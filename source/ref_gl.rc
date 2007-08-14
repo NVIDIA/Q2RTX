@@ -1,0 +1,39 @@
+#include "config.h"
+#include <windows.h>
+
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION REVISION,0,0,0
+ PRODUCTVERSION REVISION,0,0,0
+ FILEFLAGSMASK 0x17L
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x0L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040004b0"
+        BEGIN
+            VALUE "Comments", "http://q2pro.sf.net/"
+            VALUE "CompanyName", "skuller"
+            VALUE "FileDescription", "q2pro OpenGL refresh module"
+			VALUE "OriginalFilename", "ref_gl.dll"
+            VALUE "FileVersion", VERSION
+            VALUE "InternalName", "ref_gl"
+            VALUE "LegalCopyright", "Copyright (C) 2007 skuller"
+            VALUE "ProductName", "q2pro"
+            VALUE "ProductVersion", VERSION
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x400, 1200
+    END
+END
+

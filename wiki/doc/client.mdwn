@@ -1,0 +1,292 @@
+[[toc ]]
+
+Variables
+==========
+
+Netcode
+----------
+
+Q2PRO client allows separation of outgoing packet rate, physics frame rate
+and rendering frame rate. Separation of physics and rendering frame rates is
+accomplished in R1Q2 `cl_async` style. However, this may not be sufficient in
+cases you want to run at high FPS for some reason, but still want to preserve
+your upload bandwidth.
+
+This is when packet rate and physics frame rate separation comes in handy.
+In order to accomplish this, ability to pack several input samples into the
+single network packet is needed, which requires modifications to the network
+protocol for a clean solution.
+
+Q2PRO protocol naturally provides such ability. In case of default Quake2
+protocol and R1Q2 protocol a hacky solution exists, which exploits dropped
+packet recovery mechanism built into the original Quake2 netcode. This hack
+is disabled by default.
+
+- `set cl_protocol 0` (integer)  
+Specifies preferred network protocol version when connecting to servers.
+Default (zero) means to automatically select the highest protocol number
+supported.
+
+- `set cl_maxpackets 30` (integer)  
+Number of packets client sends per second, directly impacts upload rate.
+Zero means no particular limit. Unless connected using Q2PRO protocol,
+this variable is ignored and packets are sent in sync with client physics
+frame rate, controlled with `cl_maxfps` variable.
+Also, see `cl_fuzzhack` below.
+
+- `set cl_fuzzhack 0` (boolean)  
+Enable accounting of `cl_maxpackets` even if connected using non-Q2PRO
+protocol. This is not recommended, and may cause problems if your
+connection tends to drop outgoing packets.
+
+- `set cl_packetdup 1` (integer)  
+Number of backup movements client includes in each new packet,
+directly impacts upload rate. Unless connected using Q2PRO protocol,
+hardcoded value of 2 backups per packet is used.
+
+- `set cl_instantpacket 1` (boolean)  
+When enabled, important events such as pressing `+attack` or `+use` are
+sent to the server immediately, disregarding any upload rate limits.
+
+- `set cl_async 1` (boolean)  
+Enables rendering frame rate and physics frame rate separation.
+
+- `set r_maxfps 0` (integer)  
+Maximum rendering frame rate in case of `cl_async 1`.
+Default (zero) means no particular limit.
+
+- `set cl_maxfps 60` (integer)  
+Maximum rendering and physics frame rate in case of `cl_async 0`.
+Otherwise, specifies just physics frame rate.
+
+- `set cl_gibs 1` (boolean)  
+When set to zero, disables rendering of entities with `EF_GIB` flag set.
+When connected using Q2PRO protocol, allows some degree of bandwith
+savings since the server stops sending these entities at all.
+
+- `set cl_gun 1` (boolean)  
+When set to zero, disables rendering of the gun model. When connected using
+R1Q2 or Q2PRO protocol, allows some degree of bandwith savings since the
+server stops sending gun updates at all.
+
+- `set cl_footsteps 1` (boolean)  
+When set to zero, disables footsteps sounds. When connected using Q2PRO
+protocol, allows some degree of bandwith savings since the server stops
+sending footstep events at all.
+
+
+
+Effects
+----------
+
+Alternative beam based rail trail effect is available only when using OpenGL
+refresh library. In software mode original particle based effect is
+used unconditionally.
+
+- `set cl_railtrail_type 0` (integer)  
+Defines which type of effect to use:
+  - 0 - use original effect
+  - 1 - use alternative effect, draw rail core only
+  - 2 - use alternative effect, draw rail core and spiral
+
+- `set cl_railtrail_time 1.0` (float)  
+Time, in seconds, for the rail trail to be visible. 
+    
+- `set cl_railtrail_alpha 1.0` (float)  
+Initial transparency of the rail trail as it linearly fades to zero.
+
+- `set cl_railcore_color 0xFF0000` (integer)  
+Color of the core rail trail beam in the hexadecimal `0xRRGGBB` format.
+
+- `set cl_railcore_width 3` (integer)  
+Width of the rail trail core beam.
+
+- `set cl_railrings_color 0x0000FF` (integer)  
+Color of the rail trail spiral in the hexadecimal `0xRRGGBB` format.
+
+- `set cl_railrings_width 3`  
+Radius of the rail trail spiral.
+
+- `set cl_disable_particles 0` (bitmask)  
+Disables rendering of particles for the following effects:
+  - 1 - grenade explosions
+  - 2 - grenade trails
+  - 4 - rocket explosions
+  - 8 - rocket trails
+
+- `set cl_disable_explosions 0` (bitmask)  
+Disables rendering of animated models for the following effects:
+  - 1 - grenade explosions
+  - 2 - rocket explosions
+
+- `set s_ambient 1` (boolean)  
+Specifies whether ambient sounds are played or not.
+
+
+Console
+----------
+
+- `set con_clock 0` (boolean)  
+Toggles presence of the digital clock at the lower right corner of console.
+
+- `set con_height 0.5` (float)  
+Fraction of the screen in-game console occupies.
+
+- `set con_alpha 1` (float)  
+Transparency of in-game console background. Takes effect in OpenGL mode only.
+
+- `set con_scale 1` (float)  
+Scale factor of the console text. Takes effect in OpenGL mode only.
+
+- `set con_font "conchars"` (string)  
+Font to draw the console text.
+
+- `set con_background "conback"` (string)  
+Image to use as console background.
+
+Screen
+----------
+
+- `set scr_draw2d 1` (boolean)  
+Toggles drawing of all 2D elements on the screen.
+
+- `set scr_showturtle 1` (boolean)  
+Toggles drawing of various network error conditions at the lower left corner
+of the screen. Useful for debugging.
+
+- `set scr_demobar 1` (boolean)  
+Toggles drawing of progress bar at the bottom of the screen during demo playback.
+
+- `set scr_scale 1` (float)  
+Scale factor of the HUD elements. Takes effect in OpenGL mode only.
+
+- `set scr_font "conchars"` (string)  
+Font to draw the on-screen text.
+
+
+Video
+----------
+
+Hard coded list of the fullscreen video modes is gone from Q2PRO, you can
+(and should) specify your own list in your configuration files. Vertical
+refresh frequency and bit depth can be specified individually for each mode.
+
+Changing video modes no longer requires `vid_restart`, and is literally instant
+on some setups (e.g. X11 w/ LCD monitor). In windowed mode, size and position
+of the main window can be changed dynamically.
+
+- `set vid_modelist "640x480"` (string)  
+List of the fullscreen video modes. Full syntax is: `WxH[@freq][:bpp] [...]`.
+
+- `set vid_fullscreen 0` (integer)  
+If set to default (zero), run in windowed mode. If set to non zero _value_,
+run in the specified fullscreen mode. This way, _value_ acts as 1-based index
+into the list of video modes specified by `vid_modelist`.
+
+- `set vid_placement "640x480"` (string)  
+Placement of the main window on your virtual desktop. Full syntax is: `WxH[+X+Y]`.
+
+Misc
+----------
+
+- `set in_driver ""`  
+Specifies which non-keyboard (typically mouse) input driver to use:
+  - "video" or "" - input facilities provided by the window system
+  - "dinput" - DirectInput version 7 and higher
+  - "evdev" - native Linux kernel input device interface
+
+- `set cl_chat_notify 1` (boolean)  
+Specifies whether to display chat lines in the notify area.
+
+- `set cl_chat_beep 1` (boolean)  
+Specifies whether to play a sound each time chat message is received.
+
+Macros
+==========
+
+Macros behave like automated console variables. When macro expansion is
+performed, macros are searched first, then console variables.
+Each of the following examples are valid: `$loc_here`, `${loc_here}`
+and `${$loc_here}`.
+
+- `$cl_armor`
+- `$cl_ammo`
+- `$cl_health` These return statistics seen in your HUD.
+- `$cl_timer` Server time since level load.
+- `$cl_demo` Expands to 1 if playing a demo, 0 otherwise.
+- `$cl_server` Address of the server you are connected to.
+- `$cl_mapname` Name of the current map.
+- `$loc_there` Name of the location you are looking at.
+- `$loc_here` Name of the location you are standing at.
+- `$cl_dnrate` Download rate in KB/sec.
+- `$cl_uprate` Upload rate in KB/sec.
+- `$cl_ping` Average RTT to the server.
+- `$cl_fps` Rendering frame rate.
+- `$cl_ups` Player velocity in units/sec.
+- `$com_time` Current time, formatted according to `com_time_format`.
+- `$com_date` Current date, formatted according to `com_date_format`.
+- `$qt` Expands to double quote.
+- `$sc` Expands to semicolon.
+- `$$` Expands to dollar sign.
+
+Commands
+==========
+
+- `toggle <cvar> [value1 value2 ...]`  
+If _values_ are omitted, toggle the specified _cvar_ between 0 and 1.
+If two or more _values_ are specified, cycle through them.
+
+- `inc <cvar> [value]`  
+If _value_ is omitted, add 1 to the value of _cvar_.
+Otherwise, add the specified float _value_.
+
+- `dec <cvar> [value]`  
+If _value_ is omitted, subtract 1 from the value of _cvar_.
+Otherwise, subtract the specified float _value_.
+
+- `reset <cvar>`  
+Reset the specified _cvar_ to it's default value.
+
+- `cvarlist [-f] [-d] [-w <wildcard>]`
+
+- `macrolist`
+Display the list of registered macros and their current values.
+
+-   `trigger <command> <wildcard> [client|chat|print|cprint]`
+
+    Register _command_ to be executed on each message received on the
+    specified _channel_ matching the _wildcard_. The latter is macro
+    expanded before comparsion. Default channel is `print`.
+
+    Example: `trigger "record ${cl_mapname}-${com_date}-${com_time}" "$name entered the game"`.
+
+- `untrigger [-a] [-c <command>] [-m <match>]`
+Unregirster either all triggers, or just some trigger(s) by
+command and/or by match.
+
+- `serverstatus <address>`  
+Request the status string from the server at specified _address_,
+display server info and list of players sorted by frags.
+
+- `fs_restart`  
+Flush all registered media (textures, models, sounds, etc), restart
+the file system and reload the current level. Unlike `vid_restart`,
+does not reload refresh library. Use to manually change the game directory
+(typically not needed, as it is changed automatically on server connect).
+
+- `demo [/]<filename[.ext]>`  
+Play demo on client side. Unlike server side `demomap` command, does not
+load the game DLL, does not require file extension to be specified and
+supports automatic filename completion. Loads file from `demos/` unless
+slash is prepended to _filename_, otherwise loads from the root of VFS.
+
+- `draw <name> <x> <y>`  
+Add console variable or macro identified by _name_ (without the `$` prefix)
+to the list of objects drawn on the screen. By default, text is positioned
+relative to the top left corner of the screen. Use negative values to align
+text to the opposite edge, e.g. `draw cl_fps -1 -1` will draw current FPS at
+the bottom right corner of the screen.
+
+- `undraw <name>`  
+Remove object identified by _name_ from the list of objects drawn on the
+screen. Specify `all` to clear all objects.

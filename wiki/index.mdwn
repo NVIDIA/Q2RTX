@@ -1,0 +1,33 @@
+Q2PRO is a [Quake2][] game engine modification, based on source code
+released under the GPL by id Software. This is not a standalone game as it
+does not provide own media content.
+
+Client and server sides are both compatible with original Quake2 network
+architecture, as well as with modern [R1Q2][] network architecture.
+Q2PRO is designed to be secure, fast alternative engine will little to no
+visual enhancements, but not too conservative.
+It provides some features yet unique for the Quake2 gaming world,
+notably server side [MVD][] support and built-in capabilities of
+hosting [GTV][] server nodes.
+
+Q2PRO has it's own software and OpenGL refresh libraries and runs on
+Windows and GNU/Linux natively. It may compile and run on other
+Unix-like systems too.
+
+[r1q2]: http://r1ch.net/stuff/r1q2/ "R1CH's Enhanced Quake II Client/Server"
+[quake2]: http://en.wikipedia.org/wiki/Quake_2 "id Software's Quake II"
+[mvd]: http://en.wikipedia.org/wiki/Multi_view_demos "Multi View Demo"
+[gtv]: http://en.wikipedia.org/w/index.php?title=Gamer%27s_TeleVision&action=edit "Gamer's TV"
+
+* [[features]]
+* [[screenshots|shots]]
+* [[download]]
+* [[news]]
+* [[documentation|doc]]
+* [[contact]]
+* [SF.net page](http://sourceforge.net/projects/q2pro/)
+
+<a href="http://sourceforge.net">
+<img src="http://sflogo.sourceforge.net/sflogo.php?group_id=113946&amp;type=2" width="125"
+height="37" style="border: 0px;" alt="SourceForge.net Logo" /></a>
+

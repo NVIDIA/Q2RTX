@@ -1,0 +1,50 @@
+/*
+Copyright (C) 2003-2006 Andrey Nazarov
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+
+See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+
+*/
+
+//
+// prompt.h
+//
+
+#define HISTORY_SIZE	128
+#define HISTORY_MASK	( HISTORY_SIZE - 1 )
+
+#define MAX_MATCHES		1024
+#define MAX_PARTIAL		32
+
+typedef struct commandPrompt_s {
+	int		inputLineNum;
+	int		historyLineNum;
+
+	inputField_t inputLine;
+	char		*history[HISTORY_SIZE];
+
+	int			widthInChars;
+    qboolean    tooMany;
+
+	void		(*Printf)( const char *fmt, ... );
+} commandPrompt_t;
+
+
+void Prompt_Init( void );
+void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash );
+char *Prompt_Action( commandPrompt_t *prompt );
+void Prompt_HistoryUp( commandPrompt_t *prompt );
+void Prompt_HistoryDown( commandPrompt_t *prompt );
+void Prompt_Clear( commandPrompt_t *prompt );

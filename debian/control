@@ -1,0 +1,22 @@
+Source: q2pro
+Section: contrib/games
+Priority: extra
+Maintainer: Andrey Nazarov <skuller-vidnoe@yandex.ru>
+Build-Depends: cdbs, debhelper (>= 5), libx11-dev, libsdl1.2-dev,
+ libpng12-dev, libjpeg62-dev, zlib1g-dev, mesa-common-dev
+Standards-Version: 3.7.2
+
+Package: q2pro
+Architecture: i386
+Depends: ${shlibs:Depends}, quake2-data
+Description: Enhanced Quake II engine
+ Q2PRO is a Quake II engine modification, mostly compatible with the
+ original one. Q2PRO is designed to be secure, fast and doesn't provide
+ any graphical enhancements that are contrary to the `classic' Quake II
+ look and feel. Among features Q2PRO provides are server side Multi
+ View Demos, built-in GTV capabilities, network protocol optimizations.
+ .
+ Both OpenGL and software refresh modules are provided, so that 3D graphics
+ accelerator is not mandatory to play Q2PRO, although recommended.
+ .
+ Homepage: http://q2pro.sourceforge.net/

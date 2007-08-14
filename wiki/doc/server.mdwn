@@ -1,0 +1,145 @@
+[[toc ]]
+
+Variables
+==========
+
+Misc
+----------
+
+- `set sv_iplimit 3`  
+Maximum number of simultaneous connections allowed from
+single IP address. Setting this variable to 0 disables the limit.
+
+- `set sv_status_show 2`  
+Specifies how the server should respond to status queries.
+   - 0 - do not respond at all
+   - 1 - respond with server info only
+   - 2 - respond with server info and player list
+
+- `set sv_status_limit 15`  
+Maximum number of status queries per one second server should respond to.
+
+- `set sv_badauth_time 1`  
+Time, in seconds, for server to be unresponsive after an invalid
+authentication attempt. This applies to rcon commands, as well as
+authenticated connection requests.
+    
+- `set sv_password ""`  
+If not empty, allows only authenticated clients to connect.
+Clients set their passwords via "password" userinfo variable.
+
+- `set sv_reserved_slots 0`  
+
+- `set sv_reserved_password ""`  
+
+- `set sv_lan_force_rate 0`  
+
+- `set sv_ghostime 6`  
+
+
+
+MVD server
+----------
+
+- `set sv_http_enable 0`  
+Enable HTTP connections. Currently used for MVD connections and
+status queries only.
+
+- `set sv_http_maxclients 32`  
+Maximum number of HTTP clients.
+
+- `set sv_http_minclients "8"`  
+
+- `set sv_mvd_nogun "1"`  
+
+- `set sv_mvd_noblend "0"`  
+
+- `set sv_mvd_max_duration "0"`  
+
+- `set sv_mvd_max_size "0"`  
+
+- `set sv_mvd_wait "0"`  
+
+- `set sv_mvd_auth ""`  
+
+- `set sv_mvd_enable "0"`  
+
+
+MVD client
+----------
+
+- `set mvd_shownet 0` (integer)  
+Dump contents of the MVD stream as it is parsed.
+Higher values mean higher verbosity.
+
+- `set mvd_debug 0` (integer)  
+Display some MVD client related development information.
+Higher values mean higher verbosity.
+
+- `set mvd_pause 0` (boolean)  
+Pause MVD playback if non-zero.
+
+- `set mvd_timeout 120` (float)    
+Specifies MVD connection timeout value, in seconds.
+
+- `set mvd_wait_enter 0.5` (float)  
+Inuse percentage of the input buffer when MVD state
+machine transitions from running state into waiting state.
+
+- `set mvd_wait_leave 2` (float)  
+Inuse percentage of the input buffer when MVD state
+machine transitions from waiting state into running state.
+
+Hacks
+----------
+
+- `set sv_oldgame_hack 0` (boolean)  
+On Unix systems, enables "binary compatibility mode" so game libraries
+built using old GCC versions may be loaded without recompilation.
+If you have to use some closed source mod and your server segfaults
+while loading a map, try toggling this variable.
+
+- `set sv_bodyque_hack 0` (boolean)  
+Attempts to prevent "flying bodies" effect introduced by some buggy
+mods. This hack assumes the mod allocates certain range of entity
+slots for "body queue" and disables client side interpolation of
+those entities. Use this hack with caution as it may not be compatible
+with all mods and causes slightly higher bandwidth usage.
+
+- `set sv_strafejump_hack 0` (boolean)  
+Enables FPS-independent strafe jumping mode for clients supporting R1Q2
+and Q2PRO protocols.
+
+
+
+Macros
+==========
+
+- `$sv_client` Expands to the name of the client currently being processed.
+
+
+Commands
+==========
+
+- `stuff <userid> <text ...>`  
+Stuff the given _text_ into command buffer of the client identified by _userid_.
+
+- `stuffall <text ...>`  
+Stuff the given _text_ into command buffers of all connected clients.
+
+- `mvdplay <filename>`  
+Play the local MVD identified by _filename_.
+
+- `mvdconnect <[http://][user:pass@]server[:port][/resource]> [streamID]`  
+Connect to the MVD resource identified by _URI_. If _resource_ part is given,
+default port is 80. Otherwise, default port is 27910 and _streamID_ identifies
+the live MVD stream on server.
+
+- `mvdisconnect`  
+
+- `mvdspawn`  
+Spawn MVD client instance.
+
+- `mvdchannels`  
+Display status of all MVD channels.
+

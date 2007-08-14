@@ -1,0 +1,740 @@
+[[toc ]]
+
+Abstract
+-----------------
+This is some sort of a "request for comment" draft describing
+technical decisions used to implement support of MVD for Quake2
+and some open issues. Please feel free to add your [[comments|contact]].
+
+General design
+-----------------
+Unlike standard Quake2 network protocol, MVD stream itself is designed to
+operate over reliable transport, such as TCP. MVD protocol is not a real
+time protocol, so that buffering overhead associated with TCP is probably
+not an issue. Stream oriented nature of TCP solves problem of datagram
+fragmentation, which is very likely to occur in context of MVDs with a lot
+of game activity, and allows for more efficient zlib compression, when
+single zlib block spans multiple messages.
+
+Raw MVD stream format is fairly simple: a sequence of message records
+consisting of two bytes of payload length followed by the variable length
+payload. Currently, maximum payload length is 32 KiB. Zero length indicates
+"end-of-demo" record.
+
+MVD protocol is based on the simple request/response model: MVD client
+makes an initial request, then starts receiving MVD stream data passively,
+until connection is closed.
+
+[HTTP/1.0][http] was chosen as an application layer protocol for negotiating
+MVD connection parameters. This protocol is believed to be fairly easy to
+implement at reasonable conformance level (unlike e.g. HTTP/1.1), yet it allows
+for much greater interoperability comparing to some ad-hoc binary protocol.
+This way, one may download live MVD stream from Quake2 server using a
+third-party tool, like [wget][] or their favorite web browser. Furthermore,
+one may enter `mvdplay http://someserver.org/demo.mvd2` in their listen server
+console and play a MVD directly from the web, much like as one does with
+various streaming multimedia.
+
+In current implementation, HTTP/1.0 is used for choosing among MVD streams
+available on server node via URIs, peer authentication (currently Basic
+authentication method is supported) and Content-Encoding negotiation
+(identity, deflate and gzip content codings are supported).
+
+A rudimentary built-in web interface for selecting between several MVD
+streams is also provided. As a side effect, compatible server may have it's
+own status page displaying server info strings, player list, etc. By convention,
+the server should listen at the same TCP port it listens for UDP connections,
+27910 by default.
+
+Below is how generic MVD network infrastructure is supposed to look like.
+This picture is prety much self explanationary.
+
+![image of MVD infrastructure](mvdifs.png)
+
+[http]: http://tools.ietf.org/html/rfc1945 "Hypertext Transfer Protocol -- HTTP/1.0" 
+[wget]: http://www.gnu.org/software/wget/ "GNU Wget"
+
+
+Compatibility with game mods
+-----------------
+While MVD protocol is generally agnostic of the underlying game mod,
+the following important issues may need some degree of collaboration
+from the game mod:
+
+* Selecting which player POVs to capture. Currently some heuristics are used
+  to filter out spectators and capture clients with visible entities only.
+  Problems arise when clients are moved to intermission point, though, as
+  their entities are no longer visible, but POVs still need to be captured.
+  Ideally, a compatible game DLL should set something like `SVF_ACTIVE`
+  flag on player entities to be captured.
+
+* Providing an up to date scoreboard data to MVD spectators on demand.
+  Currently, this problem is solved by creating a dummy client on game
+  server side representing all MVD spectators. This client is to be put into
+  observer mode (hopefully every Quake2 game mod used today does this by
+  default for new clients) and provided a constantly updated scoreboard
+  layout by the game mod. In order for compatible game DLL to distinguish
+  such dummy client from other clients, special `mvdversion` key/value pair
+  is set in userinfo for this dummy client (and is always cleared for normal
+  clients).
+
+Unfortunately, most popular deathmatch mods for Quake2 are closed source and
+no longer developed. The situation may impove once [OpenTDM][] is released.
+
+[opentdm]: http://www.r1ch.net/forum/index.php?topic=1299.0
+
+
+The parser
+-----------------
+The following section illustrates some high level routines useful for parsing
+individual MVD messages, written in C-like pseudo code. While this is
+certainly not a definitive specification, it outlines general protocol design
+probably better than plain verbal representation. For exact details,
+please see Q2PRO [[source code|download]].
+
+Definitions of some protocol constants.
+
+    #define PROTOCOL_VERSION_MVD		37
+    #define PROTOCOL_VERSION_MVD_MINOR		2006	// q2pro r154
+
+    #define SVCMD_BITS				5
+    #define SVCMD_MASK				( ( 1 << SVCMD_BITS ) - 1 )
+
+    // MVD protocol specific operations
+    typedef enum mvd_ops_e {
+        mvd_bad,        // not used
+        mvd_nop,
+        mvd_disconnect, // reserved
+        mvd_reconnect,  // reserved
+        mvd_serverdata,
+        mvd_configstring,
+        mvd_frame,
+        mvd_frame_nodelta,
+        mvd_unicast,
+        mvd_unicast_r,
+        mvd_multicast_all,
+        mvd_multicast_pvs,
+        mvd_multicast_phs,
+        mvd_multicast_all_r,
+        mvd_multicast_pvs_r,
+        mvd_multicast_phs_r,
+        mvd_print,      // reserved
+        mvd_stufftext,  // reserved
+
+        mvd_num_types
+    } mvd_ops_t;
+
+Server data message holds enough data to build a completely valid game state:
+configstrings, baselines, and an initial delta uncompressed frame. All further
+frames will be delta compressed from previous frames.
+
+    void ParseServerData() {
+        // parse major protocol version
+        protocol = ReadLong();
+        if( protocol != PROTOCOL_VERSION_MVD ) {
+            Error( "Unsupported protocol" );
+        }
+
+        // parse minor protocol version
+        protocol = ReadShort();
+        if( protocol != PROTOCOL_VERSION_MVD_MINOR ) {
+            Error( "Unsupported protocol" );
+        }
+
+        servercount = ReadLong();
+        gamedir = ReadString();
+
+        // parse dummy MVD client number
+        mvd_clientnum = ReadShort();
+
+        // parse configstrings
+        while( 1 ) {
+            index = ReadShort();
+            if( index == MAX_CONFIGSTRINGS ) {
+                break;
+            }
+            configstrings[index] = ReadString();
+        }
+
+        // parse baselines
+        while( 1 ) {
+            entnum = ParseEntityBits();
+            if( !entnum ) {
+                break;
+            }
+            baselines[entnum] = ParseDeltaEntity();
+        }
+
+        // parse uncompressed frame
+        if( ReadByte() != mvd_frame_nodelta ) {
+            Error( "Expected uncompressed frame" );
+        }
+        MVD_ParseFrame( false );
+    }
+
+MVD protocol packs datagrams sent by game DLL as individual submessages
+containing opaque payload. For PVS/PHS datagrams precalculated leaf number
+is sent to allow fast PVS/PHS culling.
+
+    void ParseMulticastALL() {
+        length = ReadByte();
+        length |= extrabits << 8;
+        data = ReadData( length );
+
+        for_each_client( c ) {
+            c->send( data, length );
+        }
+    }
+
+    void ParseMulticastPHS() {
+        length = ReadByte();
+        length |= extrabits << 8;
+        leafnum = ReadShort();
+        data = ReadData( length );
+
+        for_each_client( c ) {
+            if( c->inPHS( leafnum ) ) {
+                c->send( data, length );
+            }
+        }
+    }
+
+    void ParseMulticastPVS() {
+        length = ReadByte();
+        length |= extrabits << 8;
+        leafnum = ReadShort();
+        data = ReadData( length );
+
+        for_each_client( c ) {
+            if( c->inPVS( leafnum ) ) {
+                c->send( data, length );
+            }
+        }
+    }
+
+Unicast datagram sent to individual game client needs to be forwarded to
+all MVD spectators following this particular client. Datagram sent to the
+dummy MVD client is handled specially: we attempt to parse the payload
+and extract layout updates, and forward everything else to MVD spectators
+those in freefloat mode.
+
+    void ParseUnicast() {
+        length = ReadByte();
+        length |= extrabits << 8;
+        clientnum = ReadByte();
+        data = ReadData( length );
+
+        if( clientnum == mvd_clientnum ) {
+            // this is a message to dummy MVD client
+            if( data[0] == svc_layout ) {
+                // extract the layout and update those spectators with scoreboard open
+                for_each_client( c ) {
+                    if( c->scoreboard_open() ) {
+                        c->send( data, length );
+                    }
+                }
+            } else {
+                // just forward it to everyone in freefloat mode, a svc_print or something
+                for_each_client( c ) {
+                    if( c->freefloat() ) {
+                        c->send( data, length );
+                    }
+                }
+            }
+        } else {
+            for_each_client( c ) {
+                if( c->follows( clientnum ) ) {
+                    c->send( data, length );
+                }
+            }
+        }
+    }
+
+    void ParseConfigstring() {
+        index = ReadShort();
+        configstrings[index] = ReadString();
+
+        for_each_client( c ) {
+            c->update_configstring( index );
+        }
+    }
+
+Frames are either uncompressed, or delta compressed from the previous frame.
+Note that presence of a valid previous frame is guaranteed, as it is read by
+ParseServerData on each connection. For definition of ParsePacketPlayers,
+please see the source code.
+
+    void ParseFrame( bool delta ) {
+        // allocate new frame
+        frame = AllocFrame();
+
+        if( !delta ) {
+            oldframe = NULL; // uncompressed frame
+        }
+
+        framenum = ReadLong(); // not currently used
+
+        // read portalbits
+        length = ReadByte();
+        data = ReadData( length );
+        SetPortalStates( data, length );
+
+        // parse and delta decompress player and entity states
+        ParsePacketPlayers( oldframe, frame );
+        ParsePacketEntities( oldframe, frame );
+
+        oldframe = frame;
+    }
+
+The main parser loop.
+
+    void ParseMessage()
+        while( !end_of_message ) {
+            cmd = ReadByte();
+
+            extrabits = cmd >> SVCMD_BITS;
+            cmd &= SVCMD_MASK;
+
+            switch( cmd ) {
+            case mvd_serverdata:
+                ParseServerData();
+                break;
+            case mvd_multicast_all:
+            case mvd_multicast_all_r:
+                ParseMulticastALL();
+                break;
+            case mvd_multicast_pvs:
+            case mvd_multicast_pvs_r:
+                ParseMulticastPVS();
+                break;
+            case mvd_multicast_phs:
+            case mvd_multicast_phs_r:
+                ParseMulticastPHS();
+                break;
+            case mvd_unicast:
+            case mvd_unicast_r:
+                ParseUnicast();
+                break;
+            case mvd_configstring:
+                ParseConfigstring();
+                break;
+            case mvd_frame:
+                ParseFrame( true );
+                break;
+            case mvd_frame_nodelta:
+                ParseFrame( false ); // should not really happen
+                break;
+            default:
+                Error( "bad cmd" );
+            }
+        }
+    }
+
+The server
+-----------------
+Obiviously, MVD protocol is useless without compatible game servers!
+If you develop Quake2 game server, you are encouraged to implement some
+degree of support for offline MVD recording (at least), broadcasting and
+playback (at most).
+
+
+Local MVD recording
+-----------------
+
+Implementing support for server side MVD recording provides a good
+replacement for the original `serverrecord` command, back from the early
+Quake2 days. This feature which was never actually used due to it's
+unability to record any player state information and lack of delta
+compression support. Local MVD recorder does not have these limitations and
+is relatively easy to implement.
+
+Essentially, each MVD message is just a complete snapshot of the corresponding
+server frame: it contains all the entity states present on entire level,
+all the multicasts issued by game DLL this frame, player states of all the
+players currently active and all the unicasts issued by game DLL to each
+active player.
+
+Structure of typical MVD message is very similar to the structure of in-game
+messages sent to regular Quake2 clients. Both contain a delta compressed frame
+packet, followed by the accumulated multicast datagram. The only difference is
+that data sent to regular clients is PVS/PHS culled, unlike MVD data.
+
+Inside each `mvd_frame` packet, player states are delta compressed exactly
+like entity states are. The code is very similar.
+
+`MSG_WriteDeltaPlayerstate_Packet` takes two `player_state_t` structures as
+input and emits delta bytes. Not all `pmove_state_t` structure fields are
+considered, as most of them are used only for keeping client prediction in
+sync and are of no interest in MVDs.
+
+    #define	PPS_M_TYPE			(1<<0)
+    #define	PPS_M_ORIGIN		(1<<1)
+    #define	PPS_M_ORIGIN2		(1<<2)
+
+    #define	PPS_VIEWOFFSET		(1<<3)
+    #define	PPS_VIEWANGLES		(1<<4)
+    #define	PPS_VIEWANGLE2		(1<<5)
+    #define	PPS_KICKANGLES		(1<<6)
+    #define	PPS_BLEND			(1<<7)
+    #define	PPS_FOV				(1<<8)
+    #define	PPS_WEAPONINDEX		(1<<9)
+    #define	PPS_WEAPONFRAME		(1<<10)
+    #define	PPS_GUNOFFSET	    (1<<11)
+    #define	PPS_GUNANGLES	    (1<<12)
+    #define	PPS_RDFLAGS			(1<<13)
+    #define	PPS_STATS		    (1<<14)
+    #define	PPS_REMOVE			(1<<15)
+
+In order for delta compression code to work properly, client slot number each
+player state refers to needs to be stored in the structure. We can utilize any
+unused field for this purpose, `pmove.pm_flags` for example.
+
+    #define PPS_NUM( ps )       (ps)->pmove.pm_flags
+
+`Delta_` macros consider quantization effects and are there to save network bandwidth.
+
+    #define Delta_Angle( a, b ) \
+      ( ((int)((a)*256/360) & 255) != ((int)((b)*256/360) & 255) )
+
+    #define Delta_Coord( a, b ) \
+      ( (int)((b)*8) != (int)((a)*8) )
+
+    #define Delta_Pos( a, b ) \
+      ( (int)((b)[0]*8) != (int)((a)[0]*8) || \
+        (int)((b)[1]*8) != (int)((a)[1]*8) || \
+        (int)((b)[2]*8) != (int)((a)[2]*8) )
+
+    #define Delta_VecChar( a, b ) \
+      ( (int)((b)[0]*4) != (int)((a)[0]*4) || \
+        (int)((b)[1]*4) != (int)((a)[1]*4) || \
+        (int)((b)[2]*4) != (int)((a)[2]*4) )
+
+    #define Delta_Blend( a, b ) \
+      ( (int)((b)[0]*255) != (int)((a)[0]*255) || \
+        (int)((b)[1]*255) != (int)((a)[1]*255) || \
+        (int)((b)[2]*255) != (int)((a)[2]*255) || \
+        (int)((b)[3]*255) != (int)((a)[3]*255) )
+
+    #define Delta_Angle16( a, b ) \
+        ( ANGLE2SHORT(b) != ANGLE2SHORT(a) )
+
+    #define Delta_VecAngle16( a, b ) \
+      ( ANGLE2SHORT((b)[0]) != ANGLE2SHORT((a)[0]) || \
+        ANGLE2SHORT((b)[1]) != ANGLE2SHORT((a)[1]) || \
+        ANGLE2SHORT((b)[2]) != ANGLE2SHORT((a)[2]) )
+
+    #define Delta_Fov( a, b ) \
+        ( (int)(b) != (int)(a) )
+
+It is possible to optionally ignore more parts of the player state by
+providing appropriate flags.
+
+    typedef enum {
+        MSG_PS_IGNORE_GUNINDEX		= ( 1 << 0 ),
+        MSG_PS_IGNORE_GUNFRAMES		= ( 1 << 1 ),
+        MSG_PS_IGNORE_BLEND			= ( 1 << 2 ),
+        MSG_PS_FORCE				= ( 1 << 3 )
+    } msgPsFlags_t;
+
+`MSG_WriteDeltaPlayerstate_Packet` may emit no bytes at all if nothing has
+changed and `MSG_PS_FORCE` bit is cleared.
+
+    void MSG_WriteDeltaPlayerstate_Packet(  const player_state_t   *from,
+                                                  player_state_t   *to,
+                                                  msgPsFlags_t     flags )
+    {
+        int				i;
+        int				pflags;
+        int				statbits;
+        int				playerNum;
+
+        if( !to ) {
+            if( !from ) {
+                Com_Error( ERR_DROP, "MSG_WriteDeltaPlayerstate_Packet: NULL" );
+            }
+            playerNum = PPS_NUM( from );
+            MSG_WriteByte( playerNum );
+            MSG_WriteShort( PPS_REMOVE );
+            return;
+        }
+
+        playerNum = PPS_NUM( to );
+        if( playerNum < 0 || playerNum >= MAX_CLIENTS ) {
+            Com_Error( ERR_DROP, "MSG_WriteDeltaPlayerstate_Packet: bad player number %i", playerNum );
+        }
+
+        if( !from ) {
+            from = &nullPlayerState;
+        }
+
+        //
+        // determine what needs to be sent
+        //
+        pflags = 0;
+
+        if( to->pmove.pm_type != from->pmove.pm_type )
+            pflags |= PPS_M_TYPE;
+
+        if( to->pmove.origin[0] != from->pmove.origin[0] ||
+            to->pmove.origin[1] != from->pmove.origin[1] )
+        {
+            pflags |= PPS_M_ORIGIN;
+        }
+
+        if( to->pmove.origin[2] != from->pmove.origin[2] ) {
+            pflags |= PPS_M_ORIGIN2;
+        }
+
+        if( Delta_VecChar( from->viewoffset, to->viewoffset ) ) {
+            pflags |= PPS_VIEWOFFSET;
+        }
+
+        if( Delta_Angle16( from->viewangles[0], to->viewangles[0] ) ||
+            Delta_Angle16( from->viewangles[1], to->viewangles[1] ) )
+        {
+            pflags |= PPS_VIEWANGLES;
+        }
+
+        if( Delta_Angle16( from->viewangles[2], to->viewangles[2] ) ) {
+            pflags |= PPS_VIEWANGLE2;
+        }
+
+        if( Delta_VecChar( from->kick_angles, to->kick_angles ) ) {
+            pflags |= PPS_KICKANGLES;
+        }
+
+        if( !( flags & MSG_PS_IGNORE_BLEND ) ) {
+            if( Delta_Blend( from->blend, to->blend ) ) {
+                pflags |= PPS_BLEND;
+            }
+        } else {
+            // save previous state
+            Vector4Copy( from->blend, to->blend );
+        }
+
+        if( Delta_Fov( from->fov, to->fov ) )
+            pflags |= PPS_FOV;
+
+        if( to->rdflags != from->rdflags )
+            pflags |= PPS_RDFLAGS;
+
+        if( !( flags & MSG_PS_IGNORE_GUNINDEX ) ) {
+            if( to->gunindex != from->gunindex )
+                pflags |= PPS_WEAPONINDEX;
+        } else {
+            // save previous state
+            to->gunindex = from->gunindex;
+        }
+
+        if( !( flags & MSG_PS_IGNORE_GUNFRAMES ) ) {
+            if( to->gunframe != from->gunframe )
+                pflags |= PPS_WEAPONFRAME;
+
+            if( Delta_VecChar( from->gunoffset, to->gunoffset ) ) {
+                pflags |= PPS_GUNOFFSET;
+            }
+
+            if( Delta_VecChar( from->gunangles, to->gunangles ) ) {
+                pflags |= PPS_GUNANGLES;
+            }
+        } else {
+            // save previous state 
+            to->gunframe = from->gunframe;
+
+            to->gunoffset[0] = from->gunoffset[0];
+            to->gunoffset[1] = from->gunoffset[1];
+            to->gunoffset[2] = from->gunoffset[2];
+
+            to->gunangles[0] = from->gunangles[0];
+            to->gunangles[1] = from->gunangles[1];
+            to->gunangles[2] = from->gunangles[2];
+        }
+
+        statbits = 0;
+        for( i = 0; i < MAX_STATS; i++ ) {
+            if( to->stats[i] != from->stats[i] ) {
+                statbits |= 1 << i;
+            }
+        }
+
+        if( statbits ) {
+            pflags |= PPS_STATS;
+        }
+
+        if( !pflags && !( flags & MSG_PS_FORCE ) ) {
+            return;
+        }
+
+        //
+        // write it
+        //
+        MSG_WriteByte( playerNum );
+        MSG_WriteShort( pflags );
+
+        //
+        // write some part of the pmove_state_t
+        //
+        if( pflags & PPS_M_TYPE )
+            MSG_WriteByte( to->pmove.pm_type );
+
+        if( pflags & PPS_M_ORIGIN ) {
+            MSG_WriteShort( to->pmove.origin[0] );
+            MSG_WriteShort( to->pmove.origin[1] );
+        }
+
+        if( pflags & PPS_M_ORIGIN2 ) {
+            MSG_WriteShort( to->pmove.origin[2] );
+        }
+
+        //
+        // write the rest of the player_state_t
+        //
+        if( pflags & PPS_VIEWOFFSET ) {
+            MSG_WriteChar( to->viewoffset[0] * 4 );
+            MSG_WriteChar( to->viewoffset[1] * 4 );
+            MSG_WriteChar( to->viewoffset[2] * 4 );
+        }
+
+        if( pflags & PPS_VIEWANGLES ) {
+            MSG_WriteAngle16( to->viewangles[0] );
+            MSG_WriteAngle16( to->viewangles[1] );
+        }
+
+        if( pflags & PPS_VIEWANGLE2 ) {
+            MSG_WriteAngle16( to->viewangles[2] );
+        }
+
+        if( pflags & PPS_KICKANGLES ) {
+            MSG_WriteChar( to->kick_angles[0] * 4 );
+            MSG_WriteChar( to->kick_angles[1] * 4 );
+            MSG_WriteChar( to->kick_angles[2] * 4 );
+        }
+
+        if( pflags & PPS_WEAPONINDEX ) {
+            MSG_WriteByte( to->gunindex );
+        }
+
+        if( pflags & PPS_WEAPONFRAME ) {
+            MSG_WriteByte( to->gunframe );
+        }
+
+        if( pflags & PPS_GUNOFFSET ) {
+            MSG_WriteChar( to->gunoffset[0] * 4 );
+            MSG_WriteChar( to->gunoffset[1] * 4 );
+            MSG_WriteChar( to->gunoffset[2] * 4 );
+        }
+
+        if( pflags & PPS_GUNANGLES ) {
+            MSG_WriteChar( to->gunangles[0] * 4 );
+            MSG_WriteChar( to->gunangles[1] * 4 );
+            MSG_WriteChar( to->gunangles[2] * 4 );
+        }
+
+        if( pflags & PPS_BLEND ) {
+            MSG_WriteByte( to->blend[0] * 255 );
+            MSG_WriteByte( to->blend[1] * 255 );
+            MSG_WriteByte( to->blend[2] * 255 );
+            MSG_WriteByte( to->blend[3] * 255 );
+        }
+
+        if( pflags & PPS_FOV )
+            MSG_WriteByte( to->fov );
+
+        if( pflags & PPS_RDFLAGS )
+            MSG_WriteByte( to->rdflags );
+
+        // send stats
+        if( pflags & PPS_STATS ) {
+            MSG_WriteLong( statbits );
+            for( i = 0; i < MAX_STATS; i++ ) {
+                if( statbits & ( 1 << i ) ) {
+                    MSG_WriteShort( to->stats[i] );
+                }
+            }
+        }
+    }
+
+Upon server startup, circular buffer for storing player states needs to be
+allocated by `SV_InitGame`, as well as some extra space for storing entity
+states. Since MVD protocol is designed to operate over reliable transport,
+there is no need to try harder than delta compressing from the previous frame,
+so we do not need to allocate buffers more than twice as large as single frame
+limit. Buffer for accumulating multicast and unicast datagrams needs to be
+allocated too.
+
+	if( sv_mvd_enable->integer ) {
+		svs.numEntityStates += MAX_EDICTS * 2;
+		svs.numPlayerStates += sv_maxclients->integer * 2;
+        svs.multicast_buffer = SV_Malloc( MAX_MSGLEN );
+	}
+
+	svs.entityStates = SV_Mallocz( sizeof( entity_state_t ) * svs.numEntityStates );
+    svs.playerStates = SV_Mallocz( sizeof( player_state_t ) * svs.numPlayerStates );
+
+Very similar to
+
+    void SV_EmitPacketPlayers(  client_frame_t  *from,
+                                client_frame_t  *to,
+                                msgPsFlags_t    flags )
+    {
+        player_state_t	*oldps, *newps;
+        uint32	oldindex, newindex;
+        int		oldnum, newnum;
+        uint32	from_num_players;
+        uint32  i;
+
+        if( !from ) {
+            from_num_players = 0;
+        } else {
+            from_num_players = from->numPlayers;
+        }
+
+        newindex = 0;
+        oldindex = 0;
+        oldps = newps = NULL;
+        while( newindex < to->numPlayers || oldindex < from_num_players ) {
+            if( newindex >= to->numPlayers ) {
+                newnum = 9999;
+            } else {
+                i = ( to->firstPlayer + newindex ) % svs.numPlayerStates;
+                newps = &svs.playerStates[i];
+                newnum = PPS_NUM( newps );
+            }
+
+            if( oldindex >= from_num_players ) {
+                oldnum = 9999;
+            } else {
+                i = ( from->firstPlayer + oldindex ) % svs.numPlayerStates;
+                oldps = &svs.playerStates[i];
+                oldnum = PPS_NUM( oldps );
+            }
+
+            if( newnum == oldnum ) {	
+                // delta update from old position
+                // because the force parm is false, this will not result
+                // in any bytes being emited if the player has not changed at all
+                MSG_WriteDeltaPlayerstate_Packet( oldps, newps, flags );
+                oldindex++;
+                newindex++;
+                continue;
+            }
+
+            if( newnum < oldnum ) {
+                // this is a new player, send it from the baseline
+                MSG_WriteDeltaPlayerstate_Packet( NULL, newps,
+                    flags | MSG_PS_FORCE );
+                newindex++;
+                continue;
+            }
+
+            if( newnum > oldnum ) {
+                // the old player isn't present in the new message
+                MSG_WriteDeltaPlayerstate_Packet( oldps, NULL,
+                    flags | MSG_PS_FORCE );
+                oldindex++;
+                continue;
+            }
+        }
+
+        MSG_WriteByte( CLIENTNUM_NONE );	// end of packetplayers
+    }

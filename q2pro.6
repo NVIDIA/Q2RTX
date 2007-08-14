@@ -1,0 +1,76 @@
+.TH "Q2PRO" "6" 
+.SH "NAME" 
+Q2PRO \(em enhanced Quake II engine 
+.SH "SYNOPSIS" 
+.PP 
+\fBq2pro\fR [\fB+command \fIarguments\fR\fP]  
+.SH "DESCRIPTION" 
+.PP 
+This manual page documents briefly the \fBq2pro\fR program.
+.PP 
+Q2PRO is a Quake II engine modification, mostly compatible with the
+original one. Q2PRO is designed to be secure, fast and doesn't provide
+any graphical enhancements that are contrary to the `classic' Quake II
+look and feel. Among features Q2PRO provides are server side Multi
+View Demos, built-in GTV capabilities, network protocol optimizations.
+.PP
+Both OpenGL and software refresh modules are provided, so that 3D graphics
+accelerator is not mandatory to play Q2PRO, although recommended.
+.PP
+Q2PRO uses SDL for video output and OSS for sound output.
+.SH "OPTIONS" 
+.PP 
+Commands on command line start with a `+', and continue until
+another `+' or end of line. Variables given on command line
+override those in normal configuration files. If the variable does not exist,
+it will be created for future use.
+.IP "\fB+set vid_ref soft\fP" 7 
+Load software refresh module (default).
+.IP "\fB+set vid_ref gl\fP" 7
+Load OpenGL refresh module. 
+.IP "\fB+set dedicated 1\fP" 7
+Start in dedicated server mode with no graphical output. 
+.IP "\fB+set deathmatch 1\fP" 7
+Enable deathmatch mode (no monsters, etc). 
+.IP "\fB+exec config.cfg\fP" 7
+Execute the specified configuration file. 
+.IP "\fB+map q2dm1\fP" 7
+Spawn the server on the given map. 
+.IP "\fB\-\-version\fP" 7
+Show version and exit. 
+.SH "FILES" 
+.PP
+.IP "\fB/etc/default/q2pro\fP" 7
+System wide configuration file. The first one to be executed.
+.IP "\fB/usr/share/games/quake2\fP" 7
+Static Quake II data hierarchy, possibly shared with other Quake II engines.
+.IP "\fB/usr/lib/games/quake2\fP" 7
+Quake II mod-specific .so libraries, possibly shared
+with other Quake II engines.
+.IP "\fB/usr/lib/games/q2pro\fP" 7
+Q2PRO specific game libraries and refresh modules.
+.IP "\fB~/.q2pro\fP" 7
+User's local data hierarchy. Overrides system hierarchy.
+Any dynamic data Q2PRO produces (savegames, screenshots, demos, etc)
+is written here.
+
+.SH "BUGS" 
+.PP 
+There are a lot more commands and variables, registered dynamically as
+various subsystems are loaded, than those few ones documented here.
+.PP 
+Q2PRO graphical menu subsystem is incomplete.
+.SH "AUTHOR" 
+.PP 
+Quake II was written by ID Software, Inc. 
+Q2PRO was written by Andrey Nazarov <skuller-vidnoe@yandex.ru>. 
+.PP 
+This manual page was written by Andrey Nazarov <skuller-vidnoe@yandex.ru> for 
+the \fBDebian\fP system (but may be used by others).  Permission is 
+granted to copy, distribute and/or modify this document under 
+the terms of the GNU General Public License, Version 2 any  
+later version published by the Free Software Foundation. 
+.PP 
+On Debian systems, the complete text of the GNU General Public 
+License can be found in /usr/share/common-licenses/GPL. 
+ 

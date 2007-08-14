@@ -1,0 +1,18 @@
+There are mailing lists set up:
+
+* [q2pro-user](https://lists.sourceforge.net/lists/listinfo/q2pro-user)
+  at lists.sourceforge.net (general discussion and support)
+* [q2pro-devel](https://lists.sourceforge.net/lists/listinfo/q2pro-devel)
+  at lists.sourceforge.net (patches, etc)
+
+There is also Q2PRO [forum](http://forum.quake2.com.ru/viewforum.php?f=6)
+available (in Russian), hosted by the [Russian Quake2 Portal](http://quake2.com.ru/).
+
+Q2PRO author (SkulleR) can be contacted directly in the following ways:
+
+* email: skuller-vidnoe at yandex.ru
+* jabber: skuller at amessage.info
+
+Author's GPG key:
+
+    1024D/928FA4A2: CC6D FA00 C355 6707 6314  FE0B 9F2E C0DD 928F A4A2
