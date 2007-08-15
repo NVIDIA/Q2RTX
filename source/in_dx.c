@@ -22,8 +22,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // win_dinput.c - DirectInput 7 mouse driver
 //
 
-#if USE_DINPUT
-
 #include "win_local.h"
 
 #define DIRECTINPUT_VERSION 0x0700
@@ -328,4 +326,3 @@ void DI_FillAPI( inputAPI_t *api ) {
 	api->ClearStates = DI_ClearMouseStates;
 }
 
-#endif // USE_DINPUT

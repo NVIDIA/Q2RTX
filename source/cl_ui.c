@@ -49,6 +49,7 @@ CL_InitUI
 */
 void CL_InitUI( void ) {
 	if( UI_Init() ) {
+		UI_ModeChanged();
 		cls.ui_initialized = qtrue;
 	}
 }

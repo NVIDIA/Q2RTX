@@ -908,7 +908,7 @@ uint32 COM_ParseHex( const char *string ) {
 SortStrcmp
 =================
 */
-int SortStrcmp( const void *p1, const void *p2 ) {
+int QDECL SortStrcmp( const void *p1, const void *p2 ) {
 	const char *s1 = *(const char **)p1;
 	const char *s2 = *(const char **)p2;
 

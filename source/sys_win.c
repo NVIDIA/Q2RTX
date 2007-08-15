@@ -1500,6 +1500,11 @@ EXCEPTION_DISPOSITION _ExceptionHandler(
 
 #endif /* USE_DBGHELP */
 
+#if ( _MSC_VER >= 1400 )
+static void msvcrt_sucks( const wchar_t *expr, const wchar_t *func, const wchar_t *file, unsigned int line, uintptr_t unused ) {
+}
+#endif
+
 /*
 ==================
 WinMain
@@ -1542,6 +1547,12 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	__try1( Sys_ExceptionHandler );
 #endif
 #endif /* USE_DBGHELP */
+
+#if ( _MSC_VER >= 1400 )
+	// no, please, don't let strftime kill the whole fucking
+	// process just because it does not conform to C99 :((
+	_set_invalid_parameter_handler( msvcrt_sucks );
+#endif
 
 	Qcommon_Init( lpCmdLine );
 
@@ -1607,7 +1618,7 @@ main
 
 ==================
 */
-int main( int argc, char **argv ) {
+int QDECL main( int argc, char **argv ) {
 	int i;
 
 	for( i = 1; i < argc; i++ ) {

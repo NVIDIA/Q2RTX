@@ -764,7 +764,7 @@ static void CL_ServerStatus_f( void ) {
 SortPlayers
 ====================
 */
-static int SortPlayers( const void *v1, const void *v2 ) {
+static int QDECL SortPlayers( const void *v1, const void *v2 ) {
     const playerStatus_t *p1 = ( const playerStatus_t * )v1;
     const playerStatus_t *p2 = ( const playerStatus_t * )v2;
 

@@ -371,7 +371,7 @@ void Draw_FPS( int x, int y ) {
 
 #define FPS_APERTURE    9
 
-int SortCmp( const void *v1, const void *v2 ) {
+int QDECL SortCmp( const void *v1, const void *v2 ) {
     int i1 = *( int * )v1;
     int i2 = *( int * )v2;
 

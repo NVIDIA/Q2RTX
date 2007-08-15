@@ -437,7 +437,7 @@ int Q_strncasecmp( const char *s1, const char *s2, int n );
 #define Q_stricmp	Q_strcasecmp
 #define Q_stricmpn	Q_strncasecmp
 
-int SortStrcmp( const void *p1, const void *p2 );
+int QDECL SortStrcmp( const void *p1, const void *p2 );
 
 char *COM_SkipPath( const char *pathname );
 void COM_StripExtension( const char *in, char *out, int outSize );
@@ -454,7 +454,7 @@ char *COM_Parse( const char **data_p );
 int COM_Compress( char *data );
 
 int Com_WildCmp( const char *filter, const char *string, qboolean ignoreCase );
-int SortStrcmp( const void *p1, const void *p2 );
+int QDECL SortStrcmp( const void *p1, const void *p2 );
 
 uint32 Com_HashString( const char *string, int hashSize );
 uint32 Com_HashPath( const char *string, int hashSize );

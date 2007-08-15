@@ -912,7 +912,7 @@ struct pngReadStruct {
 	byte *maxp;
 };
 
-static void png_vfs_read_fn( png_structp png_ptr, png_bytep buf, png_size_t size ) {
+static void QDECL png_vfs_read_fn( png_structp png_ptr, png_bytep buf, png_size_t size ) {
 	struct pngReadStruct *r = png_get_io_ptr( png_ptr );
 
 	if( r->data + size > r->maxp ) {
@@ -922,14 +922,14 @@ static void png_vfs_read_fn( png_structp png_ptr, png_bytep buf, png_size_t size
 	r->data += size;
 }
 
-static void png_console_error_fn( png_structp png_ptr, png_const_charp error_msg ) {
+static void QDECL png_console_error_fn( png_structp png_ptr, png_const_charp error_msg ) {
 	char *f = png_get_error_ptr( png_ptr );
 
 	Com_EPrintf( "LoadPNG: %s: %s\n", f, error_msg );
 	longjmp( png_jmpbuf( png_ptr ), -1 );
 }
 
-static void png_console_warning_fn( png_structp png_ptr, png_const_charp warning_msg ) {
+static void QDECL png_console_warning_fn( png_structp png_ptr, png_const_charp warning_msg ) {
 	char *f = png_get_error_ptr( png_ptr );
 
 	Com_WPrintf( "LoadPNG: %s: %s\n", f, warning_msg );

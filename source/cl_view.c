@@ -382,7 +382,7 @@ void V_Gun_Model_f (void)
 
 //============================================================================
 
-static int entitycmpfnc( const entity_t *a, const entity_t *b )
+static int QDECL entitycmpfnc( const entity_t *a, const entity_t *b )
 {
 	/*
 	** all other models are sorted by model then skin
@@ -494,7 +494,7 @@ void V_RenderView( void ) {
 		cl.refdef.rdflags = cl.frame.ps.rdflags;
 
 		// sort entities for better cache locality
-        qsort( cl.refdef.entities, cl.refdef.num_entities, sizeof( cl.refdef.entities[0] ), (int (*)(const void *, const void *))entitycmpfnc );
+        qsort( cl.refdef.entities, cl.refdef.num_entities, sizeof( cl.refdef.entities[0] ), (int (QDECL *)(const void *, const void *))entitycmpfnc );
 	}
 
 	ref.RenderFrame (&cl.refdef);

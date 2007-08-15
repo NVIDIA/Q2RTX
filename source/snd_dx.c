@@ -18,8 +18,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#if USE_DSOUND
-
 #include "win_local.h"
 #include <mmsystem.h>
 #include <dsound.h>
@@ -425,5 +423,3 @@ void DS_FillAPI( snddmaAPI_t *api ) {
 	api->Submit = DS_Submit;
 	api->Activate = DS_Activate;
 }
-
-#endif // USE_DSOUND

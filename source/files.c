@@ -1530,7 +1530,7 @@ fail:
 }
 #endif
 
-static int pakcmp( const void *p1, const void *p2 ) {
+static int QDECL pakcmp( const void *p1, const void *p2 ) {
 	const char *s1 = *( const char ** )p1;
 	const char *s2 = *( const char ** )p2;
 
