@@ -174,51 +174,50 @@ static void GL_MarkLights_r( bspNode_t *node, dlight_t *light ) {
     int lightbit, count;
     bspSurface_t *face;
     
-    if( !( plane = node->plane ) ) {
-        return;
-    }
+    while( ( plane = node->plane ) != NULL ) {
+        switch( plane->type ) {
+        case PLANE_X:
+            dot = light->transformed[0] - plane->dist;
+            break;
+        case PLANE_Y:
+            dot = light->transformed[1] - plane->dist;
+            break;
+        case PLANE_Z:
+            dot = light->transformed[2] - plane->dist;
+            break;
+        default:
+            dot = DotProduct( light->transformed, plane->normal ) - plane->dist;
+            break;
+        }
 
-    switch( plane->type ) {
-    case PLANE_X:
-		dot = light->transformed[0] - plane->dist;
-        break;
-    case PLANE_Y:
-		dot = light->transformed[1] - plane->dist;
-        break;
-    case PLANE_Z:
-		dot = light->transformed[2] - plane->dist;
-        break;
-    default:
-		dot = DotProduct( light->transformed, plane->normal ) - plane->dist;
-        break;
-    }
+        if( dot > light->intensity ) {
+            node = node->children[0];
+            continue;
+        }
+        if( dot < -light->intensity ) {
+            node = node->children[1];
+            continue;
+        }
 
-    if( dot > light->intensity ) {
+        lightbit = 1 << light->index;
+        face = node->firstFace;
+        count = node->numFaces;
+        while( count-- ) {
+            if( !( face->texinfo->flags & NOLIGHT_MASK ) ) {
+                if( face->dlightframe != glr.drawframe ) {
+                    face->dlightframe = glr.drawframe;
+                    face->dlightbits = 0;
+                }
+            
+                face->dlightbits |= lightbit;
+            }
+            face++;
+        }
+        
         GL_MarkLights_r( node->children[0], light );
-        return;
-    }
-    if( dot < -light->intensity ) {
-        GL_MarkLights_r( node->children[1], light );
-        return;
-    }
 
-	lightbit = 1 << light->index;
-    face = node->firstFace;
-    count = node->numFaces;
-    while( count-- ) {
-		if( !( face->texinfo->flags & NOLIGHT_MASK ) ) {
-			if( face->dlightframe != glr.drawframe ) {
-				face->dlightframe = glr.drawframe;
-				face->dlightbits = 0;
-			}
-		
-			face->dlightbits |= lightbit;
-		}
-        face++;
+        node = node->children[1];
     }
-    
-    GL_MarkLights_r( node->children[0], light );
-    GL_MarkLights_r( node->children[1], light );
 }
 
 void GL_MarkLights( void ) {
@@ -356,21 +355,21 @@ finish:
 #define NODE_CLIPPED    0
 #define NODE_UNCLIPPED  15
 
-static qboolean GL_ClipNodeToFrustum( bspNode_t *node, int *clipflags ) {
+static inline qboolean GL_ClipNodeToFrustum( bspNode_t *node, int *clipflags ) {
     int flags = *clipflags;
-    int i, bits;
+    int i, bits, mask;
     
-    for( i = 0; i < 4; i++ ) {
-        if( flags & ( 1 << i ) ) {
+    for( i = 0, mask = 1; i < 4; i++, mask <<= 1 ) {
+        if( flags & mask ) {
             continue;
         }
         bits = BoxOnPlaneSide( node->mins, node->maxs,
-                &glr.frustumPlanes[i] );
+            &glr.frustumPlanes[i] );
         if( bits == BOX_BEHIND ) {
             return qfalse;
         }
         if( bits == BOX_INFRONT ) {
-            flags |= 1 << i;
+            flags |= mask;
         }
     }
 
@@ -496,68 +495,68 @@ static void GL_WorldNode_r( bspNode_t *node, int clipflags ) {
     vec_t dot;
 	uint32 type;
 	
-    if( node->visframe != glr.visframe ) {
-        return;
-    }
-        
-    if( gl_cull_nodes->integer && clipflags != NODE_UNCLIPPED &&
+    while( node->visframe == glr.visframe ) {
+        if( gl_cull_nodes->integer && clipflags != NODE_UNCLIPPED &&
             GL_ClipNodeToFrustum( node, &clipflags ) == qfalse )
-    {
-        c.nodesCulled++;
-        return;
-    }
-
-    if( !node->plane ) {
-        /* found a leaf */
-        leaf = ( bspLeaf_t * )node;
-		if( leaf->contents == CONTENTS_SOLID ) {
-			return;
-		}
-		area = leaf->area;
-		if( !glr.fd.areabits || Q_IsBitSet( glr.fd.areabits, area ) ) {
-			leafFace = leaf->firstLeafFace;
-			count = leaf->numLeafFaces;
-			while( count-- ) {
-				face = *leafFace++;
-				face->drawframe = glr.drawframe;
-			}
-		}
-        return;
-    }
-
-    plane = node->plane;
-	type = plane->type;
-	if( type < 3 ) {
-		dot = modelViewOrigin[type] - plane->dist;
-	} else {
-		dot = DotProduct( modelViewOrigin, plane->normal ) - plane->dist;
-	}
-
-    side = dot < 0;
-    
-    GL_WorldNode_r( node->children[side], clipflags );
-
-	face = node->firstFace;
-    count = node->numFaces;
-	while( count-- ) {
-        if( face->drawframe == glr.drawframe ) {
-            if( face->side == side ) {
-				if( face->texinfo->flags & (SURF_TRANS33|SURF_TRANS66) ) {
-					face->next = alphaFaces;
-					alphaFaces = face;
-				} else {
-					drawFaceFunc( face );
-				}
-                c.facesDrawn++;
-            } else {
-                c.facesCulled++;
-            }
+        {
+            c.nodesCulled++;
+            break;
         }
-        face++;
+
+        if( !node->plane ) {
+            /* found a leaf */
+            leaf = ( bspLeaf_t * )node;
+            if( leaf->contents == CONTENTS_SOLID ) {
+                break;
+            }
+            area = leaf->area;
+            if( !glr.fd.areabits || Q_IsBitSet( glr.fd.areabits, area ) ) {
+                leafFace = leaf->firstLeafFace;
+                count = leaf->numLeafFaces;
+                while( count-- ) {
+                    face = *leafFace++;
+                    face->drawframe = glr.drawframe;
+                }
+            }
+            break;
+        }
+
+        plane = node->plane;
+        type = plane->type;
+        if( type < 3 ) {
+            dot = modelViewOrigin[type] - plane->dist;
+        } else {
+            dot = DotProduct( modelViewOrigin, plane->normal ) - plane->dist;
+        }
+
+        side = dot < 0;
+        
+        GL_WorldNode_r( node->children[side], clipflags );
+
+        face = node->firstFace;
+        count = node->numFaces;
+        while( count-- ) {
+            if( face->drawframe == glr.drawframe ) {
+                if( face->side == side ) {
+                    if( face->texinfo->flags & (SURF_TRANS33|SURF_TRANS66) ) {
+                        face->next = alphaFaces;
+                        alphaFaces = face;
+                    } else {
+                        drawFaceFunc( face );
+                    }
+                    c.facesDrawn++;
+                } else {
+                    c.facesCulled++;
+                }
+            }
+            face++;
+        }
+
+        c.nodesDrawn++;
+
+        node = node->children[ side ^ 1 ];
     }
 
-    GL_WorldNode_r( node->children[ side ^ 1 ], clipflags );
-    c.nodesDrawn++;
 }
 
 void GL_DrawWorld( void ) {	

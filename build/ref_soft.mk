@@ -41,11 +41,11 @@ ASMFILES=r_aclipa.s \
 		 r_surf8.s  \
 		 r_varsa.s  \
 		 d_polysa.s \
-		 fpu.s
+		 fpu.s \
+		 math.s
 endif
 
 ifdef MINGW
-#OBJFILES+=ref_soft.def
 RESFILES=ref_soft.rc
 else
 LDFLAGS+=-fPIC

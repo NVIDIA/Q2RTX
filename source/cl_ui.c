@@ -26,8 +26,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 uiAPI_t	ui;
 
-static void *ui_library;
-
 #ifdef UI_HARD_LINKED
 
 void CL_ShutdownUI( void ) {
@@ -55,6 +53,8 @@ void CL_InitUI( void ) {
 }
 
 #else
+
+static void *ui_library;
 
 /*
 ==============

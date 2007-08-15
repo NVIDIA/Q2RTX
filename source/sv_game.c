@@ -25,6 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //void PF_error (const char *fmt, ...) q_noreturn;
 
 game_export_t	*ge;
+int             gameFeatures;
 
 
 /*
@@ -729,6 +730,7 @@ void SV_ShutdownGameProgs (void)
 		return;
 	ge->Shutdown ();
 	ge = NULL;
+    gameFeatures = 0;
     if( game_library ) {
     	Sys_FreeLibrary( game_library );
 	    game_library = NULL;
@@ -775,6 +777,7 @@ void SV_InitGameProgs ( void )
 	game_import_t	import;
 	char	path[MAX_OSPATH];
     game_export_t	*(*entry)( game_import_t * ) = NULL;
+    int              (*ggf)( int );
 	/*moduleEntry_t moduleEntry;
 	moduleInfo_t info;
 	moduleCapability_t caps;
@@ -891,32 +894,11 @@ void SV_InitGameProgs ( void )
             ge->apiversion, GAME_API_VERSION);
     }
 
-#if 0
-    // get extended API
-    moduleEntry = Sys_GetProcAddress( game_library, "moduleEntry" );
-    if( moduleEntry ) {
-        moduleEntry( MQ_GETINFO, &info );
-        if( info.api_version != MODULES_APIVERSION ) {
-            Com_DPrintf( "Game DLL has incompatible extended "
-                "api_version: %d, should be %d\n",
-                info.api_version, MODULES_APIVERSION );
-        } else {
-            caps = ( moduleCapability_t )moduleEntry( MQ_GETCAPS, NULL );
-            if( !( caps & MCP_GAME ) ) {
-                Com_DPrintf( "Game DLL doesn't have GAME capability\n" );
-            } else {
-                callback = ( APISetupCallback_t )moduleEntry( MQ_SETUPAPI,
-                    ( void * )SV_GameSetupCallback );
-                if( !callback ) {
-                    Com_DPrintf( "Game DLL returned NULL callback\n" );
-                } else {
-                    callback( API_GAME, &game_api );
-                    Com_DPrintf( "Extended game API initialized\n" );
-                }
-            }
-        }
+    // get features
+    ggf = Sys_GetProcAddress( game_library, "GetGameFeatures" );
+    if( ggf ) {
+//        gameFeatures = ggf( GAME_FEATURE_CLIENTNUM );
     }
-#endif
 
     // initialize
 	ge->Init ();

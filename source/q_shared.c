@@ -461,20 +461,11 @@ BoxOnPlaneSide
 Returns 1, 2, or 1 + 2
 ==================
 */
+#ifndef USE_ASM
 int BoxOnPlaneSide( vec3_t emins, vec3_t emaxs, cplane_t *p )
 {
 	float	dist1, dist2;
 	int		sides;
-
-// fast axial cases
-	if (p->type < 3)
-	{
-		if (p->dist <= emins[p->type])
-			return 1;
-		if (p->dist >= emaxs[p->type])
-			return 2;
-		return 3;
-	}
 	
 // general case
 	switch (p->signbits)
@@ -524,6 +515,7 @@ dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
 
 	return sides;
 }
+#endif // USE_ASM
 
 void ClearBounds (vec3_t mins, vec3_t maxs)
 {

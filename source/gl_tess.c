@@ -165,7 +165,7 @@ static float r_turbsin[256] = {
     #include "warpsin.h"
 };
 
-static qboolean WouldOverflow( drawSurf_t *surf ) {
+static inline qboolean WouldOverflow( drawSurf_t *surf ) {
 	bspPoly_t *poly;
     int numVerts, numIndices;
     

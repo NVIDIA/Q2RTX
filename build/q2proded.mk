@@ -32,5 +32,9 @@ SRCFILES+=sys_unix.c
 LDFLAGS+=-ldl
 endif
 
+ifdef USE_ASM
+ASMFILES=math.s
+endif
+
 include $(SRCDIR)/build/target.mk
 

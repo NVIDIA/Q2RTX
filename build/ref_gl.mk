@@ -20,7 +20,6 @@ CFLAGS+=$(PNG_CFLAGS)
 endif
 
 ifdef MINGW
-#OBJFILES+=ref_gl.def
 RESFILES+=ref_gl.rc
 else
 CFLAGS+=-fPIC
@@ -41,6 +40,10 @@ SRCFILES=q_shared.c \
 	   gl_tess.c   \
 	   gl_sky.c   \
 	   qgl_api.c
+
+ifdef USE_ASM
+ASMFILES=math.s
+endif
 
 include $(SRCDIR)/build/target.mk
 

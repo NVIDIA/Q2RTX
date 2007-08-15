@@ -275,7 +275,6 @@ void R_ConcatRotations (float in1[3][3], float in2[3][3], float out[3][3]);
 void R_ConcatTransforms (float in1[3][4], float in2[3][4], float out[3][4]);
 
 void AngleVectors (vec3_t angles, vec3_t forward, vec3_t right, vec3_t up);
-int BoxOnPlaneSide (vec3_t emins, vec3_t emaxs, struct cplane_s *plane);
 
 static inline float LerpAngle( float a2, float a1, float frac ) {
 	if (a1 - a2 > 180)
@@ -719,6 +718,21 @@ void SetPlaneSignbits( cplane_t *plane );
 #define BOX_INTERSECTS  3
 
 int BoxOnPlaneSide( vec3_t emins, vec3_t emaxs, cplane_t *p );
+
+static inline int BoxOnPlaneSideFast( vec3_t emins, vec3_t emaxs, cplane_t *p ) {
+    // fast axial cases
+	if( p->type < 3 ) {
+		if( p->dist <= emins[p->type] )
+			return 1;
+		if( p->dist >= emaxs[p->type] )
+			return 2;
+		return 3;
+	}
+
+    // slow generic case
+    return BoxOnPlaneSide( emins, emaxs, p );
+}
+
 
 typedef struct csurface_s
 {

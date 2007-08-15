@@ -729,7 +729,7 @@ mnode_t *R_FindTopnode (vec3_t mins, vec3_t maxs)
 		}
 		
 		splitplane = node->plane;
-		sides = BoxOnPlaneSide(mins, maxs, (cplane_t *)splitplane);
+		sides = BoxOnPlaneSideFast(mins, maxs, (cplane_t *)splitplane);
 		
 		if (sides == 3)
 			return node;	// this is the splitter

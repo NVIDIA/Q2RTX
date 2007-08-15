@@ -1,3 +1,4 @@
+#include "config.h"
 #include "q_shared.h"
 
 #ifdef _WIN32

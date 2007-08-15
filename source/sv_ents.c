@@ -444,12 +444,11 @@ void SV_BuildClientFrame( client_t *client ) {
 	svs.nextPlayerStates++;
 
     // grab the current clientNum
-#if 1
-	frame->clientNum = clent->client->clientNum;
-#else
-    // TODO: support from game DLL required
-	frame->clientNum = client->number;
-#endif
+    if( gameFeatures & GAME_FEATURE_CLIENTNUM ) {
+    	frame->clientNum = clent->client->clientNum;
+    } else {
+	    frame->clientNum = client->number;
+    }
 
 	clientpvs = CM_FatPVS( &sv.cm, org );
 	clientphs = CM_ClusterPHS( &sv.cm, clientcluster );
@@ -535,14 +534,13 @@ void SV_BuildClientFrame( client_t *client ) {
 			}
 		}
 
-        // TODO: support from game DLL required
-#if 1
+        // XXX: hide this enitity from renderer
 		if( client->protocol != PROTOCOL_VERSION_Q2PRO &&
+            ( gameFeatures & GAME_FEATURE_CLIENTNUM ) &&
 			e == frame->clientNum + 1 )
 		{
 			state->modelindex = 0;
 		}
-#endif
 
 		// don't mark players missiles as solid
 		if( ent->owner == client->edict )

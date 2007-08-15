@@ -9,82 +9,11 @@
 
 	.data
 
-#if 0
 	.align	4
 Ljmptab:	.long	Lcase0, Lcase1, Lcase2, Lcase3
 			.long	Lcase4, Lcase5, Lcase6, Lcase7
-#endif
 
 	.text
-
-// TODO: rounding needed?
-// stack parameter offset
-#define	val	4
-
-.globl C(Invert24To16)
-C(Invert24To16):
-
-	movl	val(%esp),%ecx
-	movl	$0x100,%edx		// 0x10000000000 as dividend
-	cmpl	%edx,%ecx
-	jle		LOutOfRange
-
-	subl	%eax,%eax
-	divl	%ecx
-
-	ret
-
-LOutOfRange:
-	movl	$0xFFFFFFFF,%eax
-	ret
-
-#define	in	4
-#define out	8
-
-	.align 2
-.globl C(TransformVector)
-C(TransformVector):
-	movl	in(%esp),%eax
-	movl	out(%esp),%edx
-
-	flds	(%eax)		// in[0]
-	fmuls	C(vright)		// in[0]*vright[0]
-	flds	(%eax)		// in[0] | in[0]*vright[0]
-	fmuls	C(vup)		// in[0]*vup[0] | in[0]*vright[0]
-	flds	(%eax)		// in[0] | in[0]*vup[0] | in[0]*vright[0]
-	fmuls	C(vpn)		// in[0]*vpn[0] | in[0]*vup[0] | in[0]*vright[0]
-
-	flds	4(%eax)		// in[1] | ...
-	fmuls	C(vright)+4	// in[1]*vright[1] | ...
-	flds	4(%eax)		// in[1] | in[1]*vright[1] | ...
-	fmuls	C(vup)+4		// in[1]*vup[1] | in[1]*vright[1] | ...
-	flds	4(%eax)		// in[1] | in[1]*vup[1] | in[1]*vright[1] | ...
-	fmuls	C(vpn)+4		// in[1]*vpn[1] | in[1]*vup[1] | in[1]*vright[1] | ...
-	fxch	%st(2)		// in[1]*vright[1] | in[1]*vup[1] | in[1]*vpn[1] | ...
-
-	faddp	%st(0),%st(5)	// in[1]*vup[1] | in[1]*vpn[1] | ...
-	faddp	%st(0),%st(3)	// in[1]*vpn[1] | ...
-	faddp	%st(0),%st(1)	// vpn_accum | vup_accum | vright_accum
-
-	flds	8(%eax)		// in[2] | ...
-	fmuls	C(vright)+8	// in[2]*vright[2] | ...
-	flds	8(%eax)		// in[2] | in[2]*vright[2] | ...
-	fmuls	C(vup)+8		// in[2]*vup[2] | in[2]*vright[2] | ...
-	flds	8(%eax)		// in[2] | in[2]*vup[2] | in[2]*vright[2] | ...
-	fmuls	C(vpn)+8		// in[2]*vpn[2] | in[2]*vup[2] | in[2]*vright[2] | ...
-	fxch	%st(2)		// in[2]*vright[2] | in[2]*vup[2] | in[2]*vpn[2] | ...
-
-	faddp	%st(0),%st(5)	// in[2]*vup[2] | in[2]*vpn[2] | ...
-	faddp	%st(0),%st(3)	// in[2]*vpn[2] | ...
-	faddp	%st(0),%st(1)	// vpn_accum | vup_accum | vright_accum
-
-	fstps	8(%edx)		// out[2]
-	fstps	4(%edx)		// out[1]
-	fstps	(%edx)		// out[0]
-
-	ret
-
-#if 0 // in C
 
 #define EMINS	4+4
 #define EMAXS	4+8
@@ -104,7 +33,7 @@ C(BoxOnPlaneSide):
 	jge		Lerror
 	flds	pl_normal(%edx)		// p->normal[0]
 	fld		%st(0)				// p->normal[0] | p->normal[0]
-	jmp		Ljmptab(,%eax,4)
+	jmp		*Ljmptab(,%eax,4)
 
 
 //dist1= p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
@@ -395,8 +324,7 @@ LSetSides:
 
 
 Lerror:
-	call	C(BOPS_Error)
-
-#endif
+    xorl    %eax,%eax
+    ret
 
 #endif	// USE_ASM

@@ -38,6 +38,10 @@ SOLID_BBOX,			// touch on edge
 SOLID_BSP			// bsp clip, touch on edge
 } solid_t;
 
+// extended features
+
+#define GAME_FEATURE_CLIENTNUM   1
+
 //===============================================================
 
 // link_t is only used for entity area links now
@@ -233,11 +237,4 @@ typedef struct
 	int			num_edicts;		// current number, <= max_edicts
 	int			max_edicts;
 } game_export_t;
-
-#define CLIENT_EXT_NUMBER   1
-
-// extended API
-typedef struct gameAPI_s {
-    int     client_ext;
-} gameAPI_t;
 

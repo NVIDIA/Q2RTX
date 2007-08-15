@@ -1072,7 +1072,7 @@ static void CM_BoxLeafs_r( cnode_t *node ) {
 			return;
 		}
 	
-		s = BoxOnPlaneSide( leaf_mins, leaf_maxs, plane );
+		s = BoxOnPlaneSideFast( leaf_mins, leaf_maxs, plane );
 		if( s == 1 ) {
 			node = node->children[0];
 		} else if( s == 2 ) {

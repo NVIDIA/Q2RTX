@@ -498,6 +498,7 @@ qboolean SV_EdictPV( edict_t *ent, byte *mask );
 // sv_game.c
 //
 extern	game_export_t	*ge;
+extern  int             gameFeatures;
 
 void SV_InitGameProgs( void );
 void SV_ShutdownGameProgs (void);
