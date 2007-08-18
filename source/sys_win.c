@@ -1306,16 +1306,7 @@ PRIVATE DWORD Sys_ExceptionHandler( DWORD exceptionCode, LPEXCEPTION_POINTERS ex
 	OSVERSIONINFO	vinfo;
 
 #ifndef DEDICATED_ONLY
-#ifdef REF_HARD_LINKED
-#ifdef SOFTWARE_RENDERER
-	SWimp_FatalShutdown();
-#else
-	GLimp_FatalShutdown();
-#endif
-#else
-	GLimp_FatalShutdown();
-	SWimp_FatalShutdown();
-#endif
+	Win_Shutdown();
 #endif
 
 	ret = MessageBox( NULL, APPLICATION " has encountered an unhandled "
