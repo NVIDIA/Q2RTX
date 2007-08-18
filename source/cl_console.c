@@ -370,8 +370,7 @@ void Con_Linefeed( void ) {
 		con.display++;
 	con.current++;
 
-	memset( con.text[con.current & CON_TOTALLINES_MASK], 0,
-            sizeof( con.text[0] ) );
+	memset( con.text[con.current & CON_TOTALLINES_MASK], 0, sizeof( con.text[0] ) );
 
     if( con_scroll->integer & 2 ) {
     	con.display = con.current;
@@ -388,6 +387,7 @@ If no console is visible, the text will appear at the top of the game window
 ================
 */
 void Con_Print( const char *txt ) {
+    int prevline;
 	int color;
 	static qboolean	cr;
 	char *p;
@@ -395,6 +395,8 @@ void Con_Print( const char *txt ) {
 
 	if( !con.initialized )
 		return;
+
+    prevline = con.current;
 
 	color = 0;
 	while( *txt ) {
@@ -459,11 +461,12 @@ void Con_Print( const char *txt ) {
 		
 	}
 
-	// mark time for transparent overlay
-	// mark every time something is printed,
-	// so long lines don't disappear to early
-	if( con.current >= 0 && !con.skipNotify )
-		con.times[con.current & CON_TIMES_MASK] = cls.realtime;
+	// update time for transparent overlay
+	if( !con.skipNotify ) {
+        for( l = prevline + 1; l <= con.current; l++ ) {
+    		con.times[l & CON_TIMES_MASK] = cls.realtime;
+        }
+    }
 
 }
 

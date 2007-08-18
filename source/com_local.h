@@ -780,12 +780,14 @@ Common between server and client so prediction matches
 typedef struct {
 	qboolean	airaccelerate;
 	qboolean	strafeHack;
+    qboolean    flyfix;
 	int			qwmod;
 	float		speedMultiplier;
 	float		upspeed;
 	float		maxspeed;
 	float		friction;
 	float		waterfriction;
+    float       flyfriction;
 #ifdef PMOVE_HACK
 	vec3_t		origin;
 	vec3_t		velocity;

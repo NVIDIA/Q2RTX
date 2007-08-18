@@ -723,6 +723,15 @@ static void SVC_DirectConnect( void ) {
     newcl->zlib = zlib;
 	newcl->edict = EDICT_NUM( number + 1 );
 
+    // default pmove parameters
+    newcl->pmp.maxspeed = 300;
+    newcl->pmp.upspeed = 350;
+    newcl->pmp.friction = 6;
+    newcl->pmp.flyfriction = 9;
+    newcl->pmp.waterfriction = 1;
+    newcl->pmp.airaccelerate = sv_airaccelerate->integer ? qtrue : qfalse;
+
+    // r1q2 extensions
 	if( protocol == PROTOCOL_VERSION_R1Q2 ||
 		protocol == PROTOCOL_VERSION_Q2PRO )
 	{
@@ -732,22 +741,20 @@ static void SVC_DirectConnect( void ) {
 		newcl->pmp.speedMultiplier = 1;
 		newcl->pmp.strafeHack = qfalse;
 	}
-	if( protocol == PROTOCOL_VERSION_Q2PRO && sv_qwmod->integer ) {
-		newcl->pmp.qwmod = sv_qwmod->integer;
-		newcl->pmp.maxspeed = 320;
-		newcl->pmp.upspeed = ( sv_qwmod->integer > 1 ) ? 310 : 350;
-		newcl->pmp.friction = 4;
-		newcl->pmp.waterfriction = 4;
-		newcl->pmp.airaccelerate = qtrue;
-	} else {
-		newcl->pmp.qwmod = 0;
-		newcl->pmp.maxspeed = 300;
-		newcl->pmp.upspeed = 350;
-		newcl->pmp.friction = 6;
-		newcl->pmp.waterfriction = 1;
-		newcl->pmp.airaccelerate = sv_airaccelerate->integer ? qtrue : qfalse;
+
+    // q2pro extensions
+	if( protocol == PROTOCOL_VERSION_Q2PRO ) {
+        if( sv_qwmod->integer ) {
+            newcl->pmp.qwmod = sv_qwmod->integer;
+            newcl->pmp.maxspeed = 320;
+            newcl->pmp.upspeed = ( sv_qwmod->integer > 1 ) ? 310 : 350;
+            newcl->pmp.friction = 4;
+            newcl->pmp.waterfriction = 4;
+            newcl->pmp.airaccelerate = qtrue;
+        }
+        newcl->pmp.flyfix = qtrue;
+        newcl->pmp.flyfriction = 4;
 	}
-	//newcl->pmp.highprec=qtrue;
 
 	// get the game a chance to reject this connection or modify the userinfo
 	sv_client = newcl;

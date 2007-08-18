@@ -885,6 +885,7 @@ static void CL_ParseServerData( void ) {
 	cl.pmp.upspeed = 350;
 	cl.pmp.friction = 6;
 	cl.pmp.waterfriction = 1;
+    cl.pmp.flyfriction = 9;
 	cl.pmp.airaccelerate = 0;	
 	cl.gametype = GT_DEATHMATCH;
 	//cl.pmp.highprec=qtrue;
@@ -941,6 +942,8 @@ static void CL_ParseServerData( void ) {
 		cl.pmp.strafeHack = MSG_ReadByte();
 		cl.pmp.qwmod = MSG_ReadByte(); //atu QWMod
 		cl.pmp.speedMultiplier = 2;		
+        cl.pmp.flyfix = qtrue;
+        cl.pmp.flyfriction = 4;
 
 		if( cl.pmp.strafeHack ) {
 			Com_DPrintf( "Q2PRO strafeHack enabled\n" );

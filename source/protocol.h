@@ -31,7 +31,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define PROTOCOL_VERSION_MVD		37 // not used for UDP connections
 
 #define PROTOCOL_VERSION_R1Q2_MINOR		1903	// r1q2-b6377
-#define PROTOCOL_VERSION_Q2PRO_MINOR	1009	// q2pro r158
+#define PROTOCOL_VERSION_Q2PRO_MINOR	1010	// q2pro r158
 #define PROTOCOL_VERSION_MVD_MINOR		2007	// q2pro r158
 
 //=========================================
