@@ -1401,7 +1401,11 @@ void Qcommon_Init( char *commandLine ) {
 	com_timedemo = Cvar_Get( "timedemo", "0", CVAR_CHEAT );
 	com_sleep = Cvar_Get( "com_sleep", "1", 0 );
 	com_date_format = Cvar_Get( "com_date_format", "%Y-%m-%d", 0 );
-	com_time_format = Cvar_Get( "com_time_format", "%H:%M:%S", 0 );
+#ifdef _WIN32
+	com_time_format = Cvar_Get( "com_time_format", "%H.%M", 0 );
+#else
+	com_time_format = Cvar_Get( "com_time_format", "%H:%M", 0 );
+#endif
 	com_debug_break = Cvar_Get( "com_debug_break", "0", 0 );
 	Cvar_Get( "version", version, CVAR_SERVERINFO|CVAR_ROM );
 

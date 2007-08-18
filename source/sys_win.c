@@ -889,6 +889,9 @@ void *Sys_LoadLibrary( const char *path, const char *sym, void **handle ) {
 	return entry;
 }
 
+void *Sys_GetProcAddress( void *handle, const char *sym ) {
+	return GetProcAddress( handle, sym );
+}
 //=======================================================================
 
 static qboolean Sys_FindInfoToExtraInfo( WIN32_FIND_DATAA *findInfo, fsFileInfo_t *info ) {

@@ -71,8 +71,6 @@ INPUT LIBRARY
 static cvar_t	*in_driver;
 static cvar_t	*in_enable;
 
-#define DEFAULT_INPUT_DRIVER	""
-
 typedef struct inputDriver_s {
 	char *name;
 	void	(*FillAPI)( inputAPI_t *api );
@@ -175,8 +173,7 @@ CL_InitInput
 void CL_InitInput( void ) {
 	inputDriver_t *driver;
 	int i;
-
-	in_driver = Cvar_Get( "in_driver", "", CVAR_LATCHED );
+	in_driver = Cvar_Get( "in_driver", DEFAULT_INPUT_DRIVER, CVAR_LATCHED );
 	in_driver->subsystem = CVAR_SYSTEM_INPUT;
 	in_enable = Cvar_Get( "in_enable", "1", CVAR_LATCHED );
 	in_enable->subsystem = CVAR_SYSTEM_INPUT;
