@@ -34,6 +34,7 @@ executables="q2pro q2proded"
 hardlink="no"
 asm="no"
 gldriver="libGL.so"
+indriver=""
 homedir=".q2pro"
 defcfg="/etc/default/q2pro"
 asmflags=""
@@ -288,6 +289,8 @@ echo "#define PATH_SEP_CHAR '$pathsep'" >> $config_h
 echo "#define PATH_SEP_STRING \"$pathsep\"" >> $config_h
 
 echo "#define DEFAULT_OPENGL_DRIVER \"$gldriver\"" >> $config_h
+
+echo "#define DEFAULT_INPUT_DRIVER \"$indriver\"" >> $config_h
 
 if [ "$zlib" = "yes" ]; then
     echo "USE_ZLIB=yes" >> $config_mk
