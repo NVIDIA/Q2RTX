@@ -115,6 +115,9 @@ typedef struct videoMenu_s {
 	menuFrameWork_t	menu;
 	int needRestart;
 
+    int         nummodes;
+    char        *modes[16+1];
+
 	menuSpinControl_t		driver;
 	menuSlider_t	screensize;
 	menuSlider_t	gamma;
@@ -158,7 +161,7 @@ static void VideoMenu_ApplyChangesSoft( void ) {
 
 	cvar.Set( "vid_ref", "soft" );
 	cvar.SetValue( "vid_gamma", gamma );
-	cvar.SetInteger( "vid_fullscreen", m_video.fullscreen.curvalue );
+	//cvar.SetInteger( "vid_fullscreen", m_video.fullscreen.curvalue );
 	cvar.SetInteger( "sw_stipplealpha", m_video.stipple.curvalue );
 	cvar.SetInteger( "viewsize", m_video.screensize.curvalue * 10 );
 	cvar.SetInteger( "sw_drawsird", m_video.sird.curvalue );
@@ -176,7 +179,7 @@ static void VideoMenu_ApplyChangesGL( void ) {
 	cvar.Set( "vid_ref", "gl" );
 	cvar.SetValue( "vid_gamma", gamma );
 	cvar.SetInteger( "gl_picmip", 3 - m_video.picmip.curvalue );
-	cvar.SetInteger( "vid_fullscreen", m_video.fullscreen.curvalue );
+	//cvar.SetInteger( "vid_fullscreen", m_video.fullscreen.curvalue );
 #ifdef _WIN32
 	cvar.SetInteger( "gl_swapinterval", m_video.vsync.curvalue );
 #endif
@@ -247,6 +250,7 @@ static void VideoMenu_InitGL( void ) {
 
 static int VideoMenu_Callback( int id, int msg, int param ) {
     float gamma;
+    int i;
 
 	switch( msg ) {
 	case QM_ACTIVATE:
@@ -256,6 +260,7 @@ static int VideoMenu_Callback( int id, int msg, int param ) {
 			return QMS_OUT;
 		case ID_APPLY:
         apply:
+	        cmd.ExecuteText( EXEC_NOW, va( "set vid_fullscreen %d\n", m_video.fullscreen.curvalue ) );
 			if( m_video.driver.curvalue == REF_SOFT ) {
 				VideoMenu_ApplyChangesSoft();
 			} else {
@@ -282,7 +287,7 @@ static int VideoMenu_Callback( int id, int msg, int param ) {
 	case QM_CHANGE:
 		switch( id ) {
 		case ID_REF:
-			m_video.needRestart |= 2;
+			//m_video.needRestart |= 2;
 			if( m_video.driver.curvalue == REF_SOFT ) {
 				VideoMenu_InitSoft();
 			} else if( param == REF_SOFT ) {
@@ -290,8 +295,6 @@ static int VideoMenu_Callback( int id, int msg, int param ) {
 			}
 			break;
 		case ID_GAMMATYPE:
-		case ID_FULLSCREEN:
-		case ID_MODE:
 			m_video.needRestart |= 2;
 			break;
 		case ID_OVERRIDE:
@@ -327,6 +330,13 @@ static int VideoMenu_Callback( int id, int msg, int param ) {
 			VideoMenu_ResetDefaults();
         }
         break;
+    case QM_DESTROY:
+        for( i = 1; i < m_video.nummodes; i++ ) {
+            com.Free( m_video.modes[i] );
+            m_video.modes[i] = NULL;
+        }
+        m_video.nummodes = 0;
+        break;
 	default:
 		break;
 	}
@@ -337,13 +347,26 @@ static int VideoMenu_Callback( int id, int msg, int param ) {
 
 static void VideoMenu_Init( void ) {
 	int y, yy, yyy;
-	char *s;
+	char *s, *p;
 	int i;
 	float f;
 
 	memset( &m_video, 0, sizeof( m_video ) );
 
 	m_video.menu.callback = VideoMenu_Callback;
+
+    m_video.modes[0] = "windowed";
+    m_video.nummodes++;
+
+    s = cvar.VariableString( "vid_modelist" );
+    do {
+        p = COM_Parse( ( const char ** )&s );
+        if( *p ) {
+            m_video.modes[m_video.nummodes++] = UI_CopyString( p );
+        }
+    } while( s && m_video.nummodes < 16 );
+
+    m_video.modes[m_video.nummodes] = NULL;
 
 	y = 64;
 
@@ -380,9 +403,11 @@ static void VideoMenu_Init( void ) {
 	m_video.fullscreen.generic.id = ID_FULLSCREEN;
 	m_video.fullscreen.generic.x = uis.glconfig.vidWidth / 2;
 	m_video.fullscreen.generic.y = y;
-	m_video.fullscreen.generic.name = "fullscreen";
-	m_video.fullscreen.itemnames = yesnoNames;
-	m_video.fullscreen.curvalue = cvar.VariableInteger( "vid_fullscreen" );
+	m_video.fullscreen.generic.name = "video mode";
+	m_video.fullscreen.itemnames = ( const char ** )m_video.modes;
+    i = cvar.VariableInteger( "vid_fullscreen" );
+    clamp( i, 0, m_video.nummodes );
+	m_video.fullscreen.curvalue = i;
 	y += MENU_SPACING;
 
 	yy = y + MENU_SPACING * 2;
