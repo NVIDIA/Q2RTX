@@ -1207,6 +1207,14 @@ static void CL_ParseStartSoundPacket( void ) {
 		if( !( flags & SND_ENT ) ) {
 			Com_Error( ERR_DROP, "%s: neither SND_ENT nor SND_POS set", __func__ );
 		}
+        if( cl_entities[ent].serverframe != cl.frame.number ) {
+            if( cl_entities[ent].serverframe ) { 
+                Com_DPrintf( "BUG: sound on entity %d last seen %d frames ago\n",
+                    ent, cl.frame.number - cl_entities[ent].serverframe );
+            } else {
+                Com_DPrintf( "BUG: sound on entity %d we have never seen\n", ent );
+            }
+        }
 		// use entity number
 		pos = NULL;
 	}

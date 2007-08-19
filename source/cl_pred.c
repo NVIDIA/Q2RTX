@@ -315,9 +315,5 @@ finish:
 	VectorScale( pm.s.origin, 0.125f, cl.predicted_origin );
 	VectorScale( pm.s.velocity, 0.125f, cl.predicted_velocity );
 	VectorCopy( pm.viewangles, cl.predicted_angles );
-	if( cl_showmiss->integer ) {
-        Com_Printf("%f %f %f\n",cl.predicted_origin[0],
-            cl.predicted_origin[1],cl.predicted_origin[2]);
-    }
 }
 
