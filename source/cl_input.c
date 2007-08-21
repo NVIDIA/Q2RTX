@@ -788,12 +788,6 @@ void CL_FinalizeCmd( void ) {
 	// clear pending cmd
 	memset( &cl.cmd, 0, sizeof( cl.cmd ) );
 
-	if( cl.cmd.buttons && cl.cinematictime > 0 && !cl.attractLoop
-		&& cls.realtime - cl.cinematictime > 1000 )
-	{	// skip the rest of the cinematic
-		SCR_FinishCinematic ();
-	}
-
 	old_eventTime = com_eventTime;
 }
 

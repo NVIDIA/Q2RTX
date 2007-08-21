@@ -160,19 +160,9 @@ typedef struct client_state_s {
 	int			inventory[MAX_ITEMS];
 
 	//
-	// non-gameserver infornamtion
-	// FIXME: move this cinematic stuff into the cin_t structure
-	fileHandle_t cinematic_file;
-	int			cinematictime;		// cls.realtime for first cinematic frame
-	int			cinematicframe;
-	byte   		cinematicpalette[768];
-	qboolean	cinematicpalette_active;
-
-	//
 	// server state information
 	//
 	gametype_t		gametype;
-	attractLoop_t	attractLoop;		// running the attract loop, any key will menu
 	int			servercount;	// server identification for prespawns
 	char		gamedir[MAX_QPATH];
 	int			clientNum;			// never changed during gameplay, set by serverdata packet
@@ -202,9 +192,6 @@ typedef struct client_state_s {
 
 	char	weaponModels[MAX_CLIENTWEAPONMODELS][MAX_QPATH];
 	int		numWeaponModels;
-
-	clientinfo_t	*crosshairPlayer;
-	int				crosshairTime;
 } client_state_t;
 
 extern	client_state_t	cl;
@@ -296,9 +283,6 @@ extern client_static_t	cls;
 //
 // cvars
 //
-extern	cvar_t	*cl_stereo_separation;
-extern	cvar_t	*cl_stereo;
-
 extern	cvar_t	*cl_gun;
 extern	cvar_t	*cl_add_blend;
 extern	cvar_t	*cl_add_lights;
@@ -316,11 +300,25 @@ extern	cvar_t	*cl_showclamp;
 
 extern	cvar_t	*cl_vwep;
 
+extern cvar_t   *cl_railtrail_type;
+extern cvar_t   *cl_railtrail_time;
+extern cvar_t   *cl_railtrail_alpha;
+extern cvar_t   *cl_railcore_color;
+extern cvar_t   *cl_railcore_width;
+extern cvar_t   *cl_railspiral_color;
+extern cvar_t   *cl_railspiral_radius;
+
 extern cvar_t	*cl_disable_particles;
 extern cvar_t	*cl_disable_explosions;
+
 extern cvar_t	*cl_chat_notify;
-extern cvar_t	*cl_chat_beep;
-extern cvar_t	*cl_chat_clear;
+extern cvar_t	*cl_chat_sound;
+extern cvar_t	*cl_chat_filter;
+
+extern cvar_t	*cl_disconnectcmd;
+extern cvar_t	*cl_changemapcmd;
+extern cvar_t	*cl_beginmapcmd;
+
 extern cvar_t	*cl_gibs;
 
 extern cvar_t	*cl_demo_local_fov;

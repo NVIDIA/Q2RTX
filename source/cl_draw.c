@@ -32,7 +32,6 @@ cvar_t		*scr_showfollowing;
 cvar_t		*scr_lag_placement;
 cvar_t		*scr_lag_type;
 cvar_t		*scr_lag_background;
-cvar_t		*scr_crosshair_names;
 cvar_t		*scr_alpha;
 
 #define SCR_DrawString( x, y, flags, string ) \
@@ -473,70 +472,6 @@ CROSSHAIR
 
 /*
 =================
-SCR_ScanForCrosshairEntity
-=================
-*/
-static void SCR_ScanForCrosshairEntity( void ) {
-	trace_t		trace, worldtrace;
-	vec3_t		end;
-	entity_state_t	*ent;
-	int			i, x, zd, zu;
-	cnode_t		*headnode;
-	vec3_t		bmins, bmaxs;
-	vec3_t forward, light;
-
-	AngleVectors( cl.refdef.viewangles, forward, NULL, NULL );
-	VectorMA( cl.refdef.vieworg, 8192, forward, end );
-
-	CM_BoxTrace( &worldtrace, cl.refdef.vieworg, end,
-		vec3_origin, vec3_origin, cl.cm.cache->nodes, MASK_SOLID );
-
-	for( i = 0; i < cl.numSolidEntities; i++ ) {
-		ent = cl.solidEntities[i];
-
-		if( ent->solid == 31 ) {
-			continue;
-		}
-
-		if( ent->modelindex != 255 ) {
-			continue; // not a player
-		}
-
-		if( ent->frame >= 173 || ent->frame <= 0 ) {
-			continue; // player is dead
-		}
-
-		x = 8*(ent->solid & 31);
-		zd = 8*((ent->solid>>5) & 31);
-		zu = 8*((ent->solid>>10) & 63) - 32;
-
-		bmins[0] = bmins[1] = -x;
-		bmaxs[0] = bmaxs[1] = x;
-		bmins[2] = -zd;
-		bmaxs[2] = zu;
-
-		headnode = CM_HeadnodeForBox( bmins, bmaxs );
-
-		CM_TransformedBoxTrace( &trace, cl.refdef.vieworg, end,
-			vec3_origin, vec3_origin, headnode, MASK_PLAYERSOLID,
-				ent->origin, vec3_origin );
-
-		if( trace.allsolid || trace.startsolid ||
-                trace.fraction < worldtrace.fraction )
-        {
-            /* TODO: find nearest entity */
-			ref.LightPoint( ent->origin, light );
-			if( VectorLengthSquared( light ) > 0.02f ) {
-				cl.crosshairPlayer = &cl.clientinfo[ent->skinnum & 0xFF];
-				cl.crosshairTime = cls.realtime;
-			}
-			break;
-		}
-	}
-}
-
-/*
-=================
 SCR_FadeAlpha
 =================
 */
@@ -567,47 +502,16 @@ SCR_DrawCrosshair
 =================
 */
 static void SCR_DrawCrosshair( void ) {
-	int x, y, w, h;
-	float alpha;
-	qhandle_t handle;
+	int x, y;
 
-	w = h = 0;
-	if( crosshair->integer ) {
-		if( crosshair->modified ) {
-			crosshair->modified = qfalse;
-			SCR_TouchPics();
-		}
+    if( crosshair->modified ) {
+        crosshair->modified = qfalse;
+        SCR_TouchPics();
+    }
 
-        handle = crosshair_pic;
-        w = crosshair_width;
-        h = crosshair_height;
-
-		x = ( scr_hudWidth - w ) / 2;
-		y = ( scr_hudHeight - h ) / 2;
-		ref.DrawPic( x, y, handle );
-	}
-
-	Cvar_ClampValue( scr_crosshair_names, 0, 5 );
-	if( scr_crosshair_names->value ) {
-		if( cl.numSolidEntities ) {
-			SCR_ScanForCrosshairEntity();
-		}
-		if( cl.crosshairPlayer ) {
-			alpha = SCR_FadeAlpha( cl.crosshairTime,
-				scr_crosshair_names->value * 1000, 300 );
-			if( alpha ) {
-				x = ( scr_hudWidth - strlen( cl.crosshairPlayer->name ) *
-					TINYCHAR_WIDTH ) / 2;
-				y = ( scr_hudHeight + h ) / 2;
-
-				ref.SetColor( DRAW_COLOR_ALPHA, ( byte * )&alpha );
-				ref.DrawString( x, y, 0, MAX_STRING_CHARS,
-					cl.crosshairPlayer->name, scr_font );
-			}
-		}
-	}
-
-    ref.SetColor( DRAW_COLOR_CLEAR, NULL );
+    x = ( scr_hudWidth - crosshair_width ) / 2;
+    y = ( scr_hudHeight - crosshair_height ) / 2;
+    ref.DrawPic( x, y, crosshair_pic );
 }
 
 /*
@@ -656,8 +560,6 @@ static void SCR_DrawDefaultHud( void ) {
     int x, y, flags;
     char *s;
     drawstring_t *ds;
-
-//	SCR_DrawCrosshair();
 
 	Cvar_ClampValue( scr_alpha, 0, 1 );
 	ref.SetColor( DRAW_COLOR_ALPHA, ( byte * )&scr_alpha->value );
@@ -776,7 +678,9 @@ void SCR_Draw2D( void ) {
 
 	ref.SetColor( DRAW_COLOR_CLEAR, NULL );
 
-	SCR_DrawCrosshair();
+    if( crosshair->integer ) {
+    	SCR_DrawCrosshair();
+    }
 
 	SCR_DrawDefaultHud();
 
@@ -810,7 +714,6 @@ void SCR_InitDraw( void ) {
 	scr_lag_placement = Cvar_Get( "scr_lag_placement", "48x48-1-1", 0 );
     scr_lag_type = Cvar_Get( "scr_lag_type", "0", 0 );
     scr_lag_background = Cvar_Get( "scr_lag_background", "0", 0 );
-	scr_crosshair_names = Cvar_Get( "scr_crosshair_names", "0", 0 );
 	scr_alpha = Cvar_Get( "scr_alpha", "1", 0 );
 
 	Cmd_AddMacro( "cl_ping", CL_Ping_m );

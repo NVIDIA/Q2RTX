@@ -548,15 +548,15 @@ static void MVD_GameShutdown( void ) {
     Z_LeakTest( TAG_MVD );
 }
 
-static void MVD_GameSpawnEntities( char *mapname, char *entstring, char *spawnpoint ) {
+static void MVD_GameSpawnEntities( const char *mapname, const char *entstring, const char *spawnpoint ) {
 }
-static void MVD_GameWriteGame( char *filename, qboolean autosave ) {
+static void MVD_GameWriteGame( const char *filename, qboolean autosave ) {
 }
-static void MVD_GameReadGame( char *filename ) {
+static void MVD_GameReadGame( const char *filename ) {
 }
-static void MVD_GameWriteLevel( char *filename ) {
+static void MVD_GameWriteLevel( const char *filename ) {
 }
-static void MVD_GameReadLevel( char *filename ) {
+static void MVD_GameReadLevel( const char *filename ) {
 }
 
 static qboolean MVD_GameClientConnect( edict_t *ent, char *userinfo ) {

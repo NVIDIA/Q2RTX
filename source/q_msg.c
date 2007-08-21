@@ -1595,12 +1595,6 @@ void MSG_ReadPos ( vec3_t pos)
 	pos[2] = MSG_ReadShort() * (1.0/8);
 }
 
-void MSG_ReadExactPos( vec3_t pos ) {
-	*( int * )&pos[0] = MSG_ReadLong();
-	*( int * )&pos[1] = MSG_ReadLong();
-	*( int * )&pos[2] = MSG_ReadLong();
-}
-
 float MSG_ReadAngle (void)
 {
 	return MSG_ReadChar() * (360.0/256);
@@ -2710,12 +2704,6 @@ void SZ_WritePos( sizebuf_t *sb, const vec3_t pos ) {
 	SZ_WriteShort( sb, ( int )( pos[0] * 8 ) );
 	SZ_WriteShort( sb, ( int )( pos[1] * 8 ) );
 	SZ_WriteShort( sb, ( int )( pos[2] * 8 ) );
-}
-
-void SZ_WriteExactPos( sizebuf_t *sb, const vec3_t pos ) {
-	SZ_WriteLong( sb, *( int * )&pos[0] );
-	SZ_WriteLong( sb, *( int * )&pos[1] );
-	SZ_WriteLong( sb, *( int * )&pos[2] );
 }
 
 void SZ_WriteString( sizebuf_t *sb, const char *string ) {

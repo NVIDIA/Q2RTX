@@ -75,6 +75,18 @@ protocol, allows some degree of bandwith savings since the server stops
 sending footstep events at all.
 
 
+Triggers
+----------
+
+- `set cl_beginmapcmd ""` (string)  
+Specifies command to be executed each time client enters a new map.
+
+- `set cl_changemapcmd ""` (string)  
+Specifies command to be executed each time client begins loading a new map.
+
+- `set cl_disconnectcmd ""` (string)  
+Specifies command to be executed each time client disconnects from the server.
+
 
 Effects
 ----------
@@ -96,16 +108,16 @@ Time, in seconds, for the rail trail to be visible.
 Initial transparency of the rail trail as it linearly fades to zero.
 
 - `set cl_railcore_color 0xFF0000` (integer)  
-Color of the core rail trail beam in the hexadecimal `0xRRGGBB` format.
+Color of the rail core beam in the hexadecimal `0xRRGGBB` format.
 
 - `set cl_railcore_width 3` (integer)  
-Width of the rail trail core beam.
+Width of the rail core beam.
 
-- `set cl_railrings_color 0x0000FF` (integer)  
-Color of the rail trail spiral in the hexadecimal `0xRRGGBB` format.
+- `set cl_railspiral_color 0x0000FF` (integer)  
+Color of the rail spiral in the hexadecimal `0xRRGGBB` format.
 
-- `set cl_railrings_width 3`  
-Radius of the rail trail spiral.
+- `set cl_railspiral_radius 3`  
+Radius of the rail spiral.
 
 - `set cl_disable_particles 0` (bitmask)  
 Disables rendering of particles for the following effects:
@@ -252,18 +264,6 @@ Reset the specified _cvar_ to it's default value.
 - `macrolist`
 Display the list of registered macros and their current values.
 
--   `trigger <command> <wildcard> [client|chat|print|cprint]`
-
-    Register _command_ to be executed on each message received on the
-    specified _channel_ matching the _wildcard_. The latter is macro
-    expanded before comparsion. Default channel is `print`.
-
-    Example: `trigger "record ${cl_mapname}-${com_date}-${com_time}" "$name entered the game"`.
-
-- `untrigger [-a] [-c <command>] [-m <match>]`
-Unregirster either all triggers, or just some trigger(s) by
-command and/or by match.
-
 - `serverstatus <address>`  
 Request the status string from the server at specified _address_,
 display server info and list of players sorted by frags.
@@ -276,8 +276,10 @@ does not reload refresh library. Use to manually change the game directory
 
 - `demo [/]<filename[.ext]>`  
 Play demo on client side. Unlike server side `demomap` command, does not
-load the game DLL, does not require file extension to be specified and
-supports automatic filename completion. Loads file from `demos/` unless
+load the game DLL, does not require file extension to be specified,
+supports automatic filename completion and does not error entire game out
+if nonexistant file is specified. In other words, this is the **recommended**
+way to watch demos using Q2PRO. Loads file from `demos/` unless
 slash is prepended to _filename_, otherwise loads from the root of VFS.
 
 - `draw <name> <x> <y>`  

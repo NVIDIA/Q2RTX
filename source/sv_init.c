@@ -24,96 +24,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 server_static_t	svs;				// persistant server info
 server_t		sv;					// local server
 
-/*
-================
-SV_FindIndex
-
-================
-*/
-static int SV_FindIndex( const char *name, int start, int max, qboolean create ) {
-	char *string;
-	int		i;
-	
-	if( !name || !name[0] )
-		return 0;
-
-	for( i = 1; i < max; i++ ) {
-		string = sv.configstrings[start + i];
-		if( !string[0] ) {
-			break;
-		}
-		if( !strcmp( string, name ) ) {
-			return i;
-		}
-	}
-
-	if( !create )
-		return 0;
-
-	if( i == max )
-		Com_Error( ERR_DROP, "SV_FindIndex: overflow" );
-
-	PF_Configstring( i + start, name );
-
-	return i;
-}
-
-
-int SV_ModelIndex (const char *name) {
-	return SV_FindIndex (name, CS_MODELS, MAX_MODELS, qtrue);
-}
-
-int SV_SoundIndex (const char *name) {
-	return SV_FindIndex (name, CS_SOUNDS, MAX_SOUNDS, qtrue);
-}
-
-int SV_ImageIndex (const char *name) {
-	return SV_FindIndex (name, CS_IMAGES, MAX_IMAGES, qtrue);
-}
-
-/*
-=================
-SV_CheckForSavegame
-=================
-*/
-void SV_CheckForSavegame (void) {
-	char		name[MAX_OSPATH];
-	int			i;
-
-	if ( sv_noreload->integer )
-		return;
-
-	if ( Cvar_VariableInteger( "deathmatch" ) )
-		return;
-
-	Com_sprintf (name, sizeof(name), "save/current/%s.sav", sv.name);
-
-	if( FS_LoadFile( name, NULL ) < 1 )
-		return;		// no savegame
-
-
-	SV_ClearWorld ();
-
-	// get configstrings and areaportals
-	SV_ReadLevelFile ();
-
-	if (!sv.loadgame)
-	{	// coming back to a level after being in a different
-		// level, so run it for ten seconds
-
-		// rlava2 was sending too many lightstyles, and overflowing the
-		// reliable data. temporarily changing the server state to loading
-		// prevents these from being passed down.
-		server_state_t		previousState;		// PGM
-
-		previousState = sv.state;				// PGM
-		sv.state = ss_loading;					// PGM
-		for (i=0 ; i<100 ; i++)
-			ge->RunFrame ();
-
-		sv.state = previousState;				// PGM
-	}
-}
 
 void SV_ClientReset( client_t *client ) {
     if( client->state < cs_connected ) {
@@ -136,10 +46,7 @@ Change the server to a new map, taking all connected
 clients along with it.
 ================
 */
-void SV_SpawnServer( char *server, char *spawnpoint, server_state_t serverstate,
-					attractLoop_t attractloop, qboolean loadgame,
-                    qboolean fakemap )
-{
+void SV_SpawnServer( const char *server, const char *spawnpoint ) {
 	int			i;
 	uint32		checksum;
 	char		string[MAX_QPATH];
@@ -149,7 +56,7 @@ void SV_SpawnServer( char *server, char *spawnpoint, server_state_t serverstate,
 	Com_Printf( "------- Server Initialization -------\n" );
 	Com_Printf( "SpawnServer: %s\n", server );
 
-	/* force MVD recording to stop */
+	// force MVD recording to stop
 	SV_MvdRecStop();
 
 	CM_FreeMap( &sv.cm );
@@ -160,13 +67,13 @@ void SV_SpawnServer( char *server, char *spawnpoint, server_state_t serverstate,
 
 	// wipe the entire per-level structure
 	memset( &sv, 0, sizeof( sv ) );
+	sv.spawncount = ( rand() | ( rand() << 16 ) ) ^ Sys_Realtime();
+	sv.spawncount &= 0x7FFFFFFF;
+
+    // reset counters
 	svs.realtime = 0;
 	svs.nextEntityStates = 0;
 	svs.nextPlayerStates = 0;
-	sv.loadgame = loadgame;
-	sv.attractloop = attractloop;
-	sv.spawncount = ( rand() | ( rand() << 16 ) ) ^ Sys_Realtime();
-	sv.spawncount &= 0x7FFFFFFF;
 
     // setup a buffer for accumulating multicast datagrams
     if( svs.multicast_buffer ) {
@@ -183,8 +90,8 @@ void SV_SpawnServer( char *server, char *spawnpoint, server_state_t serverstate,
 	Q_strncpyz( sv.name, server, sizeof( sv.name ) );
 	
 	if( Cvar_VariableInteger( "deathmatch" ) ) {
-		strcpy( sv.configstrings[CS_AIRACCEL],
-            va( "%d", sv_airaccelerate->integer ) );
+		sprintf( sv.configstrings[CS_AIRACCEL],
+            "%d", sv_airaccelerate->integer );
 	} else {
 		strcpy( sv.configstrings[CS_AIRACCEL], "0" );
 	}
@@ -194,19 +101,15 @@ void SV_SpawnServer( char *server, char *spawnpoint, server_state_t serverstate,
         SV_ClientReset( client );
 	}
 
-	if( !fakemap ) {
-		Com_sprintf( string, sizeof( string ), "maps/%s.bsp", server );
-		strcpy( sv.configstrings[CS_MODELS + 1], string );
-		CM_LoadMap( &sv.cm, string, 0, &checksum );
-	
-		Com_sprintf( sv.configstrings[CS_MAPCHECKSUM],
-			MAX_QPATH, "%i", ( int )checksum );
-		
-		for( i = 1; i < sv.cm.cache->numcmodels; i++ ) {
-			Com_sprintf( sv.configstrings[ CS_MODELS + 1 + i ],
-				MAX_QPATH, "*%i", i );
-		}
-	}
+    Com_sprintf( string, sizeof( string ), "maps/%s.bsp", server );
+    strcpy( sv.configstrings[CS_MODELS + 1], string );
+    CM_LoadMap( &sv.cm, string, 0, &checksum );
+
+    sprintf( sv.configstrings[CS_MAPCHECKSUM], "%d", ( int )checksum );
+    
+    for( i = 1; i < sv.cm.cache->numcmodels; i++ ) {
+        sprintf( sv.configstrings[ CS_MODELS + 1 + i ], "*%d", i );
+    }
 
 	//
 	// clear physics interaction links
@@ -228,24 +131,13 @@ void SV_SpawnServer( char *server, char *spawnpoint, server_state_t serverstate,
 	ge->RunFrame ();
 	ge->RunFrame ();
 
+	// make sure maxclients string is correct
+    sprintf( sv.configstrings[CS_MAXCLIENTS], "%d", sv_maxclients->integer );
+
 	// all precaches are complete
-	sv.state = serverstate;
+	sv.state = ss_game;
 
-	// check for a savegame
-	SV_CheckForSavegame ();
-
-	// check maxclients (MVD clients rely on this)
-    if( serverstate < ss_cinematic ) {
-        i = atoi( sv.configstrings[CS_MAXCLIENTS] );
-        if( i != sv_maxclients->integer ) {
-            Com_WPrintf( "Game DLL specified wrong CS_MAXCLIENTS "
-                "(%d instead of %d), fixed.\n", i, sv_maxclients->integer );
-            Com_sprintf( string, sizeof( string ), "%d",
-                    sv_maxclients->integer );
-            strcpy( sv.configstrings[CS_MAXCLIENTS], string );
-        }
-    }
-
+    // respawn dummy MVD client
     SV_MvdSpawnDummy();
 
     LIST_FOR_EACH( tcpClient_t, t, &svs.mvdClients, mvdEntry ) {
@@ -257,14 +149,12 @@ void SV_SpawnServer( char *server, char *spawnpoint, server_state_t serverstate,
     }
 
 	// set serverinfo variable
-	Cvar_FullSet( "mapname", sv.name, CVAR_SERVERINFO|CVAR_NOSET,
-        CVAR_SET_DIRECT );
+	Cvar_FullSet( "mapname", sv.name,
+        CVAR_SERVERINFO|CVAR_NOSET, CVAR_SET_DIRECT );
 
-	Cvar_SetInteger( "sv_running", serverstate );
-	Cvar_SetInteger( "sv_paused", 0 );
-	if( serverstate != ss_demo ) {
-		Cvar_Set( "timedemo", "0" );
-	}
+	Cvar_SetInteger( "sv_running", ss_game );
+	Cvar_Set( "sv_paused", "0" );
+	Cvar_Set( "timedemo", "0" );
 
 	Com_Printf ("-------------------------------------\n");
 }
@@ -418,43 +308,28 @@ another level:
 	map tram.cin+jail_e3
 ======================
 */
-void SV_Map (attractLoop_t attractloop, char *levelstring, qboolean loadgame)
-{
+void SV_Map (const char *levelstring, qboolean restart) {
 	char	level[MAX_QPATH];
-	char	*ch;
-	int		l;
 	char	spawnpoint[MAX_QPATH];
-    server_state_t state;
-    qboolean fakemap;
+	char	expanded[MAX_QPATH];
+	char	*ch;
 
 	// skip the end-of-unit flag if necessary
 	if( *levelstring == '*' ) {
 		levelstring++;
 	}
 
-	// moved here, because levelstring typically points to cmd_argv
-	// and may be clobbered by SV_InitGame
+	// save levelstring as it typically points to cmd_argv
 	Q_strncpyz( level, levelstring, sizeof( level ) );
-
-	if( ( sv.state == ss_dead && !sv.loadgame ) ||
-		sv.state == ss_broadcast )
-	{
-		SV_InitGame ( qfalse );	// the game is just starting
-	}
 
 	// if there is a + in the map, set nextserver to the remainder
 	ch = strstr(level, "+");
-	if (ch)
-	{
+	if (ch) {
 		*ch = 0;
 		Cvar_Set ("nextserver", va("gamemap \"%s\"", ch+1));
-	}
-	else
+	} else {
 		Cvar_Set ("nextserver", "");
-
-	//ZOID special hack for end game screen in coop mode
-	if (Cvar_VariableValue ("coop") && !Q_stricmp(level, "victory.pcx"))
-		Cvar_Set ("nextserver", "gamemap \"*base1\"");
+    }
 
 	// if there is a $, use the remainder as a spawnpoint
 	ch = strstr( level, "$" );
@@ -465,32 +340,30 @@ void SV_Map (attractLoop_t attractloop, char *levelstring, qboolean loadgame)
 		spawnpoint[0] = 0;
     }
 
-	l = strlen( level );
-	if( l > 4 && !strcmp( level + l - 4, ".cin" ) ) {
-        fakemap = qtrue;
-        state = ss_cinematic;
-	} else if( l > 4 && !strcmp( level + l - 4, ".dm2" ) ) {
-        fakemap = qtrue;
-        state = ss_demo;
-	} else if( l > 4 && !strcmp( level + l - 4, ".pcx" ) ) {
-        fakemap = qtrue;
-        state = ss_pic;
-	} else {
-        fakemap = qfalse;
-        state = ss_game;
+    Com_sprintf( expanded, sizeof( expanded ), "maps/%s.bsp", level );
+    if( FS_LoadFile( expanded, NULL ) == -1 ) {
+        Com_Printf( "Can't find %s\n", expanded );
+        return;
+    }
+
+	if( sv.state == ss_dead || sv.state == ss_broadcast ) {
+        restart = qtrue;
+    }
+
+	if( restart ) {
+		SV_InitGame( qfalse );	// the game is just starting
+	}
+
+    // change state to loading
+    if( sv.state > ss_loading ) {
+        sv.state = ss_loading;
     }
     
     SCR_BeginLoadingPlaque();			// for local system
     SV_BroadcastCommand( "changing\n" );
-    /* temporary change server state to loading so
-     * SV_SendClientMessages will not send dummy svc_frame */
-    if( sv.state > ss_loading ) {
-        sv.state = ss_loading;
-    }
     SV_SendClientMessages();
     SV_SendAsyncPackets();
-    SV_SpawnServer( level, spawnpoint, state, attractloop,
-            loadgame, fakemap );
+    SV_SpawnServer( level, spawnpoint );
 
 	SV_BroadcastCommand( "reconnect\n" );
 }

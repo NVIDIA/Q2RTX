@@ -1,28 +1,20 @@
-Snapshots
+Stable releases
 ----------------
+There are no stable releases of Q2PRO available to date.
 
-Nightly built binary packages for Windows and Debian GNU/Linux
+Development snapshots
+----------------
+Nightly built binary packages for Windows and Debian GNU/Linux distribution
 and the corresponding source code snapshots can be found
 [here](../nightly/).
 
 Source code
 ----------------
+To get the latest source code, you will need to install Subversion client.
+Use the following command to checkout fresh working copy into
+the `q2pro` directory:
 
-***Code in SVN repository is currently outdated. Q2PRO source tree was
-subject to a heavy reorganization. Look in snaphots directory above for
-the latest source code until repository is updated.***
+    svn co https://q2pro.svn.sourceforge.net/svnroot/q2pro/trunk q2pro
 
-To get the source code, you will need to install Subversion client.
-Use the following command to checkout the lastest working copy
-into the "q2pro" subdirectory:
-
-    svn co https://svn.sourceforge.net/svnroot/q2pro/q2pro q2pro
-
-Remember, Q2PRO is in beta stage of development and source code in
-the repository may be broken at any given point in time.
-If you are not a developer, only proceed with downloading if you
-wish to participate in Q2PRO testing and don't mind building the
-whole thing yourself.
-    
-You may also browse Q2PRO source code
-[online](http://q2pro.svn.sourceforge.net/viewvc/q2pro/q2pro).
+You can also browse Q2PRO source tree
+[online](http://q2pro.svn.sourceforge.net/viewvc/q2pro).

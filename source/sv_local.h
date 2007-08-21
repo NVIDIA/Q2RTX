@@ -71,8 +71,6 @@ typedef struct {
 typedef struct server_s {
 	server_state_t	state;	// precache commands are only valid during load
     int             spawncount;  // random number generated each server spawn
-	attractLoop_t	attractloop; // running cinematics and demos
-                                 // for the local system only
 	qboolean	loadgame;	     // client begins should reuse existing entity
 
 	uint32		time;			 // always sv.framenum * 100 msec
@@ -91,7 +89,6 @@ typedef struct server_s {
 
     sizebuf_t       multicast;
 
-	// demo server information
 	fileHandle_t	demofile;
 
 	uint32			tracecount;
@@ -102,7 +99,7 @@ typedef struct server_s {
 
 #define MAX_TOTAL_ENT_LEAFS		128
 
-typedef enum clstate_e {
+typedef enum {
 	cs_free,		// can be reused for a new connection
 	cs_zombie,		// client has been disconnected, but don't reuse
 					// connection for a couple seconds
@@ -264,6 +261,12 @@ typedef struct ratelimit_s {
 	uint32 count;
 } ratelimit_t;
 
+typedef struct {
+    list_t  entry;
+    uint32  addr;
+    uint32  mask;
+} addrmatch_t;
+
 typedef struct server_static_s {
 	qboolean	initialized;			// sv_init has completed
 	uint32		realtime;				// always increasing, no clamping, etc
@@ -306,6 +309,9 @@ typedef struct server_static_s {
 extern	netadr_t	net_from;
 
 extern	netadr_t	master_adr[MAX_MASTERS];	// address of the master server
+
+extern  list_t      sv_banlist;
+extern  list_t      sv_blacklist;
 
 extern	server_static_t	svs;				// persistant server info
 extern	server_t		sv;					// local server
@@ -366,6 +372,9 @@ void SV_SendAsyncPackets( void );
 qboolean SV_RateLimited( ratelimit_t *r );
 void SV_RateInit( ratelimit_t *r, int limit, int period );
 
+addrmatch_t *SV_MatchAddress( list_t *list, netadr_t *address );
+void SV_DumpMatches( list_t *list );
+
 
 void Master_Heartbeat (void);
 void Master_Packet (void);
@@ -374,15 +383,9 @@ void Master_Packet (void);
 // sv_init.c
 //
 void SV_InitGame( qboolean ismvd );
-void SV_Map (attractLoop_t attractloop, char *levelstring, qboolean loadgame);
-void SV_SpawnServer( char *server, char *spawnpoint, server_state_t serverstate,
-					attractLoop_t attractloop, qboolean loadgame, qboolean fakemap );
+void SV_Map (const char *levelstring, qboolean restart);
+void SV_SpawnServer( const char *server, const char *spawnpoint );
 void SV_ClientReset( client_t *client );
-
-int SV_ModelIndex( const char *name );
-int SV_SoundIndex( const char *name );
-int SV_ImageIndex( const char *name );
-
 
 //
 // sv_send.c
@@ -398,9 +401,6 @@ void SV_DemoCompleted (void);
 void SV_SendClientMessages (void);
 
 void SV_Multicast (vec3_t origin, multicast_t to);
-void SV_StartSound (vec3_t origin, edict_t *entity, int channel,
-					int soundindex, float volume,
-					float attenuation, float timeofs);
 void SV_ClientPrintf ( client_t *cl, int level, const char *fmt, ... );
 void SV_BroadcastPrintf( int level, const char *fmt, ... );
 void SV_BroadcastCommand( const char *fmt, ... );

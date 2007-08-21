@@ -29,21 +29,19 @@ OPTIONS MENU
 =======================================================================
 */
 
-#define OPTIONS_ITEMS	16
+#define OPTIONS_ITEMS   7
 
-static const char *names[] = {
+static const char names[][16] = {
 	"Player Setup",
 	"Keys",
 	"Weapons",
-	"Game",
+//	"Game",
 	"Video",
-	"Sound",
+//	"Sound",
 	"Network",
 	"Address Book",
     "Credits"
 };
-
-static const int numItems = sizeof( names ) / sizeof( names[0] );
 
 typedef struct optionsMenu_s {
 	menuFrameWork_t	menu;
@@ -67,22 +65,22 @@ static int OptionsMenu_Callback( int id, int msg, int param ) {
 		case 2:
 			M_Menu_Weapons_f();
 			break;
+		/*case 3:
+			M_Menu_Interface_f();
+			break;*/
 		case 3:
-			//M_Menu_Interface_f();
-			break;
-		case 4:
 			M_Menu_Video_f();
 			break;
-		case 5:
-			//M_Menu_Sound_f();
-			break;
-		case 6:
+		/*case 5:
+			M_Menu_Sound_f();
+			break;*/
+		case 4:
 			M_Menu_Network_f();
 			break;
-		case 7:
+		case 5:
 			M_Menu_AddressBook_f();
 			break;
-		case 8:
+		case 6:
 			M_Menu_Credits_f();
 			break;
 		}
@@ -101,13 +99,13 @@ static void OptionsMenu_Init( void ) {
 	int x, y;
 
 	x = uis.glconfig.vidWidth / 2;
-	y = ( uis.glconfig.vidHeight - MENU_SPACING * numItems ) / 2;
+	y = ( uis.glconfig.vidHeight - MENU_SPACING * OPTIONS_ITEMS ) / 2;
 
 	memset( &m_options, 0, sizeof( m_options ) );
 
 	m_options.menu.callback = OptionsMenu_Callback;
 
-	for( i = 0; i < numItems; i++ ) {
+	for( i = 0; i < OPTIONS_ITEMS; i++ ) {
 		m_options.actions[i].generic.type = MTYPE_ACTION;
 		m_options.actions[i].generic.id = i;
 		m_options.actions[i].generic.name = names[i];

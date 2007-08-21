@@ -296,13 +296,6 @@ typedef enum clc_ops_e {
 #define CLIENTNUM_ANY		( MAX_CLIENTS - 2 )
 #define CLIENTNUM_RESERVED	( MAX_CLIENTS - 2 )
 
-typedef enum attractLoop_e {
-	ATR_NONE,
-	ATR_DEMO,
-	ATR_SERVERRECORD,
-	ATR_UNKNOWN
-} attractLoop_t;
-
 typedef enum clientSetting_e {
 	/* r1q2 specific */
 	CLS_NOGUN,

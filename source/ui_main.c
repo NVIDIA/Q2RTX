@@ -28,21 +28,19 @@ MAIN MENU
 =======================================================================
 */
 
-#define	MAIN_ITEMS	6
+#define	MAIN_ITEMS	5
 
-static char *names[] = {
-	"Singleplayer",
+static const char names[MAIN_ITEMS][16] = {
 	"Multiplayer",
 	"Demos",
 	"Options",
 	"Mods",
-	"Quit",
-	0
+	"Quit"
 };
 
 typedef struct mainMenu_s {
-	menuFrameWork_t	menu;
-	menuAction_t actions[MAIN_ITEMS];
+	menuFrameWork_t menu;
+	menuAction_t    actions[MAIN_ITEMS];
 	menuStatic_t	banner;
 } mainMenu_t;
 
@@ -59,21 +57,18 @@ static int MainMenu_Callback( int id, int msg, int param ) {
 	case QM_ACTIVATE:
 		switch( id ) {
 		case 0:
-			M_Menu_Game_f();
-			break;
-		case 1:
 			M_Menu_Multiplayer_f();
 			break;
-		case 2:
+		case 1:
 			M_Menu_Demos_f();
 			break;
-		case 3:
+		case 2:
 			M_Menu_Options_f();
 			break;
-		case 4:
+		case 3:
 			M_Menu_Mods_f();
 			break;
-		case 5:
+		case 4:
 			M_Menu_Confirm_f( "Quit game? y/n", MainMenu_QuitAction );
 			break;
 		}
@@ -110,12 +105,11 @@ static void MainMenu_Init( void ) {
 		Menu_AddItem( &m_main.menu, (void *)&m_main.actions[i] );
 	}
 
-	m_main.actions[1].generic.flags = QMF_HASFOCUS;
+	m_main.actions[0].generic.flags = QMF_HASFOCUS;
 
 	UI_SetupDefaultBanner( &m_main.banner, "Main Menu" );
 
 	Menu_AddItem( &m_main.menu, (void *)&m_main.banner );
-
 }
 
 

@@ -586,9 +586,6 @@ void SCR_TileClear( void ) {
 	if( scr_viewsize->integer == 100 )
 		return;		// full screen rendering
 
-	if( cl.cinematictime > 0 )
-		return;		// full screen cinematic
-
 	top = scr_vrect.y;
 	bottom = top + scr_vrect.height - 1;
 	left = scr_vrect.x;
@@ -1062,10 +1059,10 @@ static void SCR_DrawActiveFrame( void ) {
 
 	SCR_CalcVrect();
 
-	/* clear any dirty part of the background */
+	// clear any dirty part of the background
 	SCR_TileClear();
 
-	/* draw 3D game view */
+	// draw 3D game view
 	V_RenderView();
 
 	Cvar_ClampValue( scr_scale, 1, 9 );
@@ -1076,7 +1073,7 @@ static void SCR_DrawActiveFrame( void ) {
 	scr_hudHeight *= scale;
 	scr_hudWidth *= scale;
 
-	/* draw all 2D elements */
+	// draw all 2D elements
 	SCR_Draw2D();
 
 	ref.SetScale( NULL );
@@ -1106,38 +1103,15 @@ void SCR_UpdateScreen( void ) {
 
 	ref.BeginFrame();
 	
-	/* if a cinematic is supposed to be running, handle menus
-	 * and console specially
-	 */
-	if( cl.cinematictime > 0 ) {
-		if( cls.key_dest & (KEY_CONSOLE|KEY_MENU) ) {
-			if( cl.cinematicpalette_active ) {
-				ref.CinematicSetPalette( NULL );
-				cl.cinematicpalette_active = qfalse;
-			}
-			UI_Draw( cls.realtime );
-			Con_DrawConsole();
-		} else {
-			SCR_DrawCinematic();
-		}
-		return;
-	}
-
-	/* make sure the game palette is active */
-	if( cl.cinematicpalette_active ) {
-		ref.CinematicSetPalette( NULL );
-		cl.cinematicpalette_active = qfalse;
-	}
-
 	switch( cls.state ) {
 	case ca_disconnected:
-		/* make sure at least fullscreen console or main menu is up */
+		// make sure at least fullscreen console or main menu is up
 		if( !( cls.key_dest & (KEY_MENU|KEY_CONSOLE) ) ) {
 			Key_SetDest( cls.key_dest | KEY_CONSOLE );
 			Con_RunConsole();
 		}
 
-		/* draw main menu */
+		// draw main menu
 		UI_Draw( cls.realtime );
 		break;
 
@@ -1146,22 +1120,22 @@ void SCR_UpdateScreen( void ) {
 	case ca_connected:
 	case ca_loading:
 	case ca_precached:
-		/* make sure main menu is down */
+		// make sure main menu is down
 		if( cls.key_dest & KEY_MENU ) {
 			UI_OpenMenu( UIMENU_NONE );
 		}
 
-		/* draw loading screen */
+		// draw loading screen
 		UI_DrawLoading( cls.realtime );
 		break;
 
 	case ca_active:
 		if( UI_IsTransparent() ) {
-			/* do 3D refresh drawing */
+			// do 3D refresh drawing
 			SCR_DrawActiveFrame();
 		}
 
-		/* draw ingame menu */
+		// draw ingame menu
 		UI_Draw( cls.realtime );
 		break;
 
@@ -1175,9 +1149,7 @@ void SCR_UpdateScreen( void ) {
 	if( scr_timegraph->integer )
 		SCR_DebugGraph( cls.frametime*300, 0 );
 
-	if( scr_debuggraph->integer || scr_timegraph->integer ||
-            scr_netgraph->integer )
-    {
+	if( scr_debuggraph->integer || scr_timegraph->integer || scr_netgraph->integer ) {
 		SCR_DrawDebugGraph();
     }
 

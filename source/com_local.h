@@ -175,28 +175,15 @@ char *Cmd_RawString( void );
 
 void Cmd_Alias_f( void );
 
-typedef struct {
-	qboolean numeric;
-	char *string;
-	float value;
-} cmdEval_t;
-
-qboolean Cmd_EvaluateExpression( int firstArg, cmdEval_t *result );
-
-typedef enum {
-	TRIG_CLIENT_SYSTEM,
-	TRIG_CLIENT_CHAT,
-	TRIG_CLIENT_PRINT,
-	TRIG_CLIENT_CENTERPRINT,
-	TRIG_SERVER_SYSTEM,
-	TRIG_SERVER_BPRINT,
-	TRIG_SERVER_DPRINT
-} trigChannel_t;
-
-void Cmd_ExecTrigger( trigChannel_t chan, const char *string );
-
 void Cmd_FillAPI( cmdAPI_t *api );
 
+
+#define EXEC_TRIGGER( var ) \
+    do { \
+        if( (var)->string[0] ) { \
+            Cbuf_AddText( (var)->string ); \
+        } \
+    } while( 0 )
 
 /*
 ==============================================================
@@ -1066,17 +1053,14 @@ void	Key_Event( uint32 key, qboolean down, uint32 time );
 void	Key_CharEvent( int key );
 void	Key_WriteBindings( fileHandle_t f );
 
-typedef enum server_state_e {
+typedef enum {
 	ss_dead,			// no map loaded
 	ss_loading,			// spawning level edicts
 	ss_game,			// actively running
-	ss_broadcast,
-	ss_cinematic,
-	ss_demo,
-	ss_pic
+	ss_broadcast
 } server_state_t;
 
-typedef enum killtype_e {
+typedef enum {
 	KILL_RESTART,
 	KILL_DISCONNECT,
 	KILL_DROP

@@ -668,15 +668,6 @@ void Key_Event( uint32 key, qboolean down, uint32 time ) {
         return;
     }
 
-	// any key during the attract mode will bring up the menu
-	if( cl.attractLoop == ATR_DEMO &&
-		!cls.demoplayback &&
-        !( cls.key_dest & KEY_MENU ) &&
-		!( key >= K_F1 && key <= K_F12 ) )
-	{
-		key = K_ESCAPE;
-	}
-
 	// menu key is hardcoded, so the user can never unbind it
 	if( key == K_ESCAPE ) {
 		if( !down ) {

@@ -196,6 +196,11 @@ qboolean IF_KeyEvent( inputField_t *field, int key ) {
 
 		return qtrue;
 	}
+
+    if( key == 'c' && keys.IsDown( K_CTRL ) ) {
+        sys.SetClipboardData( field->text );
+        return qtrue;
+    }
 	
 	if( key == K_LEFTARROW ) {
 		if( field->cursorPos > 0 ) {

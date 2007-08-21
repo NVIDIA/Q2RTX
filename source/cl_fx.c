@@ -1596,16 +1596,6 @@ CL_RailTrail
 
 ===============
 */
-
-extern cvar_t *cl_railtrail_type;
-extern cvar_t *cl_railtrail_time;
-extern cvar_t *cl_railtrail_alpha;
-extern cvar_t *cl_railcore_color;
-extern cvar_t *cl_railcore_width;
-extern cvar_t *cl_railrings_color;
-extern cvar_t *cl_railrings_width;
-
-
 void CL_OldRailTrail (vec3_t start, vec3_t end)
 {
 	vec3_t		move;
@@ -1727,9 +1717,9 @@ void CL_RailTrail( vec3_t start, vec3_t end ) {
 	l->color[2] = ( cl_railcore_color->integer       ) & 0xff;
 	l->color[3] = 255 * cl_railtrail_alpha->value;
 
-	color[0] = ( cl_railrings_color->integer >> 16 ) & 0xff;
-	color[1] = ( cl_railrings_color->integer >>  8 ) & 0xff;
-	color[2] = ( cl_railrings_color->integer       ) & 0xff;
+	color[0] = ( cl_railspiral_color->integer >> 16 ) & 0xff;
+	color[1] = ( cl_railspiral_color->integer >>  8 ) & 0xff;
+	color[2] = ( cl_railspiral_color->integer       ) & 0xff;
 	color[3] = 255;
 
 	VectorCopy( start, move );
@@ -1763,7 +1753,7 @@ void CL_RailTrail( vec3_t start, vec3_t end ) {
 			p->color = 0xff;
 			*( uint32 * )p->rgb = *( uint32 * )color;
 			for( j=0 ; j<3 ; j++ ) {
-				p->org[j] = move[j] + dir[j] * cl_railrings_width->value;
+				p->org[j] = move[j] + dir[j] * cl_railspiral_radius->value;
 				p->vel[j] = dir[j] * 6;
 			}
 

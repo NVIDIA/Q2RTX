@@ -34,23 +34,6 @@ sv_client and sv_player will be valid.
 */
 
 /*
-==================
-SV_BeginDemoServer
-==================
-*/
-void SV_BeginDemoserver (void)
-{
-	char		name[MAX_QPATH];
-
-	Com_sprintf (name, sizeof(name), "demos/%s", sv.name);
-	FS_FOpenFile (name, &sv.demofile, FS_MODE_READ);
-	if (!sv.demofile)
-		Com_Error (ERR_DROP, "Couldn't open %s\n", name);
-}
-
-// ============================================================
-
-/*
 ================
 SV_CreateBaselines
 
@@ -346,6 +329,51 @@ fail:
 
 #endif // USE_ZLIB
 
+#if 0
+static const char junkchars[] =
+    "!~#``&'()*`+,-./~01~2`3`4~5`67`89:~<=`>?@~ab~cd`ef~j~k~lm`no~pq`rst`uv`w``x`yz[`\\]^_`|~";
+
+// set junk4 alias
+// set junk5 set
+//
+// $junk4 junk1 connect junkX
+// $junk4 junk9 connect junkY
+//
+// $junk5 junk2 junk5
+// $junk2 junk3 junk5
+// $junk2 junk6 $junkip
+// $junk5 junk7 $junkip
+// $junk5 junk8 $junkip
+// $junk5 junkX $realip
+//
+// $junk1-9
+static void SV_AddReconnect( void ) {
+    char junk[8][16];
+    int i, j;
+
+    for( i = 0; i < 8; i++ ) {
+        for( j = 0; j < 15; j++ ) {
+            c = rand() | ( rand() >> 8 );
+            c %= sizeof( junkchars ) - 1;
+            junk[i][j] = junkchars[c];
+        }
+        junk[i][15] = 0;
+    }
+
+    MSG_WriteByte( svc_stufftext );
+	MSG_WriteString( va( "set %s alias\n", junk[4] ) );
+	SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
+
+    MSG_WriteByte( svc_stufftext );
+	MSG_WriteString( va( "set %s set\n", junk[5] ) );
+	SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
+
+    MSG_WriteByte( svc_stufftext );
+	MSG_WriteString( va( "set %s \n", junk[5] ) );
+	SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
+}
+#endif
+
 /*
 ================
 SV_New_f
@@ -371,12 +399,6 @@ static void SV_New_f( void ) {
 		return;
 	}
 
-	// demo servers just dump the file message
-	if( sv.state == ss_demo ) {
-		SV_BeginDemoserver ();
-		return;
-	}
-
 	//
 	// serverdata needs to go over for all types of servers
 	// to make sure the protocol is right, and to set the gamedir
@@ -398,21 +420,17 @@ static void SV_New_f( void ) {
         gamedir = fs_game->string;
         mapname = sv.configstrings[CS_NAME];
         strings = ( char * )sv.configstrings;
-        if( sv.state >= ss_cinematic ) {
-            clientNum = -1;
-        } else {
-            clientNum = sv_client->number;
-            SV_CreateBaselines( sv_client->param.baselines );
-            sv_client->param.basesize = sizeof( entity_state_t );
-            sv_client->param.maxplayers = sv_maxclients->integer;
-        }
+        clientNum = sv_client->number;
+        SV_CreateBaselines( sv_client->param.baselines );
+        sv_client->param.basesize = sizeof( entity_state_t );
+        sv_client->param.maxplayers = sv_maxclients->integer;
     }
 	
 	// send the serverdata
 	MSG_WriteByte( svc_serverdata );
 	MSG_WriteLong( sv_client->protocol );
 	MSG_WriteLong( sv.spawncount );
-	MSG_WriteByte( sv.attractloop );
+	MSG_WriteByte( 0 );
 	MSG_WriteString( gamedir );
 	MSG_WriteShort( clientNum );
 	MSG_WriteString( mapname );
@@ -450,10 +468,6 @@ static void SV_New_f( void ) {
 	Com_DPrintf( "Going from cs_connected to cs_primed for %s\n",
         sv_client->name );
 	sv_client->state = cs_primed;
-
-	if( sv.state >= ss_cinematic ) {
-		return; // no real map
-	}
 
     // set up the entity for the client
     entnum = sv_client->number + 1;
@@ -740,7 +754,7 @@ void SV_Nextserver( void ) {
 	char	*v;
 
 	//ZOID, ss_pic can be nextserver'd in coop mode
-	if (sv.state == ss_game || (sv.state == ss_pic && !Cvar_VariableValue("coop")))
+	if (sv.state == ss_game)
 		return;		// can't nextserver while playing a normal game
 
     FOR_EACH_CLIENT( client ) {

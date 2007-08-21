@@ -94,7 +94,7 @@ static void Prompt_ShowMatches( commandPrompt_t *prompt, char **matches,
     int colwidths[6];
     char *match;
 
-    for( numCols = 6; numCols > 0; numCols-- ) {
+    for( numCols = 6; numCols > 1; numCols-- ) {
         numLines = ( count + numCols - 1 ) / numCols;
         total = 0;
         for( i = 0; i < numCols; i++ ) {

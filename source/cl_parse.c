@@ -451,7 +451,7 @@ static void CL_SetActiveState( void ) {
 	SCR_EndLoadingPlaque ();	// get rid of loading plaque
 	Con_Close();				// close console
 
-    Cmd_ExecTrigger( TRIG_CLIENT_SYSTEM, "enterlevel" );
+    EXEC_TRIGGER( cl_beginmapcmd );
 
 	Cvar_Set( "cl_paused", "0" );
 }
@@ -785,88 +785,44 @@ CL_ParseServerData
 */
 static void CL_ParseServerData( void ) {
 	char	*str;
-	int		i;
-	qboolean serverDemo;
+	int		i, protocol, attractloop;
 
 	Cbuf_Execute();		// make sure any stuffed commands are done
 	
-//
-// wipe the client_state_t struct
-//
+    // wipe the client_state_t struct
 	CL_ClearState();
 
-// parse protocol version number
-	i = MSG_ReadLong();
+    // parse protocol version number
+	protocol = MSG_ReadLong();
 	cl.servercount = MSG_ReadLong();
-	cl.attractLoop = MSG_ReadByte();
+	attractloop = MSG_ReadByte();
 
-	Com_DPrintf( "Serverdata packet received (protocol=%d, servercount=%d, attractLoop=%d)\n",
-		i, cl.servercount, cl.attractLoop );
+	Com_DPrintf( "Serverdata packet received (protocol=%d, servercount=%d, attractloop=%d)\n",
+		protocol, cl.servercount, attractloop );
 
-	/* TODO: rework this mess someday... */
-	if( cls.serverProtocol != i ) {
-		serverDemo =
-			sv_running->integer != ss_dead &&
-			sv_running->integer != ss_game &&
-			sv_running->integer != ss_broadcast;
-		if( cls.serverProtocol != PROTOCOL_VERSION_OLD &&
-			cls.serverProtocol != PROTOCOL_VERSION_DEFAULT && serverDemo )
-		{
-			Com_Error( ERR_DROP,
-				"Local server returned protocol version %i, not %i\n"
-				"To play a demo, use 'demo' command, not 'demomap'.",
-				i, cls.serverProtocol );
-		}
-		
-		if( cls.demoplayback || serverDemo ) { 
-			// BIG HACK to let demos from release work with the 3.0x patch!!!
-			if( i == PROTOCOL_VERSION_OLD ) {
-				Com_DPrintf( "Using protocol %i for compatibility with old demos\n",
-					PROTOCOL_VERSION_OLD );
-			} else if( i == PROTOCOL_VERSION_MVD ) {
-				Com_Error( ERR_DROP,
-					"This demo uses MVD protocol.\n"
-					"To play a MVD, use 'mvdplay' command, not 'demo'." );
-			} else if(
-				i != PROTOCOL_VERSION_DEFAULT &&
-				i != PROTOCOL_VERSION_R1Q2 &&
-				i != PROTOCOL_VERSION_Q2PRO )
-			{
-				Com_Error( ERR_DROP,
-					"Demo uses unsupported protocol version %i.\n"
-					"Supported protocols are %i, %i and %i.",
-					i, PROTOCOL_VERSION_DEFAULT, PROTOCOL_VERSION_R1Q2, PROTOCOL_VERSION_Q2PRO );
-			}
-		} else {
-			if( i == PROTOCOL_VERSION_DEFAULT || i == PROTOCOL_VERSION_R1Q2 || i == PROTOCOL_VERSION_Q2PRO ) {
-				Com_Error( ERR_DROP, "Requested protocol %i, but server returned %i (should not happen).",
-					cls.serverProtocol, i );
-			} else {
-				Com_Error( ERR_DROP,
-					"Server returned unsupported protocol version %i.\n"
-					"Supported protocols are %i, %i and %i.",
-					i, PROTOCOL_VERSION_DEFAULT, PROTOCOL_VERSION_R1Q2, PROTOCOL_VERSION_Q2PRO );
-			}
-		}
-		cls.serverProtocol = i;
-	}
+    // check protocol
+	if( cls.serverProtocol != protocol ) {
+		if( !cls.demoplayback ) { 
+			Com_Error( ERR_DROP, "Requested protocol version %d, but server returned %d.",
+                cls.serverProtocol, protocol );
+        }
 
-	if( cl.attractLoop >= ATR_UNKNOWN ) {
-		Com_Error( ERR_DROP, "CL_ParseServerData: bad attractLoop type %i", cl.attractLoop );
-	}
-
-	if( cl.attractLoop == ATR_SERVERRECORD ) {
-		Com_Error( ERR_DROP, "Serverside recorded demos are not supported\n" );
+        // BIG HACK to let demos from release work with the 3.0x patch!!!
+        if( protocol == PROTOCOL_VERSION_OLD ) {
+            Com_DPrintf( "Using protocol %d for compatibility with old demos.\n", PROTOCOL_VERSION_OLD );
+        } else if( protocol < PROTOCOL_VERSION_DEFAULT || protocol > PROTOCOL_VERSION_Q2PRO ) {
+            Com_Error( ERR_DROP, "Demo uses unsupported protocol version %d.\n", protocol );
+        }
+		cls.serverProtocol = protocol;
 	}
 
 	// game directory
 	str = MSG_ReadString();
 	Q_strncpyz( cl.gamedir, str, sizeof( cl.gamedir ) );
 
-	/* Never allow demos to change gamedir.
-	 * Don't set gamedir if connected to local sever,
-	 * since it was already done by SV_InitGame.
-	 */
+	// never allow demos to change gamedir
+	// do not set gamedir if connected to local sever,
+	// since it was already done by SV_InitGame
 	if( !cls.demoplayback && !sv_running->integer ) {
 		Cvar_UserSet( "game", cl.gamedir );
 		if( FS_NeedRestart() ) {
@@ -960,15 +916,15 @@ static void CL_ParseServerData( void ) {
 	}
 
 	if( cl.clientNum == -1 ) {
-		/* playing a cinematic or showing a pic, not a level */
-		SCR_PlayCinematic( str );
+	    // tell the server to advance to the next map / cinematic
+	    CL_ClientCommand( va( "nextserver %i\n", cl.servercount ) );
 	} else {
-		/* seperate the printfs so the server message can have a color */
+		// seperate the printfs so the server message can have a color
 		Con_Printf( "\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n" );
 		Con_Printf( S_COLOR_ALT "%s\n\n", str );
 
-        /* make sure clientNum is in range */
-        if( ( unsigned )cl.clientNum >= MAX_CLIENTS ) {
+        // make sure clientNum is in range
+        if( cl.clientNum < 0 || cl.clientNum >= MAX_CLIENTS ) {
             cl.clientNum = CLIENTNUM_NONE;
         }
 	}
@@ -1246,7 +1202,7 @@ static void CL_ParseReconnect( void ) {
 		cls.download = 0;
 	}
 
-    Cmd_ExecTrigger( TRIG_CLIENT_SYSTEM, "changelevel" );
+    EXEC_TRIGGER( cl_changemapcmd );
 
 	cls.downloadtempname[0] = 0;
 	cls.downloadname[0] = 0;
@@ -1259,10 +1215,10 @@ static void CL_ParseReconnect( void ) {
 
 /*
 ====================
-CL_CheckForPCMD
+CL_CheckForVersion
 ====================
 */
-static void CL_CheckForPCMD( const char *string ) {
+static void CL_CheckForVersion( const char *string ) {
     char * p;
 
     if ( cls.demoplayback ) {
@@ -1304,20 +1260,18 @@ static void CL_ParsePrint( void ) {
 
 	if( level != PRINT_CHAT ) {
 		Com_Printf( "%s", string );
-        Cmd_ExecTrigger( TRIG_CLIENT_PRINT, string );
 		return;
 	}
 
-	CL_CheckForPCMD( string );
+	CL_CheckForVersion( string );
 
-    Cmd_ExecTrigger( TRIG_CLIENT_CHAT, string );
-
-	/* disable notify, if specified */
+	// disable notify
 	if( !cl_chat_notify->integer ) {
 		Con_SkipNotify( qtrue );
 	}
 
-    if( cl_chat_clear->integer ) {
+    // filter text
+    if( cl_chat_filter->integer ) {
         Q_ClearStr( string, string, MAX_STRING_CHARS - 1 );
         Q_strcat( string, MAX_STRING_CHARS, "\n" );
     }
@@ -1328,8 +1282,9 @@ static void CL_ParsePrint( void ) {
 
 	SCR_AddToChatHUD( string );
 
-	if( cl_chat_beep->integer ) {
-		S_StartLocalSound( "misc/talk.wav" );
+    // play sound
+	if( cl_chat_sound->string[0] ) {
+		S_StartLocalSound( cl_chat_sound->string );
 	}
 	
 }

@@ -30,11 +30,7 @@ DEMOS MENU
 
 #define MAX_MENU_DEMOS	1024
 
-#define DEMO_EXTENSIONS \
-    ".dm2;.dm2.gz;" \
-    ".dm_35;.dm_35.gz;" \
-    ".dm_36;.dm_36.gz;" \
-    ".mvd2;.mvd2.gz"
+#define DEMO_EXTENSIONS ".dm2;.dm2.gz;.mvd2;.mvd2.gz"
 
 #define FFILE_UP	1
 #define FFILE_FOLDER	2
@@ -114,12 +110,7 @@ static void Demos_LoadInfo( int index ) {
 
 	m_demos.playerNames[numNames] = NULL;
 
-    if( m_demos.demo.mvd ) {
-    	m_demos.menu.statusbar = "Press Enter to play";
-    } else {
-    	m_demos.menu.statusbar = "Press Enter to play, "
-            "hold Shift to play on server";
-    }
+    m_demos.menu.statusbar = "Press Enter to play";
 
 	MenuList_Init( &m_demos.playerList );
 	MenuList_SetValue( &m_demos.playerList, localPlayerNum );
@@ -269,7 +260,6 @@ static void Demos_LeaveDirectory( void ) {
 static int Demos_Action( void ) {
 	char buffer[MAX_QPATH];
 	int length, baseLength;
-    char *c;
 
 	switch( m_demos.types[m_demos.list.curvalue] ) {
 	case FFILE_UP:
@@ -299,8 +289,8 @@ static int Demos_Action( void ) {
 	    if( !m_demos.demo.mapname[0] ) {
             return QMS_BEEP;
         }
-        c = m_demos.demo.mvd || keys.IsDown( K_SHIFT ) ? "mvdplay" : "demo";
-		Com_sprintf( buffer, sizeof( buffer ), "%s \"%s/%s\"\n", c,
+		Com_sprintf( buffer, sizeof( buffer ), "%s \"%s/%s\"\n",
+            m_demos.demo.mvd ? "mvdplay" : "demo",
 			m_demos_browse, m_demos.names[m_demos.list.curvalue] );
 		cmd.ExecuteText( EXEC_APPEND, buffer );
 		//UI_ForceMenuOff();

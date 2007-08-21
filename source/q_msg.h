@@ -40,7 +40,6 @@ void SZ_WriteByte( sizebuf_t *sb, int c );
 void SZ_WriteShort( sizebuf_t *sb, int c );
 void SZ_WriteLong( sizebuf_t *sb, int c );
 void SZ_WritePos( sizebuf_t *sb, const vec3_t pos );
-void SZ_WriteExactPos( sizebuf_t *sb, const vec3_t pos );
 void SZ_WriteString( sizebuf_t *sb, const char *string );
 
 //============================================================================
@@ -106,7 +105,6 @@ char	*MSG_ReadStringLine( void );
 char    *MSG_ReadStringLength( int *length );
 float	MSG_ReadCoord( void );
 void	MSG_ReadPos( vec3_t pos );
-void	MSG_ReadExactPos( vec3_t pos );
 float	MSG_ReadAngle( void );
 float	MSG_ReadAngle16 ( void );
 int		MSG_ReadBits( int bits );
@@ -131,7 +129,5 @@ const char *MSG_ServerCommandString( int cmd );
 	Com_Printf( "%3i:%s\n", msg_read.readcount - 1, \
         MSG_ServerCommandString( cmd ) ); \
     } while( 0 )
-
-void MSG_ParseZPacket( void (*parsefunc)( void ) );
 
 

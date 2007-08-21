@@ -22,9 +22,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "sv_local.h"
 #include "mvd_local.h"
 
-static int		demo_msglen;
-static byte		demo_data[MAX_PACKETLEN];
-
 /*
 =============================================================================
 
@@ -638,21 +635,6 @@ COMMON STUFF
 */
 
 /*
-==================
-SV_DemoCompleted
-==================
-*/
-void SV_DemoCompleted( void ) {
-	Com_DPrintf( "SV_DemoCompleted()\n" );
-	if( sv.demofile ) {
-		FS_FCloseFile( sv.demofile );
-		sv.demofile = 0;
-	}
-	SV_Nextserver();
-}
-
-
-/*
 =======================
 SV_SendClientMessages
 
@@ -662,47 +644,7 @@ Clients in earlier connection state are handled in SV_SendAsyncPackets.
 */
 void SV_SendClientMessages( void ) {
 	client_t	*client;
-	int			msglen;
-	int			r;
-
-	demo_msglen = 0;
-
-	// read the next demo message if needed
-	if( sv.state == ss_demo && sv.demofile ) {
-		// get the next message
-		r = FS_Read( &msglen, 4, sv.demofile );
-		if( r != 4 ) {
-			SV_DemoCompleted();
-			return;
-		}
-		msglen = LittleLong( msglen );
-		if( msglen == -1 ) {
-			SV_DemoCompleted();
-			return;
-		}
-		if( msglen < 0 || msglen > MAX_PACKETLEN )
-			Com_Error( ERR_DROP, "SV_SendClientMessages: bad demo msglen" );
-		r = FS_Read( demo_data, msglen, sv.demofile );
-		if( r != msglen ) {
-			SV_DemoCompleted();
-			return;
-		}
-		demo_msglen = msglen;
-		
-	}
-
-	if( sv.state != ss_game && sv.state != ss_broadcast ) {
-		// send a demo message to each connected client
-        FOR_EACH_CLIENT( client ) {
-			if( client->netchan->type == NETCHAN_OLD ) {
-				SV_OldClientWriteReliableMessages( client,
-                    client->netchan->maxpacketlen );
-			}
-			client->netchan->Transmit( client->netchan,
-                demo_msglen, demo_data );
-		}
-		return;
-	}
+    int         msglen;
 
 	// send a message to each connected client
     FOR_EACH_CLIENT( client ) {

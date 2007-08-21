@@ -330,10 +330,10 @@ static void Cmd_UnAlias_f( void ) {
 
 	if( Cmd_CheckParam( "-h", "--help" ) ) {
 usage:
-		Com_Printf( "Usage: %s [-h] [-a] [alias_name]\n"
+		Com_Printf( "Usage: %s [-h] [-a] [name]\n"
 			"-h|--help    : display this message\n"
 			"-a|--all     : delete everything\n"
-			"Either -a or alias_name should be given\n", Cmd_Argv( 0 ) );
+			"Either -a or name should be given\n", Cmd_Argv( 0 ) );
 		return;
 	}
 
@@ -365,202 +365,6 @@ usage:
 
 	Z_Free( a->value );
 	Z_Free( a );
-}
-
-/*
-=============================================================================
-
-					MESSAGE TRIGGERS
-
-=============================================================================
-*/
-
-typedef struct cmd_trigger_s {
-	list_t	        entry;
-	trigChannel_t	chan;
-	char		*match;
-	char		*command;
-} cmd_trigger_t;
-
-static list_t	cmd_triggers;
-
-static struct {
-    const char *name;
-    const char *desc;
-    trigChannel_t chan;
-} triggers[] = {
-    { "client", "misc client events", TRIG_CLIENT_SYSTEM },
-    { "chat", "client chat messages", TRIG_CLIENT_CHAT },
-    { "print", "client print messages (default)", TRIG_CLIENT_PRINT },
-    { "cprint", "client centerprint messages", TRIG_CLIENT_CENTERPRINT },
-    { "server", "misc server events", TRIG_SERVER_SYSTEM },
-    { "bprint", "game DLL broadcast messages", TRIG_SERVER_BPRINT },
-    { "dprint", "game DLL console messages", TRIG_SERVER_DPRINT },
-    { NULL, 0 }
-};
-
-static const char *chan2string( trigChannel_t chan ) {
-    int i;
-
-    for( i = 0; triggers[i].name; i++ ) {
-        if( triggers[i].chan == chan ) {
-            return triggers[i].name;
-        }
-    }
-    return "unknown";
-}
-
-/*
-============
-Cmd_Trigger_f
-============
-*/
-static void Cmd_Trigger_f( void ) {
-	cmd_trigger_t *trigger;
-	char *command, *match, *name;
-	int cmdLength, matchLength;
-	trigChannel_t chan;
-    int i;
-
-	if( Cmd_Argc() == 1 ) {
-		if( LIST_EMPTY( &cmd_triggers ) ) {
-			Com_Printf( "No triggers registered\n" );
-			return;
-		}
-		Com_Printf( "Current message triggers:\n" );
-        LIST_FOR_EACH( cmd_trigger_t, trigger, &cmd_triggers, entry ) {
-			Com_Printf( "\"%s\" = \"%s\" [%s]\n",
-				trigger->match, trigger->command,
-                    chan2string( trigger->chan ) );
-		}
-		return;
-	}
-
-	if( Cmd_Argc() < 3 ) {
-usage:
-		Com_Printf( "Usage: %s <command> <match> [channel]\n", Cmd_Argv( 0 ) );
-		Com_Printf( "Valid channels:\n" );
-		for( i = 0; triggers[i].name; i++ ) {
-			Com_Printf( "%6s - %s\n", triggers[i].name, triggers[i].desc );
-		}
-		return;
-	}
-
-	command = Cmd_Argv( 1 );
-	match = Cmd_Argv( 2 );
-
-	chan = TRIG_CLIENT_PRINT;
-	if( Cmd_Argc() > 3 ) {
-		name = Cmd_Argv( 3 );
-		for( i = 0; triggers[i].name; i++ ) {
-			if( !strcmp( name, triggers[i].name ) ) {
-                chan = triggers[i].chan;
-				break;
-			}
-		}
-		if( !triggers[i].name ) {
-			Com_Printf( "Unknown channel '%s'\n", name );
-            goto usage;
-		}
-	}
-
-	// don't create the same trigger twice
-    LIST_FOR_EACH( cmd_trigger_t, trigger, &cmd_triggers, entry ) {
-		if( trigger->chan == chan &&
-			!strcmp( trigger->command, command ) &&
-			!strcmp( trigger->match, match ) )
-		{
-			return;
-		}
-	}
-
-	cmdLength = strlen( command ) + 1;
-	matchLength = strlen( match ) + 1;
-
-	trigger = Cmd_Malloc( sizeof( cmd_trigger_t ) +
-        cmdLength + matchLength );
-	trigger->chan = chan;
-	trigger->command = ( char * )( trigger + 1 );
-	trigger->match = trigger->command + cmdLength;
-	List_Append( &cmd_triggers, &trigger->entry );
-
-	strcpy( trigger->command, command );
-	strcpy( trigger->match, match );
-}
-
-/*
-============
-Cmd_UnTrigger_f
-============
-*/
-static void Cmd_UnTrigger_f( void ) {
-	cmd_trigger_t *trigger, *next;
-	char *command, *match;
-
-	if( Cmd_CheckParam( "-h", "--help" ) ) {
-usage:
-		Com_Printf( "Usage: %s [-h] [-a] [-c <command>] [-m <match>]\n"
-			"-h|--help    : display this message\n"
-			"-a|--all     : delete everything\n"
-			"-c|--command : delete by command\n"
-			"-m|--match   : delete by match\n"
-			"Either -a or combination of -c and -m should be given\n",
-                Cmd_Argv( 0 ) );
-		return;
-	}
-
-	if( Cmd_CheckParam( "a", "all" ) ) {
-        LIST_FOR_EACH_SAFE( cmd_trigger_t, trigger, next, &cmd_triggers, entry ) {
-			Z_Free( trigger );
-		}
-		List_Init( &cmd_triggers );
-		Com_Printf( "Removed all triggers\n" );
-		return;
-	}
-
-	command = Cmd_FindParam( "c", "command" );
-	match = Cmd_FindParam( "m", "match" );
-	if( !command && !match ) {
-		goto usage;
-	}
-
-    LIST_FOR_EACH_SAFE( cmd_trigger_t, trigger, next, &cmd_triggers, entry ) {
-		if( command && strcmp( trigger->command, command ) ) {
-			continue;
-		}
-		if( match && strcmp( trigger->match, match ) ) {
-			continue;
-		}
-
-		Com_Printf( "Removed \"%s\" = \"%s\" [%s]\n",
-			trigger->match, trigger->command,
-                chan2string( trigger->chan ) );
-
-		List_Delete( &trigger->entry );
-		Z_Free( trigger );
-	}
-}
-
-/*
-============
-Cmd_ExecTrigger
-============
-*/
-void Cmd_ExecTrigger( trigChannel_t chan, const char *string ) {
-	cmd_trigger_t *trigger;
-    char *text;
-
-	// execute matching triggers
-    LIST_FOR_EACH( cmd_trigger_t, trigger, &cmd_triggers, entry ) {
-		if( trigger->chan != chan ) {
-			continue;
-		}
-		text = Cmd_MacroExpandString( trigger->match, qfalse );
-		if( text && Com_WildCmp( text, string, qtrue ) ) {
-			Cbuf_AddText( trigger->command );
-			Cbuf_AddText( "\n" );
-		}
-	}
 }
 
 /*
@@ -1567,8 +1371,6 @@ static const cmdreg_t c_cmd[] = {
     { "alias", Cmd_Alias_f, Cmd_Alias_g, Cmd_Mixed_g },
     { "unalias", Cmd_UnAlias_f, Cmd_Alias_g },
     { "wait", Cmd_Wait_f },
-    { "trigger", Cmd_Trigger_f },
-    { "untrigger", Cmd_UnTrigger_f },
 
     { NULL }
 };
@@ -1590,8 +1392,6 @@ void Cmd_Init( void ) {
     for( i = 0; i < ALIAS_HASH_SIZE; i++ ) {
         List_Init( &cmd_aliasHash[i] );
     }
-
-    List_Init( &cmd_triggers );
 
     Cmd_Register( c_cmd );
 	Cmd_FillAPI( &cmd );

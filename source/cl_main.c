@@ -63,14 +63,18 @@ cvar_t *cl_railtrail_time;
 cvar_t *cl_railtrail_alpha;
 cvar_t *cl_railcore_color;
 cvar_t *cl_railcore_width;
-cvar_t *cl_railrings_color;
-cvar_t *cl_railrings_width;
+cvar_t *cl_railspiral_color;
+cvar_t *cl_railspiral_radius;
 
 cvar_t	*cl_disable_particles;
 cvar_t	*cl_disable_explosions;
 cvar_t	*cl_chat_notify;
-cvar_t	*cl_chat_beep;
-cvar_t	*cl_chat_clear;
+cvar_t	*cl_chat_sound;
+cvar_t	*cl_chat_filter;
+
+cvar_t	*cl_disconnectcmd;
+cvar_t	*cl_changemapcmd;
+cvar_t	*cl_beginmapcmd;
 
 cvar_t *cl_gibs;
 
@@ -363,16 +367,12 @@ static void CL_CheckForResend( void ) {
     if ( cls.state < ca_connecting && sv_running->integer > ss_loading ) {
         strcpy( cls.servername, "localhost" );
         cls.serverAddress.type = NA_LOOPBACK;
-		if( sv_running->integer < ss_cinematic ) {
-			cls.serverProtocol = cl_protocol->integer;
-            if( cls.serverProtocol < PROTOCOL_VERSION_DEFAULT ||
-                cls.serverProtocol > PROTOCOL_VERSION_Q2PRO )
-            {
-    			cls.serverProtocol = PROTOCOL_VERSION_Q2PRO;
-            }
-		} else {
-			cls.serverProtocol = PROTOCOL_VERSION_DEFAULT;
-		}
+        cls.serverProtocol = cl_protocol->integer;
+        if( cls.serverProtocol < PROTOCOL_VERSION_DEFAULT ||
+            cls.serverProtocol > PROTOCOL_VERSION_Q2PRO )
+        {
+            cls.serverProtocol = PROTOCOL_VERSION_Q2PRO;
+        }
     
         // we don't need a challenge on the localhost
         cls.state = ca_connecting;
@@ -642,7 +642,7 @@ This is also called on Com_Error, so it shouldn't cause any errors
 */
 void CL_Disconnect( comErrorType_t type, const char *text ) {
     if ( cls.state != ca_disconnected ) {
-        Cmd_ExecTrigger( TRIG_CLIENT_SYSTEM, "disconnect" );
+        EXEC_TRIGGER( cl_disconnectcmd );
     }
 
     if ( cls.ref_initialized )
@@ -651,8 +651,6 @@ void CL_Disconnect( comErrorType_t type, const char *text ) {
     cls.connect_time = 0;
 	cls.connectCount = 0;
     cls.passive = qfalse;
-
-    SCR_StopCinematic ();
 
     if ( cls.demoplayback ) {
         FS_FCloseFile( cls.demoplayback );
@@ -1005,7 +1003,7 @@ static void CL_Changing_f( void ) {
 
     Com_Printf( "Changing map...\n" );
 
-    Cmd_ExecTrigger( TRIG_CLIENT_SYSTEM, "changelevel" );
+    EXEC_TRIGGER( cl_changemapcmd );
 
     SCR_BeginLoadingPlaque();
 
@@ -1205,7 +1203,7 @@ static void CL_ConnectionlessPacket( void ) {
 
     // challenge from the server we are connecting to
     if ( !strcmp( c, "challenge" ) ) {
-		qboolean proto35 = qfalse, proto36 = qfalse;
+		int minor35 = 0, minor36 = 0;
 
         if ( cls.state < ca_challenging ) {
             Com_DPrintf( "Challenge received while not connecting.  Ignored.\n" );
@@ -1225,18 +1223,22 @@ static void CL_ConnectionlessPacket( void ) {
         cls.connect_time = -9999;
         cls.connectCount = 0;
 
-		/* parse additional parameters */
+		// parse additional parameters
         j = Cmd_Argc();
 		for( i = 2; i < j; i++ ) {
 			s = Cmd_Argv( i );
 			if( !strncmp( s, "p=", 2 ) ) {
 				s += 2;
 				while( *s ) {
-					k = atoi( s );
+					k = strtoul( s, &s, 10 );
 					if( k == PROTOCOL_VERSION_R1Q2 ) {
-						proto35 = qtrue;
+						minor35 = PROTOCOL_VERSION_R1Q2_MINOR;
 					} else if( k == PROTOCOL_VERSION_Q2PRO ) {
-						proto36 = qtrue;
+                        if( *s == ':' ) {
+						    minor36 = strtoul( s + 1, &s, 10 );
+                        } else {
+                            minor36 = PROTOCOL_VERSION_Q2PRO_MINOR;
+                        }
 					}
 					s = strchr( s, ',' );
 					if( s == NULL ) {
@@ -1247,14 +1249,14 @@ static void CL_ConnectionlessPacket( void ) {
 			}
         }
 
-		/* select the 'best' protocol available, unless told otherwise */
+		// choose supported protocol
 		if( cls.serverProtocol == 0 ||
-			( cls.serverProtocol == PROTOCOL_VERSION_R1Q2 && !proto35 ) ||
-			( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO && !proto36 ) )
+			( cls.serverProtocol == PROTOCOL_VERSION_R1Q2 && minor35 != PROTOCOL_VERSION_R1Q2_MINOR ) ||
+			( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO && minor36 != PROTOCOL_VERSION_Q2PRO_MINOR ) )
 		{
-			if( proto36 ) {
+			if( minor36 == PROTOCOL_VERSION_Q2PRO_MINOR ) {
 				cls.serverProtocol = PROTOCOL_VERSION_Q2PRO;
-			} else if( proto35 ) {
+			} else if( minor35 == PROTOCOL_VERSION_R1Q2_MINOR ) {
 				cls.serverProtocol = PROTOCOL_VERSION_R1Q2;
 			} else {
 				cls.serverProtocol = PROTOCOL_VERSION_DEFAULT;
@@ -2353,8 +2355,8 @@ void CL_InitLocal ( void ) {
     cl_railtrail_alpha = Cvar_Get( "cl_railtrail_alpha", "1.0", 0 );
     cl_railcore_color = Cvar_Get( "cl_railcore_color", "0xFF0000", 0 );
     cl_railcore_width = Cvar_Get( "cl_railcore_width", "3", 0 );
-    cl_railrings_color = Cvar_Get( "cl_railrings_color", "0x0000FF", 0 );
-    cl_railrings_width = Cvar_Get( "cl_railrings_width", "3", 0 );
+    cl_railspiral_color = Cvar_Get( "cl_railspiral_color", "0x0000FF", 0 );
+    cl_railspiral_radius = Cvar_Get( "cl_railspiral_radius", "3", 0 );
 
     cl_disable_particles = Cvar_Get( "cl_disable_particles", "0", 0 );
 	cl_disable_explosions = Cvar_Get( "cl_disable_explosions", "0", 0 );
@@ -2362,8 +2364,12 @@ void CL_InitLocal ( void ) {
 	cl_gibs->changed = cl_gibs_changed;
 
     cl_chat_notify = Cvar_Get( "cl_chat_notify", "1", 0 );
-    cl_chat_beep = Cvar_Get( "cl_chat_beep", "1", 0 );
-    cl_chat_clear = Cvar_Get( "cl_chat_clear", "0", 0 );
+    cl_chat_sound = Cvar_Get( "cl_chat_sound", "misc/talk.wav", 0 );
+    cl_chat_filter = Cvar_Get( "cl_chat_filter", "0", 0 );
+
+    cl_disconnectcmd = Cvar_Get( "cl_disconnectcmd", "", 0 );
+    cl_changemapcmd = Cvar_Get( "cl_changemapcmd", "", 0 );
+    cl_beginmapcmd = Cvar_Get( "cl_beginmapcmd", "", 0 );
 
     cl_protocol = Cvar_Get( "cl_protocol", "0", 0 );
 
@@ -2645,7 +2651,6 @@ void CL_Frame( int msec ) {
     // advance local effects for next frame
     CL_RunDLights();
     CL_RunLightStyles();
-    SCR_RunCinematic();
     Con_RunConsole();
 
 	CL_MeasureFPS();
@@ -2694,12 +2699,12 @@ void CL_Init( void ) {
 
     // all archived variables will now be loaded
 
-#if defined __unix__ || defined __sgi
-    S_Init();
-    CL_InitRefresh();
-#else
+#ifdef _WIN32
     CL_InitRefresh();
     S_Init();	// sound must be initialized after window is created
+#else
+    S_Init();
+    CL_InitRefresh();
 #endif
 
     V_Init();

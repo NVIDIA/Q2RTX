@@ -22,16 +22,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MAX_DEMOINFO_CLIENTS	20
 #define MAX_STATUS_PLAYERS	64
 
-typedef enum connstate_e {
+typedef enum {
 	ca_uninitialized,
 	ca_disconnected, 	// not talking to a server
 	ca_challenging,		// sending getchallenge packets to the server
 	ca_connecting,		// sending connect packets to the server
 	ca_connected,		// netchan_t established, waiting for svc_serverdata
 	ca_loading,			// loading level data
-    ca_precached,       // loaded level data
-	ca_active,			// game views should be displayed
-	ca_cinematic		// playing cinematic or static pic, not a level
+    ca_precached,       // loaded level data, waiting for svc_frame
+	ca_active			// game views should be displayed
 } connstate_t;
 
 typedef enum {
@@ -42,13 +41,13 @@ typedef enum {
 	dl_single
 } dltype_t;		// download type
 
-typedef struct playerStatus_s {
+typedef struct {
 	char name[MAX_CLIENT_NAME];
 	int ping;
 	int score;
 } playerStatus_t;
 
-typedef struct serverStatus_s {
+typedef struct {
 	char	address[MAX_QPATH];
 	char	infostring[MAX_STRING_CHARS]; // BIG infostring
 	playerStatus_t	players[MAX_STATUS_PLAYERS];
@@ -56,7 +55,7 @@ typedef struct serverStatus_s {
 	int ping;
 } serverStatus_t;
 
-typedef struct demoInfo_s {
+typedef struct {
 	qboolean mvd; // FIXME: can also use clientNum == -1
 	int clientNum;
 	char gamedir[MAX_QPATH];
@@ -65,7 +64,7 @@ typedef struct demoInfo_s {
 	char clients[MAX_DEMOINFO_CLIENTS][MAX_CLIENT_NAME];
 } demoInfo_t;
 
-typedef struct clientStatus_s {
+typedef struct {
 	connstate_t	connState;
 	int			connectCount;
 	qboolean	demoplayback;
@@ -75,7 +74,7 @@ typedef struct clientStatus_s {
 	const char	*loadingString;
 } clientStatus_t;
 
-typedef struct clientAPI_s {
+typedef struct {
 	void	(*StartLocalSound)( const char *name );
 	void	(*StopAllSounds)( void );
 

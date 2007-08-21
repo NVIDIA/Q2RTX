@@ -295,7 +295,7 @@ void CL_Record_f( void ) {
 	MSG_WriteByte( svc_serverdata );
 	MSG_WriteLong( PROTOCOL_VERSION_DEFAULT );
 	MSG_WriteLong( 0x10000 + cl.servercount );
-	MSG_WriteByte( ATR_DEMO );	// demos are always attract loops
+	MSG_WriteByte( 1 );	// demos are always attract loops
 	MSG_WriteString( cl.gamedir );
     MSG_WriteShort( cl.clientNum );
 	MSG_WriteString( cl.configstrings[CS_NAME] );

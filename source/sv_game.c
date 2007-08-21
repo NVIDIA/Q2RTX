@@ -27,6 +27,51 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 game_export_t	*ge;
 int             gameFeatures;
 
+/*
+================
+PF_FindIndex
+
+================
+*/
+static int SV_FindIndex( const char *name, int start, int max, qboolean create ) {
+	char *string;
+	int		i;
+	
+	if( !name || !name[0] )
+		return 0;
+
+	for( i = 1; i < max; i++ ) {
+		string = sv.configstrings[start + i];
+		if( !string[0] ) {
+			break;
+		}
+		if( !strcmp( string, name ) ) {
+			return i;
+		}
+	}
+
+	if( !create )
+		return 0;
+
+	if( i == max )
+		Com_Error( ERR_DROP, "PF_FindIndex: overflow" );
+
+	PF_Configstring( i + start, name );
+
+	return i;
+}
+
+static int PF_ModelIndex (const char *name) {
+	return SV_FindIndex (name, CS_MODELS, MAX_MODELS, qtrue);
+}
+
+static int PF_SoundIndex (const char *name) {
+	return SV_FindIndex (name, CS_SOUNDS, MAX_SOUNDS, qtrue);
+}
+
+static int PF_ImageIndex (const char *name) {
+	return SV_FindIndex (name, CS_IMAGES, MAX_IMAGES, qtrue);
+}
 
 /*
 ===============
@@ -274,7 +319,7 @@ static void PF_setmodel (edict_t *ent, const char *name) {
 	if (!name)
 		Com_Error (ERR_DROP, "PF_setmodel: NULL");
 
-	i = SV_ModelIndex (name);
+	i = PF_ModelIndex (name);
 		
 	ent->s.modelindex = i;
 
@@ -850,9 +895,9 @@ void SV_InitGameProgs ( void )
 	import.inPHS = PF_inPHS;
 	import.Pmove = PF_Pmove;
 
-	import.modelindex = SV_ModelIndex;
-	import.soundindex = SV_SoundIndex;
-	import.imageindex = SV_ImageIndex;
+	import.modelindex = PF_ModelIndex;
+	import.soundindex = PF_SoundIndex;
+	import.imageindex = PF_ImageIndex;
 
 	import.configstring = PF_Configstring;
 	import.sound = PF_StartSound;

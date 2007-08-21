@@ -769,7 +769,6 @@ static void CL_CalcViewValues( void ) {
 	vec3_t viewoffset;
 	vec3_t kickangles;
     float fov, lerp;
-	qboolean demoplayback, predict;
     centity_t *ent;
 
 	// find states to interpolate between
@@ -806,9 +805,7 @@ static void CL_CalcViewValues( void ) {
 	lerp = cl.lerpfrac;
 
 	// calculate the origin
-	demoplayback = cls.demoplayback || cl.attractLoop == ATR_DEMO;
-	predict = cl_predict->integer && !( ps->pmove.pm_flags & PMF_NO_PREDICTION );
-	if( !demoplayback && predict ) {	
+	if( !cls.demoplayback && cl_predict->integer && !( ps->pmove.pm_flags & PMF_NO_PREDICTION ) ) {	
 		// use predicted values
 		int	delta;
 		float backlerp = lerp - 1.0;
@@ -831,7 +828,7 @@ static void CL_CalcViewValues( void ) {
 	}
 
 	// if not running a demo or on a locked frame, add the local angle movement
-	if( demoplayback ) {
+	if( cls.demoplayback ) {
 		if( cls.key_dest == KEY_GAME && Key_IsDown( K_SHIFT ) ) {
 			VectorCopy( cl.viewangles, cl.refdef.viewangles );
 		} else {

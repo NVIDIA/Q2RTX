@@ -23,6 +23,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 netadr_t	master_adr[MAX_MASTERS];	// address of group servers
 
+LIST_DECL( sv_banlist );
+LIST_DECL( sv_blacklist );
+
 client_t	*sv_client;			// current client
 
 cvar_t	*sv_enforcetime;
@@ -217,6 +220,37 @@ void SV_RateInit( ratelimit_t *r, int limit, int period ) {
 	r->time = svs.realtime + period;
 	r->limit = limit;
 	r->period = period;
+}
+
+addrmatch_t *SV_MatchAddress( list_t *list, netadr_t *address ) {
+    uint32 addr = *( uint32 * )address->ip;
+    addrmatch_t *match;
+
+    LIST_FOR_EACH( addrmatch_t, match, list, entry ) {
+        if( ( addr & match->mask ) == ( match->addr & match->mask ) ) {
+            return match;
+        }
+    }
+    return NULL;
+}
+
+void SV_DumpMatches( list_t *list ) {
+    addrmatch_t *match;
+    byte ip[4];
+    int i, count;
+
+    count = 1;
+    LIST_FOR_EACH( addrmatch_t, match, list, entry ) {
+        *( uint32 * )ip = match->addr;
+        for( i = 0; i < 32; i++ ) {
+            if( ( match->mask & ( 1 << i ) ) == 0 ) {
+                break;
+            }
+        }
+        Com_Printf( "(%d) %d.%d.%d.%d/%d\n",
+            count, ip[0], ip[1], ip[2], ip[3], i );
+        count++;
+    }
 }
 
 /*
@@ -446,7 +480,8 @@ static void SVC_GetChallenge( void ) {
 
 	// send it back
 	Netchan_OutOfBandPrint( NS_SERVER, &net_from,
-        "challenge %d p=34,35,36", challenge );
+        "challenge %d p=34,35,36:%d", challenge,
+        PROTOCOL_VERSION_Q2PRO_MINOR );
 }
 
 /*
@@ -487,18 +522,15 @@ static void SVC_DirectConnect( void ) {
         return;
     }
 
-	// attractloop servers are ONLY for local clients
-	if( sv.attractloop ) {
-		if( !NET_IsLocalAddress( &net_from ) ) {
-			SV_OobPrintf( "Connection refused.\n" );
-			Com_DPrintf( "    rejected a remote connection "
-                    "in attract loop.\n" );
-			return;
-		}
-	}
-
-	// see if the challenge is valid
 	if( !NET_IsLocalAddress( &net_from ) ) {
+        // check for banned address
+        if( SV_MatchAddress( &sv_banlist, &net_from ) ) {
+            SV_OobPrintf( "Your IP address is banned.\n" );
+            Com_DPrintf( "   rejected connect from banned IP\n" );
+            return;
+        }
+
+	    // see if the challenge is valid
 		for( i = 0; i < MAX_CHALLENGES; i++ ) {
 			if( !svs.challenges[i].challenge ) {
 				continue;
