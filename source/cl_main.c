@@ -1504,7 +1504,7 @@ void CL_UpdateUserinfo( cvar_t *var, cvarSetSource_t source ) {
 CL_Userinfo_f
 ==============
 */
-void CL_Userinfo_f ( void ) {
+static void CL_Userinfo_f ( void ) {
     Com_Printf ( "User info settings:\n" );
     Info_Print ( Cvar_Userinfo() );
 }
@@ -1514,11 +1514,9 @@ void CL_Userinfo_f ( void ) {
 CL_RegisterSounds
 ======================
 */
-void CL_RegisterSounds( void ) {
+static void CL_RegisterSounds( void ) {
     int	i;
     char	*s;
-
-    SCR_LoadingString( "sounds" );
 
     S_BeginRegistration ();
     CL_RegisterTEntSounds ();
@@ -1539,18 +1537,18 @@ Restart the sound subsystem so it can pick up
 new parameters and flush all sounds
 =================
 */
-void CL_Snd_Restart_f ( void ) {
+static void CL_Snd_Restart_f ( void ) {
     S_Shutdown ();
     S_Init ();
     CL_RegisterSounds ();
 }
 
-int precache_check; // for autodownload of precache items
-int precache_spawncount;
-int precache_tex;
-int precache_model_skin;
+static int precache_check; // for autodownload of precache items
+static int precache_spawncount;
+static int precache_tex;
+static int precache_model_skin;
 
-byte *precache_model; // used for skin checking in alias models
+static byte *precache_model; // used for skin checking in alias models
 
 #define PLAYER_MULT 5
 
@@ -1558,8 +1556,7 @@ byte *precache_model; // used for skin checking in alias models
 #define ENV_CNT (CS_PLAYERSKINS + MAX_CLIENTS * PLAYER_MULT)
 #define TEXTURE_CNT (ENV_CNT+13)
 
-static const char *env_suf[ 6 ] = {"rt", "bk", "lf", "ft", "up", "dn"
-                                  };
+static const char env_suf[6][3] = { "rt", "bk", "lf", "ft", "up", "dn" };
 
 void CL_RequestNextDownload ( void ) {
     unsigned	map_checksum;		// for detecting cheater maps
@@ -1827,7 +1824,9 @@ void CL_RequestNextDownload ( void ) {
 
 
     //ZOID
+    SCR_LoadingString( "sounds" );
     CL_RegisterSounds ();
+
     CL_PrepRefresh ();
 
     LOC_LoadLocations();
@@ -1870,6 +1869,7 @@ static void CL_Precache_f( void ) {
         SCR_LoadingString( "collision map" );
         CM_LoadMap( &cl.cm, cl.configstrings[ CS_MODELS + 1 ],
                 CM_LOAD_CLIENT, &map_checksum );
+        SCR_LoadingString( "sounds" );
         CL_RegisterSounds();
         CL_PrepRefresh();
         cls.state = ca_precached;
