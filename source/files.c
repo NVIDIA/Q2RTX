@@ -291,45 +291,33 @@ static char *FS_ConvertToSysPath( char *path ) {
 ================
 FS_GetFileLength
 
-Gets current file length.
-For GZIP files, returns uncompressed length
-(very slow operation because it has to uncompress the whole file).
+Returns current length for files opened for writing.
+Returns cached length for files opened for reading.
+Returns compressed length for GZIP files.
 ================
 */
 int FS_GetFileLength( fileHandle_t f ) {
 	fsFile_t *file = FS_FileForHandle( f );
 	int pos, length;
 
-	if( ( file->mode & FS_MODE_MASK ) == FS_MODE_READ ) {
 #ifdef USE_ZLIB
-		if( file->type == FS_GZIP ) {
-			goto gzipHack;
-		}
+    if( file->type == FS_GZIP ) {
+        return -1;
+    }
 #endif
+
+	if( ( file->mode & FS_MODE_MASK ) == FS_MODE_READ ) {
 		return file->length;
 	}
 
-	switch( file->type ) {
-	case FS_REAL:
-		pos = ftell( file->fp );
-		fseek( file->fp, 0, SEEK_END );
-		length = ftell( file->fp );
-		fseek( file->fp, pos, SEEK_SET );
-		break;
-#ifdef USE_ZLIB
-	case FS_GZIP:
-gzipHack:
-		pos = gztell( file->zfp );
-		gzseek( file->zfp, 0x7FFFFFFF, SEEK_SET );
-		length = gztell( file->zfp );
-		gzseek( file->zfp, pos, SEEK_SET );
-		break;
-#endif
-	default:
-		Com_Error( ERR_FATAL, "FS_GetFileLength: bad file type" );
-		length = -1;
-		break;
-	}
+	if( file->type != FS_REAL ) {
+		Com_Error( ERR_FATAL, "%s: bad file type", __func__ );
+    }
+
+    pos = ftell( file->fp );
+    fseek( file->fp, 0, SEEK_END );
+    length = ftell( file->fp );
+    fseek( file->fp, pos, SEEK_SET );
 
 	return length;
 }
@@ -349,20 +337,15 @@ int FS_GetFileLengthNoCache( fileHandle_t f ) {
 		length = file->length;
 		break;
 #ifdef USE_ZLIB
-	case FS_GZIP:
-		pos = gztell( file->zfp );
-		gzseek( file->zfp, 0x7FFFFFFF, SEEK_SET );
-		length = gztell( file->zfp );
-		gzseek( file->zfp, pos, SEEK_SET );
-		break;
 	case FS_PK2:
 		length = file->length;
 		break;
+	case FS_GZIP:
+        length = -1;
+        break;
 #endif
 	default:
-		Com_Error( ERR_FATAL, "FS_GetFileLengthNoCache: bad file type" );
-		length = -1;
-		break;
+		Com_Error( ERR_FATAL, "%s: bad file type", __func__ );
 	}
 
 	return length;

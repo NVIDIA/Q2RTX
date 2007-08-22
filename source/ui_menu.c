@@ -643,14 +643,18 @@ static int MenuList_Key( menuList_t *l, int key ) {
 	case K_HOME:
 	case K_KP_HOME:
 		l->prestep = 0;
-		return QMS_SILENT;
+		l->curvalue = 0;
+		l->generic.parent->callback( l->generic.id, QM_CHANGE, l->curvalue );
+		return QMS_MOVE;
 
 	case K_END:
 	case K_KP_END:
 		if( l->numItems > l->maxItems ) {
 			l->prestep = l->numItems - l->maxItems;
 		}
-		return QMS_SILENT;
+		l->curvalue = l->numItems - 1;
+		l->generic.parent->callback( l->generic.id, QM_CHANGE, l->curvalue );
+		return QMS_MOVE;
 
 	case K_MWHEELUP:
 		if( keys.IsDown( K_CTRL ) ) {

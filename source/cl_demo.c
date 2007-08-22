@@ -404,7 +404,7 @@ static void CL_ParseNextDemoMessage( void ) {
 	CL_ParseServerMessage();
 
 	if( cls.demofileSize ) {
-		pos = FS_Tell( cls.demoplayback ) - cls.demofileFrameOffset;
+		pos = FS_RawTell( cls.demoplayback ) - cls.demofileFrameOffset;
 		if( pos < 0 ) {
 			pos = 0;
 		}
@@ -444,8 +444,7 @@ static void CL_PlayDemo_f( void ) {
         if( !demofile ) {
     		ext = COM_FileExtension( arg );
 	    	if( strcmp( ext, ".dm2" ) ) {
-				length=Com_sprintf( name, sizeof( name ), "demos/%s.dm2", arg );
-                Com_Printf( "%d\n",length);
+				Com_sprintf( name, sizeof( name ), "demos/%s.dm2", arg );
 				FS_FOpenFile( name, &demofile, FS_MODE_READ );
             }
         }
@@ -478,8 +477,13 @@ static void CL_PlayDemo_f( void ) {
 	} while( cls.state == ca_connected );
 
 	length = FS_GetFileLengthNoCache( demofile );
-	cls.demofileFrameOffset = FS_Tell( demofile );
-	cls.demofileSize = length - cls.demofileFrameOffset;
+    if( length > 0 ) {
+    	cls.demofileFrameOffset = FS_Tell( demofile );
+	    cls.demofileSize = length - cls.demofileFrameOffset;
+    } else {
+    	cls.demofileFrameOffset = 0;
+	    cls.demofileSize = 0;
+    }
 
 	if( com_timedemo->integer ) {
 		cls.timeDemoFrames = 0;
