@@ -55,6 +55,7 @@ statCounters_t  c;
 
 int registration_sequence;
 
+cvar_t *gl_partscale;
 #ifdef USE_JPEG
 cvar_t *gl_screenshot_quality;
 #endif
@@ -78,9 +79,6 @@ cvar_t *gl_subdivide;
 cvar_t *gl_fastsky;
 cvar_t *gl_dynamic;
 cvar_t *gl_fullbright;
-cvar_t *gl_mode;
-cvar_t *gl_custom_width;
-cvar_t *gl_custom_height;
 cvar_t *gl_hwgamma;
 cvar_t *gl_fullscreen;
 
@@ -703,6 +701,7 @@ static void GL_Register( void ) {
 	cvar.Subsystem( CVAR_SYSTEM_VIDEO );
 
     /* misc */
+	gl_partscale = cvar.Get( "gl_partscale", "1.5", 0 );
 #ifdef USE_JPEG
 	gl_screenshot_quality = cvar.Get( "gl_screenshot_quality", "100",
         CVAR_ARCHIVE );
@@ -995,7 +994,7 @@ void GL_BeginRegistration( const char *name ) {
    
 	/* check if the required world model was already loaded */
     if( !strcmp( r_world.name, fullname ) &&
-            !cvar.VariableInteger( "flushmap" ) )
+        !cvar.VariableInteger( "flushmap" ) )
     {
 		lastexinfo = r_world.texinfos + r_world.numTexinfos;
         for( texinfo = r_world.texinfos; texinfo != lastexinfo; texinfo++ ) {

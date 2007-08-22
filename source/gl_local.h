@@ -81,6 +81,7 @@ typedef struct {
 
 extern statCounters_t c;
 
+extern cvar_t *gl_partscale;
 extern cvar_t *gl_znear;
 extern cvar_t *gl_zfar;
 extern cvar_t *gl_modulate;

@@ -959,7 +959,7 @@ void GL_DrawParticles( void ) {
     particle_t *p;
     int i;
     vec3_t transformed;
-    vec_t scale;
+    vec_t scale, dist;
     color_t color;
     int currentVert;
     vec_t *dst_vert;
@@ -980,12 +980,11 @@ void GL_DrawParticles( void ) {
     currentVert = 0;
     for( i = 0, p = glr.fd.particles; i < glr.fd.num_particles; i++, p++ ) {
         VectorSubtract( p->origin, glr.fd.vieworg, transformed );
-        scale = DotProduct( transformed, glr.viewaxis[0] );
+        dist = DotProduct( transformed, glr.viewaxis[0] );
 
-        if( scale < 20 ) {
-            scale = 1.5f;
-        } else {
-            scale = 1.5f + scale * 0.006f;
+        scale = gl_partscale->value;
+        if( dist > 20 ) {
+            scale += dist * 0.006f;
         }
 
         if( p->color == 255 ) {
@@ -996,7 +995,7 @@ void GL_DrawParticles( void ) {
         color[3] = p->alpha * 255;
 
         if( currentVert + 3 > TESS_MAX_VERTICES ||
-                currentVert + 3 > TESS_MAX_INDICES )
+            currentVert + 3 > TESS_MAX_INDICES )
         {
             tess.numVertices = tess.numIndices = currentVert;
             EndSurface_Single();

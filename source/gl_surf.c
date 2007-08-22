@@ -87,14 +87,11 @@ static void LM_InitBlock( void ) {
 static void LM_UploadBlock( void ) {
     /* lightmap images would be automatically freed
 	 * by R_FreeUnusedImages on next level load */
-    GL_SelectTMU( 1 );
     lm.lightmaps[lm.numMaps] = R_CreateImage( va( "*lightmap%d", lm.numMaps ),
-            lm.buffer, LM_BLOCK_WIDTH, LM_BLOCK_HEIGHT,
-                it_lightmap, if_auto );
+        lm.buffer, LM_BLOCK_WIDTH, LM_BLOCK_HEIGHT, it_lightmap, if_auto );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
     lm.numMaps++;
-    GL_SelectTMU( 0 );
 }
 
 static int LM_BuildSurfaceLightmap( bspSurface_t *surf ) {
@@ -528,7 +525,13 @@ int GL_PostProcessSurface( bspSurface_t *surf ) {
 }
 
 void GL_BeginPostProcessing( void ) {
+    int i;
+
+    for( i = 0; i < LM_MAX_LIGHTMAPS; i++ ) {
+        lm.lightmaps[i] = NULL;
+    }
     lm.numMaps = 0;
+
     LM_InitBlock();
 
 	gl_coloredlightmaps = cvar.Get( "gl_coloredlightmaps", "1",
