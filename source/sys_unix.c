@@ -143,13 +143,15 @@ static void Sys_ShutdownTTY( void ) {
     }
 }
 
+
+static const char color_to_ansi[8] = { '0', '1', '2', '3', '4', '6', '5', '7' };
+
 /*
 =================
 Sys_ConsoleOutput
 =================
 */
 void Sys_ConsoleOutput( const char *string ) {
-	static char color_to_ansi[8] = { '0', '1', '2', '3', '4', '6', '5', '7' };
 	char    *data, *maxp, *p;
     int     length;
     int     color = 0;
@@ -372,8 +374,8 @@ void Hunk_Begin( mempool_t *pool, int maxsize ) {
     buf = mmap( NULL, pool->maxsize, PROT_READ|PROT_WRITE,
 		MAP_PRIVATE|MAP_ANON, -1, 0 );
 	if( buf == NULL || buf == ( byte * )-1 ) {
-		Com_Error( ERR_FATAL, "Hunk_Begin: unable to virtual allocate %d bytes",
-            pool->maxsize );
+		Com_Error( ERR_FATAL, "%s: unable to virtual allocate %d bytes",
+            __func__, pool->maxsize );
     }
     pool->base = buf;
     pool->mapped = pool->maxsize;
@@ -385,9 +387,8 @@ void *Hunk_Alloc( mempool_t *pool, int size ) {
 	// round to cacheline
 	size = ( size + 31 ) & ~31;
 	if( pool->cursize + size > pool->maxsize ) {
-		Com_Error( ERR_FATAL,
-            "Hunk_Alloc: unable to allocate %d bytes out of %d",
-                size, pool->maxsize );
+		Com_Error( ERR_FATAL, "%s: unable to allocate %d bytes out of %d",
+            __func__, size, pool->maxsize );
     }
 	buf = pool->base + pool->cursize;
 	pool->cursize += size;
@@ -417,8 +418,8 @@ void Hunk_End( mempool_t *pool ) {
 	n = mremap( pool->base, pool->maxsize, pool->cursize, 0 );
 #endif
 	if( n != pool->base ) {
-		Com_Error( ERR_FATAL, "Hunk_End: could not remap virtual block: %s",
-                strerror( errno ) );
+		Com_Error( ERR_FATAL, "%s: could not remap virtual block: %s",
+            __func__, strerror( errno ) );
     }
     pool->mapped = pool->cursize;
 }
@@ -426,8 +427,8 @@ void Hunk_End( mempool_t *pool ) {
 void Hunk_Free( mempool_t *pool ) {
 	if( pool->base ) {
 		if( munmap( pool->base, pool->mapped ) ) {
-			Com_Error( ERR_FATAL, "Hunk_Free: munmap failed: %s",
-                strerror( errno ) );
+			Com_Error( ERR_FATAL, "%s: munmap failed: %s",
+                __func__, strerror( errno ) );
         }
 	}
     memset( pool, 0, sizeof( *pool ) );
@@ -1127,8 +1128,8 @@ int main( int argc, char **argv ) {
     }
 
 	if ( !getuid() || !geteuid() ) {
-		Sys_Error(  "You cannot run " APPLICATION " as superuser "
-                    "for security reasons" );
+		Sys_Error(  "You can not run " APPLICATION " as superuser "
+                    "for security reasons!" );
 	}
 		
     _Qcommon_Init_ArgcArgv( argc, argv );

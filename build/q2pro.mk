@@ -20,6 +20,7 @@ SRCFILES=cmd.c cmodel.c common.c prompt.c crc.c cvar.c \
 	snd_main.c snd_mem.c snd_mix.c
 
 ifdef REF_HARD_LINKED
+
 SRCFILES+=r_images.c  \
 	   r_bsp.c \
 	   gl_draw.c   \
@@ -33,7 +34,18 @@ SRCFILES+=r_images.c  \
 	   gl_tess.c   \
 	   gl_sky.c   \
 	   qgl_api.c
+
+ifdef USE_JPEG
+LDFLAGS+=$(JPEG_LDFLAGS)
+CFLAGS+=$(JPEG_CFLAGS)
 endif
+
+ifdef USE_PNG
+LDFLAGS+=$(PNG_LDFLAGS)
+CFLAGS+=$(PNG_CFLAGS)
+endif
+
+endif #REF_HARD_LINKED
 
 ifdef UI_HARD_LINKED
 SRCFILES+=ui_addressbook.c \

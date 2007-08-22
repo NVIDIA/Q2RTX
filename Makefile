@@ -1,6 +1,6 @@
 include config.mk
 
-.PHONY: default all clean distclean install tags
+.PHONY: default all clean distclean install strip tags
 
 default: all
 
@@ -29,6 +29,14 @@ install:
 		install -m 755 -D $$t$(LIBSUFFIX) $(DESTDIR)$(REFDIR)/$$t$(LIBSUFFIX) ; \
 	done
 	install -m 644 -D $(SRCDIR)/q2pro.6 $(DESTDIR)$(MANDIR)/q2pro.6
+
+strip:
+	for t in $(EXECUTABLES) ; do \
+		$(STRIP) $$t$(EXESUFFIX) ; \
+	done
+	for t in $(MODULES) ; do \
+		$(STRIP) $$t$(LIBSUFFIX) ; \
+	done
 
 tarball:
 	mkdir -p baseq2pro

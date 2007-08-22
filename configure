@@ -42,6 +42,7 @@ logfile="console.log"
 cfgfile="config.cfg"
 defcfg="default.cfg"
 autocfg="autoexec.cfg"
+revision="159"
 
 if [ -z "$CFLAGS" ]; then
     CFLAGS="-O2"
@@ -245,8 +246,6 @@ echo "EXECUTABLES=$executables" >> $config_mk
 test "$mingw" = "yes" && echo "RESFLAGS=-I\$(OUTDIR) -I\$(SRCDIR)/source" >> $config_mk
 test "$asm" = "yes" && echo "ASMFLAGS=$asmflags" >> $config_mk
 
-revision=`basename $sources`
-revision=${revision#q2pro-0.}
 echo "REVISION=$revision" >> $config_mk
 echo "#define REVISION $revision" >> $config_h
 echo "#define VERSION \"r$revision\"" >> $config_h

@@ -207,7 +207,9 @@ static void SCR_DrawDemoBar( void ) {
 	}
 
 	if( cls.demoplayback ) {
-		SCR_DrawPercentBar( cls.demofilePercent );
+        if( cls.demofileSize ) {
+    		SCR_DrawPercentBar( cls.demofilePercent );
+        }
 		return;
 	}
 		
