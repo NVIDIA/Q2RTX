@@ -1016,13 +1016,14 @@ char **Sys_ListFiles( const char *rawPath, const char *extension, uint32 flags, 
 		Com_ReplaceSeparators( findPath, '\\' );
 		Sys_ListFilteredFiles( listedFiles, &count, path, findPath, flags, length + 1 );
 	} else {
-		if( extension ) {
+		if( !extension || strchr( extension, ';' ) ) {
+			Com_sprintf( findPath, sizeof( findPath ), "%s\\*", path );
+		} else {
 			if( *extension == '.' ) {
 				extension++;
 			}
 			Com_sprintf( findPath, sizeof( findPath ), "%s\\*.%s", path, extension );
-		} else {
-			Com_sprintf( findPath, sizeof( findPath ), "%s\\*", path );
+			extension = NULL; // do not check later
 		}
 		
 		findHandle = FindFirstFileA( findPath, &findInfo );
@@ -1043,6 +1044,10 @@ char **Sys_ListFiles( const char *rawPath, const char *extension, uint32 flags, 
 				if( findInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ) {
 					continue;
 				}
+			}
+
+			if( extension && !FS_ExtCmp( extension, findInfo.cFileName ) ) {
+    			continue;
 			}
 
 			name = ( flags & FS_SEARCH_SAVEPATH ) ? va( "%s\\%s", path, findInfo.cFileName ) : findInfo.cFileName;
