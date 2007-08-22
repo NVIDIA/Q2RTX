@@ -1756,35 +1756,47 @@ qboolean FS_WildCmp( const char *filter, const char *string ) {
 	return qfalse;
 }
 
-qboolean FS_ExtCmp( const char *ext, const char *string ) {
+qboolean FS_ExtCmp( const char *ext, const char *name ) {
 	int		c1, c2;
-    const char *s;
-	
+    const char *e, *n, *l;
+
+    if( !name[0] || !ext[0] ) {
+        return qfalse;
+    }
+
+    for( l = name; l[1]; l++ )
+        ;
+
+    for( e = ext; e[1]; e++ )
+        ;
+
 rescan:
-    s = string;
+    n = l;
     do {
-        c1 = *ext++;
-        c2 = *s++;
+        c1 = *e--;
+        c2 = *n--;
 
         if( c1 == ';' ) {
-            if( c2 ) {
-                goto rescan;
-            }
-            return qtrue;
+            break; // matched
         }
         
-        c1 = Q_tolower( c1 );
-        c2 = Q_tolower( c2 );
         if( c1 != c2 ) {
-            while( c1 ) {
-                c1 = *ext++;
-                if( c1 == ';' ) {
-                    goto rescan;
+            c1 = Q_tolower( c1 );
+            c2 = Q_tolower( c2 );
+            if( c1 != c2 ) {
+                while( e > ext ) {
+                    c1 = *e--;
+                    if( c1 == ';' ) {
+                        goto rescan;
+                    }
                 }
+                return qfalse;
             }
+        }
+        if( n < name ) {
             return qfalse;
         }
-    } while( c1 );
+    } while( e >= ext );
 
     return qtrue;
 }
@@ -1903,7 +1915,7 @@ char **FS_ListFiles( const char *path, const char *extension,
 						}
 
 						// check extension
-						if( extension && !FS_ExtCmp( extension, COM_FileExtension( name ) ) ) {
+						if( extension && !FS_ExtCmp( extension, name ) ) {
 							continue;
 						}
 						

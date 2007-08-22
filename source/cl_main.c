@@ -641,7 +641,7 @@ This is also called on Com_Error, so it shouldn't cause any errors
 =====================
 */
 void CL_Disconnect( comErrorType_t type, const char *text ) {
-    if ( cls.state != ca_disconnected ) {
+    if ( cls.state > ca_disconnected ) {
         EXEC_TRIGGER( cl_disconnectcmd );
     }
 

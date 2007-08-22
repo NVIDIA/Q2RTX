@@ -1012,11 +1012,8 @@ char **Sys_ListFiles( const char *path, const char *extension,
 				}
 			}
 
-			if( extension ) {
-                s = COM_FileExtension( findInfo->d_name );
-                if( !FS_ExtCmp( extension, s ) ) {
-    				continue;
-                }
+			if( extension && !FS_ExtCmp( extension, findInfo->d_name ) ) {
+    			continue;
 			}
             
 			if( flags & FS_SEARCH_SAVEPATH ) {
