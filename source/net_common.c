@@ -1027,8 +1027,11 @@ void NET_Sleep( int msec ) {
 	timeout.tv_sec = msec / 1000;
 	timeout.tv_usec = ( msec % 1000 ) * 1000;
 	if( s == INVALID_SOCKET ) {
-		select( 0, NULL, NULL, NULL, &timeout );
-		return;
+	    s = udp_sockets[NS_CLIENT];
+	    if( s == INVALID_SOCKET ) {
+		    select( 0, NULL, NULL, NULL, &timeout );
+		    return;
+        }
 	}
 
 	FD_ZERO( &fdset );

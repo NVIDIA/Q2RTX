@@ -66,135 +66,44 @@ const char *MVD_ServerCommandString( int cmd ) {
     return s;
 }
 
-static void MVD_LinkEntity( mvd_t *mvd, entityStateEx_t *ent ) {
-	vec3_t		mins, maxs;
-	cleaf_t		*leafs[MAX_TOTAL_ENT_LEAFS];
-	int			clusters[MAX_TOTAL_ENT_LEAFS];
-	int			num_leafs;
-	int			i, j;
-	int			area;
-	cnode_t		*topnode;
-	int			modelindex;
+static void MVD_LinkEdict( mvd_t *mvd, edict_t *ent ) {
+	int			index;
 	cmodel_t	*cm;
 	int			x, zd, zu;
-	cmcache_t	*cache;
-
-	cache = mvd->cm.cache;
+	cmcache_t	*cache = mvd->cm.cache;
+    
 	if( !cache ) {
 		return;
-
 	}
+    
 	if( ent->s.solid == 31 ) {
-		modelindex = ent->s.modelindex;
-		if( modelindex < 1 || modelindex > cache->numcmodels ) {
-			Com_WPrintf( "MVD_LinkEntity: entity %d: "
-				"bad inline model index: %d\n",
-				ent->s.number, modelindex );
-			ent->linked = qfalse;
+		index = ent->s.modelindex;
+		if( index < 1 || index > cache->numcmodels ) {
+			Com_WPrintf( "%s: entity %d: bad inline model index: %d\n",
+				__func__, ent->s.number, index );
 			return;
 		}
-		cm = &cache->cmodels[ modelindex - 1 ];
-		VectorCopy( cm->mins, mins );
-		VectorCopy( cm->maxs, maxs );		
+		cm = &cache->cmodels[ index - 1 ];
+		VectorCopy( cm->mins, ent->mins );
+		VectorCopy( cm->maxs, ent->maxs );
+        ent->solid = SOLID_BSP;
 	} else if( ent->s.solid ) {
 		x = 8 * ( ent->s.solid & 31 );
 		zd = 8 * ( ( ent->s.solid >> 5 ) & 31 );
 		zu = 8 * ( ( ent->s.solid >> 10 ) & 63 ) - 32;
 
-		mins[0] = mins[1] = -x;
-		maxs[0] = maxs[1] = x;
-		mins[2] = -zd;
-		maxs[2] = zu;
+		ent->mins[0] = ent->mins[1] = -x;
+		ent->maxs[0] = ent->maxs[1] = x;
+		ent->mins[2] = -zd;
+		ent->maxs[2] = zu;
+        ent->solid = SOLID_BBOX;
 	} else {
-		VectorClear( mins );
-		VectorClear( maxs );
+		VectorClear( ent->mins );
+		VectorClear( ent->maxs );
+        ent->solid = SOLID_NOT;
 	}
 
-// set the abs box
-	if( ent->s.solid == 31 &&
-		( ent->s.angles[0] || ent->s.angles[1] || ent->s.angles[2] ) )
-	{	// expand for rotation
-		float		max, v;
-		int			i;
-
-		max = 0;
-		for( i = 0; i < 3; i++ ) {
-			v = fabs( mins[i] );
-			if( v > max )
-				max = v;
-			v = fabs( maxs[i] );
-			if( v > max )
-				max = v;
-		}
-		for( i = 0; i < 3; i++ ) {
-			mins[i] = ent->s.origin[i] - max;
-			maxs[i] = ent->s.origin[i] + max;
-		}
-	} else {
-		// normal
-		VectorAdd( mins, ent->s.origin, mins );	
-		VectorAdd( maxs, ent->s.origin, maxs );
-	}
-
-	// because movement is clipped an epsilon away from an actual edge,
-	// we must fully check even when bounding boxes don't quite touch
-	mins[0] -= 1;
-	mins[1] -= 1;
-	mins[2] -= 1;
-	maxs[0] += 1;
-	maxs[1] += 1;
-	maxs[2] += 1;
-
-	// link to PVS leafs
-	ent->num_clusters = 0;
-	ent->areanum = 0;
-	ent->areanum2 = 0;
-
-	// get all leafs, including solids
-	num_leafs = CM_BoxLeafs( &mvd->cm, mins, maxs,
-		leafs, MAX_TOTAL_ENT_LEAFS, &topnode );
-
-	// set areas
-	for( i = 0; i < num_leafs; i++ ) {
-		clusters[i] = CM_LeafCluster( leafs[i] );
-		area = CM_LeafArea( leafs[i] );
-		if( area ) {
-			// doors may legally straggle two areas,
-			// but nothing should evern need more than that
-			if( ent->areanum && ent->areanum != area ) {
-				ent->areanum2 = area;
-			} else {
-				ent->areanum = area;
-			}
-		}
-	}
-
-	if( num_leafs >= MAX_TOTAL_ENT_LEAFS ) {
-		// assume we missed some leafs, and mark by headnode
-		ent->num_clusters = -1;
-		ent->headnode = topnode;
-	} else {
-		ent->num_clusters = 0;
-		for( i = 0; i < num_leafs; i++ ) {
-			if( clusters[i] == -1 )
-				continue;		// not a visible leaf
-			for( j = 0; j < i; j++ )
-				if( clusters[j] == clusters[i] )
-					break;
-			if( j == i ) {
-				if ( ent->num_clusters == MAX_ENT_CLUSTERS ) {
-					// assume we missed some leafs, and mark by headnode
-					ent->num_clusters = -1;
-					ent->headnode = topnode;
-					break;
-				}
-
-				ent->clusternums[ent->num_clusters++] = clusters[i];
-			}
-		}
-	}
-
-	ent->linked = qtrue;
+    SV_LinkEdict( &mvd->cm, ent );
 }
 
 static void MVD_ParseEntityString( mvd_t *mvd ) {
@@ -205,8 +114,6 @@ static void MVD_ParseEntityString( mvd_t *mvd ) {
 	vec3_t origin;
 	vec3_t angles;
 	
-	mvd->spawnSet = qfalse;
-
     if( !mvd->cm.cache ) {
         return;
     }
@@ -282,26 +189,16 @@ static void MVD_ParseEntityString( mvd_t *mvd ) {
 		if( !strcmp( classname + 12, "intermission" ) ) {
 			VectorCopy( origin, mvd->spawnOrigin );
 			VectorCopy( angles, mvd->spawnAngles );
-			mvd->spawnSet = qtrue;
-			continue;
+            break;
 		}
 		
-		if( mvd->spawnSet ) {
-			continue;
-		}
-			
 		if( !strcmp( classname + 12, "start" ) ||
             !strcmp( classname + 12, "deathmatch" ) )
         {
 			VectorCopy( origin, mvd->spawnOrigin );
 			VectorCopy( angles, mvd->spawnAngles );
-			mvd->spawnSet = qtrue;
 		}
 
-	}
-
-	if( !mvd->spawnSet ) {
-		Com_WPrintf( "Couldn't find spawn point for MVD spectators\n" );
 	}
 }
 
@@ -396,24 +293,24 @@ static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
 	int clientNum, length, last;
 	int flags;
 	udpClient_t *client;
-	mvdPlayer_t *player;
+	mvd_player_t *player;
     clstate_t minstate;
 	int i, c;
 	char *s;
 	qboolean gotLayout, wantLayout;
-    mvdConfigstring_t *cs;
+    mvd_cs_t *cs;
 
 	length = MSG_ReadByte();
     length |= extrabits << 8;
 	clientNum = MSG_ReadByte();
 
 	if( clientNum < 0 || clientNum >= MAX_CLIENTS ) {
-		MVD_Destroy( mvd, "Bad unicast clientNum" );
+		MVD_Destroy( mvd, "%s: bad number: %d", __func__, clientNum );
 	}
 
 	last = msg_read.readcount + length;
 	if( last > msg_read.cursize ) {
-		MVD_Destroy( mvd, "Read past end of message" );
+		MVD_Destroy( mvd, "%s: read past end of message", __func__ );
 	}
 
 	player = &mvd->players[clientNum];
@@ -424,7 +321,7 @@ static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
     // layouts, etc. Give up as soon as unknown command byte is encountered.
 	while( 1 ) {
 		if( msg_read.readcount > last ) {
-		    MVD_Destroy( mvd, "Read past end of unicast" );
+		    MVD_Destroy( mvd, "%s: read past end of unicast", __func__ );
 		}
 
 		if( msg_read.readcount == last ) {
@@ -450,7 +347,7 @@ static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
 			i = MSG_ReadShort();
 			s = MSG_ReadString();
 			if( i < 0 || i >= MAX_CONFIGSTRINGS ) {
-		        MVD_Destroy( mvd, "bad configstring index" );
+		        MVD_Destroy( mvd, "%s: bad configstring index: %d", __func__, i );
 			}
             length = strlen( s );
             if( length > MAX_QPATH - 1 ) {
@@ -518,17 +415,14 @@ breakOut:
         {
 			wantLayout = qtrue;
 		}
-		if( !client->following ) {
+		if( !client->target ) {
 			if( clientNum == mvd->clientNum ) {
 				SV_ClientAddMessage( client->cl, flags );
 			}
 			continue;
 		}
-		if( client->followClientNum == clientNum ) {
+		if( client->target == player ) {
 			SV_ClientAddMessage( client->cl, flags );
-			if( client->scoreboard == SBOARD_FOLLOW ) {
-				wantLayout = qtrue;
-			}
 		}
 	}
 
@@ -551,32 +445,9 @@ breakOut:
 			SV_ClientAddMessage( client->cl, flags );
 			continue;
 		}
-		if( client->followClientNum == clientNum &&
-			client->scoreboard == SBOARD_FOLLOW )
-        {
-			SV_ClientAddMessage( client->cl, flags );
-		}
 	}
 
 	SZ_Clear( &msg_write );
-}
-
-static qboolean MVD_EdictPV( mvd_t *mvd, entityStateEx_t *ent, byte *mask ) {
-    int i, l;
-
-    if( ent->num_clusters == -1 ) {	
-        // too many leafs for individual check, go by headnode
-        return CM_HeadnodeVisible( ent->headnode, mask );
-    }
-
-    // check individual leafs
-    for( i = 0; i < ent->num_clusters; i++ ) {
-        l = ent->clusternums[i];
-        if( Q_IsBitSet( mask, l ) ) {
-            return qtrue;
-        }
-    }
-    return qfalse;		// not visible
 }
 
 /*
@@ -587,19 +458,8 @@ explicitly specified on entities out of client PVS, and not all clients
 are able to postition sounds on BSP models properly.
 */
 static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
-    vec3_t  origin, clientorg;
-    int 	channel, entnum, sendchan;
-    int 	flags, index;
-    int 	volume = 0, attenuation = 0, offset = 0;
-    entityStateEx_t *entity = NULL;
-    udpClient_t *client;
-    int i, j;
-    cleaf_t *leaf;
-    int area, cluster;
-    byte *mask;
-    mvdFrame_t *frame;
-    int modelindex;
-    cmodel_t *cm;
+    int flags, index;
+    int volume, attenuation, offset, sendchan;
 
 	flags = MSG_ReadByte();
 	index = MSG_ReadByte();
@@ -613,107 +473,8 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
 
 	// entity relative
 	sendchan = MSG_ReadShort(); 
-	entnum = sendchan >> 3;
-	if( entnum < 0 || entnum >= MAX_EDICTS )
-		MVD_Destroy( mvd, "MVD_ParseSound: bad entnum %d",  entnum );
-	channel = sendchan & 7;
 
-    // find this entity in frame
-	frame = &mvd->frames[mvd->framenum & MVD_UPDATE_MASK];
-	for( i = 0; i < frame->numEntities; i++ ) {
-		j = ( frame->firstEntity + i ) & MVD_ENTITIES_MASK;
-		entity = &mvd->entityStates[j];
-        if( entity->s.number == entnum ) {
-            break;
-        }
-    }
-    if( i == frame->numEntities ) {
-        Com_WPrintf( "MVD_ParseSound: entity %d not found in frame\n", entnum );
-        return;
-    }
-
-    // use the entity origin unless it is a bmodel
-    if( entity->s.solid == 31 ) {
-		modelindex = entity->s.modelindex;
-		if( modelindex < 1 || modelindex > mvd->cm.cache->numcmodels ) {
-			Com_WPrintf( "MVD_PaseSound: entity %d has bad inline model index %d\n",
-				entity->s.number, modelindex );
-			return;
-		}
-		cm = &mvd->cm.cache->cmodels[ modelindex - 1 ];
-        VectorAvg( cm->mins, cm->maxs, origin );
-        VectorAdd( entity->s.origin, origin, origin );
-    } else {
-        VectorCopy( entity->s.origin, origin );
-    }
-
-    LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
-		// do not send sounds to connecting clients
-		if( client->cl->state != cs_spawned || client->cl->download || client->cl->nodata ) {
-			continue; 
-		}
-
-        // default client doesn't know that bmodels have weird origins
-        if( entity->s.solid == 31 && client->cl->protocol == PROTOCOL_VERSION_DEFAULT ) {
-            flags |= SND_POS;
-        }
-
-        //if( entity != client->edict ) {
-            // get client viewpos
-            VectorMA( client->ps.viewoffset, 0.125f,
-                client->ps.pmove.origin, clientorg );
-
-            // PHS cull this sound
-            if( ( extrabits & 1 ) == 0 ) {
-                leaf = CM_PointLeaf( &mvd->cm, clientorg );
-                area = CM_LeafArea( leaf );
-                if( !CM_AreasConnected( &mvd->cm, area, entity->areanum ) ) {
-                    // doors can legally straddle two areas, so
-                    // we may need to check another one
-                    if( !entity->areanum2 || !CM_AreasConnected( &mvd->cm, area, entity->areanum2 ) ) {
-                        continue;		// blocked by a door
-                    }
-                }
-                cluster = CM_LeafCluster( leaf );
-                mask = CM_ClusterPHS( &mvd->cm, cluster );
-                if( !MVD_EdictPV( mvd, entity, mask ) ) {
-                    continue; // not in PHS
-                }
-            }
-
-            // check if position needs to be explicitly sent
-            if( ( flags & SND_POS ) == 0 ) {
-                mask = CM_FatPVS( &mvd->cm, clientorg );
-                if( !MVD_EdictPV( mvd, entity, mask ) ) {
-                    flags |= SND_POS;   // not in PVS
-                }
-            }
-//        }
-
-        MSG_WriteByte( svc_sound );
-        MSG_WriteByte( flags );
-        MSG_WriteByte( index );
-
-        if( flags & SND_VOLUME )
-            MSG_WriteByte( volume );
-        if( flags & SND_ATTENUATION )
-            MSG_WriteByte( attenuation );
-        if( flags & SND_OFFSET )
-            MSG_WriteByte( offset );
-
-        MSG_WriteShort( sendchan );
-
-        if( flags & SND_POS )
-            MSG_WritePos( origin );
-
-        flags &= ~SND_POS;
-
-	    if( extrabits & 2 ) {
-		    SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
-        } else {
-		    SV_ClientAddMessage( client->cl, MSG_CLEAR );
-        }
-    }
+    //PF_StartSound( ent, channel, index, volume, attenuation, offset );
 }
 
 static void MVD_ParseConfigstring( mvd_t *mvd ) {
@@ -724,13 +485,13 @@ static void MVD_ParseConfigstring( mvd_t *mvd ) {
 	index = MSG_ReadShort();
 
 	if( index < 0 || index >= MAX_CONFIGSTRINGS ) {
-		MVD_Destroy( mvd, "Bad configstring index: %d", index );
+		MVD_Destroy( mvd, "%s: bad index: %d", __func__, index );
 	}
 
 	string = MSG_ReadStringLength( &length );
 
 	if( MAX_QPATH * index + length >= sizeof( mvd->configstrings ) ) {
-		MVD_Destroy( mvd, "Oversize configstring" );
+		MVD_Destroy( mvd, "%s: oversize configstring: %d", __func__, index );
 	}
 
 	if( !strcmp( mvd->configstrings[index], string ) ) {
@@ -758,276 +519,94 @@ static void MVD_ParseConfigstring( mvd_t *mvd ) {
 Fix origin and angles on each player entity by
 extracting data from player state.
 */
-static void MVD_FixEntityStates( mvd_t *mvd, mvdFrame_t *frame ) {
-	entityStateEx_t *currStates[MAX_CLIENTS];
-	entityStateEx_t *state;
-	player_state_t *ps;
-	int i, j;
-    int playerNum;
+static void MVD_PlayerToEntityStates( mvd_t *mvd ) {
+    mvd_player_t *player;
+    edict_t *edict;
+	int i;
 
-	for( i = 0; i < MAX_CLIENTS; i++ ) {
-		currStates[i] = NULL;
-	}
-
-	for( i = 0; i < frame->numEntities; i++ ) {
-		j = ( frame->firstEntity + i ) & MVD_ENTITIES_MASK;
-		state = &mvd->entityStates[j];
-		
-		if( state->s.number < 1 || state->s.number >= MAX_EDICTS ) {
-			MVD_Destroy( mvd, "Bad entity number" );
-		}
-		
-		if( state->s.number <= MAX_CLIENTS ) {
-			currStates[ state->s.number - 1 ] = state;
-		}
-	}
-
-    for( i = 0; i < frame->numPlayers; i++ ) {
-        j = ( frame->firstPlayer + i ) & MVD_PLAYERS_MASK;
-        ps = &mvd->playerStates[j];
-        playerNum = ps->pmove.pm_flags;
-   
-        if( ps->pmove.pm_type >= PM_DEAD ) {
+    for( i = 0, player = mvd->players; i < mvd->maxclients; i++, player++ ) {
+        if( !player->inuse ) {
             continue;
         }
-        state = currStates[playerNum];
-        if( !state ) {
+        if( player->ps.pmove.pm_type >= PM_DEAD ) {
+            continue;
+        }
+
+        edict = &mvd->edicts[ i + 1 ];
+        if( !edict->inuse ) {
             continue; // not present in this frame
         }
 
-		VectorCopy( state->s.origin, state->s.old_origin );
+		VectorCopy( edict->s.origin, edict->s.old_origin );
 
-        VectorScale( ps->pmove.origin, 0.125f, state->s.origin );
-        VectorCopy( ps->viewangles, state->s.angles );
+        VectorScale( player->ps.pmove.origin, 0.125f, edict->s.origin );
+        VectorCopy( player->ps.viewangles, edict->s.angles );
 
-        if( state->s.angles[PITCH] > 180 ) {
-            state->s.angles[PITCH] -= 360;
+        if( edict->s.angles[PITCH] > 180 ) {
+            edict->s.angles[PITCH] -= 360;
         }
 
-        state->s.angles[PITCH] = state->s.angles[PITCH] / 3;
+        edict->s.angles[PITCH] = edict->s.angles[PITCH] / 3;
 
-        MVD_LinkEntity( mvd, state );
+        MVD_LinkEdict( mvd, edict );
     }
 }
 
-/*
-==================
-MVD_ParseDeltaEntity
-==================
-*/
 #define RELINK_MASK	    (U_MODEL|U_ORIGIN1|U_ORIGIN2|U_ORIGIN3|U_SOLID)
 
-static inline void MVD_ParseDeltaEntity( mvd_t             *mvd,
-                                         mvdFrame_t        *frame,
-                                         int               newnum,
-                                         entityStateEx_t   *old,
-                                         int               bits )
-{
-	entityStateEx_t	*state;
-	int i;
-
-	i = mvd->nextEntityStates & MVD_ENTITIES_MASK;
-	state = &mvd->entityStates[i];
-	mvd->nextEntityStates++;
-	frame->numEntities++;
-
-	if( mvd_shownet->integer > 2 ) {
-		MSG_ShowDeltaEntityBits( bits );
-	}
-
-	MSG_ParseDeltaEntity( &old->s, &state->s, newnum, bits );
-
-	if( newnum > mvd->maxclients ) {
-		if( !old || !old->linked || ( bits & RELINK_MASK ) ) {
-			MVD_LinkEntity( mvd, state );
-		} else {
-			state->linked = qtrue;
-			state->num_clusters = old->num_clusters;
-			state->headnode = old->headnode;
-			state->areanum = old->areanum;
-			state->areanum2 = old->areanum2;
-			for( i = 0; i < state->num_clusters; i++ ) {
-				state->clusternums[i] = old->clusternums[i];
-			}
-		}
-	}
-}
 
 /*
 ==================
 MVD_ParsePacketEntities
 ==================
 */
-static void MVD_ParsePacketEntities( mvd_t      *mvd,
-                                     mvdFrame_t *oldframe,
-								     mvdFrame_t *frame )
-{
-	int			newnum;
+static void MVD_ParsePacketEntities( mvd_t *mvd ) {
+	int			number;
 	int			bits;
-	entityStateEx_t	*oldstate, *base;
-	int			oldindex, oldnum;
-	int i;
-
-	frame->firstEntity = mvd->nextEntityStates;
-	frame->numEntities = 0;
-
-	// delta from the entities present in oldframe
-	oldindex = 0;
-	oldstate = NULL;
-	if( !oldframe ) {
-		oldnum = 99999;
-	} else {
-		if( oldindex >= oldframe->numEntities ) {
-			oldnum = 99999;
-		} else {
-			i = oldframe->firstEntity + oldindex;
-			oldstate = &mvd->entityStates[i & MVD_ENTITIES_MASK];
-			oldnum = oldstate->s.number;
-		}
-	}
+    edict_t         *ent;
 
 	while( 1 ) {
-		newnum = MSG_ParseEntityBits( &bits );
 		if( msg_read.readcount > msg_read.cursize ) {
-			MVD_Destroy( mvd, "Read past end of message" );
+			MVD_Destroy( mvd, "%s: read past end of message", __func__ );
 		}
 
-		if( newnum < 0 || newnum >= MAX_EDICTS ) {
-			MVD_Destroy( mvd, "Bad packetentity number: %d", newnum );
+		number = MSG_ParseEntityBits( &bits );
+		if( number < 0 || number >= MAX_EDICTS ) {
+			MVD_Destroy( mvd, "%s: bad number: %d", __func__, number );
 		}
 
-		if( !newnum ) {
+		if( !number ) {
 			break;
 		}
 
-		while( oldnum < newnum ) {
-			// one or more entities from the old packet are unchanged
-			if( mvd_shownet->integer > 2 ) {
-				Com_Printf( "   unchanged: %i\n", oldnum );
-			}
-			MVD_ParseDeltaEntity( mvd, frame, oldnum, oldstate, 0 );
-			
-			oldindex++;
-
-			if( oldindex >= oldframe->numEntities ) {
-				oldnum = 99999;
-			} else {
-				i = oldframe->firstEntity + oldindex;
-				oldstate = &mvd->entityStates[i & MVD_ENTITIES_MASK];
-				oldnum = oldstate->s.number;
-			}
-		}
+        ent = &mvd->edicts[number];
 
 		if( bits & U_REMOVE ) {	
-			// the entity present in oldframe is not in the current frame
 			if( mvd_shownet->integer > 2 ) {
-				Com_Printf( "   remove: %i\n", newnum );
+				Com_Printf( "   remove: %d\n", number );
 			}
-			if( oldnum != newnum ) {
-				Com_DPrintf( "U_REMOVE: oldnum != newnum\n" );
-			}
-			if( !oldframe ) {
-			    MVD_Destroy( mvd, "U_REMOVE: NULL oldframe" );
-			}
-
-			oldindex++;
-
-			if( oldindex >= oldframe->numEntities ) {
-				oldnum = 99999;
-			} else {
-				i = oldframe->firstEntity + oldindex;
-				oldstate = &mvd->entityStates[i & MVD_ENTITIES_MASK];
-				oldnum = oldstate->s.number;
-			}
+            ent->inuse = qfalse;
 			continue;
 		}
 
-		if( oldnum == newnum ) {	
-			// delta from previous state
-			if( mvd_shownet->integer > 2 ) {
-				Com_Printf( "   delta: %i ", newnum );
-			}
-			MVD_ParseDeltaEntity( mvd, frame, newnum, oldstate, bits );
-			if( mvd_shownet->integer > 2 ) {
-				Com_Printf( "\n" );
-			}
+        if( mvd_shownet->integer > 2 ) {
+			Com_Printf( "   %s: %d ", ent->inuse ?
+                "delta" : "baseline", number );
+            MSG_ShowDeltaEntityBits( bits );
+            Com_Printf( "\n" );
+        }
 
-			oldindex++;
+        MSG_ParseDeltaEntity( &ent->s, &ent->s, number, bits );
 
-			if( oldindex >= oldframe->numEntities ) {
-				oldnum = 99999;
-			} else {
-				i = oldframe->firstEntity + oldindex;
-				oldstate = &mvd->entityStates[i & MVD_ENTITIES_MASK];
-				oldnum = oldstate->s.number;
-			}
-			continue;
-		}
+        ent->inuse = qtrue;
+        if( number >= mvd->pool.num_edicts ) {
+            mvd->pool.num_edicts = number + 1;
+        }
 
-		if( oldnum > newnum ) {	
-			// delta from baseline
-			if( mvd_shownet->integer > 2 ) {
-				Com_Printf( "   baseline: %i ", newnum );
-			}
-			base = mvd->baselines[newnum >> SV_BASELINES_SHIFT];
-			if( base ) {
-				base += newnum & SV_BASELINES_MASK;
-			}
-			MVD_ParseDeltaEntity( mvd, frame, newnum, base, bits );
-			if( mvd_shownet->integer > 2 ) {
-				Com_Printf( "\n" );
-			}
-			continue;
-		}
-
+        if( number > mvd->maxclients && ( bits & RELINK_MASK ) ) {
+            MVD_LinkEdict( mvd, ent );
+        }
 	}
-
-	// any remaining entities in the old frame are copied over
-	while( oldnum != 99999 ) {	
-		// one or more entities from the old packet are unchanged
-		if( mvd_shownet->integer > 2 ) {
-			Com_Printf( "   unchanged: %i\n", oldnum );
-		}
-		MVD_ParseDeltaEntity( mvd, frame, oldnum, oldstate, 0 );
-		
-		oldindex++;
-
-		if( oldindex >= oldframe->numEntities ) {
-			oldnum = 99999;
-		} else {
-			i = oldframe->firstEntity + oldindex;
-			oldstate = &mvd->entityStates[i & MVD_ENTITIES_MASK];
-			oldnum = oldstate->s.number;
-		}
-	}
-}
-
-/*
-==================
-MVD_ParseDeltaPlayer
-==================
-*/
-static inline void MVD_ParseDeltaPlayer( mvd_t             *mvd,
-                                         mvdFrame_t        *frame,
-                                         int               newnum,
-								         player_state_t    *old,
-                                         int               bits )
-{
-	player_state_t	*state;
-	int i;
-
-	i = mvd->nextPlayerStates & MVD_PLAYERS_MASK;
-	state = &mvd->playerStates[i];
-	mvd->nextPlayerStates++;
-	frame->numPlayers++;
-
-	if( mvd_shownet->integer > 2 ) {
-		MSG_ShowDeltaPlayerstateBits_Packet( bits );
-	}
-	MSG_ParseDeltaPlayerstate_Packet( old, state, bits );
-
-    // save player number
-	state->pmove.pm_flags = newnum;
 }
 
 /*
@@ -1035,144 +614,48 @@ static inline void MVD_ParseDeltaPlayer( mvd_t             *mvd,
 MVD_ParsePacketPlayers
 ==================
 */
-static void MVD_ParsePacketPlayers( mvd_t       *mvd,
-                                    mvdFrame_t  *oldframe,
-                                    mvdFrame_t  *frame )
-{
-	int			newnum;
+static void MVD_ParsePacketPlayers( mvd_t *mvd ) {
+	int			number;
 	int			bits;
-	player_state_t	*oldstate;
-	int			oldindex, oldnum;
-	int			i;
-
-	frame->firstPlayer = mvd->nextPlayerStates;
-	frame->numPlayers = 0;
-
-	// delta from the players present in oldframe
-	oldindex = 0;
-	oldstate = NULL;
-	if( !oldframe ) {
-		oldnum = 99999;
-	} else {
-		if( oldindex >= oldframe->numPlayers ) {
-			oldnum = 99999;
-		} else {
-			i = oldframe->firstPlayer + oldindex;
-			oldstate = &mvd->playerStates[i & MVD_PLAYERS_MASK];
-			oldnum = PPS_NUM( oldstate );
-		}
-	}
+    mvd_player_t    *player;
 
 	while( 1 ) {
-		newnum = MSG_ReadByte();
 		if( msg_read.readcount > msg_read.cursize ) {
-			MVD_Destroy( mvd, "Read past end of message" );
+			MVD_Destroy( mvd, "%s: read past end of message", __func__ );
 		}
 
-		if( newnum < 0 || newnum >= MAX_CLIENTS ) {
-			MVD_Destroy( mvd, "Bad packetplayer number: %d", newnum );
-		}
-
-		if( newnum == CLIENTNUM_NONE ) {
+		number = MSG_ReadByte();
+		if( number == CLIENTNUM_NONE ) {
 			break;
 		}
 
+		if( number < 0 || number >= mvd->maxclients ) {
+			MVD_Destroy( mvd, "%s: bad number: %d", __func__, number );
+		}
+
+        player = &mvd->players[number];
+
 		bits = MSG_ReadShort();
 
-		while( oldnum < newnum ) {
-			// one or more players from the old packet are unchanged
-			if( mvd_shownet->integer > 2 ) {
-				Com_Printf( "   unchanged: %i\n", oldnum );
-			}
-			MVD_ParseDeltaPlayer( mvd, frame, oldnum, oldstate, 0 );
-			
-			oldindex++;
-
-			if( oldindex >= oldframe->numPlayers ) {
-				oldnum = 99999;
-			} else {
-				i = oldframe->firstPlayer + oldindex;
-				oldstate = &mvd->playerStates[i & MVD_PLAYERS_MASK];
-				oldnum = PPS_NUM( oldstate );
-			}
-		}
-
 		if( bits & PPS_REMOVE ) {	
-			// the player present in oldframe is not in the current frame
 			if( mvd_shownet->integer > 2 ) {
-				Com_Printf( "   remove: %i\n", newnum );
+				Com_Printf( "   remove: %d\n", number );
 			}
-			if( oldnum != newnum ) {
-				Com_DPrintf( "PPS_REMOVE: oldnum != newnum\n" );
-			}
-			if( !oldframe ) {
-			    MVD_Destroy( mvd, "PPS_REMOVE: NULL oldframe" );
-			}
-
-			oldindex++;
-
-			if( oldindex >= oldframe->numPlayers ) {
-				oldnum = 99999;
-			} else {
-				i = oldframe->firstPlayer + oldindex;
-				oldstate = &mvd->playerStates[i & MVD_PLAYERS_MASK];
-				oldnum = PPS_NUM( oldstate );
-			}
+            player->inuse = qfalse;
 			continue;
 		}
 
-		if( oldnum == newnum ) {	
-			// delta from previous state
-			if( mvd_shownet->integer > 2 ) {
-				Com_Printf( "   delta: %i ", newnum );
-			}
-			MVD_ParseDeltaPlayer( mvd, frame, newnum, oldstate, bits );
-			if( mvd_shownet->integer > 2 ) {
-				Com_Printf( "\n" );
-			}
+        if( mvd_shownet->integer > 2 ) {
+			Com_Printf( "   %s: %d ", player->inuse ?
+                "delta" : "baseline", number );
+            MSG_ShowDeltaPlayerstateBits_Packet( bits );
+            Com_Printf( "\n" );
+        }
 
-			oldindex++;
+        MSG_ParseDeltaPlayerstate_Packet( &player->ps, &player->ps, bits );
 
-			if( oldindex >= oldframe->numPlayers ) {
-				oldnum = 99999;
-			} else {
-				i = oldframe->firstPlayer + oldindex;
-				oldstate = &mvd->playerStates[i & MVD_PLAYERS_MASK];
-				oldnum = PPS_NUM( oldstate );
-			}
-			continue;
-		}
-
-		if( oldnum > newnum ) {	
-			// delta from baseline
-			if( mvd_shownet->integer > 2 ) {
-				Com_Printf( "   baseline: %i ", newnum );
-			}
-			MVD_ParseDeltaPlayer( mvd, frame, newnum, NULL, bits );
-			if( mvd_shownet->integer > 2 ) {
-				Com_Printf( "\n" );
-			}
-			continue;
-		}
-
-	}
-
-	while( oldnum != 99999 ) {	
-		if( mvd_shownet->integer > 2 ) {
-			Com_Printf( "   unchanged: %i\n", oldnum );
-		}
-		MVD_ParseDeltaPlayer( mvd, frame, oldnum, oldstate, 0 );
-		
-		oldindex++;
-
-		if( oldindex >= oldframe->numPlayers ) {
-			oldnum = 99999;
-		} else {
-			i = oldframe->firstPlayer + oldindex;
-			oldstate = &mvd->playerStates[i & MVD_PLAYERS_MASK];
-			oldnum = PPS_NUM( oldstate );
-		}
-	}
+        player->inuse = qtrue;
+    }
 }
 
 /*
@@ -1180,32 +663,17 @@ static void MVD_ParsePacketPlayers( mvd_t       *mvd,
 MVD_ParseFrame
 ================
 */
-static void MVD_ParseFrame( mvd_t *mvd, qboolean delta ) {
-	mvdFrame_t *oldframe, *frame;
+static void MVD_ParseFrame( mvd_t *mvd ) {
 	int length;
-
-    // allocate new frame
-	frame = &mvd->frames[++mvd->framenum & MVD_UPDATE_MASK];
-	frame->serverFrame = MSG_ReadLong();
-    frame->number = mvd->framenum;
-
-    if( delta ) {
-		oldframe = &mvd->frames[( mvd->framenum - 1 ) & MVD_UPDATE_MASK];
-		if( oldframe->number != mvd->framenum - 1 ) {
-			MVD_Destroy( mvd, "Delta from invalid frame" );
-        }
-	} else {
-        oldframe = NULL; // uncompressed frame
-	}
 
 	// read portalbits
 	length = MSG_ReadByte();
 	if( length ) {
 		if( length < 0 || msg_read.readcount + length > msg_read.cursize ) {
-            MVD_Destroy( mvd, "Read past end of message" );
+            MVD_Destroy( mvd, "%s: read past end of message", __func__ );
 		}
 		if( length > MAX_MAP_AREAS/8 ) {
-            MVD_Destroy( mvd, "Bad portalbits length" );
+            MVD_Destroy( mvd, "%s: bad portalbits length: %d", __func__, length );
 		}
         CM_SetPortalStates( &mvd->cm, msg_read.data +
             msg_read.readcount, length );
@@ -1218,28 +686,27 @@ static void MVD_ParseFrame( mvd_t *mvd, qboolean delta ) {
 		Com_Printf( "%3i:playerinfo\n", msg_read.readcount - 1 );
 	}
 
-	MVD_ParsePacketPlayers( mvd, oldframe, frame );
+	MVD_ParsePacketPlayers( mvd );
 
 	if( mvd_shownet->integer > 1 ) {
 		Com_Printf( "%3i:packetentities\n", msg_read.readcount - 1 );
 	}
 
-	MVD_ParsePacketEntities( mvd, oldframe, frame );
+	MVD_ParsePacketEntities( mvd );
 
 	if( mvd_shownet->integer > 1 ) {
-		Com_Printf( "%3i: frame:%i  delta:%i\n",
-			msg_read.readcount - 1, mvd->framenum, delta );
+		Com_Printf( "%3i: frame:%i\n", msg_read.readcount - 1, mvd->framenum );
 	}
 
-	MVD_FixEntityStates( mvd, frame );
+	MVD_PlayerToEntityStates( mvd );
+
+    mvd->framenum++;
 }
 
 static void MVD_ParseServerData( mvd_t *mvd ) {
-	int protocol, clientNum;
+	int protocol;
     int length, index;
 	char *gamedir, *string;
-	entityStateEx_t *base, **chunk;
-	int entnum, bits;
 	uint32 checksum;
 
     // clear the leftover from previous level
@@ -1260,11 +727,7 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
 
 	mvd->servercount = MSG_ReadLong();
 	gamedir = MSG_ReadString();
-	clientNum = MSG_ReadShort();
-    if( clientNum < 0 || clientNum >= MAX_CLIENTS ) {
-        MVD_Destroy( mvd, "Invalid client num: %d", clientNum );
-    }
-    mvd->clientNum = clientNum;
+    mvd->clientNum = MSG_ReadShort();
 	
 	// change gamedir unless playing a demo
     Q_strncpyz( mvd->gamedir, gamedir, sizeof( mvd->gamedir ) );
@@ -1299,8 +762,26 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
         }
     }
 
-    mvd->maxclients = atoi( mvd->configstrings[CS_MAXCLIENTS] );
+    // parse maxclients
+    index = atoi( mvd->configstrings[CS_MAXCLIENTS] );
+    if( index < 1 || index > MAX_CLIENTS ) {
+        MVD_Destroy( mvd, "Invalid maxclients" );
+    }
 
+    if( !mvd->players ) {
+        mvd->players = MVD_Malloc( sizeof( mvd_player_t ) * index );
+        mvd->maxclients = index;
+    } else if( index != mvd->maxclients ) {
+        MVD_Destroy( mvd, "Unexpected maxclients change" );
+    }
+
+    // validate clientNum
+    if( mvd->clientNum < 0 || mvd->clientNum >= mvd->maxclients ) {
+        MVD_Destroy( mvd, "Invalid client num: %d", mvd->clientNum );
+    }
+    mvd->dummy = mvd->players + mvd->clientNum;
+
+    // parse world model
     string = mvd->configstrings[ CS_MODELS + 1]; 
     length = strlen( string );
     if( length <= 9 ) {
@@ -1320,37 +801,8 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
     // get the spawn point for spectators
     MVD_ParseEntityString( mvd );
 
-    // parse baselines
-    while( 1 ) {
-        entnum = MSG_ParseEntityBits( &bits );
-        if( !entnum ) {
-            break;
-        }
-
-        if( entnum < 0 || entnum >= MAX_EDICTS ) {
-            MVD_Destroy( mvd, "Bad baseline number: %d", entnum );
-        }
-        
-        chunk = &mvd->baselines[entnum >> SV_BASELINES_SHIFT];
-        if( *chunk == NULL ) {
-            *chunk = MVD_Mallocz( sizeof( *base ) * SV_BASELINES_PER_CHUNK );
-        }
-
-        base = *chunk + ( entnum & SV_BASELINES_MASK );
-        MSG_ParseDeltaEntity( NULL, &base->s, entnum, bits );
-
-        MVD_LinkEntity( mvd, base );
-
-        if( msg_read.readcount > msg_read.cursize ) {
-            MVD_Destroy( mvd, "Read past end of message" );
-        }
-    }
-
-    // parse uncompressed frame
-    if( MSG_ReadByte() != mvd_frame_nodelta ) {
-        MVD_Destroy( mvd, "Expected uncompressed frame" );
-    }
-    MVD_ParseFrame( mvd, qfalse );
+    // parse baseline frame
+    MVD_ParseFrame( mvd );
 
     if( mvd->state < MVD_WAITING ) {
         List_Append( &mvd_ready, &mvd->ready );
@@ -1458,11 +910,12 @@ static qboolean MVD_ParseMessage( mvd_t *mvd, fifo_t *fifo ) {
 			MVD_ParseConfigstring( mvd );
 			break;
 		case mvd_frame:
-			MVD_ParseFrame( mvd, qtrue );
+			MVD_ParseFrame( mvd );
 			break;
-		case mvd_frame_nodelta:
-			MVD_ParseFrame( mvd, qfalse );
-			break;
+		//case mvd_frame_nodelta:
+            //MVD_ResetFrame( mvd );
+			//MVD_ParseFrame( mvd );
+			//break;
 		case mvd_sound:
 			MVD_ParseSound( mvd, extrabits );
 			break;

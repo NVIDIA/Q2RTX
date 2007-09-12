@@ -162,9 +162,7 @@ void GL_SetAliasColor( vec3_t origin, vec3_t color ) {
 			for( i = 0; i < 3; i++ ) {
 				m = color[i] * 0.8f;
 				color[i] += f;
-				if( color[i] < m ) {
-					color[i] = m;
-				}
+				clamp( color[i], m, 1 );
 			}
 		}
 	}

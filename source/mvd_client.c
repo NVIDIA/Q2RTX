@@ -62,14 +62,6 @@ void MVD_Disconnect( mvd_t *mvd ) {
 }
 
 void MVD_Free( mvd_t *mvd ) {
-    int i;
-
-    for( i = 0; i < SV_BASELINES_CHUNKS; i++ ) {
-        if( mvd->baselines[i] ) {
-            Z_Free( mvd->baselines[i] );
-        }
-    }
-
 #if USE_ZLIB
     if( mvd->z.state ) {
         inflateEnd( &mvd->z );
@@ -78,6 +70,7 @@ void MVD_Free( mvd_t *mvd ) {
         Z_Free( mvd->zbuf.data );
     }
 #endif
+    Z_Free( mvd->players );
 
     List_Remove( &mvd->ready );
     List_Remove( &mvd->entry );
@@ -170,11 +163,19 @@ void MVD_HttpPrintf( mvd_t *mvd, const char *fmt, ... ) {
 }
 
 void MVD_ClearState( mvd_t *mvd ) {
-	mvdConfigstring_t *cs, *nextcs;
-    mvdPlayer_t *player;
+	mvd_cs_t *cs, *nextcs;
+    mvd_player_t *player;
+    edict_t *ent;
 	int i;
 
-    for( i = 0; i < MAX_CLIENTS; i++ ) {
+    for( i = 0; i < mvd->pool.num_edicts; i++ ) {
+        ent = &mvd->edicts[i];
+        memset( &ent->s, 0, sizeof( ent->s ) );
+        ent->inuse = qfalse;
+    }
+    mvd->pool.num_edicts = 0;
+
+    for( i = 0; i < mvd->maxclients; i++ ) {
         player = &mvd->players[i];
         if( player->layout ) {
             Z_Free( player->layout );
@@ -185,13 +186,7 @@ void MVD_ClearState( mvd_t *mvd ) {
             Z_Free( cs );
         }
         player->configstrings = NULL;
-    }
-
-    for( i = 0; i < SV_BASELINES_CHUNKS; i++ ) {
-        if( mvd->baselines[i] ) {
-            memset( mvd->baselines[i], 0, sizeof( entityStateEx_t ) *
-                SV_BASELINES_PER_CHUNK );
-        }
+        memset( &player->ps, 0, sizeof( player->ps ) );
     }
 
     CM_FreeMap( &mvd->cm );
@@ -199,10 +194,10 @@ void MVD_ClearState( mvd_t *mvd ) {
     memset( mvd->configstrings, 0, sizeof( mvd->configstrings ) );
 
     mvd->framenum = 0;
-    memset( mvd->frames, 0, sizeof( mvd->frames ) );
 }
 
 static void MVD_EmitGamestate( mvd_t *mvd ) {
+#if 0
 	char		*string;
 	int			i, j;
 	entityStateEx_t	*base, *es;
@@ -292,6 +287,7 @@ static void MVD_EmitGamestate( mvd_t *mvd ) {
     MSG_WriteShort( 0 );
 
     *patch = LittleShort( msg_write.cursize - 2 );
+#endif
 }
 
 void MVD_SendGamestate( tcpClient_t *client ) {
@@ -898,6 +894,10 @@ void MVD_Connect_f( void ) {
     mvd->stream.recv.size = MAX_MSGLEN * 2;
     mvd->stream.send.data = Z_ReservedAlloc( 256 );
     mvd->stream.send.size = 256;
+    mvd->pool.edicts = mvd->edicts;
+    mvd->pool.edict_size = sizeof( edict_t );
+    mvd->pool.max_edicts = MAX_EDICTS;
+    mvd->pm_type = PM_SPECTATOR;
     List_Init( &mvd->udpClients );
     List_Init( &mvd->tcpClients );
     List_Init( &mvd->ready );
@@ -979,6 +979,10 @@ void MVD_Play_f( void ) {
 	mvd->demofile = f;
     mvd->stream.recv.data = Z_ReservedAlloc( MAX_MSGLEN * 2 );
     mvd->stream.recv.size = MAX_MSGLEN * 2;
+    mvd->pool.edicts = mvd->edicts;
+    mvd->pool.edict_size = sizeof( edict_t );
+    mvd->pool.max_edicts = MAX_EDICTS;
+    mvd->pm_type = PM_SPECTATOR;
     List_Init( &mvd->udpClients );
     List_Init( &mvd->tcpClients );
     List_Init( &mvd->ready );

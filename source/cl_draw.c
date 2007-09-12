@@ -337,18 +337,23 @@ static void CL_DnRate_m( char *buffer, int bufferSize ) {
 typedef struct {
     list_t  entry;
     int     x, y;
-    cvar_t *cvar;
-    xmacro_t macro;
-} drawstring_t;
+    int     type;
+    union {
+        cvar_t *cvar;
+        xmacro_t macro;
+        int stat;
+    };
+} drawobj_t;
 
-static LIST_DECL( scr_drawstrings );
+static list_t scr_objects;
 
 // draw cl_fps -1 80
 static void SCR_Draw_f( void ) {
     int x, y;
     char *s;
-    drawstring_t *ds;
+    drawobj_t *obj;
     xmacro_t macro;
+    int stat;
 
     if( Cmd_Argc() != 4 ) {
         Com_Printf( "Usage: %s <name> <x> <y>\n", Cmd_Argv( 0 ) );
@@ -359,25 +364,35 @@ static void SCR_Draw_f( void ) {
     x = atoi( Cmd_Argv( 2 ) );
     y = atoi( Cmd_Argv( 3 ) );
 
-    ds = Z_Malloc( sizeof( *ds ) );
-    ds->x = x;
-    ds->y = y;
+    obj = Z_Malloc( sizeof( *obj ) );
+    obj->x = x;
+    obj->y = y;
 
-	macro = Cmd_FindMacroFunction( s );
-    if( macro ) {
-        ds->cvar = NULL;
-        ds->macro = macro;
+    if( *s == '!' || *s == '#' ) {
+        stat = atoi( s + 1 );
+        if( stat < 0 || stat >= MAX_STATS ) {
+            Com_Printf( "Invalid stat index: %d\n", stat );
+        }
+        obj->stat = stat;
+        obj->cvar = NULL;
+        obj->macro = NULL;
     } else {
-        ds->cvar = Cvar_Get( s, "", CVAR_USER_CREATED );
-        ds->macro = NULL;
+        macro = Cmd_FindMacroFunction( s );
+        if( macro ) {
+            obj->cvar = NULL;
+            obj->macro = macro;
+        } else {
+            obj->cvar = Cvar_Get( s, "", CVAR_USER_CREATED );
+            obj->macro = NULL;
+        }
     }
 
-    List_Append( &scr_drawstrings, &ds->entry );
+    List_Append( &scr_objects, &obj->entry );
 }
 
 static void SCR_UnDraw_f( void ) {
     char *s;
-    drawstring_t *ds, *next;
+    drawobj_t *obj, *next;
     xmacro_t macro;
     cvar_t *cvar;
 
@@ -388,10 +403,10 @@ static void SCR_UnDraw_f( void ) {
 
     s = Cmd_Argv( 1 );
     if( !strcmp( s, "all" ) ) {
-        LIST_FOR_EACH_SAFE( drawstring_t, ds, next, &scr_drawstrings, entry ) {
-            Z_Free( ds );
+        LIST_FOR_EACH_SAFE( drawobj_t, obj, next, &scr_objects, entry ) {
+            Z_Free( obj );
         }
-        List_Init( &scr_drawstrings );
+        List_Init( &scr_objects );
         Com_Printf( "Deleted all drawstrings.\n" );
         return;
     }
@@ -402,13 +417,39 @@ static void SCR_UnDraw_f( void ) {
         cvar = Cvar_Get( s, "", CVAR_USER_CREATED );
     }
 
-    LIST_FOR_EACH_SAFE( drawstring_t, ds, next, &scr_drawstrings, entry ) {
-        if( ds->macro == macro && ds->cvar == cvar ) {
-            List_Remove( &ds->entry );
-            Z_Free( ds );
+    LIST_FOR_EACH_SAFE( drawobj_t, obj, next, &scr_objects, entry ) {
+        if( obj->macro == macro && obj->cvar == cvar ) {
+            List_Remove( &obj->entry );
+            Z_Free( obj );
         }
     }
 }
+
+static void draw_objects( void ) {
+    char buffer[MAX_QPATH];
+    int x, y, flags;
+    drawobj_t *obj;
+
+    LIST_FOR_EACH( drawobj_t, obj, &scr_objects, entry ) {
+        x = obj->x;
+        y = obj->y;
+        flags = 0;
+        if( x < 0 ) {
+            x += scr_hudWidth;
+            flags |= UI_RIGHT;
+        }
+        if( y < 0 ) {
+            y += scr_hudHeight - 8;
+        }
+        if( obj->macro ) {
+            obj->macro( buffer, sizeof( buffer ) );
+            SCR_DrawString( x, y, flags, buffer );
+        } else {
+            SCR_DrawString( x, y, flags, obj->cvar->string );
+        }
+    }
+}
+
 
 /*
 ===============================================================================
@@ -462,13 +503,7 @@ void SCR_AddToChatHUD( const char *string ) {
 	}
 }
 
-/*
-===============================================================================
-
-CROSSHAIR
-
-===============================================================================
-*/
+// ============================================================================
 
 /*
 =================
@@ -496,12 +531,7 @@ float SCR_FadeAlpha( int startTime, int visTime, int fadeTime ) {
 	return alpha;
 }
 
-/*
-=================
-SCR_DrawCrosshair
-=================
-*/
-static void SCR_DrawCrosshair( void ) {
+static void draw_crosshair( void ) {
 	int x, y;
 
     if( crosshair->modified ) {
@@ -514,20 +544,7 @@ static void SCR_DrawCrosshair( void ) {
     ref.DrawPic( x, y, crosshair_pic );
 }
 
-/*
-===============================================================================
-
-FOLLOWING
-
-===============================================================================
-*/
-
-/*
-================
-SCR_DrawFollowing
-================
-*/
-static void SCR_DrawFollowing( void ) {
+static void draw_following( void ) {
 	char *string;
 	int x;
 
@@ -549,88 +566,7 @@ static void SCR_DrawFollowing( void ) {
 	ref.DrawString( x, 48, 0, MAX_STRING_CHARS, string, scr_font );
 }
 
-/*
-=================
-SCR_DrawDefaultHud
-=================
-*/
-static void SCR_DrawDefaultHud( void ) {
-	//vrect_t rc;
-    char buffer[MAX_QPATH];
-    int x, y, flags;
-    char *s;
-    drawstring_t *ds;
-
-	Cvar_ClampValue( scr_alpha, 0, 1 );
-	ref.SetColor( DRAW_COLOR_ALPHA, ( byte * )&scr_alpha->value );
-
-	SCR_ExecuteLayoutString( cl.configstrings[CS_STATUSBAR] );
-
-	if( ( cl.frame.ps.stats[STAT_LAYOUTS] & 1 ) ||
-        ( cls.demoplayback && Key_IsDown( K_F1 ) ) )
-    {
-		SCR_ExecuteLayoutString( cl.layout );
-	}
-
-	if( cl.frame.ps.stats[STAT_LAYOUTS] & 2 ) {
-		SCR_DrawInventory();
-	}
-
-	if( cl.frame.clientNum != CLIENTNUM_NONE ) {
-		SCR_DrawFollowing();
-	}
-
-	SCR_DrawCenterString();
-
-	lag_rc.x = scr_hudWidth - 48;
-	lag_rc.y = scr_hudHeight - 48;
-	lag_rc.width = 48;
-	lag_rc.height = 48;
-
-    lag_max = 60;
-
-    switch( scr_lag_type->integer ) {
-    case 1:
-        SCR_DrawPingGraph();
-        break;
-    case 2:
-        SCR_DrawOutPacketGraph();
-        break;
-    case 3:
-        SCR_DrawInPacketGraph();
-        break;
-    case 4:
-        SCR_DrawDeltaGraph();
-        break;
-    }
-
-    LIST_FOR_EACH( drawstring_t, ds, &scr_drawstrings, entry ) {
-        if( ds->macro ) {
-            ds->macro( buffer, sizeof( buffer ) );
-            s = buffer;
-        } else {
-            s = ds->cvar->string;
-        }
-        x = ds->x;
-        y = ds->y;
-        flags = 0;
-        if( x < 0 ) {
-            x += scr_hudWidth;
-            flags = UI_RIGHT;
-        }
-        if( y < 0 ) {
-            y += scr_hudHeight - 8;
-        }
-        SCR_DrawString( x, y, flags, s );
-    }
-
-
-	// draw phone jack
-	SCR_DrawDisconnect( &lag_rc );
-
-}
-
-static void SCR_DrawTurtle( void ) {
+static void draw_turtle( void ) {
     int x = 8;
     int y = scr_hudHeight - 88;
 
@@ -651,8 +587,6 @@ static void SCR_DrawTurtle( void ) {
 
 #undef DF
 }
-
-// ============================================================================
 
 /*
 =================
@@ -679,15 +613,63 @@ void SCR_Draw2D( void ) {
 	ref.SetColor( DRAW_COLOR_CLEAR, NULL );
 
     if( crosshair->integer ) {
-    	SCR_DrawCrosshair();
+    	draw_crosshair();
     }
 
-	SCR_DrawDefaultHud();
+	Cvar_ClampValue( scr_alpha, 0, 1 );
+	ref.SetColor( DRAW_COLOR_ALPHA, ( byte * )&scr_alpha->value );
+
+    if( scr_draw2d->integer > 1 ) {
+    	SCR_ExecuteLayoutString( cl.configstrings[CS_STATUSBAR] );
+    }
+
+	if( ( cl.frame.ps.stats[STAT_LAYOUTS] & 1 ) ||
+        ( cls.demoplayback && Key_IsDown( K_F1 ) ) )
+    {
+		SCR_ExecuteLayoutString( cl.layout );
+	}
+
+	if( cl.frame.ps.stats[STAT_LAYOUTS] & 2 ) {
+		SCR_DrawInventory();
+	}
+
+	if( cl.frame.clientNum != CLIENTNUM_NONE ) {
+		draw_following();
+	}
+
+	SCR_DrawCenterString();
+
+	lag_rc.x = scr_hudWidth - 48;
+	lag_rc.y = scr_hudHeight - 48;
+	lag_rc.width = 48;
+	lag_rc.height = 48;
+
+    lag_max = 60;
+
+    switch( scr_lag_type->integer ) {
+    case 1:
+        SCR_DrawPingGraph();
+        break;
+    case 2:
+        SCR_DrawOutPacketGraph();
+        break;
+    case 3:
+        SCR_DrawInPacketGraph();
+        break;
+    case 4:
+        SCR_DrawDeltaGraph();
+        break;
+    }
+
+    draw_objects();
+
+	// draw phone jack
+	SCR_DrawDisconnect( &lag_rc );
 
 	ref.SetColor( DRAW_COLOR_CLEAR, NULL );
 
     if( scr_showturtle->integer && cl.frameflags ) {
-        SCR_DrawTurtle();
+        draw_turtle();
     }
 
     if( scr_glconfig.renderer == GL_RENDERER_SOFTWARE ) {
@@ -708,7 +690,9 @@ SCR_InitDraw
 ================
 */
 void SCR_InitDraw( void ) {
-	scr_draw2d = Cvar_Get( "scr_draw2d", "1", 0 );
+    List_Init( &scr_objects );
+
+	scr_draw2d = Cvar_Get( "scr_draw2d", "2", 0 );
 	scr_showturtle = Cvar_Get( "scr_showturtle", "1", 0 );
 	scr_showfollowing = Cvar_Get( "scr_showfollowing", "0", 0 );
 	scr_lag_placement = Cvar_Get( "scr_lag_placement", "48x48-1-1", 0 );

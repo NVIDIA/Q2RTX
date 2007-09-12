@@ -1582,6 +1582,7 @@ Qcommon_Frame
 void Qcommon_Frame( void ) {
 	int		time_before, time_event, time_between, time_after;
 	uint32	realTime, msec;
+    static float frac;
 
 	if( _setjmp( abortframe ) ) {
 		return;			// an ERR_DROP was thrown
@@ -1612,9 +1613,9 @@ void Qcommon_Frame( void ) {
 		Cvar_ClampInteger( fixedtime, 1, 1000 );
 		msec = fixedtime->integer;
 	} else if( timescale->value > 0 ) {
-		msec *= timescale->value;
-		if( msec < 1 )
-			msec = 1;
+		frac += msec * timescale->value;
+		msec = frac;
+		frac -= msec;
 	}
 
 	// this is the only place where console commands are processed.

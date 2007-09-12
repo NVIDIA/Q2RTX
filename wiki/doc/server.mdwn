@@ -127,6 +127,13 @@ Stuff the given _text_ into command buffer of the client identified by _userid_.
 - `stuffall <text ...>`  
 Stuff the given _text_ into command buffers of all connected clients.
 
+- `pick <address:port>`  
+Send `passive_connect` packet to the client at specified _address_ and _port_.
+This is useful if the server is behind NAT or firewall and can not accept remote
+connections. Remote client must support passive connections (R1Q2 and Q2PRO
+clients do), must be in passive connection mode and the specified _port_
+must be reachable. See `passive` [[client#index3h1]] command for more details.
+
 - `mvdplay <filename>`  
 Play the local MVD identified by _filename_.
 

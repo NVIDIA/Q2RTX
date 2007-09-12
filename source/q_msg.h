@@ -87,10 +87,10 @@ int		MSG_WriteDeltaUsercmd( const usercmd_t *from, const usercmd_t *cmd );
 int		MSG_WriteDeltaUsercmd_Enhanced( const usercmd_t *from, const usercmd_t *cmd );
 void	MSG_WriteDir ( const vec3_t vector);
 void	MSG_WriteData( const void *data, int length );
-void	MSG_WriteDeltaEntity( const entity_state_t *from, entity_state_t *to, msgEsFlags_t flags );
+void	MSG_WriteDeltaEntity( const entity_state_t *from, const entity_state_t *to, msgEsFlags_t flags );
 void	MSG_WriteDeltaPlayerstate_Default( const player_state_t *from, const player_state_t *to );
 int		MSG_WriteDeltaPlayerstate_Enhanced( const player_state_t *from, player_state_t *to, msgPsFlags_t flags );
-void	MSG_WriteDeltaPlayerstate_Packet( const player_state_t *from, player_state_t *to, msgPsFlags_t flags );
+void	MSG_WriteDeltaPlayerstate_Packet( const player_state_t *from, const player_state_t *to, int number, msgPsFlags_t flags );
 void	MSG_FlushTo( sizebuf_t *dest );
 void    MSG_Printf( const char *fmt, ... ) q_printf( 1, 2 ); 
 

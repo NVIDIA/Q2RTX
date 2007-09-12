@@ -32,7 +32,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define PROTOCOL_VERSION_R1Q2_MINOR		1903	// r1q2-b6377
 #define PROTOCOL_VERSION_Q2PRO_MINOR	1010	// q2pro r158
-#define PROTOCOL_VERSION_MVD_MINOR		2007	// q2pro r158
+#define PROTOCOL_VERSION_MVD_MINOR		2008	// q2pro r160
 
 //=========================================
 
@@ -221,6 +221,7 @@ typedef enum clc_ops_e {
 #define	PPS_REMOVE			(1<<15)
 
 #define PPS_NUM( ps )       (ps)->pmove.pm_flags
+#define PPS_INUSE( ps )     (ps)->pmove.pm_time
 
 //==============================================
 
@@ -293,8 +294,7 @@ typedef enum clc_ops_e {
 // ==============================================================
 
 #define CLIENTNUM_NONE		( MAX_CLIENTS - 1 )
-#define CLIENTNUM_ANY		( MAX_CLIENTS - 2 )
-#define CLIENTNUM_RESERVED	( MAX_CLIENTS - 2 )
+#define CLIENTNUM_RESERVED	( MAX_CLIENTS - 1 )
 
 typedef enum clientSetting_e {
 	/* r1q2 specific */
@@ -306,7 +306,6 @@ typedef enum clientSetting_e {
 	CLS_NOGIBS			= 10,
 	CLS_NOFOOTSTEPS,
 	CLS_NOPREDICT,
-	CLS_LOCALFOV,
 
 	CLS_MAX
 } clientSetting_t;

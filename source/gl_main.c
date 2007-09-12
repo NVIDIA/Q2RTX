@@ -25,21 +25,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "gl_local.h"
 
-#ifdef USE_PNG
-#include <png.h>
-#endif
-
-#if 0
-#ifdef USE_JPEG
-#ifndef USE_PNG
-#include <setjmp.h>
-#endif
-#include <stdio.h>
-#include <jpeglib.h>
-#endif
-#endif
-
-
 /* declare imports for this module */
 cmdAPI_t	cmd;
 cvarAPI_t	cvar;
@@ -56,8 +41,11 @@ statCounters_t  c;
 int registration_sequence;
 
 cvar_t *gl_partscale;
-#ifdef USE_JPEG
+#if USE_JPEG
 cvar_t *gl_screenshot_quality;
+#endif
+#if USE_PNG
+cvar_t *gl_screenshot_compression;
 #endif
 cvar_t *gl_znear;
 cvar_t *gl_zfar;
@@ -538,53 +526,28 @@ static void GL_EndFrame( void ) {
 
 #define SCREENSHOTS_DIRECTORY	"screenshots"
 
-#ifdef USE_JPEG
+static char *screenshot_path( char *buffer, const char *ext ) {
+    int i;
 
-/* 
-================== 
-GL_ScreenShotJPEG
-================== 
-*/  
-static qboolean GL_ScreenShotJPEG( const char *filename ) {
- 	byte	*buffer;
-	int		ret;
+    if( cmd.Argc() > 1 ) {
+		Com_sprintf( buffer, MAX_QPATH, SCREENSHOTS_DIRECTORY"/%s", cmd.Argv( 1 ) );
+		COM_DefaultExtension( buffer, ext, MAX_QPATH );
+        return buffer;
+    }
+// 
+// find a file name to save it to 
+// 
+    for( i = 0; i < 1000; i++ ) {
+        Com_sprintf( buffer, MAX_QPATH, SCREENSHOTS_DIRECTORY"/quake%03d%s", i, ext );
+        if( fs.LoadFileEx( buffer, NULL, FS_PATH_GAME ) == -1 ) {
+            return buffer;	// file doesn't exist
+        }
+    }
 
-	buffer = fs.AllocTempMem( gl_config.vidWidth * gl_config.vidHeight * 3 );
-
-	qglReadPixels( 0, 0, gl_config.vidWidth, gl_config.vidHeight, GL_RGB,
-        GL_UNSIGNED_BYTE, buffer );
-
-	ret = Image_WriteJPG( filename, buffer, gl_config.vidWidth,
-        gl_config.vidHeight, gl_screenshot_quality->integer );
-
-	fs.FreeFile( buffer );
-	
-	return ret;
+    Com_Printf( "All screenshot slots are full.\n" );
+    return NULL;
 }
 
-#endif
-
-/* 
-================== 
-GL_ScreenShotTGA
-================== 
-*/  
-static qboolean GL_ScreenShotTGA( const char *filename ) {
-	byte	*buffer;
-	int		ret;
-
-	buffer = fs.AllocTempMem( gl_config.vidWidth * gl_config.vidHeight * 3 );
-
-	qglReadPixels( 0, 0, gl_config.vidWidth, gl_config.vidHeight, GL_BGR,
-        GL_UNSIGNED_BYTE, buffer );
-
-	ret = Image_WriteTGA( filename, buffer, gl_config.vidWidth,
-        gl_config.vidHeight );
-
-	fs.FreeFile( buffer );
-	
-	return ret;
-}
 
 /* 
 ================== 
@@ -592,92 +555,106 @@ GL_ScreenShot_f
 ================== 
 */
 static void GL_ScreenShot_f( void )  {
-	char		picname[MAX_QPATH]; 
-	char		checkname[MAX_QPATH];
-	int			i;
-	qboolean	screenshotJPEG;
-	qboolean	silent;
-	qboolean	ret;
-	char		*ext;
+	char		buffer[MAX_QPATH]; 
+	byte	    *bgr;
+    qboolean    ret;
 
-	if( cmd.Argc() > 3 ) {
-		Com_Printf( "Usage: %s [name] [silent]\n", cmd.Argv( 0 ) );
+	if( cmd.Argc() > 2 ) {
+		Com_Printf( "Usage: %s [name]\n", cmd.Argv( 0 ) );
 		return;
 	}
 
-#ifdef USE_JPEG
-	if( !Q_stricmp( cmd.Argv( 0 ), "screenshotJPEG" ) ) {
-		screenshotJPEG = qtrue;
-		ext = ".jpg";
-	} else
-#endif
-	{
-		screenshotJPEG = qfalse;
-		ext = ".tga";
-	}
+    if( !screenshot_path( buffer, ".tga" ) ) {
+        return;
+    }
 
-	silent = qfalse;
-	picname[0] = 0;
-	for( i = 1; i < cmd.Argc(); i++ ) {
-		if( !Q_stricmp( cmd.Argv( i ), "silent" ) ) {
-			silent = qtrue;
-			continue;
-		}
+	bgr = fs.AllocTempMem( gl_config.vidWidth * gl_config.vidHeight * 3 );
 
-		if( picname[0] ) {
-			break;
-		}
+	qglReadPixels( 0, 0, gl_config.vidWidth, gl_config.vidHeight, GL_BGR,
+        GL_UNSIGNED_BYTE, bgr );
 
-		Q_strncpyz( picname, cmd.Argv( i ), sizeof( picname ) );
+	ret = Image_WriteTGA( buffer, bgr, gl_config.vidWidth, gl_config.vidHeight );
 
-	}
+	fs.FreeFile( bgr );
 
-// 
-// find a file name to save it to 
-// 
-	if( !picname[0] ) {
-		for( i = 0; i < 1000; i++ ) {
-			Com_sprintf( picname, sizeof( picname ), "quake%03d%s", i, ext );
-			Com_sprintf( checkname, sizeof( checkname ), SCREENSHOTS_DIRECTORY"/%s", picname );
-
-			if( fs.LoadFile( checkname, NULL ) == -1 ) {
-				break;	// file doesn't exist
-			}
-	
-		}
-
-		if( i == 1000 )  {
-			if( !silent ) {
-				Com_WPrintf( "Couldn't create a screenshot, all slots full\n" );
-			}
-			return;
- 		}
-	} else {
-		COM_DefaultExtension( picname, ext, sizeof( picname ) );
-		Com_sprintf( checkname, sizeof( checkname ), SCREENSHOTS_DIRECTORY"/%s", picname );
-	}
-
-#ifdef USE_JPEG
-	if( screenshotJPEG ) {
-		ret = GL_ScreenShotJPEG( checkname );
-	} else
-#endif
-	{
-		ret = GL_ScreenShotTGA( checkname );
-	}
-
-	if( silent ) {
-		return;
-	}
-
-	if( ret ) {
-		Com_Printf( "Wrote %s\n", picname );
-	} else {
-		Com_WPrintf( "Failed to write %s\n", picname );
-	}
-
+    if( ret ) {
+    	Com_Printf( "Wrote %s\n", buffer );
+    }
 }
 
+#if USE_JPEG
+static void GL_ScreenShotJPG_f( void )  {
+	char		buffer[MAX_QPATH]; 
+	byte	    *rgb;
+    int         quality;
+    qboolean    ret;
+
+	if( cmd.Argc() > 3 ) {
+		Com_Printf( "Usage: %s [name] [quality]\n", cmd.Argv( 0 ) );
+		return;
+	}
+
+    if( !screenshot_path( buffer, ".jpg" ) ) {
+        return;
+    }
+
+	rgb = fs.AllocTempMem( gl_config.vidWidth * gl_config.vidHeight * 3 );
+
+	qglReadPixels( 0, 0, gl_config.vidWidth, gl_config.vidHeight, GL_RGB,
+        GL_UNSIGNED_BYTE, rgb );
+
+    if( cmd.Argc() > 2 ) {
+        quality = atoi( cmd.Argv( 2 ) );
+    } else {
+        quality = gl_screenshot_quality->integer;
+    }
+
+	ret = Image_WriteJPG( buffer, rgb, gl_config.vidWidth, gl_config.vidHeight, quality );
+
+	fs.FreeFile( rgb );
+
+    if( ret ) {
+    	Com_Printf( "Wrote %s\n", buffer );
+    }
+}
+#endif
+
+#if USE_PNG
+static void GL_ScreenShotPNG_f( void )  {
+	char		buffer[MAX_QPATH]; 
+	byte	    *rgb;
+    int         compression;
+    qboolean    ret;
+
+	if( cmd.Argc() > 3 ) {
+		Com_Printf( "Usage: %s [name] [compression]\n", cmd.Argv( 0 ) );
+		return;
+	}
+
+    if( !screenshot_path( buffer, ".png" ) ) {
+        return;
+    }
+
+	rgb = fs.AllocTempMem( gl_config.vidWidth * gl_config.vidHeight * 3 );
+
+	qglReadPixels( 0, 0, gl_config.vidWidth, gl_config.vidHeight, GL_RGB,
+        GL_UNSIGNED_BYTE, rgb );
+
+    if( cmd.Argc() > 2 ) {
+        compression = atoi( cmd.Argv( 2 ) );
+    } else {
+        compression = gl_screenshot_compression->integer;
+    }
+
+	ret = Image_WritePNG( buffer, rgb, gl_config.vidWidth, gl_config.vidHeight, compression );
+
+	fs.FreeFile( rgb );
+
+    if( ret ) {
+    	Com_Printf( "Wrote %s\n", buffer );
+    }
+}
+#endif
 
 static void GL_Strings_f( void ) {
 	Com_Printf( "GL_VENDOR: %s\n", gl_config.vendorString );
@@ -702,9 +679,11 @@ static void GL_Register( void ) {
 
     /* misc */
 	gl_partscale = cvar.Get( "gl_partscale", "1.5", 0 );
-#ifdef USE_JPEG
-	gl_screenshot_quality = cvar.Get( "gl_screenshot_quality", "100",
-        CVAR_ARCHIVE );
+#if USE_JPEG
+	gl_screenshot_quality = cvar.Get( "gl_screenshot_quality", "100", 0 );
+#endif
+#if USE_PNG
+	gl_screenshot_compression = cvar.Get( "gl_screenshot_compression", "6", 0 );
 #endif
 	gl_modulate = cvar.Get( "gl_modulate", "1", CVAR_ARCHIVE );
     gl_hwgamma = cvar.Get( "vid_hwgamma", "0", CVAR_ARCHIVE|CVAR_LATCHED );
@@ -730,8 +709,11 @@ static void GL_Register( void ) {
     gl_fullbright = cvar.Get( "r_fullbright", "0", CVAR_CHEAT );
     
 	cmd.AddCommand( "screenshot", GL_ScreenShot_f );
-#ifdef USE_JPEG
-	cmd.AddCommand( "screenshotJPEG", GL_ScreenShot_f );
+#if USE_JPEG
+	cmd.AddCommand( "screenshotjpg", GL_ScreenShotJPG_f );
+#endif
+#if USE_PNG
+	cmd.AddCommand( "screenshotpng", GL_ScreenShotPNG_f );
 #endif
 	cmd.AddCommand( "strings", GL_Strings_f );
 
@@ -740,11 +722,13 @@ static void GL_Register( void ) {
 
 static void GL_Unregister( void ) {
 	cmd.RemoveCommand( "screenshot" );
-#ifdef USE_JPEG
-	cmd.RemoveCommand( "screenshotJPEG" );
+#if USE_JPEG
+	cmd.RemoveCommand( "screenshotjpg" );
+#endif
+#if USE_PNG
+	cmd.RemoveCommand( "screenshotpng" );
 #endif
 	cmd.RemoveCommand( "strings" );
-
 }
 
 static qboolean GL_SetupExtensions( void ) {
@@ -878,14 +862,6 @@ static qboolean GL_Init( qboolean total ) {
 	}
 
 	Com_Printf( "ref_gl " VERSION ", " __DATE__ "\n" );
-#if 0
-#ifdef USE_JPEG
-    Com_Printf( "w/ libjpeg v%d\n", JPEG_LIB_VERSION );
-#endif
-#ifdef USE_PNG
-    Com_Printf( "w/ libpng v" PNG_LIBPNG_VER_STRING "\n" );
-#endif
-#endif
 
 	/* initialize OS-specific parts of OpenGL */
 	/* create the window and set up the context */

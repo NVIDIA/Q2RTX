@@ -61,17 +61,17 @@ Otherwise, specifies just physics frame rate.
 
 - `set cl_gibs 1` (boolean)  
 When set to zero, disables rendering of entities with `EF_GIB` flag set.
-When connected using Q2PRO protocol, allows some degree of bandwith
+When connected using Q2PRO protocol, allows some degree of bandwidth
 savings since the server stops sending these entities at all.
 
 - `set cl_gun 1` (boolean)  
 When set to zero, disables rendering of the gun model. When connected using
-R1Q2 or Q2PRO protocol, allows some degree of bandwith savings since the
+R1Q2 or Q2PRO protocol, allows some degree of bandwidth savings since the
 server stops sending gun updates at all.
 
 - `set cl_footsteps 1` (boolean)  
 When set to zero, disables footsteps sounds. When connected using Q2PRO
-protocol, allows some degree of bandwith savings since the server stops
+protocol, allows some degree of bandwidth savings since the server stops
 sending footstep events at all.
 
 
@@ -105,7 +105,7 @@ Defines which type of effect to use:
 Time, in seconds, for the rail trail to be visible. 
     
 - `set cl_railtrail_alpha 1.0` (float)  
-Initial transparency of the rail trail as it linearly fades to zero.
+Initial opacity of the rail trail as it linearly fades to zero.
 
 - `set cl_railcore_color 0xFF0000` (integer)  
 Color of the rail core beam in the hexadecimal `0xRRGGBB` format.
@@ -151,7 +151,7 @@ Transparency of in-game console background. Takes effect in OpenGL mode only.
 Scale factor of the console text. Takes effect in OpenGL mode only.
 
 - `set con_font "conchars"` (string)  
-Font to draw the console text.
+Font used to draw console text.
 
 - `set con_background "conback"` (string)  
 Image to use as console background.
@@ -168,12 +168,17 @@ of the screen. Useful for debugging.
 
 - `set scr_demobar 1` (boolean)  
 Toggles drawing of progress bar at the bottom of the screen during demo playback.
+Progress bar is not shown when playing GZIP compressed demos as there is no
+effective way to tell original length of such demos.
 
-- `set scr_scale 1` (float)  
+- `set scr_scale 1.0` (float)  
 Scale factor of the HUD elements. Takes effect in OpenGL mode only.
 
+- `set scr_alpha 1.0` (float)  
+Opacity of the HUD elements. Takes effect in OpenGL mode only.
+
 - `set scr_font "conchars"` (string)  
-Font to draw the on-screen text.
+Font used to draw HUD text.
 
 
 Video
@@ -198,6 +203,62 @@ into the list of video modes specified by `vid_modelist`.
 - `set vid_placement "640x480"` (string)  
 Placement of the main window on your virtual desktop. Full syntax is: `WxH[+X+Y]`.
 
+
+OpenGL renderer
+----------
+
+- `set gl_gamma_scale_pics 0` (boolean)  
+Apply gamma scaling not only for textures and skins, but for all images.
+
+- `set gl_noscrap 0` (boolean)  
+By default, OpenGL renderer combines small pics into single large texture called
+scrap. This cvar disables this optimization.
+
+- `set gl_bilerp_chars 0` (boolean)  
+Enable bilinear interpolation of charset images.
+
+- `set gl_fastsky 0` (boolean)  
+Skip skybox rendering and fill sky with solid color instead.
+
+- `set gl_partscale 1.5` (float)  
+Specifies minimum size of particles.
+
+- `set gl_sort 0` (boolean)  
+Enables sorting of BSP surfaces before rendering, using texture as sorting key.
+Allows meshes to be drawn in larger batches in order to minimize number of TMU
+switches per frame. This option puts additional load on main CPU and may or may
+not gain more FPS depending on your video card and drivers.
+
+- `set gl_subdivide 1` (boolean)  
+Toggles load time subdivision of warped surfaces (water, lava, etc). Disabling
+subdivision reduces number of triangles drawn per frame and increases map load
+time a bit.
+
+- `set gl_saturation 1` (float)  
+Specifies color saturation percentage of world textures. Default value of
+1 means identity coloring, value of 0 effectively makes textures
+monochrome (and speeds up rendering a bit as textures are uploaded at
+8 bit per pixel instead of 24).
+
+- `set gl_invert 0` (boolean)  
+Invert colors of world textures. In combination with `gl_saturation 0`
+effectively makes textures look like negative.
+
+- `set gl_dynamic 2` (integer)  
+Specifies appearance of dynamic lighting:
+  - 0 - lighting disabled
+  - 1 - additive lighting
+  - 2 - modulative lighting
+
+- `set gl_anisotropy 0` (integer)  
+When set to 2 and higher, enables anisotropic filtering of world textures,
+provided you video card supports it.
+
+- `set gl_brightness 0` (float)  
+Specifies additional brightness percentage added to world lightmaps.
+Default value of 0 means identity lightmaps, value of 1 means fullbright 
+lightmaps.
+
 Misc
 ----------
 
@@ -210,8 +271,13 @@ Specifies which non-keyboard (typically mouse) input driver to use:
 - `set cl_chat_notify 1` (boolean)  
 Specifies whether to display chat lines in the notify area.
 
-- `set cl_chat_beep 1` (boolean)  
-Specifies whether to play a sound each time chat message is received.
+- `set cl_chat_sound "misc/talk1.wav"` (string)  
+Specifies sound file to play each time chat message is received.
+Set this to empty string to disable chat sound.
+
+- `set cl_chat_filter 0` (boolean)  
+Specifies whether to filter out unprintable characters from
+incoming chat messages.
 
 Macros
 ==========
@@ -232,7 +298,7 @@ and `${$loc_here}`.
 - `$loc_here` Name of the location you are standing at.
 - `$cl_dnrate` Download rate in KB/sec.
 - `$cl_uprate` Upload rate in KB/sec.
-- `$cl_ping` Average RTT to the server.
+- `$cl_ping` Average RTT to the server and back.
 - `$cl_fps` Rendering frame rate.
 - `$cl_ups` Player velocity in units/sec.
 - `$com_time` Current time, formatted according to `com_time_format`.
@@ -261,7 +327,7 @@ Reset the specified _cvar_ to it's default value.
 
 - `cvarlist [-f] [-d] [-w <wildcard>]`
 
-- `macrolist`
+- `macrolist`  
 Display the list of registered macros and their current values.
 
 - `serverstatus <address>`  
@@ -278,7 +344,7 @@ does not reload refresh library. Use to manually change the game directory
 Play demo on client side. Unlike server side `demomap` command, does not
 load the game DLL, does not require file extension to be specified,
 supports automatic filename completion and does not error entire game out
-if nonexistant file is specified. In other words, this is the **recommended**
+if nonexistent file is specified. In other words, this is the **recommended**
 way to watch demos using Q2PRO. Loads file from `demos/` unless
 slash is prepended to _filename_, otherwise loads from the root of VFS.
 
@@ -292,3 +358,11 @@ the bottom right corner of the screen.
 - `undraw <name>`  
 Remove object identified by _name_ from the list of objects drawn on the
 screen. Specify `all` to clear all objects.
+
+- `passive`  
+Toggle passive connection mode. When enabled, client awaits for the first
+`passive_connect` packet from the random server and starts normal connection
+sequence once this packet is received. This command is useful for connecting
+to servers behind NATs or firewalls. See `pick` [[server#index3h1]] command for more details.
+
+

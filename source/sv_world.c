@@ -153,12 +153,120 @@ void SV_ClearWorld( void ) {
 
 /*
 ===============
-SV_UnlinkEdict
+SV_LinkEdict
 
+General purpose routine shared by game DLL and MVD code.
+Links entity to PVS leafs.
 ===============
 */
-void SV_UnlinkEdict (edict_t *ent)
-{
+void SV_LinkEdict( cm_t *cm, edict_t *ent ) {
+	cleaf_t		*leafs[MAX_TOTAL_ENT_LEAFS];
+	int			clusters[MAX_TOTAL_ENT_LEAFS];
+	int			num_leafs;
+	int			i, j;
+	int			area;
+	cnode_t		*topnode;
+
+	// set the size
+	VectorSubtract (ent->maxs, ent->mins, ent->size);
+
+	// set the abs box
+	if (ent->solid == SOLID_BSP &&
+        (ent->s.angles[0] || ent->s.angles[1] || ent->s.angles[2]) )
+	{	// expand for rotation
+		float		max, v;
+		int			i;
+
+		max = 0;
+		for (i=0 ; i<3 ; i++) {
+			v = Q_fabs( ent->mins[i]);
+			if (v > max)
+				max = v;
+			v = Q_fabs( ent->maxs[i]);
+			if (v > max)
+				max = v;
+		}
+		for (i=0 ; i<3 ; i++)
+		{
+			ent->absmin[i] = ent->s.origin[i] - max;
+			ent->absmax[i] = ent->s.origin[i] + max;
+		}
+	}
+	else
+	{	// normal
+		VectorAdd (ent->s.origin, ent->mins, ent->absmin);	
+		VectorAdd (ent->s.origin, ent->maxs, ent->absmax);
+	}
+
+	// because movement is clipped an epsilon away from an actual edge,
+	// we must fully check even when bounding boxes don't quite touch
+	ent->absmin[0] -= 1;
+	ent->absmin[1] -= 1;
+	ent->absmin[2] -= 1;
+	ent->absmax[0] += 1;
+	ent->absmax[1] += 1;
+	ent->absmax[2] += 1;
+
+// link to PVS leafs
+	ent->num_clusters = 0;
+	ent->areanum = 0;
+	ent->areanum2 = 0;
+
+	//get all leafs, including solids
+	num_leafs = CM_BoxLeafs( cm, ent->absmin, ent->absmax,
+		leafs, MAX_TOTAL_ENT_LEAFS, &topnode);
+
+	// set areas
+	for (i=0 ; i<num_leafs ; i++)
+	{
+		clusters[i] = CM_LeafCluster (leafs[i]);
+		area = CM_LeafArea (leafs[i]);
+		if (area)
+		{	// doors may legally straggle two areas,
+			// but nothing should evern need more than that
+			if (ent->areanum && ent->areanum != area)
+			{
+				if (ent->areanum2 && ent->areanum2 != area && sv.state == ss_loading)
+					Com_DPrintf ("Object touching 3 areas at %f %f %f\n",
+					ent->absmin[0], ent->absmin[1], ent->absmin[2]);
+				ent->areanum2 = area;
+			}
+			else
+				ent->areanum = area;
+		}
+	}
+
+	if (num_leafs >= MAX_TOTAL_ENT_LEAFS)
+	{	// assume we missed some leafs, and mark by headnode
+		ent->num_clusters = -1;
+		ent->headnode = topnode - cm->cache->nodes;
+	}
+	else
+	{
+		ent->num_clusters = 0;
+		for (i=0 ; i<num_leafs ; i++)
+		{
+			if (clusters[i] == -1)
+				continue;		// not a visible leaf
+			for (j=0 ; j<i ; j++)
+				if (clusters[j] == clusters[i])
+					break;
+			if (j == i)
+			{
+				if (ent->num_clusters == MAX_ENT_CLUSTERS)
+				{	// assume we missed some leafs, and mark by headnode
+					ent->num_clusters = -1;
+					ent->headnode = topnode - cm->cache->nodes;
+					break;
+				}
+
+				ent->clusternums[ent->num_clusters++] = clusters[i];
+			}
+		}
+	}
+}
+
+void PF_UnlinkEdict (edict_t *ent) {
 	if (!ent->area.prev)
 		return;		// not linked in anywhere
 	RemoveLink (&ent->area);
@@ -166,24 +274,12 @@ void SV_UnlinkEdict (edict_t *ent)
 }
 
 
-/*
-===============
-SV_LinkEdict
-
-===============
-*/
-void SV_LinkEdict (edict_t *ent)
-{
+void PF_LinkEdict (edict_t *ent) {
 	areanode_t	*node;
-	cleaf_t		*leafs[MAX_TOTAL_ENT_LEAFS];
-	int			clusters[MAX_TOTAL_ENT_LEAFS];
-	int			num_leafs;
 	int			i, j, k;
-	int			area;
-	cnode_t		*topnode;
 
 	if (ent->area.prev)
-		SV_UnlinkEdict (ent);	// unlink from old position
+		PF_UnlinkEdict (ent);	// unlink from old position
 		
 	if (ent == ge->edicts)
 		return;		// don't add the world
@@ -195,9 +291,6 @@ void SV_LinkEdict (edict_t *ent)
 		return;
 	}
 
-	// set the size
-	VectorSubtract (ent->maxs, ent->mins, ent->size);
-	
 	// encode the size into the entity_state for client prediction
 	if (ent->solid == SOLID_BBOX && !(ent->svflags & SVF_DEADMONSTER))
 	{	// assume that x/y are equal and symetric
@@ -230,105 +323,10 @@ void SV_LinkEdict (edict_t *ent)
 	else
 		ent->s.solid = 0;
 
-	// set the abs box
-	if (ent->solid == SOLID_BSP && 
-	(ent->s.angles[0] || ent->s.angles[1] || ent->s.angles[2]) )
-	{	// expand for rotation
-		float		max, v;
-		int			i;
-
-		max = 0;
-		for (i=0 ; i<3 ; i++)
-		{
-			v =fabs( ent->mins[i]);
-			if (v > max)
-				max = v;
-			v =fabs( ent->maxs[i]);
-			if (v > max)
-				max = v;
-		}
-		for (i=0 ; i<3 ; i++)
-		{
-			ent->absmin[i] = ent->s.origin[i] - max;
-			ent->absmax[i] = ent->s.origin[i] + max;
-		}
-	}
-	else
-	{	// normal
-		VectorAdd (ent->s.origin, ent->mins, ent->absmin);	
-		VectorAdd (ent->s.origin, ent->maxs, ent->absmax);
-	}
-
-	// because movement is clipped an epsilon away from an actual edge,
-	// we must fully check even when bounding boxes don't quite touch
-	ent->absmin[0] -= 1;
-	ent->absmin[1] -= 1;
-	ent->absmin[2] -= 1;
-	ent->absmax[0] += 1;
-	ent->absmax[1] += 1;
-	ent->absmax[2] += 1;
-
-// link to PVS leafs
-	ent->num_clusters = 0;
-	ent->areanum = 0;
-	ent->areanum2 = 0;
-
-	//get all leafs, including solids
-	num_leafs = CM_BoxLeafs( &sv.cm, ent->absmin, ent->absmax,
-		leafs, MAX_TOTAL_ENT_LEAFS, &topnode);
-
-	// set areas
-	for (i=0 ; i<num_leafs ; i++)
-	{
-		clusters[i] = CM_LeafCluster (leafs[i]);
-		area = CM_LeafArea (leafs[i]);
-		if (area)
-		{	// doors may legally straggle two areas,
-			// but nothing should evern need more than that
-			if (ent->areanum && ent->areanum != area)
-			{
-				if (ent->areanum2 && ent->areanum2 != area && sv.state == ss_loading)
-					Com_DPrintf ("Object touching 3 areas at %f %f %f\n",
-					ent->absmin[0], ent->absmin[1], ent->absmin[2]);
-				ent->areanum2 = area;
-			}
-			else
-				ent->areanum = area;
-		}
-	}
-
-	if (num_leafs >= MAX_TOTAL_ENT_LEAFS)
-	{	// assume we missed some leafs, and mark by headnode
-		ent->num_clusters = -1;
-		ent->headnode = topnode - sv.cm.cache->nodes;
-	}
-	else
-	{
-		ent->num_clusters = 0;
-		for (i=0 ; i<num_leafs ; i++)
-		{
-			if (clusters[i] == -1)
-				continue;		// not a visible leaf
-			for (j=0 ; j<i ; j++)
-				if (clusters[j] == clusters[i])
-					break;
-			if (j == i)
-			{
-				if (ent->num_clusters == MAX_ENT_CLUSTERS)
-				{	// assume we missed some leafs, and mark by headnode
-					ent->num_clusters = -1;
-					ent->headnode = topnode - sv.cm.cache->nodes;
-					break;
-				}
-
-				ent->clusternums[ent->num_clusters++] = clusters[i];
-			}
-		}
-	}
+    SV_LinkEdict( &sv.cm, ent );
 
 	// if first time, make sure old_origin is valid
-	if (!ent->linkcount && sv.state != ss_broadcast)
-	{
+	if (!ent->linkcount) {
 		VectorCopy (ent->s.origin, ent->s.old_origin);
 	}
 	ent->linkcount++;

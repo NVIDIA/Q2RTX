@@ -47,7 +47,7 @@ void CL_CheckPredictionError( void ) {
 	if( !cl_predict->integer || ( ps->pmove.pm_flags & PMF_NO_PREDICTION ) )
 		return;
 
-	// calculate the last usercmd_t we sent that the sv_local.has processed
+	// calculate the last usercmd_t we sent that the server has processed
 	frame = cls.netchan->incoming_acknowledged & CMD_MASK;
 	i = cl.history[frame].cmdNumber & CMD_MASK;
 
@@ -67,9 +67,7 @@ void CL_CheckPredictionError( void ) {
 		VectorCopy( ps->pmove.origin, cl.predicted_origins[i] );
 
 		// save for error interpolation
-		cl.prediction_error[0] = delta[0] * 0.125f;
-		cl.prediction_error[1] = delta[1] * 0.125f;
-		cl.prediction_error[2] = delta[2] * 0.125f;
+		VectorScale( delta, 0.125f, cl.prediction_error );
 	}
 }
 

@@ -16,5 +16,10 @@ the `q2pro` directory:
 
     svn co https://q2pro.svn.sourceforge.net/svnroot/q2pro/trunk q2pro
 
+If you look for the source code snapshot corresponding to a particular binary
+release, you may try the following command, replacing XXX with release number:
+
+    svn co https://q2pro.svn.sourceforge.net/svnroot/q2pro/tags/rXXX q2pro-rXXX
+
 You can also browse Q2PRO source tree
 [online](http://q2pro.svn.sourceforge.net/viewvc/q2pro).

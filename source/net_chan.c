@@ -98,7 +98,7 @@ void Netchan_Init( void ) {
 
 	showpackets = Cvar_Get( "showpackets", "0", 0 );
 	showdrop = Cvar_Get( "showdrop", "0", 0 );
-	net_qport = Cvar_Get( "qport", va( "%i", port ), 0 );
+	net_qport = Cvar_Get( "qport", va( "%d", port ), 0 );
     net_maxmsglen = Cvar_Get( "net_maxmsglen", "1390", 0 );
     net_chantype = Cvar_Get( "net_chantype", "1", 0 );
 }
@@ -111,10 +111,10 @@ Sends an out-of-band datagram
 ================
 */
 neterr_t Netchan_OutOfBand( netsrc_t sock, const netadr_t *address,
-        uint32 length, const byte *data )
+                            uint32 length, const byte *data )
 {
 	sizebuf_t	send;
-	byte		send_data[MAX_PACKETLEN_DEFAULT];
+	byte		send_data[MAX_PACKETLEN_DEFAULT - 4];
 	neterr_t	ret;
 
 	SZ_Init( &send, send_data, sizeof( send_data ) );
@@ -138,22 +138,22 @@ Sends a text message in an out-of-band datagram
 ================
 */
 neterr_t Netchan_OutOfBandPrint( netsrc_t sock, const netadr_t *address,
-        const char *format, ... )
+                                 const char *format, ... )
 {
 	va_list		argptr;
 	byte		send_data[MAX_PACKETLEN_DEFAULT];
 	int			length;
 	neterr_t	ret;
 
-/* write the packet header */
-	*( uint32 * )send_data = -1;	/* -1 sequence means out of band */
+// write the packet header
+	*( uint32 * )send_data = -1;	// -1 sequence means out of band
 	
 	va_start( argptr, format );
 	length = Q_vsnprintf( ( char * )send_data + 4, sizeof( send_data ) - 4,
-            format, argptr );
+        format, argptr );
 	va_end( argptr );
 
-/* send the datagram */
+// send the datagram
 	ret = NET_SendPacket( sock, address, length + 4, send_data );
 
 	return ret;

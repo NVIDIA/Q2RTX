@@ -127,9 +127,13 @@ void R_GetPalette( byte **dest );
 void Image_LoadPCX( const char *filename, byte **pic, byte *palette, int *width, int *height );
 void Image_LoadTGA( const char *filename, byte **pic, int *width, int *height );
 qboolean Image_WriteTGA( const char *filename, const byte *rgb, int width, int height );
-#ifdef USE_JPEG
+#if USE_JPEG
 void Image_LoadJPG( const char *filename, byte **pic, int *width, int *height );
 qboolean Image_WriteJPG( const char *filename, const byte *rgb, int width, int height, int quality );
+#endif
+#if USE_PNG
+void Image_LoadPNG( const char *filename, byte **pic, int *width, int *height );
+qboolean Image_WritePNG( const char *filename, const byte *rgb, int width, int height, int compression ); 
 #endif
 
 /* these should be implemented by renderer library itself */

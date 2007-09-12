@@ -577,7 +577,7 @@ void CL_TrapParticles (entity_t *ent);
 // cl_demo.c
 //
 void CL_InitDemos( void );
-void CL_DemoFrame( int msec );
+void CL_DemoFrame( void );
 void CL_WriteDemoMessage( sizebuf_t *buf );
 void CL_EmitDemoFrame( void ); 
 void CL_Stop_f( void );

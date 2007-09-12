@@ -20,9 +20,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // sv_game.c -- interface to the game dll
 
 #include "sv_local.h"
-#include "mvd_local.h"
-
-//void PF_error (const char *fmt, ...) q_noreturn;
 
 game_export_t	*ge;
 int             gameFeatures;
@@ -120,14 +117,14 @@ static void PF_Unicast( edict_t *ent, qboolean reliable ) {
             /* probably some Q2Admin crap,
              * let MVD client process this internally */
 			SV_ClientAddMessage( client, flags );
-		} else if( sv.mvdpaused < PAUSED_FRAMES ) {
+		} else if( sv.mvd.paused < PAUSED_FRAMES ) {
             /* otherwise, MVD client will send
              * this to everyone in freefloat mode */
             SV_MvdUnicast( clientNum, op );
         }
 	} else {
         SV_ClientAddMessage( client, flags );
-        if( sv_mvd_enable->integer && sv.mvdpaused < PAUSED_FRAMES &&
+        if( sv_mvd_enable->integer && sv.mvd.paused < PAUSED_FRAMES &&
             SV_MvdPlayerIsActive( ent ) )
         {
             SV_MvdUnicast( clientNum, op );
@@ -328,7 +325,7 @@ static void PF_setmodel (edict_t *ent, const char *name) {
 		mod = CM_InlineModel (&sv.cm, name);
 		VectorCopy (mod->mins, ent->mins);
 		VectorCopy (mod->maxs, ent->maxs);
-		SV_LinkEdict (ent);
+		PF_LinkEdict (ent);
 	}
 
 }
@@ -346,7 +343,7 @@ void PF_Configstring( int index, const char *val ) {
 	client_t *client;
 
 	if( index < 0 || index >= MAX_CONFIGSTRINGS )
-		Com_Error( ERR_DROP, "PF_Configstring: bad index %i\n", index );
+		Com_Error( ERR_DROP, "%s: bad index: %d\n", __func__, index );
 
 	if( !val )
 		val = "";
@@ -354,7 +351,7 @@ void PF_Configstring( int index, const char *val ) {
 	length = strlen( val );
 	maxlength = sizeof( sv.configstrings ) - MAX_QPATH * index;
 	if( length >= maxlength ) {
-		Com_Error( ERR_DROP, "PF_Configstring: index %d overflowed: %d > %d\n",
+		Com_Error( ERR_DROP, "%s: index %d overflowed: %d > %d\n", __func__,
             index, length, maxlength - 1 );
 	}
 
@@ -493,12 +490,13 @@ static void PF_StartSound( edict_t *entity, int channel,
 	int			sendchan;
     int			flags;
 	int			ent;
-	vec3_t		origin, clientorg;
+	vec3_t		origin;
 	client_t	*client;
 	byte		*mask;
 	cleaf_t		*leaf;
 	int			area, cluster;
     player_state_t  *ps;
+    sound_packet_t  *msg;
 
 	if( !entity )
 		return;
@@ -525,14 +523,6 @@ static void PF_StartSound( edict_t *entity, int channel,
 	if( timeofs )
 		flags |= SND_OFFSET;
 
-    // use the entity origin unless it is a bmodel
-    if( entity->solid == SOLID_BSP ) {
-        VectorAvg( entity->mins, entity->maxs, origin );
-        VectorAdd( entity->s.origin, origin, origin );
-    } else {
-        VectorCopy( entity->s.origin, origin );
-    }
-    
     // if the sound doesn't attenuate,send it to everyone
     // (global radio chatter, voiceovers, etc)
     if( attenuation == ATTN_NONE ) {
@@ -545,95 +535,76 @@ static void PF_StartSound( edict_t *entity, int channel,
 			continue; 
 		}
 
-        // send origin for invisible entities
-        if( entity->svflags & SVF_NOCLIENT ) {
-            flags |= SND_POS;
-        }
-
-        // default client doesn't know that bmodels have weird origins
-        if( entity->solid == SOLID_BSP && client->protocol == PROTOCOL_VERSION_DEFAULT ) {
-            flags |= SND_POS;
-        }
-
-        if( entity != client->edict ) {
+        // PHS cull this sound
+        if( ( channel & CHAN_NO_PHS_ADD ) == 0 ) {
             // get client viewpos
             ps = &client->edict->client->ps;
-            VectorMA( ps->viewoffset, 0.125f, ps->pmove.origin, clientorg );
-
-            // PHS cull this sound
-            if( ( channel & CHAN_NO_PHS_ADD ) == 0 ) {
-                leaf = CM_PointLeaf( &sv.cm, clientorg );
-                area = CM_LeafArea( leaf );
-                if( !CM_AreasConnected( &sv.cm, area, entity->areanum ) ) {
-                    // doors can legally straddle two areas, so
-                    // we may need to check another one
-                    if( !entity->areanum2 || !CM_AreasConnected( &sv.cm, area, entity->areanum2 ) ) {
-                        continue;		// blocked by a door
-                    }
-                }
-                cluster = CM_LeafCluster( leaf );
-                mask = CM_ClusterPHS( &sv.cm, cluster );
-                if( !SV_EdictPV( entity, mask ) ) {
-                    continue; // not in PHS
+            VectorMA( ps->viewoffset, 0.125f, ps->pmove.origin, origin );
+            leaf = CM_PointLeaf( &sv.cm, origin );
+            area = CM_LeafArea( leaf );
+            if( !CM_AreasConnected( &sv.cm, area, entity->areanum ) ) {
+                // doors can legally straddle two areas, so
+                // we may need to check another one
+                if( !entity->areanum2 || !CM_AreasConnected( &sv.cm, area, entity->areanum2 ) ) {
+                    continue;		// blocked by a door
                 }
             }
-
-            // check if position needs to be explicitly sent
-            if( ( flags & SND_POS ) == 0 ) {
-                mask = CM_FatPVS( &sv.cm, clientorg );
-                if( !SV_EdictPV( entity, mask ) ) {
-                    flags |= SND_POS;   // not in PVS
-                }
+            cluster = CM_LeafCluster( leaf );
+            mask = CM_ClusterPHS( &sv.cm, cluster );
+            if( !SV_EdictPV( &sv.cm, entity, mask ) ) {
+                continue; // not in PHS
             }
         }
 
-        MSG_WriteByte( svc_sound );
-        MSG_WriteByte( flags );
-        MSG_WriteByte( soundindex );
-
-        if( flags & SND_VOLUME )
-            MSG_WriteByte( volume * 255 );
-        if( flags & SND_ATTENUATION )
-            MSG_WriteByte( attenuation * 64 );
-        if( flags & SND_OFFSET )
-            MSG_WriteByte( timeofs * 1000 );
-
-        MSG_WriteShort( sendchan );
-
-        if( flags & SND_POS )
-            MSG_WritePos( origin );
-
-        flags &= ~SND_POS;
-
-	    if( channel & CHAN_RELIABLE ) {
-		    SV_ClientAddMessage( client, MSG_RELIABLE|MSG_CLEAR );
-        } else {
-		    SV_ClientAddMessage( client, MSG_CLEAR );
+        // reliable sounds will always have position explicitly set
+        if( channel & CHAN_RELIABLE ) {
+            continue; // TODO
         }
+
+        if( LIST_EMPTY( &client->freemsg ) ) {
+            Com_WPrintf( "Out of message slots for %s!\n", client->name );
+	        if( channel & CHAN_RELIABLE ) {
+                SV_PacketizedClear( client );
+                SV_DropClient( client, "no slot for reliable message" );
+            }
+            continue;
+        }
+
+        msg = LIST_FIRST( sound_packet_t, &client->freemsg, entry );
+
+        msg->flags = flags;
+        msg->index = soundindex;
+        msg->volume = volume * 255;
+        msg->attenuation = attenuation * 64;
+        msg->timeofs = timeofs * 1000;
+        msg->sendchan = sendchan;
+
+        List_Remove( &msg->entry );
+        List_Append( &client->soundmsg, &msg->entry );
     }
 
-    if( svs.mvdummy && sv.mvdpaused < PAUSED_FRAMES ) {
+    if( svs.mvdummy && sv.mvd.paused < PAUSED_FRAMES ) {
         int extrabits = 0;
 
         if( channel & CHAN_NO_PHS_ADD ) {
-            extrabits |= 1;
+            extrabits |= 1 << SVCMD_BITS;
         }
 	    if( channel & CHAN_RELIABLE ) {
-            extrabits |= 2;
+            extrabits |= 2 << SVCMD_BITS;
         }
 
-        SZ_WriteByte( &sv.multicast, mvd_sound | ( extrabits << SVCMD_BITS ) );
-        SZ_WriteByte( &sv.multicast, flags );
-        SZ_WriteByte( &sv.multicast, soundindex );
+        SZ_WriteByte( &sv.mvd.multicast, mvd_sound | extrabits );
+        SZ_WriteByte( &sv.mvd.multicast, flags );
+        SZ_WriteByte( &sv.mvd.multicast, soundindex );
 
         if( flags & SND_VOLUME )
-            SZ_WriteByte( &sv.multicast, volume * 255 );
+            SZ_WriteByte( &sv.mvd.multicast, volume * 255 );
         if( flags & SND_ATTENUATION )
-            SZ_WriteByte( &sv.multicast, attenuation * 64 );
+            SZ_WriteByte( &sv.mvd.multicast, attenuation * 64 );
         if( flags & SND_OFFSET )
-            SZ_WriteByte( &sv.multicast, timeofs * 1000 );
+            SZ_WriteByte( &sv.mvd.multicast, timeofs * 1000 );
 
-        SZ_WriteShort( &sv.multicast, sendchan );
+        SZ_WriteShort( &sv.mvd.multicast, sendchan );
     }
 }
 
@@ -873,8 +844,8 @@ void SV_InitGameProgs ( void )
 	import.centerprintf = PF_centerprintf;
 	import.error = PF_error;
 
-	import.linkentity = SV_LinkEdict;
-	import.unlinkentity = SV_UnlinkEdict;
+	import.linkentity = PF_LinkEdict;
+	import.unlinkentity = PF_UnlinkEdict;
 	import.BoxEdicts = SV_AreaEdicts;
 #ifdef _WIN32
 #ifdef __GNUC__
@@ -943,6 +914,8 @@ void SV_InitGameProgs ( void )
     ggf = Sys_GetProcAddress( game_library, "GetGameFeatures" );
     if( ggf ) {
         gameFeatures = ggf( GAME_FEATURE_CLIENTNUM );
+    } else {
+        gameFeatures = 0;
     }
 
     // initialize

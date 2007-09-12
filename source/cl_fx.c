@@ -45,7 +45,7 @@ typedef struct clightstyle_s {
 } clightstyle_t;
 
 static clightstyle_t	cl_lightstyles[MAX_LIGHTSTYLES];
-static list_t		cl_lightlist;
+static LIST_DECL( cl_lightlist );
 static int			cl_lastofs;
 
 /*

@@ -50,16 +50,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 
 typedef struct {
-    void    *baselines[SV_BASELINES_CHUNKS];
-    int     basesize;
-    int     maxplayers;
-} frameparam_t;
-
-typedef struct {
 	uint32		numEntities;
-	uint32		numPlayers;
 	uint32		firstEntity;
-	uint32		firstPlayer;
+    player_state_t ps;
 	int			areabytes;
 	byte		areabits[MAX_MAP_AREAS/8]; // portalarea visibility bits
 	uint32		senttime;			// for ping calculations
@@ -80,19 +73,20 @@ typedef struct server_s {
 	cm_t		cm;
 
 	char		configstrings[MAX_CONFIGSTRINGS][MAX_QPATH];
-	byte		dirty_configstrings[DCS_BYTES];
 
-	qboolean	mvdrecording;
-	int     	mvdpaused;
-    int             mvdframenum;
-    client_frame_t  mvdframes[2];
-
-    sizebuf_t       multicast;
-
-	fileHandle_t	demofile;
+    struct {
+	    fileHandle_t	file;
+	    int     	    paused;
+        int             framenum;
+        entity_state_t  entities[MAX_EDICTS];
+        sizebuf_t       multicast;
+	    byte		    dcs[DCS_BYTES];
+    } mvd;
 
 	uint32			tracecount;
 } server_t;
+
+#define EDICT_POOL(c,n) ((edict_t *)((byte *)(c)->pool->edicts + (c)->pool->edict_size*(n)))
 
 #define EDICT_NUM(n) ((edict_t *)((byte *)ge->edicts + ge->edict_size*(n)))
 #define NUM_FOR_EDICT(e) ( ((byte *)(e)-(byte *)ge->edicts ) / ge->edict_size)
@@ -119,14 +113,25 @@ typedef struct {
 	list_t	    entry;
 	uint16	    cursize;
     byte		data[MSG_TRESHOLD];
-} pmsg_t;
+} message_packet_t;
 
 typedef struct {
+    list_t  entry;
+    uint16  cursize;
+    byte    flags;
+    byte    index;
+    uint16  sendchan;
+    byte    volume;
+    byte    attenuation;
+    byte    timeofs;
+} sound_packet_t;
+
+/*typedef struct {
 	list_t	    entry;
 	uint16	    cursize;
     uint16      leafnum;
     byte		data[MSG_TRESHOLD];
-} mpacket_t;
+} mpacket_t;*/
 
 #define	LATENCY_COUNTS	16
 #define LATENCY_MASK	( LATENCY_COUNTS - 1 )
@@ -185,23 +190,27 @@ typedef struct client_s {
 
     // packetized messages for clients without
     // netchan level fragmentation support
-	list_t			freemsg;
-	list_t			usedmsg;
-	list_t			relmsg;
-	pmsg_t	        *msgpool;
+	list_t			    freemsg;
+	list_t			    inusemsg[2];
+	list_t			    soundmsg;
+	message_packet_t	*msgpool;
 
     // bulk messages for clients with 
     // netchan level fragmentation support
 	sizebuf_t		datagram;
 
-    // baselines are either explicitly allocated for
-    // this client, or are taken from MVD server data
-    frameparam_t    param;
+    // baselines are allocated per client
+    entity_state_t  *baselines[SV_BASELINES_CHUNKS];
+
+    // server state pointers (MVD channels hack)
+    char            *configstrings;
+    char            *gamedir, *mapname;
+    edict_pool_t    *pool;
+    cm_t            *cm;
 
     // netchan type dependent methods
 	void			(*AddMessage)( struct client_s *, byte *, int, qboolean );
 	void			(*WriteFrame)( struct client_s * );
-	void            (*BuildFrame)( struct client_s * );
 	void			(*FinishFrame)( struct client_s * );
 	void			(*WriteDatagram)( struct client_s * );
 
@@ -279,11 +288,10 @@ typedef struct server_static_s {
 	client_t	*clientpool;	 // [maxclients]
 	list_t	    clients;         // linked list of non-free clients
 	uint32		numEntityStates; // maxclients*UPDATE_BACKUP*MAX_PACKET_ENTITIES
-	uint32			numPlayerStates;    // maxclients * UPDATE_BACKUP
 	uint32			nextEntityStates;	// next entityState to use
-	uint32			nextPlayerStates;	// next playerState to use
 	entity_state_t	*entityStates;		// [numEntityStates]
-	player_state_t	*playerStates;		// [numPlayerStates]
+
+    player_state_t  *players; // [maxclients]
 
 //    tcpcl_t         *tcpclpool;
     list_t          tcpClients;
@@ -474,7 +482,6 @@ void SV_HttpReject( const char *error, const char *reason );
 //
 void SV_Nextserver (void);
 void SV_ExecuteClientMessage (client_t *cl);
-void SV_CreateBaselines( void **baselines );
 
 //
 // sv_ccmds.c
@@ -484,15 +491,15 @@ void SV_ReadLevelFile (void);
 //
 // sv_ents.c
 //
+
+#define ES_INUSE( s ) \
+	( (s)->modelindex || (s)->effects || (s)->sound || (s)->event )
+
 void SV_BuildProxyClientFrame( client_t *client );
 void SV_BuildClientFrame( client_t *client );
 void SV_WriteFrameToClient_Default( client_t *client );
 void SV_WriteFrameToClient_Enhanced( client_t *client );
-void SV_EmitPacketEntities( client_frame_t *from, client_frame_t *to,
-						   int clientEntityNum, frameparam_t *param );
-void SV_EmitPacketPlayers( client_frame_t *from, client_frame_t *to,
-						  msgPsFlags_t flags );
-qboolean SV_EdictPV( edict_t *ent, byte *mask ); 
+qboolean SV_EdictPV( cm_t *cm, edict_t *ent, byte *mask ); 
 
 //
 // sv_game.c
@@ -516,11 +523,12 @@ void PF_Pmove( pmove_t *pm );
 void SV_ClearWorld (void);
 // called after the world model has been loaded, before linking any entities
 
-void SV_UnlinkEdict (edict_t *ent);
+void PF_UnlinkEdict (edict_t *ent);
 // call before removing an entity, and before trying to move one,
 // so it doesn't clip against itself
 
-void SV_LinkEdict (edict_t *ent);
+void SV_LinkEdict( cm_t *cm, edict_t *ent );
+void PF_LinkEdict (edict_t *ent);
 // Needs to be called any time an entity changes origin, mins, maxs,
 // or solid.  Automatically unlinks if needed.
 // sets ent->v.absmin and ent->v.absmax

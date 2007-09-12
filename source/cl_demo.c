@@ -24,10 +24,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "cl_local.h"
 
-cvar_t	*cl_demo_local_fov;
-
-static cvar_t *cl_demo_timescale;
-
 // =========================================================================
 
 /*
@@ -60,7 +56,7 @@ CL_EmitPacketEntities
 Writes a delta update of an entity_state_t list to the message.
 =============
 */
-void CL_EmitPacketEntities( server_frame_t *from, server_frame_t *to ) {
+static void CL_EmitPacketEntities( server_frame_t *from, server_frame_t *to ) {
 	entity_state_t	*oldent, *newent;
 	int	    oldindex, newindex;
 	int     oldnum, newnum;
@@ -167,7 +163,8 @@ void CL_EmitDemoFrame( void ) {
 	CL_EmitPacketEntities( oldframe, &cl.frame );
 
     if( cls.demobuff.cursize + msg_write.cursize > cls.demobuff.maxsize ) {
-        Com_WPrintf( "Demo frame overflowed.\n" );
+        Com_WPrintf( "Oversize demo frame: %d bytes\n",
+            cls.demobuff.cursize + msg_write.cursize );
     } else {
         SZ_Write( &cls.demobuff, msg_write.data, msg_write.cursize );
         cl.demoframe = cl.frame.number;
@@ -184,16 +181,14 @@ stop recording a demo
 ====================
 */
 void CL_Stop_f( void ) {
-	int len;
+	int length;
 
 	if( !cls.demorecording ) {
 		Com_Printf( "Not recording a demo.\n" );
 		return;
 	}
 
-	if( cls.serverProtocol == PROTOCOL_VERSION_R1Q2 ||
-		cls.serverProtocol == PROTOCOL_VERSION_Q2PRO )
-	{
+	if( cls.netchan && cls.serverProtocol >= PROTOCOL_VERSION_R1Q2 ) {
 		// tell the server we finished recording
 		MSG_WriteByte( clc_setting );
 		MSG_WriteShort( CLS_RECORDING );
@@ -202,14 +197,16 @@ void CL_Stop_f( void ) {
 	}
 
 // finish up
-	len = -1;
-	FS_Write( &len, 4, cls.demorecording );
+	length = -1;
+	FS_Write( &length, 4, cls.demorecording );
+
+    length = FS_RawTell( cls.demorecording );
 
 // close demofile
 	FS_FCloseFile( cls.demorecording );
 	cls.demorecording = 0;
 
-	Com_Printf( "Stopped demo.\n" );
+	Com_Printf( "Stopped demo (%d bytes written).\n", length );
 }
 
 /*
@@ -277,9 +274,7 @@ void CL_Record_f( void ) {
     // the first frame will be delta uncompressed
     cl.demoframe = -1;
 
-	if( cls.serverProtocol == PROTOCOL_VERSION_R1Q2 ||
-		cls.serverProtocol == PROTOCOL_VERSION_Q2PRO )
-	{
+	if( cls.netchan && cls.serverProtocol >= PROTOCOL_VERSION_R1Q2 ) {
 		// tell the server we are recording
 		MSG_WriteByte( clc_setting );
 		MSG_WriteShort( CLS_RECORDING );
@@ -312,7 +307,7 @@ void CL_Record_f( void ) {
 			length = MAX_QPATH;
 		}
 		
-        if( msg_write.cursize + length + 4 > MAX_PACKETLEN ) {
+        if( msg_write.cursize + length + 4 > MAX_PACKETLEN_WRITABLE_DEFAULT ) {
             CL_WriteDemoMessage( &msg_write );
         }
 
@@ -329,7 +324,7 @@ void CL_Record_f( void ) {
 			continue;
 		}
 
-        if( msg_write.cursize + 64 > MAX_PACKETLEN ) {
+        if( msg_write.cursize + 64 > MAX_PACKETLEN_WRITABLE_DEFAULT ) {
             CL_WriteDemoMessage( &msg_write );
         }
 
@@ -590,23 +585,10 @@ fail:
 CL_DemoFrame
 ====================
 */
-void CL_DemoFrame( int msec ) {
-	static float frac;
-	int dt;
-
+void CL_DemoFrame( void ) {
 	if( cls.state < ca_connected ) {
-		return;
-	}
-
-	if( sv_paused->integer ) {
-		return;
-	}
-
-	if( !cls.demoplayback ) {
-		cl.time += msec;
-		return;
-	}
-
+        return;
+    }
 	if( cls.state != ca_active ) {
 		CL_ParseNextDemoMessage();
 		return;
@@ -619,31 +601,12 @@ void CL_DemoFrame( int msec ) {
 		return;
 	}
 
-	if( cl_demo_timescale->value < 0 ) {
-		Cvar_Set( "cl_demo_timescale", "0" );
-	} else if( cl_demo_timescale->value > 1000 ) {
-		Cvar_Set( "cl_demo_timescale", "1000" );
-	}
-
-	if( cl_demo_timescale->value ) {
-		frac += msec * cl_demo_timescale->value;
-		dt = frac;
-		frac -= dt;
-
-		cl.time += dt;
-	}
-
 	while( cl.serverTime < cl.time ) {
 		CL_ParseNextDemoMessage();
 		if( cls.state != ca_active ) {
 			break;
 		}
 	}
-
-}
-
-static void cl_demo_local_fov_changed( cvar_t *self ) {
-	CL_UpdateLocalFovSetting();
 }
 
 static const cmdreg_t c_demo[] = {
@@ -660,10 +623,6 @@ CL_InitDemos
 ====================
 */
 void CL_InitDemos( void ) {
-	cl_demo_timescale = Cvar_Get( "cl_demo_timescale", "1", 0 );
-	cl_demo_local_fov = Cvar_Get( "cl_demo_local_fov", "1", 0 );
-	cl_demo_local_fov->changed = cl_demo_local_fov_changed;
-
 	Cmd_Register( c_demo );
 }
 

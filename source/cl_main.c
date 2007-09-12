@@ -237,26 +237,6 @@ static void CL_UpdatePredictSetting( void ) {
 
 /*
 ===================
-CL_UpdateLocalFovSetting
-===================
-*/
-void CL_UpdateLocalFovSetting( void ) {
-    if ( cls.state < ca_connected || cls.state > ca_active ) {
-        return;
-    }
-
-    if ( cls.serverProtocol != PROTOCOL_VERSION_Q2PRO ) {
-        return;
-    }
-
-    MSG_WriteByte( clc_setting );
-    MSG_WriteShort( CLS_LOCALFOV );
-    MSG_WriteShort( cl_demo_local_fov->integer );
-    MSG_FlushTo( &cls.netchan->message );
-}
-
-/*
-===================
 CL_ClientCommand
 ===================
 */
@@ -1236,8 +1216,6 @@ static void CL_ConnectionlessPacket( void ) {
 					} else if( k == PROTOCOL_VERSION_Q2PRO ) {
                         if( *s == ':' ) {
 						    minor36 = strtoul( s + 1, &s, 10 );
-                        } else {
-                            minor36 = PROTOCOL_VERSION_Q2PRO_MINOR;
                         }
 					}
 					s = strchr( s, ',' );
@@ -1839,7 +1817,6 @@ void CL_RequestNextDownload ( void ) {
     CL_UpdateGibSetting();
     CL_UpdateFootstepsSetting();
 	CL_UpdatePredictSetting();
-	CL_UpdateLocalFovSetting();
 
     cls.state = ca_precached;
 }
@@ -2530,89 +2507,90 @@ CL_Frame
 ==================
 */
 void CL_Frame( int msec ) {
-	static int extratime;
-	static int extraphystime;
-	int minFrameTime, minPhysTime, delta;
+	static int main_extra;
+	static int phys_extra;
+	int main_msec;
+    int phys_msec;
+    qboolean phys_frame;
 
 	time_after_ref = time_before_ref = 0;
 
-	if ( !cl_running->integer ) {
+	if( !cl_running->integer ) {
         if( cmd_buffer.waitCount > 0 ) {
             cmd_buffer.waitCount--;
         }
         return;
 	}
 
-	extratime += msec;
+	main_extra += msec;
 	cls.realtime += msec;
 
-	minFrameTime = 1;
+	main_msec = 1;
 	if( cl_async->integer ) {
-		extraphystime += msec;
+		phys_extra += msec;
+        phys_frame = qfalse;
 
 		Cvar_ClampInteger( cl_maxfps, 10, 120 );
-		minPhysTime = 1000 / cl_maxfps->integer;
-		if( extraphystime >= minPhysTime || cl.sendPacketNow ) {
-			CL_FinalizeCmd();
-			extraphystime = 0;
+		phys_msec = 1000 / cl_maxfps->integer;
+		if( phys_extra >= phys_msec ) {
+            phys_frame = qtrue;
 		}
 
 		if( r_maxfps->integer ) {
 			if( r_maxfps->integer < 10 ) {
 				Cvar_Set( "r_maxfps", "10" );
 			}
-			minFrameTime = 1000 / r_maxfps->integer;
+			main_msec = 1000 / r_maxfps->integer;
 		}
 	} else {
-		extraphystime = 0;
+        phys_frame = qtrue;
 		if( cl_maxfps->integer ) {
 			if( cl_maxfps->integer < 10 ) {
 				Cvar_Set( "cl_maxfps", "10" );
 			}
-			minFrameTime = 1000 / cl_maxfps->integer;
+			main_msec = 1000 / cl_maxfps->integer;
 		}
 	}
 	
-	if( com_timedemo->integer ) {
-		minFrameTime = 1;
-	} else if( !cls.appactive && !sv_running->integer && com_sleep->integer ) {
-		// run at 10 fps if background app
-		minFrameTime = 100;
-	} else if( cls.state < ca_active ) {
-        // run at 60 fps if not active
-        minFrameTime = 16;
-    }
-
-	if( extratime < minFrameTime ) {
-		// always sleep in background, but never sleep if running a server
-		if( !sv_running->integer && com_sleep->integer ) {
-    		delta = minFrameTime - extratime;
-            if( cls.state < ca_active ) {
-                NET_Sleep( delta );
-            } else if( !cls.appactive ) {
-                if( com_sleep->integer < 2 ) {
-                    delta = 1;
+	if( !com_timedemo->integer ) {
+        if( !sv_running->integer ) {
+            if( !cls.appactive ) {
+                // run at 10 fps if background app
+                if( main_extra < 100 ) {
+                    NET_Sleep( 100 - main_extra );
+                    return;
                 }
-                NET_Sleep( delta );
+            } else if( cls.state < ca_active ) {
+                // run at 60 fps if not active
+                if( main_extra < 16 ) {
+                    NET_Sleep( 16 - main_extra );
+                    return;
+                }
             }
-		}
-		// send pending intentions
-		CL_SendCmd();
-		return;
-	}
+        }
+        if( main_extra < main_msec ) {
+            return;
+        }
+    }
 
     if ( cls.demoplayback ) {
         sv_paused->integer = cl_paused->integer; // FIXME: HACK
     }
-
+    
     // decide the simulation time
-    cls.frametime = extratime * 0.001f;
+    cls.frametime = main_extra * 0.001f;
 
     if( cls.frametime > 1.0 / 5 )
         cls.frametime = 1.0 / 5;
 
-	// read next demo frame
-	CL_DemoFrame( extratime );
+	if( !sv_paused->integer ) {
+	    cl.time += main_extra;
+    }
+
+    // read next demo frame
+    if( cls.demoplayback ) {
+        CL_DemoFrame();
+    }
 
     // calculate local time
     CL_SetClientTime();
@@ -2620,11 +2598,12 @@ void CL_Frame( int msec ) {
     CL_CheckForReply();
 
 	// read user intentions
-	CL_UpdateCmd( extratime );
+	CL_UpdateCmd( main_extra );
 
 	// finalize them
-	if( !cl_async->integer ) {
+	if( phys_frame || cl.sendPacketNow ) {
 		CL_FinalizeCmd();
+		phys_extra = 0;
 	}
 
 	// send pending intentions
@@ -2655,7 +2634,7 @@ void CL_Frame( int msec ) {
 
 	CL_MeasureFPS();
 
-	extratime = 0;
+	main_extra = 0;
     cls.framecount++;
 
     //
@@ -2681,7 +2660,7 @@ void CL_Frame( int msec ) {
 
 //============================================================================
 
-static byte     demo_buffer[MAX_PACKETLEN];
+static byte     demo_buffer[MAX_PACKETLEN_WRITABLE_DEFAULT];
 
 /*
 ====================

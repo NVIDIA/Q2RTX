@@ -111,7 +111,6 @@ void SV_RemoveClient( client_t *client ) {
 }
 
 void SV_CleanClient( client_t *client ) {
-    frameparam_t *param = &client->param;
 	int i;
 
 	if( client->download ) {
@@ -125,12 +124,10 @@ void SV_CleanClient( client_t *client ) {
 	}
 
     // free baselines allocated for this client
-    if( param->basesize == sizeof( entity_state_t ) ) {
-        for( i = 0; i < SV_BASELINES_CHUNKS; i++ ) {
-            if( param->baselines[i] ) {
-                Z_Free( param->baselines[i] );
-                param->baselines[i] = NULL;
-            }
+    for( i = 0; i < SV_BASELINES_CHUNKS; i++ ) {
+        if( client->baselines[i] ) {
+            Z_Free( client->baselines[i] );
+            client->baselines[i] = NULL;
         }
     }
 }
@@ -573,7 +570,7 @@ static void SVC_DirectConnect( void ) {
 	}
 
     // set maximum message length
-    maxlength = 1390;
+    maxlength = MAX_PACKETLEN_WRITABLE_DEFAULT;
     zlib = qfalse;
     if( protocol >= PROTOCOL_VERSION_R1Q2 ) {
         zlib = qtrue;
@@ -591,7 +588,8 @@ static void SVC_DirectConnect( void ) {
         }
     }
 
-    if( net_maxmsglen->integer && maxlength > net_maxmsglen->integer ) {
+    // cap maximum message length
+    if( net_maxmsglen->integer > 0 && maxlength > net_maxmsglen->integer ) {
         maxlength = net_maxmsglen->integer;
     }
 
@@ -754,6 +752,11 @@ static void SVC_DirectConnect( void ) {
 	newcl->protocol = protocol;
     newcl->zlib = zlib;
 	newcl->edict = EDICT_NUM( number + 1 );
+    newcl->gamedir = fs_game->string;
+    newcl->mapname = sv.configstrings[CS_NAME];
+    newcl->configstrings = ( char * )sv.configstrings;
+    newcl->pool = ( edict_pool_t * )&ge->edicts;
+    newcl->cm = &sv.cm;
 
     // default pmove parameters
     newcl->pmp.maxspeed = 300;
@@ -820,8 +823,14 @@ static void SVC_DirectConnect( void ) {
         ncstring );
 
     List_Init( &newcl->freemsg );
-    List_Init( &newcl->usedmsg );
-    List_Init( &newcl->relmsg );
+    List_Init( &newcl->inusemsg[0] );
+    List_Init( &newcl->inusemsg[1] );
+    List_Init( &newcl->soundmsg );
+
+    newcl->msgpool = SV_Malloc( sizeof( message_packet_t ) * MSG_POOLSIZE );
+    for( i = 0; i < MSG_POOLSIZE; i++ ) {
+        List_Append( &newcl->freemsg, &newcl->msgpool[i].entry );
+    }
 
     // setup protocol
     if( nctype == NETCHAN_NEW ) {
@@ -832,10 +841,6 @@ static void SVC_DirectConnect( void ) {
         newcl->WriteDatagram = SV_NewClientWriteDatagram;
         newcl->FinishFrame = SV_NewClientFinishFrame;
     } else {
-        newcl->msgpool = SV_Malloc( sizeof( pmsg_t ) * MSG_POOLSIZE );
-        for( i = 0; i < MSG_POOLSIZE; i++ ) {
-            List_Append( &newcl->freemsg, &newcl->msgpool[i].entry );
-        }
         newcl->AddMessage = SV_OldClientAddMessage;
         newcl->WriteDatagram = SV_OldClientWriteDatagram;
         newcl->FinishFrame = SV_OldClientFinishFrame;
@@ -845,8 +850,6 @@ static void SVC_DirectConnect( void ) {
     } else {
         newcl->WriteFrame = SV_WriteFrameToClient_Enhanced;
     }
-    newcl->BuildFrame = sv.state == ss_broadcast ?
-        SV_BuildProxyClientFrame : SV_BuildClientFrame;
 
     // add them to the linked list of connected clients
     List_Append( &svs.clients, &newcl->entry );
@@ -1296,7 +1299,7 @@ static void SV_RunGameFrame( void ) {
 }
 
 #ifndef DEDICATED_ONLY
-static void SV_CheckPaused( void ) {
+static qboolean SV_CheckPaused( void ) {
 	client_t *client;
 
 	sv_paused->integer = 0;
@@ -1306,16 +1309,14 @@ static void SV_CheckPaused( void ) {
                 break; // never pause if loading
             }
             if( !NET_IsLocalAddress( &client->netchan->remote_address ) ) {
-                break; // never pause in multiplayer
+		        cl_paused->integer = 0;
+                return qfalse; // never pause in multiplayer
             }
 		}
-		if( !client ) {
-			sv_paused->integer = 1;
-			return; // don't run if paused
-		}
-
-		cl_paused->integer = 0;
+		sv_paused->integer = 1;
+		return qtrue; // don't run if paused
 	}
+    return qfalse;
 }
 #endif
 
@@ -1343,8 +1344,7 @@ void SV_Frame( int msec ) {
 	}
 
 #ifndef DEDICATED_ONLY
-	SV_CheckPaused();
-	if( sv_paused->integer ) {
+	if( SV_CheckPaused() ) {
 		return;
 	}
 #endif
@@ -1783,9 +1783,7 @@ void SV_Shutdown( const char *finalmsg, killtype_t type ) {
 		return;
 	}
 
-    if( sv_mvd_enable->integer ) {
-	    SV_MvdRecStop();
-    }
+	SV_MvdRecStop();
 
     switch( type ) {
     case KILL_RESTART:
@@ -1816,16 +1814,12 @@ void SV_Shutdown( const char *finalmsg, killtype_t type ) {
 
 	// free current level
 	CM_FreeMap( &sv.cm );
-	if( sv.demofile ) {
-		FS_FCloseFile( sv.demofile );
-	}
 	memset( &sv, 0, sizeof( sv ) );
 
 	// free server static data
 	Z_Free( svs.clientpool );
 	Z_Free( svs.entityStates );
-	Z_Free( svs.playerStates );
-    Z_Free( svs.multicast_buffer );
+	Z_Free( svs.players );
 #if USE_ZLIB
     deflateEnd( &svs.z );
 #endif

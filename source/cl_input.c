@@ -646,6 +646,12 @@ CL_UpdateCmd
 =================
 */
 void CL_UpdateCmd( int msec ) {
+	if( sv_paused->integer ) {
+        mouse_x = old_mouse_x;
+        mouse_y = old_mouse_y;
+        return;
+    }
+
 	// adjust viewangles
 	CL_AdjustAngles();
 	

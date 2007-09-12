@@ -42,30 +42,34 @@ to the clients -- only the fields that differ from the
 baseline will be transmitted
 ================
 */
-void SV_CreateBaselines( void **baselines ) {
+static void create_baselines( void ) {
 	int		i;
 	edict_t	*ent;
 	entity_state_t *base, **chunk;
 
-	/* clear baselines from previous level */
+	// clear baselines from previous level
 	for( i = 0; i < SV_BASELINES_CHUNKS; i++ ) {
-		base = ( entity_state_t * )baselines[i];
+		base = sv_client->baselines[i];
 		if( !base ) {
 			continue;
 		} 
 		memset( base, 0, sizeof( *base ) * SV_BASELINES_PER_CHUNK );
 	}
 
-	for( i = 1; i < MAX_EDICTS; i++ ) {
-		ent = EDICT_NUM( i );
+	for( i = 1; i < sv_client->pool->num_edicts; i++ ) {
+		ent = EDICT_POOL( sv_client, i );
 
-		if( !ent->s.modelindex && !ent->s.sound && !ent->s.effects ) {
+        if( ( gameFeatures & GAME_FEATURE_PROPERINUSE ) && !ent->inuse ) {
+            continue;
+        }
+
+		if( !ES_INUSE( &ent->s ) ) {
 			continue;
 		}
 
 		ent->s.number = i;
 
-		chunk = ( entity_state_t ** )&baselines[i >> SV_BASELINES_SHIFT];
+		chunk = &sv_client->baselines[i >> SV_BASELINES_SHIFT];
 		if( *chunk == NULL ) {
 			*chunk = SV_Mallocz( sizeof( *base ) * SV_BASELINES_PER_CHUNK );
 		}
@@ -77,14 +81,14 @@ void SV_CreateBaselines( void **baselines ) {
 
 }
 
-static void SV_WritePlainConfigstrings( char *configstrings, int start ) {
+static void write_plain_configstrings( void ) {
 	int			i;
 	char		*string;
 	int			length;
 
 	// write a packet full of data
-	string = configstrings + start * MAX_QPATH;
-	for( i = start; i < MAX_CONFIGSTRINGS; i++, string += MAX_QPATH ) {
+	string = sv_client->configstrings;
+	for( i = 0; i < MAX_CONFIGSTRINGS; i++, string += MAX_QPATH ) {
 		if( !string[0] ) {
 			continue;
 		}
@@ -107,19 +111,17 @@ static void SV_WritePlainConfigstrings( char *configstrings, int start ) {
 	SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
 }
 
-static void SV_WritePlainBaselines( int start ) {
+static void write_plain_baselines( void ) {
 	int		i, j;
-    byte *p;
 	entity_state_t	*base;
 
 	// write a packet full of data
-    for( i = start >> SV_BASELINES_SHIFT; i < SV_BASELINES_CHUNKS; i++ ) {
-		p = sv_client->param.baselines[i];
-		if( !p ) {
+    for( i = 0; i < SV_BASELINES_CHUNKS; i++ ) {
+		base = sv_client->baselines[i];
+		if( !base ) {
 			continue;
 		}
     	for( j = 0; j < SV_BASELINES_PER_CHUNK; j++ ) {
-            base = ( entity_state_t * )p;
             if( base->number ) {
                 // check if this baseline will overflow
                 if( msg_write.cursize + 64 > sv_client->netchan->maxpacketlen ) 
@@ -130,7 +132,7 @@ static void SV_WritePlainBaselines( int start ) {
                 MSG_WriteByte( svc_spawnbaseline );
                 MSG_WriteDeltaEntity( NULL, base, MSG_ES_FORCE );
             }
-            p += sv_client->param.basesize;
+            base++;
         }
 	}
 
@@ -139,16 +141,17 @@ static void SV_WritePlainBaselines( int start ) {
 
 #if USE_ZLIB
 
-static void SV_WriteCompressedGamestate( char *string ) {
+static void write_compressed_gamestate( void ) {
 	sizebuf_t	*buf = &sv_client->netchan->message;
 	entity_state_t	*base;
 	int			i, j, length;
-    byte        *p;
     uint16      *patch;
+    char        *string;
 
     MSG_WriteByte( svc_gamestate );
 
 	// write configstrings
+    string = sv_client->configstrings;
 	for( i = 0; i < MAX_CONFIGSTRINGS; i++, string += MAX_QPATH ) {
 		if( !string[0] ) {
 			continue;
@@ -166,16 +169,15 @@ static void SV_WriteCompressedGamestate( char *string ) {
 
     // write baselines
     for( i = 0; i < SV_BASELINES_CHUNKS; i++ ) {
-		p = sv_client->param.baselines[i];
-		if( !p ) {
+		base = sv_client->baselines[i];
+		if( !base ) {
 			continue;
 		}
     	for( j = 0; j < SV_BASELINES_PER_CHUNK; j++ ) {
-            base = ( entity_state_t * )p;
             if( base->number ) {
                 MSG_WriteDeltaEntity( NULL, base, MSG_ES_FORCE );
             }
-            p += sv_client->param.basesize;
+            base++;
         }
 	}
     MSG_WriteShort( 0 ); // end of baselines
@@ -205,9 +207,12 @@ static void SV_WriteCompressedGamestate( char *string ) {
     buf->cursize += svs.z.total_out;
 }
 
-static inline qboolean SV_ZFlush( byte *buffer ) {
-	if( deflate( &svs.z, Z_FINISH ) != Z_STREAM_END ) {
-		return qfalse;
+static inline int z_flush( byte *buffer ) {
+    int ret;
+
+    ret = deflate( &svs.z, Z_FINISH ); 
+	if( ret != Z_STREAM_END ) {
+		return ret;
 	}
 
     if( sv_debug_send->integer ) {
@@ -222,22 +227,24 @@ static inline qboolean SV_ZFlush( byte *buffer ) {
 	
 	SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
 
-	return qtrue;
+	return ret;
 }
 
-static inline void SV_ZReset( byte *buffer ) {
+static inline void z_reset( byte *buffer ) {
     deflateReset( &svs.z );
     svs.z.next_out = buffer;
     svs.z.avail_out = sv_client->netchan->maxpacketlen - 5;
 }
 
-static void SV_WriteCompressedConfigstrings( char *string ) {
+static void write_compressed_configstrings( void ) {
 	int			i, length;
 	byte		buffer[MAX_PACKETLEN_WRITABLE];
+    char        *string;
 
-    SV_ZReset( buffer );
+    z_reset( buffer );
 
 	// write a packet full of data
+    string = sv_client->configstrings;
 	for( i = 0; i < MAX_CONFIGSTRINGS; i++, string += MAX_QPATH ) {
 		if( !string[0] ) {
 			continue;
@@ -250,10 +257,10 @@ static void SV_WriteCompressedConfigstrings( char *string ) {
 		// check if this configstring will overflow
 		if( svs.z.avail_out < length + 32 ) {
 			// then flush compressed data
-			if( !SV_ZFlush( buffer ) ) {
+			if( z_flush( buffer ) != Z_STREAM_END ) {
                 goto fail;
 			}
-            SV_ZReset( buffer );
+            z_reset( buffer );
 		}
 
 		MSG_WriteByte( svc_configstring );
@@ -271,61 +278,11 @@ static void SV_WriteCompressedConfigstrings( char *string ) {
 	}
 
 	// finally flush all remaining compressed data
-	if( !SV_ZFlush( buffer ) ) {
+	if( z_flush( buffer ) != Z_STREAM_END ) {
 fail:
         SV_DropClient( sv_client, "deflate() failed on configstrings" );
 	}
 }
-
-#if 0
-static void SV_WriteCompressedBaselines( void ) {
-	int			i, j;
-	entity_state_t	*base;
-	byte		buffer[MAX_PACKETLEN_WRITABLE];
-    byte        *p;
-
-    SV_ZReset( buffer );
-
-	// write a packet full of data
-    for( i = 0; i < SV_BASELINES_CHUNKS; i++ ) {
-		p = sv_client->param.baselines[i];
-		if( !p ) {
-			continue;
-		}
-    	for( j = 0; j < SV_BASELINES_PER_CHUNK; j++ ) {
-            base = ( entity_state_t * )p;
-    		if( base->number ) {
-		        // check if this baseline will overflow
-                if( svs.z.avail_out < 64 ) {
-                    // then flush compressed data
-                    if( !SV_ZFlush( buffer ) ) {
-                        goto fail;
-                    }
-                    SV_ZReset( buffer );
-                }
-
-                MSG_WriteByte( svc_spawnbaseline );
-                MSG_WriteDeltaEntity( NULL, base, MSG_ES_FORCE );
-
-                svs.z.next_in = msg_write.data;
-                svs.z.avail_in = msg_write.cursize;
-                SZ_Clear( &msg_write );
-
-                if( deflate( &svs.z, Z_SYNC_FLUSH ) != Z_OK ) {
-                    goto fail;
-                }
-            }
-            p += sv_client->param.basesize;
-        }
-	}
-
-	// finally flush all remaining compressed data
-	if( !SV_ZFlush( buffer ) ) {
-fail:
-        SV_DropClient( sv_client, "deflate() failed on baselines" );
-	}
-}
-#endif
 
 #endif // USE_ZLIB
 
@@ -383,10 +340,6 @@ This will be sent on the initial connection and upon each server load.
 ================
 */
 static void SV_New_f( void ) {
-	edict_t		*ent;
-	char		*gamedir, *mapname, *strings;
-	int			i, entnum, clientNum;
-
 	Com_DPrintf( "New() from %s\n", sv_client->name );
 
     if( sv_client->state < cs_connected ) {
@@ -404,43 +357,24 @@ static void SV_New_f( void ) {
 	// to make sure the protocol is right, and to set the gamedir
 	//
     
-    if( sv.state == ss_broadcast ) {
-        mvd_t *mvd = mvd_clients[sv_client->number].mvd;
-
-        gamedir = mvd->gamedir;
-        mapname = mvd->configstrings[CS_NAME];
-        strings = ( char * )mvd->configstrings;
-        clientNum = mvd->clientNum;
-        for( i = 0; i < SV_BASELINES_CHUNKS; i++ ) {
-            sv_client->param.baselines[i] = mvd->baselines[i];
-        }
-        sv_client->param.basesize = sizeof( entityStateEx_t );
-        sv_client->param.maxplayers = mvd->maxclients;
-    } else {
-        gamedir = fs_game->string;
-        mapname = sv.configstrings[CS_NAME];
-        strings = ( char * )sv.configstrings;
-        clientNum = sv_client->number;
-        SV_CreateBaselines( sv_client->param.baselines );
-        sv_client->param.basesize = sizeof( entity_state_t );
-        sv_client->param.maxplayers = sv_maxclients->integer;
-    }
+    // create baselines for this client
+    create_baselines();
 	
 	// send the serverdata
 	MSG_WriteByte( svc_serverdata );
 	MSG_WriteLong( sv_client->protocol );
 	MSG_WriteLong( sv.spawncount );
-	MSG_WriteByte( 0 );
-	MSG_WriteString( gamedir );
-	MSG_WriteShort( clientNum );
-	MSG_WriteString( mapname );
+	MSG_WriteByte( 0 ); // no attract loop
+	MSG_WriteString( sv_client->gamedir );
+	MSG_WriteShort( sv_client->number );
+	MSG_WriteString( sv_client->mapname );
 
-	// write protocol-specific stuff
+	// send protocol specific stuff
 	switch( sv_client->protocol ) {
 	case PROTOCOL_VERSION_R1Q2:
-		MSG_WriteByte( 0 ); // enhanced
+		MSG_WriteByte( 0 ); // not enhanced
 		MSG_WriteShort( PROTOCOL_VERSION_R1Q2_MINOR );
-		MSG_WriteByte( 0 ); // advancedDeltas
+		MSG_WriteByte( 0 ); // no advanced deltas
 		MSG_WriteByte( sv_strafejump_hack->integer ? 1 : 0 );
 		break;
 	case PROTOCOL_VERSION_Q2PRO:
@@ -469,36 +403,24 @@ static void SV_New_f( void ) {
         sv_client->name );
 	sv_client->state = cs_primed;
 
-    // set up the entity for the client
-    entnum = sv_client->number + 1;
-    ent = EDICT_NUM( entnum );
-    ent->s.number = entnum;
-    sv_client->edict = ent;
-	sv_player = ent;
-
 	memset( &sv_client->lastcmd, 0, sizeof( sv_client->lastcmd ) );
 
 #if USE_ZLIB
     if( !sv_client->zlib ) {
-		SV_WritePlainConfigstrings( strings, 0 );
-		SV_WritePlainBaselines( 0 );
+		write_plain_configstrings();
+		write_plain_baselines();
     } else {
         if( sv_client->netchan->type == NETCHAN_NEW ) {
-            SV_WriteCompressedGamestate( strings );
+            write_compressed_gamestate();
         } else {
-#if 0
-            SV_WriteCompressedConfigstrings( strings );
-            SV_WriteCompressedBaselines();
-#else
             // FIXME: Z_SYNC_FLUSH is not efficient for baselines
-            SV_WriteCompressedConfigstrings( strings );
-		    SV_WritePlainBaselines( 0 );
-#endif
+            write_compressed_configstrings();
+		    write_plain_baselines();
         }
 	}
 #else // USE_ZLIB
-    SV_WritePlainConfigstrings( strings, 0 );
-    SV_WritePlainBaselines( 0 );
+	write_plain_configstrings();
+	write_plain_baselines();
 #endif // !USE_ZLIB
 
 	// send next command

@@ -460,15 +460,18 @@ Writes part of a packetentities message.
 Can delta from either a baseline or a previous packet_entity
 ==================
 */
-void MSG_WriteDeltaEntity( const entity_state_t *from, entity_state_t *to, msgEsFlags_t flags ) {
+void MSG_WriteDeltaEntity( const entity_state_t *from,
+                           const entity_state_t *to,
+                           msgEsFlags_t         flags )
+{
 	int		bits;
 
 	if( !to ) {
 	    if( !from ) {
-		    Com_Error( ERR_DROP, "MSG_WriteDeltaEntity: NULL" );
+		    Com_Error( ERR_DROP, "%s: NULL", __func__ );
 	    }
     	if( from->number < 1 || from->number >= MAX_EDICTS ) {
-	    	Com_Error( ERR_DROP, "MSG_WriteDeltaEntity: bad entity number %i", from->number );
+	    	Com_Error( ERR_DROP, "%s: bad number: %d", __func__, from->number );
 	    }
 		bits = U_REMOVE;
 		if( from->number >= 256 ) {
@@ -488,7 +491,7 @@ void MSG_WriteDeltaEntity( const entity_state_t *from, entity_state_t *to, msgEs
 	}
 
 	if( to->number < 1 || to->number >= MAX_EDICTS ) {
-		Com_Error( ERR_DROP, "MSG_WriteDeltaEntity: bad entity number %i", to->number );
+		Com_Error( ERR_DROP, "%s: bad number: %d", __func__, to->number );
 	}
 
 	if( !from ) {
@@ -512,10 +515,12 @@ void MSG_WriteDeltaEntity( const entity_state_t *from, entity_state_t *to, msgEs
 			bits |= U_ANGLE2;
 		if( Delta_Angle( to->angles[2], from->angles[2] ) )
 			bits |= U_ANGLE3;
-	} else {
-        // save previous state
-		VectorCopy( from->origin, to->origin );
-		VectorCopy( from->angles, to->angles );
+
+        if( flags & MSG_ES_NEWENTITY ) {
+            if( Delta_Pos( to->old_origin, from->old_origin ) ) {
+                bits |= U_OLDORIGIN;
+            }
+        }
 	}
 		
 	if( to->skinnum != from->skinnum ) {
@@ -528,16 +533,12 @@ void MSG_WriteDeltaEntity( const entity_state_t *from, entity_state_t *to, msgEs
         }
 	}
 		
-//if( !( flags & MSG_ES_FIRSTPERSON ) ) {
 	if( to->frame != from->frame ) {
 		if( to->frame < 256 )
 			bits |= U_FRAME8;
 		else
 			bits |= U_FRAME16;
 	}
-//}else{
-//    to->frame=from->frame;
-//}
 
 	if( to->effects != from->effects ) {
         if( to->effects & 0xffff0000 ) {
@@ -580,16 +581,6 @@ void MSG_WriteDeltaEntity( const entity_state_t *from, entity_state_t *to, msgEs
 
 	if( ( to->renderfx & RF_BEAM ) )
 		bits |= U_OLDORIGIN;
-
-	if( flags & MSG_ES_NEWENTITY ) {
-		if( !( flags & MSG_ES_FIRSTPERSON ) ) {
-			if( Delta_Pos( to->old_origin, from->old_origin ) ) {
-				bits |= U_OLDORIGIN;
-			}
-		} else {
-			VectorCopy( from->old_origin, to->old_origin );
-		}
-	}
 
 	//
 	// write the message
@@ -707,7 +698,7 @@ void MSG_WriteDeltaPlayerstate_Default( const player_state_t *from, const player
 	int				statbits;
 
 	if( !to ) {
-		Com_Error( ERR_DROP, "MSG_WriteDeltaPlayerstate_Default: NULL" );
+		Com_Error( ERR_DROP, "%s: NULL", __func__ );
 	}
 
 	if( !from ) {
@@ -897,7 +888,7 @@ int MSG_WriteDeltaPlayerstate_Enhanced( const player_state_t    *from,
 	int				statbits;
 
 	if( !to ) {
-		Com_Error( ERR_DROP, "MSG_WriteDeltaPlayerstate_Enhanced: NULL" );
+		Com_Error( ERR_DROP, "%s: NULL", __func__ );
 	}
 
 	if( !from ) {
@@ -1175,27 +1166,22 @@ for client prediction, and not needed in MVDs.
 ==================
 */
 void MSG_WriteDeltaPlayerstate_Packet(  const player_state_t   *from,
-                                              player_state_t   *to,
+                                        const player_state_t   *to,
+                                              int              number,
                                               msgPsFlags_t     flags )
 {
 	int				i;
 	int				pflags;
 	int				statbits;
-	int				playerNum;
 
-	if( !to ) {
-		if( !from ) {
-			Com_Error( ERR_DROP, "MSG_WriteDeltaPlayerstate_Packet: NULL" );
-		}
-	    playerNum = PPS_NUM( from );
-		MSG_WriteByte( playerNum );
-		MSG_WriteShort( PPS_REMOVE );
-		return;
+	if( number < 0 || number >= MAX_CLIENTS ) {
+		Com_Error( ERR_DROP, "%s: bad number: %d", __func__, number );
 	}
 
-	playerNum = PPS_NUM( to );
-	if( playerNum < 0 || playerNum >= MAX_CLIENTS ) {
-		Com_Error( ERR_DROP, "MSG_WriteDeltaPlayerstate_Packet: bad player number %i", playerNum );
+	if( !to ) {
+		MSG_WriteByte( number );
+		MSG_WriteShort( PPS_REMOVE );
+		return;
 	}
 
 	if( !from ) {
@@ -1242,10 +1228,7 @@ void MSG_WriteDeltaPlayerstate_Packet(  const player_state_t   *from,
 		if( Delta_Blend( from->blend, to->blend ) ) {
 			pflags |= PPS_BLEND;
 		}
-	} else {
-        // save previous state
-        Vector4Copy( from->blend, to->blend );
-    }
+	}
 
 	if( Delta_Fov( from->fov, to->fov ) )
 		pflags |= PPS_FOV;
@@ -1256,9 +1239,6 @@ void MSG_WriteDeltaPlayerstate_Packet(  const player_state_t   *from,
 	if( !( flags & MSG_PS_IGNORE_GUNINDEX ) ) {
 		if( to->gunindex != from->gunindex )
 			pflags |= PPS_WEAPONINDEX;
-	} else {
-        // save previous state
-        to->gunindex = from->gunindex;
 	}
 
 	if( !( flags & MSG_PS_IGNORE_GUNFRAMES ) ) {
@@ -1272,28 +1252,14 @@ void MSG_WriteDeltaPlayerstate_Packet(  const player_state_t   *from,
 		if( Delta_VecChar( from->gunangles, to->gunangles ) ) {
 			pflags |= PPS_GUNANGLES;
 		}
-	} else {
-		// save previous state 
-		to->gunframe = from->gunframe;
-
-		to->gunoffset[0] = from->gunoffset[0];
-		to->gunoffset[1] = from->gunoffset[1];
-		to->gunoffset[2] = from->gunoffset[2];
-
-		to->gunangles[0] = from->gunangles[0];
-		to->gunangles[1] = from->gunangles[1];
-		to->gunangles[2] = from->gunangles[2];
-    }
+	}
 
 	statbits = 0;
 	for( i = 0; i < MAX_STATS; i++ ) {
 		if( to->stats[i] != from->stats[i] ) {
 			statbits |= 1 << i;
+		    pflags |= PPS_STATS;
 		}
-	}
-
-	if( statbits ) {
-		pflags |= PPS_STATS;
 	}
 
 	if( !pflags && !( flags & MSG_PS_FORCE ) ) {
@@ -1303,7 +1269,7 @@ void MSG_WriteDeltaPlayerstate_Packet(  const player_state_t   *from,
 	//
 	// write it
 	//
-	MSG_WriteByte( playerNum );
+	MSG_WriteByte( number );
 	MSG_WriteShort( pflags );
 
 	//

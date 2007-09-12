@@ -642,6 +642,29 @@ skip:
 }
 
 
+#if 0
+static void CL_AddTestModel( void ) {
+	entity_t	test;
+
+	memset( &test, 0, sizeof( test ) );
+    test.model = ref.RegisterModel( "models/monsters/flipper/tris.md2" );
+    if( !test.model ) {
+        return;
+    }
+    test.frame = 4;
+
+    VectorMA( cl.refdef.vieworg, 160, cl.v_forward, test.origin );
+    VectorCopy( cl.refdef.viewangles, test.angles );
+    test.angles[YAW]+=120;
+    test.angles[PITCH]+=20;
+    test.origin[2]-=30;
+	test.flags = RF_MINLIGHT | RF_DEPTHHACK;
+
+	VectorCopy( test.origin, test.oldorigin );	// don't lerp at all
+	V_AddEntity( &test );
+}
+#endif
+
 
 /*
 ==============
@@ -855,8 +878,7 @@ static void CL_CalcViewValues( void ) {
 	cl.delta_angles[2] = LerpShort( ops->pmove.delta_angles[2], ps->pmove.delta_angles[2], lerp );
 #endif
 
-	// interpolate field of view
-	if( cl_demo_local_fov->integer && cls.demoplayback ) {
+	if( cls.demoplayback ) {
 		fov = info_fov->value;
         if( fov < 1 ) {
             fov = 90;
@@ -865,6 +887,7 @@ static void CL_CalcViewValues( void ) {
         }
         cl.refdef.fov_x = fov;
 	} else {
+	    // interpolate field of view
 		cl.refdef.fov_x = ops->fov + lerp * ( ps->fov - ops->fov );
 	}
 
@@ -909,6 +932,7 @@ static void CL_CalcViewValues( void ) {
 
 		// add the weapon
 		CL_AddViewWeapon( ps, ops );
+        //CL_AddTestModel();
 
 	    cl.thirdPersonView = qfalse;
 	}

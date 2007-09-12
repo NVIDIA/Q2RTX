@@ -325,8 +325,8 @@ void SV_ClientAddMessage( client_t *client, int flags ) {
 	}
 }
 
-static inline void SV_PacketizedRemove( client_t *client, pmsg_t *msg ) {
-	List_Delete( &msg->entry );
+static inline void SV_PacketizedRemove( client_t *client, message_packet_t *msg ) {
+	List_Remove( &msg->entry );
 
 	if( msg->cursize > MSG_TRESHOLD ) {
 		Z_Free( msg );
@@ -336,22 +336,24 @@ static inline void SV_PacketizedRemove( client_t *client, pmsg_t *msg ) {
 }
 
 void SV_PacketizedClear( client_t *client ) {
-	pmsg_t	*msg, *next;
+	message_packet_t	*msg, *next;
 
-    LIST_FOR_EACH_SAFE( pmsg_t, msg, next, &client->usedmsg, entry ) {
+    LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->inusemsg[0], entry ) {
 		SV_PacketizedRemove( client, msg );
 	}
-
-    LIST_FOR_EACH_SAFE( pmsg_t, msg, next, &client->relmsg, entry ) {
+    LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->inusemsg[1], entry ) {
+		SV_PacketizedRemove( client, msg );
+	}
+    LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->soundmsg, entry ) {
 		SV_PacketizedRemove( client, msg );
 	}
 }
 
 
-pmsg_t *SV_PacketizedAdd( client_t *client, byte *data,
+message_packet_t *SV_PacketizedAdd( client_t *client, byte *data,
 							  int length, qboolean reliable )
 {
-	pmsg_t	*msg;
+	message_packet_t	*msg;
 
 	if( length > MSG_TRESHOLD ) {
 		msg = SV_Malloc( sizeof( *msg ) + length - MSG_TRESHOLD );
@@ -364,20 +366,97 @@ pmsg_t *SV_PacketizedAdd( client_t *client, byte *data,
             }
             return NULL;
         }
-        msg = LIST_FIRST( pmsg_t, &client->freemsg, entry );
+        msg = LIST_FIRST( message_packet_t, &client->freemsg, entry );
     	List_Remove( &msg->entry );
 	}
 
 	memcpy( msg->data, data, length );
 	msg->cursize = length;
 
-    if( reliable ) {
-    	List_Append( &client->relmsg, &msg->entry );
-    } else {
-    	List_Append( &client->usedmsg, &msg->entry );
-    }
+    List_Append( &client->inusemsg[reliable], &msg->entry );
 
     return msg;
+}
+
+static void SV_AddClientSounds( client_t *client, int maxsize ) {
+    sound_packet_t *msg, *next;
+    edict_t *edict;
+    entity_state_t *state;
+    vec3_t origin;
+    client_frame_t *frame;
+    int flags, entnum;
+    int i, j;
+
+	frame = &client->frames[sv.framenum & UPDATE_MASK];
+
+    LIST_FOR_EACH_SAFE( sound_packet_t, msg, next, &client->soundmsg, entry ) {
+        entnum = msg->sendchan >> 3;
+        flags = msg->flags;
+
+        edict = EDICT_POOL( client, entnum );
+        
+        // send origin for invisible entities
+        if( edict->svflags & SVF_NOCLIENT ) {
+            flags |= SND_POS;
+        }
+
+        // default client doesn't know that bmodels have weird origins
+        if( edict->solid == SOLID_BSP && client->protocol == PROTOCOL_VERSION_DEFAULT ) {
+            flags |= SND_POS;
+        }
+
+        // check if position needs to be explicitly sent
+        if( ( flags & SND_POS ) == 0 ) {
+            for( i = 0; i < frame->numEntities; i++ ) {
+                j = ( frame->firstEntity + i ) % svs.numEntityStates;
+                state = &svs.entityStates[j];
+                if( state->number == entnum ) {
+                    break;
+                }
+            }
+            if( i == frame->numEntities ) {
+                if( sv_debug_send->integer ) {
+                    Com_Printf( S_COLOR_BLUE "Forcing position on entity %d for %s\n",
+                        entnum, client->name );
+                }
+                flags |= SND_POS;   // entity is not present in frame
+            }
+        }
+
+		// if this msg fits, write it
+		if( msg_write.cursize + 16 > maxsize ) {
+            break;
+        }
+
+        MSG_WriteByte( svc_sound );
+        MSG_WriteByte( flags );
+        MSG_WriteByte( msg->index );
+
+        if( flags & SND_VOLUME )
+            MSG_WriteByte( msg->volume );
+        if( flags & SND_ATTENUATION )
+            MSG_WriteByte( msg->attenuation );
+        if( flags & SND_OFFSET )
+            MSG_WriteByte( msg->timeofs );
+
+        MSG_WriteShort( msg->sendchan );
+
+        if( flags & SND_POS ) {
+            // use the entity origin unless it is a bmodel
+            if( edict->solid == SOLID_BSP ) {
+                VectorAvg( edict->mins, edict->maxs, origin );
+                VectorAdd( edict->s.origin, origin, origin );
+            } else {
+                VectorCopy( edict->s.origin, origin );
+            }
+
+            MSG_WritePos( origin );
+        }
+
+        // move message to the free pool
+	    List_Remove( &msg->entry );
+        List_Append( &client->freemsg, &msg->entry );
+    }
 }
 
 /*
@@ -413,7 +492,7 @@ ever written to client->netchan.message
 =======================
 */
 void SV_OldClientWriteReliableMessages( client_t *client, int maxsize ) {
-	pmsg_t	*msg, *next;
+	message_packet_t	*msg, *next;
     int count;
 
 	if( client->netchan->reliable_length ) {
@@ -425,7 +504,7 @@ void SV_OldClientWriteReliableMessages( client_t *client, int maxsize ) {
 
 	// find at least one reliable message to send
     count = 0;
-    LIST_FOR_EACH_SAFE( pmsg_t, msg, next, &client->relmsg, entry ) {
+    LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->inusemsg[1], entry ) {
 		// stop if this msg doesn't fit (reliables must be delivered in order)
 		if( client->netchan->message.cursize + msg->cursize > maxsize ) {
 			if( !count ) {
@@ -453,7 +532,7 @@ OldClient_SendDatagram
 =======================
 */
 void SV_OldClientWriteDatagram( client_t *client ) {
-	pmsg_t	*msg, *next;
+	message_packet_t	*msg, *next;
 	int cursize, maxsize;
 
 	maxsize = client->netchan->maxpacketlen;
@@ -463,8 +542,8 @@ void SV_OldClientWriteDatagram( client_t *client ) {
 	} else {
 		// find at least one reliable message to send
 		// and make sure to reserve space for it
-        if( !LIST_EMPTY( &client->relmsg ) ) {
-            msg = LIST_FIRST( pmsg_t, &client->relmsg, entry );
+        if( !LIST_EMPTY( &client->inusemsg[1] ) ) {
+            msg = LIST_FIRST( message_packet_t, &client->inusemsg[1], entry );
             maxsize -= msg->cursize;
         }
 	}
@@ -485,7 +564,7 @@ void SV_OldClientWriteDatagram( client_t *client ) {
 	// so that entity references will be current
 	if( msg_write.cursize + 4 <= maxsize ) {
 		// temp entities first
-        LIST_FOR_EACH_SAFE( pmsg_t, msg, next, &client->usedmsg, entry ) {
+        LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->inusemsg[0], entry ) {
 			if( msg->data[0] != svc_temp_entity ) {
 				continue;
 			}
@@ -508,31 +587,36 @@ void SV_OldClientWriteDatagram( client_t *client ) {
 		}
 
 		if( msg_write.cursize + 4 <= maxsize ) {
-			// then sounds
-            LIST_FOR_EACH_SAFE( pmsg_t, msg, next, &client->usedmsg, entry ) {
-				if( msg->data[0] != svc_sound ) {
-					continue;
-				}
+            // then entity sounds
+            SV_AddClientSounds( client, maxsize );
 
-				// if this msg fits, write it
-				if( msg_write.cursize + msg->cursize <= maxsize ) {
-					MSG_WriteData( msg->data, msg->cursize );
-				}
+			// then positioned sounds
+		    if( msg_write.cursize + 4 <= maxsize ) {
+                LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->inusemsg[0], entry ) {
+                    if( msg->data[0] != svc_sound ) {
+                        continue;
+                    }
 
-				SV_PacketizedRemove( client, msg );
-			}
+                    // if this msg fits, write it
+                    if( msg_write.cursize + msg->cursize <= maxsize ) {
+                        MSG_WriteData( msg->data, msg->cursize );
+                    }
 
-			if( msg_write.cursize + 4 <= maxsize ) {
-				// then everything else left
-                LIST_FOR_EACH_SAFE( pmsg_t, msg, next, &client->usedmsg, entry ) {
-					// if this msg fits, write it
-					if( msg_write.cursize + msg->cursize <= maxsize ) {
-						MSG_WriteData( msg->data, msg->cursize );
-					}
+                    SV_PacketizedRemove( client, msg );
+                }
 
-					SV_PacketizedRemove( client, msg );
-				}
-			}
+                if( msg_write.cursize + 4 <= maxsize ) {
+                    // then everything else left
+                    LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->inusemsg[0], entry ) {
+                        // if this msg fits, write it
+                        if( msg_write.cursize + msg->cursize <= maxsize ) {
+                            MSG_WriteData( msg->data, msg->cursize );
+                        }
+
+                        SV_PacketizedRemove( client, msg );
+                    }
+                }
+            }
 		}
 	}
 	
@@ -551,10 +635,14 @@ void SV_OldClientWriteDatagram( client_t *client ) {
 }
 
 void SV_OldClientFinishFrame( client_t *client ) {
-	pmsg_t	*msg, *next;
+	message_packet_t	*msg, *next;
 
 	// clear all unreliable messages still left
-    LIST_FOR_EACH_SAFE( pmsg_t, msg, next, &client->usedmsg, entry ) {
+    LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->inusemsg[0], entry ) {
+		SV_PacketizedRemove( client, msg );
+	}
+
+    LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->soundmsg, entry ) {
 		SV_PacketizedRemove( client, msg );
 	}
 }
@@ -600,6 +688,8 @@ void SV_NewClientWriteDatagram( client_t *client ) {
 		MSG_WriteData( client->datagram.data, client->datagram.cursize );
 	}
 
+    SV_AddClientSounds( client, msg_write.maxsize );
+
 	if( sv_pad_packets->integer ) {
         int pad = msg_write.cursize + sv_pad_packets->integer;
 
@@ -623,7 +713,14 @@ void SV_NewClientWriteDatagram( client_t *client ) {
 }
 
 void SV_NewClientFinishFrame( client_t *client ) {
+	message_packet_t	*msg, *next;
+
+	// clear all unreliable messages still left
 	SZ_Clear( &client->datagram );
+
+    LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->soundmsg, entry ) {
+		SV_PacketizedRemove( client, msg );
+	}
 }
 
 /*
@@ -665,21 +762,17 @@ void SV_SendClientMessages( void ) {
                     sv.framenum, client->name );
 			}
 			client->surpressCount++;
-            goto finish;
-		}
-
-		// don't write any frame data until all fragments are sent
-		if( client->netchan->fragment_pending ) {
-			msglen = client->netchan->TransmitNextFragment( client->netchan );
-			SV_CalcSendTime( client, msglen );
-            goto finish;
-		}
-
-        // build the new frame
-        client->BuildFrame( client );
-
-        // write it
-	    client->WriteDatagram( client );
+		} else {
+            // don't write any frame data until all fragments are sent
+            if( client->netchan->fragment_pending ) {
+                msglen = client->netchan->TransmitNextFragment( client->netchan );
+                SV_CalcSendTime( client, msglen );
+            } else {
+                // build the new frame and write it
+                SV_BuildClientFrame( client );
+                client->WriteDatagram( client );
+            }
+        }
 
 finish:
         // clear the unreliable datagram

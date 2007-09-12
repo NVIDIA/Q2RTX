@@ -944,7 +944,7 @@ void Image_LoadPNG( const char *filename, byte **pic, int *width, int *height ) 
 	byte *rawdata;
 	int rawlength;
 	byte *pixels;
-	byte *row_pointers[MAX_TEXTURE_SIZE];
+	png_bytep row_pointers[MAX_TEXTURE_SIZE];
 	png_uint_32 w, h, rowbytes, row;
     int bitdepth, colortype;
 	png_structp png_ptr;
@@ -1050,6 +1050,80 @@ void Image_LoadPNG( const char *filename, byte **pic, int *width, int *height ) 
 
 fail:
 	fs.FreeFile( rawdata );
+}
+
+static void QDECL png_vfs_write_fn( png_structp png_ptr, png_bytep buf, png_size_t size ) {
+	fileHandle_t *f = png_get_io_ptr( png_ptr );
+	fs.Write( buf, size, *f );
+}
+
+static void QDECL png_vfs_flush_fn( png_structp png_ptr ) {
+	//fileHandle_t *f = png_get_io_ptr( png_ptr );
+    //fs.Flush( *f );
+}
+
+qboolean Image_WritePNG( const char *filename, const byte *rgb, int width, int height, int compression ) {
+	png_structp png_ptr;
+	png_infop info_ptr;
+    fileHandle_t f;
+    qboolean ret = qfalse;
+    png_bytepp row_pointers = NULL;
+    int row_stride;
+    int i;
+
+	fs.FOpenFile( filename, &f, FS_MODE_WRITE );
+	if( !f ) {
+		Com_DPrintf( "WritePNG: %s: couldn't create file\n", filename );
+		return qfalse;
+	}
+
+	png_ptr = png_create_write_struct( PNG_LIBPNG_VER_STRING,
+		( png_voidp )filename, png_console_error_fn, png_console_warning_fn );
+	if( !png_ptr ) {
+        goto fail;
+	}
+
+	info_ptr = png_create_info_struct( png_ptr );
+	if( !info_ptr ) {
+		png_destroy_write_struct( &png_ptr, NULL );
+		goto fail;
+	}
+
+	if( setjmp( png_jmpbuf( png_ptr ) ) ) {
+		png_destroy_write_struct( &png_ptr, &info_ptr );
+		goto fail;
+	}
+
+	png_set_write_fn( png_ptr, ( png_voidp )&f,
+        png_vfs_write_fn, png_vfs_flush_fn );
+
+    png_set_IHDR( png_ptr, info_ptr, width, height, 8, PNG_COLOR_TYPE_RGB,
+        PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
+        PNG_FILTER_TYPE_DEFAULT );
+
+    clamp( compression, Z_NO_COMPRESSION, Z_BEST_COMPRESSION );
+    png_set_compression_level( png_ptr, compression );
+
+    row_pointers = fs.AllocTempMem( sizeof( png_bytep ) * height );
+    row_stride = width * 3;
+    for( i = 0; i < height; i++ ) {
+        row_pointers[i] = ( png_bytep )rgb + ( height - i - 1 ) * row_stride;
+    }
+
+    png_set_rows( png_ptr, info_ptr, row_pointers );
+
+    png_write_png( png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL );
+
+	png_destroy_write_struct( &png_ptr, &info_ptr );
+
+    ret = qtrue;
+
+fail:
+    if( row_pointers ) {
+        fs.FreeFile( row_pointers );
+    }
+    fs.FCloseFile( f );
+    return ret;
 }
 
 #endif /* USE_PNG */

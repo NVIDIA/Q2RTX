@@ -366,6 +366,9 @@ static void VideoMenu_Init( void ) {
         }
     } while( s && m_video.nummodes < 16 );
 
+    if( m_video.nummodes == 1 ) {
+        m_video.modes[m_video.nummodes++] = "default";
+    }
     m_video.modes[m_video.nummodes] = NULL;
 
 	y = 64;
@@ -406,7 +409,7 @@ static void VideoMenu_Init( void ) {
 	m_video.fullscreen.generic.name = "video mode";
 	m_video.fullscreen.itemnames = ( const char ** )m_video.modes;
     i = cvar.VariableInteger( "vid_fullscreen" );
-    clamp( i, 0, m_video.nummodes );
+    clamp( i, 0, m_video.nummodes - 1 );
 	m_video.fullscreen.curvalue = i;
 	y += MENU_SPACING;
 

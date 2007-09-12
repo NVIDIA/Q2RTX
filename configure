@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # -----------------------------
-# q2pro makefile by [SkulleR]
+# q2pro configuration script by [SkulleR]
 # -----------------------------
 
 # defaults
@@ -28,9 +28,16 @@ zlib="yes"
 png="no"
 jpeg="no"
 sdl="yes"
+client="yes"
+ref_soft="yes"
+ref_gl="yes"
+mod_ui="yes"
+server="no"
+openffa="no"
 help="no"
-modules="ref_soft ref_gl mod_ui openffa"
-executables="q2pro q2proded"
+targets=""
+executables=""
+libraries=""
 hardlink="no"
 asm="no"
 gldriver="libGL.so"
@@ -43,11 +50,14 @@ cfgfile="config.cfg"
 defcfg="default.cfg"
 autocfg="autoexec.cfg"
 revision="159"
+tmpc="/tmp/q2pro-${RANDOM}.c"
+tmpo="/tmp/q2pro-${RANDOM}.o"
 
 if [ -z "$CFLAGS" ]; then
     CFLAGS="-O2"
 fi
 
+# detect host CPU
 cpu=`uname -m`
 case $cpu in
 i386|i486|i586|i686)
@@ -65,7 +75,7 @@ cpu="unknown"
 ;;
 esac
 
-# OS specific
+# detect host OS
 targetos=`uname -s`
 case $targetos in
 CYGWIN*)
@@ -110,11 +120,13 @@ for opt do
     ;;
     --strip=*) strip=`echo $opt | cut -d '=' -f 2`
     ;;
-    --target-modules=*) modules=${opt#--target-modules=}
-    ;;
-    --target-executables=*) executables=${opt#--target-executables=}
-    ;;
     --hardlink) hardlink="yes"
+    ;;
+    --disable-client) client="no"
+    ;;
+    --enable-server) server="yes"
+    ;;
+    --enable-openffa) openffa="yes"
     ;;
     --enable-dsound) dsound="yes"
     ;;
@@ -130,6 +142,8 @@ for opt do
     ;;
     --disable-asm) asm="no"
     ;;
+    *) echo "Unknown option: $opt (try --help)" && exit 1
+    ;;
     esac
 done
 
@@ -143,9 +157,10 @@ echo "  --cross-prefix=PREFIX       add PREFIX to compile tools [$cross_prefix]"
 echo "  --cc=CC                     use C compiler [$cc]"
 echo "  --make=MAKE                 use MAKE processor [$make]"
 echo "  --windres=WINDRES           use RC compiler [$windres]"
-echo "  --target-modules=LIST       target modules to build [$modules]"
-echo "  --target-executables=LIST   target executables to build [$executables]"
 echo "  --hardlink                  build hard linked client"
+echo "  --disable-client            do not build client"
+echo "  --enable-server             build dedicated server"
+echo "  --enable-openffa            build OpenFFA deathmatch mod"
 echo "  --enable-mingw              enable Windows build"
 echo "  --enable-dsound             enable DirectSound driver"
 echo "  --enable-dinput             enable DirectInput driver"
@@ -178,17 +193,19 @@ else
     gamelib="game$cpu.so"
     exported="__attribute__((visibility(\"default\")))"
 
-    if [ -z "$prefix" ]; then
-        prefix="/usr/local"
-    fi
-
     datadir="$prefix/share/games/quake2"
     libdir="$prefix/lib/games/quake2"
     refdir="$prefix/lib/games/q2pro"
     bindir="$prefix/games"
     mandir="$prefix/share/man/man6"
 
-    CFLAGS="-fvisibility=hidden $CFLAGS"
+# check if -fvisibility is supported
+    echo "int main(){return 0;}" > $tmpc
+    if $cc -o $tmpo -fvisibility\=hidden $tmpc 2>/dev/null ; then
+        CFLAGS="-fvisibility=hidden $CFLAGS"
+    fi
+    rm -f $tmpc $tmpo
+
     LDFLAGS="-Wl,--no-undefined $LDFLAGS"
 fi
 
@@ -199,23 +216,39 @@ if [ ! -z "$cross_prefix" ]; then
     pngconfig="$cross_prefix-$pngconfig"
 fi
 
+echo "Build client       $client"
+if [ "$client" = "yes" ]; then
+    if [ "$hardlink" = "yes" ]; then
+        echo "Hard linked        $hardlink"
+    else
+        echo "Software refresh   $ref_soft"
+        echo "OpenGL refresh     $ref_gl"
+        echo "Build UI module    $mod_ui"
+    fi
+fi
+echo "Build server       $server"
+echo "Build OpenFFA      $openffa"
 if [ "$mingw" = "no" ]; then
-echo "Install prefix     $prefix"
-echo "Data directory     $datadir"
-echo "Game libraries     $libdir"
-echo "Refresh libraries  $refdir"
-echo "Binaries           $bindir"
-echo "Man pages          $mandir"
+    echo "Install prefix     $prefix"
+    echo "Data directory     $datadir"
+    echo "Game libraries     $libdir"
+    if [ "$client" = "yes" ]; then
+        echo "Refresh libraries  $refdir"
+    fi
+    echo "Binaries           $bindir"
+    echo "Man pages          $mandir"
 fi
 echo "zlib support       $zlib"
-echo "PNG support        $png"
-echo "JPEG support       $jpeg"
-if [ "$mingw" = "yes" ]; then
-echo "DInput support     $dinput"
-echo "DSound support     $dsound"
-else
-echo "OSS support        $oss"
-echo "Evdev support      $evdev"
+if [ "$client" = "yes" ]; then
+    echo "PNG support        $png"
+    echo "JPEG support       $jpeg"
+    if [ "$mingw" = "yes" ]; then
+        echo "DInput support     $dinput"
+        echo "DSound support     $dsound"
+    else
+        echo "OSS support        $oss"
+        echo "Evdev support      $evdev"
+    fi
 fi
 test "$cpu" = "i386" && echo "i386 assembly      $asm"
 
@@ -241,10 +274,45 @@ echo "#define LIBSUFFIX \"$libsuffix\"" >> $config_h
 echo "VPATH=\$(SRCDIR)/source \$(SRCDIR)/asm" >> $config_mk
 echo "CFLAGS=$CFLAGS" >> $config_mk
 echo "LDFLAGS=$LDFLAGS" >> $config_mk
-echo "MODULES=$modules" >> $config_mk
-echo "EXECUTABLES=$executables" >> $config_mk
 test "$mingw" = "yes" && echo "RESFLAGS=-I\$(OUTDIR) -I\$(SRCDIR)/source" >> $config_mk
 test "$asm" = "yes" && echo "ASMFLAGS=$asmflags" >> $config_mk
+
+if [ "$client" = "yes" ]; then
+    targets="$targets q2pro"
+    executables="$executables q2pro$exesuffix"
+
+    if [ "$hardlink" = "no" ]; then
+        if [ "$ref_soft" = "yes" ]; then
+            targets="$targets ref_soft"
+            libraries="$libraries ref_soft$libsuffix"
+        fi
+
+        if [ "$ref_gl" = "yes" ]; then
+            targets="$targets ref_gl"
+            libraries="$libraries ref_gl$libsuffix"
+        fi
+
+        if [ "$mod_ui" = "yes" ]; then
+            targets="$targets mod_ui"
+            libraries="$libraries mod_ui$libsuffix"
+        fi
+    fi
+fi
+
+if [ "$server" = "yes" ]; then
+    targets="$targets q2proded"
+    executables="$executables q2proded$exesuffix"
+fi
+
+if [ "$openffa" = "yes" ]; then
+    targets="$targets openffa"
+    libraries="$libraries $gamelib"
+fi
+
+echo "TARGETS=$targets" >> $config_mk
+echo "BINARIES=$executables $libraries" >> $config_mk
+echo "EXECUTABLES=$executables" >> $config_mk
+echo "LIBRARIES=$libraries" >> $config_mk
 
 echo "REVISION=$revision" >> $config_mk
 echo "#define REVISION $revision" >> $config_h
@@ -358,7 +426,7 @@ else
     echo "#define DEFAULT_REFRESH_DRIVER \"soft\"" >> $config_h
 fi
 
-for target in $modules $executables ; do
-    mkdir -p .$target ;
+for t in $targets ; do
+    mkdir -p .$t ;
 done
 

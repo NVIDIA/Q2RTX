@@ -97,56 +97,92 @@ and calculating portalbits. The same frame is used for all MVD
 clients, as well as local recorder.
 ==================
 */
-static void SV_MvdBuildFrame( void ) {
-    client_frame_t *frame;
+static void SV_MvdEmitFrame( void ) {
+	player_state_t *oldps, *newps;
+	entity_state_t *oldes, *newes;
 	edict_t *ent;
-	entity_state_t *es, *s;
-	player_state_t *ps;
+	int flags, portalbytes;
+    byte portalbits[MAX_MAP_AREAS/8];
 	int i;
 
-	frame = &sv.mvdframes[++sv.mvdframenum & 1];
-	frame->senttime = svs.realtime;
-	frame->areabytes = CM_WritePortalBits( &sv.cm, frame->areabits );
-	frame->numEntities = 0;
-	frame->firstEntity = svs.nextEntityStates;
-	frame->numPlayers = 0;
-	frame->firstPlayer = svs.nextPlayerStates;
+	MSG_WriteByte( mvd_frame );
 
-	for( i = 1; i < ge->num_edicts; i++ ) {
-		ent = EDICT_NUM( i );
-
-		if( ent->svflags & SVF_NOCLIENT ) {
-            continue;
-        }
-
-        s = &ent->s;
-		if( !s->modelindex && !s->effects && !s->sound && !s->event ) {
-            continue;
-        }
-
-        es = &svs.entityStates[svs.nextEntityStates % svs.numEntityStates];
-        *es = *s;
-        es->number = i;
-
-        svs.nextEntityStates++;
-        frame->numEntities++;
+	portalbytes = CM_WritePortalBits( &sv.cm, portalbits );
+	MSG_WriteByte( portalbytes );
+	MSG_WriteData( portalbits, portalbytes );
+	
+	flags = MSG_PS_IGNORE_PREDICTION|MSG_PS_IGNORE_DELTAANGLES;
+	if( sv_mvd_noblend->integer ) {
+		flags |= MSG_PS_IGNORE_BLEND;
+	}
+	if( sv_mvd_nogun->integer ) {
+		flags |= MSG_PS_IGNORE_GUNINDEX|MSG_PS_IGNORE_GUNFRAMES;
 	}
 
 	for( i = 0; i < sv_maxclients->integer; i++ ) {
 	    ent = EDICT_NUM( i + 1 );
-        if( !svs.mvdummy || i != svs.mvdummy->number ) {
-    		if( !SV_MvdPlayerIsActive( ent ) ) {
-                continue;
+
+        oldps = &svs.players[i];
+        newps = &ent->client->ps;
+
+    	if( !SV_MvdPlayerIsActive( ent ) ) {
+            if( PPS_INUSE( oldps ) ) {
+			    // the old player isn't present in the new message
+			    MSG_WriteDeltaPlayerstate_Packet( NULL, NULL, i, flags );
+                PPS_INUSE( oldps ) = qfalse;
             }
+            continue;
         }
 
-	    ps = &svs.playerStates[svs.nextPlayerStates % svs.numPlayerStates];
-        *ps = ent->client->ps;
-        PPS_NUM( ps ) = i;
+		if( PPS_INUSE( oldps ) ) {
+			// delta update from old position
+			// because the force parm is false, this will not result
+			// in any bytes being emited if the player has not changed at all
+			MSG_WriteDeltaPlayerstate_Packet( oldps, newps, i, flags );
+        } else {
+			// this is a new player, send it from the last state
+			MSG_WriteDeltaPlayerstate_Packet( oldps, newps, i,
+                flags | MSG_PS_FORCE );
+		}
 
-    	svs.nextPlayerStates++;
-	    frame->numPlayers++;
+        *oldps = *newps;
+        PPS_INUSE( oldps ) = qtrue;
 	}
+
+	MSG_WriteByte( CLIENTNUM_NONE );	// end of packetplayers
+
+	for( i = 1; i < ge->num_edicts; i++ ) {
+		ent = EDICT_NUM( i );
+
+        oldes = &sv.mvd.entities[i];
+        newes = &ent->s;
+
+		if( ( ent->svflags & SVF_NOCLIENT ) || !ES_INUSE( newes ) ) {
+            if( oldes->number ) {
+			    // the old entity isn't present in the new message
+			    MSG_WriteDeltaEntity( oldes, NULL, MSG_ES_FORCE );
+                oldes->number = 0;
+            }
+            continue;
+        }
+
+        flags = 0;
+        if( i <= sv_maxclients->integer ) {
+            flags |= MSG_ES_FIRSTPERSON;
+        }
+        
+        if( !oldes->number ) {
+			// this is a new entity, send it from the last state
+			flags |= MSG_ES_FORCE|MSG_ES_NEWENTITY;
+        }
+		
+        MSG_WriteDeltaEntity( oldes, newes, flags );
+
+        *oldes = *newes;
+        oldes->number = i;
+	}
+
+	MSG_WriteShort( 0 );	// end of packetentities
 }
 
 static void SV_DummyWait_f( void ) {
@@ -243,18 +279,12 @@ void SV_MvdSpawnDummy( void ) {
 	sv_client = c;
 	sv_player = c->edict;
 
-    SV_CreateBaselines( c->param.baselines );
-    c->param.basesize = sizeof( entity_state_t );
-    c->param.maxplayers = sv_maxclients->integer;
-
     ge->ClientBegin( sv_player );
 
 	sv_client = NULL;
 	sv_player = NULL;
 
 	Cbuf_AddTextEx( &dummy_buffer, "wait 50; putaway; wait 10; help\n" );
-
-    SV_MvdBuildFrame();
 
     c->state = cs_spawned;
 }
@@ -278,6 +308,7 @@ qboolean SV_MvdCreateDummy( void ) {
         }
     }
     if( newcl == lastcl ) {
+        Com_EPrintf( "No slot for dummy MVD client\n" );
         return qfalse;
     }
 
@@ -306,7 +337,7 @@ qboolean SV_MvdCreateDummy( void ) {
 	if ( !allow ) {
 	    s = Info_ValueForKey( userinfo, "rejmsg" );
         if( *s ) {
-            Com_Printf( "Dummy MVD client rejected by game DLL: %s\n", s );
+            Com_EPrintf( "Dummy MVD client rejected by game DLL: %s\n", s );
         }
         svs.mvdummy = NULL;
         return qfalse;
@@ -358,85 +389,47 @@ void SV_MvdBeginFrame( void ) {
         }
 
         if( !found ) {
-            if( sv.mvdpaused == PAUSED_FRAMES ) {
+            if( sv.mvd.paused == PAUSED_FRAMES ) {
                 Com_Printf( "MVD stream paused, no active clients.\n" );
                 for( i = 0; i < DCS_DWORDS; i++ ) {
-                    (( uint32 * )sv.dirty_configstrings)[i] = 0;
+                    (( uint32 * )sv.mvd.dcs)[i] = 0;
                 }
                 //SV_MvdBroadcastCommand( "mvdpause\n" );
             }
-            sv.mvdpaused++;
+            sv.mvd.paused++;
             return;
         }
     }
 
-	if( sv.mvdpaused >= PAUSED_FRAMES ) {
+	if( sv.mvd.paused >= PAUSED_FRAMES ) {
         for( i = 0; i < DCS_DWORDS; i++ ) {
-            if( (( uint32 * )sv.dirty_configstrings)[i] == 0 ) {
+            if( (( uint32 * )sv.mvd.dcs)[i] == 0 ) {
                 continue;
             }
             index = i << 5;
             for( j = 0; j < 32; j++, index++ ) {
-                if( !Q_IsBitSet( sv.dirty_configstrings, index ) ) {
+                if( !Q_IsBitSet( sv.mvd.dcs, index ) ) {
                     continue;
                 }
-                SZ_WriteByte( &sv.multicast, svc_configstring );
-                SZ_WriteShort( &sv.multicast, index );
+                SZ_WriteByte( &sv.mvd.multicast, svc_configstring );
+                SZ_WriteShort( &sv.mvd.multicast, index );
                 length = strlen( sv.configstrings[index] );
                 if( length > MAX_QPATH ) {
                     length = MAX_QPATH;
                 }
-                SZ_Write( &sv.multicast, sv.configstrings[index], length );
-                SZ_WriteByte( &sv.multicast, 0 );
+                SZ_Write( &sv.mvd.multicast, sv.configstrings[index], length );
+                SZ_WriteByte( &sv.mvd.multicast, 0 );
             }
         }
 
         Com_Printf( "MVD stream resumed, flushed %d bytes.\n",
-                sv.multicast.cursize );
+            sv.mvd.multicast.cursize );
         // will be subsequently written to disk by SV_MvdEndFrame
     }
-		
-	sv.mvdpaused = 0;
+
+	sv.mvd.paused = 0;
 }
 
-
-/*
-==================
-SV_MvdEmitFrame
-
-Writes new MVD frame, delta compressed from the previous one.
-==================
-*/
-static void SV_MvdEmitFrame( qboolean delta ) {
-	client_frame_t *frame, *oldframe;
-	msgPsFlags_t flags;
-
-	frame = &sv.mvdframes[sv.mvdframenum & 1];
-
-    if( delta ) {
-	    oldframe = &sv.mvdframes[( sv.mvdframenum - 1 ) & 1];
-	    MSG_WriteByte( mvd_frame );
-    } else {
-        oldframe = NULL;
-	    MSG_WriteByte( mvd_frame_nodelta );
-    }
-
-	MSG_WriteLong( sv.framenum );
-
-	MSG_WriteByte( frame->areabytes );
-	MSG_WriteData( frame->areabits, frame->areabytes );
-	
-	flags = MSG_PS_IGNORE_PREDICTION|MSG_PS_IGNORE_DELTAANGLES;
-	if( sv_mvd_noblend->integer ) {
-		flags |= MSG_PS_IGNORE_BLEND;
-	}
-	if( sv_mvd_nogun->integer ) {
-		flags |= MSG_PS_IGNORE_GUNINDEX|MSG_PS_IGNORE_GUNFRAMES;
-	}
-	SV_EmitPacketPlayers( oldframe, frame, flags );
-	SV_EmitPacketEntities( oldframe, frame, MAX_EDICTS,
-        &svs.mvdummy->param );
-}
 
 /*
 ==================
@@ -444,18 +437,18 @@ SV_MvdRecFrame
 ==================
 */
 static void SV_MvdRecFrame( void ) {
-    FS_Write( msg_write.data, msg_write.cursize, sv.demofile );
-    FS_Write( sv.multicast.data, sv.multicast.cursize, sv.demofile );
+    FS_Write( msg_write.data, msg_write.cursize, sv.mvd.file );
+    FS_Write( sv.mvd.multicast.data, sv.mvd.multicast.cursize, sv.mvd.file );
 
 	if( sv_mvd_max_size->value > 0 ) {
-	    int numbytes = FS_RawTell( sv.demofile );
+	    int numbytes = FS_RawTell( sv.mvd.file );
 
         if( numbytes > sv_mvd_max_size->value * 1000 ) {
     		Com_Printf( "Stopping MVD recording, maximum size reached.\n" );
 	    	SV_MvdRecStop();
         }
 	} else if( sv_mvd_max_duration->value > 0 &&
-        sv.mvdframenum > sv_mvd_max_duration->value * 600 )
+        sv.mvd.framenum > sv_mvd_max_duration->value * 600 )
     {
 		Com_Printf( "Stopping MVD recording, maximum duration reached.\n" );
 		SV_MvdRecStop();
@@ -471,33 +464,31 @@ void SV_MvdEndFrame( void ) {
         dummy_buffer.waitCount--;
     }
 
-    if( sv.mvdpaused >= PAUSED_FRAMES ) {
-	    SZ_Clear( &sv.multicast );
+    if( sv.mvd.paused >= PAUSED_FRAMES ) {
+	    SZ_Clear( &sv.mvd.multicast );
         return;
     }
 
-    SV_MvdBuildFrame();
-
     patch = SZ_GetSpace( &msg_write, 2 );
-    SV_MvdEmitFrame( qtrue );
-    *patch = LittleShort( msg_write.cursize + sv.multicast.cursize - 2 );
+    SV_MvdEmitFrame();
+    *patch = LittleShort( msg_write.cursize + sv.mvd.multicast.cursize - 2 );
 
     LIST_FOR_EACH( tcpClient_t, client, &svs.mvdClients, mvdEntry ) {
         if( client->state == cs_spawned ) {
             SV_HttpWrite( client, msg_write.data, msg_write.cursize );
-            SV_HttpWrite( client, sv.multicast.data, sv.multicast.cursize );
+            SV_HttpWrite( client, sv.mvd.multicast.data, sv.mvd.multicast.cursize );
 #if USE_ZLIB
             client->noflush++;
 #endif
         }
     }
 
-    if( sv.mvdrecording ) {
+    if( sv.mvd.file ) {
         SV_MvdRecFrame();
     }
 
     SZ_Clear( &msg_write );
-	SZ_Clear( &sv.multicast );
+	SZ_Clear( &sv.mvd.multicast );
 }
 
 /*
@@ -509,10 +500,13 @@ Writes a single giant message with all the startup info.
 */
 static void SV_MvdEmitGamestate( void ) {
 	char		*string;
-	int			i, j;
-	entity_state_t	*base;
+	int			i;
+    player_state_t  *ps;
+	entity_state_t	*es;
     int         length;
     uint16      *patch;
+	int flags, portalbytes;
+    byte portalbits[MAX_MAP_AREAS/8];
 
     patch = SZ_GetSpace( &msg_write, 2 );
 
@@ -541,23 +535,40 @@ static void SV_MvdEmitGamestate( void ) {
 	}
 	MSG_WriteShort( MAX_CONFIGSTRINGS );
 
-    // send baselines
-    for( i = 0; i < SV_BASELINES_CHUNKS; i++ ) {
-		base = svs.mvdummy->param.baselines[i];
-		if( !base ) {
-			continue;
+    // send baseline frame
+	portalbytes = CM_WritePortalBits( &sv.cm, portalbits );
+	MSG_WriteByte( portalbytes );
+	MSG_WriteData( portalbits, portalbytes );
+	
+    // send player states
+	flags = 0;
+	if( sv_mvd_noblend->integer ) {
+		flags |= MSG_PS_IGNORE_BLEND;
+	}
+	if( sv_mvd_nogun->integer ) {
+		flags |= MSG_PS_IGNORE_GUNINDEX|MSG_PS_IGNORE_GUNFRAMES;
+	}
+	for( i = 0; i < sv_maxclients->integer; i++ ) {
+        ps = &svs.players[i];
+		if( PPS_INUSE( ps ) ) {
+			MSG_WriteDeltaPlayerstate_Packet( NULL, ps, i,
+                flags | MSG_PS_FORCE );
 		}
-    	for( j = 0; j < SV_BASELINES_PER_CHUNK; j++ ) {
-            if( base->number ) {
-                MSG_WriteDeltaEntity( NULL, base, MSG_ES_FORCE );
+	}
+	MSG_WriteByte( CLIENTNUM_NONE );
+
+    // send entity states
+	for( i = 1; i < ge->num_edicts; i++ ) {
+        es = &sv.mvd.entities[i];
+        if( es->number ) {
+            flags = MSG_ES_FORCE|MSG_ES_NEWENTITY;
+            if( i <= sv_maxclients->integer ) {
+                flags |= MSG_ES_FIRSTPERSON;
             }
-            base++;
+            MSG_WriteDeltaEntity( NULL, es, flags );
         }
 	}
-    MSG_WriteShort( 0 );
-
-    // send uncompressed frame
-    SV_MvdEmitFrame( qfalse );
+	MSG_WriteShort( 0 );
 
     *patch = LittleShort( msg_write.cursize - 2 );
 }
@@ -626,19 +637,19 @@ as they often occur in the same BSP leaf)
 void SV_MvdMulticast( int leafnum, mvd_ops_t op ) {
 	int bits;
 
-	if( sv.mvdpaused >= PAUSED_FRAMES ) {
+	if( sv.mvd.paused >= PAUSED_FRAMES ) {
         return;
     }
 
 	bits = ( msg_write.cursize >> 8 ) & 7;
-    SZ_WriteByte( &sv.multicast, op | ( bits << SVCMD_BITS ) );
-    SZ_WriteByte( &sv.multicast, msg_write.cursize & 255 );
+    SZ_WriteByte( &sv.mvd.multicast, op | ( bits << SVCMD_BITS ) );
+    SZ_WriteByte( &sv.mvd.multicast, msg_write.cursize & 255 );
 
 	if( op != mvd_multicast_all && op != mvd_multicast_all_r ) {
-		SZ_WriteShort( &sv.multicast, leafnum );
+		SZ_WriteShort( &sv.mvd.multicast, leafnum );
 	}
 	
-	SZ_Write( &sv.multicast, msg_write.data, msg_write.cursize );
+	SZ_Write( &sv.mvd.multicast, msg_write.data, msg_write.cursize );
 }
 
 /*
@@ -649,15 +660,15 @@ SV_MvdUnicast
 void SV_MvdUnicast( int clientNum, mvd_ops_t op ) {
     int bits;
 
-	if( sv.mvdpaused >= PAUSED_FRAMES ) {
+	if( sv.mvd.paused >= PAUSED_FRAMES ) {
         return;
     }
 
 	bits = ( msg_write.cursize >> 8 ) & 7;
-    SZ_WriteByte( &sv.multicast, op | ( bits << SVCMD_BITS ) );
-    SZ_WriteByte( &sv.multicast, msg_write.cursize & 255 );
-    SZ_WriteByte( &sv.multicast, clientNum );
-    SZ_Write( &sv.multicast, msg_write.data, msg_write.cursize );
+    SZ_WriteByte( &sv.mvd.multicast, op | ( bits << SVCMD_BITS ) );
+    SZ_WriteByte( &sv.mvd.multicast, msg_write.cursize & 255 );
+    SZ_WriteByte( &sv.mvd.multicast, clientNum );
+    SZ_Write( &sv.mvd.multicast, msg_write.data, msg_write.cursize );
 }
 
 /*
@@ -666,13 +677,13 @@ SV_MvdConfigstring
 ==============
 */
 void SV_MvdConfigstring( int index, const char *string ) {
-	if( sv.mvdpaused >= PAUSED_FRAMES ) {
-		Q_SetBit( sv.dirty_configstrings, index );
+	if( sv.mvd.paused >= PAUSED_FRAMES ) {
+		Q_SetBit( sv.mvd.dcs, index );
         return;
 	}
-	SZ_WriteByte( &sv.multicast, mvd_configstring );
-	SZ_WriteShort( &sv.multicast, index );
-	SZ_WriteString( &sv.multicast, string );
+	SZ_WriteByte( &sv.mvd.multicast, mvd_configstring );
+	SZ_WriteShort( &sv.mvd.multicast, index );
+	SZ_WriteString( &sv.mvd.multicast, string );
 }
 
 /*
@@ -685,18 +696,16 @@ Stops server local MVD recording.
 void SV_MvdRecStop( void ) {
 	int length;
 
-	if( !sv.mvdrecording ) {
+	if( !sv.mvd.file ) {
 		return;
 	}
     
 	// write demo EOF marker
 	length = 0;
-	FS_Write( &length, 2, sv.demofile );
+	FS_Write( &length, 2, sv.mvd.file );
 
-	FS_FCloseFile( sv.demofile );
-    sv.demofile = 0;
-
-    sv.mvdrecording = qfalse;
+	FS_FCloseFile( sv.mvd.file );
+    sv.mvd.file = 0;
 }
 
 /*
@@ -727,13 +736,13 @@ static void MVD_Record_f( void ) {
 		return;
 	}
 
-	if( !sv_mvd_enable->integer ) {
+	/*if( !sv_mvd_enable->integer ) {
 		Com_Printf( "MVD recording disabled on this server.\n" );
 		return;
-	}
+	}*/
 
-	if( sv.mvdrecording ) {
-		Com_Printf( "Already recording a local MVD.\n" );
+	if( sv.mvd.file ) {
+		Com_Printf( "Already recording.\n" );
 		return;
 	}
 
@@ -755,21 +764,20 @@ static void MVD_Record_f( void ) {
 	}
 
     if( !SV_MvdCreateDummy() ) {
-		Com_EPrintf( "Unable to create dummy MVD client\n" );
+        FS_FCloseFile( demofile );
         return;
     }
 
-	sv.demofile = demofile;
-	sv.mvdrecording = qtrue;
+	sv.mvd.file = demofile;
 	
     magic = MVD_MAGIC;
-    FS_Write( &magic, 4, sv.demofile );
+    FS_Write( &magic, 4, demofile );
 
     SV_MvdEmitGamestate();
-    FS_Write( msg_write.data, msg_write.cursize, sv.demofile );
+    FS_Write( msg_write.data, msg_write.cursize, demofile );
     SZ_Clear( &msg_write );
 
-	Com_Printf( "Recording local MVD to %s\n", buffer );
+	Com_Printf( "Recording MVD to %s\n", buffer );
 }
 
 
@@ -785,7 +793,7 @@ static void MVD_Stop_f( void ) {
         MVD_StreamedStop_f();
         return;
     }
-	if( !sv.mvdrecording ) {
+	if( !sv.mvd.file ) {
 		Com_Printf( "Not recording a local MVD.\n" );
 		return;
 	}

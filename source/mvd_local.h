@@ -45,80 +45,58 @@ typedef enum {
 
 typedef enum {
 	SBOARD_NONE,		// no layout at all
-	SBOARD_FOLLOW,		// layout of player being followed
 	SBOARD_CLIENTS,		// MVD clients list
-	SBOARD_SCORES,		// current scores
+	SBOARD_SCORES,		// layout of the MVD dummy
     SBOARD_CHANNELS     // MVD channel list
 } scoreboard_t;
 
 #define FLOOD_SAMPLES	16
 #define	FLOOD_MASK		( FLOOD_SAMPLES - 1 )
 
+
+typedef struct mvd_cs_s {
+	struct mvd_cs_s *next;
+	int index;
+	char string[1];
+} mvd_cs_t;
+
+typedef struct {
+    player_state_t ps;
+    qboolean inuse;
+    char name[16];
+	char *layout;
+	mvd_cs_t *configstrings;
+} mvd_player_t;
+
 typedef struct {
 /* =================== */
     player_state_t ps;
     int ping;
+    int clientNum;
 /* =================== */
 
     list_t entry;
     struct mvd_s *mvd;
+	client_t *cl;
+
     qboolean admin;
-	qboolean following;
-	qboolean savedFollowing;
 	qboolean connected;
     int lastframe;
-	int followClientNum;
-	int savedClientNum;
-    int clientNum;
-	int pmflags;
-	client_t *cl;
+	mvd_player_t *target;
 	float fov;
     int cursor;
+
 	scoreboard_t scoreboard;
 	int layoutTime;
+    int layouts;
+
 	int floodSamples[FLOOD_SAMPLES];
 	int floodHead;
 	int floodTime;
+
 	usercmd_t lastcmd;
 	short delta_angles[3];
 } udpClient_t;
-
-typedef struct {
-	int				number;
-	int				serverFrame;
-	int				firstEntity, numEntities;
-	int				firstPlayer, numPlayers;
-} mvdFrame_t;
-
-#define MVD_UPDATE_BACKUP       2
-#define MVD_UPDATE_MASK         ( MVD_UPDATE_BACKUP - 1 )
-
-#define MVD_ENTITIES_BACKUP     ( MAX_EDICTS * MVD_UPDATE_BACKUP )
-#define MVD_ENTITIES_MASK       ( MVD_ENTITIES_BACKUP - 1 )
-
-#define MVD_PLAYERS_BACKUP      ( MAX_CLIENTS * MVD_UPDATE_BACKUP )
-#define MVD_PLAYERS_MASK        ( MVD_PLAYERS_BACKUP - 1 )
-
-
-typedef struct mvdConfigstring_s {
-	struct mvdConfigstring_s *next;
-	int index;
-	char string[1];
-} mvdConfigstring_t;
-
-typedef struct {
-	entity_state_t s;
-	qboolean	linked;
-	int			num_clusters;
-	int			clusternums[MAX_ENT_CLUSTERS];
-	cnode_t		*headnode;
-	int			areanum, areanum2;
-} entityStateEx_t;
-
-typedef struct {
-	char *layout;
-	mvdConfigstring_t *configstrings;
-} mvdPlayer_t;
 
 typedef struct mvd_s {
     list_t      entry;
@@ -149,26 +127,21 @@ typedef struct mvd_s {
     z_stream    z;
 #endif
     fifo_t      zbuf;
-
-	// delta decoder variables
-	int		        nextEntityStates, nextPlayerStates;
-	entityStateEx_t	entityStates[MVD_ENTITIES_BACKUP];
-	player_state_t	playerStates[MVD_PLAYERS_BACKUP];
-	
-	mvdFrame_t	frames[MVD_UPDATE_BACKUP];
     int         framenum;
 
     // game state
     char    gamedir[MAX_QPATH];
     char    mapname[MAX_QPATH];
     int     maxclients;
+    edict_pool_t pool;
 	cm_t    cm;
 	vec3_t  spawnOrigin;
 	vec3_t  spawnAngles;
-	qboolean        spawnSet;
+    int     pm_type;
 	char            configstrings[MAX_CONFIGSTRINGS][MAX_QPATH];
-	entityStateEx_t *baselines[SV_BASELINES_CHUNKS];
-    mvdPlayer_t     players[MAX_CLIENTS];
+    edict_t         edicts[MAX_EDICTS];
+    mvd_player_t    *players; // [maxclients]
+    mvd_player_t    *dummy; // &players[clientNum]
 
 	// client lists
     list_t udpClients;
@@ -228,6 +201,6 @@ qboolean MVD_Parse( mvd_t *mvd );
 extern udpClient_t      *mvd_clients;	/* [svs.maxclients] */
 extern game_export_t	mvd_ge;
 
-void MVD_UpdateFollower( udpClient_t *client, player_state_t *src );
+void MVD_UpdateClient( udpClient_t *client );
 void MVD_SwitchChannel( udpClient_t *client, mvd_t *mvd ); 
 

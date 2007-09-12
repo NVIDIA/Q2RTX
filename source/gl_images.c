@@ -50,6 +50,7 @@ static cvar_t *gl_anisotropy;
 static cvar_t *gl_saturation;
 static cvar_t *gl_intensity;
 static cvar_t *gl_gamma;
+static cvar_t *gl_invert;
 
 qboolean GL_Upload8( byte *data, int width, int height, qboolean mipmap );
 
@@ -427,7 +428,6 @@ static void GL_LightScaleTexture( byte *in, int inwidth, int inheight, qboolean 
 
 	p = in;
 	c = inwidth * inheight;
-	
 
 	if( mipmap ) {
 		for( i = 0; i < c; i++, p += 4 ) {
@@ -442,8 +442,20 @@ static void GL_LightScaleTexture( byte *in, int inwidth, int inheight, qboolean 
 			p[2] = gammatable[p[2]];
 		}
 	}
+}
 
-	
+static void GL_InvertTexture( byte *in, int inwidth, int inheight ) {
+	int		i, c;
+	byte	*p;
+
+	p = in;
+	c = inwidth * inheight;
+
+    for( i = 0; i < c; i++, p += 4 ) {
+        p[0] = 255-p[0];
+        p[1] = 255-p[1];
+        p[2] = 255-p[2];
+    }
 }
 
 /*
@@ -534,6 +546,14 @@ qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap ) {
     {
 		GL_LightScaleTexture( data, width, height, mipmap );
 	}
+
+    if( upload_image->type == it_wall &&
+	    gl_invert->integer &&
+        ( !upload_texinfo ||
+          !( upload_texinfo->flags & (SURF_SKY|SURF_WARP) ) ) )
+    {
+		GL_InvertTexture( data, width, height );
+    }
 
 	// scan the texture for any non-255 alpha
 	c = width * height;
@@ -1087,6 +1107,7 @@ void GL_InitImages( void ) {
             CVAR_ARCHIVE|CVAR_LATCHED );
 	gl_saturation = cvar.Get( "gl_saturation", "1", CVAR_ARCHIVE|CVAR_LATCHED );
 	gl_intensity = cvar.Get( "intensity", "1", CVAR_ARCHIVE|CVAR_LATCHED );
+	gl_invert = cvar.Get( "gl_invert", "0", CVAR_ARCHIVE|CVAR_LATCHED );
     if( gl_hwgamma->integer ) {
         gl_gamma = cvar.Get( "vid_gamma", "1", 0 );
         gl_gamma->changed = gl_gamma_changed;

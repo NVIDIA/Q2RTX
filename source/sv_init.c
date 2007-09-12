@@ -24,6 +24,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 server_static_t	svs;				// persistant server info
 server_t		sv;					// local server
 
+byte            sv_multicast_buffer[MAX_MSGLEN];
+
 
 void SV_ClientReset( client_t *client ) {
     if( client->state < cs_connected ) {
@@ -61,10 +63,6 @@ void SV_SpawnServer( const char *server, const char *spawnpoint ) {
 
 	CM_FreeMap( &sv.cm );
 	
-	if( sv.demofile ) {
-		FS_FCloseFile( sv.demofile );
-	}
-
 	// wipe the entire per-level structure
 	memset( &sv, 0, sizeof( sv ) );
 	sv.spawncount = ( rand() | ( rand() << 16 ) ) ^ Sys_Realtime();
@@ -73,12 +71,11 @@ void SV_SpawnServer( const char *server, const char *spawnpoint ) {
     // reset counters
 	svs.realtime = 0;
 	svs.nextEntityStates = 0;
-	svs.nextPlayerStates = 0;
+
+	memset( svs.players, 0, sizeof( player_state_t ) * sv_maxclients->integer );
 
     // setup a buffer for accumulating multicast datagrams
-    if( svs.multicast_buffer ) {
-    	SZ_Init( &sv.multicast, svs.multicast_buffer, MAX_MSGLEN );
-    }
+    SZ_Init( &sv.mvd.multicast, sv_multicast_buffer, MAX_MSGLEN );
 
 	// init rate limits
 	SV_RateInit( &svs.ratelimit_status, sv_status_limit->integer, 1000 );
@@ -242,20 +239,15 @@ void SV_InitGame( qboolean ismvd ){
     }
 
 	svs.numEntityStates = sv_maxclients->integer * UPDATE_BACKUP * MAX_PACKET_ENTITIES;
-	svs.numPlayerStates = sv_maxclients->integer * UPDATE_BACKUP;
-	if( sv_mvd_enable->integer && !ismvd ) {
-		svs.numEntityStates += MAX_EDICTS * 2;
-		svs.numPlayerStates += sv_maxclients->integer * 2;
-        svs.multicast_buffer = SV_Malloc( MAX_MSGLEN );
-	}
 
 	svs.clientpool = SV_Mallocz( sizeof( client_t ) * sv_maxclients->integer );
 	svs.entityStates = SV_Mallocz( sizeof( entity_state_t ) * svs.numEntityStates );
-    svs.playerStates = SV_Mallocz( sizeof( player_state_t ) * svs.numPlayerStates );
+
+    svs.players = SV_Malloc( sizeof( player_state_t ) * sv_maxclients->integer );
 
 #if USE_ZLIB
-	if( deflateInit2( &svs.z, Z_DEFAULT_COMPRESSION, Z_DEFLATED, -15, 9,
-        Z_DEFAULT_STRATEGY ) != Z_OK )
+	if( deflateInit2( &svs.z, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
+        -15, 9, Z_DEFAULT_STRATEGY ) != Z_OK )
     {
         Com_Error( ERR_FATAL, "deflateInit2() failed" );
     }
@@ -346,11 +338,7 @@ void SV_Map (const char *levelstring, qboolean restart) {
         return;
     }
 
-	if( sv.state == ss_dead || sv.state == ss_broadcast ) {
-        restart = qtrue;
-    }
-
-	if( restart ) {
+	if( sv.state == ss_dead || sv.state == ss_broadcast || restart ) {
 		SV_InitGame( qfalse );	// the game is just starting
 	}
 
