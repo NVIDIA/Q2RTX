@@ -2600,7 +2600,7 @@ void CL_Frame( int msec ) {
 	// read user intentions
 	CL_UpdateCmd( main_extra );
 
-	// finalize them
+	// finalize pending cmd
 	if( phys_frame || cl.sendPacketNow ) {
 		CL_FinalizeCmd();
 		phys_extra = 0;
@@ -2609,11 +2609,11 @@ void CL_Frame( int msec ) {
 	// send pending intentions
 	CL_SendCmd();
 
-    // resend a connection request if necessary
-    CL_CheckForResend();
-
     // predict all unacknowledged movements
     CL_PredictMovement();
+
+    // resend a connection request if necessary
+    CL_CheckForResend();
 
     // update the screen
     if ( host_speeds->integer )

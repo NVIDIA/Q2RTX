@@ -125,6 +125,10 @@ static void LogFile_Close( void ) {
 static void LogFile_Open( void ) {
 	uint32		mode;
 
+	if( com_logFile ) {
+        LogFile_Close();
+    }
+
 	mode = logfile_active->integer > 1 ? FS_MODE_APPEND : FS_MODE_WRITE;
 
 	if( logfile_flush->integer ) {

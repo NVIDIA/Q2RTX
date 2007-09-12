@@ -277,24 +277,18 @@ void CL_PredictMovement( void ) {
 	}
 
 	// run pending cmd
-	if( cl_async->integer ) {
-		if( !cl.cmd.msec ) {
-			if( cl_showmiss->integer ) {
-				Com_Printf( "%i: not moved\n", cl.frame.number );
-			}
-			goto finish;
-		}
-		pm.cmd = cl.cmd;
-		pm.cmd.forwardmove = cl.move[0];
-		pm.cmd.sidemove = cl.move[1];
-		pm.cmd.upmove = cl.move[2];
-		Pmove( &pm, &cl.pmp );
+    if( cl.cmd.msec ) {
+        pm.cmd = cl.cmd;
+        pm.cmd.forwardmove = cl.move[0];
+        pm.cmd.sidemove = cl.move[1];
+        pm.cmd.upmove = cl.move[2];
+        Pmove( &pm, &cl.pmp );
 		frame = current;
 
 		// save for debug checking
 		VectorCopy( pm.s.origin, cl.predicted_origins[( current + 1 ) & CMD_MASK] );
 	} else {
-		frame = current- 1;
+		frame = current - 1;
 	}
 	
 	oldz = cl.predicted_origins[frame & CMD_MASK][2];
@@ -308,7 +302,6 @@ void CL_PredictMovement( void ) {
 		cl.predicted_step_frame = frame;
 	}
 
-finish:
 	// copy results out for rendering
 	VectorScale( pm.s.origin, 0.125f, cl.predicted_origin );
 	VectorScale( pm.s.velocity, 0.125f, cl.predicted_velocity );
