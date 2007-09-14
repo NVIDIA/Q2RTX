@@ -556,7 +556,7 @@ void MVD_Update( mvd_t *mvd ) {
 		if( client->cl->state != cs_spawned ) {
             continue;
         }
-        if( client->scoreboard == SBOARD_CLIENTS && client->layoutTime < sv.time ) {
+        if( client->scoreboard >= SBOARD_CLIENTS && client->layoutTime < sv.time ) {
             MVD_LayoutClients( client );
         }
     }
@@ -694,8 +694,8 @@ static void MVD_GameClientBegin( edict_t *ent ) {
 	VectorScale( mvd->spawnOrigin, 8, client->ps.pmove.origin );
     VectorCopy( mvd->spawnAngles, client->ps.viewangles );
 
-    MVD_FollowStop( client );
 	MVD_SetDefaultLayout( client );
+    MVD_FollowStop( client );
 }
 
 static void MVD_GameClientUserinfoChanged( edict_t *ent, char *userinfo ) {

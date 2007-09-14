@@ -45,8 +45,8 @@ typedef enum {
 
 typedef enum {
 	SBOARD_NONE,		// no layout at all
-	SBOARD_CLIENTS,		// MVD clients list
 	SBOARD_SCORES,		// layout of the MVD dummy
+	SBOARD_CLIENTS,		// MVD clients list
     SBOARD_CHANNELS     // MVD channel list
 } scoreboard_t;
 

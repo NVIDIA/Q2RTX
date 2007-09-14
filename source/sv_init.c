@@ -134,7 +134,7 @@ void SV_SpawnServer( const char *server, const char *spawnpoint ) {
 	// all precaches are complete
 	sv.state = ss_game;
 
-    // respawn dummy MVD client
+    // respawn dummy MVD client and set base states
     SV_MvdSpawnDummy();
 
     LIST_FOR_EACH( tcpClient_t, t, &svs.mvdClients, mvdEntry ) {

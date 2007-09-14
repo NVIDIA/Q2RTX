@@ -197,15 +197,14 @@ void MVD_ClearState( mvd_t *mvd ) {
 }
 
 static void MVD_EmitGamestate( mvd_t *mvd ) {
-#if 0
 	char		*string;
-	int			i, j;
-	entityStateEx_t	*base, *es;
+	int			i;
+	entity_state_t	*es;
     player_state_t *ps;
     int         length;
     uint16      *patch;
-    mvdFrame_t  *frame;
-	int         flags;
+	int flags, portalbytes;
+    byte portalbits[MAX_MAP_AREAS/8];
 
     patch = SZ_GetSpace( &msg_write, 2 );
 
@@ -234,60 +233,42 @@ static void MVD_EmitGamestate( mvd_t *mvd ) {
 	}
 	MSG_WriteShort( MAX_CONFIGSTRINGS );
 
-    // send baselines
-    for( i = 0; i < SV_BASELINES_CHUNKS; i++ ) {
-		base = mvd->baselines[i];
-		if( !base ) {
-			continue;
-		}
-    	for( j = 0; j < SV_BASELINES_PER_CHUNK; j++ ) {
-            if( base->s.number ) {
-                MSG_WriteDeltaEntity( NULL, &base->s, MSG_ES_FORCE );
-            }
-            base++;
-        }
-	}
-    MSG_WriteShort( 0 );
-
-    // send uncompressed frame
-    frame = &mvd->frames[mvd->framenum & MVD_UPDATE_MASK];
-    MSG_WriteByte( mvd_frame_nodelta );
-    MSG_WriteLong( frame->serverFrame );
-    MSG_WriteByte( 0 );
-
-	flags = MSG_PS_FORCE;
+    // send baseline frame
+	portalbytes = CM_WritePortalBits( &sv.cm, portalbits );
+	MSG_WriteByte( portalbytes );
+	MSG_WriteData( portalbits, portalbytes );
+	
+    // send player states
+	flags = 0;
 	if( sv_mvd_noblend->integer ) {
 		flags |= MSG_PS_IGNORE_BLEND;
 	}
 	if( sv_mvd_nogun->integer ) {
 		flags |= MSG_PS_IGNORE_GUNINDEX|MSG_PS_IGNORE_GUNFRAMES;
 	}
-	for( i = 0; i < frame->numPlayers; i++ ) {
-		j = ( frame->firstPlayer + i ) & MVD_PLAYERS_MASK;
-		ps = &mvd->playerStates[j];
-
-		MSG_WriteDeltaPlayerstate_Packet( NULL, ps, flags );
-    }
+	for( i = 0; i < mvd->maxclients; i++ ) {
+        ps = &mvd->players[i].ps;
+		if( PPS_INUSE( ps ) ) {
+			MSG_WriteDeltaPlayerstate_Packet( NULL, ps, i,
+                flags | MSG_PS_FORCE );
+		}
+	}
 	MSG_WriteByte( CLIENTNUM_NONE );
 
-	for( i = 0; i < frame->numEntities; i++ ) {
-		j = ( frame->firstEntity + i ) & MVD_ENTITIES_MASK;
-		es = &mvd->entityStates[j];
-
-        flags = MSG_ES_FORCE|MSG_ES_NEWENTITY;
-        if( es->s.number <= mvd->maxclients ) {
-            flags |= MSG_ES_FIRSTPERSON;
+    // send entity states
+	for( i = 1; i < mvd->pool.num_edicts; i++ ) {
+        es = &mvd->edicts[i].s;
+        if( es->number ) {
+            flags = MSG_ES_FORCE|MSG_ES_NEWENTITY;
+            if( i <= mvd->maxclients ) {
+                flags |= MSG_ES_FIRSTPERSON;
+            }
+            MSG_WriteDeltaEntity( NULL, es, flags );
         }
-        base = mvd->baselines[es->s.number >> SV_BASELINES_SHIFT];
-        if( base ) {
-            base += es->s.number & SV_BASELINES_MASK;
-        }
-        MSG_WriteDeltaEntity( &base->s, &es->s, flags );
-    }
-    MSG_WriteShort( 0 );
+	}
+	MSG_WriteShort( 0 );
 
     *patch = LittleShort( msg_write.cursize - 2 );
-#endif
 }
 
 void MVD_SendGamestate( tcpClient_t *client ) {

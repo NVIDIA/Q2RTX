@@ -460,10 +460,21 @@ are able to postition sounds on BSP models properly.
 static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
     int flags, index;
     int volume, attenuation, offset, sendchan;
+	int			entnum;
+	vec3_t		origin;
+    udpClient_t *client;
+	client_t	*cl;
+	byte		*mask;
+	cleaf_t		*leaf;
+	int			area, cluster;
+    player_state_t  *ps;
+    sound_packet_t  *msg;
+    edict_t     *entity;
 
 	flags = MSG_ReadByte();
 	index = MSG_ReadByte();
 
+    volume = attenuation = offset = 0;
     if( flags & SND_VOLUME )
 		volume = MSG_ReadByte();
     if( flags & SND_ATTENUATION )
@@ -472,7 +483,65 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
 		offset = MSG_ReadByte();
 
 	// entity relative
-	sendchan = MSG_ReadShort(); 
+	sendchan = MSG_ReadShort();
+    entnum = sendchan >> 3;
+    if( entnum < 0 || entnum >= MAX_EDICTS ) {
+		MVD_Destroy( mvd, "%s: bad entnum: %d", __func__, entnum );
+    }
+
+    entity = &mvd->edicts[entnum];
+
+    LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
+        cl = client->cl;
+
+		// do not send unreliables to connecting clients
+		if( cl->state != cs_spawned || cl->download || cl->nodata ) {
+			continue;
+		}
+
+        // PHS cull this sound
+        if( extrabits & 1 ) {
+            // get client viewpos
+            ps = &client->ps;
+            VectorMA( ps->viewoffset, 0.125f, ps->pmove.origin, origin );
+            leaf = CM_PointLeaf( &mvd->cm, origin );
+            area = CM_LeafArea( leaf );
+            if( !CM_AreasConnected( &mvd->cm, area, entity->areanum ) ) {
+                // doors can legally straddle two areas, so
+                // we may need to check another one
+                if( !entity->areanum2 || !CM_AreasConnected( &mvd->cm, area, entity->areanum2 ) ) {
+                    continue;		// blocked by a door
+                }
+            }
+            cluster = CM_LeafCluster( leaf );
+            mask = CM_ClusterPHS( &mvd->cm, cluster );
+            if( !SV_EdictPV( &mvd->cm, entity, mask ) ) {
+                continue; // not in PHS
+            }
+        }
+
+        // reliable sounds will always have position explicitly set
+        if( extrabits & 2 ) {
+            continue; // TODO
+        }
+
+        if( LIST_EMPTY( &cl->freemsg ) ) {
+            Com_WPrintf( "Out of message slots for %s!\n", cl->name );
+            continue;
+        }
+
+        msg = LIST_FIRST( sound_packet_t, &cl->freemsg, entry );
+
+        msg->flags = flags;
+        msg->index = index;
+        msg->volume = volume;
+        msg->attenuation = attenuation;
+        msg->timeofs = offset;
+        msg->sendchan = sendchan;
+
+        List_Remove( &msg->entry );
+        List_Append( &cl->soundmsg, &msg->entry );
+	}
 
     //PF_StartSound( ent, channel, index, volume, attenuation, offset );
 }
@@ -665,6 +734,7 @@ MVD_ParseFrame
 */
 static void MVD_ParseFrame( mvd_t *mvd ) {
 	int length;
+    int i;
 
 	// read portalbits
 	length = MSG_ReadByte();
@@ -691,6 +761,11 @@ static void MVD_ParseFrame( mvd_t *mvd ) {
 	if( mvd_shownet->integer > 1 ) {
 		Com_Printf( "%3i:packetentities\n", msg_read.readcount - 1 );
 	}
+
+    // reset events
+    for( i = 0; i < mvd->pool.num_edicts; i++ ) {
+        mvd->edicts[i].s.event = 0;
+    }
 
 	MVD_ParsePacketEntities( mvd );
 
@@ -769,7 +844,7 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
     }
 
     if( !mvd->players ) {
-        mvd->players = MVD_Malloc( sizeof( mvd_player_t ) * index );
+        mvd->players = MVD_Mallocz( sizeof( mvd_player_t ) * index );
         mvd->maxclients = index;
     } else if( index != mvd->maxclients ) {
         MVD_Destroy( mvd, "Unexpected maxclients change" );

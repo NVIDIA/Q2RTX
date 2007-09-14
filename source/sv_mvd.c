@@ -67,6 +67,10 @@ qboolean SV_MvdPlayerIsActive( edict_t *ent ) {
 		return qfalse;
 	}
 
+    if( svs.mvdummy && ent == svs.mvdummy->edict ) {
+        return qtrue;
+    }
+
 	// HACK: if pm_type == PM_FREEZE, assume intermission is running
 	// if PMF_NO_PREDICTION is set, they are following someone!
 	if( ent->client->ps.pmove.pm_type == PM_FREEZE &&
@@ -240,7 +244,7 @@ static void SV_DummyExecuteString( const char *line ) {
 		return;
 	}
 
-    Com_Printf( "dummy stufftext: %s\n", line );
+    Com_DPrintf( "dummy stufftext: %s\n", line );
 	sv_client = svs.mvdummy;
 	sv_player = svs.mvdummy->edict;
 	ge->ClientCommand( sv_player );
@@ -271,6 +275,10 @@ static void SV_DummyAddMessage( client_t *client, byte *data,
 }
 void SV_MvdSpawnDummy( void ) {
     client_t *c = svs.mvdummy;
+	player_state_t *ps;
+	entity_state_t *es;
+	edict_t *ent;
+    int i;
 
     if( !c ) {
         return;
@@ -287,6 +295,32 @@ void SV_MvdSpawnDummy( void ) {
 	Cbuf_AddTextEx( &dummy_buffer, "wait 50; putaway; wait 10; help\n" );
 
     c->state = cs_spawned;
+
+    // set base player states
+	for( i = 0; i < sv_maxclients->integer; i++ ) {
+	    ent = EDICT_NUM( i + 1 );
+
+    	if( !SV_MvdPlayerIsActive( ent ) ) {
+            continue;
+        }
+
+        ps = &svs.players[i];
+        *ps = ent->client->ps;
+        PPS_INUSE( ps ) = qtrue;
+	}
+
+    // set base entity states
+	for( i = 1; i < ge->num_edicts; i++ ) {
+		ent = EDICT_NUM( i );
+
+		if( ( ent->svflags & SVF_NOCLIENT ) || !ES_INUSE( &ent->s ) ) {
+            continue;
+        }
+
+        es = &sv.mvd.entities[i];
+        *es = ent->s;
+        es->number = i;
+	}
 }
 
 qboolean SV_MvdCreateDummy( void ) {
@@ -736,10 +770,10 @@ static void MVD_Record_f( void ) {
 		return;
 	}
 
-	/*if( !sv_mvd_enable->integer ) {
-		Com_Printf( "MVD recording disabled on this server.\n" );
+	if( !sv_mvd_enable->integer ) {
+		Com_Printf( "MVD recording is disabled on this server.\n" );
 		return;
-	}*/
+	}
 
 	if( sv.mvd.file ) {
 		Com_Printf( "Already recording.\n" );
