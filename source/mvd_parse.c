@@ -869,9 +869,11 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
     Com_Printf( "Loading %s...\n", string );
     CM_LoadMap( &mvd->cm, string, CM_LOAD_VISONLY, &checksum );
 
+#if USE_MAPCHECKSUM
     if( checksum != atoi( mvd->configstrings[CS_MAPCHECKSUM] ) ) {
         MVD_Destroy( mvd, "Local map version differs from server" );
     }
+#endif
 
     // get the spawn point for spectators
     MVD_ParseEntityString( mvd );

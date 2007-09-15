@@ -1746,7 +1746,7 @@ void CL_RequestNextDownload ( void ) {
 
         CM_LoadMap ( &cl.cm, cl.configstrings[ CS_MODELS + 1 ], CM_LOAD_CLIENT, &map_checksum );
 
-#if 0
+#if USE_MAPCHECKSUM
         if ( map_checksum != atoi( cl.configstrings[ CS_MAPCHECKSUM ] ) ) {
             Com_Error ( ERR_DROP, "Local map version differs from server: %i != '%s'\n",
                         map_checksum, cl.configstrings[ CS_MAPCHECKSUM ] );

@@ -22,14 +22,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // win_local.h
 //
 
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
 #include "com_local.h"
 #include "key_public.h"
 #include "in_public.h"
 #include "vid_public.h"
 #include "vid_local.h"
 #include "ref_public.h"
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 
 #define IDI_APP 100
 

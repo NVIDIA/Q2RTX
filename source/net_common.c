@@ -22,6 +22,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // net.c
 //
 
+#include "com_local.h"
+
 #if defined( _WIN32 )
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -47,8 +49,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #else
 #error Unknown target OS
 #endif
-
-#include "com_local.h"
 
 #define	MAX_LOOPBACK	4
 

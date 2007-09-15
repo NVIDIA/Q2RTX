@@ -5,7 +5,7 @@
 
    Read unzip.h for more info
 */
-
+#include "config.h"
 
 #include <stdio.h>
 #include <stdlib.h>
