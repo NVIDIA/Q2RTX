@@ -735,13 +735,6 @@ Win_Shutdown
 ============
 */
 void Win_Shutdown( void ) {
-    if( win.flags & QVF_GAMMARAMP ) {
-	    SetDeviceGammaRamp( win.dc, win.gamma_orig );
-    }
-	if( win.flags & QVF_FULLSCREEN ) {
-		ChangeDisplaySettings( 0, 0 );
-	}
-
     // prevents leaving empty slots in the taskbar
     ShowWindow( win.wnd, SW_SHOWNORMAL );	
     ReleaseDC( win.wnd, win.dc );
@@ -750,6 +743,14 @@ void Win_Shutdown( void ) {
 
 	if( win.kbdHook ) {
 		UnhookWindowsHookEx( win.kbdHook );
+	}
+
+    if( win.flags & QVF_GAMMARAMP ) {
+	    SetDeviceGammaRamp( win.dc, win.gamma_orig );
+    }
+
+	if( win.flags & QVF_FULLSCREEN ) {
+		ChangeDisplaySettings( 0, 0 );
 	}
 
     memset( &win, 0, sizeof( win ) );

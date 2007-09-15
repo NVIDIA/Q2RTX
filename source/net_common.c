@@ -75,7 +75,7 @@ static cvar_t	*net_backlog;
 
 static loopback_t	loopbacks[NS_COUNT];
 static SOCKET		udp_sockets[NS_COUNT] = { INVALID_SOCKET, INVALID_SOCKET };
-static const char *const socketNames[NS_COUNT] = { "Client", "Server" };
+static const char   socketNames[NS_COUNT][8] = { "Client", "Server" };
 static SOCKET       tcp_socket = INVALID_SOCKET;
 
 static fileHandle_t	net_logFile;
