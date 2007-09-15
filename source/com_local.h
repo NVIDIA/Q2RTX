@@ -169,6 +169,7 @@ char *Cmd_FindParam( const char *sp, const char *lp );
 int Cmd_ArgOffset( int arg );
 int Cmd_FindArgForOffset( int offset );
 char *Cmd_RawString( void );
+void Cmd_Shift( void );
 // The functions that execute commands get their parameters with these
 // functions. Cmd_Argv () will return an empty string, not a NULL
 // if arg > argc, so string operations are always safe.

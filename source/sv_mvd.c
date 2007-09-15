@@ -32,6 +32,7 @@ cvar_t	*sv_mvd_noblend;
 cvar_t	*sv_mvd_nogun;
 cvar_t	*sv_mvd_max_size;
 cvar_t	*sv_mvd_max_duration;
+cvar_t	*sv_mvd_begincmd;
 
 static cmdbuf_t	dummy_buffer;
 static char		dummy_buffer_text[MAX_STRING_CHARS];
@@ -190,11 +191,22 @@ static void SV_MvdEmitFrame( void ) {
 }
 
 static void SV_DummyWait_f( void ) {
-	dummy_buffer.waitCount = 1;
+    int count = atoi( Cmd_Argv( 1 ) );
+
+    if( count < 1 ) {
+        count = 1;
+    }
+	dummy_buffer.waitCount = count;
+}
+
+static void SV_DummyForward_f( void ) {
+    Cmd_Shift();
+    Com_DPrintf( "dummy cmd: %s %s\n", Cmd_Argv( 0 ), Cmd_Args() );
+    ge->ClientCommand( svs.mvdummy->edict );
 }
 
 static const ucmd_t dummy_cmds[] = {
-	//{ "cmd", SV_DummyForward_f },
+	{ "cmd", SV_DummyForward_f },
 	//{ "connect", MVD_Connect_f },
 	{ "set", Cvar_Set_f },
 	{ "alias", Cmd_Alias_f },
@@ -292,7 +304,9 @@ void SV_MvdSpawnDummy( void ) {
 	sv_client = NULL;
 	sv_player = NULL;
 
-	Cbuf_AddTextEx( &dummy_buffer, "wait 50; putaway; wait 10; help\n" );
+    if( sv_mvd_begincmd->string[0] ) {
+    	Cbuf_AddTextEx( &dummy_buffer, sv_mvd_begincmd->string );
+    }
 
     c->state = cs_spawned;
 
@@ -860,6 +874,8 @@ void SV_MvdRegister( void ) {
 	sv_mvd_max_duration = Cvar_Get( "sv_mvd_max_duration", "0", 0 );
 	sv_mvd_noblend = Cvar_Get( "sv_mvd_noblend", "0", CVAR_LATCH );
 	sv_mvd_nogun = Cvar_Get( "sv_mvd_nogun", "1", CVAR_LATCH );
+    sv_mvd_begincmd = Cvar_Get( "sv_mvd_begincmd",
+        "wait 50; putaway; wait 10; help;", 0 );
 
 	dummy_buffer.text = dummy_buffer_text;
     dummy_buffer.maxsize = sizeof( dummy_buffer_text );

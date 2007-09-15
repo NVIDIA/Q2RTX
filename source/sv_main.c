@@ -1777,8 +1777,6 @@ void SV_Shutdown( const char *finalmsg, killtype_t type ) {
 	Cvar_Set( "sv_running", "0" );
 	Cvar_Set( "sv_paused", "0" );
     
-//	MVD_Disconnect();
-    
 	if( !svs.initialized ) {
 		return;
 	}

@@ -1258,25 +1258,6 @@ void FS_FPrintf( fileHandle_t f, const char *format, ... ) {
 	FS_Write( string, len, f );
 }
 
-uint32 _Com_HashPath( const char *string, int hashSize ) {
-	uint32 hash;
-	uint32 c;
-
-	hash = 0;
-	while( *string ) {
-		c = *string++;
-		if( c == '\\' ) {
-			c = '/';
-		} else {
-		    c = Q_tolower( c );
-        }
-		hash = 127 * hash + c;
-	}
-
-	hash = ( hash >> 20 ) ^ ( hash >> 10 ) ^ hash;
-	return hash & ( hashSize - 1 );
-}
-
 /*
 =================
 FS_LoadPakFile

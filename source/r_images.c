@@ -25,12 +25,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "config.h"
 
-#ifdef USE_PNG
+#if USE_PNG
 #include <png.h>
 #endif
 
-#ifdef USE_JPEG
-#ifndef USE_PNG
+#if USE_JPEG
+#if !USE_PNG
 #include <setjmp.h>
 #endif
 #include <stdio.h>
@@ -620,7 +620,7 @@ JPEG LOADING
 =========================================================
 */
 
-#ifdef USE_JPEG
+#if USE_JPEG
 
 typedef struct my_error_mgr {
 	struct jpeg_error_mgr	pub;
@@ -897,7 +897,7 @@ qboolean Image_WriteJPG( const char *filename, const byte *rgb, int width, int h
 #endif /* USE_JPEG */
 
 
-#ifdef USE_PNG
+#if USE_PNG
 
 /*
 =========================================================

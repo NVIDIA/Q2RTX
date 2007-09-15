@@ -633,6 +633,28 @@ char *Cmd_RawArgsFrom( int from ) {
 	return cmd_args + offset;
 }
 
+void Cmd_Shift( void ) {
+    int i;
+    
+    if( !cmd_argc ) {
+        return;
+    }
+
+    if( cmd_argc == 1 ) {
+        cmd_args[0] = 0;
+        return;
+    }
+
+    cmd_argc--;
+    for( i = 0; i < cmd_argc; i++ ) {
+        cmd_offsets[i] = cmd_offsets[ i + 1 ];
+        cmd_argv[i] = cmd_argv[ i + 1 ];
+    }
+
+    memmove( cmd_args, cmd_args + cmd_offsets[1],
+        MAX_STRING_CHARS - cmd_offsets[1] );
+}
+
 /*
 ============
 Cmd_EnumParam
