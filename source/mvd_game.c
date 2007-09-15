@@ -153,7 +153,12 @@ static void MVD_LayoutScores( udpClient_t *client ) {
 
     // send the layout
 	MSG_WriteByte( svc_layout );
-	MSG_WriteString( mvd->dummy->layout );
+
+    if( mvd->dummy->layout ) {
+    	MSG_WriteString( mvd->dummy->layout );
+    } else {
+        MSG_WriteString( "xv 100 yv 60 string \"<no scoreboard>\"" );
+    }
 	SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
 
 	client->layouts = 1;
@@ -597,6 +602,7 @@ static void MVD_GameInit( void ) {
     List_Init( &mvd->udpClients );
 
     strcpy( mvd->configstrings[CS_NAME], "Waiting Room" );
+    strcpy( mvd->configstrings[CS_SKY], "unit1_" );
     strcpy( mvd->configstrings[CS_MAXCLIENTS], "8" );
     strcpy( mvd->configstrings[CS_MAPCHECKSUM], "80717714" );
     strcpy( mvd->configstrings[CS_MODELS + 1], "maps/q2dm1.bsp" );

@@ -790,7 +790,7 @@ static void MVD_Record_f( void ) {
 	}
 
 	if( sv.mvd.file ) {
-		Com_Printf( "Already recording.\n" );
+		Com_Printf( "Already recording a local MVD.\n" );
 		return;
 	}
 
@@ -825,7 +825,7 @@ static void MVD_Record_f( void ) {
     FS_Write( msg_write.data, msg_write.cursize, demofile );
     SZ_Clear( &msg_write );
 
-	Com_Printf( "Recording MVD to %s\n", buffer );
+	Com_Printf( "Recording local MVD to %s\n", buffer );
 }
 
 
@@ -846,7 +846,7 @@ static void MVD_Stop_f( void ) {
 		return;
 	}
 
-	Com_Printf( "Local MVD recording completed.\n" );
+	Com_Printf( "Stopped local MVD recording.\n" );
 	SV_MvdRecStop();
 }
 
@@ -854,7 +854,7 @@ static void MVD_Stuff_f( void ) {
     if( svs.mvdummy ) {
         Cbuf_AddTextEx( &dummy_buffer, Cmd_RawArgs() );
     } else {
-        Com_Printf( "Can't %s, dummy MVD client not active\n", Cmd_Argv( 0 ) );
+        Com_Printf( "Can't '%s', dummy MVD client is not active\n", Cmd_Argv( 0 ) );
     }
 }
 

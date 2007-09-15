@@ -158,7 +158,7 @@ void MVD_HttpPrintf( mvd_t *mvd, const char *fmt, ... ) {
 	va_end( argptr );
 
     if( !FIFO_Write( &mvd->stream.send, buffer, length ) ) {
-        MVD_Drop( mvd, "overflowed" );
+        MVD_Drop( mvd, "%s: overflow", __func__ );
     }
 }
 
@@ -187,6 +187,7 @@ void MVD_ClearState( mvd_t *mvd ) {
         }
         player->configstrings = NULL;
         memset( &player->ps, 0, sizeof( player->ps ) );
+        player->inuse = qfalse;
     }
 
     CM_FreeMap( &mvd->cm );
@@ -248,7 +249,7 @@ static void MVD_EmitGamestate( mvd_t *mvd ) {
 	}
 	for( i = 0; i < mvd->maxclients; i++ ) {
         ps = &mvd->players[i].ps;
-		if( PPS_INUSE( ps ) ) {
+		if( mvd->players[i].inuse ) {
 			MSG_WriteDeltaPlayerstate_Packet( NULL, ps, i,
                 flags | MSG_PS_FORCE );
 		}
@@ -267,6 +268,8 @@ static void MVD_EmitGamestate( mvd_t *mvd ) {
         }
 	}
 	MSG_WriteShort( 0 );
+
+    // TODO: write private layouts/configstrings
 
     *patch = LittleShort( msg_write.cursize - 2 );
 }
@@ -380,7 +383,7 @@ void MVD_ChangeLevel( mvd_t *mvd ) {
 	udpClient_t *u;
 
     if( sv.state != ss_broadcast ) {
-        MVD_Spawn_f();
+        MVD_Spawn_f(); // the game is just starting
         return;
     }
 
@@ -393,9 +396,9 @@ void MVD_ChangeLevel( mvd_t *mvd ) {
 		SV_ClientAddMessage( u->cl, MSG_RELIABLE );
 	}
 
-    SV_SendAsyncPackets();
-
 	SZ_Clear( &msg_write );
+
+    SV_SendAsyncPackets();
 }
 
 #ifndef DEDICATED_ONLY
