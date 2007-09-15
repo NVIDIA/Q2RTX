@@ -253,9 +253,12 @@ void CL_Record_f( void ) {
 	string = Cmd_Argv( i );
 	if( *string == '/' ) {
 		Q_strncpyz( name, string + 1, sizeof( name ) );
-	} else {
+	} 
+	else {
 		Com_sprintf( name, sizeof( name ), "demos/%s", string );
-		COM_DefaultExtension( name, ".dm2", sizeof( name ) );
+
+		if( Q_stricmp(COM_FileExtension( name ), ".dm2") )
+				Q_strcat( name, sizeof( name ), ".dm2" );
 	}
 	if( compressed ) {
 		Q_strcat( name, sizeof( name ), ".gz" );
