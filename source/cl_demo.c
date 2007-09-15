@@ -219,7 +219,7 @@ Begins recording a demo from the current position
 ====================
 */
 void CL_Record_f( void ) {
-	char	name[MAX_QPATH];
+	char	name[MAX_OSPATH];
 	int		i, length;
 	entity_state_t	*ent;
 	char *string;
@@ -253,12 +253,9 @@ void CL_Record_f( void ) {
 	string = Cmd_Argv( i );
 	if( *string == '/' ) {
 		Q_strncpyz( name, string + 1, sizeof( name ) );
-	} 
-	else {
+	} else {
 		Com_sprintf( name, sizeof( name ), "demos/%s", string );
-
-		if( Q_stricmp(COM_FileExtension( name ), ".dm2") )
-				Q_strcat( name, sizeof( name ), ".dm2" );
+    	COM_AppendExtension( name, ".dm2", sizeof( name ) );
 	}
 	if( compressed ) {
 		Q_strcat( name, sizeof( name ), ".gz" );
@@ -416,7 +413,7 @@ CL_PlayDemo_f
 ====================
 */
 static void CL_PlayDemo_f( void ) {
-	char name[MAX_QPATH];
+	char name[MAX_OSPATH];
 	fileHandle_t demofile;
 	char *arg, *ext;
 	int length;

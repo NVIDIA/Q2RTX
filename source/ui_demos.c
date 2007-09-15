@@ -54,7 +54,7 @@ typedef struct m_demos_s {
 } m_demos_t;
 
 static m_demos_t	m_demos;
-static char			m_demos_browse[MAX_QPATH];
+static char			m_demos_browse[MAX_OSPATH];
 static int			m_demos_selection;
 
 static void Demos_FreeInfo( void ) {
@@ -64,7 +64,7 @@ static void Demos_FreeInfo( void ) {
 }
 
 static void Demos_LoadInfo( int index ) {
-	char buffer[MAX_QPATH];
+	char buffer[MAX_OSPATH];
 	int i, numNames, localPlayerNum;
 
 	if( m_demos.types[index] != FFILE_DEMO ) {
@@ -83,7 +83,6 @@ static void Demos_LoadInfo( int index ) {
 		m_demos.playerList.generic.flags |= QMF_HIDDEN;
         return;
 	}
-    
 
 	localPlayerNum = 0;
 
@@ -119,7 +118,7 @@ static void Demos_LoadInfo( int index ) {
 static char *Demos_BuildName( const char *path, const char *name,
                               fsFileInfo_t *info )
 {
-    char buffer[MAX_QPATH];
+    char buffer[MAX_OSPATH];
     demoInfo_t demo;
     char *s;
 
@@ -130,7 +129,15 @@ static char *Demos_BuildName( const char *path, const char *name,
         return NULL;
     }
 
-    Com_sprintf( buffer, sizeof( buffer ), "%4d", info->fileSize >> 10 );
+    if( info->fileSize >= 1000000 ) {
+        sprintf( buffer, "%2.1fM", ( float )info->fileSize / 1000000 );
+    } else if( info->fileSize >= 1000 ) {
+        sprintf( buffer, "%3dK", info->fileSize / 1000 );
+    } else {
+        sprintf( buffer, "%3db", info->fileSize );
+    }
+
+//    Com_sprintf( buffer, sizeof( buffer ), "%4d", info->fileSize >> 10 );
 
     if( demo.clientNum >= 0 && demo.clientNum < MAX_DEMOINFO_CLIENTS ) {
         s = UI_FormatColumns( 4, name, buffer, demo.mapname,
@@ -221,7 +228,7 @@ static void Demos_Free( void ) {
 }
 
 static void Demos_LeaveDirectory( void ) {
-	char buffer[MAX_QPATH];
+	char buffer[MAX_OSPATH];
 	char *s;
 	int i;
 
@@ -258,7 +265,7 @@ static void Demos_LeaveDirectory( void ) {
 }
 
 static int Demos_Action( void ) {
-	char buffer[MAX_QPATH];
+	char buffer[MAX_OSPATH];
 	int length, baseLength;
 
 	switch( m_demos.types[m_demos.list.curvalue] ) {
@@ -380,7 +387,7 @@ static void Demos_MenuInit( void ) {
 	m_demos.list.columns[0].uiFlags = UI_LEFT;
 
 	m_demos.list.columns[1].width = 40;
-	m_demos.list.columns[1].name = "KiB";
+	m_demos.list.columns[1].name = "Size";
 	m_demos.list.columns[1].uiFlags = UI_CENTER;
 
 	m_demos.list.columns[2].width = 60;

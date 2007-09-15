@@ -19,7 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "com_local.h"
-#ifdef USE_ZLIB
+#if USE_ZLIB
 #include <zlib.h>
 #include "unzip.h"
 #endif
@@ -66,7 +66,7 @@ typedef struct packfile_s {
 } packfile_t;
 
 typedef struct pack_s {
-#ifdef USE_ZLIB
+#if USE_ZLIB
 	unzFile zFile;
 #endif
 	FILE	*fp;
@@ -87,7 +87,7 @@ typedef enum fsFileType_e {
 	FS_FREE,
 	FS_REAL,
 	FS_PAK,
-#ifdef USE_ZLIB
+#if USE_ZLIB
 	FS_PK2,
 	FS_GZIP,
 #endif
@@ -95,12 +95,11 @@ typedef enum fsFileType_e {
 } fsFileType_t;
 
 typedef struct fsFile_s {
-	char	name[MAX_QPATH];
 	char	fullpath[MAX_OSPATH];
 	fsFileType_t type;
 	uint32	mode;
 	FILE *fp;
-#ifdef USE_ZLIB
+#if USE_ZLIB
 	void *zfp;
 #endif
 	packfile_t	*pak;
@@ -180,7 +179,7 @@ static void FS_DPrintf( char *format, ... ) {
 FS_AllocHandle
 ================
 */
-static fsFile_t *FS_AllocHandle( fileHandle_t *f, const char *name ) {
+static fsFile_t *FS_AllocHandle( fileHandle_t *f ) {
 	fsFile_t *file;
 	int i;
 
@@ -191,10 +190,9 @@ static fsFile_t *FS_AllocHandle( fileHandle_t *f, const char *name ) {
 	}
 
 	if( i == MAX_FILE_HANDLES ) {
-		Com_Error( ERR_FATAL, "FS_AllocHandle: none free" );
+		Com_Error( ERR_FATAL, "%s: none free", __func__ );
 	}
 
-	Q_strncpyz( file->name, name, sizeof( file->name ) );
 	*f = i + 1;
 	return file;
 }
@@ -208,16 +206,16 @@ static fsFile_t *FS_FileForHandle( fileHandle_t f ) {
 	fsFile_t *file;
 
 	if( f <= 0 || f >= MAX_FILE_HANDLES + 1 ) {
-		Com_Error( ERR_FATAL, "FS_FileForHandle: invalid handle: %i", f );
+		Com_Error( ERR_FATAL, "%s: invalid handle: %i", __func__, f );
 	}
 
 	file = &fs_files[f - 1];
 	if( file->type == FS_FREE ) {
-		Com_Error( ERR_FATAL, "FS_FileForHandle: free file: %i", f );
+		Com_Error( ERR_FATAL, "%s: free handle: %i", __func__, f );
 	}
 
 	if( file->type < FS_FREE || file->type >= FS_BAD ) {
-		Com_Error( ERR_FATAL, "FS_FileForHandle: invalid file type: %i", file->type );
+		Com_Error( ERR_FATAL, "%s: invalid file type: %i", __func__, file->type );
 	}
 
 	return file;
@@ -260,7 +258,7 @@ qboolean FS_ValidatePath( const char *s ) {
 	}
 
     // check length
-	if( s - start > MAX_QPATH ) {
+	if( s - start > MAX_OSPATH ) {
 		return qfalse;
 	}
 
@@ -300,7 +298,7 @@ int FS_GetFileLength( fileHandle_t f ) {
 	fsFile_t *file = FS_FileForHandle( f );
 	int pos, length;
 
-#ifdef USE_ZLIB
+#if USE_ZLIB
     if( file->type == FS_GZIP ) {
         return -1;
     }
@@ -336,7 +334,7 @@ int FS_GetFileLengthNoCache( fileHandle_t f ) {
 	case FS_PAK:
 		length = file->length;
 		break;
-#ifdef USE_ZLIB
+#if USE_ZLIB
 	case FS_PK2:
 		length = file->length;
 		break;
@@ -349,15 +347,6 @@ int FS_GetFileLengthNoCache( fileHandle_t f ) {
 	}
 
 	return length;
-}
-
-/*
-================
-FS_GetFileName
-================
-*/
-const char *FS_GetFileName( fileHandle_t f ) {
-	return ( FS_FileForHandle( f ) )->name;
 }
 
 const char *FS_GetFileFullPath( fileHandle_t f ) {
@@ -379,7 +368,7 @@ void FS_CreatePath( const char *path ) {
 	Q_strncpyz( buffer, path, sizeof( buffer ) );
 	FS_ConvertToSysPath( buffer );
 
-	FS_DPrintf( "FS_CreatePath( '%s' )\n", buffer );
+	FS_DPrintf( "%s: %s\n", __func__, buffer );
 	
 	for( ofs = buffer + 1; *ofs; ofs++ ) {
 		if( *ofs == PATH_SEP_CHAR ) {	
@@ -400,7 +389,7 @@ FS_FCloseFile
 void FS_FCloseFile( fileHandle_t f ) {
 	fsFile_t *file = FS_FileForHandle( f );
 
-	FS_DPrintf( "FS_FCloseFile( '%s' )\n", file->fullpath );
+	FS_DPrintf( "%s: %s\n", __func__, file->fullpath );
 
 	switch( file->type ) {
 	case FS_REAL:
@@ -411,7 +400,7 @@ void FS_FCloseFile( fileHandle_t f ) {
 			fclose( file->fp );
 		}
 		break;
-#ifdef USE_ZLIB
+#if USE_ZLIB
 	case FS_GZIP:
 		gzclose( file->zfp );
 		break;
@@ -429,7 +418,7 @@ void FS_FCloseFile( fileHandle_t f ) {
 	/* don't clear name and mode, so post-restart reopening works */
 	file->type = FS_FREE;
 	file->fp = NULL;
-#ifdef USE_ZLIB
+#if USE_ZLIB
 	file->zfp = NULL;
 #endif
 	file->pak = NULL;
@@ -443,9 +432,9 @@ FS_FOpenFileWrite
 In case of GZIP files, returns *raw* (compressed) length!
 ============
 */
-static int FS_FOpenFileWrite( fsFile_t *file ) {
+static int FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
 	FILE *fp;
-#ifdef USE_ZLIB
+#if USE_ZLIB
 	gzFile zfp;
 	char *ext;
 #endif
@@ -454,15 +443,15 @@ static int FS_FOpenFileWrite( fsFile_t *file ) {
 	uint32 mode;
 
 #ifdef _WIN32
-	/* allow writing into basedir on Windows */
+	// allow writing into basedir on Windows
 	if( ( file->mode & FS_PATH_MASK ) == FS_PATH_BASE ) {
 		Com_sprintf( file->fullpath, sizeof( file->fullpath ),
-			"%s/" BASEGAME "/%s", sys_basedir->string, file->name );
+			"%s/" BASEGAME "/%s", sys_basedir->string, name );
 	} else
 #endif
 	{
 		Com_sprintf( file->fullpath, sizeof( file->fullpath ),
-			"%s/%s", fs_gamedir, file->name );
+			"%s/%s", fs_gamedir, name );
 	}
 
 	mode = file->mode & FS_MODE_MASK;
@@ -477,8 +466,8 @@ static int FS_FOpenFileWrite( fsFile_t *file ) {
 		modeStr = "r+b";
 		break;
 	default:
-		Com_Error( ERR_FATAL, "FS_FOpenFileWrite( '%s' ): invalid mode mask",
-			file->fullpath );
+		Com_Error( ERR_FATAL, "%s: %s: invalid mode mask",
+            __func__, file->fullpath );
 		modeStr = NULL;
 		break;
 	}
@@ -488,22 +477,21 @@ static int FS_FOpenFileWrite( fsFile_t *file ) {
 	FS_CreatePath( file->fullpath );
 
 	fp = fopen( file->fullpath, modeStr );
-	
 	if( !fp ) {
-		FS_DPrintf( "FS_FOpenFileWrite: fopen( '%s', '%s' ) failed\n",
-			file->fullpath, modeStr );
+		FS_DPrintf( "%s: %s: fopen(%s) failed\n",
+			__func__, file->fullpath, modeStr );
 		return -1;
 	}
 
 	type = FS_REAL;
-#ifdef USE_ZLIB
+#if USE_ZLIB
 	if( !( file->mode & FS_FLAG_RAW ) ) {
 		ext = COM_FileExtension( file->fullpath );
-		if( !strcmp( ext, ".gz" ) ) {
+		if( !FS_strcmp( ext, ".gz" ) ) {
 			zfp = gzdopen( fileno( fp ), modeStr );
 			if( !zfp ) {
-				FS_DPrintf( "FS_FOpenFileWrite: gzopen( '%s', '%s' ) failed\n",
-					file->fullpath, modeStr );
+				FS_DPrintf( "%s: %s: gzopen(%s) failed\n",
+					__func__, file->fullpath, modeStr );
 				fclose( fp );
 				return -1;
 			}
@@ -513,7 +501,7 @@ static int FS_FOpenFileWrite( fsFile_t *file ) {
 	}
 #endif
 
-	FS_DPrintf( "FS_FOpenFileWrite( '%s' )\n", file->fullpath );
+	FS_DPrintf( "%s: %s: succeeded\n", __func__, file->fullpath );
 
 	file->fp = fp;
 	file->type = type;
@@ -550,13 +538,13 @@ Used for streaming data out of either a pak file or
 a seperate file.
 ===========
 */
-static int FS_FOpenFileRead( fsFile_t *file, qboolean unique ) {
+static int FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean unique ) {
     searchpath_t    *search;
 	pack_t			*pak;
 	uint32			hash;
 	packfile_t		*entry;
 	FILE			*fp;
-#ifdef USE_ZLIB
+#if USE_ZLIB
 	void			*zfp;
 	char			*ext;
 #endif
@@ -569,12 +557,12 @@ static int FS_FOpenFileRead( fsFile_t *file, qboolean unique ) {
 //
 // search through the path, one element at a time
 //
-	hash = Com_HashPath( file->name, 0 );
+	hash = Com_HashPath( name, 0 );
 
 	for( search = FS_SearchPath( file->mode ); search; search = search->next ) {
 		if( ( file->mode & FS_PATH_MASK ) == FS_PATH_GAME ) {
 			if( fs_searchpaths != fs_base_searchpaths && search == fs_base_searchpaths ) {
-				/* consider baseq2 a gamedir if no gamedir loaded */
+				// consider baseq2 a gamedir if no gamedir loaded
 				break;
 			}
 		}
@@ -589,28 +577,28 @@ static int FS_FOpenFileRead( fsFile_t *file, qboolean unique ) {
 			entry = pak->fileHash[ hash & ( pak->hashSize - 1 ) ];
 			for( ; entry; entry = entry->hashNext ) {
                 fs_count_strcmp++;
-				if( !Q_stricmp( entry->name, file->name ) ) {	
+				if( !Q_stricmp( entry->name, name ) ) {	
 					// found it!
 					fs_fileFromPak = qtrue;
 
-					Com_sprintf( file->fullpath, sizeof( file->fullpath ), "%s/%s", pak->filename, file->name );
+					Com_sprintf( file->fullpath, sizeof( file->fullpath ), "%s/%s", pak->filename, entry->name );
 
 					// open a new file on the pakfile
-#ifdef USE_ZLIB
+#if USE_ZLIB
 					if( pak->zFile ) {
 						if( unique ) {
 							zfp = unzReOpen( pak->filename, pak->zFile );
 							if( !zfp ) {
-								Com_Error( ERR_FATAL, "FS_FOpenFileRead: unzReOpen( '%s' ) failed", pak->filename );
+								Com_Error( ERR_FATAL, "%s: %s: unzReOpen failed", __func__, pak->filename );
 							}
 						} else {
 							zfp = pak->zFile;
 						}
 						if( unzSetCurrentFileInfoPosition( zfp, entry->filepos ) == -1 ) {
-							Com_Error( ERR_FATAL, "FS_FOpenFileRead: unzSetCurrentFileInfoPosition( '%s/%s' ) failed", pak->filename, entry->name );
+							Com_Error( ERR_FATAL, "%s: %s/%s: unzSetCurrentFileInfoPosition failed", __func__, pak->filename, entry->name );
 						}
 						if( unzOpenCurrentFile( zfp ) != UNZ_OK ) {
-							Com_Error( ERR_FATAL, "FS_FOpenFileRead: unzReOpen( '%s/%s' ) failed", pak->filename, entry->name );
+							Com_Error( ERR_FATAL, "%s: %s/%s: unzReOpen failed", __func__, pak->filename, entry->name );
 						}
 
 						file->zfp = zfp;
@@ -621,7 +609,7 @@ static int FS_FOpenFileRead( fsFile_t *file, qboolean unique ) {
 						if( unique ) {
 							fp = fopen( pak->filename, "rb" );
 							if( !fp ) {
-								Com_Error( ERR_FATAL, "Couldn't reopen %s", pak->filename );
+								Com_Error( ERR_FATAL, "%s: couldn't reopen %s", __func__, pak->filename );
 							}
 						} else {
 							fp = pak->fp;
@@ -638,7 +626,7 @@ static int FS_FOpenFileRead( fsFile_t *file, qboolean unique ) {
 					file->length = length;
 					file->unique = unique;
 
-					FS_DPrintf( "FS_FOpenFileRead( '%s/%s' )\n", pak->filename, file->name );
+					FS_DPrintf( "%s: %s/%s: succeeded\n", __func__, pak->filename, entry->name );
 
 					return length;
 				}
@@ -649,7 +637,7 @@ static int FS_FOpenFileRead( fsFile_t *file, qboolean unique ) {
 			}
 	// check a file in the directory tree
 			Com_sprintf( file->fullpath, sizeof( file->fullpath ), "%s/%s",
-				search->filename, file->name );
+				search->filename, name );
 
 			FS_ConvertToSysPath( file->fullpath );
 
@@ -660,14 +648,14 @@ static int FS_FOpenFileRead( fsFile_t *file, qboolean unique ) {
 			}
 
 			type = FS_REAL;
-#ifdef USE_ZLIB
+#if USE_ZLIB
 			if( !( file->mode & FS_FLAG_RAW ) ) {
 				ext = COM_FileExtension( file->fullpath );
 				if( !strcmp( ext, ".gz" ) ) {
 					zfp = gzdopen( fileno( fp ), "rb" );
 					if( !zfp ) {
-						Com_WPrintf( "gzopen( '%s', 'rb' ) failed, "
-							"not a GZIP file?\n", file->fullpath );
+						Com_WPrintf( "%s: %s: gzopen(rb) failed\n",
+                            __func__, file->fullpath );
 						fclose( fp );
 						return -1;
 					}
@@ -676,8 +664,7 @@ static int FS_FOpenFileRead( fsFile_t *file, qboolean unique ) {
 				}
 			}
 #endif
-			
-			FS_DPrintf( "FS_FOpenFileRead( '%s' )\n", file->fullpath );
+			FS_DPrintf( "%s: %s: succeeded\n", __func__, file->fullpath );
 
 			file->fp = fp;
 			file->type = type;
@@ -694,7 +681,7 @@ static int FS_FOpenFileRead( fsFile_t *file, qboolean unique ) {
 		}
 	}
 	
-	FS_DPrintf( "FS_FOpenFileRead( '%s' ): couldn't find\n", file->name );
+	FS_DPrintf( "%s: %s: not found\n", __func__, name );
 	
 	return -1;
 }
@@ -732,7 +719,7 @@ int FS_Read( void *buffer, int len, fileHandle_t hFile ) {
 		case FS_PAK:
 			read = fread( buf, 1, block, file->fp );
 			break;
-#ifdef USE_ZLIB
+#if USE_ZLIB
 		case FS_GZIP:
 			read = gzread( file->zfp, buf, block );
 			break;
@@ -779,7 +766,7 @@ int FS_Write( const void *buffer, int len, fileHandle_t hFile ) {
 		case FS_REAL:
 			write = fwrite( buf, 1, block, file->fp );
 			break;
-#ifdef USE_ZLIB
+#if USE_ZLIB
 		case FS_GZIP:
 			write = gzwrite( file->zfp, buf, block );
 			break;
@@ -804,7 +791,7 @@ int FS_Write( const void *buffer, int len, fileHandle_t hFile ) {
 		case FS_REAL:
 			fflush( file->fp );
 			break;
-#ifdef USE_ZLIB
+#if USE_ZLIB
 		case FS_GZIP:
 			gzflush( file->zfp, Z_SYNC_FLUSH );
 			break;
@@ -818,7 +805,7 @@ int FS_Write( const void *buffer, int len, fileHandle_t hFile ) {
 }
 
 static char *FS_ExpandLinks( const char *filename ) {
-    static char        buffer[MAX_QPATH];
+    static char        buffer[MAX_OSPATH];
     fsLink_t    *l;
     int         length;
 
@@ -828,14 +815,13 @@ static char *FS_ExpandLinks( const char *filename ) {
             continue;
         }
         if( !Q_stricmpn( l->name, filename, l->nameLength ) ) {
-            if( l->targetLength + length - l->nameLength > MAX_QPATH - 1 ) {
-                FS_DPrintf( "FS_ExpandLinks( '%s' ): MAX_QPATH exceeded\n",
-                        filename );
+            if( l->targetLength + length - l->nameLength >= MAX_OSPATH ) {
+                FS_DPrintf( "%s: %s: MAX_OSPATH exceeded\n", __func__, filename );
                 return ( char * )filename;
             }
             memcpy( buffer, l->target, l->targetLength );
             strcpy( buffer + l->targetLength, filename + l->nameLength );
-            FS_DPrintf( "FS_ExpandLinks( '%s' ) --> '%s'\n", filename, buffer );
+            FS_DPrintf( "%s: %s --> %s\n", __func__, filename, buffer );
             return buffer;
         }
     }
@@ -848,50 +834,50 @@ static char *FS_ExpandLinks( const char *filename ) {
 FS_FOpenFile
 ============
 */
-int FS_FOpenFile( const char *filename, fileHandle_t *f, uint32 mode ) {
+int FS_FOpenFile( const char *name, fileHandle_t *f, uint32 mode ) {
 	fsFile_t	*file;
 	fileHandle_t hFile;
 	int			ret = -1;
 
-	if( !filename || !f ) {
+	if( !name || !f ) {
 		Com_Error( ERR_FATAL, "FS_FOpenFile: NULL" );
 	}
 
 	*f = 0;
 
 	if( !fs_searchpaths ) {
-		return -1; /* not yet initialized */
+		return -1; // not yet initialized
 	}
 
     if( ( mode & FS_MODE_MASK ) == FS_MODE_READ ) {
-        filename = FS_ExpandLinks( filename );
+        name = FS_ExpandLinks( name );
     }
 
-	if( !FS_ValidatePath( filename ) ) {
-		FS_DPrintf( "FS_FOpenFile: refusing invalid path: %s\n", filename );
+	if( !FS_ValidatePath( name ) ) {
+		FS_DPrintf( "FS_FOpenFile: refusing invalid path: %s\n", name );
 		return -1;
 	}
 
-	/* allocate new file handle */
-	file = FS_AllocHandle( &hFile, filename );
+	// allocate new file handle
+	file = FS_AllocHandle( &hFile );
 	file->mode = mode;
 
 	mode &= FS_MODE_MASK;
 	switch( mode ) {
 	case FS_MODE_READ:
-		ret = FS_FOpenFileRead( file, qtrue );
+		ret = FS_FOpenFileRead( file, name, qtrue );
 		break;
 	case FS_MODE_WRITE:
 	case FS_MODE_APPEND:
 	case FS_MODE_RDWR:
-		ret = FS_FOpenFileWrite( file );
+		ret = FS_FOpenFileWrite( file, name );
 		break;
 	default:
 		Com_Error( ERR_FATAL, "FS_FOpenFile: illegal mode: %u", mode );
 		break;
 	}
 
-	/* if succeeded, store file handle */
+	// if succeeded, store file handle
 	if( ret != -1 ) {
 		*f = hFile;
 	}
@@ -916,7 +902,7 @@ int FS_Tell( fileHandle_t f ) {
 	case FS_PAK:
 		length = ftell( file->fp ) - file->pak->filepos;
 		break;
-#ifdef USE_ZLIB
+#if USE_ZLIB
 	case FS_GZIP:
 		length = gztell( file->zfp );
 		break;
@@ -948,7 +934,7 @@ int FS_RawTell( fileHandle_t f ) {
 	case FS_PAK:
 		length = ftell( file->fp ) - file->pak->filepos;
 		break;
-#ifdef USE_ZLIB
+#if USE_ZLIB
 	case FS_GZIP:
 		length = ftell( file->fp );
 		break;
@@ -978,13 +964,6 @@ static int loadStack;
 static int loadCount;
 static int loadCountStatic;
 
-// very simple one-file cache for *.bsp files
-static byte *cachedBytes;
-static char cachedPath[MAX_QPATH];
-static int	cachedLength;
-static int  cachedInuse;
-
-
 /*
 ============
 FS_LoadFile
@@ -1008,7 +987,7 @@ int FS_LoadFileEx( const char *path, void **buffer, uint32 flags ) {
 	}
 
 	if( !fs_searchpaths ) {
-		return -1; /* not yet initialized */
+		return -1; // not yet initialized
 	}
 
     path = FS_ExpandLinks( path );
@@ -1018,31 +997,22 @@ int FS_LoadFileEx( const char *path, void **buffer, uint32 flags ) {
 		return -1;
 	}
 
-	if( buffer && ( flags & FS_FLAG_CACHE ) ) {
-		if( !Q_stricmp( cachedPath, path ) ) {
-			//Com_Printf( S_COLOR_MAGENTA"cached: %s\n", path );
-			*buffer = cachedBytes;
-			cachedInuse++;
-			return cachedLength;
-		}
-	}
-
-	/* allocate new file handle */
-	file = FS_AllocHandle( &f, path );
+	// allocate new file handle
+	file = FS_AllocHandle( &f );
 	flags &= ~FS_MODE_MASK;
 	file->mode = flags | FS_MODE_READ;
 
-	/* look for it in the filesystem or pack files */
-	length = FS_FOpenFileRead( file, qfalse );
+	// look for it in the filesystem or pack files
+	length = FS_FOpenFileRead( file, path, qfalse );
 	if( length == -1 ) {
 		return -1;
 	}
 
-	/* get real file length */
+	// get real file length
 	length = FS_GetFileLength( f );
 	
 	if( buffer ) {
-		if( !( flags & FS_FLAG_CACHE ) && loadInuse + length < MAX_LOAD_BUFFER && !( fs_restrict_mask->integer & 16 ) ) {
+		if( loadInuse + length < MAX_LOAD_BUFFER && !( fs_restrict_mask->integer & 16 ) ) {
   //          Com_Printf(S_COLOR_MAGENTA"static: %s: %d\n",path,length);
 			buf = &loadBuffer[loadInuse];
             loadLast = buf;
@@ -1061,13 +1031,6 @@ int FS_LoadFileEx( const char *path, void **buffer, uint32 flags ) {
 		FS_Read( buf, length, f );
 		buf[length] = 0;
 
-		if( flags & FS_FLAG_CACHE ) {
-			FS_FlushCache();
-			cachedBytes = buf;
-			cachedLength = length;
-			strcpy( cachedPath, path );
-			cachedInuse = 1;
-		}
 	}
 
 	FS_FCloseFile( f );
@@ -1107,13 +1070,6 @@ void FS_FreeFile( void *buffer ) {
 	if( !buffer ) {
 		Com_Error( ERR_FATAL, "FS_FreeFile: NULL" );
 	}
-	if( ( byte * )buffer == cachedBytes ) {
-		if( cachedInuse == 0 ) {
-			Com_Error( ERR_FATAL, "FS_FreeFile: cachedInuse is zero" );
-		}
-		cachedInuse--;
-		return;
-	}
 	if( ( byte * )buffer >= loadBuffer && ( byte * )buffer < loadBuffer + MAX_LOAD_BUFFER ) {
 		if( loadStack == 0 ) {
 			Com_Error( ERR_FATAL, "FS_FreeFile: loadStack is zero" );
@@ -1129,19 +1085,6 @@ void FS_FreeFile( void *buffer ) {
 	} else {
 		Z_Free( buffer );
 	}
-}
-
-void FS_FlushCache( void ) {
-	if( cachedInuse ) {
-		Com_Error( ERR_FATAL, "FS_FlushCache: cachedInuse is nonzero" );
-	}
-	if( !cachedBytes ) {
-		return;
-	}
-	Z_Free( cachedBytes );
-	cachedBytes = NULL;
-	cachedLength = 0;
-	cachedPath[0] = 0;
 }
 
 /*
@@ -1343,7 +1286,7 @@ static pack_t *FS_LoadPakFile( const char *packfile ) {
 		namesLength + len );
 	strcpy( pack->filename, packfile );
 	pack->fp = packhandle;
-#ifdef USE_ZLIB
+#if USE_ZLIB
 	pack->zFile = NULL;
 #endif
 	pack->numfiles = numpackfiles;
@@ -1380,7 +1323,7 @@ fail:
 	return NULL;
 }
 
-#ifdef USE_ZLIB
+#if USE_ZLIB
 /*
 =================
 FS_LoadZipFile
@@ -1552,7 +1495,7 @@ void FS_AddGameDirectory( const char *fmt, ... ) {
 	int length;
 
     va_start( argptr, fmt );
-	Q_vsnprintf( fs_gamedir, sizeof( fs_gamedir ), fmt, argptr );
+	length = Q_vsnprintf( fs_gamedir, sizeof( fs_gamedir ), fmt, argptr );
     va_end( argptr );
 
 #ifdef _WIN32
@@ -1563,7 +1506,6 @@ void FS_AddGameDirectory( const char *fmt, ... ) {
 	// add the directory to the search path
 	//
 	if( !( fs_restrict_mask->integer & 1 ) ) {
-		length = strlen( fs_gamedir );
 		search = FS_Malloc( sizeof( searchpath_t ) + length );
 		search->pack = NULL;
 		strcpy( search->filename, fs_gamedir );
@@ -1578,7 +1520,7 @@ void FS_AddGameDirectory( const char *fmt, ... ) {
 		FS_LoadPackFiles( ".pak", FS_LoadPakFile );
 	}
 
-#ifdef USE_ZLIB
+#if USE_ZLIB
 	//
 	// add any zip files in the format *.pk2
 	//
@@ -1777,7 +1719,7 @@ char **FS_ListFiles( const char *path, const char *extension,
 	searchpath_t *search;
 	char *listedFiles[MAX_LISTED_FILES];
 	int count, total;
-	char buffer[MAX_QPATH];
+	char buffer[MAX_OSPATH];
 	char **dirlist;
 	int numFilesInDir;
 	char **list;
@@ -1818,7 +1760,7 @@ char **FS_ListFiles( const char *path, const char *extension,
 		for( ; search; search = search->next ) {
 			if( search->pack ) {
 				if( ( flags & FS_TYPE_MASK ) == FS_TYPE_REAL ) {
-					/* don't search in paks */
+					// don't search in paks
 					continue;
 				}
 
@@ -1828,7 +1770,7 @@ char **FS_ListFiles( const char *path, const char *extension,
 				}
 				if( ( flags & FS_PATH_MASK ) == FS_PATH_GAME ) {
 					if( fs_searchpaths != fs_base_searchpaths && search == fs_base_searchpaths ) {
-						/* consider baseq2 a gamedir if no gamedir loaded */
+						// consider baseq2 a gamedir if no gamedir loaded
 						break;
 					}
 				}
@@ -1900,7 +1842,7 @@ char **FS_ListFiles( const char *path, const char *extension,
 				}
 			} else {
 				if( ( flags & FS_TYPE_MASK ) == FS_TYPE_PAK ) {
-					/* don't search in OS filesystem */
+					// don't search in OS filesystem
 					continue;
 				}
 
@@ -2095,7 +2037,7 @@ static void FS_WhereIs_f( void ) {
     pack_t *pak;
     packfile_t *entry;
     uint32 hash;
-    char filename[MAX_QPATH];
+    char filename[MAX_OSPATH];
     char fullpath[MAX_OSPATH];
     char *path;
     fsFileInfo_t info;
@@ -2107,7 +2049,6 @@ static void FS_WhereIs_f( void ) {
 	}
 
     Cmd_ArgvBuffer( 1, filename, sizeof( filename ) );
-    Q_strlwr( filename );
 
     path = FS_ExpandLinks( filename );
     if( path != filename ) {
@@ -2160,14 +2101,14 @@ FS_Path_f
 void FS_Path_f( void ) {
 	searchpath_t	*s;
 	int				numFilesInPAK = 0;
-#ifdef USE_ZLIB
+#if USE_ZLIB
 	int				numFilesInPK2 = 0;
 #endif
 
 	Com_Printf( "Current search path:\n" );
 	for( s = fs_searchpaths; s; s = s->next ) {
 		if( s->pack ) {
-#ifdef USE_ZLIB
+#if USE_ZLIB
 			if( s->pack->zFile ) {
 				numFilesInPK2 += s->pack->numfiles;
 			} else
@@ -2187,7 +2128,7 @@ void FS_Path_f( void ) {
 		Com_Printf( "%i files in PAK files\n", numFilesInPAK );
 	}
 
-#ifdef USE_ZLIB
+#if USE_ZLIB
 	if( !( fs_restrict_mask->integer & 4 ) ) {
 		Com_Printf( "%i files in PK2 files\n", numFilesInPK2 );
 	}
@@ -2402,7 +2343,7 @@ static void FS_FreeSearchPath( searchpath_t *path ) {
 	pack_t *pak;
 
 	if( ( pak = path->pack ) != NULL ) {
-#ifdef USE_ZLIB
+#if USE_ZLIB
 		if( pak->zFile ) {
 			unzClose( pak->zFile );
 		} else
@@ -2432,16 +2373,16 @@ void FS_Shutdown( qboolean total ) {
 	}
 
 	if( total ) {
-		/* close file handles */
+		// close file handles
 		for( i = 0, file = fs_files; i < MAX_FILE_HANDLES; i++, file++ ) {
 			if( file->type != FS_FREE ) {
-				Com_WPrintf( "FS_Shutdown: closing handle %i: '%s'\n",
-                    i + 1, file->name );
+				Com_WPrintf( "FS_Shutdown: closing handle %i: %s\n",
+                    i + 1, file->fullpath );
 				FS_FCloseFile( i + 1 );
 			}
 		}
 
-        /* free symbolic links */
+        // free symbolic links
         for( l = fs_links; l; l = nextLink ) {
             nextLink = l->next;
             Z_Free( l->target );
@@ -2451,15 +2392,13 @@ void FS_Shutdown( qboolean total ) {
         fs_links = NULL;
 	}
 
-	/* free search paths */
+	// free search paths
 	for( path = fs_searchpaths; path; path = next ) {
 		next = path->next;
 		FS_FreeSearchPath( path );
 	}
 
 	fs_searchpaths = NULL;
-
-	FS_FlushCache();
 
     if( total ) {
     	Z_LeakTest( TAG_FILESYSTEM );
@@ -2561,27 +2500,27 @@ void FS_Restart( void ) {
 	
 	Com_Printf( "---------- FS_Restart ----------\n" );
 	
-	/* temporary disable logfile */
+	// temporary disable logfile
 	temp = com_logFile;
 	com_logFile = 0;
 
-	/* make sure no files are opened for reading */
+	// make sure no files are opened for reading
 	for( i = 0, file = fs_files; i < MAX_FILE_HANDLES; i++, file++ ) {
 		if( file->type == FS_FREE ) {
 			continue;
 		}
 		if( file->mode == FS_MODE_READ ) {
 			Com_Error( ERR_FATAL, "FS_Restart: closing handle %i: %s",
-                i + 1, file->name );
+                i + 1, file->fullpath );
 		}
 	}
 	
 	if( fs_restrict_mask->latched_string ) {
-		/* perform full reset */
+		// perform full reset
 		FS_Shutdown( qfalse );
 		FS_Init();
 	} else {
-		/* just change gamedir */	
+		// just change gamedir
 		for( path = fs_searchpaths; path != fs_base_searchpaths; path = next ) {
 			next = path->next;
 			FS_FreeSearchPath( path );
@@ -2593,7 +2532,7 @@ void FS_Restart( void ) {
 		FS_Path_f();
 	}
 
-	/* re-enable logfile */
+	// re-enable logfile
 	com_logFile = temp;
 	
 	Com_Printf( "--------------------------------\n" );

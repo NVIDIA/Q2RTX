@@ -220,7 +220,7 @@ static void NetLogFile_Close( void ) {
 		return;
 	}
 
-	Com_Printf( "Closing %s\n", FS_GetFileName( net_logFile ) );
+	Com_Printf( "Closing network log.\n" );
 
 	FS_FCloseFile( net_logFile );
 	net_logFile = 0;

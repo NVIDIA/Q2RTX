@@ -116,7 +116,7 @@ static void LogFile_Close( void ) {
 		return;
 	}
 
-	Com_Printf( "Closing %s\n", FS_GetFileName( com_logFile ) );
+	Com_Printf( "Closing console log.\n" );
 
 	FS_FCloseFile( com_logFile );
 	com_logFile = 0;

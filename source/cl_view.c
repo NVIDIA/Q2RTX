@@ -336,8 +336,6 @@ void CL_PrepRefresh (void)
 	// the renderer can now free unneeded stuff
 	ref.EndRegistration ();
 
-	FS_FlushCache();
-
 	// clear any lines of console text
 	Con_ClearNotify_f ();
 

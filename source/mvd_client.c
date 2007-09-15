@@ -754,7 +754,7 @@ void MVD_StreamedStop_f( void ) {
 }
 
 void MVD_StreamedRecord_f( void ) {
-	char buffer[MAX_QPATH];
+	char buffer[MAX_OSPATH];
 	char *name;
 	fileHandle_t f;
     mvd_t *mvd;
@@ -783,7 +783,7 @@ void MVD_StreamedRecord_f( void ) {
 		Q_strncpyz( buffer, name + 1, sizeof( buffer ) );
 	} else {
 		Com_sprintf( buffer, sizeof( buffer ), "demos/%s", name );
-		COM_DefaultExtension( buffer, ".mvd2", sizeof( buffer ) );
+    	COM_AppendExtension( buffer, ".mvd2", sizeof( buffer ) );
 	}
 
 	FS_FOpenFile( buffer, &f, FS_MODE_WRITE );
@@ -924,7 +924,7 @@ const char *MVD_Play_g( const char *partial, int state ) {
 
 void MVD_Play_f( void ) {
 	char *name;
-	char buffer[MAX_QPATH];
+	char buffer[MAX_OSPATH];
 	fileHandle_t f;
 	int length;
     uint32 magic = 0;
@@ -940,7 +940,7 @@ void MVD_Play_f( void ) {
 		Q_strncpyz( buffer, name + 1, sizeof( buffer ) );
 	} else {
 		Com_sprintf( buffer, sizeof( buffer ), "demos/%s", name );
-		COM_DefaultExtension( buffer, ".mvd2", sizeof( buffer ) );
+    	COM_AppendExtension( buffer, ".mvd2", sizeof( buffer ) );
 	}
 	FS_FOpenFile( buffer, &f, FS_MODE_READ );
 	if( !f ) {

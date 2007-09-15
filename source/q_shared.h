@@ -443,6 +443,7 @@ void COM_StripExtension( const char *in, char *out, int outSize );
 void COM_FileBase (char *in, char *out);
 void COM_FilePath( const char *in, char *out, int outSize );
 void COM_DefaultExtension( char *path, const char *extension, int pathSize );
+void COM_AppendExtension( char *path, const char *extension, int pathSize );
 char *COM_FileExtension( const char *in );
 
 qboolean COM_IsNumeric( const char *string );

@@ -765,7 +765,7 @@ Every entity, every playerinfo and every message will be recorded.
 ==============
 */
 static void MVD_Record_f( void ) {
-	char buffer[MAX_QPATH];
+	char buffer[MAX_OSPATH];
 	char *name;
 	fileHandle_t demofile;
     uint32 magic;
@@ -802,7 +802,7 @@ static void MVD_Record_f( void ) {
 		Q_strncpyz( buffer, name + 1, sizeof( buffer ) );
 	} else {
 		Com_sprintf( buffer, sizeof( buffer ), "demos/%s", name );
-		COM_DefaultExtension( buffer, ".mvd2", sizeof( buffer ) );
+    	COM_AppendExtension( buffer, ".mvd2", sizeof( buffer ) );
 	}
 
 	FS_FOpenFile( buffer, &demofile, FS_MODE_WRITE );

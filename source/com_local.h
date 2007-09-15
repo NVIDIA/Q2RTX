@@ -813,7 +813,6 @@ int		FS_LoadFile( const char *path, void  **buffer );
 int		FS_LoadFileEx( const char *path, void **buffer, uint32 flags );
 void    *FS_AllocTempMem( int length );
 void	FS_FreeFile( void *buffer );
-void	FS_FlushCache( void );
 // a null buffer will just return the file length without loading
 // a -1 length is not present
 
@@ -839,7 +838,7 @@ qboolean	FS_LastFileFromPak( void );
 
 void	FS_CreatePath( const char *path );
 
-const char *FS_GetFileName( fileHandle_t f );
+//const char *FS_GetFileName( fileHandle_t f );
 const char *FS_GetFileFullPath( fileHandle_t f );
 
 char	*FS_Gamedir( void );

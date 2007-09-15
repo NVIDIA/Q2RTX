@@ -834,6 +834,12 @@ void COM_DefaultExtension( char *path, const char *extension, int pathSize ) {
 	Q_strcat( path, pathSize, extension );
 }
 
+void COM_AppendExtension( char *path, const char *extension, int pathSize ) {
+    if( !Q_stricmp( COM_FileExtension( path ), extension ) ) {
+	    Q_strcat( path, pathSize, extension );
+    }
+}
+
 /*
 ==================
 COM_IsNumeric
