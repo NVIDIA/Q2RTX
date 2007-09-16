@@ -1303,6 +1303,10 @@ static qboolean SV_CheckPaused( void ) {
 	client_t *client;
 
 	sv_paused->integer = 0;
+    if( sv.state == ss_broadcast ) {
+		cl_paused->integer = 0;
+        return qfalse; // never pause in MVD client mode
+    }
 	if( cl_paused->integer ) {
         FOR_EACH_CLIENT( client ) {
             if( client->state != cs_spawned ) {
@@ -1778,6 +1782,7 @@ void SV_Shutdown( const char *finalmsg, killtype_t type ) {
 	Cvar_Set( "sv_paused", "0" );
     
 	if( !svs.initialized ) {
+        MVD_GameShutdown(); // make sure MVD client is down
 		return;
 	}
 

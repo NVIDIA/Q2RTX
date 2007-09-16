@@ -292,7 +292,7 @@ void MVD_RejectStream( const char *error, const char *reason ) {
 
     SV_HttpPrintf(
         "HTTP/1.0 %s\r\n"
-        "Content-Type: text/html\r\n"
+        "Content-Type: text/html; charset=us-ascii\r\n"
         "Cache-Control: no-cache\r\n"
         "\r\n", error );
 

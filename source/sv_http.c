@@ -27,7 +27,7 @@ tcpClient_t     *http_client;
 
 void SV_HttpHeader( const char *title ) {
     SV_HttpPrintf(
-        "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">"
+        "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 3.2//EN\">"
         "<html><head><title>%s</title></head><body>", title );
 }
 
@@ -48,7 +48,7 @@ void SV_HttpReject( const char *error, const char *reason ) {
         SV_HttpPrintf( "%s", http_header );
     }
     if( reason && http_client->method != HTTP_METHOD_HEAD ) {
-        SV_HttpPrintf( "Content-Type: text/html\r\n" );
+        SV_HttpPrintf( "Content-Type: text/html; charset=us-ascii\r\n" );
     }
     SV_HttpPrintf( "\r\n" );
 
@@ -84,7 +84,7 @@ static void uri_status( const char *uri ) {
     }
 
     SV_HttpPrintf(
-        "Content-Type: text/html\r\n"
+        "Content-Type: text/html; charset=us-ascii\r\n"
 //      "Content-Encoding: deflate\r\n"
         "\r\n" );
 

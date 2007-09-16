@@ -865,7 +865,14 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
     strcpy( mvd->mapname, string + 5 ); // skip "maps/"
     mvd->mapname[length - 9] = 0; // cut off ".bsp"
 
-	// load the world model (we are only interesed in visibility info)
+    // check if map exists so CM_LoadMap does not kill
+    // entire server if it does not
+    if( FS_LoadFile( string, NULL ) == -1 ) {
+        MVD_Destroy( mvd, "Couldn't find map: %s", string );
+    }
+
+	// load the world model (we are only interesed in
+    // visibility info, do not load brushes and such)
     Com_Printf( "Loading %s...\n", string );
     CM_LoadMap( &mvd->cm, string, CM_LOAD_VISONLY, &checksum );
 

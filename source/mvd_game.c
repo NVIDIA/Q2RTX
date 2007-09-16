@@ -616,7 +616,7 @@ static void MVD_GameInit( void ) {
     gameFeatures = GAME_FEATURE_CLIENTNUM|GAME_FEATURE_PROPERINUSE;
 }
 
-static void MVD_GameShutdown( void ) {
+void MVD_GameShutdown( void ) {
     mvd_t *mvd, *next;
 
 	Com_Printf( "----- MVD_GameShutdown -----\n" );

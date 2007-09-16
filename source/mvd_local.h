@@ -203,4 +203,5 @@ extern game_export_t	mvd_ge;
 
 void MVD_UpdateClient( udpClient_t *client );
 void MVD_SwitchChannel( udpClient_t *client, mvd_t *mvd ); 
+void MVD_GameShutdown( void );
 

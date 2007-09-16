@@ -396,7 +396,8 @@ int MSG_WriteDeltaUsercmd_Enhanced( const usercmd_t *from, const usercmd_t *cmd 
 	}
 
 	if( bits & CM_BUTTONS ) {
-		MSG_WriteBits( cmd->buttons, 8 );
+        int buttons = ( cmd->buttons & 3 ) | ( cmd->buttons >> 5 );
+		MSG_WriteBits( buttons, 3 );
 	}
 	if( bits & CM_IMPULSE ) {
 		MSG_WriteBits( cmd->msec, 8 );
@@ -1721,7 +1722,8 @@ void MSG_ReadDeltaUsercmd_Enhanced( const usercmd_t *from, usercmd_t *to ) {
 	
 // read buttons
 	if( bits & CM_BUTTONS ) {
-		to->buttons = MSG_ReadBits( 8 );
+		int buttons = MSG_ReadBits( 3 );
+        to->buttons = ( buttons & 3 ) | ( ( buttons & 4 ) << 5 );
 	}
 
 // read time to run command

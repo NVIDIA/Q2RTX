@@ -835,7 +835,7 @@ void COM_DefaultExtension( char *path, const char *extension, int pathSize ) {
 }
 
 void COM_AppendExtension( char *path, const char *extension, int pathSize ) {
-    if( !Q_stricmp( COM_FileExtension( path ), extension ) ) {
+    if( Q_stricmp( COM_FileExtension( path ), extension ) ) {
 	    Q_strcat( path, pathSize, extension );
     }
 }
