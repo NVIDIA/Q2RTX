@@ -483,7 +483,7 @@ If origin is NULL, the origin is determined from the entity origin
 or the midpoint of the entity box for bmodels.
 ==================
 */  
-static void PF_StartSound( edict_t *entity, int channel,
+static void PF_StartSound( edict_t *edict, int channel,
 					    int soundindex, float volume,
 					    float attenuation, float timeofs )
 {       
@@ -498,7 +498,7 @@ static void PF_StartSound( edict_t *entity, int channel,
     player_state_t  *ps;
     sound_packet_t  *msg;
 
-	if( !entity )
+	if( !edict )
 		return;
 
 	if( volume < 0 || volume > 1.0 )
@@ -510,7 +510,7 @@ static void PF_StartSound( edict_t *entity, int channel,
     if( soundindex < 0 || soundindex >= MAX_SOUNDS )
 		Com_Error( ERR_DROP, "PF_StartSound: soundindex = %d", soundindex );
 
-	ent = NUM_FOR_EDICT( entity );
+	ent = NUM_FOR_EDICT( edict );
 
 	sendchan = ( ent << 3 ) | ( channel & 7 );
 
@@ -542,31 +542,51 @@ static void PF_StartSound( edict_t *entity, int channel,
             VectorMA( ps->viewoffset, 0.125f, ps->pmove.origin, origin );
             leaf = CM_PointLeaf( &sv.cm, origin );
             area = CM_LeafArea( leaf );
-            if( !CM_AreasConnected( &sv.cm, area, entity->areanum ) ) {
+            if( !CM_AreasConnected( &sv.cm, area, edict->areanum ) ) {
                 // doors can legally straddle two areas, so
                 // we may need to check another one
-                if( !entity->areanum2 || !CM_AreasConnected( &sv.cm, area, entity->areanum2 ) ) {
+                if( !edict->areanum2 || !CM_AreasConnected( &sv.cm, area, edict->areanum2 ) ) {
                     continue;		// blocked by a door
                 }
             }
             cluster = CM_LeafCluster( leaf );
             mask = CM_ClusterPHS( &sv.cm, cluster );
-            if( !SV_EdictPV( &sv.cm, entity, mask ) ) {
+            if( !SV_EdictPV( &sv.cm, edict, mask ) ) {
                 continue; // not in PHS
             }
         }
 
-        // reliable sounds will always have position explicitly set
+        // reliable sounds will always have position explicitly set,
+        // as no one gurantees reliables to be delivered in time
+        // why should this happen anyway?
         if( channel & CHAN_RELIABLE ) {
-            continue; // TODO
+            // use the entity origin unless it is a bmodel
+            if( edict->solid == SOLID_BSP ) {
+                VectorAvg( edict->mins, edict->maxs, origin );
+                VectorAdd( edict->s.origin, origin, origin );
+            } else {
+                VectorCopy( edict->s.origin, origin );
+            }
+
+            MSG_WriteByte( svc_sound );
+            MSG_WriteByte( flags | SND_POS );
+            MSG_WriteByte( soundindex );
+
+            if( flags & SND_VOLUME )
+                MSG_WriteByte( volume * 255 );
+            if( flags & SND_ATTENUATION )
+                MSG_WriteByte( attenuation * 64 );
+            if( flags & SND_OFFSET )
+                MSG_WriteByte( timeofs * 1000 );
+
+            MSG_WriteShort( sendchan );
+            MSG_WritePos( origin );
+            continue;
         }
 
         if( LIST_EMPTY( &client->freemsg ) ) {
-            Com_WPrintf( "Out of message slots for %s!\n", client->name );
-	        if( channel & CHAN_RELIABLE ) {
-                SV_PacketizedClear( client );
-                SV_DropClient( client, "no slot for reliable message" );
-            }
+            Com_WPrintf( "%s: %s: out of message slots\n",
+                __func__, client->name );
             continue;
         }
 
