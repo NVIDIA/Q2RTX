@@ -325,7 +325,9 @@ void MSG_WriteBits( int value, int bits ) {
 MSG_WriteDeltaUsercmd_Enhanced
 =============
 */
-int MSG_WriteDeltaUsercmd_Enhanced( const usercmd_t *from, const usercmd_t *cmd ) {
+int MSG_WriteDeltaUsercmd_Enhanced( const usercmd_t *from,
+                                    const usercmd_t *cmd )
+{
 	int		bits, delta;
 
 	if( !from ) {
@@ -397,7 +399,7 @@ int MSG_WriteDeltaUsercmd_Enhanced( const usercmd_t *from, const usercmd_t *cmd 
 
 	if( bits & CM_BUTTONS ) {
         int buttons = ( cmd->buttons & 3 ) | ( cmd->buttons >> 5 );
-		MSG_WriteBits( buttons, 3 );
+	    MSG_WriteBits( buttons, 3 );
 	}
 	if( bits & CM_IMPULSE ) {
 		MSG_WriteBits( cmd->msec, 8 );
@@ -523,9 +525,9 @@ void MSG_WriteDeltaEntity( const entity_state_t *from,
             }
         }
 	}
-		
+
 	if( to->skinnum != from->skinnum ) {
-        if( to->skinnum & 0xffff0000 ) {
+        if( to->skinnum & 0xffff8000 ) {
 			bits |= U_SKIN8|U_SKIN16;
         } else if( to->skinnum & 0x0000ff00 ) {
 			bits |= U_SKIN16;
@@ -542,7 +544,7 @@ void MSG_WriteDeltaEntity( const entity_state_t *from,
 	}
 
 	if( to->effects != from->effects ) {
-        if( to->effects & 0xffff0000 ) {
+        if( to->effects & 0xffff8000 ) {
 			bits |= U_EFFECTS8|U_EFFECTS16;
         } else if( to->effects & 0x0000ff00 ) {
 			bits |= U_EFFECTS16;
@@ -552,7 +554,7 @@ void MSG_WriteDeltaEntity( const entity_state_t *from,
 	}
 	
 	if ( to->renderfx != from->renderfx ) {
-        if( to->renderfx & 0xffff0000 ) {
+        if( to->renderfx & 0xffff8000 ) {
 			bits |= U_RENDERFX8|U_RENDERFX16;
         } else if( to->renderfx & 0x0000ff00 ) {
 			bits |= U_RENDERFX16;
@@ -1675,7 +1677,9 @@ int MSG_ReadBits( int bits ) {
 	return value;
 }
 
-void MSG_ReadDeltaUsercmd_Enhanced( const usercmd_t *from, usercmd_t *to ) {
+void MSG_ReadDeltaUsercmd_Enhanced( const usercmd_t *from,
+                                          usercmd_t *to )
+{
 	int bits;
 
 	if( from ) {
@@ -1722,7 +1726,7 @@ void MSG_ReadDeltaUsercmd_Enhanced( const usercmd_t *from, usercmd_t *to ) {
 	
 // read buttons
 	if( bits & CM_BUTTONS ) {
-		int buttons = MSG_ReadBits( 3 );
+        int buttons = MSG_ReadBits( 3 );
         to->buttons = ( buttons & 3 ) | ( ( buttons & 4 ) << 5 );
 	}
 
