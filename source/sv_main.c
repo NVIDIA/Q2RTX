@@ -1782,7 +1782,7 @@ void SV_Shutdown( const char *finalmsg, killtype_t type ) {
 	Cvar_Set( "sv_paused", "0" );
     
 	if( !svs.initialized ) {
-        MVD_GameShutdown(); // make sure MVD client is down
+        MVD_Shutdown(); // make sure MVD client is down
 		return;
 	}
 

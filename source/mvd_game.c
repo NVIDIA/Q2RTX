@@ -616,31 +616,15 @@ static void MVD_GameInit( void ) {
     gameFeatures = GAME_FEATURE_CLIENTNUM|GAME_FEATURE_PROPERINUSE;
 }
 
-void MVD_GameShutdown( void ) {
-    mvd_t *mvd, *next;
-
+static void MVD_GameShutdown( void ) {
 	Com_Printf( "----- MVD_GameShutdown -----\n" );
 
-    LIST_FOR_EACH_SAFE( mvd_t, mvd, next, &mvd_channels, entry ) {
-        MVD_Disconnect( mvd );
-        MVD_ClearState( mvd );
-        MVD_Free( mvd );
-    }
-
-    List_Init( &mvd_channels );
-    List_Init( &mvd_ready );
-
-	if( mvd_clients ) {
-		Z_Free( mvd_clients );
-        mvd_clients = NULL;
-	}
+    MVD_Shutdown();
 
     mvd_ge.edicts = NULL;
     mvd_ge.edict_size = 0;
     mvd_ge.num_edicts = 0;
     mvd_ge.max_edicts = 0;
-
-    Z_LeakTest( TAG_MVD );
 }
 
 static void MVD_GameSpawnEntities( const char *mapname, const char *entstring, const char *spawnpoint ) {

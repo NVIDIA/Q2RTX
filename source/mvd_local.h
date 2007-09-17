@@ -175,6 +175,7 @@ void MVD_ClearState( mvd_t *mvd );
 void MVD_ChangeLevel( mvd_t *mvd ); 
 void MVD_GetStream( const char *uri );
 void MVD_Free( mvd_t *mvd ); 
+void MVD_Shutdown( void );
 
 const char *MVD_Play_g( const char *partial, int state );
 
@@ -203,5 +204,4 @@ extern game_export_t	mvd_ge;
 
 void MVD_UpdateClient( udpClient_t *client );
 void MVD_SwitchChannel( udpClient_t *client, mvd_t *mvd ); 
-void MVD_GameShutdown( void );
 

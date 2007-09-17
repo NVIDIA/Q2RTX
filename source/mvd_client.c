@@ -982,6 +982,27 @@ void MVD_Play_f( void ) {
 	strcpy( mvd->demopath, buffer );
 }
 
+
+void MVD_Shutdown( void ) {
+    mvd_t *mvd, *next;
+
+    LIST_FOR_EACH_SAFE( mvd_t, mvd, next, &mvd_channels, entry ) {
+        MVD_Disconnect( mvd );
+        MVD_ClearState( mvd );
+        MVD_Free( mvd );
+    }
+
+    List_Init( &mvd_channels );
+    List_Init( &mvd_ready );
+
+	if( mvd_clients ) {
+		Z_Free( mvd_clients );
+        mvd_clients = NULL;
+	}
+
+    Z_LeakTest( TAG_MVD );
+}
+
 static const cmdreg_t c_mvd[] = {
 	{ "mvdplay", MVD_Play_f, MVD_Play_g },
 	{ "mvdconnect", MVD_Connect_f },
