@@ -64,7 +64,6 @@ typedef struct {
 typedef struct server_s {
 	server_state_t	state;	// precache commands are only valid during load
     int             spawncount;  // random number generated each server spawn
-	qboolean	loadgame;	     // client begins should reuse existing entity
 
 	uint32		time;			 // always sv.framenum * 100 msec
 	int			framenum;
@@ -78,8 +77,8 @@ typedef struct server_s {
 	    fileHandle_t	file;
 	    int     	    paused;
         int             framenum;
-        entity_state_t  entities[MAX_EDICTS];
-        sizebuf_t       multicast;
+        sizebuf_t       datagram;
+        sizebuf_t       message; // reliable
 	    byte		    dcs[DCS_BYTES];
     } mvd;
 
@@ -257,13 +256,13 @@ typedef struct {
 // out before legitimate users connected
 #define	MAX_CHALLENGES	1024
 
-typedef struct challenge_s {
+typedef struct {
 	netadr_t	adr;
 	int			challenge;
 	int			time;
 } challenge_t;
 
-typedef struct ratelimit_s {
+typedef struct {
 	uint32 limit;
 	uint32 period;
 	uint32 time;
@@ -291,13 +290,18 @@ typedef struct server_static_s {
 	uint32			nextEntityStates;	// next entityState to use
 	entity_state_t	*entityStates;		// [numEntityStates]
 
-    player_state_t  *players; // [maxclients]
 
 //    tcpcl_t         *tcpclpool;
     list_t          tcpClients;
-    list_t          mvdClients;
-    client_t        *mvdummy;
-    byte            *multicast_buffer;
+
+    struct {
+        list_t          clients;
+        client_t        *dummy;
+        byte            *message_data;
+        byte            *datagram_data;
+        player_state_t  *players;  // [maxclients]
+        entity_state_t  *entities; // [MAX_EDICTS]
+    } mvd;
 
 #if USE_ZLIB
     z_stream        z; // for compressing messages at once
@@ -447,8 +451,8 @@ extern cvar_t	*sv_mvd_nogun;
 void SV_MvdRegister( void );
 void SV_MvdBeginFrame( void );
 void SV_MvdEndFrame( void );
-void SV_MvdUnicast( int clientNum, mvd_ops_t op );
-void SV_MvdMulticast( int leafnum, mvd_ops_t op );
+void SV_MvdUnicast( sizebuf_t *buf, int clientNum, mvd_ops_t op );
+void SV_MvdMulticast( sizebuf_t *buf, int leafnum, mvd_ops_t op );
 void SV_MvdConfigstring( int index, const char *string );
 void SV_MvdRecStop( void );
 qboolean SV_MvdPlayerIsActive( edict_t *ent );

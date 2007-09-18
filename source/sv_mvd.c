@@ -68,7 +68,7 @@ qboolean SV_MvdPlayerIsActive( edict_t *ent ) {
 		return qfalse;
 	}
 
-    if( svs.mvdummy && ent == svs.mvdummy->edict ) {
+    if( svs.mvd.dummy && ent == svs.mvd.dummy->edict ) {
         return qtrue;
     }
 
@@ -127,7 +127,7 @@ static void SV_MvdEmitFrame( void ) {
 	for( i = 0; i < sv_maxclients->integer; i++ ) {
 	    ent = EDICT_NUM( i + 1 );
 
-        oldps = &svs.players[i];
+        oldps = &svs.mvd.players[i];
         newps = &ent->client->ps;
 
     	if( !SV_MvdPlayerIsActive( ent ) ) {
@@ -159,7 +159,7 @@ static void SV_MvdEmitFrame( void ) {
 	for( i = 1; i < ge->num_edicts; i++ ) {
 		ent = EDICT_NUM( i );
 
-        oldes = &sv.mvd.entities[i];
+        oldes = &svs.mvd.entities[i];
         newes = &ent->s;
 
 		if( ( ent->svflags & SVF_NOCLIENT ) || !ES_INUSE( newes ) ) {
@@ -202,7 +202,7 @@ static void SV_DummyWait_f( void ) {
 static void SV_DummyForward_f( void ) {
     Cmd_Shift();
     Com_DPrintf( "dummy cmd: %s %s\n", Cmd_Argv( 0 ), Cmd_Args() );
-    ge->ClientCommand( svs.mvdummy->edict );
+    ge->ClientCommand( svs.mvd.dummy->edict );
 }
 
 static const ucmd_t dummy_cmds[] = {
@@ -257,8 +257,8 @@ static void SV_DummyExecuteString( const char *line ) {
 	}
 
     Com_DPrintf( "dummy stufftext: %s\n", line );
-	sv_client = svs.mvdummy;
-	sv_player = svs.mvdummy->edict;
+	sv_client = svs.mvd.dummy;
+	sv_player = svs.mvd.dummy->edict;
 	ge->ClientCommand( sv_player );
 	sv_client = NULL;
 	sv_player = NULL;
@@ -279,14 +279,14 @@ static void SV_DummyAddMessage( client_t *client, byte *data,
         return;
     }
 
-    LIST_FOR_EACH( tcpClient_t, t, &svs.mvdClients, mvdEntry ) {
+    LIST_FOR_EACH( tcpClient_t, t, &svs.mvd.clients, mvdEntry ) {
         if( t->state >= cs_primed ) {
         }
     }
 
 }
 void SV_MvdSpawnDummy( void ) {
-    client_t *c = svs.mvdummy;
+    client_t *c = svs.mvd.dummy;
 	player_state_t *ps;
 	entity_state_t *es;
 	edict_t *ent;
@@ -310,6 +310,9 @@ void SV_MvdSpawnDummy( void ) {
 
     c->state = cs_spawned;
 
+    memset( svs.mvd.players, 0, sizeof( player_state_t ) * sv_maxclients->integer );
+    memset( svs.mvd.entities, 0, sizeof( entity_state_t ) * MAX_EDICTS );
+
     // set base player states
 	for( i = 0; i < sv_maxclients->integer; i++ ) {
 	    ent = EDICT_NUM( i + 1 );
@@ -318,7 +321,7 @@ void SV_MvdSpawnDummy( void ) {
             continue;
         }
 
-        ps = &svs.players[i];
+        ps = &svs.mvd.players[i];
         *ps = ent->client->ps;
         PPS_INUSE( ps ) = qtrue;
 	}
@@ -331,7 +334,7 @@ void SV_MvdSpawnDummy( void ) {
             continue;
         }
 
-        es = &sv.mvd.entities[i];
+        es = &svs.mvd.entities[i];
         *es = ent->s;
         es->number = i;
 	}
@@ -344,7 +347,7 @@ qboolean SV_MvdCreateDummy( void ) {
     qboolean allow;
     int number;
 
-    if( svs.mvdummy ) {
+    if( svs.mvd.dummy ) {
         return qtrue; // already created
     }
 
@@ -374,7 +377,7 @@ qboolean SV_MvdCreateDummy( void ) {
         "\\name\\[MVDSPEC]\\skin\\male/grunt\\mvdversion\\%d\\ip\\loopback",
         PROTOCOL_VERSION_MVD_MINOR );
 
-    svs.mvdummy = newcl;
+    svs.mvd.dummy = newcl;
 
 	// get the game a chance to reject this connection or modify the userinfo
 	sv_client = newcl;
@@ -387,7 +390,7 @@ qboolean SV_MvdCreateDummy( void ) {
         if( *s ) {
             Com_EPrintf( "Dummy MVD client rejected by game DLL: %s\n", s );
         }
-        svs.mvdummy = NULL;
+        svs.mvd.dummy = NULL;
         return qfalse;
 	}
 
@@ -442,7 +445,6 @@ void SV_MvdBeginFrame( void ) {
                 for( i = 0; i < DCS_DWORDS; i++ ) {
                     (( uint32 * )sv.mvd.dcs)[i] = 0;
                 }
-                //SV_MvdBroadcastCommand( "mvdpause\n" );
             }
             sv.mvd.paused++;
             return;
@@ -459,53 +461,28 @@ void SV_MvdBeginFrame( void ) {
                 if( !Q_IsBitSet( sv.mvd.dcs, index ) ) {
                     continue;
                 }
-                SZ_WriteByte( &sv.mvd.multicast, svc_configstring );
-                SZ_WriteShort( &sv.mvd.multicast, index );
+                SZ_WriteByte( &sv.mvd.message, svc_configstring );
+                SZ_WriteShort( &sv.mvd.message, index );
                 length = strlen( sv.configstrings[index] );
                 if( length > MAX_QPATH ) {
                     length = MAX_QPATH;
                 }
-                SZ_Write( &sv.mvd.multicast, sv.configstrings[index], length );
-                SZ_WriteByte( &sv.mvd.multicast, 0 );
+                SZ_Write( &sv.mvd.message, sv.configstrings[index], length );
+                SZ_WriteByte( &sv.mvd.message, 0 );
             }
         }
 
         Com_Printf( "MVD stream resumed, flushed %d bytes.\n",
-            sv.mvd.multicast.cursize );
+            sv.mvd.message.cursize );
         // will be subsequently written to disk by SV_MvdEndFrame
     }
 
 	sv.mvd.paused = 0;
 }
 
-
-/*
-==================
-SV_MvdRecFrame
-==================
-*/
-static void SV_MvdRecFrame( void ) {
-    FS_Write( msg_write.data, msg_write.cursize, sv.mvd.file );
-    FS_Write( sv.mvd.multicast.data, sv.mvd.multicast.cursize, sv.mvd.file );
-
-	if( sv_mvd_max_size->value > 0 ) {
-	    int numbytes = FS_RawTell( sv.mvd.file );
-
-        if( numbytes > sv_mvd_max_size->value * 1000 ) {
-    		Com_Printf( "Stopping MVD recording, maximum size reached.\n" );
-	    	SV_MvdRecStop();
-        }
-	} else if( sv_mvd_max_duration->value > 0 &&
-        sv.mvd.framenum > sv_mvd_max_duration->value * 600 )
-    {
-		Com_Printf( "Stopping MVD recording, maximum duration reached.\n" );
-		SV_MvdRecStop();
-	}
-}
-
 void SV_MvdEndFrame( void ) {
     tcpClient_t *client;
-    uint16 *patch;
+    int length;
 
 	Cbuf_ExecuteEx( &dummy_buffer );
     if( dummy_buffer.waitCount > 0 ) {
@@ -513,30 +490,81 @@ void SV_MvdEndFrame( void ) {
     }
 
     if( sv.mvd.paused >= PAUSED_FRAMES ) {
-	    SZ_Clear( &sv.mvd.multicast );
-        return;
+        goto clear;
     }
 
-    patch = SZ_GetSpace( &msg_write, 2 );
-    SV_MvdEmitFrame();
-    *patch = LittleShort( msg_write.cursize + sv.mvd.multicast.cursize - 2 );
+    if( sv.mvd.message.overflowed ) {
+        // if reliable message overflowed, kick all clients
+        Com_EPrintf( "MVD message overflowed\n" );
+        LIST_FOR_EACH( tcpClient_t, client, &svs.mvd.clients, mvdEntry ) {
+            SV_HttpDrop( client, "overflowed" );
+        }
+        SV_MvdRecStop();
+        goto clear;
+    }
 
-    LIST_FOR_EACH( tcpClient_t, client, &svs.mvdClients, mvdEntry ) {
+    if( sv.mvd.datagram.overflowed ) {
+        Com_WPrintf( "MVD datagram overflowed\n" );
+	    SZ_Clear( &sv.mvd.datagram );
+    }
+
+    // build delta updates
+    SV_MvdEmitFrame();
+
+    // check if frame fits
+    if( sv.mvd.message.cursize + msg_write.cursize > MAX_MSGLEN ) {
+        Com_WPrintf( "Dumping MVD frame: %d bytes\n", msg_write.cursize );
+        SZ_Clear( &msg_write );
+    }
+
+    // check if unreliable datagram fits
+    if( sv.mvd.message.cursize + msg_write.cursize + sv.mvd.datagram.cursize > MAX_MSGLEN ) {
+        Com_WPrintf( "Dumping MVD datagram: %d bytes\n", sv.mvd.datagram.cursize );
+	    SZ_Clear( &sv.mvd.datagram );
+    }
+
+    length = LittleShort( sv.mvd.message.cursize + msg_write.cursize + sv.mvd.datagram.cursize );
+
+    // send frame to clients
+    LIST_FOR_EACH( tcpClient_t, client, &svs.mvd.clients, mvdEntry ) {
         if( client->state == cs_spawned ) {
+            SV_HttpWrite( client, &length, 2 );
+            SV_HttpWrite( client, sv.mvd.message.data, sv.mvd.message.cursize );
             SV_HttpWrite( client, msg_write.data, msg_write.cursize );
-            SV_HttpWrite( client, sv.mvd.multicast.data, sv.mvd.multicast.cursize );
+            SV_HttpWrite( client, sv.mvd.datagram.data, sv.mvd.datagram.cursize );
 #if USE_ZLIB
             client->noflush++;
 #endif
         }
     }
 
+    // write frame to demofile
     if( sv.mvd.file ) {
-        SV_MvdRecFrame();
+        FS_Write( &length, 2, sv.mvd.file );
+        FS_Write( sv.mvd.message.data, sv.mvd.message.cursize, sv.mvd.file );
+        FS_Write( msg_write.data, msg_write.cursize, sv.mvd.file );
+        FS_Write( sv.mvd.datagram.data, sv.mvd.datagram.cursize, sv.mvd.file );
+
+        if( sv_mvd_max_size->value > 0 ) {
+            int numbytes = FS_RawTell( sv.mvd.file );
+
+            if( numbytes > sv_mvd_max_size->value * 1000 ) {
+                Com_Printf( "Stopping MVD recording, maximum size reached.\n" );
+                SV_MvdRecStop();
+            }
+        } else if( sv_mvd_max_duration->value > 0 &&
+            sv.mvd.framenum > sv_mvd_max_duration->value * 600 )
+        {
+            Com_Printf( "Stopping MVD recording, maximum duration reached.\n" );
+            SV_MvdRecStop();
+        }
     }
 
     SZ_Clear( &msg_write );
-	SZ_Clear( &sv.mvd.multicast );
+
+clear:
+	SZ_Clear( &sv.mvd.datagram );
+	SZ_Clear( &sv.mvd.message );
 }
 
 /*
@@ -564,7 +592,7 @@ static void SV_MvdEmitGamestate( void ) {
 	MSG_WriteShort( PROTOCOL_VERSION_MVD_MINOR );
 	MSG_WriteLong( sv.spawncount );
 	MSG_WriteString( fs_game->string );
-	MSG_WriteShort( svs.mvdummy->number );
+	MSG_WriteShort( svs.mvd.dummy->number );
 
     // send configstrings
 	for( i = 0; i < MAX_CONFIGSTRINGS; i++ ) {
@@ -597,7 +625,7 @@ static void SV_MvdEmitGamestate( void ) {
 		flags |= MSG_PS_IGNORE_GUNINDEX|MSG_PS_IGNORE_GUNFRAMES;
 	}
 	for( i = 0; i < sv_maxclients->integer; i++ ) {
-        ps = &svs.players[i];
+        ps = &svs.mvd.players[i];
 		if( PPS_INUSE( ps ) ) {
 			MSG_WriteDeltaPlayerstate_Packet( NULL, ps, i,
                 flags | MSG_PS_FORCE );
@@ -607,7 +635,7 @@ static void SV_MvdEmitGamestate( void ) {
 
     // send entity states
 	for( i = 1; i < ge->num_edicts; i++ ) {
-        es = &sv.mvd.entities[i];
+        es = &svs.mvd.entities[i];
         if( es->number ) {
             flags = MSG_ES_FORCE|MSG_ES_NEWENTITY;
             if( i <= sv_maxclients->integer ) {
@@ -652,7 +680,7 @@ void SV_MvdGetStream( const char *uri ) {
         return;
     }
 
-    List_Append( &svs.mvdClients, &http_client->mvdEntry );
+    List_Append( &svs.mvd.clients, &http_client->mvdEntry );
 
     SV_HttpPrintf(
         "HTTP/1.0 200 OK\r\n"
@@ -682,22 +710,18 @@ into one message to save space (useful for shotgun patterns
 as they often occur in the same BSP leaf)
 ==============
 */
-void SV_MvdMulticast( int leafnum, mvd_ops_t op ) {
+void SV_MvdMulticast( sizebuf_t *buf, int leafnum, mvd_ops_t op ) {
 	int bits;
 
-	if( sv.mvd.paused >= PAUSED_FRAMES ) {
-        return;
-    }
-
 	bits = ( msg_write.cursize >> 8 ) & 7;
-    SZ_WriteByte( &sv.mvd.multicast, op | ( bits << SVCMD_BITS ) );
-    SZ_WriteByte( &sv.mvd.multicast, msg_write.cursize & 255 );
+    SZ_WriteByte( buf, op | ( bits << SVCMD_BITS ) );
+    SZ_WriteByte( buf, msg_write.cursize & 255 );
 
 	if( op != mvd_multicast_all && op != mvd_multicast_all_r ) {
-		SZ_WriteShort( &sv.mvd.multicast, leafnum );
+		SZ_WriteShort( buf, leafnum );
 	}
 	
-	SZ_Write( &sv.mvd.multicast, msg_write.data, msg_write.cursize );
+	SZ_Write( buf, msg_write.data, msg_write.cursize );
 }
 
 /*
@@ -705,18 +729,14 @@ void SV_MvdMulticast( int leafnum, mvd_ops_t op ) {
 SV_MvdUnicast
 ==============
 */
-void SV_MvdUnicast( int clientNum, mvd_ops_t op ) {
+void SV_MvdUnicast( sizebuf_t *buf, int clientNum, mvd_ops_t op ) {
     int bits;
 
-	if( sv.mvd.paused >= PAUSED_FRAMES ) {
-        return;
-    }
-
 	bits = ( msg_write.cursize >> 8 ) & 7;
-    SZ_WriteByte( &sv.mvd.multicast, op | ( bits << SVCMD_BITS ) );
-    SZ_WriteByte( &sv.mvd.multicast, msg_write.cursize & 255 );
-    SZ_WriteByte( &sv.mvd.multicast, clientNum );
-    SZ_Write( &sv.mvd.multicast, msg_write.data, msg_write.cursize );
+    SZ_WriteByte( buf, op | ( bits << SVCMD_BITS ) );
+    SZ_WriteByte( buf, msg_write.cursize & 255 );
+    SZ_WriteByte( buf, clientNum );
+    SZ_Write( buf, msg_write.data, msg_write.cursize );
 }
 
 /*
@@ -729,9 +749,9 @@ void SV_MvdConfigstring( int index, const char *string ) {
 		Q_SetBit( sv.mvd.dcs, index );
         return;
 	}
-	SZ_WriteByte( &sv.mvd.multicast, mvd_configstring );
-	SZ_WriteShort( &sv.mvd.multicast, index );
-	SZ_WriteString( &sv.mvd.multicast, string );
+	SZ_WriteByte( &sv.mvd.message, mvd_configstring );
+	SZ_WriteShort( &sv.mvd.message, index );
+	SZ_WriteString( &sv.mvd.message, string );
 }
 
 /*
@@ -851,7 +871,7 @@ static void MVD_Stop_f( void ) {
 }
 
 static void MVD_Stuff_f( void ) {
-    if( svs.mvdummy ) {
+    if( svs.mvd.dummy ) {
         Cbuf_AddTextEx( &dummy_buffer, Cmd_RawArgs() );
     } else {
         Com_Printf( "Can't '%s', dummy MVD client is not active\n", Cmd_Argv( 0 ) );

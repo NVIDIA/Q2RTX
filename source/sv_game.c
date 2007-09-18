@@ -82,6 +82,7 @@ static void PF_Unicast( edict_t *ent, qboolean reliable ) {
 	client_t	*client;
 	int flags, clientNum;
     svc_ops_t   op;
+    sizebuf_t *buf;
 
 	if( !ent )
 		return;
@@ -105,14 +106,17 @@ static void PF_Unicast( edict_t *ent, qboolean reliable ) {
 	}
 #endif
 
-	flags = 0;
-    op = mvd_unicast;
 	if( reliable ) {
-		flags |= MSG_RELIABLE;
+		flags = MSG_RELIABLE;
         op = mvd_unicast_r;
-	}
+        buf = &sv.mvd.message;
+	} else {
+        flags = 0;
+        op = mvd_unicast;
+        buf = &sv.mvd.datagram;
+    }
 
-	if( client == svs.mvdummy ) {
+	if( client == svs.mvd.dummy ) {
 		if( msg_write.data[0] == svc_stufftext && reliable ) {
             /* probably some Q2Admin crap,
              * let MVD client process this internally */
@@ -120,14 +124,14 @@ static void PF_Unicast( edict_t *ent, qboolean reliable ) {
 		} else if( sv.mvd.paused < PAUSED_FRAMES ) {
             /* otherwise, MVD client will send
              * this to everyone in freefloat mode */
-            SV_MvdUnicast( clientNum, op );
+            SV_MvdUnicast( buf, clientNum, op );
         }
 	} else {
         SV_ClientAddMessage( client, flags );
         if( sv_mvd_enable->integer && sv.mvd.paused < PAUSED_FRAMES &&
             SV_MvdPlayerIsActive( ent ) )
         {
-            SV_MvdUnicast( clientNum, op );
+            SV_MvdUnicast( buf, clientNum, op );
         }
     }
 
@@ -172,7 +176,7 @@ static void PF_bprintf( int level, const char *fmt, ... ) {
         }
 	}
     if( sv_mvd_enable->integer ) {
-    	SV_MvdMulticast( -1, mvd_multicast_all_r );
+    	SV_MvdMulticast( &sv.mvd.message, -1, mvd_multicast_all_r );
     }
 
 	SZ_Clear( &msg_write );
@@ -240,9 +244,9 @@ static void PF_cprintf( edict_t *ent, int level, const char *fmt, ... ) {
     }
 
     if( sv_mvd_enable->integer &&
-        ( client == svs.mvdummy || SV_MvdPlayerIsActive( ent ) ) )
+        ( client == svs.mvd.dummy || SV_MvdPlayerIsActive( ent ) ) )
     {
-        SV_MvdUnicast( clientNum, mvd_unicast_r );
+        SV_MvdUnicast( &sv.mvd.message, clientNum, mvd_unicast_r );
     }
 
     SZ_Clear( &msg_write );
@@ -603,7 +607,7 @@ static void PF_StartSound( edict_t *edict, int channel,
         List_Append( &client->soundmsg, &msg->entry );
     }
 
-    if( svs.mvdummy && sv.mvd.paused < PAUSED_FRAMES ) {
+    if( svs.mvd.dummy && sv.mvd.paused < PAUSED_FRAMES ) {
         int extrabits = 0;
 
         if( channel & CHAN_NO_PHS_ADD ) {
@@ -613,18 +617,18 @@ static void PF_StartSound( edict_t *edict, int channel,
             extrabits |= 2 << SVCMD_BITS;
         }
 
-        SZ_WriteByte( &sv.mvd.multicast, mvd_sound | extrabits );
-        SZ_WriteByte( &sv.mvd.multicast, flags );
-        SZ_WriteByte( &sv.mvd.multicast, soundindex );
+        SZ_WriteByte( &sv.mvd.datagram, mvd_sound | extrabits );
+        SZ_WriteByte( &sv.mvd.datagram, flags );
+        SZ_WriteByte( &sv.mvd.datagram, soundindex );
 
         if( flags & SND_VOLUME )
-            SZ_WriteByte( &sv.mvd.multicast, volume * 255 );
+            SZ_WriteByte( &sv.mvd.datagram, volume * 255 );
         if( flags & SND_ATTENUATION )
-            SZ_WriteByte( &sv.mvd.multicast, attenuation * 64 );
+            SZ_WriteByte( &sv.mvd.datagram, attenuation * 64 );
         if( flags & SND_OFFSET )
-            SZ_WriteByte( &sv.mvd.multicast, timeofs * 1000 );
+            SZ_WriteByte( &sv.mvd.datagram, timeofs * 1000 );
 
-        SZ_WriteShort( &sv.mvd.multicast, sendchan );
+        SZ_WriteShort( &sv.mvd.datagram, sendchan );
     }
 }
 

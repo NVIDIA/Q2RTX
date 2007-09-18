@@ -72,10 +72,11 @@ void SV_SpawnServer( const char *server, const char *spawnpoint ) {
 	svs.realtime = 0;
 	svs.nextEntityStates = 0;
 
-	memset( svs.players, 0, sizeof( player_state_t ) * sv_maxclients->integer );
-
-    // setup a buffer for accumulating multicast datagrams
-    SZ_Init( &sv.mvd.multicast, sv_multicast_buffer, MAX_MSGLEN );
+    if( sv_mvd_enable->integer ) {
+        // setup buffers for accumulating datagrams
+        SZ_Init( &sv.mvd.message, svs.mvd.message_data, MAX_MSGLEN );
+        SZ_Init( &sv.mvd.datagram, svs.mvd.datagram_data, MAX_MSGLEN );
+    }
 
 	// init rate limits
 	SV_RateInit( &svs.ratelimit_status, sv_status_limit->integer, 1000 );
@@ -137,7 +138,7 @@ void SV_SpawnServer( const char *server, const char *spawnpoint ) {
     // respawn dummy MVD client and set base states
     SV_MvdSpawnDummy();
 
-    LIST_FOR_EACH( tcpClient_t, t, &svs.mvdClients, mvdEntry ) {
+    LIST_FOR_EACH( tcpClient_t, t, &svs.mvd.clients, mvdEntry ) {
 		// needs to reconnect
         if( t->state >= cs_connected ) {
             t->state = cs_connected;
@@ -243,7 +244,14 @@ void SV_InitGame( qboolean ismvd ){
 	svs.clientpool = SV_Mallocz( sizeof( client_t ) * sv_maxclients->integer );
 	svs.entityStates = SV_Mallocz( sizeof( entity_state_t ) * svs.numEntityStates );
 
-    svs.players = SV_Malloc( sizeof( player_state_t ) * sv_maxclients->integer );
+    if( sv_mvd_enable->integer ) {
+        Z_TagReserve( sizeof( player_state_t ) * sv_maxclients->integer +
+            sizeof( entity_state_t ) * MAX_EDICTS + MAX_MSGLEN * 2, TAG_SERVER );
+        svs.mvd.message_data = Z_ReservedAlloc( MAX_MSGLEN );
+        svs.mvd.datagram_data = Z_ReservedAlloc( MAX_MSGLEN );
+        svs.mvd.players = Z_ReservedAlloc( sizeof( player_state_t ) * sv_maxclients->integer );
+        svs.mvd.entities = Z_ReservedAlloc( sizeof( entity_state_t ) * MAX_EDICTS );
+    }
 
 #if USE_ZLIB
 	if( deflateInit2( &svs.z, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
@@ -268,7 +276,7 @@ void SV_InitGame( qboolean ismvd ){
 	}
 
     List_Init( &svs.clients );
-    List_Init( &svs.mvdClients );
+    List_Init( &svs.mvd.clients );
     List_Init( &svs.tcpClients );
 
 	for( i = 0; i < sv_maxclients->integer; i++ ) {

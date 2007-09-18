@@ -530,15 +530,15 @@ static char *screenshot_path( char *buffer, const char *ext ) {
     int i;
 
     if( cmd.Argc() > 1 ) {
-		Com_sprintf( buffer, MAX_QPATH, SCREENSHOTS_DIRECTORY"/%s", cmd.Argv( 1 ) );
-		COM_DefaultExtension( buffer, ext, MAX_QPATH );
+		Com_sprintf( buffer, MAX_OSPATH, SCREENSHOTS_DIRECTORY"/%s", cmd.Argv( 1 ) );
+		COM_AppendExtension( buffer, ext, MAX_OSPATH );
         return buffer;
     }
 // 
 // find a file name to save it to 
 // 
     for( i = 0; i < 1000; i++ ) {
-        Com_sprintf( buffer, MAX_QPATH, SCREENSHOTS_DIRECTORY"/quake%03d%s", i, ext );
+        Com_sprintf( buffer, MAX_OSPATH, SCREENSHOTS_DIRECTORY"/quake%03d%s", i, ext );
         if( fs.LoadFileEx( buffer, NULL, FS_PATH_GAME ) == -1 ) {
             return buffer;	// file doesn't exist
         }
@@ -555,7 +555,7 @@ GL_ScreenShot_f
 ================== 
 */
 static void GL_ScreenShot_f( void )  {
-	char		buffer[MAX_QPATH]; 
+	char		buffer[MAX_OSPATH]; 
 	byte	    *bgr;
     qboolean    ret;
 
@@ -584,7 +584,7 @@ static void GL_ScreenShot_f( void )  {
 
 #if USE_JPEG
 static void GL_ScreenShotJPG_f( void )  {
-	char		buffer[MAX_QPATH]; 
+	char		buffer[MAX_OSPATH]; 
 	byte	    *rgb;
     int         quality;
     qboolean    ret;
@@ -621,7 +621,7 @@ static void GL_ScreenShotJPG_f( void )  {
 
 #if USE_PNG
 static void GL_ScreenShotPNG_f( void )  {
-	char		buffer[MAX_QPATH]; 
+	char		buffer[MAX_OSPATH]; 
 	byte	    *rgb;
     int         compression;
     qboolean    ret;

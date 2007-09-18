@@ -221,12 +221,15 @@ void SV_Multicast( vec3_t origin, multicast_t to ) {
 	int			flags;
 	vec3_t		org;
 	player_state_t	*ps;
+    sizebuf_t   *buf;
 
 	flags = 0;
+    buf = &sv.mvd.datagram;
 
 	switch( to ) {
 	case MULTICAST_ALL_R:
 		flags |= MSG_RELIABLE;	// intentional fallthrough
+        buf = &sv.mvd.message;
 	case MULTICAST_ALL:
 		area1 = 0;
         leafnum = 0;
@@ -235,6 +238,7 @@ void SV_Multicast( vec3_t origin, multicast_t to ) {
 		break;
 	case MULTICAST_PHS_R:
 		flags |= MSG_RELIABLE;	// intentional fallthrough
+        buf = &sv.mvd.message;
 	case MULTICAST_PHS:
 		leaf = CM_PointLeaf( &sv.cm, origin );
         leafnum = leaf - sv.cm.cache->leafs;
@@ -244,6 +248,7 @@ void SV_Multicast( vec3_t origin, multicast_t to ) {
 		break;
 	case MULTICAST_PVS_R:
 		flags |= MSG_RELIABLE;	// intentional fallthrough
+        buf = &sv.mvd.message;
 	case MULTICAST_PVS:
 		leaf = CM_PointLeaf( &sv.cm, origin );
         leafnum = leaf - sv.cm.cache->leafs;
@@ -286,8 +291,9 @@ void SV_Multicast( vec3_t origin, multicast_t to ) {
 
 	}
 
-    if( svs.mvdummy ) {
-	    SV_MvdMulticast( leafnum, mvd_multicast_all + to );
+    // add to MVD datagram
+    if( svs.mvd.dummy && sv.mvd.paused < PAUSED_FRAMES ) {
+	    SV_MvdMulticast( buf, leafnum, mvd_multicast_all + to );
     }
 
 	// clear the buffer 

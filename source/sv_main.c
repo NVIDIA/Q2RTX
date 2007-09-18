@@ -148,7 +148,7 @@ void SV_DropClient( client_t *client, const char *reason ) {
         return; // called recursively?
     }
 
-    if( client == svs.mvdummy ) {
+    if( client == svs.mvd.dummy ) {
         Com_Printf( "Attempted to drop dummy MVD client, ignored.\n" );
         return;
     }
@@ -306,8 +306,8 @@ static void SV_OobPrintf( const char *format, ... ) {
 	byte        send_data[MAX_PACKETLEN_DEFAULT];
 	int			length;
 
-    /* write the packet header */
-	*( uint32 * )send_data = -1;	/* -1 sequence means out of band */
+    // write the packet header
+	*( uint32 * )send_data = -1;	// -1 sequence means out of band
 	strcpy( ( char * )send_data + 4, "print\n" );
 	
 	va_start( argptr, format );
@@ -315,7 +315,7 @@ static void SV_OobPrintf( const char *format, ... ) {
         format, argptr );
 	va_end( argptr );
 
-    /* send the datagram */
+    // send the datagram
 	NET_SendPacket( NS_SERVER, &net_from, length + 10, send_data );
 }
 
@@ -344,7 +344,7 @@ static void SVC_Status( void ) {
 
 	svs.ratelimit_status.count++;
 
-	/* parse additional parameters */
+	// parse additional parameters
     j = Cmd_Argc();
 	for( i = 1; i < j; i++ ) {
 		s = Cmd_Argv( i );
@@ -1269,7 +1269,7 @@ static void SV_RunGameFrame( void ) {
 	sv.framenum++;
 	sv.time += 100;
 
-    if( svs.mvdummy ) {
+    if( svs.mvd.dummy ) {
     	SV_MvdBeginFrame();
     }
 	
@@ -1282,7 +1282,7 @@ static void SV_RunGameFrame( void ) {
 	}
 
 	// save the entire world state if recording a serverdemo
-    if( svs.mvdummy ) {
+    if( svs.mvd.dummy ) {
 	    SV_MvdEndFrame();
     }
 
@@ -1740,7 +1740,7 @@ static void SV_FinalMessage( const char *message, int cmd ) {
 
     // send EOF to MVD clients
     length = 0;
-    LIST_FOR_EACH( tcpClient_t, t, &svs.mvdClients, mvdEntry ) {
+    LIST_FOR_EACH( tcpClient_t, t, &svs.mvd.clients, mvdEntry ) {
         SV_HttpWrite( t, &length, 2 );
         SV_HttpFinish( t );
         NET_Run( &t->stream );
@@ -1759,10 +1759,10 @@ static void SV_FinalMessage( const char *message, int cmd ) {
         SV_HttpRemove( t );
 	}
 
-    if( svs.mvdummy ) {
-		SV_CleanClient( svs.mvdummy );
-		SV_RemoveClient( svs.mvdummy );
-        svs.mvdummy = NULL;
+    if( svs.mvd.dummy ) {
+		SV_CleanClient( svs.mvd.dummy );
+		SV_RemoveClient( svs.mvd.dummy );
+        svs.mvd.dummy = NULL;
     }
 }
 
@@ -1822,7 +1822,7 @@ void SV_Shutdown( const char *finalmsg, killtype_t type ) {
 	// free server static data
 	Z_Free( svs.clientpool );
 	Z_Free( svs.entityStates );
-	Z_Free( svs.players );
+	Z_Free( svs.mvd.message_data );
 #if USE_ZLIB
     deflateEnd( &svs.z );
 #endif
