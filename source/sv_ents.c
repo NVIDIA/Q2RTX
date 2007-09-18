@@ -42,7 +42,7 @@ static void SV_EmitPacketEntities( client_frame_t  *from,
                                    entity_state_t  **baselines )
 {
 	entity_state_t	*oldent, *newent;
-    entity_state_t  *base;
+    const entity_state_t  *base;
 	uint32	oldindex, newindex;
 	int		oldnum, newnum;
 	uint32	from_num_entities;
@@ -101,6 +101,8 @@ static void SV_EmitPacketEntities( client_frame_t  *from,
 			base = baselines[newnum >> SV_BASELINES_SHIFT];
 			if( base ) {
 				base += ( newnum & SV_BASELINES_MASK );
+			} else {
+				base = &nullEntityState;
 			}
             if( newent->number == clientEntityNum ) {
                 flags |= MSG_ES_FIRSTPERSON;

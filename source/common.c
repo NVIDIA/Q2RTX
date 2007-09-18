@@ -20,7 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // common.c -- misc functions used in client and server
 #include "com_local.h"
 #include <setjmp.h>
-#ifdef USE_ZLIB
+#if USE_ZLIB
 #include <zlib.h>
 #endif
 
@@ -1504,7 +1504,7 @@ void Qcommon_Init( char *commandLine ) {
 
 	Com_Printf( "====== " APPLICATION " initialized ======\n\n" );
 	Com_Printf( S_COLOR_CYAN APPLICATION " " VERSION ", " __DATE__ "\n"
-#ifdef USE_ZLIB
+#if USE_ZLIB
                 S_COLOR_RESET   "w/ zlib " ZLIB_VERSION "\n"
 #endif
     );

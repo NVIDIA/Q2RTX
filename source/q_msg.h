@@ -69,6 +69,10 @@ extern byte	        msg_write_buffer[MAX_MSGLEN];
 extern sizebuf_t	msg_read;
 extern byte	        msg_read_buffer[MAX_MSGLEN];
 
+extern const entity_state_t	nullEntityState;
+extern const player_state_t	nullPlayerState;
+extern const usercmd_t		nullUserCmd;
+
 void	MSG_Init( void );
 
 void	MSG_BeginWriting( void );

@@ -101,8 +101,13 @@ void SV_RemoveClient( client_t *client ) {
 	    client->netchan = NULL;
     }
 
-    // unlink them from active clients list
+    // unlink them from active client list
     List_Delete( &client->entry );
+
+	// unlink them from MVD client list
+	if( sv.state == ss_broadcast ) {
+		MVD_RemoveClient( client );
+	}
 
 	Com_DPrintf( "Going from cs_zombie to cs_free for %s\n", client->name );
 

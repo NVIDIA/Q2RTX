@@ -337,7 +337,7 @@ void MVD_SwitchChannel( udpClient_t *client, mvd_t *mvd ) {
         return; // nothing to do
     }
 
-   List_Delete( &client->entry );
+	List_Remove( &client->entry );
     List_Append( &mvd->udpClients, &client->entry );
     client->mvd = mvd;
 
@@ -567,6 +567,16 @@ void MVD_Update( mvd_t *mvd ) {
     }
 }
 
+void MVD_RemoveClient( client_t *client ) {
+	int index = client - svs.clientpool;
+	udpClient_t *cl = &mvd_clients[index];
+
+    List_Remove( &cl->entry );
+
+	memset( cl, 0, sizeof( *cl ) );
+	cl->cl = client;
+}
+
 static void MVD_GameInit( void ) {
     mvd_t *mvd = &mvd_waitingRoom;
     edict_t *edicts;
@@ -709,12 +719,8 @@ static void MVD_GameClientDisconnect( edict_t *ent ) {
     if( client->connected ) {
     	SV_BroadcastPrintf( PRINT_MEDIUM,
             "[MVD] %s left the server\n", cl->name );
+		client->connected = qfalse;
     }
-
-    List_Delete( &client->entry );
-
-	memset( client, 0, sizeof( *client ) );
-	client->cl = cl;
 }
 
 

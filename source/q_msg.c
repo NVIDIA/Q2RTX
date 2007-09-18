@@ -39,9 +39,9 @@ Handles byte ordering and avoids alignment errors
 ==============================================================================
 */
 
-static const entity_state_t	nullEntityState;
-static const player_state_t	nullPlayerState;
-static const usercmd_t		nullUserCmd;
+const entity_state_t	nullEntityState;
+const player_state_t	nullPlayerState;
+const usercmd_t			nullUserCmd;
 
 
 /*
