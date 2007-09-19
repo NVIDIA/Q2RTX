@@ -1074,7 +1074,7 @@ char **Sys_ListFiles( const char *rawPath, const char *extension, uint32 flags, 
 	list = Z_Malloc( sizeof( char * ) * ( count + 1 ) );
 	for( i = 0; i < count; i++ ) {
 		name = listedFiles[i];
-		Q_strlwr( name );
+		//Q_strlwr( name );
 		Com_ReplaceSeparators( name, '/' );
 		list[i] = name;
 	}

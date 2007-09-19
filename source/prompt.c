@@ -89,13 +89,14 @@ static void Prompt_ShowMatches( commandPrompt_t *prompt, char **matches,
                                 int start, int end )
 {
     int count = end - start;
-    int numCols, numLines;
+    int numCols = 7, numLines;
     int i, j, k, max, len, total;
     int colwidths[6];
     char *match;
 
-    for( numCols = 6; numCols > 1; numCols-- ) {
-        numLines = ( count + numCols - 1 ) / numCols;
+	do {
+		numCols--;
+		numLines = ceil( ( float )count / numCols );
         total = 0;
         for( i = 0; i < numCols; i++ ) {
             k = start + numLines * i;
@@ -110,13 +111,14 @@ static void Prompt_ShowMatches( commandPrompt_t *prompt, char **matches,
                     max = len;
                 }
             }
-            colwidths[i] = max;
+			colwidths[i] = max > prompt->widthInChars - 2 ?
+				prompt->widthInChars - 2 : max;
             total += max + 2;
         }
         if( total < prompt->widthInChars ) {
             break;
         }
-    }
+    } while( numCols > 1 );
 
     for( i = 0; i < numLines; i++ ) {
         for( j = 0; j < numCols; j++ ) {

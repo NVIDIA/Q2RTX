@@ -437,11 +437,8 @@ static void CL_PlayDemo_f( void ) {
 		Com_sprintf( name, sizeof( name ), "demos/%s", arg );
 		FS_FOpenFile( name, &demofile, FS_MODE_READ );	
         if( !demofile ) {
-    		ext = COM_FileExtension( arg );
-	    	if( strcmp( ext, ".dm2" ) ) {
-				Com_sprintf( name, sizeof( name ), "demos/%s.dm2", arg );
-				FS_FOpenFile( name, &demofile, FS_MODE_READ );
-            }
+			COM_AppendExtension( name, ".dm2", sizeof( name ) );
+			FS_FOpenFile( name, &demofile, FS_MODE_READ );
         }
     }
 
