@@ -47,7 +47,6 @@ static volatile qboolean	shouldExit;
 
 #ifdef DEDICATED_ONLY
 static SERVICE_STATUS_HANDLE	statusHandle;
-static SERVICE_STATUS			serviceStatus;
 #endif
 
 HINSTANCE	hGlobalInstance;
@@ -1377,7 +1376,7 @@ PRIVATE DWORD Sys_ExceptionHandler( DWORD exceptionCode, LPEXCEPTION_POINTERS ex
 	pSymInitialize( processHandle, execdir, TRUE );
 
 	fprintf( crashReport, "Crash report generated %s %u %u, %02u:%02u:%02u UTC\n",
-		monthNames[systemTime.wMonth % 12], systemTime.wDay, systemTime.wYear,
+		monthNames[(systemTime.wMonth - 1) % 12], systemTime.wDay, systemTime.wYear,
 		systemTime.wHour, systemTime.wMinute, systemTime.wSecond );
 	fprintf( crashReport, "by " APPLICATION " " VERSION ", built " __DATE__", " __TIME__ "\n" );
 
@@ -1572,38 +1571,37 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 #endif
 #endif /* USE_DBGHELP */
 
-	// never gets here
+	// may get here when our service stops
     return 0;
 }
 
 #ifdef DEDICATED_ONLY
 
 static VOID WINAPI ServiceHandler( DWORD fdwControl ) {
-	if( fdwControl != SERVICE_CONTROL_STOP ) {
-		return;
+	if( fdwControl == SERVICE_CONTROL_STOP ) {
+		shouldExit = qtrue;
 	}
-
-	Com_Quit();
-
-	serviceStatus.dwCurrentState = SERVICE_STOPPED;
-	serviceStatus.dwControlsAccepted = 0;
-	SetServiceStatus( statusHandle, &serviceStatus );
 }
 
-
 static VOID WINAPI ServiceMain( DWORD argc, LPTSTR *argv ) {
+	SERVICE_STATUS	status;
+
 	statusHandle = RegisterServiceCtrlHandler( APPLICATION, ServiceHandler );
 	if( !statusHandle ) {
 		return;
 	}
 
-	memset( &serviceStatus, 0, sizeof( serviceStatus ) );
-	serviceStatus.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
-	serviceStatus.dwCurrentState = SERVICE_RUNNING;
-	serviceStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP;
-	SetServiceStatus( statusHandle, &serviceStatus );
+	memset( &status, 0, sizeof( status ) );
+	status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
+	status.dwCurrentState = SERVICE_RUNNING;
+	status.dwControlsAccepted = SERVICE_ACCEPT_STOP;
+	SetServiceStatus( statusHandle, &status );
 
 	WinMain( GetModuleHandle( NULL ), NULL, GetCommandLineA(), 0 );
+
+	status.dwCurrentState = SERVICE_STOPPED;
+	status.dwControlsAccepted = 0;
+	SetServiceStatus( statusHandle, &status );
 }
 
 static SERVICE_TABLE_ENTRY serviceTable[] = {
