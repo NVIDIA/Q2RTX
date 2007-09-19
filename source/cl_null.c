@@ -79,6 +79,10 @@ void SCR_BeginLoadingPlaque( void ) {
 void SCR_EndLoadingPlaque( void ) {
 }
 
+void CL_RestartFilesystem( void ) {
+	FS_Restart();
+}
+
 void CL_LocalConnect( void ) {
 	if( FS_NeedRestart() ) {
 		FS_Restart();

@@ -224,7 +224,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 
 		if( !( flags & CVAR_USER_CREATED ) ) {
 			if( var->flags & CVAR_USER_CREATED ) {
-				/* update default string if cvar was set from command line */
+				// update default string if cvar was set from command line
 				Z_Free( var->defaultString );
 				var->defaultString = Cvar_CopyString( var_value );
 				var->flags &= ~CVAR_USER_CREATED;
@@ -237,6 +237,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 					var->flags |= CVAR_DEFAULTS_MIXED;
 				}
 			}
+#if 0
             if( ( var->flags & CVAR_LATCHED ) && !( flags & CVAR_LATCHED ) ) {
                 if( var->latched_string ) {
                     Z_Free( var->latched_string );
@@ -244,6 +245,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
                 }
                 var->flags &= ~CVAR_LATCHED;
             }
+#endif
 		} else {
 			flags &= ~CVAR_USER_CREATED;
 		}
@@ -252,7 +254,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 		return var;
 	}
 
-	/* once allocated, cvar name is never changed */
+	// once allocated, cvar name is never changed
 	length = strlen( var_name ) + 1;
 	var = Cvar_Malloc( sizeof( *var ) + length );
 	var->name = ( char * )( var + 1 );

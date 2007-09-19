@@ -2171,22 +2171,6 @@ void CL_LocalConnect( void ) {
     }
 }
 
-/*
-============
-CL_RestartFilesystem_f
- 
-Console command to re-start the file system.
-============
-*/
-static void CL_RestartFilesystem_f( void ) {
-    if( !FS_SafeToRestart() ) {
-        Com_Printf( "Can't \"%s\", there are some open file handles.\n", Cmd_Argv( 0 ) );
-        return;
-    }
-    
-    CL_RestartFilesystem();
-}
-
 static void cl_gun_changed( cvar_t *self ) {
     CL_UpdateGunSetting();
 }
@@ -2251,7 +2235,6 @@ static const cmdreg_t c_client[] = {
 	{ "dumpstatusbar", CL_DumpStatusbar_f },
 	{ "dumplayout", CL_DumpLayout_f },
     { "vid_restart", CL_RestartRefresh_f },
-    { "fs_restart", CL_RestartFilesystem_f },
 
     //
     // forward to server commands

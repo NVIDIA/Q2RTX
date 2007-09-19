@@ -2466,7 +2466,7 @@ qboolean FS_SafeToRestart( void ) {
 	fsFile_t	*file;
 	int			i;
     
-	/* make sure no files are opened for reading */
+	// make sure no files are opened for reading
 	for( i = 0, file = fs_files; i < MAX_FILE_HANDLES; i++, file++ ) {
 		if( file->type == FS_FREE ) {
 			continue;
@@ -2531,6 +2531,22 @@ void FS_Restart( void ) {
 }
 
 /*
+============
+FS_Restart_f
+ 
+Console command to re-start the file system.
+============
+*/
+static void FS_Restart_f( void ) {
+    if( !FS_SafeToRestart() ) {
+        Com_Printf( "Can't \"%s\", there are some open file handles.\n", Cmd_Argv( 0 ) );
+        return;
+    }
+    
+    CL_RestartFilesystem();
+}
+
+/*
 ================
 FS_FillAPI
 ================
@@ -2559,6 +2575,7 @@ static const cmdreg_t c_fs[] = {
     { "whereis", FS_WhereIs_f },
     { "link", FS_Link_f, FS_Link_g },
     { "unlink", FS_UnLink_f, FS_Link_g },
+	{ "fs_restart", FS_Restart_f },
 
     { NULL }
 };

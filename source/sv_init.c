@@ -24,9 +24,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 server_static_t	svs;				// persistant server info
 server_t		sv;					// local server
 
-byte            sv_multicast_buffer[MAX_MSGLEN];
-
-
 void SV_ClientReset( client_t *client ) {
     if( client->state < cs_connected ) {
         return;

@@ -415,7 +415,7 @@ CL_PlayDemo_f
 static void CL_PlayDemo_f( void ) {
 	char name[MAX_OSPATH];
 	fileHandle_t demofile;
-	char *arg, *ext;
+	char *arg;
 	int length;
 
 	if( Cmd_Argc() < 2 ) {
@@ -427,7 +427,6 @@ static void CL_PlayDemo_f( void ) {
 	length = 0;
 
 	arg = Cmd_Argv( 1 );
-
 	if( arg[0] == '/' ) {
 		// Assume full path is given
 		Q_strncpyz( name, arg + 1, sizeof( name ) );
