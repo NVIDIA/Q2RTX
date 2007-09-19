@@ -260,6 +260,9 @@ typedef struct uiStatic_s {
 	qhandle_t	fontHandle;
 	qhandle_t	cursorHandle;
 	int			cursorWidth, cursorHeight;
+
+	char		m_demos_browse[MAX_OSPATH];
+	int			m_demos_selection;
 } uiStatic_t;
 
 extern uiStatic_t	uis;

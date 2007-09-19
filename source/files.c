@@ -654,7 +654,7 @@ static int FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean unique )
 				if( !strcmp( ext, ".gz" ) ) {
 					zfp = gzdopen( fileno( fp ), "rb" );
 					if( !zfp ) {
-						Com_WPrintf( "%s: %s: gzopen(rb) failed\n",
+						FS_DPrintf( "%s: %s: gzopen(rb) failed\n",
                             __func__, file->fullpath );
 						fclose( fp );
 						return -1;
@@ -1746,18 +1746,15 @@ char **FS_ListFiles( const char *path, const char *extension,
 	if( !strcmp( path, "$modlist" ) ) {
 		FS_GetModList( listedFiles, &count );
 	} else {
-		switch( flags & FS_PATH_MASK ) {
-		case FS_PATH_BASE:
-			search = fs_base_searchpaths;
-			break;
-		default:
-			search = fs_searchpaths;
-			break;
-		}
-
 		memset( &info, 0, sizeof( info ) );
 
-		for( ; search; search = search->next ) {
+		for( search = FS_SearchPath( flags ); search; search = search->next ) {
+			if( ( flags & FS_PATH_MASK ) == FS_PATH_GAME ) {
+				if( fs_searchpaths != fs_base_searchpaths && search == fs_base_searchpaths ) {
+					// consider baseq2 a gamedir if no gamedir loaded
+					break;
+				}
+			}
 			if( search->pack ) {
 				if( ( flags & FS_TYPE_MASK ) == FS_TYPE_REAL ) {
 					// don't search in paks
@@ -1768,12 +1765,7 @@ char **FS_ListFiles( const char *path, const char *extension,
 				if( ( flags & FS_SEARCHDIRS_MASK ) == FS_SEARCHDIRS_ONLY ) {
 					continue;
 				}
-				if( ( flags & FS_PATH_MASK ) == FS_PATH_GAME ) {
-					if( fs_searchpaths != fs_base_searchpaths && search == fs_base_searchpaths ) {
-						// consider baseq2 a gamedir if no gamedir loaded
-						break;
-					}
-				}
+
 				if( flags & FS_SEARCH_BYFILTER ) {
 				    for( i = 0; i < search->pack->numfiles; i++ ) {
 					    name = search->pack->files[i].name;

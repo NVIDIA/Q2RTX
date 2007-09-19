@@ -734,6 +734,9 @@ qboolean UI_Init( void ) {
 		ui_background->changed = ui_background_changed;
 	}
 
+	// Point to a nice location at startup
+	strcpy( uis.m_demos_browse, "/demos" );
+
 	return qtrue;
 }
 

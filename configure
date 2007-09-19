@@ -49,7 +49,7 @@ logfile="console.log"
 cfgfile="config.cfg"
 defcfg="default.cfg"
 autocfg="autoexec.cfg"
-revision="160"
+revision="161"
 tmpc="/tmp/q2pro-${RANDOM}.c"
 tmpo="/tmp/q2pro-${RANDOM}.o"
 

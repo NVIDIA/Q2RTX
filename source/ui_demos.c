@@ -54,8 +54,6 @@ typedef struct m_demos_s {
 } m_demos_t;
 
 static m_demos_t	m_demos;
-static char			m_demos_browse[MAX_OSPATH];
-static int			m_demos_selection;
 
 static void Demos_FreeInfo( void ) {
 	memset( &m_demos.demo, 0, sizeof( m_demos.demo ) );
@@ -74,7 +72,7 @@ static void Demos_LoadInfo( int index ) {
 	}
 
 	Com_sprintf( buffer, sizeof( buffer ), "%s/%s",
-        m_demos_browse + 1, m_demos.names[index] );
+        uis.m_demos_browse + 1, m_demos.names[index] );
 
 	client.GetDemoInfo( buffer, &m_demos.demo );
 
@@ -232,7 +230,7 @@ static void Demos_LeaveDirectory( void ) {
 	char *s;
 	int i;
 
-	s = strrchr( m_demos_browse, '/' );
+	s = strrchr( uis.m_demos_browse, '/' );
 	if( s ) {
 		*s = 0;
 		strcpy( buffer, s + 1 );
@@ -242,12 +240,12 @@ static void Demos_LeaveDirectory( void ) {
 
 	// rebuild list
 	Demos_Free();
-	Demos_BuildList( m_demos_browse );
+	Demos_BuildList( uis.m_demos_browse );
 	MenuList_Init( &m_demos.list );
 
-	if( s == m_demos_browse ) {
-		m_demos_browse[0] = '/';
-		m_demos_browse[1] = 0;
+	if( s == uis.m_demos_browse ) {
+		uis.m_demos_browse[0] = '/';
+		uis.m_demos_browse[1] = 0;
 	}
 
 	// move cursor to the previous directory
@@ -261,7 +259,6 @@ static void Demos_LeaveDirectory( void ) {
 	}
 
 	MenuList_SetValue( &m_demos.list, 0 );
-
 }
 
 static int Demos_Action( void ) {
@@ -274,21 +271,21 @@ static int Demos_Action( void ) {
 		return QMS_OUT;
 
 	case FFILE_FOLDER:
-		baseLength = strlen( m_demos_browse );
+		baseLength = strlen( uis.m_demos_browse );
 		length = strlen( m_demos.names[m_demos.list.curvalue] );
-		if( baseLength + length > sizeof( m_demos_browse ) - 2 ) {
+		if( baseLength + length > sizeof( uis.m_demos_browse ) - 2 ) {
 			return QMS_BEEP;
 		}
-		if( m_demos_browse[ baseLength - 1 ] != '/' ) {
-			m_demos_browse[ baseLength++ ] = '/';
+		if( uis.m_demos_browse[ baseLength - 1 ] != '/' ) {
+			uis.m_demos_browse[ baseLength++ ] = '/';
 		}
 
-		strcpy( m_demos_browse + baseLength,
+		strcpy( uis.m_demos_browse + baseLength,
             m_demos.names[m_demos.list.curvalue] );
 		
 		// rebuild list
 		Demos_Free();
-		Demos_BuildList( m_demos_browse );
+		Demos_BuildList( uis.m_demos_browse );
 		MenuList_Init( &m_demos.list );
 		return QMS_IN;
 
@@ -298,7 +295,7 @@ static int Demos_Action( void ) {
         }
 		Com_sprintf( buffer, sizeof( buffer ), "%s \"%s/%s\"\n",
             m_demos.demo.mvd ? "mvdplay" : "demo",
-			m_demos_browse, m_demos.names[m_demos.list.curvalue] );
+			uis.m_demos_browse, m_demos.names[m_demos.list.curvalue] );
 		cmd.ExecuteText( EXEC_APPEND, buffer );
 		//UI_ForceMenuOff();
 		return QMS_SILENT;
@@ -342,7 +339,7 @@ static int Demos_MenuCallback( int id, int msg, int param ) {
 		break;
 
 	case QM_DESTROY:
-		m_demos_selection = m_demos.list.curvalue; // save previous position
+		uis.m_demos_selection = m_demos.list.curvalue; // save previous position
 		Demos_Free();
 		break;
 
@@ -360,12 +357,7 @@ static void Demos_MenuInit( void ) {
 
 	m_demos.menu.callback = Demos_MenuCallback;
 
-	// Point to a nice location at startup
-	if( !m_demos_browse[0] ) {
-		strcpy( m_demos_browse, "/demos" );
-	}
-
-	Demos_BuildList( m_demos_browse );
+	Demos_BuildList( uis.m_demos_browse );
 
 	w1 = ( uis.glconfig.vidWidth - 30 ) * 0.8f;
 	w2 = ( uis.glconfig.vidWidth - 30 ) * 0.2f;
@@ -383,7 +375,7 @@ static void Demos_MenuInit( void ) {
 	m_demos.list.numcolumns     = 4;
 
 	m_demos.list.columns[0].width = w1 - 180;
-	m_demos.list.columns[0].name = m_demos_browse;
+	m_demos.list.columns[0].name = uis.m_demos_browse;
 	m_demos.list.columns[0].uiFlags = UI_LEFT;
 
 	m_demos.list.columns[1].width = 40;
@@ -419,7 +411,7 @@ static void Demos_MenuInit( void ) {
 	Menu_AddItem( &m_demos.menu, (void *)&m_demos.banner );
 
 	// move cursor to previous position
-	MenuList_SetValue( &m_demos.list, m_demos_selection );
+	MenuList_SetValue( &m_demos.list, uis.m_demos_selection );
 }
 
 void M_Menu_Demos_f( void ) {
