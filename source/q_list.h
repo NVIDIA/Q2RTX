@@ -84,6 +84,16 @@ static inline void List_Remove( list_t *elem ) {
 #define LIST_PREV( type, entry, member ) \
     LIST_ENTRY( type, (entry)->member.prev, member )
 
+#define LIST_NEXT_CYCLE( type, entry, list, member ) \
+  ( (entry)->member.next == list ? \
+    LIST_FIRST( type, list, member ) : \
+    LIST_NEXT( type, entry, member ) )
+
+#define LIST_PREV_CYCLE( type, entry, list, member ) \
+  ( (entry)->member.prev == list ? \
+    LIST_LAST( type, list, member ) : \
+    LIST_PREV( type, entry, member ) )
+
 #define LIST_FOR_EACH( type, cursor, list, member ) \
 	for( cursor = LIST_FIRST( type, list, member ); \
         &(cursor)->member != list; \

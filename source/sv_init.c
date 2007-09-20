@@ -224,11 +224,16 @@ void SV_InitGame( qboolean ismvd ){
 
     Cvar_ClampInteger( sv_reserved_slots, 0, sv_maxclients->integer - 1 );
 
+    // enable networking
 	if( sv_maxclients->integer > 1 ) {
 		NET_Config( NET_SERVER );
 
         if( sv_http_enable->integer ) {
-            if( NET_Listen( qtrue ) == NET_ERROR ) {
+            if( NET_Listen( qtrue ) == NET_OK ) {
+                Cvar_ClampInteger( sv_http_minclients, 0,
+                    sv_http_maxclients->integer );
+//                svs.httppool = 
+            } else {
                 Com_EPrintf( "%s while opening server TCP port.\n",
                     NET_ErrorString() );
                 Cvar_Set( "sv_http_enable", "0" );

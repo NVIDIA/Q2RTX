@@ -30,9 +30,18 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define PROTOCOL_VERSION_Q2PRO		36
 #define PROTOCOL_VERSION_MVD		37 // not used for UDP connections
 
-#define PROTOCOL_VERSION_R1Q2_MINOR		1903	// r1q2-b6377
-#define PROTOCOL_VERSION_Q2PRO_MINOR	1011	// q2pro r161
-#define PROTOCOL_VERSION_MVD_MINOR		2008	// q2pro r160
+#define PROTOCOL_VERSION_R1Q2_MINIMUM		1903	// b6377
+#define PROTOCOL_VERSION_R1Q2_UCMD		    1904	// b7387
+#define PROTOCOL_VERSION_R1Q2_CURRENT		1904	// b7387
+#define PROTOCOL_VERSION_Q2PRO_MINIMUM	1011	// r161
+#define PROTOCOL_VERSION_Q2PRO_CURRENT	1011	// r161
+#define PROTOCOL_VERSION_MVD_MINOR		2008	// r160
+
+#define R1Q2_SUPPORTED( x )     ( (x) >= PROTOCOL_VERSION_R1Q2_MINIMUM && \
+                                  (x) <= PROTOCOL_VERSION_R1Q2_CURRENT )
+
+#define Q2PRO_SUPPORTED( x )    ( (x) >= PROTOCOL_VERSION_Q2PRO_MINIMUM && \
+                                  (x) <= PROTOCOL_VERSION_Q2PRO_CURRENT )
 
 //=========================================
 
@@ -237,8 +246,13 @@ typedef enum clc_ops_e {
 #define	CM_BUTTONS	(1<<6)
 #define	CM_IMPULSE	(1<<7)
 
-/* q2pro protocol specific extra flag */
-#define ECM_LIGHTLEVEL	(1<<0)
+// r1q2 button byte hacks
+#define BUTTON_MASK (BUTTON_ATTACK|BUTTON_USE|BUTTON_ANY)
+#define BUTTON_FORWARD  4
+#define BUTTON_SIDE     8
+#define BUTTON_UP       16
+#define BUTTON_ANGLE1   32
+#define BUTTON_ANGLE2   64
 
 //==============================================
 

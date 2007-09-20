@@ -181,7 +181,8 @@ typedef struct client_s {
 	uint32			lastmessage; // svs.realtime when packet was last received
 
 	int				challenge; // challenge of this user, randomly generated
-	int				protocol;
+	int				protocol; // major version
+    int             version; // minor version
     qboolean        zlib;
 
     // spectator speed, etc

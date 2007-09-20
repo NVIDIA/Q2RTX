@@ -391,19 +391,22 @@ static void CL_CheckForResend( void ) {
 
     cls.userinfo_modified = 0;
 
-    tail[0] = 0;
-    cls.quakePort = net_qport->integer;
-	if( cls.serverProtocol != PROTOCOL_VERSION_DEFAULT ) {
-        Com_sprintf( tail, sizeof( tail ), " %d", net_maxmsglen->integer );
-        if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO ) {
-            strcat( tail, net_chantype->integer ? " 1" : " 0" );
-#ifdef USE_ZLIB
-            strcat( tail, " 1" );
-#else
-            strcat( tail, " 0" );
-#endif
-        }
-        cls.quakePort &= 0xFF;
+	switch( cls.serverProtocol ) {
+    case PROTOCOL_VERSION_R1Q2:
+        Com_sprintf( tail, sizeof( tail ), " %d %d",
+            net_maxmsglen->integer, PROTOCOL_VERSION_R1Q2_CURRENT );
+        cls.quakePort = net_qport->integer & 0xff;
+        break;
+    case PROTOCOL_VERSION_Q2PRO:
+        Com_sprintf( tail, sizeof( tail ), " %d %d %d %d",
+            net_maxmsglen->integer, net_chantype->integer, USE_ZLIB,
+            PROTOCOL_VERSION_Q2PRO_CURRENT );
+        cls.quakePort = net_qport->integer & 0xff;
+        break;
+    default:
+        tail[0] = 0;
+        cls.quakePort = net_qport->integer;
+        break;
 	}
     ret = Netchan_OutOfBandPrint( NS_CLIENT, &cls.serverAddress,
         "connect %i %i %i \"%s\"%s\n", cls.serverProtocol, cls.quakePort,
@@ -466,7 +469,8 @@ usage:
     CL_Disconnect( ERR_DISCONNECT, NULL );
 
     cls.serverAddress = address;
-    cls.serverProtocol = protocol;
+    cls.serverProtocol = protocol ? protocol : PROTOCOL_VERSION_Q2PRO;
+    cls.protocolVersion = 0;
     Q_strncpyz( cls.servername, server, sizeof( cls.servername ) );
     cls.passive = qfalse;
 
@@ -853,7 +857,7 @@ static void CL_ParsePrintMessage( void ) {
     if ( ( cls.state == ca_challenging || cls.state == ca_connecting ) &&
             NET_IsEqualBaseAdr( &net_from, &cls.serverAddress ) )
 	{
-		/* server rejected our connect request */
+		// server rejected our connect request
 		if( NET_IsLocalAddress( &cls.serverAddress ) ) {
 			Com_Error( ERR_DROP, "Server rejected loopback connection" );
 		}
@@ -1183,7 +1187,7 @@ static void CL_ConnectionlessPacket( void ) {
 
     // challenge from the server we are connecting to
     if ( !strcmp( c, "challenge" ) ) {
-		int minor35 = 0, minor36 = 0;
+		int mask = 0;
 
         if ( cls.state < ca_challenging ) {
             Com_DPrintf( "Challenge received while not connecting.  Ignored.\n" );
@@ -1212,11 +1216,9 @@ static void CL_ConnectionlessPacket( void ) {
 				while( *s ) {
 					k = strtoul( s, &s, 10 );
 					if( k == PROTOCOL_VERSION_R1Q2 ) {
-						minor35 = PROTOCOL_VERSION_R1Q2_MINOR;
+						mask |= 1;
 					} else if( k == PROTOCOL_VERSION_Q2PRO ) {
-                        if( *s == ':' ) {
-						    minor36 = strtoul( s + 1, &s, 10 );
-                        }
+                        mask |= 2;
 					}
 					s = strchr( s, ',' );
 					if( s == NULL ) {
@@ -1228,18 +1230,20 @@ static void CL_ConnectionlessPacket( void ) {
         }
 
 		// choose supported protocol
-		if( cls.serverProtocol == 0 ||
-			( cls.serverProtocol == PROTOCOL_VERSION_R1Q2 && minor35 != PROTOCOL_VERSION_R1Q2_MINOR ) ||
-			( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO && minor36 != PROTOCOL_VERSION_Q2PRO_MINOR ) )
-		{
-			if( minor36 == PROTOCOL_VERSION_Q2PRO_MINOR ) {
-				cls.serverProtocol = PROTOCOL_VERSION_Q2PRO;
-			} else if( minor35 == PROTOCOL_VERSION_R1Q2_MINOR ) {
-				cls.serverProtocol = PROTOCOL_VERSION_R1Q2;
-			} else {
-				cls.serverProtocol = PROTOCOL_VERSION_DEFAULT;
-			}
-		}
+		switch( cls.serverProtocol ) {
+        case PROTOCOL_VERSION_Q2PRO:
+            if( mask & 2 ) {
+                break;
+            }
+            cls.serverProtocol = PROTOCOL_VERSION_R1Q2;
+        case PROTOCOL_VERSION_R1Q2:
+            if( mask & 1 ) {
+                break;
+            }
+        default:
+            cls.serverProtocol = PROTOCOL_VERSION_DEFAULT;
+            break;
+        }
 		Com_DPrintf( "Selected protocol %d\n", cls.serverProtocol );
 
 		cls.messageString[0] = 0;

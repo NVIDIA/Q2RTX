@@ -302,7 +302,8 @@ static void SV_DumpUdpClients( void ) {
 		Com_Printf( "%-21s ", NET_AdrToString(
             &client->netchan->remote_address ) );
     	Com_Printf( "%5i ", client->rate );
-    	Com_Printf( "%2i/%d ", client->protocol, client->netchan->type );
+    	Com_Printf( "%2i/%d/%d ", client->protocol,
+            client->version, client->netchan->type );
 		Com_Printf( "\n" );
 	}
 

@@ -482,8 +482,7 @@ static void SVC_GetChallenge( void ) {
 
 	// send it back
 	Netchan_OutOfBandPrint( NS_SERVER, &net_from,
-        "challenge %d p=34,35,36:%d", challenge,
-        PROTOCOL_VERSION_Q2PRO_MINOR );
+        "challenge %d p=34,35,36", challenge );
 }
 
 /*
@@ -497,7 +496,7 @@ static void SVC_DirectConnect( void ) {
 	char		userinfo[MAX_INFO_STRING];
 	int			i, number, count, length;
 	client_t	*cl, *newcl, *lastcl;
-	int			protocol;
+	int			protocol, version;
 	int			qport;
 	int			challenge;
 	qboolean	allow;
@@ -598,8 +597,20 @@ static void SVC_DirectConnect( void ) {
         maxlength = net_maxmsglen->integer;
     }
 
-    // set netchan type
-    if( protocol == PROTOCOL_VERSION_Q2PRO ) {
+    if( protocol == PROTOCOL_VERSION_R1Q2 ) {
+        // set minor protocol version
+        s = Cmd_Argv( 6 );
+        if( *s ) {
+            version = atoi( s );
+            clamp( version, PROTOCOL_VERSION_R1Q2_MINIMUM,
+                PROTOCOL_VERSION_R1Q2_CURRENT );
+        } else {
+            version = PROTOCOL_VERSION_R1Q2_MINIMUM;
+        }
+        nctype = NETCHAN_OLD;
+        ncstring = "";
+    } else if( protocol == PROTOCOL_VERSION_Q2PRO ) {
+        // set netchan type
         s = Cmd_Argv( 6 );
         if( *s ) {
             nctype = atoi( s );
@@ -622,9 +633,20 @@ static void SVC_DirectConnect( void ) {
         if( *s && !atoi( s ) ) {
             zlib = qfalse;
         }
+
+        // set minor protocol version
+        s = Cmd_Argv( 8 );
+        if( *s ) {
+            version = atoi( s );
+            clamp( version, PROTOCOL_VERSION_Q2PRO_MINIMUM,
+                PROTOCOL_VERSION_Q2PRO_CURRENT );
+        } else {
+            version = PROTOCOL_VERSION_Q2PRO_MINIMUM;
+        }
     } else {
         nctype = NETCHAN_OLD;
         ncstring = "";
+        version = 0;
     }
 
     // validate userinfo
@@ -755,6 +777,7 @@ static void SVC_DirectConnect( void ) {
     newcl->number = number;
 	newcl->challenge = challenge; // save challenge for checksumming
 	newcl->protocol = protocol;
+    newcl->version = version;
     newcl->zlib = zlib;
 	newcl->edict = EDICT_NUM( number + 1 );
     newcl->gamedir = fs_game->string;
@@ -1094,7 +1117,11 @@ void SV_PacketEvent( neterr_t ret ) {
 			if( netchan->qport != qport ) {
 				continue;
 			}
-		}
+		} else {
+		    if( netchan->remote_address.port != net_from.port ) {
+                continue;
+            }
+        }
 
 		if( netchan->remote_address.port != net_from.port ) {
 			Com_DPrintf( "Fixing up a translated port for %s: %d --> %d\n",

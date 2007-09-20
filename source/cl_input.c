@@ -887,17 +887,17 @@ static void CL_SendDefaultCmd( void ) {
 	// send this and the previous cmds in the message, so
 	// if the last packet was dropped, it can be recovered
 	cmd = &cl.cmds[( cl.cmdNumber - 2 ) & CMD_MASK];
-	MSG_WriteDeltaUsercmd( NULL, cmd );
+	MSG_WriteDeltaUsercmd( NULL, cmd, cls.protocolVersion );
 	MSG_WriteByte( cl.lightlevel );
 	oldcmd = cmd;
 
 	cmd = &cl.cmds[( cl.cmdNumber - 1 ) & CMD_MASK];
-	MSG_WriteDeltaUsercmd( oldcmd, cmd );
+	MSG_WriteDeltaUsercmd( oldcmd, cmd, cls.protocolVersion );
 	MSG_WriteByte( cl.lightlevel );
 	oldcmd = cmd;
 
 	cmd = &cl.cmds[cl.cmdNumber & CMD_MASK];
-	MSG_WriteDeltaUsercmd( oldcmd, cmd );
+	MSG_WriteDeltaUsercmd( oldcmd, cmd, cls.protocolVersion );
 	MSG_WriteByte( cl.lightlevel );
 
 	if( cls.serverProtocol <= PROTOCOL_VERSION_DEFAULT ) {

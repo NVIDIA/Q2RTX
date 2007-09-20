@@ -851,24 +851,11 @@ static void CL_ParseServerData( void ) {
 			Com_Error( ERR_DROP, "'Enhanced' R1Q2 servers are not supported" );
 		}
 		i = MSG_ReadShort();
-		if( i != PROTOCOL_VERSION_R1Q2_MINOR ) {
-			if( cls.demoplayback ) {
-				Com_WPrintf( "Demo uses different minor R1Q2 protocol version (%i instead of %i).\n"
-					"It may not play back properly.\n", i, PROTOCOL_VERSION_R1Q2_MINOR );
-			} else {
-				if( i < PROTOCOL_VERSION_R1Q2_MINOR ) {
-					Com_Error( ERR_DROP, "Server uses OLDER minor R1Q2 protocol version (%i < %i).\n"
-						"Try reconnecting using original Quake2 protocol.",
-							i, PROTOCOL_VERSION_R1Q2_MINOR );
-				} else {
-					Com_Error( ERR_DROP, "Server uses NEWER minor R1Q2 protocol version (%i > %i).\n"
-						"Consider updating your client or try reconnecting using original Quake2 protocol.",
-							i, PROTOCOL_VERSION_R1Q2_MINOR );
-				}
-			}
+		if( !R1Q2_SUPPORTED( i ) ) {
+			Com_Error( ERR_DROP, "Unsupported R1Q2 protocol version %d.\n", i );
 		}
 		i = MSG_ReadByte();
-		if( i ) { /* seems to be no longer used */
+		if( i ) { // seems to be no longer used
 			Com_DPrintf( "R1Q2 advancedDeltas enabled\n" );
 		}
 		cl.pmp.strafeHack = MSG_ReadByte();
@@ -878,21 +865,8 @@ static void CL_ParseServerData( void ) {
 		cl.pmp.speedMultiplier = 2;
 	} else if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO ) {
 		i = MSG_ReadShort();
-		if( i != PROTOCOL_VERSION_Q2PRO_MINOR ) {
-			if( cls.demoplayback ) {
-				Com_WPrintf( "Demo uses different minor Q2PRO protocol version (%i instead of %i).\n"
-					"It may not play back properly.\n", i, PROTOCOL_VERSION_Q2PRO_MINOR );
-			} else {
-				if( i < PROTOCOL_VERSION_Q2PRO_MINOR ) {
-					Com_Error( ERR_DROP, "Server uses OLDER minor Q2PRO protocol version (%i < %i).\n"
-						"Try reconnecting using original Quake2 protocol or R1Q2 protocol.",
-							i, PROTOCOL_VERSION_Q2PRO_MINOR );
-				} else {
-					Com_Error( ERR_DROP, "Server uses NEWER minor Q2PRO protocol version (%i > %i).\n"
-						"Consider updating your client or try reconnecting using original Quake2 protocol or R1Q2 protocol.",
-							i, PROTOCOL_VERSION_Q2PRO_MINOR );
-				}
-			}
+		if( !Q2PRO_SUPPORTED( i ) ) {
+			Com_Error( ERR_DROP, "Unsupported Q2PRO protocol version %d.\n", i );
 		}
 		cl.gametype = MSG_ReadByte();
 		cl.pmp.strafeHack = MSG_ReadByte();
@@ -1323,6 +1297,7 @@ static void CL_ParseStuffText( void ) {
 	if( cls.demoplayback &&
             strcmp( string, "precache\n" ) &&
             strcmp( string, "changing\n" ) &&
+            strncmp( string, "play ", 5 ) &&
             strcmp( string, "reconnect\n" ) )
     {
 		Com_DPrintf( "ignored stufftext: %s\n", string );

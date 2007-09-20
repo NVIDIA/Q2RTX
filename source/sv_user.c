@@ -373,18 +373,15 @@ static void SV_New_f( void ) {
 	switch( sv_client->protocol ) {
 	case PROTOCOL_VERSION_R1Q2:
 		MSG_WriteByte( 0 ); // not enhanced
-		MSG_WriteShort( PROTOCOL_VERSION_R1Q2_MINOR );
+		MSG_WriteShort( sv_client->version );
 		MSG_WriteByte( 0 ); // no advanced deltas
 		MSG_WriteByte( sv_strafejump_hack->integer ? 1 : 0 );
 		break;
 	case PROTOCOL_VERSION_Q2PRO:
-		MSG_WriteShort( PROTOCOL_VERSION_Q2PRO_MINOR );
+		MSG_WriteShort( sv_client->version );
 		MSG_WriteByte( svs.gametype );
 		MSG_WriteByte( sv_strafejump_hack->integer ? 1 : 0 );
 		MSG_WriteByte( sv_qwmod->integer );
-		break;
-	case PROTOCOL_VERSION_MVD:
-		MSG_WriteShort( PROTOCOL_VERSION_MVD_MINOR );
 		break;
 	default:
 		break;
@@ -835,14 +832,10 @@ static void SV_OldClientExecuteMove( void ) {
 	int		lastframe;
 
 	if( sv_client->protocol == PROTOCOL_VERSION_DEFAULT ) {
-		MSG_ReadByte();	/* skip over checksum */
+		MSG_ReadByte();	// skip over checksum
 	}
 	
     lastframe = MSG_ReadLong();
-	if( sv_client->protocol == PROTOCOL_VERSION_MVD ) {
-		sv_client->lastframe = lastframe;
-        return;
-    }
 	if( lastframe != sv_client->lastframe ) {
 		sv_client->lastframe = lastframe;
 		if( lastframe > 0 ) {
@@ -851,10 +844,17 @@ static void SV_OldClientExecuteMove( void ) {
 		}
 	}
 
-	
-	MSG_ReadDeltaUsercmd( NULL, &oldest );
-	MSG_ReadDeltaUsercmd( &oldest, &oldcmd );
-	MSG_ReadDeltaUsercmd( &oldcmd, &newcmd );
+	if( sv_client->protocol == PROTOCOL_VERSION_R1Q2 &&
+        sv_client->version >= PROTOCOL_VERSION_R1Q2_UCMD ) 
+    {
+        MSG_ReadDeltaUsercmd_Hacked( NULL, &oldest );
+        MSG_ReadDeltaUsercmd_Hacked( &oldest, &oldcmd );
+        MSG_ReadDeltaUsercmd_Hacked( &oldcmd, &newcmd );
+    } else {
+        MSG_ReadDeltaUsercmd( NULL, &oldest );
+        MSG_ReadDeltaUsercmd( &oldest, &oldcmd );
+        MSG_ReadDeltaUsercmd( &oldcmd, &newcmd );
+    }
 
 	if( sv_client->state != cs_spawned ) {
 		sv_client->lastframe = -1;
