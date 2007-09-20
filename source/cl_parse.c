@@ -854,6 +854,7 @@ static void CL_ParseServerData( void ) {
 		if( !R1Q2_SUPPORTED( i ) ) {
 			Com_Error( ERR_DROP, "Unsupported R1Q2 protocol version %d.\n", i );
 		}
+        cls.protocolVersion = i;
 		i = MSG_ReadByte();
 		if( i ) { // seems to be no longer used
 			Com_DPrintf( "R1Q2 advancedDeltas enabled\n" );
@@ -868,6 +869,7 @@ static void CL_ParseServerData( void ) {
 		if( !Q2PRO_SUPPORTED( i ) ) {
 			Com_Error( ERR_DROP, "Unsupported Q2PRO protocol version %d.\n", i );
 		}
+        cls.protocolVersion = i;
 		cl.gametype = MSG_ReadByte();
 		cl.pmp.strafeHack = MSG_ReadByte();
 		cl.pmp.qwmod = MSG_ReadByte(); //atu QWMod

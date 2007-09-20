@@ -219,7 +219,7 @@ MSG_WriteDeltaUsercmd
 =============
 */
 int MSG_WriteDeltaUsercmd( const usercmd_t *from, const usercmd_t *cmd, int version ) {
-	int		bits;
+	int		bits, buttons = cmd->buttons & BUTTON_MASK;
 
 	if( !from ) {
 		from = &nullUserCmd;
@@ -250,8 +250,16 @@ int MSG_WriteDeltaUsercmd( const usercmd_t *from, const usercmd_t *cmd, int vers
 
     if( version >= PROTOCOL_VERSION_R1Q2_UCMD ) {
         if( bits & CM_BUTTONS ) {
-            // TODO: actually optimize
-	      	MSG_WriteByte( cmd->buttons );
+            if( ( bits & CM_FORWARD ) && !( cmd->forwardmove % 5 ) ) {
+                buttons |= BUTTON_FORWARD;
+            }
+            if( ( bits & CM_SIDE ) && !( cmd->sidemove % 5 ) ) {
+                buttons |= BUTTON_SIDE;
+            }
+            if( ( bits & CM_UP ) && !( cmd->upmove % 5 ) ) {
+                buttons |= BUTTON_UP;
+            }
+	      	MSG_WriteByte( buttons );
         }
     }
 
@@ -262,12 +270,27 @@ int MSG_WriteDeltaUsercmd( const usercmd_t *from, const usercmd_t *cmd, int vers
 	if( bits & CM_ANGLE3 )
 		MSG_WriteShort( cmd->angles[2] );
 	
-	if( bits & CM_FORWARD )
-		MSG_WriteShort( cmd->forwardmove );
-	if( bits & CM_SIDE )
-	  	MSG_WriteShort( cmd->sidemove );
-	if( bits & CM_UP )
-		MSG_WriteShort( cmd->upmove );
+	if( bits & CM_FORWARD ) {
+        if( buttons & BUTTON_FORWARD ) {
+    		MSG_WriteChar( cmd->forwardmove / 5 );
+        } else {
+    		MSG_WriteShort( cmd->forwardmove );
+        }
+    }
+	if( bits & CM_SIDE ) {
+        if( buttons & BUTTON_SIDE ) {
+    		MSG_WriteChar( cmd->sidemove / 5 );
+        } else {
+	  	    MSG_WriteShort( cmd->sidemove );
+        }
+    }
+	if( bits & CM_UP ) {
+        if( buttons & BUTTON_UP ) {
+    		MSG_WriteChar( cmd->upmove / 5 );
+        } else {
+    		MSG_WriteShort( cmd->upmove );
+        }
+    }
 
     if( version < PROTOCOL_VERSION_R1Q2_UCMD ) {
      	if( bits & CM_BUTTONS )
