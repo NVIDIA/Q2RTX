@@ -321,10 +321,10 @@ void SV_ClientAddMessage( client_t *client, int flags ) {
 		return;
 	}
 
-    if( client->state > cs_zombie ) {
+//    if( client->state > cs_zombie ) {
         client->AddMessage( client, msg_write.data, msg_write.cursize,
             ( flags & MSG_RELIABLE ) ? qtrue : qfalse );
-    }
+  //  }
 
 	if( flags & MSG_CLEAR ) {
 		SZ_Clear( &msg_write );

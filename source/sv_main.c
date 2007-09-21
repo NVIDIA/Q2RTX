@@ -166,8 +166,8 @@ void SV_DropClient( client_t *client, const char *reason ) {
             SV_BroadcastPrintf( PRINT_HIGH, "%s was dropped: %s\n",
                 client->name, reason );
         }
-        SV_ClientPrintf( client, PRINT_HIGH, "*** Connection dropped: %s ***\n",
-            reason );
+        SV_ClientPrintf( client, PRINT_HIGH, "%s was dropped: %s\n",
+            client->name, reason );
 	}
 
 	// add the disconnect
@@ -1196,7 +1196,7 @@ void SV_SendAsyncPackets( void ) {
         }
 
         // don't write new reliables if not yet acknowledged
-        if( netchan->reliable_length && !retransmit ) {
+        if( netchan->reliable_length && !retransmit && client->state != cs_zombie ) {
             continue;
         }
 
