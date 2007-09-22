@@ -279,6 +279,14 @@ Set this to empty string to disable chat sound.
 Specifies whether to filter out unprintable characters from
 incoming chat messages.
 
+- `set ui_open 1` (boolean)  
+Open full screen menu automatically on startup, instead of full
+screen console.
+
+- `set ui_background ""` (string)  
+Specifies image to use as menu background. When empty set to empty string,
+just fills the screen with solid black color.
+
 Macros
 ==========
 
