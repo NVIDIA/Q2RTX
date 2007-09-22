@@ -596,6 +596,7 @@ static void PF_StartSound( edict_t *edict, int channel,
 
         msg = LIST_FIRST( sound_packet_t, &client->freemsg, entry );
 
+        msg->cursize = 0; // !!! make sure this does not get Z_Free'ed
         msg->flags = flags;
         msg->index = soundindex;
         msg->volume = volume * 255;

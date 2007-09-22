@@ -505,6 +505,8 @@ typedef struct zhead_s {
 
 static zhead_t		z_chain;
 
+static cvar_t	    *z_perturb;
+
 typedef struct zstatic_s {
 	zhead_t	z;
 	char	data[2]; /* !!make sure 'tail' field is aligned properly */
@@ -771,6 +773,11 @@ void *Z_TagMalloc( size_t size, memtag_t tag ) {
 	z->prev = &z_chain;
 	z_chain.next->prev = z;
 	z_chain.next = z;
+
+    if( z_perturb && z_perturb->integer ) {
+        memset( z + 1, z_perturb->integer, size -
+            sizeof( zhead_t ) - sizeof( uint16 ) );
+    }
 
 	*( uint16 * )( ( byte * )z + size - sizeof( uint16 ) ) = Z_TAIL;
 
@@ -1385,6 +1392,7 @@ void Qcommon_Init( char *commandLine ) {
 	//
 	// init commands and vars
 	//
+	z_perturb = Cvar_Get( "z_perturb", "0", 0 );
 	host_speeds = Cvar_Get ("host_speeds", "0", 0);
 	developer = Cvar_Get ("developer", "0", 0);
 	timescale = Cvar_Get ("timescale", "1", CVAR_CHEAT );

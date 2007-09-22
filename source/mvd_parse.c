@@ -532,6 +532,7 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
 
         msg = LIST_FIRST( sound_packet_t, &cl->freemsg, entry );
 
+        msg->cursize = 0;
         msg->flags = flags;
         msg->index = index;
         msg->volume = volume;
