@@ -481,6 +481,7 @@ usage:
 	CL_CheckForResend();
 
     Cvar_Set( "cl_paused", "0" );
+	Cvar_Set( "sv_paused", "0" );
 	Cvar_Set( "timedemo", "0" );
 
     Con_Close();
@@ -1276,7 +1277,7 @@ static void CL_ConnectionlessPacket( void ) {
             type = NETCHAN_OLD;
         }
 
-		/* parse additional parameters */
+		// parse additional parameters
         j = Cmd_Argc();
 		for( i = 1; i < j; i++ ) {
 			s = Cmd_Argv( i );
@@ -2560,8 +2561,16 @@ void CL_Frame( int msec ) {
         }
     }
 
-    if ( cls.demoplayback ) {
-        sv_paused->integer = cl_paused->integer; // FIXME: HACK
+    if ( cls.demoplayback ) { // FIXME: HACK
+        if( cl_paused->integer ) {
+            if( !sv_paused->integer ) {
+                Cvar_Set( "sv_paused", "1" );
+            }
+        } else {
+            if( sv_paused->integer ) {
+                Cvar_Set( "sv_paused", "0" );
+            }
+        }
     }
     
     // decide the simulation time

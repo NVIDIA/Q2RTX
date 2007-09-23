@@ -1334,24 +1334,29 @@ static void SV_RunGameFrame( void ) {
 static qboolean SV_CheckPaused( void ) {
 	client_t *client;
 
-	sv_paused->integer = 0;
     if( sv.state == ss_broadcast ) {
-		cl_paused->integer = 0;
-        return qfalse; // never pause in MVD client mode
+        goto nopause; // never pause in MVD client mode
     }
+
 	if( cl_paused->integer ) {
         FOR_EACH_CLIENT( client ) {
             if( client->state != cs_spawned ) {
                 break; // never pause if loading
             }
             if( !NET_IsLocalAddress( &client->netchan->remote_address ) ) {
-		        cl_paused->integer = 0;
-                return qfalse; // never pause in multiplayer
+                goto nopause; // never pause in multiplayer
             }
 		}
-		sv_paused->integer = 1;
+        if( !sv_paused->integer ) {
+            Cvar_Set( "sv_paused", "1" );
+        }
 		return qtrue; // don't run if paused
 	}
+
+nopause:
+    if( sv_paused->integer ) {
+        Cvar_Set( "sv_paused", "0" );
+    }
     return qfalse;
 }
 #endif

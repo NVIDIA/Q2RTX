@@ -2419,6 +2419,8 @@ static void FS_DefaultGamedir( void ) {
             sys_basedir->string );
     }
 
+    setenv( "QUAKE2_HOME", fs_gamedir, 1 );
+
 	Cvar_Set( "game", "" );
 	Cvar_Set( "gamedir", "" );
 }
@@ -2460,6 +2462,8 @@ static void FS_SetupGamedir( void ) {
         FS_AddGameDirectory( "%s/"BASEGAME, sys_homedir->string );
         FS_AddGameDirectory( "%s/%s", sys_homedir->string, fs_game->string );
     }
+    
+    setenv( "QUAKE2_HOME", fs_gamedir, 1 );
 }
 
 qboolean FS_SafeToRestart( void ) {
