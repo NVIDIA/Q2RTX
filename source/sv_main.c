@@ -880,7 +880,7 @@ static void SVC_DirectConnect( void ) {
     }
 
     // add them to the linked list of connected clients
-    List_Append( &svs.clients, &newcl->entry );
+    List_SeqAdd( &svs.clients, &newcl->entry );
 
 	Com_DPrintf( "Going from cs_free to cs_assigned for %s\n", newcl->name );
 	newcl->state = cs_assigned;

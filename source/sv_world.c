@@ -30,53 +30,24 @@ FIXME: this use of "area" is different from the bsp file use
 ===============================================================================
 */
 
-// (type *)STRUCT_FROM_LINK(link_t *link, type, member)
-// ent = STRUCT_FROM_LINK(link,entity_t,order)
-// FIXME: remove this mess!
-#define	STRUCT_FROM_LINK(l,t,m) ((t *)((byte *)l - (int)&(((t *)0)->m)))
-
-#define	EDICT_FROM_AREA(l) STRUCT_FROM_LINK(l,edict_t,area)
-
-typedef struct areanode_s
-{
+typedef struct areanode_s {
 	int		axis;		// -1 = leaf node
 	float	dist;
 	struct areanode_s	*children[2];
-	link_t	trigger_edicts;
-	link_t	solid_edicts;
+	list_t	trigger_edicts;
+	list_t	solid_edicts;
 } areanode_t;
 
 #define	AREA_DEPTH	4
 #define	AREA_NODES	32
 
-areanode_t	sv_areanodes[AREA_NODES];
-int			sv_numareanodes;
+static areanode_t	sv_areanodes[AREA_NODES];
+static int			sv_numareanodes;
 
-float	*area_mins, *area_maxs;
-edict_t	**area_list;
-int		area_count, area_maxcount;
-int		area_type;
-
-
-// ClearLink is used for new headnodes
-void ClearLink (link_t *l)
-{
-	l->prev = l->next = l;
-}
-
-void RemoveLink (link_t *l)
-{
-	l->next->prev = l->prev;
-	l->prev->next = l->next;
-}
-
-void InsertLinkBefore (link_t *l, link_t *before)
-{
-	l->next = before;
-	l->prev = before->prev;
-	l->prev->next = l;
-	l->next->prev = l;
-}
+static float	*area_mins, *area_maxs;
+static edict_t	**area_list;
+static int		area_count, area_maxcount;
+static int		area_type;
 
 /*
 ===============
@@ -85,8 +56,7 @@ SV_CreateAreaNode
 Builds a uniformly subdivided tree for the given world size
 ===============
 */
-areanode_t *SV_CreateAreaNode (int depth, vec3_t mins, vec3_t maxs)
-{
+static areanode_t *SV_CreateAreaNode (int depth, vec3_t mins, vec3_t maxs) {
 	areanode_t	*anode;
 	vec3_t		size;
 	vec3_t		mins1, maxs1, mins2, maxs2;
@@ -94,8 +64,8 @@ areanode_t *SV_CreateAreaNode (int depth, vec3_t mins, vec3_t maxs)
 	anode = &sv_areanodes[sv_numareanodes];
 	sv_numareanodes++;
 
-	ClearLink (&anode->trigger_edicts);
-	ClearLink (&anode->solid_edicts);
+	List_Init (&anode->trigger_edicts);
+	List_Init (&anode->solid_edicts);
 	
 	if (depth == AREA_DEPTH)
 	{
@@ -269,7 +239,7 @@ void SV_LinkEdict( cm_t *cm, edict_t *ent ) {
 void PF_UnlinkEdict (edict_t *ent) {
 	if (!ent->area.prev)
 		return;		// not linked in anywhere
-	RemoveLink (&ent->area);
+	List_Remove (&ent->area);
 	ent->area.prev = ent->area.next = NULL;
 }
 
@@ -350,9 +320,9 @@ void PF_LinkEdict (edict_t *ent) {
 	
 	// link it in	
 	if (ent->solid == SOLID_TRIGGER)
-		InsertLinkBefore (&ent->area, &node->trigger_edicts);
+        List_Append( &node->trigger_edicts, &ent->area );
 	else
-		InsertLinkBefore (&ent->area, &node->solid_edicts);
+        List_Append( &node->solid_edicts, &ent->area );
 
 }
 
@@ -363,9 +333,8 @@ SV_AreaEdicts_r
 
 ====================
 */
-void SV_AreaEdicts_r (areanode_t *node)
-{
-	link_t		*l, *next, *start;
+static void SV_AreaEdicts_r (areanode_t *node) {
+	list_t		*start;
 	edict_t		*check;
 	int			count;
 
@@ -377,14 +346,7 @@ void SV_AreaEdicts_r (areanode_t *node)
 	else
 		start = &node->trigger_edicts;
 
-	for (l=start->next  ; l != start ; l = next)
-	{
-		if( !l ) {
-			Com_Error( ERR_DROP, "SV_AreaEdicts: NULL link" );
-		}
-		next = l->next;
-		check = EDICT_FROM_AREA(l);
-
+    LIST_FOR_EACH( edict_t, check, start, area ) {
 		if (check->solid == SOLID_NOT)
 			continue;		// deactivated
 		if (check->absmin[0] > area_maxs[0]
@@ -395,8 +357,7 @@ void SV_AreaEdicts_r (areanode_t *node)
 		|| check->absmax[2] < area_mins[2])
 			continue;		// not touching
 
-		if (area_count == area_maxcount)
-		{
+		if (area_count == area_maxcount) {
 			Com_WPrintf ("SV_AreaEdicts: MAXCOUNT\n");
 			return;
 		}

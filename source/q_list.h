@@ -54,6 +54,21 @@ static inline void List_Insert( list_t *head, list_t *elem ) {
     List_Link( head, head->next, elem );
 }
 
+// add element to the list of elements allocated from the same memory pool
+// used to mimimize cache misses when interating through the list
+static inline void List_SeqAdd( list_t *list, list_t *elem ) {
+    list_t *cursor, *prev = NULL;
+
+    for( cursor = list->next; cursor != list; cursor = cursor->next ) {
+        if( elem < cursor && elem > prev ) {
+            List_Link( cursor->prev, cursor, elem );
+            return;
+        }
+    }
+
+    List_Append( list, elem );
+}
+
 static inline void List_Delete( list_t *elem ) {
     List_Unlink( elem->prev, elem->next );
     List_Init( elem );
