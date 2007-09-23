@@ -337,7 +337,7 @@ static inline void SV_PacketizedRemove( client_t *client, message_packet_t *msg 
 	if( msg->cursize > MSG_TRESHOLD ) {
 		Z_Free( msg );
     } else {
-        List_Append( &client->freemsg, &msg->entry );
+        List_Insert( &client->freemsg, &msg->entry );
     }
 }
 
@@ -461,7 +461,7 @@ static void SV_AddClientSounds( client_t *client, int maxsize ) {
 
         // move message to the free pool
 	    List_Remove( &msg->entry );
-        List_Append( &client->freemsg, &msg->entry );
+        List_Insert( &client->freemsg, &msg->entry );
     }
 }
 
