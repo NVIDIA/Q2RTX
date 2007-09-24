@@ -1003,9 +1003,10 @@ void GL_DrawParticles( void ) {
         }
         
         dst_vert = tess.vertices + currentVert * 4;
-        VectorCopy( p->origin, dst_vert );
-        VectorMA( p->origin, scale, glr.viewaxis[2], dst_vert + 4 );
-        VectorMA( p->origin, -scale, glr.viewaxis[1], dst_vert + 8 );
+//        VectorMA( p->origin, -scale*0.5f, glr.viewaxis[2], dst_vert );
+        VectorMA( p->origin, scale*0.5f, glr.viewaxis[1], dst_vert );
+        VectorMA( dst_vert, scale, glr.viewaxis[2], dst_vert + 4 );
+        VectorMA( dst_vert, -scale, glr.viewaxis[1], dst_vert + 8 );
 
         dst_color = ( uint32 * )tess.colors + currentVert;
         dst_color[0] = *( uint32 * )color;

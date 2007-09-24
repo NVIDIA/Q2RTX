@@ -338,11 +338,11 @@ typedef struct {
     list_t  entry;
     int     x, y;
     int     type;
-    union {
+    //union {
         cvar_t *cvar;
         xmacro_t macro;
-        int stat;
-    };
+    //    int stat;
+    //};
 } drawobj_t;
 
 static list_t scr_objects;
@@ -353,7 +353,7 @@ static void SCR_Draw_f( void ) {
     char *s;
     drawobj_t *obj;
     xmacro_t macro;
-    int stat;
+   // int stat;
 
     if( Cmd_Argc() != 4 ) {
         Com_Printf( "Usage: %s <name> <x> <y>\n", Cmd_Argv( 0 ) );
@@ -368,6 +368,7 @@ static void SCR_Draw_f( void ) {
     obj->x = x;
     obj->y = y;
 
+#if 0
     if( *s == '!' || *s == '#' ) {
         stat = atoi( s + 1 );
         if( stat < 0 || stat >= MAX_STATS ) {
@@ -376,7 +377,9 @@ static void SCR_Draw_f( void ) {
         obj->stat = stat;
         obj->cvar = NULL;
         obj->macro = NULL;
-    } else {
+    } else
+#endif
+    {
         macro = Cmd_FindMacroFunction( s );
         if( macro ) {
             obj->cvar = NULL;
