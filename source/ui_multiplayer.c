@@ -250,16 +250,14 @@ static void AddUnlistedServers( void ) {
 
         // save original address
         strcpy( slot->address, address );
-
-        // resolve real ip
-        client.SendStatusRequest( address, sizeof( address ) );
-
-        // save real ip
         strcpy( slot->realAddress, address );
 
 		s = UI_FormatColumns( 3, slot->address, "???", "?/?" );
 		m_join.names[m_join.list.numItems++] = s;
         m_join.names[m_join.list.numItems] = NULL;
+
+        // ping and resolve real ip
+        client.SendStatusRequest( slot->realAddress, sizeof( slot->realAddress ) );
 
         client.UpdateScreen();
 	}

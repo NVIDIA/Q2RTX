@@ -723,6 +723,9 @@ static void SVC_DirectConnect( void ) {
 
 	Q_strncpyz( userinfo, info, sizeof( userinfo ) );
 
+    // make sure mvdspec key is not set
+    Info_RemoveKey( userinfo, "mvdspec" );
+
 	// force the IP key/value pair so the game can filter based on ip
 	s = NET_AdrToString( &net_from );
 	if( !Info_AttemptSetValueForKey( userinfo, "ip", s ) ) {
@@ -793,6 +796,9 @@ static void SVC_DirectConnect( void ) {
     newcl->pmp.flyfriction = 9;
     newcl->pmp.waterfriction = 1;
     newcl->pmp.airaccelerate = sv_airaccelerate->integer ? qtrue : qfalse;
+#ifdef PMOVE_HACK
+    newcl->pmp.highprec = qtrue;
+#endif
 
     // r1q2 extensions
 	if( protocol == PROTOCOL_VERSION_R1Q2 ||

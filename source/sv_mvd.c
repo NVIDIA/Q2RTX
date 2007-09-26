@@ -374,7 +374,7 @@ qboolean SV_MvdCreateDummy( void ) {
     List_Init( &newcl->entry );
 
     Com_sprintf( userinfo, sizeof( userinfo ),
-        "\\name\\[MVDSPEC]\\skin\\male/grunt\\mvdversion\\%d\\ip\\loopback",
+        "\\name\\[MVDSPEC]\\skin\\male/grunt\\mvdspec\\%d\\ip\\loopback",
         PROTOCOL_VERSION_MVD_MINOR );
 
     svs.mvd.dummy = newcl;

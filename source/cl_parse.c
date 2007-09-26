@@ -844,7 +844,9 @@ static void CL_ParseServerData( void ) {
     cl.pmp.flyfriction = 9;
 	cl.pmp.airaccelerate = 0;	
 	cl.gametype = GT_DEATHMATCH;
-	//cl.pmp.highprec=qtrue;
+#ifdef PMOVE_HACK
+    cl.pmp.highprec = qtrue;
+#endif
 	if( cls.serverProtocol == PROTOCOL_VERSION_R1Q2 ) {
 		i = MSG_ReadByte();
 		if( i ) {

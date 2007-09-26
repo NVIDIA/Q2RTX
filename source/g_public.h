@@ -42,6 +42,7 @@ SOLID_BSP			// bsp clip, touch on edge
 
 #define GAME_FEATURE_CLIENTNUM   1
 #define GAME_FEATURE_PROPERINUSE   2
+#define GAME_FEATURE_MVDSPEC    4
 
 //===============================================================
 

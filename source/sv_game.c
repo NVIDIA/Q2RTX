@@ -938,7 +938,7 @@ void SV_InitGameProgs ( void )
     // get features
     ggf = Sys_GetProcAddress( game_library, "GetGameFeatures" );
     if( ggf ) {
-        gameFeatures = ggf( GAME_FEATURE_CLIENTNUM );
+        gameFeatures = ggf( GAME_FEATURE_CLIENTNUM|GAME_FEATURE_MVDSPEC );
     } else {
         gameFeatures = 0;
     }

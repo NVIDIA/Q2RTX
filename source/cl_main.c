@@ -1085,7 +1085,6 @@ qboolean CL_SendStatusRequest( char *buffer, int bufferSize ) {
     Com_ProcessEvents();
 
     return qtrue;
-
 }
 
 

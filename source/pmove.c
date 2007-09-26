@@ -18,6 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
+#include "config.h"
 #include "com_local.h"
 
 
@@ -585,6 +586,7 @@ void PM_AirMove (void)
 		pml.velocity[2] = 0; //!!! this is before the accel
 		PM_Accelerate (wishdir, wishspeed, pm_accelerate);
 
+
 // PGM	-- fix for negative trigger_gravity fields
 //		pml.velocity[2] = 0;
 		if(pm->s.gravity > 0)
@@ -1031,7 +1033,7 @@ void PM_SnapPosition (void)
 	int		i, j, bits;
 	short	base[3];
 	// try all single bits first
-	static int jitterbits[8] = {0,4,1,2,3,5,6,7};
+	static const int jitterbits[8] = {0,4,1,2,3,5,6,7};
 
 #ifdef PMOVE_HACK
 	if( pmp->highprec ) {
@@ -1051,7 +1053,7 @@ void PM_SnapPosition (void)
 		else 
 			sign[i] = -1;
 		pm->s.origin[i] = (int)(pml.origin[i]*8);
-		if (pm->s.origin[i]*0.125 == pml.origin[i])
+		if (pm->s.origin[i]*0.125f == pml.origin[i])
 			sign[i] = 0;
 	}
 	VectorCopy (pm->s.origin, base);
@@ -1095,7 +1097,7 @@ void PM_InitialSnapPosition(void)
 {
 	int        x, y, z;
 	short      base[3];
-	static int offset[3] = { 0, -1, 1 };
+	static const int offset[3] = { 0, -1, 1 };
 
 	VectorCopy (pm->s.origin, base);
 
