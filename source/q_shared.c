@@ -1964,7 +1964,6 @@ Info_RemoveKey
 void Info_RemoveKey( char *s, const char *key ) {
 	char	*start;
 	char	pkey[MAX_INFO_STRING];
-	char	value[MAX_INFO_STRING];
 	char	*o;
 
 	if( strchr( key, '\\' ) ) {
@@ -1984,17 +1983,18 @@ void Info_RemoveKey( char *s, const char *key ) {
 		*o = 0;
 		s++;
 
-		o = value;
 		while( *s != '\\' && *s ) {
-			if( !*s )
-				return;
-			*o++ = *s++;
+			s++;
 		}
-		*o = 0;
 
 		if( !strcmp( key, pkey ) ) {
-			strcpy( start, s );	// remove this part
-			return;
+            o = start; // remove this part
+            while( *s ) {
+                *o++ = *s++;
+            }
+            *o = 0;
+            s = start;
+			continue; // search for duplicates
 		}
 
 		if( !*s )

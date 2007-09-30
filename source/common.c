@@ -888,7 +888,7 @@ Z_TagCopyString
 */
 char *Z_TagCopyString( const char *in, memtag_t tag ) {
 	char	*out;
-	int length;
+	int     length;
 
 	if( !in ) {
 		return NULL;
@@ -897,7 +897,7 @@ char *Z_TagCopyString( const char *in, memtag_t tag ) {
 	length = strlen( in ) + 1;
 	
 	out = Z_TagMalloc( length, tag );
-	strcpy( out, in );
+	memcpy( out, in, length );
 
 	return out;
 }
@@ -909,7 +909,7 @@ Cvar_CopyString
 */
 char *Cvar_CopyString( const char *in ) {
 	char	*out;
-	int length;
+	int     length;
     zstatic_t *z;
 
 	if( !in ) {
@@ -933,7 +933,7 @@ char *Cvar_CopyString( const char *in ) {
 	length = strlen( in ) + 1;
 	
 	out = Z_TagMalloc( length, TAG_CVAR );
-	strcpy( out, in );
+	memcpy( out, in, length );
 
 	return out;
 }

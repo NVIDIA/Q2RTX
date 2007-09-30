@@ -112,7 +112,7 @@ void CL_InputActivate( void ) {
 	}
 
 	if( ( cls.key_dest & KEY_CONSOLE ) && !( scr_glconfig.flags & QVF_FULLSCREEN ) ) {
-		/* deactivate in windowed mode if console is open */
+		// deactivate in windowed mode if console is open
         active = qfalse;
     }
 
@@ -339,8 +339,7 @@ static void KeyUp (kbutton_t *b)
 		b->msec += uptime - b->downtime;
 	}
 
-	b->state = 0;		// now up
-	//b->state |= 4; 		// impulse up
+	b->state &= ~1;		// now up
 }
 
 static void IN_KLookDown( void ) { KeyDown( &in_klook ); }
@@ -406,7 +405,7 @@ CL_KeyState
 Returns the fraction of the frame that the key was down
 ===============
 */
-float CL_KeyState( kbutton_t *key ) {
+static float CL_KeyState( kbutton_t *key ) {
 	float		val;
 	uint32		msec;
 
@@ -415,7 +414,7 @@ float CL_KeyState( kbutton_t *key ) {
 	msec = key->msec;
 	key->msec = 0;
 
-	if( key->state ) {
+	if( key->state & 1 ) {
 		// still down
 		if( com_eventTime > key->downtime ) {
 			msec += com_eventTime - key->downtime;
@@ -434,8 +433,8 @@ float CL_KeyState( kbutton_t *key ) {
 }
 
 // FIXME: always discrete?
-float CL_ImmKeyState( kbutton_t *key ) {
-	if( key->state ) {
+static float CL_ImmKeyState( kbutton_t *key ) {
+	if( key->state & 1 ) {
 		return 1;
 	}
 
@@ -766,9 +765,9 @@ void CL_FinalizeCmd( void ) {
 //
 // figure button bits
 //	
-	if ( in_attack.state & 3 )
+	if( in_attack.state & 3 )
 		cl.cmd.buttons |= BUTTON_ATTACK;
-	if (in_use.state & 3)
+	if( in_use.state & 3 )
 		cl.cmd.buttons |= BUTTON_USE;
 
 	in_attack.state &= ~2;
@@ -983,7 +982,7 @@ static void CL_SendBatchedCmd( void ) {
 
 		numCmds = history->cmdNumber - oldest->cmdNumber;
 		if( numCmds >= MAX_PACKET_USERCMDS ) {
-			Com_WPrintf( "CL_SendCmd: MAX_PACKET_USERCMDS exceeded\n" );
+			Com_WPrintf( "%s: MAX_PACKET_USERCMDS exceeded\n", __func__ );
 			SZ_Clear( &msg_write );
 			break;
 		}

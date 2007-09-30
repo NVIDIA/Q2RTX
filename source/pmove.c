@@ -52,11 +52,11 @@ static pml_t		pml;
 static pmoveParams_t	*pmp;
 
 // movement parameters
-static float	pm_stopspeed = 100;
-static float	pm_duckspeed = 100;
-static float	pm_accelerate = 10;
-static float	pm_wateraccelerate = 10;
-static float	pm_waterspeed = 400;
+static const float	pm_stopspeed = 100;
+static const float	pm_duckspeed = 100;
+static const float	pm_accelerate = 10;
+static const float	pm_wateraccelerate = 10;
+static const float	pm_waterspeed = 400;
 
 /*
 
@@ -75,7 +75,7 @@ returns the blocked flags (1 = floor, 2 = step / wall)
 */
 #define	STOP_EPSILON	0.1
 
-void PM_ClipVelocity (vec3_t in, vec3_t normal, vec3_t out, float overbounce)
+static void PM_ClipVelocity (vec3_t in, vec3_t normal, vec3_t out, float overbounce)
 {
 	float	backoff;
 	float	change;
@@ -108,7 +108,7 @@ Does not modify any world state?
 */
 #define	MIN_STEP_NORMAL	0.7		// can't step up onto very steep slopes
 #define	MAX_CLIP_PLANES	5
-void PM_StepSlideMove_ (void)
+static void PM_StepSlideMove_ (void)
 {
 	int			bumpcount, numbumps;
 	vec3_t		dir;
@@ -224,7 +224,7 @@ PM_StepSlideMove
 
 ==================
 */
-void PM_StepSlideMove (void)
+static void PM_StepSlideMove (void)
 {
 	vec3_t		start_o, start_v;
 	vec3_t		down_o, down_v;
@@ -290,7 +290,7 @@ PM_Friction
 Handles both ground friction and water friction
 ==================
 */
-void PM_Friction (void)
+static void PM_Friction (void)
 {
 	float	*vel;
 	float	speed, newspeed, control;
@@ -342,7 +342,7 @@ PM_Accelerate
 Handles user intended acceleration
 ==============
 */
-void PM_Accelerate (vec3_t wishdir, float wishspeed, float accel)
+static void PM_Accelerate (vec3_t wishdir, float wishspeed, float accel)
 {
 	int			i;
 	float		addspeed, accelspeed, currentspeed;
@@ -359,7 +359,7 @@ void PM_Accelerate (vec3_t wishdir, float wishspeed, float accel)
 		pml.velocity[i] += accelspeed*wishdir[i];	
 }
 
-void PM_AirAccelerate (vec3_t wishdir, float wishspeed, float accel)
+static void PM_AirAccelerate (vec3_t wishdir, float wishspeed, float accel)
 {
 	int			i;
 	float		addspeed, accelspeed, currentspeed, wishspd = wishspeed;
@@ -383,7 +383,7 @@ void PM_AirAccelerate (vec3_t wishdir, float wishspeed, float accel)
 PM_AddCurrents
 =============
 */
-void PM_AddCurrents (vec3_t	wishvel)
+static void PM_AddCurrents (vec3_t wishvel)
 {
 	vec3_t	v;
 	float	s;
@@ -478,7 +478,7 @@ PM_WaterMove
 
 ===================
 */
-void PM_WaterMove (void)
+static void PM_WaterMove (void)
 {
 	int		i;
 	vec3_t	wishvel;
@@ -521,7 +521,7 @@ PM_AirMove
 
 ===================
 */
-void PM_AirMove (void)
+static void PM_AirMove (void)
 {
 	int			i;
 	vec3_t		wishvel;
@@ -618,7 +618,7 @@ void PM_AirMove (void)
 PM_CategorizePosition
 =============
 */
-void PM_CategorizePosition (void)
+static void PM_CategorizePosition (void)
 {
 	vec3_t		point;
 	int			cont;
@@ -720,7 +720,7 @@ void PM_CategorizePosition (void)
 PM_CheckJump
 =============
 */
-void PM_CheckJump (void)
+static void PM_CheckJump (void)
 {
 	if (pm->s.pm_flags & PMF_TIME_LAND)
 	{	// hasn't been long enough since landing to jump again
@@ -774,7 +774,7 @@ void PM_CheckJump (void)
 PM_CheckSpecialMovement
 =============
 */
-void PM_CheckSpecialMovement (void)
+static void PM_CheckSpecialMovement (void)
 {
 	vec3_t	spot;
 	int		cont;
@@ -825,7 +825,7 @@ void PM_CheckSpecialMovement (void)
 PM_FlyMove
 ===============
 */
-void PM_FlyMove (qboolean doclip)
+static void PM_FlyMove (qboolean doclip)
 {
 	float	speed, drop, friction, control, newspeed;
 	float	currentspeed, addspeed, accelspeed;
@@ -922,7 +922,7 @@ PM_CheckDuck
 Sets mins, maxs, and pm->viewheight
 ==============
 */
-void PM_CheckDuck (void)
+static void PM_CheckDuck (void)
 {
 	trace_t	trace;
 
@@ -980,7 +980,7 @@ void PM_CheckDuck (void)
 PM_DeadMove
 ==============
 */
-void PM_DeadMove (void)
+static void PM_DeadMove (void)
 {
 	float	forward;
 
@@ -1003,7 +1003,7 @@ void PM_DeadMove (void)
 }
 
 
-qboolean	PM_GoodPosition (void)
+static qboolean PM_GoodPosition (void)
 {
 	trace_t	trace;
 	vec3_t	origin, end;
@@ -1027,20 +1027,13 @@ On exit, the origin will have a value that is pre-quantized to the 0.125
 precision of the network channel and in a valid position.
 ================
 */
-void PM_SnapPosition (void)
+static void PM_SnapPosition (void)
 {
 	int		sign[3];
 	int		i, j, bits;
 	short	base[3];
 	// try all single bits first
 	static const int jitterbits[8] = {0,4,1,2,3,5,6,7};
-
-#ifdef PMOVE_HACK
-	if( pmp->highprec ) {
-		VectorCopy( pml.origin, pmp->origin );
-		VectorCopy( pml.velocity, pmp->velocity );
-	}
-#endif
 
 	// snap velocity to eigths
 	for (i=0 ; i<3 ; i++)
@@ -1072,18 +1065,47 @@ void PM_SnapPosition (void)
 	}
 
 	// go back to the last position
-#ifdef PMOVE_HACK
-	if( pmp->highprec ) {
-		VectorCopy( pml.previous_origin, pmp->origin );
-		for (i=0 ; i<3 ; i++)
-			pm->s.origin[i] = (int)(pml.previous_origin[i]*8);
-	} else
-#endif
-	{
-		VectorCopy( pml.previous_origin, pm->s.origin );
-	}
-//	Com_DPrintf ("using previous_origin\n");
+	VectorCopy( pml.previous_origin, pm->s.origin );
 }
+
+#if 0
+void PM_HackedSnapPosition(void)
+{
+	int        x, y, z;
+	short      base[3];
+	static const int offset[3] = { 0, -1, 1 };
+    int i;
+
+
+	// snap velocity to eigths
+	for (i=0 ; i<3 ; i++)
+		pm->s.velocity[i] = Q_rint(pml.velocity[i]*8);
+
+	for (i=0 ; i<3 ; i++)
+		pm->s.origin[i] = Q_rint(pml.origin[i]*8);
+
+	VectorCopy (pm->s.origin, base);
+
+	for ( z = 0; z < 3; z++ ) {
+		pm->s.origin[2] = base[2] + offset[ z ];
+		for ( y = 0; y < 3; y++ ) {
+			pm->s.origin[1] = base[1] + offset[ y ];
+			for ( x = 0; x < 3; x++ ) {
+				pm->s.origin[0] = base[0] + offset[ x ];
+				if (PM_GoodPosition ()) {
+					pml.origin[0] = pm->s.origin[0]*0.125;
+					pml.origin[1] = pm->s.origin[1]*0.125;
+					pml.origin[2] = pm->s.origin[2]*0.125;
+					VectorCopy( pm->s.origin, pml.previous_origin );
+					return;
+				}
+			}
+		}
+	}
+
+	VectorCopy( pml.previous_origin, pm->s.origin );
+}
+#endif
 
 
 
@@ -1093,7 +1115,7 @@ PM_InitialSnapPosition
 
 ================
 */
-void PM_InitialSnapPosition(void)
+static void PM_InitialSnapPosition(void)
 {
 	int        x, y, z;
 	short      base[3];
@@ -1111,22 +1133,12 @@ void PM_InitialSnapPosition(void)
 					pml.origin[0] = pm->s.origin[0]*0.125;
 					pml.origin[1] = pm->s.origin[1]*0.125;
 					pml.origin[2] = pm->s.origin[2]*0.125;
-#ifdef PMOVE_HACK
-					if( pmp->highprec ) {
-						VectorCopy( pml.origin, pmp->origin );
-						VectorCopy( pml.origin, pml.previous_origin );
-					} else
-#endif
-					{
-						VectorCopy( pm->s.origin, pml.previous_origin );
-					}
+					VectorCopy( pm->s.origin, pml.previous_origin );
 					return;
 				}
 			}
 		}
 	}
-
-	Com_DPrintf ("Bad InitialSnapPosition\n");
 }
 
 /*
@@ -1135,7 +1147,7 @@ PM_ClampAngles
 
 ================
 */
-void PM_ClampAngles (void)
+static void PM_ClampAngles (void)
 {
 	short	temp;
 	int		i;
@@ -1188,44 +1200,11 @@ void Pmove( pmove_t *pmove, pmoveParams_t *params )
 	memset (&pml, 0, sizeof(pml));
 
 	// convert origin and velocity to float values
-#ifdef PMOVE_HACK
-	if( params->highprec ) {
-		vec3_t o, v;
-		vec_t d;
+    VectorScale( pm->s.origin, 0.125f, pml.origin );
+    VectorScale( pm->s.velocity, 0.125f, pml.velocity );
 
-		VectorScale( pm->s.origin, 0.125f, o );
-		VectorScale( pm->s.velocity, 0.125f, v );
-
-		VectorSubtract( params->origin, o, o );
-		VectorSubtract( params->velocity, v, v );
-
-		d = VectorLengthSquared( o );
-		if( d > 10 ) {
-			VectorScale( pm->s.origin, 0.125f, pml.origin );
-			Com_Printf( "reset origin: %f\n", d );
-		} else {
-			VectorCopy( params->origin, pml.origin );
-		}
-			
-		d = VectorLengthSquared( v );
-		if( d > 10 ) {
-			VectorScale( pm->s.velocity, 0.125f, pml.velocity );
-			Com_Printf( "reset velocity: %f\n", d );
-		} else {
-			VectorCopy( params->velocity, pml.velocity );
-		}
-
-		// save old org in case we get stuck
-		VectorCopy (params->origin, pml.previous_origin);
-	} else
-#endif
-	{
-		VectorScale( pm->s.origin, 0.125f, pml.origin );
-		VectorScale( pm->s.velocity, 0.125f, pml.velocity );
-
-		// save old org in case we get stuck
-		VectorCopy (pm->s.origin, pml.previous_origin);
-	}
+    // save old org in case we get stuck
+    VectorCopy (pm->s.origin, pml.previous_origin);
 
 	PM_ClampAngles ();
 

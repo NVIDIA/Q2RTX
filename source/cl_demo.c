@@ -37,7 +37,7 @@ void CL_WriteDemoMessage( sizebuf_t *buf ) {
 	int		length;
 
     if( buf->overflowed ) {
-        buf->overflowed = qfalse;
+        SZ_Clear( buf );
         Com_WPrintf( "Demo message overflowed.\n" );
         return;
     }

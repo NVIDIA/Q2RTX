@@ -540,7 +540,7 @@ Sys_GetClipboardData
 =================
 */
 char *Sys_GetClipboardData( void ) {
-#ifdef USE_SDL
+#if USE_SDL
 	SDL_SysWMinfo	info;
     Display *dpy;
 	Window sowner, win;
@@ -684,7 +684,7 @@ static void Sys_Segv( int signum ) {
 
     Sys_ShutdownTTY();
 
-#ifdef USE_SDL
+#if USE_SDL
     SDL_ShowCursor( SDL_ENABLE );
     SDL_WM_GrabInput( SDL_GRAB_OFF );
 	SDL_Quit();
@@ -775,7 +775,7 @@ void Sys_Error( const char *error, ... ) {
 
     Sys_ShutdownTTY();
 
-#ifdef USE_SDL
+#if USE_SDL
     SDL_ShowCursor( SDL_ENABLE );
     SDL_WM_GrabInput( SDL_GRAB_OFF );
 	SDL_Quit();
