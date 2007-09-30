@@ -870,7 +870,6 @@ static void SVC_DirectConnect( void ) {
     if( nctype == NETCHAN_NEW ) {
         buffer = SV_Malloc( MAX_MSGLEN );
         SZ_Init( &newcl->datagram, buffer, MAX_MSGLEN );
-        newcl->datagram.allowoverflow = qtrue;
         newcl->AddMessage = SV_NewClientAddMessage;
         newcl->WriteDatagram = SV_NewClientWriteDatagram;
         newcl->FinishFrame = SV_NewClientFinishFrame;

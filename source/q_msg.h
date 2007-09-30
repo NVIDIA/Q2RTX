@@ -22,7 +22,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // q_msg.h
 //
 
+#define SZ_MSG_WRITE        MakeLong( 'w', 'r', 'i', 't' )
+#define SZ_MSG_READ         MakeLong( 'r', 'e', 'a', 'd' )
+#define SZ_NC_SEND_OLD      MakeLong( 'n', 'c', '1', 's' )
+#define SZ_NC_SEND_NEW      MakeLong( 'n', 'c', '2', 's' )
+#define SZ_NC_SEND_FRG      MakeLong( 'n', 'c', '2', 'f' )
+#define SZ_NC_FRG_IN        MakeLong( 'n', 'c', '2', 'i' )
+#define SZ_NC_FRG_OUT       MakeLong( 'n', 'c', '2', 'o' )
+
 typedef struct sizebuf_s {
+    uint32      tag;
 	qboolean	allowoverflow;
 	qboolean	overflowed;		// set to qtrue if the buffer size failed
 	byte	*data;
@@ -33,6 +42,7 @@ typedef struct sizebuf_s {
 } sizebuf_t;
 
 void SZ_Init( sizebuf_t *buf, void *data, int length );
+void SZ_TagInit( sizebuf_t *buf, void *data, int length, uint32 tag );
 void SZ_Clear( sizebuf_t *buf );
 void *SZ_GetSpace( sizebuf_t *buf, int length );
 void SZ_Write( sizebuf_t *buf, const void *data, int length );

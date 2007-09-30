@@ -176,9 +176,7 @@ transmition / retransmition of the reliable messages.
 A 0 length will still generate a packet and deal with the reliable messages.
 ================
 */
-static int NetchanOld_Transmit( netchan_t *netchan, int length,
-        const byte *data )
-{
+static int NetchanOld_Transmit( netchan_t *netchan, int length, const byte *data ) {
 	netchan_old_t *chan = ( netchan_old_t * )netchan;
 	sizebuf_t	send;
 	byte		send_buf[MAX_PACKETLEN];
@@ -190,7 +188,7 @@ static int NetchanOld_Transmit( netchan_t *netchan, int length,
 	if( netchan->message.overflowed ) {
 		netchan->fatal_error = qtrue;
 		Com_WPrintf( "%s: outgoing message overflow\n",
-                NET_AdrToString( &netchan->remote_address ) );
+            NET_AdrToString( &netchan->remote_address ) );
 		return -1;
 	}
 
@@ -207,7 +205,7 @@ static int NetchanOld_Transmit( netchan_t *netchan, int length,
 	if( !netchan->reliable_length && netchan->message.cursize ) {
 		send_reliable = qtrue;
 		memcpy( chan->reliable_buf, chan->message_buf,
-                netchan->message.cursize );
+            netchan->message.cursize );
 		netchan->reliable_length = netchan->message.cursize;
 		netchan->message.cursize = 0;
 		chan->reliable_sequence ^= 1;
@@ -223,7 +221,7 @@ static int NetchanOld_Transmit( netchan_t *netchan, int length,
 	netchan->reliable_ack_pending = qfalse;
 	netchan->last_sent = com_localTime;
 
-	SZ_Init( &send, send_buf, sizeof( send_buf ) );
+	SZ_TagInit( &send, send_buf, sizeof( send_buf ), SZ_NC_SEND_OLD );
 
 	SZ_WriteLong( &send, w1 );
 	SZ_WriteLong( &send, w2 );
@@ -376,7 +374,7 @@ NetchanOld_ShouldUpdate
 */
 static qboolean NetchanOld_ShouldUpdate( netchan_t *netchan ) {
 	if( netchan->message.cursize || netchan->reliable_ack_pending ||
-            com_localTime - netchan->last_sent > 1000 )
+        com_localTime - netchan->last_sent > 1000 )
     {
 		return qtrue;
 	}
@@ -444,19 +442,18 @@ static int NetchanNew_TransmitNextFragment( netchan_t *netchan ) {
 
 	send_reliable = netchan->reliable_length ? qtrue : qfalse;
 
-	/* write the packet header */
+	// write the packet header
 	w1 = ( netchan->outgoing_sequence & 0x3FFFFFFF ) | ( 1 << 30 ) |
         ( send_reliable << 31 );
 	w2 = ( netchan->incoming_sequence & 0x3FFFFFFF ) | ( 0 << 30 ) |
         ( chan->incoming_reliable_sequence << 31 );
 
-	SZ_Init( &send, send_buf, sizeof( send_buf ) );
-	send.allowoverflow = qfalse;
+	SZ_TagInit( &send, send_buf, sizeof( send_buf ), SZ_NC_SEND_FRG );
 
 	SZ_WriteLong( &send, w1 );
 	SZ_WriteLong( &send, w2 );
 
-	/* send the qport if we are a client */
+	// send the qport if we are a client
 	if( netchan->sock == NS_CLIENT && netchan->qport ) {
 		SZ_WriteByte( &send, netchan->qport );
 	}
@@ -473,14 +470,14 @@ static int NetchanNew_TransmitNextFragment( netchan_t *netchan ) {
 		more_fragments = qfalse;
 	}
 
-	/* write fragment offset */
+	// write fragment offset
 	offset = ( chan->fragment_out.readcount & 0x7FFF ) |
         ( more_fragments << 15 );
 	SZ_WriteShort( &send, offset );
 
-	/* write fragment contents */
+	// write fragment contents
 	SZ_Write( &send, chan->fragment_out.data + chan->fragment_out.readcount,
-            fragment_length );
+        fragment_length );
 	
 	if( showpackets->integer ) {
 		Com_Printf( "send %4i : s=%i ack=%i rack=%i "
@@ -500,7 +497,7 @@ static int NetchanNew_TransmitNextFragment( netchan_t *netchan ) {
 	chan->fragment_out.readcount += fragment_length;
 	netchan->fragment_pending = more_fragments;
 
-	/* if the message has been sent completely, clear the fragment buffer */
+	// if the message has been sent completely, clear the fragment buffer
 	if( !netchan->fragment_pending ) {
 		netchan->outgoing_sequence++;
 		netchan->last_sent = com_localTime;
@@ -509,7 +506,7 @@ static int NetchanNew_TransmitNextFragment( netchan_t *netchan ) {
 
 	// send the datagram
 	ret = NET_SendPacket( netchan->sock, &netchan->remote_address,
-            send.cursize, send.data );
+        send.cursize, send.data );
 	if( ret == NET_ERROR ) {
 		return -1;
 	}
@@ -536,7 +533,7 @@ static int NetchanNew_Transmit( netchan_t *netchan, int length,
 	if( netchan->message.overflowed ) {
 		netchan->fatal_error = qtrue;
 		Com_WPrintf( "%s: outgoing message overflow\n",
-                NET_AdrToString( &netchan->remote_address ) );
+            NET_AdrToString( &netchan->remote_address ) );
 		return -1;
 	}
 
@@ -557,7 +554,7 @@ static int NetchanNew_Transmit( netchan_t *netchan, int length,
 	if( !netchan->reliable_length && netchan->message.cursize ) {
 		send_reliable = qtrue;
 		memcpy( chan->reliable_buf, chan->message_buf,
-                netchan->message.cursize );
+            netchan->message.cursize );
 		netchan->reliable_length = netchan->message.cursize;
 		netchan->message.cursize = 0;
 		chan->reliable_sequence ^= 1;
@@ -569,9 +566,14 @@ static int NetchanNew_Transmit( netchan_t *netchan, int length,
 		if( send_reliable ) {
 			chan->last_reliable_sequence = netchan->outgoing_sequence;
 			SZ_Write( &chan->fragment_out, chan->reliable_buf,
-                    netchan->reliable_length );
+                netchan->reliable_length );
 		}
-		SZ_Write( &chan->fragment_out, data, length );
+        // add the unreliable part if space is available
+        if( chan->fragment_out.maxsize - chan->fragment_out.cursize >= length )
+		    SZ_Write( &chan->fragment_out, data, length );
+        else
+            Com_WPrintf( "%s: dumped unreliable\n",
+                NET_AdrToString( &netchan->remote_address ) );
 		return NetchanNew_TransmitNextFragment( netchan );
 	}
 
@@ -584,8 +586,7 @@ static int NetchanNew_Transmit( netchan_t *netchan, int length,
 	netchan->reliable_ack_pending = qfalse;
 	netchan->last_sent = com_localTime;
 
-	SZ_Init( &send, send_buf, netchan->maxpacketlen );
-	send.allowoverflow = qfalse;
+	SZ_TagInit( &send, send_buf, sizeof( send_buf ), SZ_NC_SEND_NEW );
 
 	SZ_WriteLong( &send, w1 );
 	SZ_WriteLong( &send, w2 );
@@ -618,7 +619,7 @@ static int NetchanNew_Transmit( netchan_t *netchan, int length,
 
 	// send the datagram
 	ret = NET_SendPacket( netchan->sock, &netchan->remote_address,
-            send.cursize, send.data );
+        send.cursize, send.data );
 	if( ret == NET_ERROR ) {
 		return -1;
 	}
@@ -707,7 +708,7 @@ static qboolean NetchanNew_Process( netchan_t *netchan ) {
 //
 	chan->incoming_reliable_acknowledged = reliable_ack;
 	if( reliable_ack == chan->reliable_sequence ) {
-		netchan->reliable_length = 0;	/* it has been received */
+		netchan->reliable_length = 0;	// it has been received
 	}
 
 
@@ -716,7 +717,7 @@ static qboolean NetchanNew_Process( netchan_t *netchan ) {
 //
 	if( fragmented_message ) {
 		if( chan->fragment_sequence != sequence ) {
-			/* start new receive sequence */
+			// start new receive sequence
 			chan->fragment_sequence = sequence;
 			SZ_Clear( &chan->fragment_in );
 		}
@@ -749,16 +750,16 @@ static qboolean NetchanNew_Process( netchan_t *netchan ) {
 			return qfalse;
 		}
 
-		SZ_Write( &chan->fragment_in, msg_read.data + msg_read.readcount,
-                length );
+		SZ_Write( &chan->fragment_in, msg_read.data +
+            msg_read.readcount, length );
 		if( more_fragments ) {
 			return qfalse;
 		}
 
-		/* message has been sucessfully assembled */
+		// message has been sucessfully assembled
 		SZ_Clear( &msg_read );
 		SZ_Write( &msg_read, chan->fragment_in.data,
-                chan->fragment_in.cursize );
+            chan->fragment_in.cursize );
 		SZ_Clear( &chan->fragment_in );
 	}
 	
@@ -827,11 +828,11 @@ static netchan_t *NetchanNew_Setup( netsrc_t sock, const netadr_t *adr,
 	netchan->ShouldUpdate = NetchanNew_ShouldUpdate;
 
 	SZ_Init( &netchan->message, chan->message_buf,
-            sizeof( chan->message_buf ) );
-	SZ_Init( &chan->fragment_in, chan->fragment_in_buf,
-            sizeof( chan->fragment_in_buf ) );
-	SZ_Init( &chan->fragment_out, chan->fragment_out_buf,
-            sizeof( chan->fragment_out_buf ) );
+        sizeof( chan->message_buf ) );
+	SZ_TagInit( &chan->fragment_in, chan->fragment_in_buf,
+        sizeof( chan->fragment_in_buf ), SZ_NC_FRG_IN );
+	SZ_TagInit( &chan->fragment_out, chan->fragment_out_buf,
+        sizeof( chan->fragment_out_buf ), SZ_NC_FRG_OUT );
 
 	return netchan;
 }

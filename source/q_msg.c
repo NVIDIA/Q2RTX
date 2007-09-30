@@ -51,13 +51,9 @@ MSG_Init
 */
 void MSG_Init( void ) {
 	// initialize default buffers
-	SZ_Init( &msg_read, msg_read_buffer, sizeof( msg_read_buffer ) );
-	SZ_Init( &msg_write, msg_write_buffer, sizeof( msg_write_buffer ) );
-
 	// don't allow them to overflow
-	msg_read.allowoverflow = qfalse;
-	msg_write.allowoverflow = qfalse;
-
+	SZ_TagInit( &msg_read, msg_read_buffer, MAX_MSGLEN, SZ_MSG_READ );
+	SZ_TagInit( &msg_write, msg_write_buffer, MAX_MSGLEN, SZ_MSG_WRITE );
 }
 
 
@@ -2706,6 +2702,13 @@ const char *MSG_ServerCommandString( int cmd ) {
 
 //===========================================================================
 
+void SZ_TagInit( sizebuf_t *buf, void *data, int length, uint32 tag ) {
+	memset( buf, 0, sizeof( *buf ) );
+	buf->data = data;
+	buf->maxsize = length;
+	buf->tag = tag;
+}
+
 void SZ_Init( sizebuf_t *buf, void *data, int length ) {
 	memset( buf, 0, sizeof( *buf ) );
 	buf->data = data;
@@ -2725,13 +2728,13 @@ void *SZ_GetSpace( sizebuf_t *buf, int length ) {
 	
 	if( buf->cursize + length > buf->maxsize ) {
 		if( !buf->allowoverflow ) {
-			Com_Error( ERR_FATAL, "SZ_GetSpace: overflow without allowoverflow set" );
+			Com_Error( ERR_FATAL, "SZ_GetSpace: %#x: overflow without allowoverflow set", buf->tag );
 		}
 		if( length > buf->maxsize ) {
-			Com_Error( ERR_FATAL, "SZ_GetSpace: %i is > full buffer size", length );
+			Com_Error( ERR_FATAL, "SZ_GetSpace: %#x: %d is > full buffer size", buf->tag, length );
 		}
-			
-		Com_DPrintf( "SZ_GetSpace: overflow\n" );
+
+		Com_DPrintf( "SZ_GetSpace: %#x: overflow\n", buf->tag );
 		SZ_Clear( buf ); 
 		buf->overflowed = qtrue;
 	}
