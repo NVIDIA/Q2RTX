@@ -680,11 +680,13 @@ void Key_Event( uint32 key, qboolean down, uint32 time ) {
 		if( cls.key_dest == KEY_GAME &&
             !cls.demoplayback &&
 			cl.clientNum != -1 &&
-			cl.frame.ps.stats[STAT_LAYOUTS] )
+			cl.frame.ps.stats[STAT_LAYOUTS] &&
+            !cl.putaway )
 		{	 
 			// put away help computer / inventory
 			Cbuf_AddText( "cmd putaway\n" );
-			//return;
+            cl.putaway = qtrue;
+			return;
 		}
 
 		if( cls.state > ca_disconnected && cls.state < ca_active ) {

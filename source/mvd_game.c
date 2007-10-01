@@ -74,7 +74,7 @@ static void MVD_LayoutClients( udpClient_t *client ) {
             strcpy( status, "observing" );
         }
 		length = Com_sprintf( buffer, sizeof( buffer ),
-			"xv 0 yv %d string \"%.16s\" "
+			"xv 0 yv %d string \"%.15s\" "
 			"xv 152 string %d "
 			"xv 208 string \"%s\" ",
 			y, cl->cl->name, cl->ping, status );
@@ -166,9 +166,11 @@ static void MVD_LayoutScores( udpClient_t *client ) {
 
 static void MVD_SetDefaultLayout( udpClient_t *client ) {
 	if( client->mvd == &mvd_waitingRoom ) {
-		client->scoreboard = SBOARD_CHANNELS;
-        client->cursor = 0;
-		MVD_LayoutChannels( client );
+        if( client->scoreboard != SBOARD_CHANNELS ) {
+    		client->scoreboard = SBOARD_CHANNELS;
+            client->cursor = 0;
+		    MVD_LayoutChannels( client );
+        }
 	} else {
 		client->layouts = 0;
 		client->scoreboard = SBOARD_NONE;
@@ -493,7 +495,7 @@ static void MVD_GameClientCommand( edict_t *ent ) {
         MVD_Observe_f( client );
 		return;
 	}
-	if( !strcmp( cmd, "inven" ) ) {
+	if( !strcmp( cmd, "inven" ) || !strcmp( cmd, "menu" ) ) {
 		if( client->scoreboard == SBOARD_CLIENTS ) {
 			MVD_SetDefaultLayout( client );
 		} else {
@@ -561,8 +563,19 @@ void MVD_Update( mvd_t *mvd ) {
 		if( client->cl->state != cs_spawned ) {
             continue;
         }
-        if( client->scoreboard >= SBOARD_CLIENTS && client->layoutTime < sv.time ) {
-            MVD_LayoutClients( client );
+        switch( client->scoreboard ) {
+        case SBOARD_CLIENTS:
+            if( client->layoutTime < sv.time ) {
+                MVD_LayoutClients( client );
+            }
+            break;
+        case SBOARD_CHANNELS:
+            if( mvd_dirty ) {
+                MVD_LayoutChannels( client );
+            }
+            break;
+        default:
+            break;
         }
     }
 }
@@ -784,15 +797,13 @@ static void MVD_GameRunFrame( void ) {
             continue;
         }
 
-        MVD_Update( mvd );
-
         // parse stream
         if( mvd->state < MVD_READING ) {
-            continue;
+            goto update;
         }
 
         if( !MVD_Parse( mvd ) ) {
-            continue;
+            goto update;
         }
 
         // update UDP clients
@@ -819,7 +830,14 @@ static void MVD_GameRunFrame( void ) {
         	FS_Write( &length, 2, mvd->demofile );
             FS_Write( msg_read.data, msg_read.cursize, mvd->demofile );
         }
+
+update:
+        MVD_Update( mvd );
     }
+
+    MVD_Update( &mvd_waitingRoom );
+    
+    mvd_dirty = qfalse;
 }
 
 static void MVD_GameServerCommand( void ) {

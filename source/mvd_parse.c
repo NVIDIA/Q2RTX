@@ -454,8 +454,10 @@ breakOut:
 MVD_ParseSound
 
 Entity positioned sounds need special handling since origins need to be
-explicitly specified on entities out of client PVS, and not all clients
+explicitly specified for entities out of client PVS, and not all clients
 are able to postition sounds on BSP models properly.
+
+FIXME: this duplicates code in sv_game.c
 */
 static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
     int flags, index;
@@ -520,13 +522,39 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
             }
         }
 
-        // reliable sounds will always have position explicitly set
+        // reliable sounds will always have position explicitly set,
+        // as no one gurantees reliables to be delivered in time
+        // why should this happen anyway?
         if( extrabits & 2 ) {
-            continue; // TODO
+            // use the entity origin unless it is a bmodel
+            if( entity->solid == SOLID_BSP ) {
+                VectorAvg( entity->mins, entity->maxs, origin );
+                VectorAdd( entity->s.origin, origin, origin );
+            } else {
+                VectorCopy( entity->s.origin, origin );
+            }
+
+            MSG_WriteByte( svc_sound );
+            MSG_WriteByte( flags | SND_POS );
+            MSG_WriteByte( index );
+
+            if( flags & SND_VOLUME )
+                MSG_WriteByte( volume );
+            if( flags & SND_ATTENUATION )
+                MSG_WriteByte( attenuation );
+            if( flags & SND_OFFSET )
+                MSG_WriteByte( offset );
+
+            MSG_WriteShort( sendchan );
+            MSG_WritePos( origin );
+
+            SV_ClientAddMessage( cl, MSG_RELIABLE|MSG_CLEAR );
+            continue;
         }
 
         if( LIST_EMPTY( &cl->freemsg ) ) {
-            Com_WPrintf( "Out of message slots for %s!\n", cl->name );
+            Com_WPrintf( "%s: %s: out of message slots\n",
+                __func__, cl->name );
             continue;
         }
 
@@ -543,8 +571,6 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
         List_Remove( &msg->entry );
         List_Append( &cl->soundmsg, &msg->entry );
 	}
-
-    //PF_StartSound( ent, channel, index, volume, attenuation, offset );
 }
 
 static void MVD_ParseConfigstring( mvd_t *mvd ) {
@@ -594,7 +620,7 @@ static void MVD_PlayerToEntityStates( mvd_t *mvd ) {
     edict_t *edict;
 	int i;
 
-    for( i = 0, player = mvd->players; i < mvd->maxclients; i++, player++ ) {
+    for( i = 1, player = mvd->players; i <= mvd->maxclients; i++, player++ ) {
         if( !player->inuse ) {
             continue;
         }
@@ -602,7 +628,7 @@ static void MVD_PlayerToEntityStates( mvd_t *mvd ) {
             continue;
         }
 
-        edict = &mvd->edicts[ i + 1 ];
+        edict = &mvd->edicts[i];
         if( !edict->inuse ) {
             continue; // not present in this frame
         }
@@ -892,6 +918,7 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
     if( mvd->state < MVD_WAITING ) {
         List_Append( &mvd_ready, &mvd->ready );
         mvd->state = mvd->demoplayback ? MVD_READING : MVD_WAITING;
+        mvd_dirty = qtrue;
     }
 
     MVD_ChangeLevel( mvd );

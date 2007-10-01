@@ -711,9 +711,13 @@ static void GL_Register( void ) {
 	cmd.AddCommand( "screenshot", GL_ScreenShot_f );
 #if USE_JPEG
 	cmd.AddCommand( "screenshotjpg", GL_ScreenShotJPG_f );
+#else
+	cmd.AddCommand( "screenshotjpg", GL_ScreenShot_f );
 #endif
 #if USE_PNG
 	cmd.AddCommand( "screenshotpng", GL_ScreenShotPNG_f );
+#else
+	cmd.AddCommand( "screenshotpng", GL_ScreenShot_f );
 #endif
 	cmd.AddCommand( "strings", GL_Strings_f );
 
@@ -722,12 +726,8 @@ static void GL_Register( void ) {
 
 static void GL_Unregister( void ) {
 	cmd.RemoveCommand( "screenshot" );
-#if USE_JPEG
 	cmd.RemoveCommand( "screenshotjpg" );
-#endif
-#if USE_PNG
 	cmd.RemoveCommand( "screenshotpng" );
-#endif
 	cmd.RemoveCommand( "strings" );
 }
 

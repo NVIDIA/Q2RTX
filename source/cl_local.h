@@ -158,6 +158,7 @@ typedef struct client_state_s {
 	//
 	char		layout[MAX_STRING_CHARS];		// general 2D overlay
 	int			inventory[MAX_ITEMS];
+    qboolean    putaway;
 
 	//
 	// server state information

@@ -156,6 +156,7 @@ typedef struct mvd_s {
 extern list_t           mvd_channels;
 extern list_t           mvd_ready;
 extern mvd_t            mvd_waitingRoom;
+extern qboolean         mvd_dirty;
 
 extern cvar_t	*mvd_shownet;
 extern cvar_t	*mvd_debug;

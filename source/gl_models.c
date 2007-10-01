@@ -860,8 +860,8 @@ qhandle_t GL_RegisterModel( const char *name ) {
 		if( nameLength > 4 && !strcmp( name + nameLength - 4, ".md2" ) ) {
 			strcpy( buffer, name );
 			buffer[nameLength - 1] = '3';
-		}
-		length = fs.LoadFile( buffer, ( void ** )&rawdata );
+		    length = fs.LoadFile( buffer, ( void ** )&rawdata );
+        }
 	}
 	if( length == -1 ) {
 		length = fs.LoadFile( name, ( void ** )&rawdata );

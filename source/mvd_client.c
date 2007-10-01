@@ -29,6 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 list_t		mvd_channels;
 list_t		mvd_ready;
 mvd_t       mvd_waitingRoom;
+qboolean    mvd_dirty;
 
 jmp_buf     mvd_jmpbuf;
 
@@ -38,7 +39,6 @@ cvar_t	*mvd_shownet;
 cvar_t	*mvd_debug;
 cvar_t	*mvd_nextserver;
 cvar_t	*mvd_timeout;
-cvar_t	*mvd_autoscores;
 cvar_t	*mvd_safecmd;
 cvar_t	*mvd_wait_enter;
 cvar_t	*mvd_wait_leave;
@@ -109,6 +109,8 @@ void MVD_Destroy( mvd_t *mvd, const char *fmt, ... ) {
     MVD_ClearState( mvd );
     MVD_Free( mvd );
 
+    mvd_dirty = qtrue;
+
     longjmp( mvd_jmpbuf, -1 );
 }
 
@@ -120,7 +122,7 @@ void MVD_Drop( mvd_t *mvd, const char *fmt, ... ) {
 	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
 	va_end( argptr );
 
-	Com_Printf( S_COLOR_YELLOW "%s\n", text );
+	Com_DPrintf( "%s\n", text );
 
     if( mvd->state < MVD_WAITING ) {
         MVD_Disconnect( mvd );
@@ -871,7 +873,7 @@ void MVD_Connect_f( void ) {
     Z_TagReserve( sizeof( *mvd ) + MAX_MSGLEN * 2 + 256, TAG_MVD );
 
     mvd = Z_ReservedAllocz( sizeof( *mvd ) );
-    strcpy( mvd->name, "unnamed" );
+    strcpy( mvd->name, "unnamed stream" );
     mvd->state = MVD_CONNECTING;
     mvd->stream = stream;
     mvd->stream.recv.data = Z_ReservedAlloc( MAX_MSGLEN * 2 );
@@ -958,6 +960,7 @@ void MVD_Play_f( void ) {
     Z_TagReserve( sizeof( *mvd ) + MAX_MSGLEN * 2, TAG_MVD );
 
     mvd = Z_ReservedAllocz( sizeof( *mvd ) );
+    strcpy( mvd->name, "unnamed demo" );
     mvd->state = MVD_PREPARING;
     mvd->demoplayback = qtrue;
 	mvd->demofile = f;
@@ -1025,12 +1028,9 @@ void MVD_Register( void ) {
 	mvd_pause = Cvar_Get( "mvd_pause", "0", 0 );
 	mvd_nextserver = Cvar_Get( "mvd_nextserver", "1", 0 );
 	mvd_timeout = Cvar_Get( "mvd_timeout", "120", 0 );
-	mvd_autoscores = Cvar_Get( "mvd_autoscores", "", 0 );
 	mvd_safecmd = Cvar_Get( "mvd_safecmd", "", 0 );
 	mvd_wait_enter = Cvar_Get( "mvd_wait_enter", "0.5", 0 );
 	mvd_wait_leave = Cvar_Get( "mvd_wait_leave", "2", 0 );
-//	mvd_drop_enter = Cvar_Get( "mvd_drop_enter", "95", 0 );
-//	mvd_drop_leave = Cvar_Get( "mvd_drop_leave", "90", 0 );
 
     Cmd_Register( c_mvd );
 

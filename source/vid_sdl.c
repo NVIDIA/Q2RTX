@@ -42,6 +42,8 @@ typedef struct {
 
 static sdl_state_t    sdl;
 
+void QSDL_AcquireMouse( void );
+
 /*
 ===============================================================================
 
@@ -261,6 +263,12 @@ static void QSDL_MouseButtonEvent( int button, qboolean down ) {
     uint32 key;
 
     if( !sdl.mouseinitialized ) {
+        return;
+    }
+
+    if( !sdl.mouseactive ) {
+        QSDL_AcquireMouse();
+        sdl.mouseactive = qtrue;
         return;
     }
 

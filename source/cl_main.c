@@ -376,7 +376,7 @@ static void CL_CheckForResend( void ) {
     if ( cls.state == ca_challenging ) {
         Com_Printf( "Requesting challenge... %i\n", cls.connectCount );
         ret = Netchan_OutOfBandPrint( NS_CLIENT, &cls.serverAddress,
-                "getchallenge\n" );
+            "getchallenge\n" );
 		if( ret == NET_ERROR ) {
 			Com_Error( ERR_DISCONNECT, "%s to %s\n", NET_ErrorString(),
                     NET_AdrToString( &cls.serverAddress ) );
@@ -734,8 +734,7 @@ static void CL_ServerStatus_f( void ) {
 
 	NET_Config( NET_CLIENT );
 
-    ret = Netchan_OutOfBandPrint( NS_CLIENT, &adr, "status p=%d,%d,%d",
-		PROTOCOL_VERSION_DEFAULT, PROTOCOL_VERSION_R1Q2, PROTOCOL_VERSION_Q2PRO );
+    ret = Netchan_OutOfBandPrint( NS_CLIENT, &adr, "status p=34,35,36" );
 	if( ret == NET_ERROR ) {
 		Com_Printf( "%s to %s\n", NET_ErrorString(), NET_AdrToString( &adr ) );
 	}

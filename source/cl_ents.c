@@ -121,6 +121,10 @@ void CL_DeltaFrame( void ) {
     if( cls.demorecording ) {
         CL_EmitDemoFrame();
     }
+    
+    if( cl.oldframe.ps.stats[STAT_LAYOUTS] != cl.frame.ps.stats[STAT_LAYOUTS] ) {
+        cl.putaway = qfalse;
+    }
 }
 
 

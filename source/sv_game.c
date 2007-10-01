@@ -30,7 +30,7 @@ PF_FindIndex
 
 ================
 */
-static int SV_FindIndex( const char *name, int start, int max, qboolean create ) {
+static int SV_FindIndex( const char *name, int start, int max ) {
 	char *string;
 	int		i;
 	
@@ -47,9 +47,6 @@ static int SV_FindIndex( const char *name, int start, int max, qboolean create )
 		}
 	}
 
-	if( !create )
-		return 0;
-
 	if( i == max )
 		Com_Error( ERR_DROP, "PF_FindIndex: overflow" );
 
@@ -59,15 +56,15 @@ static int SV_FindIndex( const char *name, int start, int max, qboolean create )
 }
 
 static int PF_ModelIndex (const char *name) {
-	return SV_FindIndex (name, CS_MODELS, MAX_MODELS, qtrue);
+	return SV_FindIndex (name, CS_MODELS, MAX_MODELS);
 }
 
 static int PF_SoundIndex (const char *name) {
-	return SV_FindIndex (name, CS_SOUNDS, MAX_SOUNDS, qtrue);
+	return SV_FindIndex (name, CS_SOUNDS, MAX_SOUNDS);
 }
 
 static int PF_ImageIndex (const char *name) {
-	return SV_FindIndex (name, CS_IMAGES, MAX_IMAGES, qtrue);
+	return SV_FindIndex (name, CS_IMAGES, MAX_IMAGES);
 }
 
 /*
@@ -585,6 +582,8 @@ static void PF_StartSound( edict_t *edict, int channel,
 
             MSG_WriteShort( sendchan );
             MSG_WritePos( origin );
+
+            SV_ClientAddMessage( client, MSG_RELIABLE|MSG_CLEAR );
             continue;
         }
 

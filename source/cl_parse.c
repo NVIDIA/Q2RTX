@@ -440,6 +440,7 @@ static void CL_SetActiveState( void ) {
 	cls.state = ca_active;
 	cl.oldframe.valid = qfalse;
     cl.frameflags = 0;
+    cl.putaway = qfalse;
 
 	if( !cls.demoplayback ) {
         VectorScale( cl.frame.ps.pmove.origin, 0.125f, cl.predicted_origin );
@@ -1328,6 +1329,7 @@ static void CL_ParseLayout( void ) {
 	}
 	
 	Q_strncpyz( cl.layout, string, sizeof( cl.layout ) );
+    cl.putaway = qfalse;
 }
 
 /*
@@ -1341,6 +1343,7 @@ static void CL_ParseInventory( void ) {
 	for( i = 0; i < MAX_ITEMS; i++ ) {
 		cl.inventory[i] = MSG_ReadShort();
 	}
+    cl.putaway = qfalse;
 }
 
 static void CL_ParseZPacket( void ) {
