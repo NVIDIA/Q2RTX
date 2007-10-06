@@ -812,7 +812,7 @@ static void CL_ParseServerData( void ) {
         if( protocol == PROTOCOL_VERSION_OLD ) {
             Com_DPrintf( "Using protocol %d for compatibility with old demos.\n", PROTOCOL_VERSION_OLD );
         } else if( protocol < PROTOCOL_VERSION_DEFAULT || protocol > PROTOCOL_VERSION_Q2PRO ) {
-            Com_Error( ERR_DROP, "Demo uses unsupported protocol version %d.\n", protocol );
+            Com_Error( ERR_DROP, "Demo uses unsupported protocol version %d.", protocol );
         }
 		cls.serverProtocol = protocol;
 	}
@@ -855,7 +855,8 @@ static void CL_ParseServerData( void ) {
 		}
 		i = MSG_ReadShort();
 		if( !R1Q2_SUPPORTED( i ) ) {
-			Com_Error( ERR_DROP, "Unsupported R1Q2 protocol version %d.\n", i );
+			Com_Error( ERR_DROP, "Unsupported R1Q2 protocol version %d.\n"
+                "Current client version is %d.", i, PROTOCOL_VERSION_R1Q2_CURRENT );
 		}
         cls.protocolVersion = i;
 		i = MSG_ReadByte();
@@ -870,7 +871,8 @@ static void CL_ParseServerData( void ) {
 	} else if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO ) {
 		i = MSG_ReadShort();
 		if( !Q2PRO_SUPPORTED( i ) ) {
-			Com_Error( ERR_DROP, "Unsupported Q2PRO protocol version %d.\n", i );
+			Com_Error( ERR_DROP, "Unsupported Q2PRO protocol version %d.\n"
+                "Current client version is %d.", i, PROTOCOL_VERSION_Q2PRO_CURRENT );
 		}
         cls.protocolVersion = i;
 		cl.gametype = MSG_ReadByte();

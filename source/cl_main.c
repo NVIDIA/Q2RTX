@@ -96,6 +96,7 @@ cvar_t	*info_fov;
 cvar_t	*info_msg;
 cvar_t	*info_hand;
 cvar_t	*info_gender;
+cvar_t	*info_uf;
 
 client_static_t	cls;
 client_state_t	cl;
@@ -2354,12 +2355,12 @@ void CL_InitLocal ( void ) {
     info_fov = Cvar_Get( "fov", "90", CVAR_USERINFO | CVAR_ARCHIVE );
     info_gender = Cvar_Get( "gender", "male", CVAR_USERINFO | CVAR_ARCHIVE );
     info_gender->modified = qfalse; // clear this so we know when user sets it manually
+    info_uf = Cvar_Get( "uf", "0", CVAR_USERINFO );
 
 
     //
-    // register our commands
+    // macros
     //
-
     Cmd_AddMacro( "cl_mapname", CL_Mapname_m );
     Cmd_AddMacro( "cl_server", CL_Server_m );
     Cmd_AddMacro( "cl_demo", CL_DemoState_m );
@@ -2369,8 +2370,6 @@ void CL_InitLocal ( void ) {
 	Cmd_AddMacro( "cl_health", CL_Health_m );
 	Cmd_AddMacro( "cl_ammo", CL_Ammo_m );
 	Cmd_AddMacro( "cl_armor", CL_Armor_m );
-
-
 }
 
 /*

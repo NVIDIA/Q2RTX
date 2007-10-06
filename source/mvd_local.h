@@ -84,6 +84,7 @@ typedef struct {
     int lastframe;
 	mvd_player_t *target;
 	float fov;
+    int uf;
     int cursor;
 
 	scoreboard_t scoreboard;
@@ -167,9 +168,9 @@ extern cvar_t	*mvd_autoscores;
 extern cvar_t	*mvd_safecmd;
 
 void MVD_DPrintf( const char *fmt, ... ) q_printf( 1, 2 );
-void MVD_Drop( mvd_t *mvd, const char *fmt, ... )
+void MVD_Dropf( mvd_t *mvd, const char *fmt, ... )
     q_noreturn q_printf( 2, 3 );
-void MVD_Destroy( mvd_t *mvd, const char *fmt, ... )
+void MVD_Destroyf( mvd_t *mvd, const char *fmt, ... )
     q_noreturn q_printf( 2, 3 );
 void MVD_Disconnect( mvd_t *mvd );
 void MVD_ClearState( mvd_t *mvd );

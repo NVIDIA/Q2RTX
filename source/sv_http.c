@@ -150,11 +150,6 @@ static void uri_status( const char *uri ) {
 }
 
 static void uri_mvdstream( const char *uri ) {
-    if( sv.state != ss_game && sv.state != ss_broadcast ) {
-        SV_HttpReject( "403 Forbidden",
-            "Live MVD stream is unavailable on this server." );
-        return;
-    }
 	if( !sv_mvd_enable->integer ) {
         SV_HttpReject( "403 Forbidden",
             "You do not have permission to access "

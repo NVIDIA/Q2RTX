@@ -248,14 +248,14 @@ static void MVD_ParseMulticast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
 		break;
 
 	default:
-		MVD_Destroy( mvd, "bad op" );
+		MVD_Destroyf( mvd, "bad op" );
 	}
 
     // skip data payload
 	data = msg_read.data + msg_read.readcount;
 	msg_read.readcount += length;
 	if( msg_read.readcount > msg_read.cursize ) {
-		MVD_Destroy( mvd, "read past end of message" );
+		MVD_Destroyf( mvd, "read past end of message" );
 	}
 
 	// send the data to all relevent clients
@@ -305,12 +305,12 @@ static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
 	clientNum = MSG_ReadByte();
 
 	if( clientNum < 0 || clientNum >= MAX_CLIENTS ) {
-		MVD_Destroy( mvd, "%s: bad number: %d", __func__, clientNum );
+		MVD_Destroyf( mvd, "%s: bad number: %d", __func__, clientNum );
 	}
 
 	last = msg_read.readcount + length;
 	if( last > msg_read.cursize ) {
-		MVD_Destroy( mvd, "%s: read past end of message", __func__ );
+		MVD_Destroyf( mvd, "%s: read past end of message", __func__ );
 	}
 
 	player = &mvd->players[clientNum];
@@ -321,7 +321,7 @@ static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
     // layouts, etc. Give up as soon as unknown command byte is encountered.
 	while( 1 ) {
 		if( msg_read.readcount > last ) {
-		    MVD_Destroy( mvd, "%s: read past end of unicast", __func__ );
+		    MVD_Destroyf( mvd, "%s: read past end of unicast", __func__ );
 		}
 
 		if( msg_read.readcount == last ) {
@@ -347,7 +347,7 @@ static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
 			i = MSG_ReadShort();
 			s = MSG_ReadString();
 			if( i < 0 || i >= MAX_CONFIGSTRINGS ) {
-		        MVD_Destroy( mvd, "%s: bad configstring index: %d", __func__, i );
+		        MVD_Destroyf( mvd, "%s: bad configstring index: %d", __func__, i );
 			}
             length = strlen( s );
             if( length > MAX_QPATH - 1 ) {
@@ -488,7 +488,7 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
 	sendchan = MSG_ReadShort();
     entnum = sendchan >> 3;
     if( entnum < 0 || entnum >= MAX_EDICTS ) {
-		MVD_Destroy( mvd, "%s: bad entnum: %d", __func__, entnum );
+		MVD_Destroyf( mvd, "%s: bad entnum: %d", __func__, entnum );
     }
 
     entity = &mvd->edicts[entnum];
@@ -575,26 +575,36 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
 
 static void MVD_ParseConfigstring( mvd_t *mvd ) {
 	int index, length;
-	char *string;
+	char *string, *p;
 	udpClient_t *client;
+    mvd_player_t *player;
 
 	index = MSG_ReadShort();
 
 	if( index < 0 || index >= MAX_CONFIGSTRINGS ) {
-		MVD_Destroy( mvd, "%s: bad index: %d", __func__, index );
+		MVD_Destroyf( mvd, "%s: bad index: %d", __func__, index );
 	}
 
 	string = MSG_ReadStringLength( &length );
 
 	if( MAX_QPATH * index + length >= sizeof( mvd->configstrings ) ) {
-		MVD_Destroy( mvd, "%s: oversize configstring: %d", __func__, index );
+		MVD_Destroyf( mvd, "%s: oversize configstring: %d", __func__, index );
 	}
 
 	if( !strcmp( mvd->configstrings[index], string ) ) {
 		return;
 	}
+    
+	if( index >= CS_PLAYERSKINS && index < CS_PLAYERSKINS + mvd->maxclients ) {
+        player = &mvd->players[ index - CS_PLAYERSKINS ];
+        Q_strncpyz( player->name, string, sizeof( player->name ) );
+        p = strchr( player->name, '\\' );
+        if( p ) {
+            *p = 0;
+        }
+    }
 
-	strcpy( mvd->configstrings[index], string );
+	memcpy( mvd->configstrings[index], string, length + 1 );
 
 	MSG_WriteByte( svc_configstring );
 	MSG_WriteShort( index );
@@ -663,12 +673,12 @@ static void MVD_ParsePacketEntities( mvd_t *mvd ) {
 
 	while( 1 ) {
 		if( msg_read.readcount > msg_read.cursize ) {
-			MVD_Destroy( mvd, "%s: read past end of message", __func__ );
+			MVD_Destroyf( mvd, "%s: read past end of message", __func__ );
 		}
 
 		number = MSG_ParseEntityBits( &bits );
 		if( number < 0 || number >= MAX_EDICTS ) {
-			MVD_Destroy( mvd, "%s: bad number: %d", __func__, number );
+			MVD_Destroyf( mvd, "%s: bad number: %d", __func__, number );
 		}
 
 		if( !number ) {
@@ -717,7 +727,7 @@ static void MVD_ParsePacketPlayers( mvd_t *mvd ) {
 
 	while( 1 ) {
 		if( msg_read.readcount > msg_read.cursize ) {
-			MVD_Destroy( mvd, "%s: read past end of message", __func__ );
+			MVD_Destroyf( mvd, "%s: read past end of message", __func__ );
 		}
 
 		number = MSG_ReadByte();
@@ -726,7 +736,7 @@ static void MVD_ParsePacketPlayers( mvd_t *mvd ) {
 		}
 
 		if( number < 0 || number >= mvd->maxclients ) {
-			MVD_Destroy( mvd, "%s: bad number: %d", __func__, number );
+			MVD_Destroyf( mvd, "%s: bad number: %d", __func__, number );
 		}
 
         player = &mvd->players[number];
@@ -767,10 +777,10 @@ static void MVD_ParseFrame( mvd_t *mvd ) {
 	length = MSG_ReadByte();
 	if( length ) {
 		if( length < 0 || msg_read.readcount + length > msg_read.cursize ) {
-            MVD_Destroy( mvd, "%s: read past end of message", __func__ );
+            MVD_Destroyf( mvd, "%s: read past end of message", __func__ );
 		}
 		if( length > MAX_MAP_AREAS/8 ) {
-            MVD_Destroy( mvd, "%s: bad portalbits length: %d", __func__, length );
+            MVD_Destroyf( mvd, "%s: bad portalbits length: %d", __func__, length );
 		}
         CM_SetPortalStates( &mvd->cm, msg_read.data +
             msg_read.readcount, length );
@@ -808,8 +818,10 @@ static void MVD_ParseFrame( mvd_t *mvd ) {
 static void MVD_ParseServerData( mvd_t *mvd ) {
 	int protocol;
     int length, index;
-	char *gamedir, *string;
+	char *gamedir, *string, *p;
 	uint32 checksum;
+    int i;
+    mvd_player_t *player;
 
     // clear the leftover from previous level
     MVD_ClearState( mvd );
@@ -817,13 +829,13 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
 	// parse major protocol version
 	protocol = MSG_ReadLong();
 	if( protocol != PROTOCOL_VERSION_MVD ) {
-        MVD_Destroy( mvd, "Unsupported protocol: %d", protocol );
+        MVD_Destroyf( mvd, "Unsupported protocol: %d", protocol );
     }
 
     // parse minor protocol version
     protocol = MSG_ReadShort();
     if( protocol != PROTOCOL_VERSION_MVD_MINOR ) {
-        MVD_Destroy( mvd, "MVD protocol version mismatch: %d instead of %d",
+        MVD_Destroyf( mvd, "MVD protocol version mismatch: %d instead of %d",
             protocol, PROTOCOL_VERSION_MVD_MINOR );
     }
 
@@ -848,38 +860,38 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
         }
 
         if( index < 0 || index >= MAX_CONFIGSTRINGS ) {
-            MVD_Destroy( mvd, "Bad configstring index: %d", index );
+            MVD_Destroyf( mvd, "Bad configstring index: %d", index );
         }
 
         string = MSG_ReadStringLength( &length );
 
         if( MAX_QPATH * index + length > sizeof( mvd->configstrings ) - 1 ) {
-            MVD_Destroy( mvd, "Oversize configstring" );
+            MVD_Destroyf( mvd, "Oversize configstring" );
         }
 
-        strcpy( mvd->configstrings[index], string );
+        memcpy( mvd->configstrings[index], string, length + 1 );
 
         if( msg_read.readcount > msg_read.cursize ) {
-            MVD_Destroy( mvd, "Read past end of message" );
+            MVD_Destroyf( mvd, "Read past end of message" );
         }
     }
 
     // parse maxclients
     index = atoi( mvd->configstrings[CS_MAXCLIENTS] );
     if( index < 1 || index > MAX_CLIENTS ) {
-        MVD_Destroy( mvd, "Invalid maxclients" );
+        MVD_Destroyf( mvd, "Invalid maxclients" );
     }
 
     if( !mvd->players ) {
         mvd->players = MVD_Mallocz( sizeof( mvd_player_t ) * index );
         mvd->maxclients = index;
     } else if( index != mvd->maxclients ) {
-        MVD_Destroy( mvd, "Unexpected maxclients change" );
+        MVD_Destroyf( mvd, "Unexpected maxclients change" );
     }
 
     // validate clientNum
     if( mvd->clientNum < 0 || mvd->clientNum >= mvd->maxclients ) {
-        MVD_Destroy( mvd, "Invalid client num: %d", mvd->clientNum );
+        MVD_Destroyf( mvd, "Invalid client num: %d", mvd->clientNum );
     }
     mvd->dummy = mvd->players + mvd->clientNum;
 
@@ -887,7 +899,7 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
     string = mvd->configstrings[ CS_MODELS + 1]; 
     length = strlen( string );
     if( length <= 9 ) {
-        MVD_Destroy( mvd, "Bad world model: %s", string );
+        MVD_Destroyf( mvd, "Bad world model: %s", string );
     }
     strcpy( mvd->mapname, string + 5 ); // skip "maps/"
     mvd->mapname[length - 9] = 0; // cut off ".bsp"
@@ -895,7 +907,7 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
     // check if map exists so CM_LoadMap does not kill
     // entire server if it does not
     if( FS_LoadFile( string, NULL ) == -1 ) {
-        MVD_Destroy( mvd, "Couldn't find map: %s", string );
+        MVD_Destroyf( mvd, "Couldn't find map: %s", string );
     }
 
 	// load the world model (we are only interesed in
@@ -905,9 +917,22 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
 
 #if USE_MAPCHECKSUM
     if( checksum != atoi( mvd->configstrings[CS_MAPCHECKSUM] ) ) {
-        MVD_Destroy( mvd, "Local map version differs from server" );
+        MVD_Destroyf( mvd, "Local map version differs from server" );
     }
 #endif
+
+    // set player names
+    for( i = 0; i < mvd->maxclients; i++ ) {
+        player = &mvd->players[i];
+        string = mvd->configstrings[ CS_PLAYERSKINS + i ];
+        if( *string ) {
+            Q_strncpyz( player->name, string, sizeof( player->name ) );
+            p = strchr( player->name, '\\' );
+            if( p ) {
+                *p = 0;
+            }
+        }
+    }
 
     // get the spawn point for spectators
     MVD_ParseEntityString( mvd );
@@ -937,7 +962,7 @@ static qboolean MVD_ParseMessage( mvd_t *mvd, fifo_t *fifo ) {
             return qfalse;
         }
         if( magic != MVD_MAGIC ) {
-            MVD_Destroy( mvd, "Not a MVD stream" );
+            MVD_Destroyf( mvd, "Not a MVD stream" );
         }
         mvd->state = MVD_PREPARING;
     }
@@ -949,11 +974,11 @@ static qboolean MVD_ParseMessage( mvd_t *mvd, fifo_t *fifo ) {
             return qfalse;
         }
         if( !msglen ) {
-            MVD_Destroy( mvd, "End of MVD stream reached" );
+            MVD_Destroyf( mvd, "End of MVD stream reached" );
         }
         msglen = LittleShort( msglen );
         if( msglen > MAX_MSGLEN ) {
-            MVD_Destroy( mvd, "Invalid MVD message length: %d bytes", msglen );
+            MVD_Destroyf( mvd, "Invalid MVD message length: %d bytes", msglen );
         }
         mvd->msglen = msglen;
     }
@@ -985,7 +1010,7 @@ static qboolean MVD_ParseMessage( mvd_t *mvd, fifo_t *fifo ) {
 //
 	while( 1 ) {
 		if( msg_read.readcount > msg_read.cursize ) {
-            MVD_Destroy( mvd, "Read past end of message" );
+            MVD_Destroyf( mvd, "Read past end of message" );
 		}
 
 		if( ( cmd = MSG_ReadByte() ) == -1 ) {
@@ -1032,7 +1057,7 @@ static qboolean MVD_ParseMessage( mvd_t *mvd, fifo_t *fifo ) {
 			MVD_ParseSound( mvd, extrabits );
 			break;
 		default:
-            MVD_Destroy( mvd, "Illegible command at %d: %d",
+            MVD_Destroyf( mvd, "Illegible command at %d: %d",
                 msg_read.readcount - 1, cmd );
 		}
 	}
@@ -1088,7 +1113,7 @@ qboolean MVD_Parse( mvd_t *mvd ) {
             inflateEnd( &mvd->z );
             break;
         default:
-            MVD_Destroy( mvd, "inflate() failed: %s", mvd->z.msg );
+            MVD_Destroyf( mvd, "inflate() failed: %s", mvd->z.msg );
         }
     }
     if( mvd->zbuf.data ) {
@@ -1103,7 +1128,7 @@ qboolean MVD_Parse( mvd_t *mvd ) {
         return qtrue;
     }
     if( mvd->state == MVD_DISCONNECTED ) {
-        MVD_Destroy( mvd, "MVD stream was truncated" );
+        MVD_Destroyf( mvd, "MVD stream was truncated" );
     }
     return qfalse;
 }

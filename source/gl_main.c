@@ -69,6 +69,7 @@ cvar_t *gl_dynamic;
 cvar_t *gl_fullbright;
 cvar_t *gl_hwgamma;
 cvar_t *gl_fullscreen;
+cvar_t *gl_showerrors;
 
 static void GL_SetupFrustum( void ) {
     cplane_t *f;
@@ -472,8 +473,10 @@ static void GL_RenderFrame( refdef_t *fd ) {
 
     GL_Blend();
 
-    while( ( err = qglGetError() ) != GL_NO_ERROR ) {
-		Com_EPrintf( "GL_RenderFrame: %s\n", GL_ErrorString( err ) );
+    if( gl_showerrors->integer ) {
+        while( ( err = qglGetError() ) != GL_NO_ERROR ) {
+	    	Com_EPrintf( "GL_RenderFrame: %s\n", GL_ErrorString( err ) );
+        }
     }
 }
 
@@ -492,8 +495,10 @@ static void GL_BeginFrame( void ) {
 	    qglClear( GL_COLOR_BUFFER_BIT );
     }
 
-    while( ( err = qglGetError() ) != GL_NO_ERROR ) {
-		Com_EPrintf( "GL_BeginFrame: %s\n", GL_ErrorString( err ) );
+    if( gl_showerrors->integer ) {
+        while( ( err = qglGetError() ) != GL_NO_ERROR ) {
+            Com_EPrintf( "GL_BeginFrame: %s\n", GL_ErrorString( err ) );
+        }
     }
 }
 
@@ -510,8 +515,10 @@ static void GL_EndFrame( void ) {
 		gl_log->modified = qfalse;
 	}
 	
-    while( ( err = qglGetError() ) != GL_NO_ERROR ) {
-		Com_EPrintf( "GL_EndFrame: %s\n", GL_ErrorString( err ) );
+    if( gl_showerrors->integer ) {
+        while( ( err = qglGetError() ) != GL_NO_ERROR ) {
+		    Com_EPrintf( "GL_EndFrame: %s\n", GL_ErrorString( err ) );
+        }
     }
     video.EndFrame();
 }
@@ -707,6 +714,7 @@ static void GL_Register( void ) {
     gl_fastsky = cvar.Get( "gl_fastsky", "0", 0 );
     gl_dynamic = cvar.Get( "gl_dynamic", "2", CVAR_ARCHIVE );
     gl_fullbright = cvar.Get( "r_fullbright", "0", CVAR_CHEAT );
+    gl_showerrors = cvar.Get( "gl_showerrors", "1", 0 );
     
 	cmd.AddCommand( "screenshot", GL_ScreenShot_f );
 #if USE_JPEG

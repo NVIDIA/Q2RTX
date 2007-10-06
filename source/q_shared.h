@@ -1375,6 +1375,11 @@ ROGUE - VERSIONS
 #define ROGUE_VERSION_STRING	"08/21/1998 Beta 2 for Ensemble"
 
 // ROGUE
+
+#define UF_AUTOSCREENSHOT   1
+#define UF_AUTORECORD       2
+#define UF_LOCALFOV         4
+
 /*
 ==========================================================
 

@@ -342,6 +342,7 @@ extern cvar_t	*info_fov;
 extern cvar_t	*info_msg;
 extern cvar_t	*info_hand;
 extern cvar_t	*info_gender;
+extern cvar_t	*info_uf;
 
 
 typedef struct cdlight_s

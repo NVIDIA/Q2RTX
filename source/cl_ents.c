@@ -882,7 +882,7 @@ static void CL_CalcViewValues( void ) {
 	cl.delta_angles[2] = LerpShort( ops->pmove.delta_angles[2], ps->pmove.delta_angles[2], lerp );
 #endif
 
-	if( cls.demoplayback ) {
+	if( cls.demoplayback && ( info_uf->integer & UF_LOCALFOV ) ) {
 		fov = info_fov->value;
         if( fov < 1 ) {
             fov = 90;

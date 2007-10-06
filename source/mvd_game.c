@@ -317,7 +317,9 @@ void MVD_UpdateClient( udpClient_t *client ) {
 
     // copy entire player state
 	client->ps = target->ps;
-	client->ps.fov = client->fov;
+    if( client->uf & UF_LOCALFOV ) {
+    	client->ps.fov = client->fov;
+    }
 	client->ps.pmove.pm_flags |= PMF_NO_PREDICTION;
 	client->ps.pmove.pm_type = PM_FREEZE;
     client->ps.stats[STAT_LAYOUTS] = client->layouts;
@@ -713,16 +715,23 @@ static void MVD_GameClientBegin( edict_t *ent ) {
 
 static void MVD_GameClientUserinfoChanged( edict_t *ent, char *userinfo ) {
 	udpClient_t *client = EDICT_MVDCL( ent );
+    char *s;
 	float fov;
 
-	fov = atof( Info_ValueForKey( userinfo, "fov" ) );
+    s = Info_ValueForKey( userinfo, "uf" );
+    client->uf = atoi( s );
+
+    s = Info_ValueForKey( userinfo, "fov" );
+	fov = atof( s );
 	if( fov < 1 ) {
 		fov = 90;
 	} else if( fov > 160 ) {
 		fov = 160;
 	}
 	client->fov = fov;
-	client->ps.fov = fov;
+    if( client->uf & UF_LOCALFOV ) {
+    	client->ps.fov = fov;
+    }
 }
 
 static void MVD_GameClientDisconnect( edict_t *ent ) {

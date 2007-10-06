@@ -404,7 +404,7 @@ void SV_ClientReset( client_t *client );
 // sv_send.c
 //
 typedef enum {RD_NONE, RD_CLIENT, RD_PACKET} redirect_t;
-#define	SV_OUTPUTBUF_LENGTH	(MAX_PACKETLEN - 16)
+#define	SV_OUTPUTBUF_LENGTH	(MAX_PACKETLEN_WRITABLE_DEFAULT - 8)
 
 extern	char	sv_outputbuf[SV_OUTPUTBUF_LENGTH];
 

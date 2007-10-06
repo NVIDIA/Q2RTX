@@ -77,19 +77,10 @@ void MVD_Free( mvd_t *mvd ) {
     Z_Free( mvd );
 }
 
-
-void MVD_Destroy( mvd_t *mvd, const char *fmt, ... ) {
-	va_list		argptr;
-	char		text[MAXPRINTMSG];
+void MVD_Destroy( mvd_t *mvd ) {
 	udpClient_t *u, *unext;
     tcpClient_t *t;
     uint16 length;
-
-	va_start( argptr, fmt );
-	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
-	va_end( argptr );
-
-	Com_Printf( S_COLOR_YELLOW "%s\n", text );
 
     // cause UDP clients to reconnect
     LIST_FOR_EACH_SAFE( udpClient_t, u, unext, &mvd->udpClients, entry ) {
@@ -110,11 +101,18 @@ void MVD_Destroy( mvd_t *mvd, const char *fmt, ... ) {
     MVD_Free( mvd );
 
     mvd_dirty = qtrue;
-
-    longjmp( mvd_jmpbuf, -1 );
 }
 
-void MVD_Drop( mvd_t *mvd, const char *fmt, ... ) {
+void MVD_Drop( mvd_t *mvd ) {
+    if( mvd->state < MVD_WAITING ) {
+        MVD_Destroy( mvd );
+    } else {
+        MVD_Disconnect( mvd );
+    }
+}
+
+
+void MVD_Destroyf( mvd_t *mvd, const char *fmt, ... ) {
 	va_list		argptr;
 	char		text[MAXPRINTMSG];
 
@@ -122,15 +120,24 @@ void MVD_Drop( mvd_t *mvd, const char *fmt, ... ) {
 	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
 	va_end( argptr );
 
-	Com_DPrintf( "%s\n", text );
+	Com_Printf( S_COLOR_YELLOW "%s\n", text );
 
-    if( mvd->state < MVD_WAITING ) {
-        MVD_Disconnect( mvd );
-        MVD_ClearState( mvd );
-        MVD_Free( mvd );
-    } else {
-        MVD_Disconnect( mvd );
-    }
+    MVD_Destroy( mvd );
+
+    longjmp( mvd_jmpbuf, -1 );
+}
+
+void MVD_Dropf( mvd_t *mvd, const char *fmt, ... ) {
+	va_list		argptr;
+	char		text[MAXPRINTMSG];
+
+	va_start( argptr, fmt );
+	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
+	va_end( argptr );
+
+	Com_Printf( S_COLOR_YELLOW "%s\n", text );
+
+    MVD_Drop( mvd );
 
     longjmp( mvd_jmpbuf, -1 );
 }
@@ -160,7 +167,7 @@ void MVD_HttpPrintf( mvd_t *mvd, const char *fmt, ... ) {
 	va_end( argptr );
 
     if( !FIFO_Write( &mvd->stream.send, buffer, length ) ) {
-        MVD_Drop( mvd, "%s: overflow", __func__ );
+        MVD_Dropf( mvd, "%s: overflow", __func__ );
     }
 }
 
@@ -336,9 +343,14 @@ void MVD_GetStream( const char *uri ) {
     }
 
     if( !*uri ) {
-        MVD_RejectStream( "300 Multiple Choices",
-            "There are several MVD channels available. "
-            "Please select an appropriate stream." );
+        if( LIST_EMPTY( &mvd_ready ) ) {
+            SV_HttpReject( "503 Service Unavailable",
+                "No MVD streams available." );
+        } else {
+            MVD_RejectStream( "300 Multiple Choices",
+                "There are several MVD channels available. "
+                "Please select an appropriate stream." );
+        }
         return;
     }
 
@@ -439,7 +451,7 @@ static void MVD_ReadDemo( mvd_t *mvd ) {
     } while( read );
 
     if( !total ) {
-        MVD_Drop( mvd, "End of MVD file reached" );
+        MVD_Dropf( mvd, "End of MVD file reached" );
     }
 }
 
@@ -459,7 +471,7 @@ static qboolean MVD_ParseResponse( mvd_t *mvd ) {
             length = b - data + 1;
         }
         if( mvd->responseLength + length > MAX_NET_STRING - 1 ) {
-            MVD_Drop( mvd, "Response line exceeded maximum length" );
+            MVD_Dropf( mvd, "Response line exceeded maximum length" );
         }
 
         memcpy( mvd->response + mvd->responseLength, data, length );
@@ -482,14 +494,14 @@ static qboolean MVD_ParseResponse( mvd_t *mvd ) {
                 continue; // empty line?
             }
             if( strncmp( token, "HTTP/", 5 ) ) {
-                MVD_Drop( mvd, "Malformed HTTP version" );
+                MVD_Dropf( mvd, "Malformed HTTP version" );
             }
 
             // parse status code
             token = COM_SimpleParse( &line );
             mvd->statusCode = atoi( token );
             if( !mvd->statusCode ) {
-                MVD_Drop( mvd, "Malformed HTTP status code" );
+                MVD_Dropf( mvd, "Malformed HTTP status code" );
             }
 
             // parse reason phrase
@@ -508,7 +520,7 @@ static qboolean MVD_ParseResponse( mvd_t *mvd ) {
             strcpy( key, token );
             p = strchr( key, ':' );
             if( !p ) {
-                MVD_Drop( mvd, "Malformed HTTP header field" );
+                MVD_Dropf( mvd, "Malformed HTTP header field" );
             }
             *p = 0;
             Q_strlwr( key );
@@ -522,14 +534,14 @@ static qboolean MVD_ParseResponse( mvd_t *mvd ) {
                     !Q_stricmp( token, "x-gzip" ) )
                 {
                     if( inflateInit2( &mvd->z, 47 ) != Z_OK ) {
-                        MVD_Drop( mvd, "inflateInit2() failed: %s", mvd->z.msg );
+                        MVD_Dropf( mvd, "inflateInit2() failed: %s", mvd->z.msg );
                     }
                     mvd->zbuf.data = MVD_Malloc( MAX_MSGLEN * 2 );
                     mvd->zbuf.size = MAX_MSGLEN * 2;
                 } else
 #endif
                 {
-                    MVD_Drop( mvd, "Unsupported content encoding: %s", token );
+                    MVD_Dropf( mvd, "Unsupported content encoding: %s", token );
                 }
             } else if( !strcmp( key, "content-length" ) ) {
                 mvd->contentLength = atoi( token );
@@ -585,10 +597,10 @@ void MVD_Frame( void ) {
         case NET_AGAIN:
             continue;
         case NET_ERROR:
-            MVD_Drop( mvd, "%s to %s", NET_ErrorString(),
+            MVD_Dropf( mvd, "%s to %s", NET_ErrorString(),
                 NET_AdrToString( &mvd->stream.address ) );
         case NET_CLOSED:
-            MVD_Drop( mvd, "Connection closed" );
+            MVD_Dropf( mvd, "Connection closed" );
         case NET_OK:
             break;
         }
@@ -604,7 +616,7 @@ void MVD_Frame( void ) {
                 continue;
             }
             if( mvd->statusCode != 200 ) {
-                MVD_Drop( mvd, "HTTP request failed: %d %s",
+                MVD_Dropf( mvd, "HTTP request failed: %d %s",
                     mvd->statusCode, mvd->statusText );
             }
             Com_Printf( "Got response, awaiting gamestate...\n" );
@@ -827,7 +839,7 @@ void MVD_Connect_f( void ) {
     uint16 port;
 
     if ( Cmd_Argc() < 2 ) {
-        Com_Printf( "Usage: %s <[http://][user:pass@]server[:port][/resource]>", Cmd_Argv( 0 ) );
+        Com_Printf( "Usage: %s <[http://][user:pass@]server[:port][/resource]> [name]", Cmd_Argv( 0 ) );
         return;
     }
 
@@ -870,10 +882,16 @@ void MVD_Connect_f( void ) {
         return;
     }
 
+    p = Cmd_Argv( 2 );
+
     Z_TagReserve( sizeof( *mvd ) + MAX_MSGLEN * 2 + 256, TAG_MVD );
 
     mvd = Z_ReservedAllocz( sizeof( *mvd ) );
-    strcpy( mvd->name, "unnamed stream" );
+    if( *p ) {
+        Q_strncpyz( mvd->name, p, sizeof( mvd->name ) );
+    } else {
+        strcpy( mvd->name, "unnamed stream" );
+    }
     mvd->state = MVD_CONNECTING;
     mvd->stream = stream;
     mvd->stream.recv.data = Z_ReservedAlloc( MAX_MSGLEN * 2 );
@@ -916,7 +934,26 @@ static void MVD_Disconnect_f( void ) {
         return;
     }
 
-//    MVD_Drop( mvd, "Disconnected from console" );
+    if( mvd->state == MVD_DISCONNECTED ) {
+        Com_Printf( "Channel is already disconnected.\n" );
+        return;
+    }
+
+    MVD_Drop( mvd );
+    Com_Printf( "Channel was disconnected.\n" );
+}
+
+static void MVD_Kill_f( void ) {
+    mvd_t *mvd;
+
+    mvd = MVD_SetChannel( 1 );
+    if( !mvd ) {
+        Com_Printf( "Usage: %s [channel]\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    MVD_Destroy( mvd );
+    Com_Printf( "Channel was killed.\n" );
 }
 
 const char *MVD_Play_g( const char *partial, int state ) {
@@ -1010,6 +1047,7 @@ static const cmdreg_t c_mvd[] = {
 	{ "mvdplay", MVD_Play_f, MVD_Play_g },
 	{ "mvdconnect", MVD_Connect_f },
 	{ "mvdisconnect", MVD_Disconnect_f },
+	{ "mvdkill", MVD_Kill_f },
 	{ "mvdspawn", MVD_Spawn_f },
 	{ "mvdchannels", MVD_ListChannels_f },
 
