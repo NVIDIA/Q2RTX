@@ -286,50 +286,8 @@ fail:
 
 #endif // USE_ZLIB
 
-#if 0
 static const char junkchars[] =
     "!~#``&'()*`+,-./~01~2`3`4~5`67`89:~<=`>?@~ab~cd`ef~j~k~lm`no~pq`rst`uv`w``x`yz[`\\]^_`|~";
-
-// set junk4 alias
-// set junk5 set
-//
-// $junk4 junk1 connect junkX
-// $junk4 junk9 connect junkY
-//
-// $junk5 junk2 junk5
-// $junk2 junk3 junk5
-// $junk2 junk6 $junkip
-// $junk5 junk7 $junkip
-// $junk5 junk8 $junkip
-// $junk5 junkX $realip
-//
-// $junk1-9
-static void SV_AddReconnect( void ) {
-    char junk[8][16];
-    int i, j;
-
-    for( i = 0; i < 8; i++ ) {
-        for( j = 0; j < 15; j++ ) {
-            c = rand() | ( rand() >> 8 );
-            c %= sizeof( junkchars ) - 1;
-            junk[i][j] = junkchars[c];
-        }
-        junk[i][15] = 0;
-    }
-
-    MSG_WriteByte( svc_stufftext );
-	MSG_WriteString( va( "set %s alias\n", junk[4] ) );
-	SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
-
-    MSG_WriteByte( svc_stufftext );
-	MSG_WriteString( va( "set %s set\n", junk[5] ) );
-	SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
-
-    MSG_WriteByte( svc_stufftext );
-	MSG_WriteString( va( "set %s \n", junk[5] ) );
-	SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
-}
-#endif
 
 /*
 ================
@@ -340,6 +298,9 @@ This will be sent on the initial connection and upon each server load.
 ================
 */
 static void SV_New_f( void ) {
+    char junk[8][16];
+    int i, j, c;
+
 	Com_DPrintf( "New() from %s\n", sv_client->name );
 
     if( sv_client->state < cs_connected ) {
@@ -352,6 +313,58 @@ static void SV_New_f( void ) {
 		return;
 	}
 
+    if( sv_force_reconnect->string[0] && !sv_client->reconnect_var[0] &&
+        !NET_IsLocalAddress( &sv_client->netchan->remote_address ) )
+    {
+        for( i = 0; i < 8; i++ ) {
+            for( j = 0; j < 15; j++ ) {
+                c = rand() | ( rand() >> 8 );
+                c %= sizeof( junkchars ) - 1;
+                junk[i][j] = junkchars[c];
+            }
+            junk[i][15] = 0;
+        }
+
+        strcpy( sv_client->reconnect_var, junk[2] );
+        strcpy( sv_client->reconnect_val, junk[3] );
+
+        SV_ClientCommand( sv_client, "set %s set\n", junk[0] );
+        SV_ClientCommand( sv_client, "$%s %s connect\n", junk[0], junk[1] );
+        if( rand() & 1 ) {
+            SV_ClientCommand( sv_client, "$%s %s %s\n", junk[0], junk[2], junk[3] );
+            SV_ClientCommand( sv_client, "$%s %s %s\n", junk[0], junk[4],
+                sv_force_reconnect->string );
+            SV_ClientCommand( sv_client, "$%s %s %s\n", junk[0], junk[5], junk[6] );
+        } else {
+            SV_ClientCommand( sv_client, "$%s %s %s\n", junk[0], junk[4],
+                sv_force_reconnect->string );
+            SV_ClientCommand( sv_client, "$%s %s %s\n", junk[0], junk[5], junk[6] );
+            SV_ClientCommand( sv_client, "$%s %s %s\n", junk[0], junk[2], junk[3] );
+        }
+        SV_ClientCommand( sv_client, "$%s %s \"\"\n", junk[0], junk[0] );
+        SV_ClientCommand( sv_client, "$%s $%s\n", junk[1], junk[4] );
+        SV_DropClient( sv_client, NULL );
+        return;
+    }
+
+	SV_ClientCommand( sv_client, "\n" );
+
+	// send version string request
+	if( !sv_client->versionString ) {
+		SV_ClientCommand( sv_client, "cmd \177c version $version\n" );
+	}
+
+    // send reconnect var request
+    if( sv_force_reconnect->string[0] && !sv_client->reconnect_done ) {
+        if( NET_IsLocalAddress( &sv_client->netchan->remote_address ) ) {
+            sv_client->reconnect_done = qtrue;
+        } else {
+    		SV_ClientCommand( sv_client, "cmd \177c connect $%s\n",
+                sv_client->reconnect_var );
+        }
+    }
+	
+
 	//
 	// serverdata needs to go over for all types of servers
 	// to make sure the protocol is right, and to set the gamedir
@@ -359,7 +372,7 @@ static void SV_New_f( void ) {
     
     // create baselines for this client
     create_baselines();
-	
+
 	// send the serverdata
 	MSG_WriteByte( svc_serverdata );
 	MSG_WriteLong( sv_client->protocol );
@@ -389,12 +402,7 @@ static void SV_New_f( void ) {
 
 	SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
 
-	// send version string request
-	if( !sv_client->versionString ) {
-		MSG_WriteByte( svc_stufftext );
-		MSG_WriteString( "cmd \177c version $version\n" );
-		SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
-	}
+	SV_ClientCommand( sv_client, "\n" );
 
 	Com_DPrintf( "Going from cs_connected to cs_primed for %s\n",
         sv_client->name );
@@ -421,9 +429,7 @@ static void SV_New_f( void ) {
 #endif // !USE_ZLIB
 
 	// send next command
-	MSG_WriteByte( svc_stufftext );
-	MSG_WriteString( va( "precache %i\n", sv.spawncount ) );
-	SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
+	SV_ClientCommand( sv_client, "precache %i\n", sv.spawncount );
 }
 
 /*
@@ -444,6 +450,15 @@ static void SV_Begin_f( void ) {
 		Com_DPrintf( "Begin not valid -- already spawned\n" );
 		return;
 	}
+
+    if( sv_force_reconnect->string[0] && !sv_client->reconnect_done ) {
+        if( dedicated->integer ) {
+            Com_Printf( "%s[%s]: failed to reconnect\n", sv_client->name,
+                NET_AdrToString( &sv_client->netchan->remote_address ) );
+        }
+        SV_DropClient( sv_client, NULL );
+        return;
+    }
 
 	Com_DPrintf( "Going from cs_primed to cs_spawned for %s\n",
         sv_client->name );
@@ -724,22 +739,23 @@ static void SV_CvarResult_f( void ) {
 	char *c, *v;
 
 	c = Cmd_Argv( 1 );
-	v = Cmd_RawArgsFrom( 2 );
 	if( !strcmp( c, "version" ) ) {
-		if( sv_client->versionString ) {
-			goto unrequested;
-		}
-		if( dedicated->integer ) {
-			Com_Printf( "%s@%s: %s\n", sv_client->name,
-                NET_AdrToString( &sv_client->netchan->remote_address ), v );
-		}
-		sv_client->versionString = SV_CopyString( v );
-		return;
-	}
-
-unrequested:
-	Com_DPrintf( "Unrequested SV_CvarResult_f() from %s: %s %s\n",
-            sv_client->name, c, v );
+		if( !sv_client->versionString ) {
+            v = Cmd_RawArgsFrom( 2 );
+            if( dedicated->integer ) {
+                Com_Printf( "%s[%s]: %s\n", sv_client->name,
+                    NET_AdrToString( &sv_client->netchan->remote_address ), v );
+            }
+            sv_client->versionString = SV_CopyString( v );
+        }
+	} else if( !strcmp( c, "connect" ) ) {
+        if( sv_client->reconnect_var[0] ) {
+            v = Cmd_Argv( 2 );
+            if( !strcmp( v, sv_client->reconnect_val ) ) {
+                sv_client->reconnect_done = qtrue;
+            }
+        }
+    }
 }
 
 static ucmd_t ucmds[] = {

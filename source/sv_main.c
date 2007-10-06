@@ -38,6 +38,8 @@ cvar_t	*rcon_password;			// password for remote server commands
 cvar_t  *sv_password;
 cvar_t  *sv_reserved_password;
 
+cvar_t	*sv_force_reconnect;
+
 cvar_t *allow_download;
 cvar_t *allow_download_players;
 cvar_t *allow_download_models;
@@ -494,6 +496,8 @@ A connection request that did not come from the master
 */
 static void SVC_DirectConnect( void ) {
 	char		userinfo[MAX_INFO_STRING];
+    char        reconnect_var[16];
+    char        reconnect_val[16];
 	int			i, number, count, length;
 	client_t	*cl, *newcl, *lastcl;
 	int			protocol, version;
@@ -735,11 +739,16 @@ static void SVC_DirectConnect( void ) {
 	}
 
 	newcl = NULL;
+    reconnect_var[0] = 0;
+    reconnect_val[0] = 0;
 
 	// if there is already a slot for this ip, reuse it
     FOR_EACH_CLIENT( cl ) {
 		if( NET_IsEqualAdr( &net_from, &cl->netchan->remote_address ) ) {
-			if( cl->state != cs_zombie ) {
+			if( cl->state == cs_zombie ) {
+                strcpy( reconnect_var, cl->reconnect_var );
+                strcpy( reconnect_val, cl->reconnect_val );
+            } else {
 				SV_DropClient( cl, "reconnected" );
 			}
 
@@ -788,6 +797,8 @@ static void SVC_DirectConnect( void ) {
     newcl->configstrings = ( char * )sv.configstrings;
     newcl->pool = ( edict_pool_t * )&ge->edicts;
     newcl->cm = &sv.cm;
+    strcpy( newcl->reconnect_var, reconnect_var );
+    strcpy( newcl->reconnect_val, reconnect_val );
 
     // default pmove parameters
     newcl->pmp.maxspeed = 300;
@@ -1685,6 +1696,7 @@ void SV_Init( void ) {
 	sv_ghostime = Cvar_Get( "sv_ghostime", "6", 0 );
 	sv_showclamp = Cvar_Get( "showclamp", "0", 0 );
 	sv_enforcetime = Cvar_Get ( "sv_enforcetime", "1", 0 );
+	sv_force_reconnect = Cvar_Get ( "sv_force_reconnect", "", CVAR_LATCH );
 
     sv_http_enable = Cvar_Get( "sv_http_enable", "0", CVAR_LATCH );
     sv_http_maxclients = Cvar_Get( "sv_http_maxclients", "32", 0 );

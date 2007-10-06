@@ -169,6 +169,20 @@ void SV_BroadcastPrintf( int level, const char *fmt, ... ) {
 	SZ_Clear( &msg_write );
 }
 
+void SV_ClientCommand( client_t *client, const char *fmt, ... ) {
+	va_list		argptr;
+	char		string[MAX_STRING_CHARS];
+	
+	va_start( argptr, fmt );
+	Q_vsnprintf( string, sizeof( string ), fmt, argptr );
+	va_end( argptr );
+
+	MSG_WriteByte( svc_stufftext );
+	MSG_WriteString( string );
+
+	SV_ClientAddMessage( client, MSG_RELIABLE|MSG_CLEAR );
+}
+
 /*
 =================
 SV_BroadcastCommand

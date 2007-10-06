@@ -148,6 +148,10 @@ typedef struct client_s {
 	char			userinfo[MAX_INFO_STRING];		// name, etc
 	char			*versionString;
 
+    char            reconnect_var[16];
+    char            reconnect_val[16];
+    qboolean        reconnect_done;
+
 	int				lastframe;			// for delta compression
 	usercmd_t		lastcmd;			// for filling in big drops
 
@@ -337,6 +341,7 @@ extern	cvar_t		*sv_noreload;			// don't reload level state when reentering
 extern	cvar_t		*sv_airaccelerate;		// development tool
 extern	cvar_t		*sv_qwmod;				// atu QW Physics modificator											
 extern	cvar_t		*sv_enforcetime;
+extern	cvar_t		*sv_force_reconnect;
 extern	cvar_t		*sv_iplimit;
 
 extern	cvar_t		*sv_http_enable;
@@ -414,9 +419,10 @@ void SV_DemoCompleted (void);
 void SV_SendClientMessages (void);
 
 void SV_Multicast (vec3_t origin, multicast_t to);
-void SV_ClientPrintf ( client_t *cl, int level, const char *fmt, ... );
-void SV_BroadcastPrintf( int level, const char *fmt, ... );
-void SV_BroadcastCommand( const char *fmt, ... );
+void SV_ClientPrintf( client_t *cl, int level, const char *fmt, ... ) q_printf( 3, 4 );
+void SV_BroadcastPrintf( int level, const char *fmt, ... ) q_printf( 2, 3 );
+void SV_ClientCommand( client_t *cl, const char *fmt, ... ) q_printf( 2, 3 );
+void SV_BroadcastCommand( const char *fmt, ... ) q_printf( 1, 2 );
 void SV_ClientAddMessage( client_t *client, int flags );
 void SV_PacketizedClear( client_t *client );
 
@@ -425,18 +431,11 @@ void SV_OldClientAddMessage( client_t *client, byte *data,
 							  int length, qboolean reliable );
 void SV_OldClientWriteReliableMessages( client_t *client, int maxSize );
 void SV_OldClientFinishFrame( client_t *client );
-void SV_OldClientAddUnicast( client_t *client, int clientNum, svc_ops_t op );
-void SV_OldClientAddMulticast( client_t *client, int leafnum, svc_ops_t op );
 
-void SV_MvdClientAddMessage( client_t *client, byte *data,
-							  int length, qboolean reliable );
-void SV_MvdClientAddUnicast( client_t *client, int clientNum, svc_ops_t op );
 void SV_NewClientWriteDatagram( client_t *client );
 void SV_NewClientAddMessage( client_t *client, byte *data,
 							  int length, qboolean reliable );
 void SV_NewClientFinishFrame( client_t *client );
-void SV_NewClientAddUnicast( client_t *client, int clientNum, svc_ops_t op );
-void SV_NewClientAddMulticast( client_t *client, int leafnum, svc_ops_t op );
 
 void SV_CalcSendTime( client_t *client, int messageSize );
 

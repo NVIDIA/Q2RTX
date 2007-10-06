@@ -1311,7 +1311,7 @@ static void CL_ParseStuffText( void ) {
 		return;
 	}
 
-	Com_DPrintf( "stufftext: %s\n", string );
+	Com_DPrintf( "stufftext: %s\n", Q_FormatString( string ) );
 
 	Cbuf_AddText( string );
 }
