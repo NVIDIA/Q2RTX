@@ -349,22 +349,6 @@ static void SV_New_f( void ) {
 
 	SV_ClientCommand( sv_client, "\n" );
 
-	// send version string request
-	if( !sv_client->versionString ) {
-		SV_ClientCommand( sv_client, "cmd \177c version $version\n" );
-	}
-
-    // send reconnect var request
-    if( sv_force_reconnect->string[0] && !sv_client->reconnect_done ) {
-        if( NET_IsLocalAddress( &sv_client->netchan->remote_address ) ) {
-            sv_client->reconnect_done = qtrue;
-        } else {
-    		SV_ClientCommand( sv_client, "cmd \177c connect $%s\n",
-                sv_client->reconnect_var );
-        }
-    }
-	
-
 	//
 	// serverdata needs to go over for all types of servers
 	// to make sure the protocol is right, and to set the gamedir
@@ -403,6 +387,21 @@ static void SV_New_f( void ) {
 	SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
 
 	SV_ClientCommand( sv_client, "\n" );
+
+	// send version string request
+	if( !sv_client->versionString ) {
+		SV_ClientCommand( sv_client, "cmd \177c version $version\n" );
+	}
+
+    // send reconnect var request
+    if( sv_force_reconnect->string[0] && !sv_client->reconnect_done ) {
+        if( NET_IsLocalAddress( &sv_client->netchan->remote_address ) ) {
+            sv_client->reconnect_done = qtrue;
+        } else {
+    		SV_ClientCommand( sv_client, "cmd \177c connect $%s\n",
+                sv_client->reconnect_var );
+        }
+    }
 
 	Com_DPrintf( "Going from cs_connected to cs_primed for %s\n",
         sv_client->name );

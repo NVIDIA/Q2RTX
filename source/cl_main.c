@@ -1006,6 +1006,9 @@ The server is changing levels
 =================
 */
 void CL_Reconnect_f( void ) {
+    if( cls.state >= ca_precached ) {
+        CL_Disconnect( ERR_SILENT, NULL );
+    }
     if( cls.state >= ca_connected ) {
         cls.state = ca_connected;
 
@@ -1022,6 +1025,7 @@ void CL_Reconnect_f( void ) {
         return;
     }
 
+    // issued manually at console
     if( cls.serverAddress.type == NA_BAD ) {
         Com_Printf( "No server to reconnect to.\n" );
         return;
