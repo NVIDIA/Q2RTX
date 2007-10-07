@@ -608,7 +608,7 @@ static void MVD_ParseConfigstring( mvd_t *mvd ) {
 
 	MSG_WriteByte( svc_configstring );
 	MSG_WriteShort( index );
-	MSG_WriteString( string );
+	MSG_WriteData( string, length + 1 );
 	
     // broadcast configstring change
     LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {

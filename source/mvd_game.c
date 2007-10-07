@@ -51,12 +51,12 @@ static void MVD_LayoutClients( udpClient_t *client ) {
 	char layout[MAX_STRING_CHARS];
 	char buffer[MAX_STRING_CHARS];
 	char status[MAX_QPATH];
-	int length, totalLength;
+	int length, total;
 	udpClient_t *cl;
     mvd_t *mvd = client->mvd;
 	int y;
 
-	totalLength = Com_sprintf( layout, sizeof( layout ),
+	total = sprintf( layout,
 		"xl 32 yb -40 string2 \""APPLICATION" "VERSION"\" "
 		"yb -32 string http://q2pro.sf.net/ "
 		"xv 0 yv 0 string2 Name "
@@ -73,26 +73,24 @@ static void MVD_LayoutClients( udpClient_t *client ) {
         } else {
             strcpy( status, "observing" );
         }
-		length = Com_sprintf( buffer, sizeof( buffer ),
+		length = sprintf( buffer,
 			"xv 0 yv %d string \"%.15s\" "
 			"xv 152 string %d "
 			"xv 208 string \"%s\" ",
 			y, cl->cl->name, cl->ping, status );
-		if( totalLength + length > sizeof( layout ) - 1 ) {
-            length = Com_sprintf( buffer, sizeof( buffer ),
-                "xv 0 yv %d string <...>", y );
-		    if( totalLength + length > sizeof( layout ) - 1 ) {
-			    break;
-            }
+		if( total + length >= sizeof( layout ) ) {
+			break;
 		}
-		strcpy( layout + totalLength, buffer );
-		totalLength += length;
+		memcpy( layout + total, buffer, length );
+		total += length;
 		y += 8;
 	}
 
+    layout[total] = 0;
+
     // send the layout
 	MSG_WriteByte( svc_layout );
-	MSG_WriteString( layout );
+	MSG_WriteData( layout, total + 1 );
 	SV_ClientAddMessage( client->cl, MSG_CLEAR );
 
 	client->layouts = 1;
@@ -103,14 +101,13 @@ static void MVD_LayoutChannels( udpClient_t *client ) {
 	char layout[MAX_STRING_CHARS];
 	char buffer[MAX_STRING_CHARS];
     mvd_t *mvd;
-	int length, totalLength, cursor, y;
+	int length, total, cursor, y;
 
-    strcpy( layout, "xv 32 yv 8 picn inventory "
+    total = sprintf( layout, "xv 32 yv 8 picn inventory "
         "xv 64 yv 32 string2 \"Channel       Map     CL\" "
         "yv 40 string \"------------- ------- --\" "
 		"xl 32 yb -40 string2 \""APPLICATION" "VERSION"\" "
 		"yb -32 string http://q2pro.sf.net/ " );
-    totalLength = strlen( layout );
 
     cursor = List_Count( &mvd_ready );
     if( cursor ) {
@@ -119,29 +116,32 @@ static void MVD_LayoutChannels( udpClient_t *client ) {
         y = 48;
         cursor = 0;
         LIST_FOR_EACH( mvd_t, mvd, &mvd_ready, ready ) {
-            length = Com_sprintf( buffer, sizeof( buffer ),
+            length = sprintf( buffer,
                 "xv 56 yv %d string \"%c%-13.13s %-7.7s %d%s\" ", y,
                 cursor == client->cursor ? 0x8d : 0x20,
                 mvd->name, mvd->mapname,
                 List_Count( &mvd->udpClients ),
                 mvd == client->mvd ? "+" : "" );
-            if( totalLength + length > sizeof( layout ) - 1 ) {
+            if( total + length >= sizeof( layout ) ) {
                 break;
             }
-            strcpy( layout + totalLength, buffer );
-            totalLength += length;
+            memcpy( layout + total, buffer, length );
+            total += length;
             y += 8;
 
             cursor++;
         }
     } else {
         client->cursor = 0;
-        strcat( layout, "xv 56 yv 48 string \" <no channels>\" " );
+        total += sprintf( layout + total,
+            "xv 56 yv 48 string \" <no channels>\" " );
     }
+
+    layout[total] = 0;
 
     // send the layout
 	MSG_WriteByte( svc_layout );
-	MSG_WriteString( layout );				
+	MSG_WriteData( layout, total + 1 );				
 	SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
 
 	client->layouts = 1;

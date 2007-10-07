@@ -662,7 +662,7 @@ void CL_Disconnect( comErrorType_t type, const char *text ) {
     if( cls.netchan ) {
         // send a disconnect message to the server
         MSG_WriteByte( clc_stringcmd );
-        MSG_WriteString( "disconnect" );
+        MSG_WriteData( "disconnect", 11 );
 
         cls.netchan->Transmit( cls.netchan, msg_write.cursize, msg_write.data );
         cls.netchan->Transmit( cls.netchan, msg_write.cursize, msg_write.data );

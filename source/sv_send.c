@@ -117,17 +117,18 @@ NOT archived in MVD stream.
 void SV_ClientPrintf( client_t *client, int level, const char *fmt, ... ) {
 	va_list		argptr;
 	char		string[MAX_STRING_CHARS];
+    int         length;
 	
 	if( level < client->messagelevel )
 		return;
 	
 	va_start( argptr, fmt );
-	Q_vsnprintf( string, sizeof( string ), fmt, argptr );
+	length = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
 	va_end( argptr );
 
 	MSG_WriteByte( svc_print );
 	MSG_WriteByte( level );
-	MSG_WriteString( string );
+	MSG_WriteData( string, length + 1 );
 
 	SV_ClientAddMessage( client, MSG_RELIABLE|MSG_CLEAR );
 }
@@ -144,15 +145,15 @@ void SV_BroadcastPrintf( int level, const char *fmt, ... ) {
 	va_list		argptr;
 	char		string[MAX_STRING_CHARS];
 	client_t	*client;
-	int			i;
+	int			i, length;
 
 	va_start( argptr, fmt );
-	Q_vsnprintf( string, sizeof( string ), fmt, argptr );
+	length = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
 	va_end( argptr );
 
 	MSG_WriteByte( svc_print );
 	MSG_WriteByte( level );
-	MSG_WriteString( string );
+	MSG_WriteData( string, length + 1 );
 
 	// echo to console
 	if( dedicated->integer ) {
@@ -176,13 +177,14 @@ void SV_BroadcastPrintf( int level, const char *fmt, ... ) {
 void SV_ClientCommand( client_t *client, const char *fmt, ... ) {
 	va_list		argptr;
 	char		string[MAX_STRING_CHARS];
+    int         length;
 	
 	va_start( argptr, fmt );
-	Q_vsnprintf( string, sizeof( string ), fmt, argptr );
+	length = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
 	va_end( argptr );
 
 	MSG_WriteByte( svc_stufftext );
-	MSG_WriteString( string );
+	MSG_WriteData( string, length + 1 );
 
 	SV_ClientAddMessage( client, MSG_RELIABLE|MSG_CLEAR );
 }
@@ -199,13 +201,14 @@ void SV_BroadcastCommand( const char *fmt, ... ) {
 	va_list		argptr;
 	char		string[MAX_STRING_CHARS];
 	client_t	*client;
+    int         length;
 	
 	va_start( argptr, fmt );
-	Q_vsnprintf( string, sizeof( string ), fmt, argptr );
+	length = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
 	va_end( argptr );
 
 	MSG_WriteByte( svc_stufftext );
-	MSG_WriteString( string );
+	MSG_WriteData( string, length + 1 );
 
     FOR_EACH_CLIENT( client ) {
     	SV_ClientAddMessage( client, MSG_RELIABLE );

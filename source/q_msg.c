@@ -146,7 +146,6 @@ MSG_WriteString
 */
 void MSG_WriteString( const char *string ) {
 	int length;
-	int c;
 
 	if( !string ) {
 		MSG_WriteByte( 0 );
@@ -154,21 +153,13 @@ void MSG_WriteString( const char *string ) {
 	}
 
 	length = strlen( string );
-	if( length > MAX_NET_STRING - 1 ) {
+	if( length >= MAX_NET_STRING ) {
 		Com_WPrintf( "MSG_WriteString: overflow: %d chars", length );
 		MSG_WriteByte( 0 );
 		return;
 	}
 
-	while( *string ) {
-		c = *string++;
-		if( c == '\xFF' ) {
-			c = '.';
-		}
-		MSG_WriteByte( c );
-	}
-
-	MSG_WriteByte( 0 );
+    MSG_WriteData( string, length + 1 );
 }
 
 /*
@@ -441,10 +432,6 @@ void MSG_WriteDir( const vec3_t dir ) {
 	
 	best = DirToByte( dir );
 	MSG_WriteByte( best );
-}
-
-void MSG_WriteData( const void *data, int length ) {
-	memcpy( SZ_GetSpace( &msg_write, length ), data, length );		
 }
 
 /* values transmitted over network are discrete, so
@@ -1396,6 +1383,7 @@ void MSG_FlushTo( sizebuf_t *dest ) {
 	SZ_Clear( &msg_write );
 }
 
+// NOTE: does not NUL-terminate the string
 void MSG_Printf( const char *fmt, ... ) {
     char buffer[MAX_STRING_CHARS];
 	va_list		argptr;

@@ -147,15 +147,16 @@ static void PF_bprintf( int level, const char *fmt, ... ) {
 	va_list		argptr;
 	char		string[MAX_STRING_CHARS];
 	client_t	*client;
+    int         length;
 	int			i;
 
 	va_start( argptr, fmt );
-	Q_vsnprintf( string, sizeof( string ), fmt, argptr );
+	length = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
 	va_end( argptr );
 
 	MSG_WriteByte( svc_print );
 	MSG_WriteByte( level );
-	MSG_WriteString( string );
+	MSG_WriteData( string, length + 1 );
 
 	// echo to console
 	if( dedicated->integer ) {
@@ -210,11 +211,11 @@ Archived in MVD stream.
 static void PF_cprintf( edict_t *ent, int level, const char *fmt, ... ) {
 	char		msg[MAX_STRING_CHARS];
 	va_list		argptr;
-	int			clientNum;
+	int			clientNum, length;
 	client_t	*client;
 
 	va_start( argptr, fmt );
-	Q_vsnprintf( msg, sizeof( msg ), fmt, argptr );
+	length = Q_vsnprintf( msg, sizeof( msg ), fmt, argptr );
 	va_end( argptr );
 
 	if( !ent ) {
@@ -234,7 +235,7 @@ static void PF_cprintf( edict_t *ent, int level, const char *fmt, ... ) {
 
 	MSG_WriteByte( svc_print );
 	MSG_WriteByte( level );
-	MSG_WriteString( msg );
+	MSG_WriteData( msg, length + 1 );
 
     if( level >= client->messagelevel ) {
         SV_ClientAddMessage( client, MSG_RELIABLE );
@@ -261,7 +262,7 @@ Archived in MVD stream.
 static void PF_centerprintf (edict_t *ent, const char *fmt, ...) {
 	char		msg[MAX_STRING_CHARS];
 	va_list		argptr;
-	int			n;
+	int			n, length;
 
     if( !ent ) {
         return;
@@ -274,11 +275,11 @@ static void PF_centerprintf (edict_t *ent, const char *fmt, ...) {
     }
 
 	va_start (argptr,fmt);
-	Q_vsnprintf( msg, sizeof( msg ), fmt, argptr );
+	length = Q_vsnprintf( msg, sizeof( msg ), fmt, argptr );
 	va_end (argptr);
 
 	MSG_WriteByte (svc_centerprint);
-	MSG_WriteString (msg);
+	MSG_WriteData (msg, length + 1);
 
 	PF_Unicast (ent, qtrue);
 }
@@ -374,7 +375,7 @@ void PF_Configstring( int index, const char *val ) {
 	// send the update to everyone
 	MSG_WriteByte( svc_configstring );
 	MSG_WriteShort( index );
-	MSG_WriteString( val );
+	MSG_WriteData( val, length + 1 );
 
     FOR_EACH_CLIENT( client ) {
 		if( client->state < cs_primed ) {
