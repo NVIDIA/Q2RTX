@@ -1022,6 +1022,7 @@ static void CL_SendBatchedCmd( void ) {
 }
 
 static void CL_SendUserinfo( void ) {
+    char userinfo[MAX_INFO_STRING];
 	cvar_t *var;
 	int i;
 
@@ -1030,8 +1031,9 @@ static void CL_SendUserinfo( void ) {
 	}
 
 	if( cls.userinfo_modified == MAX_PACKET_USERINFOS ) {
+        i = Cvar_BitInfo( userinfo, CVAR_USERINFO );
 		MSG_WriteByte( clc_userinfo );
-		MSG_WriteString( Cvar_Userinfo() );
+		MSG_WriteData( userinfo, i + 1 );
 		MSG_FlushTo( &cls.netchan->message );
 	} else if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO ) {
 		Com_DPrintf( "Sending %d userinfo updates at frame %u\n",

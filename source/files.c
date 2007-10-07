@@ -993,7 +993,7 @@ int FS_LoadFileEx( const char *path, void **buffer, uint32 flags ) {
     path = FS_ExpandLinks( path );
 
 	if( !FS_ValidatePath( path ) ) {
-        Sys_DebugBreak();
+ //       Sys_DebugBreak();
 		FS_DPrintf( "FS_LoadFile: refusing invalid path: %s\n", path );
 		return -1;
 	}

@@ -250,14 +250,7 @@ void 	Cvar_WriteVariables( fileHandle_t f );
 
 void	Cvar_Init (void);
 
-char *Cvar_BitInfo( int bit );
-char *Cvar_BitInfo_Big( int bit );
-//
-// returns an info string containing all the CVAR_USERINFO cvars
-#define Cvar_Userinfo()     Cvar_BitInfo( CVAR_USERINFO )
-
-// returns an info string containing all the CVAR_SERVERINFO cvars
-#define Cvar_Serverinfo()   Cvar_BitInfo( CVAR_SERVERINFO )
+int Cvar_BitInfo( char *info, int bit );
 
 cvar_t *Cvar_ForceSetEx( const char *var_name, const char *value, int flags );
 
@@ -494,8 +487,7 @@ void		NET_Config( netflag_t flag );
 qboolean    NET_GetAddress( netsrc_t sock, netadr_t *adr );
 
 neterr_t	NET_GetPacket( netsrc_t sock );
-neterr_t	NET_SendPacket( netsrc_t sock, const netadr_t *to, uint32 length,
-        const byte *data );
+neterr_t	NET_SendPacket( netsrc_t sock, const netadr_t *to, uint32 length, const void *data );
 qboolean	NET_GetLoopPacket( netsrc_t sock );
 
 char *		NET_AdrToString( const netadr_t *a );
@@ -589,6 +581,9 @@ neterr_t Netchan_OutOfBandPrint( netsrc_t sock, const netadr_t *adr,
 netchan_t *Netchan_Setup( netsrc_t sock, netchan_type_t type,
         const netadr_t *adr, int qport, int maxpacketlen, int protocol );
 void Netchan_Close( netchan_t *netchan );
+
+#define OOB_PRINT( sock, addr, string ) \
+	NET_SendPacket( sock, addr, strlen( "\xff\xff\xff\xff" string ), "\xff\xff\xff\xff" string )
 
 /*
 ==============================================================
@@ -890,7 +885,9 @@ static inline const ucmd_t *Com_Find( const ucmd_t *u, const char *c ) {
     return NULL;
 }
 
-void		Com_BeginRedirect (int target, char *buffer, int buffersize, void (*flush));
+typedef void (*rdflush_t)( int target, char *buffer, int length );
+
+void		Com_BeginRedirect (int target, char *buffer, int buffersize, rdflush_t flush);
 void		Com_EndRedirect (void);
 
 void		Com_LevelPrint( comPrintType_t type, const char *str );
@@ -954,6 +951,7 @@ extern uint32	com_eventTime; /* system time of the last event */
 extern uint32   com_localTime; /* milliseconds since Q2 startup */
 extern uint32	com_framenum;
 extern qboolean com_initialized;
+extern time_t   com_startTime;
 
 extern fileHandle_t	com_logFile;
 

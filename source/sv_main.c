@@ -72,10 +72,12 @@ cvar_t	*sv_bodyque_hack;
 #ifndef _WIN32
 cvar_t	*sv_oldgame_hack;
 #endif
+cvar_t	*sv_disconnect_hack;
 
 cvar_t	*sv_iplimit;
 cvar_t	*sv_status_limit;
 cvar_t	*sv_status_show;
+cvar_t	*sv_uptime;
 cvar_t	*sv_badauth_time;
 
 cvar_t	*sv_nextserver;
@@ -264,66 +266,92 @@ SV_StatusString
 Builds the string that is sent as heartbeats and status replies
 ===============
 */
-static char	*SV_StatusString( qboolean big ) {
-	char	player[MAX_STRING_CHARS];
-	static char	status[MAX_PACKETLEN_DEFAULT - 16];
-	int		j;
+static int SV_StatusString( char *status ) {
+	char	entry[MAX_STRING_CHARS];
 	client_t	*cl;
-	int		statusLength;
-	int		playerLength;
-	char	*s;
+	int		j, total, length;
+    int     sec, min, hour, day;
+    time_t  t;
+    char    *tmp = sv_maxclients->string;
 
-	if( big ) {
-		s = Cvar_BitInfo_Big( CVAR_SERVERINFO );
-	} else {
-		s = Cvar_BitInfo( CVAR_SERVERINFO );
-	}
+    // XXX: ugly hack to hide reserved slots
+    if( sv_reserved_slots->integer ) {
+        sprintf( entry, "%d", sv_maxclients->integer - 
+            sv_reserved_slots->integer );
+        sv_maxclients->string = entry;
+    }
 
-    Info_SetValueForKey( s, "maxclients", va( "%d", sv_maxclients->integer -
-        sv_reserved_slots->integer ) );
+    // add server info
+	total = Cvar_BitInfo( status, CVAR_SERVERINFO );
 
-	statusLength = Com_sprintf( status, sizeof( status ), "%s\n", s );
+    sv_maxclients->string = tmp;
 
-	if( sv_status_show->integer < 2 ) {
-		return status;
-	}
-
-    FOR_EACH_CLIENT( cl ) {
-		if( cl->state == cs_zombie ) {
-            continue;
+    // add uptime
+    if( sv_uptime->integer ) {
+        time( &t );
+        if( com_startTime > t ) {
+            com_startTime = t;
         }
-        if( sv.state == ss_broadcast ) {
-            j = 0;
+        sec = t - com_startTime;
+        min = sec / 60;
+        hour = min / 60;
+        day = hour / 24;
+        sec %= 60;
+        min %= 60;
+        hour %= 24;
+
+        memcpy( status + total, "\\uptime\\", 8 );
+        total += 8;
+        if( day ) {
+            total += sprintf( status + total, "%d+%d:%d:%d", day, hour, min, sec );
+        } else if( hour ) {
+            total += sprintf( status + total, "%d:%d:%d", hour, min, sec );
         } else {
-            j = cl->edict->client->ps.stats[STAT_FRAGS];
+            total += sprintf( status + total, "%d:%d", min, sec );
         }
-        playerLength = Com_sprintf( player, sizeof( player ),
-            "%i %i \"%s\"\n", j, cl->ping, cl->name );
-        if( statusLength + playerLength > sizeof( status ) - 1 )
-            break;		// can't hold any more
-        strcpy( status + statusLength, player );
-        statusLength += playerLength;
-	}
+    }
 
-	return status;
+    status[total++] = '\n';
+
+    // add player list
+	if( sv_status_show->integer > 1 ) {
+        FOR_EACH_CLIENT( cl ) {
+            if( cl->state == cs_zombie ) {
+                continue;
+            }
+            if( sv.state == ss_broadcast ) {
+                j = 0;
+            } else {
+                j = cl->edict->client->ps.stats[STAT_FRAGS];
+            }
+            length = sprintf( entry, "%i %i \"%s\"\n",
+                j, cl->ping, cl->name );
+            if( total + length >= SV_OUTPUTBUF_LENGTH )
+                break;		// can't hold any more
+            memcpy( status + total, entry, length );
+            total += length;
+        }
+    }
+
+    status[total] = 0;
+
+	return total;
 }
 
-static void SV_OobPrintf( const char *format, ... ) {
+static void q_printf( 1, 2 ) SV_OobPrintf( const char *format, ... ) {
 	va_list		argptr;
-	byte        send_data[MAX_PACKETLEN_DEFAULT];
+	char        buffer[MAX_PACKETLEN_DEFAULT];
 	int			length;
 
     // write the packet header
-	*( uint32 * )send_data = -1;	// -1 sequence means out of band
-	strcpy( ( char * )send_data + 4, "print\n" );
+	memcpy( buffer, "\xff\xff\xff\xffprint\n", 10 );
 	
 	va_start( argptr, format );
-	length = Q_vsnprintf( ( char * )send_data + 10, sizeof( send_data ) - 10,
-        format, argptr );
+	length = Q_vsnprintf( buffer + 10, sizeof( buffer ) - 10, format, argptr );
 	va_end( argptr );
 
     // send the datagram
-	NET_SendPacket( NS_SERVER, &net_from, length + 10, send_data );
+	NET_SendPacket( NS_SERVER, &net_from, length + 10, buffer );
 }
 
 
@@ -335,9 +363,8 @@ Responds with all the info that qplug or qspy can see
 ================
 */
 static void SVC_Status( void ) {
-	char *s;
-	int i, j, k;
-	qboolean big = qfalse;
+	char    buffer[MAX_PACKETLEN_DEFAULT];
+    int     length;
 
 	if( !sv_status_show->integer ) {
 		return;
@@ -351,27 +378,13 @@ static void SVC_Status( void ) {
 
 	svs.ratelimit_status.count++;
 
-	// parse additional parameters
-    j = Cmd_Argc();
-	for( i = 1; i < j; i++ ) {
-		s = Cmd_Argv( i );
-		if( !strncmp( s, "p=", 2 ) ) {
-			s += 2;
-			while( *s ) {
-				k = atoi( s );
-				if( k == PROTOCOL_VERSION_Q2PRO ) {
-					big = qtrue;
-				}
-				s = strchr( s, ',' );
-				if( s == NULL ) {
-					break;
-				}
-				s++;
-			}
-		}
-    }
+    // write the packet header
+	memcpy( buffer, "\xff\xff\xff\xffprint\n", 10 );
 
-	SV_OobPrintf( "%s", SV_StatusString( big ) );
+    length = SV_StatusString( buffer + 10 );
+
+    // send the datagram
+	NET_SendPacket( NS_SERVER, &net_from, length + 10, buffer );
 }
 
 /*
@@ -405,6 +418,7 @@ The second parameter should be the current protocol version number.
 */
 static void SVC_Info( void ) {
 	char	string[MAX_QPATH];
+    int     length;
 	int		count;
 	int		version;
     client_t *client;
@@ -424,11 +438,12 @@ static void SVC_Info( void ) {
 			count++;
     }
 
-	Com_sprintf (string, sizeof(string), "%16s %8s %2i/%2i\n",
+	length = Com_sprintf (string, sizeof(string),
+        "\xff\xff\xff\xffinfo\n%16s %8s %2i/%2i\n",
 		sv_hostname->string, sv.name, count, sv_maxclients->integer -
         sv_reserved_slots->integer );
 	
-	Netchan_OutOfBandPrint (NS_SERVER, &net_from, "info\n%s", string);
+	NET_SendPacket( NS_SERVER, &net_from, length, string );
 }
 
 /*
@@ -439,7 +454,7 @@ Just responds with an acknowledgement
 ================
 */
 static void SVC_Ping( void ) {
-	Netchan_OutOfBandPrint( NS_SERVER, &net_from, "ack" );
+	OOB_PRINT( NS_SERVER, &net_from, "ack" );
 }
 
 /*
@@ -947,25 +962,20 @@ static void SVC_RemoteCommand( void ) {
 		NET_AdrToString( &net_from ), string );
 
 	Com_BeginRedirect( RD_PACKET, sv_outputbuf, SV_OUTPUTBUF_LENGTH,
-            SV_FlushRedirect );
+        SV_FlushRedirect );
 
 	Cmd_ExecuteString( string );
 
 	Com_EndRedirect();
 }
 
-static const struct {
-    const char  *name;
-    void        (*func)( void );
-    qboolean    passive;
-} svcmds[] = {
-    { "ping",           SVC_Ping                    },
-    { "ack",            SVC_Ack                     },
-    { "status",         SVC_Status                  },
-    { "info",           SVC_Info                    },
-    { "getchallenge",   SVC_GetChallenge            },
-    { "connect",        SVC_DirectConnect           },
-    { "rcon",           SVC_RemoteCommand, qtrue    },
+static const ucmd_t svcmds[] = {
+    { "ping",           SVC_Ping          },
+    { "ack",            SVC_Ack           },
+    { "status",         SVC_Status        },
+    { "info",           SVC_Info          },
+    { "getchallenge",   SVC_GetChallenge  },
+    { "connect",        SVC_DirectConnect },
     { NULL }
 };
 
@@ -991,7 +1001,7 @@ static void SV_ConnectionlessPacket( void ) {
 	Cmd_TokenizeString( s, qfalse );
 
 	c = Cmd_Argv( 0 );
-	Com_DPrintf( "ServerPacket %s : %s\n", NET_AdrToString( &net_from ), c );
+	Com_DPrintf( "ServerPacket[%s]: %s\n", NET_AdrToString( &net_from ), c );
 
 	if( !NET_IsLocalAddress( &net_from ) && net_from.ip[0] == 127 &&
 		net_from.port == Cvar_VariableInteger( "net_port" ) )
@@ -1000,13 +1010,19 @@ static void SV_ConnectionlessPacket( void ) {
 		return;
 	}
 
+    if( !strcmp( c, "rcon" ) ) {
+        SVC_RemoteCommand();
+        return; // accept rcon commands even if not active
+    }
+
+    if( !svs.initialized ) {
+        Com_DPrintf( "ignored connectionless packet\n" );
+        return;
+    }
+
     for( i = 0; svcmds[i].name; i++ ) {
         if( !strcmp( c, svcmds[i].name ) ) {
-            if( !svs.initialized && !svcmds[i].passive ) {
-                Com_DPrintf( "ignored connectionless packet\n" );
-            } else {
-                svcmds[i].func();
-            }
+            svcmds[i].func();
             return;
         }
     }
@@ -1475,10 +1491,10 @@ let it know we are alive, and log information
 ================
 */
 #define	HEARTBEAT_SECONDS	300
-void Master_Heartbeat (void)
-{
-	char		*string;
-	int			i;
+void Master_Heartbeat (void) {
+	char    buffer[MAX_PACKETLEN_DEFAULT];
+    int     length;
+	int		i;
 
 	// pgm post3.19 change, cvar pointer not validated before dereferencing
 	if (!dedicated || !dedicated->integer)
@@ -1497,16 +1513,18 @@ void Master_Heartbeat (void)
 
 	svs.last_heartbeat = svs.realtime;
 
+    // write the packet header
+	memcpy( buffer, "\xff\xff\xff\xffheartbeat\n", 14 );
+
 	// send the same string that we would give for a status OOB command
-	string = SV_StatusString( qfalse );
+    length = SV_StatusString( buffer + 14 );
 
 	// send to group master
 	for( i = 0; i < MAX_MASTERS; i++ ) {
 		if( master_adr[i].port ) {
 			Com_Printf( "Sending heartbeat to %s\n",
                 NET_AdrToString( &master_adr[i] ) );
-			Netchan_OutOfBandPrint( NS_SERVER, &master_adr[i],
-                "heartbeat\n%s", string );
+	        NET_SendPacket( NS_SERVER, &master_adr[i], length + 14, buffer );
 		}
     }
 }
@@ -1534,7 +1552,7 @@ void Master_Shutdown( void ) {
 		if( master_adr[i].port ) {
 			Com_Printf( "Sending shutdown to %s\n",
                 NET_AdrToString( &master_adr[i] ) );
-			Netchan_OutOfBandPrint( NS_SERVER, &master_adr[i], "shutdown" );
+			OOB_PRINT( NS_SERVER, &master_adr[i], "shutdown" );
 		}
     }
 }
@@ -1736,6 +1754,8 @@ void SV_Init( void ) {
 
 	sv_status_limit = Cvar_Get( "sv_status_limit", "15", 0 );
 	sv_status_limit->changed = sv_status_limit_changed;
+
+	sv_uptime = Cvar_Get( "sv_uptime", "0", 0 );
 
 	sv_badauth_time = Cvar_Get( "sv_badauth_time", "1", 0 );
 	sv_badauth_time->changed = sv_badauth_time_changed;

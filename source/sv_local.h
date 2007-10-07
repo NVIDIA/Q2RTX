@@ -125,13 +125,6 @@ typedef struct {
     byte    timeofs;
 } sound_packet_t;
 
-/*typedef struct {
-	list_t	    entry;
-	uint16	    cursize;
-    uint16      leafnum;
-    byte		data[MSG_TRESHOLD];
-} mpacket_t;*/
-
 #define	LATENCY_COUNTS	16
 #define LATENCY_MASK	( LATENCY_COUNTS - 1 )
 
@@ -409,11 +402,11 @@ void SV_ClientReset( client_t *client );
 // sv_send.c
 //
 typedef enum {RD_NONE, RD_CLIENT, RD_PACKET} redirect_t;
-#define	SV_OUTPUTBUF_LENGTH	(MAX_PACKETLEN_WRITABLE_DEFAULT - 8)
+#define	SV_OUTPUTBUF_LENGTH	(MAX_PACKETLEN_DEFAULT - 16)
 
 extern	char	sv_outputbuf[SV_OUTPUTBUF_LENGTH];
 
-void SV_FlushRedirect (int sv_redirected, char *outputbuf);
+void SV_FlushRedirect( int redirected, char *outputbuf, int length );
 
 void SV_DemoCompleted (void);
 void SV_SendClientMessages (void);

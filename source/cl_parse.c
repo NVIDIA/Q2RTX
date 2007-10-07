@@ -705,7 +705,7 @@ static void CL_ConfigString( int index, const char *string ) {
             __func__, index, length );
     }
 
-	strcpy( cl.configstrings[index], string );
+	memcpy( cl.configstrings[index], string, length + 1 );
 
 	// do something apropriate 
 
@@ -947,13 +947,14 @@ void CL_LoadClientinfo( clientinfo_t *ci, char *s ) {
 
 	// isolate the player's name
 	strcpy( ci->name, s );
-	t = strstr( s, "\\" );
+	t = strchr( s, '\\' );
 	if( t ) {
 		ci->name[ t - s ] = 0;
 		s = t + 1;
 	}
 
 	if( cl_noskins->integer || *s == 0 ) {
+noskin:
 	    strcpy( model_filename, "players/male/tris.md2" );
 		strcpy( weapon_filename, "players/male/weapon.md2" );
 	    strcpy( skin_filename, "players/male/grunt.pcx" );
@@ -967,11 +968,14 @@ void CL_LoadClientinfo( clientinfo_t *ci, char *s ) {
 		strcpy( model_name, s );
 
 		// isolate the model name
-		t = strstr( model_name, "/" );
+		t = strchr( model_name, '/' );
 		if( !t )
-			t = strstr( model_name, "\\" );
+			t = strchr( model_name, '\\' );
 		if( !t )
 			t = model_name;
+        if( t == model_name ) {
+            goto noskin;
+        }
 		*t = 0;
 
 		// isolate the skin name
@@ -983,8 +987,7 @@ void CL_LoadClientinfo( clientinfo_t *ci, char *s ) {
 		ci->model = ref.RegisterModel( model_filename );
 		if( !ci->model && Q_stricmp( model_name, "male" ) ) {
 			strcpy( model_name, "male" );
-			Com_sprintf( model_filename, sizeof( model_filename ),
-                "players/male/tris.md2" );
+			strcpy( model_filename, "players/male/tris.md2" );
 			ci->model = ref.RegisterModel( model_filename );
 		}
 
@@ -997,8 +1000,7 @@ void CL_LoadClientinfo( clientinfo_t *ci, char *s ) {
 		// see if athena skin exists
         if( !ci->skin && !Q_stricmp( model_name, "female" ) ) {
             strcpy( skin_name, "athena" );
-            Com_sprintf( skin_filename, sizeof( skin_filename ),
-                "players/%s/%s.pcx", model_name, skin_name );
+            strcpy( skin_filename, "players/female/athena.pcx" );
             ci->skin = ref.RegisterSkin( skin_filename );
         }
 
@@ -1007,8 +1009,7 @@ void CL_LoadClientinfo( clientinfo_t *ci, char *s ) {
  		if( !ci->skin && Q_stricmp( model_name, "male" ) ) {
 			// change model to male
 			strcpy( model_name, "male" );
-			Com_sprintf( model_filename, sizeof( model_filename ),
-                "players/male/tris.md2" );
+			strcpy( model_filename, "players/male/tris.md2" );
 			ci->model = ref.RegisterModel( model_filename );
 
 			// see if the skin exists for the male model
@@ -1047,7 +1048,7 @@ void CL_LoadClientinfo( clientinfo_t *ci, char *s ) {
 		ci->icon = ref.RegisterPic( ci->iconname );
 	}
 
-	// must have loaded all data types to be valud
+	// must have loaded all data types to be valid
 	if( !ci->skin || !ci->icon || !ci->model || !ci->weaponmodel[0] ) {
 		ci->skin = 0;
 		ci->icon = 0;

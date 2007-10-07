@@ -32,13 +32,17 @@ MISC
 
 char sv_outputbuf[SV_OUTPUTBUF_LENGTH];
 
-void SV_FlushRedirect( int sv_redirected, char *outputbuf ) {
-	if( sv_redirected == RD_PACKET ) {
-		Netchan_OutOfBandPrint( NS_SERVER, &net_from, "print\n%s", outputbuf );
-	} else if( sv_redirected == RD_CLIENT ) {
+void SV_FlushRedirect( int redirected, char *outputbuf, int length ) {
+	byte    buffer[MAX_PACKETLEN_DEFAULT];
+
+	if( redirected == RD_PACKET ) {
+	    memcpy( buffer, "\xff\xff\xff\xffprint\n", 10 );
+        memcpy( buffer + 10, outputbuf, length );
+	    NET_SendPacket( NS_SERVER, &net_from, length + 10, buffer );
+	} else if( redirected == RD_CLIENT ) {
 		MSG_WriteByte( svc_print );
 		MSG_WriteByte( PRINT_HIGH );
-		MSG_WriteString( outputbuf );
+		MSG_WriteData( outputbuf, length + 1 );
 		SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
 	}
 }

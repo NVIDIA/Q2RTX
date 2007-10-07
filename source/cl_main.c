@@ -338,6 +338,7 @@ Resend a connect message if the last one has timed out
 static void CL_CheckForResend( void ) {
 	neterr_t ret;
     char tail[MAX_QPATH];
+    char userinfo[MAX_INFO_STRING];
 
     if ( cls.demoplayback ) {
         return;
@@ -376,8 +377,7 @@ static void CL_CheckForResend( void ) {
 
     if ( cls.state == ca_challenging ) {
         Com_Printf( "Requesting challenge... %i\n", cls.connectCount );
-        ret = Netchan_OutOfBandPrint( NS_CLIENT, &cls.serverAddress,
-            "getchallenge\n" );
+        ret = OOB_PRINT( NS_CLIENT, &cls.serverAddress, "getchallenge\n" );
 		if( ret == NET_ERROR ) {
 			Com_Error( ERR_DISCONNECT, "%s to %s\n", NET_ErrorString(),
                     NET_AdrToString( &cls.serverAddress ) );
@@ -392,6 +392,7 @@ static void CL_CheckForResend( void ) {
 
     cls.userinfo_modified = 0;
 
+    // add protocol dependent stuff
 	switch( cls.serverProtocol ) {
     case PROTOCOL_VERSION_R1Q2:
         Com_sprintf( tail, sizeof( tail ), " %d %d",
@@ -409,9 +410,11 @@ static void CL_CheckForResend( void ) {
         cls.quakePort = net_qport->integer;
         break;
 	}
+
+    Cvar_BitInfo( userinfo, CVAR_USERINFO );
     ret = Netchan_OutOfBandPrint( NS_CLIENT, &cls.serverAddress,
         "connect %i %i %i \"%s\"%s\n", cls.serverProtocol, cls.quakePort,
-        cls.challenge, Cvar_Userinfo(), tail );
+        cls.challenge, userinfo, tail );
 	if( ret == NET_ERROR ) {
 		Com_Error( ERR_DISCONNECT, "%s to %s\n", NET_ErrorString(),
             NET_AdrToString( &cls.serverAddress ) );
@@ -735,7 +738,7 @@ static void CL_ServerStatus_f( void ) {
 
 	NET_Config( NET_CLIENT );
 
-    ret = Netchan_OutOfBandPrint( NS_CLIENT, &adr, "status p=34,35,36" );
+    ret = OOB_PRINT( NS_CLIENT, &adr, "status" );
 	if( ret == NET_ERROR ) {
 		Com_Printf( "%s to %s\n", NET_ErrorString(), NET_AdrToString( &adr ) );
 	}
@@ -1084,7 +1087,7 @@ qboolean CL_SendStatusRequest( char *buffer, int bufferSize ) {
 
 	CL_AddRequest( &address, REQ_PING );
 
-    Netchan_OutOfBandPrint( NS_CLIENT, &address, "status" );
+    OOB_PRINT( NS_CLIENT, &address, "status" );
 
     Com_ProcessEvents();
 
@@ -1114,7 +1117,7 @@ static void CL_PingServers_f( void ) {
 
 	CL_AddRequest( &address, REQ_STATUS );
 
-    Netchan_OutOfBandPrint( NS_CLIENT, &address, "status" );
+    OOB_PRINT( NS_CLIENT, &address, "status" );
 
     SCR_UpdateScreen();
 
@@ -1137,7 +1140,7 @@ static void CL_PingServers_f( void ) {
         Com_Printf( "pinging %s...\n", adrstring );
 	    CL_AddRequest( &address, REQ_STATUS );
 
-        Netchan_OutOfBandPrint( NS_CLIENT, &address, "status" );
+        OOB_PRINT( NS_CLIENT, &address, "status" );
 
         Com_ProcessEvents();
         SCR_UpdateScreen();
@@ -1491,8 +1494,12 @@ CL_Userinfo_f
 ==============
 */
 static void CL_Userinfo_f ( void ) {
-    Com_Printf ( "User info settings:\n" );
-    Info_Print ( Cvar_Userinfo() );
+    char userinfo[MAX_INFO_STRING];
+
+    Cvar_BitInfo( userinfo, CVAR_USERINFO );
+
+    Com_Printf( "User info settings:\n" );
+    Info_Print( userinfo );
 }
 
 /*

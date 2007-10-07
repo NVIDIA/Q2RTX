@@ -19,7 +19,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "sv_local.h"
-#include "mvd_local.h"
 
 /*
 ===============================================================================
@@ -429,7 +428,7 @@ void SV_ConSay_f( void ) {
 	}
 
 	if( Cmd_Argc() < 2 ) {
-		Com_Printf( "Usage: %s <text>\n", Cmd_Argv( 0 ) );
+		Com_Printf( "Usage: %s <raw text>\n", Cmd_Argv( 0 ) );
 		return;
 	}
 
@@ -464,8 +463,12 @@ SV_Serverinfo_f
 ===========
 */
 static void SV_Serverinfo_f( void ) {
+    char serverinfo[MAX_INFO_STRING];
+
+    Cvar_BitInfo( serverinfo, CVAR_SERVERINFO );
+
 	Com_Printf( "Server info settings:\n" );
-	Info_Print( Cvar_Serverinfo() );
+	Info_Print( serverinfo );
 }
 
 
@@ -516,7 +519,7 @@ void SV_Stuff_f( void ) {
 	}
 
 	if( Cmd_Argc() < 3 ) {
-		Com_Printf( "Usage: %s <userid> <text>\n", Cmd_Argv( 0 ) );
+		Com_Printf( "Usage: %s <userid> <raw text>\n", Cmd_Argv( 0 ) );
 		return;
 	}
 
@@ -547,7 +550,7 @@ void SV_Stuffall_f( void ) {
 	}
 
 	if( Cmd_Argc() < 2 ) {
-		Com_Printf( "Usage: %s <text>\n", Cmd_Argv( 0 ) );
+		Com_Printf( "Usage: %s <raw text>\n", Cmd_Argv( 0 ) );
 		return;
 	}
 
@@ -590,7 +593,7 @@ static void SV_PickClient_f( void ) {
         return;
     }
 
-	Netchan_OutOfBandPrint( NS_SERVER, &address, "passive_connect\n" );
+	OOB_PRINT( NS_SERVER, &address, "passive_connect\n" );
 }
 
 

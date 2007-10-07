@@ -959,14 +959,10 @@ static void Cvar_Reset_f( void ) {
 	Cvar_SetByVar( var, var->defaultString, CVAR_SET_CONSOLE );
 }
 
-char *Cvar_BitInfo( int bit ) {
-	static char	info[MAX_INFO_STRING];
+int Cvar_BitInfo( char *info, int bit ) {
 	char newi[MAX_INFO_STRING];
 	cvar_t	*var;
-	int length, totalLength;
-
-	info[0] = 0;
-	totalLength = 0;
+	int length, total = 0;
 
 	for( var = cvar_vars; var; var = var->next ) {
 		if( !( var->flags & bit ) ) {
@@ -976,43 +972,17 @@ char *Cvar_BitInfo( int bit ) {
             continue;
         }
         length = Com_sprintf( newi, sizeof( newi ), "\\%s\\%s",
-                var->name, var->string );
-        if( totalLength + length > MAX_INFO_STRING - 1 ) {
+            var->name, var->string );
+        if( total + length >= MAX_INFO_STRING ) {
             break;
         }
-        strcpy( info + totalLength, newi );
-        totalLength += length;
+        memcpy( info + total, newi, length );
+        total += length;
 	}
-	return info;
+	info[total] = 0;
+	return total;
 }
 
-// used for generating enhanced server status response
-char *Cvar_BitInfo_Big( int bit ) {
-	static char	info[MAX_STRING_CHARS];
-	char newi[MAX_STRING_CHARS];
-	cvar_t	*var;
-	int length, totalLength;
-
-	info[0] = 0;
-	totalLength = 0;
-
-	for( var = cvar_vars; var; var = var->next ) {
-		if( !( var->flags & bit ) ) {
-            continue;
-        }
-        if( !var->string[0] ) {
-            continue;
-        }
-        length = Com_sprintf( newi, sizeof( newi ), "\\%s\\%s",
-                var->name, var->string );
-        if( totalLength + length > MAX_STRING_CHARS - 1 ) {
-            break;
-        }
-        strcpy( info + totalLength, newi );
-        totalLength += length;
-	}
-	return info;
-}
 
 /*
 ============

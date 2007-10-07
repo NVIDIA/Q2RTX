@@ -2097,41 +2097,52 @@ Info_SetValueForKey
 ==================
 */
 void Info_SetValueForKey( char *s, const char *key, const char *value ) {
-	char	newi[MAX_INFO_STRING], *v;
-	int		c, l, newl;
+	char	newi[MAX_INFO_STRING];
+	int		c, l, kl, vl;
+    const char *v;
 
-	if( strchr( key, '\\' ) || strchr( value, '\\' ) ) {
-		Com_Printf( "Can't use keys or values with a \\\n" );
-		return;
+    // validate key
+    v = key;
+	while( *v ) {
+		if( *v == '\\' || *v == '\"' || *v == ';' ) {
+		    Com_Printf( "Can't use keys with backslashes, double quotes or semicolons\n" );
+			return;
+		}
+		v++;
 	}
+    kl = v - key;
+    if( kl >= MAX_INFO_KEY ) {
+		Com_Printf( "Keys must be less then %d characters.\n", MAX_INFO_KEY );
+        return;
+    }
 
-	if( strchr( key, ';' ) ) {
-		Com_Printf( "Can't use keys or values with a semicolon\n" );
-		return;
+    // validate value
+    v = value;
+	while( *v ) {
+		if( *v == '\\' || *v == '\"' || *v == ';' ) {
+		    Com_Printf( "Can't use values with backslashes, double quotes or semicolons\n" );
+			return;
+		}
+		v++;
 	}
+    vl = v - value;
+    if( kl >= MAX_INFO_VALUE ) {
+		Com_Printf( "Values must be less then %d characters.\n", MAX_INFO_VALUE );
+        return;
+    }
 
-	if( strchr( key, '\"' ) || strchr( value, '\"' ) ) {
-		Com_Printf ("Can't use keys or values with a \"\n");
-		return;
-	}
-
-	if( strlen( key ) > MAX_INFO_KEY - 1 || strlen( value ) > MAX_INFO_VALUE - 1 ) {
-		Com_Printf( "Keys and values must be less then %i characters.\n", MAX_INFO_KEY );
-		return;
-	}
 	Info_RemoveKey( s, key );
 	if( !value[0] ) {
 		return;
 	}
 
     l = strlen( s );
-
-	newl = Com_sprintf( newi, sizeof( newi ), "\\%s\\%s", key, value );
-
-	if( newl + l > MAX_INFO_STRING - 1 ) {
+	if( l + kl + vl + 2 >= MAX_INFO_STRING ) {
 		Com_Printf( "Info string length exceeded\n" );
 		return;
 	}
+
+	sprintf( newi, "\\%s\\%s", key, value );
 
 	// only copy ascii values
 	s += l;
@@ -2151,15 +2162,35 @@ Info_AttemptSetValueForKey
 ==================
 */
 qboolean Info_AttemptSetValueForKey( char *s, const char *key, const char *value ) {
-	char	newi[MAX_INFO_STRING], *v;
-	int		c, l, newl;
+	char	newi[MAX_INFO_STRING];
+	int		c, l, kl, vl;
+    const char *v;
 
-	if( !Info_ValidateSubstring( key ) ) {
-		return qfalse;
+    // validate key
+    v = key;
+	while( *v ) {
+		if( *v == '\\' || *v == '\"' || *v == ';' ) {
+			return qfalse;
+		}
+		v++;
 	}
-	if( !Info_ValidateSubstring( value ) ) {
-		return qfalse;
+    kl = v - key;
+    if( kl >= MAX_INFO_KEY ) {
+        return qfalse;
+    }
+
+    // validate value
+    v = value;
+	while( *v ) {
+		if( *v == '\\' || *v == '\"' || *v == ';' ) {
+			return qfalse;
+		}
+		v++;
 	}
+    vl = v - value;
+    if( vl >= MAX_INFO_KEY ) {
+        return qfalse;
+    }
 
 	Info_RemoveKey( s, key );
 	if( !value[0] ) {
@@ -2167,12 +2198,11 @@ qboolean Info_AttemptSetValueForKey( char *s, const char *key, const char *value
 	}
 
     l = strlen( s );
-
-	newl = Com_sprintf( newi, sizeof( newi ), "\\%s\\%s", key, value );
-
-	if( newl + l > MAX_INFO_STRING - 1 ) {
+	if( l + kl + vl + 2 >= MAX_INFO_STRING ) {
 		return qfalse;
 	}
+
+	sprintf( newi, "\\%s\\%s", key, value );
 
 	// only copy ascii values
 	s += l;

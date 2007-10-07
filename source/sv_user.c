@@ -676,8 +676,12 @@ Dumps the serverinfo info string
 ==================
 */
 static void SV_ShowServerinfo_f( void ) {
+    char serverinfo[MAX_INFO_STRING];
+
+    Cvar_BitInfo( serverinfo, CVAR_SERVERINFO );
+
 	Com_BeginRedirect( RD_CLIENT, sv_outputbuf, SV_OUTPUTBUF_LENGTH, SV_FlushRedirect );
-	Info_Print( Cvar_Serverinfo() );
+	Info_Print( serverinfo );
 	Com_EndRedirect();
 }
 

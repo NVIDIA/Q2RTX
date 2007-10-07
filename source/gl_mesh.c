@@ -116,7 +116,7 @@ static void Tess_LerpedMesh( aliasMesh_t *mesh, int oldframe, int newframe ) {
 
 }
 
-void GL_SetAliasColor( vec3_t origin, vec3_t color ) {
+void GL_SetAliasColor( vec3_t origin, vec_t *color ) {
 	entity_t *ent = glr.ent;
 	float f, m;
 	int i;
@@ -186,8 +186,7 @@ void GL_DrawAliasModel( model_t *model ) {
 	vec_t radius;
 	glStateBits_t bits;
 	glCullResult_t cull;
-	vec3_t color;
-	float alpha;
+	vec4_t color;
 
 	newframeIdx = ent->frame;
 	if( newframeIdx < 0 || newframeIdx >= model->numFrames ) {
@@ -284,9 +283,9 @@ void GL_DrawAliasModel( model_t *model ) {
 
 	/* setup transparency */
 	bits = GLS_DEFAULT;
-	alpha = 1;
+	color[3] = 1;
 	if( ent->flags & RF_TRANSLUCENT ) {
-		alpha = ent->alpha;
+		color[3] = ent->alpha;
 		bits |= GLS_BLEND_BLEND|GLS_DEPTHMASK_FALSE;
 	}
 
@@ -312,7 +311,7 @@ void GL_DrawAliasModel( model_t *model ) {
 		qglCullFace( GL_BACK );
 	}
     
-	qglColor4f( color[0], color[1], color[2], alpha );
+	qglColor4fv( color );
 	qglVertexPointer( 3, GL_FLOAT, 16, tess.vertices );
 
 	last = model->meshes + model->numMeshes;

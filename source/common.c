@@ -57,6 +57,7 @@ uint32		com_framenum;
 uint32		com_eventTime;
 uint32      com_localTime;
 qboolean    com_initialized;
+time_t      com_startTime;
 
 // host_speeds times
 int		time_before_game;
@@ -79,9 +80,10 @@ CLIENT / SERVER interactions
 static int	rd_target;
 static char	*rd_buffer;
 static int	rd_buffersize;
-static void	(*rd_flush)(int target, char *buffer);
+static int  rd_length;
+static rdflush_t    rd_flush;
 
-void Com_BeginRedirect (int target, char *buffer, int buffersize, void (*flush))
+void Com_BeginRedirect (int target, char *buffer, int buffersize, rdflush_t flush)
 {
 	if (!target || !buffer || !buffersize || !flush)
 		return;
@@ -91,6 +93,7 @@ void Com_BeginRedirect (int target, char *buffer, int buffersize, void (*flush))
 	rd_flush = flush;
 
 	*rd_buffer = 0;
+    rd_length = 0;
 }
 
 void Com_AbortRedirect (void)
@@ -103,7 +106,8 @@ void Com_AbortRedirect (void)
 
 void Com_EndRedirect (void)
 {
-	rd_flush(rd_target, rd_buffer);
+	rd_flush(rd_target, rd_buffer, rd_length);
+    rd_length = 0;
 
 	rd_target = 0;
 	rd_buffer = NULL;
@@ -238,11 +242,15 @@ void Com_Printf( const char *fmt, ... ) {
 	va_end( argptr );
 
 	if( rd_target ) {
-		if( length + strlen( rd_buffer ) > rd_buffersize - 1 ) {
-			rd_flush( rd_target, rd_buffer );
-			*rd_buffer = 0;
-		}
-		Q_strcat( rd_buffer, rd_buffersize, msg );
+        if( length < rd_buffersize ) {
+            if( rd_length + length >= rd_buffersize ) {
+                rd_flush( rd_target, rd_buffer, rd_length );
+                *rd_buffer = 0;
+                rd_length = 0;
+            }
+            memcpy( rd_buffer + rd_length, msg, length );
+            rd_length += length;
+        }
 	} else {
 		Con_Print( msg );
 			
@@ -1519,6 +1527,8 @@ void Qcommon_Init( char *commandLine ) {
 	Com_Printf( "http://q2pro.sf.net\n\n" );
 
 	com_numCommands = 0;
+
+    time( &com_startTime );
 
 	com_eventTime = Sys_Realtime();
 }

@@ -105,33 +105,6 @@ void Netchan_Init( void ) {
 
 /*
 ===============
-Netchan_OutOfBand
-
-Sends an out-of-band datagram
-================
-*/
-neterr_t Netchan_OutOfBand( netsrc_t sock, const netadr_t *address,
-                            uint32 length, const byte *data )
-{
-	sizebuf_t	send;
-	byte		send_data[MAX_PACKETLEN_DEFAULT - 4];
-	neterr_t	ret;
-
-	SZ_Init( &send, send_data, sizeof( send_data ) );
-
-// write the packet header
-	SZ_WriteLong( &send, -1 );	// -1 sequence means out of band
-	SZ_Write( &send, data, length );
-
-// send the datagram
-	ret = NET_SendPacket( sock, address, send.cursize, send.data );
-
-	return ret;
-
-}
-
-/*
-===============
 Netchan_OutOfBandPrint
 
 Sends a text message in an out-of-band datagram
@@ -141,22 +114,18 @@ neterr_t Netchan_OutOfBandPrint( netsrc_t sock, const netadr_t *address,
                                  const char *format, ... )
 {
 	va_list		argptr;
-	byte		send_data[MAX_PACKETLEN_DEFAULT];
+	char        buffer[MAX_PACKETLEN_DEFAULT];
 	int			length;
-	neterr_t	ret;
 
-// write the packet header
-	*( uint32 * )send_data = -1;	// -1 sequence means out of band
+    // write the packet header
+	*( uint32 * )buffer = 0xffffffff;
 	
 	va_start( argptr, format );
-	length = Q_vsnprintf( ( char * )send_data + 4, sizeof( send_data ) - 4,
-        format, argptr );
+	length = Q_vsnprintf( buffer + 4, sizeof( buffer ) - 4, format, argptr );
 	va_end( argptr );
 
-// send the datagram
-	ret = NET_SendPacket( sock, address, length + 4, send_data );
-
-	return ret;
+    // send the datagram
+	return NET_SendPacket( sock, address, length + 4, buffer );
 }
 
 // ============================================================================
@@ -625,7 +594,6 @@ static int NetchanNew_Transmit( netchan_t *netchan, int length,
 	}
 
 	return send.cursize;
-
 }
 
 /*

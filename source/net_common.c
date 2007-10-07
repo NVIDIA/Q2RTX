@@ -429,9 +429,7 @@ neterr_t NET_GetPacket( netsrc_t sock ) {
 NET_SendPacket
 =============
 */
-neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, uint32 length,
-        const byte *data )
-{
+neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, uint32 length, const void *data ) {
 	struct sockaddr_in	addr;
     int    ret;
 
