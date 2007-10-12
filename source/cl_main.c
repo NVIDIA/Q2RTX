@@ -2466,7 +2466,7 @@ static void CL_MeasureFPS( void ) {
 	int time;
 
 	time = Sys_Milliseconds();
-	if( time - cls.measureTime > 1000 ) {
+	if( time - cls.measureTime >= 1000 ) {
 		cls.measureTime = time;
 		cls.currentFPS = cls.measureFramecount;
 		cls.measureFramecount = 0;
