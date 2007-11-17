@@ -209,7 +209,7 @@ DS_Init
 Direct-Sound support
 ==================
 */
-static sndinitstat DS_Init (void) {
+static sndinitstat_t DS_Init (void) {
 	DSCAPS			dscaps;
 	HRESULT			hresult;
 	LPDIRECTSOUNDCREATE pDirectSoundCreate;
@@ -298,48 +298,31 @@ static sndinitstat DS_Init (void) {
 
 /*
 ==============
-DS_GetDMAPos
+DS_BeginPainting
 
-return the current sample position (in mono samples read)
+Makes sure dma.buffer is valid.
+
+Returns the current sample position (in mono samples read)
 inside the recirculating dma buffer, so the mixing code will know
 how many sample are required to fill it up.
 ===============
 */
-static int DS_GetDMAPos(void) {
-	MMTIME	mmtime;
-	int		s;
-	DWORD	dwWrite;
-
-	if (!pDSBuf) {
-		return 0;
-	}
-
-	mmtime.wType = TIME_SAMPLES;
-	IDirectSoundBuffer_GetCurrentPosition(pDSBuf, &mmtime.u.sample, &dwWrite);
-	s = mmtime.u.sample - mmstarttime.u.sample;
-
-	s >>= sample16;
-	s &= (dma.samples-1);
-
-	return s;
-}
-
-/*
-==============
-DS_BeginPainting
-
-Makes sure dma.buffer is valid
-===============
-*/
 static void DS_BeginPainting (void) {
-	int		reps;
+	int		reps, s;
 	DWORD	dwSize2;
 	DWORD	*pbuf, *pbuf2;
 	HRESULT	hresult;
-	DWORD	dwStatus;
+	DWORD	dwStatus, dwWrite;
+	MMTIME	mmtime;
 
 	if (!pDSBuf)
 		return;
+
+    // get sample pos
+	mmtime.wType = TIME_SAMPLES;
+	IDirectSoundBuffer_GetCurrentPosition(pDSBuf, &mmtime.u.sample, &dwWrite);
+	s = ( mmtime.u.sample - mmstarttime.u.sample ) >> sample16;
+	dma.samplepos = s & ( dma.samples - 1 );
 
 	// if the buffer was lost or stopped, restore it and/or restart it
 	if (IDirectSoundBuffer_GetStatus (pDSBuf, &dwStatus) != DS_OK) {
@@ -417,7 +400,6 @@ static void DS_Activate (qboolean active) {
 
 void DS_FillAPI( snddmaAPI_t *api ) {
 	api->Init = DS_Init;
-	api->GetDMAPos = DS_GetDMAPos;
 	api->Shutdown = DS_Shutdown;
 	api->BeginPainting = DS_BeginPainting;
 	api->Submit = DS_Submit;

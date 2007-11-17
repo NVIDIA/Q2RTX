@@ -94,7 +94,7 @@ typedef enum {
 #define CVAR_LATCHED		256
 #define CVAR_USER_CREATED	512
 #define CVAR_DEFAULTS_MIXED	1024
-#define CVAR_LOCAL      	2048
+#define CVAR_GAME      	    2048
 
 #define CVAR_INFOMASK		(CVAR_USERINFO|CVAR_SERVERINFO)
 #define CVAR_EXTENDED_MASK	(~31)

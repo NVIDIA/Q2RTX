@@ -173,7 +173,9 @@ typedef struct client_state_s {
 	char		configstrings[MAX_CONFIGSTRINGS][MAX_QPATH];
 	char		mapname[MAX_QPATH]; // short format - q2dm1, etc
 
+#if USE_AUTOREPLY
 	int				replyTime;
+#endif
 
 	char		loadingString[MAX_QPATH];
 

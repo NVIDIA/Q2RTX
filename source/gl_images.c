@@ -24,7 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 image_t *r_notexture;
 image_t *r_particletexture;
 image_t *r_beamtexture;
-image_t *r_dlightTex;
+image_t *r_warptexture;
 image_t *r_whiteimage;
 
 int gl_filter_min;
@@ -932,38 +932,7 @@ static void gl_gamma_changed( cvar_t *self ) {
     video.UpdateGamma( gammatable );
 }
 
-#define DLIGHT_TEXTURE_SIZE     16
-
-static void GL_InitDlightTexture( void ) {
-    byte pixels[DLIGHT_TEXTURE_SIZE*DLIGHT_TEXTURE_SIZE*4];
-    byte *dst;
-    float x, y, f;
-    int i, j;
-
-    dst = pixels;
-    for( i = 0; i < DLIGHT_TEXTURE_SIZE; i++ ) {
-        for( j = 0; j < DLIGHT_TEXTURE_SIZE; j++ ) {
-            x = j - DLIGHT_TEXTURE_SIZE/2 + 0.5f;
-            y = i - DLIGHT_TEXTURE_SIZE/2 + 0.5f;
-            f = sqrt( x * x + y * y );
-            f = 1.0f - f / ( DLIGHT_TEXTURE_SIZE/2 - 1.5f );
-            if( f < 0 ) f = 0;
-            else if( f > 1 ) f = 1;
-            dst[0] = 255 * f;
-            dst[1] = 255 * f;
-            dst[2] = 255 * f;
-            dst[3] = 255;
-            dst += 4;
-        }
-    }
-    
-    r_dlightTex = R_CreateImage( "*dlightTexture", pixels, DLIGHT_TEXTURE_SIZE,
-            DLIGHT_TEXTURE_SIZE, it_pic, if_auto );
-    qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
-    qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
-}
-
-static byte	dottexture[8][8] = {
+static const byte dottexture[8][8] = {
 	{0,0,0,0,0,0,0,0},
 	{0,0,1,1,0,0,0,0},
 	{0,1,1,1,1,0,0,0},
@@ -1028,22 +997,21 @@ static void GL_InitWhiteImage( void ) {
 		}
 	}
     
-    r_whiteimage = R_CreateImage( "*whiteimage", pixels, 8, 8, it_pic, if_auto );
+    r_whiteimage = R_CreateImage( "*whiteimage", pixels, 8, 8,
+        it_pic, if_auto );
 }
 
-#define BEAM_TEXTURE_SIZE	16
-
 static void GL_InitBeamTexture( void ) {
-    byte pixels[BEAM_TEXTURE_SIZE*BEAM_TEXTURE_SIZE*4];
+    byte pixels[16*16*4];
     byte *dst;
     float f;
     int i, j;
 
     dst = pixels;
-    for( i = 0; i < BEAM_TEXTURE_SIZE; i++ ) {
-        for( j = 0; j < BEAM_TEXTURE_SIZE; j++ ) {
-            f = fabs( j - BEAM_TEXTURE_SIZE/2 ) - 0.5f;
-            f = 1.0f - f / ( BEAM_TEXTURE_SIZE/2 - 2.5f );
+    for( i = 0; i < 16; i++ ) {
+        for( j = 0; j < 16; j++ ) {
+            f = fabs( j - 16/2 ) - 0.5f;
+            f = 1.0f - f / ( 16/2 - 2.5f );
             if( f < 0 ) f = 0;
             else if( f > 1 ) f = 1;
             dst[0] = 255 * f;
@@ -1054,24 +1022,32 @@ static void GL_InitBeamTexture( void ) {
         }
     }
     
-    r_beamtexture = R_CreateImage( "*beamTexture", pixels, BEAM_TEXTURE_SIZE,
-            BEAM_TEXTURE_SIZE, it_pic, if_auto );
+    r_beamtexture = R_CreateImage( "*beamTexture", pixels, 16, 16,
+        it_pic, if_auto );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-   // qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
-   // qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
-   /* 
-    {
-        float borderColor[4];
-        
-        borderColor[0] = 1;
-        borderColor[1] = 1;
-        borderColor[2] = 1;
-        borderColor[3] = 0;
+}
 
-        qglTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor );
+static void GL_InitWarpTexture( void ) {
+    byte pixels[8*8*4];
+    byte *dst;
+    int i, j;
+
+    dst = pixels;
+    for( i = 0; i < 8; i++ ) {
+        for( j = 0; j < 8; j++ ) {
+            dst[0] = rand() & 255;
+            dst[1] = rand() & 255;
+            dst[2] = 255;
+            dst[3] = 255;
+            dst += 4;
+        }
     }
-	*/
+    
+    r_warptexture = R_CreateImage( "*warpTexture", pixels, 8, 8,
+        it_pic, if_auto );
+    qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+    qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 }
 
 /*
@@ -1148,7 +1124,7 @@ void GL_InitImages( void ) {
 
 	/* make sure r_notexture == &r_images[0] */
 	GL_InitDefaultTexture();
-    GL_InitDlightTexture();
+    GL_InitWarpTexture();
     GL_InitParticleTexture();
     GL_InitWhiteImage();
 	GL_InitBeamTexture();

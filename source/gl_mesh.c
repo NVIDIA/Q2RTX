@@ -172,6 +172,7 @@ void GL_SetAliasColor( vec3_t origin, vec_t *color ) {
 	}
 }
 
+#define USE_CELSHADING  1
 
 void GL_DrawAliasModel( model_t *model ) {
 	entity_t *ent = glr.ent;
@@ -187,6 +188,11 @@ void GL_DrawAliasModel( model_t *model ) {
 	glStateBits_t bits;
 	glCullResult_t cull;
 	vec4_t color;
+#if USE_CELSHADING
+    vec3_t dir;
+    float scale;
+#endif
+    int back, front;
 
 	newframeIdx = ent->frame;
 	if( newframeIdx < 0 || newframeIdx >= model->numFrames ) {
@@ -278,6 +284,15 @@ void GL_DrawAliasModel( model_t *model ) {
 		tessFunc = Tess_LerpedMesh;
 	}
 
+#if USE_CELSHADING
+    scale = 0;
+	if( gl_celshading->value > 0 && ( ent->flags & RF_SHELL_MASK ) == 0 ) {
+        VectorSubtract( origin, glr.fd.vieworg, dir );
+        scale = VectorLength( dir );
+        scale = 1.0f - scale / 700.0f;
+    }
+#endif
+
 	/* setup color */
 	GL_SetAliasColor( origin, color );
 
@@ -309,7 +324,12 @@ void GL_DrawAliasModel( model_t *model ) {
 		qglScalef( -1, 1, 1 );
 		qglMatrixMode( GL_MODELVIEW );
 		qglCullFace( GL_BACK );
-	}
+        back = GL_BACK;
+        front = GL_FRONT;
+	} else {
+        back = GL_FRONT;
+        front = GL_BACK;
+    }
     
 	qglColor4fv( color );
 	qglVertexPointer( 3, GL_FLOAT, 16, tess.vertices );
@@ -352,10 +372,28 @@ void GL_DrawAliasModel( model_t *model ) {
 			qglLockArraysEXT( 0, mesh->numVerts );
 		}
 		qglDrawElements( GL_TRIANGLES, mesh->numIndices, GL_UNSIGNED_INT,
-				mesh->indices );
+			mesh->indices );
+
+#if USE_CELSHADING
+        if( scale > 0 && scale <= 1 ) {
+            qglCullFace( front );
+            qglPolygonMode( back, GL_LINE );
+            qglDisable( GL_TEXTURE_2D );
+            qglLineWidth( gl_celshading->value*scale );
+    	    GL_Bits( bits | GLS_BLEND_BLEND );
+            qglColor4f( 0, 0, 0, scale );
+            qglDrawElements( GL_TRIANGLES, mesh->numIndices, GL_UNSIGNED_INT,
+                mesh->indices );
+            qglCullFace( back );
+            qglPolygonMode( back, GL_FILL );
+            qglColor4fv( color );
+            qglEnable( GL_TEXTURE_2D );
+        }
+#endif
+
 		if( gl_showtris->integer ) {
-			Tess_DrawSurfaceTriangles( ( int * )mesh->indices,
-                    mesh->numIndices );
+			//Tess_DrawSurfaceTriangles( ( int * )mesh->indices,
+              //      mesh->numIndices );
 		}
 		if( qglUnlockArraysEXT ) {
 			qglUnlockArraysEXT();

@@ -22,10 +22,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 vec3_t modelViewOrigin; /* viewer origin in model space */
 
+#define FACE_HASH_SIZE  32
+#define FACE_HASH_MASK  ( FACE_HASH_SIZE - 1 )
+
 static vec3_t lightcolor;
+static bspSurface_t *alphaFaces;
+//static bspSurface_t *warpFaces;
+static bspSurface_t *faces_hash[FACE_HASH_SIZE];
 
 static qboolean GL_LightPoint_r( bspNode_t *node, vec3_t start, vec3_t end ) {
-	cplane_t *plane;
 	vec_t startFrac, endFrac, midFrac;
 	vec3_t mid;
 	int side;
@@ -39,13 +44,13 @@ static qboolean GL_LightPoint_r( bspNode_t *node, vec3_t start, vec3_t end ) {
 	int w1, w2, w3, w4;
 	int color[3];
 
-	if( !( plane = node->plane ) ) {
+	if( !node->plane ) {
 		return qfalse;
 	}
 	
 	/* calculate distancies */
-	startFrac = DotProduct( plane->normal, start ) - plane->dist;
-	endFrac = DotProduct( plane->normal, end ) - plane->dist;
+	startFrac = PlaneDiffFast( start, node->plane );
+	endFrac = PlaneDiffFast( end, node->plane );
 	side = ( startFrac < 0 );
 
 	if( ( endFrac < 0 ) == side ) {
@@ -55,9 +60,7 @@ static qboolean GL_LightPoint_r( bspNode_t *node, vec3_t start, vec3_t end ) {
 
 	/* find crossing point */
 	midFrac = startFrac / ( startFrac - endFrac );
-	mid[0] = start[0] + ( end[0] - start[0] ) * midFrac;
-	mid[1] = start[1] + ( end[1] - start[1] ) * midFrac;
-	mid[2] = start[2] + ( end[2] - start[2] ) * midFrac;
+    LerpVector( start, end, midFrac, mid );
 
 	/* check near side */
 	ret = GL_LightPoint_r( node->children[side], start, mid );
@@ -114,15 +117,16 @@ static qboolean GL_LightPoint_r( bspNode_t *node, vec3_t start, vec3_t end ) {
 
 	/* check far side */
 	return GL_LightPoint_r( node->children[side^1], mid, end );
-
 }
 
 void GL_LightPoint( vec3_t origin, vec3_t dest ) {
     extern cvar_t *gl_modulate_hack;
 	vec3_t point;
+#if USE_DYNAMIC
 	dlight_t *light;
 	vec3_t dir;
 	vec_t dist, f;
+#endif
     int i;
 
 	if( !r_world.name[0] || gl_fullbright->integer ) {
@@ -143,6 +147,7 @@ void GL_LightPoint( vec3_t origin, vec3_t dest ) {
 		VectorScale( lightcolor, gl_modulate->value, lightcolor );
 	}
 
+#if USE_DYNAMIC
     for( i = 0, light = glr.fd.dlights; i < glr.fd.num_dlights; i++, light++ ) {
 		VectorSubtract( light->origin, origin, dir );
 		dist = VectorLength( dir );
@@ -152,6 +157,7 @@ void GL_LightPoint( vec3_t origin, vec3_t dest ) {
         f = 1.0f - dist / light->intensity;
 		VectorMA( lightcolor, f, light->color, lightcolor );
 	}
+#endif
 
 	/* apply modulate twice to mimic original ref_gl behavior */
 	VectorScale( lightcolor, gl_modulate->value, lightcolor );
@@ -168,28 +174,15 @@ void GL_LightPoint( vec3_t origin, vec3_t dest ) {
 
 }
 
+#if USE_DYNAMIC
 static void GL_MarkLights_r( bspNode_t *node, dlight_t *light ) {
-    cplane_t *plane;
     vec_t dot;
-    int lightbit, count;
+    int count;
     bspSurface_t *face;
+    int lightbit = 1 << light->index;
     
-    while( ( plane = node->plane ) != NULL ) {
-        switch( plane->type ) {
-        case PLANE_X:
-            dot = light->transformed[0] - plane->dist;
-            break;
-        case PLANE_Y:
-            dot = light->transformed[1] - plane->dist;
-            break;
-        case PLANE_Z:
-            dot = light->transformed[2] - plane->dist;
-            break;
-        default:
-            dot = DotProduct( light->transformed, plane->normal ) - plane->dist;
-            break;
-        }
-
+    while( node->plane ) {
+        dot = PlaneDiffFast( light->transformed, node->plane );
         if( dot > light->intensity ) {
             node = node->children[0];
             continue;
@@ -199,7 +192,6 @@ static void GL_MarkLights_r( bspNode_t *node, dlight_t *light ) {
             continue;
         }
 
-        lightbit = 1 << light->index;
         face = node->firstFace;
         count = node->numFaces;
         while( count-- ) {
@@ -253,8 +245,8 @@ static void GL_TransformLights( bspSubmodel_t *model ) {
 		GL_MarkLights_r( model->headnode, light );
 
     }
-
 }
+#endif
 
 void GL_MarkLeaves( void ) {
 	byte fatvis[MAX_MAP_LEAFS/8];
@@ -352,6 +344,25 @@ finish:
 
 }
 
+static inline void GL_AddSurf( bspSurface_t *face ) {
+    if( face->texinfo->flags & (SURF_TRANS33|SURF_TRANS66) ) {
+        face->next = alphaFaces;
+        alphaFaces = face;
+    } /*else if( face->type == SURF_WARP ) {
+        face->next = warpFaces;
+        warpFaces = face;
+    } */else {
+#if 0
+        GL_DrawSurf( face );
+#else
+        int i = ( face->texinfo->image->texnum ^ face->lightmapnum ) & FACE_HASH_MASK;
+        face->next = faces_hash[i];
+        faces_hash[i] = face;
+#endif
+    }
+    c.facesDrawn++;
+}
+
 #define NODE_CLIPPED    0
 #define NODE_UNCLIPPED  15
 
@@ -378,15 +389,6 @@ static inline qboolean GL_ClipNodeToFrustum( bspNode_t *node, int *clipflags ) {
     return qtrue;
 }
 
-typedef void (*drawFaceFunc_t)( bspSurface_t *surf );
-
-static drawFaceFunc_t   drawFaceFunc;
-static drawFaceFunc_t   drawFaceFuncTable[] = {
-    GL_AddBspSurface,
-    GL_DrawSurfPoly
-};
-
-static bspSurface_t	*alphaFaces;
 
 #define BACKFACE_EPSILON	0.001f
 
@@ -398,7 +400,6 @@ void GL_DrawBspModel( bspSubmodel_t *model ) {
 	int count;
 	vec3_t bounds[2];
 	vec_t dot;
-	cplane_t *plane;
 	vec3_t temp;
 	entity_t *ent = glr.ent;
 	glCullResult_t cull;
@@ -435,45 +436,11 @@ void GL_DrawBspModel( bspSubmodel_t *model ) {
 
 	glr.drawframe++;
 
+#if USE_DYNAMIC
 	if( gl_dynamic->integer ) {
 		GL_TransformLights( model );
 	}
-
-	/* draw visible faces */
-	/* FIXME: go by headnode instead? */
-	face = model->firstFace;
-    count = model->numFaces;
-	while( count-- ) {
-		plane = face->plane;
-		switch( plane->type ) {
-		case PLANE_X:
-			dot = modelViewOrigin[0] - plane->dist;
-			break;
-		case PLANE_Y:
-			dot = modelViewOrigin[1] - plane->dist;
-			break;
-		case PLANE_Z:
-			dot = modelViewOrigin[2] - plane->dist;
-			break;
-		default:
-			dot = DotProduct( modelViewOrigin, plane->normal ) - plane->dist;
-			break;
-		}
-		if( ( dot < -BACKFACE_EPSILON && face->side == SIDE_FRONT ) ||
-			( dot > BACKFACE_EPSILON && face->side == SIDE_BACK ) )
-		{
-			c.facesCulled++;
-		} else {
-			if( face->texinfo->flags & (SURF_TRANS33|SURF_TRANS66) ) {
-				face->next = alphaFaces;
-				alphaFaces = face;
-			} else {
-				GL_AddBspSurface( face );
-			}
-			c.facesDrawn++;
-		}
-		face++;
-	}
+#endif
 
 	qglPushMatrix();
 	qglTranslatef( ent->origin[0], ent->origin[1], ent->origin[2] );
@@ -482,18 +449,32 @@ void GL_DrawBspModel( bspSubmodel_t *model ) {
 		qglRotatef( ent->angles[PITCH], 0, 1, 0 );
 		qglRotatef( ent->angles[ROLL],  1, 0, 0 );
 	}
-	GL_SortAndDrawSurfs( qtrue );
-	qglPopMatrix();
 
+	/* draw visible faces */
+	/* FIXME: go by headnode instead? */
+	face = model->firstFace;
+    count = model->numFaces;
+	while( count-- ) {
+		dot = PlaneDiffFast( modelViewOrigin, face->plane );
+		if( ( dot < -BACKFACE_EPSILON && face->side == SIDE_FRONT ) ||
+			( dot > BACKFACE_EPSILON && face->side == SIDE_BACK ) )
+		{
+			c.facesCulled++;
+		} else {
+            /* FIXME: warp/trans surfaces are not supported */
+            GL_DrawSurf( face );  
+		}
+		face++;
+	}
+
+	qglPopMatrix();
 }
 
 static void GL_WorldNode_r( bspNode_t *node, int clipflags ) {
 	bspLeaf_t *leaf;
 	bspSurface_t **leafFace, *face;
 	int count, side, area;
-    cplane_t *plane;
     vec_t dot;
-	uint32 type;
 	
     while( node->visframe == glr.visframe ) {
         if( gl_cull_nodes->integer && clipflags != NODE_UNCLIPPED &&
@@ -521,16 +502,9 @@ static void GL_WorldNode_r( bspNode_t *node, int clipflags ) {
             break;
         }
 
-        plane = node->plane;
-        type = plane->type;
-        if( type < 3 ) {
-            dot = modelViewOrigin[type] - plane->dist;
-        } else {
-            dot = DotProduct( modelViewOrigin, plane->normal ) - plane->dist;
-        }
+        dot = PlaneDiffFast( modelViewOrigin, node->plane );
+        side = ( dot < 0 );
 
-        side = dot < 0;
-        
         GL_WorldNode_r( node->children[side], clipflags );
 
         face = node->firstFace;
@@ -538,13 +512,7 @@ static void GL_WorldNode_r( bspNode_t *node, int clipflags ) {
         while( count-- ) {
             if( face->drawframe == glr.drawframe ) {
                 if( face->side == side ) {
-                    if( face->texinfo->flags & (SURF_TRANS33|SURF_TRANS66) ) {
-                        face->next = alphaFaces;
-                        alphaFaces = face;
-                    } else {
-                        drawFaceFunc( face );
-                    }
-                    c.facesDrawn++;
+                    GL_AddSurf( face );
                 } else {
                     c.facesCulled++;
                 }
@@ -560,47 +528,49 @@ static void GL_WorldNode_r( bspNode_t *node, int clipflags ) {
 }
 
 void GL_DrawWorld( void ) {	
+    int i;
+    bspSurface_t *face;
+
     GL_MarkLeaves();
 
+#if USE_DYNAMIC
     if( gl_dynamic->integer ) {
         GL_MarkLights();
     }
+#endif
     
     R_ClearSkyBox();
-
-    drawFaceFunc = drawFaceFuncTable[gl_primitives->integer & 1];
 
 	VectorCopy( glr.fd.vieworg, modelViewOrigin );
 
     GL_WorldNode_r( r_world.nodes, NODE_CLIPPED );
-    GL_SortAndDrawSurfs( qtrue );
+
+    for( i = 0; i < FACE_HASH_SIZE; i++ ) {
+        for( face = faces_hash[i]; face; face = face->next ) {
+            GL_DrawSurf( face ); 
+        }
+        faces_hash[i] = NULL;
+    }
 
     if( !gl_fastsky->integer ) {
         R_DrawSkyBox();
     }
-	
 }
 
 void GL_DrawAlphaFaces( void ) {
 	bspSurface_t *face, *next;
 
-	face = alphaFaces;
-	if( !face ) {
-		return;
-	}
-    
-	drawFaceFunc = drawFaceFuncTable[gl_primitives->integer & 1];
+    if( ( face = alphaFaces ) == NULL ) {
+        return;
+    }
 
-	do {
-		drawFaceFunc( face ); 
-		/* Prevent loop condition in case the same face is included twice.
-		 * This should never happen normally. */
-		next = face->next;
-		face->next = NULL;
-		face = next;
-	} while( face );
+    do {
+        GL_DrawSurf( face ); 
+        next = face->next;
+        face->next = NULL;
+        face = next;
+    } while( face );
 
-	GL_SortAndDrawSurfs( qfalse );
-
-	alphaFaces = NULL;
+    alphaFaces = NULL;
 }
+

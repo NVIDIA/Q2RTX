@@ -47,6 +47,7 @@ cvar_t *gl_screenshot_quality;
 #if USE_PNG
 cvar_t *gl_screenshot_compression;
 #endif
+cvar_t *gl_celshading;
 cvar_t *gl_znear;
 cvar_t *gl_zfar;
 cvar_t *gl_modulate;
@@ -57,15 +58,15 @@ cvar_t *gl_showtris;
 cvar_t *gl_cull_nodes;
 cvar_t *gl_cull_models;
 cvar_t *gl_showstats;
+cvar_t *gl_bind;
 cvar_t *gl_clear;
 cvar_t *gl_novis;
 cvar_t *gl_lockpvs;
-cvar_t *gl_sort;
-cvar_t *gl_primitives;
-cvar_t *gl_sort;
 cvar_t *gl_subdivide;
 cvar_t *gl_fastsky;
+#if USE_DYNAMIC
 cvar_t *gl_dynamic;
+#endif
 cvar_t *gl_fullbright;
 cvar_t *gl_hwgamma;
 cvar_t *gl_fullscreen;
@@ -423,9 +424,17 @@ static char *GL_ErrorString( GLenum err ) {
 	return str;
 }
 
-static void GL_RenderFrame( refdef_t *fd ) {
+void GL_ShowErrors( const char *func ) {
 	GLenum err;
 
+    if( gl_showerrors->integer ) {
+        while( ( err = qglGetError() ) != GL_NO_ERROR ) {
+	    	Com_EPrintf( "%s: %s\n", func, GL_ErrorString( err ) );
+        }
+    }
+}
+
+static void GL_RenderFrame( refdef_t *fd ) {
 	GL_Flush2D();
 
     if( !r_world.name[0] && !( fd->rdflags & RDF_NOWORLDMODEL ) ) {
@@ -437,16 +446,11 @@ static void GL_RenderFrame( refdef_t *fd ) {
     glr.fd = *fd;
     glr.num_beams = 0;
 
+#if USE_DYNAMIC
     if( !gl_dynamic->integer ) {
         glr.fd.num_dlights = 0;
     }
-
-    AngleVectors( glr.fd.viewangles, glr.viewaxis[0], glr.viewaxis[1], glr.viewaxis[2] );
-	VectorInverse( glr.viewaxis[1] );
-
-	glr.scroll = -64 * ( ( glr.fd.time / 40.0f ) - ( int )( glr.fd.time / 40.0f ) );
-	if( glr.scroll == 0 )
-		glr.scroll = -64.0f;
+#endif
 
     GL_Setup3D();
     
@@ -473,16 +477,10 @@ static void GL_RenderFrame( refdef_t *fd ) {
 
     GL_Blend();
 
-    if( gl_showerrors->integer ) {
-        while( ( err = qglGetError() ) != GL_NO_ERROR ) {
-	    	Com_EPrintf( "GL_RenderFrame: %s\n", GL_ErrorString( err ) );
-        }
-    }
+    GL_ShowErrors( __func__ );
 }
 
 static void GL_BeginFrame( void ) {
-	GLenum err;
-
 	if( gl_log->integer ) {
 		QGL_LogNewFrame();
 	}
@@ -495,16 +493,10 @@ static void GL_BeginFrame( void ) {
 	    qglClear( GL_COLOR_BUFFER_BIT );
     }
 
-    if( gl_showerrors->integer ) {
-        while( ( err = qglGetError() ) != GL_NO_ERROR ) {
-            Com_EPrintf( "GL_BeginFrame: %s\n", GL_ErrorString( err ) );
-        }
-    }
+    GL_ShowErrors( __func__ );
 }
 
 static void GL_EndFrame( void ) {
-	GLenum err;
-
     if( gl_showstats->integer ) {
         Draw_Stats();
     }
@@ -514,12 +506,9 @@ static void GL_EndFrame( void ) {
 		QGL_EnableLogging( gl_log->integer );
 		gl_log->modified = qfalse;
 	}
+
+    GL_ShowErrors( __func__ );
 	
-    if( gl_showerrors->integer ) {
-        while( ( err = qglGetError() ) != GL_NO_ERROR ) {
-		    Com_EPrintf( "GL_EndFrame: %s\n", GL_ErrorString( err ) );
-        }
-    }
     video.EndFrame();
 }
 
@@ -692,6 +681,7 @@ static void GL_Register( void ) {
 #if USE_PNG
 	gl_screenshot_compression = cvar.Get( "gl_screenshot_compression", "6", 0 );
 #endif
+	gl_celshading = cvar.Get( "gl_celshading", "0", 0 );
 	gl_modulate = cvar.Get( "gl_modulate", "1", CVAR_ARCHIVE );
     gl_hwgamma = cvar.Get( "vid_hwgamma", "0", CVAR_ARCHIVE|CVAR_LATCHED );
 
@@ -705,14 +695,15 @@ static void GL_Register( void ) {
     gl_showstats = cvar.Get( "gl_showstats", "0", 0 );
     gl_cull_nodes = cvar.Get( "gl_cull_nodes", "1", 0 );
 	gl_cull_models = cvar.Get( "gl_cull_models", "1", 0 );
+	gl_bind = cvar.Get( "gl_bind", "1", CVAR_CHEAT );
     gl_clear = cvar.Get( "gl_clear", "0", 0 );
     gl_novis = cvar.Get( "gl_novis", "0", 0 );
     gl_lockpvs = cvar.Get( "gl_lockpvs", "0", CVAR_CHEAT );
-    gl_primitives = cvar.Get( "gl_primitives", "0", 0 );
-	gl_sort = cvar.Get( "gl_sort", "0", 0 );
     gl_subdivide = cvar.Get( "gl_subdivide", "1", 0 );
     gl_fastsky = cvar.Get( "gl_fastsky", "0", 0 );
+#if USE_DYNAMIC
     gl_dynamic = cvar.Get( "gl_dynamic", "2", CVAR_ARCHIVE );
+#endif
     gl_fullbright = cvar.Get( "r_fullbright", "0", CVAR_CHEAT );
     gl_showerrors = cvar.Get( "gl_showerrors", "1", 0 );
     
@@ -760,7 +751,6 @@ static qboolean GL_SetupExtensions( void ) {
             Com_Printf( "...enabling GL_ARB_multitexture (%d texture units)\n", integer );
             qglActiveTextureARB = ( PFNGLACTIVETEXTUREARBPROC )qwglGetProcAddress( "glActiveTextureARB" );
             qglClientActiveTextureARB = ( PFNGLCLIENTACTIVETEXTUREARBPROC )qwglGetProcAddress( "glClientActiveTextureARB" );
-            qglMultiTexCoord2fvARB = ( PFNGLMULTITEXCOORD2FVARBPROC )qwglGetProcAddress( "glMultiTexCoord2fvARB" );
             if( integer > MAX_TMUS ) {
                 integer = MAX_TMUS;
             }
@@ -788,6 +778,17 @@ static qboolean GL_SetupExtensions( void ) {
 		Com_Printf( "GL_EXT_texture_filter_anisotropic not found\n" );
     }
 
+	if( strstr( extensions, "GL_ARB_fragment_program" ) ) {
+		Com_Printf( "...enabling GL_ARB_fragment_program\n" );
+        qglProgramStringARB = ( PFNGLPROGRAMSTRINGARBPROC )qwglGetProcAddress( "glProgramStringARB" );
+        qglBindProgramARB = ( PFNGLBINDPROGRAMARBPROC )qwglGetProcAddress( "glBindProgramARB" );
+        qglDeleteProgramsARB = ( PFNGLDELETEPROGRAMSARBPROC )qwglGetProcAddress( "glDeleteProgramsARB" );
+        qglGenProgramsARB = ( PFNGLGENPROGRAMSARBPROC )qwglGetProcAddress( "glGenProgramsARB" );
+        qglProgramLocalParameter4fvARB = ( PFNGLPROGRAMLOCALPARAMETER4FVARBPROC )qwglGetProcAddress( "glProgramLocalParameter4fvARB" );
+	} else {
+		Com_Printf( "GL_ARB_fragment_program not found\n" );
+    }
+
 	if( !qglActiveTextureARB ) {
 		return qfalse;
 	}
@@ -800,30 +801,7 @@ static qboolean GL_SetupExtensions( void ) {
 	return qtrue;
 }
 
-void GL_SetDefaultState( void ) {
-	qglDrawBuffer( GL_BACK );
-	qglClearColor( 0, 0, 0, 1 );
-	qglClearDepth( 1 );
-	qglClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-	qglEnable( GL_DEPTH_TEST );
-	qglDepthFunc( GL_LEQUAL );
-	qglDepthRange( 0, 1 );
-	qglDepthMask( GL_TRUE );
-	qglDisable( GL_BLEND );
-	qglDisable( GL_ALPHA_TEST ); 
-	qglAlphaFunc( GL_GREATER, 0.666f );
-	qglHint( GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST );
-    qglPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-
-	qglEnableClientState( GL_VERTEX_ARRAY );
-    qglEnableClientState( GL_TEXTURE_COORD_ARRAY );
-    
-	GL_SelectTMU( 0 );
-	qglEnable( GL_TEXTURE_2D );
-    GL_Bits( GLS_DEFAULT );
-}
-
-static void GL_SetupRenderer( void ) {
+static void GL_IdentifyRenderer( void ) {
     char renderer_buffer[MAX_STRING_CHARS];
 
 	Q_strncpyz( renderer_buffer, gl_config.rendererString,
@@ -904,19 +882,18 @@ static qboolean GL_Init( qboolean total ) {
 		Com_Printf( "Hardware gamma is not supported by this video driver\n" );
 	}
 
-    GL_SetupRenderer();
+    GL_IdentifyRenderer();
 
 	QGL_EnableLogging( gl_log->integer );
 	gl_log->modified = qfalse;
 
     GL_PostInit();
 
+    GL_InitPrograms();
+
 	if( (( size_t )tess.vertices) & 15 ) {
 		Com_WPrintf( "tess.vertices not 16 byte aligned\n" );
 	}
-
-    gl_sort = cvar.Get( "gl_sort",
-        gl_config.renderer == GL_RENDERER_MESADRI ? "1" : "0", 0 );
 
 	Com_DPrintf( "Finished GL_Init\n" );
 
@@ -944,6 +921,8 @@ void GL_Shutdown( qboolean total ) {
 	if( !total ) {
 		return;
 	}
+    
+    GL_ShutdownPrograms();
 
 	/*
 	** shut down OS specific OpenGL stuff like contexts, etc.

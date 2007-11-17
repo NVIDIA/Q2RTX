@@ -434,11 +434,34 @@ static float CL_KeyState( kbutton_t *key ) {
 
 // FIXME: always discrete?
 static float CL_ImmKeyState( kbutton_t *key ) {
+#if 0
 	if( key->state & 1 ) {
 		return 1;
 	}
 
 	return 0;
+#else
+	float		val;
+	uint32		msec;
+
+	msec = key->msec;
+
+	if( key->state & 1 ) {
+		// still down
+		if( com_eventTime > key->downtime ) {
+			msec += com_eventTime - key->downtime;
+		}
+	}
+
+	if( !frame_msec ) {
+		return 0;
+	}
+	val = ( float )msec / frame_msec;
+
+	clamp( val, 0, 1 );
+    
+	return val;
+#endif
 }
 
 
@@ -520,15 +543,15 @@ CL_AdjustAngles
 Moves the local angle positions
 ================
 */
-static void CL_AdjustAngles (void)
+static void CL_AdjustAngles (int msec)
 {
 	float	speed;
 	float	up, down;
 	
 	if (in_speed.state & 1)
-		speed = cls.frametime * cl_anglespeedkey->value;
+		speed = msec * cl_anglespeedkey->value * 0.001f;
 	else
-		speed = cls.frametime;
+		speed = msec * 0.001f;
 
 	if (!(in_strafe.state & 1))
 	{
@@ -652,7 +675,7 @@ void CL_UpdateCmd( int msec ) {
     }
 
 	// adjust viewangles
-	CL_AdjustAngles();
+	CL_AdjustAngles( msec );
 	
 	// get basic movement from keyboard
 	CL_ImmBaseMove();

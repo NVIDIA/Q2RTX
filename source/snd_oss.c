@@ -33,7 +33,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <stdio.h>
 #include <errno.h>
 
-#include "cl_local.h"
+#include "com_local.h"
 #include "snd_local.h"
 
 static int audio_fd;
@@ -47,7 +47,7 @@ static cvar_t *snddevice;
 
 static int tryrates[] = { 22050, 11025, 44100, 48000, 8000 };
 
-static sndinitstat OSS_Init ( void ) {
+static sndinitstat_t OSS_Init ( void ) {
     int rc;
     int fmt;
     int tmp;
@@ -73,16 +73,6 @@ static sndinitstat OSS_Init ( void ) {
             strerror ( errno ) );
         return SIS_FAILURE;
     }
-
-#if 0
-    rc = ioctl ( audio_fd, SNDCTL_DSP_RESET, 0 );
-    if ( rc < 0 ) {
-        perror ( snddevice->string );
-        Com_Printf ( "Could not reset %s\n", snddevice->string );
-        close ( audio_fd );
-        return SIS_FAILURE;
-    }
-#endif
 
     if ( ioctl ( audio_fd, SNDCTL_DSP_GETCAPS, &caps ) == -1 ) {
         Com_WPrintf ( "Could not get caps of %s: %s\n", snddevice->string,
@@ -216,43 +206,39 @@ fail:
     return SIS_FAILURE;
 }
 
-static int OSS_GetDMAPos ( void ) {
-    struct count_info count;
-
-    if ( !snd_inited )
-        return 0;
-
-    if ( ioctl ( audio_fd, SNDCTL_DSP_GETOPTR, &count ) ==-1 ) {
-        Com_EPrintf ( "SNDCTL_DSP_GETOPTR failed on %s: %s\n",
-            snddevice->string, strerror ( errno ) );
-        munmap ( dma.buffer, info.fragstotal * info.fragsize );
-        close ( audio_fd );
-        snd_inited = qfalse;
-        return 0;
-    }
-    dma.samplepos = count.ptr / ( dma.samplebits >> 3 );
-
-    return dma.samplepos;
-}
-
 static void OSS_Shutdown ( void ) {
     if ( snd_inited ) {
         Com_Printf ( "Shutting down OSS\n" );
+        ioctl ( audio_fd, SNDCTL_DSP_RESET );
         munmap ( dma.buffer, info.fragstotal * info.fragsize );
         close ( audio_fd );
         snd_inited = qfalse;
     }
 }
 
-static void OSS_Submit ( void ) {}
+static void OSS_BeginPainting ( void ) {
+    struct count_info count;
 
-static void OSS_BeginPainting ( void ) {}
+    if ( !snd_inited )
+        return;
 
-static void OSS_Activate ( qboolean active ) {}
+    if ( ioctl ( audio_fd, SNDCTL_DSP_GETOPTR, &count ) == -1 ) {
+        Com_EPrintf ( "SNDCTL_DSP_GETOPTR failed on %s: %s\n",
+            snddevice->string, strerror ( errno ) );
+        OSS_Shutdown();
+        return;
+    }
+    dma.samplepos = count.ptr / ( dma.samplebits >> 3 );
+}
+
+static void OSS_Submit ( void ) {
+}
+
+static void OSS_Activate ( qboolean active ) {
+}
 
 void OSS_FillAPI ( snddmaAPI_t *api ) {
     api->Init = OSS_Init;
-    api->GetDMAPos = OSS_GetDMAPos;
     api->Shutdown = OSS_Shutdown;
     api->BeginPainting = OSS_BeginPainting;
     api->Submit = OSS_Submit;

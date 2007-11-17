@@ -250,7 +250,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 			flags &= ~CVAR_USER_CREATED;
 		}
 
-		var->flags |= flags;
+		var->flags |= flags & ~CVAR_GAME;
 		return var;
 	}
 
@@ -622,6 +622,8 @@ void Cvar_GetLatchedVars( void ) {
 	cvar_t	*var;
 
 	for( var = cvar_vars; var; var = var->next ) {
+        if( var->flags & CVAR_GAME )
+            var->flags &= ~CVAR_SERVERINFO;
 		if( !(var->flags & CVAR_LATCH) )
 			continue;
 		if( var->flags & CVAR_LATCHED )
@@ -968,6 +970,7 @@ int Cvar_BitInfo( char *info, int bit ) {
 		if( !( var->flags & bit ) ) {
             continue;
         }
+        
         if( !var->string[0] ) {
             continue;
         }

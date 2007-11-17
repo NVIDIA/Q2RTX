@@ -1032,7 +1032,7 @@ noskin:
 			Com_sprintf( weapon_filename, sizeof( weapon_filename ),
                 "players/%s/%s", model_name, cl.weaponModels[i] );
 			ci->weaponmodel[i] = ref.RegisterModel( weapon_filename );
-			if( !ci->weaponmodel[i] && strcmp( model_name, "cyborg" ) == 0 ) {
+			if( !ci->weaponmodel[i] && !Q_stricmp( model_name, "cyborg" ) ) {
 				// try male
 				Com_sprintf( weapon_filename, sizeof( weapon_filename ),
                     "players/male/%s", cl.weaponModels[i] );
@@ -1195,6 +1195,7 @@ static void CL_ParseReconnect( void ) {
 	cls.connectCount = 0;
 }
 
+#if USE_AUTOREPLY
 /*
 ====================
 CL_CheckForVersion
@@ -1222,6 +1223,7 @@ static void CL_CheckForVersion( const char *string ) {
 
     cl.replyTime = cls.realtime + 1024 + ( rand() & 1023 );
 }
+#endif
 
 
 /*
@@ -1245,7 +1247,9 @@ static void CL_ParsePrint( void ) {
 		return;
 	}
 
+#if USE_AUTOREPLY
 	CL_CheckForVersion( string );
+#endif
 
 	// disable notify
 	if( !cl_chat_notify->integer ) {

@@ -19,11 +19,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "gl_local.h"
+#include "gl_arbfp.h"
 
 glState_t gls;
 
 void GL_BindTexture( int texnum ) {
     if( gls.texnum[gls.tmu] == texnum ) {
+        return;
+    }
+    if( !gl_bind->integer ) {
         return;
     }
     
@@ -170,35 +174,26 @@ void GL_Setup2D( void ) {
     GL_CullFace( GLS_CULL_DISABLE );
 }
 
-static inline void MYgluPerspective( GLdouble fovy, GLdouble aspect,
-		     GLdouble zNear, GLdouble zFar )
-{
-   GLdouble xmin, xmax, ymin, ymax;
-
-   ymax = zNear * tan( fovy * M_PI / 360.0 );
-   ymin = -ymax;
-
-   xmin = ymin * aspect;
-   xmax = ymax * aspect;
-
-   qglFrustum( xmin, xmax, ymin, ymax, zNear, zFar );
-}
-
 void GL_Setup3D( void ) {
-    float screenAspect;
-	int yb;
+    GLdouble xmin, xmax, ymin, ymax, aspect;
+	int yb = glr.fd.y + glr.fd.height;
 
-	yb = glr.fd.y + glr.fd.height;
 	qglViewport( glr.fd.x, gl_config.vidHeight - yb,
         glr.fd.width, glr.fd.height );
 
-    screenAspect = ( float )glr.fd.width / glr.fd.height;
 	qglMatrixMode( GL_PROJECTION );
 	qglLoadIdentity();
-	MYgluPerspective( glr.fd.fov_y, screenAspect,
-        gl_znear->value, gl_zfar->value );
+
+    ymax = gl_znear->value * tan( glr.fd.fov_y * M_PI / 360.0 );
+    ymin = -ymax;
+
+    aspect = ( GLdouble )glr.fd.width / glr.fd.height;
+    xmin = ymin * aspect;
+    xmax = ymax * aspect;
+
+    qglFrustum( xmin, xmax, ymin, ymax, gl_znear->value, gl_zfar->value );
 	
-	qglMatrixMode( GL_MODELVIEW );
+    qglMatrixMode( GL_MODELVIEW );
 	qglLoadIdentity();
 
 	qglRotatef( -90, 1, 0, 0 ); /* put z axis up */
@@ -208,9 +203,82 @@ void GL_Setup3D( void ) {
 	qglRotatef( -glr.fd.viewangles[YAW],   0, 0, 1 );
 	qglTranslatef( -glr.fd.vieworg[0], -glr.fd.vieworg[1], -glr.fd.vieworg[2] );
 
+    AngleVectors( glr.fd.viewangles,
+        glr.viewaxis[0], glr.viewaxis[1], glr.viewaxis[2] );
+	VectorInverse( glr.viewaxis[1] );
+
+	glr.scroll = -64 * ( ( glr.fd.time / 40.0f ) - ( int )( glr.fd.time / 40.0f ) );
+	if( glr.scroll == 0 )
+		glr.scroll = -64.0f;
+
+
+#if 0
+    {
+        vec4_t position, diffuse;
+        vec4_t ambient, material;
+        VectorMA( glr.fd.vieworg, 128, glr.viewaxis[0], position );
+        position[3]=1;
+        VectorSet( diffuse, 1, 1, 1 );
+        VectorSet( material, 1, 1, 1 );
+        VectorSet( ambient, 0, 0, 0 );
+
+        qglLightModelfv( GL_LIGHT_MODEL_AMBIENT, ambient );
+        qglMaterialfv( GL_BACK, GL_AMBIENT_AND_DIFFUSE, material );
+
+        qglLightfv( GL_LIGHT0, GL_POSITION, position );
+        qglLightfv( GL_LIGHT0, GL_DIFFUSE, diffuse );
+    }
+    qglEnable(GL_LIGHTING);
+    qglEnable( GL_LIGHT0 );
+#endif
+
     GL_Bits( GLS_DEFAULT );
     GL_CullFace( GLS_CULL_FRONT );
 
 	qglClear( GL_DEPTH_BUFFER_BIT );
 }
+
+void GL_SetDefaultState( void ) {
+	qglDrawBuffer( GL_BACK );
+	qglClearColor( 0, 0, 0, 1 );
+	qglClearDepth( 1 );
+	qglClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+	qglEnable( GL_DEPTH_TEST );
+	qglDepthFunc( GL_LEQUAL );
+	qglDepthRange( 0, 1 );
+	qglDepthMask( GL_TRUE );
+	qglDisable( GL_BLEND );
+	qglDisable( GL_ALPHA_TEST ); 
+	qglAlphaFunc( GL_GREATER, 0.666f );
+	qglHint( GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST );
+    qglPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+
+	qglEnableClientState( GL_VERTEX_ARRAY );
+    qglEnableClientState( GL_TEXTURE_COORD_ARRAY );
+    
+	GL_SelectTMU( 0 );
+	qglEnable( GL_TEXTURE_2D );
+    GL_Bits( GLS_DEFAULT );
+}
+
+void GL_InitPrograms( void ) {
+    if( !qglProgramStringARB ) {
+        return;
+    }
+    qglGenProgramsARB( 1, &gl_static.prog_warp );
+    qglBindProgramARB( GL_FRAGMENT_PROGRAM_ARB, gl_static.prog_warp );
+    qglProgramStringARB( GL_FRAGMENT_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB,
+        sizeof( gl_prog_warp ) - 1, gl_prog_warp );
+    //Com_Printf( "%s\n", qglGetString( GL_PROGRAM_ERROR_STRING_ARB ) );
+
+    GL_ShowErrors( __func__ );
+}
+
+void GL_ShutdownPrograms( void ) {
+    if( !qglProgramStringARB ) {
+        return;
+    }
+    qglDeleteProgramsARB( 1, &gl_static.prog_warp );
+}
+
 

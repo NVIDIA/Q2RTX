@@ -98,17 +98,15 @@ typedef struct channel_s
 ====================================================================
 */
 
-typedef enum { SIS_SUCCESS, SIS_FAILURE, SIS_NOTAVAIL } sndinitstat;
+typedef enum { SIS_SUCCESS, SIS_FAILURE, SIS_NOTAVAIL } sndinitstat_t;
 
 typedef struct snddmaAPI_s {
 // initializes cycling through a DMA buffer and returns information on it
-	sndinitstat (*Init)( void );
-
-// gets the current DMA position
-	int		(*GetDMAPos)( void );
+	sndinitstat_t (*Init)( void );
 
 // shutdown the DMA xfer.
 	void	(*Shutdown)( void );
+
 	void	(*BeginPainting)( void );
 	void	(*Submit)( void );
 	void	(*Activate)( qboolean active );
@@ -122,12 +120,8 @@ extern snddmaAPI_t	snddma;
 extern	channel_t   channels[MAX_CHANNELS];
 
 extern	int		paintedtime;
-extern	int		s_rawend;
 extern	dma_t	dma;
 extern	playsound_t	s_pendingplays;
-
-#define	MAX_RAW_SAMPLES	8192
-extern	portable_samplepair_t	s_rawsamples[MAX_RAW_SAMPLES];
 
 extern cvar_t	*s_volume;
 extern cvar_t	*s_khz;

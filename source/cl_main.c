@@ -2474,6 +2474,7 @@ static void CL_MeasureFPS( void ) {
 	cls.measureFramecount++;
 }
 
+#if USE_AUTOREPLY
 /*
 ====================
 CL_CheckForReply
@@ -2494,6 +2495,22 @@ static void CL_CheckForReply( void ) {
 
     cl.replyTime = 0;
 }
+#endif
+
+static void CL_CheckTimeout( void ) {
+    if( cls.netchan->last_received > com_localTime ) {
+        cls.netchan->last_received = com_localTime;
+    }
+    if( com_localTime - cls.netchan->last_received > cl_timeout->value * 1000 ) 
+    {
+        // timeoutcount saves debugger
+        if ( ++cl.timeoutcount > 5 ) {
+            Com_Error( ERR_DISCONNECT, "Server connection timed out." );
+        }
+    } else {
+        cl.timeoutcount = 0;
+    }
+}
 
 
 /*
@@ -2503,40 +2520,40 @@ CL_Frame
 ==================
 */
 void CL_Frame( int msec ) {
-	static int main_extra;
-	static int phys_extra;
-	int main_msec;
-    int phys_msec;
-    qboolean phys_frame;
+	static int ref_extra, phys_extra, main_extra;
+	int ref_msec, phys_msec;
+    qboolean phys_frame, ref_frame;
 
 	time_after_ref = time_before_ref = 0;
 
 	if( !cl_running->integer ) {
+        // still run cmd buffer in dedicated mode
         if( cmd_buffer.waitCount > 0 ) {
             cmd_buffer.waitCount--;
         }
         return;
 	}
 
-	main_extra += msec;
+	ref_extra += msec;
+    main_extra += msec;
 	cls.realtime += msec;
 
-	main_msec = 1;
+	ref_msec = 1;
 	if( cl_async->integer ) {
 		phys_extra += msec;
-        phys_frame = qfalse;
+        phys_frame = qtrue;
 
 		Cvar_ClampInteger( cl_maxfps, 10, 120 );
 		phys_msec = 1000 / cl_maxfps->integer;
-		if( phys_extra >= phys_msec ) {
-            phys_frame = qtrue;
+		if( phys_extra < phys_msec ) {
+            phys_frame = qfalse;
 		}
 
 		if( r_maxfps->integer ) {
 			if( r_maxfps->integer < 10 ) {
 				Cvar_Set( "r_maxfps", "10" );
 			}
-			main_msec = 1000 / r_maxfps->integer;
+			ref_msec = 1000 / r_maxfps->integer;
 		}
 	} else {
         phys_frame = qtrue;
@@ -2544,10 +2561,11 @@ void CL_Frame( int msec ) {
 			if( cl_maxfps->integer < 10 ) {
 				Cvar_Set( "cl_maxfps", "10" );
 			}
-			main_msec = 1000 / cl_maxfps->integer;
+			ref_msec = 1000 / cl_maxfps->integer;
 		}
 	}
-	
+
+    ref_frame = qtrue;
 	if( !com_timedemo->integer ) {
         if( !sv_running->integer ) {
             if( !cls.appactive ) {
@@ -2564,8 +2582,11 @@ void CL_Frame( int msec ) {
                 }
             }
         }
-        if( main_extra < main_msec ) {
-            return;
+        if( ref_extra < ref_msec ) {
+            if( !cl_async->integer ) {
+                return; // everything ticks in sync with refresh
+            }
+            ref_frame = qfalse;
         }
     }
 
@@ -2599,67 +2620,61 @@ void CL_Frame( int msec ) {
     // calculate local time
     CL_SetClientTime();
 
+#if USE_AUTOREPLY
+    // check for version reply
     CL_CheckForReply();
-
-	// read user intentions
-	CL_UpdateCmd( main_extra );
-
-	// finalize pending cmd
-	if( phys_frame || cl.sendPacketNow ) {
-		CL_FinalizeCmd();
-		phys_extra = 0;
-	}
-
-	// send pending intentions
-	CL_SendCmd();
-
-    // predict all unacknowledged movements
-    CL_PredictMovement();
+#endif
 
     // resend a connection request if necessary
     CL_CheckForResend();
 
-    // update the screen
-    if ( host_speeds->integer )
-        time_before_ref = Sys_Milliseconds();
+    // read user intentions
+    CL_UpdateCmd( main_extra );
 
-    SCR_UpdateScreen();
+    // finalize pending cmd
+    phys_frame |= cl.sendPacketNow;
+    if( phys_frame ) {
+        CL_FinalizeCmd();
+        phys_extra = 0;
+    }
 
-    if ( host_speeds->integer )
-        time_after_ref = Sys_Milliseconds();
+    // send pending cmds
+    CL_SendCmd();
 
-    // update audio after the 3D view was drawn
-    S_Update();
+    // predict all unacknowledged movements
+    CL_PredictMovement();
+
+    if( ref_frame ) {
+        // update the screen
+        if ( host_speeds->integer )
+            time_before_ref = Sys_Milliseconds();
+
+        SCR_UpdateScreen();
+
+        if ( host_speeds->integer )
+            time_after_ref = Sys_Milliseconds();
+
+        // update audio after the 3D view was drawn
+        S_Update();
+
+	    ref_extra = 0;
+    }
 
     // advance local effects for next frame
     CL_RunDLights();
     CL_RunLightStyles();
     Con_RunConsole();
 
+    // check connection timeout
+    if( cls.netchan ) {
+        CL_CheckTimeout();
+    }
+
 	CL_MeasureFPS();
 
-	main_extra = 0;
     cls.framecount++;
 
-    //
-    // check timeout
-    //
-    if( !cls.netchan ) {
-        return;
-    }
-
-    if( cls.netchan->last_received > com_localTime ) {
-        cls.netchan->last_received = com_localTime;
-    }
-    if( com_localTime - cls.netchan->last_received > cl_timeout->value * 1000 ) 
-    {
-        // timeoutcount saves debugger
-        if ( ++cl.timeoutcount > 5 ) {
-            Com_Error( ERR_DISCONNECT, "Server connection timed out." );
-        }
-    } else {
-        cl.timeoutcount = 0;
-    }
+    main_extra = 0;
 }
 
 //============================================================================
@@ -2705,7 +2720,6 @@ void CL_Init( void ) {
 #endif
 
     SZ_Init( &cls.demobuff, demo_buffer, sizeof( demo_buffer ) );
-    cls.demobuff.allowoverflow = qtrue;
 
     UI_OpenMenu( UIMENU_MAIN );
 

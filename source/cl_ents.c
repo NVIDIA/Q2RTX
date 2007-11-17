@@ -841,6 +841,9 @@ static void CL_CalcViewValues( void ) {
 		
 		// smooth out stair climbing
 		delta = cls.realtime - cl.predicted_step_time;
+        if( cl.predicted_step < 16 ) {
+            delta <<= 1; // small steps
+        }
 		if( delta < 100 ) {
 			cl.refdef.vieworg[2] -= cl.predicted_step * ( 100 - delta ) * 0.01f;
 		}

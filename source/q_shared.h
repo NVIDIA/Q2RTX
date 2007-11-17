@@ -250,7 +250,7 @@ static inline float Q_fabs( float f ) {
 	((d)[0]=(a)[0]+(c)*((b)[0]-(a)[0]), \
 	 (d)[1]=(a)[1]+(c)*((b)[1]-(a)[1]), \
 	 (d)[2]=(a)[2]+(c)*((b)[2]-(a)[2]))
-
+#define PlaneDiff(v,p)   (DotProduct(v,(p)->normal)-(p)->dist)
 
 #define Vector4Subtract(a,b,c)	(c[0]=a[0]-b[0],c[1]=a[1]-b[1],c[2]=a[2]-b[2],c[3]=a[3]-b[3])
 #define Vector4Add(a,b,c)		(c[0]=a[0]+b[0],c[1]=a[1]+b[1],c[2]=a[2]+b[2],c[3]=a[3]+b[3])
@@ -734,6 +734,15 @@ static inline int BoxOnPlaneSideFast( vec3_t emins, vec3_t emaxs, cplane_t *p ) 
     return BoxOnPlaneSide( emins, emaxs, p );
 }
 
+static inline vec_t PlaneDiffFast( vec3_t v, cplane_t *p ) {
+    // fast axial cases
+    if( p->type < 3 ) {
+        return v[p->type] - p->dist;
+    }
+
+    // slow generic case
+    return PlaneDiff( v, p );
+}
 
 typedef struct csurface_s
 {

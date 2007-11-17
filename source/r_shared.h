@@ -222,7 +222,6 @@ typedef struct bspSurface_s {
 	int extents[2];
 
 #ifdef OPENGL_RENDERER
-	struct tcoord_s *normalizedTC;
     struct bspPoly_s *polys;
 
     int lightmapnum;

@@ -382,11 +382,15 @@ void ( APIENTRY * qglUnlockArraysEXT) ( void );
 void ( APIENTRY * qglPointParameterfEXT)( GLenum param, GLfloat value );
 void ( APIENTRY * qglPointParameterfvEXT)( GLenum param, const GLfloat *value );
 void ( APIENTRY * qglColorTableEXT)( int, int, int, int, int, const void * );
-void ( APIENTRY * qglSelectTextureSGIS)( GLenum );
-void ( APIENTRY * qglMTexCoord2fSGIS)( GLenum, GLfloat, GLfloat );
-void ( APIENTRY * qglMultiTexCoord2fvARB)( GLenum, const GLfloat * );
+
 void ( APIENTRY * qglActiveTextureARB) ( GLenum );
 void ( APIENTRY * qglClientActiveTextureARB) ( GLenum );
+
+void ( APIENTRY * qglProgramStringARB)( GLenum target, GLenum format, GLsizei len, const GLvoid *string );
+void ( APIENTRY * qglBindProgramARB)( GLenum target, GLuint program );
+void ( APIENTRY * qglDeleteProgramsARB)( GLsizei n, const GLuint *programs );
+void ( APIENTRY * qglGenProgramsARB)( GLsizei n, GLuint *programs );
+void ( APIENTRY * qglProgramLocalParameter4fvARB)( GLenum, GLuint, const GLfloat * );
 
 #ifdef _WIN32
 PROC ( WINAPI * qwglGetProcAddress )( LPCSTR );
@@ -3327,11 +3331,15 @@ void QGL_Init( void ) {
 	qglPointParameterfEXT = 0;
 	qglPointParameterfvEXT = 0;
 	qglColorTableEXT = 0;
-	qglSelectTextureSGIS = 0;
-	qglMTexCoord2fSGIS = 0;
-    qglMultiTexCoord2fvARB = 0;
+
 	qglActiveTextureARB = 0;
 	qglClientActiveTextureARB = 0;
+
+    qglProgramStringARB = 0;
+    qglBindProgramARB = 0;
+    qglDeleteProgramsARB = 0;
+    qglGenProgramsARB = 0;
+    qglProgramLocalParameter4fvARB = 0;
 
 #ifdef _WIN32
 	qwglGetProcAddress = GPA( "wglGetProcAddress" );

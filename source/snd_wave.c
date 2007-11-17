@@ -98,7 +98,7 @@ WAVE_Init
 Crappy windows multimedia base
 ==================
 */
-static sndinitstat WAVE_Init (void) {
+static sndinitstat_t WAVE_Init (void) {
 	WAVEFORMATEX  format; 
 	int				i;
 	HRESULT			hr;
@@ -237,39 +237,26 @@ static sndinitstat WAVE_Init (void) {
 	return SIS_SUCCESS;
 }
 
-
-/*
-==============
-WAVE_GetDMAPos
-
-return the current sample position (in mono samples read)
-inside the recirculating dma buffer, so the mixing code will know
-how many sample are required to fill it up.
-===============
-*/
-static int WAVE_GetDMAPos(void) {
-	int		s;
-
-	if( !wav_init ) {
-		return 0;
-	}
-
-	s = snd_sent * WAV_BUFFER_SIZE;
-
-	s >>= sample16;
-	s &= (dma.samples-1);
-
-	return s;
-}
-
 /*
 ==============
 WAVE_BeginPainting
 
-Makes sure dma.buffer is valid
+Makes sure dma.buffer is valid.
+
+Returns the current sample position (in mono samples read)
+inside the recirculating dma buffer, so the mixing code will know
+how many sample are required to fill it up.
 ===============
 */
 static void WAVE_BeginPainting (void) {
+	int		s;
+
+	if( !wav_init ) {
+		return;
+	}
+
+	s = ( snd_sent * WAV_BUFFER_SIZE ) >> sample16;
+	dma.samplepos = s & ( dma.samples - 1 );
 }
 
 /*
@@ -344,7 +331,6 @@ static void WAVE_Activate (qboolean active) {
 
 void WAVE_FillAPI( snddmaAPI_t *api ) {
 	api->Init = WAVE_Init;
-	api->GetDMAPos = WAVE_GetDMAPos;
 	api->Shutdown = WAVE_Shutdown;
 	api->BeginPainting = WAVE_BeginPainting;
 	api->Submit = WAVE_Submit;

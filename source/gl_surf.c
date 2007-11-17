@@ -34,7 +34,7 @@ cvar_t *gl_modulate_hack;
 /*
 =============================================================================
 
-LIGHTMAP TEXTURES BUILDING
+LIGHTMAPS BUILDING
 
 =============================================================================
 */
@@ -187,7 +187,7 @@ static int LM_BuildSurfaceLightmap( bspSurface_t *surf ) {
         dst += LM_BLOCK_WIDTH * 4;
     }
     
-    surf->lightmapnum = lm.numMaps + 1;
+    surf->lightmapnum = lm.numMaps;
 
     s = ( s << 4 ) + 8;
     t = ( t << 4 ) + 8;
@@ -266,9 +266,13 @@ static int GL_BuildSurfacePoly( bspSurface_t *surf ) {
     surf->polys = poly;
 
 	texinfo = surf->texinfo;
-	if( !surf->lightmap || ( texinfo->flags & NOLIGHT_MASK ) ||
-            gl_fullbright->integer )
-    {
+    if( texinfo->flags & SURF_WARP ) {
+        if( qglProgramStringARB ) {
+            surf->type = DSURF_WARP;
+        } else {
+		    surf->type = DSURF_NOLM;
+        }
+    } else if( !surf->lightmap || gl_fullbright->integer || ( texinfo->flags & NOLIGHT_MASK ) ) {
 		surf->type = DSURF_NOLM;
 	} else {
 		surf->type = DSURF_POLY;
@@ -286,7 +290,6 @@ static int GL_BuildSurfacePoly( bspSurface_t *surf ) {
 		}
 
 		if( index >= r_world.numEdges ) {
-			printf( "LoadFace: bad edge index" );
 			return -1;
 		}
 
@@ -296,10 +299,8 @@ static int GL_BuildSurfacePoly( bspSurface_t *surf ) {
 		VectorCopy( src_vert->point, dst_vert );
 		
 		/* texture coordinates */
-		dst_vert[3] = DotProduct( dst_vert, texinfo->axis[0] ) +
-            texinfo->offset[0];
-		dst_vert[4] = DotProduct( dst_vert, texinfo->axis[1] ) +
-            texinfo->offset[1];
+		dst_vert[3] = DotProduct( dst_vert, texinfo->axis[0] ) + texinfo->offset[0];
+		dst_vert[4] = DotProduct( dst_vert, texinfo->axis[1] ) + texinfo->offset[1];
 
         /* lightmap coordinates */
         dst_vert[5] = 0;
@@ -312,200 +313,35 @@ static int GL_BuildSurfacePoly( bspSurface_t *surf ) {
 
 }
 
-#define SUBDIVIDE_SIZE  64
-#define SUBDIVIDE_VERTS 64
-
-static bspSurface_t *warpsurf;
-
-static void BoundPolygon( int numVerts, const vec_t *verts,
-        vec3_t mins, vec3_t maxs )
-{
-    ClearBounds( mins, maxs );
-
-    while( numVerts-- ) {
-        AddPointToBounds( verts, mins, maxs );
-        verts += 3;
-    }
-}
-
-
-static void SubdividePolygon_r( int numVerts, vec_t *verts ) {
-    int i, j;
-    vec3_t front[SUBDIVIDE_VERTS];
-    vec3_t back[SUBDIVIDE_VERTS];
-    vec_t dist[SUBDIVIDE_VERTS];
-    vec3_t mins, maxs;
-    int f, b;
-    vec_t mid, frac, scale, *v;
-    bspPoly_t *poly;
-    vec3_t total;
-    vec_t total_s, total_t;
-    bspTexinfo_t *texinfo;
-    
-    if( numVerts > SUBDIVIDE_VERTS - 4 ) {
-        Com_Error( ERR_DROP, "SubdividePolygon_r: numVerts = %d", numVerts );
-    }
-
-    BoundPolygon( numVerts, verts, mins, maxs );
-
-    for( i = 0; i < 3; i++ ) {
-        mid = ( mins[i] + maxs[i] ) * 0.5f;
-        mid = SUBDIVIDE_SIZE * floor( mid / SUBDIVIDE_SIZE + 0.5f );
-        if( mid - mins[i] < 8 ) {
-            continue;
-        }
-        if( maxs[i] - mid < 8 ) {
-            continue;
-        }
-
-        v = verts + i;
-        for( j = 0; j < numVerts; j++, v += 3 ) {
-            dist[j] = *v - mid;
-        }
-
-        dist[j] = dist[0];
-        VectorCopy( verts, v - i );
-
-        f = b = 0;
-        v = verts;
-        for( j = 0; j < numVerts; j++, v += 3 ) {
-            if( dist[j] >= 0 ) {
-                VectorCopy( v, front[f] ); f++;
-            }
-            if( dist[j] <= 0 ) {
-                VectorCopy( v, back[b] ); b++;
-            }
-            if( dist[j] == 0 || dist[j+1] == 0 ) {
-                continue;
-            }
-            if( ( dist[j] > 0 ) != ( dist[j+1] > 0 ) ) {
-                frac = dist[j] / ( dist[j] - dist[j+1] );
-                front[f][0] = back[b][0] = v[0] + frac * ( v[3+0] - v[0] );
-                front[f][1] = back[b][1] = v[1] + frac * ( v[3+1] - v[1] );
-                front[f][2] = back[b][2] = v[2] + frac * ( v[3+2] - v[2] );
-                f++; b++;
-            }
-        }
-
-        SubdividePolygon_r( f, front[0] );
-        SubdividePolygon_r( b, back[0] );
-        return;
-    }
-
-    poly = sys.HunkAlloc( &r_world.pool, sizeof( *poly ) +
-            sizeof( vec_t ) * VERTEX_SIZE * numVerts );
-    poly->next = warpsurf->polys;
-    poly->numVerts = numVerts + 1;
-    poly->numIndices = numVerts * 3;
-    warpsurf->polys = poly;
-    
-    texinfo = warpsurf->texinfo;
-    VectorClear( total );
-    total_s = total_t = 0;
-    v = poly->vertices + VERTEX_SIZE;
-    for( i = 0; i < numVerts; i++ ) {
-        VectorCopy( verts, v );
-        v[3] = DotProduct( verts, texinfo->axis[0] );
-        v[4] = DotProduct( verts, texinfo->axis[1] );
-        total_s += v[3];
-        total_t += v[4];
-        VectorAdd( total, verts, total );
-        verts += 3; v += VERTEX_SIZE;
-    }
-
-    /* middle point */
-    v = poly->vertices;
-    scale = 1.0f / numVerts;
-    VectorScale( total, scale, v );
-    v[3] = total_s * scale;
-    v[4] = total_t * scale;
-
-}
-
-static int GL_BuildSurfaceWarpPolys( bspSurface_t *surf ) {
-	int *src_surfedge;
-	dvertex_t *src_vert;
-	dedge_t *src_edge;
-	vec_t *dst_vert;
-	int i;
-	int index, vertIndex;
-    int numEdges = surf->numSurfEdges;
-    vec3_t verts[SUBDIVIDE_VERTS];
-	
-    surf->polys = NULL;
-    surf->type = DSURF_WARP;
-    warpsurf = surf;
-    
-	src_surfedge = surf->firstSurfEdge;
-    dst_vert = verts[0];
-	for( i = 0; i < numEdges; i++ ) {
-		index = *src_surfedge++;
-		
-		vertIndex = 0;
-		if( index < 0 ) {
-			index = -index;
-			vertIndex = 1;
-		}
-
-		if( index >= r_world.numEdges ) {
-			printf( "LoadFace: bad edge index" );
-			return -1;
-		}
-
-		src_edge = r_world.edges + index;
-		src_vert = r_world.vertices + src_edge->v[vertIndex];
-
-		VectorCopy( src_vert->point, dst_vert );
-		
-		dst_vert += 3;
-	}
-
-    SubdividePolygon_r( numEdges, verts[0] );
-
-    return 0;
-
-}
-
 static void GL_NormalizeSurfaceTexcoords( bspSurface_t *surf ) {
     bspTexinfo_t *texinfo = surf->texinfo;
     bspPoly_t *poly = surf->polys;
     vec_t *vert;
-    tcoord_t *tc;
-    int i;
     vec2_t scale;
-
-    surf->normalizedTC = sys.HunkAlloc( &r_world.pool, sizeof( tcoord_t ) * poly->numVerts );
+    int i;
 
     scale[0] = 1.0f / texinfo->image->width;
     scale[1] = 1.0f / texinfo->image->height;
+    if( texinfo->flags & SURF_WARP && qglBindProgramARB ) {
+        scale[0] *= 0.5f;
+        scale[1] *= 0.5f;
+    }
 
-    tc = surf->normalizedTC;
     vert = poly->vertices;
     for( i = 0; i < poly->numVerts; i++ ) {
         vert[3] *= scale[0];
         vert[4] *= scale[1];
-        tc->st[0] = DotProduct( vert, texinfo->normalizedAxis[0] );
-        tc->st[1] = DotProduct( vert, texinfo->normalizedAxis[1] );
-        
-        vert += VERTEX_SIZE; tc++;
+        vert += VERTEX_SIZE;;
     }
 }
 
 int GL_PostProcessSurface( bspSurface_t *surf ) {
 	bspTexinfo_t *texinfo = surf->texinfo;
     
-    if( texinfo->flags & SURF_SKY ) {
+    if( GL_BuildSurfacePoly( surf ) ) {
+        return -1;
     }
-    if( ( texinfo->flags & SURF_WARP ) && gl_subdivide->integer ) {
-        if( GL_BuildSurfaceWarpPolys( surf ) ) {
-            return -1;
-        }
-    } else {
-        if( GL_BuildSurfacePoly( surf ) ) {
-            return -1;
-        }
-        GL_CalcSurfaceExtents( surf );
-    }
+    GL_CalcSurfaceExtents( surf );
 
     if( surf->type == DSURF_POLY ) {
         if( LM_BuildSurfaceLightmap( surf ) ) {
@@ -513,14 +349,10 @@ int GL_PostProcessSurface( bspSurface_t *surf ) {
         }
     }
     
-    if( !( texinfo->flags & (SURF_SKY|SURF_WARP) ) ) {
+    if( !( texinfo->flags & SURF_SKY ) ) {
         GL_NormalizeSurfaceTexcoords( surf );
     }
     
-    if( ( texinfo->flags & SURF_WARP ) && !gl_subdivide->integer ) {
-        GL_NormalizeSurfaceTexcoords( surf );
-    }
-
     return 0;
 }
 
@@ -566,7 +398,7 @@ void GL_EndPostProcessing( void ) {
         }
     }
 
-    Com_DPrintf( "GL_EndPostProcessing: %d lightmaps built\n", lm.numMaps );
+    Com_DPrintf( "%d lightmaps built\n", lm.numMaps );
 }
 
 

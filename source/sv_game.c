@@ -714,7 +714,7 @@ static cvar_t *PF_cvar( const char *name, const char *value, int flags ) {
 		flags &= ~CVAR_EXTENDED_MASK;
 	}
 
-	var = Cvar_Get( name, value, flags );
+	var = Cvar_Get( name, value, flags | CVAR_GAME );
 	if( !var->subsystem ) {
 		var->subsystem = CVAR_SYSTEM_GAME;
 	}

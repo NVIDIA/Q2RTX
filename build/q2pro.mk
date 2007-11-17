@@ -117,7 +117,7 @@ ASMFILES+=snd_mixa.s
 LDFLAGS+=-ldl
 
 ifdef USE_SDL
-SRCFILES+=vid_sdl.c
+SRCFILES+=vid_sdl.c snd_sdl.c
 CFLAGS+=$(SDL_CFLAGS)
 LDFLAGS+=-lX11 $(SDL_LDFLAGS)
 endif

@@ -377,12 +377,14 @@ extern	void ( APIENTRY * qglColorTableEXT)( int, int, int, int, int, const void 
 extern	void ( APIENTRY * qglLockArraysEXT) (int , int);
 extern	void ( APIENTRY * qglUnlockArraysEXT) (void);
 
-extern	void ( APIENTRY * qglMTexCoord2fSGIS)( GLenum, GLfloat, GLfloat );
-extern	void ( APIENTRY * qglSelectTextureSGIS)( GLenum );
-
-extern	void ( APIENTRY * qglMultiTexCoord2fvARB)( GLenum, const GLfloat * );
 extern	void ( APIENTRY * qglActiveTextureARB)( GLenum );
 extern	void ( APIENTRY * qglClientActiveTextureARB)( GLenum );
+
+extern  void ( APIENTRY * qglProgramStringARB)( GLenum target, GLenum format, GLsizei len, const GLvoid *string );
+extern  void ( APIENTRY * qglBindProgramARB)( GLenum target, GLuint program );
+extern  void ( APIENTRY * qglDeleteProgramsARB)( GLsizei n, const GLuint *programs );
+extern  void ( APIENTRY * qglGenProgramsARB)( GLsizei n, GLuint *programs );
+extern  void ( APIENTRY * qglProgramLocalParameter4fvARB)( GLenum, GLuint, const GLfloat * );
 
 //
 // OS-specific

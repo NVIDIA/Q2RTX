@@ -33,7 +33,7 @@ void CL_CheckPredictionError( void ) {
 	int		len;
 	player_state_t *ps;
 
-	if( cls.demoplayback ) {
+	if( !cls.netchan ) {
 		return;
 	}
 
@@ -50,6 +50,8 @@ void CL_CheckPredictionError( void ) {
 	// calculate the last usercmd_t we sent that the server has processed
 	frame = cls.netchan->incoming_acknowledged & CMD_MASK;
 	i = cl.history[frame].cmdNumber & CMD_MASK;
+
+    //if( cl.history[frame].cmdNumber>cl.predicted_step_frame) Com_Printf( "wtf?!!\n" );
 
 	// compare what the server returned with what we had predicted it to be
 	VectorSubtract( ps->pmove.origin, cl.predicted_origins[i], delta );
@@ -250,7 +252,7 @@ void CL_PredictMovement( void ) {
 		return;	
 	}
 
-	if( !cl_async->integer && current == ack ) {
+	if( !cl.cmd.msec && current == ack ) {
 		if( cl_showmiss->integer ) {
 			Com_Printf( "%i: not moved\n", cl.frame.number );
 		}
@@ -291,16 +293,13 @@ void CL_PredictMovement( void ) {
 		frame = current - 1;
 	}
 	
-	oldz = cl.predicted_origins[frame & CMD_MASK][2];
+	oldz = cl.predicted_origins[cl.predicted_step_frame & CMD_MASK][2];
 	step = pm.s.origin[2] - oldz;
-	if( cl.predicted_step_frame != frame &&
-		step > 63 && step < 160 &&
-		( pm.s.pm_flags & PMF_ON_GROUND ) )
-	{
-		cl.predicted_step = step * 0.125;
-		cl.predicted_step_time = cls.realtime - cls.frametime * 500;
-		cl.predicted_step_frame = frame;
+	if( step > 63 && step < 160 && ( pm.s.pm_flags & PMF_ON_GROUND ) ) {
+		cl.predicted_step = step * 0.125f;
+		cl.predicted_step_time = cls.realtime;/// - cls.frametime * 500;
 	}
+	cl.predicted_step_frame = frame;
 
 	// copy results out for rendering
 	VectorScale( pm.s.origin, 0.125f, cl.predicted_origin );

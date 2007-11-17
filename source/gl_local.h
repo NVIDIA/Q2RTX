@@ -43,6 +43,7 @@ typedef struct {
     int maxTextureSize;
 	qboolean registering;
 	uint32 palette[256]; /* cinematic palette */
+    GLuint prog_warp;
 } glStatic_t;
 
 typedef struct {
@@ -81,17 +82,17 @@ typedef struct {
 
 extern statCounters_t c;
 
+extern cvar_t *gl_celshading;
 extern cvar_t *gl_partscale;
 extern cvar_t *gl_znear;
 extern cvar_t *gl_zfar;
 extern cvar_t *gl_modulate;
 extern cvar_t *gl_showtris;
 extern cvar_t *gl_cull_nodes;
+extern cvar_t *gl_bind;
 extern cvar_t *gl_clear;
 extern cvar_t *gl_novis;
 extern cvar_t *gl_lockpvs;
-extern cvar_t *gl_primitives;
-extern cvar_t *gl_sort;
 extern cvar_t *gl_subdivide;
 extern cvar_t *gl_fastsky;
 extern cvar_t *gl_dynamic;
@@ -111,6 +112,8 @@ glCullResult_t GL_CullSphere( const vec3_t origin, float radius );
 glCullResult_t GL_CullLocalBox( const vec3_t origin, vec3_t bounds[2] );
 
 void GL_DrawBox( const vec3_t origin, vec3_t bounds[2] );
+
+void GL_ShowErrors( const char *func );
 
 /*
  * gl_model.c
@@ -252,6 +255,10 @@ void GL_Bits( glStateBits_t bits );
 void GL_Setup2D( void );
 void GL_Setup3D( void );
 
+void GL_SetDefaultState( void );
+void GL_InitPrograms( void );
+void GL_ShutdownPrograms( void );
+
 
 /*
  * gl_draw.c
@@ -296,7 +303,7 @@ void Draw_Stats( void );
 extern image_t *r_notexture;
 extern image_t *r_particletexture;
 extern image_t *r_beamtexture;
-extern image_t *r_dlightTex;
+extern image_t *r_warptexture;
 extern image_t *r_whiteimage;
 
 extern int gl_filter_min;
@@ -333,13 +340,13 @@ typedef struct {
     int numIndices;
     int numFaces;
     vec_t vertices[4*TESS_MAX_VERTICES];
+    vec_t normals[4*TESS_MAX_VERTICES];
     byte colors[4*TESS_MAX_VERTICES];
     tcoord_t tcoords[TESS_MAX_VERTICES];
     tcoord_t lmtcoords[TESS_MAX_VERTICES];
     int indices[TESS_MAX_INDICES];
     bspSurface_t *faces[TESS_MAX_FACES];
     int texnum;
-    int lightmapnum;
 	qboolean istrans;
 } tesselator_t;
 
@@ -350,9 +357,7 @@ void EndSurface_Single( void );
 
 void Tess_DrawSurfaceTriangles( int *indices, int numIndices );
 
-void GL_AddBspSurface( bspSurface_t *surf );
-void GL_DrawSurfPoly( bspSurface_t *surf );
-void GL_SortAndDrawSurfs( qboolean doSort );
+void GL_DrawSurf( bspSurface_t *surf );
 void GL_StretchPic( float x, float y, float w, float h,
         float s1, float t1, float s2, float t2, const byte *color, image_t *image );
 void GL_Flush2D( void );

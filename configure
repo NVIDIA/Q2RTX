@@ -297,6 +297,8 @@ if [ "$client" = "yes" ]; then
             libraries="$libraries mod_ui$libsuffix"
         fi
     fi
+else
+    sdl="no"
 fi
 
 if [ "$server" = "yes" ]; then

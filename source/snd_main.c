@@ -47,7 +47,6 @@ int			listener_entnum;
 
 qboolean	s_registering;
 
-int			soundtime;		// sample PAIRS
 int   		paintedtime; 	// sample PAIRS
 
 // during registration it is possible to have more sounds
@@ -76,44 +75,46 @@ static cvar_t		*s_driver;
 static cvar_t		*s_ambient;
 
 
-int		s_rawend;
-portable_samplepair_t	s_rawsamples[MAX_RAW_SAMPLES];
-
 snddmaAPI_t	snddma;
 
-#if (defined _WIN32)
+#if USE_WAVE
 void WAVE_FillAPI( snddmaAPI_t *api );
+#endif
+
+#if USE_DSOUND
 void DS_FillAPI( snddmaAPI_t *api );
-#elif (defined __unix__)
+#endif
+
+#if USE_OSS
 void OSS_FillAPI( snddmaAPI_t *api );
 #endif
 
-#if (defined _WIN32) && (defined USE_DSOUND)
-#define DEFAULT_SOUND_DRIVER	"dsound"
-#else
-#define DEFAULT_SOUND_DRIVER	""
+#if USE_SDL
+void QSDL_FillSoundAPI( snddmaAPI_t *api );
 #endif
 
-typedef struct sndDriver_s {
-	char *name;
-	void	(*FillAPI)( snddmaAPI_t *api );
-} sndDriver_t;
 
-static sndDriver_t	s_driverTable[] = {
-	/* fallback driver should be present on all systems */
-#if (defined _WIN32)
+// the first driver is the default one
+static struct {
+	char    name[16];
+	void	(*FillAPI)( snddmaAPI_t *api );
+} s_driverTable[] = {
+#if USE_DSOUND
+	{ "dsound", DS_FillAPI },
+#endif
+#if USE_WAVE
 	{ "wave", WAVE_FillAPI },
-#elif (defined __unix__)
+#endif
+#if USE_OSS
 	{ "oss", OSS_FillAPI },
 #endif
-
-	/* DirectSound driver */
-#ifdef USE_DSOUND
-	{ "dsound", DS_FillAPI },
+#if USE_SDL
+	{ "sdl", QSDL_FillSoundAPI },
 #endif
 };
 
-static int s_numDrivers = sizeof( s_driverTable ) / sizeof( s_driverTable[0] );
+static const int s_numDrivers =
+    sizeof( s_driverTable ) / sizeof( s_driverTable[0] );
 
 /*
 ==========================================================================
@@ -204,9 +205,8 @@ S_Init
 */
 void S_Init( void ) {
 	cvar_t	*cv;
-	sndDriver_t *driver;
-	int i;
-	sndinitstat ret = SIS_FAILURE;
+	int i, j = 0;
+	sndinitstat_t ret;
 
 	cv = Cvar_Get( "s_initsound", "1", 0 );
 	if( !cv->integer ) {
@@ -217,48 +217,43 @@ void S_Init( void ) {
 	Com_Printf( "------- S_Init -------\n" );
 
 	s_volume = Cvar_Get( "s_volume", "0.7", CVAR_ARCHIVE );
-	s_khz = Cvar_Get( "s_khz", "11", CVAR_ARCHIVE );
+	s_khz = Cvar_Get( "s_khz", "22", CVAR_ARCHIVE );
 	s_loadas8bit = Cvar_Get( "s_loadas8bit", "1", CVAR_ARCHIVE );
 	s_mixahead = Cvar_Get( "s_mixahead", "0.2", CVAR_ARCHIVE );
 	s_show = Cvar_Get( "s_show", "0", 0 );
 	s_testsound = Cvar_Get( "s_testsound", "0", 0 );
-	s_driver = Cvar_Get( "s_driver", DEFAULT_SOUND_DRIVER, CVAR_LATCHED );
+	s_driver = Cvar_Get( "s_driver", "", CVAR_LATCHED );
 	s_driver->subsystem = CVAR_SYSTEM_SOUND;
 	s_ambient = Cvar_Get( "s_ambient", "1", 0 );
 
+    // determine the first driver to try
+    if( s_driver->string[0] ) {
+        for( i = 0; i < s_numDrivers; i++ ) {
+            if( !strcmp( s_driver->string, s_driverTable[i].name ) ) {
+                j = i;
+                break;
+            }
+        }
+    }
+
+    // cycle until usable driver is found
+    i = j;
 	while( 1 ) {
-		if( s_driver->string[0] ) {
-			for( i = 0, driver = s_driverTable; i < s_numDrivers; i++, driver++ ) {
-				if( !strcmp( s_driver->string, driver->name ) ) {
-					break;
-				}
-			}
-			if( i == s_numDrivers ) {
-				Com_Printf( "Sound driver '%s' not found, falling back to default...\n", s_driver->string );
-				Cvar_Set( "s_driver", "" );
-				driver = &s_driverTable[0];
-			}
-		} else {
-			driver = &s_driverTable[0];
-		}
-		
-		driver->FillAPI( &snddma );
+		s_driverTable[i].FillAPI( &snddma );
 
 		ret = snddma.Init();
 		if( ret == SIS_SUCCESS ) {
 			break;
 		}
 		if( ret == SIS_NOTAVAIL ) {
-			Com_Printf( "Sound hardware already in use, sound disabled.\n" );
+			Com_WPrintf( "Sound hardware already in use\n" );
 			return;
 		}
-		if( !s_driver->string[0] ) {
-			Com_WPrintf( "Couldn't fall back to default sound driver!\n" );
-			return;
-		}
-
-		Com_Printf( "Failed to load sound driver, falling back to default...\n" );
-		Cvar_Set( "s_driver", "" );
+        i = ( i + 1 ) % s_numDrivers;
+        if( i == j ) {
+            Com_WPrintf( "No usable sound driver found\n" );
+            return;
+        }
 	}
 	
     Cmd_Register( c_sound );
@@ -268,7 +263,6 @@ void S_Init( void ) {
 	sound_started = qtrue;
 	num_sfx = 0;
 
-	soundtime = 0;
 	paintedtime = 0;
 
 	s_registration_sequence = 1;
@@ -854,8 +848,6 @@ void S_ClearBuffer (void)
 	if (!sound_started)
 		return;
 
-	s_rawend = 0;
-
 	if (dma.samplebits == 8)
 		clear = 0x80;
 	else
@@ -993,142 +985,34 @@ void S_AddLoopSounds (void)
 	}
 }
 
-//=============================================================================
-
-/*
-============
-S_RawSamples
-
-Cinematic streaming and voice over network
-============
-*/
-void S_RawSamples (int samples, int rate, int width, int channels, byte *data)
-{
-	int		i;
-	int		src, dst;
-	float	scale;
-
-	if (!sound_started)
-		return;
-
-	if (s_rawend < paintedtime)
-		s_rawend = paintedtime;
-	scale = (float)rate / dma.speed;
-
-//Com_Printf ("%i < %i < %i\n", soundtime, paintedtime, s_rawend);
-	if (channels == 2 && width == 2)
-	{
-		if (scale == 1.0)
-		{	// optimized case
-			for (i=0 ; i<samples ; i++)
-			{
-				dst = s_rawend&(MAX_RAW_SAMPLES-1);
-				s_rawend++;
-				s_rawsamples[dst].left =
-				    LittleShort(((short *)data)[i*2]) << 8;
-				s_rawsamples[dst].right =
-				    LittleShort(((short *)data)[i*2+1]) << 8;
-			}
-		}
-		else
-		{
-			for (i=0 ; ; i++)
-			{
-				src = i*scale;
-				if (src >= samples)
-					break;
-				dst = s_rawend&(MAX_RAW_SAMPLES-1);
-				s_rawend++;
-				s_rawsamples[dst].left =
-				    LittleShort(((short *)data)[src*2]) << 8;
-				s_rawsamples[dst].right =
-				    LittleShort(((short *)data)[src*2+1]) << 8;
-			}
-		}
-	}
-	else if (channels == 1 && width == 2)
-	{
-		for (i=0 ; ; i++)
-		{
-			src = i*scale;
-			if (src >= samples)
-				break;
-			dst = s_rawend&(MAX_RAW_SAMPLES-1);
-			s_rawend++;
-			s_rawsamples[dst].left =
-			    LittleShort(((short *)data)[src]) << 8;
-			s_rawsamples[dst].right =
-			    LittleShort(((short *)data)[src]) << 8;
-		}
-	}
-	else if (channels == 2 && width == 1)
-	{
-		for (i=0 ; ; i++)
-		{
-			src = i*scale;
-			if (src >= samples)
-				break;
-			dst = s_rawend&(MAX_RAW_SAMPLES-1);
-			s_rawend++;
-			s_rawsamples[dst].left =
-			    ((char *)data)[src*2] << 16;
-			s_rawsamples[dst].right =
-			    ((char *)data)[src*2+1] << 16;
-		}
-	}
-	else if (channels == 1 && width == 1)
-	{
-		for (i=0 ; ; i++)
-		{
-			src = i*scale;
-			if (src >= samples)
-				break;
-			dst = s_rawend&(MAX_RAW_SAMPLES-1);
-			s_rawend++;
-			s_rawsamples[dst].left =
-			    (((byte *)data)[src]-128) << 16;
-			s_rawsamples[dst].right = (((byte *)data)[src]-128) << 16;
-		}
-	}
-}
-
 // =======================================================================
 // Update sound buffer
 // =======================================================================
 
-static void S_GetTime(void)
-{
-	int		samplepos;
+static int S_GetTime(void) {
 	static	int		buffers;
 	static	int		oldsamplepos;
-	int		fullsamples;
-	
-	fullsamples = dma.samples / dma.channels;
+	int fullsamples = dma.samples / dma.channels;
 
 // it is possible to miscount buffers if it has wrapped twice between
 // calls to S_Update.  Oh well.
-	samplepos = snddma.GetDMAPos();
-
-	if (samplepos < oldsamplepos)
-	{
+	if (dma.samplepos < oldsamplepos) {
 		buffers++;					// buffer wrapped
-		
-		if (paintedtime > 0x40000000)
-		{	// time to chop things off to avoid 32 bit limits
+		if (paintedtime > 0x40000000) {
+            // time to chop things off to avoid 32 bit limits
 			buffers = 0;
 			paintedtime = fullsamples;
-			S_StopAllSounds ();
+			S_StopAllSounds();
 		}
 	}
-	oldsamplepos = samplepos;
+	oldsamplepos = dma.samplepos;
 
-	soundtime = buffers*fullsamples + samplepos/dma.channels;
+	return buffers*fullsamples + dma.samplepos/dma.channels;
 }
 
-static void S_Update_(void)
-{
-	unsigned        endtime;
-	int				samps;
+static void S_Update_(void) {
+    int soundtime, endtime;
+	int samps;
 
 	snddma.BeginPainting ();
 
@@ -1136,11 +1020,10 @@ static void S_Update_(void)
 		return;
 
 // Updates DMA time
-	S_GetTime();
+	soundtime = S_GetTime();
 
 // check to make sure that we haven't overshot
-	if (paintedtime < soundtime)
-	{
+	if (paintedtime < soundtime) {
 		Com_DPrintf ("S_Update_ : overflow\n");
 		paintedtime = soundtime;
 	}
@@ -1150,8 +1033,8 @@ static void S_Update_(void)
 //endtime = (soundtime + 4096) & ~4095;
 
 	// mix to an even submission block size
-	endtime = (endtime + dma.submission_chunk-1)
-		& ~(dma.submission_chunk-1);
+	endtime = (endtime + dma.submission_chunk - 1)
+		& ~(dma.submission_chunk - 1);
 	samps = dma.samples >> (dma.channels-1);
 	if (endtime - soundtime > samps)
 		endtime = soundtime + samps;
