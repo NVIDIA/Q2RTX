@@ -20,19 +20,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "gl_local.h"
 
-vec3_t modelViewOrigin; /* viewer origin in model space */
-
-#define FACE_HASH_SIZE  32
-#define FACE_HASH_MASK  ( FACE_HASH_SIZE - 1 )
+vec3_t modelViewOrigin; // viewer origin in model space
 
 static vec3_t lightcolor;
-static bspSurface_t *alphaFaces;
-//static bspSurface_t *warpFaces;
-static bspSurface_t *faces_hash[FACE_HASH_SIZE];
 
 static qboolean GL_LightPoint_r( bspNode_t *node, vec3_t start, vec3_t end ) {
 	vec_t startFrac, endFrac, midFrac;
-	vec3_t mid;
+	vec3_t _start, mid;
 	int side;
 	qboolean ret;
 	bspSurface_t *surf;
@@ -44,79 +38,81 @@ static qboolean GL_LightPoint_r( bspNode_t *node, vec3_t start, vec3_t end ) {
 	int w1, w2, w3, w4;
 	int color[3];
 
-	if( !node->plane ) {
-		return qfalse;
-	}
-	
-	/* calculate distancies */
-	startFrac = PlaneDiffFast( start, node->plane );
-	endFrac = PlaneDiffFast( end, node->plane );
-	side = ( startFrac < 0 );
+    VectorCopy( start, _start );
+	while( node->plane ) {
+        // calculate distancies
+        startFrac = PlaneDiffFast( _start, node->plane );
+        endFrac = PlaneDiffFast( end, node->plane );
+        side = ( startFrac < 0 );
 
-	if( ( endFrac < 0 ) == side ) {
-		/* both points are one the same side */
-		return GL_LightPoint_r( node->children[side], start, end );
-	}
+        if( ( endFrac < 0 ) == side ) {
+            // both points are one the same side
+            node = node->children[side];
+            continue;
+        }
 
-	/* find crossing point */
-	midFrac = startFrac / ( startFrac - endFrac );
-    LerpVector( start, end, midFrac, mid );
+        // find crossing point
+        midFrac = startFrac / ( startFrac - endFrac );
+        LerpVector( _start, end, midFrac, mid );
 
-	/* check near side */
-	ret = GL_LightPoint_r( node->children[side], start, mid );
-	if( ret ) {
-		return ret;
-	}
+        // check near side
+        ret = GL_LightPoint_r( node->children[side], _start, mid );
+        if( ret ) {
+            return ret;
+        }
 
-	surf = node->firstFace;
-	for( i = 0; i < node->numFaces; i++, surf++ ) {
-		texinfo = surf->texinfo;
-		if( texinfo->flags & (SURF_WARP|SURF_SKY) ) {
-			continue;
-		}
-		if( !surf->lightmap ) {
-			continue;
-		}
-		s = DotProduct( texinfo->axis[0], mid ) + texinfo->offset[0];
-		t = DotProduct( texinfo->axis[1], mid ) + texinfo->offset[1];
+        for( i = 0, surf = node->firstFace; i < node->numFaces; i++, surf++ ) {
+            texinfo = surf->texinfo;
+            if( texinfo->flags & (SURF_WARP|SURF_SKY) ) {
+                continue;
+            }
+            if( !surf->lightmap ) {
+                continue;
+            }
+            s = DotProduct( texinfo->axis[0], mid ) + texinfo->offset[0];
+            t = DotProduct( texinfo->axis[1], mid ) + texinfo->offset[1];
 
-		s -= surf->texturemins[0];
-		t -= surf->texturemins[1];
-		if( s < 0 || t < 0 ) {
-			continue;
-		}
-		if( s > surf->extents[0] || t > surf->extents[1] ) {
-			continue;
-		}
+            s -= surf->texturemins[0];
+            t -= surf->texturemins[1];
+            if( s < 0 || t < 0 ) {
+                continue;
+            }
+            if( s > surf->extents[0] || t > surf->extents[1] ) {
+                continue;
+            }
 
-		fracu = s & 15;
-		fracv = t & 15;
+            fracu = s & 15;
+            fracv = t & 15;
 
-		s >>= 4;
-		t >>= 4;
+            s >>= 4;
+            t >>= 4;
 
-		pitch = ( surf->extents[0] >> 4 ) + 1;
-		b1 = &surf->lightmap[3 * ( ( t + 0 ) * pitch + ( s + 0 ) )];
-		b2 = &surf->lightmap[3 * ( ( t + 0 ) * pitch + ( s + 1 ) )];
-		b3 = &surf->lightmap[3 * ( ( t + 1 ) * pitch + ( s + 1 ) )];
-		b4 = &surf->lightmap[3 * ( ( t + 1 ) * pitch + ( s + 0 ) )];
-		
-		w1 = ( 16 - fracu ) * ( 16 - fracv );
-		w2 = fracu * ( 16 - fracv );
-		w3 = fracu * fracv;
-		w4 = ( 16 - fracu ) * fracv;
+            pitch = ( surf->extents[0] >> 4 ) + 1;
+            b1 = &surf->lightmap[3 * ( ( t + 0 ) * pitch + ( s + 0 ) )];
+            b2 = &surf->lightmap[3 * ( ( t + 0 ) * pitch + ( s + 1 ) )];
+            b3 = &surf->lightmap[3 * ( ( t + 1 ) * pitch + ( s + 1 ) )];
+            b4 = &surf->lightmap[3 * ( ( t + 1 ) * pitch + ( s + 0 ) )];
+            
+            w1 = ( 16 - fracu ) * ( 16 - fracv );
+            w2 = fracu * ( 16 - fracv );
+            w3 = fracu * fracv;
+            w4 = ( 16 - fracu ) * fracv;
 
-		color[0] = ( w1 * b1[0] + w2 * b2[0] + w3 * b3[0] + w4 * b4[0] ) >> 8;
-		color[1] = ( w1 * b1[1] + w2 * b2[1] + w3 * b3[1] + w4 * b4[1] ) >> 8;
-		color[2] = ( w1 * b1[2] + w2 * b2[2] + w3 * b3[2] + w4 * b4[2] ) >> 8;
+            color[0] = ( w1 * b1[0] + w2 * b2[0] + w3 * b3[0] + w4 * b4[0] ) >> 8;
+            color[1] = ( w1 * b1[1] + w2 * b2[1] + w3 * b3[1] + w4 * b4[1] ) >> 8;
+            color[2] = ( w1 * b1[2] + w2 * b2[2] + w3 * b3[2] + w4 * b4[2] ) >> 8;
 
-		VectorMA( lightcolor, 1.0f / 255, color, lightcolor );
+            VectorMA( lightcolor, 1.0f / 255, color, lightcolor );
 
-		return qtrue;
-	}
+            return qtrue;
+        }
 
-	/* check far side */
-	return GL_LightPoint_r( node->children[side^1], mid, end );
+        // check far side
+        VectorCopy( mid, _start );
+        node = node->children[side^1];
+    }
+
+	return qfalse;
 }
 
 void GL_LightPoint( vec3_t origin, vec3_t dest ) {
@@ -344,25 +340,6 @@ finish:
 
 }
 
-static inline void GL_AddSurf( bspSurface_t *face ) {
-    if( face->texinfo->flags & (SURF_TRANS33|SURF_TRANS66) ) {
-        face->next = alphaFaces;
-        alphaFaces = face;
-    } /*else if( face->type == SURF_WARP ) {
-        face->next = warpFaces;
-        warpFaces = face;
-    } */else {
-#if 0
-        GL_DrawSurf( face );
-#else
-        int i = ( face->texinfo->image->texnum ^ face->lightmapnum ) & FACE_HASH_MASK;
-        face->next = faces_hash[i];
-        faces_hash[i] = face;
-#endif
-    }
-    c.facesDrawn++;
-}
-
 #define NODE_CLIPPED    0
 #define NODE_UNCLIPPED  15
 
@@ -461,11 +438,13 @@ void GL_DrawBspModel( bspSubmodel_t *model ) {
 		{
 			c.facesCulled++;
 		} else {
-            /* FIXME: warp/trans surfaces are not supported */
-            GL_DrawSurf( face );  
+            /* FIXME: trans surfaces are not supported on inline models */
+            GL_AddSolidFace( face );  
 		}
 		face++;
 	}
+
+    GL_DrawSolidFaces();
 
 	qglPopMatrix();
 }
@@ -512,7 +491,7 @@ static void GL_WorldNode_r( bspNode_t *node, int clipflags ) {
         while( count-- ) {
             if( face->drawframe == glr.drawframe ) {
                 if( face->side == side ) {
-                    GL_AddSurf( face );
+                    GL_AddFace( face );
                 } else {
                     c.facesCulled++;
                 }
@@ -528,9 +507,6 @@ static void GL_WorldNode_r( bspNode_t *node, int clipflags ) {
 }
 
 void GL_DrawWorld( void ) {	
-    int i;
-    bspSurface_t *face;
-
     GL_MarkLeaves();
 
 #if USE_DYNAMIC
@@ -539,38 +515,18 @@ void GL_DrawWorld( void ) {
     }
 #endif
     
-    R_ClearSkyBox();
+    if( !gl_fastsky->integer ) {
+        R_ClearSkyBox();
+    }
 
 	VectorCopy( glr.fd.vieworg, modelViewOrigin );
 
     GL_WorldNode_r( r_world.nodes, NODE_CLIPPED );
 
-    for( i = 0; i < FACE_HASH_SIZE; i++ ) {
-        for( face = faces_hash[i]; face; face = face->next ) {
-            GL_DrawSurf( face ); 
-        }
-        faces_hash[i] = NULL;
-    }
+    GL_DrawSolidFaces();
 
     if( !gl_fastsky->integer ) {
         R_DrawSkyBox();
     }
-}
-
-void GL_DrawAlphaFaces( void ) {
-	bspSurface_t *face, *next;
-
-    if( ( face = alphaFaces ) == NULL ) {
-        return;
-    }
-
-    do {
-        GL_DrawSurf( face ); 
-        next = face->next;
-        face->next = NULL;
-        face = next;
-    } while( face );
-
-    alphaFaces = NULL;
 }
 

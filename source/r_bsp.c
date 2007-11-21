@@ -86,7 +86,7 @@ static void Bsp_DecompressVis( byte *src, byte *dst, uint32 rowsize ) {
 	} while( rowsize );
 }
 
-static int Bsp_LoadVis( lump_t *lump ) {
+static void Bsp_LoadVis( lump_t *lump ) {
 	dvis_t *src_vis;
 	byte *dst, *src;
 	uint32 numClusters, rowsize;
@@ -96,24 +96,18 @@ static int Bsp_LoadVis( lump_t *lump ) {
 	if( !lump->filelen ) {
 		r_world.vis = NULL;
 		r_world.numClusters = 0;
-		return 0;
+		return;
 	}
 	
-	if( lump->filelen < sizeof( *src ) ) {
-		Com_EPrintf( "LoadVis: bad lump size\n" );
-		return -1;
-	}
-
 	src_vis = ( dvis_t * )( loadData + lump->fileofs );
 	numClusters = LittleLong( src_vis->numclusters );
 	if( !numClusters ) {
 		r_world.vis = 0;
 		r_world.numClusters = 0;
-		return 0; /* it is OK to have a map without vis */
+		return; // it is OK to have a map without vis
 	}
 	if( numClusters > MAX_MAP_LEAFS/8 ) {
-		Com_EPrintf( "LoadVis: bad number of clusters\n" );
-		return -1;
+		Com_Error( ERR_DROP, "%s: too many clusters", __func__ );
 	}
 	
 	rowsize = ( numClusters + 7 ) >> 3;
@@ -125,28 +119,22 @@ static int Bsp_LoadVis( lump_t *lump ) {
 	for( i = 0; i < numClusters; i++ ) {
 		offset = LittleLong( src_vis->bitofs[i][DVIS_PVS] );
 		if( offset >= lump->filelen ) {
-			Com_EPrintf( "LoadVis: bad offset\n" );
-            return -1;
+			Com_Error( ERR_DROP, "%s: bad offset", __func__ );
 		}
 		
 		src = ( byte * )src_vis + offset;
 		Bsp_DecompressVis( src, dst, rowsize );
 		dst += rowsize;
 	}
-
-	return 0;
 }
 
-static int Bsp_LoadVertices( lump_t *lump ) {
-	int count;
-	dvertex_t *src;
-	dvertex_t *dst;
-	int i;
+static void Bsp_LoadVertices( lump_t *lump ) {
+	int i, count;
+	dvertex_t *src, *dst;
 
 	count = lump->filelen / sizeof( *src );
 	if( lump->filelen % sizeof( *src ) ) {
-		Com_EPrintf( "LoadVertices: bad lump size\n" );
-		return -1;
+		Com_Error( ERR_DROP, "%s: bad lump size", __func__ );
 	}
 
 	r_world.vertices = Bsp_Malloc( ( count + EXTRA_VERTICES ) * sizeof( *dst ) );
@@ -161,20 +149,15 @@ static int Bsp_LoadVertices( lump_t *lump ) {
 		
 		src++; dst++;	
 	}
-
-	return 0;
 }
 
-static int Bsp_LoadEdges( lump_t *lump ) {
-	int count;
-	dedge_t *src;
-	dedge_t *dst;
-	int i;
+static void Bsp_LoadEdges( lump_t *lump ) {
+	int i, count;
+	dedge_t *src, *dst;
 
 	count = lump->filelen / sizeof( *src );
 	if( lump->filelen % sizeof( *src ) ) {
-		Com_EPrintf( "LoadEdges: bad lump size\n" );
-		return -1;
+		Com_Error( ERR_DROP, "%s: bad lump size", __func__ );
 	}
 
 	r_world.edges = Bsp_Malloc( ( count + EXTRA_EDGES ) * sizeof( *dst ) );
@@ -188,20 +171,15 @@ static int Bsp_LoadEdges( lump_t *lump ) {
 		
 		src++; dst++;	
 	}
-
-	return 0;
 }
 
-static int Bsp_LoadSurfEdges( lump_t *lump ) {
-	int count;
-	int *src;
-	int *dst;
-	int i;
+static void Bsp_LoadSurfEdges( lump_t *lump ) {
+	int i, count;
+	int *src, *dst;
 
 	count = lump->filelen / sizeof( *src );
 	if( lump->filelen % sizeof( *src ) ) {
-		Com_EPrintf( "LoadSurfEdges: bad lump size\n" );
-		return -1;
+		Com_Error( ERR_DROP, "%s: bad lump size", __func__ );
 	}
 
 	r_world.surfEdges = Bsp_Malloc( ( count + EXTRA_SURFEDGES ) * sizeof( *dst ) );
@@ -212,11 +190,9 @@ static int Bsp_LoadSurfEdges( lump_t *lump ) {
 	for( i = 0; i < count; i++ ) {
 		*dst++ = LittleLong( *src++ );	
 	}
-
-	return 0;
 }
 
-static int Bsp_LoadTexinfo( lump_t *lump ) {
+static void Bsp_LoadTexinfo( lump_t *lump ) {
 	int count;
 	int i;
 	texinfo_t *src;
@@ -227,8 +203,7 @@ static int Bsp_LoadTexinfo( lump_t *lump ) {
 
 	count = lump->filelen / sizeof( *src );
 	if( lump->filelen % sizeof( *src ) ) {
-		Com_EPrintf( "LoadTexinfo: bad lump size\n" );
-		return -1;
+		Com_Error( ERR_DROP, "%s: bad lump size", __func__ );
 	}
 
 	r_world.numTexinfos = count;
@@ -253,16 +228,12 @@ static int Bsp_LoadTexinfo( lump_t *lump ) {
 
 #ifdef OPENGL_RENDERER
         upload_texinfo = dst;
-
-        VectorNormalize2( dst->axis[0], dst->normalizedAxis[0] );
-        VectorNormalize2( dst->axis[1], dst->normalizedAxis[1] );
 #endif
 
 		animNext = LittleLong( src->nexttexinfo );
 		if( animNext > 0 ) {
 			if( animNext >= count ) {
-				Com_EPrintf( "Bsp_LoadTexinfo: bad anim chain\n" );
-				return -1;
+				Com_Error( ERR_DROP, "%s: bad anim chain", __func__ );
 			}
 			dst->animNext = r_world.texinfos + animNext;
 		} else {
@@ -292,11 +263,9 @@ static int Bsp_LoadTexinfo( lump_t *lump ) {
 		}
 		dst++;
 	}
-
-	return 0;
 }
 
-static int Bsp_LoadFaces( lump_t *lump ) {
+static void Bsp_LoadFaces( lump_t *lump ) {
 	int count;
 	dface_t *src_face;
 	bspSurface_t *dst_face;
@@ -308,8 +277,7 @@ static int Bsp_LoadFaces( lump_t *lump ) {
 
 	count = lump->filelen / sizeof( *src_face );
 	if( lump->filelen % sizeof( *src_face ) ) {
-		Com_EPrintf( "LoadFace: bad faces lump size\n" );
-		return -1;
+		Com_Error( ERR_DROP, "%s: bad lump size", __func__ );
 	}
 
 	r_world.surfaces = Bsp_Malloc( ( count + EXTRA_SURFACES ) * sizeof( *dst_face ) );
@@ -321,24 +289,20 @@ static int Bsp_LoadFaces( lump_t *lump ) {
 		firstEdge = LittleLong( src_face->firstedge );
 		numEdges = LittleShort( src_face->numedges );
         if( numEdges < 3 || numEdges > MAX_MAP_SURFEDGES ) {
-			Com_EPrintf( "LoadFace: bad surfedges\n" );
-			return -1;
+			Com_Error( ERR_DROP, "%s: bad surfedges", __func__ );
         }
 		if( firstEdge + numEdges > r_world.numSurfEdges ) {
-			Com_EPrintf( "LoadFace: surfedges out of bounds\n" );
-			return -1;
+			Com_Error( ERR_DROP, "%s: surfedges out of bounds", __func__ );
 		}
 
         planeNum = LittleShort( src_face->planenum );
         if( planeNum >= r_world.numPlanes ) {
-            Com_EPrintf( "LoadFace: bad planenum\n" );
-            return -1;
+            Com_Error( ERR_DROP, "%s: bad planenum", __func__ );
         }
 
 		texinfoNum = LittleShort( src_face->texinfo );
 		if( texinfoNum >= r_world.numTexinfos ) {
-			Com_EPrintf( "LoadFace: bad texinfo\n" );
-			return -1;
+			Com_Error( ERR_DROP, "%s: bad texinfo", __func__ );
 		}
         
         lightmapOffset = LittleLong( src_face->lightofs );
@@ -346,8 +310,7 @@ static int Bsp_LoadFaces( lump_t *lump ) {
             dst_face->lightmap = NULL;
         } else {
             if( lightmapOffset >= r_world.lightmapSize ) {
-                Com_EPrintf( "LoadFace: bad lightofs\n" );
-                return -1;
+                Com_Error( ERR_DROP, "%s: bad lightofs", __func__ );
             }
             dst_face->lightmap = r_world.lightmap + lightmapOffset;
         }
@@ -361,20 +324,11 @@ static int Bsp_LoadFaces( lump_t *lump ) {
         dst_face->firstSurfEdge = r_world.surfEdges + firstEdge;
         dst_face->numSurfEdges = numEdges;
 		
-#ifdef OPENGL_RENDERER
-		if( GL_PostProcessSurface( dst_face ) ) {
-            return -1;
-        }
-#endif
-
 		src_face++; dst_face++;
 	}
-	
-
-	return 0;
 }
 
-static int Bsp_LoadLeafFaces( lump_t *lump ) {
+static void Bsp_LoadLeafFaces( lump_t *lump ) {
 	int count;
 	int i;
 	uint32 faceNum;
@@ -383,8 +337,7 @@ static int Bsp_LoadLeafFaces( lump_t *lump ) {
 
 	count = lump->filelen / sizeof( *src );
 	if( lump->filelen % sizeof( *src ) ) {
-		Com_EPrintf( "LoadLeafFaces: bad lump size\n" );
-		return -1;
+		Com_Error( ERR_DROP, "%s: bad lump size", __func__ );
 	}
 
 	r_world.numLeafFaces = count;
@@ -395,18 +348,15 @@ static int Bsp_LoadLeafFaces( lump_t *lump ) {
 	for( i = 0; i < count; i++ ) {
 		faceNum = LittleShort( *src );
 		if( faceNum >= r_world.numSurfaces ) {
-			Com_EPrintf( "LoadLeafFaces: bad face index\n" );
-			return -1;
+			Com_Error( ERR_DROP, "%s: bad face index\n", __func__ );
 		}
 		*dst = r_world.surfaces + faceNum;
 		
 		src++; dst++;
 	}
-
-	return 0;
 }
 
-static int Bsp_LoadLeafs( lump_t *lump ) {
+static void Bsp_LoadLeafs( lump_t *lump ) {
 	int count;
 	int i;
 	uint32 cluster, area;
@@ -417,8 +367,7 @@ static int Bsp_LoadLeafs( lump_t *lump ) {
 
 	count = lump->filelen / sizeof( *src );
 	if( lump->filelen % sizeof( *src ) ) {
-		Com_EPrintf( "LoadLeafs: bad lump size\n" );
-		return -1;
+		Com_Error( ERR_DROP, "%s: bad lump size", __func__ );
 	}
 
 	r_world.numLeafs = count;
@@ -434,8 +383,7 @@ static int Bsp_LoadLeafs( lump_t *lump ) {
 	
 		area = LittleShort( src->area );
 		if( area >= MAX_MAP_AREAS ) {
-			Com_EPrintf( "LoadLeafs: bad area num\n" );
-			return -1;
+			Com_Error( ERR_DROP, "%s: bad area num", __func__ );
 		}
 		dst->area = area;
 		dst->contents = LittleLong( src->contents );
@@ -445,8 +393,7 @@ static int Bsp_LoadLeafs( lump_t *lump ) {
 			dst->cluster = -1;
 		} else {
             if( cluster >= r_world.numClusters ) {
-			    Com_EPrintf( "LoadLeafs: bad cluster num\n" );
-			    return -1;
+			    Com_Error( ERR_DROP, "%s: bad cluster num", __func__ );
 		    }
     		dst->cluster = cluster;
         }
@@ -455,8 +402,7 @@ static int Bsp_LoadLeafs( lump_t *lump ) {
 		numLeafFaces = LittleShort( src->numleaffaces );
 		
 		if( firstLeafFace + numLeafFaces > r_world.numLeafFaces ) {
-			Com_EPrintf( "LoadLeafs: bad leafface\n" );
-			return -1;
+			Com_Error( ERR_DROP, "%s: bad leafface", __func__ );
 		}
 
 		dst->firstLeafFace = r_world.leafFaces + firstLeafFace;
@@ -467,11 +413,9 @@ static int Bsp_LoadLeafs( lump_t *lump ) {
 		
 		src++; dst++;
 	}
-
-	return 0;
 }
 
-static int Bsp_LoadPlanes( lump_t *lump ) {
+static void Bsp_LoadPlanes( lump_t *lump ) {
 	int count;
 	int i;
 	dplane_t *src;
@@ -479,8 +423,7 @@ static int Bsp_LoadPlanes( lump_t *lump ) {
 
 	count = lump->filelen / sizeof( *src );
 	if( lump->filelen % sizeof( *src ) ) {
-		Com_EPrintf( "LoadPlanes: bad lump size\n" );
-		return -1;
+		Com_Error( ERR_DROP, "%s: bad lump size", __func__ );
 	}
 
 	r_world.numPlanes = count;
@@ -496,11 +439,9 @@ static int Bsp_LoadPlanes( lump_t *lump ) {
 		
 		src++; dst++;
 	}
-
-	return 0;
 }
 
-static int Bsp_LoadNodes( lump_t *lump ) {
+static void Bsp_LoadNodes( lump_t *lump ) {
 	int count;
 	int i, j;
 	uint32 planenum;
@@ -511,8 +452,7 @@ static int Bsp_LoadNodes( lump_t *lump ) {
 
 	count = lump->filelen / sizeof( *src );
 	if( lump->filelen % sizeof( *src ) ) {
-		Com_EPrintf( "LoadNodes: bad lump size\n" );
-		return -1;
+		Com_Error( ERR_DROP, "%s: bad lump size", __func__ );
 	}
 
 	r_world.numNodes = count;
@@ -525,30 +465,27 @@ static int Bsp_LoadNodes( lump_t *lump ) {
 		dst->parent = NULL;
 		dst->visframe = -1;
 		
-		/* load splitting plane index */
+		// load splitting plane index
 		planenum = LittleLong( src->planenum );
 		if( planenum >= r_world.numPlanes ) {
-			Com_EPrintf( "LoadNodes: bad planenum\n" );
-			return -1;
+			Com_Error( ERR_DROP, "%s: bad planenum for node %d", __func__, i );
 		}
 		dst->plane = r_world.planes + planenum;
 		
-		/* load children indices */
+		// load children indices
 		for( j = 0; j < 2; j++ ) {
 			child = LittleLong( src->children[j] );
 			if( child & 0x80000000 ) {
-				/* leaf index */
+				// leaf index
 				child = ~child;
 				if( child >= r_world.numLeafs ) {
-					Com_EPrintf( "LoadNodes: bad leafnum\n" );
-					return -1;
+					Com_Error( ERR_DROP, "%s: bad leafnum for node %d", __func__, i );
 				}
 				dst->children[j] = ( bspNode_t * )( r_world.leafs + child );
 			} else {
-				/* node index */
+				// node index
 				if( child >= count ) {
-					Com_EPrintf( "LoadNodes: bad nodenum\n" );
-					return -1;
+					Com_Error( ERR_DROP, "%s: bad nodenum for node %d", __func__, i );
 				}
 				dst->children[j] = r_world.nodes + child;
 			}
@@ -558,8 +495,7 @@ static int Bsp_LoadNodes( lump_t *lump ) {
 		numFaces = LittleShort( src->numfaces );
 
 		if( firstFace + numFaces > r_world.numSurfaces ) {
-			Com_EPrintf( "LoadNodes: bad faces\n" );
-			return -1;
+			Com_Error( ERR_DROP, "%s: bad faces for node %d", __func__, i );
 		}
 
 		dst->firstFace = r_world.surfaces + firstFace;
@@ -570,37 +506,19 @@ static int Bsp_LoadNodes( lump_t *lump ) {
 
 		src++; dst++;
 	}
-
-	return 0;
 }
 
-#if 0
-int Bsp_LoadEntityString( lump_t *lump ) {
+static void Bsp_LoadLightMap( lump_t *lump ) {
 	if( !lump->filelen ) {
-        return 0;
-    }
-
-    r_world.entityString = Bsp_Malloc( lump->filelen + 1 );
-    memcpy( r_world.entityString, loadData + lump->fileofs, lump->filelen );
-    r_world.entityString[lump->filelen] = 0;
-	
-	return 0;
-}
-#endif
-
-int Bsp_LoadLightMap( lump_t *lump ) {
-	if( !lump->filelen ) {
-        return 0;
+        return;
     }
 
     r_world.lightmap = Bsp_Malloc( lump->filelen );
     memcpy( r_world.lightmap, loadData + lump->fileofs, lump->filelen );
     r_world.lightmapSize = lump->filelen;
-
-    return 0;
 }
 
-static int Bsp_LoadSubmodels( lump_t *lump ) {
+static void Bsp_LoadSubmodels( lump_t *lump ) {
 	int count;
 	int i;
 	dmodel_t *src;
@@ -610,8 +528,7 @@ static int Bsp_LoadSubmodels( lump_t *lump ) {
 
 	count = lump->filelen / sizeof( *src );
 	if( lump->filelen % sizeof( *src ) ) {
-		Com_EPrintf( "LoadSubmodels: bad lump size\n" );
-		return -1;
+		Com_Error( ERR_DROP, "%s: bad lump size", __func__ );
 	}
 
 	r_world.numSubmodels = count;
@@ -623,14 +540,13 @@ static int Bsp_LoadSubmodels( lump_t *lump ) {
 		firstFace = LittleLong( src->firstface );
 		numFaces = LittleLong( src->numfaces );
 		if( firstFace + numFaces > r_world.numSurfaces ) {
-			Com_EPrintf( "LoadSubmodels: bad faces\n" );
-			return -1;
+			Com_Error( ERR_DROP, "%s: bad faces for model %d", __func__, i );
 		}
 
 		headnode = LittleLong( src->headnode );
 		if( headnode >= r_world.numNodes ) {
-			/* FIXME: headnode may be garbage for some models */
-			Com_DPrintf( "LoadSubmodels: bad headnode for model %d\n", i );
+			// FIXME: headnode may be garbage for some models
+			Com_DPrintf( "%s: bad headnode for model %d", __func__, i );
 			dst->headnode = NULL;
 		} else {
 			dst->headnode = r_world.nodes + headnode;
@@ -648,8 +564,6 @@ static int Bsp_LoadSubmodels( lump_t *lump ) {
 
 		src++; dst++;
 	}
-
-	return 0;
 }
 
 
@@ -675,7 +589,7 @@ void Bsp_FreeWorld( void ) {
     }
 }
 
-qboolean Bsp_LoadWorld( const char *path ) {
+void Bsp_LoadWorld( const char *path ) {
 	dheader_t header;
 	lump_t *lump;
 	int i;
@@ -684,66 +598,67 @@ qboolean Bsp_LoadWorld( const char *path ) {
 
     length = fs.LoadFileEx( path, ( void ** )&data, FS_FLAG_CACHE );
     if( !data ) {
-        return qfalse;
+        Com_Error( ERR_DROP, "%s: couldn't load %s", __func__, path );
     }
 
 	if( length < sizeof( header ) ) {
-		Com_EPrintf( "Bsp_Load: file length < header length\n" );
-        goto fail;
+		Com_Error( ERR_DROP, "%s: %s is too small", __func__, path );
 	}
 	
-	/* byte swap and validate the header */
+	// byte swap and validate the header
 	header = *( dheader_t * )data;
 	header.ident = LittleLong( header.ident );
 	header.version = LittleLong( header.version );
 	if( header.ident != IDBSPHEADER ) {
-		Com_EPrintf( "Bsp_Load: not an IBSP file: %x != %x\n",
-			header.ident, IDBSPHEADER );
-        goto fail;
+		Com_Error( ERR_DROP, "%s: %s is not an IBSP file", __func__, path );
 	}
 	if( header.version != BSPVERSION ) {
-		Com_EPrintf( "Bsp_Load: wrong version number: %u != %u\n",
-			header.version, BSPVERSION );
-        goto fail;
+		Com_Error( ERR_DROP, "%s: %s has wrong IBSP version", __func__, path );
 	}
 	
-	/* byte swap and validate lumps */
+	// byte swap and validate lumps
 	lump = header.lumps;
 	for( i = 0; i < HEADER_LUMPS; i++ ) {
 		lump->fileofs = LittleLong( lump->fileofs );
 		lump->filelen = LittleLong( lump->filelen );
 		if( lump->fileofs + lump->filelen > length ) {
-			Com_EPrintf( "Bsp_Load: lump #%d out of bounds\n", i );
-            goto fail;
+			Com_Error( ERR_DROP, "%s: %s has lump #%d out of bounds\n",
+                __func__, path, i );
 		}
 		lump++;
 	}
 
 	loadData = data;
-
     
-    /* reserve 16 MB of virtual memory */
+    // reserve 16 MB of virtual memory
     sys.HunkBegin( &r_world.pool, 0x1000000 );
 
-#define BSP_LOAD( Func, Lump ) \
-			if( Bsp_Load##Func( &header.lumps[LUMP_##Lump] ) ) { \
-				sys.HunkFree( &r_world.pool ); \
-                goto fail; \
-			}
+#ifdef OPENGL_RENDERER
+	GL_BeginPostProcessing();
+#endif
 
-	BSP_LOAD( Vis, VISIBILITY )
-	BSP_LOAD( Vertices, VERTEXES )
-	BSP_LOAD( Edges, EDGES )
-	BSP_LOAD( SurfEdges, SURFEDGES )
-	BSP_LOAD( Texinfo, TEXINFO )
-	BSP_LOAD( LightMap, LIGHTING )
-	BSP_LOAD( Planes, PLANES )
-	BSP_LOAD( Faces, FACES )
-	BSP_LOAD( LeafFaces, LEAFFACES )
-	BSP_LOAD( Leafs, LEAFS )
-	BSP_LOAD( Nodes, NODES )
-	BSP_LOAD( Submodels, MODELS )
-//	BSP2_LOAD( EntityString, ENTITIES )
+#define LOAD( Func, Lump ) do { \
+			                    Bsp_Load##Func( &header.lumps[LUMP_##Lump] ); \
+                           } while( 0 )
+
+	LOAD( Vis,          VISIBILITY );
+	LOAD( Vertices,     VERTEXES   );
+	LOAD( Edges,        EDGES      );
+	LOAD( SurfEdges,    SURFEDGES  );
+	LOAD( Texinfo,      TEXINFO    );
+	LOAD( LightMap,     LIGHTING   );
+	LOAD( Planes,       PLANES     );
+	LOAD( Faces,        FACES      );
+	LOAD( LeafFaces,    LEAFFACES  );
+	LOAD( Leafs,        LEAFS      );
+	LOAD( Nodes,        NODES      );
+	LOAD( Submodels,    MODELS     );
+
+#undef LOAD
+
+#ifdef OPENGL_RENDERER
+	GL_EndPostProcessing();
+#endif
     
     fs.FreeFile( data );
 
@@ -752,12 +667,6 @@ qboolean Bsp_LoadWorld( const char *path ) {
     Bsp_SetParent( r_world.nodes );
 
     strcpy( r_world.name, path );
-
-    return qtrue;
-
-fail:
-	fs.FreeFile( data );
-	return qfalse;
 }
 
 

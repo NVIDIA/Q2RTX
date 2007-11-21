@@ -145,7 +145,7 @@ static void gl_anisotropy_changed( cvar_t *self ) {
 
 	// change all the existing mipmap texture objects
 	for( i = 0, image = r_images; i < r_numImages; i++, image++ ) {
-		if( image->type  == it_wall || image->type  == it_skin ) {
+		if( image->type == it_wall || image->type == it_skin ) {
 			GL_BindTexture( image->texnum );
 			qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT,
 				gl_filter_anisotropy );
@@ -1136,10 +1136,19 @@ GL_ShutdownImages
 ===============
 */
 void GL_ShutdownImages( void ) {
+    GLuint num;
+    int i;
+
     gl_bilerp_chars->changed = NULL;
     gl_texturemode->changed = NULL;
     gl_anisotropy->changed = NULL;
     gl_gamma->changed = NULL;
+
+    for( i = 0; i < lm.highWater; i++ ) {
+        num = LM_TEXNUM + i;
+        qglDeleteTextures( 1, &num );
+    }
+    lm.highWater = 0;
 
 	R_FreeAllImages();
 	R_ShutdownImageManager();

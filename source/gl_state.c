@@ -211,25 +211,30 @@ void GL_Setup3D( void ) {
 	if( glr.scroll == 0 )
 		glr.scroll = -64.0f;
 
-
 #if 0
     {
-        vec4_t position, diffuse;
-        vec4_t ambient, material;
-        VectorMA( glr.fd.vieworg, 128, glr.viewaxis[0], position );
-        position[3]=1;
-        VectorSet( diffuse, 1, 1, 1 );
-        VectorSet( material, 1, 1, 1 );
-        VectorSet( ambient, 0, 0, 0 );
+        vec4_t ambient = {0,0,0,0}, material={1,1,1,1};
 
         qglLightModelfv( GL_LIGHT_MODEL_AMBIENT, ambient );
+        qglLightModelf( GL_LIGHT_MODEL_TWO_SIDE, 1 );
         qglMaterialfv( GL_BACK, GL_AMBIENT_AND_DIFFUSE, material );
 
-        qglLightfv( GL_LIGHT0, GL_POSITION, position );
-        qglLightfv( GL_LIGHT0, GL_DIFFUSE, diffuse );
     }
-    qglEnable(GL_LIGHTING);
-    qglEnable( GL_LIGHT0 );
+
+    if( glr.fd.num_dlights > 8 ) {
+        glr.fd.num_dlights = 8;
+    }
+    for( i = 0; i < glr.fd.num_dlights; i++ ) {
+        dlight_t *l = &glr.fd.dlights[i];
+        qglLightfv( GL_LIGHT0 + i, GL_POSITION, l->origin );
+        qglLightfv( GL_LIGHT0 + i, GL_DIFFUSE, l->color );
+        qglLightf( GL_LIGHT0 + i, GL_QUADRATIC_ATTENUATION,  0.00001f );
+        qglLightf( GL_LIGHT0 + i, GL_LINEAR_ATTENUATION,  0.005f );
+        qglEnable( GL_LIGHT0 + i );
+    }
+    for( ; i < 8; i++ ) {
+        qglDisable( GL_LIGHT0 + i );
+    }
 #endif
 
     GL_Bits( GLS_DEFAULT );
@@ -261,6 +266,21 @@ void GL_SetDefaultState( void ) {
     GL_Bits( GLS_DEFAULT );
 }
 
+void GL_EnableWarp( void ) {
+    vec4_t param;
+
+    qglEnable( GL_FRAGMENT_PROGRAM_ARB );
+    qglBindProgramARB( GL_FRAGMENT_PROGRAM_ARB, gl_static.prog_warp );
+    param[0] = glr.fd.time * 0.125f;
+    param[1] = glr.fd.time * 0.125f;
+    param[2] = param[3] = 0;
+    qglProgramLocalParameter4fvARB( GL_FRAGMENT_PROGRAM_ARB, 0, param );
+}
+
+void GL_DisableWarp( void ) {
+    qglDisable( GL_FRAGMENT_PROGRAM_ARB );
+}
+
 void GL_InitPrograms( void ) {
     if( !qglProgramStringARB ) {
         return;
@@ -270,6 +290,11 @@ void GL_InitPrograms( void ) {
     qglProgramStringARB( GL_FRAGMENT_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB,
         sizeof( gl_prog_warp ) - 1, gl_prog_warp );
     //Com_Printf( "%s\n", qglGetString( GL_PROGRAM_ERROR_STRING_ARB ) );
+
+    qglGenProgramsARB( 1, &gl_static.prog_light );
+    qglBindProgramARB( GL_FRAGMENT_PROGRAM_ARB, gl_static.prog_light );
+    qglProgramStringARB( GL_FRAGMENT_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB,
+        sizeof( gl_prog_light ) - 1, gl_prog_light );
 
     GL_ShowErrors( __func__ );
 }

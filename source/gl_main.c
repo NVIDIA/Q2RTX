@@ -71,6 +71,8 @@ cvar_t *gl_fullbright;
 cvar_t *gl_hwgamma;
 cvar_t *gl_fullscreen;
 cvar_t *gl_showerrors;
+cvar_t *gl_fragment_program;
+cvar_t *gl_vertex_buffer_object;
 
 static void GL_SetupFrustum( void ) {
     cplane_t *f;
@@ -706,6 +708,8 @@ static void GL_Register( void ) {
 #endif
     gl_fullbright = cvar.Get( "r_fullbright", "0", CVAR_CHEAT );
     gl_showerrors = cvar.Get( "gl_showerrors", "1", 0 );
+    gl_fragment_program = cvar.Get( "gl_fragment_program", "0", 0 );
+    gl_vertex_buffer_object = cvar.Get( "gl_vertex_buffer_object", "1", 0 );
     
 	cmd.AddCommand( "screenshot", GL_ScreenShot_f );
 #if USE_JPEG
@@ -730,6 +734,8 @@ static void GL_Unregister( void ) {
 	cmd.RemoveCommand( "strings" );
 }
 
+#define GPA( x )    do { q ## x = ( void * )qglGetProcAddress( #x ); } while( 0 )
+
 static qboolean GL_SetupExtensions( void ) {
 	const char *extensions;
     int integer;
@@ -738,8 +744,8 @@ static qboolean GL_SetupExtensions( void ) {
 	extensions = gl_config.extensionsString;
 	if( strstr( extensions, "GL_EXT_compiled_vertex_array" ) ) {
 		Com_Printf( "...enabling GL_EXT_compiled_vertex_array\n" );
-	    qglLockArraysEXT = ( PFNGLLOCKARRAYSEXTPROC )qwglGetProcAddress( "glLockArraysEXT" );
-	    qglUnlockArraysEXT = ( PFNGLUNLOCKARRAYSEXTPROC )qwglGetProcAddress( "glUnlockArraysEXT" );
+	    GPA( glLockArraysEXT );
+	    GPA( glUnlockArraysEXT );
 	} else {
 		Com_Printf( "GL_EXT_compiled_vertex_array not found\n" );
     }
@@ -749,8 +755,8 @@ static qboolean GL_SetupExtensions( void ) {
         qglGetIntegerv( GL_MAX_TEXTURE_UNITS_ARB, &integer );
         if( integer > 1 ) {
             Com_Printf( "...enabling GL_ARB_multitexture (%d texture units)\n", integer );
-            qglActiveTextureARB = ( PFNGLACTIVETEXTUREARBPROC )qwglGetProcAddress( "glActiveTextureARB" );
-            qglClientActiveTextureARB = ( PFNGLCLIENTACTIVETEXTUREARBPROC )qwglGetProcAddress( "glClientActiveTextureARB" );
+            GPA( glActiveTextureARB );
+            GPA( glClientActiveTextureARB );
             if( integer > MAX_TMUS ) {
                 integer = MAX_TMUS;
             }
@@ -779,14 +785,40 @@ static qboolean GL_SetupExtensions( void ) {
     }
 
 	if( strstr( extensions, "GL_ARB_fragment_program" ) ) {
-		Com_Printf( "...enabling GL_ARB_fragment_program\n" );
-        qglProgramStringARB = ( PFNGLPROGRAMSTRINGARBPROC )qwglGetProcAddress( "glProgramStringARB" );
-        qglBindProgramARB = ( PFNGLBINDPROGRAMARBPROC )qwglGetProcAddress( "glBindProgramARB" );
-        qglDeleteProgramsARB = ( PFNGLDELETEPROGRAMSARBPROC )qwglGetProcAddress( "glDeleteProgramsARB" );
-        qglGenProgramsARB = ( PFNGLGENPROGRAMSARBPROC )qwglGetProcAddress( "glGenProgramsARB" );
-        qglProgramLocalParameter4fvARB = ( PFNGLPROGRAMLOCALPARAMETER4FVARBPROC )qwglGetProcAddress( "glProgramLocalParameter4fvARB" );
+        if( gl_fragment_program->integer ) {
+            Com_Printf( "...enabling GL_ARB_fragment_program\n" );
+            GPA( glProgramStringARB );
+            GPA( glBindProgramARB );
+            GPA( glDeleteProgramsARB ); 
+            GPA( glGenProgramsARB );
+            GPA( glProgramEnvParameter4fvARB );
+            GPA( glProgramLocalParameter4fvARB );
+        } else {
+            Com_Printf( "...ignoring GL_ARB_fragment_program\n" );
+        }
 	} else {
 		Com_Printf( "GL_ARB_fragment_program not found\n" );
+    }
+
+	if( strstr( extensions, "GL_ARB_vertex_buffer_object" ) ) {
+        if( gl_vertex_buffer_object->integer ) {
+            Com_Printf( "...enabling GL_ARB_vertex_buffer_object\n" );
+            GPA( glBindBufferARB );
+            GPA( glDeleteBuffersARB );
+            GPA( glGenBuffersARB );
+            GPA( glIsBufferARB );
+            GPA( glBufferDataARB );
+            GPA( glBufferSubDataARB );
+            GPA( glGetBufferSubDataARB );
+            GPA( glMapBufferARB );
+            GPA( glUnmapBufferARB );
+            GPA( glGetBufferParameterivARB );
+            GPA( glGetBufferPointervARB );
+        } else {
+            Com_Printf( "...ignoring GL_ARB_vertex_buffer_object\n" );
+        }
+	} else {
+		Com_Printf( "GL_ARB_vertex_buffer_object not found\n" );
     }
 
 	if( !qglActiveTextureARB ) {
@@ -800,6 +832,8 @@ static qboolean GL_SetupExtensions( void ) {
 
 	return qtrue;
 }
+
+#undef GPA
 
 static void GL_IdentifyRenderer( void ) {
     char renderer_buffer[MAX_STRING_CHARS];
@@ -906,6 +940,18 @@ fail:
     return qfalse;
 }
 
+static void GL_FreeWorld( void ) {
+    GLuint buf = 1;
+
+    Bsp_FreeWorld();
+
+    if( !gl_static.vbo && qglDeleteBuffersARB ) {
+        qglDeleteBuffersARB( 1, &buf );
+    }
+    
+    gl_static.vbo = NULL;
+}
+
 /*
 ===============
 R_Shutdown
@@ -914,7 +960,7 @@ R_Shutdown
 void GL_Shutdown( qboolean total ) {
 	Com_DPrintf( "GL_Shutdown( %i )\n", total );
 
-    Bsp_FreeWorld();
+    GL_FreeWorld();
 	GL_ShutdownImages();
     GL_ShutdownModels();
 
@@ -945,7 +991,6 @@ void GL_BeginRegistration( const char *name ) {
     bspTexinfo_t *texinfo, *lastexinfo;
 	bspLeaf_t *leaf, *lastleaf;
 	bspNode_t *node, *lastnode;
-    int i;
 
 	gl_static.registering = qtrue;
     registration_sequence++;
@@ -955,37 +1000,31 @@ void GL_BeginRegistration( const char *name ) {
     
 	Com_sprintf( fullname, sizeof( fullname ), "maps/%s.bsp", name );
    
-	/* check if the required world model was already loaded */
+	// check if the required world model was already loaded
     if( !strcmp( r_world.name, fullname ) &&
         !cvar.VariableInteger( "flushmap" ) )
     {
 		lastexinfo = r_world.texinfos + r_world.numTexinfos;
-        for( texinfo = r_world.texinfos; texinfo != lastexinfo; texinfo++ ) {
+        for( texinfo = r_world.texinfos; texinfo < lastexinfo; texinfo++ ) {
             texinfo->image->registration_sequence = registration_sequence;
         }
 		lastleaf = r_world.leafs + r_world.numLeafs;
-	    for( leaf = r_world.leafs; leaf != lastleaf; leaf++ ) {
+	    for( leaf = r_world.leafs; leaf < lastleaf; leaf++ ) {
             leaf->visframe = 0;
         }
 		lastnode = r_world.nodes + r_world.numNodes;
-	    for( node = r_world.nodes; node != lastnode; node++ ) {
+	    for( node = r_world.nodes; node < lastnode; node++ ) {
             node->visframe = 0;
         }
-        for( i = 0; i < lm.numMaps; i++ ) {
-            lm.lightmaps[i]->registration_sequence = registration_sequence;
-        }
-		Com_DPrintf( "GL_BeginRegistration: reused old world model\n" );
+		Com_DPrintf( "%s: reused old world model\n", __func__ );
         return;
     }
      
-    Bsp_FreeWorld();
-    GL_BeginPostProcessing();
-    
-    if( !Bsp_LoadWorld( fullname ) ) {
-        Com_Error( ERR_DROP, "Couldn't load '%s'\n", fullname );
-    }
-    
-    GL_EndPostProcessing();
+    // free previous model, if any
+    GL_FreeWorld();
+
+    // load fresh world model
+    Bsp_LoadWorld( fullname );
 }
 
 void GL_EndRegistration( void ) {

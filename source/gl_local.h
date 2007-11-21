@@ -36,14 +36,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  * 
  */
 
-#define MAX_TMUS        3
+#define MAX_TMUS        2
 
 typedef struct {
     int numTextureUnits;
     int maxTextureSize;
 	qboolean registering;
 	uint32 palette[256]; /* cinematic palette */
-    GLuint prog_warp;
+    GLuint prog_warp, prog_light;
+    vec_t *vbo;
 } glStatic_t;
 
 typedef struct {
@@ -174,13 +175,6 @@ typedef struct model_s {
 /* xyz[3] + st[2] + lmst[2] */
 #define VERTEX_SIZE 7
 
-typedef struct bspPoly_s {
-    struct bspPoly_s *next;
-    int numVerts;
-    int numIndices;
-    vec_t vertices[VERTEX_SIZE];
-} bspPoly_t;
-
 void GL_InitModels( void );
 void GL_ShutdownModels( void );
 void GL_GetModelSize( qhandle_t hModel, vec3_t mins, vec3_t maxs );
@@ -194,10 +188,10 @@ void Model_FreeAll( void );
  * gl_surf.c
  * 
  */
-#define LM_BITS 5
-#define LM_MAX_LIGHTMAPS    ( 1 << LM_BITS )
-#define LM_BLOCK_WIDTH  256
-#define LM_BLOCK_HEIGHT 256
+#define LM_MAX_LIGHTMAPS    32
+#define LM_BLOCK_WIDTH      256
+#define LM_BLOCK_HEIGHT     256
+#define LM_TEXNUM			( MAX_RIMAGES + 2 )
 
 #define NOLIGHT_MASK \
     (SURF_SKY|SURF_WARP|SURF_TRANS33|SURF_TRANS66)
@@ -205,13 +199,13 @@ void Model_FreeAll( void );
 typedef struct {
     int inuse[LM_BLOCK_WIDTH];
     byte buffer[LM_BLOCK_WIDTH * LM_BLOCK_HEIGHT * 4];
-    image_t *lightmaps[LM_MAX_LIGHTMAPS];
     int numMaps;
+    int highWater;
 } lightmapBuilder_t;
 
 extern lightmapBuilder_t lm;
 
-int GL_PostProcessSurface( bspSurface_t *surf );
+void GL_PostProcessSurface( bspSurface_t *surf );
 void GL_BeginPostProcessing( void );
 void GL_EndPostProcessing( void );
 
@@ -258,6 +252,8 @@ void GL_Setup3D( void );
 void GL_SetDefaultState( void );
 void GL_InitPrograms( void );
 void GL_ShutdownPrograms( void );
+void GL_EnableWarp( void );
+void GL_DisableWarp( void );
 
 
 /*
@@ -335,19 +331,14 @@ qhandle_t R_RegisterPic( const char *name );
 #define TESS_MAX_INDICES    ( 3 * TESS_MAX_VERTICES )
 
 typedef struct {
-	int dlightbits;
-    int numVertices;
-    int numIndices;
-    int numFaces;
     vec_t vertices[4*TESS_MAX_VERTICES];
-    vec_t normals[4*TESS_MAX_VERTICES];
     byte colors[4*TESS_MAX_VERTICES];
     tcoord_t tcoords[TESS_MAX_VERTICES];
-    tcoord_t lmtcoords[TESS_MAX_VERTICES];
     int indices[TESS_MAX_INDICES];
-    bspSurface_t *faces[TESS_MAX_FACES];
-    int texnum;
-	qboolean istrans;
+    int texnum[MAX_TMUS];
+    int numVertices;
+    int numIndices;
+	int flags;
 } tesselator_t;
 
 extern tesselator_t tess;
@@ -357,12 +348,16 @@ void EndSurface_Single( void );
 
 void Tess_DrawSurfaceTriangles( int *indices, int numIndices );
 
-void GL_DrawSurf( bspSurface_t *surf );
 void GL_StretchPic( float x, float y, float w, float h,
         float s1, float t1, float s2, float t2, const byte *color, image_t *image );
 void GL_Flush2D( void );
 void GL_DrawParticles( void );
 void GL_DrawBeams( void );
+
+void GL_AddFace( bspSurface_t *face );
+void GL_AddSolidFace( bspSurface_t *face );
+void GL_DrawAlphaFaces( void );
+void GL_DrawSolidFaces( void );
 
 /*
  * gl_world.c
@@ -374,7 +369,6 @@ void GL_MarkLeaves( void );
 void GL_MarkLights( void );
 void GL_DrawBspModel( bspSubmodel_t *model );
 void GL_DrawWorld( void );
-void GL_DrawAlphaFaces( void );
 void GL_LightPoint( vec3_t origin, vec3_t dest );
 
 /*

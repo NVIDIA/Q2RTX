@@ -1233,9 +1233,6 @@ static void R_ImageList_f( void ) {
 		case it_sky:
 			Com_Printf( "Y" );
 			break;
-		case it_lightmap:
-			Com_Printf( "L" );
-			break;
 		case it_charset:
 			Com_Printf( "C" );
 			break;
@@ -1739,6 +1736,7 @@ will be freed.
 */
 void R_FreeUnusedImages( void ) {
 	image_t	*image, *last;
+    int count = 0;
 
 	last = r_images + r_numImages;
 	for( image = r_images; image != last; image++ ) {
@@ -1753,10 +1751,7 @@ void R_FreeUnusedImages( void ) {
 		if( image->type == it_pic || image->type == it_charset )
 			continue;		// don't free pics
 		if( image->flags & if_auto ) {
-			if( image->type != it_lightmap ) {
-				continue;	// never free r_notexture or particle texture
-							// always free lightmaps
-			}
+			continue;	    // don't free auto textures
 		}
 
 		// delete it from hash table
@@ -1766,12 +1761,15 @@ void R_FreeUnusedImages( void ) {
 		R_FreeImage( image );
 
         memset( image, 0, sizeof( *image ) );
+        count++;
 	}
+
+	Com_DPrintf( "%s: %i images freed\n", __func__, count );
 }
 
 void R_FreeAllImages( void ) {
 	image_t *image, *last;
-    int i;
+    int i, count = 0;
 	
 	last = r_images + r_numImages;
 	for( image = r_images; image != last; image++ ) {
@@ -1781,9 +1779,10 @@ void R_FreeAllImages( void ) {
 		R_FreeImage( image );
 		
         memset( image, 0, sizeof( *image ) );
+        count++;
 	}
 
-	Com_DPrintf( "R_FreeAllImages: %i images freed\n", r_numImages );
+	Com_DPrintf( "%s: %i images freed\n", __func__, count );
 	
 	r_numImages = 0;
     for( i = 0; i < RIMAGES_HASH; i++ ) {

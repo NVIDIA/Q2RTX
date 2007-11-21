@@ -60,8 +60,7 @@ typedef enum {
 	if_scrap		= ( 1 << 2 ),
 	if_replace_wal  = ( 1 << 3 ),
 	if_replace_pcx  = ( 1 << 4 ),
-	if_auto         = ( 1 << 5 ),
-	if_charset		= ( 1 << 6 )
+	if_auto         = ( 1 << 5 )
 } imageflags_t;
 
 typedef enum {
@@ -70,7 +69,6 @@ typedef enum {
 	it_wall,
 	it_pic,
 	it_sky,
-	it_lightmap,
 	it_charset
 } imagetype_t;
 
@@ -178,7 +176,7 @@ typedef struct bspTexinfo_s {
 	uint32 flags;
 	vec3_t axis[2];
 #ifdef OPENGL_RENDERER
-    vec3_t normalizedAxis[2];
+//    vec3_t normalizedAxis[2];
 #endif
 	vec2_t offset;
 	int numFrames;
@@ -191,7 +189,7 @@ typedef enum {
     DSURF_POLY,
     DSURF_WARP,
     DSURF_NOLM,
-    DSURF_MESH,
+    DSURF_SKY,
 
     DSURF_NUM_TYPES
 } drawSurfType_t;
@@ -222,14 +220,18 @@ typedef struct bspSurface_s {
 	int extents[2];
 
 #ifdef OPENGL_RENDERER
-    struct bspPoly_s *polys;
-
-    int lightmapnum;
+    int texnum[2];
+    int texflags;
+    
+    int firstVert;
+    int numVerts; // FIXME: duplicates numSurfEdges
+    int numIndices;
     
 	int drawframe;	
     int dlightframe;
     int dlightbits;
-	int testframe;
+
+    vec_t *vertices; // used for sky surfaces only
 
 	struct bspSurface_s *next;
 #endif
@@ -237,7 +239,7 @@ typedef struct bspSurface_s {
 
 typedef struct bspNode_s {
 /* ======> */
-	cplane_t *plane; /* should never be NULL for nodes */
+	cplane_t *plane; // never NULL
 	int index;
 	
 	vec3_t mins;
@@ -256,7 +258,7 @@ typedef struct bspNode_s {
 
 typedef struct bspLeaf_s {
 /* ======> */
-	cplane_t *plane;	/* should always be NULL for leafs */
+	cplane_t *plane;	// always NULL
 	int index;
 	
 	vec3_t mins;
@@ -345,13 +347,14 @@ typedef struct bspModel_s {
 extern bspModel_t   r_world;
 
 void Bsp_FreeWorld( void );
-qboolean Bsp_LoadWorld( const char *path );
+void Bsp_LoadWorld( const char *path );
 bspLeaf_t *Bsp_FindLeaf( vec3_t origin );
 byte *Bsp_ClusterPVS( int clusterNum );
 
 #ifdef OPENGL_RENDERER
 extern bspTexinfo_t *upload_texinfo;
-int GL_PostProcessSurface( bspSurface_t *surf );
+void GL_BeginPostProcessing( void );
+void GL_EndPostProcessing( void );
 #endif
 
 #ifdef BIGENDIAN_TARGET

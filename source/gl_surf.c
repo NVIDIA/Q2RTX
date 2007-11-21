@@ -26,8 +26,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 lightmapBuilder_t lm;
 
-static cvar_t *gl_coloredlightmaps;
-static cvar_t *gl_brightness;
+static cvar_t   *gl_coloredlightmaps;
+static cvar_t   *gl_brightness;
 
 cvar_t *gl_modulate_hack;
 
@@ -85,20 +85,22 @@ static void LM_InitBlock( void ) {
 }
 
 static void LM_UploadBlock( void ) {
-    /* lightmap images would be automatically freed
-	 * by R_FreeUnusedImages on next level load */
-    lm.lightmaps[lm.numMaps] = R_CreateImage( va( "*lightmap%d", lm.numMaps ),
-        lm.buffer, LM_BLOCK_WIDTH, LM_BLOCK_HEIGHT, it_lightmap, if_auto );
+    int comp = colorScale ? GL_RGB : GL_LUMINANCE;
+
+    qglBindTexture( GL_TEXTURE_2D, LM_TEXNUM + lm.numMaps );
+	qglTexImage2D( GL_TEXTURE_2D, 0, comp, LM_BLOCK_WIDTH, LM_BLOCK_HEIGHT, 0,
+        GL_RGBA, GL_UNSIGNED_BYTE, lm.buffer );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-    lm.numMaps++;
+
+    if( lm.highWater < ++lm.numMaps ) {
+        lm.highWater = lm.numMaps;
+    }
 }
 
-static int LM_BuildSurfaceLightmap( bspSurface_t *surf ) {
+static void LM_BuildSurfaceLightmap( bspSurface_t *surf, vec_t *vbo ) {
     byte *ptr, *dst, *src;
     int i, j;
-    bspPoly_t *poly;
-    vec_t *vert;
     int smax, tmax, s, t;
     
     smax = ( surf->extents[0] >> 4 ) + 1;
@@ -107,13 +109,12 @@ static int LM_BuildSurfaceLightmap( bspSurface_t *surf ) {
     if( !LM_AllocBlock( smax, tmax, &s, &t ) ) {
         LM_UploadBlock();
         if( lm.numMaps == LM_MAX_LIGHTMAPS ) {
-            Com_EPrintf( "LM_MAX_LIGHTMAPS exceeded\n" );
-            return -1;
+            Com_Error( ERR_DROP, "%s: LM_MAX_LIGHTMAPS exceeded\n", __func__ );
         }
         LM_InitBlock();
         if( !LM_AllocBlock( smax, tmax, &s, &t ) ) {
-            Com_EPrintf( "LM_AllocBlock( %d, %d ) failed\n", smax, tmax );
-            return -1;
+            Com_Error( ERR_DROP, "%s: LM_AllocBlock( %d, %d ) failed\n",
+                __func__, smax, tmax );
         }
     }
     
@@ -187,22 +188,18 @@ static int LM_BuildSurfaceLightmap( bspSurface_t *surf ) {
         dst += LM_BLOCK_WIDTH * 4;
     }
     
-    surf->lightmapnum = lm.numMaps;
+    surf->texnum[1] = LM_TEXNUM + lm.numMaps;
 
     s = ( s << 4 ) + 8;
     t = ( t << 4 ) + 8;
 
-    poly = surf->polys;
-    vert = poly->vertices;
-    for( i = 0; i < poly->numVerts; i++ ) {
-        vert[5] = vert[3] - surf->texturemins[0] + s;
-        vert[6] = vert[4] - surf->texturemins[1] + t;
-        vert[5] /= LM_BLOCK_WIDTH * 16;
-        vert[6] /= LM_BLOCK_HEIGHT * 16;
-        vert += VERTEX_SIZE;
+    for( i = 0; i < surf->numVerts; i++ ) {
+        vbo[5] += s - surf->texturemins[0]; 
+        vbo[6] += t - surf->texturemins[1];
+        vbo[5] /= LM_BLOCK_WIDTH * 16;
+        vbo[6] /= LM_BLOCK_HEIGHT * 16;
+        vbo += VERTEX_SIZE;
     }
-
-    return 0;
 }
 
 /*
@@ -213,62 +210,25 @@ POLYGONS BUILDING
 =============================================================================
 */
 
-static void GL_CalcSurfaceExtents( bspSurface_t *surf ) {
-	vec2_t mins, maxs;
-    int bmins[2], bmaxs[2];
-	int i;
-    bspPoly_t *poly = surf->polys;
-    vec_t *vert;
-
-	mins[0] = mins[1] = 99999;
-	maxs[0] = maxs[1] = -99999;
-
-    vert = poly->vertices;
-	for( i = 0; i < poly->numVerts; i++ ) {
-		if( mins[0] > vert[3] ) mins[0] = vert[3];
-		if( maxs[0] < vert[3] ) maxs[0] = vert[3];
-		
-		if( mins[1] > vert[4] ) mins[1] = vert[4];
-		if( maxs[1] < vert[4] ) maxs[1] = vert[4];
-
-		vert += VERTEX_SIZE;
-	}
-
-    bmins[0] = floor( mins[0] / 16 );
-    bmins[1] = floor( mins[1] / 16 );
-    bmaxs[0] = ceil( maxs[0] / 16 );
-    bmaxs[1] = ceil( maxs[1] / 16 );
-
-	surf->texturemins[0] = bmins[0] << 4;
-	surf->texturemins[1] = bmins[1] << 4;
-
-	surf->extents[0] = ( bmaxs[0] - bmins[0] ) << 4;
-	surf->extents[1] = ( bmaxs[1] - bmins[1] ) << 4;
-    
-}
-
-static int GL_BuildSurfacePoly( bspSurface_t *surf ) {
+static void GL_BuildSurfacePoly( bspSurface_t *surf, vec_t *vbo ) {
 	int *src_surfedge;
 	dvertex_t *src_vert;
 	dedge_t *src_edge;
-	vec_t *dst_vert;
-	bspTexinfo_t *texinfo;
-	bspPoly_t *poly;
-	int i;
+	bspTexinfo_t *texinfo = surf->texinfo;
 	int index, vertIndex;
-    int numEdges = surf->numSurfEdges;
+    int i, numEdges = surf->numSurfEdges;
+    vec2_t scale, tc, mins, maxs;
+    int bmins[2], bmaxs[2];
 	
-	poly = sys.HunkAlloc( &r_world.pool, sizeof( *poly ) +
-            sizeof( vec_t ) * VERTEX_SIZE * ( numEdges - 1 ) );
-	poly->next = NULL;
-	poly->numVerts = numEdges;
-	poly->numIndices = ( numEdges - 2 ) * 3;
-    surf->polys = poly;
+	surf->numVerts = numEdges;
+	surf->numIndices = ( numEdges - 2 ) * 3;
+    surf->texnum[0] = texinfo->image->texnum;
+    surf->texflags = texinfo->flags;
 
-	texinfo = surf->texinfo;
     if( texinfo->flags & SURF_WARP ) {
         if( qglProgramStringARB ) {
             surf->type = DSURF_WARP;
+            surf->texnum[1] = r_warptexture->texnum;
         } else {
 		    surf->type = DSURF_NOLM;
         }
@@ -277,9 +237,19 @@ static int GL_BuildSurfacePoly( bspSurface_t *surf ) {
 	} else {
 		surf->type = DSURF_POLY;
 	}
-    
+
+    // normalize texture coordinates
+    scale[0] = 1.0f / texinfo->image->width;
+    scale[1] = 1.0f / texinfo->image->height;
+    if( surf->type == DSURF_WARP ) {
+        scale[0] *= 0.5f;
+        scale[1] *= 0.5f;
+    }
+
+	mins[0] = mins[1] = 99999;
+	maxs[0] = maxs[1] = -99999;
+
 	src_surfedge = surf->firstSurfEdge;
-	dst_vert = poly->vertices;
 	for( i = 0; i < numEdges; i++ ) {
 		index = *src_surfedge++;
 		
@@ -290,86 +260,101 @@ static int GL_BuildSurfacePoly( bspSurface_t *surf ) {
 		}
 
 		if( index >= r_world.numEdges ) {
-			return -1;
+            Com_Error( ERR_DROP, "%s: bad edge index", __func__ );
+		}
+
+		src_edge = r_world.edges + index;
+		src_vert = r_world.vertices + src_edge->v[vertIndex];
+
+        // vertex coordinates
+		VectorCopy( src_vert->point, vbo );
+		
+		// texture0 coordinates
+		tc[0] = DotProduct( vbo, texinfo->axis[0] ) + texinfo->offset[0];
+		tc[1] = DotProduct( vbo, texinfo->axis[1] ) + texinfo->offset[1];
+
+		if( mins[0] > tc[0] ) mins[0] = tc[0];
+		if( maxs[0] < tc[0] ) maxs[0] = tc[0];
+		
+		if( mins[1] > tc[1] ) mins[1] = tc[1];
+		if( maxs[1] < tc[1] ) maxs[1] = tc[1];
+
+        vbo[3] = tc[0] * scale[0];
+        vbo[4] = tc[1] * scale[1];
+
+        // texture1 coordinates
+        if( surf->type == DSURF_WARP ) {
+            vbo[5] = vbo[3];
+            vbo[6] = vbo[4];
+        } else {
+            vbo[5] = tc[0];
+            vbo[6] = tc[1];
+        }
+
+		vbo += VERTEX_SIZE;
+	}
+
+    // calculate surface extents
+    bmins[0] = floor( mins[0] / 16 );
+    bmins[1] = floor( mins[1] / 16 );
+    bmaxs[0] = ceil( maxs[0] / 16 );
+    bmaxs[1] = ceil( maxs[1] / 16 );
+
+	surf->texturemins[0] = bmins[0] << 4;
+	surf->texturemins[1] = bmins[1] << 4;
+
+	surf->extents[0] = ( bmaxs[0] - bmins[0] ) << 4;
+	surf->extents[1] = ( bmaxs[1] - bmins[1] ) << 4;
+}
+
+static void GL_BuildSkyPoly( bspSurface_t *surf ) {
+	int *src_surfedge;
+	dvertex_t *src_vert;
+	dedge_t *src_edge;
+	bspTexinfo_t *texinfo = surf->texinfo;
+	int index, vertIndex;
+    int i, numEdges = surf->numSurfEdges;
+    vec_t *dst_vert;
+	
+	surf->numVerts = numEdges;
+	surf->numIndices = ( numEdges - 2 ) * 3;
+    surf->texnum[0] = texinfo->image->texnum;
+    surf->texflags = texinfo->flags;
+	surf->type = DSURF_SKY;
+
+    surf->vertices = sys.HunkAlloc( &r_world.pool,
+        numEdges * 3 * sizeof( vec_t ) );
+
+	src_surfedge = surf->firstSurfEdge;
+    dst_vert = surf->vertices;
+	for( i = 0; i < numEdges; i++ ) {
+		index = *src_surfedge++;
+		
+		vertIndex = 0;
+		if( index < 0 ) {
+			index = -index;
+			vertIndex = 1;
+		}
+
+		if( index >= r_world.numEdges ) {
+            Com_Error( ERR_DROP, "%s: bad edge index", __func__ );
 		}
 
 		src_edge = r_world.edges + index;
 		src_vert = r_world.vertices + src_edge->v[vertIndex];
 
 		VectorCopy( src_vert->point, dst_vert );
-		
-		/* texture coordinates */
-		dst_vert[3] = DotProduct( dst_vert, texinfo->axis[0] ) + texinfo->offset[0];
-		dst_vert[4] = DotProduct( dst_vert, texinfo->axis[1] ) + texinfo->offset[1];
 
-        /* lightmap coordinates */
-        dst_vert[5] = 0;
-        dst_vert[6] = 0;
-
-		dst_vert += VERTEX_SIZE;
+		dst_vert += 3;
 	}
-
-    return 0;
-
-}
-
-static void GL_NormalizeSurfaceTexcoords( bspSurface_t *surf ) {
-    bspTexinfo_t *texinfo = surf->texinfo;
-    bspPoly_t *poly = surf->polys;
-    vec_t *vert;
-    vec2_t scale;
-    int i;
-
-    scale[0] = 1.0f / texinfo->image->width;
-    scale[1] = 1.0f / texinfo->image->height;
-    if( texinfo->flags & SURF_WARP && qglBindProgramARB ) {
-        scale[0] *= 0.5f;
-        scale[1] *= 0.5f;
-    }
-
-    vert = poly->vertices;
-    for( i = 0; i < poly->numVerts; i++ ) {
-        vert[3] *= scale[0];
-        vert[4] *= scale[1];
-        vert += VERTEX_SIZE;;
-    }
-}
-
-int GL_PostProcessSurface( bspSurface_t *surf ) {
-	bspTexinfo_t *texinfo = surf->texinfo;
-    
-    if( GL_BuildSurfacePoly( surf ) ) {
-        return -1;
-    }
-    GL_CalcSurfaceExtents( surf );
-
-    if( surf->type == DSURF_POLY ) {
-        if( LM_BuildSurfaceLightmap( surf ) ) {
-            return -1;
-        }
-    }
-    
-    if( !( texinfo->flags & SURF_SKY ) ) {
-        GL_NormalizeSurfaceTexcoords( surf );
-    }
-    
-    return 0;
 }
 
 void GL_BeginPostProcessing( void ) {
-    int i;
-
-    for( i = 0; i < LM_MAX_LIGHTMAPS; i++ ) {
-        lm.lightmaps[i] = NULL;
-    }
     lm.numMaps = 0;
-
     LM_InitBlock();
 
-	gl_coloredlightmaps = cvar.Get( "gl_coloredlightmaps", "1",
-        CVAR_ARCHIVE|CVAR_LATCHED );
-	gl_brightness = cvar.Get( "gl_brightness", "0",
-        CVAR_ARCHIVE|CVAR_LATCHED );
+	gl_coloredlightmaps = cvar.Get( "gl_coloredlightmaps", "1", CVAR_ARCHIVE|CVAR_LATCHED );
+	gl_brightness = cvar.Get( "gl_brightness", "0", CVAR_ARCHIVE|CVAR_LATCHED );
 	gl_modulate_hack = cvar.Get( "gl_modulate_hack", "0", CVAR_LATCHED );
 
 	if( gl_coloredlightmaps->value < 0 ) {
@@ -389,8 +374,65 @@ void GL_BeginPostProcessing( void ) {
 }
     
 void GL_EndPostProcessing( void ) {
-    int i;
+    bspSurface_t *surf;
+    int i, size, count;
+    vec_t *vbo = NULL;
+   
+    // calculate vertex buffer size in bytes
+    count = 0;
+    for( i = 0, surf = r_world.surfaces; i < r_world.numSurfaces; i++, surf++ ) {
+        count += surf->numSurfEdges;
+    }
+    size = count * VERTEX_SIZE * 4;
+
+    if( qglBindBufferARB ) {
+        qglBindBufferARB( GL_ARRAY_BUFFER_ARB, 1 );
+        
+        qglBufferDataARB( GL_ARRAY_BUFFER_ARB, size, NULL, GL_STATIC_DRAW_ARB );
+
+        GL_ShowErrors( __func__ );
+
+        vbo = qglMapBufferARB( GL_ARRAY_BUFFER_ARB, GL_READ_WRITE_ARB );
+        qglBindBufferARB( GL_ARRAY_BUFFER_ARB, 0 );
+        if( vbo ) {
+            gl_static.vbo = NULL;
+            Com_DPrintf( "%d bytes of vertex data as VBO\n", size );
+        } else {
+            Com_EPrintf( "Failed to map VBO in client memory" );
+        }
+    }
     
+    if( !vbo ) {
+        vbo = sys.HunkAlloc( &r_world.pool, size );
+        gl_static.vbo = vbo;
+        Com_DPrintf( "%d bytes of vertex data on hunk\n", size );
+    }
+
+    // post process all surfaces
+    count = 0;
+    for( i = 0, surf = r_world.surfaces; i < r_world.numSurfaces; i++, surf++ ) {
+        if( ( surf->texinfo->flags & SURF_SKY ) && !gl_fastsky->integer ) {
+            GL_BuildSkyPoly( surf );
+            continue;
+        }
+        surf->firstVert = count;
+        GL_BuildSurfacePoly( surf, vbo );
+
+        if( surf->type == DSURF_POLY ) {
+            LM_BuildSurfaceLightmap( surf, vbo );
+        }
+
+        count += surf->numVerts;
+        vbo += surf->numVerts * VERTEX_SIZE;
+    }
+    
+    if( qglBindBufferARB ) {
+        qglBindBufferARB( GL_ARRAY_BUFFER_ARB, 1 );
+        qglUnmapBufferARB( GL_ARRAY_BUFFER_ARB );
+        qglBindBufferARB( GL_ARRAY_BUFFER_ARB, 0 );
+    }
+
+    // upload the last lightmap
     for( i = 0; i < LM_BLOCK_WIDTH; i++ ) {
         if( lm.inuse[i] ) {
             LM_UploadBlock();
@@ -400,5 +442,4 @@ void GL_EndPostProcessing( void ) {
 
     Com_DPrintf( "%d lightmaps built\n", lm.numMaps );
 }
-
 

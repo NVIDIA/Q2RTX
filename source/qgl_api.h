@@ -370,33 +370,48 @@ extern  void ( APIENTRY * qglVertex4sv )(const GLshort *v);
 extern  void ( APIENTRY * qglVertexPointer )(GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
 extern  void ( APIENTRY * qglViewport )(GLint x, GLint y, GLsizei width, GLsizei height);
 
-extern	void ( APIENTRY * qglPointParameterfEXT)( GLenum param, GLfloat value );
-extern	void ( APIENTRY * qglPointParameterfvEXT)( GLenum param, const GLfloat *value );
-extern	void ( APIENTRY * qglColorTableEXT)( int, int, int, int, int, const void * );
+//
+// extensions
+//
 
-extern	void ( APIENTRY * qglLockArraysEXT) (int , int);
-extern	void ( APIENTRY * qglUnlockArraysEXT) (void);
+// GL_EXT_compiled_vertex_array
+extern  PFNGLLOCKARRAYSEXTPROC              qglLockArraysEXT;
+extern  PFNGLUNLOCKARRAYSEXTPROC            qglUnlockArraysEXT;
 
-extern	void ( APIENTRY * qglActiveTextureARB)( GLenum );
-extern	void ( APIENTRY * qglClientActiveTextureARB)( GLenum );
+// GL_ARB_multitexture
+extern  PFNGLACTIVETEXTUREARBPROC           qglActiveTextureARB;
+extern  PFNGLCLIENTACTIVETEXTUREARBPROC     qglClientActiveTextureARB;
 
-extern  void ( APIENTRY * qglProgramStringARB)( GLenum target, GLenum format, GLsizei len, const GLvoid *string );
-extern  void ( APIENTRY * qglBindProgramARB)( GLenum target, GLuint program );
-extern  void ( APIENTRY * qglDeleteProgramsARB)( GLsizei n, const GLuint *programs );
-extern  void ( APIENTRY * qglGenProgramsARB)( GLsizei n, GLuint *programs );
-extern  void ( APIENTRY * qglProgramLocalParameter4fvARB)( GLenum, GLuint, const GLfloat * );
+// GL_ARB_fragment_program
+extern  PFNGLPROGRAMSTRINGARBPROC               qglProgramStringARB;
+extern  PFNGLBINDPROGRAMARBPROC                 qglBindProgramARB;
+extern  PFNGLDELETEPROGRAMSARBPROC              qglDeleteProgramsARB;
+extern  PFNGLGENPROGRAMSARBPROC                 qglGenProgramsARB;
+extern  PFNGLPROGRAMENVPARAMETER4FVARBPROC      qglProgramEnvParameter4fvARB;
+extern  PFNGLPROGRAMLOCALPARAMETER4FVARBPROC    qglProgramLocalParameter4fvARB;
+
+// GL_ARB_vertex_buffer_object
+extern  PFNGLBINDBUFFERPROC                 qglBindBufferARB;
+extern  PFNGLDELETEBUFFERSPROC              qglDeleteBuffersARB;
+extern  PFNGLGENBUFFERSPROC                 qglGenBuffersARB;
+extern  PFNGLISBUFFERPROC                   qglIsBufferARB;
+extern  PFNGLBUFFERDATAPROC                 qglBufferDataARB;
+extern  PFNGLBUFFERSUBDATAPROC              qglBufferSubDataARB;
+extern  PFNGLGETBUFFERSUBDATAPROC           qglGetBufferSubDataARB;
+extern  PFNGLMAPBUFFERPROC                  qglMapBufferARB;
+extern  PFNGLUNMAPBUFFERPROC                qglUnmapBufferARB;
+extern  PFNGLGETBUFFERPARAMETERIVPROC       qglGetBufferParameterivARB;
+extern  PFNGLGETBUFFERPOINTERVPROC          qglGetBufferPointervARB;
 
 //
 // OS-specific
 //
 
 #ifdef _WIN32
-extern PROC ( WINAPI * qwglGetProcAddress )( LPCSTR );
-#elif( defined __unix__ )
-// local function in dll
-extern void *qwglGetProcAddress( const char *symbol );
+extern PROC ( WINAPI * qglGetProcAddress )( LPCSTR );
 #else
-#error Unknown target OS
+// local function in dll
+extern void *qglGetProcAddress( const char *symbol );
 #endif
 
 #endif

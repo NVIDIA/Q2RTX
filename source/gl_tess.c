@@ -22,6 +22,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 tesselator_t tess;
 
+#define FACE_HASH_SIZE  32
+#define FACE_HASH_MASK  ( FACE_HASH_SIZE - 1 )
+
+static bspSurface_t *faces_alpha, *faces_warp, *faces_alpha_warp;
+static bspSurface_t *faces_hash[FACE_HASH_SIZE];
+
 void GL_Flush2D( void ) {
 	glStateBits_t bits;
 
@@ -30,13 +36,13 @@ void GL_Flush2D( void ) {
     }
 
 	bits = GLS_DEPTHTEST_DISABLE;
-    if( tess.istrans & 2 ) {
+    if( tess.flags & 2 ) {
         bits |= GLS_BLEND_BLEND;
-    } else if( tess.istrans & 1 ) {
+    } else if( tess.flags & 1 ) {
         bits |= GLS_ALPHATEST_ENABLE;
 	}
 
-    GL_BindTexture( tess.texnum );
+    GL_BindTexture( tess.texnum[0] );
 	GL_TexEnv( GL_MODULATE );
 	GL_Bits( bits );
 
@@ -51,24 +57,25 @@ void GL_Flush2D( void ) {
 	qglDisableClientState( GL_COLOR_ARRAY );
     
 	tess.numVertices = 0;
-    tess.texnum = 0;
-	tess.istrans = 0;
+    tess.texnum[0] = 0;
+	tess.flags = 0;
 }
 
 void GL_StretchPic( float x, float y, float w, float h,
-        float s1, float t1, float s2, float t2, const byte *color, image_t *image )
+        float s1, float t1, float s2, float t2,
+        const byte *color, image_t *image )
 {
     vec_t *dst_vert;
     tcoord_t *dst_tc;
     uint32 *dst_color;
     
     if( tess.numVertices + 4 > TESS_MAX_VERTICES ||
-        ( tess.numVertices && tess.texnum != image->texnum ) )
+        ( tess.numVertices && tess.texnum[0] != image->texnum ) )
     {
         GL_Flush2D();
     }
 
-    tess.texnum = image->texnum;
+    tess.texnum[0] = image->texnum;
 
     dst_vert = tess.vertices + tess.numVertices * 4;
     VectorSet( dst_vert,      x,     y,     0 );
@@ -84,13 +91,13 @@ void GL_StretchPic( float x, float y, float w, float h,
 	
 	if( image->flags & if_transparent ) {
         if( ( image->flags & if_paletted ) && draw.scale == 1 ) {
-    		tess.istrans |= 1;
+    		tess.flags |= 1;
         } else {
-    		tess.istrans |= 2;
+    		tess.flags |= 2;
         }
 	}
 	if( color[3] != 255 ) {
-		tess.istrans |= 2;
+		tess.flags |= 2;
 	}
 
     dst_tc = tess.tcoords + tess.numVertices;
@@ -249,84 +256,175 @@ void GL_DrawBeams( void ) {
 	qglDisableClientState( GL_COLOR_ARRAY );
 }
 
-static void GL_DrawWarp( bspSurface_t *surf ) {
-	bspPoly_t *poly = surf->polys;
-    vec4_t param;
+static void GL_BindArrays( void ) {
+    vec_t *vbo = gl_static.vbo;
 
-    qglEnable( GL_FRAGMENT_PROGRAM_ARB );
-    qglBindProgramARB( GL_FRAGMENT_PROGRAM_ARB, gl_static.prog_warp );
-    param[0] = glr.fd.time * 0.125f;
-    param[1] = glr.fd.time * 0.125f;
-    param[2] = param[3] = 0;
-    qglProgramLocalParameter4fvARB( GL_FRAGMENT_PROGRAM_ARB, 0, param );
+    if( !vbo && qglBindBufferARB ) {
+        qglBindBufferARB( GL_ARRAY_BUFFER_ARB, 1 );
+    }
 
-    GL_SelectTMU( 1 );
-    qglEnable( GL_TEXTURE_2D );
-    //GL_TexEnv( GL_MODULATE );
-    GL_BindTexture( r_warptexture->texnum );
+	qglVertexPointer( 3, GL_FLOAT, 4*VERTEX_SIZE, vbo + 0 );
+	qglTexCoordPointer( 2, GL_FLOAT, 4*VERTEX_SIZE, vbo + 3 );
 
+    qglClientActiveTextureARB( GL_TEXTURE1_ARB );
 	qglEnableClientState( GL_TEXTURE_COORD_ARRAY );
-	qglTexCoordPointer( 2, GL_FLOAT, 4*VERTEX_SIZE, poly->vertices + 3 );
-
-    qglDrawArrays( GL_POLYGON, 0, poly->numVerts );
-
-    qglDisable( GL_TEXTURE_2D );
-	qglDisableClientState( GL_TEXTURE_COORD_ARRAY );
-    GL_SelectTMU( 0 );
-
-    qglDisable( GL_FRAGMENT_PROGRAM_ARB );
+	qglTexCoordPointer( 2, GL_FLOAT, 4*VERTEX_SIZE, vbo + 5 );
+    qglClientActiveTextureARB( GL_TEXTURE0_ARB );
 }
 
-void GL_DrawSurf( bspSurface_t *surf ) {
-	bspTexinfo_t *texinfo = surf->texinfo;
-	bspPoly_t *poly = surf->polys;
-    
-    if( ( texinfo->flags & SURF_SKY ) && !gl_fastsky->integer ) {
-        R_AddSkySurface( surf );
-        return;
+static void GL_UnbindArrays( void ) {
+    if( qglBindBufferARB ) {
+        qglBindBufferARB( GL_ARRAY_BUFFER_ARB, 0 );
     }
-	
-	if( texinfo->flags & (SURF_TRANS33|SURF_TRANS66) ) {
-        GL_Bits( GLS_BLEND_BLEND | GLS_DEPTHMASK_FALSE );
-		if( texinfo->flags & SURF_TRANS33 ) {
-			qglColor4f( 1, 1, 1, 0.33f );
-		} else {
-			qglColor4f( 1, 1, 1, 0.66f );
-		}
-        GL_TexEnv( GL_MODULATE );
-    } else {
-        GL_Bits( GLS_DEFAULT );
-        GL_TexEnv( GL_REPLACE );
-		qglColor4f( 1, 1, 1, 1 );
-    }
-
-	GL_BindTexture( texinfo->image->texnum );
-
-	qglVertexPointer( 3, GL_FLOAT, 4*VERTEX_SIZE, poly->vertices );
-	qglTexCoordPointer( 2, GL_FLOAT, 4*VERTEX_SIZE, poly->vertices + 3 );
-	
-    if( surf->type == DSURF_WARP ) {
-//        qglDrawArrays( GL_POLYGON, 0, poly->numVerts );
-        GL_DrawWarp( surf );
-        return;
-    }
-	
-	if( surf->type == DSURF_NOLM ) {
-        qglDrawArrays( GL_POLYGON, 0, poly->numVerts );
-		return;
-	}
-
-    GL_SelectTMU( 1 );
-    qglEnable( GL_TEXTURE_2D );
-    GL_TexEnv( GL_MODULATE );
-    GL_BindTexture( lm.lightmaps[surf->lightmapnum]->texnum );
-	qglEnableClientState( GL_TEXTURE_COORD_ARRAY );
-	qglTexCoordPointer( 2, GL_FLOAT, 4*VERTEX_SIZE, poly->vertices + 5 );
-
-    qglDrawArrays( GL_POLYGON, 0, poly->numVerts );
-
-    qglDisable( GL_TEXTURE_2D );
+    qglClientActiveTextureARB( GL_TEXTURE1_ARB );
 	qglDisableClientState( GL_TEXTURE_COORD_ARRAY );
-    GL_SelectTMU( 0 );
+    qglClientActiveTextureARB( GL_TEXTURE0_ARB );
+}
+
+static void GL_Flush3D( void ) {
+    if( !tess.numIndices ) {
+        return;
+    }
+
+    if( tess.flags & SURF_TRANS33 ) {
+        qglColor4f( 1, 1, 1, 0.33f );
+    } else if( tess.flags & SURF_TRANS66 ) {
+        qglColor4f( 1, 1, 1, 0.66f );
+    }
+
+	GL_BindTexture( tess.texnum[0] );
+
+    if( tess.texnum[1] ) {
+        GL_SelectTMU( 1 );
+        qglEnable( GL_TEXTURE_2D );
+        GL_TexEnv( GL_MODULATE );
+        GL_BindTexture( tess.texnum[1] );
+    }
+
+    qglDrawElements( GL_TRIANGLES, tess.numIndices, GL_UNSIGNED_INT, tess.indices );
+
+    if( tess.texnum[1] ) {
+        qglDisable( GL_TEXTURE_2D );
+        GL_SelectTMU( 0 );
+    }
+
+    c.batchesDrawn++;
+
+    tess.texnum[0] = tess.texnum[1] = 0;
+    tess.numIndices = 0;
+    tess.flags = 0;
+}
+
+static void GL_DrawFace( bspSurface_t *surf ) {
+    int *dst_indices;
+    int i, j = surf->firstVert;
+
+    if( tess.texnum[0] != surf->texnum[0] ||
+        tess.texnum[1] != surf->texnum[1] ||
+        ( surf->texflags ^ tess.flags ) & ( SURF_TRANS33 | SURF_TRANS66 ) ||
+        tess.numIndices + surf->numIndices > TESS_MAX_INDICES )
+    {
+        GL_Flush3D();
+    }
+
+    tess.texnum[0] = surf->texnum[0];
+    tess.texnum[1] = surf->texnum[1];
+    tess.flags = surf->texflags;
+    dst_indices = tess.indices + tess.numIndices;
+    for( i = 0; i < surf->numVerts - 2; i++ ) {
+        dst_indices[0] = j;
+        dst_indices[1] = j + ( i + 1 );
+        dst_indices[2] = j + ( i + 2 );
+        dst_indices += 3;
+    }
+    tess.numIndices += surf->numIndices;
+    c.trisDrawn += surf->numVerts - 2;
+}
+
+static inline void GL_DrawChain( bspSurface_t **head ) {
+    bspSurface_t *face;
+
+    for( face = *head; face; face = face->next ) {
+        GL_DrawFace( face ); 
+    }
+    *head = NULL;
+}
+
+void GL_DrawSolidFaces( void ) {
+    int i;
+
+    GL_BindArrays();
+
+    GL_Bits( GLS_DEFAULT );
+    GL_TexEnv( GL_REPLACE );
+    qglColor4f( 1, 1, 1, 1 );
+
+    if( faces_warp ) {
+        GL_EnableWarp();
+        GL_DrawChain( &faces_warp );
+        GL_Flush3D();
+        GL_DisableWarp();
+    }
+
+    for( i = 0; i < FACE_HASH_SIZE; i++ ) {
+        GL_DrawChain( &faces_hash[i] );
+    }
+
+    GL_Flush3D();
+    GL_UnbindArrays();
+}
+
+
+void GL_DrawAlphaFaces( void ) {
+    GL_BindArrays();
+
+    GL_Bits( GLS_BLEND_BLEND | GLS_DEPTHMASK_FALSE );
+    GL_TexEnv( GL_MODULATE );
+
+    if( faces_alpha_warp ) {
+        GL_EnableWarp();
+        GL_DrawChain( &faces_alpha_warp );
+        GL_Flush3D();
+        GL_DisableWarp();
+    }
+
+    GL_DrawChain( &faces_alpha );
+
+    GL_Flush3D();
+    GL_UnbindArrays();
+}
+
+void GL_AddSolidFace( bspSurface_t *face ) {
+    if( face->type == DSURF_WARP ) {
+        face->next = faces_warp;
+        faces_warp = face;
+    } else {
+        int i = ( face->texnum[0] ^ face->texnum[1] ) & FACE_HASH_MASK;
+        face->next = faces_hash[i];
+        faces_hash[i] = face;
+    }
+
+    c.facesDrawn++;
+}
+
+void GL_AddFace( bspSurface_t *face ) {
+    if( face->type == DSURF_SKY ) {
+        R_AddSkySurface( face );
+        return;
+    }
+
+    if( face->texflags & (SURF_TRANS33|SURF_TRANS66) ) {
+        if( face->type == DSURF_WARP ) {
+            face->next = faces_alpha_warp;
+            faces_alpha_warp = face;
+        } else {
+            face->next = faces_alpha;
+            faces_alpha = face;
+        }
+        c.facesDrawn++;
+        return;
+    }
+
+    GL_AddSolidFace( face );
 }
 

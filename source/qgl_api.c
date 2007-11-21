@@ -376,31 +376,50 @@ void ( APIENTRY * qglVertex4sv )(const GLshort *v);
 void ( APIENTRY * qglVertexPointer )(GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
 void ( APIENTRY * qglViewport )(GLint x, GLint y, GLsizei width, GLsizei height);
 
-void ( APIENTRY * qglLockArraysEXT)( int, int);
-void ( APIENTRY * qglUnlockArraysEXT) ( void );
+//
+// extensions
+//
 
-void ( APIENTRY * qglPointParameterfEXT)( GLenum param, GLfloat value );
-void ( APIENTRY * qglPointParameterfvEXT)( GLenum param, const GLfloat *value );
-void ( APIENTRY * qglColorTableEXT)( int, int, int, int, int, const void * );
+// GL_EXT_compiled_vertex_array
+PFNGLLOCKARRAYSEXTPROC              qglLockArraysEXT;
+PFNGLUNLOCKARRAYSEXTPROC            qglUnlockArraysEXT;
 
-void ( APIENTRY * qglActiveTextureARB) ( GLenum );
-void ( APIENTRY * qglClientActiveTextureARB) ( GLenum );
+// GL_ARB_multitexture
+PFNGLACTIVETEXTUREARBPROC           qglActiveTextureARB;
+PFNGLCLIENTACTIVETEXTUREARBPROC     qglClientActiveTextureARB;
 
-void ( APIENTRY * qglProgramStringARB)( GLenum target, GLenum format, GLsizei len, const GLvoid *string );
-void ( APIENTRY * qglBindProgramARB)( GLenum target, GLuint program );
-void ( APIENTRY * qglDeleteProgramsARB)( GLsizei n, const GLuint *programs );
-void ( APIENTRY * qglGenProgramsARB)( GLsizei n, GLuint *programs );
-void ( APIENTRY * qglProgramLocalParameter4fvARB)( GLenum, GLuint, const GLfloat * );
+// GL_ARB_fragment_program
+PFNGLPROGRAMSTRINGARBPROC               qglProgramStringARB;
+PFNGLBINDPROGRAMARBPROC                 qglBindProgramARB;
+PFNGLDELETEPROGRAMSARBPROC              qglDeleteProgramsARB;
+PFNGLGENPROGRAMSARBPROC                 qglGenProgramsARB;
+PFNGLPROGRAMENVPARAMETER4FVARBPROC      qglProgramEnvParameter4fvARB;
+PFNGLPROGRAMLOCALPARAMETER4FVARBPROC    qglProgramLocalParameter4fvARB;
+
+// GL_ARB_vertex_buffer_object
+PFNGLBINDBUFFERPROC                 qglBindBufferARB;
+PFNGLDELETEBUFFERSPROC              qglDeleteBuffersARB;
+PFNGLGENBUFFERSPROC                 qglGenBuffersARB;
+PFNGLISBUFFERPROC                   qglIsBufferARB;
+PFNGLBUFFERDATAPROC                 qglBufferDataARB;
+PFNGLBUFFERSUBDATAPROC              qglBufferSubDataARB;
+PFNGLGETBUFFERSUBDATAPROC           qglGetBufferSubDataARB;
+PFNGLMAPBUFFERPROC                  qglMapBufferARB;
+PFNGLUNMAPBUFFERPROC                qglUnmapBufferARB;
+PFNGLGETBUFFERPARAMETERIVPROC       qglGetBufferParameterivARB;
+PFNGLGETBUFFERPOINTERVPROC          qglGetBufferPointervARB;
+
+//
+// OS-specific
+//
 
 #ifdef _WIN32
-PROC ( WINAPI * qwglGetProcAddress )( LPCSTR );
-BOOL ( WINAPI * qwglSwapIntervalEXT )( int interval );
+PROC ( WINAPI * qglGetProcAddress )( LPCSTR );
+#else
+void *qglGetProcAddress( const char *symbol ) { return video.GetProcAddr( symbol ); }
 #endif
 
-#ifdef __unix__
-void *qwglGetProcAddress( const char *symbol ) { return video.GetProcAddr( symbol ); }
-void (*qgl3DfxSetPaletteEXT)(GLuint *);
-#endif
+// ==========================================================
 
 static void ( APIENTRY * dllAccum )(GLenum op, GLfloat value);
 static void ( APIENTRY * dllAlphaFunc )(GLenum func, GLclampf ref);
@@ -2632,8 +2651,7 @@ static void APIENTRY logViewport(GLint x, GLint y, GLsizei width, GLsizei height
 **
 ** Unloads the specified DLL then nulls out all the proc pointers.
 */
-void QGL_Shutdown( void )
-{
+void QGL_Shutdown( void ) {
 	qglAccum                     = NULL;
 	qglAlphaFunc                 = NULL;
 	qglAreTexturesResident       = NULL;
@@ -2971,10 +2989,36 @@ void QGL_Shutdown( void )
 	qglVertexPointer             = NULL;
 	qglViewport                  = NULL;
 
-#ifdef _WIN32
-	qwglGetProcAddress			= NULL;
-#endif
 
+    qglLockArraysEXT             = NULL;
+    qglUnlockArraysEXT           = NULL;
+
+    qglActiveTextureARB          = NULL;
+    qglClientActiveTextureARB    = NULL;
+
+    qglProgramStringARB             = NULL;
+    qglBindProgramARB               = NULL;
+    qglDeleteProgramsARB            = NULL;
+    qglGenProgramsARB               = NULL;
+    qglProgramEnvParameter4fvARB    = NULL;
+    qglProgramLocalParameter4fvARB  = NULL;
+
+    qglBindBufferARB            = NULL;
+    qglDeleteBuffersARB         = NULL;
+    qglGenBuffersARB            = NULL;
+    qglIsBufferARB              = NULL;
+    qglBufferDataARB            = NULL;
+    qglBufferSubDataARB         = NULL;
+    qglGetBufferSubDataARB      = NULL;
+    qglMapBufferARB             = NULL;
+    qglUnmapBufferARB           = NULL;
+    qglGetBufferParameterivARB  = NULL;
+    qglGetBufferPointervARB     = NULL;
+
+
+#ifdef _WIN32
+	qglGetProcAddress			 = NULL;
+#endif
 }
 
 #define GPA( a )	video.GetProcAddr( a )
@@ -3328,23 +3372,13 @@ void QGL_Init( void ) {
 	qglVertexPointer             = 	dllVertexPointer             = GPA( "glVertexPointer" );
 	qglViewport                  = 	dllViewport                  = GPA( "glViewport" );
 
-	qglPointParameterfEXT = 0;
-	qglPointParameterfvEXT = 0;
-	qglColorTableEXT = 0;
-
-	qglActiveTextureARB = 0;
-	qglClientActiveTextureARB = 0;
-
-    qglProgramStringARB = 0;
-    qglBindProgramARB = 0;
-    qglDeleteProgramsARB = 0;
-    qglGenProgramsARB = 0;
-    qglProgramLocalParameter4fvARB = 0;
 
 #ifdef _WIN32
-	qwglGetProcAddress = GPA( "wglGetProcAddress" );
+	qglGetProcAddress                                           = GPA( "wglGetProcAddress" );
 #endif
 }
+
+#undef GPA
 
 void QGL_EnableLogging( qboolean enable )
 {

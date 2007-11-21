@@ -83,9 +83,7 @@ typedef struct entity_s {
 #define ENTITY_FLAGS  68
 
 typedef struct dlight_s {
-	int		index;
 	vec3_t	origin;
-	vec3_t	transformed;
 	vec3_t	color;
 	float	intensity;
 } dlight_t;

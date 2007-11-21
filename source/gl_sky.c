@@ -239,20 +239,19 @@ R_AddSkySurface
 void R_AddSkySurface( bspSurface_t *fa ) {
 	int			i;
 	vec3_t		verts[MAX_CLIP_VERTS];
-	bspPoly_t	*p;
     vec_t *vert;
 
+    if( fa->numVerts > MAX_CLIP_VERTS ) {
+        Com_Error( ERR_DROP, "%s: too many verts", __func__ );
+    }
+
 	// calculate vertex values for sky box
-	for (p=fa->polys ; p ; p=p->next)
-	{
-        vert = p->vertices;
-		for (i=0 ; i<p->numVerts ; i++)
-		{
-			VectorSubtract (vert, modelViewOrigin, verts[i]);
-            vert += VERTEX_SIZE;
-		}
-		ClipSkyPolygon (p->numVerts, verts[0], 0);
-	}
+    vert = fa->vertices;
+    for (i=0 ; i<fa->numVerts ; i++) {
+        VectorSubtract (vert, modelViewOrigin, verts[i]);
+        vert += 3;
+    }
+    ClipSkyPolygon (fa->numVerts, verts[0], 0);
 }
 
 
