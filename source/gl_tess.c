@@ -321,7 +321,7 @@ static void GL_DrawFace( bspSurface_t *surf ) {
 
     if( tess.texnum[0] != surf->texnum[0] ||
         tess.texnum[1] != surf->texnum[1] ||
-        ( surf->texflags ^ tess.flags ) & ( SURF_TRANS33 | SURF_TRANS66 ) ||
+        ( ( surf->texflags ^ tess.flags ) & ( SURF_TRANS33 | SURF_TRANS66 ) ) ||
         tess.numIndices + surf->numIndices > TESS_MAX_INDICES )
     {
         GL_Flush3D();
