@@ -1313,7 +1313,7 @@ static void CL_ConnectionlessPacket( void ) {
 		cls.netchan = Netchan_Setup( NS_CLIENT, type, &cls.serverAddress,
                 cls.quakePort, 1024, cls.serverProtocol );
 
-#ifdef USE_ANTICHEAT
+#if USE_ANTICHEAT
         if( anticheat ) {
 			MSG_WriteByte( clc_nop );
 			MSG_FlushTo( &cls.netchan->message );
@@ -1972,13 +1972,11 @@ static void CL_DumpLayout_f( void ) {
 CL_Mapname_m
 ====================
 */
-static void CL_Mapname_m( char *buffer, int bufferSize ) {
-    if ( !cl.mapname[ 0 ] ) {
-        Q_strncpyz( buffer, "nomap", bufferSize );
-        return;
+static int CL_Mapname_m( char *buffer, int bufferSize ) {
+    if( !cl.mapname[0] ) {
+        return Q_strncpyz( buffer, "nomap", bufferSize );
     }
-
-    Q_strncpyz( buffer, cl.mapname, bufferSize );
+    return Q_strncpyz( buffer, cl.mapname, bufferSize );
 }
 
 /*
@@ -1986,32 +1984,11 @@ static void CL_Mapname_m( char *buffer, int bufferSize ) {
 CL_Server_m
 ====================
 */
-static void CL_Server_m( char *buffer, int bufferSize ) {
-    if ( cls.state <= ca_disconnected ) {
-        Q_strncpyz( buffer, "noserver", bufferSize );
-        return;
+static int CL_Server_m( char *buffer, int bufferSize ) {
+    if( cls.state <= ca_disconnected ) {
+        return Q_strncpyz( buffer, "noserver", bufferSize );
     }
-
-    Q_strncpyz( buffer, cls.servername, bufferSize );
-}
-
-/*
-====================
-CL_DemoState_m
-====================
-*/
-static void CL_DemoState_m( char *buffer, int bufferSize ) {
-    Q_strncpyz( buffer, "0", bufferSize );
-
-    if ( cls.state < ca_connected ) {
-        return;
-    }
-
-    if ( cls.demorecording ) {
-        Q_strncpyz( buffer, "1", bufferSize );
-    } else if ( cls.demoplayback ) {
-        Q_strncpyz( buffer, "2", bufferSize );
-    }
+    return Q_strncpyz( buffer, cls.servername, bufferSize );
 }
 
 /*
@@ -2019,14 +1996,14 @@ static void CL_DemoState_m( char *buffer, int bufferSize ) {
 CL_Ups_m
 ==============
 */
-static void CL_Ups_m( char *buffer, int bufferSize ) {
+static int CL_Ups_m( char *buffer, int bufferSize ) {
 	vec3_t vel;
 	int ups;
 	player_state_t *ps;
 
 	if( cl.frame.clientNum == CLIENTNUM_NONE ) {
 		buffer[0] = 0;
-		return;
+		return 0;
 	}
 
 	if( !cls.demoplayback && cl.frame.clientNum == cl.clientNum &&
@@ -2042,7 +2019,7 @@ static void CL_Ups_m( char *buffer, int bufferSize ) {
 	}
 
 	ups = VectorLength( vel );
-	Com_sprintf( buffer, bufferSize, "%d", ups );
+	return Com_sprintf( buffer, bufferSize, "%d", ups );
 }
 
 /*
@@ -2050,35 +2027,31 @@ static void CL_Ups_m( char *buffer, int bufferSize ) {
 CL_Timer_m
 ==============
 */
-static void CL_Timer_m( char *buffer, int bufferSize ) {
+static int CL_Timer_m( char *buffer, int bufferSize ) {
 	int hour, min, sec;
 
 	sec = cl.time / 1000;
-	min = sec / 60;
-	hour = min / 60;
-	min %= 60;
-	sec %= 60;
+	min = sec / 60; sec %= 60;
+	hour = min / 60; min %= 60;
 
 	if( hour ) {
-		Com_sprintf( buffer, bufferSize, "%i:%i:%02i", hour, min, sec );
-	} else {
-		Com_sprintf( buffer, bufferSize, "%i:%02i", min, sec );
-	}
-
+		return Com_sprintf( buffer, bufferSize, "%i:%i:%02i", hour, min, sec );
+    }
+	return Com_sprintf( buffer, bufferSize, "%i:%02i", min, sec );
 }
 
-static void CL_Fps_m( char *buffer, int bufferSize ) {
-	Com_sprintf( buffer, bufferSize, "%i", cls.currentFPS );
+static int CL_Fps_m( char *buffer, int bufferSize ) {
+	return Com_sprintf( buffer, bufferSize, "%i", cls.currentFPS );
 }
 
-static void CL_Health_m( char *buffer, int bufferSize ) {
-	Com_sprintf( buffer, bufferSize, "%i", cl.frame.ps.stats[STAT_HEALTH] );
+static int CL_Health_m( char *buffer, int bufferSize ) {
+	return Com_sprintf( buffer, bufferSize, "%i", cl.frame.ps.stats[STAT_HEALTH] );
 }
-static void CL_Ammo_m( char *buffer, int bufferSize ) {
-	Com_sprintf( buffer, bufferSize, "%i", cl.frame.ps.stats[STAT_AMMO] );
+static int CL_Ammo_m( char *buffer, int bufferSize ) {
+	return Com_sprintf( buffer, bufferSize, "%i", cl.frame.ps.stats[STAT_AMMO] );
 }
-static void CL_Armor_m( char *buffer, int bufferSize ) {
-	Com_sprintf( buffer, bufferSize, "%i", cl.frame.ps.stats[STAT_ARMOR] );
+static int CL_Armor_m( char *buffer, int bufferSize ) {
+	return Com_sprintf( buffer, bufferSize, "%i", cl.frame.ps.stats[STAT_ARMOR] );
 }
 
 /*
@@ -2374,7 +2347,6 @@ void CL_InitLocal ( void ) {
     //
     Cmd_AddMacro( "cl_mapname", CL_Mapname_m );
     Cmd_AddMacro( "cl_server", CL_Server_m );
-    Cmd_AddMacro( "cl_demo", CL_DemoState_m );
 	Cmd_AddMacro( "cl_timer", CL_Timer_m );
 	Cmd_AddMacro( "cl_ups", CL_Ups_m );
 	Cmd_AddMacro( "cl_fps", CL_Fps_m );

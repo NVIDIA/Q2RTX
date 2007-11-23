@@ -71,7 +71,7 @@ static qhandle_t	sb_field;
 
 #define	ICON_WIDTH	24
 #define	ICON_HEIGHT	24
-#define	CHAR_WIDTH	16
+#define	DIGIT_WIDTH	16
 #define	ICON_SPACE	8
 
 void SCR_TimeRefresh_f (void);
@@ -178,19 +178,23 @@ void SCR_DrawDebugGraph (void)
 }
 
 static void SCR_DrawPercentBar( int percent ) {
-	char buffer[8];
+	char buffer[16];
 	int x, w;
 	int length;
 
-	scr_hudHeight -= TINYCHAR_HEIGHT;
+	scr_hudHeight -= CHAR_HEIGHT;
 
 	w = scr_hudWidth * percent / 100;
 
-	ref.DrawFill( 0, scr_hudHeight, w, TINYCHAR_HEIGHT, 4 );
-	ref.DrawFill( w, scr_hudHeight, scr_hudWidth - w, TINYCHAR_HEIGHT, 0 );
+	ref.DrawFill( 0, scr_hudHeight, w, CHAR_HEIGHT, 4 );
+	ref.DrawFill( w, scr_hudHeight, scr_hudWidth - w, CHAR_HEIGHT, 0 );
 
-	length = Com_sprintf( buffer, sizeof( buffer ), "%d%%", percent );
-	x = ( scr_hudWidth - length * TINYCHAR_WIDTH ) / 2;
+    if( sv_paused->integer ) {
+    	length = sprintf( buffer, "[%d%%]", percent );
+    } else {
+    	length = sprintf( buffer, "%d%%", percent );
+    }
+	x = ( scr_hudWidth - length * CHAR_WIDTH ) / 2;
 	ref.DrawString( x, scr_hudHeight, 0, MAX_STRING_CHARS, buffer, scr_font );
 }
 
@@ -656,7 +660,7 @@ void HUD_DrawNumber( int x, int y, int color, int width, int value ) {
 	l = strlen( num );
 	if( l > width )
 		l = width;
-	x += 2 + CHAR_WIDTH * ( width - l );
+	x += 2 + DIGIT_WIDTH * ( width - l );
 
 	ptr = num;
 	while( *ptr && l ) {
@@ -666,7 +670,7 @@ void HUD_DrawNumber( int x, int y, int color, int width, int value ) {
 			frame = *ptr - '0';
 
 		ref.DrawPic( x, y, sb_pics[color][frame] );
-		x += CHAR_WIDTH;
+		x += DIGIT_WIDTH;
 		ptr++;
 		l--;
 	}
@@ -714,10 +718,10 @@ void SCR_DrawInventory( void ) {
 	x += 24;
 
 	HUD_DrawString( x, y, "hotkey ### item" );
-	y += TINYCHAR_HEIGHT;
+	y += CHAR_HEIGHT;
 
 	HUD_DrawString( x, y, "------ --- ----" );
-	y += TINYCHAR_HEIGHT;
+	y += CHAR_HEIGHT;
 
 	for( i = top; i < num && i < top + DISPLAY_ITEMS; i++ ) {
 		item = index[i];
@@ -734,12 +738,11 @@ void SCR_DrawInventory( void ) {
 		} else {	// draw a blinky cursor by the selected item
 			HUD_DrawString( x, y, string );
 			if( ( cls.realtime >> 8 ) & 1 ) {
-				ref.DrawChar( x - TINYCHAR_WIDTH, y, 0, 15, scr_font );
+				ref.DrawChar( x - CHAR_WIDTH, y, 0, 15, scr_font );
 			}
-			
 		}
 		
-		y += TINYCHAR_HEIGHT;
+		y += CHAR_HEIGHT;
 	}
 
 
@@ -856,11 +859,11 @@ void SCR_ExecuteLayoutString( const char *s ) {
 
 			HUD_DrawString( x + 32, y, ci->name );
             Com_sprintf( buffer, sizeof( buffer ), "Score: %i", score ); 
-			HUD_DrawString( x + 32, y + TINYCHAR_HEIGHT, buffer );
+			HUD_DrawString( x + 32, y + CHAR_HEIGHT, buffer );
             Com_sprintf( buffer, sizeof( buffer ), "Ping:  %i", ping ); 
-			HUD_DrawString( x + 32, y + 2 * TINYCHAR_HEIGHT, buffer );
+			HUD_DrawString( x + 32, y + 2 * CHAR_HEIGHT, buffer );
             Com_sprintf( buffer, sizeof( buffer ), "Time:  %i", time ); 
-			HUD_DrawString( x + 32, y + 3 * TINYCHAR_HEIGHT, buffer );
+			HUD_DrawString( x + 32, y + 3 * CHAR_HEIGHT, buffer );
 
 			if( !ci->icon ) {
 				ci = &cl.baseclientinfo;

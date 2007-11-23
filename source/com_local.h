@@ -906,6 +906,10 @@ const char *Com_FileNameGenerator( const char *path, const char *ext, const char
 const char *Com_FileNameGeneratorByFilter( const char *path, const char *filter, const char *partial,
 										  qboolean stripExtension, int state );
 
+int         Com_Time_m( char *buffer, int size );
+int         Com_Uptime_m( char *buffer, int size );
+
+
 /* may return pointer to static memory */
 char    *Cvar_CopyString( const char *in );
 

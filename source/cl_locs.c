@@ -214,20 +214,20 @@ void LOC_AddLocationsToScene( void ) {
 LOC_Here_m
 ==============
 */
-static void LOC_Here_m( char *buffer, int bufferSize ) {
+static int LOC_Here_m( char *buffer, int size ) {
 	location_t *loc;
+    int ret;
 
-	Q_strncpyz( buffer, "unknown", bufferSize );
-
+	ret = Q_strncpyz( buffer, "unknown", size );
 	if( cls.state != ca_active ) {
-		return;
+		return ret;
 	}
 
 	loc = LOC_FindClosest( cl.playerEntityOrigin );
 	if( loc ) {
-		Q_strncpyz( buffer, loc->name, bufferSize );
+		ret = Q_strncpyz( buffer, loc->name, size );
 	}
-
+    return ret;
 }
 
 /*
@@ -235,15 +235,15 @@ static void LOC_Here_m( char *buffer, int bufferSize ) {
 LOC_There_m
 ==============
 */
-static void LOC_There_m( char *buffer, int bufferSize ) {
+static int LOC_There_m( char *buffer, int size ) {
 	location_t *loc;
 	vec3_t pos;
 	trace_t trace;
+    int ret;
 
-	Q_strncpyz( buffer, "unknown", bufferSize );
-
+	ret = Q_strncpyz( buffer, "unknown", size );
 	if( cls.state != ca_active ) {
-		return;
+		return ret;
 	}
 
 	VectorMA( cl.playerEntityOrigin, 8192, cl.v_forward, pos );
@@ -252,9 +252,9 @@ static void LOC_There_m( char *buffer, int bufferSize ) {
 
 	loc = LOC_FindClosest( trace.endpos );
 	if( loc ) {
-		Q_strncpyz( buffer, loc->name, bufferSize );
+		ret = Q_strncpyz( buffer, loc->name, size );
 	}
-
+    return ret;
 }
 
 /*

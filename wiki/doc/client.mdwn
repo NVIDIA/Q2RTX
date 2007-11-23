@@ -223,17 +223,6 @@ Skip skybox rendering and fill sky with solid color instead.
 - `set gl_partscale 1.5` (float)  
 Specifies minimum size of particles.
 
-- `set gl_sort 0` (boolean)  
-Enables sorting of BSP surfaces before rendering, using texture as sorting key.
-Allows meshes to be drawn in larger batches in order to minimize number of TMU
-switches per frame. This option puts additional load on main CPU and may or may
-not gain more FPS depending on your video card and drivers.
-
-- `set gl_subdivide 1` (boolean)  
-Toggles load time subdivision of warped surfaces (water, lava, etc). Disabling
-subdivision reduces number of triangles drawn per frame and increases map load
-time a bit.
-
 - `set gl_saturation 1` (float)  
 Specifies color saturation percentage of world textures. Default value of
 1 means identity coloring, value of 0 effectively makes textures
@@ -244,12 +233,6 @@ monochrome (and speeds up rendering a bit as textures are uploaded at
 Invert colors of world textures. In combination with `gl_saturation 0`
 effectively makes textures look like negative.
 
-- `set gl_dynamic 2` (integer)  
-Specifies appearance of dynamic lighting:
-  - 0 - lighting disabled
-  - 1 - additive lighting
-  - 2 - modulative lighting
-
 - `set gl_anisotropy 0` (integer)  
 When set to 2 and higher, enables anisotropic filtering of world textures,
 provided you video card supports it.
@@ -258,6 +241,15 @@ provided you video card supports it.
 Specifies additional brightness percentage added to world lightmaps.
 Default value of 0 means identity lightmaps, value of 1 means fullbright 
 lightmaps.
+
+- `set gl_fragment_program 0` (boolean)  
+Enables `GL_ARB_fragment_program` extension, if supported by video drivers.
+Currently this extension is used for warping liquid surfaces only.
+
+- `set gl_vertex_buffer_object 1` (boolean)  
+Enables `GL_ARB_vertex_buffer_object` extension, if supported by video drivers.
+This extensions allows uploading static vertex data into faster video
+card memory and speeds up rendering of world surfaces.
 
 Misc
 ----------
@@ -299,7 +291,6 @@ and `${$loc_here}`.
 - `$cl_ammo`
 - `$cl_health` These return statistics seen in your HUD.
 - `$cl_timer` Server time since level load.
-- `$cl_demo` Expands to 1 if playing a demo, 0 otherwise.
 - `$cl_server` Address of the server you are connected to.
 - `$cl_mapname` Name of the current map.
 - `$loc_there` Name of the location you are looking at.
@@ -311,6 +302,7 @@ and `${$loc_here}`.
 - `$cl_ups` Player velocity in units/sec.
 - `$com_time` Current time, formatted according to `com_time_format`.
 - `$com_date` Current date, formatted according to `com_date_format`.
+- `$com_uptime` Engine uptime in format `[DD+][HH:]MM.SS`.
 - `$qt` Expands to double quote.
 - `$sc` Expands to semicolon.
 - `$$` Expands to dollar sign.
@@ -349,12 +341,10 @@ does not reload refresh library. Use to manually change the game directory
 (typically not needed, as it is changed automatically on server connect).
 
 - `demo [/]<filename[.ext]>`  
-Play demo on client side. Unlike server side `demomap` command, does not
-load the game DLL, does not require file extension to be specified,
-supports automatic filename completion and does not error entire game out
-if nonexistent file is specified. In other words, this is the **recommended**
-way to watch demos using Q2PRO. Loads file from `demos/` unless
-slash is prepended to _filename_, otherwise loads from the root of VFS.
+Play client side demo. This command does not require file extension to be
+specified and supports filename autocompletion on TAB. Loads file
+from `demos/` unless slash is prepended to _filename_, otherwise loads
+from the root of VFS.
 
 - `draw <name> <x> <y>`  
 Add console variable or macro identified by _name_ (without the `$` prefix)

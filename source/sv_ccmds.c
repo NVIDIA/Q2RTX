@@ -730,22 +730,18 @@ static void SV_ListBan_f( void ) {
     SV_DumpMatches( &sv_banlist );
 }
 
-static void SV_Client_m( char *buffer, int bufferSize ) {
+static int SV_Client_m( char *buffer, int size ) {
 	if( !sv_client ) {
-		Q_strncpyz( buffer, "unknown", bufferSize );
-		return;
+		return Q_strncpyz( buffer, "unknown", size );
 	}
-
-	Q_strncpyz( buffer, sv_client->name, bufferSize );
+	return Q_strncpyz( buffer, sv_client->name, size );
 }
 
-static void SV_ClientNum_m( char *buffer, int bufferSize ) {
+static int SV_ClientNum_m( char *buffer, int size ) {
 	if( !sv_client ) {
-		Q_strncpyz( buffer, "", bufferSize );
-		return;
+		return Q_strncpyz( buffer, "", size );
 	}
-
-    Com_sprintf( buffer, bufferSize, "%d", sv_client - svs.clientpool );
+    return Com_sprintf( buffer, size, "%d", sv_client - svs.clientpool );
 }
 
 //===========================================================

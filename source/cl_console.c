@@ -53,8 +53,6 @@ typedef struct console_s {
 	qhandle_t	conbackImage;
 	qhandle_t	charsetImage;
 
-	int		charWidth, charHeight;
-
 	float	currentHeight;	// aproaches scr_conlines at scr_conspeed
 	float	destHeight;		// 0.0 to 1.0 lines of console to display
 	float	maxHeight;
@@ -274,7 +272,7 @@ void Con_CheckResize( void ) {
 	con.vidWidth = scr_glconfig.vidWidth * con.scale;
 	con.vidHeight = scr_glconfig.vidHeight * con.scale;
 
-	width = ( con.vidWidth / con.charWidth ) - 2;
+	width = ( con.vidWidth / CHAR_WIDTH ) - 2;
 
 	if( width == con.linewidth )
 		return;
@@ -338,8 +336,6 @@ void Con_Init( void ) {
 	scr_glconfig.vidWidth = 640;
 	scr_glconfig.vidHeight = 480;
 	con.linewidth = -1;
-	con.charWidth = 8;
-	con.charHeight = 8;
 	con.maxHeight = 1;
 	con.scale = 1;
 
@@ -503,7 +499,6 @@ void Con_SetupDC( void ) {
     if( !con.charsetImage ) {
         Com_Error( ERR_FATAL, "Couldn't load pics/conchars.pcx" );
     }
-    ref.DrawGetFontSize( &con.charWidth, &con.charHeight, con.charsetImage );
 
 	con.conbackImage = ref.RegisterPic( con_background->string );
 	
@@ -517,7 +512,7 @@ DRAWING
 ==============================================================================
 */
 
-#define CON_PRESTEP		( 10 + con.charHeight * 2 )
+#define CON_PRESTEP		( 10 + CHAR_HEIGHT * 2 )
 
 /*
 ================
@@ -533,7 +528,6 @@ void Con_DrawNotify( void ) {
 	int		time;
 	int		skip;
 	float	alpha;
-	int		flags;
 
 	/* only draw notify in game */
 	if( cls.state != ca_active ) {
@@ -545,8 +539,6 @@ void Con_DrawNotify( void ) {
 	if( con.currentHeight ) {
 		return;
 	}
-
-	flags = 0;
 
 	v = 0;
 	for( i = con.current - CON_TIMES + 1; i <= con.current; i++ ) {
@@ -566,10 +558,10 @@ void Con_DrawNotify( void ) {
 		}
 
         ref.SetColor( DRAW_COLOR_ALPHA, ( byte * )&alpha );
-		ref.DrawString( con.charWidth, v, flags, con.linewidth, text,
+		ref.DrawString( CHAR_WIDTH, v, 0, con.linewidth, text,
             con.charsetImage );
 
-		v += con.charHeight;
+		v += CHAR_HEIGHT;
 	}
     
     ref.SetColor( DRAW_COLOR_CLEAR, NULL );
@@ -583,14 +575,11 @@ void Con_DrawNotify( void ) {
 			skip = 5;
 		}
 
-		ref.DrawString( con.charWidth, v, flags, MAX_STRING_CHARS, text,
+		ref.DrawString( CHAR_WIDTH, v, 0, MAX_STRING_CHARS, text,
             con.charsetImage );
-		IF_Draw( &con.chatPrompt.inputLine, skip * con.charWidth, v,
-            flags | UI_DRAWCURSOR, con.charsetImage );
-
+		IF_Draw( &con.chatPrompt.inputLine, skip * CHAR_WIDTH, v,
+            UI_DRAWCURSOR, con.charsetImage );
 	}
-	
-
 }
 
 /*
@@ -601,14 +590,13 @@ Draws the console with the solid background
 ================
 */
 void Con_DrawSolidConsole( void ) {
-	int				i, y;
+	int				i, x, y;
 	int				rows;
 	char			*text;
 	int				row;
 	char			buffer[CON_LINEWIDTH];
 	int				vislines;
 	float			alpha;
-	int				flags;
 	clipRect_t		clip;
 
 	vislines = con.vidHeight * con.currentHeight;
@@ -643,40 +631,19 @@ void Con_DrawSolidConsole( void ) {
             con.vidWidth, con.vidHeight, con.conbackImage );
 	}
 
-// setup text rendering flags
-	flags = 0;
-
-	ref.SetColor( DRAW_COLOR_RGBA, colorCyan );
-
-// draw clock
-	if( con_clock->integer ) {
-		extern void Com_Time_m( char *buffer, int bufferSize );
-
-		Com_Time_m( buffer, sizeof( buffer ) );
-
-		UIS_DrawStringEx( con.vidWidth - 8,
-			vislines - CON_PRESTEP, flags | UI_RIGHT, MAX_STRING_CHARS,
-			    buffer, con.charsetImage );
-	}
-
-// draw version
-	UIS_DrawStringEx( con.vidWidth - 8,
-		vislines - CON_PRESTEP + con.charHeight, flags | UI_RIGHT,
-		    MAX_STRING_CHARS, APPLICATION " " VERSION, con.charsetImage );
-
 
 // draw the text
 	y = vislines - CON_PRESTEP;
-	rows = y / con.charHeight + 1;		// rows of text to draw
+	rows = y / CHAR_HEIGHT + 1;		// rows of text to draw
 
 // draw arrows to show the buffer is backscrolled
 	if( con.display != con.current ) {
 		ref.SetColor( DRAW_COLOR_RGBA, colorRed );
 		for( i = 1; i < con.linewidth / 2; i += 4 ) {
-			ref.DrawChar( i * con.charWidth, y, flags, '^', con.charsetImage );
+			ref.DrawChar( i * CHAR_WIDTH, y, 0, '^', con.charsetImage );
 		}
 	
-		y -= con.charHeight;
+		y -= CHAR_HEIGHT;
 		rows--;
 	}
 	
@@ -691,10 +658,9 @@ void Con_DrawSolidConsole( void ) {
 			
 		text = con.text[row & CON_TOTALLINES_MASK];
 
-		ref.DrawString( con.charWidth, y, flags, con.linewidth, text,
-                con.charsetImage );
+		ref.DrawString( CHAR_WIDTH, y, 0, con.linewidth, text, con.charsetImage );
 
-		y -= con.charHeight;
+		y -= CHAR_HEIGHT;
 		row--;
 
 	}
@@ -703,7 +669,7 @@ void Con_DrawSolidConsole( void ) {
 	// draw the download bar
 	// figure out width
 	if( cls.download ) {
-		int x, n, j;
+		int n, j;
 
 		if( ( text = strrchr( cls.downloadname, '/') ) != NULL )
 			text++;
@@ -740,17 +706,18 @@ void Con_DrawSolidConsole( void ) {
 
 		// draw it
 		y = vislines - 10;
-		ref.DrawString( con.charWidth, y, 0, CON_LINEWIDTH, buffer, con.charsetImage );
+		ref.DrawString( CHAR_WIDTH, y, 0, CON_LINEWIDTH, buffer, con.charsetImage );
 	}
 //ZOID
 
 // draw the input prompt, user text, and cursor if desired
+    x = 0;
 	if( cls.key_dest & KEY_CONSOLE ) {
-		y = vislines - CON_PRESTEP + con.charHeight;
+		y = vislines - CON_PRESTEP + CHAR_HEIGHT;
 
 		// draw it
-		IF_Draw( &con.prompt.inputLine, 2 * con.charWidth, y,
-                flags | UI_DRAWCURSOR, con.charsetImage );
+		x = IF_Draw( &con.prompt.inputLine, 2 * CHAR_WIDTH, y,
+            UI_DRAWCURSOR, con.charsetImage );
 
 		// draw command prompt
         i = 17;
@@ -759,13 +726,30 @@ void Con_DrawSolidConsole( void ) {
         } else {
     		ref.SetColor( DRAW_COLOR_RGBA, colorYellow );
         }
-		ref.DrawChar( con.charWidth, y, flags, i, con.charsetImage );
+		ref.DrawChar( CHAR_WIDTH, y, 0, i, con.charsetImage );
 	}
+
+    y = vislines - CON_PRESTEP + CHAR_HEIGHT;
+    if( x > con.vidWidth - 12 * CHAR_WIDTH ) {
+        y -= CHAR_HEIGHT;
+    }
+
+	ref.SetColor( DRAW_COLOR_RGBA, colorCyan );
+
+// draw clock
+	if( con_clock->integer ) {
+		Com_Time_m( buffer, sizeof( buffer ) );
+		UIS_DrawStringEx( con.vidWidth - CHAR_WIDTH, y - CHAR_HEIGHT,
+            UI_RIGHT, MAX_STRING_CHARS, buffer, con.charsetImage );
+	}
+
+// draw version
+	UIS_DrawStringEx( con.vidWidth - CHAR_WIDTH, y, UI_RIGHT,
+        MAX_STRING_CHARS, APPLICATION " " VERSION, con.charsetImage );
 
 	// restore rendering parameters
     ref.SetColor( DRAW_COLOR_CLEAR, NULL );
 	ref.SetClipRect( DRAW_CLIP_DISABLED, NULL );
-
 }
 
 //=============================================================================

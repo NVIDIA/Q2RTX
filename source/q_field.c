@@ -279,14 +279,13 @@ qboolean IF_CharEvent( inputField_t *field, int key ) {
 ================
 IF_Draw
 
-The input line scrolls horizontally if typing goes beyond the right edge
+The input line scrolls horizontally if typing goes beyond the right edge.
+Returns x offset of the rightmost character drawn.
 ================
 */
-void IF_Draw( inputField_t *field, int x, int y, uint32 flags,
-        qhandle_t hFont )
-{
+int IF_Draw( inputField_t *field, int x, int y, uint32 flags, qhandle_t hFont ) {
 	char *text;
-	int cursorPos, offset;
+	int cursorPos, offset, ret;
 	int start, width;
 	int cw, ch;
 	color_t	selectColor;
@@ -307,9 +306,9 @@ void IF_Draw( inputField_t *field, int x, int y, uint32 flags,
 
 	if( !( flags & UI_DRAWCURSOR ) ) {
         /* just draw text and return */
-        ref.DrawString( x, y, flags,
-                field->visibleChars, text + offset, hFont );
-        return;
+        ret = ref.DrawString( x, y, flags, field->visibleChars,
+            text + offset, hFont );
+        return ret;
     }
     
 	ref.DrawGetFontSize( &cw, &ch, hFont );
@@ -328,15 +327,15 @@ void IF_Draw( inputField_t *field, int x, int y, uint32 flags,
     }
 
 	/* draw text */
-	ref.DrawString( x, y, flags,
-            field->visibleChars, text + offset, hFont );
+	ret = ref.DrawString( x, y, flags, field->visibleChars,
+        text + offset, hFont );
 
     /* draw blinking cursor */
     if( ( sys.Milliseconds() >> 8 ) & 1 ) {
         int c = keys.GetOverstrikeMode() ? 11 : '_';
         ref.DrawChar( x + cursorPos * cw, y, flags, c, hFont );
     }
-
+    return ret;
 }
 
 #endif

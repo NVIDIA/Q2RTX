@@ -193,9 +193,12 @@ static void LM_BuildSurfaceLightmap( bspSurface_t *surf, vec_t *vbo ) {
     s = ( s << 4 ) + 8;
     t = ( t << 4 ) + 8;
 
+    s -= surf->texturemins[0]; 
+    t -= surf->texturemins[1];
+
     for( i = 0; i < surf->numVerts; i++ ) {
-        vbo[5] += s - surf->texturemins[0]; 
-        vbo[6] += t - surf->texturemins[1];
+        vbo[5] += s;
+        vbo[6] += t;
         vbo[5] /= LM_BLOCK_WIDTH * 16;
         vbo[6] /= LM_BLOCK_HEIGHT * 16;
         vbo += VERTEX_SIZE;

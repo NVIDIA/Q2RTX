@@ -44,6 +44,6 @@ void		IF_InitText( inputField_t *field, int visibleChars, int maxChars,
                 const char *text );
 void		IF_Clear( inputField_t *field );
 void		IF_Replace( inputField_t *field, const char *text );
-void        IF_Draw( inputField_t *field, int x, int y, uint32 flags,
+int         IF_Draw( inputField_t *field, int x, int y, uint32 flags,
                 qhandle_t hFont );
 

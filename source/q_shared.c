@@ -1798,21 +1798,31 @@ int Q_strcasecmp( const char *s1, const char *s2 ) {
 Q_strncpyz
 ===============
 */
-void Q_strncpyz( char *dest, const char *src, int destsize ) {
+int Q_strncpyz( char *dest, const char *src, int destsize ) {
+    int len;
+
 #ifdef _DEBUG
 	if( destsize < 1 ) {
-		Com_Error( ERR_FATAL, "Q_strncpyz: destsize < 1" );
+		Com_Error( ERR_FATAL, "%s: destsize < 1", __func__ );
 	}
 	if( !dest ) {
-		Com_Error( ERR_FATAL, "Q_strncpyz: NULL dest" );
+		Com_Error( ERR_FATAL, "%s: NULL dest", __func__ );
 	}
 	if( !src ) {
-		Com_Error( ERR_FATAL, "Q_strncpyz: NULL src" );
+		Com_Error( ERR_FATAL, "%s: NULL src", __func__ );
 	}
 #endif
 
-	strncpy( dest, src, destsize - 1 );
-	dest[destsize - 1] = 0;
+    len = strlen( src );
+    if( len >= destsize ) {
+		Com_DPrintf( "%s: overflow of %d in %d\n", __func__, len, destsize - 1 );
+        len = destsize - 1;
+    }
+
+	memcpy( dest, src, len );
+	dest[len] = 0;
+
+    return len;
 }
 
 /*
@@ -1820,21 +1830,30 @@ void Q_strncpyz( char *dest, const char *src, int destsize ) {
 Q_strcat
 ===============
 */
-void Q_strcat( char *dest, int destsize, const char *src ) {
-	int len;
+int Q_strcat( char *dest, int destsize, const char *src ) {
+	int ofs, len;
 
 #ifdef _DEBUG
 	if( !dest ) {
-		Com_Error( ERR_FATAL, "Q_strcat: NULL dest" );
+		Com_Error( ERR_FATAL, "%s: NULL dest", __func__ );
 	}
 #endif
 
-	len = strlen( dest );
-	if( len >= destsize ) {
-		Com_Error( ERR_FATAL, "Q_strcat: already overflowed" );
+	ofs = strlen( dest );
+	if( ofs >= destsize ) {
+		Com_Error( ERR_FATAL, "%s: already overflowed", __func__ );
 	}
 
-	Q_strncpyz( dest + len, src, destsize - len );
+    len = strlen( src );
+    if( ofs + len >= destsize ) {
+		Com_DPrintf( "%s: overflow of %d in %d\n", __func__, ofs + len, destsize - 1 );
+        len = destsize - ofs - 1;
+    }
+
+	memcpy( dest + ofs, src, len ); ofs += len;
+    dest[ofs] = 0;
+
+    return ofs;
 }
 
 /*

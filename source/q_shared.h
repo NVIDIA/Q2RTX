@@ -365,8 +365,8 @@ void ByteToDir( int index, vec3_t dir );
 #define UI_MULTILINE		0x00000200
 #define UI_DRAWCURSOR		0x00000400
 
-#define TINYCHAR_WIDTH	8
-#define TINYCHAR_HEIGHT	8
+#define CHAR_WIDTH	8
+#define CHAR_HEIGHT	8
 
 int Q_DrawStrlen( const char *string );
 int Q_DrawStrlenTo( const char *string, int maxChars );
@@ -462,8 +462,8 @@ uint32 Com_HashPath( const char *string, int hashSize );
 char *Com_ReplaceSeparators( char *s, int separator );
 
 // buffer safe operations
-void Q_strncpyz( char *dest, const char *src, int destsize );
-void Q_strcat( char *dest, int destsize, const char *src );
+int Q_strncpyz( char *dest, const char *src, int destsize );
+int Q_strcat( char *dest, int destsize, const char *src );
 int Com_sprintf( char *dest, int destsize, const char *fmt, ... ) q_printf( 3, 4 );
 int Q_vsnprintf( char *dest, int destsize, const char *fmt, va_list argptr );
 

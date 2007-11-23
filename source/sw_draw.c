@@ -582,7 +582,7 @@ void Draw_Char( int x, int y, uint32 flags, int ch, qhandle_t hFont ) {
 Draw_String
 ===============
 */
-void Draw_String( int x, int y, int flags, int maxChars,
+int Draw_String( int x, int y, int flags, int maxChars,
         const char *string, qhandle_t hFont )
 {
     image_t *image;
@@ -591,11 +591,11 @@ void Draw_String( int x, int y, int flags, int maxChars,
     int color, mask;
 
 	if( !hFont ) {
-		return;
+		return x;
 	}
 	image = R_ImageForHandle( hFont );
 	if( image->width != 128 || image->height != 128 ) {
-		return;
+		return x;
 	}
 
 	mask = 0;
@@ -648,10 +648,8 @@ void Draw_String( int x, int y, int flags, int maxChars,
 		}
 
 		x += 8;
-
 	}
-
-
+    return x;
 }
 
 /*

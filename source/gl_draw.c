@@ -248,8 +248,8 @@ void Draw_Char( int x, int y, uint32 flags, int ch, qhandle_t hFont ) {
             draw.color, R_ImageForHandle( hFont ) );
 }
 
-void Draw_String( int x, int y, uint32 flags, int maxChars,
-        const char *string, qhandle_t hFont )
+int Draw_String( int x, int y, uint32 flags, int maxChars,
+                 const char *string, qhandle_t hFont )
 {
     byte c;
 	float s, t;
@@ -300,6 +300,7 @@ void Draw_String( int x, int y, uint32 flags, int maxChars,
 			colors[ ( c >> 7 ) & 1 ], image );
 		x += 8;
     }
+    return x;
 }
 
 image_t *r_charset;

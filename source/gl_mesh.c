@@ -289,6 +289,9 @@ void GL_DrawAliasModel( model_t *model ) {
 #if USE_CELSHADING
     scale = 0;
 	if( gl_celshading->value > 0 && ( ent->flags & RF_SHELL_MASK ) == 0 ) {
+        if( gl_celshading->value > 5 ) {
+            cvar.Set( "gl_celshading", "5" );
+        }
         VectorSubtract( origin, glr.fd.vieworg, dir );
         scale = VectorLength( dir );
         scale = 1.0f - scale / 700.0f;
@@ -337,7 +340,7 @@ void GL_DrawAliasModel( model_t *model ) {
 	qglVertexPointer( 3, GL_FLOAT, 16, tess.vertices );
 
 	last = model->meshes + model->numMeshes;
-	for( mesh = model->meshes; mesh != last; mesh++ ) {
+	for( mesh = model->meshes; mesh < last; mesh++ ) {
 		if( ent->flags & RF_SHELL_MASK ) {
 			image = r_whiteimage;
 		} else {
@@ -360,7 +363,7 @@ void GL_DrawAliasModel( model_t *model ) {
 			}
 		}
 
-        if( !( image->flags & if_paletted ) && ( image->flags & if_transparent ) ) {
+        if( ( image->flags & ( if_transparent|if_paletted ) ) == if_transparent ) {
     	    GL_Bits( bits | GLS_BLEND_BLEND );
         } else {
     	    GL_Bits( bits );
@@ -416,6 +419,5 @@ void GL_DrawAliasModel( model_t *model ) {
 	}
 	
 	qglPopMatrix();
-
 }
 

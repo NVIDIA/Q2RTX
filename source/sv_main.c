@@ -270,8 +270,6 @@ static int SV_StatusString( char *status ) {
 	char	entry[MAX_STRING_CHARS];
 	client_t	*cl;
 	int		j, total, length;
-    int     sec, min, hour, day;
-    time_t  t;
     char    *tmp = sv_maxclients->string;
 
     // XXX: ugly hack to hide reserved slots
@@ -288,26 +286,11 @@ static int SV_StatusString( char *status ) {
 
     // add uptime
     if( sv_uptime->integer ) {
-        time( &t );
-        if( com_startTime > t ) {
-            com_startTime = t;
-        }
-        sec = t - com_startTime;
-        min = sec / 60;
-        hour = min / 60;
-        day = hour / 24;
-        sec %= 60;
-        min %= 60;
-        hour %= 24;
-
-        memcpy( status + total, "\\uptime\\", 8 );
-        total += 8;
-        if( day ) {
-            total += sprintf( status + total, "%d+%d:%d:%d", day, hour, min, sec );
-        } else if( hour ) {
-            total += sprintf( status + total, "%d:%d:%d", hour, min, sec );
-        } else {
-            total += sprintf( status + total, "%d:%d", min, sec );
+        length = Com_Uptime_m( entry, MAX_INFO_VALUE );
+        if( total + 8 + length < MAX_INFO_STRING ) {
+            memcpy( status + total, "\\uptime\\", 8 );
+            memcpy( status + total + 8, entry, length );
+            total += 8 + length;
         }
     }
 

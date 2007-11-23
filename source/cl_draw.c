@@ -262,7 +262,7 @@ static void SCR_DrawDisconnect( vrect_t *rc ) {
 	}
 }
 
-static void CL_Ping_m( char *buffer, int bufferSize ) {
+static int CL_Ping_m( char *buffer, int bufferSize ) {
 	int i, j;
 	int start;
 	int ping;
@@ -281,10 +281,10 @@ static void CL_Ping_m( char *buffer, int bufferSize ) {
 
 		ping /= i - start;
 	}
-	Com_sprintf( buffer, bufferSize, "%i", ping );
+	return Com_sprintf( buffer, bufferSize, "%i", ping );
 }
 
-static void CL_UpRate_m( char *buffer, int bufferSize ) {
+static int CL_UpRate_m( char *buffer, int bufferSize ) {
 	int i;
 	float size;
 	int startTime, endTime;
@@ -306,10 +306,10 @@ static void CL_UpRate_m( char *buffer, int bufferSize ) {
 
 		size /= endTime - startTime;
 	}
-	Com_sprintf( buffer, bufferSize, "%1.2f", size );
+	return Com_sprintf( buffer, bufferSize, "%1.2f", size );
 }
 
-static void CL_DnRate_m( char *buffer, int bufferSize ) {
+static int CL_DnRate_m( char *buffer, int bufferSize ) {
 	int i;
 	float size;
 	int startTime, endTime;
@@ -331,7 +331,7 @@ static void CL_DnRate_m( char *buffer, int bufferSize ) {
 
 		size /= endTime - startTime;
 	}
-	Com_sprintf( buffer, bufferSize, "%1.2f", size );
+	return Com_sprintf( buffer, bufferSize, "%1.2f", size );
 }
 
 typedef struct {
@@ -564,7 +564,7 @@ static void draw_following( void ) {
 		return;
 	}
 
-	x = ( scr_hudWidth - strlen( string ) * TINYCHAR_WIDTH ) / 2;
+	x = ( scr_hudWidth - strlen( string ) * CHAR_WIDTH ) / 2;
 
 	ref.DrawString( x, 48, 0, MAX_STRING_CHARS, string, scr_font );
 }

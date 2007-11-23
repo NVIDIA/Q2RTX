@@ -286,7 +286,7 @@ void Draw_Fill( int x, int y, int w, int h, int c );
 void Draw_FillEx( int x, int y, int w, int h, const color_t color );
 void Draw_FadeScreen( void );
 void Draw_Char( int x, int y, uint32 flags, int ch, qhandle_t hFont );
-void Draw_String( int x, int y, uint32 flags, int maxChars,
+int  Draw_String( int x, int y, uint32 flags, int maxChars,
         const char *string, qhandle_t hFont );
 void Draw_Stringf( int x, int y, const char *fmt, ... );
 void Draw_Stats( void );

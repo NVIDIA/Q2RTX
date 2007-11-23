@@ -38,7 +38,7 @@ typedef enum cbufExecWhen_e {
 } cbufExecWhen_t;
 
 typedef void ( *xcommand_t )( void );
-typedef void ( *xmacro_t )( char *, int );
+typedef int ( *xmacro_t )( char *, int );
 typedef const char *( *xgenerator_t )( const char *, int );
 
 typedef struct cmdreg_s {

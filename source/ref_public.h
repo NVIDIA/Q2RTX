@@ -209,8 +209,8 @@ typedef struct refAPI_s {
 	void	(*SetClipRect)( uint32 flags, const clipRect_t *clip );
 	void	(*SetScale)( float *scale );
     void    (*DrawChar)( int x, int y, uint32 flags, int ch, qhandle_t hFont );
-	void	(*DrawString)( int x, int y, uint32 flags, int maxChars,
-            const char *string, qhandle_t hFont );
+	int 	(*DrawString)( int x, int y, uint32 flags, int maxChars,
+            const char *string, qhandle_t hFont ); // returns advanced x coord
     // will return 0 0 if not found
 	void	(*DrawGetPicSize)( int *w, int *h, qhandle_t hPic );	
 	void	(*DrawGetFontSize)( int *w, int *h, qhandle_t hFont );	

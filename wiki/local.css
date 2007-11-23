@@ -1,6 +1,6 @@
 body { background: #e7e7e7; font-family: sans-serif;}
 
-#content { border: none; text-align: justify; max-width: 80ex;}
+#content { border: none; /*text-align: justify;*/ max-width: 80ex;}
 
 /*code { background: ; }*/
 

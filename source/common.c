@@ -1034,14 +1034,14 @@ void Com_FillAPI( commonAPI_t *api ) {
 Com_Time_m
 =============
 */
-void Com_Time_m( char *buffer, int bufferSize ) {
+int Com_Time_m( char *buffer, int size ) {
 	time_t	clock;
-	struct tm	*localTime;
+	struct tm	*local;
 
 	time( &clock );
-	localTime = localtime( &clock );
+	local = localtime( &clock );
 
-	strftime( buffer, bufferSize, com_time_format->string, localTime );
+	return strftime( buffer, size, com_time_format->string, local );
 }
 
 /*
@@ -1049,14 +1049,36 @@ void Com_Time_m( char *buffer, int bufferSize ) {
 Com_Date_m
 =============
 */
-static void Com_Date_m( char *buffer, int bufferSize ) {
+static int Com_Date_m( char *buffer, int size ) {
 	time_t	clock;
-	struct tm	*localTime;
+	struct tm	*local;
 
 	time( &clock );
-	localTime = localtime( &clock );
+	local = localtime( &clock );
 
-	strftime( buffer, bufferSize, com_date_format->string, localTime );
+	return strftime( buffer, size, com_date_format->string, local );
+}
+
+int Com_Uptime_m( char *buffer, int size ) {
+    int     sec, min, hour, day;
+    time_t  t;
+
+    time( &t );
+    if( com_startTime > t ) {
+        com_startTime = t;
+    }
+    sec = t - com_startTime;
+    min = sec / 60; sec %= 60;
+    hour = min / 60; min %= 60;
+    day = hour / 24; hour %= 24;
+
+    if( day ) {
+        return Com_sprintf( buffer, size, "%d+%d:%02d.%02d", day, hour, min, sec );
+    }
+    if( hour ) {
+        return Com_sprintf( buffer, size, "%d:%02d.%02d", hour, min, sec );
+    }
+    return Com_sprintf( buffer, size, "%02d.%02d", min, sec );
 }
 
 static void Com_LastError_f( void ) {
@@ -1439,6 +1461,7 @@ void Qcommon_Init( char *commandLine ) {
 
 	Cmd_AddMacro( "com_date", Com_Date_m );
 	Cmd_AddMacro( "com_time", Com_Time_m );
+	Cmd_AddMacro( "com_uptime", Com_Uptime_m );
 
     // add any system-wide configuration files
     Sys_AddDefaultConfig();

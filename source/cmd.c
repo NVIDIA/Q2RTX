@@ -398,7 +398,7 @@ static cmd_macro_t *Cmd_FindMacro( const char *name ) {
 	uint32 hash;
 
 	hash = Com_HashString( name, MACRO_HASH_SIZE );
-	for( macro = cmd_macroHash[hash]; macro ; macro = macro->hashNext ) {
+	for( macro = cmd_macroHash[hash]; macro; macro = macro->hashNext ) {
 		if( !strcmp( macro->name, name ) ) {
 			return macro;
 		}

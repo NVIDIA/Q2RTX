@@ -1364,7 +1364,7 @@ void	Draw_FillEx( int x, int y, int w, int h, const color_t color );
 void	Draw_StretchRaw( int x, int y, int w, int h, int cols,
             int rows, const byte *data );
 void    Draw_Char( int x, int y, uint32 flags, int ch, qhandle_t hFont );
-void	Draw_String( int x, int y, uint32 flags, int maxChars,
+int 	Draw_String( int x, int y, uint32 flags, int maxChars,
             const char *string, qhandle_t hFont );
 
 /*
