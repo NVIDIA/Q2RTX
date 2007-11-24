@@ -874,7 +874,8 @@ static void CL_SendDefaultCmd( void ) {
 	// archive this packet
 	history = &cl.history[cls.netchan->outgoing_sequence & CMD_MASK];
 	history->cmdNumber = cl.cmdNumber;
-	history->realtime = cls.realtime;	// for ping calculation
+	history->sent = cls.realtime;	// for ping calculation
+	history->rcvd = 0;
 
 	cl.lastTransmitCmdNumber = cl.cmdNumber;
 
@@ -938,8 +939,6 @@ static void CL_SendDefaultCmd( void ) {
 		Com_Error( ERR_DISCONNECT, "Connection reset by peer" );
 	}
 
-	SCR_AddLagometerOutPacketInfo( i );
-
 	if( cl_showpackets->integer ) {
 		Com_Printf( "%i ", i );
 	}
@@ -969,7 +968,8 @@ static void CL_SendBatchedCmd( void ) {
 	seq = cls.netchan->outgoing_sequence;
 	history = &cl.history[seq & CMD_MASK];
 	history->cmdNumber = cl.cmdNumber;
-	history->realtime = cls.realtime;	// for ping calculation
+	history->sent = cls.realtime;	// for ping calculation
+	history->rcvd = 0;
 
 	cl.lastTransmitTime = cls.realtime;
 	cl.lastTransmitCmdNumber = cl.cmdNumber;
@@ -1029,8 +1029,6 @@ static void CL_SendBatchedCmd( void ) {
 	if( i == -1 ) {
 		Com_Error( ERR_DISCONNECT, "Connection reset by peer" );
 	}
-
-	SCR_AddLagometerOutPacketInfo( i );
 
 	if( cl_showpackets->integer == 1 ) {
 		Com_Printf( "%i(%i) ", i, totalCmds );

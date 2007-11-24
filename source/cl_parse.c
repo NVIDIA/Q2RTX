@@ -441,13 +441,16 @@ static void CL_SetActiveState( void ) {
 	cl.oldframe.valid = qfalse;
     cl.frameflags = 0;
     cl.putaway = qfalse;
+    if( cls.netchan ) {
+        cl.initialSeq = cls.netchan->outgoing_sequence;
+    }
 
 	if( !cls.demoplayback ) {
         VectorScale( cl.frame.ps.pmove.origin, 0.125f, cl.predicted_origin );
 		VectorCopy( cl.frame.ps.viewangles, cl.predicted_angles );
 	}
 	
-	SCR_ClearLagometer();
+	SCR_LagClear();
 	SCR_ClearChatHUD_f();
 	SCR_EndLoadingPlaque ();	// get rid of loading plaque
 	Con_Close();				// close console
@@ -636,7 +639,7 @@ static void CL_ParseFrame( int extrabits ) {
         int rtt = 0;
 		if( cls.netchan ) {
             int seq = cls.netchan->incoming_acknowledged & CMD_MASK;
-			rtt = cls.realtime - cl.history[seq].realtime;
+			rtt = cls.realtime - cl.history[seq].sent;
 		}
 		Com_Printf( "%3i: frame:%i  delta:%i  rtt:%i\n",
 			msg_read.readcount - 1, frame.number, frame.delta, rtt );

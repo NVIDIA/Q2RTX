@@ -151,7 +151,7 @@ Transparency of in-game console background. Takes effect in OpenGL mode only.
 Scale factor of the console text. Takes effect in OpenGL mode only.
 
 - `set con_font "conchars"` (string)  
-Font used to draw console text.
+Font used for drawing console text.
 
 - `set con_background "conback"` (string)  
 Image to use as console background.
@@ -178,8 +178,21 @@ Scale factor of the HUD elements. Takes effect in OpenGL mode only.
 Opacity of the HUD elements. Takes effect in OpenGL mode only.
 
 - `set scr_font "conchars"` (string)  
-Font used to draw HUD text.
+Font used for drawing HUD text.
 
+- `set scr_lag_draw 0` (integer)  
+Toggles drawing of small (48x48 pixels) ping graph on the screen.
+  - 0 - do not draw graph
+  - 1 - draw transparent graph
+  - 2 - overlay graph on gray background
+
+- `set scr_lag_x -1` (integer)  
+Specifies horizontal placement of the ping graph. Setting this to negative
+value aligns graph to the right side of the screen.
+
+- `set scr_lag_y -1` (integer)  
+Specifies vertical placement of the ping graph. Setting this to negative
+value aligns graph to the bottom side of the screen.
 
 Video
 ----------
@@ -272,11 +285,11 @@ Specifies whether to filter out unprintable characters from
 incoming chat messages.
 
 - `set ui_open 1` (boolean)  
-Open full screen menu automatically on startup, instead of full
+When enabled, menu is automatically opened on startup, instead of full
 screen console.
 
 - `set ui_background ""` (string)  
-Specifies image to use as menu background. When empty set to empty string,
+Specifies image to use as menu background. When set to empty string,
 just fills the screen with solid black color.
 
 Macros
@@ -295,14 +308,14 @@ and `${$loc_here}`.
 - `$cl_mapname` Name of the current map.
 - `$loc_there` Name of the location you are looking at.
 - `$loc_here` Name of the location you are standing at.
-- `$cl_dnrate` Download rate in KB/sec.
-- `$cl_uprate` Upload rate in KB/sec.
 - `$cl_ping` Average RTT to the server and back.
 - `$cl_fps` Rendering frame rate.
 - `$cl_ups` Player velocity in units/sec.
 - `$com_time` Current time, formatted according to `com_time_format`.
 - `$com_date` Current date, formatted according to `com_date_format`.
 - `$com_uptime` Engine uptime in format `[DD+][HH:]MM.SS`.
+- `$net_dnrate` Download rate in bytes/sec.
+- `$net_uprate` Upload rate in bytes/sec.
 - `$qt` Expands to double quote.
 - `$sc` Expands to semicolon.
 - `$$` Expands to dollar sign.
@@ -359,7 +372,7 @@ screen. Specify `all` to clear all objects.
 
 - `passive`  
 Toggle passive connection mode. When enabled, client awaits for the first
-`passive_connect` packet from the random server and starts normal connection
+`passive_connect` packet from the random server and starts usual connection
 sequence once this packet is received. This command is useful for connecting
 to servers behind NATs or firewalls. See `pick` [[server#index3h1]] command for more details.
 

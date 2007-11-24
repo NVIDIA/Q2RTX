@@ -19,8 +19,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "cl_local.h"
-#include <setjmp.h>
-#include "q_lex.h"
 
 //
 // cl_draw.c - draw all 2D elements during gameplay
@@ -29,15 +27,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 cvar_t      *scr_draw2d;
 cvar_t      *scr_showturtle;
 cvar_t		*scr_showfollowing;
-cvar_t		*scr_lag_placement;
-cvar_t		*scr_lag_type;
-cvar_t		*scr_lag_background;
+cvar_t		*scr_lag_x;
+cvar_t		*scr_lag_y;
+cvar_t		*scr_lag_draw;
 cvar_t		*scr_alpha;
 
 #define SCR_DrawString( x, y, flags, string ) \
 	UIS_DrawStringEx( x, y, flags, MAX_STRING_CHARS, string, scr_font )
-
-// ============================================================================
 
 /*
 ==============
@@ -68,276 +64,90 @@ LAGOMETER
 ===============================================================================
 */
 
-#define LAG_SAMPLES 1024
-#define LAG_MASK	( LAG_SAMPLES - 1 )
+#define LAG_WIDTH     48
+#define LAG_HEIGHT    48
 
-#define LAG_HISTORY			16
-#define LAG_HISTORY_MASK	( LAG_HISTORY - 1 )
+#define LAG_MAX     200
 
-#define SUPRESSED_PACKET_MASK	0x4000
-#define DROPPED_PACKET_MASK		0x8000
+#define LAG_CRIT_BIT	( 1 << 31 )
+#define LAG_WARN_BIT	( 1 << 30 )
 
 #define LAG_BASE    0xD5
 #define LAG_WARN    0xDC
 #define LAG_CRIT    0xF2
 
-typedef struct lagometer_s {
-	uint16 ping[LAG_SAMPLES];
-	uint16 inSize[LAG_SAMPLES];
-	uint8 delta[LAG_SAMPLES];
-	int inTime[LAG_HISTORY];
-	int inPacketNum;
+static struct {
+	int samples[LAG_WIDTH];
+    int head;
+} lag;
 
-	uint16 outSize[LAG_SAMPLES];
-	int outTime[LAG_HISTORY];
-	int outPacketNum;
-} lagometer_t;
+void SCR_LagClear( void ) {
+	lag.head = 0;
+}
 
-static lagometer_t		lag;
-static vrect_t          lag_rc;
-static int              lag_max;
+void SCR_LagSample( void ) {
+    int i = cls.netchan->incoming_acknowledged & CMD_MASK;
+    client_history_t *h = &cl.history[i];
+    int ping = cls.realtime - h->sent;
+
+    h->rcvd = cls.realtime;
+    if( !h->cmdNumber ) {
+        return;
+    }
+
+    for( i = 0; i < cls.netchan->dropped; i++ ) {
+        lag.samples[lag.head % LAG_WIDTH] = LAG_MAX | LAG_CRIT_BIT;
+    	lag.head++;
+    }
+
+    if( cl.frameflags & FF_SURPRESSED ) {
+        ping |= LAG_WARN_BIT;
+    }
+    lag.samples[lag.head % LAG_WIDTH] = ping;
+	lag.head++;
+}
+
+static void SCR_LagDraw( int x, int y ) {
+	int i, j, v, c;
+
+	for( i = 0; i < LAG_WIDTH; i++ ) {
+		j = lag.head - i - 1;
+		if( j < 0 ) {
+			break;
+		}
+
+		v = lag.samples[j % LAG_WIDTH];
+
+		if( v & LAG_CRIT_BIT ) {
+			c = LAG_CRIT;
+		} else if( v & LAG_WARN_BIT ) {
+			c = LAG_WARN;
+		} else {
+		    c = LAG_BASE;
+        }
+
+		v &= ~(LAG_WARN_BIT|LAG_CRIT_BIT);
+		v = v * LAG_HEIGHT / LAG_MAX;
+		if( v > LAG_HEIGHT ) {
+			v = LAG_HEIGHT;
+		}
+
+		ref.DrawFill( x + LAG_WIDTH - i - 1, y + LAG_HEIGHT - v, 1, v, c );
+	}
+}
 
 /*
-==============
-SCR_ClearLagometer
-==============
+===============================================================================
+
+DRAW OBJECTS
+
+===============================================================================
 */
-void SCR_ClearLagometer( void ) {
-	memset( &lag, 0, sizeof( lag ) );
-}
-
-/*
-==============
-SCR_AddLagometerPacketInfo
-==============
-*/
-void SCR_AddLagometerPacketInfo( void ) {
-	uint16 ping;
-	int i, j;
-
-	i = cls.netchan->incoming_acknowledged & CMD_MASK;
-	ping = ( cls.realtime - cl.history[i].realtime ) & 0x3FFF;
-
-	if( cl.frameflags & FF_SURPRESSED ) {
-		ping |= SUPRESSED_PACKET_MASK;
-	}
-	if( cls.netchan->dropped ) {
-		ping |= DROPPED_PACKET_MASK;
-	}
-	
-	i = lag.inPacketNum & LAG_MASK;
-	j = lag.inPacketNum & LAG_HISTORY_MASK;
-	lag.inTime[j] = cls.realtime;
-	lag.ping[i] = ping;
-	lag.inSize[i] = msg_read.cursize;
-	lag.delta[i] = cl.frame.delta > 0 ? ( cl.frame.number - cl.frame.delta ) : 0;
-
-	lag.inPacketNum++;
-
-}
-
-/*
-==============
-SCR_AddLagometerOutPacketInfo
-==============
-*/
-void SCR_AddLagometerOutPacketInfo( int size ) {
-	int i, j;
-
-	i = lag.outPacketNum & LAG_MASK;
-	j = lag.outPacketNum & LAG_HISTORY_MASK;
-	lag.outTime[j] = cls.realtime;
-	lag.outSize[i] = size;
-
-	lag.outPacketNum++;
-}
-
-static void SCR_DrawPingGraph( void ) {
-	int i, j, v;
-	int color;
-
-	for( i = 0; i < lag_rc.width; i++ ) {
-		j = lag.inPacketNum - i - 1;
-		if( j < 0 ) {
-			break;
-		}
-
-		v = lag.ping[j & LAG_MASK];
-
-		color = LAG_BASE;
-		if( v & SUPRESSED_PACKET_MASK ) {
-			v &= ~SUPRESSED_PACKET_MASK;
-			color = LAG_WARN;
-		}
-		if( v & DROPPED_PACKET_MASK ) {
-			v &= ~DROPPED_PACKET_MASK;
-			color = LAG_CRIT;
-		}
-
-		v = v * lag_rc.height / lag_max;
-		if( v > lag_rc.height ) {
-			v = lag_rc.height;
-		}
-
-		ref.DrawFill( lag_rc.x + lag_rc.width - i - 1, lag_rc.y + lag_rc.height - v, 1, v, color );
-		
-	}
-}
-
-static void SCR_DrawOutPacketGraph( void ) {
-	int i, j, v;
-
-	for( i = 0; i < lag_rc.width; i++ ) {
-		j = lag.outPacketNum - i - 1;
-		if( j < 0 ) {
-			break;
-		}
-
-		v = lag.outSize[j & LAG_MASK];
-
-		v = v * lag_rc.height / lag_max;
-		if( v > lag_rc.height ) {
-			v = lag_rc.height;
-		}
-
-		ref.DrawFill( lag_rc.x + lag_rc.width - i - 1, lag_rc.y + lag_rc.height - v, 1, v, LAG_BASE );
-	}
-}
-
-static void SCR_DrawInPacketGraph( void ) {
-	int i, j, v;
-
-	for( i = 0; i < lag_rc.width; i++ ) {
-		j = lag.inPacketNum - i - 1;
-		if( j < 0 ) {
-			break;
-		}
-
-		v = lag.inSize[j & LAG_MASK];
-
-		v = v * lag_rc.height / lag_max;
-		if( v > lag_rc.height ) {
-			v = lag_rc.height;
-		}
-
-		ref.DrawFill( lag_rc.x + lag_rc.width - i - 1, lag_rc.y + lag_rc.height - v, 1, v, LAG_BASE );		
-	}
-}
-
-static void SCR_DrawDeltaGraph( void ) {
-	int i, j, v;
-	int color;
-
-	for( i = 0; i < lag_rc.width; i++ ) {
-		j = lag.inPacketNum - i - 1;
-		if( j < 0 ) {
-			break;
-		}
-
-		v = lag.delta[j & LAG_MASK];
-
-		color = LAG_BASE;
-		if( !v ) {
-			v = lag_max;
-			color = LAG_WARN;
-		}
-
-		v = v * lag_rc.height / lag_max;
-		if( v > lag_rc.height ) {
-			v = lag_rc.height;
-		}
-
-		ref.DrawFill( lag_rc.x + lag_rc.width - i - 1, lag_rc.y + lag_rc.height - v, 1, v, color );
-	}
-}
-
-static void SCR_DrawDisconnect( vrect_t *rc ) {
-	if( !cls.netchan ) {
-		return;
-	}
-	if( cls.netchan->outgoing_sequence - cls.netchan->incoming_acknowledged > CMD_BACKUP - 1 ) {
-		if( ( cls.realtime >> 8 ) & 3 ) {
-			ref.DrawStretchPic( rc->x, rc->y, rc->width, rc->height, scr_net );
-		}
-	}
-}
-
-static int CL_Ping_m( char *buffer, int bufferSize ) {
-	int i, j;
-	int start;
-	int ping;
-
-	start = lag.inPacketNum - LAG_HISTORY + 1;
-	if( start < 0 ) {
-		start = 0;
-	}
-
-	ping = 0;
-	if( lag.inPacketNum > 1 ) {
-		for( i = start; i < lag.inPacketNum; i++ ) {
-			j = lag.ping[i & LAG_MASK];
-			ping += j & ~( SUPRESSED_PACKET_MASK | DROPPED_PACKET_MASK );
-		}
-
-		ping /= i - start;
-	}
-	return Com_sprintf( buffer, bufferSize, "%i", ping );
-}
-
-static int CL_UpRate_m( char *buffer, int bufferSize ) {
-	int i;
-	float size;
-	int startTime, endTime;
-
-	i = lag.outPacketNum - LAG_HISTORY + 1;
-	if( i < 0 ) {
-		i = 0;
-	}
-
-	startTime = lag.outTime[i & LAG_HISTORY_MASK];
-	endTime = lag.outTime[( lag.outPacketNum - 1 ) &
-        LAG_HISTORY_MASK];
-
-	size = 0;
-	if( startTime != endTime ) {
-		for( ; i < lag.outPacketNum; i++ ) {
-			size += lag.outSize[i & LAG_MASK];
-		}
-
-		size /= endTime - startTime;
-	}
-	return Com_sprintf( buffer, bufferSize, "%1.2f", size );
-}
-
-static int CL_DnRate_m( char *buffer, int bufferSize ) {
-	int i;
-	float size;
-	int startTime, endTime;
-
-	i = lag.inPacketNum - LAG_HISTORY + 1;
-	if( i < 0 ) {
-		i = 0;
-	}
-
-	startTime = lag.inTime[i & LAG_HISTORY_MASK];
-	endTime = lag.inTime[( lag.inPacketNum - 1 ) &
-        LAG_HISTORY_MASK];
-
-	size = 0;
-	if( startTime != endTime ) {
-		for( ; i < lag.inPacketNum; i++ ) {
-			size += lag.inSize[i & LAG_MASK];
-		}
-
-		size /= endTime - startTime;
-	}
-	return Com_sprintf( buffer, bufferSize, "%1.2f", size );
-}
 
 typedef struct {
     list_t  entry;
     int     x, y;
-    int     type;
+    //int     type;
     //union {
         cvar_t *cvar;
         xmacro_t macro;
@@ -438,11 +248,11 @@ static void draw_objects( void ) {
         y = obj->y;
         flags = 0;
         if( x < 0 ) {
-            x += scr_hudWidth;
+            x += scr_hudWidth + 1;
             flags |= UI_RIGHT;
         }
         if( y < 0 ) {
-            y += scr_hudHeight - 8;
+            y += scr_hudHeight - 8 + 1;
         }
         if( obj->macro ) {
             obj->macro( buffer, sizeof( buffer ) );
@@ -598,6 +408,7 @@ SCR_Draw2D
 */
 void SCR_Draw2D( void ) {
     clipRect_t rc;
+    int x, y;
 
 	if( !scr_draw2d->integer || ( cls.key_dest & KEY_MENU ) ) {
 		return;
@@ -642,32 +453,32 @@ void SCR_Draw2D( void ) {
 
 	SCR_DrawCenterString();
 
-	lag_rc.x = scr_hudWidth - 48;
-	lag_rc.y = scr_hudHeight - 48;
-	lag_rc.width = 48;
-	lag_rc.height = 48;
+    x = scr_lag_x->integer;
+    y = scr_lag_y->integer;
 
-    lag_max = 60;
-
-    switch( scr_lag_type->integer ) {
-    case 1:
-        SCR_DrawPingGraph();
-        break;
-    case 2:
-        SCR_DrawOutPacketGraph();
-        break;
-    case 3:
-        SCR_DrawInPacketGraph();
-        break;
-    case 4:
-        SCR_DrawDeltaGraph();
-        break;
+    if( x < 0 ) {
+        x += scr_hudWidth - LAG_WIDTH + 1;
+    }
+    if( y < 0 ) {
+        y += scr_hudHeight - LAG_HEIGHT + 1;
     }
 
-    draw_objects();
+	// draw ping graph
+    if( scr_lag_draw->integer ) {
+        if( scr_lag_draw->integer > 1 ) {
+	        ref.DrawFill( x, y, LAG_WIDTH, LAG_HEIGHT, 4 );
+        }
+        SCR_LagDraw( x, y );
+    }
 
 	// draw phone jack
-	SCR_DrawDisconnect( &lag_rc );
+	if( cls.netchan && cls.netchan->outgoing_sequence - cls.netchan->incoming_acknowledged >= CMD_BACKUP ) {
+		if( ( cls.realtime >> 8 ) & 3 ) {
+			ref.DrawStretchPic( x, y, LAG_WIDTH, LAG_HEIGHT, scr_net );
+		}
+	}
+
+    draw_objects();
 
 	ref.SetColor( DRAW_COLOR_CLEAR, NULL );
 
@@ -698,15 +509,11 @@ void SCR_InitDraw( void ) {
 	scr_draw2d = Cvar_Get( "scr_draw2d", "2", 0 );
 	scr_showturtle = Cvar_Get( "scr_showturtle", "1", 0 );
 	scr_showfollowing = Cvar_Get( "scr_showfollowing", "0", 0 );
-	scr_lag_placement = Cvar_Get( "scr_lag_placement", "48x48-1-1", 0 );
-    scr_lag_type = Cvar_Get( "scr_lag_type", "0", 0 );
-    scr_lag_background = Cvar_Get( "scr_lag_background", "0", 0 );
+	scr_lag_x = Cvar_Get( "scr_lag_x", "-1", 0 );
+	scr_lag_y = Cvar_Get( "scr_lag_y", "-1", 0 );
+    scr_lag_draw = Cvar_Get( "scr_lag_draw", "0", 0 );
 	scr_alpha = Cvar_Get( "scr_alpha", "1", 0 );
 
-	Cmd_AddMacro( "cl_ping", CL_Ping_m );
-	Cmd_AddMacro( "cl_uprate", CL_UpRate_m );
-	Cmd_AddMacro( "cl_dnrate", CL_DnRate_m );
-	
     Cmd_Register( scr_drawcmds );
 }
 

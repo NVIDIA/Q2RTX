@@ -60,7 +60,8 @@ typedef struct clientinfo_s {
 } clientinfo_t;
 
 typedef struct {
-	int		realtime;	// time sent, for calculating pings
+	int		sent;	// time sent, for calculating pings
+	int		rcvd;	// time rcvd, for calculating pings
 	int		cmdNumber;	// current cmdNumber for this frame
 } client_history_t;
 
@@ -96,6 +97,7 @@ typedef struct client_state_s {
 	int			cmdNumber;
 	short		predicted_origins[CMD_BACKUP][3];	// for debug comparing against server
 	client_history_t	history[CMD_BACKUP];
+    int         initialSeq;
 
 	float		predicted_step;				// for stair up smoothing
 	int			predicted_step_time;
@@ -232,7 +234,7 @@ typedef struct client_static_s {
 
 	int			measureFramecount;
 	int			measureTime;
-	int			currentFPS;
+	int			fps, ping;
 
 // connection information
 	netadr_t	serverAddress;
@@ -696,9 +698,8 @@ void	SCR_Draw2D( void );
 void	SCR_LoadingString( const char *string );
 float	SCR_FadeAlpha( int startTime, int visTime, int fadeTime );
 void	SCR_AddToChatHUD( const char *string );
-void	SCR_AddLagometerOutPacketInfo( int size );
-void	SCR_AddLagometerPacketInfo( void );
-void	SCR_ClearLagometer( void );
+void    SCR_LagSample( void );
+void	SCR_LagClear( void );
 void	SCR_ClearChatHUD_f( void );
 
 //

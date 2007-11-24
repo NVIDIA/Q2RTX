@@ -82,6 +82,12 @@ static fileHandle_t	net_logFile;
 static netflag_t	net_active;
 static int          net_error;
 
+static uint32       net_statTime;
+static int          net_rcvd;
+static int          net_sent;
+static int          net_rate_dn;
+static int          net_rate_up;
+
 //=============================================================================
 
 /*
@@ -303,6 +309,22 @@ static void NET_LogPacket( const netadr_t *address, const char *prefix,
 	FS_FPrintf( net_logFile, "\n" );
 }
 
+static void NET_UpdateStats( void ) {
+    if( net_statTime > com_eventTime ) {
+        net_statTime = com_eventTime;
+    }
+    if( com_eventTime - net_statTime < 1000 ) {
+        return;
+    }
+    net_statTime = com_eventTime;
+
+    net_rate_dn = net_rcvd;
+    net_rate_up = net_sent;
+    net_sent = 0;
+    net_rcvd = 0;
+}
+
+
 /*
 =============
 NET_GetLoopPacket
@@ -311,6 +333,8 @@ NET_GetLoopPacket
 qboolean NET_GetLoopPacket( netsrc_t sock ) {
 	loopback_t	*loop;
 	loopmsg_t *loopmsg;
+
+    NET_UpdateStats();
 
 	loop = &loopbacks[sock];
 
@@ -330,12 +354,14 @@ qboolean NET_GetLoopPacket( netsrc_t sock ) {
 	if( net_log_active->integer ) {
 		NET_LogPacket( &net_from, "LP recv", loopmsg->data, loopmsg->datalen );
 	}
+    if( sock == NS_CLIENT ) {
+        net_rcvd += loopmsg->datalen;
+    }
 
     SZ_Init( &msg_read, msg_read_buffer, sizeof( msg_read_buffer ) );
 	msg_read.cursize = loopmsg->datalen;
 
 	return qtrue;
-
 }
 
 /*
@@ -354,6 +380,8 @@ neterr_t NET_GetPacket( netsrc_t sock ) {
     if( udp_sockets[sock] == INVALID_SOCKET ) {
         return NET_AGAIN;
     }
+
+    NET_UpdateStats();
 
 	fromlen = sizeof( from );
 	ret = recvfrom( udp_sockets[sock], msg_read_buffer, MAX_PACKETLEN, 0,
@@ -418,6 +446,7 @@ neterr_t NET_GetPacket( netsrc_t sock ) {
 
     SZ_Init( &msg_read, msg_read_buffer, sizeof( msg_read_buffer ) );
 	msg_read.cursize = ret;
+    net_rcvd += ret;
 
 	return NET_OK;
 }
@@ -460,6 +489,9 @@ neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, uint32 length, const
 			if( net_log_active->integer ) {
 				NET_LogPacket( to, "LB send", data, length );
 			}
+            if( sock == NS_CLIENT ) {
+                net_sent += length;
+            }
 		}
 		return NET_OK;
 	case NA_IP:
@@ -526,9 +558,15 @@ neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, uint32 length, const
 		return NET_AGAIN;
 	}
 
+    if( ret != length ) {
+		Com_WPrintf( "NET_SendPacket: short send to %s\n",
+            NET_AdrToString( to ) );
+    }
+
 	if( net_log_active->integer ) {
-		NET_LogPacket( to, "UDP send", data, length );
+		NET_LogPacket( to, "UDP send", data, ret );
 	}
+    net_sent += ret;
 
 	return NET_OK;
 }
@@ -971,6 +1009,7 @@ neterr_t NET_Run( netstream_t *s ) {
             if( net_log_active->integer ) {
                 NET_LogPacket( &s->address, "TCP recv", data, ret );
             }
+            net_rcvd += ret;
 
             result = NET_OK;
         }
@@ -993,6 +1032,7 @@ neterr_t NET_Run( netstream_t *s ) {
             if( net_log_active->integer ) {
                 NET_LogPacket( &s->address, "TCP send", data, ret );
             }
+            net_sent += ret;
 
             result = NET_OK;
         }
@@ -1217,6 +1257,14 @@ qboolean NET_GetAddress( netsrc_t sock, netadr_t *adr ) {
     return qtrue;
 }
 
+static int NET_UpRate_m( char *buffer, int size ) {
+	return Com_sprintf( buffer, size, "%d", net_rate_up );
+}
+
+static int NET_DnRate_m( char *buffer, int size ) {
+	return Com_sprintf( buffer, size, "%d", net_rate_dn );
+}
+
 /*
 ====================
 NET_Init
@@ -1273,9 +1321,14 @@ void NET_Init( void ) {
 		NetLogFile_Open();
     }
 
+    net_statTime = com_eventTime;
+
 	Cmd_AddCommand( "net_restart", NET_Restart_f );
 	Cmd_AddCommand( "showip", NET_ShowIP_f );
 	Cmd_AddCommand( "dns", NET_Dns_f );
+
+    Cmd_AddMacro( "net_uprate", NET_UpRate_m );
+    Cmd_AddMacro( "net_dnrate", NET_DnRate_m );
 }
 
 /*

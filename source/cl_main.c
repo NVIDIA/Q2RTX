@@ -1427,7 +1427,7 @@ void CL_PacketEvent( neterr_t ret ) {
 
     CL_AddNetgraph();
 
-    SCR_AddLagometerPacketInfo();
+    SCR_LagSample();
 }
 
 
@@ -1967,36 +1967,21 @@ static void CL_DumpLayout_f( void ) {
 	Com_Printf( "Dumped layout program to %s.\n", buffer );
 }
 
-/*
-====================
-CL_Mapname_m
-====================
-*/
-static int CL_Mapname_m( char *buffer, int bufferSize ) {
+static int CL_Mapname_m( char *buffer, int size ) {
     if( !cl.mapname[0] ) {
-        return Q_strncpyz( buffer, "nomap", bufferSize );
+        return Q_strncpyz( buffer, "nomap", size );
     }
-    return Q_strncpyz( buffer, cl.mapname, bufferSize );
+    return Q_strncpyz( buffer, cl.mapname, size );
 }
 
-/*
-====================
-CL_Server_m
-====================
-*/
-static int CL_Server_m( char *buffer, int bufferSize ) {
+static int CL_Server_m( char *buffer, int size ) {
     if( cls.state <= ca_disconnected ) {
-        return Q_strncpyz( buffer, "noserver", bufferSize );
+        return Q_strncpyz( buffer, "noserver", size );
     }
-    return Q_strncpyz( buffer, cls.servername, bufferSize );
+    return Q_strncpyz( buffer, cls.servername, size );
 }
 
-/*
-==============
-CL_Ups_m
-==============
-*/
-static int CL_Ups_m( char *buffer, int bufferSize ) {
+static int CL_Ups_m( char *buffer, int size ) {
 	vec3_t vel;
 	int ups;
 	player_state_t *ps;
@@ -2019,15 +2004,10 @@ static int CL_Ups_m( char *buffer, int bufferSize ) {
 	}
 
 	ups = VectorLength( vel );
-	return Com_sprintf( buffer, bufferSize, "%d", ups );
+	return Com_sprintf( buffer, size, "%d", ups );
 }
 
-/*
-==============
-CL_Timer_m
-==============
-*/
-static int CL_Timer_m( char *buffer, int bufferSize ) {
+static int CL_Timer_m( char *buffer, int size ) {
 	int hour, min, sec;
 
 	sec = cl.time / 1000;
@@ -2035,23 +2015,25 @@ static int CL_Timer_m( char *buffer, int bufferSize ) {
 	hour = min / 60; min %= 60;
 
 	if( hour ) {
-		return Com_sprintf( buffer, bufferSize, "%i:%i:%02i", hour, min, sec );
+		return Com_sprintf( buffer, size, "%i:%i:%02i", hour, min, sec );
     }
-	return Com_sprintf( buffer, bufferSize, "%i:%02i", min, sec );
+	return Com_sprintf( buffer, size, "%i:%02i", min, sec );
 }
 
-static int CL_Fps_m( char *buffer, int bufferSize ) {
-	return Com_sprintf( buffer, bufferSize, "%i", cls.currentFPS );
+static int CL_Fps_m( char *buffer, int size ) {
+	return Com_sprintf( buffer, size, "%i", cls.fps );
 }
-
-static int CL_Health_m( char *buffer, int bufferSize ) {
-	return Com_sprintf( buffer, bufferSize, "%i", cl.frame.ps.stats[STAT_HEALTH] );
+static int CL_Ping_m( char *buffer, int size ) {
+	return Com_sprintf( buffer, size, "%i", cls.ping );
 }
-static int CL_Ammo_m( char *buffer, int bufferSize ) {
-	return Com_sprintf( buffer, bufferSize, "%i", cl.frame.ps.stats[STAT_AMMO] );
+static int CL_Health_m( char *buffer, int size ) {
+	return Com_sprintf( buffer, size, "%i", cl.frame.ps.stats[STAT_HEALTH] );
 }
-static int CL_Armor_m( char *buffer, int bufferSize ) {
-	return Com_sprintf( buffer, bufferSize, "%i", cl.frame.ps.stats[STAT_ARMOR] );
+static int CL_Ammo_m( char *buffer, int size ) {
+	return Com_sprintf( buffer, size, "%i", cl.frame.ps.stats[STAT_AMMO] );
+}
+static int CL_Armor_m( char *buffer, int size ) {
+	return Com_sprintf( buffer, size, "%i", cl.frame.ps.stats[STAT_ARMOR] );
 }
 
 /*
@@ -2350,6 +2332,7 @@ void CL_InitLocal ( void ) {
 	Cmd_AddMacro( "cl_timer", CL_Timer_m );
 	Cmd_AddMacro( "cl_ups", CL_Ups_m );
 	Cmd_AddMacro( "cl_fps", CL_Fps_m );
+	Cmd_AddMacro( "cl_ping", CL_Ping_m );
 	Cmd_AddMacro( "cl_health", CL_Health_m );
 	Cmd_AddMacro( "cl_ammo", CL_Ammo_m );
 	Cmd_AddMacro( "cl_armor", CL_Armor_m );
@@ -2434,16 +2417,42 @@ static void CL_SetClientTime( void ) {
 
 }
 
-static void CL_MeasureFPS( void ) {
-	int time;
+static void CL_MeasureStats( void ) {
+	int time = Sys_Milliseconds();
 
-	time = Sys_Milliseconds();
-	if( time - cls.measureTime >= 1000 ) {
-		cls.measureTime = time;
-		cls.currentFPS = cls.measureFramecount;
-		cls.measureFramecount = 0;
-	}
 	cls.measureFramecount++;
+
+    if( cls.measureTime > time ) {
+        cls.measureTime = time;
+    }
+	if( time - cls.measureTime < 1000 ) {
+        return;
+    }
+
+    if( cls.netchan ) {
+        int ack = cls.netchan->incoming_acknowledged;
+        int ping = 0;
+        int i, j;
+
+        i = ack - 16 + 1;
+        if( i < cl.initialSeq ) {
+            i = cl.initialSeq;
+        }
+		for( j = i; j <= ack; j++ ) {
+            client_history_t *h = &cl.history[j & CMD_MASK];
+            if( h->rcvd > h->sent ) {
+	            ping += h->rcvd - h->sent;
+            }
+		}
+
+        if( j != i ) {
+    		cls.ping = ping / ( j - i );
+        }
+    }
+
+	cls.measureTime = time;
+	cls.fps = cls.measureFramecount;
+	cls.measureFramecount = 0;
 }
 
 #if USE_AUTOREPLY
@@ -2642,7 +2651,7 @@ void CL_Frame( int msec ) {
         CL_CheckTimeout();
     }
 
-	CL_MeasureFPS();
+	CL_MeasureStats();
 
     cls.framecount++;
 
