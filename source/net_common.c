@@ -294,7 +294,7 @@ static void NET_LogPacket( const netadr_t *address, const char *prefix,
 				FS_FPrintf( net_logFile, "   " );
 			}
 		}
-		FS_FPrintf( net_logFile, ": ", i );
+		FS_FPrintf( net_logFile, ": " );
 		for( j = 0; j < 16; j++ ) {
 			if( i * 16 + j < length ) {
 				c = data[i * 16 + j];

@@ -30,9 +30,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #ifdef __GNUC__
 
-#define q_printf( f, a )    __attribute__(( format( printf, f, a ) ))
-#define q_noreturn          __attribute__(( noreturn ))
-#define q_malloc            __attribute__(( malloc ))
+#define q_printf( f, a )    __attribute__((format( printf, f, a )))
+#define q_noreturn          __attribute__((noreturn))
+#define q_malloc            __attribute__((malloc))
+#define q_sentinel          __attribute__((sentinel))
 
 #define q_likely( x )         __builtin_expect( !!(x), 1 )
 #define q_unlikely( x )       __builtin_expect( !!(x), 0 )
@@ -47,6 +48,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define q_printf( f, a )
 #define q_noreturn
 #define q_malloc
+#define q_sentinel
 
 #define q_likely( x )         !!(x)
 #define q_unlikely( x )       !!(x)
@@ -447,6 +449,7 @@ void COM_AppendExtension( char *path, const char *extension, int pathSize );
 char *COM_FileExtension( const char *in );
 
 qboolean COM_IsNumeric( const char *string );
+qboolean COM_HasSpaces( const char *string );
 
 char *COM_SimpleParse( const char **data_p );
 char *COM_Parse( const char **data_p );
@@ -464,6 +467,7 @@ char *Com_ReplaceSeparators( char *s, int separator );
 // buffer safe operations
 int Q_strncpyz( char *dest, const char *src, int destsize );
 int Q_strcat( char *dest, int destsize, const char *src );
+int Q_concat( char *buffer, int size, ... ) q_sentinel;
 int Com_sprintf( char *dest, int destsize, const char *fmt, ... ) q_printf( 3, 4 );
 int Q_vsnprintf( char *dest, int destsize, const char *fmt, va_list argptr );
 

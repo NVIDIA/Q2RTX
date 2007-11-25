@@ -71,8 +71,8 @@ static void Demos_LoadInfo( int index ) {
 		return;
 	}
 
-	Com_sprintf( buffer, sizeof( buffer ), "%s/%s",
-        uis.m_demos_browse + 1, m_demos.names[index] );
+	Q_concat( buffer, sizeof( buffer ),
+        uis.m_demos_browse + 1, "/", m_demos.names[index], NULL );
 
 	client.GetDemoInfo( buffer, &m_demos.demo );
 
@@ -120,7 +120,7 @@ static char *Demos_BuildName( const char *path, const char *name,
     demoInfo_t demo;
     char *s;
 
-	Com_sprintf( buffer, sizeof( buffer ), "%s/%s", path, name );
+	Q_concat( buffer, sizeof( buffer ), path, "/", name, NULL );
 
 	client.GetDemoInfo( buffer, &demo );
 	if( !demo.mapname[0] ) {

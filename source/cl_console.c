@@ -75,6 +75,7 @@ static cvar_t	*con_scale;
 static cvar_t	*con_font;
 static cvar_t	*con_background;
 static cvar_t	*con_scroll;
+static cvar_t	*con_histfile;
 
 // ============================================================================
 
@@ -326,11 +327,12 @@ void Con_Init( void ) {
 	con_background = Cvar_Get( "con_background", "conback", CVAR_ARCHIVE );
 	con_background->changed = con_param_changed;
 	con_scroll = Cvar_Get( "con_scroll", "0", CVAR_ARCHIVE );
+	con_histfile = Cvar_Get( "con_histfile", "history.txt", CVAR_ARCHIVE );
 
 	IF_Init( &con.prompt.inputLine, 1, MAX_FIELD_TEXT );
 	IF_Init( &con.chatPrompt.inputLine, 1, MAX_FIELD_TEXT );
 
-	con.prompt.Printf = Con_Printf;
+	con.prompt.printf = Con_Printf;
 
 	// use default width if no video initialized yet
 	scr_glconfig.vidWidth = 640;
@@ -344,12 +346,21 @@ void Con_Init( void ) {
 	con.initialized = qtrue;
 }
 
+void Con_PostInit( void ) {
+    if( con_histfile->string[0] ) {
+        Prompt_LoadHistory( &con.prompt, con_histfile->string );
+    }
+}
+
 /*
 ================
 Con_Shutdown
 ================
 */
 void Con_Shutdown( void ) {
+    if( con_histfile->string[0] ) {
+        Prompt_SaveHistory( &con.prompt, con_histfile->string );
+    }
 	Prompt_Clear( &con.prompt );
 }
 

@@ -148,7 +148,7 @@ static void S_Play_f( void ) {
 	char name[MAX_QPATH];
 
 	if( Cmd_Argc() < 2 ) {
-		Com_Printf( "Usage: %s <sound1> [sound2] ...\n", Cmd_Argv( 0 ) );
+		Com_Printf( "Usage: %s <sound> [...]\n", Cmd_Argv( 0 ) );
 		return;
 	}
 
@@ -716,15 +716,15 @@ static sfx_t *S_RegisterSexedSound( entity_state_t *ent, const char *base ) {
 		strcpy( model, "male" );
 
 	// see if we already know of the model specific sound
-	Com_sprintf( buffer, sizeof( buffer ),
-        "#players/%s/%s", model, base + 1 );
+	Q_concat( buffer, sizeof( buffer ),
+        "#players/", model, "/", base + 1, NULL );
 	sfx = S_FindName( buffer );
     
 	// see if it exists
     if( !S_LoadSound( sfx ) ) {
 		// no, revert to the male sound in the pak0.pak
-		Com_sprintf( buffer, sizeof( buffer ),
-            "player/male/%s", base + 1 );
+		Q_concat( buffer, sizeof( buffer ),
+            "player/male/", base + 1, NULL );
 	    sfx->truename = Z_TagCopyString( buffer, TAG_SOUND );
     }
 

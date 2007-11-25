@@ -254,7 +254,7 @@ void CL_Record_f( void ) {
 	if( *string == '/' ) {
 		Q_strncpyz( name, string + 1, sizeof( name ) );
 	} else {
-		Com_sprintf( name, sizeof( name ), "demos/%s", string );
+		Q_concat( name, sizeof( name ), "demos/", string, NULL );
     	COM_AppendExtension( name, ".dm2", sizeof( name ) );
 	}
 	if( compressed ) {
@@ -417,9 +417,10 @@ static void CL_PlayDemo_f( void ) {
 	fileHandle_t demofile;
 	char *arg;
 	int length;
+    int argc = Cmd_Argc();
 
-	if( Cmd_Argc() < 2 ) {
-		Com_Printf( "Usage: %s <filename>\n", Cmd_Argv( 0 ) );
+	if( argc < 2 ) {
+		Com_Printf( "Usage: %s <filename> [...]\n", Cmd_Argv( 0 ) );
 		return;
 	}
 
@@ -433,7 +434,7 @@ static void CL_PlayDemo_f( void ) {
 		FS_FOpenFile( name, &demofile, FS_MODE_READ );
 	} else {
 		// Search for matching extensions
-		Com_sprintf( name, sizeof( name ), "demos/%s", arg );
+		Q_concat( name, sizeof( name ), "demos/", arg, NULL );
 		FS_FOpenFile( name, &demofile, FS_MODE_READ );	
         if( !demofile ) {
 			COM_AppendExtension( name, ".dm2", sizeof( name ) );
@@ -445,6 +446,16 @@ static void CL_PlayDemo_f( void ) {
 		Com_Printf( "Couldn't open %s\n", name );
 		return;
 	}
+
+#if 0
+    // add trailing filenames to play list
+    for( i = 2; i < argc; i++ ) {
+        arg = Cmd_Argv( i );
+        length = strlen( arg );
+        entry = Z_Malloc( sizeof( *entry ) + length );
+        memcpy( entry->filename, arg, length + 1 );
+    }
+#endif
 
 	if( sv_running->integer ) {
 		// if running a local server, kill it and reissue

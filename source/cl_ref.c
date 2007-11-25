@@ -258,8 +258,8 @@ static qboolean CL_LoadRefresh( const char *name ) {
 	Ref_APISetupCallback( API_REFRESH, &ref );
 #else
 
-    Com_sprintf( path, sizeof( path ), "%s" PATH_SEP_STRING "%s" LIBSUFFIX,
-        sys_refdir->string, name );
+    Q_concat( path, sizeof( path ), sys_refdir->string, PATH_SEP_STRING,
+        name, LIBSUFFIX, NULL );
     entry = Sys_LoadLibrary( path, "moduleEntry", &reflib_library );
 	if( !entry ) {
 		Com_WPrintf( "Couldn't load %s\n", name );
@@ -292,6 +292,8 @@ static qboolean CL_LoadRefresh( const char *name ) {
 	if( !ref.Init( qtrue ) ) {
 		goto fail;
 	}
+    
+    Sys_FixFPCW();
 
 	Com_Printf( "------------------------------------\n" );
 	
@@ -382,7 +384,7 @@ void CL_InitRefresh( void ) {
 	while( 1 ) {
 		char buffer[MAX_QPATH];
 
-		Com_sprintf( buffer, sizeof( buffer ), "ref_%s", vid_ref->string );
+		Q_concat( buffer, sizeof( buffer ), "ref_", vid_ref->string, NULL );
 		if( CL_LoadRefresh( buffer ) ) {
 			break;
 		}

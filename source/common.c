@@ -30,6 +30,9 @@ static jmp_buf  abortframe;		// an ERR_DROP occured, exit the entire frame
 
 static char		com_errorMsg[MAXPRINTMSG];
 
+static char     **com_argv;
+static int      com_argc;
+
 cvar_t	*host_speeds;
 cvar_t	*developer;
 cvar_t	*timescale;
@@ -481,7 +484,7 @@ static void Com_WriteConfig_f( void ) {
 		strcpy( buffer, COM_CONFIG_NAME );
 	} else {
 		Cmd_ArgvBuffer( 1, buffer, sizeof( buffer ) );
-		COM_DefaultExtension( buffer, ".cfg", sizeof( buffer ) );
+		COM_AppendExtension( buffer, ".cfg", sizeof( buffer ) );
 	}
 
 	if( Com_WriteConfiguration( buffer ) ) {
@@ -1280,43 +1283,6 @@ finish:
     return NULL;
 }
 
-#define MAX_LINE_COMMANDS	128
-
-static char	*com_commands[MAX_LINE_COMMANDS];
-static int		com_numCommands;
-
-/*
-===============
-Com_ParseCommandLine
-
-===============
-*/
-static void Com_ParseCommandLine( char *commandLine ) {
-	qboolean inquote = qfalse;
-
-    if( !commandLine ) {
-        return;
-    }
-
-	com_numCommands = 0;
-	while( *commandLine ) {
-		if( *commandLine == '\"' ) {
-			inquote ^= 1;
-		} else if( *commandLine == '+' && !inquote ) {
-			com_commands[com_numCommands] = commandLine + 1;
-			com_numCommands++;
-
-			*commandLine = 0;
-
-			if( com_numCommands == MAX_LINE_COMMANDS ) {
-				break;
-			}
-		}
-
-		commandLine++;
-
-	}
-}
 
 /*
 ===============
@@ -1335,23 +1301,24 @@ static void Com_AddEarlyCommands( qboolean clear ) {
 	int		i;
 	char	*s;
 
-	for( i = 0; i < com_numCommands; i++ ) {
-		s = com_commands[i];
-		if( !*s ) {
+	for( i = 1; i < com_argc; i++ ) {
+		s = com_argv[i];
+		if( !s ) {
 			continue;
 		}
-		Cmd_TokenizeString( s, qfalse );
-		if( strcmp( Cmd_Argv( 0 ), "set" ) ) {
+		if( strcmp( s, "+set" ) ) {
 			continue;
 		}
-        if( Cmd_Argc() != 3 ) {
+        if( i + 2 >= com_argc ) {
             Com_Printf( "Usage: +set <variable> <value>\n" );
-        } else {
-    		Cvar_SetEx( Cmd_Argv( 1 ), Cmd_Argv( 2 ), CVAR_SET_COMMAND_LINE );
+            com_argc = i;
+            break;
         }
+    	Cvar_SetEx( com_argv[ i + 1 ], com_argv[ i + 2 ], CVAR_SET_COMMAND_LINE );
 		if( clear ) {
-			*s = 0;
+			com_argv[i] = com_argv[ i + 1 ] = com_argv[ i + 2 ] = NULL;
 		}
+        i += 2;
 	}
 }
 
@@ -1373,19 +1340,27 @@ static qboolean Com_AddLateCommands( void ) {
 	char	*s;
 	qboolean ret = qfalse;
 
-	for( i = 0; i < com_numCommands; i++ ) {
-		s = com_commands[i];
-		if( !*s ) {
+	for( i = 1; i < com_argc; i++ ) {
+		s = com_argv[i];
+		if( !s ) {
 			continue;
 		}
+        if( *s == '+' ) {
+            if( ret ) {
+        		Cbuf_AddText( "\n" );
+            }
+            s++;
+        } else if( ret ) {
+    	    Cbuf_AddText( " " );
+        }
 		Cbuf_AddText( s );
-		Cbuf_AddText( "\n" );
 		ret = qtrue;
 	}
 
-	if( ret ) {
-		Cbuf_Execute();
-	}
+    if( ret ) {
+    	Cbuf_AddText( "\n" );
+        Cbuf_Execute();
+    }
 
 	return ret;
 }
@@ -1396,7 +1371,7 @@ static qboolean Com_AddLateCommands( void ) {
 Qcommon_Init
 =================
 */
-void Qcommon_Init( char *commandLine ) {
+void Qcommon_Init( int argc, char **argv ) {
 	static const char *version = APPLICATION " " VERSION " " __DATE__ " " BUILDSTRING " " CPUSTRING;
 
 	if( _setjmp( abortframe ) )
@@ -1404,7 +1379,8 @@ void Qcommon_Init( char *commandLine ) {
 
 	Com_Printf( S_COLOR_CYAN "%s\n", version );
 
-	Com_ParseCommandLine( commandLine );
+    com_argc = argc;
+    com_argv = argv;
 
 	// prepare enough of the subsystems to handle
 	// cvar and command buffer management
@@ -1548,8 +1524,6 @@ void Qcommon_Init( char *commandLine ) {
 #endif
     );
 	Com_Printf( "http://q2pro.sf.net\n\n" );
-
-	com_numCommands = 0;
 
     time( &com_startTime );
 

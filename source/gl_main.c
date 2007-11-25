@@ -998,7 +998,7 @@ void GL_BeginRegistration( const char *name ) {
     memset( &glr, 0, sizeof( glr ) );
 	glr.viewcluster1 = glr.viewcluster2 = -2;
     
-	Com_sprintf( fullname, sizeof( fullname ), "maps/%s.bsp", name );
+	Q_concat( fullname, sizeof( fullname ), "maps/", name, ".bsp", NULL );
    
 	// check if the required world model was already loaded
     if( !strcmp( r_world.name, fullname ) &&

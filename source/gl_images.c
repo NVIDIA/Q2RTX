@@ -714,7 +714,7 @@ qhandle_t R_RegisterPic( const char *name ) {
 	if( name[0] == '*' ) {
 		image = R_FindImage( name, it_pic );
     } else if( name[0] != '/' && name[0] != '\\' ) {
-		Com_sprintf( fullname, sizeof( fullname ), "pics/%s", name );
+		Q_concat( fullname, sizeof( fullname ), "pics/", name, NULL );
 		COM_DefaultExtension( fullname, ".pcx", sizeof( fullname ) );
 		image = R_FindImage( fullname, it_pic );
 	} else {

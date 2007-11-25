@@ -445,13 +445,13 @@ static int FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
 #ifdef _WIN32
 	// allow writing into basedir on Windows
 	if( ( file->mode & FS_PATH_MASK ) == FS_PATH_BASE ) {
-		Com_sprintf( file->fullpath, sizeof( file->fullpath ),
-			"%s/" BASEGAME "/%s", sys_basedir->string, name );
+		Q_concat( file->fullpath, sizeof( file->fullpath ),
+			sys_basedir->string, "/" BASEGAME "/", name, NULL );
 	} else
 #endif
 	{
-		Com_sprintf( file->fullpath, sizeof( file->fullpath ),
-			"%s/%s", fs_gamedir, name );
+		Q_concat( file->fullpath, sizeof( file->fullpath ),
+			fs_gamedir, "/", name, NULL );
 	}
 
 	mode = file->mode & FS_MODE_MASK;
@@ -581,7 +581,7 @@ static int FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean unique )
 					// found it!
 					fs_fileFromPak = qtrue;
 
-					Com_sprintf( file->fullpath, sizeof( file->fullpath ), "%s/%s", pak->filename, entry->name );
+					Q_concat( file->fullpath, sizeof( file->fullpath ), pak->filename, "/", entry->name, NULL );
 
 					// open a new file on the pakfile
 #if USE_ZLIB
@@ -636,8 +636,8 @@ static int FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean unique )
 				continue;
 			}
 	// check a file in the directory tree
-			Com_sprintf( file->fullpath, sizeof( file->fullpath ), "%s/%s",
-				search->filename, name );
+			Q_concat( file->fullpath, sizeof( file->fullpath ),
+				search->filename, "/", name, NULL );
 
 			FS_ConvertToSysPath( file->fullpath );
 
@@ -743,6 +743,27 @@ int FS_Read( void *buffer, int len, fileHandle_t hFile ) {
 
 	return len;
 }
+
+int FS_ReadLine( fileHandle_t f, char *buffer, int size ) {
+	fsFile_t	*file = FS_FileForHandle( f );
+    char *s;
+    int len;
+
+	if( file->type != FS_REAL ) {
+        return 0;
+    }
+    do {
+        s = fgets( buffer, size, file->fp );
+        if( !s ) {
+            return 0;
+        }
+        len = strlen( s );
+    } while( len < 2 );
+
+    s[ len - 1 ] = 0;
+    return len - 1;
+}
+
 
 /*
 =================
@@ -1147,7 +1168,7 @@ qboolean FS_RemoveFile( const char *filename ) {
 		return qfalse;
 	}
 
-	Com_sprintf( path, sizeof( path ), "%s/%s", fs_gamedir, filename );
+	Q_concat( path, sizeof( path ), fs_gamedir, "/", filename, NULL );
 	FS_ConvertToSysPath( path );
 
 	if( !Sys_RemoveFile( path ) ) {
@@ -1171,8 +1192,8 @@ qboolean FS_RenameFile( const char *from, const char *to ) {
 		return qfalse;
 	}
 
-	Com_sprintf( frompath, sizeof( frompath ), "%s/%s", fs_gamedir, from );
-	Com_sprintf( topath, sizeof( topath ), "%s/%s", fs_gamedir, to );
+	Q_concat( frompath, sizeof( frompath ), fs_gamedir, "/", from, NULL );
+	Q_concat( topath, sizeof( topath ), fs_gamedir, "/", to, NULL );
 
 	FS_ConvertToSysPath( frompath );
 	FS_ConvertToSysPath( topath );
@@ -1467,7 +1488,7 @@ static void FS_LoadPackFiles( const char *extension, pack_t *(loadfunc)( const c
 	}
 	qsort( list, numFiles, sizeof( list[0] ), pakcmp );
 	for( i = 0; i < numFiles; i++ ) {
-        Com_sprintf( path, sizeof( path ), "%s/%s", fs_gamedir, list[i] );
+        Q_concat( path, sizeof( path ), fs_gamedir, "/", list[i], NULL );
 		pak = (*loadfunc)( path );
 		if( !pak )
 			continue;
@@ -1839,11 +1860,11 @@ char **FS_ListFiles( const char *path, const char *extension,
 					continue;
 				}
 
-				Q_strncpyz( buffer, search->filename, sizeof( buffer ) );
 				if( *path ) {
-					Q_strcat( buffer, sizeof( buffer ), "/" );
-					Q_strcat( buffer, sizeof( buffer ), path );
-				}
+					Q_concat( buffer, sizeof( buffer ), search->filename, "/", path, NULL );
+				} else {
+				    Q_strncpyz( buffer, search->filename, sizeof( buffer ) );
+                }
 
 				if( flags & FS_SEARCH_BYFILTER ) {
 					dirlist = Sys_ListFiles( buffer, extension, flags|FS_SEARCH_NOSORT, &numFilesInDir );
@@ -2066,8 +2087,8 @@ static void FS_WhereIs_f( void ) {
                 }
             }
         } else {
-            Com_sprintf( fullpath, sizeof( fullpath ), "%s/%s",
-                search->filename, path );
+            Q_concat( fullpath, sizeof( fullpath ),
+                search->filename, "/", path, NULL );
 			FS_ConvertToSysPath( fullpath );
             if( Sys_GetFileInfo( fullpath, &info ) ) {
                 Com_Printf( "%s/%s (%d bytes)\n", search->filename, filename,
@@ -2416,8 +2437,8 @@ static void FS_DefaultGamedir( void ) {
     	FS_AddGameDirectory( "%s/"BASEGAME, sys_homedir->string );
     } else {
         // already added as basedir
-    	Com_sprintf( fs_gamedir, sizeof( fs_gamedir ), "%s/"BASEGAME,
-            sys_basedir->string );
+    	Q_concat( fs_gamedir, sizeof( fs_gamedir ),
+            sys_basedir->string, "/" BASEGAME, NULL );
     }
 
 #if( _MSC_VER >= 1400 )

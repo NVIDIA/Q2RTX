@@ -374,7 +374,7 @@ void V_Gun_Model_f (void)
 		gun_model = 0;
 		return;
 	}
-	Com_sprintf (name, sizeof(name), "models/%s/tris.md2", Cmd_Argv(1));
+	Q_concat (name, sizeof(name), "models/", Cmd_Argv(1), "/tris.md2", NULL );
 	gun_model = ref.RegisterModel (name);
 }
 

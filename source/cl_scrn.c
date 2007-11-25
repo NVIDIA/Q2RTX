@@ -112,7 +112,7 @@ void CL_AddNetgraph (void)
 
 	// see what the latency was on this packet
 	in = cls.netchan->incoming_acknowledged & CMD_MASK;
-	ping = cls.realtime - cl.history[in].realtime;
+	ping = cls.realtime - cl.history[in].sent;
 	ping /= 30;
 	if (ping > 30)
 		ping = 30;
@@ -726,12 +726,12 @@ void SCR_DrawInventory( void ) {
 	for( i = top; i < num && i < top + DISPLAY_ITEMS; i++ ) {
 		item = index[i];
 		// search for a binding
-		Com_sprintf( string, sizeof( string ), "use %s",
-                cl.configstrings[CS_ITEMS + item] );
+		Q_concat( string, sizeof( string ),
+            "use ", cl.configstrings[CS_ITEMS + item], NULL );
 		bind = Key_GetBinding( string );
 
 		Com_sprintf( string, sizeof( string ), "%6s %3i %s",
-                bind, cl.inventory[item], cl.configstrings[CS_ITEMS + item] );
+            bind, cl.inventory[item], cl.configstrings[CS_ITEMS + item] );
 		
 		if( item != selected ) {
 			HUD_DrawAltString( x, y, string );

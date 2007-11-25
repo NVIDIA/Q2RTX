@@ -21,7 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "gl_local.h"
 
-static char	skyname[MAX_QPATH];
 static float	skyrotate;
 static vec3_t	skyaxis;
 static image_t	*sky_images[6];
@@ -370,16 +369,15 @@ void R_SetSky( const char *name, float rotate, vec3_t axis ) {
 	int		i;
 	char	pathname[MAX_QPATH];
     // 3dstudio environment map names
-    static char	*suf[6] = {"rt", "bk", "lf", "ft", "up", "dn"};
+    static const char	suf[6][3] = { "rt", "bk", "lf", "ft", "up", "dn" };
 
-	Q_strncpyz( skyname, name, sizeof( skyname ) );
 	skyrotate = rotate;
 	VectorCopy (axis, skyaxis);
 
 	for (i=0 ; i<6 ; i++)
 	{
-		Com_sprintf (pathname, sizeof(pathname), "env/%s%s.tga",
-                skyname, suf[i]);
+		Q_concat( pathname, sizeof( pathname ),
+            "env/", name, suf[i], ".tga", NULL );
 
 		sky_images[i] = R_FindImage (pathname, it_sky);
 		if (!sky_images[i])

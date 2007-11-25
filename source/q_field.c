@@ -72,8 +72,6 @@ IF_Clear
 void IF_Clear( inputField_t *field ) {
 	memset( field->text, 0, sizeof( field->text ) );
 	field->cursorPos = 0;
-	field->selectStart = 0;
-	field->selectEnd = 0;
 }
 
 /*
@@ -84,26 +82,10 @@ IF_Replace
 void IF_Replace( inputField_t *field, const char *text ) {
 	Q_strncpyz( field->text, text, sizeof( field->text ) );
 	field->cursorPos = strlen( field->text );
-	field->selectStart = 0;
-	field->selectEnd = 0;
 }
 
 #ifndef DEDICATED_ONLY
 
-
-/*
-================
-IF_DeleteSelection
-================
-*/
-void IF_DeleteSelection( inputField_t *field ) {
-	if( field->selectStart < field->selectEnd ) {
-		memmove( field->text + field->selectStart,
-                field->text + field->selectEnd,
-                    sizeof( field->text ) - field->selectStart );
-		field->selectEnd = field->selectStart;
-	}
-}
 
 /*
 ================
@@ -112,10 +94,6 @@ IF_KeyEvent
 */
 qboolean IF_KeyEvent( inputField_t *field, int key ) {
 	if( key == K_DEL ) {
-		if( field->selectStart < field->selectEnd ) {
-			IF_DeleteSelection( field );
-			return qtrue;
-		}
 		if( field->text[field->cursorPos] ) {
 			memmove( field->text + field->cursorPos,
                 field->text + field->cursorPos + 1,
@@ -125,10 +103,6 @@ qboolean IF_KeyEvent( inputField_t *field, int key ) {
 	}
 	
 	if( key == K_BACKSPACE || ( key == 'h' && keys.IsDown( K_CTRL ) ) ) {
-		if( field->selectStart < field->selectEnd ) {
-			IF_DeleteSelection( field );
-			return qtrue;
-		}
 		if( field->cursorPos > 0 ) {
 			memmove( field->text + field->cursorPos - 1,
                 field->text + field->cursorPos,
@@ -250,14 +224,6 @@ qboolean IF_CharEvent( inputField_t *field, int key ) {
 		return qtrue;
 	}
 
-	if( field->selectStart < field->selectEnd ) {
-		IF_DeleteSelection( field );
-		field->cursorPos = field->selectStart;
-		field->text[field->cursorPos] = key;
-		return qtrue;
-		
-	}
-
 	if( keys.GetOverstrikeMode() ) {
 		// replace the character at cursor and advance
 		field->text[field->cursorPos] = key;
@@ -266,9 +232,8 @@ qboolean IF_CharEvent( inputField_t *field, int key ) {
 	}
 
 	// insert new character at cursor position
-	memmove( field->text + field->cursorPos + 1,
-            field->text + field->cursorPos,
-                sizeof( field->text ) - field->cursorPos - 1 );
+	memmove( field->text + field->cursorPos + 1, field->text + field->cursorPos,
+        sizeof( field->text ) - field->cursorPos - 1 );
 	field->text[field->cursorPos] = key;
 	field->cursorPos++;
 
@@ -286,9 +251,7 @@ Returns x offset of the rightmost character drawn.
 int IF_Draw( inputField_t *field, int x, int y, uint32 flags, qhandle_t hFont ) {
 	char *text;
 	int cursorPos, offset, ret;
-	int start, width;
 	int cw, ch;
-	color_t	selectColor;
 
 	if( field->cursorPos > sizeof( field->text ) - 1 ) {
 		Com_Error( ERR_FATAL, "IF_Draw: bad field->cursorPos" );
@@ -312,19 +275,6 @@ int IF_Draw( inputField_t *field, int x, int y, uint32 flags, qhandle_t hFont ) 
     }
     
 	ref.DrawGetFontSize( &cw, &ch, hFont );
-
-    /* draw selection background */
-    if( field->selectStart < field->selectEnd ) {
-        start = field->selectStart - offset;
-        width = field->selectEnd - field->selectStart;
-
-        if( width > ( field->visibleChars - 1 ) - start ) {
-            width = ( field->visibleChars - 1 ) - start;
-        }
-
-        Vector4Set( selectColor, 156, 90, 84, 255 );
-        ref.DrawFillEx( x + start * cw, y, width * cw, ch, selectColor );
-    }
 
 	/* draw text */
 	ret = ref.DrawString( x, y, flags, field->visibleChars,

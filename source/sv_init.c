@@ -96,7 +96,7 @@ void SV_SpawnServer( const char *server, const char *spawnpoint ) {
         SV_ClientReset( client );
 	}
 
-    Com_sprintf( string, sizeof( string ), "maps/%s.bsp", server );
+    Q_concat( string, sizeof( string ), "maps/", server, ".bsp", NULL );
     strcpy( sv.configstrings[CS_MODELS + 1], string );
     CM_LoadMap( &sv.cm, string, 0, &checksum );
 
@@ -342,7 +342,7 @@ void SV_Map (const char *levelstring, qboolean restart) {
 		spawnpoint[0] = 0;
     }
 
-    Com_sprintf( expanded, sizeof( expanded ), "maps/%s.bsp", level );
+    Q_concat( expanded, sizeof( expanded ), "maps/", level, ".bsp", NULL );
     if( FS_LoadFile( expanded, NULL ) == -1 ) {
         Com_Printf( "Can't find %s\n", expanded );
         return;

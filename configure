@@ -21,6 +21,7 @@ pngconfig="libpng-config"
 exesuffix=""
 libsuffix=".so"
 dsound="no"
+wave="???"
 dinput="no"
 oss="no"
 evdev="no"
@@ -82,12 +83,14 @@ CYGWIN*)
 targetos="Windows"
 mingw="yes"
 sdl="no"
+wave="yes"
 CFLAGS="-mno-cygwin $CFLAGS"
 ;;
 MINGW*)
 targetos="Windows"
 mingw="yes"
 sdl="no"
+wave="yes"
 ;;
 *BSD)
 make="gmake"
@@ -132,6 +135,8 @@ for opt do
     ;;
     --enable-dinput) dinput="yes"
     ;;
+    --disable-wave) wave="no"
+    ;;
     --disable-oss) oss="no"
     ;;
     --disable-zlib) zlib="no"
@@ -164,6 +169,7 @@ echo "  --enable-openffa            build OpenFFA deathmatch mod"
 echo "  --enable-mingw              enable Windows build"
 echo "  --enable-dsound             enable DirectSound driver"
 echo "  --enable-dinput             enable DirectInput driver"
+echo "  --disable-wave              disable WAVE sound driver"
 echo "  --disable-oss               disable OSS driver"
 echo "  --disable-evdev             disable Evdev driver"
 echo "  --disable-zlib              disable linking with zlib"
@@ -188,6 +194,9 @@ if [ "$mingw" = "yes" ]; then
     homedir=""
     asmflags="-DUNDERSCORES"
     cfgfile="q2config.cfg"
+    if [ "$wave" = "???" ]; then
+        wave="yes"
+    fi
 else
     pathsep="/"
     gamelib="game$cpu.so"
@@ -245,6 +254,7 @@ if [ "$client" = "yes" ]; then
     if [ "$mingw" = "yes" ]; then
         echo "DInput support     $dinput"
         echo "DSound support     $dsound"
+        echo "WAVE sound support $wave"
     else
         echo "OSS support        $oss"
         echo "Evdev support      $evdev"
@@ -397,6 +407,11 @@ fi
 if [ "$evdev" = "yes" ]; then
     echo "USE_EVDEV=yes" >> $config_mk
     echo "#define USE_EVDEV 1" >> $config_h
+fi
+
+if [ "$wave" = "yes" ]; then
+    echo "USE_WAVE=yes" >> $config_mk
+    echo "#define USE_WAVE 1" >> $config_h
 fi
 
 if [ "$dsound" = "yes" ]; then

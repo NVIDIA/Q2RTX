@@ -240,7 +240,7 @@ static void Bsp_LoadTexinfo( lump_t *lump ) {
 			dst->animNext = NULL;
 		}
 
-		Com_sprintf( path, sizeof( path ), "textures/%s.wal", dst->name );
+		Q_concat( path, sizeof( path ), "textures/", dst->name, ".wal", NULL );
         texture = R_FindImage( path, it_wall );
         if( texture ) {
             dst->image = texture;

@@ -62,14 +62,14 @@ LOC_LoadLocations
 ==============
 */
 void LOC_LoadLocations( void ) {
-	char path[MAX_QPATH];
+	char path[MAX_OSPATH];
 	char *buffer, *s, *p;
 	int line, count;
 	location_t *loc;
 	int argc;
 
 	// load from main directory
-	Com_sprintf( path, sizeof( path ), "locs/%s.loc", cl.mapname );
+	Q_concat( path, sizeof( path ), "locs/", cl.mapname, ".loc", NULL );
 
 	FS_LoadFile( path, (void **)&buffer );
 	if( !buffer ) {

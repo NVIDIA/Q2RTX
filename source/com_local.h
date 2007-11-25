@@ -815,7 +815,8 @@ int		FS_Read( void *buffer, int len, fileHandle_t hFile );
 int		FS_Write( const void *buffer, int len, fileHandle_t hFile );
 // properly handles partial reads
 
-void	FS_FPrintf( fileHandle_t f, const char *format, ... );
+void	FS_FPrintf( fileHandle_t f, const char *format, ... ) q_printf( 2, 3 );
+int     FS_ReadLine( fileHandle_t f, char *buffer, int size );
 
 int		FS_Tell( fileHandle_t f );
 int		FS_RawTell( fileHandle_t f );
@@ -959,7 +960,7 @@ extern time_t   com_startTime;
 
 extern fileHandle_t	com_logFile;
 
-void Qcommon_Init( char *commandLine );
+void Qcommon_Init( int argc, char **argv );
 void Qcommon_Frame( void );
 void Qcommon_Shutdown( qboolean fatalError );
 
@@ -1008,6 +1009,8 @@ qboolean Sys_GetFileInfo( const char *path, fsFileInfo_t *info );
 char	*Sys_GetCurrentDirectory( void );
 
 void	Sys_DebugBreak( void );
+
+void    Sys_FixFPCW( void );
 
 #ifdef USE_ANTICHEAT
 qboolean Sys_GetAntiCheatAPI( void );

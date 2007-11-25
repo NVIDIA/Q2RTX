@@ -67,9 +67,9 @@ static void ApplyChanges( void ) {
 
 	cvar.Set( "name", m_playerConfig.nameField.field.text );
 
-	Com_sprintf( scratch, sizeof( scratch ), "%s/%s", 
-		uis.pmi[m_playerConfig.modelBox.curvalue].directory, 
-		uis.pmi[m_playerConfig.modelBox.curvalue].skindisplaynames[m_playerConfig.skinBox.curvalue] );
+	Q_concat( scratch, sizeof( scratch ),
+		uis.pmi[m_playerConfig.modelBox.curvalue].directory, "/",
+		uis.pmi[m_playerConfig.modelBox.curvalue].skindisplaynames[m_playerConfig.skinBox.curvalue], NULL );
 
 	cvar.Set( "skin", scratch );
 
@@ -78,13 +78,16 @@ static void ApplyChanges( void ) {
 
 static void ReloadMedia( void ) {
 	char scratch[MAX_QPATH];
+    char *model = uis.pmi[m_playerConfig.modelBox.curvalue].directory;
+    char *skin = uis.pmi[m_playerConfig.modelBox.curvalue].skindisplaynames[m_playerConfig.skinBox.curvalue];
 
-	Com_sprintf( scratch, sizeof( scratch ), "players/%s/tris.md2", uis.pmi[m_playerConfig.modelBox.curvalue].directory );
+	Q_concat( scratch, sizeof( scratch ), "players/", model, "/tris.md2", NULL );
 	m_playerConfig.entities[0].model = ref.RegisterModel( scratch );
-	Com_sprintf( scratch, sizeof( scratch ), "players/%s/%s.pcx", uis.pmi[m_playerConfig.modelBox.curvalue].directory, uis.pmi[m_playerConfig.modelBox.curvalue].skindisplaynames[m_playerConfig.skinBox.curvalue] );
+
+	Q_concat( scratch, sizeof( scratch ), "players/", model, "/", skin, ".pcx", NULL );
 	m_playerConfig.entities[0].skin = ref.RegisterSkin( scratch );
 
-	Com_sprintf( scratch, sizeof( scratch ), "players/%s/w_railgun.md2", uis.pmi[m_playerConfig.modelBox.curvalue].directory );
+	Q_concat( scratch, sizeof( scratch ), "players/", model, "/w_railgun.md2", NULL );
 	m_playerConfig.entities[1].model = ref.RegisterModel( scratch );
 }
 

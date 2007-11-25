@@ -1239,7 +1239,7 @@ Cmd_Exec_f
 */
 static void Cmd_Exec_f( void ) {
 	char	buffer[MAX_QPATH];
-	char	*f, *ext;
+	char	*f;
 
 	if( Cmd_Argc() != 2 ) {
 		Com_Printf( "%s <filename> : execute a script file\n", Cmd_Argv( 0 ) );
@@ -1250,13 +1250,9 @@ static void Cmd_Exec_f( void ) {
 
 	FS_LoadFile( buffer, ( void ** )&f );
 	if( !f ) {
-		ext = COM_FileExtension( buffer );
-		if( !ext[0] ) {
-			// try with *.cfg extension
-			COM_DefaultExtension( buffer, ".cfg", sizeof( buffer ) );
-			FS_LoadFile( buffer, ( void ** )&f );
-		}
-
+        // try with *.cfg extension
+        COM_AppendExtension( buffer, ".cfg", sizeof( buffer ) );
+        FS_LoadFile( buffer, ( void ** )&f );
 		if( !f ) {
 			Com_Printf( "Couldn't exec %s\n", buffer );
 			return;

@@ -436,7 +436,7 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 	if (name[0] == '#')
 		Q_strncpyz( namebuffer, name + 1, sizeof( namebuffer ) );
 	else
-		Com_sprintf (namebuffer, sizeof(namebuffer), "sound/%s", name);
+		Q_concat( namebuffer, sizeof( namebuffer ), "sound/", name, NULL );
 
 	size = FS_LoadFile (namebuffer, (void **)&data);
 

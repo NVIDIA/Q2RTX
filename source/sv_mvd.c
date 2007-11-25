@@ -821,7 +821,7 @@ static void MVD_Record_f( void ) {
 	if( name[0] == '/' ) {
 		Q_strncpyz( buffer, name + 1, sizeof( buffer ) );
 	} else {
-		Com_sprintf( buffer, sizeof( buffer ), "demos/%s", name );
+		Q_concat( buffer, sizeof( buffer ), "demos/", name, NULL );
     	COM_AppendExtension( buffer, ".mvd2", sizeof( buffer ) );
 	}
 

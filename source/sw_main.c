@@ -1227,8 +1227,8 @@ extern	mtexinfo_t		r_skytexinfo[6];
 
 void R_SetSky( const char *name, float rotate, vec3_t axis ) {
     // 3dstudio environment map names
-    static char	*suf[6] = {"rt", "bk", "lf", "ft", "up", "dn"};
-    static int	r_skysideimage[6] = {5, 2, 4, 1, 0, 3};
+    static const char	suf[6][3] = {"rt", "bk", "lf", "ft", "up", "dn"};
+    static const int	r_skysideimage[6] = {5, 2, 4, 1, 0, 3};
 	int		i;
 	char	pathname[MAX_QPATH];
 
@@ -1238,8 +1238,8 @@ void R_SetSky( const char *name, float rotate, vec3_t axis ) {
 
 	for (i=0 ; i<6 ; i++)
 	{
-		Com_sprintf (pathname, sizeof(pathname), "env/%s%s.pcx", skyname,
-                suf[r_skysideimage[i]]);
+		Q_concat( pathname, sizeof( pathname ),
+            "env/", skyname, suf[r_skysideimage[i]], ".pcx", NULL );
 		r_skytexinfo[i].image = R_FindImage (pathname, it_sky);
 	}
 }

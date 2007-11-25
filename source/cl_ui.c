@@ -114,8 +114,8 @@ static qboolean CL_LoadUI( const char *name ) {
 
 	Com_Printf( "------- Loading %s -------\n", name );
 
-    Com_sprintf( path, sizeof( path ), "%s" PATH_SEP_STRING "%s" LIBSUFFIX,
-        sys_refdir->string, name );
+    Q_concat( path, sizeof( path ), sys_refdir->string, PATH_SEP_STRING,
+        name, LIBSUFFIX, NULL );
 
 	if( ( entry = Sys_LoadLibrary( path, "moduleEntry", &ui_library ) ) == NULL ) {
 		Com_DPrintf( "Couldn't load %s\n", name );

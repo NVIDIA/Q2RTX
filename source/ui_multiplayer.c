@@ -87,7 +87,7 @@ static void UpdateSelection( void ) {
 		m_join.players.itemnames = NULL;
 		m_join.players.numItems = 0;
 
-		m_join.menu.statusbar = "Press Space to refresh";
+		m_join.menu.statusbar = "Press Space to refresh; Hold ALT to refresh all";
 	}
 }
 
@@ -323,7 +323,7 @@ static int JoinServer_MenuCallback( int id, int msg, int param ) {
 		if( param != 32 ) {
 			break;
 		}
-        if( !keys.IsDown( K_SHIFT ) ) {
+        if( !keys.IsDown( K_ALT ) ) {
             PingSelected();
         } else {
     		PingServers();

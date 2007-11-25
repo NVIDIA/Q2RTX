@@ -973,8 +973,8 @@ int Cvar_BitInfo( char *info, int bit ) {
         if( !var->string[0] ) {
             continue;
         }
-        length = Com_sprintf( newi, sizeof( newi ), "\\%s\\%s",
-            var->name, var->string );
+        length = Q_concat( newi, sizeof( newi ),
+            "\\", var->name, "\\", var->string, NULL );
         if( total + length >= MAX_INFO_STRING ) {
             break;
         }

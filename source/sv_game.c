@@ -830,28 +830,28 @@ void SV_InitGameProgs ( void )
 #ifdef _WIN32
 	// FIXME: check current debug directory first for
     // e.g. running legacy stuff like Q2Admin
-	Com_sprintf( path, sizeof( path ), "%s" PATH_SEP_STRING "release"
-        PATH_SEP_STRING GAMELIB, Sys_GetCurrentDirectory() );
+	Q_concat( path, sizeof( path ), Sys_GetCurrentDirectory(),
+        PATH_SEP_STRING "release" PATH_SEP_STRING GAMELIB, NULL );
     entry = Sys_LoadLibrary( path, "GetGameAPI", &game_library );
 	if( !entry )
 #endif
     {
         // try refdir first for development purposes
-        Com_sprintf( path, sizeof( path ), "%s" PATH_SEP_STRING GAMELIB,
-            sys_refdir->string );
+        Q_concat( path, sizeof( path ), sys_refdir->string,
+            PATH_SEP_STRING GAMELIB, NULL );
         entry = Sys_LoadLibrary( path, "GetGameAPI", &game_library );
         if( !entry ) {
             // try gamedir
             if( fs_game->string[0] ) {
-                Com_sprintf( path, sizeof( path ), "%s" PATH_SEP_STRING "%s"
-                    PATH_SEP_STRING GAMELIB, sys_libdir->string, fs_game->string );
+                Q_concat( path, sizeof( path ), sys_libdir->string,
+                    PATH_SEP_STRING, fs_game->string, PATH_SEP_STRING GAMELIB, NULL );
                 entry = Sys_LoadLibrary( path, "GetGameAPI", &game_library );
             }
 
             if( !entry ) {
                 // try baseq2
-                Com_sprintf( path, sizeof( path ), "%s" PATH_SEP_STRING BASEGAME
-                    PATH_SEP_STRING GAMELIB, sys_libdir->string );
+                Q_concat( path, sizeof( path ), sys_libdir->string,
+                    PATH_SEP_STRING BASEGAME PATH_SEP_STRING GAMELIB, NULL );
                 entry = Sys_LoadLibrary( path, "GetGameAPI", &game_library );
                 if( !entry ) {
                     Com_Error( ERR_DROP, "Failed to load game DLL" );
@@ -945,5 +945,7 @@ void SV_InitGameProgs ( void )
 
     // initialize
 	ge->Init ();
+
+    Sys_FixFPCW();
 }
 

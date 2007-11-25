@@ -125,7 +125,9 @@ static void Win_Show( const vrect_t *rc, qboolean fullscreen ) {
 }
 
 void Win_ModeChanged( void ) {
+#ifndef REF_HARD_LINKED
     SWimp_ModeChanged();
+#endif
     ref.ModeChanged( win.rc.width, win.rc.height, win.flags,
         win.pitch, win.buffer );
     SCR_ModeChanged();
@@ -476,9 +478,6 @@ LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 			UINT lines;
 			int key;
 
-
-// this chunk of code theoretically only works under NT4 and Win98
-// since this message doesn't exist under Win95
 			if( ( short )HIWORD( wParam ) > 0 ) {
 				key = K_MWHEELUP;
 			} else {

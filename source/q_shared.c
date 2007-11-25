@@ -873,6 +873,16 @@ qboolean COM_IsNumeric( const char *string ) {
 
 }
 
+qboolean COM_HasSpaces( const char *string ) {
+    while( *string ) {
+        if( *string <= 32 ) {
+            return qtrue;
+        }
+        string++;
+    }
+    return qfalse;
+}
+
 /* Parses hexadecimal number until it encounters
  * illegible symbol or end of string.
  * Does not check for overflow.
@@ -1855,6 +1865,32 @@ int Q_strcat( char *dest, int destsize, const char *src ) {
 
     return ofs;
 }
+
+/*
+===============
+Q_concat
+===============
+*/
+int Q_concat( char *buffer, int size, ... ) {
+    va_list argptr;
+    const char *s;
+    int len, total = 0;
+
+    va_start( argptr, size );
+    while( ( s = va_arg( argptr, const char * ) ) != NULL ) {
+        len = strlen( s );
+        if( total + len >= size ) {
+            break;
+        }
+        memcpy( buffer + total, s, len );
+        total += len;
+    }
+    va_end( argptr );
+
+    buffer[total] = 0;
+    return total;
+}
+
 
 /*
 ===============

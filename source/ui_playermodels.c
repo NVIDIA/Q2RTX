@@ -28,7 +28,7 @@ PLAYER MODELS
 =============================================================================
 */
 
-static const char *baseWeaponNames[] = {
+static const char baseWeaponNames[][32] = {
 	"w_bfg.md2",
 	"w_blaster.md2",
 	"w_chaingun.md2",
@@ -38,9 +38,10 @@ static const char *baseWeaponNames[] = {
 	"w_railgun.md2",
 	"w_rlauncher.md2",
 	"w_shotgun.md2",
-	"w_sshotgun.md2",
-	NULL
+	"w_sshotgun.md2"
 };
+
+static const int numBaseWeaponNames = sizeof( baseWeaponNames ) / sizeof( baseWeaponNames[0] );
 
 static qboolean IconOfSkinExists( char *skin, char **pcxfiles, int npcxfiles ) {
 	int i;
@@ -138,13 +139,13 @@ void PlayerModel_Load( void ) {
 		char **weaponNames;
 
 		// verify the existence of tris.md2
-		Com_sprintf( scratch, sizeof( scratch ), "players/%s/tris.md2", dirnames[i] );
+		Q_concat( scratch, sizeof( scratch ), "players/", dirnames[i], "/tris.md2", NULL );
 		if( fs.LoadFile( scratch, NULL ) < 1 ) {
 			continue;
 		}
 
 		// verify the existence of at least one pcx skin
-		Com_sprintf( scratch, sizeof( scratch ), "players/%s", dirnames[i] );
+		Q_concat( scratch, sizeof( scratch ), "players/", dirnames[i], NULL );
 		pcxnames = fs.ListFiles( scratch, ".pcx", 0, &npcxfiles );
 		if( !pcxnames ) {
 			continue;
@@ -180,7 +181,7 @@ void PlayerModel_Load( void ) {
 		fs.FreeFileList( pcxnames );
 
 		// load vweap models
-		Com_sprintf( scratch, sizeof( scratch ), "players/%s/w_*.md2", dirnames[i] );
+		Q_concat( scratch, sizeof( scratch ), "players/", dirnames[i], "/w_*.md2", NULL );
 		weaponNames = fs.ListFiles( NULL, scratch, FS_SEARCH_BYFILTER, &numWeapons );
 
 		pmi = &uis.pmi[uis.numPlayerModels++];
@@ -190,16 +191,12 @@ void PlayerModel_Load( void ) {
 			pmi->weaponNames = UI_Malloc( sizeof( char * ) * numWeapons );
 
 			for( j = 0; j < numWeapons ; j++ ) {
-				for( k = 0; baseWeaponNames[k] ; k++ ) {
+				for( k = 0; k < numBaseWeaponNames; k++ ) {
 					if( !strcmp( weaponNames[j], baseWeaponNames[k] ) ) {
+				        pmi->weaponNames[pmi->numWeapons++] = UI_CopyString( weaponNames[j] );
 						break;
 					}
 				}
-				if( !baseWeaponNames[k] ) {
-					continue;
-				}
-
-				pmi->weaponNames[pmi->numWeapons++] = UI_CopyString( weaponNames[j] );
 			}
 
 			fs.FreeFileList( weaponNames );

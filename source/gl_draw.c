@@ -119,7 +119,7 @@ qhandle_t GL_RegisterFont( const char *name ) {
 	char	fullname[MAX_QPATH];
 
 	if( name[0] != '/' && name[0] != '\\' ) {
-		Com_sprintf( fullname, sizeof( fullname ), "pics/%s", name );
+		Q_concat( fullname, sizeof( fullname ), "pics/", name, NULL );
 		COM_DefaultExtension( fullname, ".pcx", sizeof( fullname ) );
 		image = R_FindImage( fullname, it_charset );
 	} else {

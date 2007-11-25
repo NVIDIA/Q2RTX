@@ -127,13 +127,13 @@ static void Prompt_ShowMatches( commandPrompt_t *prompt, char **matches,
                 break;
             }
             match = matches[k];
-            prompt->Printf( "%s", match );
+            prompt->printf( "%s", match );
             len = colwidths[j] - strlen( match );
             for( k = 0; k < len + 2; k++ ) {
-				prompt->Printf( " " );
+				prompt->printf( " " );
             }
         }
-        prompt->Printf( "\n" );
+        prompt->printf( "\n" );
     }
     
 }
@@ -145,7 +145,7 @@ static void Prompt_ShowIndividualMatches( commandPrompt_t *prompt ) {
 		qsort( matches + offset, numCommands,
 				sizeof( matches[0] ), SortStrcmp );
 
-		prompt->Printf( "\n" S_COLOR_YELLOW "%i possible command%s:\n",
+		prompt->printf( "\n" S_COLOR_YELLOW "%i possible command%s:\n",
 			numCommands, ( numCommands % 10 ) != 1 ? "s" : "" );
 
         Prompt_ShowMatches( prompt, matches, offset, offset + numCommands );
@@ -156,7 +156,7 @@ static void Prompt_ShowIndividualMatches( commandPrompt_t *prompt ) {
 		qsort( matches + offset, numCvars,
 				sizeof( matches[0] ), SortStrcmp );
 
-		prompt->Printf( "\n" S_COLOR_YELLOW "%i possible variable%s:\n",
+		prompt->printf( "\n" S_COLOR_YELLOW "%i possible variable%s:\n",
 				numCvars, ( numCvars % 10 ) != 1 ? "s" : "" );
 
         Prompt_ShowMatches( prompt, matches, offset, offset + numCvars );
@@ -167,7 +167,7 @@ static void Prompt_ShowIndividualMatches( commandPrompt_t *prompt ) {
 		qsort( matches + offset, numAliases,
 				sizeof( matches[0] ), SortStrcmp );
 
-		prompt->Printf( "\n" S_COLOR_YELLOW "%i possible alias%s:\n",
+		prompt->printf( "\n" S_COLOR_YELLOW "%i possible alias%s:\n",
 				numAliases, ( numAliases % 10 ) != 1 ? "es" : "" );
 
         Prompt_ShowMatches( prompt, matches, offset, offset + numAliases );
@@ -192,8 +192,7 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 	pos = inputLine->cursorPos;
 	if( backslash ) {
 		if( inputLine->text[0] != '\\' && inputLine->text[0] != '/' ) {
-			memmove( inputLine->text + 1, inputLine->text,
-                sizeof( inputLine->text ) - 1 );
+			memmove( inputLine->text + 1, inputLine->text, size - 1 );
 			inputLine->text[0] = '\\';
 		}
 		text++; size--; pos--;
@@ -250,34 +249,20 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 
 	if( numMatches == 1 ) {
 		/* we have finished completion! */
-        s = matches[0];
-        while( *s ) {
-            if( *s <= 32 ) {
-                break;
-            }
-            s++;
+        s = Cmd_RawArgsFrom( currentArg + 1 ); 
+        if( COM_HasSpaces( matches[0] ) ) {
+		    pos += Q_concat( text, size, "\"", matches[0], "\" ", s, NULL );
+        } else {
+		    pos += Q_concat( text, size, matches[0], " ", s, NULL );
         }
-		*text = 0;
-        if( *s ) {
-		    Q_strcat( inputLine->text, sizeof( inputLine->text ), "\"" );
-        }
-		Q_strcat( inputLine->text, sizeof( inputLine->text ), matches[0] );
-        if( *s ) {
-		    Q_strcat( inputLine->text, sizeof( inputLine->text ), "\"" );
-        }
-		Q_strcat( inputLine->text, sizeof( inputLine->text ), " " );
-		Q_strcat( inputLine->text, sizeof( inputLine->text ),
-            Cmd_RawArgsFrom( currentArg + 1 ) );
-		inputLine->cursorPos = strlen( inputLine->text );
-		inputLine->selectStart = inputLine->cursorPos;
-		inputLine->selectEnd = inputLine->cursorPos;
+		inputLine->cursorPos = pos;
         prompt->tooMany = qfalse;
 		Prompt_FreeMatches();
 		return;
 	}
 
     if( numMatches > com_completion_treshold->integer && !prompt->tooMany ) {
-        prompt->Printf( "Press TAB again to display all %d possibilities.\n",
+        prompt->printf( "Press TAB again to display all %d possibilities.\n",
             numMatches );
 		inputLine->cursorPos = strlen( inputLine->text );
         prompt->tooMany = qtrue;
@@ -311,18 +296,17 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 	} while( *first );
 
 	text[length] = 0;
-
-	inputLine->cursorPos = strlen( inputLine->text );
-	inputLine->selectStart = inputLine->cursorPos;
-	inputLine->selectEnd = inputLine->cursorPos;
+    pos += length;
+    size -= length;
 
 	if( currentArg + 1 < argc ) {
-		Q_strcat( inputLine->text, sizeof( inputLine->text ), " " );
-		Q_strcat( inputLine->text, sizeof( inputLine->text ),
-            Cmd_RawArgsFrom( currentArg + 1 ) );
+        s = Cmd_RawArgsFrom( currentArg + 1 ); 
+		pos += Q_concat( text + length, size, " ", s, NULL );
 	}
 
-	prompt->Printf( "]\\%s\n", Cmd_ArgsFrom( 0 ) );
+	inputLine->cursorPos = pos;
+
+	prompt->printf( "]\\%s\n", Cmd_ArgsFrom( 0 ) );
 	if( generator ) {
 		goto multicolumn;
 	}
@@ -331,7 +315,7 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 	case 0:
 		/* print in solid list */
 		for( i = 0 ; i < numMatches; i++ ) {
-			prompt->Printf( "%s\n", sortedMatches[i] ); 
+			prompt->printf( "%s\n", sortedMatches[i] ); 
 		}
 		break;
 	case 1:
@@ -451,6 +435,56 @@ void Prompt_Clear( commandPrompt_t *prompt ) {
 	prompt->inputLineNum = 0;
 	
 	IF_Clear( &prompt->inputLine );
+}
+
+void Prompt_SaveHistory( commandPrompt_t *prompt, const char *filename ) {
+    fileHandle_t f;
+    char *s;
+    int i;
+
+    FS_FOpenFile( filename, &f, FS_MODE_WRITE );
+    if( !f ) {
+        return;
+    }
+
+    i = prompt->inputLineNum - HISTORY_SIZE;
+    if( i < 0 ) {
+        i = 0;
+    }
+    for( ; i < prompt->inputLineNum; i++ ) {
+        s = prompt->history[i & HISTORY_MASK];
+        if( s ) {
+            FS_FPrintf( f, "%s\n", s );
+        }
+    }
+
+    FS_FCloseFile( f );
+}
+
+void Prompt_LoadHistory( commandPrompt_t *prompt, const char *filename ) {
+    char buffer[MAX_FIELD_TEXT];
+    fileHandle_t f;
+    int i, len;
+
+    FS_FOpenFile( filename, &f, FS_MODE_READ|FS_TYPE_REAL );
+    if( !f ) {
+        return;
+    }
+
+	for( i = 0; i < HISTORY_SIZE; i++ ) {
+        if( ( len = FS_ReadLine( f, buffer, sizeof( buffer ) ) ) < 1 ) {
+            break;
+        }
+		if( prompt->history[i] ) {
+			Z_Free( prompt->history[i] );
+        }
+		prompt->history[i] = memcpy( Z_Malloc( len + 1 ), buffer, len );
+	}
+
+    FS_FCloseFile( f );
+
+	prompt->historyLineNum = i;
+	prompt->inputLineNum = i;
 }
 
 /*

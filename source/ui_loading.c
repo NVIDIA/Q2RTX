@@ -61,7 +61,7 @@ void UI_DrawLoading( int realtime ) {
 	x = uis.glconfig.vidWidth / 2;
 	y = 8;
 
-	Com_sprintf( buffer, sizeof( buffer ), "%s %s", loadingStatus.demoplayback ? "Playing back" : "Connecting to", loadingStatus.servername );
+	Q_concat( buffer, sizeof( buffer ), loadingStatus.demoplayback ? "Playing back " : "Connecting to ", loadingStatus.servername, NULL );
 	UI_DrawString( x, y, NULL, UI_CENTER|UI_DROPSHADOW, buffer );
 	y += 40;
 

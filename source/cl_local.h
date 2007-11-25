@@ -606,6 +606,7 @@ void LOC_AddLocationsToScene( void );
 // console.c
 //
 void Con_Init( void );
+void Con_PostInit( void );
 void Con_Shutdown( void );
 void Con_DrawConsole( void );
 void Con_RunConsole( void );

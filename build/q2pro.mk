@@ -48,6 +48,7 @@ endif
 endif #REF_HARD_LINKED
 
 ifdef UI_HARD_LINKED
+
 SRCFILES+=ui_addressbook.c \
 	ui_atoms.c \
 	ui_confirm.c \
@@ -73,7 +74,8 @@ SRCFILES+=ui_addressbook.c \
 	ui_savegame.c \
 	ui_startserver.c \
 	ui_video.c
-endif
+
+endif # UI_HARD_LINKED
 
 ifdef USE_ZLIB
 SRCFILES+=ioapi.c unzip.c 
@@ -87,7 +89,15 @@ endif
 
 ifdef MINGW
 
-SRCFILES+=sys_win.c snd_wave.c vid_win.c win_glimp.c win_wgl.c win_swimp.c
+SRCFILES+=sys_win.c vid_win.c win_glimp.c win_wgl.c
+
+ifndef REF_HARD_LINKED
+SRCFILES+=win_swimp.c
+endif
+
+ifdef USE_WAVE
+SRCFILES+=snd_wave.c
+endif
 
 ifdef USE_DSOUND
 SRCFILES+=snd_dx.c
@@ -101,7 +111,7 @@ LDFLAGS+=-mwindows -lws2_32 -lwinmm
 
 RESFILES=q2pro.rc
 
-else
+else # MINGW
 
 SRCFILES+=sys_unix.c
 
@@ -122,7 +132,7 @@ CFLAGS+=$(SDL_CFLAGS)
 LDFLAGS+=-lX11 $(SDL_LDFLAGS)
 endif
 
-endif
+endif # !MINGW
 
 include $(SRCDIR)/build/target.mk
 

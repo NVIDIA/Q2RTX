@@ -34,7 +34,6 @@ typedef struct inputField_s {
 	int		maxChars;
 	int		visibleChars;
 	int		cursorPos;
-	int		selectStart, selectEnd;
 } inputField_t;
 
 qboolean	IF_KeyEvent( inputField_t *field, int key );

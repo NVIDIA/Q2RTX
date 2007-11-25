@@ -985,8 +985,8 @@ noskin:
 		strcpy( skin_name, t + 1 );
 
 		// model file
-		Com_sprintf( model_filename, sizeof( model_filename ),
-            "players/%s/tris.md2", model_name );
+		Q_concat( model_filename, sizeof( model_filename ),
+            "players/", model_name, "/tris.md2", NULL );
 		ci->model = ref.RegisterModel( model_filename );
 		if( !ci->model && Q_stricmp( model_name, "male" ) ) {
 			strcpy( model_name, "male" );
@@ -995,8 +995,8 @@ noskin:
 		}
 
 		// skin file
-		Com_sprintf( skin_filename, sizeof( skin_filename ),
-            "players/%s/%s.pcx", model_name, skin_name );
+		Q_concat( skin_filename, sizeof( skin_filename ),
+            "players/", model_name, "/", skin_name, ".pcx", NULL );
 		ci->skin = ref.RegisterSkin( skin_filename );
 
 		// if we don't have the skin and the model was female,
@@ -1016,8 +1016,8 @@ noskin:
 			ci->model = ref.RegisterModel( model_filename );
 
 			// see if the skin exists for the male model
-			Com_sprintf( skin_filename, sizeof( skin_filename ),
-                "players/%s/%s.pcx", model_name, skin_name );
+		    Q_concat( skin_filename, sizeof( skin_filename ),
+                "players/male/", skin_name, ".pcx", NULL );
 			ci->skin = ref.RegisterSkin( skin_filename );
 		}
 
@@ -1025,20 +1025,19 @@ noskin:
         // didn't have it, so default to grunt
 		if( !ci->skin ) {
 			// see if the skin exists for the male model
-			Com_sprintf( skin_filename, sizeof( skin_filename ),
-                "players/%s/grunt.pcx", model_name );
+		    strcpy( skin_filename, "players/male/grunt.pcx" );
 			ci->skin = ref.RegisterSkin( skin_filename );
 		}
 
 		// weapon file
 		for( i = 0; i < cl.numWeaponModels; i++ ) {
-			Com_sprintf( weapon_filename, sizeof( weapon_filename ),
-                "players/%s/%s", model_name, cl.weaponModels[i] );
+			Q_concat( weapon_filename, sizeof( weapon_filename ),
+                "players/", model_name, "/", cl.weaponModels[i], NULL );
 			ci->weaponmodel[i] = ref.RegisterModel( weapon_filename );
 			if( !ci->weaponmodel[i] && !Q_stricmp( model_name, "cyborg" ) ) {
 				// try male
-				Com_sprintf( weapon_filename, sizeof( weapon_filename ),
-                    "players/male/%s", cl.weaponModels[i] );
+				Q_concat( weapon_filename, sizeof( weapon_filename ),
+                    "players/male/", cl.weaponModels[i], NULL );
 				ci->weaponmodel[i] = ref.RegisterModel( weapon_filename );
 			}
 			if( !cl_vwep->integer )
@@ -1046,8 +1045,8 @@ noskin:
 		}
 
 		// icon file
-		Com_sprintf( ci->iconname, sizeof( ci->iconname ),
-            "/players/%s/%s_i.pcx", model_name, skin_name );
+		Q_concat( ci->iconname, sizeof( ci->iconname ),
+            "/players/", model_name, "/", skin_name, "_i.pcx", NULL );
 		ci->icon = ref.RegisterPic( ci->iconname );
 	}
 
@@ -1261,8 +1260,8 @@ static void CL_ParsePrint( void ) {
 
     // filter text
     if( cl_chat_filter->integer ) {
-        Q_ClearStr( string, string, MAX_STRING_CHARS - 1 );
-        Q_strcat( string, MAX_STRING_CHARS, "\n" );
+        int len = Q_ClearStr( string, string, MAX_STRING_CHARS - 1 );
+        string[len] = '\n';
     }
 
 	Com_Printf( S_COLOR_ALT "%s", string );

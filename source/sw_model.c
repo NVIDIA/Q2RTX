@@ -508,7 +508,7 @@ void Mod_LoadTexinfo (lump_t *l)
 		if (next > 0)
 			out->next = loadmodel->texinfo + next;
 
-		Com_sprintf (name, sizeof(name), "textures/%s.wal", in->texture);
+		Q_concat( name, sizeof( name ), "textures/", in->texture, ".wal", NULL );
 		out->image = R_FindImage (name, it_wall);
 		if (!out->image)
 		{
@@ -1121,7 +1121,7 @@ void R_BeginRegistration( const char *model ) {
 
 	registration_sequence++;
 	r_oldviewcluster = -1;		// force markleafs
-	Com_sprintf (fullname, sizeof(fullname), "maps/%s.bsp", model);
+	Q_concat( fullname, sizeof( fullname ), "maps/", model, ".bsp", NULL );
 
 	D_FlushCaches ();
 	// explicitly free the old map if different

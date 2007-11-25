@@ -303,9 +303,8 @@ void CL_Setenv_f( void ) {
     if ( argc > 2 ) {
         char buffer[ MAX_STRING_CHARS ];
 
-        Q_strncpyz( buffer, Cmd_Argv( 1 ), sizeof( buffer ) );
-        Q_strcat( buffer, sizeof( buffer ), "=" );
-		Q_strcat( buffer, sizeof( buffer ), Cmd_ArgsFrom( 2 ) );
+        Q_concat( buffer, sizeof( buffer ), Cmd_Argv( 1 ), "=",
+            Cmd_ArgsFrom( 2 ), NULL );
 
         putenv( buffer );
     } else if ( argc == 2 ) {
@@ -1654,7 +1653,7 @@ void CL_RequestNextDownload ( void ) {
                     precache_check++;
                     continue;
                 }
-                Com_sprintf( fn, sizeof( fn ), "sound/%s", cl.configstrings[ precache_check++ ] );
+                Q_concat( fn, sizeof( fn ), "sound/", cl.configstrings[ precache_check++ ], NULL );
                 if ( !CL_CheckOrDownloadFile( fn ) )
                     return; // started a download
             }
@@ -1666,7 +1665,7 @@ void CL_RequestNextDownload ( void ) {
             precache_check++; // zero is blank
         while ( precache_check < CS_IMAGES + MAX_IMAGES &&
                 cl.configstrings[ precache_check ][ 0 ] ) {
-            Com_sprintf( fn, sizeof( fn ), "pics/%s.pcx", cl.configstrings[ precache_check++ ] );
+            Q_concat( fn, sizeof( fn ), "pics/", cl.configstrings[ precache_check++ ], ".pcx", NULL );
             if ( !CL_CheckOrDownloadFile( fn ) )
                 return; // started a download
         }
@@ -1705,7 +1704,7 @@ void CL_RequestNextDownload ( void ) {
 
                 switch ( n ) {
                 case 0:   // model
-                    Com_sprintf( fn, sizeof( fn ), "players/%s/tris.md2", model );
+                    Q_concat( fn, sizeof( fn ), "players/", model, "/tris.md2", NULL );
                     if ( !CL_CheckOrDownloadFile( fn ) ) {
                         precache_check = CS_PLAYERSKINS + i * PLAYER_MULT + 1;
                         return; // started a download
@@ -1714,7 +1713,7 @@ void CL_RequestNextDownload ( void ) {
                     /*FALL THROUGH*/
 
                 case 1:   // weapon model
-                    Com_sprintf( fn, sizeof( fn ), "players/%s/weapon.md2", model );
+                    Q_concat( fn, sizeof( fn ), "players/", model, "/weapon.md2", NULL );
                     if ( !CL_CheckOrDownloadFile( fn ) ) {
                         precache_check = CS_PLAYERSKINS + i * PLAYER_MULT + 2;
                         return; // started a download
@@ -1723,7 +1722,7 @@ void CL_RequestNextDownload ( void ) {
                     /*FALL THROUGH*/
 
                 case 2:   // weapon skin
-                    Com_sprintf( fn, sizeof( fn ), "players/%s/weapon.pcx", model );
+                    Q_concat( fn, sizeof( fn ), "players/", model, "/weapon.pcx", NULL );
                     if ( !CL_CheckOrDownloadFile( fn ) ) {
                         precache_check = CS_PLAYERSKINS + i * PLAYER_MULT + 3;
                         return; // started a download
@@ -1732,7 +1731,7 @@ void CL_RequestNextDownload ( void ) {
                     /*FALL THROUGH*/
 
                 case 3:   // skin
-                    Com_sprintf( fn, sizeof( fn ), "players/%s/%s.pcx", model, skin );
+                    Q_concat( fn, sizeof( fn ), "players/", model, "/", skin, ".pcx", NULL );
                     if ( !CL_CheckOrDownloadFile( fn ) ) {
                         precache_check = CS_PLAYERSKINS + i * PLAYER_MULT + 4;
                         return; // started a download
@@ -1741,7 +1740,7 @@ void CL_RequestNextDownload ( void ) {
                     /*FALL THROUGH*/
 
                 case 4:   // skin_i
-                    Com_sprintf( fn, sizeof( fn ), "players/%s/%s_i.pcx", model, skin );
+                    Q_concat( fn, sizeof( fn ), "players/", model, "/", skin, "_i.pcx", NULL );
                     if ( !CL_CheckOrDownloadFile( fn ) ) {
                         precache_check = CS_PLAYERSKINS + i * PLAYER_MULT + 5;
                         return; // started a download
@@ -1776,11 +1775,11 @@ void CL_RequestNextDownload ( void ) {
                 int n = precache_check++ - ENV_CNT - 1;
 
                 if ( n & 1 )
-                    Com_sprintf( fn, sizeof( fn ), "env/%s%s.pcx",
-                                 cl.configstrings[ CS_SKY ], env_suf[ n / 2 ] );
+                    Q_concat( fn, sizeof( fn ),
+                        "env/", cl.configstrings[ CS_SKY ], env_suf[ n / 2 ], ".pcx", NULL );
                 else
-                    Com_sprintf( fn, sizeof( fn ), "env/%s%s.tga",
-                                 cl.configstrings[ CS_SKY ], env_suf[ n / 2 ] );
+                    Q_concat( fn, sizeof( fn ),
+                        "env/", cl.configstrings[ CS_SKY ], env_suf[ n / 2 ], ".tga", NULL );
                 if ( !CL_CheckOrDownloadFile( fn ) )
                     return; // started a download
             }
@@ -1800,11 +1799,11 @@ void CL_RequestNextDownload ( void ) {
 				char *texname = cl.cm.cache->surfaces[ precache_tex++ ].rname;
 
                 // Also check if 32bit images are present
-                Com_sprintf( fn, sizeof( fn ), "textures/%s.jpg", texname );
+                Q_concat( fn, sizeof( fn ), "textures/", texname, ".jpg", NULL );
                 if ( FS_LoadFile( fn, NULL ) == -1 ) {
-                    Com_sprintf( fn, sizeof( fn ), "textures/%s.tga", texname );
+                    Q_concat( fn, sizeof( fn ), "textures/", texname, ".tga", NULL );
                     if ( FS_LoadFile( fn, NULL ) == -1 ) {
-                        Com_sprintf( fn, sizeof( fn ), "textures/%s.wal", texname );
+                        Q_concat( fn, sizeof( fn ), "textures/", texname, ".wal", NULL );
                         if ( !CL_CheckOrDownloadFile( fn ) ) {
                             return; // started a download
                         }
@@ -2704,6 +2703,7 @@ void CL_Init( void ) {
 
     UI_OpenMenu( UIMENU_MAIN );
 
+    Con_PostInit();
     Con_RunConsole();
 
     Cvar_Set( "cl_running", "1" );

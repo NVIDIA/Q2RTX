@@ -23,6 +23,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 static color_t colorField = { 15, 128, 235, 100 };
 static color_t colorGray = { 127, 127, 127, 255 };
 
+#define UI_CALLBACK( x, y, z ) \
+    (x)->generic.parent->callback( (x)->generic.id, y, z )
+
 /*
 =================
 Common_DoEnter
@@ -224,7 +227,7 @@ static void Keybind_Draw( menuKeybind_t *k ) {
 		k->generic.uiFlags | UI_RIGHT | flags, k->generic.name );
 
 	if( k->altbinding[0] ) {
-		Com_sprintf( string, sizeof( string ), "%s or %s", k->binding, k->altbinding );
+		Q_concat( string, sizeof( string ), k->binding, " or ", k->altbinding, NULL );
 	} else if( k->binding[0] ) {
 		strcpy( string, k->binding );
 	} else {
@@ -320,7 +323,7 @@ static int Field_Char( menuField_t *f, int key ) {
 	}
 
 	ret = IF_CharEvent( &f->field, key );
-	f->generic.parent->callback( f->generic.id, QM_CHANGE, ret );
+	UI_CALLBACK( f, QM_CHANGE, ret );
 
 	return ret ? QMS_SILENT : QMS_NOTHANDLED;
 }
@@ -374,15 +377,14 @@ SpinControl_DoEnter
 =================
 */
 static int SpinControl_DoEnter( menuSpinControl_t *s ) {
-	int		oldvalue;
+	int		oldvalue = s->curvalue;
 
-	oldvalue = s->curvalue;
 	s->curvalue++;
 
-	if( s->curvalue == s->numItems )
+	if( s->curvalue >= s->numItems )
 		s->curvalue = 0;
 
-	s->generic.parent->callback( s->generic.id, QM_CHANGE, oldvalue );
+	UI_CALLBACK( s, QM_CHANGE, oldvalue );
 
 	return QMS_MOVE;
 }
@@ -393,9 +395,8 @@ SpinControl_DoSlide
 =================
 */
 static int SpinControl_DoSlide( menuSpinControl_t *s, int dir ) {
-	int		oldvalue;
+	int		oldvalue = s->curvalue;
 
-	oldvalue = s->curvalue;
 	s->curvalue += dir;
 
 	if( s->curvalue < 0 ) {
@@ -404,10 +405,9 @@ static int SpinControl_DoSlide( menuSpinControl_t *s, int dir ) {
 		s->curvalue = 0;
 	}
 
-	s->generic.parent->callback( s->generic.id, QM_CHANGE, oldvalue );
+	UI_CALLBACK( s, QM_CHANGE, oldvalue );
 
 	return QMS_MOVE;
-
 }
 
 /*
@@ -453,7 +453,6 @@ void MenuList_ValidatePrestep( menuList_t *l ) {
 	if( l->prestep > l->numItems - l->maxItems ) {
 		l->prestep = l->numItems - l->maxItems;
 	}
-
 }
 
 /*
@@ -519,7 +518,7 @@ void MenuList_SetValue( menuList_t *l, int value ) {
 		l->prestep = 0;
 	}
 
-	l->generic.parent->callback( l->generic.id, QM_CHANGE, l->curvalue );
+	UI_CALLBACK( l, QM_CHANGE, l->curvalue );
 }
 
 
@@ -616,7 +615,7 @@ static int MenuList_Key( menuList_t *l, int key ) {
 	case K_KP_UPARROW:
 		if( l->curvalue > 0 ) {
 			l->curvalue--;
-			l->generic.parent->callback( l->generic.id, QM_CHANGE, l->curvalue );
+			UI_CALLBACK( l, QM_CHANGE, l->curvalue );
 
 			// scroll contents up
 			if( l->prestep > l->curvalue ) {
@@ -630,7 +629,7 @@ static int MenuList_Key( menuList_t *l, int key ) {
 	case K_KP_DOWNARROW:
 		if( l->curvalue < l->numItems - 1 ) {
 			l->curvalue++;
-			l->generic.parent->callback( l->generic.id, QM_CHANGE, l->curvalue );
+			UI_CALLBACK( l, QM_CHANGE, l->curvalue );
 
 			// scroll contents down
 			if( l->prestep < l->curvalue - l->maxItems + 1 ) {
@@ -644,7 +643,7 @@ static int MenuList_Key( menuList_t *l, int key ) {
 	case K_KP_HOME:
 		l->prestep = 0;
 		l->curvalue = 0;
-		l->generic.parent->callback( l->generic.id, QM_CHANGE, l->curvalue );
+		UI_CALLBACK( l, QM_CHANGE, l->curvalue );
 		return QMS_MOVE;
 
 	case K_END:
@@ -653,7 +652,7 @@ static int MenuList_Key( menuList_t *l, int key ) {
 			l->prestep = l->numItems - l->maxItems;
 		}
 		l->curvalue = l->numItems - 1;
-		l->generic.parent->callback( l->generic.id, QM_CHANGE, l->curvalue );
+		UI_CALLBACK( l, QM_CHANGE, l->curvalue );
 		return QMS_MOVE;
 
 	case K_MWHEELUP:
@@ -690,11 +689,11 @@ static int MenuList_Key( menuList_t *l, int key ) {
 		i = MenuList_HitTest( l, uis.mouseCoords[0], uis.mouseCoords[1] );
 		if( i != -1 ) {
 			if( l->curvalue == i && uis.realtime - l->clickTime < DOUBLE_CLICK_DELAY ) {
-				return l->generic.parent->callback( l->generic.id, QM_ACTIVATE, i );
+				return UI_CALLBACK( l, QM_ACTIVATE, i );
 			}
 			l->clickTime = uis.realtime;
 			l->curvalue = i;
-			l->generic.parent->callback( l->generic.id, QM_CHANGE, i );
+			UI_CALLBACK( l, QM_CHANGE, i );
 		}
 		return QMS_SILENT;
     case K_MOUSE2:
@@ -702,7 +701,7 @@ static int MenuList_Key( menuList_t *l, int key ) {
 		i = MenuList_HitTest( l, uis.mouseCoords[0], uis.mouseCoords[1] );
         if( i != -1 ) {
 			l->curvalue = i;
-			l->generic.parent->callback( l->generic.id, QM_CHANGE, i );
+			UI_CALLBACK( l, QM_CHANGE, i );
         }
         return QMS_SILENT;
 	}
@@ -962,7 +961,7 @@ ImageList_UpdatePos
 */
 static void ImageList_UpdatePos( imageList_t *l ) {
 	l->prestep = l->curvalue - l->curvalue % ( l->numRows * l->numcolumns );
-	l->generic.parent->callback( l->generic.id, QM_CHANGE, l->curvalue );
+	UI_CALLBACK( l, QM_CHANGE, l->curvalue );
 }
 
 /*
@@ -1067,7 +1066,7 @@ static int ImageList_Key( imageList_t *l, int key ) {
 		i = ImageList_HitTest( l, uis.mouseCoords[0], uis.mouseCoords[1] );
 		if( i != -1 ) {
 			if( l->curvalue == i && uis.realtime - l->clickTime < DOUBLE_CLICK_DELAY ) {
-				return l->generic.parent->callback( l->generic.id, QM_ACTIVATE, i );
+				return UI_CALLBACK( l, QM_ACTIVATE, i );
 			}
 			l->clickTime = uis.realtime;
 			l->curvalue = i;
@@ -1186,7 +1185,7 @@ static int Slider_DoSlide( menuSlider_t *s, int dir ) {
 	else if( s->curvalue < s->minvalue )
 		s->curvalue = s->minvalue;
 	
-	if( ( ret = s->generic.parent->callback( s->generic.id, QM_CHANGE, s->curvalue ) ) != QMS_NOTHANDLED ) {
+	if( ( ret = UI_CALLBACK( s, QM_CHANGE, s->curvalue ) ) != QMS_NOTHANDLED ) {
 		return ret;
 	}
 
@@ -1229,7 +1228,6 @@ static void Slider_Draw( menuSlider_t *s ) {
     }
 
 	UI_DrawChar( SMALLCHAR_WIDTH + RCOLUMN_OFFSET + s->generic.x + ( SLIDER_RANGE - 1 ) * SMALLCHAR_WIDTH * pos, s->generic.y, flags | UI_LEFT, 131 );
-
 }
 
 /*

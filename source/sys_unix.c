@@ -131,7 +131,7 @@ static void Sys_InitTTY( void ) {
     tty_erase = tty.c_cc[VERASE];
     tcsetattr( 0, TCSADRAIN, &tty );
     tty_prompt.widthInChars = 80;
-    tty_prompt.Printf = Sys_Printf;
+    tty_prompt.printf = Sys_Printf;
     tty_enabled = qtrue;
 }
 
@@ -658,6 +658,27 @@ void Sys_FillAPI( sysAPI_t *api ) {
     api->HunkFree = Hunk_Free;
 }
 
+void Sys_FixFPCW( void ) {
+#ifdef __i386__
+    unsigned int cw;
+
+    __asm__ __volatile__( "fnstcw %0" : "=m" (cw) );
+
+    Com_DPrintf( "FPU control word: %x\n", cw );
+
+    if( cw & 0x300 ) {
+        Com_Printf( "Setting FPU to single precision mode\n" );
+        cw &= ~0x300;
+    }
+    if( cw & 0xC00 ) {
+        Com_Printf( "Setting FPU to round to nearest mode\n" );
+        cw &= ~0xC00;
+    }
+
+    __asm__ __volatile__( "fldcw %0" : : "m" (cw) );
+#endif
+}
+
 /*
 =================
 Sys_Kill
@@ -718,7 +739,7 @@ void Sys_Init( void ) {
 	// specifies per-user writable directory for demos, screenshots, etc
     s = getenv( "HOME" );
     if( s && *s ) {
-	    Com_sprintf( homedir, sizeof( homedir ), "%s/"HOMEDIR, s );
+	    Q_concat( homedir, sizeof( homedir ), s, "/" HOMEDIR, NULL );
     } else {
         homedir[0] = 0;
     }
@@ -744,6 +765,8 @@ void Sys_Init( void ) {
             }
         }
     }
+
+    Sys_FixFPCW();
 
 	Sys_FillAPI( &sys );
 }
@@ -905,8 +928,8 @@ static void Sys_ListFilteredFiles( char **listedFiles, int *count,
         if( !strcmp( findInfo->d_name, ".." ) ) {
             continue;
         }
-        Com_sprintf( findPath, sizeof( findPath ), "%s/%s",
-            path, findInfo->d_name );
+        Q_concat( findPath, sizeof( findPath ),
+            path, "/", findInfo->d_name, NULL );
 
         if( stat( findPath, &st ) == -1 ) {
             continue;
@@ -997,8 +1020,8 @@ char **Sys_ListFiles( const char *path, const char *extension,
 				continue;
 			}
 
-			Com_sprintf( findPath, sizeof( findPath ), "%s/%s",
-                path, findInfo->d_name );
+			Q_concat( findPath, sizeof( findPath ),
+                path, "/", findInfo->d_name, NULL );
 
 			if( stat( findPath, &st ) == -1 ) {
 				continue;
@@ -1077,41 +1100,6 @@ void Sys_FreeFileList( char **list ) {
 }
 
 /*
-===============================================================================
-
-MAIN
-
-===============================================================================
-*/
-
-static void _Qcommon_Init_ArgcArgv( int argc, char **argv ) {
-    int i, length;
-    char *cmdline;
-
-    if( argc < 2 ) {
-	    Qcommon_Init( NULL );
-        return;
-    }
-
-    length = 0;
-    for( i = 1; i < argc; i++ ) {
-        length += strlen( argv[i] ) + 1;
-    }
-    
-    cmdline = alloca( length );
-    if( cmdline != NULL ) {
-        cmdline[0] = 0;
-        for( i = 1; i < argc - 1; i++ ) {
-            strcat( cmdline, argv[i] );
-            strcat( cmdline, " " );
-        }
-        strcat( cmdline, argv[i] );
-    }
-    
-    Qcommon_Init( cmdline );
-}
-
-/*
 =================
 main
 =================
@@ -1127,15 +1115,16 @@ int main( int argc, char **argv ) {
         }
     }
 
-	if ( !getuid() || !geteuid() ) {
+	if( !getuid() || !geteuid() ) {
 		Sys_Error(  "You can not run " APPLICATION " as superuser "
                     "for security reasons!" );
 	}
 		
-    _Qcommon_Init_ArgcArgv( argc, argv );
+    Qcommon_Init( argc, argv );
     while( 1 ) {
         Qcommon_Frame();
     }
 
+    return 1; // never gets here
 }
 

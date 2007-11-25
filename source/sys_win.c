@@ -29,6 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifdef USE_DBGHELP
 #include <dbghelp.h>
 #endif
+#include <float.h>
 
 sysAPI_t	sys;
 
@@ -411,7 +412,7 @@ static void Sys_ConsoleInit( void ) {
 	mode |= ENABLE_WINDOW_INPUT;
 	SetConsoleMode( hinput, mode );
 	sys_con.widthInChars = sbinfo.dwSize.X;
-	sys_con.Printf = Sys_Printf;
+	sys_con.printf = Sys_Printf;
 	gotConsole = qtrue;
 
 	Com_DPrintf( "System console initialized (%d cols, %d rows).\n",
@@ -453,7 +454,7 @@ static void Sys_InstallService_f( void ) {
 		return;
 	}
 
-	Com_sprintf( serviceName, sizeof( serviceName ), "Q2PRO - %s", Cmd_Argv( 1 ) );
+	Q_concat( serviceName, sizeof( serviceName ), "Q2PRO - ", Cmd_Argv( 1 ), NULL );
 
 	length = GetModuleFileName( NULL, servicePath, MAX_PATH );
 	if( !length ) {
@@ -523,7 +524,7 @@ static void Sys_DeleteService_f( void ) {
 		return;
 	}
 
-	Com_sprintf( serviceName, sizeof( serviceName ), "Q2PRO - %s", Cmd_Argv( 1 ) );
+	Q_concat( serviceName, sizeof( serviceName ), "Q2PRO - ", Cmd_Argv( 1 ), NULL );
 
 	service = OpenService(
 			scm,
@@ -788,6 +789,10 @@ void Sys_FillAPI( sysAPI_t *api ) {
 	api->HunkFree = Hunk_Free;
 }
 
+void Sys_FixFPCW( void ) {
+    _controlfp( _PC_24|_RC_NEAR, _MCW_PC|_MCW_RC );
+}
+
 /*
 ================
 Sys_Init
@@ -933,7 +938,7 @@ static void Sys_ListFilteredFiles( char **listedFiles, int *count, const char *p
 		return;
 	}
 
-	Com_sprintf( findPath, sizeof( findPath ), "%s\\*", path );
+	Q_concat( findPath, sizeof( findPath ), path, "\\*", NULL );
 
 	findHandle = FindFirstFileA( findPath, &findInfo );
 	if( findHandle == INVALID_HANDLE_VALUE ) {
@@ -946,7 +951,7 @@ static void Sys_ListFilteredFiles( char **listedFiles, int *count, const char *p
 		}
 
 		if( findInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ) {
-			Com_sprintf( dirPath, sizeof( dirPath ), "%s\\%s", path, findInfo.cFileName );
+			Q_concat( dirPath, sizeof( dirPath ), path, "\\", findInfo.cFileName, NULL );
 			Sys_ListFilteredFiles( listedFiles, count, dirPath, filter, flags, length );
 		}
 
@@ -960,7 +965,7 @@ static void Sys_ListFilteredFiles( char **listedFiles, int *count, const char *p
 			}
 		}
 
-		Com_sprintf( dirPath, sizeof( dirPath ), "%s\\%s", path, findInfo.cFileName );
+		Q_concat( dirPath, sizeof( dirPath ), path, "\\", findInfo.cFileName, NULL );
 		if( !FS_WildCmp( filter, dirPath + length ) ) {
 			continue;
 		}
@@ -1016,12 +1021,12 @@ char **Sys_ListFiles( const char *rawPath, const char *extension, uint32 flags, 
 		Sys_ListFilteredFiles( listedFiles, &count, path, findPath, flags, length + 1 );
 	} else {
 		if( !extension || strchr( extension, ';' ) ) {
-			Com_sprintf( findPath, sizeof( findPath ), "%s\\*", path );
+			Q_concat( findPath, sizeof( findPath ), path, "\\*", NULL );
 		} else {
 			if( *extension == '.' ) {
 				extension++;
 			}
-			Com_sprintf( findPath, sizeof( findPath ), "%s\\*.%s", path, extension );
+			Q_concat( findPath, sizeof( findPath ), path, "\\*.", extension, NULL );
 			extension = NULL; // do not check later
 		}
 		
@@ -1503,6 +1508,43 @@ static void msvcrt_sucks( const wchar_t *expr, const wchar_t *func, const wchar_
 }
 #endif
 
+
+#define MAX_LINE_TOKENS	128
+
+static char	    *sys_argv[MAX_LINE_TOKENS];
+static int		sys_argc;
+
+/*
+===============
+Sys_ParseCommandLine
+
+===============
+*/
+static void Sys_ParseCommandLine( char *line ) {
+	sys_argc = 1;
+    sys_argv[0] = APPLICATION;
+	while( *line ) {
+		while( *line && *line <= 32 ) {
+            line++;
+        }
+        if( *line == 0 ) {
+            break;
+        }
+		sys_argv[sys_argc++] = line;
+		while( *line > 32 ) {
+            line++;
+        }
+        if( *line == 0 ) {
+            break;
+        }
+		*line = 0;
+		if( sys_argc == MAX_LINE_TOKENS ) {
+			break;
+		}
+        line++;
+	}
+}
+
 /*
 ==================
 WinMain
@@ -1552,7 +1594,9 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	_set_invalid_parameter_handler( msvcrt_sucks );
 #endif
 
-	Qcommon_Init( lpCmdLine );
+    Sys_ParseCommandLine( lpCmdLine );
+
+	Qcommon_Init( sys_argc, sys_argv );
 
 	/* main program loop */
 	while( !shouldExit ) {

@@ -38,7 +38,7 @@ typedef struct commandPrompt_s {
 	int			widthInChars;
     qboolean    tooMany;
 
-	void		(*Printf)( const char *fmt, ... );
+	void		(* q_printf( 1, 2 ) printf)( const char *fmt, ... );
 } commandPrompt_t;
 
 
@@ -48,3 +48,5 @@ char *Prompt_Action( commandPrompt_t *prompt );
 void Prompt_HistoryUp( commandPrompt_t *prompt );
 void Prompt_HistoryDown( commandPrompt_t *prompt );
 void Prompt_Clear( commandPrompt_t *prompt );
+void Prompt_SaveHistory( commandPrompt_t *prompt, const char *filename );
+void Prompt_LoadHistory( commandPrompt_t *prompt, const char *filename );
