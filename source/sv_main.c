@@ -1364,6 +1364,7 @@ static qboolean SV_CheckPaused( void ) {
 		}
         if( !sv_paused->integer ) {
             Cvar_Set( "sv_paused", "1" );
+            CL_InputActivate();
         }
 		return qtrue; // don't run if paused
 	}
@@ -1371,6 +1372,7 @@ static qboolean SV_CheckPaused( void ) {
 nopause:
     if( sv_paused->integer ) {
         Cvar_Set( "sv_paused", "0" );
+        CL_InputActivate();
     }
     return qfalse;
 }

@@ -254,6 +254,8 @@ void GL_InitPrograms( void );
 void GL_ShutdownPrograms( void );
 void GL_EnableWarp( void );
 void GL_DisableWarp( void );
+void GL_EnableOutlines( void );
+void GL_DisableOutlines( void );
 
 
 /*

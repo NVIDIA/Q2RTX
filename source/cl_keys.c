@@ -232,7 +232,7 @@ void Key_SetDest( keydest_t dest ) {
     }
 
 // activate or deactivate mouse
-	if( diff & KEY_CONSOLE ) {
+	if( diff & (KEY_CONSOLE|KEY_MENU) ) {
     	CL_InputActivate();
 	}
 }

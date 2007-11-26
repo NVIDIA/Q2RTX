@@ -51,8 +51,22 @@ void GL_Flush2D( void ) {
 	qglColorPointer( 4, GL_UNSIGNED_BYTE, 0, tess.colors );
 	qglTexCoordPointer( 2, GL_FLOAT, 0, tess.tcoords );
 	qglVertexPointer( 3, GL_FLOAT, 16, tess.vertices );
+
+    if( qglLockArraysEXT ) {
+        qglLockArraysEXT( 0, tess.numVertices );
+    }
    
 	qglDrawArrays( GL_QUADS, 0, tess.numVertices );
+
+    if( gl_showtris->integer ) {
+        GL_EnableOutlines();
+	    qglDrawArrays( GL_QUADS, 0, tess.numVertices );
+        GL_DisableOutlines();
+    }
+
+    if( qglUnlockArraysEXT ) {
+        qglUnlockArraysEXT();
+    }
 
 	qglDisableClientState( GL_COLOR_ARRAY );
     
@@ -306,6 +320,12 @@ static void GL_Flush3D( void ) {
     if( tess.texnum[1] ) {
         qglDisable( GL_TEXTURE_2D );
         GL_SelectTMU( 0 );
+    }
+
+    if( gl_showtris->integer ) {
+        GL_EnableOutlines();
+        qglDrawElements( GL_TRIANGLES, tess.numIndices, GL_UNSIGNED_INT, tess.indices );
+        GL_DisableOutlines();
     }
 
     c.batchesDrawn++;

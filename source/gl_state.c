@@ -266,6 +266,19 @@ void GL_SetDefaultState( void ) {
     GL_Bits( GLS_DEFAULT );
 }
 
+void GL_EnableOutlines( void ) {
+    qglDisable( GL_TEXTURE_2D );
+    qglPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+    qglDisable( GL_DEPTH_TEST );
+    qglColor4f( 1, 1, 1, 1 );
+}
+
+void GL_DisableOutlines( void ) {
+   qglEnable( GL_DEPTH_TEST );
+   qglPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+   qglEnable( GL_TEXTURE_2D );
+}
+
 void GL_EnableWarp( void ) {
     vec4_t param;
 

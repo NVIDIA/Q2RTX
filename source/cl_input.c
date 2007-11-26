@@ -111,8 +111,8 @@ void CL_InputActivate( void ) {
 		return;
 	}
 
-	if( ( cls.key_dest & KEY_CONSOLE ) && !( scr_glconfig.flags & QVF_FULLSCREEN ) ) {
-		// deactivate in windowed mode if console is open
+	if( ( ( cls.key_dest & KEY_CONSOLE ) || ( !( cls.key_dest & KEY_MENU ) && sv_paused->integer ) ) && !( scr_glconfig.flags & QVF_FULLSCREEN ) ) {
+		// deactivate in windowed mode if console is open or game is paused
         active = qfalse;
     }
 

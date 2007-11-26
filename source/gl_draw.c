@@ -105,8 +105,8 @@ void Draw_GetPicSize( int *w, int *h, qhandle_t hPic ) {
 	image_t *image;
 
 	image = R_ImageForHandle( hPic );
-	*w = image->upload_width;
-	*h = image->upload_height;
+	*w = image->width;
+	*h = image->height;
 }
 
 void Draw_GetFontSize( int *w, int *h, qhandle_t hFont ) {

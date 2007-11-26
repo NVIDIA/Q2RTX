@@ -490,6 +490,8 @@ void SCR_Draw2D( void ) {
         draw_turtle();
     }
 
+    SCR_DrawPause();
+
     if( scr_glconfig.renderer == GL_RENDERER_SOFTWARE ) {
         ref.SetClipRect( DRAW_CLIP_DISABLED, NULL );
     }

@@ -49,7 +49,10 @@ qhandle_t	crosshair_pic;
 int			crosshair_width, crosshair_height;
 
 qhandle_t	scr_backtile;
+
 qhandle_t	scr_pause;
+int         scr_pause_width, scr_pause_height;
+
 qhandle_t	scr_net;
 qhandle_t	scr_font;
 
@@ -189,11 +192,7 @@ static void SCR_DrawPercentBar( int percent ) {
 	ref.DrawFill( 0, scr_hudHeight, w, CHAR_HEIGHT, 4 );
 	ref.DrawFill( w, scr_hudHeight, scr_hudWidth - w, CHAR_HEIGHT, 0 );
 
-    if( sv_paused->integer ) {
-    	length = sprintf( buffer, "[%d%%]", percent );
-    } else {
-    	length = sprintf( buffer, "%d%%", percent );
-    }
+    length = sprintf( buffer, "%d%%", percent );
 	x = ( scr_hudWidth - length * CHAR_WIDTH ) / 2;
 	ref.DrawString( x, scr_hudHeight, 0, MAX_STRING_CHARS, buffer, scr_font );
 }
@@ -439,6 +438,8 @@ void SCR_RegisterMedia( void ) {
 	scr_pause = ref.RegisterPic( "pause" );
 	scr_net = ref.RegisterPic( "net" );
 	scr_font = ref.RegisterFont( scr_fontvar->string );
+
+	ref.DrawGetPicSize( &scr_pause_width, &scr_pause_height, scr_pause );
 }
 
 static void scr_fontvar_changed( cvar_t *self ) {
@@ -492,23 +493,21 @@ SCR_DrawPause
 ==============
 */
 void SCR_DrawPause( void ) {
-	int		x, y, w, h;
+	int		x, y;
 
 	if( !sv_paused->integer ) {
 		return;
 	}
+    if( cl_paused->integer != 2 ) {
+        return;
+    }
 
 	if( !scr_showpause->integer ) {		// turn off for screenshots
 		return;
 	}
 
-	if( cls.key_dest & KEY_MENU ) {
-		return;
-	}
-
-	ref.DrawGetPicSize( &w, &h, scr_pause );
-    x = ( scr_glconfig.vidWidth - w ) / 2;
-    y = scr_glconfig.vidHeight / 2 + 8;
+    x = ( scr_hudWidth - scr_pause_width ) / 2;
+    y = ( scr_hudHeight - scr_pause_height ) / 2;
 	ref.DrawPic( x, y, scr_pause );
 }
 

@@ -2584,10 +2584,12 @@ void CL_Frame( int msec ) {
         if( cl_paused->integer ) {
             if( !sv_paused->integer ) {
                 Cvar_Set( "sv_paused", "1" );
+                CL_InputActivate();
             }
         } else {
             if( sv_paused->integer ) {
                 Cvar_Set( "sv_paused", "0" );
+                CL_InputActivate();
             }
         }
     }

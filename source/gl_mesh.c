@@ -397,8 +397,10 @@ void GL_DrawAliasModel( model_t *model ) {
 #endif
 
 		if( gl_showtris->integer ) {
-			//Tess_DrawSurfaceTriangles( ( int * )mesh->indices,
-              //      mesh->numIndices );
+            GL_EnableOutlines();
+		    qglDrawElements( GL_TRIANGLES, mesh->numIndices, GL_UNSIGNED_INT,
+			    mesh->indices );
+            GL_DisableOutlines();
 		}
 		if( qglUnlockArraysEXT ) {
 			qglUnlockArraysEXT();

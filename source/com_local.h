@@ -1052,6 +1052,7 @@ void SCR_ModeChanged( void );
 void CL_LocalConnect( void );
 void CL_RestartFilesystem( void );
 void CL_InputFrame( void );
+void CL_InputActivate( void );
 void CL_AppActivate( qboolean active );
 void CL_UpdateUserinfo( cvar_t *var, cvarSetSource_t source );
 
