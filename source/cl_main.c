@@ -324,7 +324,17 @@ CL_Pause_f
 ==================
 */
 void CL_Pause_f( void ) {
-    Cvar_SetInteger( "cl_paused", !cl_paused->integer );
+    if( cl_paused->integer == 2 ) {
+        if( cls.key_dest & (KEY_CONSOLE|KEY_MENU) ) {
+            // activate automatic pause
+            Cvar_Set( "cl_paused", "1" );
+        } else {
+            Cvar_Set( "cl_paused", "0" );
+        }
+    } else {
+        // activate manual pause
+        Cvar_Set( "cl_paused", "2" );
+    }
 }
 
 /*

@@ -255,7 +255,7 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
         } else {
 		    pos += Q_concat( text, size, matches[0], " ", s, NULL );
         }
-		inputLine->cursorPos = pos;
+		inputLine->cursorPos = pos + 1;
         prompt->tooMany = qfalse;
 		Prompt_FreeMatches();
 		return;
@@ -304,7 +304,7 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 		pos += Q_concat( text + length, size, " ", s, NULL );
 	}
 
-	inputLine->cursorPos = pos;
+	inputLine->cursorPos = pos + 1;
 
 	prompt->printf( "]\\%s\n", Cmd_ArgsFrom( 0 ) );
 	if( generator ) {

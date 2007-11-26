@@ -58,7 +58,7 @@ int			scr_hudHeight;
 
 #define STAT_MINUS		10	// num frame for '-' stats digit
 
-static const char	*sb_nums[2][11] = {
+static const char	sb_nums[2][11][11] = {
 	{ "num_0", "num_1", "num_2", "num_3", "num_4", "num_5",
 	"num_6", "num_7", "num_8", "num_9", "num_minus" },
 	{ "anum_0", "anum_1", "anum_2", "anum_3", "anum_4", "anum_5",

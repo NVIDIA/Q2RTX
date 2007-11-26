@@ -111,10 +111,6 @@ void Con_Close( void ) {
 
 	Con_ClearTyping();
 	Con_ClearNotify_f();
-
-    if( !( cls.key_dest & KEY_MENU ) ) {
-    	Cvar_Set( "cl_paused", "0" );
-    }
 }
 
 /*
@@ -128,19 +124,11 @@ void Con_ToggleConsole_f( void ) {
 
 	if( cls.key_dest & KEY_CONSOLE ) {
 		Key_SetDest( cls.key_dest & ~KEY_CONSOLE );
-        if( !( cls.key_dest & KEY_MENU ) ) {
-		    Cvar_Set( "cl_paused", "0" );
-        }
 		return;
 	}
 
 	// FIXME: use old q2 style
 	Key_SetDest( ( cls.key_dest | KEY_CONSOLE ) & ~KEY_MESSAGE );
-
-	// only pause in single player
-	if( cls.demoplayback || ( sv_running->integer && Cvar_VariableInteger( "maxclients" ) == 1 ) ) {
-		Cvar_Set( "cl_paused", "1" );
-	}
 
     con.chatMode = qfalse;
 }

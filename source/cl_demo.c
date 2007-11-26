@@ -608,6 +608,10 @@ void CL_DemoFrame( void ) {
 		return;
 	}
 
+    if( cls.demorecording && cl_paused->integer == 2 ) {
+    //    CL_RecordPause();
+    }
+
 	while( cl.serverTime < cl.time ) {
 		CL_ParseNextDemoMessage();
 		if( cls.state != ca_active ) {

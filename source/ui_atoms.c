@@ -52,8 +52,6 @@ UI_PushMenu
 void UI_PushMenu( menuFrameWork_t *menu ) {
 	int		i, keydest;
 
-	cvar.Set( "cl_paused", "1" );
-
 	// if this menu is already present, drop back to that level
 	// to avoid stacking menus by hotkeys
 	for( i=0 ; i<uis.menuDepth ; i++ ) {
@@ -120,9 +118,6 @@ void UI_ForceMenuOff( void ) {
 	uis.activeMenu = NULL;
 	uis.transparent = qfalse;
 	//keys.ClearStates();
-    if( !( keys.GetDest() & KEY_CONSOLE ) ) {
-    	cvar.Set( "cl_paused", "0" );
-    }
 }
 
 /*

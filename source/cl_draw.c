@@ -272,6 +272,8 @@ CHAT HUD
 ===============================================================================
 */
 
+#if USE_CHATHUD
+
 #define MAX_CHAT_LENGTH		128
 #define MAX_CHAT_LINES		32
 #define CHAT_MASK			( MAX_CHAT_LINES - 1 )
@@ -315,6 +317,8 @@ void SCR_AddToChatHUD( const char *string ) {
 		*p = 0;
 	}
 }
+
+#endif
 
 // ============================================================================
 
@@ -492,7 +496,9 @@ void SCR_Draw2D( void ) {
 }
 
 cmdreg_t scr_drawcmds[] = {
+#if USE_CHATHUD
     { "clearchat", SCR_ClearChatHUD_f },
+#endif
     { "draw", SCR_Draw_f, Cvar_Generator },
     { "undraw", SCR_UnDraw_f/*, SCR_DrawStringGenerator*/ },
     { NULL }

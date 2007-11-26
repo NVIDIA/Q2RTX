@@ -1880,6 +1880,7 @@ int Q_concat( char *buffer, int size, ... ) {
     while( ( s = va_arg( argptr, const char * ) ) != NULL ) {
         len = strlen( s );
         if( total + len >= size ) {
+		    Com_DPrintf( "%s: overflow of %d in %d\n", __func__, total + len, size - 1 );
             break;
         }
         memcpy( buffer + total, s, len );

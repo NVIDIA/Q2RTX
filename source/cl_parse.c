@@ -451,7 +451,9 @@ static void CL_SetActiveState( void ) {
 	}
 	
 	SCR_LagClear();
+#if USE_CHATHUD
 	SCR_ClearChatHUD_f();
+#endif
 	SCR_EndLoadingPlaque ();	// get rid of loading plaque
 	Con_Close();				// close console
 
@@ -1268,7 +1270,9 @@ static void CL_ParsePrint( void ) {
 
 	Con_SkipNotify( qfalse );
 
+#if USE_CHATHUD
 	SCR_AddToChatHUD( string );
+#endif
 
     // play sound
 	if( cl_chat_sound->string[0] ) {

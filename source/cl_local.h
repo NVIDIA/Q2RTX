@@ -624,12 +624,6 @@ void Char_Console( int key );
 void Char_Message( int key );
 
 //
-// cl_draw.c
-//
-void SCR_FreeHUD_f( void );
-
-
-//
 // cl_ref.c
 //
 void	CL_InitRefresh( void );
@@ -698,10 +692,12 @@ void	SCR_InitDraw( void );
 void	SCR_Draw2D( void );
 void	SCR_LoadingString( const char *string );
 float	SCR_FadeAlpha( int startTime, int visTime, int fadeTime );
+#if USE_CHATHUD
+void	SCR_ClearChatHUD_f( void );
 void	SCR_AddToChatHUD( const char *string );
+#endif
 void    SCR_LagSample( void );
 void	SCR_LagClear( void );
-void	SCR_ClearChatHUD_f( void );
 
 //
 // keys.c

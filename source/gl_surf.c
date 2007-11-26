@@ -399,7 +399,7 @@ void GL_EndPostProcessing( void ) {
         qglBindBufferARB( GL_ARRAY_BUFFER_ARB, 0 );
         if( vbo ) {
             gl_static.vbo = NULL;
-            Com_DPrintf( "%d bytes of vertex data as VBO\n", size );
+            Com_DPrintf( "%s: %d bytes of vertex data as VBO\n", __func__, size );
         } else {
             Com_EPrintf( "Failed to map VBO in client memory" );
         }
@@ -408,7 +408,7 @@ void GL_EndPostProcessing( void ) {
     if( !vbo ) {
         vbo = sys.HunkAlloc( &r_world.pool, size );
         gl_static.vbo = vbo;
-        Com_DPrintf( "%d bytes of vertex data on hunk\n", size );
+        Com_DPrintf( "%s: %d bytes of vertex data on hunk\n", __func__, size );
     }
 
     // post process all surfaces
@@ -443,6 +443,6 @@ void GL_EndPostProcessing( void ) {
         }
     }
 
-    Com_DPrintf( "%d lightmaps built\n", lm.numMaps );
+    Com_DPrintf( "%s: %d lightmaps built\n", __func__, lm.numMaps );
 }
 
