@@ -2391,39 +2391,26 @@ CL_SetClientTime
 ==================
 */
 static void CL_SetClientTime( void ) {
-    int	prevtime;
-
-    prevtime = cl.oldframe.number * 100;
-    if ( prevtime >= cl.serverTime ) {
-        /* this may happen on a very first frame */
-        cl.lerpfrac = 0;
-        return;
-    }
-    if( sv_paused->integer ) {
-        return;
-    }
-
     if ( cl.time > cl.serverTime ) {
         if ( cl_showclamp->integer )
             Com_Printf( "high clamp %i\n", cl.time - cl.serverTime );
         cl.time = cl.serverTime;
-        cl.lerpfrac = 1.0;
-    } else if ( cl.time < prevtime ) {
+        cl.lerpfrac = 1.0f;
+    } else if ( cl.time < cl.serverTime - 100 ) {
         if ( cl_showclamp->integer )
-            Com_Printf( "low clamp %i\n", cl.serverTime - prevtime );
-        cl.time = prevtime;
+            Com_Printf( "low clamp %i\n", cl.time - cl.serverTime + 100 );
+        cl.time = cl.serverTime - 100;
         cl.lerpfrac = 0;
     } else {
-        cl.lerpfrac = ( float ) ( cl.time - prevtime ) / ( float ) ( cl.serverTime - prevtime );
+        cl.lerpfrac = ( cl.time - cl.serverTime + 100 ) * 0.01f;
     }
 
     if ( com_timedemo->integer ) {
-        cl.lerpfrac = 1.0;
+        cl.lerpfrac = 1.0f;
     }
 
     if ( cl_showclamp->integer == 2 )
         Com_Printf( "time %i, lerpfrac %.3f\n", cl.time, cl.lerpfrac );
-
 }
 
 static void CL_MeasureStats( void ) {
@@ -2606,7 +2593,7 @@ void CL_Frame( int msec ) {
 
     // read next demo frame
     if( cls.demoplayback ) {
-        if( cls.demorecording && cl_paused->integer == 2 ) {
+        if( cls.demorecording && cl_paused->integer == 2 && !cls.demopaused ) {
             static int demo_extra;
             
             // XXX: record zero frames when manually paused
@@ -2622,7 +2609,9 @@ void CL_Frame( int msec ) {
     }
 
     // calculate local time
-    CL_SetClientTime();
+    if( cls.state == ca_active && !sv_paused->integer ) {
+        CL_SetClientTime();
+    }
 
 #if USE_AUTOREPLY
     // check for version reply

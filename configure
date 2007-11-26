@@ -55,7 +55,7 @@ tmpc="/tmp/q2pro-${RANDOM}.c"
 tmpo="/tmp/q2pro-${RANDOM}.o"
 
 if [ -z "$CFLAGS" ]; then
-    CFLAGS="-O2"
+    CFLAGS="-ffast-math -O2"
 fi
 
 # detect host CPU
@@ -430,6 +430,7 @@ if [ "$asm" = "yes" ]; then
 fi
 
 echo "#define USE_MAPCHECKSUM 1" >> $config_h
+echo "#define USE_AUTOREPLY 1" >> $config_h
 
 if [ "$hardlink" = "yes" ]; then
     echo "REF_HARD_LINKED=yes" >> $config_mk

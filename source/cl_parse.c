@@ -1081,6 +1081,10 @@ static void CL_ParseConfigString (void) {
 		Com_Printf( "    %i \"%s\"\n", i, Q_FormatString( s ) );
 	}
 
+    if( cls.demorecording && cls.demopaused ) {
+        Q_SetBit( cl.dcs, i );
+    }
+
     CL_ConfigString( i, s );
 }
 
@@ -1526,7 +1530,7 @@ void CL_ParseServerMessage( void ) {
 		}
 
         // copy protocol invariant stuff
-        if( cls.demorecording ) {
+        if( cls.demorecording && !cls.demopaused ) {
             SZ_Write( &cls.demobuff, msg_read.data + readcount,
                 msg_read.readcount - readcount );
         }
@@ -1535,7 +1539,7 @@ void CL_ParseServerMessage( void ) {
 //
 // if recording demos, write the message out
 //
-    if( cls.demorecording ) {
+    if( cls.demorecording && !cls.demopaused ) {
         CL_WriteDemoMessage( &cls.demobuff );
     }
 }

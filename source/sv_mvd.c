@@ -442,7 +442,7 @@ void SV_MvdBeginFrame( void ) {
         if( !found ) {
             if( sv.mvd.paused == PAUSED_FRAMES ) {
                 Com_Printf( "MVD stream paused, no active clients.\n" );
-                for( i = 0; i < DCS_DWORDS; i++ ) {
+                for( i = 0; i < CS_BITMAP_LONGS; i++ ) {
                     (( uint32 * )sv.mvd.dcs)[i] = 0;
                 }
             }
@@ -452,7 +452,7 @@ void SV_MvdBeginFrame( void ) {
     }
 
 	if( sv.mvd.paused >= PAUSED_FRAMES ) {
-        for( i = 0; i < DCS_DWORDS; i++ ) {
+        for( i = 0; i < CS_BITMAP_LONGS; i++ ) {
             if( (( uint32 * )sv.mvd.dcs)[i] == 0 ) {
                 continue;
             }

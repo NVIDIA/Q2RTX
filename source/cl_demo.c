@@ -41,6 +41,9 @@ void CL_WriteDemoMessage( sizebuf_t *buf ) {
         Com_WPrintf( "Demo message overflowed.\n" );
         return;
     }
+    if( !buf->cursize ) {
+        return;
+    }
 
 	length = LittleLong( buf->cursize );
 	FS_Write( &length, 4, cls.demorecording );
@@ -128,6 +131,10 @@ void CL_EmitDemoFrame( void ) {
 	player_state_t		*oldstate;
 	int					lastframe;
 
+    if( cls.demopaused ) {
+        return;
+    }
+
     if( cl.demoframe < 0 ) {
         oldframe = NULL;
         oldstate = NULL;
@@ -174,7 +181,7 @@ void CL_EmitDemoFrame( void ) {
 }
 
 void CL_EmitZeroFrame( void ) {
-    cl.demodelta++;
+    cl.demodelta++; // insert new zero frame
 
 	MSG_WriteByte( svc_frame );
 	MSG_WriteLong( cl.frame.number + cl.demodelta );
@@ -230,6 +237,7 @@ void CL_Stop_f( void ) {
 // close demofile
 	FS_FCloseFile( cls.demorecording );
 	cls.demorecording = 0;
+    cls.demopaused = qfalse;
 
 	Com_Printf( "Stopped demo (%d bytes written).\n", length );
 }
@@ -295,9 +303,11 @@ void CL_Record_f( void ) {
 	Com_Printf( "Recording client demo to %s.\n", name );
 
 	cls.demorecording = demofile;
+    cls.demopaused = qfalse;
 
     // the first frame will be delta uncompressed
     cl.demoframe = -1;
+    cl.demodelta = 0;
 
 	if( cls.netchan && cls.serverProtocol >= PROTOCOL_VERSION_R1Q2 ) {
 		// tell the server we are recording
@@ -366,6 +376,54 @@ void CL_Record_f( void ) {
 	// the rest of the demo file will be individual frames
 }
 
+static void CL_Suspend_f( void ) {
+    int i, j, index;
+    int length, total = 0;
+
+	if( !cls.demorecording ) {
+		Com_Printf( "Not recording a demo.\n" );
+		return;
+	}
+    if( !cls.demopaused ) {
+		Com_Printf( "Suspended demo.\n" );
+        cls.demopaused = qtrue;
+        return;
+    }
+
+    // XXX: embed these in frame instead?
+    for( i = 0; i < CS_BITMAP_LONGS; i++ ) {
+        if( (( uint32 * )cl.dcs)[i] == 0 ) {
+            continue;
+        }
+        index = i << 5;
+        for( j = 0; j < 32; j++, index++ ) {
+            if( !Q_IsBitSet( cl.dcs, index ) ) {
+                continue;
+            }
+            length = strlen( cl.configstrings[index] );
+            if( length > MAX_QPATH ) {
+                length = MAX_QPATH;
+            }
+            if( msg_write.cursize + length + 4 > MAX_PACKETLEN_WRITABLE_DEFAULT ) {
+                CL_WriteDemoMessage( &msg_write );
+            }
+            MSG_WriteByte( svc_configstring );
+            MSG_WriteShort( index );
+		    MSG_WriteData( cl.configstrings[index], length );
+    		MSG_WriteByte( 0 );
+            total += length + 4;
+        }
+    }
+
+	// write it to the demo file
+    CL_WriteDemoMessage( &msg_write );
+
+    Com_Printf( "Resumed demo (%d bytes flushed).\n", total );
+
+    cl.demodelta += cl.demoframe - cl.frame.number; // do not create holes
+    cls.demopaused = qfalse;
+}
+
 /*
 ====================
 CL_ReadNextDemoMessage
@@ -376,6 +434,7 @@ static qboolean CL_ReadNextDemoMessage( fileHandle_t f ) {
 
 	// read msglen
 	if( FS_Read( &msglen, 4, f ) != 4 ) {
+        Com_DPrintf( "%s: short read of msglen\n", __func__ );
 		return qfalse;
 	}
 
@@ -384,7 +443,8 @@ static qboolean CL_ReadNextDemoMessage( fileHandle_t f ) {
 	}
 
 	msglen = LittleLong( msglen );
-	if( msglen < 1 || msglen >= msg_read.maxsize ) {
+	if( msglen < 0 || msglen >= msg_read.maxsize ) {
+        Com_DPrintf( "%s: bad msglen\n", __func__ );
 		return qfalse;
 	}
 
@@ -393,11 +453,11 @@ static qboolean CL_ReadNextDemoMessage( fileHandle_t f ) {
 
 	// read packet data
 	if( FS_Read( msg_read.data, msglen, f ) != msglen ) {
+        Com_DPrintf( "%s: short read of data\n", __func__ );
 		return qfalse;
 	}
 
 	return qtrue;
-
 }
 
 /*
@@ -645,6 +705,7 @@ static const cmdreg_t c_demo[] = {
     { "demo", CL_PlayDemo_f, CL_PlayDemo_g },
     { "record", CL_Record_f, CL_PlayDemo_g },
     { "stop", CL_Stop_f },
+    { "suspend", CL_Suspend_f },
 
     { NULL }
 };

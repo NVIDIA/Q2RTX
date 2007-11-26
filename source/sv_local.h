@@ -42,13 +42,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define SV_BASELINES_MASK			( SV_BASELINES_PER_CHUNK - 1 )
 #define SV_BASELINES_CHUNKS			( MAX_EDICTS >> SV_BASELINES_SHIFT )
 
-#define DCS_BYTES	260
-#define DCS_DWORDS	(DCS_BYTES/4)
-
-#if( DCS_BYTES != MAX_CONFIGSTRINGS/8 )
-#error Invalid DCS_BYTES
-#endif
-
 typedef struct {
 	uint32		numEntities;
 	uint32		firstEntity;
@@ -79,7 +72,7 @@ typedef struct server_s {
         int             framenum;
         sizebuf_t       datagram;
         sizebuf_t       message; // reliable
-	    byte		    dcs[DCS_BYTES];
+	    byte		    dcs[CS_BITMAP_BYTES];
     } mvd;
 
 	uint32			tracecount;

@@ -128,6 +128,7 @@ typedef struct client_state_s {
 
     int                 demoframe;
     int                 demodelta;
+    byte                dcs[CS_BITMAP_BYTES];
 
 	// the client maintains its own idea of view angles, which are
 	// sent to the server each frame.  It is cleared to 0 upon entering each level.
@@ -273,6 +274,7 @@ typedef struct client_static_s {
 	int				demofileFrameOffset;
 	int             demofilePercent;
     sizebuf_t       demobuff;
+    qboolean        demopaused;
 } client_static_t;
 
 extern client_static_t	cls;
