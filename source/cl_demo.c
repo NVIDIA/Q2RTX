@@ -135,7 +135,7 @@ void CL_EmitDemoFrame( void ) {
     } else {
         oldframe = &cl.frames[cl.demoframe & UPDATE_MASK];
         oldstate = &oldframe->ps;
-        lastframe = cl.demoframe;
+        lastframe = cl.demoframe + cl.demodelta;
 		if( oldframe->number != cl.demoframe || !oldframe->valid ||
 		    cl.numEntityStates - oldframe->firstEntity > MAX_PARSE_ENTITIES )
         {
@@ -146,7 +146,7 @@ void CL_EmitDemoFrame( void ) {
     }
 
 	MSG_WriteByte( svc_frame );
-	MSG_WriteLong( cl.frame.number );
+	MSG_WriteLong( cl.frame.number + cl.demodelta );
 	MSG_WriteLong( lastframe );	// what we are delta'ing from
 	MSG_WriteByte( 0 );	// rate dropped packets
 
@@ -172,6 +172,31 @@ void CL_EmitDemoFrame( void ) {
 
     SZ_Clear( &msg_write );
 }
+
+void CL_EmitZeroFrame( void ) {
+    cl.demodelta++;
+
+	MSG_WriteByte( svc_frame );
+	MSG_WriteLong( cl.frame.number + cl.demodelta );
+	MSG_WriteLong( cl.frame.number + cl.demodelta - 1 );	// what we are delta'ing from
+	MSG_WriteByte( 0 );	// rate dropped packets
+
+	// send over the areabits
+	MSG_WriteByte( cl.frame.areabytes );
+	MSG_WriteData( cl.frame.areabits, cl.frame.areabytes );
+
+	MSG_WriteByte( svc_playerinfo );
+    MSG_WriteShort( 0 );
+    MSG_WriteLong( 0 );
+
+	MSG_WriteByte( svc_packetentities );
+    MSG_WriteShort( 0 );
+
+    CL_WriteDemoMessage( &msg_write );
+
+    SZ_Clear( &msg_write );
+}
+
 
 /*
 ====================
@@ -607,10 +632,6 @@ void CL_DemoFrame( void ) {
 		cls.timeDemoFrames++;
 		return;
 	}
-
-    if( cls.demorecording && cl_paused->integer == 2 ) {
-    //    CL_RecordPause();
-    }
 
 	while( cl.serverTime < cl.time ) {
 		CL_ParseNextDemoMessage();

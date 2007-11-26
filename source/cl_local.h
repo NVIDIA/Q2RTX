@@ -127,6 +127,7 @@ typedef struct client_state_s {
 	int			        lastframe;
 
     int                 demoframe;
+    int                 demodelta;
 
 	// the client maintains its own idea of view angles, which are
 	// sent to the server each frame.  It is cleared to 0 upon entering each level.
@@ -585,6 +586,7 @@ void CL_TrapParticles (entity_t *ent);
 //
 void CL_InitDemos( void );
 void CL_DemoFrame( void );
+void CL_EmitZeroFrame( void );
 void CL_WriteDemoMessage( sizebuf_t *buf );
 void CL_EmitDemoFrame( void ); 
 void CL_Stop_f( void );

@@ -2606,6 +2606,18 @@ void CL_Frame( int msec ) {
 
     // read next demo frame
     if( cls.demoplayback ) {
+        if( cls.demorecording && cl_paused->integer == 2 ) {
+            static int demo_extra;
+            
+            // XXX: record zero frames when manually paused
+            // for syncing with audio comments, etc
+            demo_extra += main_extra;
+            if( demo_extra > 100 ) {
+                CL_EmitZeroFrame();
+                demo_extra = 0;
+            }
+        }
+
         CL_DemoFrame();
     }
 

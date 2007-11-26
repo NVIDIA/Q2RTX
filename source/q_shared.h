@@ -33,7 +33,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define q_printf( f, a )    __attribute__((format( printf, f, a )))
 #define q_noreturn          __attribute__((noreturn))
 #define q_malloc            __attribute__((malloc))
+#if __GNUC__ >= 4
 #define q_sentinel          __attribute__((sentinel))
+#else
+#define q_sentinel
+#endif
 
 #define q_likely( x )         __builtin_expect( !!(x), 1 )
 #define q_unlikely( x )       __builtin_expect( !!(x), 0 )
