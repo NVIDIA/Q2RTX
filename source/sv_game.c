@@ -698,12 +698,11 @@ static void PF_PositionedSound( vec3_t origin, edict_t *entity, int channel,
 
 
 void PF_Pmove( pmove_t *pm ) {
-	if( !sv_client ) {
-		//Pmove( pm ); // TODO
-		return;
+	if( sv_client ) {
+		Pmove( pm, &sv_client->pmp );
+	} else {
+		Pmove( pm, &sv.pmp );
 	}
-
-	Pmove( pm, &sv_client->pmp );
 }
 
 static cvar_t *PF_cvar( const char *name, const char *value, int flags ) {

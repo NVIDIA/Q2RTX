@@ -107,6 +107,17 @@ void SV_SpawnServer( const char *server, const char *spawnpoint ) {
     }
 
 	//
+    // set up default pmove parameters
+	//
+    sv.pmp.maxspeed = 300;
+    sv.pmp.upspeed = 350;
+    sv.pmp.friction = 6;
+    sv.pmp.flyfriction = 9;
+    sv.pmp.waterfriction = 1;
+    sv.pmp.airaccelerate = sv_airaccelerate->integer ? qtrue : qfalse;
+	sv.pmp.speedMultiplier = 1;
+
+	//
 	// clear physics interaction links
 	//
 	SV_ClearWorld();

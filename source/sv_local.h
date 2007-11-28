@@ -75,6 +75,8 @@ typedef struct server_s {
 	    byte		    dcs[CS_BITMAP_BYTES];
     } mvd;
 
+	pmoveParams_t		pmp;
+
 	uint32			tracecount;
 } server_t;
 

@@ -798,13 +798,8 @@ static void SVC_DirectConnect( void ) {
     strcpy( newcl->reconnect_var, reconnect_var );
     strcpy( newcl->reconnect_val, reconnect_val );
 
-    // default pmove parameters
-    newcl->pmp.maxspeed = 300;
-    newcl->pmp.upspeed = 350;
-    newcl->pmp.friction = 6;
-    newcl->pmp.flyfriction = 9;
-    newcl->pmp.waterfriction = 1;
-    newcl->pmp.airaccelerate = sv_airaccelerate->integer ? qtrue : qfalse;
+    // copy default pmove parameters
+    newcl->pmp = sv.pmp;
 #ifdef PMOVE_HACK
     newcl->pmp.highprec = qtrue;
 #endif
@@ -815,9 +810,6 @@ static void SVC_DirectConnect( void ) {
 	{
 		newcl->pmp.speedMultiplier = 2;
 		newcl->pmp.strafeHack = sv_strafejump_hack->integer ? qtrue : qfalse;
-	} else {
-		newcl->pmp.speedMultiplier = 1;
-		newcl->pmp.strafeHack = qfalse;
 	}
 
     // q2pro extensions
@@ -1345,39 +1337,6 @@ static void SV_RunGameFrame( void ) {
 
 }
 
-#ifndef DEDICATED_ONLY
-static qboolean SV_CheckPaused( void ) {
-	client_t *client;
-
-    if( sv.state == ss_broadcast ) {
-        goto nopause; // never pause in MVD client mode
-    }
-
-	if( cl_paused->integer ) {
-        FOR_EACH_CLIENT( client ) {
-            if( client->state != cs_spawned ) {
-                break; // never pause if loading
-            }
-            if( !NET_IsLocalAddress( &client->netchan->remote_address ) ) {
-                goto nopause; // never pause in multiplayer
-            }
-		}
-        if( !sv_paused->integer ) {
-            Cvar_Set( "sv_paused", "1" );
-            CL_InputActivate();
-        }
-		return qtrue; // don't run if paused
-	}
-
-nopause:
-    if( sv_paused->integer ) {
-        Cvar_Set( "sv_paused", "0" );
-        CL_InputActivate();
-    }
-    return qfalse;
-}
-#endif
-
 /*
 ==================
 SV_Frame
@@ -1402,9 +1361,18 @@ void SV_Frame( int msec ) {
 	}
 
 #ifndef DEDICATED_ONLY
-	if( SV_CheckPaused() ) {
-		return;
+    if( cl_paused->integer && sv_maxclients->integer == 1 ) {
+        if( !sv_paused->integer ) {
+            Cvar_Set( "sv_paused", "1" );
+            CL_InputActivate();
+        }
+		return; // don't run if paused
 	}
+
+    if( sv_paused->integer ) {
+        Cvar_Set( "sv_paused", "0" );
+        CL_InputActivate();
+    }
 #endif
 
 	time = 1000 * sv_timeout->value;

@@ -323,7 +323,6 @@ void PF_LinkEdict (edict_t *ent) {
         List_Append( &node->trigger_edicts, &ent->area );
 	else
         List_Append( &node->solid_edicts, &ent->area );
-
 }
 
 
@@ -467,9 +466,8 @@ int SV_PointContents (vec3_t p)
 
 typedef struct {
 	vec3_t		boxmins, boxmaxs;// enclose the test object along entire move
-	float		*mins, *maxs;	// size of the moving object
-	vec3_t		mins2, maxs2;	// size when clipping against mosnters
-	float		*start, *end;
+	vec_t		*mins, *maxs;	// size of the moving object
+	vec_t		*start, *end;
 	trace_t		*trace;
 	edict_t		*passedict;
 	int			contentmask;
@@ -521,14 +519,9 @@ void SV_ClipMoveToEntities ( moveclip_t *clip )
 		if (touch->solid != SOLID_BSP)
 			angles = vec3_origin;	// boxes don't rotate
 
-		if (touch->svflags & SVF_MONSTER)
-			CM_TransformedBoxTrace (&trace, clip->start, clip->end,
-				clip->mins2, clip->maxs2, headnode, clip->contentmask,
-				touch->s.origin, angles);
-		else
-			CM_TransformedBoxTrace (&trace, clip->start, clip->end,
-				clip->mins, clip->maxs, headnode,  clip->contentmask,
-				touch->s.origin, angles);
+		CM_TransformedBoxTrace (&trace, clip->start, clip->end,
+			clip->mins, clip->maxs, headnode,  clip->contentmask,
+			touch->s.origin, angles);
 
 		clip->trace->allsolid |= trace.allsolid;
 		clip->trace->startsolid |= trace.startsolid;
@@ -549,21 +542,16 @@ void SV_ClipMoveToEntities ( moveclip_t *clip )
 SV_TraceBounds
 ==================
 */
-static void SV_TraceBounds (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, vec3_t boxmins, vec3_t boxmaxs)
-{
+static void SV_TraceBounds (moveclip_t *clip) {
 	int		i;
 	
-	for (i=0 ; i<3 ; i++)
-	{
-		if (end[i] > start[i])
-		{
-			boxmins[i] = start[i] + mins[i] - 1;
-			boxmaxs[i] = end[i] + maxs[i] + 1;
-		}
-		else
-		{
-			boxmins[i] = end[i] + mins[i] - 1;
-			boxmaxs[i] = start[i] + maxs[i] + 1;
+	for (i=0 ; i<3 ; i++) {
+		if (clip->end[i] > clip->start[i]) {
+			clip->boxmins[i] = clip->start[i] + clip->mins[i] - 1;
+			clip->boxmaxs[i] = clip->end[i] + clip->maxs[i] + 1;
+		} else {
+			clip->boxmins[i] = clip->end[i] + clip->mins[i] - 1;
+			clip->boxmaxs[i] = clip->start[i] + clip->maxs[i] + 1;
 		}
 	}
 }
@@ -608,7 +596,7 @@ trace_t SV_Trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, edict_t *p
 		return trace;		// blocked by the world
 	}
 
-	memset ( &clip, 0, sizeof ( moveclip_t ) );
+	memset( &clip, 0, sizeof( clip ) );
 	clip.trace = &trace;
 	clip.contentmask = contentmask;
 	clip.start = start;
@@ -616,18 +604,14 @@ trace_t SV_Trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, edict_t *p
 	clip.mins = mins;
 	clip.maxs = maxs;
 	clip.passedict = passedict;
-
-	VectorCopy (mins, clip.mins2);
-	VectorCopy (maxs, clip.maxs2);
 	
 	// create the bounding box of the entire move
-	SV_TraceBounds ( start, clip.mins2, clip.maxs2, end, clip.boxmins, clip.boxmaxs );
+	SV_TraceBounds( &clip );
 
 	// clip to other solid entities
-	SV_ClipMoveToEntities ( &clip );
+	SV_ClipMoveToEntities( &clip );
 
 	return trace;
-	
 }
 
 /*
@@ -677,7 +661,7 @@ trace_t *SV_Trace_Old (trace_t *trace, vec3_t start, vec3_t mins, vec3_t maxs, v
 		return trace;		// blocked by the world
 	}
 
-	memset ( &clip, 0, sizeof ( moveclip_t ) );
+	memset( &clip, 0, sizeof( clip ) );
 	clip.trace = trace;
 	clip.contentmask = contentmask;
 	clip.start = start;
@@ -685,15 +669,12 @@ trace_t *SV_Trace_Old (trace_t *trace, vec3_t start, vec3_t mins, vec3_t maxs, v
 	clip.mins = mins;
 	clip.maxs = maxs;
 	clip.passedict = passedict;
-
-	VectorCopy (mins, clip.mins2);
-	VectorCopy (maxs, clip.maxs2);
 	
 	// create the bounding box of the entire move
-	SV_TraceBounds ( start, clip.mins2, clip.maxs2, end, clip.boxmins, clip.boxmaxs );
+	SV_TraceBounds( &clip );
 
 	// clip to other solid entities
-	SV_ClipMoveToEntities ( &clip );
+	SV_ClipMoveToEntities( &clip );
 
 	return trace;
 }
