@@ -900,6 +900,9 @@ cnode_t *CM_NodeNum( cm_t *cm, int number ) {
 	if( !cm->cache ) {
 		Com_Error( ERR_DROP, "CM_NodeNum: NULL cache" );
 	}
+	if( number == -1 ) {
+		return ( cnode_t * )cm->cache->leafs; // special case for solid leaf
+	}
 	if( number < 0 || number >= cm->cache->numnodes ) {
 		Com_Error( ERR_DROP, "CM_NodeNum: bad number: %d", number );
 	}
@@ -1021,14 +1024,9 @@ CM_PointLeaf_r
 */
 static cleaf_t *CM_PointLeaf_r( vec3_t p, cnode_t *node ) {
 	float		d;
-	cplane_t	*plane;
 
 	while( node->plane ) {
-		plane = node->plane;
-		if( plane->type < 3 )
-			d = p[plane->type] - plane->dist;
-		else
-			d = DotProduct( plane->normal, p ) - plane->dist;
+		d = PlaneDiffFast( p, node->plane );
 		if( d < 0 )
 			node = node->children[1];
 		else
@@ -1574,7 +1572,6 @@ void CM_BoxTrace( trace_t *trace, vec3_t start, vec3_t end,
 		cleaf_t		*leafs[1024];
 		int		i, numleafs;
 		vec3_t	c1, c2;
-		cnode_t		*topnode;
 
 		VectorAdd (start, mins, c1);
 		VectorAdd (start, maxs, c2);
@@ -1584,7 +1581,7 @@ void CM_BoxTrace( trace_t *trace, vec3_t start, vec3_t end,
 			c2[i] += 1;
 		}
 
-		numleafs = CM_BoxLeafs_headnode (c1, c2, leafs, 1024, headnode, &topnode);
+		numleafs = CM_BoxLeafs_headnode (c1, c2, leafs, 1024, headnode, NULL);
 		for (i=0 ; i<numleafs ; i++)
 		{
 			CM_TestInLeaf (leafs[i]);

@@ -209,7 +209,7 @@ void SV_LinkEdict( cm_t *cm, edict_t *ent ) {
 	if (num_leafs >= MAX_TOTAL_ENT_LEAFS)
 	{	// assume we missed some leafs, and mark by headnode
 		ent->num_clusters = -1;
-		ent->headnode = topnode - cm->cache->nodes;
+		ent->headnode = CM_NumNode( cm, topnode );
 	}
 	else
 	{
@@ -226,7 +226,7 @@ void SV_LinkEdict( cm_t *cm, edict_t *ent ) {
 				if (ent->num_clusters == MAX_ENT_CLUSTERS)
 				{	// assume we missed some leafs, and mark by headnode
 					ent->num_clusters = -1;
-					ent->headnode = topnode - cm->cache->nodes;
+					ent->headnode = CM_NumNode( cm, topnode );
 					break;
 				}
 
@@ -409,7 +409,7 @@ static cnode_t *SV_HullForEntity( edict_t *ent ) {
 
 	if( ent->solid == SOLID_BSP ) {
 		// explicit hulls in the BSP model
-		if( ent->s.modelindex < 1 || ent->s.modelindex > sv.cm.cache->numcmodels ) {
+		if( ent->s.modelindex < 2 || ent->s.modelindex > sv.cm.cache->numcmodels ) {
 			Com_Error( ERR_DROP, "SV_HullForEntity: inline model index %d out of range", ent->s.modelindex );
 		}
 

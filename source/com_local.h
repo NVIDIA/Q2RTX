@@ -708,6 +708,8 @@ char *CM_EntityString( cm_t *cm );
 cnode_t *CM_NodeNum( cm_t *cm, int number );
 cleaf_t *CM_LeafNum( cm_t *cm, int number );
 
+#define CM_NumNode( cm, node )		( (node) ? ( (node) - (cm)->cache->nodes ) : -1 )
+
 // creates a clipping hull for an arbitrary box
 cnode_t *CM_HeadnodeForBox( vec3_t mins, vec3_t maxs );
 
