@@ -315,7 +315,7 @@ void Con_Init( void ) {
 	con_background = Cvar_Get( "con_background", "conback", CVAR_ARCHIVE );
 	con_background->changed = con_param_changed;
 	con_scroll = Cvar_Get( "con_scroll", "0", CVAR_ARCHIVE );
-	con_histfile = Cvar_Get( "con_histfile", "history.txt", CVAR_ARCHIVE );
+	con_histfile = Cvar_Get( "con_histfile", COM_HISTORYFILE_NAME, CVAR_ARCHIVE );
 
 	IF_Init( &con.prompt.inputLine, 1, MAX_FIELD_TEXT );
 	IF_Init( &con.chatPrompt.inputLine, 1, MAX_FIELD_TEXT );
