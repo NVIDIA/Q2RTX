@@ -1508,6 +1508,134 @@ static void msvcrt_sucks( const wchar_t *expr, const wchar_t *func, const wchar_
 }
 #endif
 
+static int Sys_Main( int argc, char **argv ) {
+#ifdef DEDICATED_ONLY
+	if( !GetModuleFileName( NULL, currentDirectory, sizeof( currentDirectory ) - 1 ) ) {
+		return 1;
+	}
+	currentDirectory[sizeof( currentDirectory ) - 1] = 0;
+	{
+		char *p = strrchr( currentDirectory, '\\' );
+		if( p ) {
+			*p = 0;
+		}
+		if( !SetCurrentDirectory( currentDirectory ) ) {
+			return 1;
+		}
+	}
+#else
+	if( !GetCurrentDirectory( sizeof( currentDirectory ) - 1, currentDirectory ) ) {
+		return 1;
+	}
+	currentDirectory[sizeof( currentDirectory ) - 1] = 0;
+#endif
+
+#ifdef USE_DBGHELP
+#ifdef _MSC_VER
+	__try {
+#else
+	__try1( Sys_ExceptionHandler );
+#endif
+#endif /* USE_DBGHELP */
+
+#if ( _MSC_VER >= 1400 )
+	// no, please, don't let strftime kill the whole fucking
+	// process just because it does not conform to C99 :((
+	_set_invalid_parameter_handler( msvcrt_sucks );
+#endif
+
+	Qcommon_Init( argc, argv );
+
+	// main program loop
+	while( !shouldExit ) {
+		Qcommon_Frame();
+	}
+
+	Com_Quit();
+
+#ifdef USE_DBGHELP
+#ifdef _MSC_VER
+	} __except( Sys_ExceptionHandler( GetExceptionCode(), GetExceptionInformation() ) ) {
+		return 1;
+	}
+#else
+	__except1;
+#endif
+#endif /* USE_DBGHELP */
+
+	// may get here when our service stops
+    return 0;
+}
+
+
+
+#ifdef DEDICATED_ONLY
+
+static char	    **sys_argv;
+static int		sys_argc;
+
+static VOID WINAPI ServiceHandler( DWORD fdwControl ) {
+	if( fdwControl == SERVICE_CONTROL_STOP ) {
+		shouldExit = qtrue;
+	}
+}
+
+static VOID WINAPI ServiceMain( DWORD argc, LPTSTR *argv ) {
+	SERVICE_STATUS	status;
+
+	statusHandle = RegisterServiceCtrlHandler( APPLICATION, ServiceHandler );
+	if( !statusHandle ) {
+		return;
+	}
+
+	memset( &status, 0, sizeof( status ) );
+	status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
+	status.dwCurrentState = SERVICE_RUNNING;
+	status.dwControlsAccepted = SERVICE_ACCEPT_STOP;
+	SetServiceStatus( statusHandle, &status );
+
+	Sys_Main( sys_argc, sys_argv );
+
+	status.dwCurrentState = SERVICE_STOPPED;
+	status.dwControlsAccepted = 0;
+	SetServiceStatus( statusHandle, &status );
+}
+
+static SERVICE_TABLE_ENTRY serviceTable[] = {
+	{ APPLICATION, ServiceMain },
+	{ NULL, NULL }
+};
+
+/*
+==================
+main
+
+==================
+*/
+int QDECL main( int argc, char **argv ) {
+	int i;
+
+	hGlobalInstance = GetModuleHandle( NULL );
+
+	for( i = 1; i < argc; i++ ) {
+		if( !strcmp( argv[i], "-service" ) ) {
+			argv[i] = NULL;
+			sys_argc = argc;
+			sys_argv = argv;
+			if( StartServiceCtrlDispatcher( serviceTable ) ) {
+				return 0;
+			}
+			if( GetLastError() == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT ) {
+				break; // fall back to normal server startup
+			}
+			return 1;
+		}
+	}
+	
+	return Sys_Main( argc, argv );
+}
+
+#else // DEDICATED_ONLY
 
 #define MAX_LINE_TOKENS	128
 
@@ -1552,134 +1680,15 @@ WinMain
 ==================
 */
 int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow ) {
-	/* previous instances do not exist in Win32 */
+	// previous instances do not exist in Win32
 	if( hPrevInstance ) {
 		return 1;
 	}
 
-#ifdef DEDICATED_ONLY
-	if( !GetModuleFileName( NULL, currentDirectory, sizeof( currentDirectory ) - 1 ) ) {
-		return 1;
-	}
-	currentDirectory[sizeof( currentDirectory ) - 1] = 0;
-	{
-		char *p = strrchr( currentDirectory, '\\' );
-		if( p ) {
-			*p = 0;
-		}
-		if( !SetCurrentDirectory( currentDirectory ) ) {
-			return 1;
-		}
-	}
-#else
-	if( !GetCurrentDirectory( sizeof( currentDirectory ) - 1, currentDirectory ) ) {
-		return 1;
-	}
-	currentDirectory[sizeof( currentDirectory ) - 1] = 0;
-#endif
-
 	hGlobalInstance = hInstance;
-
-#ifdef USE_DBGHELP
-#ifdef _MSC_VER
-	__try {
-#else
-	__try1( Sys_ExceptionHandler );
-#endif
-#endif /* USE_DBGHELP */
-
-#if ( _MSC_VER >= 1400 )
-	// no, please, don't let strftime kill the whole fucking
-	// process just because it does not conform to C99 :((
-	_set_invalid_parameter_handler( msvcrt_sucks );
-#endif
-
-    Sys_ParseCommandLine( lpCmdLine );
-
-	Qcommon_Init( sys_argc, sys_argv );
-
-	/* main program loop */
-	while( !shouldExit ) {
-		Qcommon_Frame();
-	}
-
-	Com_Quit();
-
-#ifdef USE_DBGHELP
-#ifdef _MSC_VER
-	} __except( Sys_ExceptionHandler( GetExceptionCode(), GetExceptionInformation() ) ) {
-		return 1;
-	}
-#else
-	__except1;
-#endif
-#endif /* USE_DBGHELP */
-
-	// may get here when our service stops
-    return 0;
+	Sys_ParseCommandLine( lpCmdLine );
+	return Sys_Main( sys_argc, sys_argv );
 }
 
-#ifdef DEDICATED_ONLY
-
-static VOID WINAPI ServiceHandler( DWORD fdwControl ) {
-	if( fdwControl == SERVICE_CONTROL_STOP ) {
-		shouldExit = qtrue;
-	}
-}
-
-static VOID WINAPI ServiceMain( DWORD argc, LPTSTR *argv ) {
-	SERVICE_STATUS	status;
-
-	statusHandle = RegisterServiceCtrlHandler( APPLICATION, ServiceHandler );
-	if( !statusHandle ) {
-		return;
-	}
-
-	memset( &status, 0, sizeof( status ) );
-	status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
-	status.dwCurrentState = SERVICE_RUNNING;
-	status.dwControlsAccepted = SERVICE_ACCEPT_STOP;
-	SetServiceStatus( statusHandle, &status );
-
-	WinMain( GetModuleHandle( NULL ), NULL, GetCommandLineA(), 0 );
-
-	status.dwCurrentState = SERVICE_STOPPED;
-	status.dwControlsAccepted = 0;
-	SetServiceStatus( statusHandle, &status );
-}
-
-static SERVICE_TABLE_ENTRY serviceTable[] = {
-	{ APPLICATION, ServiceMain },
-	{ NULL, NULL }
-};
-
-/*
-==================
-main
-
-==================
-*/
-int QDECL main( int argc, char **argv ) {
-	int i;
-
-	for( i = 1; i < argc; i++ ) {
-		if( !strcmp( argv[i], "-service" ) ) {
-			goto service;
-		}
-	}
-
-	return WinMain( GetModuleHandle( NULL ), NULL, GetCommandLineA(), 0 );
-
-service:
-	if( !StartServiceCtrlDispatcher( serviceTable ) ) {
-		if( GetLastError() == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT ) {
-			return WinMain( GetModuleHandle( NULL ), NULL, GetCommandLineA(), 0 );
-		}
-		return 1;
-	}
-
-	return 0;
-}
-
-#endif
+#endif // !DEDICATED_ONLY
 
