@@ -1302,6 +1302,7 @@ static pack_t *FS_LoadPakFile( const char *packfile ) {
 	}
 
 	len = strlen( packfile );
+	len = ( len + 3 ) & ~3;
 	pack = FS_Malloc( sizeof( pack_t ) +
 		numpackfiles * sizeof( packfile_t ) +
 		hashSize * sizeof( packfile_t * ) +
@@ -1460,17 +1461,28 @@ fail:
 #endif
 
 static int QDECL pakcmp( const void *p1, const void *p2 ) {
-	const char *s1 = *( const char ** )p1;
-	const char *s2 = *( const char ** )p2;
+	char *s1 = *( char ** )p1;
+	char *s2 = *( char ** )p2;
 
     if( !strncmp( s1, "pak", 3 ) ) {
-        if( strncmp( s2, "pak", 3 ) ) {
-            return -1;
+        if( !strncmp( s2, "pak", 3 ) ) {
+            int n1 = strtoul( s1 + 3, &s1, 10 );
+            int n2 = strtoul( s2 + 3, &s2, 10 );
+            if( n1 > n2 ) {
+                return 1;
+            }
+            if( n1 < n2 ) {
+                return -1;
+            }
+            goto alphacmp;
         }
-    } else if( !strncmp( s2, "pak", 3 ) ) {
+        return -1;
+    }
+    if( !strncmp( s2, "pak", 3 ) ) {
         return 1;
     }
 
+alphacmp:
 	return strcmp( s1, s2 );
 }
 
