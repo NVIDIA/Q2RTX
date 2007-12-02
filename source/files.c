@@ -31,8 +31,9 @@ QUAKE FILESYSTEM
 
 - transparently merged from several sources
 - relative to the single virtual root
-- case insensitive, at least at pakfiles level
-- only '/' separators supported
+- case insensitive at pakfiles level,
+  but may be case sensitive at host OS level
+- uses / as path separators internally
 
 =============================================================================
 */
@@ -43,10 +44,13 @@ QUAKE FILESYSTEM
 #define FS_Malloc( size )		Z_TagMalloc( size, TAG_FILESYSTEM )
 #define FS_CopyString( string )		Z_TagCopyString( string, TAG_FILESYSTEM )
 
+// macros for dealing portably with files at OS level
 #ifdef _WIN32
-#define FS_strcmp  Q_stricmp
+#define FS_strcmp  Q_strcasecmp
+#define FS_strncmp  Q_strncasecmp
 #else
 #define FS_strcmp  strcmp
+#define FS_strncmp  strncmp
 #endif
 
 #define	MAX_READ	0x40000		// read in blocks of 256k
@@ -133,8 +137,6 @@ static int          fs_count_read, fs_count_strcmp, fs_count_open;
 cvar_t	*fs_game;
 
 fsAPI_t		fs;
-
-void FS_AddGameDirectory( const char *fmt, ... ) q_printf( 1, 2 );
 
 /*
 
@@ -239,7 +241,7 @@ qboolean FS_ValidatePath( const char *s ) {
 			if( back > 1 ) {
 				return qfalse;
 			}
-			back++;
+			back++; // allow one level back
 		}
 		if( *s == '/' || *s == '\\' ) {
 			// check for two slashes in a row
@@ -270,6 +272,7 @@ qboolean FS_ValidatePath( const char *s ) {
 FS_ConvertToSysPath
 ================
 */
+#if 0
 static char *FS_ConvertToSysPath( char *path ) {
 	char *s;
 
@@ -282,8 +285,28 @@ static char *FS_ConvertToSysPath( char *path ) {
 	}
 
 	return path;
-
 }
+#endif
+
+/*
+================
+FS_ReplaceSeparators
+================
+*/
+char *FS_ReplaceSeparators( char *s, int separator ) {
+	char *p;
+
+	p = s;
+	while( *p ) {
+		if( *p == '/' || *p == '\\' ) {
+			*p = separator;
+		}
+		p++;
+	}
+
+	return s;
+}
+
 
 /*
 ================
@@ -358,7 +381,7 @@ const char *FS_GetFileFullPath( fileHandle_t f ) {
 FS_CreatePath
 
 Creates any directories needed to store the given filename.
-Expects a fully qualified path.
+Expects a fully qualified quake path (i.e. with / separators).
 ============
 */
 void FS_CreatePath( const char *path ) {
@@ -366,16 +389,16 @@ void FS_CreatePath( const char *path ) {
 	char *ofs;
 
 	Q_strncpyz( buffer, path, sizeof( buffer ) );
-	FS_ConvertToSysPath( buffer );
+	//FS_ConvertToSysPath( buffer );
 
 	FS_DPrintf( "%s: %s\n", __func__, buffer );
 	
 	for( ofs = buffer + 1; *ofs; ofs++ ) {
-		if( *ofs == PATH_SEP_CHAR ) {	
+		if( *ofs == '/' ) {	
 			// create the directory
 			*ofs = 0;
 			Sys_Mkdir( buffer );
-			*ofs = PATH_SEP_CHAR;
+			*ofs = '/';
 		}
 	}
 }
@@ -415,7 +438,8 @@ void FS_FCloseFile( fileHandle_t f ) {
 		break;
 	}
 
-	/* don't clear name and mode, so post-restart reopening works */
+	// don't clear name and mode, in case
+    // this handle will be reopened later
 	file->type = FS_FREE;
 	file->fp = NULL;
 #if USE_ZLIB
@@ -472,7 +496,7 @@ static int FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
 		break;
 	}
 
-	FS_ConvertToSysPath( file->fullpath );
+	//FS_ConvertToSysPath( file->fullpath );
 
 	FS_CreatePath( file->fullpath );
 
@@ -639,7 +663,7 @@ static int FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean unique )
 			Q_concat( file->fullpath, sizeof( file->fullpath ),
 				search->filename, "/", name, NULL );
 
-			FS_ConvertToSysPath( file->fullpath );
+			//FS_ConvertToSysPath( file->fullpath );
 
             fs_count_open++;
 			fp = fopen( file->fullpath, "rb" );
@@ -1169,7 +1193,7 @@ qboolean FS_RemoveFile( const char *filename ) {
 	}
 
 	Q_concat( path, sizeof( path ), fs_gamedir, "/", filename, NULL );
-	FS_ConvertToSysPath( path );
+	//FS_ConvertToSysPath( path );
 
 	if( !Sys_RemoveFile( path ) ) {
 		return qfalse;
@@ -1188,18 +1212,18 @@ qboolean FS_RenameFile( const char *from, const char *to ) {
 	char topath[MAX_OSPATH];
 
 	if( !FS_ValidatePath( from ) || !FS_ValidatePath( to ) ) {
-		FS_DPrintf( "FS_RenameFile: %s, %s: refusing invalid path\n", from, to );
+		FS_DPrintf( "FS_RenameFile: refusing invalid path: %s to %s\n", from, to );
 		return qfalse;
 	}
 
 	Q_concat( frompath, sizeof( frompath ), fs_gamedir, "/", from, NULL );
 	Q_concat( topath, sizeof( topath ), fs_gamedir, "/", to, NULL );
 
-	FS_ConvertToSysPath( frompath );
-	FS_ConvertToSysPath( topath );
+//	FS_ConvertToSysPath( frompath );
+//	FS_ConvertToSysPath( topath );
 
 	if( !Sys_RenameFile( frompath, topath ) ) {
-		FS_DPrintf( "FS_RenameFile: Sys_RenameFile( '%s', '%s' ) failed\n", frompath, topath );
+		FS_DPrintf( "FS_RenameFile: rename failed: %s to %s\n", frompath, topath );
 		return qfalse;
 	}
 
@@ -1460,12 +1484,15 @@ fail:
 }
 #endif
 
+// this is complicated as we need pakXX.pak loaded first,
+// sorted in numerical order, then the rest of the paks in
+// alphabetical order, e.g. pak0.pak, pak2.pak, pak17.pak, abc.pak...
 static int QDECL pakcmp( const void *p1, const void *p2 ) {
 	char *s1 = *( char ** )p1;
 	char *s2 = *( char ** )p2;
 
-    if( !strncmp( s1, "pak", 3 ) ) {
-        if( !strncmp( s2, "pak", 3 ) ) {
+    if( !FS_strncmp( s1, "pak", 3 ) ) {
+        if( !FS_strncmp( s2, "pak", 3 ) ) {
             int n1 = strtoul( s1 + 3, &s1, 10 );
             int n2 = strtoul( s2 + 3, &s2, 10 );
             if( n1 > n2 ) {
@@ -1478,12 +1505,12 @@ static int QDECL pakcmp( const void *p1, const void *p2 ) {
         }
         return -1;
     }
-    if( !strncmp( s2, "pak", 3 ) ) {
+    if( !FS_strncmp( s2, "pak", 3 ) ) {
         return 1;
     }
 
 alphacmp:
-	return strcmp( s1, s2 );
+	return FS_strcmp( s1, s2 );
 }
 
 static void FS_LoadPackFiles( const char *extension, pack_t *(loadfunc)( const char * ) ) {
@@ -1523,7 +1550,7 @@ Sets fs_gamedir, adds the directory to the head of the path,
 then loads and adds pak*.pak, then anything else in alphabethical order.
 ================
 */
-void FS_AddGameDirectory( const char *fmt, ... ) {
+static void q_printf( 1, 2 ) FS_AddGameDirectory( const char *fmt, ... ) {
     va_list argptr;
 	searchpath_t	*search;
 	int length;
@@ -1533,7 +1560,7 @@ void FS_AddGameDirectory( const char *fmt, ... ) {
     va_end( argptr );
 
 #ifdef _WIN32
-	Com_ReplaceSeparators( fs_gamedir, '/' );
+	FS_ReplaceSeparators( fs_gamedir, '/' );
 #endif
 
 	//
@@ -1922,6 +1949,7 @@ char **FS_ListFiles( const char *path, const char *extension,
 	// remove duplicates
 	total = 1;
 	for( i = 1; i < count; i++ ) {
+        // FIXME: use Q_stricmp instead of FS_strcmp here?
 		if( !FS_strcmp( listedFiles[ i - 1 ], listedFiles[i] ) ) {
 			Z_Free( listedFiles[ i - 1 ] );
 			listedFiles[i-1] = NULL;
@@ -2070,7 +2098,7 @@ static void FS_WhereIs_f( void ) {
     int total;
 
 	if( Cmd_Argc() < 2 ) {
-		Com_Printf( "Usage: %s <path>\n", Cmd_Argv( 0 ) );
+		Com_Printf( "Usage: %s <path> [all]\n", Cmd_Argv( 0 ) );
 		return;
 	}
 
@@ -2094,19 +2122,23 @@ static void FS_WhereIs_f( void ) {
 				if( !Q_stricmp( entry->name, path ) ) {
                     Com_Printf( "%s/%s (%d bytes)\n", pak->filename,
                         path, entry->filelen );
+	                if( Cmd_Argc() < 3 ) {
+                        return;
+                    }
                     total++;
-                 //   return;
                 }
             }
         } else {
             Q_concat( fullpath, sizeof( fullpath ),
                 search->filename, "/", path, NULL );
-			FS_ConvertToSysPath( fullpath );
+			//FS_ConvertToSysPath( fullpath );
             if( Sys_GetFileInfo( fullpath, &info ) ) {
                 Com_Printf( "%s/%s (%d bytes)\n", search->filename, filename,
                     info.fileSize );
+                if( Cmd_Argc() < 3 ) {
+                    return;
+                }
                 total++;
-                // return;
             }
         }
         
@@ -2327,42 +2359,6 @@ static void FS_Link_f( void ) {
     target = Cmd_Argv( 2 );
     l->target = FS_CopyString( target );
     l->targetLength = strlen( target );
-}
-
-/*
-================
-FS_NextPath
-
-Allows enumerating all of the directories in the search path
-================
-*/
-char *FS_NextPath( char *prevpath ) {
-	searchpath_t	*s;
-	char			*prev;
-
-	prev = NULL;
-	for( s = fs_searchpaths; s; s = s->next ) {
-		if( s->pack )
-			continue;
-		if( prevpath == prev )
-			return s->filename;
-		prev = s->filename;
-	}
-
-	return NULL;
-}
-
-
-
-/*
-============
-FS_Gamedir
-
-Called to find where to write a file (demos, savegames, etc)
-============
-*/
-char *FS_Gamedir( void ) {
-	return fs_gamedir;
 }
 
 static void FS_FreeSearchPath( searchpath_t *path ) {

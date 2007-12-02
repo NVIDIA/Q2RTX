@@ -839,8 +839,7 @@ void	FS_CreatePath( const char *path );
 //const char *FS_GetFileName( fileHandle_t f );
 const char *FS_GetFileFullPath( fileHandle_t f );
 
-char	*FS_Gamedir( void );
-char	*FS_NextPath( char *prevpath );
+char    *FS_ReplaceSeparators( char *s, int separator );
 
 void FS_FillAPI( fsAPI_t *api );
 

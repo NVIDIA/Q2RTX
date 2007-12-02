@@ -1008,16 +1008,15 @@ char **Sys_ListFiles( const char *rawPath, const char *extension, uint32 flags, 
 		*numFiles = 0;
 	}
 
-	Q_strncpyz( path, rawPath, sizeof( path ) );
-	Com_ReplaceSeparators( path, '\\' );
+	length = Q_strncpyz( path, rawPath, sizeof( path ) );
+	FS_ReplaceSeparators( path, '\\' );
 
 	if( flags & FS_SEARCH_BYFILTER ) {
-		length = strlen( path );
         if( !length ) {
             return NULL;
         }
 		Q_strncpyz( findPath, extension, sizeof( findPath ) );
-		Com_ReplaceSeparators( findPath, '\\' );
+		FS_ReplaceSeparators( findPath, '\\' );
 		Sys_ListFilteredFiles( listedFiles, &count, path, findPath, flags, length + 1 );
 	} else {
 		if( !extension || strchr( extension, ';' ) ) {
@@ -1079,8 +1078,7 @@ char **Sys_ListFiles( const char *rawPath, const char *extension, uint32 flags, 
 	list = Z_Malloc( sizeof( char * ) * ( count + 1 ) );
 	for( i = 0; i < count; i++ ) {
 		name = listedFiles[i];
-		//Q_strlwr( name );
-		Com_ReplaceSeparators( name, '/' );
+		FS_ReplaceSeparators( name, '/' );
 		list[i] = name;
 	}
 	list[count] = NULL;

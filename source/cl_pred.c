@@ -49,9 +49,14 @@ void CL_CheckPredictionError( void ) {
 
 	// calculate the last usercmd_t we sent that the server has processed
 	frame = cls.netchan->incoming_acknowledged & CMD_MASK;
-	i = cl.history[frame].cmdNumber & CMD_MASK;
+	i = cl.history[frame].cmdNumber;
 
-    //if( cl.history[frame].cmdNumber>cl.predicted_step_frame) Com_Printf( "wtf?!!\n" );
+    // don't predict steps against server returned data
+    if( cl.predicted_step_frame <= i ) {
+        cl.predicted_step_frame = i + 1;
+    }
+
+	i &= CMD_MASK;
 
 	// compare what the server returned with what we had predicted it to be
 	VectorSubtract( ps->pmove.origin, cl.predicted_origins[i], delta );

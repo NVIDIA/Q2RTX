@@ -813,6 +813,8 @@ void Com_Error( comErrorType_t type, const char *error, ... ) {
 
 #endif
 
+#ifndef UI_HARD_LINKED
+
 /*
 =================
 UI_FillAPI
@@ -849,8 +851,6 @@ static qboolean UI_APISetupCallback( api_type_t type, void *api ) {
 
 	return qtrue;
 }
-
-#ifndef UI_HARD_LINKED
 
 /*
 @@@@@@@@@@@@@@@@@@@@@

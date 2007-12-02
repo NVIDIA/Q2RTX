@@ -466,8 +466,6 @@ int QDECL SortStrcmp( const void *p1, const void *p2 );
 uint32 Com_HashString( const char *string, int hashSize );
 uint32 Com_HashPath( const char *string, int hashSize );
 
-char *Com_ReplaceSeparators( char *s, int separator );
-
 // buffer safe operations
 int Q_strncpyz( char *dest, const char *src, int destsize );
 int Q_strcat( char *dest, int destsize, const char *src );

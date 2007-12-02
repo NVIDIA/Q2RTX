@@ -992,25 +992,6 @@ uint32 Com_HashPath( const char *string, int hashSize ) {
 
 /*
 ================
-Com_ReplaceSeparators
-================
-*/
-char *Com_ReplaceSeparators( char *s, int separator ) {
-	char *p;
-
-	p = s;
-	while( *p ) {
-		if( *p == '/' || *p == '\\' ) {
-			*p = separator;
-		}
-		p++;
-	}
-
-	return s;
-}
-
-/*
-================
 Q_DrawStrlen
 ================
 */
@@ -1900,23 +1881,23 @@ Q_vsnprintf
 Safe implementation of vsnprintf supposed to
 handle overflows correctly on all platforms.
 
-Only Windows glitches are currently handled,
-on other platforms vsnprintf is supposed to
-behave as described by printf(3) Linux manpage.
+Windows _vsnprintf glitches are handled specially.
+On other platforms, vsnprintf is supposed to
+behave exactly as specified by printf(3) Linux manpage.
 
-Returns number of chars supposed to be written,
+Returns number of chars actually written,
 not including trailing '\0'. No more than
-destsize bytes are written, including '\0'.
+destsize bytes are ever written, including '\0'.
 
-In case of output error, makes dest buffer
-empty and returns zero.
+In case of output error, sets dest buffer
+to empty string and returns zero.
 ===============
 */
 int Q_vsnprintf( char *dest, int destsize, const char *fmt, va_list argptr ) {
 	int ret;
 
 	if( destsize < 1 ) {
-		Com_Error( ERR_FATAL, "Q_vsnprintf: destsize < 1" );
+		Com_Error( ERR_FATAL, "%s: destsize < 1", __func__ );
 	}
 
 #ifdef _WIN32
@@ -1924,19 +1905,21 @@ int Q_vsnprintf( char *dest, int destsize, const char *fmt, va_list argptr ) {
 	if( ret >= destsize ) {
 		// truncated, not terminated
 		dest[destsize - 1] = 0;
-		Com_DPrintf( "Q_vsnprintf: overflow of %d in %d\n", ret, destsize - 1 );
+		Com_DPrintf( "%s: overflow of %d in %d\n", __func__, ret, destsize - 1 );
+        ret = destsize - 1;
 	} else if( ret == destsize - 1 ) {
-		// ok, not terminated
+		// ok, but not terminated
 		dest[destsize - 1] = 0;
 #else
 	ret = vsnprintf( dest, destsize, fmt, argptr );
     if( ret >= destsize ) {
 		// truncated, terminated
-		Com_DPrintf( "Q_vsnprintf: overflow of %d in %d\n", ret, destsize - 1 );
+		Com_DPrintf( "%s: overflow of %d in %d\n", __func__, ret, destsize - 1 );
+        ret = destsize - 1;
 #endif
     } else if( ret < 0 ) {
         dest[0] = 0;
-		Com_DPrintf( "Q_vsnprintf: returned %d\n", ret );
+		Com_DPrintf( "%s: returned %d\n", __func__, ret );
         ret = 0;
     }
 

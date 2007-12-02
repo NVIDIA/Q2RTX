@@ -2560,7 +2560,7 @@ void CL_Frame( int msec ) {
             }
         }
         if( ref_extra < ref_msec ) {
-            if( !cl_async->integer ) {
+            if( !cl_async->integer && !cl.sendPacketNow ) {
                 return; // everything ticks in sync with refresh
             }
             ref_frame = qfalse;
