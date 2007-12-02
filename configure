@@ -51,7 +51,7 @@ cfgfile="config.cfg"
 defcfg="default.cfg"
 autocfg="autoexec.cfg"
 histfile="history.txt"
-revision="164"
+revision="165"
 tmpc="/tmp/q2pro-${RANDOM}.c"
 tmpo="/tmp/q2pro-${RANDOM}.o"
 
