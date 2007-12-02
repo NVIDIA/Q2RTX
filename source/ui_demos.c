@@ -359,8 +359,8 @@ static void Demos_MenuInit( void ) {
 
 	Demos_BuildList( uis.m_demos_browse );
 
-	w1 = ( uis.glconfig.vidWidth - 30 ) * 0.8f;
-	w2 = ( uis.glconfig.vidWidth - 30 ) * 0.2f;
+	w1 = ( uis.width - 30 ) * 0.8f;
+	w2 = ( uis.width - 30 ) * 0.2f;
 
 	m_demos.list.generic.type	= MTYPE_LIST;
 	m_demos.list.generic.id		= ID_LIST;
@@ -368,7 +368,7 @@ static void Demos_MenuInit( void ) {
 	m_demos.list.generic.x		= 10;
 	m_demos.list.generic.y		= 32;
 	m_demos.list.generic.width	= 0;
-	m_demos.list.generic.height	= uis.glconfig.vidHeight - 64;
+	m_demos.list.generic.height	= uis.height - 64;
 	m_demos.list.generic.name	= NULL;
 	m_demos.list.itemnames		= ( const char ** )m_demos.names;
 	m_demos.list.drawNames		= qtrue;
@@ -394,7 +394,7 @@ static void Demos_MenuInit( void ) {
 	m_demos.playerList.generic.flags	= QMF_HIDDEN|QMF_DISABLED;
 	m_demos.playerList.generic.x		= w1 + 20;
 	m_demos.playerList.generic.y		= 32;
-	m_demos.playerList.generic.height	= uis.glconfig.vidHeight - 64;
+	m_demos.playerList.generic.height	= uis.height - 64;
 	m_demos.playerList.itemnames		= ( const char ** )m_demos.playerNames;
 	m_demos.playerList.mlFlags			= MLF_HIDE_SCROLLBAR_EMPTY;
 	m_demos.playerList.numcolumns		= 1;

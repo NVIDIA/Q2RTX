@@ -42,26 +42,31 @@ void UI_DrawLoading( int realtime ) {
 
 	client.GetClientStatus( &loadingStatus );
 
+    if( uis.glconfig.renderer == GL_RENDERER_SOFTWARE ) {
+        ref.SetClipRect( DRAW_CLIP_MASK, &uis.clipRect );
+    } else {
+    	ref.SetScale( &uis.scale );
+    }
+
 #if 0
 	if( loadingStatus.mapname[0] ) {
 		qhandle_t hPic;
 
 		Com_sprintf( buffer, sizeof( buffer ), "/levelshots/%s.jpg", loadingStatus.mapname );
 		if( ( hPic = ref.RegisterPic( buffer ) ) != 0 ) {
-			ref.DrawStretchPic( 0, 0, uis.glconfig.vidWidth, uis.glconfig.vidHeight, hPic );
+			ref.DrawStretchPic( 0, 0, uis.width, uis.height, hPic );
 		} else {
-			ref.DrawFill( 0, 0, uis.glconfig.vidWidth, uis.glconfig.vidHeight, 0x00 );
+			ref.DrawFill( 0, 0, uis.width, uis.height, 0x00 );
 		}
 	} else
 #endif
-	{
-		ref.DrawFill( 0, 0, uis.glconfig.vidWidth, uis.glconfig.vidHeight, 0x00 );
-	}
+		ref.DrawFill( 0, 0, uis.width, uis.height, 0x00 );
 
-	x = uis.glconfig.vidWidth / 2;
+	x = uis.width / 2;
 	y = 8;
-
-	Q_concat( buffer, sizeof( buffer ), loadingStatus.demoplayback ? "Playing back " : "Connecting to ", loadingStatus.servername, NULL );
+    
+    s = loadingStatus.demoplayback ? "Playing back " : "Connecting to ";
+	Q_concat( buffer, sizeof( buffer ), s, loadingStatus.servername, NULL );
 	UI_DrawString( x, y, NULL, UI_CENTER|UI_DROPSHADOW, buffer );
 	y += 40;
 
@@ -91,7 +96,7 @@ void UI_DrawLoading( int realtime ) {
 	    s = "Awaiting server frame...";
         break;
 	default:
-		Com_Error( ERR_DROP, "SCR_DrawLoading: bad cls.state %i", loadingStatus.connState );
+		Com_Error( ERR_DROP, "%s: bad cls.state %i", __func__, loadingStatus.connState );
 		break;
 	}
 	UI_DrawString( x, y, NULL, UI_CENTER|UI_DROPSHADOW, s );
@@ -105,5 +110,11 @@ void UI_DrawLoading( int realtime ) {
 	if( loadingStatus.loadingString[0] ) {
 		UI_DrawString( x, y, colorRed, UI_CENTER|UI_DROPSHADOW|UI_MULTILINE, loadingStatus.loadingString );
 	}
+
+    if( uis.glconfig.renderer == GL_RENDERER_SOFTWARE ) {
+        ref.SetClipRect( DRAW_CLIP_DISABLED, NULL );
+    } else {
+	    ref.SetScale( NULL );
+    }
 }
 

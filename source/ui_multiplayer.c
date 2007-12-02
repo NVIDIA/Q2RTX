@@ -358,8 +358,8 @@ void JoinServer_MenuInit( void ) {
 
 	memset( &m_join, 0, sizeof( m_join ) );
 
-	w1 = ( uis.glconfig.vidWidth - 30 ) * 0.75f;
-	w2 = ( uis.glconfig.vidWidth - 30 ) * 0.25f;
+	w1 = ( uis.width - 30 ) * 0.75f;
+	w2 = ( uis.width - 30 ) * 0.25f;
 
 //
 // server list
@@ -370,7 +370,7 @@ void JoinServer_MenuInit( void ) {
 	m_join.list.generic.x		= 10;
 	m_join.list.generic.y		= 32;
 	m_join.list.generic.width	= 0;
-	m_join.list.generic.height	= uis.glconfig.vidHeight / 2 - 5 - 32;
+	m_join.list.generic.height	= uis.height / 2 - 5 - 32;
 	m_join.list.generic.name	= NULL;
 	m_join.list.itemnames		= ( const char ** )m_join.names;
 	m_join.list.drawNames		= qtrue;
@@ -395,9 +395,9 @@ void JoinServer_MenuInit( void ) {
 	m_join.info.generic.id		= 0;
 	m_join.info.generic.flags	= QMF_LEFT_JUSTIFY|QMF_HIDDEN;
 	m_join.info.generic.x		= 10;
-	m_join.info.generic.y		= uis.glconfig.vidHeight / 2 + 5;
+	m_join.info.generic.y		= uis.height / 2 + 5;
 	m_join.info.generic.width	= 0;
-	m_join.info.generic.height	= uis.glconfig.vidHeight / 2 - 5 - 32;
+	m_join.info.generic.height	= uis.height / 2 - 5 - 32;
 	m_join.info.generic.name	= NULL;
 	m_join.info.itemnames		= NULL;
 	m_join.info.drawNames		= qtrue;
@@ -420,7 +420,7 @@ void JoinServer_MenuInit( void ) {
 	m_join.players.generic.x		= w1 + 20;
 	m_join.players.generic.y		= 32;
 	m_join.players.generic.width	= 0;
-	m_join.players.generic.height	= uis.glconfig.vidHeight - 64;
+	m_join.players.generic.height	= uis.height - 64;
 	m_join.players.generic.name		= NULL;
 	m_join.players.mlFlags			= MLF_HIDE_SCROLLBAR;
 	m_join.players.itemnames		= NULL;

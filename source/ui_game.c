@@ -94,7 +94,7 @@ static void GameMenu_Init( void ) {
 	y = 120;
 	m_game.skill.generic.type	= MTYPE_SPINCONTROL;
 	m_game.skill.generic.name	= "skill";
-	m_game.skill.generic.x		= uis.glconfig.vidWidth / 2;
+	m_game.skill.generic.x		= uis.width / 2;
 	m_game.skill.generic.y		= y;
 	m_game.skill.itemnames		= difficulty_names;
 	y += 8;
@@ -102,7 +102,7 @@ static void GameMenu_Init( void ) {
 	m_game.load.generic.type	= MTYPE_ACTION;
 	m_game.load.generic.id		= ID_LOADGAME;
 	m_game.load.generic.name	= "load game";
-	m_game.load.generic.x		= uis.glconfig.vidWidth / 2 + LCOLUMN_OFFSET;
+	m_game.load.generic.x		= uis.width / 2 + LCOLUMN_OFFSET;
 	m_game.load.generic.y		= y;
 	m_game.load.generic.uiFlags	= UI_RIGHT;
 	y += 8;
@@ -111,7 +111,7 @@ static void GameMenu_Init( void ) {
 	m_game.start.generic.flags	= QMF_HASFOCUS;
 	m_game.start.generic.id		= ID_START;
 	m_game.start.generic.name	= "start game";
-	m_game.start.generic.x		= uis.glconfig.vidWidth / 2 + LCOLUMN_OFFSET;
+	m_game.start.generic.x		= uis.width / 2 + LCOLUMN_OFFSET;
 	m_game.start.generic.y		= y;
 	m_game.start.generic.uiFlags	= UI_RIGHT;
 	y += 8;

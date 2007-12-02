@@ -1475,8 +1475,8 @@ void Menu_Draw( menuFrameWork_t *menu ) {
 // draw status bar
 //
 	if( menu->statusbar ) {
-		ref.DrawFill( 0, uis.glconfig.vidHeight - 8, uis.glconfig.vidWidth, 8, 4 );
-		UI_DrawString( uis.glconfig.vidWidth / 2, uis.glconfig.vidHeight - 8, NULL, UI_CENTER, menu->statusbar );
+		ref.DrawFill( 0, uis.height - 8, uis.width, 8, 4 );
+		UI_DrawString( uis.width / 2, uis.height - 8, NULL, UI_CENTER, menu->statusbar );
 	}
 
 }

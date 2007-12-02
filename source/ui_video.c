@@ -377,14 +377,14 @@ static void VideoMenu_Init( void ) {
 	m_video.driver.generic.flags = QMF_HASFOCUS;
 	m_video.driver.generic.id = ID_REF;
 	m_video.driver.generic.name = "driver";
-	m_video.driver.generic.x = uis.glconfig.vidWidth / 2;
+	m_video.driver.generic.x = uis.width / 2;
 	m_video.driver.generic.y = y;
 	m_video.driver.itemnames = refs;
 	m_video.driver.curvalue = -1;
 	y += MENU_SPACING;
 
 	m_video.screensize.generic.type	= MTYPE_SLIDER;
-	m_video.screensize.generic.x		= uis.glconfig.vidWidth / 2;
+	m_video.screensize.generic.x		= uis.width / 2;
 	m_video.screensize.generic.y		= y;
 	m_video.screensize.generic.name	= "screen size";
 	m_video.screensize.minvalue = 3;
@@ -394,7 +394,7 @@ static void VideoMenu_Init( void ) {
 
 	m_video.gamma.generic.type	= MTYPE_SLIDER;
 	m_video.gamma.generic.id	= ID_GAMMA;
-	m_video.gamma.generic.x	= uis.glconfig.vidWidth / 2;
+	m_video.gamma.generic.x	= uis.width / 2;
 	m_video.gamma.generic.y	= y;
 	m_video.gamma.generic.name	= "gamma";
 	m_video.gamma.minvalue = 5;
@@ -404,7 +404,7 @@ static void VideoMenu_Init( void ) {
 
 	m_video.fullscreen.generic.type = MTYPE_SPINCONTROL;
 	m_video.fullscreen.generic.id = ID_FULLSCREEN;
-	m_video.fullscreen.generic.x = uis.glconfig.vidWidth / 2;
+	m_video.fullscreen.generic.x = uis.width / 2;
 	m_video.fullscreen.generic.y = y;
 	m_video.fullscreen.generic.name = "video mode";
 	m_video.fullscreen.itemnames = ( const char ** )m_video.modes;
@@ -417,7 +417,7 @@ static void VideoMenu_Init( void ) {
 
 	m_video.gammaType.generic.type = MTYPE_SPINCONTROL;
 	m_video.gammaType.generic.id	= ID_GAMMATYPE;
-	m_video.gammaType.generic.x	= uis.glconfig.vidWidth / 2;
+	m_video.gammaType.generic.x	= uis.width / 2;
 	m_video.gammaType.generic.y	= yy;
 	m_video.gammaType.generic.name	= "gamma correction";
 	m_video.gammaType.curvalue = cvar.VariableInteger( "vid_hwgamma" ) ? 1 : 0;
@@ -426,7 +426,7 @@ static void VideoMenu_Init( void ) {
 
 	m_video.picmip.generic.type	= MTYPE_SLIDER;
 	m_video.picmip.generic.id		= ID_PICMIP;
-	m_video.picmip.generic.x		= uis.glconfig.vidWidth / 2;
+	m_video.picmip.generic.x		= uis.width / 2;
 	m_video.picmip.generic.y		= yy;
 	m_video.picmip.generic.name	= "texture quality";
 	m_video.picmip.minvalue = 0;
@@ -438,7 +438,7 @@ static void VideoMenu_Init( void ) {
 
 	m_video.textureFilter.generic.type = MTYPE_SPINCONTROL;
 	m_video.textureFilter.generic.id	= ID_TEXTUREFILTER;
-	m_video.textureFilter.generic.x	= uis.glconfig.vidWidth / 2;
+	m_video.textureFilter.generic.x	= uis.width / 2;
 	m_video.textureFilter.generic.y	= yy;
 	m_video.textureFilter.generic.name	= "texture filter";
 	m_video.textureFilter.itemnames = filterNames;
@@ -453,7 +453,7 @@ static void VideoMenu_Init( void ) {
 
 #ifdef _WIN32
 	m_video.vsync.generic.type = MTYPE_SPINCONTROL;
-	m_video.vsync.generic.x	= uis.glconfig.vidWidth / 2;
+	m_video.vsync.generic.x	= uis.width / 2;
 	m_video.vsync.generic.y	= yy;
 	m_video.vsync.generic.name	= "vertical sync";
 	m_video.vsync.curvalue = cvar.VariableInteger( "gl_swapinterval" ) ? 1 : 0;
@@ -463,7 +463,7 @@ static void VideoMenu_Init( void ) {
 
 	m_video.saturation.generic.type	= MTYPE_SLIDER;
 	m_video.saturation.generic.id		= ID_SATURATION;
-	m_video.saturation.generic.x		= uis.glconfig.vidWidth / 2;
+	m_video.saturation.generic.x		= uis.width / 2;
 	m_video.saturation.generic.y		= yy;
 	m_video.saturation.generic.name	= "texture saturation";
 	m_video.saturation.minvalue = 0;
@@ -475,7 +475,7 @@ static void VideoMenu_Init( void ) {
 
 	m_video.lightmaps.generic.type	= MTYPE_SLIDER;
 	m_video.lightmaps.generic.id		= ID_LIGHTMAPS;
-	m_video.lightmaps.generic.x		= uis.glconfig.vidWidth / 2;
+	m_video.lightmaps.generic.x		= uis.width / 2;
 	m_video.lightmaps.generic.y		= yy;
 	m_video.lightmaps.generic.name	= "lightmap saturation";
 	m_video.lightmaps.minvalue = 0;
@@ -486,7 +486,7 @@ static void VideoMenu_Init( void ) {
 	yy += MENU_SPACING;
 
 	m_video.anisotropy.generic.type	= MTYPE_SLIDER;
-	m_video.anisotropy.generic.x		= uis.glconfig.vidWidth / 2;
+	m_video.anisotropy.generic.x		= uis.width / 2;
 	m_video.anisotropy.generic.y		= yy;
 	m_video.anisotropy.generic.name	= "anisotropic filter";
 	m_video.anisotropy.minvalue = 0;
@@ -498,7 +498,7 @@ static void VideoMenu_Init( void ) {
 
 	m_video.overrideTextures.generic.type = MTYPE_SPINCONTROL;
 	m_video.overrideTextures.generic.id = ID_OVERRIDE;
-	m_video.overrideTextures.generic.x	= uis.glconfig.vidWidth / 2;
+	m_video.overrideTextures.generic.x	= uis.width / 2;
 	m_video.overrideTextures.generic.y	= yy;
 	m_video.overrideTextures.generic.name	= "override textures";
 	m_video.overrideTextures.curvalue = cvar.VariableInteger( "r_override_textures" ) ? 1 : 0;
@@ -507,7 +507,7 @@ static void VideoMenu_Init( void ) {
 
 	m_video.overrideModels.generic.type = MTYPE_SPINCONTROL;
 	m_video.overrideModels.generic.id = ID_OVERRIDE;
-	m_video.overrideModels.generic.x	= uis.glconfig.vidWidth / 2;
+	m_video.overrideModels.generic.x	= uis.width / 2;
 	m_video.overrideModels.generic.y	= yy;
 	m_video.overrideModels.generic.name	= "override models";
 	m_video.overrideModels.curvalue = cvar.VariableInteger( "r_override_models" ) ? 1 : 0;
@@ -515,7 +515,7 @@ static void VideoMenu_Init( void ) {
 	yy += MENU_SPACING;
 
 	m_video.dlight.generic.type = MTYPE_SPINCONTROL;
-	m_video.dlight.generic.x	= uis.glconfig.vidWidth / 2;
+	m_video.dlight.generic.x	= uis.width / 2;
 	m_video.dlight.generic.y	= yy;
 	m_video.dlight.generic.name	= "dynamic lighting";
     i = cvar.VariableInteger( "gl_dynamic" );
@@ -528,7 +528,7 @@ static void VideoMenu_Init( void ) {
 	yy = y + MENU_SPACING * 2;
 
 	m_video.stipple.generic.type = MTYPE_SPINCONTROL;
-	m_video.stipple.generic.x	= uis.glconfig.vidWidth / 2;
+	m_video.stipple.generic.x	= uis.width / 2;
 	m_video.stipple.generic.y	= yy;
 	m_video.stipple.generic.name	= "stipple alpha";
 	m_video.stipple.curvalue = cvar.VariableInteger( "sw_stipplealpha" ) ? 1 : 0;
@@ -536,7 +536,7 @@ static void VideoMenu_Init( void ) {
 	yy += MENU_SPACING;
 
 	m_video.sird.generic.type = MTYPE_SPINCONTROL;
-	m_video.sird.generic.x	= uis.glconfig.vidWidth / 2;
+	m_video.sird.generic.x	= uis.width / 2;
 	m_video.sird.generic.y	= yy;
 	m_video.sird.generic.name	= "draw SIRDs";
 	i = cvar.VariableInteger( "sw_drawsird" );
@@ -550,7 +550,7 @@ static void VideoMenu_Init( void ) {
 	m_video.defaults.generic.id = ID_DEFAULTS;
 	m_video.defaults.generic.uiFlags = UI_CENTER;
 	m_video.defaults.generic.name = "undo changes (u)";
-	m_video.defaults.generic.x    = uis.glconfig.vidWidth / 2;
+	m_video.defaults.generic.x    = uis.width / 2;
 	m_video.defaults.generic.y    = yyy;
 	yyy += MENU_SPACING;
 
@@ -558,7 +558,7 @@ static void VideoMenu_Init( void ) {
 	m_video.apply.generic.id = ID_APPLY;
 	m_video.apply.generic.uiFlags = UI_CENTER;
 	m_video.apply.generic.name = "apply changes (a)";
-	m_video.apply.generic.x    = uis.glconfig.vidWidth / 2;
+	m_video.apply.generic.x    = uis.width / 2;
 	m_video.apply.generic.y    = yyy;
 	yyy += MENU_SPACING;
 

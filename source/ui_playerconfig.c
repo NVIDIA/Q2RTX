@@ -217,10 +217,10 @@ qboolean PlayerConfig_MenuInit( void ) {
 		}
 	}
 
-	m_playerConfig.refdef.x = uis.glconfig.vidWidth / 2;
+	m_playerConfig.refdef.x = uis.width / 2;
 	m_playerConfig.refdef.y = 60;
-	m_playerConfig.refdef.width = uis.glconfig.vidWidth / 2;
-	m_playerConfig.refdef.height = uis.glconfig.vidHeight - 122;
+	m_playerConfig.refdef.width = uis.width / 2;
+	m_playerConfig.refdef.height = uis.height - 122;
 
 	m_playerConfig.refdef.fov_x = 40;
 	m_playerConfig.refdef.fov_y = Com_CalcFov( m_playerConfig.refdef.fov_x,
@@ -246,8 +246,8 @@ qboolean PlayerConfig_MenuInit( void ) {
 	m_playerConfig.oldTime = m_playerConfig.time;
 	PlayerConfig_RunFrame();
 
-	x = uis.glconfig.vidWidth / 2 - 130;
-	y = uis.glconfig.vidHeight / 2 - 97;
+	x = uis.width / 2 - 130;
+	y = uis.height / 2 - 97;
 
 	m_playerConfig.menu.draw = PlayerConfig_MenuDraw;
 	m_playerConfig.menu.callback = PlayerConfig_MenuCallback;

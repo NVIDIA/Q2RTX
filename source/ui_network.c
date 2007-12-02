@@ -153,7 +153,7 @@ static void Network_MenuInit( void ) {
 
 	m_network.menu.callback = NetworkMenu_Callback;
 
-	x = uis.glconfig.vidWidth / 2;
+	x = uis.width / 2;
 	y = 64;
 
 	m_network.connection.generic.type			= MTYPE_SPINCONTROL;

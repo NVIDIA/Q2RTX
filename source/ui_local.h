@@ -246,6 +246,8 @@ typedef struct uiStatic_s {
 	int realtime;
 	glconfig_t glconfig;
     clipRect_t clipRect;
+    int width, height; // scaled
+    float scale;
 	int menuDepth;
 	menuFrameWork_t	*layers[MAX_MENU_DEPTH];
 	menuFrameWork_t *activeMenu;

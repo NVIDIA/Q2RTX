@@ -86,8 +86,8 @@ static void MainMenu_Init( void ) {
 	int i;
 	int x, y;
 
-	x = uis.glconfig.vidWidth / 2;
-	y = ( uis.glconfig.vidHeight - MENU_SPACING * MAIN_ITEMS ) / 2;
+	x = uis.width / 2;
+	y = ( uis.height - MENU_SPACING * MAIN_ITEMS ) / 2;
 
 	memset( &m_main, 0, sizeof( m_main ) );
 

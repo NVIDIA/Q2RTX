@@ -157,8 +157,8 @@ static void KeysMenu_Init( const char **names, int total, const char *banner ) {
 	menuKeybind_t *k;
 	int i, x, y;
 
-	x = uis.glconfig.vidWidth / 2;
-	y = ( uis.glconfig.vidHeight - MENU_SPACING * total ) / 2;
+	x = uis.width / 2;
+	y = ( uis.height - MENU_SPACING * total ) / 2;
 
 	memset( &m_keys, 0, sizeof( m_keys ) );
 

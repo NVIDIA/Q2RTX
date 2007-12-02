@@ -89,15 +89,15 @@ static void IngameMenu_Draw( menuFrameWork_t *self ) {
 	int y1, y2;
 	color_t color;
 
-	y1 = ( uis.glconfig.vidHeight - 16 * INGAME_ITEMS ) / 2 - 16;
-	y2 = ( uis.glconfig.vidHeight + 16 * INGAME_ITEMS ) / 2 + 16;
+	y1 = ( uis.height - 16 * INGAME_ITEMS ) / 2 - 16;
+	y2 = ( uis.height + 16 * INGAME_ITEMS ) / 2 + 16;
 
 	color[0] = 0;
 	color[1] = 0;
 	color[2] = 255;
 	color[3] = 32;
 
-	ref.DrawFillEx( 0, y1, uis.glconfig.vidWidth, y2 - y1, color );
+	ref.DrawFillEx( 0, y1, uis.width, y2 - y1, color );
 
 	Menu_Draw( self );
 }
@@ -108,8 +108,8 @@ static void IngameMenu_Init( void ) {
 	int i;
 	int x, y;
 
-	x = uis.glconfig.vidWidth / 2;
-	y = ( uis.glconfig.vidHeight - 16 * INGAME_ITEMS ) / 2;
+	x = uis.width / 2;
+	y = ( uis.height - 16 * INGAME_ITEMS ) / 2;
 
 	memset( &m_ingame, 0, sizeof( m_ingame ) );
 

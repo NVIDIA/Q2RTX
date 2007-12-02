@@ -150,7 +150,7 @@ void M_Credits_MenuDraw( menuFrameWork_t *self ) {
 	uint32 flags;
 	float alpha;
 
-	yMax = uis.glconfig.vidHeight - BORDER_HEIGHT - 8;
+	yMax = uis.height - BORDER_HEIGHT - 8;
 
 	/*
 	** draw the credits
@@ -176,7 +176,7 @@ void M_Credits_MenuDraw( menuFrameWork_t *self ) {
 		}
 
 		ref.SetColor( DRAW_COLOR_ALPHA, ( byte * )&alpha );
-		UI_DrawString( uis.glconfig.vidWidth / 2, y, NULL, flags, string );
+		UI_DrawString( uis.width / 2, y, NULL, flags, string );
 		ref.SetColor( DRAW_COLOR_CLEAR, NULL );
 
 	}

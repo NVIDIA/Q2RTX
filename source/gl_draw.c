@@ -47,6 +47,7 @@ void Draw_SetColor( uint32 flags, const color_t color ) {
 
 void Draw_SetClipRect( uint32 flags, const clipRect_t *clip ) {
 	clipRect_t rc;
+    float scale;
 
 	if( ( draw.flags & DRAW_CLIP_MASK ) == flags ) {
 		return;
@@ -60,22 +61,24 @@ void Draw_SetClipRect( uint32 flags, const clipRect_t *clip ) {
 		return;
 	}
 
+    scale = 1 / draw.scale;
+
 	rc.left = 0;
 	rc.top = 0;
 	if( flags & DRAW_CLIP_LEFT ) {
-		rc.left = clip->left;
+		rc.left = clip->left * scale;
 	}
 	if( flags & DRAW_CLIP_TOP ) {
-		rc.top = clip->top;
+		rc.top = clip->top * scale;
 	}
 
 	rc.right = gl_config.vidWidth;
 	rc.bottom = gl_config.vidHeight;
 	if( flags & DRAW_CLIP_RIGHT ) {
-		rc.right = clip->right;
+		rc.right = clip->right * scale;
 	}
 	if( flags & DRAW_CLIP_BOTTOM ) {
-		rc.bottom = clip->bottom;
+		rc.bottom = clip->bottom * scale;
 	}
 
 	qglEnable( GL_SCISSOR_TEST );

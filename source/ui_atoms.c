@@ -35,8 +35,9 @@ clientAPI_t client;
 uiStatic_t	uis;
 
 cvar_t	*ui_debug;
-cvar_t	*ui_open;
-cvar_t	*ui_background;
+static cvar_t	*ui_open;
+static cvar_t	*ui_background;
+static cvar_t	*ui_scale;
 
 // ===========================================================================
 
@@ -54,7 +55,7 @@ void UI_PushMenu( menuFrameWork_t *menu ) {
 
 	// if this menu is already present, drop back to that level
 	// to avoid stacking menus by hotkeys
-	for( i=0 ; i<uis.menuDepth ; i++ ) {
+	for( i = 0; i < uis.menuDepth; i++ ) {
 		if( uis.layers[i] == menu ) {
 			break;
 		}
@@ -68,15 +69,12 @@ void UI_PushMenu( menuFrameWork_t *menu ) {
 		uis.menuDepth = i;
 	}
 
-	for( i=uis.menuDepth-1 ; i>=0 ; i-- ) {
+	uis.transparent = qfalse;
+	for( i = uis.menuDepth - 1; i >= 0; i-- ) {
 		if( uis.layers[i]->transparent ) {
+	        uis.transparent = qtrue;
 			break;
 		}
-	}
-
-	uis.transparent = qtrue;
-	if( i < 0 ) {
-		uis.transparent = qfalse;
 	}
 
 	if( !menu->callback ) {
@@ -99,6 +97,28 @@ void UI_PushMenu( menuFrameWork_t *menu ) {
 	UI_DoHitTest();
 }
 
+void UI_UpdateGeometry( void ) {
+    if( uis.glconfig.renderer == GL_RENDERER_SOFTWARE ) {
+        uis.clipRect.left = 0;
+        uis.clipRect.top = 0;
+        uis.clipRect.right = uis.glconfig.vidWidth;
+        uis.clipRect.bottom = uis.glconfig.vidHeight;
+        uis.scale = 1;
+        uis.width = uis.glconfig.vidWidth;
+        uis.height = uis.glconfig.vidHeight;
+    } else {
+        if( ui_scale->value < 1 ) {
+            cvar.Set( "ui_scale", "1" );
+        } else if( ui_scale->value > 9 ) {
+            cvar.Set( "ui_scale", "9" );
+        }
+        uis.scale = 1 / ui_scale->value;
+        uis.width = uis.glconfig.vidWidth * uis.scale;
+        uis.height = uis.glconfig.vidHeight * uis.scale;
+    }
+}
+
+
 /*
 =================
 UI_ForceMenuOff
@@ -107,7 +127,7 @@ UI_ForceMenuOff
 void UI_ForceMenuOff( void ) {
 	int i;
 
-	for( i=0 ; i<uis.menuDepth ; i++ ) {
+	for( i = 0; i < uis.menuDepth; i++ ) {
 		if( uis.layers[i] ) {
 			uis.layers[i]->callback( ID_MENU, QM_DESTROY, qtrue );
 		}
@@ -118,6 +138,8 @@ void UI_ForceMenuOff( void ) {
 	uis.activeMenu = NULL;
 	uis.transparent = qfalse;
 	//keys.ClearStates();
+
+    UI_UpdateGeometry();
 }
 
 /*
@@ -141,20 +163,15 @@ void UI_PopMenu( void ) {
 
 	uis.activeMenu = uis.layers[uis.menuDepth - 1];
 
-	for( i=uis.menuDepth-1 ; i>=0 ; i-- ) {
+	uis.transparent = qfalse;
+	for( i = uis.menuDepth - 1; i >= 0; i-- ) {
 		if( uis.layers[i]->transparent ) {
+	        uis.transparent = qtrue;
 			break;
 		}
 	}
 
-	uis.transparent = qtrue;
-	if( i < 0 ) {
-		uis.transparent = qfalse;
-	}
-
 	UI_DoHitTest();
-
-	
 }
 
 /*
@@ -284,7 +301,7 @@ void UI_SetupDefaultBanner( menuStatic_t *banner, const char *name ) {
 	banner->generic.name = name;
 	banner->generic.uiFlags = UI_CENTER|UI_ALTCOLOR;
 
-	banner->generic.x = uis.glconfig.vidWidth / 2;
+	banner->generic.x = uis.width / 2;
 	banner->generic.y = 8;
 }
 
@@ -388,8 +405,8 @@ void UI_MouseMove( int mx, int my ) {
 	uis.mouseCoords[0] += mx;
 	uis.mouseCoords[1] += my;
 
-	clamp( uis.mouseCoords[0], 0, uis.glconfig.vidWidth );
-	clamp( uis.mouseCoords[1], 0, uis.glconfig.vidHeight );
+	clamp( uis.mouseCoords[0], 0, uis.width );
+	clamp( uis.mouseCoords[1], 0, uis.height );
 
 	if( UI_DoHitTest() ) {
 		// TODO: add new mousemove sound
@@ -419,15 +436,17 @@ void UI_Draw( int realtime ) {
 	ref.SetColor( DRAW_COLOR_CLEAR, NULL );
     if( uis.glconfig.renderer == GL_RENDERER_SOFTWARE ) {
         ref.SetClipRect( DRAW_CLIP_MASK, &uis.clipRect );
+    } else {
+    	ref.SetScale( &uis.scale );
     }
 
 	if( !uis.transparent ) {
 		// no transparent menus
 		if( uis.backgroundHandle ) {
-			ref.DrawStretchPic( 0, 0, uis.glconfig.vidWidth, uis.glconfig.vidHeight,
+			ref.DrawStretchPic( 0, 0, uis.width, uis.height,
 				uis.backgroundHandle );
 		} else {
-			ref.DrawFill( 0, 0, uis.glconfig.vidWidth, uis.glconfig.vidHeight, 0 );
+			ref.DrawFill( 0, 0, uis.width, uis.height, 0 );
 		}
 
 		if( uis.activeMenu->draw ) {
@@ -440,10 +459,10 @@ void UI_Draw( int realtime ) {
 		for( i = 0; i < uis.menuDepth; i++ ) {
 			if( !uis.layers[i]->transparent ) {
 				if( uis.backgroundHandle ) {
-					ref.DrawStretchPic( 0, 0, uis.glconfig.vidWidth, uis.glconfig.vidHeight,
+					ref.DrawStretchPic( 0, 0, uis.width, uis.height,
 						uis.backgroundHandle );
 				} else {
-					ref.DrawFill( 0, 0, uis.glconfig.vidWidth, uis.glconfig.vidHeight, 0 );
+					ref.DrawFill( 0, 0, uis.width, uis.height, 0 );
 				}
 			}
 
@@ -455,13 +474,12 @@ void UI_Draw( int realtime ) {
 		}
 	}
 
-	ref.DrawStretchPic( uis.mouseCoords[0] - uis.cursorWidth / 2,
-		uis.mouseCoords[1] - uis.cursorHeight / 2,
-		uis.cursorWidth, uis.cursorHeight, uis.cursorHandle );
+	ref.DrawPic( uis.mouseCoords[0] - uis.cursorWidth / 2,
+		uis.mouseCoords[1] - uis.cursorHeight / 2, uis.cursorHandle );
 
 	if( ui_debug->integer ) {
 		Menu_HitTest( uis.activeMenu, 0, 0 );
-		UI_DrawString( uis.glconfig.vidWidth - 4, 4, NULL, UI_RIGHT,
+		UI_DrawString( uis.width - 4, 4, NULL, UI_RIGHT,
 			va( "%3i %3i", uis.mouseCoords[0], uis.mouseCoords[1] ) );
 	}
 
@@ -475,6 +493,8 @@ void UI_Draw( int realtime ) {
 
     if( uis.glconfig.renderer == GL_RENDERER_SOFTWARE ) {
         ref.SetClipRect( DRAW_CLIP_DISABLED, NULL );
+    } else {
+	    ref.SetScale( NULL );
     }
 	ref.SetColor( DRAW_COLOR_CLEAR, NULL );
 }
@@ -688,16 +708,9 @@ static void ui_background_changed( cvar_t *self ) {
 }
 
 void UI_ModeChanged( void ) {
-    UI_ForceMenuOff();
-
+	ui_scale = cvar.Get( "ui_scale", "1", 0 );
 	ref.GetConfig( &uis.glconfig );
-    if( uis.glconfig.renderer == GL_RENDERER_SOFTWARE ) {
-        uis.clipRect.left = 0;
-        uis.clipRect.top = 0;
-        uis.clipRect.right = uis.glconfig.vidWidth;
-        uis.clipRect.bottom = uis.glconfig.vidHeight;
-    }
-
+    UI_ForceMenuOff();
 }
 
 /*
@@ -727,7 +740,7 @@ qboolean UI_Init( void ) {
 			uis.backgroundHandle = ref.RegisterPic( ui_background->string );
 		}
 		ui_background->changed = ui_background_changed;
-	}
+    }
 
 	// Point to a nice location at startup
 	strcpy( uis.m_demos_browse, "/demos" );

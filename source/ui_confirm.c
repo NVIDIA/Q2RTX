@@ -71,8 +71,8 @@ static void ConfirmMenu_Init( const char *text, void (*action)( qboolean yes ) )
 
 	m_confirm.text.generic.type = MTYPE_STATIC;
 	m_confirm.text.generic.name = text;
-	m_confirm.text.generic.x = uis.glconfig.vidWidth / 2;
-	m_confirm.text.generic.y = uis.glconfig.vidHeight / 2;
+	m_confirm.text.generic.x = uis.width / 2;
+	m_confirm.text.generic.y = uis.height / 2;
 	m_confirm.text.generic.uiFlags = UI_CENTER;
 	
 	Menu_AddItem( &m_confirm.menu, ( void * )&m_confirm.text );
@@ -119,8 +119,8 @@ static void ErrorMenu_Init( comErrorType_t type, const char *text ) {
 	m_error.text.generic.type = MTYPE_STATIC;
 	m_error.text.generic.flags = QMF_CUSTOM_COLOR;
 	m_error.text.generic.name = text;
-	m_error.text.generic.x = uis.glconfig.vidWidth / 2;
-	m_error.text.generic.y = uis.glconfig.vidHeight / 2;
+	m_error.text.generic.x = uis.width / 2;
+	m_error.text.generic.y = uis.height / 2;
 	m_error.text.generic.uiFlags = UI_CENTER|UI_MULTILINE;
 	if( type == ERR_DROP ) {
 		*( uint32 * )m_error.text.generic.color = *( uint32 * )colorRed;

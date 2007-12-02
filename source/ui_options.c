@@ -98,8 +98,8 @@ static void OptionsMenu_Init( void ) {
 	int i;
 	int x, y;
 
-	x = uis.glconfig.vidWidth / 2;
-	y = ( uis.glconfig.vidHeight - MENU_SPACING * OPTIONS_ITEMS ) / 2;
+	x = uis.width / 2;
+	y = ( uis.height - MENU_SPACING * OPTIONS_ITEMS ) / 2;
 
 	memset( &m_options, 0, sizeof( m_options ) );
 
