@@ -1038,7 +1038,6 @@ int FS_LoadFileEx( const char *path, void **buffer, uint32 flags ) {
     path = FS_ExpandLinks( path );
 
 	if( !FS_ValidatePath( path ) ) {
- //       Sys_DebugBreak();
 		FS_DPrintf( "FS_LoadFile: refusing invalid path: %s\n", path );
 		return -1;
 	}
@@ -1058,25 +1057,9 @@ int FS_LoadFileEx( const char *path, void **buffer, uint32 flags ) {
 	length = FS_GetFileLength( f );
 	
 	if( buffer ) {
-		if( loadInuse + length < MAX_LOAD_BUFFER && !( fs_restrict_mask->integer & 16 ) ) {
-  //          Com_Printf(S_COLOR_MAGENTA"static: %s: %d\n",path,length);
-			buf = &loadBuffer[loadInuse];
-            loadLast = buf;
-            loadSaved = loadInuse;
-			loadInuse += length + 1;
-			loadInuse = ( loadInuse + 3 ) & ~3;
-			loadStack++;
-			loadCountStatic++;
-		} else {
-//            Com_Printf(S_COLOR_MAGENTA"alloc: %s: %d\n",path,length);
-			buf = FS_Malloc( length + 1 );
-			loadCount++;
-		}
-		*buffer = buf;
-
+		*buffer = buf = FS_AllocTempMem( length + 1 );
 		FS_Read( buf, length, f );
 		buf[length] = 0;
-
 	}
 
 	FS_FCloseFile( f );

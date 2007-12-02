@@ -98,7 +98,7 @@ void Video_GetModeFS( vrect_t *rc, int *freq, int *depth ) {
     }
 
     // sanity check
-    if( w < 1 || w > 8192 || h < 1 || h > 8192 ) {
+    if( w < 64 || w > 8192 || h < 64 || h > 8192 ) {
         Com_DPrintf( "Mode %dx%d doesn't look sane\n", w, h );
 malformed:
         w = 640;
@@ -109,8 +109,8 @@ malformed:
 
     rc->x = 0;
     rc->y = 0;
-    rc->width = w;
-    rc->height = h;
+    rc->width = w & ~7;
+    rc->height = h & ~1;
 
     if( freq ) {
         *freq = hz;
@@ -145,7 +145,7 @@ void Video_GetPlacement( vrect_t *rc ) {
         x = 0;
         y = 0;
     }
-    if( w < 1 || w > 8192 || h < 1 || h > 8192 ) {
+    if( w < 64 || w > 8192 || h < 64 || h > 8192 ) {
 malformed:
         w = 640;
         h = 480;
@@ -153,8 +153,8 @@ malformed:
 
     rc->x = x;
     rc->y = y;
-    rc->width = w;
-    rc->height = h;
+    rc->width = w & ~7;
+    rc->height = h & ~1;
 }
 
 

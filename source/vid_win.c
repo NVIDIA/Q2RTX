@@ -562,10 +562,53 @@ LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		Win_AppActivate( wParam );
 		break;
 
+	case WM_SIZING:
+		if( !vid_fullscreen->integer ) {
+		    RECT *rc = ( RECT * )lParam;
+			int w = rc->right - rc->left;
+			int h = rc->bottom - rc->top;
+			if( w < 64 ) w = 64; else w &= ~7;
+			if( h < 64 ) h = 64; else h &= ~1;
+			switch( wParam ) {
+			case WMSZ_BOTTOM:
+				rc->bottom = rc->top + h;
+				break;
+			case WMSZ_BOTTOMLEFT:
+				rc->bottom = rc->top + h;
+				rc->left = rc->right - w;
+				break;
+			case WMSZ_BOTTOMRIGHT:
+				rc->right = rc->left + w;
+	    		rc->bottom = rc->top + h;
+				break;
+			case WMSZ_LEFT:
+				rc->left = rc->right - w;
+				break;
+			case WMSZ_RIGHT:
+				rc->right = rc->left + w;
+				break;
+			case WMSZ_TOP:
+				rc->top = rc->bottom - h;
+				break;
+			case WMSZ_TOPLEFT:
+				rc->top = rc->bottom - h;
+				rc->left = rc->right - w;
+				break;
+			case WMSZ_TOPRIGHT:
+				rc->top = rc->bottom - h;
+				rc->right = rc->left + w;
+				break;
+			}
+			return TRUE;
+        }
+		break;
+
 	case WM_SIZE:
 		if( wParam == SIZE_RESTORED && !vid_fullscreen->integer ) {
-		    win.rc.width = ( short )LOWORD( lParam );
-	    	win.rc.height = ( short )HIWORD( lParam );
+		    int w = ( short )LOWORD( lParam );
+	    	int h = ( short )HIWORD( lParam );
+			win.rc.width = w & ~7;
+	    	win.rc.height = h & ~1;
             win.mode_changed |= 1;
         }
 		break;

@@ -524,19 +524,23 @@ typedef struct zstatic_s {
 	uint16	tail;
 } zstatic_t;
 
+#define Z_STATIC( x ) { { Z_MAGIC, TAG_STATIC, sizeof( zstatic_t ) }, x, Z_TAIL }
+
 static zstatic_t		z_static[] = {
-	{ { Z_MAGIC, TAG_STATIC, sizeof( zstatic_t ) }, { '0', '\0' }, Z_TAIL },
-	{ { Z_MAGIC, TAG_STATIC, sizeof( zstatic_t ) }, { '1', '\0' }, Z_TAIL },
-	{ { Z_MAGIC, TAG_STATIC, sizeof( zstatic_t ) }, { '2', '\0' }, Z_TAIL },
-	{ { Z_MAGIC, TAG_STATIC, sizeof( zstatic_t ) }, { '3', '\0' }, Z_TAIL },
-	{ { Z_MAGIC, TAG_STATIC, sizeof( zstatic_t ) }, { '4', '\0' }, Z_TAIL },
-	{ { Z_MAGIC, TAG_STATIC, sizeof( zstatic_t ) }, { '5', '\0' }, Z_TAIL },
-	{ { Z_MAGIC, TAG_STATIC, sizeof( zstatic_t ) }, { '6', '\0' }, Z_TAIL },
-	{ { Z_MAGIC, TAG_STATIC, sizeof( zstatic_t ) }, { '7', '\0' }, Z_TAIL },
-	{ { Z_MAGIC, TAG_STATIC, sizeof( zstatic_t ) }, { '8', '\0' }, Z_TAIL },
-	{ { Z_MAGIC, TAG_STATIC, sizeof( zstatic_t ) }, { '9', '\0' }, Z_TAIL },
-	{ { Z_MAGIC, TAG_STATIC, sizeof( zstatic_t ) }, { '\0'		}, Z_TAIL },
+	Z_STATIC( "0" ),
+	Z_STATIC( "1" ),
+	Z_STATIC( "2" ),
+	Z_STATIC( "3" ),
+	Z_STATIC( "4" ),
+	Z_STATIC( "5" ),
+	Z_STATIC( "6" ),
+	Z_STATIC( "7" ),
+	Z_STATIC( "8" ),
+	Z_STATIC( "9" ),
+	Z_STATIC( "" )
 };
+
+#undef Z_STATIC
 
 typedef struct zstats_s {
 	size_t  count;
