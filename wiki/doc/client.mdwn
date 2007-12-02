@@ -148,7 +148,7 @@ Fraction of the screen in-game console occupies.
 Transparency of in-game console background. Takes effect in OpenGL mode only.
 
 - `set con_scale 1` (float)  
-Scale factor of the console text. Takes effect in OpenGL mode only.
+Scaling factor of the console text. Takes effect in OpenGL mode only.
 
 - `set con_font "conchars"` (string)  
 Font used for drawing console text.
@@ -172,7 +172,7 @@ Progress bar is not shown when playing GZIP compressed demos as there is no
 effective way to tell original length of such demos.
 
 - `set scr_scale 1.0` (float)  
-Scale factor of the HUD elements. Takes effect in OpenGL mode only.
+Scaling factor of the HUD elements. Takes effect in OpenGL mode only.
 
 - `set scr_alpha 1.0` (float)  
 Opacity of the HUD elements. Takes effect in OpenGL mode only.
@@ -291,6 +291,10 @@ screen console.
 - `set ui_background ""` (string)  
 Specifies image to use as menu background. When set to empty string,
 just fills the screen with solid black color.
+
+- `set ui_scale 1` (float)  
+Scaling factor of the UI widgets. Takes effect in OpenGL mode only.
+
 
 Macros
 ==========

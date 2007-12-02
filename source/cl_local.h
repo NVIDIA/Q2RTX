@@ -179,6 +179,7 @@ typedef struct client_state_s {
 
 #if USE_AUTOREPLY
 	int				replyTime;
+	int				replyPending;
 #endif
 
 	char		loadingString[MAX_QPATH];

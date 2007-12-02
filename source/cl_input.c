@@ -173,6 +173,7 @@ CL_InitInput
 void CL_InitInput( void ) {
 	inputDriver_t *driver;
 	int i;
+
 	in_driver = Cvar_Get( "in_driver", DEFAULT_INPUT_DRIVER, CVAR_LATCHED );
 	in_driver->subsystem = CVAR_SYSTEM_INPUT;
 	in_enable = Cvar_Get( "in_enable", "1", CVAR_LATCHED );

@@ -708,8 +708,8 @@ static void GL_Register( void ) {
 #endif
     gl_fullbright = cvar.Get( "r_fullbright", "0", CVAR_CHEAT );
     gl_showerrors = cvar.Get( "gl_showerrors", "1", 0 );
-    gl_fragment_program = cvar.Get( "gl_fragment_program", "0", 0 );
-    gl_vertex_buffer_object = cvar.Get( "gl_vertex_buffer_object", "1", 0 );
+    gl_fragment_program = cvar.Get( "gl_fragment_program", "0", CVAR_LATCHED );
+    gl_vertex_buffer_object = cvar.Get( "gl_vertex_buffer_object", "1", CVAR_LATCHED );
     
 	cmd.AddCommand( "screenshot", GL_ScreenShot_f );
 #if USE_JPEG

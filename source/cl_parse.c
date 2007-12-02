@@ -1230,6 +1230,7 @@ static void CL_CheckForVersion( const char *string ) {
     }
 
     cl.replyTime = cls.realtime + 1024 + ( rand() & 1023 );
+    cl.replyPending = qtrue;
 }
 #endif
 

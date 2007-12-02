@@ -2458,7 +2458,7 @@ CL_CheckForReply
 ====================
 */
 static void CL_CheckForReply( void ) {
-    if ( !cl.replyTime ) {
+    if ( !cl.replyPending ) {
         return;
     }
 
@@ -2470,7 +2470,7 @@ static void CL_CheckForReply( void ) {
 	Cbuf_AddText( Cvar_VariableString( "version" ) );
     Cbuf_AddText( "\"\n" );
 
-    cl.replyTime = 0;
+    cl.replyPending = qfalse;
 }
 #endif
 
