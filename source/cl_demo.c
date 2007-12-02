@@ -422,6 +422,9 @@ static void CL_Suspend_f( void ) {
 
     cl.demodelta += cl.demoframe - cl.frame.number; // do not create holes
     cls.demopaused = qfalse;
+
+    // clear dirty configstrings
+    memset( cl.dcs, 0, sizeof( cl.dcs ) );
 }
 
 /*
