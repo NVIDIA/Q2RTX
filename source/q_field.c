@@ -116,86 +116,79 @@ qboolean IF_KeyEvent( inputField_t *field, int key ) {
         int oldpos = field->cursorPos;
 
         // kill trailing whitespace
-		while( field->cursorPos > 0 ) {
-            if( field->text[field->cursorPos] > ' ' ) {
-                break;
-            }
+		while( field->cursorPos > 0 && field->text[field->cursorPos] <= 32 ) {
 			field->cursorPos--;
         }
 
         // kill this word
-		while( field->cursorPos > 0 ) {
-            if( field->text[ field->cursorPos - 1 ] <= ' ' ) {
-                break;
-            }
+		while( field->cursorPos > 0 && field->text[ field->cursorPos - 1 ] > 32 ) {
 			field->cursorPos--;
         }
-		memmove( field->text + field->cursorPos ,
-                field->text + oldpos,
-                sizeof( field->text ) - oldpos );
-    }
-
-    if( key == 'k' && keys.IsDown( K_CTRL ) ) {
-        IF_Clear( field );
+		memmove( field->text + field->cursorPos, field->text + oldpos,
+            sizeof( field->text ) - oldpos );
         return qtrue;
     }
 
-	if( ( ( key == 'V' || key == 'v' ) && keys.IsDown( K_CTRL ) ) ||
-		( key == K_INS && keys.IsDown( K_SHIFT ) ) ||
-        key == K_MOUSE3 )
-	{
-		char *cbd, *s;
-		
-		if( ( cbd = sys.GetClipboardData() ) != NULL ) {
-			s = cbd;
-			while( *s ) {
-                switch( *s ) {
-                case '\n':
-                    if( s[1] ) {
-    					IF_CharEvent( field, ';' );
-                    }
-                    break;
-                case '\r':
-                case '\t':
-    			    IF_CharEvent( field, ' ' );
-                    break;
-                default:
-					IF_CharEvent( field, *s );
-                    break;
-				}
-				s++;
-			}
-			com.Free( cbd );
-		}
+    if( key == 'u' && keys.IsDown( K_CTRL ) ) {
+		memmove( field->text, field->text + field->cursorPos,
+            sizeof( field->text ) - field->cursorPos );
+        field->cursorPos = 0;
+        return qtrue;
+    }
 
-		return qtrue;
-	}
+    if( key == 'k' && keys.IsDown( K_CTRL ) ) {
+        field->text[field->cursorPos] = 0;
+        return qtrue;
+    }
 
     if( key == 'c' && keys.IsDown( K_CTRL ) ) {
         sys.SetClipboardData( field->text );
         return qtrue;
     }
 	
-	if( key == K_LEFTARROW ) {
+	if( key == K_LEFTARROW || ( key == 'b' && keys.IsDown( K_CTRL ) ) ) {
 		if( field->cursorPos > 0 ) {
 			field->cursorPos--;
 		}
 		return qtrue;
 	}
 
-	if( key == K_RIGHTARROW ) {
+	if( key == K_RIGHTARROW || ( key == 'f' && keys.IsDown( K_CTRL ) ) ) {
 		if( field->text[field->cursorPos] ) {
 			field->cursorPos++;
 		}
 		return qtrue;
 	}
 
-	if( key == K_HOME ) {
+	if( key == 'b' && keys.IsDown( K_ALT ) ) {
+		if( field->cursorPos > 0 && field->text[field->cursorPos - 1] <= 32 ) {
+			field->cursorPos--;
+		}
+		while( field->cursorPos > 0 && field->text[field->cursorPos] <= 32 ) {
+			field->cursorPos--;
+		}
+		while( field->cursorPos > 0 && field->text[field->cursorPos - 1] > 32 ) {
+			field->cursorPos--;
+		}
+		return qtrue;
+	}
+
+	if( key == 'f' && keys.IsDown( K_ALT ) ) {
+		while( field->text[field->cursorPos] && field->text[field->cursorPos] <= 32 ) {
+			field->cursorPos++;
+		}
+		while( field->text[field->cursorPos] > 32 ) {
+			field->cursorPos++;
+		}
+		return qtrue;
+	}
+
+	if( key == K_HOME || ( key == 'a' && keys.IsDown( K_CTRL ) ) ) {
 		field->cursorPos = 0;
 		return qtrue;
 	}
 
-	if( key == K_END ) {
+	if( key == K_END || ( key == 'e' && keys.IsDown( K_CTRL ) ) ) {
 		field->cursorPos = strlen( field->text );
 		return qtrue;
 	}

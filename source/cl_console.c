@@ -830,6 +830,34 @@ void Con_DrawConsole( void ) {
 ==============================================================================
 */
 
+static void Con_Action( void ) {
+    char *cmd = Prompt_Action( &con.prompt );
+    
+    if( !cmd ) {
+        Con_Printf( "]\n" );
+        return;
+    }
+    
+    // backslash text are commands, else chat
+    if( cmd[0] == '\\' || cmd[0] == '/' ) {
+        Cbuf_AddText( cmd + 1 );	// skip slash
+    } else {
+        if( cls.state == ca_active && con.chatMode ) {
+            Cbuf_AddText( va( "cmd say \"%s\"", cmd ) );
+        } else {
+            Cbuf_AddText( cmd );
+        }
+    }
+    Cbuf_AddText( "\n" );
+
+    Con_Printf( "]%s\n", cmd );
+
+    if( cls.state == ca_disconnected ) {
+        SCR_UpdateScreen ();	// force an update, because the command
+                                // may take some time
+    }
+}
+
 /*
 ====================
 Key_Console
@@ -844,30 +872,37 @@ void Key_Console( int key ) {
 	}
 
 	if( key == K_ENTER || key == K_KP_ENTER ) {
-		char *cmd;
-		
-		if( !( cmd = Prompt_Action( &con.prompt ) ) ) {
-			Con_Printf( "]\n" );
-			return;
-		}
-		
-		// backslash text are commands, else chat
-		if( cmd[0] == '\\' || cmd[0] == '/' ) {
-			Cbuf_AddText( cmd + 1 );	// skip slash
-		} else {
-			if( cls.state == ca_active && con.chatMode ) {
-				Cbuf_AddText( va( "cmd say \"%s\"", cmd ) );
-			} else {
-				Cbuf_AddText( cmd );
-			}
-		}
-		Cbuf_AddText( "\n" );
+        Con_Action();
+		goto scroll;
+	}
 
-		Con_Printf( "]%s\n", cmd );
-	
-		if( cls.state == ca_disconnected ) {
-			SCR_UpdateScreen ();	// force an update, because the command
-									// may take some time
+	if( ( key == 'v' && Key_IsDown( K_CTRL ) ) ||
+		( key == K_INS && Key_IsDown( K_SHIFT ) ) || key == K_MOUSE3 )
+	{
+		char *cbd, *s;
+		
+		if( ( cbd = Sys_GetClipboardData() ) != NULL ) {
+			s = cbd;
+			while( *s ) {
+                int c = *s++;
+                switch( c ) {
+                case '\n':
+                    if( *s ) {
+                        Con_Action();
+                    }
+                    break;
+                case '\r':
+                case '\t':
+	                IF_CharEvent( &con.prompt.inputLine, ' ' );
+                    break;
+                default:
+                    if( c >= 32 && c < 127 ) {
+	                    IF_CharEvent( &con.prompt.inputLine, c );
+                    }
+                    break;
+				}
+			}
+			Z_Free( cbd );
 		}
 		goto scroll;
 	}
