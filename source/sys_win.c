@@ -924,8 +924,12 @@ static qboolean Sys_FindInfoToExtraInfo( WIN32_FIND_DATAA *findInfo, fsFileInfo_
 Sys_ListFilteredFiles
 =================
 */
-static void Sys_ListFilteredFiles( char **listedFiles, int *count, const char *path,
-								  const char *filter, uint32 flags, int length )
+static void Sys_ListFilteredFiles(  void        **listedFiles,
+                                    int         *count,
+                                    const char  *path,
+								    const char  *filter,
+                                    int         flags,
+                                    int         length )
 {
 	WIN32_FIND_DATAA	findInfo;
 	HANDLE		findHandle;
@@ -972,17 +976,19 @@ static void Sys_ListFilteredFiles( char **listedFiles, int *count, const char *p
 
 		name = ( flags & FS_SEARCH_SAVEPATH ) ? dirPath + length : findInfo.cFileName;
 
+        // reformat it back to quake filesystem style
+        FS_ReplaceSeparators( name, '/' );
+
 		if( flags & FS_SEARCH_EXTRAINFO ) {
 			Sys_FindInfoToExtraInfo( &findInfo, &info );
-			listedFiles[( *count )++] = FS_CopyExtraInfo( name, &info );
+			listedFiles[( *count )++] = FS_CopyInfo( name, &info );
 		} else {
-			listedFiles[( *count )++] = Z_CopyString( name );
+			listedFiles[( *count )++] = FS_CopyString( name );
 		}
 
 	} while( *count < MAX_LISTED_FILES && FindNextFileA( findHandle, &findInfo ) != FALSE );
 
 	FindClose( findHandle );
-
 }
 
 /*
@@ -990,16 +996,18 @@ static void Sys_ListFilteredFiles( char **listedFiles, int *count, const char *p
 Sys_ListFiles
 =================
 */
-char **Sys_ListFiles( const char *rawPath, const char *extension, uint32 flags, int *numFiles ) {
+void **Sys_ListFiles(   const char  *rawPath,
+                        const char  *extension,
+                        int         flags,
+                        int         length,
+                        int         *numFiles )
+{
 	WIN32_FIND_DATAA	findInfo;
 	HANDLE		findHandle;
 	char	path[MAX_OSPATH];
 	char	findPath[MAX_OSPATH];
-	char	*listedFiles[MAX_LISTED_FILES];
+	void	*listedFiles[MAX_LISTED_FILES];
 	int		count;
-	char	**list;
-	int		i, length;
-	fsFileInfo_t	info;
 	char	*name;
 
 	count = 0;
@@ -1008,16 +1016,13 @@ char **Sys_ListFiles( const char *rawPath, const char *extension, uint32 flags, 
 		*numFiles = 0;
 	}
 
-	length = Q_strncpyz( path, rawPath, sizeof( path ) );
+	Q_strncpyz( path, rawPath, sizeof( path ) );
 	FS_ReplaceSeparators( path, '\\' );
 
 	if( flags & FS_SEARCH_BYFILTER ) {
-        if( !length ) {
-            return NULL;
-        }
 		Q_strncpyz( findPath, extension, sizeof( findPath ) );
 		FS_ReplaceSeparators( findPath, '\\' );
-		Sys_ListFilteredFiles( listedFiles, &count, path, findPath, flags, length + 1 );
+		Sys_ListFilteredFiles( listedFiles, &count, path, findPath, flags, length );
 	} else {
 		if( !extension || strchr( extension, ';' ) ) {
 			Q_concat( findPath, sizeof( findPath ), path, "\\*", NULL );
@@ -1054,12 +1059,15 @@ char **Sys_ListFiles( const char *rawPath, const char *extension, uint32 flags, 
 			}
 
 			name = ( flags & FS_SEARCH_SAVEPATH ) ? va( "%s\\%s", path, findInfo.cFileName ) : findInfo.cFileName;
+            
+        	// reformat it back to quake filesystem style
+		    FS_ReplaceSeparators( name, '/' );
 
 			if( flags & FS_SEARCH_EXTRAINFO ) {
 				Sys_FindInfoToExtraInfo( &findInfo, &info );
-				listedFiles[count++] = FS_CopyExtraInfo( name, &info );
+				listedFiles[count++] = FS_CopyInfo( name, &info );
 			} else {
-				listedFiles[count++] = Z_CopyString( name );
+				listedFiles[count++] = FS_CopyString( name );
 			}
 		} while( count < MAX_LISTED_FILES && FindNextFileA( findHandle, &findInfo ) != FALSE );
 
@@ -1070,44 +1078,11 @@ char **Sys_ListFiles( const char *rawPath, const char *extension, uint32 flags, 
 		return NULL;
 	}
 
-	if( !( flags & FS_SEARCH_NOSORT ) ) {
-		qsort( listedFiles, count, sizeof( listedFiles[0] ), SortStrcmp );
-	}
-
-	// reformat filenames back to quake filesystem style
-	list = Z_Malloc( sizeof( char * ) * ( count + 1 ) );
-	for( i = 0; i < count; i++ ) {
-		name = listedFiles[i];
-		FS_ReplaceSeparators( name, '/' );
-		list[i] = name;
-	}
-	list[count] = NULL;
-
 	if( numFiles ) {
 		*numFiles = count;
 	}
 
-	return list;
-}
-
-/*
-=================
-Sys_FreeFileList
-=================
-*/
-void Sys_FreeFileList( char **list ) {
-	char **p;
-
-	if( !list ) {
-		Com_Error( ERR_FATAL, "Sys_FreeFileList: NULL" );
-	}
-
-	p = list;
-	while( *p ) {
-		Z_Free( *p++ );
-	}
-
-	Z_Free( list );
+	return FS_CopyList( listedFiles, count );
 }
 
 /*

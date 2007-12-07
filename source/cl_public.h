@@ -56,12 +56,8 @@ typedef struct {
 } serverStatus_t;
 
 typedef struct {
-	qboolean mvd; // FIXME: can also use clientNum == -1
-	int clientNum;
-	char gamedir[MAX_QPATH];
-	char mapname[MAX_QPATH];
-	char fullLevelName[MAX_QPATH];
-	char clients[MAX_DEMOINFO_CLIENTS][MAX_CLIENT_NAME];
+	char map[MAX_QPATH];
+    char pov[MAX_CLIENT_NAME];
 } demoInfo_t;
 
 typedef struct {
@@ -78,7 +74,7 @@ typedef struct {
 	void	(*StartLocalSound)( const char *name );
 	void	(*StopAllSounds)( void );
 
-	qboolean	(*GetDemoInfo)( const char *path, demoInfo_t *info );
+	demoInfo_t	*(*GetDemoInfo)( const char *path, demoInfo_t *info );
 	qboolean	(*SendStatusRequest)( char *buffer, int bufferSize );
 	void		(*GetClientStatus)( clientStatus_t *status );
     void        (*UpdateScreen)( void );

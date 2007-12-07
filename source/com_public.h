@@ -123,12 +123,12 @@ FILESYSTEM
 
 #define MAX_LISTED_FILES	4096
 
-typedef struct fsSearchInfo_s {
-	int		fileSize;
-	qtime_t		timeCreate;
-	qtime_t		timeModify;
+typedef struct fsFileInfo_s {
+	int		size;
+	time_t	ctime;
+    time_t  mtime;
+    char    name[1];
 } fsFileInfo_t;
-
 
 /* bits 0 - 1, enum */
 #define		FS_MODE_APPEND			0x00000000
@@ -177,15 +177,17 @@ typedef struct fsAPI_s {
 	void 	(*FCloseFile)( fileHandle_t f );
 	int 	(*Read)( void *buffer, int len, fileHandle_t f );
 	int 	(*Write)( const void *buffer, int len, fileHandle_t f );
-	int 	(*FOpenFile)( const char *filename, fileHandle_t *f, uint32 mode );
+	int 	(*FOpenFile)( const char *filename, fileHandle_t *f, int mode );
+    void	(*FPrintf)( fileHandle_t f, const char *format, ... );
+    int     (*ReadLine)( fileHandle_t f, char *buffer, int size );
 	int 	(*Tell)( fileHandle_t f );
 	int 	(*RawTell)( fileHandle_t f );
 	int 	(*LoadFile)( const char *path, void **buffer );
-	int 	(*LoadFileEx)( const char *path, void **buffer, uint32 flags );
+	int 	(*LoadFileEx)( const char *path, void **buffer, int flags );
     void    *(*AllocTempMem)( int length );
 	void 	(*FreeFile)( void *buffer );
-	char 	**(*ListFiles)( const char *path, const char *extension, uint32 flags, int *numFiles );
-	void 	(*FreeFileList)( char **list );
+	void 	**(*ListFiles)( const char *path, const char *extension, int flags, int *numFiles );
+	void 	(*FreeList)( void **list );
 } fsAPI_t;
 
 extern	fsAPI_t		fs;

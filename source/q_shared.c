@@ -796,17 +796,16 @@ COM_FilePath
 Returns the path up to, but not including the last /
 ============
 */
-void COM_FilePath( const char *in, char *out, int outSize ) {
+void COM_FilePath( const char *in, char *out, int size ) {
 	char *s;
 
-	Q_strncpyz( out, in, outSize );
-	
-	s = out + strlen( out );
-	
-	while( s != out && *s != '/' )
-		s--;
-
-	*s = 0;
+	Q_strncpyz( out, in, size );
+    s = strrchr( out, '/' );
+    if( s ) {
+        *s = 0;
+    } else {
+        *out = 0;
+    }
 }
 
 

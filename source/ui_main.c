@@ -28,13 +28,12 @@ MAIN MENU
 =======================================================================
 */
 
-#define	MAIN_ITEMS	5
+#define	MAIN_ITEMS	4
 
 static const char names[MAIN_ITEMS][16] = {
-	"Multiplayer",
+	"Servers",
 	"Demos",
 	"Options",
-	"Mods",
 	"Quit"
 };
 
@@ -66,9 +65,6 @@ static int MainMenu_Callback( int id, int msg, int param ) {
 			M_Menu_Options_f();
 			break;
 		case 3:
-			M_Menu_Mods_f();
-			break;
-		case 4:
 			M_Menu_Confirm_f( "Quit game? y/n", MainMenu_QuitAction );
 			break;
 		}

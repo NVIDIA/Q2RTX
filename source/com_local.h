@@ -791,6 +791,9 @@ FILESYSTEM
 ==============================================================
 */
 
+#define FS_Malloc( size )		Z_TagMalloc( size, TAG_FILESYSTEM )
+#define FS_CopyString( string )		Z_TagCopyString( string, TAG_FILESYSTEM )
+
 void	FS_Init( void );
 void	FS_Shutdown( qboolean total );
 qboolean    FS_NeedRestart( void );
@@ -803,11 +806,11 @@ qboolean FS_RenameFile( const char *from, const char *to );
 
 char    *FS_CopyExtraInfo( const char *name, const fsFileInfo_t *info );
 
-int		FS_FOpenFile( const char *filename, fileHandle_t *f, uint32 mode );
+int		FS_FOpenFile( const char *filename, fileHandle_t *f, int mode );
 void	FS_FCloseFile( fileHandle_t hFile );
 
 int		FS_LoadFile( const char *path, void  **buffer );
-int		FS_LoadFileEx( const char *path, void **buffer, uint32 flags );
+int		FS_LoadFileEx( const char *path, void **buffer, int flags );
 void    *FS_AllocTempMem( int length );
 void	FS_FreeFile( void *buffer );
 // a null buffer will just return the file length without loading
@@ -829,8 +832,10 @@ int		FS_GetFileLengthNoCache( fileHandle_t f );
 qboolean FS_WildCmp( const char *filter, const char *string );
 qboolean FS_ExtCmp( const char *extension, const char *string );
 
-char	**FS_ListFiles( const char *path, const char *extension, uint32 flags, int *numFiles );
-void	FS_FreeFileList( char **list );
+void	**FS_ListFiles( const char *path, const char *extension, int flags, int *numFiles );
+void    **FS_CopyList( void **list, int count );
+fsFileInfo_t *FS_CopyInfo( const char *name, int size, time_t ctime, time_t mtime );
+void	FS_FreeList( void **list );
 
 qboolean	FS_LastFileFromPak( void );
 
@@ -999,13 +1004,12 @@ void	Sys_ConsoleOutput( const char *string );
 void	Sys_Error( const char *error, ... ) q_noreturn q_printf( 1, 2 );
 void	Sys_Quit( void );
 
-char	**Sys_ListFiles( const char *path, const char *extension, uint32 flags, int *numFiles );
-void	Sys_FreeFileList( char **list );
+void	**Sys_ListFiles( const char *path, const char *extension, int flags, int length, int *numFiles );
 
 void	Sys_Mkdir( const char *path );
 qboolean Sys_RemoveFile( const char *path );
 qboolean Sys_RenameFile( const char *from, const char *to );
-qboolean Sys_GetFileInfo( const char *path, fsFileInfo_t *info );
+fsFileInfo_t *Sys_GetFileInfo( const char *path, fsFileInfo_t *info );
 
 char	*Sys_GetCurrentDirectory( void );
 

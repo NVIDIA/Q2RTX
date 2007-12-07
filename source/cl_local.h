@@ -594,7 +594,7 @@ void CL_WriteDemoMessage( sizebuf_t *buf );
 void CL_EmitDemoFrame( void ); 
 void CL_Stop_f( void );
 void CL_Record_f( void );
-qboolean CL_GetDemoInfo( const char *path, demoInfo_t *info );
+demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info );
 
 
 //

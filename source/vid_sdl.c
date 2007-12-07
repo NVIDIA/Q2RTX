@@ -93,9 +93,14 @@ success:
 }
 
 void Video_ModeChanged( void ) {
+	SDL_Event	event;
+
     if( !QSDL_SetMode( sdl.surface->flags, sdl.surface->format->BitsPerPixel ) ) {
         Com_Error( ERR_FATAL, "Couldn't change video mode: %s", SDL_GetError() );
     }
+
+	while( SDL_PollEvent( &event ) )
+        ;
 }
 
 static qboolean QSDL_InitVideo( void ) {
@@ -321,6 +326,7 @@ void Video_PumpEvents( void ) {
                 Cvar_Set( "vid_placement", va( "%dx%d", event.resize.w,
                     event.resize.h ) );
                 Video_ModeChanged();
+                return;
             }
             break;
 

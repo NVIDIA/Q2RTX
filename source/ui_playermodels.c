@@ -93,7 +93,7 @@ void PlayerModel_Load( void ) {
 	/*
 	** get a list of directories
 	*/
-	if( !( list = fs.ListFiles( NULL, "players/*/*", FS_SEARCH_BYFILTER|FS_SEARCH_SAVEPATH, &numFiles ) ) ) {
+	if( !( list = ( char ** )fs.ListFiles( NULL, "players/*/*", FS_SEARCH_BYFILTER|FS_SEARCH_SAVEPATH, &numFiles ) ) ) {
 		return;
 	}
 
@@ -119,7 +119,7 @@ void PlayerModel_Load( void ) {
 		}
 	}
 
-	fs.FreeFileList( list );
+	fs.FreeList( ( void ** )list );
 
 	if( !ndirs ) {
 		return;
@@ -146,7 +146,7 @@ void PlayerModel_Load( void ) {
 
 		// verify the existence of at least one pcx skin
 		Q_concat( scratch, sizeof( scratch ), "players/", dirnames[i], NULL );
-		pcxnames = fs.ListFiles( scratch, ".pcx", 0, &npcxfiles );
+		pcxnames = ( char ** )fs.ListFiles( scratch, ".pcx", 0, &npcxfiles );
 		if( !pcxnames ) {
 			continue;
 		}
@@ -161,7 +161,7 @@ void PlayerModel_Load( void ) {
 		}
 
 		if( !nskins ) {
-			fs.FreeFileList( pcxnames );
+			fs.FreeList( ( void ** )pcxnames );
 			continue;
 		}
 
@@ -178,11 +178,11 @@ void PlayerModel_Load( void ) {
 			}
 		}
 
-		fs.FreeFileList( pcxnames );
+		fs.FreeList( ( void ** )pcxnames );
 
 		// load vweap models
 		Q_concat( scratch, sizeof( scratch ), "players/", dirnames[i], "/w_*.md2", NULL );
-		weaponNames = fs.ListFiles( NULL, scratch, FS_SEARCH_BYFILTER, &numWeapons );
+		weaponNames = ( char ** )fs.ListFiles( NULL, scratch, FS_SEARCH_BYFILTER, &numWeapons );
 
 		pmi = &uis.pmi[uis.numPlayerModels++];
 		pmi->numWeapons = 0;
@@ -199,7 +199,7 @@ void PlayerModel_Load( void ) {
 				}
 			}
 
-			fs.FreeFileList( weaponNames );
+			fs.FreeList( ( void ** )weaponNames );
 		}
 
 		// at this point we have a valid player model

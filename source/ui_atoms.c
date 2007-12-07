@@ -243,7 +243,7 @@ UI_FormatColumns
 char *UI_FormatColumns( int numArgs, ... ) {
 	va_list argptr;
 	char *buffer, *p;
-	int i, totalLength;
+	int i, total = 0;
 	char *strings[MAX_COLUMNS];
 	int lengths[MAX_COLUMNS];
 
@@ -251,26 +251,22 @@ char *UI_FormatColumns( int numArgs, ... ) {
 		Com_Error( ERR_FATAL, "UI_FormatColumns: too many columns" );
 	}
 
-	totalLength = 0;
-
 	va_start( argptr, numArgs );
 	for( i = 0; i < numArgs; i++ ) {
 		strings[i] = va_arg( argptr, char * );
 		lengths[i] = strlen( strings[i] ) + 1;
-		totalLength += lengths[i];
+		total += lengths[i];
 	}
 	va_end( argptr );
 
-	buffer = p = UI_Malloc( totalLength + 1 );
+	buffer = p = UI_Malloc( total + 1 );
 	for( i = 0; i < numArgs; i++ ) {
 		memcpy( p, strings[i], lengths[i] );
 		p += lengths[i];
 	}
-
 	*p = 0;
 
 	return buffer;
-
 }
 
 /*

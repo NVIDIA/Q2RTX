@@ -507,21 +507,18 @@ qboolean Sys_RenameFile( const char *from, const char *to ) {
 Sys_GetFileInfo
 ================
 */
-qboolean Sys_GetFileInfo( const char *path, fsFileInfo_t *info ) {
+fsFileInfo_t *Sys_GetFileInfo( const char *path, fsFileInfo_t *info ) {
 	struct stat		st;
-    qtime_t *ctime, *mtime;
 
-	if( stat( path, &st ) ) {
-		return qfalse;
+	if( stat( path, &st ) == -1 ) {
+		return NULL;
 	}
 
-	info->fileSize = st.st_size;
-	ctime = localtime( &st.st_ctime );
-    mtime = localtime( &st.st_mtime );
-	info->timeCreate = *ctime;
-    info->timeModify = *mtime;
+	info->size = st.st_size;
+	info->ctime = st.st_ctime;
+    info->mtime = st.st_mtime;
 
-	return qtrue;
+	return info;
 }
 
 /*
@@ -884,29 +881,23 @@ MISC
 ===============================================================================
 */
 
-static inline void st2fi( struct stat *st, fsFileInfo_t *info ) {
-    qtime_t *ctime = localtime( &st->st_ctime );
-    qtime_t *mtime = localtime( &st->st_mtime );
-
-	info->fileSize = st->st_size;
-	info->timeCreate = *ctime;
-    info->timeModify = *mtime;
-}
-
-
 /*
 =================
 Sys_ListFilteredFiles
 =================
 */
-static void Sys_ListFilteredFiles( char **listedFiles, int *count,
-    const char *path, const char *filter, uint flags, int length, int depth )
+static void Sys_ListFilteredFiles(  void        **listedFiles,
+                                    int         *count,
+                                    const char  *path,
+                                    const char  *filter,
+                                    int         flags,
+                                    int         length,
+                                    int         depth )
 {
 	struct dirent *findInfo;
 	DIR		*findHandle;
     struct  stat st;
 	char	findPath[MAX_OSPATH];
-	fsFileInfo_t	info;
 	char	*name;
 
     if( depth >= 32 ) {
@@ -960,10 +951,10 @@ static void Sys_ListFilteredFiles( char **listedFiles, int *count,
         }
 
 		if( flags & FS_SEARCH_EXTRAINFO ) {
-			st2fi( &st, &info );
-			listedFiles[( *count )++] = FS_CopyExtraInfo( name, &info );
+			listedFiles[( *count )++] = FS_CopyInfo( name,
+                st.st_size, st.st_ctime, st.st_mtime );
 		} else {
-			listedFiles[( *count )++] = Z_CopyString( name );
+			listedFiles[( *count )++] = FS_CopyString( name );
 		}
         if( *count >= MAX_LISTED_FILES ) {
             break;
@@ -980,33 +971,27 @@ static void Sys_ListFilteredFiles( char **listedFiles, int *count,
 Sys_ListFiles
 =================
 */
-char **Sys_ListFiles( const char *path, const char *extension,
-        uint32 flags, int *numFiles )
+void **Sys_ListFiles(   const char  *path,
+                        const char  *extension,
+                        int         flags,
+                        int         length,
+                        int         *numFiles )
 {
 	struct dirent *findInfo;
 	DIR		*findHandle;
 	struct stat st;
 	char	findPath[MAX_OSPATH];
-	char	*listedFiles[MAX_LISTED_FILES];
-	fsFileInfo_t	info;
-	int		count;
-	char	**list;
+	void	*listedFiles[MAX_LISTED_FILES];
+	int		count = 0;
     char    *s;
-	int		i, length;
-
-	count = 0;
 
 	if( numFiles ) {
 		*numFiles = 0;
 	}
 
 	if( flags & FS_SEARCH_BYFILTER ) {
-		length = strlen( path );
-        if( !length ) {
-            return NULL;
-        }
 		Sys_ListFilteredFiles( listedFiles, &count, path,
-            extension, flags, length + 1, 0 );
+            extension, flags, length, 0 );
 	} else {
 		if( ( findHandle = opendir( path ) ) == NULL ) {
 			return NULL;
@@ -1041,15 +1026,15 @@ char **Sys_ListFiles( const char *path, const char *extension,
 			}
             
 			if( flags & FS_SEARCH_SAVEPATH ) {
-				s = findPath;
+				s = findPath + length;
 			} else {
 				s = findInfo->d_name;
 			}
 			if( flags & FS_SEARCH_EXTRAINFO ) {
-				st2fi( &st, &info );
-				listedFiles[count++] = FS_CopyExtraInfo( s, &info );
+				listedFiles[count++] = FS_CopyInfo( s, st.st_size,
+                    st.st_ctime, st.st_mtime );
 			} else {
-				listedFiles[count++] = Z_CopyString( s );
+				listedFiles[count++] = FS_CopyString( s );
 			}
 
 			if( count >= MAX_LISTED_FILES ) {
@@ -1064,39 +1049,11 @@ char **Sys_ListFiles( const char *path, const char *extension,
 		return NULL;
 	}
 
-	qsort( listedFiles, count, sizeof( listedFiles[0] ), SortStrcmp );
-
-	list = Z_Malloc( sizeof( char * ) * ( count + 1 ) );
-	for( i = 0; i < count; i++ ) {
-		list[i] = listedFiles[i];
-	}
-	list[count] = NULL;
-
 	if( numFiles ) {
 		*numFiles = count;
 	}
 
-	return list;
-}
-
-/*
-=================
-Sys_FreeFileList
-=================
-*/
-void Sys_FreeFileList( char **list ) {
-	char **p;
-
-	if( !list ) {
-		Com_Error( ERR_FATAL, "Sys_FreeFileList: NULL" );
-	}
-
-	p = list;
-	while( *p ) {
-		Z_Free( *p++ );
-	}
-
-	Z_Free( list );
+	return FS_CopyList( listedFiles, count );
 }
 
 /*

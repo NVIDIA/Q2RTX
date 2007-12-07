@@ -258,12 +258,12 @@ static inline float Q_fabs( float f ) {
 	 (d)[2]=(a)[2]+(c)*((b)[2]-(a)[2]))
 #define PlaneDiff(v,p)   (DotProduct(v,(p)->normal)-(p)->dist)
 
-#define Vector4Subtract(a,b,c)	(c[0]=a[0]-b[0],c[1]=a[1]-b[1],c[2]=a[2]-b[2],c[3]=a[3]-b[3])
-#define Vector4Add(a,b,c)		(c[0]=a[0]+b[0],c[1]=a[1]+b[1],c[2]=a[2]+b[2],c[3]=a[3]+b[3])
-#define Vector4Copy(a,b)			(b[0]=a[0],b[1]=a[1],b[2]=a[2],b[3]=a[3])
-#define Vector4Clear(a)			(a[0]=a[1]=a[2]=a[3]=0)
-#define Vector4Negate(a,b)		(b[0]=-a[0],b[1]=-a[1],b[2]=-a[2],b[3]=-a[3])
-#define Vector4Set(v, a, b, c, d)	(v[0]=(a),v[1]=(b),v[2]=(c),v[3]=(d))
+#define Vector4Subtract(a,b,c)	((c)[0]=(a)[0]-(b)[0],(c)[1]=(a)[1]-(b)[1],(c)[2]=(a)[2]-(b)[2],(c)[3]=(a)[3]-(b)[3])
+#define Vector4Add(a,b,c)		((c)[0]=(a)[0]+(b)[0],(c)[1]=(a)[1]+(b)[1],(c)[2]=(a)[2]+(b)[2],(c)[3]=(a)[3]+(b)[3])
+#define Vector4Copy(a,b)		((b)[0]=(a)[0],(b)[1]=(a)[1],(b)[2]=(a)[2],(b)[3]=(a)[3])
+#define Vector4Clear(a)			((a)[0]=(a)[1]=(a)[2]=(a)[3]=0)
+#define Vector4Negate(a,b)		((b)[0]=-(a)[0],(b)[1]=-(a)[1],(b)[2]=-(a)[2],(b)[3]=-(a)[3])
+#define Vector4Set(v, a, b, c, d)	((v)[0]=(a),(v)[1]=(b),(v)[2]=(c),(v)[3]=(d))
 
 void ClearBounds (vec3_t mins, vec3_t maxs);
 void AddPointToBounds (const vec3_t v, vec3_t mins, vec3_t maxs);

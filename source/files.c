@@ -41,9 +41,6 @@ QUAKE FILESYSTEM
 #define MAX_FILES_IN_PK2	0x4000
 #define MAX_FILE_HANDLES	8
 
-#define FS_Malloc( size )		Z_TagMalloc( size, TAG_FILESYSTEM )
-#define FS_CopyString( string )		Z_TagCopyString( string, TAG_FILESYSTEM )
-
 // macros for dealing portably with files at OS level
 #ifdef _WIN32
 #define FS_strcmp  Q_strcasecmp
@@ -879,7 +876,7 @@ static char *FS_ExpandLinks( const char *filename ) {
 FS_FOpenFile
 ============
 */
-int FS_FOpenFile( const char *name, fileHandle_t *f, uint32 mode ) {
+int FS_FOpenFile( const char *name, fileHandle_t *f, int mode ) {
 	fsFile_t	*file;
 	fileHandle_t hFile;
 	int			ret = -1;
@@ -1017,7 +1014,7 @@ Filenames are relative to the quake search path
 a null buffer will just return the file length without loading
 ============
 */
-int FS_LoadFileEx( const char *path, void **buffer, uint32 flags ) {
+int FS_LoadFileEx( const char *path, void **buffer, int flags ) {
 	fsFile_t *file;
 	fileHandle_t f;
 	byte	*buf;
@@ -1343,7 +1340,7 @@ static pack_t *FS_LoadPakFile( const char *packfile ) {
 		names += len;
 	}
 
-	FS_DPrintf( "Added pakfile %s, %d files, %d hash table entries\n",
+	FS_DPrintf( "%s: %d files, %d hash table entries\n",
 		packfile, numpackfiles, hashSize );
 
 	return pack;
@@ -1456,7 +1453,7 @@ static pack_t *FS_LoadZipFile( const char *packfile ) {
 		}
 	}
 
-	FS_DPrintf( "Added zipfile '%s', %d files, %d hash table entries\n",
+	FS_DPrintf( "%s: %d files, %d hash table entries\n",
 		packfile, numFiles, hashSize );
 
 	return pack;
@@ -1500,11 +1497,11 @@ static void FS_LoadPackFiles( const char *extension, pack_t *(loadfunc)( const c
 	int				i;
 	searchpath_t	*search;
 	pack_t			*pak;
-	char **			list;
+	void            **list;
 	int				numFiles;
     char            path[MAX_OSPATH];
 
-	list = Sys_ListFiles( fs_gamedir, extension, FS_SEARCH_NOSORT, &numFiles );
+	list = Sys_ListFiles( fs_gamedir, extension, FS_SEARCH_NOSORT, 0, &numFiles );
 	if( !list ) {
 		return;
 	}
@@ -1521,8 +1518,7 @@ static void FS_LoadPackFiles( const char *extension, pack_t *(loadfunc)( const c
 		fs_searchpaths = search;	
 	}
 
-	Sys_FreeFileList( list );
-		
+	FS_FreeList( list );	
 }
 
 /*
@@ -1574,81 +1570,40 @@ static void q_printf( 1, 2 ) FS_AddGameDirectory( const char *fmt, ... ) {
 #endif
 }
 
-
 /*
 =================
-FS_GetModList
+FS_CopyInfo
 =================
 */
-#define MAX_LISTED_MODS		32
-
-static void FS_GetModList( char **list, int *count ) {
-	char path[MAX_OSPATH];
-	FILE *fp;
-	char **dirlist;
-	int numDirs;
-	int i;
-
-	if( !( dirlist = Sys_ListFiles( sys_basedir->string, NULL, FS_SEARCHDIRS_ONLY, &numDirs ) ) ) {
-		return;
-	}
-
-	for( i = 0; i < numDirs; i++ ) {
-		if( !strcmp( dirlist[i], BASEGAME ) ) {
-			continue;
-		}
-
-#ifdef _WIN32
-		Com_sprintf( path, sizeof( path ), "%s/%s/gamex86.dll", sys_basedir->string, dirlist[i] );
-#else
-		Com_sprintf( path, sizeof( path ), "%s/%s/gamei386.so", sys_basedir->string, dirlist[i] );
-#endif
-
-		if( !( fp = fopen( path, "rb" ) ) ) {
-			continue;
-		}
-		fclose( fp );
-
-		Com_sprintf( path, sizeof( path ), "%s/%s/description.txt", sys_basedir->string, dirlist[i] );
-
-		if( ( fp = fopen( path, "r" ) ) != NULL ) {
-			Q_strncpyz( path, va( "%s\n", dirlist[i] ), sizeof( path ) - MAX_QPATH );
-			fgets( path + strlen( path ), MAX_QPATH, fp );
-			fclose( fp );
-			list[*count] = FS_CopyString( path );
-		} else {
-			list[*count] = FS_CopyString( dirlist[i] );
-		}
-		
-		if( (*count)++ == MAX_LISTED_MODS ) {
-			break;
-		}
-	}
-
-	Sys_FreeFileList( dirlist );
-}
-
-/*
-=================
-FS_CopyExtraInfo
-=================
-*/
-char *FS_CopyExtraInfo( const char *name, const fsFileInfo_t *info ) {
-	char	*out;
-	int		length;
+fsFileInfo_t *FS_CopyInfo( const char *name, int size, time_t ctime, time_t mtime ) {
+	fsFileInfo_t	*out;
+	int		        len;
 
 	if( !name ) {
 		return NULL;
 	}
 
-	length = strlen( name ) + 1;
-	
-	out = FS_Malloc( sizeof( *info ) + length );
-	strcpy( out, name );
-
-	memcpy( out + length, info, sizeof( *info ) );
+	len = strlen( name );
+	out = FS_Malloc( sizeof( *out ) + len );
+    out->size = size;
+    out->ctime = ctime;
+    out->mtime = mtime;
+	memcpy( out->name, name, len + 1 );
 
 	return out;
+}
+
+void **FS_CopyList( void **list, int count ) {
+    void **out;
+    int i;
+
+	out = FS_Malloc( sizeof( void * ) * ( count + 1 ) );
+	for( i = 0; i < count; i++ ) {
+		out[i] = list[i];
+	}
+	out[i] = NULL;
+
+    return out;
 }
 
 #if 0
@@ -1757,19 +1712,20 @@ rescan:
 FS_ListFiles
 =================
 */
-char **FS_ListFiles( const char *path, const char *extension,
-        uint32 flags, int *numFiles )
+void **FS_ListFiles( const char *path,
+                     const char *extension,
+                     int        flags,
+                     int        *numFiles )
 {
 	searchpath_t *search;
-	char *listedFiles[MAX_LISTED_FILES];
+	void *listedFiles[MAX_LISTED_FILES];
 	int count, total;
 	char buffer[MAX_OSPATH];
-	char **dirlist;
-	int numFilesInDir;
-	char **list;
-	int i, length;
-	char *name, *filename;
-	fsFileInfo_t	info;
+	void **dirlist;
+	int dircount;
+	void **list;
+	int i, len, pathlen;
+	char *s;
 
 	if( flags & FS_SEARCH_BYFILTER ) {
 		if( !extension ) {
@@ -1779,7 +1735,10 @@ char **FS_ListFiles( const char *path, const char *extension,
 
 	if( !path ) {
 		path = "";
-	}
+        pathlen = 0;
+	} else {
+        pathlen = strlen( path );
+    }
 
 	count = 0;
 
@@ -1787,161 +1746,155 @@ char **FS_ListFiles( const char *path, const char *extension,
 		*numFiles = 0;
 	}
 
-	if( !strcmp( path, "$modlist" ) ) {
-		FS_GetModList( listedFiles, &count );
-	} else {
-		memset( &info, 0, sizeof( info ) );
+    for( search = FS_SearchPath( flags ); search; search = search->next ) {
+        if( ( flags & FS_PATH_MASK ) == FS_PATH_GAME ) {
+            if( fs_searchpaths != fs_base_searchpaths && search == fs_base_searchpaths ) {
+                // consider baseq2 a gamedir if no gamedir loaded
+                break;
+            }
+        }
+        if( search->pack ) {
+            if( ( flags & FS_TYPE_MASK ) == FS_TYPE_REAL ) {
+                // don't search in paks
+                continue;
+            }
 
-		for( search = FS_SearchPath( flags ); search; search = search->next ) {
-			if( ( flags & FS_PATH_MASK ) == FS_PATH_GAME ) {
-				if( fs_searchpaths != fs_base_searchpaths && search == fs_base_searchpaths ) {
-					// consider baseq2 a gamedir if no gamedir loaded
-					break;
-				}
-			}
-			if( search->pack ) {
-				if( ( flags & FS_TYPE_MASK ) == FS_TYPE_REAL ) {
-					// don't search in paks
-					continue;
-				}
+            // TODO: add directory search support for pak files
+            if( ( flags & FS_SEARCHDIRS_MASK ) == FS_SEARCHDIRS_ONLY ) {
+                continue;
+            }
 
-				// TODO: add directory search support for pak files
-				if( ( flags & FS_SEARCHDIRS_MASK ) == FS_SEARCHDIRS_ONLY ) {
-					continue;
-				}
-
-				if( flags & FS_SEARCH_BYFILTER ) {
-				    for( i = 0; i < search->pack->numfiles; i++ ) {
-					    name = search->pack->files[i].name;
-                        
-						// check path
-						filename = name;
-						if( *path ) {
-							length = strlen( path );
-							if( Q_stricmpn( name, path, length ) ) {
-								continue;
-							}
-							filename += length + 1;
-						}
-
-						// check filter
-						if( !FS_WildCmp( extension, filename ) ) {
-							continue;
-						}
-
-						// copy filename
-						if( count == MAX_LISTED_FILES ) {
-							break;
-						}
-
-						if( !( flags & FS_SEARCH_SAVEPATH ) ) {
-							filename = COM_SkipPath( filename );
-						}
-						if( flags & FS_SEARCH_EXTRAINFO ) {
-							info.fileSize = search->pack->files[i].filelen;
-							listedFiles[count++] = FS_CopyExtraInfo( filename, &info );
-						} else {
-							listedFiles[count++] = FS_CopyString( filename );
-						}
+            if( flags & FS_SEARCH_BYFILTER ) {
+                for( i = 0; i < search->pack->numfiles; i++ ) {
+                    s = search->pack->files[i].name;
+                    
+                    // check path
+                    if( pathlen ) {
+                        if( Q_stricmpn( s, path, pathlen ) ) {
+                            continue;
+                        }
+                        s += pathlen + 1;
                     }
-                } else {
-    				for( i = 0; i < search->pack->numfiles; i++ ) {
-	    				name = search->pack->files[i].name;
-                        
-						// check path
-						if( *path ) {
-							COM_FilePath( name, buffer, sizeof( buffer ) );
-							if( Q_stricmp( path, buffer ) ) {
-								continue;
-							}
-						}
 
-						// check extension
-						if( extension && !FS_ExtCmp( extension, name ) ) {
-							continue;
-						}
-						
-						// copy filename
-						if( count == MAX_LISTED_FILES ) {
-							break;
-						}
-						if( !( flags & FS_SEARCH_SAVEPATH ) ) {
-							name = COM_SkipPath( name );
-						}
-						if( flags & FS_SEARCH_EXTRAINFO ) {
-							info.fileSize = search->pack->files[i].filelen;
-							listedFiles[count++] = FS_CopyExtraInfo( name, &info );
-						} else {
-							listedFiles[count++] = FS_CopyString( name );
-						}
-					}
-				}
-			} else {
-				if( ( flags & FS_TYPE_MASK ) == FS_TYPE_PAK ) {
-					// don't search in OS filesystem
-					continue;
-				}
+                    // check filter
+                    if( !FS_WildCmp( extension, s ) ) {
+                        continue;
+                    }
 
-				if( *path ) {
-					Q_concat( buffer, sizeof( buffer ), search->filename, "/", path, NULL );
-				} else {
-				    Q_strncpyz( buffer, search->filename, sizeof( buffer ) );
+                    // copy filename
+                    if( count == MAX_LISTED_FILES ) {
+                        break;
+                    }
+
+                    if( !( flags & FS_SEARCH_SAVEPATH ) ) {
+                        s = COM_SkipPath( s );
+                    }
+                    if( flags & FS_SEARCH_EXTRAINFO ) {
+                        listedFiles[count++] = FS_CopyInfo( s,
+                            search->pack->files[i].filelen, 0, 0 );
+                    } else {
+                        listedFiles[count++] = FS_CopyString( s );
+                    }
                 }
+            } else {
+                for( i = 0; i < search->pack->numfiles; i++ ) {
+                    s = search->pack->files[i].name;
+                    
+                    // check path
+                    if( pathlen && Q_stricmpn( s, path, pathlen ) ) {
+                        continue;
+                    }
 
-				if( flags & FS_SEARCH_BYFILTER ) {
-					dirlist = Sys_ListFiles( buffer, extension, flags|FS_SEARCH_NOSORT, &numFilesInDir );
-				} else {
-					dirlist = Sys_ListFiles( buffer, extension, flags|FS_SEARCH_NOSORT, &numFilesInDir );
-				}
+                    // check extension
+                    if( extension && !FS_ExtCmp( extension, s ) ) {
+                        continue;
+                    }
+                    
+                    // copy filename
+                    if( count == MAX_LISTED_FILES ) {
+                        break;
+                    }
+                    if( !( flags & FS_SEARCH_SAVEPATH ) ) {
+                        s = COM_SkipPath( s );
+                    }
+                    if( flags & FS_SEARCH_EXTRAINFO ) {
+                        listedFiles[count++] = FS_CopyInfo( s,
+                            search->pack->files[i].filelen, 0, 0 );
+                    } else {
+                        listedFiles[count++] = FS_CopyString( s );
+                    }
+                }
+            }
+        } else {
+            if( ( flags & FS_TYPE_MASK ) == FS_TYPE_PAK ) {
+                // don't search in OS filesystem
+                continue;
+            }
 
-				if( !dirlist ) {
-					continue;
-				}
+            len = strlen( search->filename );
 
-				for( i = 0; i < numFilesInDir; i++ ) {
-					if( count == MAX_LISTED_FILES ) {
-						break;
-					}
-					name = dirlist[i];
-					if( ( flags & FS_SEARCH_SAVEPATH ) && !( flags & FS_SEARCH_BYFILTER ) ) {
-						// skip search path
-						name += strlen( search->filename ) + 1;
-					}
-					if( flags & FS_SEARCH_EXTRAINFO ) {
-						listedFiles[count++] = FS_CopyExtraInfo( name, ( fsFileInfo_t * )( dirlist[i] + strlen( dirlist[i] ) + 1 ) );
-					} else {
-						listedFiles[count++] = FS_CopyString( name );
-					}
-				}
-				Sys_FreeFileList( dirlist );
-				
-			}
-			if( count == MAX_LISTED_FILES ) {
-				break;
-			}
-		}
-	}
+            if( pathlen ) {
+                if( len + pathlen + 1 >= MAX_OSPATH ) {
+                    continue;
+                }
+                memcpy( buffer, search->filename, len );
+                buffer[len] = '/';
+                memcpy( buffer + len + 1, path, pathlen + 1 );
+                s = buffer;
+            } else {
+                s = search->filename;
+            }
+
+            if( flags & FS_SEARCH_BYFILTER ) {
+                len += len + pathlen + 1;
+            }
+
+            dirlist = Sys_ListFiles( s, extension,
+                flags|FS_SEARCH_NOSORT, len + 1, &dircount );
+            if( !dirlist ) {
+                continue;
+            }
+
+            if( count + dircount > MAX_LISTED_FILES ) {
+                dircount = MAX_LISTED_FILES - count;
+            }
+            for( i = 0; i < dircount; i++ ) {
+                listedFiles[count++] = dirlist[i];
+            }
+
+            Z_Free( dirlist );
+            
+        }
+        if( count == MAX_LISTED_FILES ) {
+            break;
+        }
+    }
 
 	if( !count ) {
 		return NULL;
 	}
 
-	// sort alphabetically (ignoring FS_SEARCH_NOSORT)
-	qsort( listedFiles, count, sizeof( listedFiles[0] ), SortStrcmp );
+    if( flags & FS_SEARCH_EXTRAINFO ) {
+        // TODO
+        total = count;
+    } else {
+        // sort alphabetically (ignoring FS_SEARCH_NOSORT)
+        qsort( listedFiles, count, sizeof( listedFiles[0] ), SortStrcmp );
 
-	// remove duplicates
-	total = 1;
-	for( i = 1; i < count; i++ ) {
-        // FIXME: use Q_stricmp instead of FS_strcmp here?
-		if( !FS_strcmp( listedFiles[ i - 1 ], listedFiles[i] ) ) {
-			Z_Free( listedFiles[ i - 1 ] );
-			listedFiles[i-1] = NULL;
-		} else {
-			total++;
-		}
-	}
+        // remove duplicates
+        total = 1;
+        for( i = 1; i < count; i++ ) {
+            // FIXME: use Q_stricmp instead of FS_strcmp here?
+            if( !FS_strcmp( listedFiles[ i - 1 ], listedFiles[i] ) ) {
+                Z_Free( listedFiles[ i - 1 ] );
+                listedFiles[i-1] = NULL;
+            } else {
+                total++;
+            }
+        }
+    }
 
-	list = FS_Malloc( sizeof( char * ) * ( total + 1 ) );
+	list = FS_Malloc( sizeof( void * ) * ( total + 1 ) );
 
 	total = 0;
 	for( i = 0; i < count; i++ ) {
@@ -1956,23 +1909,16 @@ char **FS_ListFiles( const char *path, const char *extension,
 	}
 
 	return list;
-
-
 }
 
 /*
 =================
-FS_FreeFileList
+FS_FreeList
 =================
 */
-void FS_FreeFileList( char **list ) {
-	char **p;
+void FS_FreeList( void **list ) {
+	void **p = list;
 
-	if( !list ) {
-		Com_Error( ERR_FATAL, "FS_FreeFileList: NULL" );
-	}
-
-	p = list;
 	while( *p ) {
 		Z_Free( *p++ );
 	}
@@ -2006,7 +1952,7 @@ FS_FDir_f
 ============
 */
 static void FS_FDir_f( void ) {
-	char	**dirnames;
+	void	**list;
 	int		ndirs = 0;
 	int     i;
     char    *filter;
@@ -2022,15 +1968,14 @@ static void FS_FDir_f( void ) {
 	if( Cmd_Argc() > 2 ) {
 		i |= FS_SEARCH_SAVEPATH;
 	}
-    
-	if( ( dirnames = FS_ListFiles( NULL, filter, i, &ndirs ) ) != NULL ) {
+
+	if( ( list = FS_ListFiles( NULL, filter, i, &ndirs ) ) != NULL ) {
 		for( i = 0; i < ndirs; i++ ) {
-			Com_Printf( "%s\n", dirnames[i] );
+			Com_Printf( "%s\n", ( char * )list[i] );
 		}
-		FS_FreeFileList( dirnames );
+		FS_FreeList( list );
 	}
 	Com_Printf( "%i files listed\n", ndirs );
-	
 }
 
 /*
@@ -2039,7 +1984,7 @@ FS_Dir_f
 ============
 */
 static void FS_Dir_f( void ) {
-	char	**dirnames;
+	void	**list;
 	int		ndirs = 0;
 	int     i;
     char    *ext;
@@ -2053,15 +1998,14 @@ static void FS_Dir_f( void ) {
     } else {
         ext = NULL;
     }
-    dirnames = FS_ListFiles( Cmd_Argv( 1 ), ext, 0, &ndirs );
-	if( dirnames ) {
+    list = FS_ListFiles( Cmd_Argv( 1 ), ext, 0, &ndirs );
+	if( list ) {
 		for( i = 0; i < ndirs; i++ ) {
-			Com_Printf( "%s\n", dirnames[i] );
+			Com_Printf( "%s\n", ( char * )list[i] );
 		}
-		FS_FreeFileList( dirnames );
+		FS_FreeList( list );
 	}
 	Com_Printf( "%i files listed\n", ndirs );
-	
 }
 
 /*
@@ -2116,8 +2060,7 @@ static void FS_WhereIs_f( void ) {
                 search->filename, "/", path, NULL );
 			//FS_ConvertToSysPath( fullpath );
             if( Sys_GetFileInfo( fullpath, &info ) ) {
-                Com_Printf( "%s/%s (%d bytes)\n", search->filename, filename,
-                    info.fileSize );
+                Com_Printf( "%s/%s (%d bytes)\n", search->filename, filename, info.size );
                 if( Cmd_Argc() < 3 ) {
                     return;
                 }
@@ -2588,7 +2531,9 @@ void FS_FillAPI( fsAPI_t *api ) {
 	api->Read = FS_Read;
 	api->Write = FS_Write;
 	api->ListFiles = FS_ListFiles;
-	api->FreeFileList = FS_FreeFileList;
+	api->FreeList = FS_FreeList;
+    api->FPrintf = FS_FPrintf;
+    api->ReadLine = FS_ReadLine;
 }
 
 static const cmdreg_t c_fs[] = {

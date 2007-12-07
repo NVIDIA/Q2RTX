@@ -2428,7 +2428,7 @@ static void CL_MeasureStats( void ) {
     if( cls.netchan ) {
         int ack = cls.netchan->incoming_acknowledged;
         int ping = 0;
-        int i, j;
+        int i, j, k = 0;
 
         i = ack - 16 + 1;
         if( i < cl.initialSeq ) {
@@ -2438,12 +2438,11 @@ static void CL_MeasureStats( void ) {
             client_history_t *h = &cl.history[j & CMD_MASK];
             if( h->rcvd > h->sent ) {
 	            ping += h->rcvd - h->sent;
+                k++;
             }
 		}
 
-        if( j != i ) {
-    		cls.ping = ping / ( j - i );
-        }
+    	cls.ping = k ? ping / k : 0;
     }
 
 	cls.measureTime = time;

@@ -1217,7 +1217,7 @@ static void Com_VsnprintfTest_f( void ) {
 const char *Com_FileNameGenerator( const char *path, const char *ext,
         const char *partial, qboolean stripExtension, int state ) {
     static int length, numFiles;
-    static char **list;
+    static void **list;
     static int curpos;
     char *s, *p;
 
@@ -1244,7 +1244,7 @@ const char *Com_FileNameGenerator( const char *path, const char *ext,
 
 finish:
     if( list ) {
-        FS_FreeFileList( list );
+        FS_FreeList( list );
         list = NULL;
     }
     return NULL;
@@ -1253,7 +1253,7 @@ finish:
 const char *Com_FileNameGeneratorByFilter( const char *path, const char *filter,
         const char *partial, qboolean stripExtension, int state ) {
     static int length, numFiles;
-    static char **list;
+    static void **list;
     static int curpos;
     char *s, *p;
 
@@ -1281,7 +1281,7 @@ const char *Com_FileNameGeneratorByFilter( const char *path, const char *filter,
 
 finish:
     if( list ) {
-        FS_FreeFileList( list );
+        FS_FreeList( list );
         list = NULL;
     }
     return NULL;

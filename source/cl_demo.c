@@ -591,39 +591,36 @@ static const char *CL_PlayDemo_g( const char *partial, int state ) {
 CL_GetDemoInfo
 ====================
 */
-qboolean CL_GetDemoInfo( const char *path, demoInfo_t *info ) {
-	fileHandle_t hFile;
-	int c, protocol;
+demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info ) {
+	fileHandle_t f;
+	int c, protocol, len;
 	char *s, *p;
+    int clientNum;
 
-	memset( info, 0, sizeof( *info ) );
-
-	FS_FOpenFile( path, &hFile, FS_MODE_READ );
-	if( !hFile ) {
-		return qfalse;
+	FS_FOpenFile( path, &f, FS_MODE_READ );
+	if( !f ) {
+		return NULL;
 	}
 
-	if( !CL_ReadNextDemoMessage( hFile ) ) {
+	if( !CL_ReadNextDemoMessage( f ) ) {
 		goto fail;
 	}
 
 	if( MSG_ReadByte() != svc_serverdata ) {
 		goto fail;
-	}
+    }
+
+    memset( info, 0, sizeof( *info ) );
 
 	protocol = MSG_ReadLong();
-
-	msg_read.readcount += 5;
-
-	Q_strncpyz( info->gamedir, MSG_ReadString(), sizeof( info->gamedir ) );
-
-	info->clientNum = MSG_ReadShort();
-
-	Q_strncpyz( info->fullLevelName, MSG_ReadString(), sizeof( info->fullLevelName ) );
+    MSG_ReadLong();
+    MSG_ReadByte();
+    MSG_ReadString();
+	clientNum = MSG_ReadShort();
+    MSG_ReadString();
 
 	switch( protocol ) {
 	case PROTOCOL_VERSION_MVD:
-		info->mvd = qtrue;
 		msg_read.readcount += 2;
 		break;
 	case PROTOCOL_VERSION_R1Q2:
@@ -639,7 +636,7 @@ qboolean CL_GetDemoInfo( const char *path, demoInfo_t *info ) {
 	while( 1 ) {
 		c = MSG_ReadByte();
 		if( c == -1 ) {
-			if( !CL_ReadNextDemoMessage( hFile ) ) {
+			if( !CL_ReadNextDemoMessage( f ) ) {
 				break;
 			}
 			continue; // parse new message
@@ -649,26 +646,28 @@ qboolean CL_GetDemoInfo( const char *path, demoInfo_t *info ) {
 		}
 		c = MSG_ReadShort();
 		s = MSG_ReadString();
-		if( c >= CS_PLAYERSKINS && c < CS_PLAYERSKINS + MAX_DEMOINFO_CLIENTS ) {
-			c -= CS_PLAYERSKINS;
-			Q_strncpyz( info->clients[c], s, sizeof( info->clients[0] ) );
-			if( ( p = strchr( info->clients[c], '\\' ) ) != NULL ) {
-				*p = 0;
-			}
+		if( c >= CS_PLAYERSKINS && c < CS_PLAYERSKINS + MAX_CLIENTS ) {
+			if( c - CS_PLAYERSKINS == clientNum ) {
+                p = strchr( s, '\\' );
+                if( p ) {
+                    *p = 0;
+                }
+                Q_strncpyz( info->pov, s, sizeof( info->pov ) );
+            }
 		} else if( c == CS_MODELS + 1 ) {
 			if( strlen( s ) > 9 ) {
-				Q_strncpyz( info->mapname, s + 5, sizeof( info->mapname ) ); // skip "maps/"
-				info->mapname[ strlen( info->mapname ) - 4 ] = 0; // cut off ".bsp"
+				len = Q_strncpyz( info->map, s + 5, sizeof( info->map ) ); // skip "maps/"
+				info->map[ len - 4 ] = 0; // cut off ".bsp"
 			}
 		}
 	}
 
-	FS_FCloseFile( hFile );
-	return qtrue;
+	FS_FCloseFile( f );
+	return info;
 
 fail:
-	FS_FCloseFile( hFile );
-	return qfalse;
+	FS_FCloseFile( f );
+	return NULL;
 
 }
 
