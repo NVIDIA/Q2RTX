@@ -33,7 +33,7 @@ INGAME MENU
 
 static const char *names[] = {
 	"Options",
-	"Multiplayer",
+	"Servers",
 	"Demos",
 	"Disconnect",
 	"Quit",
