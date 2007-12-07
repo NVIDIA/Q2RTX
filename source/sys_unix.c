@@ -507,18 +507,20 @@ qboolean Sys_RenameFile( const char *from, const char *to ) {
 Sys_GetFileInfo
 ================
 */
-fsFileInfo_t *Sys_GetFileInfo( const char *path, fsFileInfo_t *info ) {
+qboolean Sys_GetFileInfo( const char *path, fsFileInfo_t *info ) {
 	struct stat		st;
 
 	if( stat( path, &st ) == -1 ) {
-		return NULL;
+		return qfalse;
 	}
 
-	info->size = st.st_size;
-	info->ctime = st.st_ctime;
-    info->mtime = st.st_mtime;
+	if( info ) {
+		info->size = st.st_size;
+		info->ctime = st.st_ctime;
+		info->mtime = st.st_mtime;
+	}
 
-	return info;
+	return qtrue;
 }
 
 /*

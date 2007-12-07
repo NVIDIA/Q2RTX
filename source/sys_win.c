@@ -623,18 +623,10 @@ MISC
 ===============================================================================
 */
 
-static inline void stime2qtime( qtime_t *q, SYSTEMTIME *s ) {
-	q->tm_sec   = s->wSecond;
-	q->tm_min   = s->wMinute;
-	q->tm_hour  = s->wHour;
-	q->tm_mday  = s->wDay;
-	q->tm_mon   = s->wMonth;
-	q->tm_year  = s->wYear;
-	q->tm_wday  = s->wDayOfWeek;
-	q->tm_yday  = -1;
-	q->tm_isdst = -1;
+static inline time_t Sys_FileTimeToUnixTime( FILETIME *f ) {
+	ULARGE_INTEGER u = *( ULARGE_INTEGER * )f;
+	return ( time_t )( ( u.QuadPart - 116444736000000000U ) / 10000000 );
 }
-
 
 /*
 ================
@@ -693,31 +685,16 @@ Sys_GetFileInfo
 */
 qboolean Sys_GetFileInfo( const char *path, fsFileInfo_t *info ) {
 	WIN32_FILE_ATTRIBUTE_DATA	data;
-	SYSTEMTIME	systemTime;
-	BOOL bSuccess;
 
-	bSuccess = GetFileAttributesExA( path, GetFileExInfoStandard, &data );
-	if( !bSuccess ) {
+	if( !GetFileAttributesExA( path, GetFileExInfoStandard, &data ) ) {
 		return qfalse;
 	}
 
-	if( !info ) {
-		return qtrue;
+	if( info ) {
+		info->size = data.nFileSizeLow;
+		info->ctime = Sys_FileTimeToUnixTime( &data.ftCreationTime );
+		info->mtime = Sys_FileTimeToUnixTime( &data.ftLastWriteTime );
 	}
-
-	info->fileSize = data.nFileSizeLow;
-
-	bSuccess = FileTimeToSystemTime( &data.ftCreationTime, &systemTime );
-	if( !bSuccess ) {
-		return qfalse;
-	}
-	stime2qtime( &info->timeCreate, &systemTime );
-
-	bSuccess = FileTimeToSystemTime( &data.ftLastWriteTime, &systemTime );
-	if( !bSuccess ) {
-		return qfalse;
-	}
-	stime2qtime( &info->timeModify, &systemTime );
 
 	return qtrue;
 }
@@ -898,27 +875,6 @@ void *Sys_GetProcAddress( void *handle, const char *sym ) {
 }
 //=======================================================================
 
-static qboolean Sys_FindInfoToExtraInfo( WIN32_FIND_DATAA *findInfo, fsFileInfo_t *info ) {
-	SYSTEMTIME	systemTime;
-	BOOL	bSuccess;
-
-	info->fileSize = findInfo->nFileSizeLow;
-
-	bSuccess = FileTimeToSystemTime( &findInfo->ftCreationTime, &systemTime );
-	if( !bSuccess ) {
-		return qfalse;
-	}
-	stime2qtime( &info->timeCreate, &systemTime );
-
-	bSuccess = FileTimeToSystemTime( &findInfo->ftLastWriteTime, &systemTime );
-	if( !bSuccess ) {
-		return qfalse;
-	}
-	stime2qtime( &info->timeModify, &systemTime );
-
-	return qtrue;
-}
-
 /*
 =================
 Sys_ListFilteredFiles
@@ -935,7 +891,6 @@ static void Sys_ListFilteredFiles(  void        **listedFiles,
 	HANDLE		findHandle;
 	char	findPath[MAX_OSPATH];
 	char	dirPath[MAX_OSPATH];
-	fsFileInfo_t	info;
 	char	*name;
 
 	if( *count >= MAX_LISTED_FILES ) {
@@ -980,8 +935,9 @@ static void Sys_ListFilteredFiles(  void        **listedFiles,
         FS_ReplaceSeparators( name, '/' );
 
 		if( flags & FS_SEARCH_EXTRAINFO ) {
-			Sys_FindInfoToExtraInfo( &findInfo, &info );
-			listedFiles[( *count )++] = FS_CopyInfo( name, &info );
+			time_t ctime = Sys_FileTimeToUnixTime( &findInfo.ftCreationTime );
+			time_t mtime = Sys_FileTimeToUnixTime( &findInfo.ftLastWriteTime );
+			listedFiles[( *count )++] = FS_CopyInfo( name, findInfo.nFileSizeLow, ctime, mtime );
 		} else {
 			listedFiles[( *count )++] = FS_CopyString( name );
 		}
@@ -1064,8 +1020,9 @@ void **Sys_ListFiles(   const char  *rawPath,
 		    FS_ReplaceSeparators( name, '/' );
 
 			if( flags & FS_SEARCH_EXTRAINFO ) {
-				Sys_FindInfoToExtraInfo( &findInfo, &info );
-				listedFiles[count++] = FS_CopyInfo( name, &info );
+				time_t ctime = Sys_FileTimeToUnixTime( &findInfo.ftCreationTime );
+				time_t mtime = Sys_FileTimeToUnixTime( &findInfo.ftLastWriteTime );
+				listedFiles[count++] = FS_CopyInfo( name, findInfo.nFileSizeLow, ctime, mtime );
 			} else {
 				listedFiles[count++] = FS_CopyString( name );
 			}
@@ -1098,13 +1055,11 @@ char *Sys_GetCurrentDirectory( void ) {
 
 #ifdef USE_ANTICHEAT
 
-typedef BOOL (WINAPI *ISWOW64PROCESS)( HANDLE, PBOOL );
 typedef PVOID (*FNINIT)( VOID );
 
 PRIVATE PVOID anticheatApi;
 PRIVATE FNINIT anticheatInit;
 PRIVATE HMODULE anticheatHandle;
-PRIVATE ISWOW64PROCESS pIsWow64Process;
 
 //
 // r1ch.net anticheat support
@@ -1132,19 +1087,6 @@ qboolean Sys_GetAntiCheatAPI( void ) {
 			"Anticheat requires Windows 2000/XP/2003.\n" );
 		return qfalse;
 	}
-
-    if( !pIsWow64Process ) {
-        pIsWow64Process = ( ISWOW64PROCESS )GetProcAddress(
-            GetModuleHandle( "kernel32" ), "IsWow64Process" );
-    }
-    if( pIsWow64Process ) {
-        pIsWow64Process( GetCurrentProcess(), &bIsWow64 );
-        if( bIsWow64 ) {
-            Com_Printf( S_COLOR_YELLOW
-				"Anticheat is incompatible with 64 bit Windows.\n" );
-            return qfalse;
-        }
-    }
 
 reInit:
 	anticheatHandle = LoadLibrary( "anticheat" );

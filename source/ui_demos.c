@@ -87,6 +87,7 @@ static void Demos_BuildName( const char *path, fsFileInfo_t *info ) {
 }
 
 static void Demos_WriteCache( const char *path ) {
+#if 0
     char buffer[MAX_OSPATH];
     fileHandle_t f;
     int i;
@@ -112,9 +113,19 @@ static void Demos_WriteCache( const char *path ) {
         map = name + strlen( name ) + 1;
         map = map + strlen( map ) + 1;
         pov = map + strlen( map ) + 1;
-        fs.FPrintf( f, "%s %d %d %s %s\n", name, e->mtime, e->size, map, pov );
+        fs.FPrintf( f, "%s %d %d %s %s\n", name, ( int )e->mtime, e->size, map, pov );
+		
+		{
+			char buffer[64];
+			struct tm *tm;
+
+			tm=localtime( &e->mtime );
+			strftime( buffer, sizeof( buffer ), "%Y-%m-%d %H.%M", tm );
+			Com_Printf("%s: %s\n", name,buffer);
+		}
     }
     fs.FCloseFile( f );
+#endif
 }
 
 static void Demos_BuildList( const char *path ) {

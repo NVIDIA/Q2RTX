@@ -472,7 +472,9 @@ static void GL_RenderFrame( refdef_t *fd ) {
 
 	GL_DrawEntities( RF_TRANSLUCENT );
 
-	GL_DrawAlphaFaces();
+	if( !( glr.fd.rdflags & RDF_NOWORLDMODEL ) && gl_drawworld->integer ) {
+		GL_DrawAlphaFaces();
+	}
     
 	/* go back into 2D mode */
     GL_Setup2D();
