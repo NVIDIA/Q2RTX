@@ -44,7 +44,7 @@ typedef struct {
 	qboolean registering;
 	uint32 palette[256]; /* cinematic palette */
     GLuint prog_warp, prog_light;
-    vec_t *vbo;
+    vec_t *vertices;
 } glStatic_t;
 
 typedef struct {
@@ -333,10 +333,9 @@ qhandle_t R_RegisterPic( const char *name );
 #define TESS_MAX_INDICES    ( 3 * TESS_MAX_VERTICES )
 
 typedef struct {
-    vec_t vertices[4*TESS_MAX_VERTICES];
-    byte colors[4*TESS_MAX_VERTICES];
-    tcoord_t tcoords[TESS_MAX_VERTICES];
+    vec_t vertices[VERTEX_SIZE*TESS_MAX_VERTICES];
     int indices[TESS_MAX_INDICES];
+    byte colors[4*TESS_MAX_VERTICES];
     int texnum[MAX_TMUS];
     int numVertices;
     int numIndices;

@@ -709,7 +709,7 @@ static void GL_Register( void ) {
     gl_fullbright = cvar.Get( "r_fullbright", "0", CVAR_CHEAT );
     gl_showerrors = cvar.Get( "gl_showerrors", "1", 0 );
     gl_fragment_program = cvar.Get( "gl_fragment_program", "0", CVAR_LATCHED );
-    gl_vertex_buffer_object = cvar.Get( "gl_vertex_buffer_object", "1", CVAR_LATCHED );
+    gl_vertex_buffer_object = cvar.Get( "gl_vertex_buffer_object", "0", CVAR_LATCHED );
     
 	cmd.AddCommand( "screenshot", GL_ScreenShot_f );
 #if USE_JPEG
@@ -753,8 +753,8 @@ static qboolean GL_SetupExtensions( void ) {
     gl_static.numTextureUnits = 1;
 	if( strstr( extensions, "GL_ARB_multitexture" ) ) {
         qglGetIntegerv( GL_MAX_TEXTURE_UNITS_ARB, &integer );
-        if( integer > 1 ) {
-            Com_Printf( "...enabling GL_ARB_multitexture (%d texture units)\n", integer );
+        if( integer >= 2 ) {
+            Com_Printf( "...enabling GL_ARB_multitexture (%d TMUs)\n", integer );
             GPA( glActiveTextureARB );
             GPA( glClientActiveTextureARB );
             if( integer > MAX_TMUS ) {
@@ -763,7 +763,7 @@ static qboolean GL_SetupExtensions( void ) {
             gl_static.numTextureUnits = integer;
         } else {
             Com_Printf( "...ignoring GL_ARB_multitexture,\n"
-                    "not enough texture units supported (%d)\n", integer );
+                "%d TMU is not enough\n", integer );
         }
 	} else {
 		Com_Printf( "GL_ARB_multitexture not found\n" );
@@ -773,12 +773,11 @@ static qboolean GL_SetupExtensions( void ) {
 	if( strstr( extensions, "GL_EXT_texture_filter_anisotropic" ) ) {
 		qglGetFloatv( GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &value );
 		if( value >= 2 ) {
-			Com_Printf( "...enabling GL_EXT_texture_filter_anisotropic\n"
-				"(max anisotropy is %.1f)\n", value );
+			Com_Printf( "...enabling GL_EXT_texture_filter_anisotropic (%d max)\n", ( int )value );
 			gl_config.maxAnisotropy = value;
 		} else {
             Com_Printf( "...ignoring GL_EXT_texture_filter_anisotropic,\n"
-                    "not enough anisotropy supported (%.1f)\n", value );
+                    "%d anisotropy is not enough\n", ( int )value );
 		}
 	} else {
 		Com_Printf( "GL_EXT_texture_filter_anisotropic not found\n" );
@@ -907,7 +906,7 @@ static qboolean GL_Init( qboolean total ) {
 	}
 
 	if( !GL_SetupExtensions() ) {
-		Com_EPrintf( "Some of the required OpenGL extensions are missing\n" );
+		Com_EPrintf( "Required OpenGL extensions are missing\n" );
 		goto fail;
 	}
 
@@ -945,11 +944,11 @@ static void GL_FreeWorld( void ) {
 
     Bsp_FreeWorld();
 
-    if( !gl_static.vbo && qglDeleteBuffersARB ) {
+    if( !gl_static.vertices && qglDeleteBuffersARB ) {
         qglDeleteBuffersARB( 1, &buf );
     }
     
-    gl_static.vbo = NULL;
+    gl_static.vertices = NULL;
 }
 
 /*

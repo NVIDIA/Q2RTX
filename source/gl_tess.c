@@ -49,8 +49,8 @@ void GL_Flush2D( void ) {
 	qglEnableClientState( GL_COLOR_ARRAY );
 
 	qglColorPointer( 4, GL_UNSIGNED_BYTE, 0, tess.colors );
-	qglTexCoordPointer( 2, GL_FLOAT, 0, tess.tcoords );
-	qglVertexPointer( 3, GL_FLOAT, 16, tess.vertices );
+	qglTexCoordPointer( 2, GL_FLOAT, 16, tess.vertices + 2 );
+	qglVertexPointer( 2, GL_FLOAT, 16, tess.vertices );
 
     if( qglLockArraysEXT ) {
         qglLockArraysEXT( 0, tess.numVertices );
@@ -80,7 +80,6 @@ void GL_StretchPic( float x, float y, float w, float h,
         const byte *color, image_t *image )
 {
     vec_t *dst_vert;
-    tcoord_t *dst_tc;
     uint32 *dst_color;
     
     if( tess.numVertices + 4 > TESS_MAX_VERTICES ||
@@ -92,10 +91,10 @@ void GL_StretchPic( float x, float y, float w, float h,
     tess.texnum[0] = image->texnum;
 
     dst_vert = tess.vertices + tess.numVertices * 4;
-    VectorSet( dst_vert,      x,     y,     0 );
-    VectorSet( dst_vert +  4, x + w, y,     0 );
-    VectorSet( dst_vert +  8, x + w, y + h, 0 );
-    VectorSet( dst_vert + 12, x,     y + h, 0 );
+    Vector4Set( dst_vert,      x,     y,     s1, t1 );
+    Vector4Set( dst_vert +  4, x + w, y,     s2, t1 );
+    Vector4Set( dst_vert +  8, x + w, y + h, s2, t2 );
+    Vector4Set( dst_vert + 12, x,     y + h, s1, t2 );
 
     dst_color = ( uint32 * )tess.colors + tess.numVertices;
     dst_color[0] = *( const uint32 * )color;
@@ -114,12 +113,6 @@ void GL_StretchPic( float x, float y, float w, float h,
 		tess.flags |= 2;
 	}
 
-    dst_tc = tess.tcoords + tess.numVertices;
-    dst_tc[0].st[0] = s1; dst_tc[0].st[1] = t1;
-    dst_tc[1].st[0] = s2; dst_tc[1].st[1] = t1;
-    dst_tc[2].st[0] = s2; dst_tc[2].st[1] = t2;
-    dst_tc[3].st[0] = s1; dst_tc[3].st[1] = t2;
-
     tess.numVertices += 4;
 }
 
@@ -132,7 +125,6 @@ void GL_DrawParticles( void ) {
     int numVertices;
     vec_t *dst_vert;
     uint32 *dst_color;
-    tcoord_t *dst_tc;
 
     if( !glr.fd.num_particles ) {
         return;
@@ -144,8 +136,8 @@ void GL_DrawParticles( void ) {
 
     qglEnableClientState( GL_COLOR_ARRAY );
 	qglColorPointer( 4, GL_UNSIGNED_BYTE, 0, tess.colors );
-	qglTexCoordPointer( 2, GL_FLOAT, 0, tess.tcoords );
-	qglVertexPointer( 3, GL_FLOAT, 16, tess.vertices );
+	qglTexCoordPointer( 2, GL_FLOAT, 20, tess.vertices + 3 );
+	qglVertexPointer( 3, GL_FLOAT, 20, tess.vertices );
 
     numVertices = 0;
     for( i = 0, p = glr.fd.particles; i < glr.fd.num_particles; i++, p++ ) {
@@ -169,21 +161,20 @@ void GL_DrawParticles( void ) {
             numVertices = 0;
         }
         
-        dst_vert = tess.vertices + numVertices * 4;
+        dst_vert = tess.vertices + numVertices * 5;
 //        VectorMA( p->origin, -scale*0.5f, glr.viewaxis[2], dst_vert );
         VectorMA( p->origin, scale*0.5f, glr.viewaxis[1], dst_vert );
-        VectorMA( dst_vert, scale, glr.viewaxis[2], dst_vert + 4 );
-        VectorMA( dst_vert, -scale, glr.viewaxis[1], dst_vert + 8 );
+        VectorMA( dst_vert, scale, glr.viewaxis[2], dst_vert + 5 );
+        VectorMA( dst_vert, -scale, glr.viewaxis[1], dst_vert + 10 );
+
+        dst_vert[3] = 0.0625f; dst_vert[4] = 0.0625f;
+        dst_vert[8] = 1.0625f; dst_vert[9] = 0.0625f;
+        dst_vert[13] = 0.0625f; dst_vert[14] = 1.0625f;
 
         dst_color = ( uint32 * )tess.colors + numVertices;
         dst_color[0] = *( uint32 * )color;
         dst_color[1] = *( uint32 * )color;
         dst_color[2] = *( uint32 * )color;
-
-        dst_tc = tess.tcoords + numVertices;
-        dst_tc[0].st[0] = 0.0625f; dst_tc[0].st[1] = 0.0625f;
-        dst_tc[1].st[0] = 1.0625f; dst_tc[1].st[1] = 0.0625f;
-        dst_tc[2].st[0] = 0.0625f; dst_tc[2].st[1] = 1.0625f;
 
         numVertices += 3;
     }
@@ -199,7 +190,6 @@ void GL_DrawBeams( void ) {
 	color_t color;
     vec_t *dst_vert;
     uint32 *dst_color;
-    tcoord_t *dst_tc;
 	vec_t length;
 	int numVertices;
 	entity_t *ent;
@@ -214,8 +204,8 @@ void GL_DrawBeams( void ) {
 	GL_Bits( GLS_BLEND_ADD | GLS_DEPTHMASK_FALSE );
     qglEnableClientState( GL_COLOR_ARRAY );
 	qglColorPointer( 4, GL_UNSIGNED_BYTE, 0, tess.colors );
-	qglTexCoordPointer( 2, GL_FLOAT, 0, tess.tcoords );
-	qglVertexPointer( 3, GL_FLOAT, 16, tess.vertices );
+	qglTexCoordPointer( 2, GL_FLOAT, 20, tess.vertices + 3 );
+	qglVertexPointer( 3, GL_FLOAT, 20, tess.vertices );
 
 	numVertices = 0;
 	for( i = 0, ent = glr.fd.entities; i < glr.fd.num_entities; i++, ent++ ) {
@@ -245,23 +235,22 @@ void GL_DrawBeams( void ) {
             numVertices = 0;
         }
 
-		dst_vert = tess.vertices + numVertices * 4;
+		dst_vert = tess.vertices + numVertices * 5;
 		VectorAdd( start, d3, dst_vert );
-		VectorSubtract( start, d3, dst_vert + 4 );
-		VectorSubtract( end, d3, dst_vert + 8 );
-		VectorAdd( end, d3, dst_vert + 12 );
+		VectorSubtract( start, d3, dst_vert + 5 );
+		VectorSubtract( end, d3, dst_vert + 10 );
+		VectorAdd( end, d3, dst_vert + 15 );
+
+		dst_vert[3] = 0; dst_vert[4] = 0;
+		dst_vert[8] = 1; dst_vert[9] = 0;
+		dst_vert[13] = 1; dst_vert[14] = length;
+		dst_vert[18] = 0; dst_vert[19] = length;
 	    
 		dst_color = ( uint32 * )tess.colors + numVertices;
 		dst_color[0] = *( uint32 * )color;
 		dst_color[1] = *( uint32 * )color;
 		dst_color[2] = *( uint32 * )color;
 		dst_color[3] = *( uint32 * )color;
-
-		dst_tc = tess.tcoords + numVertices;
-		dst_tc[0].st[0] = 0; dst_tc[0].st[1] = 0;
-		dst_tc[1].st[0] = 1; dst_tc[1].st[1] = 0;
-		dst_tc[2].st[0] = 1; dst_tc[2].st[1] = length;
-		dst_tc[3].st[0] = 0; dst_tc[3].st[1] = length;
 
 		numVertices += 4;
 	}
@@ -271,23 +260,26 @@ void GL_DrawBeams( void ) {
 }
 
 static void GL_BindArrays( void ) {
-    vec_t *vbo = gl_static.vbo;
+    vec_t *ptr;
 
-    if( !vbo && qglBindBufferARB ) {
+    if( gl_static.vertices ) {
+        ptr = tess.vertices;
+    } else {
+        ptr = NULL;
         qglBindBufferARB( GL_ARRAY_BUFFER_ARB, 1 );
     }
 
-	qglVertexPointer( 3, GL_FLOAT, 4*VERTEX_SIZE, vbo + 0 );
-	qglTexCoordPointer( 2, GL_FLOAT, 4*VERTEX_SIZE, vbo + 3 );
+	qglVertexPointer( 3, GL_FLOAT, 4*VERTEX_SIZE, ptr + 0 );
+	qglTexCoordPointer( 2, GL_FLOAT, 4*VERTEX_SIZE, ptr + 3 );
 
     qglClientActiveTextureARB( GL_TEXTURE1_ARB );
 	qglEnableClientState( GL_TEXTURE_COORD_ARRAY );
-	qglTexCoordPointer( 2, GL_FLOAT, 4*VERTEX_SIZE, vbo + 5 );
+	qglTexCoordPointer( 2, GL_FLOAT, 4*VERTEX_SIZE, ptr + 5 );
     qglClientActiveTextureARB( GL_TEXTURE0_ARB );
 }
 
 static void GL_UnbindArrays( void ) {
-    if( qglBindBufferARB ) {
+    if( !gl_static.vertices ) {
         qglBindBufferARB( GL_ARRAY_BUFFER_ARB, 0 );
     }
     qglClientActiveTextureARB( GL_TEXTURE1_ARB );
@@ -315,6 +307,10 @@ static void GL_Flush3D( void ) {
         GL_BindTexture( tess.texnum[1] );
     }
 
+    if( gl_static.vertices && qglLockArraysEXT ) {
+		qglLockArraysEXT( 0, tess.numVertices );
+    }
+
     qglDrawElements( GL_TRIANGLES, tess.numIndices, GL_UNSIGNED_INT, tess.indices );
 
     if( tess.texnum[1] ) {
@@ -328,16 +324,39 @@ static void GL_Flush3D( void ) {
         GL_DisableOutlines();
     }
 
+	if( gl_static.vertices && qglUnlockArraysEXT ) {
+		qglUnlockArraysEXT();
+	}
+
     c.batchesDrawn++;
 
     tess.texnum[0] = tess.texnum[1] = 0;
     tess.numIndices = 0;
+    tess.numVertices = 0;
     tess.flags = 0;
+}
+
+static void GL_CopyVerts( bspSurface_t *surf ) {
+    uint32 *src_vert, *dst_vert;
+    int i, j;
+
+    if( tess.numVertices + surf->numVerts > TESS_MAX_VERTICES ) {
+        GL_Flush3D();
+    }
+
+    src_vert = ( uint32 * )gl_static.vertices + surf->firstVert * VERTEX_SIZE;
+    dst_vert = ( uint32 * )tess.vertices + tess.numVertices * VERTEX_SIZE;
+    for( i = 0; i < surf->numVerts; i++ ) {
+        for( j = 0; j < VERTEX_SIZE; j++ ) {
+            *dst_vert++ = *src_vert++;
+        }
+    }
+    tess.numVertices += surf->numVerts;
 }
 
 static void GL_DrawFace( bspSurface_t *surf ) {
     int *dst_indices;
-    int i, j = surf->firstVert;
+    int i, j;
 
     if( tess.texnum[0] != surf->texnum[0] ||
         tess.texnum[1] != surf->texnum[1] ||
@@ -345,6 +364,13 @@ static void GL_DrawFace( bspSurface_t *surf ) {
         tess.numIndices + surf->numIndices > TESS_MAX_INDICES )
     {
         GL_Flush3D();
+    }
+
+    if( gl_static.vertices ) {
+        j = tess.numVertices;
+        GL_CopyVerts( surf );
+    } else {
+        j = surf->firstVert;
     }
 
     tess.texnum[0] = surf->texnum[0];

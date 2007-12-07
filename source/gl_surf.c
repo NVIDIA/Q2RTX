@@ -397,7 +397,7 @@ void GL_EndPostProcessing( void ) {
 
         vbo = qglMapBufferARB( GL_ARRAY_BUFFER_ARB, GL_READ_WRITE_ARB );
         if( vbo ) {
-            gl_static.vbo = NULL;
+            gl_static.vertices = NULL;
             Com_DPrintf( "%s: %d bytes of vertex data as VBO\n", __func__, size );
         } else {
             Com_EPrintf( "Failed to map VBO data in client memory\n" );
@@ -406,7 +406,7 @@ void GL_EndPostProcessing( void ) {
     }
     
     if( !vbo ) {
-        gl_static.vbo = vbo = sys.HunkAlloc( &r_world.pool, size );
+        gl_static.vertices = vbo = sys.HunkAlloc( &r_world.pool, size );
         Com_DPrintf( "%s: %d bytes of vertex data on hunk\n", __func__, size );
     }
 
@@ -428,7 +428,7 @@ void GL_EndPostProcessing( void ) {
         vbo += surf->numVerts * VERTEX_SIZE;
     }
     
-    if( qglBindBufferARB && !gl_static.vbo ) {
+    if( qglBindBufferARB && !gl_static.vertices ) {
         qglBindBufferARB( GL_ARRAY_BUFFER_ARB, 1 );
         if( !qglUnmapBufferARB( GL_ARRAY_BUFFER_ARB ) ) {
             Com_Error( ERR_DROP, "Failed to unmap VBO data" );
