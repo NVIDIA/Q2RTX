@@ -67,19 +67,38 @@ void Draw_SetClipRect( uint32 flags, const clipRect_t *clip ) {
 	rc.top = 0;
 	if( flags & DRAW_CLIP_LEFT ) {
 		rc.left = clip->left * scale;
+        if( rc.left < 0 ) {
+            rc.left = 0;
+        }
 	}
 	if( flags & DRAW_CLIP_TOP ) {
 		rc.top = clip->top * scale;
+        if( rc.top < 0 ) {
+            rc.top = 0;
+        }
 	}
 
 	rc.right = gl_config.vidWidth;
 	rc.bottom = gl_config.vidHeight;
 	if( flags & DRAW_CLIP_RIGHT ) {
 		rc.right = clip->right * scale;
+        if( rc.right > gl_config.vidWidth ) {
+            rc.right = gl_config.vidWidth;
+        }
 	}
 	if( flags & DRAW_CLIP_BOTTOM ) {
 		rc.bottom = clip->bottom * scale;
+        if( rc.bottom > gl_config.vidHeight ) {
+            rc.bottom = gl_config.vidHeight;
+        }
 	}
+
+    if( rc.right < rc.left ) {
+        rc.right = rc.left;
+    }
+    if( rc.bottom < rc.top ) {
+        rc.bottom = rc.top;
+    }
 
 	qglEnable( GL_SCISSOR_TEST );
 	qglScissor( rc.left, gl_config.vidHeight - rc.bottom,
