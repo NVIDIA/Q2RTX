@@ -91,7 +91,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 	!( (item)->flags & (QMF_GRAYED|QMF_HIDDEN|QMF_DISABLED) ) )
 
 typedef struct menuFrameWork_s {
-	char	*statusbar;
+	char	*banner, *statusbar;
 
 	int		nitems;
 	void	*items[MAXMENUITEMS];
@@ -286,6 +286,7 @@ void		UI_DrawChar( int x, int y, uint32 flags, int ch );
 void		UI_StringDimensions( vrect_t *rc, uint32 flags, const char *string );
 
 void		Menu_Init( menuFrameWork_t *menu );
+void        Menu_Size( menuFrameWork_t *menu );
 void		Menu_Draw( menuFrameWork_t *menu );
 void		Menu_AddItem( menuFrameWork_t *menu, void *item );
 int			Menu_SelectItem( menuFrameWork_t *menu );

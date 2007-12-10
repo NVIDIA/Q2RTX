@@ -46,7 +46,6 @@ static const char names[][16] = {
 typedef struct optionsMenu_s {
 	menuFrameWork_t	menu;
 	menuAction_t	actions[OPTIONS_ITEMS];
-	menuStatic_t	banner;
 } optionsMenu_t;
 
 static optionsMenu_t	m_options;
@@ -85,6 +84,9 @@ static int OptionsMenu_Callback( int id, int msg, int param ) {
 			break;
 		}
 		return QMS_IN;
+    case QM_SIZE:
+        Menu_Size( &m_options.menu );
+        break;
 	default:
 		break;
 	}
@@ -92,37 +94,24 @@ static int OptionsMenu_Callback( int id, int msg, int param ) {
 	return QMS_NOTHANDLED;
 }
 
-
-
 static void OptionsMenu_Init( void ) {
 	int i;
-	int x, y;
-
-	x = uis.width / 2;
-	y = ( uis.height - MENU_SPACING * OPTIONS_ITEMS ) / 2;
 
 	memset( &m_options, 0, sizeof( m_options ) );
 
 	m_options.menu.callback = OptionsMenu_Callback;
+	m_options.menu.banner = "Options";
 
 	for( i = 0; i < OPTIONS_ITEMS; i++ ) {
 		m_options.actions[i].generic.type = MTYPE_ACTION;
 		m_options.actions[i].generic.id = i;
 		m_options.actions[i].generic.name = names[i];
-		m_options.actions[i].generic.x = x;
-		m_options.actions[i].generic.y = y;
 		m_options.actions[i].generic.uiFlags = UI_CENTER;
-		y += MENU_SPACING;
-	
-		Menu_AddItem( &m_options.menu, (void *)&m_options.actions[i] );
+
+		Menu_AddItem( &m_options.menu, &m_options.actions[i] );
 	}
 
 	m_options.actions[0].generic.flags = QMF_HASFOCUS;
-
-	UI_SetupDefaultBanner( &m_options.banner, "Options" );
-
-	Menu_AddItem( &m_options.menu, (void *)&m_options.banner );
-
 }
 
 
@@ -130,5 +119,4 @@ void M_Menu_Options_f( void ) {
 	OptionsMenu_Init();
 	UI_PushMenu( &m_options.menu );
 }
-
 

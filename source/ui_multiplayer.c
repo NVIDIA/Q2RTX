@@ -47,7 +47,6 @@ typedef struct m_joinServer_s {
 	menuList_t		list;
 	menuList_t		info;
 	menuList_t		players;
-	menuStatic_t	banner;
     qboolean        active;
     qboolean        cursorSet;
 
@@ -338,8 +337,6 @@ static void Resize( void ) {
 	m_join.players.columns[0].width = 32;
 	m_join.players.columns[1].width = 32;
 	m_join.players.columns[2].width = w2 - 64;
-    
-	m_join.banner.generic.x = uis.width / 2;
 }
 
 static int JoinServer_MenuCallback( int id, int msg, int param ) {
@@ -438,13 +435,11 @@ void JoinServer_MenuInit( void ) {
 	m_join.players.columns[2].name      = "Name";
 
 	m_join.menu.callback = JoinServer_MenuCallback;
-
-	UI_SetupDefaultBanner( &m_join.banner, "Server Browser" );
+	m_join.menu.banner = "Server Browser";
 
 	Menu_AddItem( &m_join.menu, &m_join.list );
 	Menu_AddItem( &m_join.menu, &m_join.info );
 	Menu_AddItem( &m_join.menu, &m_join.players );
-	Menu_AddItem( &m_join.menu, &m_join.banner );
 }
 
 

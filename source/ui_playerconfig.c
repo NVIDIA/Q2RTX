@@ -42,7 +42,6 @@ typedef struct m_playerConfig_s {
 	menuAction_t	downloadAction;
 	menuAction_t	back;
 	menuAction_t	apply;
-	menuStatic_t	banner;
 
 	refdef_t	refdef;
 	entity_t	entities[2];
@@ -140,8 +139,36 @@ static void PlayerConfig_MenuDraw( menuFrameWork_t *self ) {
 	//	uis.pmi[m_playerConfig.modelBox.curvalue].directory,
 	//	uis.pmi[m_playerConfig.modelBox.curvalue].skindisplaynames[m_playerConfig.skinBox.curvalue] );
 	//ref.DrawStretchPic( m_playerConfig.menu.x - 40, refdef.y, scratch );
+}
 
-	
+static void Resize( void ) {
+	int x = uis.width / 2 - 130;
+	int y = uis.height / 2 - 97;
+
+	m_playerConfig.refdef.x = uis.width / 2;
+	m_playerConfig.refdef.y = 60;
+	m_playerConfig.refdef.width = uis.width / 2;
+	m_playerConfig.refdef.height = uis.height - 122;
+
+	m_playerConfig.refdef.fov_x = 40;
+	m_playerConfig.refdef.fov_y = Com_CalcFov( m_playerConfig.refdef.fov_x,
+		m_playerConfig.refdef.width, m_playerConfig.refdef.height );
+
+
+	m_playerConfig.nameField.generic.x		= x;
+	m_playerConfig.nameField.generic.y		= y;
+	y += 32;
+
+	m_playerConfig.modelBox.generic.x	= x;
+	m_playerConfig.modelBox.generic.y	= y;
+    y += 16;
+
+	m_playerConfig.skinBox.generic.x	= x;
+	m_playerConfig.skinBox.generic.y	= y;
+    y += 16;
+
+	m_playerConfig.handBox.generic.x	= x;
+	m_playerConfig.handBox.generic.y	= y;
 }
 
 static int PlayerConfig_MenuCallback( int id, int msg, int param ) {
@@ -164,6 +191,9 @@ static int PlayerConfig_MenuCallback( int id, int msg, int param ) {
 	case QM_DESTROY:
 		ApplyChanges();
 		break;
+    case QM_SIZE:
+        Resize();
+        break;
 	default:
 		break;
 	}
@@ -179,7 +209,6 @@ qboolean PlayerConfig_MenuInit( void ) {
 	int currentdirectoryindex = 0;
 	int currentskinindex = 0;
 	char *p;
-	int x, y;
 	vec3_t origin = { 80.0f, 5.0f, 0.0f };
 	vec3_t angles = { 0.0f, 260.0f, 0.0f };
 	
@@ -217,15 +246,6 @@ qboolean PlayerConfig_MenuInit( void ) {
 		}
 	}
 
-	m_playerConfig.refdef.x = uis.width / 2;
-	m_playerConfig.refdef.y = 60;
-	m_playerConfig.refdef.width = uis.width / 2;
-	m_playerConfig.refdef.height = uis.height - 122;
-
-	m_playerConfig.refdef.fov_x = 40;
-	m_playerConfig.refdef.fov_y = Com_CalcFov( m_playerConfig.refdef.fov_x,
-		m_playerConfig.refdef.width, m_playerConfig.refdef.height );
-
 	m_playerConfig.entities[0].flags = RF_FULLBRIGHT;
 	VectorCopy( angles, m_playerConfig.entities[0].angles );
 	VectorCopy( origin, m_playerConfig.entities[0].origin );
@@ -246,49 +266,35 @@ qboolean PlayerConfig_MenuInit( void ) {
 	m_playerConfig.oldTime = m_playerConfig.time;
 	PlayerConfig_RunFrame();
 
-	x = uis.width / 2 - 130;
-	y = uis.height / 2 - 97;
-
 	m_playerConfig.menu.draw = PlayerConfig_MenuDraw;
 	m_playerConfig.menu.callback = PlayerConfig_MenuCallback;
 
 	m_playerConfig.nameField.generic.type = MTYPE_FIELD;
 	m_playerConfig.nameField.generic.flags = QMF_HASFOCUS;
 	m_playerConfig.nameField.generic.name = "name";
-	m_playerConfig.nameField.generic.x		= x;
-	m_playerConfig.nameField.generic.y		= y;
 	IF_InitText( &m_playerConfig.nameField.field, 16, 16,
 		cvar.VariableString( "name" ) );
-	y += 32;
 
 	m_playerConfig.modelBox.generic.type = MTYPE_SPINCONTROL;
 	m_playerConfig.modelBox.generic.id = ID_MODEL;
 	m_playerConfig.modelBox.generic.name = "model";
-	m_playerConfig.modelBox.generic.x	= x;
-	m_playerConfig.modelBox.generic.y	= y;
 	m_playerConfig.modelBox.curvalue = currentdirectoryindex;
 	m_playerConfig.modelBox.itemnames = ( const char ** )m_playerConfig.pmnames;
-	y += 16;
 
 	m_playerConfig.skinBox.generic.type = MTYPE_SPINCONTROL;
 	m_playerConfig.skinBox.generic.id = ID_SKIN;
 	m_playerConfig.skinBox.generic.name = "skin";
-	m_playerConfig.skinBox.generic.x	= x;
-	m_playerConfig.skinBox.generic.y	= y;
 	m_playerConfig.skinBox.curvalue = currentskinindex;
 	m_playerConfig.skinBox.itemnames = ( const char ** )
 		uis.pmi[currentdirectoryindex].skindisplaynames;
-	y += 16;
 
 	m_playerConfig.handBox.generic.type = MTYPE_SPINCONTROL;
 	m_playerConfig.handBox.generic.name = "handedness";
-	m_playerConfig.handBox.generic.x	= x;
-	m_playerConfig.handBox.generic.y	= y;
 	m_playerConfig.handBox.curvalue = cvar.VariableInteger( "hand" );
 	clamp( m_playerConfig.handBox.curvalue, 0, 2 );
 	m_playerConfig.handBox.itemnames = handedness;
 
-	UI_SetupDefaultBanner( &m_playerConfig.banner, "Player Setup" );
+	m_playerConfig.menu.banner = "Player Setup";
 
 	Menu_AddItem( &m_playerConfig.menu, &m_playerConfig.nameField );
 	Menu_AddItem( &m_playerConfig.menu, &m_playerConfig.modelBox );
@@ -297,7 +303,6 @@ qboolean PlayerConfig_MenuInit( void ) {
 	}
 	Menu_AddItem( &m_playerConfig.menu, &m_playerConfig.handBox );
 	//Menu_AddItem( &m_playerConfig.menu, &m_playerConfig.downloadAction );
-	Menu_AddItem( &m_playerConfig.menu, &m_playerConfig.banner );
 
 	ReloadMedia();
 

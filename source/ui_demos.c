@@ -49,7 +49,6 @@ typedef struct {
 typedef struct m_demos_s {
 	menuFrameWork_t	menu;
 	menuList_t		list;
-	menuStatic_t	banner;
 	int			    numDirs;
     uint8           hash[16];
 } m_demos_t;
@@ -386,8 +385,6 @@ static void Demos_Size( void ) {
 	m_demos.list.columns[1].width = 40;
 	m_demos.list.columns[2].width = 60;
 	m_demos.list.columns[3].width = w;
-
-	m_demos.banner.generic.x = uis.width / 2;
 }
 
 static int sizecmp( const void *p1, const void *p2 ) {
@@ -470,6 +467,7 @@ static void Demos_MenuInit( void ) {
 
 	Demos_BuildList( uis.m_demos_browse );
 
+	m_demos.menu.banner = "Demo Browser";
 	m_demos.menu.callback = Demos_MenuCallback;
 
 	m_demos.list.generic.type	= MTYPE_LIST;
@@ -488,10 +486,7 @@ static void Demos_MenuInit( void ) {
 	m_demos.list.columns[3].name    = "POV";
 	m_demos.list.columns[3].uiFlags = UI_CENTER;
 
-	UI_SetupDefaultBanner( &m_demos.banner, "Demo Browser" );
-
 	Menu_AddItem( &m_demos.menu, &m_demos.list );
-	Menu_AddItem( &m_demos.menu, &m_demos.banner );
 }
 
 void M_Menu_Demos_f( void ) {

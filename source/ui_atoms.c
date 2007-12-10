@@ -306,20 +306,6 @@ char *UI_CopyString( const char *in ) {
 
 /*
 =================
-UI_SetupDefaultBanner
-=================
-*/
-void UI_SetupDefaultBanner( menuStatic_t *banner, const char *name ) {
-	banner->generic.type = MTYPE_STATIC;
-	banner->generic.name = name;
-	banner->generic.uiFlags = UI_CENTER|UI_ALTCOLOR;
-
-	banner->generic.x = uis.width / 2;
-	banner->generic.y = 0;;
-}
-
-/*
-=================
 UI_CursorInRect
 =================
 */

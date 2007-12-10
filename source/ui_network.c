@@ -35,7 +35,6 @@ typedef struct m_network_s {
 	menuField_t	maxpackets;
 	menuField_t	maxfps;
 	menuSpinControl_t	async;
-	menuStatic_t	banner;
 } m_network_t;
 
 static m_network_t	m_network;
@@ -138,6 +137,9 @@ static int NetworkMenu_Callback( int id, int msg, int param ) {
     case QM_DESTROY:
         ApplyChanges();
         break;
+    case QM_SIZE:
+        Menu_Size( &m_network.menu );
+        break;
 	default:
 		break;
 	}
@@ -147,74 +149,51 @@ static int NetworkMenu_Callback( int id, int msg, int param ) {
 }
 
 static void Network_MenuInit( void ) {
-	int x, y;
-
 	memset( &m_network, 0, sizeof( m_network ) );
 
 	m_network.menu.callback = NetworkMenu_Callback;
 
-	x = uis.width / 2;
-	y = 64;
-
 	m_network.connection.generic.type			= MTYPE_SPINCONTROL;
 	m_network.connection.generic.flags			= QMF_HASFOCUS;
 	m_network.connection.generic.id				= ID_CONNECTION;
-	m_network.connection.generic.x				= x;
-	m_network.connection.generic.y				= y;
 	m_network.connection.generic.name			= "connection type";
 	m_network.connection.curvalue				= numConnectionValues;
 	m_network.connection.itemnames				= connectionNames;
-	y += MLIST_SPACING;
 
 	m_network.rate.generic.type = MTYPE_FIELD;
 	m_network.rate.generic.flags = QMF_NUMBERSONLY;
 	m_network.rate.generic.name = "rate";
-	m_network.rate.generic.x	= x;
-	m_network.rate.generic.y	= y;
 	m_network.rate.generic.id	= ID_PARAMS;
-	y += MLIST_SPACING;
 
 	m_network.maxpackets.generic.type = MTYPE_FIELD;
 	m_network.maxpackets.generic.flags = QMF_NUMBERSONLY;
 	m_network.maxpackets.generic.name = "maxpackets";
-	m_network.maxpackets.generic.x		= x;
-	m_network.maxpackets.generic.y		= y;
 	m_network.maxpackets.generic.id	= ID_PARAMS;
-	y += MLIST_SPACING;
 
 	m_network.maxfps.generic.type = MTYPE_FIELD;
 	m_network.maxfps.generic.flags = QMF_NUMBERSONLY;
 	m_network.maxfps.generic.name = "maxfps";
-	m_network.maxfps.generic.x		= x;
-	m_network.maxfps.generic.y		= y;
 	m_network.maxfps.generic.id	= ID_PARAMS;
-	y += MLIST_SPACING;
 
 	m_network.async.generic.type			= MTYPE_SPINCONTROL;
-	m_network.async.generic.x				= x;
-	m_network.async.generic.y				= y;
 	m_network.async.generic.name			= "async physics";
 	m_network.async.curvalue				= cvar.VariableInteger( "cl_async" ) ? 1 : 0;
 	m_network.async.itemnames				= yesnoNames;
-	y += MLIST_SPACING;
 
-	UI_SetupDefaultBanner( &m_network.banner, "Network" );
+	m_network.menu.banner = "Network";
 
 	SetInitialConnectionParams();
 	SetConnectionType();
 
-	Menu_AddItem( &m_network.menu, (void *)&m_network.connection );
-	Menu_AddItem( &m_network.menu, (void *)&m_network.rate );
-	Menu_AddItem( &m_network.menu, (void *)&m_network.maxpackets );
-	Menu_AddItem( &m_network.menu, (void *)&m_network.maxfps );
-	Menu_AddItem( &m_network.menu, (void *)&m_network.async );
-	Menu_AddItem( &m_network.menu, (void *)&m_network.banner );
+	Menu_AddItem( &m_network.menu, &m_network.connection );
+	Menu_AddItem( &m_network.menu, &m_network.rate );
+	Menu_AddItem( &m_network.menu, &m_network.maxpackets );
+	Menu_AddItem( &m_network.menu, &m_network.maxfps );
+	Menu_AddItem( &m_network.menu, &m_network.async );
 }
-
 
 void M_Menu_Network_f( void ) {
 	Network_MenuInit();
 	UI_PushMenu( &m_network.menu );
 }
-
 

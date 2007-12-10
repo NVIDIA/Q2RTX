@@ -124,7 +124,6 @@ typedef struct videoMenu_s {
 	menuSpinControl_t  	fullscreen;
 	menuAction_t	defaults;
 	menuAction_t	apply;
-	menuStatic_t	banner;
 
 	menuSlider_t	picmip;
 #ifdef _WIN32
@@ -562,7 +561,7 @@ static void VideoMenu_Init( void ) {
 	m_video.apply.generic.y    = yyy;
 	yyy += MENU_SPACING;
 
-	UI_SetupDefaultBanner( &m_video.banner, "Video" );
+	m_video.menu.banner = "Video";
 
 	if( !Q_stricmp( cvar.VariableString( "vid_ref" ), "soft" ) ) {
 		m_video.driver.curvalue = REF_SOFT;
@@ -602,23 +601,10 @@ static void VideoMenu_Init( void ) {
 	Menu_AddItem( &m_video.menu, (void *)&m_video.sird );
 	Menu_AddItem( &m_video.menu, (void *)&m_video.defaults );
 	Menu_AddItem( &m_video.menu, (void *)&m_video.apply );
-	Menu_AddItem( &m_video.menu, (void *)&m_video.banner );
 }
-
-
-
 
 void M_Menu_Video_f( void ) {
 	VideoMenu_Init();
 	UI_PushMenu( &m_video.menu );
 }
-
-
-
-
-
-
-
-
-
 

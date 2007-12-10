@@ -32,7 +32,6 @@ ADDRESS BOOK MENU
 typedef struct m_addressBook_s {
 	menuFrameWork_t	menu;
 	menuField_t		fields[MAX_LOCAL_SERVERS];
-	menuStatic_t	banner;
 } m_addressBook_t;
 
 static m_addressBook_t	m_addressBook;
@@ -82,11 +81,7 @@ static void AddressBook_MenuInit( void ) {
 		Menu_AddItem( &m_addressBook.menu, &m_addressBook.fields[i] );
 	}
 
-	UI_SetupDefaultBanner( &m_addressBook.banner, "Address Book" );
-
-	Menu_AddItem( &m_addressBook.menu, &m_addressBook.banner );
-
-	
+    m_addressBook.menu.banner = "Address Book";
 }
 
 void M_Menu_AddressBook_f( void ) {

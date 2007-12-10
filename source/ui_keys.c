@@ -71,7 +71,6 @@ static const int numWeapBinds = sizeof( weapbinds ) / sizeof( weapbinds[0] );
 typedef struct keysMenu_s {
 	menuFrameWork_t	menu;
 	menuKeybind_t	actions[MAX_KEYBINDS];
-	menuStatic_t	banner;
 	const char		*binds[MAX_KEYBINDS];
 	int				current;
 	int				total;
@@ -146,6 +145,9 @@ static int KeysMenu_Callback( int id, int msg, int param ) {
 			}
 		}
 		break;
+    case QM_SIZE:
+        Menu_Size( &m_keys.menu );
+        break;
 	default:
 		break;
 	}
@@ -153,16 +155,14 @@ static int KeysMenu_Callback( int id, int msg, int param ) {
 	return QMS_NOTHANDLED;
 }
 
-static void KeysMenu_Init( const char **names, int total, const char *banner ) {
+static void KeysMenu_Init( const char **names, int total, char *banner ) {
 	menuKeybind_t *k;
-	int i, x, y;
-
-	x = uis.width / 2;
-	y = ( uis.height - MENU_SPACING * total ) / 2;
+	int i;
 
 	memset( &m_keys, 0, sizeof( m_keys ) );
 
 	m_keys.menu.callback = KeysMenu_Callback;
+    m_keys.menu.banner = banner;
 	m_keys.total = total;
 
 	for( i = 0, k = m_keys.actions; i < total; i++, k++ ) {
@@ -170,15 +170,11 @@ static void KeysMenu_Init( const char **names, int total, const char *banner ) {
 		k->generic.type = MTYPE_KEYBIND;
 		k->generic.id = i;
 		k->generic.name = names[1];
-		k->generic.x = x;
-		k->generic.y = y;
 		k->generic.uiFlags = UI_CENTER;
-		
+
+		Menu_AddItem( &m_keys.menu, &m_keys.actions[i] );
+
 		names += 2;
-
-		y += MENU_SPACING;
-
-		Menu_AddItem( &m_keys.menu, ( void * )&m_keys.actions[i] );
 	}
 
 	KeysMenu_Update();
@@ -186,11 +182,6 @@ static void KeysMenu_Init( const char **names, int total, const char *banner ) {
 	m_keys.menu.statusbar = "Press Enter to change, Backspace to clear";
 
 	m_keys.actions[0].generic.flags = QMF_HASFOCUS;
-
-	UI_SetupDefaultBanner( &m_keys.banner, banner );
-
-	Menu_AddItem( &m_keys.menu, ( void * )&m_keys.banner );
-
 }
 
 

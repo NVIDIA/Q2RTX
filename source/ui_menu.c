@@ -1072,20 +1072,36 @@ void Menu_Init( menuFrameWork_t *menu ) {
     }
 }
 
+void Menu_Size( menuFrameWork_t *menu ) {
+	menuCommon_t *item;
+	int x = uis.width / 2;
+	int y = ( uis.height - MENU_SPACING * menu->nitems ) / 2;
+	int i;
+
+	for( i = 0; i < menu->nitems; i++ ) {
+		item = menu->items[i];
+		if( item->flags & QMF_HIDDEN ) {
+			continue;
+		}
+        item->x = x;
+        item->y = y;
+		y += MENU_SPACING;
+    }
+}
+
+
 menuCommon_t *Menu_ItemAtCursor( menuFrameWork_t *m ) {
 	menuCommon_t *item;
 	int i;
 
-	for( i=0 ; i<m->nitems ; i++ ) {
-		item = (menuCommon_t *)m->items[i];
-
+	for( i = 0; i < m->nitems; i++ ) {
+		item = m->items[i];
 		if( item->flags & QMF_HASFOCUS ) {
 			return item;
 		}
 	}
 
 	return NULL;
-
 }
 
 void Menu_SetFocus( menuCommon_t *focus ) {
@@ -1168,10 +1184,6 @@ int Menu_AdjustCursor( menuFrameWork_t *m, int dir ) {
 	return QMS_MOVE;
 }
 
-
-
-
-
 /*
 =================
 Menu_Draw
@@ -1180,6 +1192,13 @@ Menu_Draw
 void Menu_Draw( menuFrameWork_t *menu ) {
 	void *item;
 	int i;
+
+//
+// draw banner
+//
+	if( menu->banner ) {
+		UI_DrawString( uis.width / 2, 0, NULL, UI_CENTER|UI_ALTCOLOR, menu->banner );
+	}
 
 //
 // draw contents
