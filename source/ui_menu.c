@@ -1074,10 +1074,22 @@ void Menu_Init( menuFrameWork_t *menu ) {
 
 void Menu_Size( menuFrameWork_t *menu ) {
 	menuCommon_t *item;
-	int x = uis.width / 2;
-	int y = ( uis.height - MENU_SPACING * menu->nitems ) / 2;
-	int i;
+    int x, y;
+	int i, count;
 
+    // count visible items
+	for( i = 0, count = 0; i < menu->nitems; i++ ) {
+		item = menu->items[i];
+		if( item->flags & QMF_HIDDEN ) {
+			continue;
+		}
+        count++;
+    }
+
+	x = uis.width / 2;
+	y = ( uis.height - MENU_SPACING * count ) / 2;
+
+    // align items
 	for( i = 0; i < menu->nitems; i++ ) {
 		item = menu->items[i];
 		if( item->flags & QMF_HIDDEN ) {

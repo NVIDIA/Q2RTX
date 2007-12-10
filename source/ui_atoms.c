@@ -766,6 +766,8 @@ UI_Shutdown
 void UI_Shutdown( void ) {
 	const uicmd_t *uicmd;
 
+    UI_ForceMenuOff();
+
 	ui_background->changed = NULL;
     ui_scale->changed = NULL;
 
