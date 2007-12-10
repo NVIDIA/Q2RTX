@@ -73,7 +73,7 @@ static void AddressBook_MenuInit( void ) {
 
 		m_addressBook.fields[i].generic.type	= MTYPE_FIELD;
 		m_addressBook.fields[i].generic.name	= NULL;
-		m_addressBook.fields[i].generic.x		= ( uis.width - 30 * SMALLCHAR_WIDTH ) / 2 - RCOLUMN_OFFSET;
+		m_addressBook.fields[i].generic.x		= ( uis.width - 30 * CHAR_WIDTH ) / 2 - RCOLUMN_OFFSET;
 		m_addressBook.fields[i].generic.y		= y;
 		y += MENU_SPACING;
 

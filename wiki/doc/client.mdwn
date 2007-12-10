@@ -259,10 +259,11 @@ lightmaps.
 Enables `GL_ARB_fragment_program` extension, if supported by video drivers.
 Currently this extension is used for warping liquid surfaces only.
 
-- `set gl_vertex_buffer_object 1` (boolean)  
+- `set gl_vertex_buffer_object 0` (boolean)  
 Enables `GL_ARB_vertex_buffer_object` extension, if supported by video drivers.
-This extensions allows uploading static vertex data into faster video
-card memory and speeds up rendering of world surfaces.
+This extension allows uploading vertex data at map load time into the special
+static memory area. Depending on your OpenGL implementation, this may
+speed up rendering.
 
 Misc
 ----------

@@ -27,21 +27,6 @@ static color_t colorGray = { 127, 127, 127, 255 };
     (x)->generic.parent->callback( (x)->generic.id, y, z )
 
 /*
-=================
-Common_DoEnter
-=================
-*/
-static int Common_DoEnter( menuCommon_t *item ) {
-	int ret;
-
-	if( ( ret = item->parent->callback( item->id, QM_ACTIVATE, 0 ) ) != QMS_NOTHANDLED ) {
-		return ret;
-	}
-
-	return QMS_SILENT;
-}
-
-/*
 ===================================================================
 
 ACTION CONTROL
@@ -80,8 +65,6 @@ static void Action_Draw( menuAction_t *a ) {
 
 	UI_DrawString( a->generic.x, a->generic.y, NULL,
 		flags, a->generic.name );
-
-	
 }
 
 /*
@@ -168,7 +151,7 @@ static void Static_Draw( menuStatic_t *s ) {
 /*
 ===================================================================
 
-STATIC CONTROL
+KEYBIND CONTROL
 
 ===================================================================
 */
@@ -195,7 +178,7 @@ static void Keybind_Init( menuKeybind_t *k ) {
 	k->generic.rect.y = k->generic.y;
 
 	k->generic.rect.width += ( RCOLUMN_OFFSET - LCOLUMN_OFFSET ) +
-		Q_DrawStrlen( k->binding ) * SMALLCHAR_WIDTH;
+		Q_DrawStrlen( k->binding ) * CHAR_WIDTH;
 }
 
 /*
@@ -262,11 +245,11 @@ static void Field_Init( menuField_t *f ) {
 			f->generic.uiFlags | UI_RIGHT, f->generic.name );
 	} else {
 		f->generic.rect.width = 0;
-		f->generic.rect.height = SMALLCHAR_HEIGHT;
+		f->generic.rect.height = CHAR_HEIGHT;
 	}
 	
 	f->generic.rect.width += RCOLUMN_OFFSET +
-		f->field.visibleChars * SMALLCHAR_WIDTH;
+		f->field.visibleChars * CHAR_WIDTH;
 
 }
 
@@ -285,7 +268,7 @@ static void Field_Draw( menuField_t *f ) {
 	}
 
 	ref.DrawFillEx( f->generic.x + RCOLUMN_OFFSET, f->generic.y,
-		f->field.visibleChars * SMALLCHAR_WIDTH, SMALLCHAR_HEIGHT, colorField );
+		f->field.visibleChars * CHAR_WIDTH, CHAR_HEIGHT, colorField );
 
 	flags = f->generic.uiFlags;
 	if( f->generic.flags & QMF_HASFOCUS ) {
@@ -367,7 +350,7 @@ void SpinControl_Init( menuSpinControl_t *s ) {
 	}
 
 	s->generic.rect.width += ( RCOLUMN_OFFSET - LCOLUMN_OFFSET ) +
-		maxLength * SMALLCHAR_WIDTH;
+		maxLength * CHAR_WIDTH;
 
 }
 
@@ -444,14 +427,24 @@ LIST CONTROL
 MenuList_ValidatePrestep
 =================
 */
-void MenuList_ValidatePrestep( menuList_t *l ) {
-	if( l->numItems <= l->maxItems || l->prestep < 0 ) {
-		l->prestep = 0;
-		return;
-	}
-	
+static void MenuList_ValidatePrestep( menuList_t *l ) {
 	if( l->prestep > l->numItems - l->maxItems ) {
 		l->prestep = l->numItems - l->maxItems;
+	}
+	if( l->prestep < 0 ) {
+		l->prestep = 0;
+	}
+}
+
+static void MenuList_AdjustPrestep( menuList_t *l ) {
+	if( l->numItems > l->maxItems  ) {
+		if( l->prestep > l->curvalue ) {
+			l->prestep = l->curvalue;
+		} else if( l->prestep < l->curvalue - l->maxItems + 1 ) {
+			l->prestep = l->curvalue - l->maxItems + 1;
+		}
+	} else {
+		l->prestep = 0;
 	}
 }
 
@@ -461,21 +454,11 @@ MenuList_Init
 =================
 */
 void MenuList_Init( menuList_t *l ) {
-	const char	**n;
 	int		height;
 	int		i;
 
-	l->numItems = 0;
-	if( l->itemnames ) {
-		n = l->itemnames;
-		while( *n ) {
-			l->numItems++;
-			n++;
-		}
-	}
-
 	height = l->generic.height;
-	if( l->drawNames ) {
+	if( !( l->mlFlags & MLF_HIDE_HEADER ) ) {
 		height -= MLIST_SPACING;
 	}
 
@@ -493,8 +476,15 @@ void MenuList_Init( menuList_t *l ) {
 		l->generic.rect.width += l->columns[i].width;
 	}
 
+//	if( !( l->mlFlags & MLF_HIDE_SCROLLBAR ) ) {
+//		rc->width += MLIST_SCROLLBAR_WIDTH;
+//	}
+
 	l->generic.rect.height = l->generic.height;
 
+    if( l->sortdir ) {
+    	UI_CALLBACK( l, QM_SORT, l->sortcol );
+    }
 }
 
 /*
@@ -505,35 +495,36 @@ MenuList_SetValue
 void MenuList_SetValue( menuList_t *l, int value ) {
 	clamp( value, 0, l->numItems - 1 );
 
-	l->curvalue = value;
+    if( value != l->curvalue ) {
+    	l->curvalue = value;
+	    UI_CALLBACK( l, QM_CHANGE, value );
+    }
 
-	// set prestep accordingly
-	if( l->numItems > l->maxItems  ) {
-		if( l->prestep > l->curvalue ) {
-			l->prestep = l->curvalue;
-		} else if( l->prestep < l->curvalue - l->maxItems + 1 ) {
-			l->prestep = l->curvalue - l->maxItems + 1;
-		}
-	} else {
-		l->prestep = 0;
-	}
+	MenuList_AdjustPrestep( l );
+}
 
-	UI_CALLBACK( l, QM_CHANGE, l->curvalue );
+static int MenuList_SetColumn( menuList_t *l, int value ) {
+    if( l->sortcol == value ) {
+        l->sortdir = -l->sortdir;
+    } else {
+        l->sortcol = value;
+        l->sortdir = 1;
+    }
+    return UI_CALLBACK( l, QM_SORT, value );
 }
 
 
 /*
 =================
-MenuList_HitTest
+MenuList_Click
 =================
 */
-int MenuList_HitTest( menuList_t *l, int mx, int my ) {
-	const char **n;
-	int i;
+static int MenuList_Click( menuList_t *l ) {
+	int i, j;
 	vrect_t rect;
 
-	if( !l->itemnames ) {
-		return -1;
+	if( !l->items ) {
+		return QMS_SILENT;
 	}
 
 	rect.x = l->generic.rect.x;
@@ -541,22 +532,36 @@ int MenuList_HitTest( menuList_t *l, int mx, int my ) {
 	rect.width = l->generic.rect.width;
 	rect.height = MLIST_SPACING;
 
-	if( l->drawNames ) {
+    // click on header
+	if( !( l->mlFlags & MLF_HIDE_HEADER ) ) {
+		if( l->sortdir && UI_CursorInRect( &rect ) ) {
+            for( j = 0; j < l->numcolumns; j++ ) {
+                rect.width = l->columns[j].width;
+                if( UI_CursorInRect( &rect ) ) {
+                    return MenuList_SetColumn( l, j );
+                }
+                rect.x += rect.width;
+            }
+	        return QMS_SILENT;
+        }
 		rect.y += MLIST_SPACING;
 	}
 
-	n = l->itemnames + l->prestep;
-	for( i = 0; i < l->maxItems && *n; i++ ) {
-		if( UI_CursorInRect( &rect, mx, my ) ) {
-			return n - l->itemnames;
+    // click on item
+	j = min( l->numItems, l->prestep + l->maxItems );
+	for( i = l->prestep; i < j; i++ ) {
+		if( UI_CursorInRect( &rect ) ) {
+            if( l->curvalue == i && uis.realtime - l->clickTime < DOUBLE_CLICK_DELAY ) {
+                return UI_CALLBACK( l, QM_ACTIVATE, i );
+            }
+            l->clickTime = uis.realtime;
+            l->curvalue = i;
+            return UI_CALLBACK( l, QM_CHANGE, i );
 		}
-		
 		rect.y += MLIST_SPACING;
-		n++;
-	
 	}
 
-	return -1;
+	return QMS_SILENT;
 }
 
 /*
@@ -567,13 +572,19 @@ MenuList_Key
 static int MenuList_Key( menuList_t *l, int key ) {
 	int i;
 
-	if( !l->itemnames ) {
+	if( !l->items ) {
 		return QMS_NOTHANDLED;
 	}
 
-	if( key > 32 && key < 127 ) {
-		const char **n;
+    if( keys.IsDown( K_CTRL ) && key >= '1' && key <= '9' ) {
+        int col = key - '0' - 1;
+        if( l->sortdir && col < l->numcolumns ) {
+            return MenuList_SetColumn( l, col );
+        }
+		return QMS_NOTHANDLED;
+    }
 
+	if( key > 32 && key < 127 ) {
         if( uis.realtime > l->scratchTime + 1300 ) {
             l->scratchCount = 0;
             l->scratchTime = uis.realtime;
@@ -588,21 +599,18 @@ static int MenuList_Key( menuList_t *l, int key ) {
 
         //l->scratchTime = uis.realtime;
 
-        if( !Q_stricmpn( l->itemnames[l->curvalue],
+        if( !Q_stricmpn( UI_GetColumn( ( char * )l->items[l->curvalue] + l->extrasize, l->sortcol ),
             l->scratch, l->scratchCount ) )
         {
             return QMS_NOTHANDLED;
         }
 
-		i = 0;
-		n = l->itemnames;
-		while( *n ) {
-			if( !Q_stricmpn( *n, l->scratch, l->scratchCount ) ) {
+		for( i = 0; i < l->numItems; i++ ) {
+			if( !Q_stricmpn( UI_GetColumn( ( char * )l->items[i] + l->extrasize, l->sortcol ), l->scratch, l->scratchCount ) ) {
 				MenuList_SetValue( l, i );
 				return QMS_SILENT;
 			}
 			i++;
-			n++;
 		}
 
 		return QMS_NOTHANDLED;
@@ -611,16 +619,28 @@ static int MenuList_Key( menuList_t *l, int key ) {
     l->scratchCount = 0;
 
 	switch( key ) {
+    case K_LEFTARROW:
+        if( l->sortdir ) {
+            if( l->sortcol > 0 ) {
+               return MenuList_SetColumn( l, l->sortcol - 1 );
+            }
+            return MenuList_SetColumn( l, l->numcolumns - 1 );
+        }
+        break;
+    case K_RIGHTARROW:
+        if( l->sortdir ) {
+            if( l->sortcol < l->numcolumns - 1 ) {
+                return MenuList_SetColumn( l, l->sortcol + 1 );
+            }
+            return MenuList_SetColumn( l, 0 );
+        }
+        break;
 	case K_UPARROW:
 	case K_KP_UPARROW:
 		if( l->curvalue > 0 ) {
 			l->curvalue--;
 			UI_CALLBACK( l, QM_CHANGE, l->curvalue );
-
-			// scroll contents up
-			if( l->prestep > l->curvalue ) {
-				l->prestep = l->curvalue;
-			}
+	        MenuList_AdjustPrestep( l );
 			return QMS_MOVE;
 		}
 		return QMS_BEEP;
@@ -630,11 +650,7 @@ static int MenuList_Key( menuList_t *l, int key ) {
 		if( l->curvalue < l->numItems - 1 ) {
 			l->curvalue++;
 			UI_CALLBACK( l, QM_CHANGE, l->curvalue );
-
-			// scroll contents down
-			if( l->prestep < l->curvalue - l->maxItems + 1 ) {
-				l->prestep = l->curvalue - l->maxItems + 1;
-			}
+	        MenuList_AdjustPrestep( l );
 			return QMS_MOVE;
 		}
 		return QMS_BEEP;
@@ -686,24 +702,9 @@ static int MenuList_Key( menuList_t *l, int key ) {
 		return QMS_SILENT;
 
 	case K_MOUSE1:
-		i = MenuList_HitTest( l, uis.mouseCoords[0], uis.mouseCoords[1] );
-		if( i != -1 ) {
-			if( l->curvalue == i && uis.realtime - l->clickTime < DOUBLE_CLICK_DELAY ) {
-				return UI_CALLBACK( l, QM_ACTIVATE, i );
-			}
-			l->clickTime = uis.realtime;
-			l->curvalue = i;
-			UI_CALLBACK( l, QM_CHANGE, i );
-		}
-		return QMS_SILENT;
     case K_MOUSE2:
-    case K_MOUSE3:
-		i = MenuList_HitTest( l, uis.mouseCoords[0], uis.mouseCoords[1] );
-        if( i != -1 ) {
-			l->curvalue = i;
-			UI_CALLBACK( l, QM_CHANGE, i );
-        }
-        return QMS_SILENT;
+    //case K_MOUSE3:
+		return MenuList_Click( l );
 	}
 
 	return QMS_NOTHANDLED;
@@ -711,19 +712,10 @@ static int MenuList_Key( menuList_t *l, int key ) {
 
 /*
 =================
-MenuList_MouseMove
+MenuList_DrawString
 =================
 */
-int MenuList_MouseMove( menuList_t *l ) {
-	return QMS_NOTHANDLED;
-}
-
-/*
-=================
-MenuList_DrawcolumnString
-=================
-*/
-static void MenuList_DrawcolumnString( int x, int y, uint32 flags,
+static void MenuList_DrawString( int x, int y, uint32 flags,
 									   menuListColumn_t *column,
 									   const char *string )
 {
@@ -743,7 +735,7 @@ static void MenuList_DrawcolumnString( int x, int y, uint32 flags,
 	}
 
 	ref.SetClipRect( DRAW_CLIP_RIGHT|DRAW_CLIP_LEFT, &rc );
-	UI_DrawString( x + 1, y + 1, NULL, column->uiFlags | flags, string );
+	UI_DrawString( x, y + 1, NULL, column->uiFlags | flags, string );
     if( uis.glconfig.renderer == GL_RENDERER_SOFTWARE ) {
         ref.SetClipRect( DRAW_CLIP_MASK, &uis.clipRect );
     } else {
@@ -759,16 +751,15 @@ MenuList_Draw
 =================
 */
 static void MenuList_Draw( menuList_t *l ) {
-	const char **n;
+	char *s;
 	int x, y, xx, yy;
-	int i, j;
+	int i, j, k;
 	int width, height;
-	const char *s;
 	vrect_t rect;
 	float pageFrac, prestepFrac;
 	int barHeight;
 
-	if( !l->itemnames ) {
+	if( !l->items ) {
 		return;
 	}
 
@@ -778,16 +769,14 @@ static void MenuList_Draw( menuList_t *l ) {
 	height = l->generic.rect.height;
 
 	// draw header
-	if( l->drawNames ) {
+	if( !( l->mlFlags & MLF_HIDE_HEADER ) ) {
 		xx = x;
 		for( j = 0; j < l->numcolumns; j++ ) {
-			ref.DrawFillEx( xx, y,
-				l->columns[j].width - 1,
-				MLIST_SPACING - 1,
-				colorField );
+			ref.DrawFillEx( xx, y, l->columns[j].width - 1,
+                MLIST_SPACING - 1, colorField );
 
 			if( l->columns[j].name ) {
-				MenuList_DrawcolumnString( xx, y, UI_ALTCOLOR,
+				MenuList_DrawString( xx, y, l->sortcol == j && l->sortdir ? 0 : UI_ALTCOLOR,
 					&l->columns[j], l->columns[j].name );
 			}
 			xx += l->columns[j].width;
@@ -832,311 +821,52 @@ static void MenuList_Draw( menuList_t *l ) {
 
 	xx = x;
 	for( j = 0; j < l->numcolumns; j++ ) {
-		ref.DrawFillEx( xx, y,
-			l->columns[j].width - 1,
-			height,
-			colorField );
+		ref.DrawFillEx( xx, y, l->columns[j].width - 1,
+			height, colorField );
 		
 		xx += l->columns[j].width;
 	}
 
 	yy = y;
-	n = l->itemnames + l->prestep;
-	for( i = 0; i < l->maxItems && *n; i++ ) {
+	k = min( l->numItems, l->prestep + l->maxItems );
+	for( i = l->prestep; i < k; i++ ) {
 		// draw selection
-		if( !( l->generic.flags & QMF_DISABLED ) && ( n - l->itemnames == l->curvalue ) ) {
+		if( !( l->generic.flags & QMF_DISABLED ) && i == l->curvalue ) {
 			ref.DrawFillEx( x, yy, width - 1, MLIST_SPACING, colorField );
 		}
 
 		// draw contents
-		s = *n;
+		s = ( char * )l->items[i] + l->extrasize;
 		xx = x;
 		for( j = 0; j < l->numcolumns; j++ ) {
 			if( !*s ) {
 				break;
 			}
 			
-			MenuList_DrawcolumnString( xx, yy, 0, &l->columns[j], s );
+			MenuList_DrawString( xx, yy, 0, &l->columns[j], s );
 			
 			xx += l->columns[j].width;
 			s += strlen( s ) + 1;
 		}
 
 		yy += MLIST_SPACING;
-		n++;
 	}
 }
 
-/*
-=================
-MenuList_GetSize
-=================
-*/
-void MenuList_GetSize( vrect_t *rc, menuList_t *l ) {
-	rc->x = l->generic.rect.x;
-	rc->y = l->generic.rect.y;
-	rc->width = l->generic.rect.width;
-	rc->height = l->generic.rect.height;
+void MenuList_Sort( menuList_t *l, int offset, int (*cmpfunc)( const void *, const void * ) ) {
+    void *n = l->items[l->curvalue];
+    int i;
 
-	// TODO: move this somewhere else...
-	if( !( l->mlFlags & MLF_HIDE_SCROLLBAR ) ) {
-		rc->width += MLIST_SCROLLBAR_WIDTH;
-	}
-}
+    qsort( l->items + offset, l->numItems - offset, sizeof( char * ), cmpfunc );
 
-/*
-===================================================================
+    for( i = 0; i < l->numItems; i++ ) {
+        if( l->items[i] == n ) {
+            l->curvalue = i;
+            break;
+        }
+    }
 
-IMAGE LIST CONTROL
-
-===================================================================
-*/
-
-/*
-=================
-ImageList_NumItems
-=================
-*/
-static int ImageList_NumItems( const imageList_t *l ) {
-	const qhandle_t *n;
-	int  numItems;
-
-	numItems = 0;
-	n = l->images;
-	while( *n ) {
-		numItems++;
-		n++;
-	}
-
-	return numItems;
-}
-
-/*
-=================
-ImageList_HitTest
-=================
-*/
-int ImageList_HitTest( imageList_t *l, int mx, int my ) {
-	int i, j;
-	int xx, yy;
-	const qhandle_t *pics;
-	vrect_t rect;
-
-	pics = l->images + l->prestep;
-
-
-	xx = l->generic.x;
-	yy = l->generic.y;
-
-	if( l->name ) {
-		yy += SMALLCHAR_HEIGHT * 2;
-	}
-
-	for( i=0 ; i<l->numRows && *pics ; i++ ) {
-		xx = l->generic.x;
-		for( j=0 ; j<l->numcolumns && *pics ; j++ ) {
-			rect.x = xx;
-			rect.y = yy;
-			rect.width = l->imageWidth;
-			rect.height = l->imageHeight;
-			if( UI_CursorInRect( &rect, mx, my ) ) {
-				return l->prestep + i * l->numcolumns + j;
-			}
-			
-			xx += SMALLCHAR_WIDTH * 2 + l->imageWidth;
-			pics++;
-		
-		}
-		yy += SMALLCHAR_HEIGHT * 2 + l->imageHeight;
-		
-	}
-
-	return -1;
-}
-
-/*
-=================
-ImageList_UpdatePos
-=================
-*/
-static void ImageList_UpdatePos( imageList_t *l ) {
-	l->prestep = l->curvalue - l->curvalue % ( l->numRows * l->numcolumns );
-	UI_CALLBACK( l, QM_CHANGE, l->curvalue );
-}
-
-/*
-=================
-ImageList_Key
-=================
-*/
-static int ImageList_Key( imageList_t *l, int key ) {
-	int i;
-	int screenPos, numItems;
-
-	if( key > 32 && key < 127 ) {
-		const char **n;
-
-		i = 0;
-		n = l->names;
-		while( *n ) {
-			if( Q_tolower( *n[0] ) == Q_tolower( key ) ) {
-				l->curvalue = i;
-				ImageList_UpdatePos( l );
-				return QMS_SILENT;
-			}
-			i++;
-			n++;
-		}
-
-		return QMS_NOTHANDLED;
-	}
-
-	screenPos = l->curvalue % ( l->numRows * l->numcolumns );
-	numItems = ImageList_NumItems( l );
-
-	switch( key ) {
-	case K_UPARROW:
-	case K_KP_UPARROW:
-		if( screenPos >= l->numcolumns ) {
-			l->curvalue -= l->numcolumns;
-			ImageList_UpdatePos( l );
-			return QMS_MOVE;
-		}
-		return QMS_BEEP;
-	case K_DOWNARROW:
-	case K_KP_DOWNARROW:
-		if( screenPos < l->numRows * ( l->numcolumns - 1 ) && l->curvalue + l->numcolumns < numItems ) {
-			l->curvalue += l->numcolumns;
-			ImageList_UpdatePos( l );
-			return QMS_MOVE;
-		}
-		return QMS_BEEP;
-	case K_LEFTARROW:
-	case K_KP_LEFTARROW:
-		if( screenPos % l->numcolumns > 0 ) {
-			l->curvalue--;
-			ImageList_UpdatePos( l );
-			return QMS_MOVE;
-		}
-		if( l->curvalue >= l->numRows * l->numcolumns ) {
-			l->curvalue -= l->numRows * ( l->numcolumns - 1 ) + 1;
-			ImageList_UpdatePos( l );
-			return QMS_MOVE;
-		}
-		return QMS_BEEP;
-	case K_RIGHTARROW:
-	case K_KP_RIGHTARROW:
-		if( screenPos % l->numcolumns < l->numcolumns - 1 && l->curvalue < numItems - 1 ) {
-			l->curvalue++;
-			ImageList_UpdatePos( l );
-			return QMS_MOVE;
-		}
-		if( l->curvalue - l->curvalue % ( l->numRows * l->numcolumns ) < numItems - numItems % ( l->numRows * l->numcolumns ) ) {
-			l->curvalue += l->numRows * ( l->numcolumns - 1 ) + 1;
-			if( l->curvalue > numItems - 1 ) {
-				l->curvalue = ( numItems - 1 ) - ( numItems - 1 ) % l->numcolumns;
-			}
-			ImageList_UpdatePos( l );
-			return QMS_MOVE;
-		}
-		return QMS_BEEP;
-	case K_HOME:
-	case K_KP_HOME:
-		l->prestep = 0;
-		return QMS_SILENT;
-	case K_END:
-	case K_KP_END:
-		l->prestep = ImageList_NumItems( l ) - l->numRows * l->numcolumns;
-		return QMS_SILENT;
-	case K_MWHEELUP:
-	case K_PGUP:
-	case K_KP_PGUP:
-		if( l->prestep > 0 ) {
-			l->prestep -= l->numRows * l->numcolumns;
-		}
-		return QMS_SILENT;
-	case K_MWHEELDOWN:
-	case K_PGDN:
-	case K_KP_PGDN:
-		if( l->prestep < ImageList_NumItems( l ) - l->numRows * l->numcolumns ) {
-			l->prestep += l->numRows * l->numcolumns;
-		}
-		return QMS_SILENT;
-	case K_MOUSE1:
-		i = ImageList_HitTest( l, uis.mouseCoords[0], uis.mouseCoords[1] );
-		if( i != -1 ) {
-			if( l->curvalue == i && uis.realtime - l->clickTime < DOUBLE_CLICK_DELAY ) {
-				return UI_CALLBACK( l, QM_ACTIVATE, i );
-			}
-			l->clickTime = uis.realtime;
-			l->curvalue = i;
-			ImageList_UpdatePos( l );
-		}
-		return QMS_SILENT;
-	}
-
-	return QMS_NOTHANDLED;
-}
-
-/*
-=================
-ImageList_Draw
-=================
-*/
-static void ImageList_Draw( imageList_t *l ) {
-#if 0
-	int i, j;
-	int xx, yy;
-	const char **n;
-	const qhandle_t *pics;
-	color_t color = { 15, 128, 235, 255 };
-
-	pics = l->images + l->prestep;
-	n = l->names  + l->prestep;
-
-	xx = l->generic.x;
-	yy = l->generic.y;
-
-	if( l->name ) {
-		UI_DrawString( xx + ( l->imageWidth + SMALLCHAR_WIDTH * 2 ) * l->numcolumns / 2, yy, colorGreen, UI_CENTER, l->name );
-		yy += SMALLCHAR_HEIGHT * 2;
-	}
-
-	for( i=0 ; i<l->numRows && *pics ; i++ ) {
-		xx = l->generic.x;
-		for( j=0 ; j<l->numcolumns && *pics ; j++ ) {
-			if( i * l->numcolumns + j == l->curvalue - l->prestep ) {
-				
-				color[3] = 255;
-		
-				UIS_DrawStretchPicByName( xx - 6, yy - 6, l->imageWidth + 12, l->imageHeight + 12, "frame" );
-			}
-
-			ref.DrawStretchPic( xx, yy, l->imageWidth, l->imageHeight, *pics );
-
-			if( *n ) {
-				UI_DrawString( xx + l->imageWidth / 2, yy + l->imageHeight, NULL, UI_CENTER, *n );
-			}
-			xx += SMALLCHAR_WIDTH * 2 + l->imageWidth;
-			pics++;
-			n++;
-		}
-		yy += SMALLCHAR_HEIGHT * 2 + l->imageHeight;
-		
-	}
-#endif
-}
-
-/*
-=================
-ImageList_GetSize
-=================
-*/
-void ImageList_GetSize( vrect_t *rc, imageList_t *l ) {
-	rc->x = l->generic.x;
-	rc->y = l->generic.y;
-	rc->width = l->numcolumns * ( l->imageWidth + SMALLCHAR_WIDTH * 2 );
-	rc->height = l->numRows * ( l->imageHeight + SMALLCHAR_HEIGHT * 2 );
+	MenuList_AdjustPrestep( l );
 }
 
 /*
@@ -1150,10 +880,19 @@ SLIDER CONTROL
 #define SLIDER_RANGE 10
 
 static void Slider_Init( menuSlider_t *s ) {
+	int len = strlen( s->generic.name ) * CHAR_WIDTH;
+
+	s->generic.rect.x = s->generic.x + LCOLUMN_OFFSET - len;
+	s->generic.rect.y = s->generic.y;
+
+	s->generic.rect.width = 32 + len + ( SLIDER_RANGE + 2 ) * CHAR_WIDTH;
+	s->generic.rect.height = CHAR_HEIGHT;
+
 	if( s->curvalue > s->maxvalue )
 		s->curvalue = s->maxvalue;
 	else if( s->curvalue < s->minvalue )
 		s->curvalue = s->minvalue;
+
 }
 
 static int Slider_Key( menuSlider_t *s, int key ) {
@@ -1215,9 +954,9 @@ static void Slider_Draw( menuSlider_t *s ) {
 	UI_DrawChar( s->generic.x + RCOLUMN_OFFSET, s->generic.y, flags | UI_LEFT, 128 );
 
 	for( i = 0 ; i < SLIDER_RANGE ; i++ )
-		UI_DrawChar( RCOLUMN_OFFSET + s->generic.x + i * SMALLCHAR_WIDTH + SMALLCHAR_WIDTH, s->generic.y, flags | UI_LEFT, 129 );
+		UI_DrawChar( RCOLUMN_OFFSET + s->generic.x + i * CHAR_WIDTH + CHAR_WIDTH, s->generic.y, flags | UI_LEFT, 129 );
 
-	UI_DrawChar( RCOLUMN_OFFSET + s->generic.x + i * SMALLCHAR_WIDTH + SMALLCHAR_WIDTH, s->generic.y, flags | UI_LEFT, 130 );
+	UI_DrawChar( RCOLUMN_OFFSET + s->generic.x + i * CHAR_WIDTH + CHAR_WIDTH, s->generic.y, flags | UI_LEFT, 130 );
 
     if( s->maxvalue <= s->minvalue ) {
         pos = 0;
@@ -1227,24 +966,8 @@ static void Slider_Draw( menuSlider_t *s ) {
     	clamp( pos, 0, 1 );
     }
 
-	UI_DrawChar( SMALLCHAR_WIDTH + RCOLUMN_OFFSET + s->generic.x + ( SLIDER_RANGE - 1 ) * SMALLCHAR_WIDTH * pos, s->generic.y, flags | UI_LEFT, 131 );
+	UI_DrawChar( CHAR_WIDTH + RCOLUMN_OFFSET + s->generic.x + ( SLIDER_RANGE - 1 ) * CHAR_WIDTH * pos, s->generic.y, flags | UI_LEFT, 131 );
 }
-
-/*
-=================
-Slider_GetSize
-=================
-*/
-static void Slider_GetSize( vrect_t *rc, menuSlider_t *s ) {
-	int len = strlen( s->generic.name ) * SMALLCHAR_WIDTH;
-
-	rc->x = s->generic.x + LCOLUMN_OFFSET - len;
-	rc->y = s->generic.y;
-
-	rc->width = 32 + len + ( SLIDER_RANGE + 2 ) * SMALLCHAR_WIDTH;
-	rc->height = SMALLCHAR_HEIGHT;
-}
-
 
 /*
 ===================================================================
@@ -1253,6 +976,16 @@ MISC
 
 ===================================================================
 */
+
+/*
+=================
+Separator_Init
+=================
+*/
+static void Separator_Init( menuSeparator_t *s ) {
+	s->generic.rect.x = s->generic.rect.y = 999999;
+	s->generic.rect.width = s->generic.rect.height = -999999;
+}
 
 /*
 =================
@@ -1266,54 +999,77 @@ static void Separator_Draw( menuSeparator_t *s ) {
 
 /*
 =================
+Common_DoEnter
+=================
+*/
+static int Common_DoEnter( menuCommon_t *item ) {
+	int ret;
+
+	if( ( ret = item->parent->callback( item->id, QM_ACTIVATE, 0 ) ) != QMS_NOTHANDLED ) {
+		return ret;
+	}
+
+	return QMS_SILENT;
+}
+
+
+/*
+=================
 Menu_AddItem
 =================
 */
 void Menu_AddItem( menuFrameWork_t *menu, void *item ) {
 	if( menu->nitems >= MAXMENUITEMS ) {
+        Com_Error( ERR_FATAL, "Menu_AddItem: too many items" );
 		return;
 	}
 
 	menu->items[menu->nitems++] = item;
 	((menuCommon_t *)item)->parent = menu;
+}
 
-	switch( ((menuCommon_t *)item)->type ) {
-	case MTYPE_FIELD:
-		Field_Init( (menuField_t *)item );
-		break;
-	case MTYPE_SLIDER:
-		Slider_Init( (menuSlider_t *)item );
-		break;
-	case MTYPE_LIST:
-		MenuList_Init( (menuList_t *)item );
-		break;
-	case MTYPE_SPINCONTROL:
-		SpinControl_Init( (menuSpinControl_t *)item );
-		break;
-	case MTYPE_ACTION:
-		Action_Init( (menuAction_t *)item );
-		break;
-	case MTYPE_SEPARATOR:
-		//Separator_Init( (menuSeparator_t *)item );
-		break;
-	case MTYPE_BITMAP:
-		Bitmap_Init( (menuBitmap_t *)item );
-		break;
-	case MTYPE_IMAGELIST:
-		//ImageList_Init( (imageList_t *)item );
-		break;
-	case MTYPE_STATIC:
-		Static_Init( (menuStatic_t *)item );
-		break;
-	case MTYPE_KEYBIND:
-		Keybind_Init( (menuKeybind_t *)item );
-		break;
-	default:
-		Com_Error( ERR_FATAL, "Menu_AddItem: unknown item type" );
-		break;
-	}
-	
+void Menu_Init( menuFrameWork_t *menu ) {
+	void *item;
+	int i;
 
+	menu->callback( ID_MENU, QM_SIZE, 0 );
+
+	for( i = 0; i < menu->nitems; i++ ) {
+		item = menu->items[i];
+
+        switch( ((menuCommon_t *)item)->type ) {
+        case MTYPE_FIELD:
+            Field_Init( item );
+            break;
+        case MTYPE_SLIDER:
+            Slider_Init( item );
+            break;
+        case MTYPE_LIST:
+            MenuList_Init( item );
+            break;
+        case MTYPE_SPINCONTROL:
+            SpinControl_Init( item );
+            break;
+        case MTYPE_ACTION:
+            Action_Init( item );
+            break;
+        case MTYPE_SEPARATOR:
+            Separator_Init( item );
+            break;
+        case MTYPE_BITMAP:
+            Bitmap_Init( item );
+            break;
+        case MTYPE_STATIC:
+            Static_Init( item );
+            break;
+        case MTYPE_KEYBIND:
+            Keybind_Init( item );
+            break;
+        default:
+            Com_Error( ERR_FATAL, "Menu_Init: unknown item type" );
+            break;
+        }
+    }
 }
 
 menuCommon_t *Menu_ItemAtCursor( menuFrameWork_t *m ) {
@@ -1422,48 +1178,45 @@ Menu_Draw
 =================
 */
 void Menu_Draw( menuFrameWork_t *menu ) {
-	menuCommon_t *item;
+	void *item;
 	int i;
 
 //
 // draw contents
 //
 	for( i = 0; i < menu->nitems; i++ ) {
-		item = ( menuCommon_t * )menu->items[i];
-		if( item->flags & QMF_HIDDEN ) {
+		item = menu->items[i];
+		if( (( menuCommon_t * )item)->flags & QMF_HIDDEN ) {
 			continue;
 		}
 
-		switch( item->type ) {
+		switch( (( menuCommon_t * )item)->type ) {
 		case MTYPE_FIELD:
-			Field_Draw( (menuField_t *)item );
+			Field_Draw( item );
 			break;
 		case MTYPE_SLIDER:
-			Slider_Draw( (menuSlider_t *)item );
+			Slider_Draw( item );
 			break;
 		case MTYPE_LIST:
-			MenuList_Draw( (menuList_t *)item );
+			MenuList_Draw( item );
 			break;
 		case MTYPE_SPINCONTROL:
-			SpinControl_Draw( (menuSpinControl_t *)item );
+			SpinControl_Draw( item );
 			break;
 		case MTYPE_ACTION:
-			Action_Draw( (menuAction_t *)item );
+			Action_Draw( item );
 			break;
 		case MTYPE_SEPARATOR:
-			Separator_Draw( (menuSeparator_t *)item );
+			Separator_Draw( item );
 			break;
 		case MTYPE_BITMAP:
-			Bitmap_Draw( (menuBitmap_t *)item );
-			break;
-		case MTYPE_IMAGELIST:
-			ImageList_Draw( (imageList_t *)item );
+			Bitmap_Draw( item );
 			break;
 		case MTYPE_STATIC:
-			Static_Draw( (menuStatic_t *)item );
+			Static_Draw( item );
 			break;
 		case MTYPE_KEYBIND:
-			Keybind_Draw( (menuKeybind_t *)item );
+			Keybind_Draw( item );
 			break;
 		default:
 			Com_Error( ERR_FATAL, "Menu_Draw: unknown item type" );
@@ -1537,8 +1290,6 @@ int Menu_KeyEvent( menuCommon_t *item, int key ) {
 		return Field_Key( (menuField_t *)item, key );
 	case MTYPE_LIST:
 		return MenuList_Key( (menuList_t *)item, key );
-	case MTYPE_IMAGELIST:
-		return ImageList_Key( (imageList_t *)item, key );
 	case MTYPE_SLIDER:
 		return Slider_Key( (menuSlider_t *)item, key );
 	}
@@ -1571,10 +1322,8 @@ int Menu_MouseMove( menuCommon_t *item ) {
 	switch( item->type ) {
 	//case MTYPE_FIELD:
 		//return Field_MouseMove( (menuField_t *)item );
-	case MTYPE_LIST:
-		return MenuList_MouseMove( (menuList_t *)item );
-	//case MTYPE_IMAGELIST:
-		//return ImageList_MouseMove( (imageList_t *)item );
+	//case MTYPE_LIST:
+		//return MenuList_MouseMove( (menuList_t *)item );
 	}
 
 	return QMS_NOTHANDLED;
@@ -1582,50 +1331,25 @@ int Menu_MouseMove( menuCommon_t *item ) {
 
 
 
-menuCommon_t *Menu_HitTest( menuFrameWork_t *menu, int mx, int my ) {
-	vrect_t rect;
+menuCommon_t *Menu_HitTest( menuFrameWork_t *menu ) {
 	int i;
 	menuCommon_t *item;
 	
-	for( i=0 ; i<menu->nitems ; i++ ) {
-		rect.x = rect.y = 999999;
-		rect.width = rect.height = -999999;
-
-		item = (menuCommon_t *)menu->items[i];
-
+	for( i = 0; i < menu->nitems; i++ ) {
+		item = menu->items[i];
 		if( item->flags & QMF_HIDDEN ) {
 			continue;
 		}
 
-		switch( item->type ) {
-		default:
-			rect = item->rect;
-			break;
-		case MTYPE_SLIDER:
-			Slider_GetSize( &rect, (menuSlider_t *)item );
-			break;
-		case MTYPE_LIST:
-			MenuList_GetSize( &rect, (menuList_t *)item );
-			break;
-		case MTYPE_SEPARATOR:
-			break;
-		case MTYPE_IMAGELIST:
-			ImageList_GetSize( &rect, (imageList_t *)item );
-			break;
-		}
-
 		if( ui_debug->integer ) {
-			UIS_DrawRect( &rect, 1, 223 );
+			UIS_DrawRect( &item->rect, 1, 223 );
 		}
 
-		if( UI_CursorInRect( &rect, mx, my ) ) {
+		if( UI_CursorInRect( &item->rect ) ) {
 			return item;
 		}
-
 	}
 
 	return NULL;
-	
 }
-
 

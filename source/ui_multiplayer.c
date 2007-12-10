@@ -34,9 +34,9 @@ JOIN SERVER MENU
 
 typedef struct serverSlot_s {
 	qboolean		valid;
-	char			*rules[MAX_STATUS_RULES+1];
+	char			*rules[MAX_STATUS_RULES];
 	int				numRules;
-	char			*players[MAX_STATUS_PLAYERS+1];
+	char			*players[MAX_STATUS_PLAYERS];
 	int				numPlayers;
 	char			address[MAX_QPATH];
 	char			realAddress[MAX_QPATH];
@@ -52,7 +52,7 @@ typedef struct m_joinServer_s {
     qboolean        cursorSet;
 
 	serverSlot_t	servers[MAX_LOCAL_SERVERS];
-	char			*names[MAX_LOCAL_SERVERS+1];
+	char			*names[MAX_LOCAL_SERVERS];
 } m_joinServer_t;
 
 static m_joinServer_t	m_join;
@@ -64,27 +64,27 @@ static void UpdateSelection( void ) {
 
 	if( s->valid ) {
 		m_join.info.generic.flags &= ~QMF_HIDDEN;
-		m_join.info.itemnames = ( const char ** )s->rules;
+		m_join.info.items = ( void ** )s->rules;
 		m_join.info.numItems = s->numRules;
 
 		if( s->numPlayers ) {
 			m_join.players.generic.flags &= ~QMF_HIDDEN;
-			m_join.players.itemnames = ( const char ** )s->players;
+			m_join.players.items = ( void ** )s->players;
 			m_join.players.numItems = s->numPlayers;
 		} else {
 			m_join.players.generic.flags |= QMF_HIDDEN;
-			m_join.players.itemnames = NULL;
+			m_join.players.items = NULL;
 			m_join.players.numItems = 0;
 		}
 
 		m_join.menu.statusbar = "Press Enter to connect; Space to refresh";
 	} else {
 		m_join.info.generic.flags |= QMF_HIDDEN;
-		m_join.info.itemnames = NULL;
+		m_join.info.items = NULL;
 		m_join.info.numItems = 0;
 
 		m_join.players.generic.flags |= QMF_HIDDEN;
-		m_join.players.itemnames = NULL;
+		m_join.players.items = NULL;
 		m_join.players.numItems = 0;
 
 		m_join.menu.statusbar = "Press Space to refresh; Hold ALT to refresh all";
@@ -128,11 +128,11 @@ void UI_AddToServerList( const serverStatus_t *status ) {
 
 	slot->valid = qtrue;
 
-	s = UI_FormatColumns( 3,
+	s = UI_FormatColumns( 0,
 		Info_ValueForKey( status->infostring, "hostname" ),
 		Info_ValueForKey( status->infostring, "mapname" ),
 		va( "%i/%s", status->numPlayers,
-		Info_ValueForKey( status->infostring, "maxclients" ) ) );
+		Info_ValueForKey( status->infostring, "maxclients" ) ), NULL );
 
 	if( m_join.names[i] ) {
 		com.Free( m_join.names[i] );
@@ -157,20 +157,18 @@ void UI_AddToServerList( const serverStatus_t *status ) {
 			break;
 		}
 
-		s = UI_FormatColumns( 2, key, value );
+		s = UI_FormatColumns( 0, key, value, NULL );
 		slot->rules[slot->numRules++] = s;
 	} while( info && slot->numRules < MAX_STATUS_RULES );
-    slot->rules[slot->numRules] = NULL;
 
 	for( i = 0, player = status->players ; i < status->numPlayers; i++, player++ ) {
-		s = UI_FormatColumns( 3,
+		s = UI_FormatColumns( 0,
 			va( "%i", player->score ),
 			va( "%i", player->ping ),
-			player->name );
+			player->name, NULL );
 		slot->players[i] = s;
 	}
 	slot->numPlayers = status->numPlayers;
-    slot->players[slot->numPlayers] = NULL;
 
 	UpdateSelection();
     
@@ -185,8 +183,7 @@ static void PingSelected( void ) {
 	slot = &m_join.servers[m_join.list.curvalue];
     slot->valid = qfalse;
     
-	s = UI_FormatColumns( 3,
-            slot->address, "???", "?/?" );
+	s = UI_FormatColumns( 0, slot->address, "???", "?/?", NULL );
     
 	if( m_join.names[m_join.list.curvalue] ) {
 		com.Free( m_join.names[m_join.list.curvalue] );
@@ -252,9 +249,8 @@ static void AddUnlistedServers( void ) {
         strcpy( slot->address, address );
         strcpy( slot->realAddress, address );
 
-		s = UI_FormatColumns( 3, slot->address, "???", "?/?" );
+		s = UI_FormatColumns( 0, slot->address, "???", "?/?", NULL );
 		m_join.names[m_join.list.numItems++] = s;
-        m_join.names[m_join.list.numItems] = NULL;
 
         // ping and resolve real ip
         client.SendStatusRequest( slot->realAddress, sizeof( slot->realAddress ) );
@@ -278,7 +274,7 @@ static void FreeListedServers( void ) {
 	}
 
 
-	for( i=0 ; i<m_join.list.numItems ; i++ ) {
+	for( i = 0; i < m_join.list.numItems; i++ ) {
 		if( m_join.names[i] ) {
 			com.Free( m_join.names[i] );
 			m_join.names[i] = NULL;
@@ -286,7 +282,7 @@ static void FreeListedServers( void ) {
 	}
 
 	m_join.list.numItems = 0;
-	m_join.info.itemnames = NULL;
+	m_join.info.items = NULL;
 	m_join.info.numItems = 0;
 	//m_join.list.curvalue = 0;
 	//m_join.list.prestep = 0;
@@ -306,6 +302,44 @@ static void PingServers( void ) {
 	AddUnlistedServers();
     
 	UpdateSelection();
+}
+
+static void Resize( void ) {
+	int w1 = uis.width * 0.75f;
+	int w2 = uis.width * 0.25f;
+
+//
+// server list
+//
+	m_join.list.generic.x = 0;
+	m_join.list.generic.y = 8;
+	m_join.list.generic.height	= uis.height / 2 - 8;
+
+	m_join.list.columns[0].width = w1 - 144;
+	m_join.list.columns[1].width = 80;
+	m_join.list.columns[2].width = 64;
+
+//
+// server info
+//
+	m_join.info.generic.y		= uis.height / 2 + 1;
+	m_join.info.generic.height	= uis.height / 2 - 8 - 2;
+
+	m_join.info.columns[0].width = w1 / 2;
+	m_join.info.columns[1].width = w1 - w1 / 2;
+
+//
+// player list
+//
+	m_join.players.generic.x		= w1 + 10;
+	m_join.players.generic.y        = 8;
+	m_join.players.generic.height	= uis.height - 16 - 1;
+
+	m_join.players.columns[0].width = 32;
+	m_join.players.columns[1].width = 32;
+	m_join.players.columns[2].width = w2 - 64;
+    
+	m_join.banner.generic.x = uis.width / 2;
 }
 
 static int JoinServer_MenuCallback( int id, int msg, int param ) {
@@ -346,6 +380,10 @@ static int JoinServer_MenuCallback( int id, int msg, int param ) {
 		AddUnlistedServers();
 		break;
 
+	case QM_SIZE:
+        Resize();
+        break;
+
 	default:
 		break;
 	}
@@ -354,12 +392,7 @@ static int JoinServer_MenuCallback( int id, int msg, int param ) {
 }
 
 void JoinServer_MenuInit( void ) {
-	int w1, w2;
-
 	memset( &m_join, 0, sizeof( m_join ) );
-
-	w1 = ( uis.width - 30 ) * 0.75f;
-	w2 = ( uis.width - 30 ) * 0.25f;
 
 //
 // server list
@@ -367,77 +400,42 @@ void JoinServer_MenuInit( void ) {
 	m_join.list.generic.type	= MTYPE_LIST;
 	m_join.list.generic.id		= ID_LIST;
 	m_join.list.generic.flags	= QMF_LEFT_JUSTIFY|QMF_HASFOCUS;
-	m_join.list.generic.x		= 10;
-	m_join.list.generic.y		= 32;
-	m_join.list.generic.width	= 0;
-	m_join.list.generic.height	= uis.height / 2 - 5 - 32;
-	m_join.list.generic.name	= NULL;
-	m_join.list.itemnames		= ( const char ** )m_join.names;
-	m_join.list.drawNames		= qtrue;
+	m_join.list.items		    = ( void ** )m_join.names;
 	m_join.list.numcolumns		= 3;
 
-	m_join.list.columns[0].width = w1 - 144;
-	m_join.list.columns[0].uiFlags = UI_LEFT;
-	m_join.list.columns[0].name = "Hostname";
-
-	m_join.list.columns[1].width = 80;
-	m_join.list.columns[1].uiFlags = UI_CENTER;
-	m_join.list.columns[1].name = "Map";
-
-	m_join.list.columns[2].width = 64;
-	m_join.list.columns[2].uiFlags = UI_CENTER;
-	m_join.list.columns[2].name = "Players";
+	m_join.list.columns[0].uiFlags  = UI_LEFT;
+	m_join.list.columns[0].name     = "Hostname";
+	m_join.list.columns[1].uiFlags  = UI_CENTER;
+	m_join.list.columns[1].name     = "Map";
+	m_join.list.columns[2].uiFlags  = UI_CENTER;
+	m_join.list.columns[2].name     = "Players";
 
 //
 // server info
 //
 	m_join.info.generic.type	= MTYPE_LIST;
-	m_join.info.generic.id		= 0;
 	m_join.info.generic.flags	= QMF_LEFT_JUSTIFY|QMF_HIDDEN;
-	m_join.info.generic.x		= 10;
-	m_join.info.generic.y		= uis.height / 2 + 5;
-	m_join.info.generic.width	= 0;
-	m_join.info.generic.height	= uis.height / 2 - 5 - 32;
-	m_join.info.generic.name	= NULL;
-	m_join.info.itemnames		= NULL;
-	m_join.info.drawNames		= qtrue;
 	m_join.info.numcolumns		= 2;
 
-	m_join.info.columns[0].width = w1 / 2;
-	m_join.info.columns[0].uiFlags = UI_LEFT;
-	m_join.info.columns[0].name = "Key";
-
-	m_join.info.columns[1].width = w1 - w1 / 2;
-	m_join.info.columns[1].uiFlags = UI_LEFT;
-	m_join.info.columns[1].name = "Value";
+	m_join.info.columns[0].uiFlags  = UI_LEFT;
+	m_join.info.columns[0].name     = "Key";
+	m_join.info.columns[1].uiFlags  = UI_LEFT;
+	m_join.info.columns[1].name     = "Value";
 
 //
 // player list
 //
 	m_join.players.generic.type		= MTYPE_LIST;
-	m_join.players.generic.id		= 0;
 	m_join.players.generic.flags	= QMF_LEFT_JUSTIFY|QMF_HIDDEN|QMF_DISABLED;
-	m_join.players.generic.x		= w1 + 20;
-	m_join.players.generic.y		= 32;
-	m_join.players.generic.width	= 0;
-	m_join.players.generic.height	= uis.height - 64;
-	m_join.players.generic.name		= NULL;
 	m_join.players.mlFlags			= MLF_HIDE_SCROLLBAR;
-	m_join.players.itemnames		= NULL;
-	m_join.players.drawNames		= qtrue;
 	m_join.players.numcolumns		= 3;
 
-	m_join.players.columns[0].width = 32;
-	m_join.players.columns[0].uiFlags = UI_CENTER;
-	m_join.players.columns[0].name = "Frg";
-
-	m_join.players.columns[1].width = 32;
-	m_join.players.columns[1].uiFlags = UI_CENTER;
-	m_join.players.columns[1].name = "RTT";
-
-	m_join.players.columns[2].width = w2 - 64;
-	m_join.players.columns[2].uiFlags = UI_LEFT;
-	m_join.players.columns[2].name = "Name";
+	m_join.players.columns[0].uiFlags   = UI_CENTER;
+	m_join.players.columns[0].name      = "Frg";
+	m_join.players.columns[1].uiFlags   = UI_CENTER;
+	m_join.players.columns[1].name      = "RTT";
+	m_join.players.columns[2].uiFlags   = UI_LEFT;
+	m_join.players.columns[2].name      = "Name";
 
 	m_join.menu.callback = JoinServer_MenuCallback;
 
@@ -447,7 +445,6 @@ void JoinServer_MenuInit( void ) {
 	Menu_AddItem( &m_join.menu, &m_join.info );
 	Menu_AddItem( &m_join.menu, &m_join.players );
 	Menu_AddItem( &m_join.menu, &m_join.banner );
-
 }
 
 

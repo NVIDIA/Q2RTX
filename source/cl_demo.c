@@ -610,8 +610,6 @@ demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info ) {
 		goto fail;
     }
 
-    memset( info, 0, sizeof( *info ) );
-
 	protocol = MSG_ReadLong();
     MSG_ReadLong();
     MSG_ReadByte();

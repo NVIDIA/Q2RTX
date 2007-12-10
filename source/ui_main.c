@@ -98,7 +98,7 @@ static void MainMenu_Init( void ) {
 		m_main.actions[i].generic.uiFlags = UI_CENTER;
 		y += MENU_SPACING;
 	
-		Menu_AddItem( &m_main.menu, (void *)&m_main.actions[i] );
+		Menu_AddItem( &m_main.menu, &m_main.actions[i] );
 	}
 
 	m_main.actions[0].generic.flags = QMF_HASFOCUS;

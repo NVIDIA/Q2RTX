@@ -35,9 +35,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define UI_Malloc( size )	com.TagMalloc( size, TAG_UI )
 
-#define SMALLCHAR_WIDTH		8
-#define SMALLCHAR_HEIGHT	8
-
 #define MAXMENUITEMS	64
 
 #define MTYPE_BAD			0
@@ -71,6 +68,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define QM_MOUSE			7
 #define QM_DESTROY			8
 #define QM_DESTROY_CHILD	9
+#define QM_SIZE         	10
+#define QM_SORT         	11
 
 #define QMS_NOTHANDLED		0
 #define QMS_SILENT			1
@@ -85,8 +84,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	MENU_SPACING	12
 
 #define DOUBLE_CLICK_DELAY	300
-
-#define BUTTON_YPOS			( uis.glconfig.vidHeight - ( 60 + 32 ) / 2 )
 
 #define UI_IsItemSelectable( item ) \
 	( (item)->type != MTYPE_SEPARATOR && \
@@ -143,14 +140,15 @@ typedef struct menuSlider_s {
 #define MLIST_PRESTEP	3
 
 typedef enum menuListFlags_e {
-	MLF_NOSELECT				= (1<<0),
-	MLF_HIDE_SCROLLBAR			= (1<<1),
-	MLF_HIDE_SCROLLBAR_EMPTY	= (1<<2),
-	MLF_HIDE_BACKGROUND			= (1<<3)
+	MLF_NOSELECT				= ( 1 << 0 ),
+	MLF_HIDE_SCROLLBAR			= ( 1 << 1 ),
+	MLF_HIDE_SCROLLBAR_EMPTY	= ( 1 << 2 ),
+	MLF_HIDE_BACKGROUND			= ( 1 << 3 ),
+	MLF_HIDE_HEADER			    = ( 1 << 4 )
 } menuListFlags_t;
 
 typedef struct menuListColumn_s {
-	const char	*name;
+	char	*name;
 	int		width;
 	int		uiFlags;
 } menuListColumn_t;
@@ -158,10 +156,11 @@ typedef struct menuListColumn_s {
 typedef struct menuList_s {
 	menuCommon_t generic;
 
-	const char	**itemnames;
+	void	    **items;
 	int			numItems;
 	int			maxItems;
 	menuListFlags_t mlFlags;
+    int         extrasize;
 
 	int		prestep;
 	int		curvalue;
@@ -173,7 +172,7 @@ typedef struct menuList_s {
 
 	menuListColumn_t	columns[MAX_COLUMNS];
 	int					numcolumns;
-	qboolean			drawNames;
+    int                 sortdir, sortcol;
 } menuList_t;
 
 typedef struct imageList_s {
@@ -275,8 +274,9 @@ void		UI_PushMenu( menuFrameWork_t *menu );
 void		UI_ForceMenuOff( void );
 void		UI_PopMenu( void );
 qboolean	UI_DoHitTest( void );
-qboolean	UI_CursorInRect( vrect_t *rect, int mx, int my );
-char		*UI_FormatColumns( int numArgs, ... );
+qboolean	UI_CursorInRect( vrect_t *rect );
+void		*UI_FormatColumns( int extrasize, ... ) q_sentinel;
+char        *UI_GetColumn( char *s, int n );
 void		UI_AddToServerList( const serverStatus_t *status );
 char		*UI_CopyString( const char *in );
 void		UI_DrawLoading( int realtime );
@@ -285,6 +285,7 @@ void		UI_DrawString( int x, int y, const color_t color, uint32 flags, const char
 void		UI_DrawChar( int x, int y, uint32 flags, int ch );
 void		UI_StringDimensions( vrect_t *rc, uint32 flags, const char *string );
 
+void		Menu_Init( menuFrameWork_t *menu );
 void		Menu_Draw( menuFrameWork_t *menu );
 void		Menu_AddItem( menuFrameWork_t *menu, void *item );
 int			Menu_SelectItem( menuFrameWork_t *menu );
@@ -295,9 +296,11 @@ int			Menu_MouseMove( menuCommon_t *item );
 void		Menu_SetFocus( menuCommon_t *item );
 int			Menu_AdjustCursor( menuFrameWork_t *menu, int dir );
 menuCommon_t	*Menu_ItemAtCursor( menuFrameWork_t *menu );
-menuCommon_t	*Menu_HitTest( menuFrameWork_t *menu, int x, int y );
+menuCommon_t	*Menu_HitTest( menuFrameWork_t *menu );
 void		MenuList_Init( menuList_t *l );
 void		MenuList_SetValue( menuList_t *l, int value );
+void        MenuList_Sort( menuList_t *l, int offset,
+    int (*cmpfunc)( const void *, const void * ) );
 
 void SpinControl_Init( menuSpinControl_t *s );
 void Bitmap_Init( menuBitmap_t *b );

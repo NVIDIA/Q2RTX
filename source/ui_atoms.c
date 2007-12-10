@@ -81,6 +81,8 @@ void UI_PushMenu( menuFrameWork_t *menu ) {
 		menu->callback = EmptyCallback;
 	}
 
+    Menu_Init( menu );
+
 	if( !uis.activeMenu ) {
 		uis.entersound = qtrue;
 	}
@@ -97,7 +99,9 @@ void UI_PushMenu( menuFrameWork_t *menu ) {
 	UI_DoHitTest();
 }
 
-void UI_UpdateGeometry( void ) {
+void UI_Resize( void ) {
+	int i;
+
     if( uis.glconfig.renderer == GL_RENDERER_SOFTWARE ) {
         uis.clipRect.left = 0;
         uis.clipRect.top = 0;
@@ -116,6 +120,12 @@ void UI_UpdateGeometry( void ) {
         uis.width = uis.glconfig.vidWidth * uis.scale;
         uis.height = uis.glconfig.vidHeight * uis.scale;
     }
+
+	for( i = 0; i < uis.menuDepth; i++ ) {
+		if( uis.layers[i] ) {
+            Menu_Init( uis.layers[i] );
+		}
+	}
 }
 
 
@@ -138,8 +148,6 @@ void UI_ForceMenuOff( void ) {
 	uis.activeMenu = NULL;
 	uis.transparent = qfalse;
 	//keys.ClearStates();
-
-    UI_UpdateGeometry();
 }
 
 /*
@@ -240,33 +248,42 @@ void UI_ErrorMenu( comErrorType_t type, const char *text ) {
 UI_FormatColumns
 =================
 */
-char *UI_FormatColumns( int numArgs, ... ) {
+void *UI_FormatColumns( int extrasize, ... ) {
 	va_list argptr;
 	char *buffer, *p;
-	int i, total = 0;
+	int i, j, total = 0;
 	char *strings[MAX_COLUMNS];
 	int lengths[MAX_COLUMNS];
 
-	if( ( unsigned )numArgs > MAX_COLUMNS ) {
-		Com_Error( ERR_FATAL, "UI_FormatColumns: too many columns" );
-	}
-
-	va_start( argptr, numArgs );
-	for( i = 0; i < numArgs; i++ ) {
-		strings[i] = va_arg( argptr, char * );
-		lengths[i] = strlen( strings[i] ) + 1;
-		total += lengths[i];
+	va_start( argptr, extrasize );
+    for( i = 0; i < MAX_COLUMNS; i++ ) {
+	    if( ( p = va_arg( argptr, char * ) ) == NULL ) {
+            break;
+        }
+		strings[i] = p;
+		total += lengths[i] = strlen( p ) + 1;
 	}
 	va_end( argptr );
 
-	buffer = p = UI_Malloc( total + 1 );
-	for( i = 0; i < numArgs; i++ ) {
-		memcpy( p, strings[i], lengths[i] );
-		p += lengths[i];
+	buffer = UI_Malloc( extrasize + total + 1 );
+    p = buffer + extrasize;
+	for( j = 0; j < i; j++ ) {
+		memcpy( p, strings[j], lengths[j] );
+		p += lengths[j];
 	}
 	*p = 0;
 
 	return buffer;
+}
+
+char *UI_GetColumn( char *s, int n ) {
+    int i;
+
+    for( i = 0; i < n && *s; i++ ) {
+        s += strlen( s ) + 1;
+    }
+
+    return s;
 }
 
 /*
@@ -298,7 +315,7 @@ void UI_SetupDefaultBanner( menuStatic_t *banner, const char *name ) {
 	banner->generic.uiFlags = UI_CENTER|UI_ALTCOLOR;
 
 	banner->generic.x = uis.width / 2;
-	banner->generic.y = 8;
+	banner->generic.y = 0;;
 }
 
 /*
@@ -306,14 +323,20 @@ void UI_SetupDefaultBanner( menuStatic_t *banner, const char *name ) {
 UI_CursorInRect
 =================
 */
-qboolean UI_CursorInRect( vrect_t *rect, int mx, int my ) {
-	if( mx > rect->x && mx < rect->x + rect->width &&
-		my > rect->y && my < rect->y + rect->height )
-	{
-		return qtrue;
+qboolean UI_CursorInRect( vrect_t *rect ) {
+	if( uis.mouseCoords[0] < rect->x ) {
+        return qfalse;
+    }
+	if( uis.mouseCoords[0] >= rect->x + rect->width ) {
+        return qfalse;
+    }
+	if( uis.mouseCoords[1] < rect->y ) {
+        return qfalse;
+    }
+    if( uis.mouseCoords[1] >= rect->y + rect->height ) {
+		return qfalse;
 	}
-
-	return qfalse;
+	return qtrue;
 }
 
 void UI_DrawString( int x, int y, const color_t color, uint32 flags, const char *string ) {
@@ -366,7 +389,7 @@ qboolean UI_DoHitTest( void ) {
 		return qfalse;
 	}
 
-	if( !( item = Menu_HitTest( uis.activeMenu, uis.mouseCoords[0], uis.mouseCoords[1] ) ) ) {
+	if( !( item = Menu_HitTest( uis.activeMenu ) ) ) {
 		return qfalse;
 	}
 	if( !UI_IsItemSelectable( item ) ) {
@@ -474,7 +497,7 @@ void UI_Draw( int realtime ) {
 		uis.mouseCoords[1] - uis.cursorHeight / 2, uis.cursorHandle );
 
 	if( ui_debug->integer ) {
-		Menu_HitTest( uis.activeMenu, 0, 0 );
+		Menu_HitTest( uis.activeMenu );
 		UI_DrawString( uis.width - 4, 4, NULL, UI_RIGHT,
 			va( "%3i %3i", uis.mouseCoords[0], uis.mouseCoords[1] ) );
 	}
@@ -534,7 +557,7 @@ int Default_MenuKey( menuFrameWork_t *m, int key ) {
 	case K_MOUSE1:
 	case K_MOUSE2:
 	case K_MOUSE3:
-		item = Menu_HitTest( m, uis.mouseCoords[0], uis.mouseCoords[1] );
+		item = Menu_HitTest( m );
 		if( !item ) {
 			return QMS_NOTHANDLED;
 		}
@@ -703,10 +726,15 @@ static void ui_background_changed( cvar_t *self ) {
 	}
 }
 
+static void ui_scale_changed( cvar_t *self ) {
+    UI_Resize();
+}
+
 void UI_ModeChanged( void ) {
 	ui_scale = cvar.Get( "ui_scale", "1", 0 );
+    ui_scale->changed = ui_scale_changed;
 	ref.GetConfig( &uis.glconfig );
-    UI_ForceMenuOff();
+    UI_Resize();
 }
 
 /*
@@ -753,6 +781,7 @@ void UI_Shutdown( void ) {
 	const uicmd_t *uicmd;
 
 	ui_background->changed = NULL;
+    ui_scale->changed = NULL;
 
 	PlayerModel_Free();
 

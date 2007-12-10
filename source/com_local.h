@@ -792,6 +792,7 @@ FILESYSTEM
 */
 
 #define FS_Malloc( size )		Z_TagMalloc( size, TAG_FILESYSTEM )
+#define FS_Mallocz( size )		Z_TagMallocz( size, TAG_FILESYSTEM )
 #define FS_CopyString( string )		Z_TagCopyString( string, TAG_FILESYSTEM )
 
 void	FS_Init( void );
@@ -850,26 +851,6 @@ void FS_FillAPI( fsAPI_t *api );
 
 extern cvar_t	*fs_game;
 
-
-/*
-==============================================================
-
-MDFOUR
-
-==============================================================
-*/
-
-typedef struct mdfour {
-	uint32 A, B, C, D;
-	uint32 totalN;
-} mdfour_t;
-
-void mdfour_begin( struct mdfour *md );
-void mdfour_update( struct mdfour *md, uint8 *in, int n );
-void mdfour_result( struct mdfour *md, uint8 *out );
-
-uint32	Com_BlockChecksum( void *buffer, int length );
-
 /*
 ==============================================================
 
@@ -915,6 +896,8 @@ const char *Com_FileNameGeneratorByFilter( const char *path, const char *filter,
 
 int         Com_Time_m( char *buffer, int size );
 int         Com_Uptime_m( char *buffer, int size );
+
+uint32      Com_BlockChecksum( void *buffer, int length );
 
 
 /* may return pointer to static memory */

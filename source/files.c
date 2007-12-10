@@ -1584,7 +1584,7 @@ fsFileInfo_t *FS_CopyInfo( const char *name, int size, time_t ctime, time_t mtim
 	}
 
 	len = strlen( name );
-	out = FS_Malloc( sizeof( *out ) + len );
+	out = FS_Mallocz( sizeof( *out ) + len );
     out->size = size;
     out->ctime = ctime;
     out->mtime = mtime;
@@ -1706,6 +1706,19 @@ rescan:
     return qtrue;
 }
 
+static int infocmp( const void *p1, const void *p2 ) {
+    fsFileInfo_t *n1 = *( fsFileInfo_t ** )p1;
+    fsFileInfo_t *n2 = *( fsFileInfo_t ** )p2;
+
+    return Q_stricmp( n1->name, n2->name );
+}
+
+static int alphacmp( const void *p1, const void *p2 ) {
+    char *s1 = *( char ** )p1;
+    char *s2 = *( char ** )p2;
+
+    return Q_stricmp( s1, s2 );
+}
 
 /*
 =================
@@ -1876,16 +1889,17 @@ void **FS_ListFiles( const char *path,
 
     if( flags & FS_SEARCH_EXTRAINFO ) {
         // TODO
+        qsort( listedFiles, count, sizeof( listedFiles[0] ), infocmp );
         total = count;
     } else {
         // sort alphabetically (ignoring FS_SEARCH_NOSORT)
-        qsort( listedFiles, count, sizeof( listedFiles[0] ), SortStrcmp );
+        qsort( listedFiles, count, sizeof( listedFiles[0] ), alphacmp );
 
         // remove duplicates
         total = 1;
         for( i = 1; i < count; i++ ) {
             // FIXME: use Q_stricmp instead of FS_strcmp here?
-            if( !FS_strcmp( listedFiles[ i - 1 ], listedFiles[i] ) ) {
+            if( !Q_stricmp( listedFiles[ i - 1 ], listedFiles[i] ) ) {
                 Z_Free( listedFiles[ i - 1 ] );
                 listedFiles[i-1] = NULL;
             } else {

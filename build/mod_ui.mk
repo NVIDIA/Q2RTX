@@ -42,7 +42,8 @@ SRCFILES = q_shared.c \
 	ui_playermodels.c \
 	ui_savegame.c \
 	ui_startserver.c \
-	ui_video.c
+	ui_video.c \
+	mdfour.c
 
 include $(SRCDIR)/build/target.mk
 

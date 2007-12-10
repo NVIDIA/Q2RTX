@@ -9,14 +9,17 @@ Standards-Version: 3.7.2
 Package: q2pro
 Architecture: i386
 Depends: ${shlibs:Depends}, quake2-data
-Description: Enhanced Quake II engine
- Q2PRO is a Quake II engine modification, mostly compatible with the
- original one. Q2PRO is designed to be secure, fast and doesn't provide
- any graphical enhancements that are contrary to the `classic' Quake II
- look and feel. Among features Q2PRO provides are server side Multi
- View Demos, built-in GTV capabilities, network protocol optimizations.
+Description: Enhanced Quake II engine for multiplayer
+ Q2PRO is a Quake II engine modification designed for online play,
+ fully compatible with original Quake II clients and servers.
  .
- Both OpenGL and software refresh modules are provided, so that 3D graphics
- accelerator is not mandatory to play Q2PRO, although recommended.
+ Q2PRO features enhanced graphical console, support for 32-bit textures and
+ MD3 models, network protocol optimizations, freely resizable windows,
+ increased security and overall performance, basic built-in demo editing
+ capabilities, built-in server and demo browsers.
+ .
+ Both OpenGL and software refresh modules are included, so that 3D graphics
+ accelerator is not mandatory to play Q2PRO, although highly recommended to
+ take most of Q2PRO features.
  .
  Homepage: http://q2pro.sourceforge.net/

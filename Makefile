@@ -23,10 +23,10 @@ distclean: clean
 
 install:
 	for t in $(EXECUTABLES) ; do \
-		install -m 755 -D $$t$(EXESUFFIX) $(DESTDIR)$(BINDIR)/$$t$(EXESUFFIX) ; \
+		install -m 755 -D $$t $(DESTDIR)$(BINDIR)/$$t ; \
 	done
 	for t in $(LIBRARIES) ; do \
-		install -m 755 -D $$t$(LIBSUFFIX) $(DESTDIR)$(REFDIR)/$$t$(LIBSUFFIX) ; \
+		install -m 755 -D $$t $(DESTDIR)$(REFDIR)/$$t ; \
 	done
 	install -m 644 -D $(SRCDIR)/q2pro.6 $(DESTDIR)$(MANDIR)/q2pro.6
 
@@ -34,6 +34,9 @@ strip:
 	for t in $(BINARIES) ; do \
 		$(STRIP) $$t ; \
 	done
+
+doc:
+	$(MAKE) -C wiki
 
 tags:
 	ctags $(SRCDIR)/source/*.[ch] $(SRCDIR)/source/openffa/*.[ch]
