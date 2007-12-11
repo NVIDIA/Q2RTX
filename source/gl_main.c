@@ -514,6 +514,8 @@ static void GL_EndFrame( void ) {
     GL_ShowErrors( __func__ );
 	
     video.EndFrame();
+
+//    qglFinish();
 }
 
 /* 

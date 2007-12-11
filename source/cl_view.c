@@ -288,7 +288,7 @@ void CL_PrepRefresh (void)
         }
 		if (name[0] == '#') {
 			// special player weapon model
-			if (cl.numWeaponModels < MAX_CLIENTWEAPONMODELS) {
+			if (cl.numWeaponModels < MAX_CLIENTWEAPONMODELS && cl_vwep->integer) {
 				strcpy( cl.weaponModels[cl.numWeaponModels++], name + 1 );
 			}
 		}  else {

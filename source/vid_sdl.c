@@ -30,6 +30,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "key_public.h"
 #include "q2pro.xbm"
 #include <SDL.h>
+#ifdef __unix__
+#include <GL/glx.h>
+#include <GL/glxext.h>
+#endif
 
 typedef struct {
     SDL_Surface     *surface;
@@ -38,6 +42,9 @@ typedef struct {
     vidFlags_t	    flags;
     qboolean		mouseactive;	// false when not focus app
     qboolean		mouseinitialized;
+#ifdef __unix__
+    //PFNGLXGETVIDEOSYNCSGIPROC glXGetVideoSyncSGI;
+#endif
 } sdl_state_t;
 
 static sdl_state_t    sdl;
@@ -386,6 +393,7 @@ static qboolean QSDL_InitGL( void ) {
         Com_EPrintf( "Couldn't set video mode: %s\n", SDL_GetError() );
         goto fail;
     }
+//    sdl.glXGetVideoSyncSGI = SDL_GL_GetProcAddress( "glXGetVideoSyncSGI" );
 
 	CL_AppActivate( qtrue );
 	return qtrue;
@@ -394,6 +402,23 @@ fail:
     QSDL_ShutdownVideo();
 	return qfalse;
 }
+
+#if 0
+qboolean QSDL_VideoSync( void ) {
+    GLuint count;
+    static GLuint oldcount;
+
+    sdl.glXGetVideoSyncSGI( &count );
+
+    if( count != oldcount ) {
+        oldcount = count;
+    	SDL_GL_SwapBuffers();
+    //    Com_Printf( "%u ", count );
+        return qtrue;
+    }
+    return qfalse;
+}
+#endif
 
 static void QSDL_BeginFrameGL( void ) {
 }

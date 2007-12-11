@@ -263,30 +263,18 @@ static void CL_AddPacketEntities( void ) {
 				{
 					ent.skin = cl.baseclientinfo.skin;
 					ent.model = cl.baseclientinfo.model;
+                    ci = &cl.baseclientinfo;
 				}
 
 //============
 //PGM
-#if 0
 				if (renderfx & RF_USE_DISGUISE)
 				{
-					if(!strncmp((char *)ent.skin, "players/male", 12))
-					{
-						ent.skin = ref.RegisterSkin ("players/male/disguise.pcx");
-						ent.model = ref.RegisterModel ("players/male/tris.md2");
-					}
-					else if(!strncmp((char *)ent.skin, "players/female", 14))
-					{
-						ent.skin = ref.RegisterSkin ("players/female/disguise.pcx");
-						ent.model = ref.RegisterModel ("players/female/tris.md2");
-					}
-					else if(!strncmp((char *)ent.skin, "players/cyborg", 14))
-					{
-						ent.skin = ref.RegisterSkin ("players/cyborg/disguise.pcx");
-						ent.model = ref.RegisterModel ("players/cyborg/tris.md2");
-					}
+                    char buffer[MAX_QPATH];
+
+                    Q_concat( buffer, sizeof( buffer ), "players/", ci->model_name, "/disguise.pcx", NULL );
+					ent.skin = ref.RegisterSkin( buffer );
 				}
-#endif
 //PGM
 //============
 			}
@@ -444,7 +432,7 @@ static void CL_AddPacketEntities( void ) {
 			{	// custom weapon
 				ci = &cl.clientinfo[s1->skinnum & 0xff];
 				i = (s1->skinnum >> 8); // 0 is default weapon model
-				if (!cl_vwep->integer || i > MAX_CLIENTWEAPONMODELS - 1)
+				if (i < 0 || i > cl.numWeaponModels - 1)
 					i = 0;
 				ent.model = ci->weaponmodel[i];
 				if (!ent.model) {

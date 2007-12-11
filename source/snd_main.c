@@ -692,25 +692,20 @@ void S_IssuePlaysound( playsound_t *ps ) {
 S_RegisterSexedSound
 ====================
 */
-static sfx_t *S_RegisterSexedSound( entity_state_t *ent, const char *base ) {
-	int				n;
-	char			*p;
-	sfx_t		*sfx;
+static sfx_t *S_RegisterSexedSound( int entnum, const char *base ) {
+	sfx_t		    *sfx;
 	char			model[MAX_QPATH];
 	char			buffer[MAX_QPATH];
+    clientinfo_t    *ci;
 
 	// determine what model the client is using
-	model[0] = 0;
-	n = CS_PLAYERSKINS + ent->number - 1;
-	if( cl.configstrings[n][0] ) {
-		p = strchr( cl.configstrings[n], '\\' );
-		if( p ) {
-			Q_strncpyz( model, p + 1, sizeof( model ) );
-			p = strchr( model, '/' );
-			if( p )
-				*p = 0;
-		}
-	}
+	if( entnum > 0 && entnum <= MAX_CLIENTS ) {
+        ci = &cl.clientinfo[ entnum - 1 ];
+    } else {
+        ci = &cl.baseclientinfo;
+    }
+    strcpy( model, ci->model_name );
+
 	// if we can't figure it out, they're male
 	if( !model[0] )
 		strcpy( model, "male" );
@@ -760,10 +755,7 @@ void S_StartSound( const vec3_t origin, int entnum, int entchannel, qhandle_t hS
 	}
 
 	if( sfx->name[0] == '*' ) {
-		if( entnum < 1 || entnum >= MAX_EDICTS ) {
-			Com_Error( ERR_DROP, "S_StartSound: bad entnum: %d", entnum );
-		}
-		sfx = S_RegisterSexedSound( &cl_entities[entnum].current, sfx->name );
+		sfx = S_RegisterSexedSound( entnum, sfx->name );
 	}
 
 	// make sure the sound is loaded

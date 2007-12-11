@@ -272,7 +272,7 @@ static inline void CL_ParseDeltaEntity( server_frame_t  *frame,
 	entity_state_t	*state;
 
 	if( frame->numEntities == MAX_PACKET_ENTITIES ) {
-		Com_Error( ERR_DROP, "CL_ParseDeltaEntity: MAX_PACKET_ENTITIES exceeded" );
+		Com_Error( ERR_DROP, "%s: MAX_PACKET_ENTITIES exceeded", __func__ );
 	}
 
 	state = &cl.entityStates[cl.numEntityStates & PARSE_ENTITIES_MASK];
@@ -321,11 +321,11 @@ static void CL_ParsePacketEntities( server_frame_t *oldframe,
 	while( 1 ) {
 		newnum = MSG_ParseEntityBits( &bits );
 		if( newnum < 0 || newnum >= MAX_EDICTS ) {
-			Com_Error( ERR_DROP, "ParsePacketEntities: bad number %i", newnum );
+			Com_Error( ERR_DROP, "%s: bad number: %d", __func__, newnum );
 		}
 
 		if( msg_read.readcount > msg_read.cursize ) {
-			Com_Error( ERR_DROP, "ParsePacketEntities: end of message" );
+			Com_Error( ERR_DROP, "%s: read past end of message", __func__ );
 		}
 
 		if( !newnum ) {
@@ -947,6 +947,7 @@ void CL_LoadClientinfo( clientinfo_t *ci, char *s ) {
 	char		model_filename[MAX_QPATH];
 	char		skin_filename[MAX_QPATH];
 	char		weapon_filename[MAX_QPATH];
+	char		icon_filename[MAX_QPATH];
 
 	strcpy( ci->cinfo, s );
 
@@ -963,12 +964,16 @@ noskin:
 	    strcpy( model_filename, "players/male/tris.md2" );
 		strcpy( weapon_filename, "players/male/weapon.md2" );
 	    strcpy( skin_filename, "players/male/grunt.pcx" );
-		strcpy( ci->iconname, "/players/male/grunt_i.pcx" );
+		strcpy( icon_filename, "/players/male/grunt_i.pcx" );
 		ci->model = ref.RegisterModel( model_filename );
-		memset( ci->weaponmodel, 0, sizeof( ci->weaponmodel ) );
-		ci->weaponmodel[0] = ref.RegisterModel( weapon_filename );
+		for( i = 0; i < cl.numWeaponModels; i++ ) {
+			Q_concat( weapon_filename, sizeof( weapon_filename ),
+                "players/male/", cl.weaponModels[i], NULL );
+			ci->weaponmodel[i] = ref.RegisterModel( weapon_filename );
+        }
 		ci->skin = ref.RegisterSkin( skin_filename );
-		ci->icon = ref.RegisterPic( ci->iconname );
+		ci->icon = ref.RegisterPic( icon_filename );
+        strcpy( ci->model_name, "male" );
 	} else {
 		strcpy( model_name, s );
 
@@ -1036,20 +1041,20 @@ noskin:
 			Q_concat( weapon_filename, sizeof( weapon_filename ),
                 "players/", model_name, "/", cl.weaponModels[i], NULL );
 			ci->weaponmodel[i] = ref.RegisterModel( weapon_filename );
-			if( !ci->weaponmodel[i] && !Q_stricmp( model_name, "cyborg" ) ) {
+			if( !ci->weaponmodel[i] && Q_stricmp( model_name, "male" ) ) {
 				// try male
 				Q_concat( weapon_filename, sizeof( weapon_filename ),
                     "players/male/", cl.weaponModels[i], NULL );
 				ci->weaponmodel[i] = ref.RegisterModel( weapon_filename );
 			}
-			if( !cl_vwep->integer )
-				break; // only one when vwep is off
 		}
 
 		// icon file
-		Q_concat( ci->iconname, sizeof( ci->iconname ),
+		Q_concat( icon_filename, sizeof( icon_filename ),
             "/players/", model_name, "/", skin_name, "_i.pcx", NULL );
-		ci->icon = ref.RegisterPic( ci->iconname );
+		ci->icon = ref.RegisterPic( icon_filename );
+
+        strcpy( ci->model_name, model_name );
 	}
 
 	// must have loaded all data types to be valid
@@ -1058,6 +1063,7 @@ noskin:
 		ci->icon = 0;
 		ci->model = 0;
 		ci->weaponmodel[0] = 0;
+        ci->model_name[0] = 0;
 	}
 }
 

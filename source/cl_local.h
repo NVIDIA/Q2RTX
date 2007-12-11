@@ -54,7 +54,7 @@ typedef struct clientinfo_s {
 	char	cinfo[MAX_QPATH];
 	qhandle_t skin;
 	qhandle_t icon;
-	char	iconname[MAX_QPATH];
+	char	model_name[MAX_QPATH];
 	qhandle_t model;
 	qhandle_t weaponmodel[MAX_CLIENTWEAPONMODELS];
 } clientinfo_t;
