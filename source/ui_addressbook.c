@@ -37,12 +37,12 @@ typedef struct m_addressBook_s {
 static m_addressBook_t	m_addressBook;
 
 static void SaveChanges( void ) {
-	char buffer[32];
-	int index;
+	char buffer[8];
+	int i;
 
-	for( index = 0; index < MAX_LOCAL_SERVERS; index++ ) {
-		Com_sprintf( buffer, sizeof( buffer ), "adr%d", index );
-		cvar.Set( buffer, m_addressBook.fields[index].field.text );
+	for( i = 0; i < MAX_LOCAL_SERVERS; i++ ) {
+		Com_sprintf( buffer, sizeof( buffer ), "adr%d", i );
+		cvar.Set( buffer, m_addressBook.fields[i].field.text );
 	}
 }
 
@@ -51,6 +51,9 @@ static int AddressBook_MenuCallback( int id, int msg, int param ) {
 	case QM_DESTROY:
         SaveChanges();
 		break;
+    case QM_SIZE:
+        Menu_Size( &m_addressBook.menu );
+        break;
 	default:
 		break;
 	}
@@ -59,27 +62,25 @@ static int AddressBook_MenuCallback( int id, int msg, int param ) {
 }
 
 static void AddressBook_MenuInit( void ) {
-	char buffer[32];
-	int i, y;
+	char buffer[8];
+	int i;
 
 	memset( &m_addressBook, 0, sizeof( m_addressBook ) );
 
 	m_addressBook.menu.callback = AddressBook_MenuCallback;
 
-	y = 64;
 	for( i = 0; i < MAX_LOCAL_SERVERS; i++ ) {
 		Com_sprintf( buffer, sizeof( buffer ), "adr%d", i );
 
 		m_addressBook.fields[i].generic.type	= MTYPE_FIELD;
-		m_addressBook.fields[i].generic.name	= NULL;
-		m_addressBook.fields[i].generic.x		= ( uis.width - 30 * CHAR_WIDTH ) / 2 - RCOLUMN_OFFSET;
-		m_addressBook.fields[i].generic.y		= y;
-		y += MENU_SPACING;
 
-		IF_InitText( &m_addressBook.fields[i].field, 30, 60, cvar.VariableString( buffer ) );
+		IF_InitText( &m_addressBook.fields[i].field, 30, 60,
+            cvar.VariableString( buffer ) );
 
 		Menu_AddItem( &m_addressBook.menu, &m_addressBook.fields[i] );
 	}
+
+	m_addressBook.fields[0].generic.flags	= QMF_HASFOCUS;
 
     m_addressBook.menu.banner = "Address Book";
 }

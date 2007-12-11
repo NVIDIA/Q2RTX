@@ -709,7 +709,9 @@ static const uicmd_t uicmds[] = {
 static void ui_background_changed( cvar_t *self ) {
 	if( self->string[0] ) {
 		uis.backgroundHandle = ref.RegisterPic( self->string );
-	}
+	} else {
+        uis.backgroundHandle = 0;
+    }
 }
 
 static void ui_scale_changed( cvar_t *self ) {

@@ -235,22 +235,22 @@ Field_Init
 =================
 */
 static void Field_Init( menuField_t *f ) {
-	f->generic.uiFlags &= ~( UI_LEFT | UI_RIGHT );
+    int w = f->field.visibleChars * CHAR_WIDTH;
 
-	f->generic.rect.x = f->generic.x + LCOLUMN_OFFSET;
-	f->generic.rect.y = f->generic.y;
+	f->generic.uiFlags &= ~( UI_LEFT | UI_RIGHT );
 	
 	if( f->generic.name ) {
+	    f->generic.rect.x = f->generic.x + LCOLUMN_OFFSET;
+    	f->generic.rect.y = f->generic.y;
 		UI_StringDimensions( &f->generic.rect,
 			f->generic.uiFlags | UI_RIGHT, f->generic.name );
+	    f->generic.rect.width += RCOLUMN_OFFSET + w;
 	} else {
-		f->generic.rect.width = 0;
-		f->generic.rect.height = CHAR_HEIGHT;
+        f->generic.rect.x = f->generic.x - w / 2;
+        f->generic.rect.y = f->generic.y;
+        f->generic.rect.width = w;
+        f->generic.rect.height = CHAR_HEIGHT;
 	}
-	
-	f->generic.rect.width += RCOLUMN_OFFSET +
-		f->field.visibleChars * CHAR_WIDTH;
-
 }
 
 
@@ -260,23 +260,28 @@ Field_Draw
 =================
 */
 static void Field_Draw( menuField_t *f ) {
-	uint32	flags;
+	uint32 flags = f->generic.uiFlags;
 
-	if( f->generic.name ) {
-		UI_DrawString( f->generic.x + LCOLUMN_OFFSET, f->generic.y, NULL,
-			f->generic.uiFlags | UI_RIGHT | UI_ALTCOLOR, f->generic.name );
-	}
-
-	ref.DrawFillEx( f->generic.x + RCOLUMN_OFFSET, f->generic.y,
-		f->field.visibleChars * CHAR_WIDTH, CHAR_HEIGHT, colorField );
-
-	flags = f->generic.uiFlags;
 	if( f->generic.flags & QMF_HASFOCUS ) {
 		flags |= UI_DRAWCURSOR;
 	}
 
-	IF_Draw( &f->field, f->generic.x + RCOLUMN_OFFSET, f->generic.y,
-		flags, uis.fontHandle );
+	if( f->generic.name ) {
+		UI_DrawString( f->generic.x + LCOLUMN_OFFSET, f->generic.y, NULL,
+			f->generic.uiFlags | UI_RIGHT | UI_ALTCOLOR, f->generic.name );
+
+    	ref.DrawFillEx( f->generic.x + RCOLUMN_OFFSET, f->generic.y - 1,
+	    	f->field.visibleChars * CHAR_WIDTH, CHAR_HEIGHT + 2, colorField );
+
+	    IF_Draw( &f->field, f->generic.x + RCOLUMN_OFFSET, f->generic.y,
+		    flags, uis.fontHandle );
+    } else {
+        ref.DrawFillEx( f->generic.rect.x, f->generic.rect.y - 1,
+            f->generic.rect.width, CHAR_HEIGHT + 2, colorField );
+
+        IF_Draw( &f->field, f->generic.rect.x, f->generic.rect.y,
+            flags, uis.fontHandle );
+    }
 }
 
 /*
@@ -293,7 +298,7 @@ static int Field_Key( menuField_t *f, int key ) {
 
 /*
 =================
-Field_Key
+Field_Char
 =================
 */
 static int Field_Char( menuField_t *f, int key ) {
