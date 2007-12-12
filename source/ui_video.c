@@ -29,17 +29,6 @@ VIDEO MENU
 =======================================================================
 */
 
-enum {
-#ifndef REF_HARD_LINKED
-    REF_SOFT,
-#endif
-    REF_OPENGL,
-    REF_3DFX,
-    REF_POWERVR
-};
-
-#define ID_APPLY	101
-#define ID_DEFAULTS	102
 #define ID_REF		103
 #define ID_PICMIP	104
 #define ID_LIGHTMAPS	106
@@ -50,17 +39,19 @@ enum {
 #define ID_OVERRIDE	112
 #define ID_SATURATION   113
 
-static const char *refs[] = {
 #ifndef REF_HARD_LINKED
-	"[software      ]",
-#endif
-	"[default OpenGL]",
-#ifdef _WIN32
-	"[3Dfx OpenGL   ]",
-	"[PowerVR OpenGL]",
-#endif
+static const char *refNames[] = {
+	"[software]",
+	"[OpenGL  ]",
 	NULL
 };
+
+static const char *refValues[] = {
+	"soft",
+	"gl",
+	NULL
+};
+#endif
 
 static const char *yesnoNames[] = {
 	"no",
@@ -124,12 +115,12 @@ typedef struct videoMenu_s {
     int         nummodes;
     char        *modes[16+1];
 
+#ifndef REF_HARD_LINKED
 	menuSpinControl_t		driver;
+#endif
 	menuSlider_t	screensize;
 	menuSlider_t	gamma;
 	menuSpinControl_t  	fullscreen;
-	menuAction_t	defaults;
-	menuAction_t	apply;
 
 	menuSlider_t	picmip;
 #ifdef _WIN32
@@ -155,11 +146,6 @@ typedef struct videoMenu_s {
 static videoMenu_t		m_video;
 
 
-static void VideoMenu_ResetDefaults( void ) {
-	UI_PopMenu();
-	M_Menu_Video_f();
-}
-
 #ifndef REF_HARD_LINKED
 static void VideoMenu_ApplyChangesSoft( void ) {
 	float gamma;
@@ -171,7 +157,7 @@ static void VideoMenu_ApplyChangesSoft( void ) {
 
 	cvar.Set( "vid_ref", "soft" );
 	cvar.SetValue( "vid_gamma", gamma );
-	//cvar.SetInteger( "vid_fullscreen", m_video.fullscreen.curvalue );
+	cmd.ExecuteText( EXEC_NOW, va( "set vid_fullscreen %d\n", m_video.fullscreen.curvalue ) );
 	cvar.SetInteger( "sw_stipplealpha", m_video.stipple.curvalue );
 	cvar.SetInteger( "viewsize", m_video.screensize.curvalue * 10 );
 	cvar.SetInteger( "sw_drawsird", m_video.sird.curvalue );
@@ -189,7 +175,7 @@ static void VideoMenu_ApplyChangesGL( void ) {
 	cvar.Set( "vid_ref", "gl" );
 	cvar.SetValue( "vid_gamma", gamma );
 	cvar.SetInteger( "gl_picmip", 3 - m_video.picmip.curvalue );
-	//cvar.SetInteger( "vid_fullscreen", m_video.fullscreen.curvalue );
+	cmd.ExecuteText( EXEC_NOW, va( "set vid_fullscreen %d\n", m_video.fullscreen.curvalue ) );
 #ifdef _WIN32
 	cvar.SetInteger( "gl_swapinterval", m_video.vsync.curvalue );
 #endif
@@ -204,24 +190,6 @@ static void VideoMenu_ApplyChangesGL( void ) {
 #if USE_DYNAMIC
 	cvar.SetInteger( "gl_dynamic", m_video.dlight.curvalue );
 #endif
-
-#ifdef _WIN32
-	switch( m_video.driver.curvalue ) {
-	case REF_OPENGL:
-		cvar.Set( "gl_driver", "opengl32" );
-		break;
-	case REF_3DFX:
-		cvar.Set( "gl_driver", "3dfxgl" );
-		break;
-	case REF_POWERVR:
-		cvar.Set( "gl_driver", "pvrgl" );
-		break;
-	case REF_VERITE:
-		cvar.Set( "gl_driver", "veritegl" );
-		break;
-	}
-#endif
-
 }
 
 #ifndef REF_HARD_LINKED
@@ -244,7 +212,7 @@ static void VideoMenu_InitSoft( void ) {
 	m_video.stipple.generic.flags &= ~QMF_HIDDEN;
 	m_video.sird.generic.flags &= ~QMF_HIDDEN;
 
-    Menu_Size( &m_video.menu );
+    Menu_Init( &m_video.menu );
 }
 #endif
 
@@ -269,7 +237,6 @@ static void VideoMenu_InitGL( void ) {
 	m_video.sird.generic.flags |= QMF_HIDDEN;
 #endif
 
-    Menu_Size( &m_video.menu );
 }
 
 static int VideoMenu_Callback( int id, int msg, int param ) {
@@ -277,46 +244,17 @@ static int VideoMenu_Callback( int id, int msg, int param ) {
     int i;
 
 	switch( msg ) {
-	case QM_ACTIVATE:
-		switch( id ) {
-		case ID_APPLY:
-        apply:
-#ifndef REF_HARD_LINKED
-			if( m_video.driver.curvalue == REF_SOFT ) {
-				VideoMenu_ApplyChangesSoft();
-			} else
-#endif
-            {
-				VideoMenu_ApplyChangesGL();
-			}
-			if( m_video.needRestart ) {
-				if( m_video.needRestart & 2 ) {
-					cmd.ExecuteText( EXEC_APPEND, "vid_restart; menu_video\n" );
-				} else {
-					cmd.ExecuteText( EXEC_APPEND, "fs_restart; menu_video\n" );
-				}
-				UI_ForceMenuOff();
-				return QMS_SILENT;
-			}
-			UI_PopMenu();
-			return QMS_OUT;
-		case ID_DEFAULTS:
-			VideoMenu_ResetDefaults();
-			break;
-		default:
-			break;
-		}
-		break;
 	case QM_CHANGE:
 		switch( id ) {
 #ifndef REF_HARD_LINKED
 		case ID_REF:
-			//m_video.needRestart |= 2;
-			if( m_video.driver.curvalue == REF_SOFT ) {
+			m_video.needRestart |= 2;
+			if( !m_video.driver.curvalue ) {
 				VideoMenu_InitSoft();
-			} else if( param == REF_SOFT ) {
+			} else {
 				VideoMenu_InitGL();
 			}
+            Menu_Init( &m_video.menu );
 			break;
 #endif
 		case ID_GAMMATYPE:
@@ -336,28 +274,18 @@ static int VideoMenu_Callback( int id, int msg, int param ) {
 			    m_video.needRestart |= 1;
             }
             break;
-        case ID_FULLSCREEN:
-	        cmd.ExecuteText( EXEC_NOW, va( "set vid_fullscreen %d\n", m_video.fullscreen.curvalue ) );
-            break;
 		default:
 			break;
 		}
+
         if( m_video.needRestart ) {
             if( m_video.needRestart & 2 ) {
-                m_video.menu.statusbar = "vid_restart required";
+                m_video.menu.statusbar = "vid_restart pending";
             } else {
-                m_video.menu.statusbar = "fs_restart required";
+                m_video.menu.statusbar = "fs_restart pending";
             }
         }
 		return QMS_NOTHANDLED;
-    case QM_KEY:
-        if( param == 'a' ) {
-			goto apply;
-        }
-        if( param == 'u' ) {
-			VideoMenu_ResetDefaults();
-        }
-        break;
     case QM_DESTROY:
         for( i = 1; i < m_video.nummodes; i++ ) {
             com.Free( m_video.modes[i] );
@@ -368,6 +296,31 @@ static int VideoMenu_Callback( int id, int msg, int param ) {
     case QM_SIZE:
         Menu_Size( &m_video.menu );
         break;
+    case QM_KEY:
+        if( param != K_ESCAPE ) {
+            break;
+        }
+        if( !keys.IsDown( K_CTRL ) ) {
+#ifndef REF_HARD_LINKED
+            if( !m_video.driver.curvalue ) {
+                VideoMenu_ApplyChangesSoft();
+            } else
+#endif
+            {
+                VideoMenu_ApplyChangesGL();
+            }
+            if( m_video.needRestart ) {
+                if( m_video.needRestart & 2 ) {
+                    cmd.ExecuteText( EXEC_APPEND, "vid_restart\n" );
+                } else {
+                    cmd.ExecuteText( EXEC_APPEND, "fs_restart\n" );
+                }
+                UI_ForceMenuOff();
+                return QMS_SILENT;
+            }
+        }
+        UI_PopMenu();
+        return QMS_OUT;
 	default:
 		break;
 	}
@@ -376,10 +329,50 @@ static int VideoMenu_Callback( int id, int msg, int param ) {
 
 }
 
+static int UI_VariableInteger( const char *name, int min, int max ) {
+    int v = cvar.VariableInteger( name );
+
+    if( v < min ) {
+        v = min;
+    } else if( v > max ) {
+        v = max;
+    }
+
+    return v;
+}
+
+static float UI_VariableValue( const char *name, float min, float max ) {
+    float v = cvar.VariableValue( name );
+
+    if( v < min ) {
+        v = min;
+    } else if( v > max ) {
+        v = max;
+    }
+
+    return v;
+}
+
+static int UI_VariableBool( const char *name ) {
+    int v = cvar.VariableInteger( name );
+
+    return v ? 1 : 0;
+}
+
+static int UI_VariableString( const char *name, const char **values ) {
+    char *s = cvar.VariableString( name );
+    int i;
+
+    for( i = 0; values[i]; i++ ) {
+        if( !Q_stricmp( s, values[i] ) ) {
+            return i;
+        }
+    }
+    return 0;
+}
+
 static void VideoMenu_Init( void ) {
 	char *s, *p;
-	int i;
-	float f;
 
 	memset( &m_video, 0, sizeof( m_video ) );
 
@@ -401,17 +394,19 @@ static void VideoMenu_Init( void ) {
     }
     m_video.modes[m_video.nummodes] = NULL;
 
+#ifndef REF_HARD_LINKED
 	m_video.driver.generic.type = MTYPE_SPINCONTROL;
 	m_video.driver.generic.flags = QMF_HASFOCUS;
 	m_video.driver.generic.id = ID_REF;
 	m_video.driver.generic.name = "driver";
-	m_video.driver.itemnames = refs;
-	m_video.driver.curvalue = -1;
+	m_video.driver.itemnames = refNames;
+	m_video.driver.curvalue = UI_VariableString( "vid_ref", refValues );
+#endif
 
 	m_video.screensize.generic.type	= MTYPE_SLIDER;
 	m_video.screensize.generic.name	= "screen size";
-	m_video.screensize.minvalue = 3;
-	m_video.screensize.maxvalue = 12;
+	m_video.screensize.minvalue = 4;
+	m_video.screensize.maxvalue = 10;
 	m_video.screensize.curvalue = cvar.VariableInteger( "viewsize" ) / 10;
 
 	m_video.gamma.generic.type	= MTYPE_SLIDER;
@@ -425,14 +420,12 @@ static void VideoMenu_Init( void ) {
 	m_video.fullscreen.generic.id = ID_FULLSCREEN;
 	m_video.fullscreen.generic.name = "video mode";
 	m_video.fullscreen.itemnames = ( const char ** )m_video.modes;
-    i = cvar.VariableInteger( "vid_fullscreen" );
-    clamp( i, 0, m_video.nummodes - 1 );
-	m_video.fullscreen.curvalue = i;
+	m_video.fullscreen.curvalue = UI_VariableInteger( "vid_fullscreen", 0, m_video.nummodes - 1 );
 
 	m_video.gammaType.generic.type = MTYPE_SPINCONTROL;
 	m_video.gammaType.generic.id	= ID_GAMMATYPE;
 	m_video.gammaType.generic.name	= "gamma correction";
-	m_video.gammaType.curvalue = cvar.VariableInteger( "vid_hwgamma" ) ? 1 : 0;
+	m_video.gammaType.curvalue = UI_VariableBool( "vid_hwgamma" );
 	m_video.gammaType.itemnames = gammaNames;
 
 	m_video.picmip.generic.type	= MTYPE_SLIDER;
@@ -440,26 +433,18 @@ static void VideoMenu_Init( void ) {
 	m_video.picmip.generic.name	= "texture quality";
 	m_video.picmip.minvalue = 0;
 	m_video.picmip.maxvalue = 3;
-	i = cvar.VariableInteger( "gl_picmip" );
-	clamp( i, 0, 3 );
-	m_video.picmip.curvalue = 3 - i;
+	m_video.picmip.curvalue = 3 - UI_VariableInteger( "gl_picmip", 0, 3 );
 
 	m_video.textureFilter.generic.type = MTYPE_SPINCONTROL;
 	m_video.textureFilter.generic.id	= ID_TEXTUREFILTER;
 	m_video.textureFilter.generic.name	= "texture filter";
 	m_video.textureFilter.itemnames = filterNames;
-	s = cvar.VariableString( "gl_texturemode" );
-	for( i=0 ; filterValues[i] ; i++ ) {
-		if( !Q_stricmp( s, filterValues[i] ) ) {
-			m_video.textureFilter.curvalue = i;
-			break;
-		}
-	}
+	m_video.textureFilter.curvalue = UI_VariableString( "gl_texturemode", filterValues );
 
 #ifdef _WIN32
 	m_video.vsync.generic.type = MTYPE_SPINCONTROL;
 	m_video.vsync.generic.name	= "vertical sync";
-	m_video.vsync.curvalue = cvar.VariableInteger( "gl_swapinterval" ) ? 1 : 0;
+	m_video.vsync.curvalue = UI_VariableBool( "gl_swapinterval" );
 	m_video.vsync.itemnames = yesnoNames;
 #endif
 
@@ -468,94 +453,57 @@ static void VideoMenu_Init( void ) {
 	m_video.saturation.generic.name	= "texture saturation";
 	m_video.saturation.minvalue = 0;
 	m_video.saturation.maxvalue = 10;
-	f = cvar.VariableValue( "gl_saturation" );
-	clamp( f, 0, 1 );
-	m_video.saturation.curvalue = f * 10;
+	m_video.saturation.curvalue = UI_VariableValue( "gl_saturation", 0, 1 ) * 10;
 
 	m_video.lightmaps.generic.type	= MTYPE_SLIDER;
 	m_video.lightmaps.generic.id		= ID_LIGHTMAPS;
 	m_video.lightmaps.generic.name	= "lightmap saturation";
 	m_video.lightmaps.minvalue = 0;
 	m_video.lightmaps.maxvalue = 10;
-	f = cvar.VariableValue( "gl_coloredlightmaps" );
-	clamp( f, 0, 1 );
-	m_video.lightmaps.curvalue = f * 10;
+	m_video.lightmaps.curvalue = UI_VariableValue( "gl_coloredlightmaps", 0, 1 ) * 10;
 
 	m_video.anisotropy.generic.type	= MTYPE_SLIDER;
 	m_video.anisotropy.generic.name	= "anisotropic filter";
 	m_video.anisotropy.minvalue = 0;
 	m_video.anisotropy.maxvalue = 16;
-	f = cvar.VariableValue( "gl_anisotropy" );
-	clamp( f, 0, 16 );
-	m_video.anisotropy.curvalue = f;
+	m_video.anisotropy.curvalue = UI_VariableInteger( "gl_anisotropy", 0, 16 );
 
 	m_video.overrideTextures.generic.type = MTYPE_SPINCONTROL;
 	m_video.overrideTextures.generic.id = ID_OVERRIDE;
 	m_video.overrideTextures.generic.name	= "override textures";
-	m_video.overrideTextures.curvalue = cvar.VariableInteger( "r_override_textures" ) ? 1 : 0;
+	m_video.overrideTextures.curvalue = UI_VariableBool( "r_override_textures" );
 	m_video.overrideTextures.itemnames = yesnoNames;
 
 	m_video.overrideModels.generic.type = MTYPE_SPINCONTROL;
 	m_video.overrideModels.generic.id = ID_OVERRIDE;
 	m_video.overrideModels.generic.name	= "override models";
-	m_video.overrideModels.curvalue = cvar.VariableInteger( "r_override_models" ) ? 1 : 0;
+	m_video.overrideModels.curvalue = UI_VariableBool( "r_override_models" );
 	m_video.overrideModels.itemnames = yesnoNames;
 
 #if USE_DYNAMIC
 	m_video.dlight.generic.type = MTYPE_SPINCONTROL;
 	m_video.dlight.generic.name	= "dynamic lighting";
-    i = cvar.VariableInteger( "gl_dynamic" );
-    clamp( i, 0, 2 );
-	m_video.dlight.curvalue = i;
+	m_video.dlight.curvalue = UI_VariableInteger( "gl_dynamic", 0, 2 );
 	m_video.dlight.itemnames = dlightNames;
 #endif
 
 #ifndef REF_HARD_LINKED
 	m_video.stipple.generic.type = MTYPE_SPINCONTROL;
 	m_video.stipple.generic.name	= "stipple alpha";
-	m_video.stipple.curvalue = cvar.VariableInteger( "sw_stipplealpha" ) ? 1 : 0;
+	m_video.stipple.curvalue = UI_VariableBool( "sw_stipplealpha" );
 	m_video.stipple.itemnames = yesnoNames;
 
 	m_video.sird.generic.type = MTYPE_SPINCONTROL;
 	m_video.sird.generic.name	= "draw SIRDs";
-	i = cvar.VariableInteger( "sw_drawsird" );
-	clamp( i, 0, 2 );
-	m_video.sird.curvalue = i;
+	m_video.sird.curvalue = UI_VariableInteger( "sw_drawsird", 0, 2 );
 	m_video.sird.itemnames = sirdNames;
 #endif
-
-	m_video.defaults.generic.type = MTYPE_ACTION;
-	m_video.defaults.generic.id = ID_DEFAULTS;
-	m_video.defaults.generic.uiFlags = UI_CENTER;
-	m_video.defaults.generic.name = "undo changes (u)";
-
-	m_video.apply.generic.type = MTYPE_ACTION;
-	m_video.apply.generic.id = ID_APPLY;
-	m_video.apply.generic.uiFlags = UI_CENTER;
-	m_video.apply.generic.name = "apply changes (a)";
 
 	m_video.menu.banner = "Video";
 
 #ifndef REF_HARD_LINKED
-	if( !Q_stricmp( cvar.VariableString( "vid_ref" ), "soft" ) ) {
-		m_video.driver.curvalue = REF_SOFT;
-		VideoMenu_InitSoft();
-	} else
-#endif
-    {
-		m_video.driver.curvalue = REF_OPENGL;
-#ifdef _WIN32
-		s = cvar.VariableString( "gl_driver" );
-		if( !Q_stricmp( s, "3dfxgl" ) ) {
-			m_video.driver.curvalue = REF_3DFX;
-		} else if( !Q_stricmp( s, "pvrgl" ) ) {
-			m_video.driver.curvalue = REF_POWERVR;
-		}
-#endif
-		VideoMenu_InitGL();
-	}
-
 	Menu_AddItem( &m_video.menu, &m_video.driver );
+#endif
 	Menu_AddItem( &m_video.menu, &m_video.screensize );
 	Menu_AddItem( &m_video.menu, &m_video.gamma );
 	Menu_AddItem( &m_video.menu, &m_video.fullscreen );
@@ -574,14 +522,19 @@ static void VideoMenu_Init( void ) {
 #if USE_DYNAMIC
 	Menu_AddItem( &m_video.menu, &m_video.dlight );
 #endif
-
 #ifndef REF_HARD_LINKED
 	Menu_AddItem( &m_video.menu, &m_video.stipple );
 	Menu_AddItem( &m_video.menu, &m_video.sird );
 #endif
 
-	Menu_AddItem( &m_video.menu, &m_video.defaults );
-	Menu_AddItem( &m_video.menu, &m_video.apply );
+#ifndef REF_HARD_LINKED
+	if( !m_video.driver.curvalue ) {
+		VideoMenu_InitSoft();
+	} else
+#endif
+    {
+		VideoMenu_InitGL();
+	}
 }
 
 void M_Menu_Video_f( void ) {
