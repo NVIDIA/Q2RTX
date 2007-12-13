@@ -280,9 +280,9 @@ static int VideoMenu_Callback( int id, int msg, int param ) {
 
         if( m_video.needRestart ) {
             if( m_video.needRestart & 2 ) {
-                m_video.menu.statusbar = "vid_restart pending";
+                m_video.menu.statusbar = "vid_restart pending; Ctrl+Esc to cancel";
             } else {
-                m_video.menu.statusbar = "fs_restart pending";
+                m_video.menu.statusbar = "fs_restart pending; Ctrl+Esc to cancel";
             }
         }
 		return QMS_NOTHANDLED;

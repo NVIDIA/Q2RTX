@@ -50,8 +50,9 @@ logfile="console.log"
 cfgfile="config.cfg"
 defcfg="default.cfg"
 autocfg="autoexec.cfg"
-histfile="history.txt"
-revision="166"
+histfile=".conhistory"
+democache=".democache"
+revision="167"
 tmpc="/tmp/q2pro-${RANDOM}.c"
 tmpo="/tmp/q2pro-${RANDOM}.o"
 
@@ -360,6 +361,7 @@ echo "#define COM_CONFIG_NAME \"$cfgfile\"" >> $config_h
 echo "#define COM_DEFAULTCFG_NAME \"$defcfg\"" >> $config_h
 echo "#define COM_AUTOEXECCFG_NAME \"$autocfg\"" >> $config_h
 echo "#define COM_HISTORYFILE_NAME \"$histfile\"" >> $config_h
+echo "#define COM_DEMOCACHE_NAME \"$democache\"" >> $config_h
 
 test "$mingw" = "no" && echo "#define DEFCFG \"$defcfg\"" >> $config_h
 

@@ -48,5 +48,5 @@ char *Prompt_Action( commandPrompt_t *prompt );
 void Prompt_HistoryUp( commandPrompt_t *prompt );
 void Prompt_HistoryDown( commandPrompt_t *prompt );
 void Prompt_Clear( commandPrompt_t *prompt );
-void Prompt_SaveHistory( commandPrompt_t *prompt, const char *filename );
+void Prompt_SaveHistory( commandPrompt_t *prompt, const char *filename, int lines );
 void Prompt_LoadHistory( commandPrompt_t *prompt, const char *filename );

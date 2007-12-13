@@ -18,8 +18,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#define MVD_MAGIC   MakeLong( 'M', 'V', 'D', '2' )
-
 #define MVD_DEBUG( s ) do { if( mvd_debug->integer ) \
     Com_Printf( S_COLOR_BLUE "%s: %s", __func__, s ); } while( 0 )
 

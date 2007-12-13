@@ -75,7 +75,7 @@ static cvar_t	*con_scale;
 static cvar_t	*con_font;
 static cvar_t	*con_background;
 static cvar_t	*con_scroll;
-static cvar_t	*con_histfile;
+static cvar_t	*con_history;
 
 // ============================================================================
 
@@ -315,7 +315,7 @@ void Con_Init( void ) {
 	con_background = Cvar_Get( "con_background", "conback", CVAR_ARCHIVE );
 	con_background->changed = con_param_changed;
 	con_scroll = Cvar_Get( "con_scroll", "0", CVAR_ARCHIVE );
-	con_histfile = Cvar_Get( "con_histfile", COM_HISTORYFILE_NAME, CVAR_ARCHIVE );
+	con_history = Cvar_Get( "con_history", "0", 0 );
 
 	IF_Init( &con.prompt.inputLine, 1, MAX_FIELD_TEXT );
 	IF_Init( &con.chatPrompt.inputLine, 1, MAX_FIELD_TEXT );
@@ -335,8 +335,8 @@ void Con_Init( void ) {
 }
 
 void Con_PostInit( void ) {
-    if( con_histfile->string[0] ) {
-        Prompt_LoadHistory( &con.prompt, con_histfile->string );
+    if( con_history->integer > 0 ) {
+        Prompt_LoadHistory( &con.prompt, COM_HISTORYFILE_NAME );
     }
 }
 
@@ -346,8 +346,8 @@ Con_Shutdown
 ================
 */
 void Con_Shutdown( void ) {
-    if( con_histfile->string[0] ) {
-        Prompt_SaveHistory( &con.prompt, con_histfile->string );
+    if( con_history->integer > 0 ) {
+        Prompt_SaveHistory( &con.prompt, COM_HISTORYFILE_NAME, con_history->integer );
     }
 	Prompt_Clear( &con.prompt );
 }

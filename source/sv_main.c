@@ -1803,8 +1803,6 @@ before Sys_Quit or Sys_Error
 ================
 */
 void SV_Shutdown( const char *finalmsg, killtype_t type ) {
-	int cmd;
-
 	Cvar_Set( "sv_running", "0" );
 	Cvar_Set( "sv_paused", "0" );
     
@@ -1815,29 +1813,11 @@ void SV_Shutdown( const char *finalmsg, killtype_t type ) {
 
 	SV_MvdRecStop();
 
-    switch( type ) {
-    case KILL_RESTART:
-        cmd = svc_reconnect;
-        break;
-    case KILL_DISCONNECT:
-        if( !dedicated->integer ) {
-            cmd = svc_disconnect;
-            break;
-        }
-
-        if( mvd_safecmd->string[0] ) {
-            Cbuf_AddText( mvd_safecmd->string );
-            cmd = svc_reconnect;
-        } else {
-            cmd = svc_disconnect;
-        }
-        break;
-    default:
-        cmd = svc_disconnect;
-        break;
+    if( type == KILL_RESTART ) {
+        SV_FinalMessage( finalmsg, svc_reconnect );
+    } else {
+        SV_FinalMessage( finalmsg, svc_disconnect );
     }
-
-    SV_FinalMessage( finalmsg, cmd );
 
 	Master_Shutdown();
 	SV_ShutdownGameProgs();

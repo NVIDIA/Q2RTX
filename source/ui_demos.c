@@ -134,7 +134,7 @@ static char *Demos_LoadCache( const char *path, void **list ) {
 		path++;
 	}
 
-	Q_concat( buffer, sizeof( buffer ), path, "/.democache", NULL );
+	Q_concat( buffer, sizeof( buffer ), path, "/" COM_DEMOCACHE_NAME, NULL );
     len = fs.LoadFile( buffer, ( void ** )&cache );
     if( !cache ) {
         return NULL;
@@ -180,7 +180,7 @@ static void Demos_WriteCache( const char *path ) {
 		path++;
 	}
 
-	Q_concat( buffer, sizeof( buffer ), path, "/.democache", NULL );
+	Q_concat( buffer, sizeof( buffer ), path, "/" COM_DEMOCACHE_NAME, NULL );
     fs.FOpenFile( buffer, &f, FS_MODE_WRITE );
     if( !f ) {
         return;

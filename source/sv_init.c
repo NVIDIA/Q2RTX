@@ -270,7 +270,7 @@ void SV_InitGame( qboolean ismvd ){
 	if( deflateInit2( &svs.z, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
         -15, 9, Z_DEFAULT_STRATEGY ) != Z_OK )
     {
-        Com_Error( ERR_FATAL, "deflateInit2() failed" );
+        Com_Error( ERR_FATAL, "%s: deflateInit2() failed", __func__ );
     }
 #endif
 

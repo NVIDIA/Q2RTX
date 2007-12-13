@@ -437,7 +437,7 @@ void Prompt_Clear( commandPrompt_t *prompt ) {
 	IF_Clear( &prompt->inputLine );
 }
 
-void Prompt_SaveHistory( commandPrompt_t *prompt, const char *filename ) {
+void Prompt_SaveHistory( commandPrompt_t *prompt, const char *filename, int lines ) {
     fileHandle_t f;
     char *s;
     int i;
@@ -447,7 +447,11 @@ void Prompt_SaveHistory( commandPrompt_t *prompt, const char *filename ) {
         return;
     }
 
-    i = prompt->inputLineNum - HISTORY_SIZE;
+    if( lines > HISTORY_SIZE ) {
+        lines = HISTORY_SIZE;
+    }
+
+    i = prompt->inputLineNum - lines;
     if( i < 0 ) {
         i = 0;
     }
