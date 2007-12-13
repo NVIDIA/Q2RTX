@@ -47,7 +47,9 @@ static const char *keybinds[][2] = {
 	{ "invprev", "prev item" },
 	{ "invnext", "next item" },
 
-	{ "help", "help computer" }
+	{ "help", "help computer" },
+
+	{ "pause", "pause game" }
 };
 
 static const int numKeyBinds = sizeof( keybinds ) / sizeof( keybinds[0] );

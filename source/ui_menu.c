@@ -1036,12 +1036,14 @@ void Menu_AddItem( menuFrameWork_t *menu, void *item ) {
 void Menu_Init( menuFrameWork_t *menu ) {
 	void *item;
 	int i;
+    int focus = 0;
 
 	menu->callback( ID_MENU, QM_SIZE, 0 );
 
 	for( i = 0; i < menu->nitems; i++ ) {
 		item = menu->items[i];
 
+        focus |= ((menuCommon_t *)item)->flags & QMF_HASFOCUS;
         switch( ((menuCommon_t *)item)->type ) {
         case MTYPE_FIELD:
             Field_Init( item );
@@ -1074,6 +1076,12 @@ void Menu_Init( menuFrameWork_t *menu ) {
             Com_Error( ERR_FATAL, "Menu_Init: unknown item type" );
             break;
         }
+    }
+
+    // set focus to the first item by default
+    if( !focus && menu->nitems ) {
+		item = menu->items[0];
+        ((menuCommon_t *)item)->flags |= QMF_HASFOCUS;
     }
 }
 
