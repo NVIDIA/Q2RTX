@@ -182,23 +182,13 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 	}
 	
 	if( flags & CVAR_INFOMASK ) {
-		length = strlen( var_name );
-		if( length >= MAX_INFO_KEY ) {
-			Com_WPrintf( "Oversize info cvar name: %d chars.\n", length );
-			goto badvar;
-		}
-		if( !Info_ValidateSubstring( var_name ) ) {
+		if( Info_SubValidate( var_name ) == -1 ) {
 			Com_WPrintf( "Invalid info cvar name.\n" );
-			goto badvar;
+			return NULL;
 		}
-		length = strlen( var_value );
-		if( length >= MAX_INFO_VALUE ) {
-			Com_WPrintf( "Oversize info cvar value: %d chars.\n", length );
-			goto badvar;
-		}
-		if( !Info_ValidateSubstring( var_value ) ) {
+		if( Info_SubValidate( var_value ) == -1 ) {
 			Com_WPrintf( "Invalid info cvar value.\n" );
-			goto badvar;
+			return NULL;
 		}
 	}
 
@@ -279,12 +269,6 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 	var->modified = qtrue;
 
 	return var;
-
-badvar:
-	if( !( flags & CVAR_USER_CREATED ) ) {
-		Com_Error( ERR_FATAL, "Cvar_Get: invalid info variable" );
-	}
-	return NULL;
 }
 
 void Cvar_Subsystem( cvarSubsystem_t subsystem ) {
@@ -297,25 +281,15 @@ Cvar_SetByVar
 ============
 */
 void Cvar_SetByVar( cvar_t *var, const char *value, cvarSetSource_t source ) {
-	int length;
-
 	if( !strcmp( value, var->string ) &&
-            !( var->flags & (CVAR_LATCHED|CVAR_LATCH) ) )
+        !( var->flags & (CVAR_LATCHED|CVAR_LATCH) ) )
     {
 		return;		// not changed
     }
 
-	//Com_DPrintf( "Cvar_Set( \"%s\", \"%s\" )\n", var->name, value );
-
 	if( var->flags & CVAR_INFOMASK ) {
-		length = strlen( value );
-		if( length >= MAX_INFO_VALUE ) {
-			Com_WPrintf( "Oversize info cvar value specified "
-                "(%d chars), ignored.\n", length );
-			return;
-		}
-		if( !Info_ValidateSubstring( value ) ) {
-			Com_WPrintf( "Invalid info cvar value specified, ignored.\n" );
+		if( Info_SubValidate( value ) == -1 ) {
+			Com_WPrintf( "Invalid info cvar value.\n" );
 			return;
 		}
 	}

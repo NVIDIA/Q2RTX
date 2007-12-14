@@ -1138,7 +1138,7 @@ void SV_ExecuteClientMessage( client_t *client ) {
 				userinfoUpdateCount++;
 
 				strcpy( buffer, client->userinfo );
-				if( !Info_AttemptSetValueForKey( buffer, key, value ) ) {
+				if( !Info_SetValueForKey( buffer, key, value ) ) {
 					SV_ClientPrintf( client, PRINT_HIGH,
 						"Malformed userinfo update supplied. Ignored.\n" );
 					break;

@@ -86,9 +86,8 @@ static int	rd_buffersize;
 static int  rd_length;
 static rdflush_t    rd_flush;
 
-void Com_BeginRedirect (int target, char *buffer, int buffersize, rdflush_t flush)
-{
-	if (!target || !buffer || !buffersize || !flush)
+void Com_BeginRedirect( int target, char *buffer, int buffersize, rdflush_t flush ) {
+	if( !target || !buffer || buffersize < 1 || !flush )
 		return;
 	rd_target = target;
 	rd_buffer = buffer;
@@ -99,23 +98,40 @@ void Com_BeginRedirect (int target, char *buffer, int buffersize, rdflush_t flus
     rd_length = 0;
 }
 
-void Com_AbortRedirect (void)
-{
+static void Com_AbortRedirect( void ) {
 	rd_target = 0;
 	rd_buffer = NULL;
 	rd_buffersize = 0;
 	rd_flush = NULL;
 }
 
-void Com_EndRedirect (void)
-{
-	rd_flush(rd_target, rd_buffer, rd_length);
+void Com_EndRedirect( void ) {
+	rd_flush( rd_target, rd_buffer, rd_length );
     rd_length = 0;
 
 	rd_target = 0;
 	rd_buffer = NULL;
 	rd_buffersize = 0;
 	rd_flush = NULL;
+}
+
+static void Com_Redirect( const char *msg, int total ) {
+    int length;
+
+    while( total ) {
+        length = total;
+        if( length > rd_buffersize ) {
+            length = rd_buffersize;
+        }
+        if( rd_length + length > rd_buffersize ) {
+            rd_flush( rd_target, rd_buffer, rd_length );
+            *rd_buffer = 0;
+            rd_length = 0;
+        }
+        memcpy( rd_buffer + rd_length, msg, length );
+        rd_length += length;
+        total -= length;
+    }
 }
 
 static void LogFile_Close( void ) {
@@ -195,8 +211,8 @@ static void LogFile_Output( const char *string ) {
 			continue;
 		}
         if( com_logNewline ) {
-            if( length && p + length < maxp ) {
-                strcpy( p, timebuf );
+            if( length > 0 && p + length < maxp ) {
+                memcpy( p, timebuf, length );
                 p += length;
             }
             com_logNewline = qfalse;
@@ -245,19 +261,12 @@ void Com_Printf( const char *fmt, ... ) {
 	va_end( argptr );
 
 	if( rd_target ) {
-        if( length < rd_buffersize ) {
-            if( rd_length + length >= rd_buffersize ) {
-                rd_flush( rd_target, rd_buffer, rd_length );
-                *rd_buffer = 0;
-                rd_length = 0;
-            }
-            memcpy( rd_buffer + rd_length, msg, length );
-            rd_length += length;
-        }
+        Com_Redirect( msg, length );
 	} else {
+        // graphical console
 		Con_Print( msg );
-			
-		// also echo to debugging console
+
+		// debugging console
 		Sys_ConsoleOutput( msg );
 
 		// logfile

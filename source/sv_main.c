@@ -730,7 +730,7 @@ static void SVC_DirectConnect( void ) {
 
 	// force the IP key/value pair so the game can filter based on ip
 	s = NET_AdrToString( &net_from );
-	if( !Info_AttemptSetValueForKey( userinfo, "ip", s ) ) {
+	if( !Info_SetValueForKey( userinfo, "ip", s ) ) {
 		SV_OobPrintf( "Oversize userinfo string.\n" );
 		Com_DPrintf( "    rejected - oversize userinfo.\n" );
 		return;
@@ -1567,7 +1567,7 @@ void SV_UpdateUserinfo( char *userinfo ) {
 
 	// force the IP key/value pair so the game can filter based on ip
 	s = NET_AdrToString( &sv_client->netchan->remote_address );
-	if( !Info_AttemptSetValueForKey( userinfo, "ip", s ) ) {
+	if( !Info_SetValueForKey( userinfo, "ip", s ) ) {
 		return;
 	}
 

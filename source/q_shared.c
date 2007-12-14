@@ -2004,10 +2004,6 @@ void Info_RemoveKey( char *s, const char *key ) {
 	char	pkey[MAX_INFO_STRING];
 	char	*o;
 
-	if( strchr( key, '\\' ) ) {
-		return;
-	}
-
 	while( 1 ) {
 		start = s;
 		if( *s == '\\' )
@@ -2053,7 +2049,7 @@ Also checks the length of keys/values and the whole string.
 */
 qboolean Info_Validate( const char *s ) {
 	const char *start;
-	int		len;
+	int		c, len;
 	
 	start = s;
 	while( 1 ) {
@@ -2068,7 +2064,8 @@ qboolean Info_Validate( const char *s ) {
 		}
 		len = 0;
 		while( *s != '\\' ) {
-			if( *s == '\"' || *s == ';' ) {
+            c = *s & 127;
+			if( c == '\\' || c == '\"' || c == ';' ) {
 				return qfalse;	// illegal characters
 			}
 			if( len == MAX_INFO_KEY - 1 ) {
@@ -2089,7 +2086,8 @@ qboolean Info_Validate( const char *s ) {
 		}
 		len = 0;
 		while( *s != '\\' ) {
-			if( *s == '\"' || *s == ';' ) {
+            c = *s & 127;
+			if( c == '\\' || c == '\"' || c == ';' ) {
 				return qfalse;	// illegal characters
 			}
 			if( len == MAX_INFO_VALUE - 1 ) {
@@ -2113,20 +2111,23 @@ qboolean Info_Validate( const char *s ) {
 Info_ValidateSubstring
 ============
 */
-qboolean Info_ValidateSubstring( const char *s ) {
+int Info_SubValidate( const char *s ) {
 	const char *start;
+    int c, len;
 
-	start = s;
-	while( *s ) {
-		if( *s == '\\' || *s == '\"' || *s == ';' ) {
-			return qfalse;
+	for( start = s; *s; s++ ) {
+        c = *s & 127;
+		if( c == '\\' || c == '\"' || c == ';' ) {
+			return -1;
 		}
-		s++;
 	}
-	if( s - start > MAX_QPATH ) {
-		return qfalse;
-	}
-	return qtrue;
+
+	len = s - start;
+    if( len >= MAX_QPATH ) {
+        return -1;
+    }
+
+    return len;
 }
 
 /*
@@ -2134,104 +2135,24 @@ qboolean Info_ValidateSubstring( const char *s ) {
 Info_SetValueForKey
 ==================
 */
-void Info_SetValueForKey( char *s, const char *key, const char *value ) {
-	char	newi[MAX_INFO_STRING];
+qboolean Info_SetValueForKey( char *s, const char *key, const char *value ) {
+	char	newi[MAX_INFO_STRING], *v;
 	int		c, l, kl, vl;
-    const char *v;
 
     // validate key
-    v = key;
-	while( *v ) {
-		if( *v == '\\' || *v == '\"' || *v == ';' ) {
-		    Com_Printf( "Can't use keys with backslashes, double quotes or semicolons\n" );
-			return;
-		}
-		v++;
+    kl = Info_SubValidate( key );
+    if( kl == -1 ) {
+		return qfalse;
 	}
-    kl = v - key;
-    if( kl >= MAX_INFO_KEY ) {
-		Com_Printf( "Keys must be less then %d characters.\n", MAX_INFO_KEY );
-        return;
-    }
 
     // validate value
-    v = value;
-	while( *v ) {
-		if( *v == '\\' || *v == '\"' || *v == ';' ) {
-		    Com_Printf( "Can't use values with backslashes, double quotes or semicolons\n" );
-			return;
-		}
-		v++;
+    vl = Info_SubValidate( value );
+    if( vl == -1 ) {
+		return qfalse;
 	}
-    vl = v - value;
-    if( kl >= MAX_INFO_VALUE ) {
-		Com_Printf( "Values must be less then %d characters.\n", MAX_INFO_VALUE );
-        return;
-    }
 
 	Info_RemoveKey( s, key );
-	if( !value[0] ) {
-		return;
-	}
-
-    l = strlen( s );
-	if( l + kl + vl + 2 >= MAX_INFO_STRING ) {
-		Com_Printf( "Info string length exceeded\n" );
-		return;
-	}
-
-	sprintf( newi, "\\%s\\%s", key, value );
-
-	// only copy ascii values
-	s += l;
-	v = newi;
-	while( *v ) {
-		c = *v++;
-		c &= 127;		// strip high bits
-		if( c >= 32 && c < 127 )
-			*s++ = c;
-	}
-	*s = 0;
-}
-
-/*
-==================
-Info_AttemptSetValueForKey
-==================
-*/
-qboolean Info_AttemptSetValueForKey( char *s, const char *key, const char *value ) {
-	char	newi[MAX_INFO_STRING];
-	int		c, l, kl, vl;
-    const char *v;
-
-    // validate key
-    v = key;
-	while( *v ) {
-		if( *v == '\\' || *v == '\"' || *v == ';' ) {
-			return qfalse;
-		}
-		v++;
-	}
-    kl = v - key;
-    if( kl >= MAX_INFO_KEY ) {
-        return qfalse;
-    }
-
-    // validate value
-    v = value;
-	while( *v ) {
-		if( *v == '\\' || *v == '\"' || *v == ';' ) {
-			return qfalse;
-		}
-		v++;
-	}
-    vl = v - value;
-    if( vl >= MAX_INFO_KEY ) {
-        return qfalse;
-    }
-
-	Info_RemoveKey( s, key );
-	if( !value[0] ) {
+	if( !vl ) {
 		return qtrue;
 	}
 
@@ -2240,7 +2161,10 @@ qboolean Info_AttemptSetValueForKey( char *s, const char *key, const char *value
 		return qfalse;
 	}
 
-	sprintf( newi, "\\%s\\%s", key, value );
+    newi[0] = '\\';
+    memcpy( newi + 1, key, kl );
+    newi[kl + 1] = '\\';
+    memcpy( newi + kl + 2, value, vl + 1 );
 
 	// only copy ascii values
 	s += l;
@@ -2253,7 +2177,7 @@ qboolean Info_AttemptSetValueForKey( char *s, const char *key, const char *value
 	}
 	*s = 0;
 
-	return qtrue;
+    return qtrue;
 }
 
 /*
@@ -2330,7 +2254,4 @@ void Info_Print( const char *infostring ) {
 		}
 	}
 }
-
-
-
 

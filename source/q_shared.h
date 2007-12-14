@@ -554,10 +554,9 @@ static inline float FloatSwap( float f ) {
 
 char	*Info_ValueForKey( const char *s, const char *key );
 void	Info_RemoveKey( char *s, const char *key );
-void	Info_SetValueForKey( char *s, const char *key, const char *value );
-qboolean Info_AttemptSetValueForKey( char *s, const char *key, const char *value );
+qboolean	Info_SetValueForKey( char *s, const char *key, const char *value );
 qboolean	Info_Validate( const char *s );
-qboolean	Info_ValidateSubstring( const char *s );
+int 	Info_SubValidate( const char *s );
 void	Info_NextPair( const char **string, char *key, char *value );
 void	Info_Print( const char *infostring );
 
