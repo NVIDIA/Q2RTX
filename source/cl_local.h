@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "q_list.h"
 #include "q_field.h"
 #include "q_uis.h"
+#include "vid_public.h"
 #include "ref_public.h"
 #include "key_public.h"
 #include "snd_public.h"
@@ -616,7 +617,6 @@ void Con_Shutdown( void );
 void Con_DrawConsole( void );
 void Con_RunConsole( void );
 void Con_Print( const char *txt );
-void Con_Clear_f( void );
 void Con_ClearNotify_f( void );
 void Con_ToggleConsole_f (void);
 void Con_Close( void );
@@ -633,8 +633,6 @@ void Char_Message( int key );
 //
 void	CL_InitRefresh( void );
 void	CL_ShutdownRefresh( void );
-
-extern cvar_t *vid_autorestart;
 
 //
 // cl_ui.c

@@ -1097,6 +1097,10 @@ int Com_Uptime_m( char *buffer, int size ) {
     return Com_sprintf( buffer, size, "%02d.%02d", min, sec );
 }
 
+int Com_Random_m( char *buffer, int size ) {
+    return Com_sprintf( buffer, size, "%d", rand() % 10 );
+}
+
 static void Com_LastError_f( void ) {
 	if( com_errorMsg[0] ) {
 		Com_Printf( "%s\n", com_errorMsg );
@@ -1451,6 +1455,7 @@ void Qcommon_Init( int argc, char **argv ) {
 	Cmd_AddMacro( "com_date", Com_Date_m );
 	Cmd_AddMacro( "com_time", Com_Time_m );
 	Cmd_AddMacro( "com_uptime", Com_Uptime_m );
+	Cmd_AddMacro( "random", Com_Random_m );
 
     // add any system-wide configuration files
     Sys_AddDefaultConfig();

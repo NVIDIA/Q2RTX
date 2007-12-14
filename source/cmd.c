@@ -729,8 +729,7 @@ char *Cmd_MacroExpandString( const char *text, qboolean aliasHack ) {
 		return NULL;
 	}
 
-	strcpy( expanded, text );
-	scan = expanded;
+	scan = memcpy( expanded, text, len + 1 );
 
 	inquote = qfalse;
 	count = 0;
@@ -743,27 +742,26 @@ char *Cmd_MacroExpandString( const char *text, qboolean aliasHack ) {
 			inquote ^= 1;
 		}
 		if( inquote ) {
-			continue;	/* don't expand inside quotes */
+			continue;	// don't expand inside quotes
 		}
 		if( scan[i] != '$' ) {
 			continue;
 		}
 		
-		/* scan out the complete macro */
+		// scan out the complete macro
 		start = scan + i + 1;
 
-		if( !start[0] ) {
-			break;	/* end of string */
+		if( *start == 0 ) {
+			break;	// end of string
 		}
 
-		/* allow escape syntax */
-		if( i && scan[i-1] == '\\' ) {
-			memmove( scan + i - 1, scan + i, len - i + 1 );
-			i--;
+		// allow $$ escape syntax
+		if( *start == '$' ) {
+			memmove( scan + i, start, len - i );
 			continue;
 		}
 
-		/* fix from jitspoe - skip leading spaces */
+		// skip leading spaces
 		while( *start && *start <= 32 ) {
 			start++;
 		}
@@ -771,9 +769,9 @@ char *Cmd_MacroExpandString( const char *text, qboolean aliasHack ) {
 		token = temporary;
 
 		if( *start == '{' ) {
-			/* allow ${variable} syntax */
+			// allow ${variable} syntax
 			start++;
-            if( *start == '$' ) {
+            if( *start == '$' ) { // allow ${$varibale} syntax
                 start++;
             }
 			while( *start ) {
@@ -784,7 +782,7 @@ char *Cmd_MacroExpandString( const char *text, qboolean aliasHack ) {
 				*token++ = *start++;
 			}
 		} else {
-			/* parse single word */
+			// parse single word
 			while( *start > 32 ) {
 				*token++ = *start++;
 			}
@@ -799,7 +797,7 @@ char *Cmd_MacroExpandString( const char *text, qboolean aliasHack ) {
 		rescan = qfalse;
 		
 		if( aliasHack ) {
-			/* expand positional parameters only */
+			// expand positional parameters only
             if( temporary[1]  ) {
                 continue;
             }
@@ -811,12 +809,13 @@ char *Cmd_MacroExpandString( const char *text, qboolean aliasHack ) {
                 continue;
             }
 		} else {
-			/* check for macros first */
+			// check for macros first
 			macro = Cmd_FindMacro( temporary );
 			if( macro ) {
 				macro->function( buffer, sizeof( buffer ) );
 				token = buffer;
             } else {
+                // than variables
 				var = Cvar_FindVar( temporary );
 				if( var && !( var->flags & CVAR_PRIVATE ) ) {
 					token = var->string;
@@ -1361,6 +1360,11 @@ static void Cmd_MacroList_f( void ) {
 	Com_Printf( "%i of %i macros\n", i, total );
 }
 
+static void Cmd_Text_f( void ) {
+    Cbuf_AddText( Cmd_Args() );
+    Cbuf_AddText( "\n" );
+}
+
 /*
 ============
 Cmd_FillAPI
@@ -1389,6 +1393,7 @@ static const cmdreg_t c_cmd[] = {
     { "alias", Cmd_Alias_f, Cmd_Alias_g, Cmd_Mixed_g },
     { "unalias", Cmd_UnAlias_f, Cmd_Alias_g },
     { "wait", Cmd_Wait_f },
+    { "text", Cmd_Text_f },
 
     { NULL }
 };

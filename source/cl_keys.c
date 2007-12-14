@@ -70,8 +70,14 @@ static keyname_t keynames[] =
 	{"RIGHTARROW", K_RIGHTARROW},
 
 	{"ALT", K_ALT},
+	{"LALT", K_LALT},
+	{"RALT", K_RALT},
 	{"CTRL", K_CTRL},
+	{"LCTRL", K_LCTRL},
+	{"RCTRL", K_RCTRL},
 	{"SHIFT", K_SHIFT},
+	{"LSHIFT", K_LSHIFT},
+	{"RSHIFT", K_RSHIFT},
 	
 	{"F1", K_F1},
 	{"F2", K_F2},
@@ -276,7 +282,7 @@ int Key_StringToKeynum( const char *str ) {
 	if( !str[1] )
 		return str[0];
 
-	for( kn=keynames ; kn->name ; kn++ ) {
+	for( kn = keynames; kn->name; kn++ ) {
 		if( !Q_stricmp( str, kn->name ) )
 			return kn->keynum;
 	}
@@ -322,7 +328,7 @@ Returns the name of the first key found.
 char *Key_GetBinding( const char *binding ) {
 	int key;
 
-	for( key=0 ; key<256 ; key++ ) {
+	for( key = 0; key < 256; key++ ) {
 		if( keybindings[key] ) {
 			if( !Q_stricmp( keybindings[key], binding ) ) {
 				return Key_KeynumToString( key );
@@ -422,7 +428,7 @@ Key_Unbindall_f
 static void Key_Unbindall_f( void ) {
 	int		i;
 	
-	for( i=0 ; i<256 ; i++ )
+	for( i = 0; i < 256; i++ )
 		if( keybindings[i] )
 			Key_SetBinding( i, NULL );
 }
@@ -470,7 +476,7 @@ Writes lines containing "bind key value"
 void Key_WriteBindings( fileHandle_t f ) {
 	int		i;
 
-	for( i=0 ; i<256 ; i++ ) {
+	for( i = 0; i < 256; i++ ) {
 		if( keybindings[i] && keybindings[i][0] ) {
 			FS_FPrintf( f, "bind %s \"%s\"\n", Key_KeynumToString( i ),
                 keybindings[i] );
@@ -488,7 +494,7 @@ Key_Bindlist_f
 static void Key_Bindlist_f( void ) {
 	int		i;
 
-	for( i=0 ; i<256 ; i++ ) {
+	for( i = 0; i < 256; i++ ) {
 		if( keybindings[i] && keybindings[i][0] ) {
 			Com_Printf( "%s \"%s\"\n", Key_KeynumToString( i ),
                 keybindings[i] );
@@ -671,9 +677,11 @@ void Key_Event( uint32 key, qboolean down, uint32 time ) {
     // Alt+Enter is hardcoded for all systems
     if( keydown[K_ALT] && key == K_ENTER ) {
         if( down ) {
-    	    Cvar_SetInteger( "vid_fullscreen",
-                !Cvar_VariableInteger( "vid_fullscreen" ) );
-	    	Cbuf_AddText( "vid_restart\n" );
+            if( scr_glconfig.flags & QVF_FULLSCREEN ) {
+        	    Cbuf_AddText( "set vid_fullscreen 0\n" );
+            } else {
+        	    Cbuf_AddText( "set vid_fullscreen 1\n" );
+            }
         }
         return;
     }
@@ -736,16 +744,19 @@ void Key_Event( uint32 key, qboolean down, uint32 time ) {
 			anykeydown = 0;
 	}
     
+//
+// if not a consolekey, send to the interpreter no matter what mode is
+//
 	if( ( cls.key_dest == KEY_GAME ) ||
 		( ( cls.key_dest & KEY_CONSOLE ) && !consolekeys[key] ) ||
 		( ( cls.key_dest & KEY_MENU ) && menubound[key] ) )
     {
 
 //
-// key up events only generate commands if the game key binding is
+// Key up events only generate commands if the game key binding is
 // a button command (leading + sign).
 // Button commands include the kenum as a parameter, so multiple
-// downs can be matched with ups
+// downs can be matched with ups.
 //
         if( !down ) {
             kb = keybindings[key];
@@ -763,16 +774,19 @@ void Key_Event( uint32 key, qboolean down, uint32 time ) {
                     Cbuf_InsertText( cmd );
                 }
             }
-#endif
+#endif // USE_CHAR_EVENTS
             return;
         }
 
-//
-// if not a consolekey, send to the interpreter no matter what mode is
-//
 		if( key_repeats[key] > 1 ) {
 			return;
 		}
+
+#ifndef USE_CHAR_EVENTS
+        if( keydown[K_SHIFT] && keyshift[key] != key && keybindings[keyshift[key]] ) {
+            key = keyshift[key];
+        }
+#endif // USE_CHAR_EVENTS
 
 		kb = keybindings[key];
 		if( kb ) {
@@ -853,7 +867,7 @@ void Key_Event( uint32 key, qboolean down, uint32 time ) {
 		break;
 	}
 
-    /* if key is printable, generate char events */
+    // if key is printable, generate char events
     if( key < 32 || key >= 127 ) {
         return;
     }
@@ -870,7 +884,7 @@ void Key_Event( uint32 key, qboolean down, uint32 time ) {
 		Char_Message( key );
 	}
 
-#endif /* !USE_CHAR_EVENTS */
+#endif // !USE_CHAR_EVENTS
 
 }
 
@@ -895,7 +909,7 @@ void Key_CharEvent( int key ) {
 	}
 }
 
-#endif /* USE_CHAR_EVENTS */
+#endif // USE_CHAR_EVENTS
 
 /*
 ===================

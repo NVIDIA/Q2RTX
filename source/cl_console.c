@@ -28,11 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define CON_TOTALLINES			1024	// total lines in console scrollback
 #define CON_TOTALLINES_MASK		( CON_TOTALLINES - 1 )
 
-/* max chars in a single line.
- * this should be large enough to hold (maxscreenwidth / charwidth) chars,
- * plus some extra color escape codes
- */
-#define CON_LINEWIDTH	512
+#define CON_LINEWIDTH	100     // fixed width, do not need more
 
 typedef struct console_s {
 	qboolean	initialized;
@@ -138,10 +134,25 @@ void Con_ToggleConsole_f( void ) {
 Con_ToggleChat_f
 ================
 */
-void Con_ToggleChat_f( void ) {
+static void Con_ToggleChat_f( void ) {
     Con_ToggleConsole_f();
 
 	if( ( cls.key_dest & KEY_CONSOLE ) && cls.state == ca_active ) {
+        con.chatTeam = qfalse;
+        con.chatMode = qtrue;
+	}
+}
+
+/*
+================
+Con_ToggleChat2_f
+================
+*/
+static void Con_ToggleChat2_f( void ) {
+    Con_ToggleConsole_f();
+
+	if( ( cls.key_dest & KEY_CONSOLE ) && cls.state == ca_active ) {
+        con.chatTeam = qtrue;
         con.chatMode = qtrue;
 	}
 }
@@ -151,7 +162,7 @@ void Con_ToggleChat_f( void ) {
 Con_Clear_f
 ================
 */
-void Con_Clear_f( void ) {
+static void Con_Clear_f( void ) {
 	memset( con.text, 0, sizeof( con.text ) );
 	con.display = con.current;
 }
@@ -167,7 +178,7 @@ Con_Dump_f
 Save the console contents out to a file
 ================
 */
-void Con_Dump_f( void ) {
+static void Con_Dump_f( void ) {
 	int		l;
 	char	*line;
 	fileHandle_t	f;
@@ -227,7 +238,7 @@ void Con_ClearNotify_f( void ) {
 Con_MessageMode_f
 ================
 */
-void Con_MessageMode_f( void ) {
+static void Con_MessageMode_f( void ) {
 	con.chatTeam = qfalse;
     if( Cmd_Argc() > 1 ) {
         IF_Replace( &con.chatPrompt.inputLine, Cmd_RawArgs() );
@@ -240,7 +251,7 @@ void Con_MessageMode_f( void ) {
 Con_MessageMode2_f
 ================
 */
-void Con_MessageMode2_f( void ) {
+static void Con_MessageMode2_f( void ) {
 	con.chatTeam = qtrue;
     if( Cmd_Argc() > 1 ) {
         IF_Replace( &con.chatPrompt.inputLine, Cmd_RawArgs() );
@@ -255,7 +266,7 @@ Con_CheckResize
 If the line width has changed, reformat the buffer.
 ================
 */
-void Con_CheckResize( void ) {
+static void Con_CheckResize( void ) {
 	int		width;
 
 	con.vidWidth = scr_glconfig.vidWidth * con.scale;
@@ -272,6 +283,23 @@ void Con_CheckResize( void ) {
 	con.chatPrompt.inputLine.visibleChars = con.linewidth;
 }
 
+/*
+================
+Con_CheckTop
+
+Make sure at least one line is visible if console is backscrolled.
+================
+*/
+static void Con_CheckTop( void ) {
+    int top = con.current - CON_TOTALLINES + 1;
+
+    if( top < 1 ) {
+        top = 1;
+    }
+    if( con.display < top ) {
+        con.display = top;
+    }
+}
 
 static void con_param_changed( cvar_t *self ) {
 	if( con.initialized && cls.ref_initialized ) {
@@ -282,6 +310,7 @@ static void con_param_changed( cvar_t *self ) {
 static const cmdreg_t c_console[] = {
 	{ "toggleconsole", Con_ToggleConsole_f },
 	{ "togglechat", Con_ToggleChat_f },
+	{ "togglechat2", Con_ToggleChat2_f },
 	{ "messagemode", Con_MessageMode_f },
 	{ "messagemode2", Con_MessageMode2_f },
 	{ "clear", Con_Clear_f },
@@ -352,7 +381,6 @@ void Con_Shutdown( void ) {
 	Prompt_Clear( &con.prompt );
 }
 
-
 /*
 ===============
 Con_Linefeed
@@ -369,6 +397,8 @@ void Con_Linefeed( void ) {
 
     if( con_scroll->integer & 2 ) {
     	con.display = con.current;
+    } else {
+        Con_CheckTop();
     }
 }
 
@@ -830,6 +860,12 @@ void Con_DrawConsole( void ) {
 ==============================================================================
 */
 
+static void Con_Say( char *msg ) {
+    Cbuf_AddText( con.chatTeam ? "say_team \"" : "say \"" );
+    Cbuf_AddText( msg );
+    Cbuf_AddText( "\"\n" );
+}
+
 static void Con_Action( void ) {
     char *cmd = Prompt_Action( &con.prompt );
     
@@ -841,14 +877,15 @@ static void Con_Action( void ) {
     // backslash text are commands, else chat
     if( cmd[0] == '\\' || cmd[0] == '/' ) {
         Cbuf_AddText( cmd + 1 );	// skip slash
+        Cbuf_AddText( "\n" );
     } else {
         if( cls.state == ca_active && con.chatMode ) {
-            Cbuf_AddText( va( "cmd say \"%s\"", cmd ) );
+            Con_Say( cmd );
         } else {
             Cbuf_AddText( cmd );
+            Cbuf_AddText( "\n" );
         }
     }
-    Cbuf_AddText( "\n" );
 
     Con_Printf( "]%s\n", cmd );
 
@@ -928,10 +965,7 @@ void Key_Console( int key ) {
 		} else {
 			con.display -= 2;
 		}
-
-		if( con.display < 1 ) {
-			con.display = 1;
-		}
+        Con_CheckTop();
 		return;
 	}
 
@@ -949,6 +983,7 @@ void Key_Console( int key ) {
 
 	if( key == K_HOME && Key_IsDown( K_CTRL ) ) {
 		con.display = 1;
+        Con_CheckTop();
 		return;
 	}
 
@@ -981,16 +1016,15 @@ void Key_Message( int key ) {
 	}
 
 	if( key == K_ENTER || key == K_KP_ENTER ) {
-		char *cmd;
+		char *cmd = Prompt_Action( &con.chatPrompt );
 		
-		if( ( cmd = Prompt_Action( &con.chatPrompt ) ) ) {
+		if( cmd ) {
 		    Cbuf_AddText( con.chatTeam ? "say_team \"" : "say \"" );
 		    Cbuf_AddText( cmd );
 		    Cbuf_AddText( "\"\n" );
         }
 	
 		Key_SetDest( cls.key_dest & ~KEY_MESSAGE );
-		//IF_Clear( &con.chatPrompt.inputField );
 		return;
 	}
 

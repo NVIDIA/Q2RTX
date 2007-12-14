@@ -196,7 +196,7 @@ static void QSDL_UpdateGamma( const byte *table ) {
 }
 
 static void QSDL_KeyEvent( SDL_keysym *keysym, qboolean down ) {
-	uint32 key;
+	uint32 key1, key2 = 0;
 
     if( keysym->sym <= 127 ) {
         // ASCII chars are mapped directly
@@ -204,7 +204,8 @@ static void QSDL_KeyEvent( SDL_keysym *keysym, qboolean down ) {
         return;
     }
 
-#define K( s, d )	case SDLK_ ## s: key = K_ ## d; break;
+#define K( s, d )	case SDLK_ ## s: key1 = K_ ## d; break;
+#define KK( s, d1, d2 )	case SDLK_ ## s: key1 = K_ ## d1; key2 = K_ ## d2; break;
 
 	switch( keysym->sym ) {
 	K( KP0,			KP_INS		    )
@@ -254,21 +255,25 @@ static void QSDL_KeyEvent( SDL_keysym *keysym, qboolean down ) {
 	K( RSUPER,		RWINKEY		)
 	K( MENU,		MENU		)
 
-	K( RSHIFT,		SHIFT   )
-	K( LSHIFT,		SHIFT	)
-	K( RCTRL,		CTRL	)
-	K( LCTRL,		CTRL	)
-	K( RALT,		ALT		)
-	K( LALT,		ALT		)
+	KK( RSHIFT,		SHIFT, RSHIFT )
+	KK( LSHIFT,		SHIFT, LSHIFT )
+	KK( RCTRL,		CTRL,  RCTRL  )
+	KK( LCTRL,		CTRL,  LCTRL  )
+	KK( RALT,		ALT,   RALT	  )
+	KK( LALT,		ALT,   LALT	  )
 
 #undef K
+#undef KK
 
 	default:
 		Com_DPrintf( "%s: unknown keysym %d\n", __func__, keysym->sym );
         return;
 	}
 
-	Key_Event( key, down, com_eventTime );
+	Key_Event( key1, down, com_eventTime );
+    if( key2 ) {
+	    Key_Event( key2, down, com_eventTime );
+    }
 }
 
 static void QSDL_MouseButtonEvent( int button, qboolean down ) {
