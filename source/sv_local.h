@@ -75,8 +75,6 @@ typedef struct server_s {
 	    byte		    dcs[CS_BITMAP_BYTES];
     } mvd;
 
-	pmoveParams_t		pmp;
-
 	uint32			tracecount;
 } server_t;
 
@@ -320,6 +318,9 @@ extern  list_t      sv_blacklist;
 
 extern	server_static_t	svs;				// persistant server info
 extern	server_t		sv;					// local server
+
+extern  pmoveParams_t	sv_pmp;
+
 
 extern	cvar_t		*sv_hostname;
 extern	cvar_t		*sv_maxclients;

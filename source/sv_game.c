@@ -701,7 +701,7 @@ void PF_Pmove( pmove_t *pm ) {
 	if( sv_client ) {
 		Pmove( pm, &sv_client->pmp );
 	} else {
-		Pmove( pm, &sv.pmp );
+		Pmove( pm, &sv_pmp );
 	}
 }
 

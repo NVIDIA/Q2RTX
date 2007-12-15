@@ -23,6 +23,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 netadr_t	master_adr[MAX_MASTERS];	// address of group servers
 
+pmoveParams_t   sv_pmp;
+
 LIST_DECL( sv_banlist );
 LIST_DECL( sv_blacklist );
 
@@ -799,7 +801,8 @@ static void SVC_DirectConnect( void ) {
     strcpy( newcl->reconnect_val, reconnect_val );
 
     // copy default pmove parameters
-    newcl->pmp = sv.pmp;
+    newcl->pmp = sv_pmp;
+    newcl->pmp.airaccelerate = sv_airaccelerate->integer ? qtrue : qfalse;
 #ifdef PMOVE_HACK
     newcl->pmp.highprec = qtrue;
 #endif
@@ -1716,6 +1719,16 @@ void SV_Init( void ) {
 	SV_RateInit( &svs.ratelimit_status, sv_status_limit->integer, 1000 );
 	SV_RateInit( &svs.ratelimit_badpass, 1, sv_badauth_time->value * 1000 );
 	SV_RateInit( &svs.ratelimit_badrcon, 1, sv_badauth_time->value * 1000 );
+
+	//
+    // set up default pmove parameters
+	//
+    sv_pmp.maxspeed = 300;
+    sv_pmp.upspeed = 350;
+    sv_pmp.friction = 6;
+    sv_pmp.flyfriction = 9;
+    sv_pmp.waterfriction = 1;
+	sv_pmp.speedMultiplier = 1;
 }
 
 /*
