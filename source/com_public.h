@@ -213,12 +213,10 @@ typedef enum memtag_e {
 	TAG_FILESYSTEM,
 	TAG_RENDERER,
 	TAG_UI,
-	TAG_CGAME,
     TAG_SERVER,
 	TAG_MVD,
     TAG_SOUND,
 	TAG_CMODEL,
-    TAG_LUA,
 
 	TAG_MAX,
 

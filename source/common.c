@@ -516,6 +516,15 @@ just cleared malloc with counters now...
 #define	Z_MAGIC		0x1d0d
 #define	Z_TAIL		0x5b7b
 
+#define Z_TAIL_F( z ) \
+    *( uint16 * )( ( byte * )(z) + (z)->size - sizeof( uint16 ) )
+
+#define Z_FOR_EACH( z ) \
+    for( (z) = z_chain.next; (z) != &z_chain; (z) = (z)->next )
+
+#define Z_FOR_EACH_SAFE( z, n ) \
+    for( (z) = z_chain.next; (z) != &z_chain; (z) = (n) )
+
 typedef struct zhead_s {
 	uint16	magic;
 	uint16	tag;			// for group free
@@ -527,15 +536,15 @@ static zhead_t		z_chain;
 
 static cvar_t	    *z_perturb;
 
-typedef struct zstatic_s {
+typedef struct {
 	zhead_t	z;
-	char	data[2]; /* !!make sure 'tail' field is aligned properly */
+	char	data[2];
 	uint16	tail;
 } zstatic_t;
 
 #define Z_STATIC( x ) { { Z_MAGIC, TAG_STATIC, sizeof( zstatic_t ) }, x, Z_TAIL }
 
-static zstatic_t		z_static[] = {
+static const zstatic_t		z_static[] = {
 	Z_STATIC( "0" ),
 	Z_STATIC( "1" ),
 	Z_STATIC( "2" ),
@@ -554,47 +563,51 @@ static zstatic_t		z_static[] = {
 typedef struct zstats_s {
 	size_t  count;
 	size_t	bytes;
-	char	*name;
 } zstats_t;
 
 static zstats_t		z_stats[TAG_MAX];
 
+static const char   z_tagnames[TAG_MAX][8] = {
+    "game",
+    "static",
+    "generic",
+    "cmd",
+    "cvar",
+    "fs",
+    "refresh",
+    "ui",
+    "server",
+    "mvd",
+    "sound",
+    "cmodel"
+};
+
+static inline void Z_Validate( zhead_t *z, const char *func ) {
+    if( z->magic != Z_MAGIC ) {
+        Com_Error( ERR_FATAL, "%s: bad magic", func );
+    }
+    if( Z_TAIL_F( z ) != Z_TAIL ) {
+        Com_Error( ERR_FATAL, "%s: bad tail", func );
+    }
+    if( z->tag == TAG_FREE ) {
+        Com_Error( ERR_FATAL, "%s: bad tag", func );
+    }
+}
+
 void Z_Check( void ) {
 	zhead_t	*z;
 
-	for( z = z_chain.next; z != &z_chain; z = z->next ) {
-		if( z->magic != Z_MAGIC ) {
-			Com_Error( ERR_FATAL, "Z_Check: bad magic" );
-        }
-
-		if( *( uint16 * )( ( byte * )z + z->size - sizeof( uint16 ) ) != Z_TAIL ) {
-			Com_Error( ERR_FATAL, "Z_Check: bad tail" );
-        }
-
-		if( z->tag == TAG_FREE ) {
-			Com_Error( ERR_FATAL, "Z_Check: bad tag" );
-        }
+	Z_FOR_EACH( z ) {
+        Z_Validate( z, __func__ );
 	}
 }
 
 void Z_LeakTest( memtag_t tag ) {
 	zhead_t	*z;
-	zstats_t *s;
-	size_t numLeaks, numBytes;
+	size_t numLeaks = 0, numBytes = 0;
 	
-	numLeaks = numBytes = 0;
-	for( z = z_chain.next; z != &z_chain; z = z->next ) {
-		if( z->magic != Z_MAGIC )
-			Com_Error( ERR_FATAL, "Z_LeakTest: bad magic" );
-
-		if( *( uint16 * )( ( byte * )z + z->size - sizeof( uint16 ) ) != Z_TAIL ) {
-			Com_Error( ERR_FATAL, "Z_LeakTest: bad tail" );
-        }
-
-		if( z->tag == TAG_FREE ) {
-			Com_Error( ERR_FATAL, "Z_LeakTest: bad tag" );
-        }
-
+	Z_FOR_EACH( z ) {
+        Z_Validate( z, __func__ );
 		if( z->tag == tag ) {
 			numLeaks++;
 			numBytes += z->size;
@@ -602,12 +615,11 @@ void Z_LeakTest( memtag_t tag ) {
 	}
 
 	if( numLeaks ) {
-		s = &z_stats[tag < TAG_MAX ? tag : TAG_FREE];
 		Com_Printf( S_COLOR_YELLOW "************* Z_LeakTest *************\n"
 						           "%s leaked %u bytes of memory (%u object%s)\n"
 						           "**************************************\n",
-								   s->name, numBytes, numLeaks,
-								   ( numLeaks % 10 ) == 1 ? "" : "s" );
+								   z_tagnames[tag < TAG_MAX ? tag : TAG_FREE],
+                                   numBytes, numLeaks, numLeaks == 1 ? "" : "s" );
 	}
 }
 
@@ -624,19 +636,9 @@ void Z_Free( void *ptr ) {
         return;
 	}
 
-	z = ( ( zhead_t * )ptr ) - 1;
+	z = ( zhead_t * )ptr - 1;
 
-	if( z->magic != Z_MAGIC ) {
-		Com_Error( ERR_FATAL, "Z_Free: bad magic" );
-    }
-
-	if( *( uint16 * )( ( byte * )z + z->size - sizeof( uint16 ) ) != Z_TAIL ) {
-		Com_Error( ERR_FATAL, "Z_Free: bad tail" );
-    }
-
-	if( z->tag == TAG_FREE ) {
-		Com_Error( ERR_FATAL, "Z_Free: bad tag" );
-    }
+    Z_Validate( z, __func__ );
 
 	s = &z_stats[z->tag < TAG_MAX ? z->tag : TAG_FREE];
 	s->count--;
@@ -645,7 +647,6 @@ void Z_Free( void *ptr ) {
 	if( z->tag != TAG_STATIC ) {
     	z->prev->next = z->next;
 	    z->next->prev = z->prev;
-
 	    free( z );
     }
 }
@@ -668,23 +669,12 @@ void *Z_Realloc( void *ptr, size_t size ) {
         return NULL;
     }
 
-	z = ( ( zhead_t * )ptr ) - 1;
+	z = ( zhead_t * )ptr - 1;
 
-	if( z->magic != Z_MAGIC ) {
-		Com_Error( ERR_FATAL, "Z_Realloc: bad magic" );
-    }
-
-	if( *( uint16 * )( ( byte * )z + z->size - sizeof( uint16 ) ) != Z_TAIL ) {
-		Com_Error( ERR_FATAL, "Z_Realloc: bad tail" );
-    }
-
-	if( z->tag == TAG_FREE ) {
-		Com_Error( ERR_FATAL, "Z_Realloc: bad tag" );
-    }
+    Z_Validate( z, __func__ );
 
 	if( z->tag == TAG_STATIC ) {
-        Z_Free( ptr );
-        return Z_Malloc( size );
+		Com_Error( ERR_FATAL, "Z_Realloc: couldn't realloc static memory" );
     }
 
 	s = &z_stats[z->tag < TAG_MAX ? z->tag : TAG_FREE];
@@ -695,7 +685,7 @@ void *Z_Realloc( void *ptr, size_t size ) {
     
     z = realloc( z, size );
     if( !z ) {
-		Com_Error( ERR_FATAL, "Z_Realloc: couldn't reallocate %u bytes", size );
+		Com_Error( ERR_FATAL, "Z_Realloc: couldn't realloc %u bytes", size );
     }
 
 	z->size = size;
@@ -704,9 +694,9 @@ void *Z_Realloc( void *ptr, size_t size ) {
 
 	s->bytes += size;
 
-	*( uint16 * )( ( byte * )z + size - sizeof( uint16 ) ) = Z_TAIL;
+	Z_TAIL_F( z ) = Z_TAIL;
 
-	return ( void * )( z + 1 );
+	return z + 1;
 }
 
 /*
@@ -715,27 +705,25 @@ Z_Stats_f
 ========================
 */
 void Z_Stats_f( void ) {
-	size_t z_bytes, z_count;
+	size_t bytes = 0, count = 0;
 	zstats_t *s;
 	int i;
 
-	Com_Printf( "-----------------\n" );
-	Com_Printf( "    bytes  blocks\n\n" );
+	Com_Printf( "    bytes blocks name\n"
+	            "--------- ------ -------\n" );
 
-	z_bytes = 0;
-	z_count = 0;
 	for( i = 0, s = z_stats; i < TAG_MAX; i++, s++ ) {
         if( !s->count ) {
             continue;
         }
-            
-		Com_Printf( "%9u  %6u  %s\n", s->bytes, s->count, s->name );
-		z_bytes += s->bytes;
-		z_count += s->count;
+		Com_Printf( "%9u %6u %s\n", s->bytes, s->count, z_tagnames[i] );
+		bytes += s->bytes;
+		count += s->count;
 	}
 
-	Com_Printf( "-----------------\n" );
-	Com_Printf( "%9u  %6u  %s\n", z_bytes, z_count, "total" );
+	Com_Printf( "--------- ------ -------\n"
+	            "%9u %6u total\n",
+                bytes, count );
 }
 
 /*
@@ -744,25 +732,13 @@ Z_FreeTags
 ========================
 */
 void Z_FreeTags( memtag_t tag ) {
-	zhead_t	*z, *next;
+	zhead_t	*z, *n;
 
-	for( z = z_chain.next; z != &z_chain; z = next ) {
-		if( z->magic != Z_MAGIC ) {
-			Com_Error( ERR_FATAL, "Z_FreeTags: bad magic" );
-        }
-
-		if( *( uint16 * )( ( byte * )z + z->size - sizeof( uint16 ) ) !=
-                Z_TAIL )
-        {
-			Com_Error( ERR_FATAL, "Z_FreeTags: bad tail" );
-        }
-
-		if( z->tag == TAG_FREE ) {
-			Com_Error( ERR_FATAL, "Z_FreeTags: bad tag" );
-        }
-		next = z->next;
+	Z_FOR_EACH_SAFE( z, n ) {
+        Z_Validate( z, __func__ );
+		n = z->next;
 		if( z->tag == tag ) {
-			Z_Free( ( void * )( z + 1 ) );
+			Z_Free( z + 1 );
 		}
 	}
 }
@@ -803,26 +779,20 @@ void *Z_TagMalloc( size_t size, memtag_t tag ) {
             sizeof( zhead_t ) - sizeof( uint16 ) );
     }
 
-	*( uint16 * )( ( byte * )z + size - sizeof( uint16 ) ) = Z_TAIL;
+	Z_TAIL_F( z ) = Z_TAIL;
 
 	s = &z_stats[tag < TAG_MAX ? tag : TAG_FREE];
 	s->count++;
 	s->bytes += size;
 
-	return ( void * )( z + 1 );
+	return z + 1;
 }
 
 void *Z_TagMallocz( size_t size, memtag_t tag ) {
-    void *ptr;
-
     if( !size ) {
         return NULL;
     }
-
-    ptr = Z_TagMalloc( size, tag );
-    memset( ptr, 0, size );
-
-    return ptr;
+    return memset( Z_TagMalloc( size, tag ), 0, size );
 }
 
 static byte *z_reserved;
@@ -846,31 +816,24 @@ void *Z_ReservedAlloc( size_t size ) {
 	z_reservedUnuse += size;
 
 	return ptr;
-
 }
 
 void *Z_ReservedAllocz( size_t size ) {
-	void *ptr = Z_ReservedAlloc( size );
-    memset( ptr, 0, size );
-
-	return ptr;
-
+    if( !size ) {
+        return NULL;
+    }
+    return memset( Z_ReservedAlloc( size ), 0, size );
 }
 
 char *Z_ReservedCopyString( const char *in ) {
-	char	*out;
-	int length;
+	int len;
 
 	if( !in ) {
 		return NULL;
 	}
 
-	length = strlen( in ) + 1;
-	
-	out = Z_ReservedAlloc( length );
-	strcpy( out, in );
-
-	return out;
+	len = strlen( in ) + 1;
+	return memcpy( Z_ReservedAlloc( len ), in, len );
 }
 
 /*
@@ -878,31 +841,8 @@ char *Z_ReservedCopyString( const char *in ) {
 Z_Init
 ========================
 */
-void Z_Init( void ) {
-	zstats_t *s;
-	int i;
-	static char *names[TAG_MAX] = {
-		"game",
-		"static",
-		"generic",
-		"cmd",
-		"cvar",
-		"filesystem",
-		"renderer",
-		"ui",
-		"cgame",
-        "server",
-		"mvd",
-        "sound",
-		"cmodel",
-        "lua"
-	};
-
+static void Z_Init( void ) {
 	z_chain.next = z_chain.prev = &z_chain;
-
-	for( i = 0, s = z_stats; i < TAG_MAX; i++, s++ ) {
-		s->name = names[i] ? names[i] : "unknown";
-	}
 }
 
 /*
@@ -911,19 +851,14 @@ Z_TagCopyString
 ================
 */
 char *Z_TagCopyString( const char *in, memtag_t tag ) {
-	char	*out;
-	int     length;
+	int     len;
 
 	if( !in ) {
 		return NULL;
 	}
 
-	length = strlen( in ) + 1;
-	
-	out = Z_TagMalloc( length, tag );
-	memcpy( out, in, length );
-
-	return out;
+	len = strlen( in ) + 1;
+	return memcpy( Z_TagMalloc( len, tag ), in, len );
 }
 
 /*
@@ -932,8 +867,7 @@ Cvar_CopyString
 ================
 */
 char *Cvar_CopyString( const char *in ) {
-	char	*out;
-	int     length;
+	int     len;
     zstatic_t *z;
 
 	if( !in ) {
@@ -941,25 +875,21 @@ char *Cvar_CopyString( const char *in ) {
 	}
 
 	if( !in[0] ) {
-        z = &z_static[10];
+        z = ( zstatic_t * )&z_static[10];
         z_stats[TAG_STATIC].count++;
         z_stats[TAG_STATIC].bytes += z->z.size;
 		return z->data;
 	}
 
 	if( !in[1] && Q_isdigit( in[0] ) ) {
-        z = &z_static[ in[0] - '0' ];
+        z = ( zstatic_t * )&z_static[ in[0] - '0' ];
         z_stats[TAG_STATIC].count++;
         z_stats[TAG_STATIC].bytes += z->z.size;
 		return z->data;
 	}
 
-	length = strlen( in ) + 1;
-	
-	out = Z_TagMalloc( length, TAG_CVAR );
-	memcpy( out, in, length );
-
-	return out;
+	len = strlen( in ) + 1;
+	return memcpy( Z_TagMalloc( len, TAG_CVAR ), in, len );
 }
 
 /*
@@ -1277,7 +1207,7 @@ const char *Com_FileNameGeneratorByFilter( const char *path, const char *filter,
     if( !state ) {
         length = strlen( partial );
         list = FS_ListFiles( path, filter, FS_SEARCH_SAVEPATH |
-                FS_SEARCH_BYFILTER, &numFiles );
+            FS_SEARCH_BYFILTER, &numFiles );
         curpos = 0;
     }
 

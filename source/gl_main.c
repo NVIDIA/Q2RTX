@@ -526,8 +526,6 @@ static void GL_EndFrame( void ) {
 ============================================================================== 
 */
 
-#define SCREENSHOTS_DIRECTORY	"screenshots"
-
 static char *screenshot_path( char *buffer, const char *ext ) {
     int i;
 

@@ -566,6 +566,8 @@ void Key_Init( void ) {
 	consolekeys[K_PGDN] = qtrue;
 	consolekeys[K_KP_PGDN] = qtrue;
 	consolekeys[K_SHIFT] = qtrue;
+	consolekeys[K_LSHIFT] = qtrue;
+	consolekeys[K_RSHIFT] = qtrue;
 	consolekeys[K_INS] = qtrue;
 	consolekeys[K_KP_INS] = qtrue;
 	consolekeys[K_KP_DEL] = qtrue;
@@ -575,6 +577,11 @@ void Key_Init( void ) {
 	consolekeys[K_KP_5] = qtrue;
 	consolekeys[K_DEL] = qtrue;
 	consolekeys[K_CTRL] = qtrue;
+	consolekeys[K_LCTRL] = qtrue;
+	consolekeys[K_RCTRL] = qtrue;
+	consolekeys[K_ALT] = qtrue;
+	consolekeys[K_LALT] = qtrue;
+	consolekeys[K_RALT] = qtrue;
 	consolekeys[K_MWHEELUP] = qtrue;
 	consolekeys[K_MWHEELDOWN] = qtrue;
 	consolekeys[K_MOUSE3] = qtrue;

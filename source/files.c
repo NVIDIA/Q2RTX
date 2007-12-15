@@ -1851,19 +1851,19 @@ void **FS_ListFiles( const char *path,
                     continue;
                 }
                 memcpy( buffer, search->filename, len );
-                buffer[len] = '/';
-                memcpy( buffer + len + 1, path, pathlen + 1 );
+                buffer[len++] = '/';
+                memcpy( buffer + len, path, pathlen + 1 );
                 s = buffer;
             } else {
                 s = search->filename;
             }
 
             if( flags & FS_SEARCH_BYFILTER ) {
-                len += len + pathlen + 1;
+                len += pathlen + 1;
             }
 
             dirlist = Sys_ListFiles( s, extension,
-                flags|FS_SEARCH_NOSORT, len + 1, &dircount );
+                flags|FS_SEARCH_NOSORT, len, &dircount );
             if( !dirlist ) {
                 continue;
             }

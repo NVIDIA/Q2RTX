@@ -613,7 +613,6 @@ void SCR_TileClear( void ) {
 
 }
 
-
 /*
 ===============================================================================
 
@@ -655,8 +654,7 @@ void HUD_DrawNumber( int x, int y, int color, int width, int value ) {
 
 	color &= 1;
 
-	Com_sprintf( num, sizeof( num ), "%i", value );
-	l = strlen( num );
+	l = Com_sprintf( num, sizeof( num ), "%i", value );
 	if( l > width )
 		l = width;
 	x += 2 + DIGIT_WIDTH * ( width - l );
@@ -743,9 +741,8 @@ void SCR_DrawInventory( void ) {
 		
 		y += CHAR_HEIGHT;
 	}
-
-
 }
+
 
 /*
 ================
@@ -754,7 +751,7 @@ SCR_ExecuteLayoutString
 ================
 */
 void SCR_ExecuteLayoutString( const char *s ) {
-    char	buffer[80];
+    char	buffer[MAX_QPATH];
 	int		x, y;
 	int		value;
 	char	*token;
@@ -818,7 +815,7 @@ void SCR_ExecuteLayoutString( const char *s ) {
 			token = COM_Parse( &s );
 			value = atoi( token );
 			if( value < 0 || value >= MAX_STATS ) {
-				Com_Error( ERR_DROP, "%s: invalid pic index", __func__ );
+				Com_Error( ERR_DROP, "%s: invalid stat index", __func__ );
 			}
 			value = cl.frame.ps.stats[value];
 			if( value < 0 || value >= MAX_IMAGES ) {
@@ -896,7 +893,7 @@ void SCR_ExecuteLayoutString( const char *s ) {
 				ping = 999;
 
 			Com_sprintf( buffer, sizeof( buffer ), "%3d %3d %-12.12s",
-                    score, ping, ci->name );
+                score, ping, ci->name );
             if( value == cl.frame.clientNum ) {
 				HUD_DrawAltString( x, y, buffer );
 			} else {
@@ -1037,11 +1034,8 @@ void SCR_ExecuteLayoutString( const char *s ) {
 					}
 				}
 			}
-
 			continue;
 		}
-
-
 	}
 }
 
