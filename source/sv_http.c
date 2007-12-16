@@ -62,7 +62,7 @@ void SV_HttpReject( const char *error, const char *reason ) {
     SV_HttpDrop( http_client, error );
 }
 
-static void uri_status( const char *uri ) {
+static void SV_GetStatus( void ) {
     char buffer[MAX_STRING_CHARS];
     cvar_t *var;
     client_t *cl;
@@ -88,13 +88,7 @@ static void uri_status( const char *uri ) {
 //      "Content-Encoding: deflate\r\n"
         "\r\n" );
 
-    count = 0;
-    FOR_EACH_CLIENT( cl ) {
-		if( cl->state != cs_zombie ) {
-            count++;
-        }
-    }
-
+    count = SV_CountClients();
     Q_EscapeMarkup( buffer, sv_hostname->string, sizeof( buffer ) );
     SV_HttpHeader( va( "%s - %d/%d", buffer, count, sv_maxclients->integer ) );
     SV_HttpPrintf( "<h1>Status page of %s</h1>", buffer );
@@ -147,6 +141,14 @@ static void uri_status( const char *uri ) {
   //  deflateEnd( &client->z );
 
     SV_HttpDrop( http_client, "200 OK" );
+}
+
+static void uri_status( const char *uri ) {
+    if( sv.state == ss_game ) {
+        SV_GetStatus();
+    } else {
+        MVD_GetStatus();
+    }
 }
 
 static void uri_mvdstream( const char *uri ) {

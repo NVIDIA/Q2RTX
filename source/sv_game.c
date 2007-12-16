@@ -86,13 +86,13 @@ static void PF_Unicast( edict_t *ent, qboolean reliable ) {
 
 	clientNum = NUM_FOR_EDICT( ent ) - 1;
 	if( clientNum < 0 || clientNum >= sv_maxclients->integer ) {
-        Com_WPrintf( "unicast to a non-client %d\n", clientNum );
+        Com_WPrintf( "PF_Unicast to a non-client %d\n", clientNum );
         return;
     }
 
 	client = svs.clientpool + clientNum;
     if( client->state == cs_free ) {
-        Com_WPrintf( "unicast to a free client %d\n", clientNum );
+        Com_WPrintf( "PF_Unicast to a free client %d\n", clientNum );
         return;
     }
 
@@ -115,12 +115,10 @@ static void PF_Unicast( edict_t *ent, qboolean reliable ) {
 
 	if( client == svs.mvd.dummy ) {
 		if( msg_write.data[0] == svc_stufftext && reliable ) {
-            /* probably some Q2Admin crap,
-             * let MVD client process this internally */
+            // let MVD client process this internally
 			SV_ClientAddMessage( client, flags );
 		} else if( sv.mvd.paused < PAUSED_FRAMES ) {
-            /* otherwise, MVD client will send
-             * this to everyone in freefloat mode */
+            // send this to all observers
             SV_MvdUnicast( buf, clientNum, op );
         }
 	} else {
@@ -161,7 +159,7 @@ static void PF_bprintf( int level, const char *fmt, ... ) {
 	// echo to console
 	if( dedicated->integer ) {
 		// mask off high bits
-		for( i = 0; string[i]; i++ )
+		for( i = 0; i < length; i++ )
 			string[i] &= 127;
 		Com_Printf( "%s", string );
 	}
@@ -225,12 +223,12 @@ static void PF_cprintf( edict_t *ent, int level, const char *fmt, ... ) {
 
 	clientNum = NUM_FOR_EDICT( ent ) - 1;
 	if( clientNum < 0 || clientNum >= sv_maxclients->integer ) {
-		Com_Error( ERR_DROP, "cprintf to a non-client %d", clientNum );
+		Com_Error( ERR_DROP, "PF_cprintf to a non-client %d", clientNum );
     }
 
 	client = svs.clientpool + clientNum;
     if( client->state == cs_free ) {
-        Com_Error( ERR_DROP, "cprintf to a free client %d", clientNum );
+        Com_Error( ERR_DROP, "PF_cprintf to a free client %d", clientNum );
     }
 
 	MSG_WriteByte( svc_print );
@@ -259,7 +257,7 @@ Centerprint to a single client.
 Archived in MVD stream.
 ===============
 */
-static void PF_centerprintf (edict_t *ent, const char *fmt, ...) {
+static void PF_centerprintf( edict_t *ent, const char *fmt, ... ) {
 	char		msg[MAX_STRING_CHARS];
 	va_list		argptr;
 	int			n, length;
@@ -268,20 +266,20 @@ static void PF_centerprintf (edict_t *ent, const char *fmt, ...) {
         return;
     }
 	
-	n = NUM_FOR_EDICT(ent);
-	if (n < 1 || n > sv_maxclients->integer) {
-        Com_WPrintf( "centerprintf to a non-client\n" );
+	n = NUM_FOR_EDICT( ent );
+	if( n < 1 || n > sv_maxclients->integer ) {
+        Com_WPrintf( "PF_centerprintf to a non-client\n" );
 		return;
     }
 
-	va_start (argptr,fmt);
+	va_start( argptr, fmt );
 	length = Q_vsnprintf( msg, sizeof( msg ), fmt, argptr );
-	va_end (argptr);
+	va_end( argptr );
 
-	MSG_WriteByte (svc_centerprint);
-	MSG_WriteData (msg, length + 1);
+	MSG_WriteByte( svc_centerprint );
+	MSG_WriteData( msg, length + 1 );
 
-	PF_Unicast (ent, qtrue);
+	PF_Unicast( ent, qtrue );
 }
 
 
@@ -739,19 +737,6 @@ static qboolean PF_AreasConnected( int area1, int area2 ) {
 	return CM_AreasConnected( &sv.cm, area1, area2 );
 }
 
-static void *PF_TagMalloc( int size, memtag_t tag ) {
-    void *ptr;
-
-    if( !size ) {
-        return NULL;
-    }
-
-    ptr = Z_TagMalloc( size, tag );
-    memset( ptr, 0, size );
-
-    return ptr;
-}
-
 //==============================================
 
 static void *game_library;
@@ -908,7 +893,7 @@ void SV_InitGameProgs ( void )
 	import.WriteDir = MSG_WriteDir;
 	import.WriteAngle = MSG_WriteAngle;
 
-	import.TagMalloc = PF_TagMalloc;
+	import.TagMalloc = Z_TagMallocz;
 	import.TagFree = Z_Free;
 	import.FreeTags = Z_FreeTags;
 

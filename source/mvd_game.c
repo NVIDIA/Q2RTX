@@ -338,6 +338,8 @@ void MVD_SwitchChannel( udpClient_t *client, mvd_t *mvd ) {
     client_t *cl = client->cl;
 
     if( mvd == client->mvd ) {
+        SV_ClientPrintf( client->cl, PRINT_HIGH,
+            "[MVD] You are already on this channel.\n" );
         return; // nothing to do
     }
 

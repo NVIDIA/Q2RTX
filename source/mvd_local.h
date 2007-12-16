@@ -100,22 +100,21 @@ typedef struct {
 typedef struct mvd_s {
     list_t      entry;
     list_t      ready;
+
+    int         id;
     char        name[MAX_QPATH];
 
 	// demo related variables
 	fileHandle_t	demofile;
 	qboolean	demoplayback;
 	qboolean	demorecording;
-	int			demofileSize;
-	int			demofileFrameOffset;
-	int         demofilePercent;
-	char		demopath[MAX_QPATH];
 
 	// connection variables
 	mvdState_t	state;
 	int			servercount;
 	int			clientNum;
     netstream_t stream;
+	char		address[MAX_QPATH];
     char        response[MAX_NET_STRING];
     int         responseLength;
     int         contentLength;
@@ -127,6 +126,7 @@ typedef struct mvd_s {
 #endif
     fifo_t      zbuf;
     int         framenum;
+    int         lastReceived;
 
     // game state
     char    gamedir[MAX_QPATH];
@@ -174,6 +174,7 @@ void MVD_Disconnect( mvd_t *mvd );
 void MVD_ClearState( mvd_t *mvd );
 void MVD_ChangeLevel( mvd_t *mvd ); 
 void MVD_GetStream( const char *uri );
+void MVD_GetStatus( void );
 void MVD_Free( mvd_t *mvd ); 
 void MVD_Shutdown( void );
 

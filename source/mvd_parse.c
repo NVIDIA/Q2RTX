@@ -912,7 +912,7 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
 
 	// load the world model (we are only interesed in
     // visibility info, do not load brushes and such)
-    Com_Printf( "Loading %s...\n", string );
+    Com_Printf( "[%s] Loading %s...\n", mvd->name, string );
     CM_LoadMap( &mvd->cm, string, CM_LOAD_VISONLY, &checksum );
 
 #if USE_MAPCHECKSUM

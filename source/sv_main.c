@@ -1011,6 +1011,18 @@ static void SV_ConnectionlessPacket( void ) {
 
 //============================================================================
 
+
+int SV_CountClients( void ) {
+    client_t *cl;
+    int count = 0;
+
+    FOR_EACH_CLIENT( cl ) {
+		if( cl->state > cs_zombie ) {
+            count++;
+        }
+    }
+    return count;
+}
 /*
 ===================
 SV_CalcPings

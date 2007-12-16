@@ -382,6 +382,8 @@ void SV_RateInit( ratelimit_t *r, int limit, int period );
 addrmatch_t *SV_MatchAddress( list_t *list, netadr_t *address );
 void SV_DumpMatches( list_t *list );
 
+int SV_CountClients( void );
+
 
 void Master_Heartbeat (void);
 void Master_Packet (void);
@@ -456,6 +458,7 @@ void SV_MvdSpawnDummy( void );
 
 extern tcpClient_t  *http_client;
 extern char         http_host[MAX_STRING_CHARS];
+extern char         http_header[MAX_STRING_CHARS];
 
 void SV_HttpRun( void ); 
 

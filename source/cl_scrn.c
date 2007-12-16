@@ -203,7 +203,7 @@ SCR_DrawDemoBar
 ================
 */
 static void SCR_DrawDemoBar( void ) {
-	int percent, bufferPercent;
+	//int percent, bufferPercent;
 
 	if( !scr_demobar->integer ) {
 		return;
@@ -215,7 +215,7 @@ static void SCR_DrawDemoBar( void ) {
         }
 		return;
 	}
-		
+#if 0		
 	if( sv_running->integer != ss_broadcast ) {
 		return;
 	}
@@ -230,6 +230,7 @@ static void SCR_DrawDemoBar( void ) {
 	if( scr_demobar->integer & 2 ) {
 		SCR_DrawPercentBar( bufferPercent );
 	}
+#endif
 	
 }
 

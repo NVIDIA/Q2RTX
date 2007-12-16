@@ -30,16 +30,14 @@ list_t		mvd_channels;
 list_t		mvd_ready;
 mvd_t       mvd_waitingRoom;
 qboolean    mvd_dirty;
+int         mvd_chanid;
 
 jmp_buf     mvd_jmpbuf;
 
-cvar_t  *mvd_pause;
 cvar_t	*mvd_running;
 cvar_t	*mvd_shownet;
 cvar_t	*mvd_debug;
-cvar_t	*mvd_nextserver;
 cvar_t	*mvd_timeout;
-cvar_t	*mvd_safecmd;
 cvar_t	*mvd_wait_enter;
 cvar_t	*mvd_wait_leave;
 
@@ -120,7 +118,7 @@ void MVD_Destroyf( mvd_t *mvd, const char *fmt, ... ) {
 	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
 	va_end( argptr );
 
-	Com_Printf( S_COLOR_YELLOW "%s\n", text );
+	Com_Printf( "[%s] %s\n", mvd->name, text );
 
     MVD_Destroy( mvd );
 
@@ -135,7 +133,7 @@ void MVD_Dropf( mvd_t *mvd, const char *fmt, ... ) {
 	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
 	va_end( argptr );
 
-	Com_Printf( S_COLOR_YELLOW "%s\n", text );
+	Com_Printf( "[%s] %s\n", mvd->name, text );
 
     MVD_Drop( mvd );
 
@@ -157,7 +155,7 @@ void MVD_DPrintf( const char *fmt, ... ) {
 	Com_Printf( S_COLOR_BLUE "%s", text );
 }
 
-void MVD_HttpPrintf( mvd_t *mvd, const char *fmt, ... ) {
+static void MVD_HttpPrintf( mvd_t *mvd, const char *fmt, ... ) {
     char buffer[MAX_STRING_CHARS];
 	va_list		argptr;
     int     length;
@@ -294,72 +292,116 @@ void MVD_SendGamestate( tcpClient_t *client ) {
     SZ_Clear( &msg_write );
 }
 
-void MVD_RejectStream( const char *error, const char *reason ) {
+void MVD_GetStatus( void ) {
     char buffer[MAX_STRING_CHARS];
     mvd_t *mvd;
-    int number, count;
+    int count;
 
-    SV_HttpPrintf(
-        "HTTP/1.0 %s\r\n"
-        "Content-Type: text/html; charset=us-ascii\r\n"
-        "Cache-Control: no-cache\r\n"
-        "\r\n", error );
+    SV_HttpPrintf( "HTTP/1.0 200 OK\r\n" );
 
-    SV_HttpHeader( error );
-    SV_HttpPrintf(
-        "<h1>%s</h1><p>%s</p><table border=\"1\"><tr>"
-        "<th>Index</th><th>Name</th><th>Map</th><th>Clients</th></tr>",
-        error, reason );
-
-    number = 0;
-    LIST_FOR_EACH( mvd_t, mvd, &mvd_ready, entry ) {
-        SV_HttpPrintf(
-            "<tr><td><a href=\"http://%s/mvdstream/%d\">%d</a></td>",
-            http_host, number, number );
-
-        Q_EscapeMarkup( buffer, mvd->name, sizeof( buffer ) );
-        SV_HttpPrintf( "<td>%s</td>", buffer );
-
-        Q_EscapeMarkup( buffer, mvd->mapname, sizeof( buffer ) );
-        count = List_Count( &mvd->udpClients );
-        SV_HttpPrintf( "<td>%s</td><td>%d</td></tr>", buffer, count );
-
-        number++;
+    if( http_client->method == HTTP_METHOD_HEAD ) {
+        SV_HttpPrintf( "\r\n" );
+        SV_HttpDrop( http_client, "200 OK" );
+        return;
     }
-    SV_HttpPrintf( "</table>" );
+
+    SV_HttpPrintf(
+        "Content-Type: text/html; charset=us-ascii\r\n"
+        "\r\n" );
+
+    count = SV_CountClients();
+    Q_EscapeMarkup( buffer, sv_hostname->string, sizeof( buffer ) );
+    SV_HttpHeader( va( "%s - %d/%d", buffer, count, sv_maxclients->integer ) );
+    SV_HttpPrintf( "<h1>Status page of %s</h1>"
+        "<p>This server has ", buffer );
+
+    count = List_Count( &mvd_ready );
+    if( count ) {
+        SV_HttpPrintf( "%d MVD stream%s available. ",
+            count, count == 1 ? "" : "s" );
+    } else {
+        SV_HttpPrintf( "no MVD streams available. " );
+    }
+
+    count = List_Count( &mvd_waitingRoom.udpClients ); 
+    if( count ) {
+        SV_HttpPrintf( "Waiting room has %d client%s.</p>",
+            count, count == 1 ? "" : "s" );
+    } else {
+        SV_HttpPrintf( "Waiting room is empty.</p>" );
+    }
+    
+    if( !LIST_EMPTY( &mvd_ready ) ) {
+        SV_HttpPrintf(
+            "<table border=\"1\"><tr>"
+            "<th>ID</th><th>Name</th><th>Map</th><th>Clients</th></tr>" );
+
+        LIST_FOR_EACH( mvd_t, mvd, &mvd_ready, ready ) {
+            SV_HttpPrintf(
+                "<tr><td><a href=\"http://%s/mvdstream/%d\">%d</a></td>",
+                http_host, mvd->id, mvd->id );
+
+            Q_EscapeMarkup( buffer, mvd->name, sizeof( buffer ) );
+            SV_HttpPrintf(
+                "<td><a href=\"http://%s/mvdstream/%d\">%s</a></td>",
+                http_host, mvd->id, buffer );
+
+            Q_EscapeMarkup( buffer, mvd->mapname, sizeof( buffer ) );
+            count = List_Count( &mvd->udpClients );
+            SV_HttpPrintf( "<td>%s</td><td>%d</td></tr>", buffer, count );
+        }
+        SV_HttpPrintf( "</table><br>" );
+    }
+
+    SV_HttpPrintf( "<a href=\"quake2://%s\">Join this server</a>", http_host );
 
     SV_HttpFooter();
 
-    SV_HttpDrop( http_client, error );
+    SV_HttpDrop( http_client, "200 OK" );
 }
 
-void MVD_GetStream( const char *uri ) {
+static mvd_t *MVD_SetStream( const char *uri ) {
     mvd_t *mvd;
-    int index;
-    uint32 magic;
+    int id;
+
+    if( LIST_EMPTY( &mvd_ready ) ) {
+        SV_HttpReject( "503 Service Unavailable",
+            "No MVD streams are available on this server." );
+        return NULL;
+    }
 
     if( *uri == '/' ) {
         uri++;
     }
 
-    if( !*uri ) {
-        if( LIST_EMPTY( &mvd_ready ) ) {
-            SV_HttpReject( "503 Service Unavailable",
-                "No MVD streams available." );
-        } else {
-            MVD_RejectStream( "300 Multiple Choices",
-                "There are several MVD channels available. "
-                "Please select an appropriate stream." );
+    if( *uri == 0 ) {
+        if( List_Count( &mvd_ready ) == 1 ) {
+            return LIST_FIRST( mvd_t, &mvd_ready, ready );
         }
-        return;
+        strcpy( http_header, "Cache-Control: no-cache\r\n" );
+        SV_HttpReject( "300 Multiple Choices",
+            "Please specify an exact stream ID." );
+        return NULL;
     }
 
-    index = atoi( uri );
+    id = atoi( uri );
+    LIST_FOR_EACH( mvd_t, mvd, &mvd_ready, ready ) {
+        if( mvd->id == id ) {
+            return mvd;
+        }
+    }
 
-    mvd = LIST_INDEX( mvd_t, index, &mvd_ready, ready );
+    SV_HttpReject( "404 Not Found",
+        "Requested MVD stream was not found on this server." );
+    return NULL;
+}
+
+void MVD_GetStream( const char *uri ) {
+    mvd_t *mvd;
+    uint32 magic;
+
+    mvd = MVD_SetStream( uri );
     if( !mvd ) {
-        MVD_RejectStream( "404 Not Found",
-            "Requested MVD stream was not found on this server." );
         return;
     }
 
@@ -414,27 +456,6 @@ void MVD_ChangeLevel( mvd_t *mvd ) {
 
     SV_SendAsyncPackets();
 }
-
-#ifndef DEDICATED_ONLY
-/* called by the client code */
-qboolean MVD_GetDemoPercent( int *percent, int *bufferPercent ) {
-#if 0
-	int delta;
-
-	if( !mvd.demoplayback ) {
-		return qfalse;
-	}
-	
-	delta = mvd.serverPacketNum - mvd.timelines[0].framenum;
-	*bufferPercent = 100 - delta * 100 / ( mvd.frameBackup - 1 );
-	*percent = mvd.demofilePercent;
-
-	return qtrue;
-#else
-	return qfalse;
-#endif
-}
-#endif
 
 static void MVD_ReadDemo( mvd_t *mvd ) {
     byte *data;
@@ -595,6 +616,13 @@ void MVD_Frame( void ) {
         ret = NET_Run( &mvd->stream );
         switch( ret ) {
         case NET_AGAIN:
+            // check timeout
+            if( mvd->lastReceived > svs.realtime ) {
+                mvd->lastReceived = svs.realtime;
+            }
+            if( svs.realtime - mvd->lastReceived > mvd_timeout->value * 1000 ) {
+                MVD_Dropf( mvd, "Connection timed out" );
+            }
             continue;
         case NET_ERROR:
             MVD_Dropf( mvd, "%s to %s", NET_ErrorString(),
@@ -605,10 +633,13 @@ void MVD_Frame( void ) {
             break;
         }
 
+        // don't timeout
+        mvd->lastReceived = svs.realtime;
+
         // run MVD state machine
         switch( mvd->state ) {
         case MVD_CONNECTING:
-            Com_Printf( "Connected, awaiting response...\n" );
+            Com_Printf( "[%s] Connected, awaiting response...\n", mvd->name );
             mvd->state = MVD_CONNECTED;
             // fall through
         case MVD_CONNECTED:
@@ -619,7 +650,7 @@ void MVD_Frame( void ) {
                 MVD_Dropf( mvd, "HTTP request failed: %d %s",
                     mvd->statusCode, mvd->statusText );
             }
-            Com_Printf( "Got response, awaiting gamestate...\n" );
+            Com_Printf( "[%s] Got response, awaiting gamestate...\n", mvd->name );
             mvd->state = MVD_CHECKING;
             // fall through
         case MVD_CHECKING:
@@ -631,14 +662,14 @@ void MVD_Frame( void ) {
                 usage = MVD_BufferPercent( mvd );
                 if( mvd->state == MVD_WAITING ) {
                     if( usage >= mvd_wait_leave->value ) {
-                        Com_Printf( "Reading data...\n" );
+                        Com_Printf( "[%s] Reading data...\n", mvd->name );
                         mvd->state = MVD_READING;
                     }
                 } else {
                     if( mvd_wait_leave->value > mvd_wait_enter->value &&
                         usage < mvd_wait_enter->value )
                     {
-                        Com_Printf( "Buffering data...\n" );
+                        Com_Printf( "[%s] Buffering data...\n", mvd->name );
                         mvd->state = MVD_WAITING;
                     }
                 }
@@ -659,28 +690,36 @@ OPERATOR COMMANDS
 mvd_t *MVD_SetChannel( int arg ) {
     char *s = Cmd_Argv( arg );
     mvd_t *mvd;
+    int id;
+
+    if( LIST_EMPTY( &mvd_channels ) ) {
+        Com_Printf( "No active channels.\n" );
+        return NULL;
+    }
 
     if( !*s ) {
         if( List_Count( &mvd_channels ) == 1 ) {
             return LIST_FIRST( mvd_t, &mvd_channels, entry );
         }
-        Com_Printf( "Please specify a channel\n" );
+        Com_Printf( "Please specify an exact channel ID.\n" );
         return NULL;
     }
 
-    mvd = LIST_INDEX( mvd_t, atoi( s ), &mvd_channels, entry );
-    if( mvd ) {
-        return mvd;
+    id = atoi( s );
+    LIST_FOR_EACH( mvd_t, mvd, &mvd_channels, entry ) {
+        if( mvd->id == id ) {
+            return mvd;
+        }
     }
 
-    Com_Printf( "No such channel: %s\n", s );
+    Com_Printf( "No such channel ID: %s\n", s );
     return NULL;
 }
 
 void MVD_Spawn_f( void ) {
     SV_InitGame( qtrue );
 
-    /* set serverinfo variables */
+    // set serverinfo variables
     Cvar_Set( "mapname", "nomap" );
     Cvar_SetInteger( "sv_running", ss_broadcast );
     Cvar_SetInteger( "sv_paused", 0 );
@@ -694,19 +733,18 @@ void MVD_Spawn_f( void ) {
 
 void MVD_ListChannels_f( void ) {
     mvd_t *mvd;
-    int number, usage;
+    int usage;
 
     if( LIST_EMPTY( &mvd_channels ) ) {
         Com_Printf( "No active channels.\n" );
         return;
     }
 
-	Com_Printf( "num name             map      state buf address       \n"
-	            "--- ---------------- -------- ----- --- --------------\n" );
+	Com_Printf( "id name             map      state buf address       \n"
+	            "-- ---------------- -------- ----- --- --------------\n" );
 
-    number = 0;
     LIST_FOR_EACH( mvd_t, mvd, &mvd_channels, entry ) {
-        Com_Printf( "%3d %-16.16s %-8.8s", number,
+        Com_Printf( "%2d %-16.16s %-8.8s", mvd->id,
             mvd->name, mvd->mapname );
         switch( mvd->state ) {
         case MVD_DEAD:
@@ -731,14 +769,7 @@ void MVD_ListChannels_f( void ) {
             break;
         }
         usage = MVD_BufferPercent( mvd );
-        Com_Printf( " %3d ", usage );
-        if( mvd->demoplayback ) {
-            Com_Printf( "%s", mvd->demopath );
-        } else {
-            Com_Printf( "%s", NET_AdrToString( &mvd->stream.address ) );
-        }
-        Com_Printf( "\n" );
-        number++;
+        Com_Printf( " %3d %s\n", usage, mvd->address );
     }
 }
 
@@ -748,12 +779,12 @@ void MVD_StreamedStop_f( void ) {
 
     mvd = MVD_SetChannel( 1 );
     if( !mvd ) {
-        Com_Printf( "Usage: %s [channel]\n", Cmd_Argv( 0 ) );
+        Com_Printf( "Usage: %s [chanid]\n", Cmd_Argv( 0 ) );
         return;
     }
 
 	if( !mvd->demorecording ) {
-		Com_Printf( "Not recording on channel %s.\n", mvd->name );
+		Com_Printf( "[%s] Not recording a demo.\n", mvd->name );
 		return;
 	}
 
@@ -764,7 +795,7 @@ void MVD_StreamedStop_f( void ) {
 	mvd->demofile = 0;
 	mvd->demorecording = qfalse;
 
-	Com_Printf( "Stopped recording on channel %s.\n", mvd->name );
+	Com_Printf( "[%s] Stopped recording.\n", mvd->name );
 }
 
 void MVD_StreamedRecord_f( void ) {
@@ -775,17 +806,17 @@ void MVD_StreamedRecord_f( void ) {
     uint32 magic;
     
 	if( Cmd_Argc() < 2 || ( mvd = MVD_SetChannel( 2 ) ) == NULL ) {
-		Com_Printf( "Usage: %s [/]<filename> [channel]\n", Cmd_Argv( 0 ) );
+		Com_Printf( "Usage: %s [/]<filename> [chanid]\n", Cmd_Argv( 0 ) );
 		return;
 	}
 
 	if( mvd->demorecording ) {
-		Com_Printf( "Already recording on channel %s.\n", mvd->name );
+		Com_Printf( "[%s] Already recording.\n", mvd->name );
 		return;
 	}
 
 	if( mvd->state < MVD_WAITING ) {
-		Com_Printf( "Channel %s is not ready for recording.\n", mvd->name );
+		Com_Printf( "[%s] Channel not ready.\n", mvd->name );
 		return;
 	}
 
@@ -806,7 +837,7 @@ void MVD_StreamedRecord_f( void ) {
 		return;
 	}
 	
-	Com_Printf( "Recording on channel %s into %s\n", mvd->name, buffer );
+	Com_Printf( "[%s] Recording into %s.\n", mvd->name, buffer );
 
 	mvd->demofile = f;
 	mvd->demorecording = qtrue;
@@ -838,17 +869,20 @@ void MVD_Connect_f( void ) {
     mvd_t *mvd;
     uint16 port;
 
-    if ( Cmd_Argc() < 2 ) {
-        Com_Printf( "Usage: %s <[http://][user:pass@]server[:port][/resource]> [name]", Cmd_Argv( 0 ) );
+    if( Cmd_Argc() < 2 ) {
+        Com_Printf( "Usage: %s [http://][user:pass@]<host>[:port][/resource] [stream_id] [chan_name]", Cmd_Argv( 0 ) );
         return;
     }
 
 	Cmd_ArgvBuffer( 1, buffer, sizeof( buffer ) );
 
+    // skip optional http:// prefix
     host = buffer;
     if( !strncmp( host, "http://", 7 ) ) {
         host += 7;
     }
+
+    // parse credentials
     p = strchr( host, '@' );
     if( p ) {
         *p = 0;
@@ -857,6 +891,8 @@ void MVD_Connect_f( void ) {
     } else {
         credentials[0] = 0;
     }
+
+    // parse resource
     p = strchr( host, '/' );
     if( p ) {
         *p = 0;
@@ -867,11 +903,12 @@ void MVD_Connect_f( void ) {
             "mvdstream/", Cmd_Argv( 2 ), NULL );
         port = BigShort( PORT_SERVER );
     }
+
+    // resolve hostname
 	if( !NET_StringToAdr( host, &adr ) ) {
 		Com_Printf( "Bad server address: %s\n", host );
 		return;
 	}
-
     if( !adr.port ) {
         adr.port = port;
     }
@@ -882,16 +919,10 @@ void MVD_Connect_f( void ) {
         return;
     }
 
-    p = Cmd_Argv( 2 );
-
     Z_TagReserve( sizeof( *mvd ) + MAX_MSGLEN * 2 + 256, TAG_MVD );
 
     mvd = Z_ReservedAllocz( sizeof( *mvd ) );
-    if( *p ) {
-        Q_strncpyz( mvd->name, p, sizeof( mvd->name ) );
-    } else {
-        strcpy( mvd->name, "unnamed stream" );
-    }
+    mvd->id = mvd_chanid++;
     mvd->state = MVD_CONNECTING;
     mvd->stream = stream;
     mvd->stream.recv.data = Z_ReservedAlloc( MAX_MSGLEN * 2 );
@@ -902,12 +933,27 @@ void MVD_Connect_f( void ) {
     mvd->pool.edict_size = sizeof( edict_t );
     mvd->pool.max_edicts = MAX_EDICTS;
     mvd->pm_type = PM_SPECTATOR;
+    mvd->lastReceived = svs.realtime;
     List_Init( &mvd->udpClients );
     List_Init( &mvd->tcpClients );
     List_Init( &mvd->ready );
     List_Append( &mvd_channels, &mvd->entry );
 
-    Com_Printf( "Connecting to %s...\n", NET_AdrToString( &adr ) );
+    // set channel name
+    if( p ) {
+        p = Cmd_Argv( 2 );
+    } else {
+        p = Cmd_Argv( 3 );
+    }
+    if( *p ) {
+        Q_strncpyz( mvd->name, p, sizeof( mvd->name ) );
+    } else {
+        Com_sprintf( mvd->name, sizeof( mvd->name ), "net%d", mvd->id );
+    }
+
+    Q_strncpyz( mvd->address, host, sizeof( mvd->address ) );
+
+    Com_Printf( "[%s] Connecting to %s...\n", mvd->name, NET_AdrToString( &adr ) );
 
     MVD_HttpPrintf( mvd,
         "GET /%s HTTP/1.0\r\n"
@@ -930,17 +976,16 @@ static void MVD_Disconnect_f( void ) {
 
     mvd = MVD_SetChannel( 1 );
     if( !mvd ) {
-        Com_Printf( "Usage: %s [channel]\n", Cmd_Argv( 0 ) );
         return;
     }
 
     if( mvd->state == MVD_DISCONNECTED ) {
-        Com_Printf( "Channel is already disconnected.\n" );
+        Com_Printf( "[%s] Already disconnected.\n", mvd->name );
         return;
     }
 
+    Com_Printf( "[%s] Channel was disconnected.\n", mvd->name );
     MVD_Drop( mvd );
-    Com_Printf( "Channel was disconnected.\n" );
 }
 
 static void MVD_Kill_f( void ) {
@@ -948,12 +993,11 @@ static void MVD_Kill_f( void ) {
 
     mvd = MVD_SetChannel( 1 );
     if( !mvd ) {
-        Com_Printf( "Usage: %s [channel]\n", Cmd_Argv( 0 ) );
         return;
     }
 
+    Com_Printf( "[%s] Channel was killed.\n", mvd->name );
     MVD_Destroy( mvd );
-    Com_Printf( "Channel was killed.\n" );
 }
 
 const char *MVD_Play_g( const char *partial, int state ) {
@@ -965,12 +1009,11 @@ void MVD_Play_f( void ) {
 	char *name;
 	char buffer[MAX_OSPATH];
 	fileHandle_t f;
-	int length;
     uint32 magic = 0;
     mvd_t *mvd;
 
 	if( Cmd_Argc() < 2 ) {
-		Com_Printf( "Usage: %s [/]<filename>\n", Cmd_Argv( 0 ) );
+		Com_Printf( "Usage: %s [/]<filename> [chanid]\n", Cmd_Argv( 0 ) );
 		return;
 	}
 
@@ -997,7 +1040,7 @@ void MVD_Play_f( void ) {
     Z_TagReserve( sizeof( *mvd ) + MAX_MSGLEN * 2, TAG_MVD );
 
     mvd = Z_ReservedAllocz( sizeof( *mvd ) );
-    strcpy( mvd->name, "unnamed demo" );
+    mvd->id = mvd_chanid++;
     mvd->state = MVD_PREPARING;
     mvd->demoplayback = qtrue;
 	mvd->demofile = f;
@@ -1012,14 +1055,16 @@ void MVD_Play_f( void ) {
     List_Init( &mvd->ready );
     List_Append( &mvd_channels, &mvd->entry );
 
-    if( dedicated->integer && !sv_nextserver->string[0] ) {
-    	Cvar_Set( "nextserver", va( "mvdplay /%s", buffer ) );
+    // set channel name
+    name = Cmd_Argv( 2 );
+    if( *name ) {
+        Q_strncpyz( mvd->name, name, sizeof( mvd->name ) );
+    } else {
+        Com_sprintf( mvd->name, sizeof( mvd->name ), "dem%d", mvd->id );
     }
 
-	length = FS_GetFileLengthNoCache( mvd->demofile );
-	mvd->demofileFrameOffset = FS_Tell( mvd->demofile );
-	mvd->demofileSize = length - mvd->demofileFrameOffset;
-	strcpy( mvd->demopath, buffer );
+    // set channel address
+    Q_strncpyz( mvd->address, COM_SkipPath( buffer ), sizeof( mvd->address ) );
 }
 
 
@@ -1039,6 +1084,8 @@ void MVD_Shutdown( void ) {
 		Z_Free( mvd_clients );
         mvd_clients = NULL;
 	}
+
+    mvd_chanid = 0;
 
     Z_LeakTest( TAG_MVD );
 }
@@ -1063,10 +1110,7 @@ MVD_Register
 void MVD_Register( void ) {
 	mvd_shownet = Cvar_Get( "mvd_shownet", "0", 0 );
 	mvd_debug = Cvar_Get( "mvd_debug", "0", 0 );
-	mvd_pause = Cvar_Get( "mvd_pause", "0", 0 );
-	mvd_nextserver = Cvar_Get( "mvd_nextserver", "1", 0 );
 	mvd_timeout = Cvar_Get( "mvd_timeout", "120", 0 );
-	mvd_safecmd = Cvar_Get( "mvd_safecmd", "", 0 );
 	mvd_wait_enter = Cvar_Get( "mvd_wait_enter", "0.5", 0 );
 	mvd_wait_leave = Cvar_Get( "mvd_wait_leave", "2", 0 );
 
