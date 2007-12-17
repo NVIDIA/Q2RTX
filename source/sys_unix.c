@@ -39,6 +39,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <dirent.h>
 #include <dlfcn.h>
 #include <termios.h>
+#include <sys/ioctl.h>
 #ifndef __linux__
 #include <machine/param.h>
 #endif
@@ -67,7 +68,6 @@ sysAPI_t sys;
 
 static qboolean         tty_enabled;
 static struct termios   tty_orig;
-static int              tty_erase;
 static commandPrompt_t	tty_prompt;
 static int				tty_hidden;
 
@@ -122,15 +122,22 @@ static void Sys_ShowInput( void ) {
 
 static void Sys_InitTTY( void ) {
     struct termios tty;
+#ifdef TIOCGWINSZ
+    struct winsize ws;
+#endif
     
     tcgetattr( 0, &tty_orig );
     tty = tty_orig;
     tty.c_lflag &= ~( ECHO | ICANON | INPCK | ISTRIP );
     tty.c_cc[VMIN] = 1;
     tty.c_cc[VTIME] = 0;
-    tty_erase = tty.c_cc[VERASE];
     tcsetattr( 0, TCSADRAIN, &tty );
     tty_prompt.widthInChars = 80;
+#ifdef TIOCGWINSZ
+    if( ioctl( 0, TIOCGWINSZ, &ws ) == 0 ) {
+        tty_prompt.widthInChars = ws.ws_col;
+    }
+#endif
     tty_prompt.printf = Sys_Printf;
     tty_enabled = qtrue;
 }
@@ -164,10 +171,10 @@ void Sys_ConsoleOutput( const char *string ) {
                 string += 2;
                 continue;
             }
-            *p++ = *string++ & 127;
-            if( p == maxp ) {
+            if( p + 1 > maxp ) {
                 break;
             }
+            *p++ = *string++ & 127;
         }
 
         FIFO_Commit( &sys_output, p - data );
@@ -204,10 +211,10 @@ void Sys_ConsoleOutput( const char *string ) {
             }
             continue;
         }
-        *p++ = *string++ & 127;
-        if( p == maxp ) {
+        if( p + 1 > maxp ) {
             break;
         }
+        *p++ = *string++ & 127;
     }
 
     if( color ) {
@@ -234,7 +241,7 @@ Sys_ParseInput
 static void Sys_ParseInput( const char *text ) {
 	inputField_t *f;
 	char *s;
-    int key;
+    int i, key;
 
 	if( !tty_enabled ) {    
         Cbuf_AddText( text );
@@ -245,11 +252,19 @@ static void Sys_ParseInput( const char *text ) {
     while( *text ) {
         key = *text++;
 
-        if( key == tty_erase || key == 127 || key == 8 ) {
+        if( key == tty_orig.c_cc[VERASE] || key == 127 || key == 8 ) {
             if( f->cursorPos ) {
                 f->text[--f->cursorPos] = 0;
                 FIFO_Write( &sys_output, "\b \b", 3 );	
             }
+            continue;
+        }
+
+        if( key == tty_orig.c_cc[VKILL] ) {
+            for( i = 0; i < f->cursorPos; i++ ) {
+                FIFO_Write( &sys_output, "\b \b", 3 );	
+            }
+            f->cursorPos = 0;
             continue;
         }
 
@@ -285,21 +300,38 @@ static void Sys_ParseInput( const char *text ) {
             Sys_ShowInput();
             continue;
         }
-        
+
         //Com_Printf( "%s\n",Q_FormatString(text));
         if( *text ) {
             key = *text++;
             if( key == '[' || key == 'O' ) {
                 if( *text ) {
                     key = *text++;
-                    if( key == 'A' ) {
+                    switch( key ) {
+                    case 'A':
                         Sys_HideInput();
                         Prompt_HistoryUp( &tty_prompt );
                         Sys_ShowInput();
-                    } else if( key == 'B' ) {
+                        break;
+                    case 'B':
                         Sys_HideInput();
                         Prompt_HistoryDown( &tty_prompt );
                         Sys_ShowInput();
+                        break;
+#if 0
+                    case 'C':
+                        if( f->text[f->cursorPos] ) {
+                            FIFO_Write( &sys_output, "\033[C", 3 );
+                            f->cursorPos++;
+                        }
+                        break;
+                    case 'D':
+                        if( f->cursorPos ) {
+                            FIFO_Write( &sys_output, "\033[D", 3 );
+                            f->cursorPos--;
+                        }
+                        break;
+#endif
                     }
                 }
             }

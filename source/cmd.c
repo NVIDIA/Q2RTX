@@ -709,9 +709,8 @@ int Cmd_ParseOptions( const cmd_option_t *opt ) {
             if( o->sh[1] == ':' ) {
                 cmd_optarg = p + 1;
             } else {
-                Com_Printf( "%s does not take an argument.\n"
-                    "Try '%s --help' for more information.\n",
-                    o->lo, cmd_argv[0] );
+                Com_Printf( "%s does not take an argument.\n", o->lo );
+                Cmd_PrintHint();
             }
             *p = 0;
         }
@@ -729,18 +728,16 @@ int Cmd_ParseOptions( const cmd_option_t *opt ) {
 
     if( !o->sh ) {
 unknown:
-        Com_Printf( "Unknown option: %s.\n"
-            "Try '%s --help' for more information.\n",
-            cmd_argv[cmd_optind], cmd_argv[0] );
+        Com_Printf( "Unknown option: %s.\n", cmd_argv[cmd_optind] );
+        Cmd_PrintHint();
         return '?';
     }
 
     // parse option argument
     if( !p && o->sh[1] == ':' ) {
         if( cmd_optind + 1 == cmd_argc ) {
-            Com_Printf( "Missing argument to %s.\n"
-                "Try '%s --help' for more information.\n",
-                 cmd_argv[cmd_optind], cmd_argv[0] );
+            Com_Printf( "Missing argument to %s.\n", cmd_argv[cmd_optind] );
+            Cmd_PrintHint();
             return ':';
         }
         cmd_optarg = cmd_argv[++cmd_optind];
@@ -749,6 +746,22 @@ unknown:
     cmd_optind++;
 
     return o->sh[0];
+}
+
+void Cmd_PrintUsage( const cmd_option_t *opt, const char *suffix ) {
+    Com_Printf( "Usage: %s [-", cmd_argv[0] );
+    while( opt->sh ) {
+        Com_Printf( "%c", opt->sh[0] );
+        if( opt->sh[1] == ':' ) {
+            Com_Printf( ":" );
+        }
+        opt++;
+    }
+    if( suffix ) {
+        Com_Printf( "] %s\n", suffix );
+    } else {
+        Com_Printf( "]\n" );
+    }
 }
 
 void Cmd_PrintHelp( const cmd_option_t *opt ) {
@@ -766,6 +779,10 @@ void Cmd_PrintHelp( const cmd_option_t *opt ) {
         opt++;
     }
     Com_Printf( "\n" );
+}
+
+void Cmd_PrintHint( void ) {
+    Com_Printf( "Try '%s --help' for more information.\n", cmd_argv[0] );
 }
 
 

@@ -212,12 +212,12 @@ void MVD_ClearState( mvd_t *mvd ) {
 
 static void MVD_EmitGamestate( mvd_t *mvd ) {
 	char		*string;
-	int			i;
+	int			i, j;
 	entity_state_t	*es;
     player_state_t *ps;
     int         length;
     uint16      *patch;
-	int flags, portalbytes;
+	int flags, extra, portalbytes;
     byte portalbits[MAX_MAP_AREAS/8];
 
     patch = SZ_GetSpace( &msg_write, 2 );
@@ -252,7 +252,7 @@ static void MVD_EmitGamestate( mvd_t *mvd ) {
 	MSG_WriteByte( portalbytes );
 	MSG_WriteData( portalbits, portalbytes );
 	
-    // send player states
+    // send base player states
 	flags = 0;
 	if( sv_mvd_noblend->integer ) {
 		flags |= MSG_PS_IGNORE_BLEND;
@@ -262,23 +262,27 @@ static void MVD_EmitGamestate( mvd_t *mvd ) {
 	}
 	for( i = 0; i < mvd->maxclients; i++ ) {
         ps = &mvd->players[i].ps;
-		if( mvd->players[i].inuse ) {
-			MSG_WriteDeltaPlayerstate_Packet( NULL, ps, i,
-                flags | MSG_PS_FORCE );
-		}
+        extra = 0;
+        if( !PPS_INUSE( ps ) ) {
+            extra |= MSG_PS_REMOVE;
+        }
+		MSG_WriteDeltaPlayerstate_Packet( NULL, ps, i, flags | extra );
 	}
 	MSG_WriteByte( CLIENTNUM_NONE );
 
-    // send entity states
+    // send base entity states
 	for( i = 1; i < mvd->pool.num_edicts; i++ ) {
         es = &mvd->edicts[i].s;
-        if( es->number ) {
-            flags = MSG_ES_FORCE|MSG_ES_NEWENTITY;
-            if( i <= mvd->maxclients ) {
-                flags |= MSG_ES_FIRSTPERSON;
-            }
-            MSG_WriteDeltaEntity( NULL, es, flags );
+        flags = 0;
+        if( i <= mvd->maxclients ) {
+            flags |= MSG_ES_FIRSTPERSON;
         }
+        if( ( j = es->number ) == 0 ) {
+            flags |= MSG_ES_REMOVE;
+        }
+        es->number = i;
+        MSG_WriteDeltaEntity( NULL, es, flags );
+        es->number = j;
 	}
 	MSG_WriteShort( 0 );
 
@@ -926,14 +930,13 @@ void MVD_Connect_f( void ) {
     while( ( c = Cmd_ParseOptions( options ) ) != -1 ) {
         switch( c ) {
         case 'h':
-            Com_Printf( "Usage: %s [-hin:] <uri>\n"
-                "Create new MVD channel and connect to URI.\n",
-                Cmd_Argv( 0 ) );
+            Cmd_PrintUsage( options, "<uri>" );
+            Com_Printf( "Create new MVD channel and connect to URI.\n" );
             Cmd_PrintHelp( options );
             Com_Printf(
     "Full URI syntax: [http://][user:pass@]<host>[:port][/resource]\n"
     "If resource is given, default port is 80 and stream ID is ignored.\n"
-    "Otherwise, default port is %d and stream ID is 0.\n", PORT_SERVER );
+    "Otherwise, default port is %d and stream ID is undefined.\n", PORT_SERVER );
             return;
         case 'i':
             id = cmd_optarg;
@@ -947,8 +950,8 @@ void MVD_Connect_f( void ) {
     }
 
     if( !cmd_optarg[0] ) {
-        Com_Printf( "Missing URI argument.\n"
-            "Try '%s --help' for more information.\n", Cmd_Argv( 0 ) );
+        Com_Printf( "Missing URI argument.\n" );
+        Cmd_PrintHint();
         return;
     }
 
@@ -1072,6 +1075,66 @@ static void MVD_Kill_f( void ) {
     MVD_Destroy( mvd );
 }
 
+static void MVD_Control_f( void ) {
+    static const cmd_option_t options[] = {
+        { "h", "help", "display this message" },
+        { "l:number", "loop", "replay <number> of times (0 means forever)" },
+        { "n:string", "name", "specify channel name as <string>" },
+        { NULL }
+    };
+    mvd_t *mvd;
+    char *name = NULL;
+    int loop = -1;
+    int todo = 0;
+    int c;
+
+    while( ( c = Cmd_ParseOptions( options ) ) != -1 ) {
+        switch( c ) {
+        case 'h':
+            Cmd_PrintUsage( options, "[chanid]" );
+            Com_Printf( "Change attributes of existing MVD channel.\n" );
+            Cmd_PrintHelp( options );
+            return;
+        case 'l':
+            loop = atoi( cmd_optarg );
+            if( loop < 0 ) {
+                Com_Printf( "Invalid value for %s option.\n", cmd_optopt );
+                Cmd_PrintHint();
+                return;
+            }
+            todo |= 1;
+            break;
+        case 'n':
+            name = cmd_optarg;
+            todo |= 2;
+            break;
+        default:
+            return;
+        }
+    }
+
+    if( !todo ) {
+        Com_Printf( "At least one option needed.\n" );
+        Cmd_PrintHint();
+        return;
+    }
+
+    mvd = MVD_SetChannel( cmd_optind );
+    if( !mvd ) {
+        Cmd_PrintHint();
+        return;
+    }
+
+    if( name ) {
+        Com_Printf( "[%s] Channel renamed to %s.\n", mvd->name, name );
+        Q_strncpyz( mvd->name, name, sizeof( mvd->name ) );
+    }
+    if( loop != -1 ) {
+        Com_Printf( "[%s] Loop count changed to %d.\n", mvd->name, loop );
+        mvd->demoloop = loop;
+    }
+}
+
 const char *MVD_Play_g( const char *partial, int state ) {
 	return Com_FileNameGeneratorByFilter( "demos", "*.mvd2;*.mvd2.gz",
         partial, qfalse, state );
@@ -1095,9 +1158,8 @@ void MVD_Play_f( void ) {
     while( ( c = Cmd_ParseOptions( options ) ) != -1 ) {
         switch( c ) {
         case 'h':
-            Com_Printf( "Usage: %s [-hln:] [/]<filename>\n"
-                "Create new MVD channel and begin demo playback.\n",
-                Cmd_Argv( 0 ) );
+            Cmd_PrintUsage( options, "[/]<filename>" );
+            Com_Printf( "Create new MVD channel and begin demo playback.\n" );
             Cmd_PrintHelp( options );
             Com_Printf( "Final path is formatted as demos/<filename>.mvd2.\n"
                 "Prepend slash to specify raw path.\n" );
@@ -1105,9 +1167,8 @@ void MVD_Play_f( void ) {
         case 'l':
             loop = atoi( cmd_optarg );
             if( loop < 0 ) {
-                Com_Printf( "Invalid value for %s option.\n"
-                    "Try '%s --help' for more information.\n",
-                    cmd_optopt, Cmd_Argv( 0 ) );
+                Com_Printf( "Invalid value for %s option.\n", cmd_optopt );
+                Cmd_PrintHint();
                 return;
             }
             break;
@@ -1121,8 +1182,8 @@ void MVD_Play_f( void ) {
 
     argc = Cmd_Argc();
     if( cmd_optind == argc ) {
-        Com_Printf( "Missing filename argument.\n"
-            "Try '%s --help' for more information.\n", Cmd_Argv( 0 ) );
+        Com_Printf( "Missing filename argument.\n" );
+        Cmd_PrintHint();
         return;
     }
 
@@ -1210,6 +1271,7 @@ static const cmdreg_t c_mvd[] = {
 	{ "mvdkill", MVD_Kill_f },
 	{ "mvdspawn", MVD_Spawn_f },
 	{ "mvdchannels", MVD_ListChannels_f },
+	{ "mvdcontrol", MVD_Control_f },
 
     { NULL }
 };

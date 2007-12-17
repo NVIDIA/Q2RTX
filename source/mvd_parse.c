@@ -687,14 +687,6 @@ static void MVD_ParsePacketEntities( mvd_t *mvd ) {
 
         ent = &mvd->edicts[number];
 
-		if( bits & U_REMOVE ) {	
-			if( mvd_shownet->integer > 2 ) {
-				Com_Printf( "   remove: %d\n", number );
-			}
-            ent->inuse = qfalse;
-			continue;
-		}
-
         if( mvd_shownet->integer > 2 ) {
 			Com_Printf( "   %s: %d ", ent->inuse ?
                 "delta" : "baseline", number );
@@ -703,6 +695,14 @@ static void MVD_ParsePacketEntities( mvd_t *mvd ) {
         }
 
         MSG_ParseDeltaEntity( &ent->s, &ent->s, number, bits );
+
+		if( bits & U_REMOVE ) {	
+			if( mvd_shownet->integer > 2 ) {
+				Com_Printf( "   remove: %d\n", number );
+			}
+            ent->inuse = qfalse;
+			continue;
+		}
 
         ent->inuse = qtrue;
         if( number >= mvd->pool.num_edicts ) {
@@ -743,14 +743,6 @@ static void MVD_ParsePacketPlayers( mvd_t *mvd ) {
 
 		bits = MSG_ReadShort();
 
-		if( bits & PPS_REMOVE ) {	
-			if( mvd_shownet->integer > 2 ) {
-				Com_Printf( "   remove: %d\n", number );
-			}
-            player->inuse = qfalse;
-			continue;
-		}
-
         if( mvd_shownet->integer > 2 ) {
 			Com_Printf( "   %s: %d ", player->inuse ?
                 "delta" : "baseline", number );
@@ -759,6 +751,14 @@ static void MVD_ParsePacketPlayers( mvd_t *mvd ) {
         }
 
         MSG_ParseDeltaPlayerstate_Packet( &player->ps, &player->ps, bits );
+
+		if( bits & PPS_REMOVE ) {	
+			if( mvd_shownet->integer > 2 ) {
+				Com_Printf( "   remove: %d\n", number );
+			}
+            player->inuse = qfalse;
+			continue;
+		}
 
         player->inuse = qtrue;
     }

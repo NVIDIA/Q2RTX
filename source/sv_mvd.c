@@ -576,12 +576,12 @@ Writes a single giant message with all the startup info.
 */
 static void SV_MvdEmitGamestate( void ) {
 	char		*string;
-	int			i;
+	int			i, j;
     player_state_t  *ps;
 	entity_state_t	*es;
     int         length;
     uint16      *patch;
-	int flags, portalbytes;
+	int flags, extra, portalbytes;
     byte portalbits[MAX_MAP_AREAS/8];
 
     patch = SZ_GetSpace( &msg_write, 2 );
@@ -624,25 +624,27 @@ static void SV_MvdEmitGamestate( void ) {
 	if( sv_mvd_nogun->integer ) {
 		flags |= MSG_PS_IGNORE_GUNINDEX|MSG_PS_IGNORE_GUNFRAMES;
 	}
-	for( i = 0; i < sv_maxclients->integer; i++ ) {
-        ps = &svs.mvd.players[i];
-		if( PPS_INUSE( ps ) ) {
-			MSG_WriteDeltaPlayerstate_Packet( NULL, ps, i,
-                flags | MSG_PS_FORCE );
-		}
+	for( i = 0, ps = svs.mvd.players; i < sv_maxclients->integer; i++, ps++ ) {
+        extra = 0;
+        if( !PPS_INUSE( ps ) ) {
+            extra |= MSG_PS_REMOVE;
+        }
+    	MSG_WriteDeltaPlayerstate_Packet( NULL, ps, i, flags | extra );
 	}
 	MSG_WriteByte( CLIENTNUM_NONE );
 
     // send entity states
-	for( i = 1; i < ge->num_edicts; i++ ) {
-        es = &svs.mvd.entities[i];
-        if( es->number ) {
-            flags = MSG_ES_FORCE|MSG_ES_NEWENTITY;
-            if( i <= sv_maxclients->integer ) {
-                flags |= MSG_ES_FIRSTPERSON;
-            }
-            MSG_WriteDeltaEntity( NULL, es, flags );
+	for( i = 1, es = svs.mvd.entities + 1; i < ge->num_edicts; i++, es++ ) {
+        flags = 0;
+        if( i <= sv_maxclients->integer ) {
+            flags |= MSG_ES_FIRSTPERSON;
         }
+        if( ( j = es->number ) == 0 ) {
+            flags |= MSG_ES_REMOVE;
+        }
+        es->number = i;
+        MSG_WriteDeltaEntity( NULL, es, flags );
+        es->number = j;
 	}
 	MSG_WriteShort( 0 );
 

@@ -193,6 +193,8 @@ extern char *cmd_optopt;
 
 int Cmd_ParseOptions( const cmd_option_t *opt );
 void Cmd_PrintHelp( const cmd_option_t *opt );
+void Cmd_PrintUsage( const cmd_option_t *opt, const char *suffix );
+void Cmd_PrintHint( void );
 
 /*
 ==============================================================

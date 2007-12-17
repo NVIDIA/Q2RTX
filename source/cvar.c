@@ -751,7 +751,7 @@ static void Cvar_List_f( void ) {
     static const cmd_option_t options[] = {
         { "v", "verbose", "display flags of each cvar" },
         { "h", "help", "display this help message" },
-        { "f:wildcard", "filter", "filter cvars by wildcard" },
+        { "f:string", "filter", "filter cvars by wildcard" },
         { NULL }
     };
 	cvar_t	*var;
@@ -767,8 +767,8 @@ static void Cvar_List_f( void ) {
             wildcard = cmd_optarg;
             break;
         case 'h':
-            Com_Printf( "Usage: %s [-f:hv] -- list console variables\n",
-                Cmd_Argv( 0 ) );
+            Cmd_PrintUsage( options, NULL );
+            Com_Printf( "List registered console variables.\n" );
             Cmd_PrintHelp( options );
             Com_Printf(
                         "Flags legend:\n"

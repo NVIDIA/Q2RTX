@@ -1401,6 +1401,9 @@ void Qcommon_Init( int argc, char **argv ) {
     com_initialized = qtrue;
 
 	Sys_Init();
+
+    Sys_RunConsole();
+
 	FS_Init();
 
     Sys_RunConsole();

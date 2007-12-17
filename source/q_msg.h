@@ -64,13 +64,15 @@ typedef enum {
 	MSG_PS_IGNORE_VIEWANGLES	= ( 1 << 3 ),
 	MSG_PS_IGNORE_DELTAANGLES	= ( 1 << 4 ),
 	MSG_PS_IGNORE_PREDICTION	= ( 1 << 5 ),	// mutually exclusive with IGNORE_VIEWANGLES
-	MSG_PS_FORCE				= ( 1 << 7 )
+	MSG_PS_FORCE				= ( 1 << 7 ),
+	MSG_PS_REMOVE				= ( 1 << 8 )
 } msgPsFlags_t;
 
 typedef enum {
 	MSG_ES_FORCE				= ( 1 << 0 ),
 	MSG_ES_NEWENTITY			= ( 1 << 1 ),
-	MSG_ES_FIRSTPERSON			= ( 1 << 2 )
+	MSG_ES_FIRSTPERSON			= ( 1 << 2 ),
+	MSG_ES_REMOVE	     		= ( 1 << 3 )
 } msgEsFlags_t;
 	
 extern sizebuf_t	msg_write;

@@ -606,6 +606,10 @@ void MSG_WriteDeltaEntity( const entity_state_t *from,
 	if( !bits && !( flags & MSG_ES_FORCE ) )
 		return;		// nothing to send!
 
+	if( flags & MSG_ES_REMOVE ) {
+        bits |= U_REMOVE;
+    }
+
 	//----------
 
 	if (to->number >= 256)
@@ -1283,6 +1287,10 @@ void MSG_WriteDeltaPlayerstate_Packet(  const player_state_t   *from,
 	if( !pflags && !( flags & MSG_PS_FORCE ) ) {
 		return;
 	}
+
+    if( flags & MSG_PS_REMOVE ) {
+        pflags |= PPS_REMOVE;
+    }
 
 	//
 	// write it
