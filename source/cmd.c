@@ -324,35 +324,45 @@ void Cmd_Alias_f( void ) {
 }
 
 static void Cmd_UnAlias_f( void ) {
+    static const cmd_option_t options[] = {
+        { "h", "help", "display this message" },
+        { "a", "all", "delete everything" },
+        { 0 }
+    };
 	char *s;
 	cmdalias_t	*a, *n;
 	uint32 hash;
+    int c;
 
-	if( Cmd_CheckParam( "-h", "--help" ) ) {
-usage:
-		Com_Printf( "Usage: %s [-h] [-a] [name]\n"
-			"-h|--help    : display this message\n"
-			"-a|--all     : delete everything\n"
-			"Either -a or name should be given\n", Cmd_Argv( 0 ) );
-		return;
-	}
+    while( ( c = Cmd_ParseOptions( options ) ) != -1 ) {
+        switch( c ) {
+        case 'h':
+            Com_Printf( "Usage: %s [-ha] [name]\n", Cmd_Argv( 0 ) );
+            Cmd_PrintHelp( options );
+            return;
+        case 'a':
+            LIST_FOR_EACH_SAFE( cmdalias_t, a, n, &cmd_alias, listEntry ) {
+                Z_Free( a->value );
+                Z_Free( a );
+            }
+            for( hash = 0; hash < ALIAS_HASH_SIZE; hash++ ) {
+                List_Init( &cmd_aliasHash[hash] );
+            }
+            List_Init( &cmd_alias );
+            Com_Printf( "Removed all aliases\n" );
+            return;
+        default:
+            return;
+        }
+    }
 
-	if( Cmd_CheckParam( "a", "all" ) ) {
-        LIST_FOR_EACH_SAFE( cmdalias_t, a, n, &cmd_alias, listEntry ) {
-			Z_Free( a->value );
-			Z_Free( a );
-		}
-		for( hash = 0; hash < ALIAS_HASH_SIZE; hash++ ) {
-			List_Init( &cmd_aliasHash[hash] );
-		}
-		List_Init( &cmd_alias );
-		Com_Printf( "Removed all aliases\n" );
-		return;
-	}
+    if( !cmd_optarg[0] ) {
+        Com_Printf( "Missing alias name.\n"
+            "Try %s --help for more information.\n",
+            Cmd_Argv( 0 ) );
+        return;
+    }
 
-	if( Cmd_Argc() < 2 ) {
-		goto usage;
-	}
 	s = Cmd_Argv( 1 );
 	a = Cmd_AliasFind( s );
 	if( !a ) {
@@ -488,6 +498,10 @@ static	int			cmd_offsets[MAX_STRING_TOKENS];
 
 /* sequence of NULL-terminated tokens, each cmd_argv[] points here */
 static	char		cmd_data[MAX_STRING_CHARS];
+
+int			cmd_optind;
+char        *cmd_optarg;
+char        *cmd_optopt;
 
 int Cmd_ArgOffset( int arg ) {
 	if( arg < 0 ) {
@@ -655,56 +669,105 @@ void Cmd_Shift( void ) {
         MAX_STRING_CHARS - cmd_offsets[1] );
 }
 
-/*
-============
-Cmd_EnumParam
-============
-*/
-int Cmd_EnumParam( int start, const char *sp, const char *lp ) {
-	int i;
-	char *s;
-	
-	if( start < 0 || start >= cmd_argc ) {
-		return 0;
-	}
-	for( i = start; i < cmd_argc; i++ ) {
-		if( *( s = cmd_argv[i] ) == '-' ) {
-			if( *( ++s ) == '-' ) {
-				if( !strcmp( s + 1, lp ) ) {
-					return i;
-				}
-			} else if( !strcmp( s, sp ) ) {
-				return i;
-			}
-		}
-	}
-	
-	return 0;
+int Cmd_ParseOptions( const cmd_option_t *opt ) {
+    const cmd_option_t *o;
+    char *s, *p;
+
+    cmd_optopt = cmd_null_string;
+
+    if( cmd_optind == cmd_argc ) {
+        cmd_optarg = cmd_null_string;
+        return -1; // no more arguments
+    }
+
+    s = cmd_argv[cmd_optind];
+    if( *s != '-' ) {
+        cmd_optarg = s;
+        return -1; // non-option argument
+    }
+    cmd_optopt = s++;
+
+    if( *s == '-' ) {
+        s++;
+        if( *s == 0 ) {
+            if( ++cmd_optind < cmd_argc ) {
+                cmd_optarg = cmd_argv[cmd_optind];
+            } else {
+                cmd_optarg = cmd_null_string;
+            }
+            return -1; // special terminator
+        }
+        if( ( p = strchr( s, '=' ) ) != NULL ) {
+            *p = 0;
+        }
+        for( o = opt; o->sh; o++ ) {
+            if( !strcmp( o->lo, s ) ) {
+                break;
+            }
+        }
+        if( p ) {
+            if( o->sh[1] == ':' ) {
+                cmd_optarg = p + 1;
+            } else {
+                Com_Printf( "%s does not take an argument.\n"
+                    "Try '%s --help' for more information.\n",
+                    o->lo, cmd_argv[0] );
+            }
+            *p = 0;
+        }
+    } else {
+        p = NULL;
+        if( s[1] ) {
+            goto unknown;
+        }
+        for( o = opt; o->sh; o++ ) {
+            if( o->sh[0] == *s ) {
+                break;
+            }
+        }
+    }
+
+    if( !o->sh ) {
+unknown:
+        Com_Printf( "Unknown option: %s.\n"
+            "Try '%s --help' for more information.\n",
+            cmd_argv[cmd_optind], cmd_argv[0] );
+        return '?';
+    }
+
+    // parse option argument
+    if( !p && o->sh[1] == ':' ) {
+        if( cmd_optind + 1 == cmd_argc ) {
+            Com_Printf( "Missing argument to %s.\n"
+                "Try '%s --help' for more information.\n",
+                 cmd_argv[cmd_optind], cmd_argv[0] );
+            return ':';
+        }
+        cmd_optarg = cmd_argv[++cmd_optind];
+    }
+
+    cmd_optind++;
+
+    return o->sh[0];
 }
 
-/*
-============
-Cmd_CheckParam
-============
-*/
-int Cmd_CheckParam( const char *sp, const char *lp ) {
-	return Cmd_EnumParam( 1, sp, lp );
+void Cmd_PrintHelp( const cmd_option_t *opt ) {
+    char buffer[32];
+
+    Com_Printf( "\nAvailable options:\n" );
+    while( opt->sh ) {
+        if( opt->sh[1] == ':' ) {
+            Q_concat( buffer, sizeof( buffer ),
+                opt->lo, "=<", opt->sh + 2, ">", NULL );
+        } else {
+            Q_strncpyz( buffer, opt->lo, sizeof( buffer ) );
+        }
+        Com_Printf( "-%c | --%-16.16s : %s\n", opt->sh[0], buffer, opt->help );
+        opt++;
+    }
+    Com_Printf( "\n" );
 }
 
-/*
-============
-Cmd_FindParam
-============
-*/
-char *Cmd_FindParam( const char *sp, const char *lp ) {
-	int i;
-
-	if( ( i = Cmd_EnumParam( 1, sp, lp ) ) && ++i != cmd_argc ) {
-		return cmd_argv[i];
-	}
-
-	return NULL;
-}
 
 /*
 ======================
@@ -883,6 +946,8 @@ void Cmd_TokenizeString( const char *text, qboolean macroExpand ) {
 		
 	cmd_argc = 0;
 	cmd_args[0] = 0;
+    cmd_optind = 1;
+    cmd_optarg = cmd_optopt = cmd_null_string;
 	
     if( !text[0] ) {
         return;

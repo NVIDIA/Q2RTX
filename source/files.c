@@ -2212,41 +2212,51 @@ static const char *FS_Link_g( const char *partial, int state ) {
 }
 
 static void FS_UnLink_f( void ) {
+    static const cmd_option_t options[] = {
+        { "a", "all", "delete all links" },
+        { "h", "help", "display this message" },
+        { NULL }
+    };
     fsLink_t *l, *next, **back;
     char *name;
+    int c;
 
-    if( Cmd_CheckParam( "h", "help" ) ) {
-usage:
-        Com_Printf( "Usage: %s <name>\n"
-                "Deletes the specified symbolic link.\n",
-                    Cmd_Argv( 0 ) );
-        return;
-    }
-
-    if( Cmd_CheckParam( "a", "all" ) ) {
-        for( l = fs_links; l; l = next ) {
-            next = l->next;
-            Z_Free( l->target );
-            Z_Free( l );
+    while( ( c = Cmd_ParseOptions( options ) ) != -1 ) {
+        switch( c ) {
+        case 'h':
+            Com_Printf( "Usage: %s [-ah] <name> -- delete symbolic link\n",
+                Cmd_Argv( 0 ) );
+            Cmd_PrintHelp( options );
+            return;
+        case 'a':
+            for( l = fs_links; l; l = next ) {
+                next = l->next;
+                Z_Free( l->target );
+                Z_Free( l );
+            }
+            fs_links = NULL;
+            Com_Printf( "Deleted all symbolic links.\n" );
+            return;
+        default:
+            return;
         }
-        fs_links = NULL;
+    }
+
+    name = cmd_optarg;
+    if( !name[0] ) {
+        Com_Printf( "Missing name argument.\n"
+            "Try '%s --help' for more information.\n", Cmd_Argv( 0 ) );
         return;
     }
 
-    if( Cmd_Argc() != 2 ) {
-        goto usage;
-    }
-
-    name = Cmd_Argv( 1 );
     for( l = fs_links, back = &fs_links; l; l = l->next ) {
         if( !Q_stricmp( l->name, name ) ) {
             break;
         }
         back = &l->next;
     }
-
     if( !l ) {
-        Com_Printf( "Symbolic link '%s' does not exist.\n", name );
+        Com_Printf( "Symbolic link %s does not exist.\n", name );
         return;
     }
 
@@ -2269,7 +2279,7 @@ static void FS_Link_f( void ) {
                 "%d symbolic links listed.\n", count );
         return;
     }
-    if( Cmd_CheckParam( "h", "help" ) || argc != 3 ) {
+    if( argc != 3 ) {
         Com_Printf( "Usage: %s <name> <target>\n"
                 "Creates symbolic link to target with the specified name.\n"
                 "Virtual quake paths are accepted.\n"

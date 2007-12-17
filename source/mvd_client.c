@@ -109,6 +109,12 @@ void MVD_Drop( mvd_t *mvd ) {
     }
 }
 
+void MVD_ResetStream( mvd_t *mvd ) {
+    mvd->state = MVD_PREPARING;
+    List_Delete( &mvd_ready );
+
+    longjmp( mvd_jmpbuf, -1 );
+}
 
 void MVD_Destroyf( mvd_t *mvd, const char *fmt, ... ) {
 	va_list		argptr;
@@ -457,6 +463,44 @@ void MVD_ChangeLevel( mvd_t *mvd ) {
     SV_SendAsyncPackets();
 }
 
+static void MVD_PlayNext( mvd_t *mvd, demoentry_t *entry ) {
+    uint32 magic = 0;
+
+    if( !entry ) {
+        if( mvd->demoloop ) {
+            if( --mvd->demoloop == 0 ) {
+                MVD_Dropf( mvd, "End of play list reached" );
+                return;
+            }
+        }
+        entry = mvd->demohead;
+    }
+
+    if( mvd->demofile ) {
+        FS_FCloseFile( mvd->demofile );
+        mvd->demofile = 0;
+    }
+
+    FS_FOpenFile( entry->path, &mvd->demofile, FS_MODE_READ );
+    if( !mvd->demofile ) {
+        MVD_Dropf( mvd, "Couldn't reopen %s", entry->path );
+    }
+
+    FS_Read( &magic, 4, mvd->demofile );
+    if( magic != MVD_MAGIC ) {
+        MVD_Dropf( mvd, "%s is not a MVD2 file", entry->path );
+    }
+
+    Com_Printf( "[%s] Reading from %s\n", mvd->name, entry->path );
+
+    // reset state
+    mvd->demoentry = entry;
+
+    // set channel address
+    Q_strncpyz( mvd->address, COM_SkipPath( entry->path ), sizeof( mvd->address ) );
+}
+
+
 static void MVD_ReadDemo( mvd_t *mvd ) {
     byte *data;
     int length, read, total = 0;
@@ -472,7 +516,8 @@ static void MVD_ReadDemo( mvd_t *mvd ) {
     } while( read );
 
     if( !total ) {
-        MVD_Dropf( mvd, "End of MVD file reached" );
+//        MVD_Dropf( mvd, "End of MVD file reached" );
+        MVD_PlayNext( mvd, mvd->demoentry->next );
     }
 }
 
@@ -605,7 +650,9 @@ void MVD_Frame( void ) {
         }
 
         if( mvd->demoplayback ) {
-            MVD_ReadDemo( mvd );
+            if( mvd->demofile ) {
+                MVD_ReadDemo( mvd );
+            }
             if( mvd->state == MVD_PREPARING ) {
                 MVD_Parse( mvd );
             }
@@ -740,32 +787,32 @@ void MVD_ListChannels_f( void ) {
         return;
     }
 
-	Com_Printf( "id name             map      state buf address       \n"
-	            "-- ---------------- -------- ----- --- --------------\n" );
+	Com_Printf( "id name             map      stat buf address       \n"
+	            "-- ---------------- -------- ---- --- --------------\n" );
 
     LIST_FOR_EACH( mvd_t, mvd, &mvd_channels, entry ) {
-        Com_Printf( "%2d %-16.16s %-8.8s", mvd->id,
+        Com_Printf( "%2d %-16.16s %-8.8s ", mvd->id,
             mvd->name, mvd->mapname );
         switch( mvd->state ) {
         case MVD_DEAD:
-            Com_Printf( " DEAD " );
+            Com_Printf( "DEAD" );
             break;
 	    case MVD_CONNECTING:
 	    case MVD_CONNECTED:
-            Com_Printf( " CNCT " );
+            Com_Printf( "CNCT" );
             break;
 	    case MVD_CHECKING:
 	    case MVD_PREPARING:
-            Com_Printf( " PREP " );
+            Com_Printf( "PREP" );
             break;
         case MVD_WAITING:
-            Com_Printf( " WAIT " );
+            Com_Printf( "WAIT" );
             break;
         case MVD_READING:
-            Com_Printf( " READ " );
+            Com_Printf( "READ" );
             break;
         case MVD_DISCONNECTED:
-            Com_Printf( " DISC " );
+            Com_Printf( "DISC" );
             break;
         }
         usage = MVD_BufferPercent( mvd );
@@ -860,21 +907,52 @@ MVD_Connect_f
 ==============
 */
 void MVD_Connect_f( void ) {
+    static const cmd_option_t options[] = {
+        { "h", "help", "display this message" },
+        { "i:number", "id", "specify remote stream ID as <number>" },
+        { "n:string", "name", "specify channel name as <string>" },
+        { NULL }
+    };
 	netadr_t adr;
     netstream_t stream;
     char buffer[MAX_STRING_CHARS];
     char resource[MAX_STRING_CHARS];
     char credentials[MAX_STRING_CHARS];
-	char *host, *p;
+	char *id = "", *name = NULL, *host, *p;
     mvd_t *mvd;
     uint16 port;
+    int c;
 
-    if( Cmd_Argc() < 2 ) {
-        Com_Printf( "Usage: %s [http://][user:pass@]<host>[:port][/resource] [stream_id] [chan_name]", Cmd_Argv( 0 ) );
+    while( ( c = Cmd_ParseOptions( options ) ) != -1 ) {
+        switch( c ) {
+        case 'h':
+            Com_Printf( "Usage: %s [-hin:] <uri>\n"
+                "Create new MVD channel and connect to URI.\n",
+                Cmd_Argv( 0 ) );
+            Cmd_PrintHelp( options );
+            Com_Printf(
+    "Full URI syntax: [http://][user:pass@]<host>[:port][/resource]\n"
+    "If resource is given, default port is 80 and stream ID is ignored.\n"
+    "Otherwise, default port is %d and stream ID is 0.\n", PORT_SERVER );
+            return;
+        case 'i':
+            id = cmd_optarg;
+            break;
+        case 'n':
+            name = cmd_optarg;
+            break;
+        default:
+            return;
+        }
+    }
+
+    if( !cmd_optarg[0] ) {
+        Com_Printf( "Missing URI argument.\n"
+            "Try '%s --help' for more information.\n", Cmd_Argv( 0 ) );
         return;
     }
 
-	Cmd_ArgvBuffer( 1, buffer, sizeof( buffer ) );
+	Cmd_ArgvBuffer( cmd_optind, buffer, sizeof( buffer ) );
 
     // skip optional http:// prefix
     host = buffer;
@@ -899,8 +977,7 @@ void MVD_Connect_f( void ) {
         strcpy( resource, p + 1 );
         port = BigShort( 80 );
     } else {
-        Q_concat( resource, sizeof( resource ),
-            "mvdstream/", Cmd_Argv( 2 ), NULL );
+        Q_concat( resource, sizeof( resource ), "mvdstream/", id, NULL );
         port = BigShort( PORT_SERVER );
     }
 
@@ -940,13 +1017,8 @@ void MVD_Connect_f( void ) {
     List_Append( &mvd_channels, &mvd->entry );
 
     // set channel name
-    if( p ) {
-        p = Cmd_Argv( 2 );
-    } else {
-        p = Cmd_Argv( 3 );
-    }
-    if( *p ) {
-        Q_strncpyz( mvd->name, p, sizeof( mvd->name ) );
+    if( name ) {
+        Q_strncpyz( mvd->name, name, sizeof( mvd->name ) );
     } else {
         Com_sprintf( mvd->name, sizeof( mvd->name ), "net%d", mvd->id );
     }
@@ -1006,34 +1078,76 @@ const char *MVD_Play_g( const char *partial, int state ) {
 }
 
 void MVD_Play_f( void ) {
-	char *name;
+    static const cmd_option_t options[] = {
+        { "h", "help", "display this message" },
+        { "l:number", "loop", "replay <number> of times (0 means forever)" },
+        { "n:string", "name", "specify channel name as <string>" },
+        { NULL }
+    };
+	char *name = NULL, *s;
 	char buffer[MAX_OSPATH];
-	fileHandle_t f;
-    uint32 magic = 0;
+    int loop = 1, len;
     mvd_t *mvd;
+    int c, argc;
+    demoentry_t *entry, *head;
+    int i;
 
-	if( Cmd_Argc() < 2 ) {
-		Com_Printf( "Usage: %s [/]<filename> [chanid]\n", Cmd_Argv( 0 ) );
-		return;
-	}
+    while( ( c = Cmd_ParseOptions( options ) ) != -1 ) {
+        switch( c ) {
+        case 'h':
+            Com_Printf( "Usage: %s [-hln:] [/]<filename>\n"
+                "Create new MVD channel and begin demo playback.\n",
+                Cmd_Argv( 0 ) );
+            Cmd_PrintHelp( options );
+            Com_Printf( "Final path is formatted as demos/<filename>.mvd2.\n"
+                "Prepend slash to specify raw path.\n" );
+            return;
+        case 'l':
+            loop = atoi( cmd_optarg );
+            if( loop < 0 ) {
+                Com_Printf( "Invalid value for %s option.\n"
+                    "Try '%s --help' for more information.\n",
+                    cmd_optopt, Cmd_Argv( 0 ) );
+                return;
+            }
+            break;
+        case 'n':
+            name = cmd_optarg;
+            break;
+        default:
+            return;
+        }
+    }
 
-	name = Cmd_Argv( 1 );
-	if( name[0] == '/' ) {
-		Q_strncpyz( buffer, name + 1, sizeof( buffer ) );
-	} else {
-		Q_concat( buffer, sizeof( buffer ), "demos/", name, NULL );
-    	COM_AppendExtension( buffer, ".mvd2", sizeof( buffer ) );
-	}
-	FS_FOpenFile( buffer, &f, FS_MODE_READ );
-	if( !f ) {
-		Com_Printf( "Couldn't open '%s'\n", buffer );
-		return;
-	}
+    argc = Cmd_Argc();
+    if( cmd_optind == argc ) {
+        Com_Printf( "Missing filename argument.\n"
+            "Try '%s --help' for more information.\n", Cmd_Argv( 0 ) );
+        return;
+    }
 
-    FS_Read( &magic, 4, f );
-    if( magic != MVD_MAGIC ) {
-        Com_Printf( "'%s' is not a MVD2 file\n", buffer );
-		FS_FCloseFile( f );
+    head = NULL;
+    for( i = argc - 1; i >= cmd_optind; i-- ) {
+	    s = Cmd_Argv( i );
+        if( *s == '/' ) {
+            Q_strncpyz( buffer, s + 1, sizeof( buffer ) );
+        } else {
+            Q_concat( buffer, sizeof( buffer ), "demos/", s, NULL );
+            COM_AppendExtension( buffer, ".mvd2", sizeof( buffer ) );
+        }
+        if( FS_LoadFile( buffer, NULL ) == -1 ) {
+            Com_Printf( "Ignoring non-existent entry: %s\n", buffer );
+            continue;
+        }
+
+        len = strlen( buffer ) + 1;
+        entry = Z_Malloc( sizeof( *entry ) + len );
+        memcpy( entry->path, buffer, len );
+        entry->next = head;
+        head = entry;
+    }
+
+    if( !head ) {
         return;
     }
 
@@ -1043,7 +1157,8 @@ void MVD_Play_f( void ) {
     mvd->id = mvd_chanid++;
     mvd->state = MVD_PREPARING;
     mvd->demoplayback = qtrue;
-	mvd->demofile = f;
+    mvd->demohead = head;
+    mvd->demoloop = loop;
     mvd->stream.recv.data = Z_ReservedAlloc( MAX_MSGLEN * 2 );
     mvd->stream.recv.size = MAX_MSGLEN * 2;
     mvd->pool.edicts = mvd->edicts;
@@ -1056,15 +1171,13 @@ void MVD_Play_f( void ) {
     List_Append( &mvd_channels, &mvd->entry );
 
     // set channel name
-    name = Cmd_Argv( 2 );
-    if( *name ) {
+    if( name ) {
         Q_strncpyz( mvd->name, name, sizeof( mvd->name ) );
     } else {
         Com_sprintf( mvd->name, sizeof( mvd->name ), "dem%d", mvd->id );
     }
 
-    // set channel address
-    Q_strncpyz( mvd->address, COM_SkipPath( buffer ), sizeof( mvd->address ) );
+    MVD_PlayNext( mvd, mvd->demohead );
 }
 
 

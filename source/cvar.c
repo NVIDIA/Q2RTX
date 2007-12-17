@@ -748,37 +748,47 @@ Cvar_List_f
 ============
 */
 static void Cvar_List_f( void ) {
+    static const cmd_option_t options[] = {
+        { "v", "verbose", "display flags of each cvar" },
+        { "h", "help", "display this help message" },
+        { "f:wildcard", "filter", "filter cvars by wildcard" },
+        { NULL }
+    };
 	cvar_t	*var;
 	int		i, total;
-	char *wildcard;
-	int showDesc;
-	int showFlags;
+    qboolean verbose = qfalse;
+	char *wildcard = NULL;
 	char buffer[6];
+    int c;
 
-	if( Cmd_CheckParam( "h", "help" ) ) {
-		Com_Printf( "Usage: %s [-f] [-d] [-h] [-w <wildcard>]\n",
+    while( ( c = Cmd_ParseOptions( options ) ) != -1 ) {
+        switch( c ) {
+        case 'f':
+            wildcard = cmd_optarg;
+            break;
+        case 'h':
+            Com_Printf( "Usage: %s [-f:hv] -- list console variables\n",
                 Cmd_Argv( 0 ) );
-		Com_Printf( "Options:\n"
-					"-d, --desc     : display description of each cvar\n"
-					"-f, --flags    : display flags of each cvar\n"
-					"-h, --help     : display this help message\n"
-					"-w, --wildcard : filter cvars by wildcard\n"
-					"Flags legend:\n"
-					"C: cheat protected\n"
-					"A: archived in config file\n"
-					"U: included in userinfo\n"
-					"S: included in serverinfo\n"
-					"N: set from command line only\n"
-					"R: read-only variable\n"
-					"L: latched (requires subsystem restart)\n"
-					"G: latched (requires game map restart)\n"
-					"?: created by user\n" );
-		return;
-	}
-
-	showFlags = Cmd_CheckParam( "f", "flags" );
-	showDesc = Cmd_CheckParam( "d", "desc" );
-	wildcard = Cmd_FindParam( "w", "wildcard" );
+            Cmd_PrintHelp( options );
+            Com_Printf(
+                        "Flags legend:\n"
+                        "C: cheat protected\n"
+                        "A: archived in config file\n"
+                        "U: included in userinfo\n"
+                        "S: included in serverinfo\n"
+                        "N: set from command line only\n"
+                        "R: read-only variable\n"
+                        "L: latched (requires subsystem restart)\n"
+                        "G: latched (requires game map restart)\n"
+                        "?: created by user\n" );
+            return;
+        case 'v':
+            verbose = qtrue;
+            break;
+        default:
+            return;
+        }
+    }
 
 	buffer[sizeof( buffer ) - 1] = 0;
 	i = 0;
@@ -787,7 +797,7 @@ static void Cvar_List_f( void ) {
 			continue;
 		}
 
-		if( showFlags ) {
+		if( verbose ) {
 			memset( buffer, ' ', sizeof( buffer ) - 1 );
 
 			if( var->flags & CVAR_CHEAT )
@@ -816,12 +826,7 @@ static void Cvar_List_f( void ) {
 			Com_Printf( "%s ", buffer );
 		}
 
-		if( showDesc && var->description ) {
-			Com_Printf( "%s \"%s\" %s\n", var->name, var->string,
-                    var->description );
-		} else {
-			Com_Printf( "%s \"%s\"\n", var->name, var->string );
-		}
+		Com_Printf( "%s \"%s\"\n", var->name, var->string );
 
 		i++;
 	}

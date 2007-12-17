@@ -97,6 +97,11 @@ typedef struct {
 	short delta_angles[3];
 } udpClient_t;
 
+typedef struct demoentry_s {
+    struct demoentry_s *next;
+    char path[1];
+} demoentry_t;
+
 typedef struct mvd_s {
     list_t      entry;
     list_t      ready;
@@ -108,6 +113,8 @@ typedef struct mvd_s {
 	fileHandle_t	demofile;
 	qboolean	demoplayback;
 	qboolean	demorecording;
+    int         demoloop;
+    demoentry_t  *demohead, *demoentry;
 
 	// connection variables
 	mvdState_t	state;
@@ -173,6 +180,7 @@ void MVD_Destroyf( mvd_t *mvd, const char *fmt, ... )
 void MVD_Disconnect( mvd_t *mvd );
 void MVD_ClearState( mvd_t *mvd );
 void MVD_ChangeLevel( mvd_t *mvd ); 
+void MVD_ResetStream( mvd_t *mvd ) q_noreturn;
 void MVD_GetStream( const char *uri );
 void MVD_GetStatus( void );
 void MVD_Free( mvd_t *mvd ); 

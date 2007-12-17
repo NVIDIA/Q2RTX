@@ -107,6 +107,10 @@ then searches for a command or variable that matches the first token.
 
 */
 
+typedef struct {
+    const char *sh, *lo, *help;
+} cmd_option_t;
+
 void	Cmd_Init( void );
 
 qboolean Cmd_Exists( const char *cmd_name );
@@ -163,9 +167,6 @@ char	*Cmd_ArgsFrom( int from );
 char	*Cmd_RawArgsFrom( int from );
 void	Cmd_ArgsBuffer( char *buffer, int bufferSize );
 void	Cmd_ArgvBuffer( int arg, char *buffer, int bufferSize );
-int Cmd_EnumParam( int start, const char *sp, const char *lp );
-int Cmd_CheckParam( const char *sp, const char *lp );
-char *Cmd_FindParam( const char *sp, const char *lp );
 int Cmd_ArgOffset( int arg );
 int Cmd_FindArgForOffset( int offset );
 char *Cmd_RawString( void );
@@ -185,6 +186,13 @@ void Cmd_FillAPI( cmdAPI_t *api );
             Cbuf_AddText( (var)->string ); \
         } \
     } while( 0 )
+
+extern int cmd_optind;
+extern char *cmd_optarg;
+extern char *cmd_optopt;
+
+int Cmd_ParseOptions( const cmd_option_t *opt );
+void Cmd_PrintHelp( const cmd_option_t *opt );
 
 /*
 ==============================================================
@@ -361,6 +369,10 @@ static inline int FIFO_Percent( fifo_t *fifo ) {
 
 static inline int FIFO_Usage( fifo_t *fifo ) {
     return fifo->ay - fifo->ax + fifo->bs;
+}
+
+static inline void FIFO_Clear( fifo_t *fifo ) {
+    fifo->ax = fifo->ay = fifo->bs = 0;
 }
 
 qboolean FIFO_Read( fifo_t *fifo, void *buffer, int length );

@@ -974,6 +974,9 @@ static qboolean MVD_ParseMessage( mvd_t *mvd, fifo_t *fifo ) {
             return qfalse;
         }
         if( !msglen ) {
+            if( mvd->demoplayback && FIFO_Usage( fifo ) ) {
+                MVD_ResetStream( mvd );
+            }
             MVD_Destroyf( mvd, "End of MVD stream reached" );
         }
         msglen = LittleShort( msglen );
