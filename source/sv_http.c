@@ -541,6 +541,7 @@ static qboolean SV_HttpParseRequest( tcpClient_t *client ) {
             if( !token[0] ) {
                 if( !client->host ) {
                     SV_HttpReject( "400 Bad Request", "Missing host field." );
+                    return qfalse;
                 }
                 return qtrue; // end of header
             }
