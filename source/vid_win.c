@@ -375,8 +375,8 @@ static byte        scantokey[128] = {
     'q',		'w',        'e',		'r',			't',		'y',			'u',		 'i', 
     'o',		'p',	    '[',		']',			K_ENTER,	K_CTRL,			'a',		 's',		// 1 
     'd',		'f',	    'g',		'h',			'j',		'k',			'l',		 ';', 
-    '\'' ,		'`',	    K_SHIFT,	'\\',			'z',		'x',			'c',		 'v',		// 2 
-    'b',		'n',	    'm',		',',			'.',		'/',			K_SHIFT,	 '*', 
+    '\'' ,		'`',	    K_LSHIFT,	'\\',			'z',		'x',			'c',		 'v',		// 2 
+    'b',		'n',	    'm',		',',			'.',		'/',			K_RSHIFT,	 '*', 
     K_ALT,		K_SPACE,	K_CAPSLOCK,	K_F1,			K_F2,		K_F3,			K_F4,		 K_F5,		// 3 
     K_F6,		K_F7,	    K_F8,		K_F9,			K_F10,		K_PAUSE,		K_SCROLLOCK, K_HOME, 
     K_UPARROW,	K_PGUP,	    K_KP_MINUS,	K_LEFTARROW,	K_KP_5,		K_RIGHTARROW,	K_KP_PLUS,	 K_END,		// 4 
@@ -396,16 +396,12 @@ Map from windows to quake keynums
 =======
 */
 static void Win_KeyEvent( WPARAM wParam, LPARAM lParam, qboolean down ) {
-	uint32 result;
-	uint32 scancode = ( lParam >> 16 ) & 255;
-	qboolean is_extended = qfalse;
+	unsigned result;
+	unsigned scancode = ( lParam >> 16 ) & 255;
+	unsigned is_extended = ( lParam >> 24 ) & 1;
 
 	if( scancode > 127 ) {
 		return;
-    }
-
-	if( lParam & ( 1 << 24 ) ) {
-		is_extended = qtrue;
     }
 
 	result = scantokey[scancode];
@@ -446,6 +442,22 @@ static void Win_KeyEvent( WPARAM wParam, LPARAM lParam, qboolean down ) {
 		case K_DEL:
 			result = K_KP_DEL;
             break;
+		case K_LSHIFT:
+			Key_Event( K_SHIFT, down, win.lastMsgTime );
+			Key_Event( K_LSHIFT, down, win.lastMsgTime );
+			return;
+		case K_RSHIFT:
+			Key_Event( K_SHIFT, down, win.lastMsgTime );
+			Key_Event( K_RSHIFT, down, win.lastMsgTime );
+			return;
+		case K_ALT:
+			Key_Event( K_ALT, down, win.lastMsgTime );
+			Key_Event( K_LALT, down, win.lastMsgTime );
+			return;
+		case K_CTRL:
+			Key_Event( K_CTRL, down, win.lastMsgTime );
+			Key_Event( K_LCTRL, down, win.lastMsgTime );
+			return;	
 		}
 	} else {
 		switch( result ) {
@@ -458,6 +470,14 @@ static void Win_KeyEvent( WPARAM wParam, LPARAM lParam, qboolean down ) {
 		case 0xAF:
 			result = K_KP_PLUS;
             break;
+		case K_ALT:
+			Key_Event( K_ALT, down, win.lastMsgTime );
+			Key_Event( K_RALT, down, win.lastMsgTime );
+			return;
+		case K_CTRL:
+			Key_Event( K_CTRL, down, win.lastMsgTime );
+			Key_Event( K_RCTRL, down, win.lastMsgTime );
+			return;	
 		}
 	}
 
@@ -650,7 +670,7 @@ LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 	case WM_KEYDOWN:
     case WM_SYSKEYDOWN:
 		Win_KeyEvent( wParam, lParam, qtrue );
-		break;
+		return FALSE;
 
 #ifdef USE_CHAR_EVENTS
 	case WM_CHAR:
@@ -661,7 +681,7 @@ LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 	case WM_SYSKEYUP:
 	case WM_KEYUP:
 		Win_KeyEvent( wParam, lParam, qfalse );
-		break;
+		return FALSE;
 
 	default:	
         break;

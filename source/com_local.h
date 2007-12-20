@@ -1059,7 +1059,7 @@ void CL_AppActivate( qboolean active );
 void CL_UpdateUserinfo( cvar_t *var, cvarSetSource_t source );
 
 void	Key_Init( void );
-void	Key_Event( uint32 key, qboolean down, uint32 time );
+void	Key_Event( unsigned key, qboolean down, unsigned time );
 void	Key_CharEvent( int key );
 void	Key_WriteBindings( fileHandle_t f );
 

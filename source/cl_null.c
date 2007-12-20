@@ -98,7 +98,7 @@ void CL_AppActivate( qboolean active ) {
 void Key_WriteBindings( fileHandle_t f ) {
 }
 
-void Key_Event( uint32 key, qboolean down, uint32 time ) {
+void Key_Event( unsigned key, qboolean down, unsigned time ) {
 }
 
 void Key_CharEvent( int key ) {

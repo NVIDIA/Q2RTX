@@ -639,7 +639,7 @@ Called by the system between frames for both key up and key down events
 Should NOT be called during an interrupt!
 ===================
 */
-void Key_Event( uint32 key, qboolean down, uint32 time ) {
+void Key_Event( unsigned key, qboolean down, unsigned time ) {
 	char	*kb;
 	char	cmd[MAX_STRING_CHARS];
 
