@@ -770,6 +770,10 @@ void Sys_FixFPCW( void ) {
     _controlfp( _PC_24|_RC_NEAR, _MCW_PC|_MCW_RC );
 }
 
+void Sys_Sleep( int msec ) {
+    Sleep( msec );
+}
+
 /*
 ================
 Sys_Init
@@ -1053,7 +1057,7 @@ char *Sys_GetCurrentDirectory( void ) {
 
 //=======================================================================
 
-#ifdef USE_ANTICHEAT
+#if USE_ANTICHEAT & 1
 
 typedef PVOID (*FNINIT)( VOID );
 
@@ -1066,7 +1070,6 @@ PRIVATE HMODULE anticheatHandle;
 //
 qboolean Sys_GetAntiCheatAPI( void ) {
 	qboolean updated = qfalse;
-    BOOL bIsWow64 = FALSE;
 
 	//already loaded, just reinit
 	if( anticheatInit ) {
@@ -1097,7 +1100,7 @@ reInit:
 
 	//this should never fail unless the anticheat.dll is bad
     anticheatInit = ( FNINIT )GetProcAddress(
-            anticheatHandle, "Initialize" );
+        anticheatHandle, "Initialize" );
     if( !anticheatInit ) {
         Com_Printf( S_COLOR_RED "Couldn't get API of anticheat.dll!\n"
                     "Please check you are using a valid "
@@ -1127,7 +1130,7 @@ reInit:
 
 #endif /* USE_ANTICHEAT */
 
-#ifdef USE_DBGHELP
+#if USE_DBGHELP
 
 typedef DWORD (WINAPI *SETSYMOPTIONS)( DWORD );
 typedef BOOL (WINAPI *SYMGETMODULEINFO)( HANDLE, DWORD, PIMAGEHLP_MODULE );
@@ -1445,7 +1448,7 @@ static int Sys_Main( int argc, char **argv ) {
 	currentDirectory[sizeof( currentDirectory ) - 1] = 0;
 #endif
 
-#ifdef USE_DBGHELP
+#if USE_DBGHELP
 #ifdef _MSC_VER
 	__try {
 #else
@@ -1468,7 +1471,7 @@ static int Sys_Main( int argc, char **argv ) {
 
 	Com_Quit();
 
-#ifdef USE_DBGHELP
+#if USE_DBGHELP
 #ifdef _MSC_VER
 	} __except( Sys_ExceptionHandler( GetExceptionCode(), GetExceptionInformation() ) ) {
 		return 1;

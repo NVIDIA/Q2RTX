@@ -634,30 +634,22 @@ static void SV_ServerCommand_f( void ) {
 // bits = 32 --> mask = 255.255.255.255
 // bits = 24 --> mask = 255.255.255.0
 
-static void SV_AddBan_f( void ) {
-    char	*s, *p;
+static qboolean SV_ParseMask( const char *s, uint32 *addr, uint32 *mask ) {
     netadr_t address;
-    addrmatch_t *ban;
-    uint32 addr, mask;
+    char *p;
     int bits;
 
-    if ( Cmd_Argc() < 2 ) {
-		Com_Printf( "Usage: %s <address/mask>\n", Cmd_Argv( 0 ) );
-        return;
-    }
-
-    s = Cmd_Argv( 1 );
     p = strchr( s, '/' );
     if( p ) {
         *p++ = 0;
         if( *p == 0 ) {
             Com_Printf( "Please specify a mask.\n" );
-            return;
+            return qfalse;
         }
         bits = atoi( p );
         if( bits < 1 || bits > 32 ) {
             Com_Printf( "Bad mask: %d bits\n", bits );
-            return;
+            return qfalse;
         }
     } else {
         bits = 32;
@@ -665,30 +657,69 @@ static void SV_AddBan_f( void ) {
 
     if( !NET_StringToAdr( s, &address ) ) {
         Com_Printf( "Bad address: %s\n", s );
-        return;
+        return qfalse;
     }
 
-    addr = *( uint32 * )address.ip;
-    mask = 0xffffffffU >> ( 32 - bits ); // LE
-
-    ban = Z_Malloc( sizeof( *ban ) );
-    ban->addr = addr;
-    ban->mask = mask;
-    List_Append( &sv_banlist, &ban->entry );
+    *addr = *( uint32 * )address.ip;
+    *mask = 0xffffffffU >> ( 32 - bits ); // LE
+    return qtrue;
 }
 
-static void SV_DelBan_f( void ) {
+void SV_AddMatch_f( list_t *list ) {
     char	*s;
-    netadr_t address;
-    addrmatch_t *ban;
-    int i;
+    addrmatch_t *match;
+    uint32 addr, mask;
 
-    if ( Cmd_Argc() < 2 ) {
-		Com_Printf( "Usage: %s <address|index>\n", Cmd_Argv( 0 ) );
+    if( Cmd_Argc() < 2 ) {
+		Com_Printf( "Usage: %s <address/mask>\n", Cmd_Argv( 0 ) );
         return;
     }
 
     s = Cmd_Argv( 1 );
+    if( !SV_ParseMask( s, &addr, &mask ) ) {
+        return;
+    }
+
+#if 0
+    LIST_FOR_EACH( addrmatch_t, match, list, entry ) {
+        if( ( match->addr & match->mask ) == ( addr & mask ) ) {
+            Com_Printf( "Address already matches.\n" );
+            return;
+        }
+    }
+#endif
+
+    match = Z_Malloc( sizeof( *match ) );
+    match->addr = addr;
+    match->mask = mask;
+    List_Append( list, &match->entry );
+}
+
+void SV_DelMatch_f( list_t *list ) {
+    char	*s;
+    addrmatch_t *match, *next;
+    uint32 addr, mask;
+    int i;
+
+    if( Cmd_Argc() < 2 ) {
+		Com_Printf( "Usage: %s <address/mask|id|all>\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    if( LIST_EMPTY( list ) ) {
+        Com_Printf( "Address list is empty.\n" );
+        return;
+    }
+
+    s = Cmd_Argv( 1 );
+    if( !strcmp( s, "all" ) ) {
+        LIST_FOR_EACH_SAFE( addrmatch_t, match, next, list, entry ) {
+            Z_Free( match );
+        }
+        List_Init( list );
+        Com_Printf( "Address list cleared.\n" );
+        return;
+    }
 
 	// numeric values are just slot numbers
 	for( i = 0; s[i]; i++ ) {
@@ -698,36 +729,66 @@ static void SV_DelBan_f( void ) {
 	} 
 	if( !s[i] ) {
 		i = atoi( s );
-        ban = LIST_INDEX( addrmatch_t, i, &sv_banlist, entry );
-        if( !ban ) {
-            Com_Printf( "No such index: %d\n", i );
+        if( i < 1 ) {
+            Com_Printf( "Bad index: %d\n", i );
+            return;
         }
-        goto remove;
-    }
-
-    if( !NET_StringToAdr( s, &address ) ) {
-        Com_Printf( "Bad address: %s\n", s );
+        match = LIST_INDEX( addrmatch_t, i + 1, list, entry );
+        if( match ) {
+            goto remove;
+        }
+        Com_Printf( "No such index: %d\n", i );
         return;
     }
 
-    LIST_FOR_EACH( addrmatch_t, ban, &sv_banlist, entry ) {
-        if( ban->addr == *( uint32 * )address.ip ) {
+    if( !SV_ParseMask( s, &addr, &mask ) ) {
+        return;
+    }
+
+    LIST_FOR_EACH( addrmatch_t, match, list, entry ) {
+        if( match->addr == addr && match->mask == mask ) {
 remove:
-            Com_Printf( "Address removed from ban list.\n" );
-            List_Remove( &ban->entry );
-            Z_Free( ban );
+            Com_Printf( "Address removed from list.\n" );
+            List_Remove( &match->entry );
+            Z_Free( match );
             return;
         }
     }
-    Com_Printf( "Address not found in ban list.\n" );
+    Com_Printf( "Address/mask pair not found in list.\n" );
 }
 
-static void SV_ListBan_f( void ) {
-    if( LIST_EMPTY( &sv_banlist ) ) {
-        Com_Printf( "Ban list is empty.\n" );
+void SV_ListMatches_f( list_t *list ) {
+    addrmatch_t *match;
+    byte ip[4];
+    int i, count;
+
+    if( LIST_EMPTY( list ) ) {
+        Com_Printf( "Address list is empty.\n" );
         return;
     }
-    SV_DumpMatches( &sv_banlist );
+
+    count = 1;
+    LIST_FOR_EACH( addrmatch_t, match, list, entry ) {
+        *( uint32 * )ip = match->addr;
+        for( i = 0; i < 32; i++ ) {
+            if( ( match->mask & ( 1 << i ) ) == 0 ) {
+                break;
+            }
+        }
+        Com_Printf( "(%d) %d.%d.%d.%d/%d\n",
+            count, ip[0], ip[1], ip[2], ip[3], i );
+        count++;
+    }
+}
+
+static void SV_AddBan_f( void ) {
+    SV_AddMatch_f( &sv_banlist );
+}
+static void SV_DelBan_f( void ) {
+    SV_DelMatch_f( &sv_banlist );
+}
+static void SV_ListBans_f( void ) {
+    SV_ListMatches_f( &sv_banlist );
 }
 
 static int SV_Client_m( char *buffer, int size ) {
@@ -763,7 +824,7 @@ static const cmdreg_t c_server[] = {
 	{ "pick", SV_PickClient_f },
 	{ "addban", SV_AddBan_f },
 	{ "delban", SV_DelBan_f },
-	{ "listban", SV_ListBan_f },
+	{ "listbans", SV_ListBans_f },
 
     { NULL }
 };

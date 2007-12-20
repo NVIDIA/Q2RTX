@@ -435,6 +435,19 @@ static inline char *Q_strupr( char *s ) {
 	return s;
 }
 
+static inline int Q_charhex( int c ) {
+    if( c >= 'A' && c <= 'F' ) {
+        return 10 + ( c - 'A' );
+    }
+    if( c >= 'a' && c <= 'f' ) {
+        return 10 + ( c - 'a' );
+    }
+    if( c >= '0' && c <= '9' ) {
+        return c - '0';
+    }
+    return -1;
+}
+
 // portable case insensitive compare
 int Q_strcasecmp( const char *s1, const char *s2 );
 int Q_strncasecmp( const char *s1, const char *s2, int n );

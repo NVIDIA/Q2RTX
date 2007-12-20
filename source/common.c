@@ -38,6 +38,7 @@ cvar_t	*developer;
 cvar_t	*timescale;
 cvar_t	*fixedtime;
 cvar_t	*dedicated;
+cvar_t	*com_version;
 
 cvar_t	*logfile_active;	// 1 = create new, 2 = append to existing
 cvar_t	*logfile_flush;		// 1 = flush after each print
@@ -900,58 +901,69 @@ char *Cvar_CopyString( const char *in ) {
 ==============================================================================
 */
 
-qboolean FIFO_Read( fifo_t *fifo, void *buffer, int length ) {
-    byte *dst = buffer;
-    int as = fifo->ay - fifo->ax;
-    int wrapped = length - as;
+int FIFO_Read( fifo_t *fifo, void *buffer, int length ) {
+    int head = fifo->ay - fifo->ax;
+    int wrapped = length - head;
 
     if( wrapped < 0 ) {
-        memcpy( dst, fifo->data + fifo->ax, length );
-        fifo->ax += length;
-    } else {
-        if( wrapped > fifo->bs ) {
-            return qfalse;
+        if( buffer ) {
+            memcpy( buffer, fifo->data + fifo->ax, length );
+            fifo->ax += length;
         }
-        memcpy( dst, fifo->data + fifo->ax, as );
-        memcpy( dst + as, fifo->data, wrapped );
+        return length;
+    }
+
+    if( wrapped > fifo->bs ) {
+        wrapped = fifo->bs;
+    }
+    if( buffer ) {
+        memcpy( buffer, fifo->data + fifo->ax, head );
+        memcpy( ( byte * )buffer + head, fifo->data, wrapped );
         fifo->ax = wrapped;
         fifo->ay = fifo->bs;
         fifo->bs = 0;
     }
 
-    return qtrue;
+    return head + wrapped;
 }
 
-qboolean FIFO_Write( fifo_t *fifo, const void *buffer, int length ) {
-    const byte *src = buffer;
-    int tail, wrapped;
+int FIFO_Write( fifo_t *fifo, const void *buffer, int length ) {
+    int tail, wrapped, remaining;
 
     if( fifo->bs ) {
-        if( fifo->bs + length > fifo->ax ) {
-            return qfalse;
+        remaining = fifo->ax - fifo->bs;
+        if( length > remaining ) {
+            length = remaining;
         }
-        memcpy( fifo->data + fifo->bs, src, length );
-        fifo->bs += length;
-        return qtrue;
+        if( buffer ) {
+            memcpy( fifo->data + fifo->bs, buffer, length );
+            fifo->bs += length;
+        }
+        return length;
     }
 
     tail = fifo->size - fifo->ay;
     wrapped = length - tail;
 
     if( wrapped < 0 ) {
-        memcpy( fifo->data + fifo->ay, src, length );
-        fifo->ay += length;
-    } else {
-        if( wrapped > fifo->ax ) {
-            return qfalse;
+        if( buffer ) {
+            memcpy( fifo->data + fifo->ay, buffer, length );
+            fifo->ay += length;
         }
-        memcpy( fifo->data + fifo->ay, src, tail );
-        memcpy( fifo->data, src + tail, wrapped );
+        return length;
+    }
+
+    if( wrapped > fifo->ax ) {
+        wrapped = fifo->ax;
+    }
+    if( buffer ) {
+        memcpy( fifo->data + fifo->ay, buffer, tail );
+        memcpy( fifo->data, ( byte * )buffer + tail, wrapped );
         fifo->ay = fifo->size;
         fifo->bs = wrapped;
     }
 
-    return qtrue;
+    return tail + wrapped;
 }
 
 /*
@@ -1372,7 +1384,7 @@ void Qcommon_Init( int argc, char **argv ) {
 	com_time_format = Cvar_Get( "com_time_format", "%H:%M", 0 );
 #endif
 	com_debug_break = Cvar_Get( "com_debug_break", "0", 0 );
-	Cvar_Get( "version", version, CVAR_SERVERINFO|CVAR_ROM );
+	com_version = Cvar_Get( "version", version, CVAR_SERVERINFO|CVAR_ROM );
 
 	Cmd_AddCommand ("z_stats", Z_Stats_f);
 

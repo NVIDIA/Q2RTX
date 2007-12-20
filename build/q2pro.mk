@@ -19,6 +19,10 @@ SRCFILES=cmd.c cmodel.c common.c prompt.c crc.c cvar.c \
 	cl_scrn.c cl_tent.c cl_ui.c cl_view.c cl_console.c cl_keys.c		\
 	snd_main.c snd_mem.c snd_mix.c
 
+ifdef USE_ANTICHEAT
+SRCFILES+=sv_ac.c
+endif
+
 ifdef REF_HARD_LINKED
 
 SRCFILES+=r_images.c  \

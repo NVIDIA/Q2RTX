@@ -886,28 +886,18 @@ qboolean COM_HasSpaces( const char *string ) {
  * illegible symbol or end of string.
  * Does not check for overflow.
  */
-uint32 COM_ParseHex( const char *string ) {
-	int ch;
-	uint32 result, digit;
+uint32 COM_ParseHex( const char *s ) {
+    int c;
+	uint32 result;
 
-	result = 0;
-	while( *string ) {
-		ch = *string++;
-		if( ch >= '0' && ch <= '9' ) {
-			digit = ch - '0';
-		} else if( ch >= 'a' && ch <= 'f' ) {
-			digit = ch - 'a' + 10;
-		} else if( ch >= 'A' && ch <= 'F' ) {
-			digit = ch - 'A' + 10;
-		} else {
-			break;
-		}
-
-		result = digit | ( result << 4 );
+	for( result = 0; *s; s++ ) {
+        if( ( c = Q_charhex( *s ) ) == -1 ) {
+            break;
+        }
+		result = c | ( result << 4 );
 	}
 
 	return result;
-
 }
 
 /*

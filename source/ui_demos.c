@@ -112,19 +112,6 @@ static void Demos_BuildDir( const char *name, int type ) {
     m_demos.list.items[m_demos.list.numItems++] = e;
 }
 
-static inline int char2hex( int c ) {
-    if( c >= 'A' && c <= 'F' ) {
-        return 10 + ( c - 'A' );
-    }
-    if( c >= 'a' && c <= 'f' ) {
-        return 10 + ( c - 'a' );
-    }
-    if( c >= '0' && c <= '9' ) {
-        return c - '0';
-    }
-    return 0;
-}
-
 static char *Demos_LoadCache( const char *path, void **list ) {
     char buffer[MAX_OSPATH], *cache;
     int i, len;
@@ -144,8 +131,8 @@ static char *Demos_LoadCache( const char *path, void **list ) {
     }
 
 	for( i = 0; i < 16; i++ ) {
-        int c1 = char2hex( cache[i*2+0] );
-        int c2 = char2hex( cache[i*2+1] );
+        int c1 = Q_charhex( cache[i*2+0] );
+        int c2 = Q_charhex( cache[i*2+1] );
         hash[i] = ( c1 << 4 ) | c2;
 	}
 

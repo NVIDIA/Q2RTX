@@ -958,7 +958,7 @@ static qboolean MVD_ParseMessage( mvd_t *mvd, fifo_t *fifo ) {
 
     // parse magic
     if( mvd->state == MVD_CHECKING ) {
-        if( !FIFO_Read( fifo, &magic, 4 ) ) {
+        if( !FIFO_TryRead( fifo, &magic, 4 ) ) {
             return qfalse;
         }
         if( magic != MVD_MAGIC ) {
@@ -970,7 +970,7 @@ static qboolean MVD_ParseMessage( mvd_t *mvd, fifo_t *fifo ) {
     // parse msglen
     msglen = mvd->msglen;
     if( !msglen ) {
-        if( !FIFO_Read( fifo, &msglen, 2 ) ) {
+        if( !FIFO_TryRead( fifo, &msglen, 2 ) ) {
             return qfalse;
         }
         if( !msglen ) {
@@ -989,7 +989,7 @@ static qboolean MVD_ParseMessage( mvd_t *mvd, fifo_t *fifo ) {
     // first, try to read in a single block
     data = FIFO_Peek( fifo, &length );
     if( length < msglen ) {
-        if( !FIFO_Read( fifo, msg_read_buffer, msglen ) ) {
+        if( !FIFO_TryRead( fifo, msg_read_buffer, msglen ) ) {
             return qfalse; // not yet available
         }
         SZ_Init( &msg_read, msg_read_buffer, sizeof( msg_read_buffer ) );

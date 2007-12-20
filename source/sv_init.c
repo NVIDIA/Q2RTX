@@ -290,6 +290,12 @@ void SV_InitGame( qboolean ismvd ){
         client->number = i;
 	}
 
+#if USE_ANTICHEAT & 2
+    if( !ismvd ) {
+        AC_Connect();
+    }
+#endif
+
 	svs.initialized = qtrue;
 }
 

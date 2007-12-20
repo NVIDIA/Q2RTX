@@ -186,6 +186,10 @@ void SV_DropClient( client_t *client, const char *reason ) {
 		ge->ClientDisconnect( client->edict );
 	}
 
+#if USE_ANTICHEAT & 2
+    AC_ClientDisconnect( client );
+#endif
+
 	SV_CleanClient( client );
 
 	Com_DPrintf( "Going to cs_zombie for %s\n", client->name );
@@ -240,25 +244,6 @@ addrmatch_t *SV_MatchAddress( list_t *list, netadr_t *address ) {
         }
     }
     return NULL;
-}
-
-void SV_DumpMatches( list_t *list ) {
-    addrmatch_t *match;
-    byte ip[4];
-    int i, count;
-
-    count = 1;
-    LIST_FOR_EACH( addrmatch_t, match, list, entry ) {
-        *( uint32 * )ip = match->addr;
-        for( i = 0; i < 32; i++ ) {
-            if( ( match->mask & ( 1 << i ) ) == 0 ) {
-                break;
-            }
-        }
-        Com_Printf( "(%d) %d.%d.%d.%d/%d\n",
-            count, ip[0], ip[1], ip[2], ip[3], i );
-        count++;
-    }
 }
 
 /*
@@ -507,7 +492,7 @@ static void SVC_DirectConnect( void ) {
 	char		*info, *s;
     int         maxlength;
     netchan_type_t nctype;
-    char        *ncstring;
+    char        *ncstring, *acstring;
     int         reserved;
     byte        *buffer;
     qboolean    zlib;
@@ -856,9 +841,18 @@ static void SVC_DirectConnect( void ) {
 	Q_strncpyz( newcl->userinfo, userinfo, sizeof( newcl->userinfo ) );
 	SV_UserinfoChanged( newcl );
 
+#if USE_ANTICHEAT & 2
+    if( !sv_force_reconnect->string[0] || reconnect_var[0] ) {
+        acstring = AC_ClientConnect( newcl );
+    } else
+#endif
+    {
+        acstring = "";
+    }
+
 	// send the connect packet to the client
-	Netchan_OutOfBandPrint( NS_SERVER, &net_from, "client_connect%s",
-        ncstring );
+	Netchan_OutOfBandPrint( NS_SERVER, &net_from, "client_connect%s%s",
+        ncstring, acstring );
 
     List_Init( &newcl->freemsg );
     List_Init( &newcl->inusemsg[0] );
@@ -1375,6 +1369,10 @@ void SV_Frame( int msec ) {
 		return;
 	}
 
+#if USE_ANTICHEAT & 2
+    AC_Run();
+#endif
+
 #ifndef DEDICATED_ONLY
     if( cl_paused->integer && sv_maxclients->integer == 1 ) {
         if( !sv_paused->integer ) {
@@ -1663,6 +1661,9 @@ void SV_Init( void ) {
 	SV_InitOperatorCommands	();
     SV_MvdRegister();
 	MVD_Register();
+#if USE_ANTICHEAT & 2
+    AC_Register();
+#endif
 
 	Cvar_Get( "protocol", va( "%i", PROTOCOL_VERSION_DEFAULT ), CVAR_SERVERINFO|CVAR_ROM );
 	
@@ -1835,6 +1836,10 @@ void SV_Shutdown( const char *finalmsg, killtype_t type ) {
         MVD_Shutdown(); // make sure MVD client is down
 		return;
 	}
+
+#if USE_ANTICHEAT & 2
+    AC_Disconnect();
+#endif
 
 	SV_MvdRecStop();
 

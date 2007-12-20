@@ -241,54 +241,49 @@ void SV_HttpHandle( const uriEntry_t *e, const char *uri ) {
 
 void SV_HttpWrite( tcpClient_t *client, void *data, int length ) {
     fifo_t *fifo = &client->stream.send;
-#if USE_ZLIB
-    z_streamp z = &client->z;
-    int param;
-#endif
 
     if( client->state <= cs_zombie ) {
         return;
     }
 
 #if USE_ZLIB
-    if( !z->state ) {
-        if( !FIFO_Write( fifo, data, length ) ) {
-            SV_HttpDrop( client, "overflowed" );
+    if( client->z.state ) {
+        z_streamp z = &client->z;
+        int param;
+
+        z->next_in = data;
+        z->avail_in = length;
+
+        param = Z_NO_FLUSH;
+        if( client->noflush > 120 ) {
+            param = Z_SYNC_FLUSH;
+        }
+
+        while( z->avail_in ) {
+            data = FIFO_Reserve( fifo, &length );
+            if( !length ) {
+                SV_HttpDrop( client, "overflowed" );
+                return;
+            }
+
+            z->next_out = data;
+            z->avail_out = length;
+
+            if( deflate( z, param ) != Z_OK ) {
+                SV_HttpDrop( client, "deflate failed" );
+                return;
+            }
+
+            length -= z->avail_out;
+            if( length ) {
+                FIFO_Commit( fifo, length );
+                client->noflush = 0;
+            }
         }
         return;
     }
-
-    z->next_in = data;
-    z->avail_in = length;
-
-    param = Z_NO_FLUSH;
-    if( client->noflush > 120 ) {
-        param = Z_SYNC_FLUSH;
-    }
-
-    while( z->avail_in ) {
-        data = FIFO_Reserve( fifo, &length );
-        if( !length ) {
-            SV_HttpDrop( client, "overflowed" );
-            return;
-        }
-
-        z->next_out = data;
-        z->avail_out = length;
-
-        if( deflate( z, param ) != Z_OK ) {
-            SV_HttpDrop( client, "deflate failed" );
-            return;
-        }
-
-        length -= z->avail_out;
-        if( length ) {
-            FIFO_Commit( fifo, length );
-            client->noflush = 0;
-        }
-    }
 #else
-    if( !FIFO_Write( fifo, data, length ) ) {
+    if( FIFO_Write( fifo, data, length ) != length ) {
         SV_HttpDrop( client, "overflowed" );
     }
 #endif
@@ -346,7 +341,7 @@ void SV_HttpPrintf( const char *fmt, ... ) {
 	length = Q_vsnprintf( buffer, sizeof( buffer ), fmt, argptr );
 	va_end( argptr );
 
-    if( !FIFO_Write( &http_client->stream.send, buffer, length ) ) {
+    if( FIFO_Write( &http_client->stream.send, buffer, length ) != length ) {
         SV_HttpDrop( http_client, "overflowed" );
     }
 }

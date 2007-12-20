@@ -674,6 +674,11 @@ void Sys_AddDefaultConfig( void ) {
     fclose( fp );
 }
 
+void Sys_Sleep( int msec ) {
+    struct timespec req = { 0, msec * 1000000 };
+    nanosleep( &req, NULL );
+}
+
 /*
 ================
 Sys_FillAPI

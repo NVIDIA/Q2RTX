@@ -170,7 +170,7 @@ static void MVD_HttpPrintf( mvd_t *mvd, const char *fmt, ... ) {
 	length = Q_vsnprintf( buffer, sizeof( buffer ), fmt, argptr );
 	va_end( argptr );
 
-    if( !FIFO_Write( &mvd->stream.send, buffer, length ) ) {
+    if( FIFO_Write( &mvd->stream.send, buffer, length ) != length ) {
         MVD_Dropf( mvd, "%s: overflow", __func__ );
     }
 }

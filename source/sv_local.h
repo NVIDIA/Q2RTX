@@ -95,6 +95,22 @@ typedef enum {
 	cs_spawned		// client is fully in game
 } clstate_t;
 
+#if USE_ANTICHEAT
+
+typedef enum {
+    AC_NORMAL,
+    AC_REQUIRED,
+    AC_EXEMPT
+} ac_required_t;
+
+typedef enum {
+    AC_QUERY_UNSENT,
+    AC_QUERY_SENT,
+    AC_QUERY_DONE
+} ac_query_t;
+
+#endif // USE_ANTICHEAT
+
 #define MSG_POOLSIZE		1024
 #define MSG_TRESHOLD	    ( 64 - 10 )		// keep pmsg_s 64 bytes aligned
 
@@ -205,6 +221,15 @@ typedef struct client_s {
 	void			(*WriteDatagram)( struct client_s * );
 
 	netchan_t		*netchan;
+
+#if USE_ANTICHEAT
+    qboolean        ac_valid;
+    ac_query_t      ac_query_sent;
+    ac_required_t   ac_required;
+    int             ac_file_failures;
+    unsigned        ac_query_time;
+    int             ac_client_type;
+#endif
 } client_t;
 
 typedef enum {
@@ -380,7 +405,6 @@ qboolean SV_RateLimited( ratelimit_t *r );
 void SV_RateInit( ratelimit_t *r, int limit, int period );
 
 addrmatch_t *SV_MatchAddress( list_t *list, netadr_t *address );
-void SV_DumpMatches( list_t *list );
 
 int SV_CountClients( void );
 
@@ -472,17 +496,41 @@ void SV_HttpHeader( const char *title );
 void SV_HttpFooter( void );
 void SV_HttpReject( const char *error, const char *reason ); 
 
+#if USE_ANTICHEAT
+
+// 
+// sv_ac.c
+//
+//
+char *AC_ClientConnect( client_t *cl );
+void AC_ClientDisconnect( client_t *cl );
+qboolean AC_ClientBegin( client_t *cl );
+void AC_ClientAnnounce( client_t *cl );
+
+void AC_Register( void );
+void AC_Disconnect( void );
+void AC_Connect( void );
+void AC_Run( void );
+
+void AC_List_f( void );
+void AC_Info_f( void );
+
+#endif // USE_ANTICHEAT
 
 //
 // sv_user.c
 //
+void SV_New_f( void );
+void SV_Begin_f( void );
 void SV_Nextserver (void);
 void SV_ExecuteClientMessage (client_t *cl);
 
 //
 // sv_ccmds.c
 //
-void SV_ReadLevelFile (void);
+void SV_AddMatch_f( list_t *list );
+void SV_DelMatch_f( list_t *list );
+void SV_ListMatches_f( list_t *list );
 
 //
 // sv_ents.c

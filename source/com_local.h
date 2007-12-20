@@ -377,8 +377,24 @@ static inline void FIFO_Clear( fifo_t *fifo ) {
     fifo->ax = fifo->ay = fifo->bs = 0;
 }
 
-qboolean FIFO_Read( fifo_t *fifo, void *buffer, int length );
-qboolean FIFO_Write( fifo_t *fifo, const void *buffer, int length );
+int FIFO_Read( fifo_t *fifo, void *buffer, int length );
+int FIFO_Write( fifo_t *fifo, const void *buffer, int length );
+
+static inline qboolean FIFO_TryRead( fifo_t *fifo, void *buffer, int length ) {
+    if( FIFO_Read( fifo, NULL, length ) == length ) {
+        FIFO_Read( fifo, buffer, length );
+        return qtrue;
+    }
+    return qfalse;
+}
+
+static inline qboolean FIFO_TryWrite( fifo_t *fifo, void *buffer, int length ) {
+    if( FIFO_Write( fifo, NULL, length ) == length ) {
+        FIFO_Write( fifo, buffer, length );
+        return qtrue;
+    }
+    return qfalse;
+}
 
 /*
 ==============================================================
@@ -938,6 +954,7 @@ char    *Z_ReservedCopyString( const char *in ) q_malloc;
 extern	cvar_t	*developer;
 extern	cvar_t	*dedicated;
 extern	cvar_t	*host_speeds;
+extern	cvar_t	*com_version;
 
 extern	cvar_t	*mvd_running;
 extern	cvar_t	*sv_running;
@@ -987,6 +1004,7 @@ int		Sys_Milliseconds( void );
 uint32	Sys_Realtime( void );
 char	*Sys_GetClipboardData( void );
 void	Sys_SetClipboardData( const char *data );
+void    Sys_Sleep( int msec );
 
 void	Hunk_Begin( mempool_t *pool, int maxsize );
 void	*Hunk_Alloc( mempool_t *pool, int size );

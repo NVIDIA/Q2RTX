@@ -927,12 +927,9 @@ neterr_t NET_Connect( const netadr_t *peer, netstream_t *s ) {
             closesocket( socket );
             return NET_ERROR;
         }
-
-        s->state = NS_CONNECTING;
-    } else {
-        s->state = NS_CONNECTED;
     }
 
+    s->state = NS_CONNECTING;
     s->address = *peer;
     s->socket = socket;
 
@@ -945,10 +942,10 @@ neterr_t NET_Run( netstream_t *s ) {
     int ret, err;
     int length;
     byte *data;
-    neterr_t result;
+    neterr_t result = NET_AGAIN;
 
     if( s->state < NS_CONNECTING || s->state > NS_CONNECTED ) {
-        return NET_AGAIN;
+        return result;
     }
 
     tv.tv_sec = 0;
@@ -965,14 +962,15 @@ neterr_t NET_Run( netstream_t *s ) {
     }
 
     if( !ret ) {
-        return NET_AGAIN;
+        return result;
     }
 
+    result = NET_AGAIN;
     if( s->state == NS_CONNECTING ) {
         socklen_t length;
 
         if( !FD_ISSET( s->socket, &wfd ) && !FD_ISSET( s->socket, &efd ) ) {
-            return NET_AGAIN;
+            return result;
         }
 
         length = sizeof( err );
@@ -989,9 +987,9 @@ neterr_t NET_Run( netstream_t *s ) {
         }
 
         s->state = NS_CONNECTED;
+        result = NET_OK;
     }
 
-    result = NET_AGAIN;
     if( FD_ISSET( s->socket, &rfd ) ) {
         // read as much as we can
         data = FIFO_Reserve( &s->recv, &length );

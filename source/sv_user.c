@@ -297,7 +297,7 @@ Sends the first message from the server to a connected client.
 This will be sent on the initial connection and upon each server load.
 ================
 */
-static void SV_New_f( void ) {
+void SV_New_f( void ) {
     char junk[8][16];
     int i, j, c;
 
@@ -436,7 +436,7 @@ static void SV_New_f( void ) {
 SV_Begin_f
 ==================
 */
-static void SV_Begin_f( void ) {
+void SV_Begin_f( void ) {
 	Com_DPrintf( "Begin() from %s\n", sv_client->name );
 
 	// handle the case of a level changing while a client was connecting
@@ -459,6 +459,12 @@ static void SV_Begin_f( void ) {
         return;
     }
 
+#if USE_ANTICHEAT & 2
+    if( !AC_ClientBegin( sv_client ) ) {
+        return;
+    }
+#endif
+
 	Com_DPrintf( "Going from cs_primed to cs_spawned for %s\n",
         sv_client->name );
 	sv_client->state = cs_spawned;
@@ -468,6 +474,10 @@ static void SV_Begin_f( void ) {
 	
 	// call the game begin function
 	ge->ClientBegin( sv_player );
+
+#if USE_ANTICHEAT & 2
+    AC_ClientAnnounce( sv_client );
+#endif
 }
 
 //=============================================================================
@@ -761,6 +771,22 @@ static void SV_CvarResult_f( void ) {
     }
 }
 
+#if USE_ANTICHEAT & 2
+
+static void SV_AC_List_f( void ) {
+	Com_BeginRedirect( RD_CLIENT, sv_outputbuf, SV_OUTPUTBUF_LENGTH, SV_FlushRedirect );
+	AC_List_f();
+	Com_EndRedirect();
+}
+
+static void SV_AC_Info_f( void ) {
+	Com_BeginRedirect( RD_CLIENT, sv_outputbuf, SV_OUTPUTBUF_LENGTH, SV_FlushRedirect );
+	AC_Info_f();
+	Com_EndRedirect();
+}
+
+#endif
+
 static ucmd_t ucmds[] = {
 	// auto issued
 	{ "new", SV_New_f },
@@ -781,6 +807,10 @@ static ucmd_t ucmds[] = {
 
 	{ "\177c", SV_CvarResult_f },
 	{ "nogamedata", SV_NoGameData_f },
+#if USE_ANTICHEAT & 2
+	{ "aclist", SV_AC_List_f },
+	{ "acinfo", SV_AC_Info_f },
+#endif
 
 	{ NULL, NULL }
 };

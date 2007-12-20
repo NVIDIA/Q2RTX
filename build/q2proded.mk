@@ -16,6 +16,10 @@ SRCFILES=cmd.c cmodel.c common.c crc.c cvar.c \
 	mvd_client.c mvd_parse.c mvd_game.c \
 	q_shared.c q_msg.c q_field.c prompt.c cl_null.c
 
+ifdef USE_ANTICHEAT
+SRCFILES+=sv_ac.c
+endif
+
 ifdef USE_ZLIB
 SRCFILES+=ioapi.c unzip.c 
 CFLAGS+=$(ZLIB_CFLAGS)

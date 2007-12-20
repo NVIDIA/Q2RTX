@@ -1322,7 +1322,7 @@ static void CL_ConnectionlessPacket( void ) {
 		cls.netchan = Netchan_Setup( NS_CLIENT, type, &cls.serverAddress,
                 cls.quakePort, 1024, cls.serverProtocol );
 
-#if USE_ANTICHEAT
+#if USE_ANTICHEAT & 1
         if( anticheat ) {
 			MSG_WriteByte( clc_nop );
 			MSG_FlushTo( &cls.netchan->message );
@@ -2466,7 +2466,7 @@ static void CL_CheckForReply( void ) {
     }
 
     Cbuf_AddText( "cmd say \"" );
-	Cbuf_AddText( Cvar_VariableString( "version" ) );
+	Cbuf_AddText( com_version->string );
     Cbuf_AddText( "\"\n" );
 
     cl.replyPending = qfalse;
