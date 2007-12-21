@@ -696,7 +696,7 @@ void Sys_FillAPI( sysAPI_t *api ) {
 
 void Sys_FixFPCW( void ) {
 #ifdef __i386__
-    unsigned int cw;
+    uint16 cw;
 
     __asm__ __volatile__( "fnstcw %0" : "=m" (cw) );
 
