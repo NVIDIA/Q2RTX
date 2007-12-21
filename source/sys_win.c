@@ -774,6 +774,15 @@ void Sys_Sleep( int msec ) {
     Sleep( msec );
 }
 
+void Sys_Setenv( const char *name, const char *value ) {
+#if( _MSC_VER >= 1400 )
+	_putenv_s( name, value );
+#else
+	_putenv( va( "%s=%s", name, value ) );
+#endif
+}
+
+
 /*
 ================
 Sys_Init

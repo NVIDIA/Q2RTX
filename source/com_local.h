@@ -126,6 +126,7 @@ void Cmd_AliasSet( const char *name, const char *cmd );
 const char *Cmd_Command_g( const char *text, int state );
 const char *Cmd_Alias_g( const char *text, int state );
 const char *Cmd_Mixed_g( const char *partial, int state ); 
+const char *Cmd_Exec_g( const char *partial, int state );
 // attempts to match a partial command for automatic command line completion
 // returns NULL if nothing fits
 
@@ -1005,6 +1006,7 @@ uint32	Sys_Realtime( void );
 char	*Sys_GetClipboardData( void );
 void	Sys_SetClipboardData( const char *data );
 void    Sys_Sleep( int msec );
+void    Sys_Setenv( const char *name, const char *value );
 
 void	Hunk_Begin( mempool_t *pool, int maxsize );
 void	*Hunk_Alloc( mempool_t *pool, int size );

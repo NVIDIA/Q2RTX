@@ -679,6 +679,10 @@ void Sys_Sleep( int msec ) {
     nanosleep( &req, NULL );
 }
 
+void Sys_Setenv( const char *name, const char *value ) {
+    setenv( name, value, 1 );
+}
+
 /*
 ================
 Sys_FillAPI
@@ -1101,19 +1105,22 @@ main
 =================
 */
 int main( int argc, char **argv ) {
-    int i;
-
-    for( i = 1; i < argc; i++ ) {
+    if( argc > 1 ) {
         if( !strcmp( argv[1], "-v" ) || !strcmp( argv[1], "--version" ) ) {
             printf( APPLICATION " " VERSION " " __DATE__ " " BUILDSTRING " "
                     CPUSTRING "\n" );
             return 0;
         }
+        if( !strcmp( argv[1], "-h" ) || !strcmp( argv[1], "--help" ) ) {
+            printf( "Usage: %s [+command arguments] [...]\n", argv[0] );
+            return 0;
+        }
     }
 
 	if( !getuid() || !geteuid() ) {
-		Sys_Error(  "You can not run " APPLICATION " as superuser "
-                    "for security reasons!" );
+		printf(  "You can not run " APPLICATION " as superuser "
+                 "for security reasons!" );
+        return 1;
 	}
 		
     Qcommon_Init( argc, argv );

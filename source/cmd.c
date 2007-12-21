@@ -1350,7 +1350,7 @@ static void Cmd_Exec_f( void ) {
 	FS_FreeFile( f );
 }
 
-static const char *Cmd_Exec_g( const char *partial, int state ) {
+const char *Cmd_Exec_g( const char *partial, int state ) {
 	return Com_FileNameGeneratorByFilter( "", "*.cfg", partial, qtrue, state );
 }
 

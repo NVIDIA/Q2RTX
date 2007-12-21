@@ -2399,14 +2399,10 @@ static void FS_DefaultGamedir( void ) {
             sys_basedir->string, "/" BASEGAME, NULL );
     }
 
-#if( _MSC_VER >= 1400 )
-	_putenv_s( "QUAKE2_HOME", fs_gamedir );
-#else
-    putenv( va( "QUAKE2_HOME=%s", fs_gamedir ) );
-#endif
-
 	Cvar_Set( "game", "" );
 	Cvar_Set( "gamedir", "" );
+
+    Sys_Setenv( "QUAKE2_HOME", fs_gamedir );
 }
 
 
@@ -2447,11 +2443,7 @@ static void FS_SetupGamedir( void ) {
         FS_AddGameDirectory( "%s/%s", sys_homedir->string, fs_game->string );
     }
     
-#if( _MSC_VER >= 1400 )
-	_putenv_s( "QUAKE2_HOME", fs_gamedir );
-#else
-    putenv( va( "QUAKE2_HOME=%s", fs_gamedir ) );
-#endif
+    Sys_Setenv( "QUAKE2_HOME", fs_gamedir );
 }
 
 qboolean FS_SafeToRestart( void ) {
