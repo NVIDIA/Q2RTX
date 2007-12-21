@@ -330,7 +330,7 @@ static void SV_DumpTcpClients( void ) {
 "num resource             buf lastmsg address               state\n"
 "--- -------------------- --- ------- --------------------- -----\n" );
     count = 0;
-    LIST_FOR_EACH( tcpClient_t, client, &svs.tcpClients, entry ) {
+    LIST_FOR_EACH( tcpClient_t, client, &svs.tcp_client_list, entry ) {
         Com_Printf( "%3d %-20.20s %3d %7u %-21s ",
             count, client->resource ? client->resource : "",
             FIFO_Usage( &client->stream.send ),
@@ -366,7 +366,7 @@ static void SV_DumpTcpVersions( void ) {
 "--- --------------------- -----------------------------------------\n" );
 		
     count = 0;
-    LIST_FOR_EACH( tcpClient_t, client, &svs.tcpClients, entry ) {
+    LIST_FOR_EACH( tcpClient_t, client, &svs.tcp_client_list, entry ) {
         Com_Printf( "%3i %-21s %-40.40s\n",
             count, NET_AdrToString( &client->stream.address ),
             client->agent ? client->agent : "" );
@@ -401,7 +401,7 @@ static void SV_Status_f( void ) {
     }
     Com_Printf( "\n" );
 
-    if( LIST_EMPTY( &svs.tcpClients ) ) {
+    if( LIST_EMPTY( &svs.tcp_client_list ) ) {
         Com_Printf( "No TCP clients.\n" );
     } else {
 	    if( Cmd_Argc() > 1 ) {

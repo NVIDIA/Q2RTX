@@ -11,7 +11,8 @@ Maximum number of simultaneous connections allowed from
 single IP address. Setting this variable to 0 disables the limit.
 
 - `set sv_status_show 2`  
-Specifies how the server should respond to status queries.
+Specifies how the server should respond to status queries
+over UDP datagrams and HTTP.
    - 0 - do not respond at all
    - 1 - respond with server info only
    - 2 - respond with server info and player list
@@ -35,6 +36,15 @@ Clients set their passwords via "password" userinfo variable.
 - `set sv_lan_force_rate 0`  
 
 - `set sv_ghostime 6`  
+Maximum time, in seconds, to keep clients which passed initial
+challenge-response connection stage but not yet requested server data chunk.
+This also applies to HTTP clients in request processing stage.
+Helps to avoid attacks flooding server with zombie clients, combined
+with `sv_iplimit` variable.
+
+- `set sv_force_reconnect ""`  
+When set to address string, forces new clients to reconnect to this address
+as an additional proxy protection measure. This reconnection process is FAST.
 
 
 
@@ -42,27 +52,33 @@ MVD server
 ----------
 
 - `set sv_http_enable 0`  
-Enable HTTP connections. Currently used for MVD connections and
-status queries only.
+Enable HTTP connections, which are used for serving MVD clients and
+status queries in HTML.
 
-- `set sv_http_maxclients 32`  
-Maximum number of HTTP clients.
+- `set sv_http_maxclients 4`  
+Maximum number of HTTP clients. Can be changed at any time, setting this to
+zero effectively disables new HTTP connections.
 
-- `set sv_http_minclients "8"`  
+- `set sv_http_minclients 4`  
+Maximum number of HTTP clients to be kept in the special pool of recently
+used slots for faster access and avoiding memory fragmentation.
 
-- `set sv_mvd_nogun "1"`  
+- `set sv_mvd_nogun 1`  
 
-- `set sv_mvd_noblend "0"`  
+- `set sv_mvd_noblend 0`  
 
-- `set sv_mvd_max_duration "0"`  
+- `set sv_mvd_max_duration 0`  
 
-- `set sv_mvd_max_size "0"`  
+- `set sv_mvd_max_size 0`  
 
-- `set sv_mvd_wait "0"`  
+- `set sv_mvd_wait 0`  
 
 - `set sv_mvd_auth ""`  
+If not empty, perform Basic HTTP authentication of MVD connections.
+Value should be in form of `user:pass`.
 
-- `set sv_mvd_enable "0"`  
+- `set sv_mvd_enable 0`  
+Enable recording local MVDs and serving MVD clients over HTTP.
 
 
 MVD client
@@ -137,7 +153,7 @@ must be reachable. See `passive` [[client#index3h1]] command for more details.
 - `mvdplay <filename>`  
 Play the local MVD identified by _filename_.
 
-- `mvdconnect <[http://][user:pass@]server[:port][/resource]> [streamID]`  
+- `mvdconnect <[http://][user:pass@]server[:port][/resource]>`  
 Connect to the MVD resource identified by _URI_. If _resource_ part is given,
 default port is 80. Otherwise, default port is 27910 and _streamID_ identifies
 the live MVD stream on server.

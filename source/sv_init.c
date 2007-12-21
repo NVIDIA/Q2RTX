@@ -279,7 +279,8 @@ void SV_InitGame( qboolean ismvd ){
 
     List_Init( &svs.clients );
     List_Init( &svs.mvd.clients );
-    List_Init( &svs.tcpClients );
+    List_Init( &svs.tcp_client_list );
+    List_Init( &svs.tcp_client_pool );
 
 	for( i = 0; i < sv_maxclients->integer; i++ ) {
         client = svs.clientpool + i;

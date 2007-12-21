@@ -119,8 +119,10 @@ static void CMod_LoadSurfaces (lump_t *l)
 	out = cmod->surfaces;
 	for ( i=0 ; i<count ; i++, in++, out++)
 	{
-		Q_strncpyz (out->c.name, in->texture, sizeof(out->c.name));
-		Q_strncpyz (out->rname, in->texture, sizeof(out->rname));
+		memcpy( out->c.name, in->texture, sizeof( out->c.name ) );
+        out->c.name[ sizeof( out->c.name ) - 1 ] = 0;
+		memcpy( out->rname, in->texture, sizeof( out->rname ) );
+        out->rname[ sizeof( out->rname ) - 1 ] = 0;
 		out->c.flags = LittleLong (in->flags);
 		out->c.value = LittleLong (in->value);
 	}

@@ -307,8 +307,8 @@ typedef struct server_static_s {
 	entity_state_t	*entityStates;		// [numEntityStates]
 
 
-//    tcpcl_t         *tcpclpool;
-    list_t          tcpClients;
+    list_t          tcp_client_pool;
+    list_t          tcp_client_list;
 
     struct {
         list_t          clients;

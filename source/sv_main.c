@@ -1686,8 +1686,8 @@ void SV_Init( void ) {
 	sv_force_reconnect = Cvar_Get ( "sv_force_reconnect", "", CVAR_LATCH );
 
     sv_http_enable = Cvar_Get( "sv_http_enable", "0", CVAR_LATCH );
-    sv_http_maxclients = Cvar_Get( "sv_http_maxclients", "32", 0 );
-    sv_http_minclients = Cvar_Get( "sv_http_minclients", "8", 0 );
+    sv_http_maxclients = Cvar_Get( "sv_http_maxclients", "4", 0 );
+    sv_http_minclients = Cvar_Get( "sv_http_minclients", "4", 0 );
 
 	allow_download = Cvar_Get( "allow_download", "1", CVAR_ARCHIVE );
 	allow_download_players = Cvar_Get( "allow_download_players", "0", CVAR_ARCHIVE );
@@ -1807,10 +1807,15 @@ static void SV_FinalMessage( const char *message, int cmd ) {
 		SV_RemoveClient( client );
 	}
 
-    LIST_FOR_EACH_SAFE( tcpClient_t, t, tnext, &svs.tcpClients, entry ) {
+    LIST_FOR_EACH_SAFE( tcpClient_t, t, tnext, &svs.tcp_client_list, entry ) {
         SV_HttpDrop( t, NULL );
-        SV_HttpRemove( t );
+        NET_Close( &t->stream );
+        Z_Free( t );
 	}
+
+    LIST_FOR_EACH_SAFE( tcpClient_t, t, tnext, &svs.tcp_client_pool, entry ) {
+        Z_Free( t );
+    }
 
     if( svs.mvd.dummy ) {
 		SV_CleanClient( svs.mvd.dummy );

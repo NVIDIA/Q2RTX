@@ -384,20 +384,32 @@ void SV_HttpDrop( tcpClient_t *client, const char *error ) {
 }
 
 void SV_HttpRemove( tcpClient_t *client ) {
-    Com_DPrintf( "HTTP client %s removed\n",
-        NET_AdrToString( &client->stream.address ) );
+    char *addr, *dest;
+    int count;
 
+    addr = NET_AdrToString( &client->stream.address );
     NET_Close( &client->stream );
-    List_Delete( &client->entry );
-    Z_Free( client );
+    List_Remove( &client->entry );
+
+    count = List_Count( &svs.tcp_client_pool );
+    if( count < sv_http_minclients->integer ) {
+        List_Insert( &svs.tcp_client_pool, &client->entry );
+        dest = "pool";
+    } else {
+        Z_Free( client );
+        dest = "memory";
+    }
+
+    Com_DPrintf( "HTTP client %s removed into %s\n", addr, dest );
 }
 
 static void SV_HttpAccept( netstream_t *stream ) {
     tcpClient_t *client;
     netstream_t *s;
     int count;
+    char *from;
 
-    count = List_Count( &svs.tcpClients );
+    count = List_Count( &svs.tcp_client_list );
     if( count >= sv_http_maxclients->integer ) {
         Com_DPrintf( "HTTP client %s rejected: too many clients\n",
             NET_AdrToString( &stream->address ) );
@@ -408,7 +420,7 @@ static void SV_HttpAccept( netstream_t *stream ) {
 
     if( sv_iplimit->integer > 0 ) {
         count = 0;
-        LIST_FOR_EACH( tcpClient_t, client, &svs.tcpClients, entry ) {
+        LIST_FOR_EACH( tcpClient_t, client, &svs.tcp_client_list, entry ) {
             if( NET_IsEqualBaseAdr( &client->stream.address, &stream->address ) ) {
                 count++;
             }
@@ -416,31 +428,39 @@ static void SV_HttpAccept( netstream_t *stream ) {
         if( count >= sv_iplimit->integer ) {
             Com_DPrintf( "HTTP client %s rejected: too many connections "
                 "from single IP address\n",
-                    NET_AdrToString( &stream->address ) );
+                NET_AdrToString( &stream->address ) );
             NET_Close( stream );
             return;
         }
     }
 
-    Z_TagReserve( sizeof( *client ) + 256 + MAX_MSGLEN * 2, TAG_SERVER );
-    client = Z_ReservedAllocz( sizeof( *client ) );
-	client->lastmessage = svs.realtime;
-    client->state = cs_assigned;
+    if( LIST_EMPTY( &svs.tcp_client_pool ) ) {
+        client = SV_Malloc( sizeof( *client ) + 256 + MAX_MSGLEN * 2 );
+        from = "memory";
+    } else {
+        client = LIST_FIRST( tcpClient_t, &svs.tcp_client_pool, entry );
+        List_Remove( &client->entry );
+        from = "pool";
+    }
+
+    memset( client, 0, sizeof( *client ) );
     List_Init( &client->mvdEntry );
 
     s = &client->stream;
-    s->recv.data = Z_ReservedAlloc( 256 );
+    s->recv.data = ( byte * )( client + 1 );
     s->recv.size = 256;
-    s->send.data = Z_ReservedAlloc( MAX_MSGLEN * 2 );
+    s->send.data = s->recv.data + 256;
     s->send.size = MAX_MSGLEN * 2;
     s->socket = stream->socket;
     s->address = stream->address;
     s->state = stream->state;
 
-    List_Append( &svs.tcpClients, &client->entry );
+	client->lastmessage = svs.realtime;
+    client->state = cs_assigned;
+    List_SeqAdd( &svs.tcp_client_list, &client->entry );
 
-    Com_DPrintf( "HTTP client %s accepted\n",
-        NET_AdrToString( &stream->address ) );
+    Com_DPrintf( "HTTP client %s accepted from %s\n",
+        NET_AdrToString( &stream->address ), from );
 }
 
 static qboolean SV_HttpParseRequest( tcpClient_t *client ) {
@@ -461,8 +481,7 @@ static qboolean SV_HttpParseRequest( tcpClient_t *client ) {
             length = b - data + 1;
         }
         if( client->requestLength + length > MAX_NET_STRING - 1 ) {
-            SV_HttpReject( "400 Bad Request",
-                "Maximum request line length exceeded." );
+            SV_HttpReject( "400 Bad Request", NULL );
             break;
         }
 
@@ -494,8 +513,7 @@ static qboolean SV_HttpParseRequest( tcpClient_t *client ) {
             /*} else if( !strcmp( token, "POST" ) ) {
                 client->method = HTTP_METHOD_POST;*/
             } else {
-                SV_HttpReject( "501 Not Implemented",
-                    "Specified method is not implemented." );
+                SV_HttpReject( "501 Not Implemented", NULL );
                 break;
             }
 
@@ -504,7 +522,7 @@ static qboolean SV_HttpParseRequest( tcpClient_t *client ) {
             if( !Q_stricmpn( token, "http://", 7 ) ) {
                 p = strchr( token + 7, '/' );
                 if( !p ) {
-                    SV_HttpReject( "400 Bad Request", "Invalid absolute URI." );
+                    SV_HttpReject( "400 Bad Request", NULL );
                     break;
                 }
                 client->resource = SV_CopyString( p );
@@ -512,35 +530,33 @@ static qboolean SV_HttpParseRequest( tcpClient_t *client ) {
                 client->host = SV_CopyString( token + 7 );
             } else {
                 if( *token != '/' ) {
-                    SV_HttpReject( "400 Bad Request", "Invalid relative URI." );
+                    SV_HttpReject( "400 Bad Request", NULL );
                     break;
                 }
                 client->resource = SV_CopyString( token );
             }
-            Com_DPrintf( "GET %s\n", client->resource );
 
             // parse version
             token = COM_SimpleParse( &line );
             if( strncmp( token, "HTTP/", 5 ) ) {
-                SV_HttpReject( "400 Bad Request", "HTTP version is malfromed." );
+                SV_HttpReject( "400 Bad Request", NULL );
                 break;
             }
             major = strtoul( token + 5, &token, 10 );
             if( *token != '.' ) {
-                SV_HttpReject( "400 Bad Request", "HTTP version is malformed." );
+                SV_HttpReject( "400 Bad Request", NULL );
                 break;
             }
             minor = strtoul( token + 1, &token, 10 );
             if( major != 1 || ( minor != 0 && minor != 1 ) ) {
-                SV_HttpReject( "505 HTTP Version not supported",
-                    "HTTP version is not supported." );
+                SV_HttpReject( "505 HTTP Version not supported", NULL );
                 break;
             }
         } else {
             token = COM_SimpleParse( &line );
             if( !token[0] ) {
-                if( !client->host ) {
-                    SV_HttpReject( "400 Bad Request", "Missing host field." );
+                if( !client->host || !client->resource ) {
+                    SV_HttpReject( "400 Bad Request", NULL );
                     return qfalse;
                 }
                 return qtrue; // end of header
@@ -549,7 +565,7 @@ static qboolean SV_HttpParseRequest( tcpClient_t *client ) {
             strcpy( key, token );
             p = strchr( key, ':' );
             if( !p ) {
-                SV_HttpReject( "400 Bad Request", "Malformed request field." );
+                SV_HttpReject( "400 Bad Request", NULL );
                 break;
             }
             *p = 0;
@@ -604,7 +620,7 @@ void SV_HttpRun( void ) {
     }
 
     // run existing connections
-    LIST_FOR_EACH_SAFE( tcpClient_t, client, next, &svs.tcpClients, entry ) {
+    LIST_FOR_EACH_SAFE( tcpClient_t, client, next, &svs.tcp_client_list, entry ) {
         http_client = client;
         http_header[0] = 0;
 
@@ -659,6 +675,7 @@ void SV_HttpRun( void ) {
         // parse the request
         if( client->state == cs_assigned ) {
             if( SV_HttpParseRequest( client ) ) {
+                Com_DPrintf( "GET %s\n", client->resource );
                 client->state = cs_connected;
                 Q_EscapeMarkup( http_host, client->host, sizeof( http_host ) );
                 SV_HttpHandle( rootURIs, client->resource );
