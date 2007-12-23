@@ -501,9 +501,8 @@ static void AC_Announce( client_t *client, const char *fmt, ... ) {
 
 	MSG_WriteByte( svc_print );
 	MSG_WriteByte( PRINT_HIGH );
+	MSG_WriteData( AC_MESSAGE, sizeof( AC_MESSAGE ) - 1 );
 	MSG_WriteData( string, length + 1 );
-
-	Com_Printf( "%s", string );
 
     if( client->state == cs_spawned ) {
         FOR_EACH_CLIENT( client ) {
@@ -629,10 +628,10 @@ static void AC_ParseClientAck( void ) {
 }
 
 static void AC_ParseFileViolation( void ) {
-	//linkednamelist_t	*bad;
+	string_entry_t	*bad;
 	client_t	*cl;
 	char		*path, *hash;
-    int			action;
+    int			action, pathlen;
     ac_file_t	*f;
 
     cl = AC_ParseClient();
@@ -640,7 +639,7 @@ static void AC_ParseFileViolation( void ) {
         return;
     }
 
-	path = MSG_ReadString();
+	path = MSG_ReadStringLength( &pathlen );
 	if( msg_read.readcount < msg_read.cursize )
 		hash = MSG_ReadString();
 	else
@@ -665,8 +664,8 @@ static void AC_ParseFileViolation( void ) {
         AC_Announce( cl, "%s was kicked for modified %s\n", cl->name, path );
         break;
     case 1:
-        SV_ClientPrintf( cl, PRINT_HIGH,
-            "WARNING: Your file %s has been modified. "
+        SV_ClientPrintf( cl, PRINT_HIGH, AC_MESSAGE
+            "Your file %s has been modified. "
             "Please replace it with a known valid copy.\n", path );
         break;
     case 2:
@@ -691,16 +690,10 @@ static void AC_ParseFileViolation( void ) {
         return;
     }
 
-    /*
-    bad = &cl->anticheat_bad_files;
-    while (bad->next)
-        bad = bad->next;
-
-    bad->next = Z_TagMalloc (sizeof(*bad), TAGMALLOC_ANTICHEAT);
-    bad = bad->next;
-    bad->name = CopyString (quakePath, TAGMALLOC_ANTICHEAT);
-    bad->next = NULL;
-    */
+    bad = SV_Malloc( sizeof( *bad ) + pathlen );
+    memcpy( bad->string, path, pathlen + 1 );
+    bad->next = cl->ac_bad_files;
+    cl->ac_bad_files = bad;
 }
 
 static void AC_ParseReady( void ) {
@@ -1365,8 +1358,10 @@ void AC_List_f( void ) {
 }
 
 void AC_Info_f( void ) {
-	//client_t			*cl;
-	//linkednamelist_t	*bad;
+	client_t			*cl;
+	string_entry_t	    *bad;
+    char    *substring, *filesubstring;
+    int     clientID;
 
     if( !svs.initialized ) {
 		Com_Printf( "No server running.\n" );
@@ -1380,22 +1375,57 @@ void AC_Info_f( void ) {
 	}
 
 	if( Cmd_Argc() == 1 ) {
-		Com_Printf( "Usage: %s [substring|id]\n", Cmd_Argv( 0 ) );
-		return;
+        if( !sv_client ) {
+		    Com_Printf( "Usage: %s [substring|id] [filesubstring]\n", Cmd_Argv( 0 ) );
+            return;
+        }
+		cl = sv_client;
+		filesubstring = "";
+	} else {
+		substring = Cmd_Argv( 1 );
+		filesubstring = Cmd_Argv( 2 );
+
+		if( COM_IsNumeric( substring ) ) {
+			clientID = atoi( substring );
+			if( clientID < 0 || clientID >= sv_maxclients->integer ) {
+				Com_Printf( "Invalid client ID.\n" );
+				return;
+			}
+            cl = &svs.clientpool[clientID];
+            if( cl->state < cs_spawned ) {
+                Com_Printf( "Player is not active.\n" );
+                return;
+            }
+		} else {
+            FOR_EACH_CLIENT( cl ) {
+				if( cl->state < cs_spawned ) {
+					continue;
+                }
+				if( strstr( cl->name, substring ) ) {
+					goto found;
+				}
+			}
+            Com_Printf( "Player not found.\n" );
+            return;
+		}
 	}
 
-    //SV_SetPlayer();
-
-    /*
-	bad = &cl->anticheat_bad_files;
-
-	Com_Printf ("File check failures for %s:\n", LOG_GENERAL, cl->name);
-	while (bad->next)
-	{
-		bad = bad->next;
-		if (!filesubstring[0] || strstr (bad->name, filesubstring))
-			Com_Printf ("%s\n", LOG_GENERAL, bad->name);
-	}*/
+found:
+	if( !cl->ac_valid ) {
+		Com_Printf( "%s is not using anticheat.\n", cl->name );
+		return;
+	}
+    
+    if( cl->ac_bad_files ) {
+	    Com_Printf( "File check failures for %s:\n", cl->name );
+        for( bad = cl->ac_bad_files; bad; bad = bad->next ) {
+            if( !filesubstring[0] || strstr( bad->string, filesubstring ) ) {
+    	        Com_Printf( "%s\n", bad->string );
+            }
+        }
+    } else {
+	    Com_Printf( "%s has no file check failures.\n", cl->name );
+    }
 }
 
 static void AC_Invalidate_f( void ) {

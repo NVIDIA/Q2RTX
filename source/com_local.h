@@ -904,6 +904,11 @@ static inline const ucmd_t *Com_Find( const ucmd_t *u, const char *c ) {
     return NULL;
 }
 
+typedef struct string_entry_s {
+    struct string_entry_s *next;
+    char string[1];
+} string_entry_t;
+
 typedef void (*rdflush_t)( int target, char *buffer, int length );
 
 void		Com_BeginRedirect (int target, char *buffer, int buffersize, rdflush_t flush);

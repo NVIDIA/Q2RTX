@@ -123,6 +123,15 @@ void SV_RemoveClient( client_t *client ) {
 
 void SV_CleanClient( client_t *client ) {
 	int i;
+#if USE_ANTICHEAT & 2
+    string_entry_t *bad, *next;
+
+    for( bad = client->ac_bad_files; bad; bad = next ) {
+        next = bad->next;
+        Z_Free( bad );
+    }
+    client->ac_bad_files = NULL;
+#endif
 
 	if( client->download ) {
 		FS_FreeFile( client->download );

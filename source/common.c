@@ -88,14 +88,13 @@ static int  rd_length;
 static rdflush_t    rd_flush;
 
 void Com_BeginRedirect( int target, char *buffer, int buffersize, rdflush_t flush ) {
-	if( !target || !buffer || buffersize < 1 || !flush )
+	if( rd_target || !target || !buffer || buffersize < 1 || !flush ) {
 		return;
+    }
 	rd_target = target;
 	rd_buffer = buffer;
 	rd_buffersize = buffersize;
 	rd_flush = flush;
-
-	*rd_buffer = 0;
     rd_length = 0;
 }
 
@@ -104,16 +103,19 @@ static void Com_AbortRedirect( void ) {
 	rd_buffer = NULL;
 	rd_buffersize = 0;
 	rd_flush = NULL;
+    rd_length = 0;
 }
 
 void Com_EndRedirect( void ) {
+    if( !rd_target ) {
+        return;
+    }
 	rd_flush( rd_target, rd_buffer, rd_length );
-    rd_length = 0;
-
 	rd_target = 0;
 	rd_buffer = NULL;
 	rd_buffersize = 0;
 	rd_flush = NULL;
+    rd_length = 0;
 }
 
 static void Com_Redirect( const char *msg, int total ) {
@@ -126,7 +128,6 @@ static void Com_Redirect( const char *msg, int total ) {
         }
         if( rd_length + length > rd_buffersize ) {
             rd_flush( rd_target, rd_buffer, rd_length );
-            *rd_buffer = 0;
             rd_length = 0;
         }
         memcpy( rd_buffer + rd_length, msg, length );

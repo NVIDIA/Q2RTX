@@ -467,7 +467,7 @@ void MVD_ChangeLevel( mvd_t *mvd ) {
     SV_SendAsyncPackets();
 }
 
-static void MVD_PlayNext( mvd_t *mvd, demoentry_t *entry ) {
+static void MVD_PlayNext( mvd_t *mvd, string_entry_t *entry ) {
     uint32 magic = 0;
 
     if( !entry ) {
@@ -485,23 +485,23 @@ static void MVD_PlayNext( mvd_t *mvd, demoentry_t *entry ) {
         mvd->demofile = 0;
     }
 
-    FS_FOpenFile( entry->path, &mvd->demofile, FS_MODE_READ );
+    FS_FOpenFile( entry->string, &mvd->demofile, FS_MODE_READ );
     if( !mvd->demofile ) {
-        MVD_Dropf( mvd, "Couldn't reopen %s", entry->path );
+        MVD_Dropf( mvd, "Couldn't reopen %s", entry->string );
     }
 
     FS_Read( &magic, 4, mvd->demofile );
     if( magic != MVD_MAGIC ) {
-        MVD_Dropf( mvd, "%s is not a MVD2 file", entry->path );
+        MVD_Dropf( mvd, "%s is not a MVD2 file", entry->string );
     }
 
-    Com_Printf( "[%s] Reading from %s\n", mvd->name, entry->path );
+    Com_Printf( "[%s] Reading from %s\n", mvd->name, entry->string );
 
     // reset state
     mvd->demoentry = entry;
 
     // set channel address
-    Q_strncpyz( mvd->address, COM_SkipPath( entry->path ), sizeof( mvd->address ) );
+    Q_strncpyz( mvd->address, COM_SkipPath( entry->string ), sizeof( mvd->address ) );
 }
 
 
@@ -1152,7 +1152,7 @@ void MVD_Play_f( void ) {
     int loop = 1, len;
     mvd_t *mvd;
     int c, argc;
-    demoentry_t *entry, *head;
+    string_entry_t *entry, *head;
     int i;
 
     while( ( c = Cmd_ParseOptions( options ) ) != -1 ) {
@@ -1203,7 +1203,7 @@ void MVD_Play_f( void ) {
 
         len = strlen( buffer ) + 1;
         entry = Z_Malloc( sizeof( *entry ) + len );
-        memcpy( entry->path, buffer, len );
+        memcpy( entry->string, buffer, len );
         entry->next = head;
         head = entry;
     }

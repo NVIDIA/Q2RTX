@@ -97,11 +97,6 @@ typedef struct {
 	short delta_angles[3];
 } udpClient_t;
 
-typedef struct demoentry_s {
-    struct demoentry_s *next;
-    char path[1];
-} demoentry_t;
-
 typedef struct mvd_s {
     list_t      entry;
     list_t      ready;
@@ -114,7 +109,7 @@ typedef struct mvd_s {
 	qboolean	demoplayback;
 	qboolean	demorecording;
     int         demoloop;
-    demoentry_t  *demohead, *demoentry;
+    string_entry_t  *demohead, *demoentry;
 
 	// connection variables
 	mvdState_t	state;

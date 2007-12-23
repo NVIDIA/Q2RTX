@@ -229,6 +229,7 @@ typedef struct client_s {
     int             ac_file_failures;
     unsigned        ac_query_time;
     int             ac_client_type;
+    string_entry_t  *ac_bad_files;
 #endif
 } client_t;
 
