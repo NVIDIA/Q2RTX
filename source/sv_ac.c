@@ -1050,7 +1050,7 @@ void AC_ClientToken( client_t *cl, const char *token ) {
         }
     }
 
-    Com_Printf( "ANTICHEAT: %s bypassed anticheat requirements with '%s'\n",
+    Com_Printf( "ANTICHEAT: %s bypassed anticheat requirements with token '%s'\n",
         cl->name, tok->string );
     cl->ac_token = tok->string;
     cl->ac_required = AC_EXEMPT;
