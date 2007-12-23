@@ -249,15 +249,14 @@ void SV_HttpWrite( tcpClient_t *client, void *data, int length ) {
 #if USE_ZLIB
     if( client->z.state ) {
         z_streamp z = &client->z;
-        int param;
+        int param = Z_NO_FLUSH;
 
-        z->next_in = data;
-        z->avail_in = length;
-
-        param = Z_NO_FLUSH;
         if( client->noflush > 120 ) {
             param = Z_SYNC_FLUSH;
         }
+
+        z->next_in = data;
+        z->avail_in = length;
 
         while( z->avail_in ) {
             data = FIFO_Reserve( fifo, &length );
@@ -275,7 +274,7 @@ void SV_HttpWrite( tcpClient_t *client, void *data, int length ) {
             }
 
             length -= z->avail_out;
-            if( length ) {
+            if( length > 0 ) {
                 FIFO_Commit( fifo, length );
                 client->noflush = 0;
             }
@@ -283,7 +282,7 @@ void SV_HttpWrite( tcpClient_t *client, void *data, int length ) {
         return;
     }
 #else
-    if( FIFO_Write( fifo, data, length ) != length ) {
+    if( !FIFO_TryWrite( fifo, data, length ) ) {
         SV_HttpDrop( client, "overflowed" );
     }
 #endif
@@ -500,7 +499,7 @@ static qboolean SV_HttpParseRequest( tcpClient_t *client ) {
 
         if( !client->method ) {
             // parse request line
-            token = COM_SimpleParse( &line );
+            token = COM_SimpleParse( &line, NULL );
             if( !token[0] ) {
                 continue; // ignore empty lines
             }
@@ -518,7 +517,7 @@ static qboolean SV_HttpParseRequest( tcpClient_t *client ) {
             }
 
             // parse URI
-            token = COM_SimpleParse( &line );
+            token = COM_SimpleParse( &line, NULL );
             if( !Q_stricmpn( token, "http://", 7 ) ) {
                 p = strchr( token + 7, '/' );
                 if( !p ) {
@@ -537,7 +536,7 @@ static qboolean SV_HttpParseRequest( tcpClient_t *client ) {
             }
 
             // parse version
-            token = COM_SimpleParse( &line );
+            token = COM_SimpleParse( &line, NULL );
             if( strncmp( token, "HTTP/", 5 ) ) {
                 SV_HttpReject( "400 Bad Request", NULL );
                 break;
@@ -553,7 +552,7 @@ static qboolean SV_HttpParseRequest( tcpClient_t *client ) {
                 break;
             }
         } else {
-            token = COM_SimpleParse( &line );
+            token = COM_SimpleParse( &line, NULL );
             if( !token[0] ) {
                 if( !client->host || !client->resource ) {
                     SV_HttpReject( "400 Bad Request", NULL );
@@ -571,7 +570,7 @@ static qboolean SV_HttpParseRequest( tcpClient_t *client ) {
             *p = 0;
             Q_strlwr( key );
 
-            token = COM_SimpleParse( &line );
+            token = COM_SimpleParse( &line, NULL );
             if( !strcmp( key, "host" ) ) {
                 if( !client->host ) {
                     client->host = SV_CopyString( token );
@@ -583,7 +582,7 @@ static qboolean SV_HttpParseRequest( tcpClient_t *client ) {
                 if( Q_stricmp( token, "Basic" ) ) {
                     continue;
                 }
-                token = COM_SimpleParse( &line );
+                token = COM_SimpleParse( &line, NULL );
                 if( Q_Decode64( key, token, sizeof( key ) ) == -1 ) {
                     continue;
                 }

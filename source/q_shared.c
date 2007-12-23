@@ -1479,7 +1479,12 @@ char *va( const char *format, ... ) {
 }
 
 
-static char		com_token[MAX_TOKEN_CHARS];
+static char		com_token[4][MAX_TOKEN_CHARS];
+static int      com_tokidx;
+
+static char *COM_GetToken( void ) {
+    return com_token[com_tokidx++ & 3];
+}
 
 /*
 ==============
@@ -1488,25 +1493,29 @@ COM_SimpleParse
 Parse a token out of a string.
 ==============
 */
-char *COM_SimpleParse( const char **data_p ) {
+char *COM_SimpleParse( const char **data_p, int *length ) {
 	int		c;
 	int		len;
 	const char	*data;
+    char *s = COM_GetToken();
 
 	data = *data_p;
 	len = 0;
-	com_token[0] = 0;
+	s[0] = 0;
+    if( length ) {
+        *length = 0;
+    }
 	
 	if( !data ) {
 		*data_p = NULL;
-		return com_token;
+		return s;
 	}
 		
 // skip whitespace
 	while( ( c = *data ) <= ' ' ) {
 		if( c == 0 ) {
 			*data_p = NULL;
-			return com_token;
+			return s;
 		}
 		data++;
 	}
@@ -1514,17 +1523,20 @@ char *COM_SimpleParse( const char **data_p ) {
 // parse a regular word
 	do {
 		if( len < MAX_TOKEN_CHARS - 1 ) {
-			com_token[len] = c;
-			len++;
+			s[len++] = c;
 		}
 		data++;
 		c = *data;
 	} while( c > 32 );
 
-	com_token[len] = 0;
+	s[len] = 0;
+
+    if( length ) {
+        *length = len;
+    }
 
 	*data_p = data;
-	return com_token;
+	return s;
 }
 
 
@@ -1540,14 +1552,15 @@ char *COM_Parse( const char **data_p ) {
 	int		c;
 	int		len;
 	const char	*data;
+    char *s = COM_GetToken();
 
 	data = *data_p;
 	len = 0;
-	com_token[0] = 0;
+	s[0] = 0;
 	
 	if( !data ) {
 		*data_p = NULL;
-		return com_token;
+		return s;
 	}
 		
 // skip whitespace
@@ -1555,7 +1568,7 @@ skipwhite:
 	while( ( c = *data ) <= ' ' ) {
 		if( c == 0 ) {
 			*data_p = NULL;
-			return com_token;
+			return s;
 		}
 		data++;
 	}
@@ -1591,8 +1604,7 @@ skipwhite:
 			}
 
 			if( len < MAX_TOKEN_CHARS - 1 ) {
-				com_token[len] = c;
-				len++;
+				s[len++] = c;
 			}
 		}
 	}
@@ -1600,18 +1612,17 @@ skipwhite:
 // parse a regular word
 	do {
 		if( len < MAX_TOKEN_CHARS - 1 ) {
-			com_token[len] = c;
-			len++;
+		    s[len++] = c;
 		}
 		data++;
 		c = *data;
 	} while( c > 32 );
 
 finish:
-	com_token[len] = 0;
+	s[len] = 0;
 
 	*data_p = data;
-	return com_token;
+	return s;
 }
 
 /*
@@ -1929,6 +1940,16 @@ int Com_sprintf( char *dest, int destsize, const char *fmt, ... ) {
 	va_end( argptr );
 
 	return ret;
+}
+
+char *Q_strchrnul( const char *s, int c ) {
+    while( *s ) {
+        if( *s == c ) {
+            return ( char * )s;
+        }
+        s++;
+    }
+    return ( char * )s;
 }
 
 /*

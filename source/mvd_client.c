@@ -559,7 +559,7 @@ static qboolean MVD_ParseResponse( mvd_t *mvd ) {
         
         if( !mvd->statusCode ) {
             // parse version
-            token = COM_SimpleParse( &line );
+            token = COM_SimpleParse( &line, NULL );
             if( !token[0] ) {
                 continue; // empty line?
             }
@@ -568,7 +568,7 @@ static qboolean MVD_ParseResponse( mvd_t *mvd ) {
             }
 
             // parse status code
-            token = COM_SimpleParse( &line );
+            token = COM_SimpleParse( &line, NULL );
             mvd->statusCode = atoi( token );
             if( !mvd->statusCode ) {
                 MVD_Dropf( mvd, "Malformed HTTP status code" );
@@ -583,7 +583,7 @@ static qboolean MVD_ParseResponse( mvd_t *mvd ) {
             }
         } else {
             // parse header fields
-            token = COM_SimpleParse( &line );
+            token = COM_SimpleParse( &line, NULL );
             if( !token[0] ) {
                 return qtrue; // end of header
             }
@@ -595,7 +595,7 @@ static qboolean MVD_ParseResponse( mvd_t *mvd ) {
             *p = 0;
             Q_strlwr( key );
 
-            token = COM_SimpleParse( &line );
+            token = COM_SimpleParse( &line, NULL );
             if( !strcmp( key, "content-type" ) ) {
             } else if( !strcmp( key, "content-encoding" ) ) {
 #if USE_ZLIB

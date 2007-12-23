@@ -41,6 +41,7 @@ executables=""
 libraries=""
 hardlink="no"
 asm="no"
+anticheat="no"
 gldriver="libGL.so"
 indriver=""
 homedir=".q2pro"
@@ -151,6 +152,8 @@ for opt do
     ;;
     --disable-asm) asm="no"
     ;;
+    --enable-anticheat) anticheat="yes"
+    ;;
     *) echo "Unknown option: $opt (try --help)" && exit 1
     ;;
     esac
@@ -180,6 +183,7 @@ echo "  --disable-zlib              disable linking with zlib"
 echo "  --enable-png                enable linking with PNG library"
 echo "  --enable-jpeg               enable linking with JPEG library"
 echo "  --disable-asm               disable i386 assembly optimizations"
+echo "  --enable-anticheat          enable r1ch.net anticheat server interface"
 echo ""
 echo "Object files are built in the directory from which configure is run."
 exit 1
@@ -435,6 +439,11 @@ fi
 if [ "$asm" = "yes" ]; then
     echo "USE_ASM=yes" >> $config_mk
     echo "#define USE_ASM 1" >> $config_h
+fi
+
+if [ "$anticheat" = "yes" ]; then
+    echo "USE_ANTICHEAT=yes" >> $config_mk
+    echo "#define USE_ANTICHEAT 2" >> $config_h
 fi
 
 echo "#define USE_MAPCHECKSUM 1" >> $config_h

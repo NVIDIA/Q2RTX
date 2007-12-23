@@ -382,19 +382,19 @@ int FIFO_Read( fifo_t *fifo, void *buffer, int length );
 int FIFO_Write( fifo_t *fifo, const void *buffer, int length );
 
 static inline qboolean FIFO_TryRead( fifo_t *fifo, void *buffer, int length ) {
-    if( FIFO_Read( fifo, NULL, length ) == length ) {
-        FIFO_Read( fifo, buffer, length );
-        return qtrue;
+    if( FIFO_Read( fifo, NULL, length ) < length ) {
+        return qfalse;
     }
-    return qfalse;
+    FIFO_Read( fifo, buffer, length );
+    return qtrue;
 }
 
 static inline qboolean FIFO_TryWrite( fifo_t *fifo, void *buffer, int length ) {
-    if( FIFO_Write( fifo, NULL, length ) == length ) {
-        FIFO_Write( fifo, buffer, length );
-        return qtrue;
+    if( FIFO_Write( fifo, NULL, length ) < length ) {
+        return qfalse;
     }
-    return qfalse;
+    FIFO_Write( fifo, buffer, length );
+    return qtrue;
 }
 
 /*

@@ -36,7 +36,7 @@ typedef enum {
 	ACS_PONG,
 	ACS_UPDATE_REQUIRED,
 	ACS_DISCONNECT,
-	ACS_ERROR,
+	ACS_ERROR
 } ac_serverbyte_t;
 
 typedef enum {
@@ -48,7 +48,7 @@ typedef enum {
 	ACC_QUERYCLIENT,
 	ACC_PING,
 	ACC_UPDATECHECKS,
-	ACC_SETPREFERENCES,
+	ACC_SETPREFERENCES
 } ac_clientbyte_t;
 
 typedef enum {
@@ -61,7 +61,7 @@ typedef enum {
 	OP_GT,
 	OP_STREQUAL,
 	OP_STRNEQUAL,
-	OP_STRSTR,
+	OP_STRSTR
 } ac_opcode_t;
 
 typedef enum {
@@ -84,8 +84,7 @@ typedef struct ac_cvar_s {
     int num_values;
     char **values;
     ac_opcode_t op;
-    char *def;
-    char name[1];
+    char *def, *name;
 } ac_cvar_t;
 
 typedef struct {
@@ -95,14 +94,20 @@ typedef struct {
     unsigned last_ping;
     netstream_t  stream;
     int msglen;
+} ac_locals_t;
+
+typedef struct {
+    time_t retry_time;
+    int retry_backoff;
 
     ac_file_t *files;
     int num_files;
 
     ac_cvar_t *cvars;
     int num_cvars;
-} ac_locals_t;
 
+    char hashlist_name[MAX_QPATH];
+} ac_static_t;
 
 #define ACP_BLOCKPLAY	( 1 << 0 )
 
@@ -122,12 +127,10 @@ typedef struct {
 #define AC_RECV_SIZE    1024
 
 static ac_locals_t  ac;
+static ac_static_t  acs;
 
 static list_t       ac_required_list;
 static list_t       ac_exempt_list;
-
-static time_t       ac_retry_time;
-static int          ac_retry_backoff;
 
 static byte         ac_send_buffer[AC_SEND_SIZE];
 static byte         ac_recv_buffer[AC_RECV_SIZE];
@@ -149,10 +152,288 @@ static const char ac_clients[][8] = {
     "EGL",
     "Apr GL",
     "Apr SW",
-    "Q2PRO",
+    "Q2PRO"
 };
 
 static const int ac_num_clients = sizeof( ac_clients ) / sizeof( ac_clients[0] );
+
+
+/*
+==============================================================================
+
+FILE PARSING
+
+==============================================================================
+*/
+
+#define AC_HASHES_NAME  "anticheat-hashes.txt"
+#define AC_CVARS_NAME   "anticheat-cvars.txt"
+#define AC_TOKENS_NAME  "anticheat-tokens.txt"
+
+typedef struct {
+    char str[4];
+    ac_opcode_t code;
+    int max_values;
+} ac_cvarop_t;
+
+static const ac_cvarop_t ac_cvarops[] = {
+    { "=", OP_EQUAL, 254 },
+    { "==", OP_EQUAL, 254 },
+    { "!=", OP_NEQUAL, 254 },
+    { ">=", OP_GTEQUAL, 1 },
+    { "<=", OP_LTEQUAL, 1 },
+    { "<", OP_LT, 1 },
+    { ">", OP_GT, 1 },
+    { "eq", OP_STREQUAL, 254 },
+    { "ne", OP_STRNEQUAL, 254 },
+    { "~", OP_STRSTR, 254 },
+    { 0 }
+};
+
+
+static void AC_ParseHash( const char *data, int linenum, const char *path ) {
+    char *pstr, *hstr;
+    int pathlen, hashlen;
+    int flags;
+    byte hash[20];
+    ac_file_t *file;
+    int i;
+
+    if( *data == '!' ) {
+        Q_strncpyz( acs.hashlist_name, data + 1, sizeof( acs.hashlist_name ) );
+        return;
+    }
+
+    pstr = COM_SimpleParse( &data, &pathlen );
+    if( !pstr[0] ) {
+        return;
+    }
+    hstr = COM_SimpleParse( &data, &hashlen );
+    if( !hstr[0] ) {
+        Com_WPrintf( "ANTICHEAT: Incomplete line %d in %s\n", linenum, path );
+        return;
+    }
+
+    if( pathlen >= MAX_QPATH ) {
+        Com_WPrintf( "ANTICHEAT: Too long quake path on line %d in %s\n", linenum, path );
+        return;
+    }
+    if( strchr( pstr, '\\' ) || !Q_isalnum( pstr[0] ) ) {
+        Com_WPrintf( "ANTICHEAT: Malformed quake path on line %d in %s\n", linenum, path );
+        return;
+    }
+
+    if( hashlen != 40 ) {
+badhash:
+        Com_WPrintf( "ANTICHEAT: Malformed hash on line %d in %s\n", linenum, path );
+        return;
+    }
+
+    for( i = 0; i < 20; i++, hstr += 2 ) {
+        int c1 = Q_charhex( hstr[0] );
+        int c2 = Q_charhex( hstr[1] );
+        if( c1 == -1 || c2 == -1 ) {
+            goto badhash;
+        }
+        hash[i] = ( c1 << 4 ) | c2;
+    }
+    
+    // parse optional flags
+    flags = 0;
+    if( data ) {
+        if( strstr( data, "required" ) ) {
+            flags |= ACH_REQUIRED;
+        }
+        if( strstr( data, "negative" ) ) {
+            flags |= ACH_NEGATIVE;
+        }
+    }
+
+    file = SV_Malloc( sizeof( *file ) + pathlen );
+    memcpy( file->hash, hash, sizeof( file->hash ) );
+    memcpy( file->path, pstr, pathlen + 1 );
+    file->flags = flags;
+    file->next = acs.files;
+    acs.files = file;
+    acs.num_files++;
+}
+
+static void AC_ParseCvar( const char *data, int linenum, const char *path ) {
+    char *values[256], *p;
+    byte lengths[256];
+    char *name, *opstr, *val, *def;
+    int num_values, namelen, vallen, deflen;
+    ac_cvar_t *cvar;
+    const ac_cvarop_t *op;
+    int i, len;
+
+    name = COM_SimpleParse( &data, &namelen );
+    if( !name[0] ) {
+        return;
+    }
+    opstr = COM_SimpleParse( &data, NULL );
+    val = COM_SimpleParse( &data, &vallen );
+    def = COM_SimpleParse( &data, &deflen );
+    if( !opstr[0] || !val[0] || !def[0] ) {
+        Com_WPrintf( "ANTICHEAT: Incomplete line %d in %s\n", linenum, path );
+        return;
+    }
+
+    if( namelen >= 64 ) {
+        Com_WPrintf( "ANTICHEAT: Too long cvar name on line %d in %s\n", linenum, path );
+        return;
+    }
+    if( deflen >= 64 ) {
+        Com_WPrintf( "ANTICHEAT: Too long default value on line %d in %s\n", linenum, path );
+        return;
+    }
+
+    for( op = ac_cvarops; op->str[0]; op++ ) {
+        if( !strcmp( opstr, op->str ) ) {
+            break;
+        }
+    }
+    if( !op->str[0] ) {
+        Com_WPrintf( "ANTICHEAT: Unknown opcode '%s' on line %d in %s\n", opstr, linenum, path );
+        return;
+    }
+
+    num_values = 0;
+    while( 1 ) {
+        if( num_values == op->max_values ) {
+            Com_WPrintf( "ANTICHEAT: Too many values for opcode '%s' on line %d in %s\n", opstr, linenum, path );
+            return;
+        }
+        if( !val[0] ) {
+            Com_WPrintf( "ANTICHEAT: Empty value on line %d in %s\n", linenum, path );
+            return;
+        }
+        p = strchr( val, ',' );
+        if( p ) {
+            *p = 0;
+        }
+        len = strlen( val );
+        if( len >= 64 ) {
+            Com_WPrintf( "ANTICHEAT: Too long value on line %d in %s\n", linenum, path );
+            return;
+        }
+        values[num_values] = val;
+        lengths[num_values++] = len + 1;
+        if( !p ) {
+            break;
+        }
+        val = p + 1;
+    }
+
+    Z_TagReserve( sizeof( *cvar ) + namelen + 1 + deflen + 1 +
+        num_values * sizeof( char * ) + vallen + 1, TAG_SERVER );
+    cvar = Z_ReservedAlloc( sizeof( *cvar ) );
+    cvar->name = Z_ReservedAlloc( namelen + 1 );
+    memcpy( cvar->name, name, namelen + 1 );
+    cvar->def = Z_ReservedAlloc( deflen + 1 );
+    memcpy( cvar->def, def, deflen + 1 );
+    cvar->num_values = num_values;
+    cvar->values = Z_ReservedAlloc( num_values * sizeof( char * ) );
+    for( i = 0; i < num_values; i++ ) {
+        cvar->values[i] = Z_ReservedAlloc( lengths[i] );
+        memcpy( cvar->values[i], values[i], lengths[i] );
+    }
+    cvar->op = op->code;
+    cvar->next = acs.cvars;
+    acs.cvars = cvar;
+    acs.num_cvars++;
+}
+
+static qboolean AC_ParseFile( const char *path, void (*parse)( const char *, int, const char * ) ) {
+    char *data, *p;
+    int linenum = 1;
+
+    FS_LoadFile( path, ( void ** )&data );
+    if( !data ) {
+        return qfalse;
+    }
+
+    while( *data ) {
+        p = strchr( data, '\n' );
+        if( p ) {
+            *p = 0;
+        }
+
+        switch( *data ) {
+        case '/':
+        case '#':
+        case 0:
+            break;
+        case '\\':
+            if( !strncmp( data + 1, "include ", 8 ) ) {
+                if( !AC_ParseFile( data + 9, parse ) ) {
+                    Com_WPrintf( "ANTICHEAT: Could not include %s\n", data + 9 );
+                }
+            } else {
+                Com_WPrintf( "ANTICHEAT: Unknown directive %s on line %d in %s\n", data + 1, linenum, path );
+            }
+            break;
+        default:
+            parse( data, linenum, path );
+            break;
+        }
+
+        if( !p ) {
+            break;
+        }
+
+        linenum++;
+        data = p + 1;
+    }
+
+    return qtrue;
+}
+
+static void AC_LoadChecks( void ) {
+    if( !AC_ParseFile( AC_HASHES_NAME, AC_ParseHash ) ) {
+        Com_Printf( "ANTICHEAT: Missing " AC_HASHES_NAME ", "
+            "not using any file checks.\n" );
+        strcpy( acs.hashlist_name, "none" );
+    } else if( !acs.num_files ) {
+        Com_Printf( "ANTICHEAT: No file hashes were loaded, "
+            "please check the " AC_HASHES_NAME ".\n" );
+        strcpy( acs.hashlist_name, "none" );
+    } else if( !acs.hashlist_name[0] ) {
+         Com_sprintf( acs.hashlist_name, MAX_QPATH, "unknown (%d %s)",
+             acs.num_files, acs.num_files == 1 ? "entry" : "entries" );
+    }
+
+    if( !AC_ParseFile( AC_CVARS_NAME, AC_ParseCvar ) ) {
+        Com_Printf( "ANTICHEAT: Missing " AC_CVARS_NAME ", "
+            "not using any cvar checks.\n" );
+    } else if( !acs.num_cvars ) {
+        Com_Printf( "ANTICHEAT: No cvar checks were loaded, "
+            "please check the " AC_CVARS_NAME ".\n" );
+    }
+
+    //AC_ParseFile( "anticheat-tokens.txt", AC_ParseToken );
+}
+
+static void AC_FreeChecks( void ) {
+    ac_file_t *f, *fn;
+    ac_cvar_t *c, *cn;
+
+    for( f = acs.files; f; f = fn ) {
+        fn = f->next;
+        Z_Free( f );
+    }
+    acs.files = NULL;
+
+    for( c = acs.cvars; c; c = cn ) {
+        cn = c->next;
+        Z_Free( c );
+    }
+    acs.cvars = NULL;
+
+    acs.hashlist_name[0] = 0;
+    acs.num_files = 0;
+    acs.num_cvars = 0;
+}
 
 /*
 ==============================================================================
@@ -170,10 +451,10 @@ static void AC_Drop( void ) {
 
     if( !ac.connected ) {
 		Com_Printf( "ANTICHEAT: Server connection failed. "
-            "Retrying in %d seconds.\n", ac_retry_backoff );
+            "Retrying in %d seconds.\n", acs.retry_backoff );
         clock = time( NULL );
-        ac_retry_time = clock + ac_retry_backoff;
-        ac_retry_backoff += 5;
+        acs.retry_time = clock + acs.retry_backoff;
+        acs.retry_backoff += 5;
         return;
     }
 
@@ -193,17 +474,17 @@ static void AC_Drop( void ) {
                 "You will need to reconnect once the server has "
                 "re-established the anticheat connection.\n" );
         }
-        ac_retry_backoff = AC_DEFAULT_BACKOFF;
+        acs.retry_backoff = AC_DEFAULT_BACKOFF;
 	} else {
-        ac_retry_backoff += 30; // this generally indicates a server problem
+        acs.retry_backoff += 30; // this generally indicates a server problem
     }
 
 	Com_WPrintf(
         "ANTICHEAT: Lost connection to anticheat server! "
-        "Will attempt to reconnect in %d seconds.\n", ac_retry_backoff );
+        "Will attempt to reconnect in %d seconds.\n", acs.retry_backoff );
 
     clock = time( NULL );
-    ac_retry_time = clock + ac_retry_backoff;
+    acs.retry_time = clock + acs.retry_backoff;
 
     memset( &ac, 0, sizeof( ac ) );
 }
@@ -337,7 +618,7 @@ static void AC_ParseClientAck( void ) {
         return;
     }
 
-	if( cl->state != cs_connected && cl->state != cs_primed ) {
+	if( cl->state < cs_connected || cl->state > cs_primed ) {
 		Com_DPrintf( "ANTICHEAT: %s with client in state %d\n",
             __func__, cl->state );
 		return;
@@ -368,7 +649,7 @@ static void AC_ParseFileViolation( void ) {
     cl->ac_file_failures++;
 
     action = ac_badfile_action->integer;
-    for( f = ac.files; f; f = f->next ) {
+    for( f = acs.files; f; f = f->next ) {
         if( !strcmp( f->path, path ) ) {
             if( f->flags & ACH_REQUIRED ) {
                 action = 1;
@@ -425,7 +706,7 @@ static void AC_ParseFileViolation( void ) {
 static void AC_ParseReady( void ) {
 	ac.ready = qtrue;
     ac.last_ping = svs.realtime;
-	ac_retry_backoff = AC_DEFAULT_BACKOFF;
+	acs.retry_backoff = AC_DEFAULT_BACKOFF;
 	Com_Printf( "ANTICHEAT: Ready to serve anticheat clients.\n" );
 	Cvar_FullSet( "anticheat", ac_required->string,
         CVAR_SERVERINFO | CVAR_NOSET, CVAR_SET_DIRECT );
@@ -485,7 +766,7 @@ static void AC_ParseError( void ) {
     AC_Disconnect();
 }
 
-static void AC_ParseMessage( void ) {
+static qboolean AC_ParseMessage( void ) {
     uint16 msglen;
     byte *data;
     int length;
@@ -494,16 +775,16 @@ static void AC_ParseMessage( void ) {
     // parse msglen
     if( !ac.msglen ) {
         if( !FIFO_TryRead( &ac.stream.recv, &msglen, 2 ) ) {
-            return;
+            return qfalse;
         }
         if( !msglen ) {
-            return;
+            return qtrue;
         }
         msglen = LittleShort( msglen );
         if( msglen > AC_RECV_SIZE ) {
             Com_EPrintf( "ANTICHEAT: Oversize message: %d bytes\n", msglen );
             AC_Drop();
-            return;
+            return qfalse;
         }
         ac.msglen = msglen;
     }
@@ -512,7 +793,7 @@ static void AC_ParseMessage( void ) {
     data = FIFO_Peek( &ac.stream.recv, &length );
     if( length < ac.msglen ) {
         if( !FIFO_TryRead( &ac.stream.recv, msg_read_buffer, ac.msglen ) ) {
-            return; // not yet available
+            return qfalse; // not yet available
         }
         SZ_Init( &msg_read, msg_read_buffer, sizeof( msg_read_buffer ) );
     } else {
@@ -542,22 +823,22 @@ static void AC_ParseMessage( void ) {
         break;
     case ACS_ERROR:
         AC_ParseError();
-        break;
+        return qfalse;
     case ACS_NOACCESS:
         Com_WPrintf( "ANTICHEAT: You do not have permission to "
             "use the anticheat server. Anticheat disabled.\n" );
         AC_Disconnect();
-        break;
+        return qfalse;
     case ACS_UPDATE_REQUIRED:
         Com_WPrintf( "ANTICHEAT: The anticheat server is no longer "
             "compatible with this version of " APPLICATION ". "
             "Please make sure you are using the latest " APPLICATION " version. "
             "Anticheat disabled.\n" );
         AC_Disconnect();
-        break;
+        return qfalse;
     case ACS_DISCONNECT:
         AC_ParseDisconnect();
-        break;
+        return qfalse;
     case ACS_PONG:
         ac.ping_pending = qfalse;
         ac.last_ping = svs.realtime;
@@ -567,9 +848,10 @@ static void AC_ParseMessage( void ) {
             "sure you are using the latest " APPLICATION " version. "
             "Anticheat disabled.\n", cmd );
         AC_Disconnect();
-        break;
+        return qfalse;
 	}
 
+    return qtrue;
 }
 
 /*
@@ -789,11 +1071,11 @@ static void AC_SendChecks( void ) {
 
     MSG_WriteShort( 9 );
     MSG_WriteByte( ACC_UPDATECHECKS );
-    MSG_WriteLong( ac.num_files );
-    MSG_WriteLong( ac.num_cvars );
+    MSG_WriteLong( acs.num_files );
+    MSG_WriteLong( acs.num_cvars );
     AC_Flush();
 
-    for( f = ac.files, p = NULL; f; p = f, f = f->next ) {
+    for( f = acs.files, p = NULL; f; p = f, f = f->next ) {
         MSG_WriteData( f->hash, sizeof( f->hash ) );
         MSG_WriteByte( f->flags );
         if( p && !strcmp( f->path, p->path ) ) {
@@ -804,7 +1086,7 @@ static void AC_SendChecks( void ) {
         AC_Flush();
     }
 
-    for( c = ac.cvars; c; c = c->next ) {
+    for( c = acs.cvars; c; c = c->next ) {
         AC_WriteString( c->name );
         MSG_WriteByte( c->op );
         MSG_WriteByte( c->num_values );
@@ -920,14 +1202,14 @@ static qboolean AC_Reconnect( void ) {
     ac.stream.send.size = AC_SEND_SIZE;
     ac.stream.recv.data = ac_recv_buffer;
     ac.stream.recv.size = AC_RECV_SIZE;
-    ac_retry_time = 0;
+    acs.retry_time = 0;
     return qtrue;
 
 fail:
-    ac_retry_backoff += 60;
-    Com_Printf( "ANTICHEAT: Retrying in %d seconds.\n", ac_retry_backoff );
+    acs.retry_backoff += 60;
+    Com_Printf( "ANTICHEAT: Retrying in %d seconds.\n", acs.retry_backoff );
     clock = time( NULL );
-    ac_retry_time = clock + ac_retry_backoff;
+    acs.retry_time = clock + acs.retry_backoff;
     return qfalse;
 }
 
@@ -936,9 +1218,9 @@ void AC_Run( void ) {
     neterr_t ret;
     time_t clock;
 
-    if( ac_retry_time ) {
+    if( acs.retry_time ) {
         clock = time( NULL );
-        if( ac_retry_time < clock ) {
+        if( acs.retry_time < clock ) {
 		    Com_Printf( "ANTICHEAT: Attempting to reconnect to anticheat server...\n" );
             AC_Reconnect();
         }
@@ -968,7 +1250,8 @@ void AC_Run( void ) {
             ac.connected = qtrue;
             AC_SendHello();
         }
-        AC_ParseMessage();
+        while( AC_ParseMessage() )
+            ;
         AC_CheckTimeouts();
         break;
     }
@@ -989,10 +1272,12 @@ void AC_Connect( void ) {
     }
 #endif
 
+    AC_LoadChecks();
+
 	Com_Printf( "ANTICHEAT: Attempting to connect to %s...\n", ac_server_address->string );
     Sys_RunConsole();
 
-    ac_retry_backoff = AC_DEFAULT_BACKOFF;
+    acs.retry_backoff = AC_DEFAULT_BACKOFF;
     if( !AC_Reconnect() ) {
         return;
     }
@@ -1003,18 +1288,20 @@ void AC_Connect( void ) {
         Sys_Sleep( 1 );
         AC_Run();
         if( ac.ready || !ac.stream.state ) {
-            break;
+            return;
         }
     }
+
+	Com_WPrintf( "ANTICHEAT: Still not ready, resuming server initialization.\n" );
 }
 
 void AC_Disconnect( void ) {
     NET_Close( &ac.stream );
 
-    ac_retry_time = 0;
-    ac_retry_backoff = AC_DEFAULT_BACKOFF;
+    AC_FreeChecks();
 
     memset( &ac, 0, sizeof( ac ) );
+    memset( &acs, 0, sizeof( acs ) );
     Cvar_SetByVar( ac_required, "0", CVAR_SET_DIRECT );
     Cvar_FullSet( "anticheat", "0", CVAR_NOSET, CVAR_SET_DIRECT );
 }
@@ -1023,6 +1310,11 @@ void AC_List_f( void ) {
 	client_t	*cl;
 	char	*sub;
     int i;
+
+    if( !svs.initialized ) {
+		Com_Printf( "No server running.\n" );
+        return;
+    }
 
 	if( !ac_required->integer ) {
 		Com_Printf( "The anticheat module is not in use on this server.\n"
@@ -1062,6 +1354,10 @@ void AC_List_f( void ) {
 
 	Com_Printf( "+----------------+--------+-----+------+\n" );
 
+    if( ac.ready ) {
+        Com_Printf( "File check list in use: %s\n", acs.hashlist_name );
+    }
+
     Com_Printf(
         "This Quake II server is %sconnected to the anticheat server.\n"
         "For information on anticheat, please visit http://antiche.at/\n",
@@ -1071,6 +1367,11 @@ void AC_List_f( void ) {
 void AC_Info_f( void ) {
 	//client_t			*cl;
 	//linkednamelist_t	*bad;
+
+    if( !svs.initialized ) {
+		Com_Printf( "No server running.\n" );
+        return;
+    }
 
 	if( !ac_required->integer ) {
 		Com_Printf( "The anticheat module is not in use on this server.\n"
@@ -1100,6 +1401,10 @@ void AC_Info_f( void ) {
 static void AC_Invalidate_f( void ) {
 	client_t	*cl;
 
+    if( !svs.initialized ) {
+		Com_Printf( "No server running.\n" );
+        return;
+    }
 	if( !ac.ready ) {
 		Com_Printf( "Anticheat is not ready.\n" );
 		return;
@@ -1115,12 +1420,22 @@ static void AC_Invalidate_f( void ) {
 }
 
 static void AC_Update_f( void ) {
-	if( !ac.ready ) {
-		Com_Printf( "Anticheat is not ready.\n" );
+    if( !svs.initialized ) {
+		Com_Printf( "No server running.\n" );
+        return;
+    }
+    if( !ac_required->integer ) {
+		Com_Printf( "Anticheat is not in use.\n" );
 		return;
+    }
+
+    AC_FreeChecks();
+    AC_LoadChecks();
+
+	if( ac.connected ) {
+	    AC_SendChecks();
 	}
 
-	AC_SendChecks();
 	Com_Printf( "Anticheat configuration updated.\n" );
 }
 

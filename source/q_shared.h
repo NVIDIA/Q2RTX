@@ -457,6 +457,8 @@ int Q_strncasecmp( const char *s1, const char *s2, int n );
 
 int QDECL SortStrcmp( const void *p1, const void *p2 );
 
+char *Q_strchrnul( const char *s, int c );
+
 char *COM_SkipPath( const char *pathname );
 void COM_StripExtension( const char *in, char *out, int outSize );
 void COM_FileBase (char *in, char *out);
@@ -468,7 +470,7 @@ char *COM_FileExtension( const char *in );
 qboolean COM_IsNumeric( const char *string );
 qboolean COM_HasSpaces( const char *string );
 
-char *COM_SimpleParse( const char **data_p );
+char *COM_SimpleParse( const char **data_p, int *length );
 char *COM_Parse( const char **data_p );
 // data is an in/out parm, returns a parsed out token
 int COM_Compress( char *data );
