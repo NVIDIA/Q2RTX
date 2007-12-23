@@ -331,15 +331,15 @@ static void AC_ParseCvar( const char *data, int linenum, const char *path ) {
         val = p + 1;
     }
 
-    Z_TagReserve( sizeof( *cvar ) + namelen + 1 + deflen + 1 +
-        num_values * sizeof( char * ) + vallen + 1, TAG_SERVER );
+    Z_TagReserve( sizeof( *cvar ) + num_values * sizeof( char * ) +
+        namelen + 1 + deflen + 1 + vallen + 1, TAG_SERVER );
     cvar = Z_ReservedAlloc( sizeof( *cvar ) );
+    cvar->values = Z_ReservedAlloc( num_values * sizeof( char * ) );
     cvar->name = Z_ReservedAlloc( namelen + 1 );
     memcpy( cvar->name, name, namelen + 1 );
     cvar->def = Z_ReservedAlloc( deflen + 1 );
     memcpy( cvar->def, def, deflen + 1 );
     cvar->num_values = num_values;
-    cvar->values = Z_ReservedAlloc( num_values * sizeof( char * ) );
     for( i = 0; i < num_values; i++ ) {
         cvar->values[i] = Z_ReservedAlloc( lengths[i] );
         memcpy( cvar->values[i], values[i], lengths[i] );
