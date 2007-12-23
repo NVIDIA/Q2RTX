@@ -390,7 +390,11 @@ void SV_New_f( void ) {
 
 	// send version string request
 	if( !sv_client->versionString ) {
-		SV_ClientCommand( sv_client, "cmd \177c version $version\n" );
+		SV_ClientCommand( sv_client, "cmd \177c version $version\n"
+#if USE_ANTICHEAT & 2
+            "cmd \177c actoken $actoken\n"
+#endif
+            );
 	}
 
     // send reconnect var request
@@ -769,6 +773,11 @@ static void SV_CvarResult_f( void ) {
             }
         }
     }
+#if USE_ANTICHEAT & 2
+	else if( !strcmp( c, "actoken" ) ) {
+        AC_ClientToken( sv_client, Cmd_Argv( 2 ) );
+    }
+#endif
 }
 
 #if USE_ANTICHEAT & 2

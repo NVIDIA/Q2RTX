@@ -106,6 +106,8 @@ typedef struct {
     ac_cvar_t *cvars;
     int num_cvars;
 
+    string_entry_t *tokens;
+
     char hashlist_name[MAX_QPATH];
 } ac_static_t;
 
@@ -169,6 +171,10 @@ FILE PARSING
 #define AC_HASHES_NAME  "anticheat-hashes.txt"
 #define AC_CVARS_NAME   "anticheat-cvars.txt"
 #define AC_TOKENS_NAME  "anticheat-tokens.txt"
+
+#define AC_MAX_INCLUDES 16
+
+typedef void (*ac_parse_t)( const char *, int, const char * );
 
 typedef struct {
     char str[4];
@@ -344,7 +350,17 @@ static void AC_ParseCvar( const char *data, int linenum, const char *path ) {
     acs.num_cvars++;
 }
 
-static qboolean AC_ParseFile( const char *path, void (*parse)( const char *, int, const char * ) ) {
+static void AC_ParseToken( const char *data, int linenum, const char *path ) {
+    string_entry_t *tok;
+    int len = strlen( data );
+
+    tok = SV_Malloc( sizeof( *tok ) + len );
+    memcpy( tok->string, data, len );
+    tok->next = acs.tokens;
+    acs.tokens = tok;
+}
+
+static qboolean AC_ParseFile( const char *path, ac_parse_t parse, int depth ) {
     char *data, *p;
     int linenum = 1;
 
@@ -366,7 +382,9 @@ static qboolean AC_ParseFile( const char *path, void (*parse)( const char *, int
             break;
         case '\\':
             if( !strncmp( data + 1, "include ", 8 ) ) {
-                if( !AC_ParseFile( data + 9, parse ) ) {
+                if( depth == AC_MAX_INCLUDES ) {
+                    Com_WPrintf( "ANTICHEAT: Includes too deeply nested.\n" );
+                } else if( !AC_ParseFile( data + 9, parse, depth + 1 ) ) {
                     Com_WPrintf( "ANTICHEAT: Could not include %s\n", data + 9 );
                 }
             } else {
@@ -390,7 +408,7 @@ static qboolean AC_ParseFile( const char *path, void (*parse)( const char *, int
 }
 
 static void AC_LoadChecks( void ) {
-    if( !AC_ParseFile( AC_HASHES_NAME, AC_ParseHash ) ) {
+    if( !AC_ParseFile( AC_HASHES_NAME, AC_ParseHash, 0 ) ) {
         Com_Printf( "ANTICHEAT: Missing " AC_HASHES_NAME ", "
             "not using any file checks.\n" );
         strcpy( acs.hashlist_name, "none" );
@@ -403,7 +421,7 @@ static void AC_LoadChecks( void ) {
              acs.num_files, acs.num_files == 1 ? "entry" : "entries" );
     }
 
-    if( !AC_ParseFile( AC_CVARS_NAME, AC_ParseCvar ) ) {
+    if( !AC_ParseFile( AC_CVARS_NAME, AC_ParseCvar, 0 ) ) {
         Com_Printf( "ANTICHEAT: Missing " AC_CVARS_NAME ", "
             "not using any cvar checks.\n" );
     } else if( !acs.num_cvars ) {
@@ -411,12 +429,13 @@ static void AC_LoadChecks( void ) {
             "please check the " AC_CVARS_NAME ".\n" );
     }
 
-    //AC_ParseFile( "anticheat-tokens.txt", AC_ParseToken );
+    AC_ParseFile( "anticheat-tokens.txt", AC_ParseToken, 0 );
 }
 
 static void AC_FreeChecks( void ) {
     ac_file_t *f, *fn;
     ac_cvar_t *c, *cn;
+    string_entry_t *t, *tn;
 
     for( f = acs.files; f; f = fn ) {
         fn = f->next;
@@ -429,6 +448,12 @@ static void AC_FreeChecks( void ) {
         Z_Free( c );
     }
     acs.cvars = NULL;
+
+    for( t = acs.tokens; t; t = tn ) {
+        tn = t->next;
+        Z_Free( t );
+    }
+    acs.tokens = NULL;
 
     acs.hashlist_name[0] = 0;
     acs.num_files = 0;
@@ -1002,6 +1027,33 @@ void AC_ClientDisconnect( client_t *cl ) {
 	MSG_WriteLong( num );
     MSG_WriteLong( cl->challenge );
     AC_Write( __func__ );
+}
+
+void AC_ClientToken( client_t *cl, const char *token ) {
+    string_entry_t *tok;
+    client_t *other;
+
+    for( tok = acs.tokens; tok; tok = tok->next ) {
+        if( !strcmp( tok->string, token ) ) {
+            break;
+        }
+    }
+
+    if( !tok ) {
+        return;
+    }
+
+    FOR_EACH_CLIENT( other ) {
+        // FIXME: after `svacupdate' this check is incorrect
+        if( other->ac_token == token ) {
+            SV_DropClient( other, "duplicate anticheat token" );
+        }
+    }
+
+    Com_Printf( "ANTICHEAT: %s bypassed anticheat requirements with '%s'\n",
+        cl->name, tok->string );
+    cl->ac_token = tok->string;
+    cl->ac_required = AC_EXEMPT;
 }
 
 /*

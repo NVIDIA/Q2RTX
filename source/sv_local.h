@@ -230,6 +230,7 @@ typedef struct client_s {
     unsigned        ac_query_time;
     int             ac_client_type;
     string_entry_t  *ac_bad_files;
+    char            *ac_token;
 #endif
 } client_t;
 
@@ -507,6 +508,7 @@ char *AC_ClientConnect( client_t *cl );
 void AC_ClientDisconnect( client_t *cl );
 qboolean AC_ClientBegin( client_t *cl );
 void AC_ClientAnnounce( client_t *cl );
+void AC_ClientToken( client_t *cl, const char *token );
 
 void AC_Register( void );
 void AC_Disconnect( void );
