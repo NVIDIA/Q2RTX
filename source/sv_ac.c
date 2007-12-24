@@ -355,7 +355,7 @@ static void AC_ParseToken( const char *data, int linenum, const char *path ) {
     int len = strlen( data );
 
     tok = SV_Malloc( sizeof( *tok ) + len );
-    memcpy( tok->string, data, len );
+    memcpy( tok->string, data, len + 1 );
     tok->next = acs.tokens;
     acs.tokens = tok;
 }
