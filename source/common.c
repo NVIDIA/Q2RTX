@@ -50,7 +50,6 @@ cvar_t	*sv_paused;
 cvar_t	*cl_running;
 cvar_t	*cl_paused;
 cvar_t	*com_timedemo;
-cvar_t	*com_sleep;
 cvar_t	*com_date_format;
 cvar_t	*com_time_format;
 cvar_t	*com_debug_break;
@@ -1262,7 +1261,6 @@ void Qcommon_Init( int argc, char **argv ) {
 	cl_running = Cvar_Get( "cl_running", "0", CVAR_ROM );
 	cl_paused = Cvar_Get( "cl_paused", "0", CVAR_ROM );
 	com_timedemo = Cvar_Get( "timedemo", "0", CVAR_CHEAT );
-	com_sleep = Cvar_Get( "com_sleep", "1", 0 );
 	com_date_format = Cvar_Get( "com_date_format", "%Y-%m-%d", 0 );
 #ifdef _WIN32
 	com_time_format = Cvar_Get( "com_time_format", "%H.%M", 0 );

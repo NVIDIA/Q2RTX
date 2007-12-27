@@ -21,6 +21,8 @@ distclean: clean
 	rm -f config.mk config.h
 	rm -f tags
 
+ifndef SINGLEUSER
+
 install:
 	for t in $(EXECUTABLES) ; do \
 		install -m 755 -D $$t $(DESTDIR)$(BINDIR)/$$t ; \
@@ -29,6 +31,8 @@ install:
 		install -m 755 -D $$t $(DESTDIR)$(REFDIR)/$$t ; \
 	done
 	install -m 644 -D $(SRCDIR)/q2pro.6 $(DESTDIR)$(MANDIR)/q2pro.6
+
+endif # SINGLEUSER
 
 strip:
 	for t in $(BINARIES) ; do \

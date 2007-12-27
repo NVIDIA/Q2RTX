@@ -84,9 +84,6 @@ cvar_t	*sv_badauth_time;
 
 cvar_t	*sv_nextserver;
 
-void Master_Shutdown (void);
-
-
 //============================================================================
 
 void SV_RemoveClient( client_t *client ) {
@@ -1356,6 +1353,78 @@ static void SV_RunGameFrame( void ) {
 }
 
 /*
+================
+SV_MasterHeartbeat
+
+Send a message to the master every few minutes to
+let it know we are alive, and log information
+================
+*/
+#define	HEARTBEAT_SECONDS	300
+static void SV_MasterHeartbeat( void ) {
+	char    buffer[MAX_PACKETLEN_DEFAULT];
+    int     length;
+	int		i;
+
+	if( !dedicated->integer )
+		return;		// only dedicated servers send heartbeats
+
+	if( !sv_public->integer )
+		return;		// a private dedicated game
+
+	// check for time wraparound
+	if( svs.last_heartbeat > svs.realtime )
+		svs.last_heartbeat = svs.realtime;
+
+	if( svs.realtime - svs.last_heartbeat < HEARTBEAT_SECONDS*1000 )
+		return;		// not time to send yet
+
+	svs.last_heartbeat = svs.realtime;
+
+    // write the packet header
+	memcpy( buffer, "\xff\xff\xff\xffheartbeat\n", 14 );
+
+	// send the same string that we would give for a status OOB command
+    length = SV_StatusString( buffer + 14 );
+
+	// send to group master
+	for( i = 0; i < MAX_MASTERS; i++ ) {
+		if( master_adr[i].port ) {
+			Com_Printf( "Sending heartbeat to %s\n",
+                NET_AdrToString( &master_adr[i] ) );
+	        NET_SendPacket( NS_SERVER, &master_adr[i], length + 14, buffer );
+		}
+    }
+}
+
+/*
+=================
+SV_MasterShutdown
+
+Informs all masters that this server is going down
+=================
+*/
+static void SV_MasterShutdown( void ) {
+	int			i;
+
+	if( !dedicated->integer )
+		return;		// only dedicated servers send heartbeats
+
+	if( !sv_public->integer )
+		return;		// a private dedicated game
+
+	// send to group master
+	for( i = 0; i < MAX_MASTERS; i++ ) {
+		if( master_adr[i].port ) {
+			Com_Printf( "Sending shutdown to %s\n",
+                NET_AdrToString( &master_adr[i] ) );
+			OOB_PRINT( NS_SERVER, &master_adr[i], "shutdown" );
+		}
+    }
+}
+
+
+/*
 ==================
 SV_Frame
 
@@ -1373,7 +1442,7 @@ void SV_Frame( int msec ) {
 	// if server is not active, do nothing
 	if( !svs.initialized ) {
 		if( dedicated->integer ) {
-			NET_Sleep( 1 );
+			Sys_Sleep( 1 );
 		}
 		return;
 	}
@@ -1424,12 +1493,8 @@ void SV_Frame( int msec ) {
 				Com_Printf( "sv lowclamp\n" );
 			svs.realtime = sv.time - 100;
 		}
-		if( dedicated->integer && com_sleep->integer ) {
-            if( com_sleep->integer > 1 ) {
-    			NET_Sleep( sv.time - svs.realtime );
-            } else {
-                NET_Sleep( 1 );
-            }
+		if( dedicated->integer ) {
+    		NET_Sleep( sv.time - svs.realtime );
 		}
 		return;
 	}
@@ -1447,89 +1512,12 @@ void SV_Frame( int msec ) {
 	SV_SendClientMessages ();
 
 	// send a heartbeat to the master if needed
-	Master_Heartbeat ();
+	SV_MasterHeartbeat ();
 
 	// clear teleport flags, etc for next frame
 	if( sv.state != ss_broadcast ) {
 		SV_PrepWorldFrame ();
 	}
-}
-
-//============================================================================
-
-/*
-================
-Master_Heartbeat
-
-Send a message to the master every few minutes to
-let it know we are alive, and log information
-================
-*/
-#define	HEARTBEAT_SECONDS	300
-void Master_Heartbeat (void) {
-	char    buffer[MAX_PACKETLEN_DEFAULT];
-    int     length;
-	int		i;
-
-	// pgm post3.19 change, cvar pointer not validated before dereferencing
-	if (!dedicated || !dedicated->integer)
-		return;		// only dedicated servers send heartbeats
-
-	// pgm post3.19 change, cvar pointer not validated before dereferencing
-	if (!sv_public || !sv_public->integer)
-		return;		// a private dedicated game
-
-	// check for time wraparound
-	if (svs.last_heartbeat > svs.realtime)
-		svs.last_heartbeat = svs.realtime;
-
-	if (svs.realtime - svs.last_heartbeat < HEARTBEAT_SECONDS*1000)
-		return;		// not time to send yet
-
-	svs.last_heartbeat = svs.realtime;
-
-    // write the packet header
-	memcpy( buffer, "\xff\xff\xff\xffheartbeat\n", 14 );
-
-	// send the same string that we would give for a status OOB command
-    length = SV_StatusString( buffer + 14 );
-
-	// send to group master
-	for( i = 0; i < MAX_MASTERS; i++ ) {
-		if( master_adr[i].port ) {
-			Com_Printf( "Sending heartbeat to %s\n",
-                NET_AdrToString( &master_adr[i] ) );
-	        NET_SendPacket( NS_SERVER, &master_adr[i], length + 14, buffer );
-		}
-    }
-}
-
-/*
-=================
-Master_Shutdown
-
-Informs all masters that this server is going down
-=================
-*/
-void Master_Shutdown( void ) {
-	int			i;
-
-	// pgm post3.19 change, cvar pointer not validated before dereferencing
-	if (!dedicated || !dedicated->integer)
-		return;		// only dedicated servers send heartbeats
-
-	// pgm post3.19 change, cvar pointer not validated before dereferencing
-	if (!sv_public || !sv_public->integer)
-		return;		// a private dedicated game
-
-	// send to group master
-	for( i = 0; i < MAX_MASTERS; i++ ) {
-		if( master_adr[i].port ) {
-			Com_Printf( "Sending shutdown to %s\n",
-                NET_AdrToString( &master_adr[i] ) );
-			OOB_PRINT( NS_SERVER, &master_adr[i], "shutdown" );
-		}
-    }
 }
 
 //============================================================================
@@ -1709,7 +1697,7 @@ void SV_Init( void ) {
 	sv_noreload = Cvar_Get ("sv_noreload", "0", 0);
 	sv_airaccelerate = Cvar_Get("sv_airaccelerate", "0", CVAR_LATCH);
 	sv_qwmod = Cvar_Get( "sv_qwmod", "0", CVAR_LATCH ); //atu QWMod
-	sv_public = Cvar_Get ("public", "0", 0);
+	sv_public = Cvar_Get( "public", "0", CVAR_LATCH );
 	rcon_password = Cvar_Get( "rcon_password", "", CVAR_PRIVATE );
 	sv_password = Cvar_Get( "sv_password", "", CVAR_PRIVATE );
 	sv_reserved_password = Cvar_Get( "sv_reserved_password", "", CVAR_PRIVATE );
@@ -1863,7 +1851,7 @@ void SV_Shutdown( const char *finalmsg, killtype_t type ) {
         SV_FinalMessage( finalmsg, svc_disconnect );
     }
 
-	Master_Shutdown();
+	SV_MasterShutdown();
 	SV_ShutdownGameProgs();
 
 	// free current level

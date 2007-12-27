@@ -193,7 +193,7 @@ static const ac_cvarop_t ac_cvarops[] = {
     { "eq", OP_STREQUAL, 254 },
     { "ne", OP_STRNEQUAL, 254 },
     { "~", OP_STRSTR, 254 },
-    { 0 }
+    { "" }
 };
 
 

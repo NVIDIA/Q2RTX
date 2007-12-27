@@ -11,6 +11,11 @@ if [ "$sources" = "." ]; then
 fi
 outdir=`pwd`
 prefix="/usr/local"
+datadir="share/games/quake2"
+libdir="lib/games/quake2"
+refdir="lib/games/q2pro"
+bindir="games"
+mandir="share/man/man6"
 cross_prefix=""
 cc="gcc"
 make="make"
@@ -42,9 +47,10 @@ libraries=""
 hardlink="no"
 asm="no"
 anticheat="no"
+singleuser="no"
 gldriver="libGL.so"
 indriver=""
-homedir=".q2pro"
+homedir="~/.q2pro"
 defcfg="/etc/default/q2pro"
 asmflags=""
 logfile="console.log"
@@ -55,7 +61,7 @@ histfile=".conhistory"
 democache=".democache"
 screenshots="screenshots"
 scoreshots="scoreshots"
-revision="169"
+revision="170"
 tmpc="/tmp/q2pro-${RANDOM}.c"
 tmpo="/tmp/q2pro-${RANDOM}.o"
 
@@ -154,6 +160,20 @@ for opt do
     ;;
     --enable-anticheat) anticheat="yes"
     ;;
+    --single-user) singleuser="yes"
+    ;;
+    --datadir=*) datadir=`echo $opt | cut -d '=' -f 2`
+    ;;
+    --libdir=*) libdir=`echo $opt | cut -d '=' -f 2`
+    ;;
+    --refdir=*) refdir=`echo $opt | cut -d '=' -f 2`
+    ;;
+    --bindir=*) bindir=`echo $opt | cut -d '=' -f 2`
+    ;;
+    --mandir=*) mandir=`echo $opt | cut -d '=' -f 2`
+    ;;
+    --homedir=*) homedir=`echo $opt | cut -d '=' -f 2`
+    ;;
     *) echo "Unknown option: $opt (try --help)" && exit 1
     ;;
     esac
@@ -163,30 +183,47 @@ if [ "$help" = "yes" ]; then
 echo "Usage: $0 [options]"
 echo ""
 echo "Options:"
-echo "  --help                      print this message"
-echo "  --prefix=PREFIX             install in PREFIX [$prefix]"
-echo "  --cross-prefix=PREFIX       add PREFIX to compile tools [$cross_prefix]"
-echo "  --cc=CC                     use C compiler [$cc]"
-echo "  --make=MAKE                 use MAKE processor [$make]"
-echo "  --windres=WINDRES           use RC compiler [$windres]"
-echo "  --hardlink                  link client with ref_gl and mod_ui"
-echo "  --disable-client            do not build client"
-echo "  --enable-server             build dedicated server"
-echo "  --enable-openffa            build OpenFFA deathmatch mod"
-echo "  --enable-mingw              enable Windows build"
-echo "  --enable-dsound             enable DirectSound driver"
-echo "  --enable-dinput             enable DirectInput driver"
-echo "  --disable-wave              disable WAVE sound driver"
-echo "  --disable-oss               disable OSS driver"
-echo "  --disable-evdev             disable Evdev driver"
-echo "  --disable-zlib              disable linking with zlib"
-echo "  --enable-png                enable linking with PNG library"
-echo "  --enable-jpeg               enable linking with JPEG library"
-echo "  --disable-asm               disable i386 assembly optimizations"
-echo "  --enable-anticheat          enable r1ch.net anticheat server interface"
+echo "  --help                 print this message"
+echo "  --cross-prefix=PREFIX  add PREFIX to compile tools [$cross_prefix]"
+echo "  --cc=CC                use C compiler [$cc]"
+echo "  --make=MAKE            use MAKE processor [$make]"
+echo "  --windres=WINDRES      use RC compiler [$windres]"
+echo "  --hardlink             link client with ref_gl and mod_ui"
+echo "  --disable-client       do not build client"
+echo "  --enable-server        build dedicated server"
+echo "  --enable-openffa       build OpenFFA deathmatch mod"
+echo "  --enable-mingw         enable Windows build"
+echo "  --enable-dsound        enable DirectSound driver"
+echo "  --enable-dinput        enable DirectInput driver"
+echo "  --disable-wave         disable WAVE sound driver"
+echo "  --disable-oss          disable OSS driver"
+echo "  --disable-evdev        disable Evdev driver"
+echo "  --disable-zlib         disable linking with zlib"
+echo "  --enable-png           enable linking with PNG library"
+echo "  --enable-jpeg          enable linking with JPEG library"
+echo "  --disable-asm          disable i386 assembly optimizations"
+echo "  --enable-anticheat     enable r1ch.net anticheat server interface"
+echo "  --single-user          assume to be installed in home dir"
+echo "  --prefix=PREFIX        install in PREFIX [$prefix]"
+echo "  --datadir=DIR          game data tree [$datadir]"
+echo "  --libdir=DIR           game libraries tree [$libdir]"
+echo "  --refdir=DIR           refresh libraries directory [$refdir]"
+echo "  --bindir=DIR           executables directory [$bindir]"
+echo "  --mandir=DIR           manpages directory [$mandir]"
+echo "  --homedir=DIR          home directory [$homedir]"
 echo ""
 echo "Object files are built in the directory from which configure is run."
 exit 1
+fi
+
+if [ "$singleuser" = "yes" ]; then
+    prefix=""
+    datadir="."
+    libdir="."
+    refdir="."
+    bindir=""
+    mandir=""
+    homedir=""
 fi
 
 if [ "$mingw" = "yes" ]; then
@@ -210,11 +247,13 @@ else
     gamelib="game$cpu.so"
     exported="__attribute__((visibility(\"default\")))"
 
-    datadir="$prefix/share/games/quake2"
-    libdir="$prefix/lib/games/quake2"
-    refdir="$prefix/lib/games/q2pro"
-    bindir="$prefix/games"
-    mandir="$prefix/share/man/man6"
+    if [ ! -z "$prefix" ]; then
+        datadir="$prefix/$datadir"
+        libdir="$prefix/$libdir"
+        refdir="$prefix/$refdir"
+        bindir="$prefix/$bindir"
+        mandir="$prefix/$mandir"
+    fi
 
 # check if -fvisibility is supported
     echo "int main(){return 0;}" > $tmpc
@@ -246,14 +285,18 @@ fi
 echo "Build server       $server"
 echo "Build OpenFFA      $openffa"
 if [ "$mingw" = "no" ]; then
-    echo "Install prefix     $prefix"
-    echo "Data directory     $datadir"
-    echo "Game libraries     $libdir"
-    if [ "$client" = "yes" ]; then
-        echo "Refresh libraries  $refdir"
+    if [ "$singleuser" = "yes" ]; then
+        echo "Single user        $singleuser"
+    else
+        echo "Data directory     $datadir"
+        echo "Game libraries     $libdir"
+        if [ "$client" = "yes" ]; then
+            echo "Refresh libraries  $refdir"
+        fi
+        echo "Binaries           $bindir"
+        echo "Man pages          $mandir"
+        echo "Home directory     $homedir"
     fi
-    echo "Binaries           $bindir"
-    echo "Man pages          $mandir"
 fi
 echo "zlib support       $zlib"
 if [ "$client" = "yes" ]; then
@@ -348,12 +391,14 @@ if [ "$mingw" = "no" ]; then
     echo "REFDIR=$refdir" >> $config_mk
     echo "#define REFDIR \"$refdir\"" >> $config_h
 
-    echo "BINDIR=$bindir" >> $config_mk
-    echo "#define BINDIR \"$bindir\"" >> $config_h
-
-    echo "MANDIR=$mandir" >> $config_mk
-
     echo "#define HOMEDIR \"$homedir\"" >> $config_h
+
+    if [ "$singleuser" = "yes" ]; then
+        echo "SINGLEUSER=$singleuser" >> $config_mk
+    else
+        echo "BINDIR=$bindir" >> $config_mk
+        echo "MANDIR=$mandir" >> $config_mk
+    fi
 fi
 
 echo "#define EXPORTED $exported" >> $config_h

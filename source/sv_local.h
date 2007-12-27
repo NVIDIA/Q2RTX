@@ -308,7 +308,6 @@ typedef struct server_static_s {
 	uint32			nextEntityStates;	// next entityState to use
 	entity_state_t	*entityStates;		// [numEntityStates]
 
-
     list_t          tcp_client_pool;
     list_t          tcp_client_list;
 

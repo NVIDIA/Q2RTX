@@ -6,12 +6,12 @@ Build-Depends: cdbs, debhelper (>= 5), libx11-dev, libsdl1.2-dev,
  libpng12-dev, libjpeg62-dev, zlib1g-dev, mesa-common-dev
 Standards-Version: 3.7.2
 
-Package: q2pro
+Package: q2pro-client
 Architecture: i386
 Depends: ${shlibs:Depends}, quake2-data
-Description: Enhanced Quake II engine for multiplayer
- Q2PRO is a Quake II engine modification designed for online play,
- fully compatible with original Quake II clients and servers.
+Description: Enhanced Quake 2 client for multiplayer
+ Q2PRO is a Quake 2 engine modification designed for online play,
+ fully compatible with original Quake 2 clients and servers.
  .
  Q2PRO features enhanced graphical console, support for 32-bit textures and
  MD3 models, network protocol optimizations, freely resizable windows,
@@ -21,5 +21,21 @@ Description: Enhanced Quake II engine for multiplayer
  Both OpenGL and software refresh modules are included, so that 3D graphics
  accelerator is not mandatory to play Q2PRO, although highly recommended to
  take most of Q2PRO features.
+ .
+ Homepage: http://q2pro.sourceforge.net/
+
+Package: q2pro-server
+Architecture: i386
+Depends: ${shlibs:Depends}
+Description: Dedicated Quake 2 server
+ Q2PRO is a Quake 2 engine modification designed for online play,
+ fully compatible with original Quake 2 clients and servers.
+ .
+ Q2PRO dedicated server features multi-view demo recording capabilities,
+ game television support, network protocol optimizations, increased security
+ and overall performance.
+ .
+ This package contains streamlined server executable, with all client side
+ code stripped out. Use it for hosting long running Quake 2 servers.
  .
  Homepage: http://q2pro.sourceforge.net/

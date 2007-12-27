@@ -263,9 +263,6 @@ void SV_InitGame( qboolean ismvd ){
     }
 #endif
 
-	// heartbeats will always be sent to the id master
-	svs.last_heartbeat = -99999;		// send immediately
-
 	// init game
 	if( ismvd ) {
 		if( ge ) {

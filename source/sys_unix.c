@@ -762,8 +762,7 @@ Sys_Init
 =================
 */
 void Sys_Init( void ) {
-    char	homedir[MAX_OSPATH];
-    char    *s;
+    char    *homedir;
 
 	signal( SIGTERM, Sys_Kill );
 	signal( SIGINT, Sys_Kill );
@@ -777,11 +776,15 @@ void Sys_Init( void ) {
     
 	// homedir <path>
 	// specifies per-user writable directory for demos, screenshots, etc
-    s = getenv( "HOME" );
-    if( s && *s ) {
-	    Q_concat( homedir, sizeof( homedir ), s, "/" HOMEDIR, NULL );
+    if( HOMEDIR[0] == '~' ) {
+        char *s = getenv( "HOME" );
+        if( s && *s ) {
+            homedir = va( "%s%s", s, HOMEDIR + 1 );
+        } else {
+            homedir = "";
+        }
     } else {
-        homedir[0] = 0;
+        homedir = HOMEDIR;
     }
 	sys_homedir = Cvar_Get( "homedir", homedir, CVAR_NOSET );
 

@@ -36,40 +36,36 @@ SV_SetMaster_f
 Specify a list of master servers
 ====================
 */
-void SV_SetMaster_f (void)
-{
+static void SV_SetMaster_f( void ) {
 	int		i, slot;
 
 	// only dedicated servers send heartbeats
-	if (!dedicated->integer)
-	{
-		Com_Printf ("Only dedicated servers use masters.\n");
+	if( !dedicated->integer ) {
+		Com_Printf( "Only dedicated servers use masters.\n" );
 		return;
 	}
 
 	// make sure the server is listed public
-	Cvar_Set ("public", "1");
+	Cvar_Set( "public", "1" );
 
-	for (i=0 ; i<MAX_MASTERS ; i++)
-		memset (&master_adr[i], 0, sizeof(master_adr[0]));
+	for( i = 0; i < MAX_MASTERS; i++ )
+		memset( &master_adr[i], 0, sizeof( master_adr[0] ) );
 
 	slot = 0;
-	for (i=1 ; i<Cmd_Argc() ; i++)
-	{
-		if (slot == MAX_MASTERS) {
-		    Com_Printf ("Too many masters.\n");
+	for( i = 1; i < Cmd_Argc(); i++) {
+		if( slot == MAX_MASTERS ) {
+		    Com_Printf( "Too many masters.\n" );
 			break;
         }
 
-		if (!NET_StringToAdr (Cmd_Argv(i), &master_adr[slot]))
-		{
-			Com_Printf ("Bad address: %s\n", Cmd_Argv(i));
+		if( !NET_StringToAdr( Cmd_Argv( i ), &master_adr[slot] ) ) {
+			Com_Printf( "Bad address: %s\n", Cmd_Argv( i ) );
 			continue;
 		}
-		if (master_adr[slot].port == 0)
-			master_adr[slot].port = BigShort (PORT_MASTER);
+		if( master_adr[slot].port == 0 )
+			master_adr[slot].port = BigShort( PORT_MASTER );
 
-		Com_Printf ("Master server at %s\n", NET_AdrToString (&master_adr[slot]));
+		Com_Printf( "Master server at %s\n", NET_AdrToString( &master_adr[slot] ) );
 
 		//Com_Printf ("Sending a ping.\n");
 
@@ -78,7 +74,7 @@ void SV_SetMaster_f (void)
 		slot++;
 	}
 
-	svs.last_heartbeat = -9999999;
+	svs.last_heartbeat = 0;
 }
 
 static const char *SV_SetPlayer_g( const char *partial, int state ) {
@@ -451,7 +447,7 @@ SV_Heartbeat_f
 ==================
 */
 static void SV_Heartbeat_f( void ) {
-	svs.last_heartbeat = -9999999;
+	svs.last_heartbeat = 0;
 }
 
 
