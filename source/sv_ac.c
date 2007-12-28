@@ -544,11 +544,16 @@ static void AC_Announce( client_t *client, const char *fmt, ... ) {
 
 static client_t *AC_ParseClient( void ) {
     client_t *cl;
-	uint16 clientID = MSG_ReadShort();
+	uint16 clientID;
+    uint32 challenge;
 
-	// we check challenge to ensure we don't get
-    // a race condition if a client reconnects.
-	uint32 challenge = MSG_ReadLong();
+    if( msg_read.readcount + 6 > msg_read.cursize ) {
+        Com_DPrintf( "ANTICHEAT: Message too short in %s\n", __func__ );
+        return NULL;
+    }
+
+    clientID = MSG_ReadShort();
+	challenge = MSG_ReadLong();
 
 	if( clientID >= sv_maxclients->integer ) {
 		Com_WPrintf( "ANTICHEAT: Illegal client ID: %u\n", clientID );
@@ -557,6 +562,8 @@ static client_t *AC_ParseClient( void ) {
 
 	cl = &svs.clientpool[clientID];
 
+	// we check challenge to ensure we don't get
+    // a race condition if a client reconnects.
 	if( cl->challenge != challenge ) {
 		return NULL;
     }
@@ -574,6 +581,11 @@ static void AC_ParseViolation( void ) {
 
     cl = AC_ParseClient();
     if( !cl ) {
+        return;
+    }
+
+    if( msg_read.readcount + 1 > msg_read.cursize ) {
+        Com_DPrintf( "ANTICHEAT: Message too short in %s\n", __func__ );
         return;
     }
 
@@ -642,6 +654,11 @@ static void AC_ParseClientAck( void ) {
         return;
     }
 
+    if( msg_read.readcount + 1 > msg_read.cursize ) {
+        Com_DPrintf( "ANTICHEAT: Message too short in %s\n", __func__ );
+        return;
+    }
+
 	if( cl->state < cs_connected || cl->state > cs_primed ) {
 		Com_DPrintf( "ANTICHEAT: %s with client in state %d\n",
             __func__, cl->state );
@@ -661,6 +678,11 @@ static void AC_ParseFileViolation( void ) {
 
     cl = AC_ParseClient();
     if( !cl ) {
+        return;
+    }
+
+    if( msg_read.readcount + 1 > msg_read.cursize ) {
+        Com_DPrintf( "ANTICHEAT: Message too short in %s\n", __func__ );
         return;
     }
 
@@ -739,6 +761,11 @@ static void AC_ParseQueryReply( void ) {
         return;
     }
 
+    if( msg_read.readcount + 4 > msg_read.cursize ) {
+        Com_DPrintf( "ANTICHEAT: Message too short in %s\n", __func__ );
+        return;
+    }
+
 	type = MSG_ReadByte();
     MSG_ReadByte();
     MSG_ReadByte();
@@ -750,10 +777,14 @@ static void AC_ParseQueryReply( void ) {
 		cl->ac_valid = qtrue;
 	}
 
-	if( cl->state < cs_connected || cl->state > cs_primed ) {
+    if( cl->state == cs_connected ) {
+    	return; // handle possible map change
+    }
+
+	if( cl->state != cs_primed ) {
 		Com_DPrintf( "ANTICHEAT: %s with client in state %d\n",
             __func__, cl->state );
-		SV_DropClient( cl, NULL );
+    	SV_DropClient( cl, NULL );
 		return;
 	}
 
@@ -777,11 +808,6 @@ static void AC_ParseDisconnect ( void ) {
 		Com_Printf( "ANTICHEAT: Dropping %s, disconnect message.\n", cl->name );
 		SV_DropClient( cl, NULL );
 	}
-}
-
-static void AC_ParseError( void ) {
-    //Com_EPrintf( "ANTICHEAT: %s\n", AC_ReadString() );
-    AC_Disconnect();
 }
 
 static qboolean AC_ParseMessage( void ) {
@@ -840,7 +866,8 @@ static qboolean AC_ParseMessage( void ) {
         AC_ParseQueryReply();
         break;
     case ACS_ERROR:
-        AC_ParseError();
+        Com_EPrintf( "ANTICHEAT: %s\n", MSG_ReadString() );
+        AC_Disconnect();
         return qfalse;
     case ACS_NOACCESS:
         Com_WPrintf( "ANTICHEAT: You do not have permission to "
@@ -868,6 +895,11 @@ static qboolean AC_ParseMessage( void ) {
         AC_Disconnect();
         return qfalse;
 	}
+
+    if( msg_read.readcount > msg_read.cursize ) {
+        Com_WPrintf( "ANTICHEAT: Read %d bytes past end of message %d\n",
+            msg_read.readcount - msg_read.cursize, cmd );
+    }
 
     return qtrue;
 }

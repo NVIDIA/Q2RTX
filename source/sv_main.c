@@ -1447,10 +1447,6 @@ void SV_Frame( int msec ) {
 		return;
 	}
 
-#if USE_ANTICHEAT & 2
-    AC_Run();
-#endif
-
 #ifndef DEDICATED_ONLY
     if( cl_paused->integer && sv_maxclients->integer == 1 ) {
         if( !sv_paused->integer ) {
@@ -1474,6 +1470,10 @@ void SV_Frame( int msec ) {
 
 	time = 1000 * sv_ghostime->value;
 	svs.ghostpoint = svs.realtime > time ? svs.realtime - time : 0;
+
+#if USE_ANTICHEAT & 2
+    AC_Run();
+#endif
 
     if( sv_http_enable->integer ) {
         SV_HttpRun();
