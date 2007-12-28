@@ -568,7 +568,7 @@ static client_t *AC_ParseClient( void ) {
 		return NULL;
     }
 
-	if( cl->state < cs_connected ) {
+	if( cl->state < cs_assigned ) {
         return NULL;
     }
 
@@ -659,12 +659,13 @@ static void AC_ParseClientAck( void ) {
         return;
     }
 
-	if( cl->state < cs_connected || cl->state > cs_primed ) {
+	if( cl->state > cs_primed ) {
 		Com_DPrintf( "ANTICHEAT: %s with client in state %d\n",
             __func__, cl->state );
 		return;
 	}
 
+    Com_DPrintf( "ANTICHEAT: %s for %s\n", __func__, cl->name );
 	cl->ac_client_type = MSG_ReadByte();
 	cl->ac_valid = qtrue;
 }
@@ -761,14 +762,12 @@ static void AC_ParseQueryReply( void ) {
         return;
     }
 
-    if( msg_read.readcount + 4 > msg_read.cursize ) {
+    if( msg_read.readcount + 2 > msg_read.cursize ) {
         Com_DPrintf( "ANTICHEAT: Message too short in %s\n", __func__ );
         return;
     }
 
 	type = MSG_ReadByte();
-    MSG_ReadByte();
-    MSG_ReadByte();
     valid = MSG_ReadByte();
 
 	cl->ac_query_sent = AC_QUERY_DONE;
@@ -777,17 +776,16 @@ static void AC_ParseQueryReply( void ) {
 		cl->ac_valid = qtrue;
 	}
 
-    if( cl->state == cs_connected ) {
-    	return; // handle possible map change
-    }
-
-	if( cl->state != cs_primed ) {
+	if( cl->state < cs_connected || cl->state > cs_primed ) {
 		Com_DPrintf( "ANTICHEAT: %s with client in state %d\n",
             __func__, cl->state );
     	SV_DropClient( cl, NULL );
 		return;
 	}
 
+    Com_DPrintf( "ANTICHEAT: %s for %s\n", __func__, cl->name );
+
+    // SV_Begin_f will handle possible map change
     sv_client = cl;
     sv_player = cl->edict;
 	SV_Begin_f();
