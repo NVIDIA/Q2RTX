@@ -1443,7 +1443,7 @@ Qcommon_Frame
 */
 void Qcommon_Frame( void ) {
 	int		time_before, time_event, time_between, time_after;
-	uint32	realTime, msec;
+	uint32	oldtime, msec;
     static float frac;
 
 	if( _setjmp( abortframe ) ) {
@@ -1455,15 +1455,13 @@ void Qcommon_Frame( void ) {
 	if( host_speeds->integer )
 		time_before = Sys_Milliseconds();
 
+    oldtime = com_eventTime;
+	com_eventTime = Sys_Realtime();
 	do {
 		Com_ProcessEvents();
-		realTime = Sys_Realtime();
-        if( com_eventTime > realTime ) {
-            com_eventTime = realTime;
-        }
-		msec = realTime - com_eventTime;
+		com_eventTime = Sys_Realtime();
+		msec = com_eventTime - oldtime;
 	} while( msec < 1 );
-	com_eventTime = realTime;
 
     if( msec > 250 ) {
         Com_DPrintf( "Hitch warning: %u msec frame time\n", msec );

@@ -484,11 +484,10 @@ void Sys_DebugBreak( void ) {
 Sys_Milliseconds
 ================
 */
-int curtime;
-
 int Sys_Milliseconds( void ) {
 	struct timeval tp;
 	static int		secbase;
+    int curtime;
 
 	gettimeofday( &tp, NULL );
 

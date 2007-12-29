@@ -880,6 +880,17 @@ void SV_ClientThink( client_t *cl, usercmd_t *cmd ) {
 	ge->ClientThink( cl->edict, cmd );
 }
 
+static inline void SV_SetLastFrame( int lastframe ) {
+    if( lastframe == sv_client->lastframe ) {
+        return;
+    }
+    sv_client->lastframe = lastframe;
+    if( lastframe > 0 ) {
+        sv_client->frame_latency[lastframe & LATENCY_MASK] = 
+            com_eventTime - sv_client->frames[lastframe & UPDATE_MASK].senttime;
+    }
+}
+
 /*
 ==================
 SV_OldClientExecuteMove
@@ -894,13 +905,7 @@ static void SV_OldClientExecuteMove( void ) {
 	}
 	
     lastframe = MSG_ReadLong();
-	if( lastframe != sv_client->lastframe ) {
-		sv_client->lastframe = lastframe;
-		if( lastframe > 0 ) {
-			sv_client->frame_latency[lastframe & LATENCY_MASK] = 
-				svs.realtime - sv_client->frames[lastframe & UPDATE_MASK].senttime;
-		}
-	}
+    SV_SetLastFrame( lastframe );
 
 	if( sv_client->protocol == PROTOCOL_VERSION_R1Q2 &&
         sv_client->version >= PROTOCOL_VERSION_R1Q2_UCMD ) 
@@ -957,28 +962,23 @@ static void SV_NewClientExecuteMove( int c ) {
 
 	numDups = c >> SVCMD_BITS;
 	c &= SVCMD_MASK;
-	if( c == clc_move_nodelta ) {
-		lastframe = -1;
-	} else {
-		lastframe = MSG_ReadLong();
-	}
-
-	if( lastframe != sv_client->lastframe ) {
-		sv_client->lastframe = lastframe;
-		if( lastframe != -1 ) {
-			sv_client->frame_latency[lastframe & LATENCY_MASK] = 
-				svs.realtime - sv_client->frames[lastframe & UPDATE_MASK].senttime;
-		}
-	}
 
 	if( numDups > MAX_PACKET_FRAMES - 1 ) {
 		SV_DropClient( sv_client, "too many frames in packet" );
 		return;
 	}
 
+	if( c == clc_move_nodelta ) {
+		lastframe = -1;
+	} else {
+		lastframe = MSG_ReadLong();
+	}
+
+    SV_SetLastFrame( lastframe );
+
 	lightlevel = MSG_ReadByte();
 
-	/* read them all */
+	// read all cmds
 	lastcmd = NULL;
 	for( i = 0; i <= numDups; i++ ) {
 		numCmds[i] = MSG_ReadBits( 5 );
@@ -1016,13 +1016,13 @@ static void SV_NewClientExecuteMove( int c ) {
 	} 
 
 	if( net_drop < 20 ) {
-		/* run lastcmd multiple times if no backups available */
+		// run lastcmd multiple times if no backups available
 		while( net_drop > numDups ) {
 			SV_ClientThink( sv_client, &sv_client->lastcmd );
 			net_drop--;
 		}
 
-		/* run backup cmds, if any */
+		// run backup cmds, if any
 		while( net_drop > 0 ) {
 			i = numDups - net_drop;
 			for( j = 0; j < numCmds[i]; j++ ) {
@@ -1033,7 +1033,7 @@ static void SV_NewClientExecuteMove( int c ) {
 
 	}
 
-	/* run new cmds */
+	// run new cmds
 	for( j = 0; j < numCmds[numDups]; j++ ) {
 		SV_ClientThink( sv_client, &cmds[numDups][j] );
 	}

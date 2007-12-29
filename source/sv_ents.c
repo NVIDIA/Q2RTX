@@ -137,7 +137,6 @@ void SV_WriteFrameToClient_Default( client_t *client ) {
 
 	// this is the frame we are creating
 	frame = &client->frames[sv.framenum & UPDATE_MASK];
-	client->frame_latency[sv.framenum & LATENCY_MASK] = -1;
 
 	if( client->lastframe <= 0 ) {
 		// client is asking for a retransmit
@@ -199,7 +198,6 @@ void SV_WriteFrameToClient_Enhanced( client_t *client ) {
 
 	// this is the frame we are creating
 	frame = &client->frames[sv.framenum & UPDATE_MASK];
-	client->frame_latency[sv.framenum & LATENCY_MASK] = -1;
 
 	if( client->lastframe <= 0 ) {
 		// client is asking for a retransmit
@@ -354,8 +352,9 @@ void SV_BuildClientFrame( client_t *client ) {
 
 	// this is the frame we are creating
 	frame = &client->frames[sv.framenum & UPDATE_MASK];
+	client->frame_latency[sv.framenum & LATENCY_MASK] = -1;
 
-	frame->senttime = svs.realtime; // save it for ping calc later
+	frame->senttime = com_eventTime; // save it for ping calc later
 
 	// find the client's PVS
     ps = &clent->client->ps;
