@@ -235,12 +235,53 @@ static void MVD_FollowStart( udpClient_t *client, mvd_player_t *target ) {
         SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
 	}
 
+    SV_ClientPrintf( client->cl, PRINT_MEDIUM, "[MVD] Following %s.\n", target->name );
+
     MVD_UpdateClient( client );
+}
+
+static void MVD_FollowFirst( udpClient_t *client ) {
+    mvd_t *mvd = client->mvd;
+	mvd_player_t *target;
+	int i;
+
+    // pick up the first active player
+    for( i = 0; i < mvd->maxclients; i++ ) {
+        target = &mvd->players[i];
+        if( target->inuse && target != mvd->dummy ) {
+            MVD_FollowStart( client, target );
+            return;
+        }
+    }
+
+    SV_ClientPrintf( client->cl, PRINT_MEDIUM, "[MVD] No players to follow.\n" );
+}
+
+static void MVD_FollowLast( udpClient_t *client ) {
+    mvd_t *mvd = client->mvd;
+	mvd_player_t *target;
+	int i;
+
+    // pick up the last active player
+    for( i = 0; i < mvd->maxclients; i++ ) {
+        target = &mvd->players[ mvd->maxclients - i - 1 ];
+        if( target->inuse && target != mvd->dummy ) {
+            MVD_FollowStart( client, target );
+            return;
+        }
+    }
+
+    SV_ClientPrintf( client->cl, PRINT_MEDIUM, "[MVD] No players to follow.\n" );
 }
 
 static void MVD_FollowNext( udpClient_t *client ) {
     mvd_t *mvd = client->mvd;
 	mvd_player_t *target = client->target;
+
+    if( !target ) {
+        MVD_FollowFirst( client );
+        return;
+    }
 
     do {
         if( target == mvd->players + mvd->maxclients - 1 ) {
@@ -260,6 +301,11 @@ static void MVD_FollowPrev( udpClient_t *client ) {
     mvd_t *mvd = client->mvd;
 	mvd_player_t *target = client->target;
 
+    if( !target ) {
+        MVD_FollowLast( client );
+        return;
+    }
+
     do {
         if( target == mvd->players ) {
             target = mvd->players + mvd->maxclients - 1;
@@ -272,26 +318,6 @@ static void MVD_FollowPrev( udpClient_t *client ) {
     } while( !target->inuse || target == mvd->dummy );
 
 	MVD_FollowStart( client, target );
-}
-
-static void MVD_FollowFirst( udpClient_t *client ) {
-    mvd_t *mvd = client->mvd;
-	mvd_player_t *target;
-	int i;
-
-    // pick up the first active player
-    for( i = 0; i < mvd->maxclients; i++ ) {
-        target = &mvd->players[i];
-        if( target == mvd->dummy ) {
-            continue;
-        }
-        if( target->inuse ) {
-            MVD_FollowStart( client, target );
-            return;
-        }
-    }
-
-    SV_ClientPrintf( client->cl, PRINT_MEDIUM, "[MVD] No players to follow.\n" );
 }
 
 void MVD_UpdateClient( udpClient_t *client ) {
