@@ -350,7 +350,7 @@ static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
 		        MVD_Destroyf( mvd, "%s: bad configstring index: %d", __func__, i );
 			}
             length = strlen( s );
-            if( length > MAX_QPATH - 1 ) {
+            if( length >= MAX_QPATH ) {
                 Com_WPrintf( "Private configstring %d for player %d "
                         "is %d chars long, ignored.\n", i, clientNum, length );
             } else {
@@ -365,7 +365,7 @@ static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
                     cs->next = player->configstrings;
                     player->configstrings = cs;
                 }
-                strcpy( cs->string, s );
+                memcpy( cs->string, s, length + 1 );
             }
             if( mvd_debug->integer > 1 ) {
                 Com_Printf( "  index:%d string: %s\n", i, s );
@@ -667,9 +667,9 @@ MVD_ParsePacketEntities
 ==================
 */
 static void MVD_ParsePacketEntities( mvd_t *mvd ) {
-	int			number;
-	int			bits;
-    edict_t         *ent;
+	int			number, oldnum = 0;
+	int			i, bits;
+    edict_t     *ent;
 
 	while( 1 ) {
 		if( msg_read.readcount > msg_read.cursize ) {
@@ -684,6 +684,14 @@ static void MVD_ParsePacketEntities( mvd_t *mvd ) {
 		if( !number ) {
 			break;
 		}
+
+        for( i = oldnum + 1; i < number; i++ ) {
+            ent = &mvd->edicts[i];
+            if( ent->inuse && !( ent->s.renderfx & RF_BEAM ) ) {
+    		    VectorCopy( ent->s.origin, ent->s.old_origin );
+            }
+        }
+        oldnum = number;
 
         ent = &mvd->edicts[number];
 

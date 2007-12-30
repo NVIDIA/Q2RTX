@@ -119,6 +119,9 @@ static void PF_Unicast( edict_t *ent, qboolean reliable ) {
 			SV_ClientAddMessage( client, flags );
 		} else if( sv.mvd.paused < PAUSED_FRAMES ) {
             // send this to all observers
+            if( msg_write.data[0] == svc_layout ) {
+                sv.mvd.layout_time = svs.realtime;
+            }
             SV_MvdUnicast( buf, clientNum, op );
         }
 	} else {

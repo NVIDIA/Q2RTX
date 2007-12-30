@@ -567,6 +567,7 @@ void MVD_Update( mvd_t *mvd ) {
 		if( client->cl->state != cs_spawned ) {
             continue;
         }
+        client->ps.stats[STAT_LAYOUTS] = client->layouts;
         switch( client->scoreboard ) {
         case SBOARD_CLIENTS:
             if( client->layoutTime < sv.time ) {

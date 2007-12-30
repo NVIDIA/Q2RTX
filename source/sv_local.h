@@ -70,6 +70,7 @@ typedef struct server_s {
 	    fileHandle_t	file;
 	    int     	    paused;
         int             framenum;
+        uint32          layout_time;
         sizebuf_t       datagram;
         sizebuf_t       message; // reliable
 	    byte		    dcs[CS_BITMAP_BYTES];

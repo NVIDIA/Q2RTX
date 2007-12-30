@@ -33,6 +33,7 @@ cvar_t	*sv_mvd_nogun;
 cvar_t	*sv_mvd_max_size;
 cvar_t	*sv_mvd_max_duration;
 cvar_t	*sv_mvd_begincmd;
+cvar_t	*sv_mvd_scorecmd;
 
 static cmdbuf_t	dummy_buffer;
 static char		dummy_buffer_text[MAX_STRING_CHARS];
@@ -70,6 +71,10 @@ qboolean SV_MvdPlayerIsActive( edict_t *ent ) {
 
     if( svs.mvd.dummy && ent == svs.mvd.dummy->edict ) {
         return qtrue;
+    }
+
+    if( ent->client->ps.pmove.pm_type == PM_SPECTATOR ) {
+        return qfalse;
     }
 
 	// HACK: if pm_type == PM_FREEZE, assume intermission is running
@@ -508,6 +513,16 @@ void SV_MvdEndFrame( void ) {
 	    SZ_Clear( &sv.mvd.datagram );
     }
 
+    if( sv_mvd_scorecmd->string[0] ) {
+        if( sv.mvd.layout_time > svs.realtime ) {
+            sv.mvd.layout_time = svs.realtime;
+        }
+        if( svs.realtime - sv.mvd.layout_time > 9000 ) {
+            Cbuf_AddTextEx( &dummy_buffer, sv_mvd_scorecmd->string );
+            sv.mvd.layout_time = svs.realtime;
+        }
+    }
+
     // build delta updates
     SV_MvdEmitFrame();
 
@@ -898,6 +913,8 @@ void SV_MvdRegister( void ) {
 	sv_mvd_nogun = Cvar_Get( "sv_mvd_nogun", "1", CVAR_LATCH );
     sv_mvd_begincmd = Cvar_Get( "sv_mvd_begincmd",
         "wait 50; putaway; wait 10; help;", 0 );
+    sv_mvd_scorecmd = Cvar_Get( "sv_mvd_scorecmd",
+        "putaway; wait 10; help;", 0 );
 
 	dummy_buffer.text = dummy_buffer_text;
     dummy_buffer.maxsize = sizeof( dummy_buffer_text );
