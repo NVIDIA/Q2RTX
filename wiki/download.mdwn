@@ -4,9 +4,20 @@ There are no stable releases of Q2PRO available to date.
 
 Development snapshots
 ----------------
-Nightly built binary packages for Windows and Debian GNU/Linux distribution
-and the corresponding source code snapshots can be found
-[here](../nightly/).
+Binary package for Windows:
+[q2pro-win32.zip](../nightly/q2pro-win32.zip).
+
+Update utility for Windows:
+[q2proupd.exe](../nightly/q2proupd.exe).
+
+Dedicated server binary for GNU/Linux:
+[q2proded.bin.gz](../update/q2proded.bin.gz).<br />
+Use this binary for running Q2PRO server from
+your remote shell account.
+
+Update utility source tarball:
+[q2proupd.tar.gz](../nightly/q2proupd.tar.gz).<br />
+You will need zlib and libCURL development files installed to build it.
 
 Source code
 ----------------

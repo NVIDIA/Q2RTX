@@ -868,12 +868,14 @@ static int  net_drop;
 SV_ClientThink
 ==================
 */
-void SV_ClientThink( client_t *cl, usercmd_t *cmd ) {
+static inline void SV_ClientThink( client_t *cl, usercmd_t *cmd ) {
 	cl->commandMsec -= cmd->msec;
 
 	if( cl->commandMsec < 0 && sv_enforcetime->integer ) {
+#ifdef _DEBUG
 		Com_DPrintf( "commandMsec underflow from %s: %d\n",
 			cl->name, cl->commandMsec );
+#endif
 		return;
 	}
 

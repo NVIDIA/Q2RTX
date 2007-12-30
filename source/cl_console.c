@@ -180,18 +180,23 @@ Save the console contents out to a file
 */
 static void Con_Dump_f( void ) {
 	int		l;
-	char	*line;
+	char	*line, *string;
 	fileHandle_t	f;
 	char	buffer[CON_LINEWIDTH];
-	char	name[MAX_QPATH];
+	char	name[MAX_OSPATH];
 
 	if( Cmd_Argc() != 2 ) {
 		Com_Printf( "Usage: %s <filename>\n", Cmd_Argv( 0 ) );
 		return;
 	}
 
-	Cmd_ArgvBuffer( 1, name, sizeof( name ) );
-	COM_DefaultExtension( name, ".txt", sizeof( buffer ) );
+    string = Cmd_Argv( 1 );
+	if( *string == '/' ) {
+		Q_strncpyz( name, string + 1, sizeof( name ) );
+	} else {
+		Q_concat( name, sizeof( name ), "condumps/", string, NULL );
+    	COM_AppendExtension( name, ".txt", sizeof( name ) );
+	}
 
 	FS_FOpenFile( name, &f, FS_MODE_WRITE );
 	if( !f ) {

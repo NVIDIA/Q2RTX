@@ -514,6 +514,11 @@ static void AC_Drop( void ) {
     memset( &ac, 0, sizeof( ac ) );
 }
 
+static void AC_Disable( void ) {
+    AC_Disconnect();
+    Cvar_SetByVar( ac_required, "0", CVAR_SET_DIRECT );
+}
+
 
 static void AC_Announce( client_t *client, const char *fmt, ... ) {
 	va_list		argptr;
@@ -865,19 +870,19 @@ static qboolean AC_ParseMessage( void ) {
         break;
     case ACS_ERROR:
         Com_EPrintf( "ANTICHEAT: %s\n", MSG_ReadString() );
-        AC_Disconnect();
+        AC_Disable();
         return qfalse;
     case ACS_NOACCESS:
         Com_WPrintf( "ANTICHEAT: You do not have permission to "
             "use the anticheat server. Anticheat disabled.\n" );
-        AC_Disconnect();
+        AC_Disable();
         return qfalse;
     case ACS_UPDATE_REQUIRED:
         Com_WPrintf( "ANTICHEAT: The anticheat server is no longer "
             "compatible with this version of " APPLICATION ". "
             "Please make sure you are using the latest " APPLICATION " version. "
             "Anticheat disabled.\n" );
-        AC_Disconnect();
+        AC_Disable();
         return qfalse;
     case ACS_DISCONNECT:
         AC_ParseDisconnect();
@@ -890,7 +895,7 @@ static qboolean AC_ParseMessage( void ) {
         Com_EPrintf( "ANTICHEAT: Unknown command byte %d, please make "
             "sure you are using the latest " APPLICATION " version. "
             "Anticheat disabled.\n", cmd );
-        AC_Disconnect();
+        AC_Disable();
         return qfalse;
 	}
 
@@ -1218,21 +1223,24 @@ static void AC_SendHello( void ) {
 static void AC_CheckTimeouts( void ) {
     client_t *cl;
 
+    if( ac.last_ping > svs.realtime ) {
+        ac.last_ping = svs.realtime;
+    }
+
     if( ac.ping_pending ) {
         if( svs.realtime - ac.last_ping > AC_PING_TIMEOUT ) {
 			Com_Printf( "ANTICHEAT: Server ping timeout, disconnecting.\n" );
             AC_Drop();
             return;
         }
-    }
-    if( ac.ready ) {
+    } else if( ac.ready ) {
         if( svs.realtime - ac.last_ping > AC_PING_INTERVAL ) {
             AC_SendPing();
         }
     }
 
     FOR_EACH_CLIENT( cl ) {
-		if( cl->state != cs_primed ) {
+		if( cl->state < cs_connected || cl->state > cs_primed ) {
             continue;
         }
         if( cl->ac_query_sent != AC_QUERY_SENT ) {
@@ -1377,7 +1385,6 @@ void AC_Disconnect( void ) {
 
     memset( &ac, 0, sizeof( ac ) );
     memset( &acs, 0, sizeof( acs ) );
-    Cvar_SetByVar( ac_required, "0", CVAR_SET_DIRECT );
     Cvar_FullSet( "anticheat", "0", CVAR_NOSET, CVAR_SET_DIRECT );
 }
 

@@ -1171,6 +1171,10 @@ static void CL_ParseStartSoundPacket( void ) {
 		pos = NULL;
 	}
 
+	if( cl_shownet->integer > 2 ) {
+		Com_Printf( "    %s\n", cl.configstrings[CS_SOUNDS+sound_num] );
+	}
+
 	if( cl.sound_precache[sound_num] ) {
     	S_StartSound( pos, ent, channel, cl.sound_precache[sound_num],
             volume, attenuation, ofs );
