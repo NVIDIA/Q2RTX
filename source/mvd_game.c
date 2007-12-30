@@ -474,7 +474,7 @@ static void MVD_Follow_f( udpClient_t *client ) {
     }
 
     player = &mvd->players[number];
-    if( !player->inuse ) {
+    if( !player->inuse || player == mvd->dummy ) {
         SV_ClientPrintf( client->cl, PRINT_HIGH,
             "[MVD] Player %d is not active.\n", number );
         return;
@@ -556,7 +556,7 @@ static void MVD_GameClientCommand( edict_t *ent ) {
         MVD_Invuse_f( client );
         return;
     }
-	if( !strcmp( cmd, "help" ) ) {
+	if( !strcmp( cmd, "help" ) || !strncmp( cmd, "score", 5 ) ) {
 		if( client->scoreboard == SBOARD_SCORES ) {
 			MVD_SetDefaultLayout( client );
 		} else {
