@@ -694,7 +694,7 @@ S_RegisterSexedSound
 */
 static sfx_t *S_RegisterSexedSound( int entnum, const char *base ) {
 	sfx_t		    *sfx;
-	char			model[MAX_QPATH];
+	char			*model;
 	char			buffer[MAX_QPATH];
     clientinfo_t    *ci;
 
@@ -704,19 +704,20 @@ static sfx_t *S_RegisterSexedSound( int entnum, const char *base ) {
     } else {
         ci = &cl.baseclientinfo;
     }
-    strcpy( model, ci->model_name );
+    model = ci->model_name;
 
 	// if we can't figure it out, they're male
-	if( !model[0] )
-		strcpy( model, "male" );
+	if( !model[0] ) {
+		model = "male";
+    }
 
 	// see if we already know of the model specific sound
 	Q_concat( buffer, sizeof( buffer ),
         "#players/", model, "/", base + 1, NULL );
 	sfx = S_FindName( buffer );
-    
+
 	// see if it exists
-    if( !S_LoadSound( sfx ) ) {
+    if( !sfx->truename && !S_LoadSound( sfx ) ) {
 		// no, revert to the male sound in the pak0.pak
 		Q_concat( buffer, sizeof( buffer ),
             "player/male/", base + 1, NULL );
