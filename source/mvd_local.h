@@ -143,6 +143,7 @@ typedef struct mvd_s {
     edict_t         edicts[MAX_EDICTS];
     mvd_player_t    *players; // [maxclients]
     mvd_player_t    *dummy; // &players[clientNum]
+    qboolean    intermission;
 
 	// client lists
     list_t udpClients;

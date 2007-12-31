@@ -869,6 +869,23 @@ static void MVD_GameRunFrame( void ) {
             FS_Write( msg_read.data, msg_read.cursize, mvd->demofile );
         }
 
+        // check for intermission
+        if( !mvd->intermission ) {
+            if( mvd->dummy->ps.pmove.pm_type == PM_FREEZE ) {
+                mvd->intermission = qtrue;
+                LIST_FOR_EACH( udpClient_t, u, &mvd->udpClients, entry ) {
+                    if( u->cl->state == cs_spawned && !u->scoreboard ) {
+			            u->scoreboard = SBOARD_SCORES;
+            			MVD_LayoutScores( u );            
+                    }
+                }
+            }
+        } else {
+            if( mvd->dummy->ps.pmove.pm_type != PM_FREEZE ) {
+                mvd->intermission = qfalse;
+            }
+        }
+
 update:
         MVD_Update( mvd );
     }

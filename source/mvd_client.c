@@ -208,6 +208,7 @@ void MVD_ClearState( mvd_t *mvd ) {
     memset( mvd->configstrings, 0, sizeof( mvd->configstrings ) );
 
     mvd->framenum = 0;
+    mvd->intermission = qfalse;
 }
 
 static void MVD_EmitGamestate( mvd_t *mvd ) {
