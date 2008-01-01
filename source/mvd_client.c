@@ -190,10 +190,6 @@ void MVD_ClearState( mvd_t *mvd ) {
 
     for( i = 0; i < mvd->maxclients; i++ ) {
         player = &mvd->players[i];
-        if( player->layout ) {
-            Z_Free( player->layout );
-            player->layout = NULL;
-        }
         for( cs = player->configstrings; cs; cs = nextcs ) {
             nextcs = cs->next;
             Z_Free( cs );
@@ -206,6 +202,7 @@ void MVD_ClearState( mvd_t *mvd ) {
     CM_FreeMap( &mvd->cm );
 
     memset( mvd->configstrings, 0, sizeof( mvd->configstrings ) );
+    mvd->layout[0] = 0;
 
     mvd->framenum = 0;
     mvd->intermission = qfalse;
@@ -1195,7 +1192,9 @@ void MVD_Play_f( void ) {
             Q_strncpyz( buffer, s + 1, sizeof( buffer ) );
         } else {
             Q_concat( buffer, sizeof( buffer ), "demos/", s, NULL );
-            COM_AppendExtension( buffer, ".mvd2", sizeof( buffer ) );
+            if( FS_LoadFile( buffer, NULL ) == -1 ) {
+                COM_AppendExtension( buffer, ".mvd2", sizeof( buffer ) );
+            }
         }
         if( FS_LoadFile( buffer, NULL ) == -1 ) {
             Com_Printf( "Ignoring non-existent entry: %s\n", buffer );

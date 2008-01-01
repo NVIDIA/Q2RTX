@@ -114,7 +114,9 @@ static void PF_Unicast( edict_t *ent, qboolean reliable ) {
     }
 
 	if( client == svs.mvd.dummy ) {
-		if( msg_write.data[0] == svc_stufftext && reliable ) {
+		if( msg_write.data[0] == svc_stufftext &&
+            memcmp( msg_write.data + 1, "play ", 5 ) )
+        {
             // let MVD client process this internally
 			SV_ClientAddMessage( client, flags );
 		} else if( sv.mvd.paused < PAUSED_FRAMES ) {
@@ -129,7 +131,12 @@ static void PF_Unicast( edict_t *ent, qboolean reliable ) {
         if( sv_mvd_enable->integer && sv.mvd.paused < PAUSED_FRAMES &&
             SV_MvdPlayerIsActive( ent ) )
         {
-            SV_MvdUnicast( buf, clientNum, op );
+            if( msg_write.data[0] != svc_layout &&
+                ( msg_write.data[0] != svc_stufftext ||
+                  !memcmp( msg_write.data + 1, "play ", 5 ) ) )
+            {
+                SV_MvdUnicast( buf, clientNum, op );
+            }
         }
     }
 

@@ -835,7 +835,7 @@ void SCR_InitDraw( void ) {
 
 	scr_draw2d = Cvar_Get( "scr_draw2d", "2", 0 );
 	scr_showturtle = Cvar_Get( "scr_showturtle", "1", 0 );
-	scr_showfollowing = Cvar_Get( "scr_showfollowing", "0", 0 );
+	scr_showfollowing = Cvar_Get( "scr_showfollowing", "1", 0 );
 	scr_lag_x = Cvar_Get( "scr_lag_x", "-1", 0 );
 	scr_lag_y = Cvar_Get( "scr_lag_y", "-1", 0 );
     scr_lag_draw = Cvar_Get( "scr_lag_draw", "0", 0 );

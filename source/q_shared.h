@@ -1408,6 +1408,8 @@ ROGUE - VERSIONS
 #define UF_AUTOSCREENSHOT   1
 #define UF_AUTORECORD       2
 #define UF_LOCALFOV         4
+#define UF_NOGAMECHAT       8
+#define UF_NOMVDCHAT        16
 
 /*
 ==========================================================

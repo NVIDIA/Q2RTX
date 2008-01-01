@@ -42,11 +42,12 @@ typedef enum {
 #define LAYOUT_MSEC		3000
 
 typedef enum {
-	SBOARD_NONE,		// no layout at all
-	SBOARD_SCORES,		// layout of the MVD dummy
-	SBOARD_CLIENTS,		// MVD clients list
-    SBOARD_CHANNELS     // MVD channel list
-} scoreboard_t;
+	LAYOUT_NONE,		// no layout at all
+    LAYOUT_FOLLOW,      // display chase target name
+	LAYOUT_SCORES,		// layout of the MVD dummy
+	LAYOUT_CLIENTS,		// MVD clients list
+    LAYOUT_CHANNELS     // MVD channel list
+} mvd_layout_t;
 
 #define FLOOD_SAMPLES	16
 #define	FLOOD_MASK		( FLOOD_SAMPLES - 1 )
@@ -62,7 +63,6 @@ typedef struct {
     player_state_t ps;
     qboolean inuse;
     char name[16];
-	char *layout;
 	mvd_cs_t *configstrings;
 } mvd_player_t;
 
@@ -85,9 +85,8 @@ typedef struct {
     int uf;
     int cursor;
 
-	scoreboard_t scoreboard;
-	int layoutTime;
-    int layouts;
+	mvd_layout_t layout_type;
+	int layout_time;
 
 	int floodSamples[FLOOD_SAMPLES];
 	int floodHead;
@@ -143,6 +142,7 @@ typedef struct mvd_s {
     edict_t         edicts[MAX_EDICTS];
     mvd_player_t    *players; // [maxclients]
     mvd_player_t    *dummy; // &players[clientNum]
+    char        layout[MAX_STRING_CHARS];
     qboolean    intermission;
 
 	// client lists

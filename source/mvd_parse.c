@@ -286,25 +286,167 @@ static void MVD_ParseMulticast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
 
 		cl->AddMessage( cl, data, length, reliable );
 	}
-
 }
 
+static void MVD_UnicastSend( mvd_t *mvd, qboolean reliable, byte *data, int length, mvd_player_t *player ) {
+    mvd_player_t *target;
+    udpClient_t *client;
+    client_t *cl;
+    
+	// send to all relevant clients
+    LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
+        cl = client->cl;
+        if( cl->state < cs_spawned ) {
+            continue;
+        }
+        target = client->target ? client->target : mvd->dummy;
+		if( target == player ) {
+		    cl->AddMessage( cl, data, length, reliable );
+		}
+	}
+}
+
+static void MVD_UnicastLayout( mvd_t *mvd, qboolean reliable, mvd_player_t *player ) {
+    char *string;
+    byte *data;
+    int readcount, length;
+    udpClient_t *client;
+    client_t *cl;
+
+	data = msg_read.data + msg_read.readcount - 1;
+    readcount = msg_read.readcount - 1;
+
+    string = MSG_ReadString();
+    if( player != mvd->dummy ) {
+        return; // we don't care about others
+    }
+
+    length = msg_read.readcount - readcount;
+
+    Q_strncpyz( mvd->layout, string, sizeof( mvd->layout ) );
+
+	// send to all relevant clients
+    LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
+        cl = client->cl;
+        if( cl->state < cs_spawned ) {
+            continue;
+        }
+		if( client->layout_type == LAYOUT_SCORES ) {
+		    cl->AddMessage( cl, data, length, reliable );
+		}
+	}
+}
+
+static void MVD_UnicastString( mvd_t *mvd, qboolean reliable, mvd_player_t *player ) {
+    int index;
+    char *string;
+    mvd_cs_t *cs;
+    byte *data;
+    int readcount, length;
+
+	data = msg_read.data + msg_read.readcount - 1;
+    readcount = msg_read.readcount - 1;
+
+    index = MSG_ReadShort();
+    string = MSG_ReadStringLength( &length );
+
+    if( index < 0 || index >= MAX_CONFIGSTRINGS ) {
+        MVD_Destroyf( mvd, "%s: bad index: %d", __func__, index );
+    }
+    if( length >= MAX_QPATH ) {
+        Com_WPrintf( "%s: oversize configstring: %d\n", __func__, index );
+        return;
+    }
+
+    for( cs = player->configstrings; cs; cs = cs->next ) {
+        if( cs->index == index ) {
+            break;
+        }
+    }
+    if( !cs ) {
+        cs = MVD_Malloc( sizeof( *cs ) + MAX_QPATH - 1 );
+        cs->index = index;
+        cs->next = player->configstrings;
+        player->configstrings = cs;
+    }
+
+    memcpy( cs->string, string, length + 1 );
+
+    length = msg_read.readcount - readcount;
+    MVD_UnicastSend( mvd, reliable, data, length, player );
+}
+
+static void MVD_UnicastPrint( mvd_t *mvd, qboolean reliable, mvd_player_t *player ) {
+    int level;
+    char *string;
+    byte *data;
+    int readcount, length;
+    udpClient_t *client;
+    client_t *cl;
+    mvd_player_t *target;
+
+	data = msg_read.data + msg_read.readcount - 1;
+    readcount = msg_read.readcount - 1;
+
+    level = MSG_ReadByte();
+    string = MSG_ReadString();
+
+    length = msg_read.readcount - readcount;
+    
+	// send to all relevant clients
+    LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
+        cl = client->cl;
+        if( cl->state < cs_spawned ) {
+            continue;
+        }
+		if( level < cl->messagelevel ) {
+			continue;
+        }
+        if( level == PRINT_CHAT && ( client->uf & UF_NOGAMECHAT ) ) {
+            continue;
+        }
+        target = client->target ? client->target : mvd->dummy;
+		if( target == player ) {
+		    cl->AddMessage( cl, data, length, reliable );
+		}
+	}
+}
+
+static void MVD_UnicastStuff( mvd_t *mvd, qboolean reliable, mvd_player_t *player ) {
+    char *string;
+    byte *data;
+    int readcount, length;
+
+	data = msg_read.data + msg_read.readcount - 1;
+    readcount = msg_read.readcount - 1;
+
+    string = MSG_ReadString();
+    if( strncmp( string, "play ", 5 ) ) {
+        return;
+    }
+
+    length = msg_read.readcount - readcount;
+    MVD_UnicastSend( mvd, reliable, data, length, player );
+}
+
+/*
+MVD_ParseUnicast
+
+Attempt to parse the datagram and find custom configstrings,
+layouts, etc. Give up as soon as unknown command byte is encountered.
+*/
 static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
 	int clientNum, length, last;
-	int flags;
-	udpClient_t *client;
 	mvd_player_t *player;
-    clstate_t minstate;
-	int i, c;
-	char *s;
-	qboolean gotLayout, wantLayout;
-    mvd_cs_t *cs;
+    byte *data;
+    qboolean reliable;
+	int c;
 
 	length = MSG_ReadByte();
     length |= extrabits << 8;
 	clientNum = MSG_ReadByte();
 
-	if( clientNum < 0 || clientNum >= MAX_CLIENTS ) {
+	if( clientNum < 0 || clientNum >= mvd->maxclients ) {
 		MVD_Destroyf( mvd, "%s: bad number: %d", __func__, clientNum );
 	}
 
@@ -315,10 +457,8 @@ static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
 
 	player = &mvd->players[clientNum];
 
-	gotLayout = qfalse;
+    reliable = op == mvd_unicast_r ? qtrue : qfalse;
 
-	// Attempt to parse the datagram and find custom configstrings,
-    // layouts, etc. Give up as soon as unknown command byte is encountered.
 	while( 1 ) {
 		if( msg_read.readcount > last ) {
 		    MVD_Destroyf( mvd, "%s: read past end of unicast", __func__ );
@@ -329,125 +469,28 @@ static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
 		}
 
         c = MSG_ReadByte();
-
-        if( mvd_debug->integer > 1 ) {
-            Com_Printf( "%s\n", MVD_ServerCommandString( c ) );
-        }
-
 		switch( c ) {
 		case svc_layout:
-			s = MSG_ReadString();
-            if( !player->layout ) {
-                player->layout = MVD_Malloc( MAX_STRING_CHARS );
-            }
-			Q_strncpyz( player->layout, s, MAX_STRING_CHARS );
-			gotLayout = qtrue;
+            MVD_UnicastLayout( mvd, op, player );
 			break;
 		case svc_configstring:
-			i = MSG_ReadShort();
-			s = MSG_ReadString();
-			if( i < 0 || i >= MAX_CONFIGSTRINGS ) {
-		        MVD_Destroyf( mvd, "%s: bad configstring index: %d", __func__, i );
-			}
-            length = strlen( s );
-            if( length >= MAX_QPATH ) {
-                Com_WPrintf( "Private configstring %d for player %d "
-                        "is %d chars long, ignored.\n", i, clientNum, length );
-            } else {
-                for( cs = player->configstrings; cs; cs = cs->next ) {
-                    if( cs->index == i ) {
-                        break;
-                    }
-                }
-                if( !cs ) {
-                    cs = MVD_Malloc( sizeof( *cs ) + MAX_QPATH - 1 );
-                    cs->index = i;
-                    cs->next = player->configstrings;
-                    player->configstrings = cs;
-                }
-                memcpy( cs->string, s, length + 1 );
-            }
-            if( mvd_debug->integer > 1 ) {
-                Com_Printf( "  index:%d string: %s\n", i, s );
-            }
-			MSG_WriteByte( svc_configstring );
-			MSG_WriteShort( i );
-			MSG_WriteString( s );
+            MVD_UnicastString( mvd, op, player );
 			break;
 		case svc_print:
-			i = MSG_ReadByte();
-			s = MSG_ReadString();
-			MSG_WriteByte( svc_print );
-			MSG_WriteByte( i );
-			MSG_WriteString( s );
+            MVD_UnicastPrint( mvd, op, player );
 			break;
 		case svc_stufftext:
-			s = MSG_ReadString();
-			MSG_WriteByte( svc_stufftext );
-			MSG_WriteString( s );
+            MVD_UnicastStuff( mvd, op, player );
 			break;
 		default:
-			// copy remaining data and stop
-			MSG_WriteByte( c );
-            MSG_WriteData( msg_read.data + msg_read.readcount,
-                last - msg_read.readcount );
+			// send remaining data and return
+            data = msg_read.data + msg_read.readcount - 1;
+            length = last - msg_read.readcount + 1;
+            MVD_UnicastSend( mvd, reliable, data, length, player );
 			msg_read.readcount = last;
-			goto breakOut;
+			return;
 		}
 	}
-
-breakOut:
-	flags = 0;
-    minstate = cs_spawned;
-	if( op == mvd_unicast_r ) {
-		flags |= MSG_RELIABLE;
-        minstate = cs_primed;
-	}
-
-	// send to all relevant clients
-	wantLayout = qfalse;
-    LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
-        if( client->cl->state < minstate ) {
-            continue;
-        }
-		if( client->scoreboard == SBOARD_SCORES &&
-            clientNum == mvd->clientNum )
-        {
-			wantLayout = qtrue;
-		}
-		if( !client->target ) {
-			if( clientNum == mvd->clientNum ) {
-				SV_ClientAddMessage( client->cl, flags );
-			}
-			continue;
-		}
-		if( client->target == player ) {
-			SV_ClientAddMessage( client->cl, flags );
-		}
-	}
-
-	SZ_Clear( &msg_write );
-
-	if( !gotLayout || !wantLayout ) {
-		return;
-	}
-
-	MSG_WriteByte( svc_layout );
-	MSG_WriteString( player->layout );
-
-    LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
-        if( client->cl->state < minstate ) {
-            continue;
-        }
-		if( client->scoreboard == SBOARD_SCORES &&
-            clientNum == mvd->clientNum )
-        {
-			SV_ClientAddMessage( client->cl, flags );
-			continue;
-		}
-	}
-
-	SZ_Clear( &msg_write );
 }
 
 /*

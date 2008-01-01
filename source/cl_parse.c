@@ -1302,15 +1302,15 @@ CL_ParseCenterPrint
 =====================
 */
 static void CL_ParseCenterPrint( void ) {
-	char *string;
+	char *s;
 
-	string = MSG_ReadString();
+	s = MSG_ReadString();
 
 	if( cl_shownet->integer > 2 ) {
-		Com_Printf( "    \"%s\"\n", Q_FormatString( string ) );
+		Com_Printf( "    \"%s\"\n", Q_FormatString( s ) );
 	}
 
-    SCR_CenterPrint( string );
+    SCR_CenterPrint( s );
 }
 
 /*
@@ -1319,27 +1319,29 @@ CL_ParseStuffText
 =====================
 */
 static void CL_ParseStuffText( void ) {
-	char *string;
+	char *s, *p;
 
-	string = MSG_ReadString();
+	s = MSG_ReadString();
 
-	if( cl_shownet->integer > 2 ) {
-		Com_Printf( "    \"%s\"\n", Q_FormatString( string ) );
-	}
+	//if( cl_shownet->integer > 2 ) {
+	//	Com_Printf( "    \"%s\"\n", Q_FormatString( s ) );
+	//}
 
+    // FIXME: this is uuugly...
 	if( cls.demoplayback &&
-            strcmp( string, "precache\n" ) &&
-            strcmp( string, "changing\n" ) &&
-            strncmp( string, "play ", 5 ) &&
-            strcmp( string, "reconnect\n" ) )
+        strcmp( s, "precache\n" ) &&
+        strcmp( s, "changing\n" ) &&
+        ( strncmp( s, "play ", 5 ) || !( p = strchr( s, '\n' ) ) ||
+          p[1] || strchr( s, ';' ) || strchr( s, '$' ) ) &&
+        strcmp( s, "reconnect\n" ) )
     {
-		Com_DPrintf( "ignored stufftext: %s\n", string );
+		Com_DPrintf( "ignored stufftext: %s\n", s );
 		return;
 	}
 
-	Com_DPrintf( "stufftext: %s\n", Q_FormatString( string ) );
+	Com_DPrintf( "stufftext: %s\n", Q_FormatString( s ) );
 
-	Cbuf_AddText( string );
+	Cbuf_AddText( s );
 }
 
 /*
@@ -1348,15 +1350,15 @@ CL_ParseLayout
 =====================
 */
 static void CL_ParseLayout( void ) {
-	char *string;
+	char *s;
 
-	string = MSG_ReadString();
+	s = MSG_ReadString();
 
 	if( cl_shownet->integer > 2 ) {
-		Com_Printf( "    \"%s\"\n", Q_FormatString( string ) );
+		Com_Printf( "    \"%s\"\n", Q_FormatString( s ) );
 	}
-	
-	Q_strncpyz( cl.layout, string, sizeof( cl.layout ) );
+
+	Q_strncpyz( cl.layout, s, sizeof( cl.layout ) );
     cl.putaway = qfalse;
 }
 

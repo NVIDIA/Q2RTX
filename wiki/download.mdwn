@@ -4,11 +4,15 @@ There are no stable releases of Q2PRO available to date.
 
 Development snapshots
 ----------------
-Binary package for Windows:
+OpenGL client for Windows:
 [q2pro-win32.zip](../nightly/q2pro-win32.zip).
 
+Dedicated server for Windows:
+[q2proded-win32.zip](../nightly/q2proded-win32.zip).
+
 Update utility for Windows:
-[q2proupd.exe](../nightly/q2proupd.exe).
+[q2proupd.exe](../nightly/q2proupd.exe)
+(included in above packages).
 
 Dedicated server binary for GNU/Linux:
 [q2proded.bin.gz](../update/q2proded.bin.gz).<br />
@@ -27,8 +31,9 @@ the `q2pro` directory:
 
     svn co https://q2pro.svn.sourceforge.net/svnroot/q2pro/trunk q2pro
 
-If you look for the source code snapshot corresponding to a particular binary
-release, you may try the following command, replacing XXX with release number:
+If you are looking for the source code snapshot corresponding to
+a particular binary release, you may try the following command,
+replacing XXX with release number:
 
     svn co https://q2pro.svn.sourceforge.net/svnroot/q2pro/tags/rXXX q2pro-rXXX
 

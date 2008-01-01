@@ -93,8 +93,7 @@ static void MVD_LayoutClients( udpClient_t *client ) {
 	MSG_WriteData( layout, total + 1 );
 	SV_ClientAddMessage( client->cl, MSG_CLEAR );
 
-	client->layouts = 1;
-	client->layoutTime = sv.time + LAYOUT_MSEC;
+	client->layout_time = sv.time + LAYOUT_MSEC;
 }
 
 static void MVD_LayoutChannels( udpClient_t *client ) {
@@ -143,37 +142,45 @@ static void MVD_LayoutChannels( udpClient_t *client ) {
 	MSG_WriteByte( svc_layout );
 	MSG_WriteData( layout, total + 1 );				
 	SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
-
-	client->layouts = 1;
-	client->layoutTime = sv.time + LAYOUT_MSEC;
 }
 
 static void MVD_LayoutScores( udpClient_t *client ) {
     mvd_t *mvd = client->mvd;
+    char *layout = mvd->layout[0] ? mvd->layout :
+        "xv 100 yv 60 string \"<no scoreboard>\"";
 
     // send the layout
 	MSG_WriteByte( svc_layout );
+    MSG_WriteString( layout );
+	SV_ClientAddMessage( client->cl, MSG_CLEAR );
+}
 
-    if( mvd->dummy->layout ) {
-    	MSG_WriteString( mvd->dummy->layout );
-    } else {
-        MSG_WriteString( "xv 100 yv 60 string \"<no scoreboard>\"" );
-    }
+static void MVD_LayoutFollow( udpClient_t *client ) {
+    char *name = client->target ? client->target->name : "<no target>";
+
+    // send the layout
+	MSG_WriteByte( svc_layout );
+    MSG_WriteString( va( "xv 0 yt 48 cstring \"%s\"", name ) );
 	SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
-
-	client->layouts = 1;
 }
 
 static void MVD_SetDefaultLayout( udpClient_t *client ) {
-	if( client->mvd == &mvd_waitingRoom ) {
-        if( client->scoreboard != SBOARD_CHANNELS ) {
-    		client->scoreboard = SBOARD_CHANNELS;
+    mvd_t *mvd = client->mvd;
+
+	if( mvd == &mvd_waitingRoom ) {
+        if( client->layout_type != LAYOUT_CHANNELS ) {
+    		client->layout_type = LAYOUT_CHANNELS;
             client->cursor = 0;
 		    MVD_LayoutChannels( client );
         }
-	} else {
-		client->layouts = 0;
-		client->scoreboard = SBOARD_NONE;
+	} else if( mvd->intermission ) {
+        client->layout_type = LAYOUT_SCORES;
+        MVD_LayoutScores( client );
+	} else if( client->target && client->cl->protocol != PROTOCOL_VERSION_Q2PRO ) {
+        client->layout_type = LAYOUT_FOLLOW;
+        MVD_LayoutFollow( client );
+    } else {
+		client->layout_type = LAYOUT_NONE;
 	}
 }
 
@@ -215,6 +222,10 @@ static void MVD_FollowStop( udpClient_t *client ) {
     client->clientNum = mvd->clientNum;
     client->target = NULL;
 
+    if( client->layout_type == LAYOUT_FOLLOW ) {
+        MVD_SetDefaultLayout( client );
+    }
+
     MVD_UpdateClient( client );
 }
 
@@ -235,7 +246,14 @@ static void MVD_FollowStart( udpClient_t *client, mvd_player_t *target ) {
         SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
 	}
 
-    SV_ClientPrintf( client->cl, PRINT_MEDIUM, "[MVD] Following %s.\n", target->name );
+    SV_ClientPrintf( client->cl, PRINT_LOW, "[MVD] Following %s.\n", target->name );
+
+    if( !client->layout_type && client->cl->protocol != PROTOCOL_VERSION_Q2PRO ) {
+        client->layout_type = LAYOUT_FOLLOW;
+    }
+    if( client->layout_type == LAYOUT_FOLLOW ) {
+        MVD_LayoutFollow( client );
+    }
 
     MVD_UpdateClient( client );
 }
@@ -331,7 +349,6 @@ void MVD_UpdateClient( udpClient_t *client ) {
         for( i = 0; i < MAX_STATS; i++ ) {
             client->ps.stats[i] = target->ps.stats[i];
         }
-        client->ps.stats[STAT_LAYOUTS] = client->layouts;
         return;
     }
 
@@ -348,7 +365,6 @@ void MVD_UpdateClient( udpClient_t *client ) {
     }
 	client->ps.pmove.pm_flags |= PMF_NO_PREDICTION;
 	client->ps.pmove.pm_type = PM_FREEZE;
-    client->ps.stats[STAT_LAYOUTS] = client->layouts;
     client->clientNum = target - mvd->players;
 }
 
@@ -412,7 +428,11 @@ static void MVD_Admin_f( udpClient_t *client ) {
 }
 
 static void MVD_Say_f( udpClient_t *client ) {
-    int i;
+    mvd_t *mvd = client->mvd;
+    udpClient_t *other;
+    client_t *cl;
+    char buffer[128];
+    int i, length;
 
     if( mvd_flood_mute->integer && !client->admin ) {
         SV_ClientPrintf( client->cl, PRINT_HIGH,
@@ -443,9 +463,31 @@ static void MVD_Say_f( udpClient_t *client ) {
         }
     }
 
-    SV_BroadcastPrintf( PRINT_CHAT, "{%s}: %s\n", client->cl->name, Cmd_Args() );
     client->floodSamples[client->floodHead & FLOOD_MASK] = sv.time;
     client->floodHead++;
+
+    length = Com_sprintf( buffer, sizeof( buffer ), "{%s}: %s\n",
+        client->cl->name, Cmd_Args() );
+
+    MSG_WriteByte( svc_print );
+    MSG_WriteByte( PRINT_CHAT );
+    MSG_WriteData( buffer, length + 1 );
+
+    LIST_FOR_EACH( udpClient_t, other, &mvd->udpClients, entry ) {
+        cl = other->cl;
+        if( cl->state < cs_spawned ) {
+            continue;
+        }
+		if( PRINT_CHAT < cl->messagelevel ) {
+			continue;
+        }
+        if( ( other->uf & UF_NOMVDCHAT ) && !client->admin ) {
+            continue;
+        }
+		SV_ClientAddMessage( cl, MSG_RELIABLE );
+	}
+
+    SZ_Clear( &msg_write );
 }
 
 static void MVD_Observe_f( udpClient_t *client ) {
@@ -487,7 +529,7 @@ static void MVD_Invuse_f( udpClient_t *client ) {
     mvd_t *mvd;
     int cursor = 0;
 
-    if( client->scoreboard != SBOARD_CHANNELS ) {
+    if( client->layout_type != LAYOUT_CHANNELS ) {
         return;
     }
 
@@ -526,16 +568,16 @@ static void MVD_GameClientCommand( edict_t *ent ) {
 		return;
 	}
 	if( !strcmp( cmd, "inven" ) || !strcmp( cmd, "menu" ) ) {
-		if( client->scoreboard == SBOARD_CLIENTS ) {
+		if( client->layout_type == LAYOUT_CLIENTS ) {
 			MVD_SetDefaultLayout( client );
 		} else {
-			client->scoreboard = SBOARD_CLIENTS;
+			client->layout_type = LAYOUT_CLIENTS;
 			MVD_LayoutClients( client );
 		}
 		return;
 	}
 	if( !strcmp( cmd, "invnext" ) ) {
-		if( client->scoreboard == SBOARD_CHANNELS ) {
+		if( client->layout_type == LAYOUT_CHANNELS ) {
             client->cursor++;
 			MVD_LayoutChannels( client );
         } else {
@@ -544,7 +586,7 @@ static void MVD_GameClientCommand( edict_t *ent ) {
         return;
     }
 	if( !strcmp( cmd, "invprev" ) ) {
-		if( client->scoreboard == SBOARD_CHANNELS ) {
+		if( client->layout_type == LAYOUT_CHANNELS ) {
             client->cursor--;
 			MVD_LayoutChannels( client );
         } else {
@@ -557,10 +599,10 @@ static void MVD_GameClientCommand( edict_t *ent ) {
         return;
     }
 	if( !strcmp( cmd, "help" ) || !strncmp( cmd, "score", 5 ) ) {
-		if( client->scoreboard == SBOARD_SCORES ) {
+		if( client->layout_type == LAYOUT_SCORES ) {
 			MVD_SetDefaultLayout( client );
 		} else {
-			client->scoreboard = SBOARD_SCORES;
+			client->layout_type = LAYOUT_SCORES;
 			MVD_LayoutScores( client );
 		}
 		return;
@@ -570,7 +612,7 @@ static void MVD_GameClientCommand( edict_t *ent ) {
 		return;
 	}
 	if( !strcmp( cmd, "channels" ) ) {
-		client->scoreboard = SBOARD_CHANNELS;
+		client->layout_type = LAYOUT_CHANNELS;
 		MVD_LayoutChannels( client );
 		return;
 	}
@@ -586,21 +628,21 @@ MISC GAME FUNCTIONS
 ==============================================================================
 */
 
-void MVD_Update( mvd_t *mvd ) {
+static void MVD_Update( mvd_t *mvd ) {
     udpClient_t *client;
 
     LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
 		if( client->cl->state != cs_spawned ) {
             continue;
         }
-        client->ps.stats[STAT_LAYOUTS] = client->layouts;
-        switch( client->scoreboard ) {
-        case SBOARD_CLIENTS:
-            if( client->layoutTime < sv.time ) {
+        client->ps.stats[STAT_LAYOUTS] = client->layout_type ? 1 : 0;
+        switch( client->layout_type ) {
+        case LAYOUT_CLIENTS:
+            if( client->layout_time < sv.time ) {
                 MVD_LayoutClients( client );
             }
             break;
-        case SBOARD_CHANNELS:
+        case LAYOUT_CHANNELS:
             if( mvd_dirty ) {
                 MVD_LayoutChannels( client );
             }
@@ -874,8 +916,8 @@ static void MVD_GameRunFrame( void ) {
             if( mvd->dummy->ps.pmove.pm_type == PM_FREEZE ) {
                 mvd->intermission = qtrue;
                 LIST_FOR_EACH( udpClient_t, u, &mvd->udpClients, entry ) {
-                    if( u->cl->state == cs_spawned && !u->scoreboard ) {
-			            u->scoreboard = SBOARD_SCORES;
+                    if( u->cl->state == cs_spawned && u->layout_type < LAYOUT_SCORES ) {
+			            u->layout_type = LAYOUT_SCORES;
             			MVD_LayoutScores( u );            
                     }
                 }

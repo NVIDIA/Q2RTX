@@ -1053,7 +1053,7 @@ int FS_LoadFileEx( const char *path, void **buffer, int flags ) {
 	// get real file length
 	length = FS_GetFileLength( f );
 	
-	if( buffer ) {
+	if( buffer && length != -1 ) {
 		*buffer = buf = FS_AllocTempMem( length + 1 );
 		FS_Read( buf, length, f );
 		buf[length] = 0;
@@ -1061,7 +1061,7 @@ int FS_LoadFileEx( const char *path, void **buffer, int flags ) {
 
 	FS_FCloseFile( f );
 
-	return length;
+	return length == -1 ? 0 : length;
 }
 
 int FS_LoadFile( const char *path, void **buffer ) {
