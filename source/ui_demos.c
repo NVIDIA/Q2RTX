@@ -36,6 +36,7 @@ DEMOS MENU
 #define FFILE_UP	    1
 #define FFILE_FOLDER	2
 #define FFILE_DEMO	    3
+#define FFILE_MVD	    4
 
 #define ID_LIST			105
 
@@ -55,7 +56,7 @@ typedef struct m_demos_s {
 
 static m_demos_t	m_demos;
 
-static void Demos_BuildName( const char *path, fsFileInfo_t *info, char **cache ) {
+static void Demos_BuildName( fsFileInfo_t *info, char **cache ) {
     char buffer[MAX_OSPATH];
     demoInfo_t demo;
     demoEntry_t *e;
@@ -80,7 +81,7 @@ static void Demos_BuildName( const char *path, fsFileInfo_t *info, char **cache 
         }
         *cache = s;
     } else {
-        Q_concat( buffer, sizeof( buffer ), path, "/", info->name, NULL );
+        Q_concat( buffer, sizeof( buffer ), uis.m_demos_browse, "/", info->name, NULL );
         client.GetDemoInfo( buffer, &demo );
     }
 
@@ -94,7 +95,7 @@ static void Demos_BuildName( const char *path, fsFileInfo_t *info, char **cache 
 
     e = UI_FormatColumns( DEMO_EXTRASIZE,
         info->name, buffer, demo.map, demo.pov, NULL );
-    e->type = FFILE_DEMO;
+    e->type = strstr( info->name, ".mvd2" ) ? FFILE_MVD : FFILE_DEMO;
     e->size = info->size;
     e->mtime = info->mtime;
 
@@ -112,16 +113,12 @@ static void Demos_BuildDir( const char *name, int type ) {
     m_demos.list.items[m_demos.list.numItems++] = e;
 }
 
-static char *Demos_LoadCache( const char *path, void **list ) {
+static char *Demos_LoadCache( void **list ) {
     char buffer[MAX_OSPATH], *cache;
     int i, len;
     uint8 hash[16];
 
-	if( *path == '/' ) {
-		path++;
-	}
-
-	Q_concat( buffer, sizeof( buffer ), path, "/" COM_DEMOCACHE_NAME, NULL );
+	Q_concat( buffer, sizeof( buffer ), uis.m_demos_browse, "/" COM_DEMOCACHE_NAME, NULL );
     len = fs.LoadFile( buffer, ( void ** )&cache );
     if( !cache ) {
         return NULL;
@@ -152,7 +149,7 @@ fail:
     return NULL;
 }
 
-static void Demos_WriteCache( const char *path ) {
+static void Demos_WriteCache( void ) {
     char buffer[MAX_OSPATH];
     fileHandle_t f;
     int i;
@@ -163,11 +160,7 @@ static void Demos_WriteCache( const char *path ) {
         return;
     }
 
-	if( *path == '/' ) {
-		path++;
-	}
-
-	Q_concat( buffer, sizeof( buffer ), path, "/" COM_DEMOCACHE_NAME, NULL );
+	Q_concat( buffer, sizeof( buffer ), uis.m_demos_browse, "/" COM_DEMOCACHE_NAME, NULL );
     fs.FOpenFile( buffer, &f, FS_MODE_WRITE );
     if( !f ) {
         return;
@@ -212,20 +205,16 @@ static void Demos_CalcHash( void **list ) {
     mdfour_result( &md, m_demos.hash );
 }
 
-static void Demos_BuildList( const char *path ) {
+static void Demos_BuildList( void ) {
 	int numDirs, numDemos;
 	void **dirlist, **demolist;
     char *cache, *p;
 	int i;
-
-	if( *path == '/' ) {
-		path++;
-	}
 	
     // alloc entries
-	dirlist = fs.ListFiles( path, NULL, FS_PATH_GAME |
+	dirlist = fs.ListFiles( uis.m_demos_browse, NULL, FS_PATH_GAME |
         FS_SEARCHDIRS_ONLY, &numDirs );
-	demolist = fs.ListFiles( path, DEMO_EXTENSIONS, FS_PATH_GAME |
+	demolist = fs.ListFiles( uis.m_demos_browse, DEMO_EXTENSIONS, FS_PATH_GAME |
         FS_SEARCH_EXTRAINFO, &numDemos );
 
     m_demos.list.items = UI_Malloc( sizeof( demoEntry_t * ) * ( numDirs + numDemos + 1 ) );
@@ -233,7 +222,7 @@ static void Demos_BuildList( const char *path ) {
     m_demos.list.curvalue = 0;
     m_demos.list.prestep = 0;
 
-	if( *path ) {
+	if( uis.m_demos_browse[0] ) {
         Demos_BuildDir( "..", FFILE_UP );
         m_demos.list.curvalue = 1;
 	}
@@ -251,18 +240,18 @@ static void Demos_BuildList( const char *path ) {
     // add demos
 	if( demolist ) {
         Demos_CalcHash( demolist );
-        if( ( cache = Demos_LoadCache( path, demolist ) ) != NULL ) {
+        if( ( cache = Demos_LoadCache( demolist ) ) != NULL ) {
             p = cache + 32 + 1;
             for( i = 0; i < numDemos; i++ ) {
-                Demos_BuildName( path, demolist[i], &p );
+                Demos_BuildName( demolist[i], &p );
             }
             fs.FreeFile( cache );
         } else {
             for( i = 0; i < numDemos; i++ ) {
-                Demos_BuildName( path, demolist[i], NULL );
+                Demos_BuildName( demolist[i], NULL );
             }
         }
-        Demos_WriteCache( path );
+        Demos_WriteCache();
         fs.FreeList( demolist );
     }
 }
@@ -281,45 +270,41 @@ static void Demos_Free( void ) {
 }
 
 static void Demos_LeaveDirectory( void ) {
-	char buffer[MAX_OSPATH];
 	char *s;
 	int i;
 
 	s = strrchr( uis.m_demos_browse, '/' );
-	if( s ) {
-		*s = 0;
-		strcpy( buffer, s + 1 );
-	} else {
-		buffer[0] = 0;
-	}
+	if( !s ) {
+        return;
+    }
+	*s = 0;
 
 	// rebuild list
 	Demos_Free();
-	Demos_BuildList( uis.m_demos_browse );
+	Demos_BuildList();
 	MenuList_Init( &m_demos.list );
 
-	if( s == uis.m_demos_browse ) {
-		uis.m_demos_browse[0] = '/';
-		uis.m_demos_browse[1] = 0;
-	}
+    if( s == uis.m_demos_browse ) {
+        // TODO
+        uis.m_demos_browse[0] = '/';
+        uis.m_demos_browse[1] = 0;
+    }
 
 	// move cursor to the previous directory
-	if( buffer[0] ) {
-		for( i = 0; i < m_demos.numDirs; i++ ) {
-            demoEntry_t *e = m_demos.list.items[i];
-			if( !strcmp( e->name, buffer ) ) {
-				MenuList_SetValue( &m_demos.list, i );
-				return;
-			}
-		}
-	}
+    for( i = 0; i < m_demos.numDirs; i++ ) {
+        demoEntry_t *e = m_demos.list.items[i];
+        if( !strcmp( e->name, s + 1 ) ) {
+            MenuList_SetValue( &m_demos.list, i );
+            return;
+        }
+    }
 
 	MenuList_SetValue( &m_demos.list, 0 );
 }
 
 static int Demos_Action( void ) {
-	char buffer[MAX_OSPATH];
-	int length, baseLength;
+//    char buffer[MAX_OSPTH];
+	int len, baselen;
     demoEntry_t *e = m_demos.list.items[m_demos.list.curvalue];
 
 	switch( e->type ) {
@@ -328,28 +313,29 @@ static int Demos_Action( void ) {
 		return QMS_OUT;
 
 	case FFILE_FOLDER:
-		baseLength = strlen( uis.m_demos_browse );
-		length = strlen( e->name );
-		if( baseLength + length > sizeof( uis.m_demos_browse ) - 2 ) {
+		baselen = strlen( uis.m_demos_browse );
+		len = strlen( e->name );
+		if( baselen + 1 + len >= sizeof( uis.m_demos_browse ) ) {
 			return QMS_BEEP;
 		}
-		if( uis.m_demos_browse[ baseLength - 1 ] != '/' ) {
-			uis.m_demos_browse[ baseLength++ ] = '/';
-		}
-
-		strcpy( uis.m_demos_browse + baseLength, e->name );
+        if( !baselen || uis.m_demos_browse[ baselen - 1 ] != '/' ) {
+    		uis.m_demos_browse[ baselen++ ] = '/';
+        }
+		memcpy( uis.m_demos_browse + baselen, e->name, len + 1 );
 		
 		// rebuild list
 		Demos_Free();
-		Demos_BuildList( uis.m_demos_browse );
+		Demos_BuildList();
 		MenuList_Init( &m_demos.list );
 		return QMS_IN;
 
 	case FFILE_DEMO:
-		Com_sprintf( buffer, sizeof( buffer ), "%s \"%s/%s\"\n",
-            /*m_demos.demo.mvd ? "mvdplay" : */"demo",
-			uis.m_demos_browse, e->name );
-		cmd.ExecuteText( EXEC_APPEND, buffer );
+		cmd.ExecuteText( EXEC_APPEND, va( "demo \"%s/%s\"\n",
+            uis.m_demos_browse[1] ? uis.m_demos_browse : "", e->name ) );
+		return QMS_SILENT;
+	case FFILE_MVD:
+		cmd.ExecuteText( EXEC_APPEND, va( "mvdplay \"%s/%s\"\n",
+            uis.m_demos_browse[1] ? uis.m_demos_browse : "", e->name ) );
 		return QMS_SILENT;
 	}
 
@@ -401,10 +387,14 @@ static int Demos_MenuCallback( int id, int msg, int param ) {
 	case QM_CHANGE:
 		if( id == ID_LIST ) {
             demoEntry_t *e = m_demos.list.items[m_demos.list.curvalue];
-            if( e->type == FFILE_DEMO ) {
+            switch( e->type ) {
+            case FFILE_DEMO:
+            case FFILE_MVD:
                 m_demos.menu.statusbar = "Press Enter to play demo";
-            } else {
+                break;
+            default:
                 m_demos.menu.statusbar = "Press Enter to change directory";
+                break;
             }
             return QMS_SILENT;
         }
@@ -452,7 +442,7 @@ static int Demos_MenuCallback( int id, int msg, int param ) {
 static void Demos_MenuInit( void ) {
 	memset( &m_demos, 0, sizeof( m_demos ) );
 
-	Demos_BuildList( uis.m_demos_browse );
+	Demos_BuildList();
 
 	m_demos.menu.banner = "Demo Browser";
 	m_demos.menu.callback = Demos_MenuCallback;

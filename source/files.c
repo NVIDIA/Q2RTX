@@ -891,6 +891,10 @@ int FS_FOpenFile( const char *name, fileHandle_t *f, int mode ) {
 		return -1; // not yet initialized
 	}
 
+    if( *name == '/' ) {
+        name++;
+    }
+
     if( ( mode & FS_MODE_MASK ) == FS_MODE_READ ) {
         name = FS_ExpandLinks( name );
     }
@@ -1032,6 +1036,10 @@ int FS_LoadFileEx( const char *path, void **buffer, int flags ) {
 		return -1; // not yet initialized
 	}
 
+    if( *path == '/' ) {
+        path++;
+    }
+
     path = FS_ExpandLinks( path );
 
 	if( !FS_ValidatePath( path ) ) {
@@ -1167,6 +1175,10 @@ FS_RemoveFile
 qboolean FS_RemoveFile( const char *filename ) {
 	char path[MAX_OSPATH];
 
+    if( *filename == '/' ) {
+        filename++;
+    }
+
 	if( !FS_ValidatePath( filename ) ) {
 		FS_DPrintf( "FS_RemoveFile: refusing invalid path: %s\n", filename );
 		return qfalse;
@@ -1190,6 +1202,13 @@ FS_RemoveFile
 qboolean FS_RenameFile( const char *from, const char *to ) {
 	char frompath[MAX_OSPATH];
 	char topath[MAX_OSPATH];
+
+    if( *from == '/' ) {
+        from++;
+    }
+    if( *to == '/' ) {
+        to++;
+    }
 
 	if( !FS_ValidatePath( from ) || !FS_ValidatePath( to ) ) {
 		FS_DPrintf( "FS_RenameFile: refusing invalid path: %s to %s\n", from, to );
@@ -1750,6 +1769,9 @@ void **FS_ListFiles( const char *path,
 		path = "";
         pathlen = 0;
 	} else {
+        if( *path == '/' ) {
+            path++;
+        }
         pathlen = strlen( path );
     }
 
