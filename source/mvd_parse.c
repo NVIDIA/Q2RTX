@@ -459,28 +459,20 @@ static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
 
     reliable = op == mvd_unicast_r ? qtrue : qfalse;
 
-	while( 1 ) {
-		if( msg_read.readcount > last ) {
-		    MVD_Destroyf( mvd, "%s: read past end of unicast", __func__ );
-		}
-
-		if( msg_read.readcount == last ) {
-			break;
-		}
-
+	while( msg_read.readcount < last ) {
         c = MSG_ReadByte();
 		switch( c ) {
 		case svc_layout:
-            MVD_UnicastLayout( mvd, op, player );
+            MVD_UnicastLayout( mvd, reliable, player );
 			break;
 		case svc_configstring:
-            MVD_UnicastString( mvd, op, player );
+            MVD_UnicastString( mvd, reliable, player );
 			break;
 		case svc_print:
-            MVD_UnicastPrint( mvd, op, player );
+            MVD_UnicastPrint( mvd, reliable, player );
 			break;
 		case svc_stufftext:
-            MVD_UnicastStuff( mvd, op, player );
+            MVD_UnicastStuff( mvd, reliable, player );
 			break;
 		default:
 			// send remaining data and return
@@ -491,6 +483,10 @@ static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
 			return;
 		}
 	}
+
+    if( msg_read.readcount > last ) {
+        MVD_Destroyf( mvd, "%s: read past end of unicast", __func__ );
+    }
 }
 
 /*

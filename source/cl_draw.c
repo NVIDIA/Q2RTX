@@ -690,6 +690,9 @@ static void draw_following( void ) {
 	if( !cls.demoplayback && cl.frame.clientNum == cl.clientNum ) {
 		return;
 	}
+    if( cl.frame.ps.stats[STAT_LAYOUTS] ) {
+        return;
+    }
 
 	string = cl.clientinfo[cl.frame.clientNum].name;
 	if( !string[0] ) {

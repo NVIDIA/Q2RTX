@@ -176,7 +176,9 @@ static void MVD_SetDefaultLayout( udpClient_t *client ) {
 	} else if( mvd->intermission ) {
         client->layout_type = LAYOUT_SCORES;
         MVD_LayoutScores( client );
-	} else if( client->target && client->cl->protocol != PROTOCOL_VERSION_Q2PRO ) {
+	} else if( client->target && ( client->cl->protocol !=
+        PROTOCOL_VERSION_Q2PRO || client->cl->settings[CLS_RECORDING] ) )
+    {
         client->layout_type = LAYOUT_FOLLOW;
         MVD_LayoutFollow( client );
     } else {
@@ -248,7 +250,9 @@ static void MVD_FollowStart( udpClient_t *client, mvd_player_t *target ) {
 
     SV_ClientPrintf( client->cl, PRINT_LOW, "[MVD] Following %s.\n", target->name );
 
-    if( !client->layout_type && client->cl->protocol != PROTOCOL_VERSION_Q2PRO ) {
+    if( !client->layout_type && ( client->cl->protocol !=
+        PROTOCOL_VERSION_Q2PRO || client->cl->settings[CLS_RECORDING] ) )
+    {
         client->layout_type = LAYOUT_FOLLOW;
     }
     if( client->layout_type == LAYOUT_FOLLOW ) {
@@ -637,6 +641,15 @@ static void MVD_Update( mvd_t *mvd ) {
         }
         client->ps.stats[STAT_LAYOUTS] = client->layout_type ? 1 : 0;
         switch( client->layout_type ) {
+        case LAYOUT_NONE:
+            if( client->cl->protocol != PROTOCOL_VERSION_Q2PRO ) {
+                break;
+            }
+            if( client->target && client->cl->settings[CLS_RECORDING] ) {
+                client->layout_type = LAYOUT_FOLLOW;
+                MVD_LayoutFollow( client );
+            }
+            break;
         case LAYOUT_CLIENTS:
             if( client->layout_time < sv.time ) {
                 MVD_LayoutClients( client );

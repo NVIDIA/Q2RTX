@@ -461,9 +461,10 @@ void SV_BuildClientFrame( client_t *client ) {
 		}
 
         // XXX: hide this enitity from renderer
-		if( client->protocol != PROTOCOL_VERSION_Q2PRO &&
+		if( ( client->protocol != PROTOCOL_VERSION_Q2PRO ||
+              client->settings[CLS_RECORDING] ) &&
             ( gameFeatures & GAME_FEATURE_CLIENTNUM ) &&
-			e == frame->clientNum + 1 )
+			e == frame->clientNum + 1 && ent != clent )
 		{
 			state->modelindex = 0;
 		}

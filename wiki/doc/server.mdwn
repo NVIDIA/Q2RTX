@@ -161,8 +161,24 @@ the live MVD stream on server.
 - `mvdisconnect`  
 
 - `mvdspawn`  
-Spawn MVD client instance.
+Spawn MVD client instance, that is, Waiting Room channel.
 
 - `mvdchannels`  
 Display status of all MVD channels.
 
+
+Anticheat
+==========
+
+Q2PRO server supports r1ch.net anticheat server interface, which means it is
+capable of serving clients supported by the proprietary client side anticheat
+module (currently, these include Windows builds of R1Q2, EGL and AprQ2).
+
+See this [thread](http://www.r1ch.net/forum/index.php?topic=944.0) on r1ch.net
+forums for more information on how to setup your server to use anticheat
+interface.
+
+Q2PRO anticheat server interface is implemented on top of R1Q2 reference
+implementation. All R1Q2 variables and commands related to anticheat are
+supported, except of `sv_anticheat_nag_*`, `sv_anticheat_client_restrictions`
+and `sv_anticheat_force_protocol35` variables.

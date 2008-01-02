@@ -1,5 +1,27 @@
 [[toc ]]
 
+Quick start
+==========
+
+For those who prefer to see results first, then read documentation,
+here is an example client configuration file to start playing with:
+
+    set cl_async 1 // framerate separation
+    set cl_maxfps 120 // physics
+    set r_maxfps 240 // graphics
+    set cl_maxpackets 60 // network
+    set vid_modelist "640x480 800x600 1024x768"
+    set vid_fullscreen 2 // 800x600
+    set r_override_textures 1 // JPG, PNG
+    set r_override_models 1 // MD3
+    set gl_brightness 0.25 // lightmap overbright
+    set gl_saturation 0.5 // textures color saturation
+    set gl_coloredlightmaps 0.5 // lightmap color saturation
+    set gl_anisotropy 8  // enable anisotropic filtering
+    set gl_vertex_buffer_object 1 // enable VBOs
+    set cl_railtrail_type 1 // single beam
+    set con_clock 1 // display clock in console
+
 Variables
 ==========
 
@@ -156,6 +178,11 @@ Font used for drawing console text.
 - `set con_background "conback"` (string)  
 Image to use as console background.
 
+- `set con_history 0` (integer)  
+If non-zero, specifies how many lines to save into console history file
+before exiting Q2PRO, to be reloaded on next startup. Maximum number of
+history lines is 128.
+
 Screen
 ----------
 
@@ -199,23 +226,28 @@ Video
 
 Hard coded list of the fullscreen video modes is gone from Q2PRO, you can
 (and should) specify your own list in your configuration files. Vertical
-refresh frequency and bit depth can be specified individually for each mode.
+refresh frequency `freq` and bit depth `bpp` can be specified individually
+for each mode.
 
 Changing video modes no longer requires `vid_restart`, and is literally instant
 on some setups (e.g. X11 w/ LCD monitor). In windowed mode, size and position
-of the main window can be changed dynamically.
+of the main window can be changed freely, by dragging window borders with
+mouse cursor or whatever.
 
 - `set vid_modelist "640x480"` (string)  
 List of the fullscreen video modes. Full syntax is: `WxH[@freq][:bpp] [...]`.
 
 - `set vid_fullscreen 0` (integer)  
 If set to default (zero), run in windowed mode. If set to non zero _value_,
-run in the specified fullscreen mode. This way, _value_ acts as 1-based index
+run in the specified fullscreen mode. This way, _value_ acts as index
 into the list of video modes specified by `vid_modelist`.
 
 - `set vid_placement "640x480"` (string)  
 Placement of the main window on your virtual desktop. Full syntax is: `WxH[+X+Y]`.
 
+For example, `set vid_modelist "640x480@75 800x600@75:32"`, followed by
+`set vid_fullscreen 2` selects 800x600 video mode at 75 Hz vertical refresh
+and forces 32 bit framebuffer depth.
 
 OpenGL renderer
 ----------
@@ -314,11 +346,12 @@ and `${$loc_here}`.
 - `$loc_there` Name of the location you are looking at.
 - `$loc_here` Name of the location you are standing at.
 - `$cl_ping` Average RTT to the server and back.
-- `$cl_fps` Rendering frame rate.
+- `$cl_fps` Input polling rate (that is, main loop frame rate).
 - `$cl_ups` Player velocity in units/sec.
 - `$com_time` Current time, formatted according to `com_time_format`.
 - `$com_date` Current date, formatted according to `com_date_format`.
 - `$com_uptime` Engine uptime in format `[DD+][HH:]MM.SS`.
+- `$random` Expands to the single random decimal digit.
 - `$net_dnrate` Download rate in bytes/sec.
 - `$net_uprate` Upload rate in bytes/sec.
 - `$qt` Expands to double quote.
@@ -343,7 +376,9 @@ Otherwise, subtract the specified float _value_.
 - `reset <cvar>`  
 Reset the specified _cvar_ to it's default value.
 
-- `cvarlist [-f] [-d] [-w <wildcard>]`
+- `cvarlist [options]`  
+Display the list of registered cvars and their current values with
+optional wildcard filtering. Try `cvarlist --help` for details.
 
 - `macrolist`  
 Display the list of registered macros and their current values.
