@@ -222,6 +222,7 @@ static void MVD_FollowStop( udpClient_t *client ) {
     }
 
     client->clientNum = mvd->clientNum;
+    client->oldtarget = client->target;
     client->target = NULL;
 
     if( client->layout_type == LAYOUT_FOLLOW ) {
@@ -380,18 +381,46 @@ SPECTATOR COMMANDS
 ==============================================================================
 */
 
+static void MVD_BroadcastPrintf( mvd_t *mvd, int level, const char *fmt, ... ) {
+	va_list		argptr;
+	char		text[MAXPRINTMSG];
+    int         len;
+    udpClient_t *other;
+    client_t    *cl;
+
+	va_start( argptr, fmt );
+	len = Q_vsnprintf( text, sizeof( text ), fmt, argptr );
+	va_end( argptr );
+
+    MSG_WriteByte( svc_print );
+    MSG_WriteByte( level );
+    MSG_WriteData( text, len + 1 );
+
+    LIST_FOR_EACH( udpClient_t, other, &mvd->udpClients, entry ) {
+        cl = other->cl;
+        if( cl->state < cs_spawned ) {
+            continue;
+        }
+		if( level < cl->messagelevel ) {
+			continue;
+        }
+        if( level == PRINT_CHAT && ( other->uf & UF_NOMVDCHAT ) ) {
+            continue;
+        }
+		SV_ClientAddMessage( cl, MSG_RELIABLE );
+	}
+
+    SZ_Clear( &msg_write );
+}
+
 void MVD_SwitchChannel( udpClient_t *client, mvd_t *mvd ) {
     client_t *cl = client->cl;
-
-    if( mvd == client->mvd ) {
-        SV_ClientPrintf( client->cl, PRINT_HIGH,
-            "[MVD] You are already on this channel.\n" );
-        return; // nothing to do
-    }
 
 	List_Remove( &client->entry );
     List_Append( &mvd->udpClients, &client->entry );
     client->mvd = mvd;
+    client->begin_time = 0;
+    client->target = client->oldtarget = NULL;
 
     cl->gamedir = mvd->gamedir;
     cl->mapname = mvd->configstrings[CS_NAME];
@@ -405,6 +434,28 @@ void MVD_SwitchChannel( udpClient_t *client, mvd_t *mvd ) {
     MSG_WriteString( "changing; reconnect\n" );
     SV_ClientReset( client->cl );
     SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
+}
+
+void MVD_TrySwitchChannel( udpClient_t *client, mvd_t *mvd ) {
+    if( mvd == client->mvd ) {
+        SV_ClientPrintf( client->cl, PRINT_HIGH,
+            "[MVD] You are already on this channel.\n" );
+        return; // nothing to do
+    }
+    if( client->begin_time ) {
+        if( client->begin_time > svs.realtime ) {
+            client->begin_time = svs.realtime;
+        }
+        if( svs.realtime - client->begin_time < 3000 ) {
+            SV_ClientPrintf( client->cl, PRINT_HIGH,
+                "[MVD] You may not switch channels too soon.\n" );
+            return;
+        }
+        MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM,
+            "[MVD] %s left the channel.\n", client->cl->name );
+    }
+
+    MVD_SwitchChannel( client, mvd );
 }
 
 static void MVD_Admin_f( udpClient_t *client ) {
@@ -436,7 +487,7 @@ static void MVD_Say_f( udpClient_t *client ) {
     udpClient_t *other;
     client_t *cl;
     char buffer[128];
-    int i, length;
+    int i, len;
 
     if( mvd_flood_mute->integer && !client->admin ) {
         SV_ClientPrintf( client->cl, PRINT_HIGH,
@@ -470,12 +521,12 @@ static void MVD_Say_f( udpClient_t *client ) {
     client->floodSamples[client->floodHead & FLOOD_MASK] = sv.time;
     client->floodHead++;
 
-    length = Com_sprintf( buffer, sizeof( buffer ), "{%s}: %s\n",
+    len = Com_sprintf( buffer, sizeof( buffer ), "{%s}: %s\n",
         client->cl->name, Cmd_Args() );
 
     MSG_WriteByte( svc_print );
     MSG_WriteByte( PRINT_CHAT );
-    MSG_WriteData( buffer, length + 1 );
+    MSG_WriteData( buffer, len + 1 );
 
     LIST_FOR_EACH( udpClient_t, other, &mvd->udpClients, entry ) {
         cl = other->cl;
@@ -497,6 +548,8 @@ static void MVD_Say_f( udpClient_t *client ) {
 static void MVD_Observe_f( udpClient_t *client ) {
     if( client->target ) {
         MVD_FollowStop( client );
+    } else if( client->oldtarget && client->oldtarget->inuse ) {
+        MVD_FollowStart( client, client->oldtarget );
     } else {
         MVD_FollowFirst( client );
     }
@@ -542,11 +595,25 @@ static void MVD_Invuse_f( udpClient_t *client ) {
             continue;
         }
         if( cursor == client->cursor ) {
-            MVD_SwitchChannel( client, mvd );
+            MVD_TrySwitchChannel( client, mvd );
             return;
         }
         cursor++;
     }
+}
+
+static void MVD_Join_f( udpClient_t *client ) {
+    mvd_t *mvd;
+        
+	SV_BeginRedirect( RD_CLIENT );
+    mvd = MVD_SetChannel( 1 );
+	Com_EndRedirect();
+
+    if( !mvd ) {
+        return;
+    }
+
+    MVD_TrySwitchChannel( client, mvd );
 }
 
 static void MVD_GameClientCommand( edict_t *ent ) {
@@ -620,8 +687,12 @@ static void MVD_GameClientCommand( edict_t *ent ) {
 		MVD_LayoutChannels( client );
 		return;
 	}
+	if( !strcmp( cmd, "join" ) ) {
+        MVD_Join_f( client );
+        return;
+    }
 	
-	SV_ClientPrintf( client->cl, PRINT_LOW, "[MVD] Unknown command: %s\n", cmd );
+	SV_ClientPrintf( client->cl, PRINT_HIGH, "[MVD] Unknown command: %s\n", cmd );
 }
 
 /*
@@ -783,13 +854,13 @@ static void MVD_GameClientBegin( edict_t *ent ) {
 	memset( &client->lastcmd, 0, sizeof( client->lastcmd ) );
 	memset( &client->ps, 0, sizeof( client->ps ) );
 	
-	if( !client->connected ) {
-		SV_BroadcastPrintf( PRINT_MEDIUM, "[MVD] %s entered the server\n",
-            client->cl->name );
-		client->connected = qtrue;
+	if( !client->begin_time ) {
+		MVD_BroadcastPrintf( mvd, PRINT_MEDIUM,
+            "[MVD] %s entered the channel\n", client->cl->name );
 	}
+	client->begin_time = svs.realtime;
 
-    // spawn the  spectator
+    // spawn the spectator
 	VectorScale( mvd->spawnOrigin, 8, client->ps.pmove.origin );
     VectorCopy( mvd->spawnAngles, client->ps.viewangles );
 
@@ -822,10 +893,10 @@ static void MVD_GameClientDisconnect( edict_t *ent ) {
 	udpClient_t *client = EDICT_MVDCL( ent );
     client_t *cl = client->cl;
 
-    if( client->connected ) {
-    	SV_BroadcastPrintf( PRINT_MEDIUM,
-            "[MVD] %s left the server\n", cl->name );
-		client->connected = qfalse;
+    if( client->begin_time ) {
+    	MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM,
+            "[MVD] %s disconnected\n", cl->name );
+		client->begin_time = 0;
     }
 }
 
@@ -850,11 +921,7 @@ static void MVD_GameClientThink( edict_t *ent, usercmd_t *cmd ) {
 	pmove_t pm;
 
 	if( !( old->buttons & BUTTON_ATTACK ) && ( cmd->buttons & BUTTON_ATTACK ) ) {
-		if( client->target ) {
-			MVD_FollowStop( client );
-		} else {
-			MVD_FollowFirst( client );
-		}
+        MVD_Observe_f( client );
 	}
 
 	if( client->target ) {

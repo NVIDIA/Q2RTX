@@ -432,6 +432,9 @@ void SV_ClientReset( client_t *client );
 typedef enum {RD_NONE, RD_CLIENT, RD_PACKET} redirect_t;
 #define	SV_OUTPUTBUF_LENGTH	(MAX_PACKETLEN_DEFAULT - 16)
 
+#define SV_BeginRedirect( target ) \
+	Com_BeginRedirect( target, sv_outputbuf, SV_OUTPUTBUF_LENGTH, SV_FlushRedirect )
+
 extern	char	sv_outputbuf[SV_OUTPUTBUF_LENGTH];
 
 void SV_FlushRedirect( int redirected, char *outputbuf, int length );

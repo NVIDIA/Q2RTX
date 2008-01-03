@@ -695,7 +695,7 @@ static void SV_ShowServerinfo_f( void ) {
 
     Cvar_BitInfo( serverinfo, CVAR_SERVERINFO );
 
-	Com_BeginRedirect( RD_CLIENT, sv_outputbuf, SV_OUTPUTBUF_LENGTH, SV_FlushRedirect );
+	SV_BeginRedirect( RD_CLIENT );
 	Info_Print( serverinfo );
 	Com_EndRedirect();
 }
@@ -784,13 +784,13 @@ static void SV_CvarResult_f( void ) {
 #if USE_ANTICHEAT & 2
 
 static void SV_AC_List_f( void ) {
-	Com_BeginRedirect( RD_CLIENT, sv_outputbuf, SV_OUTPUTBUF_LENGTH, SV_FlushRedirect );
+	SV_BeginRedirect( RD_CLIENT );
 	AC_List_f();
 	Com_EndRedirect();
 }
 
 static void SV_AC_Info_f( void ) {
-	Com_BeginRedirect( RD_CLIENT, sv_outputbuf, SV_OUTPUTBUF_LENGTH, SV_FlushRedirect );
+	SV_BeginRedirect( RD_CLIENT );
 	AC_Info_f();
 	Com_EndRedirect();
 }

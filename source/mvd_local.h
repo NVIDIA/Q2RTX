@@ -78,9 +78,9 @@ typedef struct {
 	client_t *cl;
 
     qboolean admin;
-	qboolean connected;
+	unsigned begin_time;
     int lastframe;
-	mvd_player_t *target;
+	mvd_player_t *target, *oldtarget;
 	float fov;
     int uf;
     int cursor;
@@ -181,6 +181,8 @@ void MVD_GetStream( const char *uri );
 void MVD_GetStatus( void );
 void MVD_Free( mvd_t *mvd ); 
 void MVD_Shutdown( void );
+
+mvd_t *MVD_SetChannel( int arg );
 
 const char *MVD_Play_g( const char *partial, int state );
 
