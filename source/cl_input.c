@@ -50,11 +50,6 @@ static cvar_t	*m_yaw;
 static cvar_t	*m_forward;
 static cvar_t	*m_side;
 
-static qboolean mlooking;
-
-static uint32	frame_msec;
-static uint32	old_eventTime;
-
 inputAPI_t	input;
 
 void CL_CenterView (void);
@@ -263,7 +258,7 @@ static kbutton_t	in_strafe, in_speed, in_use, in_attack;
 static kbutton_t	in_up, in_down;
 
 static int			in_impulse;
-
+static qboolean     in_mlooking;
 
 static void KeyDown (kbutton_t *b)
 {
@@ -342,6 +337,14 @@ static void KeyUp (kbutton_t *b)
 	b->state &= ~1;		// now up
 }
 
+static void KeyClear( kbutton_t *b ) {
+    b->msec = 0;
+	b->state &= ~2;		// clear impulses
+	if( b->state & 1 ) {
+		b->downtime = com_eventTime; // still down
+	}
+}
+
 static void IN_KLookDown( void ) { KeyDown( &in_klook ); }
 static void IN_KLookUp( void ) { KeyUp( &in_klook ); }
 static void IN_UpDown( void ) { KeyDown( &in_up ); }
@@ -388,11 +391,11 @@ static void IN_Impulse ( void ) {
 }
 
 static void IN_MLookDown( void ) {
-	mlooking = qtrue;
+	in_mlooking = qtrue;
 }
 
 static void IN_MLookUp( void ) {
-	mlooking = qfalse;
+	in_mlooking = qfalse;
 
 	if( !freelook->integer && lookspring->integer )
 		CL_CenterView();
@@ -407,44 +410,7 @@ Returns the fraction of the frame that the key was down
 */
 static float CL_KeyState( kbutton_t *key ) {
 	float		val;
-	uint32		msec;
-
-	key->state &= ~2;		// clear impulses
-
-	msec = key->msec;
-	key->msec = 0;
-
-	if( key->state & 1 ) {
-		// still down
-		if( com_eventTime > key->downtime ) {
-			msec += com_eventTime - key->downtime;
-		}
-		key->downtime = com_eventTime;
-	}
-
-	if( !frame_msec ) {
-		return 0;
-	}
-	val = ( float )msec / frame_msec;
-
-	clamp( val, 0, 1 );
-    
-	return val;
-}
-
-// FIXME: always discrete?
-static float CL_ImmKeyState( kbutton_t *key ) {
-#if 0
-	if( key->state & 1 ) {
-		return 1;
-	}
-
-	return 0;
-#else
-	float		val;
-	uint32		msec;
-
-	msec = key->msec;
+	uint32		msec = key->msec;
 
 	if( key->state & 1 ) {
 		// still down
@@ -453,17 +419,15 @@ static float CL_ImmKeyState( kbutton_t *key ) {
 		}
 	}
 
-	if( !frame_msec ) {
+	if( !cl.cmd.msec ) {
 		return 0;
 	}
-	val = ( float )msec / frame_msec;
+	val = ( float )msec / cl.cmd.msec;
 
 	clamp( val, 0, 1 );
     
 	return val;
-#endif
 }
-
 
 //==========================================================================
 
@@ -522,13 +486,13 @@ static void CL_MouseMove( void ) {
 	my *= speed;
 
 // add mouse X/Y movement to cmd
-	if( ( in_strafe.state & 1 ) || ( lookstrafe->integer && mlooking ) ) {
+	if( ( in_strafe.state & 1 ) || ( lookstrafe->integer && !in_mlooking ) ) {
 		cl.cmd.sidemove += m_side->value * mx;
 	} else {
 		cl.viewangles[YAW] -= m_yaw->value * mx;
 	}
 
-	if( ( mlooking || freelook->integer ) && !( in_strafe.state & 1 ) ) {
+	if( ( in_mlooking || freelook->integer ) && !( in_strafe.state & 1 ) ) {
 		cl.viewangles[PITCH] += m_pitch->value * my;
 	} else {
 		cl.cmd.forwardmove -= m_forward->value * my;
@@ -543,49 +507,39 @@ CL_AdjustAngles
 Moves the local angle positions
 ================
 */
-static void CL_AdjustAngles (int msec)
-{
+static void CL_AdjustAngles( int msec ) {
 	float	speed;
-	float	up, down;
 	
-	if (in_speed.state & 1)
+	if( in_speed.state & 1 )
 		speed = msec * cl_anglespeedkey->value * 0.001f;
 	else
 		speed = msec * 0.001f;
 
-	if (!(in_strafe.state & 1))
-	{
-		cl.viewangles[YAW] -= speed*cl_yawspeed->value*CL_ImmKeyState (&in_right);
-		cl.viewangles[YAW] += speed*cl_yawspeed->value*CL_ImmKeyState (&in_left);
+	if( !( in_strafe.state & 1 ) ) {
+		cl.viewangles[YAW] -= speed*cl_yawspeed->value*CL_KeyState(&in_right);
+		cl.viewangles[YAW] += speed*cl_yawspeed->value*CL_KeyState(&in_left);
 	}
-	if (in_klook.state & 1)
-	{
-		cl.viewangles[PITCH] -= speed*cl_pitchspeed->value * CL_ImmKeyState (&in_forward);
-		cl.viewangles[PITCH] += speed*cl_pitchspeed->value * CL_ImmKeyState (&in_back);
+	if( in_klook.state & 1 ) {
+		cl.viewangles[PITCH] -= speed*cl_pitchspeed->value*CL_KeyState(&in_forward);
+		cl.viewangles[PITCH] += speed*cl_pitchspeed->value*CL_KeyState(&in_back);
 	}
 	
-	up = CL_ImmKeyState (&in_lookup);
-	down = CL_ImmKeyState(&in_lookdown);
-	
-	cl.viewangles[PITCH] -= speed*cl_pitchspeed->value * up;
-	cl.viewangles[PITCH] += speed*cl_pitchspeed->value * down;
+	cl.viewangles[PITCH] -= speed*cl_pitchspeed->value*CL_KeyState(&in_lookup);
+	cl.viewangles[PITCH] += speed*cl_pitchspeed->value*CL_KeyState(&in_lookdown);
 }
 
 /*
 ================
 CL_BaseMove
 
-Send the intended movement message to the server
+Build the intended movement vector
 ================
 */
-static void CL_BaseMove( void ) {
-	vec3_t move;
-	
-	VectorClear( move );
+static void CL_BaseMove( vec3_t move ) {
 	if( in_strafe.state & 1 ) {
 		move[1] += cl_sidespeed->value * CL_KeyState( &in_right );
 		move[1] -= cl_sidespeed->value * CL_KeyState( &in_left );
-	}
+    }
 
 	move[1] += cl_sidespeed->value * CL_KeyState( &in_moveright );
 	move[1] -= cl_sidespeed->value * CL_KeyState( &in_moveleft );
@@ -596,51 +550,13 @@ static void CL_BaseMove( void ) {
 	if( !( in_klook.state & 1 ) ) {
 		move[0] += cl_forwardspeed->value * CL_KeyState( &in_forward );
 		move[0] -= cl_forwardspeed->value * CL_KeyState( &in_back );
-	}	
+    }
 
 //
 // adjust for speed key / running
 //
 	if( ( in_speed.state & 1 ) ^ cl_run->integer ) {
 		VectorScale( move, 2, move );
-	}
-
-	cl.cmd.forwardmove = move[0];
-	cl.cmd.sidemove = move[1];
-	cl.cmd.upmove = move[2];
-}
-
-/*
-================
-CL_ImmBaseMove
-
-Builds intended movement message for
-local pmove sampling
-================
-*/
-static void CL_ImmBaseMove( void ) {
-	VectorClear( cl.move );
-	if( in_strafe.state & 1 ) {
-		cl.move[1] += cl_sidespeed->value * CL_ImmKeyState( &in_right );
-		cl.move[1] -= cl_sidespeed->value * CL_ImmKeyState( &in_left );
-	}
-
-	cl.move[1] += cl_sidespeed->value * CL_ImmKeyState( &in_moveright );
-	cl.move[1] -= cl_sidespeed->value * CL_ImmKeyState( &in_moveleft );
-
-	cl.move[2] += cl_upspeed->value * CL_ImmKeyState( &in_up );
-	cl.move[2] -= cl_upspeed->value * CL_ImmKeyState( &in_down );
-
-	if( !( in_klook.state & 1 ) ) {
-		cl.move[0] += cl_forwardspeed->value * CL_ImmKeyState( &in_forward );
-		cl.move[0] -= cl_forwardspeed->value * CL_ImmKeyState( &in_back );
-	}	
-
-//
-// adjust for speed key / running
-//
-	if( ( in_speed.state & 1 ) ^ cl_run->integer ) {
-		VectorScale( cl.move, 2, cl.move );
 	}
 }
 
@@ -668,6 +584,8 @@ CL_UpdateCmd
 =================
 */
 void CL_UpdateCmd( int msec ) {
+    VectorClear( cl.move );
+
 	if( sv_paused->integer ) {
         mouse_x = old_mouse_x;
         mouse_y = old_mouse_y;
@@ -678,12 +596,12 @@ void CL_UpdateCmd( int msec ) {
 	CL_AdjustAngles( msec );
 	
 	// get basic movement from keyboard
-	CL_ImmBaseMove();
+	CL_BaseMove( cl.move );
 
 	// allow mice or other external controllers to add to the move
 	CL_MouseMove();
 
-	// send milliseconds of time to apply the move
+	// add to milliseconds of time to apply the move
 	cl.cmd.msec += msec;
 
 	CL_ClampPitch();
@@ -769,6 +687,8 @@ void CL_RegisterInput( void ) {
 }
 
 void CL_FinalizeCmd( void ) {
+	vec3_t move;
+
     // command buffer ticks in sync with cl_maxfps
     if( cmd_buffer.waitCount > 0 ) {
         cmd_buffer.waitCount--;
@@ -781,9 +701,6 @@ void CL_FinalizeCmd( void ) {
 	if( sv_paused->integer ) {
 		return;
 	}
-
-	frame_msec = com_eventTime - old_eventTime;
-	clamp( frame_msec, 1, 200 );
 
 //
 // figure button bits
@@ -804,7 +721,30 @@ void CL_FinalizeCmd( void ) {
 		cl.cmd.msec = 100;		// time was unreasonable
 	}
 
-	CL_BaseMove();
+	move[0] = cl.cmd.forwardmove;
+	move[1] = cl.cmd.sidemove;
+	move[2] = cl.cmd.upmove;
+
+	CL_BaseMove( move );
+
+	cl.cmd.forwardmove = move[0];
+	cl.cmd.sidemove = move[1];
+	cl.cmd.upmove = move[2];
+
+    KeyClear( &in_right );
+    KeyClear( &in_left );
+
+    KeyClear( &in_moveright );
+    KeyClear( &in_moveleft );
+
+    KeyClear( &in_up );
+    KeyClear( &in_down );
+
+    KeyClear( &in_forward );
+    KeyClear( &in_back );
+
+    KeyClear( &in_lookup );
+    KeyClear( &in_lookdown );
 
 	cl.cmd.impulse = in_impulse;
 	in_impulse = 0;
@@ -815,8 +755,6 @@ void CL_FinalizeCmd( void ) {
 
 	// clear pending cmd
 	memset( &cl.cmd, 0, sizeof( cl.cmd ) );
-
-	old_eventTime = com_eventTime;
 }
 
 /*
