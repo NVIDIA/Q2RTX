@@ -754,8 +754,8 @@ static void SVC_DirectConnect( void ) {
 
 	// find a client slot
 	if( !newcl ) {
-        lastcl = svs.clientpool + sv_maxclients->integer - reserved;
-        for( newcl = svs.clientpool; newcl < lastcl; newcl++ ) {
+        lastcl = svs.udp_client_pool + sv_maxclients->integer - reserved;
+        for( newcl = svs.udp_client_pool; newcl < lastcl; newcl++ ) {
             if( !newcl->state ) {
                 break;
             }
@@ -776,7 +776,7 @@ static void SVC_DirectConnect( void ) {
 	// accept the new client
 	// this is the only place a client_t is ever initialized
 	memset( newcl, 0, sizeof( *newcl ) );
-	number = newcl - svs.clientpool;
+	number = newcl - svs.udp_client_pool;
     newcl->number = number;
 	newcl->challenge = challenge; // save challenge for checksumming
 	newcl->protocol = protocol;
@@ -889,7 +889,7 @@ static void SVC_DirectConnect( void ) {
     }
 
     // add them to the linked list of connected clients
-    List_SeqAdd( &svs.clients, &newcl->entry );
+    List_SeqAdd( &svs.udp_client_list, &newcl->entry );
 
 	Com_DPrintf( "Going from cs_free to cs_assigned for %s\n", newcl->name );
 	newcl->state = cs_assigned;
@@ -1011,18 +1011,18 @@ static void SV_ConnectionlessPacket( void ) {
 
 //============================================================================
 
-
 int SV_CountClients( void ) {
     client_t *cl;
     int count = 0;
 
     FOR_EACH_CLIENT( cl ) {
-		if( cl->state > cs_zombie ) {
+		if( cl->state > cs_zombie && cl->protocol != -1 ) {
             count++;
         }
     }
     return count;
 }
+
 /*
 ===================
 SV_CalcPings
@@ -1257,7 +1257,7 @@ static void SV_CheckTimeouts( void ) {
 	client_t	*client, *next;
     uint32      point;
 
-    LIST_FOR_EACH_SAFE( client_t, client, next, &svs.clients, entry ) {
+    LIST_FOR_EACH_SAFE( client_t, client, next, &svs.udp_client_list, entry ) {
 		// message times may be wrong across a changelevel
 		if( client->lastmessage > svs.realtime ) {
 			client->lastmessage = svs.realtime;
@@ -1423,7 +1423,6 @@ static void SV_MasterShutdown( void ) {
     }
 }
 
-
 /*
 ==================
 SV_Frame
@@ -1432,12 +1431,13 @@ SV_Frame
 */
 void SV_Frame( int msec ) {
     uint32 time;
+    int mvdconns;
 
 	time_before_game = time_after_game = 0;
 
 	svs.realtime += msec;
 
-	MVD_Frame();
+	mvdconns = MVD_Frame();
 
 	// if server is not active, do nothing
 	if( !svs.initialized ) {
@@ -1448,7 +1448,9 @@ void SV_Frame( int msec ) {
 	}
 
 #ifndef DEDICATED_ONLY
-    if( cl_paused->integer && sv_maxclients->integer == 1 ) {
+    if( !dedicated->integer && cl_paused->integer &&
+        List_Count( &svs.udp_client_list ) == 1 && mvdconns == 0 )
+    {
         if( !sv_paused->integer ) {
             Cvar_Set( "sv_paused", "1" );
             CL_InputActivate();
@@ -1797,7 +1799,7 @@ static void SV_FinalMessage( const char *message, int cmd ) {
 	}
 
 	// free any data dynamically allocated
-    LIST_FOR_EACH_SAFE( client_t, client, next, &svs.clients, entry ) {
+    LIST_FOR_EACH_SAFE( client_t, client, next, &svs.udp_client_list, entry ) {
 		if( client->state != cs_zombie ) {
 			SV_CleanClient( client );
 		}
@@ -1859,7 +1861,7 @@ void SV_Shutdown( const char *finalmsg, killtype_t type ) {
 	memset( &sv, 0, sizeof( sv ) );
 
 	// free server static data
-	Z_Free( svs.clientpool );
+	Z_Free( svs.udp_client_pool );
 	Z_Free( svs.entityStates );
 	Z_Free( svs.mvd.message_data );
 #if USE_ZLIB

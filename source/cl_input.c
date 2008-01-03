@@ -52,8 +52,6 @@ static cvar_t	*m_side;
 
 inputAPI_t	input;
 
-void CL_CenterView (void);
-
 /*
 ===============================================================================
 
@@ -390,6 +388,10 @@ static void IN_Impulse ( void ) {
 	in_impulse = atoi( Cmd_Argv( 1 ) );
 }
 
+static void IN_CenterView( void ) {
+	cl.viewangles[PITCH] = -SHORT2ANGLE( cl.frame.ps.pmove.delta_angles[PITCH] );
+}
+
 static void IN_MLookDown( void ) {
 	in_mlooking = qtrue;
 }
@@ -398,7 +400,7 @@ static void IN_MLookUp( void ) {
 	in_mlooking = qfalse;
 
 	if( !freelook->integer && lookspring->integer )
-		CL_CenterView();
+		IN_CenterView();
 }
 
 /*
@@ -612,17 +614,13 @@ void CL_UpdateCmd( int msec ) {
 }
 
 
-void CL_CenterView( void ) {
-	cl.viewangles[PITCH] = -SHORT2ANGLE( cl.frame.ps.pmove.delta_angles[PITCH] );
-}
-
 /*
 ============
 CL_RegisterInput
 ============
 */
 void CL_RegisterInput( void ) {
-	Cmd_AddCommand ("centerview",CL_CenterView);
+	Cmd_AddCommand ("centerview",IN_CenterView);
 
 	Cmd_AddCommand ("+moveup",IN_UpDown);
 	Cmd_AddCommand ("-moveup",IN_UpUp);

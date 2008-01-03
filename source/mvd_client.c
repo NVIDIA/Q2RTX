@@ -637,10 +637,11 @@ static inline float MVD_BufferPercent( mvd_t *mvd ) {
     return usage * 100.0f / size;
 }
 
-void MVD_Frame( void ) {
+int MVD_Frame( void ) {
     mvd_t *mvd, *next;
     neterr_t ret;
     float usage;
+    int connections = 0;
 
     LIST_FOR_EACH_SAFE( mvd_t, mvd, next, &mvd_channels, entry ) {
         if( mvd->state <= MVD_DEAD || mvd->state >= MVD_DISCONNECTED ) {
@@ -660,6 +661,8 @@ void MVD_Frame( void ) {
             }
             continue;
         }
+
+        connections++;
 
         // process network stream
         ret = NET_Run( &mvd->stream );
@@ -725,6 +728,8 @@ void MVD_Frame( void ) {
             }
         }
     }
+
+    return connections;
 }
 
 

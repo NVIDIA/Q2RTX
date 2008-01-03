@@ -308,6 +308,7 @@ void SV_New_f( void ) {
             sv_client->name );
         sv_client->state = cs_connected;
         sv_client->lastmessage = svs.realtime; // don't timeout
+        time( &sv_client->connect_time );
     } else if( sv_client->state > cs_connected ) {
 		Com_DPrintf( "New not valid -- already primed\n" );
 		return;

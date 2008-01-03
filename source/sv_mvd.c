@@ -357,19 +357,19 @@ qboolean SV_MvdCreateDummy( void ) {
     }
 
     // find a free client slot
-    lastcl = svs.clientpool + sv_maxclients->integer;
-    for( newcl = svs.clientpool; newcl < lastcl; newcl++ ) {
+    lastcl = svs.udp_client_pool + sv_maxclients->integer;
+    for( newcl = svs.udp_client_pool; newcl < lastcl; newcl++ ) {
         if( !newcl->state ) {
             break;
         }
     }
     if( newcl == lastcl ) {
-        Com_EPrintf( "No slot for dummy MVD client\n" );
+        Com_WPrintf( "No slot for dummy MVD client\n" );
         return qfalse;
     }
 
 	memset( newcl, 0, sizeof( *newcl ) );
-    number = newcl - svs.clientpool;
+    number = newcl - svs.udp_client_pool;
 	newcl->number = number;
 	newcl->protocol = -1;
     newcl->state = cs_connected;
@@ -393,7 +393,7 @@ qboolean SV_MvdCreateDummy( void ) {
 	if ( !allow ) {
 	    s = Info_ValueForKey( userinfo, "rejmsg" );
         if( *s ) {
-            Com_EPrintf( "Dummy MVD client rejected by game DLL: %s\n", s );
+            Com_WPrintf( "Dummy MVD client rejected by game DLL: %s\n", s );
         }
         svs.mvd.dummy = NULL;
         return qfalse;

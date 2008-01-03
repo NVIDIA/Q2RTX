@@ -191,7 +191,7 @@ void MVD_StreamedStop_f( void );
 void MVD_StreamedRecord_f( void );
 
 void MVD_Register( void );
-void MVD_Frame( void ); 
+int MVD_Frame( void ); 
 
 //
 // mvd_parse.c

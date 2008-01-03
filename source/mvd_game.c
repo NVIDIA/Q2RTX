@@ -667,7 +667,7 @@ static void MVD_Update( mvd_t *mvd ) {
 }
 
 void MVD_RemoveClient( client_t *client ) {
-	int index = client - svs.clientpool;
+	int index = client - svs.udp_client_pool;
 	udpClient_t *cl = &mvd_clients[index];
 
     List_Remove( &cl->entry );
@@ -698,7 +698,7 @@ static void MVD_GameInit( void ) {
         ( sv_maxclients->integer + 1 ) );
 
 	for( i = 0; i < sv_maxclients->integer; i++ ) {
-		mvd_clients[i].cl = &svs.clientpool[i];
+		mvd_clients[i].cl = &svs.udp_client_pool[i];
         edicts[i + 1].client = ( gclient_t * )&mvd_clients[i];
 	}
 

@@ -6,79 +6,104 @@ Variables
 Misc
 ----------
 
-- `set sv_iplimit 3`  
+- `set sv_iplimit 3` (integer)  
 Maximum number of simultaneous connections allowed from
 single IP address. Setting this variable to 0 disables the limit.
 
-- `set sv_status_show 2`  
+- `set sv_status_show 2` (integer)  
 Specifies how the server should respond to status queries
 over UDP datagrams and HTTP.
    - 0 - do not respond at all
    - 1 - respond with server info only
    - 2 - respond with server info and player list
 
-- `set sv_status_limit 15`  
+- `set sv_status_limit 15` (integer)  
 Maximum number of status queries per one second server should respond to.
 
-- `set sv_badauth_time 1`  
+- `set sv_badauth_time 1` (integer)  
 Time, in seconds, for server to be unresponsive after an invalid
 authentication attempt. This applies to rcon commands, as well as
 authenticated connection requests.
     
-- `set sv_password ""`  
+- `set sv_password ""` (string)  
 If not empty, allows only authenticated clients to connect.
-Clients set their passwords via "password" userinfo variable.
+Authenticated clients are allowed to occupy reserved slots, see below.
+Clients set their passwords via `password` userinfo variable.
 
-- `set sv_reserved_slots 0`  
+- `set sv_reserved_slots 0` (integer)  
+Number of client slots to be occupied only by clients who
+know `sv_reserved_password` or `sv_password`. Must be less than
+`maxclients` value. If `sv_mvd_enable` is non-zero and `sv_reserved_slots`
+is zero, `sv_reserved_slots` is automatically set to one to reserve a slot
+for dummy MVD observer. NOTE: `sv_reserved_slots` value is subtracted from
+`maxclients` value when displayed in server info!
 
-- `set sv_reserved_password ""`  
+- `set sv_reserved_password ""` (string)  
+See above. If empty, no one is allowed to occupy reserved slot(s), except of
+dummy MVD observer. Clients set their passwords via `password` userinfo variable.
 
-- `set sv_lan_force_rate 0`  
+- `set sv_lan_force_rate 0` (boolean)  
+When enabled, do not enforce any rate limits for clients whose IP is from
+private address space (127.x.x.x, 10.x.x.x, 192.168.x.x, 172.16.x.x).
 
-- `set sv_ghostime 6`  
+- `set sv_ghostime 6` (float)  
 Maximum time, in seconds, to keep clients which passed initial
 challenge-response connection stage but not yet requested server data chunk.
 This also applies to HTTP clients in request processing stage.
 Helps to avoid attacks flooding server with zombie clients, combined
 with `sv_iplimit` variable.
 
-- `set sv_force_reconnect ""`  
+- `set sv_force_reconnect ""` (string)  
 When set to address string, forces new clients to reconnect to this address
 as an additional proxy protection measure. This reconnection process is FAST.
 
+- `set sv_uptime 0` (boolean)  
+Display uptime in server info.
 
 
 MVD server
 ----------
 
-- `set sv_http_enable 0`  
+- `set sv_http_enable 0` (boolean)  
 Enable HTTP connections, which are used for serving MVD clients and
 status queries in HTML.
 
-- `set sv_http_maxclients 4`  
+- `set sv_http_maxclients 4` (integer)  
 Maximum number of HTTP clients. Can be changed at any time, setting this to
 zero effectively disables new HTTP connections.
 
-- `set sv_http_minclients 4`  
+- `set sv_http_minclients 4` (integer)  
 Maximum number of HTTP clients to be kept in the special pool of recently
 used slots for faster access and avoiding memory fragmentation.
 
-- `set sv_mvd_nogun 1`  
+- `set sv_mvd_nogun 1` (boolean)  
 
-- `set sv_mvd_noblend 0`  
+- `set sv_mvd_noblend 0` (boolean)  
 
-- `set sv_mvd_max_duration 0`  
+- `set sv_mvd_max_duration 0` (boolean)  
 
-- `set sv_mvd_max_size 0`  
+- `set sv_mvd_max_size 0` (boolean)  
 
-- `set sv_mvd_wait 0`  
+- `set sv_mvd_wait 0` (boolean)  
 
-- `set sv_mvd_auth ""`  
+- `set sv_mvd_auth ""` (string)  
 If not empty, perform Basic HTTP authentication of MVD connections.
 Value should be in form of `user:pass`.
 
-- `set sv_mvd_enable 0`  
+- `set sv_mvd_enable 0` (boolean)  
 Enable recording local MVDs and serving MVD clients over HTTP.
+
+- `set sv_mvd_begincmd "wait 50; putaway; wait 10; help;"` (string)  
+Issue this command on behaf of dummy MVD observer as soon as it
+enters the game. Do any game mod dependant preparations here to make sure
+MVD observer enters an appropriate spectator team, opens the scoreboard, etc.
+Each `wait` cycle lasts 0.1 second here.
+
+- `set sv_mvd_scorecmd "putaway; wait 10; help;"` (string)  
+Issue this command on behaf of dummy MVD observer each time no layout
+updates are detected for more than 9 seconds. Useful for reopening the
+scoreboard if the game mod closes it for some reason.
+Each `wait` cycle lasts 0.1 second here.
 
 
 MVD client
@@ -150,15 +175,21 @@ connections. Remote client must support passive connections (R1Q2 and Q2PRO
 clients do), must be in passive connection mode and the specified _port_
 must be reachable. See `passive` [[client#index3h1]] command for more details.
 
-- `mvdplay <filename>`  
+- `mvdplay [-hl:n:] <filename> [...]`  
 Play the local MVD identified by _filename_.
 
-- `mvdconnect <[http://][user:pass@]server[:port][/resource]>`  
+- `mvdconnect [-hi:n:] [http://][user:pass@]<host>[:port][/resource]`  
 Connect to the MVD resource identified by _URI_. If _resource_ part is given,
 default port is 80. Otherwise, default port is 27910 and _streamID_ identifies
 the live MVD stream on server.
 
-- `mvdisconnect`  
+- `mvdisconnect [chanid]`  
+Disconnect the specified channel from the server. There is no need to
+specify `chanid` if there is only one active channel.
+
+- `mvdkill [chanid]`  
+Kill the specified channel. There is no need to specify `chanid` if
+there is only one active channel.
 
 - `mvdspawn`  
 Spawn MVD client instance, that is, Waiting Room channel.
@@ -166,6 +197,9 @@ Spawn MVD client instance, that is, Waiting Room channel.
 - `mvdchannels`  
 Display status of all MVD channels.
 
+- `mvdstuff <text>`  
+Stuff the specified text into command buffer of the dummy MVD observer.
+Should be issued on _game_ server, not on MVD client.
 
 Anticheat
 ==========

@@ -962,13 +962,13 @@ static int Com_Date_m( char *buffer, int size ) {
 
 int Com_Uptime_m( char *buffer, int size ) {
     int     sec, min, hour, day;
-    time_t  t;
+    time_t  clock;
 
-    time( &t );
-    if( com_startTime > t ) {
-        com_startTime = t;
+    time( &clock );
+    if( com_startTime > clock ) {
+        com_startTime = clock;
     }
-    sec = t - com_startTime;
+    sec = clock - com_startTime;
     min = sec / 60; sec %= 60;
     hour = min / 60; min %= 60;
     day = hour / 24; hour %= 24;

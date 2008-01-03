@@ -62,11 +62,39 @@ void SV_HttpReject( const char *error, const char *reason ) {
     SV_HttpDrop( http_client, error );
 }
 
+static void SV_HttpPrintTime( int sec ) {
+    int min, hour, day;
+    
+    min = sec / 60; sec %= 60;
+    hour = min / 60; min %= 60;
+    day = hour / 24; hour %= 24;
+
+    if( day ) {
+        SV_HttpPrintf(
+            "%d day%s, %d hour%s, %d min%s",
+            day, day == 1 ? "" : "s",
+            hour, hour == 1 ? "" : "s",
+            min, min == 1 ? "" : "s" );
+    } else if( hour ) {
+        SV_HttpPrintf(
+            "%d hour%s, %d min%s",
+            hour, hour == 1 ? "" : "s",
+            min, min == 1 ? "" : "s" );
+    } else if( min ) {
+        SV_HttpPrintf(
+            "%d min%s",
+            min, min == 1 ? "" : "s" );
+    } else {
+        SV_HttpPrintf( "&lt; 1 min" );
+    }
+}
+
 static void SV_GetStatus( void ) {
     char buffer[MAX_STRING_CHARS];
     cvar_t *var;
     client_t *cl;
-    int count;
+    int count, len, sec;
+    time_t clock;
 
 	if( sv_status_show->integer < 1 ) {
         SV_HttpReject( "403 Forbidden",
@@ -85,27 +113,42 @@ static void SV_GetStatus( void ) {
 
     SV_HttpPrintf(
         "Content-Type: text/html; charset=us-ascii\r\n"
-//      "Content-Encoding: deflate\r\n"
         "\r\n" );
 
     count = SV_CountClients();
-    Q_EscapeMarkup( buffer, sv_hostname->string, sizeof( buffer ) );
-    SV_HttpHeader( va( "%s - %d/%d", buffer, count, sv_maxclients->integer ) );
+    len = Q_EscapeMarkup( buffer, sv_hostname->string, sizeof( buffer ) );
+    Com_sprintf( buffer + len, sizeof( buffer ) - len, " - %d/%d",
+        count, sv_maxclients->integer - sv_reserved_slots->integer );
+
+    SV_HttpHeader( buffer );
+
+    buffer[len] = 0;
     SV_HttpPrintf( "<h1>Status page of %s</h1>", buffer );
+
+    time( &clock );
 
 	if( sv_status_show->integer > 1 ) {
         SV_HttpPrintf( "<h2>Player Info</h2>" );
         if( count ) {
-            SV_HttpPrintf(
-                "<table border=\"1\"><tr>"
-                "<th>Score</th><th>Ping</th><th>Name</th></tr>" );
+            SV_HttpPrintf( "<table border=\"1\">"
+                "<tr><th>Score</th><th>Ping</th><th>Time</th><th>Name</th></tr>" );
             FOR_EACH_CLIENT( cl ) {
-                if( cl->state >= cs_connected ) {
-                    Q_EscapeMarkup( buffer, cl->name, sizeof( buffer ) );
-                    SV_HttpPrintf( "<tr><td>%d</td><td>%d</td><td>%s</td></tr>",
-                        cl->edict->client->ps.stats[STAT_FRAGS],
-                            cl->ping, buffer );
+                if( cl->state < cs_connected ) {
+                    continue;
                 }
+
+                SV_HttpPrintf( "<tr><td>%d</td><td>%d</td><td>",
+                    cl->edict->client->ps.stats[STAT_FRAGS], cl->ping );
+
+                if( cl->connect_time > clock ) {
+                    cl->connect_time = clock;
+                }
+                sec = clock - cl->connect_time;
+
+                SV_HttpPrintTime( sec );
+
+                Q_EscapeMarkup( buffer, cl->name, sizeof( buffer ) );
+                SV_HttpPrintf( "</td><td>%s</td></tr>", buffer );
             }
             SV_HttpPrintf( "</table>" );
         } else {
@@ -124,21 +167,40 @@ static void SV_GetStatus( void ) {
         if( !var->string[0] ) {
             continue;
         }
+
         Q_EscapeMarkup( buffer, var->name, sizeof( buffer ) );
         SV_HttpPrintf( "<tr><td>%s</td>", buffer );
-        Q_EscapeMarkup( buffer, var->string, sizeof( buffer ) );
-        SV_HttpPrintf( "<td>%s</td></tr>", buffer );
+
+        // XXX: ugly hack to hide reserved slots
+        if( var == sv_maxclients && sv_reserved_slots->integer ) {
+            SV_HttpPrintf( "<td>%d</td></tr>",
+                sv_maxclients->integer - sv_reserved_slots->integer );
+        } else {
+            Q_EscapeMarkup( buffer, var->string, sizeof( buffer ) );
+            SV_HttpPrintf( "<td>%s</td></tr>", buffer );
+        }
 	}
 
-    SV_HttpPrintf( "</table><br><a href=\"quake2://%s\">Join this server</a>",
-        http_host );
+    // add uptime
+    if( sv_uptime->integer ) {
+        if( com_startTime > clock ) {
+            com_startTime = clock;
+        }
+        sec = clock - com_startTime;
+
+        SV_HttpPrintf( "<tr><td>uptime</td><td>" );
+        SV_HttpPrintTime( sec );
+        SV_HttpPrintf( "</td></tr>" );
+    }
+
+    SV_HttpPrintf( "</table>"
+        "<p><a href=\"quake2://%s\">Join this server</a></p>", http_host );
+    if( sv_mvd_enable->integer ) {
+        SV_HttpPrintf(
+            "<p><a href=\"http://%s/mvdstream\">Download MVD stream</a></p>",
+            http_host );
+    }
     SV_HttpFooter();
-
-//    deflateInit( &client->z, Z_DEFAULT_COMPRESSION );
-
-    //SV_HttpFinish( client );
-
-  //  deflateEnd( &client->z );
 
     SV_HttpDrop( http_client, "200 OK" );
 }

@@ -2505,6 +2505,9 @@ static void CL_CheckForReply( void ) {
 #endif
 
 static void CL_CheckTimeout( void ) {
+    if( NET_IsLocalAddress( &cls.netchan->remote_address ) ) {
+        return;
+    }
     if( cls.netchan->last_received > com_localTime ) {
         cls.netchan->last_received = com_localTime;
     }

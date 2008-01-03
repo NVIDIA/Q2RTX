@@ -222,28 +222,18 @@ void SV_InitGame( qboolean ismvd ){
 		svs.gametype = GT_SINGLEPLAYER;
 	}
 
-    Cvar_ClampInteger( sv_reserved_slots, 0, sv_maxclients->integer - 1 );
-
     // enable networking
 	if( sv_maxclients->integer > 1 ) {
 		NET_Config( NET_SERVER );
-
-        if( sv_http_enable->integer ) {
-            if( NET_Listen( qtrue ) == NET_OK ) {
-                Cvar_ClampInteger( sv_http_minclients, 0,
-                    sv_http_maxclients->integer );
-//                svs.httppool = 
-            } else {
-                Com_EPrintf( "%s while opening server TCP port.\n",
-                    NET_ErrorString() );
-                Cvar_Set( "sv_http_enable", "0" );
-            }
+        if( sv_http_enable->integer && NET_Listen( qtrue ) == NET_ERROR ) {
+            Com_EPrintf( "%s while opening server TCP port.\n", NET_ErrorString() );
+            Cvar_Set( "sv_http_enable", "0" );
         }
     }
 
-	svs.numEntityStates = sv_maxclients->integer * UPDATE_BACKUP * MAX_PACKET_ENTITIES;
+	svs.udp_client_pool = SV_Mallocz( sizeof( client_t ) * sv_maxclients->integer );
 
-	svs.clientpool = SV_Mallocz( sizeof( client_t ) * sv_maxclients->integer );
+	svs.numEntityStates = sv_maxclients->integer * UPDATE_BACKUP * MAX_PACKET_ENTITIES;
 	svs.entityStates = SV_Mallocz( sizeof( entity_state_t ) * svs.numEntityStates );
 
     if( sv_mvd_enable->integer ) {
@@ -253,7 +243,15 @@ void SV_InitGame( qboolean ismvd ){
         svs.mvd.datagram_data = Z_ReservedAlloc( MAX_MSGLEN );
         svs.mvd.players = Z_ReservedAlloc( sizeof( player_state_t ) * sv_maxclients->integer );
         svs.mvd.entities = Z_ReservedAlloc( sizeof( entity_state_t ) * MAX_EDICTS );
+
+        // reserve the slot for dummy MVD client
+        if( !sv_reserved_slots->integer ) {
+            Cvar_Set( "sv_reserved_slots", "1" );
+        }
     }
+
+    Cvar_ClampInteger( sv_http_minclients, 0, sv_http_maxclients->integer );
+    Cvar_ClampInteger( sv_reserved_slots, 0, sv_maxclients->integer - 1 );
 
 #if USE_ZLIB
 	if( deflateInit2( &svs.z, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
@@ -274,13 +272,13 @@ void SV_InitGame( qboolean ismvd ){
 		SV_InitGameProgs();
 	}
 
-    List_Init( &svs.clients );
+    List_Init( &svs.udp_client_list );
     List_Init( &svs.mvd.clients );
     List_Init( &svs.tcp_client_list );
     List_Init( &svs.tcp_client_pool );
 
 	for( i = 0; i < sv_maxclients->integer; i++ ) {
-        client = svs.clientpool + i;
+        client = svs.udp_client_pool + i;
 		entnum = i + 1;
 		ent = EDICT_NUM( entnum );
 		ent->s.number = entnum;

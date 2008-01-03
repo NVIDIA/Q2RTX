@@ -92,7 +92,7 @@ static const char *SV_SetPlayer_g( const char *partial, int state ) {
     }
 
 	while( index < sv_maxclients->integer ) {
-		client = &svs.clientpool[index++];
+		client = &svs.udp_client_pool[index++];
 		if( !client->state || client->protocol == -1 ) {
 			continue;
 		}
@@ -112,57 +112,49 @@ SV_SetPlayer
 Sets sv_client and sv_player to the player with idnum Cmd_Argv(1)
 ==================
 */
-qboolean SV_SetPlayer (void)
-{
+static qboolean SV_SetPlayer( void ) {
 	client_t	*cl;
 	int			i;
 	int			idnum;
 	char		*s;
 
-	if (Cmd_Argc() < 2)
-		return qfalse;
-
-	s = Cmd_Argv(1);
+	s = Cmd_Argv( 1 );
+    if( !s[0] ) {
+        return qfalse;
+    }
 
 	// numeric values are just slot numbers
 	for( i = 0; s[i]; i++ ) {
 		if( !Q_isdigit( s[i] ) ) {
 			break;
 		}
-	} 
+	}
 	if( !s[i] ) {
-		idnum = atoi(s);
-		if (idnum < 0 || idnum >= sv_maxclients->integer)
-		{
-			Com_Printf ("Bad client slot: %i\n", idnum);
+		idnum = atoi( s );
+		if( idnum < 0 || idnum >= sv_maxclients->integer ) {
+			Com_Printf( "Bad client slot: %i\n", idnum );
 			return qfalse;
 		}
 
-		sv_client = &svs.clientpool[idnum];
+		sv_client = &svs.udp_client_pool[idnum];
 		sv_player = sv_client->edict;
-		if (!sv_client->state)
-		{
-			Com_Printf ("Client %i is not active\n", idnum);
+		if( !sv_client->state ) {
+			Com_Printf( "Client %i is not active\n", idnum );
 			return qfalse;
 		}
 		return qtrue;
 	}
 
 	// check for a name match
-    for( i = 0; i < sv_maxclients->integer; i++ ) {
-        cl = &svs.clientpool[i];
-        if( !cl->state ) {
-            continue;
-        }
-		if (!strcmp(cl->name, s))
-		{
+    FOR_EACH_CLIENT( cl ) {
+		if( !strcmp( cl->name, s ) ) {
 			sv_client = cl;
 			sv_player = sv_client->edict;
 			return qtrue;
 		}
 	}
 
-	Com_Printf ("Userid %s is not on the server\n", s);
+	Com_Printf( "Userid %s is not on the server\n", s );
 	return qfalse;
 }
 
@@ -297,8 +289,7 @@ static void SV_DumpUdpClients( void ) {
 		Com_Printf( "%-21s ", NET_AdrToString(
             &client->netchan->remote_address ) );
     	Com_Printf( "%5i ", client->rate );
-    	Com_Printf( "%2i/%d/%d ", client->protocol,
-            client->version, client->netchan->type );
+    	Com_Printf( "%2i ", client->protocol );
 		Com_Printf( "\n" );
 	}
 
@@ -386,7 +377,7 @@ static void SV_Status_f( void ) {
 	    Com_Printf( "Current map: %s\n\n", sv.name );
     }
 
-    if( LIST_EMPTY( &svs.clients ) ) {
+    if( LIST_EMPTY( &svs.udp_client_list ) ) {
         Com_Printf( "No UDP clients.\n" );
     } else {
 	    if( Cmd_Argc() > 1 ) {
@@ -798,7 +789,7 @@ static int SV_ClientNum_m( char *buffer, int size ) {
 	if( !sv_client ) {
 		return Q_strncpyz( buffer, "", size );
 	}
-    return Com_sprintf( buffer, size, "%d", sv_client - svs.clientpool );
+    return Com_sprintf( buffer, size, "%d", sv_client - svs.udp_client_pool );
 }
 
 //===========================================================

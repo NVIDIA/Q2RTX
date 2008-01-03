@@ -96,7 +96,7 @@ typedef enum {
 	cs_spawned		// client is fully in game
 } clstate_t;
 
-#if USE_ANTICHEAT
+#if USE_ANTICHEAT & 2
 
 typedef enum {
     AC_NORMAL,
@@ -141,7 +141,7 @@ typedef struct {
 #define	RATE_MESSAGES	10
 
 #define FOR_EACH_CLIENT( client ) \
-    LIST_FOR_EACH( client_t, client, &svs.clients, entry )
+    LIST_FOR_EACH( client_t, client, &svs.udp_client_list, entry )
 
 typedef struct client_s {
     list_t          entry;
@@ -192,6 +192,8 @@ typedef struct client_s {
     int             version; // minor version
     qboolean        zlib;
 
+    time_t          connect_time;
+
     // spectator speed, etc
 	pmoveParams_t	pmp;
 
@@ -223,7 +225,7 @@ typedef struct client_s {
 
 	netchan_t		*netchan;
 
-#if USE_ANTICHEAT
+#if USE_ANTICHEAT & 2
     qboolean        ac_valid;
     ac_query_t      ac_query_sent;
     ac_required_t   ac_required;
@@ -303,8 +305,9 @@ typedef struct server_static_s {
 
 	gametype_t	gametype;
 
-	client_t	*clientpool;	 // [maxclients]
-	list_t	    clients;         // linked list of non-free clients
+	client_t	*udp_client_pool;	 // [maxclients]
+    list_t	    udp_client_list;         // linked list of non-free clients
+
 	uint32		numEntityStates; // maxclients*UPDATE_BACKUP*MAX_PACKET_ENTITIES
 	uint32			nextEntityStates;	// next entityState to use
 	entity_state_t	*entityStates;		// [numEntityStates]
@@ -377,6 +380,7 @@ extern cvar_t		*sv_oldgame_hack;
 extern cvar_t		*sv_status_limit;
 extern cvar_t		*sv_status_show;
 extern cvar_t		*sv_badauth_time;
+extern cvar_t	    *sv_uptime;
 
 extern cvar_t       *sv_nextserver;
 
