@@ -162,6 +162,10 @@ static void PF_bprintf( int level, const char *fmt, ... ) {
 	length = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
 	va_end( argptr );
 
+    if( sv_mvd_enable->integer ) {
+    	SV_MvdBroadcastPrint( level, string );
+    }
+
 	MSG_WriteByte( svc_print );
 	MSG_WriteByte( level );
 	MSG_WriteData( string, length + 1 );
@@ -181,9 +185,6 @@ static void PF_bprintf( int level, const char *fmt, ... ) {
 		    SV_ClientAddMessage( client, MSG_RELIABLE );
         }
 	}
-    if( sv_mvd_enable->integer ) {
-    	SV_MvdMulticast( &sv.mvd.message, -1, mvd_multicast_all_r );
-    }
 
 	SZ_Clear( &msg_write );
 }

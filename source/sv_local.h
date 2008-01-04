@@ -485,6 +485,7 @@ void SV_MvdEndFrame( void );
 void SV_MvdUnicast( sizebuf_t *buf, int clientNum, mvd_ops_t op );
 void SV_MvdMulticast( sizebuf_t *buf, int leafnum, mvd_ops_t op );
 void SV_MvdConfigstring( int index, const char *string );
+void SV_MvdBroadcastPrint( int level, const char *string );
 void SV_MvdRecStop( void );
 qboolean SV_MvdPlayerIsActive( edict_t *ent );
 void SV_MvdClientNew( tcpClient_t *client );

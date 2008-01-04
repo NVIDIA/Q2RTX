@@ -692,6 +692,13 @@ static void MVD_ParseConfigstring( mvd_t *mvd ) {
 	SZ_Clear( &msg_write );
 }
 
+static void MVD_ParsePrint( mvd_t *mvd ) {
+    int level = MSG_ReadByte();
+    char *string = MSG_ReadString();
+
+    MVD_BroadcastPrintf( mvd, level, UF_NOGAMECHAT, "%s", string );
+}
+
 /*
 Fix origin and angles on each player entity by
 extracting data from player state.
@@ -913,9 +920,9 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
 
     // parse minor protocol version
     protocol = MSG_ReadShort();
-    if( protocol != PROTOCOL_VERSION_MVD_MINOR ) {
-        MVD_Destroyf( mvd, "MVD protocol version mismatch: %d instead of %d",
-            protocol, PROTOCOL_VERSION_MVD_MINOR );
+    if( !MVD_SUPPORTED( protocol ) ) {
+        MVD_Destroyf( mvd, "Unsupported MVD protocol version: %d.\n"
+            "Current version is %d.\n", protocol, PROTOCOL_VERSION_MVD_CURRENT );
     }
 
 	mvd->servercount = MSG_ReadLong();
@@ -1138,6 +1145,9 @@ static qboolean MVD_ParseMessage( mvd_t *mvd, fifo_t *fifo ) {
 		case mvd_sound:
 			MVD_ParseSound( mvd, extrabits );
 			break;
+        case mvd_print:
+            MVD_ParsePrint( mvd );
+            break;
 		default:
             MVD_Destroyf( mvd, "Illegible command at %d: %d",
                 msg_read.readcount - 1, cmd );

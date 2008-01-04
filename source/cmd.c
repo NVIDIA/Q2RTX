@@ -491,13 +491,16 @@ static	char		*cmd_argv[MAX_STRING_TOKENS];
 static	char		*cmd_null_string = "";
 
 /* complete command string, quotes preserved */
-static	char		cmd_args[MAX_STRING_CHARS];
+static	char		cmd_string[MAX_STRING_CHARS];
+static  int         cmd_string_len;
 
-/* offsets of individual tokens in cmd_args */
+/* offsets of individual tokens in cmd_string */
 static	int			cmd_offsets[MAX_STRING_TOKENS];
 
 /* sequence of NULL-terminated tokens, each cmd_argv[] points here */
 static	char		cmd_data[MAX_STRING_CHARS];
+
+static	char		cmd_args[MAX_STRING_CHARS];
 
 int			cmd_optind;
 char        *cmd_optarg;
@@ -508,7 +511,7 @@ int Cmd_ArgOffset( int arg ) {
 		return 0;
 	}
 	if( arg >= cmd_argc ) {
-		return strlen( cmd_args );
+		return cmd_string_len;
 	}
 	return cmd_offsets[arg];	
 }
@@ -550,7 +553,7 @@ char *Cmd_Argv( int arg ) {
 Cmd_ArgvBuffer
 ============
 */
-void Cmd_ArgvBuffer( int arg, char *buffer, int bufferSize ) {
+void Cmd_ArgvBuffer( int arg, char *buffer, int size ) {
 	char *s;
 
 	if( arg < 0 || arg >= cmd_argc ) {
@@ -559,7 +562,7 @@ void Cmd_ArgvBuffer( int arg, char *buffer, int bufferSize ) {
 		s = cmd_argv[arg];
 	}
 
-	Q_strncpyz( buffer, s, bufferSize );	
+	Q_strncpyz( buffer, s, size );	
 }
 
 
@@ -571,43 +574,40 @@ Returns a single string containing argv(1) to argv(argc()-1)
 ============
 */
 char *Cmd_Args( void ) {
-	static char args[MAX_STRING_CHARS];
 	int i;
 
 	if( cmd_argc < 2 ) {
 		return cmd_null_string;
 	}
 
-	args[0] = 0;
+	cmd_args[0] = 0;
 	for( i = 1; i < cmd_argc - 1; i++ ) {
-		strcat( args, cmd_argv[i] );
-		strcat( args, " " );
+		strcat( cmd_args, cmd_argv[i] );
+		strcat( cmd_args, " " );
 	}
-	strcat( args, cmd_argv[i] );
+	strcat( cmd_args, cmd_argv[i] );
 
-	return args;
+	return cmd_args;
 }
 
 char *Cmd_RawArgs( void ) {
 	if( cmd_argc < 2 ) {
 		return cmd_null_string;
 	}
-	return cmd_args + cmd_offsets[1];
+	return cmd_string + cmd_offsets[1];
 }
 
 char *Cmd_RawString( void ) {
-	return cmd_args;
+	return cmd_string;
 }
-
-
 
 /*
 ============
 Cmd_ArgsBuffer
 ============
 */
-void Cmd_ArgsBuffer( char *buffer, int bufferSize ) {
-	Q_strncpyz( buffer, Cmd_Args(), bufferSize );	
+void Cmd_ArgsBuffer( char *buffer, int size ) {
+	Q_strncpyz( buffer, Cmd_Args(), size );	
 }
 
 /*
@@ -618,21 +618,20 @@ Returns a single string containing argv(1) to argv(from-1)
 ============
 */
 char *Cmd_ArgsFrom( int from ) {
-	static char args[MAX_STRING_CHARS];
 	int i;
 
 	if( from < 0 || from >= cmd_argc ) {
 		return cmd_null_string;
 	}
 
-	args[0] = 0;
+	cmd_args[0] = 0;
 	for( i = from; i < cmd_argc - 1; i++ ) {
-		strcat( args, cmd_argv[i] );
-		strcat( args, " " );
+		strcat( cmd_args, cmd_argv[i] );
+		strcat( cmd_args, " " );
 	}
-	strcat( args, cmd_argv[i] );
+	strcat( cmd_args, cmd_argv[i] );
 
-	return args;
+	return cmd_args;
 }
 
 char *Cmd_RawArgsFrom( int from ) {
@@ -644,7 +643,7 @@ char *Cmd_RawArgsFrom( int from ) {
 
 	offset = cmd_offsets[from];
 
-	return cmd_args + offset;
+	return cmd_string + offset;
 }
 
 void Cmd_Shift( void ) {
@@ -655,7 +654,7 @@ void Cmd_Shift( void ) {
     }
 
     if( cmd_argc == 1 ) {
-        cmd_args[0] = 0;
+        cmd_string[0] = 0;
         return;
     }
 
@@ -665,7 +664,7 @@ void Cmd_Shift( void ) {
         cmd_argv[i] = cmd_argv[ i + 1 ];
     }
 
-    memmove( cmd_args, cmd_args + cmd_offsets[1],
+    memmove( cmd_string, cmd_string + cmd_offsets[1],
         MAX_STRING_CHARS - cmd_offsets[1] );
 }
 
@@ -962,7 +961,7 @@ void Cmd_TokenizeString( const char *text, qboolean macroExpand ) {
 	}
 		
 	cmd_argc = 0;
-	cmd_args[0] = 0;
+	cmd_string[0] = 0;
     cmd_optind = 1;
     cmd_optarg = cmd_optopt = cmd_null_string;
 	
@@ -978,10 +977,10 @@ void Cmd_TokenizeString( const char *text, qboolean macroExpand ) {
 		}
 	}
 
-	Q_strncpyz( cmd_args, text, sizeof( cmd_args ) );
+	cmd_string_len = Q_strncpyz( cmd_string, text, sizeof( cmd_string ) );
 
 	dest = cmd_data;
-	start = data = cmd_args;
+	start = data = cmd_string;
 	while( cmd_argc < MAX_STRING_TOKENS ) {
 // skip whitespace up to a /n
 		while( *data <= 32 ) {

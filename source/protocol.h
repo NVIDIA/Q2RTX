@@ -35,13 +35,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define PROTOCOL_VERSION_R1Q2_CURRENT		1904	// b7387
 #define PROTOCOL_VERSION_Q2PRO_MINIMUM	1011	// r161
 #define PROTOCOL_VERSION_Q2PRO_CURRENT	1011	// r161
-#define PROTOCOL_VERSION_MVD_MINOR		2009	// r168
+#define PROTOCOL_VERSION_MVD_MINIMUM		2009	// r168
+#define PROTOCOL_VERSION_MVD_CURRENT		2010	// r177
 
 #define R1Q2_SUPPORTED( x )     ( (x) >= PROTOCOL_VERSION_R1Q2_MINIMUM && \
                                   (x) <= PROTOCOL_VERSION_R1Q2_CURRENT )
 
 #define Q2PRO_SUPPORTED( x )    ( (x) >= PROTOCOL_VERSION_Q2PRO_MINIMUM && \
                                   (x) <= PROTOCOL_VERSION_Q2PRO_CURRENT )
+
+#define MVD_SUPPORTED( x )    ( (x) >= PROTOCOL_VERSION_MVD_MINIMUM && \
+                                  (x) <= PROTOCOL_VERSION_MVD_CURRENT )
 
 //=========================================
 

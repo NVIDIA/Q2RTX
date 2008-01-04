@@ -383,7 +383,7 @@ qboolean SV_MvdCreateDummy( void ) {
 
     Com_sprintf( userinfo, sizeof( userinfo ),
         "\\name\\[MVDSPEC]\\skin\\male/grunt\\mvdspec\\%d\\ip\\loopback",
-        PROTOCOL_VERSION_MVD_MINOR );
+        PROTOCOL_VERSION_MVD_CURRENT );
 
     svs.mvd.dummy = newcl;
 
@@ -607,7 +607,7 @@ static void SV_MvdEmitGamestate( void ) {
 	// send the serverdata
 	MSG_WriteByte( mvd_serverdata );
 	MSG_WriteLong( PROTOCOL_VERSION_MVD );
-	MSG_WriteShort( PROTOCOL_VERSION_MVD_MINOR );
+	MSG_WriteShort( PROTOCOL_VERSION_MVD_CURRENT );
 	MSG_WriteLong( sv.spawncount );
 	MSG_WriteString( fs_game->string );
 	MSG_WriteShort( svs.mvd.dummy->number );
@@ -797,6 +797,15 @@ void SV_MvdConfigstring( int index, const char *string ) {
 	SZ_WriteString( &sv.mvd.message, string );
 }
 
+void SV_MvdBroadcastPrint( int level, const char *string ) {
+	if( sv.mvd.paused >= PAUSED_FRAMES ) {
+        return;
+	}
+	SZ_WriteByte( &sv.mvd.message, mvd_print );
+	SZ_WriteByte( &sv.mvd.message, level );
+	SZ_WriteString( &sv.mvd.message, string );
+}
+
 /*
 ==============
 SV_MvdRecStop
@@ -932,7 +941,7 @@ static const cmdreg_t c_svmvd[] = {
 void SV_MvdRegister( void ) {
 	sv_mvd_enable = Cvar_Get( "sv_mvd_enable", "0", CVAR_LATCH );
 	sv_mvd_auth = Cvar_Get( "sv_mvd_auth", "", CVAR_PRIVATE );
-	sv_mvd_wait = Cvar_Get( "sv_mvd_wait", "0", 0 );
+	sv_mvd_wait = Cvar_Get( "sv_mvd_wait", "0", CVAR_ROM ); // TODO
 	sv_mvd_max_size = Cvar_Get( "sv_mvd_max_size", "0", 0 );
 	sv_mvd_max_duration = Cvar_Get( "sv_mvd_max_duration", "0", 0 );
 	sv_mvd_noblend = Cvar_Get( "sv_mvd_noblend", "0", CVAR_LATCH );

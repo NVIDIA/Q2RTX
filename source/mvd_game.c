@@ -381,7 +381,7 @@ SPECTATOR COMMANDS
 ==============================================================================
 */
 
-static void MVD_BroadcastPrintf( mvd_t *mvd, int level, const char *fmt, ... ) {
+void MVD_BroadcastPrintf( mvd_t *mvd, int level, int mask, const char *fmt, ... ) {
 	va_list		argptr;
 	char		text[MAXPRINTMSG];
     int         len;
@@ -404,7 +404,7 @@ static void MVD_BroadcastPrintf( mvd_t *mvd, int level, const char *fmt, ... ) {
 		if( level < cl->messagelevel ) {
 			continue;
         }
-        if( level == PRINT_CHAT && ( other->uf & UF_NOMVDCHAT ) ) {
+        if( level == PRINT_CHAT && ( other->uf & mask ) ) {
             continue;
         }
 		SV_ClientAddMessage( cl, MSG_RELIABLE );
@@ -451,7 +451,7 @@ void MVD_TrySwitchChannel( udpClient_t *client, mvd_t *mvd ) {
                 "[MVD] You may not switch channels too soon.\n" );
             return;
         }
-        MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM,
+        MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM, 0,
             "[MVD] %s left the channel.\n", client->cl->name );
     }
 
@@ -484,10 +484,8 @@ static void MVD_Admin_f( udpClient_t *client ) {
 
 static void MVD_Say_f( udpClient_t *client ) {
     mvd_t *mvd = client->mvd;
-    udpClient_t *other;
-    client_t *cl;
-    char buffer[128];
-    int i, len;
+    char *text;
+    int i;
 
     if( mvd_flood_mute->integer && !client->admin ) {
         SV_ClientPrintf( client->cl, PRINT_HIGH,
@@ -521,28 +519,11 @@ static void MVD_Say_f( udpClient_t *client ) {
     client->floodSamples[client->floodHead & FLOOD_MASK] = sv.time;
     client->floodHead++;
 
-    len = Com_sprintf( buffer, sizeof( buffer ), "{%s}: %s\n",
-        client->cl->name, Cmd_Args() );
+    text = Cmd_Args();
+    text[128] = 0; // don't let it be too long
 
-    MSG_WriteByte( svc_print );
-    MSG_WriteByte( PRINT_CHAT );
-    MSG_WriteData( buffer, len + 1 );
-
-    LIST_FOR_EACH( udpClient_t, other, &mvd->udpClients, entry ) {
-        cl = other->cl;
-        if( cl->state < cs_spawned ) {
-            continue;
-        }
-		if( PRINT_CHAT < cl->messagelevel ) {
-			continue;
-        }
-        if( ( other->uf & UF_NOMVDCHAT ) && !client->admin ) {
-            continue;
-        }
-		SV_ClientAddMessage( cl, MSG_RELIABLE );
-	}
-
-    SZ_Clear( &msg_write );
+    MVD_BroadcastPrintf( mvd, PRINT_CHAT, client->admin ? 0 : UF_NOMVDCHAT,
+        "{%s}: %s\n", client->cl->name, text );
 }
 
 static void MVD_Observe_f( udpClient_t *client ) {
@@ -855,7 +836,7 @@ static void MVD_GameClientBegin( edict_t *ent ) {
 	memset( &client->ps, 0, sizeof( client->ps ) );
 	
 	if( !client->begin_time ) {
-		MVD_BroadcastPrintf( mvd, PRINT_MEDIUM,
+		MVD_BroadcastPrintf( mvd, PRINT_MEDIUM, 0,
             "[MVD] %s entered the channel\n", client->cl->name );
 	}
 	client->begin_time = svs.realtime;
@@ -894,7 +875,7 @@ static void MVD_GameClientDisconnect( edict_t *ent ) {
     client_t *cl = client->cl;
 
     if( client->begin_time ) {
-    	MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM,
+    	MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM, 0,
             "[MVD] %s disconnected\n", cl->name );
 		client->begin_time = 0;
     }

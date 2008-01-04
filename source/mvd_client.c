@@ -223,7 +223,7 @@ static void MVD_EmitGamestate( mvd_t *mvd ) {
 	// send the serverdata
 	MSG_WriteByte( mvd_serverdata );
 	MSG_WriteLong( PROTOCOL_VERSION_MVD );
-	MSG_WriteShort( PROTOCOL_VERSION_MVD_MINOR );
+	MSG_WriteShort( PROTOCOL_VERSION_MVD_CURRENT );
 	MSG_WriteLong( mvd->servercount );
 	MSG_WriteString( mvd->gamedir );
 	MSG_WriteShort( mvd->clientNum );
@@ -933,7 +933,7 @@ MVD_Connect_f
 void MVD_Connect_f( void ) {
     static const cmd_option_t options[] = {
         { "h", "help", "display this message" },
-        { "e:number", "encoding", "assume encoding identified by <number>" },
+        { "e:string", "encoding", "specify default encoding as <string>" },
         { "i:number", "id", "specify remote stream ID as <number>" },
         { "n:string", "name", "specify channel name as <string>" },
         { "r:string", "referer", "specify referer as <string> in HTTP request" },
