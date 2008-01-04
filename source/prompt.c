@@ -482,7 +482,7 @@ void Prompt_LoadHistory( commandPrompt_t *prompt, const char *filename ) {
 		if( prompt->history[i] ) {
 			Z_Free( prompt->history[i] );
         }
-		prompt->history[i] = memcpy( Z_Malloc( len + 1 ), buffer, len );
+		prompt->history[i] = memcpy( Z_Malloc( len + 1 ), buffer, len + 1 );
 	}
 
     FS_FCloseFile( f );
