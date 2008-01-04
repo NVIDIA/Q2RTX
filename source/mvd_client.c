@@ -303,7 +303,7 @@ void MVD_SendGamestate( tcpClient_t *client ) {
 void MVD_GetStatus( void ) {
     char buffer[MAX_STRING_CHARS];
     mvd_t *mvd;
-    int count;
+    int count, len;
 
     SV_HttpPrintf( "HTTP/1.0 200 OK\r\n" );
 
@@ -318,17 +318,21 @@ void MVD_GetStatus( void ) {
         "\r\n" );
 
     count = SV_CountClients();
-    Q_EscapeMarkup( buffer, sv_hostname->string, sizeof( buffer ) );
-    SV_HttpHeader( va( "%s - %d/%d", buffer, count, sv_maxclients->integer ) );
-    SV_HttpPrintf( "<h1>Status page of %s</h1>"
-        "<p>This server has ", buffer );
+    len = Q_EscapeMarkup( buffer, sv_hostname->string, sizeof( buffer ) );
+    Com_sprintf( buffer + len, sizeof( buffer ) - len, " - %d/%d",
+        count, sv_maxclients->integer - sv_reserved_slots->integer );
+
+    SV_HttpHeader( buffer );
+
+    buffer[len] = 0;
+    SV_HttpPrintf( "<h1>%s</h1><p>This server has ", buffer );
 
     count = List_Count( &mvd_ready );
     if( count ) {
-        SV_HttpPrintf( "%d MVD stream%s available. ",
+        SV_HttpPrintf( "%d channel%s available. ",
             count, count == 1 ? "" : "s" );
     } else {
-        SV_HttpPrintf( "no MVD streams available. " );
+        SV_HttpPrintf( "no channels available. " );
     }
 
     count = List_Count( &mvd_waitingRoom.udpClients ); 
@@ -345,23 +349,32 @@ void MVD_GetStatus( void ) {
             "<th>ID</th><th>Name</th><th>Map</th><th>Clients</th></tr>" );
 
         LIST_FOR_EACH( mvd_t, mvd, &mvd_ready, ready ) {
-            SV_HttpPrintf(
-                "<tr><td><a href=\"http://%s/mvdstream/%d\">%d</a></td>",
-                http_host, mvd->id, mvd->id );
+            SV_HttpPrintf( "<tr><td>" );
+            if( sv_mvd_enable->integer ) {
+                SV_HttpPrintf( "<a href=\"http://%s/mvdstream/%d\">%d</a>",
+                    http_host, mvd->id, mvd->id );
+            } else {
+                SV_HttpPrintf( "%d", mvd->id );
+            }
+            SV_HttpPrintf( "</td><td>" );
 
             Q_EscapeMarkup( buffer, mvd->name, sizeof( buffer ) );
-            SV_HttpPrintf(
-                "<td><a href=\"http://%s/mvdstream/%d\">%s</a></td>",
-                http_host, mvd->id, buffer );
+            if( sv_mvd_enable->integer ) {
+                SV_HttpPrintf( "<a href=\"http://%s/mvdstream/%d\">%s</a>",
+                    http_host, mvd->id, buffer );
+            } else {
+                SV_HttpPrintf( "%s", buffer );
+            }
 
             Q_EscapeMarkup( buffer, mvd->mapname, sizeof( buffer ) );
             count = List_Count( &mvd->udpClients );
-            SV_HttpPrintf( "<td>%s</td><td>%d</td></tr>", buffer, count );
+            SV_HttpPrintf( "</td><td>%s</td><td>%d</td></tr>", buffer, count );
         }
-        SV_HttpPrintf( "</table><br>" );
+        SV_HttpPrintf( "</table>" );
     }
 
-    SV_HttpPrintf( "<a href=\"quake2://%s\">Join this server</a>", http_host );
+    SV_HttpPrintf(
+        "<p><a href=\"quake2://%s\">Join this server</a></p>", http_host );
 
     SV_HttpFooter();
 
@@ -406,17 +419,14 @@ static mvd_t *MVD_SetStream( const char *uri ) {
 
 void MVD_GetStream( const char *uri ) {
     mvd_t *mvd;
-    uint32 magic;
 
     mvd = MVD_SetStream( uri );
     if( !mvd ) {
         return;
     }
 
-    SV_HttpPrintf( "HTTP/1.0 200 OK\r\n" );
-
     if( http_client->method == HTTP_METHOD_HEAD ) {
-        SV_HttpPrintf( "\r\n" );
+        SV_HttpPrintf( "HTTP/1.0 200 OK\r\n\r\n" );
         SV_HttpDrop( http_client, "200 OK " );
         return;
     }
@@ -424,24 +434,10 @@ void MVD_GetStream( const char *uri ) {
     List_Append( &mvd->tcpClients, &http_client->mvdEntry );
     http_client->mvd = mvd;
 
-    SV_HttpPrintf(
-#if USE_ZLIB
-        "Content-Encoding: deflate\r\n"
-#endif
-        "Content-Type: application/octet-stream\r\n"
-        "Content-Disposition: attachment; filename=\"stream.mvd2\"\r\n"
-        "\r\n" );
-
-#if USE_ZLIB
-    deflateInit( &http_client->z, Z_DEFAULT_COMPRESSION );
-#endif
-
-    magic = MVD_MAGIC;
-    SV_HttpWrite( http_client, &magic, 4 );
+    SV_MvdInitStream();
 
     MVD_SendGamestate( http_client );
 }
-
 
 void MVD_ChangeLevel( mvd_t *mvd ) {
 	udpClient_t *u;

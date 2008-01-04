@@ -481,6 +481,7 @@ void SV_MvdConfigstring( int index, const char *string );
 void SV_MvdRecStop( void );
 qboolean SV_MvdPlayerIsActive( edict_t *ent );
 void SV_MvdClientNew( tcpClient_t *client );
+void SV_MvdInitStream( void );
 void SV_MvdGetStream( const char *uri );
 void SV_MvdRemoveDummy( void );
 void SV_MvdSpawnDummy( void );

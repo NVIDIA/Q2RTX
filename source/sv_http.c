@@ -123,7 +123,7 @@ static void SV_GetStatus( void ) {
     SV_HttpHeader( buffer );
 
     buffer[len] = 0;
-    SV_HttpPrintf( "<h1>Status page of %s</h1>", buffer );
+    SV_HttpPrintf( "<h1>%s</h1>", buffer );
 
     time( &clock );
 
@@ -343,11 +343,11 @@ void SV_HttpWrite( tcpClient_t *client, void *data, int length ) {
         }
         return;
     }
-#else
+#endif
+
     if( !FIFO_TryWrite( fifo, data, length ) ) {
         SV_HttpDrop( client, "overflowed" );
     }
-#endif
 }
 
 void SV_HttpFinish( tcpClient_t *client ) {

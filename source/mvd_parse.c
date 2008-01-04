@@ -353,8 +353,12 @@ static void MVD_UnicastString( mvd_t *mvd, qboolean reliable, mvd_player_t *play
     if( index < 0 || index >= MAX_CONFIGSTRINGS ) {
         MVD_Destroyf( mvd, "%s: bad index: %d", __func__, index );
     }
+    if( index < CS_GENERAL ) {
+        Com_DPrintf( "%s: common configstring: %d\n", __func__, index );
+        return;
+    }
     if( length >= MAX_QPATH ) {
-        Com_WPrintf( "%s: oversize configstring: %d\n", __func__, index );
+        Com_DPrintf( "%s: oversize configstring: %d\n", __func__, index );
         return;
     }
 
@@ -440,7 +444,7 @@ static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
 	mvd_player_t *player;
     byte *data;
     qboolean reliable;
-	int c;
+	int cmd;
 
 	length = MSG_ReadByte();
     length |= extrabits << 8;
@@ -460,8 +464,11 @@ static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
     reliable = op == mvd_unicast_r ? qtrue : qfalse;
 
 	while( msg_read.readcount < last ) {
-        c = MSG_ReadByte();
-		switch( c ) {
+        cmd = MSG_ReadByte();
+		if( mvd_shownet->integer > 1 ) {
+			MSG_ShowSVC( cmd );
+		}
+		switch( cmd ) {
 		case svc_layout:
             MVD_UnicastLayout( mvd, reliable, player );
 			break;
@@ -475,6 +482,9 @@ static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
             MVD_UnicastStuff( mvd, reliable, player );
 			break;
 		default:
+            if( mvd_shownet->integer > 1 ) {
+                Com_Printf( "%d:SKIPPING UNICAST\n", msg_read.readcount - 1 );
+            }
 			// send remaining data and return
             data = msg_read.data + msg_read.readcount - 1;
             length = last - msg_read.readcount + 1;
@@ -482,6 +492,10 @@ static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
 			msg_read.readcount = last;
 			return;
 		}
+	}
+
+	if( mvd_shownet->integer > 1 ) {
+		Com_Printf( "%d:END OF UNICAST\n", msg_read.readcount - 1 );
 	}
 
     if( msg_read.readcount > last ) {
@@ -617,6 +631,8 @@ static void MVD_ParseConfigstring( mvd_t *mvd ) {
 	char *string, *p;
 	udpClient_t *client;
     mvd_player_t *player;
+    mvd_cs_t *cs, **pcs;
+    int i;
 
 	index = MSG_ReadShort();
 
@@ -635,11 +651,27 @@ static void MVD_ParseConfigstring( mvd_t *mvd ) {
 	}
     
 	if( index >= CS_PLAYERSKINS && index < CS_PLAYERSKINS + mvd->maxclients ) {
+        // update player name
         player = &mvd->players[ index - CS_PLAYERSKINS ];
         Q_strncpyz( player->name, string, sizeof( player->name ) );
         p = strchr( player->name, '\\' );
         if( p ) {
             *p = 0;
+        }
+    } else if( index >= CS_GENERAL ) {
+        // reset unicast versions of this string
+        for( i = 0; i < mvd->maxclients; i++ ) {
+            player = &mvd->players[i];
+            pcs = &player->configstrings;
+            for( cs = player->configstrings; cs; cs = cs->next ) {
+                if( cs->index == index ) {
+                    Com_DPrintf( "%s: reset %d on %d\n", __func__, index, i );
+                    *pcs = cs->next;
+                    Z_Free( cs );
+                    break;
+                }
+                pcs = &cs->next;
+            }
         }
     }
 

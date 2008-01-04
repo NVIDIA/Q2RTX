@@ -34,6 +34,9 @@ cvar_t	*sv_mvd_max_size;
 cvar_t	*sv_mvd_max_duration;
 cvar_t	*sv_mvd_begincmd;
 cvar_t	*sv_mvd_scorecmd;
+#if USE_ZLIB
+cvar_t	*sv_mvd_encoding;
+#endif
 
 static cmdbuf_t	dummy_buffer;
 static char		dummy_buffer_text[MAX_STRING_CHARS];
@@ -681,10 +684,47 @@ void SV_MvdClientNew( tcpClient_t *client ) {
     SZ_Clear( &msg_write );
 }
 
+void SV_MvdInitStream( void ) {
+    uint32 magic;
+#if USE_ZLIB
+    int bits;
+#endif
+
+    SV_HttpPrintf( "HTTP/1.0 200 OK\r\n" );
+
+#if USE_ZLIB
+    switch( sv_mvd_encoding->integer ) {
+    case 1:
+        SV_HttpPrintf( "Content-Encoding: gzip\r\n" );
+        bits = 31;
+        break;
+    case 2:
+        SV_HttpPrintf( "Content-Encoding: deflate\r\n" );
+        bits = 15;
+        break;
+    default:
+        bits = 0;
+        break;
+    }
+#endif
+
+    SV_HttpPrintf(
+        "Content-Type: application/octet-stream\r\n"
+        "Content-Disposition: attachment; filename=\"stream.mvd2\"\r\n"
+        "\r\n" );
+
+#if USE_ZLIB
+    if( bits ) {
+        deflateInit2( &http_client->z, Z_DEFAULT_COMPRESSION,
+            Z_DEFLATED, bits, 8, Z_DEFAULT_STRATEGY );
+    }
+#endif
+
+    magic = MVD_MAGIC;
+    SV_HttpWrite( http_client, &magic, 4 );
+}
 
 void SV_MvdGetStream( const char *uri ) {
-    uint32 magic;
-
     if( http_client->method == HTTP_METHOD_HEAD ) {
         SV_HttpPrintf( "HTTP/1.0 200 OK\r\n\r\n" );
         SV_HttpDrop( http_client, "200 OK " );
@@ -699,21 +739,7 @@ void SV_MvdGetStream( const char *uri ) {
 
     List_Append( &svs.mvd.clients, &http_client->mvdEntry );
 
-    SV_HttpPrintf(
-        "HTTP/1.0 200 OK\r\n"
-#ifdef USE_ZLIB
-        "Content-Encoding: deflate\r\n"
-#endif
-        "Content-Type: application/octet-stream\r\n"
-        "Content-Disposition: attachment; filename=\"stream.mvd2\"\r\n"
-        "\r\n" );
-
-#if USE_ZLIB
-    deflateInit( &http_client->z, Z_DEFAULT_COMPRESSION );
-#endif
-
-    magic = MVD_MAGIC;
-    SV_HttpWrite( http_client, &magic, 4 );
+    SV_MvdInitStream();
 
     SV_MvdClientNew( http_client );
 }
@@ -915,6 +941,9 @@ void SV_MvdRegister( void ) {
         "wait 50; putaway; wait 10; help;", 0 );
     sv_mvd_scorecmd = Cvar_Get( "sv_mvd_scorecmd",
         "putaway; wait 10; help;", 0 );
+#if USE_ZLIB
+    sv_mvd_encoding = Cvar_Get( "sv_mvd_encoding", "1", 0 );
+#endif
 
 	dummy_buffer.text = dummy_buffer_text;
     dummy_buffer.maxsize = sizeof( dummy_buffer_text );
