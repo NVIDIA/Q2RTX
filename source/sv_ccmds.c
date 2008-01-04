@@ -789,7 +789,7 @@ static int SV_ClientNum_m( char *buffer, int size ) {
 	if( !sv_client ) {
 		return Q_strncpyz( buffer, "", size );
 	}
-    return Com_sprintf( buffer, size, "%d", sv_client - svs.udp_client_pool );
+    return Com_sprintf( buffer, size, "%d", sv_client->number );
 }
 
 //===========================================================

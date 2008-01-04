@@ -565,7 +565,7 @@ static client_t *AC_ParseClient( void ) {
 		return NULL;
 	}
 
-	cl = &svs.clientpool[clientID];
+	cl = &svs.udp_client_pool[clientID];
 
 	// we check challenge to ensure we don't get
     // a race condition if a client reconnects.
@@ -927,8 +927,6 @@ static void AC_Write( const char *func ) {
 }
 
 static void AC_ClientQuery( client_t *cl ) {
-	int num = cl - svs.clientpool;
-
 	cl->ac_query_sent = AC_QUERY_SENT;
 	cl->ac_query_time = svs.realtime;
 
@@ -940,7 +938,7 @@ static void AC_ClientQuery( client_t *cl ) {
 
     MSG_WriteShort( 9 );
 	MSG_WriteByte( ACC_QUERYCLIENT );
-	MSG_WriteLong( num );
+	MSG_WriteLong( cl->number );
     MSG_WriteLong( cl->challenge );
     AC_Write( __func__ );
 }
@@ -1014,8 +1012,6 @@ void AC_ClientAnnounce( client_t *cl ) {
 }
 
 char *AC_ClientConnect( client_t *cl ) {
-	int num = cl - svs.clientpool;
-
     if( !ac_required->integer ) {
         return "";
     }
@@ -1040,7 +1036,7 @@ char *AC_ClientConnect( client_t *cl ) {
         MSG_WriteByte( ACC_REQUESTCHALLENGE );
         MSG_WriteData( net_from.ip, 4 );
         MSG_WriteData( &net_from.port, 2 );
-        MSG_WriteLong( num );
+        MSG_WriteLong( cl->number );
         MSG_WriteLong( cl->challenge );
         AC_Write( __func__ );
     }
@@ -1049,8 +1045,6 @@ char *AC_ClientConnect( client_t *cl ) {
 }
 
 void AC_ClientDisconnect( client_t *cl ) {
-	int num = cl - svs.clientpool;
-
 	cl->ac_query_sent = AC_QUERY_UNSENT;
 	cl->ac_valid = qfalse;
 
@@ -1059,7 +1053,7 @@ void AC_ClientDisconnect( client_t *cl ) {
 
     MSG_WriteShort( 9 );
 	MSG_WriteByte( ACC_CLIENTDISCONNECT );
-	MSG_WriteLong( num );
+	MSG_WriteLong( cl->number );
     MSG_WriteLong( cl->challenge );
     AC_Write( __func__ );
 }
@@ -1480,7 +1474,7 @@ void AC_Info_f( void ) {
 				Com_Printf( "Invalid client ID.\n" );
 				return;
 			}
-            cl = &svs.clientpool[clientID];
+            cl = &svs.udp_client_pool[clientID];
             if( cl->state < cs_spawned ) {
                 Com_Printf( "Player is not active.\n" );
                 return;
