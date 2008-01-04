@@ -519,6 +519,22 @@ static void MVD_ReadDemo( mvd_t *mvd ) {
     }
 }
 
+static htcoding_t MVD_FindCoding( const char *name ) {
+    if( !Q_stricmp( name, "identity" ) ) {
+        return HTTP_CODING_NONE;
+    }
+    if( !Q_stricmp( name, "gzip" ) ) {
+        return HTTP_CODING_GZIP;
+    }
+    if( !Q_stricmp( name, "x-gzip" ) ) {
+        return HTTP_CODING_GZIP;
+    }
+    if( !Q_stricmp( name, "deflate" ) ) {
+        return HTTP_CODING_DEFLATE;
+    }
+    return HTTP_CODING_UNKNOWN;
+}
+
 static qboolean MVD_ParseResponse( mvd_t *mvd ) {
     char key[MAX_TOKEN_CHARS];
     char *p, *token;
@@ -592,21 +608,7 @@ static qboolean MVD_ParseResponse( mvd_t *mvd ) {
             token = COM_SimpleParse( &line, NULL );
             if( !strcmp( key, "content-type" ) ) {
             } else if( !strcmp( key, "content-encoding" ) ) {
-#if USE_ZLIB
-                if( !Q_stricmp( token, "deflate" ) ||
-                    !Q_stricmp( token, "gzip" ) ||
-                    !Q_stricmp( token, "x-gzip" ) )
-                {
-                    if( inflateInit2( &mvd->z, 47 ) != Z_OK ) {
-                        MVD_Dropf( mvd, "inflateInit2() failed: %s", mvd->z.msg );
-                    }
-                    mvd->zbuf.data = MVD_Malloc( MAX_MSGLEN * 2 );
-                    mvd->zbuf.size = MAX_MSGLEN * 2;
-                } else
-#endif
-                {
-                    MVD_Dropf( mvd, "Unsupported content encoding: %s", token );
-                }
+                mvd->contentCoding = MVD_FindCoding( token );
             } else if( !strcmp( key, "content-length" ) ) {
                 mvd->contentLength = atoi( token );
             } else if( !strcmp( key, "transfer-encoding" ) ) {
@@ -697,6 +699,24 @@ int MVD_Frame( void ) {
             if( mvd->statusCode != 200 ) {
                 MVD_Dropf( mvd, "HTTP request failed: %d %s",
                     mvd->statusCode, mvd->statusText );
+            }
+            switch( mvd->contentCoding ) {
+            case HTTP_CODING_NONE:
+                break;
+#if USE_ZLIB
+            case HTTP_CODING_GZIP:
+            case HTTP_CODING_DEFLATE:
+                if( inflateInit2( &mvd->z, 47 ) != Z_OK ) {
+                    MVD_Dropf( mvd, "inflateInit2() failed: %s", mvd->z.msg );
+                }
+                mvd->zbuf.data = MVD_Malloc( MAX_MSGLEN * 2 );
+                mvd->zbuf.size = MAX_MSGLEN * 2;
+                break;
+#endif
+            default:
+                MVD_Dropf( mvd, "Unsupported content encoding: %d",
+                    mvd->contentCoding );
+                break;
             }
             Com_Printf( "[%s] Got response, awaiting gamestate...\n", mvd->name );
             mvd->state = MVD_CHECKING;
@@ -913,8 +933,10 @@ MVD_Connect_f
 void MVD_Connect_f( void ) {
     static const cmd_option_t options[] = {
         { "h", "help", "display this message" },
+        { "e:number", "encoding", "assume encoding identified by <number>" },
         { "i:number", "id", "specify remote stream ID as <number>" },
         { "n:string", "name", "specify channel name as <string>" },
+        { "r:string", "referer", "specify referer as <string> in HTTP request" },
         { NULL }
     };
 	netadr_t adr;
@@ -922,7 +944,8 @@ void MVD_Connect_f( void ) {
     char buffer[MAX_STRING_CHARS];
     char resource[MAX_STRING_CHARS];
     char credentials[MAX_STRING_CHARS];
-	char *id = "", *name = NULL, *host, *p;
+	char *id = "", *name = NULL, *referer = NULL, *host, *p;
+    htcoding_t coding = HTTP_CODING_NONE;
     mvd_t *mvd;
     uint16 port;
     int c;
@@ -936,13 +959,28 @@ void MVD_Connect_f( void ) {
             Com_Printf(
     "Full URI syntax: [http://][user:pass@]<host>[:port][/resource]\n"
     "If resource is given, default port is 80 and stream ID is ignored.\n"
-    "Otherwise, default port is %d and stream ID is undefined.\n", PORT_SERVER );
+    "Otherwise, default port is %d and stream ID is undefined.\n\n"
+#if USE_ZLIB
+    "Accepted content encodings: gzip, deflate.\n"
+#endif
+                , PORT_SERVER );
             return;
+        case 'e':
+            coding = MVD_FindCoding( cmd_optarg );
+            if( coding == HTTP_CODING_UNKNOWN ) {
+                Com_Printf( "Unknown content encoding: %s.\n", cmd_optarg );
+                Cmd_PrintHint();
+                return;
+            }
+            break;
         case 'i':
             id = cmd_optarg;
             break;
         case 'n':
             name = cmd_optarg;
+            break;
+        case 'r':
+            referer = cmd_optarg;
             break;
         default:
             return;
@@ -1004,6 +1042,7 @@ void MVD_Connect_f( void ) {
     mvd = Z_ReservedAllocz( sizeof( *mvd ) );
     mvd->id = mvd_chanid++;
     mvd->state = MVD_CONNECTING;
+    mvd->contentCoding = coding;
     mvd->stream = stream;
     mvd->stream.recv.data = Z_ReservedAlloc( MAX_MSGLEN * 2 );
     mvd->stream.recv.size = MAX_MSGLEN * 2;
@@ -1034,7 +1073,7 @@ void MVD_Connect_f( void ) {
         "GET /%s HTTP/1.0\r\n"
         "Host: %s\r\n"
         "User-Agent: " APPLICATION "/" VERSION "\r\n"
-#ifdef USE_ZLIB
+#if USE_ZLIB
         "Accept-Encoding: gzip, deflate\r\n"
 #endif
         "Accept: application/*\r\n",
@@ -1042,6 +1081,9 @@ void MVD_Connect_f( void ) {
     if( credentials[0] ) {
         Q_Encode64( buffer, credentials, sizeof( buffer ) );
         MVD_HttpPrintf( mvd, "Authorization: Basic %s\r\n", buffer );
+    }
+    if( referer ) {
+        MVD_HttpPrintf( mvd, "Referer: %s\r\n", referer );
     }
     MVD_HttpPrintf( mvd, "\r\n" );
 }

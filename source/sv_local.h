@@ -244,6 +244,13 @@ typedef enum {
     HTTP_METHOD_POST
 } htmethod_t;
 
+typedef enum {
+    HTTP_CODING_NONE,
+    HTTP_CODING_GZIP,
+    HTTP_CODING_DEFLATE,
+    HTTP_CODING_UNKNOWN
+} htcoding_t;
+
 typedef struct {
     list_t      entry;
 	clstate_t	state;

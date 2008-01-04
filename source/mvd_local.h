@@ -119,6 +119,7 @@ typedef struct mvd_s {
     char        response[MAX_NET_STRING];
     int         responseLength;
     int         contentLength;
+    htcoding_t  contentCoding;
     int         statusCode;
     char        statusText[MAX_QPATH];
     int         msglen;
