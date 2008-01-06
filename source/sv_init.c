@@ -272,6 +272,11 @@ void SV_InitGame( qboolean ismvd ){
 		SV_InitGameProgs();
 	}
 
+	// init rate limits
+	SV_RateInit( &svs.ratelimit_status, sv_status_limit->integer, 1000 );
+	SV_RateInit( &svs.ratelimit_badpass, 1, sv_badauth_time->value * 1000 );
+	SV_RateInit( &svs.ratelimit_badrcon, 1, sv_badauth_time->value * 1000 );
+
     List_Init( &svs.udp_client_list );
     List_Init( &svs.mvd.clients );
     List_Init( &svs.tcp_client_list );

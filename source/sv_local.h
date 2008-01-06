@@ -216,6 +216,7 @@ typedef struct client_s {
     char            *gamedir, *mapname;
     edict_pool_t    *pool;
     cm_t            *cm;
+    int             slot;
 
     // netchan type dependent methods
 	void			(*AddMessage)( struct client_s *, byte *, int, qboolean );

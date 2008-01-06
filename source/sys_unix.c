@@ -674,13 +674,23 @@ void Sys_AddDefaultConfig( void ) {
 }
 
 void Sys_Sleep( int msec ) {
-    struct timespec req = { 0, msec * 1000000 };
+    struct timespec req;
+
+    req.tv_sec = msec / 1000; msec %= 1000;
+    req.tv_nsec = msec * 1000000;
     nanosleep( &req, NULL );
 }
 
 void Sys_Setenv( const char *name, const char *value ) {
     setenv( name, value, 1 );
 }
+
+#if USE_ANTICHEAT & 1
+qboolean Sys_GetAntiCheatAPI( void ) {
+    Sys_Sleep( 1500 );
+    return qfalse;
+}
+#endif
 
 /*
 ================

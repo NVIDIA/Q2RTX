@@ -425,7 +425,7 @@ void MVD_SwitchChannel( udpClient_t *client, mvd_t *mvd ) {
     cl->gamedir = mvd->gamedir;
     cl->mapname = mvd->configstrings[CS_NAME];
     cl->configstrings = ( char * )mvd->configstrings;
-    cl->number = mvd->clientNum;
+    cl->slot = mvd->clientNum;
     cl->cm = &mvd->cm;
     cl->pool = &mvd->pool;
 

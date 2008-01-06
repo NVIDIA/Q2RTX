@@ -777,7 +777,7 @@ static void SVC_DirectConnect( void ) {
 	// this is the only place a client_t is ever initialized
 	memset( newcl, 0, sizeof( *newcl ) );
 	number = newcl - svs.udp_client_pool;
-    newcl->number = number;
+    newcl->number = newcl->slot = number;
 	newcl->challenge = challenge; // save challenge for checksumming
 	newcl->protocol = protocol;
     newcl->version = version;
@@ -939,8 +939,7 @@ static void SVC_RemoteCommand( void ) {
 	Com_Printf( "Rcon from %s:\n%s\n",
 		NET_AdrToString( &net_from ), string );
 
-	Com_BeginRedirect( RD_PACKET, sv_outputbuf, SV_OUTPUTBUF_LENGTH,
-        SV_FlushRedirect );
+	SV_BeginRedirect( RD_PACKET );
 
 	Cmd_ExecuteString( string );
 
@@ -1727,10 +1726,6 @@ void SV_Init( void ) {
 
 	sv_badauth_time = Cvar_Get( "sv_badauth_time", "1", 0 );
 	sv_badauth_time->changed = sv_badauth_time_changed;
-
-	SV_RateInit( &svs.ratelimit_status, sv_status_limit->integer, 1000 );
-	SV_RateInit( &svs.ratelimit_badpass, 1, sv_badauth_time->value * 1000 );
-	SV_RateInit( &svs.ratelimit_badrcon, 1, sv_badauth_time->value * 1000 );
 
 	//
     // set up default pmove parameters

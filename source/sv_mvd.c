@@ -373,7 +373,7 @@ qboolean SV_MvdCreateDummy( void ) {
 
 	memset( newcl, 0, sizeof( *newcl ) );
     number = newcl - svs.udp_client_pool;
-	newcl->number = number;
+	newcl->number = newcl->slot = number;
 	newcl->protocol = -1;
     newcl->state = cs_connected;
     newcl->AddMessage = SV_DummyAddMessage;

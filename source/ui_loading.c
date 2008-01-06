@@ -28,14 +28,13 @@ CONNECTION / LOADING SCREEN
 =============================================================================
 */
 
-static clientStatus_t	loadingStatus;
-
 /*
 ==============
 UI_DrawLoading
 ==============
 */
 void UI_DrawLoading( int realtime ) {
+    clientStatus_t	loadingStatus;
 	char buffer[MAX_STRING_CHARS];
 	char *s;
 	int x, y;
@@ -81,12 +80,15 @@ void UI_DrawLoading( int realtime ) {
         s = buffer;
 		break;
 	case ca_connecting:
-		Com_sprintf( buffer, sizeof( buffer ), "Connecting... %i", loadingStatus.connectCount );
-        s = buffer;
+        if( loadingStatus.connectCount == -1 ) {
+            s = "Loading anticheat...";
+        } else {
+    		Com_sprintf( buffer, sizeof( buffer ), "Connecting... %i", loadingStatus.connectCount );
+            s = buffer;
+        }
 		break;
 	case ca_connected:
 		s = "Receiving server data...";
-		UI_DrawString( x, y, NULL, UI_CENTER|UI_DROPSHADOW, s );
 		break;
 	case ca_loading:
 		Com_sprintf( buffer, sizeof( buffer ), "Loading... %s", loadingStatus.loadingString );

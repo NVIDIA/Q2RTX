@@ -1307,6 +1307,7 @@ static void CL_ConnectionlessPacket( void ) {
 			MSG_FlushTo( &cls.netchan->message );
 			cls.netchan->Transmit( cls.netchan, 0, NULL );
 			S_StopAllSounds();
+	        cls.connectCount = -1;
 			Com_Printf( "Loading anticheat, this may take a few moments...\n" );
 			SCR_UpdateScreen();
 			if( !Sys_GetAntiCheatAPI() ) {
@@ -1325,6 +1326,7 @@ static void CL_ConnectionlessPacket( void ) {
         CL_ClientCommand( "new" );
         cls.state = ca_connected;
 		cls.messageString[0] = 0;
+	    cls.connectCount = 0;
         return;
     }
 

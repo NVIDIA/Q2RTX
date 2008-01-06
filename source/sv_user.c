@@ -364,7 +364,7 @@ void SV_New_f( void ) {
 	MSG_WriteLong( sv.spawncount );
 	MSG_WriteByte( 0 ); // no attract loop
 	MSG_WriteString( sv_client->gamedir );
-	MSG_WriteShort( sv_client->number );
+	MSG_WriteShort( sv_client->slot );
 	MSG_WriteString( sv_client->mapname );
 
 	// send protocol specific stuff
