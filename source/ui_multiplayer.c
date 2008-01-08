@@ -31,6 +31,7 @@ JOIN SERVER MENU
 #define ID_LIST		101
 
 #define MAX_STATUS_RULES	64
+#define MAX_STATUS_SERVERS  64
 
 typedef struct serverSlot_s {
 	qboolean		valid;
@@ -50,8 +51,8 @@ typedef struct m_joinServer_s {
     qboolean        active;
     qboolean        cursorSet;
 
-	serverSlot_t	servers[MAX_LOCAL_SERVERS];
-	char			*names[MAX_LOCAL_SERVERS];
+	serverSlot_t	servers[MAX_STATUS_SERVERS];
+	char			*names[MAX_STATUS_SERVERS];
 } m_joinServer_t;
 
 static m_joinServer_t	m_join;
@@ -90,11 +91,26 @@ static void UpdateSelection( void ) {
 	}
 }
 
+static void ClearSlot( serverSlot_t *slot ) {
+    int i;
+
+    for( i = 0; i < slot->numRules; i++ ) {
+        com.Free( slot->rules[i] );
+        slot->rules[i] = NULL;
+    }
+    for( i = 0; i < slot->numPlayers; i++ ) {
+        com.Free( slot->players[i] );
+        slot->players[i] = NULL;
+    }
+    slot->numRules = slot->numPlayers = 0;
+    slot->valid = qfalse;
+}
+
 void UI_AddToServerList( const serverStatus_t *status ) {
 	serverSlot_t *slot;
-	int		i;
-	char *s;
-	const char *info;
+	int		i, j;
+	char *host, *map;
+	const char *info = status->infostring;
 	char key[MAX_STRING_CHARS];
 	char value[MAX_STRING_CHARS];
 	const playerStatus_t *player;
@@ -112,7 +128,7 @@ void UI_AddToServerList( const serverStatus_t *status ) {
 
 	if( i == m_join.list.numItems ) {
 		// create new slot
-		if( m_join.list.numItems == MAX_LOCAL_SERVERS ) {
+		if( m_join.list.numItems == MAX_STATUS_SERVERS ) {
 			return;
 		}
         strcpy( slot->realAddress, status->address );
@@ -125,113 +141,90 @@ void UI_AddToServerList( const serverStatus_t *status ) {
         m_join.names[m_join.list.numItems] = NULL;
 	}
 
-	slot->valid = qtrue;
+    host = Info_ValueForKey( info, "hostname" );
+    if( !host[0] ) {
+        host = slot->address;
+    }
 
-	s = UI_FormatColumns( 0,
-		Info_ValueForKey( status->infostring, "hostname" ),
-		Info_ValueForKey( status->infostring, "mapname" ),
-		va( "%i/%s", status->numPlayers,
-		Info_ValueForKey( status->infostring, "maxclients" ) ), NULL );
+	map = Info_ValueForKey( info, "mapname" );
+    if( !map[0] ) {
+        map = "???";
+    }
+
+    j = atoi( Info_ValueForKey( info, "maxclients" ) );
+    Com_sprintf( key, sizeof( key ), "%d/%d", status->numPlayers, j );
 
 	if( m_join.names[i] ) {
 		com.Free( m_join.names[i] );
 	}
-	m_join.names[i] = s;
+	m_join.names[i] = UI_FormatColumns( 0, host, map, key, NULL );
 
-	for( i = 0; i < slot->numRules; i++ ) {
-		com.Free( slot->rules[i] );
-        slot->rules[i] = NULL;
-	}
-	for( i = 0; i < slot->numPlayers; i++ ) {
-		com.Free( slot->players[i] );
-        slot->players[i] = NULL;
-	}
+    ClearSlot( slot );
 
-	slot->numRules = 0;
-	info = status->infostring;
 	do {
 		Info_NextPair( &info, key, value );
-
 		if( !key[0] ) {
 			break;
 		}
-
-		s = UI_FormatColumns( 0, key, value, NULL );
-		slot->rules[slot->numRules++] = s;
+		slot->rules[slot->numRules++] =
+            UI_FormatColumns( 0, key, value, NULL );
 	} while( info && slot->numRules < MAX_STATUS_RULES );
 
 	for( i = 0, player = status->players ; i < status->numPlayers; i++, player++ ) {
-		s = UI_FormatColumns( 0,
-			va( "%i", player->score ),
-			va( "%i", player->ping ),
-			player->name, NULL );
-		slot->players[i] = s;
+        Com_sprintf( key, sizeof( key ), "%d", player->score );
+        Com_sprintf( value, sizeof( value ), "%d", player->ping );
+		slot->players[i] = UI_FormatColumns( 0,
+			key, value, player->name, NULL );
 	}
 	slot->numPlayers = status->numPlayers;
 
+	slot->valid = qtrue;
+
 	UpdateSelection();
-    
 }
 
 static void PingSelected( void ) {
-	serverSlot_t *slot;
-	char address[MAX_QPATH];
-    int i;
-    char *s;
-    
-	slot = &m_join.servers[m_join.list.curvalue];
-    slot->valid = qfalse;
-    
-	s = UI_FormatColumns( 0, slot->address, "???", "?/?", NULL );
-    
+	serverSlot_t *slot = &m_join.servers[m_join.list.curvalue];
+
 	if( m_join.names[m_join.list.curvalue] ) {
 		com.Free( m_join.names[m_join.list.curvalue] );
 	}
-	m_join.names[m_join.list.curvalue] = s;
-
-	for( i = 0; i < slot->numRules; i++ ) {
-		com.Free( slot->rules[i] );
-        slot->rules[i] = NULL;
-	}
-	for( i = 0; i < slot->numPlayers; i++ ) {
-		com.Free( slot->players[i] );
-        slot->players[i] = NULL;
-	}
-
-	slot->numRules = 0;
-    slot->numPlayers = 0;
+	m_join.names[m_join.list.curvalue] = UI_FormatColumns( 0,
+        slot->address, "???", "?/?", NULL );
+    
+    ClearSlot( slot );
     
     UpdateSelection();
     m_join.menu.statusbar = "Pinging servers, please wait...";
     client.UpdateScreen();
     
-	strcpy( address, slot->realAddress );
-	client.SendStatusRequest( address, sizeof( address ) );
+	client.SendStatusRequest( slot->realAddress, 0 );
 
 	UpdateSelection();
 }
 
 static void AddUnlistedServers( void ) {
-	char *s;
-	char address[MAX_QPATH];
 	serverSlot_t *slot;
+    cvar_t *var;
 	int i, j;
     
     m_join.active = qtrue;
 
     // ping broadcast
-    strcpy( address, "broadcast" );
-    client.SendStatusRequest( address, sizeof( address ) );
+    client.SendStatusRequest( NULL, 0 );
 
-	for( i = 0; i < MAX_LOCAL_SERVERS; i++ ) {
-		cvar.VariableStringBuffer( va( "adr%i", i ), address, sizeof( address ) );
-		if( !address[0] ) {
+	for( i = 0; i < MAX_STATUS_SERVERS; i++ ) {
+		var = cvar.Find( va( "adr%i", i ) );
+        if( !var ) {
+            break;
+        }
+		if( !var->string[0] ) {
 			continue;
 		}
 
 		// ignore if already listed
 		for( j = 0, slot = m_join.servers; j < m_join.list.numItems; j++, slot++ ) {
-			if( !Q_stricmp( address, slot->address ) ) {
+			if( !Q_stricmp( var->string, slot->address ) ) {
 				break;
 			}
 		}
@@ -240,16 +233,16 @@ static void AddUnlistedServers( void ) {
 			continue;
 		}
 
-		if( m_join.list.numItems == MAX_LOCAL_SERVERS ) {
+		if( m_join.list.numItems == MAX_STATUS_SERVERS ) {
 			break;
 		}
 
         // save original address
-        strcpy( slot->address, address );
-        strcpy( slot->realAddress, address );
+        Q_strncpyz( slot->address, var->string, sizeof( slot->address ) );
+        Q_strncpyz( slot->realAddress, var->string, sizeof( slot->realAddress ) );
 
-		s = UI_FormatColumns( 0, slot->address, "???", "?/?", NULL );
-		m_join.names[m_join.list.numItems++] = s;
+		m_join.names[m_join.list.numItems++] = UI_FormatColumns( 0,
+            slot->address, "???", "?/?", NULL );
 
         // ping and resolve real ip
         client.SendStatusRequest( slot->realAddress, sizeof( slot->realAddress ) );
@@ -259,19 +252,11 @@ static void AddUnlistedServers( void ) {
 }
 
 static void FreeListedServers( void ) {
-	int i, j;
-	serverSlot_t *slot;
+	int i;
 
-	for( i = 0, slot = m_join.servers; i < m_join.list.numItems; i++, slot++ ) {
-		for( j = 0; j < slot->numRules; j++ ) {
-			com.Free( slot->rules[j] );
-		}
-		for( j = 0; j < slot->numPlayers; j++ ) {
-			com.Free( slot->players[j] );
-		}
-		memset( slot, 0, sizeof( *slot ) );
+	for( i = 0; i < m_join.list.numItems; i++ ) {
+        ClearSlot( &m_join.servers[i] );
 	}
-
 
 	for( i = 0; i < m_join.list.numItems; i++ ) {
 		if( m_join.names[i] ) {

@@ -104,9 +104,8 @@ typedef struct mvd_s {
     char        name[MAX_QPATH];
 
 	// demo related variables
-	fileHandle_t	demofile;
-	qboolean	demoplayback;
-	qboolean	demorecording;
+	fileHandle_t	demoplayback;
+	fileHandle_t	demorecording;
     int         demoloop;
     string_entry_t  *demohead, *demoentry;
 

@@ -233,6 +233,17 @@ void Sys_ConsoleOutput( const char *string ) {
     Sys_ShowInput();
 }
 
+void Sys_SetConsoleTitle( const char *title ) {
+    char buffer[MAX_STRING_CHARS];
+    int len;
+
+	if( !tty_enabled ) {
+        return;
+    }
+    len = Com_sprintf( buffer, sizeof( buffer ), "\033]0;%s\007", title );
+    FIFO_Write( &sys_output, buffer, len );	
+}
+
 /*
 =================
 Sys_ParseInput

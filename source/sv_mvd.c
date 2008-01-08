@@ -754,9 +754,8 @@ as they often occur in the same BSP leaf)
 ==============
 */
 void SV_MvdMulticast( sizebuf_t *buf, int leafnum, mvd_ops_t op ) {
-	int bits;
+	int bits = ( msg_write.cursize >> 8 ) & 7;
 
-	bits = ( msg_write.cursize >> 8 ) & 7;
     SZ_WriteByte( buf, op | ( bits << SVCMD_BITS ) );
     SZ_WriteByte( buf, msg_write.cursize & 255 );
 
@@ -773,9 +772,8 @@ SV_MvdUnicast
 ==============
 */
 void SV_MvdUnicast( sizebuf_t *buf, int clientNum, mvd_ops_t op ) {
-    int bits;
+    int bits = ( msg_write.cursize >> 8 ) & 7;
 
-	bits = ( msg_write.cursize >> 8 ) & 7;
     SZ_WriteByte( buf, op | ( bits << SVCMD_BITS ) );
     SZ_WriteByte( buf, msg_write.cursize & 255 );
     SZ_WriteByte( buf, clientNum );
@@ -798,9 +796,6 @@ void SV_MvdConfigstring( int index, const char *string ) {
 }
 
 void SV_MvdBroadcastPrint( int level, const char *string ) {
-	if( sv.mvd.paused >= PAUSED_FRAMES ) {
-        return;
-	}
 	SZ_WriteByte( &sv.mvd.message, mvd_print );
 	SZ_WriteByte( &sv.mvd.message, level );
 	SZ_WriteString( &sv.mvd.message, string );

@@ -1332,10 +1332,10 @@ void Qcommon_Init( int argc, char **argv ) {
 	srand( Sys_Milliseconds() );
 
 	Netchan_Init();
+	NET_Init();
 	CM_Init();
 	SV_Init();
 	CL_Init();
-	NET_Init();
 
 	if( dedicated->integer ) {
 		NET_Config( NET_SERVER );

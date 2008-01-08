@@ -1015,7 +1015,7 @@ int SV_CountClients( void ) {
     int count = 0;
 
     FOR_EACH_CLIENT( cl ) {
-		if( cl->state > cs_zombie && cl->protocol != -1 ) {
+		if( cl->state > cs_zombie ) {
             count++;
         }
     }
@@ -1648,6 +1648,15 @@ static void sv_badauth_time_changed( cvar_t *self ) {
 	SV_RateInit( &svs.ratelimit_badrcon, 1, self->value * 1000 );
 }
 
+static void sv_hostname_changed( cvar_t *self ) {
+    char buffer[MAX_STRING_CHARS];
+
+    Com_sprintf( buffer, sizeof( buffer ), "%s (port %d)",
+        sv_hostname->string, net_port->integer );
+
+    Sys_SetConsoleTitle( buffer );
+}
+
 /*
 ===============
 SV_Init
@@ -1676,7 +1685,9 @@ void SV_Init( void ) {
 	sv_maxclients = Cvar_Get( "maxclients", "1", CVAR_SERVERINFO|CVAR_LATCH );
 	sv_reserved_slots = Cvar_Get( "sv_reserved_slots", "0", CVAR_LATCH );
 	sv_hostname = Cvar_Get( "hostname", "noname", CVAR_SERVERINFO|CVAR_ARCHIVE );
-	sv_timeout = Cvar_Get( "timeout", "125", 0 );
+    sv_hostname->changed = sv_hostname_changed;
+    sv_hostname->changed( sv_hostname );
+	sv_timeout = Cvar_Get( "timeout", "90", 0 );
 	sv_zombietime = Cvar_Get( "zombietime", "2", 0 );
 	sv_ghostime = Cvar_Get( "sv_ghostime", "6", 0 );
 	sv_showclamp = Cvar_Get( "showclamp", "0", 0 );

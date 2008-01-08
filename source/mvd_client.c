@@ -46,14 +46,17 @@ cvar_t	*mvd_wait_leave;
 
 void MVD_Disconnect( mvd_t *mvd ) {
 	if( mvd->demorecording ) {
-		MVD_StreamedStop_f();
+        uint16 msglen = 0;
+        FS_Write( &msglen, 2, mvd->demorecording );
+        FS_FCloseFile( mvd->demorecording );
+        mvd->demorecording = 0;
 	}
     if( mvd->stream.state ) {
         NET_Close( &mvd->stream );
     }
-	if( mvd->demofile ) {
-		FS_FCloseFile( mvd->demofile );
-        mvd->demofile = 0;
+	if( mvd->demoplayback ) {
+		FS_FCloseFile( mvd->demoplayback );
+        mvd->demoplayback = 0;
 	}
 
     mvd->state = MVD_DISCONNECTED;
@@ -474,17 +477,17 @@ static void MVD_PlayNext( mvd_t *mvd, string_entry_t *entry ) {
         entry = mvd->demohead;
     }
 
-    if( mvd->demofile ) {
-        FS_FCloseFile( mvd->demofile );
-        mvd->demofile = 0;
+    if( mvd->demoplayback ) {
+        FS_FCloseFile( mvd->demoplayback );
+        mvd->demoplayback = 0;
     }
 
-    FS_FOpenFile( entry->string, &mvd->demofile, FS_MODE_READ );
-    if( !mvd->demofile ) {
+    FS_FOpenFile( entry->string, &mvd->demoplayback, FS_MODE_READ );
+    if( !mvd->demoplayback ) {
         MVD_Dropf( mvd, "Couldn't reopen %s", entry->string );
     }
 
-    FS_Read( &magic, 4, mvd->demofile );
+    FS_Read( &magic, 4, mvd->demoplayback );
     if( magic != MVD_MAGIC ) {
         MVD_Dropf( mvd, "%s is not a MVD2 file", entry->string );
     }
@@ -508,7 +511,7 @@ static void MVD_ReadDemo( mvd_t *mvd ) {
         if( !length ) {
             return;
         }
-        read = FS_Read( data, length, mvd->demofile );
+        read = FS_Read( data, length, mvd->demoplayback );
         FIFO_Commit( &mvd->stream.recv, read );
         total += read;
     } while( read );
@@ -650,8 +653,8 @@ int MVD_Frame( void ) {
             continue;
         }
 
-        if( mvd->demoplayback ) {
-            if( mvd->demofile ) {
+        if( !mvd->stream.state ) {
+            if( mvd->demoplayback ) {
                 MVD_ReadDemo( mvd );
             }
             if( mvd->state == MVD_PREPARING ) {
@@ -860,11 +863,10 @@ void MVD_StreamedStop_f( void ) {
 	}
 
 	msglen = 0;
-	FS_Write( &msglen, 2, mvd->demofile );
-	FS_FCloseFile( mvd->demofile );
+	FS_Write( &msglen, 2, mvd->demorecording );
 
-	mvd->demofile = 0;
-	mvd->demorecording = qfalse;
+	FS_FCloseFile( mvd->demorecording );
+	mvd->demorecording = 0;
 
 	Com_Printf( "[%s] Stopped recording.\n", mvd->name );
 }
@@ -910,14 +912,13 @@ void MVD_StreamedRecord_f( void ) {
 	
 	Com_Printf( "[%s] Recording into %s.\n", mvd->name, buffer );
 
-	mvd->demofile = f;
-	mvd->demorecording = qtrue;
+	mvd->demorecording = f;
 
     MVD_EmitGamestate( mvd );
 
     magic = MVD_MAGIC;
-    FS_Write( &magic, 4, f );
-	FS_Write( msg_write.data, msg_write.cursize, f );
+    FS_Write( &magic, 4, mvd->demorecording );
+	FS_Write( msg_write.data, msg_write.cursize, mvd->demorecording );
 
     SZ_Clear( &msg_write );
 }
@@ -1261,7 +1262,6 @@ void MVD_Play_f( void ) {
     mvd = Z_ReservedAllocz( sizeof( *mvd ) );
     mvd->id = mvd_chanid++;
     mvd->state = MVD_PREPARING;
-    mvd->demoplayback = qtrue;
     mvd->demohead = head;
     mvd->demoloop = loop;
     mvd->stream.recv.data = Z_ReservedAlloc( MAX_MSGLEN * 2 );

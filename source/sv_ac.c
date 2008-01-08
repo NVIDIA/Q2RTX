@@ -772,8 +772,8 @@ static void AC_ParseQueryReply( void ) {
         return;
     }
 
-	type = MSG_ReadByte();
     valid = MSG_ReadByte();
+	type = MSG_ReadByte();
 
 	cl->ac_query_sent = AC_QUERY_DONE;
 	if( valid == 1 ) {

@@ -1023,6 +1023,7 @@ void    Sys_AddDefaultConfig( void );
 
 void    Sys_RunConsole( void );
 void	Sys_ConsoleOutput( const char *string );
+void    Sys_SetConsoleTitle( const char *title );
 void	Sys_Error( const char *error, ... ) q_noreturn q_printf( 1, 2 );
 void	Sys_Quit( void );
 

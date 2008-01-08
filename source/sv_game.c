@@ -128,7 +128,7 @@ static void PF_Unicast( edict_t *ent, qboolean reliable ) {
         }
 	} else {
         SV_ClientAddMessage( client, flags );
-        if( sv_mvd_enable->integer && sv.mvd.paused < PAUSED_FRAMES &&
+        if( svs.mvd.dummy && sv.mvd.paused < PAUSED_FRAMES &&
             SV_MvdPlayerIsActive( ent ) )
         {
             if( msg_write.data[0] != svc_layout &&
@@ -162,7 +162,7 @@ static void PF_bprintf( int level, const char *fmt, ... ) {
 	length = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
 	va_end( argptr );
 
-    if( sv_mvd_enable->integer ) {
+    if( svs.mvd.dummy && sv.mvd.paused < PAUSED_FRAMES ) {
     	SV_MvdBroadcastPrint( level, string );
     }
 
@@ -250,7 +250,7 @@ static void PF_cprintf( edict_t *ent, int level, const char *fmt, ... ) {
         SV_ClientAddMessage( client, MSG_RELIABLE );
     }
 
-    if( sv_mvd_enable->integer &&
+    if( svs.mvd.dummy && sv.mvd.paused < PAUSED_FRAMES &&
         ( client == svs.mvd.dummy || SV_MvdPlayerIsActive( ent ) ) )
     {
         SV_MvdUnicast( &sv.mvd.message, clientNum, mvd_unicast_r );
@@ -377,7 +377,7 @@ void PF_Configstring( int index, const char *val ) {
 		return;
 	}
 
-    if( sv_mvd_enable->integer ) {
+    if( svs.mvd.dummy ) {
         SV_MvdConfigstring( index, val );
     }
 

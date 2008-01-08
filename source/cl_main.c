@@ -105,8 +105,6 @@ clientAPI_t		client;
 
 centity_t	cl_entities[ MAX_EDICTS ];
 
-qboolean CL_SendStatusRequest( char *buffer, int bufferSize );
-
 //======================================================================
 
 typedef enum {
@@ -1050,15 +1048,15 @@ void CL_ParseStatusMessage ( void ) {}
 CL_SendStatusRequest
 =================
 */
-qboolean CL_SendStatusRequest( char *buffer, int bufferSize ) {
+static qboolean CL_SendStatusRequest( char *buffer, int size ) {
     netadr_t	address;
 
     memset( &address, 0, sizeof( address ) );
 
 	NET_Config( NET_CLIENT );
 
-    // send a broadcast packet
-    if ( !strcmp( buffer, "broadcast" ) ) {
+    if( !buffer ) {
+        // send a broadcast packet
         address.type = NA_BROADCAST;
         address.port = BigShort( PORT_SERVER );
     } else {
@@ -1070,7 +1068,10 @@ qboolean CL_SendStatusRequest( char *buffer, int bufferSize ) {
             address.port = BigShort( PORT_SERVER );
         }
 
-        Q_strncpyz( buffer, NET_AdrToString( &address ), bufferSize );
+        // return resolved address
+        if( size > 0 ) {
+            Q_strncpyz( buffer, NET_AdrToString( &address ), size );
+        }
     }
 
 	CL_AddRequest( &address, REQ_PING );

@@ -495,7 +495,6 @@ void CL_Quit_f (void);
 void CL_Disconnect( comErrorType_t type, const char *text );
 void CL_RequestNextDownload (void);
 void CL_ClearState (void);
-qboolean CL_SendStatusRequest( char *buffer, int bufferSize );
 void CL_RestartFilesystem( void );
 void CL_RestartRefresh( void );
 void CL_ClientCommand( const char *string );

@@ -332,7 +332,7 @@ void SV_Map (const char *levelstring, qboolean restart) {
 	Q_strncpyz( level, levelstring, sizeof( level ) );
 
 	// if there is a + in the map, set nextserver to the remainder
-	ch = strstr(level, "+");
+	ch = strchr(level, '+');
 	if (ch) {
 		*ch = 0;
 		Cvar_Set ("nextserver", va("gamemap \"%s\"", ch+1));
@@ -341,7 +341,7 @@ void SV_Map (const char *levelstring, qboolean restart) {
     }
 
 	// if there is a $, use the remainder as a spawnpoint
-	ch = strstr( level, "$" );
+	ch = strchr( level, '$' );
 	if( ch ) {
 		*ch = 0;
 		strcpy( spawnpoint, ch + 1 );

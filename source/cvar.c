@@ -175,7 +175,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 	int length;
 
 	if( !var_name ) {
-		Com_Error( ERR_FATAL, "Cvar_Get: NULL variable name" );
+		Com_Error( ERR_FATAL, "Cvar_Get: NULL var_name" );
 	}
 	if( !var_value ) {
 		var_value = "";
@@ -183,11 +183,11 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 	
 	if( flags & CVAR_INFOMASK ) {
 		if( Info_SubValidate( var_name ) == -1 ) {
-			Com_WPrintf( "Invalid info cvar name.\n" );
+			Com_WPrintf( "Invalid info cvar name '%s'.\n", var_name );
 			return NULL;
 		}
 		if( Info_SubValidate( var_value ) == -1 ) {
-			Com_WPrintf( "Invalid info cvar value.\n" );
+			Com_WPrintf( "Invalid info cvar value '%s' for '%s'.\n", var_value, var_name );
 			return NULL;
 		}
 	}
@@ -221,9 +221,8 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 				var->subsystem = currentSubsystem;
 			} else if( !( var->flags & CVAR_DEFAULTS_MIXED ) ) {
 				if( strcmp( var->defaultString, var_value ) ) {
-					Com_DPrintf( "Cvar \"%s\" given initial values: "
-								"\"%s\" and \"%s\"\n",
-									var->name, var->defaultString, var_value );
+					Com_DPrintf( "Cvar '%s' given initial values: '%s' and '%s'\n",
+                        var->name, var->defaultString, var_value );
 					var->flags |= CVAR_DEFAULTS_MIXED;
 				}
 			}
@@ -248,7 +247,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 	length = strlen( var_name ) + 1;
 	var = Cvar_Malloc( sizeof( *var ) + length );
 	var->name = ( char * )( var + 1 );
-	strcpy( var->name, var_name );
+	memcpy( var->name, var_name, length );
 	var->string = Cvar_CopyString( var_value );
     var->latched_string = NULL;
 	var->defaultString = Cvar_CopyString( var_value );
@@ -258,9 +257,8 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
     var->changed = NULL;
     var->description = NULL;
 
-	hash = Com_HashString( var_name, CVARHASH_SIZE );
-
 	// link the variable in
+	hash = Com_HashString( var_name, CVARHASH_SIZE );
 	var->next = cvar_vars;
 	cvar_vars = var;
 	var->hashNext = cvarHash[hash];
@@ -294,7 +292,7 @@ void Cvar_SetByVar( cvar_t *var, const char *value, cvarSetSource_t source ) {
 		}
 	}
 
-	/* some cvars may not be changed by user at all */
+	// some cvars may not be changed by user at all
 	if( source != CVAR_SET_DIRECT ) {
 		if( var->flags & CVAR_ROM ) {
 			Com_Printf( "%s is read-only.\n", var->name );
@@ -309,7 +307,7 @@ void Cvar_SetByVar( cvar_t *var, const char *value, cvarSetSource_t source ) {
 		}
 	}
 
-	/* some cvars may require special processing if set by user from console */
+	// some cvars may require special processing if set by user from console
 	if( source == CVAR_SET_CONSOLE && com_initialized ) {
 		if( var->flags & CVAR_NOSET ) {
 			Com_Printf( "%s may be set from command line only.\n", var->name );
@@ -318,7 +316,7 @@ void Cvar_SetByVar( cvar_t *var, const char *value, cvarSetSource_t source ) {
 
 		if( var->flags & (CVAR_LATCHED|CVAR_LATCH) ) {
 			if( !strcmp( var->string, value ) ) {
-				/* set back to current value? */
+				// set back to current value
 				if( var->latched_string ) {
 					Z_Free( var->latched_string );
 					var->latched_string = NULL;
@@ -327,8 +325,7 @@ void Cvar_SetByVar( cvar_t *var, const char *value, cvarSetSource_t source ) {
 			}
 			if( var->latched_string ) {
 				if( !strcmp( var->latched_string, value ) ) {
-					/* latched string not changed? */
-					return;
+					return; // latched string not changed
 				}
 				Z_Free( var->latched_string );
 				var->latched_string = NULL;
@@ -344,7 +341,7 @@ void Cvar_SetByVar( cvar_t *var, const char *value, cvarSetSource_t source ) {
 					var->latched_string = Cvar_CopyString( value );
 					return;
 				}
-				/* server is down, it's ok to update this cvar now */
+				// server is down, it's ok to update this cvar now
 			} else {
 				char *subsystem;
 
@@ -387,7 +384,7 @@ void Cvar_SetByVar( cvar_t *var, const char *value, cvarSetSource_t source ) {
 
 	}
 
-	/* free latched string, if any */
+	// free latched string, if any
 	if( var->latched_string ) {
 		Z_Free( var->latched_string );
 		var->latched_string = NULL;
@@ -973,6 +970,7 @@ Cvar_FillAPI
 void Cvar_FillAPI( cvarAPI_t *api ) {
 	api->Get = Cvar_Get;
 	api->Set = Cvar_Set;
+	api->Find = Cvar_FindVar;
 	api->SetValue = Cvar_SetValue;
 	api->SetInteger = Cvar_SetInteger;
 	api->VariableValue = Cvar_VariableValue;

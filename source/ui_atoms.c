@@ -92,7 +92,6 @@ void UI_PushMenu( menuFrameWork_t *menu ) {
 	keydest = keys.GetDest();
 	if( keydest & KEY_CONSOLE ) {
 		keydest &= ~KEY_CONSOLE;
-		cmd.ExecuteText( EXEC_NOW, "toggleconsole\n" );
 	}
 	keys.SetDest( keydest | KEY_MENU );
 

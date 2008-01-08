@@ -374,6 +374,12 @@ void Sys_ConsoleOutput( const char *string ) {
 	Sys_ShowInput();
 }
 
+void Sys_SetConsoleTitle( const char *title ) {
+	if( gotConsole ) {
+        SetConsoleTitle( title );
+    }
+}
+
 static BOOL WINAPI Sys_ConsoleCtrlHandler( DWORD dwCtrlType ) {
 	if( errorEntered ) {
 		exit( 1 );
@@ -406,7 +412,7 @@ static void Sys_ConsoleInit( void ) {
 		return;
 	}
 
-	SetConsoleTitle( "q2pro console" );
+	SetConsoleTitle( APPLICATION " console" );
 	SetConsoleCtrlHandler( Sys_ConsoleCtrlHandler, TRUE );
 	GetConsoleMode( hinput, &mode );
 	mode |= ENABLE_WINDOW_INPUT;
@@ -1191,7 +1197,7 @@ PRIVATE BOOL CALLBACK EnumModulesCallback(
 	if( GetFileVersionInfo( ModuleName, 0, sizeof( buffer ), buffer ) ) {
 		if( VerQueryValue( buffer, "\\", &data, &numBytes ) ) {
 			info = ( VS_FIXEDFILEINFO * )data;
-			Com_sprintf( version, sizeof( version ), "%u.%u.%u.%u",
+			sprintf( version, "%u.%u.%u.%u",
 				HIWORD( info->dwFileVersionMS ),
 				LOWORD( info->dwFileVersionMS ),
 				HIWORD( info->dwFileVersionLS ),
@@ -1215,7 +1221,8 @@ PRIVATE BOOL CALLBACK EnumModulesCallback(
 	fprintf( crashReport, "%08x %08x %s (version %s, symbols %s) ",
 		ModuleBase, ModuleBase + ModuleSize, ModuleName, version, symbols );
 	if( pc >= ModuleBase && pc < ModuleBase + ModuleSize ) {
-		Q_strncpyz( moduleName, ModuleName, sizeof( moduleName ) );
+		strncpy( moduleName, ModuleName, sizeof( moduleName ) - 1 );
+        moduleName[ sizeof( moduleName ) - 1 ] = 0;
 		fprintf( crashReport, "*\n" );
 	} else {
 		fprintf( crashReport, "\n" );
@@ -1228,7 +1235,7 @@ PRIVATE DWORD Sys_ExceptionHandler( DWORD exceptionCode, LPEXCEPTION_POINTERS ex
 	STACKFRAME stackFrame;
 	PCONTEXT context;
 	SYMBOL_INFO *symbol;
-	int count, ret, i;
+	int count, ret, i, len;
 	DWORD64 offset;
 	BYTE buffer[sizeof( SYMBOL_INFO ) + 256 - 1];
 	IMAGEHLP_MODULE moduleInfo;
@@ -1288,14 +1295,21 @@ PRIVATE DWORD Sys_ExceptionHandler( DWORD exceptionCode, LPEXCEPTION_POINTERS ex
 	GetModuleFileName( NULL, execdir, sizeof( execdir ) - 1 );
 	execdir[sizeof( execdir ) - 1] = 0;
 	p = strrchr( execdir, '\\' );
-	if( p ) {
-		*p = 0;
-	}
-	
-	GetSystemTime( &systemTime );
+	if( !p ) {
+        return EXCEPTION_CONTINUE_SEARCH;
+    }
 
+    *p = 0;
+    len = p - execdir;
+    if( len + 24 >= MAX_PATH ) {
+        return EXCEPTION_CONTINUE_SEARCH;
+    }
+	
+    memcpy( path, execdir, len );
+    memcpy( path + len, "\\Q2PRO_CrashReportXX.txt", 25 );
 	for( i = 0; i < 100; i++ ) {
-		Com_sprintf( path, sizeof( path ), "%s\\Q2PRO_CrashReport%02d.txt", execdir, i );
+		path[len+18] = i / 10;
+		path[len+19] = i % 10;
 		if( !Sys_GetFileInfo( path, NULL ) ) {
 			break;
 		}
@@ -1307,6 +1321,7 @@ PRIVATE DWORD Sys_ExceptionHandler( DWORD exceptionCode, LPEXCEPTION_POINTERS ex
 
 	pSymInitialize( processHandle, execdir, TRUE );
 
+	GetSystemTime( &systemTime );
 	fprintf( crashReport, "Crash report generated %s %u %u, %02u:%02u:%02u UTC\n",
 		monthNames[(systemTime.wMonth - 1) % 12], systemTime.wDay, systemTime.wYear,
 		systemTime.wHour, systemTime.wMinute, systemTime.wSecond );

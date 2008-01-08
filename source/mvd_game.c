@@ -819,7 +819,7 @@ static qboolean MVD_GameClientConnect( edict_t *ent, char *userinfo ) {
     cl->gamedir = mvd->gamedir;
     cl->mapname = mvd->configstrings[CS_NAME];
     cl->configstrings = ( char * )mvd->configstrings;
-    cl->number = mvd->clientNum;
+    cl->slot = mvd->clientNum;
     cl->cm = &mvd->cm;
     cl->pool = &mvd->pool;
 
@@ -968,8 +968,8 @@ static void MVD_GameRunFrame( void ) {
 
         // write this message to demofile
         if( mvd->demorecording ) {
-        	FS_Write( &length, 2, mvd->demofile );
-            FS_Write( msg_read.data, msg_read.cursize, mvd->demofile );
+        	FS_Write( &length, 2, mvd->demorecording );
+            FS_Write( msg_read.data, msg_read.cursize, mvd->demorecording );
         }
 
         // check for intermission
