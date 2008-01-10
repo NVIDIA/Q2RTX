@@ -228,7 +228,12 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
     }
 
     if( relative ) {
-        generator = Cmd_FindGenerator( s, relative );
+        cvar_t *v = Cvar_FindVar( s );
+        if( v && v->generator ) {
+            generator = v->generator;
+        } else {
+            generator = Cmd_FindGenerator( s, relative );
+        }
         if( generator ) {
             Prompt_FooGenerator( generator, partial );
         }
@@ -240,7 +245,7 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 	if( !numMatches ) {
 		inputLine->cursorPos = strlen( inputLine->text );
         prompt->tooMany = qfalse;
-		return; /* nothing found */
+		return; // nothing found
 	}
 
 	pos = Cmd_ArgOffset( currentArg );
@@ -248,7 +253,7 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 	size -= pos;
 
 	if( numMatches == 1 ) {
-		/* we have finished completion! */
+		// we have finished completion!
         s = Cmd_RawArgsFrom( currentArg + 1 ); 
         if( COM_HasSpaces( matches[0] ) ) {
 		    pos += Q_concat( text, size, "\"", matches[0], "\" ", s, NULL );
@@ -272,13 +277,13 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 
     prompt->tooMany = qfalse;
 
-	/* sort matches alphabethically */
+	// sort matches alphabethically
 	for( i = 0; i < numMatches; i++ ) {
 		sortedMatches[i] = matches[i];
 	}
 	qsort( sortedMatches, numMatches, sizeof( sortedMatches[0] ), SortStrcmp );
 
-	/* copy matching part */
+	// copy matching part
 	first = sortedMatches[0];
 	last = sortedMatches[ numMatches - 1 ];
 	length = 0;
@@ -313,19 +318,19 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
     
 	switch( com_completion_mode->integer ) {
 	case 0:
-		/* print in solid list */
+		// print in solid list
 		for( i = 0 ; i < numMatches; i++ ) {
 			prompt->printf( "%s\n", sortedMatches[i] ); 
 		}
 		break;
 	case 1:
     multicolumn:
-		/* print in multiple columns */
+		// print in multiple columns
         Prompt_ShowMatches( prompt, sortedMatches, 0, numMatches );
 		break;
 	case 2:
 	default:
-		/* resort matches by type and print in multiple columns */
+		// resort matches by type and print in multiple columns
 		Prompt_ShowIndividualMatches( prompt );
 		break;
 	}
@@ -347,10 +352,10 @@ char *Prompt_Action( commandPrompt_t *prompt ) {
     prompt->tooMany = qfalse;
 	if( s[0] == 0 || ( ( s[0] == '/' || s[0] == '\\' ) && s[1] == 0 ) ) {
 		IF_Clear( &prompt->inputLine );
-		return NULL; /* empty line */
+		return NULL; // empty line
 	}
 
-	/* save current line in history */
+	// save current line in history
 	i = prompt->inputLineNum & HISTORY_MASK;
 	j = ( prompt->inputLineNum - 1 ) & HISTORY_MASK;
     if( !prompt->history[j] || strcmp( prompt->history[j], s ) ) {
@@ -363,7 +368,7 @@ char *Prompt_Action( commandPrompt_t *prompt ) {
         i = j;
     }
 
-    /* stop history search */
+    // stop history search
 	prompt->historyLineNum = prompt->inputLineNum;
 	
 	IF_Clear( &prompt->inputLine );
@@ -380,7 +385,7 @@ void Prompt_HistoryUp( commandPrompt_t *prompt ) {
     int i;
 
 	if( prompt->historyLineNum == prompt->inputLineNum ) {
-		/* save current line in history */
+		// save current line in history
 	    i = prompt->inputLineNum & HISTORY_MASK;
         if( prompt->history[i] ) {
             Z_Free( prompt->history[i] );

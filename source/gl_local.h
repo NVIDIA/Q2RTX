@@ -310,8 +310,6 @@ extern float gl_filter_anisotropy;
 extern int gl_tex_alpha_format;
 extern int gl_tex_solid_format;
 
-extern qboolean scrap_dirty;
-
 void Scrap_Upload( void );
 
 void GL_InitImages( void );

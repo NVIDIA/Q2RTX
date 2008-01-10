@@ -1281,8 +1281,6 @@ void NET_Init( void ) {
 	Com_DPrintf( "Winsock Initialized\n" );
 #endif
 
-	Cvar_Subsystem( CVAR_SYSTEM_NET );
-
 	net_ip = Cvar_Get( "net_ip", "localhost", 0 );
 	net_port = Cvar_Get( "net_port", va( "%i", PORT_SERVER ), 0 );
 	net_clientport = Cvar_Get( "net_clientport", va( "%i", PORT_ANY ), 0 );
@@ -1295,8 +1293,6 @@ void NET_Init( void ) {
 	net_log_flush->changed = net_log_param_changed;
 	net_ignore_icmp = Cvar_Get( "net_ignore_icmp", "0", 0 );
 	net_backlog = Cvar_Get( "net_backlog", "4", 0 );
-
-	Cvar_Subsystem( CVAR_SYSTEM_GENERIC );
 
     if( ( i = Cvar_VariableInteger( "ip_hostport" ) ) ||
         ( i = Cvar_VariableInteger( "hostport" ) ) ||

@@ -599,6 +599,11 @@ CVARS (console variables)
 							// but can be set from the command line
 #define	CVAR_LATCH		16	// save changes until server restart
 
+struct cvar_s;
+
+typedef const char *( *xgenerator_t )( const char *, int );
+typedef void (*xchanged_t)( struct cvar_s * );	
+
 // nothing outside the cvar.*() functions should modify these fields!
 typedef struct cvar_s {
 	char		*name;
@@ -610,14 +615,11 @@ typedef struct cvar_s {
 	struct cvar_s *next;
 
 // ------ new stuff ------
-	int		integer;
-	void	(*changed)( struct cvar_s *self );	// WARNING: points to static variable
-
-	char		*defaultString;
-	const char	*description;		// WARNING: points to static variable
-	uint32		subsystem;
-
-	struct cvar_s *hashNext;
+	int		    integer;
+	char	    *default_string;
+	xchanged_t      changed;
+    xgenerator_t    generator;
+	struct cvar_s   *hashNext;
 } cvar_t;
 
 #endif		// CVAR

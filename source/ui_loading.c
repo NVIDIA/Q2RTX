@@ -47,19 +47,18 @@ void UI_DrawLoading( int realtime ) {
     	ref.SetScale( &uis.scale );
     }
 
-#if 0
 	if( loadingStatus.mapname[0] ) {
-		qhandle_t hPic;
+		qhandle_t h;
 
-		Com_sprintf( buffer, sizeof( buffer ), "/levelshots/%s.jpg", loadingStatus.mapname );
-		if( ( hPic = ref.RegisterPic( buffer ) ) != 0 ) {
-			ref.DrawStretchPic( 0, 0, uis.width, uis.height, hPic );
+		Com_sprintf( buffer, MAX_QPATH, "*levelshots/%s.jpg", loadingStatus.mapname );
+		if( ( h = ref.RegisterPic( buffer ) ) != 0 ) {
+			ref.DrawStretchPic( 0, 0, uis.width, uis.height, h );
 		} else {
 			ref.DrawFill( 0, 0, uis.width, uis.height, 0x00 );
 		}
-	} else
-#endif
+	} else {
 		ref.DrawFill( 0, 0, uis.width, uis.height, 0x00 );
+    }
 
 	x = uis.width / 2;
 	y = 8;

@@ -258,12 +258,14 @@ qhandle_t R_RegisterPic( const char *name ) {
 	image_t	*image;
 	char	fullname[MAX_QPATH];
 
-	if( name[0] != '/' && name[0] != '\\' ) {
+	if( name[0] == '*' ) {
+		image = R_FindImage( name + 1, it_tmp );
+    } else if( name[0] == '/' || name[0] == '\\' ) {
+		image = R_FindImage( name + 1, it_pic );
+    } else {
 		Q_concat( fullname, sizeof( fullname ), "pics/", name, NULL );
 		COM_DefaultExtension( fullname, ".pcx", sizeof( fullname ) );
 		image = R_FindImage( fullname, it_pic );
-	} else {
-		image = R_FindImage( name + 1, it_pic );
 	}
 
 	return image ? ( image - r_images ) + 1 : 0;

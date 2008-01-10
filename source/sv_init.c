@@ -365,7 +365,7 @@ void SV_Map (const char *levelstring, qboolean restart) {
     }
     
     SCR_BeginLoadingPlaque();			// for local system
-    SV_BroadcastCommand( "changing\n" );
+    SV_BroadcastCommand( "changing map=%s\n", level );
     SV_SendClientMessages();
     SV_SendAsyncPackets();
     SV_SpawnServer( level, spawnpoint );

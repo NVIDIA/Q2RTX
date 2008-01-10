@@ -423,7 +423,7 @@ void MVD_SwitchChannel( udpClient_t *client, mvd_t *mvd ) {
     client->target = client->oldtarget = NULL;
 
     cl->gamedir = mvd->gamedir;
-    cl->mapname = mvd->configstrings[CS_NAME];
+    cl->mapname = mvd->mapname;
     cl->configstrings = ( char * )mvd->configstrings;
     cl->slot = mvd->clientNum;
     cl->cm = &mvd->cm;
@@ -431,7 +431,7 @@ void MVD_SwitchChannel( udpClient_t *client, mvd_t *mvd ) {
 
     // needs to reconnect
     MSG_WriteByte( svc_stufftext );
-    MSG_WriteString( "changing; reconnect\n" );
+    MSG_WriteString( va( "changing map=%s; reconnect\n", mvd->mapname ) );
     SV_ClientReset( client->cl );
     SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
 }
@@ -672,6 +672,10 @@ static void MVD_GameClientCommand( edict_t *ent ) {
         MVD_Join_f( client );
         return;
     }
+	if( !strcmp( cmd, "leave" ) ) {
+        MVD_TrySwitchChannel( client, &mvd_waitingRoom );
+        return;
+    }
 	
 	SV_ClientPrintf( client->cl, PRINT_HIGH, "[MVD] Unknown command: %s\n", cmd );
 }
@@ -760,6 +764,7 @@ static void MVD_GameInit( void ) {
     mvd_ge.max_edicts = sv_maxclients->integer + 1;
 
     strcpy( mvd->name, "Waiting Room" );
+    strcpy( mvd->mapname, "q2dm1" );
     List_Init( &mvd->udpClients );
 
     strcpy( mvd->configstrings[CS_NAME], "Waiting Room" );
@@ -817,7 +822,7 @@ static qboolean MVD_GameClientConnect( edict_t *ent, char *userinfo ) {
     
     // override server state
     cl->gamedir = mvd->gamedir;
-    cl->mapname = mvd->configstrings[CS_NAME];
+    cl->mapname = mvd->mapname;
     cl->configstrings = ( char * )mvd->configstrings;
     cl->slot = mvd->clientNum;
     cl->cm = &mvd->cm;

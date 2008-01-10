@@ -167,9 +167,7 @@ void CL_InitInput( void ) {
 	int i;
 
 	in_driver = Cvar_Get( "in_driver", DEFAULT_INPUT_DRIVER, CVAR_LATCHED );
-	in_driver->subsystem = CVAR_SYSTEM_INPUT;
 	in_enable = Cvar_Get( "in_enable", "1", CVAR_LATCHED );
-	in_enable->subsystem = CVAR_SYSTEM_INPUT;
 
 	if( !in_enable->integer ) {
 		Com_Printf( "Non-keyboard input disabled\n" );

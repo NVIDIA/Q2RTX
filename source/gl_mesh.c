@@ -314,7 +314,7 @@ void GL_DrawAliasModel( model_t *model ) {
 	qglPushMatrix();
 
 	qglTranslatef( origin[0], origin[1], origin[2] );
-	
+
 	qglRotatef( ent->angles[YAW],   0, 0, 1 );
 	qglRotatef( ent->angles[PITCH], 0, 1, 0 );
 	qglRotatef( ent->angles[ROLL],  1, 0, 0 );

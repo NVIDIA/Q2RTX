@@ -1058,18 +1058,22 @@ int FS_LoadFileEx( const char *path, void **buffer, int flags ) {
 		return -1;
 	}
 
-	// get real file length
-	length = FS_GetFileLength( f );
-	
-	if( buffer && length != -1 ) {
-		*buffer = buf = FS_AllocTempMem( length + 1 );
-		FS_Read( buf, length, f );
-		buf[length] = 0;
+	if( buffer ) {
+#if USE_ZLIB
+        if( file->type == FS_GZIP ) {
+            length = -1; // unknown length
+        } else
+#endif
+        {
+            *buffer = buf = FS_AllocTempMem( length + 1 );
+            FS_Read( buf, length, f );
+            buf[length] = 0;
+        }
 	}
 
 	FS_FCloseFile( f );
 
-	return length == -1 ? 0 : length;
+	return length;
 }
 
 int FS_LoadFile( const char *path, void **buffer ) {
@@ -2437,7 +2441,6 @@ Sets the gamedir and path to a different directory.
 */
 static void FS_SetupGamedir( void ) {
 	fs_game = Cvar_Get( "game", "", CVAR_LATCHED|CVAR_SERVERINFO );
-	fs_game->subsystem = CVAR_SYSTEM_FILES;
 
 	if( !fs_game->string[0] || !FS_strcmp( fs_game->string, BASEGAME ) ) {
 		FS_DefaultGamedir();
@@ -2604,7 +2607,6 @@ void FS_Init( void ) {
 
 	fs_debug = Cvar_Get( "fs_debug", "0", 0 );
 	fs_restrict_mask = Cvar_Get( "fs_restrict_mask", "4", CVAR_NOSET );
-	fs_restrict_mask->subsystem = CVAR_SYSTEM_FILES;
 
 	if( ( fs_restrict_mask->integer & 7 ) == 7 ) {
 		Com_WPrintf( "Invalid fs_restrict_mask value %d. "

@@ -235,7 +235,7 @@ static void GL_TextureSolidMode( void ) {
 
 static int	scrap_inuse[SCRAP_BLOCK_WIDTH];
 static byte	scrap_data[SCRAP_BLOCK_WIDTH * SCRAP_BLOCK_HEIGHT];
-qboolean	scrap_dirty;
+static qboolean	scrap_dirty;
 
 static qboolean Scrap_AllocBlock( int w, int h, int *s, int *t ) {
     int i, j;
@@ -272,16 +272,22 @@ static qboolean Scrap_AllocBlock( int w, int h, int *s, int *t ) {
     return qtrue;
 }
 
-void Scrap_Init( void ) {
+static void Scrap_Shutdown( void ) {
+    GLuint num = SCRAP_TEXNUM;
     int i;
-    
+
     for( i = 0; i < SCRAP_BLOCK_WIDTH; i++ ) {
         scrap_inuse[i] = 0;
     }
+	scrap_dirty = qfalse;
+
+    qglDeleteTextures( 1, &num );
 }
 
 void Scrap_Upload( void ) {
-	//Com_Printf( "Scrap_Upload()\n" );
+    if( !scrap_dirty ) {
+        return;
+    }
     GL_BindTexture( SCRAP_TEXNUM );
 	GL_Upload8( scrap_data, SCRAP_BLOCK_WIDTH, SCRAP_BLOCK_HEIGHT, qfalse );
 	scrap_dirty = qfalse;
@@ -712,13 +718,13 @@ qhandle_t R_RegisterPic( const char *name ) {
 	char	fullname[MAX_QPATH];
 
 	if( name[0] == '*' ) {
-		image = R_FindImage( name, it_pic );
-    } else if( name[0] != '/' && name[0] != '\\' ) {
+		image = R_FindImage( name + 1, it_tmp );
+    } else if( name[0] == '/' || name[0] == '\\' ) {
+		image = R_FindImage( name + 1, it_pic );
+    } else {
 		Q_concat( fullname, sizeof( fullname ), "pics/", name, NULL );
 		COM_DefaultExtension( fullname, ".pcx", sizeof( fullname ) );
 		image = R_FindImage( fullname, it_pic );
-	} else {
-		image = R_FindImage( name + 1, it_pic );
 	}
 
 	if( !image ) {
@@ -1093,8 +1099,6 @@ void GL_InitImages( void ) {
 
 	R_InitImageManager();
 
-	Scrap_Init();
-
 	R_GetPalette( NULL );
 
 	if( gl_intensity->value < 1 ) {
@@ -1150,7 +1154,14 @@ void GL_ShutdownImages( void ) {
     }
     lm.highWater = 0;
 
+    r_notexture = NULL;
+    r_particletexture = NULL;
+    r_beamtexture = NULL;
+    r_warptexture = NULL;
+    r_whiteimage = NULL;
+
 	R_FreeAllImages();
 	R_ShutdownImageManager();
+    Scrap_Shutdown();
 }
 

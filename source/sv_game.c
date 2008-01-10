@@ -715,19 +715,12 @@ void PF_Pmove( pmove_t *pm ) {
 }
 
 static cvar_t *PF_cvar( const char *name, const char *value, int flags ) {
-	cvar_t *var;
-
 	if( flags & CVAR_EXTENDED_MASK ) {
 		Com_WPrintf( "Game DLL attemped to set extended flags on variable '%s', cleared.\n", name );
 		flags &= ~CVAR_EXTENDED_MASK;
 	}
 
-	var = Cvar_Get( name, value, flags | CVAR_GAME );
-	if( !var->subsystem ) {
-		var->subsystem = CVAR_SYSTEM_GAME;
-	}
-
-	return var;
+	return Cvar_Get( name, value, flags | CVAR_GAME );
 }
 
 static void PF_AddCommandString( const char *string ) {

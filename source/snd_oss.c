@@ -57,12 +57,10 @@ static sndinitstat_t OSS_Init ( void ) {
     if ( snd_inited )
         return SIS_SUCCESS;
 
-    Cvar_Subsystem ( CVAR_SYSTEM_SOUND );
     sndbits = Cvar_Get ( "sndbits", "16", CVAR_ARCHIVE|CVAR_LATCHED );
     sndspeed = Cvar_Get ( "sndspeed", "22050", CVAR_ARCHIVE|CVAR_LATCHED );
     sndchannels = Cvar_Get ( "sndchannels", "2", CVAR_ARCHIVE|CVAR_LATCHED );
     snddevice = Cvar_Get ( "snddevice", "/dev/dsp", CVAR_ARCHIVE|CVAR_LATCHED );
-    Cvar_Subsystem ( CVAR_SYSTEM_GENERIC );
 
 // open /dev/dsp, confirm capability to mmap, and get size of dma buffer
 

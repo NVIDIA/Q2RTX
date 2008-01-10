@@ -223,7 +223,6 @@ void S_Init( void ) {
 	s_show = Cvar_Get( "s_show", "0", 0 );
 	s_testsound = Cvar_Get( "s_testsound", "0", 0 );
 	s_driver = Cvar_Get( "s_driver", "", CVAR_LATCHED );
-	s_driver->subsystem = CVAR_SYSTEM_SOUND;
 	s_ambient = Cvar_Get( "s_ambient", "1", 0 );
 
     // determine the first driver to try

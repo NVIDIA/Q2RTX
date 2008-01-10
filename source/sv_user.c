@@ -365,7 +365,7 @@ void SV_New_f( void ) {
 	MSG_WriteByte( 0 ); // no attract loop
 	MSG_WriteString( sv_client->gamedir );
 	MSG_WriteShort( sv_client->slot );
-	MSG_WriteString( sv_client->mapname );
+	MSG_WriteString( &sv_client->configstrings[CS_NAME*MAX_QPATH] );
 
 	// send protocol specific stuff
 	switch( sv_client->protocol ) {

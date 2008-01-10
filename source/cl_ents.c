@@ -533,16 +533,14 @@ static void CL_AddPacketEntities( void ) {
 			}
 			else if (effects & EF_BFG)
 			{
-				static int bfg_lightramp[6] = {300, 400, 600, 300, 150, 75};
+				static const int bfg_lightramp[6] = {300, 400, 600, 300, 150, 75};
 
-				if (effects & EF_ANIM_ALLFAST)
-				{
+				if (effects & EF_ANIM_ALLFAST) {
 					CL_BfgParticles (&ent);
 					i = 200;
-				}
-				else
-				{
-					i = bfg_lightramp[s1->frame];
+				} else {
+                    i = s1->frame; clamp( i, 0, 5 );
+					i = bfg_lightramp[i];
 				}
 				V_AddLight (ent.origin, i, 0, 1, 0);
 			}
@@ -634,22 +632,34 @@ skip:
 }
 
 
-#if 0
+#if 1
+static cvar_t *test_model;
+static cvar_t *test_pitch;
+static cvar_t *test_yaw;
+
 static void CL_AddTestModel( void ) {
 	entity_t	test;
 
+    if( !test_model ) {
+        test_model = Cvar_Get( "test_model", "", 0 );
+        test_pitch = Cvar_Get( "test_pitch", "0", 0 );
+        test_yaw = Cvar_Get( "test_yaw", "0", 0 );
+    }
+    if( !test_model->string[0] ) {
+        return;
+    }
+
 	memset( &test, 0, sizeof( test ) );
-    test.model = ref.RegisterModel( "models/monsters/flipper/tris.md2" );
+    test.model = ref.RegisterModel( test_model->string );
     if( !test.model ) {
         return;
     }
-    test.frame = 4;
+    test.frame = 1;
 
     VectorMA( cl.refdef.vieworg, 160, cl.v_forward, test.origin );
-    VectorCopy( cl.refdef.viewangles, test.angles );
-    test.angles[YAW]+=120;
-    test.angles[PITCH]+=20;
-    test.origin[2]-=30;
+//    VectorCopy( cl.refdef.viewangles, test.angles );
+    test.angles[YAW]+=test_yaw->value;
+    test.angles[PITCH]+=test_pitch->value;
 	test.flags = RF_MINLIGHT | RF_DEPTHHACK;
 
 	VectorCopy( test.origin, test.oldorigin );	// don't lerp at all
@@ -927,7 +937,7 @@ static void CL_CalcViewValues( void ) {
 
 		// add the weapon
 		CL_AddViewWeapon( ps, ops );
-        //CL_AddTestModel();
+        CL_AddTestModel();
 
 	    cl.thirdPersonView = qfalse;
 	}

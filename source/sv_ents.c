@@ -366,6 +366,10 @@ void SV_BuildClientFrame( client_t *client ) {
 
 	// calculate the visible areas
 	frame->areabytes = CM_WriteAreaBits( client->cm, frame->areabits, clientarea );
+    if( !frame->areabytes && client->protocol != PROTOCOL_VERSION_Q2PRO ) {
+        frame->areabits[0] = 255;
+        frame->areabytes = 1;
+    }
 
 	// grab the current player_state_t
 	frame->ps = *ps;

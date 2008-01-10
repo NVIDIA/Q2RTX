@@ -241,8 +241,6 @@ void D_SCDump_f (void);
 
 void R_Register (void)
 {
-	cvar.Subsystem( CVAR_SYSTEM_VIDEO );
-
 	sw_aliasstats = cvar.Get ("sw_polymodelstats", "0", 0);
 	sw_allow_modex = cvar.Get( "sw_allow_modex", "1", CVAR_ARCHIVE );
 	sw_clearcolor = cvar.Get ("sw_clearcolor", "2", 0);
@@ -281,7 +279,6 @@ void R_Register (void)
 	sw_lockpvs = cvar.Get ("sw_lockpvs", "0", 0);
 //PGM
 
-	cvar.Subsystem( CVAR_SYSTEM_GENERIC );
 }
 
 void R_UnRegister (void)

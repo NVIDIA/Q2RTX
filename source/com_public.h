@@ -39,7 +39,6 @@ typedef enum cbufExecWhen_e {
 
 typedef void ( *xcommand_t )( void );
 typedef int ( *xmacro_t )( char *, int );
-typedef const char *( *xgenerator_t )( const char *, int );
 
 typedef struct cmdreg_s {
 	const char		*name;
@@ -76,25 +75,13 @@ CVAR
 ==============================================================
 */
 
-typedef enum {
-	CVAR_SYSTEM_GENERIC,
-	CVAR_SYSTEM_GAME,
-	CVAR_SYSTEM_VIDEO,
-	CVAR_SYSTEM_SOUND,
-	CVAR_SYSTEM_INPUT,
-	CVAR_SYSTEM_NET,
-	CVAR_SYSTEM_FILES,
-
-	CVAR_SYSTEM_MAX
-} cvarSubsystem_t;
-
-#define CVAR_CHEAT			32
-#define CVAR_PRIVATE		64
-#define CVAR_ROM			128
-#define CVAR_LATCHED		256
-#define CVAR_USER_CREATED	512
-#define CVAR_DEFAULTS_MIXED	1024
-#define CVAR_GAME      	    2048
+#define CVAR_CHEAT			( 1 << 5 )
+#define CVAR_PRIVATE		( 1 << 6 )
+#define CVAR_ROM			( 1 << 7 )
+#define CVAR_LATCHED		( 1 << 8 )
+#define CVAR_USER_CREATED	( 1 << 9 )
+#define CVAR_DEFAULTS_MIXED	( 1 << 10 )
+#define CVAR_GAME      	    ( 1 << 11 )
 
 #define CVAR_INFOMASK		(CVAR_USERINFO|CVAR_SERVERINFO)
 #define CVAR_EXTENDED_MASK	(~31)
@@ -109,7 +96,6 @@ typedef struct cvarAPI_s {
     cvar_t  *(*Find)( const char *var_name );
 	void 	(*SetValue)( const char *var_name, float value );
 	void 	(*SetInteger)( const char *var_name, int value );
-	void	(*Subsystem)( cvarSubsystem_t subsystem );
 } cvarAPI_t;
 
 extern	cvarAPI_t	cvar;

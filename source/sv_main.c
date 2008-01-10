@@ -784,7 +784,7 @@ static void SVC_DirectConnect( void ) {
     newcl->zlib = zlib;
 	newcl->edict = EDICT_NUM( number + 1 );
     newcl->gamedir = fs_game->string;
-    newcl->mapname = sv.configstrings[CS_NAME];
+    newcl->mapname = sv.name;
     newcl->configstrings = ( char * )sv.configstrings;
     newcl->pool = ( edict_pool_t * )&ge->edicts;
     newcl->cm = &sv.cm;
@@ -857,8 +857,8 @@ static void SVC_DirectConnect( void ) {
     }
 
 	// send the connect packet to the client
-	Netchan_OutOfBandPrint( NS_SERVER, &net_from, "client_connect%s%s",
-        ncstring, acstring );
+	Netchan_OutOfBandPrint( NS_SERVER, &net_from, "client_connect%s%s map=%s",
+        ncstring, acstring, newcl->mapname );
 
     List_Init( &newcl->freemsg );
     List_Init( &newcl->inusemsg[0] );
@@ -1675,14 +1675,14 @@ void SV_Init( void ) {
 	Cvar_Get( "protocol", va( "%i", PROTOCOL_VERSION_DEFAULT ), CVAR_SERVERINFO|CVAR_ROM );
 	
 	Cvar_Get( "skill", "1", CVAR_LATCH );
-	Cvar_Get( "deathmatch", "0", CVAR_SERVERINFO|CVAR_LATCH );
-	Cvar_Get( "coop", "0", CVAR_SERVERINFO|CVAR_LATCH );
+	Cvar_Get( "deathmatch", "1", CVAR_SERVERINFO|CVAR_LATCH );
+	Cvar_Get( "coop", "0", /*CVAR_SERVERINFO|*/CVAR_LATCH );
 	Cvar_Get( "cheats", "0", CVAR_SERVERINFO|CVAR_LATCH );
 	Cvar_Get( "dmflags", va( "%i", DF_INSTANT_ITEMS ), CVAR_SERVERINFO );
 	Cvar_Get( "fraglimit", "0", CVAR_SERVERINFO );
 	Cvar_Get( "timelimit", "0", CVAR_SERVERINFO );
 
-	sv_maxclients = Cvar_Get( "maxclients", "1", CVAR_SERVERINFO|CVAR_LATCH );
+	sv_maxclients = Cvar_Get( "maxclients", "8", CVAR_SERVERINFO|CVAR_LATCH );
 	sv_reserved_slots = Cvar_Get( "sv_reserved_slots", "0", CVAR_LATCH );
 	sv_hostname = Cvar_Get( "hostname", "noname", CVAR_SERVERINFO|CVAR_ARCHIVE );
     sv_hostname->changed = sv_hostname_changed;

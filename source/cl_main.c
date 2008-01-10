@@ -35,7 +35,6 @@ extern cvar_t	*rcon_password;
 cvar_t	*rcon_address;
 
 cvar_t	*cl_noskins;
-cvar_t	*cl_autoskins;
 cvar_t	*cl_footsteps;
 cvar_t	*cl_timeout;
 cvar_t	*cl_predict;
@@ -279,7 +278,7 @@ void Cmd_ForwardToServer( void ) {
 CL_ForwardToServer_f
 ==================
 */
-void CL_ForwardToServer_f( void ) {
+static void CL_ForwardToServer_f( void ) {
     if ( cls.state < ca_connected ) {
         Com_Printf( "Can't \"%s\", not connected\n", Cmd_Argv( 0 ) );
         return;
@@ -300,7 +299,7 @@ void CL_ForwardToServer_f( void ) {
 CL_Pause_f
 ==================
 */
-void CL_Pause_f( void ) {
+static void CL_Pause_f( void ) {
     if( cl_paused->integer == 2 ) {
         if( cls.key_dest & (KEY_CONSOLE|KEY_MENU) ) {
             // activate automatic pause
@@ -414,33 +413,33 @@ CL_Connect_f
  
 ================
 */
-void CL_Connect_f( void ) {
+static void CL_Connect_f( void ) {
     char	*server;
     netadr_t	address;
 	int	protocol;
+    int argc = Cmd_Argc();
 
-    if ( Cmd_Argc() < 2 ) {
+    if( argc < 2 ) {
 usage:
-        Com_Printf( "Usage: connect <server> [protocol]\n"
-					"Protocol argument overrides cl_protocol setting\n"
-					"Supported protocols: %d, %d and %d\n",
-			PROTOCOL_VERSION_DEFAULT,
-			PROTOCOL_VERSION_R1Q2,
-			PROTOCOL_VERSION_Q2PRO );
+        Com_Printf( "Usage: connect <server> [34|35|36]\n" );
         return;
     }
 
-    server = Cmd_Argv( 1 );
-	protocol = cl_protocol->integer;
-	if( Cmd_Argc() > 2 ) {
+	if( argc > 2 ) {
 		protocol = atoi( Cmd_Argv( 2 ) );
 		if( protocol < PROTOCOL_VERSION_DEFAULT ||
 			protocol > PROTOCOL_VERSION_Q2PRO )
 		{
 			goto usage;
 		}
-	}
+	} else {
+	    protocol = cl_protocol->integer;
+        if( !protocol ) {
+            protocol = PROTOCOL_VERSION_Q2PRO;
+        }
+    }
 
+    server = Cmd_Argv( 1 );
     if ( !NET_StringToAdr( server, &address ) ) {
         Com_Printf( "Bad server address\n" );
         return;
@@ -448,6 +447,9 @@ usage:
     if ( address.port == 0 ) {
         address.port = BigShort( PORT_SERVER );
     }
+
+    // copy early to avoid potential cmd_argv[1] clobbering
+    Q_strncpyz( cls.servername, server, sizeof( cls.servername ) );
 
     if ( sv_running->integer ) {
         // if running a local server, kill it and reissue
@@ -459,11 +461,9 @@ usage:
     CL_Disconnect( ERR_DISCONNECT, NULL );
 
     cls.serverAddress = address;
-    cls.serverProtocol = protocol ? protocol : PROTOCOL_VERSION_Q2PRO;
+    cls.serverProtocol = protocol;
     cls.protocolVersion = 0;
-    Q_strncpyz( cls.servername, server, sizeof( cls.servername ) );
     cls.passive = qfalse;
-
     cls.state = ca_challenging;
     cls.connectCount = 0;
     cls.connect_time = -99999;	// CL_CheckForResend() will fire immediately
@@ -478,7 +478,7 @@ usage:
     UI_OpenMenu( UIMENU_NONE );
 }
 
-void CL_PassiveConnect_f( void ) {
+static void CL_PassiveConnect_f( void ) {
     netadr_t address;
 
     if( cls.passive ) {
@@ -539,7 +539,7 @@ CL_Rcon_f
   an unconnected command.
 =====================
 */
-void CL_Rcon_f( void ) {
+static void CL_Rcon_f( void ) {
     netadr_t	address;
 	neterr_t	ret;
 
@@ -579,7 +579,7 @@ void CL_Rcon_f( void ) {
 		"rcon \"%s\" %s", rcon_password->string, Cmd_RawArgs() );
 	if( ret == NET_ERROR ) {
 		Com_Printf( "%s to %s\n", NET_ErrorString(),
-                NET_AdrToString( &address ) );
+            NET_AdrToString( &address ) );
 	}
 }
 
@@ -969,6 +969,9 @@ drop to full console
 =================
 */
 static void CL_Changing_f( void ) {
+    int i, j;
+    char *s;
+
     if ( cls.state < ca_connected ) {
         return;
     }
@@ -982,6 +985,17 @@ static void CL_Changing_f( void ) {
     SCR_BeginLoadingPlaque();
 
     cls.state = ca_connected;	// not active anymore, but not disconnected
+    cl.mapname[0] = 0;
+    cl.configstrings[CS_NAME][0] = 0;
+
+    // parse additional parameters
+    j = Cmd_Argc();
+    for( i = 1; i < j; i++ ) {
+        s = Cmd_Argv( i );
+        if( !strncmp( s, "map=", 4 ) ) {
+            Q_strncpyz( cl.mapname, s + 4, sizeof( cl.mapname ) );
+        }
+    }
 
     SCR_UpdateScreen();
 }
@@ -994,7 +1008,7 @@ CL_Reconnect_f
 The server is changing levels
 =================
 */
-void CL_Reconnect_f( void ) {
+static void CL_Reconnect_f( void ) {
     if( cls.state >= ca_precached ) {
         CL_Disconnect( ERR_SILENT, NULL );
     }
@@ -1091,8 +1105,8 @@ CL_PingServers_f
 */
 static void CL_PingServers_f( void ) {
     int	i;
-    char	buffer[ 32 ];
-    char	*adrstring;
+    char	buffer[32];
+    cvar_t  *var;
     netadr_t	address;
 
     memset( &address, 0, sizeof( address ) );
@@ -1111,29 +1125,31 @@ static void CL_PingServers_f( void ) {
     SCR_UpdateScreen();
 
     // send a packet to each address book entry
-    for ( i = 0; i < MAX_LOCAL_SERVERS; i++ ) {
+    for( i = 0; i < 64; i++ ) {
         Com_sprintf( buffer, sizeof( buffer ), "adr%i", i );
-        adrstring = Cvar_VariableString( buffer );
-        if ( !adrstring[ 0 ] )
+        var = Cvar_FindVar( buffer );
+        if( !var ) {
+            break;
+        }
+        if( !var->string[0] )
             continue;
 
-        if ( !NET_StringToAdr( adrstring, &address ) ) {
-            Com_Printf( "bad address: %s\n", adrstring );
+        if( !NET_StringToAdr( var->string, &address ) ) {
+            Com_Printf( "bad address: %s\n", var->string );
             continue;
         }
 
-        if ( !address.port ) {
+        if( !address.port ) {
             address.port = BigShort( PORT_SERVER );
         }
 
-        Com_Printf( "pinging %s...\n", adrstring );
+        Com_Printf( "pinging %s...\n", var->string );
 	    CL_AddRequest( &address, REQ_STATUS );
 
         OOB_PRINT( NS_CLIENT, &address, "status" );
 
         Com_ProcessEvents();
         SCR_UpdateScreen();
-
     }
 }
 
@@ -1144,7 +1160,7 @@ CL_Skins_f
 Load or download any custom player skins and models
 =================
 */
-void CL_Skins_f ( void ) {
+static void CL_Skins_f ( void ) {
     int	i;
     char *s;
 
@@ -1252,6 +1268,7 @@ static void CL_ConnectionlessPacket( void ) {
     if ( !strcmp( c, "client_connect" ) ) {
 		netchan_type_t type;
         int anticheat = 0;
+        char mapname[MAX_QPATH];
 
         if ( cls.state < ca_connecting ) {
             Com_DPrintf( "Connect received while not connecting.  Ignored.\n" );
@@ -1272,6 +1289,8 @@ static void CL_ConnectionlessPacket( void ) {
             type = NETCHAN_OLD;
         }
 
+        mapname[0] = 0;
+
 		// parse additional parameters
         j = Cmd_Argc();
 		for( i = 1; i < j; i++ ) {
@@ -1290,6 +1309,8 @@ static void CL_ConnectionlessPacket( void ) {
                             "Server returned invalid netchan type" );
                     }
                 }
+            } else if( !strncmp( s, "map=", 4 ) ) {
+                Q_strncpyz( mapname, s + 4, sizeof( mapname ) );
             }
         }
 
@@ -1328,6 +1349,7 @@ static void CL_ConnectionlessPacket( void ) {
         cls.state = ca_connected;
 		cls.messageString[0] = 0;
 	    cls.connectCount = 0;
+        strcpy( cl.mapname, mapname ); // for levelshot screen
         return;
     }
 
@@ -2135,7 +2157,7 @@ void CL_RestartFilesystem( void ) {
 CL_RestartRefresh
 ====================
 */
-void CL_RestartRefresh_f( void ) {
+static void CL_RestartRefresh_f( void ) {
     int	cls_state;
 
     Com_DPrintf( "CL_RestartRefresh()\n" );
@@ -2271,7 +2293,7 @@ static const cmdreg_t c_client[] = {
 CL_InitLocal
 =================
 */
-void CL_InitLocal ( void ) {
+static void CL_InitLocal ( void ) {
     int i;
 
     cls.state = ca_disconnected;
@@ -2303,7 +2325,6 @@ void CL_InitLocal ( void ) {
     cl_footsteps = Cvar_Get( "cl_footsteps", "1", 0 );
 	cl_footsteps->changed = cl_footsteps_changed;
     cl_noskins = Cvar_Get ( "cl_noskins", "0", 0 );
-    cl_autoskins = Cvar_Get ( "cl_autoskins", "0", 0 );
     cl_predict = Cvar_Get ( "cl_predict", "1", 0 );
 	cl_predict->changed = cl_predict_changed;
     cl_kickangles = Cvar_Get( "cl_kickangles", "1", CVAR_CHEAT );
@@ -2318,6 +2339,7 @@ void CL_InitLocal ( void ) {
 
     rcon_password = Cvar_Get ( "rcon_password", "", CVAR_PRIVATE );
     rcon_address = Cvar_Get ( "rcon_address", "", CVAR_PRIVATE );
+    rcon_address->generator = CL_Connect_g;
 
     cl_thirdperson = Cvar_Get( "cl_thirdperson", "0", CVAR_CHEAT );
     cl_thirdperson_angle = Cvar_Get( "cl_thirdperson_angle", "0", 0 );
@@ -2758,7 +2780,6 @@ void CL_Init( void ) {
     Cvar_Set( "cl_running", "1" );
 }
 
-
 /*
 ===============
 CL_Shutdown
@@ -2794,3 +2815,4 @@ void CL_Shutdown( void ) {
 
     isdown = qfalse;
 }
+

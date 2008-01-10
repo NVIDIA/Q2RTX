@@ -33,7 +33,6 @@ uint32	cvar_infoModified;
 #define CVARHASH_SIZE	256
 
 static cvar_t *cvarHash[CVARHASH_SIZE];
-static cvarSubsystem_t currentSubsystem;
 
 static cvar_t	*cvar_silent;
 
@@ -215,14 +214,13 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 		if( !( flags & CVAR_USER_CREATED ) ) {
 			if( var->flags & CVAR_USER_CREATED ) {
 				// update default string if cvar was set from command line
-				Z_Free( var->defaultString );
-				var->defaultString = Cvar_CopyString( var_value );
+				Z_Free( var->default_string );
+				var->default_string = Cvar_CopyString( var_value );
 				var->flags &= ~CVAR_USER_CREATED;
-				var->subsystem = currentSubsystem;
 			} else if( !( var->flags & CVAR_DEFAULTS_MIXED ) ) {
-				if( strcmp( var->defaultString, var_value ) ) {
+				if( strcmp( var->default_string, var_value ) ) {
 					Com_DPrintf( "Cvar '%s' given initial values: '%s' and '%s'\n",
-                        var->name, var->defaultString, var_value );
+                        var->name, var->default_string, var_value );
 					var->flags |= CVAR_DEFAULTS_MIXED;
 				}
 			}
@@ -250,12 +248,11 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 	memcpy( var->name, var_name, length );
 	var->string = Cvar_CopyString( var_value );
     var->latched_string = NULL;
-	var->defaultString = Cvar_CopyString( var_value );
+	var->default_string = Cvar_CopyString( var_value );
 	Cvar_ParseString( var );
 	var->flags = flags;
-	var->subsystem = currentSubsystem;
     var->changed = NULL;
-    var->description = NULL;
+    var->generator = NULL;
 
 	// link the variable in
 	hash = Com_HashString( var_name, CVARHASH_SIZE );
@@ -267,10 +264,6 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 	var->modified = qtrue;
 
 	return var;
-}
-
-void Cvar_Subsystem( cvarSubsystem_t subsystem ) {
-	currentSubsystem = subsystem;
 }
 
 /*
@@ -343,14 +336,15 @@ void Cvar_SetByVar( cvar_t *var, const char *value, cvarSetSource_t source ) {
 				}
 				// server is down, it's ok to update this cvar now
 			} else {
-				char *subsystem;
+				//char *subsystem;
 
 				var->latched_string = Cvar_CopyString( value );
-				cvar_latchedModified |= 1 << var->subsystem;
+				//cvar_latchedModified |= 1 << var->subsystem;
 				if( cvar_silent->integer ) {
 					return;
 				}
 
+#if 0
 				switch( var->subsystem ) {
 				case CVAR_SYSTEM_GENERIC:
 					subsystem = "desired subsystem";
@@ -378,6 +372,9 @@ void Cvar_SetByVar( cvar_t *var, const char *value, cvarSetSource_t source ) {
 				}
 				Com_Printf( "%s will be changed upon restarting the %s.\n",
 					var->name, subsystem );
+#else
+				Com_Printf( "%s will be changed upon restarting.\n", var->name );
+#endif
 				return;
 			}
 		}
@@ -576,7 +573,7 @@ void Cvar_FixCheats( void ) {
     // fix any cheating cvars
     for( var = cvar_vars ; var ; var = var->next ) {
 		if( var->flags & CVAR_CHEAT ) {
-			Cvar_SetByVar( var, var->defaultString, CVAR_SET_DIRECT );
+			Cvar_SetByVar( var, var->default_string, CVAR_SET_DIRECT );
 		}
     }
 }
@@ -619,21 +616,17 @@ Handles variable inspection and changing from the console
 */
 void Cvar_Command( cvar_t *v ) {
 // perform a variable print or set
-	if( Cmd_Argc() != 2 ) {
-		if( v->flags & CVAR_ROM ) {
-			Com_Printf( "\"%s\" is \"%s\"\n", v->name, v->string );
-		} else {
-			Com_Printf( "\"%s\" is \"%s\"  ", v->name, v->string );
-            if( strcmp( v->string, v->defaultString ) ) {
-			    Com_Printf( "default: \"%s\"  ", v->defaultString );
-            }
-			if( v->latched_string && strcmp( v->latched_string, v->string ) ) {
-				Com_Printf( "latched: \"%s\"", v->latched_string );
-			}
-			Com_Printf( "\n" );
-		}
+	if( Cmd_Argc() < 2 ) {
+        Com_Printf( "\"%s\" is \"%s\"", v->name, v->string );
+        if( strcmp( v->string, v->default_string ) ) {
+            Com_Printf( "  default: \"%s\"", v->default_string );
+        }
+        if( v->latched_string && strcmp( v->latched_string, v->string ) ) {
+            Com_Printf( "  latched: \"%s\"", v->latched_string );
+        }
+        Com_Printf( "\n" );
 	} else {
-    	Cvar_SetByVar( v, Cmd_Argv( 1 ), CVAR_SET_CONSOLE );
+    	Cvar_SetByVar( v, Cmd_ArgsFrom( 1 ), CVAR_SET_CONSOLE );
     }
 }
 
@@ -648,33 +641,33 @@ Allows setting and defining of arbitrary cvars from console
 void Cvar_Set_f( void ) {
 	int		c, flags;
 	char	*f;
-	cvar_t	*var;
 
 	c = Cmd_Argc();
-	if( c != 3 && c != 4 ) {
+	if( c < 3 ) {
 		Com_Printf( "Usage: set <variable> <value> [u / s]\n" );
 		return;
 	}
 
-	if( c != 4 ) {
-		Cvar_SetEx( Cmd_Argv( 1 ), Cmd_Argv( 2 ), CVAR_SET_CONSOLE );
-		return;
-	}
+    if( c == 3 ) {
+        Cvar_SetEx( Cmd_Argv( 1 ), Cmd_Argv( 2 ), CVAR_SET_CONSOLE );
+        return;
+    }
 
-	f = Cmd_Argv( 3 );
-	if( !strcmp( f, "u" ) ) {
-		flags = CVAR_USERINFO;
-	} else if( !strcmp( f, "s" ) ) {
-		flags = CVAR_SERVERINFO;
-	} else {
-		Com_Printf( "Flags can only be 'u' or 's'\n" );
-		return;
-	}
+    if( c == 4 ) {
+        f = Cmd_Argv( 3 );
+        if( !strcmp( f, "u" ) ) {
+            flags = CVAR_USERINFO;
+        } else if( !strcmp( f, "s" ) ) {
+            flags = CVAR_SERVERINFO;
+        } else {
+            goto set;
+        }
+    	Cvar_FullSet( Cmd_Argv( 1 ), Cmd_Argv( 2 ), flags, CVAR_SET_CONSOLE );
+        return;
+    }
 
-	var = Cvar_FullSet( Cmd_Argv( 1 ), Cmd_Argv( 2 ), flags, CVAR_SET_CONSOLE );
-	if( !var ) {
-		return;
-	}
+set:
+    Cvar_SetEx( Cmd_Argv( 1 ), Cmd_ArgsFrom( 2 ), CVAR_SET_CONSOLE );
 }
 
 /*
@@ -685,15 +678,14 @@ Allows setting and defining of arbitrary cvars from console
 ============
 */
 static void Cvar_SetFlag_f( void ) {
-	char	*s;
+	char	*s = Cmd_Argv( 0 );
 	int		flags;
 
 	if( Cmd_Argc() < 3 ) {
-		Com_Printf( "Usage: %s <variable> <value>\n", Cmd_Argv( 0 ) );
+		Com_Printf( "Usage: %s <variable> <value>\n", s );
 		return;
 	}
 
-	s = Cmd_Argv( 0 );
 	if( !Q_stricmp( s, "setu" ) ) {
 		flags = CVAR_USERINFO;
 	} else if( !Q_stricmp( s, "sets" ) ) {
@@ -934,7 +926,7 @@ static void Cvar_Reset_f( void ) {
 		return;
 	}
 
-	Cvar_SetByVar( var, var->defaultString, CVAR_SET_CONSOLE );
+	Cvar_SetByVar( var, var->default_string, CVAR_SET_CONSOLE );
 }
 
 int Cvar_BitInfo( char *info, int bit ) {
@@ -977,7 +969,6 @@ void Cvar_FillAPI( cvarAPI_t *api ) {
 	api->VariableInteger = Cvar_VariableInteger;
 	api->VariableString = Cvar_VariableString;
 	api->VariableStringBuffer = Cvar_VariableStringBuffer;
-	api->Subsystem = Cvar_Subsystem;
 }
 
 static const cmdreg_t c_cvar[] = {

@@ -220,14 +220,10 @@ doing the wgl interface stuff.
 static qboolean GLimp_Init( void ) {
     const char *extensions;
 
-	Cvar_Subsystem( CVAR_SYSTEM_VIDEO );
-
 	gl_driver = Cvar_Get( "gl_driver", "opengl32", CVAR_ARCHIVE|CVAR_LATCHED );
 	gl_drawbuffer = Cvar_Get( "gl_drawbuffer", "GL_BACK", 0 );
 	gl_allow_software = Cvar_Get( "gl_allow_software", "0", CVAR_LATCHED );
 	gl_swapinterval = Cvar_Get( "gl_swapinterval", "1", CVAR_ARCHIVE );
-
-	Cvar_Subsystem( CVAR_SYSTEM_GENERIC );
 
     // create the window
 	Win_Init();

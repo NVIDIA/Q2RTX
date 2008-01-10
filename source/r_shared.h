@@ -69,7 +69,8 @@ typedef enum {
 	it_wall,
 	it_pic,
 	it_sky,
-	it_charset
+	it_charset,
+    it_tmp
 } imagetype_t;
 
 #define EXTENSION_PNG	MakeLong( '.', 'p', 'n', 'g' )

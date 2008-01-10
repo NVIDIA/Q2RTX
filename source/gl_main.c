@@ -675,8 +675,6 @@ static void GL_ModeChanged( int width, int height, int flags,
 }
 
 static void GL_Register( void ) {
-	cvar.Subsystem( CVAR_SYSTEM_VIDEO );
-
     /* misc */
 	gl_partscale = cvar.Get( "gl_partscale", "1.5", 0 );
 #if USE_JPEG
@@ -725,8 +723,6 @@ static void GL_Register( void ) {
 	cmd.AddCommand( "screenshotpng", GL_ScreenShot_f );
 #endif
 	cmd.AddCommand( "strings", GL_Strings_f );
-
-	cvar.Subsystem( CVAR_SYSTEM_GENERIC );
 }
 
 static void GL_Unregister( void ) {
@@ -1031,9 +1027,7 @@ void GL_BeginRegistration( const char *name ) {
 void GL_EndRegistration( void ) {
     R_FreeUnusedImages();
 	Model_FreeUnused();
-	if( scrap_dirty ) {
-		Scrap_Upload();
-	}
+	Scrap_Upload();
 	gl_static.registering = qfalse;
 }
 

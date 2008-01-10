@@ -295,8 +295,6 @@ cvar_t *Cvar_FindVar( const char *var_name );
 
 void Cvar_Set_f( void );
 
-void Cvar_Subsystem( cvarSubsystem_t subsystem );
-
 void Cvar_FillAPI( cvarAPI_t *api );
 
 /*
