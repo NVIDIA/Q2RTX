@@ -94,7 +94,7 @@ extern cvar_t *gl_bind;
 extern cvar_t *gl_clear;
 extern cvar_t *gl_novis;
 extern cvar_t *gl_lockpvs;
-extern cvar_t *gl_subdivide;
+extern cvar_t *gl_lightmap;
 extern cvar_t *gl_fastsky;
 extern cvar_t *gl_dynamic;
 extern cvar_t *gl_fullbright;

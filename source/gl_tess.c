@@ -373,8 +373,13 @@ static void GL_DrawFace( bspSurface_t *surf ) {
         j = surf->firstVert;
     }
 
-    tess.texnum[0] = surf->texnum[0];
-    tess.texnum[1] = surf->texnum[1];
+    if( gl_lightmap->integer ) {
+        tess.texnum[0] = surf->texnum[1] ? surf->texnum[1] : surf->texnum[0];
+        tess.texnum[1] = 0;
+    } else {
+        tess.texnum[0] = surf->texnum[0];
+        tess.texnum[1] = surf->texnum[1];
+    }
     tess.flags = surf->texflags;
     dst_indices = tess.indices + tess.numIndices;
     for( i = 0; i < surf->numVerts - 2; i++ ) {

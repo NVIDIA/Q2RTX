@@ -87,11 +87,13 @@ static void LM_InitBlock( void ) {
 static void LM_UploadBlock( void ) {
     int comp = colorScale ? GL_RGB : GL_LUMINANCE;
 
+    qglActiveTextureARB( GL_TEXTURE1_ARB );
     qglBindTexture( GL_TEXTURE_2D, LM_TEXNUM + lm.numMaps );
 	qglTexImage2D( GL_TEXTURE_2D, 0, comp, LM_BLOCK_WIDTH, LM_BLOCK_HEIGHT, 0,
         GL_RGBA, GL_UNSIGNED_BYTE, lm.buffer );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+    qglActiveTextureARB( GL_TEXTURE0_ARB );
 
     if( lm.highWater < ++lm.numMaps ) {
         lm.highWater = lm.numMaps;
