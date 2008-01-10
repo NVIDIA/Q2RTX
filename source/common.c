@@ -1322,7 +1322,6 @@ void Qcommon_Init( int argc, char **argv ) {
 	Cmd_AddCommand( "errordrop", Com_ErrorDrop_f );
 	Cmd_AddCommand( "freeze", Com_Freeze_f );
 	Cmd_AddCommand( "crash", Com_Crash_f );
-	Cmd_AddCommand( "vstest", Com_VsnprintfTest_f );
 #endif
 
 	Cmd_AddCommand( "lasterror", Com_LastError_f );

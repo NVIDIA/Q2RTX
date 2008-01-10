@@ -1072,7 +1072,7 @@ char *Sys_GetCurrentDirectory( void ) {
 
 //=======================================================================
 
-#if USE_ANTICHEAT & 1
+#if !( defined DEDICATED_ONLY ) && ( USE_ANTICHEAT & 1 )
 
 typedef PVOID (*FNINIT)( VOID );
 
@@ -1100,7 +1100,7 @@ qboolean Sys_GetAntiCheatAPI( void ) {
 	}
 
 	//windows version check
-	if( !winnt ) {
+	if( !iswinnt ) {
 		Com_Printf( S_COLOR_YELLOW
 			"Anticheat requires Windows 2000/XP/2003.\n" );
 		return qfalse;
@@ -1308,8 +1308,8 @@ PRIVATE DWORD Sys_ExceptionHandler( DWORD exceptionCode, LPEXCEPTION_POINTERS ex
     memcpy( path, execdir, len );
     memcpy( path + len, "\\Q2PRO_CrashReportXX.txt", 25 );
 	for( i = 0; i < 100; i++ ) {
-		path[len+18] = i / 10;
-		path[len+19] = i % 10;
+		path[len+18] = '0' + i / 10;
+		path[len+19] = '0' + i % 10;
 		if( !Sys_GetFileInfo( path, NULL ) ) {
 			break;
 		}
