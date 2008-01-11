@@ -254,34 +254,38 @@ static int GetLittleLong(void) {
 	return val;
 }
 
-static void FindNextChunk( uint32 name ) {
+static void FindNextChunk( const char *name, uint32 search ) {
     uint32 chunk, length;
+    int i;
 
-	while( 1 ) {
+	for( i = 0; i < 1000; i++ ) {
 		if( data_p >= iff_end ) {
-            // didn't find the chunk
 			data_p = NULL;
-			return;
+			return; // didn't find the chunk
 		}
-		
+
         chunk = GetLittleLong();
 		iff_chunk_len = GetLittleLong();
-        if( data_p + iff_chunk_len > iff_end ) {
-            Com_DPrintf( "FindNextChunk: oversize chunk %#x\n", chunk );
+        if( iff_chunk_len > iff_end - data_p ) {
+            Com_DPrintf( "%s: oversize chunk %#x in %s\n",
+                __func__, chunk, name );
             data_p = NULL;
             return;
         }
-		if( chunk == name ) {
+		if( chunk == search ) {
 			return;
         }
         length = ( iff_chunk_len + 1 ) & ~1;
         data_p += length;
-	}
+    }
+
+    Com_WPrintf( "%s: too many iterations for chunk %#x in %s\n",
+        __func__, search, name );
 }
 
-static void FindChunk( uint32 name ) {
+static void FindChunk( const char *name, uint32 search ) {
 	data_p = iff_data;
-	FindNextChunk( name );
+	FindNextChunk( name, search );
 }
 
 #define TAG_RIFF    MakeLong( 'R', 'I', 'F', 'F' )
@@ -305,7 +309,7 @@ static qboolean GetWavinfo( const char *name, wavinfo_t *info ) {
 	memset (info, 0, sizeof(*info));
 
 // find "RIFF" chunk
-	FindChunk( TAG_RIFF );
+	FindChunk( name, TAG_RIFF );
 	if( !data_p ) {
 		Com_DPrintf( "%s has missing/invalid RIFF chunk\n", name );
 		return qfalse;
@@ -319,7 +323,7 @@ static qboolean GetWavinfo( const char *name, wavinfo_t *info ) {
 	iff_data = data_p;
 
 // get "fmt " chunk
-	FindChunk( TAG_fmt );
+	FindChunk( name, TAG_fmt );
 	if( !data_p ) {
 		Com_DPrintf("%s has missing/invalid fmt chunk\n", name );
 		return qfalse;
@@ -358,12 +362,12 @@ static qboolean GetWavinfo( const char *name, wavinfo_t *info ) {
     }
 
 // get cue chunk
-	FindChunk( TAG_cue );
+	FindChunk( name, TAG_cue );
 	if( data_p ) {
 		data_p += 24;
 		info->loopstart = GetLittleLong();
 
-		FindNextChunk( TAG_LIST );
+		FindNextChunk( name, TAG_LIST );
 		if( data_p ) {
             data_p += 20;
             chunk = GetLittleLong();
@@ -379,7 +383,7 @@ static qboolean GetWavinfo( const char *name, wavinfo_t *info ) {
     }
 
 // find data chunk
-	FindChunk( TAG_data );
+	FindChunk( name, TAG_data );
 	if( !data_p ) {
 		Com_DPrintf( "%s has missing/invalid data chunk\n", name );
 		return qfalse;
