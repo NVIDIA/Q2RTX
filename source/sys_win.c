@@ -712,20 +712,23 @@ Sys_GetClipboardData
 ================
 */
 char *Sys_GetClipboardData( void ) {
+	HANDLE clipdata;
 	char *data = NULL;
 	char *cliptext;
 
-	if( OpenClipboard( NULL ) != FALSE ) {
-		HANDLE hClipboardData;
-
-		if( ( hClipboardData = GetClipboardData( CF_TEXT ) ) != NULL ) {
-			if( ( cliptext = GlobalLock( hClipboardData ) ) != NULL ) {
-				data = Z_CopyString( cliptext );
-				GlobalUnlock( hClipboardData );
-			}
-		}
-		CloseClipboard();
+	if( OpenClipboard( NULL ) == FALSE ) {
+		Com_DPrintf( "Couldn't open clipboard.\n" );
+		return data;
 	}
+
+	if( ( clipdata = GetClipboardData( CF_TEXT ) ) != NULL ) {
+		if( ( cliptext = GlobalLock( clipdata ) ) != NULL ) {
+			data = Z_CopyString( cliptext );
+			GlobalUnlock( clipdata );
+		}
+	}
+	CloseClipboard();
+	
 	return data;
 }
 
@@ -736,24 +739,31 @@ Sys_SetClipboardData
 ================
 */
 void Sys_SetClipboardData( const char *data ) {
+	HANDLE clipdata;
 	char *cliptext;
 	int	length;
 
-	if( OpenClipboard( NULL ) != FALSE ) {
-		HANDLE hClipboardData;
-
-		length = strlen( data );
-		hClipboardData = GlobalAlloc( GMEM_MOVEABLE | GMEM_DDESHARE, length + 1 );
-
-		if( SetClipboardData( CF_TEXT, hClipboardData ) != NULL ) {
-			if( ( cliptext = GlobalLock( hClipboardData ) ) != NULL ) {
-				memcpy( cliptext, data, length + 1 );
-				cliptext[length] = 0;
-				GlobalUnlock( hClipboardData );
-			}
-		}
-		CloseClipboard();
+	if( !data[0] ) {
+		return;
 	}
+
+	if( OpenClipboard( NULL ) == FALSE ) {
+		Com_DPrintf( "Couldn't open clipboard.\n" );
+		return;
+	}
+
+	EmptyClipboard();
+
+	length = strlen( data ) + 1;
+	if( ( clipdata = GlobalAlloc( GMEM_MOVEABLE | GMEM_DDESHARE, length ) ) != NULL ) {
+		if( ( cliptext = GlobalLock( clipdata ) ) != NULL ) {
+			memcpy( cliptext, data, length );
+			GlobalUnlock( clipdata );
+			SetClipboardData( CF_TEXT, clipdata );
+		}
+	}
+	
+	CloseClipboard();
 }
 
 

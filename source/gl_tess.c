@@ -201,7 +201,7 @@ void GL_DrawBeams( void ) {
 
     GL_BindTexture( r_beamtexture->texnum );
     GL_TexEnv( GL_MODULATE );
-	GL_Bits( GLS_BLEND_ADD | GLS_DEPTHMASK_FALSE );
+	GL_Bits( GLS_BLEND_BLEND | GLS_DEPTHMASK_FALSE );
     qglEnableClientState( GL_COLOR_ARRAY );
 	qglColorPointer( 4, GL_UNSIGNED_BYTE, 0, tess.colors );
 	qglTexCoordPointer( 2, GL_FLOAT, 20, tess.vertices + 3 );

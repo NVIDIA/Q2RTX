@@ -1023,7 +1023,7 @@ static void GL_InitBeamTexture( void ) {
             dst[0] = 255 * f;
             dst[1] = 255 * f;
             dst[2] = 255 * f;
-            dst[3] = 255;
+            dst[3] = 255*f;
             dst += 4;
         }
     }
