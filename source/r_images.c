@@ -1406,7 +1406,7 @@ image_t	*R_FindImage( const char *name, imagetype_t type ) {
 	flags = 0;
 
 	if( r_override_textures->integer ) {
-#ifdef USE_PNG
+#if USE_PNG
 		// try *.png
 		strcpy( ext, ".png" );
 		Image_LoadPNG( buffer, &pic, &width, &height );
@@ -1418,7 +1418,7 @@ image_t	*R_FindImage( const char *name, imagetype_t type ) {
 			strcpy( ext, ".tga" );
 			Image_LoadTGA( buffer, &pic, &width, &height );
 
-#ifdef USE_JPEG
+#if USE_JPEG
 			if( !pic ) {
 				// try *.jpg
 				strcpy( ext, ".jpg" );
@@ -1460,7 +1460,7 @@ image_t	*R_FindImage( const char *name, imagetype_t type ) {
 
 	switch( extHash ) {
 	case EXTENSION_PNG:
-#ifdef USE_PNG
+#if USE_PNG
 		// try *.png
 		strcpy( ext, ".png" );
 		Image_LoadPNG( buffer, &pic, &width, &height );
@@ -1476,7 +1476,7 @@ image_t	*R_FindImage( const char *name, imagetype_t type ) {
 			goto load;
 		}
 
-#ifdef USE_JPEG
+#if USE_JPEG
 		// try *.jpg
 		strcpy( ext, ".jpg" );
 		Image_LoadJPG( buffer, &pic, &width, &height );
@@ -1501,7 +1501,7 @@ image_t	*R_FindImage( const char *name, imagetype_t type ) {
 			goto load;
 		}
 
-#ifdef USE_PNG
+#if USE_PNG
 		// try *.png
 		strcpy( ext, ".png" );
 		Image_LoadPNG( buffer, &pic, &width, &height );
@@ -1510,7 +1510,7 @@ image_t	*R_FindImage( const char *name, imagetype_t type ) {
 		}
 #endif
 
-#ifdef USE_JPEG
+#if USE_JPEG
 		// try *.jpg
 		strcpy( ext, ".jpg" );
 		Image_LoadJPG( buffer, &pic, &width, &height );
@@ -1529,7 +1529,7 @@ image_t	*R_FindImage( const char *name, imagetype_t type ) {
 		return NULL;
 
 	case EXTENSION_JPG:
-#ifdef USE_JPEG
+#if USE_JPEG
 		strcpy( ext, ".jpg" );
 		Image_LoadJPG( buffer, &pic, &width, &height );
 		if( pic ) {
@@ -1537,7 +1537,7 @@ image_t	*R_FindImage( const char *name, imagetype_t type ) {
 		}
 #endif
 
-#ifdef USE_PNG
+#if USE_PNG
 		// try *.png
 		strcpy( ext, ".png" );
 		Image_LoadPNG( buffer, &pic, &width, &height );
@@ -1571,7 +1571,7 @@ image_t	*R_FindImage( const char *name, imagetype_t type ) {
 			goto load;
 		}
 
-#ifdef USE_PNG
+#if USE_PNG
 		// try *.png
 		strcpy( ext, ".png" );
 		Image_LoadPNG( buffer, &pic, &width, &height );
@@ -1587,7 +1587,7 @@ image_t	*R_FindImage( const char *name, imagetype_t type ) {
 			goto load;
 		}
 
-#ifdef USE_JPEG
+#if USE_JPEG
 		// try *.jpg
 		strcpy( ext, ".jpg" );
 		Image_LoadJPG( buffer, &pic, &width, &height );
@@ -1607,7 +1607,7 @@ image_t	*R_FindImage( const char *name, imagetype_t type ) {
 
 		// FIXME: no way to figure correct texture dimensions here
 
-#ifdef USE_PNG
+#if USE_PNG
 		// try *.png
 		strcpy( ext, ".png" );
 		Image_LoadPNG( buffer, &pic, &width, &height );
@@ -1623,7 +1623,7 @@ image_t	*R_FindImage( const char *name, imagetype_t type ) {
 			goto load;
 		}
 
-#ifdef USE_JPEG
+#if USE_JPEG
 		// try *.jpg
 		strcpy( ext, ".jpg" );
 		Image_LoadJPG( buffer, &pic, &width, &height );

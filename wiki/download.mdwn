@@ -1,6 +1,8 @@
 Stable releases
 ----------------
-There are no stable releases of Q2PRO available to date.
+OpenGL client for Windows:
+[q2pro-r178ac-win32.zip](../ac/q2pro-r178ac-win32.zip).  
+This binary is supported by r1ch.net [anticheat](http://antiche.at/) module.
 
 Development snapshots
 ----------------
@@ -10,32 +12,29 @@ OpenGL client for Windows:
 Dedicated server for Windows:
 [q2proded-win32.zip](../nightly/q2proded-win32.zip).
 
-Update utility for Windows:
-[q2proupd.exe](../nightly/q2proupd.exe)
-(included in above packages).
-
 Dedicated server binary for GNU/Linux:
-[q2proded.bin.gz](../update/q2proded.bin.gz).<br />
+[q2proded.bin.gz](../update/q2proded.bin.gz).  
 Use this binary for running Q2PRO server from
 your remote shell account.
 
-Update utility source tarball:
-[q2proupd.tar.gz](../nightly/q2proupd.tar.gz).<br />
-You will need zlib and libCURL development files installed to build it.
-
 Source code
 ----------------
-To get the latest source code, you will need to install Subversion client.
-Use the following command to checkout fresh working copy into
+To get the latest Q2PRO source code, you will need to install Subversion
+client. Use the following command to checkout fresh working copy into
 the `q2pro` directory:
 
     svn co https://q2pro.svn.sourceforge.net/svnroot/q2pro/trunk q2pro
 
 If you are looking for the source code snapshot corresponding to
-a particular binary release, you may try the following command,
-replacing XXX with release number:
+a particular binary release, try the following command, replacing XXX
+with release number:
 
     svn co https://q2pro.svn.sourceforge.net/svnroot/q2pro/tags/rXXX q2pro-rXXX
 
-You can also browse Q2PRO source tree
-[online](http://q2pro.svn.sourceforge.net/viewvc/q2pro).
+You can also [browse](http://q2pro.svn.sourceforge.net/viewvc/q2pro/)
+Q2PRO source tree online.
+
+Update utility source tarball:
+[q2proupd.tar.gz](../nightly/q2proupd.tar.gz).  
+You will need zlib and libCURL development files installed to build it.
+

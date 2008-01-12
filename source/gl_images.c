@@ -1020,10 +1020,10 @@ static void GL_InitBeamTexture( void ) {
             f = 1.0f - f / ( 16/2 - 2.5f );
             if( f < 0 ) f = 0;
             else if( f > 1 ) f = 1;
-            dst[0] = 255 * f;
-            dst[1] = 255 * f;
-            dst[2] = 255 * f;
-            dst[3] = 255*f;
+            dst[0] = 255;// * f;
+            dst[1] = 255;// * f;
+            dst[2] = 255;// * f;
+            dst[3] = 255 * f;
             dst += 4;
         }
     }

@@ -159,14 +159,14 @@ void CL_AddLasers( void ) {
 			f = (float)time / (float)l->lifeTime;
 
 			ent.alpha *= f;
-			if( l->fadeType == LASER_FADE_RGBA ) {
+			/*if( l->fadeType == LASER_FADE_RGBA ) {
 				*(int *)color = *(int *)l->color;
 				color[0] *= f;
 				color[1] *= f;
 				color[2] *= f;
 				ent.skinnum = *(int *)color;
-			}
-		} else {
+			}*/
+		} /*else*/ {
 			ent.skinnum = *(int *)l->color;
 		}
 

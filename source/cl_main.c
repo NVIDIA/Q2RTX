@@ -2349,7 +2349,7 @@ static void CL_InitLocal ( void ) {
     cl_railtrail_time = Cvar_Get( "cl_railtrail_time", "1.0", 0 );
     cl_railtrail_alpha = Cvar_Get( "cl_railtrail_alpha", "1.0", 0 );
     cl_railcore_color = Cvar_Get( "cl_railcore_color", "0xFF0000", 0 );
-    cl_railcore_width = Cvar_Get( "cl_railcore_width", "3", 0 );
+    cl_railcore_width = Cvar_Get( "cl_railcore_width", "2", 0 );
     cl_railspiral_color = Cvar_Get( "cl_railspiral_color", "0x0000FF", 0 );
     cl_railspiral_radius = Cvar_Get( "cl_railspiral_radius", "3", 0 );
 

@@ -226,7 +226,7 @@ static byte 	*iff_end;
 static byte 	*iff_data;
 static uint32 	iff_chunk_len;
 
-static int GetLittleShort(void) {
+static int GetLittleShort( void ) {
 	int val;
 
     if( data_p + 2 > iff_end ) {
@@ -239,7 +239,7 @@ static int GetLittleShort(void) {
 	return val;
 }
 
-static int GetLittleLong(void) {
+static int GetLittleLong( void ) {
 	int val;
 
     if( data_p + 4 > iff_end ) {
@@ -259,7 +259,7 @@ static void FindNextChunk( const char *name, uint32 search ) {
     int i;
 
 	for( i = 0; i < 1000; i++ ) {
-		if( data_p >= iff_end ) {
+		if( data_p + 8 >= iff_end ) {
 			data_p = NULL;
 			return; // didn't find the chunk
 		}
@@ -306,7 +306,7 @@ static qboolean GetWavinfo( const char *name, wavinfo_t *info ) {
 	int		samples, width;
     uint32  chunk;
 
-	memset (info, 0, sizeof(*info));
+	memset( info, 0, sizeof( *info ) );
 
 // find "RIFF" chunk
 	FindChunk( name, TAG_RIFF );
@@ -329,13 +329,13 @@ static qboolean GetWavinfo( const char *name, wavinfo_t *info ) {
 		return qfalse;
 	}
 	format = GetLittleShort();
-	if (format != 1) {
-		Com_DPrintf("%s has non-Microsoft PCM format\n", name);
+	if( format != 1 ) {
+		Com_DPrintf( "%s has non-Microsoft PCM format\n", name );
 		return qfalse;
 	}
 
 	info->channels = GetLittleShort();
-	if (info->channels != 1 && info->channels != 2) {
+	if( info->channels != 1 && info->channels != 2 ) {
 		Com_DPrintf( "%s has bad number of channels\n", name );
         return qfalse;
 	}
@@ -395,9 +395,9 @@ static qboolean GetWavinfo( const char *name, wavinfo_t *info ) {
         return qfalse;
     }
 
-	if ( info->samples ) {
-		if (samples < info->samples) {
-			Com_DPrintf( "%s has bad loop length\n", name);
+	if( info->samples ) {
+		if( samples < info->samples ) {
+			Com_DPrintf( "%s has bad loop length\n", name );
             return qfalse;
         }
 	} else {
