@@ -536,6 +536,8 @@ Build the intended movement vector
 ================
 */
 static void CL_BaseMove( vec3_t move ) {
+    float speed;
+
 	if( in_strafe.state & 1 ) {
 		move[1] += cl_sidespeed->value * CL_KeyState( &in_right );
 		move[1] -= cl_sidespeed->value * CL_KeyState( &in_left );
@@ -552,12 +554,16 @@ static void CL_BaseMove( vec3_t move ) {
 		move[0] -= cl_forwardspeed->value * CL_KeyState( &in_back );
     }
 
-//
 // adjust for speed key / running
-//
 	if( ( in_speed.state & 1 ) ^ cl_run->integer ) {
 		VectorScale( move, 2, move );
 	}
+
+// clamp to server defined max speed
+    speed = cl.pmp.maxspeed;
+    clamp( move[0], -speed, speed );
+    clamp( move[1], -speed, speed );
+    clamp( move[2], -speed, speed );
 }
 
 static void CL_ClampPitch( void ) {

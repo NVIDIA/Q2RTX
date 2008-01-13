@@ -507,7 +507,7 @@ static void CL_PassiveConnect_f( void ) {
 static const char *CL_Connect_g( const char *partial, int state ) {
     static int length;
     static int index;
-    const char *adrstring;
+    cvar_t *var;
 	char buffer[MAX_QPATH];
     
     if( !state ) {
@@ -515,15 +515,18 @@ static const char *CL_Connect_g( const char *partial, int state ) {
         index = 0;
     }
 
-	while( index < MAX_LOCAL_SERVERS ) {
+	while( index < 1024 ) {
 		Com_sprintf( buffer, sizeof( buffer ), "adr%i", index );
 		index++;
-		adrstring = Cvar_VariableString( buffer );
-		if( !adrstring[ 0 ] ) {
+		var = Cvar_FindVar( buffer );
+        if( !var ) {
+            break;
+        }
+		if( !var->string[0] ) {
 			continue;
 		}
-		if( !strncmp( partial, adrstring, length ) ) {
-			return adrstring;
+		if( !strncmp( partial, var->string, length ) ) {
+			return var->string;
 		}
 	}
 
@@ -1992,7 +1995,7 @@ static qboolean CL_WriteConfig( const char *path ) {
 
 	FS_FOpenFile( path, &f, FS_MODE_WRITE );
 	if( !f ) {
-		Com_WPrintf( "Couldn't write %s\n", path );
+		Com_WPrintf( "Couldn't open %s for writing\n", path );
 		return qfalse;
 	}
 
