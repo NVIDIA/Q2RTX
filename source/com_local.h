@@ -798,7 +798,7 @@ typedef struct {
     qboolean    flyfix;
 	int			qwmod;
 	float		speedMultiplier;
-	float		upspeed;
+//	float		upspeed;
 	float		maxspeed;
 	float		friction;
 	float		waterfriction;

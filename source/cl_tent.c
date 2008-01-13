@@ -141,7 +141,7 @@ void CL_AddLasers( void ) {
 	laser_t		*l;
 	entity_t	ent;
 	int			i;
-	color_t		color;
+	//color_t		color;
 	int time;
 	float f;
 

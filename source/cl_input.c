@@ -598,6 +598,9 @@ void CL_UpdateCmd( int msec ) {
         return;
     }
 
+	// add to milliseconds of time to apply the move
+	cl.cmd.msec += msec;
+
 	// adjust viewangles
 	CL_AdjustAngles( msec );
 	
@@ -606,9 +609,6 @@ void CL_UpdateCmd( int msec ) {
 
 	// allow mice or other external controllers to add to the move
 	CL_MouseMove();
-
-	// add to milliseconds of time to apply the move
-	cl.cmd.msec += msec;
 
 	CL_ClampPitch();
 	
@@ -954,7 +954,7 @@ static void CL_SendBatchedCmd( void ) {
 		for( j = oldest->cmdNumber + 1; j <= history->cmdNumber; j++ ) {
 			cmd = &cl.cmds[j & CMD_MASK];
 			totalMsec += cmd->msec;
-			bits = MSG_WriteDeltaUsercmd_Enhanced( oldcmd, cmd );
+			bits = MSG_WriteDeltaUsercmd_Enhanced( oldcmd, cmd, cls.protocolVersion );
 			if( cl_showpackets->integer == 3 ) {
 				MSG_ShowDeltaUsercmdBits_Enhanced( bits );
 			}

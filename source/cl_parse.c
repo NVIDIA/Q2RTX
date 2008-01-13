@@ -844,7 +844,7 @@ static void CL_ParseServerData( void ) {
 
 	cl.pmp.speedMultiplier = 1;
 	cl.pmp.maxspeed = 300;
-	cl.pmp.upspeed = 350;
+//	cl.pmp.upspeed = 350;
 	cl.pmp.friction = 6;
 	cl.pmp.waterfriction = 1;
     cl.pmp.flyfriction = 9;
@@ -894,7 +894,7 @@ static void CL_ParseServerData( void ) {
 			Com_DPrintf( "Q2PRO QWMod enabled\n" );
 
 			cl.pmp.maxspeed = 320;
-			cl.pmp.upspeed = ((cl.pmp.qwmod == 2) ? 310 : 350);
+			//cl.pmp.upspeed = ((cl.pmp.qwmod == 2) ? 310 : 350);
 			cl.pmp.friction = 4;
 			cl.pmp.waterfriction = 4;
 			cl.pmp.airaccelerate = qtrue;

@@ -811,7 +811,7 @@ static void SVC_DirectConnect( void ) {
         if( sv_qwmod->integer ) {
             newcl->pmp.qwmod = sv_qwmod->integer;
             newcl->pmp.maxspeed = 320;
-            newcl->pmp.upspeed = ( sv_qwmod->integer > 1 ) ? 310 : 350;
+            //newcl->pmp.upspeed = ( sv_qwmod->integer > 1 ) ? 310 : 350;
             newcl->pmp.friction = 4;
             newcl->pmp.waterfriction = 4;
             newcl->pmp.airaccelerate = qtrue;
@@ -1742,7 +1742,7 @@ void SV_Init( void ) {
     // set up default pmove parameters
 	//
     sv_pmp.maxspeed = 300;
-    sv_pmp.upspeed = 350;
+    //sv_pmp.upspeed = 350;
     sv_pmp.friction = 6;
     sv_pmp.flyfriction = 9;
     sv_pmp.waterfriction = 1;

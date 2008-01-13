@@ -345,9 +345,10 @@ MSG_WriteDeltaUsercmd_Enhanced
 =============
 */
 int MSG_WriteDeltaUsercmd_Enhanced( const usercmd_t *from,
-                                    const usercmd_t *cmd )
+                                    const usercmd_t *cmd,
+                                          int       version )
 {
-	int		bits, delta;
+	int		bits, delta, count;
 
 	if( !from ) {
 		from = &nullUserCmd;
@@ -406,15 +407,21 @@ int MSG_WriteDeltaUsercmd_Enhanced( const usercmd_t *from,
 		MSG_WriteBits( cmd->angles[2], -16 );
 	}
 	
-	if( bits & CM_FORWARD ) {
-		MSG_WriteBits( cmd->forwardmove, -16 );
-	}
-	if( bits & CM_SIDE ) {
-		MSG_WriteBits( cmd->sidemove, -16 );
-	}
-	if( bits & CM_UP ) {
-		MSG_WriteBits( cmd->upmove, -16 );
-	}
+    if( version >= PROTOCOL_VERSION_Q2PRO_UCMD ) {
+        count = -10;
+    } else {
+        count = -16;
+    }
+
+    if( bits & CM_FORWARD ) {
+        MSG_WriteBits( cmd->forwardmove, count );
+    }
+    if( bits & CM_SIDE ) {
+        MSG_WriteBits( cmd->sidemove, count );
+    }
+    if( bits & CM_UP ) {
+        MSG_WriteBits( cmd->upmove, count );
+    }
 
 	if( bits & CM_BUTTONS ) {
         int buttons = ( cmd->buttons & 3 ) | ( cmd->buttons >> 5 );
@@ -1770,9 +1777,10 @@ int MSG_ReadBits( int bits ) {
 }
 
 void MSG_ReadDeltaUsercmd_Enhanced( const usercmd_t *from,
-                                          usercmd_t *to )
+                                          usercmd_t *to,
+                                          int       version )
 {
-	int bits;
+	int bits, count;
 
 	if( from ) {
 		memcpy( to, from, sizeof( *to ) );
@@ -1804,16 +1812,22 @@ void MSG_ReadDeltaUsercmd_Enhanced( const usercmd_t *from,
 	if( bits & CM_ANGLE3 ) {
 		to->angles[2] = MSG_ReadBits( -16 );
 	}
-		
+
 // read movement
+    if( version >= PROTOCOL_VERSION_Q2PRO_UCMD ) {
+        count = -10;
+    } else {
+        count = -16;
+    }
+
 	if( bits & CM_FORWARD ) {
-		to->forwardmove = MSG_ReadBits( -16 );
+		to->forwardmove = MSG_ReadBits( count );
 	}
 	if( bits & CM_SIDE ) {
-		to->sidemove = MSG_ReadBits( -16 );
+		to->sidemove = MSG_ReadBits( count );
 	}
 	if( bits & CM_UP ) {
-		to->upmove = MSG_ReadBits( -16 );
+		to->upmove = MSG_ReadBits( count );
 	}
 	
 // read buttons

@@ -999,7 +999,7 @@ static void SV_NewClientExecuteMove( int c ) {
 				return;
 			}
 			cmd = &cmds[i][j];
-			MSG_ReadDeltaUsercmd_Enhanced( lastcmd, cmd );
+			MSG_ReadDeltaUsercmd_Enhanced( lastcmd, cmd, sv_client->version );
 			cmd->lightlevel = lightlevel;
 			lastcmd = cmd;
 		}
