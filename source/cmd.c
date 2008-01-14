@@ -377,6 +377,16 @@ static void Cmd_UnAlias_f( void ) {
 	Z_Free( a );
 }
 
+#ifndef DEDICATED_ONLY
+void Cmd_WriteAliases( fileHandle_t f ) {
+    cmdalias_t *a;
+
+    LIST_FOR_EACH( cmdalias_t, a, &cmd_alias, listEntry ) {
+        FS_FPrintf( f, "alias \"%s\" \"%s\"\n", a->name, a->value );
+    }
+}
+#endif
+
 /*
 =============================================================================
 
@@ -774,7 +784,7 @@ void Cmd_PrintHelp( const cmd_option_t *opt ) {
         } else {
             Q_strncpyz( buffer, opt->lo, sizeof( buffer ) );
         }
-        Com_Printf( "-%c | --%-16.16s : %s\n", opt->sh[0], buffer, opt->help );
+        Com_Printf( "-%c | --%-16.16s | %s\n", opt->sh[0], buffer, opt->help );
         opt++;
     }
     Com_Printf( "\n" );

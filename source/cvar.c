@@ -224,7 +224,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 					var->flags |= CVAR_DEFAULTS_MIXED;
 				}
 			}
-#if 0
+#if 1
             if( ( var->flags & CVAR_LATCHED ) && !( flags & CVAR_LATCHED ) ) {
                 if( var->latched_string ) {
                     Z_Free( var->latched_string );
@@ -709,7 +709,7 @@ Appends lines containing "set variable value" for all variables
 with the archive flag set to true.
 ============
 */
-void Cvar_WriteVariables( fileHandle_t f ) {
+void Cvar_WriteVariables( fileHandle_t f, int mask, qboolean modified ) {
 	cvar_t	*var;
     char *string;
 
@@ -717,13 +717,15 @@ void Cvar_WriteVariables( fileHandle_t f ) {
         if( var->flags & CVAR_PRIVATE ) {
             continue;
         }
-		if( var->flags & CVAR_ARCHIVE ) {
+		if( var->flags & mask ) {
             if( ( var->flags & CVAR_LATCHED ) && var->latched_string ) {
                 string = var->latched_string;
             } else {
                 string = var->string;
             }
-			FS_FPrintf( f, "set %s \"%s\"\n", var->name, string );
+            if( !modified || strcmp( string, var->default_string ) ) {
+    			FS_FPrintf( f, "set %s \"%s\"\n", var->name, string );
+            }
 		}
 	}	
 }
@@ -738,22 +740,35 @@ Cvar_List_f
 */
 static void Cvar_List_f( void ) {
     static const cmd_option_t options[] = {
-        { "v", "verbose", "display flags of each cvar" },
+        { "a", "archive", "list archived cvars" },
+        { "c", "cheat", "list cheat protected cvars" },
         { "h", "help", "display this help message" },
-        { "f:string", "filter", "filter cvars by wildcard" },
+        { "l", "latched", "list latched cvars" },
+        { "m", "modified", "list modified cvars" },
+        { "n", "noset", "list command line cvars" },
+        { "r", "rom", "list read-only cvars" },
+        { "s", "serverinfo", "list serverinfo cvars" },
+        { "t", "custom", "list user-created cvars" },
+        { "u", "userinfo", "list userinfo cvars" },
+        { "v", "verbose", "display flags of each cvar" },
+        { "w:string", "wildcard", "list cvars matching wildcard" },
         { NULL }
     };
 	cvar_t	*var;
 	int		i, total;
-    qboolean verbose = qfalse;
+    qboolean verbose = qfalse, modified = qfalse, latched = qfalse;
+    int mask = 0;
 	char *wildcard = NULL;
 	char buffer[6];
     int c;
 
     while( ( c = Cmd_ParseOptions( options ) ) != -1 ) {
         switch( c ) {
-        case 'f':
-            wildcard = cmd_optarg;
+        case 'a':
+            mask |= CVAR_ARCHIVE;
+            break;
+        case 'c':
+            mask |= CVAR_CHEAT;
             break;
         case 'h':
             Cmd_PrintUsage( options, NULL );
@@ -771,8 +786,32 @@ static void Cvar_List_f( void ) {
                         "G: latched (requires game map restart)\n"
                         "?: created by user\n" );
             return;
+        case 'l':
+            latched = qtrue;
+            break;
+        case 'm':
+            modified = qtrue;
+            break;
+        case 'n':
+            mask |= CVAR_NOSET;
+            break;
+        case 'r':
+            mask |= CVAR_ROM;
+            break;
+        case 's':
+            mask |= CVAR_SERVERINFO;
+            break;
+        case 't':
+            mask |= CVAR_USER_CREATED;
+            break;
+        case 'u':
+            mask |= CVAR_USERINFO;
+            break;
         case 'v':
             verbose = qtrue;
+            break;
+        case 'w':
+            wildcard = cmd_optarg;
             break;
         default:
             return;
@@ -782,9 +821,20 @@ static void Cvar_List_f( void ) {
 	buffer[sizeof( buffer ) - 1] = 0;
 	i = 0;
 	for( var = cvar_vars, total = 0; var; var = var->next, total++ ) {
+        if( latched && !var->latched_string ) {
+            continue;
+        }
+        if( mask && !( var->flags & mask ) ) {
+            continue;
+        }
 		if( wildcard && !Com_WildCmp( wildcard, var->name, qtrue ) ) {
 			continue;
 		}
+        if( modified && ( !strcmp( var->latched_string ? var->latched_string :
+            var->string, var->default_string ) || ( var->flags & CVAR_ROM ) ) )
+        {
+            continue;
+        }
 
 		if( verbose ) {
 			memset( buffer, ' ', sizeof( buffer ) - 1 );

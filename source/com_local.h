@@ -178,6 +178,8 @@ void Cmd_Shift( void );
 
 void Cmd_Alias_f( void );
 
+void Cmd_WriteAliases( fileHandle_t f );
+
 void Cmd_FillAPI( cmdAPI_t *api );
 
 
@@ -255,9 +257,9 @@ void Cvar_Command( cvar_t *v );
 // command.  Returns qtrue if the command was a variable reference that
 // was handled. (print or change)
 
-void 	Cvar_WriteVariables( fileHandle_t f );
+void 	Cvar_WriteVariables( fileHandle_t f, int mask, qboolean modified );
 // appends lines containing "set variable value" for all variables
-// with the archive flag set to qtrue.
+// with matching flags
 
 void	Cvar_Init (void);
 

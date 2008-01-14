@@ -23,6 +23,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <zlib.h>
 #include "unzip.h"
 #endif
+#ifdef __unix__
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
+#include <errno.h>
 
 /*
 =============================================================================
@@ -462,6 +468,9 @@ static int FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
 	char *modeStr;
 	fsFileType_t type;
 	uint32 mode;
+#ifdef __unix__
+    struct stat st;
+#endif
 
 #ifdef _WIN32
 	// allow writing into basedir on Windows
@@ -499,10 +508,23 @@ static int FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
 
 	fp = fopen( file->fullpath, modeStr );
 	if( !fp ) {
-		FS_DPrintf( "%s: %s: fopen(%s) failed\n",
-			__func__, file->fullpath, modeStr );
+		FS_DPrintf( "%s: %s: fopen(%s): %s\n",
+			__func__, file->fullpath, modeStr, strerror( errno ) );
 		return -1;
 	}
+
+#ifdef __unix__
+    if( fstat( fileno( fp ), &st ) == -1 ) {
+        FS_DPrintf( "%s: %s: stat: %s\n",
+            __func__, file->fullpath, strerror( errno ) );
+        return -1;
+    }
+    if( !S_ISREG( st.st_mode ) ) {
+        FS_DPrintf( "%s: %s: not a file\n",
+            __func__, file->fullpath );
+        return -1;
+    }
+#endif
 
 	type = FS_REAL;
 #if USE_ZLIB
@@ -511,8 +533,8 @@ static int FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
 		if( !FS_strcmp( ext, ".gz" ) ) {
 			zfp = gzdopen( fileno( fp ), modeStr );
 			if( !zfp ) {
-				FS_DPrintf( "%s: %s: gzopen(%s) failed\n",
-					__func__, file->fullpath, modeStr );
+				FS_DPrintf( "%s: %s: gzdopen(%s): %s\n",
+					__func__, file->fullpath, modeStr, strerror( errno ) );
 				fclose( fp );
 				return -1;
 			}
@@ -570,7 +592,12 @@ static int FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean unique )
 	char			*ext;
 #endif
 	fsFileType_t	type;
-	int				pos, length;
+	int				length;
+#ifdef __unix__
+    struct stat     st;
+#else
+    int             pos;
+#endif
 
 	fs_fileFromPak = qfalse;
     fs_count_read++;
@@ -668,6 +695,26 @@ static int FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean unique )
 				continue;
 			}
 
+#ifdef __unix__
+            if( fstat( fileno( fp ), &st ) == -1 ) {
+                FS_DPrintf( "%s: %s: stat: %s\n",
+                    __func__, file->fullpath, strerror( errno ) );
+                continue;
+            }
+            if( !S_ISREG( st.st_mode ) ) {
+                FS_DPrintf( "%s: %s: not a file\n",
+                    __func__, file->fullpath );
+                continue;
+            }
+
+            length = st.st_size;
+#else
+            pos = ftell( fp );
+            fseek( fp, 0, SEEK_END );
+            length = ftell( fp );
+            fseek( fp, pos, SEEK_SET );
+#endif
+
 			type = FS_REAL;
 #if USE_ZLIB
 			if( !( file->mode & FS_FLAG_RAW ) ) {
@@ -675,8 +722,8 @@ static int FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean unique )
 				if( !strcmp( ext, ".gz" ) ) {
 					zfp = gzdopen( fileno( fp ), "rb" );
 					if( !zfp ) {
-						FS_DPrintf( "%s: %s: gzopen(rb) failed\n",
-                            __func__, file->fullpath );
+						FS_DPrintf( "%s: %s: gzdopen(rb): %s\n",
+                            __func__, file->fullpath, strerror( errno ) );
 						fclose( fp );
 						return -1;
 					}
@@ -690,12 +737,6 @@ static int FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean unique )
 			file->fp = fp;
 			file->type = type;
 			file->unique = qtrue;
-
-			pos = ftell( fp );
-			fseek( fp, 0, SEEK_END );
-			length = ftell( fp );
-			fseek( fp, pos, SEEK_SET );
-
 			file->length = length;
 
 			return length;
@@ -862,7 +903,8 @@ static char *FS_ExpandLinks( const char *filename ) {
                 return ( char * )filename;
             }
             memcpy( buffer, l->target, l->targetLength );
-            strcpy( buffer + l->targetLength, filename + l->nameLength );
+            memcpy( buffer + l->targetLength, filename + l->nameLength,
+                length - l->nameLength + 1 );
             FS_DPrintf( "%s: %s --> %s\n", __func__, filename, buffer );
             return buffer;
         }
