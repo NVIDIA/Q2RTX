@@ -119,13 +119,9 @@ char *Cvar_VariableString( const char *var_name ) {
 Cvar_VariableStringBuffer
 ============
 */
-void Cvar_VariableStringBuffer( const char *var_name, char *buffer,
-        int bufferSize )
-{
-	Q_strncpyz( buffer, Cvar_VariableString( var_name ), bufferSize );
+void Cvar_VariableStringBuffer( const char *var_name, char *buffer, int size ) {
+	Q_strncpyz( buffer, Cvar_VariableString( var_name ), size );
 }
-
-
 
 const char *Cvar_Generator( const char *text, int state ) {
     static int length;
@@ -169,7 +165,7 @@ The flags will be or'ed in if the variable exists.
 ============
 */
 cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
-	cvar_t	*var;
+	cvar_t	*var, *c, **p;
 	uint32 hash;
 	int length;
 
@@ -253,15 +249,21 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 	var->flags = flags;
     var->changed = NULL;
     var->generator = NULL;
+	var->modified = qtrue;
+
+	// sort the variable in
+    for( c = cvar_vars, p = &cvar_vars; c; p = &c->next, c = c->next ) {
+        if( strcmp( var->name, c->name ) < 0 ) {
+            break;
+        }
+    }
+	var->next = c;
+	*p = var;
 
 	// link the variable in
 	hash = Com_HashString( var_name, CVARHASH_SIZE );
-	var->next = cvar_vars;
-	cvar_vars = var;
 	var->hashNext = cvarHash[hash];
 	cvarHash[hash] = var;
-
-	var->modified = qtrue;
 
 	return var;
 }
@@ -942,7 +944,7 @@ static void Cvar_Inc_f( void ) {
 
 	if( !COM_IsNumeric( var->string ) ) {
 		Com_Printf( "\"%s\" is \"%s\", can't increment\n",
-                var->name, var->string );
+            var->name, var->string );
 		return;
 	}
 

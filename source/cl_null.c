@@ -63,11 +63,8 @@ void CL_PacketEvent( neterr_t ret ) {
 void CL_UpdateUserinfo( cvar_t *var, cvarSetSource_t source ) {
 }
 
-void Cmd_ForwardToServer( void ) {
-	char *cmd;
-
-	cmd = Cmd_Argv( 0 );
-	Com_Printf( "Unknown command \"%s\"\n", cmd );
+qboolean Cmd_ForwardToServer( void ) {
+    return qfalse;
 }
 
 void SCR_DebugGraph( float value, int color ) {

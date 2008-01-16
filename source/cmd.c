@@ -490,7 +490,7 @@ typedef struct cmd_function_s {
 	xgenerator_t	generator1;
 	xgenerator_t	generator2;
 	xgenerator_t	generator3;
-	const char		*name;
+	char		*name;
 } cmd_function_t;
 
 static	list_t		cmd_functions;		/* possible commands to execute */
@@ -1082,12 +1082,19 @@ static void Cmd_RegCommand( const cmdreg_t *reg ) {
 // fail if the command already exists
     cmd = Cmd_Find( reg->name );
 	if( cmd ) {
-        Com_WPrintf( "Cmd_AddCommand: %s already defined\n", reg->name );
+        if( cmd->function ) {
+            Com_WPrintf( "Cmd_AddCommand: %s already defined\n", reg->name );
+            return;
+        }
+        cmd->function = reg->function;
+        cmd->generator1 = reg->generator1;
+        cmd->generator2 = reg->generator2;
+        cmd->generator3 = reg->generator3;
         return;
 	}
 
     cmd = Cmd_Malloc( sizeof( *cmd ) );
-    cmd->name = reg->name;
+    cmd->name = ( char * )reg->name;
     cmd->function = reg->function;
     cmd->generator1 = reg->generator1;
     cmd->generator2 = reg->generator2;
@@ -1290,8 +1297,8 @@ void Cmd_ExecuteString( const char *text ) {
 	if( cmd ) {
         if( cmd->function ) {
             cmd->function();
-        } else {
-            Cmd_ForwardToServer();
+        } else if( !Cmd_ForwardToServer() ) {
+            Com_Printf( "Can't \"%s\", not connected\n", cmd_argv[0] );
         }
 		return;
 	}
@@ -1319,7 +1326,9 @@ void Cmd_ExecuteString( const char *text ) {
     }
 
 	// send it as a server command if we are connected
-	Cmd_ForwardToServer();
+	if( !Cmd_ForwardToServer() ) {
+        Com_Printf( "Unknown command \"%s\"\n", cmd_argv[0] );
+    }
 }
 
 /*
@@ -1456,6 +1465,47 @@ static void Cmd_Text_f( void ) {
     Cbuf_AddText( "\n" );
 }
 
+static void Cmd_Complete_f( void ) {
+    cmd_function_t *cmd;
+    char *name;
+    uint32 hash;
+    int len;
+
+    if( cmd_argc < 2 ) {
+        Com_Printf( "Usage: %s <command>", cmd_argv[0] );
+        return;
+    }
+
+    name = cmd_argv[1];
+
+// fail if the command is a variable name
+	if( Cvar_Exists( name ) ) {
+		Com_Printf( "%s is already defined as a cvar\n", name );
+		return;
+	}
+	
+// fail if the command already exists
+    cmd = Cmd_Find( name );
+	if( cmd ) {
+        Com_Printf( "%s is already defined\n", name );
+        return;
+	}
+
+    len = strlen( name ) + 1;
+    cmd = Cmd_Malloc( sizeof( *cmd ) + len );
+    cmd->name = ( char * )( cmd + 1 );
+    memcpy( cmd->name, name, len );
+    cmd->function = NULL;
+    cmd->generator1 = NULL;
+    cmd->generator2 = NULL;
+    cmd->generator3 = NULL;
+
+    List_Append( &cmd_functions, &cmd->listEntry );
+
+    hash = Com_HashString( name, CMD_HASH_SIZE );
+    List_Append( &cmd_hash[hash], &cmd->hashEntry );
+}
+
 /*
 ============
 Cmd_FillAPI
@@ -1485,6 +1535,7 @@ static const cmdreg_t c_cmd[] = {
     { "unalias", Cmd_UnAlias_f, Cmd_Alias_g },
     { "wait", Cmd_Wait_f },
     { "text", Cmd_Text_f },
+    { "complete", Cmd_Complete_f },
 
     { NULL }
 };

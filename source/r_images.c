@@ -1147,6 +1147,7 @@ uint32		d_8to24table[256];
 #ifdef TRUECOLOR_RENDERER
 
 static cvar_t	*r_override_textures;
+static cvar_t	*r_texture_formats;
 
 /*
 ================
@@ -1359,7 +1360,7 @@ image_t	*R_FindImage( const char *name, imagetype_t type ) {
 	byte	*pic;
 	int		width, height;
 	char	buffer[MAX_QPATH];
-	char	*ext;
+	char	*ext, *s;
 	int		length;
 	uint32	hash, extHash;
 	imageflags_t flags;
@@ -1404,36 +1405,36 @@ image_t	*R_FindImage( const char *name, imagetype_t type ) {
 	flags = 0;
 
 	if( r_override_textures->integer ) {
+        for( s = r_texture_formats->string; *s; s++ ) {
+            switch( *s ) {
 #if USE_PNG
-		// try *.png
-		strcpy( ext, ".png" );
-		Image_LoadPNG( buffer, &pic, &width, &height );
-
-		if( !pic )
+            case 'p': // try *.png
+                strcpy( ext, ".png" );
+                Image_LoadPNG( buffer, &pic, &width, &height );
+                break;
 #endif
-		{
-			// try *.tga
-			strcpy( ext, ".tga" );
-			Image_LoadTGA( buffer, &pic, &width, &height );
-
 #if USE_JPEG
-			if( !pic ) {
-				// try *.jpg
-				strcpy( ext, ".jpg" );
-				Image_LoadJPG( buffer, &pic, &width, &height );
-			}
+            case 'j': // try *.jpg
+                strcpy( ext, ".jpg" );
+                Image_LoadJPG( buffer, &pic, &width, &height );
+                break;
 #endif
-		}
-
-		if( pic ) {
-		    // replacing 8 bit texture with 32 bit texture
-			if( extHash == EXTENSION_WAL ) {
-				flags |= if_replace_wal;
-			} else if( extHash == EXTENSION_PCX ) {
-				flags |= if_replace_pcx;
+            case 't': // try *.tga
+                strcpy( ext, ".tga" );
+                Image_LoadTGA( buffer, &pic, &width, &height );
+                break;
             }
-			goto load;
-		}
+
+            if( pic ) {
+                // replacing 8 bit texture with 32 bit texture
+                if( extHash == EXTENSION_WAL ) {
+                    flags |= if_replace_wal;
+                } else if( extHash == EXTENSION_PCX ) {
+                    flags |= if_replace_pcx;
+                }
+                goto load;
+            }
+        }
 
         switch( extHash ) {
         case EXTENSION_PNG:
@@ -1466,22 +1467,23 @@ image_t	*R_FindImage( const char *name, imagetype_t type ) {
 			goto load;
 		}
 #endif
-
-		// try *.tga
-		strcpy( ext, ".tga" );
-		Image_LoadTGA( buffer, &pic, &width, &height );
-		if( pic ) {
-			goto load;
-		}
-
+        for( s = r_texture_formats->string; *s; s++ ) {
+            switch( *s ) {
 #if USE_JPEG
-		// try *.jpg
-		strcpy( ext, ".jpg" );
-		Image_LoadJPG( buffer, &pic, &width, &height );
-		if( pic ) {
-			goto load;
-		}
+            case 'j': // try *.jpg
+                strcpy( ext, ".jpg" );
+                Image_LoadJPG( buffer, &pic, &width, &height );
+                break;
 #endif
+            case 't': // try *.tga
+                strcpy( ext, ".tga" );
+                Image_LoadTGA( buffer, &pic, &width, &height );
+                break;
+            }
+            if( pic ) {
+                goto load;
+            }
+        }
 
 		// try *.pcx
 		strcpy( ext, ".pcx" );
@@ -1499,23 +1501,25 @@ image_t	*R_FindImage( const char *name, imagetype_t type ) {
 			goto load;
 		}
 
+        for( s = r_texture_formats->string; *s; s++ ) {
+            switch( *s ) {
 #if USE_PNG
-		// try *.png
-		strcpy( ext, ".png" );
-		Image_LoadPNG( buffer, &pic, &width, &height );
-		if( pic ) {
-			goto load;
-		}
+            case 'p': // try *.png
+                strcpy( ext, ".png" );
+                Image_LoadPNG( buffer, &pic, &width, &height );
+                break;
 #endif
-
 #if USE_JPEG
-		// try *.jpg
-		strcpy( ext, ".jpg" );
-		Image_LoadJPG( buffer, &pic, &width, &height );
-		if( pic ) {
-			goto load;
-		}
+            case 'j': // try *.jpg
+                strcpy( ext, ".jpg" );
+                Image_LoadJPG( buffer, &pic, &width, &height );
+                break;
 #endif
+            }
+            if( pic ) {
+                goto load;
+            }
+        }
 
 		// try *.pcx
 		strcpy( ext, ".pcx" );
@@ -1535,21 +1539,24 @@ image_t	*R_FindImage( const char *name, imagetype_t type ) {
 		}
 #endif
 
+        for( s = r_texture_formats->string; *s; s++ ) {
+            switch( *s ) {
 #if USE_PNG
-		// try *.png
-		strcpy( ext, ".png" );
-		Image_LoadPNG( buffer, &pic, &width, &height );
-		if( pic ) {
-			goto load;
-		}
+            case 'p': // try *.png
+                strcpy( ext, ".png" );
+                Image_LoadPNG( buffer, &pic, &width, &height );
+                break;
 #endif
+            case 't': // try *.tga
+                strcpy( ext, ".tga" );
+                Image_LoadTGA( buffer, &pic, &width, &height );
+                break;
+            }
+            if( pic ) {
+                goto load;
+            }
+        }
 
-		// try *.tga
-		strcpy( ext, ".tga" );
-		Image_LoadTGA( buffer, &pic, &width, &height );
-		if( pic ) {
-			goto load;
-		}
 
 		// try *.pcx
 		strcpy( ext, ".pcx" );
@@ -1569,30 +1576,30 @@ image_t	*R_FindImage( const char *name, imagetype_t type ) {
 			goto load;
 		}
 
+        for( s = r_texture_formats->string; *s; s++ ) {
+            switch( *s ) {
 #if USE_PNG
-		// try *.png
-		strcpy( ext, ".png" );
-		Image_LoadPNG( buffer, &pic, &width, &height );
-		if( pic ) {
-			goto load;
-		}
+            case 'p': // try *.png
+                strcpy( ext, ".png" );
+                Image_LoadPNG( buffer, &pic, &width, &height );
+                break;
 #endif
-
-		// try *.tga
-		strcpy( ext, ".tga" );
-		Image_LoadTGA( buffer, &pic, &width, &height );
-		if( pic ) {
-			goto load;
-		}
-
 #if USE_JPEG
-		// try *.jpg
-		strcpy( ext, ".jpg" );
-		Image_LoadJPG( buffer, &pic, &width, &height );
-		if( pic ) {
-			goto load;
-		}
+            case 'j': // try *.jpg
+                strcpy( ext, ".jpg" );
+                Image_LoadJPG( buffer, &pic, &width, &height );
+                break;
 #endif
+            case 't': // try *.tga
+                strcpy( ext, ".tga" );
+                Image_LoadTGA( buffer, &pic, &width, &height );
+                break;
+            }
+
+            if( pic ) {
+                goto load;
+            }
+        }
 
 		return NULL;
 
@@ -1604,31 +1611,30 @@ image_t	*R_FindImage( const char *name, imagetype_t type ) {
 		}
 
 		// FIXME: no way to figure correct texture dimensions here
-
+        for( s = r_texture_formats->string; *s; s++ ) {
+            switch( *s ) {
 #if USE_PNG
-		// try *.png
-		strcpy( ext, ".png" );
-		Image_LoadPNG( buffer, &pic, &width, &height );
-		if( pic ) {
-			goto load;
-		}
+            case 'p': // try *.png
+                strcpy( ext, ".png" );
+                Image_LoadPNG( buffer, &pic, &width, &height );
+                break;
 #endif
-
-		// try *.tga
-		strcpy( ext, ".tga" );
-		Image_LoadTGA( buffer, &pic, &width, &height );
-		if( pic ) {
-			goto load;
-		}
-
 #if USE_JPEG
-		// try *.jpg
-		strcpy( ext, ".jpg" );
-		Image_LoadJPG( buffer, &pic, &width, &height );
-		if( pic ) {
-			goto load;
-		}
+            case 'j': // try *.jpg
+                strcpy( ext, ".jpg" );
+                Image_LoadJPG( buffer, &pic, &width, &height );
+                break;
 #endif
+            case 't': // try *.tga
+                strcpy( ext, ".tga" );
+                Image_LoadTGA( buffer, &pic, &width, &height );
+                break;
+            }
+
+            if( pic ) {
+                goto load;
+            }
+        }
 
 		return NULL;
 
@@ -1827,7 +1833,15 @@ void R_InitImageManager( void ) {
 
 #ifdef TRUECOLOR_RENDERER
 	r_override_textures = cvar.Get( "r_override_textures", "0", CVAR_ARCHIVE|CVAR_LATCHED );
+    r_texture_formats = cvar.Get( "r_texture_formats",
+#if USE_PNG
+        "p"
 #endif
+#if USE_JPEG
+        "j"
+#endif
+#endif
+        "t", 0 );
 	cmd.AddCommand( "imagelist", R_ImageList_f );
 
     for( i = 0; i < RIMAGES_HASH; i++ ) {

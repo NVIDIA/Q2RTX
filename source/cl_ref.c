@@ -369,7 +369,7 @@ void CL_InitRefresh( void ) {
 	// Create the video variables so we know how to start the graphics drivers
     vid_placement = Cvar_Get( "vid_placement", "640x480", CVAR_ARCHIVE );
     vid_fullscreen = Cvar_Get( "vid_fullscreen", "0", CVAR_ARCHIVE );
-    vid_modelist = Cvar_Get( "vid_modelist", "640x480", CVAR_ARCHIVE );
+    vid_modelist = Cvar_Get( "vid_modelist", "640x480 800x600 1024x768", CVAR_ARCHIVE );
 
 #ifdef REF_HARD_LINKED
 	vid_ref = Cvar_Get( "vid_ref", DEFAULT_REFRESH_DRIVER, CVAR_ROM );
