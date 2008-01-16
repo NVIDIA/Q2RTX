@@ -146,7 +146,7 @@ void GL_DrawParticles( void ) {
 
         scale = gl_partscale->value;
         if( dist > 20 ) {
-            scale += dist * 0.006f;
+            scale += dist * 0.012f;
         }
 
         if( p->color == 255 ) {
@@ -167,9 +167,9 @@ void GL_DrawParticles( void ) {
         VectorMA( dst_vert, scale, glr.viewaxis[2], dst_vert + 5 );
         VectorMA( dst_vert, -scale, glr.viewaxis[1], dst_vert + 10 );
 
-        dst_vert[3] = 0.0625f; dst_vert[4] = 0.0625f;
-        dst_vert[8] = 1.0625f; dst_vert[9] = 0.0625f;
-        dst_vert[13] = 0.0625f; dst_vert[14] = 1.0625f;
+        dst_vert[3] = 0; dst_vert[4] = 0;
+        dst_vert[8] = 2; dst_vert[9] = 0;
+        dst_vert[13] = 0; dst_vert[14] = 2;
 
         dst_color = ( uint32 * )tess.colors + numVertices;
         dst_color[0] = *( uint32 * )color;

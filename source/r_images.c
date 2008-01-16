@@ -1374,9 +1374,7 @@ image_t	*R_FindImage( const char *name, imagetype_t type ) {
 	}
 
 	if( length <= 4 ) {
-		/* must have at least 1 char of basename 
-		 * and 4 chars of extension part */
-		return NULL;
+		return NULL; // must have at least 1 char of base name 
 	}
 
 	length -= 4;

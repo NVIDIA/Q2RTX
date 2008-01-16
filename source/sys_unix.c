@@ -71,12 +71,6 @@ static struct termios   tty_orig;
 static commandPrompt_t	tty_prompt;
 static int				tty_hidden;
 
-static byte             sys_output_buffer[MAX_MSGLEN];
-static fifo_t           sys_output = {
-    .data = sys_output_buffer,
-    .size = sizeof( sys_output_buffer )
-};
-
 void Sys_Printf( const char *fmt, ... );
 
 /*
@@ -87,6 +81,20 @@ TERMINAL SUPPORT
 ===============================================================================
 */
 
+static void Sys_ConsoleWrite( char *data, int count ) {
+    int ret;
+
+    while( count ) {
+        ret = write( 1, data, count );
+        if( ret <= 0 ) {
+            Com_Error( ERR_FATAL, "%s: %d bytes written: %s",
+                __func__, ret, strerror( errno ) );
+        }
+        count -= ret;
+        data += ret;
+    }
+}
+
 static void Sys_HideInput( void ) {
 	int i;
 
@@ -96,7 +104,7 @@ static void Sys_HideInput( void ) {
 
 	if( !tty_hidden ) {
 		for( i = 0; i <= tty_prompt.inputLine.cursorPos; i++ ) {
-            FIFO_Write( &sys_output, "\b \b", 3 );	
+            Sys_ConsoleWrite( "\b \b", 3 );
 		}
 	}
 	tty_hidden++;
@@ -114,9 +122,9 @@ static void Sys_ShowInput( void ) {
 
 	tty_hidden--;
 	if( !tty_hidden ) {
-        FIFO_Write( &sys_output, "]", 1 );	
-        FIFO_Write( &sys_output, tty_prompt.inputLine.text,
-            tty_prompt.inputLine.cursorPos );	
+        Sys_ConsoleWrite( "]", 1 );	
+        Sys_ConsoleWrite( tty_prompt.inputLine.text,
+            tty_prompt.inputLine.cursorPos );
 	}
 }
 
@@ -159,37 +167,36 @@ Sys_ConsoleOutput
 =================
 */
 void Sys_ConsoleOutput( const char *string ) {
-	char    *data, *maxp, *p;
-    int     length;
+    char    buffer[MAXPRINTMSG*2];
+	char    *m, *p;
     int     color = 0;
 
+    p = buffer;
+    m = buffer + sizeof( buffer );
+
 	if( !tty_enabled ) {
-        data = p = FIFO_Reserve( &sys_output, &length );
-        maxp = p + length;
         while( *string ) {
             if( Q_IsColorString( string ) ) {
                 string += 2;
                 continue;
             }
-            if( p + 1 > maxp ) {
+            if( p + 1 > m ) {
                 break;
             }
             *p++ = *string++ & 127;
         }
 
-        FIFO_Commit( &sys_output, p - data );
+        Sys_ConsoleWrite( buffer, p - buffer );
 		return;
 	}
 
     Sys_HideInput();
     
-    data = p = FIFO_Reserve( &sys_output, &length );
-    maxp = p + length;
     while( *string ) {
         if( Q_IsColorString( string ) ) {
             color = string[1];
             string += 2;
-            if( p + 5 > maxp ) {
+            if( p + 5 > m ) {
                 break;
             }
             p[0] = '\033';
@@ -211,15 +218,15 @@ void Sys_ConsoleOutput( const char *string ) {
             }
             continue;
         }
-        if( p + 1 > maxp ) {
+        if( p + 1 > m ) {
             break;
         }
         *p++ = *string++ & 127;
     }
 
     if( color ) {
-        if( p + 4 > maxp ) {
-            p = maxp - 4;
+        if( p + 4 > m ) {
+            p = m - 4;
         }
         p[0] = '\033';
         p[1] = '[';
@@ -228,7 +235,7 @@ void Sys_ConsoleOutput( const char *string ) {
         p += 4;
     }
 
-    FIFO_Commit( &sys_output, p - data );
+    Sys_ConsoleWrite( buffer, p - buffer );
 	
     Sys_ShowInput();
 }
@@ -241,7 +248,7 @@ void Sys_SetConsoleTitle( const char *title ) {
         return;
     }
     len = Com_sprintf( buffer, sizeof( buffer ), "\033]0;%s\007", title );
-    FIFO_Write( &sys_output, buffer, len );	
+    Sys_ConsoleWrite( buffer, len );	
 }
 
 /*
@@ -266,14 +273,14 @@ static void Sys_ParseInput( const char *text ) {
         if( key == tty_orig.c_cc[VERASE] || key == 127 || key == 8 ) {
             if( f->cursorPos ) {
                 f->text[--f->cursorPos] = 0;
-                FIFO_Write( &sys_output, "\b \b", 3 );	
+                Sys_ConsoleWrite( "\b \b", 3 );	
             }
             continue;
         }
 
         if( key == tty_orig.c_cc[VKILL] ) {
             for( i = 0; i < f->cursorPos; i++ ) {
-                FIFO_Write( &sys_output, "\b \b", 3 );	
+                Sys_ConsoleWrite( "\b \b", 3 );	
             }
             f->cursorPos = 0;
             continue;
@@ -281,8 +288,9 @@ static void Sys_ParseInput( const char *text ) {
 
         if( key >= 32 ) {
             if( f->cursorPos < sizeof( f->text ) - 1 ) {
-                FIFO_Write( &sys_output, &key, 1 );	
-                f->text[f->cursorPos] = key;
+                char c = key;
+                Sys_ConsoleWrite( &c, 1 );	
+                f->text[f->cursorPos] = c;
                 f->text[++f->cursorPos] = 0;
             }
             continue;
@@ -298,7 +306,7 @@ static void Sys_ParseInput( const char *text ) {
                 Sys_Printf( "]%s\n", s );
                 Cbuf_AddText( s );
             } else {
-                FIFO_Write( &sys_output, "]\n", 2 );	
+                Sys_ConsoleWrite( "]\n", 2 );	
             }
             Sys_ShowInput();
             continue;
@@ -351,10 +359,8 @@ static void Sys_ParseInput( const char *text ) {
 }
 
 void Sys_RunConsole( void ) {
-	fd_set	rfd, wfd;
+	fd_set	fd;
     struct timeval tv;
-    byte *data;
-    int length;
     char text[MAX_STRING_CHARS];
     int ret;
 
@@ -362,42 +368,31 @@ void Sys_RunConsole( void ) {
         return;
     }
 
-    FD_ZERO( &rfd );
-    FD_ZERO( &wfd );
-    FD_SET( 0, &rfd ); // stdin
-    FD_SET( 1, &wfd ); // stdout
+    FD_ZERO( &fd );
+    FD_SET( 0, &fd ); // stdin
     tv.tv_sec = 0;
     tv.tv_usec = 0;
-    if( select( 2, &rfd, &wfd, NULL, &tv ) == -1 ) {
+    if( select( 1, &fd, NULL, NULL, &tv ) == -1 ) {
         Com_Error( ERR_FATAL, "%s: select() failed", __func__ );
     }
 
-    if( FD_ISSET( 0, &rfd ) ) {
-        ret = read( 0, text, sizeof( text ) );
-        if( !ret ) {
-            Com_DPrintf( "Read EOF from stdin.\n" );
-            Sys_ShutdownTTY();
-            Cvar_Set( "sys_stdio", "0" );
-            return;
-        }
-        if( ret < 0 ) {
-            Com_Error( ERR_FATAL, "%s: %d bytes read", __func__, ret );
-        }
-        text[ret] = 0;
-
-        Sys_ParseInput( text );
+    if( !FD_ISSET( 0, &fd ) ) {
+        return;
     }
 
-    if( FD_ISSET( 1, &wfd ) ) {
-        data = FIFO_Peek( &sys_output, &length );
-        if( length ) {
-            ret = write( 1, data, length );
-            if( ret <= 0 ) {
-                Com_Error( ERR_FATAL, "%s: %d bytes written", __func__, ret );
-            }
-            FIFO_Decommit( &sys_output, ret );
-        }
+    ret = read( 0, text, sizeof( text ) - 1 );
+    if( !ret ) {
+        Com_DPrintf( "Read EOF from stdin.\n" );
+        Sys_ShutdownTTY();
+        Cvar_Set( "sys_stdio", "0" );
+        return;
     }
+    if( ret < 0 ) {
+        Com_Error( ERR_FATAL, "%s: %d bytes read", __func__, ret );
+    }
+    text[ret] = 0;
+
+    Sys_ParseInput( text );
 }
 
 /*
@@ -477,6 +472,71 @@ void Hunk_Free( mempool_t *pool ) {
     memset( pool, 0, sizeof( *pool ) );
 }
 
+/*
+===============================================================================
+
+FIFO
+
+===============================================================================
+*/
+
+#if 0
+qboolean FIFO_Alloc( fifo_t *fifo, int size ) {
+    byte *mem, *ret;
+    char temp[32];
+    int fd;
+
+    strcpy( temp, "/dev/shm/" APPLICATION "-XXXXXX" );
+    fd = mkstemp( temp );
+    if( fd < 0 ) {
+        return qfalse;
+    }
+
+    unlink( temp );
+
+    size = ( size + 4095 ) & ~4095;
+
+    if( ftruncate( fd, size << 1 ) == -1 ) {
+        goto fail2;
+    }
+
+    mem = mmap( NULL, size << 1, PROT_NONE, MAP_ANONYMOUS|MAP_PRIVATE, -1, 0 );
+    if( mem == MAP_FAILED ) {
+        goto fail2;
+    }
+
+    ret = mmap( mem, size, PROT_READ|PROT_WRITE, MAP_FIXED|MAP_SHARED, fd, 0 );
+    if( ret != mem ) {
+        goto fail1;
+    }
+
+    ret = mmap( mem + size, size, PROT_READ|PROT_WRITE, MAP_FIXED|MAP_SHARED, fd, 0 );
+    if( ret != mem + size ) {
+        goto fail1;
+    }
+
+    fifo->data = mem;
+    fifo->size = size;
+    fifo->tail = fifo->head = 0;
+    return qtrue;
+
+fail1:
+    munmap( mem, size << 1 );
+fail2:
+    close( fd );
+    return qfalse;
+}
+
+void FIFO_Free( fifo_t *fifo ) {
+    if( fifo->data ) { 
+        if( munmap( fifo->data, fifo->size << 1 ) ) {
+			Com_Error( ERR_FATAL, "%s: munmap failed: %s",
+                __func__, strerror( errno ) );
+        }
+    }
+    memset( fifo, 0, sizeof( *fifo ) );
+}
+#endif
 
 /*
 ===============================================================================
@@ -550,7 +610,7 @@ Sys_GetFileInfo
 ================
 */
 qboolean Sys_GetFileInfo( const char *path, fsFileInfo_t *info ) {
-	struct stat		st;
+	struct stat st;
 
 	if( stat( path, &st ) == -1 ) {
 		return qfalse;
@@ -816,7 +876,7 @@ void Sys_Init( void ) {
     if( sys_stdio->integer ) {
         // change stdin and stdout to non-blocking
         fcntl( 0, F_SETFL, fcntl( 0, F_GETFL, 0 ) | FNDELAY );
-        fcntl( 1, F_SETFL, fcntl( 1, F_GETFL, 0 ) | FNDELAY );
+        fcntl( 1, F_SETFL, fcntl( 1, F_GETFL, 0 ) & ~FNDELAY );
 
         // init TTY support
         if( sys_stdio->integer > 1 ) {

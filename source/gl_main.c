@@ -67,6 +67,7 @@ cvar_t *gl_fastsky;
 #if USE_DYNAMIC
 cvar_t *gl_dynamic;
 #endif
+cvar_t *gl_polyblend;
 cvar_t *gl_fullbright;
 cvar_t *gl_hwgamma;
 cvar_t *gl_fullscreen;
@@ -126,7 +127,7 @@ static void GL_SetupFrustum( void ) {
 static void GL_Blend( void ) {
     color_t color;
     
-    if( glr.fd.blend[3] == 0 ) {
+    if( !gl_polyblend->integer || glr.fd.blend[3] == 0 ) {
         return;
     }
 
@@ -676,7 +677,7 @@ static void GL_ModeChanged( int width, int height, int flags,
 
 static void GL_Register( void ) {
     /* misc */
-	gl_partscale = cvar.Get( "gl_partscale", "1.5", 0 );
+	gl_partscale = cvar.Get( "gl_partscale", "2", 0 );
 #if USE_JPEG
 	gl_screenshot_quality = cvar.Get( "gl_screenshot_quality", "100", 0 );
 #endif
@@ -706,6 +707,7 @@ static void GL_Register( void ) {
 #if USE_DYNAMIC
     gl_dynamic = cvar.Get( "gl_dynamic", "2", CVAR_ARCHIVE );
 #endif
+    gl_polyblend = cvar.Get( "gl_polyblend", "1", 0 );
     gl_fullbright = cvar.Get( "r_fullbright", "0", CVAR_CHEAT );
     gl_showerrors = cvar.Get( "gl_showerrors", "1", 0 );
     gl_fragment_program = cvar.Get( "gl_fragment_program", "0", CVAR_LATCHED );

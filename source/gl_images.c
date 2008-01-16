@@ -968,24 +968,33 @@ static void GL_InitDefaultTexture( void ) {
     r_notexture = R_CreateImage( "*notexture", pixels, 8, 8, it_wall, if_auto );
 }
 
+#define DLIGHT_TEXTURE_SIZE     16
+
 static void GL_InitParticleTexture( void ) {
-    int i, j;
-    byte pixels[8*8*4];
+    byte pixels[DLIGHT_TEXTURE_SIZE*DLIGHT_TEXTURE_SIZE*4];
     byte *dst;
-    
+    float x, y, f;
+    int i, j;
+
     dst = pixels;
-    for( i = 0; i < 8; i++ ) {
-        for( j = 0; j < 8; j++ ) {
+    for( i = 0; i < DLIGHT_TEXTURE_SIZE; i++ ) {
+        for( j = 0; j < DLIGHT_TEXTURE_SIZE; j++ ) {
+            x = j - DLIGHT_TEXTURE_SIZE/2 + 0.5f;
+            y = i - DLIGHT_TEXTURE_SIZE/2 + 0.5f;
+            f = sqrt( x * x + y * y );
+            f = 1.0f - f / ( DLIGHT_TEXTURE_SIZE/2 - 1.5f );
+            if( f < 0 ) f = 0;
+            else if( f > 1 ) f = 1;
             dst[0] = 255;
             dst[1] = 255;
             dst[2] = 255;
-            dst[3] = dottexture[ i ][ j ] * 255;
+            dst[3] = 255*f;
             dst += 4;
-		}
-	}
+        }
+    }
     
-    r_particletexture = R_CreateImage( "*particletexture", pixels, 8, 8,
-            it_sprite, if_auto );
+    r_particletexture = R_CreateImage( "*particleTexture", pixels,
+        DLIGHT_TEXTURE_SIZE, DLIGHT_TEXTURE_SIZE, it_pic, if_auto );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
 }
@@ -1074,8 +1083,8 @@ void GL_InitImages( void ) {
 
 	gl_bilerp_chars = cvar.Get( "gl_bilerp_chars", "0", 0 );
     gl_bilerp_chars->changed = gl_bilerp_chars_changed;
-	gl_texturemode = cvar.Get( "gl_texturemode", "GL_LINEAR_MIPMAP_NEAREST",
-            CVAR_ARCHIVE );
+	gl_texturemode = cvar.Get( "gl_texturemode",
+        "GL_LINEAR_MIPMAP_LINEAR", CVAR_ARCHIVE );
     gl_texturemode->changed = gl_texturemode_changed;
 	gl_anisotropy = cvar.Get( "gl_anisotropy", "1", CVAR_ARCHIVE );
     gl_anisotropy->changed = gl_anisotropy_changed;
@@ -1083,10 +1092,10 @@ void GL_InitImages( void ) {
     gl_round_down = cvar.Get( "gl_round_down", "0", CVAR_LATCHED );
     gl_picmip = cvar.Get( "gl_picmip", "0", CVAR_LATCHED );
     gl_gamma_scale_pics = cvar.Get( "gl_gamma_scale_pics", "0", CVAR_LATCHED );
-	gl_texturealphamode = cvar.Get( "gl_texturealphamode", "default",
-            CVAR_ARCHIVE|CVAR_LATCHED );
-	gl_texturesolidmode = cvar.Get( "gl_texturesolidmode", "default",
-            CVAR_ARCHIVE|CVAR_LATCHED );
+	gl_texturealphamode = cvar.Get( "gl_texturealphamode",
+        "default", CVAR_ARCHIVE|CVAR_LATCHED );
+	gl_texturesolidmode = cvar.Get( "gl_texturesolidmode",
+        "default", CVAR_ARCHIVE|CVAR_LATCHED );
 	gl_saturation = cvar.Get( "gl_saturation", "1", CVAR_ARCHIVE|CVAR_LATCHED );
 	gl_intensity = cvar.Get( "intensity", "1", CVAR_ARCHIVE|CVAR_LATCHED );
 	gl_invert = cvar.Get( "gl_invert", "0", CVAR_ARCHIVE|CVAR_LATCHED );
