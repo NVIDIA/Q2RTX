@@ -571,8 +571,13 @@ LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
             win.mouse.state = temp;
 		}
 		break;
+
 	case WM_HOTKEY:
 		return FALSE;
+
+	case WM_PAINT:
+		SCR_UpdateScreen();
+		break;
 
 	case WM_CLOSE:
 		PostQuitMessage( 0 );
@@ -672,11 +677,12 @@ LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		Win_KeyEvent( wParam, lParam, qtrue );
 		return FALSE;
 
-#ifdef USE_CHAR_EVENTS
+	case WM_SYSCHAR:
 	case WM_CHAR:
+#if USE_CHAR_EVENTS
 		Key_CharEvent( wParam );
-		break;
 #endif
+		return FALSE;
 
 	case WM_SYSKEYUP:
 	case WM_KEYUP:

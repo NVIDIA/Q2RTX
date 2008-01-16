@@ -1613,7 +1613,7 @@ static void q_printf( 1, 2 ) FS_AddGameDirectory( const char *fmt, ... ) {
 	if( !( fs_restrict_mask->integer & 1 ) ) {
 		search = FS_Malloc( sizeof( searchpath_t ) + length );
 		search->pack = NULL;
-		strcpy( search->filename, fs_gamedir );
+		memcpy( search->filename, fs_gamedir, length + 1 );
 		search->next = fs_searchpaths;
 		fs_searchpaths = search;
 	}
