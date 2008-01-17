@@ -34,6 +34,7 @@ cvar_t		*vid_ref;			// Name of Refresh DLL loaded
 cvar_t      *vid_placement;
 cvar_t      *vid_modelist;
 cvar_t      *vid_fullscreen;
+cvar_t      *_vid_fullscreen;
 
 #define MODE_PLACEMENT  1
 #define MODE_FULLSCREEN 2
@@ -163,6 +164,17 @@ void Video_SetPlacement( vrect_t *rc ) {
     Com_sprintf( buffer, sizeof( buffer ), "%dx%d+%d+%d",
         rc->width, rc->height, rc->x, rc->y );
     Cvar_Set( "vid_placement", buffer );
+}
+
+void Video_ToggleFullscreen( void ) {
+    if( !vid_fullscreen->integer ) {
+        if( !_vid_fullscreen->integer ) {
+            Cvar_Set( "_vid_fullscreen", "1" );
+        }
+        Cbuf_AddText( "set vid_fullscreen $_vid_fullscreen\n" );
+    } else {
+        Cbuf_AddText( "set vid_fullscreen 0\n" );
+    }
 }
 
 /*
@@ -322,6 +334,9 @@ void CL_PumpEvents( void ) {
         } else
 #endif
         if( mode_changed & MODE_FULLSCREEN ) {
+			if( vid_fullscreen->integer ) {
+                Cbuf_AddText( "set _vid_fullscreen $vid_fullscreen\n" );
+			}
             Video_ModeChanged();
         } else {
             if( vid_fullscreen->integer ) {
@@ -369,7 +384,14 @@ void CL_InitRefresh( void ) {
 	// Create the video variables so we know how to start the graphics drivers
     vid_placement = Cvar_Get( "vid_placement", "640x480", CVAR_ARCHIVE );
     vid_fullscreen = Cvar_Get( "vid_fullscreen", "0", CVAR_ARCHIVE );
+    _vid_fullscreen = Cvar_Get( "_vid_fullscreen", "1", CVAR_ARCHIVE );
     vid_modelist = Cvar_Get( "vid_modelist", "640x480 800x600 1024x768", CVAR_ARCHIVE );
+
+    if( vid_fullscreen->integer ) {
+        Cvar_Set( "_vid_fullscreen", vid_fullscreen->string );
+    } else if( !_vid_fullscreen->integer ) {
+        Cvar_Set( "_vid_fullscreen", "1" );
+    }
 
 #ifdef REF_HARD_LINKED
 	vid_ref = Cvar_Get( "vid_ref", DEFAULT_REFRESH_DRIVER, CVAR_ROM );

@@ -34,31 +34,29 @@ static int	anykeydown;
 static int		key_waiting;
 static char		*keybindings[256];
 
-/* if qtrue, can't be rebound while in console */
+// if qtrue, can't be rebound while in console
 static qboolean	consolekeys[256];
 
-/* if qtrue, can't be rebound while in menu */
+// if qtrue, can't be rebound while in menu
 static qboolean	menubound[256];
 
 #ifndef USE_CHAR_EVENTS
-/* key to map to if shift held down in console
- * used unless char events are provided by OS */
+// key to map to if shift held down in console
+// used unless char events are provided by OS
 static int		keyshift[256];
 #endif /* !USE_CHAR_EVENTS */
 
-static int		key_repeats[256];	/* if > 1, it is autorepeating */
+static int		key_repeats[256];	// if > 1, it is autorepeating
 static qboolean	keydown[256];
 
 static qboolean	key_overstrike;
 
-typedef struct keyname_s
-{
+typedef struct keyname_s {
 	char	*name;
 	int		keynum;
 } keyname_t;
 
-static keyname_t keynames[] =
-{
+static keyname_t keynames[] = {
 	{"TAB", K_TAB},
 	{"ENTER", K_ENTER},
 	{"ESCAPE", K_ESCAPE},
@@ -684,11 +682,9 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
     // Alt+Enter is hardcoded for all systems
     if( keydown[K_ALT] && key == K_ENTER ) {
         if( down ) {
-            if( scr_glconfig.flags & QVF_FULLSCREEN ) {
-        	    Cbuf_AddText( "set vid_fullscreen 0\n" );
-            } else {
-        	    Cbuf_AddText( "set vid_fullscreen 1\n" );
-            }
+            extern void Video_ToggleFullscreen( void );
+
+            Video_ToggleFullscreen();
         }
         return;
     }

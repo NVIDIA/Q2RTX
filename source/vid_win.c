@@ -668,7 +668,7 @@ LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 			return FALSE;
         case SC_MAXIMIZE:
 			if( !vid_fullscreen->integer ) {
-                Cbuf_AddText( "set vid_fullscreen 1\n" );
+                Video_ToggleFullscreen();
 			}
             return FALSE;
 		}

@@ -22,6 +22,7 @@ extern cvar_t       *vid_ref;
 extern cvar_t       *vid_placement;
 extern cvar_t       *vid_modelist;
 extern cvar_t       *vid_fullscreen;
+extern cvar_t       *_vid_fullscreen;
 
 void Video_PumpEvents( void );
 void Video_ModeChanged( void );
@@ -32,3 +33,4 @@ void Video_FillSWAPI( videoAPI_t *api );
 void Video_GetModeFS( vrect_t *rc, int *freq, int *depth );
 void Video_GetPlacement( vrect_t *rc ); 
 void Video_SetPlacement( vrect_t *rc ); 
+void Video_ToggleFullscreen( void );
