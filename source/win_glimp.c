@@ -38,7 +38,6 @@ GLimp_SwitchFullscreen
 glwstate_t glw;
 
 static cvar_t	*gl_driver;
-static cvar_t	*gl_allow_software;
 static cvar_t	*gl_drawbuffer;
 static cvar_t   *gl_swapinterval;
 
@@ -70,17 +69,6 @@ static void GLimp_Shutdown( void ) {
     memset( &glw, 0, sizeof( glw ) );
 }
 
-static qboolean GLimp_VerifyDriver( void ) {
-	char buffer[MAX_STRING_CHARS];
-
-	Q_strncpyz( buffer, qglGetString( GL_RENDERER ), sizeof( buffer ) );
-	Q_strlwr( buffer );
-	if( strcmp( buffer, "gdi generic" ) == 0 )
-		if( !( win.flags & QVF_ACCELERATED ) )
-			return qfalse;
-	return qtrue;
-}
-
 static qboolean GLimp_InitGL( void ) {
     PIXELFORMATDESCRIPTOR pfd = {
 		sizeof( PIXELFORMATDESCRIPTOR ),	// size of this pfd
@@ -102,8 +90,8 @@ static qboolean GLimp_InitGL( void ) {
 		0,								// reserved
 		0, 0, 0							// layer masks ignored
     };
-    int  pixelformat;
-	DWORD dwLastError = 0;
+    int pixelformat;
+    char *renderer;
 
 	// figure out if we're running on a minidriver or not
 	if( !strstr( gl_driver->string, "opengl32" ) ) {
@@ -114,86 +102,64 @@ static qboolean GLimp_InitGL( void ) {
 	// load OpenGL library
 	Com_DPrintf( "...initializing WGL: " );
 	if( !WGL_Init( gl_driver->string ) ) {
-		dwLastError = GetLastError();
-		Com_DPrintf( "failed\n" );
-		goto fail;
+		goto fail1;
 	}
 	Com_DPrintf( "ok\n" );
 
 	Com_DPrintf( "...setting pixel format: " );
 	if( glw.minidriver ) {
-		if ( !( pixelformat = qwglChoosePixelFormat( win.dc, &pfd ) ) ) {
-			dwLastError = GetLastError();
-			Com_DPrintf( "failed\n" );
-			goto fail;
+		if ( ( pixelformat = qwglChoosePixelFormat( win.dc, &pfd ) ) == 0 ) {
+		    goto fail1;
 		}
-
 		if( qwglSetPixelFormat( win.dc, pixelformat, &pfd ) == FALSE ) {
-			dwLastError = GetLastError();
-			Com_DPrintf( "failed\n" );
-			goto fail;
+		    goto fail1;
 		}
-
 		qwglDescribePixelFormat( win.dc, pixelformat, sizeof( pfd ), &pfd );
 	} else {
 		if( ( pixelformat = ChoosePixelFormat( win.dc, &pfd ) ) == 0 ) {
-			dwLastError = GetLastError();
-			Com_DPrintf( "failed\n" );
-			goto fail;
+		    goto fail1;
 		}
-
 		if( SetPixelFormat( win.dc, pixelformat, &pfd ) == FALSE ) {
-			dwLastError = GetLastError();
-			Com_DPrintf( "failed\n" );
-			goto fail;
+		    goto fail1;
 		}
-
 		DescribePixelFormat( win.dc, pixelformat, sizeof( pfd ), &pfd );
-
-		if( ( pfd.dwFlags & PFD_GENERIC_ACCELERATED ) ||
-                gl_allow_software->integer )
-        {
-			win.flags |= QVF_ACCELERATED;
-		}
 	}
 	Com_DPrintf( "ok\n" );
 
 	// startup the OpenGL subsystem by creating a context and making it current
 	Com_DPrintf( "...creating OpenGL context: " );
 	if( ( glw.hGLRC = qwglCreateContext( win.dc ) ) == NULL ) {
-		dwLastError = GetLastError();
-		Com_DPrintf( "failed\n" );
-		goto fail;
+		goto fail1;
 	}
 	Com_DPrintf( "ok\n" );
 
 	Com_DPrintf( "...making context current: " );
     if( !qwglMakeCurrent( win.dc, glw.hGLRC ) ) {
-		dwLastError = GetLastError();
-		Com_DPrintf( "failed\n" );
-		goto fail;
+		goto fail1;
 	}
 	Com_DPrintf( "ok\n" );
 
-	if( !GLimp_VerifyDriver() ) {
-		Com_Printf( "No hardware acceleration detected\n" );
-		goto fail;
-	}
+    renderer = qglGetString( GL_RENDERER );
 
-	// print out PFD specifics 
+    if( pfd.dwFlags & PFD_GENERIC_ACCELERATED ) {
+        win.flags |= QVF_ACCELERATED;
+    } else if( !renderer || !renderer[0] || !Q_stricmp( renderer, "gdi generic" ) ) {
+		Com_Printf( "No hardware OpenGL acceleration detected.\n" );
+		goto fail2;
+    }
+
+	// print out PFD specifics
 	Com_Printf( "GL_VENDOR: %s\n", qglGetString( GL_VENDOR ) );
-	Com_Printf( "GL_RENDERER: %s\n", qglGetString( GL_RENDERER ) );
+	Com_Printf( "GL_RENDERER: %s\n", renderer );
 	Com_Printf( "GL_PFD: color(%d-bits: %d,%d,%d,%d) Z(%d-bit) stencil(%d-bit)\n",
 		pfd.cColorBits, pfd.cRedBits, pfd.cGreenBits, pfd.cBlueBits,
 		pfd.cAlphaBits, pfd.cDepthBits, pfd.cStencilBits );
 
 	return qtrue;
 
-fail:
-    if( dwLastError ) {
-    	Com_DPrintf( "GetLastError() = 0x%lx\n", dwLastError );
-    }
-
+fail1:
+	Com_DPrintf( "failed with error %#x\n", GetLastError() );
+fail2:
 	if( glw.hGLRC && qwglDeleteContext ) {
 		qwglDeleteContext( glw.hGLRC );
 		glw.hGLRC = NULL;
@@ -222,7 +188,6 @@ static qboolean GLimp_Init( void ) {
 
 	gl_driver = Cvar_Get( "gl_driver", "opengl32", CVAR_ARCHIVE|CVAR_LATCHED );
 	gl_drawbuffer = Cvar_Get( "gl_drawbuffer", "GL_BACK", 0 );
-	gl_allow_software = Cvar_Get( "gl_allow_software", "0", CVAR_LATCHED );
 	gl_swapinterval = Cvar_Get( "gl_swapinterval", "1", CVAR_ARCHIVE );
 
     // create the window
@@ -273,8 +238,13 @@ as yet to be determined.  Probably better not to make this a GLimp
 function and instead do a call to GLimp_SwapBuffers.
 */
 static void GLimp_EndFrame( void ) {
-    if( !qwglSwapBuffers( win.dc ) )
-        Com_Error( ERR_FATAL, "GLimp_EndFrame: wglSwapBuffers failed" );
+    if( !qwglSwapBuffers( win.dc ) ) {
+        int error = GetLastError();
+
+        if( !IsIconic( win.wnd ) ) {
+            Com_Error( ERR_FATAL, "GLimp_EndFrame: wglSwapBuffers failed with error %#x", error );
+        }
+    }
 }
 
 /*
