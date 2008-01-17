@@ -91,7 +91,7 @@ static qboolean GLimp_InitGL( void ) {
 		0, 0, 0							// layer masks ignored
     };
     int pixelformat;
-    char *renderer;
+    const char *renderer;
 
 	// figure out if we're running on a minidriver or not
 	if( !strstr( gl_driver->string, "opengl32" ) ) {
