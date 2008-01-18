@@ -733,7 +733,7 @@ static explosion_t *CL_RocketExplosion( vec3_t pos, qhandle_t hModel ) {
 CL_ParseTEnt
 =================
 */
-static byte splash_color[] = {0x00, 0xe0, 0xb0, 0x50, 0xd0, 0xe0, 0xe8};
+static const byte splash_color[] = {0x00, 0xe0, 0xb0, 0x50, 0xd0, 0xe0, 0xe8};
 
 void CL_ParseTEnt (void)
 {
@@ -752,7 +752,9 @@ void CL_ParseTEnt (void)
 	case TE_BLOOD:			// bullet hitting flesh
 		MSG_ReadPos (pos);
 		MSG_ReadDir (dir);
-		CL_ParticleEffect (pos, dir, 0xe8, 60);
+        if( !( cl_disable_particles->integer & NOPART_BLOOD ) ) {
+    		CL_ParticleEffect (pos, dir, 0xe8, 60);
+        }
 		break;
 
 	case TE_GUNSHOT:			// bullet hitting wall
@@ -805,7 +807,7 @@ void CL_ParseTEnt (void)
 		MSG_ReadPos (pos);
 		MSG_ReadDir (dir);
 		r = MSG_ReadByte ();
-		if (r > 6)
+		if (r < 0 || r > 6)
 			color = 0x00;
 		else
 			color = splash_color[r];

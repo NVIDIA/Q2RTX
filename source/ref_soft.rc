@@ -26,7 +26,7 @@ BEGIN
 			VALUE "OriginalFilename", "ref_soft.dll"
             VALUE "FileVersion", VERSION
             VALUE "InternalName", "ref_soft"
-            VALUE "LegalCopyright", "Copyright (C) 2007 skuller"
+            VALUE "LegalCopyright", "Copyright (C) 2008 skuller"
             VALUE "ProductName", "q2pro"
             VALUE "ProductVersion", VERSION
         END

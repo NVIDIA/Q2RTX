@@ -287,6 +287,7 @@ extern client_static_t	cls;
 #define NOPART_GRENADE_TRAIL		2
 #define NOPART_ROCKET_EXPLOSION		4
 #define NOPART_ROCKET_TRAIL			8
+#define NOPART_BLOOD			    16
 
 #define NOEXP_GRENADE		1
 #define NOEXP_ROCKET		2
