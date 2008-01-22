@@ -702,6 +702,7 @@ static void SV_ShowServerinfo_f( void ) {
 
 
 void SV_Nextserver( void ) {
+#if 0
     client_t *client;
 	char	*v;
 
@@ -722,6 +723,7 @@ void SV_Nextserver( void ) {
 		Cbuf_AddText ("\n");
 	}
 	Cvar_Set ("nextserver","");
+#endif
 }
 
 /*

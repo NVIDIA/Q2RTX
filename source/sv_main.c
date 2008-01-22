@@ -721,6 +721,11 @@ static void SVC_DirectConnect( void ) {
     // make sure mvdspec key is not set
     Info_RemoveKey( userinfo, "mvdspec" );
 
+    if( sv_password->string[0] || sv_reserved_password->string[0] ) {
+        // unset password key to make game mod happy
+        Info_RemoveKey( userinfo, "password" );
+    }
+
 	// force the IP key/value pair so the game can filter based on ip
 	s = NET_AdrToString( &net_from );
 	if( !Info_SetValueForKey( userinfo, "ip", s ) ) {

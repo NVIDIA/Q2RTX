@@ -1,7 +1,7 @@
 Stable releases
 ----------------
 OpenGL client for Windows:
-[q2pro-r178ac-win32.zip](../ac/q2pro-r178ac-win32.zip).  
+[q2pro-r179ac-win32.zip](../ac/q2pro-r179ac-win32.zip).  
 This binary is supported by r1ch.net [anticheat](http://antiche.at/) module.
 
 Development snapshots

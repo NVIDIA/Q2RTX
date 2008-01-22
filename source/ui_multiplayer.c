@@ -336,6 +336,10 @@ static int JoinServer_MenuCallback( int id, int msg, int param ) {
 		return QMS_IN;
 
 	case QM_KEY:
+        if( param == 'r' ) {
+            cvar.Set( "rcon_address", m_join.servers[m_join.list.curvalue].realAddress );
+            break;
+        }
 		if( param != 32 ) {
 			break;
 		}

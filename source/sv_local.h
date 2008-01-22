@@ -529,7 +529,7 @@ void AC_ClientToken( client_t *cl, const char *token );
 
 void AC_Register( void );
 void AC_Disconnect( void );
-void AC_Connect( void );
+void AC_Connect( qboolean ismvd );
 void AC_Run( void );
 
 void AC_List_f( void );

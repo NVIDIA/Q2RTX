@@ -145,10 +145,10 @@ static void Resize( void ) {
 	int x = uis.width / 2 - 130;
 	int y = uis.height / 2 - 97;
 
-	m_playerConfig.refdef.x = uis.width / 2;
+	m_playerConfig.refdef.x = uis.width / uis.scale / 2;
 	m_playerConfig.refdef.y = 60;
-	m_playerConfig.refdef.width = uis.width / 2;
-	m_playerConfig.refdef.height = uis.height - 122;
+	m_playerConfig.refdef.width = uis.width / uis.scale / 2;
+	m_playerConfig.refdef.height = uis.height / uis.scale - 122;
 
 	m_playerConfig.refdef.fov_x = 40;
 	m_playerConfig.refdef.fov_y = Com_CalcFov( m_playerConfig.refdef.fov_x,

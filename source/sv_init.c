@@ -292,9 +292,7 @@ void SV_InitGame( qboolean ismvd ){
 	}
 
 #if USE_ANTICHEAT & 2
-    if( !ismvd ) {
-        AC_Connect();
-    }
+    AC_Connect( ismvd );
 #endif
 
 	svs.initialized = qtrue;

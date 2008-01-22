@@ -520,7 +520,7 @@ static void MVD_Say_f( udpClient_t *client ) {
     client->floodHead++;
 
     text = Cmd_Args();
-    text[128] = 0; // don't let it be too long
+    //text[128] = 0; // don't let it be too long
 
     MVD_BroadcastPrintf( mvd, PRINT_CHAT, client->admin ? 0 : UF_NOMVDCHAT,
         "{%s}: %s\n", client->cl->name, text );

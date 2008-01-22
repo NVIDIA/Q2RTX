@@ -2294,7 +2294,7 @@ static const cmdreg_t c_client[] = {
     { "connect", CL_Connect_f, CL_Connect_g },
     { "passive", CL_PassiveConnect_f },
     { "reconnect", CL_Reconnect_f },
-    { "rcon", CL_Rcon_f },
+    { "rcon", CL_Rcon_f, Cmd_Command_g },
     { "precache", CL_Precache_f },
     { "download", CL_Download_f },
     { "serverstatus", CL_ServerStatus_f, CL_Connect_g },

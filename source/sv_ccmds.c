@@ -808,7 +808,7 @@ static const cmdreg_t c_server[] = {
 	{ "setmaster", SV_SetMaster_f },
 	{ "killserver", SV_KillServer_f },
 	{ "sv", SV_ServerCommand_f },
-	{ "pick", SV_PickClient_f },
+	{ "pickclient", SV_PickClient_f },
 	{ "addban", SV_AddBan_f },
 	{ "delban", SV_DelBan_f },
 	{ "listbans", SV_ListBans_f },

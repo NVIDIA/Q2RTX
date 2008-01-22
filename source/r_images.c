@@ -78,6 +78,10 @@ void Image_LoadPCX( const char *filename, byte **pic, byte *palette, int *width,
 	if( !raw ) {
 		return;
 	}
+    if( len < sizeof( *pcx ) ) {
+		Com_WPrintf( "LoadPCX: %s: header too short\n", filename );
+        return;
+    }
 
 	//
 	// parse the PCX file
@@ -106,6 +110,7 @@ void Image_LoadPCX( const char *filename, byte **pic, byte *palette, int *width,
 
 	if( palette ) {
         if( len < 768 ) {
+		    Com_WPrintf( "LoadPCX: %s: palette too short\n", filename );
             goto malformed;
         }
 		memcpy( palette, ( byte * )pcx + len - 768, 768 );
@@ -116,7 +121,8 @@ void Image_LoadPCX( const char *filename, byte **pic, byte *palette, int *width,
 
 	for( y = 0; y < h; y++, pix += w ) {
 		for( x = 0; x < w; ) {
-            if( raw == end ) {
+            if( raw >= end ) {
+		        Com_WPrintf( "LoadPCX: %s: read past end of file\n", filename );
                 goto malformed;
             }
 			dataByte = *raw++;
@@ -124,9 +130,11 @@ void Image_LoadPCX( const char *filename, byte **pic, byte *palette, int *width,
 			if( ( dataByte & 0xC0 ) == 0xC0 ) {
 				runLength = dataByte & 0x3F;
                 if( x + runLength > w ) {
+		            Com_WPrintf( "LoadPCX: %s: run length overrun\n", filename );
                     goto malformed;
                 }
-                if( raw == end ) {
+                if( raw >= end ) {
+		            Com_WPrintf( "LoadPCX: %s: read past end of file\n", filename );
                     goto malformed;
                 }
 				dataByte = *raw++;
@@ -152,7 +160,6 @@ void Image_LoadPCX( const char *filename, byte **pic, byte *palette, int *width,
     return;
 
 malformed:
-    Com_WPrintf( "LoadPCX: %s: file was malformed\n", filename );
 #ifdef SOFTWARE_RENDERER
     com.Free( out );
 #else
@@ -856,7 +863,7 @@ qboolean Image_WriteJPG( const char *filename, const byte *rgb, int width, int h
 	cinfo.err = jpeg_std_error( &jerr.pub );
 	jerr.pub.error_exit = my_error_exit;
 
-	if( _setjmp( jerr.setjmp_buffer ) ) {
+	if( setjmp( jerr.setjmp_buffer ) ) {
 		Com_DPrintf( "WriteJPG: %s: JPEGLIB signaled an error\n", filename );
 		jpeg_destroy_compress( &cinfo );
 		fs.FCloseFile( hFile );

@@ -1218,7 +1218,7 @@ Qcommon_Init
 void Qcommon_Init( int argc, char **argv ) {
 	static const char *version = APPLICATION " " VERSION " " __DATE__ " " BUILDSTRING " " CPUSTRING;
 
-	if( _setjmp( abortframe ) )
+	if( setjmp( abortframe ) )
 		Sys_Error( "Error during initialization: %s", com_errorMsg );
 
 	Com_Printf( S_COLOR_CYAN "%s\n", version );
@@ -1445,7 +1445,7 @@ void Qcommon_Frame( void ) {
 	uint32	oldtime, msec;
     static float frac;
 
-	if( _setjmp( abortframe ) ) {
+	if( setjmp( abortframe ) ) {
 		return;			// an ERR_DROP was thrown
 	}
 
