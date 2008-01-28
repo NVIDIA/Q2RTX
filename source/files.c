@@ -23,11 +23,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <zlib.h>
 #include "unzip.h"
 #endif
-#ifdef __unix__
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#endif
 #include <errno.h>
 
 /*
@@ -322,7 +317,7 @@ Returns compressed length for GZIP files.
 */
 int FS_GetFileLength( fileHandle_t f ) {
 	fsFile_t *file = FS_FileForHandle( f );
-	int pos, length;
+    fsFileInfo_t info;
 
 #if USE_ZLIB
     if( file->type == FS_GZIP ) {
@@ -338,41 +333,36 @@ int FS_GetFileLength( fileHandle_t f ) {
 		Com_Error( ERR_FATAL, "%s: bad file type", __func__ );
     }
 
-    pos = ftell( file->fp );
-    fseek( file->fp, 0, SEEK_END );
-    length = ftell( file->fp );
-    fseek( file->fp, pos, SEEK_SET );
+    if( !Sys_GetFileInfo( file->fp, &info ) ) {
+        return -1;
+    }
 
-	return length;
+	return info.size;
 }
 
 int FS_GetFileLengthNoCache( fileHandle_t f ) {
 	fsFile_t *file = FS_FileForHandle( f );
-	int pos, length;
+    fsFileInfo_t info;
 
 	switch( file->type ) {
 	case FS_REAL:
-		pos = ftell( file->fp );
-		fseek( file->fp, 0, SEEK_END );
-		length = ftell( file->fp );
-		fseek( file->fp, pos, SEEK_SET );
-		break;
+        if( !Sys_GetFileInfo( file->fp, &info ) ) {
+            return -1;
+        }
+	    return info.size;
 	case FS_PAK:
-		length = file->length;
-		break;
+		return file->length;
 #if USE_ZLIB
 	case FS_PK2:
-		length = file->length;
-		break;
+		return file->length;
 	case FS_GZIP:
-        length = -1;
-        break;
+        return -1;
+    default:
+	    Com_Error( ERR_FATAL, "%s: bad file type", __func__ );
 #endif
-	default:
-		Com_Error( ERR_FATAL, "%s: bad file type", __func__ );
 	}
 
-	return length;
+    return -1;
 }
 
 const char *FS_GetFileFullPath( fileHandle_t f ) {
@@ -468,10 +458,6 @@ static int FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
 	char *modeStr;
 	fsFileType_t type;
 	uint32 mode;
-#ifdef __unix__
-    struct stat st;
-#endif
-
 #ifdef _WIN32
 	// allow writing into basedir on Windows
 	if( ( file->mode & FS_PATH_MASK ) == FS_PATH_BASE ) {
@@ -514,14 +500,10 @@ static int FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
 	}
 
 #ifdef __unix__
-    if( fstat( fileno( fp ), &st ) == -1 ) {
-        FS_DPrintf( "%s: %s: stat: %s\n",
-            __func__, file->fullpath, strerror( errno ) );
-        return -1;
-    }
-    if( !S_ISREG( st.st_mode ) ) {
-        FS_DPrintf( "%s: %s: not a file\n",
+    if( !Sys_GetFileInfo( fp, NULL ) ) {
+        FS_DPrintf( "%s: %s: couldn't get info\n",
             __func__, file->fullpath );
+        fclose( fp );
         return -1;
     }
 #endif
@@ -592,12 +574,7 @@ static int FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean unique )
 	char			*ext;
 #endif
 	fsFileType_t	type;
-	int				length;
-#ifdef __unix__
-    struct stat     st;
-#else
-    int             pos;
-#endif
+    fsFileInfo_t    info;
 
 	fs_fileFromPak = qfalse;
     fs_count_read++;
@@ -669,14 +646,13 @@ static int FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean unique )
 						file->type = FS_PAK;
 					}
 
-					length = entry->filelen;
 					file->pak = entry;
-					file->length = length;
+					file->length = entry->filelen;
 					file->unique = unique;
 
 					FS_DPrintf( "%s: %s/%s: succeeded\n", __func__, pak->filename, entry->name );
 
-					return length;
+					return file->length;
 				}
 			}
 		} else {
@@ -695,25 +671,12 @@ static int FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean unique )
 				continue;
 			}
 
-#ifdef __unix__
-            if( fstat( fileno( fp ), &st ) == -1 ) {
-                FS_DPrintf( "%s: %s: stat: %s\n",
-                    __func__, file->fullpath, strerror( errno ) );
-                continue;
-            }
-            if( !S_ISREG( st.st_mode ) ) {
-                FS_DPrintf( "%s: %s: not a file\n",
+            if( !Sys_GetFileInfo( fp, &info ) ) {
+                FS_DPrintf( "%s: %s: couldn't get info\n",
                     __func__, file->fullpath );
+                fclose( fp );
                 continue;
             }
-
-            length = st.st_size;
-#else
-            pos = ftell( fp );
-            fseek( fp, 0, SEEK_END );
-            length = ftell( fp );
-            fseek( fp, pos, SEEK_SET );
-#endif
 
 			type = FS_REAL;
 #if USE_ZLIB
@@ -732,14 +695,14 @@ static int FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean unique )
 				}
 			}
 #endif
-			FS_DPrintf( "%s: %s: succeeded\n", __func__, file->fullpath );
-
 			file->fp = fp;
 			file->type = type;
 			file->unique = qtrue;
-			file->length = length;
+			file->length = info.size;
 
-			return length;
+			FS_DPrintf( "%s: %s: succeeded\n", __func__, file->fullpath );
+
+			return file->length;
 		}
 	}
 	
@@ -2141,7 +2104,7 @@ static void FS_WhereIs_f( void ) {
             Q_concat( fullpath, sizeof( fullpath ),
                 search->filename, "/", path, NULL );
 			//FS_ConvertToSysPath( fullpath );
-            if( Sys_GetFileInfo( fullpath, &info ) ) {
+            if( Sys_GetPathInfo( fullpath, &info ) ) {
                 Com_Printf( "%s/%s (%d bytes)\n", search->filename, filename, info.size );
                 if( Cmd_Argc() < 3 ) {
                     return;

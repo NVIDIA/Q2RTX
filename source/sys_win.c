@@ -663,8 +663,11 @@ uint32 Sys_Realtime( void ) {
 Sys_Mkdir
 ================
 */
-void Sys_Mkdir( const char *path ) {
-	CreateDirectoryA( path, NULL );
+qboolean Sys_Mkdir( const char *path ) {
+	if( !CreateDirectoryA( path, NULL ) ) {
+        return qfalse;
+    }
+    return qtrue;
 }
 
 qboolean Sys_RemoveFile( const char *path ) {
@@ -686,10 +689,10 @@ void Sys_AddDefaultConfig( void ) {
 
 /*
 ================
-Sys_GetFileInfo
+Sys_GetPathInfo
 ================
 */
-qboolean Sys_GetFileInfo( const char *path, fsFileInfo_t *info ) {
+qboolean Sys_GetPathInfo( const char *path, fsFileInfo_t *info ) {
 	WIN32_FILE_ATTRIBUTE_DATA	data;
 
 	if( !GetFileAttributesExA( path, GetFileExInfoStandard, &data ) ) {
@@ -703,6 +706,19 @@ qboolean Sys_GetFileInfo( const char *path, fsFileInfo_t *info ) {
 	}
 
 	return qtrue;
+}
+
+qboolean Sys_GetFileInfo( FILE *fp, fsFileInfo_t *info ) {
+    int pos;
+
+    pos = ftell( fp );
+    fseek( fp, 0, SEEK_END );
+    info->size = ftell( fp );
+    info->ctime = 0;
+    info->mtime = 0;
+    fseek( fp, pos, SEEK_SET );
+
+    return qtrue;
 }
 
 /*

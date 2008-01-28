@@ -1442,7 +1442,7 @@ Qcommon_Frame
 */
 void Qcommon_Frame( void ) {
 	int		time_before, time_event, time_between, time_after;
-	uint32	oldtime, msec;
+	uint32	oldtime, msec, spins;
     static float frac;
 
 	if( setjmp( abortframe ) ) {
@@ -1456,10 +1456,12 @@ void Qcommon_Frame( void ) {
 
     oldtime = com_eventTime;
 	com_eventTime = Sys_Realtime();
+    spins=0;
 	do {
 		Com_ProcessEvents();
 		com_eventTime = Sys_Realtime();
 		msec = com_eventTime - oldtime;
+        spins++;
 	} while( msec < 1 );
 
     if( msec > 250 ) {
@@ -1467,6 +1469,8 @@ void Qcommon_Frame( void ) {
         msec = 100; // time was unreasonable,
                     // host OS was hibernated or something
     }
+
+    //if( spins > 1 )Com_Printf("%u spins!\n",spins);
 
 	if( fixedtime->integer ) {
 		Cvar_ClampInteger( fixedtime, 1, 1000 );

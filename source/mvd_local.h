@@ -93,7 +93,8 @@ typedef struct {
 	int floodTime;
 
 	usercmd_t lastcmd;
-	short delta_angles[3];
+	//short delta_angles[3];
+    qboolean jump_held;
 } udpClient_t;
 
 typedef struct mvd_s {

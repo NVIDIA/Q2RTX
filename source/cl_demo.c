@@ -446,13 +446,13 @@ static qboolean CL_ReadNextDemoMessage( fileHandle_t f ) {
 	}
 
 	msglen = LittleLong( msglen );
-	if( msglen < 0 || msglen >= msg_read.maxsize ) {
+	if( msglen < 0 || msglen >= sizeof( msg_read_buffer ) ) {
         Com_DPrintf( "%s: bad msglen\n", __func__ );
 		return qfalse;
 	}
 
+    SZ_Init( &msg_read, msg_read_buffer, sizeof( msg_read_buffer ) );
 	msg_read.cursize = msglen;
-	msg_read.readcount = 0;
 
 	// read packet data
 	if( FS_Read( msg_read.data, msglen, f ) != msglen ) {
@@ -601,6 +601,10 @@ demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info ) {
 	if( !f ) {
 		return NULL;
 	}
+
+	/*if( FS_Read( &magic, 4, f ) != 4 ) {
+        FS_Seek();
+    }*/
 
 	if( !CL_ReadNextDemoMessage( f ) ) {
 		goto fail;

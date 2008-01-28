@@ -1073,6 +1073,10 @@ void NET_Sleep( int msec ) {
 	FD_ZERO( &fdset );
 	FD_SET( s, &fdset );
 	select( s + 1, &fdset, NULL, NULL, &timeout );
+    /*msec = timeout.tv_sec * 1000 + timeout.tv_usec / 1000;
+    if(msec){
+        Com_Printf( "%d msec not slept\n",msec);
+    }*/
 }
 
 //===================================================================

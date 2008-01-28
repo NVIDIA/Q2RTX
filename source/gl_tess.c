@@ -25,7 +25,7 @@ tesselator_t tess;
 #define FACE_HASH_SIZE  32
 #define FACE_HASH_MASK  ( FACE_HASH_SIZE - 1 )
 
-static bspSurface_t *faces_alpha, *faces_warp, *faces_alpha_warp;
+static bspSurface_t *faces_alpha, *faces_warp, *faces_alpha_warp, *faces_sky;
 static bspSurface_t *faces_hash[FACE_HASH_SIZE];
 
 void GL_Flush2D( void ) {
@@ -296,6 +296,8 @@ static void GL_Flush3D( void ) {
         qglColor4f( 1, 1, 1, 0.33f );
     } else if( tess.flags & SURF_TRANS66 ) {
         qglColor4f( 1, 1, 1, 0.66f );
+    } else if( tess.flags & SURF_SKY ) {
+        qglColor4f( 0, 0, 0, 1 );
     }
 
 	GL_BindTexture( tess.texnum[0] );
@@ -360,7 +362,7 @@ static void GL_DrawFace( bspSurface_t *surf ) {
 
     if( tess.texnum[0] != surf->texnum[0] ||
         tess.texnum[1] != surf->texnum[1] ||
-        ( ( surf->texflags ^ tess.flags ) & ( SURF_TRANS33 | SURF_TRANS66 ) ) ||
+        ( ( surf->texflags ^ tess.flags ) & ( SURF_TRANS33 | SURF_TRANS66 | SURF_SKY ) ) ||
         tess.numIndices + surf->numIndices > TESS_MAX_INDICES )
     {
         GL_Flush3D();
@@ -417,6 +419,13 @@ void GL_DrawSolidFaces( void ) {
         GL_DisableWarp();
     }
 
+    if( faces_sky ) {
+        qglDisable( GL_TEXTURE_2D );
+        GL_DrawChain( &faces_sky );
+        GL_Flush3D();
+        qglEnable( GL_TEXTURE_2D );
+    }
+
     for( i = 0; i < FACE_HASH_SIZE; i++ ) {
         GL_DrawChain( &faces_hash[i] );
     }
@@ -461,6 +470,12 @@ void GL_AddSolidFace( bspSurface_t *face ) {
 void GL_AddFace( bspSurface_t *face ) {
     if( face->type == DSURF_SKY ) {
         R_AddSkySurface( face );
+        return;
+    }
+
+    if( face->texflags & SURF_SKY ) {
+        face->next = faces_sky;
+        faces_sky = face;
         return;
     }
 

@@ -63,7 +63,6 @@ cvar_t *gl_clear;
 cvar_t *gl_novis;
 cvar_t *gl_lockpvs;
 cvar_t *gl_lightmap;
-cvar_t *gl_fastsky;
 #if USE_DYNAMIC
 cvar_t *gl_dynamic;
 #endif
@@ -703,7 +702,6 @@ static void GL_Register( void ) {
     gl_novis = cvar.Get( "gl_novis", "0", 0 );
     gl_lockpvs = cvar.Get( "gl_lockpvs", "0", CVAR_CHEAT );
     gl_lightmap = cvar.Get( "gl_lightmap", "0", CVAR_CHEAT );
-    gl_fastsky = cvar.Get( "gl_fastsky", "0", 0 );
 #if USE_DYNAMIC
     gl_dynamic = cvar.Get( "gl_dynamic", "2", CVAR_ARCHIVE );
 #endif

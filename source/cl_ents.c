@@ -710,6 +710,12 @@ static void CL_AddViewWeapon( const player_state_t *ps, const player_state_t *op
 			ps->gunangles[i], cl.lerpfrac );
 	}
 
+    // adjust for high fov
+    if( cl.frame.ps.fov > 90 ) {
+        vec_t ofs = ( 90 - cl.frame.ps.fov ) * 0.2f;
+        VectorMA( gun.origin, ofs, cl.v_forward, gun.origin );
+    }
+
 	if( gun_frame ) {
 		gun.frame = gun_frame;	// development tool
 		gun.oldframe = gun_frame;	// development tool

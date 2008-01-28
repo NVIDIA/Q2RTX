@@ -586,19 +586,22 @@ uint32 Sys_Realtime( void ) {
 Sys_Mkdir
 ================
 */
-void Sys_Mkdir( const char *path ) {
-    mkdir( path, 0777 );
+qboolean Sys_Mkdir( const char *path ) {
+    if( mkdir( path, 0777 ) == -1 ) {
+        return qfalse;
+    }
+    return qtrue;
 }
 
 qboolean Sys_RemoveFile( const char *path ) {
-	if( remove( path ) ) {
+	if( unlink( path ) == -1 ) {
 		return qfalse;
 	}
 	return qtrue;
 }
 
 qboolean Sys_RenameFile( const char *from, const char *to ) {
-	if( rename( from, to ) ) {
+	if( rename( from, to ) == -1 ) {
 		return qfalse;
 	}
 	return qtrue;
@@ -606,15 +609,39 @@ qboolean Sys_RenameFile( const char *from, const char *to ) {
 
 /*
 ================
-Sys_GetFileInfo
+Sys_GetPathInfo
 ================
 */
-qboolean Sys_GetFileInfo( const char *path, fsFileInfo_t *info ) {
+qboolean Sys_GetPathInfo( const char *path, fsFileInfo_t *info ) {
 	struct stat st;
 
 	if( stat( path, &st ) == -1 ) {
 		return qfalse;
 	}
+
+    if( !S_ISREG( st.st_mode ) ) {
+        return qfalse;
+    }
+
+	if( info ) {
+		info->size = st.st_size;
+		info->ctime = st.st_ctime;
+		info->mtime = st.st_mtime;
+	}
+
+	return qtrue;
+}
+
+qboolean Sys_GetFileInfo( FILE *fp, fsFileInfo_t *info ) {
+	struct stat st;
+
+	if( fstat( fileno( fp ), &st ) == -1 ) {
+		return qfalse;
+	}
+
+    if( !S_ISREG( st.st_mode ) ) {
+        return qfalse;
+    }
 
 	if( info ) {
 		info->size = st.st_size;

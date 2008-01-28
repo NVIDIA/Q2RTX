@@ -37,6 +37,7 @@ cvar_t	*sv_mvd_scorecmd;
 #if USE_ZLIB
 cvar_t	*sv_mvd_encoding;
 #endif
+cvar_t	*sv_mvd_capture_flags;
 
 static cmdbuf_t	dummy_buffer;
 static char		dummy_buffer_text[MAX_STRING_CHARS];
@@ -58,6 +59,8 @@ whether given player is to be captured, instead of relying on this hack.
 ==================
 */
 qboolean SV_MvdPlayerIsActive( edict_t *ent ) {
+    int num;
+
 	if( !ent->inuse ) {
 		return qfalse;
 	}
@@ -67,38 +70,55 @@ qboolean SV_MvdPlayerIsActive( edict_t *ent ) {
 		return qfalse;
 	}
 
-	// HACK: make sure player_state_t is valid
+    num = NUM_FOR_EDICT( ent ) - 1;
+    if( num < 0 || num >= sv_maxclients->integer ) {
+        return qfalse;
+    }
+
+    // check if client is actually connected
+    if( sv_mvd_capture_flags->integer & 1 ) {
+        if( svs.udp_client_pool[num].state != cs_spawned ) {
+            return qfalse;
+        }
+    }
+
+	// first of all, make sure player_state_t is valid
 	if( !ent->client->ps.fov ) {
 		return qfalse;
 	}
 
+    // always capture dummy MVD client
     if( svs.mvd.dummy && ent == svs.mvd.dummy->edict ) {
         return qtrue;
     }
 
+    // never capture spectators
     if( ent->client->ps.pmove.pm_type == PM_SPECTATOR ) {
         return qfalse;
     }
 
-	// HACK: if pm_type == PM_FREEZE, assume intermission is running
-	// if PMF_NO_PREDICTION is set, they are following someone!
-	if( ent->client->ps.pmove.pm_type == PM_FREEZE &&
-		!( ent->client->ps.pmove.pm_flags & PMF_NO_PREDICTION ) )
-	{
+	// if pm_type == PM_FREEZE, assume intermission is running
+	if( ent->client->ps.pmove.pm_type == PM_FREEZE ) {
+	    // if PMF_NO_PREDICTION is set, they are following someone!
+        if( ent->client->ps.pmove.pm_flags & PMF_NO_PREDICTION ) {
+            return qfalse;
+        }
 		return qtrue;
 	}
 
-	// if set to invisible, skip
-	if( ent->svflags & SVF_NOCLIENT ) {
-		return qfalse;
-	}
+    if( sv_mvd_capture_flags->integer & 2 ) {
+        // if set to invisible, skip
+        if( ent->svflags & SVF_NOCLIENT ) {
+            return qfalse;
+        }
 
-	if( ent->s.modelindex || ent->s.effects || ent->s.sound || ent->s.event ) {
-		return qtrue;
-	}
+        // if it has no effects, skip
+        if( !ES_INUSE( &ent->s ) ) {
+            return qfalse;
+        }
+    }
 
-    // if it has no effects, skip
-	return qfalse;
+	return qtrue;
 }
 
 /*
@@ -948,6 +968,7 @@ void SV_MvdRegister( void ) {
 #if USE_ZLIB
     sv_mvd_encoding = Cvar_Get( "sv_mvd_encoding", "1", 0 );
 #endif
+    sv_mvd_capture_flags = Cvar_Get( "sv_mvd_capture_flags", "1", 0 );
 
 	dummy_buffer.text = dummy_buffer_text;
     dummy_buffer.maxsize = sizeof( dummy_buffer_text );

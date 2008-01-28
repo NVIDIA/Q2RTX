@@ -1029,10 +1029,11 @@ void	Sys_Quit( void );
 
 void	**Sys_ListFiles( const char *path, const char *extension, int flags, int length, int *numFiles );
 
-void	Sys_Mkdir( const char *path );
+qboolean Sys_Mkdir( const char *path );
 qboolean Sys_RemoveFile( const char *path );
 qboolean Sys_RenameFile( const char *from, const char *to );
-qboolean Sys_GetFileInfo( const char *path, fsFileInfo_t *info );
+qboolean Sys_GetPathInfo( const char *path, fsFileInfo_t *info );
+qboolean Sys_GetFileInfo( FILE *fp, fsFileInfo_t *info );
 
 char	*Sys_GetCurrentDirectory( void );
 

@@ -539,27 +539,66 @@ static void MVD_Observe_f( udpClient_t *client ) {
 static void MVD_Follow_f( udpClient_t *client ) {
     mvd_t *mvd = client->mvd;
     mvd_player_t *player;
-    int number;
+    entity_state_t *ent;
+    char *s;
+    int i, mask;
 
     if( Cmd_Argc() < 2 ) {
         MVD_Observe_f( client );
         return;
     }
 
-    number = atoi( Cmd_Argv( 1 ) );
-    if( number < 0 || number >= mvd->maxclients ) {
+    s = Cmd_Argv( 1 );
+    if( s[0] == '!' ) {
+        switch( s[1] ) {
+        case 'q':
+            mask = EF_QUAD;
+            break;
+        case 'i':
+            mask = EF_PENT;
+            break;
+        case 'r':
+            mask = EF_FLAG1;
+            break;
+        case 'b':
+            mask = EF_FLAG2;
+            break;
+        default:
+            SV_ClientPrintf( client->cl, PRINT_HIGH,
+                "[MVD] Unknown powerup '%s'. Valid powerups:\n"
+                "q (quad), i (invulner), r (red flag), b (blue flag).\n", s + 1 );
+            return;
+        }
+        for( i = 0; i < mvd->maxclients; i++ ) {
+            player = &mvd->players[i];
+            if( !player->inuse || player == mvd->dummy ) {
+                continue;
+            }
+            ent = &mvd->edicts[ i + 1 ].s;
+            if( ent->effects & mask ) {
+                goto follow;
+            }
+        }
         SV_ClientPrintf( client->cl, PRINT_HIGH,
-            "[MVD] Player number %d is invalid.\n", number );
+            "[MVD] No players with '%s' powerup.\n", s + 1 );
         return;
     }
 
-    player = &mvd->players[number];
+    i = atoi( s );
+    if( i < 0 || i >= mvd->maxclients ) {
+        SV_ClientPrintf( client->cl, PRINT_HIGH,
+            "[MVD] Player number %d is invalid.\n", i );
+        return;
+    }
+
+    player = &mvd->players[i];
     if( !player->inuse || player == mvd->dummy ) {
         SV_ClientPrintf( client->cl, PRINT_HIGH,
-            "[MVD] Player %d is not active.\n", number );
+            "[MVD] Player %d is not active.\n", i );
         return;
     }
 
+follow:
     MVD_FollowStart( client, player );
 }
 
@@ -839,6 +878,7 @@ static void MVD_GameClientBegin( edict_t *ent ) {
 	client->floodHead = 0;
 	memset( &client->lastcmd, 0, sizeof( client->lastcmd ) );
 	memset( &client->ps, 0, sizeof( client->ps ) );
+    client->jump_held = qfalse;
 	
 	if( !client->begin_time ) {
 		MVD_BroadcastPrintf( mvd, PRINT_MEDIUM, 0,
@@ -906,14 +946,19 @@ static void MVD_GameClientThink( edict_t *ent, usercmd_t *cmd ) {
     usercmd_t *old = &client->lastcmd;
 	pmove_t pm;
 
-	if( !( old->buttons & BUTTON_ATTACK ) && ( cmd->buttons & BUTTON_ATTACK ) ) {
+	if( ( cmd->buttons & ~old->buttons ) & BUTTON_ATTACK ) {
         MVD_Observe_f( client );
 	}
 
 	if( client->target ) {
-		if( !old->upmove && cmd->upmove ) {
-			MVD_FollowNext( client );
-		}
+		if( cmd->upmove >= 10 ) {
+            if( !client->jump_held ) {
+    			MVD_FollowNext( client );
+                client->jump_held = qtrue;
+            }
+		} else {
+            client->jump_held = qfalse;
+        }
 	} else {
         memset( &pm, 0, sizeof( pm ) );
         pm.trace = MVD_Trace;

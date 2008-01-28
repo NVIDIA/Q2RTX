@@ -30,6 +30,7 @@ static cvar_t   *gl_coloredlightmaps;
 static cvar_t   *gl_brightness;
 
 cvar_t *gl_modulate_hack;
+cvar_t *gl_fastsky;
 
 /*
 =============================================================================
@@ -361,6 +362,7 @@ void GL_BeginPostProcessing( void ) {
 	gl_coloredlightmaps = cvar.Get( "gl_coloredlightmaps", "1", CVAR_ARCHIVE|CVAR_LATCHED );
 	gl_brightness = cvar.Get( "gl_brightness", "0", CVAR_ARCHIVE|CVAR_LATCHED );
 	gl_modulate_hack = cvar.Get( "gl_modulate_hack", "0", CVAR_LATCHED );
+    gl_fastsky = cvar.Get( "gl_fastsky", "0", CVAR_LATCHED );
 
 	if( gl_coloredlightmaps->value < 0 ) {
 		cvar.Set( "gl_coloredlightmaps", "0" );
