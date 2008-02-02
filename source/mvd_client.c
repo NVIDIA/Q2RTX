@@ -793,8 +793,9 @@ void MVD_Spawn_f( void ) {
     SV_InitGame( qtrue );
 
     // set serverinfo variables
-	Cvar_FullSet( "mapname", "q2dm1",
-        CVAR_SERVERINFO|CVAR_NOSET, CVAR_SET_DIRECT );
+	Cvar_FullSet( "mapname", "q2dm1", CVAR_SERVERINFO|CVAR_NOSET, CVAR_SET_DIRECT );
+	Cvar_FullSet( "gamedir", "gtv", CVAR_SERVERINFO|CVAR_NOSET, CVAR_SET_DIRECT );
+    
     Cvar_SetInteger( "sv_running", ss_broadcast );
     Cvar_SetInteger( "sv_paused", 0 );
     Cvar_SetInteger( "timedemo", 0 );

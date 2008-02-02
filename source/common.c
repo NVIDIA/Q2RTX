@@ -33,7 +33,9 @@ static char		com_errorMsg[MAXPRINTMSG];
 static char     **com_argv;
 static int      com_argc;
 
+#ifndef DEDICATED_ONLY
 cvar_t	*host_speeds;
+#endif
 cvar_t	*developer;
 cvar_t	*timescale;
 cvar_t	*fixedtime;
@@ -62,11 +64,13 @@ uint32      com_localTime;
 qboolean    com_initialized;
 time_t      com_startTime;
 
+#ifndef DEDICATED_ONLY
 // host_speeds times
 int		time_before_game;
 int		time_after_game;
 int		time_before_ref;
 int		time_after_ref;
+#endif
 
 void Con_Init( void );
 void Prompt_Init( void );
@@ -1243,7 +1247,9 @@ void Qcommon_Init( int argc, char **argv ) {
 	// init commands and vars
 	//
 	z_perturb = Cvar_Get( "z_perturb", "0", 0 );
+#ifndef DEDICATED_ONLY
 	host_speeds = Cvar_Get ("host_speeds", "0", 0);
+#endif
 	developer = Cvar_Get ("developer", "0", 0);
 	timescale = Cvar_Get ("timescale", "1", CVAR_CHEAT );
 	fixedtime = Cvar_Get ("fixedtime", "0", CVAR_CHEAT );
@@ -1441,36 +1447,49 @@ Qcommon_Frame
 =================
 */
 void Qcommon_Frame( void ) {
+#ifndef DEDICATED_ONLY
 	int		time_before, time_event, time_between, time_after;
-	uint32	oldtime, msec, spins;
+#endif
+	uint32	oldtime, msec;
     static float frac;
 
 	if( setjmp( abortframe ) ) {
 		return;			// an ERR_DROP was thrown
 	}
 
+#ifndef DEDICATED_ONLY
 	time_before = time_event = time_between = time_after = 0;
 
 	if( host_speeds->integer )
 		time_before = Sys_Milliseconds();
+#endif
 
+    Com_ProcessEvents();
+
+    // calculate time spent running last frame
     oldtime = com_eventTime;
 	com_eventTime = Sys_Realtime();
-    spins=0;
-	do {
-		Com_ProcessEvents();
-		com_eventTime = Sys_Realtime();
-		msec = com_eventTime - oldtime;
-        spins++;
-	} while( msec < 1 );
+    if( oldtime > com_eventTime ) {
+        oldtime = com_eventTime;
+    }
+	msec = com_eventTime - oldtime;
+
+#ifndef DEDICATED_ONLY
+    // spin until msec is positive if running a client
+    if( !dedicated->integer ) {
+        while( msec < 1 ) {
+            Com_ProcessEvents();
+            com_eventTime = Sys_Realtime();
+            msec = com_eventTime - oldtime;
+        }
+    }
+#endif
 
     if( msec > 250 ) {
         Com_DPrintf( "Hitch warning: %u msec frame time\n", msec );
         msec = 100; // time was unreasonable,
                     // host OS was hibernated or something
     }
-
-    //if( spins > 1 )Com_Printf("%u spins!\n",spins);
 
 	if( fixedtime->integer ) {
 		Cvar_ClampInteger( fixedtime, 1, 1000 );
@@ -1484,17 +1503,18 @@ void Qcommon_Frame( void ) {
 	// this is the only place where console commands are processed.
     Cbuf_Execute();
 
+#ifndef DEDICATED_ONLY
 	if( host_speeds->integer )
 		time_event = Sys_Milliseconds();
+#endif
 
 	SV_Frame( msec );
 
+#ifndef DEDICATED_ONLY
 	if( host_speeds->integer )
 		time_between = Sys_Milliseconds();
 
-#ifndef DEDICATED_ONLY
 	Com_ProcessLoopback();
-#endif
 
 	CL_Frame( msec );
 
@@ -1516,6 +1536,7 @@ void Qcommon_Frame( void ) {
 		Com_Printf( "all:%3i ev:%3i sv:%3i gm:%3i cl:%3i rf:%3i\n",
 			all, ev, sv, gm, cl, rf );
 	}
+#endif
     
 	cvar_infoModified = 0;
 

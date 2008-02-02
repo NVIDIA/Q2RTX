@@ -936,6 +936,7 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
         if( FS_NeedRestart() ) {
             FS_Restart();
         }
+	    Cvar_FullSet( "gamedir", "gtv", CVAR_SERVERINFO|CVAR_NOSET, CVAR_SET_DIRECT );
 	}
 
     // parse configstrings

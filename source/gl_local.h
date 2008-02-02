@@ -112,6 +112,8 @@ glCullResult_t GL_CullBox( vec3_t bounds[2] );
 glCullResult_t GL_CullSphere( const vec3_t origin, float radius );
 glCullResult_t GL_CullLocalBox( const vec3_t origin, vec3_t bounds[2] );
 
+void GL_RotateForEntity( void );
+
 void GL_DrawBox( const vec3_t origin, vec3_t bounds[2] );
 
 void GL_ShowErrors( const char *func );

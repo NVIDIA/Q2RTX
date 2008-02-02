@@ -30,11 +30,30 @@ static vec3_t translate;
 
 typedef void (*meshTessFunc_t)( aliasMesh_t *, int, int );
 
+#if USE_SHADING
+
+// precalculated dot products for quantized angles
+#define SHADEDOT_QUANT 16
+#define SHADEDOT_INDEX( x ) (((int)((x)*(SHADEDOT_QUANT/360.0f)))&(SHADEDOT_QUANT-1))
+
+static const float   r_avertexnormal_dots[SHADEDOT_QUANT][256] =
+#include "anormtab.h"
+;
+
+static color_t shadelight;
+static const vec_t *shadedots;
+
+#endif
+
 static void Tess_Mesh( aliasMesh_t *mesh, int oldframe, int newframe ) {
 	aliasVert_t *src_vert;
 	vec_t *dst_vert;
     int i, count;
 	vec_t *normal;
+#if USE_SHADING
+    byte *dst_color;
+    vec_t d;
+#endif
 
 	src_vert = &mesh->verts[newframe * mesh->numVerts];
     dst_vert = tess.vertices;
@@ -54,13 +73,25 @@ static void Tess_Mesh( aliasMesh_t *mesh, int oldframe, int newframe ) {
 			dst_vert += 4;
 		}
 	} else {
+#if USE_SHADING
+        dst_color = tess.colors;
+#endif
 		for( i = 0; i < count; i++ ) {
 			dst_vert[0] = src_vert->pos[0] * newscale[0] + translate[0];
 			dst_vert[1] = src_vert->pos[1] * newscale[1] + translate[1];
 			dst_vert[2] = src_vert->pos[2] * newscale[2] + translate[2];
+			dst_vert += 4;
+
+#if USE_SHADING
+            d = shadedots[src_vert->normalIndex];
+            dst_color[0] = shadelight[0] * d;
+            dst_color[1] = shadelight[1] * d;
+            dst_color[2] = shadelight[2] * d;
+            dst_color[3] = shadelight[3];
+            dst_color += 4;
+#endif
 	        
 			src_vert++;
-			dst_vert += 4;
 		}
 	}
 
@@ -73,6 +104,10 @@ static void Tess_LerpedMesh( aliasMesh_t *mesh, int oldframe, int newframe ) {
 	vec_t *dst_vert;
     int i, count;
 	vec_t *normal;
+#if USE_SHADING
+    byte *dst_color;
+    vec_t d;
+#endif
 
 	src_oldvert = &mesh->verts[oldframe * mesh->numVerts];
 	src_newvert = &mesh->verts[newframe * mesh->numVerts];
@@ -97,6 +132,9 @@ static void Tess_LerpedMesh( aliasMesh_t *mesh, int oldframe, int newframe ) {
 			dst_vert += 4;
 		}
 	} else {
+#if USE_SHADING
+        dst_color = tess.colors;
+#endif
 		for( i = 0; i < count; i++ ) {
 			dst_vert[0] =
 				src_oldvert->pos[0] * oldscale[0] +
@@ -107,10 +145,19 @@ static void Tess_LerpedMesh( aliasMesh_t *mesh, int oldframe, int newframe ) {
 			dst_vert[2] =
 				src_oldvert->pos[2] * oldscale[2] +
 				src_newvert->pos[2] * newscale[2] + translate[2];
-	        
+
 			src_oldvert++;
 			src_newvert++;
 			dst_vert += 4;
+
+#if USE_SHADING
+            d = shadedots[src_newvert->normalIndex];
+            dst_color[0] = shadelight[0] * d;
+            dst_color[1] = shadelight[1] * d;
+            dst_color[2] = shadelight[2] * d;
+            dst_color[3] = shadelight[3];
+            dst_color += 4;
+#endif
 		}
 	}
 	
@@ -118,7 +165,7 @@ static void Tess_LerpedMesh( aliasMesh_t *mesh, int oldframe, int newframe ) {
 
 }
 
-void GL_SetAliasColor( vec3_t origin, vec_t *color ) {
+static void GL_SetAliasColor( vec3_t origin, vec_t *color ) {
 	entity_t *ent = glr.ent;
 	float f, m;
 	int i;
@@ -172,6 +219,10 @@ void GL_SetAliasColor( vec3_t origin, vec_t *color ) {
 	if( glr.fd.rdflags & RDF_IRGOGGLES && ent->flags & RF_IR_VISIBLE ) {
 		VectorSet( color, 1, 0, 0 );
 	}
+
+/*	for( i = 0; i < 3; i++ ) {
+        clamp( color[i], 0, 255 );
+    }*/
 }
 
 #define USE_CELSHADING  1
@@ -195,6 +246,30 @@ void GL_DrawAliasModel( model_t *model ) {
     float scale;
 #endif
     int back, front;
+
+#if 0
+    if(!inited) {
+        int i,j;
+
+        for(i=0;i<SHADEDOT_QUANT;i++) {
+            for(j=0;j<256;j++){
+                vec_t d, a;
+                vec3_t v;
+
+                a = i * 360.0f / SHADEDOT_QUANT;
+
+                v[0]=cos(-a);
+                v[1]=sin(-a);
+                v[2]=0;
+
+                d=fabs(DotProduct(v,bytedirs[j]));
+                if(d<0.3)d=0.3;
+                r_avertexnormal_dots[i][j]=d;
+            }
+        }
+        inited=qtrue;
+    }
+#endif
 
 	newframeIdx = ent->frame;
 	if( newframeIdx < 0 || newframeIdx >= model->numFrames ) {
@@ -312,12 +387,10 @@ void GL_DrawAliasModel( model_t *model ) {
 	GL_TexEnv( GL_MODULATE );
     
 	qglPushMatrix();
-
 	qglTranslatef( origin[0], origin[1], origin[2] );
-
-	qglRotatef( ent->angles[YAW],   0, 0, 1 );
-	qglRotatef( ent->angles[PITCH], 0, 1, 0 );
-	qglRotatef( ent->angles[ROLL],  1, 0, 0 );
+    qglRotatef( ent->angles[YAW],   0, 0, 1 );
+    qglRotatef( ent->angles[PITCH], 0, 1, 0 );
+    qglRotatef( ent->angles[ROLL],  1, 0, 0 );
 
 	if( ent->flags & RF_DEPTHHACK ) {
 		qglDepthRange( 0, 0.25f );
@@ -335,9 +408,20 @@ void GL_DrawAliasModel( model_t *model ) {
         back = GL_FRONT;
         front = GL_BACK;
     }
-    
-	qglColor4fv( color );
+
 	qglVertexPointer( 3, GL_FLOAT, 16, tess.vertices );
+    
+#if USE_SHADING
+    VectorScale( color, 255, shadelight );
+    shadelight[3]=color[3]*255;
+
+    shadedots = r_avertexnormal_dots[ SHADEDOT_INDEX( ent->angles[YAW] ) ];
+
+	qglColorPointer( 4, GL_UNSIGNED_BYTE, 0, tess.colors );
+	qglEnableClientState( GL_COLOR_ARRAY );
+#else
+	qglColor4fv( color );
+#endif
 
 	last = model->meshes + model->numMeshes;
 	for( mesh = model->meshes; mesh < last; mesh++ ) {
@@ -406,6 +490,10 @@ void GL_DrawAliasModel( model_t *model ) {
 			qglUnlockArraysEXT();
 		}
 	}
+
+#if USE_SHADING
+	qglDisableClientState( GL_COLOR_ARRAY );
+#endif
 
 	if( ent->flags & RF_DEPTHHACK ) {
 		qglDepthRange( 0, 1 );

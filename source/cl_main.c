@@ -48,6 +48,7 @@ cvar_t	*cl_add_lights;
 cvar_t	*cl_add_entities;
 cvar_t	*cl_add_blend;
 cvar_t	*cl_kickangles;
+cvar_t  *cl_rollhack;
 
 cvar_t	*cl_shownet;
 cvar_t	*cl_showmiss;
@@ -2362,6 +2363,7 @@ static void CL_InitLocal ( void ) {
 	cl_maxfps = Cvar_Get( "cl_maxfps", "60", CVAR_ARCHIVE );
 	cl_async = Cvar_Get( "cl_async", "1", CVAR_ARCHIVE );
 	r_maxfps = Cvar_Get( "r_maxfps", "0", CVAR_ARCHIVE );
+    cl_rollhack = Cvar_Get( "cl_rollhack", "1", 0 );
 
     cl_shownet = Cvar_Get( "cl_shownet", "0", 0 );
     cl_showmiss = Cvar_Get ( "cl_showmiss", "0", 0 );

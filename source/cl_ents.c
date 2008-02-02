@@ -265,7 +265,6 @@ static void CL_AddPacketEntities( void ) {
 					ent.model = cl.baseclientinfo.model;
                     ci = &cl.baseclientinfo;
 				}
-
 //============
 //PGM
 				if (renderfx & RF_USE_DISGUISE)
@@ -320,6 +319,11 @@ static void CL_AddPacketEntities( void ) {
 		} else { // interpolate angles
             LerpAngles(cent->prev.angles, cent->current.angles,
                 cl.lerpfrac, ent.angles);
+
+            // mimic original ref_gl "leaning" bug (uuugly!)
+            if( s1->modelindex == 255 && cl_rollhack->integer ) {
+                ent.angles[ROLL] = -ent.angles[ROLL];
+            }
 		}
 
 		if( s1->number == cl.frame.clientNum + 1 ) {
@@ -632,7 +636,7 @@ skip:
 }
 
 
-#if 1
+#if 0
 static cvar_t *test_model;
 static cvar_t *test_pitch;
 static cvar_t *test_yaw;
@@ -943,7 +947,7 @@ static void CL_CalcViewValues( void ) {
 
 		// add the weapon
 		CL_AddViewWeapon( ps, ops );
-        CL_AddTestModel();
+        //CL_AddTestModel();
 
 	    cl.thirdPersonView = qfalse;
 	}

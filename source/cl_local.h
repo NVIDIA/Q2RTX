@@ -304,6 +304,7 @@ extern	cvar_t	*cl_predict;
 extern	cvar_t	*cl_footsteps;
 extern	cvar_t	*cl_noskins;
 extern	cvar_t	*cl_kickangles;
+extern	cvar_t	*cl_rollhack;
 
 extern	cvar_t	*cl_shownet;
 extern	cvar_t	*cl_showmiss;

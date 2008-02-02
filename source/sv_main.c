@@ -1317,8 +1317,10 @@ SV_RunGameFrame
 =================
 */
 static void SV_RunGameFrame( void ) {
+#ifndef DEDICATED_ONLY
 	if( host_speeds->integer )
 		time_before_game = Sys_Milliseconds();
+#endif
 
 	// we always need to bump framenum, even if we
 	// don't run the world, otherwise the delta
@@ -1351,9 +1353,10 @@ static void SV_RunGameFrame( void ) {
 		svs.realtime = sv.time;
 	}
 
+#ifndef DEDICATED_ONLY
 	if( host_speeds->integer )
 		time_after_game = Sys_Milliseconds();
-
+#endif
 }
 
 /*
@@ -1437,7 +1440,9 @@ void SV_Frame( int msec ) {
     uint32 time;
     int mvdconns;
 
+#ifndef DEDICATED_ONLY
 	time_before_game = time_after_game = 0;
+#endif
 
 	svs.realtime += msec;
 
