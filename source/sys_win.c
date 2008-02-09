@@ -1336,7 +1336,7 @@ PRIVATE DWORD Sys_ExceptionHandler( DWORD exceptionCode, LPEXCEPTION_POINTERS ex
 	for( i = 0; i < 100; i++ ) {
 		path[len+18] = '0' + i / 10;
 		path[len+19] = '0' + i % 10;
-		if( !Sys_GetFileInfo( path, NULL ) ) {
+		if( !Sys_GetPathInfo( path, NULL ) ) {
 			break;
 		}
 	}

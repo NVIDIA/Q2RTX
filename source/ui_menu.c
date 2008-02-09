@@ -765,7 +765,7 @@ static void MenuList_Draw( menuList_t *l ) {
 	int barHeight;
 
 	if( !l->items ) {
-		return;
+		//return;
 	}
 
 	x = l->generic.rect.x;
@@ -859,8 +859,14 @@ static void MenuList_Draw( menuList_t *l ) {
 }
 
 void MenuList_Sort( menuList_t *l, int offset, int (*cmpfunc)( const void *, const void * ) ) {
-    void *n = l->items[l->curvalue];
+    void *n;
     int i;
+
+	if( !l->items ) {
+		return;
+	}
+
+    n = l->items[l->curvalue];
 
     qsort( l->items + offset, l->numItems - offset, sizeof( char * ), cmpfunc );
 

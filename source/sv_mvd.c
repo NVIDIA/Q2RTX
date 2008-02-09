@@ -121,6 +121,25 @@ qboolean SV_MvdPlayerIsActive( edict_t *ent ) {
 	return qtrue;
 }
 
+static void SV_MvdCopyEntity( entity_state_t *dst, entity_state_t *src, int flags ) {
+    if( !( flags & MSG_ES_FIRSTPERSON ) ) {
+		VectorCopy( src->origin, dst->origin );
+		VectorCopy( src->angles, dst->angles );
+		VectorCopy( src->old_origin, dst->old_origin );
+    }
+    dst->modelindex = src->modelindex;
+    dst->modelindex2 = src->modelindex2;
+    dst->modelindex3 = src->modelindex3;
+    dst->modelindex4 = src->modelindex4;
+    dst->frame = src->frame;
+    dst->skinnum = src->skinnum;
+    dst->effects = src->effects;
+    dst->renderfx = src->renderfx;
+    dst->solid = src->solid;
+    dst->sound = src->sound;
+    dst->event = 0;
+}
+
 /*
 ==================
 SV_MvdBuildFrame
@@ -201,7 +220,10 @@ static void SV_MvdEmitFrame( void ) {
 
         flags = 0;
         if( i <= sv_maxclients->integer ) {
-            flags |= MSG_ES_FIRSTPERSON;
+            oldps = &svs.mvd.players[ i - 1 ];
+            if( PPS_INUSE( oldps ) && oldps->pmove.pm_type < PM_DEAD ) {
+                flags |= MSG_ES_FIRSTPERSON;
+            }
         }
         
         if( !oldes->number ) {
@@ -211,7 +233,7 @@ static void SV_MvdEmitFrame( void ) {
 		
         MSG_WriteDeltaEntity( oldes, newes, flags );
 
-        *oldes = *newes;
+        SV_MvdCopyEntity( oldes, newes, flags );
         oldes->number = i;
 	}
 
@@ -341,6 +363,8 @@ void SV_MvdSpawnDummy( void ) {
     memset( svs.mvd.players, 0, sizeof( player_state_t ) * sv_maxclients->integer );
     memset( svs.mvd.entities, 0, sizeof( entity_state_t ) * MAX_EDICTS );
 
+    sv.mvd.layout_time = svs.realtime;
+
     // set base player states
 	for( i = 0; i < sv_maxclients->integer; i++ ) {
 	    ent = EDICT_NUM( i + 1 );
@@ -398,6 +422,8 @@ qboolean SV_MvdCreateDummy( void ) {
     newcl->state = cs_connected;
     newcl->AddMessage = SV_DummyAddMessage;
 	newcl->edict = EDICT_NUM( number + 1 );
+    newcl->netchan = SV_Mallocz( sizeof( netchan_t ) );
+    newcl->netchan->remote_address.type = NA_LOOPBACK;
 
     List_Init( &newcl->entry );
 
@@ -423,12 +449,30 @@ qboolean SV_MvdCreateDummy( void ) {
 	}
 
 	// parse some info from the info strings
-	Q_strncpyz( newcl->userinfo, userinfo, sizeof( newcl->userinfo ) );
+	strcpy( newcl->userinfo, userinfo );
 	SV_UserinfoChanged( newcl );
 
     SV_MvdSpawnDummy();
 
     return qtrue;
+}
+
+void SV_MvdDropDummy( const char *reason ) {
+    tcpClient_t *client;
+
+    if( !svs.mvd.dummy ) {
+        return;
+    }
+    LIST_FOR_EACH( tcpClient_t, client, &svs.mvd.clients, mvdEntry ) {
+        SV_HttpDrop( client, reason );
+    }
+    SV_MvdRecStop();
+
+	SV_RemoveClient( svs.mvd.dummy );
+    svs.mvd.dummy = NULL;
+
+	SZ_Clear( &sv.mvd.datagram );
+	SZ_Clear( &sv.mvd.message );
 }
 
 /*
@@ -524,10 +568,7 @@ void SV_MvdEndFrame( void ) {
     if( sv.mvd.message.overflowed ) {
         // if reliable message overflowed, kick all clients
         Com_EPrintf( "MVD message overflowed\n" );
-        LIST_FOR_EACH( tcpClient_t, client, &svs.mvd.clients, mvdEntry ) {
-            SV_HttpDrop( client, "overflowed" );
-        }
-        SV_MvdRecStop();
+        SV_MvdDropDummy( "overflowed" );
         goto clear;
     }
 
@@ -675,7 +716,10 @@ static void SV_MvdEmitGamestate( void ) {
 	for( i = 1, es = svs.mvd.entities + 1; i < ge->num_edicts; i++, es++ ) {
         flags = 0;
         if( i <= sv_maxclients->integer ) {
-            flags |= MSG_ES_FIRSTPERSON;
+            ps = &svs.mvd.players[ i - 1 ];
+            if( PPS_INUSE( ps ) && ps->pmove.pm_type < PM_DEAD ) {
+                flags |= MSG_ES_FIRSTPERSON;
+            }
         }
         if( ( j = es->number ) == 0 ) {
             flags |= MSG_ES_REMOVE;

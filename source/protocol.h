@@ -125,9 +125,8 @@ typedef enum svc_ops_e {
 	// r1q2 specific operations
 	svc_zpacket,
 	svc_zdownload,
-
-    // q2pro specific operations
-    svc_gamestate,
+    svc_gamestate, // q2pro specific, means svc_playerupdate in r1q2
+    svc_setting,
 
     svc_num_types
 } svc_ops_t;
@@ -321,18 +320,28 @@ typedef enum clc_ops_e {
 #define CLIENTNUM_RESERVED	( MAX_CLIENTS - 1 )
 
 typedef enum clientSetting_e {
-	/* r1q2 specific */
+	// r1q2 specific
 	CLS_NOGUN,
 	CLS_NOBLEND,
 	CLS_RECORDING,
+    CLS_PLAYERUPDATES,
+    CLS_FPS,
 
-	/* q2pro specific */
+	// q2pro specific
 	CLS_NOGIBS			= 10,
 	CLS_NOFOOTSTEPS,
 	CLS_NOPREDICT,
 
 	CLS_MAX
 } clientSetting_t;
+
+typedef enum serverSetting_e {
+    // r1q2 specific
+    SVS_PLAYERUPDATES,
+    SVS_FPS,
+
+    SVS_MAX
+} serverSetting_t;
 
 typedef enum gametype_e {
 	GT_SINGLEPLAYER,
@@ -341,14 +350,14 @@ typedef enum gametype_e {
 } gametype_t;
 
 typedef enum {
-    /* these are sent by the server */
+    // these are sent by the server
     FF_SURPRESSED   = ( 1 << 0 ),
     FF_CLIENTDROP   = ( 1 << 1 ),
     FF_CLIENTPRED   = ( 1 << 2 ),
 
-    /* these are calculated by the client */
+    // these are calculated by the client
     FF_SERVERDROP   = ( 1 << 4 ),
-    FF_BADFRAME    = ( 1 << 5 ),
+    FF_BADFRAME     = ( 1 << 5 ),
     FF_OLDFRAME     = ( 1 << 6 ),
     FF_OLDENT       = ( 1 << 7 ),
     FF_NODELTA      = ( 1 << 8 )

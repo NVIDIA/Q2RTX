@@ -531,27 +531,27 @@ static void CL_ParseFrame( int extrabits ) {
 		from = &oldframe->ps;
 		if( deltaframe == currentframe ) {
             // old buggy q2 servers still cause this on map change
-			Com_DPrintf( "Delta from current frame.\n" );
+			Com_DPrintf( "%s: delta from current frame\n", __func__ );
             cl.frameflags |= FF_BADFRAME;
 		} else if( oldframe->number != deltaframe ) {
 			// The frame that the server did the delta from
 			// is too old, so we can't reconstruct it properly.
-			Com_DPrintf( "Delta frame was never received or too old.\n" );
+			Com_DPrintf( "%s: delta frame was never received or too old\n", __func__ );
             cl.frameflags |= FF_OLDFRAME;
 		} else if( !oldframe->valid ) {	
 			// should never happen
-			Com_DPrintf( "Delta from invalid frame.\n" );
+			Com_DPrintf( "%s: delta from invalid frame\n", __func__ );
             cl.frameflags |= FF_BADFRAME;
 		} else if( cl.numEntityStates - oldframe->firstEntity >
 			MAX_PARSE_ENTITIES - MAX_PACKET_ENTITIES )
 		{
-			Com_DPrintf( "Delta entities too old.\n" );
+			Com_DPrintf( "%s: delta entities too old\n", __func__ );
             cl.frameflags |= FF_OLDENT;
 		} else {
 			frame.valid = qtrue;	// valid delta parse
 		}
         if( !frame.valid && cl.frame.valid && cls.demoplayback ) {
-            Com_DPrintf( "Trying to recover from the broken demo recording.\n" );
+            Com_DPrintf( "%s: recovering broken demo\n", __func__ );
             oldframe = &cl.frame;
             from = &oldframe->ps;
             frame.valid = qtrue;
@@ -570,10 +570,10 @@ static void CL_ParseFrame( int extrabits ) {
 	length = MSG_ReadByte();
 	if( length ) {
 		if( length < 0 || msg_read.readcount + length > msg_read.cursize ) {
-			Com_Error( ERR_DROP, "CL_ParseFrame: read past end of message" );
+			Com_Error( ERR_DROP, "%s: read past end of message", __func__ );
 		}
 		if( length > sizeof( frame.areabits ) ) {
-			Com_Error( ERR_DROP, "CL_ParseFrame: invalid areabits length" );
+			Com_Error( ERR_DROP, "%s: invalid areabits length", __func__ );
 		}
 		MSG_ReadData( frame.areabits, length );
 		frame.areabytes = length;
@@ -583,7 +583,7 @@ static void CL_ParseFrame( int extrabits ) {
 
 	if( cls.serverProtocol <= PROTOCOL_VERSION_DEFAULT ) {
 		if( MSG_ReadByte() != svc_playerinfo ) {
-			Com_Error( ERR_DROP, "CL_ParseFrame: not playerinfo" );
+			Com_Error( ERR_DROP, "%s: not playerinfo", __func__ );
 		}
 	}
 
@@ -618,13 +618,13 @@ static void CL_ParseFrame( int extrabits ) {
 	}
 	if( !frame.ps.fov ) {
         // fail out early to prevent spurious errors later
-        Com_Error( ERR_DROP, "CL_ParseFrame: bad fov" );
+        Com_Error( ERR_DROP, "%s: bad fov", __func__ );
     }
 
 	// parse packetentities
 	if( cls.serverProtocol <= PROTOCOL_VERSION_DEFAULT ) {
 		if( MSG_ReadByte() != svc_packetentities ) {
-			Com_Error( ERR_DROP, "CL_ParseFrame: not packetentities" );
+			Com_Error( ERR_DROP, "%s: not packetentities", __func__ );
 		}
 	}
 
@@ -654,7 +654,7 @@ static void CL_ParseFrame( int extrabits ) {
 
 	cl.oldframe = cl.frame;
 	cl.frame = frame;
-	cl.serverTime = frame.number * 100;
+	cl.serverTime = frame.number * cl.frametime;
 
 	// getting a valid frame message ends the connection process
 	if( cls.state == ca_precached ) {
@@ -842,6 +842,7 @@ static void CL_ParseServerData( void ) {
 	// get the full level name
 	str = MSG_ReadString();
 
+    // setup default pmove parameters
 	cl.pmp.speedMultiplier = 1;
 	cl.pmp.maxspeed = 300;
 //	cl.pmp.upspeed = 350;
@@ -853,6 +854,11 @@ static void CL_ParseServerData( void ) {
 #ifdef PMOVE_HACK
     cl.pmp.highprec = qtrue;
 #endif
+
+    // setup default frame times
+    cl.frametime = 100;
+    cl.framefrac = 0.01f;
+
 	if( cls.serverProtocol == PROTOCOL_VERSION_R1Q2 ) {
 		i = MSG_ReadByte();
 		if( i ) {
@@ -1421,6 +1427,25 @@ static void CL_ParseZPacket( void ) {
 #endif
 }
 
+static void CL_ParseSetting( void ) {
+	uint32		index, value;
+
+	index = MSG_ReadLong();
+	value = MSG_ReadLong();
+
+    switch( index ) {
+    case SVS_FPS:
+        if( !value ) {
+            value = 10;
+        }
+        cl.frametime = 1000 / value;
+        cl.framefrac = value * 0.001f;
+        break;
+    default:
+        break;
+    }
+}
+
 /*
 =====================
 CL_ParseServerMessage
@@ -1441,7 +1466,7 @@ void CL_ParseServerMessage( void ) {
 //
 	while( 1 ) {
 		if( msg_read.readcount > msg_read.cursize ) {
-			Com_Error( ERR_DROP, "CL_ParseServerMessage: read past end of server message" );
+			Com_Error( ERR_DROP, "%s: read past end of server message", __func__ );
 		}
 
         readcount = msg_read.readcount;
@@ -1463,7 +1488,8 @@ void CL_ParseServerMessage( void ) {
 	// other commands
 		switch( cmd ) {
 		default:
-			Com_Error( ERR_DROP, "CL_ParseServerMessage: illegible server message: %d", cmd );
+        badbyte:
+			Com_Error( ERR_DROP, "%s: illegible server message: %d", __func__, cmd );
 			break;
 			
 		case svc_nop:
@@ -1534,11 +1560,24 @@ void CL_ParseServerMessage( void ) {
 			break;
 
 		case svc_zpacket:
+            if( cls.serverProtocol < PROTOCOL_VERSION_R1Q2 ) {
+                goto badbyte;
+            }
 			CL_ParseZPacket();
 			continue;
 
 		case svc_gamestate:
+            if( cls.serverProtocol != PROTOCOL_VERSION_Q2PRO ) {
+                goto badbyte;
+            }
 			CL_ParseGamestate();
+			continue;
+
+		case svc_setting:
+            if( cls.serverProtocol < PROTOCOL_VERSION_R1Q2 ) {
+                goto badbyte;
+            }
+			CL_ParseSetting();
 			continue;
 		}
 

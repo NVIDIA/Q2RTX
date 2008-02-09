@@ -38,8 +38,8 @@ cvar_t	*mvd_running;
 cvar_t	*mvd_shownet;
 cvar_t	*mvd_debug;
 cvar_t	*mvd_timeout;
-cvar_t	*mvd_wait_enter;
-cvar_t	*mvd_wait_leave;
+cvar_t	*mvd_wait_delay;
+cvar_t	*mvd_wait_percent;
 
 // ====================================================================
 
@@ -110,13 +110,6 @@ void MVD_Drop( mvd_t *mvd ) {
     } else {
         MVD_Disconnect( mvd );
     }
-}
-
-void MVD_ResetStream( mvd_t *mvd ) {
-    mvd->state = MVD_PREPARING;
-    List_Delete( &mvd_ready );
-
-    longjmp( mvd_jmpbuf, -1 );
 }
 
 void MVD_Destroyf( mvd_t *mvd, const char *fmt, ... ) {
@@ -211,6 +204,23 @@ void MVD_ClearState( mvd_t *mvd ) {
     mvd->intermission = qfalse;
 }
 
+void MVD_BeginWaiting( mvd_t *mvd ) {
+    //int maxDelay = mvd_wait_delay->value * 1000;
+
+    mvd->state = MVD_WAITING;
+    mvd->waitTime = svs.realtime;
+#if 0
+    mvd->waitDelay += 5000;
+    if( maxDelay < 5000 ) {
+        maxDelay = 5000;
+    }
+    if( mvd->waitDelay > maxDelay ) {
+        mvd->waitDelay = maxDelay;
+    }
+#endif
+
+}
+
 static void MVD_EmitGamestate( mvd_t *mvd ) {
 	char		*string;
 	int			i, j;
@@ -276,7 +286,10 @@ static void MVD_EmitGamestate( mvd_t *mvd ) {
         es = &mvd->edicts[i].s;
         flags = 0;
         if( i <= mvd->maxclients ) {
-            flags |= MSG_ES_FIRSTPERSON;
+            ps = &svs.mvd.players[ i - 1 ];
+            if( PPS_INUSE( ps ) && ps->pmove.pm_type < PM_DEAD ) {
+                flags |= MSG_ES_FIRSTPERSON;
+            }
         }
         if( ( j = es->number ) == 0 ) {
             flags |= MSG_ES_REMOVE;
@@ -470,7 +483,7 @@ static void MVD_PlayNext( mvd_t *mvd, string_entry_t *entry ) {
     if( !entry ) {
         if( mvd->demoloop ) {
             if( --mvd->demoloop == 0 ) {
-                MVD_Dropf( mvd, "End of play list reached" );
+                MVD_Destroyf( mvd, "End of play list reached" );
                 return;
             }
         }
@@ -484,12 +497,12 @@ static void MVD_PlayNext( mvd_t *mvd, string_entry_t *entry ) {
 
     FS_FOpenFile( entry->string, &mvd->demoplayback, FS_MODE_READ );
     if( !mvd->demoplayback ) {
-        MVD_Dropf( mvd, "Couldn't reopen %s", entry->string );
+        MVD_Destroyf( mvd, "Couldn't reopen %s", entry->string );
     }
 
     FS_Read( &magic, 4, mvd->demoplayback );
     if( magic != MVD_MAGIC ) {
-        MVD_Dropf( mvd, "%s is not a MVD2 file", entry->string );
+        MVD_Destroyf( mvd, "%s is not a MVD2 file", entry->string );
     }
 
     Com_Printf( "[%s] Reading from %s\n", mvd->name, entry->string );
@@ -501,6 +514,19 @@ static void MVD_PlayNext( mvd_t *mvd, string_entry_t *entry ) {
     Q_strncpyz( mvd->address, COM_SkipPath( entry->string ), sizeof( mvd->address ) );
 }
 
+void MVD_Finish( mvd_t *mvd, const char *reason ) {
+	Com_Printf( "[%s] %s\n", mvd->name, reason );
+
+    if( mvd->demoentry ) {
+        MVD_PlayNext( mvd, mvd->demoentry->next );
+        mvd->state = MVD_PREPARING;
+        List_Delete( &mvd_ready );
+    } else {
+        MVD_Destroy( mvd );
+    }
+
+    longjmp( mvd_jmpbuf, -1 );
+}
 
 static void MVD_ReadDemo( mvd_t *mvd ) {
     byte *data;
@@ -517,8 +543,7 @@ static void MVD_ReadDemo( mvd_t *mvd ) {
     } while( read );
 
     if( !total ) {
-//        MVD_Dropf( mvd, "End of MVD file reached" );
-        MVD_PlayNext( mvd, mvd->demoentry->next );
+        MVD_Dropf( mvd, "End of MVD file reached" );
     }
 }
 
@@ -653,7 +678,7 @@ int MVD_Frame( void ) {
             continue;
         }
 
-        if( !mvd->stream.state ) {
+        if( mvd->demoentry ) {
             if( mvd->demoplayback ) {
                 MVD_ReadDemo( mvd );
             }
@@ -727,24 +752,27 @@ int MVD_Frame( void ) {
         case MVD_CHECKING:
         case MVD_PREPARING:
             MVD_Parse( mvd );
-            if( mvd->state > MVD_PREPARING ) {
-            // fall through
-        default:
-                usage = MVD_BufferPercent( mvd );
-                if( mvd->state == MVD_WAITING ) {
-                    if( usage >= mvd_wait_leave->value ) {
-                        Com_Printf( "[%s] Reading data...\n", mvd->name );
-                        mvd->state = MVD_READING;
-                    }
-                } else {
-                    if( mvd_wait_leave->value > mvd_wait_enter->value &&
-                        usage < mvd_wait_enter->value )
-                    {
-                        Com_Printf( "[%s] Buffering data...\n", mvd->name );
-                        mvd->state = MVD_WAITING;
-                    }
-                }
+            if( mvd->state <= MVD_PREPARING ) {
+                break;
             }
+            // fall through
+        case MVD_WAITING:
+            if( mvd->waitTime > svs.realtime ) {
+                mvd->waitTime = svs.realtime;
+            }
+            if( svs.realtime - mvd->waitTime >= mvd->waitDelay ) {
+                Com_Printf( "[%s] Waiting finished, reading...\n", mvd->name );
+                mvd->state = MVD_READING;
+                break;
+            }
+            usage = MVD_BufferPercent( mvd );
+            if( usage >= mvd_wait_percent->value ) {
+                Com_Printf( "[%s] Buffering finished, reading...\n", mvd->name );
+                mvd->state = MVD_READING;
+            }
+            break;
+        default:
+            break;
         }
     }
 
@@ -1055,6 +1083,7 @@ void MVD_Connect_f( void ) {
     mvd->pool.max_edicts = MAX_EDICTS;
     mvd->pm_type = PM_SPECTATOR;
     mvd->lastReceived = svs.realtime;
+    mvd->waitDelay = mvd_wait_delay->value * 1000;
     List_Init( &mvd->udpClients );
     List_Init( &mvd->tcpClients );
     List_Init( &mvd->ready );
@@ -1117,6 +1146,29 @@ static void MVD_Kill_f( void ) {
 
     Com_Printf( "[%s] Channel was killed.\n", mvd->name );
     MVD_Destroy( mvd );
+}
+
+static void MVD_Pause_f( void ) {
+    mvd_t *mvd;
+
+    mvd = MVD_SetChannel( 1 );
+    if( !mvd ) {
+        return;
+    }
+
+    switch( mvd->state ) {
+    case MVD_WAITING:
+        Com_Printf( "[%s] Channel was resumed.\n", mvd->name );
+        mvd->state = MVD_READING;
+        break;
+    case MVD_READING:
+        Com_Printf( "[%s] Channel was paused.\n", mvd->name );
+        MVD_BeginWaiting( mvd );
+        break;
+    default:
+        Com_Printf( "[%s] Channel is not ready.\n", mvd->name );
+        break;
+    }
 }
 
 static void MVD_Control_f( void ) {
@@ -1317,6 +1369,7 @@ static const cmdreg_t c_mvd[] = {
 	{ "mvdspawn", MVD_Spawn_f },
 	{ "mvdchannels", MVD_ListChannels_f },
 	{ "mvdcontrol", MVD_Control_f },
+	{ "mvdpause", MVD_Pause_f },
 
     { NULL }
 };
@@ -1331,8 +1384,8 @@ void MVD_Register( void ) {
 	mvd_shownet = Cvar_Get( "mvd_shownet", "0", 0 );
 	mvd_debug = Cvar_Get( "mvd_debug", "0", 0 );
 	mvd_timeout = Cvar_Get( "mvd_timeout", "120", 0 );
-	mvd_wait_enter = Cvar_Get( "mvd_wait_enter", "0.5", 0 );
-	mvd_wait_leave = Cvar_Get( "mvd_wait_leave", "2", 0 );
+	mvd_wait_delay = Cvar_Get( "mvd_wait_delay", "20", 0 );
+	mvd_wait_percent = Cvar_Get( "mvd_wait_percent", "50", 0 );
 
     Cmd_Register( c_mvd );
 

@@ -525,7 +525,11 @@ char *		NET_AdrToString( const netadr_t *a );
 qboolean	NET_StringToAdr( const char *s, netadr_t *a );
 void		NET_Sleep( int msec );
 
+#ifdef DEDICATED_ONLY
+#define		NET_IsLocalAddress( adr )	0
+#else
 #define		NET_IsLocalAddress( adr )	( (adr)->type == NA_LOOPBACK )
+#endif
 
 const char	*NET_ErrorString( void );
 

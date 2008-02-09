@@ -76,7 +76,8 @@ cvar_t	*cl_disconnectcmd;
 cvar_t	*cl_changemapcmd;
 cvar_t	*cl_beginmapcmd;
 
-cvar_t *cl_gibs;
+cvar_t  *cl_gibs;
+cvar_t  *cl_updaterate;
 
 cvar_t *cl_protocol;
 
@@ -152,11 +153,10 @@ CL_UpdateGunSetting
 static void CL_UpdateGunSetting( void ) {
     int nogun;
 
-    if ( cls.state < ca_connected || cls.state > ca_active ) {
+    if( cls.state < ca_connected ) {
         return;
     }
-
-    if ( cls.serverProtocol < PROTOCOL_VERSION_R1Q2 ) {
+    if( cls.serverProtocol < PROTOCOL_VERSION_R1Q2 ) {
         return;
     }
 
@@ -180,11 +180,11 @@ CL_UpdateGibSetting
 ===================
 */
 static void CL_UpdateGibSetting( void ) {
-    if ( cls.state < ca_connected || cls.state > ca_active ) {
+    if( cls.state < ca_connected ) {
         return;
     }
 
-    if ( cls.serverProtocol != PROTOCOL_VERSION_Q2PRO ) {
+    if( cls.serverProtocol != PROTOCOL_VERSION_Q2PRO ) {
         return;
     }
 
@@ -200,11 +200,10 @@ CL_UpdateFootstepsSetting
 ===================
 */
 static void CL_UpdateFootstepsSetting( void ) {
-    if ( cls.state < ca_connected || cls.state > ca_active ) {
+    if( cls.state < ca_connected ) {
         return;
     }
-
-    if ( cls.serverProtocol != PROTOCOL_VERSION_Q2PRO ) {
+    if( cls.serverProtocol != PROTOCOL_VERSION_Q2PRO ) {
         return;
     }
 
@@ -220,17 +219,30 @@ CL_UpdatePredictSetting
 ===================
 */
 static void CL_UpdatePredictSetting( void ) {
-    if ( cls.state < ca_connected || cls.state > ca_active ) {
+    if( cls.state < ca_connected ) {
         return;
     }
-
-    if ( cls.serverProtocol != PROTOCOL_VERSION_Q2PRO ) {
+    if( cls.serverProtocol != PROTOCOL_VERSION_Q2PRO ) {
         return;
     }
 
     MSG_WriteByte( clc_setting );
     MSG_WriteShort( CLS_NOPREDICT );
     MSG_WriteShort( !cl_predict->integer );
+    MSG_FlushTo( &cls.netchan->message );
+}
+
+static void CL_UpdateRateSetting( void ) {
+    if( cls.state < ca_connected ) {
+        return;
+    }
+    if( cls.serverProtocol != PROTOCOL_VERSION_R1Q2 ) {
+        return;
+    }
+
+    MSG_WriteByte( clc_setting );
+    MSG_WriteShort( CLS_FPS );
+    MSG_WriteShort( cl_updaterate->integer );
     MSG_FlushTo( &cls.netchan->message );
 }
 
@@ -705,19 +717,21 @@ static void CL_ServerStatus_f( void ) {
     netadr_t	adr;
 	neterr_t	ret;
 
-    if ( Cmd_Argc() < 2 ) {
-        Com_Printf( "Usage: %s <server>\n", Cmd_Argv( 0 ) );
-        return;
-    }
-
-    s = Cmd_Argv( 1 );
-    if ( !NET_StringToAdr( s, &adr ) ) {
-        Com_Printf( "Bad address: %s\n", s );
-        return;
-    }
-
-    if ( !adr.port ) {
-        adr.port = BigShort( PORT_SERVER );
+    if( Cmd_Argc() < 2 ) {
+        if( !cls.netchan ) {
+            Com_Printf( "Usage: %s [address]\n", Cmd_Argv( 0 ) );
+            return;
+        }
+        adr = cls.netchan->remote_address;
+    } else {
+        s = Cmd_Argv( 1 );
+        if( !NET_StringToAdr( s, &adr ) ) {
+            Com_Printf( "Bad address: %s\n", s );
+            return;
+        }
+        if( !adr.port ) {
+            adr.port = BigShort( PORT_SERVER );
+        }
     }
 
 	CL_AddRequest( &adr, REQ_STATUS );
@@ -728,7 +742,6 @@ static void CL_ServerStatus_f( void ) {
 	if( ret == NET_ERROR ) {
 		Com_Printf( "%s to %s\n", NET_ErrorString(), NET_AdrToString( &adr ) );
 	}
-		
 }
 
 /*
@@ -802,8 +815,9 @@ static qboolean CL_ServerStatusResponse( const char *status,
 void CL_DumpServerInfo( const serverStatus_t *status ) {
 	char	key[MAX_STRING_CHARS];
 	char	value[MAX_STRING_CHARS];
-    const   playerStatus_t *player, *last;
+    const   playerStatus_t *player;
     const char    *infostring;
+    int i;
 
     Com_Printf( "Info response from %s:\n",
         NET_AdrToString( &net_from ) );
@@ -823,10 +837,9 @@ void CL_DumpServerInfo( const serverStatus_t *status ) {
 		}
 	} while( infostring );
 
-    Com_Printf( "\nScore Ping Name\n" );
-    last = status->players + status->numPlayers;
-    for( player = status->players; player != last; player++ ) {
-        Com_Printf( "%5i %4i %s\n", player->score, player->ping,
+    Com_Printf( "\nNum Score Ping Name\n" );
+    for( i = 0, player = status->players; i < status->numPlayers; i++, player++ ) {
+        Com_Printf( "%3i %5i %4i %s\n", i + 1, player->score, player->ping,
             player->name );
     }
 }
@@ -1314,7 +1327,7 @@ static void CL_ConnectionlessPacket( void ) {
             }
         }
 
-		Com_Printf( "Connection to %s established (protocol %d).\n",
+		Com_Printf( "Connected to %s (protocol %d).\n",
 			NET_AdrToString( &cls.serverAddress ), cls.serverProtocol );
 		if( cls.netchan ) {
 			// this may happen after svc_reconnect
@@ -1845,6 +1858,7 @@ void CL_RequestNextDownload ( void ) {
     CL_UpdateGibSetting();
     CL_UpdateFootstepsSetting();
 	CL_UpdatePredictSetting();
+	CL_UpdateRateSetting();
 
     cls.state = ca_precached;
 }
@@ -2260,6 +2274,10 @@ static void cl_predict_changed( cvar_t *self ) {
     CL_UpdatePredictSetting();
 }
 
+static void cl_updaterate_changed( cvar_t *self ) {
+    CL_UpdateRateSetting();
+}
+
 static void CL_GetClientStatus( clientStatus_t *status ) {
 	if( !status ) {
 		Com_Error( ERR_DROP, "CL_GetClientStatus: NULL" );
@@ -2391,6 +2409,9 @@ static void CL_InitLocal ( void ) {
     cl_gibs = Cvar_Get( "cl_gibs", "1", 0 );
 	cl_gibs->changed = cl_gibs_changed;
 
+    cl_updaterate = Cvar_Get( "cl_updaterate", "0", 0 );
+	cl_updaterate->changed = cl_updaterate_changed;
+
     cl_chat_notify = Cvar_Get( "cl_chat_notify", "1", 0 );
     cl_chat_sound = Cvar_Get( "cl_chat_sound", "misc/talk.wav", 0 );
     cl_chat_filter = Cvar_Get( "cl_chat_filter", "0", 0 );
@@ -2480,26 +2501,33 @@ CL_SetClientTime
 ==================
 */
 static void CL_SetClientTime( void ) {
-    if ( cl.time > cl.serverTime ) {
-        if ( cl_showclamp->integer )
+    int prevtime;
+
+    if( com_timedemo->integer ) {
+        cl.time = cl.serverTime;
+        cl.lerpfrac = 1.0f;
+        return;
+    }
+
+    prevtime = cl.serverTime - cl.frametime;
+    if( cl.time > cl.serverTime ) {
+        if( cl_showclamp->integer )
             Com_Printf( "high clamp %i\n", cl.time - cl.serverTime );
         cl.time = cl.serverTime;
         cl.lerpfrac = 1.0f;
-    } else if ( cl.time < cl.serverTime - 100 ) {
-        if ( cl_showclamp->integer )
-            Com_Printf( "low clamp %i\n", cl.time - cl.serverTime + 100 );
-        cl.time = cl.serverTime - 100;
+    } else if( cl.time < prevtime ) {
+        if( cl_showclamp->integer )
+            Com_Printf( "low clamp %i\n", prevtime - cl.time );
+        cl.time = prevtime;
         cl.lerpfrac = 0;
     } else {
-        cl.lerpfrac = ( cl.time - cl.serverTime + 100 ) * 0.01f;
+        cl.lerpfrac = ( cl.time - prevtime ) * cl.framefrac;
     }
 
-    if ( com_timedemo->integer ) {
-        cl.lerpfrac = 1.0f;
+    if( cl_showclamp->integer == 2 ) {
+        Com_Printf( "time %i, lerpfrac %.3f\n",
+            cl.time, cl.lerpfrac );
     }
-
-    if ( cl_showclamp->integer == 2 )
-        Com_Printf( "time %i, lerpfrac %.3f\n", cl.time, cl.lerpfrac );
 }
 
 static void CL_MeasureStats( void ) {

@@ -308,31 +308,22 @@ static void MVD_UnicastSend( mvd_t *mvd, qboolean reliable, byte *data, int leng
 
 static void MVD_UnicastLayout( mvd_t *mvd, qboolean reliable, mvd_player_t *player ) {
     char *string;
-    byte *data;
-    int readcount, length;
     udpClient_t *client;
-    client_t *cl;
-
-	data = msg_read.data + msg_read.readcount - 1;
-    readcount = msg_read.readcount - 1;
 
     string = MSG_ReadString();
     if( player != mvd->dummy ) {
         return; // we don't care about others
     }
 
-    length = msg_read.readcount - readcount;
-
     Q_strncpyz( mvd->layout, string, sizeof( mvd->layout ) );
 
 	// send to all relevant clients
     LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
-        cl = client->cl;
-        if( cl->state < cs_spawned ) {
+        if( client->cl->state < cs_spawned ) {
             continue;
         }
 		if( client->layout_type == LAYOUT_SCORES ) {
-		    cl->AddMessage( cl, data, length, reliable );
+            client->layout_time = 0;
 		}
 	}
 }
@@ -713,7 +704,7 @@ static void MVD_PlayerToEntityStates( mvd_t *mvd ) {
             continue;
         }
         if( player->ps.pmove.pm_type >= PM_DEAD ) {
-            continue;
+            continue; // can be out of sync
         }
 
         edict = &mvd->edicts[i];
@@ -745,8 +736,8 @@ MVD_ParsePacketEntities
 ==================
 */
 static void MVD_ParsePacketEntities( mvd_t *mvd ) {
-	int			number, oldnum = 0;
-	int			i, bits;
+	int			number;
+	int			bits;
     edict_t     *ent;
 
 	while( 1 ) {
@@ -762,14 +753,6 @@ static void MVD_ParsePacketEntities( mvd_t *mvd ) {
 		if( !number ) {
 			break;
 		}
-
-        for( i = oldnum + 1; i < number; i++ ) {
-            ent = &mvd->edicts[i];
-            if( ent->inuse && !( ent->s.renderfx & RF_BEAM ) ) {
-    		    VectorCopy( ent->s.origin, ent->s.old_origin );
-            }
-        }
-        oldnum = number;
 
         ent = &mvd->edicts[number];
 
@@ -857,7 +840,6 @@ MVD_ParseFrame
 */
 static void MVD_ParseFrame( mvd_t *mvd ) {
 	int length;
-    int i;
 
 	// read portalbits
 	length = MSG_ReadByte();
@@ -884,11 +866,6 @@ static void MVD_ParseFrame( mvd_t *mvd ) {
 	if( mvd_shownet->integer > 1 ) {
 		Com_Printf( "%3i:packetentities\n", msg_read.readcount - 1 );
 	}
-
-    // reset events
-    for( i = 0; i < mvd->pool.num_edicts; i++ ) {
-        mvd->edicts[i].s.event = 0;
-    }
 
 	MVD_ParsePacketEntities( mvd );
 
@@ -1030,6 +1007,7 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
     if( mvd->state < MVD_WAITING ) {
         List_Append( &mvd_ready, &mvd->ready );
         mvd->state = mvd->demoplayback ? MVD_READING : MVD_WAITING;
+        mvd->waitTime = svs.realtime;
         mvd_dirty = qtrue;
     }
 
@@ -1061,10 +1039,7 @@ static qboolean MVD_ParseMessage( mvd_t *mvd, fifo_t *fifo ) {
             return qfalse;
         }
         if( !msglen ) {
-            if( !mvd->stream.state && FIFO_Usage( fifo ) ) {
-                MVD_ResetStream( mvd );
-            }
-            MVD_Destroyf( mvd, "End of MVD stream reached" );
+            MVD_Finish( mvd, "End of MVD stream reached" );
         }
         msglen = LittleShort( msglen );
         if( msglen > MAX_MSGLEN ) {
@@ -1220,8 +1195,14 @@ qboolean MVD_Parse( mvd_t *mvd ) {
     if( MVD_ParseMessage( mvd, fifo ) ) {
         return qtrue;
     }
+
+    // ran out of buffers
     if( mvd->state == MVD_DISCONNECTED ) {
-        MVD_Destroyf( mvd, "MVD stream was truncated" );
+        MVD_Finish( mvd, "MVD stream was truncated" );
+    }
+    if( mvd->state == MVD_READING ) {
+        Com_Printf( "[%s] Buffering data...\n", mvd->name );
+        MVD_BeginWaiting( mvd );
     }
     return qfalse;
 }

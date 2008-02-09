@@ -1847,8 +1847,8 @@ void R_InitImageManager( void ) {
 #if USE_JPEG
         "j"
 #endif
-#endif
         "t", 0 );
+#endif
 	cmd.AddCommand( "imagelist", R_ImageList_f );
 
     for( i = 0; i < RIMAGES_HASH; i++ ) {

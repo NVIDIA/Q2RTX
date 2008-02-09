@@ -427,13 +427,61 @@ static void CL_Suspend_f( void ) {
     memset( cl.dcs, 0, sizeof( cl.dcs ) );
 }
 
+static int CL_ReadFirstDemoMessage( fileHandle_t f ) {
+	uint32		ul;
+    uint16      us;
+    int         msglen, type;
+
+    // read magic/msglen
+    if( FS_Read( &ul, 4, f ) != 4 ) {
+        Com_DPrintf( "%s: short read of msglen\n", __func__ );
+        return -1;
+    }
+
+    if( ul == MVD_MAGIC ) {
+        if( FS_Read( &us, 2, f ) != 2 ) {
+            Com_DPrintf( "%s: short read of msglen\n", __func__ );
+            return -1;
+        }
+        if( us == ( uint16 )-1 ) {
+            Com_DPrintf( "%s: end of demo\n", __func__ );
+            return -1;
+        }
+        msglen = LittleShort( us );
+        type = 1;
+    } else {
+        if( ul == ( uint32 )-1 ) {
+            Com_DPrintf( "%s: end of demo\n", __func__ );
+            return -1;
+        }
+	    msglen = LittleLong( ul );
+        type = 0;
+    }
+
+	if( msglen <= 0 || msglen >= sizeof( msg_read_buffer ) ) {
+        Com_DPrintf( "%s: bad msglen\n", __func__ );
+		return -1;
+	}
+
+    SZ_Init( &msg_read, msg_read_buffer, sizeof( msg_read_buffer ) );
+	msg_read.cursize = msglen;
+
+	// read packet data
+	if( FS_Read( msg_read.data, msglen, f ) != msglen ) {
+        Com_DPrintf( "%s: short read of data\n", __func__ );
+		return -1;
+	}
+
+	return type;
+}
+
 /*
 ====================
 CL_ReadNextDemoMessage
 ====================
 */
 static qboolean CL_ReadNextDemoMessage( fileHandle_t f ) {
-	int		msglen;
+	uint32		msglen;
 
 	// read msglen
 	if( FS_Read( &msglen, 4, f ) != 4 ) {
@@ -441,12 +489,13 @@ static qboolean CL_ReadNextDemoMessage( fileHandle_t f ) {
 		return qfalse;
 	}
 
-	if( msglen == -1 ) {
+	if( msglen == ( uint32 )-1 ) {
+        Com_DPrintf( "%s: end of demo\n", __func__ );
 		return qfalse;
 	}
 
 	msglen = LittleLong( msglen );
-	if( msglen < 0 || msglen >= sizeof( msg_read_buffer ) ) {
+	if( msglen >= sizeof( msg_read_buffer ) ) {
         Com_DPrintf( "%s: bad msglen\n", __func__ );
 		return qfalse;
 	}
@@ -504,7 +553,7 @@ static void CL_PlayDemo_f( void ) {
 	char name[MAX_OSPATH];
 	fileHandle_t demofile;
 	char *arg;
-	int length;
+	int length, type;
     int argc = Cmd_Argc();
 
 	if( argc < 2 ) {
@@ -545,6 +594,20 @@ static void CL_PlayDemo_f( void ) {
     }
 #endif
 
+    type = CL_ReadFirstDemoMessage( demofile );
+    if( type == -1 ) {
+		Com_Printf( "%s is not a demo file\n", name );
+        FS_FCloseFile( demofile );
+        return;
+    }
+
+    if( type == 1 ) {
+		Com_DPrintf( "%s is a MVD file\n", name );
+        Cbuf_InsertText( va( "mvdplay /%s\n", name ) );
+        FS_FCloseFile( demofile );
+        return;
+    }
+
 	if( sv_running->integer ) {
 		// if running a local server, kill it and reissue
 		SV_Shutdown( "Server was killed\n", KILL_DROP );
@@ -561,10 +624,11 @@ static void CL_PlayDemo_f( void ) {
 
 	SCR_UpdateScreen();
 
-	do {
-		CL_ParseNextDemoMessage();
+	CL_ParseServerMessage();
+	while( cls.state == ca_connected ) {
 	    Cbuf_Execute();
-	} while( cls.state == ca_connected );
+		CL_ParseNextDemoMessage();
+    }
 
 	length = FS_GetFileLengthNoCache( demofile );
     if( length > 0 ) {
@@ -586,6 +650,26 @@ static const char *CL_PlayDemo_g( const char *partial, int state ) {
         partial, qfalse, state );
 }
 
+static void CL_ParseInfoString( demoInfo_t *info, int clientNum, int index, const char *string ) {
+    int len;
+    char *p;
+
+    if( index >= CS_PLAYERSKINS && index < CS_PLAYERSKINS + MAX_CLIENTS ) {
+        if( index - CS_PLAYERSKINS == clientNum ) {
+            p = strchr( string, '\\' );
+            if( p ) {
+                *p = 0;
+            }
+            Q_strncpyz( info->pov, string, sizeof( info->pov ) );
+        }
+    } else if( index == CS_MODELS + 1 ) {
+        if( strlen( string ) > 9 ) {
+            len = Q_strncpyz( info->map, string + 5, sizeof( info->map ) ); // skip "maps/"
+            info->map[ len - 4 ] = 0; // cut off ".bsp"
+        }
+    }
+}
+
 /*
 ====================
 CL_GetDemoInfo
@@ -593,76 +677,75 @@ CL_GetDemoInfo
 */
 demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info ) {
 	fileHandle_t f;
-	int c, protocol, len;
-	char *s, *p;
-    int clientNum;
+	int c, index;
+	char *string;
+    int clientNum, type;
 
 	FS_FOpenFile( path, &f, FS_MODE_READ );
 	if( !f ) {
 		return NULL;
 	}
 
-	/*if( FS_Read( &magic, 4, f ) != 4 ) {
-        FS_Seek();
-    }*/
-
-	if( !CL_ReadNextDemoMessage( f ) ) {
-		goto fail;
-	}
-
-	if( MSG_ReadByte() != svc_serverdata ) {
-		goto fail;
+    type = CL_ReadFirstDemoMessage( f );
+    if( type == -1 ) {
+        goto fail;
     }
 
-	protocol = MSG_ReadLong();
-    MSG_ReadLong();
-    MSG_ReadByte();
-    MSG_ReadString();
-	clientNum = MSG_ReadShort();
-    MSG_ReadString();
+    if( type == 0 ) {
+        if( MSG_ReadByte() != svc_serverdata ) {
+            goto fail;
+        }
+        if( MSG_ReadLong() != PROTOCOL_VERSION_DEFAULT ) {
+            goto fail;
+        }
+        MSG_ReadLong();
+        MSG_ReadByte();
+        MSG_ReadString();
+        clientNum = MSG_ReadShort();
+        MSG_ReadString();
 
-	switch( protocol ) {
-	case PROTOCOL_VERSION_MVD:
-		msg_read.readcount += 2;
-		break;
-	case PROTOCOL_VERSION_R1Q2:
-		msg_read.readcount += 5;
-		break;
-	case PROTOCOL_VERSION_Q2PRO:
-		msg_read.readcount += 5;
-		break;
-	default:
-		break;
-	}
-
-	while( 1 ) {
-		c = MSG_ReadByte();
-		if( c == -1 ) {
-			if( !CL_ReadNextDemoMessage( f ) ) {
-				break;
-			}
-			continue; // parse new message
-		}
-		if( c != svc_configstring ) {
-			break;
-		}
-		c = MSG_ReadShort();
-		s = MSG_ReadString();
-		if( c >= CS_PLAYERSKINS && c < CS_PLAYERSKINS + MAX_CLIENTS ) {
-			if( c - CS_PLAYERSKINS == clientNum ) {
-                p = strchr( s, '\\' );
-                if( p ) {
-                    *p = 0;
+        while( 1 ) {
+            c = MSG_ReadByte();
+            if( c == -1 ) {
+                if( !CL_ReadNextDemoMessage( f ) ) {
+                    break;
                 }
-                Q_strncpyz( info->pov, s, sizeof( info->pov ) );
+                continue; // parse new message
             }
-		} else if( c == CS_MODELS + 1 ) {
-			if( strlen( s ) > 9 ) {
-				len = Q_strncpyz( info->map, s + 5, sizeof( info->map ) ); // skip "maps/"
-				info->map[ len - 4 ] = 0; // cut off ".bsp"
-			}
-		}
-	}
+            if( c != svc_configstring ) {
+                break;
+            }
+            index = MSG_ReadShort();
+            if( index < 0 || index >= MAX_CONFIGSTRINGS ) {
+                goto fail;
+            }
+            string = MSG_ReadString();
+            CL_ParseInfoString( info, clientNum, index, string );
+        }
+    } else {
+        if( MSG_ReadByte() != mvd_serverdata ) {
+            goto fail;
+        }
+        if( MSG_ReadLong() != PROTOCOL_VERSION_MVD ) {
+            goto fail;
+        }
+        MSG_ReadShort();
+        MSG_ReadLong();
+        MSG_ReadString();
+        clientNum = MSG_ReadShort();
+
+        while( 1 ) {
+            index = MSG_ReadShort();
+            if( index == MAX_CONFIGSTRINGS ) {
+                break;
+            }
+            if( index < 0 || index >= MAX_CONFIGSTRINGS ) {
+                goto fail;
+            }
+            string = MSG_ReadString();
+            CL_ParseInfoString( info, clientNum, index, string );
+        }
+    }
 
 	FS_FCloseFile( f );
 	return info;

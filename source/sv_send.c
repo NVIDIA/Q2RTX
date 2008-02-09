@@ -147,7 +147,7 @@ void SV_BroadcastPrintf( int level, const char *fmt, ... ) {
 	va_list		argptr;
 	char		string[MAX_STRING_CHARS];
 	client_t	*client;
-	int			i, length;
+	int			length;
 
 	va_start( argptr, fmt );
 	length = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
@@ -156,14 +156,6 @@ void SV_BroadcastPrintf( int level, const char *fmt, ... ) {
 	MSG_WriteByte( svc_print );
 	MSG_WriteByte( level );
 	MSG_WriteData( string, length + 1 );
-
-	// echo to console
-	if( dedicated->integer ) {
-		// mask off high bits
-		for( i = 0; string[i]; i++ )
-			string[i] &= 127;
-		Com_Printf( "%s", string );
-	}
 
     FOR_EACH_CLIENT( client ) {
 		if( client->state != cs_spawned )

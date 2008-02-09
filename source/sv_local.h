@@ -494,6 +494,7 @@ void SV_MvdInitStream( void );
 void SV_MvdGetStream( const char *uri );
 void SV_MvdRemoveDummy( void );
 void SV_MvdSpawnDummy( void );
+void SV_MvdDropDummy( const char *reason );
 
 //
 // sv_http.c

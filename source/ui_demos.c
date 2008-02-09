@@ -36,7 +36,6 @@ DEMOS MENU
 #define FFILE_UP	    1
 #define FFILE_FOLDER	2
 #define FFILE_DEMO	    3
-#define FFILE_MVD	    4
 
 #define ID_LIST			105
 
@@ -95,7 +94,7 @@ static void Demos_BuildName( fsFileInfo_t *info, char **cache ) {
 
     e = UI_FormatColumns( DEMO_EXTRASIZE,
         info->name, buffer, demo.map, demo.pov, NULL );
-    e->type = strstr( info->name, ".mvd2" ) ? FFILE_MVD : FFILE_DEMO;
+    e->type = FFILE_DEMO;
     e->size = info->size;
     e->mtime = info->mtime;
 
@@ -176,17 +175,6 @@ static void Demos_WriteCache( void ) {
         map = UI_GetColumn( e->name, 2 );
         pov = UI_GetColumn( e->name, 3 );
         fs.FPrintf( f, "%s\\%s\\", map, pov );
-		
-#if 0
-		{
-			char buffer[64];
-			struct tm *tm;
-
-			tm=localtime( &e->mtime );
-			strftime( buffer, sizeof( buffer ), "%Y-%m-%d %H.%M", tm );
-			Com_Printf("%s: %s\n", name,buffer);
-		}
-#endif
     }
     fs.FCloseFile( f );
 }
@@ -205,11 +193,28 @@ static void Demos_CalcHash( void **list ) {
     mdfour_result( &md, m_demos.hash );
 }
 
+static void Demos_UpdateStatus( void ) {
+    demoEntry_t *e = m_demos.list.items[m_demos.list.curvalue];
+
+    switch( e->type ) {
+    case FFILE_DEMO:
+        m_demos.menu.statusbar = "Press Enter to play demo";
+        break;
+    default:
+        m_demos.menu.statusbar = "Press Enter to change directory";
+        break;
+    }
+}
+
 static void Demos_BuildList( void ) {
 	int numDirs, numDemos;
 	void **dirlist, **demolist;
     char *cache, *p;
 	int i;
+
+    client.StopAllSounds();
+    m_demos.menu.statusbar = "Building list...";
+    client.UpdateScreen();
 	
     // alloc entries
 	dirlist = fs.ListFiles( uis.m_demos_browse, NULL, FS_PATH_GAME |
@@ -249,11 +254,17 @@ static void Demos_BuildList( void ) {
         } else {
             for( i = 0; i < numDemos; i++ ) {
                 Demos_BuildName( demolist[i], NULL );
+                if( ( i & 7 ) == 0 ) {
+                    client.UpdateScreen();
+                }
             }
         }
         Demos_WriteCache();
         fs.FreeList( demolist );
     }
+
+    Demos_UpdateStatus();
+    client.UpdateScreen();
 }
 
 static void Demos_Free( void ) {
@@ -333,10 +344,6 @@ static int Demos_Action( void ) {
 		cmd.ExecuteText( EXEC_APPEND, va( "demo \"%s/%s\"\n",
             uis.m_demos_browse[1] ? uis.m_demos_browse : "", e->name ) );
 		return QMS_SILENT;
-	case FFILE_MVD:
-		cmd.ExecuteText( EXEC_APPEND, va( "mvdplay \"%s/%s\"\n",
-            uis.m_demos_browse[1] ? uis.m_demos_browse : "", e->name ) );
-		return QMS_SILENT;
 	}
 
 	return QMS_NOTHANDLED;
@@ -386,16 +393,7 @@ static int Demos_MenuCallback( int id, int msg, int param ) {
 
 	case QM_CHANGE:
 		if( id == ID_LIST ) {
-            demoEntry_t *e = m_demos.list.items[m_demos.list.curvalue];
-            switch( e->type ) {
-            case FFILE_DEMO:
-            case FFILE_MVD:
-                m_demos.menu.statusbar = "Press Enter to play demo";
-                break;
-            default:
-                m_demos.menu.statusbar = "Press Enter to change directory";
-                break;
-            }
+            Demos_UpdateStatus();
             return QMS_SILENT;
         }
 		break;
@@ -442,8 +440,6 @@ static int Demos_MenuCallback( int id, int msg, int param ) {
 static void Demos_MenuInit( void ) {
 	memset( &m_demos, 0, sizeof( m_demos ) );
 
-	Demos_BuildList();
-
 	m_demos.menu.banner = "Demo Browser";
 	m_demos.menu.callback = Demos_MenuCallback;
 
@@ -469,6 +465,8 @@ static void Demos_MenuInit( void ) {
 void M_Menu_Demos_f( void ) {
 	Demos_MenuInit();
 	UI_PushMenu( &m_demos.menu );
+
+	Demos_BuildList();
 
 	// move cursor to previous position
 	MenuList_SetValue( &m_demos.list, uis.m_demos_selection );

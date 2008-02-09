@@ -679,6 +679,10 @@ The client is going to disconnect, so remove the connection immediately
 =================
 */
 static void SV_Disconnect_f( void ) {
+    if( dedicated->integer && sv_client->netchan ) {
+        Com_Printf( "%s[%s] disconnected\n", sv_client->name,
+            NET_AdrToString( &sv_client->netchan->remote_address ) );
+    }
 	SV_DropClient( sv_client, NULL );
 }
 
@@ -1183,8 +1187,7 @@ void SV_ExecuteClientMessage( client_t *client ) {
 
 				strcpy( buffer, client->userinfo );
 				if( !Info_SetValueForKey( buffer, key, value ) ) {
-					SV_ClientPrintf( client, PRINT_HIGH,
-						"Malformed userinfo update supplied. Ignored.\n" );
+					SV_DropClient( client, "malformed delta userinfo" );
 					break;
 				}
 

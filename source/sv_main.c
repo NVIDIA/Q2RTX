@@ -61,6 +61,7 @@ cvar_t	*sv_http_minclients;
 cvar_t	*sv_maxclients;
 cvar_t	*sv_reserved_slots;
 cvar_t	*sv_showclamp;
+cvar_t  *sv_locked;
 
 cvar_t	*sv_hostname;
 cvar_t	*sv_public;			// should heartbeats be sent
@@ -105,7 +106,7 @@ void SV_RemoveClient( client_t *client ) {
     }
 
     // unlink them from active client list
-    List_Delete( &client->entry );
+    List_Remove( &client->entry );
 
 	// unlink them from MVD client list
 	if( sv.state == ss_broadcast ) {
@@ -165,11 +166,6 @@ void SV_DropClient( client_t *client, const char *reason ) {
         return; // called recursively?
     }
 
-    if( client == svs.mvd.dummy ) {
-        Com_Printf( "Attempted to drop dummy MVD client, ignored.\n" );
-        return;
-    }
-
 	client->state = cs_zombie;		// become free in a few seconds
     client->lastmessage = svs.realtime;
 
@@ -178,8 +174,16 @@ void SV_DropClient( client_t *client, const char *reason ) {
             SV_BroadcastPrintf( PRINT_HIGH, "%s was dropped: %s\n",
                 client->name, reason );
         }
+
+        // print this to client as they will not receive broadcast
         SV_ClientPrintf( client, PRINT_HIGH, "%s was dropped: %s\n",
             client->name, reason );
+
+        // print to server console
+        if( dedicated->integer ) {
+            Com_Printf( "%s[%s] was dropped: %s\n", client->name,
+                NET_AdrToString( &client->netchan->remote_address ), reason );
+        }
 	}
 
 	// add the disconnect
@@ -199,6 +203,10 @@ void SV_DropClient( client_t *client, const char *reason ) {
 	SV_CleanClient( client );
 
 	Com_DPrintf( "Going to cs_zombie for %s\n", client->name );
+
+    if( client == svs.mvd.dummy ) {
+        SV_MvdDropDummy( reason );
+    }
 }
 
 
@@ -545,28 +553,35 @@ static void SVC_DirectConnect( void ) {
 			return;
 		}
 		svs.challenges[i].challenge = 0;
-	}
 
-	// limit number of connections from single IP
-	if( sv_iplimit->integer > 0 ) {
-		count = 0;
-        FOR_EACH_CLIENT( cl ) {
-			if( NET_IsEqualBaseAdr( &net_from, &cl->netchan->remote_address ) ) 
-            {
-				if( cl->state == cs_zombie ) {
-					count++;
-				} else {
-					count += 2;
-				}
-			}
-		}
-		count >>= 1;
-		if( count >= sv_iplimit->integer ) {
-			SV_OobPrintf( "Too many connections from your IP address.\n" );
-			Com_DPrintf( "    rejected - %d connections from this IP.\n", count );
-			return;
-		}
-	}
+        if( sv_locked->integer ) {
+			SV_OobPrintf( "Server is locked.\n" );
+			Com_DPrintf( "    rejected - server is locked.\n" );
+            return;
+        }
+
+        // limit number of connections from single IP
+        if( sv_iplimit->integer > 0 ) {
+            count = 0;
+            FOR_EACH_CLIENT( cl ) {
+                if( NET_IsEqualBaseAdr( &net_from,
+                    &cl->netchan->remote_address ) ) 
+                {
+                    if( cl->state == cs_zombie ) {
+                        count++;
+                    } else {
+                        count += 2;
+                    }
+                }
+            }
+            count >>= 1;
+            if( count >= sv_iplimit->integer ) {
+                SV_OobPrintf( "Too many connections from your IP address.\n" );
+                Com_DPrintf( "    rejected - %d connections from this IP.\n", count );
+                return;
+            }
+        }
+    }
 
     // set maximum message length
     maxlength = MAX_PACKETLEN_WRITABLE_DEFAULT;
@@ -1258,20 +1273,18 @@ if necessary
 ==================
 */
 static void SV_CheckTimeouts( void ) {
-	client_t	*client, *next;
+	client_t	*client;
     uint32      point;
 
-    LIST_FOR_EACH_SAFE( client_t, client, next, &svs.udp_client_list, entry ) {
+    FOR_EACH_CLIENT( client ) {
 		// message times may be wrong across a changelevel
 		if( client->lastmessage > svs.realtime ) {
 			client->lastmessage = svs.realtime;
 		}
-#ifndef DEDICATED_ONLY
 		// never timeout local clients
 		if( NET_IsLocalAddress( &client->netchan->remote_address ) ) {
 			continue;
 		}
-#endif
 		if( client->state == cs_zombie ) {
             if( client->lastmessage < svs.zombiepoint ) {
     			SV_RemoveClient( client );
@@ -1511,23 +1524,25 @@ void SV_Frame( int msec ) {
 	}
 
 	// update ping based on the last known frame from all clients
-	SV_CalcPings ();
+	SV_CalcPings();
 
 	// give the clients some timeslices
-	SV_GiveMsec ();
+	SV_GiveMsec();
 
 	// let everything in the world think and move
-	SV_RunGameFrame ();
+	SV_RunGameFrame();
 
 	// send messages back to the clients that had packets read this frame
-	SV_SendClientMessages ();
+	SV_SendClientMessages();
 
 	// send a heartbeat to the master if needed
-	SV_MasterHeartbeat ();
+	SV_MasterHeartbeat();
 
 	// clear teleport flags, etc for next frame
-	if( sv.state != ss_broadcast ) {
-		SV_PrepWorldFrame ();
+	if( sv.state == ss_broadcast ) {
+		MVD_PrepWorldFrame();
+    } else {
+		SV_PrepWorldFrame();
 	}
 }
 
@@ -1543,52 +1558,40 @@ WARNING: may modify userinfo in place!
 */
 void SV_UpdateUserinfo( char *userinfo ) {
 	char *s;
-	int length;
+	int len;
 
 	if( !userinfo[0] ) {
-		SV_ClientPrintf( sv_client, PRINT_HIGH,
-			"Empty userinfo string supplied. Ignored.\n" );
+		SV_DropClient( sv_client, "empty userinfo" );
 		return;
 	}
 	
 	if( !Info_Validate( userinfo ) ) {
-		SV_ClientPrintf( sv_client, PRINT_HIGH,
-			"Malformed userinfo string supplied. Ignored.\n" );
+		SV_DropClient( sv_client, "malformed userinfo" );
 		return;
 	}
 
 	s = Info_ValueForKey( userinfo, "name" );
-	if( !s[0] || Q_IsWhiteSpace( s ) ) {
-		SV_ClientPrintf( sv_client, PRINT_HIGH,
-			"Empty name supplied in userinfo. Ignored.\n" );
-		return;
-	}
-		
-	length = strlen( s );
-	if(	length > MAX_CLIENT_NAME - 1 ) {
-		SV_ClientPrintf( sv_client, PRINT_HIGH,
-			"Oversize name supplied in userinfo. Ignored.\n" );
+	len = strlen( s );
+	if( len >= MAX_CLIENT_NAME || Q_IsWhiteSpace( s ) ) {
+        if( sv_client->name[0] ) {
+            SV_ClientCommand( sv_client, "set name \"%s\"\n", sv_client->name );
+        } else {
+		    SV_DropClient( sv_client, "malformed name" );
+        }
 		return;
 	}
 
     s = Info_ValueForKey( userinfo, "skin" );
-    if( !s[0] ) {
-        SV_ClientPrintf( sv_client, PRINT_HIGH,
-            "Empty skin supplied in userinfo. Ignored.\n" );
-        return;
-    }
-    
-    length = strlen( s );
-    if( !Q_ispath( s[0] ) || !Q_ispath( s[ length - 1 ] ) || strchr( s, '.' ) ) 
-    {
-        SV_ClientPrintf( sv_client, PRINT_HIGH,
-            "Malformed skin supplied in userinfo. Ignored.\n" );
+    len = strlen( s );
+    if( !Q_ispath( s[0] ) || !Q_ispath( s[ len - 1 ] ) || strchr( s, '.' ) ) {
+        SV_ClientCommand( sv_client, "set skin \"male/grunt\"\n" );
         return;
     }
 
 	// force the IP key/value pair so the game can filter based on ip
 	s = NET_AdrToString( &sv_client->netchan->remote_address );
 	if( !Info_SetValueForKey( userinfo, "ip", s ) ) {
+		SV_DropClient( sv_client, "oversize userinfo" );
 		return;
 	}
 
@@ -1607,18 +1610,24 @@ into a more C freindly form.
 =================
 */
 void SV_UserinfoChanged( client_t *cl ) {
+    char    name[MAX_CLIENT_NAME];
 	char	*val;
-	int		i;
+	int		i, len;
 
 	// call prog code to allow overrides
 	ge->ClientUserinfoChanged( cl->edict, cl->userinfo );
 	
 	// name for C code
 	val = Info_ValueForKey( cl->userinfo, "name" );
-	Q_strncpyz( cl->name, val, sizeof( cl->name ) );
+	len = Q_strncpyz( name, val, sizeof( name ) );
 	// mask off high bit
-	for( i = 0; cl->name[i]; i++ )
-		cl->name[i] &= 127;
+	for( i = 0; i < len; i++ )
+		name[i] &= 127;
+    if( dedicated->integer && cl->name[0] && strcmp( cl->name, name ) ) {
+        Com_Printf( "%s[%s] changed name to %s\n", cl->name,
+            NET_AdrToString( &cl->netchan->remote_address ), name );
+    }
+    memcpy( cl->name, name, len + 1 );
 
 	// rate command
 	val = Info_ValueForKey( cl->userinfo, "rate" );
@@ -1630,19 +1639,22 @@ void SV_UserinfoChanged( client_t *cl ) {
 	}
 
 	// never drop over the loopback
-    if( cl->netchan ) {
-        netadr_t *address = &cl->netchan->remote_address;
-        if( NET_IsLocalAddress( address ) ||
-            ( sv_lan_force_rate->integer && NET_IsLanAddress( address ) ) )
-        {
-            cl->rate = 0;
-        }
+    if( NET_IsLocalAddress( &cl->netchan->remote_address ) ) {
+        cl->rate = 0;
+    }
+
+    // don't drop over LAN connections
+    if( sv_lan_force_rate->integer &&
+        NET_IsLanAddress( &cl->netchan->remote_address ) )
+    {
+        cl->rate = 0;
     }
 
 	// msg command
 	val = Info_ValueForKey( cl->userinfo, "msg" );
 	if( *val ) {
 		cl->messagelevel = atoi( val );
+        clamp( cl->messagelevel, PRINT_LOW, PRINT_CHAT + 1 );
 	}
 }
 
@@ -1723,6 +1735,7 @@ void SV_Init( void ) {
 	rcon_password = Cvar_Get( "rcon_password", "", CVAR_PRIVATE );
 	sv_password = Cvar_Get( "sv_password", "", CVAR_PRIVATE );
 	sv_reserved_password = Cvar_Get( "sv_reserved_password", "", CVAR_PRIVATE );
+	sv_locked = Cvar_Get( "sv_locked", "0", 0 );
 
 	sv_debug_send = Cvar_Get( "sv_debug_send", "0", 0 );
 	sv_pad_packets = Cvar_Get( "sv_pad_packets", "0", 0 );

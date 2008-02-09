@@ -48,36 +48,49 @@ LAYOUTS
 */
 
 static void MVD_LayoutClients( udpClient_t *client ) {
+    static const char header[] = 
+        "xv 16 yv 0 string2 \"    Name            RTT Status\"";
 	char layout[MAX_STRING_CHARS];
 	char buffer[MAX_STRING_CHARS];
 	char status[MAX_QPATH];
 	int length, total;
 	udpClient_t *cl;
     mvd_t *mvd = client->mvd;
-	int y;
+	int y, i, prestep;
 
-	total = sprintf( layout,
-		"xl 32 yb -40 string2 \""APPLICATION" "VERSION"\" "
-		"yb -32 string http://q2pro.sf.net/ "
-		"xv 0 yv 0 string2 Name "
-		"xv 152 string2 Ping "
-		"xv 208 string2 Status " );
+    // calculate prestep
+    if( client->layout_cursor < 0 ) {
+        client->layout_cursor = 0;
+    } else if( client->layout_cursor ) {
+        total = List_Count( &mvd->udpClients );
+        if( client->layout_cursor > total / 10 ) {
+            client->layout_cursor = total / 10;
+        }
+    }
+
+    prestep = client->layout_cursor * 10;
+
+    memcpy( layout, header, sizeof( header ) - 1 );
+	total = sizeof( header ) - 1;
 
 	y = 8;
+    i = 0;
     LIST_FOR_EACH( udpClient_t, cl, &mvd->udpClients, entry ) {
+        if( ++i < prestep ) {
+            continue;
+        }
 		if( cl->cl->state < cs_spawned ) {
-			strcpy( status, "connecting" );
-        } else if( cl->target ) {
+            continue;
+        }
+        if( cl->target ) {
 			strcpy( status, "-> " );
             strcpy( status + 3, cl->target->name );
         } else {
             strcpy( status, "observing" );
         }
-		length = sprintf( buffer,
-			"xv 0 yv %d string \"%.15s\" "
-			"xv 152 string %d "
-			"xv 208 string \"%s\" ",
-			y, cl->cl->name, cl->ping, status );
+		length = Com_sprintf( buffer, sizeof( buffer ),
+			"yv %d string \"%3d %-15.15s %3d %s\"",
+			y, i, cl->cl->name, cl->ping, status );
 		if( total + length >= sizeof( layout ) ) {
 			break;
 		}
@@ -97,27 +110,30 @@ static void MVD_LayoutClients( udpClient_t *client ) {
 }
 
 static void MVD_LayoutChannels( udpClient_t *client ) {
+    static const char header[] =
+        "xv 32 yv 8 picn inventory "
+        "xv 64 yv 32 string2 \"Channel       Map     CL\""
+        "yv 40 string \"------------- ------- --\"";
+    static const char nochans[] =
+        "xv 56 yv 48 string \" <no channels>\"";
 	char layout[MAX_STRING_CHARS];
 	char buffer[MAX_STRING_CHARS];
     mvd_t *mvd;
 	int length, total, cursor, y;
 
-    total = sprintf( layout, "xv 32 yv 8 picn inventory "
-        "xv 64 yv 32 string2 \"Channel       Map     CL\" "
-        "yv 40 string \"------------- ------- --\" "
-		"xl 32 yb -40 string2 \""APPLICATION" "VERSION"\" "
-		"yb -32 string http://q2pro.sf.net/ " );
+    memcpy( layout, header, sizeof( header ) - 1 );
+    total = sizeof( header ) - 1;
 
     cursor = List_Count( &mvd_ready );
     if( cursor ) {
-        clamp( client->cursor, 0, cursor - 1 );
+        clamp( client->layout_cursor, 0, cursor - 1 );
 
         y = 48;
         cursor = 0;
         LIST_FOR_EACH( mvd_t, mvd, &mvd_ready, ready ) {
-            length = sprintf( buffer,
+            length = Com_sprintf( buffer, sizeof( buffer ),
                 "xv 56 yv %d string \"%c%-13.13s %-7.7s %d%s\" ", y,
-                cursor == client->cursor ? 0x8d : 0x20,
+                cursor == client->layout_cursor ? 0x8d : 0x20,
                 mvd->name, mvd->mapname,
                 List_Count( &mvd->udpClients ),
                 mvd == client->mvd ? "+" : "" );
@@ -131,9 +147,9 @@ static void MVD_LayoutChannels( udpClient_t *client ) {
             cursor++;
         }
     } else {
-        client->cursor = 0;
-        total += sprintf( layout + total,
-            "xv 56 yv 48 string \" <no channels>\" " );
+        client->layout_cursor = 0;
+        memcpy( layout + total, nochans, sizeof( nochans ) - 1 );
+        total += sizeof( nochans ) - 1;
     }
 
     layout[total] = 0;
@@ -142,6 +158,8 @@ static void MVD_LayoutChannels( udpClient_t *client ) {
 	MSG_WriteByte( svc_layout );
 	MSG_WriteData( layout, total + 1 );				
 	SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
+
+	client->layout_time = 1;
 }
 
 static void MVD_LayoutScores( udpClient_t *client ) {
@@ -153,6 +171,8 @@ static void MVD_LayoutScores( udpClient_t *client ) {
 	MSG_WriteByte( svc_layout );
     MSG_WriteString( layout );
 	SV_ClientAddMessage( client->cl, MSG_CLEAR );
+
+	client->layout_time = 1;
 }
 
 static void MVD_LayoutFollow( udpClient_t *client ) {
@@ -162,29 +182,75 @@ static void MVD_LayoutFollow( udpClient_t *client ) {
 	MSG_WriteByte( svc_layout );
     MSG_WriteString( va( "xv 0 yt 48 cstring \"%s\"", name ) );
 	SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
+
+	client->layout_time = 1;
 }
 
 static void MVD_SetDefaultLayout( udpClient_t *client ) {
     mvd_t *mvd = client->mvd;
 
 	if( mvd == &mvd_waitingRoom ) {
-        if( client->layout_type != LAYOUT_CHANNELS ) {
-    		client->layout_type = LAYOUT_CHANNELS;
-            client->cursor = 0;
-		    MVD_LayoutChannels( client );
-        }
+    	client->layout_type = LAYOUT_CHANNELS;
 	} else if( mvd->intermission ) {
         client->layout_type = LAYOUT_SCORES;
-        MVD_LayoutScores( client );
 	} else if( client->target && ( client->cl->protocol !=
         PROTOCOL_VERSION_Q2PRO || client->cl->settings[CLS_RECORDING] ) )
     {
         client->layout_type = LAYOUT_FOLLOW;
-        MVD_LayoutFollow( client );
     } else {
 		client->layout_type = LAYOUT_NONE;
 	}
+
+    // force an update
+    client->layout_time = 0;
+    client->layout_cursor = 0;
 }
+
+// this is the only function that actually writes layouts
+static void MVD_UpdateLayouts( mvd_t *mvd ) {
+    udpClient_t *client;
+
+    LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
+		if( client->cl->state != cs_spawned ) {
+            continue;
+        }
+        client->ps.stats[STAT_LAYOUTS] = client->layout_type ? 1 : 0;
+        switch( client->layout_type ) {
+        case LAYOUT_NONE:
+            if( client->cl->protocol != PROTOCOL_VERSION_Q2PRO ) {
+                break;
+            }
+            if( client->target && client->cl->settings[CLS_RECORDING] ) {
+                client->layout_type = LAYOUT_FOLLOW;
+                MVD_LayoutFollow( client );
+            }
+            break;
+        case LAYOUT_FOLLOW:
+            if( !client->layout_time ) {
+                MVD_LayoutFollow( client );
+            }
+            break;
+        case LAYOUT_SCORES:
+            if( !client->layout_time ) {
+                MVD_LayoutScores( client );
+            }
+            break;
+        case LAYOUT_CLIENTS:
+            if( client->layout_time < sv.time ) {
+                MVD_LayoutClients( client );
+            }
+            break;
+        case LAYOUT_CHANNELS:
+            if( mvd_dirty || !client->layout_time ) {
+                MVD_LayoutChannels( client );
+            }
+            break;
+        default:
+            break;
+        }
+    }
+}
+
 
 /*
 ==============================================================================
@@ -257,7 +323,7 @@ static void MVD_FollowStart( udpClient_t *client, mvd_player_t *target ) {
         client->layout_type = LAYOUT_FOLLOW;
     }
     if( client->layout_type == LAYOUT_FOLLOW ) {
-        MVD_LayoutFollow( client );
+        client->layout_time = 0; // force an update
     }
 
     MVD_UpdateClient( client );
@@ -446,7 +512,7 @@ void MVD_TrySwitchChannel( udpClient_t *client, mvd_t *mvd ) {
         if( client->begin_time > svs.realtime ) {
             client->begin_time = svs.realtime;
         }
-        if( svs.realtime - client->begin_time < 3000 ) {
+        if( svs.realtime - client->begin_time < 2000 ) {
             SV_ClientPrintf( client->cl, PRINT_HIGH,
                 "[MVD] You may not switch channels too soon.\n" );
             return;
@@ -614,7 +680,7 @@ static void MVD_Invuse_f( udpClient_t *client ) {
         if( !mvd->framenum ) {
             continue;
         }
-        if( cursor == client->cursor ) {
+        if( cursor == client->layout_cursor ) {
             MVD_TrySwitchChannel( client, mvd );
             return;
         }
@@ -663,23 +729,23 @@ static void MVD_GameClientCommand( edict_t *ent ) {
 			MVD_SetDefaultLayout( client );
 		} else {
 			client->layout_type = LAYOUT_CLIENTS;
-			MVD_LayoutClients( client );
+            client->layout_time = 0;
 		}
 		return;
 	}
 	if( !strcmp( cmd, "invnext" ) ) {
-		if( client->layout_type == LAYOUT_CHANNELS ) {
-            client->cursor++;
-			MVD_LayoutChannels( client );
+		if( client->layout_type >= LAYOUT_CLIENTS ) {
+            client->layout_cursor++;
+            client->layout_time = 0;
         } else {
             MVD_FollowNext( client );
         }
         return;
     }
 	if( !strcmp( cmd, "invprev" ) ) {
-		if( client->layout_type == LAYOUT_CHANNELS ) {
-            client->cursor--;
-			MVD_LayoutChannels( client );
+		if( client->layout_type >= LAYOUT_CLIENTS ) {
+            client->layout_cursor--;
+            client->layout_time = 0;
         } else {
             MVD_FollowPrev( client );
         }
@@ -694,7 +760,7 @@ static void MVD_GameClientCommand( edict_t *ent ) {
 			MVD_SetDefaultLayout( client );
 		} else {
 			client->layout_type = LAYOUT_SCORES;
-			MVD_LayoutScores( client );
+            client->layout_time = 0;
 		}
 		return;
 	}
@@ -704,7 +770,7 @@ static void MVD_GameClientCommand( edict_t *ent ) {
 	}
 	if( !strcmp( cmd, "channels" ) ) {
 		client->layout_type = LAYOUT_CHANNELS;
-		MVD_LayoutChannels( client );
+        client->layout_time = 0;
 		return;
 	}
 	if( !strcmp( cmd, "join" ) ) {
@@ -726,40 +792,6 @@ MISC GAME FUNCTIONS
 
 ==============================================================================
 */
-
-static void MVD_Update( mvd_t *mvd ) {
-    udpClient_t *client;
-
-    LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
-		if( client->cl->state != cs_spawned ) {
-            continue;
-        }
-        client->ps.stats[STAT_LAYOUTS] = client->layout_type ? 1 : 0;
-        switch( client->layout_type ) {
-        case LAYOUT_NONE:
-            if( client->cl->protocol != PROTOCOL_VERSION_Q2PRO ) {
-                break;
-            }
-            if( client->target && client->cl->settings[CLS_RECORDING] ) {
-                client->layout_type = LAYOUT_FOLLOW;
-                MVD_LayoutFollow( client );
-            }
-            break;
-        case LAYOUT_CLIENTS:
-            if( client->layout_time < sv.time ) {
-                MVD_LayoutClients( client );
-            }
-            break;
-        case LAYOUT_CHANNELS:
-            if( mvd_dirty ) {
-                MVD_LayoutChannels( client );
-            }
-            break;
-        default:
-            break;
-        }
-    }
-}
 
 void MVD_RemoveClient( client_t *client ) {
 	int index = client - svs.udp_client_pool;
@@ -1040,16 +1072,36 @@ static void MVD_GameRunFrame( void ) {
         }
 
 update:
-        MVD_Update( mvd );
+        MVD_UpdateLayouts( mvd );
     }
 
-    MVD_Update( &mvd_waitingRoom );
+    MVD_UpdateLayouts( &mvd_waitingRoom );
     
     mvd_dirty = qfalse;
 }
 
 static void MVD_GameServerCommand( void ) {
 }
+
+void MVD_PrepWorldFrame( void ) {
+    mvd_t *mvd;
+    edict_t *ent;
+    int i;
+
+    // reset events and old origins
+    LIST_FOR_EACH( mvd_t, mvd, &mvd_ready, ready ) {
+        for( i = 1, ent = &mvd->edicts[1]; i < mvd->pool.num_edicts; i++, ent++ ) {
+            if( !ent->inuse ) {
+                continue;
+            }
+            if( !( ent->s.renderfx & RF_BEAM ) ) {
+                VectorCopy( ent->s.origin, ent->s.old_origin );
+            }
+            ent->s.event = 0;
+        }
+    }
+}
+
 
 game_export_t mvd_ge = {
 	GAME_API_VERSION,

@@ -145,6 +145,8 @@ typedef struct client_state_s {
 	int			time;			// this is the time value that the client
 								// is rendering at.  always <= cls.realtime
 	float		lerpfrac;		// between oldframe and frame
+    int         frametime;      // fixed server frame time
+    float       framefrac;
 
 
 	refdef_t	refdef;

@@ -83,10 +83,10 @@ typedef struct {
 	mvd_player_t *target, *oldtarget;
 	float fov;
     int uf;
-    int cursor;
 
-	mvd_layout_t layout_type;
-	int layout_time;
+	mvd_layout_t    layout_type;
+	int             layout_time;
+    int             layout_cursor;
 
 	int floodSamples[FLOOD_SAMPLES];
 	int floodHead;
@@ -129,6 +129,7 @@ typedef struct mvd_s {
     fifo_t      zbuf;
     int         framenum;
     int         lastReceived;
+    unsigned    waitTime, waitDelay;
 
     // game state
     char    gamedir[MAX_QPATH];
@@ -175,9 +176,10 @@ void MVD_Dropf( mvd_t *mvd, const char *fmt, ... )
 void MVD_Destroyf( mvd_t *mvd, const char *fmt, ... )
     q_noreturn q_printf( 2, 3 );
 void MVD_Disconnect( mvd_t *mvd );
+void MVD_BeginWaiting( mvd_t *mvd );
 void MVD_ClearState( mvd_t *mvd );
 void MVD_ChangeLevel( mvd_t *mvd ); 
-void MVD_ResetStream( mvd_t *mvd ) q_noreturn;
+void MVD_Finish( mvd_t *mvd, const char *reason ) q_noreturn;
 void MVD_GetStream( const char *uri );
 void MVD_GetStatus( void );
 void MVD_Free( mvd_t *mvd ); 
@@ -215,4 +217,5 @@ void MVD_SwitchChannel( udpClient_t *client, mvd_t *mvd );
 void MVD_RemoveClient( client_t *client );
 void MVD_BroadcastPrintf( mvd_t *mvd, int level,
     int mask, const char *fmt, ... ) q_printf( 4, 5 );
+void MVD_PrepWorldFrame( void );
 
