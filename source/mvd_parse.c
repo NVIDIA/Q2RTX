@@ -649,6 +649,14 @@ static void MVD_ParseConfigstring( mvd_t *mvd ) {
         if( p ) {
             *p = 0;
         }
+        LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
+            if( client->cl->state < cs_spawned ) {
+                continue;
+            }
+            if( client->target == player && client->layout_type == LAYOUT_FOLLOW ) {
+                client->layout_time = 0;
+            }
+        }
     } else if( index >= CS_GENERAL ) {
         // reset unicast versions of this string
         for( i = 0; i < mvd->maxclients; i++ ) {

@@ -775,12 +775,12 @@ void CL_DemoFrame( void ) {
 
 	if( com_timedemo->integer ) {
 		CL_ParseNextDemoMessage();
-		cl.time = cl.serverTime;
+		cl.time = cl.servertime;
 		cls.timeDemoFrames++;
 		return;
 	}
 
-	while( cl.serverTime < cl.time ) {
+	while( cl.servertime < cl.time ) {
 		CL_ParseNextDemoMessage();
 		if( cls.state != ca_active ) {
 			break;

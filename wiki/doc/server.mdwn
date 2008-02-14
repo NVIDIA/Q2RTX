@@ -117,28 +117,25 @@ Higher values mean higher verbosity.
 Display some MVD client related development information.
 Higher values mean higher verbosity.
 
-- `set mvd_pause 0` (boolean)  
-Pause MVD playback if non-zero.
-
 - `set mvd_timeout 120` (float)    
 Specifies MVD connection timeout value, in seconds.
 
-- `set mvd_wait_enter 0.5` (float)  
-Inuse percentage of the input buffer when MVD state
-machine transitions from running state into waiting state.
+- `set mvd_wait_delay 20` (float)  
+Time, in seconds, for MVD client to buffer data right after initial
+connection. This effectively specifies MVD stream delay seen by observers.
 
-- `set mvd_wait_leave 2` (float)  
-Inuse percentage of the input buffer when MVD state
-machine transitions from waiting state into running state.
+- `set mvd_wait_percent 2` (float)  
+Inuse percentage of the input buffer when MVD state machine transitions
+into running state to prevent buffer overrun.
 
 Hacks
 ----------
 
 - `set sv_oldgame_hack 0` (boolean)  
-On Unix systems, enables "binary compatibility mode" so game libraries
-built using old GCC versions may be loaded without recompilation.
-If you have to use some closed source mod and your server segfaults
-while loading a map, try toggling this variable.
+On Unix systems, enables ABI compatibility mode which allows loading of
+game libraries built using ancient GCC versions. If you happen to run closed
+source game mod and your server crashes while loading a map, try enabling
+this variable.
 
 - `set sv_bodyque_hack 0` (boolean)  
 Attempts to prevent "flying bodies" effect introduced by some buggy
@@ -147,8 +144,8 @@ slots for "body queue" and disables client side interpolation of
 those entities. Use this hack with caution as it may not be compatible
 with all mods and causes slightly higher bandwidth usage.
 
-- `set sv_strafejump_hack 0` (boolean)  
-Enables FPS-independent strafe jumping mode for clients supporting R1Q2
+- `set sv_strafejump_hack 1` (boolean)  
+Enables FPS-independent strafe jumping mode for clients using R1Q2
 and Q2PRO protocols.
 
 
@@ -206,7 +203,7 @@ Anticheat
 
 Q2PRO server supports r1ch.net anticheat server interface, which means it is
 capable of serving clients supported by the proprietary client side anticheat
-module (currently, these include Windows builds of R1Q2, EGL and AprQ2).
+module (currently, these include Windows builds of R1Q2, EGL, AprQ2 and Q2PRO).
 
 See this [thread](http://www.r1ch.net/forum/index.php?topic=944.0) on r1ch.net
 forums for more information on how to setup your server to use anticheat

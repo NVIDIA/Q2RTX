@@ -122,7 +122,8 @@ typedef struct client_state_s {
 	server_frame_t		frames[UPDATE_BACKUP];
 	server_frame_t		frame;				// received from server
 	server_frame_t		oldframe;
-	int			        serverTime;
+	int			        servertime;
+    int                 serverdelta;
     frameflags_t        frameflags;
 
 	int			        lastframe;
@@ -147,7 +148,6 @@ typedef struct client_state_s {
 	float		lerpfrac;		// between oldframe and frame
     int         frametime;      // fixed server frame time
     float       framefrac;
-
 
 	refdef_t	refdef;
 	int			lightlevel;

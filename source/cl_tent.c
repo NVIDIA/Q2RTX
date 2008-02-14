@@ -333,7 +333,7 @@ void CL_SmokeAndFlash(vec3_t origin)
 	ex->type = ex_misc;
 	ex->frames = 4;
 	ex->ent.flags = RF_TRANSLUCENT;
-	ex->start = cl.serverTime - 100;
+	ex->start = cl.servertime - cl.frametime;
 	ex->ent.model = cl_mod_smoke;
 
 	ex = CL_AllocExplosion ();
@@ -341,7 +341,7 @@ void CL_SmokeAndFlash(vec3_t origin)
 	ex->type = ex_flash;
 	ex->ent.flags = RF_FULLBRIGHT;
 	ex->frames = 2;
-	ex->start = cl.serverTime - 100;
+	ex->start = cl.servertime - cl.frametime;
 	ex->ent.model = cl_mod_flash;
 }
 
@@ -714,7 +714,7 @@ static explosion_t *CL_RocketExplosion( vec3_t pos, qhandle_t hModel ) {
 	VectorCopy (pos, ex->ent.origin);
 	ex->type = ex_poly;
 	ex->ent.flags = RF_FULLBRIGHT;
-	ex->start = cl.serverTime - 100;
+	ex->start = cl.servertime - cl.frametime;
 	ex->light = 350;
 	ex->lightcolor[0] = 1.0;
 	ex->lightcolor[1] = 0.5;
@@ -860,7 +860,7 @@ void CL_ParseTEnt (void)
 
 		ex->type = ex_misc;
 		ex->ent.flags = RF_FULLBRIGHT|RF_TRANSLUCENT;
-		ex->start = cl.serverTime - 100;
+		ex->start = cl.servertime - cl.frametime;
 		ex->light = 150;
 		ex->lightcolor[0] = 1;
 		ex->lightcolor[1] = 1;
@@ -884,7 +884,7 @@ void CL_ParseTEnt (void)
 		VectorCopy (pos, ex->ent.origin);
 		ex->type = ex_poly;
 		ex->ent.flags = RF_FULLBRIGHT;
-		ex->start = cl.serverTime - 100;
+		ex->start = cl.servertime - cl.frametime;
 		ex->light = 350;
 		ex->lightcolor[0] = 1.0;
 		ex->lightcolor[1] = 0.5;
@@ -914,7 +914,7 @@ void CL_ParseTEnt (void)
 		VectorCopy (pos, ex->ent.origin);
 		ex->type = ex_poly;
 		ex->ent.flags = RF_FULLBRIGHT;
-		ex->start = cl.serverTime - 100;
+		ex->start = cl.servertime - cl.frametime;
 		ex->light = 350;
 		ex->lightcolor[0] = 1.0;
 		ex->lightcolor[1] = 0.5;
@@ -936,7 +936,7 @@ void CL_ParseTEnt (void)
 		VectorCopy (pos, ex->ent.origin);
 		ex->type = ex_poly;
 		ex->ent.flags = RF_FULLBRIGHT;
-		ex->start = cl.serverTime - 100;
+		ex->start = cl.servertime - cl.frametime;
 		ex->light = 350;
 		ex->lightcolor[0] = 1.0; 
 		ex->lightcolor[1] = 0.5;
@@ -993,7 +993,7 @@ void CL_ParseTEnt (void)
 		VectorCopy (pos, ex->ent.origin);
 		ex->type = ex_poly;
 		ex->ent.flags = RF_FULLBRIGHT;
-		ex->start = cl.serverTime - 100;
+		ex->start = cl.servertime - cl.frametime;
 		ex->light = 350;
 		ex->lightcolor[0] = 0.0;
 		ex->lightcolor[1] = 1.0;
@@ -1048,7 +1048,7 @@ void CL_ParseTEnt (void)
 		// note to self
 		// we need a better no draw flag
 		ex->ent.flags = RF_BEAM;
-		ex->start = cl.serverTime - 0.1;
+		ex->start = cl.servertime - cl.frametime;
 		ex->light = 100 + (rand()%75);
 		ex->lightcolor[0] = 1.0;
 		ex->lightcolor[1] = 1.0;
@@ -1108,7 +1108,7 @@ void CL_ParseTEnt (void)
 		else // flechette
 			ex->ent.skinnum = 2;
 
-		ex->start = cl.serverTime - 100;
+		ex->start = cl.servertime - cl.frametime;
 		ex->light = 150;
 		// PMM
 		if (type == TE_BLASTER2)
@@ -1142,7 +1142,7 @@ void CL_ParseTEnt (void)
 		VectorCopy (pos, ex->ent.origin);
 		ex->type = ex_poly;
 		ex->ent.flags = RF_FULLBRIGHT;
-		ex->start = cl.serverTime - 100;
+		ex->start = cl.servertime - cl.frametime;
 		ex->light = 350;
 		ex->lightcolor[0] = 1.0;
 		ex->lightcolor[1] = 0.5;

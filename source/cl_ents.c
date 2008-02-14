@@ -96,6 +96,9 @@ void CL_DeltaFrame( void ) {
 	entity_state_t		*state;
 	int					i, j;
 
+    // set server time
+	cl.servertime = ( cl.frame.number - cl.serverdelta ) * cl.frametime;
+
     VectorScale( cl.frame.ps.pmove.origin, 0.125f, cl.playerEntityOrigin );
 
 	CL_BuildSolidList();

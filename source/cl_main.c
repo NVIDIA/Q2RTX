@@ -989,6 +989,9 @@ static void CL_Changing_f( void ) {
         return;
     }
 
+    if ( cls.demorecording )
+        CL_Stop_f();
+
     S_StopAllSounds();
 
     Com_Printf( "Changing map...\n" );
@@ -2463,23 +2466,21 @@ CL_CheatsOK
 ==================
 */
 qboolean CL_CheatsOK( void ) {
-    if ( cls.state < ca_connected ) {
+    if( cls.state < ca_connected || cls.demoplayback ) {
         return qtrue;
     }
 
-    if ( cls.demoplayback ) {
-        return qtrue;
+	if( !sv_running->integer ) {
+        return qfalse;
     }
 
     // developer option
-	if ( sv_running->integer ) {
-		if( sv_running->integer != ss_game || Cvar_VariableInteger( "cheats" ) ) {
-			return qtrue;
-		}
+    if( Cvar_VariableInteger( "cheats" ) ) {
+		return qtrue;
     }
 
     // single player can cheat
-    if ( atoi( cl.configstrings[ CS_MAXCLIENTS ] ) < 2 ) {
+    if( cls.state > ca_connected && cl.maxclients < 2 ) {
         return qtrue;
     }
 
@@ -2504,16 +2505,16 @@ static void CL_SetClientTime( void ) {
     int prevtime;
 
     if( com_timedemo->integer ) {
-        cl.time = cl.serverTime;
+        cl.time = cl.servertime;
         cl.lerpfrac = 1.0f;
         return;
     }
 
-    prevtime = cl.serverTime - cl.frametime;
-    if( cl.time > cl.serverTime ) {
+    prevtime = cl.servertime - cl.frametime;
+    if( cl.time > cl.servertime ) {
         if( cl_showclamp->integer )
-            Com_Printf( "high clamp %i\n", cl.time - cl.serverTime );
-        cl.time = cl.serverTime;
+            Com_Printf( "high clamp %i\n", cl.time - cl.servertime );
+        cl.time = cl.servertime;
         cl.lerpfrac = 1.0f;
     } else if( cl.time < prevtime ) {
         if( cl_showclamp->integer )

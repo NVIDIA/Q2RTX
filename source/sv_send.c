@@ -80,10 +80,10 @@ static qboolean SV_RateDrop( client_t *client ) {
 	return qfalse;
 }
 
-void SV_CalcSendTime( client_t *client, int messageSize ) {
+void SV_CalcSendTime( client_t *client, int size ) {
 	int delta;
 
-	if( messageSize == -1 ) {
+	if( size == -1 ) {
 		return;
 	}
 
@@ -93,9 +93,9 @@ void SV_CalcSendTime( client_t *client, int messageSize ) {
 		return;
 	}
 
-	client->message_size[sv.framenum % RATE_MESSAGES] = messageSize;
+	client->message_size[sv.framenum % RATE_MESSAGES] = size;
 
-	delta = messageSize * 1000 / client->rate;
+	delta = size * 1000 / client->rate;
 	client->sendTime = svs.realtime + delta;
 }
 

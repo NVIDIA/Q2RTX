@@ -436,7 +436,8 @@ CL_SetActiveState
 ================
 */
 static void CL_SetActiveState( void ) {
-	cl.time = cl.serverTime; // set time, needed for demos
+    cl.serverdelta = cl.frame.number;
+	cl.time = cl.servertime = 0; // set time, needed for demos
 	cls.state = ca_active;
 	cl.oldframe.valid = qfalse;
     cl.frameflags = 0;
@@ -654,7 +655,6 @@ static void CL_ParseFrame( int extrabits ) {
 
 	cl.oldframe = cl.frame;
 	cl.frame = frame;
-	cl.serverTime = frame.number * cl.frametime;
 
 	// getting a valid frame message ends the connection process
 	if( cls.state == ca_precached ) {
