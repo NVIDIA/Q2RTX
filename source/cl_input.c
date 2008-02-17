@@ -242,8 +242,8 @@ Key_Event (int key, qboolean down, unsigned time);
 
 typedef struct kbutton_s {
 	int			down[2];		// key nums holding it down
-	uint32		downtime;		// msec timestamp
-	uint32		msec;			// msec down this frame
+	unsigned	downtime;		// msec timestamp
+	unsigned	msec;			// msec down this frame
 	int			state;
 } kbutton_t;
 
@@ -297,7 +297,7 @@ static void KeyUp (kbutton_t *b)
 {
 	int		k;
 	char	*c;
-	uint32	uptime;
+	unsigned uptime;
 
 	c = Cmd_Argv(1);
 	if (c[0])
@@ -410,7 +410,7 @@ Returns the fraction of the frame that the key was down
 */
 static float CL_KeyState( kbutton_t *key ) {
 	float		val;
-	uint32		msec = key->msec;
+	unsigned	msec = key->msec;
 
 	if( key->state & 1 ) {
 		// still down

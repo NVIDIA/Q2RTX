@@ -324,7 +324,7 @@ qboolean UI_CursorInRect( vrect_t *rect ) {
 	return qtrue;
 }
 
-void UI_DrawString( int x, int y, const color_t color, uint32 flags, const char *string ) {
+void UI_DrawString( int x, int y, const color_t color, int flags, const char *string ) {
 	if( color ) {
 		ref.SetColor( DRAW_COLOR_RGBA, color );
 	}
@@ -341,11 +341,11 @@ void UI_DrawString( int x, int y, const color_t color, uint32 flags, const char 
 	}
 }
 
-void UI_DrawChar( int x, int y, uint32 flags, int ch ) {
+void UI_DrawChar( int x, int y, int flags, int ch ) {
 	ref.DrawChar( x, y, flags, ch, uis.fontHandle );
 }
 
-void UI_StringDimensions( vrect_t *rc, uint32 flags, const char *string ) {
+void UI_StringDimensions( vrect_t *rc, int flags, const char *string ) {
 	rc->height = 8;
 	rc->width = 8 * Q_DrawStrlen( string );
 	

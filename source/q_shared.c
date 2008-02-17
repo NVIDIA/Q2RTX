@@ -886,9 +886,9 @@ qboolean COM_HasSpaces( const char *string ) {
  * illegible symbol or end of string.
  * Does not check for overflow.
  */
-uint32 COM_ParseHex( const char *s ) {
+unsigned COM_ParseHex( const char *s ) {
     int c;
-	uint32 result;
+	unsigned result;
 
 	for( result = 0; *s; s++ ) {
         if( ( c = Q_charhex( *s ) ) == -1 ) {
@@ -941,9 +941,8 @@ int Com_WildCmp( const char *filter, const char *string, qboolean ignoreCase ) {
 Com_HashString
 ================
 */
-uint32 Com_HashString( const char *string, int hashSize ) {
-	uint32 hash;
-	uint32 c;
+unsigned Com_HashString( const char *string, int hashSize ) {
+	unsigned hash, c;
 
 	hash = 0;
 	while( *string ) {
@@ -960,9 +959,8 @@ uint32 Com_HashString( const char *string, int hashSize ) {
 Com_HashPath
 ================
 */
-uint32 Com_HashPath( const char *string, int hashSize ) {
-	uint32 hash;
-	uint32 c;
+unsigned Com_HashPath( const char *string, int hashSize ) {
+	unsigned hash, c;
 
 	hash = 0;
 	while( *string ) {

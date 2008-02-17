@@ -249,7 +249,7 @@ void GL_MarkLeaves( void ) {
 	bspLeaf_t *leaf, *lastleaf;
 	bspNode_t *node, *lastnode;
 	byte *vis1, *vis2;
-	uint32 *dst, *src1, *src2;
+	uint32_t *dst, *src1, *src2;
 	int cluster1, cluster2, longs;
 	vec3_t tmp;
     static int lastNodesVisible;
@@ -305,9 +305,9 @@ void GL_MarkLeaves( void ) {
 
 	if( vis1 != vis2 ) {
 		longs = ( r_world.numClusters + 31 ) >> 5;
-		src1 = ( uint32 * )vis1;
-		src2 = ( uint32 * )vis2;
-		dst = ( uint32 * )fatvis;
+		src1 = ( uint32_t * )vis1;
+		src2 = ( uint32_t * )vis2;
+		dst = ( uint32_t * )fatvis;
 		while( longs-- ) {
 			*dst++ = *src1++ | *src2++;
 		}

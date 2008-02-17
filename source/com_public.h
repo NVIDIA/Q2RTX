@@ -238,7 +238,7 @@ typedef struct {
 } mempool_t;
 
 typedef struct sysAPI_s {
-	int		(*Milliseconds)( void );
+	unsigned    (*Milliseconds)( void );
 	char	*(*GetClipboardData)( void );
 	void	(*SetClipboardData)( const char *data );
 	void	(*HunkBegin)( mempool_t *pool, int maxsize );

@@ -1013,7 +1013,7 @@ static void MVD_GameRunFrame( void ) {
     mvd_t *mvd, *next;
     udpClient_t *u;
     tcpClient_t *t;
-    uint16 length;
+    uint16_t length;
 
     LIST_FOR_EACH_SAFE( mvd_t, mvd, next, &mvd_ready, ready ) {
         if( setjmp( mvd_jmpbuf ) ) {

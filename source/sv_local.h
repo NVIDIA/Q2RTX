@@ -43,12 +43,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define SV_BASELINES_CHUNKS			( MAX_EDICTS >> SV_BASELINES_SHIFT )
 
 typedef struct {
-	uint32		numEntities;
-	uint32		firstEntity;
+	unsigned	numEntities;
+	unsigned	firstEntity;
     player_state_t ps;
 	int			areabytes;
 	byte		areabits[MAX_MAP_AREAS/8]; // portalarea visibility bits
-	uint32		senttime;			// for ping calculations
+	unsigned	senttime;			// for ping calculations
     int         clientNum;
 } client_frame_t;
 
@@ -58,7 +58,7 @@ typedef struct server_s {
 	server_state_t	state;	// precache commands are only valid during load
     int             spawncount;  // random number generated each server spawn
 
-	uint32		time;			 // always sv.framenum * 100 msec
+	unsigned	time;			 // always sv.framenum * 100 msec
 	int			framenum;
 
 	char		name[MAX_QPATH];			// map name, or cinematic name
@@ -70,13 +70,13 @@ typedef struct server_s {
 	    fileHandle_t	file;
 	    int     	    paused;
         int             framenum;
-        uint32          layout_time;
+        unsigned        layout_time;
         sizebuf_t       datagram;
         sizebuf_t       message; // reliable
 	    byte		    dcs[CS_BITMAP_BYTES];
     } mvd;
 
-	uint32			tracecount;
+	unsigned	tracecount;
 } server_t;
 
 #define EDICT_POOL(c,n) ((edict_t *)((byte *)(c)->pool->edicts + (c)->pool->edict_size*(n)))
@@ -120,19 +120,19 @@ typedef enum {
 
 typedef struct {
 	list_t	    entry;
-	uint16	    cursize;
+	uint16_t	cursize;
     byte		data[MSG_TRESHOLD];
 } message_packet_t;
 
 typedef struct {
-    list_t  entry;
-    uint16  cursize;
-    byte    flags;
-    byte    index;
-    uint16  sendchan;
-    byte    volume;
-    byte    attenuation;
-    byte    timeofs;
+    list_t      entry;
+    uint16_t    cursize;
+    uint8_t     flags;
+    uint8_t     index;
+    uint16_t    sendchan;
+    uint8_t     volume;
+    uint8_t     attenuation;
+    uint8_t     timeofs;
 } sound_packet_t;
 
 #define	LATENCY_COUNTS	16
@@ -167,7 +167,7 @@ typedef struct client_s {
 	int				message_size[RATE_MESSAGES];	// used to rate drop packets
 	int				rate;
 	int				surpressCount;		// number of messages rate supressed
-	uint32			sendTime;			// used to rate drop async packets
+	unsigned		sendTime;			// used to rate drop async packets
     frameflags_t    frameflags;
 
 	edict_t			*edict;				// EDICT_NUM(clientnum+1)
@@ -185,7 +185,7 @@ typedef struct client_s {
 	int				downloadsize; // total bytes (can't use EOF because of paks)
 	int				downloadcount; // bytes sent
 
-	uint32			lastmessage; // svs.realtime when packet was last received
+	unsigned		lastmessage; // svs.realtime when packet was last received
 
 	int				challenge; // challenge of this user, randomly generated
 	int				protocol; // major version
@@ -260,7 +260,7 @@ typedef struct {
     z_stream    z;
     int         noflush;
 #endif
-    uint32      lastmessage; 
+    unsigned    lastmessage; 
 
     char        request[MAX_NET_STRING];
     int         requestLength;
@@ -287,27 +287,27 @@ typedef struct {
 
 typedef struct {
 	netadr_t	adr;
-	int			challenge;
-	int			time;
+	unsigned	challenge;
+	unsigned	time;
 } challenge_t;
 
 typedef struct {
-	uint32 limit;
-	uint32 period;
-	uint32 time;
-	uint32 count;
+	unsigned limit;
+	unsigned period;
+	unsigned time;
+	unsigned count;
 } ratelimit_t;
 
 typedef struct {
     list_t  entry;
-    uint32  addr;
-    uint32  mask;
+    uint32_t    addr;
+    uint32_t    mask;
 } addrmatch_t;
 
 typedef struct server_static_s {
 	qboolean	initialized;			// sv_init has completed
-	uint32		realtime;				// always increasing, no clamping, etc
-    uint32      zombiepoint, ghostpoint, droppoint;
+	unsigned	realtime;				// always increasing, no clamping, etc
+    unsigned    zombiepoint, ghostpoint, droppoint;
 
 	char		mapcmd[MAX_TOKEN_CHARS];	// ie: *intro.cin+base 
 
@@ -316,8 +316,8 @@ typedef struct server_static_s {
 	client_t	*udp_client_pool;	 // [maxclients]
     list_t	    udp_client_list;         // linked list of non-free clients
 
-	uint32		numEntityStates; // maxclients*UPDATE_BACKUP*MAX_PACKET_ENTITIES
-	uint32			nextEntityStates;	// next entityState to use
+	unsigned		numEntityStates; // maxclients*UPDATE_BACKUP*MAX_PACKET_ENTITIES
+	unsigned		nextEntityStates;	// next entityState to use
 	entity_state_t	*entityStates;		// [numEntityStates]
 
     list_t          tcp_client_pool;
@@ -336,7 +336,7 @@ typedef struct server_static_s {
     z_stream        z; // for compressing messages at once
 #endif
 
-	uint32			last_heartbeat;
+	unsigned		last_heartbeat;
 
 	ratelimit_t		ratelimit_status;
 	ratelimit_t		ratelimit_badpass;

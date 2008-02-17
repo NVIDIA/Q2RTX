@@ -47,7 +47,7 @@ clients along with it.
 */
 void SV_SpawnServer( const char *server, const char *spawnpoint ) {
 	int			i;
-	uint32		checksum;
+	uint32_t	checksum;
 	char		string[MAX_QPATH];
 	client_t	*client;
     tcpClient_t *t;
@@ -62,7 +62,7 @@ void SV_SpawnServer( const char *server, const char *spawnpoint ) {
 	
 	// wipe the entire per-level structure
 	memset( &sv, 0, sizeof( sv ) );
-	sv.spawncount = ( rand() | ( rand() << 16 ) ) ^ Sys_Realtime();
+	sv.spawncount = ( rand() | ( rand() << 16 ) ) ^ Sys_Milliseconds();
 	sv.spawncount &= 0x7FFFFFFF;
 
     // reset counters

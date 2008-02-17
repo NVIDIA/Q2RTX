@@ -255,7 +255,7 @@ void CL_PrepRefresh (void)
 	char		*name;
 	float		rotate;
 	vec3_t		axis;
-	int			time_start, time_map, time_models, time_clients, time_total;
+	unsigned	time_start, time_map, time_models, time_clients, time_total;
 
 	if (!cl.mapname[0])
 		return;		// no map loaded
@@ -342,9 +342,9 @@ void CL_PrepRefresh (void)
 	SCR_UpdateScreen ();
 
 	time_total = Sys_Milliseconds();
-	Com_DPrintf( "Map loaded in %d msec (%d,%d,%d,%d)\n", time_total - time_start,
-        time_map - time_start, time_models - time_map, time_clients - time_models,
-        time_total - time_clients );	
+	Com_DPrintf( "Map loaded in %u msec (map=%u,mod=%u,cl=%u,purge=%u)\n",
+        time_total - time_start, time_map - time_start, time_models - time_map,
+        time_clients - time_models, time_total - time_clients );	
 }
 
 

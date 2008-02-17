@@ -56,7 +56,7 @@ Action_Draw
 =================
 */
 static void Action_Draw( menuAction_t *a ) {
-	uint32 flags;
+	int flags;
 
 	flags = a->generic.uiFlags;
 	if( a->generic.flags & QMF_HASFOCUS ) {
@@ -189,7 +189,7 @@ Keybind_Draw
 static void Keybind_Draw( menuKeybind_t *k ) {
 	char string[MAX_STRING_CHARS];
 	byte *color;
-	uint32 flags;
+	int flags;
 
 	color = NULL;
 	flags = UI_ALTCOLOR;
@@ -260,7 +260,7 @@ Field_Draw
 =================
 */
 static void Field_Draw( menuField_t *f ) {
-	uint32 flags = f->generic.uiFlags;
+	int flags = f->generic.uiFlags;
 
 	if( f->generic.flags & QMF_HASFOCUS ) {
 		flags |= UI_DRAWCURSOR;
@@ -720,7 +720,7 @@ static int MenuList_Key( menuList_t *l, int key ) {
 MenuList_DrawString
 =================
 */
-static void MenuList_DrawString( int x, int y, uint32 flags,
+static void MenuList_DrawString( int x, int y, int flags,
 									   menuListColumn_t *column,
 									   const char *string )
 {

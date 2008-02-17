@@ -549,15 +549,15 @@ static void AC_Announce( client_t *client, const char *fmt, ... ) {
 
 static client_t *AC_ParseClient( void ) {
     client_t *cl;
-	uint16 clientID;
-    uint32 challenge;
+	uint16_t clientID;
+    uint32_t challenge;
 
     if( msg_read.readcount + 6 > msg_read.cursize ) {
         Com_DPrintf( "ANTICHEAT: Message too short in %s\n", __func__ );
         return NULL;
     }
 
-    clientID = MSG_ReadShort();
+    clientID = MSG_ReadWord();
 	challenge = MSG_ReadLong();
 
 	if( clientID >= sv_maxclients->integer ) {
@@ -814,7 +814,7 @@ static void AC_ParseDisconnect ( void ) {
 }
 
 static qboolean AC_ParseMessage( void ) {
-    uint16 msglen;
+    uint16_t msglen;
     byte *data;
     int length;
     int cmd;
@@ -1259,14 +1259,10 @@ static qboolean AC_Reconnect( void ) {
     netadr_t address;
     time_t clock;
 
-    if( !NET_StringToAdr( ac_server_address->string, &address ) ) {
+    if( !NET_StringToAdr( ac_server_address->string, &address, PORT_SERVER ) ) {
         Com_WPrintf( "ANTICHEAT: Unable to lookup %s.\n",
             ac_server_address->string );
         goto fail;
-    }
-
-    if( !address.port ) {
-        address.port = BigShort( PORT_SERVER );
     }
 
     if( NET_Connect( &address, &ac.stream ) == NET_ERROR ) {

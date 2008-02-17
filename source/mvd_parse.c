@@ -890,7 +890,7 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
 	int protocol;
     int length, index;
 	char *gamedir, *string, *p;
-	uint32 checksum;
+	uint32_t checksum;
     int i;
     mvd_player_t *player;
 
@@ -1023,8 +1023,8 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
 }
 
 static qboolean MVD_ParseMessage( mvd_t *mvd, fifo_t *fifo ) {
-    uint16      msglen;
-    uint32      magic;
+    uint16_t    msglen;
+    uint32_t    magic;
     byte        *data;
     int         length;
 	int			cmd, extrabits;

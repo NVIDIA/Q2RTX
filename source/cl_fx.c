@@ -1751,7 +1751,7 @@ void CL_RailTrail( vec3_t start, vec3_t end ) {
 			p->alpha = cl_railtrail_alpha->value;
 			p->alphavel = -1.0 / ( cl_railtrail_time->value + frand() * 0.2 );
 			p->color = 0xff;
-			*( uint32 * )p->rgb = *( uint32 * )color;
+			*( uint32_t * )p->rgb = *( uint32_t * )color;
 			for( j=0 ; j<3 ; j++ ) {
 				p->org[j] = move[j] + dir[j] * cl_railspiral_radius->value;
 				p->vel[j] = dir[j] * 6;
@@ -2313,7 +2313,7 @@ void CL_AddParticles (void)
 		part->origin[2] = p->org[2] + p->vel[2]*time + p->accel[2]*time2;
 
 		if( color == 255 ) {
-			*( uint32 * )part->rgb = *( uint32 * )p->rgb;
+			*( uint32_t * )part->rgb = *( uint32_t * )p->rgb;
 		}
 
 		part->color = color;

@@ -117,7 +117,7 @@ typedef struct {
 	int colorIndex;
 	int colorFlags;
 	clipRect_t clipRect;
-	uint32 flags;
+	int flags;
 } drawStatic_t;
 
 static drawStatic_t	draw;
@@ -135,7 +135,7 @@ void Draw_Init( void ) {
 	}
 }
 
-void Draw_SetColor( uint32 flags, const color_t color ) {
+void Draw_SetColor( int flags, const color_t color ) {
 	draw.flags &= ~DRAW_COLOR_MASK;
 
 	if( flags == DRAW_COLOR_CLEAR ) {
@@ -148,7 +148,7 @@ void Draw_SetColor( uint32 flags, const color_t color ) {
 	}
 
 	if( flags == DRAW_COLOR_INDEXED ) {
-		draw.colorIndex = *( uint32 * )color & 255;
+		draw.colorIndex = *( uint32_t * )color & 255;
 		return;
 	}
 
@@ -161,7 +161,7 @@ void Draw_SetColor( uint32 flags, const color_t color ) {
 	draw.flags |= flags;
 }
 
-void Draw_SetClipRect( uint32 flags, const clipRect_t *clip ) {
+void Draw_SetClipRect( int flags, const clipRect_t *clip ) {
 	draw.flags &= ~DRAW_CLIP_MASK;
 
 	if( flags == DRAW_CLIP_DISABLED ) {
@@ -554,7 +554,7 @@ void Draw_StretchRaw( int x, int y, int w, int h, int cols,
 	Draw_StretchData( x, y, w, h, 0, 0, cols, rows, cols, ( byte * )data );
 }
 
-void Draw_Char( int x, int y, uint32 flags, int ch, qhandle_t hFont ) {
+void Draw_Char( int x, int y, int flags, int ch, qhandle_t hFont ) {
 	image_t *image;
     int xx, yy;
     byte *data;

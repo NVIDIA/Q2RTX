@@ -42,7 +42,7 @@ STRING DRAWING
 UIS_DrawStringEx
 ==============
 */
-void UIS_DrawStringEx( int x, int y, uint32 flags, int maxChars,
+void UIS_DrawStringEx( int x, int y, int flags, int maxChars,
         const char *string, qhandle_t hFont )
 {
 	char	*p;

@@ -317,7 +317,7 @@ static void Win_AppActivate( WPARAM wParam ) {
 
 static LRESULT CALLBACK LowLevelKeyboardProc( int nCode, WPARAM wParam, LPARAM lParam ) {
 	PKBDLLHOOKSTRUCT kb = ( PKBDLLHOOKSTRUCT )lParam;
-	uint32 key;
+	unsigned key;
 
 	if( nCode != HC_ACTION ) {
 		goto ignore;

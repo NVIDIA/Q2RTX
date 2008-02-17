@@ -50,7 +50,7 @@ typedef struct m_demos_s {
 	menuFrameWork_t	menu;
 	menuList_t		list;
 	int			    numDirs;
-    uint8           hash[16];
+    uint8_t         hash[16];
 } m_demos_t;
 
 static m_demos_t	m_demos;
@@ -115,7 +115,7 @@ static void Demos_BuildDir( const char *name, int type ) {
 static char *Demos_LoadCache( void **list ) {
     char buffer[MAX_OSPATH], *cache;
     int i, len;
-    uint8 hash[16];
+    uint8_t hash[16];
 
 	Q_concat( buffer, sizeof( buffer ), uis.m_demos_browse, "/" COM_DEMOCACHE_NAME, NULL );
     len = fs.LoadFile( buffer, ( void ** )&cache );
@@ -188,7 +188,7 @@ static void Demos_CalcHash( void **list ) {
     while( *list ) {
         info = *list++;
         len = sizeof( *info ) + strlen( info->name ) - 1;
-	    mdfour_update( &md, ( uint8 * )info, len );
+	    mdfour_update( &md, ( uint8_t * )info, len );
     }
     mdfour_result( &md, m_demos.hash );
 }

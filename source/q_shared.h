@@ -26,7 +26,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <stdarg.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <time.h>
+#include <endian.h>
 
 #ifdef __GNUC__
 
@@ -64,10 +66,6 @@ typedef unsigned char 		byte;
 typedef enum { qfalse, qtrue }	qboolean;
 typedef int qhandle_t;
 typedef int fileHandle_t;
-
-typedef unsigned char	uint8;
-typedef unsigned short	uint16;
-typedef unsigned int	uint32;
 
 #ifndef NULL
 #define NULL ((void *)0)
@@ -193,7 +191,7 @@ typedef struct vrect_s {
 
 // microsoft's fabs seems to be ungodly slow...
 static inline float Q_fabs( float f ) {
-	uint32 tmp = *( uint32 * )&f;
+	uint32_t tmp = *( uint32_t * )&f;
 	tmp &= 0x7FFFFFFF;
 	return *( float * )&tmp;
 }
@@ -478,8 +476,8 @@ int COM_Compress( char *data );
 int Com_WildCmp( const char *filter, const char *string, qboolean ignoreCase );
 int QDECL SortStrcmp( const void *p1, const void *p2 );
 
-uint32 Com_HashString( const char *string, int hashSize );
-uint32 Com_HashPath( const char *string, int hashSize );
+unsigned Com_HashString( const char *string, int hashSize );
+unsigned Com_HashPath( const char *string, int hashSize );
 
 // buffer safe operations
 int Q_strncpyz( char *dest, const char *src, int destsize );
@@ -490,22 +488,22 @@ int Q_vsnprintf( char *dest, int destsize, const char *fmt, va_list argptr );
 
 void Com_PageInMemory (void *buffer, int size);
 
-uint32 COM_ParseHex( const char *string );
+unsigned COM_ParseHex( const char *string );
 
 char	*va( const char *format, ... ) q_printf( 1, 2 );
 
 //=============================================
 
-static inline short ShortSwap( short l ) {
+static inline int16_t ShortSwap( int16_t s ) {
 	byte    b1, b2;
 
-	b1 = l & 255;
-	b2 = ( l >> 8 ) & 255;
+	b1 = s & 255;
+	b2 = ( s >> 8 ) & 255;
 
-	return ( b1 << 8 ) + b2;
+	return ( b1 << 8 ) | b2;
 }
 
-static inline int LongSwap( int l ) {
+static inline int32_t LongSwap( int32_t l ) {
 	byte    b1, b2, b3, b4;
 
 	b1 = l & 255;
@@ -513,47 +511,40 @@ static inline int LongSwap( int l ) {
 	b3 = ( l >> 16 ) & 255;
 	b4 = ( l >> 24 ) & 255;
 
-	return ( ( int )b1 << 24 ) +
-           ( ( int )b2 << 16 ) +
-           ( ( int )b3 <<  8 ) + b4;
+	return ( b1 << 24 ) | ( b2 << 16 ) | ( b3 << 8 ) | b4;
 }
 
 static inline float FloatSwap( float f ) {
 	union {
 		float	f;
-		byte	b[4];
+		int32_t l;
 	} dat1, dat2;
 	
 	dat1.f = f;
-	dat2.b[0] = dat1.b[3];
-	dat2.b[1] = dat1.b[2];
-	dat2.b[2] = dat1.b[1];
-	dat2.b[3] = dat1.b[0];
+	dat2.l = LongSwap( dat1.l );
 	return dat2.f;
 }
 
-#ifdef BIGENDIAN_TARGET
- #define BigShort
- #define BigLong
- #define BigFloat
- #define LittleShort	ShortSwap
- #define LittleLong		LongSwap
- #define LittleFloat	FloatSwap
- #define MakeLong( b1, b2, b3, b4 ) \
-	( ( ( b1 ) << 24 ) + ( ( b2 ) << 16 ) + ( ( b3 ) << 8 ) + ( b4 ) )
- #define MakeShort( b1, b2 ) \
-	( ( ( b1 ) << 8 ) + ( b2 ) )
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define BigShort	ShortSwap
+#define BigLong	LongSwap
+#define BigFloat	FloatSwap
+#define LittleShort
+#define LittleLong
+#define LittleFloat
+#define MakeLong( b1, b2, b3, b4 ) (((b4)<<24)|((b3)<<16)|((b2)<<8)|(b1))
+#define MakeShort( b1, b2 ) (((b2)<<8)|(b1))
+#elif __BYTE_ORDER == __BIG_ENDIAN
+#define BigShort
+#define BigLong
+#define BigFloat
+#define LittleShort	ShortSwap
+#define LittleLong		LongSwap
+#define LittleFloat	FloatSwap
+#define MakeLong( b1, b2, b3, b4 ) (((b1)<<24)|((b2)<<16)|((b3)<<8)|(b4))
+#define MakeShort( b1, b2 ) (((b1)<<8)|(b2))
 #else
- #define BigShort	ShortSwap
- #define BigLong	LongSwap
- #define BigFloat	FloatSwap
- #define LittleShort
- #define LittleLong
- #define LittleFloat
- #define MakeLong( b1, b2, b3, b4 ) \
-	( ( ( b4 ) << 24 ) + ( ( b3 ) << 16 ) + ( ( b2 ) << 8 ) + ( b1 ) )
- #define MakeShort( b1, b2 ) \
-	( ( ( b2 ) << 8 ) + ( b1 ) )
+#error Unknown byte order
 #endif
 
 #define LittleVector(a,b)		((b)[0]=LittleFloat((a)[0]),(b)[1]=LittleFloat((a)[1]),(b)[2]=LittleFloat((a)[2]))

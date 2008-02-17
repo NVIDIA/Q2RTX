@@ -60,8 +60,7 @@ void IF_InitText( inputField_t *field, int visibleChars, int maxChars,
 	field->maxChars = maxChars;
 	field->visibleChars = visibleChars;
 
-	Q_strncpyz( field->text, text, sizeof( field->text ) );
-	field->cursorPos = strlen( field->text );
+	field->cursorPos = Q_strncpyz( field->text, text, sizeof( field->text ) );
 }
 
 /*
@@ -80,8 +79,7 @@ IF_Replace
 ================
 */
 void IF_Replace( inputField_t *field, const char *text ) {
-	Q_strncpyz( field->text, text, sizeof( field->text ) );
-	field->cursorPos = strlen( field->text );
+	field->cursorPos = Q_strncpyz( field->text, text, sizeof( field->text ) );
 }
 
 #ifndef DEDICATED_ONLY
@@ -241,7 +239,7 @@ The input line scrolls horizontally if typing goes beyond the right edge.
 Returns x offset of the rightmost character drawn.
 ================
 */
-int IF_Draw( inputField_t *field, int x, int y, uint32 flags, qhandle_t hFont ) {
+int IF_Draw( inputField_t *field, int x, int y, int flags, qhandle_t hFont ) {
 	char *text;
 	int cursorPos, offset, ret;
 	int cw, ch;

@@ -128,7 +128,7 @@ typedef struct {
 static request_t	clientRequests[MAX_REQUESTS];
 static int			currentRequest;
 
-static request_t *CL_AddRequest( netadr_t *adr, requestType_t type ) {
+static request_t *CL_AddRequest( const netadr_t *adr, requestType_t type ) {
 	request_t *r;
 
 	r = &clientRequests[currentRequest & REQUEST_MASK];
@@ -449,12 +449,9 @@ usage:
     }
 
     server = Cmd_Argv( 1 );
-    if ( !NET_StringToAdr( server, &address ) ) {
+    if ( !NET_StringToAdr( server, &address, PORT_SERVER ) ) {
         Com_Printf( "Bad server address\n" );
         return;
-    }
-    if ( address.port == 0 ) {
-        address.port = BigShort( PORT_SERVER );
     }
 
     // copy early to avoid potential cmd_argv[1] clobbering
@@ -513,7 +510,7 @@ static void CL_PassiveConnect_f( void ) {
         NET_AdrToString( &address ) );
 }
 
-static const char *CL_Connect_g( const char *partial, int state ) {
+const char *CL_Connect_g( const char *partial, int state ) {
     static int length;
     static int index;
     cvar_t *var;
@@ -542,6 +539,21 @@ static const char *CL_Connect_g( const char *partial, int state ) {
     return NULL;
 }
 
+void CL_SendRcon( const netadr_t *adr, const char *pass, const char *cmd ) {
+	neterr_t	ret;
+
+	NET_Config( NET_CLIENT );
+
+	CL_AddRequest( adr, REQ_RCON );
+
+    ret = Netchan_OutOfBandPrint( NS_CLIENT, adr,
+		"rcon \"%s\" %s", pass, cmd );
+	if( ret == NET_ERROR ) {
+		Com_Printf( "%s to %s\n", NET_ErrorString(),
+            NET_AdrToString( adr ) );
+	}
+}
+
 
 /*
 =====================
@@ -553,7 +565,6 @@ CL_Rcon_f
 */
 static void CL_Rcon_f( void ) {
     netadr_t	address;
-	neterr_t	ret;
 
 	if( Cmd_Argc() < 2 ) {
 		Com_Printf( "Usage: %s <command>\n", Cmd_Argv( 0 ) );
@@ -573,26 +584,15 @@ static void CL_Rcon_f( void ) {
                         "to issue rcon commands.\n" );
             return;
         }
-		if( !NET_StringToAdr( rcon_address->string, &address ) ) {
+		if( !NET_StringToAdr( rcon_address->string, &address, PORT_SERVER ) ) {
 			Com_Printf( "Bad address: %s\n", rcon_address->string );
 			return;
 		}
-        if( !address.port )
-            address.port = BigShort( PORT_SERVER );
 	} else {
 		address = cls.netchan->remote_address;
 	}
 
-	NET_Config( NET_CLIENT );
-
-	CL_AddRequest( &address, REQ_RCON );
-
-    ret = Netchan_OutOfBandPrint( NS_CLIENT, &address,
-		"rcon \"%s\" %s", rcon_password->string, Cmd_RawArgs() );
-	if( ret == NET_ERROR ) {
-		Com_Printf( "%s to %s\n", NET_ErrorString(),
-            NET_AdrToString( &address ) );
-	}
+    CL_SendRcon( &address, rcon_password->string, Cmd_RawArgs() );
 }
 
 
@@ -644,13 +644,17 @@ void CL_Disconnect( comErrorType_t type, const char *text ) {
         cls.demoplayback = 0;
 
         if ( com_timedemo->integer ) {
-            float seconds, fps;
+            unsigned msec = Sys_Milliseconds();
 
-            seconds = ( Sys_Milliseconds() - cls.timeDemoStart ) * 0.001f;
-            fps = cls.timeDemoFrames / seconds;
+            if( cls.timeDemoStart < msec ) {
+                float sec = ( msec - cls.timeDemoStart ) * 0.001f;
+                float fps = cls.timeDemoFrames / sec;
 
-            Com_Printf( "%i frames, %3.1f seconds: %3.1f fps\n",
-                    cls.timeDemoFrames, seconds, fps );
+                Com_Printf( "%u frames, %3.1f seconds: %3.1f fps\n",
+                    cls.timeDemoFrames, sec, fps );
+            } else {
+                Com_Printf( "Time wrapped during timedemo\n" );
+            }
         }
     }
     
@@ -725,12 +729,9 @@ static void CL_ServerStatus_f( void ) {
         adr = cls.netchan->remote_address;
     } else {
         s = Cmd_Argv( 1 );
-        if( !NET_StringToAdr( s, &adr ) ) {
+        if( !NET_StringToAdr( s, &adr, PORT_SERVER ) ) {
             Com_Printf( "Bad address: %s\n", s );
             return;
-        }
-        if( !adr.port ) {
-            adr.port = BigShort( PORT_SERVER );
         }
     }
 
@@ -1090,12 +1091,8 @@ static qboolean CL_SendStatusRequest( char *buffer, int size ) {
         address.type = NA_BROADCAST;
         address.port = BigShort( PORT_SERVER );
     } else {
-        if ( !NET_StringToAdr( buffer, &address ) ) {
+        if ( !NET_StringToAdr( buffer, &address, PORT_SERVER ) ) {
             return qfalse;
-        }
-
-        if ( !address.port ) {
-            address.port = BigShort( PORT_SERVER );
         }
 
         // return resolved address
@@ -1150,13 +1147,9 @@ static void CL_PingServers_f( void ) {
         if( !var->string[0] )
             continue;
 
-        if( !NET_StringToAdr( var->string, &address ) ) {
+        if( !NET_StringToAdr( var->string, &address, PORT_SERVER ) ) {
             Com_Printf( "bad address: %s\n", var->string );
             continue;
-        }
-
-        if( !address.port ) {
-            address.port = BigShort( PORT_SERVER );
         }
 
         Com_Printf( "pinging %s...\n", var->string );
@@ -1886,7 +1879,7 @@ static void CL_Precache_f( void ) {
     //Yet another hack to let old demos work
     //the old precache sequence
     if ( cls.demoplayback || Cmd_Argc() < 2 ) {
-        uint32	map_checksum;		// for detecting cheater maps
+        uint32_t	map_checksum;		// for detecting cheater maps
 
         SCR_LoadingString( "collision map" );
         CM_LoadMap( &cl.cm, cl.configstrings[ CS_MODELS + 1 ],
@@ -2532,14 +2525,14 @@ static void CL_SetClientTime( void ) {
 }
 
 static void CL_MeasureStats( void ) {
-	int time = Sys_Milliseconds();
+	unsigned msec = Sys_Milliseconds();
 
 	cls.measureFramecount++;
 
-    if( cls.measureTime > time ) {
-        cls.measureTime = time;
+    if( cls.measureTime > msec ) {
+        cls.measureTime = msec;
     }
-	if( time - cls.measureTime < 1000 ) {
+	if( msec - cls.measureTime < 1000 ) {
         return;
     }
 
@@ -2563,7 +2556,7 @@ static void CL_MeasureStats( void ) {
     	cls.ping = k ? ping / k : 0;
     }
 
-	cls.measureTime = time;
+	cls.measureTime = msec;
 	cls.fps = cls.measureFramecount;
 	cls.measureFramecount = 0;
 }

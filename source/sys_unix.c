@@ -53,9 +53,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #undef USE_SDL
 #endif
 
-#ifdef USE_SDL
+#if USE_SDL
 #include <SDL.h>
+#if USE_X11
 #include <SDL_syswm.h>
+#endif
 #endif
 
 cvar_t	*sys_basedir;
@@ -550,31 +552,9 @@ void Sys_DebugBreak( void ) {
     raise( SIGTERM );
 }
 
-/*
-================
-Sys_Milliseconds
-================
-*/
-int Sys_Milliseconds( void ) {
+unsigned Sys_Milliseconds( void ) {
 	struct timeval tp;
-	static int		secbase;
-    int curtime;
-
-	gettimeofday( &tp, NULL );
-
-	if( !secbase ) {
-		secbase = tp.tv_sec;
-		return tp.tv_usec / 1000;
-	}
-
-	curtime = ( tp.tv_sec - secbase ) * 1000 + tp.tv_usec / 1000;
-
-	return curtime;
-}
-
-uint32 Sys_Realtime( void ) {
-	struct timeval tp;
-    uint32 time;
+    unsigned time;
     
 	gettimeofday( &tp, NULL );
 	time = tp.tv_sec * 1000 + tp.tv_usec / 1000;
@@ -668,7 +648,7 @@ Sys_GetClipboardData
 =================
 */
 char *Sys_GetClipboardData( void ) {
-#if USE_SDL
+#if USE_SDL && USE_X11
 	SDL_SysWMinfo	info;
     Display *dpy;
 	Window sowner, win;
@@ -807,7 +787,7 @@ void Sys_FillAPI( sysAPI_t *api ) {
 
 void Sys_FixFPCW( void ) {
 #ifdef __i386__
-    uint16 cw;
+    uint16_t cw;
 
     __asm__ __volatile__( "fnstcw %0" : "=m" (cw) );
 

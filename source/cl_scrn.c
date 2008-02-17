@@ -543,11 +543,13 @@ SCR_TimeRefresh_f
 void SCR_TimeRefresh_f (void)
 {
 	int		i;
-	int		start, stop;
-	float	time;
+	unsigned    start, stop;
+	float	    time;
 
-	if ( cls.state != ca_active )
+	if( cls.state != ca_active ) {
+        Com_Printf( "No map loaded.\n" );
 		return;
+    }
 
 	start = Sys_Milliseconds ();
 
@@ -555,13 +557,13 @@ void SCR_TimeRefresh_f (void)
 		// run without page flipping
 		ref.BeginFrame();
 		for (i=0 ; i<128 ; i++) {
-			cl.refdef.viewangles[1] = i/128.0*360.0;
+			cl.refdef.viewangles[1] = i/128.0f*360.0f;
 			ref.RenderFrame (&cl.refdef);
 		}
 		ref.EndFrame();
 	} else {
 		for (i=0 ; i<128 ; i++) {
-			cl.refdef.viewangles[1] = i/128.0*360.0;
+			cl.refdef.viewangles[1] = i/128.0f*360.0f;
 
 			ref.BeginFrame();
 			ref.RenderFrame (&cl.refdef);
@@ -569,9 +571,9 @@ void SCR_TimeRefresh_f (void)
 		}
 	}
 
-	stop = Sys_Milliseconds ();
-	time = (stop-start)/1000.0;
-	Com_Printf ("%f seconds (%f fps)\n", time, 128/time);
+	stop = Sys_Milliseconds();
+	time = (stop-start)*0.001f;
+	Com_Printf ("%f seconds (%f fps)\n", time, 128.0f/time);
 }
 
 

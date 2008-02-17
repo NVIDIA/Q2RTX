@@ -60,7 +60,7 @@ Image_LoadPCX
 void Image_LoadPCX( const char *filename, byte **pic, byte *palette, int *width, int *height ) {
 	byte	*raw, *end;
 	pcx_t	*pcx;
-	uint32	x, y, w, h;
+	uint16_t	x, y, w, h;
 	int		len;
 	int		dataByte, runLength;
 	byte	*out, *pix;
@@ -250,10 +250,10 @@ static qboolean tga_decode_bgr( byte *data, byte *pixels,
 		int columns, int rows, byte *maxp )
 {
 	int		col, row;
-	uint32	*pixbuf;
+	uint32_t	*pixbuf;
 
 	for( row = rows - 1; row >= 0; row-- ) {
-		pixbuf = ( uint32 * )pixels + row * columns;
+		pixbuf = ( uint32_t * )pixels + row * columns;
 
 		for( col = 0; col < columns; col++ ) {
 			*pixbuf++ = MakeColor( data[2], data[1], data[0], 255 );
@@ -268,10 +268,10 @@ static qboolean tga_decode_bgra( byte *data, byte *pixels,
 		int columns, int rows, byte *maxp )
 {
 	int		col, row;
-	uint32	*pixbuf;
+	uint32_t	*pixbuf;
 
 	for( row = rows - 1; row >= 0; row-- ) {
-		pixbuf = ( uint32 * )pixels + row * columns;
+		pixbuf = ( uint32_t * )pixels + row * columns;
 
 		for( col = 0; col < columns; col++ ) {
 			*pixbuf++ = MakeColor( data[2], data[1], data[0], data[3] );
@@ -286,9 +286,9 @@ static qboolean tga_decode_bgr_flip( byte *data, byte *pixels,
 		int columns, int rows, byte *maxp )
 {
 	int		count;
-	uint32	*pixbuf;
+	uint32_t	*pixbuf;
 
-	pixbuf = ( uint32 * )pixels;
+	pixbuf = ( uint32_t * )pixels;
 	count = rows * columns;
 	do {
 		*pixbuf++ = MakeColor( data[2], data[1], data[0], 255 );
@@ -302,9 +302,9 @@ static qboolean tga_decode_bgra_flip( byte *data, byte *pixels,
 		int columns, int rows, byte *maxp )
 {
 	int		count;
-	uint32	*pixbuf;
+	uint32_t	*pixbuf;
 
-	pixbuf = ( uint32 * )pixels;
+	pixbuf = ( uint32_t * )pixels;
 	count = rows * columns;
 	do {
 		*pixbuf++ = MakeColor( data[2], data[1], data[0], data[3] );
@@ -318,12 +318,12 @@ static qboolean tga_decode_bgr_rle( byte *data, byte *pixels,
 		int columns, int rows, byte *maxp )
 {
 	int col, row;
-	uint32 *pixbuf, color;
+	uint32_t *pixbuf, color;
 	byte packetHeader, packetSize;
 	int j;
 
 	for( row = rows - 1; row >= 0; row-- ) {
-		pixbuf = ( uint32 * )pixels + row * columns;
+		pixbuf = ( uint32_t * )pixels + row * columns;
 
 		for( col = 0; col < columns; ) {
 			packetHeader = *data++;
@@ -349,7 +349,7 @@ static qboolean tga_decode_bgr_rle( byte *data, byte *pixels,
 						else
 							goto breakOut;
 
-						pixbuf = ( uint32 * )pixels + row * columns;
+						pixbuf = ( uint32_t * )pixels + row * columns;
 					}
 				}
 			} else {
@@ -369,7 +369,7 @@ static qboolean tga_decode_bgr_rle( byte *data, byte *pixels,
 							row--;
 						else
 							goto breakOut;
-						pixbuf = ( uint32 * )pixels + row * columns;
+						pixbuf = ( uint32_t * )pixels + row * columns;
 					}						
 				}
 			}
@@ -386,12 +386,12 @@ static qboolean tga_decode_bgra_rle( byte *data, byte *pixels,
 		int columns, int rows, byte *maxp )
 {
 	int col, row;
-	uint32 *pixbuf, color;
+	uint32_t *pixbuf, color;
 	byte packetHeader, packetSize;
 	int j;
 
 	for( row = rows - 1; row >= 0; row-- ) {
-		pixbuf = ( uint32 * )pixels + row * columns;
+		pixbuf = ( uint32_t * )pixels + row * columns;
 
 		for( col = 0; col < columns; ) {
 			packetHeader = *data++;
@@ -417,7 +417,7 @@ static qboolean tga_decode_bgra_rle( byte *data, byte *pixels,
 						else
 							goto breakOut;
 
-						pixbuf = ( uint32 * )pixels + row * columns;
+						pixbuf = ( uint32_t * )pixels + row * columns;
 					}
 				}
 			} else {
@@ -437,7 +437,7 @@ static qboolean tga_decode_bgra_rle( byte *data, byte *pixels,
 							row--;
 						else
 							goto breakOut;
-						pixbuf = ( uint32 * )pixels + row * columns;
+						pixbuf = ( uint32_t * )pixels + row * columns;
 					}						
 				}
 			}
@@ -708,7 +708,7 @@ void Image_LoadJPG( const char *filename, byte **pic, int *width, int *height ) 
 		return;
 	}
 
-	if( rawlength < 10 || *( uint32 * )( rawdata + 6 ) != MakeLong( 'J', 'F', 'I', 'F' ) ) {
+	if( rawlength < 10 || *( uint32_t * )( rawdata + 6 ) != MakeLong( 'J', 'F', 'I', 'F' ) ) {
 		Com_WPrintf( "LoadJPG: %s: not a valid JPEG file\n", filename );
 		fs.FreeFile( rawdata );
 		return;
@@ -756,7 +756,7 @@ void Image_LoadJPG( const char *filename, byte **pic, int *width, int *height ) 
 
 		src = ( byte * )buffer[0];
 		for( i = 0; i < cinfo.output_width; i++ ) {
-			*( uint32 * )dest = MakeColor( src[0], src[1], src[2], 255 );
+			*( uint32_t * )dest = MakeColor( src[0], src[1], src[2], 255 );
 			src += 3;
 			dest += 4;
 		}
@@ -1149,7 +1149,7 @@ image_t		r_images[MAX_RIMAGES];
 list_t		r_imageHash[RIMAGES_HASH];
 int			r_numImages;
 
-uint32		d_8to24table[256];
+uint32_t		d_8to24table[256];
 
 #ifdef TRUECOLOR_RENDERER
 
@@ -1162,10 +1162,10 @@ R_ResampleTexture
 ================
 */
 void R_ResampleTexture( const byte *in, int inwidth, int inheight, byte *out, int outwidth, int outheight ) {
-	int		i, j;
+	int i, j;
 	const byte	*inrow1, *inrow2;
-	uint32		frac, fracstep;
-	uint32		p1[MAX_TEXTURE_SIZE], p2[MAX_TEXTURE_SIZE];
+	unsigned	frac, fracstep;
+	unsigned	p1[MAX_TEXTURE_SIZE], p2[MAX_TEXTURE_SIZE];
 	const byte	*pix1, *pix2, *pix3, *pix4;
 	float		heightScale;
 
@@ -1256,7 +1256,7 @@ static void R_ImageList_f( void ) {
 	Com_Printf( "Total texel count (not counting mipmaps): %i\n", texels );
 }
 
-static image_t *R_AllocImageInternal( const char *name, uint32 hash ) {
+static image_t *R_AllocImageInternal( const char *name, unsigned hash ) {
 	int i;
 	image_t *image;
 	
@@ -1289,7 +1289,7 @@ Case and extension insensitive.
 ===============
 */
 static image_t *R_LookupImage( const char *name, imagetype_t type,
-					   uint32 hash, int baselength )
+					   unsigned hash, int baselength )
 {
 	image_t	*image;
 
@@ -1309,7 +1309,7 @@ static image_t *R_LookupImage( const char *name, imagetype_t type,
 image_t *R_AllocImage( const char *name ) {
 	char buffer[MAX_QPATH];
 	char *ext;
-	uint32 hash;
+	unsigned hash;
 	image_t *image;
 	int length;
 
@@ -1369,7 +1369,7 @@ image_t	*R_FindImage( const char *name, imagetype_t type ) {
 	char	buffer[MAX_QPATH];
 	char	*ext, *s;
 	int		length;
-	uint32	hash, extHash;
+	unsigned	hash, extHash;
 	imageflags_t flags;
 
 	if( !name || !name[0] ) {
@@ -1672,7 +1672,7 @@ image_t	*R_FindImage( const char *name, imagetype_t type ) {
 	char	buffer[MAX_QPATH];
 	char	*ext;
 	int		length;
-	uint32	hash, extHash;
+	unsigned	hash, extHash;
 
 	if( !name || !name[0] ) {
 		Com_Error( ERR_FATAL, "R_FindImage: NULL" );

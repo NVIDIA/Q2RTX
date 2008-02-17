@@ -224,7 +224,7 @@ typedef struct wavinfo_s {
 static byte     *data_p;
 static byte 	*iff_end;
 static byte 	*iff_data;
-static uint32 	iff_chunk_len;
+static uint32_t iff_chunk_len;
 
 static int GetLittleShort( void ) {
 	int val;
@@ -254,8 +254,8 @@ static int GetLittleLong( void ) {
 	return val;
 }
 
-static void FindNextChunk( const char *name, uint32 search ) {
-    uint32 chunk, length;
+static void FindNextChunk( const char *name, uint32_t search ) {
+    uint32_t chunk, length;
     int i;
 
 	for( i = 0; i < 1000; i++ ) {
@@ -283,7 +283,7 @@ static void FindNextChunk( const char *name, uint32 search ) {
         __func__, search, name );
 }
 
-static void FindChunk( const char *name, uint32 search ) {
+static void FindChunk( const char *name, uint32_t search ) {
 	data_p = iff_data;
 	FindNextChunk( name, search );
 }
@@ -304,7 +304,7 @@ GetWavinfo
 static qboolean GetWavinfo( const char *name, wavinfo_t *info ) {
 	int     format;
 	int		samples, width;
-    uint32  chunk;
+    uint32_t  chunk;
 
 	memset( info, 0, sizeof( *info ) );
 

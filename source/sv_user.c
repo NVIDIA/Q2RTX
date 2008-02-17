@@ -145,7 +145,7 @@ static void write_compressed_gamestate( void ) {
 	sizebuf_t	*buf = &sv_client->netchan->message;
 	entity_state_t	*base;
 	int			i, j, length;
-    uint16      *patch;
+    uint16_t    *patch;
     char        *string;
 
     MSG_WriteByte( svc_gamestate );
@@ -1136,7 +1136,7 @@ void SV_ExecuteClientMessage( client_t *client ) {
 
 		// r1q2 specific operations
 		case clc_setting: {
-				uint16		idx, value;
+				uint16_t idx, value;
 
 				if( client->protocol < PROTOCOL_VERSION_R1Q2 ) {
 					goto badbyte;

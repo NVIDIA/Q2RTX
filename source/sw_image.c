@@ -77,7 +77,7 @@ qboolean R_ConvertTo32( const byte *data, int width, int height, byte *buffer ) 
 	dest = buffer;
 	for( i = 0; i < size; i++ ) {
 		p = data[i];
-		*( uint32 * )dest = d_8to24table[p];
+		*( uint32_t * )dest = d_8to24table[p];
 		
 		if( p == 255 ) {	
 			// transparent, so scan around for another color
@@ -115,10 +115,9 @@ R_LoadWal
 */
 image_t *R_LoadWal( const char *name ) {
 	miptex_t	*mt;
-	uint32			ofs;
+	uint32_t	ofs, w, h;
 	image_t		*image;
-	uint32			size, length;
-	uint32 w, h;
+	unsigned	size, length;
 	byte *source[4];
 
 	length = fs.LoadFile( name, ( void ** )&mt );

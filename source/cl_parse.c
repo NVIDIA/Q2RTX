@@ -469,7 +469,7 @@ CL_ParseFrame
 ================
 */
 static void CL_ParseFrame( int extrabits ) {
-	uint32  bits, extraflags;
+	uint32_t bits, extraflags;
 	int     currentframe, deltaframe,
             delta, surpressed;
 	server_frame_t  frame, *oldframe;
@@ -1428,7 +1428,7 @@ static void CL_ParseZPacket( void ) {
 }
 
 static void CL_ParseSetting( void ) {
-	uint32		index, value;
+	uint32_t    index, value;
 
 	index = MSG_ReadLong();
 	value = MSG_ReadLong();

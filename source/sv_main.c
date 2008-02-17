@@ -249,7 +249,7 @@ void SV_RateInit( ratelimit_t *r, int limit, int period ) {
 }
 
 addrmatch_t *SV_MatchAddress( list_t *list, netadr_t *address ) {
-    uint32 addr = *( uint32 * )address->ip;
+    uint32_t addr = *( uint32_t * )address->ip;
     addrmatch_t *match;
 
     LIST_FOR_EACH( addrmatch_t, match, list, entry ) {
@@ -453,17 +453,20 @@ challenge, they must give a valid IP address.
 =================
 */
 static void SVC_GetChallenge( void ) {
-	int		i, challenge;
-	int		oldest;
-	int		oldestTime;
+	int		i, oldest;
+    unsigned    challenge;
+	unsigned    oldestTime;
 
 	oldest = 0;
-	oldestTime = 0x7fffffff;
+	oldestTime = 0xffffffff;
 
 	// see if we already have a challenge for this ip
 	for( i = 0; i < MAX_CHALLENGES; i++ ) {
-		if( NET_IsEqualBaseAdr ( &net_from, &svs.challenges[i].adr ) )
+		if( NET_IsEqualBaseAdr( &net_from, &svs.challenges[i].adr ) )
 			break;
+		if( svs.challenges[i].time > com_eventTime ) {
+		    svs.challenges[i].time = com_eventTime;
+        }
 		if( svs.challenges[i].time < oldestTime ) {
 			oldestTime = svs.challenges[i].time;
 			oldest = i;
@@ -475,15 +478,15 @@ static void SVC_GetChallenge( void ) {
 		// overwrite the oldest
 		svs.challenges[oldest].challenge = challenge;
 		svs.challenges[oldest].adr = net_from;
-		svs.challenges[oldest].time = Sys_Milliseconds();
+		svs.challenges[oldest].time = com_eventTime;
 	} else {
 		svs.challenges[i].challenge = challenge;
-		svs.challenges[i].time = Sys_Milliseconds();
+		svs.challenges[i].time = com_eventTime;
 	}
 
 	// send it back
 	Netchan_OutOfBandPrint( NS_SERVER, &net_from,
-        "challenge %d p=34,35,36", challenge );
+        "challenge %u p=34,35,36", challenge );
 }
 
 /*
@@ -1274,7 +1277,7 @@ if necessary
 */
 static void SV_CheckTimeouts( void ) {
 	client_t	*client;
-    uint32      point;
+    unsigned    point;
 
     FOR_EACH_CLIENT( client ) {
 		// message times may be wrong across a changelevel
@@ -1450,7 +1453,7 @@ SV_Frame
 ==================
 */
 void SV_Frame( int msec ) {
-    uint32 time;
+    unsigned time;
     int mvdconns;
 
 #ifndef DEDICATED_ONLY
@@ -1786,7 +1789,7 @@ static void SV_FinalMessage( const char *message, int cmd ) {
 	client_t	*client, *next;
     tcpClient_t *t, *tnext;
     netchan_t   *netchan;
-    uint16 length;
+    uint16_t length;
 
 	MSG_WriteByte( svc_print );
 	MSG_WriteByte( PRINT_HIGH );

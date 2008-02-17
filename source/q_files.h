@@ -289,8 +289,8 @@ typedef struct {
 typedef struct miptex_s
 {
 	char		name[32];
-	uint32		width, height;
-	uint32		offsets[MIPLEVELS];		// four mip maps stored
+	uint32_t	width, height;
+	uint32_t	offsets[MIPLEVELS];		// four mip maps stored
 	char		animname[32];			// next frame in animation chain
 	int			flags;
 	int			contents;
@@ -346,7 +346,7 @@ typedef struct miptex_s
 //=============================================================================
 
 typedef struct {
-	uint32		fileofs, filelen;
+	uint32_t		fileofs, filelen;
 } lump_t;
 
 #define	LUMP_ENTITIES		0
@@ -371,16 +371,16 @@ typedef struct {
 #define	HEADER_LUMPS		19
 
 typedef struct {
-	uint32		ident;
-	uint32		version;	
+	uint32_t		ident;
+	uint32_t		version;	
 	lump_t		lumps[HEADER_LUMPS];
 } dheader_t;
 
 typedef struct {
 	float		mins[3], maxs[3];
 	float		origin[3];		// for sounds or lights
-	uint32		headnode;
-	uint32		firstface, numfaces;	// submodels just draw faces
+	uint32_t		headnode;
+	uint32_t		firstface, numfaces;	// submodels just draw faces
 										// without walking the bsp tree
 } dmodel_t;
 
@@ -392,7 +392,7 @@ typedef struct {
 typedef struct {
 	float	normal[3];
 	float	dist;
-	uint32	type;		// PLANE_X - PLANE_ANYZ ?remove? trivial to regenerate
+	uint32_t	type;		// PLANE_X - PLANE_ANYZ ?remove? trivial to regenerate
 } dplane_t;
 
 
@@ -449,70 +449,70 @@ typedef struct {
 #define	SURF_NODRAW		0x80	// don't bother referencing the texture
 
 typedef struct {
-	uint32			planenum;
-	uint32			children[2];	// negative numbers are -(leafs+1), not nodes
-	short			mins[3];		// for frustom culling
-	short			maxs[3];
-	uint16			firstface;
-	uint16			numfaces;	// counting both sides
+	uint32_t		planenum;
+	uint32_t		children[2];	// negative numbers are -(leafs+1), not nodes
+	int16_t			mins[3];		// for frustom culling
+	int16_t			maxs[3];
+	uint16_t		firstface;
+	uint16_t		numfaces;	// counting both sides
 } dnode_t;
 
 
 typedef struct texinfo_s {
 	float		vecs[2][4];		// [s/t][xyz offset]
-	uint32		flags;			// miptex flags + overrides
-	int			value;			// light emission, etc
+	uint32_t	flags;			// miptex flags + overrides
+	int32_t		value;			// light emission, etc
 	char		texture[32];	// texture name (textures/*.wal)
-	uint32		nexttexinfo;	// for animations, -1 = end of chain
+	uint32_t	nexttexinfo;	// for animations, -1 = end of chain
 } texinfo_t;
 
 
 // note that edge 0 is never used, because negative edge nums are used for
 // counterclockwise use of the edge in a face
 typedef struct {
-	uint16	v[2];		// vertex numbers
+	uint16_t	v[2];		// vertex numbers
 } dedge_t;
 
 #define	MAXLIGHTMAPS	4
 
 typedef struct {
-	uint16		planenum;
-	uint16		side;
+	uint16_t		planenum;
+	uint16_t		side;
 
-	uint32		firstedge;		// we must support > 64k edges
-	uint16		numedges;	
-	uint16		texinfo;
+	uint32_t		firstedge;		// we must support > 64k edges
+	uint16_t		numedges;	
+	uint16_t		texinfo;
 
 // lighting info
-	byte		styles[MAXLIGHTMAPS];
-	uint32		lightofs;		// start of [numstyles*surfsize] samples
+	uint8_t		    styles[MAXLIGHTMAPS];
+	uint32_t		lightofs;		// start of [numstyles*surfsize] samples
 } dface_t;
 
 typedef struct {
-	uint32			contents;			// OR of all brushes (not needed?)
+	uint32_t		contents;			// OR of all brushes (not needed?)
 
-	uint16			cluster;
-	uint16			area;
+	uint16_t		cluster;
+	uint16_t		area;
 
-	short			mins[3];			// for frustum culling
-	short			maxs[3];
+	int16_t			mins[3];			// for frustum culling
+	int16_t			maxs[3];
 
-	uint16			firstleafface;
-	uint16			numleaffaces;
+	uint16_t		firstleafface;
+	uint16_t		numleaffaces;
 
-	uint16			firstleafbrush;
-	uint16			numleafbrushes;
+	uint16_t		firstleafbrush;
+	uint16_t		numleafbrushes;
 } dleaf_t;
 
 typedef struct {
-	uint16	planenum;		// facing out of the leaf
-	uint16	texinfo;
+	uint16_t	planenum;		// facing out of the leaf
+	uint16_t	texinfo;
 } dbrushside_t;
 
 typedef struct {
-	uint32			firstside;
-	uint32			numsides;
-	uint32			contents;
+	uint32_t			firstside;
+	uint32_t			numsides;
+	uint32_t			contents;
 } dbrush_t;
 
 #define	ANGLE_UP	-1
@@ -528,21 +528,21 @@ typedef struct {
 #define DVIS_CLUSTERS	8
 
 typedef struct {
-	uint32		numclusters;
-	uint32		bitofs[DVIS_CLUSTERS][2];	// bitofs[numclusters][2]
+	uint32_t		numclusters;
+	uint32_t		bitofs[DVIS_CLUSTERS][2];	// bitofs[numclusters][2]
 } dvis_t;
 
 // each area has a list of portals that lead into other areas
 // when portals are closed, other areas may not be visible or
 // hearable even if the vis info says that it should be
 typedef struct {
-	uint32		portalnum;
-	uint32		otherarea;
+	uint32_t		portalnum;
+	uint32_t		otherarea;
 } dareaportal_t;
 
 typedef struct {
-	uint32		numareaportals;
-	uint32		firstareaportal;
+	uint32_t		numareaportals;
+	uint32_t		firstareaportal;
 } darea_t;
 
 /*

@@ -649,7 +649,7 @@ qboolean GL_Upload8( byte *data, int width, int height, qboolean mipmap ) {
     dest = buffer;
     for( i = 0; i < s; i++ ) {
         p = data[i];
-        *( uint32 * )dest = d_8to24table[p];
+        *( uint32_t * )dest = d_8to24table[p];
 
         if (p == 255) {	
             // transparent, so scan around for another color
@@ -879,8 +879,8 @@ R_LoadWal
 */
 image_t *R_LoadWal( const char *name ) {
 	miptex_t	*mt;
-	uint32			width, height, ofs;
-	uint32		length;
+	uint32_t	width, height, ofs;
+	unsigned	length;
 	image_t		*image;
 
 	length = fs.LoadFile( name, ( void ** )&mt );
@@ -1007,7 +1007,7 @@ static void GL_InitWhiteImage( void ) {
     dst = pixels;
     for( i = 0; i < 8; i++ ) {
         for( j = 0; j < 8; j++ ) {
-            *( uint32 * )dst = ( uint32 )-1;
+            *( uint32_t * )dst = ( uint32_t )-1;
             dst += 4;
 		}
 	}

@@ -118,7 +118,7 @@ neterr_t Netchan_OutOfBandPrint( netsrc_t sock, const netadr_t *address,
 	int			length;
 
     // write the packet header
-	*( uint32 * )buffer = 0xffffffff;
+	*( uint32_t * )buffer = 0xffffffff;
 	
 	va_start( argptr, format );
 	length = Q_vsnprintf( buffer + 4, sizeof( buffer ) - 4, format, argptr );
@@ -150,7 +150,7 @@ static int NetchanOld_Transmit( netchan_t *netchan, int length, const byte *data
 	sizebuf_t	send;
 	byte		send_buf[MAX_PACKETLEN];
 	qboolean	send_reliable;
-	uint32	    w1, w2;
+	uint32_t	w1, w2;
 	neterr_t	ret;
 
 // check for message overflow
@@ -250,9 +250,8 @@ modifies net_message so that it points to the packet payload
 */
 static qboolean NetchanOld_Process( netchan_t *netchan ) {
 	netchan_old_t *chan = ( netchan_old_t * )netchan;
-	uint32  	sequence, sequence_ack;
-	uint32  	reliable_ack, reliable_message;
-	int			qport;
+	uint32_t  	sequence, sequence_ack;
+	uint32_t  	reliable_ack, reliable_message;
 
 // get sequence numbers		
 	MSG_BeginReading();
@@ -262,9 +261,9 @@ static qboolean NetchanOld_Process( netchan_t *netchan ) {
 	// read the qport if we are a server
 	if( netchan->sock == NS_SERVER ) {
 		if( netchan->protocol < PROTOCOL_VERSION_R1Q2 ) {
-			qport = MSG_ReadShort();
+			MSG_ReadShort();
 		} else if( netchan->qport ) {
-			qport = MSG_ReadByte();
+			MSG_ReadByte();
 		}
 	}
 
@@ -403,8 +402,8 @@ static int NetchanNew_TransmitNextFragment( netchan_t *netchan ) {
 	sizebuf_t	send;
 	byte		send_buf[MAX_PACKETLEN];
 	qboolean	send_reliable;
-	uint32	    w1, w2;
-	uint16	    offset;
+	uint32_t	w1, w2;
+	uint16_t	offset;
 	int			fragment_length;
 	qboolean	more_fragments;
 	neterr_t	ret;
@@ -495,7 +494,7 @@ static int NetchanNew_Transmit( netchan_t *netchan, int length,
 	sizebuf_t	send;
 	byte		send_buf[MAX_PACKETLEN];
 	qboolean	send_reliable;
-	uint32		w1, w2;
+	uint32_t	w1, w2;
 	neterr_t	ret;
 
 // check for message overflow
@@ -603,9 +602,9 @@ NetchanNew_Process
 */
 static qboolean NetchanNew_Process( netchan_t *netchan ) {
 	netchan_new_t *chan = ( netchan_new_t * )netchan;
-	uint32      sequence, sequence_ack, reliable_ack;
+	uint32_t    sequence, sequence_ack, reliable_ack;
     qboolean    reliable_message, fragmented_message, more_fragments;
-	uint16		fragment_offset;
+	uint16_t	fragment_offset;
 	int			length;
 
 // get sequence numbers		

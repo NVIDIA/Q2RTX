@@ -88,7 +88,7 @@ typedef struct image_s {
 	int		upload_width, upload_height;	// after power of two and picmip
 	int		registration_sequence;		// 0 = free
 #ifdef OPENGL_RENDERER
-	uint32	texnum;						// gl texture binding
+	unsigned	texnum;						// gl texture binding
 	float	sl, sh, tl, th;
 #elif SOFTWARE_RENDERER
 	byte		*pixels[4];				// mip levels
@@ -106,7 +106,7 @@ extern image_t		r_images[MAX_RIMAGES];
 extern list_t		r_imageHash[RIMAGES_HASH];
 extern int			r_numImages;
 
-extern uint32		d_8to24table[256];
+extern uint32_t		d_8to24table[256];
 
 #define R_Malloc( size )	com.TagMalloc( size, TAG_RENDERER )
 
@@ -173,8 +173,8 @@ extern image_t *r_notexture;
 
 typedef struct bspTexinfo_s {
 	char name[MAX_QPATH];
-	uint32 contents;
-	uint32 flags;
+	int contents;
+	int flags;
 	vec3_t axis[2];
 #ifdef OPENGL_RENDERER
 //    vec3_t normalizedAxis[2];
@@ -330,7 +330,7 @@ typedef struct bspModel_s {
 	int rowsize;
 
     byte *lightmap;
-    uint32  lightmapSize;
+    unsigned  lightmapSize;
 
 //	char *entityString;
     

@@ -57,7 +57,7 @@ static void CMod_LoadSubmodels (lump_t *l)
 	dmodel_t	*in;
 	cmodel_t	*out;
 	int			i, j, count;
-	uint32		headnode;
+	uint32_t	headnode;
 
 	in = (void *)(cmod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -138,10 +138,10 @@ CMod_LoadNodes
 static void CMod_LoadNodes (lump_t *l)
 {
 	dnode_t		*in;
-	uint32		child;
+	uint32_t	child;
 	cnode_t		*out;
 	int			i, j, count;
-	uint32		planeNum;
+	uint32_t	planeNum;
 	
 	in = (void *)(cmod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -195,7 +195,7 @@ static void CMod_LoadBrushes (lump_t *l)
 	dbrush_t	*in;
 	cbrush_t	*out;
 	int			i, count;
-	uint32		firstSide, numSides;
+	uint32_t	firstSide, numSides;
 	
 	in = (void *)(cmod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -231,11 +231,10 @@ CMod_LoadLeafs
 */
 static void CMod_LoadLeafs (lump_t *l)
 {
-	int			i;
 	cleaf_t		*out;
 	dleaf_t 	*in;
-	int			count;
-	uint16		areaNum, firstBrush, numBrushes;
+	int			i, count;
+	uint16_t	areaNum, firstBrush, numBrushes;
 	
 	in = (void *)(cmod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -288,10 +287,9 @@ CMod_LoadPlanes
 */
 static void CMod_LoadPlanes (lump_t *l)
 {
-	int			i;
 	cplane_t	*out;
 	dplane_t 	*in;
-	int			count;
+	int			i, count;
 	
 	in = (void *)(cmod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -327,11 +325,10 @@ CMod_LoadLeafBrushes
 */
 static void CMod_LoadLeafBrushes (lump_t *l)
 {
-	int			i;
 	cbrush_t	**out;
-	uint16	 	*in;
-	int			count;
-	uint16		brushNum;
+	uint16_t	*in;
+	int			i, count;
+	uint16_t	brushNum;
 	
 	in = (void *)(cmod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -363,12 +360,11 @@ CMod_LoadBrushSides
 */
 static void CMod_LoadBrushSides (lump_t *l)
 {
-	int			i;
 	cbrushside_t	*out;
 	dbrushside_t 	*in;
-	int			count;
-	uint32			planeNum;
-	uint16			texinfoNum;
+	int			i, count;
+	uint32_t	planeNum;
+	uint16_t	texinfoNum;
 
 	in = (void *)(cmod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -390,7 +386,7 @@ static void CMod_LoadBrushSides (lump_t *l)
 		}
 		out->plane = cmod->planes + planeNum;
 		texinfoNum = LittleShort (in->texinfo);
-		if( texinfoNum == (uint16)-1 ) {
+		if( texinfoNum == (uint16_t)-1 ) {
 			out->surface = &nullsurface;
 		} else {
 			if (texinfoNum >= cmod->numtexinfo)
@@ -407,11 +403,10 @@ CMod_LoadAreas
 */
 static void CMod_LoadAreas (lump_t *l)
 {
-	int			i;
 	carea_t		*out;
 	darea_t 	*in;
-	int			count;
-	uint32		numPortals, firstPortal;
+	int			i, count;
+	uint32_t	numPortals, firstPortal;
 
 	in = (void *)(cmod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -445,11 +440,10 @@ CMod_LoadAreaPortals
 */
 static void CMod_LoadAreaPortals (lump_t *l)
 {
-	int			i;
-	careaportal_t		*out;
+	careaportal_t	*out;
 	dareaportal_t 	*in;
-	int			count;
-	uint32		portalNum, otherArea;
+	int			i, count;
+	uint32_t	portalNum, otherArea;
 
 	in = (void *)(cmod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -484,8 +478,8 @@ CMod_LoadVisibility
 =================
 */
 static void CMod_LoadVisibility( lump_t *l ) {
-	int		i;
-	uint32 numClusters;
+	int i;
+	uint32_t numClusters;
 
 	if( !l->filelen ) {
 		return;
@@ -708,7 +702,7 @@ CM_LoadMap
 Loads in the map and all submodels
 ==================
 */
-qboolean CM_LoadMap( cm_t *cm, const char *name, uint32 flags, uint32 *checksum ) {
+qboolean CM_LoadMap( cm_t *cm, const char *name, int flags, uint32_t *checksum ) {
 	cmcache_t		*cache;
 	byte			*buf;
 	int				i;
@@ -777,7 +771,7 @@ qboolean CM_LoadMap( cm_t *cm, const char *name, uint32 flags, uint32 *checksum 
 
 	header = *( dheader_t * )buf;
 	for( i = 0; i < sizeof( dheader_t )/4; i++ )
-		(( uint32 * )&header)[i] = LittleLong( (( uint32 * )&header)[i] );
+		(( uint32_t * )&header)[i] = LittleLong( (( uint32_t * )&header)[i] );
 
 	if( header.version != BSPVERSION ) {
 		Com_Error( ERR_DROP, "CM_LoadMap: %s has wrong version number (%i should be %i)",
@@ -2002,7 +1996,7 @@ byte *CM_FatPVS( cm_t *cm, const vec3_t org ) {
 	int		clusters[64];
 	int		i, j, count;
 	int		longs;
-	uint32	*src, *dst;
+	uint32_t *src, *dst;
 	vec3_t	mins, maxs;
 		
 	if( !cm->cache ) {	// map not loaded
@@ -2025,8 +2019,8 @@ byte *CM_FatPVS( cm_t *cm, const vec3_t org ) {
 		clusters[i] = leafs[i]->cluster;
 	}
 
-	src = ( uint32 * )CM_ClusterPVS( cm, clusters[0] );
-	dst = ( uint32 * )fatpvs;
+	src = ( uint32_t * )CM_ClusterPVS( cm, clusters[0] );
+	dst = ( uint32_t * )fatpvs;
 	for( j = 0; j < longs; j++ ) {
 		*dst++ = *src++;
 	}
@@ -2038,8 +2032,8 @@ byte *CM_FatPVS( cm_t *cm, const vec3_t org ) {
 				goto nextleaf; // already have the cluster we want
 			}
 		}
-		src = ( uint32 * )CM_ClusterPVS( cm, clusters[i] );
-		dst = ( uint32 * )fatpvs;
+		src = ( uint32_t * )CM_ClusterPVS( cm, clusters[i] );
+		dst = ( uint32_t * )fatpvs;
 		for( j = 0; j < longs; j++ ) {
 			*dst++ |= *src++;
 		}

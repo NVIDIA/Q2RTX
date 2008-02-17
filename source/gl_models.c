@@ -153,12 +153,12 @@ static qboolean Model_LoadMd2( model_t *model, const byte *rawdata, int length )
 	aliasFrame_t *dst_frame;
 	aliasVert_t *dst_vert;
 	aliasMesh_t *dst_mesh;
-	uint32 *finalIndices;
+	uint32_t *finalIndices;
 	tcoord_t *dst_tc;
 	int i, j, k;
-	uint16 remap[MAX_TRIANGLES*3];
-	uint16 vertIndices[MAX_TRIANGLES*3];
-	uint16 tcIndices[MAX_TRIANGLES*3];
+	uint16_t remap[MAX_TRIANGLES*3];
+	uint16_t vertIndices[MAX_TRIANGLES*3];
+	uint16_t tcIndices[MAX_TRIANGLES*3];
 	int numVerts, numIndices;
 	char skinname[MAX_QPATH];
 	char *src_skin;
@@ -176,7 +176,7 @@ static qboolean Model_LoadMd2( model_t *model, const byte *rawdata, int length )
 	/* byte swap the header */
 	header = *( dmdl_t * )rawdata;
 	for( i = 0; i < sizeof( header )/4; i++ ) {
-		(( uint32 * )&header)[i] = LittleLong( (( uint32 * )&header)[i] );
+		(( uint32_t * )&header)[i] = LittleLong( (( uint32_t * )&header)[i] );
 	}
 
 	if( header.ident != IDALIASHEADER ) {
@@ -210,7 +210,7 @@ static qboolean Model_LoadMd2( model_t *model, const byte *rawdata, int length )
 			model->name, header.num_tris, MAX_TRIANGLES );
 		return qfalse;
 	}
-	if( ( uint32 )header.num_skins > MAX_MD2SKINS ) {
+	if( ( unsigned )header.num_skins > MAX_MD2SKINS ) {
 		Com_EPrintf( "%s has too many skins: %d > %d\n",
 			model->name, header.num_skins, MAX_MD2SKINS );
 		return qfalse;
@@ -251,7 +251,7 @@ static qboolean Model_LoadMd2( model_t *model, const byte *rawdata, int length )
 	model->numMeshes = 1;
 
 	dst_mesh = model->meshes;
-	dst_mesh->indices = Model_Malloc( numIndices * sizeof( uint32 ) );
+	dst_mesh->indices = Model_Malloc( numIndices * sizeof( uint32_t ) );
 	dst_mesh->numTris = header.num_tris;
 	dst_mesh->numIndices = numIndices;
 
@@ -383,20 +383,20 @@ fail:
 
 static qboolean Model_LoadMd3( model_t *model, const byte *rawdata, int length ) {
 	dmd3header_t header;
-	uint32 offset;
+	uint32_t offset;
 	dmd3frame_t *src_frame;
 	dmd3mesh_t *src_mesh;
 	dmd3vertex_t *src_vert;
 	dmd3coord_t *src_tc;
 	dmd3skin_t *src_skin;
-	uint32 *src_idx;
+	uint32_t *src_idx;
 	aliasFrame_t *dst_frame;
 	aliasMesh_t *dst_mesh;
 	aliasVert_t *dst_vert;
 	tcoord_t *dst_tc;
-	uint32 *dst_idx;
-	uint32 numVerts, numTris, numSkins;
-	uint32 totalVerts;
+	uint32_t *dst_idx;
+	uint32_t numVerts, numTris, numSkins;
+	uint32_t totalVerts;
 	char skinname[MAX_QPATH];
 	image_t *skin;
 	const byte *rawend;
@@ -410,7 +410,7 @@ static qboolean Model_LoadMd3( model_t *model, const byte *rawdata, int length )
 	/* byte swap the header */
 	header = *( dmd3header_t * )rawdata;
 	for( i = 0; i < sizeof( header )/4; i++ ) {
-		(( uint32 * )&header)[i] = LittleLong( (( uint32 * )&header)[i] );
+		(( uint32_t * )&header)[i] = LittleLong( (( uint32_t * )&header)[i] );
 	}
 
 	if( header.ident != MD3_IDENT ) {
@@ -493,7 +493,7 @@ static qboolean Model_LoadMd3( model_t *model, const byte *rawdata, int length )
 		dst_mesh->numVerts = numVerts;
 		dst_mesh->verts = Model_Malloc( sizeof( aliasVert_t ) * numVerts * header.num_frames );
 		dst_mesh->tcoords = Model_Malloc( sizeof( tcoord_t ) * numVerts );
-		dst_mesh->indices = Model_Malloc( sizeof( uint32 ) * numTris * 3 );
+		dst_mesh->indices = Model_Malloc( sizeof( uint32_t ) * numTris * 3 );
 
 		/* load all skins */
 		numSkins = LittleLong( src_mesh->num_skins );
@@ -553,7 +553,7 @@ static qboolean Model_LoadMd3( model_t *model, const byte *rawdata, int length )
 
 		/* load all triangle indices */
 		offset = LittleLong( src_mesh->ofs_indexes );
-		src_idx = ( uint32 * )( ( byte * )src_mesh + offset );
+		src_idx = ( uint32_t * )( ( byte * )src_mesh + offset );
 		if( ( byte * )( src_idx + numTris * 3 ) > rawend ) {
 			Com_EPrintf( "%s has bad indices offset for mesh %d\n", model->name, i );
 			goto fail;
@@ -589,20 +589,20 @@ fail:
 
 static qboolean Model_WriteMd3( model_t *model, fileHandle_t f ) {
 	dmd3header_t *header;
-	uint32 offset, length;
+	uint32_t offset, length;
     byte *data;
 	dmd3frame_t *dst_frame;
 	dmd3mesh_t *dst_mesh;
 	dmd3vertex_t *dst_vert;
 	dmd3coord_t *dst_tc;
 	dmd3skin_t *dst_skin;
-	uint32 *dst_idx;
+	uint32_t *dst_idx;
 	aliasFrame_t *src_frame;
 	aliasMesh_t *src_mesh;
 	aliasVert_t *src_vert;
 	tcoord_t *src_tc;
-	uint32 *src_idx;
-	uint32 totalVerts;
+	uint32_t *src_idx;
+	uint32_t totalVerts;
 	int i, j;
     qboolean ret;
     short pos[3];
@@ -616,7 +616,7 @@ static qboolean Model_WriteMd3( model_t *model, fileHandle_t f ) {
             src_mesh->numSkins * sizeof( dmd3skin_t ) +
             src_mesh->numVerts * model->numFrames * sizeof( dmd3vertex_t ) +
             src_mesh->numVerts * sizeof( dmd3coord_t ) +
-            src_mesh->numIndices * sizeof( uint32 );
+            src_mesh->numIndices * sizeof( uint32_t );
         src_mesh++;
     }
 
@@ -706,7 +706,7 @@ static qboolean Model_WriteMd3( model_t *model, fileHandle_t f ) {
 		// write all triangle indices
 		dst_mesh->ofs_indexes = LittleLong( offset );
 		src_idx = src_mesh->indices;
-		Model_TempAlloc( dst_idx, sizeof( uint32 ) * src_mesh->numIndices );
+		Model_TempAlloc( dst_idx, sizeof( uint32_t ) * src_mesh->numIndices );
 		for( j = 0; j < src_mesh->numTris; j++ ) {
 			dst_idx[0] = LittleLong( src_idx[0] );
 			dst_idx[1] = LittleLong( src_idx[1] );
@@ -748,7 +748,7 @@ static qboolean Model_LoadSp2( model_t *model, const byte *rawdata, int length )
 	/* byte swap the header */
 	header = ( dsprite_t * )rawdata;
 	for( i = 0; i < sizeof( header )/4; i++ ) {
-		(( uint32 * )&header)[i] = LittleLong( (( uint32 * )&header)[i] );
+		(( uint32_t * )&header)[i] = LittleLong( (( uint32_t * )&header)[i] );
 	}
 
 	ident = LittleLong( header->ident );
@@ -826,7 +826,7 @@ qhandle_t GL_RegisterModel( const char *name ) {
 	int index, length, nameLength;
 	model_t *model;
 	byte *rawdata;
-	uint32 ident;
+	uint32_t ident;
 	qboolean success;
 	char buffer[MAX_QPATH];
 
@@ -878,7 +878,7 @@ qhandle_t GL_RegisterModel( const char *name ) {
 
 	model = Model_Alloc( name );
 
-	ident = LittleLong( *( uint32 * )rawdata );
+	ident = LittleLong( *( uint32_t * )rawdata );
 	switch( ident ) {
 	case IDALIASHEADER:
 		success = Model_LoadMd2( model, rawdata, length );

@@ -123,9 +123,9 @@ static void ErrorMenu_Init( comErrorType_t type, const char *text ) {
 	m_error.text.generic.y = uis.height / 2;
 	m_error.text.generic.uiFlags = UI_CENTER|UI_MULTILINE;
 	if( type == ERR_DROP ) {
-		*( uint32 * )m_error.text.generic.color = *( uint32 * )colorRed;
+		*( uint32_t * )m_error.text.generic.color = *( uint32_t * )colorRed;
 	} else {
-		*( uint32 * )m_error.text.generic.color = *( uint32 * )colorYellow;
+		*( uint32_t * )m_error.text.generic.color = *( uint32_t * )colorYellow;
 	}
 	
 	Menu_AddItem( &m_error.menu, ( void * )&m_error.text );

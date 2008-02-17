@@ -147,7 +147,7 @@ void M_Credits_MenuDraw( menuFrameWork_t *self ) {
 	int i;
 	float y, yMax;
 	const char *string;
-	uint32 flags;
+	int flags;
 	float alpha;
 
 	yMax = uis.height - BORDER_HEIGHT - 8;

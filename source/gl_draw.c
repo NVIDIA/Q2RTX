@@ -22,17 +22,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 drawStatic_t draw;
 
-void Draw_SetColor( uint32 flags, const color_t color ) {
+void Draw_SetColor( int flags, const color_t color ) {
 	draw.flags &= ~DRAW_COLOR_MASK;
 
 	if( flags == DRAW_COLOR_CLEAR ) {
-        *( uint32 * )draw.color = *( uint32 * )colorWhite;
+        *( uint32_t * )draw.color = *( uint32_t * )colorWhite;
 		return;
 	}
 	if( flags == DRAW_COLOR_ALPHA ) {
         draw.color[3] = *( float * )color * 255;
 	} else if( flags == DRAW_COLOR_INDEXED ) {
-		*( uint32 * )draw.color = d_8to24table[ *( uint32 * )color & 255 ];
+		*( uint32_t * )draw.color = d_8to24table[ *( uint32_t * )color & 255 ];
 	} else {
 		if( flags & DRAW_COLOR_RGB ) {
 			VectorCopy( color, draw.color );
@@ -45,7 +45,7 @@ void Draw_SetColor( uint32 flags, const color_t color ) {
 	draw.flags |= flags;
 }
 
-void Draw_SetClipRect( uint32 flags, const clipRect_t *clip ) {
+void Draw_SetClipRect( int flags, const clipRect_t *clip ) {
 	clipRect_t rc;
     float scale;
 
@@ -189,11 +189,11 @@ void Draw_Pic( int x, int y, qhandle_t hPic ) {
 void Draw_StretchRaw( int x, int y, int w, int h, int cols,
         int rows, const byte *data )
 {
-	uint32	resampled[256*256];
+	uint32_t resampled[256*256];
 	int width, height;
 	const byte *src;
 	byte tbyte;
-	uint32 *dst;
+	uint32_t *dst;
 	int u, v, ustep, vstep;
 
 	vstep = rows * 0x10000 / 256;
@@ -259,7 +259,7 @@ void Draw_FillEx( int x, int y, int w, int h, const color_t color ) {
 void Draw_FadeScreen( void ) {
 }
 
-void Draw_Char( int x, int y, uint32 flags, int ch, qhandle_t hFont ) {
+void Draw_Char( int x, int y, int flags, int ch, qhandle_t hFont ) {
 	float s, t;
     
     ch &= 255;
@@ -270,7 +270,7 @@ void Draw_Char( int x, int y, uint32 flags, int ch, qhandle_t hFont ) {
             draw.color, R_ImageForHandle( hFont ) );
 }
 
-int Draw_String( int x, int y, uint32 flags, int maxChars,
+int Draw_String( int x, int y, int flags, int maxChars,
                  const char *string, qhandle_t hFont )
 {
     byte c;
@@ -286,15 +286,15 @@ int Draw_String( int x, int y, uint32 flags, int maxChars,
 		mask |= 128;
 	}
 
-    *( uint32 * )colors[0] = *( uint32 * )draw.color;
-	*( uint32 * )colors[1] = MakeColor( 255, 255, 255, draw.color[3] );
+    *( uint32_t * )colors[0] = *( uint32_t * )draw.color;
+	*( uint32_t * )colors[1] = MakeColor( 255, 255, 255, draw.color[3] );
 	while( maxChars-- && *string ) {
         if( Q_IsColorString( string ) ) {
             c = string[1];
 			if( c == COLOR_ALT ) {
 				mask |= 128;
 			} else if( c == COLOR_RESET ) {
-                *( uint32 * )colors[0] = *( uint32 * )draw.color;
+                *( uint32_t * )colors[0] = *( uint32_t * )draw.color;
 				mask = 0;
 				if( flags & UI_ALTCOLOR ) {
 					mask |= 128;

@@ -114,8 +114,8 @@ typedef struct menuCommon_s {
 	int x, y;
 	int width, height;
 
-	uint32 flags;
-	uint32 uiFlags;
+	int flags;
+	int uiFlags;
 } menuCommon_t;
 
 typedef struct menuField_s {
@@ -281,9 +281,9 @@ void		UI_AddToServerList( const serverStatus_t *status );
 char		*UI_CopyString( const char *in );
 void		UI_DrawLoading( int realtime );
 void		UI_SetupDefaultBanner( menuStatic_t *banner, const char *name );
-void		UI_DrawString( int x, int y, const color_t color, uint32 flags, const char *string );
-void		UI_DrawChar( int x, int y, uint32 flags, int ch );
-void		UI_StringDimensions( vrect_t *rc, uint32 flags, const char *string );
+void		UI_DrawString( int x, int y, const color_t color, int flags, const char *string );
+void		UI_DrawChar( int x, int y, int flags, int ch );
+void		UI_StringDimensions( vrect_t *rc, int flags, const char *string );
 
 void		Menu_Init( menuFrameWork_t *menu );
 void        Menu_Size( menuFrameWork_t *menu );

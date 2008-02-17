@@ -205,11 +205,11 @@ typedef struct refAPI_s {
 	void	(*RenderFrame)( refdef_t *fd );
 	void	(*LightPoint)( vec3_t origin, vec3_t light );
 
-	void	(*SetColor)( uint32 flags, const color_t color );
-	void	(*SetClipRect)( uint32 flags, const clipRect_t *clip );
+	void	(*SetColor)( int flags, const color_t color );
+	void	(*SetClipRect)( int flags, const clipRect_t *clip );
 	void	(*SetScale)( float *scale );
-    void    (*DrawChar)( int x, int y, uint32 flags, int ch, qhandle_t hFont );
-	int 	(*DrawString)( int x, int y, uint32 flags, int maxChars,
+    void    (*DrawChar)( int x, int y, int flags, int ch, qhandle_t hFont );
+	int 	(*DrawString)( int x, int y, int flags, int maxChars,
             const char *string, qhandle_t hFont ); // returns advanced x coord
     // will return 0 0 if not found
 	void	(*DrawGetPicSize)( int *w, int *h, qhandle_t hPic );	

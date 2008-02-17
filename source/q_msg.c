@@ -2712,7 +2712,7 @@ const char *MSG_ServerCommandString( int cmd ) {
 
 //===========================================================================
 
-void SZ_TagInit( sizebuf_t *buf, void *data, int length, uint32 tag ) {
+void SZ_TagInit( sizebuf_t *buf, void *data, int length, uint32_t tag ) {
 	memset( buf, 0, sizeof( *buf ) );
 	buf->data = data;
 	buf->maxsize = length;

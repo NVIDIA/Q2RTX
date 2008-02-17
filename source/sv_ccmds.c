@@ -58,12 +58,10 @@ static void SV_SetMaster_f( void ) {
 			break;
         }
 
-		if( !NET_StringToAdr( Cmd_Argv( i ), &master_adr[slot] ) ) {
+		if( !NET_StringToAdr( Cmd_Argv( i ), &master_adr[slot], PORT_MASTER ) ) {
 			Com_Printf( "Bad address: %s\n", Cmd_Argv( i ) );
 			continue;
 		}
-		if( master_adr[slot].port == 0 )
-			master_adr[slot].port = BigShort( PORT_MASTER );
 
 		Com_Printf( "Master server at %s\n", NET_AdrToString( &master_adr[slot] ) );
 
@@ -571,7 +569,7 @@ static void SV_PickClient_f( void ) {
     }
 
     s = Cmd_Argv( 1 );
-    if ( !NET_StringToAdr( s, &address ) ) {
+    if ( !NET_StringToAdr( s, &address, 0 ) ) {
         Com_Printf( "Bad client address: %s\n", s );
         return;
     }
@@ -621,7 +619,7 @@ static void SV_ServerCommand_f( void ) {
 // bits = 32 --> mask = 255.255.255.255
 // bits = 24 --> mask = 255.255.255.0
 
-static qboolean SV_ParseMask( const char *s, uint32 *addr, uint32 *mask ) {
+static qboolean SV_ParseMask( const char *s, uint32_t *addr, uint32_t *mask ) {
     netadr_t address;
     char *p;
     int bits;
@@ -642,12 +640,12 @@ static qboolean SV_ParseMask( const char *s, uint32 *addr, uint32 *mask ) {
         bits = 32;
     }
 
-    if( !NET_StringToAdr( s, &address ) ) {
+    if( !NET_StringToAdr( s, &address, 0 ) ) {
         Com_Printf( "Bad address: %s\n", s );
         return qfalse;
     }
 
-    *addr = *( uint32 * )address.ip;
+    *addr = *( uint32_t * )address.ip;
     *mask = 0xffffffffU >> ( 32 - bits ); // LE
     return qtrue;
 }
@@ -655,7 +653,7 @@ static qboolean SV_ParseMask( const char *s, uint32 *addr, uint32 *mask ) {
 void SV_AddMatch_f( list_t *list ) {
     char	*s;
     addrmatch_t *match;
-    uint32 addr, mask;
+    uint32_t addr, mask;
 
     if( Cmd_Argc() < 2 ) {
 		Com_Printf( "Usage: %s <address/mask>\n", Cmd_Argv( 0 ) );
@@ -685,7 +683,7 @@ void SV_AddMatch_f( list_t *list ) {
 void SV_DelMatch_f( list_t *list ) {
     char	*s;
     addrmatch_t *match, *next;
-    uint32 addr, mask;
+    uint32_t addr, mask;
     int i;
 
     if( Cmd_Argc() < 2 ) {
@@ -756,7 +754,7 @@ void SV_ListMatches_f( list_t *list ) {
 
     count = 1;
     LIST_FOR_EACH( addrmatch_t, match, list, entry ) {
-        *( uint32 * )ip = match->addr;
+        *( uint32_t * )ip = match->addr;
         for( i = 0; i < 32; i++ ) {
             if( ( match->mask & ( 1 << i ) ) == 0 ) {
                 break;

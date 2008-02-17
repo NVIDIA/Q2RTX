@@ -227,8 +227,8 @@ typedef enum {
 } cvarSetSource_t;
 
 extern	cvar_t	*cvar_vars;
-extern	uint32	cvar_latchedModified;
-extern	uint32	cvar_infoModified;
+extern	int	    cvar_latchedModified;
+extern	int	    cvar_infoModified;
 
 void Cvar_SetByVar( cvar_t *var, const char *value, cvarSetSource_t source );
 
@@ -281,8 +281,8 @@ cvar_t 	*Cvar_SetEx( const char *var_name, const char *value, cvarSetSource_t so
 // will create the variable if it doesn't exist
 
 void	Cvar_SetValue( const char *var_name, float value );
-void Cvar_SetInteger( const char *var_name, int value );
-void Cvar_SetIntegerHex( const char *var_name, uint32 value );
+void    Cvar_SetInteger( const char *var_name, int value );
+void    Cvar_SetIntegerHex( const char *var_name, unsigned value );
 // expands value to a string and calls Cvar_Set
 
 float	Cvar_VariableValue( const char *var_name );
@@ -443,8 +443,8 @@ typedef enum netstat_e {
 
 typedef struct netadr_s {
 	netadrtype_t	type;
-	byte    ip[4];
-	uint16	port;
+	byte        ip[4];
+	uint16_t    port;
 } netadr_t;
 
 static inline qboolean NET_IsEqualAdr( const netadr_t *a, const netadr_t *b ) {
@@ -457,7 +457,7 @@ static inline qboolean NET_IsEqualAdr( const netadr_t *a, const netadr_t *b ) {
 		return qtrue;
 	case NA_IP:
 	case NA_BROADCAST:
-		if( *( uint32 * )a->ip == *( uint32 * )b->ip && a->port == b->port ) {
+		if( *( uint32_t * )a->ip == *( uint32_t * )b->ip && a->port == b->port ) {
 			return qtrue;
 		}
 		return qfalse;
@@ -478,7 +478,7 @@ static inline qboolean NET_IsEqualBaseAdr( const netadr_t *a, const netadr_t *b 
 		return qtrue;
 	case NA_IP:
 	case NA_BROADCAST:
-		if( *( uint32 * )a->ip == *( uint32 * )b->ip ) {
+		if( *( uint32_t * )a->ip == *( uint32_t * )b->ip ) {
 			return qtrue;
 		}
 		return qfalse;
@@ -498,8 +498,8 @@ static inline qboolean NET_IsLanAddress( const netadr_t *adr ) {
 		if( adr->ip[0] == 127 || adr->ip[0] == 10 ) {
 			return qtrue;
 		}
-		if( *( uint16 * )adr->ip == MakeShort( 192, 168 ) ||
-            *( uint16 * )adr->ip == MakeShort( 172,  16 ) )
+		if( *( uint16_t * )adr->ip == MakeShort( 192, 168 ) ||
+            *( uint16_t * )adr->ip == MakeShort( 172,  16 ) )
 		{
 			return qtrue;
 		}
@@ -518,11 +518,11 @@ void		NET_Config( netflag_t flag );
 qboolean    NET_GetAddress( netsrc_t sock, netadr_t *adr );
 
 neterr_t	NET_GetPacket( netsrc_t sock );
-neterr_t	NET_SendPacket( netsrc_t sock, const netadr_t *to, uint32 length, const void *data );
+neterr_t	NET_SendPacket( netsrc_t sock, const netadr_t *to, unsigned length, const void *data );
 qboolean	NET_GetLoopPacket( netsrc_t sock );
 
 char *		NET_AdrToString( const netadr_t *a );
-qboolean	NET_StringToAdr( const char *s, netadr_t *a );
+qboolean	NET_StringToAdr( const char *s, netadr_t *a, int port );
 void		NET_Sleep( int msec );
 
 #ifdef DEDICATED_ONLY
@@ -578,8 +578,8 @@ typedef struct netchan_s {
 
 	int			dropped;			// between last packet and previous
 
-	uint32		last_received;		// for timeouts
-	uint32		last_sent;			// for retransmits
+	unsigned	last_received;		// for timeouts
+	unsigned	last_sent;			// for retransmits
 
 	netadr_t	remote_address;
 	int			qport;				// qport value to write when transmitting
@@ -609,7 +609,7 @@ extern cvar_t       *net_maxmsglen;
 extern cvar_t       *net_chantype;
 
 void Netchan_Init( void );
-neterr_t Netchan_OutOfBand( netsrc_t sock, const netadr_t *adr, uint32 length,
+neterr_t Netchan_OutOfBand( netsrc_t sock, const netadr_t *adr, unsigned length,
         const byte *data );
 neterr_t Netchan_OutOfBandPrint( netsrc_t sock, const netadr_t *adr,
         const char *format, ... );
@@ -666,8 +666,8 @@ typedef struct {
 } carea_t;
 
 typedef struct {
-	uint32		portalnum;
-	uint32		otherarea;
+	unsigned	portalnum;
+	unsigned	otherarea;
 } careaportal_t;
 
 typedef struct cmodel_s {
@@ -679,7 +679,7 @@ typedef struct cmodel_s {
 typedef struct cmcache_s {
 	char		name[MAX_QPATH];
 	mempool_t	pool;
-	uint32		checksum;
+	uint32_t	checksum;
 	qboolean	onlyVis;
 	int			refcount;
 
@@ -734,7 +734,7 @@ typedef struct {
 void		CM_Init( void );
 
 void		CM_FreeMap( cm_t *cm );
-qboolean	CM_LoadMap( cm_t *cm, const char *name, uint32 flags, uint32 *checksum );
+qboolean	CM_LoadMap( cm_t *cm, const char *name, int flags, uint32_t *checksum );
 cmodel_t	*CM_InlineModel( cm_t *cm, const char *name );	// *1, *2, etc
 
 int CM_NumClusters( cm_t *cm );
@@ -937,10 +937,10 @@ const char *Com_FileNameGeneratorByFilter( const char *path, const char *filter,
 int         Com_Time_m( char *buffer, int size );
 int         Com_Uptime_m( char *buffer, int size );
 
-uint32      Com_BlockChecksum( void *buffer, int length );
+uint32_t    Com_BlockChecksum( void *buffer, int length );
 
 
-/* may return pointer to static memory */
+// may return pointer to static memory
 char    *Cvar_CopyString( const char *in );
 
 void	Z_Free( void *ptr );
@@ -976,17 +976,19 @@ extern	cvar_t	*com_sleep;
 
 extern	FILE *log_stats_file;
 
+#ifndef DEDICATED_ONLY
 // host_speeds times
-extern	int		time_before_game;
-extern	int		time_after_game;
-extern	int		time_before_ref;
-extern	int		time_after_ref;
+extern unsigned	time_before_game;
+extern unsigned	time_after_game;
+extern unsigned	time_before_ref;
+extern unsigned	time_after_ref;
+#endif
 
-extern uint32	com_eventTime; /* system time of the last event */
-extern uint32   com_localTime; /* milliseconds since Q2 startup */
-extern uint32	com_framenum;
-extern qboolean com_initialized;
-extern time_t   com_startTime;
+extern unsigned     com_eventTime; // system time of the last event
+extern unsigned     com_localTime; // milliseconds since Q2 startup
+extern unsigned	    com_framenum;
+extern qboolean     com_initialized;
+extern time_t       com_startTime;
 
 extern fileHandle_t	com_logFile;
 
@@ -1010,8 +1012,7 @@ void    *Sys_LoadLibrary( const char *path, const char *sym, void **handle );
 void	Sys_FreeLibrary( void *handle );
 void    *Sys_GetProcAddress( void *handle, const char *sym );
 
-int		Sys_Milliseconds( void );
-uint32	Sys_Realtime( void );
+unsigned	Sys_Milliseconds( void );
 char	*Sys_GetClipboardData( void );
 void	Sys_SetClipboardData( const char *data );
 void    Sys_Sleep( int msec );

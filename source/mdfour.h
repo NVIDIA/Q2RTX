@@ -26,11 +26,11 @@
 */
 
 typedef struct mdfour {
-	uint32 A, B, C, D;
-	uint32 totalN;
+	uint32_t A, B, C, D;
+	uint32_t totalN;
 } mdfour_t;
 
 void mdfour_begin( struct mdfour *md );
-void mdfour_update( struct mdfour *md, uint8 *in, int n );
-void mdfour_result( struct mdfour *md, uint8 *out );
+void mdfour_update( struct mdfour *md, uint8_t *in, int n );
+void mdfour_result( struct mdfour *md, uint8_t *out );
 

@@ -55,12 +55,12 @@ static struct mdfour *m;
 #define ROUND3(a,b,c,d,k,s) a = lshift(a + H(b,c,d) + X[k] + 0x6ED9EBA1,s)
 
 /* this applies md4 to 64 byte chunks */
-static void mdfour64(uint32 *M)
+static void mdfour64(uint32_t *M)
 {
 	int j;
-	uint32 AA, BB, CC, DD;
-	uint32 X[16];
-	uint32 A,B,C,D;
+	uint32_t AA, BB, CC, DD;
+	uint32_t X[16];
+	uint32_t A,B,C,D;
 
 	for (j=0;j<16;j++)
 		X[j] = M[j];
@@ -108,7 +108,7 @@ static void mdfour64(uint32 *M)
 	m->A = A; m->B = B; m->C = C; m->D = D;
 }
 
-static void copy64(uint32 *M, uint8 *in)
+static void copy64(uint32_t *M, uint8_t *in)
 {
 	int i;
 
@@ -117,7 +117,7 @@ static void copy64(uint32 *M, uint8 *in)
 			(in[i*4+1]<<8) | (in[i*4+0]<<0);
 }
 
-static void copy4(uint8 *out,uint32 x)
+static void copy4(uint8_t *out,uint32_t x)
 {
 	out[0] = x&0xFF;
 	out[1] = (x>>8)&0xFF;
@@ -135,11 +135,11 @@ void mdfour_begin(struct mdfour *md)
 }
 
 
-static void mdfour_tail(uint8 *in, int n)
+static void mdfour_tail(uint8_t *in, int n)
 {
-	uint8 buf[128];
-	uint32 M[16];
-	uint32 b;
+	uint8_t buf[128];
+	uint32_t M[16];
+	uint32_t b;
 
 	m->totalN += n;
 
@@ -162,9 +162,9 @@ static void mdfour_tail(uint8 *in, int n)
 	}
 }
 
-void mdfour_update(struct mdfour *md, uint8 *in, int n)
+void mdfour_update(struct mdfour *md, uint8_t *in, int n)
 {
-	uint32 M[16];
+	uint32_t M[16];
 
 	m = md;
 
@@ -182,7 +182,7 @@ void mdfour_update(struct mdfour *md, uint8 *in, int n)
 }
 
 
-void mdfour_result(struct mdfour *md, uint8 *out)
+void mdfour_result(struct mdfour *md, uint8_t *out)
 {
 	m = md;
 
@@ -194,14 +194,14 @@ void mdfour_result(struct mdfour *md, uint8 *out)
 
 //===================================================================
 
-uint32 Com_BlockChecksum( void *buffer, int length ) {
-	uint32 digest[4];
-	uint32 val;
+uint32_t Com_BlockChecksum( void *buffer, int length ) {
+	uint32_t digest[4];
+	uint32_t val;
 	struct mdfour md;
 
 	mdfour_begin( &md );
-	mdfour_update( &md, ( uint8 * )buffer, length );
-	mdfour_result( &md, ( uint8 * )digest );
+	mdfour_update( &md, ( uint8_t * )buffer, length );
+	mdfour_result( &md, ( uint8_t * )digest );
 	
 	val = digest[0] ^ digest[1] ^ digest[2] ^ digest[3];
 

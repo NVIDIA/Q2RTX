@@ -65,8 +65,8 @@ byte *Bsp_ClusterPVS( int clusterNum ) {
 
 static byte *loadData;
 
-static void Bsp_DecompressVis( byte *src, byte *dst, uint32 rowsize ) {
-	uint32 count;
+static void Bsp_DecompressVis( byte *src, byte *dst, unsigned rowsize ) {
+	unsigned count;
 	
 	do {
 		if( *src ) {
@@ -89,8 +89,8 @@ static void Bsp_DecompressVis( byte *src, byte *dst, uint32 rowsize ) {
 static void Bsp_LoadVis( lump_t *lump ) {
 	dvis_t *src_vis;
 	byte *dst, *src;
-	uint32 numClusters, rowsize;
-	uint32 offset;
+	uint32_t numClusters, rowsize;
+	uint32_t offset;
 	int i;
 	
 	if( !lump->filelen ) {
@@ -193,8 +193,7 @@ static void Bsp_LoadSurfEdges( lump_t *lump ) {
 }
 
 static void Bsp_LoadTexinfo( lump_t *lump ) {
-	int count;
-	int i;
+	int i, count;
 	texinfo_t *src;
 	bspTexinfo_t *dst, *tex;
     image_t *texture;
@@ -266,14 +265,14 @@ static void Bsp_LoadTexinfo( lump_t *lump ) {
 }
 
 static void Bsp_LoadFaces( lump_t *lump ) {
-	int count;
 	dface_t *src_face;
 	bspSurface_t *dst_face;
-	int i, j;
-	uint32 texinfoNum;
-    uint32 lightmapOffset;
-	uint32 firstEdge, numEdges;
-    uint32 planeNum;
+	int i, j, count;
+	uint32_t texinfoNum;
+    uint32_t lightmapOffset;
+	uint32_t firstEdge;
+    uint16_t numEdges;
+    uint16_t planeNum;
 
 	count = lump->filelen / sizeof( *src_face );
 	if( lump->filelen % sizeof( *src_face ) ) {
@@ -288,7 +287,7 @@ static void Bsp_LoadFaces( lump_t *lump ) {
 	for( i = 0; i < count; i++ ) {
 		firstEdge = LittleLong( src_face->firstedge );
 		numEdges = LittleShort( src_face->numedges );
-        if( numEdges < 3 || numEdges > MAX_MAP_SURFEDGES ) {
+        if( numEdges < 3 ) {
 			Com_Error( ERR_DROP, "%s: bad surfedges", __func__ );
         }
 		if( firstEdge + numEdges > r_world.numSurfEdges ) {
@@ -306,7 +305,7 @@ static void Bsp_LoadFaces( lump_t *lump ) {
 		}
         
         lightmapOffset = LittleLong( src_face->lightofs );
-        if( lightmapOffset == ( uint32 )-1 || r_world.lightmapSize == 0 ) {
+        if( lightmapOffset == ( uint32_t )-1 || r_world.lightmapSize == 0 ) {
             dst_face->lightmap = NULL;
         } else {
             if( lightmapOffset >= r_world.lightmapSize ) {
@@ -329,10 +328,9 @@ static void Bsp_LoadFaces( lump_t *lump ) {
 }
 
 static void Bsp_LoadLeafFaces( lump_t *lump ) {
-	int count;
-	int i;
-	uint32 faceNum;
-	uint16 *src;
+	int i, count;
+	uint32_t faceNum;
+	uint16_t *src;
 	bspSurface_t **dst;
 
 	count = lump->filelen / sizeof( *src );
@@ -343,7 +341,7 @@ static void Bsp_LoadLeafFaces( lump_t *lump ) {
 	r_world.numLeafFaces = count;
 	r_world.leafFaces = Bsp_Malloc( sizeof( *dst ) * count );
 	
-	src = ( uint16 * )( loadData + lump->fileofs );
+	src = ( uint16_t * )( loadData + lump->fileofs );
 	dst = r_world.leafFaces;
 	for( i = 0; i < count; i++ ) {
 		faceNum = LittleShort( *src );
@@ -357,11 +355,9 @@ static void Bsp_LoadLeafFaces( lump_t *lump ) {
 }
 
 static void Bsp_LoadLeafs( lump_t *lump ) {
-	int count;
-	int i;
-	uint32 cluster, area;
-	uint32 firstLeafFace;
-	uint32 numLeafFaces;
+	int i, count;
+	uint16_t cluster, area;
+	uint16_t firstLeafFace, numLeafFaces;
 	dleaf_t *src;
 	bspLeaf_t *dst;
 
@@ -389,7 +385,7 @@ static void Bsp_LoadLeafs( lump_t *lump ) {
 		dst->contents = LittleLong( src->contents );
 
 		cluster = LittleShort( src->cluster );
-		if( cluster == ( uint16 )-1 || r_world.numClusters == 0 ) {
+		if( cluster == ( uint16_t )-1 || r_world.numClusters == 0 ) {
 			dst->cluster = -1;
 		} else {
             if( cluster >= r_world.numClusters ) {
@@ -416,8 +412,7 @@ static void Bsp_LoadLeafs( lump_t *lump ) {
 }
 
 static void Bsp_LoadPlanes( lump_t *lump ) {
-	int count;
-	int i;
+	int i, count;
 	dplane_t *src;
 	cplane_t *dst;
 
@@ -442,13 +437,12 @@ static void Bsp_LoadPlanes( lump_t *lump ) {
 }
 
 static void Bsp_LoadNodes( lump_t *lump ) {
-	int count;
-	int i, j;
-	uint32 planenum;
-	uint32 child;
+	int i, j, count;
+	uint32_t planenum;
+	uint32_t child;
 	dnode_t *src;
 	bspNode_t *dst;
-	uint32 firstFace, numFaces;
+	uint16_t firstFace, numFaces;
 
 	count = lump->filelen / sizeof( *src );
 	if( lump->filelen % sizeof( *src ) ) {
@@ -519,12 +513,11 @@ static void Bsp_LoadLightMap( lump_t *lump ) {
 }
 
 static void Bsp_LoadSubmodels( lump_t *lump ) {
-	int count;
-	int i;
+	int i, count;
 	dmodel_t *src;
 	bspSubmodel_t *dst;
-	uint32 firstFace, numFaces;
-	uint32 headnode;
+	uint32_t firstFace, numFaces;
+	uint32_t headnode;
 
 	count = lump->filelen / sizeof( *src );
 	if( lump->filelen % sizeof( *src ) ) {

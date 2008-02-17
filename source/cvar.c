@@ -25,8 +25,8 @@ cvarAPI_t	cvar;
 
 cvar_t	*cvar_vars;
 
-uint32	cvar_latchedModified;
-uint32	cvar_infoModified;
+int	    cvar_latchedModified;
+int	    cvar_infoModified;
 
 #define Cvar_Malloc( size )		Z_TagMalloc( size, TAG_CVAR )
 
@@ -166,7 +166,7 @@ The flags will be or'ed in if the variable exists.
 */
 cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 	cvar_t	*var, *c, **p;
-	uint32 hash;
+	unsigned hash;
 	int length;
 
 	if( !var_name ) {
@@ -510,7 +510,7 @@ void Cvar_SetInteger( const char *var_name, int value ) {
 Cvar_SetInteger
 ============
 */
-void Cvar_SetIntegerHex( const char *var_name, uint32 value ) {
+void Cvar_SetIntegerHex( const char *var_name, unsigned value ) {
 	char	val[32];
 
 	Com_sprintf( val, sizeof( val ), "0x%X", value );

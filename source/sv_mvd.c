@@ -515,7 +515,7 @@ void SV_MvdBeginFrame( void ) {
             if( sv.mvd.paused == PAUSED_FRAMES ) {
                 Com_Printf( "MVD stream paused, no active clients.\n" );
                 for( i = 0; i < CS_BITMAP_LONGS; i++ ) {
-                    (( uint32 * )sv.mvd.dcs)[i] = 0;
+                    (( uint32_t * )sv.mvd.dcs)[i] = 0;
                 }
             }
             sv.mvd.paused++;
@@ -525,7 +525,7 @@ void SV_MvdBeginFrame( void ) {
 
 	if( sv.mvd.paused >= PAUSED_FRAMES ) {
         for( i = 0; i < CS_BITMAP_LONGS; i++ ) {
-            if( (( uint32 * )sv.mvd.dcs)[i] == 0 ) {
+            if( (( uint32_t * )sv.mvd.dcs)[i] == 0 ) {
                 continue;
             }
             index = i << 5;
@@ -659,7 +659,7 @@ static void SV_MvdEmitGamestate( void ) {
     player_state_t  *ps;
 	entity_state_t	*es;
     int         length;
-    uint16      *patch;
+    uint16_t    *patch;
 	int flags, extra, portalbytes;
     byte portalbits[MAX_MAP_AREAS/8];
 
@@ -749,7 +749,7 @@ void SV_MvdClientNew( tcpClient_t *client ) {
 }
 
 void SV_MvdInitStream( void ) {
-    uint32 magic;
+    uint32_t magic;
 #if USE_ZLIB
     int bits;
 #endif
@@ -899,7 +899,7 @@ static void MVD_Record_f( void ) {
 	char buffer[MAX_OSPATH];
 	char *name;
 	fileHandle_t demofile;
-    uint32 magic;
+    uint32_t magic;
 
 	if( sv.state != ss_game ) {
         if( sv.state == ss_broadcast ) {

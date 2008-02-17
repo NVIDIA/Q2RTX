@@ -53,7 +53,7 @@ static void Evdev_SendMouseMoveEvents( void ) {
 	int bytes, count;
 	int dx, dy;
 	int i, button;
-    uint32 time;
+    unsigned time;
 
 	if( !mouseinitialized ) {
 		return;

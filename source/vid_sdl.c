@@ -196,7 +196,7 @@ static void QSDL_UpdateGamma( const byte *table ) {
 }
 
 static void QSDL_KeyEvent( SDL_keysym *keysym, qboolean down ) {
-	uint32 key1, key2 = 0;
+	unsigned key1, key2 = 0;
 
     if( keysym->sym <= 127 ) {
         // ASCII chars are mapped directly
@@ -277,7 +277,7 @@ static void QSDL_KeyEvent( SDL_keysym *keysym, qboolean down ) {
 }
 
 static void QSDL_MouseButtonEvent( int button, qboolean down ) {
-    uint32 key;
+    unsigned key;
 
     if( !sdl.mouseinitialized ) {
         return;
@@ -513,7 +513,7 @@ SDL MOUSE DRIVER
 #define SDL_FULLFOCUS  (SDL_APPACTIVE|SDL_APPINPUTFOCUS|SDL_APPMOUSEFOCUS)
 
 void QSDL_AcquireMouse( void ) {
-    uint32 state;
+    int state;
 
 	// move cursor to center of the main window before we grab the mouse
 	if( sdl.surface ) {

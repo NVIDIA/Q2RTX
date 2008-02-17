@@ -42,7 +42,7 @@ typedef struct {
     int numTextureUnits;
     int maxTextureSize;
 	qboolean registering;
-	uint32 palette[256]; /* cinematic palette */
+	uint32_t palette[256]; // cinematic palette
     GLuint prog_warp, prog_light;
     vec_t *vertices;
 } glStatic_t;
@@ -144,7 +144,7 @@ typedef struct aliasMesh_s {
 	int numVerts;
 	int numTris;
 	int numIndices;
-	uint32 *indices;
+	uint32_t *indices;
 	aliasVert_t *verts;
 	tcoord_t *tcoords;
 	image_t *skins[MAX_MD2SKINS];
@@ -266,7 +266,7 @@ void GL_DisableOutlines( void );
  */
 typedef struct {
     color_t color;
-	uint32 flags;
+	int flags;
 	float scale;
 } drawStatic_t;
 
@@ -274,8 +274,8 @@ extern drawStatic_t	draw;
 
 qhandle_t GL_RegisterFont( const char *name );
 
-void Draw_SetColor( uint32 flags, const color_t color );
-void Draw_SetClipRect( uint32 flags, const clipRect_t *clip );
+void Draw_SetColor( int flags, const color_t color );
+void Draw_SetClipRect( int flags, const clipRect_t *clip );
 void Draw_SetScale( float *scale );
 void Draw_GetPicSize( int *w, int *h, qhandle_t hPic );
 void Draw_GetFontSize( int *w, int *h, qhandle_t hFont );
@@ -289,8 +289,8 @@ void Draw_TileClear( int x, int y, int w, int h, qhandle_t hPic );
 void Draw_Fill( int x, int y, int w, int h, int c );
 void Draw_FillEx( int x, int y, int w, int h, const color_t color );
 void Draw_FadeScreen( void );
-void Draw_Char( int x, int y, uint32 flags, int ch, qhandle_t hFont );
-int  Draw_String( int x, int y, uint32 flags, int maxChars,
+void Draw_Char( int x, int y, int flags, int ch, qhandle_t hFont );
+int  Draw_String( int x, int y, int flags, int maxChars,
         const char *string, qhandle_t hFont );
 void Draw_Stringf( int x, int y, const char *fmt, ... );
 void Draw_Stats( void );

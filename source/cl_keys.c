@@ -641,6 +641,10 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
 	char	*kb;
 	char	cmd[MAX_STRING_CHARS];
 
+    if( key >= 256 ) {
+        Com_Error( ERR_FATAL, "%s: bad key", __func__ );
+    }
+
 	// hack for modal presses
 	if( key_waiting == -1 ) {
 		if( down )

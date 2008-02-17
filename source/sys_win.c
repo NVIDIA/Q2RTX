@@ -634,27 +634,7 @@ static inline time_t Sys_FileTimeToUnixTime( FILETIME *f ) {
 	return ( time_t )( ( u.QuadPart - 116444736000000000U ) / 10000000 );
 }
 
-/*
-================
-Sys_Milliseconds
-================
-*/
-int Sys_Milliseconds( void ) {
-	static uint32		base;
-	static qboolean	initialized = qfalse;
-	int	curtime;
-
-	if( !initialized ) {	
-		// let base retain 16 bits of effectively random data
-		base = timeGetTime() & 0xffff0000;
-		initialized = qtrue;
-	}
-	curtime = timeGetTime() - base;
-
-	return curtime;
-}
-
-uint32 Sys_Realtime( void ) {
+unsigned Sys_Milliseconds( void ) {
 	return timeGetTime();
 }
 

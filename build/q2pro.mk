@@ -127,13 +127,18 @@ ifdef USE_EVDEV
 SRCFILES+=in_evdev.c
 endif
 
-ASMFILES+=snd_mixa.s
+ifdef USE_DL
 LDFLAGS+=-ldl
+endif
 
 ifdef USE_SDL
 SRCFILES+=vid_sdl.c snd_sdl.c
 CFLAGS+=$(SDL_CFLAGS)
-LDFLAGS+=-lX11 $(SDL_LDFLAGS)
+LDFLAGS+=$(SDL_LDFLAGS)
+ifdef USE_X11
+CFLAGS+=$(X11_CFLAGS)
+LDFLAGS+=$(X11_LDFLAGS)
+endif
 endif
 
 endif # !MINGW

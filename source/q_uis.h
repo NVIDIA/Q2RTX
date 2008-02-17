@@ -22,7 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // ui_shared.h
 //
 
-void	UIS_DrawStringEx( int x, int y, uint32 flags, int maxChars,
+void	UIS_DrawStringEx( int x, int y, int flags, int maxChars,
             const char *string, qhandle_t hFont );
 void	UIS_DrawStretchPicByName( int x, int y, int w, int h, const char *pic );
 void	UIS_DrawPicByName( int x, int y, const char *pic );

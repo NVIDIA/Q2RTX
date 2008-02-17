@@ -80,7 +80,7 @@ void GL_StretchPic( float x, float y, float w, float h,
         const byte *color, image_t *image )
 {
     vec_t *dst_vert;
-    uint32 *dst_color;
+    uint32_t *dst_color;
     
     if( tess.numVertices + 4 > TESS_MAX_VERTICES ||
         ( tess.numVertices && tess.texnum[0] != image->texnum ) )
@@ -96,11 +96,11 @@ void GL_StretchPic( float x, float y, float w, float h,
     Vector4Set( dst_vert +  8, x + w, y + h, s2, t2 );
     Vector4Set( dst_vert + 12, x,     y + h, s1, t2 );
 
-    dst_color = ( uint32 * )tess.colors + tess.numVertices;
-    dst_color[0] = *( const uint32 * )color;
-    dst_color[1] = *( const uint32 * )color;
-    dst_color[2] = *( const uint32 * )color;
-    dst_color[3] = *( const uint32 * )color;
+    dst_color = ( uint32_t * )tess.colors + tess.numVertices;
+    dst_color[0] = *( const uint32_t * )color;
+    dst_color[1] = *( const uint32_t * )color;
+    dst_color[2] = *( const uint32_t * )color;
+    dst_color[3] = *( const uint32_t * )color;
 	
 	if( image->flags & if_transparent ) {
         if( ( image->flags & if_paletted ) && draw.scale == 1 ) {
@@ -124,7 +124,7 @@ void GL_DrawParticles( void ) {
     color_t color;
     int numVertices;
     vec_t *dst_vert;
-    uint32 *dst_color;
+    uint32_t *dst_color;
 
     if( !glr.fd.num_particles ) {
         return;
@@ -150,9 +150,9 @@ void GL_DrawParticles( void ) {
         }
 
         if( p->color == 255 ) {
-            *( uint32 * )color = *( uint32 * )p->rgb;
+            *( uint32_t * )color = *( uint32_t * )p->rgb;
         } else {
-            *( uint32 * )color = d_8to24table[p->color & 255];
+            *( uint32_t * )color = d_8to24table[p->color & 255];
         }
         color[3] = p->alpha * 255;
 
@@ -171,10 +171,10 @@ void GL_DrawParticles( void ) {
         dst_vert[8] = 2; dst_vert[9] = 0;
         dst_vert[13] = 0; dst_vert[14] = 2;
 
-        dst_color = ( uint32 * )tess.colors + numVertices;
-        dst_color[0] = *( uint32 * )color;
-        dst_color[1] = *( uint32 * )color;
-        dst_color[2] = *( uint32 * )color;
+        dst_color = ( uint32_t * )tess.colors + numVertices;
+        dst_color[0] = *( uint32_t * )color;
+        dst_color[1] = *( uint32_t * )color;
+        dst_color[2] = *( uint32_t * )color;
 
         numVertices += 3;
     }
@@ -189,7 +189,7 @@ void GL_DrawBeams( void ) {
 	vec_t *start, *end;
 	color_t color;
     vec_t *dst_vert;
-    uint32 *dst_color;
+    uint32_t *dst_color;
 	vec_t length;
 	int numVertices;
 	entity_t *ent;
@@ -224,9 +224,9 @@ void GL_DrawBeams( void ) {
 		length = VectorLength( d1 );
 
 		if( ent->lightstyle ) {
-			*( uint32 * )color = *( uint32 * )&ent->skinnum;
+			*( uint32_t * )color = *( uint32_t * )&ent->skinnum;
 		} else {
-			*( uint32 * )color = d_8to24table[ent->skinnum & 0xFF];
+			*( uint32_t * )color = d_8to24table[ent->skinnum & 0xFF];
 		}
 		color[3] = 255 * ent->alpha;
 
@@ -246,11 +246,11 @@ void GL_DrawBeams( void ) {
 		dst_vert[13] = 1; dst_vert[14] = length;
 		dst_vert[18] = 0; dst_vert[19] = length;
 	    
-		dst_color = ( uint32 * )tess.colors + numVertices;
-		dst_color[0] = *( uint32 * )color;
-		dst_color[1] = *( uint32 * )color;
-		dst_color[2] = *( uint32 * )color;
-		dst_color[3] = *( uint32 * )color;
+		dst_color = ( uint32_t * )tess.colors + numVertices;
+		dst_color[0] = *( uint32_t * )color;
+		dst_color[1] = *( uint32_t * )color;
+		dst_color[2] = *( uint32_t * )color;
+		dst_color[3] = *( uint32_t * )color;
 
 		numVertices += 4;
 	}
@@ -339,15 +339,15 @@ static void GL_Flush3D( void ) {
 }
 
 static void GL_CopyVerts( bspSurface_t *surf ) {
-    uint32 *src_vert, *dst_vert;
+    uint32_t *src_vert, *dst_vert;
     int i, j;
 
     if( tess.numVertices + surf->numVerts > TESS_MAX_VERTICES ) {
         GL_Flush3D();
     }
 
-    src_vert = ( uint32 * )gl_static.vertices + surf->firstVert * VERTEX_SIZE;
-    dst_vert = ( uint32 * )tess.vertices + tess.numVertices * VERTEX_SIZE;
+    src_vert = ( uint32_t * )gl_static.vertices + surf->firstVert * VERTEX_SIZE;
+    dst_vert = ( uint32_t * )tess.vertices + tess.numVertices * VERTEX_SIZE;
     for( i = 0; i < surf->numVerts; i++ ) {
         for( j = 0; j < VERTEX_SIZE; j++ ) {
             *dst_vert++ = *src_vert++;

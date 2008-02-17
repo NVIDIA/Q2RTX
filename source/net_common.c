@@ -82,7 +82,7 @@ static fileHandle_t	net_logFile;
 static netflag_t	net_active;
 static int          net_error;
 
-static uint32       net_statTime;
+static unsigned     net_statTime;
 static int          net_rcvd;
 static int          net_sent;
 static int          net_rate_dn;
@@ -106,7 +106,7 @@ static void NET_NetadrToSockadr( const netadr_t *a, struct sockaddr_in *s ) {
 		break;
 	case NA_IP:
 		s->sin_family = AF_INET;
-		s->sin_addr.s_addr = *( uint32 * )&a->ip;
+		s->sin_addr.s_addr = *( uint32_t * )&a->ip;
 		s->sin_port = a->port;
 		break;
 	default:
@@ -124,7 +124,7 @@ static void NET_SockadrToNetadr( const struct sockaddr_in *s, netadr_t *a ) {
 	memset( a, 0, sizeof( *a ) );
 
 	a->type = NA_IP;
-	*( uint32 * )&a->ip = s->sin_addr.s_addr;
+	*( uint32_t * )&a->ip = s->sin_addr.s_addr;
 	a->port = s->sin_port;
 }
 
@@ -158,11 +158,11 @@ static qboolean NET_StringToSockaddr( const char *s, struct sockaddr_in *sadr ) 
 		}
     }
 	if( copy[0] >= '0' && copy[0] <= '9' ) {
-		*( uint32 * )&sadr->sin_addr = inet_addr( copy );
+		*( uint32_t * )&sadr->sin_addr = inet_addr( copy );
 	} else {
 		if( !( h = gethostbyname( copy ) ) )
 			return qfalse;
-		*( uint32 * )&sadr->sin_addr = *( uint32 * )h->h_addr_list[0];
+		*( uint32_t * )&sadr->sin_addr = *( uint32_t * )h->h_addr_list[0];
 	}
 
 	return qtrue;
@@ -207,7 +207,7 @@ idnewt:28000
 192.246.40.70:28000
 =============
 */
-qboolean NET_StringToAdr( const char *s, netadr_t *a ) {
+qboolean NET_StringToAdr( const char *s, netadr_t *a, int port ) {
 	struct sockaddr_in sadr;
 	
 	if( !NET_StringToSockaddr( s, &sadr ) ) {
@@ -215,6 +215,10 @@ qboolean NET_StringToAdr( const char *s, netadr_t *a ) {
     }
 	
 	NET_SockadrToNetadr( &sadr, a );
+
+    if( !a->port ) {
+        a->port = BigShort( port );
+    }
 
 	return qtrue;
 }
@@ -233,7 +237,7 @@ static void NetLogFile_Close( void ) {
 }
 
 static void NetLogFile_Open( void ) {
-	uint32	mode;
+	int mode;
 
 	mode = net_log_active->integer > 1 ? FS_MODE_APPEND : FS_MODE_WRITE;
 
@@ -273,7 +277,7 @@ NET_LogPacket
 =============
 */
 static void NET_LogPacket( const netadr_t *address, const char *prefix,
-                           const byte *data, uint32 length )
+                           const byte *data, unsigned length )
 {
 	int numRows;
 	int i, j, c;
@@ -374,7 +378,7 @@ net_from variable receives source address.
 */
 neterr_t NET_GetPacket( netsrc_t sock ) {
 	struct sockaddr_in from;
-	uint32	fromlen;
+	socklen_t fromlen;
 	int		ret;
 
     if( udp_sockets[sock] == INVALID_SOCKET ) {
@@ -458,7 +462,7 @@ neterr_t NET_GetPacket( netsrc_t sock ) {
 NET_SendPacket
 =============
 */
-neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, uint32 length, const void *data ) {
+neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, unsigned length, const void *data ) {
 	struct sockaddr_in	addr;
     int    ret;
 
@@ -853,7 +857,7 @@ neterr_t NET_Listen( qboolean arg ) {
 
 neterr_t NET_Accept( netadr_t *peer, netstream_t *s ) {
 	struct sockaddr_in from;
-    uint32 fromlen;
+    socklen_t fromlen;
 	u_long _true = 1;
     SOCKET newsocket;
     struct timeval tv;

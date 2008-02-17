@@ -56,7 +56,7 @@ static void R_DrawPoly( int iswater );
 
 void R_DrawSpanletOpaque( void ) {
 	byte *btemp;
-	uint32 ts, tt;
+	unsigned ts, tt;
 
 	do {
 		ts = s_spanletvars.s >> 16;
@@ -88,7 +88,7 @@ void R_DrawSpanletOpaque( void ) {
 
 void R_DrawSpanletBlended( void ) {
 	byte *btemp;
-	uint32 ts, tt;
+	unsigned ts, tt;
 
 	do {
 		ts = s_spanletvars.s >> 16;

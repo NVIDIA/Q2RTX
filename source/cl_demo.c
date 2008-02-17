@@ -392,7 +392,7 @@ static void CL_Suspend_f( void ) {
 
     // XXX: embed these in frame instead?
     for( i = 0; i < CS_BITMAP_LONGS; i++ ) {
-        if( (( uint32 * )cl.dcs)[i] == 0 ) {
+        if( (( uint32_t * )cl.dcs)[i] == 0 ) {
             continue;
         }
         index = i << 5;
@@ -428,9 +428,10 @@ static void CL_Suspend_f( void ) {
 }
 
 static int CL_ReadFirstDemoMessage( fileHandle_t f ) {
-	uint32		ul;
-    uint16      us;
-    int         msglen, type;
+	uint32_t	ul;
+    uint16_t    us;
+    unsigned    msglen;
+    int         type;
 
     // read magic/msglen
     if( FS_Read( &ul, 4, f ) != 4 ) {
@@ -443,14 +444,14 @@ static int CL_ReadFirstDemoMessage( fileHandle_t f ) {
             Com_DPrintf( "%s: short read of msglen\n", __func__ );
             return -1;
         }
-        if( us == ( uint16 )-1 ) {
+        if( us == ( uint16_t )-1 ) {
             Com_DPrintf( "%s: end of demo\n", __func__ );
             return -1;
         }
         msglen = LittleShort( us );
         type = 1;
     } else {
-        if( ul == ( uint32 )-1 ) {
+        if( ul == ( uint32_t )-1 ) {
             Com_DPrintf( "%s: end of demo\n", __func__ );
             return -1;
         }
@@ -458,7 +459,7 @@ static int CL_ReadFirstDemoMessage( fileHandle_t f ) {
         type = 0;
     }
 
-	if( msglen <= 0 || msglen >= sizeof( msg_read_buffer ) ) {
+	if( msglen >= sizeof( msg_read_buffer ) ) {
         Com_DPrintf( "%s: bad msglen\n", __func__ );
 		return -1;
 	}
@@ -481,7 +482,7 @@ CL_ReadNextDemoMessage
 ====================
 */
 static qboolean CL_ReadNextDemoMessage( fileHandle_t f ) {
-	uint32		msglen;
+	uint32_t		msglen;
 
 	// read msglen
 	if( FS_Read( &msglen, 4, f ) != 4 ) {
@@ -489,7 +490,7 @@ static qboolean CL_ReadNextDemoMessage( fileHandle_t f ) {
 		return qfalse;
 	}
 
-	if( msglen == ( uint32 )-1 ) {
+	if( msglen == ( uint32_t )-1 ) {
         Com_DPrintf( "%s: end of demo\n", __func__ );
 		return qfalse;
 	}

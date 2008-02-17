@@ -278,14 +278,14 @@ typedef struct clipplane_s {
 typedef struct surfcache_s {
 	struct surfcache_s      *next;
 	struct surfcache_s      **owner;                // NULL is an empty chunk of memory
-	int                                     lightadj[MAXLIGHTMAPS]; // checked for strobe flush
-	int                                     dlight;
-	int                                     size;           // including header
-	uint32							 width;
-	uint32	                        height;         // DEBUG only needed for debug
-	float                           mipscale;
-	image_t							*image;
-	byte                            data[4];        // width*height elements
+	int                     lightadj[MAXLIGHTMAPS]; // checked for strobe flush
+	int                     dlight;
+	int                     size;           // including header
+	unsigned				width;
+	unsigned	            height;         // DEBUG only needed for debug
+	float                   mipscale;
+	image_t					*image;
+	byte                    data[4];        // width*height elements
 } surfcache_t;
 
 // !!! if this is changed, it must be changed in asm_draw.h too !!!
@@ -336,7 +336,7 @@ typedef struct edge_s {
 	fixed16_t               u;
 	fixed16_t               u_step;
 	struct edge_s   *prev, *next;
-	uint16  surfs[2];
+	uint16_t  surfs[2];
 	struct edge_s   *nextremove;
 	float                   nearzi;
 	medge_t                 *owner;

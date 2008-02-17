@@ -228,7 +228,7 @@ Cmd_AliasFind
 ===============
 */
 cmdalias_t *Cmd_AliasFind( const char *name ) {
-	uint32 hash;
+	unsigned hash;
 	cmdalias_t *alias;
 
 	hash = Com_HashString( name, ALIAS_HASH_SIZE );
@@ -254,7 +254,7 @@ char *Cmd_AliasCommand( const char *name ) {
 
 void Cmd_AliasSet( const char *name, const char *cmd ) {
 	cmdalias_t	*a;
-	uint32		hash;
+	unsigned	hash;
 
 	// if the alias already exists, reuse it
 	a = Cmd_AliasFind( name );
@@ -331,7 +331,7 @@ static void Cmd_UnAlias_f( void ) {
     };
 	char *s;
 	cmdalias_t	*a, *n;
-	uint32 hash;
+	unsigned hash;
     int c;
 
     while( ( c = Cmd_ParseOptions( options ) ) != -1 ) {
@@ -415,7 +415,7 @@ Cmd_FindMacro
 */
 static cmd_macro_t *Cmd_FindMacro( const char *name ) {
 	cmd_macro_t *macro;
-	uint32 hash;
+	unsigned hash;
 
 	hash = Com_HashString( name, MACRO_HASH_SIZE );
 	for( macro = cmd_macroHash[hash]; macro; macro = macro->hashNext ) {
@@ -446,7 +446,7 @@ Cmd_AddMacro
 void Cmd_AddMacro( const char *name, xmacro_t function ) {
 	cmd_macro_t	*macro;
     cvar_t *var;
-	uint32 hash;
+	unsigned hash;
 
     var = Cvar_FindVar( name );
 	if( var && !( var->flags & CVAR_USER_CREATED ) ) {
@@ -1054,7 +1054,7 @@ Cmd_Find
 */
 cmd_function_t *Cmd_Find( const char *name ) {
 	cmd_function_t *cmd;
-	uint32 hash;
+	unsigned hash;
 
 	hash = Com_HashString( name, CMD_HASH_SIZE );
     LIST_FOR_EACH( cmd_function_t, cmd, &cmd_hash[hash], hashEntry ) {
@@ -1069,7 +1069,7 @@ cmd_function_t *Cmd_Find( const char *name ) {
 static void Cmd_RegCommand( const cmdreg_t *reg ) {
 	cmd_function_t	*cmd;
     cvar_t *var;
-	uint32 hash;
+	unsigned hash;
 	
 // fail if the command is a variable name
     var = Cvar_FindVar( reg->name );
@@ -1468,7 +1468,7 @@ static void Cmd_Text_f( void ) {
 static void Cmd_Complete_f( void ) {
     cmd_function_t *cmd;
     char *name;
-    uint32 hash;
+    unsigned hash;
     int len;
 
     if( cmd_argc < 2 ) {
@@ -1487,7 +1487,7 @@ static void Cmd_Complete_f( void ) {
 // fail if the command already exists
     cmd = Cmd_Find( name );
 	if( cmd ) {
-        Com_Printf( "%s is already defined\n", name );
+        //Com_Printf( "%s is already defined\n", name );
         return;
 	}
 

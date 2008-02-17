@@ -766,7 +766,7 @@ D_FlatFillSurface
 Simple single color fill with no texture mapping
 ==============
 */
-void D_FlatFillSurface( surf_t *surf, uint32 color ) {
+void D_FlatFillSurface( surf_t *surf, uint32_t color ) {
 	espan_t	*span;
 	byte	*pdest;
 	int		count;
@@ -777,7 +777,7 @@ void D_FlatFillSurface( surf_t *surf, uint32 color ) {
 		count = span->count;
 		do {
 #ifdef TRUECOLOR_RENDERER
-			*( uint32 * )pdest = color;
+			*( uint32_t * )pdest = color;
 #else
 			*pdest = color & 0xff;
 #endif
@@ -1046,7 +1046,7 @@ void D_DrawflatSurfaces (void)
 
 		// make a stable color for each surface by taking the low
 		// bits of the msurface pointer
-		D_FlatFillSurface (s, (uint32)s->msurf);
+		D_FlatFillSurface (s, (uint32_t)s->msurf);
 		D_DrawZSpans (s->spans);
 	}
 }

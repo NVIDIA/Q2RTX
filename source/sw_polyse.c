@@ -558,7 +558,7 @@ void R_PolysetDrawSpansOpaque( spanpackage_t *pspanpackage ) {
 			do {
 				if ((lzi >> 16) >= *lpz) {
 					*lpz = lzi >> 16;
-					*( uint32 * )lpdest = *( uint32 * )lptex;
+					*( uint32_t * )lpdest = *( uint32_t * )lptex;
 				}
 				lpdest += VID_BYTES;
 				lzi += r_zistepx;

@@ -30,6 +30,18 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define CON_LINEWIDTH	100     // fixed width, do not need more
 
+typedef enum {
+    CHAT_NONE,
+    CHAT_DEFAULT,
+    CHAT_TEAM
+} chatMode_t;
+
+typedef enum {
+    CON_DEFAULT,
+    CON_CHAT,
+    CON_REMOTE
+} consoleMode_t;
+
 typedef struct console_s {
 	qboolean	initialized;
 
@@ -56,8 +68,10 @@ typedef struct console_s {
 	commandPrompt_t chatPrompt;
 	commandPrompt_t prompt;
 
-	qboolean	chatTeam;
-    qboolean    chatMode;
+    chatMode_t chat;
+    consoleMode_t mode;
+    netadr_t remoteAddress;
+    char *remotePassword;
 } console_t;
 
 static console_t	con;
@@ -101,12 +115,14 @@ Con_Close
 ================
 */
 void Con_Close( void ) {
-	Key_SetDest( cls.key_dest & ~KEY_CONSOLE );
-	con.currentHeight = 0;
-    con.chatMode = qfalse;
-
 	Con_ClearTyping();
 	Con_ClearNotify_f();
+
+	Key_SetDest( cls.key_dest & ~KEY_CONSOLE );
+
+	con.currentHeight = 0;
+    con.mode = CON_DEFAULT;
+    con.chat = CHAT_DEFAULT;
 }
 
 /*
@@ -125,8 +141,7 @@ void Con_ToggleConsole_f( void ) {
 
 	// FIXME: use old q2 style
 	Key_SetDest( ( cls.key_dest | KEY_CONSOLE ) & ~KEY_MESSAGE );
-
-    con.chatMode = qfalse;
+    //con.mode = CON_DEFAULT;
 }
 
 /*
@@ -138,8 +153,8 @@ static void Con_ToggleChat_f( void ) {
     Con_ToggleConsole_f();
 
 	if( ( cls.key_dest & KEY_CONSOLE ) && cls.state == ca_active ) {
-        con.chatTeam = qfalse;
-        con.chatMode = qtrue;
+        con.mode = CON_CHAT;
+        con.chat = CHAT_DEFAULT;
 	}
 }
 
@@ -152,8 +167,8 @@ static void Con_ToggleChat2_f( void ) {
     Con_ToggleConsole_f();
 
 	if( ( cls.key_dest & KEY_CONSOLE ) && cls.state == ca_active ) {
-        con.chatTeam = qtrue;
-        con.chatMode = qtrue;
+        con.mode = CON_CHAT;
+        con.chat = CHAT_TEAM;
 	}
 }
 
@@ -244,10 +259,10 @@ Con_MessageMode_f
 ================
 */
 static void Con_MessageMode_f( void ) {
-	con.chatTeam = qfalse;
-    if( Cmd_Argc() > 1 ) {
-        IF_Replace( &con.chatPrompt.inputLine, Cmd_RawArgs() );
-    }
+    Con_Close();
+
+	con.chat = CHAT_DEFAULT;
+    IF_Replace( &con.chatPrompt.inputLine, Cmd_RawArgs() );
 	Key_SetDest( cls.key_dest | KEY_MESSAGE );
 }
 
@@ -257,11 +272,40 @@ Con_MessageMode2_f
 ================
 */
 static void Con_MessageMode2_f( void ) {
-	con.chatTeam = qtrue;
-    if( Cmd_Argc() > 1 ) {
-        IF_Replace( &con.chatPrompt.inputLine, Cmd_RawArgs() );
-    }
+    Con_Close();
+
+	con.chat = CHAT_TEAM;
+    IF_Replace( &con.chatPrompt.inputLine, Cmd_RawArgs() );
 	Key_SetDest( cls.key_dest | KEY_MESSAGE );
+}
+
+static void Con_RemoteMode_f( void ) {
+    netadr_t adr;
+    char *s;
+
+    if( Cmd_Argc() != 3 ) {
+        Com_Printf( "Usage: %s <address> <password>\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    s = Cmd_Argv( 1 );
+    if( !NET_StringToAdr( s, &adr, PORT_SERVER ) ) {
+        Com_Printf( "Bad address: %s\n", s );
+        return;
+    }
+
+    s = Cmd_Argv( 2 );
+
+	if( !( cls.key_dest & KEY_CONSOLE ) ) {
+        Con_ToggleConsole_f();
+    }
+
+    con.mode = CON_REMOTE;
+    con.remoteAddress = adr;
+    if( con.remotePassword ) {
+        Z_Free( con.remotePassword );
+    }
+    con.remotePassword = Z_CopyString( s );
 }
 
 /*
@@ -318,6 +362,7 @@ static const cmdreg_t c_console[] = {
 	{ "togglechat2", Con_ToggleChat2_f },
 	{ "messagemode", Con_MessageMode_f },
 	{ "messagemode2", Con_MessageMode2_f },
+	{ "remotemode", Con_RemoteMode_f, CL_Connect_g },
 	{ "clear", Con_Clear_f },
 	{ "clearnotify", Con_ClearNotify_f },
 	{ "condump", Con_Dump_f, Con_Dump_g },
@@ -601,7 +646,7 @@ void Con_DrawNotify( void ) {
     ref.SetColor( DRAW_COLOR_CLEAR, NULL );
 
 	if( cls.key_dest & KEY_MESSAGE ) {
-		if( con.chatTeam ) {
+		if( con.chat == CHAT_TEAM ) {
 			text = "say_team:";
 			skip = 11;
 		} else {
@@ -749,18 +794,25 @@ void Con_DrawSolidConsole( void ) {
 	if( cls.key_dest & KEY_CONSOLE ) {
 		y = vislines - CON_PRESTEP + CHAR_HEIGHT;
 
-		// draw it
+		// draw command prompt
+        switch( con.mode ) {
+        case CON_CHAT:
+            i = '&';
+            break;
+        case CON_REMOTE:
+            i = '#';
+            break;
+        default:
+            i = 17;
+            break;
+        }
+        ref.SetColor( DRAW_COLOR_RGBA, colorYellow );
+		ref.DrawChar( CHAR_WIDTH, y, 0, i, con.charsetImage );
+        ref.SetColor( DRAW_COLOR_CLEAR, NULL );
+
+		// draw input line
 		x = IF_Draw( &con.prompt.inputLine, 2 * CHAR_WIDTH, y,
             UI_DRAWCURSOR, con.charsetImage );
-
-		// draw command prompt
-        i = 17;
-        if( con.chatMode ) {
-            i |= 128;
-        } else {
-    		ref.SetColor( DRAW_COLOR_RGBA, colorYellow );
-        }
-		ref.DrawChar( CHAR_WIDTH, y, 0, i, con.charsetImage );
 	}
 
     y = vislines - CON_PRESTEP + CHAR_HEIGHT;
@@ -866,7 +918,7 @@ void Con_DrawConsole( void ) {
 */
 
 static void Con_Say( char *msg ) {
-    Cbuf_AddText( con.chatTeam ? "say_team \"" : "say \"" );
+    Cbuf_AddText( con.chat == CHAT_TEAM ? "say_team \"" : "say \"" );
     Cbuf_AddText( msg );
     Cbuf_AddText( "\"\n" );
 }
@@ -881,10 +933,16 @@ static void Con_Action( void ) {
     
     // backslash text are commands, else chat
     if( cmd[0] == '\\' || cmd[0] == '/' ) {
-        Cbuf_AddText( cmd + 1 );	// skip slash
-        Cbuf_AddText( "\n" );
+        if( con.mode == CON_REMOTE ) {
+            CL_SendRcon( &con.remoteAddress, con.remotePassword, cmd + 1 );
+        } else {
+            Cbuf_AddText( cmd + 1 );	// skip slash
+            Cbuf_AddText( "\n" );
+        }
     } else {
-        if( cls.state == ca_active && con.chatMode ) {
+        if( con.mode == CON_REMOTE ) {
+            CL_SendRcon( &con.remoteAddress, con.remotePassword, cmd );
+        } else if( cls.state == ca_active && con.mode == CON_CHAT ) {
             Con_Say( cmd );
         } else {
             Cbuf_AddText( cmd );
@@ -910,6 +968,11 @@ Interactive line editing and console scrollback
 void Key_Console( int key ) {
 	if( key == 'l' && Key_IsDown( K_CTRL ) ) {
 		Con_Clear_f();
+		return;
+	}
+
+	if( ( key == 'd' || key == 'c' ) && Key_IsDown( K_CTRL ) ) {
+		con.mode = CON_DEFAULT;
 		return;
 	}
 
@@ -1023,12 +1086,9 @@ void Key_Message( int key ) {
 	if( key == K_ENTER || key == K_KP_ENTER ) {
 		char *cmd = Prompt_Action( &con.chatPrompt );
 		
-		if( cmd ) {
-		    Cbuf_AddText( con.chatTeam ? "say_team \"" : "say \"" );
-		    Cbuf_AddText( cmd );
-		    Cbuf_AddText( "\"\n" );
+        if( cmd ) {
+            Con_Say( cmd );
         }
-	
 		Key_SetDest( cls.key_dest & ~KEY_MESSAGE );
 		return;
 	}

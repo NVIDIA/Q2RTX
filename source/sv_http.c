@@ -669,7 +669,7 @@ void SV_HttpRun( void ) {
     tcpClient_t *client, *next;
     neterr_t ret;
     netstream_t stream;
-    uint32      point;
+    unsigned point;
 
     // accept new connections
     ret = NET_Accept( &net_from, &stream );

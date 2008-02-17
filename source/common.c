@@ -56,20 +56,20 @@ cvar_t	*com_date_format;
 cvar_t	*com_time_format;
 cvar_t	*com_debug_break;
 
-fileHandle_t	com_logFile;
+fileHandle_t    com_logFile;
 qboolean        com_logNewline;
-uint32		com_framenum;
-uint32		com_eventTime;
-uint32      com_localTime;
+unsigned	com_framenum;
+unsigned	com_eventTime;
+unsigned    com_localTime;
 qboolean    com_initialized;
 time_t      com_startTime;
 
 #ifndef DEDICATED_ONLY
 // host_speeds times
-int		time_before_game;
-int		time_after_game;
-int		time_before_ref;
-int		time_after_ref;
+unsigned	time_before_game;
+unsigned	time_after_game;
+unsigned	time_before_ref;
+unsigned	time_after_ref;
 #endif
 
 void Con_Init( void );
@@ -151,7 +151,7 @@ static void LogFile_Close( void ) {
 }
 
 static void LogFile_Open( void ) {
-	uint32		mode;
+	unsigned mode;
 
 	if( com_logFile ) {
         LogFile_Close();
@@ -465,7 +465,7 @@ just cleared malloc with counters now...
 #define	Z_TAIL		0x5b7b
 
 #define Z_TAIL_F( z ) \
-    *( uint16 * )( ( byte * )(z) + (z)->size - sizeof( uint16 ) )
+    *( uint16_t * )( ( byte * )(z) + (z)->size - sizeof( uint16_t ) )
 
 #define Z_FOR_EACH( z ) \
     for( (z) = z_chain.next; (z) != &z_chain; (z) = (z)->next )
@@ -474,9 +474,9 @@ just cleared malloc with counters now...
     for( (z) = z_chain.next; (z) != &z_chain; (z) = (n) )
 
 typedef struct zhead_s {
-	uint16	magic;
-	uint16	tag;			// for group free
-	size_t	size;
+	uint16_t    magic;
+	uint16_t    tag;			// for group free
+	size_t      size;
 	struct zhead_s	*prev, *next;
 } zhead_t;
 
@@ -485,9 +485,9 @@ static zhead_t		z_chain;
 static cvar_t	    *z_perturb;
 
 typedef struct {
-	zhead_t	z;
-	char	data[2];
-	uint16	tail;
+	zhead_t	    z;
+	char	    data[2];
+	uint16_t	tail;
 } zstatic_t;
 
 #define Z_STATIC( x ) { { Z_MAGIC, TAG_STATIC, sizeof( zstatic_t ) }, x, Z_TAIL }
@@ -564,7 +564,7 @@ void Z_LeakTest( memtag_t tag ) {
 
 	if( numLeaks ) {
 		Com_Printf( S_COLOR_YELLOW "************* Z_LeakTest *************\n"
-						           "%s leaked %u bytes of memory (%u object%s)\n"
+						           "%s leaked %"PRIz"u bytes of memory (%"PRIz"u object%s)\n"
 						           "**************************************\n",
 								   z_tagnames[tag < TAG_MAX ? tag : TAG_FREE],
                                    numBytes, numLeaks, numLeaks == 1 ? "" : "s" );
@@ -628,12 +628,12 @@ void *Z_Realloc( void *ptr, size_t size ) {
 	s = &z_stats[z->tag < TAG_MAX ? z->tag : TAG_FREE];
 	s->bytes -= z->size;
 
-	size += sizeof( zhead_t ) + sizeof( uint16 );
+	size += sizeof( zhead_t ) + sizeof( uint16_t );
 	size = ( size + 3 ) & ~3;
     
     z = realloc( z, size );
     if( !z ) {
-		Com_Error( ERR_FATAL, "Z_Realloc: couldn't realloc %u bytes", size );
+		Com_Error( ERR_FATAL, "Z_Realloc: couldn't realloc %"PRIz"u bytes", size );
     }
 
 	z->size = size;
@@ -664,13 +664,13 @@ void Z_Stats_f( void ) {
         if( !s->count ) {
             continue;
         }
-		Com_Printf( "%9u %6u %s\n", s->bytes, s->count, z_tagnames[i] );
+		Com_Printf( "%9"PRIz"u %6"PRIz"u %s\n", s->bytes, s->count, z_tagnames[i] );
 		bytes += s->bytes;
 		count += s->count;
 	}
 
 	Com_Printf( "--------- ------ -------\n"
-	            "%9u %6u total\n",
+	            "%9"PRIz"u %6"PRIz"u total\n",
                 bytes, count );
 }
 
@@ -707,11 +707,11 @@ void *Z_TagMalloc( size_t size, memtag_t tag ) {
 	if( tag == TAG_FREE )
 		Com_Error( ERR_FATAL, "Z_TagMalloc: bad tag" );
 	
-	size += sizeof( zhead_t ) + sizeof( uint16 );
+	size += sizeof( zhead_t ) + sizeof( uint16_t );
 	size = ( size + 3 ) & ~3;
 	z = malloc( size );
 	if( !z ) {
-		Com_Error( ERR_FATAL, "Z_TagMalloc: couldn't allocate %u bytes", size );
+		Com_Error( ERR_FATAL, "Z_TagMalloc: couldn't allocate %"PRIz"u bytes", size );
     }
 	z->magic = Z_MAGIC;
 	z->tag = tag;
@@ -724,7 +724,7 @@ void *Z_TagMalloc( size_t size, memtag_t tag ) {
 
     if( z_perturb && z_perturb->integer ) {
         memset( z + 1, z_perturb->integer, size -
-            sizeof( zhead_t ) - sizeof( uint16 ) );
+            sizeof( zhead_t ) - sizeof( uint16_t ) );
     }
 
 	Z_TAIL_F( z ) = Z_TAIL;
@@ -1035,15 +1035,15 @@ void Com_ErrorDrop_f( void ) {
 }
 
 void Com_Freeze_f( void ) {
-	int seconds, time;
+	int sec, time;
 
 	if( Cmd_Argc() < 2 ) {
 		Com_Printf( "Usage: %s <seconds>\n", Cmd_Argv( 0 ) );
 		return;
 	}
 
-	seconds = atoi( Cmd_Argv( 1 ) );
-	if( seconds < 1 ) {
+	seco = atoi( Cmd_Argv( 1 ) );
+	if( sec < 1 ) {
 		return;
 	}
 
@@ -1053,7 +1053,7 @@ void Com_Freeze_f( void ) {
 }
 
 void Com_Crash_f( void ) {
-	*( uint32 * )0 = 0x123456;
+	*( uint32_t * )0 = 0x123456;
 }
 
 #endif
@@ -1375,7 +1375,7 @@ void Qcommon_Init( int argc, char **argv ) {
 
     time( &com_startTime );
 
-	com_eventTime = Sys_Realtime();
+	com_eventTime = Sys_Milliseconds();
 }
 
 /*
@@ -1448,9 +1448,9 @@ Qcommon_Frame
 */
 void Qcommon_Frame( void ) {
 #ifndef DEDICATED_ONLY
-	int		time_before, time_event, time_between, time_after;
+	unsigned	time_before, time_event, time_between, time_after;
 #endif
-	uint32	oldtime, msec;
+	unsigned oldtime, msec;
     static float frac;
 
 	if( setjmp( abortframe ) ) {
@@ -1468,7 +1468,7 @@ void Qcommon_Frame( void ) {
 
     // calculate time spent running last frame
     oldtime = com_eventTime;
-	com_eventTime = Sys_Realtime();
+	com_eventTime = Sys_Milliseconds();
     if( oldtime > com_eventTime ) {
         oldtime = com_eventTime;
     }
@@ -1479,7 +1479,7 @@ void Qcommon_Frame( void ) {
     if( !dedicated->integer ) {
         while( msec < 1 ) {
             Com_ProcessEvents();
-            com_eventTime = Sys_Realtime();
+            com_eventTime = Sys_Milliseconds();
             msec = com_eventTime - oldtime;
         }
     }

@@ -31,7 +31,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define SZ_NC_FRG_OUT       MakeLong( 'n', 'c', '2', 'o' )
 
 typedef struct sizebuf_s {
-    uint32      tag;
+    uint32_t    tag;
 	qboolean	allowoverflow;
 	qboolean	overflowed;		// set to qtrue if the buffer size failed
 	byte	*data;
@@ -42,7 +42,7 @@ typedef struct sizebuf_s {
 } sizebuf_t;
 
 void SZ_Init( sizebuf_t *buf, void *data, int length );
-void SZ_TagInit( sizebuf_t *buf, void *data, int length, uint32 tag );
+void SZ_TagInit( sizebuf_t *buf, void *data, int length, uint32_t tag );
 void SZ_Clear( sizebuf_t *buf );
 void *SZ_GetSpace( sizebuf_t *buf, int length );
 void SZ_Write( sizebuf_t *buf, const void *data, int length );
@@ -117,6 +117,7 @@ void	MSG_BeginReading( void );
 int		MSG_ReadChar( void );
 int		MSG_ReadByte( void );
 int		MSG_ReadShort( void );
+int     MSG_ReadWord( void );
 int		MSG_ReadLong( void );
 float	MSG_ReadFloat( void );
 char	*MSG_ReadString( void );

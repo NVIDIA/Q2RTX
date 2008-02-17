@@ -1347,8 +1347,8 @@ void Draw_SetScale( float *scale ) {
 	}
 }
 
-void    Draw_SetColor( uint32 flags, const color_t color );
-void    Draw_SetClipRect( uint32 flags, const clipRect_t *clip );
+void    Draw_SetColor( int flags, const color_t color );
+void    Draw_SetClipRect( int flags, const clipRect_t *clip );
 void	Draw_GetPicSize( int *w, int *h, qhandle_t hPic );
 void	Draw_GetFontSize( int *w, int *h, qhandle_t hFont );
 void	Draw_Pic( int x, int y, qhandle_t hPic );
@@ -1360,8 +1360,8 @@ void	Draw_Fill( int x, int y, int w, int h, int c );
 void	Draw_FillEx( int x, int y, int w, int h, const color_t color );
 void	Draw_StretchRaw( int x, int y, int w, int h, int cols,
             int rows, const byte *data );
-void    Draw_Char( int x, int y, uint32 flags, int ch, qhandle_t hFont );
-int 	Draw_String( int x, int y, uint32 flags, int maxChars,
+void    Draw_Char( int x, int y, int flags, int ch, qhandle_t hFont );
+int 	Draw_String( int x, int y, int flags, int maxChars,
             const char *string, qhandle_t hFont );
 
 /*

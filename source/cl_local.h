@@ -238,8 +238,8 @@ typedef struct client_static_s {
 	int			realtime;			// always increasing, no clamping, etc
 	float		frametime;			// seconds since last frame
 
-	int			measureFramecount;
-	int			measureTime;
+	unsigned	measureFramecount;
+	unsigned	measureTime;
 	int			fps, ping;
 
 // connection information
@@ -272,8 +272,8 @@ typedef struct client_static_s {
 // demo recording info must be here, so it isn't cleared on level change
 	fileHandle_t	demoplayback;
 	fileHandle_t	demorecording;
-	int			    timeDemoStart;
-	int			    timeDemoFrames;
+	unsigned		timeDemoStart;
+	unsigned		timeDemoFrames;
 	int				demofileSize;
 	int				demofileFrameOffset;
 	int             demofilePercent;
@@ -503,6 +503,8 @@ void CL_RestartRefresh( void );
 void CL_ClientCommand( const char *string );
 void CL_UpdateLocalFovSetting( void );
 void CL_FillAPI( clientAPI_t *api );
+void CL_SendRcon( const netadr_t *adr, const char *pass, const char *cmd );
+const char *CL_Connect_g( const char *partial, int state );
 
 //
 // cl_input
@@ -709,7 +711,7 @@ void	SCR_LagClear( void );
 //
 
 void	Key_Init( void );
-void	Key_Event( uint32 key, qboolean down, uint32 time );
+void	Key_Event( unsigned key, qboolean down, unsigned time );
 void	Key_CharEvent( int key );
 void	Key_WriteBindings( fileHandle_t f );
 

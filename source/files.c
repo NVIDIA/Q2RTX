@@ -97,9 +97,9 @@ typedef enum fsFileType_e {
 } fsFileType_t;
 
 typedef struct fsFile_s {
-	char	fullpath[MAX_OSPATH];
+	char fullpath[MAX_OSPATH];
 	fsFileType_t type;
-	uint32	mode;
+	unsigned mode;
 	FILE *fp;
 #if USE_ZLIB
 	void *zfp;
@@ -457,7 +457,7 @@ static int FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
 #endif
 	char *modeStr;
 	fsFileType_t type;
-	uint32 mode;
+	unsigned mode;
 #ifdef _WIN32
 	// allow writing into basedir on Windows
 	if( ( file->mode & FS_PATH_MASK ) == FS_PATH_BASE ) {
@@ -544,7 +544,7 @@ static int FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
 	return ftell( fp );
 }
 
-static searchpath_t *FS_SearchPath( uint32 flags ) {
+static searchpath_t *FS_SearchPath( unsigned flags ) {
 	if( ( flags & FS_PATH_MASK ) == FS_PATH_BASE ) {
 		return fs_base_searchpaths;
 	}
@@ -566,7 +566,7 @@ a seperate file.
 static int FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean unique ) {
     searchpath_t    *search;
 	pack_t			*pak;
-	uint32			hash;
+	unsigned		hash;
 	packfile_t		*entry;
 	FILE			*fp;
 #if USE_ZLIB
@@ -1277,7 +1277,7 @@ static pack_t *FS_LoadPakFile( const char *packfile ) {
 	FILE			*packhandle;
 	dpackfile_t		info[MAX_FILES_IN_PACK];
 	int				hashSize;
-	uint32			hash;
+	unsigned		hash;
 	int				len;
 
 	packhandle = fopen( packfile, "rb" );
@@ -1396,7 +1396,7 @@ static pack_t *FS_LoadZipFile( const char *packfile ) {
 	char			name[MAX_QPATH];
 	int				namesLength;
 	int				hashSize;
-	uint32			hash;
+	unsigned		hash;
 	int				len;
 
 	zFile = unzOpen( packfile );
@@ -2062,7 +2062,7 @@ static void FS_WhereIs_f( void ) {
     searchpath_t *search;
     pack_t *pak;
     packfile_t *entry;
-    uint32 hash;
+    unsigned hash;
     char filename[MAX_OSPATH];
     char fullpath[MAX_OSPATH];
     char *path;
@@ -2602,9 +2602,9 @@ FS_Init
 ================
 */
 void FS_Init( void ) {
-	int	startTime;
+	unsigned start, end;
 
-	startTime = Sys_Milliseconds();
+	start = Sys_Milliseconds();
 
 	Com_Printf( "---------- FS_Init ----------\n" );
 
@@ -2632,8 +2632,8 @@ void FS_Init( void ) {
 
 	FS_FillAPI( &fs );
 	
-	Com_DPrintf( "%i msec to init filesystem\n",
-        Sys_Milliseconds() - startTime );
+    end = Sys_Milliseconds();
+	Com_DPrintf( "%i msec to init filesystem\n", end - start );
 	Com_Printf( "-----------------------------\n" );
 }
 

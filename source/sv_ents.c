@@ -42,11 +42,11 @@ static void SV_EmitPacketEntities( client_frame_t  *from,
 {
 	entity_state_t	*oldent, *newent;
     const entity_state_t  *base;
-	uint32	oldindex, newindex;
-	int		oldnum, newnum;
-	uint32	from_num_entities;
+	unsigned	oldindex, newindex;
+	int		    oldnum, newnum;
+	unsigned    from_num_entities;
 	msgEsFlags_t flags;
-    uint32  i;
+    unsigned    i;
 
 	if( !from )
 		from_num_entities = 0;
@@ -190,7 +190,7 @@ SV_WriteFrameToClient_Enhanced
 void SV_WriteFrameToClient_Enhanced( client_t *client ) {
 	client_frame_t		*frame, *oldframe;
 	player_state_t		*oldstate;
-	uint32		extraflags;
+	uint32_t	extraflags;
 	int			delta, surpressed;
 	byte *b1, *b2;
 	msgPsFlags_t	psFlags;

@@ -46,7 +46,7 @@ cvar_t	*mvd_wait_percent;
 
 void MVD_Disconnect( mvd_t *mvd ) {
 	if( mvd->demorecording ) {
-        uint16 msglen = 0;
+        uint16_t msglen = 0;
         FS_Write( &msglen, 2, mvd->demorecording );
         FS_FCloseFile( mvd->demorecording );
         mvd->demorecording = 0;
@@ -81,7 +81,7 @@ void MVD_Free( mvd_t *mvd ) {
 void MVD_Destroy( mvd_t *mvd ) {
 	udpClient_t *u, *unext;
     tcpClient_t *t;
-    uint16 length;
+    uint16_t length;
 
     // cause UDP clients to reconnect
     LIST_FOR_EACH_SAFE( udpClient_t, u, unext, &mvd->udpClients, entry ) {
@@ -227,7 +227,7 @@ static void MVD_EmitGamestate( mvd_t *mvd ) {
 	entity_state_t	*es;
     player_state_t *ps;
     int         length;
-    uint16      *patch;
+    uint16_t    *patch;
 	int flags, extra, portalbytes;
     byte portalbits[MAX_MAP_AREAS/8];
 
@@ -478,7 +478,7 @@ void MVD_ChangeLevel( mvd_t *mvd ) {
 }
 
 static void MVD_PlayNext( mvd_t *mvd, string_entry_t *entry ) {
-    uint32 magic = 0;
+    uint32_t magic = 0;
 
     if( !entry ) {
         if( mvd->demoloop ) {
@@ -828,7 +828,7 @@ void MVD_Spawn_f( void ) {
     Cvar_SetInteger( "sv_paused", 0 );
     Cvar_SetInteger( "timedemo", 0 );
 
-	sv.spawncount = ( rand() | ( rand() << 16 ) ) ^ Sys_Realtime();
+	sv.spawncount = ( rand() | ( rand() << 16 ) ) ^ Sys_Milliseconds();
 	sv.spawncount &= 0x7FFFFFFF;
 
     sv.state = ss_broadcast;
@@ -878,7 +878,7 @@ void MVD_ListChannels_f( void ) {
 
 void MVD_StreamedStop_f( void ) {
     mvd_t *mvd;
-	uint16 msglen;
+	uint16_t msglen;
 
     mvd = MVD_SetChannel( 1 );
     if( !mvd ) {
@@ -905,7 +905,7 @@ void MVD_StreamedRecord_f( void ) {
 	char *name;
 	fileHandle_t f;
     mvd_t *mvd;
-    uint32 magic;
+    uint32_t magic;
     
 	if( Cmd_Argc() < 2 || ( mvd = MVD_SetChannel( 2 ) ) == NULL ) {
 		Com_Printf( "Usage: %s [/]<filename> [chanid]\n", Cmd_Argv( 0 ) );
@@ -977,7 +977,7 @@ void MVD_Connect_f( void ) {
 	char *id = "", *name = NULL, *referer = NULL, *host, *p;
     htcoding_t coding = HTTP_CODING_NONE;
     mvd_t *mvd;
-    uint16 port;
+    uint16_t port;
     int c;
 
     while( ( c = Cmd_ParseOptions( options ) ) != -1 ) {
@@ -1053,13 +1053,10 @@ void MVD_Connect_f( void ) {
     }
 
     // resolve hostname
-	if( !NET_StringToAdr( host, &adr ) ) {
+	if( !NET_StringToAdr( host, &adr, port ) ) {
 		Com_Printf( "Bad server address: %s\n", host );
 		return;
 	}
-    if( !adr.port ) {
-        adr.port = port;
-    }
 
     if( NET_Connect( &adr, &stream ) == NET_ERROR ) {
         Com_Printf( "%s to %s\n", NET_ErrorString(),
