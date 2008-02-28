@@ -831,14 +831,20 @@ static inline void SV_ClientThink( client_t *cl, usercmd_t *cmd ) {
 }
 
 static inline void SV_SetLastFrame( int lastframe ) {
-    if( lastframe == sv_client->lastframe ) {
-        return;
-    }
-    sv_client->lastframe = lastframe;
+    unsigned sentTime;
+
     if( lastframe > 0 ) {
-        sv_client->frame_latency[lastframe & LATENCY_MASK] = 
-            com_eventTime - sv_client->frames[lastframe & UPDATE_MASK].senttime;
+        if( lastframe <= sv_client->lastframe ) {
+            return;
+        }
+
+        sentTime = sv_client->frames[lastframe & UPDATE_MASK].sentTime;
+        if( sentTime <= com_eventTime ) {
+            sv_client->frame_latency[lastframe & LATENCY_MASK] = com_eventTime - sentTime;
+        }
     }
+
+    sv_client->lastframe = lastframe;
 }
 
 /*

@@ -48,7 +48,7 @@ typedef struct {
     player_state_t ps;
 	int			areabytes;
 	byte		areabits[MAX_MAP_AREAS/8]; // portalarea visibility bits
-	unsigned	senttime;			// for ping calculations
+	unsigned	sentTime;			// for ping calculations
     int         clientNum;
 } client_frame_t;
 
@@ -384,6 +384,7 @@ extern	cvar_t		*sv_http_minclients;
 extern	cvar_t		*sv_debug_send;
 extern	cvar_t		*sv_pad_packets;
 extern	cvar_t		*sv_lan_force_rate;
+extern  cvar_t      *sv_calcpings_method;
 
 extern cvar_t		*sv_strafejump_hack;
 extern cvar_t		*sv_bodyque_hack;

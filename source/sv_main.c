@@ -69,6 +69,7 @@ cvar_t	*sv_public;			// should heartbeats be sent
 cvar_t	*sv_debug_send;
 cvar_t	*sv_pad_packets;
 cvar_t	*sv_lan_force_rate;
+cvar_t  *sv_calcpings_method;
 
 cvar_t	*sv_strafejump_hack;
 cvar_t	*sv_bodyque_hack;
@@ -1062,25 +1063,53 @@ static void SV_CalcPings( void ) {
 	client_t	*cl;
 	int			total, count;
 
-    FOR_EACH_CLIENT( cl ) {
-		if( cl->state != cs_spawned )
-			continue;
+    switch( sv_calcpings_method->integer ) {
+    case 0:
+        FOR_EACH_CLIENT( cl ) {
+		    if( cl->state != cs_spawned )
+			    continue;
+            cl->ping = 0;
+	    	cl->edict->client->ping = 0;
+        }
+        break;
+    case 2:
+        FOR_EACH_CLIENT( cl ) {
+            if( cl->state != cs_spawned )
+                continue;
 
-		total = 0;
-		count = 0;
-		for( j = 0; j < LATENCY_COUNTS; j++ ) {
-			if( cl->frame_latency[j] > 0 ) {
-				count++;
-				total += cl->frame_latency[j];
-			}
-		}
-		if( !count )
-			cl->ping = 0;
-		else
-			cl->ping = total / count;
+            count = 9999;
+            for( j = 0; j < LATENCY_COUNTS; j++ ) {
+                if( cl->frame_latency[j] > 0 ) {
+                    if( count > cl->frame_latency[j] ) {
+                        count = cl->frame_latency[j];
+                    }
+                }
+            }
+            cl->ping = count == 9999 ? 0 : count;
 
-		// let the game dll know about the ping
-		cl->edict->client->ping = cl->ping;
+            // let the game dll know about the ping
+            cl->edict->client->ping = cl->ping;
+        }
+        break;
+    default:
+        FOR_EACH_CLIENT( cl ) {
+            if( cl->state != cs_spawned )
+                continue;
+
+            total = 0;
+            count = 0;
+            for( j = 0; j < LATENCY_COUNTS; j++ ) {
+                if( cl->frame_latency[j] > 0 ) {
+                    count++;
+                    total += cl->frame_latency[j];
+                }
+            }
+            cl->ping = count ? total / count : 0;
+
+            // let the game dll know about the ping
+            cl->edict->client->ping = cl->ping;
+        }
+        break;
 	}
 }
 
@@ -1748,6 +1777,7 @@ void SV_Init( void ) {
 	sv_debug_send = Cvar_Get( "sv_debug_send", "0", 0 );
 	sv_pad_packets = Cvar_Get( "sv_pad_packets", "0", 0 );
 	sv_lan_force_rate = Cvar_Get( "sv_lan_force_rate", "0", CVAR_LATCH );
+	sv_calcpings_method = Cvar_Get( "sv_calcpings_method", "1", 0 );
 
 	sv_strafejump_hack = Cvar_Get( "sv_strafejump_hack", "1", CVAR_LATCH );
 

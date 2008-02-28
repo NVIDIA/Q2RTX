@@ -1492,8 +1492,6 @@ void Qcommon_Frame( void ) {
 		time_before = Sys_Milliseconds();
 #endif
 
-    Com_ProcessEvents();
-
     // calculate time spent running last frame
     oldtime = com_eventTime;
 	com_eventTime = Sys_Milliseconds();
@@ -1502,8 +1500,10 @@ void Qcommon_Frame( void ) {
     }
 	msec = com_eventTime - oldtime;
 
+    Com_ProcessEvents();
+
 #ifndef DEDICATED_ONLY
-    // spin until msec is positive if running a client
+    // spin until msec is non-zero if running a client
     if( !dedicated->integer ) {
         while( msec < 1 ) {
             Com_ProcessEvents();
