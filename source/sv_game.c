@@ -97,11 +97,6 @@ static void PF_Unicast( edict_t *ent, qboolean reliable ) {
         goto clear;
     }
 
-	// HACK: fix anti-kicking exploit
-	if( msg_write.data[0] == svc_disconnect ) {
-	    client->flags |= CF_DROP;
-	}
-
 	if( reliable ) {
 		flags = MSG_RELIABLE;
         op = mvd_unicast_r;
@@ -110,6 +105,13 @@ static void PF_Unicast( edict_t *ent, qboolean reliable ) {
         flags = 0;
         op = mvd_unicast;
         buf = &sv.mvd.datagram;
+    }
+
+    // HACK: fix anti-kicking exploit
+    if( msg_write.data[0] == svc_disconnect ) {
+        SV_ClientAddMessage( client, flags );
+        client->flags |= CF_DROP;
+        goto clear;
     }
 
 	if( client == svs.mvd.dummy ) {
