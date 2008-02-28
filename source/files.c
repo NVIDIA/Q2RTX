@@ -2221,10 +2221,14 @@ static void FS_Stats_f( void ) {
 	}
 }
 
-static const char *FS_Link_g( const char *partial, int state ) {
+static const char *FS_Link_g( const char *partial, int argnum, int state ) {
     static int length;
     static fsLink_t *link;
     char *name;
+
+    if( argnum != 1 ) {
+        return NULL;
+    }
 
     if( !state ) {
         length = strlen( partial );

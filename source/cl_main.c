@@ -415,6 +415,24 @@ static void CL_CheckForResend( void ) {
 	}
 }
 
+static const char *CL_Connect_g( const char *partial, int argnum, int state ) {
+    static int protocol;
+
+    if( !state ) {
+        protocol = 34;
+    }
+
+    if( argnum == 1 ) {
+        return Com_AddressGenerator( partial, state );
+    } else if( argnum == 2 ) {
+        if( !partial[0] || ( partial[0] == '3' && !partial[1] ) ) {
+            while( protocol <= 36 ) {
+                return va( "%d", protocol++ );
+            }
+        }
+    }
+    return NULL;
+}
 
 /*
 ================
@@ -430,7 +448,7 @@ static void CL_Connect_f( void ) {
 
     if( argc < 2 ) {
 usage:
-        Com_Printf( "Usage: connect <server> [34|35|36]\n" );
+        Com_Printf( "Usage: %s <server> [34|35|36]\n", Cmd_Argv( 0 ) );
         return;
     }
 
@@ -510,35 +528,6 @@ static void CL_PassiveConnect_f( void ) {
         NET_AdrToString( &address ) );
 }
 
-const char *CL_Connect_g( const char *partial, int state ) {
-    static int length;
-    static int index;
-    cvar_t *var;
-	char buffer[MAX_QPATH];
-    
-    if( !state ) {
-        length = strlen( partial );
-        index = 0;
-    }
-
-	while( index < 1024 ) {
-		Com_sprintf( buffer, sizeof( buffer ), "adr%i", index );
-		index++;
-		var = Cvar_FindVar( buffer );
-        if( !var ) {
-            break;
-        }
-		if( !var->string[0] ) {
-			continue;
-		}
-		if( !strncmp( partial, var->string, length ) ) {
-			return var->string;
-		}
-	}
-
-    return NULL;
-}
-
 void CL_SendRcon( const netadr_t *adr, const char *pass, const char *cmd ) {
 	neterr_t	ret;
 
@@ -593,6 +582,10 @@ static void CL_Rcon_f( void ) {
 	}
 
     CL_SendRcon( &address, rcon_password->string, Cmd_RawArgs() );
+}
+
+const char *CL_Rcon_g( const char *partial, int argnum, int state ) {
+    return Prompt_Completer( partial, 1, argnum, state );
 }
 
 
@@ -710,6 +703,13 @@ static void CL_Disconnect_f( void ) {
 	}
 }
 
+
+const char *CL_Server_g( const char *partial, int argnum, int state ) {
+    if( argnum == 1 ) {
+        return Com_AddressGenerator( partial, state );
+    }
+    return NULL;
+}
 
 /*
 ================
@@ -1182,6 +1182,28 @@ static void CL_Skins_f ( void ) {
         CL_ParseClientinfo ( i );
     }
 }
+
+const char *CL_NickGenerator( const char *partial, int state ) {
+    static int length;
+    static int i;
+    clientinfo_t *ci;
+
+    if( !state ) {
+        if( cls.state < ca_loading ) {
+            return NULL;
+        }
+        length = strlen( partial );
+        i = 0;
+    }
+    while( i < MAX_CLIENTS ) {
+        ci = &cl.clientinfo[i++];
+        if( ci->name[0] && !strncmp( ci->name, partial, length ) ) {
+            return ci->name;
+        }
+    }
+    return NULL;
+}
+
 
 /*
 =================
@@ -1990,27 +2012,36 @@ static void CL_DumpLayout_f( void ) {
 	Com_Printf( "Dumped layout program to %s.\n", buffer );
 }
 
+static const cmd_option_t o_writeconfig[] = {
+    { "a", "aliases", "write aliases" },
+    { "b", "bindings", "write bindings" },
+    { "c", "cvars", "write archived cvars" },
+    { "h", "help", "display this help message" },
+    { "m", "modified", "write modified cvars" },
+    { NULL }
+};
+
+static const char *CL_ConfigGenerator( const char *partial, int state ) {
+	return Com_FileNameGeneratorByFilter( "", "*.cfg", partial, qtrue, state );
+}
+
+static const char *CL_WriteConfig_g( const char *partial, int argnum, int state ) {
+    return Cmd_Completer( o_writeconfig, partial, argnum, state, CL_ConfigGenerator );
+}
+
 /*
 ===============
 CL_WriteConfig_f
 ===============
 */
 static void CL_WriteConfig_f( void ) {
-    static const cmd_option_t options[] = {
-        { "a", "aliases", "write aliases" },
-        { "b", "bindings", "write bindings" },
-        { "c", "cvars", "write archived cvars" },
-        { "h", "help", "display this help message" },
-        { "m", "modified", "write modified cvars" },
-        { NULL }
-    };
 	char buffer[MAX_QPATH];
     qboolean aliases = qfalse, bindings = qfalse, modified = qfalse;
     int mask = 0;
 	fileHandle_t f;
     int c;
 
-    while( ( c = Cmd_ParseOptions( options ) ) != -1 ) {
+    while( ( c = Cmd_ParseOptions( o_writeconfig ) ) != -1 ) {
         switch( c ) {
         case 'a':
             aliases = qtrue;
@@ -2022,9 +2053,9 @@ static void CL_WriteConfig_f( void ) {
             mask |= CVAR_ARCHIVE;
             break;
         case 'h':
-            Cmd_PrintUsage( options, "<filename>" );
+            Cmd_PrintUsage( o_writeconfig, "<filename>" );
             Com_Printf( "Save current configuration into file.\n" );
-            Cmd_PrintHelp( options );
+            Cmd_PrintHelp( o_writeconfig );
             return;
         case 'm':
             modified = qtrue;
@@ -2075,6 +2106,9 @@ static void CL_WriteConfig_f( void ) {
 	Com_Printf( "Wrote %s.\n", buffer );
 }
 
+static const char *CL_Say_g( const char *partial, int argnum, int state ) {
+    return CL_NickGenerator( partial, state );
+}
 
 static int CL_Mapname_m( char *buffer, int size ) {
     if( !cl.mapname[0] ) {
@@ -2309,14 +2343,14 @@ static const cmdreg_t c_client[] = {
     { "connect", CL_Connect_f, CL_Connect_g },
     { "passive", CL_PassiveConnect_f },
     { "reconnect", CL_Reconnect_f },
-    { "rcon", CL_Rcon_f, Cmd_Command_g },
+    { "rcon", CL_Rcon_f, CL_Rcon_g },
     { "precache", CL_Precache_f },
     { "download", CL_Download_f },
-    { "serverstatus", CL_ServerStatus_f, CL_Connect_g },
+    { "serverstatus", CL_ServerStatus_f, CL_Server_g },
     { "dumpclients", CL_DumpClients_f },
 	{ "dumpstatusbar", CL_DumpStatusbar_f },
 	{ "dumplayout", CL_DumpLayout_f },
-    { "writeconfig", CL_WriteConfig_f, Cmd_Exec_g },
+    { "writeconfig", CL_WriteConfig_f, CL_WriteConfig_g },
     { "vid_restart", CL_RestartRefresh_f },
 
     //
@@ -2325,11 +2359,14 @@ static const cmdreg_t c_client[] = {
     // the only thing this does is allow command completion
     // to work -- all unknown commands are automatically
     // forwarded to the server
+    { "say", NULL, CL_Say_g },
+    { "say_team", NULL, CL_Say_g },
+
     { "wave" }, { "inven" }, { "kill" }, { "use" },
-    { "drop" }, { "say" }, { "say_team" }, { "info" },
-    { "prog" }, { "give" }, { "god" }, { "notarget" },
-    { "noclip" }, { "invuse" }, { "invprev" }, { "invnext" },
-    { "invdrop" }, { "weapnext" }, { "weapprev" },
+    { "drop" }, { "info" }, { "prog" },
+    { "give" }, { "god" }, { "notarget" }, { "noclip" },
+    { "invuse" }, { "invprev" }, { "invnext" }, { "invdrop" },
+    { "weapnext" }, { "weapprev" },
 
     { NULL }
 };
@@ -2340,6 +2377,7 @@ CL_InitLocal
 =================
 */
 static void CL_InitLocal ( void ) {
+    cvar_t *var;
     int i;
 
     cls.state = ca_disconnected;
@@ -2356,7 +2394,8 @@ static void CL_InitLocal ( void ) {
     Cmd_Register( c_client );
 
     for ( i = 0 ; i < MAX_LOCAL_SERVERS ; i++ ) {
-        Cvar_Get( va( "adr%i", i ), "", CVAR_ARCHIVE );
+        var = Cvar_Get( va( "adr%i", i ), "", CVAR_ARCHIVE );
+        var->generator = Com_AddressGenerator;
     }
 
     //
@@ -2386,7 +2425,7 @@ static void CL_InitLocal ( void ) {
 
     rcon_password = Cvar_Get ( "rcon_password", "", CVAR_PRIVATE );
     rcon_address = Cvar_Get ( "rcon_address", "", CVAR_PRIVATE );
-    rcon_address->generator = CL_Connect_g;
+    rcon_address->generator = Com_AddressGenerator;
 
     cl_thirdperson = Cvar_Get( "cl_thirdperson", "0", CVAR_CHEAT );
     cl_thirdperson_angle = Cvar_Get( "cl_thirdperson_angle", "0", 0 );

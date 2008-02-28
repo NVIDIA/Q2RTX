@@ -143,17 +143,25 @@ typedef struct {
 #define FOR_EACH_CLIENT( client ) \
     LIST_FOR_EACH( client_t, client, &svs.udp_client_list, entry )
 
+typedef enum {
+    CF_RECONNECTED  = ( 1 << 0 ),
+    CF_NODATA       = ( 1 << 1 ),
+    CF_DEFLATE      = ( 1 << 2 ),
+    CF_DROP         = ( 1 << 3 )
+} client_flags_t;
+
 typedef struct client_s {
     list_t          entry;
 
 	clstate_t	    state;
+
+    client_flags_t  flags;
 
 	char			userinfo[MAX_INFO_STRING];		// name, etc
 	char			*versionString;
 
     char            reconnect_var[16];
     char            reconnect_val[16];
-    qboolean        reconnect_done;
 
 	int				lastframe;			// for delta compression
 	usercmd_t		lastcmd;			// for filling in big drops
@@ -177,7 +185,6 @@ typedef struct client_s {
 	int				number;             // client slot number
 
 	clientSetting_t	settings[CLS_MAX];
-	qboolean		nodata;
 
 	client_frame_t	frames[UPDATE_BACKUP];	// updates can be delta'd from here
 
@@ -190,7 +197,6 @@ typedef struct client_s {
 	int				challenge; // challenge of this user, randomly generated
 	int				protocol; // major version
     int             version; // minor version
-    qboolean        zlib;
 
     time_t          connect_time;
 

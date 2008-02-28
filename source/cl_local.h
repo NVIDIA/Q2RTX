@@ -504,7 +504,7 @@ void CL_ClientCommand( const char *string );
 void CL_UpdateLocalFovSetting( void );
 void CL_FillAPI( clientAPI_t *api );
 void CL_SendRcon( const netadr_t *adr, const char *pass, const char *cmd );
-const char *CL_Connect_g( const char *partial, int state );
+const char *CL_Server_g( const char *partial, int argnum, int state );
 
 //
 // cl_input

@@ -56,7 +56,21 @@ static void Prompt_FreeMatches( void ) {
 
 }
 
-static void Prompt_FooGenerator( xgenerator_t generator, const char *partial ) {
+static void Prompt_RunCompleter( xcompleter_t completer, const char *partial, int argnum ) {
+	const char *match;
+
+    match = (*completer)( partial, argnum, 0 );
+    while( match ) {
+        matches[numMatches++] = Z_CopyString( match );
+		if( numMatches == MAX_MATCHES ) {
+			(*completer)( partial, argnum, 2 );
+			return;
+		}
+        match = (*completer)( partial, argnum, 1 );
+    }
+}
+
+static void Prompt_RunGenerator( xgenerator_t generator, const char *partial ) {
 	const char *match;
 
     match = (*generator)( partial, 0 );
@@ -71,15 +85,15 @@ static void Prompt_FooGenerator( xgenerator_t generator, const char *partial ) {
 }
 
 static void Prompt_GenerateMatches( const char *partial ) {
-	Prompt_FooGenerator( Cmd_Command_g, partial );
+	Prompt_RunGenerator( Cmd_CommandGenerator, partial );
     numCommands = numMatches;
     
 	if( numMatches != MAX_MATCHES ) {
-		Prompt_FooGenerator( Cvar_Generator, partial );
+		Prompt_RunGenerator( Cvar_Generator, partial );
 		numCvars = numMatches - numCommands;
 
 		if( numMatches != MAX_MATCHES ) {
-			Prompt_FooGenerator( Cmd_Alias_g, partial );
+			Prompt_RunGenerator( Cmd_AliasGenerator, partial );
 			numAliases = numMatches - numCvars - numCommands;
 		}
 	}
@@ -175,6 +189,40 @@ static void Prompt_ShowIndividualMatches( commandPrompt_t *prompt ) {
 	}
 }
 
+const char *Prompt_Completer( const char *partial, int firstarg, int argnum, int state ) {
+    static xcompleter_t completer;
+    static xgenerator_t generator;
+    int relative = argnum - firstarg;
+
+    if( relative < 0 ) {
+        return NULL;
+    }
+    
+    if( !state ) {
+        if( relative > 0 ) {
+            char *s = Cmd_Argv( firstarg );
+
+            generator = NULL;
+            completer = Cmd_FindCompleter( s );
+            if( !completer && relative == 1 ) {
+                cvar_t *v = Cvar_FindVar( s );
+                generator = v->generator;
+            }
+        } else {
+            completer = NULL;
+            generator = Cmd_MixedGenerator;
+        }
+    }
+
+    if( completer ) {
+        return (*completer)( partial, relative, state );
+    } else if( generator ) {
+        return (*generator)( partial, state );
+    } else {
+        return NULL;
+    }
+}
+
 /*
 ====================
 Prompt_CompleteCommand
@@ -185,7 +233,6 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 	char *text, *partial, *s;
 	int i, argc, pos, currentArg, size, length, relative;
 	char *first, *last;
-	xgenerator_t generator;
 
 	text = inputLine->text;
 	size = sizeof( inputLine->text );
@@ -228,17 +275,16 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
     }
 
     if( relative ) {
-        cvar_t *v = Cvar_FindVar( s );
-        if( v && v->generator ) {
-            generator = v->generator;
-        } else {
-            generator = Cmd_FindGenerator( s, relative );
-        }
-        if( generator ) {
-            Prompt_FooGenerator( generator, partial );
+        xcompleter_t completer = Cmd_FindCompleter( s );
+        if( completer ) {
+            Prompt_RunCompleter( completer, partial, relative );
+        } else if( relative == 1 ) {
+            cvar_t *v = Cvar_FindVar( s );
+            if( v && v->generator ) {
+                Prompt_RunGenerator( v->generator, partial );
+            }
         }
     } else {
-        generator = NULL;
         Prompt_GenerateMatches( partial );
     }
 
@@ -312,8 +358,8 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 	inputLine->cursorPos = pos + 1;
 
 	prompt->printf( "]\\%s\n", Cmd_ArgsFrom( 0 ) );
-	if( generator ) {
-		goto multicolumn;
+	if( relative ) {
+		goto multi;
 	}
     
 	switch( com_completion_mode->integer ) {
@@ -324,7 +370,7 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 		}
 		break;
 	case 1:
-    multicolumn:
+    multi:
 		// print in multiple columns
         Prompt_ShowMatches( prompt, sortedMatches, 0, numMatches );
 		break;

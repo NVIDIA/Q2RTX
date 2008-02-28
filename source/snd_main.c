@@ -138,9 +138,12 @@ static void S_SoundInfo_f( void ) {
 }
 
 
-const char *S_Play_g( const char *partial, int state ) {
-	return Com_FileNameGeneratorByFilter( "sound", "*.wav", partial,
+const char *S_Play_g( const char *partial, int argnum, int state ) {
+    if( argnum == 1 ) {
+    	return Com_FileNameGeneratorByFilter( "sound", "*.wav", partial,
             qfalse, state );
+    }
+    return NULL;
 }
 
 static void S_Play_f( void ) {

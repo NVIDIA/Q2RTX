@@ -262,6 +262,7 @@ void GL_SetDefaultState( void ) {
     qglEnableClientState( GL_TEXTURE_COORD_ARRAY );
     
 	GL_SelectTMU( 0 );
+    GL_BindTexture( 0 );
 	qglEnable( GL_TEXTURE_2D );
     GL_Bits( GLS_DEFAULT );
 }

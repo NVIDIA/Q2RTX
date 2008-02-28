@@ -1131,6 +1131,34 @@ finish:
     return NULL;
 }
 
+const char *Com_AddressGenerator( const char *partial, int state ) {
+    static int length;
+    static int index;
+    cvar_t *var;
+	char buffer[MAX_QPATH];
+    
+    if( !state ) {
+        length = strlen( partial );
+        index = 0;
+    }
+
+	while( index < 1024 ) {
+		Com_sprintf( buffer, sizeof( buffer ), "adr%i", index );
+		index++;
+		var = Cvar_FindVar( buffer );
+        if( !var ) {
+            break;
+        }
+		if( !var->string[0] ) {
+			continue;
+		}
+		if( !strncmp( partial, var->string, length ) ) {
+			return var->string;
+		}
+	}
+
+    return NULL;
+}
 
 /*
 ===============
@@ -1220,7 +1248,7 @@ Qcommon_Init
 =================
 */
 void Qcommon_Init( int argc, char **argv ) {
-	static const char *version = APPLICATION " " VERSION " " __DATE__ " " BUILDSTRING " " CPUSTRING;
+	static const char version[] = APPLICATION " " VERSION " " __DATE__ " " BUILDSTRING " " CPUSTRING;
 
 	if( setjmp( abortframe ) )
 		Sys_Error( "Error during initialization: %s", com_errorMsg );
@@ -1256,7 +1284,7 @@ void Qcommon_Init( int argc, char **argv ) {
 	logfile_active = Cvar_Get( "logfile", "0", 0 );
 	logfile_flush = Cvar_Get( "logfile_flush", "0", 0 );
 	logfile_name = Cvar_Get( "logfile_name", COM_LOGFILE_NAME, 0 );
-	logfile_prefix = Cvar_Get( "logfile_prefix", "", 0 );
+	logfile_prefix = Cvar_Get( "logfile_prefix", "[%Y-%m-%d %H:%M] ", 0 );
 #ifdef DEDICATED_ONLY
 	dedicated = Cvar_Get ("dedicated", "1", CVAR_ROM);
 #else

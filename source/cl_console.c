@@ -182,8 +182,11 @@ static void Con_Clear_f( void ) {
 	con.display = con.current;
 }
 
-static const char *Con_Dump_g( const char *partial, int state ) {
-	return Com_FileNameGenerator( "", ".txt", partial, qtrue, state );
+static const char *Con_Dump_g( const char *partial, int argnum, int state ) {
+    if( argnum == 1 ) {
+    	return Com_FileNameGenerator( "", ".txt", partial, qtrue, state );
+    }
+    return NULL;
 }
 						
 /*
@@ -362,7 +365,7 @@ static const cmdreg_t c_console[] = {
 	{ "togglechat2", Con_ToggleChat2_f },
 	{ "messagemode", Con_MessageMode_f },
 	{ "messagemode2", Con_MessageMode2_f },
-	{ "remotemode", Con_RemoteMode_f, CL_Connect_g },
+	{ "remotemode", Con_RemoteMode_f, CL_Server_g },
 	{ "clear", Con_Clear_f },
 	{ "clearnotify", Con_ClearNotify_f },
 	{ "condump", Con_Dump_f, Con_Dump_g },

@@ -81,27 +81,26 @@ static void PF_Unicast( edict_t *ent, qboolean reliable ) {
     svc_ops_t   op;
     sizebuf_t *buf;
 
-	if( !ent )
-		return;
+	if( !ent ) {
+        goto clear;
+    }
 
 	clientNum = NUM_FOR_EDICT( ent ) - 1;
 	if( clientNum < 0 || clientNum >= sv_maxclients->integer ) {
         Com_WPrintf( "PF_Unicast to a non-client %d\n", clientNum );
-        return;
+        goto clear;
     }
 
 	client = svs.udp_client_pool + clientNum;
     if( client->state == cs_free ) {
         Com_WPrintf( "PF_Unicast to a free client %d\n", clientNum );
-        return;
+        goto clear;
     }
 
-#if 0
-	// HACK: fixes 'anti-votekick' exploit
+	// HACK: fix anti-kicking exploit
 	if( msg_write.data[0] == svc_disconnect ) {
-		SV_RemoveClient( client );
+	    client->flags |= CF_DROP;
 	}
-#endif
 
 	if( reliable ) {
 		flags = MSG_RELIABLE;
@@ -140,6 +139,7 @@ static void PF_Unicast( edict_t *ent, qboolean reliable ) {
         }
     }
 
+clear:
     SZ_Clear( &msg_write );
 }
 
@@ -542,7 +542,7 @@ static void PF_StartSound( edict_t *edict, int channel,
 
     FOR_EACH_CLIENT( client ) {
 		// do not send sounds to connecting clients
-		if( client->state != cs_spawned || client->download || client->nodata ) {
+		if( client->state != cs_spawned || client->download || ( client->flags & CF_NODATA ) ) {
 			continue; 
 		}
 

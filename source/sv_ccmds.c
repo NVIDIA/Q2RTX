@@ -75,7 +75,7 @@ static void SV_SetMaster_f( void ) {
 	svs.last_heartbeat = 0;
 }
 
-static const char *SV_SetPlayer_g( const char *partial, int state ) {
+static const char *SV_SetPlayer_g( const char *partial, int argnum, int state ) {
     static int length;
     static int index;
     client_t *client;
@@ -83,6 +83,9 @@ static const char *SV_SetPlayer_g( const char *partial, int state ) {
 	if( !svs.initialized ) {
 		return NULL;
 	}
+    if( argnum != 1 ) {
+        return NULL;
+    }
     
     if( !state ) {
         length = strlen( partial );
@@ -216,8 +219,11 @@ static void SV_Map_f( void ) {
 	SV_Map( Cmd_Argv( 1 ), qtrue );
 }
 
-static const char *SV_Map_g( const char *partial, int state ) {
-	return Com_FileNameGenerator( "maps", ".bsp", partial, qtrue, state );
+static const char *SV_Map_g( const char *partial, int argnum, int state ) {
+    if( argnum == 1 ) {
+    	return Com_FileNameGenerator( "maps", ".bsp", partial, qtrue, state );
+    }
+    return NULL;
 }
 
 //===============================================================

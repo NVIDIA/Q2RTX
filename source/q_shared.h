@@ -592,8 +592,8 @@ CVARS (console variables)
 
 struct cvar_s;
 
-typedef const char *( *xgenerator_t )( const char *, int );
 typedef void (*xchanged_t)( struct cvar_s * );	
+typedef const char *( *xgenerator_t )( const char *, int );
 
 // nothing outside the cvar.*() functions should modify these fields!
 typedef struct cvar_s {

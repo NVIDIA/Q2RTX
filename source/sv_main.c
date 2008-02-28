@@ -512,7 +512,7 @@ static void SVC_DirectConnect( void ) {
     char        *ncstring, *acstring;
     int         reserved;
     byte        *buffer;
-    qboolean    zlib;
+    int         zlib;
 
 	protocol = atoi( Cmd_Argv( 1 ) );
 	qport = atoi( Cmd_Argv( 2 ) ) ;
@@ -588,9 +588,9 @@ static void SVC_DirectConnect( void ) {
 
     // set maximum message length
     maxlength = MAX_PACKETLEN_WRITABLE_DEFAULT;
-    zlib = qfalse;
+    zlib = 0;
     if( protocol >= PROTOCOL_VERSION_R1Q2 ) {
-        zlib = qtrue;
+        zlib = CF_DEFLATE;
         s = Cmd_Argv( 5 );
         if( *s ) {
             maxlength = atoi( s );
@@ -644,7 +644,7 @@ static void SVC_DirectConnect( void ) {
         // set zlib
         s = Cmd_Argv( 7 );
         if( *s && !atoi( s ) ) {
-            zlib = qfalse;
+            zlib = 0;
         }
 
         // set minor protocol version
@@ -804,7 +804,7 @@ static void SVC_DirectConnect( void ) {
 	newcl->challenge = challenge; // save challenge for checksumming
 	newcl->protocol = protocol;
     newcl->version = version;
-    newcl->zlib = zlib;
+    newcl->flags = zlib;
 	newcl->edict = EDICT_NUM( number + 1 );
     newcl->gamedir = fs_game->string;
     newcl->mapname = sv.name;
@@ -909,6 +909,11 @@ static void SVC_DirectConnect( void ) {
         newcl->WriteFrame = SV_WriteFrameToClient_Default;
     } else {
         newcl->WriteFrame = SV_WriteFrameToClient_Enhanced;
+    }
+
+    // loopback client doesn't need to reconnect
+    if( NET_IsLocalAddress( &net_from ) ) {
+        newcl->flags |= CF_RECONNECTED;
     }
 
     // add them to the linked list of connected clients
@@ -1224,9 +1229,7 @@ void SV_SendAsyncPackets( void ) {
         }
 
 		// spawned clients are handled elsewhere
-		if( client->state == cs_spawned && !client->download &&
-            !client->nodata )
-        {
+		if( client->state == cs_spawned && !client->download && !( client->flags & CF_NODATA ) ) {
 			continue;
 		}
 
@@ -1293,6 +1296,8 @@ static void SV_CheckTimeouts( void ) {
     			SV_RemoveClient( client );
 	    		continue;
 	    	}
+        } else if( client->flags & CF_DROP ) {
+			SV_DropClient( client, NULL );
         } else {
             point = svs.droppoint;
             if( client->state == cs_assigned && point < svs.ghostpoint ) {
@@ -1413,7 +1418,7 @@ static void SV_MasterHeartbeat( void ) {
 	// send to group master
 	for( i = 0; i < MAX_MASTERS; i++ ) {
 		if( master_adr[i].port ) {
-			Com_Printf( "Sending heartbeat to %s\n",
+			Com_DPrintf( "Sending heartbeat to %s\n",
                 NET_AdrToString( &master_adr[i] ) );
 	        NET_SendPacket( NS_SERVER, &master_adr[i], length + 14, buffer );
 		}
@@ -1439,7 +1444,7 @@ static void SV_MasterShutdown( void ) {
 	// send to group master
 	for( i = 0; i < MAX_MASTERS; i++ ) {
 		if( master_adr[i].port ) {
-			Com_Printf( "Sending shutdown to %s\n",
+			Com_DPrintf( "Sending shutdown to %s\n",
                 NET_AdrToString( &master_adr[i] ) );
 			OOB_PRINT( NS_SERVER, &master_adr[i], "shutdown" );
 		}

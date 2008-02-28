@@ -399,13 +399,9 @@ void SV_New_f( void ) {
 	}
 
     // send reconnect var request
-    if( sv_force_reconnect->string[0] && !sv_client->reconnect_done ) {
-        if( NET_IsLocalAddress( &sv_client->netchan->remote_address ) ) {
-            sv_client->reconnect_done = qtrue;
-        } else {
-    		SV_ClientCommand( sv_client, "cmd \177c connect $%s\n",
-                sv_client->reconnect_var );
-        }
+    if( sv_force_reconnect->string[0] && !( sv_client->flags & CF_RECONNECTED ) ) {
+    	SV_ClientCommand( sv_client, "cmd \177c connect $%s\n",
+            sv_client->reconnect_var );
     }
 
 	Com_DPrintf( "Going from cs_connected to cs_primed for %s\n",
@@ -415,7 +411,7 @@ void SV_New_f( void ) {
 	memset( &sv_client->lastcmd, 0, sizeof( sv_client->lastcmd ) );
 
 #if USE_ZLIB
-    if( !sv_client->zlib ) {
+    if( !( sv_client->flags & CF_DEFLATE ) ) {
 		write_plain_configstrings();
 		write_plain_baselines();
     } else {
@@ -455,7 +451,7 @@ void SV_Begin_f( void ) {
 		return;
 	}
 
-    if( sv_force_reconnect->string[0] && !sv_client->reconnect_done ) {
+    if( sv_force_reconnect->string[0] && !( sv_client->flags & CF_RECONNECTED ) ) {
         if( dedicated->integer ) {
             Com_Printf( "%s[%s]: failed to reconnect\n", sv_client->name,
                 NET_AdrToString( &sv_client->netchan->remote_address ) );
@@ -704,59 +700,8 @@ static void SV_ShowServerinfo_f( void ) {
 	Com_EndRedirect();
 }
 
-
-void SV_Nextserver( void ) {
-#if 0
-    client_t *client;
-	char	*v;
-
-	//ZOID, ss_pic can be nextserver'd in coop mode
-	if (sv.state == ss_game)
-		return;		// can't nextserver while playing a normal game
-
-    FOR_EACH_CLIENT( client ) {
-        SV_ClientReset( client );
-    }
-
-	v = sv_nextserver->string;
-	if (!v[0])
-		Cbuf_AddText ("killserver\n");
-	else
-	{
-		Cbuf_AddText (v);
-		Cbuf_AddText ("\n");
-	}
-	Cvar_Set ("nextserver","");
-#endif
-}
-
-/*
-==================
-SV_Nextserver_f
-
-A cinematic has completed or been aborted by a client, so move
-to the next server.
-==================
-*/
-static void SV_Nextserver_f( void ) {
-	if( !NET_IsLocalAddress( &sv_client->netchan->remote_address ) ) {
-		Com_DPrintf( "Nextserver() from remote client, from %s\n",
-            sv_client->name );
-		return;
-	}
-	if ( atoi( Cmd_Argv( 1 ) ) != sv.spawncount ) {
-		Com_DPrintf( "Nextserver() from wrong level, from %s\n",
-            sv_client->name );
-		return;		// leftover from last server
-	}
-
-	Com_DPrintf( "Nextserver() from %s\n", sv_client->name );
-
-	SV_Nextserver ();
-}
-
 static void SV_NoGameData_f( void ) {
-	sv_client->nodata ^= 1;
+	sv_client->flags ^= CF_NODATA;
 }
 
 static void SV_CvarResult_f( void ) {
@@ -776,7 +721,7 @@ static void SV_CvarResult_f( void ) {
         if( sv_client->reconnect_var[0] ) {
             v = Cmd_Argv( 2 );
             if( !strcmp( v, sv_client->reconnect_val ) ) {
-                sv_client->reconnect_done = qtrue;
+                sv_client->flags |= CF_RECONNECTED;
             }
         }
     }
@@ -803,15 +748,13 @@ static void SV_AC_Info_f( void ) {
 
 #endif
 
-static ucmd_t ucmds[] = {
+static const ucmd_t ucmds[] = {
 	// auto issued
 	{ "new", SV_New_f },
 	{ "begin", SV_Begin_f },
 	{ "baselines", NULL },
 	{ "configstrings", NULL },
-
-	{ "nextserver", SV_Nextserver_f },
-
+	{ "nextserver", NULL },
 	{ "disconnect", SV_Disconnect_f },
 
 	// issued by hand at client consoles	
@@ -854,9 +797,10 @@ static void SV_ExecuteUserCommand( const char *s ) {
         }
         return;
     }
-    if( sv.state == ss_game || sv.state == ss_broadcast ) {
-        ge->ClientCommand( sv_player );
+    if( sv.state < ss_game ) {
+        return;
     }
+    ge->ClientCommand( sv_player );
 }
 
 /*
@@ -866,9 +810,6 @@ USER CMD EXECUTION
 
 ===========================================================================
 */
-
-static int  net_drop;
-
 
 /*
 ==================
@@ -905,7 +846,7 @@ static inline void SV_SetLastFrame( int lastframe ) {
 SV_OldClientExecuteMove
 ==================
 */
-static void SV_OldClientExecuteMove( void ) {
+static void SV_OldClientExecuteMove( int net_drop ) {
 	usercmd_t	oldest, oldcmd, newcmd;
 	int		lastframe;
 
@@ -962,7 +903,7 @@ static void SV_OldClientExecuteMove( void ) {
 SV_NewClientExecuteMove
 ==================
 */
-static void SV_NewClientExecuteMove( int c ) {
+static void SV_NewClientExecuteMove( int c, int net_drop ) {
 	usercmd_t cmds[MAX_PACKET_FRAMES][MAX_PACKET_USERCMDS];
 	usercmd_t *lastcmd, *cmd;
 	int		lastframe;
@@ -1063,6 +1004,7 @@ void SV_ExecuteClientMessage( client_t *client ) {
 	qboolean	move_issued;
 	int		stringCmdCount;
 	int		userinfoUpdateCount;
+    int     net_drop;
 
 	sv_client = client;
 	sv_player = sv_client->edict;
@@ -1073,7 +1015,7 @@ void SV_ExecuteClientMessage( client_t *client ) {
 	userinfoUpdateCount = 0;
 
 	net_drop = client->netchan->dropped;
-    if( net_drop ) {
+    if( net_drop > 0 ) {
         client->frameflags |= FF_CLIENTDROP;
     }
 
@@ -1117,7 +1059,7 @@ void SV_ExecuteClientMessage( client_t *client ) {
 
 			move_issued = qtrue;
 
-			SV_OldClientExecuteMove();
+			SV_OldClientExecuteMove( net_drop );
 			break;
 
 		case clc_stringcmd:	
@@ -1164,7 +1106,7 @@ void SV_ExecuteClientMessage( client_t *client ) {
 			}
 
 			move_issued = qtrue;
-			SV_NewClientExecuteMove( c );
+			SV_NewClientExecuteMove( c, net_drop );
 			break;
 
 		case clc_userinfo_delta: {

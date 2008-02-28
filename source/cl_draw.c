@@ -822,7 +822,7 @@ cmdreg_t scr_drawcmds[] = {
 #if USE_CHATHUD
     { "clearchat", SCR_ClearChatHUD_f },
 #endif
-    { "draw", SCR_Draw_f, Cvar_Generator },
+    { "draw", SCR_Draw_f, Cvar_Set_g },
     { "undraw", SCR_UnDraw_f/*, SCR_DrawStringGenerator*/ },
     { "scoreshot", SCR_ScoreShot_f },
     { NULL }

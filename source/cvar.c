@@ -123,20 +123,20 @@ void Cvar_VariableStringBuffer( const char *var_name, char *buffer, int size ) {
 	Q_strncpyz( buffer, Cvar_VariableString( var_name ), size );
 }
 
-const char *Cvar_Generator( const char *text, int state ) {
+const char *Cvar_Generator( const char *partial, int state ) {
     static int length;
     static cvar_t *cvar;
     const char *name;
     
     if( !state ) {
-        length = strlen( text );
+        length = strlen( partial );
         cvar = cvar_vars;
     }
 
     while( cvar ) {
         name = cvar->name;
         cvar = cvar->next;
-		if( !strncmp( text, name, length ) ) {
+		if( !strncmp( partial, name, length ) ) {
             return name;
         }
     }
@@ -632,6 +632,13 @@ void Cvar_Command( cvar_t *v ) {
     }
 }
 
+const char *Cvar_Set_g( const char *partial, int argnum, int state ) {
+    if( argnum == 1 ) {
+        return Cvar_Generator( partial, state );
+    }
+    return NULL;
+}
+
 
 /*
 ============
@@ -740,22 +747,28 @@ Cvar_List_f
 
 ============
 */
+
+static const cmd_option_t o_cvarlist[] = {
+    { "a", "archive", "list archived cvars" },
+    { "c", "cheat", "list cheat protected cvars" },
+    { "h", "help", "display this help message" },
+    { "l", "latched", "list latched cvars" },
+    { "m", "modified", "list modified cvars" },
+    { "n", "noset", "list command line cvars" },
+    { "r", "rom", "list read-only cvars" },
+    { "s", "serverinfo", "list serverinfo cvars" },
+    { "t", "custom", "list user-created cvars" },
+    { "u", "userinfo", "list userinfo cvars" },
+    { "v", "verbose", "display flags of each cvar" },
+    { "w:string", "wildcard", "list cvars matching wildcard" },
+    { NULL }
+};
+
+static const char *Cvar_List_g( const char *partial, int argnum, int state ) {
+    return Cmd_Completer( o_cvarlist, partial, argnum, state, NULL );
+}
+
 static void Cvar_List_f( void ) {
-    static const cmd_option_t options[] = {
-        { "a", "archive", "list archived cvars" },
-        { "c", "cheat", "list cheat protected cvars" },
-        { "h", "help", "display this help message" },
-        { "l", "latched", "list latched cvars" },
-        { "m", "modified", "list modified cvars" },
-        { "n", "noset", "list command line cvars" },
-        { "r", "rom", "list read-only cvars" },
-        { "s", "serverinfo", "list serverinfo cvars" },
-        { "t", "custom", "list user-created cvars" },
-        { "u", "userinfo", "list userinfo cvars" },
-        { "v", "verbose", "display flags of each cvar" },
-        { "w:string", "wildcard", "list cvars matching wildcard" },
-        { NULL }
-    };
 	cvar_t	*var;
 	int		i, total;
     qboolean verbose = qfalse, modified = qfalse, latched = qfalse;
@@ -764,7 +777,7 @@ static void Cvar_List_f( void ) {
 	char buffer[6];
     int c;
 
-    while( ( c = Cmd_ParseOptions( options ) ) != -1 ) {
+    while( ( c = Cmd_ParseOptions( o_cvarlist ) ) != -1 ) {
         switch( c ) {
         case 'a':
             mask |= CVAR_ARCHIVE;
@@ -773,9 +786,9 @@ static void Cvar_List_f( void ) {
             mask |= CVAR_CHEAT;
             break;
         case 'h':
-            Cmd_PrintUsage( options, NULL );
+            Cmd_PrintUsage( o_cvarlist, NULL );
             Com_Printf( "List registered console variables.\n" );
-            Cmd_PrintHelp( options );
+            Cmd_PrintHelp( o_cvarlist );
             Com_Printf(
                         "Flags legend:\n"
                         "C: cheat protected\n"
@@ -1024,15 +1037,15 @@ void Cvar_FillAPI( cvarAPI_t *api ) {
 }
 
 static const cmdreg_t c_cvar[] = {
-    { "set", Cvar_Set_f, Cvar_Generator },
-    { "setu", Cvar_SetFlag_f, Cvar_Generator },
-    { "sets", Cvar_SetFlag_f, Cvar_Generator },
-    { "seta", Cvar_SetFlag_f, Cvar_Generator },
-    { "cvarlist", Cvar_List_f },
-    { "toggle", Cvar_Toggle_f, Cvar_Generator },
-    { "inc", Cvar_Inc_f, Cvar_Generator },
-    { "dec", Cvar_Inc_f, Cvar_Generator },
-    { "reset", Cvar_Reset_f, Cvar_Generator },
+    { "set", Cvar_Set_f, Cvar_Set_g },
+    { "setu", Cvar_SetFlag_f, Cvar_Set_g },
+    { "sets", Cvar_SetFlag_f, Cvar_Set_g },
+    { "seta", Cvar_SetFlag_f, Cvar_Set_g },
+    { "cvarlist", Cvar_List_f, Cvar_List_g },
+    { "toggle", Cvar_Toggle_f, Cvar_Set_g },
+    { "inc", Cvar_Inc_f, Cvar_Set_g },
+    { "dec", Cvar_Inc_f, Cvar_Set_g },
+    { "reset", Cvar_Reset_f, Cvar_Set_g },
 
     { NULL }
 };

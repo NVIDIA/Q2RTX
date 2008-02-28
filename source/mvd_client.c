@@ -952,6 +952,18 @@ void MVD_StreamedRecord_f( void ) {
     SZ_Clear( &msg_write );
 }
 
+static const cmd_option_t o_mvdconnect[] = {
+    { "h", "help", "display this message" },
+    { "e:string", "encoding", "specify default encoding as <string>" },
+    { "i:number", "id", "specify remote stream ID as <number>" },
+    { "n:string", "name", "specify channel name as <string>" },
+    { "r:string", "referer", "specify referer as <string> in HTTP request" },
+    { NULL }
+};
+
+const char *MVD_Connect_g( const char *partial, int argnum, int state ) {
+    return Cmd_Completer( o_mvdconnect, partial, argnum, state, Com_AddressGenerator );
+}
 
 /*
 ==============
@@ -961,14 +973,6 @@ MVD_Connect_f
 ==============
 */
 void MVD_Connect_f( void ) {
-    static const cmd_option_t options[] = {
-        { "h", "help", "display this message" },
-        { "e:string", "encoding", "specify default encoding as <string>" },
-        { "i:number", "id", "specify remote stream ID as <number>" },
-        { "n:string", "name", "specify channel name as <string>" },
-        { "r:string", "referer", "specify referer as <string> in HTTP request" },
-        { NULL }
-    };
 	netadr_t adr;
     netstream_t stream;
     char buffer[MAX_STRING_CHARS];
@@ -980,12 +984,12 @@ void MVD_Connect_f( void ) {
     uint16_t port;
     int c;
 
-    while( ( c = Cmd_ParseOptions( options ) ) != -1 ) {
+    while( ( c = Cmd_ParseOptions( o_mvdconnect ) ) != -1 ) {
         switch( c ) {
         case 'h':
-            Cmd_PrintUsage( options, "<uri>" );
+            Cmd_PrintUsage( o_mvdconnect, "<uri>" );
             Com_Printf( "Create new MVD channel and connect to URI.\n" );
-            Cmd_PrintHelp( options );
+            Cmd_PrintHelp( o_mvdconnect );
             Com_Printf(
     "Full URI syntax: [http://][user:pass@]<host>[:port][/resource]\n"
     "If resource is given, default port is 80 and stream ID is ignored.\n"
@@ -1228,18 +1232,23 @@ static void MVD_Control_f( void ) {
     }
 }
 
-const char *MVD_Play_g( const char *partial, int state ) {
-	return Com_FileNameGeneratorByFilter( "demos", "*.mvd2;*.mvd2.gz",
+static const cmd_option_t o_mvdplay[] = {
+    { "h", "help", "display this message" },
+    { "l:number", "loop", "replay <number> of times (0 means forever)" },
+    { "n:string", "name", "specify channel name as <string>" },
+    { NULL }
+};
+
+static const char *MVD_FileGenerator( const char *partial, int state ) {
+    return Com_FileNameGeneratorByFilter( "demos", "*.mvd2;*.mvd2.gz",
         partial, qfalse, state );
 }
 
+const char *MVD_Play_g( const char *partial, int argnum, int state ) {
+    return Cmd_Completer( o_mvdplay, partial, argnum, state, MVD_FileGenerator );
+}
+
 void MVD_Play_f( void ) {
-    static const cmd_option_t options[] = {
-        { "h", "help", "display this message" },
-        { "l:number", "loop", "replay <number> of times (0 means forever)" },
-        { "n:string", "name", "specify channel name as <string>" },
-        { NULL }
-    };
 	char *name = NULL, *s;
 	char buffer[MAX_OSPATH];
     int loop = 1, len;
@@ -1248,12 +1257,12 @@ void MVD_Play_f( void ) {
     string_entry_t *entry, *head;
     int i;
 
-    while( ( c = Cmd_ParseOptions( options ) ) != -1 ) {
+    while( ( c = Cmd_ParseOptions( o_mvdplay ) ) != -1 ) {
         switch( c ) {
         case 'h':
-            Cmd_PrintUsage( options, "[/]<filename>" );
+            Cmd_PrintUsage( o_mvdplay, "[/]<filename>" );
             Com_Printf( "Create new MVD channel and begin demo playback.\n" );
-            Cmd_PrintHelp( options );
+            Cmd_PrintHelp( o_mvdplay );
             Com_Printf( "Final path is formatted as demos/<filename>.mvd2.\n"
                 "Prepend slash to specify raw path.\n" );
             return;
@@ -1296,9 +1305,9 @@ void MVD_Play_f( void ) {
             continue;
         }
 
-        len = strlen( buffer ) + 1;
+        len = strlen( buffer );
         entry = Z_Malloc( sizeof( *entry ) + len );
-        memcpy( entry->string, buffer, len );
+        memcpy( entry->string, buffer, len + 1 );
         entry->next = head;
         head = entry;
     }
@@ -1360,7 +1369,7 @@ void MVD_Shutdown( void ) {
 
 static const cmdreg_t c_mvd[] = {
 	{ "mvdplay", MVD_Play_f, MVD_Play_g },
-	{ "mvdconnect", MVD_Connect_f },
+	{ "mvdconnect", MVD_Connect_f, MVD_Connect_g },
 	{ "mvdisconnect", MVD_Disconnect_f },
 	{ "mvdkill", MVD_Kill_f },
 	{ "mvdspawn", MVD_Spawn_f },

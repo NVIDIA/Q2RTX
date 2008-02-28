@@ -118,15 +118,15 @@ qboolean Cmd_Exists( const char *cmd_name );
 
 xcommand_t Cmd_FindFunction( const char *name );
 xmacro_t Cmd_FindMacroFunction( const char *name );
-xgenerator_t Cmd_FindGenerator( const char *name, int index );
+xcompleter_t Cmd_FindCompleter( const char *name );
 
 char *Cmd_AliasCommand( const char *name );
 void Cmd_AliasSet( const char *name, const char *cmd );
 
-const char *Cmd_Command_g( const char *text, int state );
-const char *Cmd_Alias_g( const char *text, int state );
-const char *Cmd_Mixed_g( const char *partial, int state ); 
-const char *Cmd_Exec_g( const char *partial, int state );
+const char *Cmd_CommandGenerator( const char *partial, int state );
+const char *Cmd_AliasGenerator( const char *partial, int state );
+const char *Cmd_MixedGenerator( const char *partial, int state ); 
+const char *Cmd_Exec_g( const char *partial, int argnum, int state );
 // attempts to match a partial command for automatic command line completion
 // returns NULL if nothing fits
 
@@ -199,6 +199,9 @@ void Cmd_PrintHelp( const cmd_option_t *opt );
 void Cmd_PrintUsage( const cmd_option_t *opt, const char *suffix );
 void Cmd_PrintHint( void );
 
+const char *Cmd_Completer( const cmd_option_t *opt, const char *partial,
+    int argnum, int state, xgenerator_t generator );
+
 /*
 ==============================================================
 
@@ -243,7 +246,9 @@ cvar_t 	*Cvar_FullSet( const char *var_name, const char *value,
 void Cvar_ClampInteger( cvar_t *var, int min, int max );
 void Cvar_ClampValue( cvar_t *var, float min, float max );
 
-const char *Cvar_Generator( const char *text, int state );
+const char *Cvar_Set_g( const char *partial, int argnum, int state );
+
+const char *Cvar_Generator( const char *partial, int state );
 // attempts to match a partial variable name for command line completion
 // returns NULL if nothing fits
 
@@ -933,6 +938,7 @@ const char *Com_FileNameGenerator( const char *path, const char *ext, const char
 								  qboolean stripExtension, int state );
 const char *Com_FileNameGeneratorByFilter( const char *path, const char *filter, const char *partial,
 										  qboolean stripExtension, int state );
+const char *Com_AddressGenerator( const char *partial, int state );
 
 int         Com_Time_m( char *buffer, int size );
 int         Com_Uptime_m( char *buffer, int size );
@@ -1114,5 +1120,6 @@ void SV_Shutdown( const char *finalmsg, killtype_t type );
 void SV_Frame (int msec);
 qboolean MVD_GetDemoPercent( int *percent, int *bufferPercent );
 
+const char *Prompt_Completer( const char *partial, int firstarg, int argnum, int state );
 
 

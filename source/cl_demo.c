@@ -646,9 +646,12 @@ static void CL_PlayDemo_f( void ) {
 	}
 }
 
-static const char *CL_PlayDemo_g( const char *partial, int state ) {
-	return Com_FileNameGeneratorByFilter( "demos", "*.dm2;*.dm2.gz",
-        partial, qfalse, state );
+static const char *CL_PlayDemo_g( const char *partial, int argnum, int state ) {
+    if( argnum == 1 ) {
+    	return Com_FileNameGeneratorByFilter( "demos", "*.dm2;*.dm2.gz",
+            partial, qfalse, state );
+    }
+    return NULL;
 }
 
 static void CL_ParseInfoString( demoInfo_t *info, int clientNum, int index, const char *string ) {

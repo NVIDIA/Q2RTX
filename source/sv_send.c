@@ -282,7 +282,7 @@ void SV_Multicast( vec3_t origin, multicast_t to ) {
 		}
 		// do not send unreliables to connecting clients
 		if( !( flags & MSG_RELIABLE ) && ( client->state != cs_spawned ||
-            client->download || client->nodata ) )
+            client->download || ( client->flags & CF_NODATA ) ) )
         {
 			continue; 
 		}
@@ -766,7 +766,7 @@ void SV_SendClientMessages( void ) {
 
 	// send a message to each connected client
     FOR_EACH_CLIENT( client ) {
-		if( client->state != cs_spawned || client->download || client->nodata )
+		if( client->state != cs_spawned || client->download || ( client->flags & CF_NODATA ) )
             goto finish;
 
 		// if the reliable message overflowed,

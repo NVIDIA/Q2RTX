@@ -255,6 +255,7 @@ char *Cmd_AliasCommand( const char *name ) {
 void Cmd_AliasSet( const char *name, const char *cmd ) {
 	cmdalias_t	*a;
 	unsigned	hash;
+    int         len;
 
 	// if the alias already exists, reuse it
 	a = Cmd_AliasFind( name );
@@ -264,8 +265,9 @@ void Cmd_AliasSet( const char *name, const char *cmd ) {
 		return;
 	}
 
-	a = Cmd_Malloc( sizeof( cmdalias_t ) + strlen( name ) );
-	strcpy( a->name, name );
+    len = strlen( name );
+	a = Cmd_Malloc( sizeof( cmdalias_t ) + len );
+	memcpy( a->name, name, len + 1 );
 	a->value = Cmd_CopyString( cmd );
 
 	List_Append( &cmd_alias, &a->listEntry );
@@ -287,10 +289,10 @@ void Cmd_Alias_f( void ) {
 
 	if( Cmd_Argc() < 2 ) {
 		if( LIST_EMPTY( &cmd_alias ) ) {
-			Com_Printf( "No alias commands registered\n" );
+			Com_Printf( "No alias commands registered.\n" );
 			return;
 		}
-		Com_Printf( "Current alias commands:\n" );
+		Com_Printf( "Registered alias commands:\n" );
         LIST_FOR_EACH( cmdalias_t, a, &cmd_alias, listEntry ) {
 			Com_Printf( "\"%s\" = \"%s\"\n", a->name, a->value );
 		}
@@ -349,7 +351,7 @@ static void Cmd_UnAlias_f( void ) {
                 List_Init( &cmd_aliasHash[hash] );
             }
             List_Init( &cmd_alias );
-            Com_Printf( "Removed all aliases\n" );
+            Com_Printf( "Removed all alias commands.\n" );
             return;
         default:
             return;
@@ -366,7 +368,7 @@ static void Cmd_UnAlias_f( void ) {
 	s = Cmd_Argv( 1 );
 	a = Cmd_AliasFind( s );
 	if( !a ) {
-		Com_Printf( "\"%s\" is undefined\n", s );
+		Com_Printf( "\"%s\" is undefined.\n", s );
 		return;
 	}
 
@@ -386,6 +388,26 @@ void Cmd_WriteAliases( fileHandle_t f ) {
     }
 }
 #endif
+
+const char *Cmd_Alias_g( const char *partial, int argnum, int state ) {
+    switch( argnum ) {
+    case 0:
+        return NULL;
+    case 1:
+        return Cmd_AliasGenerator( partial, state );
+    case 2:
+        return Cmd_MixedGenerator( partial, state );
+    default:
+        return NULL;
+    }
+}
+
+const char *Cmd_UnAlias_g( const char *partial, int argnum, int state ) {
+    if( argnum == 1 ) {
+        return Cmd_AliasGenerator( partial, state );
+    }
+    return NULL;
+}
 
 /*
 =============================================================================
@@ -460,13 +482,13 @@ void Cmd_AddMacro( const char *name, xmacro_t function ) {
 		return;
 	}
 
-	hash = Com_HashString( name, MACRO_HASH_SIZE );
-
 	macro = Cmd_Malloc( sizeof( cmd_macro_t ) );
 	macro->name = name;
 	macro->function = function;
 	macro->next = cmd_macros;
 	cmd_macros = macro;
+
+	hash = Com_HashString( name, MACRO_HASH_SIZE );
 	macro->hashNext = cmd_macroHash[hash];
 	cmd_macroHash[hash] = macro;
 }
@@ -487,10 +509,8 @@ typedef struct cmd_function_s {
     list_t          listEntry;
 
 	xcommand_t		function;
-	xgenerator_t	generator1;
-	xgenerator_t	generator2;
-	xgenerator_t	generator3;
-	char		*name;
+	xcompleter_t	completer;
+	char		    *name;
 } cmd_function_t;
 
 static	list_t		cmd_functions;		/* possible commands to execute */
@@ -794,6 +814,49 @@ void Cmd_PrintHint( void ) {
     Com_Printf( "Try '%s --help' for more information.\n", cmd_argv[0] );
 }
 
+const char *Cmd_Completer( const cmd_option_t *opt, const char *partial,
+    int argnum, int state, xgenerator_t generator )
+{
+    static int length;
+    static const cmd_option_t *o;
+    const char *s;
+
+    if( !state ) {
+        length = strlen( partial );
+        o = opt;
+    }
+
+    if( partial[0] == '-' ) {
+        while( o->sh ) {
+            if( partial[1] == '-' ) {
+                if( !strncmp( o->lo, partial + 2, length - 2 ) ) {
+                    s = va( "--%s", o->lo );
+                    o++;
+                    return s;
+                }
+            } else if( !partial[1] || o->sh[0] == partial[1] ) {
+                s = va( "-%c", o->sh[0] );
+                o++;
+                return s;
+                
+            }
+            o++;
+        }
+    } else {
+     /*   if( argnum > 1 ) {
+            s = cmd_argv[argnum - 1];
+        }*/
+        if( generator ) {
+            return (*generator)( partial, state );
+        }
+        if( !partial[0] ) {
+            return "-";
+        }
+    }
+
+    return NULL;
+}
+
 
 /*
 ======================
@@ -1087,18 +1150,14 @@ static void Cmd_RegCommand( const cmdreg_t *reg ) {
             return;
         }
         cmd->function = reg->function;
-        cmd->generator1 = reg->generator1;
-        cmd->generator2 = reg->generator2;
-        cmd->generator3 = reg->generator3;
+        cmd->completer = reg->completer;
         return;
 	}
 
     cmd = Cmd_Malloc( sizeof( *cmd ) );
     cmd->name = ( char * )reg->name;
     cmd->function = reg->function;
-    cmd->generator1 = reg->generator1;
-    cmd->generator2 = reg->generator2;
-    cmd->generator3 = reg->generator3;
+    cmd->completer = reg->completer;
 
     List_Append( &cmd_functions, &cmd->listEntry );
 
@@ -1116,9 +1175,7 @@ void Cmd_AddCommand( const char *name, xcommand_t function ) {
 
     reg.name = name;
     reg.function = function;
-    reg.generator1 = NULL;
-    reg.generator2 = NULL;
-    reg.generator3 = NULL;
+    reg.completer = NULL;
 	Cmd_RegCommand( &reg );
 }
 
@@ -1162,44 +1219,24 @@ Cmd_Exists
 ============
 */
 qboolean Cmd_Exists( const char *name ) {
-	cmd_function_t *cmd;
+	cmd_function_t *cmd = Cmd_Find( name ); 
 
-    cmd = Cmd_Find( name ); 
-	if( !cmd ) {
-		return qfalse;
-	}
-
-	return qtrue;
+	return cmd ? qtrue : qfalse;
 }
 
 xcommand_t Cmd_FindFunction( const char *name ) {
-	cmd_function_t *cmd;
-
-	cmd = Cmd_Find( name );
-	if( !cmd ) {
-		return NULL;
-	}
-
-	return cmd->function;
-}
-
-xgenerator_t Cmd_FindGenerator( const char *name, int index ) {
 	cmd_function_t *cmd = Cmd_Find( name );
 
-	if( !cmd ) {
-		return NULL;
-	}
-
-    switch( index ) {
-        case 1: return cmd->generator1;
-        case 2: return cmd->generator2;
-        case 3: return cmd->generator3;
-    }
-
-	return NULL;
+	return cmd ? cmd->function : NULL;
 }
 
-const char *Cmd_Command_g( const char *partial, int state ) {
+xcompleter_t Cmd_FindCompleter( const char *name ) {
+	cmd_function_t *cmd = Cmd_Find( name );
+
+    return cmd ? cmd->completer : NULL;
+}
+
+const char *Cmd_CommandGenerator( const char *partial, int state ) {
     static int length;
     static cmd_function_t *cmd;
     const char *name;
@@ -1220,7 +1257,7 @@ const char *Cmd_Command_g( const char *partial, int state ) {
     return NULL;
 }
 
-const char *Cmd_Alias_g( const char *partial, int state ) {
+const char *Cmd_AliasGenerator( const char *partial, int state ) {
     static int length;
     static cmdalias_t *alias;
     const char *name;
@@ -1241,7 +1278,7 @@ const char *Cmd_Alias_g( const char *partial, int state ) {
     return NULL;
 }
 
-const char *Cmd_Mixed_g( const char *partial, int state ) {
+const char *Cmd_MixedGenerator( const char *partial, int state ) {
     static xgenerator_t g;
     const char *match;
 
@@ -1251,7 +1288,7 @@ const char *Cmd_Mixed_g( const char *partial, int state ) {
     }
 
     if( !state ) {
-        g = Cmd_Command_g;
+        g = Cmd_CommandGenerator;
     }   
 
     match = g( partial, state );
@@ -1259,9 +1296,9 @@ const char *Cmd_Mixed_g( const char *partial, int state ) {
         return match;
     }
 
-    if( g == Cmd_Command_g ) {
+    if( g == Cmd_CommandGenerator ) {
         g( partial, 2 );
-        g = Cmd_Alias_g;
+        g = Cmd_AliasGenerator;
 
         match = g( partial, 0 );
         if( match ) {
@@ -1368,8 +1405,11 @@ static void Cmd_Exec_f( void ) {
 	FS_FreeFile( f );
 }
 
-const char *Cmd_Exec_g( const char *partial, int state ) {
-	return Com_FileNameGeneratorByFilter( "", "*.cfg", partial, qtrue, state );
+const char *Cmd_Exec_g( const char *partial, int argnum, int state ) {
+    if( argnum == 1 ) {
+	    return Com_FileNameGeneratorByFilter( "", "*.cfg", partial, qtrue, state );
+    }
+    return NULL;
 }
 
 /*
@@ -1496,9 +1536,7 @@ static void Cmd_Complete_f( void ) {
     cmd->name = ( char * )( cmd + 1 );
     memcpy( cmd->name, name, len );
     cmd->function = NULL;
-    cmd->generator1 = NULL;
-    cmd->generator2 = NULL;
-    cmd->generator3 = NULL;
+    cmd->completer = NULL;
 
     List_Append( &cmd_functions, &cmd->listEntry );
 
@@ -1522,7 +1560,6 @@ void Cmd_FillAPI( cmdAPI_t *api ) {
 	api->ExecuteText = Cbuf_ExecuteText;
 	api->FindFunction = Cmd_FindFunction;
 	api->FindMacroFunction = Cmd_FindMacroFunction;
-	api->FindGenerator = Cmd_FindGenerator;
 }
 
 static const cmdreg_t c_cmd[] = {
@@ -1531,8 +1568,8 @@ static const cmdreg_t c_cmd[] = {
     { "exec", Cmd_Exec_f, Cmd_Exec_g },
     { "echo", Cmd_Echo_f },
     { "_echo", Cmd_ColoredEcho_f },
-    { "alias", Cmd_Alias_f, Cmd_Alias_g, Cmd_Mixed_g },
-    { "unalias", Cmd_UnAlias_f, Cmd_Alias_g },
+    { "alias", Cmd_Alias_f, Cmd_Alias_g },
+    { "unalias", Cmd_UnAlias_f, Cmd_UnAlias_g },
     { "wait", Cmd_Wait_f },
     { "text", Cmd_Text_f },
     { "complete", Cmd_Complete_f },
