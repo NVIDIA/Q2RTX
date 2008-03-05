@@ -591,9 +591,10 @@ CVARS (console variables)
 #define	CVAR_LATCH		16	// save changes until server restart
 
 struct cvar_s;
+struct genctx_s;
 
 typedef void (*xchanged_t)( struct cvar_s * );	
-typedef const char *( *xgenerator_t )( const char *, int );
+typedef void (*xgenerator_t)( struct genctx_s * );
 
 // nothing outside the cvar.*() functions should modify these fields!
 typedef struct cvar_s {

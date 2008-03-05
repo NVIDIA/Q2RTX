@@ -415,23 +415,16 @@ static void CL_CheckForResend( void ) {
 	}
 }
 
-static const char *CL_Connect_g( const char *partial, int argnum, int state ) {
-    static int protocol;
-
-    if( !state ) {
-        protocol = 34;
-    }
-
+static void CL_Connect_c( genctx_t *ctx, int argnum ) {
     if( argnum == 1 ) {
-        return Com_AddressGenerator( partial, state );
+        Com_Address_g( ctx );
     } else if( argnum == 2 ) {
-        if( !partial[0] || ( partial[0] == '3' && !partial[1] ) ) {
-            while( protocol <= 36 ) {
-                return va( "%d", protocol++ );
-            }
+        if( !ctx->partial[0] || ( ctx->partial[0] == '3' && !ctx->partial[1] ) ) {
+            Prompt_AddMatch( ctx, "34" );
+            Prompt_AddMatch( ctx, "35" );
+            Prompt_AddMatch( ctx, "36" );
         }
     }
-    return NULL;
 }
 
 /*
@@ -584,10 +577,9 @@ static void CL_Rcon_f( void ) {
     CL_SendRcon( &address, rcon_password->string, Cmd_RawArgs() );
 }
 
-const char *CL_Rcon_g( const char *partial, int argnum, int state ) {
-    return Prompt_Completer( partial, 1, argnum, state );
+static void CL_Rcon_c( genctx_t *ctx, int argnum ) {
+    Com_Generic_c( ctx, argnum - 1 );
 }
-
 
 /*
 =====================
@@ -703,12 +695,10 @@ static void CL_Disconnect_f( void ) {
 	}
 }
 
-
-const char *CL_Server_g( const char *partial, int argnum, int state ) {
+static void CL_ServerStatus_c( genctx_t *ctx, int argnum ) {
     if( argnum == 1 ) {
-        return Com_AddressGenerator( partial, state );
+        Com_Address_g( ctx );
     }
-    return NULL;
 }
 
 /*
@@ -1183,25 +1173,20 @@ static void CL_Skins_f ( void ) {
     }
 }
 
-const char *CL_NickGenerator( const char *partial, int state ) {
-    static int length;
-    static int i;
+void CL_Name_g( genctx_t *ctx ) {
+    int i;
     clientinfo_t *ci;
 
-    if( !state ) {
-        if( cls.state < ca_loading ) {
-            return NULL;
-        }
-        length = strlen( partial );
-        i = 0;
+    if( cls.state < ca_loading ) {
+        return;
     }
-    while( i < MAX_CLIENTS ) {
-        ci = &cl.clientinfo[i++];
-        if( ci->name[0] && !strncmp( ci->name, partial, length ) ) {
-            return ci->name;
+
+    for( i = 0; i < MAX_CLIENTS; i++ ) {
+        ci = &cl.clientinfo[i];
+        if( ci->name[0] && !Prompt_AddMatch( ctx, ci->name ) ) {
+            break;
         }
     }
-    return NULL;
 }
 
 
@@ -2021,12 +2006,8 @@ static const cmd_option_t o_writeconfig[] = {
     { NULL }
 };
 
-static const char *CL_ConfigGenerator( const char *partial, int state ) {
-	return Com_FileNameGeneratorByFilter( "", "*.cfg", partial, qtrue, state );
-}
-
-static const char *CL_WriteConfig_g( const char *partial, int argnum, int state ) {
-    return Cmd_Completer( o_writeconfig, partial, argnum, state, CL_ConfigGenerator );
+static void CL_WriteConfig_c( genctx_t *ctx, int argnum ) {
+    Cmd_Option_c( o_writeconfig, Cmd_Config_g, ctx, argnum );
 }
 
 /*
@@ -2106,8 +2087,8 @@ static void CL_WriteConfig_f( void ) {
 	Com_Printf( "Wrote %s.\n", buffer );
 }
 
-static const char *CL_Say_g( const char *partial, int argnum, int state ) {
-    return CL_NickGenerator( partial, state );
+static void CL_Say_c( genctx_t *ctx, int argnum ) {
+    CL_Name_g( ctx );
 }
 
 static int CL_Mapname_m( char *buffer, int size ) {
@@ -2194,9 +2175,7 @@ void CL_RestartFilesystem( void ) {
         return;
     }
 
-    Com_DPrintf( "CL_RestartFilesystem()\n" );
-
-    /* temporary switch to loading state */
+    // temporary switch to loading state
     cls_state = cls.state;
     if ( cls.state >= ca_precached ) {
         cls.state = ca_loading;
@@ -2225,7 +2204,7 @@ void CL_RestartFilesystem( void ) {
         CL_PrepRefresh();
     }
 
-    /* switch back to original state */
+    // switch back to original state
     cls.state = cls_state;
 
 }
@@ -2238,9 +2217,7 @@ CL_RestartRefresh
 static void CL_RestartRefresh_f( void ) {
     int	cls_state;
 
-    Com_DPrintf( "CL_RestartRefresh()\n" );
-
-    /* temporary switch to loading state */
+    // temporary switch to loading state
     cls_state = cls.state;
     if ( cls.state >= ca_precached ) {
         cls.state = ca_loading;
@@ -2267,7 +2244,7 @@ static void CL_RestartRefresh_f( void ) {
         CL_PrepRefresh();
     }
 
-    /* switch back to original state */
+    // switch back to original state
     cls.state = cls_state;
 
 }
@@ -2340,17 +2317,18 @@ static const cmdreg_t c_client[] = {
     { "snd_restart", CL_Snd_Restart_f },
     { "changing", CL_Changing_f },
     { "disconnect", CL_Disconnect_f },
-    { "connect", CL_Connect_f, CL_Connect_g },
+    { "connect", CL_Connect_f, CL_Connect_c },
     { "passive", CL_PassiveConnect_f },
     { "reconnect", CL_Reconnect_f },
-    { "rcon", CL_Rcon_f, CL_Rcon_g },
+    { "rcon", CL_Rcon_f, CL_Rcon_c },
     { "precache", CL_Precache_f },
     { "download", CL_Download_f },
-    { "serverstatus", CL_ServerStatus_f, CL_Server_g },
+    { "serverstatus", CL_ServerStatus_f, CL_ServerStatus_c },
     { "dumpclients", CL_DumpClients_f },
 	{ "dumpstatusbar", CL_DumpStatusbar_f },
 	{ "dumplayout", CL_DumpLayout_f },
-    { "writeconfig", CL_WriteConfig_f, CL_WriteConfig_g },
+    { "writeconfig", CL_WriteConfig_f, CL_WriteConfig_c },
+//    { "msgtab", CL_Msgtab_f, CL_Msgtab_g },
     { "vid_restart", CL_RestartRefresh_f },
 
     //
@@ -2359,8 +2337,8 @@ static const cmdreg_t c_client[] = {
     // the only thing this does is allow command completion
     // to work -- all unknown commands are automatically
     // forwarded to the server
-    { "say", NULL, CL_Say_g },
-    { "say_team", NULL, CL_Say_g },
+    { "say", NULL, CL_Say_c },
+    { "say_team", NULL, CL_Say_c },
 
     { "wave" }, { "inven" }, { "kill" }, { "use" },
     { "drop" }, { "info" }, { "prog" },
@@ -2395,7 +2373,7 @@ static void CL_InitLocal ( void ) {
 
     for ( i = 0 ; i < MAX_LOCAL_SERVERS ; i++ ) {
         var = Cvar_Get( va( "adr%i", i ), "", CVAR_ARCHIVE );
-        var->generator = Com_AddressGenerator;
+        var->generator = Com_Address_g;
     }
 
     //
@@ -2425,7 +2403,7 @@ static void CL_InitLocal ( void ) {
 
     rcon_password = Cvar_Get ( "rcon_password", "", CVAR_PRIVATE );
     rcon_address = Cvar_Get ( "rcon_address", "", CVAR_PRIVATE );
-    rcon_address->generator = Com_AddressGenerator;
+    rcon_address->generator = Com_Address_g;
 
     cl_thirdperson = Cvar_Get( "cl_thirdperson", "0", CVAR_CHEAT );
     cl_thirdperson_angle = Cvar_Get( "cl_thirdperson_angle", "0", 0 );

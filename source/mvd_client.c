@@ -961,8 +961,8 @@ static const cmd_option_t o_mvdconnect[] = {
     { NULL }
 };
 
-const char *MVD_Connect_g( const char *partial, int argnum, int state ) {
-    return Cmd_Completer( o_mvdconnect, partial, argnum, state, Com_AddressGenerator );
+void MVD_Connect_c( genctx_t *ctx, int argnum ) {
+    Cmd_Option_c( o_mvdconnect, Com_Address_g, ctx, argnum );
 }
 
 /*
@@ -1239,13 +1239,12 @@ static const cmd_option_t o_mvdplay[] = {
     { NULL }
 };
 
-static const char *MVD_FileGenerator( const char *partial, int state ) {
-    return Com_FileNameGeneratorByFilter( "demos", "*.mvd2;*.mvd2.gz",
-        partial, qfalse, state );
+void MVD_File_g( genctx_t *ctx ) {
+    FS_File_g( "demos", "*.mvd2;*.mvd2.gz", FS_SEARCH_SAVEPATH | FS_SEARCH_BYFILTER | 0x80000000, ctx );
 }
 
-const char *MVD_Play_g( const char *partial, int argnum, int state ) {
-    return Cmd_Completer( o_mvdplay, partial, argnum, state, MVD_FileGenerator );
+static void MVD_Play_c( genctx_t *ctx, int argnum ) {
+    Cmd_Option_c( o_mvdplay, MVD_File_g, ctx, argnum );
 }
 
 void MVD_Play_f( void ) {
@@ -1368,8 +1367,8 @@ void MVD_Shutdown( void ) {
 }
 
 static const cmdreg_t c_mvd[] = {
-	{ "mvdplay", MVD_Play_f, MVD_Play_g },
-	{ "mvdconnect", MVD_Connect_f, MVD_Connect_g },
+	{ "mvdplay", MVD_Play_f, MVD_Play_c },
+	{ "mvdconnect", MVD_Connect_f, MVD_Connect_c },
 	{ "mvdisconnect", MVD_Disconnect_f },
 	{ "mvdkill", MVD_Kill_f },
 	{ "mvdspawn", MVD_Spawn_f },

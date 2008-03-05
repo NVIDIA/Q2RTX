@@ -75,34 +75,29 @@ static void SV_SetMaster_f( void ) {
 	svs.last_heartbeat = 0;
 }
 
-static const char *SV_SetPlayer_g( const char *partial, int argnum, int state ) {
-    static int length;
-    static int index;
-    client_t *client;
+static void SV_Player_g( genctx_t *ctx ) {
+    int i;
+    client_t *c;
 
 	if( !svs.initialized ) {
-		return NULL;
+		return;
 	}
-    if( argnum != 1 ) {
-        return NULL;
-    }
     
-    if( !state ) {
-        length = strlen( partial );
-        index = 0;
-    }
-
-	while( index < sv_maxclients->integer ) {
-		client = &svs.udp_client_pool[index++];
-		if( !client->state || client->protocol == -1 ) {
+	for( i = 0; i < sv_maxclients->integer; i++ ) {
+		c = &svs.udp_client_pool[i];
+		if( !c->state || c->protocol == -1 ) {
 			continue;
 		}
-		if( !strncmp( partial, client->name, length ) ) {
-			return client->name;
+		if( !Prompt_AddMatch( ctx, c->name ) ) {
+			break;
 		}
 	}
+}
 
-    return NULL;
+static void SV_SetPlayer_c( genctx_t *ctx, int argnum ) {
+    if( argnum == 1 ) {
+        SV_Player_g( ctx );
+    }
 }
 
 
@@ -219,11 +214,10 @@ static void SV_Map_f( void ) {
 	SV_Map( Cmd_Argv( 1 ), qtrue );
 }
 
-static const char *SV_Map_g( const char *partial, int argnum, int state ) {
+static void SV_Map_c( genctx_t *ctx, int argnum ) {
     if( argnum == 1 ) {
-    	return Com_FileNameGenerator( "maps", ".bsp", partial, qtrue, state );
+    	FS_File_g( "maps", ".bsp", 0x80000000, ctx );
     }
-    return NULL;
 }
 
 //===============================================================
@@ -800,15 +794,15 @@ static int SV_ClientNum_m( char *buffer, int size ) {
 
 static const cmdreg_t c_server[] = {
 	{ "heartbeat", SV_Heartbeat_f },
-	{ "kick", SV_Kick_f, SV_SetPlayer_g },
+	{ "kick", SV_Kick_f, SV_SetPlayer_c },
 	{ "status", SV_Status_f },
 	{ "serverinfo", SV_Serverinfo_f },
-	{ "dumpuser", SV_DumpUser_f, SV_SetPlayer_g },
-	{ "stuff", SV_Stuff_f, SV_SetPlayer_g },
+	{ "dumpuser", SV_DumpUser_f, SV_SetPlayer_c },
+	{ "stuff", SV_Stuff_f, SV_SetPlayer_c },
 	{ "stuffall", SV_Stuffall_f },
-	{ "map", SV_Map_f, SV_Map_g },
+	{ "map", SV_Map_f, SV_Map_c },
 	{ "demomap", SV_DemoMap_f },
-	{ "gamemap", SV_GameMap_f, SV_Map_g },
+	{ "gamemap", SV_GameMap_f, SV_Map_c },
 	{ "setmaster", SV_SetMaster_f },
 	{ "killserver", SV_KillServer_f },
 	{ "sv", SV_ServerCommand_f },

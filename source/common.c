@@ -1058,106 +1058,45 @@ void Com_Crash_f( void ) {
 
 #endif
 
-const char *Com_FileNameGenerator( const char *path, const char *ext,
-        const char *partial, qboolean stripExtension, int state ) {
-    static int length, numFiles;
-    static void **list;
-    static int curpos;
-    char *s, *p;
-
-	if( state == 2 ) {
-		goto finish;
-	}
-    
-    if( !state ) {
-        length = strlen( partial );
-        list = FS_ListFiles( path, ext, 0, &numFiles );
-        curpos = 0;
-    }
-
-    while( curpos < numFiles ) {
-        s = list[curpos++];
-		if( stripExtension ) {
-			p = COM_FileExtension( s );
-			*p = 0;
-		}
-        if( !strncmp( s, partial, length ) ) {
-            return s;
-        }
-    }
-
-finish:
-    if( list ) {
-        FS_FreeList( list );
-        list = NULL;
-    }
-    return NULL;
-}
-
-const char *Com_FileNameGeneratorByFilter( const char *path, const char *filter,
-        const char *partial, qboolean stripExtension, int state ) {
-    static int length, numFiles;
-    static void **list;
-    static int curpos;
-    char *s, *p;
-
-	if( state == 2 ) {
-		goto finish;
-	}
-    
-    if( !state ) {
-        length = strlen( partial );
-        list = FS_ListFiles( path, filter, FS_SEARCH_SAVEPATH |
-            FS_SEARCH_BYFILTER, &numFiles );
-        curpos = 0;
-    }
-
-    while( curpos < numFiles ) {
-        s = list[curpos++];
-		if( stripExtension ) {
-			p = COM_FileExtension( s );
-			*p = 0;
-		}
-        if( !strncmp( s, partial, length ) ) {
-            return s;
-        }
-    }
-
-finish:
-    if( list ) {
-        FS_FreeList( list );
-        list = NULL;
-    }
-    return NULL;
-}
-
-const char *Com_AddressGenerator( const char *partial, int state ) {
-    static int length;
-    static int index;
+void Com_Address_g( genctx_t *ctx ) {
+    int i;
     cvar_t *var;
-	char buffer[MAX_QPATH];
     
-    if( !state ) {
-        length = strlen( partial );
-        index = 0;
-    }
-
-	while( index < 1024 ) {
-		Com_sprintf( buffer, sizeof( buffer ), "adr%i", index );
-		index++;
-		var = Cvar_FindVar( buffer );
+	for( i = 0; i < 1024; i++ ) {
+		var = Cvar_FindVar( va( "adr%d", i ) );
         if( !var ) {
             break;
         }
 		if( !var->string[0] ) {
 			continue;
 		}
-		if( !strncmp( partial, var->string, length ) ) {
-			return var->string;
-		}
+        if( !Prompt_AddMatch( ctx, var->string ) ) {
+            break;
+        }
 	}
+}
 
-    return NULL;
+void Com_Generic_c( genctx_t *ctx, int argnum ) {
+    xcompleter_t c;
+    xgenerator_t g;
+    char *s;
+
+    // complete command, alias or cvar name
+    if( !argnum ) {
+	    Cmd_Command_g( ctx );
+	    Cvar_Variable_g( ctx );
+	    Cmd_Alias_g( ctx );
+        return;
+    }
+
+    s = Cmd_Argv( ctx->argnum - argnum );
+
+    // complete command argument or cvar value
+    if( ( c = Cmd_FindCompleter( s ) ) != NULL ) {
+        c( ctx, argnum );
+    } else if( argnum == 1 && ( g = Cvar_FindGenerator( s ) ) != NULL ) {
+        g( ctx );
+    }
 }
 
 /*

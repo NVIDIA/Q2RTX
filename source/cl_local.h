@@ -506,6 +506,11 @@ void CL_FillAPI( clientAPI_t *api );
 void CL_SendRcon( const netadr_t *adr, const char *pass, const char *cmd );
 const char *CL_Server_g( const char *partial, int argnum, int state );
 
+// the sound code makes callbacks to the client for entitiy position
+// information, so entities can be dynamically re-spatialized
+void CL_GetEntitySoundOrigin( int ent, vec3_t org );
+
+
 //
 // cl_input
 //

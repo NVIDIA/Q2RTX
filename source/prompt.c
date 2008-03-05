@@ -26,78 +26,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "q_field.h"
 #include "prompt.h"
 
-static char		*matches[MAX_MATCHES];
-static char		*sortedMatches[MAX_MATCHES];
-static int		numMatches;
-static int		numCommands;
-static int		numCvars;
-static int		numAliases;
-
 static cvar_t	*com_completion_mode;
 static cvar_t	*com_completion_treshold;
-
-/*
-====================
-Prompt_FreeMatches
-====================
-*/
-static void Prompt_FreeMatches( void ) {
-	int i;
-
-	// free them
-	for( i = 0; i < numMatches; i++ ) {
-		Z_Free( matches[i] );
-	}
-
-	numMatches = 0;
-	numCommands = 0;
-	numCvars = 0;
-	numAliases = 0;
-
-}
-
-static void Prompt_RunCompleter( xcompleter_t completer, const char *partial, int argnum ) {
-	const char *match;
-
-    match = (*completer)( partial, argnum, 0 );
-    while( match ) {
-        matches[numMatches++] = Z_CopyString( match );
-		if( numMatches == MAX_MATCHES ) {
-			(*completer)( partial, argnum, 2 );
-			return;
-		}
-        match = (*completer)( partial, argnum, 1 );
-    }
-}
-
-static void Prompt_RunGenerator( xgenerator_t generator, const char *partial ) {
-	const char *match;
-
-    match = (*generator)( partial, 0 );
-    while( match ) {
-        matches[numMatches++] = Z_CopyString( match );
-		if( numMatches == MAX_MATCHES ) {
-			(*generator)( partial, 2 );
-			return;
-		}
-        match = (*generator)( partial, 1 );
-    }
-}
-
-static void Prompt_GenerateMatches( const char *partial ) {
-	Prompt_RunGenerator( Cmd_CommandGenerator, partial );
-    numCommands = numMatches;
-    
-	if( numMatches != MAX_MATCHES ) {
-		Prompt_RunGenerator( Cvar_Generator, partial );
-		numCvars = numMatches - numCommands;
-
-		if( numMatches != MAX_MATCHES ) {
-			Prompt_RunGenerator( Cmd_AliasGenerator, partial );
-			numAliases = numMatches - numCvars - numCommands;
-		}
-	}
-}
 
 static void Prompt_ShowMatches( commandPrompt_t *prompt, char **matches,
                                 int start, int end )
@@ -152,75 +82,54 @@ static void Prompt_ShowMatches( commandPrompt_t *prompt, char **matches,
     
 }
 
-static void Prompt_ShowIndividualMatches( commandPrompt_t *prompt ) {
+static void Prompt_ShowIndividualMatches(
+    commandPrompt_t *prompt,
+    char            **matches,
+    int             numCommands,
+    int             numAliases,
+    int             numCvars )
+{
 	int offset = 0;
 
 	if( numCommands ) {
-		qsort( matches + offset, numCommands,
-				sizeof( matches[0] ), SortStrcmp );
+		qsort( matches + offset, numCommands, sizeof( matches[0] ), SortStrcmp );
 
 		prompt->printf( "\n" S_COLOR_YELLOW "%i possible command%s:\n",
-			numCommands, ( numCommands % 10 ) != 1 ? "s" : "" );
+			numCommands, numCommands != 1 ? "s" : "" );
 
         Prompt_ShowMatches( prompt, matches, offset, offset + numCommands );
 		offset += numCommands;
 	}
 
 	if( numCvars ) {
-		qsort( matches + offset, numCvars,
-				sizeof( matches[0] ), SortStrcmp );
+		qsort( matches + offset, numCvars, sizeof( matches[0] ), SortStrcmp );
 
 		prompt->printf( "\n" S_COLOR_YELLOW "%i possible variable%s:\n",
-				numCvars, ( numCvars % 10 ) != 1 ? "s" : "" );
+			numCvars, numCvars != 1 ? "s" : "" );
 
         Prompt_ShowMatches( prompt, matches, offset, offset + numCvars );
 		offset += numCvars;
 	}
 
 	if( numAliases ) {
-		qsort( matches + offset, numAliases,
-				sizeof( matches[0] ), SortStrcmp );
+		qsort( matches + offset, numAliases, sizeof( matches[0] ), SortStrcmp );
 
 		prompt->printf( "\n" S_COLOR_YELLOW "%i possible alias%s:\n",
-				numAliases, ( numAliases % 10 ) != 1 ? "es" : "" );
+			numAliases, numAliases != 1 ? "es" : "" );
 
         Prompt_ShowMatches( prompt, matches, offset, offset + numAliases );
 		offset += numAliases;
 	}
 }
 
-const char *Prompt_Completer( const char *partial, int firstarg, int argnum, int state ) {
-    static xcompleter_t completer;
-    static xgenerator_t generator;
-    int relative = argnum - firstarg;
-
-    if( relative < 0 ) {
-        return NULL;
+qboolean Prompt_AddMatch( genctx_t *ctx, const char *s ) {
+    if( ctx->count >= ctx->size ) {
+        return qfalse;
     }
-    
-    if( !state ) {
-        if( relative > 0 ) {
-            char *s = Cmd_Argv( firstarg );
-
-            generator = NULL;
-            completer = Cmd_FindCompleter( s );
-            if( !completer && relative == 1 ) {
-                cvar_t *v = Cvar_FindVar( s );
-                generator = v->generator;
-            }
-        } else {
-            completer = NULL;
-            generator = Cmd_MixedGenerator;
-        }
+	if( !strncmp( ctx->partial, s, ctx->length ) ) {
+        ctx->matches[ctx->count++] = Z_CopyString( s );
     }
-
-    if( completer ) {
-        return (*completer)( partial, relative, state );
-    } else if( generator ) {
-        return (*generator)( partial, state );
-    } else {
-        return NULL;
-    }
+    return qtrue;
 }
 
 /*
@@ -231,18 +140,25 @@ Prompt_CompleteCommand
 void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 	inputField_t *inputLine = &prompt->inputLine;
 	char *text, *partial, *s;
-	int i, argc, pos, currentArg, size, length, relative;
+	int i, argc, pos, currentArg, size, length, argnum;
 	char *first, *last;
+    genctx_t ctx;
+    char *matches[MAX_MATCHES], *sortedMatches[MAX_MATCHES];
+    int numCommands = 0, numCvars = 0, numAliases = 0;
 
 	text = inputLine->text;
 	size = sizeof( inputLine->text );
 	pos = inputLine->cursorPos;
+
+    // prepend backslash if missing
 	if( backslash ) {
 		if( inputLine->text[0] != '\\' && inputLine->text[0] != '/' ) {
 			memmove( inputLine->text + 1, inputLine->text, size - 1 );
 			inputLine->text[0] = '\\';
 		}
-		text++; size--; pos--;
+		text++;
+        size--;
+        pos--;
 	}
 	
 	Cmd_TokenizeString( text, qfalse );
@@ -256,14 +172,14 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 			currentArg++;
 		}
 	}
-    relative = 0;
+    argnum = 0;
     s = Cmd_Argv( 0 );
     for( i = 0; i < currentArg; i++ ) {
         partial = Cmd_Argv( i );
-        relative++;
+        argnum++;
         if( *partial == ';' ) {
 	        s = Cmd_Argv( i + 1 );
-            relative = 0;
+            argnum = 0;
         }
     }
 
@@ -271,24 +187,31 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
     if( *partial == ';' ) {
         currentArg++;
         partial = Cmd_Argv( currentArg );
-        relative = 0;
+        argnum = 0;
     }
 
-    if( relative ) {
-        xcompleter_t completer = Cmd_FindCompleter( s );
-        if( completer ) {
-            Prompt_RunCompleter( completer, partial, relative );
-        } else if( relative == 1 ) {
-            cvar_t *v = Cvar_FindVar( s );
-            if( v && v->generator ) {
-                Prompt_RunGenerator( v->generator, partial );
-            }
-        }
+    // generate matches
+    memset( &ctx, 0, sizeof( ctx ) );
+    ctx.partial = partial;
+    ctx.length = strlen( partial );
+    ctx.argnum = currentArg;
+    ctx.matches = matches;
+    ctx.size = MAX_MATCHES;
+
+    if( argnum ) {
+        Com_Generic_c( &ctx, argnum );
     } else {
-        Prompt_GenerateMatches( partial );
+        Cmd_Command_g( &ctx );
+        numCommands = ctx.count;
+
+        Cvar_Variable_g( &ctx );
+        numCvars = ctx.count - numCommands;
+
+        Cmd_Alias_g( &ctx );
+        numAliases = ctx.count - numCvars - numCommands;
     }
 
-	if( !numMatches ) {
+	if( !ctx.count ) {
 		inputLine->cursorPos = strlen( inputLine->text );
         prompt->tooMany = qfalse;
 		return; // nothing found
@@ -298,7 +221,7 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 	text += pos;
 	size -= pos;
 
-	if( numMatches == 1 ) {
+	if( ctx.count == 1 ) {
 		// we have finished completion!
         s = Cmd_RawArgsFrom( currentArg + 1 ); 
         if( COM_HasSpaces( matches[0] ) ) {
@@ -308,30 +231,28 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
         }
 		inputLine->cursorPos = pos + 1;
         prompt->tooMany = qfalse;
-		Prompt_FreeMatches();
-		return;
+        goto finish;
 	}
 
-    if( numMatches > com_completion_treshold->integer && !prompt->tooMany ) {
+    if( ctx.count > com_completion_treshold->integer && !prompt->tooMany ) {
         prompt->printf( "Press TAB again to display all %d possibilities.\n",
-            numMatches );
+            ctx.count );
 		inputLine->cursorPos = strlen( inputLine->text );
         prompt->tooMany = qtrue;
-		Prompt_FreeMatches();
-        return;
+        goto finish;
     }
 
     prompt->tooMany = qfalse;
 
 	// sort matches alphabethically
-	for( i = 0; i < numMatches; i++ ) {
+	for( i = 0; i < ctx.count; i++ ) {
 		sortedMatches[i] = matches[i];
 	}
-	qsort( sortedMatches, numMatches, sizeof( sortedMatches[0] ), SortStrcmp );
+	qsort( sortedMatches, ctx.count, sizeof( sortedMatches[0] ), SortStrcmp );
 
 	// copy matching part
 	first = sortedMatches[0];
-	last = sortedMatches[ numMatches - 1 ];
+	last = sortedMatches[ ctx.count - 1 ];
 	length = 0;
 	do {
         if( *first != *last ) {
@@ -358,30 +279,34 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 	inputLine->cursorPos = pos + 1;
 
 	prompt->printf( "]\\%s\n", Cmd_ArgsFrom( 0 ) );
-	if( relative ) {
+	if( argnum ) {
 		goto multi;
 	}
     
 	switch( com_completion_mode->integer ) {
 	case 0:
 		// print in solid list
-		for( i = 0 ; i < numMatches; i++ ) {
+		for( i = 0 ; i < ctx.count; i++ ) {
 			prompt->printf( "%s\n", sortedMatches[i] ); 
 		}
 		break;
 	case 1:
     multi:
 		// print in multiple columns
-        Prompt_ShowMatches( prompt, sortedMatches, 0, numMatches );
+        Prompt_ShowMatches( prompt, sortedMatches, 0, ctx.count );
 		break;
 	case 2:
 	default:
 		// resort matches by type and print in multiple columns
-		Prompt_ShowIndividualMatches( prompt );
+		Prompt_ShowIndividualMatches( prompt, matches, numCommands, numAliases, numCvars );
 		break;
 	}
-	
-	Prompt_FreeMatches();
+
+finish:
+	// free matches
+	for( i = 0; i < ctx.count; i++ ) {
+		Z_Free( matches[i] );
+	}
 }
 
 /*

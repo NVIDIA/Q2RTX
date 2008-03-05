@@ -468,19 +468,26 @@ typedef struct {
     //int     type;
     //union {
         cvar_t *cvar;
-        xmacro_t macro;
+        cmd_macro_t *macro;
     //    int stat;
     //};
 } drawobj_t;
 
 static list_t scr_objects;
 
+static void SCR_Draw_c( genctx_t *ctx, int argnum ) {
+    if( argnum == 1 ) {
+        Cvar_Variable_g( ctx );
+        Cmd_Macro_g( ctx );
+    }
+}
+
 // draw cl_fps -1 80
 static void SCR_Draw_f( void ) {
     int x, y;
     char *s;
     drawobj_t *obj;
-    xmacro_t macro;
+    cmd_macro_t *macro;
    // int stat;
 
     if( Cmd_Argc() != 4 ) {
@@ -508,7 +515,7 @@ static void SCR_Draw_f( void ) {
     } else
 #endif
     {
-        macro = Cmd_FindMacroFunction( s );
+        macro = Cmd_FindMacro( s );
         if( macro ) {
             obj->cvar = NULL;
             obj->macro = macro;
@@ -521,10 +528,28 @@ static void SCR_Draw_f( void ) {
     List_Append( &scr_objects, &obj->entry );
 }
 
+static void SCR_Draw_g( genctx_t *ctx ) {
+    drawobj_t *obj;
+    const char *s;
+    
+    LIST_FOR_EACH( drawobj_t, obj, &scr_objects, entry ) {
+        s = obj->macro ? obj->macro->name : obj->cvar->name;
+        if( !Prompt_AddMatch( ctx, s ) ) {
+            break;
+        }
+    }
+}
+
+static void SCR_UnDraw_c( genctx_t *ctx, int argnum ) {
+    if( argnum == 1 ) {
+        SCR_Draw_g( ctx );
+    }
+}
+
 static void SCR_UnDraw_f( void ) {
     char *s;
     drawobj_t *obj, *next;
-    xmacro_t macro;
+    cmd_macro_t *macro;
     cvar_t *cvar;
 
     if( Cmd_Argc() != 2 ) {
@@ -543,7 +568,7 @@ static void SCR_UnDraw_f( void ) {
     }
 
     cvar = NULL;
-	macro = Cmd_FindMacroFunction( s );
+	macro = Cmd_FindMacro( s );
     if( !macro ) {
         cvar = Cvar_Get( s, "", CVAR_USER_CREATED );
     }
@@ -573,7 +598,7 @@ static void draw_objects( void ) {
             y += scr_hudHeight - 8 + 1;
         }
         if( obj->macro ) {
-            obj->macro( buffer, sizeof( buffer ) );
+            obj->macro->function( buffer, sizeof( buffer ) );
             SCR_DrawString( x, y, flags, buffer );
         } else {
             SCR_DrawString( x, y, flags, obj->cvar->string );
@@ -822,8 +847,8 @@ cmdreg_t scr_drawcmds[] = {
 #if USE_CHATHUD
     { "clearchat", SCR_ClearChatHUD_f },
 #endif
-    { "draw", SCR_Draw_f, Cvar_Set_g },
-    { "undraw", SCR_UnDraw_f/*, SCR_DrawStringGenerator*/ },
+    { "draw", SCR_Draw_f, SCR_Draw_c },
+    { "undraw", SCR_UnDraw_f, SCR_UnDraw_c },
     { "scoreshot", SCR_ScoreShot_f },
     { NULL }
 };

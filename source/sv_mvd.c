@@ -887,6 +887,12 @@ void SV_MvdRecStop( void ) {
     sv.mvd.file = 0;
 }
 
+static void MVD_Record_c( genctx_t *ctx, int argnum ) {
+    if( argnum == 1 ) {
+        MVD_File_g( ctx );
+    }
+}
+
 /*
 ==============
 MVD_Record_f
@@ -990,7 +996,7 @@ static void MVD_Stuff_f( void ) {
 }
 
 static const cmdreg_t c_svmvd[] = {
-	{ "mvdrecord", MVD_Record_f, MVD_Play_g },
+	{ "mvdrecord", MVD_Record_f, MVD_Record_c },
 	{ "mvdstop", MVD_Stop_f },
 	{ "mvdstuff", MVD_Stuff_f },
 

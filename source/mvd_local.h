@@ -187,7 +187,7 @@ void MVD_Shutdown( void );
 
 mvd_t *MVD_SetChannel( int arg );
 
-const char *MVD_Play_g( const char *partial, int argnum, int state );
+void MVD_File_g( genctx_t *ctx );
 
 void MVD_Connect_f( void );
 void MVD_Spawn_f( void ); 

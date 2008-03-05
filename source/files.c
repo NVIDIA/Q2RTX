@@ -1971,6 +1971,33 @@ void FS_FreeList( void **list ) {
 	Z_Free( list );
 }
 
+void FS_File_g( const char *path, const char *ext, int flags, genctx_t *ctx ) {
+    int i, numFiles;
+    void **list;
+    char *s, *p;
+
+    list = FS_ListFiles( path, ext, flags, &numFiles );
+    if( !list ) {
+        return;
+    }
+
+    for( i = 0; i < numFiles; i++ ) {
+        s = list[i];
+		if( flags & 0x80000000 ) {
+			p = COM_FileExtension( s );
+			*p = 0;
+		}
+        if( ctx->count < ctx->size && !strncmp( s, ctx->partial, ctx->length ) ) {
+            ctx->matches[ctx->count++] = s;
+        } else {
+            Z_Free( s );
+        }
+    }
+
+    Z_Free( list );
+}
+
+
 /*
 =================
 FS_CopyFile_f
@@ -2221,29 +2248,20 @@ static void FS_Stats_f( void ) {
 	}
 }
 
-static const char *FS_Link_g( const char *partial, int argnum, int state ) {
-    static int length;
-    static fsLink_t *link;
-    char *name;
+static void FS_Link_g( genctx_t *ctx ) {
+    fsLink_t *link;
 
-    if( argnum != 1 ) {
-        return NULL;
+    for( link = fs_links; link; link = link->next ) {
+        if( !Prompt_AddMatch( ctx, link->name ) ) {
+            break;
+        }
     }
+}
 
-    if( !state ) {
-        length = strlen( partial );
-        link = fs_links;
+static void FS_Link_c( genctx_t *ctx, int argnum ) {
+    if( argnum == 1 ) {
+        FS_Link_g( ctx );
     }
-
-	while( link ) {
-        name = link->name;
-        link = link->next;
-		if( !Q_stricmpn( partial, name, length ) ) {
-			return name;
-		}
-	}
-
-    return NULL;
 }
 
 static void FS_UnLink_f( void ) {
@@ -2593,8 +2611,8 @@ static const cmdreg_t c_fs[] = {
     { "copyfile", FS_CopyFile_f },
     { "fs_stats", FS_Stats_f },
     { "whereis", FS_WhereIs_f },
-    { "link", FS_Link_f, FS_Link_g },
-    { "unlink", FS_UnLink_f, FS_Link_g },
+    { "link", FS_Link_f, FS_Link_c },
+    { "unlink", FS_UnLink_f, FS_Link_c },
 	{ "fs_restart", FS_Restart_f },
 
     { NULL }

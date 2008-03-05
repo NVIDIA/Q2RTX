@@ -24,10 +24,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //=============================================================================
 
 
-static const char *const validExts[] = {
-    ".pcx", ".wal", ".tga", ".jpg", ".png",
-    ".md2", ".md3", ".sp2", ".wav", ".dm2",
-    ".bsp", ".txt", ".loc", ".ent", NULL
+static const char validExts[][4] = {
+    "pcx", "wal", "tga", "jpg", "png",
+    "md2", "md3", "sp2", "wav", "dm2",
+    "bsp", "txt", "loc", "ent", ""
 };
 
 /*
@@ -63,12 +63,16 @@ qboolean CL_CheckOrDownloadFile( const char *path ) {
 	// a trivial attempt to prevent malicious server from
 	// uploading trojan executables to the win32 client
 	ext = COM_FileExtension( filename );
-    for( i = 0; validExts[i]; i++ ) {
-	    if( !strcmp( ext, validExts[i] ) ) {
+    if( *ext != '.' ) {
+		Com_WPrintf( "Refusing to download file without extension.\n" );
+        return qtrue;
+    }
+    for( i = 0; validExts[i][0]; i++ ) {
+	    if( !strcmp( ext + 1, validExts[i] ) ) {
             break;
         }
 	}
-    if( !validExts[i] ) {
+    if( !validExts[i][0] ) {
 		Com_WPrintf( "Refusing to download file with invalid extension.\n" );
 		return qtrue;
     }
@@ -1297,7 +1301,7 @@ static void CL_ParsePrint( void ) {
 
     // play sound
 	if( cl_chat_sound->string[0] ) {
-		S_StartLocalSound( cl_chat_sound->string );
+		S_StartLocalSound_( cl_chat_sound->string );
 	}
 	
 }

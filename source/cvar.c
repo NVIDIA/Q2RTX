@@ -56,6 +56,12 @@ cvar_t *Cvar_FindVar( const char *var_name ) {
 	return NULL;
 }
 
+xgenerator_t Cvar_FindGenerator( const char *var_name ) {
+	cvar_t *var = Cvar_FindVar( var_name );
+
+    return var ? var->generator : NULL;
+}
+
 /*
 ============
 Cvar_Exists
@@ -123,25 +129,25 @@ void Cvar_VariableStringBuffer( const char *var_name, char *buffer, int size ) {
 	Q_strncpyz( buffer, Cvar_VariableString( var_name ), size );
 }
 
-const char *Cvar_Generator( const char *partial, int state ) {
-    static int length;
-    static cvar_t *cvar;
-    const char *name;
+void Cvar_Variable_g( genctx_t *ctx ) {
+    cvar_t *c;
     
-    if( !state ) {
-        length = strlen( partial );
-        cvar = cvar_vars;
-    }
-
-    while( cvar ) {
-        name = cvar->name;
-        cvar = cvar->next;
-		if( !strncmp( partial, name, length ) ) {
-            return name;
+    for( c = cvar_vars; c; c = c->next ) {
+        if( !Prompt_AddMatch( ctx, c->name ) ) {
+            break;
         }
     }
+}
 
-    return NULL;
+void Cvar_Default_g( genctx_t *ctx ) {
+    cvar_t *c = ctx->data;
+
+    if( c ) {
+        if( strcmp( c->string, c->default_string ) ) {
+            Prompt_AddMatch( ctx, c->string );
+        }
+        Prompt_AddMatch( ctx, c->default_string );
+    }
 }
 
 static void Cvar_ParseString( cvar_t *var ) {
@@ -155,6 +161,7 @@ static void Cvar_ParseString( cvar_t *var ) {
 		var->value = atof( var->string );
 	}
 }
+
 
 /*
 ============
@@ -248,7 +255,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 	Cvar_ParseString( var );
 	var->flags = flags;
     var->changed = NULL;
-    var->generator = NULL;
+    var->generator = Cvar_Default_g;
 	var->modified = qtrue;
 
 	// sort the variable in
@@ -632,11 +639,18 @@ void Cvar_Command( cvar_t *v ) {
     }
 }
 
-const char *Cvar_Set_g( const char *partial, int argnum, int state ) {
+static void Cvar_Set_c( genctx_t *ctx, int argnum ) {
+    char *s;
+    xgenerator_t g;
+
     if( argnum == 1 ) {
-        return Cvar_Generator( partial, state );
+        Cvar_Variable_g( ctx );
+    } else if( argnum == 2 ) {
+        s = Cmd_Argv( ctx->argnum - 1 );
+        if( ( g = Cvar_FindGenerator( s ) ) != NULL ) {
+            g( ctx );
+        }
     }
-    return NULL;
 }
 
 
@@ -764,8 +778,8 @@ static const cmd_option_t o_cvarlist[] = {
     { NULL }
 };
 
-static const char *Cvar_List_g( const char *partial, int argnum, int state ) {
-    return Cmd_Completer( o_cvarlist, partial, argnum, state, NULL );
+static void Cvar_List_c( genctx_t *ctx, int argnum ) {
+    return Cmd_Option_c( o_cvarlist, NULL, ctx, argnum );
 }
 
 static void Cvar_List_f( void ) {
@@ -935,6 +949,20 @@ static void Cvar_Toggle_f( void ) {
 	Com_Printf( "\"%s\" is \"%s\", can't cycle\n", var->name, var->string );
 }
 
+static void Cvar_Toggle_c( genctx_t *ctx, int argnum ) {
+    char *s;
+    xgenerator_t g;
+
+    if( argnum == 1 ) {
+        Cvar_Variable_g( ctx );
+    } else {
+        s = Cmd_Argv( ctx->argnum - argnum + 1 );
+        if( ( g = Cvar_FindGenerator( s ) ) != NULL ) {
+            g( ctx );
+        }
+    }
+}
+
 /*
 ============
 Cvar_Inc_f
@@ -994,6 +1022,12 @@ static void Cvar_Reset_f( void ) {
 	Cvar_SetByVar( var, var->default_string, CVAR_SET_CONSOLE );
 }
 
+static void Cvar_Reset_c( genctx_t *ctx, int argnum ) {
+    if( argnum == 1 ) {
+        Cvar_Variable_g( ctx );
+    }
+}
+
 int Cvar_BitInfo( char *info, int bit ) {
 	char newi[MAX_INFO_STRING];
 	cvar_t	*var;
@@ -1037,15 +1071,15 @@ void Cvar_FillAPI( cvarAPI_t *api ) {
 }
 
 static const cmdreg_t c_cvar[] = {
-    { "set", Cvar_Set_f, Cvar_Set_g },
-    { "setu", Cvar_SetFlag_f, Cvar_Set_g },
-    { "sets", Cvar_SetFlag_f, Cvar_Set_g },
-    { "seta", Cvar_SetFlag_f, Cvar_Set_g },
-    { "cvarlist", Cvar_List_f, Cvar_List_g },
-    { "toggle", Cvar_Toggle_f, Cvar_Set_g },
-    { "inc", Cvar_Inc_f, Cvar_Set_g },
-    { "dec", Cvar_Inc_f, Cvar_Set_g },
-    { "reset", Cvar_Reset_f, Cvar_Set_g },
+    { "set", Cvar_Set_f, Cvar_Set_c },
+    { "setu", Cvar_SetFlag_f, Cvar_Set_c },
+    { "sets", Cvar_SetFlag_f, Cvar_Set_c },
+    { "seta", Cvar_SetFlag_f, Cvar_Set_c },
+    { "cvarlist", Cvar_List_f, Cvar_List_c },
+    { "toggle", Cvar_Toggle_f, Cvar_Toggle_c },
+    { "inc", Cvar_Inc_f, Cvar_Reset_c },
+    { "dec", Cvar_Inc_f, Cvar_Reset_c },
+    { "reset", Cvar_Reset_f, Cvar_Reset_c },
 
     { NULL }
 };

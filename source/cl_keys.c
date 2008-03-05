@@ -375,39 +375,28 @@ void Key_SetBinding( int keynum, const char *binding ) {
 	keybindings[keynum] = Z_CopyString( binding );	
 }
 
-static const char *Key_NameGenerator( const char *partial, int state ) {
-    static int length;
-    static keyname_t *k;
-    const char *name;
-    
-    if( !state ) {
-        length = strlen( partial );
-        k = keynames;
-    }
+static void Key_Name_g( genctx_t *ctx ) {
+    keyname_t *k;
 
-    while( k->name ) {
-        name = k->name;
-        k++;
-		if( !strncmp( partial, name, length ) ) {
-            return name;
+    for( k = keynames; k->name; k++ ) {
+        if( !Prompt_AddMatch( ctx, k->name ) ) {
+            break;
         }
     }
-
-    return NULL;
 }
 
-static const char *Key_Bind_g( const char *partial, int argnum, int state ) {
+static void Key_Bind_c( genctx_t *ctx, int argnum ) {
     if( argnum == 1 ) {
-        return Key_NameGenerator( partial, state );
+        Key_Name_g( ctx );
+    } else {
+        Com_Generic_c( ctx, argnum - 2 );
     }
-    return Prompt_Completer( partial, 2, argnum, state );
 }
 
-static const char *Key_Unbind_g( const char *partial, int argnum, int state ) {
+static void Key_Unbind_c( genctx_t *ctx, int argnum ) {
     if( argnum == 1 ) {
-        return Key_NameGenerator( partial, state );
+        Key_Name_g( ctx );
     }
-    return NULL;
 }
 
 /*
@@ -536,8 +525,8 @@ void Key_FillAPI( keyAPI_t *api ) {
 }
 
 static cmdreg_t c_keys[] = {
-	{ "bind", Key_Bind_f, Key_Bind_g },
-	{ "unbind", Key_Unbind_f, Key_Unbind_g },
+	{ "bind", Key_Bind_f, Key_Bind_c },
+	{ "unbind", Key_Unbind_f, Key_Unbind_c },
 	{ "unbindall", Key_Unbindall_f },
 	{ "bindlist", Key_Bindlist_f },
 

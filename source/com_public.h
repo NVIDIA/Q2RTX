@@ -39,7 +39,16 @@ typedef enum cbufExecWhen_e {
 
 typedef void ( *xcommand_t )( void );
 typedef int ( *xmacro_t )( char *, int );
-typedef const char *( *xcompleter_t )( const char *, int, int );
+typedef void ( *xcompleter_t )( struct genctx_s *, int );
+
+typedef struct genctx_s {
+    const char  *partial;
+    int length;
+    int argnum;
+    char **matches;
+    int count, size;
+    void *data;
+} genctx_t;
 
 typedef struct cmdreg_s {
 	const char		*name;
@@ -60,7 +69,6 @@ typedef struct cmdAPI_s {
 	void 	(*AddCommand)( const char *cmd_name, xcommand_t function );
 	void 	(*RemoveCommand)( const char *cmd_name );
 	xcommand_t	(*FindFunction)( const char *name );
-	xmacro_t	(*FindMacroFunction)( const char *name );
 } cmdAPI_t;
 
 extern	cmdAPI_t	cmd;

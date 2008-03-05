@@ -646,12 +646,10 @@ static void CL_PlayDemo_f( void ) {
 	}
 }
 
-static const char *CL_PlayDemo_g( const char *partial, int argnum, int state ) {
+static void CL_Demo_c( genctx_t *ctx, int argnum ) {
     if( argnum == 1 ) {
-    	return Com_FileNameGeneratorByFilter( "demos", "*.dm2;*.dm2.gz",
-            partial, qfalse, state );
+        FS_File_g( "demos", "*.dm2;*.dm2.gz", FS_SEARCH_SAVEPATH | FS_SEARCH_BYFILTER | 0x80000000, ctx );
     }
-    return NULL;
 }
 
 static void CL_ParseInfoString( demoInfo_t *info, int clientNum, int index, const char *string ) {
@@ -793,8 +791,8 @@ void CL_DemoFrame( void ) {
 }
 
 static const cmdreg_t c_demo[] = {
-    { "demo", CL_PlayDemo_f, CL_PlayDemo_g },
-    { "record", CL_Record_f, CL_PlayDemo_g },
+    { "demo", CL_PlayDemo_f, CL_Demo_c },
+    { "record", CL_Record_f, CL_Demo_c },
     { "stop", CL_Stop_f },
     { "suspend", CL_Suspend_f },
 

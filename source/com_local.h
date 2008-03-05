@@ -111,22 +111,29 @@ typedef struct {
     const char *sh, *lo, *help;
 } cmd_option_t;
 
+typedef struct cmd_macro_s {
+	struct cmd_macro_s	*next, *hashNext;
+	const char		*name;
+	xmacro_t		function;
+} cmd_macro_t;
+
 void	Cmd_Init( void );
 
 qboolean Cmd_Exists( const char *cmd_name );
 // used by the cvar code to check for cvar / command name overlap
 
 xcommand_t Cmd_FindFunction( const char *name );
-xmacro_t Cmd_FindMacroFunction( const char *name );
+cmd_macro_t *Cmd_FindMacro( const char *name );
 xcompleter_t Cmd_FindCompleter( const char *name );
 
 char *Cmd_AliasCommand( const char *name );
 void Cmd_AliasSet( const char *name, const char *cmd );
 
-const char *Cmd_CommandGenerator( const char *partial, int state );
-const char *Cmd_AliasGenerator( const char *partial, int state );
-const char *Cmd_MixedGenerator( const char *partial, int state ); 
-const char *Cmd_Exec_g( const char *partial, int argnum, int state );
+void Cmd_Command_g( genctx_t *ctx );
+void Cmd_Alias_g( genctx_t *ctx );
+void Cmd_Macro_g( genctx_t *ctx );
+void Cmd_Config_g( genctx_t *ctx );
+void Cmd_Option_c( const cmd_option_t *opt, xgenerator_t g, genctx_t *ctx, int argnum );
 // attempts to match a partial command for automatic command line completion
 // returns NULL if nothing fits
 
@@ -246,9 +253,10 @@ cvar_t 	*Cvar_FullSet( const char *var_name, const char *value,
 void Cvar_ClampInteger( cvar_t *var, int min, int max );
 void Cvar_ClampValue( cvar_t *var, float min, float max );
 
-const char *Cvar_Set_g( const char *partial, int argnum, int state );
+xgenerator_t Cvar_FindGenerator( const char *var_name );
 
-const char *Cvar_Generator( const char *partial, int state );
+void Cvar_Variable_g( genctx_t *ctx );
+void Cvar_Default_g( genctx_t *ctx );
 // attempts to match a partial variable name for command line completion
 // returns NULL if nothing fits
 
@@ -887,6 +895,8 @@ const char *FS_GetFileFullPath( fileHandle_t f );
 
 char    *FS_ReplaceSeparators( char *s, int separator );
 
+void FS_File_g( const char *path, const char *ext, int flags, genctx_t *ctx );
+
 void FS_FillAPI( fsAPI_t *api );
 
 extern cvar_t	*fs_game;
@@ -934,11 +944,10 @@ byte		COM_BlockSequenceCRCByte (byte *base, int length, int sequence);
 
 void		Com_ProcessEvents( void );
 
-const char *Com_FileNameGenerator( const char *path, const char *ext, const char *partial,
-								  qboolean stripExtension, int state );
-const char *Com_FileNameGeneratorByFilter( const char *path, const char *filter, const char *partial,
-										  qboolean stripExtension, int state );
-const char *Com_AddressGenerator( const char *partial, int state );
+void        Com_Address_g( genctx_t *ctx );
+void        Com_Generic_c( genctx_t *ctx, int argnum );
+
+qboolean    Prompt_AddMatch( genctx_t *ctx, const char *s );
 
 int         Com_Time_m( char *buffer, int size );
 int         Com_Uptime_m( char *buffer, int size );
@@ -1119,7 +1128,4 @@ void SV_Init (void);
 void SV_Shutdown( const char *finalmsg, killtype_t type );
 void SV_Frame (int msec);
 qboolean MVD_GetDemoPercent( int *percent, int *bufferPercent );
-
-const char *Prompt_Completer( const char *partial, int firstarg, int argnum, int state );
-
 

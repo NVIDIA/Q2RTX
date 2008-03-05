@@ -22,7 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cl_local.h"
 #include "prompt.h"
 
-#define	CON_TIMES		4
+#define	CON_TIMES		16
 #define CON_TIMES_MASK	( CON_TIMES - 1 )
 
 #define CON_TOTALLINES			1024	// total lines in console scrollback
@@ -77,6 +77,7 @@ typedef struct console_s {
 static console_t	con;
 
 static cvar_t	*con_notifytime;
+static cvar_t	*con_notifylines;
 static cvar_t	*con_clock;
 static cvar_t	*con_height;
 static cvar_t	*con_speed;
@@ -182,13 +183,12 @@ static void Con_Clear_f( void ) {
 	con.display = con.current;
 }
 
-static const char *Con_Dump_g( const char *partial, int argnum, int state ) {
+static void Con_Dump_c( genctx_t *ctx, int argnum ) {
     if( argnum == 1 ) {
-    	return Com_FileNameGenerator( "", ".txt", partial, qtrue, state );
+    	FS_File_g( "condumps", ".txt", 0x80000000, ctx );
     }
-    return NULL;
 }
-						
+
 /*
 ================
 Con_Dump_f
@@ -311,6 +311,12 @@ static void Con_RemoteMode_f( void ) {
     con.remotePassword = Z_CopyString( s );
 }
 
+static void CL_RemoteMode_c( genctx_t *ctx, int argnum ) {
+    if( argnum == 1 ) {
+        Com_Address_g( ctx );
+    }
+}
+
 /*
 ================
 Con_CheckResize
@@ -365,10 +371,10 @@ static const cmdreg_t c_console[] = {
 	{ "togglechat2", Con_ToggleChat2_f },
 	{ "messagemode", Con_MessageMode_f },
 	{ "messagemode2", Con_MessageMode2_f },
-	{ "remotemode", Con_RemoteMode_f, CL_Server_g },
+	{ "remotemode", Con_RemoteMode_f, CL_RemoteMode_c },
 	{ "clear", Con_Clear_f },
 	{ "clearnotify", Con_ClearNotify_f },
-	{ "condump", Con_Dump_f, Con_Dump_g },
+	{ "condump", Con_Dump_f, Con_Dump_c },
 
     { NULL }
 };
@@ -387,6 +393,7 @@ void Con_Init( void ) {
     Cmd_Register( c_console );
 
 	con_notifytime = Cvar_Get( "con_notifytime", "3", 0 );
+	con_notifylines = Cvar_Get( "con_notifylines", "4", 0 );
 	con_clock = Cvar_Get( "con_clock", "0", CVAR_ARCHIVE );
 	con_height = Cvar_Get( "con_height", "0.5", CVAR_ARCHIVE );
 	con_speed = Cvar_Get( "scr_conspeed", "3", 0 );
@@ -606,12 +613,12 @@ Draws the last few lines of output transparently over the game top
 void Con_DrawNotify( void ) {
 	int		v;
 	char	*text;
-	int		i;
+	int		i, j;
 	int		time;
 	int		skip;
 	float	alpha;
 
-	/* only draw notify in game */
+	// only draw notify in game
 	if( cls.state != ca_active ) {
 		return; 
 	}
@@ -622,8 +629,13 @@ void Con_DrawNotify( void ) {
 		return;
 	}
 
+    j = con_notifylines->integer;
+    if( j > CON_TIMES ) {
+        j = CON_TIMES;
+    }
+
 	v = 0;
-	for( i = con.current - CON_TIMES + 1; i <= con.current; i++ ) {
+	for( i = con.current - j + 1; i <= con.current; i++ ) {
 		if( i < 0 )
 			continue;
 		time = con.times[i & CON_TIMES_MASK];
@@ -858,7 +870,7 @@ void Con_RunConsole( void ) {
 	Cvar_ClampValue( con_height, 0.1f, con.maxHeight );
 
 	if( cls.state == ca_disconnected && !( cls.key_dest & KEY_MENU ) ) {
-		/* draw fullscreen console */
+		// draw fullscreen console
 		con.destHeight = con.maxHeight;
 		con.currentHeight = con.destHeight;
 		return;
@@ -866,7 +878,7 @@ void Con_RunConsole( void ) {
 
 	if( cls.state > ca_disconnected && cls.state < ca_active ) {
 		if( !cls.ui_initialized ) {
-			/* draw half-screen console */
+			// draw half-screen console
 			con.destHeight = min( con.maxHeight, 0.5f );
 			con.currentHeight = con.destHeight;
 			return;

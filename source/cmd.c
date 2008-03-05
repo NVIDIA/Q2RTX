@@ -276,6 +276,17 @@ void Cmd_AliasSet( const char *name, const char *cmd ) {
 	List_Append( &cmd_aliasHash[hash], &a->hashEntry );
 }
 
+void Cmd_Alias_g( genctx_t *ctx ) {
+    cmdalias_t *a;
+
+    LIST_FOR_EACH( cmdalias_t, a, &cmd_alias, listEntry ) {
+        if( !Prompt_AddMatch( ctx, a->name ) ) {
+            break;
+        }
+    }
+}
+
+
 /*
 ===============
 Cmd_Alias_f
@@ -389,24 +400,18 @@ void Cmd_WriteAliases( fileHandle_t f ) {
 }
 #endif
 
-const char *Cmd_Alias_g( const char *partial, int argnum, int state ) {
-    switch( argnum ) {
-    case 0:
-        return NULL;
-    case 1:
-        return Cmd_AliasGenerator( partial, state );
-    case 2:
-        return Cmd_MixedGenerator( partial, state );
-    default:
-        return NULL;
+static void Cmd_Alias_c( genctx_t *ctx, int argnum ) {
+    if( argnum == 1 ) {
+        Cmd_Alias_g( ctx );
+    } else {
+        Com_Generic_c( ctx, argnum - 2 );
     }
 }
 
-const char *Cmd_UnAlias_g( const char *partial, int argnum, int state ) {
+static void Cmd_UnAlias_c( genctx_t *ctx, int argnum ) {
     if( argnum == 1 ) {
-        return Cmd_AliasGenerator( partial, state );
+        Cmd_Alias_g( ctx );
     }
-    return NULL;
 }
 
 /*
@@ -416,14 +421,6 @@ const char *Cmd_UnAlias_g( const char *partial, int argnum, int state ) {
 
 =============================================================================
 */
-
-typedef struct cmd_macro_s {
-	struct cmd_macro_s	*next;
-	struct cmd_macro_s	*hashNext;
-
-	const char		*name;
-	xmacro_t		function;
-} cmd_macro_t;
 
 #define MACRO_HASH_SIZE	64
 
@@ -435,7 +432,7 @@ static cmd_macro_t	*cmd_macroHash[MACRO_HASH_SIZE];
 Cmd_FindMacro
 ============
 */
-static cmd_macro_t *Cmd_FindMacro( const char *name ) {
+cmd_macro_t *Cmd_FindMacro( const char *name ) {
 	cmd_macro_t *macro;
 	unsigned hash;
 
@@ -449,15 +446,14 @@ static cmd_macro_t *Cmd_FindMacro( const char *name ) {
 	return NULL;
 }
 
-xmacro_t Cmd_FindMacroFunction( const char *name ) {
-	cmd_macro_t *macro;
+void Cmd_Macro_g( genctx_t *ctx ) {
+    cmd_macro_t *m;
 
-	macro = Cmd_FindMacro( name );
-	if( !macro ) {
-		return NULL;
-	}
-
-	return macro->function;
+    for( m = cmd_macros; m; m = m->next ) {
+        if( !Prompt_AddMatch( ctx, m->name ) ) {
+            break;
+        }
+    }
 }
 
 /*
@@ -814,47 +810,30 @@ void Cmd_PrintHint( void ) {
     Com_Printf( "Try '%s --help' for more information.\n", cmd_argv[0] );
 }
 
-const char *Cmd_Completer( const cmd_option_t *opt, const char *partial,
-    int argnum, int state, xgenerator_t generator )
-{
-    static int length;
-    static const cmd_option_t *o;
-    const char *s;
-
-    if( !state ) {
-        length = strlen( partial );
-        o = opt;
-    }
-
-    if( partial[0] == '-' ) {
-        while( o->sh ) {
-            if( partial[1] == '-' ) {
-                if( !strncmp( o->lo, partial + 2, length - 2 ) ) {
-                    s = va( "--%s", o->lo );
-                    o++;
-                    return s;
-                }
-            } else if( !partial[1] || o->sh[0] == partial[1] ) {
-                s = va( "-%c", o->sh[0] );
-                o++;
-                return s;
-                
+void Cmd_Option_c( const cmd_option_t *opt, xgenerator_t g, genctx_t *ctx, int argnum ) {
+    if( ctx->partial[0] == '-' ) {
+        for( ; opt->sh; opt++ ) {
+            if( ctx->count >= ctx->size ) {
+                break;
             }
-            o++;
+            if( ctx->partial[1] == '-' ) {
+                if( !strncmp( opt->lo, ctx->partial + 2, ctx->length - 2 ) ) {
+                    ctx->matches[ctx->count++] = Z_CopyString( va( "--%s", opt->lo ) );
+                }
+            } else if( !ctx->partial[1] || opt->sh[0] == ctx->partial[1] ) {
+                ctx->matches[ctx->count++] = Z_CopyString( va( "-%c", opt->sh[0] ) );
+            }
         }
     } else {
      /*   if( argnum > 1 ) {
             s = cmd_argv[argnum - 1];
         }*/
-        if( generator ) {
-            return (*generator)( partial, state );
-        }
-        if( !partial[0] ) {
-            return "-";
+        if( g ) {
+            g( ctx );
+        } else if( !ctx->partial[0] && ctx->count < ctx->size ) {
+            ctx->matches[ctx->count++] = Z_CopyString( "-" );
         }
     }
-
-    return NULL;
 }
 
 
@@ -1236,79 +1215,15 @@ xcompleter_t Cmd_FindCompleter( const char *name ) {
     return cmd ? cmd->completer : NULL;
 }
 
-const char *Cmd_CommandGenerator( const char *partial, int state ) {
-    static int length;
-    static cmd_function_t *cmd;
-    const char *name;
-    
-    if( !state ) {
-        length = strlen( partial );
-		cmd = LIST_FIRST( cmd_function_t, &cmd_functions, listEntry );
-    }
+void Cmd_Command_g( genctx_t *ctx ) {
+    cmd_function_t *cmd;
 
-    while( !LIST_TERM( cmd, &cmd_functions, listEntry ) ) {
-        name = cmd->name;
-		cmd = LIST_NEXT( cmd_function_t, cmd, listEntry );
-		if( !strncmp( partial, name, length ) ) {
-            return name;
+    LIST_FOR_EACH( cmd_function_t, cmd, &cmd_functions, listEntry ) {
+        if( !Prompt_AddMatch( ctx, cmd->name ) ) {
+            break;
         }
     }
-
-    return NULL;
 }
-
-const char *Cmd_AliasGenerator( const char *partial, int state ) {
-    static int length;
-    static cmdalias_t *alias;
-    const char *name;
-    
-    if( !state ) {
-        length = strlen( partial );
-		alias = LIST_FIRST( cmdalias_t, &cmd_alias, listEntry );
-    }
-
-    while( !LIST_TERM( alias, &cmd_alias, listEntry ) ) {
-        name = alias->name;
-        alias = LIST_NEXT( cmdalias_t, alias, listEntry );
-		if( !strncmp( partial, name, length ) ) {
-            return name;
-        }
-    }
-
-    return NULL;
-}
-
-const char *Cmd_MixedGenerator( const char *partial, int state ) {
-    static xgenerator_t g;
-    const char *match;
-
-    if( state == 2 ) {
-        g( partial, 2 );
-        return NULL;
-    }
-
-    if( !state ) {
-        g = Cmd_CommandGenerator;
-    }   
-
-    match = g( partial, state );
-    if( match ) {
-        return match;
-    }
-
-    if( g == Cmd_CommandGenerator ) {
-        g( partial, 2 );
-        g = Cmd_AliasGenerator;
-
-        match = g( partial, 0 );
-        if( match ) {
-            return match;
-        }
-    }
-
-    return NULL;
-}
-
 
 /*
 ============
@@ -1405,11 +1320,14 @@ static void Cmd_Exec_f( void ) {
 	FS_FreeFile( f );
 }
 
-const char *Cmd_Exec_g( const char *partial, int argnum, int state ) {
+void Cmd_Config_g( genctx_t *ctx ) {
+	FS_File_g( "", "*.cfg", FS_SEARCH_SAVEPATH | FS_SEARCH_BYFILTER | 0x80000000, ctx );
+}
+
+static void Cmd_Exec_c( genctx_t *ctx, int argnum ) {
     if( argnum == 1 ) {
-	    return Com_FileNameGeneratorByFilter( "", "*.cfg", partial, qtrue, state );
+        Cmd_Config_g( ctx );
     }
-    return NULL;
 }
 
 /*
@@ -1544,6 +1462,9 @@ static void Cmd_Complete_f( void ) {
     List_Append( &cmd_hash[hash], &cmd->hashEntry );
 }
 
+void Com_Mixed_c( genctx_t *ctx, int argnum ) {
+}
+
 /*
 ============
 Cmd_FillAPI
@@ -1559,17 +1480,16 @@ void Cmd_FillAPI( cmdAPI_t *api ) {
 	api->ArgsFrom = Cmd_ArgsFrom;
 	api->ExecuteText = Cbuf_ExecuteText;
 	api->FindFunction = Cmd_FindFunction;
-	api->FindMacroFunction = Cmd_FindMacroFunction;
 }
 
 static const cmdreg_t c_cmd[] = {
     { "cmdlist", Cmd_List_f },
     { "macrolist", Cmd_MacroList_f },
-    { "exec", Cmd_Exec_f, Cmd_Exec_g },
+    { "exec", Cmd_Exec_f, Cmd_Exec_c },
     { "echo", Cmd_Echo_f },
     { "_echo", Cmd_ColoredEcho_f },
-    { "alias", Cmd_Alias_f, Cmd_Alias_g },
-    { "unalias", Cmd_UnAlias_f, Cmd_UnAlias_g },
+    { "alias", Cmd_Alias_f, Cmd_Alias_c },
+    { "unalias", Cmd_UnAlias_f, Cmd_UnAlias_c },
     { "wait", Cmd_Wait_f },
     { "text", Cmd_Text_f },
     { "complete", Cmd_Complete_f },

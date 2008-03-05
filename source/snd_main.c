@@ -138,12 +138,8 @@ static void S_SoundInfo_f( void ) {
 }
 
 
-const char *S_Play_g( const char *partial, int argnum, int state ) {
-    if( argnum == 1 ) {
-    	return Com_FileNameGeneratorByFilter( "sound", "*.wav", partial,
-            qfalse, state );
-    }
-    return NULL;
+static void S_Play_c( genctx_t *ctx, int state ) {
+    FS_File_g( "sound", "*.wav", FS_SEARCH_SAVEPATH | FS_SEARCH_BYFILTER | 0x80000000, ctx );
 }
 
 static void S_Play_f( void ) {
@@ -193,7 +189,7 @@ static void S_SoundList_f( void ) {
 
 
 static const cmdreg_t c_sound[] = {
-	{ "play", S_Play_f, S_Play_g },
+	{ "play", S_Play_f, S_Play_c },
 	{ "stopsound", S_StopAllSounds },
 	{ "soundlist", S_SoundList_f },
 	{ "soundinfo", S_SoundInfo_f },
@@ -483,9 +479,11 @@ void S_EndRegistration( void ) {
 /*
 =================
 S_PickChannel
+
+picks a channel based on priorities, empty slots, number of channels
 =================
 */
-channel_t *S_PickChannel( int entnum, int entchannel ) {
+static channel_t *S_PickChannel( int entnum, int entchannel ) {
     int			ch_idx;
     int			first_to_die;
     int			life_left;
@@ -497,24 +495,27 @@ channel_t *S_PickChannel( int entnum, int entchannel ) {
 // Check for replacement sound, or find the best one to replace
     first_to_die = -1;
     life_left = 0x7fffffff;
-    for( ch_idx=0 ; ch_idx<MAX_CHANNELS ; ch_idx++ ) {
-		if( entchannel != 0		// channel 0 never overrides
-		&& channels[ch_idx].entnum == entnum
-		&& channels[ch_idx].entchannel == entchannel )
-		{	// always override sound from same entity
+    for( ch_idx = 0; ch_idx < MAX_CHANNELS; ch_idx++ ) {
+        ch = &channels[ch_idx];
+        // channel 0 never overrides unless out of channels
+		if( ch->entnum == entnum && ch->entchannel == entchannel && entchannel != 0 ) {
+            if( entchannel == 256 && ch->sfx ) {
+                return NULL; // channel 256 never overrides
+            }
+			// always override sound from same entity
 			first_to_die = ch_idx;
 			break;
 		}
 
 		// don't let monster sounds override player sounds
-		if( channels[ch_idx].entnum == listener_entnum && entnum != listener_entnum && channels[ch_idx].sfx )
+		if( ch->entnum == listener_entnum && entnum != listener_entnum && ch->sfx )
 			continue;
 
-		if( channels[ch_idx].end - paintedtime < life_left ) {
-			life_left = channels[ch_idx].end - paintedtime;
+		if( ch->end - paintedtime < life_left ) {
+			life_left = ch->end - paintedtime;
 			first_to_die = ch_idx;
 		}
-   }
+    }
 
 	if( first_to_die == -1 )
 		return NULL;
@@ -821,13 +822,17 @@ S_StartLocalSound
 ==================
 */
 void S_StartLocalSound( const char *sound ) {
-	qhandle_t sfx;
+	if( sound_started ) {
+	    qhandle_t sfx = S_RegisterSound( sound );
+    	S_StartSound( NULL, listener_entnum, 0, sfx, 1, 1, 0 );
+    }
+}
 
-	if( !sound_started )
-		return;
-		
-	sfx = S_RegisterSound( sound );
-	S_StartSound( NULL, listener_entnum, 0, sfx, 1, 1, 0 );
+void S_StartLocalSound_( const char *sound ) {
+	if( sound_started ) {
+	    qhandle_t sfx = S_RegisterSound( sound );
+    	S_StartSound( NULL, listener_entnum, 256, sfx, 1, 1, 0 );
+    }
 }
 
 
