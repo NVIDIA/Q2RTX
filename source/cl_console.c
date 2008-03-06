@@ -986,7 +986,7 @@ void Key_Console( int key ) {
 		return;
 	}
 
-	if( ( key == 'd' || key == 'c' ) && Key_IsDown( K_CTRL ) ) {
+	if( key == 'd' && Key_IsDown( K_CTRL ) ) {
 		con.mode = CON_DEFAULT;
 		return;
 	}

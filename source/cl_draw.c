@@ -485,12 +485,27 @@ static void SCR_Draw_c( genctx_t *ctx, int argnum ) {
 // draw cl_fps -1 80
 static void SCR_Draw_f( void ) {
     int x, y;
-    char *s;
+    const char *s;
     drawobj_t *obj;
     cmd_macro_t *macro;
    // int stat;
+    int argc = Cmd_Argc();
 
-    if( Cmd_Argc() != 4 ) {
+    if( argc == 1 ) {
+        if( LIST_EMPTY( &scr_objects ) ) {
+            Com_Printf( "No draw strings registered.\n" );
+            return;
+        }
+        Com_Printf( "Name               X    Y\n"
+                    "--------------- ---- ----\n" );
+        LIST_FOR_EACH( drawobj_t, obj, &scr_objects, entry ) {
+            s = obj->macro ? obj->macro->name : obj->cvar->name;
+            Com_Printf( "%-15s %4d %4d\n", s, obj->x, obj->y );
+        }
+        return;
+    }
+
+    if( argc < 4 ) {
         Com_Printf( "Usage: %s <name> <x> <y>\n", Cmd_Argv( 0 ) );
         return;
     }
@@ -531,6 +546,8 @@ static void SCR_Draw_f( void ) {
 static void SCR_Draw_g( genctx_t *ctx ) {
     drawobj_t *obj;
     const char *s;
+
+    Prompt_AddMatch( ctx, "all" );
     
     LIST_FOR_EACH( drawobj_t, obj, &scr_objects, entry ) {
         s = obj->macro ? obj->macro->name : obj->cvar->name;
@@ -551,9 +568,15 @@ static void SCR_UnDraw_f( void ) {
     drawobj_t *obj, *next;
     cmd_macro_t *macro;
     cvar_t *cvar;
+    qboolean deleted;
 
     if( Cmd_Argc() != 2 ) {
         Com_Printf( "Usage: %s <name>\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    if( LIST_EMPTY( &scr_objects ) ) {
+        Com_Printf( "No draw strings registered.\n" );
         return;
     }
 
@@ -563,7 +586,7 @@ static void SCR_UnDraw_f( void ) {
             Z_Free( obj );
         }
         List_Init( &scr_objects );
-        Com_Printf( "Deleted all drawstrings.\n" );
+        Com_Printf( "Deleted all draw strings.\n" );
         return;
     }
 
@@ -573,11 +596,17 @@ static void SCR_UnDraw_f( void ) {
         cvar = Cvar_Get( s, "", CVAR_USER_CREATED );
     }
 
+    deleted = qfalse;
     LIST_FOR_EACH_SAFE( drawobj_t, obj, next, &scr_objects, entry ) {
         if( obj->macro == macro && obj->cvar == cvar ) {
             List_Remove( &obj->entry );
             Z_Free( obj );
+            deleted = qtrue;
         }
+    }
+
+    if( !deleted ) {
+        Com_Printf( "Draw string '%s' not found.\n", s );
     }
 }
 

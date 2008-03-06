@@ -289,7 +289,7 @@ void Cvar_SetByVar( cvar_t *var, const char *value, cvarSetSource_t source ) {
 
 	if( var->flags & CVAR_INFOMASK ) {
 		if( Info_SubValidate( value ) == -1 ) {
-			Com_WPrintf( "Invalid info cvar value.\n" );
+			Com_WPrintf( "Invalid info cvar value '%s' for '%s'.\n", value, var->name );
 			return;
 		}
 	}
@@ -779,7 +779,7 @@ static const cmd_option_t o_cvarlist[] = {
 };
 
 static void Cvar_List_c( genctx_t *ctx, int argnum ) {
-    return Cmd_Option_c( o_cvarlist, NULL, ctx, argnum );
+    Cmd_Option_c( o_cvarlist, NULL, ctx, argnum );
 }
 
 static void Cvar_List_f( void ) {
