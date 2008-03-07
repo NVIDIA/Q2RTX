@@ -110,7 +110,7 @@ static void NET_NetadrToSockadr( const netadr_t *a, struct sockaddr_in *s ) {
 		s->sin_port = a->port;
 		break;
 	default:
-		Com_Error( ERR_FATAL, "NetadrToSockadr: bad address type" );
+		Com_Error( ERR_FATAL, "%s: bad address type", __func__ );
 		break;
 	}
 }
@@ -141,8 +141,8 @@ idnewt:28000
 */
 static qboolean NET_StringToSockaddr( const char *s, struct sockaddr_in *sadr ) {
 	struct hostent	*h;
-	char	*colon;
-	char	copy[MAX_QPATH];
+	char copy[MAX_QPATH], *p;
+    int dots;
 
 	memset( sadr, 0, sizeof( *sadr ) );
 
@@ -151,14 +151,25 @@ static qboolean NET_StringToSockaddr( const char *s, struct sockaddr_in *sadr ) 
 
 	Q_strncpyz( copy, s, sizeof( copy ) );
 	// strip off a trailing :port if present
-	for( colon = copy ; *colon ; colon++ ) {
-		if( *colon == ':' ) {
-			*colon = 0;
-			sadr->sin_port = htons( ( u_short )atoi( colon + 1 ) );
-		}
+    p = strchr( copy, ':' );
+    if( p ) {
+        *p = 0;
+        sadr->sin_port = htons( ( u_short )atoi( p + 1 ) );
     }
-	if( copy[0] >= '0' && copy[0] <= '9' ) {
-		*( uint32_t * )&sadr->sin_addr = inet_addr( copy );
+    for( p = copy, dots = 0; *p; p++ ) {
+        if( *p == '.' ) {
+            dots++;
+        } else if( !Q_isdigit( *p ) ) {
+            break;
+        }
+    }
+	if( *p == 0 && dots == 3 ) {
+        uint32_t addr = inet_addr( copy );
+
+        if( addr == INADDR_NONE ) {
+            return qfalse;
+        }
+		*( uint32_t * )&sadr->sin_addr = addr;
 	} else {
 		if( !( h = gethostbyname( copy ) ) )
 			return qfalse;
@@ -183,13 +194,11 @@ char *NET_AdrToString( const netadr_t *a ) {
 		return s;
 	case NA_IP:
 	case NA_BROADCAST:
-		Com_sprintf( s, sizeof( s ), "%i.%i.%i.%i:%i",
-            a->ip[0], a->ip[1], a->ip[2], a->ip[3],
-                ntohs( a->port ) );
+		Com_sprintf( s, sizeof( s ), "%u.%u.%u.%u:%u",
+            a->ip[0], a->ip[1], a->ip[2], a->ip[3], ntohs( a->port ) );
 		return s;
 	default:
-		Com_Error( ERR_FATAL, "NET_AdrToString: bad address type: %i",
-            a->type );
+		Com_Error( ERR_FATAL, "%s: bad address type", __func__ );
 		break;
 	}
 
@@ -411,11 +420,11 @@ neterr_t NET_GetPacket( netsrc_t sock ) {
 			}
 			break;
 		case WSAEMSGSIZE:
-			Com_WPrintf( "NET_GetPacket: oversize packet from %s\n",
+			Com_WPrintf( "%s: oversize packet from %s\n", __func__,
 				NET_AdrToString( &net_from ) );
 			break;
 		default:
-			Com_EPrintf( "NET_GetPacket: %s from %s\n",
+			Com_EPrintf( "%s: %s from %s\n", __func__,
 				NET_ErrorString(), NET_AdrToString( &net_from ) );
 			break;
 		}
@@ -430,7 +439,7 @@ neterr_t NET_GetPacket( netsrc_t sock ) {
 			}
 			break;
 		default:
-			Com_EPrintf( "NET_GetPacket: %s from %s\n",
+			Com_EPrintf( "%s: %s from %s\n", __func__,
 				NET_ErrorString(), NET_AdrToString( &net_from ) );
 			break;
 		}
@@ -443,7 +452,7 @@ neterr_t NET_GetPacket( netsrc_t sock ) {
 	}
 	
 	if( ret > MAX_PACKETLEN ) {
-		Com_WPrintf( "NET_GetPacket: oversize packet from %s\n",
+		Com_WPrintf( "%s: oversize packet from %s\n", __func__,
 			NET_AdrToString( &net_from ) );
 		return NET_AGAIN;
 	}
@@ -467,13 +476,13 @@ neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, unsigned length, con
     int    ret;
 
 	if( length > MAX_PACKETLEN ) {
-		Com_WPrintf( "NET_SendPacket: bad length: %u bytes\n", length );
+		Com_WPrintf( "%s: bad length: %u bytes\n", __func__, length );
 		return NET_ERROR;
 	}
 
 	switch( to->type ) {
 	case NA_LOOPBACK: {
-			loopback_t	*loop;
+			loopback_t *loop;
 			loopmsg_t *msg;
 
 			if( net_dropsim->integer > 0 &&
@@ -502,9 +511,9 @@ neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, unsigned length, con
 	case NA_BROADCAST:
 		break;
 	default:
-		Com_Error( ERR_FATAL, "NET_SendPacket: bad address type: %i",to->type );
+		Com_Error( ERR_FATAL, "%s: bad address type", __func__ );
 		break;
-	}	
+	}
 
     if( udp_sockets[sock] == INVALID_SOCKET ) {
         return NET_AGAIN;
@@ -536,7 +545,7 @@ neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, unsigned length, con
 			}
 			// intentional fallthrough
 		default:
-			Com_EPrintf( "NET_SendPacket: %s to %s\n",
+			Com_EPrintf( "%s: %s to %s\n", __func__,
 				NET_ErrorString(), NET_AdrToString( to ) );
 			break;
 		}
@@ -554,7 +563,7 @@ neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, unsigned length, con
             }
 			break;
 		default:
-			Com_EPrintf( "NET_SendPacket: %s to %s\n",
+			Com_EPrintf( "%s: %s to %s\n", __func__,
 				NET_ErrorString(), NET_AdrToString( to ) );
 			break;
 		}
@@ -563,7 +572,7 @@ neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, unsigned length, con
 	}
 
     if( ret != length ) {
-		Com_WPrintf( "NET_SendPacket: short send to %s\n",
+		Com_WPrintf( "%s: short send to %s\n", __func__,
             NET_AdrToString( to ) );
     }
 
@@ -585,78 +594,22 @@ const char *NET_ErrorString( void ) {
         return "NO ERROR";
 	default:
         return "UNKNOWN ERROR";
-
-#define MAPERR( x )		case x: return #x;
-
-	MAPERR( WSAEINTR )
-	MAPERR( WSAEBADF )
-	MAPERR( WSAEACCES )
-	MAPERR( WSAEFAULT )
-	MAPERR( WSAEINVAL )
-	MAPERR( WSAEMFILE )
-	MAPERR( WSAEWOULDBLOCK )
-	MAPERR( WSAEINPROGRESS )
-	MAPERR( WSAEALREADY )
-	MAPERR( WSAENOTSOCK )
-	MAPERR( WSAEDESTADDRREQ )
-	MAPERR( WSAEMSGSIZE )
-	MAPERR( WSAEPROTOTYPE )
-	MAPERR( WSAENOPROTOOPT )
-	MAPERR( WSAEPROTONOSUPPORT )
-	MAPERR( WSAESOCKTNOSUPPORT )
-	MAPERR( WSAEOPNOTSUPP )
-	MAPERR( WSAEPFNOSUPPORT )
-	MAPERR( WSAEAFNOSUPPORT )
-	MAPERR( WSAEADDRINUSE )
-	MAPERR( WSAEADDRNOTAVAIL )
-	MAPERR( WSAENETDOWN )
-	MAPERR( WSAENETUNREACH )
-	MAPERR( WSAENETRESET )
-	MAPERR( WSAECONNABORTED )
-	MAPERR( WSAECONNRESET )
-	MAPERR( WSAENOBUFS )
-	MAPERR( WSAEISCONN )
-	MAPERR( WSAENOTCONN )
-	MAPERR( WSAESHUTDOWN )
-	MAPERR( WSAETOOMANYREFS )
-	MAPERR( WSAETIMEDOUT )
-	MAPERR( WSAECONNREFUSED )
-	MAPERR( WSAELOOP )
-	MAPERR( WSAENAMETOOLONG )
-	MAPERR( WSAEHOSTDOWN )
-	MAPERR( WSAEHOSTUNREACH )
-	MAPERR( WSAENOTEMPTY )
-	MAPERR( WSAEPROCLIM )
-	MAPERR( WSAEUSERS )
-	MAPERR( WSAEDQUOT )
-	MAPERR( WSAESTALE )
-	MAPERR( WSAEREMOTE )
-	MAPERR( WSASYSNOTREADY )
-	MAPERR( WSAVERNOTSUPPORTED )
-	MAPERR( WSANOTINITIALISED )
-	MAPERR( WSAEDISCON )
-	MAPERR( WSAENOMORE )
-	MAPERR( WSAECANCELLED )
-	MAPERR( WSAEINVALIDPROCTABLE )
-	MAPERR( WSAEINVALIDPROVIDER )
-	MAPERR( WSAEPROVIDERFAILEDINIT )
-	MAPERR( WSASYSCALLFAILURE )
-	MAPERR( WSASERVICE_NOT_FOUND )
-	MAPERR( WSATYPE_NOT_FOUND )
-	MAPERR( WSA_E_NO_MORE )
-	MAPERR( WSA_E_CANCELLED )
-	MAPERR( WSAEREFUSED )
-	MAPERR( WSAHOST_NOT_FOUND )
-	MAPERR( WSATRY_AGAIN )
-	MAPERR( WSANO_RECOVERY )
-	MAPERR( WSANO_DATA )
-	}
-
-#undef MAPERR
-
+#include "wsaerr.h"
+    }
 #else
 	return strerror( net_error );
 #endif
+}
+
+static qboolean NET_StringToIface( const char *s, struct sockaddr_in *sadr ) {
+    if( !Q_stricmp( s, "localhost" ) ) {
+        // FIXME: this use of `localhost' is misleading
+        memset( sadr, 0, sizeof( *sadr ) );
+		sadr->sin_family = AF_INET;
+		sadr->sin_addr.s_addr = INADDR_ANY;
+        return qtrue;
+    }
+    return NET_StringToSockaddr( s, sadr );
 }
 
 static SOCKET UDP_OpenSocket( const char *interface, int port ) {
@@ -689,15 +642,9 @@ static SOCKET UDP_OpenSocket( const char *interface, int port ) {
 		goto fail;
 	}
 
-    if( !Q_stricmp( interface, "localhost" ) ) {
-        memset( &address, 0, sizeof( address ) );
-		address.sin_family = AF_INET;
-		address.sin_addr.s_addr = INADDR_ANY;
-    } else {
-    	if( !NET_StringToSockaddr( interface, &address ) ) {
-            Com_Printf( "Bad interface address: %s\n", interface );
-            goto fail;
-        }
+    if( !NET_StringToIface( interface, &address ) ) {
+        Com_Printf( "Bad interface address: %s\n", interface );
+        goto fail;
     }
 
 	if( port != PORT_ANY ) {
@@ -736,15 +683,9 @@ static SOCKET TCP_OpenSocket( const char *interface, int port ) {
 		goto fail;
 	}
 
-    if( !Q_stricmp( interface, "localhost" ) ) {
-        memset( &address, 0, sizeof( address ) );
-		address.sin_family = AF_INET;
-		address.sin_addr.s_addr = INADDR_ANY;
-    } else {
-    	if( !NET_StringToSockaddr( interface, &address ) ) {
-            Com_Printf( "Bad interface address: %s\n", interface );
-            goto fail;
-        }
+    if( !NET_StringToIface( interface, &address ) ) {
+        Com_Printf( "Bad interface address: %s\n", interface );
+        goto fail;
     }
 	if( port != PORT_ANY ) {
 		address.sin_port = htons( ( u_short )port );
@@ -1077,10 +1018,6 @@ void NET_Sleep( int msec ) {
 	FD_ZERO( &fdset );
 	FD_SET( s, &fdset );
 	select( s + 1, &fdset, NULL, NULL, &timeout );
-    /*msec = timeout.tv_sec * 1000 + timeout.tv_usec / 1000;
-    if(msec){
-        Com_Printf( "%d msec not slept\n",msec);
-    }*/
 }
 
 //===================================================================
@@ -1096,18 +1033,15 @@ static void NET_DumpHostInfo( struct hostent *h ) {
 
 	Com_Printf( "Hostname: %s\n", h->h_name );
 
-	list = (byte **)h->h_aliases;
-	for( i=0 ; list[i] ; i++ ) {
+	list = ( byte ** )h->h_aliases;
+	for( i = 0; list[i]; i++ ) {
 		Com_Printf( "Alias   : %s\n", list[i] );
 	}
 
-	list = (byte **)h->h_addr_list;
-	for( i=0 ; list[i] ; i++ ) {
-		Com_Printf( "IP      : %d.%d.%d.%d\n",
-			list[i][0] & 255,
-			list[i][1] & 255,
-			list[i][2] & 255,
-			list[i][3] & 255 );
+	list = ( byte ** )h->h_addr_list;
+	for( i = 0; list[i]; i++ ) {
+		Com_Printf( "IP      : %u.%u.%u.%u\n",
+			list[i][0], list[i][1], list[i][2], list[i][3] );
 	}
 }
 
@@ -1125,12 +1059,12 @@ static void NET_ShowIP_f( void ) {
     netsrc_t sock;
 
 	if( gethostname( buffer, sizeof( buffer ) ) == -1 ) {
-		Com_WPrintf( "Couldn't get machine hostname\n" );
+		Com_EPrintf( "%s: gethostname: %s\n", __func__, NET_ErrorString() );
 		return;
 	}
 
 	if( !( h = gethostbyname( buffer ) ) ) {
-		Com_WPrintf( "Couldn't get machine hostname\n" );
+		Com_EPrintf( "%s: gethostbyname: %s\n", __func__, NET_ErrorString() );
 		return;
 	}
 
@@ -1171,7 +1105,7 @@ static void NET_Dns_f( void ) {
 	}
 
 	if( ( address = inet_addr( buffer ) ) != INADDR_NONE ) {
-		h = gethostbyaddr( (const char *)&address, sizeof( address ), AF_INET );
+		h = gethostbyaddr( ( const char * )&address, sizeof( address ), AF_INET );
 	} else {
 		h = gethostbyname( buffer );
 	}

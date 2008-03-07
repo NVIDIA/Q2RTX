@@ -1050,10 +1050,10 @@ void MVD_Connect_f( void ) {
     if( p ) {
         *p = 0;
         strcpy( resource, p + 1 );
-        port = BigShort( 80 );
+        port = 80;
     } else {
         Q_concat( resource, sizeof( resource ), "mvdstream/", id, NULL );
-        port = BigShort( PORT_SERVER );
+        port = PORT_SERVER;
     }
 
     // resolve hostname
