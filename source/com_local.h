@@ -456,7 +456,7 @@ typedef enum netstat_e {
 
 typedef struct netadr_s {
 	netadrtype_t	type;
-	byte        ip[4];
+	uint8_t     ip[4];
 	uint16_t    port;
 } netadr_t;
 

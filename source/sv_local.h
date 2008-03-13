@@ -205,10 +205,10 @@ typedef struct client_s {
 
     // packetized messages for clients without
     // netchan level fragmentation support
-	list_t			    freemsg;
-	list_t			    inusemsg[2];
-	list_t			    soundmsg;
-	message_packet_t	*msgpool;
+	list_t			    msg_free;
+	list_t			    msg_used[2];
+	list_t			    msg_sound;
+	message_packet_t	*msg_pool;
 
     // bulk messages for clients with 
     // netchan level fragmentation support

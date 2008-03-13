@@ -374,7 +374,7 @@ static void CL_CheckForResend( void ) {
         ret = OOB_PRINT( NS_CLIENT, &cls.serverAddress, "getchallenge\n" );
 		if( ret == NET_ERROR ) {
 			Com_Error( ERR_DISCONNECT, "%s to %s\n", NET_ErrorString(),
-                    NET_AdrToString( &cls.serverAddress ) );
+                NET_AdrToString( &cls.serverAddress ) );
 		}
         return;
     }

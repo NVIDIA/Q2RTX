@@ -987,7 +987,7 @@ int Com_Uptime_m( char *buffer, int size ) {
 }
 
 int Com_Random_m( char *buffer, int size ) {
-    return Com_sprintf( buffer, size, "%d", rand() % 10 );
+    return Com_sprintf( buffer, size, "%d", ( rand() ^ ( rand() >> 8 ) ) % 10 );
 }
 
 static void Com_LastError_f( void ) {

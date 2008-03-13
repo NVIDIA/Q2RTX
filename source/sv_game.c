@@ -599,13 +599,13 @@ static void PF_StartSound( edict_t *edict, int channel,
             continue;
         }
 
-        if( LIST_EMPTY( &client->freemsg ) ) {
+        if( LIST_EMPTY( &client->msg_free ) ) {
             Com_WPrintf( "%s: %s: out of message slots\n",
                 __func__, client->name );
             continue;
         }
 
-        msg = LIST_FIRST( sound_packet_t, &client->freemsg, entry );
+        msg = LIST_FIRST( sound_packet_t, &client->msg_free, entry );
 
         msg->cursize = 0; // !!! make sure this does not get Z_Free'ed
         msg->flags = flags;
@@ -616,7 +616,7 @@ static void PF_StartSound( edict_t *edict, int channel,
         msg->sendchan = sendchan;
 
         List_Remove( &msg->entry );
-        List_Append( &client->soundmsg, &msg->entry );
+        List_Append( &client->msg_sound, &msg->entry );
     }
 
     if( svs.mvd.dummy && sv.mvd.paused < PAUSED_FRAMES ) {

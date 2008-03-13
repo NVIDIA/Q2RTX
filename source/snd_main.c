@@ -914,23 +914,24 @@ void S_AddLoopSounds (void)
 	if( sv_paused->integer ) {
 		return;
 	}
-
-	if (cls.state != ca_active)
+	if( cls.state != ca_active ) {
 		return;
-
+    }
 	if( !s_ambient->integer ) {
 		return;
 	}
 
-	for (i=0 ; i<cl.frame.numEntities ; i++)
-	{
+	for( i = 0; i < cl.frame.numEntities; i++ ) {
 		num = ( cl.frame.firstEntity + i ) & PARSE_ENTITIES_MASK;
 		ent = &cl.entityStates[num];
-		sounds[i] = ent->sound;
+	    if( s_ambient->integer == 2 && ent->number != listener_entnum ) {
+		    sounds[i] = 0;
+        } else {
+		    sounds[i] = ent->sound;
+        }
 	}
 
-	for (i=0 ; i<cl.frame.numEntities ; i++)
-	{
+	for( i = 0; i < cl.frame.numEntities; i++ ) {
 		if (!sounds[i])
 			continue;
 

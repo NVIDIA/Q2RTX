@@ -596,13 +596,13 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
             continue;
         }
 
-        if( LIST_EMPTY( &cl->freemsg ) ) {
+        if( LIST_EMPTY( &cl->msg_free ) ) {
             Com_WPrintf( "%s: %s: out of message slots\n",
                 __func__, cl->name );
             continue;
         }
 
-        msg = LIST_FIRST( sound_packet_t, &cl->freemsg, entry );
+        msg = LIST_FIRST( sound_packet_t, &cl->msg_free, entry );
 
         msg->cursize = 0;
         msg->flags = flags;
@@ -613,7 +613,7 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
         msg->sendchan = sendchan;
 
         List_Remove( &msg->entry );
-        List_Append( &cl->soundmsg, &msg->entry );
+        List_Append( &cl->msg_sound, &msg->entry );
 	}
 }
 

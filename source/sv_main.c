@@ -89,10 +89,10 @@ cvar_t	*sv_nextserver;
 //============================================================================
 
 void SV_RemoveClient( client_t *client ) {
-    if( client->msgpool ) {
+    if( client->msg_pool ) {
         SV_PacketizedClear( client );
-        Z_Free( client->msgpool );
-        client->msgpool = NULL;
+        Z_Free( client->msg_pool );
+        client->msg_pool = NULL;
     }
 
     if( client->datagram.data ) {
@@ -884,14 +884,14 @@ static void SVC_DirectConnect( void ) {
 	Netchan_OutOfBandPrint( NS_SERVER, &net_from, "client_connect%s%s map=%s",
         ncstring, acstring, newcl->mapname );
 
-    List_Init( &newcl->freemsg );
-    List_Init( &newcl->inusemsg[0] );
-    List_Init( &newcl->inusemsg[1] );
-    List_Init( &newcl->soundmsg );
+    List_Init( &newcl->msg_free );
+    List_Init( &newcl->msg_used[0] );
+    List_Init( &newcl->msg_used[1] );
+    List_Init( &newcl->msg_sound );
 
-    newcl->msgpool = SV_Malloc( sizeof( message_packet_t ) * MSG_POOLSIZE );
+    newcl->msg_pool = SV_Malloc( sizeof( message_packet_t ) * MSG_POOLSIZE );
     for( i = 0; i < MSG_POOLSIZE; i++ ) {
-        List_Append( &newcl->freemsg, &newcl->msgpool[i].entry );
+        List_Append( &newcl->msg_free, &newcl->msg_pool[i].entry );
     }
 
     // setup protocol

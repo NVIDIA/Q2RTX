@@ -732,8 +732,7 @@ static void NET_OpenClient( void ) {
     struct sockaddr_in address;
     socklen_t length;
 
-	udp_sockets[NS_CLIENT] = UDP_OpenSocket( net_ip->string,
-        net_clientport->integer );
+	udp_sockets[NS_CLIENT] = UDP_OpenSocket( net_ip->string, net_clientport->integer );
 	if( udp_sockets[NS_CLIENT] != INVALID_SOCKET ) {
 		return;
 	}
@@ -749,7 +748,7 @@ static void NET_OpenClient( void ) {
                 ( struct sockaddr * )&address, &length );
             Com_WPrintf( "Client bound to UDP port %d.\n",
                 ntohs( address.sin_port ) );
-			Cvar_SetInteger( "net_clientport", PORT_ANY );
+		    Cvar_SetByVar( net_clientport, va( "%d", PORT_ANY ), CVAR_SET_DIRECT );
 			return;
 		}
 	}
@@ -1005,16 +1004,16 @@ void NET_Sleep( int msec ) {
 	fd_set	fdset;
 	SOCKET s = udp_sockets[NS_SERVER];
 
-	timeout.tv_sec = msec / 1000;
-	timeout.tv_usec = ( msec % 1000 ) * 1000;
 	if( s == INVALID_SOCKET ) {
 	    s = udp_sockets[NS_CLIENT];
 	    if( s == INVALID_SOCKET ) {
-		    select( 0, NULL, NULL, NULL, &timeout );
+            Sys_Sleep( msec );
 		    return;
         }
 	}
 
+	timeout.tv_sec = msec / 1000;
+	timeout.tv_usec = ( msec % 1000 ) * 1000;
 	FD_ZERO( &fdset );
 	FD_SET( s, &fdset );
 	select( s + 1, &fdset, NULL, NULL, &timeout );

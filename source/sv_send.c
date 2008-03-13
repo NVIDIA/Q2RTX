@@ -352,24 +352,23 @@ static inline void SV_PacketizedRemove( client_t *client, message_packet_t *msg 
 	if( msg->cursize > MSG_TRESHOLD ) {
 		Z_Free( msg );
     } else {
-        List_Insert( &client->freemsg, &msg->entry );
+        List_Insert( &client->msg_free, &msg->entry );
     }
 }
 
 void SV_PacketizedClear( client_t *client ) {
 	message_packet_t	*msg, *next;
 
-    LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->inusemsg[0], entry ) {
+    LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->msg_used[0], entry ) {
 		SV_PacketizedRemove( client, msg );
 	}
-    LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->inusemsg[1], entry ) {
+    LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->msg_used[1], entry ) {
 		SV_PacketizedRemove( client, msg );
 	}
-    LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->soundmsg, entry ) {
+    LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->msg_sound, entry ) {
 		SV_PacketizedRemove( client, msg );
 	}
 }
-
 
 message_packet_t *SV_PacketizedAdd( client_t *client, byte *data,
 							  int length, qboolean reliable )
@@ -379,7 +378,7 @@ message_packet_t *SV_PacketizedAdd( client_t *client, byte *data,
 	if( length > MSG_TRESHOLD ) {
 		msg = SV_Malloc( sizeof( *msg ) + length - MSG_TRESHOLD );
 	} else {
-        if( LIST_EMPTY( &client->freemsg ) ) {
+        if( LIST_EMPTY( &client->msg_free ) ) {
             Com_WPrintf( "Out of message slots for %s!\n", client->name );
             if( reliable ) {
                 SV_PacketizedClear( client );
@@ -387,14 +386,14 @@ message_packet_t *SV_PacketizedAdd( client_t *client, byte *data,
             }
             return NULL;
         }
-        msg = LIST_FIRST( message_packet_t, &client->freemsg, entry );
+        msg = LIST_FIRST( message_packet_t, &client->msg_free, entry );
     	List_Remove( &msg->entry );
 	}
 
 	memcpy( msg->data, data, length );
 	msg->cursize = length;
 
-    List_Append( &client->inusemsg[reliable], &msg->entry );
+    List_Append( &client->msg_used[reliable], &msg->entry );
 
     return msg;
 }
@@ -410,7 +409,7 @@ static void SV_AddClientSounds( client_t *client, int maxsize ) {
 
 	frame = &client->frames[sv.framenum & UPDATE_MASK];
 
-    LIST_FOR_EACH_SAFE( sound_packet_t, msg, next, &client->soundmsg, entry ) {
+    LIST_FOR_EACH_SAFE( sound_packet_t, msg, next, &client->msg_sound, entry ) {
         entnum = msg->sendchan >> 3;
         flags = msg->flags;
 
@@ -476,7 +475,7 @@ static void SV_AddClientSounds( client_t *client, int maxsize ) {
 
         // move message to the free pool
 	    List_Remove( &msg->entry );
-        List_Insert( &client->freemsg, &msg->entry );
+        List_Insert( &client->msg_free, &msg->entry );
     }
 }
 
@@ -488,6 +487,7 @@ FRAME UPDATES - DEFAULT, R1Q2 AND Q2PRO CLIENTS (OLD NETCHAN)
 ===============================================================================
 */
 
+#define FOR_EACH_MSG( list )     LIST_FOR_EACH_SAFE( message_packet_t, msg, next, list, entry )
 
 void SV_OldClientAddMessage( client_t *client, byte *data,
 							  int length, qboolean reliable )
@@ -525,7 +525,7 @@ void SV_OldClientWriteReliableMessages( client_t *client, int maxsize ) {
 
 	// find at least one reliable message to send
     count = 0;
-    LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->inusemsg[1], entry ) {
+    FOR_EACH_MSG( &client->msg_used[1] ) {
 		// stop if this msg doesn't fit (reliables must be delivered in order)
 		if( client->netchan->message.cursize + msg->cursize > maxsize ) {
 			if( !count ) {
@@ -546,6 +546,14 @@ void SV_OldClientWriteReliableMessages( client_t *client, int maxsize ) {
 	}
 }
 
+static inline void write_msg( client_t *client, message_packet_t *msg, int maxsize ) {
+    // if this msg fits, write it
+    if( msg_write.cursize + msg->cursize <= maxsize ) {
+        MSG_WriteData( msg->data, msg->cursize );
+    }
+	SV_PacketizedRemove( client, msg );
+}
+
 
 /*
 =======================
@@ -563,8 +571,8 @@ void SV_OldClientWriteDatagram( client_t *client ) {
 	} else {
 		// find at least one reliable message to send
 		// and make sure to reserve space for it
-        if( !LIST_EMPTY( &client->inusemsg[1] ) ) {
-            msg = LIST_FIRST( message_packet_t, &client->inusemsg[1], entry );
+        if( !LIST_EMPTY( &client->msg_used[1] ) ) {
+            msg = LIST_FIRST( message_packet_t, &client->msg_used[1], entry );
             maxsize -= msg->cursize;
         }
 	}
@@ -585,26 +593,18 @@ void SV_OldClientWriteDatagram( client_t *client ) {
 	// so that entity references will be current
 	if( msg_write.cursize + 4 <= maxsize ) {
 		// temp entities first
-        LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->inusemsg[0], entry ) {
+        FOR_EACH_MSG( &client->msg_used[0] ) {
 			if( msg->data[0] != svc_temp_entity ) {
 				continue;
 			}
 			// ignore some low-priority effects, these checks come from r1q2
-			if( msg->data[1] == TE_BLOOD || msg->data[1] == TE_SPLASH ) {
-				continue;
-			}
-			if( msg->data[1] == TE_GUNSHOT || msg->data[1] == TE_BULLET_SPARKS
-                    || msg->data[1] == TE_SHOTGUN )
+			if( msg->data[1] == TE_BLOOD || msg->data[1] == TE_SPLASH ||
+			    msg->data[1] == TE_GUNSHOT || msg->data[1] == TE_BULLET_SPARKS ||
+                msg->data[1] == TE_SHOTGUN )
             {
 				continue;
 			}
-
-			// if this msg fits, write it
-			if( msg_write.cursize + msg->cursize <= maxsize ) {
-				MSG_WriteData( msg->data, msg->cursize );
-			}
-
-			SV_PacketizedRemove( client, msg );
+            write_msg( client, msg, maxsize );
 		}
 
 		if( msg_write.cursize + 4 <= maxsize ) {
@@ -613,28 +613,17 @@ void SV_OldClientWriteDatagram( client_t *client ) {
 
 			// then positioned sounds
 		    if( msg_write.cursize + 4 <= maxsize ) {
-                LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->inusemsg[0], entry ) {
+                FOR_EACH_MSG( &client->msg_used[0] ) {
                     if( msg->data[0] != svc_sound ) {
                         continue;
                     }
-
-                    // if this msg fits, write it
-                    if( msg_write.cursize + msg->cursize <= maxsize ) {
-                        MSG_WriteData( msg->data, msg->cursize );
-                    }
-
-                    SV_PacketizedRemove( client, msg );
+                    write_msg( client, msg, maxsize );
                 }
 
                 if( msg_write.cursize + 4 <= maxsize ) {
                     // then everything else left
-                    LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->inusemsg[0], entry ) {
-                        // if this msg fits, write it
-                        if( msg_write.cursize + msg->cursize <= maxsize ) {
-                            MSG_WriteData( msg->data, msg->cursize );
-                        }
-
-                        SV_PacketizedRemove( client, msg );
+                    FOR_EACH_MSG( &client->msg_used[0] ) {
+                        write_msg( client, msg, maxsize );
                     }
                 }
             }
@@ -659,11 +648,11 @@ void SV_OldClientFinishFrame( client_t *client ) {
 	message_packet_t	*msg, *next;
 
 	// clear all unreliable messages still left
-    LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->inusemsg[0], entry ) {
+    FOR_EACH_MSG( &client->msg_used[0] ) {
 		SV_PacketizedRemove( client, msg );
 	}
 
-    LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->soundmsg, entry ) {
+    FOR_EACH_MSG( &client->msg_sound ) {
 		SV_PacketizedRemove( client, msg );
 	}
 }
@@ -739,7 +728,7 @@ void SV_NewClientFinishFrame( client_t *client ) {
 	// clear all unreliable messages still left
 	SZ_Clear( &client->datagram );
 
-    LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->soundmsg, entry ) {
+    FOR_EACH_MSG( &client->msg_sound ) {
 		SV_PacketizedRemove( client, msg );
 	}
 }
