@@ -648,7 +648,7 @@ static void CL_PlayDemo_f( void ) {
 
 static void CL_Demo_c( genctx_t *ctx, int argnum ) {
     if( argnum == 1 ) {
-        FS_File_g( "demos", "*.dm2;*.dm2.gz", FS_SEARCH_SAVEPATH | FS_SEARCH_BYFILTER | 0x80000000, ctx );
+        FS_File_g( "demos", "*.dm2;*.dm2.gz;*.mvd2;*.mvd2.gz", FS_SEARCH_SAVEPATH | FS_SEARCH_BYFILTER, ctx );
     }
 }
 

@@ -78,6 +78,9 @@ static int IngameMenu_Callback( int id, int msg, int param ) {
 			break;
 		}
 		return QMS_IN;
+	case QM_SIZE:
+        Menu_Size( &m_ingame.menu );
+		break;
 	default:
 		break;
 	}
@@ -87,15 +90,10 @@ static int IngameMenu_Callback( int id, int msg, int param ) {
 
 static void IngameMenu_Draw( menuFrameWork_t *self ) {
 	int y1, y2;
-	color_t color;
+    static const color_t color = { 0, 0, 255, 32 };
 
-	y1 = ( uis.height - 16 * INGAME_ITEMS ) / 2 - 16;
-	y2 = ( uis.height + 16 * INGAME_ITEMS ) / 2 + 16;
-
-	color[0] = 0;
-	color[1] = 0;
-	color[2] = 255;
-	color[3] = 32;
+	y1 = ( uis.height - MENU_SPACING * INGAME_ITEMS ) / 2 - MENU_SPACING;
+	y2 = ( uis.height + MENU_SPACING * INGAME_ITEMS ) / 2 + MENU_SPACING;
 
 	ref.DrawFillEx( 0, y1, uis.width, y2 - y1, color );
 
@@ -106,10 +104,6 @@ static void IngameMenu_Draw( menuFrameWork_t *self ) {
 
 static void IngameMenu_Init( void ) {
 	int i;
-	int x, y;
-
-	x = uis.width / 2;
-	y = ( uis.height - 16 * INGAME_ITEMS ) / 2;
 
 	memset( &m_ingame, 0, sizeof( m_ingame ) );
 
@@ -117,16 +111,13 @@ static void IngameMenu_Init( void ) {
 	m_ingame.menu.draw = IngameMenu_Draw;
 	m_ingame.menu.transparent = qtrue;
 
-	for( i=0 ; i<INGAME_ITEMS ; i++ ) {
+	for( i = 0; i < INGAME_ITEMS; i++ ) {
 		m_ingame.actions[i].generic.type = MTYPE_ACTION;
 		m_ingame.actions[i].generic.id = i;
 		m_ingame.actions[i].generic.name = names[i];
-		m_ingame.actions[i].generic.x = x;
-		m_ingame.actions[i].generic.y = y;
 		m_ingame.actions[i].generic.uiFlags = UI_CENTER|UI_DROPSHADOW;
-		y += 16;
 	
-		Menu_AddItem( &m_ingame.menu, (void *)&m_ingame.actions[i] );
+		Menu_AddItem( &m_ingame.menu, &m_ingame.actions[i] );
 	}
 
 	m_ingame.actions[0].generic.flags = QMF_HASFOCUS;

@@ -379,7 +379,7 @@ static void Key_Name_g( genctx_t *ctx ) {
     keyname_t *k;
 
     for( k = keynames; k->name; k++ ) {
-        if( !Prompt_AddMatch( ctx, k->name ) ) {
+        if( !Prompt_AddMatchCase( ctx, k->name ) ) {
             break;
         }
     }

@@ -948,6 +948,7 @@ void        Com_Address_g( genctx_t *ctx );
 void        Com_Generic_c( genctx_t *ctx, int argnum );
 
 qboolean    Prompt_AddMatch( genctx_t *ctx, const char *s );
+qboolean    Prompt_AddMatchCase( genctx_t *ctx, const char *s );
 
 int         Com_Time_m( char *buffer, int size );
 int         Com_Uptime_m( char *buffer, int size );

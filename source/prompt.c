@@ -132,6 +132,16 @@ qboolean Prompt_AddMatch( genctx_t *ctx, const char *s ) {
     return qtrue;
 }
 
+qboolean Prompt_AddMatchCase( genctx_t *ctx, const char *s ) {
+    if( ctx->count >= ctx->size ) {
+        return qfalse;
+    }
+	if( !Q_strncasecmp( ctx->partial, s, ctx->length ) ) {
+        ctx->matches[ctx->count++] = Z_CopyString( s );
+    }
+    return qtrue;
+}
+
 /*
 ====================
 Prompt_CompleteCommand
