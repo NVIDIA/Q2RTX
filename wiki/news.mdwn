@@ -1,1 +1,0 @@
-[[inline pages="./news/* and !*/Discussion" rootpage="news" show="30"]]

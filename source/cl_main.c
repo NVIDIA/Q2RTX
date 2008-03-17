@@ -1952,7 +1952,7 @@ static void CL_DumpStatusbar_f( void ) {
 	}
 
 	FS_FPrintf( f, "// status bar program dump of '%s' mod\n",
-            Cvar_VariableString( "gamedir" ) );
+        Cvar_VariableString( "gamedir" ) );
 	FS_FPrintf( f, "%s\n", cl.configstrings[CS_STATUSBAR] );
 
 	FS_FCloseFile( f );

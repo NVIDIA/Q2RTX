@@ -1,28 +1,72 @@
-Q2PRO is a [Quake2][] game engine modification, based on source code
-released under the GPL by id Software. This is not a standalone game as it
-does not provide own media content.
+Introduction
+-----------------
 
-Client and server sides are both compatible with original Quake2 network
-architecture, as well as with modern [R1Q2][] network architecture.
-Q2PRO is designed to be secure, fast alternative engine will little to no
-visual enhancements, but not too conservative.
-It provides some features yet unique for the Quake2 gaming world,
-notably server side [MVD][] support and built-in capabilities of
-hosting [GTV][] server nodes.
+Q2PRO is a [Quake2][] engine modification, based on source code released
+under the GPL by id Software. This is not a standalone game as it does not
+provide own media content, but rather an enhancement over original Quake2
+release designed for everyday use.
 
-Q2PRO has it's own software and OpenGL refresh libraries and runs on
-Windows and GNU/Linux natively. It may compile and run on other
-Unix-like systems too.
 
-[r1q2]: http://r1ch.net/stuff/r1q2/ "R1CH's Enhanced Quake II Client/Server"
+Feature highlights
+-----------------
+
+* __Improved security and stability.__ Q2PRO client and server, being in
+  development since 2003, addresses all critical Quake2 engine vulnerabilities
+  known to the author.
+
+* __Performance increases.__ OpenGL refresh module has been completely
+  rewritten to take full advantage of capabilities of modern hardware.
+  By greatly reducing driver overhead, Q2PRO provides performace
+  increases up to 200% of default Quake2 renderer speed.
+
+* __Enhanced console input.__ Q2PRO supports bash(1)-like autocompletion not of
+  just commands and cvars, but also agruments of many frequently used commands.
+  Graphical client console supports most of readline(3) key bindings, which makes
+  command line editing much more convenient.
+
+* __Basic demo editing.__ Good news for those frustrated of inability of
+  Quake2 client to record demos while playing back: Q2PRO supports this
+  natively. There is no longer need for external demo editor to perform some
+  basic operations like cutting interesting frags out of a demo.
+
+* __Support for several platforms.__ Q2PRO client and server natively run on
+  Windows as well as many UNIX-like systems. Q2PRO client uses cross-platform
+  SDL library for graphical output on UNIX.
+
+* __Integrated demo and server browser.__ Q2PRO client allows one easily manage
+  their demo collection by providing integrated demo browser. Address book
+  functionality is greatly improved by providing integrated server browser.
+
+* __Multi View Demo support.__ Q2PRO server is capable of recording and playing
+  back demos is special MVD format, which captures view updates of all players.
+  Clients themselves choose which view they would like to watch during playback,
+  which is completely transparent and supported for _all_ Quake2 clients.
+
+* __Game TeleVision support.__ Q2PRO server may act as game retranslator node,
+  allowing massive amount of spectators watch game match in real time without
+  putting any additional load on the game server itself. Furthermore, broadcasting is
+  done in MVD format natively, which allows any particular spectator individually
+  choose which view they would like to watch. There is no need for "camera man",
+  unlike many other GTV implementations.
+
+* __Frame rates separation.__ Q2PRO client provides "true" networking, physics,
+  rendering and input polling frame rates separation. Unlike other Quake2 clients,
+  Q2PRO will not waste CPU cycles drawing frames never actually seen on screen,
+  but will poll for user input instead in order to minimize input latency.
+
+* __Anti-cheat measures.__ Q2PRO client builds for Windows may optionally load
+  [r1ch.net anticheat][ac] module to authenticate themselves to anticheat-enabled
+  servers. On other side, Q2PRO server itself is capable of serving
+  anticheat-enabled clients.
+
 [quake2]: http://en.wikipedia.org/wiki/Quake_2 "id Software's Quake II"
-[mvd]: http://en.wikipedia.org/wiki/Multi_view_demos "Multi View Demo"
-[gtv]: http://en.wikipedia.org/w/index.php?title=Gamer%27s_TeleVision&action=edit "Gamer's TV"
+[ac]: http://antiche.at "r1ch.net anticheat"
 
-* [[features]]
-* [[screenshots|shots]]
+
+Navigation
+-----------------
+
 * [[download]]
-* [[news]]
 * [[documentation|doc]]
 * [[contact]]
 * [SF.net page](http://sourceforge.net/projects/q2pro/)

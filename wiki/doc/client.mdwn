@@ -1,27 +1,5 @@
 [[toc ]]
 
-Quick start
-==========
-
-For those who prefer to see results first, then read documentation,
-here is an example client configuration file to start playing with:
-
-    set cl_async 1 // framerate separation
-    set cl_maxfps 120 // physics
-    set r_maxfps 240 // graphics
-    set cl_maxpackets 60 // network
-    set vid_modelist "640x480 800x600 1024x768"
-    set vid_fullscreen 2 // 800x600
-    set r_override_textures 1 // JPG, PNG
-    set r_override_models 1 // MD3
-    set gl_brightness 0.25 // lightmap overbright
-    set gl_saturation 0.5 // textures color saturation
-    set gl_coloredlightmaps 0.5 // lightmap color saturation
-    set gl_anisotropy 8  // enable anisotropic filtering
-    set gl_vertex_buffer_object 1 // enable VBOs
-    set cl_railtrail_type 1 // single beam
-    set con_clock 1 // display clock in console
-
 Variables
 ==========
 

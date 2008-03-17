@@ -1,7 +1,6 @@
 Documentation for Q2PRO.
 
-* Build instructions for [[MinGW]].
-* [[Server README|server]].
-* [[Client README|client]].
-* MVD protocol [[specification|mvdspec]].
-* Example OpenFFA config files: [[openffa.cfg|openffa.cfg.txt]] and [[maplist.cfg|maplist.cfg.txt]]
+* [[Server_commands_and_cvars|server]].
+* [[Client_commands_and_cvars|client]].
+* Building instructions for [[MinGW]].
+* [[Netcode]] details.

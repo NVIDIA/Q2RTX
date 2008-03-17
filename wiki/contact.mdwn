@@ -8,10 +8,13 @@ There are mailing lists set up:
 There is also Q2PRO [forum](http://forum.quake2.com.ru/viewforum.php?f=6)
 available (in Russian), hosted by the [Russian Quake2 Portal](http://quake2.com.ru/).
 
+IRC channel for Q2PRO is #q2pro at quakenet.org.
+
 Q2PRO author (SkulleR) can be contacted directly in the following ways:
 
 * email: skuller-vidnoe at yandex.ru
 * jabber/email: skuller32 at gmail.com
+* IRC: skuller at quakenet.org
 
 Author's GPG key:
 
