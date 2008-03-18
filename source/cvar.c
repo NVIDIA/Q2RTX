@@ -970,7 +970,8 @@ Cvar_Inc_f
 */
 static void Cvar_Inc_f( void ) {
 	cvar_t *var;
-	float val;
+	float value;
+	char val[32];
 
 	if( Cmd_Argc() < 2 ) {
 		Com_Printf( "Usage: %s <variable> [value]\n", Cmd_Argv( 0 ) );
@@ -984,20 +985,26 @@ static void Cvar_Inc_f( void ) {
 	}
 
 	if( !COM_IsNumeric( var->string ) ) {
-		Com_Printf( "\"%s\" is \"%s\", can't increment\n",
-            var->name, var->string );
+		Com_Printf( "\"%s\" is \"%s\", can't %s\n",
+            var->name, var->string, Cmd_Argv( 0 ) );
 		return;
 	}
 
-	val = 1;
+	value = 1;
 	if( Cmd_Argc() > 2 ) {
-		val = atof( Cmd_Argv( 2 ) );
+		value = atof( Cmd_Argv( 2 ) );
 	}
     if( !strcmp( Cmd_Argv( 0 ), "dec" ) ) {
-        val = -val;
+        value = -value;
     }
+    value += var->value;
 
-	Cvar_SetValue( var->name, var->value + val );
+	if( value == ( int )value )
+		Com_sprintf( val, sizeof( val ), "%i", ( int )value );
+	else
+		Com_sprintf( val, sizeof( val ), "%f", value );
+
+	Cvar_SetByVar( var, val, CVAR_SET_CONSOLE );
 }
 
 /*
