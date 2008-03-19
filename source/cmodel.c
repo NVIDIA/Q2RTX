@@ -787,17 +787,19 @@ qboolean CM_LoadMap( cm_t *cm, const char *name, int flags, uint32_t *checksum )
 	} while( 0 )
 
 	// load into heap
-	CM_LOAD( Visibility, VISIBILITY );
-	CM_LOAD( Surfaces, TEXINFO );
-	CM_LOAD( Planes, PLANES );
-	CM_LOAD( BrushSides, BRUSHSIDES );
-	CM_LOAD( Brushes, BRUSHES );
-	CM_LOAD( LeafBrushes, LEAFBRUSHES );
-	CM_LOAD( AreaPortals, AREAPORTALS );
-	CM_LOAD( Areas, AREAS );
-	CM_LOAD( Leafs, LEAFS );
-	CM_LOAD( Nodes, NODES );
-	CM_LOAD( Submodels, MODELS );
+    if( !( flags & CM_LOAD_ENTONLY ) ) {
+        CM_LOAD( Visibility, VISIBILITY );
+        CM_LOAD( Surfaces, TEXINFO );
+        CM_LOAD( Planes, PLANES );
+        CM_LOAD( BrushSides, BRUSHSIDES );
+        CM_LOAD( Brushes, BRUSHES );
+        CM_LOAD( LeafBrushes, LEAFBRUSHES );
+        CM_LOAD( AreaPortals, AREAPORTALS );
+        CM_LOAD( Areas, AREAS );
+        CM_LOAD( Leafs, LEAFS );
+        CM_LOAD( Nodes, NODES );
+        CM_LOAD( Submodels, MODELS );
+    }
 
 #if 0
 	// Load the entity string from file, if specified

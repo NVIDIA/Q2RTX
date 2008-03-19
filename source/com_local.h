@@ -242,6 +242,9 @@ extern	int	    cvar_infoModified;
 
 void Cvar_SetByVar( cvar_t *var, const char *value, cvarSetSource_t source );
 
+#define Cvar_Reset( x ) \
+	Cvar_SetByVar( x, (x)->default_string, CVAR_SET_CONSOLE )
+
 cvar_t *Cvar_UserSet( const char *var_name, const char *value );
 
 cvar_t *Cvar_ForceSet (const char *var_name, const char *value);
@@ -743,6 +746,7 @@ typedef struct {
 
 #define CM_LOAD_CLIENT	1
 #define CM_LOAD_VISONLY	2
+#define CM_LOAD_ENTONLY	4
 
 void		CM_Init( void );
 

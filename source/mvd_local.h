@@ -203,6 +203,7 @@ int MVD_Frame( void );
 //
 
 qboolean MVD_Parse( mvd_t *mvd ); 
+void MVD_ParseEntityString( mvd_t *mvd );
 
 
 //

@@ -106,7 +106,7 @@ static void MVD_LinkEdict( mvd_t *mvd, edict_t *ent ) {
     SV_LinkEdict( &mvd->cm, ent );
 }
 
-static void MVD_ParseEntityString( mvd_t *mvd ) {
+void MVD_ParseEntityString( mvd_t *mvd ) {
 	const char *data, *p;
 	char key[MAX_STRING_CHARS];
 	char value[MAX_STRING_CHARS];

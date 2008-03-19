@@ -305,6 +305,7 @@ static void MVD_FollowStart( udpClient_t *client, mvd_player_t *target ) {
 		return;
 	}
 
+    client->oldtarget = client->target;
 	client->target = target;
 
 	// send delta configstrings
@@ -629,10 +630,19 @@ static void MVD_Follow_f( udpClient_t *client ) {
         case 'b':
             mask = EF_FLAG2;
             break;
+        case 'p':
+            if( client->oldtarget && client->oldtarget->inuse ) {
+                MVD_FollowStart( client, client->oldtarget );
+            } else {
+                SV_ClientPrintf( client->cl, PRINT_HIGH,
+                    "Previous target is not active.\n" );
+            }
+            return;
         default:
             SV_ClientPrintf( client->cl, PRINT_HIGH,
-                "[MVD] Unknown powerup '%s'. Valid powerups:\n"
-                "q (quad), i (invulner), r (red flag), b (blue flag).\n", s + 1 );
+                "[MVD] Unknown target '%s'. Valid targets:\n"
+                "q (quad), i (invulner), r (red flag), "
+                "b (blue flag), p (previous target).\n", s + 1 );
             return;
         }
         for( i = 0; i < mvd->maxclients; i++ ) {
@@ -806,6 +816,9 @@ void MVD_RemoveClient( client_t *client ) {
 static void MVD_GameInit( void ) {
     mvd_t *mvd = &mvd_waitingRoom;
     edict_t *edicts;
+    cvar_t *mvd_default_map;
+    char buffer[MAX_QPATH];
+    unsigned checksum;
 	int i;
 
 	Com_Printf( "----- MVD_GameInit -----\n" );
@@ -815,6 +828,7 @@ static void MVD_GameInit( void ) {
 	mvd_flood_persecond = Cvar_Get( "flood_persecond", "4", 0 ); // FIXME: rename this
 	mvd_flood_waitdelay = Cvar_Get( "flood_waitdelay", "10", 0 );
 	mvd_flood_mute = Cvar_Get( "flood_mute", "0", 0 );
+    mvd_default_map = Cvar_Get( "mvd_default_map", "q2dm1", CVAR_LATCH );
 
     Z_TagReserve( ( sizeof( edict_t ) +
         sizeof( udpClient_t ) ) * sv_maxclients->integer +
@@ -834,18 +848,31 @@ static void MVD_GameInit( void ) {
     mvd_ge.num_edicts = sv_maxclients->integer + 1;
     mvd_ge.max_edicts = sv_maxclients->integer + 1;
 
+    Com_sprintf( buffer, sizeof( buffer ),
+        "maps/%s.bsp", mvd_default_map->string );
+
+    if( CM_LoadMap( &mvd->cm, buffer, CM_LOAD_CLIENT|CM_LOAD_ENTONLY, &checksum ) ) {
+        // get the spectator spawn point
+        MVD_ParseEntityString( mvd );
+        CM_FreeMap( &mvd->cm );
+    } else {
+        Com_WPrintf( "Couldn't load %s.\n", buffer );
+        Cvar_Reset( mvd_default_map );
+        strcpy( buffer, "maps/q2dm1.bsp" );
+        checksum = 80717714;
+        VectorSet( mvd->spawnOrigin, 984, 192, 784 );
+        VectorSet( mvd->spawnAngles, 25, 72, 0 );
+    }
+
     strcpy( mvd->name, "Waiting Room" );
-    strcpy( mvd->mapname, "q2dm1" );
+    strcpy( mvd->mapname, mvd_default_map->string );
     List_Init( &mvd->udpClients );
 
     strcpy( mvd->configstrings[CS_NAME], "Waiting Room" );
     strcpy( mvd->configstrings[CS_SKY], "unit1_" );
     strcpy( mvd->configstrings[CS_MAXCLIENTS], "8" );
-    strcpy( mvd->configstrings[CS_MAPCHECKSUM], "80717714" );
-    strcpy( mvd->configstrings[CS_MODELS + 1], "maps/q2dm1.bsp" );
-
-    VectorSet( mvd->spawnOrigin, 984, 192, 784 );
-    VectorSet( mvd->spawnAngles, 25, 72, 0 );
+    sprintf( mvd->configstrings[CS_MAPCHECKSUM], "%d", checksum );
+    strcpy( mvd->configstrings[CS_MODELS + 1], buffer );
 
     mvd->dummy = &mvd_dummy;
     mvd->pm_type = PM_FREEZE;
