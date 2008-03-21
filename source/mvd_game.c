@@ -851,12 +851,13 @@ static void MVD_GameInit( void ) {
     Com_sprintf( buffer, sizeof( buffer ),
         "maps/%s.bsp", mvd_default_map->string );
 
-    if( CM_LoadMap( &mvd->cm, buffer, CM_LOAD_CLIENT|CM_LOAD_ENTONLY, &checksum ) ) {
+    if( FS_LoadFile( buffer, NULL ) > 0 ) {
+        CM_LoadMap( &mvd->cm, buffer, CM_LOAD_CLIENT|CM_LOAD_ENTONLY, &checksum );
         // get the spectator spawn point
         MVD_ParseEntityString( mvd );
         CM_FreeMap( &mvd->cm );
     } else {
-        Com_WPrintf( "Couldn't load %s.\n", buffer );
+        Com_WPrintf( "Couldn't load %s for the Waiting Room.\n", buffer );
         Cvar_Reset( mvd_default_map );
         strcpy( buffer, "maps/q2dm1.bsp" );
         checksum = 80717714;
@@ -865,7 +866,8 @@ static void MVD_GameInit( void ) {
     }
 
     strcpy( mvd->name, "Waiting Room" );
-    strcpy( mvd->mapname, mvd_default_map->string );
+    Cvar_VariableStringBuffer( "game", mvd->gamedir, sizeof( mvd->gamedir ) );
+    Q_strncpyz( mvd->mapname, mvd_default_map->string, sizeof( mvd->mapname ) );
     List_Init( &mvd->udpClients );
 
     strcpy( mvd->configstrings[CS_NAME], "Waiting Room" );
