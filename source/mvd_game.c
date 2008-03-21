@@ -879,6 +879,12 @@ static void MVD_GameInit( void ) {
     mvd->dummy = &mvd_dummy;
     mvd->pm_type = PM_FREEZE;
 
+    // set serverinfo variables
+	SV_InfoSet( "mapname", mvd->mapname );
+//	SV_InfoSet( "gamedir", "gtv" );
+	SV_InfoSet( "gamename", "gtv" );
+	SV_InfoSet( "gamedate", __DATE__ );
+    
     gameFeatures = GAME_FEATURE_CLIENTNUM|GAME_FEATURE_PROPERINUSE;
 }
 

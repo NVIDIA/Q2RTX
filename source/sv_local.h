@@ -42,6 +42,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define SV_BASELINES_MASK			( SV_BASELINES_PER_CHUNK - 1 )
 #define SV_BASELINES_CHUNKS			( MAX_EDICTS >> SV_BASELINES_SHIFT )
 
+#define SV_InfoSet( var, val ) \
+	Cvar_FullSet( var, val, CVAR_SERVERINFO|CVAR_NOSET, CVAR_SET_DIRECT )
+
 typedef struct {
 	unsigned	numEntities;
 	unsigned	firstEntity;

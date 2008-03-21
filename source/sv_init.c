@@ -144,8 +144,7 @@ void SV_SpawnServer( const char *server, const char *spawnpoint ) {
     }
 
 	// set serverinfo variable
-	Cvar_FullSet( "mapname", sv.name,
-        CVAR_SERVERINFO|CVAR_NOSET, CVAR_SET_DIRECT );
+	SV_InfoSet( "mapname", sv.name );
 
 	Cvar_SetInteger( "sv_running", ss_game );
 	Cvar_Set( "sv_paused", "0" );
@@ -236,7 +235,8 @@ void SV_InitGame( qboolean ismvd ){
 	svs.numEntityStates = sv_maxclients->integer * UPDATE_BACKUP * MAX_PACKET_ENTITIES;
 	svs.entityStates = SV_Mallocz( sizeof( entity_state_t ) * svs.numEntityStates );
 
-    if( sv_mvd_enable->integer ) {
+    // allocate MVD recorder buffers
+    if( !ismvd && sv_mvd_enable->integer ) {
         Z_TagReserve( sizeof( player_state_t ) * sv_maxclients->integer +
             sizeof( entity_state_t ) * MAX_EDICTS + MAX_MSGLEN * 2, TAG_SERVER );
         svs.mvd.message_data = Z_ReservedAlloc( MAX_MSGLEN );
