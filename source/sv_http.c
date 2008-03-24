@@ -669,7 +669,10 @@ void SV_HttpRun( void ) {
     tcpClient_t *client, *next;
     neterr_t ret;
     netstream_t stream;
-    unsigned point;
+	unsigned    zombie_time = 1000 * sv_zombietime->value;
+	unsigned    drop_time = 1000 * sv_timeout->value;
+    unsigned    ghost_time = 1000 * sv_ghostime->value;
+    unsigned    delta;
 
     // accept new connections
     ret = NET_Accept( &net_from, &stream );
@@ -686,30 +689,22 @@ void SV_HttpRun( void ) {
         http_header[0] = 0;
 
         // check timeouts
-		if( client->lastmessage > svs.realtime ) {
-			client->lastmessage = svs.realtime;
-		}
+		delta = svs.realtime - client->lastmessage;
         switch( client->state ) {
         case cs_zombie:
-            if( client->lastmessage < svs.zombiepoint ||
-                FIFO_Usage( &client->stream.send ) == 0 )
-            {
+            if( delta > zombie_time || !FIFO_Usage( &client->stream.send ) ) {
                 SV_HttpRemove( client );
 			    continue;
 		    }
             break;
         case cs_assigned:
-            point = svs.droppoint;
-            if( point < svs.ghostpoint ) {
-                point = svs.ghostpoint;
-            }
-            if( client->lastmessage < point ) {
+            if( delta > ghost_time || delta > drop_time ) {
                 SV_HttpReject( "408 Request Timeout", NULL );
                 continue;
             }
             break;
         default:
-            if( client->lastmessage < svs.droppoint ) {
+            if( delta > drop_time ) {
                 SV_HttpDrop( client, "connection timed out" );
                 SV_HttpRemove( client );
                 continue;

@@ -22,187 +22,77 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cl_local.h"
 #include "snd_local.h"
 
+typedef struct wavinfo_s {
+	int			rate;
+	int			width;
+	int			channels;
+	int			loopstart;
+	int			samples;
+    byte        *data;
+} wavinfo_t;
+
+
 /*
 ================
 ResampleSfx
-
-code from QFusion (thanks Vic)
 ================
 */
-static void ResampleSfx (sfx_t *sfx, byte *data)
-{
-	int i, outcount, srcsample, srclength, samplefrac, fracstep;
-	sfxcache_t *sc = sfx->cache;
+static sfxcache_t *ResampleSfx( sfx_t *sfx, wavinfo_t *info ) {
+	int		outcount;
+	int		srcsample;
+	float	stepscale;
+	int		i;
+	int		samplefrac, fracstep;
+	sfxcache_t	*sc;
 
-	// this is usually 0.5 (128), 1 (256), or 2 (512)
-	fracstep = ((double) sc->speed / (double) dma.speed) * 256.0;
+	stepscale = ( float )info->rate / dma.speed;	// this is usually 0.5, 1, or 2
 
-	srclength = sc->length * sc->channels;
-	outcount = (double) sc->length * (double) dma.speed / (double) sc->speed;
+	outcount = info->samples / stepscale;
+    if( !outcount ) {
+        return NULL;
+    }
 
+	sc = sfx->cache = S_Malloc( outcount * info->width + sizeof( sfxcache_t ) - 1 );
+	
 	sc->length = outcount;
-	if (sc->loopstart != -1)
-		sc->loopstart = (double) sc->loopstart * (double) dma.speed / (double) sc->speed;
-
+	sc->loopstart = info->loopstart / stepscale;
 	sc->speed = dma.speed;
+	sc->width = info->width;
+	sc->channels = 1;
 
 // resample / decimate to the current source rate
-	if (fracstep == 256)
-	{
-		if (sc->width == 1) // 8bit
-			for (i = 0;i < srclength;i++)
-				((signed char *)sc->data)[i] = ((unsigned char *)data)[i] - 128;
-		else
-			for (i = 0;i < srclength;i++)
-				((short *)sc->data)[i] = LittleShort (((short *)data)[i]);
-	}
-	else
-	{
+
+	if (stepscale == 1) {
+// fast special case
+        if( sc->width == 1 ) {
+		    for(i = 0; i < outcount; i++) {
+			    ((signed char *)sc->data)[i] = (int)( (unsigned char)info->data[i] - 128 );
+            }
+        } else {
+		    for(i = 0; i < outcount; i++) {
+                ((signed short *)sc->data)[i] = LittleShort( ((signed short *)info->data)[i] );
+            }
+        }
+	} else {
 // general case
-		Com_DPrintf("ResampleSfx: resampling sound %s\n", sfx->name);
 		samplefrac = 0;
-
-		if ((fracstep & 255) == 0) // skipping points on perfect multiple
-		{
-			srcsample = 0;
-			fracstep >>= 8;
-			if (sc->width == 2)
-			{
-				short *out = (void *)sc->data, *in = (void *)data;
-				if (sc->channels == 2)
-				{
-					fracstep <<= 1;
-					for (i=0 ; i<outcount ; i++)
-					{
-						*out++ = LittleShort (in[srcsample  ]);
-						*out++ = LittleShort (in[srcsample+1]);
-						srcsample += fracstep;
-					}
-				}
-				else
-				{
-					for (i=0 ; i<outcount ; i++)
-					{
-						*out++ = LittleShort (in[srcsample  ]);
-						srcsample += fracstep;
-					}
-				}
-			}
-			else
-			{
-				signed char *out = (void *)sc->data;
-				unsigned char *in = (void *)data;
-
-				if (sc->channels == 2)
-				{
-					fracstep <<= 1;
-					for (i=0 ; i<outcount ; i++)
-					{
-						*out++ = in[srcsample  ] - 128;
-						*out++ = in[srcsample+1] - 128;
-						srcsample += fracstep;
-					}
-				}
-				else
-				{
-					for (i=0 ; i<outcount ; i++)
-					{
-						*out++ = in[srcsample  ] - 128;
-						srcsample += fracstep;
-					}
-				}
-			}
-		}
-		else
-		{
-			int sample;
-			int a, b;
-			if (sc->width == 2)
-			{
-				short *out = (void *)sc->data, *in = (void *)data;
-
-				if (sc->channels == 2)
-				{
-					for (i=0 ; i<outcount ; i++)
-					{
-						srcsample = (samplefrac >> 8) << 1;
-						a = in[srcsample  ];
-						if (srcsample+2 >= srclength)
-							b = 0;
-						else
-							b = in[srcsample+2];
-						sample = (((b - a) * (samplefrac & 255)) >> 8) + a;
-						*out++ = (short) sample;
-						a = in[srcsample+1];
-						if (srcsample+2 >= srclength)
-							b = 0;
-						else
-							b = in[srcsample+3];
-						sample = (((b - a) * (samplefrac & 255)) >> 8) + a;
-						*out++ = (short) sample;
-						samplefrac += fracstep;
-					}
-				}
-				else
-				{
-					for (i=0 ; i<outcount ; i++)
-					{
-						srcsample = samplefrac >> 8;
-						a = in[srcsample  ];
-						if (srcsample+1 >= srclength)
-							b = 0;
-						else
-							b = in[srcsample+1];
-						sample = (((b - a) * (samplefrac & 255)) >> 8) + a;
-						*out++ = (short) sample;
-						samplefrac += fracstep;
-					}
-				}
-			}
-			else
-			{
-				signed char *out = (void *)sc->data;
-				unsigned char *in = (void *)data;
-				if (sc->channels == 2)
-				{
-					for (i=0 ; i<outcount ; i++)
-					{
-						srcsample = (samplefrac >> 8) << 1;
-						a = (int) in[srcsample  ] - 128;
-						if (srcsample+2 >= srclength)
-							b = 0;
-						else
-							b = (int) in[srcsample+2] - 128;
-						sample = (((b - a) * (samplefrac & 255)) >> 8) + a;
-						*out++ = (signed char) sample;
-						a = (int) in[srcsample+1] - 128;
-						if (srcsample+2 >= srclength)
-							b = 0;
-						else
-							b = (int) in[srcsample+3] - 128;
-						sample = (((b - a) * (samplefrac & 255)) >> 8) + a;
-						*out++ = (signed char) sample;
-						samplefrac += fracstep;
-					}
-				}
-				else
-				{
-					for (i=0 ; i<outcount ; i++)
-					{
-						srcsample = samplefrac >> 8;
-						a = (int) in[srcsample  ] - 128;
-						if (srcsample+1 >= srclength)
-							b = 0;
-						else
-							b = (int) in[srcsample+1] - 128;
-						sample = (((b - a) * (samplefrac & 255)) >> 8) + a;
-						*out++ = (signed char) sample;
-						samplefrac += fracstep;
-					}
-				}
-			}
+		fracstep = stepscale*256;
+        if( sc->width == 1 ) {
+            for (i = 0; i < outcount; i++) {
+                srcsample = samplefrac >> 8;
+                samplefrac += fracstep;
+                ((signed char *)sc->data)[i] = (int)( (unsigned char)info->data[srcsample] - 128 );
+            }
+        } else {
+            for (i = 0; i < outcount; i++) {
+                srcsample = samplefrac >> 8;
+                samplefrac += fracstep;
+                ((signed short *)sc->data)[i] = LittleShort( ((signed short *)info->data)[srcsample] );
+            }
 		}
 	}
+
+    return sc;
 }
 
 /*
@@ -212,14 +102,6 @@ WAV loading
 
 ===============================================================================
 */
-
-typedef struct wavinfo_s {
-	int			rate;
-	int			width;
-	int			channels;
-	int			loopstart;
-	int			samples;
-} wavinfo_t;
 
 static byte     *data_p;
 static byte 	*iff_end;
@@ -335,7 +217,7 @@ static qboolean GetWavinfo( const char *name, wavinfo_t *info ) {
 	}
 
 	info->channels = GetLittleShort();
-	if( info->channels != 1 && info->channels != 2 ) {
+	if( info->channels != 1 /*&& info->channels != 2*/ ) {
 		Com_DPrintf( "%s has bad number of channels\n", name );
         return qfalse;
 	}
@@ -404,6 +286,8 @@ static qboolean GetWavinfo( const char *name, wavinfo_t *info ) {
 		info->samples = samples;
     }
 
+    info->data = data_p;
+
 	return qtrue;
 }
 
@@ -412,13 +296,10 @@ static qboolean GetWavinfo( const char *name, wavinfo_t *info ) {
 S_LoadSound
 ==============
 */
-sfxcache_t *S_LoadSound (sfx_t *s)
-{
+sfxcache_t *S_LoadSound (sfx_t *s) {
     char	namebuffer[MAX_QPATH];
 	byte	*data;
 	wavinfo_t	info;
-	int		len;
-    float   stepscale;
 	sfxcache_t	*sc;
 	int		size;
 	char	*name;
@@ -443,41 +324,20 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 		Q_concat( namebuffer, sizeof( namebuffer ), "sound/", name, NULL );
 
 	size = FS_LoadFile (namebuffer, (void **)&data);
-
-	if (!data)
-	{
+	if (!data) {
 		Com_DPrintf ("Couldn't load %s\n", namebuffer);
 		return NULL;
 	}
 
 	iff_data = data;
 	iff_end = data + size;
-	if( !GetWavinfo( name, &info ) ) {
-        FS_FreeFile (data);
-        return NULL;
+	if( GetWavinfo( name, &info ) ) {
+	    if( !( sc = ResampleSfx( s, &info ) ) ) {
+            Com_DPrintf( "%s resampled to zero length\n", name );
+        }
     }
 
-    stepscale = ( float )info.rate / dma.speed;
-	len = info.samples / stepscale;
-    if( !len ) {
-        Com_DPrintf( "%s resampled to zero length\n", name );
-        FS_FreeFile (data);
-        return NULL;
-    }
-
-	sc = s->cache = Z_TagMalloc( len * info.width + sizeof( sfxcache_t ) - 1,
-        TAG_SOUND );
-	
-	sc->length = info.samples / info.channels;
-	sc->loopstart = info.loopstart;
-	sc->speed = info.rate;
-	sc->width = info.width;
-	sc->channels = info.channels;
-
-	ResampleSfx( s, data_p );
-
-	FS_FreeFile (data);
-
+	FS_FreeFile( data );
 	return sc;
 }
 

@@ -477,6 +477,9 @@ typedef struct zhead_s {
 	uint16_t    magic;
 	uint16_t    tag;			// for group free
 	size_t      size;
+#ifdef _DEBUG
+    void        *addr;
+#endif
 	struct zhead_s	*prev, *next;
 } zhead_t;
 
@@ -716,6 +719,10 @@ void *Z_TagMalloc( size_t size, memtag_t tag ) {
 	z->magic = Z_MAGIC;
 	z->tag = tag;
 	z->size = size;
+
+#ifdef _DEBUG
+    z->addr = __builtin_return_address( 0 );
+#endif
 
 	z->next = z_chain.next;
 	z->prev = &z_chain;
@@ -1042,12 +1049,12 @@ void Com_Freeze_f( void ) {
 		return;
 	}
 
-	seco = atoi( Cmd_Argv( 1 ) );
+	sec = atoi( Cmd_Argv( 1 ) );
 	if( sec < 1 ) {
 		return;
 	}
 
-	time = Sys_Milliseconds() + seconds * 1000;
+	time = Sys_Milliseconds() + sec * 1000;
 	while( Sys_Milliseconds() < time )
 		;
 }

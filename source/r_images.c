@@ -51,6 +51,14 @@ PCX LOADING
 =================================================================
 */
 
+// FIXME: get rid of this
+#ifdef SOFTWARE_RENDERER
+#define PCX_ALLOC( x )  R_Malloc( x )
+#define PCX_FREE( x ) com.Free( x )
+#else
+#define PCX_ALLOC( x )  fs.AllocTempMem( w * h )
+#define PCX_FREE( x ) fs.FreeFile( x )
+#endif
 
 /*
 ==============
@@ -79,8 +87,8 @@ void Image_LoadPCX( const char *filename, byte **pic, byte *palette, int *width,
 		return;
 	}
     if( len < sizeof( *pcx ) ) {
-		Com_WPrintf( "LoadPCX: %s: header too short\n", filename );
-        return;
+		Com_WPrintf( "LoadPCX: %s: file too short\n", filename );
+        goto fail2;
     }
 
 	//
@@ -99,19 +107,15 @@ void Image_LoadPCX( const char *filename, byte **pic, byte *palette, int *width,
 		|| h > 480 )
 	{
 		Com_WPrintf( "LoadPCX: %s: unsupported format\n", filename );
-		return;
+        goto fail2;
 	}
 
-#ifdef SOFTWARE_RENDERER
-	pix = out = R_Malloc( w * h );
-#else
-	pix = out = fs.AllocTempMem( w * h );
-#endif
+	pix = out = PCX_ALLOC( w * h );
 
 	if( palette ) {
         if( len < 768 ) {
 		    Com_WPrintf( "LoadPCX: %s: palette too short\n", filename );
-            goto malformed;
+            goto fail1;
         }
 		memcpy( palette, ( byte * )pcx + len - 768, 768 );
 	}
@@ -123,7 +127,7 @@ void Image_LoadPCX( const char *filename, byte **pic, byte *palette, int *width,
 		for( x = 0; x < w; ) {
             if( raw >= end ) {
 		        Com_WPrintf( "LoadPCX: %s: read past end of file\n", filename );
-                goto malformed;
+                goto fail1;
             }
 			dataByte = *raw++;
 
@@ -131,11 +135,11 @@ void Image_LoadPCX( const char *filename, byte **pic, byte *palette, int *width,
 				runLength = dataByte & 0x3F;
                 if( x + runLength > w ) {
 		            Com_WPrintf( "LoadPCX: %s: run length overrun\n", filename );
-                    goto malformed;
+                    goto fail1;
                 }
                 if( raw >= end ) {
 		            Com_WPrintf( "LoadPCX: %s: read past end of file\n", filename );
-                    goto malformed;
+                    goto fail1;
                 }
 				dataByte = *raw++;
                 while( runLength-- ) {
@@ -159,12 +163,9 @@ void Image_LoadPCX( const char *filename, byte **pic, byte *palette, int *width,
 	fs.FreeFile( pcx );
     return;
 
-malformed:
-#ifdef SOFTWARE_RENDERER
-    com.Free( out );
-#else
-    fs.FreeFile( out );
-#endif
+fail1:
+    PCX_FREE( out );
+fail2:
 	fs.FreeFile( pcx );
 }
 
@@ -512,7 +513,7 @@ void Image_LoadTGA( const char *filename, byte **pic,
 	}
 
 	if( w < 1 || h < 1 || w > MAX_TEXTURE_SIZE || h > MAX_TEXTURE_SIZE ) {
-		Com_WPrintf( "LoadTGA: %s: has strange dimensions: %dx%d\n",
+		Com_WPrintf( "LoadTGA: %s: bad dimensions: %dx%d\n",
 		    filename, w, h );
 		goto finish;
 	}
@@ -1170,8 +1171,7 @@ void R_ResampleTexture( const byte *in, int inwidth, int inheight, byte *out, in
 	float		heightScale;
 
 	if( outwidth > MAX_TEXTURE_SIZE ) {
-		Com_Error( ERR_FATAL, "ResampleTexture: outwidth > %d",
-            MAX_TEXTURE_SIZE );
+		Com_Error( ERR_FATAL, "%s: outwidth > %d", __func__, MAX_TEXTURE_SIZE );
 	}
 
 	fracstep = inwidth * 0x10000 / outwidth;

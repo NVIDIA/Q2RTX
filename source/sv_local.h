@@ -31,7 +31,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 //=============================================================================
 
-#define	MAX_MASTERS	8				// max recipients for heartbeat packets
+#define	MAX_MASTERS 8				// max recipients for heartbeat packets
+#define	HEARTBEAT_SECONDS   300
 
 #define SV_Malloc( size )       Z_TagMalloc( size, TAG_SERVER )
 #define SV_Mallocz( size )      Z_TagMallocz( size, TAG_SERVER )
@@ -150,7 +151,8 @@ typedef enum {
     CF_RECONNECTED  = ( 1 << 0 ),
     CF_NODATA       = ( 1 << 1 ),
     CF_DEFLATE      = ( 1 << 2 ),
-    CF_DROP         = ( 1 << 3 )
+    CF_DROP         = ( 1 << 3 ),
+    CF_ERROR        = ( 1 << 4 )
 } client_flags_t;
 
 typedef struct client_s {
@@ -178,7 +180,7 @@ typedef struct client_s {
 	int				message_size[RATE_MESSAGES];	// used to rate drop packets
 	int				rate;
 	int				surpressCount;		// number of messages rate supressed
-	unsigned		sendTime;			// used to rate drop async packets
+	unsigned		send_time, send_delta;	// used to rate drop async packets
     frameflags_t    frameflags;
 
 	edict_t			*edict;				// EDICT_NUM(clientnum+1)
@@ -316,7 +318,6 @@ typedef struct {
 typedef struct server_static_s {
 	qboolean	initialized;			// sv_init has completed
 	unsigned	realtime;				// always increasing, no clamping, etc
-    unsigned    zombiepoint, ghostpoint, droppoint;
 
 	char		mapcmd[MAX_TOKEN_CHARS];	// ie: *intro.cin+base 
 
@@ -404,6 +405,7 @@ extern cvar_t       *sv_nextserver;
 
 extern cvar_t       *sv_timeout;
 extern cvar_t       *sv_zombietime;
+extern cvar_t	    *sv_ghostime;
 
 extern	client_t	*sv_client;
 extern	edict_t		*sv_player;

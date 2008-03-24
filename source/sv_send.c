@@ -81,22 +81,21 @@ static qboolean SV_RateDrop( client_t *client ) {
 }
 
 void SV_CalcSendTime( client_t *client, int size ) {
-	int delta;
-
 	if( size == -1 ) {
 		return;
 	}
 
 	// never drop over the loopback
 	if( !client->rate ) {
-		client->sendTime = 0;
+        client->send_time = svs.realtime;
+        client->send_delta = 0;
 		return;
 	}
 
 	client->message_size[sv.framenum % RATE_MESSAGES] = size;
 
-	delta = size * 1000 / client->rate;
-	client->sendTime = svs.realtime + delta;
+    client->send_time = svs.realtime;
+	client->send_delta = size * 1000 / client->rate;
 }
 
 /*

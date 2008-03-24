@@ -72,7 +72,7 @@ static void SV_SetMaster_f( void ) {
 		slot++;
 	}
 
-	svs.last_heartbeat = 0;
+	svs.last_heartbeat = svs.realtime - HEARTBEAT_SECONDS*1000;
 }
 
 static void SV_Player_g( genctx_t *ctx ) {

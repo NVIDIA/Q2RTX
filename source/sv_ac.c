@@ -404,6 +404,8 @@ static qboolean AC_ParseFile( const char *path, ac_parse_t parse, int depth ) {
         data = p + 1;
     }
 
+    FS_FreeFile( data );
+
     return qtrue;
 }
 
@@ -1217,10 +1219,6 @@ static void AC_SendHello( void ) {
 static void AC_CheckTimeouts( void ) {
     client_t *cl;
 
-    if( ac.last_ping > svs.realtime ) {
-        ac.last_ping = svs.realtime;
-    }
-
     if( ac.ping_pending ) {
         if( svs.realtime - ac.last_ping > AC_PING_TIMEOUT ) {
 			Com_Printf( "ANTICHEAT: Server ping timeout, disconnecting.\n" );
@@ -1239,9 +1237,6 @@ static void AC_CheckTimeouts( void ) {
         }
         if( cl->ac_query_sent != AC_QUERY_SENT ) {
             continue;
-        }
-        if( cl->ac_query_time > svs.realtime ) {
-            cl->ac_query_time = svs.realtime;
         }
         if( svs.realtime - cl->ac_query_time > 5000 ) {
             Com_WPrintf( "ANTICHEAT: Query timed out for %s, possible network problem.\n", cl->name );

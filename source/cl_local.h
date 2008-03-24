@@ -61,8 +61,8 @@ typedef struct clientinfo_s {
 } clientinfo_t;
 
 typedef struct {
-	int		sent;	// time sent, for calculating pings
-	int		rcvd;	// time rcvd, for calculating pings
+	unsigned    sent;	// time sent, for calculating pings
+	unsigned	rcvd;	// time rcvd, for calculating pings
 	int		cmdNumber;	// current cmdNumber for this frame
 } client_history_t;
 
@@ -89,7 +89,7 @@ typedef struct {
 typedef struct client_state_s {
 	int			timeoutcount;
 
-	int			lastTransmitTime;
+	unsigned	lastTransmitTime;
 	int			lastTransmitCmdNumber;
     qboolean    sendPacketNow;
 
@@ -101,7 +101,7 @@ typedef struct client_state_s {
     int         initialSeq;
 
 	float		predicted_step;				// for stair up smoothing
-	int			predicted_step_time;
+	unsigned	predicted_step_time;
 	int			predicted_step_frame;
 	vec3_t		move;
 
@@ -181,8 +181,8 @@ typedef struct client_state_s {
 	char		mapname[MAX_QPATH]; // short format - q2dm1, etc
 
 #if USE_AUTOREPLY
-	int				replyTime;
-	int				replyPending;
+	unsigned	reply_time;
+	unsigned	reply_delta;
 #endif
 
 	char		loadingString[MAX_QPATH];
@@ -235,7 +235,7 @@ typedef struct client_static_s {
 // so that the client knows to send it to the server
 
 	int			framecount;
-	int			realtime;			// always increasing, no clamping, etc
+	unsigned	realtime;			// always increasing, no clamping, etc
 	float		frametime;			// seconds since last frame
 
 	unsigned	measureFramecount;
@@ -245,7 +245,7 @@ typedef struct client_static_s {
 // connection information
 	netadr_t	serverAddress;
 	char		servername[MAX_OSPATH];	// name of server from original connect
-	int			connect_time;		// for connection retransmits
+	unsigned	connect_time;		// for connection retransmits
 	int			connectCount;
 	char		messageString[MAX_STRING_CHARS];
     qboolean    passive;
@@ -703,7 +703,7 @@ void		SCR_FinishCinematic( void );
 void	SCR_InitDraw( void );
 void	SCR_Draw2D( void );
 void	SCR_LoadingString( const char *string );
-float	SCR_FadeAlpha( int startTime, int visTime, int fadeTime );
+float	SCR_FadeAlpha( unsigned startTime, unsigned visTime, unsigned fadeTime );
 #if USE_CHATHUD
 void	SCR_ClearChatHUD_f( void );
 void	SCR_AddToChatHUD( const char *string );

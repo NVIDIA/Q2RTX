@@ -223,9 +223,9 @@ qboolean SV_RateLimited( ratelimit_t *r ) {
 	if( !r->limit ) {
 		return qfalse;
 	}
-	if( r->time < svs.realtime ) {
+	if( svs.realtime - r->time > r->period ) {
 		r->count = 0;
-		r->time = svs.realtime + r->period;
+		r->time = svs.realtime;
 		return qfalse;
 	}
 
@@ -244,7 +244,7 @@ void SV_RateInit( ratelimit_t *r, int limit, int period ) {
 		period = 100;
 	}
 	r->count = 0;
-	r->time = svs.realtime + period;
+	r->time = svs.realtime;
 	r->limit = limit;
 	r->period = period;
 }
@@ -1165,12 +1165,7 @@ void SV_PacketEvent( neterr_t ret ) {
 			if( !NET_IsEqualAdr( &net_from, &netchan->remote_address ) ) {
 				continue;
 			}
-            if( client->lastmessage > svs.realtime ) {
-                client->lastmessage = svs.realtime;
-            }
-            if( svs.realtime - client->lastmessage > 6000 ) {
-    			SV_DropClient( client, "connection reset by peer" );
-            }
+            client->flags |= CF_ERROR; // drop them soon
 			break;
 		}
 		return;
@@ -1213,6 +1208,7 @@ void SV_PacketEvent( neterr_t ret ) {
                 if( client->state != cs_assigned ) {
     				client->lastmessage = svs.realtime;	// don't timeout
                 }
+                client->flags &= ~CF_ERROR; // don't drop
 				SV_ExecuteClientMessage( client );
 			}
 		}
@@ -1241,7 +1237,7 @@ void SV_SendAsyncPackets( void ) {
 	
     FOR_EACH_CLIENT( client ) {
 		// don't overrun bandwidth
-		if( client->sendTime > svs.realtime ) {
+		if( svs.realtime - client->send_time < client->send_delta ) {
 			continue;
 		}
 
@@ -1263,13 +1259,7 @@ void SV_SendAsyncPackets( void ) {
 		}
 
         // see if it's time to resend a (possibly dropped) packet
-        retransmit = qfalse;
-        if( netchan->last_sent > com_localTime ) {
-            netchan->last_sent = com_localTime;
-        }
-        if( com_localTime - netchan->last_sent > 1000 ) {
-            retransmit = qtrue;
-        }
+        retransmit = com_localTime - netchan->last_sent > 1000 ? qtrue : qfalse;
 
         // don't write new reliables if not yet acknowledged
         if( netchan->reliable_length && !retransmit && client->state != cs_zombie ) {
@@ -1309,34 +1299,39 @@ if necessary
 */
 static void SV_CheckTimeouts( void ) {
 	client_t	*client;
-    unsigned    point;
+	unsigned    zombie_time = 1000 * sv_zombietime->value;
+	unsigned    drop_time = 1000 * sv_timeout->value;
+    unsigned    ghost_time = 1000 * sv_ghostime->value;
+    unsigned    delta;
 
     FOR_EACH_CLIENT( client ) {
-		// message times may be wrong across a changelevel
-		if( client->lastmessage > svs.realtime ) {
-			client->lastmessage = svs.realtime;
-		}
 		// never timeout local clients
 		if( NET_IsLocalAddress( &client->netchan->remote_address ) ) {
 			continue;
 		}
+        // NOTE: delta calculated this way is not sensitive to overflow
+        delta = svs.realtime - client->lastmessage;
 		if( client->state == cs_zombie ) {
-            if( client->lastmessage < svs.zombiepoint ) {
+            if( delta > zombie_time ) {
     			SV_RemoveClient( client );
-	    		continue;
 	    	}
-        } else if( client->flags & CF_DROP ) {
+	    	continue;
+        }
+        if( client->flags & CF_DROP ) {
 			SV_DropClient( client, NULL );
-        } else {
-            point = svs.droppoint;
-            if( client->state == cs_assigned && point < svs.ghostpoint ) {
-                point = svs.ghostpoint;
+            continue;
+        }
+        if( client->flags & CF_ERROR ) {
+            if( delta > ghost_time ) {
+    			SV_DropClient( client, "connection reset by peer" );
+	    		SV_RemoveClient( client );	// don't bother with zombie state
+                continue;
             }
-		    if( client->lastmessage < point ) {
-			    SV_DropClient( client, "timed out" );
-			    SV_RemoveClient( client );	// don't bother with zombie state	
-            }
-		}
+        }
+        if( delta > drop_time || ( client->state == cs_assigned && delta > ghost_time ) ) {
+			SV_DropClient( client, "timed out" );
+			SV_RemoveClient( client );	// don't bother with zombie state
+        }
 	}
 }
 
@@ -1417,7 +1412,6 @@ Send a message to the master every few minutes to
 let it know we are alive, and log information
 ================
 */
-#define	HEARTBEAT_SECONDS	300
 static void SV_MasterHeartbeat( void ) {
 	char    buffer[MAX_PACKETLEN_DEFAULT];
     int     length;
@@ -1428,10 +1422,6 @@ static void SV_MasterHeartbeat( void ) {
 
 	if( !sv_public->integer )
 		return;		// a private dedicated game
-
-	// check for time wraparound
-	if( svs.last_heartbeat > svs.realtime )
-		svs.last_heartbeat = svs.realtime;
 
 	if( svs.realtime - svs.last_heartbeat < HEARTBEAT_SECONDS*1000 )
 		return;		// not time to send yet
@@ -1487,7 +1477,6 @@ SV_Frame
 ==================
 */
 void SV_Frame( int msec ) {
-    unsigned time;
     int mvdconns;
 
 #ifndef DEDICATED_ONLY
@@ -1522,15 +1511,6 @@ void SV_Frame( int msec ) {
         CL_InputActivate();
     }
 #endif
-
-	time = 1000 * sv_timeout->value;
-	svs.droppoint = svs.realtime > time ? svs.realtime - time : 0;
-
-	time = 1000 * sv_zombietime->value;
-	svs.zombiepoint = svs.realtime > time ? svs.realtime - time : 0;
-
-	time = 1000 * sv_ghostime->value;
-	svs.ghostpoint = svs.realtime > time ? svs.realtime - time : 0;
 
 #if USE_ANTICHEAT & 2
     AC_Run();

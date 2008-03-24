@@ -765,7 +765,7 @@ CL_ReadyToSend
 =================
 */
 static inline qboolean CL_ReadyToSend( void ) {
-	int msec;
+	unsigned msec;
 	
 	if( cl.sendPacketNow ) {
 		return qtrue;
@@ -783,9 +783,6 @@ static inline qboolean CL_ReadyToSend( void ) {
 
 	if( cl_maxpackets->integer < 10 ) {
 		Cvar_SetInteger( "cl_maxpackets", 10 );
-	}
-	if( cl.lastTransmitTime > cls.realtime ) {
-		cl.lastTransmitTime = cls.realtime;
 	}
 
 	msec = 1000 / cl_maxpackets->integer;

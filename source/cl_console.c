@@ -54,7 +54,7 @@ typedef struct console_s {
 	int		vidWidth, vidHeight;
 	float	scale;
 
-	int		times[CON_TIMES];	// cls.realtime time the line was generated
+	unsigned	times[CON_TIMES];	// cls.realtime time the line was generated
 								// for transparent notify lines
 	qboolean	skipNotify;
 
@@ -614,7 +614,7 @@ void Con_DrawNotify( void ) {
 	int		v;
 	char	*text;
 	int		i, j;
-	int		time;
+	unsigned    time;
 	int		skip;
 	float	alpha;
 

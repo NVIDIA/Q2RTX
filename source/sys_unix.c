@@ -342,13 +342,13 @@ static void Sys_ParseInput( const char *text ) {
 #if 0
                     case 'C':
                         if( f->text[f->cursorPos] ) {
-                            FIFO_Write( &sys_output, "\033[C", 3 );
+                            Sys_ConsoleWrite( "\033[C", 3 );
                             f->cursorPos++;
                         }
                         break;
                     case 'D':
                         if( f->cursorPos ) {
-                            FIFO_Write( &sys_output, "\033[D", 3 );
+                            Sys_ConsoleWrite( "\033[D", 3 );
                             f->cursorPos--;
                         }
                         break;

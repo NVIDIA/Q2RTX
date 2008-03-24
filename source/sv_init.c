@@ -32,7 +32,7 @@ void SV_ClientReset( client_t *client ) {
     // any partially connected client will be restarted
     client->state = cs_connected;
     client->lastframe = -1;
-    client->sendTime = 0;
+    client->send_delta = 0;
     client->surpressCount = 0;
     memset( &client->lastcmd, 0, sizeof( client->lastcmd ) );
 }
@@ -65,8 +65,7 @@ void SV_SpawnServer( const char *server, const char *spawnpoint ) {
 	sv.spawncount = ( rand() | ( rand() << 16 ) ) ^ Sys_Milliseconds();
 	sv.spawncount &= 0x7FFFFFFF;
 
-    // reset counters
-	svs.realtime = 0;
+    // reset entity counter
 	svs.nextEntityStates = 0;
 
     if( sv_mvd_enable->integer ) {

@@ -119,7 +119,7 @@ typedef enum {
 typedef struct {
 	requestType_t type;
 	netadr_t adr;
-	int time;
+	unsigned time;
 } request_t;
 
 #define MAX_REQUESTS	32
@@ -136,11 +136,7 @@ static request_t *CL_AddRequest( const netadr_t *adr, requestType_t type ) {
 
 	r->adr = *adr;
 	r->type = type;
-	if( adr->type == NA_BROADCAST ) {
-		r->time = cls.realtime + 3000;
-	} else {
-		r->time = cls.realtime + 6000;
-	}
+	r->time = cls.realtime;
 
 	return r;
 }
@@ -845,6 +841,7 @@ static void CL_ParsePrintMessage( void ) {
     serverStatus_t serverStatus;
     char *string;
     int i, oldest;
+    unsigned delta;
 
     string = MSG_ReadString();
 
@@ -871,12 +868,13 @@ static void CL_ParsePrintMessage( void ) {
 		if( !r->type ) {
 			continue;
 		}
+        delta = cls.realtime - r->time;
 		if( r->adr.type == NA_BROADCAST ) {
-			if( r->time < cls.realtime ) {
+			if( delta > 3000 ) {
 				continue;
 			}
 		} else {
-			if( r->time < cls.realtime ) {
+			if( delta > 6000 ) {
 				break;
 			}
 			if( !NET_IsEqualBaseAdr( &net_from, &r->adr ) ) {
@@ -2585,11 +2583,11 @@ CL_CheckForReply
 ====================
 */
 static void CL_CheckForReply( void ) {
-    if ( !cl.replyPending ) {
+    if( !cl.reply_delta ) {
         return;
     }
 
-    if ( cls.realtime < cl.replyTime ) {
+    if( cls.realtime - cl.reply_time < cl.reply_delta ) {
         return;
     }
 
@@ -2597,19 +2595,17 @@ static void CL_CheckForReply( void ) {
 	Cbuf_AddText( com_version->string );
     Cbuf_AddText( "\"\n" );
 
-    cl.replyPending = qfalse;
+    cl.reply_delta = 0;
 }
 #endif
 
 static void CL_CheckTimeout( void ) {
+    unsigned delta = cl_timeout->value * 1000;
+
     if( NET_IsLocalAddress( &cls.netchan->remote_address ) ) {
         return;
     }
-    if( cls.netchan->last_received > com_localTime ) {
-        cls.netchan->last_received = com_localTime;
-    }
-    if( com_localTime - cls.netchan->last_received > cl_timeout->value * 1000 ) 
-    {
+    if( com_localTime - cls.netchan->last_received > delta )  {
         // timeoutcount saves debugger
         if ( ++cl.timeoutcount > 5 ) {
             Com_Error( ERR_DISCONNECT, "Server connection timed out." );

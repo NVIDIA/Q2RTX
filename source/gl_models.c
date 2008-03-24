@@ -164,12 +164,15 @@ static qboolean Model_LoadMd2( model_t *model, const byte *rawdata, int length )
 	char *src_skin;
 	image_t *skin;
 	vec_t scaleS, scaleT;
-	int offset, val;
+	int val;
 	vec3_t mins, maxs;
 	const byte *rawend;
 
+#define ERR( x ) \
+    Com_WPrintf( "LoadMD2: %s: " x "\n", model->name )
+
 	if( length < sizeof( header ) ) {
-		Com_EPrintf( "%s has length < header length\n", model->name );
+		ERR( "file too short" );
 		return qfalse;
 	}
 
@@ -179,46 +182,75 @@ static qboolean Model_LoadMd2( model_t *model, const byte *rawdata, int length )
 		(( uint32_t * )&header)[i] = LittleLong( (( uint32_t * )&header)[i] );
 	}
 
+    // check ident and version
 	if( header.ident != IDALIASHEADER ) {
-		Com_EPrintf( "%s is not an MD2 file\n", model->name );
+		ERR( "not an MD2 file" );
 		return qfalse;
 	}
-
 	if( header.version != ALIAS_VERSION ) {
-		Com_EPrintf( "%s has bad version: %d != %d\n",
-			model->name, header.version, ALIAS_VERSION );
+        ERR( "bad version" );
 		return qfalse;
 	}
 
-	if( header.num_frames < 1 ) {
-		Com_EPrintf( "%s has bad number of frames: %d\n",
-			model->name, header.num_frames );
+    // check triangles
+	if( header.num_tris < 1 || header.num_tris > MAX_TRIANGLES ) {
+		ERR( "bad number of triangles" );
 		return qfalse;
 	}
-	if( header.num_frames > MAX_FRAMES ) {
-		Com_EPrintf( "%s has too many frames: %d > %d\n",
-			model->name, header.num_frames, MAX_FRAMES );
+    if( header.ofs_tris < sizeof( header ) ||
+        header.ofs_tris + sizeof( dtriangle_t ) * header.num_tris > length )
+    {
+		ERR( "bad triangles offset" );
 		return qfalse;
-	}
-	if( header.num_tris < 1 ) {
-		Com_EPrintf( "%s has bad number of triangles: %d\n",
-			model->name, header.num_tris );
-		return qfalse;
-	}
-	if( header.num_tris > MAX_TRIANGLES ) {
-		Com_EPrintf( "%s has too many triangles: %d > %d\n",
-			model->name, header.num_tris, MAX_TRIANGLES );
-		return qfalse;
-	}
-	if( ( unsigned )header.num_skins > MAX_MD2SKINS ) {
-		Com_EPrintf( "%s has too many skins: %d > %d\n",
-			model->name, header.num_skins, MAX_MD2SKINS );
-		return qfalse;
-	}
+    }
 
+    // check st
+	if( header.num_st < 3 || header.num_st > MAX_VERTS ) {
+		ERR( "bad number of st" );
+		return qfalse;
+	}
+    if( header.ofs_st < sizeof( header ) ||
+        header.ofs_st + sizeof( dstvert_t ) * header.num_st > length )
+    {
+		ERR( "bad st offset" );
+		return qfalse;
+    }
+
+    // check xyz and frames
+	if( header.num_xyz < 3 || header.num_xyz > MAX_VERTS ) {
+		ERR( "bad number of xyz" );
+		return qfalse;
+	}
+	if( header.num_frames < 1 || header.num_frames > MAX_FRAMES ) {
+		ERR( "bad number of frames" );
+		return qfalse;
+	}
+    if( header.framesize < sizeof( daliasframe_t ) + ( header.num_xyz - 1 ) * sizeof( dtrivertx_t ) ||
+        header.framesize > MAX_FRAMESIZE )
+    {
+		ERR( "bad frame size" );
+		return qfalse;
+    }
+    if( header.ofs_frames < sizeof( header ) ||
+        header.ofs_frames + header.framesize * header.num_frames > length )
+    {
+		ERR( "bad frames offset" );
+		return qfalse;
+    }
+
+    // check skins
+	if( header.num_skins < 0 || header.num_skins > MAX_MD2SKINS ) {
+		ERR( "bad number of skins" );
+		return qfalse;
+	}
+	if( header.num_skins && ( header.ofs_skins < sizeof( header ) ||
+        header.ofs_skins + MAX_SKINNAME * header.num_skins > length ) )
+    {
+		ERR( "bad skins offset" );
+		return qfalse;
+	}
 	if( header.skinwidth <= 0 || header.skinheight <= 0 ) {
-		Com_EPrintf( "%s has bad skin dimensions: %d x %d\n",
-			model->name, header.skinwidth, header.skinheight );
+		ERR( "bad skin dimensions" );
 		return qfalse;
 	}
 
@@ -229,19 +261,19 @@ static qboolean Model_LoadMd2( model_t *model, const byte *rawdata, int length )
 
 	/* load all triangle indices */
 	src_tri = ( dtriangle_t * )( ( byte * )rawdata + header.ofs_tris );
-	if( ( byte * )( src_tri + header.num_tris ) > rawend ) {
-		Com_EPrintf( "%s has bad triangles offset\n", model->name );
-		goto fail;
-	}
 	for( i = 0; i < header.num_tris; i++ ) {
-		vertIndices[i*3+0] = LittleShort( src_tri->index_xyz[0] );
-		vertIndices[i*3+1] = LittleShort( src_tri->index_xyz[1] );
-		vertIndices[i*3+2] = LittleShort( src_tri->index_xyz[2] );
-		
-		tcIndices[i*3+0] = LittleShort( src_tri->index_st[0] );
-		tcIndices[i*3+1] = LittleShort( src_tri->index_st[1] );
-		tcIndices[i*3+2] = LittleShort( src_tri->index_st[2] );
+        for( j = 0; j < 3; j++ ) {
+            uint16_t idx_xyz = LittleShort( src_tri->index_xyz[j] );
+            uint16_t idx_st = LittleShort( src_tri->index_st[j] );
 
+            if( idx_xyz > header.num_xyz || idx_st > header.num_st ) {
+		        ERR( "bad indices" );
+		        goto fail;
+            }
+
+            vertIndices[i*3+j] = idx_xyz; 
+            tcIndices[i*3+j] = idx_st;
+        }
 		src_tri++;
 	}
 
@@ -289,10 +321,6 @@ static qboolean Model_LoadMd2( model_t *model, const byte *rawdata, int length )
 
 	/* load all skins */
 	src_skin = ( char * )rawdata + header.ofs_skins;
-	if( ( byte * )( src_skin + MAX_SKINNAME * header.num_skins ) > rawend ) {
-		Com_EPrintf( "%s has bad skins offset\n", model->name );
-		goto fail;
-	}
 	for( i = 0; i < header.num_skins; i++ ) {
 		Q_strncpyz( skinname, src_skin, sizeof( skinname ) );
 		skin = R_FindImage( skinname, it_skin );
@@ -321,15 +349,9 @@ static qboolean Model_LoadMd2( model_t *model, const byte *rawdata, int length )
 	model->frames = Model_Malloc( header.num_frames * sizeof( aliasFrame_t ) );
 	model->numFrames = header.num_frames;
 
-	offset = header.ofs_frames;
+	src_frame = ( daliasframe_t * )( ( byte * )rawdata + header.ofs_frames );
 	dst_frame = model->frames;
 	for( j = 0; j < header.num_frames; j++ ) {
-		src_frame = ( daliasframe_t * )( ( byte * )rawdata + offset );
-		if( ( byte * )( src_frame + 1 ) > rawend ) {
-			Com_EPrintf( "%s has bad offset for frame %d\n", model->name, j );
-			goto fail;
-		}
-
 		LittleVector( src_frame->scale, dst_frame->scale );
 		LittleVector( src_frame->translate, dst_frame->translate );
 
@@ -345,7 +367,7 @@ static qboolean Model_LoadMd2( model_t *model, const byte *rawdata, int length )
 				dst_vert->pos[2] = src_vert->v[2];
 				k = src_vert->lightnormalindex;
 				if( k >= NUMVERTEXNORMALS ) {
-					Com_EPrintf( "%s has bad normal index\n", model->name );
+					ERR( "bad normal index" );
 					goto fail;
 				}
 				dst_vert->normalIndex = k;
@@ -368,17 +390,18 @@ static qboolean Model_LoadMd2( model_t *model, const byte *rawdata, int length )
 		VectorAdd( mins, dst_frame->translate, dst_frame->bounds[0] );
 		VectorAdd( maxs, dst_frame->translate, dst_frame->bounds[1] );
 
-		offset += header.framesize;
+		src_frame = ( daliasframe_t * )( ( byte * )src_frame + header.framesize );
 		dst_frame++;
 	}
 
     sys.HunkEnd( &model->pool );
-
 	return qtrue;
 
 fail:
 	sys.HunkFree( &model->pool );
 	return qfalse;
+
+#undef ERR
 }
 
 static qboolean Model_LoadMd3( model_t *model, const byte *rawdata, int length ) {
@@ -403,7 +426,7 @@ static qboolean Model_LoadMd3( model_t *model, const byte *rawdata, int length )
 	int i, j;
 
 	if( length < sizeof( header ) ) {
-		Com_EPrintf( "%s has length < header length\n", model->name );
+		Com_WPrintf( "%s has length < header length\n", model->name );
 		return qfalse;
 	}
 
@@ -414,29 +437,29 @@ static qboolean Model_LoadMd3( model_t *model, const byte *rawdata, int length )
 	}
 
 	if( header.ident != MD3_IDENT ) {
-		Com_EPrintf( "%s is not an MD3 file\n", model->name );
+		Com_WPrintf( "%s is not an MD3 file\n", model->name );
 		return qfalse;
 	}
 
 	if( header.version != MD3_VERSION ) {
-		Com_EPrintf( "%s has bad version: %d != %d\n",
+		Com_WPrintf( "%s has bad version: %d != %d\n",
 			model->name, header.version, MD3_VERSION );
 		return qfalse;
 	}
 
 	if( header.num_frames < 1 ) {
-		Com_EPrintf( "%s has bad number of frames: %d\n",
+		Com_WPrintf( "%s has bad number of frames: %d\n",
 			model->name, header.num_frames );
 		return qfalse;
 	}
 	if( header.num_frames > MD3_MAX_FRAMES ) {
-		Com_EPrintf( "%s has too many frames: %d > %d\n",
+		Com_WPrintf( "%s has too many frames: %d > %d\n",
 			model->name, header.num_frames, MD3_MAX_FRAMES );
 		return qfalse;
 	}
 
 	if( header.num_meshes < 1 || header.num_meshes > MD3_MAX_SURFACES ) {
-		Com_EPrintf( "%s has bad number of meshes\n", model->name );
+		Com_WPrintf( "%s has bad number of meshes\n", model->name );
 		return qfalse;
 	}
 	
@@ -452,7 +475,7 @@ static qboolean Model_LoadMd3( model_t *model, const byte *rawdata, int length )
 	/* load all frames */
 	src_frame = ( dmd3frame_t * )( rawdata + header.ofs_frames );
 	if( ( byte * )( src_frame + header.num_frames ) > rawend ) {
-		Com_EPrintf( "%s has bad frames offset\n", model->name );
+		Com_WPrintf( "%s has bad frames offset\n", model->name );
 		goto fail;
 	}
 	dst_frame = model->frames;
@@ -472,7 +495,7 @@ static qboolean Model_LoadMd3( model_t *model, const byte *rawdata, int length )
 	dst_mesh = model->meshes;
 	for( i = 0; i < header.num_meshes; i++ ) {
 		if( ( byte * )( src_mesh + 1 ) > rawend ) {
-			Com_EPrintf( "%s has bad offset for mesh %d\n", model->name, i );
+			Com_WPrintf( "%s has bad offset for mesh %d\n", model->name, i );
 			goto fail;
 		}
 
@@ -480,11 +503,11 @@ static qboolean Model_LoadMd3( model_t *model, const byte *rawdata, int length )
 		numTris = LittleLong( src_mesh->num_tris );
 
 		if( numVerts < 3 || numVerts > TESS_MAX_VERTICES ) {
-			Com_EPrintf( "%s has bad number of vertices for mesh %d\n", model->name, i );
+			Com_WPrintf( "%s has bad number of vertices for mesh %d\n", model->name, i );
 			goto fail;
 		}
 		if( numTris < 1 || numTris > TESS_MAX_INDICES / 3 ) {
-			Com_EPrintf( "%s has bad number of faces for mesh %d\n", model->name, i );
+			Com_WPrintf( "%s has bad number of faces for mesh %d\n", model->name, i );
 			goto fail;
 		}
 		
@@ -498,13 +521,13 @@ static qboolean Model_LoadMd3( model_t *model, const byte *rawdata, int length )
 		/* load all skins */
 		numSkins = LittleLong( src_mesh->num_skins );
 		if( numSkins > MAX_MD2SKINS ) {
-			Com_EPrintf( "%s has bad number of skins for mesh %d\n", model->name, i );
+			Com_WPrintf( "%s has bad number of skins for mesh %d\n", model->name, i );
 			goto fail;
 		}
 		offset = LittleLong( src_mesh->ofs_skins );
 		src_skin = ( dmd3skin_t * )( ( byte * )src_mesh + offset );
 		if( ( byte * )( src_skin + numSkins ) > rawend ) {
-			Com_EPrintf( "%s has bad skins offset for mesh %d\n", model->name, i );
+			Com_WPrintf( "%s has bad skins offset for mesh %d\n", model->name, i );
 			goto fail;
 		}
 		for( j = 0; j < numSkins; j++ ) {
@@ -522,7 +545,7 @@ static qboolean Model_LoadMd3( model_t *model, const byte *rawdata, int length )
 		offset = LittleLong( src_mesh->ofs_verts );
 		src_vert = ( dmd3vertex_t * )( ( byte * )src_mesh + offset );
 		if( ( byte * )( src_vert + totalVerts ) > rawend ) {
-			Com_EPrintf( "%s has bad vertices offset for mesh %d\n", model->name, i );
+			Com_WPrintf( "%s has bad vertices offset for mesh %d\n", model->name, i );
 			goto fail;
 		}
 		dst_vert = dst_mesh->verts;
@@ -541,7 +564,7 @@ static qboolean Model_LoadMd3( model_t *model, const byte *rawdata, int length )
 		offset = LittleLong( src_mesh->ofs_tcs );
 		src_tc = ( dmd3coord_t * )( ( byte * )src_mesh + offset );
 		if( ( byte * )( src_tc + numVerts ) > rawend ) {
-			Com_EPrintf( "%s has bad tcoords offset for mesh %d\n", model->name, i );
+			Com_WPrintf( "%s has bad tcoords offset for mesh %d\n", model->name, i );
 			goto fail;
 		}
 		dst_tc = dst_mesh->tcoords;
@@ -555,7 +578,7 @@ static qboolean Model_LoadMd3( model_t *model, const byte *rawdata, int length )
 		offset = LittleLong( src_mesh->ofs_indexes );
 		src_idx = ( uint32_t * )( ( byte * )src_mesh + offset );
 		if( ( byte * )( src_idx + numTris * 3 ) > rawend ) {
-			Com_EPrintf( "%s has bad indices offset for mesh %d\n", model->name, i );
+			Com_WPrintf( "%s has bad indices offset for mesh %d\n", model->name, i );
 			goto fail;
 		}
 		dst_idx = dst_mesh->indices;
@@ -564,7 +587,7 @@ static qboolean Model_LoadMd3( model_t *model, const byte *rawdata, int length )
 			dst_idx[1] = LittleLong( src_idx[1] );
 			dst_idx[2] = LittleLong( src_idx[2] );
             if( dst_idx[0] >= numVerts || dst_idx[1] >= numVerts || dst_idx[2] >= numVerts ) {
-			    Com_EPrintf( "%s has bad indices for triangle %d in mesh %d\n", model->name, j, i );
+			    Com_WPrintf( "%s has bad indices for triangle %d in mesh %d\n", model->name, j, i );
 			    goto fail;
             }
 			src_idx += 3; dst_idx += 3;
@@ -576,7 +599,6 @@ static qboolean Model_LoadMd3( model_t *model, const byte *rawdata, int length )
 	}
 
     sys.HunkEnd( &model->pool );
-
 	return qtrue;
 
 fail:
@@ -834,7 +856,7 @@ qhandle_t GL_RegisterModel( const char *name ) {
 		/* inline bsp model */
 		index = atoi( name + 1 );
 		if( index < 1 || index >= r_world.numSubmodels ) {
-			Com_Error( ERR_DROP, "GL_RegisterModel: bad inline model index: %d", index );
+			Com_Error( ERR_DROP, "%s: bad inline model index: %d", __func__, index );
 		}
 		return ~index;
 	}
@@ -846,7 +868,7 @@ qhandle_t GL_RegisterModel( const char *name ) {
 
 	nameLength = strlen( name );
 	if( nameLength > MAX_QPATH - 1 ) {
-		Com_Error( ERR_DROP, "GL_RegisterModel: oversize name: %d chars", nameLength );
+		Com_Error( ERR_DROP, "%s: oversize name: %d chars", __func__, nameLength );
 	}
 
 	model = Model_Find( name );
@@ -872,7 +894,7 @@ qhandle_t GL_RegisterModel( const char *name ) {
 	}
 
 	if( length < 4 ) {
-		Com_WPrintf( "%s has invalid length\n", name );
+		Com_WPrintf( "LoadXXX: %s: file too short\n", name );
 		return 0;
 	}
 
@@ -899,11 +921,11 @@ qhandle_t GL_RegisterModel( const char *name ) {
 		success = Model_LoadSp2( model, rawdata, length );
 		break;
 	case IDBSPHEADER:
-		Com_WPrintf( "Loaded bsp model '%s' after the world\n", name );
+		Com_WPrintf( "LoadXXX: %s: loaded BSP model after the world\n", name );
 		success = qfalse;
 		break;
 	default:
-		Com_WPrintf( "%s has unknown ident: %x\n", name, ident );
+		Com_WPrintf( "LoadXXX: %s: unknown ident: %x\n", name, ident );
 		success = qfalse;
 		break;
 	}

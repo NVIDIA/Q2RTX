@@ -578,9 +578,6 @@ void SV_MvdEndFrame( void ) {
     }
 
     if( sv_mvd_scorecmd->string[0] ) {
-        if( sv.mvd.layout_time > svs.realtime ) {
-            sv.mvd.layout_time = svs.realtime;
-        }
         if( svs.realtime - sv.mvd.layout_time > 9000 ) {
             Cbuf_AddTextEx( &dummy_buffer, sv_mvd_scorecmd->string );
             sv.mvd.layout_time = svs.realtime;
@@ -921,7 +918,7 @@ static void MVD_Record_f( void ) {
 		return;
 	}
 
-	if( !sv_mvd_enable->integer ) {
+	if( !svs.mvd.entities ) {
 		Com_Printf( "MVD recording is disabled on this server.\n" );
 		return;
 	}

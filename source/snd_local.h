@@ -127,6 +127,9 @@ extern cvar_t	*s_volume;
 extern cvar_t	*s_khz;
 extern cvar_t	*s_testsound;
 
+#define S_Malloc( x )   Z_TagMalloc( x, TAG_SOUND )
+#define S_CopyString( x )   Z_TagCopyString( x, TAG_SOUND )
+
 void S_InitScaletable (void);
 
 sfxcache_t *S_LoadSound (sfx_t *s);

@@ -707,6 +707,7 @@ qboolean CM_LoadMap( cm_t *cm, const char *name, int flags, uint32_t *checksum )
 	byte			*buf;
 	int				i;
 	dheader_t		header;
+    lump_t          *lump;
 	int				length;
 //	char *entstring;
 //	char buffer[MAX_QPATH];
@@ -769,13 +770,25 @@ qboolean CM_LoadMap( cm_t *cm, const char *name, int flags, uint32_t *checksum )
 		*checksum = cache->checksum;
 	}
 
+	// byte swap and validate the header
 	header = *( dheader_t * )buf;
-	for( i = 0; i < sizeof( dheader_t )/4; i++ )
-		(( uint32_t * )&header)[i] = LittleLong( (( uint32_t * )&header)[i] );
-
+	header.ident = LittleLong( header.ident );
+	header.version = LittleLong( header.version );
+	if( header.ident != IDBSPHEADER ) {
+		Com_Error( ERR_DROP, "%s: %s is not an IBSP file", __func__, name );
+	}
 	if( header.version != BSPVERSION ) {
-		Com_Error( ERR_DROP, "CM_LoadMap: %s has wrong version number (%i should be %i)",
-			name, header.version, BSPVERSION );
+		Com_Error( ERR_DROP, "%s: %s has wrong IBSP version", __func__, name );
+	}
+	
+	// byte swap and validate lumps
+	for( i = 0, lump = header.lumps; i < HEADER_LUMPS; i++, lump++ ) {
+		lump->fileofs = LittleLong( lump->fileofs );
+		lump->filelen = LittleLong( lump->filelen );
+		if( lump->fileofs + lump->filelen > length ) {
+			Com_Error( ERR_DROP, "%s: %s has lump #%d out of bounds",
+                __func__, name, i );
+		}
 	}
 
 	cmod_base = buf;

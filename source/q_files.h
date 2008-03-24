@@ -124,6 +124,8 @@ typedef struct
 	dtrivertx_t	verts[1];	// variable sized
 } daliasframe_t;
 
+#define MAX_FRAMESIZE   ( sizeof( daliasframe_t ) + sizeof( dtrivertx_t ) * ( MAX_VERTS - 1 ) )
+
 
 // the glcmd format:
 // a positive integer starts a tristrip command, followed by that many

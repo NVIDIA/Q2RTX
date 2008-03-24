@@ -469,7 +469,7 @@ void SV_Begin_f( void ) {
 	Com_DPrintf( "Going from cs_primed to cs_spawned for %s\n",
         sv_client->name );
 	sv_client->state = cs_spawned;
-	sv_client->sendTime = 0;
+	sv_client->send_delta = 0;
 	sv_client->commandMsec = 1800;
     sv_client->surpressCount = 0;
 	
@@ -637,7 +637,6 @@ static void SV_BeginDownload_f( void ) {
 	Com_DPrintf( "Downloading %s to %s\n", name, sv_client->name );
 
 	SV_NextDownload_f();
-	
 }
 
 static void SV_StopDownload_f( void ) {

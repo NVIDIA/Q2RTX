@@ -1230,27 +1230,27 @@ CL_CheckForVersion
 ====================
 */
 static void CL_CheckForVersion( const char *string ) {
-    char * p;
+    char *p;
 
-    if ( cls.demoplayback ) {
+    if( cls.demoplayback ) {
         return;
     }
 
     p = strstr( string, ": " );
-    if ( !p ) {
+    if( !p ) {
         return;
     }
 
-    if ( strncmp( p + 2, "!version", 8 ) ) {
+    if( strncmp( p + 2, "!version", 8 ) ) {
         return;
     }
 
-    if ( cl.replyTime && cls.realtime - cl.replyTime < 120000 ) {
+    if( cl.reply_time && cls.realtime - cl.reply_time < 120000 ) {
         return;
     }
 
-    cl.replyTime = cls.realtime + 1024 + ( rand() & 1023 );
-    cl.replyPending = qtrue;
+    cl.reply_time = cls.realtime;
+    cl.reply_delta = 1024 + ( rand() & 1023 );
 }
 #endif
 

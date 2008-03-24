@@ -699,12 +699,11 @@ void SCR_AddToChatHUD( const char *string ) {
 SCR_FadeAlpha
 =================
 */
-float SCR_FadeAlpha( int startTime, int visTime, int fadeTime ) {
+float SCR_FadeAlpha( unsigned startTime, unsigned visTime, unsigned fadeTime ) {
 	float alpha;
-	int timeLeft;
+    unsigned timeLeft, delta = cls.realtime - startTime;
 
-	timeLeft = visTime - ( cls.realtime - startTime );
-	if( timeLeft <= 0 ) {
+	if( delta >= visTime ) {
 		return 0;
 	}
 
@@ -713,6 +712,7 @@ float SCR_FadeAlpha( int startTime, int visTime, int fadeTime ) {
 	}
 
 	alpha = 1;
+	timeLeft = visTime - delta;
 	if( timeLeft < fadeTime ) {
 		alpha = ( float )timeLeft / fadeTime;
 	}

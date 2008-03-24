@@ -724,7 +724,7 @@ static sfx_t *S_RegisterSexedSound( int entnum, const char *base ) {
 		// no, revert to the male sound in the pak0.pak
 		Q_concat( buffer, sizeof( buffer ),
             "player/male/", base + 1, NULL );
-	    sfx->truename = Z_TagCopyString( buffer, TAG_SOUND );
+	    sfx->truename = S_CopyString( buffer );
     }
 
 	return sfx;

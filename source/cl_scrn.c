@@ -243,7 +243,7 @@ CENTER PRINTING
 */
 
 static char		scr_centerstring[MAX_STRING_CHARS];
-static int		scr_centertime_start;	// for slow victory printing
+static unsigned	scr_centertime_start;	// for slow victory printing
 static int		scr_center_lines;
 
 /*

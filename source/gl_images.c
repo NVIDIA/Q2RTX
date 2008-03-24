@@ -879,31 +879,37 @@ R_LoadWal
 */
 image_t *R_LoadWal( const char *name ) {
 	miptex_t	*mt;
-	uint32_t	width, height, ofs;
-	unsigned	length;
+	uint32_t	width, height, offset;
+	unsigned	length, endpos;
 	image_t		*image;
 
 	length = fs.LoadFile( name, ( void ** )&mt );
 	if( !mt ) {
-		Com_DPrintf( "GL_LoadWal: can't load %s\n", name);
 		return r_notexture;
 	}
 
 	width = LittleLong( mt->width );
 	height = LittleLong( mt->height );
-	ofs = LittleLong( mt->offsets[0] );
+	offset = LittleLong( mt->offsets[0] );
 
-	if( ofs + width * height > length ) {
-		Com_DPrintf( "GL_LoadWal: '%s' is malformed\n", name );
-		fs.FreeFile( ( void * )mt );
-		return NULL;
+    if( width < 1 || width > MAX_TEXTURE_SIZE || height < 1 || height > MAX_TEXTURE_SIZE ) {
+		Com_WPrintf( "LoadWAL: %s: bad dimensions\n", name );
+        goto fail;
+    }
+    endpos = offset + width * height;
+	if( offset > endpos || endpos > length ) {
+		Com_WPrintf( "LoadWAL: %s: bad offset\n", name );
+        goto fail;
 	}
 
-	image = R_CreateImage( name, ( byte * )mt + ofs, width, height, it_wall, if_paletted );
+	image = R_CreateImage( name, ( byte * )mt + offset, width, height, it_wall, if_paletted );
 
-	fs.FreeFile( ( void * )mt );
-
+	fs.FreeFile( mt );
 	return image;
+
+fail:
+    fs.FreeFile( mt );
+    return NULL;
 }
 
 void R_FreeImage( image_t *image ) {

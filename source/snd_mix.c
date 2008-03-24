@@ -180,12 +180,12 @@ static void S_PaintChannelFrom8 (channel_t *ch, sfxcache_t *sc, int count, int o
 
 	sfx = sc->data + ch->pos * sc->channels;
 
-	if( sc->channels == 2 ) {
+	/*if( sc->channels == 2 ) {
 		for( i=0 ; i<count ; i++, samp++ ) {
 			samp->left += lscale[*sfx++];
 			samp->right += rscale[*sfx++];
 		}
-	} else {
+	} else */{
 		for( i=0 ; i<count ; i++, samp++ ) {
 			data = *sfx++;
 			samp->left += lscale[data];
@@ -210,14 +210,14 @@ static void S_PaintChannelFrom16 (channel_t *ch, sfxcache_t *sc, int count, int 
 
 	sfx = (signed short *)sc->data + ch->pos * sc->channels;
 
-	if( sc->channels == 2 ) {
+	/*if( sc->channels == 2 ) {
 		for( i=0 ; i<count ; i++, samp++ ) {
 			left = ( *sfx++ * leftvol ) >> 8;
 			right = ( *sfx++ * rightvol ) >> 8;
 			samp->left += left;
 			samp->right += right;
 		}
-	} else {
+	} else*/ {
 		for( i=0 ; i<count ; i++, samp++ ) {
 			data = *sfx++;
 			left = ( data * leftvol ) >> 8;
