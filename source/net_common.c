@@ -415,6 +415,8 @@ neterr_t NET_GetPacket( netsrc_t sock ) {
 			// wouldblock is silent
 			break;
 		case WSAECONNRESET:
+			Com_DPrintf( "%s: %s from %s\n", __func__,
+				NET_ErrorString(), NET_AdrToString( &net_from ) );
 			if( !net_ignore_icmp->integer ) {
 				return NET_ERROR;
 			}
@@ -434,6 +436,8 @@ neterr_t NET_GetPacket( netsrc_t sock ) {
 			// wouldblock is silent
 			break;
 		case ECONNREFUSED:
+			Com_DPrintf( "%s: %s from %s\n", __func__,
+				NET_ErrorString(), NET_AdrToString( &net_from ) );
 			if( !net_ignore_icmp->integer ) {
 				return NET_ERROR;
 			}
@@ -534,6 +538,8 @@ neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, unsigned length, con
 			break;
 		case WSAECONNRESET:
 		case WSAEHOSTUNREACH:
+			Com_DPrintf( "%s: %s to %s\n", __func__,
+				NET_ErrorString(), NET_AdrToString( to ) );
 			if( !net_ignore_icmp->integer ) {
 				return NET_ERROR;
 			}
@@ -558,6 +564,8 @@ neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, unsigned length, con
         case EHOSTUNREACH:
         case ENETUNREACH:
         case ENETDOWN:
+			Com_DPrintf( "%s: %s to %s\n", __func__,
+				NET_ErrorString(), NET_AdrToString( to ) );
             if( !net_ignore_icmp->integer ) {
                 return NET_ERROR;
             }
