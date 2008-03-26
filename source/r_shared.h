@@ -358,19 +358,7 @@ void GL_BeginPostProcessing( void );
 void GL_EndPostProcessing( void );
 #endif
 
-#ifdef BIGENDIAN_TARGET
-#define LL(x) ( dst->x = LongSwap( src->x ) )
-#define LF(x) ( dst->x = FloatSwap( src->x ) )
-#define LV(x) ( dst->x[0] = FloatSwap( src->x[0] ), \
-		dst->x[1] = FloatSwap( src->x[1] ), \
-		dst->x[2] = FloatSwap( src->x[2] ) )
-#define LLV(x) ( dst->x[0] = LongSwap( src->x[0] ), \
-		dst->x[1] = LongSwap( src->x[1] ), \
-		dst->x[2] = LongSwap( src->x[2] ) )
-#define LSV(x) ( dst->x[0] = ShortSwap( src->x[0] ), \
-		dst->x[1] = ShortSwap( src->x[1] ), \
-		dst->x[2] = ShortSwap( src->x[2] ) )
-#else
+#if __BYTE_ORDER == __LITTLE_ENDIAN
 #define LL(x) ( dst->x = src->x )
 #define LF(x) ( dst->x = src->x )
 #define LV(x) ( dst->x[0] = src->x[0], \
@@ -382,6 +370,20 @@ void GL_EndPostProcessing( void );
 #define LSV(x) ( dst->x[0] = src->x[0], \
         dst->x[1] = src->x[1], \
         dst->x[2] = src->x[2] )
+#elif __BYTE_ORDER == __BIG_ENDIAN
+#define LL(x) ( dst->x = LongSwap( src->x ) )
+#define LF(x) ( dst->x = FloatSwap( src->x ) )
+#define LV(x) ( dst->x[0] = FloatSwap( src->x[0] ), \
+		dst->x[1] = FloatSwap( src->x[1] ), \
+		dst->x[2] = FloatSwap( src->x[2] ) )
+#define LLV(x) ( dst->x[0] = LongSwap( src->x[0] ), \
+		dst->x[1] = LongSwap( src->x[1] ), \
+		dst->x[2] = LongSwap( src->x[2] ) )
+#define LSV(x) ( dst->x[0] = ( signed short )ShortSwap( src->x[0] ), \
+		dst->x[1] = ( signed short )ShortSwap( src->x[1] ), \
+		dst->x[2] = ( signed short )ShortSwap( src->x[2] ) )
+#else
+#error Unknown byte order
 #endif
 
 

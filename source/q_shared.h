@@ -494,7 +494,7 @@ char	*va( const char *format, ... ) q_printf( 1, 2 );
 
 //=============================================
 
-static inline int16_t ShortSwap( int16_t s ) {
+static inline uint16_t ShortSwap( uint16_t s ) {
 	byte    b1, b2;
 
 	b1 = s & 255;
@@ -503,7 +503,7 @@ static inline int16_t ShortSwap( int16_t s ) {
 	return ( b1 << 8 ) | b2;
 }
 
-static inline int32_t LongSwap( int32_t l ) {
+static inline uint32_t LongSwap( uint32_t l ) {
 	byte    b1, b2, b3, b4;
 
 	b1 = l & 255;
@@ -516,8 +516,8 @@ static inline int32_t LongSwap( int32_t l ) {
 
 static inline float FloatSwap( float f ) {
 	union {
-		float	f;
-		int32_t l;
+		float f;
+		uint32_t l;
 	} dat1, dat2;
 	
 	dat1.f = f;
@@ -529,15 +529,15 @@ static inline float FloatSwap( float f ) {
 #define BigShort	ShortSwap
 #define BigLong	LongSwap
 #define BigFloat	FloatSwap
-#define LittleShort
-#define LittleLong
-#define LittleFloat
+#define LittleShort( x )    (( uint16_t )(x))
+#define LittleLong( x )     (( uint32_t )(x))
+#define LittleFloat( x )    (( float )(x))
 #define MakeLong( b1, b2, b3, b4 ) (((b4)<<24)|((b3)<<16)|((b2)<<8)|(b1))
 #define MakeShort( b1, b2 ) (((b2)<<8)|(b1))
 #elif __BYTE_ORDER == __BIG_ENDIAN
-#define BigShort
-#define BigLong
-#define BigFloat
+#define BigShort        (( uint16_t )(x))
+#define BigLong         (( uint32_t )(x))
+#define BigFloat        (( float )(x))
 #define LittleShort	ShortSwap
 #define LittleLong		LongSwap
 #define LittleFloat	FloatSwap

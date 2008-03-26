@@ -634,7 +634,7 @@ netchan_t *Netchan_Setup( netsrc_t sock, netchan_type_t type,
 void Netchan_Close( netchan_t *netchan );
 
 #define OOB_PRINT( sock, addr, string ) \
-	NET_SendPacket( sock, addr, strlen( "\xff\xff\xff\xff" string ), "\xff\xff\xff\xff" string )
+	NET_SendPacket( sock, addr, sizeof( "\xff\xff\xff\xff" string ) - 1, "\xff\xff\xff\xff" string )
 
 /*
 ==============================================================
@@ -751,7 +751,8 @@ typedef struct {
 void		CM_Init( void );
 
 void		CM_FreeMap( cm_t *cm );
-qboolean	CM_LoadMap( cm_t *cm, const char *name, int flags, uint32_t *checksum );
+const char	*CM_LoadMapEx( cm_t *cm, const char *name, int flags, uint32_t *checksum );
+void        CM_LoadMap( cm_t *cm, const char *name, int flags, uint32_t *checksum );
 cmodel_t	*CM_InlineModel( cm_t *cm, const char *name );	// *1, *2, etc
 
 int CM_NumClusters( cm_t *cm );

@@ -45,9 +45,9 @@ Change the server to a new map, taking all connected
 clients along with it.
 ================
 */
-void SV_SpawnServer( const char *server, const char *spawnpoint ) {
+static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint ) {
 	int			i;
-	uint32_t	checksum;
+//	uint32_t	checksum;
 	char		string[MAX_QPATH];
 	client_t	*client;
     tcpClient_t *t;
@@ -96,10 +96,10 @@ void SV_SpawnServer( const char *server, const char *spawnpoint ) {
 	}
 
     Q_concat( string, sizeof( string ), "maps/", server, ".bsp", NULL );
+    sv.cm = *cm;
     strcpy( sv.configstrings[CS_MODELS + 1], string );
-    CM_LoadMap( &sv.cm, string, 0, &checksum );
 
-    sprintf( sv.configstrings[CS_MAPCHECKSUM], "%d", ( int )checksum );
+    sprintf( sv.configstrings[CS_MAPCHECKSUM], "%d", ( int )cm->cache->checksum );
     
     for( i = 1; i < sv.cm.cache->numcmodels; i++ ) {
         sprintf( sv.configstrings[ CS_MODELS + 1 + i ], "*%d", i );
@@ -319,6 +319,9 @@ void SV_Map (const char *levelstring, qboolean restart) {
 	char	spawnpoint[MAX_QPATH];
 	char	expanded[MAX_QPATH];
 	char	*ch;
+    cm_t    cm;
+    uint32_t checksum;
+    const char *error;
 
 	// skip the end-of-unit flag if necessary
 	if( *levelstring == '*' ) {
@@ -347,8 +350,8 @@ void SV_Map (const char *levelstring, qboolean restart) {
     }
 
     Q_concat( expanded, sizeof( expanded ), "maps/", level, ".bsp", NULL );
-    if( FS_LoadFile( expanded, NULL ) == -1 ) {
-        Com_Printf( "Can't find %s\n", expanded );
+    if( ( error = CM_LoadMapEx( &cm, expanded, 0, &checksum ) ) != NULL ) {
+        Com_Printf( "Couldn't load %s: %s\n", expanded, error );
         return;
     }
 
@@ -365,7 +368,7 @@ void SV_Map (const char *levelstring, qboolean restart) {
     SV_BroadcastCommand( "changing map=%s\n", level );
     SV_SendClientMessages();
     SV_SendAsyncPackets();
-    SV_SpawnServer( level, spawnpoint );
+    SV_SpawnServer( &cm, level, spawnpoint );
 
 	SV_BroadcastCommand( "reconnect\n" );
 }

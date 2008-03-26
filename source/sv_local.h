@@ -443,7 +443,6 @@ void Master_Packet (void);
 //
 void SV_InitGame( qboolean ismvd );
 void SV_Map (const char *levelstring, qboolean restart);
-void SV_SpawnServer( const char *server, const char *spawnpoint );
 void SV_ClientReset( client_t *client );
 
 //

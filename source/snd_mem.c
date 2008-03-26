@@ -66,11 +66,11 @@ static sfxcache_t *ResampleSfx( sfx_t *sfx, wavinfo_t *info ) {
 // fast special case
         if( sc->width == 1 ) {
 		    for(i = 0; i < outcount; i++) {
-			    ((signed char *)sc->data)[i] = (int)( (unsigned char)info->data[i] - 128 );
+			    ((signed char *)sc->data)[i] = ( signed char )( ( uint8_t )info->data[i] - 128 );
             }
         } else {
 		    for(i = 0; i < outcount; i++) {
-                ((signed short *)sc->data)[i] = LittleShort( ((signed short *)info->data)[i] );
+                ((signed short *)sc->data)[i] = ( signed short )LittleShort( (( uint16_t * )info->data)[i] );
             }
         }
 	} else {
@@ -81,13 +81,13 @@ static sfxcache_t *ResampleSfx( sfx_t *sfx, wavinfo_t *info ) {
             for (i = 0; i < outcount; i++) {
                 srcsample = samplefrac >> 8;
                 samplefrac += fracstep;
-                ((signed char *)sc->data)[i] = (int)( (unsigned char)info->data[srcsample] - 128 );
+                ((signed char *)sc->data)[i] = ( signed char )( ( uint8_t )info->data[srcsample] - 128 );
             }
         } else {
             for (i = 0; i < outcount; i++) {
                 srcsample = samplefrac >> 8;
                 samplefrac += fracstep;
-                ((signed short *)sc->data)[i] = LittleShort( ((signed short *)info->data)[srcsample] );
+                ((signed short *)sc->data)[i] = ( signed short )LittleShort( (( uint16_t * )info->data)[srcsample] );
             }
 		}
 	}

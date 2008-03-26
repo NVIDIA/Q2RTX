@@ -711,8 +711,8 @@ void Mod_LoadNodes (lump_t *l)
 	{
 		for (j=0 ; j<3 ; j++)
 		{
-			out->minmaxs[j] = LittleShort (in->mins[j]);
-			out->minmaxs[3+j] = LittleShort (in->maxs[j]);
+			out->minmaxs[j] = ( signed short )LittleShort (in->mins[j]);
+			out->minmaxs[3+j] = ( signed short )LittleShort (in->maxs[j]);
 		}
 	
 		p = LittleLong(in->planenum);
@@ -759,8 +759,8 @@ void Mod_LoadLeafs (lump_t *l)
 	{
 		for (j=0 ; j<3 ; j++)
 		{
-			out->minmaxs[j] = LittleShort (in->mins[j]);
-			out->minmaxs[3+j] = LittleShort (in->maxs[j]);
+			out->minmaxs[j] = ( signed short )LittleShort (in->mins[j]);
+			out->minmaxs[3+j] = ( signed short )LittleShort (in->maxs[j]);
 		}
 
 		out->contents = LittleLong(in->contents);
@@ -998,8 +998,8 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 
 	for (i=0 ; i<pheader->num_st ; i++)
 	{
-		poutst[i].s = LittleShort (pinst[i].s);
-		poutst[i].t = LittleShort (pinst[i].t);
+		poutst[i].s = ( signed short )LittleShort (pinst[i].s);
+		poutst[i].t = ( signed short )LittleShort (pinst[i].t);
 	}
 
 //

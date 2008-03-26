@@ -340,8 +340,11 @@ static qboolean Model_LoadMd2( model_t *model, const byte *rawdata, int length )
 	scaleT = 1.0f / header.skinheight;
 	for( i = 0; i < numIndices; i++ ) {
 		if( remap[i] == i ) {
-			dst_tc[ finalIndices[i] ].st[0] = LittleShort( src_tc[ tcIndices[i] ].s ) * scaleS;
-			dst_tc[ finalIndices[i] ].st[1] = LittleShort( src_tc[ tcIndices[i] ].t ) * scaleT;
+            float s = ( signed short )LittleShort( src_tc[ tcIndices[i] ].s );
+            float t = ( signed short )LittleShort( src_tc[ tcIndices[i] ].t );
+
+			dst_tc[ finalIndices[i] ].st[0] = s * scaleS;
+			dst_tc[ finalIndices[i] ].st[1] = t * scaleT;
 		}
 	}
 
@@ -550,9 +553,9 @@ static qboolean Model_LoadMd3( model_t *model, const byte *rawdata, int length )
 		}
 		dst_vert = dst_mesh->verts;
 		for( j = 0; j < totalVerts; j++ ) {
-			dst_vert->pos[0] = LittleShort( src_vert->point[0] );
-			dst_vert->pos[1] = LittleShort( src_vert->point[1] );
-			dst_vert->pos[2] = LittleShort( src_vert->point[2] );
+			dst_vert->pos[0] = ( signed short )LittleShort( src_vert->point[0] );
+			dst_vert->pos[1] = ( signed short )LittleShort( src_vert->point[1] );
+			dst_vert->pos[2] = ( signed short )LittleShort( src_vert->point[2] );
 
 			dst_vert->normalIndex = ll2byte[src_vert->norm[0]]
                 [src_vert->norm[1]];
@@ -706,9 +709,9 @@ static qboolean Model_WriteMd3( model_t *model, fileHandle_t f ) {
             pos[1] = src_vert->pos[1] * src_frame->scale[1] / MD3_XYZ_SCALE;
             pos[2] = src_vert->pos[2] * src_frame->scale[2] / MD3_XYZ_SCALE;
 
-			dst_vert->point[0] = LittleShort( pos[0] );
-			dst_vert->point[1] = LittleShort( pos[1] );
-			dst_vert->point[2] = LittleShort( pos[2] );
+			dst_vert->point[0] = ( signed short )LittleShort( pos[0] );
+			dst_vert->point[1] = ( signed short )LittleShort( pos[1] );
+			dst_vert->point[2] = ( signed short )LittleShort( pos[2] );
 
             // TODO: calc normal
 

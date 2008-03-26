@@ -819,6 +819,7 @@ static void MVD_GameInit( void ) {
     cvar_t *mvd_default_map;
     char buffer[MAX_QPATH];
     unsigned checksum;
+    const char *error;
 	int i;
 
 	Com_Printf( "----- MVD_GameInit -----\n" );
@@ -851,18 +852,19 @@ static void MVD_GameInit( void ) {
     Com_sprintf( buffer, sizeof( buffer ),
         "maps/%s.bsp", mvd_default_map->string );
 
-    if( FS_LoadFile( buffer, NULL ) > 0 ) {
-        CM_LoadMap( &mvd->cm, buffer, CM_LOAD_CLIENT|CM_LOAD_ENTONLY, &checksum );
-        // get the spectator spawn point
-        MVD_ParseEntityString( mvd );
-        CM_FreeMap( &mvd->cm );
-    } else {
-        Com_WPrintf( "Couldn't load %s for the Waiting Room.\n", buffer );
+    error = CM_LoadMapEx( &mvd->cm, buffer,
+        CM_LOAD_CLIENT|CM_LOAD_ENTONLY, &checksum );
+    if( error ) {
+        Com_WPrintf( "Couldn't load %s for the Waiting Room: %s\n", buffer, error );
         Cvar_Reset( mvd_default_map );
         strcpy( buffer, "maps/q2dm1.bsp" );
         checksum = 80717714;
         VectorSet( mvd->spawnOrigin, 984, 192, 784 );
         VectorSet( mvd->spawnAngles, 25, 72, 0 );
+    } else {
+        // get the spectator spawn point
+        MVD_ParseEntityString( mvd );
+        CM_FreeMap( &mvd->cm );
     }
 
     strcpy( mvd->name, "Waiting Room" );

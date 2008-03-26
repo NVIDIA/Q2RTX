@@ -268,7 +268,7 @@ static void Bsp_LoadFaces( lump_t *lump ) {
 	dface_t *src_face;
 	bspSurface_t *dst_face;
 	int i, j, count;
-	uint32_t texinfoNum;
+	uint16_t texinfoNum;
     uint32_t lightmapOffset;
 	uint32_t firstEdge;
     uint16_t numEdges;
@@ -587,7 +587,7 @@ void Bsp_LoadWorld( const char *path ) {
 	lump_t *lump;
 	int i;
     byte *data;
-    int length;
+    unsigned length, endpos;
 
     length = fs.LoadFileEx( path, ( void ** )&data, FS_FLAG_CACHE );
     if( !data ) {
@@ -610,15 +610,14 @@ void Bsp_LoadWorld( const char *path ) {
 	}
 	
 	// byte swap and validate lumps
-	lump = header.lumps;
-	for( i = 0; i < HEADER_LUMPS; i++ ) {
+	for( i = 0, lump = header.lumps; i < HEADER_LUMPS; i++, lump++ ) {
 		lump->fileofs = LittleLong( lump->fileofs );
 		lump->filelen = LittleLong( lump->filelen );
-		if( lump->fileofs + lump->filelen > length ) {
+        endpos = lump->fileofs + lump->filelen;
+		if( endpos < lump->fileofs || endpos > length ) {
 			Com_Error( ERR_DROP, "%s: %s has lump #%d out of bounds\n",
                 __func__, path, i );
 		}
-		lump++;
 	}
 
 	loadData = data;

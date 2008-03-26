@@ -890,6 +890,7 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
 	int protocol;
     int length, index;
 	char *gamedir, *string, *p;
+    const char *error;
 	uint32_t checksum;
     int i;
     mvd_player_t *player;
@@ -976,16 +977,13 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
     strcpy( mvd->mapname, string + 5 ); // skip "maps/"
     mvd->mapname[length - 9] = 0; // cut off ".bsp"
 
-    // check if map exists so CM_LoadMap does not kill
-    // entire server if it does not
-    if( FS_LoadFile( string, NULL ) == -1 ) {
-        MVD_Destroyf( mvd, "Couldn't find map: %s", string );
-    }
-
 	// load the world model (we are only interesed in
     // visibility info, do not load brushes and such)
     Com_Printf( "[%s] Loading %s...\n", mvd->name, string );
-    CM_LoadMap( &mvd->cm, string, CM_LOAD_VISONLY, &checksum );
+    error = CM_LoadMapEx( &mvd->cm, string, CM_LOAD_VISONLY, &checksum );
+    if( error ) {
+        MVD_Destroyf( mvd, "Couldn't load %s: %s", string, error );
+    }
 
 #if USE_MAPCHECKSUM
     if( checksum != atoi( mvd->configstrings[CS_MAPCHECKSUM] ) ) {
