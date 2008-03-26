@@ -74,11 +74,6 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
         SZ_Init( &sv.mvd.datagram, svs.mvd.datagram_data, MAX_MSGLEN );
     }
 
-	// init rate limits
-	SV_RateInit( &svs.ratelimit_status, sv_status_limit->integer, 1000 );
-	SV_RateInit( &svs.ratelimit_badpass, 1, sv_badauth_time->value * 1000 );
-	SV_RateInit( &svs.ratelimit_badrcon, 1, sv_badauth_time->value * 1000 );
-
 	// save name for levels that don't set message
 	Q_strncpyz( sv.configstrings[CS_NAME], server, MAX_QPATH );
 	Q_strncpyz( sv.name, server, sizeof( sv.name ) );

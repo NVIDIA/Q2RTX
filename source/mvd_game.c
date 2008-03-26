@@ -106,7 +106,7 @@ static void MVD_LayoutClients( udpClient_t *client ) {
 	MSG_WriteData( layout, total + 1 );
 	SV_ClientAddMessage( client->cl, MSG_CLEAR );
 
-	client->layout_time = sv.time + LAYOUT_MSEC;
+	client->layout_time = svs.realtime;
 }
 
 static void MVD_LayoutChannels( udpClient_t *client ) {
@@ -159,7 +159,7 @@ static void MVD_LayoutChannels( udpClient_t *client ) {
 	MSG_WriteData( layout, total + 1 );				
 	SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
 
-	client->layout_time = 1;
+	client->layout_time = svs.realtime;
 }
 
 static void MVD_LayoutScores( udpClient_t *client ) {
@@ -172,7 +172,7 @@ static void MVD_LayoutScores( udpClient_t *client ) {
     MSG_WriteString( layout );
 	SV_ClientAddMessage( client->cl, MSG_CLEAR );
 
-	client->layout_time = 1;
+	client->layout_time = svs.realtime;
 }
 
 static void MVD_LayoutFollow( udpClient_t *client ) {
@@ -183,7 +183,7 @@ static void MVD_LayoutFollow( udpClient_t *client ) {
     MSG_WriteString( va( "xv 0 yt 48 cstring \"%s\"", name ) );
 	SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
 
-	client->layout_time = 1;
+	client->layout_time = svs.realtime;
 }
 
 static void MVD_SetDefaultLayout( udpClient_t *client ) {
@@ -236,7 +236,7 @@ static void MVD_UpdateLayouts( mvd_t *mvd ) {
             }
             break;
         case LAYOUT_CLIENTS:
-            if( client->layout_time < sv.time ) {
+            if( svs.realtime - client->layout_time > LAYOUT_MSEC ) {
                 MVD_LayoutClients( client );
             }
             break;
@@ -551,39 +551,40 @@ static void MVD_Admin_f( udpClient_t *client ) {
 
 static void MVD_Say_f( udpClient_t *client ) {
     mvd_t *mvd = client->mvd;
+    unsigned delta, delay = mvd_flood_waitdelay->value * 1000;
+    unsigned treshold = mvd_flood_persecond->value * 1000;
     char *text;
     int i;
 
     if( mvd_flood_mute->integer && !client->admin ) {
         SV_ClientPrintf( client->cl, PRINT_HIGH,
-            "[MVD] Spectators can't talk on this server.\n" );
+            "[MVD] Spectators may not talk on this server.\n" );
         return;
     }
 
-    if( client->floodTime > sv.time ) {
-        SV_ClientPrintf( client->cl, PRINT_HIGH,
-            "[MVD] You can't talk for %d more seconds.\n",
-            ( client->floodTime - sv.time ) / 1000 );
-        return;
+    if( client->floodTime ) {
+        delta = svs.realtime - client->floodTime;
+        if( delta < delay ) {
+            SV_ClientPrintf( client->cl, PRINT_HIGH,
+                "[MVD] You can't talk for %u more seconds.\n",
+                ( delay - delta ) / 1000 );
+            return;
+        }
     }
 
     Cvar_ClampInteger( mvd_flood_msgs, 0, FLOOD_SAMPLES - 1 );
     i = client->floodHead - mvd_flood_msgs->integer - 1;
     if( i >= 0 ) {
-        Cvar_ClampValue( mvd_flood_persecond, 0, 60 );
-        if( sv.time - client->floodSamples[i & FLOOD_MASK] <
-            mvd_flood_persecond->value * 1000 )
-        {
-            Cvar_ClampValue( mvd_flood_waitdelay, 0, 60 );
+        delta = svs.realtime - client->floodSamples[i & FLOOD_MASK];
+        if( delta < treshold ) {
             SV_ClientPrintf( client->cl, PRINT_HIGH,
-                "[MVD] You can't talk for %d seconds.\n",
-                mvd_flood_waitdelay->integer );
-            client->floodTime = sv.time + mvd_flood_waitdelay->value * 1000;
+                "[MVD] You can't talk for %u seconds.\n", delay / 1000 );
+            client->floodTime = svs.realtime;
             return;
         }
     }
 
-    client->floodSamples[client->floodHead & FLOOD_MASK] = sv.time;
+    client->floodSamples[client->floodHead & FLOOD_MASK] = svs.realtime;
     client->floodHead++;
 
     text = Cmd_Args();

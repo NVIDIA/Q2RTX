@@ -1372,7 +1372,7 @@ static void SV_RunGameFrame( void ) {
 	// compression can get confused when a client
 	// has the "current" frame
 	sv.framenum++;
-	sv.time += 100;
+	svs.time += 100;
 
     if( svs.mvd.dummy ) {
     	SV_MvdBeginFrame();
@@ -1392,10 +1392,10 @@ static void SV_RunGameFrame( void ) {
     }
 
 	// never get more than one tic behind
-	if( sv.time < svs.realtime ) {
+	if( svs.time < svs.realtime ) {
 		if( sv_showclamp->integer )
 			Com_Printf( "sv highclamp\n" );
-		svs.realtime = sv.time;
+		svs.realtime = svs.time;
 	}
 
 #ifndef DEDICATED_ONLY
@@ -1527,15 +1527,15 @@ void SV_Frame( int msec ) {
 	SV_SendAsyncPackets();
 
 	// move autonomous things around if enough time has passed
-	if( !com_timedemo->integer && svs.realtime < sv.time ) {
+	if( !com_timedemo->integer && svs.realtime < svs.time ) {
 		// never let the time get too far off
-		if( sv.time - svs.realtime > 100 ) {
+		if( svs.time - svs.realtime > 100 ) {
 			if( sv_showclamp->integer )
 				Com_Printf( "sv lowclamp\n" );
-			svs.realtime = sv.time - 100;
+			svs.realtime = svs.time - 100;
 		}
 		if( dedicated->integer ) {
-    		NET_Sleep( sv.time - svs.realtime );
+    		NET_Sleep( svs.time - svs.realtime );
 		}
 		return;
 	}

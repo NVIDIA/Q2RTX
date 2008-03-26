@@ -37,42 +37,53 @@ Specify a list of master servers
 ====================
 */
 static void SV_SetMaster_f( void ) {
-	int		i, slot;
+    netadr_t adr;
+	int		i, j, slot;
+    char    *s;
 
+#ifndef DEDICATED_ONLY
 	// only dedicated servers send heartbeats
 	if( !dedicated->integer ) {
 		Com_Printf( "Only dedicated servers use masters.\n" );
 		return;
 	}
+#endif
 
-	// make sure the server is listed public
-	Cvar_Set( "public", "1" );
-
-	for( i = 0; i < MAX_MASTERS; i++ )
-		memset( &master_adr[i], 0, sizeof( master_adr[0] ) );
+	memset( &master_adr, 0, sizeof( master_adr ) );
 
 	slot = 0;
-	for( i = 1; i < Cmd_Argc(); i++) {
+	for( i = 1; i < Cmd_Argc(); i++ ) {
 		if( slot == MAX_MASTERS ) {
 		    Com_Printf( "Too many masters.\n" );
 			break;
         }
 
-		if( !NET_StringToAdr( Cmd_Argv( i ), &master_adr[slot], PORT_MASTER ) ) {
-			Com_Printf( "Bad address: %s\n", Cmd_Argv( i ) );
+        s = Cmd_Argv( i );
+		if( !NET_StringToAdr( s, &adr, PORT_MASTER ) ) {
+			Com_Printf( "Bad address: %s\n", s );
 			continue;
 		}
 
-		Com_Printf( "Master server at %s\n", NET_AdrToString( &master_adr[slot] ) );
+        s = NET_AdrToString( &adr );
+        for( j = 0; j < slot; j++ ) {
+            if( NET_IsEqualBaseAdr( &master_adr[j], &adr ) ) {
+			    Com_Printf( "Ignoring duplicate at %s.\n", s );
+                break;
+            }
+        }
 
-		//Com_Printf ("Sending a ping.\n");
-
-		//Netchan_OutOfBandPrint (NS_SERVER, &master_adr[slot], "ping");
-
-		slot++;
+        if( j == slot ) {
+    		Com_Printf( "Master server at %s.\n", s );
+	    	master_adr[slot++] = adr;
+        }
 	}
 
-	svs.last_heartbeat = svs.realtime - HEARTBEAT_SECONDS*1000;
+    if( slot ) {
+    	// make sure the server is listed public
+	    Cvar_Set( "public", "1" );
+
+    	svs.last_heartbeat = svs.realtime - HEARTBEAT_SECONDS*1000;
+    }
 }
 
 static void SV_Player_g( genctx_t *ctx ) {

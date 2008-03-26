@@ -62,7 +62,6 @@ typedef struct server_s {
 	server_state_t	state;	// precache commands are only valid during load
     int             spawncount;  // random number generated each server spawn
 
-	unsigned	time;			 // always sv.framenum * 100 msec
 	int			framenum;
 
 	char		name[MAX_QPATH];			// map name, or cinematic name
@@ -317,7 +316,7 @@ typedef struct {
 
 typedef struct server_static_s {
 	qboolean	initialized;			// sv_init has completed
-	unsigned	realtime;				// always increasing, no clamping, etc
+	unsigned	realtime, time;			// always increasing, no clamping, etc
 
 	char		mapcmd[MAX_TOKEN_CHARS];	// ie: *intro.cin+base 
 
