@@ -633,7 +633,17 @@ JPEG LOADING
 typedef struct my_error_mgr {
 	struct jpeg_error_mgr	pub;
 	jmp_buf					setjmp_buffer;
+    const char              *filename;
 } *my_error_ptr;
+
+METHODDEF( void )my_output_message( j_common_ptr cinfo ) {
+    char buffer[JMSG_LENGTH_MAX];
+	my_error_ptr myerr = ( my_error_ptr )cinfo->err;
+
+    (*cinfo->err->format_message)( cinfo, buffer );
+
+    Com_WPrintf( "LoadJPG: %s: %s\n", myerr->filename, buffer );
+}
 
 METHODDEF( void )my_error_exit( j_common_ptr cinfo ) {
 	my_error_ptr myerr = ( my_error_ptr )cinfo->err;
@@ -644,9 +654,9 @@ METHODDEF( void )my_error_exit( j_common_ptr cinfo ) {
 }
 
 
-METHODDEF( void ) mem_init_source( j_decompress_ptr cinfo ) { }
+METHODDEF( void )mem_init_source( j_decompress_ptr cinfo ) { }
 
-METHODDEF( boolean ) mem_fill_input_buffer( j_decompress_ptr cinfo ) {
+METHODDEF( boolean )mem_fill_input_buffer( j_decompress_ptr cinfo ) {
 	my_error_ptr jerr = ( my_error_ptr )cinfo->err;
 
 	longjmp( jerr->setjmp_buffer, 1 );
@@ -654,7 +664,7 @@ METHODDEF( boolean ) mem_fill_input_buffer( j_decompress_ptr cinfo ) {
 }
 
 
-METHODDEF( void ) mem_skip_input_data( j_decompress_ptr cinfo, long num_bytes ) {
+METHODDEF( void )mem_skip_input_data( j_decompress_ptr cinfo, long num_bytes ) {
 	struct jpeg_source_mgr *src = cinfo->src;
 	my_error_ptr jerr = ( my_error_ptr )cinfo->err;
     
@@ -666,11 +676,12 @@ METHODDEF( void ) mem_skip_input_data( j_decompress_ptr cinfo, long num_bytes ) 
 	src->bytes_in_buffer -= ( size_t )num_bytes;
 }
 
-METHODDEF( void ) mem_term_source( j_decompress_ptr cinfo ) { }
+METHODDEF( void )mem_term_source( j_decompress_ptr cinfo ) { }
 
 
-METHODDEF( void ) jpeg_mem_src( j_decompress_ptr cinfo, byte *memory, int size ) {
-	cinfo->src = (struct jpeg_source_mgr *)(*cinfo->mem->alloc_small)( ( j_common_ptr )cinfo, JPOOL_PERMANENT, sizeof( struct jpeg_source_mgr ) );
+METHODDEF( void )jpeg_mem_src( j_decompress_ptr cinfo, byte *data, int size ) {
+	cinfo->src = ( struct jpeg_source_mgr * )(*cinfo->mem->alloc_small)(
+        ( j_common_ptr )cinfo, JPOOL_PERMANENT, sizeof( struct jpeg_source_mgr ) );
 
 	cinfo->src->init_source = mem_init_source;
 	cinfo->src->fill_input_buffer = mem_fill_input_buffer;
@@ -678,7 +689,7 @@ METHODDEF( void ) jpeg_mem_src( j_decompress_ptr cinfo, byte *memory, int size )
 	cinfo->src->resync_to_restart = jpeg_resync_to_restart;
 	cinfo->src->term_source = mem_term_source;
 	cinfo->src->bytes_in_buffer = size;
-	cinfo->src->next_input_byte = memory;
+	cinfo->src->next_input_byte = data;
 }
 
 /*
@@ -694,7 +705,8 @@ void Image_LoadJPG( const char *filename, byte **pic, int *width, int *height ) 
 	byte *rawdata;
 	int rawlength;
 	byte *pixels;
-	byte *src, *dest;
+	byte *src;
+    uint32_t *dst;
 	int i;
 
 	if( !filename || !pic ) {
@@ -709,19 +721,14 @@ void Image_LoadJPG( const char *filename, byte **pic, int *width, int *height ) 
 		return;
 	}
 
-	if( rawlength < 10 || *( uint32_t * )( rawdata + 6 ) != MakeLong( 'J', 'F', 'I', 'F' ) ) {
-		Com_WPrintf( "LoadJPG: %s: not a valid JPEG file\n", filename );
-		fs.FreeFile( rawdata );
-		return;
-	}
-
 	cinfo.err = jpeg_std_error( &jerr.pub );
 	jerr.pub.error_exit = my_error_exit;
+	jerr.pub.output_message = my_output_message;
+    jerr.filename = filename;
 
 	jpeg_create_decompress( &cinfo );
 	
 	if( setjmp( jerr.setjmp_buffer ) ) {
-		Com_WPrintf( "LoadJPG: %s: JPEGLIB signaled an error\n", filename );
 		jpeg_destroy_decompress( &cinfo );
 		if( pixels ) {
 			fs.FreeFile( pixels );
@@ -736,7 +743,7 @@ void Image_LoadJPG( const char *filename, byte **pic, int *width, int *height ) 
 
 	if( cinfo.output_components != 3 /*&& cinfo.output_components != 4*/ ) {
 		Com_WPrintf( "LoadJPG: %s: unsupported number of color components: %i\n",
-				filename, cinfo.output_components );
+			filename, cinfo.output_components );
 		jpeg_destroy_decompress( &cinfo );
 		fs.FreeFile( rawdata );
 		return;
@@ -751,15 +758,13 @@ void Image_LoadJPG( const char *filename, byte **pic, int *width, int *height ) 
 
 	buffer = (*cinfo.mem->alloc_sarray)( ( j_common_ptr )&cinfo, JPOOL_IMAGE, row_stride, 1 );
 
-	dest = pixels;
+	dst = ( uint32_t * )pixels;
 	while( cinfo.output_scanline < cinfo.output_height ) {
 		jpeg_read_scanlines( &cinfo, buffer, 1 );
 
 		src = ( byte * )buffer[0];
-		for( i = 0; i < cinfo.output_width; i++ ) {
-			*( uint32_t * )dest = MakeColor( src[0], src[1], src[2], 255 );
-			src += 3;
-			dest += 4;
+		for( i = 0; i < cinfo.output_width; i++, src += 3 ) {
+			*dst++ = MakeColor( src[0], src[1], src[2], 255 );
 		}
 	}
 
