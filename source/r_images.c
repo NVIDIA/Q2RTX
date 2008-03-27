@@ -924,10 +924,11 @@ static void QDECL png_vfs_read_fn( png_structp png_ptr, png_bytep buf, png_size_
 	struct pngReadStruct *r = png_get_io_ptr( png_ptr );
 
 	if( r->data + size > r->maxp ) {
-		size = r->maxp - r->data;
-	}
-	memcpy( buf, r->data, size );
-	r->data += size;
+        png_error( png_ptr, "read error" );
+	} else {
+    	memcpy( buf, r->data, size );
+	    r->data += size;
+    }
 }
 
 static void QDECL png_console_error_fn( png_structp png_ptr, png_const_charp error_msg ) {
