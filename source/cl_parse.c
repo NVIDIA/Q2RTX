@@ -1219,8 +1219,8 @@ static void CL_ParseReconnect( void ) {
 
 	CL_ClearState();
 	cls.state = ca_challenging;
-	cls.connect_time = -99999;	// CL_CheckForResend() will fire immediately
-	cls.connectCount = 0;
+    cls.connect_time = cls.realtime - CONNECT_DELAY;
+	cls.connect_count = 0;
 }
 
 #if USE_AUTOREPLY

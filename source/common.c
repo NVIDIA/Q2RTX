@@ -1033,33 +1033,35 @@ Just throw a fatal error to
 test error shutdown procedures
 =============
 */
-void Com_Error_f( void ) {
+static void Com_Error_f( void ) {
 	Com_Error( ERR_FATAL, "%s", Cmd_Argv( 1 ) );
 }
 
-void Com_ErrorDrop_f( void ) {
+static void Com_ErrorDrop_f( void ) {
 	Com_Error( ERR_DROP, "%s", Cmd_Argv( 1 ) );
 }
 
-void Com_Freeze_f( void ) {
-	int sec, time;
+static void Com_Freeze_f( void ) {
+	unsigned time, msec;
+    float seconds;
 
 	if( Cmd_Argc() < 2 ) {
 		Com_Printf( "Usage: %s <seconds>\n", Cmd_Argv( 0 ) );
 		return;
 	}
 
-	sec = atoi( Cmd_Argv( 1 ) );
-	if( sec < 1 ) {
+	seconds = atof( Cmd_Argv( 1 ) );
+	if( seconds < 0 ) {
 		return;
 	}
 
-	time = Sys_Milliseconds() + sec * 1000;
-	while( Sys_Milliseconds() < time )
+	time = Sys_Milliseconds();
+    msec = seconds * 1000;
+	while( Sys_Milliseconds() - time < msec )
 		;
 }
 
-void Com_Crash_f( void ) {
+static void Com_Crash_f( void ) {
 	*( uint32_t * )0 = 0x123456;
 }
 

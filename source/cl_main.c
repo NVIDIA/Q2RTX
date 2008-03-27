@@ -348,25 +348,25 @@ static void CL_CheckForResend( void ) {
     
         // we don't need a challenge on the localhost
         cls.state = ca_connecting;
-        cls.connect_time = -9999;
+        cls.connect_time = cls.realtime - CONNECT_DELAY;
 
         cls.passive = qfalse;
     }
 
     // resend if we haven't gotten a reply yet
-    if ( cls.state != ca_connecting && cls.state != ca_challenging ) {
+    if( cls.state != ca_connecting && cls.state != ca_challenging ) {
         return;
     }
 
-    if ( cls.realtime - cls.connect_time < 3000 )
+    if( cls.realtime - cls.connect_time < CONNECT_DELAY ) {
         return;
+    }
 
     cls.connect_time = cls.realtime;	// for retransmit requests
-
-    cls.connectCount++;
+    cls.connect_count++;
 
     if ( cls.state == ca_challenging ) {
-        Com_Printf( "Requesting challenge... %i\n", cls.connectCount );
+        Com_Printf( "Requesting challenge... %i\n", cls.connect_count );
         ret = OOB_PRINT( NS_CLIENT, &cls.serverAddress, "getchallenge\n" );
 		if( ret == NET_ERROR ) {
 			Com_Error( ERR_DISCONNECT, "%s to %s\n", NET_ErrorString(),
@@ -378,7 +378,7 @@ static void CL_CheckForResend( void ) {
     //
     // We have gotten a challenge from the server, so try and connect.
     //
-    Com_Printf( "Requesting connection... %i\n", cls.connectCount );
+    Com_Printf( "Requesting connection... %i\n", cls.connect_count );
 
     cls.userinfo_modified = 0;
 
@@ -478,8 +478,8 @@ usage:
     cls.protocolVersion = 0;
     cls.passive = qfalse;
     cls.state = ca_challenging;
-    cls.connectCount = 0;
-    cls.connect_time = -99999;	// CL_CheckForResend() will fire immediately
+    cls.connect_count = 0;
+    cls.connect_time = cls.realtime - CONNECT_DELAY;	// CL_CheckForResend() will fire immediately
 
 	CL_CheckForResend();
 
@@ -617,7 +617,7 @@ void CL_Disconnect( comErrorType_t type, const char *text ) {
         ref.CinematicSetPalette( NULL );
 
     cls.connect_time = 0;
-	cls.connectCount = 0;
+	cls.connect_count = 0;
     cls.passive = qfalse;
 
     if ( cls.demoplayback ) {
@@ -627,15 +627,11 @@ void CL_Disconnect( comErrorType_t type, const char *text ) {
         if ( com_timedemo->integer ) {
             unsigned msec = Sys_Milliseconds();
 
-            if( cls.timeDemoStart < msec ) {
-                float sec = ( msec - cls.timeDemoStart ) * 0.001f;
-                float fps = cls.timeDemoFrames / sec;
+            float sec = ( msec - cls.timeDemoStart ) * 0.001f;
+            float fps = cls.timeDemoFrames / sec;
 
-                Com_Printf( "%u frames, %3.1f seconds: %3.1f fps\n",
-                    cls.timeDemoFrames, sec, fps );
-            } else {
-                Com_Printf( "Time wrapped during timedemo\n" );
-            }
+            Com_Printf( "%u frames, %3.1f seconds: %3.1f fps\n",
+                cls.timeDemoFrames, sec, fps );
         }
     }
     
@@ -1045,7 +1041,7 @@ static void CL_Reconnect_f( void ) {
 
     Com_Printf( "Reconnecting...\n" );
 
-    cls.connect_time = -9999;
+    cls.connect_time = cls.realtime - CONNECT_DELAY;
     cls.state = ca_challenging;
 
     SCR_UpdateScreen();
@@ -1230,7 +1226,7 @@ static void CL_ConnectionlessPacket( void ) {
 
         cls.challenge = atoi( Cmd_Argv( 1 ) );
         cls.state = ca_connecting;
-        cls.connect_time = -9999;
+        cls.connect_time = cls.realtime - CONNECT_DELAY;
         //cls.connectCount = 0;
 
 		// parse additional parameters
@@ -1343,7 +1339,7 @@ static void CL_ConnectionlessPacket( void ) {
 			MSG_FlushTo( &cls.netchan->message );
 			cls.netchan->Transmit( cls.netchan, 0, NULL );
 			S_StopAllSounds();
-	        cls.connectCount = -1;
+	        cls.connect_count = -1;
 			Com_Printf( "Loading anticheat, this may take a few moments...\n" );
 			SCR_UpdateScreen();
 			if( !Sys_GetAntiCheatAPI() ) {
@@ -1362,7 +1358,7 @@ static void CL_ConnectionlessPacket( void ) {
         CL_ClientCommand( "new" );
         cls.state = ca_connected;
 		cls.messageString[0] = 0;
-	    cls.connectCount = 0;
+	    cls.connect_count = 0;
         strcpy( cl.mapname, mapname ); // for levelshot screen
         return;
     }
@@ -1389,8 +1385,8 @@ static void CL_ConnectionlessPacket( void ) {
         cls.passive = qfalse;
 
         cls.state = ca_challenging;
-        cls.connect_time = -9999;
-        cls.connectCount = 0;
+        cls.connect_time = cls.realtime - CONNECT_DELAY;
+        cls.connect_count = 0;
 
         CL_CheckForResend();
         return;
@@ -2288,7 +2284,7 @@ static void CL_GetClientStatus( clientStatus_t *status ) {
 		Com_Error( ERR_DROP, "CL_GetClientStatus: NULL" );
 	}
 	status->connState = cls.state;
-	status->connectCount = cls.connectCount;
+	status->connectCount = cls.connect_count;
 	status->demoplayback = cls.demoplayback;
 	status->servername = cls.servername;
 	status->mapname = cl.mapname;
@@ -2357,7 +2353,7 @@ static void CL_InitLocal ( void ) {
     int i;
 
     cls.state = ca_disconnected;
-    cls.realtime = 0;
+    cls.realtime = 0xffffffff-15*1000;
 
 	CL_FillAPI( &client );
 
@@ -2540,14 +2536,9 @@ static void CL_SetClientTime( void ) {
 }
 
 static void CL_MeasureStats( void ) {
-	unsigned msec = Sys_Milliseconds();
-
 	cls.measureFramecount++;
 
-    if( cls.measureTime > msec ) {
-        cls.measureTime = msec;
-    }
-	if( msec - cls.measureTime < 1000 ) {
+	if( com_localTime - cls.measureTime < 1000 ) {
         return;
     }
 
@@ -2571,7 +2562,7 @@ static void CL_MeasureStats( void ) {
     	cls.ping = k ? ping / k : 0;
     }
 
-	cls.measureTime = msec;
+	cls.measureTime = com_localTime;
 	cls.fps = cls.measureFramecount;
 	cls.measureFramecount = 0;
 }

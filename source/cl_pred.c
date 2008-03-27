@@ -29,7 +29,7 @@ CL_CheckPredictionError
 void CL_CheckPredictionError( void ) {
 	int		frame;
 	int		delta[3];
-	int		i;
+	unsigned    cmd;
 	int		len;
 	player_state_t *ps;
 
@@ -49,17 +49,17 @@ void CL_CheckPredictionError( void ) {
 
 	// calculate the last usercmd_t we sent that the server has processed
 	frame = cls.netchan->incoming_acknowledged & CMD_MASK;
-	i = cl.history[frame].cmdNumber;
+	cmd = cl.history[frame].cmdNumber;
 
     // don't predict steps against server returned data
-    if( cl.predicted_step_frame <= i ) {
-        cl.predicted_step_frame = i + 1;
+    if( cl.predicted_step_frame < cmd + 1 ) {
+        cl.predicted_step_frame = cmd + 1;
     }
 
-	i &= CMD_MASK;
+	cmd &= CMD_MASK;
 
 	// compare what the server returned with what we had predicted it to be
-	VectorSubtract( ps->pmove.origin, cl.predicted_origins[i], delta );
+	VectorSubtract( ps->pmove.origin, cl.predicted_origins[cmd], delta );
 
 	// save the prediction error for interpolation
 	len = abs( delta[0] ) + abs( delta[1] ) + abs( delta[2] );
@@ -71,7 +71,7 @@ void CL_CheckPredictionError( void ) {
 			Com_Printf( "prediction miss on %i: %i\n", cl.frame.number, len );
 		}
 
-		VectorCopy( ps->pmove.origin, cl.predicted_origins[i] );
+		VectorCopy( ps->pmove.origin, cl.predicted_origins[cmd] );
 
 		// save for error interpolation
 		VectorScale( delta, 0.125f, cl.prediction_error );
@@ -105,8 +105,7 @@ CL_ClipMoveToEntities
 
 ====================
 */
-void CL_ClipMoveToEntities ( vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, trace_t *tr )
-{
+static void CL_ClipMoveToEntities ( vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, trace_t *tr ) {
 	int			i, x, zd, zu;
 	trace_t		trace;
 	cnode_t		*headnode;
@@ -115,20 +114,18 @@ void CL_ClipMoveToEntities ( vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end,
 	cmodel_t		*cmodel;
 	vec3_t		bmins, bmaxs;
 
-	for (i=0 ; i<cl.numSolidEntities ; i++)
-	{
+	for (i=0 ; i<cl.numSolidEntities ; i++) {
 		ent = cl.solidEntities[i];
 
-		if (ent->solid == 31)
-		{	// special value for bmodel
+		if (ent->solid == 31) {	
+            // special value for bmodel
 			cmodel = cl.model_clip[ent->modelindex];
 			if (!cmodel)
 				continue;
 			headnode = cmodel->headnode;
 			angles = ent->angles;
-		}
-		else
-		{	// encoded bbox
+		} else {
+            // encoded bbox
 			x = 8*(ent->solid & 31);
 			zd = 8*((ent->solid>>5) & 31);
 			zu = 8*((ent->solid>>10) & 63) - 32;
@@ -168,8 +165,7 @@ void CL_ClipMoveToEntities ( vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end,
 CL_PMTrace
 ================
 */
-trace_t		CL_PMTrace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end)
-{
+static trace_t CL_Trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end) {
 	trace_t	t;
 
 	// check against world
@@ -183,8 +179,7 @@ trace_t		CL_PMTrace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end)
 	return t;
 }
 
-int		CL_PMpointcontents (vec3_t point)
-{
+static int CL_PointContents (vec3_t point) {
 	int			i;
 	entity_state_t	*ent;
 	cmodel_t		*cmodel;
@@ -192,8 +187,7 @@ int		CL_PMpointcontents (vec3_t point)
 
 	contents = CM_PointContents (point, cl.cm.cache->nodes);
 
-	for (i=0 ; i<cl.numSolidEntities ; i++)
-	{
+	for (i=0 ; i<cl.numSolidEntities ; i++) {
 		ent = cl.solidEntities[i];
 
 		if (ent->solid != 31) // special value for bmodel
@@ -218,8 +212,7 @@ Sets cl.predicted_origin and cl.predicted_angles
 =================
 */
 void CL_PredictMovement( void ) {
-	int			ack, current;
-	int			frame;
+	unsigned	ack, current, frame;
 	pmove_t		pm;
 	int			step, oldz;
 	player_state_t *ps;
@@ -266,8 +259,8 @@ void CL_PredictMovement( void ) {
 
 	// copy current state to pmove
 	memset( &pm, 0, sizeof( pm ) );
-	pm.trace = CL_PMTrace;
-	pm.pointcontents = CL_PMpointcontents;
+	pm.trace = CL_Trace;
+	pm.pointcontents = CL_PointContents;
 
 	pm.s = ps->pmove;
 #if USE_SMOOTH_DELTA_ANGLES

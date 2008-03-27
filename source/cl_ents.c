@@ -845,13 +845,12 @@ static void CL_CalcViewValues( void ) {
 	// calculate the origin
 	if( !cls.demoplayback && cl_predict->integer && !( ps->pmove.pm_flags & PMF_NO_PREDICTION ) ) {	
 		// use predicted values
-		int	delta;
+		unsigned delta = cls.realtime - cl.predicted_step_time;
 		float backlerp = lerp - 1.0;
 
         VectorMA( cl.predicted_origin, backlerp, cl.prediction_error, cl.refdef.vieworg );
 		
 		// smooth out stair climbing
-		delta = cls.realtime - cl.predicted_step_time;
         if( cl.predicted_step < 16 ) {
             delta <<= 1; // small steps
         }
