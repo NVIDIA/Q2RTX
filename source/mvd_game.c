@@ -112,10 +112,11 @@ static void MVD_LayoutClients( udpClient_t *client ) {
 static void MVD_LayoutChannels( udpClient_t *client ) {
     static const char header[] =
         "xv 32 yv 8 picn inventory "
+        "xv 240 yv 172 string2 " VERSION " "
         "xv 64 yv 32 string2 \"Channel       Map     CL\""
-        "yv 40 string \"------------- ------- --\"";
+        "yv 40 string \"------------- ------- --\" xv 56 ";
     static const char nochans[] =
-        "xv 56 yv 48 string \" <no channels>\"";
+        "yv 48 string \" <no channels>\"";
 	char layout[MAX_STRING_CHARS];
 	char buffer[MAX_STRING_CHARS];
     mvd_t *mvd;
@@ -132,7 +133,7 @@ static void MVD_LayoutChannels( udpClient_t *client ) {
         cursor = 0;
         LIST_FOR_EACH( mvd_t, mvd, &mvd_ready, ready ) {
             length = Com_sprintf( buffer, sizeof( buffer ),
-                "xv 56 yv %d string \"%c%-13.13s %-7.7s %d%s\" ", y,
+                "yv %d string \"%c%-13.13s %-7.7s %d%s\" ", y,
                 cursor == client->layout_cursor ? 0x8d : 0x20,
                 mvd->name, mvd->mapname,
                 List_Count( &mvd->udpClients ),
@@ -153,6 +154,54 @@ static void MVD_LayoutChannels( udpClient_t *client ) {
     }
 
     layout[total] = 0;
+
+    // send the layout
+	MSG_WriteByte( svc_layout );
+	MSG_WriteData( layout, total + 1 );				
+	SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
+
+	client->layout_time = svs.realtime;
+}
+
+#define MENU_ITEMS  9
+#define YES "\xD9\xE5\xF3"
+#define NO "\xCE\xEF"
+
+static void MVD_LayoutMenu( udpClient_t *client ) {
+    static const char format[] =
+        "xv 32 yv 8 picn inventory "
+        "xv 72 yv 32 string \"Q2PRO MVD - Main Menu\" xv 56 "
+        "yv 48 string2 \"%c%s in-eyes mode\""
+        "yv 56 string2 \"%cShow scoreboard\""
+        "yv 64 string2 \"%cShow spectators (%d)\""
+        "yv 72 string2 \"%cShow channels (%d)\""
+        "yv 80 string2 \"%cLeave this channel\""
+        "yv 96 string \"%cIgnore spectator chat: %s\""
+        "yv 104 string \"%cIgnore player chat:    %s\""
+        "yv 112 string \"%cIgnore player FOV:     %s\""
+        "yv 128 string2 \"%cExit menu\""
+        "xv 240 yv 172 string2 " VERSION;
+	char layout[MAX_STRING_CHARS];
+    char cur[MENU_ITEMS];
+    int total;
+
+    if( client->layout_cursor < 0 ) {
+        client->layout_cursor = MENU_ITEMS - 1;
+    } else if( client->layout_cursor > MENU_ITEMS - 1 ) {
+        client->layout_cursor = 0;
+    }
+
+    memset( cur, 0x20, sizeof( cur ) );
+    cur[client->layout_cursor] = 0x8d;
+
+    total = Com_sprintf( layout, sizeof( layout ), format,
+        cur[0], client->target ? "Leave" : "Enter", cur[1],
+        cur[2], List_Count( &client->mvd->udpClients ),
+        cur[3], List_Count( &mvd_ready ), cur[4],
+        cur[5], ( client->uf & UF_NOMVDCHAT ) ? YES : NO,
+        cur[6], ( client->uf & UF_NOGAMECHAT ) ? YES: NO,
+        cur[7], ( client->uf & UF_LOCALFOV ) ? YES : NO,
+        cur[8] );
 
     // send the layout
 	MSG_WriteByte( svc_layout );
@@ -233,6 +282,11 @@ static void MVD_UpdateLayouts( mvd_t *mvd ) {
         case LAYOUT_SCORES:
             if( !client->layout_time ) {
                 MVD_LayoutScores( client );
+            }
+            break;
+        case LAYOUT_MENU:
+            if( !client->layout_time ) {
+                MVD_LayoutMenu( client );
             }
             break;
         case LAYOUT_CLIENTS:
@@ -506,6 +560,8 @@ void MVD_SwitchChannel( udpClient_t *client, mvd_t *mvd ) {
 void MVD_TrySwitchChannel( udpClient_t *client, mvd_t *mvd ) {
     if( mvd == client->mvd ) {
         SV_ClientPrintf( client->cl, PRINT_HIGH,
+            mvd == &mvd_waitingRoom ?
+            "[MVD] You are already in the Waiting Room.\n" :
             "[MVD] You are already on this channel.\n" );
         return; // nothing to do
     }
@@ -559,6 +615,11 @@ static void MVD_Say_f( udpClient_t *client ) {
     if( mvd_flood_mute->integer && !client->admin ) {
         SV_ClientPrintf( client->cl, PRINT_HIGH,
             "[MVD] Spectators may not talk on this server.\n" );
+        return;
+    }
+    if( client->uf & UF_NOMVDCHAT ) {
+        SV_ClientPrintf( client->cl, PRINT_HIGH,
+            "[MVD] Please turn off ignore mode first.\n" );
         return;
     }
 
@@ -682,6 +743,50 @@ follow:
 static void MVD_Invuse_f( udpClient_t *client ) {
     mvd_t *mvd;
     int cursor = 0;
+    int uf = client->uf;
+
+    if( client->layout_type == LAYOUT_MENU ) {
+        if( client->layout_cursor < 0 ) {
+            client->layout_cursor = MENU_ITEMS - 1;
+        } else if( client->layout_cursor > MENU_ITEMS - 1 ) {
+            client->layout_cursor = 0;
+        }
+        switch( client->layout_cursor ) {
+        case 0:
+            MVD_SetDefaultLayout( client );
+            MVD_Observe_f( client );
+            return;
+        case 1:
+			client->layout_type = LAYOUT_SCORES;
+            break;
+        case 2:
+			client->layout_type = LAYOUT_CLIENTS;
+            break;
+        case 3:
+			client->layout_type = LAYOUT_CHANNELS;
+            break;
+        case 4:
+            MVD_TrySwitchChannel( client, &mvd_waitingRoom );
+            return;
+        case 5:
+            client->uf ^= UF_NOMVDCHAT;
+            break;
+        case 6:
+            client->uf ^= UF_NOGAMECHAT;
+            break;
+        case 7:
+            client->uf ^= UF_LOCALFOV;
+            break;
+        case 8:
+            MVD_SetDefaultLayout( client );
+            break;
+        }
+        if( uf != client->uf ) {
+            SV_ClientCommand( client->cl, "set uf %d u\n", client->uf );
+        }
+        client->layout_time = 0;
+        return;
+    }
 
     if( client->layout_type != LAYOUT_CHANNELS ) {
         return;
@@ -736,16 +841,16 @@ static void MVD_GameClientCommand( edict_t *ent ) {
 		return;
 	}
 	if( !strcmp( cmd, "inven" ) || !strcmp( cmd, "menu" ) ) {
-		if( client->layout_type == LAYOUT_CLIENTS ) {
+		if( client->layout_type == LAYOUT_MENU ) {
 			MVD_SetDefaultLayout( client );
 		} else {
-			client->layout_type = LAYOUT_CLIENTS;
+			client->layout_type = LAYOUT_MENU;
             client->layout_time = 0;
 		}
 		return;
 	}
 	if( !strcmp( cmd, "invnext" ) ) {
-		if( client->layout_type >= LAYOUT_CLIENTS ) {
+		if( client->layout_type >= LAYOUT_MENU ) {
             client->layout_cursor++;
             client->layout_time = 0;
         } else {
@@ -754,7 +859,7 @@ static void MVD_GameClientCommand( edict_t *ent ) {
         return;
     }
 	if( !strcmp( cmd, "invprev" ) ) {
-		if( client->layout_type >= LAYOUT_CLIENTS ) {
+		if( client->layout_type >= LAYOUT_MENU ) {
             client->layout_cursor--;
             client->layout_time = 0;
         } else {

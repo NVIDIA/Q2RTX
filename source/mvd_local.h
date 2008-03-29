@@ -45,6 +45,7 @@ typedef enum {
 	LAYOUT_NONE,		// no layout at all
     LAYOUT_FOLLOW,      // display chase target name
 	LAYOUT_SCORES,		// layout of the MVD dummy
+    LAYOUT_MENU,        // MVD main menu
 	LAYOUT_CLIENTS,		// MVD clients list
     LAYOUT_CHANNELS     // MVD channel list
 } mvd_layout_t;
