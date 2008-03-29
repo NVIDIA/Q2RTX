@@ -40,6 +40,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #else
 #define q_sentinel
 #endif
+#define q_packed            __attribute__((packed))
 
 #define q_likely( x )         __builtin_expect( !!(x), 1 )
 #define q_unlikely( x )       __builtin_expect( !!(x), 0 )
@@ -55,6 +56,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define q_noreturn
 #define q_malloc
 #define q_sentinel
+#define q_packed
 
 #define q_likely( x )         !!(x)
 #define q_unlikely( x )       !!(x)

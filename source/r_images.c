@@ -68,8 +68,7 @@ Image_LoadPCX
 void Image_LoadPCX( const char *filename, byte **pic, byte *palette, int *width, int *height ) {
 	byte	*raw, *end;
 	pcx_t	*pcx;
-	uint16_t	x, y, w, h;
-	int		len;
+	unsigned len, x, y, w, h;
 	int		dataByte, runLength;
 	byte	*out, *pix;
 
@@ -82,8 +81,8 @@ void Image_LoadPCX( const char *filename, byte **pic, byte *palette, int *width,
 	//
 	// load the file
 	//
-	len = fs.LoadFile( filename, (void **)&raw );
-	if( !raw ) {
+	len = fs.LoadFile( filename, (void **)&pcx );
+	if( !pcx ) {
 		return;
 	}
     if( len < sizeof( *pcx ) ) {
@@ -94,7 +93,6 @@ void Image_LoadPCX( const char *filename, byte **pic, byte *palette, int *width,
 	//
 	// parse the PCX file
 	//
-	pcx = (pcx_t *)raw;
 
     w = LittleShort( pcx->xmax ) + 1;
     h = LittleShort( pcx->ymax ) + 1;

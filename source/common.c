@@ -491,7 +491,7 @@ typedef struct {
 	zhead_t	    z;
 	char	    data[2];
 	uint16_t	tail;
-} zstatic_t;
+} q_packed zstatic_t;
 
 #define Z_STATIC( x ) { { Z_MAGIC, TAG_STATIC, sizeof( zstatic_t ) }, x, Z_TAIL }
 

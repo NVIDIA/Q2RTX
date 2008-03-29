@@ -316,7 +316,7 @@ if [ "$client" = "yes" ]; then
 fi
 test "$cpu" = "i386" && echo "i386 assembly      $asm"
 
-CFLAGS="-I\$(OUTDIR) -MF \$*.d -MMD -Wall -Wno-missing-braces -Wstrict-prototypes -pipe -ffloat-store -fno-strict-aliasing $CFLAGS"
+CFLAGS="-I\$(OUTDIR) -MF \$*.d -MMD -Wall -Wno-missing-braces -Wno-strict-aliasing -Wstrict-prototypes -pipe -ffloat-store $CFLAGS"
 #LDFLAGS="$LDFLAGS"
 
 config_mk="config.mk"
