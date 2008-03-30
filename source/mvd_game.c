@@ -475,7 +475,7 @@ static void MVD_FollowPrev( udpClient_t *client ) {
 static mvd_player_t *MVD_MostFollowed( mvd_t *mvd ) {
     int count[MAX_CLIENTS];
     udpClient_t *other;
-    mvd_player_t *target = NULL;
+    mvd_player_t *player, *target = NULL;
     int i, maxcount = -1;
 
     memset( count, 0, sizeof( count ) );
@@ -485,10 +485,10 @@ static mvd_player_t *MVD_MostFollowed( mvd_t *mvd ) {
             count[ other->target - mvd->players ]++;
         }
     }
-    for( i = 0; i < mvd->maxclients; i++ ) {
-        if( mvd->players[i].inuse && maxcount < count[i] ) {
+    for( i = 0, player = mvd->players; i < mvd->maxclients; i++, player++ ) {
+        if( player->inuse && player != mvd->dummy && maxcount < count[i] ) {
             maxcount = count[i];
-            target = &mvd->players[i];
+            target = player;
         }
     }
     return target;
