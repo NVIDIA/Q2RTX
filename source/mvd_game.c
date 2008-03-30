@@ -113,10 +113,11 @@ static void MVD_LayoutChannels( udpClient_t *client ) {
     static const char header[] =
         "xv 32 yv 8 picn inventory "
         "xv 240 yv 172 string2 " VERSION " "
-        "xv 64 yv 32 string2 \"Channel       Map     CL\""
-        "yv 40 string \"------------- ------- --\" xv 56 ";
+        "xv 0 yv 32 cstring \"\020Channel Chooser\021\""
+        "xv 64 yv 48 string2 \"Name          Map     CL\""
+        "yv 56 string \"------------- ------- --\" xv 56 ";
     static const char nochans[] =
-        "yv 48 string \" <no channels>\"";
+        "yv 64 string \" <no channels>\"";
 	char layout[MAX_STRING_CHARS];
 	char buffer[MAX_STRING_CHARS];
     mvd_t *mvd;
@@ -129,7 +130,7 @@ static void MVD_LayoutChannels( udpClient_t *client ) {
     if( cursor ) {
         clamp( client->layout_cursor, 0, cursor - 1 );
 
-        y = 48;
+        y = 64;
         cursor = 0;
         LIST_FOR_EACH( mvd_t, mvd, &mvd_ready, ready ) {
             length = Com_sprintf( buffer, sizeof( buffer ),
@@ -144,6 +145,9 @@ static void MVD_LayoutChannels( udpClient_t *client ) {
             memcpy( layout + total, buffer, length );
             total += length;
             y += 8;
+            if( y > 172 ) {
+                break;
+            }
 
             cursor++;
         }
@@ -163,23 +167,25 @@ static void MVD_LayoutChannels( udpClient_t *client ) {
 	client->layout_time = svs.realtime;
 }
 
-#define MENU_ITEMS  9
+#define MENU_ITEMS  10
 #define YES "\xD9\xE5\xF3"
 #define NO "\xCE\xEF"
 
 static void MVD_LayoutMenu( udpClient_t *client ) {
     static const char format[] =
         "xv 32 yv 8 picn inventory "
-        "xv 72 yv 32 string \"Q2PRO MVD - Main Menu\" xv 56 "
+        "xv 0 yv 32 cstring \"\020Main Menu\021\" xv 56 "
         "yv 48 string2 \"%c%s in-eyes mode\""
         "yv 56 string2 \"%cShow scoreboard\""
         "yv 64 string2 \"%cShow spectators (%d)\""
         "yv 72 string2 \"%cShow channels (%d)\""
         "yv 80 string2 \"%cLeave this channel\""
         "yv 96 string \"%cIgnore spectator chat: %s\""
-        "yv 104 string \"%cIgnore player chat:    %s\""
-        "yv 112 string \"%cIgnore player FOV:     %s\""
-        "yv 128 string2 \"%cExit menu\""
+        "yv 104 string \"%cIgnore connect msgs:   %s\""
+        "yv 112 string \"%cIgnore player chat:    %s\""
+        "yv 120 string \"%cIgnore player FOV:     %s\""
+        "yv 128 string \" (use 'set uf %d u' in cfg)\""
+        "yv 144 string2 \"%cExit menu\""
         "xv 240 yv 172 string2 " VERSION;
 	char layout[MAX_STRING_CHARS];
     char cur[MENU_ITEMS];
@@ -198,10 +204,12 @@ static void MVD_LayoutMenu( udpClient_t *client ) {
         cur[0], client->target ? "Leave" : "Enter", cur[1],
         cur[2], List_Count( &client->mvd->udpClients ),
         cur[3], List_Count( &mvd_ready ), cur[4],
-        cur[5], ( client->uf & UF_NOMVDCHAT ) ? YES : NO,
-        cur[6], ( client->uf & UF_NOGAMECHAT ) ? YES: NO,
-        cur[7], ( client->uf & UF_LOCALFOV ) ? YES : NO,
-        cur[8] );
+        cur[5], ( client->uf & UF_MUTE_OBSERVERS ) ? YES : NO,
+        cur[6], ( client->uf & UF_MUTE_MISC ) ? YES : NO,
+        cur[7], ( client->uf & UF_MUTE_PLAYERS ) ? YES: NO,
+        cur[8], ( client->uf & UF_LOCALFOV ) ? YES : NO,
+        client->uf,
+        cur[9] );
 
     // send the layout
 	MSG_WriteByte( svc_layout );
@@ -464,6 +472,28 @@ static void MVD_FollowPrev( udpClient_t *client ) {
 	MVD_FollowStart( client, target );
 }
 
+static mvd_player_t *MVD_MostFollowed( mvd_t *mvd ) {
+    int count[MAX_CLIENTS];
+    udpClient_t *other;
+    mvd_player_t *target = NULL;
+    int i, maxcount = -1;
+
+    memset( count, 0, sizeof( count ) );
+
+    LIST_FOR_EACH( udpClient_t, other, &mvd->udpClients, entry ) {
+        if( other->cl->state == cs_spawned && other->target ) {
+            count[ other->target - mvd->players ]++;
+        }
+    }
+    for( i = 0; i < mvd->maxclients; i++ ) {
+        if( mvd->players[i].inuse && maxcount < count[i] ) {
+            maxcount = count[i];
+            target = &mvd->players[i];
+        }
+    }
+    return target;
+}
+
 void MVD_UpdateClient( udpClient_t *client ) {
     mvd_t *mvd = client->mvd;
     mvd_player_t *target = client->target;
@@ -525,7 +555,7 @@ void MVD_BroadcastPrintf( mvd_t *mvd, int level, int mask, const char *fmt, ... 
 		if( level < cl->messagelevel ) {
 			continue;
         }
-        if( level == PRINT_CHAT && ( other->uf & mask ) ) {
+        if( other->uf & mask ) {
             continue;
         }
 		SV_ClientAddMessage( cl, MSG_RELIABLE );
@@ -574,7 +604,7 @@ void MVD_TrySwitchChannel( udpClient_t *client, mvd_t *mvd ) {
                 "[MVD] You may not switch channels too soon.\n" );
             return;
         }
-        MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM, 0,
+        MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM, UF_MUTE_MISC,
             "[MVD] %s left the channel.\n", client->cl->name );
     }
 
@@ -617,7 +647,7 @@ static void MVD_Say_f( udpClient_t *client ) {
             "[MVD] Spectators may not talk on this server.\n" );
         return;
     }
-    if( client->uf & UF_NOMVDCHAT ) {
+    if( client->uf & UF_MUTE_OBSERVERS ) {
         SV_ClientPrintf( client->cl, PRINT_HIGH,
             "[MVD] Please turn off ignore mode first.\n" );
         return;
@@ -651,11 +681,16 @@ static void MVD_Say_f( udpClient_t *client ) {
     text = Cmd_Args();
     //text[128] = 0; // don't let it be too long
 
-    MVD_BroadcastPrintf( mvd, PRINT_CHAT, client->admin ? 0 : UF_NOMVDCHAT,
+    MVD_BroadcastPrintf( mvd, PRINT_CHAT, client->admin ? 0 : UF_MUTE_OBSERVERS,
         "{%s}: %s\n", client->cl->name, text );
 }
 
 static void MVD_Observe_f( udpClient_t *client ) {
+    if( client->mvd == &mvd_waitingRoom ) {
+        SV_ClientPrintf( client->cl, PRINT_HIGH,
+            "[MVD] Please enter a channel first.\n" );
+        return;
+    }
     if( client->target ) {
         MVD_FollowStop( client );
     } else if( client->oldtarget && client->oldtarget->inuse ) {
@@ -671,6 +706,12 @@ static void MVD_Follow_f( udpClient_t *client ) {
     entity_state_t *ent;
     char *s;
     int i, mask;
+
+    if( client->mvd == &mvd_waitingRoom ) {
+        SV_ClientPrintf( client->cl, PRINT_HIGH,
+            "[MVD] Please enter a channel first.\n" );
+        return;
+    }
 
     if( Cmd_Argc() < 2 ) {
         MVD_Observe_f( client );
@@ -697,7 +738,7 @@ static void MVD_Follow_f( udpClient_t *client ) {
                 MVD_FollowStart( client, client->oldtarget );
             } else {
                 SV_ClientPrintf( client->cl, PRINT_HIGH,
-                    "Previous target is not active.\n" );
+                    "[MVD] Previous target is not active.\n" );
             }
             return;
         default:
@@ -769,15 +810,18 @@ static void MVD_Invuse_f( udpClient_t *client ) {
             MVD_TrySwitchChannel( client, &mvd_waitingRoom );
             return;
         case 5:
-            client->uf ^= UF_NOMVDCHAT;
+            client->uf ^= UF_MUTE_OBSERVERS;
             break;
         case 6:
-            client->uf ^= UF_NOGAMECHAT;
+            client->uf ^= UF_MUTE_MISC;
             break;
         case 7:
-            client->uf ^= UF_LOCALFOV;
+            client->uf ^= UF_MUTE_PLAYERS;
             break;
         case 8:
+            client->uf ^= UF_LOCALFOV;
+            break;
+        case 9:
             MVD_SetDefaultLayout( client );
             break;
         }
@@ -812,6 +856,11 @@ static void MVD_Join_f( udpClient_t *client ) {
 	Com_EndRedirect();
 
     if( !mvd ) {
+        return;
+    }
+    if( mvd->state < MVD_WAITING ) {
+        SV_ClientPrintf( client->cl, PRINT_HIGH,
+            "[MVD] This channel is not ready yet.\n" );
         return;
     }
 
@@ -1048,6 +1097,7 @@ static qboolean MVD_GameClientConnect( edict_t *ent, char *userinfo ) {
 static void MVD_GameClientBegin( edict_t *ent ) {
 	udpClient_t *client = EDICT_MVDCL( ent );
     mvd_t *mvd = client->mvd;
+    mvd_player_t *target;
 
 	client->floodTime = 0;
 	client->floodHead = 0;
@@ -1056,17 +1106,25 @@ static void MVD_GameClientBegin( edict_t *ent ) {
     client->jump_held = qfalse;
 	
 	if( !client->begin_time ) {
-		MVD_BroadcastPrintf( mvd, PRINT_MEDIUM, 0,
+		MVD_BroadcastPrintf( mvd, PRINT_MEDIUM, UF_MUTE_MISC,
             "[MVD] %s entered the channel\n", client->cl->name );
-	}
+        target = MVD_MostFollowed( mvd );
+	} else {
+        target = client->target;
+    }
 	client->begin_time = svs.realtime;
 
-    // spawn the spectator
-	VectorScale( mvd->spawnOrigin, 8, client->ps.pmove.origin );
-    VectorCopy( mvd->spawnAngles, client->ps.viewangles );
-
 	MVD_SetDefaultLayout( client );
-    MVD_FollowStop( client );
+
+    if( target && target->inuse ) {
+        // start chase cam mode
+        MVD_FollowStart( client, target );
+    } else {
+        // spawn the spectator
+        VectorScale( mvd->spawnOrigin, 8, client->ps.pmove.origin );
+        VectorCopy( mvd->spawnAngles, client->ps.viewangles );
+        MVD_FollowStop( client );
+    }
 }
 
 static void MVD_GameClientUserinfoChanged( edict_t *ent, char *userinfo ) {
@@ -1090,12 +1148,34 @@ static void MVD_GameClientUserinfoChanged( edict_t *ent, char *userinfo ) {
     }
 }
 
+void MVD_GameClientNameChanged( edict_t *ent, const char *name ) {
+	udpClient_t *client = EDICT_MVDCL( ent );
+    client_t *cl = client->cl;
+
+    if( client->begin_time ) {
+        MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM, UF_MUTE_MISC,
+            "[MVD] %s changed name to %s\n", cl->name, name );
+    }
+}
+
+// called early from SV_Drop to prevent multiple disconnect messages
+void MVD_GameClientDrop( edict_t *ent, const char *reason ) {
+	udpClient_t *client = EDICT_MVDCL( ent );
+    client_t *cl = client->cl;
+
+    if( client->begin_time ) {
+        MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM, UF_MUTE_MISC,
+            "[MVD] %s was dropped: %s\n", cl->name, reason );
+        client->begin_time = 0;
+    }
+}
+
 static void MVD_GameClientDisconnect( edict_t *ent ) {
 	udpClient_t *client = EDICT_MVDCL( ent );
     client_t *cl = client->cl;
 
     if( client->begin_time ) {
-    	MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM, 0,
+    	MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM, UF_MUTE_MISC,
             "[MVD] %s disconnected\n", cl->name );
 		client->begin_time = 0;
     }

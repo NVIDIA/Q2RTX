@@ -193,9 +193,14 @@ typedef struct vrect_s {
 
 // microsoft's fabs seems to be ungodly slow...
 static inline float Q_fabs( float f ) {
-	uint32_t tmp = *( uint32_t * )&f;
-	tmp &= 0x7FFFFFFF;
-	return *( float * )&tmp;
+    union {
+    	uint32_t l;
+        float f;
+    } tmp;
+
+    tmp.f = f;
+	tmp.l &= 0x7FFFFFFF;
+	return tmp.f;
 }
 
 #define Q_ftol( f ) ((long)(f))
@@ -1406,8 +1411,9 @@ ROGUE - VERSIONS
 #define UF_AUTOSCREENSHOT   1
 #define UF_AUTORECORD       2
 #define UF_LOCALFOV         4
-#define UF_NOGAMECHAT       8
-#define UF_NOMVDCHAT        16
+#define UF_MUTE_PLAYERS     8
+#define UF_MUTE_OBSERVERS   16
+#define UF_MUTE_MISC        32
 
 /*
 ==========================================================

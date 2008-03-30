@@ -397,7 +397,7 @@ static void MVD_UnicastPrint( mvd_t *mvd, qboolean reliable, mvd_player_t *playe
 		if( level < cl->messagelevel ) {
 			continue;
         }
-        if( level == PRINT_CHAT && ( client->uf & UF_NOGAMECHAT ) ) {
+        if( level == PRINT_CHAT && ( client->uf & UF_MUTE_PLAYERS ) ) {
             continue;
         }
         target = client->target ? client->target : mvd->dummy;
@@ -695,7 +695,8 @@ static void MVD_ParsePrint( mvd_t *mvd ) {
     int level = MSG_ReadByte();
     char *string = MSG_ReadString();
 
-    MVD_BroadcastPrintf( mvd, level, UF_NOGAMECHAT, "%s", string );
+    MVD_BroadcastPrintf( mvd, level, level == PRINT_CHAT ?
+        UF_MUTE_PLAYERS : 0, "%s", string );
 }
 
 /*

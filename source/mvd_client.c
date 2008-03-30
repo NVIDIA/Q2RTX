@@ -806,10 +806,18 @@ mvd_t *MVD_SetChannel( int arg ) {
         return NULL;
     }
 
-    id = atoi( s );
-    LIST_FOR_EACH( mvd_t, mvd, &mvd_channels, entry ) {
-        if( mvd->id == id ) {
-            return mvd;
+    if( COM_IsNumeric( s ) ) {
+        id = atoi( s );
+        LIST_FOR_EACH( mvd_t, mvd, &mvd_channels, entry ) {
+            if( mvd->id == id ) {
+                return mvd;
+            }
+        }
+    } else {
+        LIST_FOR_EACH( mvd_t, mvd, &mvd_channels, entry ) {
+            if( !strcmp( mvd->name, s ) ) {
+                return mvd;
+            }
         }
     }
 

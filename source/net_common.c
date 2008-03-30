@@ -1197,7 +1197,7 @@ qboolean NET_GetAddress( netsrc_t sock, netadr_t *adr ) {
 
     length = sizeof( address );
     if( getsockname( udp_sockets[sock], ( struct sockaddr * )
-            &address, &length ) == -1 )
+        &address, &length ) == -1 )
     {
         return qfalse;
     }

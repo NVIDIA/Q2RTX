@@ -172,8 +172,13 @@ void SV_DropClient( client_t *client, const char *reason ) {
 
 	if( reason ) {
         if( oldstate == cs_spawned ) {
-            SV_BroadcastPrintf( PRINT_HIGH, "%s was dropped: %s\n",
-                client->name, reason );
+            // announce to others
+            if( sv.state == ss_broadcast ) {
+                MVD_GameClientDrop( client->edict, reason );
+            } else {
+                SV_BroadcastPrintf( PRINT_HIGH, "%s was dropped: %s\n",
+                    client->name, reason );
+            }
         }
 
         // print this to client as they will not receive broadcast
@@ -1640,9 +1645,14 @@ void SV_UserinfoChanged( client_t *cl ) {
 	// mask off high bit
 	for( i = 0; i < len; i++ )
 		name[i] &= 127;
-    if( dedicated->integer && cl->name[0] && strcmp( cl->name, name ) ) {
-        Com_Printf( "%s[%s] changed name to %s\n", cl->name,
-            NET_AdrToString( &cl->netchan->remote_address ), name );
+    if( cl->name[0] && strcmp( cl->name, name ) ) {
+        if( dedicated->integer ) {
+            Com_Printf( "%s[%s] changed name to %s\n", cl->name,
+                NET_AdrToString( &cl->netchan->remote_address ), name );
+        }
+        if( sv.state == ss_broadcast ) {
+            MVD_GameClientNameChanged( cl->edict, name );
+        }
     }
     memcpy( cl->name, name, len + 1 );
 
