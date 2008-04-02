@@ -86,11 +86,11 @@ CLIENT / SERVER interactions
 
 static int	rd_target;
 static char	*rd_buffer;
-static int	rd_buffersize;
-static int  rd_length;
+static size_t	rd_buffersize;
+static size_t  rd_length;
 static rdflush_t    rd_flush;
 
-void Com_BeginRedirect( int target, char *buffer, int buffersize, rdflush_t flush ) {
+void Com_BeginRedirect( int target, char *buffer, size_t buffersize, rdflush_t flush ) {
 	if( rd_target || !target || !buffer || buffersize < 1 || !flush ) {
 		return;
     }
@@ -121,8 +121,8 @@ void Com_EndRedirect( void ) {
     rd_length = 0;
 }
 
-static void Com_Redirect( const char *msg, int total ) {
-    int length;
+static void Com_Redirect( const char *msg, size_t total ) {
+    size_t length;
 
     while( total ) {
         length = total;
@@ -194,7 +194,7 @@ static void LogFile_Output( const char *string ) {
 	char text[MAXPRINTMSG];
     char timebuf[MAX_QPATH];
 	char *p, *maxp;
-	int length;
+	size_t length;
 	time_t	clock;
 	struct tm	*tm;
     int c;
@@ -253,7 +253,7 @@ void Com_Printf( const char *fmt, ... ) {
 	va_list		argptr;
 	char		msg[MAXPRINTMSG];
 	static int	recursive;
-	int			length;
+	size_t		len;
 
 	if( recursive == 2 ) {
 		return;
@@ -262,11 +262,11 @@ void Com_Printf( const char *fmt, ... ) {
 	recursive++;
 
 	va_start( argptr, fmt );
-	length = Q_vsnprintf( msg, sizeof( msg ), fmt, argptr );
+	len = Q_vsnprintf( msg, sizeof( msg ), fmt, argptr );
 	va_end( argptr );
 
 	if( rd_target ) {
-        Com_Redirect( msg, length );
+        Com_Redirect( msg, len );
 	} else {
         // graphical console
 		Con_Print( msg );
@@ -487,11 +487,13 @@ static zhead_t		z_chain;
 
 static cvar_t	    *z_perturb;
 
+#pragma pack( push, 1 )
 typedef struct {
 	zhead_t	    z;
 	char	    data[2];
 	uint16_t	tail;
-} q_packed zstatic_t;
+} zstatic_t;
+#pragma pack( pop )
 
 #define Z_STATIC( x ) { { Z_MAGIC, TAG_STATIC, sizeof( zstatic_t ) }, x, Z_TAIL }
 
@@ -567,7 +569,7 @@ void Z_LeakTest( memtag_t tag ) {
 
 	if( numLeaks ) {
 		Com_Printf( S_COLOR_YELLOW "************* Z_LeakTest *************\n"
-						           "%s leaked %"PRIz"u bytes of memory (%"PRIz"u object%s)\n"
+						           "%s leaked %"PRIz" bytes of memory (%"PRIz"u object%s)\n"
 						           "**************************************\n",
 								   z_tagnames[tag < TAG_MAX ? tag : TAG_FREE],
                                    numBytes, numLeaks, numLeaks == 1 ? "" : "s" );
@@ -636,7 +638,7 @@ void *Z_Realloc( void *ptr, size_t size ) {
     
     z = realloc( z, size );
     if( !z ) {
-		Com_Error( ERR_FATAL, "Z_Realloc: couldn't realloc %"PRIz"u bytes", size );
+		Com_Error( ERR_FATAL, "Z_Realloc: couldn't realloc %"PRIz" bytes", size );
     }
 
 	z->size = size;
@@ -667,13 +669,13 @@ void Z_Stats_f( void ) {
         if( !s->count ) {
             continue;
         }
-		Com_Printf( "%9"PRIz"u %6"PRIz"u %s\n", s->bytes, s->count, z_tagnames[i] );
+		Com_Printf( "%9"PRIz" %6"PRIz" %s\n", s->bytes, s->count, z_tagnames[i] );
 		bytes += s->bytes;
 		count += s->count;
 	}
 
 	Com_Printf( "--------- ------ -------\n"
-	            "%9"PRIz"u %6"PRIz"u total\n",
+	            "%9"PRIz" %6"PRIz" total\n",
                 bytes, count );
 }
 
@@ -714,14 +716,20 @@ void *Z_TagMalloc( size_t size, memtag_t tag ) {
 	size = ( size + 3 ) & ~3;
 	z = malloc( size );
 	if( !z ) {
-		Com_Error( ERR_FATAL, "Z_TagMalloc: couldn't allocate %"PRIz"u bytes", size );
+		Com_Error( ERR_FATAL, "Z_TagMalloc: couldn't allocate %"PRIz" bytes", size );
     }
 	z->magic = Z_MAGIC;
 	z->tag = tag;
 	z->size = size;
 
 #ifdef _DEBUG
+#if( defined __GNUC__ )
     z->addr = __builtin_return_address( 0 );
+#elif( defined _MSC_VER )
+    z->addr = _ReturnAddress();
+#else
+    z->addr = NULL;
+#endif
 #endif
 
 	z->next = z_chain.next;
@@ -781,7 +789,7 @@ void *Z_ReservedAllocz( size_t size ) {
 }
 
 char *Z_ReservedCopyString( const char *in ) {
-	int len;
+	size_t len;
 
 	if( !in ) {
 		return NULL;
@@ -806,7 +814,7 @@ Z_TagCopyString
 ================
 */
 char *Z_TagCopyString( const char *in, memtag_t tag ) {
-	int     len;
+	size_t     len;
 
 	if( !in ) {
 		return NULL;
@@ -822,7 +830,7 @@ Cvar_CopyString
 ================
 */
 char *Cvar_CopyString( const char *in ) {
-	int     len;
+	size_t     len;
     zstatic_t *z;
 
 	if( !in ) {
@@ -855,18 +863,18 @@ char *Cvar_CopyString( const char *in ) {
 ==============================================================================
 */
 
-int FIFO_Read( fifo_t *fifo, void *buffer, int length ) {
-    int head = fifo->ay - fifo->ax;
-    int wrapped = length - head;
+size_t FIFO_Read( fifo_t *fifo, void *buffer, size_t len ) {
+    size_t wrapped, head = fifo->ay - fifo->ax;
 
-    if( wrapped < 0 ) {
+    if( head > len ) {
         if( buffer ) {
-            memcpy( buffer, fifo->data + fifo->ax, length );
-            fifo->ax += length;
+            memcpy( buffer, fifo->data + fifo->ax, len );
+            fifo->ax += len;
         }
-        return length;
+        return len;
     }
 
+	wrapped = len - head;
     if( wrapped > fifo->bs ) {
         wrapped = fifo->bs;
     }
@@ -881,32 +889,31 @@ int FIFO_Read( fifo_t *fifo, void *buffer, int length ) {
     return head + wrapped;
 }
 
-int FIFO_Write( fifo_t *fifo, const void *buffer, int length ) {
-    int tail, wrapped, remaining;
+size_t FIFO_Write( fifo_t *fifo, const void *buffer, size_t len ) {
+    size_t tail, wrapped, remaining;
 
     if( fifo->bs ) {
         remaining = fifo->ax - fifo->bs;
-        if( length > remaining ) {
-            length = remaining;
+        if( len > remaining ) {
+            len = remaining;
         }
         if( buffer ) {
-            memcpy( fifo->data + fifo->bs, buffer, length );
-            fifo->bs += length;
+            memcpy( fifo->data + fifo->bs, buffer, len );
+            fifo->bs += len;
         }
-        return length;
+        return len;
     }
 
     tail = fifo->size - fifo->ay;
-    wrapped = length - tail;
-
-    if( wrapped < 0 ) {
+    if( tail > len ) {
         if( buffer ) {
-            memcpy( fifo->data + fifo->ay, buffer, length );
-            fifo->ay += length;
+            memcpy( fifo->data + fifo->ay, buffer, len );
+            fifo->ay += len;
         }
-        return length;
+        return len;
     }
 
+	wrapped = len - tail;
     if( wrapped > fifo->ax ) {
         wrapped = fifo->ax;
     }
@@ -946,7 +953,7 @@ void Com_FillAPI( commonAPI_t *api ) {
 Com_Time_m
 =============
 */
-int Com_Time_m( char *buffer, int size ) {
+size_t Com_Time_m( char *buffer, size_t size ) {
 	time_t	clock;
 	struct tm	*local;
 
@@ -961,7 +968,7 @@ int Com_Time_m( char *buffer, int size ) {
 Com_Date_m
 =============
 */
-static int Com_Date_m( char *buffer, int size ) {
+static size_t Com_Date_m( char *buffer, size_t size ) {
 	time_t	clock;
 	struct tm	*local;
 
@@ -971,7 +978,7 @@ static int Com_Date_m( char *buffer, int size ) {
 	return strftime( buffer, size, com_date_format->string, local );
 }
 
-int Com_Uptime_m( char *buffer, int size ) {
+size_t Com_Uptime_m( char *buffer, size_t size ) {
     int     sec, min, hour, day;
     time_t  clock;
 
@@ -993,7 +1000,7 @@ int Com_Uptime_m( char *buffer, int size ) {
     return Com_sprintf( buffer, size, "%02d.%02d", min, sec );
 }
 
-int Com_Random_m( char *buffer, int size ) {
+size_t Com_Random_m( char *buffer, size_t size ) {
     return Com_sprintf( buffer, size, "%d", ( rand() ^ ( rand() >> 8 ) ) % 10 );
 }
 

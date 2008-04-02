@@ -77,7 +77,7 @@ qboolean CL_CheckOrDownloadFile( const char *path ) {
 		return qtrue;
     }
 
-	if( FS_LoadFile( filename, NULL ) != -1 ) {	
+	if( FS_LoadFile( filename, NULL ) != INVALID_LENGTH ) {	
 		// it exists, no need to download
 		return qtrue;
 	}
@@ -155,7 +155,7 @@ void CL_Download_f( void ) {
 		return;
 	}
 
-	if( FS_LoadFile( path, NULL ) != -1 ) {	
+	if( FS_LoadFile( path, NULL ) != INVALID_LENGTH ) {	
 		Com_Printf( "File '%s' already exists.\n", path );
 		return;
 	}
@@ -593,7 +593,7 @@ static void CL_ParseFrame( int extrabits ) {
 	}
 
 	if( cl_shownet->integer > 2 ) {
-		Com_Printf( "%3i:playerinfo\n", msg_read.readcount - 1 );
+		Com_Printf( "%3"PRIz":playerinfo\n", msg_read.readcount - 1 );
 	}
 
 	frame.clientNum = cl.clientNum;
@@ -634,7 +634,7 @@ static void CL_ParseFrame( int extrabits ) {
 	}
 
 	if( cl_shownet->integer > 2 ) {
-		Com_Printf( "%3i:packetentities\n", msg_read.readcount - 1 );
+		Com_Printf( "%3"PRIz":packetentities\n", msg_read.readcount - 1 );
 	}
 
 	CL_ParsePacketEntities( oldframe, &frame );
@@ -648,7 +648,7 @@ static void CL_ParseFrame( int extrabits ) {
             int seq = cls.netchan->incoming_acknowledged & CMD_MASK;
 			rtt = cls.realtime - cl.history[seq].sent;
 		}
-		Com_Printf( "%3i: frame:%i  delta:%i  rtt:%i\n",
+		Com_Printf( "%3"PRIz":frame:%d  delta:%d  rtt:%d\n",
 			msg_read.readcount - 1, frame.number, frame.delta, rtt );
 	}
 
@@ -701,7 +701,7 @@ void CL_ParseClientinfo( int player ) {
 
 
 static void CL_ConfigString( int index, const char *string ) {
-	int		length, maxlength;
+	size_t		length, maxlength;
 
     if( index >= CS_STATUSBAR && index < CS_AIRACCEL ) {
         maxlength = MAX_QPATH * ( CS_AIRACCEL - index );
@@ -710,8 +710,8 @@ static void CL_ConfigString( int index, const char *string ) {
     }
     length = strlen( string );
     if( length >= maxlength ) {
-		Com_Error( ERR_DROP, "%s: index %d overflowed: %d chars",
-            __func__, index, length );
+		Com_Error( ERR_DROP, "%s: index %d overflowed",
+            __func__, index );
     }
 
 	memcpy( cl.configstrings[index], string, length + 1 );
@@ -1456,11 +1456,11 @@ CL_ParseServerMessage
 =====================
 */
 void CL_ParseServerMessage( void ) {
-	int			cmd, readcount;
-	int			extrabits;
+	int			cmd, extrabits;
+	size_t		readcount;
 
 	if( cl_shownet->integer == 1 ) {
-		Com_Printf( "%i ", msg_read.cursize );
+		Com_Printf( "%"PRIz" ", msg_read.cursize );
 	} else if( cl_shownet->integer > 1 ) {
 		Com_Printf( "------------------\n" );
 	}
@@ -1477,7 +1477,7 @@ void CL_ParseServerMessage( void ) {
 
 		if( ( cmd = MSG_ReadByte() ) == -1 ) {
 			if( cl_shownet->integer > 1 ) {
-				Com_Printf( "%3i:END OF MESSAGE\n", msg_read.readcount - 1 );
+				Com_Printf( "%3"PRIz":END OF MESSAGE\n", msg_read.readcount - 1 );
 			}
 			break;
 		}

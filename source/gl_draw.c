@@ -270,7 +270,7 @@ void Draw_Char( int x, int y, int flags, int ch, qhandle_t hFont ) {
             draw.color, R_ImageForHandle( hFont ) );
 }
 
-int Draw_String( int x, int y, int flags, int maxChars,
+int Draw_String( int x, int y, int flags, size_t maxChars,
                  const char *string, qhandle_t hFont )
 {
     byte c;

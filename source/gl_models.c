@@ -848,7 +848,8 @@ void GL_GetModelSize( qhandle_t hModel, vec3_t mins, vec3_t maxs ) {
 }
 
 qhandle_t GL_RegisterModel( const char *name ) {
-	int index, length, nameLength;
+	int index, length = 0;
+	size_t namelen;
 	model_t *model;
 	byte *rawdata;
 	uint32_t ident;
@@ -869,9 +870,9 @@ qhandle_t GL_RegisterModel( const char *name ) {
 		return 0;
 	}
 
-	nameLength = strlen( name );
-	if( nameLength > MAX_QPATH - 1 ) {
-		Com_Error( ERR_DROP, "%s: oversize name: %d chars", __func__, nameLength );
+	namelen = strlen( name );
+	if( namelen > MAX_QPATH - 1 ) {
+		Com_Error( ERR_DROP, "%s: oversize name", __func__ );
 	}
 
 	model = Model_Find( name );
@@ -879,18 +880,18 @@ qhandle_t GL_RegisterModel( const char *name ) {
 		goto finish;
 	}
 
-	length = -1;
+	rawdata = NULL;
     buffer[0] = 0;
 	if( gl_override_models->integer ) {
-		if( nameLength > 4 && !strcmp( name + nameLength - 4, ".md2" ) ) {
+		if( namelen > 4 && !strcmp( name + namelen - 4, ".md2" ) ) {
 			strcpy( buffer, name );
-			buffer[nameLength - 1] = '3';
+			buffer[namelen - 1] = '3';
 		    length = fs.LoadFile( buffer, ( void ** )&rawdata );
         }
 	}
-	if( length == -1 ) {
+	if( !rawdata ) {
 		length = fs.LoadFile( name, ( void ** )&rawdata );
-		if( length == -1 ) {
+		if( !rawdata ) {
 			Com_DPrintf( "Couldn't load %s\n", name );
 			return 0;
 		}

@@ -250,9 +250,10 @@ UI_FormatColumns
 void *UI_FormatColumns( int extrasize, ... ) {
 	va_list argptr;
 	char *buffer, *p;
-	int i, j, total = 0;
+	int i, j;
+	size_t total = 0;
 	char *strings[MAX_COLUMNS];
-	int lengths[MAX_COLUMNS];
+	size_t lengths[MAX_COLUMNS];
 
 	va_start( argptr, extrasize );
     for( i = 0; i < MAX_COLUMNS; i++ ) {

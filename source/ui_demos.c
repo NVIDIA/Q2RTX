@@ -87,9 +87,9 @@ static void Demos_BuildName( fsFileInfo_t *info, char **cache ) {
     if( info->size >= 1000000 ) {
         sprintf( buffer, "%2.1fM", ( float )info->size / 1000000 );
     } else if( info->size >= 1000 ) {
-        sprintf( buffer, "%3dK", info->size / 1000 );
+        sprintf( buffer, "%3"PRIz"K", info->size / 1000 );
     } else {
-        sprintf( buffer, "%3db", info->size );
+        sprintf( buffer, "%3"PRIz"b", info->size );
     }
 
     e = UI_FormatColumns( DEMO_EXTRASIZE,
@@ -114,7 +114,8 @@ static void Demos_BuildDir( const char *name, int type ) {
 
 static char *Demos_LoadCache( void **list ) {
     char buffer[MAX_OSPATH], *cache;
-    int i, len;
+    int i;
+    size_t len;
     uint8_t hash[16];
 
 	Q_concat( buffer, sizeof( buffer ), uis.m_demos_browse, "/" COM_DEMOCACHE_NAME, NULL );
@@ -182,7 +183,7 @@ static void Demos_WriteCache( void ) {
 static void Demos_CalcHash( void **list ) {
 	struct mdfour md;
     fsFileInfo_t *info;
-    int len;
+    size_t len;
 
 	mdfour_begin( &md );
     while( *list ) {
@@ -315,7 +316,7 @@ static void Demos_LeaveDirectory( void ) {
 
 static int Demos_Action( void ) {
 //    char buffer[MAX_OSPTH];
-	int len, baselen;
+	size_t len, baselen;
     demoEntry_t *e = m_demos.list.items[m_demos.list.curvalue];
 
 	switch( e->type ) {

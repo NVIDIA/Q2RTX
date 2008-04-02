@@ -32,17 +32,17 @@ MISC
 
 char sv_outputbuf[SV_OUTPUTBUF_LENGTH];
 
-void SV_FlushRedirect( int redirected, char *outputbuf, int length ) {
+void SV_FlushRedirect( int redirected, char *outputbuf, size_t len ) {
 	byte    buffer[MAX_PACKETLEN_DEFAULT];
 
 	if( redirected == RD_PACKET ) {
 	    memcpy( buffer, "\xff\xff\xff\xffprint\n", 10 );
-        memcpy( buffer + 10, outputbuf, length );
-	    NET_SendPacket( NS_SERVER, &net_from, length + 10, buffer );
+        memcpy( buffer + 10, outputbuf, len );
+	    NET_SendPacket( NS_SERVER, &net_from, len + 10, buffer );
 	} else if( redirected == RD_CLIENT ) {
 		MSG_WriteByte( svc_print );
 		MSG_WriteByte( PRINT_HIGH );
-		MSG_WriteData( outputbuf, length );
+		MSG_WriteData( outputbuf, len );
         MSG_WriteByte( 0 );
         //Sys_Printf("redirect: %d bytes: %s", outputbuf);
 		SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
@@ -58,7 +58,7 @@ bandwidth estimation and should not be sent another packet
 =======================
 */
 static qboolean SV_RateDrop( client_t *client ) {
-	int		total;
+	size_t	total;
 	int		i;
 
 	// never drop over the loopback
@@ -80,11 +80,7 @@ static qboolean SV_RateDrop( client_t *client ) {
 	return qfalse;
 }
 
-void SV_CalcSendTime( client_t *client, int size ) {
-	if( size == -1 ) {
-		return;
-	}
-
+void SV_CalcSendTime( client_t *client, size_t size ) {
 	// never drop over the loopback
 	if( !client->rate ) {
         client->send_time = svs.realtime;
@@ -118,18 +114,18 @@ NOT archived in MVD stream.
 void SV_ClientPrintf( client_t *client, int level, const char *fmt, ... ) {
 	va_list		argptr;
 	char		string[MAX_STRING_CHARS];
-    int         length;
+    size_t      len;
 	
 	if( level < client->messagelevel )
 		return;
 	
 	va_start( argptr, fmt );
-	length = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
+	len = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
 	va_end( argptr );
 
 	MSG_WriteByte( svc_print );
 	MSG_WriteByte( level );
-	MSG_WriteData( string, length + 1 );
+	MSG_WriteData( string, len + 1 );
 
 	SV_ClientAddMessage( client, MSG_RELIABLE|MSG_CLEAR );
 }
@@ -146,15 +142,15 @@ void SV_BroadcastPrintf( int level, const char *fmt, ... ) {
 	va_list		argptr;
 	char		string[MAX_STRING_CHARS];
 	client_t	*client;
-	int			length;
+	size_t		len;
 
 	va_start( argptr, fmt );
-	length = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
+	len = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
 	va_end( argptr );
 
 	MSG_WriteByte( svc_print );
 	MSG_WriteByte( level );
-	MSG_WriteData( string, length + 1 );
+	MSG_WriteData( string, len + 1 );
 
     FOR_EACH_CLIENT( client ) {
 		if( client->state != cs_spawned )
@@ -170,14 +166,14 @@ void SV_BroadcastPrintf( int level, const char *fmt, ... ) {
 void SV_ClientCommand( client_t *client, const char *fmt, ... ) {
 	va_list		argptr;
 	char		string[MAX_STRING_CHARS];
-    int         length;
+    size_t      len;
 	
 	va_start( argptr, fmt );
-	length = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
+	len = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
 	va_end( argptr );
 
 	MSG_WriteByte( svc_stufftext );
-	MSG_WriteData( string, length + 1 );
+	MSG_WriteData( string, len + 1 );
 
 	SV_ClientAddMessage( client, MSG_RELIABLE|MSG_CLEAR );
 }
@@ -194,14 +190,14 @@ void SV_BroadcastCommand( const char *fmt, ... ) {
 	va_list		argptr;
 	char		string[MAX_STRING_CHARS];
 	client_t	*client;
-    int         length;
+    size_t      len;
 	
 	va_start( argptr, fmt );
-	length = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
+	len = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
 	va_end( argptr );
 
 	MSG_WriteByte( svc_stufftext );
-	MSG_WriteData( string, length + 1 );
+	MSG_WriteData( string, len + 1 );
 
     FOR_EACH_CLIENT( client ) {
     	SV_ClientAddMessage( client, MSG_RELIABLE );
@@ -327,7 +323,7 @@ unless told otherwise.
 */
 void SV_ClientAddMessage( client_t *client, int flags ) {
     if( sv_debug_send->integer > 1 ) {
-        Com_Printf( S_COLOR_BLUE"%s: add%c: %d\n", client->name,
+        Com_Printf( S_COLOR_BLUE"%s: add%c: %"PRIz"\n", client->name,
             ( flags & MSG_RELIABLE ) ? 'r' : 'u', msg_write.cursize );
     }
 
@@ -370,12 +366,15 @@ void SV_PacketizedClear( client_t *client ) {
 }
 
 message_packet_t *SV_PacketizedAdd( client_t *client, byte *data,
-							  int length, qboolean reliable )
+							  size_t len, qboolean reliable )
 {
 	message_packet_t	*msg;
 
-	if( length > MSG_TRESHOLD ) {
-		msg = SV_Malloc( sizeof( *msg ) + length - MSG_TRESHOLD );
+	if( len > MSG_TRESHOLD ) {
+		if( len > MAX_MSGLEN ) {
+			Com_Error( ERR_FATAL, "%s: oversize packet", __func__ );
+		}
+		msg = SV_Malloc( sizeof( *msg ) + len - MSG_TRESHOLD );
 	} else {
         if( LIST_EMPTY( &client->msg_free ) ) {
             Com_WPrintf( "Out of message slots for %s!\n", client->name );
@@ -389,15 +388,15 @@ message_packet_t *SV_PacketizedAdd( client_t *client, byte *data,
     	List_Remove( &msg->entry );
 	}
 
-	memcpy( msg->data, data, length );
-	msg->cursize = length;
+	memcpy( msg->data, data, len );
+	msg->cursize = ( uint16_t )len;
 
     List_Append( &client->msg_used[reliable], &msg->entry );
 
     return msg;
 }
 
-static void SV_AddClientSounds( client_t *client, int maxsize ) {
+static void SV_AddClientSounds( client_t *client, size_t maxsize ) {
     sound_packet_t *msg, *next;
     edict_t *edict;
     entity_state_t *state;
@@ -489,9 +488,9 @@ FRAME UPDATES - DEFAULT, R1Q2 AND Q2PRO CLIENTS (OLD NETCHAN)
 #define FOR_EACH_MSG( list )     LIST_FOR_EACH_SAFE( message_packet_t, msg, next, list, entry )
 
 void SV_OldClientAddMessage( client_t *client, byte *data,
-							  int length, qboolean reliable )
+							  size_t len, qboolean reliable )
 {
-	if( length > client->netchan->maxpacketlen ) {
+	if( len > client->netchan->maxpacketlen ) {
 		if( reliable ) {
 			SV_DropClient( client, "oversize reliable message" );
 		} else {
@@ -500,7 +499,7 @@ void SV_OldClientAddMessage( client_t *client, byte *data,
 		return;
 	}
 
-    SV_PacketizedAdd( client, data, length, reliable );
+    SV_PacketizedAdd( client, data, len, reliable );
 }
 
 /*
@@ -511,7 +510,7 @@ This should be the only place data is
 ever written to client->netchan.message
 =======================
 */
-void SV_OldClientWriteReliableMessages( client_t *client, int maxsize ) {
+void SV_OldClientWriteReliableMessages( client_t *client, size_t maxsize ) {
 	message_packet_t	*msg, *next;
     int count;
 
@@ -545,7 +544,7 @@ void SV_OldClientWriteReliableMessages( client_t *client, int maxsize ) {
 	}
 }
 
-static inline void write_msg( client_t *client, message_packet_t *msg, int maxsize ) {
+static inline void write_msg( client_t *client, message_packet_t *msg, size_t maxsize ) {
     // if this msg fits, write it
     if( msg_write.cursize + msg->cursize <= maxsize ) {
         MSG_WriteData( msg->data, msg->cursize );
@@ -561,7 +560,7 @@ OldClient_SendDatagram
 */
 void SV_OldClientWriteDatagram( client_t *client ) {
 	message_packet_t	*msg, *next;
-	int cursize, maxsize;
+	size_t maxsize, cursize;
 
 	maxsize = client->netchan->maxpacketlen;
 	if( client->netchan->reliable_length ) {
@@ -581,7 +580,7 @@ void SV_OldClientWriteDatagram( client_t *client ) {
 	client->WriteFrame( client );
 	if( msg_write.cursize > maxsize ) {
 		if( sv_debug_send->integer ) {
-			Com_Printf( S_COLOR_BLUE"Frame overflowed for %s: %d > %d\n",
+			Com_Printf( S_COLOR_BLUE"Frame overflowed for %s: %"PRIz" > %"PRIz"\n",
                 client->name, msg_write.cursize, maxsize );
 		}
 		SZ_Clear( &msg_write );
@@ -665,15 +664,14 @@ FRAME UPDATES - Q2PRO CLIENTS (NEW NETCHAN)
 */
 
 void SV_NewClientAddMessage( client_t *client, byte *data,
-							  int length, qboolean reliable )
+							  size_t length, qboolean reliable )
 {
 	sizebuf_t *buf = reliable ? &client->netchan->message : &client->datagram;
 	SZ_Write( buf, data, length );
 }
 
 void SV_NewClientWriteDatagram( client_t *client ) {
-	int cursize;
-	int i;
+	size_t cursize;
 
 	// send over all the relevant entity_state_t
 	// and the player_state_t
@@ -700,12 +698,12 @@ void SV_NewClientWriteDatagram( client_t *client ) {
     SV_AddClientSounds( client, msg_write.maxsize );
 
 	if( sv_pad_packets->integer ) {
-        int pad = msg_write.cursize + sv_pad_packets->integer;
+        size_t pad = msg_write.cursize + sv_pad_packets->integer;
 
         if( pad > msg_write.maxsize ) {
             pad = msg_write.maxsize;
         }
-	    for( i = msg_write.cursize; i < pad; i++ ) {
+		for( ; pad > 0; pad-- ) {
 		    MSG_WriteByte( svc_nop );
 	    }
     }
@@ -750,7 +748,7 @@ Clients in earlier connection state are handled in SV_SendAsyncPackets.
 */
 void SV_SendClientMessages( void ) {
 	client_t	*client;
-    int         msglen;
+    size_t      cursize;
 
 	// send a message to each connected client
     FOR_EACH_CLIENT( client ) {
@@ -774,8 +772,8 @@ void SV_SendClientMessages( void ) {
 		} else {
             // don't write any frame data until all fragments are sent
             if( client->netchan->fragment_pending ) {
-                msglen = client->netchan->TransmitNextFragment( client->netchan );
-                SV_CalcSendTime( client, msglen );
+                cursize = client->netchan->TransmitNextFragment( client->netchan );
+                SV_CalcSendTime( client, cursize );
             } else {
                 // build the new frame and write it
                 SV_BuildClientFrame( client );

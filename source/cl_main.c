@@ -1824,9 +1824,9 @@ void CL_RequestNextDownload ( void ) {
 
                 // Also check if 32bit images are present
                 Q_concat( fn, sizeof( fn ), "textures/", texname, ".jpg", NULL );
-                if ( FS_LoadFile( fn, NULL ) == -1 ) {
+                if ( FS_LoadFile( fn, NULL ) == INVALID_LENGTH ) {
                     Q_concat( fn, sizeof( fn ), "textures/", texname, ".tga", NULL );
-                    if ( FS_LoadFile( fn, NULL ) == -1 ) {
+                    if ( FS_LoadFile( fn, NULL ) == INVALID_LENGTH ) {
                         Q_concat( fn, sizeof( fn ), "textures/", texname, ".wal", NULL );
                         if ( !CL_CheckOrDownloadFile( fn ) ) {
                             return; // started a download
@@ -2085,21 +2085,21 @@ static void CL_Say_c( genctx_t *ctx, int argnum ) {
     CL_Name_g( ctx );
 }
 
-static int CL_Mapname_m( char *buffer, int size ) {
+static size_t CL_Mapname_m( char *buffer, size_t size ) {
     if( !cl.mapname[0] ) {
         return Q_strncpyz( buffer, "nomap", size );
     }
     return Q_strncpyz( buffer, cl.mapname, size );
 }
 
-static int CL_Server_m( char *buffer, int size ) {
+static size_t CL_Server_m( char *buffer, size_t size ) {
     if( cls.state <= ca_disconnected ) {
         return Q_strncpyz( buffer, "noserver", size );
     }
     return Q_strncpyz( buffer, cls.servername, size );
 }
 
-static int CL_Ups_m( char *buffer, int size ) {
+static size_t CL_Ups_m( char *buffer, size_t size ) {
 	vec3_t vel;
 	int ups;
 	player_state_t *ps;
@@ -2125,7 +2125,7 @@ static int CL_Ups_m( char *buffer, int size ) {
 	return Com_sprintf( buffer, size, "%d", ups );
 }
 
-static int CL_Timer_m( char *buffer, int size ) {
+static size_t CL_Timer_m( char *buffer, size_t size ) {
 	int hour, min, sec;
 
 	sec = cl.time / 1000;
@@ -2138,19 +2138,19 @@ static int CL_Timer_m( char *buffer, int size ) {
 	return Com_sprintf( buffer, size, "%i:%02i", min, sec );
 }
 
-static int CL_Fps_m( char *buffer, int size ) {
+static size_t CL_Fps_m( char *buffer, size_t size ) {
 	return Com_sprintf( buffer, size, "%i", cls.fps );
 }
-static int CL_Ping_m( char *buffer, int size ) {
+static size_t CL_Ping_m( char *buffer, size_t size ) {
 	return Com_sprintf( buffer, size, "%i", cls.ping );
 }
-static int CL_Health_m( char *buffer, int size ) {
+static size_t CL_Health_m( char *buffer, size_t size ) {
 	return Com_sprintf( buffer, size, "%i", cl.frame.ps.stats[STAT_HEALTH] );
 }
-static int CL_Ammo_m( char *buffer, int size ) {
+static size_t CL_Ammo_m( char *buffer, size_t size ) {
 	return Com_sprintf( buffer, size, "%i", cl.frame.ps.stats[STAT_AMMO] );
 }
-static int CL_Armor_m( char *buffer, int size ) {
+static size_t CL_Armor_m( char *buffer, size_t size ) {
 	return Com_sprintf( buffer, size, "%i", cl.frame.ps.stats[STAT_ARMOR] );
 }
 

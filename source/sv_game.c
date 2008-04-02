@@ -157,11 +157,11 @@ static void PF_bprintf( int level, const char *fmt, ... ) {
 	va_list		argptr;
 	char		string[MAX_STRING_CHARS];
 	client_t	*client;
-    int         length;
+    size_t      len;
 	int			i;
 
 	va_start( argptr, fmt );
-	length = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
+	len = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
 	va_end( argptr );
 
     if( svs.mvd.dummy && sv.mvd.paused < PAUSED_FRAMES ) {
@@ -170,12 +170,12 @@ static void PF_bprintf( int level, const char *fmt, ... ) {
 
 	MSG_WriteByte( svc_print );
 	MSG_WriteByte( level );
-	MSG_WriteData( string, length + 1 );
+	MSG_WriteData( string, len + 1 );
 
 	// echo to console
 	if( dedicated->integer ) {
 		// mask off high bits
-		for( i = 0; i < length; i++ )
+		for( i = 0; i < len; i++ )
 			string[i] &= 127;
 		Com_Printf( "%s", string );
 	}
@@ -222,11 +222,12 @@ Archived in MVD stream.
 static void PF_cprintf( edict_t *ent, int level, const char *fmt, ... ) {
 	char		msg[MAX_STRING_CHARS];
 	va_list		argptr;
-	int			clientNum, length;
+	int			clientNum;
+	size_t		len;
 	client_t	*client;
 
 	va_start( argptr, fmt );
-	length = Q_vsnprintf( msg, sizeof( msg ), fmt, argptr );
+	len = Q_vsnprintf( msg, sizeof( msg ), fmt, argptr );
 	va_end( argptr );
 
 	if( !ent ) {
@@ -246,7 +247,7 @@ static void PF_cprintf( edict_t *ent, int level, const char *fmt, ... ) {
 
 	MSG_WriteByte( svc_print );
 	MSG_WriteByte( level );
-	MSG_WriteData( msg, length + 1 );
+	MSG_WriteData( msg, len + 1 );
 
     if( level >= client->messagelevel ) {
         SV_ClientAddMessage( client, MSG_RELIABLE );
@@ -273,7 +274,8 @@ Archived in MVD stream.
 static void PF_centerprintf( edict_t *ent, const char *fmt, ... ) {
 	char		msg[MAX_STRING_CHARS];
 	va_list		argptr;
-	int			n, length;
+	int			n;
+	size_t		len;
 
     if( !ent ) {
         return;
@@ -286,11 +288,11 @@ static void PF_centerprintf( edict_t *ent, const char *fmt, ... ) {
     }
 
 	va_start( argptr, fmt );
-	length = Q_vsnprintf( msg, sizeof( msg ), fmt, argptr );
+	len = Q_vsnprintf( msg, sizeof( msg ), fmt, argptr );
 	va_end( argptr );
 
 	MSG_WriteByte( svc_centerprint );
-	MSG_WriteData( msg, length + 1 );
+	MSG_WriteData( msg, len + 1 );
 
 	PF_Unicast( ent, qtrue );
 }
@@ -352,7 +354,7 @@ Archived in MVD stream.
 ===============
 */
 void PF_Configstring( int index, const char *val ) {
-	int length, maxlength;
+	size_t length, maxlength;
 	client_t *client;
 
 	if( index < 0 || index >= MAX_CONFIGSTRINGS )
@@ -364,7 +366,7 @@ void PF_Configstring( int index, const char *val ) {
 	length = strlen( val );
 	maxlength = sizeof( sv.configstrings ) - MAX_QPATH * index;
 	if( length >= maxlength ) {
-		Com_Error( ERR_DROP, "%s: index %d overflowed: %d > %d\n", __func__,
+		Com_Error( ERR_DROP, "%s: index %d overflowed: %"PRIz" > %"PRIz"\n", __func__,
             index, length, maxlength - 1 );
 	}
 

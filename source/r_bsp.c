@@ -587,7 +587,7 @@ void Bsp_LoadWorld( const char *path ) {
 	lump_t *lump;
 	int i;
     byte *data;
-    unsigned length, endpos;
+    size_t length, endpos;
 
     length = fs.LoadFileEx( path, ( void ** )&data, FS_FLAG_CACHE );
     if( !data ) {

@@ -31,16 +31,14 @@ LINE EDITING
 
 typedef struct inputField_s {
 	char	text[MAX_FIELD_TEXT];
-	int		maxChars;
-	int		visibleChars;
-	int		cursorPos;
+	size_t	maxChars;
+	size_t	visibleChars;
+	size_t	cursorPos;
 } inputField_t;
 
 qboolean	IF_KeyEvent( inputField_t *field, int key );
 qboolean	IF_CharEvent( inputField_t *field, int key );
-void		IF_Init( inputField_t *field, int visibleChars, int maxChars );
-void		IF_InitText( inputField_t *field, int visibleChars, int maxChars,
-                const char *text );
+void		IF_Init( inputField_t *field, size_t visibleChars, size_t maxChars, const char *text );
 void		IF_Clear( inputField_t *field );
 void		IF_Replace( inputField_t *field, const char *text );
 int         IF_Draw( inputField_t *field, int x, int y, int flags,

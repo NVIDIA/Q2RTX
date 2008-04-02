@@ -174,7 +174,7 @@ The flags will be or'ed in if the variable exists.
 cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 	cvar_t	*var, *c, **p;
 	unsigned hash;
-	int length;
+	size_t length;
 
 	if( !var_name ) {
 		Com_Error( ERR_FATAL, "Cvar_Get: NULL var_name" );
@@ -1035,10 +1035,10 @@ static void Cvar_Reset_c( genctx_t *ctx, int argnum ) {
     }
 }
 
-int Cvar_BitInfo( char *info, int bit ) {
+size_t Cvar_BitInfo( char *info, int bit ) {
 	char newi[MAX_INFO_STRING];
 	cvar_t	*var;
-	int length, total = 0;
+	size_t length, total = 0;
 
 	for( var = cvar_vars; var; var = var->next ) {
 		if( !( var->flags & bit ) ) {

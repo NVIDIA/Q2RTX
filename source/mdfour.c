@@ -135,7 +135,7 @@ void mdfour_begin(struct mdfour *md)
 }
 
 
-static void mdfour_tail(uint8_t *in, int n)
+static void mdfour_tail(uint8_t *in, size_t n)
 {
 	uint8_t buf[128];
 	uint32_t M[16];
@@ -162,7 +162,7 @@ static void mdfour_tail(uint8_t *in, int n)
 	}
 }
 
-void mdfour_update(struct mdfour *md, uint8_t *in, int n)
+void mdfour_update(struct mdfour *md, uint8_t *in, size_t n)
 {
 	uint32_t M[16];
 
@@ -194,13 +194,13 @@ void mdfour_result(struct mdfour *md, uint8_t *out)
 
 //===================================================================
 
-uint32_t Com_BlockChecksum( void *buffer, int length ) {
+uint32_t Com_BlockChecksum( void *buffer, size_t len ) {
 	uint32_t digest[4];
 	uint32_t val;
 	struct mdfour md;
 
 	mdfour_begin( &md );
-	mdfour_update( &md, ( uint8_t * )buffer, length );
+	mdfour_update( &md, ( uint8_t * )buffer, len );
 	mdfour_result( &md, ( uint8_t * )digest );
 	
 	val = digest[0] ^ digest[1] ^ digest[2] ^ digest[3];

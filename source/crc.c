@@ -28,8 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define CRC_INIT_VALUE	0xffff
 #define CRC_XOR_VALUE	0x0000
 
-static unsigned short crctable[256] =
-{
+static const uint16_t crctable[256] = {
 	0x0000,	0x1021,	0x2042,	0x3063,	0x4084,	0x50a5,	0x60c6,	0x70e7,
 	0x8108,	0x9129,	0xa14a,	0xb16b,	0xc18c,	0xd1ad,	0xe1ce,	0xf1ef,
 	0x1231,	0x0210,	0x3273,	0x2252,	0x52b5,	0x4294,	0x72f7,	0x62d6,
@@ -64,33 +63,16 @@ static unsigned short crctable[256] =
 	0x6e17,	0x7e36,	0x4e55,	0x5e74,	0x2e93,	0x3eb2,	0x0ed1,	0x1ef0
 };
 
-void CRC_Init(unsigned short *crcvalue)
-{
-	*crcvalue = CRC_INIT_VALUE;
-}
+static uint16_t CRC_Block (byte *start, size_t count) {
+	uint16_t	crc = CRC_INIT_VALUE;
 
-void CRC_ProcessByte(unsigned short *crcvalue, byte data)
-{
-	*crcvalue = (*crcvalue << 8) ^ crctable[(*crcvalue >> 8) ^ data];
-}
-
-unsigned short CRC_Value(unsigned short crcvalue)
-{
-	return crcvalue ^ CRC_XOR_VALUE;
-}
-
-unsigned short CRC_Block (byte *start, int count)
-{
-	unsigned short	crc;
-
-	CRC_Init (&crc);
 	while (count--)
 		crc = (crc << 8) ^ crctable[(crc >> 8) ^ *start++];
 
 	return crc;
 }
 
-static byte chktbl[1024] = {
+static const byte chktbl[1024] = {
 	0x84, 0x47, 0x51, 0xc1, 0x93, 0x22, 0x21, 0x24, 0x2f, 0x66, 0x60, 0x4d, 0xb0, 0x7c, 0xda,
 	0x88, 0x54, 0x15, 0x2b, 0xc6, 0x6c, 0x89, 0xc5, 0x9d, 0x48, 0xee, 0xe6, 0x8a, 0xb5, 0xf4,
 	0xcb, 0xfb, 0xf1, 0x0c, 0x2e, 0xa0, 0xd7, 0xc9, 0x1f, 0xd6, 0x06, 0x9a, 0x09, 0x41, 0x54,
@@ -164,17 +146,15 @@ COM_BlockSequenceCRCByte
 For proxy protecting
 ====================
 */
-byte	COM_BlockSequenceCRCByte (byte *base, int length, int sequence)
-{
+byte COM_BlockSequenceCRCByte (byte *base, size_t length, int sequence) {
 	int		n;
-	byte	*p;
+	const byte	*p;
 	int		x;
 	byte chkb[60 + 4];
 	unsigned short crc;
 
-
 	if (sequence < 0)
-		Com_Error(ERR_FATAL, "sequence < 0, this shouldn't happen\n");
+		Com_Error(ERR_DROP, "%s: sequence < 0", __func__);
 
 	p = chktbl + (sequence % (sizeof(chktbl) - 4));
 

@@ -34,8 +34,9 @@ static void Prompt_ShowMatches( commandPrompt_t *prompt, char **matches,
 {
     int count = end - start;
     int numCols = 7, numLines;
-    int i, j, k, max, len, total;
-    int colwidths[6];
+    int i, j, k;
+	size_t max, len, total;
+    size_t colwidths[6];
     char *match;
 
 	do {
@@ -47,7 +48,7 @@ static void Prompt_ShowMatches( commandPrompt_t *prompt, char **matches,
 			if( k >= end ) {
 				break;
 			}
-            max = -9999;
+            max = 0;
             j = k;
             while( j - k < numLines && j < end ) {
                 len = strlen( matches[j++] );
@@ -150,7 +151,8 @@ Prompt_CompleteCommand
 void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 	inputField_t *inputLine = &prompt->inputLine;
 	char *text, *partial, *s;
-	int i, argc, pos, currentArg, size, length, argnum;
+	int i, argc, currentArg, argnum;
+	size_t size, len, pos;
 	char *first, *last;
     genctx_t ctx;
     char *matches[MAX_MATCHES], *sortedMatches[MAX_MATCHES];
@@ -176,8 +178,8 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 	argc = Cmd_Argc();
 
 	currentArg = Cmd_FindArgForOffset( pos );
-	i = strlen( text );
-	if( i != 0 && text[ i - 1 ] == ' ' ) {
+	len = strlen( text );
+	if( len > 0 && text[ len - 1 ] == ' ' ) {
 		if( currentArg == argc - 1 ) {
 			currentArg++;
 		}
@@ -263,13 +265,13 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 	// copy matching part
 	first = sortedMatches[0];
 	last = sortedMatches[ ctx.count - 1 ];
-	length = 0;
+	len = 0;
 	do {
         if( *first != *last ) {
             break;
         }
-		text[length++] = *first;
-		if( length == size - 1 ) {
+		text[len++] = *first;
+		if( len == size - 1 ) {
 			break;
 		}
 
@@ -277,13 +279,13 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 		last++;
 	} while( *first );
 
-	text[length] = 0;
-    pos += length;
-    size -= length;
+	text[len] = 0;
+    pos += len;
+    size -= len;
 
 	if( currentArg + 1 < argc ) {
         s = Cmd_RawArgsFrom( currentArg + 1 ); 
-		pos += Q_concat( text + length, size, " ", s, NULL );
+		pos += Q_concat( text + len, size, " ", s, NULL );
 	}
 
 	inputLine->cursorPos = pos + 1;
@@ -454,7 +456,8 @@ void Prompt_SaveHistory( commandPrompt_t *prompt, const char *filename, int line
 void Prompt_LoadHistory( commandPrompt_t *prompt, const char *filename ) {
     char buffer[MAX_FIELD_TEXT];
     fileHandle_t f;
-    int i, len;
+    int i;
+	size_t len;
 
     FS_FOpenFile( filename, &f, FS_MODE_READ|FS_TYPE_REAL );
     if( !f ) {

@@ -34,7 +34,7 @@ Dumps the current demo message, prefixed by the length.
 ====================
 */
 void CL_WriteDemoMessage( sizebuf_t *buf ) {
-	int		length;
+	uint32_t length;
 
     if( buf->overflowed ) {
         SZ_Clear( buf );
@@ -170,7 +170,7 @@ void CL_EmitDemoFrame( void ) {
 	CL_EmitPacketEntities( oldframe, &cl.frame );
 
     if( cls.demobuff.cursize + msg_write.cursize > cls.demobuff.maxsize ) {
-        Com_WPrintf( "Oversize demo frame: %d bytes\n",
+        Com_WPrintf( "Oversize demo frame: %"PRIz" bytes\n",
             cls.demobuff.cursize + msg_write.cursize );
     } else {
         SZ_Write( &cls.demobuff, msg_write.data, msg_write.cursize );
@@ -213,7 +213,7 @@ stop recording a demo
 ====================
 */
 void CL_Stop_f( void ) {
-	int length;
+	uint32_t length;
 
 	if( !cls.demorecording ) {
 		Com_Printf( "Not recording a demo.\n" );
@@ -229,7 +229,7 @@ void CL_Stop_f( void ) {
 	}
 
 // finish up
-	length = -1;
+	length = ( uint32_t )-1;
 	FS_Write( &length, 4, cls.demorecording );
 
     length = FS_RawTell( cls.demorecording );
@@ -239,7 +239,7 @@ void CL_Stop_f( void ) {
 	cls.demorecording = 0;
     cls.demopaused = qfalse;
 
-	Com_Printf( "Stopped demo (%d bytes written).\n", length );
+	Com_Printf( "Stopped demo (%u bytes written).\n", length );
 }
 
 /*
@@ -253,7 +253,8 @@ Begins recording a demo from the current position
 */
 void CL_Record_f( void ) {
 	char	name[MAX_OSPATH];
-	int		i, length;
+	int		i;
+	size_t	length;
 	entity_state_t	*ent;
 	char *string;
 	fileHandle_t demofile;
@@ -378,7 +379,7 @@ void CL_Record_f( void ) {
 
 static void CL_Suspend_f( void ) {
     int i, j, index;
-    int length, total = 0;
+    size_t length, total = 0;
 
 	if( !cls.demorecording ) {
 		Com_Printf( "Not recording a demo.\n" );
@@ -418,7 +419,7 @@ static void CL_Suspend_f( void ) {
 	// write it to the demo file
     CL_WriteDemoMessage( &msg_write );
 
-    Com_Printf( "Resumed demo (%d bytes flushed).\n", total );
+    Com_Printf( "Resumed demo (%"PRIz" bytes flushed).\n", total );
 
     cl.demodelta += cl.demoframe - cl.frame.number; // do not create holes
     cls.demopaused = qfalse;
@@ -554,8 +555,8 @@ static void CL_PlayDemo_f( void ) {
 	char name[MAX_OSPATH];
 	fileHandle_t demofile;
 	char *arg;
-	int length, type;
-    int argc = Cmd_Argc();
+	size_t length;
+    int type, argc = Cmd_Argc();
 
 	if( argc < 2 ) {
 		Com_Printf( "Usage: %s <filename> [...]\n", Cmd_Argv( 0 ) );
@@ -631,13 +632,13 @@ static void CL_PlayDemo_f( void ) {
 		CL_ParseNextDemoMessage();
     }
 
-	length = FS_GetFileLengthNoCache( demofile );
-    if( length > 0 ) {
-    	cls.demofileFrameOffset = FS_Tell( demofile );
-	    cls.demofileSize = length - cls.demofileFrameOffset;
-    } else {
+	length = FS_GetFileLength( demofile );
+    if( length == INVALID_LENGTH ) {
     	cls.demofileFrameOffset = 0;
 	    cls.demofileSize = 0;
+    } else {
+    	cls.demofileFrameOffset = FS_Tell( demofile );
+	    cls.demofileSize = length - cls.demofileFrameOffset;
     }
 
 	if( com_timedemo->integer ) {
@@ -653,7 +654,7 @@ static void CL_Demo_c( genctx_t *ctx, int argnum ) {
 }
 
 static void CL_ParseInfoString( demoInfo_t *info, int clientNum, int index, const char *string ) {
-    int len;
+    size_t len;
     char *p;
 
     if( index >= CS_PLAYERSKINS && index < CS_PLAYERSKINS + MAX_CLIENTS ) {

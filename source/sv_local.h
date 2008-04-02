@@ -176,8 +176,8 @@ typedef struct client_s {
 	int				frame_latency[LATENCY_COUNTS];
 	int				ping;
 
-	int				message_size[RATE_MESSAGES];	// used to rate drop packets
-	int				rate;
+	size_t			message_size[RATE_MESSAGES];	// used to rate drop packets
+	size_t			rate;
 	int				surpressCount;		// number of messages rate supressed
 	unsigned		send_time, send_delta;	// used to rate drop async packets
     frameflags_t    frameflags;
@@ -229,7 +229,7 @@ typedef struct client_s {
     int             slot;
 
     // netchan type dependent methods
-	void			(*AddMessage)( struct client_s *, byte *, int, qboolean );
+	void			(*AddMessage)( struct client_s *, byte *, size_t, qboolean );
 	void			(*WriteFrame)( struct client_s * );
 	void			(*FinishFrame)( struct client_s * );
 	void			(*WriteDatagram)( struct client_s * );
@@ -273,7 +273,7 @@ typedef struct {
     unsigned    lastmessage; 
 
     char        request[MAX_NET_STRING];
-    int         requestLength;
+    size_t      requestLength;
     htmethod_t  method;
     char        *resource, *host, *agent, *credentials;
 
@@ -455,7 +455,7 @@ typedef enum {RD_NONE, RD_CLIENT, RD_PACKET} redirect_t;
 
 extern	char	sv_outputbuf[SV_OUTPUTBUF_LENGTH];
 
-void SV_FlushRedirect( int redirected, char *outputbuf, int length );
+void SV_FlushRedirect( int redirected, char *outputbuf, size_t len );
 
 void SV_DemoCompleted (void);
 void SV_SendClientMessages (void);
@@ -470,16 +470,16 @@ void SV_PacketizedClear( client_t *client );
 
 void SV_OldClientWriteDatagram( client_t *client );
 void SV_OldClientAddMessage( client_t *client, byte *data,
-							  int length, qboolean reliable );
-void SV_OldClientWriteReliableMessages( client_t *client, int maxSize );
+							  size_t length, qboolean reliable );
+void SV_OldClientWriteReliableMessages( client_t *client, size_t maxsize );
 void SV_OldClientFinishFrame( client_t *client );
 
 void SV_NewClientWriteDatagram( client_t *client );
 void SV_NewClientAddMessage( client_t *client, byte *data,
-							  int length, qboolean reliable );
+							  size_t length, qboolean reliable );
 void SV_NewClientFinishFrame( client_t *client );
 
-void SV_CalcSendTime( client_t *client, int messageSize );
+void SV_CalcSendTime( client_t *client, size_t messageSize );
 
 //
 // sv_mvd.c
@@ -518,7 +518,7 @@ void SV_HttpRun( void );
 
 void SV_HttpRemove( tcpClient_t *client ); 
 void SV_HttpDrop( tcpClient_t *client, const char *error ); 
-void SV_HttpWrite( tcpClient_t *client, void *data, int length ); 
+void SV_HttpWrite( tcpClient_t *client, void *data, size_t length ); 
 void SV_HttpFinish( tcpClient_t *client );
 
 void SV_HttpPrintf( const char *fmt, ... ) q_printf( 1, 2 );

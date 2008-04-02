@@ -756,7 +756,7 @@ void R_LoadImage( image_t *image, byte *pic, int width, int height,
 	// HACK: get dimensions from 8-bit texture
 	if( flags & (if_replace_wal|if_replace_pcx) ) {
 		char buffer[MAX_QPATH];
-		int length;
+		size_t length;
 	    miptex_t	mt;
         pcx_t pcx;
         fileHandle_t f;
@@ -879,8 +879,7 @@ R_LoadWal
 */
 image_t *R_LoadWal( const char *name ) {
 	miptex_t	*mt;
-	uint32_t	width, height, offset;
-	unsigned	length, endpos;
+	size_t	    width, height, offset, length, endpos;
 	image_t		*image;
 
 	length = fs.LoadFile( name, ( void ** )&mt );
@@ -892,12 +891,12 @@ image_t *R_LoadWal( const char *name ) {
 	height = LittleLong( mt->height );
 	offset = LittleLong( mt->offsets[0] );
 
-    if( width < 1 || width > MAX_TEXTURE_SIZE || height < 1 || height > MAX_TEXTURE_SIZE ) {
+    if( width < 1 || height < 1 || width > MAX_TEXTURE_SIZE || height > MAX_TEXTURE_SIZE ) {
 		Com_WPrintf( "LoadWAL: %s: bad dimensions\n", name );
         goto fail;
     }
     endpos = offset + width * height;
-	if( offset > endpos || endpos > length ) {
+	if( endpos < offset || endpos > length ) {
 		Com_WPrintf( "LoadWAL: %s: bad offset\n", name );
         goto fail;
 	}

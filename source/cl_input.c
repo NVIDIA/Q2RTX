@@ -803,8 +803,7 @@ CL_SendDefaultCmd
 =================
 */
 static void CL_SendDefaultCmd( void ) {
-	int			i;
-	int			checksumIndex;
+	size_t		cursize, checksumIndex;
 	usercmd_t	*cmd, *oldcmd;
 	client_history_t	*history;
 
@@ -871,13 +870,9 @@ static void CL_SendDefaultCmd( void ) {
 	//
 	// deliver the message
 	//
-	i = cls.netchan->Transmit( cls.netchan, msg_write.cursize, msg_write.data );
-	if( i == -1 ) {
-		Com_Error( ERR_DISCONNECT, "Connection reset by peer" );
-	}
-
+	cursize = cls.netchan->Transmit( cls.netchan, msg_write.cursize, msg_write.data );
 	if( cl_showpackets->integer ) {
-		Com_Printf( "%i ", i );
+		Com_Printf( "%"PRIz" ", cursize );
 	}
 
 	SZ_Clear( &msg_write );
@@ -892,6 +887,7 @@ static void CL_SendBatchedCmd( void ) {
 	int			i, j, seq, bits;
 	int			numCmds, numDups;
 	int			totalCmds, totalMsec;
+    size_t      cursize;
 	usercmd_t	*cmd, *oldcmd;
 	client_history_t	*history, *oldest;
 	byte *patch;
@@ -962,15 +958,11 @@ static void CL_SendBatchedCmd( void ) {
 	//
 	// deliver the message
 	//
-	i = cls.netchan->Transmit( cls.netchan, msg_write.cursize, msg_write.data );
-	if( i == -1 ) {
-		Com_Error( ERR_DISCONNECT, "Connection reset by peer" );
-	}
-
+	cursize = cls.netchan->Transmit( cls.netchan, msg_write.cursize, msg_write.data );
 	if( cl_showpackets->integer == 1 ) {
-		Com_Printf( "%i(%i) ", i, totalCmds );
+		Com_Printf( "%"PRIz"(%i) ", cursize, totalCmds );
 	} else if( cl_showpackets->integer == 2 ) {
-		Com_Printf( "%i(%i) ", i, totalMsec );
+		Com_Printf( "%"PRIz"(%i) ", cursize, totalMsec );
 	} else if( cl_showpackets->integer == 3 ) {
 		Com_Printf( " | " );
 	}
@@ -989,9 +981,9 @@ static void CL_SendUserinfo( void ) {
 	}
 
 	if( cls.userinfo_modified == MAX_PACKET_USERINFOS ) {
-        i = Cvar_BitInfo( userinfo, CVAR_USERINFO );
+        size_t len = Cvar_BitInfo( userinfo, CVAR_USERINFO );
 		MSG_WriteByte( clc_userinfo );
-		MSG_WriteData( userinfo, i + 1 );
+		MSG_WriteData( userinfo, len + 1 );
 		MSG_FlushTo( &cls.netchan->message );
 	} else if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO ) {
 		Com_DPrintf( "Sending %d userinfo updates at frame %u\n",

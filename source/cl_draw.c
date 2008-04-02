@@ -67,7 +67,7 @@ STAT PROGRAMS TO TEXT
 #define TH_WIDTH    80
 #define TH_HEIGHT   40
 
-static void TH_DrawString( char *dst, int x, int y, char *src, int len ) {
+static void TH_DrawString( char *dst, int x, int y, char *src, size_t len ) {
     int c;
 
     if( x + len > TH_WIDTH ) {
@@ -94,7 +94,7 @@ static void TH_DrawString( char *dst, int x, int y, char *src, int len ) {
     }
 }
 
-static void TH_DrawCenterString( char *dst, int x, int y, char *src, int len ) {
+static void TH_DrawCenterString( char *dst, int x, int y, char *src, size_t len ) {
     x -= len / 2;
     if( x < 0 ) {
         src -= x;
@@ -128,8 +128,8 @@ static void TH_DrawLayoutString( char *dst, const char *s ) {
 	int		x, y;
 	int		value;
 	char	*token;
-	int		width, len;
-	int		index;
+	size_t	len;
+	int		width, index;
 	clientinfo_t	*ci;
 
 	if( !s[0] )
@@ -341,7 +341,7 @@ static void SCR_ScoreShot_f( void ) {
     } else {
         for( i = 0; i < 1000; i++ ) {
             Com_sprintf( path, sizeof( path ), SCORESHOTS_DIRECTORY "/quake%03d.txt", i );
-            if( FS_LoadFileEx( path, NULL, FS_PATH_GAME ) == -1 ) {
+            if( FS_LoadFileEx( path, NULL, FS_PATH_GAME ) == INVALID_LENGTH ) {
                 break;	// file doesn't exist
             }
         }

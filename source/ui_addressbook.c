@@ -74,7 +74,7 @@ static void AddressBook_MenuInit( void ) {
 
 		m_addressBook.fields[i].generic.type	= MTYPE_FIELD;
 
-		IF_InitText( &m_addressBook.fields[i].field, 30, 60,
+		IF_Init( &m_addressBook.fields[i].field, 30, 60,
             cvar.VariableString( buffer ) );
 
 		Menu_AddItem( &m_addressBook.menu, &m_addressBook.fields[i] );

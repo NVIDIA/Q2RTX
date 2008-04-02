@@ -160,13 +160,13 @@ void MVD_DPrintf( const char *fmt, ... ) {
 static void MVD_HttpPrintf( mvd_t *mvd, const char *fmt, ... ) {
     char buffer[MAX_STRING_CHARS];
 	va_list		argptr;
-    int     length;
+    size_t      len;
 
 	va_start( argptr, fmt );
-	length = Q_vsnprintf( buffer, sizeof( buffer ), fmt, argptr );
+	len = Q_vsnprintf( buffer, sizeof( buffer ), fmt, argptr );
 	va_end( argptr );
 
-    if( FIFO_Write( &mvd->stream.send, buffer, length ) != length ) {
+    if( FIFO_Write( &mvd->stream.send, buffer, len ) != len ) {
         MVD_Dropf( mvd, "%s: overflow", __func__ );
     }
 }
@@ -226,7 +226,7 @@ static void MVD_EmitGamestate( mvd_t *mvd ) {
 	int			i, j;
 	entity_state_t	*es;
     player_state_t *ps;
-    int         length;
+    size_t      length;
     uint16_t    *patch;
 	int flags, extra, portalbytes;
     byte portalbits[MAX_MAP_AREAS/8];
@@ -530,7 +530,7 @@ void MVD_Finish( mvd_t *mvd, const char *reason ) {
 
 static void MVD_ReadDemo( mvd_t *mvd ) {
     byte *data;
-    int length, read, total = 0;
+    size_t length, read, total = 0;
 
     do {
         data = FIFO_Reserve( &mvd->stream.recv, &length );
@@ -568,7 +568,7 @@ static qboolean MVD_ParseResponse( mvd_t *mvd ) {
     char *p, *token;
     const char *line;
     byte *b, *data;
-    int length;
+    size_t length;
 
     while( 1 ) {
         data = FIFO_Peek( &mvd->stream.recv, &length );
@@ -649,8 +649,8 @@ static qboolean MVD_ParseResponse( mvd_t *mvd ) {
 }
 
 static inline float MVD_BufferPercent( mvd_t *mvd ) {
-    int usage = FIFO_Usage( &mvd->stream.recv );
-    int size = mvd->stream.recv.size;
+    size_t usage = FIFO_Usage( &mvd->stream.recv );
+    size_t size = mvd->stream.recv.size;
 
 #ifdef USE_ZLIB
     usage += FIFO_Usage( &mvd->zbuf );
@@ -1254,7 +1254,8 @@ static void MVD_Play_c( genctx_t *ctx, int argnum ) {
 void MVD_Play_f( void ) {
 	char *name = NULL, *s;
 	char buffer[MAX_OSPATH];
-    int loop = 1, len;
+    int loop = 1;
+	size_t len;
     mvd_t *mvd;
     int c, argc;
     string_entry_t *entry, *head;
@@ -1299,11 +1300,11 @@ void MVD_Play_f( void ) {
             Q_strncpyz( buffer, s + 1, sizeof( buffer ) );
         } else {
             Q_concat( buffer, sizeof( buffer ), "demos/", s, NULL );
-            if( FS_LoadFile( buffer, NULL ) == -1 ) {
+            if( FS_LoadFile( buffer, NULL ) == INVALID_LENGTH ) {
                 COM_AppendExtension( buffer, ".mvd2", sizeof( buffer ) );
             }
         }
-        if( FS_LoadFile( buffer, NULL ) == -1 ) {
+        if( FS_LoadFile( buffer, NULL ) == INVALID_LENGTH ) {
             Com_Printf( "Ignoring non-existent entry: %s\n", buffer );
             continue;
         }

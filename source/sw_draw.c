@@ -582,7 +582,7 @@ void Draw_Char( int x, int y, int flags, int ch, qhandle_t hFont ) {
 Draw_String
 ===============
 */
-int Draw_String( int x, int y, int flags, int maxChars,
+int Draw_String( int x, int y, int flags, size_t maxChars,
         const char *string, qhandle_t hFont )
 {
     image_t *image;

@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "mvd_local.h"
 
 #define MVD_ShowSVC( cmd ) do { \
-	Com_Printf( "%3i:%s\n", msg_read.readcount - 1, \
+	Com_Printf( "%3"PRIz":%s\n", msg_read.readcount - 1, \
         MVD_ServerCommandString( cmd ) ); \
     } while( 0 )
 
@@ -288,7 +288,7 @@ static void MVD_ParseMulticast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
 	}
 }
 
-static void MVD_UnicastSend( mvd_t *mvd, qboolean reliable, byte *data, int length, mvd_player_t *player ) {
+static void MVD_UnicastSend( mvd_t *mvd, qboolean reliable, byte *data, size_t length, mvd_player_t *player ) {
     mvd_player_t *target;
     udpClient_t *client;
     client_t *cl;
@@ -333,7 +333,7 @@ static void MVD_UnicastString( mvd_t *mvd, qboolean reliable, mvd_player_t *play
     char *string;
     mvd_cs_t *cs;
     byte *data;
-    int readcount, length;
+    size_t readcount, length;
 
 	data = msg_read.data + msg_read.readcount - 1;
     readcount = msg_read.readcount - 1;
@@ -375,7 +375,7 @@ static void MVD_UnicastPrint( mvd_t *mvd, qboolean reliable, mvd_player_t *playe
     int level;
     char *string;
     byte *data;
-    int readcount, length;
+    size_t readcount, length;
     udpClient_t *client;
     client_t *cl;
     mvd_player_t *target;
@@ -410,7 +410,7 @@ static void MVD_UnicastPrint( mvd_t *mvd, qboolean reliable, mvd_player_t *playe
 static void MVD_UnicastStuff( mvd_t *mvd, qboolean reliable, mvd_player_t *player ) {
     char *string;
     byte *data;
-    int readcount, length;
+    size_t readcount, length;
 
 	data = msg_read.data + msg_read.readcount - 1;
     readcount = msg_read.readcount - 1;
@@ -431,7 +431,8 @@ Attempt to parse the datagram and find custom configstrings,
 layouts, etc. Give up as soon as unknown command byte is encountered.
 */
 static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
-	int clientNum, length, last;
+	int clientNum;
+	size_t length, last;
 	mvd_player_t *player;
     byte *data;
     qboolean reliable;
@@ -474,7 +475,7 @@ static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
 			break;
 		default:
             if( mvd_shownet->integer > 1 ) {
-                Com_Printf( "%d:SKIPPING UNICAST\n", msg_read.readcount - 1 );
+                Com_Printf( "%"PRIz":SKIPPING UNICAST\n", msg_read.readcount - 1 );
             }
 			// send remaining data and return
             data = msg_read.data + msg_read.readcount - 1;
@@ -486,7 +487,7 @@ static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
 	}
 
 	if( mvd_shownet->integer > 1 ) {
-		Com_Printf( "%d:END OF UNICAST\n", msg_read.readcount - 1 );
+		Com_Printf( "%"PRIz":END OF UNICAST\n", msg_read.readcount - 1 );
 	}
 
     if( msg_read.readcount > last ) {
@@ -618,7 +619,8 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
 }
 
 static void MVD_ParseConfigstring( mvd_t *mvd ) {
-	int index, length;
+	int index;
+	size_t len;
 	char *string, *p;
 	udpClient_t *client;
     mvd_player_t *player;
@@ -631,9 +633,9 @@ static void MVD_ParseConfigstring( mvd_t *mvd ) {
 		MVD_Destroyf( mvd, "%s: bad index: %d", __func__, index );
 	}
 
-	string = MSG_ReadStringLength( &length );
+	string = MSG_ReadStringLength( &len );
 
-	if( MAX_QPATH * index + length >= sizeof( mvd->configstrings ) ) {
+	if( MAX_QPATH * index + len >= sizeof( mvd->configstrings ) ) {
 		MVD_Destroyf( mvd, "%s: oversize configstring: %d", __func__, index );
 	}
 
@@ -674,11 +676,11 @@ static void MVD_ParseConfigstring( mvd_t *mvd ) {
         }
     }
 
-	memcpy( mvd->configstrings[index], string, length + 1 );
+	memcpy( mvd->configstrings[index], string, len + 1 );
 
 	MSG_WriteByte( svc_configstring );
 	MSG_WriteShort( index );
-	MSG_WriteData( string, length + 1 );
+	MSG_WriteData( string, len + 1 );
 	
     // broadcast configstring change
     LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
@@ -867,19 +869,19 @@ static void MVD_ParseFrame( mvd_t *mvd ) {
 	}
 
 	if( mvd_shownet->integer > 1 ) {
-		Com_Printf( "%3i:playerinfo\n", msg_read.readcount - 1 );
+		Com_Printf( "%3"PRIz":playerinfo\n", msg_read.readcount - 1 );
 	}
 
 	MVD_ParsePacketPlayers( mvd );
 
 	if( mvd_shownet->integer > 1 ) {
-		Com_Printf( "%3i:packetentities\n", msg_read.readcount - 1 );
+		Com_Printf( "%3"PRIz":packetentities\n", msg_read.readcount - 1 );
 	}
 
 	MVD_ParsePacketEntities( mvd );
 
 	if( mvd_shownet->integer > 1 ) {
-		Com_Printf( "%3i: frame:%i\n", msg_read.readcount - 1, mvd->framenum );
+		Com_Printf( "%3"PRIz":frame:%u\n", msg_read.readcount - 1, mvd->framenum );
 	}
 
 	MVD_PlayerToEntityStates( mvd );
@@ -889,11 +891,11 @@ static void MVD_ParseFrame( mvd_t *mvd ) {
 
 static void MVD_ParseServerData( mvd_t *mvd ) {
 	int protocol;
-    int length, index;
+    size_t length;
 	char *gamedir, *string, *p;
     const char *error;
 	uint32_t checksum;
-    int i;
+    int i, index;
     mvd_player_t *player;
 
     // clear the leftover from previous level
@@ -1024,8 +1026,8 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
 static qboolean MVD_ParseMessage( mvd_t *mvd, fifo_t *fifo ) {
     uint16_t    msglen;
     uint32_t    magic;
-    byte        *data;
-    int         length;
+    void        *data;
+    size_t      length;
 	int			cmd, extrabits;
 
     // parse magic
@@ -1040,8 +1042,7 @@ static qboolean MVD_ParseMessage( mvd_t *mvd, fifo_t *fifo ) {
     }
 
     // parse msglen
-    msglen = mvd->msglen;
-    if( !msglen ) {
+    if( !mvd->msglen ) {
         if( !FIFO_TryRead( fifo, &msglen, 2 ) ) {
             return qfalse;
         }
@@ -1050,29 +1051,28 @@ static qboolean MVD_ParseMessage( mvd_t *mvd, fifo_t *fifo ) {
         }
         msglen = LittleShort( msglen );
         if( msglen > MAX_MSGLEN ) {
-            MVD_Destroyf( mvd, "Invalid MVD message length: %d bytes", msglen );
+            MVD_Destroyf( mvd, "Invalid MVD message length: %u bytes", msglen );
         }
         mvd->msglen = msglen;
     }
 
     // first, try to read in a single block
     data = FIFO_Peek( fifo, &length );
-    if( length < msglen ) {
-        if( !FIFO_TryRead( fifo, msg_read_buffer, msglen ) ) {
+    if( length < mvd->msglen ) {
+        if( !FIFO_TryRead( fifo, msg_read_buffer, mvd->msglen ) ) {
             return qfalse; // not yet available
         }
         SZ_Init( &msg_read, msg_read_buffer, sizeof( msg_read_buffer ) );
     } else {
-        SZ_Init( &msg_read, data, msglen );
-        FIFO_Decommit( fifo, msglen );
+        SZ_Init( &msg_read, data, mvd->msglen );
+        FIFO_Decommit( fifo, mvd->msglen );
     }
 
+    msg_read.cursize = mvd->msglen;
     mvd->msglen = 0;
 
-    msg_read.cursize = msglen;
-
 	if( mvd_shownet->integer == 1 ) {
-		Com_Printf( "%i ", msg_read.cursize );
+		Com_Printf( "%"PRIz" ", msg_read.cursize );
 	} else if( mvd_shownet->integer > 1 ) {
 		Com_Printf( "------------------\n" );
 	}
@@ -1087,7 +1087,7 @@ static qboolean MVD_ParseMessage( mvd_t *mvd, fifo_t *fifo ) {
 
 		if( ( cmd = MSG_ReadByte() ) == -1 ) {
 			if( mvd_shownet->integer > 1 ) {
-				Com_Printf( "%3i:END OF MESSAGE\n", msg_read.readcount - 1 );
+				Com_Printf( "%3"PRIz":END OF MESSAGE\n", msg_read.readcount - 1 );
 			}
 			break;
 		}
@@ -1132,7 +1132,7 @@ static qboolean MVD_ParseMessage( mvd_t *mvd, fifo_t *fifo ) {
             MVD_ParsePrint( mvd );
             break;
 		default:
-            MVD_Destroyf( mvd, "Illegible command at %d: %d",
+            MVD_Destroyf( mvd, "Illegible command at %"PRIz": %d",
                 msg_read.readcount - 1, cmd );
 		}
 	}
@@ -1143,7 +1143,7 @@ static qboolean MVD_ParseMessage( mvd_t *mvd, fifo_t *fifo ) {
 #if USE_ZLIB
 static int MVD_Decompress( mvd_t *mvd ) {
     byte        *data;
-    int         avail_in, avail_out;
+    size_t      avail_in, avail_out;
     z_streamp   z = &mvd->z;
     int         ret = Z_BUF_ERROR;
 
@@ -1153,14 +1153,14 @@ static int MVD_Decompress( mvd_t *mvd ) {
             break;
         }
         z->next_in = data;
-        z->avail_in = avail_in;
+        z->avail_in = ( uInt )avail_in;
 
         data = FIFO_Reserve( &mvd->zbuf, &avail_out );
         if( !avail_out ) {
             break;
         }
         z->next_out = data;
-        z->avail_out = avail_out;
+        z->avail_out = ( uInt )avail_out;
 
         ret = inflate( z, Z_SYNC_FLUSH );
 

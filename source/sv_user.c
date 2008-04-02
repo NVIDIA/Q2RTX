@@ -84,7 +84,7 @@ static void create_baselines( void ) {
 static void write_plain_configstrings( void ) {
 	int			i;
 	char		*string;
-	int			length;
+	size_t		length;
 
 	// write a packet full of data
 	string = sv_client->configstrings;
@@ -144,7 +144,8 @@ static void write_plain_baselines( void ) {
 static void write_compressed_gamestate( void ) {
 	sizebuf_t	*buf = &sv_client->netchan->message;
 	entity_state_t	*base;
-	int			i, j, length;
+	int			i, j;
+	size_t		length;
     uint16_t    *patch;
     char        *string;
 
@@ -188,9 +189,9 @@ static void write_compressed_gamestate( void ) {
 
     deflateReset( &svs.z );
     svs.z.next_in = msg_write.data;
-    svs.z.avail_in = msg_write.cursize;
+    svs.z.avail_in = ( uInt )msg_write.cursize;
     svs.z.next_out = buf->data + buf->cursize;
-    svs.z.avail_out = buf->maxsize - buf->cursize;
+    svs.z.avail_out = ( uInt )( buf->maxsize - buf->cursize );
 	SZ_Clear( &msg_write );
 
 	if( deflate( &svs.z, Z_FINISH ) != Z_STREAM_END ) {
@@ -233,11 +234,12 @@ static inline int z_flush( byte *buffer ) {
 static inline void z_reset( byte *buffer ) {
     deflateReset( &svs.z );
     svs.z.next_out = buffer;
-    svs.z.avail_out = sv_client->netchan->maxpacketlen - 5;
+    svs.z.avail_out = ( uInt )( sv_client->netchan->maxpacketlen - 5 );
 }
 
 static void write_compressed_configstrings( void ) {
-	int			i, length;
+	int			i;
+	size_t		length;
 	byte		buffer[MAX_PACKETLEN_WRITABLE];
     char        *string;
 
@@ -269,7 +271,7 @@ static void write_compressed_configstrings( void ) {
 		MSG_WriteByte( 0 );
 
         svs.z.next_in = msg_write.data;
-        svs.z.avail_in = msg_write.cursize;
+        svs.z.avail_in = ( uInt )msg_write.cursize;
         SZ_Clear( &msg_write );
 
     	if( deflate( &svs.z, Z_SYNC_FLUSH ) != Z_OK ) {
@@ -600,7 +602,7 @@ static void SV_BeginDownload_f( void ) {
 
 	downloadsize = FS_LoadFileEx( filename, NULL, FS_FLAG_RAW );
 	
-	if( downloadsize == -1 || downloadsize == 0
+	if( downloadsize == INVALID_LENGTH || downloadsize == 0
 		// special check for maps, if it came from a pak file, don't allow
 		// download  ZOID
 		|| ( allow == allow_download_maps

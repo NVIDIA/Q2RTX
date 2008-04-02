@@ -115,22 +115,22 @@ neterr_t Netchan_OutOfBandPrint( netsrc_t sock, const netadr_t *address,
 {
 	va_list		argptr;
 	char        buffer[MAX_PACKETLEN_DEFAULT];
-	int			length;
+	size_t		len;
 
     // write the packet header
 	*( uint32_t * )buffer = 0xffffffff;
 	
 	va_start( argptr, format );
-	length = Q_vsnprintf( buffer + 4, sizeof( buffer ) - 4, format, argptr );
+	len = Q_vsnprintf( buffer + 4, sizeof( buffer ) - 4, format, argptr );
 	va_end( argptr );
 
     // send the datagram
-	return NET_SendPacket( sock, address, length + 4, buffer );
+	return NET_SendPacket( sock, address, len + 4, buffer );
 }
 
 // ============================================================================
 
-static int NetchanOld_TransmitNextFragment( netchan_t *netchan ) {
+static size_t NetchanOld_TransmitNextFragment( netchan_t *netchan ) {
 	Com_Error( ERR_FATAL, "NetchanOld_TransmitNextFragment: not implemented" );
 	return 0;
 }
@@ -145,7 +145,7 @@ transmition / retransmition of the reliable messages.
 A 0 length will still generate a packet and deal with the reliable messages.
 ================
 */
-static int NetchanOld_Transmit( netchan_t *netchan, int length, const byte *data ) {
+static size_t NetchanOld_Transmit( netchan_t *netchan, size_t length, const void *data ) {
 	netchan_old_t *chan = ( netchan_old_t * )netchan;
 	sizebuf_t	send;
 	byte		send_buf[MAX_PACKETLEN];
@@ -158,7 +158,7 @@ static int NetchanOld_Transmit( netchan_t *netchan, int length, const byte *data
 		netchan->fatal_error = qtrue;
 		Com_WPrintf( "%s: outgoing message overflow\n",
             NET_AdrToString( &netchan->remote_address ) );
-		return -1;
+		return 0;
 	}
 
 	send_reliable = qfalse;
@@ -218,7 +218,7 @@ static int NetchanOld_Transmit( netchan_t *netchan, int length, const byte *data
             NET_AdrToString( &netchan->remote_address ) );
 
 	if( showpackets->integer ) {
-        Com_Printf( "send %4i : s=%i ack=%i rack=%i",
+        Com_Printf( "send %4"PRIz" : s=%d ack=%d rack=%d",
             send.cursize,
             netchan->outgoing_sequence - 1,
             netchan->incoming_sequence,
@@ -233,11 +233,10 @@ static int NetchanOld_Transmit( netchan_t *netchan, int length, const byte *data
 	ret = NET_SendPacket( netchan->sock, &netchan->remote_address,
         send.cursize, send.data );
 	if( ret == NET_ERROR ) {
-		return -1;
+		return 0;
 	}
 
 	return send.cursize;
-
 }
 
 /*
@@ -274,13 +273,13 @@ static qboolean NetchanOld_Process( netchan_t *netchan ) {
 	sequence_ack &= ~( 1 << 31 );	
 
 	if( showpackets->integer ) {
-        Com_Printf( "recv %4i : s=%i ack=%i rack=%i",
+        Com_Printf( "recv %4"PRIz" : s=%d ack=%d rack=%d",
             msg_read.cursize,
             sequence,
             sequence_ack,
             reliable_ack );
 		if( reliable_message ) {
-			Com_Printf( " reliable=%i", chan->incoming_reliable_sequence ^ 1 );
+			Com_Printf( " reliable=%d", chan->incoming_reliable_sequence ^ 1 );
         }
         Com_Printf( "\n" );
 	}
@@ -358,7 +357,7 @@ called to open a channel to a remote system
 ==============
 */
 static netchan_t *NetchanOld_Setup( netsrc_t sock, const netadr_t *adr,
-        int qport, int maxpacketlen )
+        int qport, size_t maxpacketlen )
 {
 	netchan_old_t *chan;
 	netchan_t *netchan;
@@ -397,14 +396,14 @@ static netchan_t *NetchanOld_Setup( netsrc_t sock, const netadr_t *adr,
 NetchanNew_TransmitNextFragment
 ================
 */
-static int NetchanNew_TransmitNextFragment( netchan_t *netchan ) {
+static size_t NetchanNew_TransmitNextFragment( netchan_t *netchan ) {
 	netchan_new_t *chan = ( netchan_new_t * )netchan;
 	sizebuf_t	send;
 	byte		send_buf[MAX_PACKETLEN];
 	qboolean	send_reliable;
 	uint32_t	w1, w2;
 	uint16_t	offset;
-	int			fragment_length;
+	size_t		fragment_length;
 	qboolean	more_fragments;
 	neterr_t	ret;
 
@@ -448,8 +447,8 @@ static int NetchanNew_TransmitNextFragment( netchan_t *netchan ) {
         fragment_length );
 	
 	if( showpackets->integer ) {
-		Com_Printf( "send %4i : s=%i ack=%i rack=%i "
-                    "fragment_offset=%i more_fragments=%i",
+		Com_Printf( "send %4"PRIz" : s=%d ack=%d rack=%d "
+                    "fragment_offset=%"PRIz" more_fragments=%d",
 			send.cursize,
 			netchan->outgoing_sequence,
 			netchan->incoming_sequence,
@@ -476,7 +475,7 @@ static int NetchanNew_TransmitNextFragment( netchan_t *netchan ) {
 	ret = NET_SendPacket( netchan->sock, &netchan->remote_address,
         send.cursize, send.data );
 	if( ret == NET_ERROR ) {
-		return -1;
+		return 0;
 	}
 
 	return send.cursize;
@@ -487,9 +486,7 @@ static int NetchanNew_TransmitNextFragment( netchan_t *netchan ) {
 NetchanNew_Transmit
 ================
 */
-static int NetchanNew_Transmit( netchan_t *netchan, int length,
-        const byte *data )
-{
+static size_t NetchanNew_Transmit( netchan_t *netchan, size_t length, const void *data ) {
 	netchan_new_t *chan = ( netchan_new_t * )netchan;
 	sizebuf_t	send;
 	byte		send_buf[MAX_PACKETLEN];
@@ -502,7 +499,7 @@ static int NetchanNew_Transmit( netchan_t *netchan, int length,
 		netchan->fatal_error = qtrue;
 		Com_WPrintf( "%s: outgoing message overflow\n",
             NET_AdrToString( &netchan->remote_address ) );
-		return -1;
+		return 0;
 	}
 
 	if( netchan->fragment_pending ) {
@@ -574,13 +571,13 @@ static int NetchanNew_Transmit( netchan_t *netchan, int length,
 	SZ_Write( &send, data, length );
 
 	if( showpackets->integer ) {
-        Com_Printf( "send %4i : s=%i ack=%i rack=%i",
+        Com_Printf( "send %4"PRIz" : s=%d ack=%d rack=%d",
             send.cursize,
             netchan->outgoing_sequence - 1,
             netchan->incoming_sequence,
             chan->incoming_reliable_sequence );
 		if( send_reliable ) {
-			Com_Printf( " reliable=%i", chan->reliable_sequence );
+			Com_Printf( " reliable=%d", chan->reliable_sequence );
         }
         Com_Printf( "\n" );
 	}
@@ -589,7 +586,7 @@ static int NetchanNew_Transmit( netchan_t *netchan, int length,
 	ret = NET_SendPacket( netchan->sock, &netchan->remote_address,
         send.cursize, send.data );
 	if( ret == NET_ERROR ) {
-		return -1;
+		return 0;
 	}
 
 	return send.cursize;
@@ -605,7 +602,7 @@ static qboolean NetchanNew_Process( netchan_t *netchan ) {
 	uint32_t    sequence, sequence_ack, reliable_ack;
     qboolean    reliable_message, fragmented_message, more_fragments;
 	uint16_t	fragment_offset;
-	int			length;
+	size_t		length;
 
 // get sequence numbers		
 	MSG_BeginReading();
@@ -633,14 +630,14 @@ static qboolean NetchanNew_Process( netchan_t *netchan ) {
 	}
 
 	if( showpackets->integer ) {
-		Com_Printf( "recv %4i : s=%i ack=%i rack=%i", msg_read.cursize,
-                sequence, sequence_ack, reliable_ack );
+		Com_Printf( "recv %4"PRIz" : s=%d ack=%d rack=%d",
+            msg_read.cursize, sequence, sequence_ack, reliable_ack );
 		if( fragmented_message ) {
-			Com_Printf( " fragment_offset=%i more_fragments=%i",
-                    fragment_offset, more_fragments );
+			Com_Printf( " fragment_offset=%d more_fragments=%d",
+                fragment_offset, more_fragments );
 		}
 		if( reliable_message ) {
-			Com_Printf( " reliable=%i", chan->incoming_reliable_sequence ^ 1 );
+			Com_Printf( " reliable=%d", chan->incoming_reliable_sequence ^ 1 );
 		}
 		Com_Printf( "\n" );
 	}
@@ -774,7 +771,7 @@ NetchanNew_Setup
 ==============
 */
 static netchan_t *NetchanNew_Setup( netsrc_t sock, const netadr_t *adr,
-        int qport, int maxpacketlen )
+        int qport, size_t maxpacketlen )
 {
 	netchan_new_t *chan;
 	netchan_t *netchan;
@@ -810,7 +807,7 @@ Netchan_Setup
 ==============
 */
 netchan_t *Netchan_Setup( netsrc_t sock, netchan_type_t type,
-        const netadr_t *adr, int qport, int maxpacketlen, int protocol )
+        const netadr_t *adr, int qport, size_t maxpacketlen, int protocol )
 {
     netchan_t *netchan;
 

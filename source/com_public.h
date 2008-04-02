@@ -38,12 +38,12 @@ typedef enum cbufExecWhen_e {
 } cbufExecWhen_t;
 
 typedef void ( *xcommand_t )( void );
-typedef int ( *xmacro_t )( char *, int );
+typedef size_t ( *xmacro_t )( char *, size_t );
 typedef void ( *xcompleter_t )( struct genctx_s *, int );
 
 typedef struct genctx_s {
     const char  *partial;
-    int length;
+    size_t length;
     int argnum;
     char **matches;
     int count, size;
@@ -117,7 +117,7 @@ FILESYSTEM
 #define MAX_LISTED_FILES	4096
 
 typedef struct fsFileInfo_s {
-	int		size;
+	size_t	size;
 	time_t	ctime;
     time_t  mtime;
     char    name[1];
@@ -166,18 +166,20 @@ typedef struct fsFileInfo_s {
 #define	FS_FLAG_RAW				0x00000080
 #define	FS_FLAG_CACHE			0x00000100
 
+#define INVALID_LENGTH      ( ( size_t )-1 )
+
 typedef struct fsAPI_s {
 	void 	(*FCloseFile)( fileHandle_t f );
-	int 	(*Read)( void *buffer, int len, fileHandle_t f );
-	int 	(*Write)( const void *buffer, int len, fileHandle_t f );
-	int 	(*FOpenFile)( const char *filename, fileHandle_t *f, int mode );
+	size_t 	(*Read)( void *buffer, size_t len, fileHandle_t f );
+	size_t 	(*Write)( const void *buffer, size_t len, fileHandle_t f );
+	size_t 	(*FOpenFile)( const char *filename, fileHandle_t *f, int mode );
     void	(*FPrintf)( fileHandle_t f, const char *format, ... );
-    int     (*ReadLine)( fileHandle_t f, char *buffer, int size );
+    size_t  (*ReadLine)( fileHandle_t f, char *buffer, int size );
 	int 	(*Tell)( fileHandle_t f );
 	int 	(*RawTell)( fileHandle_t f );
-	int 	(*LoadFile)( const char *path, void **buffer );
-	int 	(*LoadFileEx)( const char *path, void **buffer, int flags );
-    void    *(*AllocTempMem)( int length );
+	size_t 	(*LoadFile)( const char *path, void **buffer );
+	size_t 	(*LoadFileEx)( const char *path, void **buffer, int flags );
+    void    *(*AllocTempMem)( size_t length );
 	void 	(*FreeFile)( void *buffer );
 	void 	**(*ListFiles)( const char *path, const char *extension, int flags, int *numFiles );
 	void 	(*FreeList)( void **list );
@@ -264,7 +266,7 @@ MODULES
 */
 
 // if api_version is different, the dll cannot be used
-#define MODULES_APIVERSION	314
+#define MODULES_APIVERSION	315
 
 typedef enum moduleQuery_e {
 	MQ_GETINFO,

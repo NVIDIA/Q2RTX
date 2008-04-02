@@ -54,13 +54,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 typedef struct {
 	byte	data[MAX_PACKETLEN];
-	int		datalen;
+	size_t	datalen;
 } loopmsg_t;
 
 typedef struct {
 	loopmsg_t	msgs[MAX_LOOPBACK];
-	int			get;
-	int			send;
+	unsigned	get;
+	unsigned	send;
 } loopback_t;
 
 cvar_t	*net_ip;
@@ -83,10 +83,10 @@ static netflag_t	net_active;
 static int          net_error;
 
 static unsigned     net_statTime;
-static int          net_rcvd;
-static int          net_sent;
-static int          net_rate_dn;
-static int          net_rate_up;
+static size_t       net_rcvd;
+static size_t       net_sent;
+static size_t       net_rate_dn;
+static size_t       net_rate_up;
 
 //=============================================================================
 
@@ -286,7 +286,7 @@ NET_LogPacket
 =============
 */
 static void NET_LogPacket( const netadr_t *address, const char *prefix,
-                           const byte *data, unsigned length )
+                           const byte *data, size_t length )
 {
 	int numRows;
 	int i, j, c;
@@ -475,12 +475,12 @@ neterr_t NET_GetPacket( netsrc_t sock ) {
 NET_SendPacket
 =============
 */
-neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, unsigned length, const void *data ) {
+neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, size_t length, const void *data ) {
 	struct sockaddr_in	addr;
     int    ret;
 
-	if( length > MAX_PACKETLEN ) {
-		Com_WPrintf( "%s: bad length: %u bytes\n", __func__, length );
+	if( length < 1 || length > MAX_PACKETLEN ) {
+		Com_WPrintf( "%s: bad length: %"PRIz" bytes\n", __func__, length );
 		return NET_ERROR;
 	}
 
@@ -892,7 +892,7 @@ neterr_t NET_Run( netstream_t *s ) {
     struct timeval tv;
     fd_set rfd, wfd, efd;
     int ret, err;
-    int length;
+    size_t length;
     byte *data;
     neterr_t result = NET_AGAIN;
 
@@ -1207,12 +1207,12 @@ qboolean NET_GetAddress( netsrc_t sock, netadr_t *adr ) {
     return qtrue;
 }
 
-static int NET_UpRate_m( char *buffer, int size ) {
-	return Com_sprintf( buffer, size, "%d", net_rate_up );
+static size_t NET_UpRate_m( char *buffer, size_t size ) {
+	return Com_sprintf( buffer, size, "%"PRIz, net_rate_up );
 }
 
-static int NET_DnRate_m( char *buffer, int size ) {
-	return Com_sprintf( buffer, size, "%d", net_rate_dn );
+static size_t NET_DnRate_m( char *buffer, size_t size ) {
+	return Com_sprintf( buffer, size, "%"PRIz, net_rate_dn );
 }
 
 /*

@@ -38,13 +38,13 @@ void    CM_FloodAreaConnections( cm_t *cm );
 
 typedef struct {
     void *base;
-    unsigned count;
+    size_t count;
 } cmlump_t;
 
 typedef struct {
     size_t size;
-    unsigned mincount;
-    unsigned maxcount;
+    size_t mincount;
+    size_t maxcount;
     const char *name;
 } lump_info_t;
 
@@ -684,7 +684,7 @@ const char *CM_LoadMapEx( cm_t *cm, const char *name, int flags, uint32_t *check
     cmlump_t         *out;
     const lump_info_t *info;
     const lump_load_t *load;
-    unsigned        length, endpos, fileofs, filelen;
+    size_t          length, endpos, fileofs, filelen;
     char            *error;
 //  char *entstring;
 //  char buffer[MAX_QPATH];

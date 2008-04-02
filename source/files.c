@@ -61,8 +61,8 @@ QUAKE FILESYSTEM
 
 typedef struct packfile_s {
 	char	*name;
-	int		filepos;
-	int		filelen;
+	size_t	filepos;
+	size_t	filelen;
 
 	struct packfile_s *hashNext;
 } packfile_t;
@@ -106,12 +106,12 @@ typedef struct fsFile_s {
 #endif
 	packfile_t	*pak;
 	qboolean unique;
-	int	length;
+	size_t	length;
 } fsFile_t;
 
 typedef struct fsLink_s {
     char *target;
-    int targetLength, nameLength;
+    size_t targlen, namelen;
     struct fsLink_s *next;
     char name[1];
 } fsLink_t;
@@ -315,39 +315,14 @@ Returns cached length for files opened for reading.
 Returns compressed length for GZIP files.
 ================
 */
-int FS_GetFileLength( fileHandle_t f ) {
-	fsFile_t *file = FS_FileForHandle( f );
-    fsFileInfo_t info;
-
-#if USE_ZLIB
-    if( file->type == FS_GZIP ) {
-        return -1;
-    }
-#endif
-
-	if( ( file->mode & FS_MODE_MASK ) == FS_MODE_READ ) {
-		return file->length;
-	}
-
-	if( file->type != FS_REAL ) {
-		Com_Error( ERR_FATAL, "%s: bad file type", __func__ );
-    }
-
-    if( !Sys_GetFileInfo( file->fp, &info ) ) {
-        return -1;
-    }
-
-	return info.size;
-}
-
-int FS_GetFileLengthNoCache( fileHandle_t f ) {
+size_t FS_GetFileLength( fileHandle_t f ) {
 	fsFile_t *file = FS_FileForHandle( f );
     fsFileInfo_t info;
 
 	switch( file->type ) {
 	case FS_REAL:
         if( !Sys_GetFileInfo( file->fp, &info ) ) {
-            return -1;
+            return INVALID_LENGTH;
         }
 	    return info.size;
 	case FS_PAK:
@@ -356,13 +331,13 @@ int FS_GetFileLengthNoCache( fileHandle_t f ) {
 	case FS_PK2:
 		return file->length;
 	case FS_GZIP:
-        return -1;
+        return INVALID_LENGTH;
+#endif
     default:
 	    Com_Error( ERR_FATAL, "%s: bad file type", __func__ );
-#endif
 	}
 
-    return -1;
+    return INVALID_LENGTH;
 }
 
 const char *FS_GetFileFullPath( fileHandle_t f ) {
@@ -449,7 +424,7 @@ FS_FOpenFileWrite
 In case of GZIP files, returns *raw* (compressed) length!
 ============
 */
-static int FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
+static size_t FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
 	FILE *fp;
 #if USE_ZLIB
 	gzFile zfp;
@@ -458,6 +433,7 @@ static int FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
 	char *modeStr;
 	fsFileType_t type;
 	unsigned mode;
+
 #ifdef _WIN32
 	// allow writing into basedir on Windows
 	if( ( file->mode & FS_PATH_MASK ) == FS_PATH_BASE ) {
@@ -496,7 +472,7 @@ static int FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
 	if( !fp ) {
 		FS_DPrintf( "%s: %s: fopen(%s): %s\n",
 			__func__, file->fullpath, modeStr, strerror( errno ) );
-		return -1;
+		return INVALID_LENGTH;
 	}
 
 #ifdef __unix__
@@ -504,7 +480,7 @@ static int FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
         FS_DPrintf( "%s: %s: couldn't get info\n",
             __func__, file->fullpath );
         fclose( fp );
-        return -1;
+        return INVALID_LENGTH;
     }
 #endif
 
@@ -518,7 +494,7 @@ static int FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
 				FS_DPrintf( "%s: %s: gzdopen(%s): %s\n",
 					__func__, file->fullpath, modeStr, strerror( errno ) );
 				fclose( fp );
-				return -1;
+				return INVALID_LENGTH;
 			}
 			file->zfp = zfp;
 			type = FS_GZIP;
@@ -541,7 +517,7 @@ static int FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
 		fseek( fp, 0, SEEK_END );
 	}
 	
-	return ftell( fp );
+	return ( size_t )ftell( fp );
 }
 
 static searchpath_t *FS_SearchPath( unsigned flags ) {
@@ -563,7 +539,7 @@ Used for streaming data out of either a pak file or
 a seperate file.
 ===========
 */
-static int FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean unique ) {
+static size_t FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean unique ) {
     searchpath_t    *search;
 	pack_t			*pak;
 	unsigned		hash;
@@ -688,7 +664,7 @@ static int FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean unique )
 						FS_DPrintf( "%s: %s: gzdopen(rb): %s\n",
                             __func__, file->fullpath, strerror( errno ) );
 						fclose( fp );
-						return -1;
+						continue;
 					}
 					file->zfp = zfp;
 					type = FS_GZIP;
@@ -708,7 +684,7 @@ static int FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean unique )
 	
 	FS_DPrintf( "%s: %s: not found\n", __func__, name );
 	
-	return -1;
+	return INVALID_LENGTH;
 }
 
 /*
@@ -728,9 +704,8 @@ FS_ReadFile
 Properly handles partial reads
 =================
 */
-int FS_Read( void *buffer, int len, fileHandle_t hFile ) {
-	int		block, remaining = len;
-	int		read = 0;
+size_t FS_Read( void *buffer, size_t len, fileHandle_t hFile ) {
+	size_t	block, remaining = len, read = 0;
 	byte	*buf = (byte *)buffer;
 	fsFile_t	*file = FS_FileForHandle( hFile );
 
@@ -758,8 +733,8 @@ int FS_Read( void *buffer, int len, fileHandle_t hFile ) {
 		if( read == 0 ) {
 			return len - remaining;
 		}
-		if( read == -1 ) {
-			Com_Error( ERR_FATAL, "FS_Read: -1 bytes read" );
+		if( read > block ) {
+			Com_Error( ERR_FATAL, "FS_Read: %"PRIz" bytes read", read );
         }
 
 		remaining -= read;
@@ -769,10 +744,10 @@ int FS_Read( void *buffer, int len, fileHandle_t hFile ) {
 	return len;
 }
 
-int FS_ReadLine( fileHandle_t f, char *buffer, int size ) {
+size_t FS_ReadLine( fileHandle_t f, char *buffer, int size ) {
 	fsFile_t	*file = FS_FileForHandle( f );
     char *s;
-    int len;
+    size_t len;
 
 	if( file->type != FS_REAL ) {
         return 0;
@@ -797,9 +772,8 @@ FS_Write
 Properly handles partial writes
 =================
 */
-int FS_Write( const void *buffer, int len, fileHandle_t hFile ) {
-	int		block, remaining = len;
-	int		write = 0;
+size_t FS_Write( const void *buffer, size_t len, fileHandle_t hFile ) {
+	size_t	block, remaining = len, write = 0;
 	byte	*buf = (byte *)buffer;
 	fsFile_t	*file = FS_FileForHandle( hFile );
 
@@ -824,8 +798,8 @@ int FS_Write( const void *buffer, int len, fileHandle_t hFile ) {
 		if( write == 0 ) {
 			return len - remaining;
 		}
-		if( write == -1 ) {
-			Com_Error( ERR_FATAL, "FS_Write: -1 bytes written" );
+		if( write > block ) {
+			Com_Error( ERR_FATAL, "FS_Write: %"PRIz" bytes written", write );
 		}
 
 		remaining -= write;
@@ -853,21 +827,21 @@ int FS_Write( const void *buffer, int len, fileHandle_t hFile ) {
 static char *FS_ExpandLinks( const char *filename ) {
     static char        buffer[MAX_OSPATH];
     fsLink_t    *l;
-    int         length;
+    size_t      length;
 
     length = strlen( filename );
     for( l = fs_links; l; l = l->next ) {
-        if( l->nameLength > length ) {
+        if( l->namelen > length ) {
             continue;
         }
-        if( !Q_stricmpn( l->name, filename, l->nameLength ) ) {
-            if( l->targetLength + length - l->nameLength >= MAX_OSPATH ) {
+        if( !Q_stricmpn( l->name, filename, l->namelen ) ) {
+            if( l->targlen + length - l->namelen >= MAX_OSPATH ) {
                 FS_DPrintf( "%s: %s: MAX_OSPATH exceeded\n", __func__, filename );
                 return ( char * )filename;
             }
-            memcpy( buffer, l->target, l->targetLength );
-            memcpy( buffer + l->targetLength, filename + l->nameLength,
-                length - l->nameLength + 1 );
+            memcpy( buffer, l->target, l->targlen );
+            memcpy( buffer + l->targlen, filename + l->namelen,
+                length - l->namelen + 1 );
             FS_DPrintf( "%s: %s --> %s\n", __func__, filename, buffer );
             return buffer;
         }
@@ -881,10 +855,10 @@ static char *FS_ExpandLinks( const char *filename ) {
 FS_FOpenFile
 ============
 */
-int FS_FOpenFile( const char *name, fileHandle_t *f, int mode ) {
+size_t FS_FOpenFile( const char *name, fileHandle_t *f, int mode ) {
 	fsFile_t	*file;
 	fileHandle_t hFile;
-	int			ret = -1;
+	size_t		ret = INVALID_LENGTH;
 
 	if( !name || !f ) {
 		Com_Error( ERR_FATAL, "FS_FOpenFile: NULL" );
@@ -893,7 +867,7 @@ int FS_FOpenFile( const char *name, fileHandle_t *f, int mode ) {
 	*f = 0;
 
 	if( !fs_searchpaths ) {
-		return -1; // not yet initialized
+		return ret; // not yet initialized
 	}
 
     if( *name == '/' ) {
@@ -906,7 +880,7 @@ int FS_FOpenFile( const char *name, fileHandle_t *f, int mode ) {
 
 	if( !FS_ValidatePath( name ) ) {
 		FS_DPrintf( "FS_FOpenFile: refusing invalid path: %s\n", name );
-		return -1;
+		return ret;
 	}
 
 	// allocate new file handle
@@ -1007,8 +981,8 @@ int FS_RawTell( fileHandle_t f ) {
 // the last allocation may be easily undone
 static byte loadBuffer[MAX_LOAD_BUFFER];
 static byte *loadLast;
-static int loadSaved;
-static int loadInuse;
+static size_t loadSaved;
+static size_t loadInuse;
 static int loadStack;
 
 // for statistics
@@ -1023,11 +997,11 @@ Filenames are relative to the quake search path
 a null buffer will just return the file length without loading
 ============
 */
-int FS_LoadFileEx( const char *path, void **buffer, int flags ) {
+size_t FS_LoadFileEx( const char *path, void **buffer, int flags ) {
 	fsFile_t *file;
 	fileHandle_t f;
 	byte	*buf;
-	int		length;
+	size_t	length;
 
 	if( !path ) {
 		Com_Error( ERR_FATAL, "FS_LoadFile: NULL" );
@@ -1038,7 +1012,7 @@ int FS_LoadFileEx( const char *path, void **buffer, int flags ) {
 	}
 
 	if( !fs_searchpaths ) {
-		return -1; // not yet initialized
+		return INVALID_LENGTH; // not yet initialized
 	}
 
     if( *path == '/' ) {
@@ -1049,7 +1023,7 @@ int FS_LoadFileEx( const char *path, void **buffer, int flags ) {
 
 	if( !FS_ValidatePath( path ) ) {
 		FS_DPrintf( "FS_LoadFile: refusing invalid path: %s\n", path );
-		return -1;
+		return INVALID_LENGTH;
 	}
 
 	// allocate new file handle
@@ -1059,14 +1033,14 @@ int FS_LoadFileEx( const char *path, void **buffer, int flags ) {
 
 	// look for it in the filesystem or pack files
 	length = FS_FOpenFileRead( file, path, qfalse );
-	if( length == -1 ) {
-		return -1;
+	if( length == INVALID_LENGTH ) {
+		return length;
 	}
 
 	if( buffer ) {
 #if USE_ZLIB
         if( file->type == FS_GZIP ) {
-            length = -1; // unknown length
+            length = INVALID_LENGTH; // unknown length
         } else
 #endif
         {
@@ -1081,11 +1055,11 @@ int FS_LoadFileEx( const char *path, void **buffer, int flags ) {
 	return length;
 }
 
-int FS_LoadFile( const char *path, void **buffer ) {
+size_t FS_LoadFile( const char *path, void **buffer ) {
 	return FS_LoadFileEx( path, buffer, 0 );
 }
 
-void *FS_AllocTempMem( int length ) {
+void *FS_AllocTempMem( size_t length ) {
     byte *buf;
 
     if( loadInuse + length <= MAX_LOAD_BUFFER && !( fs_restrict_mask->integer & 16 ) ) {
@@ -1138,8 +1112,7 @@ FS_CopyFile
 qboolean FS_CopyFile( const char *src, const char *dst ) {
 	fileHandle_t hSrc, hDst;
 	byte	buffer[MAX_READ];
-	int		len;
-	int		size;
+	size_t	len, size;
 
 	FS_DPrintf( "FS_CopyFile( '%s', '%s' )\n", src, dst );
 
@@ -1246,7 +1219,7 @@ FS_FPrintf
 void FS_FPrintf( fileHandle_t f, const char *format, ... ) {
 	va_list argptr;
 	char string[MAXPRINTMSG];
-	int len;
+	size_t len;
 
 	va_start( argptr, format );
 	len = Q_vsnprintf( string, sizeof( string ), format, argptr );
@@ -1272,13 +1245,13 @@ static pack_t *FS_LoadPakFile( const char *packfile ) {
 	dpackfile_t		*dfile;
 	int				numpackfiles;
 	char			*names;
-	int				namesLength;
+	size_t			namesLength;
 	pack_t			*pack;
 	FILE			*packhandle;
 	dpackfile_t		info[MAX_FILES_IN_PACK];
 	int				hashSize;
 	unsigned		hash;
-	int				len;
+	size_t			len;
 
 	packhandle = fopen( packfile, "rb" );
 	if( !packhandle ) {
@@ -1354,9 +1327,9 @@ static pack_t *FS_LoadPakFile( const char *packfile ) {
 // parse the directory
 	for( i = 0, file = pack->files, dfile = info; i < pack->numfiles; i++, file++, dfile++ ) {
 		len = strlen( dfile->name ) + 1;
-		file->name = names;
 
-		strcpy( file->name, dfile->name );
+		file->name = memcpy( names, dfile->name, len );
+		names += len;
 
 		file->filepos = LittleLong( dfile->filepos );
 		file->filelen = LittleLong( dfile->filelen );
@@ -1364,8 +1337,6 @@ static pack_t *FS_LoadPakFile( const char *packfile ) {
 		hash = Com_HashPath( file->name, hashSize );
 		file->hashNext = pack->fileHash[hash];
 		pack->fileHash[hash] = file;
-
-		names += len;
 	}
 
 	FS_DPrintf( "%s: %d files, %d hash table entries\n",
@@ -1394,10 +1365,10 @@ static pack_t *FS_LoadZipFile( const char *packfile ) {
 	unz_global_info	zGlobalInfo;
 	unz_file_info	zInfo;
 	char			name[MAX_QPATH];
-	int				namesLength;
+	size_t			namesLength;
 	int				hashSize;
 	unsigned		hash;
-	int				len;
+	size_t			len;
 
 	zFile = unzOpen( packfile );
 	if( !zFile ) {
@@ -1560,10 +1531,10 @@ then loads and adds pak*.pak, then anything else in alphabethical order.
 static void q_printf( 1, 2 ) FS_AddGameDirectory( const char *fmt, ... ) {
     va_list argptr;
 	searchpath_t	*search;
-	int length;
+	size_t len;
 
     va_start( argptr, fmt );
-	length = Q_vsnprintf( fs_gamedir, sizeof( fs_gamedir ), fmt, argptr );
+	len = Q_vsnprintf( fs_gamedir, sizeof( fs_gamedir ), fmt, argptr );
     va_end( argptr );
 
 #ifdef _WIN32
@@ -1574,9 +1545,9 @@ static void q_printf( 1, 2 ) FS_AddGameDirectory( const char *fmt, ... ) {
 	// add the directory to the search path
 	//
 	if( !( fs_restrict_mask->integer & 1 ) ) {
-		search = FS_Malloc( sizeof( searchpath_t ) + length );
+		search = FS_Malloc( sizeof( searchpath_t ) + len );
 		search->pack = NULL;
-		memcpy( search->filename, fs_gamedir, length + 1 );
+		memcpy( search->filename, fs_gamedir, len + 1 );
 		search->next = fs_searchpaths;
 		fs_searchpaths = search;
 	}
@@ -1603,9 +1574,9 @@ static void q_printf( 1, 2 ) FS_AddGameDirectory( const char *fmt, ... ) {
 FS_CopyInfo
 =================
 */
-fsFileInfo_t *FS_CopyInfo( const char *name, int size, time_t ctime, time_t mtime ) {
+fsFileInfo_t *FS_CopyInfo( const char *name, size_t size, time_t ctime, time_t mtime ) {
 	fsFileInfo_t	*out;
-	int		        len;
+	size_t		    len;
 
 	if( !name ) {
 		return NULL;
@@ -1765,7 +1736,8 @@ void **FS_ListFiles( const char *path,
 	void **dirlist;
 	int dircount;
 	void **list;
-	int i, len, pathlen;
+	int i;
+	size_t len, pathlen;
 	char *s;
 
 	if( flags & FS_SEARCH_BYFILTER ) {
@@ -2119,7 +2091,7 @@ static void FS_WhereIs_f( void ) {
 			entry = pak->fileHash[ hash & ( pak->hashSize - 1 ) ];
 			for( ; entry; entry = entry->hashNext ) {
 				if( !Q_stricmp( entry->name, path ) ) {
-                    Com_Printf( "%s/%s (%d bytes)\n", pak->filename,
+                    Com_Printf( "%s/%s (%"PRIz" bytes)\n", pak->filename,
                         path, entry->filelen );
 	                if( Cmd_Argc() < 3 ) {
                         return;
@@ -2132,7 +2104,7 @@ static void FS_WhereIs_f( void ) {
                 search->filename, "/", path, NULL );
 			//FS_ConvertToSysPath( fullpath );
             if( Sys_GetPathInfo( fullpath, &info ) ) {
-                Com_Printf( "%s/%s (%d bytes)\n", search->filename, filename, info.size );
+                Com_Printf( "%s/%s (%"PRIz" bytes)\n", search->filename, filename, info.size );
                 if( Cmd_Argc() < 3 ) {
                     return;
                 }
@@ -2319,7 +2291,8 @@ static void FS_UnLink_f( void ) {
 }
 
 static void FS_Link_f( void ) {
-    int argc, length, count;
+    int argc, count;
+	size_t length;
     fsLink_t *l;
     char *name, *target;
 
@@ -2352,7 +2325,7 @@ static void FS_Link_f( void ) {
         length = strlen( name );
         l = FS_Malloc( sizeof( *l ) + length );
         strcpy( l->name, name );
-        l->nameLength = length;
+        l->namelen = length;
         l->next = fs_links;
         fs_links = l;
     } else {
@@ -2361,7 +2334,7 @@ static void FS_Link_f( void ) {
 
     target = Cmd_Argv( 2 );
     l->target = FS_CopyString( target );
-    l->targetLength = strlen( target );
+    l->targlen = strlen( target );
 }
 
 static void FS_FreeSearchPath( searchpath_t *path ) {

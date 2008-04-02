@@ -74,24 +74,22 @@ typedef struct {
     int clientNum;
 /* =================== */
 
-    list_t entry;
-    struct mvd_s *mvd;
-	client_t *cl;
-
-    qboolean admin;
-	unsigned begin_time;
-    int lastframe;
+    list_t          entry;
+    struct mvd_s    *mvd;
+	client_t        *cl;
+    qboolean    admin;
+	unsigned    begin_time;
 	mvd_player_t *target, *oldtarget;
-	float fov;
-    int uf;
+	float       fov;
+    int         uf;
 
 	mvd_layout_t    layout_type;
-	int             layout_time;
+	unsigned        layout_time;
     int             layout_cursor;
 
-	int floodSamples[FLOOD_SAMPLES];
-	int floodHead;
-	int floodTime;
+	unsigned    floodSamples[FLOOD_SAMPLES];
+	unsigned    floodHead;
+	unsigned    floodTime;
 
 	usercmd_t lastcmd;
 	//short delta_angles[3];
@@ -108,7 +106,7 @@ typedef struct mvd_s {
 	// demo related variables
 	fileHandle_t	demoplayback;
 	fileHandle_t	demorecording;
-    int         demoloop;
+    int             demoloop;
     string_entry_t  *demohead, *demoentry;
 
 	// connection variables
@@ -118,18 +116,18 @@ typedef struct mvd_s {
     netstream_t stream;
 	char		address[MAX_QPATH];
     char        response[MAX_NET_STRING];
-    int         responseLength;
-    int         contentLength;
+    size_t      responseLength;
+    size_t      contentLength;
     htcoding_t  contentCoding;
     int         statusCode;
     char        statusText[MAX_QPATH];
-    int         msglen;
+    size_t      msglen;
 #if USE_ZLIB
     z_stream    z;
 #endif
     fifo_t      zbuf;
-    int         framenum;
-    int         lastReceived;
+    unsigned    framenum;
+    unsigned    lastReceived;
     unsigned    waitTime, waitDelay;
 
     // game state

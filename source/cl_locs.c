@@ -44,13 +44,13 @@ LOC_Alloc
 static location_t *LOC_Alloc( const char *name ) {
 	location_t *loc;
 	char buffer[MAX_QPATH];
-	int length;
+	size_t length;
 
 	Q_ClearStr( buffer, name, sizeof( buffer ) );
 
 	length = strlen( buffer );
 	loc = Z_Malloc( sizeof( *loc ) + length );
-	strcpy( loc->name, buffer );
+	memcpy( loc->name, buffer, length + 1 );
 	List_Append( &cl_locations, &loc->entry );
 
 	return loc;
@@ -214,9 +214,9 @@ void LOC_AddLocationsToScene( void ) {
 LOC_Here_m
 ==============
 */
-static int LOC_Here_m( char *buffer, int size ) {
+static size_t LOC_Here_m( char *buffer, size_t size ) {
 	location_t *loc;
-    int ret;
+    size_t ret;
 
 	ret = Q_strncpyz( buffer, "unknown", size );
 	if( cls.state != ca_active ) {
@@ -235,7 +235,7 @@ static int LOC_Here_m( char *buffer, int size ) {
 LOC_There_m
 ==============
 */
-static int LOC_There_m( char *buffer, int size ) {
+static size_t LOC_There_m( char *buffer, size_t size ) {
 	location_t *loc;
 	vec3_t pos;
 	trace_t trace;

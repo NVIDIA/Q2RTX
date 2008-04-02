@@ -35,17 +35,17 @@ typedef struct sizebuf_s {
 	qboolean	allowoverflow;
 	qboolean	overflowed;		// set to qtrue if the buffer size failed
 	byte	*data;
-	int		maxsize;
-	int		cursize;
-	int		readcount;
-	int		bitpos;
+	size_t	maxsize;
+	size_t	cursize;
+	size_t	readcount;
+	size_t	bitpos;
 } sizebuf_t;
 
-void SZ_Init( sizebuf_t *buf, void *data, int length );
-void SZ_TagInit( sizebuf_t *buf, void *data, int length, uint32_t tag );
+void SZ_Init( sizebuf_t *buf, void *data, size_t length );
+void SZ_TagInit( sizebuf_t *buf, void *data, size_t length, uint32_t tag );
 void SZ_Clear( sizebuf_t *buf );
-void *SZ_GetSpace( sizebuf_t *buf, int length );
-void SZ_Write( sizebuf_t *buf, const void *data, int length );
+void *SZ_GetSpace( sizebuf_t *buf, size_t length );
+void SZ_Write( sizebuf_t *buf, const void *data, size_t length );
 void SZ_WriteByte( sizebuf_t *sb, int c );
 void SZ_WriteShort( sizebuf_t *sb, int c );
 void SZ_WriteLong( sizebuf_t *sb, int c );
@@ -109,7 +109,7 @@ void	MSG_WriteDeltaPlayerstate_Packet( const player_state_t *from, const player_
 void	MSG_FlushTo( sizebuf_t *dest );
 void    MSG_Printf( const char *fmt, ... ) q_printf( 1, 2 ); 
 
-static inline void MSG_WriteData( const void *data, int length ) {
+static inline void MSG_WriteData( const void *data, size_t length ) {
 	memcpy( SZ_GetSpace( &msg_write, length ), data, length );		
 }
 
@@ -122,7 +122,7 @@ int		MSG_ReadLong( void );
 float	MSG_ReadFloat( void );
 char	*MSG_ReadString( void );
 char	*MSG_ReadStringLine( void );
-char    *MSG_ReadStringLength( int *length );
+char    *MSG_ReadStringLength( size_t *length );
 float	MSG_ReadCoord( void );
 void	MSG_ReadPos( vec3_t pos );
 float	MSG_ReadAngle( void );
@@ -147,7 +147,7 @@ void MSG_ShowDeltaUsercmdBits_Enhanced( int bits );
 const char *MSG_ServerCommandString( int cmd );
 
 #define MSG_ShowSVC( cmd ) do { \
-	Com_Printf( "%3i:%s\n", msg_read.readcount - 1, \
+	Com_Printf( "%3"PRIz":%s\n", msg_read.readcount - 1, \
         MSG_ServerCommandString( cmd ) ); \
     } while( 0 )
 

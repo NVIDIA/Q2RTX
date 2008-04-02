@@ -261,7 +261,7 @@ void Sys_RunConsole( void ) {
 			case VK_TAB:
 				Sys_HideInput();
 				Prompt_CompleteCommand( &sys_con, qfalse );
-				f->cursorPos = strlen( f->text );
+				f->cursorPos = ( int )strlen( f->text );
 				Sys_ShowInput();
 				break;
 			default:
@@ -737,7 +737,7 @@ Sys_SetClipboardData
 void Sys_SetClipboardData( const char *data ) {
 	HANDLE clipdata;
 	char *cliptext;
-	int	length;
+	size_t length;
 
 	if( !data[0] ) {
 		return;
@@ -910,7 +910,7 @@ static void Sys_ListFilteredFiles(  void        **listedFiles,
                                     const char  *path,
 								    const char  *filter,
                                     int         flags,
-                                    int         length )
+                                    size_t      length )
 {
 	WIN32_FIND_DATAA	findInfo;
 	HANDLE		findHandle;
@@ -980,7 +980,7 @@ Sys_ListFiles
 void **Sys_ListFiles(   const char  *rawPath,
                         const char  *extension,
                         int         flags,
-                        int         length,
+                        size_t      length,
                         int         *numFiles )
 {
 	WIN32_FIND_DATAA	findInfo;
@@ -1154,28 +1154,28 @@ reInit:
 #if USE_DBGHELP
 
 typedef DWORD (WINAPI *SETSYMOPTIONS)( DWORD );
-typedef BOOL (WINAPI *SYMGETMODULEINFO)( HANDLE, DWORD, PIMAGEHLP_MODULE );
+typedef BOOL (WINAPI *SYMGETMODULEINFO64)( HANDLE, DWORD64, PIMAGEHLP_MODULE64 );
 typedef BOOL (WINAPI *SYMINITIALIZE)( HANDLE, PSTR, BOOL );
 typedef BOOL (WINAPI *SYMCLEANUP)( HANDLE );
-typedef BOOL (WINAPI *ENUMERATELOADEDMODULES)( HANDLE, PENUMLOADED_MODULES_CALLBACK, PVOID );
-typedef BOOL (WINAPI *STACKWALK)( DWORD, HANDLE, HANDLE, LPSTACKFRAME, PVOID,
-	PREAD_PROCESS_MEMORY_ROUTINE, PFUNCTION_TABLE_ACCESS_ROUTINE, PGET_MODULE_BASE_ROUTINE,
-	PTRANSLATE_ADDRESS_ROUTINE );
+typedef BOOL (WINAPI *ENUMERATELOADEDMODULES64)( HANDLE, PENUMLOADED_MODULES_CALLBACK64, PVOID );
+typedef BOOL (WINAPI *STACKWALK64)( DWORD, HANDLE, HANDLE, LPSTACKFRAME64, PVOID,
+	PREAD_PROCESS_MEMORY_ROUTINE64, PFUNCTION_TABLE_ACCESS_ROUTINE64, PGET_MODULE_BASE_ROUTINE64,
+	PTRANSLATE_ADDRESS_ROUTINE64 );
 typedef BOOL (WINAPI *SYMFROMADDR)( HANDLE, DWORD64, PDWORD64, PSYMBOL_INFO );
-typedef PVOID (WINAPI *SYMFUNCTIONTABLEACCESS)( HANDLE, DWORD );
-typedef DWORD (WINAPI *SYMGETMODULEBASE)( HANDLE, DWORD );
+typedef PVOID (WINAPI *SYMFUNCTIONTABLEACCESS64)( HANDLE, DWORD64 );
+typedef DWORD64 (WINAPI *SYMGETMODULEBASE64)( HANDLE, DWORD64 );
 
 typedef HINSTANCE (WINAPI *SHELLEXECUTE)( HWND, LPCSTR, LPCSTR, LPCSTR, LPCSTR, INT );
 
 PRIVATE SETSYMOPTIONS pSymSetOptions;
-PRIVATE SYMGETMODULEINFO pSymGetModuleInfo;
+PRIVATE SYMGETMODULEINFO64 pSymGetModuleInfo64;
 PRIVATE SYMINITIALIZE pSymInitialize;
 PRIVATE SYMCLEANUP pSymCleanup;
-PRIVATE ENUMERATELOADEDMODULES pEnumerateLoadedModules;
-PRIVATE STACKWALK pStackWalk;
+PRIVATE ENUMERATELOADEDMODULES64 pEnumerateLoadedModules64;
+PRIVATE STACKWALK64 pStackWalk64;
 PRIVATE SYMFROMADDR pSymFromAddr;
-PRIVATE SYMFUNCTIONTABLEACCESS pSymFunctionTableAccess;
-PRIVATE SYMGETMODULEBASE pSymGetModuleBase;
+PRIVATE SYMFUNCTIONTABLEACCESS64 pSymFunctionTableAccess64;
+PRIVATE SYMGETMODULEBASE64 pSymGetModuleBase64;
 PRIVATE SHELLEXECUTE pShellExecute;
 
 PRIVATE HANDLE processHandle, threadHandle;
@@ -1185,13 +1185,13 @@ PRIVATE FILE *crashReport;
 PRIVATE CHAR moduleName[MAX_PATH];
 
 PRIVATE BOOL CALLBACK EnumModulesCallback(
-	PSTR  ModuleName,
-	ULONG ModuleBase,
+	PTSTR ModuleName,
+	DWORD64 ModuleBase,
 	ULONG ModuleSize,
 	PVOID UserContext )
 {
-	IMAGEHLP_MODULE moduleInfo;
-	DWORD pc = ( DWORD )UserContext;
+	IMAGEHLP_MODULE64 moduleInfo;
+	DWORD64 pc = ( DWORD64 )UserContext;
 	BYTE buffer[4096];
 	PBYTE data;
 	UINT numBytes;
@@ -1213,7 +1213,7 @@ PRIVATE BOOL CALLBACK EnumModulesCallback(
 	
 	symbols = "failed";
 	moduleInfo.SizeOfStruct = sizeof( moduleInfo );
-	if( pSymGetModuleInfo( processHandle, ModuleBase, &moduleInfo ) ) {
+	if( pSymGetModuleInfo64( processHandle, ModuleBase, &moduleInfo ) ) {
 		ModuleName = moduleInfo.ModuleName;
 		switch( moduleInfo.SymType ) {
 			case SymCoff: symbols = "COFF"; break;
@@ -1224,7 +1224,7 @@ PRIVATE BOOL CALLBACK EnumModulesCallback(
 		}
 	}
 	
-	fprintf( crashReport, "%08x %08x %s (version %s, symbols %s) ",
+	fprintf( crashReport, "%p %p %s (version %s, symbols %s) ",
 		ModuleBase, ModuleBase + ModuleSize, ModuleName, version, symbols );
 	if( pc >= ModuleBase && pc < ModuleBase + ModuleSize ) {
 		strncpy( moduleName, ModuleName, sizeof( moduleName ) - 1 );
@@ -1238,19 +1238,19 @@ PRIVATE BOOL CALLBACK EnumModulesCallback(
 }
 
 PRIVATE DWORD Sys_ExceptionHandler( DWORD exceptionCode, LPEXCEPTION_POINTERS exceptionInfo ) {
-	STACKFRAME stackFrame;
+	STACKFRAME64 stackFrame;
 	PCONTEXT context;
 	SYMBOL_INFO *symbol;
 	int count, ret, i, len;
 	DWORD64 offset;
 	BYTE buffer[sizeof( SYMBOL_INFO ) + 256 - 1];
-	IMAGEHLP_MODULE moduleInfo;
+	IMAGEHLP_MODULE64 moduleInfo;
 	char path[MAX_PATH];
 	char execdir[MAX_PATH];
 	char *p;
 	HMODULE helpModule, shellModule;
 	SYSTEMTIME systemTime;
-	static char *monthNames[12] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+	static const char monthNames[12][4] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
 		"Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 	OSVERSIONINFO	vinfo;
 
@@ -1285,14 +1285,14 @@ PRIVATE DWORD Sys_ExceptionHandler( DWORD exceptionCode, LPEXCEPTION_POINTERS ex
 	} while( 0 )
 
 	GPA( SETSYMOPTIONS, SymSetOptions );
-	GPA( SYMGETMODULEINFO, SymGetModuleInfo );
+	GPA( SYMGETMODULEINFO64, SymGetModuleInfo64 );
 	GPA( SYMCLEANUP, SymCleanup );
 	GPA( SYMINITIALIZE, SymInitialize );
-	GPA( ENUMERATELOADEDMODULES, EnumerateLoadedModules );
-	GPA( STACKWALK, StackWalk );
+	GPA( ENUMERATELOADEDMODULES64, EnumerateLoadedModules64 );
+	GPA( STACKWALK64, StackWalk64 );
 	GPA( SYMFROMADDR, SymFromAddr );
-	GPA( SYMFUNCTIONTABLEACCESS, SymFunctionTableAccess );
-	GPA( SYMGETMODULEBASE, SymGetModuleBase );
+	GPA( SYMFUNCTIONTABLEACCESS64, SymFunctionTableAccess64 );
+	GPA( SYMGETMODULEBASE64, SymGetModuleBase64 );
 
 	pSymSetOptions( SYMOPT_LOAD_ANYTHING|SYMOPT_DEBUG|SYMOPT_FAIL_CRITICAL_ERRORS );
 	processHandle = GetCurrentProcess();
@@ -1344,45 +1344,76 @@ PRIVATE DWORD Sys_ExceptionHandler( DWORD exceptionCode, LPEXCEPTION_POINTERS ex
 	context = exceptionInfo->ContextRecord;
 
 	fprintf( crashReport, "\nLoaded modules:\n" );
-	pEnumerateLoadedModules( processHandle, EnumModulesCallback, ( PVOID )context->Eip );
+	pEnumerateLoadedModules64( processHandle, EnumModulesCallback,
+#ifdef _WIN64
+		( PVOID )context->Rip
+#else
+		( PVOID )context->Eip
+#endif
+	);
 
 	fprintf( crashReport, "\nException information:\n" );
 	fprintf( crashReport, "Code: %08x\n", exceptionCode );
-	fprintf( crashReport, "Address: %08x (%s)\n",
-		context->Eip, moduleName );
+	fprintf( crashReport, "Address: %p (%s)\n",
+#ifdef _WIN64
+		context->Rip,
+#else
+		context->Eip,
+#endif
+		moduleName );
 
 	fprintf( crashReport, "\nThread context:\n" );
-	fprintf( crashReport, "EIP: %08x EBP: %08x ESP: %08x\n",
+#ifdef _WIN64
+	fprintf( crashReport, "RIP: %p RBP: %p RSP: %p\n",
+		context->Rip, context->Rbp, context->Rsp );
+	fprintf( crashReport, "RAX: %p RBX: %p RCX: %p\n",
+		context->Rax, context->Rbx, context->Rcx );
+	fprintf( crashReport, "RDX: %p RSI: %p RDI: %p\n",
+		context->Rdx, context->Rsi, context->Rdi );
+#else
+	fprintf( crashReport, "EIP: %p EBP: %p ESP: %p\n",
 		context->Eip, context->Ebp, context->Esp );
-	fprintf( crashReport, "EAX: %08x EBX: %08x ECX: %08x\n",
+	fprintf( crashReport, "EAX: %p EBX: %p ECX: %p\n",
 		context->Eax, context->Ebx, context->Ecx );
-	fprintf( crashReport, "EDX: %08x ESI: %08x EDI: %08x\n",
+	fprintf( crashReport, "EDX: %p ESI: %p EDI: %p\n",
 		context->Edx, context->Esi, context->Edi );
+#endif
 
 	memset( &stackFrame, 0, sizeof( stackFrame ) );
+#ifdef _WIN64
+	stackFrame.AddrPC.Offset = context->Rip;
+	stackFrame.AddrFrame.Offset = context->Rbp;
+	stackFrame.AddrStack.Offset = context->Rsp;
+#else
 	stackFrame.AddrPC.Offset = context->Eip;
-	stackFrame.AddrPC.Mode = AddrModeFlat;
 	stackFrame.AddrFrame.Offset = context->Ebp;
-	stackFrame.AddrFrame.Mode = AddrModeFlat;
 	stackFrame.AddrStack.Offset = context->Esp;
+#endif
+	stackFrame.AddrPC.Mode = AddrModeFlat;
+	stackFrame.AddrFrame.Mode = AddrModeFlat;
 	stackFrame.AddrStack.Mode = AddrModeFlat;	
 
 	fprintf( crashReport, "\nStack trace:\n" );
 	count = 0;
 	symbol = ( SYMBOL_INFO * )buffer;
-	symbol->SizeOfStruct = sizeof( *symbol );
+	symbol->SizeOfStruct = sizeof( SYMBOL_INFO );
 	symbol->MaxNameLen = 256;
-	while( pStackWalk( IMAGE_FILE_MACHINE_I386,
+	while( pStackWalk64(
+#ifdef _WIN64
+		IMAGE_FILE_MACHINE_AMD64,
+#else
+		IMAGE_FILE_MACHINE_I386,
+#endif
 		processHandle,
 		threadHandle,
 		&stackFrame,
 		context,
 		NULL,
-		pSymFunctionTableAccess,
-		pSymGetModuleBase,
+		pSymFunctionTableAccess64,
+		pSymGetModuleBase64,
 		NULL ) )
 	{
-		fprintf( crashReport, "%d: %08x %08x %08x %08x ",
+		fprintf( crashReport, "%d: %p %p %p %p ",
 			count,
 			stackFrame.Params[0],
 			stackFrame.Params[1],
@@ -1390,7 +1421,7 @@ PRIVATE DWORD Sys_ExceptionHandler( DWORD exceptionCode, LPEXCEPTION_POINTERS ex
 			stackFrame.Params[3] );
 
 		moduleInfo.SizeOfStruct = sizeof( moduleInfo );
-		if( pSymGetModuleInfo( processHandle, stackFrame.AddrPC.Offset, &moduleInfo ) ) {
+		if( pSymGetModuleInfo64( processHandle, stackFrame.AddrPC.Offset, &moduleInfo ) ) {
 			if( moduleInfo.SymType != SymNone && moduleInfo.SymType != SymExport &&
 				pSymFromAddr( processHandle, stackFrame.AddrPC.Offset, &offset, symbol ) )
 			{

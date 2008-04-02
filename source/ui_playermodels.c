@@ -140,7 +140,7 @@ void PlayerModel_Load( void ) {
 
 		// verify the existence of tris.md2
 		Q_concat( scratch, sizeof( scratch ), "players/", dirnames[i], "/tris.md2", NULL );
-		if( fs.LoadFile( scratch, NULL ) < 1 ) {
+		if( fs.LoadFile( scratch, NULL ) == INVALID_LENGTH ) {
 			continue;
 		}
 

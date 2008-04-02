@@ -301,7 +301,7 @@ sfxcache_t *S_LoadSound (sfx_t *s) {
 	byte	*data;
 	wavinfo_t	info;
 	sfxcache_t	*sc;
-	int		size;
+	size_t		size;
 	char	*name;
 
 	if (s->name[0] == '*')

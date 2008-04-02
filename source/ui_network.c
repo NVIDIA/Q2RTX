@@ -72,9 +72,9 @@ static const int connectionValues[][2] = {
 static const int numConnectionValues = sizeof( connectionValues ) / sizeof( connectionValues[0] );
 
 static void SetInitialConnectionParams( void ) {
-	IF_InitText( &m_network.rate.field, 6, 6, cvar.VariableString( "rate" ) );
-	IF_InitText( &m_network.maxpackets.field, 6, 6, cvar.VariableString( "cl_maxpackets" ) );
-	IF_InitText( &m_network.maxfps.field, 6, 6, cvar.VariableString( "cl_maxfps" ) );
+	IF_Init( &m_network.rate.field, 6, 6, cvar.VariableString( "rate" ) );
+	IF_Init( &m_network.maxpackets.field, 6, 6, cvar.VariableString( "cl_maxpackets" ) );
+	IF_Init( &m_network.maxfps.field, 6, 6, cvar.VariableString( "cl_maxfps" ) );
 }
 
 static void ConnectionCallback( void  ) {

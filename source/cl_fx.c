@@ -82,14 +82,15 @@ void CL_RunLightStyles( void ) {
 
 void CL_SetLightstyle( int index ) {
 	char	*s;
-	int		length, i;
+	size_t	length;
+	int		i;
 	clightstyle_t	*dest;
 
 	s = cl.configstrings[index + CS_LIGHTS];
 
 	length = strlen( s );
 	if( length >= MAX_QPATH )
-		Com_Error( ERR_DROP, "CL_SetLightstyle: length=%i", length );
+		Com_Error( ERR_DROP, "CL_SetLightstyle: bad length" );
 
 	dest = &cl_lightstyles[index];
 	dest->length = length;

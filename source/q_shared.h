@@ -40,7 +40,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #else
 #define q_sentinel
 #endif
-#define q_packed            __attribute__((packed))
 
 #define q_likely( x )         __builtin_expect( !!(x), 1 )
 #define q_unlikely( x )       __builtin_expect( !!(x), 0 )
@@ -455,7 +454,7 @@ static inline int Q_charhex( int c ) {
 
 // portable case insensitive compare
 int Q_strcasecmp( const char *s1, const char *s2 );
-int Q_strncasecmp( const char *s1, const char *s2, int n );
+int Q_strncasecmp( const char *s1, const char *s2, size_t n );
 
 #define Q_stricmp	Q_strcasecmp
 #define Q_stricmpn	Q_strncasecmp
@@ -487,11 +486,11 @@ unsigned Com_HashString( const char *string, int hashSize );
 unsigned Com_HashPath( const char *string, int hashSize );
 
 // buffer safe operations
-int Q_strncpyz( char *dest, const char *src, int destsize );
-int Q_strcat( char *dest, int destsize, const char *src );
-int Q_concat( char *buffer, int size, ... ) q_sentinel;
-int Com_sprintf( char *dest, int destsize, const char *fmt, ... ) q_printf( 3, 4 );
-int Q_vsnprintf( char *dest, int destsize, const char *fmt, va_list argptr );
+size_t Q_strncpyz( char *dest, const char *src, size_t destsize );
+size_t Q_strcat( char *dest, size_t destsize, const char *src );
+size_t Q_concat( char *dest, size_t destsize, ... ) q_sentinel;
+size_t Com_sprintf( char *dest, size_t destsize, const char *fmt, ... ) q_printf( 3, 4 );
+size_t Q_vsnprintf( char *dest, size_t destsize, const char *fmt, va_list argptr );
 
 void Com_PageInMemory (void *buffer, int size);
 

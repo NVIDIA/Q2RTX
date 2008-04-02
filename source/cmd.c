@@ -75,7 +75,7 @@ Adds command text at the end of the buffer
 ============
 */
 void Cbuf_AddTextEx( cmdbuf_t *buf, const char *text ) {
-	int		l = strlen( text );
+	size_t l = strlen( text );
 
 	if( buf->cursize + l > buf->maxsize ) {
 		Com_WPrintf( "Cbuf_AddText: overflow\n" );
@@ -106,7 +106,7 @@ Adds a \n to the text.
 ============
 */
 void Cbuf_InsertTextEx( cmdbuf_t *buf, const char *text ) {
-	int		l = strlen( text );
+	size_t l = strlen( text );
 
 // add the entire text of the file
     if( !l ) {
@@ -255,7 +255,7 @@ char *Cmd_AliasCommand( const char *name ) {
 void Cmd_AliasSet( const char *name, const char *cmd ) {
 	cmdalias_t	*a;
 	unsigned	hash;
-    int         len;
+    size_t      len;
 
 	// if the alias already exists, reuse it
 	a = Cmd_AliasFind( name );
@@ -518,10 +518,10 @@ static	char		*cmd_null_string = "";
 
 /* complete command string, quotes preserved */
 static	char		cmd_string[MAX_STRING_CHARS];
-static  int         cmd_string_len;
+static  size_t      cmd_string_len;
 
 /* offsets of individual tokens in cmd_string */
-static	int			cmd_offsets[MAX_STRING_TOKENS];
+static	size_t		cmd_offsets[MAX_STRING_TOKENS];
 
 /* sequence of NULL-terminated tokens, each cmd_argv[] points here */
 static	char		cmd_data[MAX_STRING_CHARS];
@@ -532,7 +532,7 @@ int			cmd_optind;
 char        *cmd_optarg;
 char        *cmd_optopt;
 
-int Cmd_ArgOffset( int arg ) {
+size_t Cmd_ArgOffset( int arg ) {
 	if( arg < 0 ) {
 		return 0;
 	}
@@ -542,12 +542,12 @@ int Cmd_ArgOffset( int arg ) {
 	return cmd_offsets[arg];	
 }
 
-int Cmd_FindArgForOffset( int offset ) {
+int Cmd_FindArgForOffset( size_t offset ) {
 	int i;
  
 	for( i = 1; i < cmd_argc; i++ ) {
 		if( offset < cmd_offsets[i] ) {
-			return i - 1;
+			break;
 		}
 	}
 	return i - 1;	
@@ -661,7 +661,7 @@ char *Cmd_ArgsFrom( int from ) {
 }
 
 char *Cmd_RawArgsFrom( int from ) {
-	int offset;
+	size_t offset;
 
 	if( from < 0 || from >= cmd_argc ) {
 		return cmd_null_string;
@@ -843,7 +843,8 @@ Cmd_MacroExpandString
 ======================
 */
 char *Cmd_MacroExpandString( const char *text, qboolean aliasHack ) {
-	int		i, j, count, len;
+	size_t	i, j, len;
+	int		count;
 	qboolean	inquote;
 	char	*scan, *start;
 	static	char	expanded[MAX_STRING_CHARS];
@@ -1427,7 +1428,7 @@ static void Cmd_Complete_f( void ) {
     cmd_function_t *cmd;
     char *name;
     unsigned hash;
-    int len;
+    size_t len;
 
     if( cmd_argc < 2 ) {
         Com_Printf( "Usage: %s <command>", cmd_argv[0] );

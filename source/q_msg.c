@@ -145,7 +145,7 @@ MSG_WriteString
 =============
 */
 void MSG_WriteString( const char *string ) {
-	int length;
+	size_t length;
 
 	if( !string ) {
 		MSG_WriteByte( 0 );
@@ -154,7 +154,7 @@ void MSG_WriteString( const char *string ) {
 
 	length = strlen( string );
 	if( length >= MAX_NET_STRING ) {
-		Com_WPrintf( "MSG_WriteString: overflow: %d chars", length );
+		Com_WPrintf( "%s: overflow: %"PRIz" chars", __func__, length );
 		MSG_WriteByte( 0 );
 		return;
 	}
@@ -297,7 +297,8 @@ MSG_WriteBits
 =============
 */
 void MSG_WriteBits( int value, int bits ) {
-	int i, bitpos;
+	int i;
+	size_t bitpos;
 
 	if( bits == 0 || bits < -31 || bits > 32 ) {
 		Com_Error( ERR_FATAL, "MSG_WriteBits: bad bits: %d", bits );
@@ -1402,13 +1403,13 @@ void MSG_FlushTo( sizebuf_t *dest ) {
 void MSG_Printf( const char *fmt, ... ) {
     char buffer[MAX_STRING_CHARS];
 	va_list		argptr;
-	int			length;
+	size_t		len;
 
 	va_start( argptr, fmt );
-	length = Q_vsnprintf( buffer, sizeof( buffer ), fmt, argptr );
+	len = Q_vsnprintf( buffer, sizeof( buffer ), fmt, argptr );
 	va_end( argptr );
 
-    MSG_WriteData( buffer, length );
+    MSG_WriteData( buffer, len );
 }
 
 //============================================================
@@ -1501,7 +1502,7 @@ int MSG_ReadLong ( void )
 	return c;
 }
 
-char *MSG_ReadStringLength( int *length ) {
+char *MSG_ReadStringLength( size_t *length ) {
 	static char	string[2][MAX_NET_STRING];
 	static int index;
 	char	*s;
@@ -1724,7 +1725,8 @@ void MSG_ReadDeltaUsercmd_Hacked( const usercmd_t *from, usercmd_t *to ) {
 }
 
 int MSG_ReadBits( int bits ) {
-	int i, get, bitpos;
+	int i, get;
+	size_t bitpos;
 	qboolean sgn;
 	int value;
 
@@ -2712,14 +2714,14 @@ const char *MSG_ServerCommandString( int cmd ) {
 
 //===========================================================================
 
-void SZ_TagInit( sizebuf_t *buf, void *data, int length, uint32_t tag ) {
+void SZ_TagInit( sizebuf_t *buf, void *data, size_t length, uint32_t tag ) {
 	memset( buf, 0, sizeof( *buf ) );
 	buf->data = data;
 	buf->maxsize = length;
 	buf->tag = tag;
 }
 
-void SZ_Init( sizebuf_t *buf, void *data, int length ) {
+void SZ_Init( sizebuf_t *buf, void *data, size_t length ) {
 	memset( buf, 0, sizeof( *buf ) );
 	buf->data = data;
 	buf->maxsize = length;
@@ -2733,15 +2735,19 @@ void SZ_Clear( sizebuf_t *buf ) {
 	buf->overflowed = qfalse;
 }
 
-void *SZ_GetSpace( sizebuf_t *buf, int length ) {
+void *SZ_GetSpace( sizebuf_t *buf, size_t length ) {
 	void	*data;
 	
 	if( buf->cursize + length > buf->maxsize ) {
 		if( !buf->allowoverflow ) {
-			Com_Error( ERR_FATAL, "SZ_GetSpace: %#x: overflow without allowoverflow set", buf->tag );
+			Com_Error( ERR_FATAL,
+                "%s: %#x: overflow without allowoverflow set",
+                __func__, buf->tag );
 		}
 		if( length > buf->maxsize ) {
-			Com_Error( ERR_FATAL, "SZ_GetSpace: %#x: %d is > full buffer size", buf->tag, length );
+			Com_Error( ERR_FATAL,
+                "%s: %#x: %"PRIz" is > full buffer size %"PRIz"",
+                __func__, buf->tag, length, buf->maxsize );
 		}
 
 		Com_DPrintf( "SZ_GetSpace: %#x: overflow\n", buf->tag );
@@ -2756,7 +2762,7 @@ void *SZ_GetSpace( sizebuf_t *buf, int length ) {
 	return data;
 }
 
-void SZ_Write( sizebuf_t *buf, const void *data, int length ) {
+void SZ_Write( sizebuf_t *buf, const void *data, size_t length ) {
 	memcpy( SZ_GetSpace( buf, length ), data, length );		
 }
 
@@ -2792,7 +2798,7 @@ void SZ_WritePos( sizebuf_t *sb, const vec3_t pos ) {
 }
 
 void SZ_WriteString( sizebuf_t *sb, const char *string ) {
-	int length;
+	size_t length;
 	int c;
 
 	if( !string ) {
@@ -2802,7 +2808,7 @@ void SZ_WriteString( sizebuf_t *sb, const char *string ) {
 
 	length = strlen( string );
 	if( length > MAX_NET_STRING - 1 ) {
-		Com_WPrintf( "SZ_WriteString: overflow: %d chars", length );
+		Com_WPrintf( "%s: overflow: %"PRIz" chars", __func__, length );
 		SZ_WriteByte( sb, 0 );
 		return;
 	}

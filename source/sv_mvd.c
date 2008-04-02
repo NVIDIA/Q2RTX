@@ -315,7 +315,7 @@ static void SV_DummyExecuteString( const char *line ) {
 }
 
 static void SV_DummyAddMessage( client_t *client, byte *data,
-							  int length, qboolean reliable )
+							  size_t length, qboolean reliable )
 {
     tcpClient_t *t;
 
@@ -488,7 +488,8 @@ into the multicast buffer.
 */
 void SV_MvdBeginFrame( void ) {
 	int i, j;
-	int index, length;
+	int index;
+	size_t length;
     client_t *client;
     qboolean found;
 
@@ -544,7 +545,7 @@ void SV_MvdBeginFrame( void ) {
             }
         }
 
-        Com_Printf( "MVD stream resumed, flushed %d bytes.\n",
+        Com_Printf( "MVD stream resumed, flushed %"PRIz" bytes.\n",
             sv.mvd.message.cursize );
         // will be subsequently written to disk by SV_MvdEndFrame
     }
@@ -589,13 +590,13 @@ void SV_MvdEndFrame( void ) {
 
     // check if frame fits
     if( sv.mvd.message.cursize + msg_write.cursize > MAX_MSGLEN ) {
-        Com_WPrintf( "Dumping MVD frame: %d bytes\n", msg_write.cursize );
+        Com_WPrintf( "Dumping MVD frame: %"PRIz" bytes\n", msg_write.cursize );
         SZ_Clear( &msg_write );
     }
 
     // check if unreliable datagram fits
     if( sv.mvd.message.cursize + msg_write.cursize + sv.mvd.datagram.cursize > MAX_MSGLEN ) {
-        Com_WPrintf( "Dumping MVD datagram: %d bytes\n", sv.mvd.datagram.cursize );
+        Com_WPrintf( "Dumping MVD datagram: %"PRIz" bytes\n", sv.mvd.datagram.cursize );
 	    SZ_Clear( &sv.mvd.datagram );
     }
 
@@ -655,7 +656,7 @@ static void SV_MvdEmitGamestate( void ) {
 	int			i, j;
     player_state_t  *ps;
 	entity_state_t	*es;
-    int         length;
+    size_t      length;
     uint16_t    *patch;
 	int flags, extra, portalbytes;
     byte portalbits[MAX_MAP_AREAS/8];

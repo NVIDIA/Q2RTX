@@ -34,24 +34,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 IF_Init
 ================
 */
-void IF_Init( inputField_t *field, int visibleChars, int maxChars ) {
-	memset( field, 0, sizeof( *field ) );
-	
-	clamp( maxChars, 1, sizeof( field->text ) );
-	clamp( visibleChars, 1, maxChars );
-
-	field->maxChars = maxChars;
-	field->visibleChars = visibleChars;
-}
-
-/*
-================
-IF_InitText
-================
-*/
-void IF_InitText( inputField_t *field, int visibleChars, int maxChars,
-        const char *text )
-{
+void IF_Init( inputField_t *field, size_t visibleChars, size_t maxChars, const char *text ) {
 	memset( field, 0, sizeof( *field ) );
 	
 	clamp( maxChars, 1, sizeof( field->text ) );
@@ -60,7 +43,9 @@ void IF_InitText( inputField_t *field, int visibleChars, int maxChars,
 	field->maxChars = maxChars;
 	field->visibleChars = visibleChars;
 
-	field->cursorPos = Q_strncpyz( field->text, text, sizeof( field->text ) );
+	if( text ) {
+		field->cursorPos = Q_strncpyz( field->text, text, maxChars );
+	}
 }
 
 /*
@@ -111,7 +96,7 @@ qboolean IF_KeyEvent( inputField_t *field, int key ) {
 	}
 
     if( key == 'w' && keys.IsDown( K_CTRL ) ) {
-        int oldpos = field->cursorPos;
+        size_t oldpos = field->cursorPos;
 
         // kill trailing whitespace
 		while( field->cursorPos > 0 && field->text[field->cursorPos] <= 32 ) {
@@ -241,7 +226,8 @@ Returns x offset of the rightmost character drawn.
 */
 int IF_Draw( inputField_t *field, int x, int y, int flags, qhandle_t hFont ) {
 	char *text;
-	int cursorPos, offset, ret;
+	size_t cursorPos, offset;
+	int ret;
 	int cw, ch;
 
 	if( field->cursorPos > sizeof( field->text ) - 1 ) {

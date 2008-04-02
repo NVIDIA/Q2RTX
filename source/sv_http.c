@@ -275,7 +275,7 @@ static const uriEntry_t rootURIs[] = {
 
 void SV_HttpHandle( const uriEntry_t *e, const char *uri ) {
     const char *p;
-    int length;
+    size_t length;
 
     if( *uri == '/' ) {
         uri++;
@@ -301,7 +301,7 @@ void SV_HttpHandle( const uriEntry_t *e, const char *uri ) {
     }
 }
 
-void SV_HttpWrite( tcpClient_t *client, void *data, int length ) {
+void SV_HttpWrite( tcpClient_t *client, void *data, size_t len ) {
     fifo_t *fifo = &client->stream.send;
 
     if( client->state <= cs_zombie ) {
@@ -318,26 +318,26 @@ void SV_HttpWrite( tcpClient_t *client, void *data, int length ) {
         }
 
         z->next_in = data;
-        z->avail_in = length;
+        z->avail_in = ( uInt )len;
 
         while( z->avail_in ) {
-            data = FIFO_Reserve( fifo, &length );
-            if( !length ) {
+            data = FIFO_Reserve( fifo, &len );
+            if( !len ) {
                 SV_HttpDrop( client, "overflowed" );
                 return;
             }
 
             z->next_out = data;
-            z->avail_out = length;
+            z->avail_out = ( uInt )len;
 
             if( deflate( z, param ) != Z_OK ) {
                 SV_HttpDrop( client, "deflate failed" );
                 return;
             }
 
-            length -= z->avail_out;
-            if( length > 0 ) {
-                FIFO_Commit( fifo, length );
+            len -= z->avail_out;
+            if( len > 0 ) {
+                FIFO_Commit( fifo, len );
                 client->noflush = 0;
             }
         }
@@ -345,7 +345,7 @@ void SV_HttpWrite( tcpClient_t *client, void *data, int length ) {
     }
 #endif
 
-    if( !FIFO_TryWrite( fifo, data, length ) ) {
+    if( !FIFO_TryWrite( fifo, data, len ) ) {
         SV_HttpDrop( client, "overflowed" );
     }
 }
@@ -355,7 +355,8 @@ void SV_HttpFinish( tcpClient_t *client ) {
     fifo_t *fifo = &client->stream.send;
     z_streamp z = &client->z;
     byte *data;
-    int length, ret;
+    size_t len;
+	int ret;
 
     if( client->state <= cs_zombie ) {
         return;
@@ -369,18 +370,18 @@ void SV_HttpFinish( tcpClient_t *client ) {
     z->avail_in = 0;
 
     do {
-        data = FIFO_Reserve( fifo, &length );
-        if( !length ) {
+        data = FIFO_Reserve( fifo, &len );
+        if( !len ) {
             SV_HttpDrop( client, "overflowed" );
             return;
         }
 
         z->next_out = data;
-        z->avail_out = length;
+        z->avail_out = ( uInt )len;
 
         ret = deflate( z, Z_FINISH );
 
-        FIFO_Commit( fifo, length - z->avail_out );
+        FIFO_Commit( fifo, len - z->avail_out );
     } while( ret == Z_OK );
 
     if( ret != Z_STREAM_END ) {
@@ -392,17 +393,17 @@ void SV_HttpFinish( tcpClient_t *client ) {
 void SV_HttpPrintf( const char *fmt, ... ) {
     char buffer[MAX_STRING_CHARS];
 	va_list		argptr;
-    int         length;
+    size_t      len;
 
     if( http_client->state <= cs_zombie ) {
         return;
     }
 
 	va_start( argptr, fmt );
-	length = Q_vsnprintf( buffer, sizeof( buffer ), fmt, argptr );
+	len = Q_vsnprintf( buffer, sizeof( buffer ), fmt, argptr );
 	va_end( argptr );
 
-    if( FIFO_Write( &http_client->stream.send, buffer, length ) != length ) {
+    if( FIFO_Write( &http_client->stream.send, buffer, len ) != len ) {
         SV_HttpDrop( http_client, "overflowed" );
     }
 }
@@ -529,7 +530,7 @@ static qboolean SV_HttpParseRequest( tcpClient_t *client ) {
     char *p, *token;
     const char *line;
     byte *b, *data;
-    int length;
+    size_t length;
     int major, minor;
 
     while( 1 ) {

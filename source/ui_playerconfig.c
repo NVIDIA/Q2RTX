@@ -272,7 +272,7 @@ qboolean PlayerConfig_MenuInit( void ) {
 	m_playerConfig.nameField.generic.type = MTYPE_FIELD;
 	m_playerConfig.nameField.generic.flags = QMF_HASFOCUS;
 	m_playerConfig.nameField.generic.name = "name";
-	IF_InitText( &m_playerConfig.nameField.field, 16, 16,
+	IF_Init( &m_playerConfig.nameField.field, 16, 16,
 		cvar.VariableString( "name" ) );
 
 	m_playerConfig.modelBox.generic.type = MTYPE_SPINCONTROL;

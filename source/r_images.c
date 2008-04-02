@@ -68,7 +68,7 @@ Image_LoadPCX
 void Image_LoadPCX( const char *filename, byte **pic, byte *palette, int *width, int *height ) {
 	byte	*raw, *end;
 	pcx_t	*pcx;
-	unsigned len, x, y, w, h;
+	size_t  len, x, y, w, h;
 	int		dataByte, runLength;
 	byte	*out, *pix;
 
@@ -460,7 +460,7 @@ void Image_LoadTGA( const char *filename, byte **pic,
 		int *width, int *height )
 {
 	byte	*buffer;
-	int		length;
+	size_t		length;
 	byte		*pixels;
 	int 		offset, w, h;
 	qboolean (*decode)( byte *, byte *, int, int, byte * );
@@ -677,7 +677,7 @@ METHODDEF( void )mem_skip_input_data( j_decompress_ptr cinfo, long num_bytes ) {
 METHODDEF( void )mem_term_source( j_decompress_ptr cinfo ) { }
 
 
-METHODDEF( void )jpeg_mem_src( j_decompress_ptr cinfo, byte *data, int size ) {
+METHODDEF( void )jpeg_mem_src( j_decompress_ptr cinfo, byte *data, size_t size ) {
 	cinfo->src = ( struct jpeg_source_mgr * )(*cinfo->mem->alloc_small)(
         ( j_common_ptr )cinfo, JPOOL_PERMANENT, sizeof( struct jpeg_source_mgr ) );
 
@@ -701,7 +701,7 @@ void Image_LoadJPG( const char *filename, byte **pic, int *width, int *height ) 
 	JSAMPARRAY buffer;
 	int row_stride;
 	byte *rawdata;
-	int rawlength;
+	size_t rawlength;
 	byte *pixels;
 	byte *src;
     uint32_t *dst;
@@ -954,7 +954,7 @@ LoadPNG
 */
 void Image_LoadPNG( const char *filename, byte **pic, int *width, int *height ) {
 	byte *rawdata;
-	int rawlength;
+	size_t rawlength;
 	byte *pixels;
 	png_bytep row_pointers[MAX_TEXTURE_SIZE];
 	png_uint_32 w, h, rowbytes, row;
@@ -1293,7 +1293,7 @@ Case and extension insensitive.
 ===============
 */
 static image_t *R_LookupImage( const char *name, imagetype_t type,
-					   unsigned hash, int baselength )
+					   unsigned hash, size_t baselength )
 {
 	image_t	*image;
 
@@ -1315,7 +1315,7 @@ image_t *R_AllocImage( const char *name ) {
 	char *ext;
 	unsigned hash;
 	image_t *image;
-	int length;
+	size_t length;
 
 	if( !name || !name[0] ) {
 		Com_Error( ERR_FATAL, "R_AllocImage: NULL" );
@@ -1323,10 +1323,10 @@ image_t *R_AllocImage( const char *name ) {
 
 	length = strlen( name );
 	if( length >= MAX_QPATH ) {
-		Com_Error( ERR_FATAL, "R_AllocImage: oversize name: %d chars", length );
+		Com_Error( ERR_FATAL, "R_AllocImage: oversize name" );
 	}
 
-	strcpy( buffer, name );
+	memcpy( buffer, name, length + 1 );
 
 	ext = COM_FileExtension( buffer );
 	if( *ext == '.' ) {
@@ -1372,7 +1372,7 @@ image_t	*R_FindImage( const char *name, imagetype_t type ) {
 	int		width, height;
 	char	buffer[MAX_QPATH];
 	char	*ext, *s;
-	int		length;
+	size_t		length;
 	unsigned	hash, extHash;
 	imageflags_t flags;
 
@@ -1382,7 +1382,7 @@ image_t	*R_FindImage( const char *name, imagetype_t type ) {
 
 	length = strlen( name );
 	if( length >= MAX_QPATH ) {
-		Com_Error( ERR_FATAL, "R_FindImage: oversize name: %d chars", length );
+		Com_Error( ERR_FATAL, "R_FindImage: oversize name" );
 	}
 
 	if( length <= 4 ) {

@@ -53,7 +53,7 @@ static void MVD_LayoutClients( udpClient_t *client ) {
 	char layout[MAX_STRING_CHARS];
 	char buffer[MAX_STRING_CHARS];
 	char status[MAX_QPATH];
-	int length, total;
+	size_t length, total;
 	udpClient_t *cl;
     mvd_t *mvd = client->mvd;
 	int y, i, prestep;
@@ -121,7 +121,8 @@ static void MVD_LayoutChannels( udpClient_t *client ) {
 	char layout[MAX_STRING_CHARS];
 	char buffer[MAX_STRING_CHARS];
     mvd_t *mvd;
-	int length, total, cursor, y;
+	size_t length, total;
+	int cursor, y;
 
     memcpy( layout, header, sizeof( header ) - 1 );
     total = sizeof( header ) - 1;
@@ -189,7 +190,7 @@ static void MVD_LayoutMenu( udpClient_t *client ) {
         "xv 240 yv 172 string2 " VERSION;
 	char layout[MAX_STRING_CHARS];
     char cur[MENU_ITEMS];
-    int total;
+    size_t total;
 
     if( client->layout_cursor < 0 ) {
         client->layout_cursor = MENU_ITEMS - 1;
@@ -535,7 +536,7 @@ SPECTATOR COMMANDS
 void MVD_BroadcastPrintf( mvd_t *mvd, int level, int mask, const char *fmt, ... ) {
 	va_list		argptr;
 	char		text[MAXPRINTMSG];
-    int         len;
+    size_t      len;
     udpClient_t *other;
     client_t    *cl;
 

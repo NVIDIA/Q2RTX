@@ -273,10 +273,11 @@ SV_StatusString
 Builds the string that is sent as heartbeats and status replies
 ===============
 */
-static int SV_StatusString( char *status ) {
+static size_t SV_StatusString( char *status ) {
 	char	entry[MAX_STRING_CHARS];
 	client_t	*cl;
-	int		j, total, length;
+	int		j;
+	size_t	total, length;
     char    *tmp = sv_maxclients->string;
 
     // XXX: ugly hack to hide reserved slots
@@ -331,17 +332,17 @@ static int SV_StatusString( char *status ) {
 static void q_printf( 1, 2 ) SV_OobPrintf( const char *format, ... ) {
 	va_list		argptr;
 	char        buffer[MAX_PACKETLEN_DEFAULT];
-	int			length;
+	size_t		len;
 
     // write the packet header
 	memcpy( buffer, "\xff\xff\xff\xffprint\n", 10 );
 	
 	va_start( argptr, format );
-	length = Q_vsnprintf( buffer + 10, sizeof( buffer ) - 10, format, argptr );
+	len = Q_vsnprintf( buffer + 10, sizeof( buffer ) - 10, format, argptr );
 	va_end( argptr );
 
     // send the datagram
-	NET_SendPacket( NS_SERVER, &net_from, length + 10, buffer );
+	NET_SendPacket( NS_SERVER, &net_from, len + 10, buffer );
 }
 
 
@@ -354,7 +355,7 @@ Responds with all the info that qplug or qspy can see
 */
 static void SVC_Status( void ) {
 	char    buffer[MAX_PACKETLEN_DEFAULT];
-    int     length;
+    size_t  len;
 
 	if( !sv_status_show->integer ) {
 		return;
@@ -371,10 +372,10 @@ static void SVC_Status( void ) {
     // write the packet header
 	memcpy( buffer, "\xff\xff\xff\xffprint\n", 10 );
 
-    length = SV_StatusString( buffer + 10 );
+    len = SV_StatusString( buffer + 10 );
 
     // send the datagram
-	NET_SendPacket( NS_SERVER, &net_from, length + 10, buffer );
+	NET_SendPacket( NS_SERVER, &net_from, len + 10, buffer );
 }
 
 /*
@@ -408,7 +409,7 @@ The second parameter should be the current protocol version number.
 */
 static void SVC_Info( void ) {
 	char	string[MAX_QPATH];
-    int     length;
+    size_t  len;
 	int		count;
 	int		version;
     client_t *client;
@@ -428,12 +429,12 @@ static void SVC_Info( void ) {
 			count++;
     }
 
-	length = Com_sprintf (string, sizeof(string),
+	len = Com_sprintf (string, sizeof(string),
         "\xff\xff\xff\xffinfo\n%16s %8s %2i/%2i\n",
 		sv_hostname->string, sv.name, count, sv_maxclients->integer -
         sv_reserved_slots->integer );
 	
-	NET_SendPacket( NS_SERVER, &net_from, length, string );
+	NET_SendPacket( NS_SERVER, &net_from, len, string );
 }
 
 /*
@@ -506,7 +507,8 @@ static void SVC_DirectConnect( void ) {
 	char		userinfo[MAX_INFO_STRING];
     char        reconnect_var[16];
     char        reconnect_val[16];
-	int			i, number, count, length;
+	int			i, number, count;
+	size_t		length;
 	client_t	*cl, *newcl, *lastcl;
 	int			protocol, version;
 	int			qport;
@@ -692,8 +694,8 @@ static void SVC_DirectConnect( void ) {
 	length = strlen( s );
 	if( length > MAX_CLIENT_NAME - 1 ) {
         SV_OobPrintf( "Names longer than %d characters are not allowed.\n"
-            "Your name is %d characters long.\n", MAX_CLIENT_NAME - 1, length );
-		Com_DPrintf( "    rejected - oversize name (%d chars).\n", length );
+            "Your name is %"PRIz" characters long.\n", MAX_CLIENT_NAME - 1, length );
+		Com_DPrintf( "    rejected - oversize name (%"PRIz" chars).\n", length );
 		return;
 	}
 	
@@ -1238,7 +1240,7 @@ void SV_SendAsyncPackets( void ) {
 	qboolean retransmit;
 	client_t	*client;
     netchan_t   *netchan;
-	int cursize;
+	size_t cursize;
 	
     FOR_EACH_CLIENT( client ) {
 		// don't overrun bandwidth
@@ -1252,7 +1254,7 @@ void SV_SendAsyncPackets( void ) {
         if( netchan->fragment_pending ) {
             cursize = netchan->TransmitNextFragment( netchan );
 			if( sv_debug_send->integer ) {
-				Com_Printf( S_COLOR_BLUE"%s: frag: %d\n",
+				Com_Printf( S_COLOR_BLUE"%s: frag: %"PRIz"\n",
                     client->name, cursize );
             }
             goto calctime;
@@ -1280,7 +1282,7 @@ void SV_SendAsyncPackets( void ) {
         {
 			cursize = netchan->Transmit( netchan, 0, NULL );
 			if( sv_debug_send->integer ) {
-				Com_Printf( S_COLOR_BLUE"%s: send: %d\n",
+				Com_Printf( S_COLOR_BLUE"%s: send: %"PRIz"\n",
                     client->name, cursize );
             }
 calctime:
@@ -1386,7 +1388,7 @@ static void SV_RunGameFrame( void ) {
 	ge->RunFrame();
 
 	if( msg_write.cursize ) {
-		Com_WPrintf( "Game DLL left %d bytes in multicast buffer, cleared.\n",
+		Com_WPrintf( "Game DLL left %"PRIz" bytes in multicast buffer, cleared.\n",
             msg_write.cursize );
 		SZ_Clear( &msg_write );
 	}
@@ -1419,7 +1421,7 @@ let it know we are alive, and log information
 */
 static void SV_MasterHeartbeat( void ) {
 	char    buffer[MAX_PACKETLEN_DEFAULT];
-    int     length;
+    size_t  len;
 	int		i;
 
 	if( !dedicated->integer )
@@ -1437,14 +1439,14 @@ static void SV_MasterHeartbeat( void ) {
 	memcpy( buffer, "\xff\xff\xff\xffheartbeat\n", 14 );
 
 	// send the same string that we would give for a status OOB command
-    length = SV_StatusString( buffer + 14 );
+    len = SV_StatusString( buffer + 14 );
 
 	// send to group master
 	for( i = 0; i < MAX_MASTERS; i++ ) {
 		if( master_adr[i].port ) {
 			Com_DPrintf( "Sending heartbeat to %s\n",
                 NET_AdrToString( &master_adr[i] ) );
-	        NET_SendPacket( NS_SERVER, &master_adr[i], length + 14, buffer );
+	        NET_SendPacket( NS_SERVER, &master_adr[i], len + 14, buffer );
 		}
     }
 }
@@ -1580,7 +1582,7 @@ WARNING: may modify userinfo in place!
 */
 void SV_UpdateUserinfo( char *userinfo ) {
 	char *s;
-	int len;
+	size_t len;
 
 	if( !userinfo[0] ) {
 		SV_DropClient( sv_client, "empty userinfo" );
@@ -1634,7 +1636,8 @@ into a more C freindly form.
 void SV_UserinfoChanged( client_t *cl ) {
     char    name[MAX_CLIENT_NAME];
 	char	*val;
-	int		i, len;
+	size_t	len;
+	int		i;
 
 	// call prog code to allow overrides
 	ge->ClientUserinfoChanged( cl->edict, cl->userinfo );

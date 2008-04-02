@@ -1244,7 +1244,8 @@ char *Q_UnescapeString( const char *string ) {
 
 int Q_EscapeMarkup( char *out, const char *in, int bufsize ) {
     char *p, *m, *s;
-    int c, l;
+    int c;
+	size_t l;
 
 	if( bufsize < 1 ) {
 		Com_Error( ERR_FATAL, "%s: bad bufsize: %d", __func__, bufsize );
@@ -1735,7 +1736,7 @@ void Com_PageInMemory (void *buffer, int size)
 ============================================================================
 */
 
-int Q_strncasecmp( const char *s1, const char *s2, int n ) {
+int Q_strncasecmp( const char *s1, const char *s2, size_t n ) {
 	int		c1, c2;
 	
 	do {
@@ -1787,8 +1788,8 @@ int Q_strcasecmp( const char *s1, const char *s2 ) {
 Q_strncpyz
 ===============
 */
-int Q_strncpyz( char *dest, const char *src, int destsize ) {
-    int len;
+size_t Q_strncpyz( char *dest, const char *src, size_t destsize ) {
+    size_t len;
 
 #ifdef _DEBUG
 	if( destsize < 1 ) {
@@ -1804,7 +1805,7 @@ int Q_strncpyz( char *dest, const char *src, int destsize ) {
 
     len = strlen( src );
     if( len >= destsize ) {
-		Com_DPrintf( "%s: overflow of %d in %d\n", __func__, len, destsize - 1 );
+		Com_DPrintf( "%s: overflow of %"PRIz" in %"PRIz"\n", __func__, len, destsize - 1 );
         len = destsize - 1;
     }
 
@@ -1819,8 +1820,8 @@ int Q_strncpyz( char *dest, const char *src, int destsize ) {
 Q_strcat
 ===============
 */
-int Q_strcat( char *dest, int destsize, const char *src ) {
-	int ofs, len;
+size_t Q_strcat( char *dest, size_t destsize, const char *src ) {
+	size_t ofs, len, total;
 
 #ifdef _DEBUG
 	if( !dest ) {
@@ -1835,14 +1836,15 @@ int Q_strcat( char *dest, int destsize, const char *src ) {
 
     len = strlen( src );
     if( ofs + len >= destsize ) {
-		Com_DPrintf( "%s: overflow of %d in %d\n", __func__, ofs + len, destsize - 1 );
+		Com_DPrintf( "%s: overflow of %"PRIz" in %"PRIz"\n", __func__, ofs + len, destsize - 1 );
         len = destsize - ofs - 1;
     }
 
-	memcpy( dest + ofs, src, len ); ofs += len;
-    dest[ofs] = 0;
+	memcpy( dest + ofs, src, len );
+	total = ofs + len;
+    dest[total] = 0;
 
-    return ofs;
+    return total;
 }
 
 /*
@@ -1850,24 +1852,24 @@ int Q_strcat( char *dest, int destsize, const char *src ) {
 Q_concat
 ===============
 */
-int Q_concat( char *buffer, int size, ... ) {
+size_t Q_concat( char *dest, size_t destsize, ... ) {
     va_list argptr;
     const char *s;
-    int len, total = 0;
+    size_t len, total = 0;
 
-    va_start( argptr, size );
+    va_start( argptr, destsize );
     while( ( s = va_arg( argptr, const char * ) ) != NULL ) {
         len = strlen( s );
-        if( total + len >= size ) {
-		    Com_DPrintf( "%s: overflow of %d in %d\n", __func__, total + len, size - 1 );
+        if( total + len >= destsize ) {
+		    Com_DPrintf( "%s: overflow of %"PRIz" in %"PRIz"\n", __func__, total + len, destsize - 1 );
             break;
         }
-        memcpy( buffer + total, s, len );
+        memcpy( dest + total, s, len );
         total += len;
     }
     va_end( argptr );
 
-    buffer[total] = 0;
+    dest[total] = 0;
     return total;
 }
 
@@ -1891,7 +1893,7 @@ In case of output error, sets dest buffer
 to empty string and returns zero.
 ===============
 */
-int Q_vsnprintf( char *dest, int destsize, const char *fmt, va_list argptr ) {
+size_t Q_vsnprintf( char *dest, size_t destsize, const char *fmt, va_list argptr ) {
 	int ret;
 
 	if( destsize < 1 ) {
@@ -1903,7 +1905,7 @@ int Q_vsnprintf( char *dest, int destsize, const char *fmt, va_list argptr ) {
 	if( ret >= destsize ) {
 		// truncated, not terminated
 		dest[destsize - 1] = 0;
-		Com_DPrintf( "%s: overflow of %d in %d\n", __func__, ret, destsize - 1 );
+		Com_DPrintf( "%s: overflow of %d in %"PRIz"\n", __func__, ret, destsize - 1 );
         ret = destsize - 1;
 	} else if( ret == destsize - 1 ) {
 		// ok, but not terminated
@@ -1912,7 +1914,7 @@ int Q_vsnprintf( char *dest, int destsize, const char *fmt, va_list argptr ) {
 	ret = vsnprintf( dest, destsize, fmt, argptr );
     if( ret >= destsize ) {
 		// truncated, terminated
-		Com_DPrintf( "%s: overflow of %d in %d\n", __func__, ret, destsize - 1 );
+		Com_DPrintf( "%s: overflow of %d in %"PRIz"\n", __func__, ret, destsize - 1 );
         ret = destsize - 1;
 #endif
     } else if( ret < 0 ) {
@@ -1921,7 +1923,7 @@ int Q_vsnprintf( char *dest, int destsize, const char *fmt, va_list argptr ) {
         ret = 0;
     }
 
-	return ret;
+	return ( size_t )ret;
 }
 
 /*
@@ -1929,9 +1931,9 @@ int Q_vsnprintf( char *dest, int destsize, const char *fmt, va_list argptr ) {
 Com_sprintf
 ===============
 */
-int Com_sprintf( char *dest, int destsize, const char *fmt, ... ) {
+size_t Com_sprintf( char *dest, size_t destsize, const char *fmt, ... ) {
 	va_list		argptr;
-	int			ret;
+	size_t		ret;
 
 	va_start( argptr, fmt );
 	ret = Q_vsnprintf( dest, destsize, fmt, argptr );
@@ -2165,7 +2167,7 @@ qboolean Info_SetValueForKey( char *s, const char *key, const char *value ) {
 		return qtrue;
 	}
 
-    l = strlen( s );
+    l = ( int )strlen( s );
 	if( l + kl + vl + 2 >= MAX_INFO_STRING ) {
 		return qfalse;
 	}

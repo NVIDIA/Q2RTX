@@ -521,7 +521,7 @@ else
     echo "#define DEFAULT_REFRESH_DRIVER \"soft\"" >> $config_h
 fi
 
-echo "#define PRIz \"z\"" >> $config_h
+echo "#define PRIz \"zu\"" >> $config_h
 
 for t in $targets ; do
     mkdir -p .$t ;

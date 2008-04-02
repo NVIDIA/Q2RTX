@@ -115,9 +115,8 @@ R_LoadWal
 */
 image_t *R_LoadWal( const char *name ) {
 	miptex_t	*mt;
-	uint32_t	ofs, w, h;
 	image_t		*image;
-	unsigned	size, length;
+	size_t	    size, length, ofs, endpos, w, h;
 	byte *source[4];
 
 	length = fs.LoadFile( name, ( void ** )&mt );
@@ -131,7 +130,8 @@ image_t *R_LoadWal( const char *name ) {
 
 	size = w * h * ( 256 + 64 + 16 + 4 ) / 256;
 	ofs = LittleLong( mt->offsets[0] );
-	if( ofs + size > length ) {
+    endpos = ofs + size;
+	if( endpos < ofs || endpos > length ) {
 		Com_DPrintf( "R_LoadWal: %s is malformed\n", name );
 		fs.FreeFile( ( void * )mt );
 		return r_notexture_mip;
@@ -301,7 +301,7 @@ R_InitImages
 */
 void R_InitImages( void ) {
     byte *data;
-    int length;
+    size_t length;
 
 	registration_sequence = 1;
 

@@ -52,8 +52,8 @@ Command text buffering and command execution
 
 typedef struct {
 	char	    *text; // may not be NULL terminated
-    int         cursize;
-    int         maxsize;
+    size_t      cursize;
+    size_t      maxsize;
 	int			waitCount;
 	int			aliasCount; // for detecting runaway loops
 	void		(*exec)( const char * );
@@ -175,8 +175,8 @@ char	*Cmd_ArgsFrom( int from );
 char	*Cmd_RawArgsFrom( int from );
 void	Cmd_ArgsBuffer( char *buffer, int bufferSize );
 void	Cmd_ArgvBuffer( int arg, char *buffer, int bufferSize );
-int Cmd_ArgOffset( int arg );
-int Cmd_FindArgForOffset( int offset );
+size_t Cmd_ArgOffset( int arg );
+int Cmd_FindArgForOffset( size_t offset );
 char *Cmd_RawString( void );
 void Cmd_Shift( void );
 // The functions that execute commands get their parameters with these
@@ -279,7 +279,7 @@ void 	Cvar_WriteVariables( fileHandle_t f, int mask, qboolean modified );
 
 void	Cvar_Init (void);
 
-int Cvar_BitInfo( char *info, int bit );
+size_t	Cvar_BitInfo( char *info, int bit );
 
 cvar_t *Cvar_ForceSetEx( const char *var_name, const char *value, int flags );
 
@@ -325,12 +325,12 @@ FIFO
 
 typedef struct {
     byte *data;
-    int size;
-    int ax, ay, bs;
+    size_t size;
+    size_t ax, ay, bs;
 } fifo_t;
 
-static inline void *FIFO_Reserve( fifo_t *fifo, int *reserved ) {
-    int tail;
+static inline void *FIFO_Reserve( fifo_t *fifo, size_t *reserved ) {
+    size_t tail;
 
     if( fifo->bs ) {
         *reserved = fifo->ax - fifo->bs;
@@ -347,31 +347,31 @@ static inline void *FIFO_Reserve( fifo_t *fifo, int *reserved ) {
     return fifo->data;
 }
 
-static inline void FIFO_Commit( fifo_t *fifo, int length ) {
-    int tail;
+static inline void FIFO_Commit( fifo_t *fifo, size_t len ) {
+    size_t tail;
 
     if( fifo->bs ) {
-        fifo->bs += length;
+        fifo->bs += len;
         return;
     }
 
     tail = fifo->size - fifo->ay;
     if( fifo->ax < tail ) {
-        fifo->ay += length;
+        fifo->ay += len;
         return;
     }
 
-    fifo->bs = length;
+    fifo->bs = len;
 }
 
-static inline void *FIFO_Peek( fifo_t *fifo, int *length ) {
-    *length = fifo->ay - fifo->ax;
+static inline void *FIFO_Peek( fifo_t *fifo, size_t *len ) {
+    *len = fifo->ay - fifo->ax;
     return fifo->data + fifo->ax;
 }
 
-static inline void FIFO_Decommit( fifo_t *fifo, int length ) {
-    if( fifo->ax + length < fifo->ay ) {
-        fifo->ax += length;
+static inline void FIFO_Decommit( fifo_t *fifo, size_t len ) {
+    if( fifo->ax + len < fifo->ay ) {
+        fifo->ax += len;
         return;
     }
 
@@ -379,37 +379,37 @@ static inline void FIFO_Decommit( fifo_t *fifo, int length ) {
     fifo->ax = fifo->bs = 0;
 }
 
+static inline size_t FIFO_Usage( fifo_t *fifo ) {
+    return fifo->ay - fifo->ax + fifo->bs;
+}
+
 static inline int FIFO_Percent( fifo_t *fifo ) {
     if( !fifo->size ) {
         return 0;
     }
-    return ( fifo->ay - fifo->ax + fifo->bs ) * 100 / fifo->size;
-}
-
-static inline int FIFO_Usage( fifo_t *fifo ) {
-    return fifo->ay - fifo->ax + fifo->bs;
+    return ( int )( FIFO_Usage( fifo ) * 100 / fifo->size );
 }
 
 static inline void FIFO_Clear( fifo_t *fifo ) {
     fifo->ax = fifo->ay = fifo->bs = 0;
 }
 
-int FIFO_Read( fifo_t *fifo, void *buffer, int length );
-int FIFO_Write( fifo_t *fifo, const void *buffer, int length );
+size_t FIFO_Read( fifo_t *fifo, void *buffer, size_t len );
+size_t FIFO_Write( fifo_t *fifo, const void *buffer, size_t len );
 
-static inline qboolean FIFO_TryRead( fifo_t *fifo, void *buffer, int length ) {
-    if( FIFO_Read( fifo, NULL, length ) < length ) {
+static inline qboolean FIFO_TryRead( fifo_t *fifo, void *buffer, size_t len ) {
+    if( FIFO_Read( fifo, NULL, len ) < len ) {
         return qfalse;
     }
-    FIFO_Read( fifo, buffer, length );
+    FIFO_Read( fifo, buffer, len );
     return qtrue;
 }
 
-static inline qboolean FIFO_TryWrite( fifo_t *fifo, void *buffer, int length ) {
-    if( FIFO_Write( fifo, NULL, length ) < length ) {
+static inline qboolean FIFO_TryWrite( fifo_t *fifo, void *buffer, size_t len ) {
+    if( FIFO_Write( fifo, NULL, len ) < len ) {
         return qfalse;
     }
-    FIFO_Write( fifo, buffer, length );
+    FIFO_Write( fifo, buffer, len );
     return qtrue;
 }
 
@@ -534,7 +534,7 @@ void		NET_Config( netflag_t flag );
 qboolean    NET_GetAddress( netsrc_t sock, netadr_t *adr );
 
 neterr_t	NET_GetPacket( netsrc_t sock );
-neterr_t	NET_SendPacket( netsrc_t sock, const netadr_t *to, unsigned length, const void *data );
+neterr_t	NET_SendPacket( netsrc_t sock, const netadr_t *to, size_t length, const void *data );
 qboolean	NET_GetLoopPacket( netsrc_t sock );
 
 char *		NET_AdrToString( const netadr_t *a );
@@ -586,7 +586,7 @@ typedef enum netchan_type_e {
 typedef struct netchan_s {
 	netchan_type_t	type;
 	int			protocol;
-    int         maxpacketlen;
+    size_t      maxpacketlen;
 
 	qboolean	fatal_error;
 
@@ -602,7 +602,7 @@ typedef struct netchan_s {
 
 	sizebuf_t	message;		// writing buffer for reliable data
 
-	int			reliable_length;
+	size_t		reliable_length;
 	
 	qboolean	reliable_ack_pending;	// set to qtrue each time reliable is received
 	qboolean	fragment_pending;
@@ -612,8 +612,8 @@ typedef struct netchan_s {
 	int			incoming_acknowledged;
 	int			outgoing_sequence;
 
-	int			(*Transmit)( struct netchan_s *, int, const byte * );
-	int			(*TransmitNextFragment)( struct netchan_s * );
+	size_t		(*Transmit)( struct netchan_s *, size_t, const void * );
+	size_t		(*TransmitNextFragment)( struct netchan_s * );
 	qboolean	(*Process)( struct netchan_s * );
 	qboolean	(*ShouldUpdate)( struct netchan_s * );
 } netchan_t;
@@ -625,12 +625,10 @@ extern cvar_t       *net_maxmsglen;
 extern cvar_t       *net_chantype;
 
 void Netchan_Init( void );
-neterr_t Netchan_OutOfBand( netsrc_t sock, const netadr_t *adr, unsigned length,
-        const byte *data );
 neterr_t Netchan_OutOfBandPrint( netsrc_t sock, const netadr_t *adr,
         const char *format, ... );
 netchan_t *Netchan_Setup( netsrc_t sock, netchan_type_t type,
-        const netadr_t *adr, int qport, int maxpacketlen, int protocol );
+        const netadr_t *adr, int qport, size_t maxpacketlen, int protocol );
 void Netchan_Close( netchan_t *netchan );
 
 #define OOB_PRINT( sock, addr, string ) \
@@ -860,35 +858,34 @@ qboolean FS_RenameFile( const char *from, const char *to );
 
 char    *FS_CopyExtraInfo( const char *name, const fsFileInfo_t *info );
 
-int		FS_FOpenFile( const char *filename, fileHandle_t *f, int mode );
+size_t	FS_FOpenFile( const char *filename, fileHandle_t *f, int mode );
 void	FS_FCloseFile( fileHandle_t hFile );
 
-int		FS_LoadFile( const char *path, void  **buffer );
-int		FS_LoadFileEx( const char *path, void **buffer, int flags );
-void    *FS_AllocTempMem( int length );
+size_t	FS_LoadFile( const char *path, void  **buffer );
+size_t	FS_LoadFileEx( const char *path, void **buffer, int flags );
+void    *FS_AllocTempMem( size_t length );
 void	FS_FreeFile( void *buffer );
 // a null buffer will just return the file length without loading
 // a -1 length is not present
 
-int		FS_Read( void *buffer, int len, fileHandle_t hFile );
-int		FS_Write( const void *buffer, int len, fileHandle_t hFile );
+size_t	FS_Read( void *buffer, size_t len, fileHandle_t hFile );
+size_t	FS_Write( const void *buffer, size_t len, fileHandle_t hFile );
 // properly handles partial reads
 
 void	FS_FPrintf( fileHandle_t f, const char *format, ... ) q_printf( 2, 3 );
-int     FS_ReadLine( fileHandle_t f, char *buffer, int size );
+size_t  FS_ReadLine( fileHandle_t f, char *buffer, int size );
 
 int		FS_Tell( fileHandle_t f );
 int		FS_RawTell( fileHandle_t f );
 
-int		FS_GetFileLength( fileHandle_t f );
-int		FS_GetFileLengthNoCache( fileHandle_t f );
+size_t	FS_GetFileLength( fileHandle_t f );
 
 qboolean FS_WildCmp( const char *filter, const char *string );
 qboolean FS_ExtCmp( const char *extension, const char *string );
 
 void	**FS_ListFiles( const char *path, const char *extension, int flags, int *numFiles );
 void    **FS_CopyList( void **list, int count );
-fsFileInfo_t *FS_CopyInfo( const char *name, int size, time_t ctime, time_t mtime );
+fsFileInfo_t *FS_CopyInfo( const char *name, size_t size, time_t ctime, time_t mtime );
 void	FS_FreeList( void **list );
 
 qboolean	FS_LastFileFromPak( void );
@@ -933,9 +930,9 @@ typedef struct string_entry_s {
     char string[1];
 } string_entry_t;
 
-typedef void (*rdflush_t)( int target, char *buffer, int length );
+typedef void (*rdflush_t)( int target, char *buffer, size_t len );
 
-void		Com_BeginRedirect (int target, char *buffer, int buffersize, rdflush_t flush);
+void		Com_BeginRedirect (int target, char *buffer, size_t buffersize, rdflush_t flush);
 void		Com_EndRedirect (void);
 
 void		Com_LevelPrint( comPrintType_t type, const char *str );
@@ -945,7 +942,7 @@ void		Com_FillAPI( commonAPI_t *api );
 
 void 		Com_Quit (void);
 
-byte		COM_BlockSequenceCRCByte (byte *base, int length, int sequence);
+byte		COM_BlockSequenceCRCByte (byte *base, size_t length, int sequence);
 
 void		Com_ProcessEvents( void );
 
@@ -955,10 +952,10 @@ void        Com_Generic_c( genctx_t *ctx, int argnum );
 qboolean    Prompt_AddMatch( genctx_t *ctx, const char *s );
 qboolean    Prompt_AddMatchCase( genctx_t *ctx, const char *s );
 
-int         Com_Time_m( char *buffer, int size );
-int         Com_Uptime_m( char *buffer, int size );
+size_t      Com_Time_m( char *buffer, size_t size );
+size_t      Com_Uptime_m( char *buffer, size_t size );
 
-uint32_t    Com_BlockChecksum( void *buffer, int length );
+uint32_t    Com_BlockChecksum( void *buffer, size_t len );
 
 
 // may return pointer to static memory
@@ -1053,7 +1050,7 @@ void    Sys_SetConsoleTitle( const char *title );
 void	Sys_Error( const char *error, ... ) q_noreturn q_printf( 1, 2 );
 void	Sys_Quit( void );
 
-void	**Sys_ListFiles( const char *path, const char *extension, int flags, int length, int *numFiles );
+void	**Sys_ListFiles( const char *path, const char *extension, int flags, size_t length, int *numFiles );
 
 qboolean Sys_Mkdir( const char *path );
 qboolean Sys_RemoveFile( const char *path );

@@ -93,7 +93,7 @@ typedef struct {
     qboolean ping_pending;
     unsigned last_ping;
     netstream_t  stream;
-    int msglen;
+    size_t msglen;
 } ac_locals_t;
 
 typedef struct {
@@ -271,7 +271,8 @@ static void AC_ParseCvar( const char *data, int linenum, const char *path ) {
     int num_values, namelen, vallen, deflen;
     ac_cvar_t *cvar;
     const ac_cvarop_t *op;
-    int i, len;
+    int i;
+	size_t len;
 
     name = COM_SimpleParse( &data, &namelen );
     if( !name[0] ) {
@@ -324,7 +325,7 @@ static void AC_ParseCvar( const char *data, int linenum, const char *path ) {
             return;
         }
         values[num_values] = val;
-        lengths[num_values++] = len + 1;
+        lengths[num_values++] = ( byte )( len + 1 );
         if( !p ) {
             break;
         }
@@ -352,7 +353,7 @@ static void AC_ParseCvar( const char *data, int linenum, const char *path ) {
 
 static void AC_ParseToken( const char *data, int linenum, const char *path ) {
     string_entry_t *tok;
-    int len = strlen( data );
+    size_t len = strlen( data );
 
     tok = SV_Malloc( sizeof( *tok ) + len );
     memcpy( tok->string, data, len + 1 );
@@ -525,16 +526,16 @@ static void AC_Disable( void ) {
 static void AC_Announce( client_t *client, const char *fmt, ... ) {
 	va_list		argptr;
 	char		string[MAX_STRING_CHARS];
-    int         length;
+    size_t      len;
 	
 	va_start( argptr, fmt );
-	length = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
+	len = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
 	va_end( argptr );
 
 	MSG_WriteByte( svc_print );
 	MSG_WriteByte( PRINT_HIGH );
 	MSG_WriteData( AC_MESSAGE, sizeof( AC_MESSAGE ) - 1 );
-	MSG_WriteData( string, length + 1 );
+	MSG_WriteData( string, len + 1 );
 
     if( client->state == cs_spawned ) {
         FOR_EACH_CLIENT( client ) {
@@ -681,7 +682,8 @@ static void AC_ParseFileViolation( void ) {
 	string_entry_t	*bad;
 	client_t	*cl;
 	char		*path, *hash;
-    int			action, pathlen;
+    int			action;
+	size_t		pathlen;
     ac_file_t	*f;
 
     cl = AC_ParseClient();
@@ -818,7 +820,7 @@ static void AC_ParseDisconnect ( void ) {
 static qboolean AC_ParseMessage( void ) {
     uint16_t msglen;
     byte *data;
-    int length;
+    size_t length;
     int cmd;
 
     // parse msglen
@@ -831,7 +833,7 @@ static qboolean AC_ParseMessage( void ) {
         }
         msglen = LittleShort( msglen );
         if( msglen > AC_RECV_SIZE ) {
-            Com_EPrintf( "ANTICHEAT: Oversize message: %d bytes\n", msglen );
+            Com_EPrintf( "ANTICHEAT: Oversize message: %u bytes\n", msglen );
             AC_Drop();
             return qfalse;
         }
@@ -919,7 +921,7 @@ IN-GAME QUERIES
 
 static void AC_Write( const char *func ) {
     byte *src = msg_write.data;
-    int len = msg_write.cursize;
+    size_t len = msg_write.cursize;
 
     SZ_Clear( &msg_write );
 
@@ -1097,7 +1099,7 @@ STARTUP STUFF
 
 static qboolean AC_Flush( void ) {
     byte *src = msg_write.data;
-    int ret, len = msg_write.cursize;
+    size_t ret, len = msg_write.cursize;
 
     SZ_Clear( &msg_write );
 
@@ -1130,7 +1132,7 @@ static qboolean AC_Flush( void ) {
 }
 
 static void AC_WriteString( const char *s ) {
-    int len = strlen( s );
+    size_t len = strlen( s );
 
     if( len > 255 ) {
         len = 255;
@@ -1197,8 +1199,8 @@ static void AC_SendPing( void ) {
 }
 
 static void AC_SendHello( void ) {
-    int hostlen = strlen( sv_hostname->string );
-    int verlen = strlen( com_version->string );
+    size_t hostlen = strlen( sv_hostname->string );
+    size_t verlen = strlen( com_version->string );
 
     MSG_WriteByte( 0x02 );
     MSG_WriteShort( 22 + hostlen + verlen ); // why 22 instead of 9?

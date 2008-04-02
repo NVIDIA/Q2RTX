@@ -1024,7 +1024,7 @@ static void Sys_ListFilteredFiles(  void        **listedFiles,
                                     const char  *path,
                                     const char  *filter,
                                     int         flags,
-                                    int         length,
+                                    size_t      length,
                                     int         depth )
 {
 	struct dirent *findInfo;
@@ -1107,7 +1107,7 @@ Sys_ListFiles
 void **Sys_ListFiles(   const char  *path,
                         const char  *extension,
                         int         flags,
-                        int         length,
+                        size_t      length,
                         int         *numFiles )
 {
 	struct dirent *findInfo;
