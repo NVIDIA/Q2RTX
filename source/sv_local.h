@@ -400,7 +400,7 @@ extern cvar_t		*sv_status_show;
 extern cvar_t		*sv_badauth_time;
 extern cvar_t	    *sv_uptime;
 
-extern cvar_t       *sv_nextserver;
+extern cvar_t       *g_features;
 
 extern cvar_t       *sv_timeout;
 extern cvar_t       *sv_zombietime;
@@ -580,7 +580,6 @@ qboolean SV_EdictPV( cm_t *cm, edict_t *ent, byte *mask );
 // sv_game.c
 //
 extern	game_export_t	*ge;
-extern  int             gameFeatures;
 
 void SV_InitGameProgs( void );
 void SV_ShutdownGameProgs (void);

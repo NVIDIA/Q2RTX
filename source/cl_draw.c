@@ -471,24 +471,38 @@ typedef struct {
         cmd_macro_t *macro;
     //    int stat;
     //};
+    unsigned color;
 } drawobj_t;
 
 static list_t scr_objects;
+
+static void SCR_Color_g( genctx_t *ctx ) {
+    int color;
+
+    for( color = 0; color < 10; color++ ) {
+        if( !Prompt_AddMatch( ctx, colorNames[color] ) ) {
+            break;
+        }
+    }
+}
 
 static void SCR_Draw_c( genctx_t *ctx, int argnum ) {
     if( argnum == 1 ) {
         Cvar_Variable_g( ctx );
         Cmd_Macro_g( ctx );
+    } else if( argnum == 4 ) {
+        SCR_Color_g( ctx );
     }
 }
 
 // draw cl_fps -1 80
 static void SCR_Draw_f( void ) {
     int x, y;
-    const char *s;
+    const char *s, *c;
     drawobj_t *obj;
     cmd_macro_t *macro;
    // int stat;
+    int color = COLOR_RESET;
     int argc = Cmd_Argc();
 
     if( argc == 1 ) {
@@ -506,7 +520,7 @@ static void SCR_Draw_f( void ) {
     }
 
     if( argc < 4 ) {
-        Com_Printf( "Usage: %s <name> <x> <y>\n", Cmd_Argv( 0 ) );
+        Com_Printf( "Usage: %s <name> <x> <y> [color]\n", Cmd_Argv( 0 ) );
         return;
     }
 
@@ -514,9 +528,23 @@ static void SCR_Draw_f( void ) {
     x = atoi( Cmd_Argv( 2 ) );
     y = atoi( Cmd_Argv( 3 ) );
 
+    if( argc > 4 ) {
+        c = Cmd_Argv( 4 );
+        for( color = 0; color < 10; color++ ) {
+            if( !strcmp( colorNames[color], c ) ) {
+                break;
+            }
+        }
+        if( color == 10 ) {
+            Com_Printf( "Unknown color '%s'\n", c );
+            return;
+        }
+    }
+
     obj = Z_Malloc( sizeof( *obj ) );
     obj->x = x;
     obj->y = y;
+    obj->color = color;
 
 #if 0
     if( *s == '!' || *s == '#' ) {
@@ -546,6 +574,10 @@ static void SCR_Draw_f( void ) {
 static void SCR_Draw_g( genctx_t *ctx ) {
     drawobj_t *obj;
     const char *s;
+
+    if( LIST_EMPTY( &scr_objects ) ) {
+        return;
+    }
 
     Prompt_AddMatch( ctx, "all" );
     
@@ -624,7 +656,12 @@ static void draw_objects( void ) {
             flags |= UI_RIGHT;
         }
         if( y < 0 ) {
-            y += scr_hudHeight - 8 + 1;
+            y += scr_hudHeight - CHAR_HEIGHT + 1;
+        }
+        if( obj->color == 8 ) {
+            flags |= UI_ALTCOLOR;
+        } else if( obj->color < 8 ) {
+            ref.SetColor( DRAW_COLOR_RGB, colorTable[obj->color] );
         }
         if( obj->macro ) {
             obj->macro->function( buffer, sizeof( buffer ) );
@@ -632,6 +669,7 @@ static void draw_objects( void ) {
         } else {
             SCR_DrawString( x, y, flags, obj->cvar->string );
         }
+        ref.SetColor( DRAW_COLOR_CLEAR, NULL );
     }
 }
 

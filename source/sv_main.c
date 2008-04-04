@@ -84,7 +84,7 @@ cvar_t	*sv_status_show;
 cvar_t	*sv_uptime;
 cvar_t	*sv_badauth_time;
 
-cvar_t	*sv_nextserver;
+cvar_t  *g_features;
 
 //============================================================================
 
@@ -1780,7 +1780,6 @@ void SV_Init( void ) {
 #endif
 
 	sv_iplimit = Cvar_Get( "sv_iplimit", "3", 0 );
-	sv_nextserver = Cvar_Get( "nextserver", "", 0 );
 
 	sv_status_show = Cvar_Get( "sv_status_show", "2", 0 );
 
@@ -1791,6 +1790,9 @@ void SV_Init( void ) {
 
 	sv_badauth_time = Cvar_Get( "sv_badauth_time", "1", 0 );
 	sv_badauth_time->changed = sv_badauth_time_changed;
+
+    Cvar_Get( "sv_features", va( "%d", GMF_CLIENTNUM|GMF_MVDSPEC ), CVAR_ROM );
+    g_features = Cvar_Get( "g_features", NULL, CVAR_USER_CREATED );
 
 	//
     // set up default pmove parameters

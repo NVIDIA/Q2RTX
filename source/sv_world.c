@@ -432,7 +432,6 @@ int SV_PointContents (vec3_t p)
 	int			i, num;
 	int			contents, c2;
 	cnode_t		*headnode;
-	float		*angles;
 
 	if( !sv.cm.cache ) {
 		Com_Error( ERR_DROP, "SV_PointContents: no map loaded" );
@@ -450,9 +449,6 @@ int SV_PointContents (vec3_t p)
 
 		// might intersect, so do an exact clip
 		headnode = SV_HullForEntity (hit);
-		angles = hit->s.angles;
-		if (hit->solid != SOLID_BSP)
-			angles = vec3_origin;	// boxes don't rotate
 
 		c2 = CM_TransformedPointContents (p, headnode, hit->s.origin, hit->s.angles);
 
@@ -485,7 +481,6 @@ void SV_ClipMoveToEntities ( moveclip_t *clip )
 	edict_t		*touchlist[MAX_EDICTS], *touch;
 	trace_t		trace;
 	cnode_t		*headnode;
-	float		*angles;
 
 	num = SV_AreaEdicts (clip->boxmins, clip->boxmaxs, touchlist
 		, MAX_EDICTS, AREA_SOLID);
@@ -515,13 +510,10 @@ void SV_ClipMoveToEntities ( moveclip_t *clip )
 
 		// might intersect, so do an exact clip
 		headnode = SV_HullForEntity (touch);
-		angles = touch->s.angles;
-		if (touch->solid != SOLID_BSP)
-			angles = vec3_origin;	// boxes don't rotate
 
 		CM_TransformedBoxTrace (&trace, clip->start, clip->end,
 			clip->mins, clip->maxs, headnode,  clip->contentmask,
-			touch->s.origin, angles);
+			touch->s.origin, touch->s.angles);
 
 		clip->trace->allsolid |= trace.allsolid;
 		clip->trace->startsolid |= trace.startsolid;

@@ -40,9 +40,9 @@ SOLID_BSP			// bsp clip, touch on edge
 
 // extended features
 
-#define GAME_FEATURE_CLIENTNUM   1
-#define GAME_FEATURE_PROPERINUSE   2
-#define GAME_FEATURE_MVDSPEC    4
+#define GMF_CLIENTNUM   1
+#define GMF_PROPERINUSE 2
+#define GMF_MVDSPEC     4
 
 //===============================================================
 

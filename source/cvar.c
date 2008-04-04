@@ -162,6 +162,25 @@ static void Cvar_ParseString( cvar_t *var ) {
 	}
 }
 
+static void Cvar_UpdateString( cvar_t *var, const char *value, cvarSetSource_t source ) {
+	Z_Free( var->string );	// free the old value string
+	
+	var->string = Cvar_CopyString( value );
+	Cvar_ParseString( var );
+
+	if( var->flags & CVAR_INFOMASK ) {
+		cvar_infoModified |= var->flags & CVAR_INFOMASK;
+		if( var->flags & CVAR_USERINFO ) {
+			CL_UpdateUserinfo( var, source );
+		}
+	}
+
+	var->modified = qtrue;
+	if( source != CVAR_SET_DIRECT && var->changed ) {
+		var->changed( var );
+	}
+}
+
 
 /*
 ============
@@ -199,17 +218,8 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 		if( ( var->flags & CVAR_LATCHED ) && var->latched_string ) {
 			if( strcmp( var->latched_string, var->string ) ) {
 				// update latched cvar
-				Z_Free( var->string );
-				var->string = Cvar_CopyString( var->latched_string );
-				Cvar_ParseString( var );
-
-				if( var->flags & CVAR_USERINFO ) {
-					CL_UpdateUserinfo( var, CVAR_SET_DIRECT );
-				}
-				
-				var->modified = qtrue;				
+                Cvar_UpdateString( var, var->latched_string, CVAR_SET_DIRECT );
 			}
-
 			Z_Free( var->latched_string );
 			var->latched_string = NULL;
 		}
@@ -219,6 +229,13 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 				// update default string if cvar was set from command line
 				Z_Free( var->default_string );
 				var->default_string = Cvar_CopyString( var_value );
+                if( ( flags & ( CVAR_NOSET | CVAR_ROM ) ||
+                    ( ( flags & CVAR_CHEAT ) && !CL_CheatsOK() ) )
+                    && strcmp( var_value, var->string ) )
+                {
+                    // reset cvar back to default value
+                    Cvar_UpdateString( var, var_value, CVAR_SET_DIRECT );
+                }
 				var->flags &= ~CVAR_USER_CREATED;
 			} else if( !( var->flags & CVAR_DEFAULTS_MIXED ) ) {
 				if( strcmp( var->default_string, var_value ) ) {
@@ -229,6 +246,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 			}
 #if 1
             if( ( var->flags & CVAR_LATCHED ) && !( flags & CVAR_LATCHED ) ) {
+                // cvar is no longer latched
                 if( var->latched_string ) {
                     Z_Free( var->latched_string );
                     var->latched_string = NULL;
@@ -281,6 +299,9 @@ Cvar_SetByVar
 ============
 */
 void Cvar_SetByVar( cvar_t *var, const char *value, cvarSetSource_t source ) {
+    if( !value ) {
+        value = "";
+    }
 	if( !strcmp( value, var->string ) &&
         !( var->flags & (CVAR_LATCHED|CVAR_LATCH) ) )
     {
@@ -395,23 +416,8 @@ void Cvar_SetByVar( cvar_t *var, const char *value, cvarSetSource_t source ) {
 		Z_Free( var->latched_string );
 		var->latched_string = NULL;
 	}
-	
-	Z_Free( var->string );	// free the old value string
-	
-	var->string = Cvar_CopyString( value );
-	Cvar_ParseString( var );
 
-	if( var->flags & CVAR_INFOMASK ) {
-		cvar_infoModified |= var->flags & CVAR_INFOMASK;
-		if( var->flags & CVAR_USERINFO ) {
-			CL_UpdateUserinfo( var, source );
-		}
-	}
-
-	var->modified = qtrue;
-	if( source != CVAR_SET_DIRECT && var->changed ) {
-		var->changed( var );
-	}
+    Cvar_UpdateString( var, value, source );
 }
 
 /*

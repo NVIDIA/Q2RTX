@@ -22,7 +22,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "sv_local.h"
 
 game_export_t	*ge;
-int             gameFeatures;
 
 /*
 ================
@@ -733,14 +732,14 @@ static void PF_AddCommandString( const char *string ) {
 
 static void PF_SetAreaPortalState( int portalnum, qboolean open ) {
 	if( !sv.cm.cache ) {
-		Com_Error( ERR_DROP, "PF_SetAreaPortalState: no map loaded" );
+		Com_Error( ERR_DROP, "%s: no map loaded", __func__ );
 	}
 	CM_SetAreaPortalState( &sv.cm, portalnum, open );
 }
 
 static qboolean PF_AreasConnected( int area1, int area2 ) {
 	if( !sv.cm.cache ) {
-		Com_Error( ERR_DROP, "PF_AreasConnected: no map loaded" );
+		Com_Error( ERR_DROP, "%s: no map loaded", __func__ );
 	}
 	return CM_AreasConnected( &sv.cm, area1, area2 );
 }
@@ -757,44 +756,20 @@ Called when either the entire server is being killed, or
 it is changing to a different game directory.
 ===============
 */
-void SV_ShutdownGameProgs (void)
-{
-	if (!ge)
-		return;
-	ge->Shutdown ();
-	ge = NULL;
-    gameFeatures = 0;
+void SV_ShutdownGameProgs (void) {
+	if( ge ) {
+	    ge->Shutdown();
+	    ge = NULL;
+    }
     if( game_library ) {
     	Sys_FreeLibrary( game_library );
 	    game_library = NULL;
     }
+    if( g_features ) {
+        Cvar_SetByVar( g_features, NULL, CVAR_SET_DIRECT );
+        g_features->flags = CVAR_USER_CREATED;
+    }
 }
-
-#if 0
-static qboolean SV_GameSetupCallback( api_type_t type, void *api ) {
-	switch( type ) {
-	case API_CMD:
-		Cmd_FillAPI( ( cmdAPI_t * )api );
-		break;
-	case API_CVAR:
-		Cvar_FillAPI( ( cvarAPI_t * )api );
-		break;
-	case API_FS:
-		FS_FillAPI( ( fsAPI_t * )api );
-		break;
-	case API_COMMON:
-		Com_FillAPI( ( commonAPI_t * )api );
-		break;
-	case API_SYSTEM:
-		Sys_FillAPI( ( sysAPI_t * )api );
-		break;
-	default:
-		Com_Error( ERR_FATAL, "SV_GameSetupCallback: bad api type" );
-	}
-
-	return qtrue;
-}
-#endif
 
 /*
 ===============
@@ -803,18 +778,10 @@ SV_InitGameProgs
 Init the game subsystem for a new map
 ===============
 */
-void SCR_DebugGraph (float value, int color);
-
-void SV_InitGameProgs ( void )
-{
+void SV_InitGameProgs ( void ) {
 	game_import_t	import;
 	char	path[MAX_OSPATH];
     game_export_t	*(*entry)( game_import_t * ) = NULL;
-    int              (*ggf)( int );
-	/*moduleEntry_t moduleEntry;
-	moduleInfo_t info;
-	moduleCapability_t caps;
-	APISetupCallback_t callback;*/
 
 	// unload anything we have now
 	SV_ShutdownGameProgs ();
@@ -925,14 +892,6 @@ void SV_InitGameProgs ( void )
 	if (ge->apiversion != GAME_API_VERSION) {
 		Com_Error (ERR_DROP, "Game DLL is version %d, expected %d",
             ge->apiversion, GAME_API_VERSION);
-    }
-
-    // get features
-    ggf = Sys_GetProcAddress( game_library, "GetGameFeatures" );
-    if( ggf ) {
-        gameFeatures = ggf( GAME_FEATURE_CLIENTNUM|GAME_FEATURE_MVDSPEC );
-    } else {
-        gameFeatures = 0;
     }
 
     // initialize

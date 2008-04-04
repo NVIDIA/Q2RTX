@@ -417,7 +417,8 @@ void R_AliasTransformFinalVerts( int numpoints, finalvert_t *fv, dtrivertx_t *ol
 	for ( i = 0; i < numpoints; i++, fv++, oldv++, newv++ )
 	{
 		int		temp;
-		float	lightcos, *plightnormal;
+		float	lightcos;
+        const float *plightnormal;
 		vec3_t  lerped_vert;
 
 		lerped_vert[0] = r_lerp_move[0] + oldv->v[0]*r_lerp_backv[0] + newv->v[0]*r_lerp_frontv[0];

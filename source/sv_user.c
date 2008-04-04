@@ -59,7 +59,7 @@ static void create_baselines( void ) {
 	for( i = 1; i < sv_client->pool->num_edicts; i++ ) {
 		ent = EDICT_POOL( sv_client, i );
 
-        if( ( gameFeatures & GAME_FEATURE_PROPERINUSE ) && !ent->inuse ) {
+        if( ( g_features->integer & GMF_PROPERINUSE ) && !ent->inuse ) {
             continue;
         }
 

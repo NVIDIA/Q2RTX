@@ -49,7 +49,7 @@ static void Tess_Mesh( aliasMesh_t *mesh, int oldframe, int newframe ) {
 	aliasVert_t *src_vert;
 	vec_t *dst_vert;
     int i, count;
-	vec_t *normal;
+	const vec_t *normal;
 #if USE_SHADING
     byte *dst_color;
     vec_t d;
@@ -103,7 +103,7 @@ static void Tess_LerpedMesh( aliasMesh_t *mesh, int oldframe, int newframe ) {
 	aliasVert_t *src_newvert;
 	vec_t *dst_vert;
     int i, count;
-	vec_t *normal;
+	const vec_t *normal;
 #if USE_SHADING
     byte *dst_color;
     vec_t d;

@@ -277,14 +277,14 @@ int Draw_String( int x, int y, int flags, size_t maxChars,
 	float s, t;
 	image_t *image;
     color_t colors[2];
-	int mask;
+	int mask, altmask = 0;
 
 	image = R_ImageForHandle( hFont );
 
-	mask = 0;
 	if( flags & UI_ALTCOLOR ) {
-		mask |= 128;
+		altmask |= 128;
 	}
+    mask = altmask;
 
     *( uint32_t * )colors[0] = *( uint32_t * )draw.color;
 	*( uint32_t * )colors[1] = MakeColor( 255, 255, 255, draw.color[3] );
@@ -295,10 +295,7 @@ int Draw_String( int x, int y, int flags, size_t maxChars,
 				mask |= 128;
 			} else if( c == COLOR_RESET ) {
                 *( uint32_t * )colors[0] = *( uint32_t * )draw.color;
-				mask = 0;
-				if( flags & UI_ALTCOLOR ) {
-					mask |= 128;
-				}
+				mask = altmask;
             } else {
                 VectorCopy( colorTable[ ColorIndex( c ) ], colors[0] );
 				mask = 0;
@@ -308,13 +305,12 @@ int Draw_String( int x, int y, int flags, size_t maxChars,
         }
         
 		c = *string++;
-		c |= mask;
-        
         if( ( c & 127 ) == 32 ) {
             x += 8;
             continue;
         }
 
+		c |= mask;
 		s = ( c & 15 ) * 0.0625f;
 		t = ( c >> 4 ) * 0.0625f;
 

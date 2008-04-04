@@ -986,6 +986,7 @@ static void MVD_GameInit( void ) {
 	mvd_flood_waitdelay = Cvar_Get( "flood_waitdelay", "10", 0 );
 	mvd_flood_mute = Cvar_Get( "flood_mute", "0", 0 );
     mvd_default_map = Cvar_Get( "mvd_default_map", "q2dm1", CVAR_LATCH );
+    Cvar_Get( "g_features", va( "%d", GMF_CLIENTNUM|GMF_PROPERINUSE ), CVAR_ROM );
 
     Z_TagReserve( ( sizeof( edict_t ) +
         sizeof( udpClient_t ) ) * sv_maxclients->integer +
@@ -1042,8 +1043,6 @@ static void MVD_GameInit( void ) {
 //	SV_InfoSet( "gamedir", "gtv" );
 	SV_InfoSet( "gamename", "gtv" );
 	SV_InfoSet( "gamedate", __DATE__ );
-    
-    gameFeatures = GAME_FEATURE_CLIENTNUM|GAME_FEATURE_PROPERINUSE;
 }
 
 static void MVD_GameShutdown( void ) {

@@ -375,7 +375,7 @@ void SV_BuildClientFrame( client_t *client ) {
 	frame->ps = *ps;
 
     // grab the current clientNum
-    if( gameFeatures & GAME_FEATURE_CLIENTNUM ) {
+    if( g_features->integer & GMF_CLIENTNUM ) {
     	frame->clientNum = clent->client->clientNum;
     } else {
 	    frame->clientNum = client->number;
@@ -392,7 +392,7 @@ void SV_BuildClientFrame( client_t *client ) {
 		ent = EDICT_POOL( client, e );
 
         // ignore entities not in use
-        if( ( gameFeatures & GAME_FEATURE_PROPERINUSE ) && !ent->inuse ) {
+        if( ( g_features->integer & GMF_PROPERINUSE ) && !ent->inuse ) {
             continue;
         }
 
@@ -467,7 +467,7 @@ void SV_BuildClientFrame( client_t *client ) {
         // XXX: hide this enitity from renderer
 		if( ( client->protocol != PROTOCOL_VERSION_Q2PRO ||
               client->settings[CLS_RECORDING] ) &&
-            ( gameFeatures & GAME_FEATURE_CLIENTNUM ) &&
+            ( g_features->integer & GMF_CLIENTNUM ) &&
 			e == frame->clientNum + 1 && ent != clent )
 		{
 			state->modelindex = 0;

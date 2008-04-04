@@ -169,7 +169,7 @@ extern vec3_t vec3_origin;
 
 #define NUMVERTEXNORMALS	162
 
-extern vec3_t bytedirs[NUMVERTEXNORMALS];
+extern const vec3_t bytedirs[NUMVERTEXNORMALS];
 
 extern const color_t colorBlack;
 extern const color_t colorRed;
@@ -181,6 +181,8 @@ extern const color_t colorMagenta;
 extern const color_t colorWhite;
 
 extern const color_t colorTable[8];
+
+extern const char colorNames[10][8];
 
 typedef struct vrect_s {
 	int				x, y, width, height;

@@ -54,9 +54,6 @@ void SZ_WriteString( sizebuf_t *sb, const char *string );
 
 //============================================================================
 
-#define NUMVERTEXNORMALS	162
-extern	vec3_t	bytedirs[NUMVERTEXNORMALS];
-
 typedef enum {
 	MSG_PS_IGNORE_GUNINDEX		= ( 1 << 0 ),
 	MSG_PS_IGNORE_GUNFRAMES		= ( 1 << 1 ),

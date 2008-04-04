@@ -21,10 +21,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "config.h"
 #include "q_shared.h"
 
-static const char *const hexchars = "0123456789ABCDEF";
+static const char hexchars[] = "0123456789ABCDEF";
 
 vec3_t vec3_origin = { 0, 0, 0 };
-
 
 const color_t colorBlack	= {   0,   0,   0, 255 };
 const color_t colorRed		= { 255,   0,   0, 255 };
@@ -46,7 +45,13 @@ const color_t colorTable[8] = {
 	{ 255, 255, 255, 255 }
 };
 
-vec3_t bytedirs[NUMVERTEXNORMALS] = {
+const char colorNames[10][8] = {
+	"black", "red", "green", "yellow",
+	"blue", "cyan", "magenta", "white",
+	"alt", "none"
+};
+
+const vec3_t bytedirs[NUMVERTEXNORMALS] = {
 {-0.525731, 0.000000, 0.850651}, 
 {-0.442863, 0.238856, 0.864188}, 
 {-0.295242, 0.000000, 0.955423}, 
