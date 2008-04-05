@@ -264,17 +264,16 @@ typedef struct {
 		// little-endian "IDS2"
 #define SPRITE_VERSION	2
 
-typedef struct
-{
-	int		width, height;
-	int		origin_x, origin_y;		// raster coordinates inside pic
-	char	name[MAX_SKINNAME];		// name of pcx file
+typedef struct {
+	uint32_t	width, height;
+	uint32_t    origin_x, origin_y;		// raster coordinates inside pic
+	char	    name[MAX_SKINNAME];		// name of pcx file
 } dsprframe_t;
 
 typedef struct {
-	int			ident;
-	int			version;
-	int			numframes;
+	uint32_t	ident;
+	uint32_t	version;
+	uint32_t	numframes;
 	dsprframe_t	frames[1];			// variable sized
 } dsprite_t;
 

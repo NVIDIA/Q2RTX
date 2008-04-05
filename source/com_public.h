@@ -239,18 +239,18 @@ SYSTEM
 */
 
 typedef struct {
-	byte	*base;
-	int		maxsize;
-	int		cursize;
-    int     mapped;
+	void	*base;
+	size_t	maxsize;
+	size_t	cursize;
+    size_t  mapped;
 } mempool_t;
 
 typedef struct sysAPI_s {
 	unsigned    (*Milliseconds)( void );
 	char	*(*GetClipboardData)( void );
 	void	(*SetClipboardData)( const char *data );
-	void	(*HunkBegin)( mempool_t *pool, int maxsize );
-	void	*(*HunkAlloc)( mempool_t *pool, int size );
+	void	(*HunkBegin)( mempool_t *pool, size_t maxsize );
+	void	*(*HunkAlloc)( mempool_t *pool, size_t size );
 	void	(*HunkEnd)( mempool_t *pool );
 	void	(*HunkFree)( mempool_t *pool );
 } sysAPI_t;

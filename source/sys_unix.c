@@ -405,15 +405,15 @@ HUNK
 ===============================================================================
 */
 
-void Hunk_Begin( mempool_t *pool, int maxsize ) {
-    byte *buf;
+void Hunk_Begin( mempool_t *pool, size_t maxsize ) {
+    void *buf;
 
 	// reserve a huge chunk of memory, but don't commit any yet
 	pool->maxsize = ( maxsize + 4095 ) & ~4095;
 	pool->cursize = 0;
     buf = mmap( NULL, pool->maxsize, PROT_READ|PROT_WRITE,
 		MAP_PRIVATE|MAP_ANON, -1, 0 );
-	if( buf == NULL || buf == ( byte * )-1 ) {
+	if( buf == NULL || buf == ( void * )-1 ) {
 		Com_Error( ERR_FATAL, "%s: unable to virtual allocate %d bytes",
             __func__, pool->maxsize );
     }
@@ -421,47 +421,41 @@ void Hunk_Begin( mempool_t *pool, int maxsize ) {
     pool->mapped = pool->maxsize;
 }
 
-void *Hunk_Alloc( mempool_t *pool, int size ) {
-	byte *buf;
+void *Hunk_Alloc( mempool_t *pool, size_t size ) {
+	void *buf;
 
 	// round to cacheline
 	size = ( size + 31 ) & ~31;
 	if( pool->cursize + size > pool->maxsize ) {
-		Com_Error( ERR_FATAL, "%s: unable to allocate %d bytes out of %d",
+		Com_Error( ERR_FATAL, "%s: unable to allocate %"PRIz" bytes out of %"PRIz,
             __func__, size, pool->maxsize );
     }
-	buf = pool->base + pool->cursize;
+	buf = ( byte * )pool->base + pool->cursize;
 	pool->cursize += size;
 	return buf;
 }
 
 void Hunk_End( mempool_t *pool ) {
-	byte *n;
+	size_t newsize = ( pool->cursize + 4095 ) & ~4095;
 
-#ifndef __linux__
-	size_t old_size = pool->maxsize;
-	size_t new_size = pool->cursize;
-	void * unmap_base;
-	size_t unmap_len;
-
-	new_size = round_page(new_size);
-	old_size = round_page(old_size);
-	if (new_size > old_size) {
-		Com_Error( ERR_FATAL, "Hunk_End: new_size > old_size" );
+	if( newsize > pool->maxsize ) {
+		Com_Error( ERR_FATAL, "%s: newsize > maxsize", __func__ );
     }
-	if (new_size < old_size) {
-		unmap_base = (caddr_t)(pool->base + new_size);
-		unmap_len = old_size - new_size;
-		n = munmap(unmap_base, unmap_len) + pool->base;
-	}
+
+	if( newsize < pool->maxsize ) {
+#ifdef __linux__
+	    void *buf = mremap( pool->base, pool->maxsize, newsize, 0 );
 #else
-	n = mremap( pool->base, pool->maxsize, pool->cursize, 0 );
+		void *unmap_base = ( byte * )pool->base + newsize;
+		size_t unmap_len = pool->maxsize - newsize;
+		void *buf = munmap( unmap_base, unmap_len ) + pool->base;
 #endif
-	if( n != pool->base ) {
-		Com_Error( ERR_FATAL, "%s: could not remap virtual block: %s",
-            __func__, strerror( errno ) );
-    }
-    pool->mapped = pool->cursize;
+        if( buf != pool->base ) {
+            Com_Error( ERR_FATAL, "%s: could not remap virtual block: %s",
+                __func__, strerror( errno ) );
+        }
+	}
+    pool->mapped = newsize;
 }
 
 void Hunk_Free( mempool_t *pool ) {

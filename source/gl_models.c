@@ -760,10 +760,10 @@ static qboolean Model_LoadSp2( model_t *model, const byte *rawdata, int length )
 	dsprite_t *header;
 	dsprframe_t *src_frame;
 	spriteFrame_t *dst_frame;
-	int ident, version, numframes;
-	int i, width, height;
+	unsigned ident, version, numframes, width, height;
 	char buffer[MAX_SKINNAME];
 	image_t *image;
+    int i;
 
 	if( length < sizeof( *header ) ) {
 		Com_EPrintf( "%s has length < header length\n", model->name );
@@ -784,22 +784,14 @@ static qboolean Model_LoadSp2( model_t *model, const byte *rawdata, int length )
 		Com_EPrintf( "%s is not an sp2 file\n", model->name );
 		return qfalse;
 	}
-
 	if( version != SPRITE_VERSION ) {
 		Com_EPrintf( "%s has bad version: %d != %d\n",
 			model->name, version, ALIAS_VERSION );
 		return qfalse;
 	}
-
-	if( numframes < 1 ) {
+	if( numframes < 1 || numframes > MAX_MD2SKINS ) {
 		Com_EPrintf( "%s has bad number of frames: %d\n",
 			model->name, numframes );
-		return qfalse;
-	}
-
-	if( numframes > MAX_MD2SKINS ) {
-		Com_EPrintf( "%s has too many frames: %d > %d\n",
-			model->name, numframes, MAX_MD2SKINS );
 		return qfalse;
 	}
 
@@ -814,8 +806,8 @@ static qboolean Model_LoadSp2( model_t *model, const byte *rawdata, int length )
 	for( i = 0; i < numframes; i++ ) {
 		width = LittleLong( src_frame->width );
 		height = LittleLong( src_frame->height );
-		if( width <= 0 || height <= 0 ) {
-			Com_WPrintf( "%s has bad image dimensions for frame #%d: %d x %d\n",
+		if( width < 1 || height < 1 || width > MAX_TEXTURE_SIZE || height > MAX_TEXTURE_SIZE ) {
+			Com_WPrintf( "%s has bad image dimensions for frame #%d: %ux%u\n",
 				model->name, width, height, i );
 			width = 1;
 			height = 1;

@@ -274,22 +274,25 @@ static void GL_DrawSpriteModel( model_t *model ) {
 	entity_t *e = glr.ent;
 	spriteFrame_t *frame;
 	image_t *image;
-	int idx, bits;
+	int bits;
 	float alpha;
 
-	idx = e->frame % model->numFrames;
-	frame = &model->sframes[idx];
+	frame = &model->sframes[e->frame % model->numFrames];
 	image = frame->image;
 
 	GL_TexEnv( GL_MODULATE );
 
-	alpha = 1;
-	bits = GLS_DEFAULT;
-	if( e->flags & RF_TRANSLUCENT ) {
-		alpha = e->alpha;
-		bits = GLS_BLEND_BLEND;
-	}
+	alpha = ( e->flags & RF_TRANSLUCENT ) ? e->alpha : 1.0f;
 
+    if( alpha == 1.0f ) {
+        if( image->flags & if_transparent ) {
+            bits = GLS_ALPHATEST_ENABLE;
+        } else {
+            bits = GLS_DEFAULT;
+        }
+    } else {
+        bits = GLS_BLEND_BLEND;
+    }
 	GL_Bits( bits );
 
 	qglColor4f( 1, 1, 1, alpha );

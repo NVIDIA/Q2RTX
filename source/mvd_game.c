@@ -31,6 +31,7 @@ static cvar_t	*mvd_flood_msgs;
 static cvar_t	*mvd_flood_persecond;
 static cvar_t	*mvd_flood_waitdelay;
 static cvar_t	*mvd_flood_mute;
+static cvar_t	*mvd_stats_hack;
 
 udpClient_t     *mvd_clients;
 

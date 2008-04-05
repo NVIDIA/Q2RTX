@@ -229,7 +229,8 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 				// update default string if cvar was set from command line
 				Z_Free( var->default_string );
 				var->default_string = Cvar_CopyString( var_value );
-                if( ( flags & ( CVAR_NOSET | CVAR_ROM ) ||
+                if( ( ( flags & CVAR_ROM ) ||
+                    ( ( flags & CVAR_NOSET ) && com_initialized ) ||
                     ( ( flags & CVAR_CHEAT ) && !CL_CheatsOK() ) )
                     && strcmp( var_value, var->string ) )
                 {

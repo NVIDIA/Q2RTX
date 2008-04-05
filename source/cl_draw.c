@@ -27,6 +27,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 cvar_t      *scr_draw2d;
 cvar_t      *scr_showturtle;
 cvar_t		*scr_showfollowing;
+cvar_t		*scr_showstats;
 cvar_t		*scr_lag_x;
 cvar_t		*scr_lag_y;
 cvar_t		*scr_lag_draw;
@@ -818,6 +819,28 @@ static void draw_turtle( void ) {
 #undef DF
 }
 
+static void SCR_DrawStats( void ) {
+    char buffer[MAX_QPATH];
+    int i, j;
+    int x, y;
+
+    j = scr_showstats->integer;
+    if( j > MAX_STATS ) {
+        j = MAX_STATS;
+    }
+    x = 8;
+    y = ( scr_hudHeight - j * CHAR_HEIGHT ) / 2;
+    for( i = 0; i < j; i++ ) {
+        Com_sprintf( buffer, sizeof( buffer ), "%2d: %d", i, cl.frame.ps.stats[i] );
+        if( cl.oldframe.ps.stats[i] != cl.frame.ps.stats[i] ) {
+            ref.SetColor( DRAW_COLOR_RGBA, colorRed );
+        }
+        ref.DrawString( x, y, 0, MAX_STRING_CHARS, buffer, scr_font );
+        ref.SetColor( DRAW_COLOR_CLEAR, NULL );
+        y += CHAR_HEIGHT;
+    }
+}
+
 /*
 =================
 SCR_Draw2D
@@ -903,6 +926,10 @@ void SCR_Draw2D( void ) {
         draw_turtle();
     }
 
+    if( scr_showstats->integer ) {
+        SCR_DrawStats();
+    }
+
     SCR_DrawPause();
 
     if( scr_glconfig.renderer == GL_RENDERER_SOFTWARE ) {
@@ -935,6 +962,7 @@ void SCR_InitDraw( void ) {
 	scr_lag_y = Cvar_Get( "scr_lag_y", "-1", 0 );
     scr_lag_draw = Cvar_Get( "scr_lag_draw", "0", 0 );
 	scr_alpha = Cvar_Get( "scr_alpha", "1", 0 );
+	scr_showstats = Cvar_Get( "scr_showstats", "0", 0 );
 
     Cmd_Register( scr_drawcmds );
 }

@@ -1036,8 +1036,8 @@ void	Sys_SetClipboardData( const char *data );
 void    Sys_Sleep( int msec );
 void    Sys_Setenv( const char *name, const char *value );
 
-void	Hunk_Begin( mempool_t *pool, int maxsize );
-void	*Hunk_Alloc( mempool_t *pool, int size );
+void	Hunk_Begin( mempool_t *pool, size_t maxsize );
+void	*Hunk_Alloc( mempool_t *pool, size_t size );
 void	Hunk_Free( mempool_t *pool );
 
 void	Sys_Init( void );

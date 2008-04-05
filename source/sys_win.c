@@ -574,19 +574,19 @@ HUNK
 ===============================================================================
 */
 
-void Hunk_Begin( mempool_t *pool, int maxsize ) {
+void Hunk_Begin( mempool_t *pool, size_t maxsize ) {
 	// reserve a huge chunk of memory, but don't commit any yet
 	pool->cursize = 0;
 	pool->maxsize = ( maxsize + 4095 ) & ~4095;
 	pool->base = VirtualAlloc( NULL, pool->maxsize, MEM_RESERVE, PAGE_NOACCESS );
 	if( !pool->base ) {
 		Com_Error( ERR_FATAL,
-            "VirtualAlloc reserve %d bytes failed. GetLastError() = %lu",
+            "VirtualAlloc reserve %"PRIz" bytes failed. GetLastError() = %lu",
 			pool->maxsize, GetLastError() );
 	}
 }
 
-void *Hunk_Alloc( mempool_t *pool, int size ) {
+void *Hunk_Alloc( mempool_t *pool, size_t size ) {
 	void	*buf;
 
 	// round to cacheline
@@ -594,17 +594,17 @@ void *Hunk_Alloc( mempool_t *pool, int size ) {
 
 	pool->cursize += size;
 	if( pool->cursize > pool->maxsize )
-		Com_Error( ERR_FATAL, "Hunk_Alloc: couldn't allocate %d bytes", size );
+		Com_Error( ERR_FATAL, "%s: couldn't allocate %"PRIz" bytes", __func__, size );
 
 	// commit pages as needed
 	buf = VirtualAlloc( pool->base, pool->cursize, MEM_COMMIT, PAGE_READWRITE );
 	if( !buf ) {
 		Com_Error( ERR_FATAL,
-            "VirtualAlloc commit %d bytes failed. GetLastError() = %lu",
+            "VirtualAlloc commit %"PRIz" bytes failed. GetLastError() = %lu",
 			pool->cursize, GetLastError() );
 	}
 
-	return ( void * )( pool->base + pool->cursize - size );
+	return ( byte * )pool->base + pool->cursize - size;
 }
 
 void Hunk_End( mempool_t *pool ) {
@@ -618,7 +618,7 @@ void Hunk_Free( mempool_t *pool ) {
 		}
 	}
 
-	memset( pool, 0, sizeof( pool ) );
+	memset( pool, 0, sizeof( *pool ) );
 }
 
 /*
