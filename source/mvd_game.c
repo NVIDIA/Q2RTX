@@ -524,6 +524,16 @@ void MVD_UpdateClient( udpClient_t *client ) {
 	client->ps.pmove.pm_flags |= PMF_NO_PREDICTION;
 	client->ps.pmove.pm_type = PM_FREEZE;
     client->clientNum = target - mvd->players;
+
+    if( mvd_stats_hack->integer ) {
+        // copy stats of the dummy MVD observer
+        target = mvd->dummy;
+        for( i = 0; i < MAX_STATS; i++ ) {
+            if( mvd_stats_hack->integer & ( 1 << i ) ) {
+                client->ps.stats[i] = target->ps.stats[i];
+            }
+        }
+    }
 }
 
 /*
@@ -987,6 +997,7 @@ static void MVD_GameInit( void ) {
 	mvd_flood_waitdelay = Cvar_Get( "flood_waitdelay", "10", 0 );
 	mvd_flood_mute = Cvar_Get( "flood_mute", "0", 0 );
     mvd_default_map = Cvar_Get( "mvd_default_map", "q2dm1", CVAR_LATCH );
+    mvd_stats_hack = Cvar_Get( "mvd_stats_hack", "0", 0 );
     Cvar_Get( "g_features", va( "%d", GMF_CLIENTNUM|GMF_PROPERINUSE ), CVAR_ROM );
 
     Z_TagReserve( ( sizeof( edict_t ) +
