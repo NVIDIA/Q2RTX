@@ -28,6 +28,7 @@ cvar_t      *scr_draw2d;
 cvar_t      *scr_showturtle;
 cvar_t		*scr_showfollowing;
 cvar_t		*scr_showstats;
+cvar_t		*scr_showpmove;
 cvar_t		*scr_lag_x;
 cvar_t		*scr_lag_y;
 cvar_t		*scr_lag_draw;
@@ -564,7 +565,7 @@ static void SCR_Draw_f( void ) {
             obj->cvar = NULL;
             obj->macro = macro;
         } else {
-            obj->cvar = Cvar_Get( s, "", CVAR_USER_CREATED );
+            obj->cvar = Cvar_Get( s, NULL, CVAR_USER_CREATED );
             obj->macro = NULL;
         }
     }
@@ -626,7 +627,7 @@ static void SCR_UnDraw_f( void ) {
     cvar = NULL;
 	macro = Cmd_FindMacro( s );
     if( !macro ) {
-        cvar = Cvar_Get( s, "", CVAR_USER_CREATED );
+        cvar = Cvar_Get( s, NULL, CVAR_USER_CREATED );
     }
 
     deleted = qfalse;
@@ -828,7 +829,7 @@ static void SCR_DrawStats( void ) {
     if( j > MAX_STATS ) {
         j = MAX_STATS;
     }
-    x = 8;
+    x = CHAR_WIDTH;
     y = ( scr_hudHeight - j * CHAR_HEIGHT ) / 2;
     for( i = 0; i < j; i++ ) {
         Com_sprintf( buffer, sizeof( buffer ), "%2d: %d", i, cl.frame.ps.stats[i] );
@@ -838,6 +839,35 @@ static void SCR_DrawStats( void ) {
         ref.DrawString( x, y, 0, MAX_STRING_CHARS, buffer, scr_font );
         ref.SetColor( DRAW_COLOR_CLEAR, NULL );
         y += CHAR_HEIGHT;
+    }
+}
+
+static void SCR_DrawPmove( void ) {
+	static const char * const types[] = {
+        "NORMAL", "SPECTATOR", "DEAD", "GIB", "FREEZE"
+    };
+	static const char * const flags[] = {
+        "DUCKED", "JUMP_HELD", "ON_GROUND",
+        "TIME_WATERJUMP", "TIME_LAND", "TIME_TELEPORT",
+        "NO_PREDICTION", "TELEPORT_BIT"
+    };
+    int x = CHAR_WIDTH;
+    int y = ( scr_hudHeight - 2 * CHAR_HEIGHT ) / 2;
+    unsigned i, j;
+
+    i = cl.frame.ps.pmove.pm_type;
+    if( i > PM_FREEZE ) {
+        i = PM_FREEZE;
+    }
+    ref.DrawString( x, y, 0, MAX_STRING_CHARS, types[i], scr_font );
+    y += CHAR_HEIGHT;
+
+    j = cl.frame.ps.pmove.pm_flags;
+    for( i = 0; i < 8; i++ ) {
+        if( j & ( 1 << i ) ) {
+            x = ref.DrawString( x, y, 0, MAX_STRING_CHARS, flags[i], scr_font );
+            x += CHAR_WIDTH;
+        }
     }
 }
 
@@ -929,6 +959,9 @@ void SCR_Draw2D( void ) {
     if( scr_showstats->integer ) {
         SCR_DrawStats();
     }
+    if( scr_showpmove->integer ) {
+        SCR_DrawPmove();
+    }
 
     SCR_DrawPause();
 
@@ -963,6 +996,7 @@ void SCR_InitDraw( void ) {
     scr_lag_draw = Cvar_Get( "scr_lag_draw", "0", 0 );
 	scr_alpha = Cvar_Get( "scr_alpha", "1", 0 );
 	scr_showstats = Cvar_Get( "scr_showstats", "0", 0 );
+	scr_showpmove = Cvar_Get( "scr_showpmove", "0", 0 );
 
     Cmd_Register( scr_drawcmds );
 }

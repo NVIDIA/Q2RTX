@@ -1,17 +1,18 @@
 include config.mk
 
-.PHONY: default all clean distclean install strip tags
+.PHONY: default all binaries clean distclean install strip tags
 
 default: all
+all: binaries strip
 
-all:
+binaries:
 	for t in $(TARGETS) ; do \
-		$(MAKE) -C .$$t -f $(SRCDIR)/build/$$t.mk $@ || exit 1 ; \
+		$(MAKE) -C .$$t -f $(SRCDIR)/build/$$t.mk all || exit 1 ; \
 	done
 
 clean:
 	for t in $(TARGETS) ; do \
-		$(MAKE) -C .$$t -f $(SRCDIR)/build/$$t.mk $@ ; \
+		$(MAKE) -C .$$t -f $(SRCDIR)/build/$$t.mk clean ; \
 	done
 
 distclean: clean
@@ -21,8 +22,10 @@ distclean: clean
 	rm -f config.mk config.h
 	rm -f tags
 
-ifndef SINGLEUSER
-
+ifdef SINGLEUSER
+install:
+	echo "Single user mode configured, can't install" && exit 1
+else
 install:
 	for t in $(EXECUTABLES) ; do \
 		install -m 755 -D $$t $(DESTDIR)$(BINDIR)/$$t ; \
@@ -31,7 +34,6 @@ install:
 		install -m 755 -D $$t $(DESTDIR)$(REFDIR)/$$t ; \
 	done
 	install -m 644 -D $(SRCDIR)/q2pro.6 $(DESTDIR)$(MANDIR)/q2pro.6
-
 endif # SINGLEUSER
 
 strip:
@@ -39,7 +41,7 @@ strip:
 		$(STRIP) $$t ; \
 	done
 
-doc:
+docs:
 	$(MAKE) -C wiki
 
 tags:

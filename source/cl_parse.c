@@ -596,8 +596,6 @@ static void CL_ParseFrame( int extrabits ) {
 		Com_Printf( "%3"PRIz":playerinfo\n", msg_read.readcount - 1 );
 	}
 
-	frame.clientNum = cl.clientNum;
-
 	// parse playerstate
 	bits = MSG_ReadShort();
 	if( cls.serverProtocol > PROTOCOL_VERSION_DEFAULT ) {
@@ -613,6 +611,8 @@ static void CL_ParseFrame( int extrabits ) {
 	        } else if( oldframe ) {
                 frame.clientNum = oldframe->clientNum;
             }
+        } else {
+	        frame.clientNum = cl.clientNum;
         }
 	} else {
 		MSG_ParseDeltaPlayerstate_Default( from, &frame.ps, bits );
@@ -620,6 +620,7 @@ static void CL_ParseFrame( int extrabits ) {
 			MSG_ShowDeltaPlayerstateBits_Default( bits );
 			Com_Printf( "\n" );
 		}
+	    frame.clientNum = cl.clientNum;
 	}
 	if( !frame.ps.fov ) {
         // fail out early to prevent spurious errors later

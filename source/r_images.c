@@ -118,7 +118,7 @@ void Image_LoadPCX( const char *filename, byte **pic, byte *palette, int *width,
 		memcpy( palette, ( byte * )pcx + len - 768, 768 );
 	}
 
-	raw = &pcx->data;
+	raw = pcx->data;
     end = ( byte * )pcx + len;
 
 	for( y = 0; y < h; y++, pix += w ) {
@@ -199,15 +199,13 @@ qboolean Image_WritePCX( const char *filename, const byte *data, int width,
 	memset( pcx->filler, 0, sizeof( pcx->filler ) );
 
 // pack the image
-	pack = &pcx->data;
+	pack = pcx->data;
 	for( i = 0; i < height; i++) {
 		for( j = 0; j < width; j++) {
-			if( ( *data & 0xc0 ) != 0xc0 ) {
-				*pack++ = *data++;
-            } else {
+			if( ( *data & 0xc0 ) == 0xc0 ) {
 				*pack++ = 0xc1;
-				*pack++ = *data++;
-			}
+            }
+			*pack++ = *data++;
 		}
 		data += rowbytes - width;
 	}

@@ -149,11 +149,10 @@ typedef struct fsFileInfo_s {
 #define	FS_TYPE_RESERVED	0x00000018
 #define	FS_TYPE_MASK		0x00000018
 
-/* bits 5 - 6, enum */
+/* bits 5 - 6, flag */
 #define	FS_PATH_ANY			0x00000000
-#define	FS_PATH_RESERVED	0x00000020
-#define	FS_PATH_BASE		0x00000040
-#define	FS_PATH_GAME		0x00000060
+#define	FS_PATH_BASE	    0x00000020
+#define	FS_PATH_GAME		0x00000040
 #define	FS_PATH_MASK		0x00000060
 
 /* bits 7 - 10, flag */

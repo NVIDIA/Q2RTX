@@ -321,6 +321,99 @@ finish:
 	}
 }
 
+void Prompt_CompleteHistory( commandPrompt_t *prompt, qboolean forward ) {
+	inputField_t *inputLine = &prompt->inputLine;
+    int i, j, k;
+    char *s, *text, *first, *last;
+    size_t len;
+    char *matches[HISTORY_SIZE], *sortedMatches[HISTORY_SIZE];
+    int numMatches = 0;
+
+	text = inputLine->text;
+    len = strlen( text );
+
+    if( *text != '\\' && *text != '/' ) {
+        memmove( text + 1, text, len + 1 );
+        *text = '\\';
+        len++;
+    }
+
+    if( forward ) {
+        i = prompt->inputLineNum - HISTORY_SIZE;
+        if( i < 0 ) {
+            i = 0;
+        }
+        for( ; i < prompt->inputLineNum; i++ ) {
+            s = prompt->history[i & HISTORY_MASK];
+            if( s && !strncmp( text, s, len ) ) {
+                for( k = 0; k < numMatches; k++ ) {
+                    if( !strcmp( matches[k], s ) ) {
+                        break;
+                    }
+                }
+                if( k == numMatches ) {
+                    matches[numMatches++] = s;
+                }
+            }
+        }
+    } else {
+        j = prompt->inputLineNum - HISTORY_SIZE;
+        if( j < 0 ) {
+            j = 0;
+        }
+        for( i = prompt->inputLineNum - 1; i >= j; i-- ) {
+            s = prompt->history[i & HISTORY_MASK];
+            if( s && !strncmp( text, s, len ) ) {
+                for( k = 0; k < numMatches; k++ ) {
+                    if( !strcmp( matches[k], s ) ) {
+                        break;
+                    }
+                }
+                if( k == numMatches ) {
+                    matches[numMatches++] = s;
+                }
+            }
+        }
+    }
+
+    if( !numMatches ) {
+		inputLine->cursorPos = len;
+		return; // nothing found
+    }
+
+	if( numMatches == 1 ) {
+		// we have finished completion!
+        memcpy( text, s, len + 1 );
+        inputLine->cursorPos = len;
+        return;
+    }
+
+	// sort matches alphabethically
+	for( i = 0; i < numMatches; i++ ) {
+		sortedMatches[i] = matches[i];
+	}
+	qsort( sortedMatches, numMatches, sizeof( sortedMatches[0] ), SortStrcmp );
+
+	// copy matching part
+	first = sortedMatches[0];
+	last = sortedMatches[ numMatches - 1 ];
+	len = 0;
+	do {
+        if( *first != *last ) {
+            break;
+        }
+		text[len++] = *first;
+
+		first++;
+		last++;
+	} while( *first );
+
+	text[len] = 0;
+    inputLine->cursorPos = len;
+
+    Prompt_ShowMatches( prompt, matches, 0, numMatches );
+}
+
 /*
 ====================
 Prompt_Action
@@ -430,7 +523,7 @@ void Prompt_SaveHistory( commandPrompt_t *prompt, const char *filename, int line
     char *s;
     int i;
 
-    FS_FOpenFile( filename, &f, FS_MODE_WRITE );
+    FS_FOpenFile( filename, &f, FS_MODE_WRITE|FS_PATH_BASE );
     if( !f ) {
         return;
     }
@@ -459,7 +552,7 @@ void Prompt_LoadHistory( commandPrompt_t *prompt, const char *filename ) {
     int i;
 	size_t len;
 
-    FS_FOpenFile( filename, &f, FS_MODE_READ|FS_TYPE_REAL );
+    FS_FOpenFile( filename, &f, FS_MODE_READ|FS_TYPE_REAL|FS_PATH_BASE );
     if( !f ) {
         return;
     }

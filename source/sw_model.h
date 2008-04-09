@@ -54,6 +54,7 @@ typedef struct
 
 // plane_t structure
 // !!! if this is changed, it must be changed in asm_i386.h too !!!
+#if 0
 typedef struct mplane_s
 {
 	vec3_t	normal;
@@ -62,6 +63,9 @@ typedef struct mplane_s
 	byte	signbits;		// signx + signy<<1 + signz<<1
 	byte	pad[2];
 } mplane_t;
+#else
+#define mplane_t cplane_t
+#endif
 
 
 // !!! if this is changed, it must be changed in asm_draw.h too !!!

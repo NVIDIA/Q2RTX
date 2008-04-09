@@ -130,7 +130,11 @@ static void MVD_LayoutChannels( udpClient_t *client ) {
 
     cursor = List_Count( &mvd_ready );
     if( cursor ) {
-        clamp( client->layout_cursor, 0, cursor - 1 );
+        if( client->layout_cursor < 0 ) {
+            client->layout_cursor = cursor - 1;
+        } else if( client->layout_cursor > cursor - 1 ) {
+            client->layout_cursor = 0;
+        }
 
         y = 64;
         cursor = 0;
@@ -265,6 +269,14 @@ static void MVD_SetDefaultLayout( udpClient_t *client ) {
     client->layout_cursor = 0;
 }
 
+static void MVD_SetFollowLayout( udpClient_t *client ) {
+    if( !client->layout_type ) {
+        MVD_SetDefaultLayout( client );
+    } else if( client->layout_type == LAYOUT_FOLLOW ) {
+        client->layout_time = 0; // force an update
+    }
+}
+
 // this is the only function that actually writes layouts
 static void MVD_UpdateLayouts( mvd_t *mvd ) {
     udpClient_t *client;
@@ -382,15 +394,7 @@ static void MVD_FollowStart( udpClient_t *client, mvd_player_t *target ) {
 
     SV_ClientPrintf( client->cl, PRINT_LOW, "[MVD] Following %s.\n", target->name );
 
-    if( !client->layout_type && ( client->cl->protocol !=
-        PROTOCOL_VERSION_Q2PRO || client->cl->settings[CLS_RECORDING] ) )
-    {
-        client->layout_type = LAYOUT_FOLLOW;
-    }
-    if( client->layout_type == LAYOUT_FOLLOW ) {
-        client->layout_time = 0; // force an update
-    }
-
+    MVD_SetFollowLayout( client );
     MVD_UpdateClient( client );
 }
 
@@ -525,7 +529,7 @@ void MVD_UpdateClient( udpClient_t *client ) {
 	client->ps.pmove.pm_type = PM_FREEZE;
     client->clientNum = target - mvd->players;
 
-    if( mvd_stats_hack->integer ) {
+    if( mvd_stats_hack->integer && target != mvd->dummy ) {
         // copy stats of the dummy MVD observer
         target = mvd->dummy;
         for( i = 0; i < MAX_STATS; i++ ) {
@@ -703,6 +707,9 @@ static void MVD_Observe_f( udpClient_t *client ) {
             "[MVD] Please enter a channel first.\n" );
         return;
     }
+    if( client->mvd->intermission ) {
+        return;
+    }
     if( client->target ) {
         MVD_FollowStop( client );
     } else if( client->oldtarget && client->oldtarget->inuse ) {
@@ -719,9 +726,13 @@ static void MVD_Follow_f( udpClient_t *client ) {
     char *s;
     int i, mask;
 
-    if( client->mvd == &mvd_waitingRoom ) {
+    if( mvd == &mvd_waitingRoom ) {
         SV_ClientPrintf( client->cl, PRINT_HIGH,
             "[MVD] Please enter a channel first.\n" );
+        return;
+    }
+
+    if( mvd->intermission ) {
         return;
     }
 
@@ -914,7 +925,7 @@ static void MVD_GameClientCommand( edict_t *ent ) {
 		if( client->layout_type >= LAYOUT_MENU ) {
             client->layout_cursor++;
             client->layout_time = 0;
-        } else {
+        } else if( !client->mvd->intermission ) {
             MVD_FollowNext( client );
         }
         return;
@@ -923,7 +934,7 @@ static void MVD_GameClientCommand( edict_t *ent ) {
 		if( client->layout_type >= LAYOUT_MENU ) {
             client->layout_cursor--;
             client->layout_time = 0;
-        } else {
+        } else if( !client->mvd->intermission ) {
             MVD_FollowPrev( client );
         }
         return;
@@ -947,6 +958,11 @@ static void MVD_GameClientCommand( edict_t *ent ) {
 	}
 	if( !strcmp( cmd, "channels" ) ) {
 		client->layout_type = LAYOUT_CHANNELS;
+        client->layout_time = 0;
+		return;
+	}
+	if( !strcmp( cmd, "clients" ) ) {
+		client->layout_type = LAYOUT_CLIENTS;
         client->layout_time = 0;
 		return;
 	}
@@ -1124,12 +1140,18 @@ static void MVD_GameClientBegin( edict_t *ent ) {
 	} else {
         target = client->target;
     }
+    client->oldtarget = NULL;
 	client->begin_time = svs.realtime;
 
 	MVD_SetDefaultLayout( client );
 
-    if( target && target->inuse ) {
-        // start chase cam mode
+    if( mvd->intermission ) {
+        // force them to chase dummy MVD client
+        client->target = mvd->dummy;
+        MVD_SetFollowLayout( client );
+        MVD_UpdateClient( client );
+    } else if( target && target->inuse ) {
+        // start normal chase cam mode
         MVD_FollowStart( client, target );
     } else {
         // spawn the spectator
@@ -1244,6 +1266,50 @@ static void MVD_GameClientThink( edict_t *ent, usercmd_t *cmd ) {
 	*old = *cmd;
 }
 
+static void MVD_IntermissionStart( mvd_t *mvd ) {
+    udpClient_t *client;
+
+    // set this early so MVD_SetDefaultLayout works
+    mvd->intermission = qtrue;
+
+    // force all clients to switch to the MVD dummy
+    // and open the scoreboard
+    LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
+        if( client->cl->state != cs_spawned ) {
+            continue;
+        }
+        client->oldtarget = client->target;
+        client->target = mvd->dummy;
+        MVD_SetFollowLayout( client );
+    }
+}
+
+static void MVD_IntermissionStop( mvd_t *mvd ) {
+    udpClient_t *client;
+    mvd_player_t *target;
+
+    // set this early so MVD_SetDefaultLayout works
+    mvd->intermission = qfalse;
+
+    // force all clients to switch to previous mode
+    // and close the scoreboard
+    LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
+        if( client->cl->state != cs_spawned ) {
+            continue;
+        }
+        if( client->layout_type == LAYOUT_SCORES ) {
+            client->layout_type = 0;
+        }
+        target = client->oldtarget;
+        if( target && target->inuse ) {
+            // start normal chase cam mode
+            MVD_FollowStart( client, target );
+        } else {
+            MVD_FollowStop( client );
+        }
+    }
+}
+
 static void MVD_GameRunFrame( void ) {
     mvd_t *mvd, *next;
     udpClient_t *u;
@@ -1262,6 +1328,15 @@ static void MVD_GameRunFrame( void ) {
 
         if( !MVD_Parse( mvd ) ) {
             goto update;
+        }
+
+        // check for intermission
+        if( !mvd->intermission ) {
+            if( mvd->dummy->ps.pmove.pm_type == PM_FREEZE ) {
+                MVD_IntermissionStart( mvd );
+            }
+        } else if( mvd->dummy->ps.pmove.pm_type != PM_FREEZE ) {
+            MVD_IntermissionStop( mvd );
         }
 
         // update UDP clients
@@ -1287,23 +1362,6 @@ static void MVD_GameRunFrame( void ) {
         if( mvd->demorecording ) {
         	FS_Write( &length, 2, mvd->demorecording );
             FS_Write( msg_read.data, msg_read.cursize, mvd->demorecording );
-        }
-
-        // check for intermission
-        if( !mvd->intermission ) {
-            if( mvd->dummy->ps.pmove.pm_type == PM_FREEZE ) {
-                mvd->intermission = qtrue;
-                LIST_FOR_EACH( udpClient_t, u, &mvd->udpClients, entry ) {
-                    if( u->cl->state == cs_spawned && u->layout_type < LAYOUT_SCORES ) {
-			            u->layout_type = LAYOUT_SCORES;
-            			MVD_LayoutScores( u );            
-                    }
-                }
-            }
-        } else {
-            if( mvd->dummy->ps.pmove.pm_type != PM_FREEZE ) {
-                mvd->intermission = qfalse;
-            }
         }
 
 update:

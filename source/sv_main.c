@@ -27,6 +27,8 @@ pmoveParams_t   sv_pmp;
 
 LIST_DECL( sv_banlist );
 LIST_DECL( sv_blacklist );
+LIST_DECL( sv_cmdlist_connect );
+LIST_DECL( sv_cmdlist_begin );
 
 client_t	*sv_client;			// current client
 

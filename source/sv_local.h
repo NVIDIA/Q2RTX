@@ -44,7 +44,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define SV_BASELINES_CHUNKS			( MAX_EDICTS >> SV_BASELINES_SHIFT )
 
 #define SV_InfoSet( var, val ) \
-	Cvar_FullSet( var, val, CVAR_SERVERINFO|CVAR_NOSET, CVAR_SET_DIRECT )
+	Cvar_FullSet( var, val, CVAR_SERVERINFO|CVAR_ROM, CVAR_SET_DIRECT )
 
 typedef struct {
 	unsigned	numEntities;
@@ -314,6 +314,12 @@ typedef struct {
     uint32_t    mask;
 } addrmatch_t;
 
+typedef struct {
+    list_t entry;
+    int len;
+    char string[1];
+} stuffcmd_t;
+
 typedef struct server_static_s {
 	qboolean	initialized;			// sv_init has completed
 	unsigned	realtime, time;			// always increasing, no clamping, etc
@@ -362,6 +368,9 @@ extern	netadr_t	master_adr[MAX_MASTERS];	// address of the master server
 
 extern  list_t      sv_banlist;
 extern  list_t      sv_blacklist;
+
+extern  list_t      sv_cmdlist_connect;
+extern  list_t      sv_cmdlist_begin;
 
 extern	server_static_t	svs;				// persistant server info
 extern	server_t		sv;					// local server

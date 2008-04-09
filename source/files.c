@@ -81,6 +81,7 @@ typedef struct pack_s {
 
 typedef struct searchpath_s {
 	struct searchpath_s *next;
+    int mode;
 	struct pack_s	*pack;		// only one of filename / pack will be used
 	char	        filename[1];
 } searchpath_t;
@@ -520,14 +521,6 @@ static size_t FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
 	return ( size_t )ftell( fp );
 }
 
-static searchpath_t *FS_SearchPath( unsigned flags ) {
-	if( ( flags & FS_PATH_MASK ) == FS_PATH_BASE ) {
-		return fs_base_searchpaths;
-	}
-	return fs_searchpaths;
-}
-
-
 /*
 ===========
 FS_FOpenFileRead
@@ -560,11 +553,10 @@ static size_t FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean uniqu
 //
 	hash = Com_HashPath( name, 0 );
 
-	for( search = FS_SearchPath( file->mode ); search; search = search->next ) {
-		if( ( file->mode & FS_PATH_MASK ) == FS_PATH_GAME ) {
-			if( fs_searchpaths != fs_base_searchpaths && search == fs_base_searchpaths ) {
-				// consider baseq2 a gamedir if no gamedir loaded
-				break;
+	for( search = fs_searchpaths; search; search = search->next ) {
+		if( file->mode & FS_PATH_MASK ) {
+			if( ( file->mode & search->mode & FS_PATH_MASK ) == 0 ) {
+				continue;
 			}
 		}
 	
@@ -1492,7 +1484,7 @@ alphacmp:
 	return FS_strcmp( s1, s2 );
 }
 
-static void FS_LoadPackFiles( const char *extension, pack_t *(loadfunc)( const char * ) ) {
+static void FS_LoadPackFiles( int mode, const char *extension, pack_t *(loadfunc)( const char * ) ) {
 	int				i;
 	searchpath_t	*search;
 	pack_t			*pak;
@@ -1511,6 +1503,7 @@ static void FS_LoadPackFiles( const char *extension, pack_t *(loadfunc)( const c
 		if( !pak )
 			continue;
 		search = FS_Malloc( sizeof( searchpath_t ) );
+        search->mode = mode;
 		search->filename[0] = 0;
 		search->pack = pak;
 		search->next = fs_searchpaths;
@@ -1528,7 +1521,7 @@ Sets fs_gamedir, adds the directory to the head of the path,
 then loads and adds pak*.pak, then anything else in alphabethical order.
 ================
 */
-static void q_printf( 1, 2 ) FS_AddGameDirectory( const char *fmt, ... ) {
+static void q_printf( 2, 3 ) FS_AddGameDirectory( int mode, const char *fmt, ... ) {
     va_list argptr;
 	searchpath_t	*search;
 	size_t len;
@@ -1546,6 +1539,7 @@ static void q_printf( 1, 2 ) FS_AddGameDirectory( const char *fmt, ... ) {
 	//
 	if( !( fs_restrict_mask->integer & 1 ) ) {
 		search = FS_Malloc( sizeof( searchpath_t ) + len );
+        search->mode = mode;
 		search->pack = NULL;
 		memcpy( search->filename, fs_gamedir, len + 1 );
 		search->next = fs_searchpaths;
@@ -1556,7 +1550,7 @@ static void q_printf( 1, 2 ) FS_AddGameDirectory( const char *fmt, ... ) {
 	// add any pak files in the format *.pak
 	//
 	if( !( fs_restrict_mask->integer & 2 ) ) {
-		FS_LoadPackFiles( ".pak", FS_LoadPakFile );
+		FS_LoadPackFiles( mode, ".pak", FS_LoadPakFile );
 	}
 
 #if USE_ZLIB
@@ -1564,7 +1558,7 @@ static void q_printf( 1, 2 ) FS_AddGameDirectory( const char *fmt, ... ) {
 	// add any zip files in the format *.pk2
 	//
 	if( !( fs_restrict_mask->integer & 4 ) ) {
-		FS_LoadPackFiles( ".pk2", FS_LoadZipFile );
+		FS_LoadPackFiles( mode, ".pk2", FS_LoadZipFile );
 	}
 #endif
 }
@@ -1762,13 +1756,12 @@ void **FS_ListFiles( const char *path,
 		*numFiles = 0;
 	}
 
-    for( search = FS_SearchPath( flags ); search; search = search->next ) {
-        if( ( flags & FS_PATH_MASK ) == FS_PATH_GAME ) {
-            if( fs_searchpaths != fs_base_searchpaths && search == fs_base_searchpaths ) {
-                // consider baseq2 a gamedir if no gamedir loaded
-                break;
-            }
-        }
+    for( search = fs_searchpaths; search; search = search->next ) {
+		if( flags & FS_PATH_MASK ) {
+			if( ( flags & search->mode & FS_PATH_MASK ) == 0 ) {
+				continue;
+			}
+		}
         if( search->pack ) {
             if( ( flags & FS_TYPE_MASK ) == FS_TYPE_REAL ) {
                 // don't search in paks
@@ -2418,7 +2411,7 @@ FS_DefaultGamedir
 */
 static void FS_DefaultGamedir( void ) {
     if( sys_homedir->string[0] ) {
-    	FS_AddGameDirectory( "%s/"BASEGAME, sys_homedir->string );
+    	FS_AddGameDirectory( FS_PATH_BASE|FS_PATH_GAME, "%s/"BASEGAME, sys_homedir->string );
     } else {
         // already added as basedir
     	Q_concat( fs_gamedir, sizeof( fs_gamedir ),
@@ -2460,12 +2453,12 @@ static void FS_SetupGamedir( void ) {
 	Cvar_FullSet( "gamedir", fs_game->string, CVAR_ROM|CVAR_SERVERINFO,
         CVAR_SET_DIRECT );
 
-	FS_AddGameDirectory( "%s/%s", sys_basedir->string, fs_game->string );
+	FS_AddGameDirectory( FS_PATH_GAME, "%s/%s", sys_basedir->string, fs_game->string );
 
     // home paths override system paths
     if( sys_homedir->string[0] ) {
-        FS_AddGameDirectory( "%s/"BASEGAME, sys_homedir->string );
-        FS_AddGameDirectory( "%s/%s", sys_homedir->string, fs_game->string );
+        FS_AddGameDirectory( FS_PATH_BASE, "%s/"BASEGAME, sys_homedir->string );
+        FS_AddGameDirectory( FS_PATH_GAME, "%s/%s", sys_homedir->string, fs_game->string );
     }
     
     Sys_Setenv( "QUAKE2_HOME", fs_gamedir );
@@ -2616,7 +2609,7 @@ void FS_Init( void ) {
 	}
 
 	// start up with baseq2 by default
-	FS_AddGameDirectory( "%s/"BASEGAME, sys_basedir->string );
+	FS_AddGameDirectory( FS_PATH_BASE|FS_PATH_GAME, "%s/"BASEGAME, sys_basedir->string );
 
 	fs_base_searchpaths = fs_searchpaths;
 

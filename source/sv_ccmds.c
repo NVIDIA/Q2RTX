@@ -729,7 +729,7 @@ void SV_DelMatch_f( list_t *list ) {
             Com_Printf( "Bad index: %d\n", i );
             return;
         }
-        match = LIST_INDEX( addrmatch_t, i + 1, list, entry );
+        match = LIST_INDEX( addrmatch_t, i - 1, list, entry );
         if( match ) {
             goto remove;
         }
@@ -787,6 +787,111 @@ static void SV_ListBans_f( void ) {
     SV_ListMatches_f( &sv_banlist );
 }
 
+static list_t *SV_FindStuffList( void ) {
+    char *s = Cmd_Argv( 1 );
+
+    if( !strcmp( s, "connect" ) ) {
+        return &sv_cmdlist_connect;
+    }
+    if( !strcmp( s, "begin" ) ) {
+        return &sv_cmdlist_begin;
+    }
+    Com_Printf( "Unknown stuffcmd list: %s\n", s );
+    return NULL;
+}
+
+static void SV_AddStuffCmd_f( void ) {
+    char	*s;
+    list_t *list;
+    stuffcmd_t *stuff;
+    int len;
+
+    if( Cmd_Argc() < 3 ) {
+		Com_Printf( "Usage: %s <list> <command>\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    if( ( list = SV_FindStuffList() ) == NULL ) {
+        return;
+    }
+
+    s = Cmd_ArgsFrom( 2 );
+    len = strlen( s );
+    stuff = Z_Malloc( sizeof( *stuff ) + len );
+    stuff->len = len;
+    memcpy( stuff->string, s, len + 1 );
+    List_Append( list, &stuff->entry );
+}
+
+static void SV_DelStuffCmd_f( void ) {
+    list_t *list;
+    stuffcmd_t *stuff;
+    char *s;
+    int i;
+
+    if( Cmd_Argc() < 3 ) {
+		Com_Printf( "Usage: %s <list> <index>\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    if( ( list = SV_FindStuffList() ) == NULL ) {
+        return;
+    }
+
+    if( LIST_EMPTY( list ) ) {
+        Com_Printf( "No stuffcmds registered.\n" );
+        return;
+    }
+
+    s = Cmd_Argv( 2 );
+    i = atoi( s );
+    if( i < 1 ) {
+        Com_Printf( "Bad index: %d\n", i );
+        return;
+    }
+    stuff = LIST_INDEX( stuffcmd_t, i - 1, list, entry );
+    if( !stuff ) {
+        Com_Printf( "No such index: %d\n", i );
+        return;
+    }
+
+    List_Remove( &stuff->entry );
+    Z_Free( stuff );
+}
+
+static void SV_ListStuffCmds_f( void ) {
+    list_t *list;
+    stuffcmd_t *stuff;
+    int count;
+
+    if( Cmd_Argc() != 2 ) {
+		Com_Printf( "Usage: %s <list>\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    if( ( list = SV_FindStuffList() ) == NULL ) {
+        return;
+    }
+
+    if( LIST_EMPTY( list ) ) {
+        Com_Printf( "No stuffcmds registered.\n" );
+        return;
+    }
+
+    count = 1;
+    LIST_FOR_EACH( stuffcmd_t, stuff, list, entry ) {
+        Com_Printf( "(%d) %s\n", count, stuff->string );
+        count++;
+    }
+}
+
+static void SV_StuffCmd_c( genctx_t *ctx, int argnum ) {
+    if( argnum == 1 ) {
+        Prompt_AddMatch( ctx, "connect" );
+        Prompt_AddMatch( ctx, "begin" );
+    }
+}
+
 static size_t SV_Client_m( char *buffer, size_t size ) {
 	if( !sv_client ) {
 		return Q_strncpyz( buffer, "unknown", size );
@@ -821,6 +926,9 @@ static const cmdreg_t c_server[] = {
 	{ "addban", SV_AddBan_f },
 	{ "delban", SV_DelBan_f },
 	{ "listbans", SV_ListBans_f },
+	{ "addstuffcmd", SV_AddStuffCmd_f, SV_StuffCmd_c },
+	{ "delstuffcmd", SV_DelStuffCmd_f, SV_StuffCmd_c },
+	{ "liststuffcmds", SV_ListStuffCmds_f, SV_StuffCmd_c },
 
     { NULL }
 };

@@ -288,6 +288,18 @@ fail:
 
 #endif // USE_ZLIB
 
+static void stuff_cmds( list_t *list ) {
+    stuffcmd_t *stuff;
+
+    LIST_FOR_EACH( stuffcmd_t, stuff, list, entry ) {
+        MSG_WriteByte( svc_stufftext );
+        MSG_WriteData( stuff->string, stuff->len );
+        MSG_WriteByte( '\n' );
+        MSG_WriteByte( 0 );
+	    SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
+    }
+}
+
 static const char junkchars[] =
     "!~#``&'()*`+,-./~01~2`3`4~5`67`89:~<=`>?@~ab~cd`ef~j~k~lm`no~pq`rst`uv`w``x`yz[`\\]^_`|~";
 
@@ -398,6 +410,7 @@ void SV_New_f( void ) {
             "cmd \177c actoken $actoken\n"
 #endif
             );
+        stuff_cmds( &sv_cmdlist_connect );
 	}
 
     // send reconnect var request
@@ -474,6 +487,8 @@ void SV_Begin_f( void ) {
 	sv_client->send_delta = 0;
 	sv_client->commandMsec = 1800;
     sv_client->surpressCount = 0;
+
+    stuff_cmds( &sv_cmdlist_begin );
 	
 	// call the game begin function
 	ge->ClientBegin( sv_player );

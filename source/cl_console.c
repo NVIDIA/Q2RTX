@@ -1032,6 +1032,16 @@ void Key_Console( int key ) {
 		goto scroll;
 	}
 
+	if( key == 'r' && Key_IsDown( K_CTRL ) ) {
+		Prompt_CompleteHistory( &con.prompt, qfalse );
+		goto scroll;
+    }
+
+	if( key == 's' && Key_IsDown( K_CTRL ) ) {
+		Prompt_CompleteHistory( &con.prompt, qtrue );
+		goto scroll;
+    }
+
 	if( key == K_UPARROW || ( key == 'p' && Key_IsDown( K_CTRL ) ) ) {
 		Prompt_HistoryUp( &con.prompt );
 		goto scroll;

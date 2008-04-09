@@ -516,13 +516,13 @@ static void PF_StartSound( edict_t *edict, int channel,
 		return;
 
 	if( volume < 0 || volume > 1.0 )
-		Com_Error( ERR_DROP, "PF_StartSound: volume = %f", volume );
+		Com_Error( ERR_DROP, "%s: volume = %f", __func__, volume );
 	if( attenuation < 0 || attenuation > 4 )
-		Com_Error( ERR_DROP, "PF_StartSound: attenuation = %f", attenuation );
+		Com_Error( ERR_DROP, "%s: attenuation = %f", __func__, attenuation );
 	if( timeofs < 0 || timeofs > 0.255 )
-		Com_Error( ERR_DROP, "PF_StartSound: timeofs = %f", timeofs );
+		Com_Error( ERR_DROP, "%s: timeofs = %f", __func__, timeofs );
     if( soundindex < 0 || soundindex >= MAX_SOUNDS )
-		Com_Error( ERR_DROP, "PF_StartSound: soundindex = %d", soundindex );
+		Com_Error( ERR_DROP, "%s: soundindex = %d", __func__, soundindex );
 
 	ent = NUM_FOR_EDICT( edict );
 
@@ -654,15 +654,15 @@ static void PF_PositionedSound( vec3_t origin, edict_t *entity, int channel,
 	int			ent;
 
 	if( !origin )
-		Com_Error( ERR_DROP, "PF_PositionedSound: NULL origin" );
+		Com_Error( ERR_DROP, "%s: NULL origin", __func__ );
 	if( volume < 0 || volume > 1.0 )
-		Com_Error( ERR_DROP, "PF_PositionedSound: volume = %f", volume );
+		Com_Error( ERR_DROP, "%s: volume = %f", __func__, volume );
 	if( attenuation < 0 || attenuation > 4 )
-		Com_Error( ERR_DROP, "PF_PositionedSound: attenuation = %f", attenuation );
+		Com_Error( ERR_DROP, "%s: attenuation = %f", __func__, attenuation );
 	if( timeofs < 0 || timeofs > 0.255 )
-		Com_Error( ERR_DROP, "PF_PositionedSound: timeofs = %f", timeofs );
+		Com_Error( ERR_DROP, "%s: timeofs = %f", __func__, timeofs );
     if( soundindex < 0 || soundindex >= MAX_SOUNDS )
-		Com_Error( ERR_DROP, "PF_PositionedSound: soundindex = %d", soundindex );
+		Com_Error( ERR_DROP, "%s: soundindex = %d", __func__, soundindex );
 
 	ent = NUM_FOR_EDICT( entity );
 

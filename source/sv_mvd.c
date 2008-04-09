@@ -46,16 +46,12 @@ static char		dummy_buffer_text[MAX_STRING_CHARS];
 ==================
 SV_MvdPlayerIsActive
 
-Determines if the given player entity is active,
-e.g. fully in game and visible to other players.
+Attempts to determine if the given player entity is active,
+e.g. the given player state is to be captured into MVD stream.
 
-Should work both for human players, as well as bots,
-and should never attempt to capture spectators.
-FIXME: If intermission is running, capture everyone.
-
-Tested to work with CTF, OSP Tourney, AQ2 TNG, Gladiator bots.
 Ideally a compatible game DLL should provide us with information
-whether given player is to be captured, instead of relying on this hack.
+whether given player is to be captured, instead of relying on
+this stupid and complex hack.
 ==================
 */
 qboolean SV_MvdPlayerIsActive( edict_t *ent ) {
@@ -75,7 +71,7 @@ qboolean SV_MvdPlayerIsActive( edict_t *ent ) {
         return qfalse;
     }
 
-    // check if client is actually connected
+    // check if client is actually connected (default)
     if( sv_mvd_capture_flags->integer & 1 ) {
         if( svs.udp_client_pool[num].state != cs_spawned ) {
             return qfalse;
@@ -97,25 +93,27 @@ qboolean SV_MvdPlayerIsActive( edict_t *ent ) {
         return qfalse;
     }
 
-	// if pm_type == PM_FREEZE, assume intermission is running
-	if( ent->client->ps.pmove.pm_type == PM_FREEZE ) {
-	    // if PMF_NO_PREDICTION is set, they are following someone!
-        if( ent->client->ps.pmove.pm_flags & PMF_NO_PREDICTION ) {
+    // check entity visibility
+    if( ( ent->svflags & SVF_NOCLIENT ) || !ES_INUSE( &ent->s ) ) {
+        // never capture invisible entities
+        if( sv_mvd_capture_flags->integer & 2 ) {
             return qfalse;
         }
-		return qtrue;
+    } else {
+        // always capture visible entities (default)
+        if( sv_mvd_capture_flags->integer & 4 ) {
+            return qtrue;
+        }
+    }
+
+	// they are likely following somene in case of PM_FREEZE
+	if( ent->client->ps.pmove.pm_type == PM_FREEZE ) {
+        return qfalse;
 	}
 
-    if( sv_mvd_capture_flags->integer & 2 ) {
-        // if set to invisible, skip
-        if( ent->svflags & SVF_NOCLIENT ) {
-            return qfalse;
-        }
-
-        // if it has no effects, skip
-        if( !ES_INUSE( &ent->s ) ) {
-            return qfalse;
-        }
+	// they are likely following someone if PMF_NO_PREDICTION is set 
+    if( ent->client->ps.pmove.pm_flags & PMF_NO_PREDICTION ) {
+        return qfalse;
     }
 
 	return qtrue;
@@ -1016,7 +1014,7 @@ void SV_MvdRegister( void ) {
 #if USE_ZLIB
     sv_mvd_encoding = Cvar_Get( "sv_mvd_encoding", "1", 0 );
 #endif
-    sv_mvd_capture_flags = Cvar_Get( "sv_mvd_capture_flags", "1", 0 );
+    sv_mvd_capture_flags = Cvar_Get( "sv_mvd_capture_flags", "5", 0 );
 
 	dummy_buffer.text = dummy_buffer_text;
     dummy_buffer.maxsize = sizeof( dummy_buffer_text );

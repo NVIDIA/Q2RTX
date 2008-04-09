@@ -7,8 +7,9 @@ Build-Depends: cdbs, debhelper (>= 5), libx11-dev, libsdl1.2-dev,
 Standards-Version: 3.7.2
 
 Package: q2pro-client
-Architecture: i386
+Architecture: i386 amd64
 Depends: ${shlibs:Depends}, quake2-data
+Suggests: quake2-mod-openffa
 Description: Enhanced Quake 2 client for multiplayer
  Q2PRO is a Quake 2 engine modification designed for online play,
  fully compatible with original Quake 2 clients and servers.
@@ -25,8 +26,9 @@ Description: Enhanced Quake 2 client for multiplayer
  Homepage: http://q2pro.sourceforge.net/
 
 Package: q2pro-server
-Architecture: i386
+Architecture: i386 amd64
 Depends: ${shlibs:Depends}
+Recommends: quake2-mod-openffa
 Description: Dedicated Quake 2 server
  Q2PRO is a Quake 2 engine modification designed for online play,
  fully compatible with original Quake 2 clients and servers.
@@ -37,5 +39,14 @@ Description: Dedicated Quake 2 server
  .
  This package contains streamlined server executable, with all client side
  code stripped out. Use it for hosting long running Quake 2 servers.
+ .
+ Homepage: http://q2pro.sourceforge.net/
+
+Package: quake2-mod-openffa
+Architecture: i386 amd64
+Depends: ${shlibs:Depends}
+Description: Simple Quake 2 deathmatch mod
+ OpenFFA is a simple deathmatch mod for Quake 2. It features familiar
+ scoreboard, voting system, map rotation support, high scores logging.
  .
  Homepage: http://q2pro.sourceforge.net/

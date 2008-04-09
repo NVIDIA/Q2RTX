@@ -44,6 +44,7 @@ typedef struct commandPrompt_s {
 
 void Prompt_Init( void );
 void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash );
+void Prompt_CompleteHistory( commandPrompt_t *prompt, qboolean forward );
 char *Prompt_Action( commandPrompt_t *prompt );
 void Prompt_HistoryUp( commandPrompt_t *prompt );
 void Prompt_HistoryDown( commandPrompt_t *prompt );

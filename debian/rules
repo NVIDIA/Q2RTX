@@ -6,5 +6,5 @@ include /usr/share/cdbs/1/class/autotools.mk
 DEB_DH_INSTALL_SOURCEDIR := debian/tmp
 
 DEB_CONFIGURE_NORMAL_ARGS := --prefix=$(DEB_CONFIGURE_PREFIX) \
-	--enable-png --enable-jpeg --enable-server --enable-anticheat
+	--enable-png --enable-jpeg --enable-server --enable-anticheat --enable-openffa
 

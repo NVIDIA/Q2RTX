@@ -170,8 +170,7 @@ void R_RecursiveClipBPoly (bedge_t *pedges, mnode_t *pnode, msurface_t *psurf)
 // transform the BSP plane into model space
 // FIXME: cache these?
 	splitplane = pnode->plane;
-	tplane.dist = splitplane->dist -
-			DotProduct(r_entorigin, splitplane->normal);
+	tplane.dist = -PlaneDiff(r_entorigin, splitplane);
 	tplane.normal[0] = DotProduct (entity_rotation[0], splitplane->normal);
 	tplane.normal[1] = DotProduct (entity_rotation[1], splitplane->normal);
 	tplane.normal[2] = DotProduct (entity_rotation[2], splitplane->normal);
@@ -184,8 +183,7 @@ void R_RecursiveClipBPoly (bedge_t *pedges, mnode_t *pnode, msurface_t *psurf)
 	// set the status for the last point as the previous point
 	// FIXME: cache this stuff somehow?
 		plastvert = pedges->v[0];
-		lastdist = DotProduct (plastvert->position, tplane.normal) -
-				   tplane.dist;
+		lastdist = PlaneDiff (plastvert->position, &tplane);
 
 		if (lastdist > 0)
 			lastside = 0;
@@ -193,8 +191,7 @@ void R_RecursiveClipBPoly (bedge_t *pedges, mnode_t *pnode, msurface_t *psurf)
 			lastside = 1;
 
 		pvert = pedges->v[1];
-
-		dist = DotProduct (pvert->position, tplane.normal) - tplane.dist;
+		dist = PlaneDiff (pvert->position, &tplane);
 
 		if (dist > 0)
 			side = 0;
@@ -354,7 +351,7 @@ void R_DrawSolidClippedSubmodelPolygons (model_t *pmodel, mnode_t *topnode)
 	// find which side of the node we are on
 		pplane = psurf->plane;
 
-		dot = DotProduct (modelorg, pplane->normal) - pplane->dist;
+		dot = PlaneDiff (modelorg, pplane);
 
 	// draw the polygon
 		if (( !(psurf->flags & SURF_PLANEBACK) && (dot < -BACKFACE_EPSILON)) ||
@@ -429,7 +426,7 @@ void R_DrawSubmodelPolygons (model_t *pmodel, int clipflags, mnode_t *topnode)
 	// find which side of the node we are on
 		pplane = psurf->plane;
 
-		dot = DotProduct (modelorg, pplane->normal) - pplane->dist;
+		dot = PlaneDiff (modelorg, pplane);
 
 	// draw the polygon
 		if (((psurf->flags & SURF_PLANEBACK) && (dot < -BACKFACE_EPSILON)) ||
@@ -486,17 +483,15 @@ void R_RecursiveWorldNode (mnode_t *node, int clipflags)
 			rejectpt[1] = (float)node->minmaxs[pindex[1]];
 			rejectpt[2] = (float)node->minmaxs[pindex[2]];
 			
-			d = DotProduct (rejectpt, view_clipplanes[i].normal);
-			d -= view_clipplanes[i].dist;
+			d = PlaneDiff(rejectpt, &view_clipplanes[i]);
 			if (d <= 0)
 				return;
+
 			acceptpt[0] = (float)node->minmaxs[pindex[3+0]];
 			acceptpt[1] = (float)node->minmaxs[pindex[3+1]];
 			acceptpt[2] = (float)node->minmaxs[pindex[3+2]];
 
-			d = DotProduct (acceptpt, view_clipplanes[i].normal);
-			d -= view_clipplanes[i].dist;
-
+			d = PlaneDiff (acceptpt, &view_clipplanes[i]);
 			if (d >= 0)
 				clipflags &= ~(1<<i);	// node is entirely on screen
 		}
@@ -538,21 +533,7 @@ c_drawnode++;
 	// find which side of the node we are on
 		plane = node->plane;
 
-		switch (plane->type)
-		{
-		case PLANE_X:
-			dot = modelorg[0] - plane->dist;
-			break;
-		case PLANE_Y:
-			dot = modelorg[1] - plane->dist;
-			break;
-		case PLANE_Z:
-			dot = modelorg[2] - plane->dist;
-			break;
-		default:
-			dot = DotProduct (modelorg, plane->normal) - plane->dist;
-			break;
-		}
+        dot = PlaneDiffFast( modelorg, plane );
 	
 		if (dot >= 0)
 			side = 0;

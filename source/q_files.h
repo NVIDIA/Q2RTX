@@ -33,17 +33,15 @@ The .pak files are just a linear collapse of a directory tree
 
 #define IDPAKHEADER		(('K'<<24)+('C'<<16)+('A'<<8)+'P')
 
-typedef struct
-{
-	char	name[56];
-	int		filepos, filelen;
+typedef struct {
+	char	    name[56];
+	uint32_t	filepos, filelen;
 } dpackfile_t;
 
-typedef struct
-{
-	int		ident;		// == IDPAKHEADER
-	int		dirofs;
-	int		dirlen;
+typedef struct {
+	uint32_t	ident;		// == IDPAKHEADER
+	uint32_t	dirofs;
+	uint32_t	dirlen;
 } dpackheader_t;
 
 #define	MAX_FILES_IN_PACK	4096
@@ -57,21 +55,20 @@ PCX files are used for as many images as possible
 ========================================================================
 */
 
-typedef struct
-{
-    char	manufacturer;
-    char	version;
-    char	encoding;
-    char	bits_per_pixel;
-    unsigned short	xmin,ymin,xmax,ymax;
-    unsigned short	hres,vres;
-    unsigned char	palette[48];
-    char	reserved;
-    char	color_planes;
-    unsigned short	bytes_per_line;
-    unsigned short	palette_type;
-    char	filler[58];
-    unsigned char	data;			// unbounded
+typedef struct {
+    uint8_t	manufacturer;
+    uint8_t	version;
+    uint8_t	encoding;
+    uint8_t	bits_per_pixel;
+    uint16_t	xmin,ymin,xmax,ymax;
+    uint16_t	hres,vres;
+    uint8_t	    palette[48];
+    uint8_t	reserved;
+    uint8_t	color_planes;
+    uint16_t	bytes_per_line;
+    uint16_t	palette_type;
+    uint8_t	    filler[58];
+    uint8_t	data[1];			// unbounded
 } pcx_t;
 
 
@@ -92,22 +89,19 @@ typedef struct
 #define MAX_MD2SKINS	32
 #define	MAX_SKINNAME	64
 
-typedef struct
-{
-	short	s;
-	short	t;
+typedef struct {
+	int16_t	s;
+	int16_t	t;
 } dstvert_t;
 
-typedef struct 
-{
-	short	index_xyz[3];
-	short	index_st[3];
+typedef struct {
+	uint16_t	index_xyz[3];
+	uint16_t	index_st[3];
 } dtriangle_t;
 
-typedef struct
-{
-	byte	v[3];			// scaled byte to fit in frame mins/maxs
-	byte	lightnormalindex;
+typedef struct {
+	uint8_t	v[3];			// scaled byte to fit in frame mins/maxs
+	uint8_t	lightnormalindex;
 } dtrivertx_t;
 
 #define DTRIVERTX_V0   0
@@ -116,8 +110,7 @@ typedef struct
 #define DTRIVERTX_LNI  3
 #define DTRIVERTX_SIZE 4
 
-typedef struct
-{
+typedef struct {
 	float		scale[3];	// multiply byte verts by this
 	float		translate[3];	// then add this
 	char		name[16];	// frame name from grabbing
@@ -136,29 +129,27 @@ typedef struct
 // and an integer vertex index.
 
 
-typedef struct
-{
-	int			ident;
-	int			version;
+typedef struct {
+	uint32_t		ident;
+	uint32_t		version;
 
-	int			skinwidth;
-	int			skinheight;
-	int			framesize;		// byte size of each frame
+	uint32_t		skinwidth;
+	uint32_t		skinheight;
+	uint32_t		framesize;		// byte size of each frame
 
-	int			num_skins;
-	int			num_xyz;
-	int			num_st;			// greater than num_xyz for seams
-	int			num_tris;
-	int			num_glcmds;		// dwords in strip/fan command list
-	int			num_frames;
+	uint32_t		num_skins;
+	uint32_t		num_xyz;
+	uint32_t		num_st;			// greater than num_xyz for seams
+	uint32_t		num_tris;
+	uint32_t		num_glcmds;		// dwords in strip/fan command list
+	uint32_t		num_frames;
 
-	int			ofs_skins;		// each skin is a MAX_SKINNAME string
-	int			ofs_st;			// byte offset from start for stverts
-	int			ofs_tris;		// offset for dtriangles
-	int			ofs_frames;		// offset for first frame
-	int			ofs_glcmds;	
-	int			ofs_end;		// end of file
-
+	uint32_t		ofs_skins;		// each skin is a MAX_SKINNAME string
+	uint32_t		ofs_st;			// byte offset from start for stverts
+	uint32_t		ofs_tris;		// offset for dtriangles
+	uint32_t		ofs_frames;		// offset for first frame
+	uint32_t		ofs_glcmds;	
+	uint32_t		ofs_end;		// end of file
 } dmdl_t;
 
 /*
@@ -186,69 +177,69 @@ typedef struct
 #define	MD3_XYZ_SCALE		(1.0f/64.0f)
 
 typedef struct {
-	float			st[2];
+	float		st[2];
 } dmd3coord_t;
 
 typedef struct {
-	short			point[3];
-	unsigned char		norm[2];
+	int16_t		point[3];
+	uint8_t		norm[2];
 } dmd3vertex_t;
 
 typedef struct {
-   	float			mins[3];
-	float			maxs[3];
-	float			translate[3];
-	float			radius;
-	char			creator[16];
+   	float		mins[3];
+	float		maxs[3];
+	float		translate[3];
+	float		radius;
+	char		creator[16];
 } dmd3frame_t;
 
 typedef struct {
-	char			name[MD3_MAX_PATH];	// tag name
-	float			origin[3];
-	float			axis[3][3];
+	char		name[MD3_MAX_PATH];	// tag name
+	float		origin[3];
+	float		axis[3][3];
 } dmd3tag_t;
 
 typedef struct {
-	char			name[MD3_MAX_PATH];
-	int			unused;			// shader
+	char		name[MD3_MAX_PATH];
+	uint32_t	unused;			// shader
 } dmd3skin_t;
 
 typedef struct {
-	int			ident;
+	uint32_t	ident;
 
-	char			name[MD3_MAX_PATH];
-	int			flags;
+	char		name[MD3_MAX_PATH];
+	uint32_t	flags;
 
-	int			num_frames;
-	int			num_skins;
-	int			num_verts;
-	int			num_tris;
+	uint32_t	num_frames;
+	uint32_t	num_skins;
+	uint32_t	num_verts;
+	uint32_t	num_tris;
 
-	int			ofs_indexes;
-	int			ofs_skins;
-	int			ofs_tcs;
-	int			ofs_verts;
+	uint32_t	ofs_indexes;
+	uint32_t	ofs_skins;
+	uint32_t	ofs_tcs;
+	uint32_t	ofs_verts;
 
-	int			meshsize;
+	uint32_t	meshsize;
 } dmd3mesh_t;
 
 typedef struct {
-	int			ident;
-	int			version;
+	uint32_t	ident;
+	uint32_t	version;
 
-	char			filename[MD3_MAX_PATH];
+	char		filename[MD3_MAX_PATH];
 
-	int			flags;
+	uint32_t	flags;
 
-	int			num_frames;
-	int			num_tags;
-	int			num_meshes;
-	int			num_skins;
+	uint32_t	num_frames;
+	uint32_t	num_tags;
+	uint32_t	num_meshes;
+	uint32_t	num_skins;
 
-	int			ofs_frames;
-	int			ofs_tags;
-	int			ofs_meshes;
-	int			ofs_end;
+	uint32_t	ofs_frames;
+	uint32_t	ofs_tags;
+	uint32_t	ofs_meshes;
+	uint32_t	ofs_end;
 } dmd3header_t;
 
 
@@ -285,17 +276,16 @@ typedef struct {
 ==============================================================================
 */
 
-
 #define	MIPLEVELS	4
-typedef struct miptex_s
-{
+
+typedef struct {
 	char		name[32];
 	uint32_t	width, height;
 	uint32_t	offsets[MIPLEVELS];		// four mip maps stored
 	char		animname[32];			// next frame in animation chain
-	int			flags;
-	int			contents;
-	int			value;
+	uint32_t	flags;
+	uint32_t	contents;
+	uint32_t	value;
 } miptex_t;
 
 
@@ -372,16 +362,16 @@ typedef struct {
 #define	HEADER_LUMPS		19
 
 typedef struct {
-	uint32_t		ident;
-	uint32_t		version;	
+	uint32_t	ident;
+	uint32_t	version;	
 	lump_t		lumps[HEADER_LUMPS];
 } dheader_t;
 
 typedef struct {
 	float		mins[3], maxs[3];
 	float		origin[3];		// for sounds or lights
-	uint32_t		headnode;
-	uint32_t		firstface, numfaces;	// submodels just draw faces
+	uint32_t	headnode;
+	uint32_t	firstface, numfaces;	// submodels just draw faces
 										// without walking the bsp tree
 } dmodel_t;
 
@@ -545,36 +535,5 @@ typedef struct {
 	uint32_t		numareaportals;
 	uint32_t		firstareaportal;
 } darea_t;
-
-/*
-==============================================================================
-
-  .QFONT file format
-
-==============================================================================
-*/
-
-#define QFONT_MAGIC		(('T'<<24)+('N'<<16)+('F'<<8)+'Q') // little-endian "QFNT"
-
-#define QFONT_MAX_GLYPHS	256
-#define QFONT_MAX_IMAGES	4
-
-typedef struct dglyph_s {
-	char	xBearing;
-	char	yBearing;
-	byte	xAdvance;
-	byte	imageIndex;
-	byte	s1, t1; // absolute coordinates
-	byte	s2, t2; // absolute coordinates
-} dglyph_t;
-
-typedef struct dfont_s {
-	int			magic;
-	//int			charWidth;
-	//int			charHeight;
-	char		fontImages[QFONT_MAX_IMAGES][MAX_QPATH];
-	dglyph_t	glyphs[QFONT_MAX_GLYPHS];
-} dfont_t;
-
 
 
