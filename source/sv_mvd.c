@@ -219,7 +219,7 @@ static void SV_MvdEmitFrame( void ) {
         flags = 0;
         if( i <= sv_maxclients->integer ) {
             oldps = &svs.mvd.players[ i - 1 ];
-            if( PPS_INUSE( oldps ) && oldps->pmove.pm_type < PM_DEAD ) {
+            if( PPS_INUSE( oldps ) && oldps->pmove.pm_type == PM_NORMAL ) {
                 flags |= MSG_ES_FIRSTPERSON;
             }
         }
@@ -553,12 +553,17 @@ void SV_MvdBeginFrame( void ) {
 
 void SV_MvdEndFrame( void ) {
     tcpClient_t *client;
+    usercmd_t cmd;
     int length;
 
 	Cbuf_ExecuteEx( &dummy_buffer );
     if( dummy_buffer.waitCount > 0 ) {
         dummy_buffer.waitCount--;
     }
+
+    memset( &cmd, 0, sizeof( cmd ) );
+    cmd.msec = 100;
+	ge->ClientThink( svs.mvd.dummy->edict, &cmd );
 
     if( sv.mvd.paused >= PAUSED_FRAMES ) {
         goto clear;
@@ -713,7 +718,7 @@ static void SV_MvdEmitGamestate( void ) {
         flags = 0;
         if( i <= sv_maxclients->integer ) {
             ps = &svs.mvd.players[ i - 1 ];
-            if( PPS_INUSE( ps ) && ps->pmove.pm_type < PM_DEAD ) {
+            if( PPS_INUSE( ps ) && ps->pmove.pm_type == PM_NORMAL ) {
                 flags |= MSG_ES_FIRSTPERSON;
             }
         }

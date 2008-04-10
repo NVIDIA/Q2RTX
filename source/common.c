@@ -569,7 +569,7 @@ void Z_LeakTest( memtag_t tag ) {
 
 	if( numLeaks ) {
 		Com_Printf( S_COLOR_YELLOW "************* Z_LeakTest *************\n"
-						           "%s leaked %"PRIz" bytes of memory (%"PRIz"u object%s)\n"
+						           "%s leaked %"PRIz" bytes of memory (%"PRIz" object%s)\n"
 						           "**************************************\n",
 								   z_tagnames[tag < TAG_MAX ? tag : TAG_FREE],
                                    numBytes, numLeaks, numLeaks == 1 ? "" : "s" );

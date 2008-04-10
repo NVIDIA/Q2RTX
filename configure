@@ -63,7 +63,7 @@ histfile=".conhistory"
 democache=".democache"
 screenshots="screenshots"
 scoreshots="scoreshots"
-revision="216"
+revision="226"
 tmpc="/tmp/q2pro-${RANDOM}.c"
 tmpo="/tmp/q2pro-${RANDOM}.o"
 

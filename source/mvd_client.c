@@ -287,7 +287,7 @@ static void MVD_EmitGamestate( mvd_t *mvd ) {
         flags = 0;
         if( i <= mvd->maxclients ) {
             ps = &mvd->players[ i - 1 ].ps;
-            if( PPS_INUSE( ps ) && ps->pmove.pm_type < PM_DEAD ) {
+            if( PPS_INUSE( ps ) && ps->pmove.pm_type == PM_NORMAL ) {
                 flags |= MSG_ES_FIRSTPERSON;
             }
         }

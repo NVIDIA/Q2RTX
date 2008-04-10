@@ -275,10 +275,17 @@ void SV_WriteFrameToClient_Enhanced( client_t *client ) {
 
 	if( client->protocol == PROTOCOL_VERSION_Q2PRO ) {
         // delta encode the clientNum
-        int clientNum = oldframe ? oldframe->clientNum : 0;
-        if( clientNum != frame->clientNum ) {
-            extraflags |= EPS_CLIENTNUM;
-            MSG_WriteByte( frame->clientNum );
+        if( client->version < PROTOCOL_VERSION_Q2PRO_CLIENTFIX ) {
+            if( !oldframe || frame->clientNum != oldframe->clientNum ) {
+                extraflags |= EPS_CLIENTNUM;
+                MSG_WriteByte( frame->clientNum );
+            }
+        } else {
+            int clientNum = oldframe ? oldframe->clientNum : 0;
+            if( clientNum != frame->clientNum ) {
+                extraflags |= EPS_CLIENTNUM;
+                MSG_WriteByte( frame->clientNum );
+            }
         }
     }
 

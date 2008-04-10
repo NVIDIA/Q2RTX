@@ -31,7 +31,9 @@ static cvar_t	*mvd_flood_msgs;
 static cvar_t	*mvd_flood_persecond;
 static cvar_t	*mvd_flood_waitdelay;
 static cvar_t	*mvd_flood_mute;
+static cvar_t	*mvd_filter_version;
 static cvar_t	*mvd_stats_hack;
+static cvar_t	*mvd_freeze_hack;
 
 udpClient_t     *mvd_clients;
 
@@ -559,6 +561,13 @@ void MVD_BroadcastPrintf( mvd_t *mvd, int level, int mask, const char *fmt, ... 
 	len = Q_vsnprintf( text, sizeof( text ), fmt, argptr );
 	va_end( argptr );
 
+    if( level == PRINT_CHAT && mvd_filter_version->integer ) {
+        char *s = strstr( text, "!version" );
+        if( s ) {
+            s[6] = '0';
+        }
+    }
+
     MSG_WriteByte( svc_print );
     MSG_WriteByte( level );
     MSG_WriteData( text, len + 1 );
@@ -698,7 +707,7 @@ static void MVD_Say_f( udpClient_t *client ) {
     //text[128] = 0; // don't let it be too long
 
     MVD_BroadcastPrintf( mvd, PRINT_CHAT, client->admin ? 0 : UF_MUTE_OBSERVERS,
-        "{%s}: %s\n", client->cl->name, text );
+        "[MVD] %s: %s\n", client->cl->name, text );
 }
 
 static void MVD_Observe_f( udpClient_t *client ) {
@@ -1012,8 +1021,10 @@ static void MVD_GameInit( void ) {
 	mvd_flood_persecond = Cvar_Get( "flood_persecond", "4", 0 ); // FIXME: rename this
 	mvd_flood_waitdelay = Cvar_Get( "flood_waitdelay", "10", 0 );
 	mvd_flood_mute = Cvar_Get( "flood_mute", "0", 0 );
+	mvd_filter_version = Cvar_Get( "mvd_filter_version", "0", 0 );
     mvd_default_map = Cvar_Get( "mvd_default_map", "q2dm1", CVAR_LATCH );
     mvd_stats_hack = Cvar_Get( "mvd_stats_hack", "0", 0 );
+    mvd_freeze_hack = Cvar_Get( "mvd_freeze_hack", "0", 0 );
     Cvar_Get( "g_features", va( "%d", GMF_CLIENTNUM|GMF_PROPERINUSE ), CVAR_ROM );
 
     Z_TagReserve( ( sizeof( edict_t ) +
@@ -1242,7 +1253,9 @@ static void MVD_GameClientThink( edict_t *ent, usercmd_t *cmd ) {
 	if( client->target ) {
 		if( cmd->upmove >= 10 ) {
             if( !client->jump_held ) {
-    			MVD_FollowNext( client );
+                if( !client->mvd->intermission ) {
+        			MVD_FollowNext( client );
+                }
                 client->jump_held = qtrue;
             }
 		} else {
@@ -1307,6 +1320,7 @@ static void MVD_IntermissionStop( mvd_t *mvd ) {
         } else {
             MVD_FollowStop( client );
         }
+        client->oldtarget = NULL;
     }
 }
 
@@ -1331,11 +1345,15 @@ static void MVD_GameRunFrame( void ) {
         }
 
         // check for intermission
-        if( !mvd->intermission ) {
-            if( mvd->dummy->ps.pmove.pm_type == PM_FREEZE ) {
-                MVD_IntermissionStart( mvd );
+        if( mvd_freeze_hack->integer ) {
+            if( !mvd->intermission ) {
+                if( mvd->dummy->ps.pmove.pm_type == PM_FREEZE ) {
+                    MVD_IntermissionStart( mvd );
+                }
+            } else if( mvd->dummy->ps.pmove.pm_type != PM_FREEZE ) {
+                MVD_IntermissionStop( mvd );
             }
-        } else if( mvd->dummy->ps.pmove.pm_type != PM_FREEZE ) {
+        } else if( mvd->intermission ) {
             MVD_IntermissionStop( mvd );
         }
 

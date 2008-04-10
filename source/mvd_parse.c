@@ -714,7 +714,8 @@ static void MVD_PlayerToEntityStates( mvd_t *mvd ) {
         if( !player->inuse ) {
             continue;
         }
-        if( player->ps.pmove.pm_type >= PM_DEAD ) {
+
+        if( player->ps.pmove.pm_type != PM_NORMAL ) {
             continue; // can be out of sync
         }
 
