@@ -73,8 +73,6 @@ static struct termios   tty_orig;
 static commandPrompt_t	tty_prompt;
 static int				tty_hidden;
 
-void Sys_Printf( const char *fmt, ... );
-
 /*
 ===============================================================================
 
@@ -150,6 +148,8 @@ static void Sys_InitTTY( void ) {
 #endif
     tty_prompt.printf = Sys_Printf;
     tty_enabled = qtrue;
+
+    Sys_ConsoleWrite( " ", 1 );	
 }
 
 static void Sys_ShutdownTTY( void ) {
@@ -727,19 +727,17 @@ void Sys_AddDefaultConfig( void ) {
     struct stat st;
     char *text;
 
-    if( stat( DEFCFG, &st ) == -1 ) {
-        return;
-    }
-
     fp = fopen( DEFCFG, "r" );
     if( !fp ) {
         return;
     }
 
-    Com_Printf( "Execing " DEFCFG "\n" );
-    text = Cbuf_Alloc( &cmd_buffer, st.st_size );
-    if( text ) {
-        fread( text, st.st_size, 1, fp );
+    if( fstat( fileno( fp ), &st ) == 0 ) {
+        text = Cbuf_Alloc( &cmd_buffer, st.st_size );
+        if( text ) {
+            Com_Printf( "Execing " DEFCFG "\n" );
+            fread( text, st.st_size, 1, fp );
+        }
     }
 
     fclose( fp );
@@ -748,8 +746,8 @@ void Sys_AddDefaultConfig( void ) {
 void Sys_Sleep( int msec ) {
     struct timespec req;
 
-    req.tv_sec = msec / 1000; msec %= 1000;
-    req.tv_nsec = msec * 1000000;
+    req.tv_sec = msec / 1000;
+    req.tv_nsec = ( msec % 1000 ) * 1000000;
     nanosleep( &req, NULL );
 }
 

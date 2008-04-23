@@ -16,16 +16,20 @@ clean:
 .PHONY: clean
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
+	@echo [CC] $@
+	@$(CC) $(CFLAGS) -c -o $@ $<
 	
 %.o: %.s
-	$(CC) $(CFLAGS) $(ASMFLAGS) -x assembler-with-cpp -c -o $@ $<
+	@echo [AS] $@
+	@$(CC) $(CFLAGS) $(ASMFLAGS) -x assembler-with-cpp -c -o $@ $<
 
 %.o: %.rc
-	$(WINDRES) $(RESFLAGS) -o $@ $<
+	@echo [RC] $@
+	@$(WINDRES) $(RESFLAGS) -o $@ $<
 
 $(TARGET): $(OBJFILES)
-	$(CC) -o $@ $^ $(LDFLAGS)
+	@echo [LD] $@
+	@$(CC) -o $@ $^ $(LDFLAGS)
 
 -include *.d
 

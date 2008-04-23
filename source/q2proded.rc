@@ -1,4 +1,4 @@
-#include "config.h"
+#include <config.h>
 #include <windows.h>
 
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US

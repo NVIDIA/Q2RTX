@@ -131,8 +131,8 @@ typedef struct {
 static ac_locals_t  ac;
 static ac_static_t  acs;
 
-static list_t       ac_required_list;
-static list_t       ac_exempt_list;
+static LIST_DECL( ac_required_list );
+static LIST_DECL( ac_exempt_list );
 
 static byte         ac_send_buffer[AC_SEND_SIZE];
 static byte         ac_recv_buffer[AC_RECV_SIZE];
@@ -1466,7 +1466,7 @@ void AC_Info_f( void ) {
 		substring = Cmd_Argv( 1 );
 		filesubstring = Cmd_Argv( 2 );
 
-		if( COM_IsNumeric( substring ) ) {
+		if( COM_IsUint( substring ) ) {
 			clientID = atoi( substring );
 			if( clientID < 0 || clientID >= sv_maxclients->integer ) {
 				Com_Printf( "Invalid client ID.\n" );
@@ -1609,9 +1609,6 @@ void AC_Register( void ) {
     ac_disable_play->changed = ac_disable_play_changed;
 
     Cmd_Register( c_ac );
-
-    List_Init( &ac_required_list );
-    List_Init( &ac_exempt_list );
 }
 
 

@@ -989,11 +989,11 @@ Filenames are relative to the quake search path
 a null buffer will just return the file length without loading
 ============
 */
-size_t FS_LoadFileEx( const char *path, void **buffer, int flags ) {
+size_t FS_LoadFileEx( const char *path, void **buffer, int flags, memtag_t tag ) {
 	fsFile_t *file;
 	fileHandle_t f;
 	byte	*buf;
-	size_t	length;
+	size_t	len;
 
 	if( !path ) {
 		Com_Error( ERR_FATAL, "FS_LoadFile: NULL" );
@@ -1024,31 +1024,45 @@ size_t FS_LoadFileEx( const char *path, void **buffer, int flags ) {
 	file->mode = flags | FS_MODE_READ;
 
 	// look for it in the filesystem or pack files
-	length = FS_FOpenFileRead( file, path, qfalse );
-	if( length == INVALID_LENGTH ) {
-		return length;
+	len = FS_FOpenFileRead( file, path, qfalse );
+	if( len == INVALID_LENGTH ) {
+		return len;
 	}
 
 	if( buffer ) {
 #if USE_ZLIB
         if( file->type == FS_GZIP ) {
-            length = INVALID_LENGTH; // unknown length
+            len = INVALID_LENGTH; // unknown length
         } else
 #endif
         {
-            *buffer = buf = FS_AllocTempMem( length + 1 );
-            FS_Read( buf, length, f );
-            buf[length] = 0;
+            if( tag == TAG_FREE ) {
+                buf = FS_AllocTempMem( len + 1 );
+            } else {
+                buf = Z_TagMalloc( len + 1, tag );
+            }
+            if( FS_Read( buf, len, f ) == len ) {
+                *buffer = buf;
+                buf[len] = 0;
+            } else {
+                Com_EPrintf( "FS_LoadFile: error reading file: %s\n", path );
+                if( tag == TAG_FREE ) {
+                    FS_FreeFile( buf );
+                } else {
+                    Z_Free( buf );
+                }
+                len = INVALID_LENGTH;
+            }
         }
 	}
 
 	FS_FCloseFile( f );
 
-	return length;
+	return len;
 }
 
 size_t FS_LoadFile( const char *path, void **buffer ) {
-	return FS_LoadFileEx( path, buffer, 0 );
+	return FS_LoadFileEx( path, buffer, 0, TAG_FREE );
 }
 
 void *FS_AllocTempMem( size_t length ) {

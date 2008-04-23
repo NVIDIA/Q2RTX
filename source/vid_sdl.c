@@ -80,7 +80,7 @@ static qboolean QSDL_SetMode( int flags, int forcedepth ) {
 			sdl.flags |= QVF_FULLSCREEN;
             goto success;
         }
-		Com_EPrintf( "FS video mode failed: %s\n", SDL_GetError() );
+		Com_EPrintf( "Fullscreen video mode failed: %s\n", SDL_GetError() );
         Cvar_Set( "vid_fullscreen", "0" );
     }
 
@@ -99,6 +99,13 @@ success:
     return qtrue;
 }
 
+static void QSDL_Activate( SDL_Event *event ) {
+    // state is actually a bitmask!
+    if( event->active.state & SDL_APPACTIVE ) {
+        CL_AppActivate( event->active.gain ? qtrue : qfalse );
+    }
+}
+
 void Video_ModeChanged( void ) {
 	SDL_Event	event;
 
@@ -106,8 +113,17 @@ void Video_ModeChanged( void ) {
         Com_Error( ERR_FATAL, "Couldn't change video mode: %s", SDL_GetError() );
     }
 
-	while( SDL_PollEvent( &event ) )
-        ;
+    // ignore any pending resize events
+	while( SDL_PollEvent( &event ) ) {
+		switch( event.type ) {
+		case SDL_ACTIVEEVENT:
+            QSDL_Activate( &event );
+			break;
+		case SDL_QUIT:
+			Com_Quit();
+			break;
+        }
+    }
 }
 
 static qboolean QSDL_InitVideo( void ) {
@@ -319,20 +335,11 @@ void Video_PumpEvents( void ) {
 	while( SDL_PollEvent( &event ) ) {
 		switch( event.type ) {
 		case SDL_ACTIVEEVENT:
-			// state is actually a bitmask!
-			if( event.active.state & SDL_APPACTIVE ) {
-				if( event.active.gain ) {
-					CL_AppActivate( qtrue );
-				} else {
-					CL_AppActivate( qfalse );
-				}
-			}
+            QSDL_Activate( &event );
 			break;
-
 		case SDL_QUIT:
 			Com_Quit();
 			break;
-
         case SDL_VIDEORESIZE:
             if( sdl.surface->flags & SDL_RESIZABLE ) {
                 event.resize.w &= ~7;
@@ -343,19 +350,15 @@ void Video_PumpEvents( void ) {
                 return;
             }
             break;
-
 		case SDL_KEYDOWN:
 			QSDL_KeyEvent( &event.key.keysym, qtrue );
 			break;
-
 		case SDL_KEYUP:
 			QSDL_KeyEvent( &event.key.keysym, qfalse );
 			break;
-
 		case SDL_MOUSEBUTTONDOWN:
             QSDL_MouseButtonEvent( event.button.button, qtrue );
             break;
-
 		case SDL_MOUSEBUTTONUP:
             QSDL_MouseButtonEvent( event.button.button, qfalse );
             break;

@@ -393,7 +393,7 @@ void CL_InitRefresh( void ) {
         Cvar_Set( "_vid_fullscreen", "1" );
     }
 
-#ifdef REF_HARD_LINKED
+#if REF_HARD_LINKED
 	vid_ref = Cvar_Get( "vid_ref", DEFAULT_REFRESH_DRIVER, CVAR_ROM );
 	if( !CL_LoadRefresh( "ref_" DEFAULT_REFRESH_DRIVER ) ) {
 		Com_Error( ERR_FATAL, "Couldn't load built-in video driver!" );
@@ -417,16 +417,22 @@ void CL_InitRefresh( void ) {
 		Com_Printf( "Falling back to default refresh...\n" );
 		Cvar_Set( "vid_ref", DEFAULT_REFRESH_DRIVER );	
 	}
-#endif
 
+	vid_ref->changed = vid_ref_changed;
+#endif
     vid_placement->changed = vid_placement_changed;
     vid_fullscreen->changed = vid_fullscreen_changed;
     vid_modelist->changed = vid_modelist_changed;
-#ifndef REF_HARD_LINKED
-	vid_ref->changed = vid_ref_changed;
-#endif
 
     mode_changed = 0;
+
+    // Initialize the rest of graphics subsystems
+    V_Init();
+    SCR_Init();
+    CL_InitUI();
+
+    SCR_RegisterMedia();
+    Con_RegisterMedia();
 }
 
 /*
@@ -439,10 +445,15 @@ void CL_ShutdownRefresh( void ) {
 		return;
 	}
 
+    // Shutdown the rest of graphics subsystems
+    V_Shutdown();
+    SCR_Shutdown();
+    CL_ShutdownUI();
+
     vid_placement->changed = NULL;
     vid_fullscreen->changed = NULL;
     vid_modelist->changed = NULL;
-#ifndef REF_HARD_LINKED
+#if !REF_HARD_LINKED
 	vid_ref->changed = NULL;
 #endif
 
@@ -450,6 +461,7 @@ void CL_ShutdownRefresh( void ) {
 	CL_FreeRefresh();
 
 	Z_LeakTest( TAG_RENDERER );
+
 }
 
 

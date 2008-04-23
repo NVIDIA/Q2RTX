@@ -121,7 +121,6 @@ Sets sv_client and sv_player to the player with idnum Cmd_Argv(1)
 */
 static qboolean SV_SetPlayer( void ) {
 	client_t	*cl;
-	int			i;
 	int			idnum;
 	char		*s;
 
@@ -130,13 +129,14 @@ static qboolean SV_SetPlayer( void ) {
         return qfalse;
     }
 
+    // allow numeric value escape
+    if( *s == '\\' ) {
+        s++;
+        goto namecmp;
+    }
+
 	// numeric values are just slot numbers
-	for( i = 0; s[i]; i++ ) {
-		if( !Q_isdigit( s[i] ) ) {
-			break;
-		}
-	}
-	if( !s[i] ) {
+	if( COM_IsUint( s ) ) {
 		idnum = atoi( s );
 		if( idnum < 0 || idnum >= sv_maxclients->integer ) {
 			Com_Printf( "Bad client slot: %i\n", idnum );
@@ -152,6 +152,7 @@ static qboolean SV_SetPlayer( void ) {
 		return qtrue;
 	}
 
+namecmp:
 	// check for a name match
     FOR_EACH_CLIENT( cl ) {
 		if( !strcmp( cl->name, s ) ) {
@@ -228,6 +229,39 @@ static void SV_Map_f( void ) {
 static void SV_Map_c( genctx_t *ctx, int argnum ) {
     if( argnum == 1 ) {
     	FS_File_g( "maps", ".bsp", 0x80000000, ctx );
+    }
+}
+
+static void SV_DumpEnts_f( void ) {
+    cmcache_t *c = sv.cm.cache;
+    fileHandle_t f;
+    char *s, buffer[MAX_QPATH];
+
+    if( !c || !c->entitystring ) {
+        Com_Printf( "No map loaded.\n" );
+        return;
+    }
+
+	if( Cmd_Argc() != 2 ) {
+		Com_Printf( "Usage: %s <entname>\n", Cmd_Argv( 0 ) );
+		return;
+	}
+
+	s = Cmd_Argv( 1 );
+	if( *s == '/' ) {
+		Q_strncpyz( buffer, s + 1, sizeof( buffer ) );
+	} else {
+		Q_concat( buffer, sizeof( buffer ), "maps/", s, NULL );
+    	COM_AppendExtension( buffer, ".ent", sizeof( buffer ) );
+	}
+
+    FS_FOpenFile( buffer, &f, FS_MODE_WRITE );
+    if( f ) {
+        FS_Write( c->entitystring, c->numEntityChars, f );
+        FS_FCloseFile( f );
+        Com_Printf( "Dumped entity string to %s\n", buffer );
+    } else {
+        Com_Printf( "Failed to dump entity string to %s\n", buffer );
     }
 }
 
@@ -919,6 +953,7 @@ static const cmdreg_t c_server[] = {
 	{ "map", SV_Map_f, SV_Map_c },
 	{ "demomap", SV_DemoMap_f },
 	{ "gamemap", SV_GameMap_f, SV_Map_c },
+	{ "dumpents", SV_DumpEnts_f },
 	{ "setmaster", SV_SetMaster_f },
 	{ "killserver", SV_KillServer_f },
 	{ "sv", SV_ServerCommand_f },

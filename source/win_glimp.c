@@ -158,7 +158,7 @@ static qboolean GLimp_InitGL( void ) {
 	return qtrue;
 
 fail1:
-	Com_DPrintf( "failed with error %#x\n", GetLastError() );
+	Com_DPrintf( "failed with error %#lx\n", GetLastError() );
 fail2:
 	if( glw.hGLRC && qwglDeleteContext ) {
 		qwglDeleteContext( glw.hGLRC );

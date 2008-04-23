@@ -58,9 +58,7 @@ typedef struct m_joinServer_s {
 static m_joinServer_t	m_join;
 
 static void UpdateSelection( void ) {
-	serverSlot_t *s;
-
-	s = &m_join.servers[m_join.list.curvalue];
+	serverSlot_t *s = &m_join.servers[m_join.list.curvalue];
 
 	if( s->valid ) {
 		m_join.info.generic.flags &= ~QMF_HIDDEN;
@@ -108,7 +106,7 @@ static void ClearSlot( serverSlot_t *slot ) {
 
 void UI_AddToServerList( const serverStatus_t *status ) {
 	serverSlot_t *slot;
-	int		i, j;
+	int		i, j, k;
 	char *host, *map;
 	const char *info = status->infostring;
 	char key[MAX_STRING_CHARS];
@@ -149,10 +147,19 @@ void UI_AddToServerList( const serverStatus_t *status ) {
 	map = Info_ValueForKey( info, "mapname" );
     if( !map[0] ) {
         map = "???";
+    } else {
+        Com_sprintf( value, sizeof( value ), "maps/%s.bsp", map );
+        if( fs.LoadFile( value, NULL ) == INVALID_LENGTH ) {
+            Q_concat( value, sizeof( value ), S_COLOR_RED, map, NULL );
+            map = value;
+        }
     }
 
     j = atoi( Info_ValueForKey( info, "maxclients" ) );
-    Com_sprintf( key, sizeof( key ), "%d/%d", status->numPlayers, j );
+    k = atoi( Info_ValueForKey( info, "needpass" ) );
+    Com_sprintf( key, sizeof( key ), "%s%d/%d",
+        status->numPlayers < j ? k > 0 ? S_COLOR_YELLOW : "" : S_COLOR_RED,
+        status->numPlayers, j );
 
 	if( m_join.names[i] ) {
 		com.Free( m_join.names[i] );
@@ -180,25 +187,25 @@ void UI_AddToServerList( const serverStatus_t *status ) {
 
 	slot->valid = qtrue;
 
-	UpdateSelection();
+    UpdateSelection();
 }
 
 static void PingSelected( void ) {
-	serverSlot_t *slot = &m_join.servers[m_join.list.curvalue];
+	serverSlot_t *s = &m_join.servers[m_join.list.curvalue];
 
 	if( m_join.names[m_join.list.curvalue] ) {
 		com.Free( m_join.names[m_join.list.curvalue] );
 	}
 	m_join.names[m_join.list.curvalue] = UI_FormatColumns( 0,
-        slot->address, "???", "?/?", NULL );
+        s->address, "???", "?/?", NULL );
     
-    ClearSlot( slot );
+    ClearSlot( s );
     
     UpdateSelection();
     m_join.menu.statusbar = "Pinging servers, please wait...";
     client.UpdateScreen();
     
-	client.SendStatusRequest( slot->realAddress, 0 );
+	client.SendStatusRequest( s->realAddress, 0 );
 
 	UpdateSelection();
 }
@@ -325,51 +332,47 @@ static void Resize( void ) {
 }
 
 static int JoinServer_MenuCallback( int id, int msg, int param ) {
+	serverSlot_t *s = &m_join.servers[m_join.list.curvalue];
+
 	switch( msg ) {
 	case QM_ACTIVATE:
-		if( id != ID_LIST ) {
-			break;
-		}
-		cmd.ExecuteText( EXEC_APPEND, va( "connect \"%s\"\n",
-			m_join.servers[m_join.list.curvalue].realAddress ) );
-		UI_PopMenu();
-		return QMS_IN;
-
+		if( id == ID_LIST ) {
+		    cmd.ExecuteText( EXEC_APPEND,
+                va( "connect \"%s\"\n", s->realAddress ) );
+    		UI_PopMenu();
+	    	return QMS_IN;
+        }
+        break;
 	case QM_KEY:
         if( param == 'r' ) {
-            cvar.Set( "rcon_address", m_join.servers[m_join.list.curvalue].realAddress );
-            break;
+            cvar.Set( "rcon_address", s->realAddress );
+    		return QMS_SILENT;
         }
-		if( param != 32 ) {
-			break;
-		}
-        if( !keys.IsDown( K_ALT ) ) {
-            PingSelected();
-        } else {
-    		PingServers();
+		if( param == ' ' ) {
+            if( !keys.IsDown( K_ALT ) ) {
+                PingSelected();
+            } else {
+                PingServers();
+            }
+    		return QMS_SILENT;
         }
-		return QMS_SILENT;
-
+        break;
 	case QM_CHANGE:
-		if( id != ID_LIST ) {
-			break;
-		}
-		UpdateSelection();
-		return QMS_MOVE;
-
+		if( id == ID_LIST ) {
+		    UpdateSelection();
+    		return QMS_MOVE;
+        }
+        break;
 	case QM_DESTROY:
 		FreeListedServers();
 		break;
-
 	case QM_DESTROY_CHILD:
 		FreeListedServers();
 		AddUnlistedServers();
 		break;
-
 	case QM_SIZE:
         Resize();
         break;
-
 	default:
 		break;
 	}

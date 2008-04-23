@@ -58,14 +58,6 @@ cvar_t	*cl_thirdperson;
 cvar_t	*cl_thirdperson_angle;
 cvar_t	*cl_thirdperson_range;
 
-cvar_t *cl_railtrail_type;
-cvar_t *cl_railtrail_time;
-cvar_t *cl_railtrail_alpha;
-cvar_t *cl_railcore_color;
-cvar_t *cl_railcore_width;
-cvar_t *cl_railspiral_color;
-cvar_t *cl_railspiral_radius;
-
 cvar_t	*cl_disable_particles;
 cvar_t	*cl_disable_explosions;
 cvar_t	*cl_chat_notify;
@@ -1559,6 +1551,22 @@ static void CL_Snd_Restart_f ( void ) {
     CL_RegisterSounds ();
 }
 
+static void CL_RegisterModels( void ) {
+    int i;
+    char *name;
+
+	for ( i = 1; i < MAX_MODELS; i++ ) {
+		name = cl.configstrings[CS_MODELS+i];
+        if( !name[0] ) {
+            break;
+        }
+        if( name[0] == '*' )
+            cl.model_clip[i] = CM_InlineModel( &cl.cm, name );
+        else
+            cl.model_clip[i] = NULL;
+	}
+}
+
 static int precache_check; // for autodownload of precache items
 static int precache_spawncount;
 static int precache_tex;
@@ -1843,6 +1851,7 @@ void CL_RequestNextDownload ( void ) {
     SCR_LoadingString( "sounds" );
     CL_RegisterSounds ();
 
+    CL_RegisterModels();
     CL_PrepRefresh ();
 
     LOC_LoadLocations();
@@ -1887,6 +1896,7 @@ static void CL_Precache_f( void ) {
                 CM_LOAD_CLIENT, &map_checksum );
         SCR_LoadingString( "sounds" );
         CL_RegisterSounds();
+        CL_RegisterModels();
         CL_PrepRefresh();
         cls.state = ca_precached;
         return;
@@ -2181,20 +2191,25 @@ void CL_RestartFilesystem( void ) {
     S_StopAllSounds();
 	S_FreeAllSounds();
 
-    ref.Shutdown( qfalse );
+    if( cls.ref_initialized ) {
+        ref.Shutdown( qfalse );
 
-    FS_Restart();
+        FS_Restart();
 
-    ref.Init( qfalse );
+        ref.Init( qfalse );
 
-    SCR_RegisterMedia();
-    Con_SetupDC();
-    CL_InitUI();
+        SCR_RegisterMedia();
+        Con_RegisterMedia();
+        CL_InitUI();
+    } else {
+        FS_Restart();
+    }
 
     if ( cls_state == ca_disconnected ) {
         UI_OpenMenu( UIMENU_MAIN );
     } else if ( cls_state >= ca_loading ) {
 		CL_RegisterSounds();
+        CL_RegisterModels();
         CL_PrepRefresh();
     }
 
@@ -2210,6 +2225,10 @@ CL_RestartRefresh
 */
 static void CL_RestartRefresh_f( void ) {
     int	cls_state;
+
+    if( !cls.ref_initialized ) {
+        return;
+    }
 
     // temporary switch to loading state
     cls_state = cls.state;
@@ -2227,10 +2246,6 @@ static void CL_RestartRefresh_f( void ) {
 
     CL_InitRefresh();
     CL_InitInput();
-
-    SCR_RegisterMedia();
-    Con_SetupDC();
-    CL_InitUI();
 
     if ( cls_state == ca_disconnected ) {
         UI_OpenMenu( UIMENU_MAIN );
@@ -2353,15 +2368,14 @@ static void CL_InitLocal ( void ) {
     int i;
 
     cls.state = ca_disconnected;
-    cls.realtime = 0xffffffff-15*1000;
 
 	CL_FillAPI( &client );
 
     CL_RegisterInput();
-
     CL_InitDemos();
-
     LOC_Init();
+    CL_InitAscii();
+    CL_InitEffects();
 
     Cmd_Register( c_client );
 
@@ -2402,14 +2416,6 @@ static void CL_InitLocal ( void ) {
     cl_thirdperson = Cvar_Get( "cl_thirdperson", "0", CVAR_CHEAT );
     cl_thirdperson_angle = Cvar_Get( "cl_thirdperson_angle", "0", 0 );
     cl_thirdperson_range = Cvar_Get( "cl_thirdperson_range", "60", 0 );
-
-    cl_railtrail_type = Cvar_Get( "cl_railtrail_type", "0", 0 );
-    cl_railtrail_time = Cvar_Get( "cl_railtrail_time", "1.0", 0 );
-    cl_railtrail_alpha = Cvar_Get( "cl_railtrail_alpha", "1.0", 0 );
-    cl_railcore_color = Cvar_Get( "cl_railcore_color", "0xFF0000", 0 );
-    cl_railcore_width = Cvar_Get( "cl_railcore_width", "2", 0 );
-    cl_railspiral_color = Cvar_Get( "cl_railspiral_color", "0x0000FF", 0 );
-    cl_railspiral_radius = Cvar_Get( "cl_railspiral_radius", "3", 0 );
 
     cl_disable_particles = Cvar_Get( "cl_disable_particles", "0", 0 );
 	cl_disable_explosions = Cvar_Get( "cl_disable_explosions", "0", 0 );
@@ -2815,13 +2821,8 @@ void CL_Init( void ) {
     CL_InitRefresh();
 #endif
 
-    V_Init();
-    SCR_Init();
     CL_InitLocal();
     CL_InitInput();
-    SCR_RegisterMedia();
-    Con_SetupDC();
-    CL_InitUI();
 
 #if USE_ZLIB
     if( inflateInit2( &cls.z, -15 ) != Z_OK ) {

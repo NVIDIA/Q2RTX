@@ -106,7 +106,7 @@ static sndinitstat_t OSS_Init ( void ) {
                 break;
         }
         if ( i == sizeof ( tryrates ) / 4 ) {
-            Com_WPrintf ( "%s supports no valid bitrates", snddevice->string );
+            Com_WPrintf ( "%s supports no valid bitrates\n", snddevice->string );
             goto fail;
         }
         dma.speed = tryrates[i];
@@ -121,7 +121,7 @@ static sndinitstat_t OSS_Init ( void ) {
         tmp = 1;
     rc = ioctl ( audio_fd, SNDCTL_DSP_STEREO, &tmp );
     if ( rc < 0 ) {
-        Com_WPrintf ( "Could not set %s to %d channels: %s", snddevice->string,
+        Com_WPrintf ( "Could not set %s to %d channels: %s\n", snddevice->string,
             dma.channels, strerror ( errno ) );
         goto fail;
     }
@@ -132,7 +132,7 @@ static sndinitstat_t OSS_Init ( void ) {
 
     rc = ioctl ( audio_fd, SNDCTL_DSP_SPEED, &dma.speed );
     if ( rc < 0 ) {
-        Com_WPrintf ( "Could not set %s speed to %d: %s", snddevice->string,
+        Com_WPrintf ( "Could not set %s speed to %d: %s\n", snddevice->string,
             dma.speed, strerror ( errno ) );
         goto fail;
     }
@@ -152,7 +152,7 @@ static sndinitstat_t OSS_Init ( void ) {
             goto fail;
         }
     } else {
-        Com_WPrintf ( "%d-bit sound not supported.", dma.samplebits );
+        Com_WPrintf ( "%d-bit sound not supported.\n", dma.samplebits );
         goto fail;
     }
 

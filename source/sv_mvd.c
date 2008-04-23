@@ -660,7 +660,7 @@ static void SV_MvdEmitGamestate( void ) {
     player_state_t  *ps;
 	entity_state_t	*es;
     size_t      length;
-    uint16_t    *patch;
+    uint8_t     *patch;
 	int flags, extra, portalbytes;
     byte portalbits[MAX_MAP_AREAS/8];
 
@@ -731,7 +731,9 @@ static void SV_MvdEmitGamestate( void ) {
 	}
 	MSG_WriteShort( 0 );
 
-    *patch = LittleShort( msg_write.cursize - 2 );
+    length = msg_write.cursize - 2;
+    patch[0] = length & 255;
+    patch[1] = ( length >> 8 ) & 255;
 }
 
 void SV_MvdClientNew( tcpClient_t *client ) {

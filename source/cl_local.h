@@ -316,14 +316,6 @@ extern	cvar_t	*cl_showclamp;
 
 extern	cvar_t	*cl_vwep;
 
-extern cvar_t   *cl_railtrail_type;
-extern cvar_t   *cl_railtrail_time;
-extern cvar_t   *cl_railtrail_alpha;
-extern cvar_t   *cl_railcore_color;
-extern cvar_t   *cl_railcore_width;
-extern cvar_t   *cl_railspiral_color;
-extern cvar_t   *cl_railspiral_radius;
-
 extern cvar_t	*cl_disable_particles;
 extern cvar_t	*cl_disable_explosions;
 
@@ -434,6 +426,7 @@ typedef struct cparticle_s
 // PGM
 // ========
 
+void CL_InitEffects (void);
 void CL_ClearEffects (void);
 void CL_ClearTEnts (void);
 void CL_BlasterTrail (vec3_t start, vec3_t end);
@@ -541,7 +534,8 @@ void CL_DeltaFrame( void );
 extern	int			gun_frame;
 extern	qhandle_t	gun_model;
 
-void V_Init (void);
+void V_Init( void );
+void V_Shutdown( void );
 void V_RenderView( void );
 void V_AddEntity (entity_t *ent);
 void V_AddParticle( particle_t *p );
@@ -632,7 +626,7 @@ void Con_ClearNotify_f( void );
 void Con_ToggleConsole_f (void);
 void Con_Close( void );
 void Con_SkipNotify( qboolean skip );
-void Con_SetupDC( void );
+void Con_RegisterMedia( void );
 
 void Key_Console( int key );
 void Key_Message( int key );
@@ -672,6 +666,7 @@ extern int			scr_hudWidth;
 extern int			scr_hudHeight;
 
 void	SCR_Init (void);
+void    SCR_Shutdown( void );
 void	SCR_UpdateScreen (void);
 void	SCR_SizeUp( void );
 void	SCR_SizeDown( void );
@@ -703,6 +698,7 @@ void		SCR_FinishCinematic( void );
 // cl_draw.c
 //
 void	SCR_InitDraw( void );
+void	SCR_ShutdownDraw( void );
 void	SCR_Draw2D( void );
 void	SCR_LoadingString( const char *string );
 float	SCR_FadeAlpha( unsigned startTime, unsigned visTime, unsigned fadeTime );
@@ -739,6 +735,10 @@ int		Key_EnumBindings( int key, const char *binding );
 void Key_FillAPI( keyAPI_t *api );
 
 
+//
+// cl_aastat.c
+//
+void CL_InitAscii( void ); 
 
 
 

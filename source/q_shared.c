@@ -18,7 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#include "config.h"
+#include <config.h>
 #include "q_shared.h"
 
 static const char hexchars[] = "0123456789ABCDEF";
@@ -846,51 +846,61 @@ void COM_AppendExtension( char *path, const char *extension, int pathSize ) {
 
 /*
 ==================
-COM_IsNumeric
+COM_IsFloat
 
 Returns true if the given string is valid representation
-of floating point or integer number.
+of floating point number.
 ==================
 */
-qboolean COM_IsNumeric( const char *string ) {
-	int c;
+qboolean COM_IsFloat( const char *s ) {
+	int c, dot = '.';
 
-	if( !string ) {
-		return qfalse;
-	}
-
-	if( !*string ) {
+    if( *s == '-' ) {
+        s++;
+    }
+	if( !*s ) {
 		return qfalse;
 	}
 
 	do {
-		c = *string++;
-		if( Q_isdigit( c ) ) {
-			continue;
-		}
-		if( c != '-' && c != '.' && c != ' ' ) {
+		c = *s++;
+        if( c == dot ) {
+            dot = 0;
+        } else if( !Q_isdigit( c ) ) {
 			return qfalse;
 		}
-	} while( *string );
+	} while( *s );
 
 	return qtrue;
-
 }
 
-qboolean COM_HasSpaces( const char *string ) {
-    while( *string ) {
-        if( *string <= 32 ) {
+qboolean COM_IsUint( const char *s ) {
+	int c;
+
+	if( !*s ) {
+		return qfalse;
+	}
+
+	do {
+		c = *s++;
+        if( !Q_isdigit( c ) ) {
+			return qfalse;
+		}
+	} while( *s );
+
+	return qtrue;
+}
+
+qboolean COM_HasSpaces( const char *s ) {
+    while( *s ) {
+        if( *s <= 32 ) {
             return qtrue;
         }
-        string++;
+        s++;
     }
     return qfalse;
 }
 
-/* Parses hexadecimal number until it encounters
- * illegible symbol or end of string.
- * Does not check for overflow.
- */
 unsigned COM_ParseHex( const char *s ) {
     int c;
 	unsigned result;
@@ -899,10 +909,59 @@ unsigned COM_ParseHex( const char *s ) {
         if( ( c = Q_charhex( *s ) ) == -1 ) {
             break;
         }
+        if( result & ~( UINT_MAX >> 4 ) ) {
+            return UINT_MAX;
+        }
 		result = c | ( result << 4 );
 	}
 
 	return result;
+}
+
+qboolean COM_ParseColor( const char *s, color_t color ) {
+    int i;
+    int c[8];
+
+    if( *s == '#' ) {
+        s++;
+        for( i = 0; s[i]; i++ ) {
+            c[i] = Q_charhex( s[i] );
+            if( c[i] == -1 ) {
+                return qfalse;
+            }
+        }
+        switch( i ) {
+        case 3:
+            color[0] = c[0] | ( c[0] << 4 );
+            color[1] = c[1] | ( c[1] << 4 );
+            color[2] = c[2] | ( c[2] << 4 );
+            color[3] = 255;
+            break;
+        case 6:
+            color[0] = c[1] | ( c[0] << 4 );
+            color[1] = c[3] | ( c[2] << 4 );
+            color[2] = c[5] | ( c[4] << 4 );
+            color[3] = 255;
+            break;
+        case 8:
+            color[0] = c[1] | ( c[0] << 4 );
+            color[1] = c[3] | ( c[2] << 4 );
+            color[2] = c[5] | ( c[4] << 4 );
+            color[3] = c[7] | ( c[6] << 4 );
+            break;
+        default:
+            return qfalse;
+        }
+        return qtrue;
+    } else {
+        for( i = 0; i < 8; i++ ) {
+            if( !strcmp( colorNames[i], s ) ) {
+                *( uint32_t * )color = *( uint32_t * )colorTable[i];
+                return qtrue;
+            }
+        }
+        return qfalse;
+    }
 }
 
 /*
@@ -911,10 +970,17 @@ SortStrcmp
 =================
 */
 int QDECL SortStrcmp( const void *p1, const void *p2 ) {
-	const char *s1 = *(const char **)p1;
-	const char *s2 = *(const char **)p2;
+	const char *s1 = *( const char ** )p1;
+	const char *s2 = *( const char ** )p2;
 
 	return strcmp( s1, s2 );
+}
+
+int QDECL SortStricmp( const void *p1, const void *p2 ) {
+	const char *s1 = *( const char ** )p1;
+	const char *s2 = *( const char ** )p2;
+
+	return Q_stricmp( s1, s2 );
 }
 
 /*
@@ -1194,51 +1260,64 @@ char *Q_FormatString( const char *string ) {
 	return buffer;
 }
 
+#if 0
+
+typedef enum {
+    ESC_CHR = ( 1 << 0 ),
+    ESC_CLR = ( 1 << 1 )
+} escape_t;
+
 /*
 ================
 Q_UnescapeString
 ================
 */
-char *Q_UnescapeString( const char *string ) {
-	static char buffer[MAX_STRING_CHARS];
+size_t Q_UnescapeString( char *out, const char *in, size_t bufsize, escape_t flags ) {
 	char	*dst, *last;
 	int		c;
 
-	dst = buffer;
-	last = buffer + MAX_STRING_CHARS - 1;
-	while( *string && dst != last ) {
-		c = *string++;
+	if( bufsize < 1 ) {
+		Com_Error( ERR_FATAL, "%s: bad bufsize: %d", __func__, bufsize );
+	}
 
-		if( c != '\\' ) {
-			*dst++ = c;
-			continue;
-		}
+    p = out;
+    m = out + bufsize - 1;
+    while( *in && p < m ) {
+		c = *in++;
 
-		c = *string++;
-		if( c == 0 ) {
-			break;
-		}
-		switch( c ) {
-		case 't':
-			c = '\t';
-			break;
-		case 'b':
-			c = '\b';
-			break;
-		case 'r':
-			c = '\r';
-			break;
-		case 'n':
-			c = '\n';
-			break;
-		case '\\':
-			c = '\\';
-			break;
-		default:
-			break;
-		}
+        if( ( flags & ESC_CHR ) && c == '\\' ) {
+            c = *in++;
+            switch( c ) {
+            case 0:
+                goto breakOut;
+            case 't':
+                c = '\t';
+                break;
+            case 'b':
+                c = '\b';
+                break;
+            case 'r':
+                c = '\r';
+                break;
+            case 'n':
+                c = '\n';
+                break;
+            case '\\':
+                c = '\\';
+                break;
+            case 'x':
+                if( ( c = Q_charhex( in[0] ) ) == -1 ) {
+                    goto breakOut;
+                }
+                    result = c | ( r << 4 );
+                }
+                break;
+            default:
+                break;
+            }
 
-		*dst++ = c;
+		    *p++ = c;
+        }
 	}
 
 	*dst = 0;
@@ -1246,6 +1325,7 @@ char *Q_UnescapeString( const char *string ) {
 	return buffer;
 
 }
+#endif
 
 int Q_EscapeMarkup( char *out, const char *in, int bufsize ) {
     char *p, *m, *s;

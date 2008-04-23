@@ -3,7 +3,7 @@ include config.mk
 .PHONY: default all binaries clean distclean install strip tags
 
 default: all
-all: binaries strip
+all: binaries
 
 binaries:
 	for t in $(TARGETS) ; do \

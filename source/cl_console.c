@@ -58,7 +58,7 @@ typedef struct console_s {
 								// for transparent notify lines
 	qboolean	skipNotify;
 
-	qhandle_t	conbackImage;
+	qhandle_t	backImage;
 	qhandle_t	charsetImage;
 
 	float	currentHeight;	// aproaches scr_conlines at scr_conspeed
@@ -107,7 +107,7 @@ Con_ClearTyping
 void Con_ClearTyping( void ) {
 	// clear any typing
 	IF_Clear( &con.prompt.inputLine );
-    con.prompt.tooMany = qfalse;
+    Prompt_ClearState( &con.prompt );
 }
 
 /*
@@ -361,7 +361,7 @@ static void Con_CheckTop( void ) {
 
 static void con_param_changed( cvar_t *self ) {
 	if( con.initialized && cls.ref_initialized ) {
-		Con_SetupDC();
+		Con_RegisterMedia();
 	}
 }
 
@@ -576,21 +576,24 @@ void Con_Printf( const char *fmt, ... ) {
 
 /*
 ================
-Con_SetupDC
+Con_RegisterMedia
 ================
 */
-void Con_SetupDC( void ) {
-	if( !( con.charsetImage = ref.RegisterFont( con_font->string ) ) ) {
-        /* fall back to default */
-		Com_WPrintf( "Couldn't load %s, falling back to default...\n", con_font->string );
+void Con_RegisterMedia( void ) {
+    con.charsetImage = ref.RegisterFont( con_font->string );
+	if( !con.charsetImage && strcmp( con_font->string, "conchars" ) ) {
+		Com_WPrintf( "Couldn't load console font: %s\n", con_font->string );
 		con.charsetImage = ref.RegisterFont( "conchars" );
 	}
     if( !con.charsetImage ) {
         Com_Error( ERR_FATAL, "Couldn't load pics/conchars.pcx" );
     }
 
-	con.conbackImage = ref.RegisterPic( con_background->string );
-	
+	con.backImage = ref.RegisterPic( con_background->string );
+	if( !con.backImage && strcmp( con_background->string, "conback" ) ) {
+		Com_WPrintf( "Couldn't load console background: %s\n", con_background->string );
+		con.backImage = ref.RegisterFont( "conback" );
+	}
 }
 
 /*
@@ -722,9 +725,8 @@ void Con_DrawSolidConsole( void ) {
 // draw the background
 	if( cls.state != ca_active || ( cls.key_dest & KEY_MENU ) || con_alpha->value ) {
 		ref.DrawStretchPic( 0, vislines - con.vidHeight,
-            con.vidWidth, con.vidHeight, con.conbackImage );
+            con.vidWidth, con.vidHeight, con.backImage );
 	}
-
 
 // draw the text
 	y = vislines - CON_PRESTEP;
@@ -1085,7 +1087,9 @@ void Key_Console( int key ) {
 		return;
 	}
 
-	IF_KeyEvent( &con.prompt.inputLine, key );
+	if( IF_KeyEvent( &con.prompt.inputLine, key ) ) {
+        Prompt_ClearState( &con.prompt );
+    }
 
 scroll: 
     if( con_scroll->integer & 1 ) {
@@ -1124,6 +1128,16 @@ void Key_Message( int key ) {
 		return;
 	}
 
+	if( key == 'r' && Key_IsDown( K_CTRL ) ) {
+		Prompt_CompleteHistory( &con.chatPrompt, qfalse );
+        return;
+    }
+
+	if( key == 's' && Key_IsDown( K_CTRL ) ) {
+		Prompt_CompleteHistory( &con.chatPrompt, qtrue );
+        return;
+    }
+
 	if( key == K_UPARROW || ( key == 'p' && Key_IsDown( K_CTRL ) ) ) {
 		Prompt_HistoryUp( &con.chatPrompt );
 		return;
@@ -1134,7 +1148,9 @@ void Key_Message( int key ) {
 		return;
 	}
 
-	IF_KeyEvent( &con.chatPrompt.inputLine, key );
+	if( IF_KeyEvent( &con.chatPrompt.inputLine, key ) ) {
+        Prompt_ClearState( &con.chatPrompt );
+    }
 }
 
 void Char_Message( int key ) {

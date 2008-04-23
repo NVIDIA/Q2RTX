@@ -113,7 +113,7 @@ void SV_ClearWorld( void ) {
 		SV_CreateAreaNode( 0, cm->mins, cm->maxs );
 	}
 
-	/* make sure all entities are unlinked */
+	// make sure all entities are unlinked
 	for( i = 0; i < MAX_EDICTS; i++ ) {
 		ent = EDICT_NUM( i );
 		ent->area.prev = ent->area.next = NULL;
@@ -475,8 +475,7 @@ SV_ClipMoveToEntities
 
 ====================
 */
-void SV_ClipMoveToEntities ( moveclip_t *clip )
-{
+static void SV_ClipMoveToEntities( moveclip_t *clip ) {
 	int			i, num;
 	edict_t		*touchlist[MAX_EDICTS], *touch;
 	trace_t		trace;
@@ -515,16 +514,7 @@ void SV_ClipMoveToEntities ( moveclip_t *clip )
 			clip->mins, clip->maxs, headnode,  clip->contentmask,
 			touch->s.origin, touch->s.angles);
 
-		clip->trace->allsolid |= trace.allsolid;
-		clip->trace->startsolid |= trace.startsolid;
-		if( trace.fraction < clip->trace->fraction ) {
-			clip->trace->fraction = trace.fraction;
-            VectorCopy( trace.endpos, clip->trace->endpos );
-            clip->trace->plane = trace.plane;
-            clip->trace->surface = trace.surface;
-            clip->trace->contents |= trace.contents;
-			clip->trace->ent = touch;
-        }
+		CM_ClipEntity( clip->trace, &trace, touch );
 	}
 }
 

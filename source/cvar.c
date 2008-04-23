@@ -43,7 +43,7 @@ Cvar_FindVar
 */
 cvar_t *Cvar_FindVar( const char *var_name ) {
 	cvar_t	*var;
-	int hash;
+	unsigned hash;
 
 	hash = Com_HashString( var_name, CVARHASH_SIZE );
 	
@@ -235,6 +235,8 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
                     && strcmp( var_value, var->string ) )
                 {
                     // reset cvar back to default value
+                    Com_DPrintf( "Cvar '%s' was reset from '%s' to default '%s'\n",
+                        var->name, var->string, var->default_string );
                     Cvar_UpdateString( var, var_value, CVAR_SET_DIRECT );
                 }
 				var->flags &= ~CVAR_USER_CREATED;
@@ -648,14 +650,19 @@ void Cvar_Command( cvar_t *v ) {
 
 static void Cvar_Set_c( genctx_t *ctx, int argnum ) {
     char *s;
+    cvar_t *var;
     xgenerator_t g;
 
     if( argnum == 1 ) {
         Cvar_Variable_g( ctx );
     } else if( argnum == 2 ) {
         s = Cmd_Argv( ctx->argnum - 1 );
-        if( ( g = Cvar_FindGenerator( s ) ) != NULL ) {
-            g( ctx );
+        if( ( var = Cvar_FindVar( s ) ) != NULL ) {
+            g = var->generator;
+            if( g ) {
+                ctx->data = var;
+                g( ctx );
+            }
         }
     }
 }
@@ -991,7 +998,7 @@ static void Cvar_Inc_f( void ) {
 		return;
 	}
 
-	if( !COM_IsNumeric( var->string ) ) {
+	if( !COM_IsFloat( var->string ) ) {
 		Com_Printf( "\"%s\" is \"%s\", can't %s\n",
             var->name, var->string, Cmd_Argv( 0 ) );
 		return;

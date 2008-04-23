@@ -61,324 +61,6 @@ void SCR_LoadingString( const char *string ) {
 /*
 ===============================================================================
 
-STAT PROGRAMS TO TEXT
-
-===============================================================================
-*/
-
-#define TH_WIDTH    80
-#define TH_HEIGHT   40
-
-static void TH_DrawString( char *dst, int x, int y, char *src, size_t len ) {
-    int c;
-
-    if( x + len > TH_WIDTH ) {
-        len = TH_WIDTH - x;
-    }
-
-    dst += y * ( TH_WIDTH + 1 ) + x;
-    while( len-- ) {
-        c = *src++;
-        c &= 127;
-        switch( c ) {
-        case 16: c = '['; break;
-        case 17: c = ']'; break;
-        case 29: c = '<'; break;
-        case 30: c = '='; break;
-        case 31: c = '>'; break;
-        default:
-            if( c < 32 ) {
-                c = 32;
-            }
-            break;
-        }
-        *dst++ = c;
-    }
-}
-
-static void TH_DrawCenterString( char *dst, int x, int y, char *src, size_t len ) {
-    x -= len / 2;
-    if( x < 0 ) {
-        src -= x;
-        x = 0;
-    }
-
-    TH_DrawString( dst, x, y, src, len );
-}
-
-static void TH_DrawNumber( char *dst, int x, int y, int width, int value ) {
-    char num[16];
-    int l;
-
-	if( width < 1 )
-		return;
-
-	// draw number string
-	if( width > 5 )
-		width = 5;
-
-	l = Com_sprintf( num, sizeof( num ), "%d", value );
-	if( l > width )
-		l = width;
-	x += width - l;
-
-	TH_DrawString( dst, x, y, num, l );
-}
-
-static void TH_DrawLayoutString( char *dst, const char *s ) {
-    char	buffer[MAX_QPATH];
-	int		x, y;
-	int		value;
-	char	*token;
-	size_t	len;
-	int		width, index;
-	clientinfo_t	*ci;
-
-	if( !s[0] )
-		return;
-
-	x = 0;
-	y = 0;
-	width = 3;
-
-	while( s ) {
-		token = COM_Parse( &s );
-		if( token[2] == 0 ) {
-			if( token[0] == 'x' ) {
-				if( token[1] == 'l' ) {
-					token = COM_Parse( &s );
-					x = atoi( token ) / 8;
-					continue;
-				}
-
-				if( token[1] == 'r' ) {
-					token = COM_Parse( &s );
-					x = TH_WIDTH + atoi( token ) / 8;
-					continue;
-				}
-
-				if( token[1] == 'v' ) {
-					token = COM_Parse( &s );
-					x = TH_WIDTH / 2 - 20 + atoi( token ) / 8;
-					continue;
-				}
-			}
-
-			if( token[0] == 'y' ) {
-				if( token[1] == 't' ) {
-					token = COM_Parse( &s );
-					y = atoi( token ) / 8;
-					continue;
-				}
-
-				if( token[1] == 'b' ) {
-					token = COM_Parse( &s );
-					y = TH_HEIGHT + atoi( token ) / 8;
-					continue;
-				}
-
-				if( token[1] == 'v' ) {
-					token = COM_Parse( &s );
-					y = TH_HEIGHT / 2 - 15 + atoi( token ) / 8;
-					continue;
-				}
-			}
-		}
-
-		if( !strcmp( token, "pic" ) ) {	
-			// draw a pic from a stat number
-			COM_Parse( &s );
-			continue;
-		}
-
-		if( !strcmp( token, "client" ) ) {	
-			// draw a deathmatch client block
-			int		score, ping, time;
-
-			token = COM_Parse( &s );
-			x = TH_WIDTH / 2 - 20 + atoi( token ) / 8;
-			token = COM_Parse( &s );
-			y = TH_HEIGHT / 2 - 15 + atoi( token ) / 8;
-
-			token = COM_Parse( &s );
-			value = atoi( token );
-			if( value < 0 || value >= MAX_CLIENTS ) {
-				Com_Error( ERR_DROP, "%s: invalid client index", __func__ );
-			}
-			ci = &cl.clientinfo[value];
-
-			token = COM_Parse( &s );
-			score = atoi( token );
-
-			token = COM_Parse( &s );
-			ping = atoi( token );
-
-			token = COM_Parse( &s );
-			time = atoi( token );
-
-            len = strlen( ci->name );
-			TH_DrawString( dst, x + 4, y, ci->name, len );
-            len = Com_sprintf( buffer, sizeof( buffer ), "Score: %i", score ); 
-			TH_DrawString( dst, x + 4, y + 1, buffer, len );
-            len = Com_sprintf( buffer, sizeof( buffer ), "Ping:  %i", ping ); 
-			TH_DrawString( dst, x + 4, y + 2, buffer, len );
-            len = Com_sprintf( buffer, sizeof( buffer ), "Time:  %i", time ); 
-			TH_DrawString( dst, x + 4, y + 3, buffer, len );
-			continue;
-		}
-
-		if( !strcmp( token, "ctf" ) ) {	
-			// draw a ctf client block
-			int		score, ping;
-
-			token = COM_Parse( &s );
-			x = TH_WIDTH / 2 - 20 + atoi( token ) / 8;
-			token = COM_Parse( &s );
-			y = TH_HEIGHT / 2 - 15 + atoi( token ) / 8;
-
-			token = COM_Parse( &s );
-			value = atoi( token );
-			if( value < 0 || value >= MAX_CLIENTS ) {
-				Com_Error( ERR_DROP, "%s: invalid client index", __func__ );
-			}
-			ci = &cl.clientinfo[value];
-
-			token = COM_Parse( &s );
-			score = atoi( token );
-
-			token = COM_Parse( &s );
-			ping = atoi( token );
-			if( ping > 999 )
-				ping = 999;
-
-			len = Com_sprintf( buffer, sizeof( buffer ), "%3d %3d %-12.12s",
-                score, ping, ci->name );
-			TH_DrawString( dst, x, y, buffer, len );
-			continue;
-		}
-
-		if( !strcmp( token, "picn" ) ) {	
-			// draw a pic from a name
-			COM_Parse( &s );
-			continue;
-		}
-
-		if( !strcmp( token, "num" ) ) {	
-			// draw a number
-			token = COM_Parse( &s );
-			width = atoi( token );
-			token = COM_Parse( &s );
-			value = atoi( token );
-			if( value < 0 || value >= MAX_STATS ) {
-				Com_Error( ERR_DROP, "%s: invalid stat index", __func__ );
-			}
-			value = cl.frame.ps.stats[value];
-			TH_DrawNumber( dst, x, y, width, value );
-			continue;
-		}
-
-		if( !strcmp( token, "stat_string" ) ) {
-			token = COM_Parse( &s );
-			index = atoi( token );
-			if( index < 0 || index >= MAX_STATS ) {
-				Com_Error( ERR_DROP, "%s: invalid string index", __func__ );
-			}
-			index = cl.frame.ps.stats[index];
-			if( index < 0 || index >= MAX_CONFIGSTRINGS ) {
-				Com_Error( ERR_DROP, "%s: invalid string index", __func__ );
-			}
-            len = strlen( cl.configstrings[index] );
-			TH_DrawString( dst, x, y, cl.configstrings[index], len );
-			continue;
-		}
-
-		if( !strncmp( token, "cstring", 7 ) ) {
-			token = COM_Parse( &s );
-            len = strlen( token );
-			TH_DrawCenterString( dst, x + 40 / 2, y, token, len );
-			continue;
-		}
-
-		if( !strncmp( token, "string", 6 ) ) {
-			token = COM_Parse( &s );
-            len = strlen( token );
-			TH_DrawString( dst, x, y, token, len );
-			continue;
-		}
-
-		if( !strcmp( token, "if" ) ) {
-			token = COM_Parse( &s );
-			value = atoi( token );
-			if( value < 0 || value >= MAX_STATS ) {
-				Com_Error( ERR_DROP, "%s: invalid stat index", __func__ );
-			}
-			value = cl.frame.ps.stats[value];
-			if( !value ) {	// skip to endif
-				while( strcmp( token, "endif" ) ) {
-					token = COM_Parse( &s );
-					if( !s ) {
-						break;
-					}
-				}
-			}
-			continue;
-		}
-	}
-}
-
-static void SCR_ScoreShot_f( void ) {
-    char buffer[( TH_WIDTH + 1 ) * TH_HEIGHT];
-	char path[MAX_QPATH];
-	fileHandle_t f;
-    int i;
-
-    if( cls.state != ca_active ) {
-		Com_Printf( "Must be in a level.\n" );
-        return;
-    }
-
-	if( Cmd_Argc() > 1 ) {
-	    Q_concat( path, sizeof( path ), SCORESHOTS_DIRECTORY "/", Cmd_Argv( 1 ), NULL );
-    	COM_AppendExtension( path, ".txt", sizeof( path ) );
-    } else {
-        for( i = 0; i < 1000; i++ ) {
-            Com_sprintf( path, sizeof( path ), SCORESHOTS_DIRECTORY "/quake%03d.txt", i );
-            if( FS_LoadFileEx( path, NULL, FS_PATH_GAME ) == INVALID_LENGTH ) {
-                break;	// file doesn't exist
-            }
-        }
-
-        if( i == 1000 ) {
-            Com_Printf( "All scoreshot slots are full.\n" );
-            return;
-        }
-    }
-
-	FS_FOpenFile( path, &f, FS_MODE_WRITE );
-	if( !f ) {
-		Com_EPrintf( "Couldn't open %s for writing.\n", path );
-		return;
-	}
-
-    memset( buffer, ' ', sizeof( buffer ) );
-    for( i = 0; i < TH_HEIGHT; i++ ) {
-        buffer[ i * ( TH_WIDTH + 1 ) + TH_WIDTH ] = '\n';
-    }
-
-    TH_DrawLayoutString( buffer, cl.configstrings[CS_STATUSBAR] );
-    TH_DrawLayoutString( buffer, cl.layout );
-
-    FS_Write( buffer, sizeof( buffer ), f );
-
-	FS_FCloseFile( f );
-
-	Com_Printf( "Wrote %s.\n", path );
-}
-
-
-/*
-===============================================================================
-
 LAGOMETER
 
 ===============================================================================
@@ -467,16 +149,13 @@ DRAW OBJECTS
 typedef struct {
     list_t  entry;
     int     x, y;
-    //int     type;
-    //union {
-        cvar_t *cvar;
-        cmd_macro_t *macro;
-    //    int stat;
-    //};
-    unsigned color;
+    cvar_t *cvar;
+    cmd_macro_t *macro;
+    int flags;
+    color_t color;
 } drawobj_t;
 
-static list_t scr_objects;
+static LIST_DECL( scr_objects );
 
 static void SCR_Color_g( genctx_t *ctx ) {
     int color;
@@ -504,7 +183,8 @@ static void SCR_Draw_f( void ) {
     drawobj_t *obj;
     cmd_macro_t *macro;
    // int stat;
-    int color = COLOR_RESET;
+    color_t color = { 0, 0, 0, 0 };
+    int flags = UI_IGNORECOLOR;
     int argc = Cmd_Argc();
 
     if( argc == 1 ) {
@@ -528,46 +208,37 @@ static void SCR_Draw_f( void ) {
 
     s = Cmd_Argv( 1 );
     x = atoi( Cmd_Argv( 2 ) );
+    if( x < 0 ) {
+        flags |= UI_RIGHT;
+    }
     y = atoi( Cmd_Argv( 3 ) );
 
     if( argc > 4 ) {
         c = Cmd_Argv( 4 );
-        for( color = 0; color < 10; color++ ) {
-            if( !strcmp( colorNames[color], c ) ) {
-                break;
+        if( !strcmp( c, "alt" ) ) {
+            flags |= UI_ALTCOLOR;
+        } else {
+            if( !COM_ParseColor( c, color ) ) {
+                Com_Printf( "Unknown color '%s'\n", c );
+                return;
             }
-        }
-        if( color == 10 ) {
-            Com_Printf( "Unknown color '%s'\n", c );
-            return;
+            flags &= ~UI_IGNORECOLOR;
         }
     }
 
     obj = Z_Malloc( sizeof( *obj ) );
     obj->x = x;
     obj->y = y;
-    obj->color = color;
+    obj->flags = flags;
+    *( uint32_t * )obj->color = *( uint32_t * )color;
 
-#if 0
-    if( *s == '!' || *s == '#' ) {
-        stat = atoi( s + 1 );
-        if( stat < 0 || stat >= MAX_STATS ) {
-            Com_Printf( "Invalid stat index: %d\n", stat );
-        }
-        obj->stat = stat;
+    macro = Cmd_FindMacro( s );
+    if( macro ) {
         obj->cvar = NULL;
+        obj->macro = macro;
+    } else {
+        obj->cvar = Cvar_Get( s, NULL, CVAR_USER_CREATED );
         obj->macro = NULL;
-    } else
-#endif
-    {
-        macro = Cmd_FindMacro( s );
-        if( macro ) {
-            obj->cvar = NULL;
-            obj->macro = macro;
-        } else {
-            obj->cvar = Cvar_Get( s, NULL, CVAR_USER_CREATED );
-            obj->macro = NULL;
-        }
     }
 
     List_Append( &scr_objects, &obj->entry );
@@ -646,30 +317,26 @@ static void SCR_UnDraw_f( void ) {
 
 static void draw_objects( void ) {
     char buffer[MAX_QPATH];
-    int x, y, flags;
+    int x, y;
     drawobj_t *obj;
 
     LIST_FOR_EACH( drawobj_t, obj, &scr_objects, entry ) {
         x = obj->x;
         y = obj->y;
-        flags = 0;
         if( x < 0 ) {
             x += scr_hudWidth + 1;
-            flags |= UI_RIGHT;
         }
         if( y < 0 ) {
             y += scr_hudHeight - CHAR_HEIGHT + 1;
         }
-        if( obj->color == 8 ) {
-            flags |= UI_ALTCOLOR;
-        } else if( obj->color < 8 ) {
-            ref.SetColor( DRAW_COLOR_RGB, colorTable[obj->color] );
+        if( !( obj->flags & UI_IGNORECOLOR ) ) {
+            ref.SetColor( DRAW_COLOR_RGBA, obj->color );
         }
         if( obj->macro ) {
             obj->macro->function( buffer, sizeof( buffer ) );
-            SCR_DrawString( x, y, flags, buffer );
+            SCR_DrawString( x, y, obj->flags, buffer );
         } else {
-            SCR_DrawString( x, y, flags, obj->cvar->string );
+            SCR_DrawString( x, y, obj->flags, obj->cvar->string );
         }
         ref.SetColor( DRAW_COLOR_CLEAR, NULL );
     }
@@ -970,13 +637,12 @@ void SCR_Draw2D( void ) {
     }
 }
 
-cmdreg_t scr_drawcmds[] = {
+static const cmdreg_t scr_drawcmds[] = {
 #if USE_CHATHUD
     { "clearchat", SCR_ClearChatHUD_f },
 #endif
     { "draw", SCR_Draw_f, SCR_Draw_c },
     { "undraw", SCR_UnDraw_f, SCR_UnDraw_c },
-    { "scoreshot", SCR_ScoreShot_f },
     { NULL }
 };
 
@@ -986,8 +652,6 @@ SCR_InitDraw
 ================
 */
 void SCR_InitDraw( void ) {
-    List_Init( &scr_objects );
-
 	scr_draw2d = Cvar_Get( "scr_draw2d", "2", 0 );
 	scr_showturtle = Cvar_Get( "scr_showturtle", "1", 0 );
 	scr_showfollowing = Cvar_Get( "scr_showfollowing", "1", 0 );
@@ -1000,4 +664,9 @@ void SCR_InitDraw( void ) {
 
     Cmd_Register( scr_drawcmds );
 }
+
+void SCR_ShutdownDraw( void ) {
+    Cmd_Deregister( scr_drawcmds );
+}
+
 

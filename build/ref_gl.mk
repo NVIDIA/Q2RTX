@@ -4,7 +4,7 @@
 
 include ../config.mk
 
-TARGET=$(OUTDIR)/ref_gl$(LIBSUFFIX)
+TARGET=../ref_gl$(LIBSUFFIX)
 
 LDFLAGS+=-lm -shared
 CFLAGS+=-DOPENGL_RENDERER=1 -DTRUECOLOR_RENDERER=1

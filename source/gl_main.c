@@ -542,7 +542,7 @@ static char *screenshot_path( char *buffer, const char *ext ) {
 // 
     for( i = 0; i < 1000; i++ ) {
         Com_sprintf( buffer, MAX_OSPATH, SCREENSHOTS_DIRECTORY"/quake%03d%s", i, ext );
-        if( fs.LoadFileEx( buffer, NULL, FS_PATH_GAME ) == INVALID_LENGTH ) {
+        if( fs.LoadFileEx( buffer, NULL, FS_PATH_GAME, TAG_FREE ) == INVALID_LENGTH ) {
             return buffer;	// file doesn't exist
         }
     }

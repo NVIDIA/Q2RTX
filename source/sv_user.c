@@ -146,7 +146,7 @@ static void write_compressed_gamestate( void ) {
 	entity_state_t	*base;
 	int			i, j;
 	size_t		length;
-    uint16_t    *patch;
+    uint8_t     *patch;
     char        *string;
 
     MSG_WriteByte( svc_gamestate );
@@ -204,7 +204,8 @@ static void write_compressed_gamestate( void ) {
             sv_client->name, svs.z.total_in, svs.z.total_out );
     }
 
-    *patch = LittleShort( svs.z.total_out );
+    patch[0] = svs.z.total_out & 255;
+    patch[1] = ( svs.z.total_out >> 8 ) & 255;
     buf->cursize += svs.z.total_out;
 }
 
@@ -531,7 +532,7 @@ static void SV_NextDownload_f( void ) {
 	MSG_WriteData( sv_client->download + sv_client->downloadcount - r, r );
 
 	if( sv_client->downloadcount == sv_client->downloadsize ) {
-		FS_FreeFile( sv_client->download );
+		Z_Free( sv_client->download );
 		sv_client->download = NULL;
 	}
 		
@@ -615,7 +616,7 @@ static void SV_BeginDownload_f( void ) {
 
 	filename = name;
 
-	downloadsize = FS_LoadFileEx( filename, NULL, FS_FLAG_RAW );
+	downloadsize = FS_LoadFileEx( filename, NULL, FS_FLAG_RAW, TAG_SERVER );
 	
 	if( downloadsize == INVALID_LENGTH || downloadsize == 0
 		// special check for maps, if it came from a pak file, don't allow
@@ -648,7 +649,8 @@ static void SV_BeginDownload_f( void ) {
 		return;
 	}
 
-	sv_client->downloadsize = FS_LoadFileEx( filename, ( void ** )&sv_client->download, FS_FLAG_RAW );
+	sv_client->downloadsize = FS_LoadFileEx( filename,
+        ( void ** )&sv_client->download, FS_FLAG_RAW, TAG_SERVER );
 	sv_client->downloadcount = offset;
 
 	Com_DPrintf( "Downloading %s to %s\n", name, sv_client->name );
@@ -676,7 +678,7 @@ static void SV_StopDownload_f( void ) {
 	SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
 
 	Com_DPrintf( "Download for %s stopped by user request\n", sv_client->name );
-	FS_FreeFile( sv_client->download );
+	Z_Free( sv_client->download );
 	sv_client->download = NULL;
 }
 
@@ -935,7 +937,7 @@ static void SV_NewClientExecuteMove( int c, int net_drop ) {
 	numDups = c >> SVCMD_BITS;
 	c &= SVCMD_MASK;
 
-	if( numDups > MAX_PACKET_FRAMES - 1 ) {
+	if( numDups >= MAX_PACKET_FRAMES ) {
 		SV_DropClient( sv_client, "too many frames in packet" );
 		return;
 	}

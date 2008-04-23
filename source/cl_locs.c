@@ -30,7 +30,7 @@ typedef struct {
 	char name[1];
 } location_t;
 
-static list_t		cl_locations = { &cl_locations, &cl_locations };
+static LIST_DECL( cl_locations );
 
 static cvar_t	*loc_draw;
 static cvar_t	*loc_trace;

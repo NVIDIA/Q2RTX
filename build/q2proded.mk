@@ -4,7 +4,7 @@
 
 include ../config.mk
 
-TARGET=$(OUTDIR)/q2proded$(EXESUFFIX)
+TARGET=../q2proded$(EXESUFFIX)
 
 CFLAGS+=-DDEDICATED_ONLY
 LDFLAGS+=-lm

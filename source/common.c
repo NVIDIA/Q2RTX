@@ -443,7 +443,15 @@ do the apropriate things.
 =============
 */
 void Com_Quit( void ) {
-	SV_Shutdown( "Server quit\n", KILL_DROP );
+    if( Cmd_Argc() > 1 ) {
+        char buffer[MAX_STRING_TOKENS];
+
+        Com_sprintf( buffer, sizeof( buffer ),
+            "Server quit: %s\n", Cmd_Args() );
+	    SV_Shutdown( buffer, KILL_DROP );
+    } else {
+	    SV_Shutdown( "Server quit\n", KILL_DROP );
+    }
 	CL_Shutdown();
 	Qcommon_Shutdown( qfalse );
 
@@ -487,17 +495,17 @@ static zhead_t		z_chain;
 
 static cvar_t	    *z_perturb;
 
-#pragma pack( push, 1 )
 typedef struct {
 	zhead_t	    z;
 	char	    data[2];
 	uint16_t	tail;
 } zstatic_t;
-#pragma pack( pop )
-
-#define Z_STATIC( x ) { { Z_MAGIC, TAG_STATIC, sizeof( zstatic_t ) }, x, Z_TAIL }
 
 static const zstatic_t		z_static[] = {
+#define Z_STATIC( x ) \
+    { { Z_MAGIC, TAG_STATIC, q_offsetof( zstatic_t, tail ) + \
+        sizeof( uint16_t ) }, x, Z_TAIL }
+
 	Z_STATIC( "0" ),
 	Z_STATIC( "1" ),
 	Z_STATIC( "2" ),
@@ -509,11 +517,11 @@ static const zstatic_t		z_static[] = {
 	Z_STATIC( "8" ),
 	Z_STATIC( "9" ),
 	Z_STATIC( "" )
-};
 
 #undef Z_STATIC
+};
 
-typedef struct zstats_s {
+typedef struct {
 	size_t  count;
 	size_t	bytes;
 } zstats_t;
@@ -830,29 +838,30 @@ Cvar_CopyString
 ================
 */
 char *Cvar_CopyString( const char *in ) {
-	size_t     len;
+	size_t len;
     zstatic_t *z;
+    zstats_t *s;
+    int i;
 
 	if( !in ) {
 		return NULL;
 	}
 
 	if( !in[0] ) {
-        z = ( zstatic_t * )&z_static[10];
-        z_stats[TAG_STATIC].count++;
-        z_stats[TAG_STATIC].bytes += z->z.size;
-		return z->data;
-	}
+        i = 10;
+	} else if( !in[1] && Q_isdigit( in[0] ) ) {
+        i = in[0] - '0';
+	} else {
+    	len = strlen( in ) + 1;
+	    return memcpy( Z_TagMalloc( len, TAG_CVAR ), in, len );
+    }
 
-	if( !in[1] && Q_isdigit( in[0] ) ) {
-        z = ( zstatic_t * )&z_static[ in[0] - '0' ];
-        z_stats[TAG_STATIC].count++;
-        z_stats[TAG_STATIC].bytes += z->z.size;
-		return z->data;
-	}
-
-	len = strlen( in ) + 1;
-	return memcpy( Z_TagMalloc( len, TAG_CVAR ), in, len );
+    // return static storage
+    z = ( zstatic_t * )&z_static[i];
+    s = &z_stats[TAG_STATIC];
+    s->count++;
+    s->bytes += z->z.size;
+    return z->data;
 }
 
 /*
@@ -1095,6 +1104,7 @@ void Com_Address_g( genctx_t *ctx ) {
 void Com_Generic_c( genctx_t *ctx, int argnum ) {
     xcompleter_t c;
     xgenerator_t g;
+    cvar_t *var;
     char *s;
 
     // complete command, alias or cvar name
@@ -1110,8 +1120,22 @@ void Com_Generic_c( genctx_t *ctx, int argnum ) {
     // complete command argument or cvar value
     if( ( c = Cmd_FindCompleter( s ) ) != NULL ) {
         c( ctx, argnum );
-    } else if( argnum == 1 && ( g = Cvar_FindGenerator( s ) ) != NULL ) {
-        g( ctx );
+    } else if( argnum == 1 && ( var = Cvar_FindVar( s ) ) != NULL ) {
+        g = var->generator;
+        if( g ) {
+            ctx->data = var;
+            g( ctx );
+        }
+    }
+}
+
+void Com_Color_g( genctx_t *ctx ) {
+    int color;
+
+    for( color = 0; color < 8; color++ ) {
+        if( !Prompt_AddMatch( ctx, colorNames[color] ) ) {
+            break;
+        }
     }
 }
 
@@ -1278,9 +1302,6 @@ void Qcommon_Init( int argc, char **argv ) {
 	// the settings of the config files
 	Com_AddEarlyCommands( qfalse );
 
-    // do not accept CVAR_NOSET variable changes anymore
-    com_initialized = qtrue;
-
 	Sys_Init();
 
     Sys_RunConsole();
@@ -1288,6 +1309,9 @@ void Qcommon_Init( int argc, char **argv ) {
 	FS_Init();
 
     Sys_RunConsole();
+
+    // do not accept CVAR_NOSET variable changes anymore
+    com_initialized = qtrue;
 
 	// after FS is initialized, open logfile
 	logfile_active->changed = logfile_active_changed;

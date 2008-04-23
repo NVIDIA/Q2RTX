@@ -32,7 +32,7 @@ static int          floodvalid;
 static int          checkcount;
 
 static cvar_t       *map_noareas;
-static cvar_t       *map_load_entities;
+static cvar_t       *map_override;
 
 void    CM_FloodAreaConnections( cm_t *cm );
 
@@ -466,130 +466,6 @@ CM_FUNC( EntityString ) {
     return qtrue;
 }
 
-#if 0
-/*
-==================
-CM_Concat
-==================
-*/
-static void CM_Concat( const char *text ) {
-    int len = strlen( text );
-
-    if( numEntityChars + len >= sizeof( cache->entitystring ) ) {
-        Com_Error( ERR_DROP, "CM_Concat: oversize entity lump" );
-    }
-
-    memcpy( cache->entitystring + numEntityChars, text, len );
-    numEntityChars += len;
-}
-
-/*
-==================
-CM_ParseMap
-
-Parses complete *.map file
-==================
-*/
-static qboolean CM_ParseMap( const char *data ) {
-    char *token;
-    int numInlineModels;
-    qboolean inlineModel;
-    char buffer[MAX_STRING_CHARS];
-
-    numInlineModels = 0;
-
-    while( 1 ) {
-        token = COM_Parse( &data );
-        if( !data ) {
-            break;
-        }
-
-        if( *token != '{' ) {
-            Com_WPrintf( "%s: expected '{', found '%s'\n", __func__, token );
-            return qfalse;
-        }
-
-        CM_Concat( "{ " );
-
-        inlineModel = qfalse;
-
-        // Parse entity
-        while( 1 ) {
-            token = COM_Parse( &data );
-            if( !data ) {
-                Com_WPrintf( "%s: expected key, found EOF\n", __func__ );
-                return qfalse;
-            }
-
-            if( *token == '}' ) {
-                // FIXME HACK: restore inline model number
-                // This may not work properly if the entity order is different!!!
-                if( inlineModel && numInlineModels ) {
-                    Com_sprintf( buffer, sizeof( buffer ), "\"model\" \"*%i\" } ", numInlineModels );
-                    CM_Concat( buffer );
-                } else {
-                    CM_Concat( "} " );
-                }
-
-                numInlineModels += inlineModel;
-                break;
-            }
-
-            if( *token == '{' ) {
-                inlineModel = qtrue;
-
-                // Parse brush
-                while( 1 ) {
-                    token = COM_Parse( &data );
-                    if( !data ) {
-                        Com_WPrintf( "%s: expected brush data, found EOF\n", __func__ );
-                        return qfalse;
-                    }
-
-                    if( *token == '}' ) {
-                        break;
-                    }
-
-                    if( *token == '{' ) {
-                        Com_WPrintf( "%s: expected brush data, found '{'\n", __func__ );
-                        return qfalse;
-                    }
-
-                }
-                continue;
-            }
-
-            CM_Concat( "\"" );
-            CM_Concat( token );
-            CM_Concat( "\" \"" );
-
-            token = COM_Parse( &data );
-            if( !data ) {
-                Com_WPrintf( "%s: expected value, found EOF\n", __func__ );
-                return qfalse;
-            }
-
-            if( *token == '}' || *token == '{' ) {
-                Com_WPrintf( "%s: expected value, found '%s'\n", __func__, token );
-                return qfalse;
-            }
-
-            CM_Concat( token );
-            CM_Concat( "\" " );
-        }
-    }
-
-    cmod->entitystring[numEntityChars] = 0;
-
-    if( numInlineModels != numcmodels + 1 ) {
-        Com_WPrintf( "%s: inline models count mismatch\n", __func__ );
-        return qfalse;
-    }
-
-    return qtrue;
-}
-#endif
-
 #define CM_CACHESIZE        16
 
 static cmcache_t    cm_cache[CM_CACHESIZE];
@@ -686,8 +562,6 @@ const char *CM_LoadMapEx( cm_t *cm, const char *name, int flags, uint32_t *check
     const lump_load_t *load;
     size_t          length, endpos, fileofs, filelen;
     char            *error;
-//  char *entstring;
-//  char buffer[MAX_QPATH];
 
     if( !name || !name[0] ) {
         Com_Error( ERR_FATAL, "CM_LoadMap: NULL name" );
@@ -728,7 +602,7 @@ const char *CM_LoadMapEx( cm_t *cm, const char *name, int flags, uint32_t *check
     //
     // load the file
     //
-    length = FS_LoadFileEx( name, (void **)&buf, FS_FLAG_CACHE );
+    length = FS_LoadFileEx( name, (void **)&buf, FS_FLAG_CACHE, TAG_FREE );
     if( !buf ) {
         return "file not found";
     }
@@ -787,28 +661,24 @@ const char *CM_LoadMapEx( cm_t *cm, const char *name, int flags, uint32_t *check
         }
     }
 
-#if 0
-    // Load the entity string from file, if specified
-    entstring = NULL;
-    if( cm_override_entities->integer && !( flags & CM_LOAD_CLIENT ) ) {
-        COM_StripExtension( name, buffer, sizeof( buffer ) );
-        Q_strcat( buffer, sizeof( buffer ), ".map" );
-        FS_LoadFile( buffer, ( void ** )&entstring );
-    }
+    // optionally load the entity string from external source
+    if( map_override->integer && !( flags & CM_LOAD_CLIENT ) ) {
+        char *entstring;
+        char buffer[MAX_QPATH];
 
-    if( entstring ) {
-        Com_Printf( "Loading entity string from %s...\n", buffer );
-        cm
-        if( !CM_ParseMapFile( entstring ) ) {
-            CM_LOAD( EntityString, ENTITIES );
+        COM_StripExtension( name, buffer, sizeof( buffer ) );
+        Q_strcat( buffer, sizeof( buffer ), ".ent" );
+        length = FS_LoadFileEx( buffer, ( void ** )&entstring, 0, TAG_CMODEL );
+        if( entstring ) {
+            Com_DPrintf( "Loaded entity string from %s\n", buffer );
+            cache->entitystring = entstring;
+            cache->numEntityChars = length;
+        } else {
+            CM_LoadEntityString( cache, &lumps[LUMP_ENTITIES] );
         }
-        FS_FreeFile( entstring );
     } else {
-        CM_LOAD( EntityString, ENTITIES );
+        CM_LoadEntityString( cache, &lumps[LUMP_ENTITIES] );
     }
-#else
-    CM_LoadEntityString( cache, &lumps[LUMP_ENTITIES] );
-#endif
 
     FS_FreeFile( buf );
 
@@ -845,14 +715,14 @@ cmodel_t *CM_InlineModel( cm_t *cm, const char *name ) {
     cmodel_t *cmodel;
 
     if( !name || name[0] != '*' ) {
-        Com_Error( ERR_DROP, "CM_InlineModel: bad name: %s", name );
+        Com_Error( ERR_DROP, "%s: bad name: %s", __func__, name );
     }
     if( !cm->cache ) {
-        Com_Error( ERR_DROP, "CM_InlineModel: NULL cache" );
+        Com_Error( ERR_DROP, "%s: NULL cache", __func__ );
     }
     num = atoi( name + 1 );
     if( num < 1 || num >= cm->cache->numcmodels ) {
-        Com_Error ( ERR_DROP, "CM_InlineModel: bad number: %d", num );
+        Com_Error ( ERR_DROP, "%s: bad number: %d", __func__, num );
     }
 
     cmodel = &cm->cache->cmodels[num];
@@ -886,23 +756,23 @@ char *CM_EntityString( cm_t *cm ) {
 
 cnode_t *CM_NodeNum( cm_t *cm, int number ) {
     if( !cm->cache ) {
-        Com_Error( ERR_DROP, "CM_NodeNum: NULL cache" );
+        Com_Error( ERR_DROP, "%s: NULL cache", __func__ );
     }
     if( number == -1 ) {
         return ( cnode_t * )cm->cache->leafs; // special case for solid leaf
     }
     if( number < 0 || number >= cm->cache->numnodes ) {
-        Com_Error( ERR_DROP, "CM_NodeNum: bad number: %d", number );
+        Com_Error( ERR_DROP, "%s: bad number: %d", __func__, number );
     }
     return cm->cache->nodes + number;
 }
 
 cleaf_t *CM_LeafNum( cm_t *cm, int number ) {
     if( !cm->cache ) {
-        Com_Error( ERR_DROP, "CM_LeafNum: NULL cache" );
+        Com_Error( ERR_DROP, "%s: NULL cache", __func__ );
     }
     if( number < 0 || number >= cm->cache->numleafs ) {
-        Com_Error( ERR_DROP, "CM_LeafNum: bad number: %d", number );
+        Com_Error( ERR_DROP, "%s: bad number: %d", __func__, number );
     }
     return cm->cache->leafs + number;
 }
@@ -1673,6 +1543,21 @@ void CM_TransformedBoxTrace ( trace_t *trace, vec3_t start, vec3_t end,
     trace->endpos[2] = start[2] + trace->fraction * (end[2] - start[2]);
 }
 
+
+void CM_ClipEntity( trace_t *dst, trace_t *src, struct edict_s *ent ) {
+    dst->allsolid |= src->allsolid;
+    dst->startsolid |= src->startsolid;
+    if( src->fraction < dst->fraction ) {
+        dst->fraction = src->fraction;
+        VectorCopy( src->endpos, dst->endpos );
+        dst->plane = src->plane;
+        dst->surface = src->surface;
+        dst->contents |= src->contents;
+        dst->ent = ent;
+    }
+}
+
+
 /*
 ===============================================================================
 
@@ -2013,6 +1898,6 @@ void CM_Init( void ) {
     CM_InitBoxHull();
 
     map_noareas = Cvar_Get( "map_noareas", "0", 0 );
-    map_load_entities = Cvar_Get( "map_load_entities", "0", 0 );
+    map_override = Cvar_Get( "map_override", "0", 0 );
 }
 

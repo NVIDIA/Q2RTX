@@ -1,9 +1,9 @@
 Introduction
 -----------------
 
-Q2PRO is a [Quake2][] engine modification, based on source code released
+Q2PRO is a [Quake 2][] engine modification, based on source code released
 under the GPL by id Software. This is not a standalone game as it does not
-provide own media content, but rather an enhancement over original Quake2
+provide own media content, but rather an enhancement over original Quake 2
 release designed for everyday use.
 
 
@@ -11,13 +11,13 @@ Feature highlights
 -----------------
 
 * __Improved security and stability.__ Q2PRO client and server, being in
-  development since 2003, addresses all critical Quake2 engine vulnerabilities
+  development since 2003, addresses all critical Quake 2 engine vulnerabilities
   known to the author.
 
 * __Performance increases.__ OpenGL refresh module has been completely
   rewritten to take full advantage of capabilities of modern hardware.
   By greatly reducing driver overhead, Q2PRO provides performace
-  increases up to 200% of default Quake2 renderer speed.
+  increases up to 200% of default Quake 2 renderer speed.
 
 * __Enhanced console input.__ Q2PRO supports bash(1)-like autocompletion not of
   just commands and cvars, but also agruments of many frequently used commands.
@@ -25,7 +25,7 @@ Feature highlights
   command line editing much more convenient.
 
 * __Basic demo editing.__ Good news for those frustrated of inability of
-  Quake2 client to record demos while playing back: Q2PRO supports this
+  Quake 2 client to record demos while playing back: Q2PRO supports this
   natively. There is no longer need for external demo editor to perform some
   basic operations like cutting interesting frags out of a demo.
 
@@ -40,7 +40,7 @@ Feature highlights
 * __Multi View Demo support.__ Q2PRO server is capable of recording and playing
   back demos is special MVD format, which captures view updates of all players.
   Clients themselves choose which view they would like to watch during playback,
-  which is completely transparent and supported for _all_ Quake2 clients.
+  which is completely transparent and supported for _all_ Quake 2 clients.
 
 * __Game TeleVision support.__ Q2PRO server may act as game retranslator node,
   allowing massive amount of spectators watch game match in real time without
@@ -50,7 +50,7 @@ Feature highlights
   unlike many other GTV implementations.
 
 * __Frame rates separation.__ Q2PRO client provides "true" networking, physics,
-  rendering and input polling frame rates separation. Unlike other Quake2 clients,
+  rendering and input polling frame rates separation. Unlike other Quake 2 clients,
   Q2PRO will not waste CPU cycles drawing frames never actually seen on screen,
   but will poll for user input instead in order to minimize input latency.
 

@@ -4,7 +4,7 @@
 
 include ../config.mk
 
-TARGET=$(OUTDIR)/ref_soft$(LIBSUFFIX)
+TARGET=../ref_soft$(LIBSUFFIX)
 
 LDFLAGS+=-lm -shared
 CFLAGS+=-DSOFTWARE_RENDERER

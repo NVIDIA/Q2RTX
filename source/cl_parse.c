@@ -920,6 +920,8 @@ static void CL_ParseServerData( void ) {
 		Con_Printf( "\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n" );
 		Con_Printf( S_COLOR_ALT "%s\n\n", str );
 
+        Sys_Printf( "\n\n%s\n", str );
+
         // make sure clientNum is in range
         if( cl.clientNum < 0 || cl.clientNum >= MAX_CLIENTS ) {
             cl.clientNum = CLIENTNUM_NONE;
@@ -970,103 +972,97 @@ void CL_LoadClientinfo( clientinfo_t *ci, char *s ) {
 		s = t + 1;
 	}
 
-	if( cl_noskins->integer || *s == 0 ) {
-noskin:
-	    strcpy( model_filename, "players/male/tris.md2" );
-		strcpy( weapon_filename, "players/male/weapon.md2" );
-	    strcpy( skin_filename, "players/male/grunt.pcx" );
-		strcpy( icon_filename, "/players/male/grunt_i.pcx" );
-		ci->model = ref.RegisterModel( model_filename );
-		for( i = 0; i < cl.numWeaponModels; i++ ) {
-			Q_concat( weapon_filename, sizeof( weapon_filename ),
-                "players/male/", cl.weaponModels[i], NULL );
-			ci->weaponmodel[i] = ref.RegisterModel( weapon_filename );
-        }
-		ci->skin = ref.RegisterSkin( skin_filename );
-		ci->icon = ref.RegisterPic( icon_filename );
-        strcpy( ci->model_name, "male" );
-	} else {
-		strcpy( model_name, s );
+    strcpy( model_name, s );
 
-		// isolate the model name
-		t = strchr( model_name, '/' );
-		if( !t )
-			t = strchr( model_name, '\\' );
-		if( !t )
-			t = model_name;
-        if( t == model_name ) {
-            goto noskin;
-        }
-		*t = 0;
+    // isolate the model name
+    t = strchr( model_name, '/' );
+    if( !t )
+        t = strchr( model_name, '\\' );
+    if( !t )
+        t = model_name;
+    if( t == model_name ) {
+        strcpy( model_name, "male" );
+        strcpy( skin_name, "grunt" );
+    } else {
+        *t = 0;
 
-		// isolate the skin name
-		strcpy( skin_name, t + 1 );
-
-		// model file
-		Q_concat( model_filename, sizeof( model_filename ),
-            "players/", model_name, "/tris.md2", NULL );
-		ci->model = ref.RegisterModel( model_filename );
-		if( !ci->model && Q_stricmp( model_name, "male" ) ) {
-			strcpy( model_name, "male" );
-			strcpy( model_filename, "players/male/tris.md2" );
-			ci->model = ref.RegisterModel( model_filename );
-		}
-
-		// skin file
-		Q_concat( skin_filename, sizeof( skin_filename ),
-            "players/", model_name, "/", skin_name, ".pcx", NULL );
-		ci->skin = ref.RegisterSkin( skin_filename );
-
-		// if we don't have the skin and the model was female,
-		// see if athena skin exists
-        if( !ci->skin && !Q_stricmp( model_name, "female" ) ) {
+        // apply restictions on skins
+        if( cl_noskins->integer == 2 && !Q_stricmp( model_name, "female" ) ) {
+            strcpy( model_name, "female" );
             strcpy( skin_name, "athena" );
-            strcpy( skin_filename, "players/female/athena.pcx" );
-            ci->skin = ref.RegisterSkin( skin_filename );
+        } else if( cl_noskins->integer ) {
+            strcpy( model_name, "male" );
+            strcpy( skin_name, "grunt" );
+        } else {
+            // isolate the skin name
+            strcpy( skin_name, t + 1 );
         }
+    }
 
-		// if we don't have the skin and the model wasn't male,
-		// see if the male has it (this is for CTF's skins)
- 		if( !ci->skin && Q_stricmp( model_name, "male" ) ) {
-			// change model to male
-			strcpy( model_name, "male" );
-			strcpy( model_filename, "players/male/tris.md2" );
-			ci->model = ref.RegisterModel( model_filename );
+    // model file
+    Q_concat( model_filename, sizeof( model_filename ),
+        "players/", model_name, "/tris.md2", NULL );
+    ci->model = ref.RegisterModel( model_filename );
+    if( !ci->model && Q_stricmp( model_name, "male" ) ) {
+        strcpy( model_name, "male" );
+        strcpy( model_filename, "players/male/tris.md2" );
+        ci->model = ref.RegisterModel( model_filename );
+    }
 
-			// see if the skin exists for the male model
-		    Q_concat( skin_filename, sizeof( skin_filename ),
-                "players/male/", skin_name, ".pcx", NULL );
-			ci->skin = ref.RegisterSkin( skin_filename );
-		}
+    // skin file
+    Q_concat( skin_filename, sizeof( skin_filename ),
+        "players/", model_name, "/", skin_name, ".pcx", NULL );
+    ci->skin = ref.RegisterSkin( skin_filename );
 
-		// if we still don't have a skin, it means that the male model
-        // didn't have it, so default to grunt
-		if( !ci->skin ) {
-			// see if the skin exists for the male model
-		    strcpy( skin_filename, "players/male/grunt.pcx" );
-			ci->skin = ref.RegisterSkin( skin_filename );
-		}
+    // if we don't have the skin and the model was female,
+    // see if athena skin exists
+    if( !ci->skin && !Q_stricmp( model_name, "female" ) ) {
+        strcpy( skin_name, "athena" );
+        strcpy( skin_filename, "players/female/athena.pcx" );
+        ci->skin = ref.RegisterSkin( skin_filename );
+    }
 
-		// weapon file
-		for( i = 0; i < cl.numWeaponModels; i++ ) {
-			Q_concat( weapon_filename, sizeof( weapon_filename ),
-                "players/", model_name, "/", cl.weaponModels[i], NULL );
-			ci->weaponmodel[i] = ref.RegisterModel( weapon_filename );
-			if( !ci->weaponmodel[i] && Q_stricmp( model_name, "male" ) ) {
-				// try male
-				Q_concat( weapon_filename, sizeof( weapon_filename ),
-                    "players/male/", cl.weaponModels[i], NULL );
-				ci->weaponmodel[i] = ref.RegisterModel( weapon_filename );
-			}
-		}
+    // if we don't have the skin and the model wasn't male,
+    // see if the male has it (this is for CTF's skins)
+    if( !ci->skin && Q_stricmp( model_name, "male" ) ) {
+        // change model to male
+        strcpy( model_name, "male" );
+        strcpy( model_filename, "players/male/tris.md2" );
+        ci->model = ref.RegisterModel( model_filename );
 
-		// icon file
-		Q_concat( icon_filename, sizeof( icon_filename ),
-            "/players/", model_name, "/", skin_name, "_i.pcx", NULL );
-		ci->icon = ref.RegisterPic( icon_filename );
+        // see if the skin exists for the male model
+        Q_concat( skin_filename, sizeof( skin_filename ),
+            "players/male/", skin_name, ".pcx", NULL );
+        ci->skin = ref.RegisterSkin( skin_filename );
+    }
 
-        strcpy( ci->model_name, model_name );
-	}
+    // if we still don't have a skin, it means that the male model
+    // didn't have it, so default to grunt
+    if( !ci->skin ) {
+        // see if the skin exists for the male model
+        strcpy( skin_filename, "players/male/grunt.pcx" );
+        ci->skin = ref.RegisterSkin( skin_filename );
+    }
+
+    // weapon file
+    for( i = 0; i < cl.numWeaponModels; i++ ) {
+        Q_concat( weapon_filename, sizeof( weapon_filename ),
+            "players/", model_name, "/", cl.weaponModels[i], NULL );
+        ci->weaponmodel[i] = ref.RegisterModel( weapon_filename );
+        if( !ci->weaponmodel[i] && Q_stricmp( model_name, "male" ) ) {
+            // try male
+            Q_concat( weapon_filename, sizeof( weapon_filename ),
+                "players/male/", cl.weaponModels[i], NULL );
+            ci->weaponmodel[i] = ref.RegisterModel( weapon_filename );
+        }
+    }
+
+    // icon file
+    Q_concat( icon_filename, sizeof( icon_filename ),
+        "/players/", model_name, "/", skin_name, "_i.pcx", NULL );
+    ci->icon = ref.RegisterPic( icon_filename );
+
+    strcpy( ci->model_name, model_name );
 
 	// must have loaded all data types to be valid
 	if( !ci->skin || !ci->icon || !ci->model || !ci->weaponmodel[0] ) {

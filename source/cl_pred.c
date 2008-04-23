@@ -109,7 +109,6 @@ static void CL_ClipMoveToEntities ( vec3_t start, vec3_t mins, vec3_t maxs, vec3
 	int			i, x, zd, zu;
 	trace_t		trace;
 	cnode_t		*headnode;
-	float		*angles;
 	entity_state_t	*ent;
 	cmodel_t		*cmodel;
 	vec3_t		bmins, bmaxs;
@@ -123,7 +122,6 @@ static void CL_ClipMoveToEntities ( vec3_t start, vec3_t mins, vec3_t maxs, vec3
 			if (!cmodel)
 				continue;
 			headnode = cmodel->headnode;
-			angles = ent->angles;
 		} else {
             // encoded bbox
 			x = 8*(ent->solid & 31);
@@ -136,7 +134,6 @@ static void CL_ClipMoveToEntities ( vec3_t start, vec3_t mins, vec3_t maxs, vec3
 			bmaxs[2] = zu;
 
 			headnode = CM_HeadnodeForBox (bmins, bmaxs);
-			angles = vec3_origin;	// boxes don't rotate
 		}
 
 		if (tr->allsolid)
@@ -144,18 +141,9 @@ static void CL_ClipMoveToEntities ( vec3_t start, vec3_t mins, vec3_t maxs, vec3
 
 		CM_TransformedBoxTrace (&trace, start, end,
 			mins, maxs, headnode,  MASK_PLAYERSOLID,
-			ent->origin, angles);
+			ent->origin, ent->angles);
 
-		tr->allsolid |= trace.allsolid;
-		tr->startsolid |= trace.startsolid;
-		if( trace.fraction < tr->fraction ) {
-			tr->fraction = trace.fraction;
-            VectorCopy( trace.endpos, tr->endpos );
-            tr->plane = trace.plane;
-            tr->surface = trace.surface;
-            tr->contents |= trace.contents;
-			tr->ent = ( struct edict_s * )ent;
-        }
+		CM_ClipEntity( tr, &trace, ( struct edict_s * )ent );
 	}
 }
 

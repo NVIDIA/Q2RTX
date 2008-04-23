@@ -56,8 +56,7 @@ V_ClearScene
 Specifies the model that will be used as the world
 ====================
 */
-void V_ClearScene (void)
-{
+static void V_ClearScene (void) {
 	r_numdlights = 0;
 	r_numentities = 0;
 	r_numparticles = 0;
@@ -70,8 +69,7 @@ V_AddEntity
 
 =====================
 */
-void V_AddEntity (entity_t *ent)
-{
+void V_AddEntity (entity_t *ent) {
 	if (r_numentities >= MAX_ENTITIES)
 		return;
 	
@@ -85,12 +83,10 @@ V_AddParticle
 
 =====================
 */
-void V_AddParticle( particle_t *p )
-{
+void V_AddParticle( particle_t *p ) {
 	if (r_numparticles >= MAX_PARTICLES)
 		return;
 	r_particles[r_numparticles++] = *p;
-
 }
 
 /*
@@ -99,8 +95,7 @@ V_AddLight
 
 =====================
 */
-void V_AddLight (vec3_t org, float intensity, float r, float g, float b)
-{
+void V_AddLight (vec3_t org, float intensity, float r, float g, float b) {
 	dlight_t	*dl;
 
 	if (r_numdlights >= MAX_DLIGHTS)
@@ -120,8 +115,7 @@ V_AddLightStyle
 
 =====================
 */
-void V_AddLightStyle (int style, vec4_t value)
-{
+void V_AddLightStyle (int style, vec4_t value) {
 	lightstyle_t	*ls;
 
 	if (style < 0 || style > MAX_LIGHTSTYLES)
@@ -142,8 +136,7 @@ V_TestParticles
 If cl_testparticles is set, create 4096 particles in the view
 ================
 */
-void V_TestParticles (void)
-{
+static void V_TestParticles (void) {
 	particle_t	*p;
 	int			i, j;
 	float		d, r, u;
@@ -172,8 +165,7 @@ V_TestEntities
 If cl_testentities is set, create 32 player models
 ================
 */
-void V_TestEntities (void)
-{
+static void V_TestEntities (void) {
 	int			i, j;
 	float		f, r;
 	entity_t	*ent;
@@ -204,8 +196,7 @@ V_TestLights
 If cl_testlights is set, create 32 lights models
 ================
 */
-void V_TestLights (void)
-{
+static void V_TestLights (void) {
 	int			i, j;
 	float		f, r;
 	dlight_t	*dl;
@@ -249,14 +240,16 @@ CL_PrepRefresh
 Call before entering a new level, or after changing dlls
 =================
 */
-void CL_PrepRefresh (void)
-{
+void CL_PrepRefresh (void) {
 	int			i;
 	char		*name;
 	float		rotate;
 	vec3_t		axis;
 	unsigned	time_start, time_map, time_models, time_clients, time_total;
 
+    if( !cls.ref_initialized ) {
+        return;
+    }
 	if (!cl.mapname[0])
 		return;		// no map loaded
 
@@ -293,10 +286,6 @@ void CL_PrepRefresh (void)
 			}
 		}  else {
 			cl.model_draw[i] = ref.RegisterModel( name );
-			if( name[0] == '*' )
-				cl.model_clip[i] = CM_InlineModel( &cl.cm, name );
-			else
-				cl.model_clip[i] = NULL;
 		}
 	}
 	time_models = Sys_Milliseconds();
@@ -311,8 +300,7 @@ void CL_PrepRefresh (void)
 	}
 
 	SCR_LoadingString( "clients" );
-	for (i=0 ; i<MAX_CLIENTS ; i++)
-	{
+	for (i=0 ; i<MAX_CLIENTS ; i++) {
         name = cl.configstrings[CS_PLAYERSKINS+i];
         if( !name[0] )
 			continue;
@@ -351,26 +339,22 @@ void CL_PrepRefresh (void)
 //============================================================================
 
 // gun frame debugging functions
-void V_Gun_Next_f (void)
-{
+static void V_Gun_Next_f (void) {
 	gun_frame++;
 	Com_Printf ("frame %i\n", gun_frame);
 }
 
-void V_Gun_Prev_f (void)
-{
+static void V_Gun_Prev_f (void) {
 	gun_frame--;
 	if (gun_frame < 0)
 		gun_frame = 0;
 	Com_Printf ("frame %i\n", gun_frame);
 }
 
-void V_Gun_Model_f (void)
-{
+static void V_Gun_Model_f (void) {
 	char	name[MAX_QPATH];
 
-	if (Cmd_Argc() != 2)
-	{
+	if (Cmd_Argc() != 2) {
 		gun_model = 0;
 		return;
 	}
@@ -395,7 +379,7 @@ static int QDECL entitycmpfnc( const entity_t *a, const entity_t *b )
 	}
 }
 
-void V_SetLightLevel( void ) {
+static void V_SetLightLevel( void ) {
 	vec3_t shadelight;
 
 	// save off light value for server to look at (BIG HACK!)
@@ -509,27 +493,27 @@ void V_RenderView( void ) {
 V_Viewpos_f
 =============
 */
-void V_Viewpos_f (void)
-{
+static void V_Viewpos_f (void) {
 	Com_Printf ("(%i %i %i) : %i\n", (int)cl.refdef.vieworg[0],
 		(int)cl.refdef.vieworg[1], (int)cl.refdef.vieworg[2], 
 		(int)cl.refdef.viewangles[YAW]);
 }
+
+static const cmdreg_t v_cmds[] = {
+    { "gun_next", V_Gun_Next_f },
+    { "gun_prev", V_Gun_Prev_f },
+    { "gun_model", V_Gun_Model_f },
+    { "viewpos", V_Viewpos_f },
+    { NULL }
+};
 
 /*
 =============
 V_Init
 =============
 */
-void V_Init (void)
-{
-	Cmd_AddCommand ("gun_next", V_Gun_Next_f);
-	Cmd_AddCommand ("gun_prev", V_Gun_Prev_f);
-	Cmd_AddCommand ("gun_model", V_Gun_Model_f);
-
-	Cmd_AddCommand ("viewpos", V_Viewpos_f);
-
-	crosshair = Cvar_Get ("crosshair", "0", CVAR_ARCHIVE);
+void V_Init( void ) {
+    Cmd_Register( v_cmds );
 
 	cl_testblend = Cvar_Get ("cl_testblend", "0", 0);
 	cl_testparticles = Cvar_Get ("cl_testparticles", "0", 0);
@@ -538,5 +522,10 @@ void V_Init (void)
 
 	cl_stats = Cvar_Get ("cl_stats", "0", 0);
 }
+
+void V_Shutdown( void ) {
+    Cmd_Deregister( v_cmds );
+}
+
 
 

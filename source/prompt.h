@@ -34,6 +34,7 @@ typedef struct commandPrompt_s {
 
 	inputField_t inputLine;
 	char		*history[HISTORY_SIZE];
+    char        *search;
 
 	int			widthInChars;
     qboolean    tooMany;
@@ -45,6 +46,7 @@ typedef struct commandPrompt_s {
 void Prompt_Init( void );
 void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash );
 void Prompt_CompleteHistory( commandPrompt_t *prompt, qboolean forward );
+void Prompt_ClearState( commandPrompt_t *prompt );
 char *Prompt_Action( commandPrompt_t *prompt );
 void Prompt_HistoryUp( commandPrompt_t *prompt );
 void Prompt_HistoryDown( commandPrompt_t *prompt );

@@ -27,8 +27,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <limits.h>
 #include <time.h>
+#if HAVE_ENDIAN_H
 #include <endian.h>
+#endif
 
 #ifdef __GNUC__
 
@@ -153,7 +156,7 @@ typedef vec_t vec5_t[5];
 
 typedef float mat4_t[16];
 
-typedef byte color_t[4];
+typedef unsigned char color_t[4];
 
 typedef	int	fixed4_t;
 typedef	int	fixed8_t;
@@ -473,8 +476,9 @@ void COM_DefaultExtension( char *path, const char *extension, int pathSize );
 void COM_AppendExtension( char *path, const char *extension, int pathSize );
 char *COM_FileExtension( const char *in );
 
-qboolean COM_IsNumeric( const char *string );
-qboolean COM_HasSpaces( const char *string );
+qboolean COM_IsFloat( const char *s );
+qboolean COM_IsUint( const char *s );
+qboolean COM_HasSpaces( const char *s );
 
 char *COM_SimpleParse( const char **data_p, int *length );
 char *COM_Parse( const char **data_p );
@@ -483,6 +487,7 @@ int COM_Compress( char *data );
 
 int Com_WildCmp( const char *filter, const char *string, qboolean ignoreCase );
 int QDECL SortStrcmp( const void *p1, const void *p2 );
+int QDECL SortStricmp( const void *p1, const void *p2 );
 
 unsigned Com_HashString( const char *string, int hashSize );
 unsigned Com_HashPath( const char *string, int hashSize );
@@ -497,6 +502,7 @@ size_t Q_vsnprintf( char *dest, size_t destsize, const char *fmt, va_list argptr
 void Com_PageInMemory (void *buffer, int size);
 
 unsigned COM_ParseHex( const char *string );
+qboolean COM_ParseColor( const char *s, color_t color );
 
 char	*va( const char *format, ... ) q_printf( 1, 2 );
 
@@ -1222,7 +1228,7 @@ typedef struct
 
 // ROGUE
 
-extern	vec3_t monster_flash_offset [];
+extern	const vec3_t monster_flash_offset [];
 
 
 // temp entity events

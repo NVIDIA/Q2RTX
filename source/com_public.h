@@ -26,6 +26,50 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 /*
 ==============================================================
 
+COMMON
+
+==============================================================
+*/
+
+#define	MAXPRINTMSG		4096
+
+// memory tags to allow dynamic memory to be cleaned up
+typedef enum memtag_e {
+	TAG_FREE,				// should have never been set
+	TAG_STATIC,
+
+	TAG_GENERAL,
+	TAG_CMD,
+	TAG_CVAR,
+	TAG_FILESYSTEM,
+	TAG_RENDERER,
+	TAG_UI,
+    TAG_SERVER,
+	TAG_MVD,
+    TAG_SOUND,
+	TAG_CMODEL,
+
+	TAG_MAX,
+
+	TAG_GAME	= 765,		// clear when unloading the dll
+	TAG_LEVEL	= 766		// clear when loading a new level
+} memtag_t;
+
+typedef struct commonAPI_s {
+	void	(* q_noreturn Error)( comErrorType_t code, const char *str );
+	void	(*Print)( comPrintType_t type, const char *str );
+
+	void	*(*TagMalloc)( size_t size, memtag_t tag );
+	void	*(*Realloc)( void *ptr, size_t size );
+	void	(*Free)( void *ptr );
+} commonAPI_t;
+
+extern	commonAPI_t	com;
+
+
+/*
+==============================================================
+
 CMD
 
 ==============================================================
@@ -48,6 +92,7 @@ typedef struct genctx_s {
     char **matches;
     int count, size;
     void *data;
+    qboolean ignorecase;
 } genctx_t;
 
 typedef struct cmdreg_s {
@@ -177,7 +222,7 @@ typedef struct fsAPI_s {
 	int 	(*Tell)( fileHandle_t f );
 	int 	(*RawTell)( fileHandle_t f );
 	size_t 	(*LoadFile)( const char *path, void **buffer );
-	size_t 	(*LoadFileEx)( const char *path, void **buffer, int flags );
+	size_t 	(*LoadFileEx)( const char *path, void **buffer, int flags, memtag_t tag );
     void    *(*AllocTempMem)( size_t length );
 	void 	(*FreeFile)( void *buffer );
 	void 	**(*ListFiles)( const char *path, const char *extension, int flags, int *numFiles );
@@ -185,49 +230,6 @@ typedef struct fsAPI_s {
 } fsAPI_t;
 
 extern	fsAPI_t		fs;
-
-/*
-==============================================================
-
-COMMON
-
-==============================================================
-*/
-
-#define	MAXPRINTMSG		4096
-
-// memory tags to allow dynamic memory to be cleaned up
-typedef enum memtag_e {
-	TAG_FREE,				// should have never been set
-	TAG_STATIC,
-
-	TAG_GENERAL,
-	TAG_CMD,
-	TAG_CVAR,
-	TAG_FILESYSTEM,
-	TAG_RENDERER,
-	TAG_UI,
-    TAG_SERVER,
-	TAG_MVD,
-    TAG_SOUND,
-	TAG_CMODEL,
-
-	TAG_MAX,
-
-	TAG_GAME	= 765,		// clear when unloading the dll
-	TAG_LEVEL	= 766		// clear when loading a new level
-} memtag_t;
-
-typedef struct commonAPI_s {
-	void	(* q_noreturn Error)( comErrorType_t code, const char *str );
-	void	(*Print)( comPrintType_t type, const char *str );
-
-	void	*(*TagMalloc)( size_t size, memtag_t tag );
-	void	*(*Realloc)( void *ptr, size_t size );
-	void	(*Free)( void *ptr );
-} commonAPI_t;
-
-extern	commonAPI_t	com;
 
 /*
 ==============================================================

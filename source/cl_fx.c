@@ -1682,8 +1682,48 @@ void CL_OldRailTrail (vec3_t start, vec3_t end)
 	}
 }
 
+static color_t  railcore_color;
+static color_t  railspiral_color;
 
-void CL_RailTrail( vec3_t start, vec3_t end ) {
+static cvar_t *cl_railtrail_type;
+static cvar_t *cl_railtrail_time;
+static cvar_t *cl_railcore_color;
+static cvar_t *cl_railcore_width;
+static cvar_t *cl_railspiral_color;
+static cvar_t *cl_railspiral_radius;
+
+
+static void cl_railcore_color_changed( cvar_t *self ) {
+    if( !COM_ParseColor( self->string, railcore_color ) ) {
+        Com_WPrintf( "Invalid value '%s' for '%s'\n", self->string, self->name );
+        *( uint32_t *)railcore_color = *( uint32_t * )colorRed;
+    }
+}
+
+static void cl_railspiral_color_changed( cvar_t *self ) {
+    if( !COM_ParseColor( self->string, railspiral_color ) ) {
+        Com_WPrintf( "Invalid value '%s' for '%s'\n", self->string, self->name );
+        *( uint32_t *)railspiral_color = *( uint32_t * )colorBlue;
+    }
+}
+
+static void CL_NewRailCore( vec3_t start, vec3_t end ) {
+	laser_t *l = CL_AllocLaser();
+
+    if( !l ) {
+		return;
+	}
+
+	VectorCopy( start, l->start );
+	VectorCopy( end, l->end );
+	l->fadeType = LASER_FADE_RGBA;
+	l->lifeTime = 1000 * cl_railtrail_time->value;
+	l->indexed = qfalse;
+	l->width = cl_railcore_width->value;
+	*( uint32_t * )l->color = *( uint32_t * )railcore_color;
+}
+
+static void CL_NewRailSpiral( vec3_t start, vec3_t end ) {
 	vec3_t		move;
 	vec3_t		vec;
 	float		len;
@@ -1694,76 +1734,54 @@ void CL_RailTrail( vec3_t start, vec3_t end ) {
 	int			i;
 	float		d, c, s;
 	vec3_t		dir;
-	laser_t		*l;
-	color_t color;
 
+    VectorCopy( start, move );
+    VectorSubtract( end, start, vec );
+    len = VectorNormalize( vec );
+
+    MakeNormalVectors( vec, right, up );
+
+    for( i=0 ; i<len ; i++ ) {
+        if( !free_particles )
+            return;
+
+        p = free_particles;
+        free_particles = p->next;
+        p->next = active_particles;
+        active_particles = p;
+        
+        p->time = cl.time;
+        VectorClear( p->accel );
+
+        d = i * 0.1;
+        c = cos( d );
+        s = sin( d );
+
+        VectorScale( right, c, dir );
+        VectorMA( dir, s, up, dir );
+
+        p->alpha = railspiral_color[3] / 255.0f;
+        p->alphavel = -1.0 / ( cl_railtrail_time->value + frand() * 0.2 );
+        p->color = 0xff;
+        *( uint32_t * )p->rgb = *( uint32_t * )railspiral_color;
+        for( j=0 ; j<3 ; j++ ) {
+            p->org[j] = move[j] + dir[j] * cl_railspiral_radius->value;
+            p->vel[j] = dir[j] * 6;
+        }
+
+        VectorAdd( move, vec, move );
+    }
+}
+
+void CL_RailTrail( vec3_t start, vec3_t end ) {
 	if( !cl_railtrail_type->integer || scr_glconfig.renderer == GL_RENDERER_SOFTWARE ) {
 		CL_OldRailTrail( start, end );
-		return;
-	}
-
-	if( !( l = CL_AllocLaser() ) ) {
-		return;
-	}
-
-	VectorCopy( start, l->start );
-	VectorCopy( end, l->end );
-	l->fadeType = LASER_FADE_RGBA;
-	l->lifeTime = 1000 * cl_railtrail_time->value;
-	l->indexed = qfalse;
-	l->width = cl_railcore_width->value;
-
-	l->color[0] = ( cl_railcore_color->integer >> 16 ) & 0xff;
-	l->color[1] = ( cl_railcore_color->integer >>  8 ) & 0xff;
-	l->color[2] = ( cl_railcore_color->integer       ) & 0xff;
-	l->color[3] = 255 * cl_railtrail_alpha->value;
-
-	color[0] = ( cl_railspiral_color->integer >> 16 ) & 0xff;
-	color[1] = ( cl_railspiral_color->integer >>  8 ) & 0xff;
-	color[2] = ( cl_railspiral_color->integer       ) & 0xff;
-	color[3] = 255;
-
-	VectorCopy( start, move );
-	VectorSubtract( end, start, vec );
-	len = VectorNormalize( vec );
-
-	MakeNormalVectors( vec, right, up );
-
-	if( cl_railtrail_type->integer > 1 ) {
-		for( i=0 ; i<len ; i++ ) {
-			if( !free_particles )
-				return;
-
-			p = free_particles;
-			free_particles = p->next;
-			p->next = active_particles;
-			active_particles = p;
-			
-			p->time = cl.time;
-			VectorClear( p->accel );
-
-			d = i * 0.1;
-			c = cos( d );
-			s = sin( d );
-
-			VectorScale( right, c, dir );
-			VectorMA( dir, s, up, dir );
-
-			p->alpha = cl_railtrail_alpha->value;
-			p->alphavel = -1.0 / ( cl_railtrail_time->value + frand() * 0.2 );
-			p->color = 0xff;
-			*( uint32_t * )p->rgb = *( uint32_t * )color;
-			for( j=0 ; j<3 ; j++ ) {
-				p->org[j] = move[j] + dir[j] * cl_railspiral_radius->value;
-				p->vel[j] = dir[j] * 6;
-			}
-
-			VectorAdd( move, vec, move );
-		}
-	}
-	
-
-	
+	} else {
+        CL_NewRailCore( start, end );
+	    if( cl_railtrail_type->integer > 1 ) {
+            CL_NewRailSpiral( start, end );
+	    }
+    }
 }
 
 
@@ -2385,3 +2403,19 @@ void CL_ClearEffects (void)
 	CL_ClearDlights ();
 	CL_ClearLightStyles ();
 }
+
+void CL_InitEffects( void ) {
+    cl_railtrail_type = Cvar_Get( "cl_railtrail_type", "0", 0 );
+    cl_railtrail_time = Cvar_Get( "cl_railtrail_time", "1.0", 0 );
+    cl_railcore_color = Cvar_Get( "cl_railcore_color", "red", 0 );
+    cl_railcore_color->changed = cl_railcore_color_changed;
+    cl_railcore_color->generator = Com_Color_g;
+    cl_railcore_color_changed( cl_railcore_color );
+    cl_railcore_width = Cvar_Get( "cl_railcore_width", "2", 0 );
+    cl_railspiral_color = Cvar_Get( "cl_railspiral_color", "blue", 0 );
+    cl_railspiral_color->changed = cl_railspiral_color_changed;
+    cl_railspiral_color->generator = Com_Color_g;
+    cl_railspiral_color_changed( cl_railspiral_color );
+    cl_railspiral_radius = Cvar_Get( "cl_railspiral_radius", "3", 0 );
+}
+

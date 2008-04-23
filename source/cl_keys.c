@@ -56,7 +56,7 @@ typedef struct keyname_s {
 	int		keynum;
 } keyname_t;
 
-static keyname_t keynames[] = {
+static const keyname_t keynames[] = {
 	{"TAB", K_TAB},
 	{"ENTER", K_ENTER},
 	{"ESCAPE", K_ESCAPE},
@@ -273,7 +273,7 @@ the K_* names are matched up.
 ===================
 */
 int Key_StringToKeynum( const char *str ) {
-	keyname_t	*kn;
+	const keyname_t	*kn;
 	
 	if( !str || !str[0] )
 		return -1;
@@ -297,8 +297,8 @@ FIXME: handle quote special (general escape sequence?)
 ===================
 */
 char *Key_KeynumToString( int keynum ) {
-	keyname_t	*kn;	
-	static	char	tinystr[2];
+	const keyname_t	*kn;	
+	static char	tinystr[2];
 	
 	if( keynum == -1 )
 		return "<KEY NOT FOUND>";
@@ -309,7 +309,7 @@ char *Key_KeynumToString( int keynum ) {
 		return tinystr;
 	}
 	
-	for( kn=keynames ; kn->name ; kn++ )
+	for( kn = keynames; kn->name; kn++ )
 		if( keynum == kn->keynum )
 			return kn->name;
 
@@ -366,7 +366,7 @@ void Key_SetBinding( int keynum, const char *binding ) {
 	if( keynum < 0 || keynum > 255 )
 		return;
 
-// free old bindings
+// free old binding
 	if( keybindings[keynum] ) {
 		Z_Free( keybindings[keynum] );
 	}
@@ -376,11 +376,25 @@ void Key_SetBinding( int keynum, const char *binding ) {
 }
 
 static void Key_Name_g( genctx_t *ctx ) {
-    keyname_t *k;
+    const keyname_t *k;
 
+    ctx->ignorecase = qtrue;
     for( k = keynames; k->name; k++ ) {
-        if( !Prompt_AddMatchCase( ctx, k->name ) ) {
+        if( !Prompt_AddMatch( ctx, k->name ) ) {
             break;
+        }
+    }
+}
+
+static void Key_Bound_g( genctx_t *ctx ) {
+    int i;
+
+    ctx->ignorecase = qtrue;
+    for( i = 0; i < 256; i++ ) {
+        if( keybindings[i] ) {
+            if( !Prompt_AddMatch( ctx, Key_KeynumToString( i ) ) ) {
+                break;
+            }
         }
     }
 }
@@ -395,7 +409,7 @@ static void Key_Bind_c( genctx_t *ctx, int argnum ) {
 
 static void Key_Unbind_c( genctx_t *ctx, int argnum ) {
     if( argnum == 1 ) {
-        Key_Name_g( ctx );
+        Key_Bound_g( ctx );
     }
 }
 

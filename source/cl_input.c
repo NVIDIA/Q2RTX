@@ -68,23 +68,23 @@ typedef struct inputDriver_s {
 	void	(*FillAPI)( inputAPI_t *api );
 } inputDriver_t;
 
-#ifdef USE_DINPUT
+#if USE_DINPUT
 void DI_FillAPI( inputAPI_t *api );
 #endif
 
-#ifdef USE_EVDEV
+#if USE_EVDEV
 void Evdev_FillAPI( inputAPI_t *api );
 #endif
 
 static inputDriver_t	in_driverTable[] = {
-	/* fallback driver should be present on all systems */
+	// fallback driver should be present on all systems
 	{ "video", Video_FillInputAPI },
 
 	/* DirectInput driver */
-#ifdef USE_DINPUT
+#if USE_DINPUT
 	{ "dinput", DI_FillAPI },
 #endif
-#ifdef USE_EVDEV
+#if USE_EVDEV
 	{ "evdev", Evdev_FillAPI },
 #endif
 };

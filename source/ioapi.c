@@ -5,7 +5,7 @@
 
    Copyright (C) 1998-2002 Gilles Vollant
 */
-#include "config.h"
+#include <config.h>
 
 #include <stdio.h>
 #include <stdlib.h>

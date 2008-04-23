@@ -22,7 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // r_bsp.c -- map loading functions common for both renderers
 //
 
-#include "config.h"
+#include <config.h>
 #include "q_shared.h"
 #include "com_public.h"
 #include "q_files.h"
@@ -589,7 +589,7 @@ void Bsp_LoadWorld( const char *path ) {
     byte *data;
     size_t length, endpos;
 
-    length = fs.LoadFileEx( path, ( void ** )&data, FS_FLAG_CACHE );
+    length = fs.LoadFileEx( path, ( void ** )&data, FS_FLAG_CACHE, TAG_FREE );
     if( !data ) {
         Com_Error( ERR_DROP, "%s: couldn't load %s", __func__, path );
     }

@@ -795,22 +795,21 @@ void SV_InitGameProgs ( void ) {
 	if( !entry )
 #endif
     {
-        // try refdir first for development purposes
-        Q_concat( path, sizeof( path ), sys_refdir->string,
-            PATH_SEP_STRING GAMELIB, NULL );
-        entry = Sys_LoadLibrary( path, "GetGameAPI", &game_library );
+        // try gamedir first
+        if( fs_game->string[0] ) {
+            Q_concat( path, sizeof( path ), sys_libdir->string,
+                PATH_SEP_STRING, fs_game->string, PATH_SEP_STRING GAMELIB, NULL );
+            entry = Sys_LoadLibrary( path, "GetGameAPI", &game_library );
+        }
         if( !entry ) {
-            // try gamedir
-            if( fs_game->string[0] ) {
-                Q_concat( path, sizeof( path ), sys_libdir->string,
-                    PATH_SEP_STRING, fs_game->string, PATH_SEP_STRING GAMELIB, NULL );
-                entry = Sys_LoadLibrary( path, "GetGameAPI", &game_library );
-            }
-
+            // then try baseq2
+            Q_concat( path, sizeof( path ), sys_libdir->string,
+                PATH_SEP_STRING BASEGAME PATH_SEP_STRING GAMELIB, NULL );
+            entry = Sys_LoadLibrary( path, "GetGameAPI", &game_library );
             if( !entry ) {
-                // try baseq2
-                Q_concat( path, sizeof( path ), sys_libdir->string,
-                    PATH_SEP_STRING BASEGAME PATH_SEP_STRING GAMELIB, NULL );
+                // then try to fall back to refdir
+                Q_concat( path, sizeof( path ), sys_refdir->string,
+                    PATH_SEP_STRING GAMELIB, NULL );
                 entry = Sys_LoadLibrary( path, "GetGameAPI", &game_library );
                 if( !entry ) {
                     Com_Error( ERR_DROP, "Failed to load game DLL" );

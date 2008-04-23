@@ -20,7 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // qcommon.h -- definitions common between client and server, but not game.dll
 
-#include "config.h"
+#include <config.h>
 #include "q_shared.h"
 #include "q_files.h"
 #include "com_public.h"
@@ -777,6 +777,7 @@ void		CM_TransformedBoxTrace( trace_t *trace, vec3_t start, vec3_t end,
 						  vec3_t mins, vec3_t maxs,
 						  cnode_t * headnode, int brushmask,
 						  vec3_t origin, vec3_t angles );
+void        CM_ClipEntity( trace_t *dst, trace_t *src, struct edict_s *ent );
 
 byte		*CM_ClusterPVS( cm_t *cm, int cluster);
 byte		*CM_ClusterPHS( cm_t *cm, int cluster );
@@ -862,7 +863,7 @@ size_t	FS_FOpenFile( const char *filename, fileHandle_t *f, int mode );
 void	FS_FCloseFile( fileHandle_t hFile );
 
 size_t	FS_LoadFile( const char *path, void  **buffer );
-size_t	FS_LoadFileEx( const char *path, void **buffer, int flags );
+size_t	FS_LoadFileEx( const char *path, void **buffer, int flags, memtag_t tag );
 void    *FS_AllocTempMem( size_t length );
 void	FS_FreeFile( void *buffer );
 // a null buffer will just return the file length without loading
@@ -948,9 +949,9 @@ void		Com_ProcessEvents( void );
 
 void        Com_Address_g( genctx_t *ctx );
 void        Com_Generic_c( genctx_t *ctx, int argnum );
+void        Com_Color_g( genctx_t *ctx );
 
 qboolean    Prompt_AddMatch( genctx_t *ctx, const char *s );
-qboolean    Prompt_AddMatchCase( genctx_t *ctx, const char *s );
 
 size_t      Com_Time_m( char *buffer, size_t size );
 size_t      Com_Uptime_m( char *buffer, size_t size );
@@ -1047,6 +1048,7 @@ void    Sys_AddDefaultConfig( void );
 void    Sys_RunConsole( void );
 void	Sys_ConsoleOutput( const char *string );
 void    Sys_SetConsoleTitle( const char *title );
+void    Sys_Printf( const char *fmt, ... ) q_printf( 1, 2 );
 void	Sys_Error( const char *error, ... ) q_noreturn q_printf( 1, 2 );
 void	Sys_Quit( void );
 

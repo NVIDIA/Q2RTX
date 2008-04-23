@@ -26,8 +26,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "mvd_local.h"
 #include <setjmp.h>
 
-list_t		mvd_channels;
-list_t		mvd_ready;
+LIST_DECL( mvd_channels );
+LIST_DECL( mvd_ready );
+
 mvd_t       mvd_waitingRoom;
 qboolean    mvd_dirty;
 int         mvd_chanid;
@@ -227,7 +228,7 @@ static void MVD_EmitGamestate( mvd_t *mvd ) {
 	entity_state_t	*es;
     player_state_t *ps;
     size_t      length;
-    uint16_t    *patch;
+    uint8_t     *patch;
 	int flags, extra, portalbytes;
     byte portalbits[MAX_MAP_AREAS/8];
 
@@ -302,7 +303,9 @@ static void MVD_EmitGamestate( mvd_t *mvd ) {
 
     // TODO: write private layouts/configstrings
 
-    *patch = LittleShort( msg_write.cursize - 2 );
+    length = msg_write.cursize - 2;
+    patch[0] = length & 255;
+    patch[1] = ( length >> 8 ) & 255;
 }
 
 void MVD_SendGamestate( tcpClient_t *client ) {
@@ -806,7 +809,7 @@ mvd_t *MVD_SetChannel( int arg ) {
         return NULL;
     }
 
-    if( COM_IsNumeric( s ) ) {
+    if( COM_IsUint( s ) ) {
         id = atoi( s );
         LIST_FOR_EACH( mvd_t, mvd, &mvd_channels, entry ) {
             if( mvd->id == id ) {
@@ -1398,8 +1401,5 @@ void MVD_Register( void ) {
 	mvd_wait_percent = Cvar_Get( "mvd_wait_percent", "50", 0 );
 
     Cmd_Register( c_mvd );
-
-    List_Init( &mvd_channels );
-    List_Init( &mvd_ready );
 }
 

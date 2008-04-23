@@ -4,7 +4,7 @@
 
 include ../config.mk
 
-TARGET=$(OUTDIR)/mod_ui$(LIBSUFFIX)
+TARGET=../mod_ui$(LIBSUFFIX)
 
 LDFLAGS+=-lm -shared
 

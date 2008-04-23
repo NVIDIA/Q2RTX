@@ -77,7 +77,6 @@ static qhandle_t	sb_field;
 #define	DIGIT_WIDTH	16
 #define	ICON_SPACE	8
 
-void SCR_TimeRefresh_f (void);
 void SCR_Loading_f (void);
 
 
@@ -101,6 +100,9 @@ void CL_AddNetgraph (void)
 	int		i;
 	int		in;
 	int		ping;
+
+	if (!scr_initialized)
+        return;
 
 	// if using the debuggraph for something else, don't
 	// add the net lines
@@ -334,11 +336,9 @@ SCR_SizeUp_f
 Keybinding command
 =================
 */
-void SCR_SizeUp_f (void)
-{
-	Cvar_SetInteger("viewsize",scr_viewsize->integer+10);
+static void SCR_SizeUp_f( void ) {
+	Cvar_SetInteger( "viewsize", scr_viewsize->integer + 10 );
 }
-
 
 /*
 =================
@@ -347,9 +347,8 @@ SCR_SizeDown_f
 Keybinding command
 =================
 */
-void SCR_SizeDown_f (void)
-{
-	Cvar_SetInteger ("viewsize",scr_viewsize->integer-10);
+static void SCR_SizeDown_f( void ) {
+	Cvar_SetInteger( "viewsize", scr_viewsize->integer - 10 );
 }
 
 /*
@@ -359,35 +358,67 @@ SCR_Sky_f
 Set a specific sky and rotation speed
 =================
 */
-void SCR_Sky_f (void)
-{
-	float	rotate;
-	vec3_t	axis;
+static void SCR_Sky_f( void ) {
+	float	rotate = 0;
+	vec3_t	axis = { 0, 0, 1 };
+    int     argc = Cmd_Argc();
 
-	if (Cmd_Argc() < 2)
-	{
+	if( argc < 2 ) {
 		Com_Printf ("Usage: sky <basename> [rotate] [axis x y z]\n");
 		return;
 	}
-	if (Cmd_Argc() > 2)
+
+	if( argc > 2 )
 		rotate = atof(Cmd_Argv(2));
-	else
-		rotate = 0;
-	if (Cmd_Argc() == 6)
-	{
+	if( argc == 6 ) {
 		axis[0] = atof(Cmd_Argv(3));
 		axis[1] = atof(Cmd_Argv(4));
 		axis[2] = atof(Cmd_Argv(5));
 	}
-	else
-	{
-		axis[0] = 0;
-		axis[1] = 0;
-		axis[2] = 1;
-	}
 
 	ref.SetSky (Cmd_Argv(1), rotate, axis);
 }
+
+/*
+================
+SCR_TimeRefresh_f
+================
+*/
+static void SCR_TimeRefresh_f (void) {
+	int		i;
+	unsigned    start, stop;
+	float	    time;
+
+	if( cls.state != ca_active ) {
+        Com_Printf( "No map loaded.\n" );
+		return;
+    }
+
+	start = Sys_Milliseconds ();
+
+	if (Cmd_Argc() == 2) {
+		// run without page flipping
+		ref.BeginFrame();
+		for (i=0 ; i<128 ; i++) {
+			cl.refdef.viewangles[1] = i/128.0f*360.0f;
+			ref.RenderFrame (&cl.refdef);
+		}
+		ref.EndFrame();
+	} else {
+		for (i=0 ; i<128 ; i++) {
+			cl.refdef.viewangles[1] = i/128.0f*360.0f;
+
+			ref.BeginFrame();
+			ref.RenderFrame (&cl.refdef);
+			ref.EndFrame();
+		}
+	}
+
+	stop = Sys_Milliseconds();
+	time = (stop-start)*0.001f;
+	Com_Printf ("%f seconds (%f fps)\n", time, 128.0f/time);
+}
+
 
 //============================================================================
 
@@ -447,13 +478,20 @@ static void scr_fontvar_changed( cvar_t *self ) {
 	scr_font = ref.RegisterFont( self->string );
 }
 
+static const cmdreg_t scr_cmds[] = {
+    { "timerefresh", SCR_TimeRefresh_f },
+    { "sizeup", SCR_SizeUp_f }, 
+    { "sizedown", SCR_SizeDown_f },
+    { "sky", SCR_Sky_f },
+    { NULL }
+};
+
 /*
 ==================
 SCR_Init
 ==================
 */
-void SCR_Init (void)
-{
+void SCR_Init( void ) {
 	scr_viewsize = Cvar_Get ("viewsize", "100", CVAR_ARCHIVE);
 	scr_showpause = Cvar_Get ("scr_showpause", "1", 0);
 	scr_centertime = Cvar_Get ("scr_centertime", "2.5", 0);
@@ -468,25 +506,25 @@ void SCR_Init (void)
 	scr_fontvar = Cvar_Get( "scr_font", "conchars", CVAR_ARCHIVE );
 	scr_fontvar->changed = scr_fontvar_changed;
 	scr_scale = Cvar_Get( "scr_scale", "1", CVAR_ARCHIVE );
+	crosshair = Cvar_Get ("crosshair", "0", CVAR_ARCHIVE);
+
+    Cmd_Register( scr_cmds );
 
 	SCR_InitDraw();
 
-//
-// register our commands
-//
-	Cmd_AddCommand ("timerefresh",SCR_TimeRefresh_f);
-	Cmd_AddCommand ("sizeup",SCR_SizeUp_f);
-	Cmd_AddCommand ("sizedown",SCR_SizeDown_f);
-	Cmd_AddCommand ("sky",SCR_Sky_f);
-
-	scr_glconfig.vidWidth = 320;
-	scr_glconfig.vidHeight = 240;
+	scr_glconfig.vidWidth = 640;
+	scr_glconfig.vidHeight = 480;
 
 	scr_initialized = qtrue;
 }
 
+void SCR_Shutdown( void ) {
+    Cmd_Deregister( scr_cmds );
 
+    SCR_ShutdownDraw();
 
+	scr_initialized = qfalse;
+}
 
 /*
 ==============
@@ -534,50 +572,6 @@ void SCR_EndLoadingPlaque( void ) {
 	Con_ClearNotify_f();
 }
 
-
-/*
-================
-SCR_TimeRefresh_f
-================
-*/
-void SCR_TimeRefresh_f (void)
-{
-	int		i;
-	unsigned    start, stop;
-	float	    time;
-
-	if( cls.state != ca_active ) {
-        Com_Printf( "No map loaded.\n" );
-		return;
-    }
-
-	start = Sys_Milliseconds ();
-
-	if (Cmd_Argc() == 2) {
-		// run without page flipping
-		ref.BeginFrame();
-		for (i=0 ; i<128 ; i++) {
-			cl.refdef.viewangles[1] = i/128.0f*360.0f;
-			ref.RenderFrame (&cl.refdef);
-		}
-		ref.EndFrame();
-	} else {
-		for (i=0 ; i<128 ; i++) {
-			cl.refdef.viewangles[1] = i/128.0f*360.0f;
-
-			ref.BeginFrame();
-			ref.RenderFrame (&cl.refdef);
-			ref.EndFrame();
-		}
-	}
-
-	stop = Sys_Milliseconds();
-	time = (stop-start)*0.001f;
-	Com_Printf ("%f seconds (%f fps)\n", time, 128.0f/time);
-}
-
-
-
 /*
 ==============
 SCR_TileClear
@@ -585,7 +579,7 @@ SCR_TileClear
 Clear any parts of the tiled background that were drawn on last frame
 ==============
 */
-void SCR_TileClear( void ) {
+static void SCR_TileClear( void ) {
 	int	top, bottom, left, right;
 
 	//if( con.currentHeight == 1 )

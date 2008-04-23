@@ -124,20 +124,17 @@ static void Prompt_ShowIndividualMatches(
 }
 
 qboolean Prompt_AddMatch( genctx_t *ctx, const char *s ) {
-    if( ctx->count >= ctx->size ) {
-        return qfalse;
-    }
-	if( !strncmp( ctx->partial, s, ctx->length ) ) {
-        ctx->matches[ctx->count++] = Z_CopyString( s );
-    }
-    return qtrue;
-}
+    int r;
 
-qboolean Prompt_AddMatchCase( genctx_t *ctx, const char *s ) {
     if( ctx->count >= ctx->size ) {
         return qfalse;
     }
-	if( !Q_strncasecmp( ctx->partial, s, ctx->length ) ) {
+    if( ctx->ignorecase ) {
+        r = Q_strncasecmp( ctx->partial, s, ctx->length );
+    } else {
+        r = strncmp( ctx->partial, s, ctx->length );
+    }
+	if( !r ) {
         ctx->matches[ctx->count++] = Z_CopyString( s );
     }
     return qtrue;
@@ -260,7 +257,8 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 	for( i = 0; i < ctx.count; i++ ) {
 		sortedMatches[i] = matches[i];
 	}
-	qsort( sortedMatches, ctx.count, sizeof( sortedMatches[0] ), SortStrcmp );
+	qsort( sortedMatches, ctx.count, sizeof( sortedMatches[0] ),
+        ctx.ignorecase ? SortStricmp : SortStrcmp );
 
 	// copy matching part
 	first = sortedMatches[0];
@@ -268,7 +266,9 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 	len = 0;
 	do {
         if( *first != *last ) {
-            break;
+            if( !ctx.ignorecase || Q_tolower( *first ) != Q_tolower( *last ) ) {
+                break;
+            }
         }
 		text[len++] = *first;
 		if( len == size - 1 ) {
@@ -322,37 +322,27 @@ finish:
 }
 
 void Prompt_CompleteHistory( commandPrompt_t *prompt, qboolean forward ) {
-	inputField_t *inputLine = &prompt->inputLine;
-    int i, j, k;
-    char *s, *text, *first, *last;
-    size_t len;
-    char *matches[HISTORY_SIZE], *sortedMatches[HISTORY_SIZE];
-    int numMatches = 0;
+    char *s, *m = NULL;
+    int i, j;
 
-	text = inputLine->text;
-    len = strlen( text );
-
-    if( *text != '\\' && *text != '/' ) {
-        memmove( text + 1, text, len + 1 );
-        *text = '\\';
-        len++;
+    if( !prompt->search ) {
+        s = prompt->inputLine.text;
+        if( *s == '/' || *s == '\\' ) {
+            s++;
+        }
+        if( !*s ) {
+            return;
+        }
+        prompt->search = Z_CopyString( s );
     }
 
     if( forward ) {
-        i = prompt->inputLineNum - HISTORY_SIZE;
-        if( i < 0 ) {
-            i = 0;
-        }
-        for( ; i < prompt->inputLineNum; i++ ) {
+        for( i = prompt->historyLineNum + 1; i < prompt->inputLineNum; i++ ) {
             s = prompt->history[i & HISTORY_MASK];
-            if( s && !strncmp( text, s, len ) ) {
-                for( k = 0; k < numMatches; k++ ) {
-                    if( !strcmp( matches[k], s ) ) {
-                        break;
-                    }
-                }
-                if( k == numMatches ) {
-                    matches[numMatches++] = s;
+            if( s && strstr( s, prompt->search ) ) {
+                if( strcmp( s, prompt->inputLine.text ) ) {
+                    m = s;
+                    break;
                 }
             }
         }
@@ -361,57 +351,31 @@ void Prompt_CompleteHistory( commandPrompt_t *prompt, qboolean forward ) {
         if( j < 0 ) {
             j = 0;
         }
-        for( i = prompt->inputLineNum - 1; i >= j; i-- ) {
+        for( i = prompt->historyLineNum - 1; i >= j; i-- ) {
             s = prompt->history[i & HISTORY_MASK];
-            if( s && !strncmp( text, s, len ) ) {
-                for( k = 0; k < numMatches; k++ ) {
-                    if( !strcmp( matches[k], s ) ) {
-                        break;
-                    }
-                }
-                if( k == numMatches ) {
-                    matches[numMatches++] = s;
+            if( s && strstr( s, prompt->search ) ) {
+                if( strcmp( s, prompt->inputLine.text ) ) {
+                    m = s;
+                    break;
                 }
             }
         }
     }
 
-    if( !numMatches ) {
-		inputLine->cursorPos = len;
-		return; // nothing found
-    }
-
-	if( numMatches == 1 ) {
-		// we have finished completion!
-        memcpy( text, s, len + 1 );
-        inputLine->cursorPos = len;
+    if( !m ) {
         return;
     }
 
-	// sort matches alphabethically
-	for( i = 0; i < numMatches; i++ ) {
-		sortedMatches[i] = matches[i];
-	}
-	qsort( sortedMatches, numMatches, sizeof( sortedMatches[0] ), SortStrcmp );
+    prompt->historyLineNum = i;
+	IF_Replace( &prompt->inputLine, prompt->history[i & HISTORY_MASK] );
+}
 
-	// copy matching part
-	first = sortedMatches[0];
-	last = sortedMatches[ numMatches - 1 ];
-	len = 0;
-	do {
-        if( *first != *last ) {
-            break;
-        }
-		text[len++] = *first;
-
-		first++;
-		last++;
-	} while( *first );
-
-	text[len] = 0;
-    inputLine->cursorPos = len;
-
-    Prompt_ShowMatches( prompt, matches, 0, numMatches );
+void Prompt_ClearState( commandPrompt_t *prompt ) {
+    prompt->tooMany = qfalse;
+    if( prompt->search ) {
+        Z_Free( prompt->search );
+        prompt->search = NULL;
+    }
 }
 
 /*
@@ -425,7 +389,7 @@ char *Prompt_Action( commandPrompt_t *prompt ) {
     char *s = prompt->inputLine.text;
 	int i, j;
 	
-    prompt->tooMany = qfalse;
+    Prompt_ClearState( prompt );
 	if( s[0] == 0 || ( ( s[0] == '/' || s[0] == '\\' ) && s[1] == 0 ) ) {
 		IF_Clear( &prompt->inputLine );
 		return NULL; // empty line
@@ -460,6 +424,8 @@ Prompt_HistoryUp
 void Prompt_HistoryUp( commandPrompt_t *prompt ) {
     int i;
 
+    Prompt_ClearState( prompt );
+
 	if( prompt->historyLineNum == prompt->inputLineNum ) {
 		// save current line in history
 	    i = prompt->inputLineNum & HISTORY_MASK;
@@ -487,6 +453,8 @@ Prompt_HistoryDown
 void Prompt_HistoryDown( commandPrompt_t *prompt ) {
     int i;
 
+    Prompt_ClearState( prompt );
+
 	if( prompt->historyLineNum == prompt->inputLineNum ) {
 		return;
 	}
@@ -504,6 +472,8 @@ Prompt_Clear
 */
 void Prompt_Clear( commandPrompt_t *prompt ) {
 	int i;
+
+    Prompt_ClearState( prompt );
 	
 	for( i = 0; i < HISTORY_SIZE; i++ ) {
 		if( prompt->history[i] ) {

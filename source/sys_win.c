@@ -631,7 +631,7 @@ MISC
 
 static inline time_t Sys_FileTimeToUnixTime( FILETIME *f ) {
 	ULARGE_INTEGER u = *( ULARGE_INTEGER * )f;
-	return ( time_t )( ( u.QuadPart - 116444736000000000U ) / 10000000 );
+	return ( time_t )( ( u.QuadPart - 116444736000000000ULL ) / 10000000 );
 }
 
 unsigned Sys_Milliseconds( void ) {

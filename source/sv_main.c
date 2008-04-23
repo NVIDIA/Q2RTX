@@ -135,7 +135,7 @@ void SV_CleanClient( client_t *client ) {
 #endif
 
 	if( client->download ) {
-		FS_FreeFile( client->download );
+		Z_Free( client->download );
 		client->download = NULL;
 	}
 

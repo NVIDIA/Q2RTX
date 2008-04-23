@@ -575,20 +575,21 @@ MenuList_Key
 =================
 */
 static int MenuList_Key( menuList_t *l, int key ) {
-	int i;
+	//int i;
 
 	if( !l->items ) {
 		return QMS_NOTHANDLED;
 	}
 
-    if( keys.IsDown( K_CTRL ) && key >= '1' && key <= '9' ) {
-        int col = key - '0' - 1;
+    if( keys.IsDown( K_ALT ) && Q_isdigit( key ) ) {
+        int col = key == '0' ? 9 : key - '0' - 1;
         if( l->sortdir && col < l->numcolumns ) {
             return MenuList_SetColumn( l, col );
         }
 		return QMS_NOTHANDLED;
     }
 
+#if 0
 	if( key > 32 && key < 127 ) {
         if( uis.realtime > l->scratchTime + 1300 ) {
             l->scratchCount = 0;
@@ -620,11 +621,13 @@ static int MenuList_Key( menuList_t *l, int key ) {
 
 		return QMS_NOTHANDLED;
 	}
+#endif
 
     l->scratchCount = 0;
 
 	switch( key ) {
     case K_LEFTARROW:
+    case 'h':
         if( l->sortdir ) {
             if( l->sortcol > 0 ) {
                return MenuList_SetColumn( l, l->sortcol - 1 );
@@ -633,6 +636,7 @@ static int MenuList_Key( menuList_t *l, int key ) {
         }
         break;
     case K_RIGHTARROW:
+    case 'l':
         if( l->sortdir ) {
             if( l->sortcol < l->numcolumns - 1 ) {
                 return MenuList_SetColumn( l, l->sortcol + 1 );
@@ -642,6 +646,7 @@ static int MenuList_Key( menuList_t *l, int key ) {
         break;
 	case K_UPARROW:
 	case K_KP_UPARROW:
+    case 'k':
 		if( l->curvalue > 0 ) {
 			l->curvalue--;
 			UI_CALLBACK( l, QM_CHANGE, l->curvalue );
@@ -652,6 +657,7 @@ static int MenuList_Key( menuList_t *l, int key ) {
 
 	case K_DOWNARROW:
 	case K_KP_DOWNARROW:
+    case 'j':
 		if( l->curvalue < l->numItems - 1 ) {
 			l->curvalue++;
 			UI_CALLBACK( l, QM_CHANGE, l->curvalue );

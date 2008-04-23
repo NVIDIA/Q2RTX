@@ -312,7 +312,9 @@ void S_Shutdown( void ) {
 
 void S_Activate( qboolean active ) {
 	if( sound_started ) {
-        S_StopAllSounds();
+#ifdef _WIN32
+        S_StopAllSounds(); // FIXME
+#endif
 		snddma.Activate( active );
 	}
 }
