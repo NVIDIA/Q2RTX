@@ -231,7 +231,6 @@ qboolean FS_ValidatePath( const char *s ) {
 		return qfalse;
 	}
 
-	back = 0;
 	start = s;
 	while( *s ) {
 		// check for ".."
