@@ -454,7 +454,7 @@ void SCR_TouchPics( void ) {
 
 void SCR_ModeChanged( void ) {
 	ref.GetConfig( &scr_glconfig );
-    CL_AppActivate( cls.appactive );
+    IN_Activate();
     UI_ModeChanged();
 }
 
@@ -1083,7 +1083,7 @@ void SCR_UpdateScreen( void ) {
 		return;				// not initialized yet
 
     if( recursive > 1 ) {
-        Com_Error( ERR_FATAL, "SCR_UpdateScreen: recursively called" );
+        Com_Error( ERR_FATAL, "%s: recursively called", __func__ );
     }
 
     recursive++;
@@ -1127,7 +1127,7 @@ void SCR_UpdateScreen( void ) {
 		break;
 
 	default:
-		Com_Error( ERR_FATAL, "SCR_DrawScreenFrame: bad cls.state" );
+		Com_Error( ERR_FATAL, "%s: bad cls.state", __func__ );
 		break;
 	}
 

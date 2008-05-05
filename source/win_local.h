@@ -86,7 +86,7 @@ typedef struct {
 
     struct {
         qboolean	initialized;
-        qboolean	active;	        // qfalse when not focus app
+        grab_t	    grabbed;
         int			state;
         qboolean    parmsvalid;
         qboolean	restoreparms;

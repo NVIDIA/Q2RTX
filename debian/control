@@ -7,8 +7,9 @@ Build-Depends: cdbs, debhelper (>= 5), libx11-dev, libsdl1.2-dev,
 Standards-Version: 3.7.2
 
 Package: q2pro-client
-Architecture: i386 amd64 armel
-Depends: ${shlibs:Depends}, quake2-data, q2pro-common
+Architecture: any
+Depends: ${shlibs:Depends}, q2pro-common
+Recommends: quake2-data
 Description: Enhanced Quake 2 client for multiplayer
  Q2PRO is a Quake 2 engine modification designed for online play,
  fully compatible with original Quake 2 clients and servers.
@@ -25,7 +26,7 @@ Description: Enhanced Quake 2 client for multiplayer
  Homepage: http://q2pro.sf.net/
 
 Package: q2pro-server
-Architecture: i386 amd64 armel
+Architecture: any
 Depends: ${shlibs:Depends}, q2pro-common
 Recommends: quake2-data
 Description: Dedicated Quake 2 server
@@ -42,7 +43,7 @@ Description: Dedicated Quake 2 server
  Homepage: http://q2pro.sf.net/
 
 Package: q2pro-common
-Architecture: i386 amd64 armel
+Architecture: any
 Depends: ${shlibs:Depends}
 Description: Common files for Q2PRO
  This package contains common files between Q2PRO server and client.

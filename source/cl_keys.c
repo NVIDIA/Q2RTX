@@ -213,8 +213,14 @@ Key_SetDest
 ===================
 */
 void Key_SetDest( keydest_t dest ) {
-	int diff = cls.key_dest ^ dest;
+	int diff;
 
+// make sure at least fullscreen console or main menu is up
+    if( cls.state == ca_disconnected && !( dest & (KEY_MENU|KEY_CONSOLE) ) ) {
+        dest |= KEY_CONSOLE;
+    }
+
+	diff = cls.key_dest ^ dest;
 	if( diff & KEY_CONSOLE ) {
         if( dest & KEY_CONSOLE ) {
 // release all keys, to keep the character from continuing an
@@ -237,7 +243,7 @@ void Key_SetDest( keydest_t dest ) {
 
 // activate or deactivate mouse
 	if( diff & (KEY_CONSOLE|KEY_MENU) ) {
-    	CL_InputActivate();
+    	IN_Activate();
 	}
 }
 
@@ -662,6 +668,8 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
         Com_Error( ERR_FATAL, "%s: bad key", __func__ );
     }
 
+    //Com_Printf("%s: %d\n",Key_KeynumToString(key),down);
+
 	// hack for modal presses
 	if( key_waiting == -1 ) {
 		if( down )
@@ -681,7 +689,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
 			&& key != K_KP_PGDN
 			&& key_repeats[key] > 1 )
 		{
-				return;	// ignore most autorepeats
+			return;	// ignore most autorepeats
 		}
 			
 		if( key >= 200 && !keybindings[key] && !consolekeys[key] ) {
@@ -703,9 +711,9 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
     // Alt+Enter is hardcoded for all systems
     if( keydown[K_ALT] && key == K_ENTER ) {
         if( down ) {
-            extern void Video_ToggleFullscreen( void );
+            extern void VID_ToggleFullscreen( void );
 
-            Video_ToggleFullscreen();
+            VID_ToggleFullscreen();
         }
         return;
     }
@@ -840,7 +848,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
 #ifndef USE_CHAR_EVENTS
 
 	if( keydown[K_CTRL] || keydown[K_ALT] ) {
-		return;
+	//	return;
 	}
 
 	switch( key ) {

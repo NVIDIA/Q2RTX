@@ -188,7 +188,7 @@ void Win_SetMode( void ) {
         Com_DPrintf( "failed\n" );
     }
 
-    Video_GetPlacement( &rc );
+    VID_GetGeometry( &rc );
 
     Com_DPrintf( "...setting windowed mode: %dx%d+%d+%d\n",
         rc.width, rc.height, rc.x, rc.y );
@@ -262,24 +262,27 @@ static void win_noalttab_changed( cvar_t *self ) {
 
 /*
 =================
-Win_AppActivate
+Win_Activate
 =================
 */
-static void Win_AppActivate( WPARAM wParam ) {
-	qboolean active, minimized;
+static void Win_Activate( WPARAM wParam ) {
+	active_t active;
 
-	minimized = active = qfalse;
 	if( HIWORD( wParam ) ) {
 		// we don't want to act like we're active if we're minimized
-		minimized = qtrue;
-	} else if( LOWORD( wParam ) ) {
-		active = qtrue;
+        active = ACT_MINIMIZED;
+	} else {
+        if( LOWORD( wParam ) ) {
+            active = ACT_ACTIVATED;
+        } else {
+            active = ACT_RESTORED;
+        }
 	}
 
-	CL_AppActivate( active );
+	CL_Activate( active );
 
 	if( win_noalttab->integer ) {
-		if( !active ) {
+		if( active == ACT_ACTIVATED ) {
 			Win_EnableAltTab();
 		} else {
 			Win_DisableAltTab();
@@ -287,7 +290,7 @@ static void Win_AppActivate( WPARAM wParam ) {
 	}
 
 	if( win.flags & QVF_GAMMARAMP ) {
-		if( active ) {
+		if( active == ACT_ACTIVATED ) {
 			SetDeviceGammaRamp( win.dc, win.gamma_cust );
 		} else {
 			SetDeviceGammaRamp( win.dc, win.gamma_orig );
@@ -295,14 +298,14 @@ static void Win_AppActivate( WPARAM wParam ) {
 	}
 
 	if( win.flags & QVF_FULLSCREEN ) {
-		if( active ) {
+		if( active == ACT_ACTIVATED ) {
 			ShowWindow( win.wnd, SW_RESTORE );
 		} else {
 			ShowWindow( win.wnd, SW_MINIMIZE );
 		}
 
     	if( vid_flip_on_switch->integer ) {
-            if( active ) {
+            if( active == ACT_ACTIVATED ) {
                 ChangeDisplaySettings( &win.dm, CDS_FULLSCREEN );
             } else {
                 ChangeDisplaySettings( NULL, 0 );
@@ -310,7 +313,7 @@ static void Win_AppActivate( WPARAM wParam ) {
         }
     }
 
-	if( active ) {
+	if( active == ACT_ACTIVATED ) {
 		SetForegroundWindow( win.wnd );
 	}
 }
@@ -369,7 +372,7 @@ static void win_disablewinkey_changed( cvar_t *self ) {
 	}
 }
 
-static byte        scantokey[128] = { 
+static const byte   scantokey[128] = { 
 //  0           1           2			3				4			5				6			7 
 //  8           9           A			B				C			D				E			F 
     0,  		K_ESCAPE,   '1',		'2',			'3',		'4',			'5',		 '6', 
@@ -408,7 +411,7 @@ static void Win_KeyEvent( WPARAM wParam, LPARAM lParam, qboolean down ) {
 
 	result = scantokey[scancode];
     if( !result ) {
-		Com_DPrintf( "Win_KeyEvent: unknown scancode %u\n", scancode );
+		Com_DPrintf( "%s: unknown scancode: %u\n", __func__, scancode );
         return;
     }
 
@@ -586,7 +589,7 @@ LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		return FALSE;
 
 	case WM_ACTIVATE:
-		Win_AppActivate( wParam );
+		Win_Activate( wParam );
 		break;
 
 	case WM_SIZING:
@@ -634,8 +637,6 @@ LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		if( wParam == SIZE_RESTORED && !vid_fullscreen->integer ) {
 		    int w = ( short )LOWORD( lParam );
 	    	int h = ( short )HIWORD( lParam );
-			win.rc.width = w & ~7;
-	    	win.rc.height = h & ~1;
             win.mode_changed |= 1;
         }
 		break;
@@ -668,7 +669,7 @@ LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 			return FALSE;
         case SC_MAXIMIZE:
 			if( !vid_fullscreen->integer ) {
-                Video_ToggleFullscreen();
+                VID_ToggleFullscreen();
 			}
             return FALSE;
 		}
@@ -723,7 +724,7 @@ void Video_PumpEvents( void ) {
 	}
 
     if( win.mode_changed ) {
-        Video_SetPlacement( &win.rc );
+        VID_SetGeometry( &win.rc );
         if( win.mode_changed & 1 ) {
             Win_ModeChanged();
         }
@@ -837,6 +838,16 @@ MOUSE
 // mouse variables
 static cvar_t	*win_xpfix;
 
+static void Win_HideCursor( void ) {
+	while( ShowCursor( FALSE ) >= 0 )
+		;
+}
+
+static void Win_ShowCursor( void ) {
+	while( ShowCursor ( TRUE ) < 0 )
+		;
+}
+
 /*
 ===========
 Win_AcquireMouse
@@ -868,8 +879,8 @@ static void Win_AcquireMouse( void ) {
 
 	SetCapture( win.wnd );
 	ClipCursor( &rc );
-	while( ShowCursor( FALSE ) >= 0 )
-		;
+
+    SetWindowTitle( win.wnd, "[" APPLICATION "]" );
 }
 
 
@@ -881,13 +892,13 @@ Called when the window loses focus
 ===========
 */
 static void Win_DeAcquireMouse( void ) {
-	if( win.mouse.restoreparms )
-		SystemParametersInfo( SPI_SETMOUSE, 0, win.mouse.originalparms, 0 );
+    if( win.mouse.restoreparms )
+        SystemParametersInfo( SPI_SETMOUSE, 0, win.mouse.originalparms, 0 );
 
-	ClipCursor( NULL );
-	ReleaseCapture();
-	while( ShowCursor ( TRUE ) < 0 )
-		;
+    ClipCursor( NULL );
+    ReleaseCapture();
+
+    SetWindowTitle( win.wnd, APPLICATION );
 }
 
 static void win_xpfix_changed( cvar_t *self ) {
@@ -898,33 +909,27 @@ static void win_xpfix_changed( cvar_t *self ) {
 
 /*
 ===========
-Win_SendMouseMoveEvents
+Win_GetMouseMotion
 ===========
 */
-static void Win_SendMouseMoveEvents( void ) {
+static qboolean Win_GetMouseMotion( int *dx, int *dy ) {
     POINT	pt;
-	int		dx, dy;
 
 	if( !win.mouse.active ) {
-		return;
+		return qfalse;
 	}
 
 	// find mouse movement
 	if( !GetCursorPos( &pt ) ) {
-		return;
+		return qfalse;
 	}
 
-	dx = pt.x - win.center_x;
-	dy = pt.y - win.center_y;
-
-	if( !dx && !dy ) {
-		return;
-	}
+	*dx = pt.x - win.center_x;
+	*dy = pt.y - win.center_y;
 
 	// force the mouse to the center, so there's room to move
 	SetCursorPos( win.center_x, win.center_y );
-
-	CL_MouseEvent( dx, dy );
+    return qtrue;
 }
 
 /*
@@ -934,6 +939,7 @@ Win_ShutdownMouse
 */
 static void Win_ShutdownMouse( void ) {
 	Win_DeAcquireMouse();
+    Win_ShowCursor();
     memset( &win.mouse, 0, sizeof( win.mouse ) );
 }
 
@@ -966,42 +972,42 @@ The window may have been destroyed and recreated
 between a deactivate and an activate.
 ===========
 */
-static void Win_ActivateMouse( qboolean active ) {
+static void Win_ActivateMouse( grab_t grab ) {
 	if( !win.mouse.initialized ) {
 		return;
 	}
-	if( win.mouse.active == active ) {
-//		return;
+	if( win.mouse.grabbed == grab ) {
+		return;
 	}
 
-	if( active ) {
+	if( grab == IN_GRAB ) {
 		Win_AcquireMouse();
+        Win_HideCursor();
 	} else {
-		Win_DeAcquireMouse();
+        if( win.mouse.grabbed == IN_GRAB ) {
+    	    Win_DeAcquireMouse();
+        }
+        if( grab == IN_HIDE ) {
+            Win_HideCursor();
+        } else {
+            Win_ShowCursor();
+        }
 	}
 
-	win.mouse.active = active;
-}
-
-/*
-===================
-Win_ClearMouseStates
-===================
-*/
-static void Win_ClearMouseStates( void ) {
 	win.mouse.state = 0;
+	win.mouse.grabbed = grab;
 }
 
 /*
 @@@@@@@@@@@@@@@@@@@
-Win_FillInputAPI
+VID_FillInputAPI
 @@@@@@@@@@@@@@@@@@@
 */
-void Video_FillInputAPI( inputAPI_t *api ) {
+void VID_FillInputAPI( inputAPI_t *api ) {
 	api->Init = Win_InitMouse;
 	api->Shutdown = Win_ShutdownMouse;
-	api->Activate = Win_ActivateMouse;
-	api->Frame = Win_SendMouseMoveEvents;
-	api->ClearStates = Win_ClearMouseStates;
+	api->Grab = Win_GrabMouse;
+	api->GetEvents = NULL;
+    api->GetMotion = Win_GetMouseMotion;
 }
 

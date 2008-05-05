@@ -252,12 +252,12 @@ void UI_AddToServerList( const serverStatus_t *status ) {
 
 /*
 ===================
-UI_MouseMove
+UI_MouseEvent
 ===================
 */
-void UI_MouseMove( int dx, int dy ) {
+void UI_MouseEvent( int dx, int dy ) {
 	if( cls.ui_initialized ) {
-		ui.MouseMove( dx, dy );
+		ui.MouseEvent( dx, dy );
 	}
 }
 

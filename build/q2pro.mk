@@ -93,14 +93,10 @@ endif
 
 ifdef MINGW
 
-SRCFILES+=sys_win.c vid_win.c win_glimp.c win_wgl.c
+SRCFILES+=sys_win.c snd_wave.c vid_win.c win_glimp.c win_wgl.c
 
 ifndef REF_HARD_LINKED
 SRCFILES+=win_swimp.c
-endif
-
-ifdef USE_WAVE
-SRCFILES+=snd_wave.c
 endif
 
 ifdef USE_DSOUND
@@ -119,11 +115,11 @@ else # MINGW
 
 SRCFILES+=sys_unix.c
 
-ifdef USE_OSS
+ifdef USE_DSOUND
 SRCFILES+=snd_oss.c
 endif
 
-ifdef USE_EVDEV
+ifdef USE_DINPUT
 SRCFILES+=in_evdev.c
 endif
 

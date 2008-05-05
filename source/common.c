@@ -1415,7 +1415,7 @@ void Com_ProcessEvents( void ) {
     } while( ret == NET_OK );
 
 	CL_PumpEvents();
-	CL_InputFrame();
+	IN_Frame();
 #endif
 }
 

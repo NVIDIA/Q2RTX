@@ -23,11 +23,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "q_list.h"
 #include "q_field.h"
 #include "q_uis.h"
-#include "vid_public.h"
 #include "ref_public.h"
 #include "key_public.h"
 #include "snd_public.h"
-#include "in_public.h"
 #include "cl_public.h"
 #include "ui_public.h"
 #if USE_ZLIB
@@ -52,10 +50,10 @@ typedef struct centity_s {
 
 typedef struct clientinfo_s {
 	char	name[MAX_QPATH];
-	char	cinfo[MAX_QPATH];
 	qhandle_t skin;
 	qhandle_t icon;
 	char	model_name[MAX_QPATH];
+	char	skin_name[MAX_QPATH];
 	qhandle_t model;
 	qhandle_t weaponmodel[MAX_CLIENTWEAPONMODELS];
 } clientinfo_t;
@@ -224,12 +222,11 @@ typedef struct client_static_s {
 	connstate_t	state;
 	keydest_t	key_dest;
 
-	qboolean	appactive;
+	active_t	active;
 
 	qboolean	ref_initialized;
-	qboolean	input_initialized;
+	qboolean	_unused;
 	qboolean	ui_initialized;
-	//qboolean	cgame_initialized;
 
 	int			userinfo_modified;
 	cvar_t		*userinfo_updates[MAX_PACKET_USERINFOS];
@@ -471,7 +468,7 @@ void CL_ParseMuzzleFlash (void);
 void CL_ParseMuzzleFlash2 (void);
 void SmokeAndFlash(vec3_t origin);
 
-void CL_SetLightstyle (int i);
+void CL_SetLightstyle( int index, const char *string, size_t length );
 
 void CL_RunParticles (void);
 void CL_RunDLights (void);
@@ -509,11 +506,12 @@ void CL_GetEntitySoundOrigin( int ent, vec3_t org );
 //
 // cl_input
 //
+void IN_Init( void );
+void IN_Shutdown( void );
+void IN_Frame( void );
+void IN_Activate( void );
+
 void CL_RegisterInput( void );
-void CL_InitInput( void );
-void CL_ShutdownInput( void );
-void CL_InputFrame( void );
-void CL_InputActivate( void );
 void CL_UpdateCmd( int msec );
 void CL_FinalizeCmd( void );
 void CL_SendCmd( void );
@@ -523,8 +521,7 @@ void CL_SendCmd( void );
 //
 qboolean CL_CheckOrDownloadFile( const char *filename );
 void CL_ParseServerMessage (void);
-void CL_LoadClientinfo (clientinfo_t *ci, char *s);
-void CL_ParseClientinfo( int index );
+void CL_LoadClientinfo (clientinfo_t *ci, const char *s);
 void CL_Download_f (void);
 void CL_DeltaFrame( void );
 

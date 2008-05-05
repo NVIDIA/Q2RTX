@@ -79,7 +79,7 @@ static inline void List_Remove( list_t *elem ) {
 }
 
 #define LIST_ENTRY( type, elem, member ) \
-    ( type * )( ( unsigned char * )elem - q_offsetof( type, member ) )
+    (( type * )( ( unsigned char * )elem - q_offsetof( type, member ) ))
 
 #define LIST_EMPTY( list ) \
     ( (list)->next == list ) \

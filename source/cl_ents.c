@@ -128,6 +128,10 @@ void CL_DeltaFrame( void ) {
     if( cl.oldframe.ps.stats[STAT_LAYOUTS] != cl.frame.ps.stats[STAT_LAYOUTS] ) {
         cl.putaway = qfalse;
     }
+
+    if( cl.oldframe.ps.pmove.pm_type != cl.frame.ps.pmove.pm_type ) {
+        IN_Activate();
+    }
 }
 
 

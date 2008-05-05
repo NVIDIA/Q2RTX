@@ -264,7 +264,7 @@ surfcache_t     *D_SCAlloc (int width, int size)
 	if ((size <= 0) || (size > 0x10000))
 		Com_Error (ERR_FATAL,"D_SCAlloc: bad cache size %d\n", size);
 	
-	size = (int)&((surfcache_t *)0)->data[size];
+	size += sizeof( surfcache_t ) - 4;
 	size = (size + 3) & ~3;
 	if (size > sc_size)
 		Com_Error (ERR_FATAL,"D_SCAlloc: %i > cache size of %i",size, sc_size);

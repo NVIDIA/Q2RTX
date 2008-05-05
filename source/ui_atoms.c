@@ -83,17 +83,15 @@ void UI_PushMenu( menuFrameWork_t *menu ) {
 
     Menu_Init( menu );
 
+	keydest = keys.GetDest();
+	keys.SetDest( ( keydest & ~KEY_CONSOLE ) | KEY_MENU );
+
 	if( !uis.activeMenu ) {
 		uis.entersound = qtrue;
+        //CL_WarpMouse( 0, 0 );
 	}
 
 	uis.activeMenu = menu;
-
-	keydest = keys.GetDest();
-	if( keydest & KEY_CONSOLE ) {
-		keydest &= ~KEY_CONSOLE;
-	}
-	keys.SetDest( keydest | KEY_MENU );
 
 	UI_DoHitTest();
 }
@@ -125,6 +123,8 @@ void UI_Resize( void ) {
             Menu_Init( uis.layers[i] );
 		}
 	}
+
+    //CL_WarpMouse( 0, 0 );
 }
 
 
@@ -395,30 +395,22 @@ qboolean UI_DoHitTest( void ) {
 
 /*
 =================
-UI_MouseMove
+UI_MouseEvent
 =================
 */
-void UI_MouseMove( int mx, int my ) {
+void UI_MouseEvent( int x, int y ) {
 	if( !uis.activeMenu ) {
 		return;
 	}
 
-	if( !mx && !my ) {
-		return;
-	}
+	clamp( x, 0, uis.glconfig.vidWidth );
+	clamp( y, 0, uis.glconfig.vidHeight );
 
-	uis.mouseCoords[0] += mx;
-	uis.mouseCoords[1] += my;
+	uis.mouseCoords[0] = x * uis.scale;
+	uis.mouseCoords[1] = y * uis.scale;
 
-	clamp( uis.mouseCoords[0], 0, uis.width );
-	clamp( uis.mouseCoords[1], 0, uis.height );
-
-	if( UI_DoHitTest() ) {
-		// TODO: add new mousemove sound
-		// cl.StartLocalSound( "misc/menu2.wav" );
-	}
+	UI_DoHitTest();
 }
-
 
 /*
 =================
@@ -479,8 +471,11 @@ void UI_Draw( int realtime ) {
 		}
 	}
 
-	ref.DrawPic( uis.mouseCoords[0] - uis.cursorWidth / 2,
-		uis.mouseCoords[1] - uis.cursorHeight / 2, uis.cursorHandle );
+    // draw custom cursor in fullscreen mode
+    if( uis.glconfig.flags & QVF_FULLSCREEN ) {
+    	ref.DrawPic( uis.mouseCoords[0] - uis.cursorWidth / 2,
+	    	uis.mouseCoords[1] - uis.cursorHeight / 2, uis.cursorHandle );
+    }
 
 	if( ui_debug->integer ) {
 		Menu_HitTest( uis.activeMenu );
@@ -854,7 +849,7 @@ static void UI_FillAPI( uiAPI_t *api ) {
     api->ModeChanged = UI_ModeChanged;
 	api->Draw = UI_Draw;
 	api->DrawLoading = UI_DrawLoading;
-	api->MouseMove = UI_MouseMove;
+	api->MouseEvent = UI_MouseEvent;
 	api->Keydown = UI_Keydown;
 	api->CharEvent = UI_CharEvent;
 	api->OpenMenu = UI_OpenMenu;

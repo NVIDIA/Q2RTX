@@ -137,7 +137,7 @@ static void QSDL_ActivateSound( qboolean active ) {
     }
 }
 
-void QSDL_FillSoundAPI ( snddmaAPI_t *api ) {
+void WAVE_FillAPI ( snddmaAPI_t *api ) {
     api->Init = QSDL_InitSound;
     api->Shutdown = QSDL_ShutdownSound;
     api->BeginPainting = QSDL_BeginPainting;

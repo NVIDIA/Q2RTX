@@ -1145,17 +1145,34 @@ CL_Skins_f
 Load or download any custom player skins and models
 =================
 */
-static void CL_Skins_f ( void ) {
+static void CL_Skins_f( void ) {
     int	i;
     char *s;
+    clientinfo_t *ci;
 
-    for ( i = 0 ; i < MAX_CLIENTS ; i++ ) {
+    for( i = 0 ; i < MAX_CLIENTS; i++ ) {
         s = cl.configstrings[ CS_PLAYERSKINS + i ];
         if( !s[0] )
             continue;
-        Com_Printf ( "client %i: %s\n", i, s );
-        SCR_UpdateScreen ();
-        CL_ParseClientinfo ( i );
+        ci = &cl.clientinfo[i];
+    	CL_LoadClientinfo( ci, s );
+        Com_Printf( "client %d: %s --> %s/%s\n", i, s,
+            ci->model_name, ci->skin_name );
+        SCR_UpdateScreen();
+    }
+}
+
+static void cl_noskins_changed( cvar_t *self ) {
+    int	i;
+    char *s;
+    clientinfo_t *ci;
+
+    for( i = 0 ; i < MAX_CLIENTS; i++ ) {
+        s = cl.configstrings[ CS_PLAYERSKINS + i ];
+        if( !s[0] )
+            continue;
+        ci = &cl.clientinfo[i];
+    	CL_LoadClientinfo( ci, s );
     }
 }
 
@@ -2241,11 +2258,11 @@ static void CL_RestartRefresh_f( void ) {
 
     S_StopAllSounds();
    
-    CL_ShutdownInput();
+    IN_Shutdown();
     CL_ShutdownRefresh();
 
     CL_InitRefresh();
-    CL_InitInput();
+    IN_Init();
 
     if ( cls_state == ca_disconnected ) {
         UI_OpenMenu( UIMENU_MAIN );
@@ -2396,6 +2413,7 @@ static void CL_InitLocal ( void ) {
     cl_footsteps = Cvar_Get( "cl_footsteps", "1", 0 );
 	cl_footsteps->changed = cl_footsteps_changed;
     cl_noskins = Cvar_Get ( "cl_noskins", "0", 0 );
+    cl_noskins->changed = cl_noskins_changed;
     cl_predict = Cvar_Get ( "cl_predict", "1", 0 );
 	cl_predict->changed = cl_predict_changed;
     cl_kickangles = Cvar_Get( "cl_kickangles", "1", CVAR_CHEAT );
@@ -2499,11 +2517,18 @@ qboolean CL_CheatsOK( void ) {
 
 //============================================================================
 
-void CL_AppActivate( qboolean active ) {
-	cls.appactive = active;
-    Key_ClearStates();
-    CL_InputActivate();
-    S_Activate( active );
+/*
+==================
+CL_Activate
+==================
+*/
+void CL_Activate( active_t active ) {
+    if( cls.active != active ) {
+        cls.active = active;
+        Key_ClearStates();
+        IN_Activate();
+        S_Activate();
+    }
 }
 
 /*
@@ -2668,13 +2693,14 @@ void CL_Frame( int msec ) {
     ref_frame = qtrue;
 	if( !com_timedemo->integer ) {
         if( !sv_running->integer ) {
-            if( !cls.appactive ) {
-                // run at 10 fps if background app
+            if( cls.active == ACT_MINIMIZED ) {
+                // run at 10 fps if minimized
                 if( main_extra < 100 ) {
                     NET_Sleep( 100 - main_extra );
                     return;
                 }
-            } else if( cls.state < ca_active ) {
+                ref_frame = qfalse;
+            } else if( cls.active == ACT_RESTORED || cls.state < ca_active ) {
                 // run at 60 fps if not active
                 if( main_extra < 16 ) {
                     NET_Sleep( 16 - main_extra );
@@ -2694,12 +2720,12 @@ void CL_Frame( int msec ) {
         if( cl_paused->integer ) {
             if( !sv_paused->integer ) {
                 Cvar_Set( "sv_paused", "1" );
-                CL_InputActivate();
+                IN_Activate();
             }
         } else {
             if( sv_paused->integer ) {
                 Cvar_Set( "sv_paused", "0" );
-                CL_InputActivate();
+                IN_Activate();
             }
         }
     }
@@ -2770,11 +2796,11 @@ void CL_Frame( int msec ) {
         if ( host_speeds->integer )
             time_after_ref = Sys_Milliseconds();
 
-        // update audio after the 3D view was drawn
-        S_Update();
-
 	    ref_extra = 0;
     }
+
+    // update audio after the 3D view was drawn
+    S_Update();
 
     // advance local effects for next frame
     CL_RunDLights();
@@ -2813,6 +2839,9 @@ void CL_Init( void ) {
 
     // all archived variables will now be loaded
 
+    // start with full screen console
+    cls.key_dest = KEY_CONSOLE;
+
 #ifdef _WIN32
     CL_InitRefresh();
     S_Init();	// sound must be initialized after window is created
@@ -2822,7 +2851,7 @@ void CL_Init( void ) {
 #endif
 
     CL_InitLocal();
-    CL_InitInput();
+    IN_Init();
 
 #if USE_ZLIB
     if( inflateInit2( &cls.z, -15 ) != Z_OK ) {
@@ -2889,7 +2918,7 @@ void CL_Shutdown( void ) {
 
     CL_ShutdownUI();
     S_Shutdown();
-    CL_ShutdownInput();
+    IN_Shutdown();
     Con_Shutdown();
     CL_ShutdownRefresh();
 	CL_WriteConfig();

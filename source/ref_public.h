@@ -137,6 +137,13 @@ typedef enum glHardware_e {
     GL_RENDERER_MESADRI
 } glHardware_t;
 
+typedef enum {
+	QVF_MINIDRIVER		= ( 1 << 0 ),
+	QVF_ACCELERATED		= ( 1 << 1 ),
+	QVF_GAMMARAMP		= ( 1 << 2 ),
+	QVF_FULLSCREEN		= ( 1 << 3 )
+} vidFlags_t;
+
 typedef struct glconfig_s {
 	glHardware_t	renderer;
 	const char *rendererString;

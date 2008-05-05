@@ -1046,7 +1046,7 @@ void D_DrawflatSurfaces (void)
 
 		// make a stable color for each surface by taking the low
 		// bits of the msurface pointer
-		D_FlatFillSurface (s, (uint32_t)s->msurf);
+		D_FlatFillSurface (s, (uint32_t)((intptr_t)s->msurf));
 		D_DrawZSpans (s->spans);
 	}
 }

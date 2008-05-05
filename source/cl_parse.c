@@ -680,39 +680,16 @@ static void CL_ParseFrame( int extrabits ) {
 =====================================================================
 */
 
-/*
-================
-CL_ParseClientinfo
-
-Load the skin, icon, and model for a client
-================
-*/
-void CL_ParseClientinfo( int player ) {
-	char			*s;
-	clientinfo_t	*ci;
-
-	s = cl.configstrings[player+CS_PLAYERSKINS];
-
-	ci = &cl.clientinfo[player];
-
-    if( strcmp( ci->cinfo, s ) ) {
-    	CL_LoadClientinfo( ci, s );
-    }
-}
-
-
-static void CL_ConfigString( int index, const char *string ) {
-	size_t		length, maxlength;
+static void CL_ConfigString( int index, const char *string, size_t length ) {
+	size_t		maxlength;
 
     if( index >= CS_STATUSBAR && index < CS_AIRACCEL ) {
         maxlength = MAX_QPATH * ( CS_AIRACCEL - index );
     } else {
         maxlength = MAX_QPATH;
     }
-    length = strlen( string );
     if( length >= maxlength ) {
-		Com_Error( ERR_DROP, "%s: index %d overflowed",
-            __func__, index );
+		Com_Error( ERR_DROP, "%s: index %d overflowed", __func__, index );
     }
 
 	memcpy( cl.configstrings[index], string, length + 1 );
@@ -732,7 +709,7 @@ static void CL_ConfigString( int index, const char *string ) {
         return;
     }
 	if (index >= CS_LIGHTS && index < CS_LIGHTS+MAX_LIGHTSTYLES) {
-		CL_SetLightstyle (index - CS_LIGHTS);
+		CL_SetLightstyle( index - CS_LIGHTS, string, length );
         return;
     }
 
@@ -751,7 +728,7 @@ static void CL_ConfigString( int index, const char *string ) {
 	} else if (index >= CS_IMAGES && index < CS_IMAGES+MAX_MODELS) {
 		cl.image_precache[index-CS_IMAGES] = ref.RegisterPic (string);
 	} else if (index >= CS_PLAYERSKINS && index < CS_PLAYERSKINS+MAX_CLIENTS) {
-		CL_ParseClientinfo (index-CS_PLAYERSKINS);
+        CL_LoadClientinfo( &cl.clientinfo[index - CS_PLAYERSKINS], string );
 	} else if( index == CS_AIRACCEL && !cl.pmp.qwmod ) {
 		cl.pmp.airaccelerate = atoi( string ) ? qtrue : qfalse;
 	}
@@ -760,6 +737,7 @@ static void CL_ConfigString( int index, const char *string ) {
 static void CL_ParseGamestate( void ) {
 	int		index, bits;
     char    *string;
+    size_t  length;
 
     while( 1 ) {
         index = MSG_ReadShort();
@@ -771,9 +749,9 @@ static void CL_ParseGamestate( void ) {
                 __func__, index );
         }
 
-        string = MSG_ReadString();
+        string = MSG_ReadStringLength( &length );
 
-        CL_ConfigString( index, string );
+        CL_ConfigString( index, string, length );
     }
 
     while( 1 ) {
@@ -952,7 +930,7 @@ CL_LoadClientinfo
 
 ================
 */
-void CL_LoadClientinfo( clientinfo_t *ci, char *s ) {
+void CL_LoadClientinfo( clientinfo_t *ci, const char *s ) {
 	int         i;
 	char		*t;
 	char		model_name[MAX_QPATH];
@@ -961,8 +939,6 @@ void CL_LoadClientinfo( clientinfo_t *ci, char *s ) {
 	char		skin_filename[MAX_QPATH];
 	char		weapon_filename[MAX_QPATH];
 	char		icon_filename[MAX_QPATH];
-
-	strcpy( ci->cinfo, s );
 
 	// isolate the player's name
 	strcpy( ci->name, s );
@@ -1040,6 +1016,7 @@ void CL_LoadClientinfo( clientinfo_t *ci, char *s ) {
     // didn't have it, so default to grunt
     if( !ci->skin ) {
         // see if the skin exists for the male model
+        strcpy( skin_name, "grunt" );
         strcpy( skin_filename, "players/male/grunt.pcx" );
         ci->skin = ref.RegisterSkin( skin_filename );
     }
@@ -1063,6 +1040,7 @@ void CL_LoadClientinfo( clientinfo_t *ci, char *s ) {
     ci->icon = ref.RegisterPic( icon_filename );
 
     strcpy( ci->model_name, model_name );
+    strcpy( ci->skin_name, skin_name );
 
 	// must have loaded all data types to be valid
 	if( !ci->skin || !ci->icon || !ci->model || !ci->weaponmodel[0] ) {
@@ -1071,6 +1049,7 @@ void CL_LoadClientinfo( clientinfo_t *ci, char *s ) {
 		ci->model = 0;
 		ci->weaponmodel[0] = 0;
         ci->model_name[0] = 0;
+        ci->skin_name[0] = 0;
 	}
 }
 
@@ -1083,12 +1062,13 @@ CL_ParseConfigString
 static void CL_ParseConfigString (void) {
 	int		i;
 	char	*s;
+    size_t  length;
 
 	i = MSG_ReadShort ();
 	if (i < 0 || i >= MAX_CONFIGSTRINGS)
 		Com_Error( ERR_DROP, "%s: bad index: %d", __func__, i );
 
-	s = MSG_ReadString();
+	s = MSG_ReadStringLength( &length );
 
 	if( cl_shownet->integer > 2 ) {
 		Com_Printf( "    %i \"%s\"\n", i, Q_FormatString( s ) );
@@ -1098,7 +1078,7 @@ static void CL_ParseConfigString (void) {
         Q_SetBit( cl.dcs, i );
     }
 
-    CL_ConfigString( i, s );
+    CL_ConfigString( i, s, length );
 }
 
 

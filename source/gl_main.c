@@ -672,8 +672,8 @@ static void GL_Strings_f( void ) {
 static void GL_ModeChanged( int width, int height, int flags,
     int rowbytes, void *pixels )
 {
-	gl_config.vidWidth = width;
-	gl_config.vidHeight = height;
+	gl_config.vidWidth = width & ~7;
+	gl_config.vidHeight = height & ~1;
     gl_config.flags = flags;
 }
 

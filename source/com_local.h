@@ -1091,9 +1091,14 @@ extern	cvar_t *allow_download_maps;
 extern	cvar_t *allow_download_demos;
 extern	cvar_t *allow_download_other;
 
+typedef enum {
+    ACT_MINIMIZED,
+    ACT_RESTORED,
+    ACT_ACTIVATED
+} active_t;
+
 void CL_PumpEvents( void );
 void CL_PacketEvent( neterr_t ret );
-void CL_MouseEvent( int dx, int dy );
 void CL_Init (void);
 void CL_Disconnect( comErrorType_t type, const char *text );
 void CL_Shutdown (void);
@@ -1105,10 +1110,12 @@ void SCR_BeginLoadingPlaque (void);
 void SCR_ModeChanged( void );
 void CL_LocalConnect( void );
 void CL_RestartFilesystem( void );
-void CL_InputFrame( void );
-void CL_InputActivate( void );
-void CL_AppActivate( qboolean active );
+void CL_Activate( active_t active );
 void CL_UpdateUserinfo( cvar_t *var, cvarSetSource_t source );
+
+void IN_Frame( void );
+void IN_Activate( void );
+void IN_MouseEvent( int x, int y );
 
 void	Key_Init( void );
 void	Key_Event( unsigned key, qboolean down, unsigned time );

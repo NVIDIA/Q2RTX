@@ -45,7 +45,7 @@ static cvar_t *sndspeed;
 static cvar_t *sndchannels;
 static cvar_t *snddevice;
 
-static int tryrates[] = { 22050, 11025, 44100, 48000, 8000 };
+static const int tryrates[] = { 22050, 11025, 44100, 48000, 8000 };
 
 static sndinitstat_t OSS_Init ( void ) {
     int rc;
@@ -235,7 +235,7 @@ static void OSS_Submit ( void ) {
 static void OSS_Activate ( qboolean active ) {
 }
 
-void OSS_FillAPI ( snddmaAPI_t *api ) {
+void DS_FillAPI ( snddmaAPI_t *api ) {
     api->Init = OSS_Init;
     api->Shutdown = OSS_Shutdown;
     api->BeginPainting = OSS_BeginPainting;

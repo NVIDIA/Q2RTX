@@ -107,7 +107,7 @@ static void Model_List_f( void ) {
 			continue;
 		}
 
-		Com_Printf( "%8i : %s\n", model->pool.cursize, model->name );
+		Com_Printf( "%8"PRIz" : %s\n", model->pool.cursize, model->name );
 		bytes += model->pool.cursize;
 	}
 	Com_Printf( "Total resident: %i\n", bytes );

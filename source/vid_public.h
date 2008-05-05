@@ -18,19 +18,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-typedef enum {
-	QVF_MINIDRIVER		= ( 1 << 0 ),
-	QVF_ACCELERATED		= ( 1 << 1 ),
-	QVF_GAMMARAMP		= ( 1 << 2 ),
-	QVF_FULLSCREEN		= ( 1 << 3 )
-} vidFlags_t;
-
-typedef struct vidmode_s {
-	int         width, height;
-    int         bpp;
-    int         frequency;
-} vidmode_t;
-
 typedef struct {
 	qboolean    (*Init)( void );
 	void        (*Shutdown)( void );

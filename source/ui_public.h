@@ -34,7 +34,7 @@ typedef struct uiAPI_s {
 
 	void		(*Draw)( int realtime );
 	void		(*DrawLoading)( int realtime );
-	void		(*MouseMove)( int dx, int dy );
+	void		(*MouseEvent)( int x, int y );
 	void		(*Keydown)( int key );
 	void		(*CharEvent)( int key );
 	void		(*OpenMenu)( uiMenu_t menu );
@@ -54,7 +54,7 @@ void		UI_Draw( int realtime );
 void		UI_OpenMenu( uiMenu_t menu );
 void		UI_ErrorMenu( comErrorType_t type, const char *text );
 void		UI_AddToServerList( const serverStatus_t *status );
-void		UI_MouseMove( int dx, int dy );
+void		UI_MouseEvent( int x, int y );
 qboolean	UI_IsTransparent( void );
 void		UI_DrawLoading( int realtime );
 

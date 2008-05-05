@@ -24,6 +24,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 
 #include "cl_local.h"
+#include "vid_public.h"
+#include "in_public.h"
 #include "vid_local.h"
 
 // Structure containing functions exported from refresh DLL
@@ -31,12 +33,12 @@ refAPI_t	ref;
 
 // Console variables that we need to access from this module
 cvar_t		*vid_ref;			// Name of Refresh DLL loaded
-cvar_t      *vid_placement;
+cvar_t      *vid_geometry;
 cvar_t      *vid_modelist;
 cvar_t      *vid_fullscreen;
 cvar_t      *_vid_fullscreen;
 
-#define MODE_PLACEMENT  1
+#define MODE_GEOMETRY   1
 #define MODE_FULLSCREEN 2
 #define MODE_MODELIST   4
 #define MODE_REFRESH    8
@@ -63,7 +65,7 @@ HELPER FUNCTIONS
 // 640x480@75
 // 640x480@75:32
 // 640x480:32@75
-void Video_GetModeFS( vrect_t *rc, int *freq, int *depth ) {
+void VID_GetModeFS( vrect_t *rc, int *freq, int *depth ) {
     char *s = vid_modelist->string;
     int mode = 1;
     int w = 640, h = 480, hz = 0, bpp = 0;
@@ -109,8 +111,8 @@ malformed:
 
     rc->x = 0;
     rc->y = 0;
-    rc->width = w & ~7;
-    rc->height = h & ~1;
+    rc->width = w;
+    rc->height = h;
 
     if( freq ) {
         *freq = hz;
@@ -123,13 +125,13 @@ malformed:
 // 640x480
 // 640x480+0
 // 640x480+0+0
-void Video_GetPlacement( vrect_t *rc ) {
-    char *s = vid_placement->string;
+void VID_GetGeometry( vrect_t *rc ) {
+    char *s = vid_geometry->string;
     int w = 640, h = 480, x = 0, y = 0;
 
     w = strtoul( s, &s, 10 );
     if( *s != 'x' ) {
-        Com_DPrintf( "Placement string is malformed\n" );
+        Com_DPrintf( "Geometry string is malformed\n" );
         goto malformed;
     }
     h = strtoul( s + 1, &s, 10 );
@@ -153,20 +155,20 @@ malformed:
 
     rc->x = x;
     rc->y = y;
-    rc->width = w & ~7;
-    rc->height = h & ~1;
+    rc->width = w;
+    rc->height = h;
 }
 
 
-void Video_SetPlacement( vrect_t *rc ) {
+void VID_SetGeometry( vrect_t *rc ) {
     char buffer[MAX_QPATH];
 
     Com_sprintf( buffer, sizeof( buffer ), "%dx%d+%d+%d",
         rc->width, rc->height, rc->x, rc->y );
-    Cvar_Set( "vid_placement", buffer );
+    Cvar_SetByVar( vid_geometry, buffer, CVAR_SET_DIRECT );
 }
 
-void Video_ToggleFullscreen( void ) {
+void VID_ToggleFullscreen( void ) {
     if( !vid_fullscreen->integer ) {
         if( !_vid_fullscreen->integer ) {
             Cvar_Set( "_vid_fullscreen", "1" );
@@ -224,10 +226,10 @@ static qboolean CL_RefSetupCallback( api_type_t type, void *api ) {
 		Sys_FillAPI( ( sysAPI_t * )api );
 		break;
 	case API_VIDEO_SOFTWARE:
-		Video_FillSWAPI( ( videoAPI_t * )api );
+		VID_FillSWAPI( ( videoAPI_t * )api );
 		break;
 	case API_VIDEO_OPENGL:
-		Video_FillGLAPI( ( videoAPI_t * )api );
+		VID_FillGLAPI( ( videoAPI_t * )api );
 		break;
 	default:
 		Com_Error( ERR_FATAL, "CL_RefSetupCallback: bad api type" );
@@ -261,9 +263,9 @@ static qboolean CL_LoadRefresh( const char *name ) {
 
 #ifdef REF_HARD_LINKED
 #ifdef SOFTWARE_RENDERER
-	Video_FillSWAPI( &video );
+	VID_FillSWAPI( &video );
 #else
-	Video_FillGLAPI( &video );
+	VID_FillGLAPI( &video );
 #endif
 
 	Ref_APISetupCallback( API_REFRESH, &ref );
@@ -325,7 +327,7 @@ void CL_PumpEvents( void ) {
         return;
     }
     
-	Video_PumpEvents();
+	VID_PumpEvents();
 
     if( mode_changed ) {
 #ifndef REF_HARD_LINKED
@@ -337,15 +339,15 @@ void CL_PumpEvents( void ) {
 			if( vid_fullscreen->integer ) {
                 Cbuf_AddText( "set _vid_fullscreen $vid_fullscreen\n" );
 			}
-            Video_ModeChanged();
+            VID_ModeChanged();
         } else {
             if( vid_fullscreen->integer ) {
                 if( mode_changed & MODE_MODELIST ) {
-                    Video_ModeChanged();
+                    VID_ModeChanged();
                 }
             } else {
-                if( mode_changed & MODE_PLACEMENT ) {
-                    Video_ModeChanged();
+                if( mode_changed & MODE_GEOMETRY ) {
+                    VID_ModeChanged();
                 }
             }
         }
@@ -353,8 +355,8 @@ void CL_PumpEvents( void ) {
     }
 }
 
-static void vid_placement_changed( cvar_t *self ) {
-    mode_changed |= MODE_PLACEMENT;
+static void vid_geometry_changed( cvar_t *self ) {
+    mode_changed |= MODE_GEOMETRY;
 }
 
 static void vid_fullscreen_changed( cvar_t *self ) {
@@ -382,7 +384,7 @@ void CL_InitRefresh( void ) {
 	}
 
 	// Create the video variables so we know how to start the graphics drivers
-    vid_placement = Cvar_Get( "vid_placement", "640x480", CVAR_ARCHIVE );
+    vid_geometry = Cvar_Get( "vid_geometry", "640x480", CVAR_ARCHIVE );
     vid_fullscreen = Cvar_Get( "vid_fullscreen", "0", CVAR_ARCHIVE );
     _vid_fullscreen = Cvar_Get( "_vid_fullscreen", "1", CVAR_ARCHIVE );
     vid_modelist = Cvar_Get( "vid_modelist", "640x480 800x600 1024x768", CVAR_ARCHIVE );
@@ -420,7 +422,7 @@ void CL_InitRefresh( void ) {
 
 	vid_ref->changed = vid_ref_changed;
 #endif
-    vid_placement->changed = vid_placement_changed;
+    vid_geometry->changed = vid_geometry_changed;
     vid_fullscreen->changed = vid_fullscreen_changed;
     vid_modelist->changed = vid_modelist_changed;
 
@@ -450,7 +452,7 @@ void CL_ShutdownRefresh( void ) {
     SCR_Shutdown();
     CL_ShutdownUI();
 
-    vid_placement->changed = NULL;
+    vid_geometry->changed = NULL;
     vid_fullscreen->changed = NULL;
     vid_modelist->changed = NULL;
 #if !REF_HARD_LINKED

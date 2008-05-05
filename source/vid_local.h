@@ -19,18 +19,24 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 extern cvar_t       *vid_ref;
-extern cvar_t       *vid_placement;
+extern cvar_t       *vid_geometry;
 extern cvar_t       *vid_modelist;
 extern cvar_t       *vid_fullscreen;
 extern cvar_t       *_vid_fullscreen;
 
-void Video_PumpEvents( void );
-void Video_ModeChanged( void );
-void Video_FillInputAPI( inputAPI_t *api );
-void Video_FillGLAPI( videoAPI_t *api );
-void Video_FillSWAPI( videoAPI_t *api );
+//
+// vid_*.c
+//
+void VID_PumpEvents( void );
+void VID_ModeChanged( void );
+void VID_FillInputAPI( inputAPI_t *api );
+void VID_FillGLAPI( videoAPI_t *api );
+void VID_FillSWAPI( videoAPI_t *api );
 
-void Video_GetModeFS( vrect_t *rc, int *freq, int *depth );
-void Video_GetPlacement( vrect_t *rc ); 
-void Video_SetPlacement( vrect_t *rc ); 
-void Video_ToggleFullscreen( void );
+//
+// cl_ref.c
+//
+void VID_GetModeFS( vrect_t *rc, int *freq, int *depth );
+void VID_GetGeometry( vrect_t *rc ); 
+void VID_SetGeometry( vrect_t *rc ); 
+void VID_ToggleFullscreen( void );

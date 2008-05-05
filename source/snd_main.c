@@ -36,6 +36,7 @@ int			s_registration_sequence;
 channel_t   channels[MAX_CHANNELS];
 
 qboolean	sound_started;
+qboolean	sound_modified;
 
 dma_t		dma;
 
@@ -68,53 +69,21 @@ cvar_t		*s_khz;
 cvar_t		*s_volume;
 cvar_t		*s_testsound;
 
-static cvar_t		*s_loadas8bit;
+static cvar_t	    *s_enable;
+#if USE_DSOUND
+static cvar_t	    *s_direct;
+#endif
 static cvar_t		*s_show;
 static cvar_t		*s_mixahead;
-static cvar_t		*s_driver;
 static cvar_t		*s_ambient;
 
-
-snddmaAPI_t	snddma;
-
-#if USE_WAVE
 void WAVE_FillAPI( snddmaAPI_t *api );
-#endif
 
 #if USE_DSOUND
 void DS_FillAPI( snddmaAPI_t *api );
 #endif
 
-#if USE_OSS
-void OSS_FillAPI( snddmaAPI_t *api );
-#endif
-
-#if USE_SDL
-void QSDL_FillSoundAPI( snddmaAPI_t *api );
-#endif
-
-
-// the first driver is the default one
-static struct {
-	char    name[16];
-	void	(*FillAPI)( snddmaAPI_t *api );
-} s_driverTable[] = {
-#if USE_DSOUND
-	{ "dsound", DS_FillAPI },
-#endif
-#if USE_WAVE
-	{ "wave", WAVE_FillAPI },
-#endif
-#if USE_OSS
-	{ "oss", OSS_FillAPI },
-#endif
-#if USE_SDL
-	{ "sdl", QSDL_FillSoundAPI },
-#endif
-};
-
-static const int s_numDrivers =
-    sizeof( s_driverTable ) / sizeof( s_driverTable[0] );
+snddmaAPI_t	snddma;
 
 /*
 ==========================================================================
@@ -187,6 +156,9 @@ static void S_SoundList_f( void ) {
 	Com_Printf( "Total resident: %i\n", total );
 }
 
+static void s_param_changed( cvar_t *self ) {
+    sound_modified = qtrue;
+}
 
 static const cmdreg_t c_sound[] = {
 	{ "play", S_Play_f, S_Play_c },
@@ -203,56 +175,43 @@ S_Init
 ================
 */
 void S_Init( void ) {
-	cvar_t	*cv;
-	int i, j = 0;
-	sndinitstat_t ret;
+    sndinitstat_t ret = SIS_FAILURE;
 
-	cv = Cvar_Get( "s_initsound", "1", 0 );
-	if( !cv->integer ) {
+	s_enable = Cvar_Get( "s_enable", "1", 0 );
+    s_enable->changed = s_param_changed;
+	if( !s_enable->integer ) {
 		Com_Printf( "Sound initialization disabled.\n" );
 		return;
 	}
 
 	Com_Printf( "------- S_Init -------\n" );
 
-	s_volume = Cvar_Get( "s_volume", "0.7", CVAR_ARCHIVE );
 	s_khz = Cvar_Get( "s_khz", "22", CVAR_ARCHIVE );
-	s_loadas8bit = Cvar_Get( "s_loadas8bit", "1", CVAR_ARCHIVE );
-	s_mixahead = Cvar_Get( "s_mixahead", "0.2", CVAR_ARCHIVE );
-	s_show = Cvar_Get( "s_show", "0", 0 );
-	s_testsound = Cvar_Get( "s_testsound", "0", 0 );
-	s_driver = Cvar_Get( "s_driver", "", CVAR_LATCHED );
-	s_ambient = Cvar_Get( "s_ambient", "1", 0 );
 
-    // determine the first driver to try
-    if( s_driver->string[0] ) {
-        for( i = 0; i < s_numDrivers; i++ ) {
-            if( !strcmp( s_driver->string, s_driverTable[i].name ) ) {
-                j = i;
-                break;
-            }
+#if USE_DSOUND
+	s_direct = Cvar_Get( "s_direct", "1", 0 );
+    if( s_direct->integer ) {
+        DS_FillAPI( &snddma );
+        ret = snddma.Init();
+		if( ret != SIS_SUCCESS ) {
+            Cvar_Set( "s_direct", "0" );
+        }
+    }
+#endif
+	if( ret != SIS_SUCCESS ) {
+        WAVE_FillAPI( &snddma );
+        ret = snddma.Init();
+        if( ret != SIS_SUCCESS ) {
+            Cvar_Set( "s_enable", "0" );
+            return;
         }
     }
 
-    // cycle until usable driver is found
-    i = j;
-	while( 1 ) {
-		s_driverTable[i].FillAPI( &snddma );
-
-		ret = snddma.Init();
-		if( ret == SIS_SUCCESS ) {
-			break;
-		}
-		if( ret == SIS_NOTAVAIL ) {
-			Com_WPrintf( "Sound hardware already in use\n" );
-			return;
-		}
-        i = ( i + 1 ) % s_numDrivers;
-        if( i == j ) {
-            Com_WPrintf( "No usable sound driver found\n" );
-            return;
-        }
-	}
+	s_volume = Cvar_Get( "s_volume", "0.7", CVAR_ARCHIVE );
+	s_mixahead = Cvar_Get( "s_mixahead", "0.2", CVAR_ARCHIVE );
+	s_show = Cvar_Get( "s_show", "0", 0 );
+	s_testsound = Cvar_Get( "s_testsound", "0", 0 );
+	s_ambient = Cvar_Get( "s_ambient", "1", 0 );
 	
     Cmd_Register( c_sound );
 
@@ -264,6 +223,11 @@ void S_Init( void ) {
 	paintedtime = 0;
 
 	s_registration_sequence = 1;
+
+#if USE_DSOUND
+    s_direct->changed = s_param_changed;
+#endif
+    s_khz->changed = s_param_changed;
 
 	Com_Printf( "sound sampling rate: %i\n", dma.speed );
 
@@ -303,6 +267,11 @@ void S_Shutdown( void ) {
 
 	sound_started = qfalse;
 
+#if USE_DSOUND
+    s_direct->changed = NULL;
+#endif
+    s_khz->changed = NULL;
+
     Cmd_Deregister( c_sound );
 
 	S_FreeAllSounds();
@@ -310,12 +279,12 @@ void S_Shutdown( void ) {
     Z_LeakTest( TAG_SOUND );
 }
 
-void S_Activate( qboolean active ) {
+void S_Activate( void ) {
 	if( sound_started ) {
 #ifdef _WIN32
         S_StopAllSounds(); // FIXME
 #endif
-		snddma.Activate( active );
+		snddma.Activate( cls.active == ACT_ACTIVATED ? qtrue : qfalse );
 	}
 }
 
@@ -1060,6 +1029,12 @@ void S_Update( void )
 	int			i;
 	int			total;
 	channel_t	*ch;
+
+    if( sound_modified ) {
+        Cbuf_AddText( "snd_restart\n" );
+        sound_modified = qfalse;
+        return;
+    }
 
 	if (!sound_started)
 		return;

@@ -101,7 +101,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
 void Key_CharEvent( int key ) {
 }
 
-void CL_MouseEvent( int dx, int dy ) {
+void CL_MouseEvent( int x, int y ) {
 }
 
 void CL_InputFrame( void ) {

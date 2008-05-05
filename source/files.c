@@ -224,7 +224,6 @@ static fsFile_t *FS_FileForHandle( fileHandle_t f ) {
 
 qboolean FS_ValidatePath( const char *s ) {
 	const char *start;
-	int back;
 
 	// check for leading slash
 	// check for empty path
@@ -237,10 +236,7 @@ qboolean FS_ValidatePath( const char *s ) {
 	while( *s ) {
 		// check for ".."
 		if( *s == '.' && s[1] == '.' ) {
-			if( back > 1 ) {
-				return qfalse;
-			}
-			back++; // allow one level back
+			return qfalse;
 		}
 		if( *s == '/' || *s == '\\' ) {
 			// check for two slashes in a row
@@ -1569,10 +1565,10 @@ static void q_printf( 2, 3 ) FS_AddGameDirectory( int mode, const char *fmt, ...
 
 #if USE_ZLIB
 	//
-	// add any zip files in the format *.pk2
+	// add any zip files in the format *.pkz
 	//
 	if( !( fs_restrict_mask->integer & 4 ) ) {
-		FS_LoadPackFiles( mode, ".pk2", FS_LoadZipFile );
+		FS_LoadPackFiles( mode, ".pkz", FS_LoadZipFile );
 	}
 #endif
 }
@@ -1754,6 +1750,12 @@ void **FS_ListFiles( const char *path,
 		}
 	}
 
+	count = 0;
+
+	if( numFiles ) {
+		*numFiles = 0;
+	}
+
 	if( !path ) {
 		path = "";
         pathlen = 0;
@@ -1761,14 +1763,12 @@ void **FS_ListFiles( const char *path,
         if( *path == '/' ) {
             path++;
         }
+        if( !FS_ValidatePath( path ) ) {
+		    FS_DPrintf( "%s: refusing invalid path: %s\n", __func__, path );
+            return NULL;
+        }
         pathlen = strlen( path );
     }
-
-	count = 0;
-
-	if( numFiles ) {
-		*numFiles = 0;
-	}
 
     for( search = fs_searchpaths; search; search = search->next ) {
 		if( flags & FS_PATH_MASK ) {
@@ -2165,7 +2165,7 @@ void FS_Path_f( void ) {
 
 #if USE_ZLIB
 	if( !( fs_restrict_mask->integer & 4 ) ) {
-		Com_Printf( "%i files in PK2 files\n", numFilesInPK2 );
+		Com_Printf( "%i files in PKZ files\n", numFilesInPK2 );
 	}
 #endif
 }
@@ -2613,13 +2613,13 @@ void FS_Init( void ) {
     Cmd_Register( c_fs );
 
 	fs_debug = Cvar_Get( "fs_debug", "0", 0 );
-	fs_restrict_mask = Cvar_Get( "fs_restrict_mask", "4", CVAR_NOSET );
+	fs_restrict_mask = Cvar_Get( "fs_restrict_mask", "0", CVAR_NOSET );
 
 	if( ( fs_restrict_mask->integer & 7 ) == 7 ) {
 		Com_WPrintf( "Invalid fs_restrict_mask value %d. "
             "Falling back to default.\n",
 			    fs_restrict_mask->integer );
-		Cvar_SetInteger( "fs_restrict_mask", 4 );
+		Cvar_Set( "fs_restrict_mask", "0" );
 	}
 
 	// start up with baseq2 by default

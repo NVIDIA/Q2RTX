@@ -22,13 +22,18 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // in_public.h -- external (non-keyboard) input devices
 //
 
+typedef enum {
+    IN_SHOW,
+    IN_HIDE,
+    IN_GRAB
+} grab_t;
+
 typedef struct inputAPI_s {
 	qboolean	(*Init)( void );
-	void	(*Shutdown)( void );
-	void	(*Activate)( qboolean active );
-	void	(*Frame)( void );
-	void	(*ClearStates)( void );
+	void	    (*Shutdown)( void );
+	void	    (*Grab)( grab_t grab );
+    void        (*Warp)( int x, int y );
+	void	    (*GetEvents)( void );
+	qboolean 	(*GetMotion)( int *dx, int *dy );
 } inputAPI_t;
-
-extern inputAPI_t	input;
 

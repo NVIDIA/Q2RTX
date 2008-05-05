@@ -30,7 +30,7 @@ void S_FreeAllSounds( void );
 void S_StopAllSounds(void);
 void S_Update (void);
 
-void S_Activate (qboolean active);
+void S_Activate (void);
 
 void S_BeginRegistration (void);
 qhandle_t S_RegisterSound (const char *sample);

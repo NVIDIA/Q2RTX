@@ -80,24 +80,15 @@ void CL_RunLightStyles( void ) {
 }
 
 
-void CL_SetLightstyle( int index ) {
-	char	*s;
-	size_t	length;
+void CL_SetLightstyle( int index, const char *string, size_t length ) {
 	int		i;
 	clightstyle_t	*dest;
-
-	s = cl.configstrings[index + CS_LIGHTS];
-
-	length = strlen( s );
-	if( length >= MAX_QPATH )
-		Com_Error( ERR_DROP, "CL_SetLightstyle: bad length" );
 
 	dest = &cl_lightstyles[index];
 	dest->length = length;
 
-	dest->map[0] = 1.0f;
 	for( i = 0; i < length; i++ ) {
-		dest->map[i] = ( float )( s[i] - 'a' ) / ( float )( 'm' - 'a' );
+		dest->map[i] = ( float )( string[i] - 'a' ) / ( float )( 'm' - 'a' );
 	}
 
     if( dest->entry.prev ) {
@@ -109,8 +100,7 @@ void CL_SetLightstyle( int index ) {
 		return;
 	}
 
-	dest->value[0] = dest->value[1] = dest->value[2] = dest->value[3] = dest->map[0];
-
+	dest->value[0] = dest->value[1] = dest->value[2] = dest->value[3] = dest->map[0] = 1;
 }
 
 /*

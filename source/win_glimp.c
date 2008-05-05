@@ -249,10 +249,10 @@ static void GLimp_EndFrame( void ) {
 
 /*
 @@@@@@@@@@@@
-GLimp_FillAPI
+VID_FillGLAPI
 @@@@@@@@@@@@
 */
-void Video_FillGLAPI( videoAPI_t *api ) {
+void VID_FillGLAPI( videoAPI_t *api ) {
 	api->Init = GLimp_Init;
 	api->Shutdown = GLimp_Shutdown;
 	api->UpdateGamma = Win_UpdateGamma;

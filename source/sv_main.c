@@ -1505,19 +1505,21 @@ void SV_Frame( int msec ) {
 	}
 
 #ifndef DEDICATED_ONLY
+    // pause if there is only local client on the server
     if( !dedicated->integer && cl_paused->integer &&
-        List_Count( &svs.udp_client_list ) == 1 && mvdconns == 0 )
+        List_Count( &svs.udp_client_list ) == 1 && mvdconns == 0 &&
+        LIST_FIRST( client_t, &svs.udp_client_list, entry )->state == cs_spawned )
     {
         if( !sv_paused->integer ) {
             Cvar_Set( "sv_paused", "1" );
-            CL_InputActivate();
+            IN_Activate();
         }
 		return; // don't run if paused
 	}
 
     if( sv_paused->integer ) {
         Cvar_Set( "sv_paused", "0" );
-        CL_InputActivate();
+        IN_Activate();
     }
 #endif
 

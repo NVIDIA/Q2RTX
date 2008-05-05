@@ -91,7 +91,7 @@ void Mod_Modellist_f (void)
 	{
 		if (!mod->name[0])
 			continue;
-		Com_Printf( "%8i : %s\n",mod->pool.cursize, mod->name);
+		Com_Printf( "%8"PRIz" : %s\n",mod->pool.cursize, mod->name);
 		total += mod->pool.cursize;
 	}
 	Com_Printf( "Total resident: %i\n", total);

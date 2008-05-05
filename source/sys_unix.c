@@ -414,7 +414,7 @@ void Hunk_Begin( mempool_t *pool, size_t maxsize ) {
     buf = mmap( NULL, pool->maxsize, PROT_READ|PROT_WRITE,
 		MAP_PRIVATE|MAP_ANON, -1, 0 );
 	if( buf == NULL || buf == ( void * )-1 ) {
-		Com_Error( ERR_FATAL, "%s: unable to virtual allocate %d bytes",
+		Com_Error( ERR_FATAL, "%s: unable to virtual allocate %"PRIz" bytes",
             __func__, pool->maxsize );
     }
     pool->base = buf;
@@ -467,72 +467,6 @@ void Hunk_Free( mempool_t *pool ) {
 	}
     memset( pool, 0, sizeof( *pool ) );
 }
-
-/*
-===============================================================================
-
-FIFO
-
-===============================================================================
-*/
-
-#if 0
-qboolean FIFO_Alloc( fifo_t *fifo, int size ) {
-    byte *mem, *ret;
-    char temp[32];
-    int fd;
-
-    strcpy( temp, "/dev/shm/" APPLICATION "-XXXXXX" );
-    fd = mkstemp( temp );
-    if( fd < 0 ) {
-        return qfalse;
-    }
-
-    unlink( temp );
-
-    size = ( size + 4095 ) & ~4095;
-
-    if( ftruncate( fd, size << 1 ) == -1 ) {
-        goto fail2;
-    }
-
-    mem = mmap( NULL, size << 1, PROT_NONE, MAP_ANONYMOUS|MAP_PRIVATE, -1, 0 );
-    if( mem == MAP_FAILED ) {
-        goto fail2;
-    }
-
-    ret = mmap( mem, size, PROT_READ|PROT_WRITE, MAP_FIXED|MAP_SHARED, fd, 0 );
-    if( ret != mem ) {
-        goto fail1;
-    }
-
-    ret = mmap( mem + size, size, PROT_READ|PROT_WRITE, MAP_FIXED|MAP_SHARED, fd, 0 );
-    if( ret != mem + size ) {
-        goto fail1;
-    }
-
-    fifo->data = mem;
-    fifo->size = size;
-    fifo->tail = fifo->head = 0;
-    return qtrue;
-
-fail1:
-    munmap( mem, size << 1 );
-fail2:
-    close( fd );
-    return qfalse;
-}
-
-void FIFO_Free( fifo_t *fifo ) {
-    if( fifo->data ) { 
-        if( munmap( fifo->data, fifo->size << 1 ) ) {
-			Com_Error( ERR_FATAL, "%s: munmap failed: %s",
-                __func__, strerror( errno ) );
-        }
-    }
-    memset( fifo, 0, sizeof( *fifo ) );
-}
-#endif
 
 /*
 ===============================================================================
@@ -727,7 +661,7 @@ void Sys_AddDefaultConfig( void ) {
     struct stat st;
     char *text;
 
-    fp = fopen( DEFCFG, "r" );
+    fp = fopen( SYS_SITECFG_NAME, "r" );
     if( !fp ) {
         return;
     }
@@ -735,7 +669,7 @@ void Sys_AddDefaultConfig( void ) {
     if( fstat( fileno( fp ), &st ) == 0 ) {
         text = Cbuf_Alloc( &cmd_buffer, st.st_size );
         if( text ) {
-            Com_Printf( "Execing " DEFCFG "\n" );
+            Com_Printf( "Execing " SYS_SITECFG_NAME "\n" );
             fread( text, st.st_size, 1, fp );
         }
     }

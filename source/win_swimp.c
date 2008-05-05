@@ -333,10 +333,10 @@ static void SWimp_UpdatePalette( const byte *_pal ) {
 
 /*
 @@@@@@@@@@@@
-SWimp_FillAPI
+VID_FillSWAPI
 @@@@@@@@@@@@
 */
-void Video_FillSWAPI( videoAPI_t *api ) {
+void VID_FillSWAPI( videoAPI_t *api ) {
 	api->Init = SWimp_Init;
 	api->Shutdown = SWimp_Shutdown;
 	api->UpdateGamma = Win_UpdateGamma;
