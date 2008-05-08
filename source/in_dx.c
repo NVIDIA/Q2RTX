@@ -99,7 +99,7 @@ static void DI_GetMouseEvents( void ) {
 	int		value;
 	HRESULT	hr;
 
-	if( !di_initialized || !di_grabbed ) {
+	if( di_grabbed != IN_GRAB ) {
 		return;
 	}
 
@@ -161,7 +161,7 @@ static qboolean DI_GetMouseMotion( int *dx, int *dy ) {
 	DIMOUSESTATE2	state;
 	HRESULT	hr;
 
-	if( !di_initialized || !di_grabbed ) {
+	if( di_grabbed != IN_GRAB ) {
 		return qfalse;
 	}
 

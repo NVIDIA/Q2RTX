@@ -35,10 +35,11 @@ static void Prompt_ShowMatches( commandPrompt_t *prompt, char **matches,
     int count = end - start;
     int numCols = 7, numLines;
     int i, j, k;
-	size_t max, len, total;
+	size_t maxlen, len, total;
     size_t colwidths[6];
     char *match;
 
+    // determine number of columns needed
 	do {
 		numCols--;
 		numLines = ceil( ( float )count / numCols );
@@ -48,20 +49,22 @@ static void Prompt_ShowMatches( commandPrompt_t *prompt, char **matches,
 			if( k >= end ) {
 				break;
 			}
-            max = 0;
-            j = k;
-            while( j - k < numLines && j < end ) {
-                len = strlen( matches[j++] );
-                if( max < len ) {
-                    max = len;
+            maxlen = 0;
+            for( j = k; j < k + numLines && j < end; j++ ) {
+                len = strlen( matches[j] );
+                if( maxlen < len ) {
+                    maxlen = len;
                 }
             }
-			colwidths[i] = max > prompt->widthInChars - 2 ?
-				prompt->widthInChars - 2 : max;
-            total += max + 2;
+            maxlen += 2; // account for intercolumn spaces
+            if( maxlen > prompt->widthInChars ) {
+                maxlen = prompt->widthInChars;
+            }
+			colwidths[i] = maxlen;
+            total += maxlen;
         }
         if( total < prompt->widthInChars ) {
-            break;
+            break; // this number of columns does fit
         }
     } while( numCols > 1 );
 
@@ -73,14 +76,16 @@ static void Prompt_ShowMatches( commandPrompt_t *prompt, char **matches,
             }
             match = matches[k];
             prompt->printf( "%s", match );
-            len = colwidths[j] - strlen( match );
-            for( k = 0; k < len + 2; k++ ) {
-				prompt->printf( " " );
+            len = strlen( match );
+            if( len < colwidths[j] ) {
+                // pad with spaces
+                for( k = 0; k < colwidths[j] - len; k++ ) {
+				    prompt->printf( " " );
+                }
             }
         }
         prompt->printf( "\n" );
     }
-    
 }
 
 static void Prompt_ShowIndividualMatches(
