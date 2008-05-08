@@ -70,6 +70,8 @@ void UI_PushMenu( menuFrameWork_t *menu ) {
 
     Menu_Init( menu );
 
+    Con_Close();
+
 	Key_SetDest( ( Key_GetDest() & ~KEY_CONSOLE ) | KEY_MENU );
 
 	if( !uis.activeMenu ) {
@@ -81,6 +83,10 @@ void UI_PushMenu( menuFrameWork_t *menu ) {
 	uis.activeMenu = menu;
 
 	UI_DoHitTest();
+
+    if( menu->expose ) {
+        menu->expose( menu );
+    }
 }
 
 void UI_Resize( void ) {

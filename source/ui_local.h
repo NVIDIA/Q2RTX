@@ -91,6 +91,7 @@ typedef struct menuFrameWork_s {
 
     qboolean (*push)( struct menuFrameWork_s * );
     void (*pop)( struct menuFrameWork_s * );
+    void (*expose)( struct menuFrameWork_s * );
     void (*draw)( struct menuFrameWork_s * );
     void (*size)( struct menuFrameWork_s * );
     void (*free)( struct menuFrameWork_s * );

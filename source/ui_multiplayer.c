@@ -367,16 +367,15 @@ static void Pop( menuFrameWork_t *self ) {
     FreeListedServers();
 }
 
-static qboolean Push( menuFrameWork_t *self ) {
+static void Expose( menuFrameWork_t *self ) {
     PingServers();
-    return qtrue;
 }
 
 void M_Menu_Servers( void ) {
     m_join.menu.name    = "servers";
     m_join.menu.title   = "Server Browser";
 
-    m_join.menu.push    = Push;
+    m_join.menu.expose  = Expose;
     m_join.menu.pop     = Pop;
     m_join.menu.size    = Size;
     m_join.menu.keydown = Keydown;

@@ -716,15 +716,15 @@ VID_PumpEvents
 */
 void VID_PumpEvents( void ) {
     MSG        msg;
-    
+
     while( PeekMessage( &msg, NULL, 0, 0, PM_REMOVE ) ) {
     	if( msg.message == WM_QUIT ) {
     		Com_Quit();
     		break;
     	}
-    	win.lastMsgTime = msg.time;
-          TranslateMessage( &msg );
-          DispatchMessage( &msg );
+        win.lastMsgTime = msg.time;
+        TranslateMessage( &msg );
+        DispatchMessage( &msg );
     }
 
     if( win.mode_changed ) {

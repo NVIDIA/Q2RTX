@@ -408,18 +408,17 @@ static void Pop( menuFrameWork_t *self ) {
     FreeList();
 }
 
-static qboolean Push( menuFrameWork_t *self ) {
+static void Expose( menuFrameWork_t *self ) {
     BuildList();
     // move cursor to previous position
     MenuList_SetValue( &m_demos.list, uis.m_demos_selection );
-    return qtrue;
 }
 
 void M_Menu_Demos( void ) {
     m_demos.menu.name = "demos";
     m_demos.menu.title = "Demo Browser";
 
-    m_demos.menu.push       = Push;
+    m_demos.menu.expose     = Expose;
     m_demos.menu.pop        = Pop;
     m_demos.menu.size       = Size;
     m_demos.menu.keydown    = Keydown;

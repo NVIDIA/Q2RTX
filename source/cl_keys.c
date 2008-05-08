@@ -224,9 +224,6 @@ void Key_SetDest( keydest_t dest ) {
 // release all keys, to keep the character from continuing an
 // action started before a console switch
             Key_ClearStates();
-        } else {
-	        Con_ClearTyping();
-	        Con_ClearNotify_f();
         }
     }
 
@@ -727,10 +724,8 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
 		}
 
 		if( cls.key_dest & KEY_CONSOLE ) {
-			if( cls.state == ca_disconnected ) {
-                if( !( cls.key_dest & KEY_MENU ) ) {
-				    UI_OpenMenu( UIMENU_MAIN_FORCE );
-                }
+			if( cls.state == ca_disconnected && !( cls.key_dest & KEY_MENU ) ) {
+				UI_OpenMenu( UIMENU_MAIN_FORCE );
 			} else {
     			Con_Close();
             }

@@ -343,6 +343,9 @@ static void CL_CheckForResend( void ) {
         cls.connect_time = cls.realtime - CONNECT_DELAY;
 
         cls.passive = qfalse;
+
+        Con_Close();
+        UI_OpenMenu( UIMENU_NONE );
     }
 
     // resend if we haven't gotten a reply yet
