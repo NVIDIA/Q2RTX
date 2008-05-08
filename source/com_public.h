@@ -145,8 +145,6 @@ typedef struct cvarAPI_s {
 	cvar_t 	*(*Get)( const char *var_name, const char *var_value, int flags );
 	cvar_t 	*(*Set)( const char *var_name, const char *value );
     cvar_t  *(*Find)( const char *var_name );
-	void 	(*SetValue)( const char *var_name, float value );
-	void 	(*SetInteger)( const char *var_name, int value );
 } cvarAPI_t;
 
 extern	cvarAPI_t	cvar;
@@ -267,7 +265,7 @@ MODULES
 */
 
 // if api_version is different, the dll cannot be used
-#define MODULES_APIVERSION	315
+#define MODULES_APIVERSION	316
 
 typedef enum moduleQuery_e {
 	MQ_GETINFO,

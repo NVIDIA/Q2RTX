@@ -18,36 +18,34 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#ifndef __QMENU_H__
-#define __QMENU_H__
-
-#include "config.h"
-#include "q_shared.h"
+#include "com_local.h"
 #include "q_list.h"
 #include "q_field.h"
 #include "q_uis.h"
-#include "com_public.h"
 #include "ref_public.h"
 #include "key_public.h"
 #include "snd_public.h"
 #include "cl_public.h"
 #include "ui_public.h"
 
-#define UI_Malloc( size )	com.TagMalloc( size, TAG_UI )
+#define UI_Malloc( size )      Z_TagMalloc( size, TAG_UI )
+#define UI_Mallocz( size )      Z_TagMallocz( size, TAG_UI )
 
 #define MAXMENUITEMS	64
 
-#define MTYPE_BAD			0
-#define MTYPE_SLIDER		1
-#define MTYPE_LIST			2
-#define MTYPE_ACTION		3
-#define MTYPE_SPINCONTROL	4
-#define MTYPE_SEPARATOR  	5
-#define MTYPE_FIELD			6
-#define MTYPE_BITMAP		7
-#define MTYPE_IMAGELIST		8
-#define MTYPE_STATIC		9
-#define MTYPE_KEYBIND		10
+typedef enum {
+    MTYPE_BAD,
+    MTYPE_SLIDER,
+    MTYPE_LIST,
+    MTYPE_ACTION,
+    MTYPE_SPINCONTROL,
+    MTYPE_SEPARATOR,
+    MTYPE_FIELD,
+    MTYPE_BITMAP,
+    MTYPE_IMAGELIST,
+    MTYPE_STATIC,
+    MTYPE_KEYBIND
+} menuType_t;
 
 #define QMF_LEFT_JUSTIFY	0x00000001
 #define QMF_GRAYED			0x00000002
@@ -57,26 +55,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define QMF_DISABLED		0x00000020
 #define QMF_CUSTOM_COLOR	0x00000040
 
-#define ID_MENU				-1
-
-#define QM_GOTFOCUS			1
-#define QM_LOSTFOCUS		2
-#define QM_ACTIVATE			3
-#define QM_CHANGE			4
-#define QM_KEY				5
-#define QM_CHAR				6
-#define QM_MOUSE			7
-#define QM_DESTROY			8
-#define QM_DESTROY_CHILD	9
-#define QM_SIZE         	10
-#define QM_SORT         	11
-
-#define QMS_NOTHANDLED		0
-#define QMS_SILENT			1
-#define QMS_IN				2
-#define QMS_MOVE			3
-#define QMS_OUT				4
-#define QMS_BEEP			5
+typedef enum {
+    QMS_NOTHANDLED,
+    QMS_SILENT,
+    QMS_IN,
+    QMS_MOVE,
+    QMS_OUT,
+    QMS_BEEP
+} menuSound_t;
 
 #define RCOLUMN_OFFSET  16
 #define LCOLUMN_OFFSET -16
@@ -90,8 +76,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 	(item)->type != MTYPE_STATIC && \
 	!( (item)->flags & (QMF_GRAYED|QMF_HIDDEN|QMF_DISABLED) ) )
 
+typedef void (*confirmAction_t)( qboolean );
+
 typedef struct menuFrameWork_s {
-	char	*banner, *statusbar;
+    list_t  entry;
+
+	char	*name, *title, *status;
 
 	int		nitems;
 	void	*items[MAXMENUITEMS];
@@ -99,14 +89,18 @@ typedef struct menuFrameWork_s {
 	qboolean transparent;
 	qboolean keywait;
 
-	void		(*draw)( struct menuFrameWork_s *self );
-	int			(*callback)( int id, int msg, int param );
+    qboolean (*push)( struct menuFrameWork_s * );
+    void (*pop)( struct menuFrameWork_s * );
+    void (*draw)( struct menuFrameWork_s * );
+    void (*size)( struct menuFrameWork_s * );
+    void (*free)( struct menuFrameWork_s * );
+    menuSound_t (*keydown)( struct menuFrameWork_s *, int );
 } menuFrameWork_t;
 
 typedef struct menuCommon_s {
-	int type;
+	menuType_t type;
 	int id;
-	const char *name;
+	char *name;
 	menuFrameWork_t *parent;
 	color_t	color;
 	vrect_t rect;
@@ -116,6 +110,11 @@ typedef struct menuCommon_s {
 
 	int flags;
 	int uiFlags;
+
+    menuSound_t (*activate)( struct menuCommon_s * );
+    menuSound_t (*change)( struct menuCommon_s * );
+    menuSound_t (*keydown)( struct menuCommon_s *, int key );
+    menuSound_t (*focus)( struct menuCommon_s *, qboolean gain );
 } menuCommon_t;
 
 typedef struct menuField_s {
@@ -125,10 +124,13 @@ typedef struct menuField_s {
 
 typedef struct menuSlider_s {
 	menuCommon_t generic;
+    cvar_t *cvar;
 
 	float minvalue;
 	float maxvalue;
 	float curvalue;
+
+    float mul, add;
 
 	float range;
 } menuSlider_t;
@@ -139,7 +141,7 @@ typedef struct menuSlider_s {
 #define MLIST_SCROLLBAR_WIDTH	10
 #define MLIST_PRESTEP	3
 
-typedef enum menuListFlags_e {
+typedef enum {
 	MLF_NOSELECT				= ( 1 << 0 ),
 	MLF_HIDE_SCROLLBAR			= ( 1 << 1 ),
 	MLF_HIDE_SCROLLBAR_EMPTY	= ( 1 << 2 ),
@@ -173,47 +175,27 @@ typedef struct menuList_s {
 	menuListColumn_t	columns[MAX_COLUMNS];
 	int					numcolumns;
     int                 sortdir, sortcol;
+
+    menuSound_t (*sort)( struct menuList_s *, int column );
 } menuList_t;
-
-typedef struct imageList_s {
-	menuCommon_t generic;
-
-	const char *name;
-
-	int prestep;
-	int curvalue;
-	const char **names;
-	const qhandle_t *images;
-	int clickTime;
-
-	int numcolumns;
-	int numRows;
-
-	int imageWidth;
-	int imageHeight;
-} imageList_t;
 
 typedef struct menuSpinControl_s {
 	menuCommon_t generic;
+    cvar_t *cvar;
 
-	const char	**itemnames;
+	char	**itemnames;
 	int			numItems;
 	int			curvalue;
 } menuSpinControl_t;
 
 typedef struct menuAction_s {
 	menuCommon_t generic;
+    char *cmd;
 } menuAction_t;
 
 typedef struct menuSeparator_s {
 	menuCommon_t generic;
 } menuSeparator_t;
-
-typedef struct menuBitmap_s {
-	menuCommon_t generic;
-	qhandle_t	pic;
-	const char *errorImage;
-} menuBitmap_t;
 
 typedef struct menuStatic_s {
 	menuCommon_t	generic;
@@ -224,6 +206,7 @@ typedef struct menuKeybind_s {
 	menuCommon_t	generic;
 	char			binding[32];
 	char			altbinding[32];
+    char            *cmd;
 } menuKeybind_t;
 
 #define MAX_PLAYERMODELS 32
@@ -268,9 +251,11 @@ typedef struct uiStatic_s {
 
 extern uiStatic_t	uis;
 
+extern list_t       ui_menus;
+
 extern cvar_t		*ui_debug;
 
-void		UI_PushMenu( menuFrameWork_t *menu );
+void        UI_PushMenu( menuFrameWork_t *menu );
 void		UI_ForceMenuOff( void );
 void		UI_PopMenu( void );
 qboolean	UI_DoHitTest( void );
@@ -285,53 +270,35 @@ void		UI_DrawString( int x, int y, const color_t color, int flags, const char *s
 void		UI_DrawChar( int x, int y, int flags, int ch );
 void		UI_StringDimensions( vrect_t *rc, int flags, const char *string );
 
+void        UI_LoadStript( void );
+void        UI_FreeStript( void );
+menuFrameWork_t *UI_FindMenu( const char *name );
+
 void		Menu_Init( menuFrameWork_t *menu );
 void        Menu_Size( menuFrameWork_t *menu );
 void		Menu_Draw( menuFrameWork_t *menu );
 void		Menu_AddItem( menuFrameWork_t *menu, void *item );
-int			Menu_SelectItem( menuFrameWork_t *menu );
-int			Menu_SlideItem( menuFrameWork_t *menu, int dir );
-int			Menu_KeyEvent( menuCommon_t *item, int key );
-int			Menu_CharEvent( menuCommon_t *item, int key );
-int			Menu_MouseMove( menuCommon_t *item );
+menuSound_t	Menu_SelectItem( menuFrameWork_t *menu );
+menuSound_t	Menu_SlideItem( menuFrameWork_t *menu, int dir );
+menuSound_t	Menu_KeyEvent( menuCommon_t *item, int key );
+menuSound_t	Menu_CharEvent( menuCommon_t *item, int key );
+menuSound_t Menu_MouseMove( menuCommon_t *item );
+menuSound_t Menu_Keydown( menuFrameWork_t *menu, int key );
 void		Menu_SetFocus( menuCommon_t *item );
-int			Menu_AdjustCursor( menuFrameWork_t *menu, int dir );
+menuSound_t	Menu_AdjustCursor( menuFrameWork_t *menu, int dir );
 menuCommon_t	*Menu_ItemAtCursor( menuFrameWork_t *menu );
 menuCommon_t	*Menu_HitTest( menuFrameWork_t *menu );
 void		MenuList_Init( menuList_t *l );
 void		MenuList_SetValue( menuList_t *l, int value );
 void        MenuList_Sort( menuList_t *l, int offset,
     int (*cmpfunc)( const void *, const void * ) );
+qboolean    Menu_Push( menuFrameWork_t *menu );
+void        Menu_Pop( menuFrameWork_t *menu );
+void        Menu_Free( menuFrameWork_t *menu );
 
-void SpinControl_Init( menuSpinControl_t *s );
-void Bitmap_Init( menuBitmap_t *b );
+void M_Menu_Error( comErrorType_t type, const char *text );
+void M_Menu_Confirm( const char *text, confirmAction_t action );
+void M_Menu_PlayerConfig( void );
+void M_Menu_Demos( void );
+void M_Menu_Servers( void );
 
-void M_Menu_Error_f( comErrorType_t type, const char *text );
-void M_Menu_Confirm_f( const char *text, void (*action)( qboolean yes ) );
-void M_Menu_Main_f (void);
-	void M_Menu_Game_f (void);
-		void M_Menu_LoadGame_f (void);
-		void M_Menu_SaveGame_f (void);
-		void M_Menu_PlayerConfig_f (void);
-			void M_Menu_DownloadOptions_f (void);
-		void M_Menu_Credits_f( void );
-	void M_Menu_Multiplayer_f( void );
-		void M_Menu_JoinServer_f (void);
-			void M_Menu_AddressBook_f( void );
-		void M_Menu_StartServer_f (void);
-			void M_Menu_DMOptions_f (void);
-	void M_Menu_Video_f (void);
-	void M_Menu_Options_f (void);
-		void M_Menu_Keys_f (void);
-		void M_Menu_Weapons_f( void );
-	void M_Menu_Quit_f (void);
-	void M_Menu_Demos_f( void );
-
-	void M_Menu_Credits( void );
-	void M_Menu_Network_f( void );
-
-	void M_Menu_Mods_f( void );
-	void M_Menu_Ingame_f( void );
-
-
-#endif

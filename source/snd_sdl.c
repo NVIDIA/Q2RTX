@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2003-2007 Andrey Nazarov
+Copyright (C) 2007-2008 Andrey Nazarov
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "snd_local.h"
 #include <SDL.h>
 
-static void filler( void *userdata, Uint8 *stream, int len ) {
+static void Filler( void *userdata, Uint8 *stream, int len ) {
     int size = dma.samples << 1;
     int pos = dma.samplepos << 1;
     int wrapped = pos + len - size;
@@ -42,15 +42,15 @@ static void filler( void *userdata, Uint8 *stream, int len ) {
     }
 }
 
-static void QSDL_ShutdownSound( void ) {
+static void Shutdown( void ) {
     Com_Printf( "Shutting down SDL audio\n" );
 
     SDL_CloseAudio();
-	if( SDL_WasInit( SDL_INIT_EVERYTHING ) == SDL_INIT_AUDIO ) {
-		SDL_Quit();
-	} else {
-		SDL_QuitSubSystem( SDL_INIT_AUDIO );
-	}
+    if( SDL_WasInit( SDL_INIT_EVERYTHING ) == SDL_INIT_AUDIO ) {
+        SDL_Quit();
+    } else {
+        SDL_QuitSubSystem( SDL_INIT_AUDIO );
+    }
 
     if( dma.buffer ) {
         Z_Free( dma.buffer );
@@ -58,50 +58,50 @@ static void QSDL_ShutdownSound( void ) {
     }
 }
 
-static sndinitstat_t QSDL_InitSound( void ) {
+static sndinitstat_t Init( void ) {
     SDL_AudioSpec desired, obtained;
-	char buffer[MAX_QPATH];
+    char buffer[MAX_QPATH];
     int ret;
 
-	if( SDL_WasInit( SDL_INIT_EVERYTHING ) == 0 ) {
-		ret = SDL_Init( SDL_INIT_AUDIO|SDL_INIT_NOPARACHUTE );
-	} else {
-		ret = SDL_InitSubSystem( SDL_INIT_AUDIO );
-	}
-	if( ret == -1 ) {
-		Com_EPrintf( "Couldn't initialize SDL audio: %s\n", SDL_GetError() );
-		return SIS_FAILURE;
-	}
+    if( SDL_WasInit( SDL_INIT_EVERYTHING ) == 0 ) {
+        ret = SDL_Init( SDL_INIT_AUDIO|SDL_INIT_NOPARACHUTE );
+    } else {
+        ret = SDL_InitSubSystem( SDL_INIT_AUDIO );
+    }
+    if( ret == -1 ) {
+        Com_EPrintf( "Couldn't initialize SDL audio: %s\n", SDL_GetError() );
+        return SIS_FAILURE;
+    }
 
     memset( &desired, 0, sizeof( desired ) );
-	switch( s_khz->integer ) {
+    switch( s_khz->integer ) {
     case 48:
-		desired.freq = 48000;
+        desired.freq = 48000;
         break;
     case 44:
-		desired.freq = 44100;
+        desired.freq = 44100;
         break;
     case 22:
-		desired.freq = 22050;
+        desired.freq = 22050;
         break;
     default:
-		desired.freq = 11025;
+        desired.freq = 11025;
         break;
     }
 
     desired.format = AUDIO_S16LSB;
     desired.samples = 512;
     desired.channels = 2;
-    desired.callback = filler;
+    desired.callback = Filler;
     ret = SDL_OpenAudio( &desired, &obtained );
-	if( ret == -1 ) {
-		Com_EPrintf( "Couldn't open SDL audio: %s\n", SDL_GetError() );
-		return SIS_FAILURE;
-	}
+    if( ret == -1 ) {
+        Com_EPrintf( "Couldn't open SDL audio: %s\n", SDL_GetError() );
+        return SIS_FAILURE;
+    }
 
     if( obtained.format != AUDIO_S16LSB ) {
-		Com_EPrintf( "SDL audio format %d unsupported\n", obtained.format );
-        QSDL_ShutdownSound();
+        Com_EPrintf( "SDL audio format %d unsupported\n", obtained.format );
+        Shutdown();
         return SIS_FAILURE;
     }
 
@@ -121,15 +121,15 @@ static sndinitstat_t QSDL_InitSound( void ) {
     return SIS_SUCCESS;
 }
 
-static void QSDL_BeginPainting( void ) {
+static void BeginPainting( void ) {
     SDL_LockAudio();
 }
 
-static void QSDL_Submit( void ) {
+static void Submit( void ) {
     SDL_UnlockAudio();
 }
 
-static void QSDL_ActivateSound( qboolean active ) {
+static void Activate( qboolean active ) {
     if( active ) {
         SDL_PauseAudio( 0 );
     } else {
@@ -137,11 +137,11 @@ static void QSDL_ActivateSound( qboolean active ) {
     }
 }
 
-void WAVE_FillAPI ( snddmaAPI_t *api ) {
-    api->Init = QSDL_InitSound;
-    api->Shutdown = QSDL_ShutdownSound;
-    api->BeginPainting = QSDL_BeginPainting;
-    api->Submit = QSDL_Submit;
-    api->Activate = QSDL_ActivateSound;
+void WAVE_FillAPI( snddmaAPI_t *api ) {
+    api->Init = Init;
+    api->Shutdown = Shutdown;
+    api->BeginPainting = BeginPainting;
+    api->Submit = Submit;
+    api->Activate = Activate;
 }
 

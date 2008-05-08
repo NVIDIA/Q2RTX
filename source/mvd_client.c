@@ -831,9 +831,9 @@ mvd_t *MVD_SetChannel( int arg ) {
 void MVD_Spawn_f( void ) {
     SV_InitGame( qtrue );
 
-    Cvar_SetInteger( "sv_running", ss_broadcast );
-    Cvar_SetInteger( "sv_paused", 0 );
-    Cvar_SetInteger( "timedemo", 0 );
+    Cvar_SetInteger( sv_running, ss_broadcast, CVAR_SET_DIRECT );
+    Cvar_Set( "sv_paused", "0" );
+    Cvar_Set( "timedemo", "0" );
 
 	sv.spawncount = ( rand() | ( rand() << 16 ) ) ^ Sys_Milliseconds();
 	sv.spawncount &= 0x7FFFFFFF;

@@ -497,7 +497,7 @@ cvar_t *Cvar_UserSet( const char *var_name, const char *value ) {
 Cvar_SetValue
 ============
 */
-void Cvar_SetValue( const char *var_name, float value ) {
+void Cvar_SetValue( cvar_t *var, float value, cvarSetSource_t source ) {
 	char	val[32];
 
 	if( value == (int)value )
@@ -505,7 +505,7 @@ void Cvar_SetValue( const char *var_name, float value ) {
 	else
 		Com_sprintf( val, sizeof( val ), "%f", value);
 
-	Cvar_SetEx( var_name, val, CVAR_SET_DIRECT );
+	Cvar_SetByVar( var, val, source );
 }
 
 /*
@@ -513,25 +513,25 @@ void Cvar_SetValue( const char *var_name, float value ) {
 Cvar_SetInteger
 ============
 */
-void Cvar_SetInteger( const char *var_name, int value ) {
+void Cvar_SetInteger( cvar_t *var, int value, cvarSetSource_t source ) {
 	char	val[32];
 
 	Com_sprintf( val, sizeof( val ), "%i", value );
 
-	Cvar_SetEx( var_name, val, CVAR_SET_DIRECT );
+	Cvar_SetByVar( var, val, source );
 }
 
 /*
 ============
-Cvar_SetInteger
+Cvar_SetHex
 ============
 */
-void Cvar_SetIntegerHex( const char *var_name, unsigned value ) {
+void Cvar_SetHex( cvar_t *var, int value, cvarSetSource_t source ) {
 	char	val[32];
 
 	Com_sprintf( val, sizeof( val ), "0x%X", value );
 
-	Cvar_SetEx( var_name, val, CVAR_SET_DIRECT );
+	Cvar_SetByVar( var, val, source );
 }
 
 /*
@@ -1083,8 +1083,6 @@ void Cvar_FillAPI( cvarAPI_t *api ) {
 	api->Get = Cvar_Get;
 	api->Set = Cvar_Set;
 	api->Find = Cvar_FindVar;
-	api->SetValue = Cvar_SetValue;
-	api->SetInteger = Cvar_SetInteger;
 	api->VariableValue = Cvar_VariableValue;
 	api->VariableInteger = Cvar_VariableInteger;
 	api->VariableString = Cvar_VariableString;

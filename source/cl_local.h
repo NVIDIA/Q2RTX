@@ -225,8 +225,8 @@ typedef struct client_static_s {
 	active_t	active;
 
 	qboolean	ref_initialized;
-	qboolean	_unused;
-	qboolean	ui_initialized;
+	qboolean	_unused1;
+	qboolean	_unused2;
 
 	int			userinfo_modified;
 	cvar_t		*userinfo_updates[MAX_PACKET_USERINFOS];
@@ -611,7 +611,7 @@ void LOC_AddLocationsToScene( void );
 
 
 //
-// console.c
+// cl_console.c
 //
 void Con_Init( void );
 void Con_PostInit( void );
@@ -621,6 +621,7 @@ void Con_RunConsole( void );
 void Con_Print( const char *txt );
 void Con_ClearNotify_f( void );
 void Con_ToggleConsole_f (void);
+void Con_ClearTyping( void );
 void Con_Close( void );
 void Con_SkipNotify( qboolean skip );
 void Con_RegisterMedia( void );
@@ -707,29 +708,12 @@ void    SCR_LagSample( void );
 void	SCR_LagClear( void );
 
 //
-// keys.c
+// cl_keys.c
 //
-
 void	Key_Init( void );
 void	Key_Event( unsigned key, qboolean down, unsigned time );
 void	Key_CharEvent( int key );
 void	Key_WriteBindings( fileHandle_t f );
-
-qboolean	Key_GetOverstrikeMode( void );
-void		Key_SetOverstrikeMode( qboolean overstrike );
-keydest_t	Key_GetDest( void );
-void		Key_SetDest( keydest_t dest );
-
-qboolean	Key_IsDown( int key );
-qboolean	Key_AnyKeyDown( void );
-void		Key_ClearStates( void );
-
-char	*Key_KeynumToString ( int keynum );
-void	Key_SetBinding( int keynum, const char *binding );
-char	*Key_GetBinding( const char *binding );
-int		Key_EnumBindings( int key, const char *binding );
-
-void Key_FillAPI( keyAPI_t *api );
 
 
 //

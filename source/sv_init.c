@@ -140,7 +140,7 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
 	// set serverinfo variable
 	SV_InfoSet( "mapname", sv.name );
 
-	Cvar_SetInteger( "sv_running", ss_game );
+	Cvar_SetInteger( sv_running, ss_game, CVAR_SET_DIRECT );
 	Cvar_Set( "sv_paused", "0" );
 	Cvar_Set( "timedemo", "0" );
 
@@ -200,14 +200,14 @@ void SV_InitGame( qboolean ismvd ){
 	// init clients
 	if( Cvar_VariableInteger( "deathmatch" ) ) {
 		if( sv_maxclients->integer <= 1 ) {
-			Cvar_SetInteger( "maxclients", 8 );
+			Cvar_SetInteger( sv_maxclients, 8, CVAR_SET_DIRECT );
 		} else if( sv_maxclients->integer > CLIENTNUM_RESERVED ) {
-			Cvar_SetInteger( "maxclients", CLIENTNUM_RESERVED );
+			Cvar_SetInteger( sv_maxclients, CLIENTNUM_RESERVED, CVAR_SET_DIRECT );
 		}
 		svs.gametype = GT_DEATHMATCH;
 	} else if( Cvar_VariableInteger( "coop" ) ) {
 		if( sv_maxclients->integer <= 1 || sv_maxclients->integer > 4 )
-			Cvar_SetInteger( "maxclients", 4 );
+			Cvar_Set( "maxclients", "4" );
 		svs.gametype = GT_COOP;
 	} else {	// non-deathmatch, non-coop is one player
 		Cvar_FullSet( "maxclients", "1", CVAR_SERVERINFO|CVAR_LATCH,

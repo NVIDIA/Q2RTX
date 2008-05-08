@@ -337,7 +337,7 @@ Keybinding command
 =================
 */
 static void SCR_SizeUp_f( void ) {
-	Cvar_SetInteger( "viewsize", scr_viewsize->integer + 10 );
+	Cvar_SetInteger( scr_viewsize, scr_viewsize->integer + 10, CVAR_SET_CONSOLE );
 }
 
 /*
@@ -348,7 +348,7 @@ Keybinding command
 =================
 */
 static void SCR_SizeDown_f( void ) {
-	Cvar_SetInteger( "viewsize", scr_viewsize->integer - 10 );
+	Cvar_SetInteger( scr_viewsize, scr_viewsize->integer - 10, CVAR_SET_CONSOLE );
 }
 
 /*
@@ -442,7 +442,7 @@ void SCR_TouchPics( void ) {
 
 	if( crosshair->integer ) {
 		if( crosshair->integer < 0 ) {
-			Cvar_SetInteger( "crosshair", 0 );
+			Cvar_Set( "crosshair", "0" );
 		}
 
 		Com_sprintf( buffer, sizeof( buffer ), "ch%i", crosshair->integer );
@@ -1097,6 +1097,11 @@ void SCR_UpdateScreen( void ) {
 			Key_SetDest( cls.key_dest | KEY_CONSOLE );
 			Con_RunConsole();
 		}
+
+		if( UI_IsTransparent() ) {
+			ref.DrawFill( 0, 0, scr_glconfig.vidWidth,
+                scr_glconfig.vidHeight, 0 );
+        }
 
 		// draw main menu
 		UI_Draw( cls.realtime );

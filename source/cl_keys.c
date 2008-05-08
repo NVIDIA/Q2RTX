@@ -27,8 +27,6 @@ key up events are sent even if in console mode
 
 #define MAXCMDLINE 256
 
-keyAPI_t		keys;
-
 static int	anykeydown;
 
 static int		key_waiting;
@@ -226,6 +224,9 @@ void Key_SetDest( keydest_t dest ) {
 // release all keys, to keep the character from continuing an
 // action started before a console switch
             Key_ClearStates();
+        } else {
+	        Con_ClearTyping();
+	        Con_ClearNotify_f();
         }
     }
 
@@ -523,27 +524,6 @@ static void Key_Bindlist_f( void ) {
     }
 }
 
-/*
-===================
-Key_FillAPI
-===================
-*/
-void Key_FillAPI( keyAPI_t *api ) {
-	api->GetOverstrikeMode = Key_GetOverstrikeMode;
-	api->SetOverstrikeMode = Key_SetOverstrikeMode;
-	api->GetDest = Key_GetDest;
-	api->SetDest = Key_SetDest;
-
-	api->IsDown = Key_IsDown;
-	api->AnyKeyDown = Key_AnyKeyDown;
-	api->ClearStates = Key_ClearStates;
-
-	api->KeyNumToString = Key_KeynumToString;
-	api->SetBinding = Key_SetBinding;
-	api->GetBinding = Key_GetBinding;
-	api->EnumBindings = Key_EnumBindings;
-}
-
 static cmdreg_t c_keys[] = {
 	{ "bind", Key_Bind_f, Key_Bind_c },
 	{ "unbind", Key_Unbind_f, Key_Unbind_c },
@@ -648,8 +628,6 @@ void Key_Init( void ) {
 // register our functions
 //
     Cmd_Register( c_keys );
-
-	Key_FillAPI( &keys );
 }
 
 /*
@@ -749,10 +727,13 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
 		}
 
 		if( cls.key_dest & KEY_CONSOLE ) {
-			if( cls.state == ca_disconnected && !( cls.key_dest & KEY_MENU ) ) {
-				UI_OpenMenu( UIMENU_MAIN_FORCE );
-			}
-			Con_Close();
+			if( cls.state == ca_disconnected ) {
+                if( !( cls.key_dest & KEY_MENU ) ) {
+				    UI_OpenMenu( UIMENU_MAIN_FORCE );
+                }
+			} else {
+    			Con_Close();
+            }
 		} else if( cls.key_dest & KEY_MENU ) {
 			UI_Keydown( key );
 		} else if( cls.key_dest & KEY_MESSAGE ) {

@@ -45,7 +45,6 @@ x11="yes"
 client="yes"
 ref_soft="yes"
 ref_gl="yes"
-mod_ui="yes"
 server="no"
 openffa="no"
 help="no"
@@ -153,7 +152,7 @@ echo "  --cross-prefix=PREFIX  add PREFIX to compile tools [$cross_prefix]"
 echo "  --cc=CC                use C compiler [$cc]"
 echo "  --make=MAKE            use MAKE processor [$make]"
 echo "  --windres=WINDRES      use RC compiler [$windres]"
-echo "  --hardlink             link client with ref_gl and mod_ui"
+echo "  --hardlink             hard link client with ref_gl"
 echo "  --disable-client       do not build client"
 echo "  --enable-server        build dedicated server"
 echo "  --enable-openffa       build OpenFFA deathmatch mod"
@@ -292,7 +291,6 @@ if [ "$client" = "yes" ]; then
     else
         echo "Software refresh   $ref_soft"
         echo "OpenGL refresh     $ref_gl"
-        echo "Build UI module    $mod_ui"
     fi
 fi
 echo "Build server       $server"
@@ -338,11 +336,6 @@ if [ "$client" = "yes" ]; then
         if [ "$ref_gl" = "yes" ]; then
             targets="$targets ref_gl"
             libraries="$libraries ref_gl$libsuffix"
-        fi
-
-        if [ "$mod_ui" = "yes" ]; then
-            targets="$targets mod_ui"
-            libraries="$libraries mod_ui$libsuffix"
         fi
     fi
 else
@@ -500,9 +493,6 @@ echo "#define USE_AUTOREPLY 1" >> $config_h
 if [ "$hardlink" = "yes" ]; then
     echo "REF_HARD_LINKED=yes" >> $config_mk
     echo "#define REF_HARD_LINKED 1" >> $config_h
-
-    echo "UI_HARD_LINKED=yes" >> $config_mk
-    echo "#define UI_HARD_LINKED 1" >> $config_h
 
     echo "#define OPENGL_RENDERER 1" >> $config_h
     echo "#define TRUECOLOR_RENDERER 1" >> $config_h

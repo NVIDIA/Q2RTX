@@ -85,7 +85,7 @@ qboolean IF_KeyEvent( inputField_t *field, int key ) {
 		return qtrue;
 	}
 	
-	if( key == K_BACKSPACE || ( key == 'h' && keys.IsDown( K_CTRL ) ) ) {
+	if( key == K_BACKSPACE || ( key == 'h' && Key_IsDown( K_CTRL ) ) ) {
 		if( field->cursorPos > 0 ) {
 			memmove( field->text + field->cursorPos - 1,
                 field->text + field->cursorPos,
@@ -95,7 +95,7 @@ qboolean IF_KeyEvent( inputField_t *field, int key ) {
 		return qtrue;
 	}
 
-    if( key == 'w' && keys.IsDown( K_CTRL ) ) {
+    if( key == 'w' && Key_IsDown( K_CTRL ) ) {
         size_t oldpos = field->cursorPos;
 
         // kill trailing whitespace
@@ -112,38 +112,38 @@ qboolean IF_KeyEvent( inputField_t *field, int key ) {
         return qtrue;
     }
 
-    if( key == 'u' && keys.IsDown( K_CTRL ) ) {
+    if( key == 'u' && Key_IsDown( K_CTRL ) ) {
 		memmove( field->text, field->text + field->cursorPos,
             sizeof( field->text ) - field->cursorPos );
         field->cursorPos = 0;
         return qtrue;
     }
 
-    if( key == 'k' && keys.IsDown( K_CTRL ) ) {
+    if( key == 'k' && Key_IsDown( K_CTRL ) ) {
         field->text[field->cursorPos] = 0;
         return qtrue;
     }
 
-    if( key == 'c' && keys.IsDown( K_CTRL ) ) {
+    if( key == 'c' && Key_IsDown( K_CTRL ) ) {
         sys.SetClipboardData( field->text );
         return qtrue;
     }
 	
-	if( key == K_LEFTARROW || ( key == 'b' && keys.IsDown( K_CTRL ) ) ) {
+	if( key == K_LEFTARROW || ( key == 'b' && Key_IsDown( K_CTRL ) ) ) {
 		if( field->cursorPos > 0 ) {
 			field->cursorPos--;
 		}
 		return qtrue;
 	}
 
-	if( key == K_RIGHTARROW || ( key == 'f' && keys.IsDown( K_CTRL ) ) ) {
+	if( key == K_RIGHTARROW || ( key == 'f' && Key_IsDown( K_CTRL ) ) ) {
 		if( field->text[field->cursorPos] ) {
 			field->cursorPos++;
 		}
 		return qtrue;
 	}
 
-	if( key == 'b' && keys.IsDown( K_ALT ) ) {
+	if( key == 'b' && Key_IsDown( K_ALT ) ) {
 		if( field->cursorPos > 0 && field->text[field->cursorPos - 1] <= 32 ) {
 			field->cursorPos--;
 		}
@@ -156,7 +156,7 @@ qboolean IF_KeyEvent( inputField_t *field, int key ) {
 		return qtrue;
 	}
 
-	if( key == 'f' && keys.IsDown( K_ALT ) ) {
+	if( key == 'f' && Key_IsDown( K_ALT ) ) {
 		while( field->text[field->cursorPos] && field->text[field->cursorPos] <= 32 ) {
 			field->cursorPos++;
 		}
@@ -166,18 +166,18 @@ qboolean IF_KeyEvent( inputField_t *field, int key ) {
 		return qtrue;
 	}
 
-	if( key == K_HOME || ( key == 'a' && keys.IsDown( K_CTRL ) ) ) {
+	if( key == K_HOME || ( key == 'a' && Key_IsDown( K_CTRL ) ) ) {
 		field->cursorPos = 0;
 		return qtrue;
 	}
 
-	if( key == K_END || ( key == 'e' && keys.IsDown( K_CTRL ) ) ) {
+	if( key == K_END || ( key == 'e' && Key_IsDown( K_CTRL ) ) ) {
 		field->cursorPos = strlen( field->text );
 		return qtrue;
 	}
 
 	if( key == K_INS ) {
-		keys.SetOverstrikeMode( keys.GetOverstrikeMode() ^ 1 );
+		Key_SetOverstrikeMode( Key_GetOverstrikeMode() ^ 1 );
 		return qtrue;
 	}
 
@@ -200,7 +200,7 @@ qboolean IF_CharEvent( inputField_t *field, int key ) {
 		return qtrue;
 	}
 
-	if( keys.GetOverstrikeMode() ) {
+	if( Key_GetOverstrikeMode() ) {
 		// replace the character at cursor and advance
 		field->text[field->cursorPos] = key;
 		field->cursorPos++;
@@ -259,7 +259,7 @@ int IF_Draw( inputField_t *field, int x, int y, int flags, qhandle_t hFont ) {
 
     /* draw blinking cursor */
     if( ( sys.Milliseconds() >> 8 ) & 1 ) {
-        int c = keys.GetOverstrikeMode() ? 11 : '_';
+        int c = Key_GetOverstrikeMode() ? 11 : '_';
         ref.DrawChar( x + cursorPos * cw, y, flags, c, hFont );
     }
     return ret;

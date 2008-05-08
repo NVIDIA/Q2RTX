@@ -1116,7 +1116,7 @@ void GL_InitImages( void ) {
 	R_GetPalette( NULL );
 
 	if( gl_intensity->value < 1 ) {
-		cvar.SetValue( "intensity", 1 );
+		cvar.Set( "intensity", "1" );
 	}
 	f = gl_intensity->value;
 	for( i = 0; i < 256; i++ ) {

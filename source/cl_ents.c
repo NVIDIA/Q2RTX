@@ -143,10 +143,6 @@ INTERPOLATE BETWEEN FRAMES TO GET RENDERING PARMS
 ==========================================================================
 */
 
-// PMM - used in shell code 
-extern int Developer_searchpath (int who);
-// pmm
-
 /*
 ===============
 CL_AddPacketEntities
@@ -390,41 +386,35 @@ static void CL_AddPacketEntities( void ) {
 			// PMM - at this point, all of the shells have been handled
 			// if we're in the rogue pack, set up the custom mixing, otherwise just
 			// keep going
-//			if(Developer_searchpath(2) == 2)
-//			{
+			if(!strcmp(fs_game->string,"rogue"))
+			{
 				// all of the solo colors are fine.  we need to catch any of the combinations that look bad
 				// (double & half) and turn them into the appropriate color, and make double/quad something special
 				if (renderfx & RF_SHELL_HALF_DAM)
 				{
-					if(Developer_searchpath(2) == 2)
-					{
-						// ditch the half damage shell if any of red, blue, or double are on
-						if (renderfx & (RF_SHELL_RED|RF_SHELL_BLUE|RF_SHELL_DOUBLE))
-							renderfx &= ~RF_SHELL_HALF_DAM;
-					}
+                    // ditch the half damage shell if any of red, blue, or double are on
+                    if (renderfx & (RF_SHELL_RED|RF_SHELL_BLUE|RF_SHELL_DOUBLE))
+                        renderfx &= ~RF_SHELL_HALF_DAM;
 				}
 
 				if (renderfx & RF_SHELL_DOUBLE)
 				{
-					if(Developer_searchpath(2) == 2)
-					{
-						// lose the yellow shell if we have a red, blue, or green shell
-						if (renderfx & (RF_SHELL_RED|RF_SHELL_BLUE|RF_SHELL_GREEN))
-							renderfx &= ~RF_SHELL_DOUBLE;
-						// if we have a red shell, turn it to purple by adding blue
-						if (renderfx & RF_SHELL_RED)
-							renderfx |= RF_SHELL_BLUE;
-						// if we have a blue shell (and not a red shell), turn it to cyan by adding green
-						else if (renderfx & RF_SHELL_BLUE) {
-							// go to green if it's on already, otherwise do cyan (flash green)
-							if (renderfx & RF_SHELL_GREEN)
-								renderfx &= ~RF_SHELL_BLUE;
-							else
-								renderfx |= RF_SHELL_GREEN;
-						}
-					}
+                    // lose the yellow shell if we have a red, blue, or green shell
+                    if (renderfx & (RF_SHELL_RED|RF_SHELL_BLUE|RF_SHELL_GREEN))
+                        renderfx &= ~RF_SHELL_DOUBLE;
+                    // if we have a red shell, turn it to purple by adding blue
+                    if (renderfx & RF_SHELL_RED)
+                        renderfx |= RF_SHELL_BLUE;
+                    // if we have a blue shell (and not a red shell), turn it to cyan by adding green
+                    else if (renderfx & RF_SHELL_BLUE) {
+                        // go to green if it's on already, otherwise do cyan (flash green)
+                        if (renderfx & RF_SHELL_GREEN)
+                            renderfx &= ~RF_SHELL_BLUE;
+                        else
+                            renderfx |= RF_SHELL_GREEN;
+                    }
 				}
-//			}
+			}
 			// pmm
 			ent.flags = renderfx | RF_TRANSLUCENT;
 			ent.alpha = 0.30;

@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2003-2006 Andrey Nazarov
+Copyright (C) 2003-2008 Andrey Nazarov
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -18,46 +18,23 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#define UI_APIVERSION	2
-
-typedef enum uiMenu_e {
-	UIMENU_NONE,
-	UIMENU_MAIN,
-	UIMENU_MAIN_FORCE,
-	UIMENU_INGAME
+typedef enum {
+    UIMENU_NONE,
+    UIMENU_MAIN,
+    UIMENU_MAIN_FORCE,
+    UIMENU_INGAME
 } uiMenu_t;
 
-typedef struct uiAPI_s {
-	qboolean	(*Init)( void );
-	void		(*Shutdown)( void );
-	void		(*ModeChanged)( void );
-
-	void		(*Draw)( int realtime );
-	void		(*DrawLoading)( int realtime );
-	void		(*MouseEvent)( int x, int y );
-	void		(*Keydown)( int key );
-	void		(*CharEvent)( int key );
-	void		(*OpenMenu)( uiMenu_t menu );
-	void		(*ErrorMenu)( comErrorType_t type, const char *text );
-	void		(*AddToServerList)( const serverStatus_t *status );
-	qboolean	(*IsTransparent)( void );
-} uiAPI_t;
-
-extern uiAPI_t ui;
-
-qboolean	UI_Init( void );
-void		UI_Shutdown( void );
+qboolean    UI_Init( void );
+void    	UI_Shutdown( void );
 void        UI_ModeChanged( void );
-void		UI_Keydown( int key );
-void		UI_CharEvent( int key );
-void		UI_Draw( int realtime );
-void		UI_OpenMenu( uiMenu_t menu );
-void		UI_ErrorMenu( comErrorType_t type, const char *text );
-void		UI_AddToServerList( const serverStatus_t *status );
-void		UI_MouseEvent( int x, int y );
-qboolean	UI_IsTransparent( void );
-void		UI_DrawLoading( int realtime );
-
-
-
+void    	UI_Keydown( int key );
+void    	UI_CharEvent( int key );
+void    	UI_Draw( int realtime );
+void    	UI_OpenMenu( uiMenu_t menu );
+void    	UI_ErrorMenu( comErrorType_t type, const char *text );
+void    	UI_AddToServerList( const serverStatus_t *status );
+void    	UI_MouseEvent( int x, int y );
+qboolean    UI_IsTransparent( void );
+void    	UI_DrawLoading( int realtime );
 

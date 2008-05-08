@@ -374,6 +374,9 @@ void VID_PumpEvents( void ) {
                 return;
             }
             break;
+        case SDL_VIDEOEXPOSE:
+            SCR_UpdateScreen();
+            break;
         case SDL_KEYDOWN:
             KeyEvent( &event.key.keysym, qtrue );
             break;

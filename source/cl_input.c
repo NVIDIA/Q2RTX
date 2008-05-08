@@ -789,7 +789,7 @@ static inline qboolean CL_ReadyToSend( void ) {
     }
 
     if( cl_maxpackets->integer < 10 ) {
-        Cvar_SetInteger( "cl_maxpackets", 10 );
+        Cvar_Set( "cl_maxpackets", "10" );
     }
 
     msec = 1000 / cl_maxpackets->integer;

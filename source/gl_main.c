@@ -912,7 +912,7 @@ static qboolean GL_Init( qboolean total ) {
 	}
 
 	if( gl_hwgamma->integer && !( gl_config.flags & QVF_GAMMARAMP ) ) {
-		cvar.SetInteger( "vid_hwgamma", 0 );
+		cvar.Set( "vid_hwgamma", "0" );
 		Com_Printf( "Hardware gamma is not supported by this video driver\n" );
 	}
 

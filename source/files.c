@@ -117,7 +117,9 @@ typedef struct fsLink_s {
     char name[1];
 } fsLink_t;
 
+// these point to user home directory
 static char		fs_gamedir[MAX_OSPATH];
+//static char		fs_basedir[MAX_OSPATH];
 
 static cvar_t	*fs_debug;
 static cvar_t	*fs_restrict_mask;
@@ -222,12 +224,17 @@ static fsFile_t *FS_FileForHandle( fileHandle_t f ) {
 	return file;
 }
 
-qboolean FS_ValidatePath( const char *s ) {
+/*
+================
+FS_ValidatePath
+================
+*/
+static qboolean FS_ValidatePath( const char *s ) {
 	const char *start;
 
 	// check for leading slash
 	// check for empty path
-	if( *s == '/' || *s == '\\' || *s == 0 ) {
+	if( *s == '/' || *s == '\\' /*|| *s == 0*/ ) {
 		return qfalse;
 	}
 
@@ -260,27 +267,6 @@ qboolean FS_ValidatePath( const char *s ) {
 
 	return qtrue;
 }
-
-/*
-================
-FS_ConvertToSysPath
-================
-*/
-#if 0
-static char *FS_ConvertToSysPath( char *path ) {
-	char *s;
-
-	s = path;
-	while( *s ) {
-		if( *s == '/' || *s == '\\' ) {
-			*s = PATH_SEP_CHAR;
-		}
-		s++;
-	}
-
-	return path;
-}
-#endif
 
 /*
 ================
@@ -353,7 +339,6 @@ void FS_CreatePath( const char *path ) {
 	char *ofs;
 
 	Q_strncpyz( buffer, path, sizeof( buffer ) );
-	//FS_ConvertToSysPath( buffer );
 
 	FS_DPrintf( "%s: %s\n", __func__, buffer );
 	
@@ -365,6 +350,46 @@ void FS_CreatePath( const char *path ) {
 			*ofs = '/';
 		}
 	}
+}
+
+qboolean FS_FilterFile( fileHandle_t f ) {
+#if USE_ZLIB
+	fsFile_t *file = FS_FileForHandle( f );
+    int mode;
+    char *modeStr;
+	void *zfp;
+
+    switch( file->type ) {
+    case FS_GZIP:
+        return qtrue;
+    case FS_REAL:
+        break;
+    default:
+        return qfalse;
+    }
+
+	mode = file->mode & FS_MODE_MASK;
+	switch( mode ) {
+	case FS_MODE_READ:
+        modeStr = "rb";
+	case FS_MODE_WRITE:
+		modeStr = "wb";
+		break;
+	default:
+        return qfalse;
+	}
+
+    zfp = gzdopen( fileno( file->fp ), modeStr );
+    if( !zfp ) {
+        return qfalse;
+    }
+
+    file->zfp = zfp;
+    file->type = FS_GZIP;
+    return qtrue;
+#else
+    return qfalse;
+#endif
 }
 
 
@@ -416,18 +441,11 @@ void FS_FCloseFile( fileHandle_t f ) {
 /*
 ============
 FS_FOpenFileWrite
-
-In case of GZIP files, returns *raw* (compressed) length!
 ============
 */
 static size_t FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
 	FILE *fp;
-#if USE_ZLIB
-	gzFile zfp;
-	char *ext;
-#endif
 	char *modeStr;
-	fsFileType_t type;
 	unsigned mode;
 
 #ifdef _WIN32
@@ -460,8 +478,6 @@ static size_t FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
 		break;
 	}
 
-	//FS_ConvertToSysPath( file->fullpath );
-
 	FS_CreatePath( file->fullpath );
 
 	fp = fopen( file->fullpath, modeStr );
@@ -480,28 +496,10 @@ static size_t FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
     }
 #endif
 
-	type = FS_REAL;
-#if USE_ZLIB
-	if( !( file->mode & FS_FLAG_RAW ) ) {
-		ext = COM_FileExtension( file->fullpath );
-		if( !FS_strcmp( ext, ".gz" ) ) {
-			zfp = gzdopen( fileno( fp ), modeStr );
-			if( !zfp ) {
-				FS_DPrintf( "%s: %s: gzdopen(%s): %s\n",
-					__func__, file->fullpath, modeStr, strerror( errno ) );
-				fclose( fp );
-				return INVALID_LENGTH;
-			}
-			file->zfp = zfp;
-			type = FS_GZIP;
-		}
-	}
-#endif
-
 	FS_DPrintf( "%s: %s: succeeded\n", __func__, file->fullpath );
 
 	file->fp = fp;
-	file->type = type;
+	file->type = FS_REAL;
 	file->length = 0;
 	file->unique = qtrue;
 
@@ -533,11 +531,6 @@ static size_t FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean uniqu
 	unsigned		hash;
 	packfile_t		*entry;
 	FILE			*fp;
-#if USE_ZLIB
-	void			*zfp;
-	char			*ext;
-#endif
-	fsFileType_t	type;
     fsFileInfo_t    info;
 
 	fs_fileFromPak = qfalse;
@@ -574,6 +567,8 @@ static size_t FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean uniqu
 					// open a new file on the pakfile
 #if USE_ZLIB
 					if( pak->zFile ) {
+                        void *zfp;
+
 						if( unique ) {
 							zfp = unzReOpen( pak->filename, pak->zFile );
 							if( !zfp ) {
@@ -626,8 +621,6 @@ static size_t FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean uniqu
 			Q_concat( file->fullpath, sizeof( file->fullpath ),
 				search->filename, "/", name, NULL );
 
-			//FS_ConvertToSysPath( file->fullpath );
-
             fs_count_open++;
 			fp = fopen( file->fullpath, "rb" );
 			if( !fp ) {
@@ -641,25 +634,8 @@ static size_t FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean uniqu
                 continue;
             }
 
-			type = FS_REAL;
-#if USE_ZLIB
-			if( !( file->mode & FS_FLAG_RAW ) ) {
-				ext = COM_FileExtension( file->fullpath );
-				if( !strcmp( ext, ".gz" ) ) {
-					zfp = gzdopen( fileno( fp ), "rb" );
-					if( !zfp ) {
-						FS_DPrintf( "%s: %s: gzdopen(rb): %s\n",
-                            __func__, file->fullpath, strerror( errno ) );
-						fclose( fp );
-						continue;
-					}
-					file->zfp = zfp;
-					type = FS_GZIP;
-				}
-			}
-#endif
 			file->fp = fp;
-			file->type = type;
+			file->type = FS_REAL;
 			file->unique = qtrue;
 			file->length = info.size;
 
@@ -1068,7 +1044,7 @@ void *FS_AllocTempMem( size_t length ) {
         loadLast = buf;
         loadSaved = loadInuse;
         loadInuse += length;
-        loadInuse = ( loadInuse + 3 ) & ~3;
+        loadInuse = ( loadInuse + 31 ) & ~31;
         loadStack++;
         loadCountStatic++;
     } else {
@@ -1200,9 +1176,6 @@ qboolean FS_RenameFile( const char *from, const char *to ) {
 
 	Q_concat( frompath, sizeof( frompath ), fs_gamedir, "/", from, NULL );
 	Q_concat( topath, sizeof( topath ), fs_gamedir, "/", to, NULL );
-
-//	FS_ConvertToSysPath( frompath );
-//	FS_ConvertToSysPath( topath );
 
 	if( !Sys_RenameFile( frompath, topath ) ) {
 		FS_DPrintf( "FS_RenameFile: rename failed: %s to %s\n", frompath, topath );
@@ -2424,11 +2397,8 @@ FS_DefaultGamedir
 */
 static void FS_DefaultGamedir( void ) {
     if( sys_homedir->string[0] ) {
-    	FS_AddGameDirectory( FS_PATH_BASE|FS_PATH_GAME, "%s/"BASEGAME, sys_homedir->string );
-    } else {
-        // already added as basedir
-    	Q_concat( fs_gamedir, sizeof( fs_gamedir ),
-            sys_basedir->string, "/" BASEGAME, NULL );
+    	FS_AddGameDirectory( FS_PATH_BASE|FS_PATH_GAME,
+            "%s/"BASEGAME, sys_homedir->string );
     }
 
 	Cvar_Set( "game", "" );
@@ -2650,24 +2620,4 @@ qboolean FS_NeedRestart( void ) {
 	
 	return qfalse;
 }
-
-
-// TODO: remove it
-int	Developer_searchpath( int who ) {
-	if( !strcmp( fs_game->string, "xatrix" ) ) {
-		return 1;
-	}
-
-	if( !strcmp( fs_game->string, "rogue" ) ) {
-		return 1;
-	}
-
-	return 0;
-
-
-}
-
-
-
-
 

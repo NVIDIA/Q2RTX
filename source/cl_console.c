@@ -879,12 +879,14 @@ void Con_RunConsole( void ) {
 	}
 
 	if( cls.state > ca_disconnected && cls.state < ca_active ) {
+#if 0
 		if( !cls.ui_initialized ) {
 			// draw half-screen console
 			con.destHeight = min( con.maxHeight, 0.5f );
 			con.currentHeight = con.destHeight;
 			return;
 		}
+#endif
 	}
 
 // decide on the height of the console

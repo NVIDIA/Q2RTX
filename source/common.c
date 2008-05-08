@@ -167,7 +167,7 @@ static void LogFile_Open( void ) {
 
 	if( !com_logFile ) {
 		Com_WPrintf( "Couldn't open %s\n", logfile_name->string );
-		Cvar_SetInteger( "logfile", 0 );
+		Cvar_Set( "logfile", "0" );
 		return;
 	}
 

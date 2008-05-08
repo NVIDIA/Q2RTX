@@ -296,9 +296,9 @@ cvar_t 	*Cvar_Set( const char *var_name, const char *value );
 cvar_t 	*Cvar_SetEx( const char *var_name, const char *value, cvarSetSource_t source );
 // will create the variable if it doesn't exist
 
-void	Cvar_SetValue( const char *var_name, float value );
-void    Cvar_SetInteger( const char *var_name, int value );
-void    Cvar_SetIntegerHex( const char *var_name, unsigned value );
+void    Cvar_SetValue( cvar_t *var, float value, cvarSetSource_t source );
+void    Cvar_SetInteger( cvar_t *var, int value, cvarSetSource_t source );
+void    Cvar_SetHex( cvar_t *var, int value, cvarSetSource_t source );
 // expands value to a string and calls Cvar_Set
 
 float	Cvar_VariableValue( const char *var_name );
@@ -861,6 +861,7 @@ char    *FS_CopyExtraInfo( const char *name, const fsFileInfo_t *info );
 
 size_t	FS_FOpenFile( const char *filename, fileHandle_t *f, int mode );
 void	FS_FCloseFile( fileHandle_t hFile );
+qboolean FS_FilterFile( fileHandle_t f );
 
 size_t	FS_LoadFile( const char *path, void  **buffer );
 size_t	FS_LoadFileEx( const char *path, void **buffer, int flags, memtag_t tag );
@@ -1108,6 +1109,7 @@ void Con_Printf( const char *fmt, ... );
 void Con_SetMaxHeight( float frac );
 void SCR_BeginLoadingPlaque (void);
 void SCR_ModeChanged( void );
+void SCR_UpdateScreen( void );
 void CL_LocalConnect( void );
 void CL_RestartFilesystem( void );
 void CL_Activate( active_t active );

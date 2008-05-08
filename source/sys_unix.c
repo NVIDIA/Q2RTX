@@ -817,7 +817,7 @@ void Sys_Init( void ) {
                 Sys_InitTTY(); 
             } else {
                 Com_DPrintf( "stdin in not a tty, tty input disabled.\n" );
-                Cvar_SetInteger( "sys_stdio", 1 );
+                Cvar_Set( "sys_stdio", "1" );
             }
         }
     }

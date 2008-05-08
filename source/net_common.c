@@ -258,7 +258,7 @@ static void NetLogFile_Open( void ) {
 
 	if( !net_logFile ) {
 		Com_WPrintf( "Couldn't open %s\n", net_log_name->string );
-		Cvar_SetInteger( "net_log_active", 0 );
+		Cvar_Set( "net_log_active", "0" );
 		return;
 	}
 
@@ -722,10 +722,10 @@ static void NET_OpenServer( void ) {
 
         if( i ) {
             Com_WPrintf( "Server bound to UDP port %d.\n", port );
-            Cvar_SetInteger( "net_port", port );
+            Cvar_SetInteger( net_port, port, CVAR_SET_DIRECT );
         }
         // set this for compatibility with game mods
-        Cvar_SetInteger( "port", port );
+        Cvar_Set( "port", net_port->string );
         return;
 	}
 
@@ -1252,7 +1252,7 @@ void NET_Init( void ) {
     {
         Com_Printf( "NOTICE: net_port overriden to %d "
             "by deprecated cvar\n", i );
-        Cvar_SetInteger( "net_port", i );
+        Cvar_SetInteger( net_port, i, CVAR_SET_DIRECT );
     }
 
     if( ( i = Cvar_VariableInteger( "ip_clientport" ) ) ||
@@ -1260,7 +1260,7 @@ void NET_Init( void ) {
     {
         Com_Printf( "NOTICE: net_clientport overriden to %d "
             "by deprecated cvar\n", i );
-        Cvar_SetInteger( "net_clientport", i );
+        Cvar_SetInteger( net_clientport, i, CVAR_SET_DIRECT );
     }
 
     if( net_log_active->integer ) {

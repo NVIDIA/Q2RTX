@@ -34,6 +34,12 @@ ACTION CONTROL
 ===================================================================
 */
 
+static void Action_Free( menuAction_t *a ) {
+    Z_Free( a->generic.name );
+    Z_Free( a->cmd );
+    Z_Free( a );
+}
+
 /*
 =================
 Action_Init
@@ -70,46 +76,6 @@ static void Action_Draw( menuAction_t *a ) {
 /*
 ===================================================================
 
-BITMAP CONTROL
-
-===================================================================
-*/
-
-/*
-=================
-Bitmap_Init
-=================
-*/
-void Bitmap_Init( menuBitmap_t *b ) {
-	if( !b->generic.name ) {
-		Com_Error( ERR_FATAL, "Bitmap_Init: NULL b->generic.name" );
-	}
-
-	b->generic.rect.x = b->generic.x;
-	b->generic.rect.y = b->generic.y;
-	b->generic.rect.width = b->generic.width;
-	b->generic.rect.height = b->generic.height;
-
-	b->pic = ref.RegisterPic( b->generic.name );
-	if( !b->pic && b->errorImage ) {
-		b->pic = ref.RegisterPic( b->errorImage );
-	}
-
-}
-
-/*
-=================
-Bitmap_Draw
-=================
-*/
-static void Bitmap_Draw( menuBitmap_t *b ) {
-	ref.DrawStretchPic( b->generic.x, b->generic.y,
-		b->generic.width, b->generic.height, b->pic );
-}
-
-/*
-===================================================================
-
 STATIC CONTROL
 
 ===================================================================
@@ -134,7 +100,6 @@ static void Static_Init( menuStatic_t *s ) {
 
 	UI_StringDimensions( &s->generic.rect,
 		s->generic.uiFlags, s->generic.name );
-
 }
 
 /*
@@ -156,6 +121,12 @@ KEYBIND CONTROL
 ===================================================================
 */
 
+static void Keybind_Free( menuKeybind_t *k ) {
+    Z_Free( k->generic.name );
+    Z_Free( k->cmd );
+    Z_Free( k );
+}
+
 /*
 =================
 Keybind_Init
@@ -174,9 +145,6 @@ static void Keybind_Init( menuKeybind_t *k ) {
 	UI_StringDimensions( &k->generic.rect,
 		k->generic.uiFlags | UI_RIGHT, k->generic.name );
 
-	k->generic.rect.x = k->generic.x;
-	k->generic.rect.y = k->generic.y;
-
 	k->generic.rect.width += ( RCOLUMN_OFFSET - LCOLUMN_OFFSET ) +
 		Q_DrawStrlen( k->binding ) * CHAR_WIDTH;
 }
@@ -194,9 +162,9 @@ static void Keybind_Draw( menuKeybind_t *k ) {
 	color = NULL;
 	flags = UI_ALTCOLOR;
 	if( k->generic.flags & QMF_HASFOCUS ) {
-		if( k->generic.parent->keywait ) {
-			//UI_DrawChar( k->generic.x + RCOLUMN_OFFSET / 2, k->generic.y, k->generic.uiFlags | UI_RIGHT, '=' );
-		} else if( ( uis.realtime >> 8 ) & 1 ) {
+		/*if( k->generic.parent->keywait ) {
+			UI_DrawChar( k->generic.x + RCOLUMN_OFFSET / 2, k->generic.y, k->generic.uiFlags | UI_RIGHT, '=' );
+		} else*/ if( ( uis.realtime >> 8 ) & 1 ) {
 			UI_DrawChar( k->generic.x + RCOLUMN_OFFSET / 2, k->generic.y, k->generic.uiFlags | UI_RIGHT, 13 );
 		}
 	} else {
@@ -220,6 +188,78 @@ static void Keybind_Draw( menuKeybind_t *k ) {
 	UI_DrawString( k->generic.x + RCOLUMN_OFFSET, k->generic.y, color,
 		k->generic.uiFlags | UI_LEFT, string );
 }
+
+static menuSound_t Keybind_DoEnter( menuKeybind_t *k ) {
+    menuFrameWork_t *menu = k->generic.parent;
+
+    menu->keywait = qtrue;
+    menu->status = "Press the desired key, Escape to cancel";
+    return QMS_IN;
+}
+
+static void Keybind_Push( menuKeybind_t *k ) {
+    int key = Key_EnumBindings( 0, k->cmd );
+    k->altbinding[0] = 0;
+    if( key == -1 ) {
+        strcpy( k->binding, "???" );
+    } else {
+        strcpy( k->binding, Key_KeynumToString( key ) );
+        key = Key_EnumBindings( key + 1, k->cmd );
+        if( key != -1 ) {
+            strcpy( k->altbinding, Key_KeynumToString( key ) );
+        }
+    }
+}
+
+static void Keybind_Update( menuFrameWork_t *menu ) {
+    menuKeybind_t *k;
+    int i;
+
+	for( i = 0; i < menu->nitems; i++ ) {
+		k = menu->items[i];
+        if( k->generic.type == MTYPE_KEYBIND ) {
+            Keybind_Push( k );
+        }
+    }
+}
+
+static void Keybind_Remove( const char *cmd ) {
+    int key;
+
+    for( key = 0; ; key++ ) {
+        key = Key_EnumBindings( key, cmd );
+        if( key == -1 ) {
+            break;
+        }
+        Key_SetBinding( key, NULL );
+    }
+}
+
+static menuSound_t Keybind_Key( menuKeybind_t *k, int key ) {
+    menuFrameWork_t *menu = k->generic.parent;
+
+    if( menu->keywait ) {
+        if( key != K_ESCAPE ) {
+            if( k->altbinding[0] ) {
+                Keybind_Remove( k->cmd );
+            }
+            Key_SetBinding( key, k->cmd );
+        }
+        Keybind_Update( menu );
+        menu->keywait = qfalse;
+        menu->status = "Press Enter to change, Backspace to clear";
+        return QMS_OUT;
+    }
+    
+    if( key == K_BACKSPACE || key == K_DEL ) {
+        Keybind_Remove( k->cmd );
+        Keybind_Update( menu );
+        return QMS_IN;
+    }
+
+    return QMS_NOTHANDLED;
+}
+
 
 /*
 ===================================================================
@@ -311,7 +351,9 @@ static int Field_Char( menuField_t *f, int key ) {
 	}
 
 	ret = IF_CharEvent( &f->field, key );
-	UI_CALLBACK( f, QM_CHANGE, ret );
+    if( f->generic.change ) {
+        f->generic.change( &f->generic );
+    }
 
 	return ret ? QMS_SILENT : QMS_NOTHANDLED;
 }
@@ -324,13 +366,35 @@ SPIN CONTROL
 ===================================================================
 */
 
+static void SpinControl_Push( menuSpinControl_t *s ) {
+    int val = s->cvar->integer;
+    clamp( val, 0, s->numItems - 1 );
+    s->curvalue = val;
+}
+
+static void SpinControl_Pop( menuSpinControl_t *s ) {
+    Cvar_SetInteger( s->cvar, s->curvalue, CVAR_SET_CONSOLE );
+}
+
+static void SpinControl_Free( menuSpinControl_t *s ) {
+    int i;
+
+    Z_Free( s->generic.name );
+    for( i = 0; i < s->numItems; i++ ) {
+        Z_Free( s->itemnames[i] );
+    }
+    Z_Free( s->itemnames );
+    Z_Free( s );
+}
+
+
 /*
 =================
 SpinControl_Init
 =================
 */
 void SpinControl_Init( menuSpinControl_t *s ) {
-	const char **n;
+	char **n;
 	int	maxLength, length;
 
 	s->generic.uiFlags &= ~( UI_LEFT | UI_RIGHT );
@@ -356,7 +420,6 @@ void SpinControl_Init( menuSpinControl_t *s ) {
 
 	s->generic.rect.width += ( RCOLUMN_OFFSET - LCOLUMN_OFFSET ) +
 		maxLength * CHAR_WIDTH;
-
 }
 
 /*
@@ -365,14 +428,14 @@ SpinControl_DoEnter
 =================
 */
 static int SpinControl_DoEnter( menuSpinControl_t *s ) {
-	int		oldvalue = s->curvalue;
-
 	s->curvalue++;
 
 	if( s->curvalue >= s->numItems )
 		s->curvalue = 0;
 
-	UI_CALLBACK( s, QM_CHANGE, oldvalue );
+    if( s->generic.change ) {
+        s->generic.change( &s->generic );
+    }
 
 	return QMS_MOVE;
 }
@@ -383,8 +446,6 @@ SpinControl_DoSlide
 =================
 */
 static int SpinControl_DoSlide( menuSpinControl_t *s, int dir ) {
-	int		oldvalue = s->curvalue;
-
 	s->curvalue += dir;
 
 	if( s->curvalue < 0 ) {
@@ -393,7 +454,9 @@ static int SpinControl_DoSlide( menuSpinControl_t *s, int dir ) {
 		s->curvalue = 0;
 	}
 
-	UI_CALLBACK( s, QM_CHANGE, oldvalue );
+    if( s->generic.change ) {
+        s->generic.change( &s->generic );
+    }
 
 	return QMS_MOVE;
 }
@@ -487,8 +550,8 @@ void MenuList_Init( menuList_t *l ) {
 
 	l->generic.rect.height = l->generic.height;
 
-    if( l->sortdir ) {
-    	UI_CALLBACK( l, QM_SORT, l->sortcol );
+    if( l->sortdir && l->sort ) {
+    	l->sort( l, l->sortcol );
     }
 }
 
@@ -502,7 +565,9 @@ void MenuList_SetValue( menuList_t *l, int value ) {
 
     if( value != l->curvalue ) {
     	l->curvalue = value;
-	    UI_CALLBACK( l, QM_CHANGE, value );
+        if( l->generic.change ) {
+            l->generic.change( &l->generic );
+        }
     }
 
 	MenuList_AdjustPrestep( l );
@@ -515,7 +580,10 @@ static int MenuList_SetColumn( menuList_t *l, int value ) {
         l->sortcol = value;
         l->sortdir = 1;
     }
-    return UI_CALLBACK( l, QM_SORT, value );
+    if( l->sort ) {
+    	l->sort( l, l->sortcol );
+    }
+    return QMS_SILENT;
 }
 
 
@@ -556,12 +624,20 @@ static int MenuList_Click( menuList_t *l ) {
 	j = min( l->numItems, l->prestep + l->maxItems );
 	for( i = l->prestep; i < j; i++ ) {
 		if( UI_CursorInRect( &rect ) ) {
-            if( l->curvalue == i && uis.realtime - l->clickTime < DOUBLE_CLICK_DELAY ) {
-                return UI_CALLBACK( l, QM_ACTIVATE, i );
+            if( l->curvalue == i && uis.realtime -
+                l->clickTime < DOUBLE_CLICK_DELAY )
+            {
+                if( l->generic.activate ) {
+                    return l->generic.activate( &l->generic );
+                }
+                return QMS_SILENT;
             }
             l->clickTime = uis.realtime;
             l->curvalue = i;
-            return UI_CALLBACK( l, QM_CHANGE, i );
+            if( l->generic.change ) {
+                return l->generic.change( &l->generic );
+            }
+            return QMS_SILENT;
 		}
 		rect.y += MLIST_SPACING;
 	}
@@ -581,7 +657,7 @@ static int MenuList_Key( menuList_t *l, int key ) {
 		return QMS_NOTHANDLED;
 	}
 
-    if( keys.IsDown( K_ALT ) && Q_isdigit( key ) ) {
+    if( Key_IsDown( K_ALT ) && Q_isdigit( key ) ) {
         int col = key == '0' ? 9 : key - '0' - 1;
         if( l->sortdir && col < l->numcolumns ) {
             return MenuList_SetColumn( l, col );
@@ -649,7 +725,9 @@ static int MenuList_Key( menuList_t *l, int key ) {
     case 'k':
 		if( l->curvalue > 0 ) {
 			l->curvalue--;
-			UI_CALLBACK( l, QM_CHANGE, l->curvalue );
+            if( l->generic.change ) {
+                l->generic.change( &l->generic );
+            }
 	        MenuList_AdjustPrestep( l );
 			return QMS_MOVE;
 		}
@@ -660,7 +738,9 @@ static int MenuList_Key( menuList_t *l, int key ) {
     case 'j':
 		if( l->curvalue < l->numItems - 1 ) {
 			l->curvalue++;
-			UI_CALLBACK( l, QM_CHANGE, l->curvalue );
+            if( l->generic.change ) {
+                l->generic.change( &l->generic );
+            }
 	        MenuList_AdjustPrestep( l );
 			return QMS_MOVE;
 		}
@@ -670,7 +750,9 @@ static int MenuList_Key( menuList_t *l, int key ) {
 	case K_KP_HOME:
 		l->prestep = 0;
 		l->curvalue = 0;
-		UI_CALLBACK( l, QM_CHANGE, l->curvalue );
+        if( l->generic.change ) {
+            l->generic.change( &l->generic );
+        }
 		return QMS_MOVE;
 
 	case K_END:
@@ -679,11 +761,13 @@ static int MenuList_Key( menuList_t *l, int key ) {
 			l->prestep = l->numItems - l->maxItems;
 		}
 		l->curvalue = l->numItems - 1;
-		UI_CALLBACK( l, QM_CHANGE, l->curvalue );
+        if( l->generic.change ) {
+            l->generic.change( &l->generic );
+        }
 		return QMS_MOVE;
 
 	case K_MWHEELUP:
-		if( keys.IsDown( K_CTRL ) ) {
+		if( Key_IsDown( K_CTRL ) ) {
 			l->prestep -= 4;
 		} else {
 			l->prestep -= 2;
@@ -692,7 +776,7 @@ static int MenuList_Key( menuList_t *l, int key ) {
 		return QMS_SILENT;
 
 	case K_MWHEELDOWN:
-		if( keys.IsDown( K_CTRL ) ) {
+		if( Key_IsDown( K_CTRL ) ) {
 			l->prestep += 4;
 		} else {
 			l->prestep += 2;
@@ -896,6 +980,22 @@ SLIDER CONTROL
 
 #define SLIDER_RANGE 10
 
+static void Slider_Push( menuSlider_t *s ) {
+    int val = ( s->cvar->value + s->add ) * s->mul;
+    clamp( val, s->minvalue, s->maxvalue );
+    s->curvalue = val;
+}
+
+void Slider_Pop( menuSlider_t *s ) {
+    float val = s->curvalue / s->mul - s->add;
+    Cvar_SetValue( s->cvar, val, CVAR_SET_CONSOLE );
+}
+
+static void Slider_Free( menuSlider_t *s ) {
+    Z_Free( s->generic.name );
+    Z_Free( s );
+}
+
 static void Slider_Init( menuSlider_t *s ) {
 	int len = strlen( s->generic.name ) * CHAR_WIDTH;
 
@@ -909,7 +1009,6 @@ static void Slider_Init( menuSlider_t *s ) {
 		s->curvalue = s->maxvalue;
 	else if( s->curvalue < s->minvalue )
 		s->curvalue = s->minvalue;
-
 }
 
 static int Slider_Key( menuSlider_t *s, int key ) {
@@ -932,18 +1031,19 @@ Slider_DoSlide
 =================
 */
 static int Slider_DoSlide( menuSlider_t *s, int dir ) {
-	int ret;
-
 	s->curvalue += dir;
 
 	if( s->curvalue > s->maxvalue )
 		s->curvalue = s->maxvalue;
 	else if( s->curvalue < s->minvalue )
 		s->curvalue = s->minvalue;
-	
-	if( ( ret = UI_CALLBACK( s, QM_CHANGE, s->curvalue ) ) != QMS_NOTHANDLED ) {
-		return ret;
-	}
+
+    if( s->generic.change ) {
+        menuSound_t sound = s->generic.change( &s->generic );
+    	if( sound != QMS_NOTHANDLED ) {
+	    	return sound;
+	    }
+    }
 
 	return QMS_SILENT;
 }
@@ -989,7 +1089,7 @@ static void Slider_Draw( menuSlider_t *s ) {
 /*
 ===================================================================
 
-MISC
+SEPARATOR CONTROL
 
 ===================================================================
 */
@@ -1015,15 +1115,24 @@ static void Separator_Draw( menuSeparator_t *s ) {
 }
 
 /*
+===================================================================
+
+MISC
+
+===================================================================
+*/
+
+/*
 =================
 Common_DoEnter
 =================
 */
 static int Common_DoEnter( menuCommon_t *item ) {
-	int ret;
-
-	if( ( ret = item->parent->callback( item->id, QM_ACTIVATE, 0 ) ) != QMS_NOTHANDLED ) {
-		return ret;
+    if( item->activate ) {
+        menuSound_t sound = item->activate( item );
+        if( sound != QMS_NOTHANDLED ) {
+    		return sound;
+        }
 	}
 
 	return QMS_SILENT;
@@ -1050,7 +1159,10 @@ void Menu_Init( menuFrameWork_t *menu ) {
 	int i;
     int focus = 0;
 
-	menu->callback( ID_MENU, QM_SIZE, 0 );
+    if( !menu->size ) {
+        menu->size = Menu_Size;
+    }
+    menu->size( menu );
 
 	for( i = 0; i < menu->nitems; i++ ) {
 		item = menu->items[i];
@@ -1074,9 +1186,6 @@ void Menu_Init( menuFrameWork_t *menu ) {
             break;
         case MTYPE_SEPARATOR:
             Separator_Init( item );
-            break;
-        case MTYPE_BITMAP:
-            Bitmap_Init( item );
             break;
         case MTYPE_STATIC:
             Static_Init( item );
@@ -1152,15 +1261,19 @@ void Menu_SetFocus( menuCommon_t *focus ) {
 
 	menu = focus->parent;
 
-	for( i=0 ; i<menu->nitems ; i++ ) {
+	for( i = 0; i < menu->nitems ; i++ ) {
 		item = (menuCommon_t *)menu->items[i];
 
 		if( item == focus ) {
 			item->flags |= QMF_HASFOCUS;
-			menu->callback( item->id, QM_GOTFOCUS, 0 );
+            if( item->focus ) {
+                item->focus( item, qtrue );
+            }
 		} else if( item->flags & QMF_HASFOCUS ) {
 			item->flags &= ~QMF_HASFOCUS;
-			menu->callback( item->id, QM_LOSTFOCUS, 0 );
+            if( item->focus ) {
+                item->focus( item, qfalse );
+            }
 		}
 	}
 
@@ -1175,7 +1288,7 @@ to adjust the menu's cursor so that it's at the next available
 slot.
 =================
 */
-int Menu_AdjustCursor( menuFrameWork_t *m, int dir ) {
+menuSound_t Menu_AdjustCursor( menuFrameWork_t *m, int dir ) {
 	menuCommon_t *item;
 	int cursor, pos;
 	int i;
@@ -1231,10 +1344,10 @@ void Menu_Draw( menuFrameWork_t *menu ) {
 	int i;
 
 //
-// draw banner
+// draw title bar
 //
-	if( menu->banner ) {
-		UI_DrawString( uis.width / 2, 0, NULL, UI_CENTER|UI_ALTCOLOR, menu->banner );
+	if( menu->title ) {
+		UI_DrawString( uis.width / 2, 0, NULL, UI_CENTER|UI_ALTCOLOR, menu->title );
 	}
 
 //
@@ -1265,9 +1378,6 @@ void Menu_Draw( menuFrameWork_t *menu ) {
 		case MTYPE_SEPARATOR:
 			Separator_Draw( item );
 			break;
-		case MTYPE_BITMAP:
-			Bitmap_Draw( item );
-			break;
 		case MTYPE_STATIC:
 			Static_Draw( item );
 			break;
@@ -1278,19 +1388,23 @@ void Menu_Draw( menuFrameWork_t *menu ) {
 			Com_Error( ERR_FATAL, "Menu_Draw: unknown item type" );
 			break;
 		}
+
+		if( ui_debug->integer ) {
+			UIS_DrawRect( &(( menuCommon_t * )item)->rect, 1, 223 );
+		}
 	}
 
 //
 // draw status bar
 //
-	if( menu->statusbar ) {
+	if( menu->status ) {
 		ref.DrawFill( 0, uis.height - 8, uis.width, 8, 4 );
-		UI_DrawString( uis.width / 2, uis.height - 8, NULL, UI_CENTER, menu->statusbar );
+		UI_DrawString( uis.width / 2, uis.height - 8, NULL, UI_CENTER, menu->status );
 	}
 
 }
 
-int Menu_SelectItem( menuFrameWork_t *s ) {
+menuSound_t Menu_SelectItem( menuFrameWork_t *s ) {
 	menuCommon_t *item;
 
 	if( !( item = Menu_ItemAtCursor( s ) ) ) {
@@ -1302,21 +1416,20 @@ int Menu_SelectItem( menuFrameWork_t *s ) {
 	//	return Slider_DoSlide( (menuSlider_t *)item, 1 );
 	case MTYPE_SPINCONTROL:
 		return SpinControl_DoEnter( (menuSpinControl_t *)item );
+	case MTYPE_KEYBIND:
+        return Keybind_DoEnter( ( menuKeybind_t * )item );
 	case MTYPE_FIELD:
 	case MTYPE_ACTION:
 	case MTYPE_BITMAP:
 	case MTYPE_LIST:
 	case MTYPE_IMAGELIST:
-	case MTYPE_KEYBIND:
 		return Common_DoEnter( item );
+    default:
+	    return QMS_NOTHANDLED;
 	}
-
-	return QMS_NOTHANDLED;
 }
 
-
-
-int Menu_SlideItem( menuFrameWork_t *s, int dir ) {
+menuSound_t Menu_SlideItem( menuFrameWork_t *s, int dir ) {
 	menuCommon_t *item;
 
 	if( !( item = Menu_ItemAtCursor( s ) ) ) {
@@ -1328,77 +1441,174 @@ int Menu_SlideItem( menuFrameWork_t *s, int dir ) {
 		return Slider_DoSlide( (menuSlider_t *)item, dir );
 	case MTYPE_SPINCONTROL:
 		return SpinControl_DoSlide( (menuSpinControl_t *)item, dir );
+    default:
+	    return QMS_NOTHANDLED;
 	}
-
-	return QMS_NOTHANDLED;
-	
 }
 
-int Menu_KeyEvent( menuCommon_t *item, int key ) {
-	int ret;
-
-	if( ( ret = item->parent->callback( item->id, QM_KEY, key ) ) != QMS_NOTHANDLED ) {
-		return ret;
+menuSound_t Menu_KeyEvent( menuCommon_t *item, int key ) {
+    if( item->keydown ) {
+	    menuSound_t sound = item->keydown( item, key );
+        if( sound != QMS_NOTHANDLED ) {
+            return sound;
+        }
 	}
 
 	switch( item->type ) {
 	case MTYPE_FIELD:
-		return Field_Key( (menuField_t *)item, key );
+		return Field_Key( ( menuField_t * )item, key );
 	case MTYPE_LIST:
-		return MenuList_Key( (menuList_t *)item, key );
+		return MenuList_Key( ( menuList_t * )item, key );
 	case MTYPE_SLIDER:
-		return Slider_Key( (menuSlider_t *)item, key );
+		return Slider_Key( ( menuSlider_t * )item, key );
+	case MTYPE_KEYBIND:
+		return Keybind_Key( ( menuKeybind_t * )item, key );
+    default:
+	    return QMS_NOTHANDLED;
 	}
-
-	return QMS_NOTHANDLED;
 }
 
-int Menu_CharEvent( menuCommon_t *item, int key ) {
-	int ret;
-
-	if( ( ret = item->parent->callback( item->id, QM_CHAR, key ) ) != QMS_NOTHANDLED ) {
-		return ret;
-	}
-
+menuSound_t Menu_CharEvent( menuCommon_t *item, int key ) {
 	switch( item->type ) {
 	case MTYPE_FIELD:
 		return Field_Char( (menuField_t *)item, key );
+    default:
+	    return QMS_NOTHANDLED;
+	}
+}
+
+menuSound_t Menu_MouseMove( menuCommon_t *item ) {
+	return QMS_NOTHANDLED;
+}
+
+menuSound_t Menu_DefaultKey( menuFrameWork_t *m, int key ) {
+	menuCommon_t *item;
+	
+	switch( key ) {
+	case K_ESCAPE:
+		UI_PopMenu();
+		return QMS_OUT;
+
+	case K_KP_UPARROW:
+	case K_UPARROW:
+    case 'k':
+		return Menu_AdjustCursor( m, -1 );
+		
+	case K_KP_DOWNARROW:
+	case K_DOWNARROW:
+	case K_TAB:
+    case 'j':
+		return Menu_AdjustCursor( m, 1 );
+
+	case K_KP_LEFTARROW:
+	case K_LEFTARROW:
+	case K_MWHEELDOWN:
+    case 'h':
+		return Menu_SlideItem( m, -1 );
+
+	case K_KP_RIGHTARROW:
+	case K_RIGHTARROW:
+	case K_MWHEELUP:
+    case 'l':
+		return Menu_SlideItem( m, 1 );
+
+	case K_MOUSE1:
+	case K_MOUSE2:
+	case K_MOUSE3:
+		item = Menu_HitTest( m );
+		if( !item ) {
+			return QMS_NOTHANDLED;
+		}
+			
+		if( !( item->flags & QMF_HASFOCUS ) ) {
+			return QMS_NOTHANDLED;
+		}
+
+		// fall through
+
+	case K_JOY1:
+	case K_JOY2:
+	case K_JOY3:
+	case K_JOY4:
+	case K_AUX1:
+	case K_AUX2:
+	case K_AUX3:
+	case K_AUX4:
+	case K_AUX5:
+	case K_AUX6:
+	case K_AUX7:
+	case K_AUX8:
+	case K_AUX9:
+	case K_AUX10:
+	case K_AUX11:
+	case K_AUX12:
+	case K_AUX13:
+	case K_AUX14:
+	case K_AUX15:
+	case K_AUX16:
+	case K_AUX17:
+	case K_AUX18:
+	case K_AUX19:
+	case K_AUX20:
+	case K_AUX21:
+	case K_AUX22:
+	case K_AUX23:
+	case K_AUX24:
+	case K_AUX25:
+	case K_AUX26:
+	case K_AUX27:
+	case K_AUX28:
+	case K_AUX29:
+	case K_AUX30:
+	case K_AUX31:
+	case K_AUX32:
+	case K_KP_ENTER:
+	case K_ENTER:
+		return Menu_SelectItem( m );
 	}
 
 	return QMS_NOTHANDLED;
 }
 
-int Menu_MouseMove( menuCommon_t *item ) {
-	int ret;
+menuSound_t Menu_Keydown( menuFrameWork_t *menu, int key ) {
+	menuCommon_t *item;
+    menuSound_t sound;
 
-	if( ( ret = item->parent->callback( item->id, QM_MOUSE, 0 ) ) != QMS_NOTHANDLED ) {
-		return ret;
-	}
+    if( menu->keywait ) {
+    }
 
-	switch( item->type ) {
-	//case MTYPE_FIELD:
-		//return Field_MouseMove( (menuField_t *)item );
-	//case MTYPE_LIST:
-		//return MenuList_MouseMove( (menuList_t *)item );
-	}
+	if( menu->keydown ) {
+        sound = menu->keydown( menu, key );
+        if( sound != QMS_NOTHANDLED ) {
+            return sound;
+        }
+    }
 
-	return QMS_NOTHANDLED;
+    item = Menu_ItemAtCursor( menu );
+    if( item ) {
+		sound = Menu_KeyEvent( item, key );
+        if( sound != QMS_NOTHANDLED ) {
+            return sound;
+        }
+    }
+	
+	sound = Menu_DefaultKey( menu, key );
+    return sound;
 }
-
 
 
 menuCommon_t *Menu_HitTest( menuFrameWork_t *menu ) {
 	int i;
 	menuCommon_t *item;
+
+    if( menu->keywait ) {
+        return NULL;
+    }
 	
 	for( i = 0; i < menu->nitems; i++ ) {
 		item = menu->items[i];
 		if( item->flags & QMF_HIDDEN ) {
 			continue;
-		}
-
-		if( ui_debug->integer ) {
-			UIS_DrawRect( &item->rect, 1, 223 );
 		}
 
 		if( UI_CursorInRect( &item->rect ) ) {
@@ -1407,5 +1617,84 @@ menuCommon_t *Menu_HitTest( menuFrameWork_t *menu ) {
 	}
 
 	return NULL;
+}
+
+qboolean Menu_Push( menuFrameWork_t *menu ) {
+	void *item;
+    int i;
+
+	for( i = 0; i < menu->nitems; i++ ) {
+		item = menu->items[i];
+
+        switch( ((menuCommon_t *)item)->type ) {
+        case MTYPE_SLIDER:
+            Slider_Push( item );
+            break;
+        case MTYPE_SPINCONTROL:
+            SpinControl_Push( item );
+            break;
+        case MTYPE_KEYBIND:
+            Keybind_Push( item );
+            break;
+        default:
+            break;
+        }
+    }
+    return qtrue;
+}
+
+void Menu_Pop( menuFrameWork_t *menu ) {
+	void *item;
+    int i;
+
+	for( i = 0; i < menu->nitems; i++ ) {
+		item = menu->items[i];
+
+        switch( ((menuCommon_t *)item)->type ) {
+        case MTYPE_SLIDER:
+            Slider_Pop( item );
+            break;
+        case MTYPE_SPINCONTROL:
+            SpinControl_Pop( item );
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+void Menu_Free( menuFrameWork_t *menu ) {
+	void *item;
+    int i;
+
+	for( i = 0; i < menu->nitems; i++ ) {
+		item = menu->items[i];
+
+        switch( ((menuCommon_t *)item)->type ) {
+        case MTYPE_ACTION:
+            Action_Free( item );
+            break;
+        case MTYPE_SLIDER:
+            Slider_Free( item );
+            break;
+        case MTYPE_SPINCONTROL:
+            SpinControl_Free( item );
+            break;
+        case MTYPE_KEYBIND:
+            Keybind_Free( item );
+            break;
+        default:
+            break;
+        }
+    }
+
+    if( menu->title ) {
+        Z_Free( menu->title );
+    }
+    if( menu->name ) {
+        Z_Free( menu->name );
+    }
+
+    Z_Free( menu );
 }
 

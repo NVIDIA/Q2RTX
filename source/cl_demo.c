@@ -303,6 +303,10 @@ void CL_Record_f( void ) {
 
 	Com_Printf( "Recording client demo to %s.\n", name );
 
+	if( compressed ) {
+        FS_FilterFile( demofile );
+    }
+
 	cls.demorecording = demofile;
     cls.demopaused = qfalse;
 
@@ -431,7 +435,7 @@ static void CL_Suspend_f( void ) {
 static int CL_ReadFirstDemoMessage( fileHandle_t f ) {
 	uint32_t	ul;
     uint16_t    us;
-    unsigned    msglen;
+    size_t      msglen;
     int         type;
 
     // read magic/msglen

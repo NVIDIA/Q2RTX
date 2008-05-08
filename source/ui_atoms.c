@@ -20,19 +20,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "ui_local.h"
 
-#ifndef UI_HARD_LINKED
-/* declare imports for this module */
-cmdAPI_t	cmd;
-cvarAPI_t	cvar;
-fsAPI_t		fs;
-commonAPI_t	com;
-sysAPI_t	sys;
-refAPI_t	ref;
-keyAPI_t	keys;
-clientAPI_t client;
-#endif
-
 uiStatic_t	uis;
+
+LIST_DECL( ui_menus );
 
 cvar_t	*ui_debug;
 static cvar_t	*ui_open;
@@ -41,17 +31,17 @@ static cvar_t	*ui_scale;
 
 // ===========================================================================
 
-static int EmptyCallback( int id, int msg, int param ) {
-	return QMS_NOTHANDLED;
-}
-
 /*
 =================
 UI_PushMenu
 =================
 */
 void UI_PushMenu( menuFrameWork_t *menu ) {
-	int		i, keydest;
+	int		i, j;
+
+    if( !menu ) {
+        return;
+    }
 
 	// if this menu is already present, drop back to that level
 	// to avoid stacking menus by hotkeys
@@ -66,31 +56,28 @@ void UI_PushMenu( menuFrameWork_t *menu ) {
 			Com_Error( ERR_FATAL, "UI_PushMenu: MAX_MENU_DEPTH" );
 		uis.layers[uis.menuDepth++] = menu;
 	} else {
-		uis.menuDepth = i;
+        for( j = i; j < uis.menuDepth; j++ ) {
+            UI_PopMenu();
+        }
+		uis.menuDepth = i + 1;
 	}
 
-	uis.transparent = qfalse;
-	for( i = uis.menuDepth - 1; i >= 0; i-- ) {
-		if( uis.layers[i]->transparent ) {
-	        uis.transparent = qtrue;
-			break;
-		}
-	}
-
-	if( !menu->callback ) {
-		menu->callback = EmptyCallback;
-	}
+    if( menu->push ) {
+        if( !menu->push( menu ) ) {
+            return;
+        }
+    }
 
     Menu_Init( menu );
 
-	keydest = keys.GetDest();
-	keys.SetDest( ( keydest & ~KEY_CONSOLE ) | KEY_MENU );
+	Key_SetDest( ( Key_GetDest() & ~KEY_CONSOLE ) | KEY_MENU );
 
 	if( !uis.activeMenu ) {
 		uis.entersound = qtrue;
         //CL_WarpMouse( 0, 0 );
 	}
 
+    uis.transparent |= menu->transparent;
 	uis.activeMenu = menu;
 
 	UI_DoHitTest();
@@ -108,20 +95,14 @@ void UI_Resize( void ) {
         uis.width = uis.glconfig.vidWidth;
         uis.height = uis.glconfig.vidHeight;
     } else {
-        if( ui_scale->value < 1 ) {
-            cvar.Set( "ui_scale", "1" );
-        } else if( ui_scale->value > 9 ) {
-            cvar.Set( "ui_scale", "9" );
-        }
+        Cvar_ClampValue( ui_scale, 1, 9 );
         uis.scale = 1 / ui_scale->value;
         uis.width = uis.glconfig.vidWidth * uis.scale;
         uis.height = uis.glconfig.vidHeight * uis.scale;
     }
 
 	for( i = 0; i < uis.menuDepth; i++ ) {
-		if( uis.layers[i] ) {
-            Menu_Init( uis.layers[i] );
-		}
+        Menu_Init( uis.layers[i] );
 	}
 
     //CL_WarpMouse( 0, 0 );
@@ -134,19 +115,20 @@ UI_ForceMenuOff
 =================
 */
 void UI_ForceMenuOff( void ) {
+    menuFrameWork_t *menu;
 	int i;
 
 	for( i = 0; i < uis.menuDepth; i++ ) {
-		if( uis.layers[i] ) {
-			uis.layers[i]->callback( ID_MENU, QM_DESTROY, qtrue );
+        menu = uis.layers[i];
+        if( menu->pop ) {
+			menu->pop( menu );
 		}
 	}
 
-	keys.SetDest( keys.GetDest() & ~KEY_MENU );
+	Key_SetDest( Key_GetDest() & ~KEY_MENU );
 	uis.menuDepth = 0;
 	uis.activeMenu = NULL;
 	uis.transparent = qfalse;
-	//keys.ClearStates();
 }
 
 /*
@@ -155,18 +137,21 @@ UI_PopMenu
 =================
 */
 void UI_PopMenu( void ) {
+    menuFrameWork_t *menu;
 	int i;
 
 	if( uis.menuDepth < 1 )
 		Com_Error( ERR_FATAL, "UI_PopMenu: depth < 1" );
 
-	if( --uis.menuDepth == 0 ) {
+    menu = uis.layers[--uis.menuDepth];
+    if( menu->pop ) {
+        menu->pop( menu );
+    }
+
+	if( !uis.menuDepth ) {
 		UI_ForceMenuOff();
 		return;
 	}
-
-	uis.layers[uis.menuDepth]->callback( ID_MENU, QM_DESTROY, qfalse );
-	uis.layers[uis.menuDepth - 1]->callback( ID_MENU, QM_DESTROY_CHILD, qfalse );
 
 	uis.activeMenu = uis.layers[uis.menuDepth - 1];
 
@@ -187,7 +172,7 @@ UI_IsTransparent
 =================
 */
 qboolean UI_IsTransparent( void ) {
-	if( !( keys.GetDest() & KEY_MENU ) ) {
+	if( !( Key_GetDest() & KEY_MENU ) ) {
 		return qtrue;
 	}
 
@@ -198,26 +183,39 @@ qboolean UI_IsTransparent( void ) {
 	return uis.transparent;
 }
 
+menuFrameWork_t *UI_FindMenu( const char *name ) {
+    menuFrameWork_t *menu;
+
+    LIST_FOR_EACH( menuFrameWork_t, menu, &ui_menus, entry ) {
+        if( !strcmp( menu->name, name ) ) {
+            return menu;
+        }
+    }
+    return NULL;
+}
+
 /*
 =================
 UI_OpenMenu
 =================
 */
-void UI_OpenMenu( uiMenu_t menu ) {
+void UI_OpenMenu( uiMenu_t type ) {
+    menuFrameWork_t *menu = NULL;
+
 	// close any existing menus
 	UI_ForceMenuOff();
 
-	switch( menu ) {
+	switch( type ) {
 	case UIMENU_MAIN:
 		if( ui_open->integer ) {
-			M_Menu_Main_f();
+            menu = UI_FindMenu( "main" );
 		}
 		break;
 	case UIMENU_MAIN_FORCE:
-		M_Menu_Main_f();
+        menu = UI_FindMenu( "main" );
 		break;
 	case UIMENU_INGAME:
-		M_Menu_Ingame_f();
+        menu = UI_FindMenu( "game" );
 		break;
 	case UIMENU_NONE:
 		break;
@@ -225,18 +223,18 @@ void UI_OpenMenu( uiMenu_t menu ) {
 		Com_Error( ERR_FATAL, "UI_OpenMenu: bad menu" );
 		break;
 	}
+
+    UI_PushMenu( menu );
 }
 
 void UI_ErrorMenu( comErrorType_t type, const char *text ) {
 	// close any existing menus
 	UI_ForceMenuOff();
 
-	if( !ui_open->integer ) {
-		return;
-	}
-
-	M_Menu_Main_f();
-	M_Menu_Error_f( type, text );
+	if( ui_open->integer ) {
+        UI_PushMenu( UI_FindMenu( "main" ) );
+	    M_Menu_Error( type, text );
+    }
 }
 
 
@@ -422,7 +420,7 @@ void UI_Draw( int realtime ) {
 
 	uis.realtime = realtime;
 
-	if( !( keys.GetDest() & KEY_MENU ) ) {
+	if( !( Key_GetDest() & KEY_MENU ) ) {
 		return;
 	}
 
@@ -488,7 +486,7 @@ void UI_Draw( int realtime ) {
 	// caching images
 	if( uis.entersound ) {
 		uis.entersound = qfalse;
-		client.StartLocalSound( "misc/menu1.wav" );
+		S_StartLocalSound( "misc/menu1.wav" );
 	}
 
     if( uis.glconfig.renderer == GL_RENDERER_SOFTWARE ) {
@@ -501,133 +499,31 @@ void UI_Draw( int realtime ) {
 
 /*
 =================
-Default_MenuKey
-=================
-*/
-int Default_MenuKey( menuFrameWork_t *m, int key ) {
-	menuCommon_t *item;
-	
-	switch( key ) {
-	case K_ESCAPE:
-		UI_PopMenu();
-		return QMS_OUT;
-
-	case K_KP_UPARROW:
-	case K_UPARROW:
-    case 'k':
-		return Menu_AdjustCursor( m, -1 );
-		
-	case K_KP_DOWNARROW:
-	case K_DOWNARROW:
-	case K_TAB:
-    case 'j':
-		return Menu_AdjustCursor( m, 1 );
-
-	case K_KP_LEFTARROW:
-	case K_LEFTARROW:
-	case K_MWHEELDOWN:
-    case 'h':
-		return Menu_SlideItem( m, -1 );
-
-	case K_KP_RIGHTARROW:
-	case K_RIGHTARROW:
-	case K_MWHEELUP:
-    case 'l':
-		return Menu_SlideItem( m, 1 );
-
-	case K_MOUSE1:
-	case K_MOUSE2:
-	case K_MOUSE3:
-		item = Menu_HitTest( m );
-		if( !item ) {
-			return QMS_NOTHANDLED;
-		}
-			
-		if( !( item->flags & QMF_HASFOCUS ) ) {
-			return QMS_NOTHANDLED;
-		}
-
-		// fall through
-
-	case K_JOY1:
-	case K_JOY2:
-	case K_JOY3:
-	case K_JOY4:
-	case K_AUX1:
-	case K_AUX2:
-	case K_AUX3:
-	case K_AUX4:
-	case K_AUX5:
-	case K_AUX6:
-	case K_AUX7:
-	case K_AUX8:
-	case K_AUX9:
-	case K_AUX10:
-	case K_AUX11:
-	case K_AUX12:
-	case K_AUX13:
-	case K_AUX14:
-	case K_AUX15:
-	case K_AUX16:
-	case K_AUX17:
-	case K_AUX18:
-	case K_AUX19:
-	case K_AUX20:
-	case K_AUX21:
-	case K_AUX22:
-	case K_AUX23:
-	case K_AUX24:
-	case K_AUX25:
-	case K_AUX26:
-	case K_AUX27:
-	case K_AUX28:
-	case K_AUX29:
-	case K_AUX30:
-	case K_AUX31:
-	case K_AUX32:
-	case K_KP_ENTER:
-	case K_ENTER:
-		return Menu_SelectItem( m );
-	}
-
-	return QMS_NOTHANDLED;
-}
-
-/*
-=================
 UI_Keydown
 =================
 */
 void UI_Keydown( int key ) {
-	menuCommon_t *item;
-	int sound;
+	menuSound_t sound;
 
 	if( !uis.activeMenu ) {
 		return;
 	}
 
-	if( ( sound = uis.activeMenu->callback( ID_MENU, QM_KEY, key ) ) == QMS_NOTHANDLED ) {
-		if( ( item = Menu_ItemAtCursor( uis.activeMenu ) ) == NULL ||
-			( sound = Menu_KeyEvent( item, key ) ) == QMS_NOTHANDLED )
-		{
-			sound = Default_MenuKey( uis.activeMenu, key );
-		}
-	}
+    sound = Menu_Keydown( uis.activeMenu, key );
 
 	switch( sound ) {
 	case QMS_IN:
-		client.StartLocalSound( "misc/menu1.wav" );
+		S_StartLocalSound( "misc/menu1.wav" );
 		break;
 	case QMS_MOVE:
-		client.StartLocalSound( "misc/menu2.wav" );
+		S_StartLocalSound( "misc/menu2.wav" );
 		break;
 	case QMS_OUT:
-		client.StartLocalSound( "misc/menu3.wav" );
+		S_StartLocalSound( "misc/menu3.wav" );
 		break;
 	case QMS_BEEP:
-		client.StartLocalSound( "misc/talk1.wav" );
+		S_StartLocalSound( "misc/talk1.wav" );
 		break;
-	case QMS_NOTHANDLED:
 	default:
 		break;
 	}
@@ -641,32 +537,30 @@ UI_CharEvent
 */
 void UI_CharEvent( int key ) {
 	menuCommon_t *item;
-	int sound;
+	menuSound_t sound;
 
 	if( !uis.activeMenu ) {
 		return;
 	}
 
-	if( ( sound = uis.activeMenu->callback( ID_MENU, QM_CHAR, key ) ) == QMS_NOTHANDLED ) {
-		if( ( item = Menu_ItemAtCursor( uis.activeMenu ) ) == NULL ||
-			( sound = Menu_CharEvent( item, key ) ) == QMS_NOTHANDLED )
-		{
-			return;
-		}
-	}
+    if( ( item = Menu_ItemAtCursor( uis.activeMenu ) ) == NULL ||
+        ( sound = Menu_CharEvent( item, key ) ) == QMS_NOTHANDLED )
+    {
+        return;
+    }
 
 	switch( sound ) {
 	case QMS_IN:
-		client.StartLocalSound( "misc/menu1.wav" );
+		S_StartLocalSound( "misc/menu1.wav" );
 		break;
 	case QMS_MOVE:
-		client.StartLocalSound( "misc/menu2.wav" );
+		S_StartLocalSound( "misc/menu2.wav" );
 		break;
 	case QMS_OUT:
-		client.StartLocalSound( "misc/menu3.wav" );
+		S_StartLocalSound( "misc/menu3.wav" );
 		break;
 	case QMS_BEEP:
-		client.StartLocalSound( "misc/talk1.wav" );
+		S_StartLocalSound( "misc/talk1.wav" );
 		break;
 	case QMS_NOTHANDLED:
 	default:
@@ -675,28 +569,50 @@ void UI_CharEvent( int key ) {
 
 }
 
-typedef struct uicmd_s {
-	const char *name;
-	void (*func)( void );
-} uicmd_t;
+static void UI_Menu_g( genctx_t *ctx ) {
+    menuFrameWork_t *menu;
 
-static const uicmd_t uicmds[] = {
-	{ "menu_main", M_Menu_Main_f },
-	{ "menu_game", M_Menu_Game_f },
-	{ "menu_loadgame", M_Menu_LoadGame_f },
-	{ "menu_savegame", M_Menu_SaveGame_f },
-	{ "menu_addressbook", M_Menu_AddressBook_f },
-	{ "menu_startserver", M_Menu_StartServer_f },
-	{ "menu_dmoptions", M_Menu_DMOptions_f },
-	{ "menu_playerconfig", M_Menu_PlayerConfig_f },
-	{ "menu_downloadoptions", M_Menu_DownloadOptions_f },
-	{ "menu_multiplayer", M_Menu_Multiplayer_f },
-	{ "menu_network", M_Menu_Network_f },
-	{ "menu_video", M_Menu_Video_f },
-	{ "menu_options", M_Menu_Options_f },
-	{ "menu_keys", M_Menu_Keys_f },
-	{ "menu_quit", M_Menu_Credits_f },
-	{ "menu_close", UI_ForceMenuOff },
+    LIST_FOR_EACH( menuFrameWork_t, menu, &ui_menus, entry ) {
+        if( !Prompt_AddMatch( ctx, menu->name ) ) {
+            break;
+        }
+    }
+}
+
+static void UI_PushMenu_c( genctx_t *ctx, int argnum ) {
+    if( argnum == 1 ) {
+        UI_Menu_g( ctx );
+    }
+}
+
+static void UI_PushMenu_f( void ) {
+    menuFrameWork_t *menu;
+    char *s;
+
+    if( Cmd_Argc() < 2 ) {
+        Com_Printf( "Usage: %s <menu>\n", Cmd_Argv( 0 ) );
+        return;
+    }
+    s = Cmd_Argv( 1 );
+    menu = UI_FindMenu( s );
+    if( menu ) {
+        UI_PushMenu( menu );
+    } else {
+        Com_Printf( "No such menu: %s\n", s );
+    }
+}
+
+static void UI_PopMenu_f( void ) {
+    if( uis.activeMenu ) {
+        UI_PopMenu();
+    }
+}
+
+
+static const cmdreg_t c_ui[] = {
+	{ "forcemenuoff", UI_ForceMenuOff },
+	{ "pushmenu", UI_PushMenu_f, UI_PushMenu_c },
+	{ "popmenu", UI_PopMenu_f },
 
 	{ NULL, NULL }
 };
@@ -720,23 +636,31 @@ void UI_ModeChanged( void ) {
     UI_Resize();
 }
 
+static void UI_FreeMenus( void ) {
+    menuFrameWork_t *menu, *next;
+
+    LIST_FOR_EACH_SAFE( menuFrameWork_t, menu, next, &ui_menus, entry ) {
+        if( menu->free ) {
+            menu->free( menu );
+        }
+    }
+    List_Init( &ui_menus );
+}
+
+
 /*
 =================
 UI_Init
 =================
 */
 qboolean UI_Init( void ) {
-	const uicmd_t *uicmd;
-
-	memset( &uis, 0, sizeof( uis ) );
-
-	for( uicmd = uicmds; uicmd->name; uicmd++ ) {
-		cmd.AddCommand( uicmd->name, uicmd->func );
-	}
+    Cmd_Register( c_ui );
 
 	ui_debug = cvar.Get( "ui_debug", "0", 0 );
 	ui_open = cvar.Get( "ui_open", "0", CVAR_ARCHIVE );
 	ui_background = cvar.Get( "ui_background", "", 0 );
+
+    UI_ModeChanged();
 
 	uis.fontHandle = ref.RegisterFont( "conchars" );
 	uis.cursorHandle = ref.RegisterPic( "ch1" );
@@ -752,6 +676,14 @@ qboolean UI_Init( void ) {
 	// Point to a nice location at startup
 	strcpy( uis.m_demos_browse, "/demos" );
 
+    // load built-in menus
+    M_Menu_PlayerConfig();
+    M_Menu_Servers();
+    M_Menu_Demos();
+
+    // load custom menus
+    UI_LoadStript();
+
 	return qtrue;
 }
 
@@ -761,8 +693,6 @@ UI_Shutdown
 =================
 */
 void UI_Shutdown( void ) {
-	const uicmd_t *uicmd;
-
     UI_ForceMenuOff();
 
 	ui_background->changed = NULL;
@@ -770,155 +700,13 @@ void UI_Shutdown( void ) {
 
 	PlayerModel_Free();
 
-	for( uicmd = uicmds; uicmd->name; uicmd++ ) {
-		cmd.RemoveCommand( uicmd->name );
-	}
+    UI_FreeMenus();
+
+    Cmd_Deregister( c_ui );
+
+	memset( &uis, 0, sizeof( uis ) );
+
+	Z_LeakTest( TAG_UI );
 }
 
-#ifndef UI_HARD_LINKED
-
-// this is only here so the functions in q_shared.c can link
-
-void Com_Printf( const char *fmt, ... ) {
-	va_list		argptr;
-	char		text[MAXPRINTMSG];
-
-	va_start( argptr, fmt );
-	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
-	va_end( argptr );
-
-	com.Print( PRINT_ALL, text );
-}
-
-void Com_DPrintf( const char *fmt, ... ) {
-	va_list		argptr;
-	char		text[MAXPRINTMSG];
-
-	va_start( argptr, fmt );
-	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
-	va_end( argptr );
-
-	com.Print( PRINT_DEVELOPER, text );
-}
-
-void Com_WPrintf( const char *fmt, ... ) {
-	va_list		argptr;
-	char		text[MAXPRINTMSG];
-
-	va_start( argptr, fmt );
-	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
-	va_end( argptr );
-
-	com.Print( PRINT_WARNING, text );
-}
-
-void Com_EPrintf( const char *fmt, ... ) {
-	va_list		argptr;
-	char		text[MAXPRINTMSG];
-
-	va_start( argptr, fmt );
-	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
-	va_end( argptr );
-
-	com.Print( PRINT_ERROR, text );
-}
-
-void Com_Error( comErrorType_t type, const char *error, ... ) {
-	va_list		argptr;
-	char		text[MAXPRINTMSG];
-
-	va_start( argptr, error );
-	Q_vsnprintf( text, sizeof( text ), error, argptr );
-	va_end( argptr );
-
-	com.Error( type, text );
-}
-
-#endif
-
-#ifndef UI_HARD_LINKED
-
-/*
-=================
-UI_FillAPI
-=================
-*/
-static void UI_FillAPI( uiAPI_t *api ) {
-	api->Init = UI_Init;
-	api->Shutdown = UI_Shutdown;
-    api->ModeChanged = UI_ModeChanged;
-	api->Draw = UI_Draw;
-	api->DrawLoading = UI_DrawLoading;
-	api->MouseEvent = UI_MouseEvent;
-	api->Keydown = UI_Keydown;
-	api->CharEvent = UI_CharEvent;
-	api->OpenMenu = UI_OpenMenu;
-	api->ErrorMenu = UI_ErrorMenu;
-	api->AddToServerList = UI_AddToServerList;
-	api->IsTransparent = UI_IsTransparent;
-}
-
-/*
-=================
-UI_APISetupCallback
-=================
-*/
-static qboolean UI_APISetupCallback( api_type_t type, void *api ) {
-	switch( type ) {
-	case API_UI:
-		UI_FillAPI( ( uiAPI_t * )api );
-		break;
-	default:
-		return qfalse;
-	}
-
-	return qtrue;
-}
-
-/*
-@@@@@@@@@@@@@@@@@@@@@
-moduleEntry
-
-@@@@@@@@@@@@@@@@@@@@@
-*/
-EXPORTED void *moduleEntry( int query, void *data ) {
-	moduleInfo_t *info;
-	moduleCapability_t caps;
-	APISetupCallback_t callback;
-
-	switch( query ) {
-	case MQ_GETINFO:
-		info = ( moduleInfo_t * )data;
-		info->api_version = MODULES_APIVERSION;
-		Q_strncpyz( info->fullname, "User interface library",
-                sizeof( info->fullname ) );
-		Q_strncpyz( info->author, "Andrey Nazarov", sizeof( info->author ) );
-		return ( void * )qtrue;
-
-	case MQ_GETCAPS:
-		caps = MCP_UI;
-		return ( void * )caps;
-
-	case MQ_SETUPAPI:
-		if( ( callback = ( APISetupCallback_t )data ) == NULL ) {
-			return NULL;
-		}
-		callback( API_CMD, &cmd );
-		callback( API_CVAR, &cvar );
-		callback( API_FS, &fs );
-		callback( API_COMMON, &com );
-		callback( API_SYSTEM, &sys );
-		callback( API_REFRESH, &ref );
-		callback( API_KEYS, &keys );
-		callback( API_CLIENT, &client );
-
-		return ( void * )UI_APISetupCallback;
-
-	}
-
-	/* quiet compiler warning */
-	return NULL;
-}
-
-#endif
 

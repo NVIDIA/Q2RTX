@@ -156,21 +156,17 @@ typedef enum keydest_e {
 	KEY_MENU	= ( 1 << 2 )
 } keydest_t;
 
-typedef struct keyAPI_s {
-	qboolean	(*GetOverstrikeMode)( void );
-	void		(*SetOverstrikeMode)( qboolean overstrike );
-	keydest_t	(*GetDest)( void );
-	void		(*SetDest)( keydest_t dest );
+qboolean	Key_GetOverstrikeMode( void );
+void		Key_SetOverstrikeMode( qboolean overstrike );
+keydest_t	Key_GetDest( void );
+void		Key_SetDest( keydest_t dest );
 
-	qboolean	(*IsDown)( int key );
-	qboolean	(*AnyKeyDown)( void );
-	void		(*ClearStates)( void );
+qboolean	Key_IsDown( int key );
+qboolean	Key_AnyKeyDown( void );
+void		Key_ClearStates( void );
 
-	char	*(*KeyNumToString)( int keynum );
-	void	(*SetBinding)( int keynum, const char *binding );
-	char	*(*GetBinding)( const char *binding );
-	int		(*EnumBindings)( int key, const char *binding );
-} keyAPI_t;
-
-extern keyAPI_t		keys;
+char	*Key_KeynumToString ( int keynum );
+void	Key_SetBinding( int keynum, const char *binding );
+char	*Key_GetBinding( const char *binding );
+int		Key_EnumBindings( int key, const char *binding );
 

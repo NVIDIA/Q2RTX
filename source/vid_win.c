@@ -33,8 +33,6 @@ static cvar_t	*vid_hwgamma;
 static cvar_t	*win_noalttab;
 static cvar_t	*win_disablewinkey;
 
-void SCR_UpdateScreen( void );
-
 /*
 ===============================================================================
 

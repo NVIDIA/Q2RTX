@@ -662,10 +662,7 @@ void CL_Disconnect( comErrorType_t type, const char *text ) {
     cls.messageString[ 0 ] = 0;
 	cls.userinfo_modified = 0;
 
-	if( cls.ui_initialized ) {
-		UI_ErrorMenu( type, text );
-	}
-
+	UI_ErrorMenu( type, text );
 }
 
 /*
@@ -2202,8 +2199,7 @@ void CL_RestartFilesystem( void ) {
         cls.state = ca_loading;
     }
 
-    UI_OpenMenu( UIMENU_NONE );
-    CL_ShutdownUI();
+    UI_Shutdown();
 
     S_StopAllSounds();
 	S_FreeAllSounds();
@@ -2217,7 +2213,7 @@ void CL_RestartFilesystem( void ) {
 
         SCR_RegisterMedia();
         Con_RegisterMedia();
-        CL_InitUI();
+        UI_Init();
     } else {
         FS_Restart();
     }
@@ -2253,14 +2249,10 @@ static void CL_RestartRefresh_f( void ) {
         cls.state = ca_loading;
     }
 
-    UI_OpenMenu( UIMENU_NONE );
-    CL_ShutdownUI();
-
     S_StopAllSounds();
    
     IN_Shutdown();
     CL_ShutdownRefresh();
-
     CL_InitRefresh();
     IN_Init();
 
@@ -2916,7 +2908,7 @@ void CL_Shutdown( void ) {
     inflateEnd( &cls.z );
 #endif
 
-    CL_ShutdownUI();
+    UI_Shutdown();
     S_Shutdown();
     IN_Shutdown();
     Con_Shutdown();
