@@ -62,7 +62,7 @@ static const DIDATAFORMAT mouseDataFormat = {
 	DIDF_RELAXIS,
 	sizeof( DIMOUSESTATE2 ),
 	sizeof( mouseObjectDataFormat ) / sizeof( mouseObjectDataFormat[0] ),
-	mouseObjectDataFormat
+	( LPDIOBJECTDATAFORMAT )mouseObjectDataFormat
 };
 
 static const DIPROPDWORD mouseBufferSize = {
@@ -291,7 +291,7 @@ static void DI_GrabMouse( grab_t grab ) {
 		return;
 	}
 
-	if( grab ) {
+	if( grab == IN_GRAB ) {
 		Com_DPrintf( "IDirectInputDevice_Acquire\n" );
 		hr = IDirectInputDevice_Acquire( di_mouse );
 		if( FAILED( hr ) ) {
