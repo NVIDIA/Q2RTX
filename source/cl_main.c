@@ -2911,7 +2911,6 @@ void CL_Shutdown( void ) {
     inflateEnd( &cls.z );
 #endif
 
-    UI_Shutdown();
     S_Shutdown();
     IN_Shutdown();
     Con_Shutdown();

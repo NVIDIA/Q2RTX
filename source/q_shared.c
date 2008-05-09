@@ -719,10 +719,10 @@ char *COM_SkipPath( const char *pathname ) {
 COM_StripExtension
 ============
 */
-void COM_StripExtension( const char *in, char *out, int outSize ) {
+void COM_StripExtension( const char *in, char *out, size_t size ) {
 	char *s;
 
-	Q_strncpyz( out, in, outSize );
+	Q_strncpyz( out, in, size );
 
 	s = out + strlen( out );
 	
@@ -801,7 +801,7 @@ COM_FilePath
 Returns the path up to, but not including the last /
 ============
 */
-void COM_FilePath( const char *in, char *out, int size ) {
+void COM_FilePath( const char *in, char *out, size_t size ) {
 	char *s;
 
 	Q_strncpyz( out, in, size );
@@ -819,7 +819,7 @@ void COM_FilePath( const char *in, char *out, int size ) {
 COM_DefaultExtension
 ==================
 */
-void COM_DefaultExtension( char *path, const char *extension, int pathSize ) {
+void COM_DefaultExtension( char *path, const char *ext, size_t size ) {
 	char    *src;
 //
 // if path doesn't have a .EXT, append extension
@@ -835,12 +835,12 @@ void COM_DefaultExtension( char *path, const char *extension, int pathSize ) {
 		}
 	}
 
-	Q_strcat( path, pathSize, extension );
+	Q_strcat( path, size, ext );
 }
 
-void COM_AppendExtension( char *path, const char *extension, int pathSize ) {
-    if( Q_stricmp( COM_FileExtension( path ), extension ) ) {
-	    Q_strcat( path, pathSize, extension );
+void COM_AppendExtension( char *path, const char *ext, size_t size ) {
+    if( Q_stricmp( COM_FileExtension( path ), ext ) ) {
+	    Q_strcat( path, size, ext );
     }
 }
 
@@ -1779,6 +1779,12 @@ int COM_Compress( char *data ) {
                 }
                 *d++ = c;
             } while( c != '\"' );
+            continue;
+        }
+
+        // handle line feed escape
+        if( *s == '\\' && s[1] == '\n' ) {
+            s += 2;
             continue;
         }
 

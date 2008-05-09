@@ -890,6 +890,12 @@ void SV_MvdRecStop( void ) {
     sv.mvd.file = 0;
 }
 
+const cmd_option_t o_mvdrecord[] = {
+    { "h", "help", "display this message" },
+    { "z", "gzip", "compress file with gzip" },
+    { NULL }
+};
+
 static void MVD_Record_c( genctx_t *ctx, int argnum ) {
     if( argnum == 1 ) {
         MVD_File_g( ctx );
@@ -906,23 +912,38 @@ Every entity, every playerinfo and every message will be recorded.
 */
 static void MVD_Record_f( void ) {
 	char buffer[MAX_OSPATH];
-	char *name;
 	fileHandle_t demofile;
     uint32_t magic;
+    qboolean gzip = qfalse;
+    int c;
 
 	if( sv.state != ss_game ) {
         if( sv.state == ss_broadcast ) {
             MVD_StreamedRecord_f();
         } else {
-    		Com_Printf( "Must be running a game server to record.\n" );
+    		Com_Printf( "No server running.\n" );
         }
 		return;
 	}
 
-	if( Cmd_Argc() != 2 ) {
-		Com_Printf( "Usage: %s [/]<filename>\n", Cmd_Argv( 0 ) );
-		return;
-	}
+    while( ( c = Cmd_ParseOptions( o_mvdrecord ) ) != -1 ) {
+        switch( c ) {
+        case 'h':
+            Cmd_PrintUsage( o_mvdrecord, "[/]<filename>" );
+            Com_Printf( "Begin local MVD recording.\n" );
+            Cmd_PrintHelp( o_mvdrecord );
+            return;
+        case 'z':
+            gzip = qtrue;
+            break;
+        }
+    }
+
+    if( !cmd_optarg[0] ) {
+        Com_Printf( "Missing filename argument.\n" );
+        Cmd_PrintHint();
+        return;
+    }
 
 	if( !svs.mvd.entities ) {
 		Com_Printf( "MVD recording is disabled on this server.\n" );
@@ -937,12 +958,14 @@ static void MVD_Record_f( void ) {
 	//
 	// open the demo file
 	//
-	name = Cmd_Argv( 1 );
-	if( name[0] == '/' ) {
-		Q_strncpyz( buffer, name + 1, sizeof( buffer ) );
+	if( cmd_optarg[0] == '/' ) {
+		Q_strncpyz( buffer, cmd_optarg + 1, sizeof( buffer ) );
 	} else {
-		Q_concat( buffer, sizeof( buffer ), "demos/", name, NULL );
+		Q_concat( buffer, sizeof( buffer ), "demos/", cmd_optarg, NULL );
     	COM_AppendExtension( buffer, ".mvd2", sizeof( buffer ) );
+        if( gzip ) {
+        	COM_AppendExtension( buffer, ".gz", sizeof( buffer ) );
+        }
 	}
 
 	FS_FOpenFile( buffer, &demofile, FS_MODE_WRITE );
@@ -954,6 +977,10 @@ static void MVD_Record_f( void ) {
     if( !SV_MvdCreateDummy() ) {
         FS_FCloseFile( demofile );
         return;
+    }
+
+	if( gzip ) {
+        FS_FilterFile( demofile );
     }
 
 	sv.mvd.file = demofile;

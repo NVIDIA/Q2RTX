@@ -503,7 +503,17 @@ static void MVD_PlayNext( mvd_t *mvd, string_entry_t *entry ) {
         MVD_Destroyf( mvd, "Couldn't reopen %s", entry->string );
     }
 
-    FS_Read( &magic, 4, mvd->demoplayback );
+    if( FS_Read( &magic, 4, mvd->demoplayback ) != 4 ) {
+        MVD_Destroyf( mvd, "Couldn't read magic out of %s", entry->string );
+    }
+    if( ( ( LittleLong( magic ) & 0xe0ffffff ) == 0x00088b1f ) ) {
+        if( !FS_FilterFile( mvd->demoplayback ) ) {
+            MVD_Destroyf( mvd, "Couldn't install gzip filter on %s", entry->string );
+        }
+        if( FS_Read( &magic, 4, mvd->demoplayback ) != 4 ) {
+            MVD_Destroyf( mvd, "Couldn't read magic out of %s", entry->string );
+        }
+    }
     if( magic != MVD_MAGIC ) {
         MVD_Destroyf( mvd, "%s is not a MVD2 file", entry->string );
     }
@@ -907,15 +917,37 @@ void MVD_StreamedStop_f( void ) {
 	Com_Printf( "[%s] Stopped recording.\n", mvd->name );
 }
 
+extern const cmd_option_t o_mvdrecord[];
+
 void MVD_StreamedRecord_f( void ) {
 	char buffer[MAX_OSPATH];
-	char *name;
 	fileHandle_t f;
     mvd_t *mvd;
     uint32_t magic;
+    qboolean gzip = qfalse;
+    int c;
+
+    while( ( c = Cmd_ParseOptions( o_mvdrecord ) ) != -1 ) {
+        switch( c ) {
+        case 'h':
+            Cmd_PrintUsage( o_mvdrecord, "[/]<filename> [chanid]" );
+            Com_Printf( "Begin MVD recording on the specified channel.\n" );
+            Cmd_PrintHelp( o_mvdrecord );
+            return;
+        case 'z':
+            gzip = qtrue;
+            break;
+        }
+    }
+
+    if( !cmd_optarg[0] ) {
+        Com_Printf( "Missing filename argument.\n" );
+        Cmd_PrintHint();
+        return;
+    }
     
-	if( Cmd_Argc() < 2 || ( mvd = MVD_SetChannel( 2 ) ) == NULL ) {
-		Com_Printf( "Usage: %s [/]<filename> [chanid]\n", Cmd_Argv( 0 ) );
+	if( ( mvd = MVD_SetChannel( cmd_optind + 1 ) ) == NULL ) {
+        Cmd_PrintHint();
 		return;
 	}
 
@@ -932,12 +964,14 @@ void MVD_StreamedRecord_f( void ) {
 	//
 	// open the demo file
 	//
-	name = Cmd_Argv( 1 );
-	if( name[0] == '/' ) {
-		Q_strncpyz( buffer, name + 1, sizeof( buffer ) );
+	if( cmd_optarg[0] == '/' ) {
+		Q_strncpyz( buffer, cmd_optarg + 1, sizeof( buffer ) );
 	} else {
-		Q_concat( buffer, sizeof( buffer ), "demos/", name, NULL );
+		Q_concat( buffer, sizeof( buffer ), "demos/", cmd_optarg, NULL );
     	COM_AppendExtension( buffer, ".mvd2", sizeof( buffer ) );
+        if( gzip ) {
+        	COM_AppendExtension( buffer, ".gz", sizeof( buffer ) );
+        }
 	}
 
 	FS_FOpenFile( buffer, &f, FS_MODE_WRITE );
@@ -947,6 +981,10 @@ void MVD_StreamedRecord_f( void ) {
 	}
 	
 	Com_Printf( "[%s] Recording into %s.\n", mvd->name, buffer );
+
+	if( gzip ) {
+        FS_FilterFile( f );
+    }
 
 	mvd->demorecording = f;
 

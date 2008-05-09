@@ -28,8 +28,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cl_public.h"
 #include "ui_public.h"
 
-#define UI_Malloc( size )      Z_TagMalloc( size, TAG_UI )
-#define UI_Mallocz( size )      Z_TagMallocz( size, TAG_UI )
+#define UI_Malloc( s )      Z_TagMalloc( s, TAG_UI )
+#define UI_Mallocz( s )      Z_TagMallocz( s, TAG_UI )
+#define UI_CopyString( s )      Z_TagCopyString( s, TAG_UI )
 
 #define MAXMENUITEMS	64
 
@@ -41,8 +42,9 @@ typedef enum {
     MTYPE_SPINCONTROL,
     MTYPE_SEPARATOR,
     MTYPE_FIELD,
-    MTYPE_BITMAP,
-    MTYPE_IMAGELIST,
+    MTYPE_BITFIELD,
+    MTYPE_PAIRS,
+    MTYPE_TOGGLE,
     MTYPE_STATIC,
     MTYPE_KEYBIND
 } menuType_t;
@@ -185,8 +187,12 @@ typedef struct menuSpinControl_s {
     cvar_t *cvar;
 
 	char	**itemnames;
+	char	**itemvalues;
 	int			numItems;
 	int			curvalue;
+
+    int     mask;
+    qboolean    negate;
 } menuSpinControl_t;
 
 typedef struct menuAction_s {
@@ -264,7 +270,6 @@ qboolean	UI_CursorInRect( vrect_t *rect );
 void		*UI_FormatColumns( int extrasize, ... ) q_sentinel;
 char        *UI_GetColumn( char *s, int n );
 void		UI_AddToServerList( const serverStatus_t *status );
-char		*UI_CopyString( const char *in );
 void		UI_DrawLoading( int realtime );
 void		UI_SetupDefaultBanner( menuStatic_t *banner, const char *name );
 void		UI_DrawString( int x, int y, const color_t color, int flags, const char *string );

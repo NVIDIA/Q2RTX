@@ -38,12 +38,13 @@ static void Draw( menuFrameWork_t *self ) {
     Menu_Draw( self );
 }
 
-static void ParseSpin( menuFrameWork_t *menu ) {
+static void Parse_Values( menuFrameWork_t *menu ) {
     menuSpinControl_t *s;
     int numItems = Cmd_Argc() - 3;
     int i;
 
     if( numItems < 1 ) {
+        Com_Printf( "Usage: %s <name> <cvar> <desc1> [...]\n", Cmd_Argv( 0 ) );
         return;
     }
 
@@ -60,9 +61,43 @@ static void ParseSpin( menuFrameWork_t *menu ) {
     Menu_AddItem( menu, s );
 }
 
-static void ParseSlider( menuFrameWork_t *menu ) {
-    menuSlider_t *s = UI_Mallocz( sizeof( *s ) );
+static void Parse_Pairs( menuFrameWork_t *menu ) {
+    menuSpinControl_t *s;
+    int numItems = Cmd_Argc() - 3;
+    int i;
 
+    if( numItems < 2 || ( numItems & 1 ) ) {
+        Com_Printf( "Usage: %s <name> <cvar> <desc1> <value1> [...]\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    s = UI_Mallocz( sizeof( *s ) );
+    s->generic.type = MTYPE_PAIRS;
+    s->generic.name = UI_CopyString( Cmd_Argv( 1 ) );
+    s->cvar = Cvar_Get( Cmd_Argv( 2 ), NULL, CVAR_USER_CREATED );
+    numItems >>= 1;
+    s->itemnames = UI_Mallocz( sizeof( char * ) * ( numItems + 1 ) );
+    for( i = 0; i < numItems; i++ ) {
+        s->itemnames[i] = UI_CopyString( Cmd_Argv( 3 + i*2 ) );
+    }
+    s->itemvalues = UI_Mallocz( sizeof( char * ) * ( numItems + 1 ) );
+    for( i = 0; i < numItems; i++ ) {
+        s->itemvalues[i] = UI_CopyString( Cmd_Argv( 4 + i*2 ) );
+    }
+    s->numItems = numItems;
+
+    Menu_AddItem( menu, s );
+}
+
+static void Parse_Range( menuFrameWork_t *menu ) {
+    menuSlider_t *s;
+
+    if( Cmd_Argc() < 7 ) {
+        Com_Printf( "Usage: %s <name> <cvar> <add> <mul> <min> <max>\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    s = UI_Mallocz( sizeof( *s ) );
     s->generic.type = MTYPE_SLIDER;
     s->generic.name = UI_CopyString( Cmd_Argv( 1 ) );
     s->cvar = Cvar_Get( Cmd_Argv( 2 ), NULL, CVAR_USER_CREATED );
@@ -74,9 +109,15 @@ static void ParseSlider( menuFrameWork_t *menu ) {
     Menu_AddItem( menu, s );
 }
 
-static void ParseAction( menuFrameWork_t *menu ) {
-    menuAction_t *a = UI_Mallocz( sizeof( *a ) );
+static void Parse_Action( menuFrameWork_t *menu ) {
+    menuAction_t *a;
 
+    if( Cmd_Argc() < 3 ) {
+        Com_Printf( "Usage: %s <name> <command>\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    a = UI_Mallocz( sizeof( *a ) );
     a->generic.type = MTYPE_ACTION;
     a->generic.name = UI_CopyString( Cmd_Argv( 1 ) );
     a->generic.activate = Activate;
@@ -86,9 +127,15 @@ static void ParseAction( menuFrameWork_t *menu ) {
     Menu_AddItem( menu, a );
 }
 
-static void ParseBind( menuFrameWork_t *menu ) {
-    menuKeybind_t *k = UI_Mallocz( sizeof( *k ) );
+static void Parse_Bind( menuFrameWork_t *menu ) {
+    menuKeybind_t *k;
 
+    if( Cmd_Argc() < 3 ) {
+        Com_Printf( "Usage: %s <name> <command>\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    k = UI_Mallocz( sizeof( *k ) );
     k->generic.type = MTYPE_KEYBIND;
     k->generic.name = UI_CopyString( Cmd_Argv( 1 ) );
     k->generic.uiFlags = UI_CENTER;
@@ -97,14 +144,53 @@ static void ParseBind( menuFrameWork_t *menu ) {
     Menu_AddItem( menu, k );
 }
 
-static qboolean ParseFile( const char *path ) {
+static void Parse_Toggle( menuFrameWork_t *menu ) {
+    static const char *yes_no_names[] = { "no", "yes", NULL };
+    menuSpinControl_t *s;
+    qboolean negate = qfalse;
+    menuType_t type = MTYPE_TOGGLE;
+    int bit = 0;
+    char *b;
+
+    if( Cmd_Argc() < 3 ) {
+        Com_Printf( "Usage: %s <name> <cvar> [~][bit]\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    b = Cmd_Argv( 3 );
+    if( *b == '~' ) {
+        negate = qtrue;
+        b++;
+    }
+    if( *b ) {
+        bit = atoi( b );
+        if( bit < 0 || bit >= 32 ) {
+            Com_Printf( "Invalid bit number: %d\n", bit );
+            return;
+        }
+        type = MTYPE_BITFIELD;
+    }
+
+    s = UI_Mallocz( sizeof( *s ) );
+    s->generic.type = type;
+    s->generic.name = UI_CopyString( Cmd_Argv( 1 ) );
+    s->cvar = Cvar_Get( Cmd_Argv( 2 ), NULL, CVAR_USER_CREATED );
+    s->itemnames = ( char ** )yes_no_names;
+    s->numItems = 2;
+    s->negate = negate;
+    s->mask = 1 << bit;
+
+    Menu_AddItem( menu, s );
+}
+
+static qboolean Parse_File( const char *path, int depth ) {
     char *data, *p, *cmd;
-    int linenum = 1;
     int argc;
     menuFrameWork_t *menu = NULL;
 
     FS_LoadFile( path, ( void ** )&data );
     if( !data ) {
+        Com_Printf( "Couldn't load %s\n", path );
         return qfalse;
     }
 
@@ -123,50 +209,74 @@ static qboolean ParseFile( const char *path ) {
             cmd = Cmd_Argv( 0 );
             if( menu ) {
                 if( !strcmp( cmd, "end" ) ) {
-                    if( !menu->title ) {
-                        menu->transparent = qtrue;
-                        menu->draw = Draw;
+                    if( menu->nitems ) {
+                        if( !menu->title ) {
+                            menu->transparent = qtrue;
+                            menu->draw = Draw;
+                        }
+                        List_Append( &ui_menus, &menu->entry );
+                    } else {
+                        menu->free( menu );
                     }
-                    List_Append( &ui_menus, &menu->entry );
                     menu = NULL;
                 } else if( !strcmp( cmd, "title" ) ) {
                     if( menu->title ) {
                         Z_Free( menu->title );
                     }
                     menu->title = UI_CopyString( Cmd_Argv( 1 ) );
-                } else if( !strcmp( cmd, "spin" ) ) {
-                    if( argc < 4 ) {
-                        Com_WPrintf( "Insufficient arguments to '%s' on line %d in %s\n",
-                            cmd, linenum, path );
-                    }
-                    ParseSpin( menu );
-                } else if( !strcmp( cmd, "slider" ) ) {
-                    ParseSlider( menu );
+                } else if( !strcmp( cmd, "values" ) ) {
+                    Parse_Values( menu );
+                } else if( !strcmp( cmd, "pairs" ) ) {
+                    Parse_Pairs( menu );
+                } else if( !strcmp( cmd, "range" ) ) {
+                    Parse_Range( menu );
                 } else if( !strcmp( cmd, "action" ) ) {
-                    ParseAction( menu );
-                } else if( !strcmp( cmd, "confirm" ) ) {
+                    Parse_Action( menu );
                 } else if( !strcmp( cmd, "bind" ) ) {
-                    ParseBind( menu );
+                    Parse_Bind( menu );
+                } else if( !strcmp( cmd, "toggle" ) ) {
+                    Parse_Toggle( menu );
                 } else {
-                    Com_WPrintf( "Unexpected '%s' on line %d in %s\n",
-                        cmd, linenum, path );
+                    Com_WPrintf( "Unknown keyword '%s'\n", cmd );
+                    menu->free( menu );
+                    menu = NULL;
                     break;
                 }
             } else {
                 if( !strcmp( cmd, "begin" ) ) {
-                    if( argc < 2 ) {
-                        Com_WPrintf( "Insufficient arguments to '%s' on line %d in %s\n",
-                            cmd, linenum, path );
+                    char *s = Cmd_Argv( 1 );
+                    if( !*s ) {
+                        Com_WPrintf( "Expected menu name after '%s'\n", cmd );
                         break;
                     }
+                    menu = UI_FindMenu( s );
+                    if( menu ) {
+                        if( menu->free ) {
+                            List_Remove( &menu->entry );
+                            menu->free( menu );
+                        } else {
+                            Com_WPrintf( "Attempted to override built-in menu '%s'\n", s );
+                            break;
+                        }
+                    }
                     menu = UI_Mallocz( sizeof( *menu ) );
-                    menu->name = UI_CopyString( Cmd_Argv( 1 ) );
+                    menu->name = UI_CopyString( s );
                     menu->push = Menu_Push;
                     menu->pop = Menu_Pop;
                     menu->free = Menu_Free;
+                } else if( !strcmp( cmd, "include" ) ) {
+                    char *s = Cmd_Argv( 1 );
+                    if( !*s ) {
+                        Com_WPrintf( "Expected file name after '%s'\n", cmd );
+                        break;
+                    }
+                    if( depth == 16 ) {
+                        Com_WPrintf( "Includes too deeply nested\n" );
+                    } else {
+                        Parse_File( s, depth + 1 );
+                    }
                 } else {
-                    Com_WPrintf( "Unexpected '%s' on line %d in %s\n",
-                        cmd, linenum, path );
+                    Com_WPrintf( "Unknown keyword '%s'\n", cmd );
                     break;
                 }
             }
@@ -176,7 +286,6 @@ static qboolean ParseFile( const char *path ) {
             break;
         }
 
-        linenum++; // FIXME: meaniningless
         data = p + 1;
     }
 
@@ -186,6 +295,6 @@ static qboolean ParseFile( const char *path ) {
 }
 
 void UI_LoadStript( void ) {
-    ParseFile( "q2pro.menu" );
+    Parse_File( "q2pro.menu", 0 );
 }
 

@@ -372,6 +372,7 @@ qboolean FS_FilterFile( fileHandle_t f ) {
 	switch( mode ) {
 	case FS_MODE_READ:
         modeStr = "rb";
+        break;
 	case FS_MODE_WRITE:
 		modeStr = "wb";
 		break;
@@ -379,6 +380,7 @@ qboolean FS_FilterFile( fileHandle_t f ) {
         return qfalse;
 	}
 
+    fseek( file->fp, 0, SEEK_SET );
     zfp = gzdopen( fileno( file->fp ), modeStr );
     if( !zfp ) {
         return qfalse;
@@ -448,14 +450,15 @@ static size_t FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
 	char *modeStr;
 	unsigned mode;
 
-#ifdef _WIN32
-	// allow writing into basedir on Windows
 	if( ( file->mode & FS_PATH_MASK ) == FS_PATH_BASE ) {
-		Q_concat( file->fullpath, sizeof( file->fullpath ),
-			sys_basedir->string, "/" BASEGAME "/", name, NULL );
-	} else
-#endif
-	{
+        if( sys_homedir->string[0] ) {
+    		Q_concat( file->fullpath, sizeof( file->fullpath ),
+	    		sys_homedir->string, "/" BASEGAME "/", name, NULL );
+        } else {
+    		Q_concat( file->fullpath, sizeof( file->fullpath ),
+	    		sys_basedir->string, "/" BASEGAME "/", name, NULL );
+        }
+	} else {
 		Q_concat( file->fullpath, sizeof( file->fullpath ),
 			fs_gamedir, "/", name, NULL );
 	}
@@ -727,6 +730,22 @@ size_t FS_ReadLine( fileHandle_t f, char *buffer, int size ) {
     return len - 1;
 }
 
+void FS_Flush( fileHandle_t f ) {
+	fsFile_t *file = FS_FileForHandle( f );
+
+    switch( file->type ) {
+    case FS_REAL:
+        fflush( file->fp );
+        break;
+#if USE_ZLIB
+    case FS_GZIP:
+        gzflush( file->zfp, Z_SYNC_FLUSH );
+        break;
+#endif
+    default:
+        break;
+    }
+}
 
 /*
 =================

@@ -59,7 +59,7 @@ typedef struct {
 	int	minimize, maximize;
 } glmode_t;
 
-static glmode_t filterModes[] = {
+static const glmode_t filterModes[] = {
 	{ "GL_NEAREST", GL_NEAREST, GL_NEAREST },
 	{ "GL_LINEAR", GL_LINEAR, GL_LINEAR },
 	{ "GL_NEAREST_MIPMAP_NEAREST", GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST },
@@ -68,14 +68,14 @@ static glmode_t filterModes[] = {
 	{ "GL_LINEAR_MIPMAP_LINEAR", GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR }
 };
 
-static int numFilterModes = sizeof( filterModes ) / sizeof( filterModes[0] );
+static const int numFilterModes = sizeof( filterModes ) / sizeof( filterModes[0] );
 
 typedef struct {
 	char *name;
 	int mode;
 } gltmode_t;
 
-static gltmode_t alphaModes[] = {
+static const gltmode_t alphaModes[] = {
 	{ "default", 4 },
 	{ "GL_RGBA", GL_RGBA },
 	{ "GL_RGBA8", GL_RGBA8 },
@@ -84,9 +84,9 @@ static gltmode_t alphaModes[] = {
 	{ "GL_RGBA2", GL_RGBA2 }
 };
 
-static int numAlphaModes = sizeof( alphaModes ) / sizeof( alphaModes[0] );
+static const int numAlphaModes = sizeof( alphaModes ) / sizeof( alphaModes[0] );
 
-static gltmode_t solidModes[] = {
+static const gltmode_t solidModes[] = {
 	{ "default", 4 },
 	{ "GL_RGB", GL_RGB },
 	{ "GL_RGB8", GL_RGB8 },
@@ -99,7 +99,7 @@ static gltmode_t solidModes[] = {
 #endif
 };
 
-static int numSolidModes = sizeof( solidModes ) / sizeof( solidModes[0] );
+static const int numSolidModes = sizeof( solidModes ) / sizeof( solidModes[0] );
 
 static void gl_texturemode_changed( cvar_t *self ) {
 	int		i;

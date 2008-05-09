@@ -877,6 +877,8 @@ size_t	FS_Write( const void *buffer, size_t len, fileHandle_t hFile );
 void	FS_FPrintf( fileHandle_t f, const char *format, ... ) q_printf( 2, 3 );
 size_t  FS_ReadLine( fileHandle_t f, char *buffer, int size );
 
+void    FS_Flush( fileHandle_t f );
+
 int		FS_Tell( fileHandle_t f );
 int		FS_RawTell( fileHandle_t f );
 

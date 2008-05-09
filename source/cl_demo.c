@@ -34,7 +34,7 @@ Dumps the current demo message, prefixed by the length.
 ====================
 */
 void CL_WriteDemoMessage( sizebuf_t *buf ) {
-	uint32_t length;
+	uint32_t msglen;
 
     if( buf->overflowed ) {
         SZ_Clear( buf );
@@ -45,8 +45,8 @@ void CL_WriteDemoMessage( sizebuf_t *buf ) {
         return;
     }
 
-	length = LittleLong( buf->cursize );
-	FS_Write( &length, 4, cls.demorecording );
+	msglen = LittleLong( buf->cursize );
+	FS_Write( &msglen, 4, cls.demorecording );
 	FS_Write( buf->data, buf->cursize, cls.demorecording );
 
     SZ_Clear( buf );
@@ -213,7 +213,7 @@ stop recording a demo
 ====================
 */
 void CL_Stop_f( void ) {
-	uint32_t length;
+	uint32_t msglen;
 
 	if( !cls.demorecording ) {
 		Com_Printf( "Not recording a demo.\n" );
@@ -229,18 +229,21 @@ void CL_Stop_f( void ) {
 	}
 
 // finish up
-	length = ( uint32_t )-1;
-	FS_Write( &length, 4, cls.demorecording );
+	msglen = ( uint32_t )-1;
+	FS_Write( &msglen, 4, cls.demorecording );
 
-    length = FS_RawTell( cls.demorecording );
+    FS_Flush( cls.demorecording );
+    msglen = FS_RawTell( cls.demorecording );
 
 // close demofile
 	FS_FCloseFile( cls.demorecording );
 	cls.demorecording = 0;
     cls.demopaused = qfalse;
 
-	Com_Printf( "Stopped demo (%u bytes written).\n", length );
+	Com_Printf( "Stopped demo (%u bytes written).\n", msglen );
 }
+
+extern const cmd_option_t o_mvdrecord[];
 
 /*
 ====================
@@ -258,18 +261,8 @@ void CL_Record_f( void ) {
 	entity_state_t	*ent;
 	char *string;
 	fileHandle_t demofile;
-	qboolean compressed = qfalse;
-
-	i = 1;
-	if( !strcmp( Cmd_Argv( i ), "-c" ) || !strcmp( Cmd_Argv( i ), "--compressed" ) ) {
-		compressed = qtrue;
-		i++;
-	}
-
-	if( i >= Cmd_Argc() ) {
-		Com_Printf( "Usage: %s [-c|--compressed] [/]<filename>\n", Cmd_Argv( 0 ) );
-		return;
-	}
+	qboolean gzip = qfalse;
+    int c;
 
 	if( cls.demorecording ) {
 		Com_Printf( "Already recording.\n" );
@@ -281,18 +274,36 @@ void CL_Record_f( void ) {
 		return;
 	}
 
+    while( ( c = Cmd_ParseOptions( o_mvdrecord ) ) != -1 ) {
+        switch( c ) {
+        case 'h':
+            Cmd_PrintUsage( o_mvdrecord, "[/]<filename>" );
+            Com_Printf( "Begin client demo recording.\n" );
+            Cmd_PrintHelp( o_mvdrecord );
+            return;
+        case 'z':
+            gzip = qtrue;
+            break;
+        }
+    }
+
+    if( !cmd_optarg[0] ) {
+        Com_Printf( "Missing filename argument.\n" );
+        Cmd_PrintHint();
+        return;
+    }
+
 	//
 	// open the demo file
 	//
-	string = Cmd_Argv( i );
-	if( *string == '/' ) {
-		Q_strncpyz( name, string + 1, sizeof( name ) );
+	if( cmd_optarg[0] == '/' ) {
+		Q_strncpyz( name, cmd_optarg + 1, sizeof( name ) );
 	} else {
-		Q_concat( name, sizeof( name ), "demos/", string, NULL );
+		Q_concat( name, sizeof( name ), "demos/", cmd_optarg, NULL );
     	COM_AppendExtension( name, ".dm2", sizeof( name ) );
-	}
-	if( compressed ) {
-		Q_strcat( name, sizeof( name ), ".gz" );
+	    if( gzip ) {
+    	    COM_AppendExtension( name, ".gz", sizeof( name ) );
+    	}
 	}
 
 	FS_FOpenFile( name, &demofile, FS_MODE_WRITE );
@@ -303,7 +314,7 @@ void CL_Record_f( void ) {
 
 	Com_Printf( "Recording client demo to %s.\n", name );
 
-	if( compressed ) {
+	if( gzip ) {
         FS_FilterFile( demofile );
     }
 
@@ -442,6 +453,18 @@ static int CL_ReadFirstDemoMessage( fileHandle_t f ) {
     if( FS_Read( &ul, 4, f ) != 4 ) {
         Com_DPrintf( "%s: short read of msglen\n", __func__ );
         return -1;
+    }
+
+    if( ( ( LittleLong( ul ) & 0xe0ffffff ) == 0x00088b1f ) ) {
+        Com_DPrintf( "%s: looks like gzip file\n", __func__ );
+        if( !FS_FilterFile( f ) ) {
+            Com_DPrintf( "%s: couldn't install gzip filter\n", __func__ );
+            return -1;
+        }
+        if( FS_Read( &ul, 4, f ) != 4 ) {
+            Com_DPrintf( "%s: short read of msglen\n", __func__ );
+            return -1;
+        }
     }
 
     if( ul == MVD_MAGIC ) {
