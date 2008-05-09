@@ -1,0 +1,152 @@
+/* * * * * * * * * * * * * * * * * * * * * * * *
+*
+* This is example menu definition file for Q2PRO.
+*
+* File format is line based, whitespace is ignored. Lines are macro
+* expanded at script load time just as usual console commands.
+*
+* Long lines can be broken into multiple ones by escaping LF character
+* with '\'. Escaping CRLF-style line endings will _not_ work.
+*
+* C and C++ style comments are supported.
+*
+* Each menu should have a title, otherwise menu is considered transparent.
+*
+* Empty menu entries are ignored. Duplicate menu entries override previous ones.
+* Built-in menus (`demos', `servers' and `players') can not be overridden.
+*
+* include <filename>
+*
+* begin <menuname>
+*    title <menutitle>
+*
+*    range <name> <cvar> <add> <mul> <min> <max>
+*
+*    pairs <name> <cvar> <desc1> <value1> [...]
+*    values <name> <cvar> <desc1> [...]
+*    toggle <name> <cvar> [~][bit]
+*
+*    bind <name> <command>
+*    action <name> <command>
+* end
+*
+* * * * * * * * * * * * * * * * * * * * * * * */
+
+// include test.menu
+
+begin video
+    title "Video Setup"
+    range "screen size" viewsize 0 0.1 4 10
+    range "gamma" vid_gamma -1.8 -10 5 13
+    toggle "hardware gamma" vid_hwgamma
+    values "video mode" vid_fullscreen windowed $vid_modelist
+    range "texture quality" gl_picmip 3 -1 0 3
+    pairs "texture filter" gl_texturemode \
+        nearest GL_NEAREST \
+        linear GL_LINEAR \
+        bilinear GL_LINEAR_MIPMAP_NEAREST \
+        trilinear GL_LINEAR_MIPMAP_LINEAR
+    toggle "vertical sync" gl_swapinterval
+    range "texture saturation" gl_saturation 0 10 0 10
+    range "lightmap saturation" gl_coloredlightmaps 0 10 0 10
+    toggle "override textures" r_override_textures
+    toggle "override models" r_override_models
+    toggle "override textures" r_override_textures
+end
+
+begin options
+    title "Options"
+    action "Player" pushmenu players
+    action "Keys" pushmenu keys
+    action "Weapons" pushmenu weapons
+    action "Video" pushmenu video
+    action "Sound" pushmenu sound
+    action "Game" pushmenu dmopts
+end
+
+
+begin sound
+    title "Sound Setup"
+    values "hardware access" s_direct "max compatibility" "max performance"
+    range "effects volume" s_volume 0 10 0 10
+    values "ambient sounds" s_ambient "no" "yes" "only player's own"
+    pairs "chat beep" cl_chat_sound \
+        disabled "" \
+        default misc/talk.wav \
+        alternative misc/talk1.wav
+end
+
+begin dmopts
+    title "Game Options"
+    toggle "falling damage" dmflags ~3
+    toggle "weapons stay" dmflags 2
+    toggle "instant powerups" dmflags 4
+    toggle "allow powerups" dmflags ~1
+    toggle "allow health" dmflags ~0
+    toggle "allow armor" dmflags ~11
+    toggle "spawn farthest" dmflags 9
+    toggle "same map" dmflags 5
+    toggle "force respawn" dmflags 10
+    toggle "infinite ammo" dmflags 13
+    toggle "fixed FOV" dmflags 15
+    toggle "quad drop" dmflags 14
+end
+
+begin main
+    title "Main Menu"
+    action "Servers" pushmenu servers
+    action "Demos" pushmenu demos
+    action "Options" pushmenu options
+    action "Quit" quit
+end
+
+begin game
+    action "Servers" pushmenu servers
+    action "Demos" pushmenu demos
+    action "Options" pushmenu options
+    action "Disconnet" disconnect
+    action "Quit" quit
+end
+
+begin keys
+    title "Key Bindings"
+    bind "attack" +attack
+    bind "next weapon" weapnext
+    bind "walk forward" +forward
+    bind "backpedal" +back
+    bind "turn left" +left
+    bind "turn right" +right
+    bind "run" +speed
+    bind "step left" +moveleft
+    bind "step right" +moveright
+    bind "sidestep" +strafe
+    bind "look up" +lookup
+    bind "look down" +lookdown
+    bind "center view" centerview
+    bind "mouse look" +mlook
+    bind "keyboard look" +klook
+    bind "up / jump" +moveup
+    bind "down / crouch" +movedown
+    bind "inventory" inven
+    bind "use item" invuse
+    bind "drop item" invdrop
+    bind "prev item" invprev
+    bind "next item" invnext
+    bind "help computer" help
+    bind "pause game" pause
+end
+
+begin weapons
+    title "Weapon Bindings"
+    bind "blaster" "use Blaster"
+    bind "shotgun" "use Shotgun"
+    bind "super shotgun" "use Super Shotgun"
+    bind "machinegun" "use Machinegun"
+    bind "chaingun" "use Chaingun"
+    bind "grenade launcher" "use Grenade Launcher"
+    bind "rocket launcher" "use Rocket Launcher"
+    bind "hyperblaster" "use HyperBlaster"
+    bind "railgun" "use Railgun"
+    bind "bfg10k" "use BFG10K"
+end
+
