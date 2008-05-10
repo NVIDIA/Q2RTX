@@ -50,6 +50,10 @@ static void Action_Init( menuAction_t *a ) {
         Com_Error( ERR_FATAL, "Action_Init: NULL a->generic.name" );
     }
 
+    if( ( a->generic.uiFlags & UI_CENTER ) != UI_CENTER ) {
+        a->generic.x += RCOLUMN_OFFSET;
+    }
+
     a->generic.rect.x = a->generic.x;
     a->generic.rect.y = a->generic.y;
     UI_StringDimensions( &a->generic.rect, a->generic.uiFlags, a->generic.name );
@@ -66,7 +70,13 @@ static void Action_Draw( menuAction_t *a ) {
 
     flags = a->generic.uiFlags;
     if( a->generic.flags & QMF_HASFOCUS ) {
-        flags |= UI_ALTCOLOR;
+        if( ( a->generic.uiFlags & UI_CENTER ) != UI_CENTER ) {
+            if( ( uis.realtime >> 8 ) & 1 ) {
+                UI_DrawChar( a->generic.x - RCOLUMN_OFFSET / 2, a->generic.y, a->generic.uiFlags | UI_RIGHT, 13 );
+            }
+        } else {
+            flags |= UI_ALTCOLOR;
+        }
     }
 
     UI_DrawString( a->generic.x, a->generic.y, NULL,
@@ -269,13 +279,27 @@ FIELD CONTROL
 ===================================================================
 */
 
+static void Field_Push( menuField_t *f ) {
+    IF_Init( &f->field, f->width, MAX_FIELD_TEXT, f->cvar->string );
+}
+
+static void Field_Pop( menuField_t *f ) {
+    Cvar_SetByVar( f->cvar, f->field.text, CVAR_SET_CONSOLE );
+}
+
+static void Field_Free( menuField_t *f ) {
+    Z_Free( f->generic.name );
+    Z_Free( f->generic.status );
+    Z_Free( f );
+}
+
 /*
 =================
 Field_Init
 =================
 */
 static void Field_Init( menuField_t *f ) {
-    int w = f->field.visibleChars * CHAR_WIDTH;
+    int w = f->width * CHAR_WIDTH;
 
     f->generic.uiFlags &= ~( UI_LEFT | UI_RIGHT );
     
@@ -284,7 +308,7 @@ static void Field_Init( menuField_t *f ) {
         f->generic.rect.y = f->generic.y;
         UI_StringDimensions( &f->generic.rect,
             f->generic.uiFlags | UI_RIGHT, f->generic.name );
-        f->generic.rect.width += RCOLUMN_OFFSET + w;
+        f->generic.rect.width += ( RCOLUMN_OFFSET - LCOLUMN_OFFSET ) + w;
     } else {
         f->generic.rect.x = f->generic.x - w / 2;
         f->generic.rect.y = f->generic.y;
@@ -333,7 +357,19 @@ static int Field_Key( menuField_t *f, int key ) {
     qboolean ret;
 
     ret = IF_KeyEvent( &f->field, key );
-    return ret ? QMS_SILENT : QMS_NOTHANDLED;
+    if( ret ) {
+        return QMS_SILENT;
+    }
+    if( f->generic.flags & QMF_NUMBERSONLY ) {
+        if( Q_isdigit( key ) ) {
+            return QMS_SILENT;
+        }
+    } else {
+	    if( key >= 32 && key < 127 ) {
+            return QMS_SILENT;
+        }
+    }
+    return QMS_NOTHANDLED;
 }
 
 /*
@@ -547,6 +583,29 @@ static void Pairs_Free( menuSpinControl_t *s ) {
     Z_Free( s->itemnames );
     Z_Free( s->itemvalues );
     Z_Free( s );
+}
+
+/*
+===================================================================
+
+STRINGS CONTROL
+
+===================================================================
+*/
+
+static void Strings_Push( menuSpinControl_t *s ) {
+    int i;
+
+    for( i = 0; i < s->numItems; i++ ) {
+        if( !Q_stricmp( s->itemnames[i], s->cvar->string ) ) {
+            s->curvalue = i;
+            break;
+        }
+    }
+}
+
+static void Strings_Pop( menuSpinControl_t *s ) {
+    Cvar_SetByVar( s->cvar, s->itemnames[s->curvalue], CVAR_SET_CONSOLE );
 }
 
 /*
@@ -1260,6 +1319,8 @@ void Menu_Init( menuFrameWork_t *menu ) {
         case MTYPE_SPINCONTROL:
         case MTYPE_BITFIELD:
         case MTYPE_PAIRS:
+        case MTYPE_VALUES:
+        case MTYPE_STRINGS:
         case MTYPE_TOGGLE:
             SpinControl_Init( item );
             break;
@@ -1350,11 +1411,15 @@ void Menu_SetFocus( menuCommon_t *focus ) {
             item->flags |= QMF_HASFOCUS;
             if( item->focus ) {
                 item->focus( item, qtrue );
+            } else if( item->status ) {
+                menu->status = item->status;
             }
         } else if( item->flags & QMF_HASFOCUS ) {
             item->flags &= ~QMF_HASFOCUS;
             if( item->focus ) {
                 item->focus( item, qfalse );
+            } else if( menu->status == item->status ) {
+                menu->status = NULL;
             }
         }
     }
@@ -1454,6 +1519,8 @@ void Menu_Draw( menuFrameWork_t *menu ) {
         case MTYPE_SPINCONTROL:
         case MTYPE_BITFIELD:
         case MTYPE_PAIRS:
+        case MTYPE_VALUES:
+        case MTYPE_STRINGS:
         case MTYPE_TOGGLE:
             SpinControl_Draw( item );
             break;
@@ -1502,6 +1569,8 @@ menuSound_t Menu_SelectItem( menuFrameWork_t *s ) {
     case MTYPE_SPINCONTROL:
     case MTYPE_BITFIELD:
     case MTYPE_PAIRS:
+    case MTYPE_VALUES:
+    case MTYPE_STRINGS:
     case MTYPE_TOGGLE:
         return SpinControl_DoEnter( (menuSpinControl_t *)item );
     case MTYPE_KEYBIND:
@@ -1528,6 +1597,8 @@ menuSound_t Menu_SlideItem( menuFrameWork_t *s, int dir ) {
     case MTYPE_SPINCONTROL:
     case MTYPE_BITFIELD:
     case MTYPE_PAIRS:
+    case MTYPE_VALUES:
+    case MTYPE_STRINGS:
     case MTYPE_TOGGLE:
         return SpinControl_DoSlide( (menuSpinControl_t *)item, dir );
     default:
@@ -1725,6 +1796,9 @@ qboolean Menu_Push( menuFrameWork_t *menu ) {
         case MTYPE_PAIRS:
             Pairs_Push( item );
             break;
+        case MTYPE_STRINGS:
+            Strings_Push( item );
+            break;
         case MTYPE_SPINCONTROL:
             SpinControl_Push( item );
             break;
@@ -1733,6 +1807,9 @@ qboolean Menu_Push( menuFrameWork_t *menu ) {
             break;
         case MTYPE_KEYBIND:
             Keybind_Push( item );
+            break;
+        case MTYPE_FIELD:
+            Field_Push( item );
             break;
         default:
             break;
@@ -1758,9 +1835,15 @@ void Menu_Pop( menuFrameWork_t *menu ) {
         case MTYPE_PAIRS:
             Pairs_Pop( item );
             break;
+        case MTYPE_STRINGS:
+            Strings_Pop( item );
+            break;
         case MTYPE_SPINCONTROL:
         case MTYPE_TOGGLE:
             SpinControl_Pop( item );
+            break;
+        case MTYPE_FIELD:
+            Field_Pop( item );
             break;
         default:
             break;
@@ -1790,23 +1873,25 @@ void Menu_Free( menuFrameWork_t *menu ) {
             Pairs_Free( item );
             break;
         case MTYPE_SPINCONTROL:
+        case MTYPE_STRINGS:
             SpinControl_Free( item );
             break;
         case MTYPE_KEYBIND:
             Keybind_Free( item );
+            break;
+        case MTYPE_FIELD:
+            Field_Free( item );
+            break;
+        case MTYPE_SEPARATOR:
+            Z_Free( item );
             break;
         default:
             break;
         }
     }
 
-    if( menu->title ) {
-        Z_Free( menu->title );
-    }
-    if( menu->name ) {
-        Z_Free( menu->name );
-    }
-
+    Z_Free( menu->title );
+    Z_Free( menu->name );
     Z_Free( menu );
 }
 

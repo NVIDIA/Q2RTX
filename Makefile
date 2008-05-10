@@ -34,6 +34,8 @@ install:
 		install -m 755 -D $$t $(DESTDIR)$(REFDIR)/$$t ; \
 	done
 	install -m 644 -D $(SRCDIR)/q2pro.6 $(DESTDIR)$(MANDIR)/q2pro.6
+	install -m 644 -D $(SRCDIR)/wiki/doc/q2pro.menu \
+		$(DESTDIR)$(DATADIR)/baseq2/q2pro.menu
 endif # SINGLEUSER
 
 strip:

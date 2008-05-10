@@ -208,6 +208,10 @@ UI_OpenMenu
 void UI_OpenMenu( uiMenu_t type ) {
     menuFrameWork_t *menu = NULL;
 
+    if( !uis.initialized ) {
+        return;
+    }
+
     // close any existing menus
     UI_ForceMenuOff();
 
@@ -234,6 +238,9 @@ void UI_OpenMenu( uiMenu_t type ) {
 }
 
 void UI_ErrorMenu( comErrorType_t type, const char *text ) {
+    if( !uis.initialized ) {
+        return;
+    }
     // close any existing menus
     UI_ForceMenuOff();
 
@@ -673,6 +680,8 @@ qboolean UI_Init( void ) {
     UI_LoadStript();
 
     Com_Printf( "Registered %d menus.\n", List_Count( &ui_menus ) );
+
+    uis.initialized = qtrue;
 
     return qtrue;
 }

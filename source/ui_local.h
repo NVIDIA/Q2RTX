@@ -44,6 +44,8 @@ typedef enum {
     MTYPE_FIELD,
     MTYPE_BITFIELD,
     MTYPE_PAIRS,
+    MTYPE_STRINGS,
+    MTYPE_VALUES,
     MTYPE_TOGGLE,
     MTYPE_STATIC,
     MTYPE_KEYBIND
@@ -107,6 +109,7 @@ typedef struct menuCommon_s {
 	menuFrameWork_t *parent;
 	color_t	color;
 	vrect_t rect;
+    char *status;
 
 	int x, y;
 	int width, height;
@@ -123,6 +126,8 @@ typedef struct menuCommon_s {
 typedef struct menuField_s {
 	menuCommon_t generic;
 	inputField_t field;
+    cvar_t *cvar;
+    int width;
 } menuField_t;
 
 typedef struct menuSlider_s {
@@ -232,6 +237,7 @@ void PlayerModel_Free( void );
 #define	MAX_MENU_DEPTH	8
 
 typedef struct uiStatic_s {
+    qboolean initialized;
 	int realtime;
 	glconfig_t glconfig;
     clipRect_t clipRect;

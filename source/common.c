@@ -1013,6 +1013,31 @@ size_t Com_Random_m( char *buffer, size_t size ) {
     return Com_sprintf( buffer, size, "%d", ( rand() ^ ( rand() >> 8 ) ) % 10 );
 }
 
+static size_t Com_MapList_m( char *buffer, size_t size ) {
+    int i, numFiles;
+    void **list;
+    char *s, *p;
+    size_t len, total = 0;
+
+    list = FS_ListFiles( "maps", ".bsp", 0, &numFiles );
+    for( i = 0; i < numFiles; i++ ) {
+        s = list[i];
+		p = COM_FileExtension( list[i] );
+		*p = 0;
+        len = strlen( s );
+        if( total + len + 1 < size ) {
+            memcpy( buffer + total, s, len );
+            buffer[total + len] = ' ';
+            total += len + 1;
+        }
+        Z_Free( s );
+    }
+    buffer[total] = 0;
+
+    Z_Free( list );
+    return total;
+}
+
 static void Com_LastError_f( void ) {
 	if( com_errorMsg[0] ) {
 		Com_Printf( "%s\n", com_errorMsg );
@@ -1291,6 +1316,7 @@ void Qcommon_Init( int argc, char **argv ) {
 	Cmd_AddMacro( "com_time", Com_Time_m );
 	Cmd_AddMacro( "com_uptime", Com_Uptime_m );
 	Cmd_AddMacro( "random", Com_Random_m );
+	Cmd_AddMacro( "com_maplist", Com_MapList_m );
 
     // add any system-wide configuration files
     Sys_AddDefaultConfig();

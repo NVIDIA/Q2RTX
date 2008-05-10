@@ -22,12 +22,16 @@
 *
 *    range <name> <cvar> <add> <mul> <min> <max>
 *
-*    pairs <name> <cvar> <desc1> <value1> [...]
-*    values <name> <cvar> <desc1> [...]
+*    pairs <name> <cvar> <string1> <value1> [...]
+*    values <name> <cvar> <string1> [...]
+*    strings <name> <cvar> <value1> [...]
 *    toggle <name> <cvar> [~][bit]
 *
 *    bind <name> <command>
 *    action <name> <command>
+*    blank
+*
+*    field [options] <name> <cvar>
 * end
 *
 * * * * * * * * * * * * * * * * * * * * * * * */
@@ -51,7 +55,6 @@ begin video
     range "lightmap saturation" gl_coloredlightmaps 0 10 0 10
     toggle "override textures" r_override_textures
     toggle "override models" r_override_models
-    toggle "override textures" r_override_textures
 end
 
 begin options
@@ -61,9 +64,8 @@ begin options
     action "Weapons" pushmenu weapons
     action "Video" pushmenu video
     action "Sound" pushmenu sound
-    action "Game" pushmenu dmopts
+    action "Downloads" pushmenu downloads
 end
-
 
 begin sound
     title "Sound Setup"
@@ -76,8 +78,17 @@ begin sound
         alternative misc/talk1.wav
 end
 
-begin dmopts
-    title "Game Options"
+begin downloads
+    title "Download Options"
+    toggle "allow downloading" allow_download
+    toggle "maps" allow_download_maps
+    toggle "player models/skins" allow_download_players
+    toggle "models" allow_download_models
+    toggle "sounds" allow_download_sounds
+end
+
+begin gameflags
+    title "Deathmatch Flags"
     toggle "falling damage" dmflags ~3
     toggle "weapons stay" dmflags 2
     toggle "instant powerups" dmflags 4
@@ -92,11 +103,24 @@ begin dmopts
     toggle "quad drop" dmflags 14
 end
 
+begin startserver
+    title "Start Server"
+    strings "initial map" nextserver $com_maplist
+    field --integer --status "0 - no time limit" --width 3 "time limit" timelimit
+    field --integer --status "0 - no frag limit" --width 3 "frag limit" fraglimit
+    field --integer --width 3 "max players" maxclients
+    field --width 16 "host name" hostname
+    blank
+    action --align "deathmatch flags" pushmenu gameflags
+    action --align "begin game" "forcemenuoff; map $nextserver"
+end
+
 begin main
     title "Main Menu"
     action "Servers" pushmenu servers
     action "Demos" pushmenu demos
     action "Options" pushmenu options
+    action "Game" pushmenu startserver
     action "Quit" quit
 end
 
