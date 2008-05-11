@@ -443,7 +443,7 @@ void Hunk_End( mempool_t *pool ) {
     }
 
 	if( newsize < pool->maxsize ) {
-#ifdef __linux__
+#ifdef _GNU_SOURCE
 	    void *buf = mremap( pool->base, pool->maxsize, newsize, 0 );
 #else
 		void *unmap_base = ( byte * )pool->base + newsize;
@@ -477,7 +477,7 @@ GENERAL ROUTINES
 */
 
 void Sys_DebugBreak( void ) {
-    raise( SIGTERM );
+    raise( SIGTRAP );
 }
 
 unsigned Sys_Milliseconds( void ) {
