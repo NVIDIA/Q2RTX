@@ -95,7 +95,7 @@ extern cvar_t *gl_clear;
 extern cvar_t *gl_novis;
 extern cvar_t *gl_lockpvs;
 extern cvar_t *gl_lightmap;
-extern cvar_t *gl_fastsky;
+extern cvar_t *gl_drawsky;
 extern cvar_t *gl_dynamic;
 extern cvar_t *gl_fullbright;
 extern cvar_t *gl_mode;
@@ -277,8 +277,7 @@ qhandle_t GL_RegisterFont( const char *name );
 void Draw_SetColor( int flags, const color_t color );
 void Draw_SetClipRect( int flags, const clipRect_t *clip );
 void Draw_SetScale( float *scale );
-void Draw_GetPicSize( int *w, int *h, qhandle_t hPic );
-void Draw_GetFontSize( int *w, int *h, qhandle_t hFont );
+qboolean Draw_GetPicSize( int *w, int *h, qhandle_t hPic );
 void Draw_StretchPicST( int x, int y, int w, int h, float s1, float t1,
         float s2, float t2, qhandle_t hPic );
 void Draw_StretchPic( int x, int y, int w, int h, qhandle_t hPic );
@@ -305,6 +304,7 @@ extern image_t *r_particletexture;
 extern image_t *r_beamtexture;
 extern image_t *r_warptexture;
 extern image_t *r_whiteimage;
+extern image_t *r_blackimage;
 
 extern int gl_filter_min;
 extern int gl_filter_max;

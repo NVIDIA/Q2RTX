@@ -1796,7 +1796,7 @@ void SV_Init( void ) {
 	sv_badauth_time->changed = sv_badauth_time_changed;
 
     Cvar_Get( "sv_features", va( "%d", GMF_CLIENTNUM|GMF_MVDSPEC ), CVAR_ROM );
-    g_features = Cvar_Get( "g_features", NULL, CVAR_USER_CREATED );
+    g_features = Cvar_Ref( "g_features" );
 
 	//
     // set up default pmove parameters

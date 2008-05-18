@@ -87,8 +87,9 @@ static void Sys_ConsoleWrite( char *data, int count ) {
     while( count ) {
         ret = write( 1, data, count );
         if( ret <= 0 ) {
-            Com_Error( ERR_FATAL, "%s: %d bytes written: %s",
-                __func__, ret, strerror( errno ) );
+            //Com_Error( ERR_FATAL, "%s: %d bytes written: %s",
+              //  __func__, ret, strerror( errno ) );
+            break;
         }
         count -= ret;
         data += ret;
@@ -375,7 +376,8 @@ void Sys_RunConsole( void ) {
     tv.tv_sec = 0;
     tv.tv_usec = 0;
     if( select( 1, &fd, NULL, NULL, &tv ) == -1 ) {
-        Com_Error( ERR_FATAL, "%s: select() failed", __func__ );
+        Com_Error( ERR_FATAL, "%s: select() failed: %s",
+            __func__, strerror( errno ) );
     }
 
     if( !FD_ISSET( 0, &fd ) ) {
@@ -390,7 +392,11 @@ void Sys_RunConsole( void ) {
         return;
     }
     if( ret < 0 ) {
-        Com_Error( ERR_FATAL, "%s: %d bytes read", __func__, ret );
+        if( errno == EINTR ) {
+            return;
+        }
+        Com_Error( ERR_FATAL, "%s: read() failed: %s",
+            __func__, strerror( errno ) );
     }
     text[ret] = 0;
 
@@ -734,28 +740,24 @@ void Sys_FixFPCW( void ) {
 
 /*
 =================
-Sys_Kill
+Sys_Term
 =================
 */
-static void Sys_Kill( int signum ) {
-	signal( SIGTERM, SIG_DFL );
-	signal( SIGINT, SIG_DFL );
-	signal( SIGSEGV, SIG_DFL );
-	
+static void Sys_Term( int signum ) {
+#ifdef _GNU_SOURCE
+	Com_Printf( "%s\n", strsignal( signum ) );
+#else
 	Com_Printf( "Received signal %d, exiting\n", signum );
-	Com_Quit();
+#endif
+	Com_Quit( NULL );
 }
 
 /*
 =================
-Sys_Segv
+Sys_Kill
 =================
 */
-static void Sys_Segv( int signum ) {
-	signal( SIGTERM, SIG_DFL );
-	signal( SIGINT, SIG_DFL );
-	signal( SIGSEGV, SIG_DFL );
-
+static void Sys_Kill( int signum ) {
     Sys_ShutdownTTY();
 
 #if USE_SDL
@@ -764,7 +766,11 @@ static void Sys_Segv( int signum ) {
 	SDL_Quit();
 #endif
 
-	fprintf( stderr, "Received signal SIGSEGV, segmentation fault\n" );
+#ifdef _GNU_SOURCE
+	fprintf( stderr, "%s\n", strsignal( signum ) );
+#else
+	fprintf( stderr, "Received signal %d, aborting\n", signum );
+#endif
 
     exit( 1 );
 }
@@ -777,9 +783,12 @@ Sys_Init
 void Sys_Init( void ) {
     char    *homedir;
 
-	signal( SIGTERM, Sys_Kill );
-	signal( SIGINT, Sys_Kill );
-	signal( SIGSEGV, Sys_Segv );
+	signal( SIGTERM, Sys_Term );
+	signal( SIGINT, Sys_Term );
+	signal( SIGSEGV, Sys_Kill );
+	signal( SIGILL, Sys_Kill );
+	signal( SIGFPE, Sys_Kill );
+	signal( SIGTRAP, Sys_Kill );
 	signal( SIGTTIN, SIG_IGN );
 	signal( SIGTTOU, SIG_IGN );
 
@@ -807,7 +816,7 @@ void Sys_Init( void ) {
     sys_stdio = Cvar_Get( "sys_stdio", "2", CVAR_NOSET );
 
     if( sys_stdio->integer ) {
-        // change stdin and stdout to non-blocking
+        // change stdin to non-blocking and stdout to blocking
         fcntl( 0, F_SETFL, fcntl( 0, F_GETFL, 0 ) | FNDELAY );
         fcntl( 1, F_SETFL, fcntl( 1, F_GETFL, 0 ) & ~FNDELAY );
 
@@ -820,6 +829,9 @@ void Sys_Init( void ) {
                 Cvar_Set( "sys_stdio", "1" );
             }
         }
+	    signal( SIGHUP, Sys_Term );
+    } else {
+	    signal( SIGHUP, SIG_IGN );
     }
 
     Sys_FixFPCW();
@@ -855,8 +867,8 @@ void Sys_Error( const char *error, ... ) {
     Sys_ShutdownTTY();
 
 #if USE_SDL
-    SDL_ShowCursor( SDL_ENABLE );
     SDL_WM_GrabInput( SDL_GRAB_OFF );
+    SDL_ShowCursor( SDL_ENABLE );
 	SDL_Quit();
 #endif
 
@@ -890,11 +902,8 @@ Sys_FreeLibrary
 =================
 */
 void Sys_FreeLibrary( void *handle ) {
-    if( !handle ) {
-        return;
-    }
-    if( dlclose( handle ) ) {
-        Com_Error( ERR_FATAL, "dlclose failed on %p", handle );
+    if( handle && dlclose( handle ) ) {
+        Com_Error( ERR_FATAL, "dlclose failed on %p: %s", handle, dlerror() );
     }
 }
 

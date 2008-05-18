@@ -21,7 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "com_local.h"
 #include "q_list.h"
 #include "q_field.h"
-#include "q_uis.h"
 #include "ref_public.h"
 #include "key_public.h"
 #include "snd_public.h"
@@ -92,6 +91,10 @@ typedef struct menuFrameWork_s {
 
 	qboolean transparent;
 	qboolean keywait;
+
+    qhandle_t image;
+    color_t color;
+    int y1, y2;
 
     qboolean (*push)( struct menuFrameWork_s * );
     void (*pop)( struct menuFrameWork_s * );
@@ -280,6 +283,8 @@ void		UI_DrawLoading( int realtime );
 void		UI_SetupDefaultBanner( menuStatic_t *banner, const char *name );
 void		UI_DrawString( int x, int y, const color_t color, int flags, const char *string );
 void		UI_DrawChar( int x, int y, int flags, int ch );
+void        UI_DrawRect( const vrect_t *rect, int border, int color );
+void        UI_DrawRectEx( const vrect_t *rect, int border, const color_t color );
 void		UI_StringDimensions( vrect_t *rc, int flags, const char *string );
 
 void        UI_LoadStript( void );

@@ -26,18 +26,6 @@ static menuSound_t Activate( menuCommon_t *self ) {
     return QMS_NOTHANDLED;
 }
 
-static void Draw( menuFrameWork_t *self ) {
-    static const color_t color = { 0, 0, 255, 32 };
-    int y1, y2;
-
-    y1 = ( uis.height - MENU_SPACING * self->nitems ) / 2 - MENU_SPACING;
-    y2 = ( uis.height + MENU_SPACING * self->nitems ) / 2 + MENU_SPACING;
-
-    ref.DrawFillEx( 0, y1, uis.width, y2 - y1, color );
-
-    Menu_Draw( self );
-}
-
 static void Parse_Spin( menuFrameWork_t *menu, menuType_t type ) {
     menuSpinControl_t *s;
     int numItems = Cmd_Argc() - 3;
@@ -51,7 +39,7 @@ static void Parse_Spin( menuFrameWork_t *menu, menuType_t type ) {
     s = UI_Mallocz( sizeof( *s ) );
     s->generic.type = type;
     s->generic.name = UI_CopyString( Cmd_Argv( 1 ) );
-    s->cvar = Cvar_Get( Cmd_Argv( 2 ), NULL, CVAR_USER_CREATED );
+    s->cvar = Cvar_Ref( Cmd_Argv( 2 ) );
     s->itemnames = UI_Mallocz( sizeof( char * ) * ( numItems + 1 ) );
     for( i = 0; i < numItems; i++ ) {
         s->itemnames[i] = UI_CopyString( Cmd_Argv( 3 + i ) );
@@ -74,7 +62,7 @@ static void Parse_Pairs( menuFrameWork_t *menu ) {
     s = UI_Mallocz( sizeof( *s ) );
     s->generic.type = MTYPE_PAIRS;
     s->generic.name = UI_CopyString( Cmd_Argv( 1 ) );
-    s->cvar = Cvar_Get( Cmd_Argv( 2 ), NULL, CVAR_USER_CREATED );
+    s->cvar = Cvar_Ref( Cmd_Argv( 2 ) );
     numItems >>= 1;
     s->itemnames = UI_Mallocz( sizeof( char * ) * ( numItems + 1 ) );
     for( i = 0; i < numItems; i++ ) {
@@ -100,7 +88,7 @@ static void Parse_Range( menuFrameWork_t *menu ) {
     s = UI_Mallocz( sizeof( *s ) );
     s->generic.type = MTYPE_SLIDER;
     s->generic.name = UI_CopyString( Cmd_Argv( 1 ) );
-    s->cvar = Cvar_Get( Cmd_Argv( 2 ), NULL, CVAR_USER_CREATED );
+    s->cvar = Cvar_Ref( Cmd_Argv( 2 ) );
     s->add = atof( Cmd_Argv( 3 ) );
     s->mul = atof( Cmd_Argv( 4 ) );
     s->minvalue = atoi( Cmd_Argv( 5 ) );
@@ -196,7 +184,7 @@ static void Parse_Toggle( menuFrameWork_t *menu ) {
     s = UI_Mallocz( sizeof( *s ) );
     s->generic.type = type;
     s->generic.name = UI_CopyString( Cmd_Argv( 1 ) );
-    s->cvar = Cvar_Get( Cmd_Argv( 2 ), NULL, CVAR_USER_CREATED );
+    s->cvar = Cvar_Ref( Cmd_Argv( 2 ) );
     s->itemnames = ( char ** )yes_no_names;
     s->numItems = 2;
     s->negate = negate;
@@ -243,7 +231,7 @@ static void Parse_Field( menuFrameWork_t *menu ) {
     f->generic.name = UI_CopyString( Cmd_Argv( cmd_optind ) );
     f->generic.status = UI_CopyString( status );
     f->generic.flags = flags;
-    f->cvar = Cvar_Get( Cmd_Argv( cmd_optind + 1 ), NULL, CVAR_USER_CREATED );
+    f->cvar = Cvar_Ref( Cmd_Argv( cmd_optind + 1 ) );
     f->width = width;
 
     Menu_AddItem( menu, f );
@@ -256,6 +244,20 @@ static void Parse_Blank( menuFrameWork_t *menu ) {
     s->generic.type = MTYPE_SEPARATOR;
 
     Menu_AddItem( menu, s );
+}
+
+static void Parse_Background( menuFrameWork_t *menu ) {
+    char *s = Cmd_Argv( 1 );
+
+    if( COM_ParseColor( s, menu->color ) ) {
+        menu->image = 0;
+        if( menu->color[3] != 255 ) {
+            menu->transparent = qtrue;
+        }
+    } else {
+        menu->image = ref.RegisterPic( s );
+        menu->transparent = ref.DrawGetPicSize( NULL, NULL, menu->image );
+    }
 }
 
 static qboolean Parse_File( const char *path, int depth ) {
@@ -285,10 +287,6 @@ static qboolean Parse_File( const char *path, int depth ) {
             if( menu ) {
                 if( !strcmp( cmd, "end" ) ) {
                     if( menu->nitems ) {
-                        if( !menu->title ) {
-                            menu->transparent = qtrue;
-                            menu->draw = Draw;
-                        }
                         List_Append( &ui_menus, &menu->entry );
                     } else {
                         menu->free( menu );
@@ -299,6 +297,8 @@ static qboolean Parse_File( const char *path, int depth ) {
                         Z_Free( menu->title );
                     }
                     menu->title = UI_CopyString( Cmd_Argv( 1 ) );
+                } else if( !strcmp( cmd, "background" ) ) {
+                    Parse_Background( menu );
                 } else if( !strcmp( cmd, "values" ) ) {
                     Parse_Spin( menu, MTYPE_SPINCONTROL );
                 } else if( !strcmp( cmd, "strings" ) ) {
@@ -342,6 +342,8 @@ static qboolean Parse_File( const char *path, int depth ) {
                     menu->push = Menu_Push;
                     menu->pop = Menu_Pop;
                     menu->free = Menu_Free;
+                    menu->image = uis.backgroundHandle;
+                    *( uint32_t * )menu->color = *( uint32_t * )colorBlack;
                 } else if( !strcmp( cmd, "include" ) ) {
                     char *s = Cmd_Argv( 1 );
                     if( !*s ) {

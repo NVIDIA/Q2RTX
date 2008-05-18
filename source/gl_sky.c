@@ -25,7 +25,7 @@ static float	skyrotate;
 static vec3_t	skyaxis;
 static image_t	*sky_images[6];
 
-static vec3_t	skyclip[6] = {
+static const vec3_t	skyclip[6] = {
 	{1,1,0},
 	{1,-1,0},
 	{0,-1,1},
@@ -35,7 +35,7 @@ static vec3_t	skyclip[6] = {
 };
 
 // 1 = s, 2 = t, 3 = 2048
-static int	st_to_vec[6][3] = {
+static const int	st_to_vec[6][3] = {
 	{3,-1,2},
 	{-3,1,2},
 
@@ -47,7 +47,7 @@ static int	st_to_vec[6][3] = {
 };
 
 // s = [0]/[2], t = [1]/[2]
-static int	vec_to_st[6][3] = {
+static const int	vec_to_st[6][3] = {
 	{-2,3,1},
 	{2,3,-1},
 
@@ -59,7 +59,8 @@ static int	vec_to_st[6][3] = {
 };
 
 static float	skymins[2][6], skymaxs[2][6];
-static float	sky_min, sky_max;
+static const float	sky_min = 1.0/512;
+static const float  sky_max = 511.0/512;
 
 static void DrawSkyPolygon (int nump, vec3_t vecs)
 {
@@ -141,7 +142,7 @@ static void DrawSkyPolygon (int nump, vec3_t vecs)
 
 static void ClipSkyPolygon (int nump, vec3_t vecs, int stage)
 {
-	float	*norm;
+	const float	*norm;
 	float	*v;
 	qboolean	front, back;
 	float	d, e;
@@ -314,7 +315,10 @@ R_DrawSkyBox
 */
 void R_DrawSkyBox( void ) {
 	int		i;
-    static int	skytexorder[6] = {0,2,1,3,4,5};
+    static const int	skytexorder[6] = {0,2,1,3,4,5};
+
+	qglPushMatrix ();
+	qglTranslatef (modelViewOrigin[0], modelViewOrigin[1], modelViewOrigin[2]);
 
 	if (skyrotate)
 	{	// check for no sky at all
@@ -324,12 +328,9 @@ void R_DrawSkyBox( void ) {
 				break;
 		if (i == 6)
 			return;		// nothing visible
+    	qglRotatef (glr.fd.time * skyrotate, skyaxis[0], skyaxis[1], skyaxis[2]);
 	}
 
-	qglPushMatrix ();
-	qglTranslatef (modelViewOrigin[0], modelViewOrigin[1], modelViewOrigin[2]);
-	qglRotatef (glr.fd.time * skyrotate,
-            skyaxis[0], skyaxis[1], skyaxis[2]);
 	qglColor3f( 1, 1, 1 );
 	GL_Bits( GLS_DEFAULT );
 
@@ -347,7 +348,7 @@ void R_DrawSkyBox( void ) {
 		|| skymins[1][i] >= skymaxs[1][i])
 			continue;
 
-		GL_BindTexture (sky_images[skytexorder[i]]->texnum);
+    	GL_BindTexture (sky_images[skytexorder[i]]->texnum);
 
 		qglBegin (GL_QUADS);
 		MakeSkyVec (skymins[0][i], skymins[1][i], i);
@@ -359,6 +360,14 @@ void R_DrawSkyBox( void ) {
 	qglPopMatrix ();
 }
 
+void R_UnsetSky( void ) {
+    int i;
+
+	skyrotate = 0;
+	for( i = 0; i < 6; i++ ) {
+		sky_images[i] = r_blackimage;
+    }
+}
 
 /*
 ============
@@ -371,29 +380,22 @@ void R_SetSky( const char *name, float rotate, vec3_t axis ) {
     // 3dstudio environment map names
     static const char	suf[6][3] = { "rt", "bk", "lf", "ft", "up", "dn" };
 
+    if( !gl_drawsky->integer ) {
+        R_UnsetSky();
+        return;
+    }
+
 	skyrotate = rotate;
 	VectorCopy (axis, skyaxis);
 
-	for (i=0 ; i<6 ; i++)
-	{
+	for( i = 0; i < 6; i++ ) {
 		Q_concat( pathname, sizeof( pathname ),
             "env/", name, suf[i], ".tga", NULL );
-
-		sky_images[i] = R_FindImage (pathname, it_sky);
-		if (!sky_images[i])
-			sky_images[i] = r_notexture;
-
-		/*if (gl_skymip->integer || skyrotate)
-		{	// take less memory
-			sky_min = 1.0/256;
-			sky_max = 255.0/256;
-		}
-		else*/	
-		{
-			sky_min = 1.0/512;
-			sky_max = 511.0/512;
-		}
+		sky_images[i] = R_FindImage( pathname, it_sky );
+		if( !sky_images[i] ) {
+            R_UnsetSky();
+            return;
+        }
 	}
-
 }
 

@@ -727,6 +727,11 @@ void Con_DrawSolidConsole( void ) {
 		ref.DrawStretchPic( 0, vislines - con.vidHeight,
             con.vidWidth, con.vidHeight, con.backImage );
 	}
+#if 0
+	if( cls.state > ca_disconnected && cls.state < ca_active ) {
+        ref.DrawFill( 0, vislines, con.vidWidth, con.vidHeight - vislines, 0 );
+    }
+#endif
 
 // draw the text
 	y = vislines - CON_PRESTEP;
@@ -842,12 +847,12 @@ void Con_DrawSolidConsole( void ) {
 // draw clock
 	if( con_clock->integer ) {
 		Com_Time_m( buffer, sizeof( buffer ) );
-		UIS_DrawStringEx( con.vidWidth - CHAR_WIDTH, y - CHAR_HEIGHT,
+		SCR_DrawStringEx( con.vidWidth - CHAR_WIDTH, y - CHAR_HEIGHT,
             UI_RIGHT, MAX_STRING_CHARS, buffer, con.charsetImage );
 	}
 
 // draw version
-	UIS_DrawStringEx( con.vidWidth - CHAR_WIDTH, y, UI_RIGHT,
+	SCR_DrawStringEx( con.vidWidth - CHAR_WIDTH, y, UI_RIGHT,
         MAX_STRING_CHARS, APPLICATION " " VERSION, con.charsetImage );
 
 	// restore rendering parameters
@@ -879,13 +884,11 @@ void Con_RunConsole( void ) {
 	}
 
 	if( cls.state > ca_disconnected && cls.state < ca_active ) {
-#if 0
-		if( !cls.ui_initialized ) {
-			// draw half-screen console
-			con.destHeight = min( con.maxHeight, 0.5f );
-			con.currentHeight = con.destHeight;
-			return;
-		}
+#if 1
+        // draw half-screen console
+        con.destHeight = min( con.maxHeight, 0.5f );
+        con.currentHeight = con.destHeight;
+        return;
 #endif
 	}
 

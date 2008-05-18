@@ -142,10 +142,7 @@ void IN_MouseEvent( int x, int y ) {
         input.api.Grab( IN_SHOW );
         input.hideCursor = 2;
     }
-    if( cls.key_dest & KEY_MENU ) {
-        UI_MouseEvent( x, y );
-        return;
-    }
+    UI_MouseEvent( x, y );
 }
 
 /*

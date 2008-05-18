@@ -26,6 +26,7 @@ image_t *r_particletexture;
 image_t *r_beamtexture;
 image_t *r_warptexture;
 image_t *r_whiteimage;
+image_t *r_blackimage;
 
 int gl_filter_min;
 int gl_filter_max;
@@ -1005,20 +1006,19 @@ static void GL_InitParticleTexture( void ) {
 }
 
 static void GL_InitWhiteImage( void ) {
-    int i, j;
-    byte pixels[8*8*4];
-    byte *dst;
+    uint32_t pixel;
     
-    dst = pixels;
-    for( i = 0; i < 8; i++ ) {
-        for( j = 0; j < 8; j++ ) {
-            *( uint32_t * )dst = ( uint32_t )-1;
-            dst += 4;
-		}
-	}
-    
-    r_whiteimage = R_CreateImage( "*whiteimage", pixels, 8, 8,
+    pixel = MakeColor( 0xff, 0xff, 0xff, 0xff );
+    r_whiteimage = R_CreateImage( "*whiteimage", ( byte * )&pixel, 1, 1,
         it_pic, if_auto );
+    qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+    qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+
+    pixel = MakeColor( 0, 0, 0, 0xff );
+    r_blackimage = R_CreateImage( "*blackimage", ( byte * )&pixel, 1, 1,
+        it_pic, if_auto );
+    qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+    qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 }
 
 static void GL_InitBeamTexture( void ) {
@@ -1173,6 +1173,7 @@ void GL_ShutdownImages( void ) {
     r_beamtexture = NULL;
     r_warptexture = NULL;
     r_whiteimage = NULL;
+    r_blackimage = NULL;
 
 	R_FreeAllImages();
 	R_ShutdownImageManager();

@@ -515,9 +515,7 @@ void GL_DrawWorld( void ) {
     }
 #endif
     
-    if( !gl_fastsky->integer ) {
-        R_ClearSkyBox();
-    }
+    R_ClearSkyBox();
 
 	VectorCopy( glr.fd.vieworg, modelViewOrigin );
 
@@ -525,8 +523,6 @@ void GL_DrawWorld( void ) {
 
     GL_DrawSolidFaces();
 
-    if( !gl_fastsky->integer ) {
-        R_DrawSkyBox();
-    }
+    R_DrawSkyBox();
 }
 

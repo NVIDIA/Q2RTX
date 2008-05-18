@@ -442,12 +442,12 @@ Both client and server can use this, and it will
 do the apropriate things.
 =============
 */
-void Com_Quit( void ) {
-    if( Cmd_Argc() > 1 ) {
+void Com_Quit( const char *reason ) {
+    if( reason && *reason ) {
         char buffer[MAX_STRING_TOKENS];
 
         Com_sprintf( buffer, sizeof( buffer ),
-            "Server quit: %s\n", Cmd_Args() );
+            "Server quit: %s\n", reason );
 	    SV_Shutdown( buffer, KILL_DROP );
     } else {
 	    SV_Shutdown( "Server quit\n", KILL_DROP );
@@ -456,6 +456,10 @@ void Com_Quit( void ) {
 	Qcommon_Shutdown( qfalse );
 
 	Sys_Quit();
+}
+
+static void Com_Quit_f( void ) {
+    Com_Quit( Cmd_Args() );
 }
 
 
@@ -1365,7 +1369,7 @@ void Qcommon_Init( int argc, char **argv ) {
 
 	Cmd_AddCommand( "lasterror", Com_LastError_f );
 
-	Cmd_AddCommand( "quit", Com_Quit );
+	Cmd_AddCommand( "quit", Com_Quit_f );
 
 	srand( Sys_Milliseconds() );
 

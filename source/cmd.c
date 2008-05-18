@@ -467,7 +467,7 @@ void Cmd_AddMacro( const char *name, xmacro_t function ) {
 	unsigned hash;
 
     var = Cvar_FindVar( name );
-	if( var && !( var->flags & CVAR_USER_CREATED ) ) {
+	if( var && !( var->flags & (CVAR_CUSTOM|CVAR_VOLATILE) ) ) {
 		Com_WPrintf( "Cmd_AddMacro: %s already defined as a cvar\n", name );
 		return;
 	}
@@ -1116,9 +1116,8 @@ static void Cmd_RegCommand( const cmdreg_t *reg ) {
 	
 // fail if the command is a variable name
     var = Cvar_FindVar( reg->name );
-	if( var && !( var->flags & CVAR_USER_CREATED ) ) {
-		Com_WPrintf( "Cmd_AddCommand: %s already defined as a cvar\n",
-            reg->name );
+	if( var && !( var->flags & (CVAR_CUSTOM|CVAR_VOLATILE) ) ) {
+		Com_WPrintf( "%s: %s already defined as a cvar\n", __func__, reg->name );
 		return;
 	}
 	
@@ -1126,7 +1125,7 @@ static void Cmd_RegCommand( const cmdreg_t *reg ) {
     cmd = Cmd_Find( reg->name );
 	if( cmd ) {
         if( cmd->function ) {
-            Com_WPrintf( "Cmd_AddCommand: %s already defined\n", reg->name );
+            Com_WPrintf( "%s: %s already defined\n", __func__, reg->name );
             return;
         }
         cmd->function = reg->function;

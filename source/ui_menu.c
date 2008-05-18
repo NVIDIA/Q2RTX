@@ -988,7 +988,6 @@ static void MenuList_Draw( menuList_t *l ) {
     int x, y, xx, yy;
     int i, j, k;
     int width, height;
-    vrect_t rect;
     float pageFrac, prestepFrac;
     int barHeight;
 
@@ -1024,14 +1023,10 @@ static void MenuList_Draw( menuList_t *l ) {
         barHeight = height - MLIST_SPACING * 2;
         yy = y + MLIST_SPACING;
 
+        // draw scrollbar background
         if( !( l->mlFlags & MLF_HIDE_BACKGROUND ) ) {
-            rect.x = x + width;
-            rect.y = yy;
-            rect.width = MLIST_SCROLLBAR_WIDTH - 1;
-            rect.height = barHeight;
-
-            // draw scrollbar background
-            UIS_FillRectEx( &rect, colorField );
+            ref.DrawFillEx( x + width, yy, MLIST_SCROLLBAR_WIDTH - 1,
+                barHeight, colorField );
         }
 
         if( l->numItems > l->maxItems ) {
@@ -1042,14 +1037,12 @@ static void MenuList_Draw( menuList_t *l ) {
             prestepFrac = 0;
         }
 
-        rect.x = x + width;
-        rect.y = yy + Q_rint( barHeight * prestepFrac );
-        rect.width = MLIST_SCROLLBAR_WIDTH - 1;
-        rect.height = Q_rint( barHeight * pageFrac );
-
         // draw scrollbar thumb
-        UIS_FillRectEx( &rect, colorField );
-
+        ref.DrawFillEx( x + width,
+            yy + Q_rint( barHeight * prestepFrac ),
+            MLIST_SCROLLBAR_WIDTH - 1,
+            Q_rint( barHeight * pageFrac ),
+            colorField );
     }
 
     xx = x;
@@ -1273,7 +1266,7 @@ static int Common_DoEnter( menuCommon_t *item ) {
         }
     }
 
-    return QMS_SILENT;
+    return QMS_IN;
 }
 
 
@@ -1284,7 +1277,7 @@ Menu_AddItem
 */
 void Menu_AddItem( menuFrameWork_t *menu, void *item ) {
     if( menu->nitems >= MAXMENUITEMS ) {
-        Com_Error( ERR_FATAL, "Menu_AddItem: too many items" );
+        Com_WPrintf( "Menu_AddItem: %s: too many items\n", menu->name );
         return;
     }
 
@@ -1363,6 +1356,15 @@ void Menu_Size( menuFrameWork_t *menu ) {
         count++;
     }
 
+    // set menu top/bottom
+    if( menu->transparent ) {
+        menu->y1 = ( uis.height - MENU_SPACING * count ) / 2 - MENU_SPACING;
+        menu->y2 = ( uis.height + MENU_SPACING * count ) / 2 + MENU_SPACING;
+    } else {
+        menu->y1 = 0;
+        menu->y2 = uis.height;
+    }
+
     x = uis.width / 2;
     y = ( uis.height - MENU_SPACING * count ) / 2;
 
@@ -1376,6 +1378,7 @@ void Menu_Size( menuFrameWork_t *menu ) {
         item->y = y;
         y += MENU_SPACING;
     }
+
 }
 
 
@@ -1491,10 +1494,22 @@ void Menu_Draw( menuFrameWork_t *menu ) {
     int i;
 
 //
+// draw background
+//
+    if( menu->image ) {
+        ref.DrawStretchPic( 0, menu->y1, uis.width,
+            menu->y2 - menu->y1, menu->image );
+    } else {
+        ref.DrawFillEx( 0, menu->y1, uis.width,
+            menu->y2 - menu->y1, menu->color );
+    }
+
+//
 // draw title bar
 //
     if( menu->title ) {
-        UI_DrawString( uis.width / 2, 0, NULL, UI_CENTER|UI_ALTCOLOR, menu->title );
+        UI_DrawString( uis.width / 2, menu->y1, NULL,
+            UI_CENTER|UI_ALTCOLOR, menu->title );
     }
 
 //
@@ -1542,7 +1557,7 @@ void Menu_Draw( menuFrameWork_t *menu ) {
         }
 
         if( ui_debug->integer ) {
-            UIS_DrawRect( &(( menuCommon_t * )item)->rect, 1, 223 );
+            UI_DrawRect( &(( menuCommon_t * )item)->rect, 1, 223 );
         }
     }
 
@@ -1550,10 +1565,10 @@ void Menu_Draw( menuFrameWork_t *menu ) {
 // draw status bar
 //
     if( menu->status ) {
-        ref.DrawFill( 0, uis.height - 8, uis.width, 8, 4 );
-        UI_DrawString( uis.width / 2, uis.height - 8, NULL, UI_CENTER, menu->status );
+        ref.DrawFill( 0, menu->y2 - 8, uis.width, 8, 4 );
+        UI_DrawString( uis.width / 2, menu->y2 - 8, NULL,
+            UI_CENTER, menu->status );
     }
-
 }
 
 menuSound_t Menu_SelectItem( menuFrameWork_t *s ) {

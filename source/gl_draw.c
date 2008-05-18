@@ -123,17 +123,17 @@ void Draw_SetScale( float *scale ) {
 	draw.scale = f;
 }
 
-void Draw_GetPicSize( int *w, int *h, qhandle_t hPic ) {
+qboolean Draw_GetPicSize( int *w, int *h, qhandle_t hPic ) {
 	image_t *image;
 
 	image = R_ImageForHandle( hPic );
-	*w = image->width;
-	*h = image->height;
-}
-
-void Draw_GetFontSize( int *w, int *h, qhandle_t hFont ) {
-    *w = 8;
-    *h = 8;
+    if( w ) {
+    	*w = image->width;
+    }
+    if( h ) {
+    	*h = image->height;
+    }
+    return image->flags & if_transparent;
 }
 
 qhandle_t GL_RegisterFont( const char *name ) {

@@ -237,6 +237,10 @@ static qboolean Push( menuFrameWork_t *self ) {
     return qtrue;
 }
 
+static void Free( menuFrameWork_t *self ) {
+    memset( &m_player, 0, sizeof( m_player ) );
+}
+
 void M_Menu_PlayerConfig( void ) {
     static const vec3_t origin = { 80.0f, 5.0f, 0.0f };
     static const vec3_t angles = { 0.0f, 260.0f, 0.0f };
@@ -247,6 +251,9 @@ void M_Menu_PlayerConfig( void ) {
     m_player.menu.pop = Pop;
     m_player.menu.size = Size;
     m_player.menu.draw = Draw;
+    m_player.menu.free = Free;
+    m_player.menu.image = uis.backgroundHandle;
+    *( uint32_t * )m_player.menu.color = *( uint32_t * )colorBlack;
 
     m_player.entities[0].flags = RF_FULLBRIGHT;
     VectorCopy( angles, m_player.entities[0].angles );

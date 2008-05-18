@@ -130,8 +130,8 @@ CVAR
 #define CVAR_PRIVATE		( 1 << 6 )
 #define CVAR_ROM			( 1 << 7 )
 #define CVAR_LATCHED		( 1 << 8 )
-#define CVAR_USER_CREATED	( 1 << 9 )
-#define CVAR_DEFAULTS_MIXED	( 1 << 10 )
+#define CVAR_CUSTOM	        ( 1 << 9 )
+#define CVAR_VOLATILE      	( 1 << 10 )
 #define CVAR_GAME      	    ( 1 << 11 )
 
 #define CVAR_INFOMASK		(CVAR_USERINFO|CVAR_SERVERINFO)
@@ -205,10 +205,10 @@ typedef struct fsFileInfo_s {
 #define	FS_SEARCH_NOSORT		0x00000400
 
 /* bits 7 - 8, flag */
-#define	FS_FLAG_RAW				0x00000080
-#define	FS_FLAG_CACHE			0x00000100
+#define	FS_FLAG_RESERVED1		0x00000080
+#define	FS_FLAG_RESERVED2		0x00000100
 
-#define INVALID_LENGTH      ( ( size_t )-1 )
+#define INVALID_LENGTH      ((size_t)-1)
 
 typedef struct fsAPI_s {
 	void 	(*FCloseFile)( fileHandle_t f );
@@ -265,7 +265,7 @@ MODULES
 */
 
 // if api_version is different, the dll cannot be used
-#define MODULES_APIVERSION	316
+#define MODULES_APIVERSION	317
 
 typedef enum moduleQuery_e {
 	MQ_GETINFO,

@@ -60,25 +60,6 @@ typedef struct {
     char pov[MAX_CLIENT_NAME];
 } demoInfo_t;
 
-typedef struct {
-	connstate_t	connState;
-	int			connectCount;
-	qboolean	demoplayback;
-	const char	*servername;
-	const char	*mapname;
-	const char	*fullname;
-	const char	*loadingString;
-} clientStatus_t;
 
-typedef struct {
-	void	(*StartLocalSound)( const char *name );
-	void	(*StopAllSounds)( void );
-
-	demoInfo_t	*(*GetDemoInfo)( const char *path, demoInfo_t *info );
-	qboolean	(*SendStatusRequest)( char *buffer, int bufferSize );
-	void		(*GetClientStatus)( clientStatus_t *status );
-    void        (*UpdateScreen)( void );
-} clientAPI_t;
-
-extern clientAPI_t client;
-
+qboolean CL_SendStatusRequest( char *buffer, size_t size );
+demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info );

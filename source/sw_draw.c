@@ -176,17 +176,17 @@ void Draw_SetClipRect( int flags, const clipRect_t *clip ) {
 Draw_GetPicSize
 =============
 */
-void Draw_GetPicSize( int *w, int *h, qhandle_t hPic ) {
+qboolean Draw_GetPicSize( int *w, int *h, qhandle_t hPic ) {
 	image_t *gl;
 
 	gl = R_ImageForHandle( hPic );
-	*w = gl->width;
-	*h = gl->height;
-}
-
-void Draw_GetFontSize( int *w, int *h, qhandle_t hFont ) {
-    *w = 8;
-    *h = 8;
+    if( w ) {
+    	*w = gl->width;
+    }
+    if( h ) {
+    	*h = gl->height;
+    }
+    return gl->flags & if_transparent;
 }
 
 qhandle_t R_RegisterFont( const char *name ) {

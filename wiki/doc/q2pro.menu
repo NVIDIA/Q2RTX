@@ -105,6 +105,7 @@ end
 
 begin startserver
     title "Start Server"
+    background conback
     strings "initial map" nextserver $com_maplist
     field --integer --status "0 - no time limit" --width 3 "time limit" timelimit
     field --integer --status "0 - no frag limit" --width 3 "frag limit" fraglimit
@@ -125,6 +126,9 @@ begin main
 end
 
 begin game
+    background #0000ff20
+    //background inventory
+    //background blue
     action "Servers" pushmenu servers
     action "Demos" pushmenu demos
     action "Options" pushmenu options

@@ -228,7 +228,6 @@ int IF_Draw( inputField_t *field, int x, int y, int flags, qhandle_t hFont ) {
 	char *text;
 	size_t cursorPos, offset;
 	int ret;
-	int cw, ch;
 
 	if( field->cursorPos > sizeof( field->text ) - 1 ) {
 		Com_Error( ERR_FATAL, "IF_Draw: bad field->cursorPos" );
@@ -251,8 +250,6 @@ int IF_Draw( inputField_t *field, int x, int y, int flags, qhandle_t hFont ) {
         return ret;
     }
     
-	ref.DrawGetFontSize( &cw, &ch, hFont );
-
 	/* draw text */
 	ret = ref.DrawString( x, y, flags, field->visibleChars,
         text + offset, hFont );
@@ -260,7 +257,7 @@ int IF_Draw( inputField_t *field, int x, int y, int flags, qhandle_t hFont ) {
     /* draw blinking cursor */
     if( ( sys.Milliseconds() >> 8 ) & 1 ) {
         int c = Key_GetOverstrikeMode() ? 11 : '_';
-        ref.DrawChar( x + cursorPos * cw, y, flags, c, hFont );
+        ref.DrawChar( x + cursorPos * CHAR_WIDTH, y, flags, c, hFont );
     }
     return ret;
 }

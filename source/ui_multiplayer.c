@@ -202,9 +202,9 @@ static void PingSelected( void ) {
     
     UpdateSelection();
     m_join.menu.status = "Pinging servers, please wait...";
-    client.UpdateScreen();
+    SCR_UpdateScreen();
     
-    client.SendStatusRequest( s->realAddress, 0 );
+    CL_SendStatusRequest( s->realAddress, 0 );
 
     UpdateSelection();
 }
@@ -217,7 +217,7 @@ static void AddUnlistedServers( void ) {
     m_join.active = qtrue;
 
     // ping broadcast
-    client.SendStatusRequest( NULL, 0 );
+    CL_SendStatusRequest( NULL, 0 );
 
     for( i = 0; i < MAX_STATUS_SERVERS; i++ ) {
         var = cvar.Find( va( "adr%i", i ) );
@@ -251,9 +251,9 @@ static void AddUnlistedServers( void ) {
             slot->address, "???", "?/?", NULL );
 
         // ping and resolve real ip
-        client.SendStatusRequest( slot->realAddress, sizeof( slot->realAddress ) );
+        CL_SendStatusRequest( slot->realAddress, sizeof( slot->realAddress ) );
 
-        client.UpdateScreen();
+        SCR_UpdateScreen();
     }
 }
 
@@ -282,11 +282,11 @@ static void FreeListedServers( void ) {
 
 static void PingServers( void ) {
     FreeListedServers();
-    client.StopAllSounds();
+    S_StopAllSounds();
     UpdateSelection();
 
     m_join.menu.status = "Pinging servers, please wait...";
-    client.UpdateScreen();
+    SCR_UpdateScreen();
 
     // send out info packets
     AddUnlistedServers();
@@ -297,7 +297,7 @@ static void PingServers( void ) {
 static menuSound_t Connect( menuCommon_t *self ) {
     serverSlot_t *s = &m_join.servers[m_join.list.curvalue];
 
-    cmd.ExecuteText( EXEC_APPEND, va( "connect \"%s\"\n", s->realAddress ) );
+    Cbuf_AddText( va( "connect \"%s\"\n", s->realAddress ) );
     UI_PopMenu();
     return QMS_IN;
 }
@@ -349,7 +349,7 @@ static menuSound_t Keydown( menuFrameWork_t *self, int key ) {
 
     switch( key ) {
     case 'r':
-        cvar.Set( "rcon_address", s->realAddress );
+        Cvar_Set( "rcon_address", s->realAddress );
         return QMS_SILENT;
     case ' ':
         if( !Key_IsDown( K_ALT ) ) {
@@ -371,6 +371,10 @@ static void Expose( menuFrameWork_t *self ) {
     PingServers();
 }
 
+static void Free( menuFrameWork_t *self ) {
+    memset( &m_join, 0, sizeof( m_join ) );
+}
+
 void M_Menu_Servers( void ) {
     m_join.menu.name    = "servers";
     m_join.menu.title   = "Server Browser";
@@ -379,6 +383,9 @@ void M_Menu_Servers( void ) {
     m_join.menu.pop     = Pop;
     m_join.menu.size    = Size;
     m_join.menu.keydown = Keydown;
+    m_join.menu.free    = Free;
+    m_join.menu.image = uis.backgroundHandle;
+    *( uint32_t * )m_join.menu.color = *( uint32_t * )colorBlack;
 
 //
 // server list

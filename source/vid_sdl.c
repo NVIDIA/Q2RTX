@@ -364,7 +364,7 @@ void VID_PumpEvents( void ) {
             Activate();
             break;
         case SDL_QUIT:
-            Com_Quit();
+            Com_Quit( NULL );
             break;
         case SDL_VIDEORESIZE:
             if( sdl.surface->flags & SDL_RESIZABLE ) {
@@ -620,6 +620,7 @@ static void GrabMouse( grab_t grab ) {
     }
 
     if( sdl.mouse.grabbed == grab ) {
+        SDL_GetRelativeMouseState( NULL, NULL );
         return;
     }
 

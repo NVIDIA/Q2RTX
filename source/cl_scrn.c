@@ -295,7 +295,7 @@ void SCR_DrawCenterString( void ) {
 
 	y = scr_hudHeight / 4 - scr_center_lines * 8 / 2;
 
-	UIS_DrawStringEx( scr_hudWidth / 2, y, UI_CENTER|UI_MULTILINE,
+	SCR_DrawStringMulti( scr_hudWidth / 2, y, UI_CENTER,
 		MAX_STRING_CHARS, scr_centerstring, scr_font );
 
 	ref.SetColor( DRAW_COLOR_CLEAR, NULL );
@@ -625,10 +625,10 @@ STAT PROGRAMS
     ref.DrawString( x, y, UI_ALTCOLOR, MAX_STRING_CHARS, string, scr_font )
 
 #define HUD_DrawCenterString( x, y, string ) \
-    UIS_DrawStringEx( x, y, UI_CENTER|UI_MULTILINE, MAX_STRING_CHARS, string, scr_font )
+    SCR_DrawStringEx( x, y, UI_CENTER, MAX_STRING_CHARS, string, scr_font )
 
 #define HUD_DrawAltCenterString( x, y, string ) \
-    UIS_DrawStringEx( x, y, UI_CENTER|UI_MULTILINE|UI_ALTCOLOR, MAX_STRING_CHARS, string, scr_font )
+    SCR_DrawStringEx( x, y, UI_CENTER|UI_ALTCOLOR, MAX_STRING_CHARS, string, scr_font )
 
 
 
@@ -820,7 +820,7 @@ void SCR_ExecuteLayoutString( const char *s ) {
 			}
 			token = cl.configstrings[CS_IMAGES + value];
 			if( token[0] ) {
-				UIS_DrawPicByName( x, y, token );
+	            ref.DrawPic( x, y, ref.RegisterPic( token ) );
 			}
 			continue;
 		}
@@ -902,7 +902,7 @@ void SCR_ExecuteLayoutString( const char *s ) {
 		if( !strcmp( token, "picn" ) ) {	
 			// draw a pic from a name
 			token = COM_Parse( &s );
-			UIS_DrawPicByName( x, y, token );
+	        ref.DrawPic( x, y, ref.RegisterPic( token ) );
 			continue;
 		}
 
@@ -1118,7 +1118,7 @@ void SCR_UpdateScreen( void ) {
 		}
 
 		// draw loading screen
-		UI_DrawLoading( cls.realtime );
+		SCR_DrawLoading();
 		break;
 
 	case ca_active:

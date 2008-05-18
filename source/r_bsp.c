@@ -589,7 +589,7 @@ void Bsp_LoadWorld( const char *path ) {
     byte *data;
     size_t length, endpos;
 
-    length = fs.LoadFileEx( path, ( void ** )&data, FS_FLAG_CACHE, TAG_FREE );
+    length = fs.LoadFile( path, ( void ** )&data );
     if( !data ) {
         Com_Error( ERR_DROP, "%s: couldn't load %s", __func__, path );
     }

@@ -148,12 +148,17 @@ with all mods and causes slightly higher bandwidth usage.
 Enables FPS-independent strafe jumping mode for clients using R1Q2
 and Q2PRO protocols.
 
-
+- `set map_override 0` (boolean)
+When enabled, each time server map is loaded, file `maps/<mapname>.ent`
+is searched. If this file exists, then entity lump of the map being loaded
+is replaced with the contents of this file. Use this feature _only_ if you
+know what you are doing.
 
 Macros
 ==========
 
 - `$sv_client` Expands to the name of the client currently being processed.
+- `$sv_clientnum` Expands to the numeric ID of the client currently being processed.
 
 
 Commands
@@ -165,12 +170,38 @@ Stuff the given _text_ into command buffer of the client identified by _userid_.
 - `stuffall <text ...>`  
 Stuff the given _text_ into command buffers of all connected clients.
 
-- `pick <address:port>`  
+- `pickclient <address:port>`  
 Send `passive_connect` packet to the client at specified _address_ and _port_.
 This is useful if the server is behind NAT or firewall and can not accept remote
 connections. Remote client must support passive connections (R1Q2 and Q2PRO
 clients do), must be in passive connection mode and the specified _port_
 must be reachable. See `passive` [[client#index3h1]] command for more details.
+
+- `dumpents [/]<entname>`
+Dumps entity lump of the current map into `maps/<entname>.ent`, which you can later
+edit and use as `map_override` file (see above).
+
+- `addban <address[/mask]>`
+Adds specified address to the ban list. Specify _mask_ to ban the whole network.
+
+- `delban <address[/mask]|id|all>`
+Deletes single matching address from the ban list. You can also specify
+numeric ID of the address/mask pair to delete, or `all` to clear
+the whole ban list.
+
+- `listbans`
+Enumerates all registered address/mask pairs in the ban list.
+
+- `addstuffcmd <connect|begin> <command> [...]`
+Adds command to be automatically stuffed to every client as they initially
+connect or each time they enter new map.
+
+- `delstuffcmd <connect|begin> <id|all>`
+Deletes command identified by numeric ID from the specified list.
+You can also specify `all` to clear the whole stuffcmd list.
+
+- `liststuffcmds <connect|begin>`
+Enumerates all registered commands in the specified stuffcmd list.
 
 - `mvdplay [-hl:n:] <filename> [...]`  
 Play the local MVD identified by _filename_.

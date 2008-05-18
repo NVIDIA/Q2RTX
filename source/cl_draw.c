@@ -35,28 +35,57 @@ cvar_t		*scr_lag_draw;
 cvar_t		*scr_alpha;
 
 #define SCR_DrawString( x, y, flags, string ) \
-	UIS_DrawStringEx( x, y, flags, MAX_STRING_CHARS, string, scr_font )
+	SCR_DrawStringEx( x, y, flags, MAX_STRING_CHARS, string, scr_font )
 
 /*
 ==============
-SCR_LoadingString
+SCR_DrawStringEx
 ==============
 */
-void SCR_LoadingString( const char *string ) {
-    if( cls.state != ca_loading ) {
-        return;
-    }
-	Q_strncpyz( cl.loadingString, string, sizeof( cl.loadingString ) );
-	
-	if( string[0] ) {
-		Con_Printf( "Loading %s...\r", string );
-	} else {
-		Con_Printf( "\n" );
-	}
+int SCR_DrawStringEx( int x, int y, int flags, size_t maxlen,
+                      const char *s, qhandle_t font )
+{
+    int w = Q_DrawStrlenTo( s, maxlen ) * CHAR_WIDTH;
 
-	SCR_UpdateScreen();
-	Com_ProcessEvents();	
+    if( ( flags & UI_CENTER ) == UI_CENTER ) {
+        x -= w / 2;
+    } else if( flags & UI_RIGHT ) {
+        x -= w;
+    }
+
+    return ref.DrawString( x, y, flags, maxlen, s, font );
 }
+
+
+/*
+==============
+SCR_DrawStringMulti
+==============
+*/
+void SCR_DrawStringMulti( int x, int y, int flags, size_t maxlen,
+                          const char *s, qhandle_t font )
+{
+	char	*p;
+	size_t	len;
+
+	while( *s ) {
+        p = strchr( s, '\n' );
+        if( !p ) {
+    	    SCR_DrawStringEx( x, y, flags, maxlen, s, font );
+            break;
+        }
+
+        len = p - s;
+        if( len > maxlen ) {
+            len = maxlen;
+        }
+    	SCR_DrawStringEx( x, y, flags, len, s, font );
+
+		y += CHAR_HEIGHT;
+		s = p + 1;
+	}
+}
+
 
 /*
 ===============================================================================
@@ -237,7 +266,7 @@ static void SCR_Draw_f( void ) {
         obj->cvar = NULL;
         obj->macro = macro;
     } else {
-        obj->cvar = Cvar_Get( s, NULL, CVAR_USER_CREATED );
+        obj->cvar = Cvar_Get( s, NULL, CVAR_VOLATILE );
         obj->macro = NULL;
     }
 
@@ -298,7 +327,7 @@ static void SCR_UnDraw_f( void ) {
     cvar = NULL;
 	macro = Cmd_FindMacro( s );
     if( !macro ) {
-        cvar = Cvar_Get( s, NULL, CVAR_USER_CREATED );
+        cvar = Cvar_Ref( s );
     }
 
     deleted = qfalse;
@@ -398,6 +427,111 @@ void SCR_AddToChatHUD( const char *string ) {
 }
 
 #endif
+
+/*
+=============================================================================
+
+CONNECTION / LOADING SCREEN
+
+=============================================================================
+*/
+
+void SCR_DrawLoading( void ) {
+	char *s;
+	int x, y;
+    int i;
+	qhandle_t h;
+
+    if( !cl.mapname[0] || !( h = ref.RegisterPic( va( "*levelshots/%s.jpg", cl.mapname ) ) ) ) {
+        ref.DrawFill( 0, 0, scr_glconfig.vidWidth, scr_glconfig.vidHeight, 0 );
+    } else {
+        ref.DrawStretchPic( 0, 0, scr_glconfig.vidWidth, scr_glconfig.vidHeight, h );
+    }
+
+	x = scr_glconfig.vidWidth / 2;
+	y = 8;
+    
+    s = va( "%s %s", cls.demoplayback ? "Playing back " :
+        "Connecting to ", cls.servername );
+	SCR_DrawString( x, y, UI_CENTER|UI_DROPSHADOW, s );
+	y += 16;
+
+    s = cl.configstrings[CS_NAME];
+	if( *s ) {
+        ref.SetColor( DRAW_COLOR_RGB, colorYellow );
+		SCR_DrawString( x, y, UI_CENTER|UI_DROPSHADOW, s );
+        ref.SetColor( DRAW_COLOR_CLEAR, NULL );
+	}
+	y += 16;
+
+    y = scr_glconfig.vidHeight / 2 - 45;
+	x -= 136;
+    for( i = ca_challenging; i < cls.state; i++ ) {
+        switch( i ) {
+        case ca_challenging:
+            s = "challenge";
+            break;
+        case ca_connecting:
+            s = "connection";
+            break;
+        case ca_connected:
+            s = "server data";
+            break;
+        default:
+            continue;
+        }
+
+	    SCR_DrawString( x, y, 0, va( "Receiving %s...", s ) );
+        if( cls.state > i ) {
+	        SCR_DrawString( x + 256, y, 0, "ok" );
+        }
+        y += 10;
+    }
+
+	if( cls.state >= ca_loading ) {
+        for( i = 0; i <= cl.load_state; i++ ) {
+            if( !cl.load_time[i] ) {
+                continue;
+            }
+            switch( i ) {
+            case LOAD_MAP:
+                s = cl.configstrings[ CS_MODELS + 1 ];
+                break;
+            case LOAD_MODELS:
+                s = "models";
+                break;
+            case LOAD_IMAGES:
+                s = "images";
+                break;
+            case LOAD_CLIENTS:
+                s = "clients";
+                break;
+            case LOAD_SOUNDS:
+                s = "sounds";
+                break;
+            default:
+                continue;
+            }
+            SCR_DrawString( x, y, 0, va( "Loading %s...", s ) ); 
+            if( cl.load_state > i ) {
+                unsigned ms = cl.load_time[ i + 1 ] - cl.load_time[i];
+                SCR_DrawString( x + 224, y, 0, va( "%3u ms", ms ) );
+            }
+            y += 10;
+        }
+    }
+
+	if( cls.state >= ca_precached ) {
+	    SCR_DrawString( x, y, 0, "Receiving server frame..." );
+    }
+
+	// draw message string
+	if( cls.state < ca_connected && cls.messageString[0] ) {
+        ref.SetColor( DRAW_COLOR_RGB, colorRed );
+		SCR_DrawString( x, y + 16, UI_CENTER|UI_MULTILINE, cls.messageString );
+        ref.SetColor( DRAW_COLOR_CLEAR, NULL );
+	}
+}
 
 // ============================================================================
 

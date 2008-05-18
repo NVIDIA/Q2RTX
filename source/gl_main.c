@@ -54,6 +54,7 @@ cvar_t *gl_modulate;
 cvar_t *gl_log;
 cvar_t *gl_drawworld;
 cvar_t *gl_drawentities;
+cvar_t *gl_drawsky;
 cvar_t *gl_showtris;
 cvar_t *gl_cull_nodes;
 cvar_t *gl_cull_models;
@@ -696,6 +697,7 @@ static void GL_Register( void ) {
 	gl_log = cvar.Get( "gl_log", "0", 0 );
 	gl_drawworld = cvar.Get( "gl_drawworld", "1", CVAR_CHEAT );
 	gl_drawentities = cvar.Get( "gl_drawentities", "1", CVAR_CHEAT );
+    gl_drawsky = cvar.Get( "gl_drawsky", "1", 0 );
     gl_showtris = cvar.Get( "gl_showtris", "0", CVAR_CHEAT );
     gl_showstats = cvar.Get( "gl_showstats", "0", 0 );
     gl_cull_nodes = cvar.Get( "gl_cull_nodes", "1", 0 );
@@ -1138,7 +1140,6 @@ static void Ref_FillAPI( refAPI_t *api ) {
 	api->DrawString = Draw_String;
 	api->DrawChar = Draw_Char;
 	api->DrawGetPicSize = Draw_GetPicSize;
-	api->DrawGetFontSize = Draw_GetFontSize;
 	api->DrawPic = Draw_Pic;
 	api->DrawStretchPicST = Draw_StretchPicST;
 	api->DrawStretchPic = Draw_StretchPic;

@@ -1349,8 +1349,7 @@ void Draw_SetScale( float *scale ) {
 
 void    Draw_SetColor( int flags, const color_t color );
 void    Draw_SetClipRect( int flags, const clipRect_t *clip );
-void	Draw_GetPicSize( int *w, int *h, qhandle_t hPic );
-void	Draw_GetFontSize( int *w, int *h, qhandle_t hFont );
+qboolean Draw_GetPicSize( int *w, int *h, qhandle_t hPic );
 void	Draw_Pic( int x, int y, qhandle_t hPic );
 void	Draw_StretchPic( int x, int y, int w, int h, qhandle_t hPic );
 void	Draw_StretchPicST( int x, int y, int w, int h, float s1, float t1,
@@ -1386,7 +1385,6 @@ static void Ref_FillAPI( refAPI_t *api ) {
     api->SetClipRect = Draw_SetClipRect;
 	api->SetScale = Draw_SetScale;
 	api->DrawGetPicSize = Draw_GetPicSize;
-	api->DrawGetFontSize = Draw_GetFontSize;
 	api->DrawPic = Draw_Pic;
 	api->DrawStretchPic = Draw_StretchPic;
 	api->DrawStretchPicST = Draw_StretchPicST;

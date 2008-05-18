@@ -79,7 +79,7 @@ static void BuildName( fsFileInfo_t *info, char **cache ) {
         *cache = s;
     } else {
         Q_concat( buffer, sizeof( buffer ), uis.m_demos_browse, "/", info->name, NULL );
-        client.GetDemoInfo( buffer, &demo );
+        CL_GetDemoInfo( buffer, &demo );
     }
 
     if( info->size >= 1000000 ) {
@@ -211,14 +211,14 @@ static void BuildList( void ) {
     char *cache, *p;
     int i;
 
-    client.StopAllSounds();
+    S_StopAllSounds();
     m_demos.menu.status = "Building list...";
-    client.UpdateScreen();
+    SCR_UpdateScreen();
     
     // alloc entries
-    dirlist = fs.ListFiles( uis.m_demos_browse, NULL, FS_PATH_GAME |
+    dirlist = FS_ListFiles( uis.m_demos_browse, NULL, FS_PATH_GAME |
         FS_SEARCHDIRS_ONLY, &numDirs );
-    demolist = fs.ListFiles( uis.m_demos_browse, DEMO_EXTENSIONS, FS_PATH_GAME |
+    demolist = FS_ListFiles( uis.m_demos_browse, DEMO_EXTENSIONS, FS_PATH_GAME |
         FS_SEARCH_EXTRAINFO, &numDemos );
 
     m_demos.list.items = UI_Malloc( sizeof( demoEntry_t * ) * ( numDirs + numDemos + 1 ) );
@@ -235,7 +235,7 @@ static void BuildList( void ) {
         for( i = 0; i < numDirs; i++ ) {
             BuildDir( dirlist[i], ENTRY_DN );
         }
-        fs.FreeList( dirlist );
+        FS_FreeList( dirlist );
     }    
 
     m_demos.numDirs = m_demos.list.numItems;
@@ -248,24 +248,24 @@ static void BuildList( void ) {
             for( i = 0; i < numDemos; i++ ) {
                 BuildName( demolist[i], &p );
             }
-            fs.FreeFile( cache );
+            FS_FreeFile( cache );
         } else {
             for( i = 0; i < numDemos; i++ ) {
                 BuildName( demolist[i], NULL );
                 if( ( i & 7 ) == 0 ) {
-                    client.UpdateScreen();
+                    SCR_UpdateScreen();
                 }
             }
         }
         WriteCache();
-        fs.FreeList( demolist );
+        FS_FreeList( demolist );
     }
 
     if( m_demos.list.numItems ) {
         Change( &m_demos.list.generic );
     }
         
-    client.UpdateScreen();
+    SCR_UpdateScreen();
 }
 
 static void FreeList( void ) {
@@ -338,8 +338,8 @@ static menuSound_t Activate( menuCommon_t *self ) {
         return QMS_IN;
 
     case ENTRY_DEMO:
-        cmd.ExecuteText( EXEC_APPEND, va( "demo \"%s/%s\"\n",
-            uis.m_demos_browse[1] ? uis.m_demos_browse : "", e->name ) );
+        Cbuf_AddText( va( "demo \"%s/%s\"\n", uis.m_demos_browse[1] ?
+            uis.m_demos_browse : "", e->name ) );
         return QMS_SILENT;
     }
 
@@ -414,6 +414,10 @@ static void Expose( menuFrameWork_t *self ) {
     MenuList_SetValue( &m_demos.list, uis.m_demos_selection );
 }
 
+static void Free( menuFrameWork_t *self ) {
+    memset( &m_demos, 0, sizeof( m_demos ) );
+}
+
 void M_Menu_Demos( void ) {
     m_demos.menu.name = "demos";
     m_demos.menu.title = "Demo Browser";
@@ -422,6 +426,9 @@ void M_Menu_Demos( void ) {
     m_demos.menu.pop        = Pop;
     m_demos.menu.size       = Size;
     m_demos.menu.keydown    = Keydown;
+    m_demos.menu.free       = Free;
+    m_demos.menu.image = uis.backgroundHandle;
+    *( uint32_t * )m_demos.menu.color = *( uint32_t * )colorBlack;
 
     m_demos.list.generic.type   = MTYPE_LIST;
     m_demos.list.generic.flags  = QMF_HASFOCUS;

@@ -58,6 +58,8 @@ void M_Menu_Confirm( const char *text, confirmAction_t action ) {
 	memset( &m_confirm, 0, sizeof( m_confirm ) );
 
     m_confirm.menu.keydown = ConfirmKeydown;
+    m_confirm.menu.image = uis.backgroundHandle;
+    *( uint32_t * )m_confirm.menu.color = *( uint32_t * )colorBlack;
 
 	m_confirm.text.generic.type = MTYPE_STATIC;
 	m_confirm.text.generic.name = ( char * )text;
@@ -111,6 +113,8 @@ void M_Menu_Error( comErrorType_t type, const char *text ) {
 	memset( &m_error, 0, sizeof( m_error ) );
 
 	m_error.menu.keydown = ErrorKeydown;
+    m_error.menu.image = uis.backgroundHandle;
+    *( uint32_t * )m_error.menu.color = *( uint32_t * )colorBlack;
 
 	m_error.text.generic.type = MTYPE_STATIC;
 	m_error.text.generic.flags = QMF_CUSTOM_COLOR;

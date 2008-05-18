@@ -1530,7 +1530,7 @@ static int Sys_Main( int argc, char **argv ) {
 		Qcommon_Frame();
 	}
 
-	Com_Quit();
+	Com_Quit( NULL );
 
 #if USE_DBGHELP
 #ifdef _MSC_VER

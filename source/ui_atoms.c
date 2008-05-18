@@ -350,11 +350,23 @@ void UI_StringDimensions( vrect_t *rc, int flags, const char *string ) {
     }    
 }
 
+void UI_DrawRect( const vrect_t *rc, int border, int color ) {
+	ref.DrawFill( rc->x, rc->y, border, rc->height, color ); // left
+	ref.DrawFill( rc->x + rc->width - border, rc->y, border, rc->height, color ); // right
+	ref.DrawFill( rc->x + border, rc->y, rc->width - border * 2, border, color ); // top
+	ref.DrawFill( rc->x + border, rc->y + rc->height - border, rc->width - border * 2, border, color ); // bottom
+}
+
+void UI_DrawRectEx( const vrect_t *rc, int border, const color_t color ) {
+	ref.DrawFillEx( rc->x, rc->y, border, rc->height, color ); // left
+	ref.DrawFillEx( rc->x + rc->width - border, rc->y, border, rc->height, color ); // right
+	ref.DrawFillEx( rc->x + border, rc->y, rc->width - border * 2, border, color ); // top
+	ref.DrawFillEx( rc->x + border, rc->y + rc->height - border, rc->width - border * 2, border, color ); // bottom
+}
+
 
 //=============================================================================
 /* Menu Subsystem */
-
-void M_Menu_Network_f( void );
 
 /*
 =================
@@ -392,10 +404,6 @@ UI_MouseEvent
 =================
 */
 void UI_MouseEvent( int x, int y ) {
-    if( !uis.activeMenu ) {
-        return;
-    }
-
     clamp( x, 0, uis.glconfig.vidWidth );
     clamp( y, 0, uis.glconfig.vidHeight );
 
@@ -431,14 +439,7 @@ void UI_Draw( int realtime ) {
     }
 
     if( !uis.transparent ) {
-        // no transparent menus
-        if( uis.backgroundHandle ) {
-            ref.DrawStretchPic( 0, 0, uis.width, uis.height,
-                uis.backgroundHandle );
-        } else {
-            ref.DrawFill( 0, 0, uis.width, uis.height, 0 );
-        }
-
+        // draw top menu
         if( uis.activeMenu->draw ) {
             uis.activeMenu->draw( uis.activeMenu );
         } else {
@@ -447,15 +448,6 @@ void UI_Draw( int realtime ) {
     } else {
         // draw all layers
         for( i = 0; i < uis.menuDepth; i++ ) {
-            if( !uis.layers[i]->transparent ) {
-                if( uis.backgroundHandle ) {
-                    ref.DrawStretchPic( 0, 0, uis.width, uis.height,
-                        uis.backgroundHandle );
-                } else {
-                    ref.DrawFill( 0, 0, uis.width, uis.height, 0 );
-                }
-            }
-
             if( uis.layers[i]->draw ) {
                 uis.layers[i]->draw( uis.layers[i] );
             } else {
@@ -471,7 +463,6 @@ void UI_Draw( int realtime ) {
     }
 
     if( ui_debug->integer ) {
-        Menu_HitTest( uis.activeMenu );
         UI_DrawString( uis.width - 4, 4, NULL, UI_RIGHT,
             va( "%3i %3i", uis.mouseCoords[0], uis.mouseCoords[1] ) );
     }

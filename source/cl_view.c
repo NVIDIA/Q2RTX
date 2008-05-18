@@ -245,7 +245,6 @@ void CL_PrepRefresh (void) {
 	char		*name;
 	float		rotate;
 	vec3_t		axis;
-	unsigned	time_start, time_map, time_models, time_clients, time_total;
 
     if( !cls.ref_initialized ) {
         return;
@@ -253,21 +252,13 @@ void CL_PrepRefresh (void) {
 	if (!cl.mapname[0])
 		return;		// no map loaded
 
-	time_start = Sys_Milliseconds();
-
 	Con_Close();
 	UI_OpenMenu( UIMENU_NONE );
 
 	// register models, pics, and skins
-	SCR_LoadingString( cl.configstrings[CS_MODELS+1] );
 	ref.BeginRegistration( cl.mapname );
-	time_map = Sys_Milliseconds();
 
-	// precache status bar pics
-	SCR_LoadingString( "pics" );
-	SCR_TouchPics ();
-
-	SCR_LoadingString( "models" );
+	CL_LoadState( LOAD_MODELS );
 
 	CL_RegisterTEntModels ();
 
@@ -288,9 +279,12 @@ void CL_PrepRefresh (void) {
 			cl.model_draw[i] = ref.RegisterModel( name );
 		}
 	}
-	time_models = Sys_Milliseconds();
 
-	SCR_LoadingString( "images" );
+	CL_LoadState( LOAD_IMAGES );
+
+	// precache status bar pics
+	SCR_TouchPics ();
+
 	for (i=1 ; i<MAX_IMAGES; i++) {
         name = cl.configstrings[CS_IMAGES+i];
         if( !name[0] ) {
@@ -299,7 +293,7 @@ void CL_PrepRefresh (void) {
 		cl.image_precache[i] = ref.RegisterPic (name);
 	}
 
-	SCR_LoadingString( "clients" );
+	CL_LoadState( LOAD_CLIENTS );
 	for (i=0 ; i<MAX_CLIENTS ; i++) {
         name = cl.configstrings[CS_PLAYERSKINS+i];
         if( !name[0] )
@@ -309,17 +303,12 @@ void CL_PrepRefresh (void) {
 	}
 
 	CL_LoadClientinfo (&cl.baseclientinfo, "unnamed\\male/grunt");
-	time_clients = Sys_Milliseconds();
-
-	SCR_LoadingString( "sky" );
 
 	// set sky textures and speed
 	rotate = atof (cl.configstrings[CS_SKYROTATE]);
 	sscanf (cl.configstrings[CS_SKYAXIS], "%f %f %f", 
 		&axis[0], &axis[1], &axis[2]);
 	ref.SetSky (cl.configstrings[CS_SKY], rotate, axis);
-
-	SCR_LoadingString( "" );
 
 	// the renderer can now free unneeded stuff
 	ref.EndRegistration ();
@@ -328,11 +317,6 @@ void CL_PrepRefresh (void) {
 	Con_ClearNotify_f ();
 
 	SCR_UpdateScreen ();
-
-	time_total = Sys_Milliseconds();
-	Com_DPrintf( "Map loaded in %u msec (map=%u,mod=%u,cl=%u,purge=%u)\n",
-        time_total - time_start, time_map - time_start, time_models - time_map,
-        time_clients - time_models, time_total - time_clients );	
 }
 
 

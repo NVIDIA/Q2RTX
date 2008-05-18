@@ -22,7 +22,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "com_local.h"
 #include "q_list.h"
 #include "q_field.h"
-#include "q_uis.h"
 #include "ref_public.h"
 #include "key_public.h"
 #include "snd_public.h"
@@ -79,6 +78,15 @@ typedef struct {
 	int				numEntities;
 	int				firstEntity;
 } server_frame_t;
+
+typedef enum {
+    LOAD_MAP,
+    LOAD_MODELS,
+    LOAD_IMAGES,
+    LOAD_CLIENTS,
+    LOAD_SOUNDS,
+    LOAD_FINISH
+} load_state_t;
 
 //
 // the client_state_t structure is wiped completely at every
@@ -183,7 +191,8 @@ typedef struct client_state_s {
 	unsigned	reply_delta;
 #endif
 
-	char		loadingString[MAX_QPATH];
+	load_state_t	load_state;
+    unsigned        load_time[ LOAD_FINISH + 1 ];
 
 	//
 	// locally derived information from server state
@@ -494,7 +503,7 @@ void CL_RestartFilesystem( void );
 void CL_RestartRefresh( void );
 void CL_ClientCommand( const char *string );
 void CL_UpdateLocalFovSetting( void );
-void CL_FillAPI( clientAPI_t *api );
+void CL_LoadState( load_state_t state );
 void CL_SendRcon( const netadr_t *adr, const char *pass, const char *cmd );
 const char *CL_Server_g( const char *partial, int argnum, int state );
 
@@ -698,7 +707,7 @@ void		SCR_FinishCinematic( void );
 void	SCR_InitDraw( void );
 void	SCR_ShutdownDraw( void );
 void	SCR_Draw2D( void );
-void	SCR_LoadingString( const char *string );
+void    SCR_DrawLoading( void );
 float	SCR_FadeAlpha( unsigned startTime, unsigned visTime, unsigned fadeTime );
 #if USE_CHATHUD
 void	SCR_ClearChatHUD_f( void );
@@ -706,6 +715,9 @@ void	SCR_AddToChatHUD( const char *string );
 #endif
 void    SCR_LagSample( void );
 void	SCR_LagClear( void );
+
+int     SCR_DrawStringEx( int x, int y, int flags, size_t maxlen, const char *s, qhandle_t font );
+void    SCR_DrawStringMulti( int x, int y, int flags, size_t maxlen, const char *s, qhandle_t font );
 
 //
 // cl_keys.c

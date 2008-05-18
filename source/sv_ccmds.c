@@ -747,7 +747,6 @@ void SV_DelMatch_f( list_t *list ) {
             Z_Free( match );
         }
         List_Init( list );
-        Com_Printf( "Address list cleared.\n" );
         return;
     }
 
@@ -778,13 +777,12 @@ void SV_DelMatch_f( list_t *list ) {
     LIST_FOR_EACH( addrmatch_t, match, list, entry ) {
         if( match->addr == addr && match->mask == mask ) {
 remove:
-            Com_Printf( "Address removed from list.\n" );
             List_Remove( &match->entry );
             Z_Free( match );
             return;
         }
     }
-    Com_Printf( "Address/mask pair not found in list.\n" );
+    Com_Printf( "No such address/mask: %s\n", s );
 }
 
 void SV_ListMatches_f( list_t *list ) {
@@ -859,7 +857,7 @@ static void SV_AddStuffCmd_f( void ) {
 
 static void SV_DelStuffCmd_f( void ) {
     list_t *list;
-    stuffcmd_t *stuff;
+    stuffcmd_t *stuff, *next;
     char *s;
     int i;
 
@@ -878,14 +876,21 @@ static void SV_DelStuffCmd_f( void ) {
     }
 
     s = Cmd_Argv( 2 );
+    if( !strcmp( s, "all" ) ) {
+        LIST_FOR_EACH_SAFE( stuffcmd_t, stuff, next, list, entry ) {
+            Z_Free( stuff );
+        }
+        List_Init( list );
+        return;
+    }
     i = atoi( s );
     if( i < 1 ) {
-        Com_Printf( "Bad index: %d\n", i );
+        Com_Printf( "Bad stuffcmd index: %d\n", i );
         return;
     }
     stuff = LIST_INDEX( stuffcmd_t, i - 1, list, entry );
     if( !stuff ) {
-        Com_Printf( "No such index: %d\n", i );
+        Com_Printf( "No such stuffcmd index: %d\n", i );
         return;
     }
 
@@ -980,10 +985,7 @@ void SV_InitOperatorCommands( void ) {
 	if ( dedicated->integer )
 		Cmd_AddCommand( "say", SV_ConSay_f );
 
-
-	Cmd_AddMacro ("sv_client", SV_Client_m);
-	Cmd_AddMacro ("sv_curid", SV_ClientNum_m);
-
+	Cmd_AddMacro( "sv_client", SV_Client_m );
+	Cmd_AddMacro( "sv_clientnum", SV_ClientNum_m );
 }
  
-

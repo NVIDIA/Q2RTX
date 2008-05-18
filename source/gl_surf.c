@@ -30,7 +30,6 @@ static cvar_t   *gl_coloredlightmaps;
 static cvar_t   *gl_brightness;
 
 cvar_t *gl_modulate_hack;
-cvar_t *gl_fastsky;
 
 /*
 =============================================================================
@@ -362,7 +361,6 @@ void GL_BeginPostProcessing( void ) {
 	gl_coloredlightmaps = cvar.Get( "gl_coloredlightmaps", "1", CVAR_ARCHIVE|CVAR_LATCHED );
 	gl_brightness = cvar.Get( "gl_brightness", "0", CVAR_ARCHIVE|CVAR_LATCHED );
 	gl_modulate_hack = cvar.Get( "gl_modulate_hack", "0", CVAR_LATCHED );
-    gl_fastsky = cvar.Get( "gl_fastsky", "0", CVAR_LATCHED );
 
 	if( gl_coloredlightmaps->value < 0 ) {
 		cvar.Set( "gl_coloredlightmaps", "0" );
@@ -417,7 +415,7 @@ void GL_EndPostProcessing( void ) {
     // post process all surfaces
     count = 0;
     for( i = 0, surf = r_world.surfaces; i < r_world.numSurfaces; i++, surf++ ) {
-        if( ( surf->texinfo->flags & SURF_SKY ) && !gl_fastsky->integer ) {
+        if( surf->texinfo->flags & SURF_SKY ) {
             GL_BuildSkyPoly( surf );
             continue;
         }

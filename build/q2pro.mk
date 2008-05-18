@@ -13,14 +13,13 @@ SRCFILES=cmd.c cmodel.c common.c prompt.c crc.c cvar.c \
 	sv_ents.c sv_game.c sv_init.c sv_main.c sv_send.c	\
 	sv_user.c sv_world.c sv_mvd.c sv_http.c \
 	mvd_client.c mvd_parse.c mvd_game.c \
-	q_msg.c q_shared.c q_uis.c q_field.c	\
+	q_msg.c q_shared.c q_field.c	\
 	m_flash.c cl_demo.c cl_draw.c cl_ents.c cl_fx.c cl_input.c	\
 	cl_locs.c cl_main.c cl_newfx.c cl_parse.c cl_pred.c cl_ref.c	\
 	cl_scrn.c cl_tent.c cl_view.c cl_console.c cl_keys.c cl_aastat.c		\
 	snd_main.c snd_mem.c snd_mix.c \
-	ui_atoms.c ui_confirm.c ui_demos.c ui_loading.c \
-	ui_menu.c ui_multiplayer.c ui_playerconfig.c ui_playermodels.c \
-	ui_script.c
+	ui_atoms.c ui_confirm.c ui_demos.c ui_menu.c ui_multiplayer.c \
+	ui_playerconfig.c ui_playermodels.c ui_script.c
 
 ifdef USE_ANTICHEAT
 SRCFILES+=sv_ac.c

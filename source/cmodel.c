@@ -602,7 +602,7 @@ const char *CM_LoadMapEx( cm_t *cm, const char *name, int flags, uint32_t *check
     //
     // load the file
     //
-    length = FS_LoadFileEx( name, (void **)&buf, FS_FLAG_CACHE, TAG_FREE );
+    length = FS_LoadFile( name, (void **)&buf );
     if( !buf ) {
         return "file not found";
     }
@@ -1700,14 +1700,18 @@ qboolean CM_AreasConnected( cm_t *cm, int area1, int area2 ) {
     if( !cache ) {
         return qfalse;
     }
-    if( map_noareas->integer )
+    if( map_noareas->integer ) {
         return qtrue;
-
-    if( area1 > cache->numareas || area2 > cache->numareas )
+    }
+    if( area1 < 1 || area2 < 1 ) {
+        return qfalse;
+    }
+    if( area1 >= cache->numareas || area2 >= cache->numareas ) {
         Com_Error( ERR_DROP, "CM_AreasConnected: area > numareas" );
-
-    if( cm->floodnums[area1] == cm->floodnums[area2] )
+    }
+    if( cm->floodnums[area1] == cm->floodnums[area2] ) {
         return qtrue;
+    }
 
     return qfalse;
 }

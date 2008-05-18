@@ -292,6 +292,8 @@ cvar_t *Cvar_Get( const char *var_name, const char *value, int flags );
 // if it exists, the value will not be changed, but flags will be ORed in
 // that allows variables to be unarchived without needing bitflags
 
+cvar_t *Cvar_Ref( const char *var_name );
+
 cvar_t 	*Cvar_Set( const char *var_name, const char *value );
 cvar_t 	*Cvar_SetEx( const char *var_name, const char *value, cvarSetSource_t source );
 // will create the variable if it doesn't exist
@@ -944,7 +946,7 @@ void		Com_LevelError( comErrorType_t code, const char *str ) q_noreturn;
 
 void		Com_FillAPI( commonAPI_t *api );
 
-void 		Com_Quit (void);
+void 		Com_Quit( const char *reason );
 
 byte		COM_BlockSequenceCRCByte (byte *base, size_t length, int sequence);
 
@@ -1077,6 +1079,9 @@ extern cvar_t   *sys_basedir;
 extern cvar_t   *sys_libdir;
 extern cvar_t   *sys_refdir;
 extern cvar_t   *sys_homedir;
+#ifdef __unix__
+extern cvar_t   *sys_stdio;
+#endif
 
 /*
 ==============================================================

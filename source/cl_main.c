@@ -94,8 +94,6 @@ cvar_t	*info_uf;
 client_static_t	cls;
 client_state_t	cl;
 
-clientAPI_t		client;
-
 centity_t	cl_entities[ MAX_EDICTS ];
 
 //======================================================================
@@ -1055,7 +1053,7 @@ void CL_ParseStatusMessage ( void ) {}
 CL_SendStatusRequest
 =================
 */
-static qboolean CL_SendStatusRequest( char *buffer, int size ) {
+qboolean CL_SendStatusRequest( char *buffer, size_t size ) {
     netadr_t	address;
 
     memset( &address, 0, sizeof( address ) );
@@ -1584,12 +1582,20 @@ static void CL_RegisterModels( void ) {
 	}
 }
 
+void CL_LoadState( load_state_t state ) {
+    cl.load_state = state;
+    cl.load_time[state] = Sys_Milliseconds();
+
+	Com_ProcessEvents();	
+	SCR_UpdateScreen();
+}
+
 static int precache_check; // for autodownload of precache items
 static int precache_spawncount;
 static int precache_tex;
 static int precache_model_skin;
 
-static byte *precache_model; // used for skin checking in alias models
+static void *precache_model; // used for skin checking in alias models
 
 #define PLAYER_MULT 5
 
@@ -1600,10 +1606,10 @@ static byte *precache_model; // used for skin checking in alias models
 static const char env_suf[6][3] = { "rt", "bk", "lf", "ft", "up", "dn" };
 
 void CL_RequestNextDownload ( void ) {
-    unsigned	map_checksum;		// for detecting cheater maps
+    unsigned map_checksum;		// for detecting cheater maps
     char fn[ MAX_QPATH ];
     dmdl_t *pheader;
-    int length;
+    size_t length;
 
     if ( cls.state != ca_connected && cls.state != ca_loading )
         return;
@@ -1622,7 +1628,7 @@ void CL_RequestNextDownload ( void ) {
         if ( allow_download_models->integer ) {
             while ( precache_check < CS_MODELS + MAX_MODELS &&
                     cl.configstrings[ precache_check ][ 0 ] ) {
-                int num_skins, ofs_skins;
+                size_t num_skins, ofs_skins, end_skins;
 
                 if ( cl.configstrings[ precache_check ][ 0 ] == '*' ||
                         cl.configstrings[ precache_check ][ 0 ] == '#' ) {
@@ -1648,21 +1654,22 @@ void CL_RequestNextDownload ( void ) {
                     pheader = ( dmdl_t * ) precache_model;
                     if( length < sizeof( *pheader ) ||
                         LittleLong( pheader->ident ) != IDALIASHEADER ||
-                        LittleLong ( pheader->version ) != ALIAS_VERSION )
+                        LittleLong( pheader->version ) != ALIAS_VERSION )
                     {
                         // not an alias model
                         FS_FreeFile( precache_model );
-                        precache_model = 0;
+                        precache_model = NULL;
                         precache_model_skin = 0;
                         precache_check++;
                         continue;
                     }
                     num_skins = LittleLong( pheader->num_skins );
                     ofs_skins = LittleLong( pheader->ofs_skins );
-                    if( ofs_skins + num_skins * MAX_SKINNAME > length ) {
+                    end_skins = ofs_skins + num_skins * MAX_SKINNAME;
+                    if( num_skins > MAX_MD2SKINS || end_skins < ofs_skins || end_skins > length ) {
                         // bad alias model
                         FS_FreeFile( precache_model );
-                        precache_model = 0;
+                        precache_model = NULL;
                         precache_model_skin = 0;
                         precache_check++;
                         continue;
@@ -1682,10 +1689,8 @@ void CL_RequestNextDownload ( void ) {
                     }
                     precache_model_skin++;
                 }
-                if ( precache_model ) {
-                    FS_FreeFile( precache_model );
-                    precache_model = 0;
-                }
+                FS_FreeFile( precache_model );
+                precache_model = NULL;
                 precache_model_skin = 0;
                 precache_check++;
             }
@@ -1805,7 +1810,6 @@ void CL_RequestNextDownload ( void ) {
 
     if ( precache_check == ENV_CNT ) {
         precache_check = ENV_CNT + 1;
-        SCR_LoadingString( "collision map" );
 
         CM_LoadMap ( &cl.cm, cl.configstrings[ CS_MODELS + 1 ], CM_LOAD_CLIENT, &map_checksum );
 
@@ -1816,6 +1820,7 @@ void CL_RequestNextDownload ( void ) {
             return;
         }
 #endif
+        CL_RegisterModels();
     }
 
     if ( precache_check > ENV_CNT && precache_check < TEXTURE_CNT ) {
@@ -1863,15 +1868,14 @@ void CL_RequestNextDownload ( void ) {
         precache_check = TEXTURE_CNT + 999;
     }
 
-
-    //ZOID
-    SCR_LoadingString( "sounds" );
-    CL_RegisterSounds ();
-
-    CL_RegisterModels();
     CL_PrepRefresh ();
 
+    CL_LoadState( LOAD_SOUNDS );
+    CL_RegisterSounds ();
+
     LOC_LoadLocations();
+    
+    CL_LoadState( LOAD_FINISH );
 
     CL_ClientCommand( va( "begin %i\n", precache_spawncount ) );
 
@@ -1895,33 +1899,35 @@ before allowing the client into the server
 =================
 */
 static void CL_Precache_f( void ) {
-    if ( cls.state < ca_connected ) {
+    if( cls.state < ca_connected ) {
         return;
     }
 
     cls.state = ca_loading;
+    CL_LoadState( LOAD_MAP );
 
     S_StopAllSounds();
 
     //Yet another hack to let old demos work
     //the old precache sequence
-    if ( cls.demoplayback || Cmd_Argc() < 2 ) {
-        uint32_t	map_checksum;		// for detecting cheater maps
-
-        SCR_LoadingString( "collision map" );
+    if( cls.demoplayback ) {
         CM_LoadMap( &cl.cm, cl.configstrings[ CS_MODELS + 1 ],
-                CM_LOAD_CLIENT, &map_checksum );
-        SCR_LoadingString( "sounds" );
-        CL_RegisterSounds();
+            CM_LOAD_CLIENT, NULL );
         CL_RegisterModels();
         CL_PrepRefresh();
+        CL_LoadState( LOAD_SOUNDS );
+        CL_RegisterSounds();
+        CL_LoadState( LOAD_FINISH );
         cls.state = ca_precached;
         return;
     }
 
     precache_check = CS_MODELS;
     precache_spawncount = atoi( Cmd_Argv( 1 ) );
-    precache_model = 0;
+    if( precache_model ) {
+        FS_FreeFile( precache_model );
+        precache_model = NULL;
+    }
     precache_model_skin = 0;
 
     CL_RequestNextDownload();
@@ -2224,9 +2230,12 @@ void CL_RestartFilesystem( void ) {
     if ( cls_state == ca_disconnected ) {
         UI_OpenMenu( UIMENU_MAIN );
     } else if ( cls_state >= ca_loading ) {
-		CL_RegisterSounds();
+        CL_LoadState( LOAD_MAP );
         CL_RegisterModels();
         CL_PrepRefresh();
+        CL_LoadState( LOAD_SOUNDS );
+		CL_RegisterSounds();
+        CL_LoadState( LOAD_FINISH );
     }
 
     // switch back to original state
@@ -2262,7 +2271,9 @@ static void CL_RestartRefresh_f( void ) {
     if ( cls_state == ca_disconnected ) {
         UI_OpenMenu( UIMENU_MAIN );
     } else if ( cls_state >= ca_loading ) {
+        CL_LoadState( LOAD_MAP );
         CL_PrepRefresh();
+        CL_LoadState( LOAD_FINISH );
     }
 
     // switch back to original state
@@ -2304,29 +2315,6 @@ static void cl_predict_changed( cvar_t *self ) {
 
 static void cl_updaterate_changed( cvar_t *self ) {
     CL_UpdateRateSetting();
-}
-
-static void CL_GetClientStatus( clientStatus_t *status ) {
-	if( !status ) {
-		Com_Error( ERR_DROP, "CL_GetClientStatus: NULL" );
-	}
-	status->connState = cls.state;
-	status->connectCount = cls.connect_count;
-	status->demoplayback = cls.demoplayback;
-	status->servername = cls.servername;
-	status->mapname = cl.mapname;
-	status->fullname = cl.configstrings[CS_NAME];
-	status->loadingString = cls.state > ca_connected ?
-        cl.loadingString : cls.messageString;
-}
-
-void CL_FillAPI( clientAPI_t *api ) {
-	api->StartLocalSound = S_StartLocalSound;
-	api->StopAllSounds = S_StopAllSounds;
-	api->SendStatusRequest = CL_SendStatusRequest;
-	api->GetClientStatus = CL_GetClientStatus;
-	api->GetDemoInfo = CL_GetDemoInfo;
-	api->UpdateScreen = SCR_UpdateScreen;
 }
 
 static const cmdreg_t c_client[] = {
@@ -2380,8 +2368,6 @@ static void CL_InitLocal ( void ) {
     int i;
 
     cls.state = ca_disconnected;
-
-	CL_FillAPI( &client );
 
     CL_RegisterInput();
     CL_InitDemos();
@@ -2519,6 +2505,7 @@ CL_Activate
 */
 void CL_Activate( active_t active ) {
     if( cls.active != active ) {
+        Com_DPrintf( "%s: %u\n", __func__, active );
         cls.active = active;
         Key_ClearStates();
         IN_Activate();
@@ -2705,6 +2692,11 @@ void CL_Frame( int msec ) {
         }
         if( ref_extra < ref_msec ) {
             if( !cl_async->integer && !cl.sendPacketNow ) {
+#if 1
+                if( cls.demoplayback || cl.frame.ps.pmove.pm_type == PM_FREEZE ) {
+                    NET_Sleep( ref_msec - ref_extra );
+                }
+#endif
                 return; // everything ticks in sync with refresh
             }
             ref_frame = qfalse;
@@ -2724,7 +2716,7 @@ void CL_Frame( int msec ) {
             }
         }
     }
-    
+
     // decide the simulation time
     cls.frametime = main_extra * 0.001f;
 

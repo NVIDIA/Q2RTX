@@ -427,9 +427,7 @@ void SV_BuildClientFrame( client_t *client ) {
 			if( !CM_AreasConnected( client->cm, clientarea, ent->areanum ) ) {	
 				// doors can legally straddle two areas, so
 				// we may need to check another one
-				if( !ent->areanum2 ||
-                    !CM_AreasConnected( client->cm, clientarea, ent->areanum2 ) )
-                {
+				if( !CM_AreasConnected( client->cm, clientarea, ent->areanum2 ) ) {
 					continue;		// blocked by a door
                 }
 			}

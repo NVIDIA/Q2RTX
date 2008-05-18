@@ -98,7 +98,7 @@ qboolean CL_CheckOrDownloadFile( const char *path ) {
 //ZOID
 	// check to see if we already have a tmp for this file, if so, try to resume
 	// open the file if not opened yet
-	length = FS_FOpenFile( cls.downloadtempname, &f, FS_MODE_RDWR|FS_FLAG_RAW );
+	length = FS_FOpenFile( cls.downloadtempname, &f, FS_MODE_RDWR );
 	if( length < 0 && f ) {
 		Com_WPrintf( "Couldn't determine size of %s\n", cls.downloadtempname );
 		FS_FCloseFile( f );
@@ -209,9 +209,7 @@ static void CL_ParseDownload( void ) {
 
 	// open the file if not opened yet
 	if( !cls.download ) {
-		FS_FOpenFile( cls.downloadtempname, &cls.download,
-            FS_MODE_WRITE|FS_FLAG_RAW );
-
+		FS_FOpenFile( cls.downloadtempname, &cls.download, FS_MODE_WRITE );
 		if( !cls.download ) {
 			msg_read.readcount += size;
 			Com_WPrintf( "Failed to open '%s' for writing\n",

@@ -403,8 +403,6 @@ static void PF_WriteFloat( float f ) {
 	Com_Error( ERR_DROP, "PF_WriteFloat not implemented" );
 }
 
-
-
 /*
 =================
 PF_inPVS
@@ -767,7 +765,7 @@ void SV_ShutdownGameProgs (void) {
     }
     if( g_features ) {
         Cvar_SetByVar( g_features, NULL, CVAR_SET_DIRECT );
-        g_features->flags = CVAR_USER_CREATED;
+        g_features->flags = CVAR_VOLATILE;
     }
 }
 

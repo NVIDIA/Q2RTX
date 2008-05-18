@@ -616,7 +616,7 @@ static void SV_BeginDownload_f( void ) {
 
 	filename = name;
 
-	downloadsize = FS_LoadFileEx( filename, NULL, FS_FLAG_RAW, TAG_SERVER );
+	downloadsize = FS_LoadFileEx( filename, NULL, 0, TAG_SERVER );
 	
 	if( downloadsize == INVALID_LENGTH || downloadsize == 0
 		// special check for maps, if it came from a pak file, don't allow
@@ -650,7 +650,7 @@ static void SV_BeginDownload_f( void ) {
 	}
 
 	sv_client->downloadsize = FS_LoadFileEx( filename,
-        ( void ** )&sv_client->download, FS_FLAG_RAW, TAG_SERVER );
+        ( void ** )&sv_client->download, 0, TAG_SERVER );
 	sv_client->downloadcount = offset;
 
 	Com_DPrintf( "Downloading %s to %s\n", name, sv_client->name );

@@ -219,8 +219,7 @@ typedef struct refAPI_s {
 	int 	(*DrawString)( int x, int y, int flags, size_t maxChars,
             const char *string, qhandle_t hFont ); // returns advanced x coord
     // will return 0 0 if not found
-	void	(*DrawGetPicSize)( int *w, int *h, qhandle_t hPic );	
-	void	(*DrawGetFontSize)( int *w, int *h, qhandle_t hFont );	
+	qboolean (*DrawGetPicSize)( int *w, int *h, qhandle_t hPic ); // returns transparency bit
 	void	(*DrawPic)( int x, int y, qhandle_t hPic );
 	void	(*DrawStretchPic)( int x, int y, int w, int h, qhandle_t hPic );
 	void	(*DrawStretchPicST)( int x, int y, int w, int h,
