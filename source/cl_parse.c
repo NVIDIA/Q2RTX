@@ -24,12 +24,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //=============================================================================
 
 
-static const char validExts[][4] = {
-    "pcx", "wal", "tga", "jpg", "png",
-    "md2", "md3", "sp2", "wav", "dm2",
-    "bsp", "txt", "loc", "ent", ""
-};
-
 /*
 ===============
 CL_CheckOrDownloadFile
@@ -39,84 +33,87 @@ to start a download from the server.
 ===============
 */
 qboolean CL_CheckOrDownloadFile( const char *path ) {
-	fileHandle_t	f;
-	int		i, length;
-	char filename[MAX_QPATH];
-	char *ext;
+    static const char validExts[][4] = {
+        "pcx", "wal", "tga", "jpg", "png",
+        "md2", "md3", "sp2", "wav", "dm2",
+        "bsp", "txt", "loc", "ent", ""
+    };
+    fileHandle_t    f;
+    int        i, length;
+    char filename[MAX_QPATH];
+    char *ext;
 
-	Q_strncpyz( filename, path, sizeof( filename ) );
-	Q_strlwr( filename );
+    Q_strncpyz( filename, path, sizeof( filename ) );
+    Q_strlwr( filename );
 
-	length = strlen( filename );
-	if( !length
-		|| !Q_ispath( filename[0] )
-		|| !Q_ispath( filename[ length - 1 ] )
-		|| strchr( filename, '\\' )
-		|| strchr( filename, ':' )
-		|| !strchr( filename, '/' )
-		|| strstr( filename, ".." ) )
-	{
-		Com_WPrintf( "Refusing to download file with invalid path.\n" );
-		return qtrue;
-	}
+    length = strlen( filename );
+    if( !length
+        || !Q_ispath( filename[0] )
+        || !Q_ispath( filename[ length - 1 ] )
+        || strchr( filename, '\\' )
+        || strchr( filename, ':' )
+        || !strchr( filename, '/' )
+        || strstr( filename, ".." ) )
+    {
+        Com_WPrintf( "Refusing to download file with invalid path.\n" );
+        return qtrue;
+    }
 
-	// a trivial attempt to prevent malicious server from
-	// uploading trojan executables to the win32 client
-	ext = COM_FileExtension( filename );
+    // a trivial attempt to prevent malicious server from
+    // uploading trojan executables to the win32 client
+    ext = COM_FileExtension( filename );
     if( *ext != '.' ) {
-		Com_WPrintf( "Refusing to download file without extension.\n" );
+        Com_WPrintf( "Refusing to download file without extension.\n" );
         return qtrue;
     }
     for( i = 0; validExts[i][0]; i++ ) {
-	    if( !strcmp( ext + 1, validExts[i] ) ) {
+        if( !strcmp( ext + 1, validExts[i] ) ) {
             break;
         }
-	}
+    }
     if( !validExts[i][0] ) {
-		Com_WPrintf( "Refusing to download file with invalid extension.\n" );
-		return qtrue;
+        Com_WPrintf( "Refusing to download file with invalid extension.\n" );
+        return qtrue;
     }
 
-	if( FS_LoadFile( filename, NULL ) != INVALID_LENGTH ) {	
-		// it exists, no need to download
-		return qtrue;
-	}
+    if( FS_LoadFile( filename, NULL ) != INVALID_LENGTH ) {    
+        // it exists, no need to download
+        return qtrue;
+    }
 
-	strcpy( cls.downloadname, filename );
+    strcpy( cls.download.name, filename );
 
-	// download to a temp name, and only rename
-	// to the real name when done, so if interrupted
-	// a runt file wont be left
-	COM_StripExtension( cls.downloadname, cls.downloadtempname, MAX_QPATH );
-	
-	if( strlen( cls.downloadtempname ) >= MAX_QPATH - 5 ) {
-		strcpy( cls.downloadtempname + MAX_QPATH - 5, ".tmp" );
-	} else {
-		strcat( cls.downloadtempname, ".tmp" );
-	}
+    // download to a temp name, and only rename
+    // to the real name when done, so if interrupted
+    // a runt file wont be left
+    COM_StripExtension( cls.download.name, cls.download.temp, MAX_QPATH );
+    
+    if( strlen( cls.download.temp ) >= MAX_QPATH - 5 ) {
+        strcpy( cls.download.temp + MAX_QPATH - 5, ".tmp" );
+    } else {
+        strcat( cls.download.temp, ".tmp" );
+    }
 
 //ZOID
-	// check to see if we already have a tmp for this file, if so, try to resume
-	// open the file if not opened yet
-	length = FS_FOpenFile( cls.downloadtempname, &f, FS_MODE_RDWR );
-	if( length < 0 && f ) {
-		Com_WPrintf( "Couldn't determine size of %s\n", cls.downloadtempname );
-		FS_FCloseFile( f );
-		f = 0;
-	}
-	if( f ) { // it exists
-		cls.download = f;
-		// give the server an offset to start the download
-		Com_Printf( "Resuming %s\n", cls.downloadname );
-		CL_ClientCommand( va( "download \"%s\" %i", cls.downloadname, length ) );
-	} else {
-		Com_Printf( "Downloading %s\n", cls.downloadname );
-		CL_ClientCommand( va( "download \"%s\"", cls.downloadname ) );
-	}
+    // check to see if we already have a tmp for this file, if so, try to resume
+    // open the file if not opened yet
+    length = FS_FOpenFile( cls.download.temp, &f, FS_MODE_RDWR );
+    if( length < 0 && f ) {
+        Com_WPrintf( "Couldn't determine size of %s\n", cls.download.temp );
+        FS_FCloseFile( f );
+        f = 0;
+    }
+    if( f ) { // it exists
+        cls.download.file = f;
+        // give the server an offset to start the download
+        Com_Printf( "Resuming %s\n", cls.download.name );
+        CL_ClientCommand( va( "download \"%s\" %i", cls.download.name, length ) );
+    } else {
+        Com_Printf( "Downloading %s\n", cls.download.name );
+        CL_ClientCommand( va( "download \"%s\"", cls.download.name ) );
+    }
 
-	cls.downloadnumber++;
-
-	return qfalse;
+    return qfalse;
 }
 
 /*
@@ -127,40 +124,40 @@ Request a download from the server
 ===============
 */
 void CL_Download_f( void ) {
-	char *path;
+    char *path;
 
-	if( cls.state < ca_connected ) {
-		Com_Printf( "Must be connected to a server.\n" );
-		return;
-	}
+    if( cls.state < ca_connected ) {
+        Com_Printf( "Must be connected to a server.\n" );
+        return;
+    }
 
-	if( Cmd_Argc() != 2 ) {
-		Com_Printf( "Usage: download <filename>\n" );
-		return;
-	}
+    if( Cmd_Argc() != 2 ) {
+        Com_Printf( "Usage: download <filename>\n" );
+        return;
+    }
 
-	path = Cmd_Argv( 1 );
+    path = Cmd_Argv( 1 );
 
-	if( !allow_download->integer ) {
-		Com_Printf( "Couldn't download '%s', "
+    if( !allow_download->integer ) {
+        Com_Printf( "Couldn't download '%s', "
             "downloading is locally disabled.\n", path );
-		return;
-	}
+        return;
+    }
 
-	if( cls.downloadtempname[0] ) {
-		Com_Printf( "Already downloading.\n" );
-		if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO ) {
-			Com_Printf( "Try using 'stopdl' command to abort the download.\n" );
-		}
-		return;
-	}
+    if( cls.download.temp[0] ) {
+        Com_Printf( "Already downloading.\n" );
+        if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO ) {
+            Com_Printf( "Try using 'stopdl' command to abort the download.\n" );
+        }
+        return;
+    }
 
-	if( FS_LoadFile( path, NULL ) != INVALID_LENGTH ) {	
-		Com_Printf( "File '%s' already exists.\n", path );
-		return;
-	}
+    if( FS_LoadFile( path, NULL ) != INVALID_LENGTH ) {    
+        Com_Printf( "File '%s' already exists.\n", path );
+        return;
+    }
 
-	CL_CheckOrDownloadFile( path );
+    CL_CheckOrDownloadFile( path );
 }
 
 
@@ -172,84 +169,73 @@ A download message has been received from the server
 =====================
 */
 static void CL_ParseDownload( void ) {
-	int		size, percent;
+    int        size, percent;
 
-	if( !cls.downloadtempname[0] ) {
-		Com_Error( ERR_DROP, "Server sending download, but "
+    if( !cls.download.temp[0] ) {
+        Com_Error( ERR_DROP, "Server sending download, but "
             "no download was requested" );
-	}
+    }
 
-	// read the data
-	size = MSG_ReadShort();
-	percent = MSG_ReadByte();
-	if( size == -1 ) {
-		if( !percent ) {
-			Com_Printf( "Server was unable to send this file.\n" );
-		} else {
-			Com_Printf( "Server stopped the download.\n" );
-		}
-		if( cls.download ) {
-			// if here, we tried to resume a file but the server said no
-			FS_FCloseFile( cls.download );
-			cls.download = 0;
-		}
-		cls.downloadtempname[0] = 0;
-		cls.downloadname[0] = 0;
-		CL_RequestNextDownload();
-		return;
-	}
+    // read the data
+    size = MSG_ReadShort();
+    percent = MSG_ReadByte();
+    if( size == -1 ) {
+        if( !percent ) {
+            Com_Printf( "Server was unable to send this file.\n" );
+        } else {
+            Com_Printf( "Server stopped the download.\n" );
+        }
+        if( cls.download.file ) {
+            // if here, we tried to resume a file but the server said no
+            FS_FCloseFile( cls.download.file );
+        }
+        goto another;
+    }
 
-	if( size < 0 ) {
-		Com_Error( ERR_DROP, "CL_ParseDownload: bad size: %d", size );
-	}
+    if( size < 0 ) {
+        Com_Error( ERR_DROP, "CL_ParseDownload: bad size: %d", size );
+    }
 
-	if( msg_read.readcount + size > msg_read.cursize ) {
-		Com_Error( ERR_DROP, "CL_ParseDownload: read past end of message" );
-	}
+    if( msg_read.readcount + size > msg_read.cursize ) {
+        Com_Error( ERR_DROP, "CL_ParseDownload: read past end of message" );
+    }
 
-	// open the file if not opened yet
-	if( !cls.download ) {
-		FS_FOpenFile( cls.downloadtempname, &cls.download, FS_MODE_WRITE );
-		if( !cls.download ) {
-			msg_read.readcount += size;
-			Com_WPrintf( "Failed to open '%s' for writing\n",
-                cls.downloadtempname );
-			cls.downloadtempname[0] = 0;
-			cls.downloadname[0] = 0;
-			CL_RequestNextDownload();
-			return;
-		}
-	}
+    // open the file if not opened yet
+    if( !cls.download.file ) {
+        FS_FOpenFile( cls.download.temp, &cls.download.file, FS_MODE_WRITE );
+        if( !cls.download.file ) {
+            msg_read.readcount += size;
+            Com_WPrintf( "Failed to open '%s' for writing\n",
+                cls.download.temp );
+            goto another;
+        }
+    }
 
-	FS_Write( msg_read.data + msg_read.readcount, size, cls.download );
-	msg_read.readcount += size;
-	
-	if( percent != 100 ) {
-		// request next block
-		// change display routines by zoid
-		cls.downloadpercent = percent;
+    FS_Write( msg_read.data + msg_read.readcount, size, cls.download.file );
+    msg_read.readcount += size;
+    
+    if( percent != 100 ) {
+        // request next block
+        // change display routines by zoid
+        cls.download.percent = percent;
 
-		CL_ClientCommand( "nextdl" );
-	} else {
-		FS_FCloseFile( cls.download );
+        CL_ClientCommand( "nextdl" );
+    } else {
+        FS_FCloseFile( cls.download.file );
 
-		// rename the temp file to it's final name
-		if( !FS_RenameFile( cls.downloadtempname, cls.downloadname ) ) {
-			Com_WPrintf( "Failed to rename %s to %s\n",
-				cls.downloadtempname, cls.downloadname );
-		}
+        // rename the temp file to it's final name
+        if( !FS_RenameFile( cls.download.temp, cls.download.name ) ) {
+            Com_WPrintf( "Failed to rename %s to %s\n",
+                cls.download.temp, cls.download.name );
+        }
 
-		Com_Printf( "Downloaded successfully.\n" );
+        Com_Printf( "Downloaded successfully.\n" );
 
-		cls.downloadtempname[0] = 0;
-		cls.downloadname[0] = 0;
-
-		cls.download = 0;
-		cls.downloadpercent = 0;
-
-		// get another file if needed
-		CL_RequestNextDownload();
-	}
+another:
+        // get another file if needed
+        memset( &cls.download, 0, sizeof( cls.download ) );
+        CL_RequestNextDownload();
+    }
 }
 
 /*
@@ -271,21 +257,21 @@ static inline void CL_ParseDeltaEntity( server_frame_t  *frame,
                                         entity_state_t  *old,
                                         int             bits )
 {
-	entity_state_t	*state;
+    entity_state_t    *state;
 
-	if( frame->numEntities == MAX_PACKET_ENTITIES ) {
-		Com_Error( ERR_DROP, "%s: MAX_PACKET_ENTITIES exceeded", __func__ );
-	}
+    if( frame->numEntities == MAX_PACKET_ENTITIES ) {
+        Com_Error( ERR_DROP, "%s: MAX_PACKET_ENTITIES exceeded", __func__ );
+    }
 
-	state = &cl.entityStates[cl.numEntityStates & PARSE_ENTITIES_MASK];
-	cl.numEntityStates++;
-	frame->numEntities++;
+    state = &cl.entityStates[cl.numEntityStates & PARSE_ENTITIES_MASK];
+    cl.numEntityStates++;
+    frame->numEntities++;
 
-	if( cl_shownet->integer > 2 ) {
-		MSG_ShowDeltaEntityBits( bits );
-	}
+    if( cl_shownet->integer > 2 ) {
+        MSG_ShowDeltaEntityBits( bits );
+    }
 
-	MSG_ParseDeltaEntity( old, state, newnum, bits );
+    MSG_ParseDeltaEntity( old, state, newnum, bits );
 }
 
 /*
@@ -296,140 +282,140 @@ CL_ParsePacketEntities
 static void CL_ParsePacketEntities( server_frame_t *oldframe,
                                     server_frame_t *frame )
 {
-	int			newnum;
-	int			bits;
-	entity_state_t	*oldstate;
-	int			oldindex, oldnum;
-	int i;
+    int            newnum;
+    int            bits;
+    entity_state_t    *oldstate;
+    int            oldindex, oldnum;
+    int i;
 
-	frame->firstEntity = cl.numEntityStates;
-	frame->numEntities = 0;
+    frame->firstEntity = cl.numEntityStates;
+    frame->numEntities = 0;
 
-	// delta from the entities present in oldframe
-	oldindex = 0;
-	oldstate = NULL;
-	if( !oldframe ) {
-		oldnum = 99999;
-	} else {
-		if( oldindex >= oldframe->numEntities ) {
-			oldnum = 99999;
-		} else {
-			i = oldframe->firstEntity + oldindex;
-			oldstate = &cl.entityStates[i & PARSE_ENTITIES_MASK];
-			oldnum = oldstate->number;
-		}
-	}
+    // delta from the entities present in oldframe
+    oldindex = 0;
+    oldstate = NULL;
+    if( !oldframe ) {
+        oldnum = 99999;
+    } else {
+        if( oldindex >= oldframe->numEntities ) {
+            oldnum = 99999;
+        } else {
+            i = oldframe->firstEntity + oldindex;
+            oldstate = &cl.entityStates[i & PARSE_ENTITIES_MASK];
+            oldnum = oldstate->number;
+        }
+    }
 
-	while( 1 ) {
-		newnum = MSG_ParseEntityBits( &bits );
-		if( newnum < 0 || newnum >= MAX_EDICTS ) {
-			Com_Error( ERR_DROP, "%s: bad number: %d", __func__, newnum );
-		}
+    while( 1 ) {
+        newnum = MSG_ParseEntityBits( &bits );
+        if( newnum < 0 || newnum >= MAX_EDICTS ) {
+            Com_Error( ERR_DROP, "%s: bad number: %d", __func__, newnum );
+        }
 
-		if( msg_read.readcount > msg_read.cursize ) {
-			Com_Error( ERR_DROP, "%s: read past end of message", __func__ );
-		}
+        if( msg_read.readcount > msg_read.cursize ) {
+            Com_Error( ERR_DROP, "%s: read past end of message", __func__ );
+        }
 
-		if( !newnum ) {
-			break;
-		}
+        if( !newnum ) {
+            break;
+        }
 
-		while( oldnum < newnum ) {
-			// one or more entities from the old packet are unchanged
-			if( cl_shownet->integer > 2 ) {
-				Com_Printf( "   unchanged: %i\n", oldnum );
-			}
-			CL_ParseDeltaEntity( frame, oldnum, oldstate, 0 );
-			
-			oldindex++;
+        while( oldnum < newnum ) {
+            // one or more entities from the old packet are unchanged
+            if( cl_shownet->integer > 2 ) {
+                Com_Printf( "   unchanged: %i\n", oldnum );
+            }
+            CL_ParseDeltaEntity( frame, oldnum, oldstate, 0 );
+            
+            oldindex++;
 
-			if( oldindex >= oldframe->numEntities ) {
-				oldnum = 99999;
-			} else {
-				i = oldframe->firstEntity + oldindex;
-				oldstate = &cl.entityStates[i & PARSE_ENTITIES_MASK];
-				oldnum = oldstate->number;
-			}
-		}
+            if( oldindex >= oldframe->numEntities ) {
+                oldnum = 99999;
+            } else {
+                i = oldframe->firstEntity + oldindex;
+                oldstate = &cl.entityStates[i & PARSE_ENTITIES_MASK];
+                oldnum = oldstate->number;
+            }
+        }
 
-		if( bits & U_REMOVE ) {	
-			// the entity present in oldframe is not in the current frame
-			if( cl_shownet->integer > 2 ) {
-				Com_Printf( "   remove: %i\n", newnum );
-			}
-			if( oldnum != newnum ) {
-				Com_DPrintf( "U_REMOVE: oldnum != newnum\n" );
-			}
-			if( !oldframe ) {
-				Com_Error( ERR_DROP, "U_REMOVE: NULL oldframe" );
-			}
+        if( bits & U_REMOVE ) {    
+            // the entity present in oldframe is not in the current frame
+            if( cl_shownet->integer > 2 ) {
+                Com_Printf( "   remove: %i\n", newnum );
+            }
+            if( oldnum != newnum ) {
+                Com_DPrintf( "U_REMOVE: oldnum != newnum\n" );
+            }
+            if( !oldframe ) {
+                Com_Error( ERR_DROP, "U_REMOVE: NULL oldframe" );
+            }
 
-			oldindex++;
+            oldindex++;
 
-			if( oldindex >= oldframe->numEntities ) {
-				oldnum = 99999;
-			} else {
-				i = oldframe->firstEntity + oldindex;
-				oldstate = &cl.entityStates[i & PARSE_ENTITIES_MASK];
-				oldnum = oldstate->number;
-			}
-			continue;
-		}
+            if( oldindex >= oldframe->numEntities ) {
+                oldnum = 99999;
+            } else {
+                i = oldframe->firstEntity + oldindex;
+                oldstate = &cl.entityStates[i & PARSE_ENTITIES_MASK];
+                oldnum = oldstate->number;
+            }
+            continue;
+        }
 
-		if( oldnum == newnum ) {	
-			// delta from previous state
-			if( cl_shownet->integer > 2 ) {
-				Com_Printf( "   delta: %i ", newnum );
-			}
-			CL_ParseDeltaEntity( frame, newnum, oldstate, bits );
-			if( cl_shownet->integer > 2 ) {
-				Com_Printf( "\n" );
-			}
+        if( oldnum == newnum ) {    
+            // delta from previous state
+            if( cl_shownet->integer > 2 ) {
+                Com_Printf( "   delta: %i ", newnum );
+            }
+            CL_ParseDeltaEntity( frame, newnum, oldstate, bits );
+            if( cl_shownet->integer > 2 ) {
+                Com_Printf( "\n" );
+            }
 
-			oldindex++;
+            oldindex++;
 
-			if( oldindex >= oldframe->numEntities ) {
-				oldnum = 99999;
-			} else {
-				i = oldframe->firstEntity + oldindex;
-				oldstate = &cl.entityStates[i & PARSE_ENTITIES_MASK];
-				oldnum = oldstate->number;
-			}
-			continue;
-		}
+            if( oldindex >= oldframe->numEntities ) {
+                oldnum = 99999;
+            } else {
+                i = oldframe->firstEntity + oldindex;
+                oldstate = &cl.entityStates[i & PARSE_ENTITIES_MASK];
+                oldnum = oldstate->number;
+            }
+            continue;
+        }
 
-		if( oldnum > newnum ) {	
-			// delta from baseline
-			if( cl_shownet->integer > 2 ) {
-				Com_Printf( "   baseline: %i ", newnum );
-			}
-			CL_ParseDeltaEntity( frame, newnum, &cl.baselines[newnum], bits );
-			if( cl_shownet->integer > 2 ) {
-				Com_Printf( "\n" );
-			}
-			continue;
-		}
+        if( oldnum > newnum ) {    
+            // delta from baseline
+            if( cl_shownet->integer > 2 ) {
+                Com_Printf( "   baseline: %i ", newnum );
+            }
+            CL_ParseDeltaEntity( frame, newnum, &cl.baselines[newnum], bits );
+            if( cl_shownet->integer > 2 ) {
+                Com_Printf( "\n" );
+            }
+            continue;
+        }
 
-	}
+    }
 
-	// any remaining entities in the old frame are copied over
-	while( oldnum != 99999 ) {	
-		// one or more entities from the old packet are unchanged
-		if( cl_shownet->integer > 2 ) {
-			Com_Printf( "   unchanged: %i\n", oldnum );
-		}
-		CL_ParseDeltaEntity( frame, oldnum, oldstate, 0 );
-		
-		oldindex++;
+    // any remaining entities in the old frame are copied over
+    while( oldnum != 99999 ) {    
+        // one or more entities from the old packet are unchanged
+        if( cl_shownet->integer > 2 ) {
+            Com_Printf( "   unchanged: %i\n", oldnum );
+        }
+        CL_ParseDeltaEntity( frame, oldnum, oldstate, 0 );
+        
+        oldindex++;
 
-		if( oldindex >= oldframe->numEntities ) {
-			oldnum = 99999;
-		} else {
-			i = oldframe->firstEntity + oldindex;
-			oldstate = &cl.entityStates[i & PARSE_ENTITIES_MASK];
-			oldnum = oldstate->number;
-		}
-	}
+        if( oldindex >= oldframe->numEntities ) {
+            oldnum = 99999;
+        } else {
+            i = oldframe->firstEntity + oldindex;
+            oldstate = &cl.entityStates[i & PARSE_ENTITIES_MASK];
+            oldnum = oldstate->number;
+        }
+    }
 }
 
 /*
@@ -439,30 +425,30 @@ CL_SetActiveState
 */
 static void CL_SetActiveState( void ) {
     cl.serverdelta = cl.frame.number;
-	cl.time = cl.servertime = 0; // set time, needed for demos
-	cls.state = ca_active;
-	cl.oldframe.valid = qfalse;
+    cl.time = cl.servertime = 0; // set time, needed for demos
+    cls.state = ca_active;
+    cl.oldframe.valid = qfalse;
     cl.frameflags = 0;
     cl.putaway = qfalse;
     if( cls.netchan ) {
         cl.initialSeq = cls.netchan->outgoing_sequence;
     }
 
-	if( !cls.demoplayback ) {
+    if( !cls.demo.playback ) {
         VectorScale( cl.frame.ps.pmove.origin, 0.125f, cl.predicted_origin );
-		VectorCopy( cl.frame.ps.viewangles, cl.predicted_angles );
-	}
-	
-	SCR_LagClear();
+        VectorCopy( cl.frame.ps.viewangles, cl.predicted_angles );
+    }
+    
+    SCR_LagClear();
 #if USE_CHATHUD
-	SCR_ClearChatHUD_f();
+    SCR_ClearChatHUD_f();
 #endif
-	SCR_EndLoadingPlaque ();	// get rid of loading plaque
-	Con_Close();				// close console
+    SCR_EndLoadingPlaque ();    // get rid of loading plaque
+    Con_Close();                // close console
 
     EXEC_TRIGGER( cl_beginmapcmd );
 
-	Cvar_Set( "cl_paused", "0" );
+    Cvar_Set( "cl_paused", "0" );
 }
 
 /*
@@ -471,202 +457,202 @@ CL_ParseFrame
 ================
 */
 static void CL_ParseFrame( int extrabits ) {
-	uint32_t bits, extraflags;
-	int     currentframe, deltaframe,
+    uint32_t bits, extraflags;
+    int     currentframe, deltaframe,
             delta, surpressed;
-	server_frame_t  frame, *oldframe;
-	player_state_t  *from;
-	int     length;
-	
-	memset( &frame, 0, sizeof( frame ) );
+    server_frame_t  frame, *oldframe;
+    player_state_t  *from;
+    int     length;
+    
+    memset( &frame, 0, sizeof( frame ) );
 
     cl.frameflags = 0;
 
     surpressed = 0;
-	extraflags = 0;
-	if( cls.serverProtocol > PROTOCOL_VERSION_DEFAULT ) {
-		bits = MSG_ReadLong();
+    extraflags = 0;
+    if( cls.serverProtocol > PROTOCOL_VERSION_DEFAULT ) {
+        bits = MSG_ReadLong();
 
-		currentframe = bits & FRAMENUM_MASK;
-		delta = bits >> FRAMENUM_BITS;
+        currentframe = bits & FRAMENUM_MASK;
+        delta = bits >> FRAMENUM_BITS;
 
-		if( delta == 31 ) {
-			deltaframe = -1;
-		} else {
-			deltaframe = currentframe - delta;
-		}
+        if( delta == 31 ) {
+            deltaframe = -1;
+        } else {
+            deltaframe = currentframe - delta;
+        }
 
-		bits = MSG_ReadByte();
+        bits = MSG_ReadByte();
 
-		surpressed = bits & SURPRESSCOUNT_MASK;
-	    if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO ) {
+        surpressed = bits & SURPRESSCOUNT_MASK;
+        if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO ) {
             cl.frameflags |= surpressed;
         } else if( surpressed ) {
             cl.frameflags |= FF_SURPRESSED;
         }
-		extraflags = ( extrabits << 4 ) | ( bits >> SURPRESSCOUNT_BITS );
-	} else {
-		currentframe = MSG_ReadLong();
-		deltaframe = MSG_ReadLong();
+        extraflags = ( extrabits << 4 ) | ( bits >> SURPRESSCOUNT_BITS );
+    } else {
+        currentframe = MSG_ReadLong();
+        deltaframe = MSG_ReadLong();
 
-		// BIG HACK to let old demos continue to work
-		if( cls.serverProtocol != PROTOCOL_VERSION_OLD ) {
-			surpressed = MSG_ReadByte();
+        // BIG HACK to let old demos continue to work
+        if( cls.serverProtocol != PROTOCOL_VERSION_OLD ) {
+            surpressed = MSG_ReadByte();
             if( surpressed ) {
                 cl.frameflags |= FF_SURPRESSED;
             }
-		}
-	}
+        }
+    }
 
-	frame.number = currentframe;
-	frame.delta = deltaframe;
+    frame.number = currentframe;
+    frame.delta = deltaframe;
 
     if( cls.netchan && cls.netchan->dropped ) {
         cl.frameflags |= FF_SERVERDROP;
     }
 
-	/* If the frame is delta compressed from data that we
-	 * no longer have available, we must suck up the rest of
-	 * the frame, but not use it, then ask for a non-compressed
-	 * message */
-	if( deltaframe > 0 ) {
-		oldframe = &cl.frames[deltaframe & UPDATE_MASK];
-		from = &oldframe->ps;
-		if( deltaframe == currentframe ) {
+    /* If the frame is delta compressed from data that we
+     * no longer have available, we must suck up the rest of
+     * the frame, but not use it, then ask for a non-compressed
+     * message */
+    if( deltaframe > 0 ) {
+        oldframe = &cl.frames[deltaframe & UPDATE_MASK];
+        from = &oldframe->ps;
+        if( deltaframe == currentframe ) {
             // old buggy q2 servers still cause this on map change
-			Com_DPrintf( "%s: delta from current frame\n", __func__ );
+            Com_DPrintf( "%s: delta from current frame\n", __func__ );
             cl.frameflags |= FF_BADFRAME;
-		} else if( oldframe->number != deltaframe ) {
-			// The frame that the server did the delta from
-			// is too old, so we can't reconstruct it properly.
-			Com_DPrintf( "%s: delta frame was never received or too old\n", __func__ );
+        } else if( oldframe->number != deltaframe ) {
+            // The frame that the server did the delta from
+            // is too old, so we can't reconstruct it properly.
+            Com_DPrintf( "%s: delta frame was never received or too old\n", __func__ );
             cl.frameflags |= FF_OLDFRAME;
-		} else if( !oldframe->valid ) {	
-			// should never happen
-			Com_DPrintf( "%s: delta from invalid frame\n", __func__ );
+        } else if( !oldframe->valid ) {    
+            // should never happen
+            Com_DPrintf( "%s: delta from invalid frame\n", __func__ );
             cl.frameflags |= FF_BADFRAME;
-		} else if( cl.numEntityStates - oldframe->firstEntity >
-			MAX_PARSE_ENTITIES - MAX_PACKET_ENTITIES )
-		{
-			Com_DPrintf( "%s: delta entities too old\n", __func__ );
+        } else if( cl.numEntityStates - oldframe->firstEntity >
+            MAX_PARSE_ENTITIES - MAX_PACKET_ENTITIES )
+        {
+            Com_DPrintf( "%s: delta entities too old\n", __func__ );
             cl.frameflags |= FF_OLDENT;
-		} else {
-			frame.valid = qtrue;	// valid delta parse
-		}
-        if( !frame.valid && cl.frame.valid && cls.demoplayback ) {
+        } else {
+            frame.valid = qtrue;    // valid delta parse
+        }
+        if( !frame.valid && cl.frame.valid && cls.demo.playback ) {
             Com_DPrintf( "%s: recovering broken demo\n", __func__ );
             oldframe = &cl.frame;
             from = &oldframe->ps;
             frame.valid = qtrue;
         }
-	} else {
-		oldframe = NULL;
-		from = NULL;
-		frame.valid = qtrue;		// uncompressed frame
+    } else {
+        oldframe = NULL;
+        from = NULL;
+        frame.valid = qtrue;        // uncompressed frame
         //if( !cls.demowaiting ) {
             cl.frameflags |= FF_NODELTA;
         //}
-    	//cls.demowaiting = qfalse;   // we can start recording now
-	}
+        //cls.demowaiting = qfalse;   // we can start recording now
+    }
 
-	// read areabits
-	length = MSG_ReadByte();
-	if( length ) {
-		if( length < 0 || msg_read.readcount + length > msg_read.cursize ) {
-			Com_Error( ERR_DROP, "%s: read past end of message", __func__ );
-		}
-		if( length > sizeof( frame.areabits ) ) {
-			Com_Error( ERR_DROP, "%s: invalid areabits length", __func__ );
-		}
-		MSG_ReadData( frame.areabits, length );
-		frame.areabytes = length;
-	} else {
-		frame.areabytes = 0;
-	}
+    // read areabits
+    length = MSG_ReadByte();
+    if( length ) {
+        if( length < 0 || msg_read.readcount + length > msg_read.cursize ) {
+            Com_Error( ERR_DROP, "%s: read past end of message", __func__ );
+        }
+        if( length > sizeof( frame.areabits ) ) {
+            Com_Error( ERR_DROP, "%s: invalid areabits length", __func__ );
+        }
+        MSG_ReadData( frame.areabits, length );
+        frame.areabytes = length;
+    } else {
+        frame.areabytes = 0;
+    }
 
-	if( cls.serverProtocol <= PROTOCOL_VERSION_DEFAULT ) {
-		if( MSG_ReadByte() != svc_playerinfo ) {
-			Com_Error( ERR_DROP, "%s: not playerinfo", __func__ );
-		}
-	}
+    if( cls.serverProtocol <= PROTOCOL_VERSION_DEFAULT ) {
+        if( MSG_ReadByte() != svc_playerinfo ) {
+            Com_Error( ERR_DROP, "%s: not playerinfo", __func__ );
+        }
+    }
 
-	if( cl_shownet->integer > 2 ) {
-		Com_Printf( "%3"PRIz":playerinfo\n", msg_read.readcount - 1 );
-	}
+    if( cl_shownet->integer > 2 ) {
+        Com_Printf( "%3"PRIz":playerinfo\n", msg_read.readcount - 1 );
+    }
 
-	// parse playerstate
-	bits = MSG_ReadShort();
-	if( cls.serverProtocol > PROTOCOL_VERSION_DEFAULT ) {
-		MSG_ParseDeltaPlayerstate_Enhanced( from, &frame.ps, bits, extraflags );
-		if( cl_shownet->integer > 2 ) {
-			MSG_ShowDeltaPlayerstateBits_Enhanced( bits );
-			Com_Printf( "\n" );
-		}
-		if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO ) {
+    // parse playerstate
+    bits = MSG_ReadShort();
+    if( cls.serverProtocol > PROTOCOL_VERSION_DEFAULT ) {
+        MSG_ParseDeltaPlayerstate_Enhanced( from, &frame.ps, bits, extraflags );
+        if( cl_shownet->integer > 2 ) {
+            MSG_ShowDeltaPlayerstateBits_Enhanced( bits );
+            Com_Printf( "\n" );
+        }
+        if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO ) {
             // parse clientNum
-	        if( extraflags & EPS_CLIENTNUM ) {
-		        frame.clientNum = MSG_ReadByte();
-	        } else if( oldframe ) {
+            if( extraflags & EPS_CLIENTNUM ) {
+                frame.clientNum = MSG_ReadByte();
+            } else if( oldframe ) {
                 frame.clientNum = oldframe->clientNum;
             }
         } else {
-	        frame.clientNum = cl.clientNum;
+            frame.clientNum = cl.clientNum;
         }
-	} else {
-		MSG_ParseDeltaPlayerstate_Default( from, &frame.ps, bits );
-		if( cl_shownet->integer > 2 ) {
-			MSG_ShowDeltaPlayerstateBits_Default( bits );
-			Com_Printf( "\n" );
-		}
-	    frame.clientNum = cl.clientNum;
-	}
-	if( !frame.ps.fov ) {
+    } else {
+        MSG_ParseDeltaPlayerstate_Default( from, &frame.ps, bits );
+        if( cl_shownet->integer > 2 ) {
+            MSG_ShowDeltaPlayerstateBits_Default( bits );
+            Com_Printf( "\n" );
+        }
+        frame.clientNum = cl.clientNum;
+    }
+    if( !frame.ps.fov ) {
         // fail out early to prevent spurious errors later
         Com_Error( ERR_DROP, "%s: bad fov", __func__ );
     }
 
-	// parse packetentities
-	if( cls.serverProtocol <= PROTOCOL_VERSION_DEFAULT ) {
-		if( MSG_ReadByte() != svc_packetentities ) {
-			Com_Error( ERR_DROP, "%s: not packetentities", __func__ );
-		}
-	}
+    // parse packetentities
+    if( cls.serverProtocol <= PROTOCOL_VERSION_DEFAULT ) {
+        if( MSG_ReadByte() != svc_packetentities ) {
+            Com_Error( ERR_DROP, "%s: not packetentities", __func__ );
+        }
+    }
 
-	if( cl_shownet->integer > 2 ) {
-		Com_Printf( "%3"PRIz":packetentities\n", msg_read.readcount - 1 );
-	}
+    if( cl_shownet->integer > 2 ) {
+        Com_Printf( "%3"PRIz":packetentities\n", msg_read.readcount - 1 );
+    }
 
-	CL_ParsePacketEntities( oldframe, &frame );
+    CL_ParsePacketEntities( oldframe, &frame );
 
-	// save the frame off in the backup array for later delta comparisons
-	cl.frames[currentframe & UPDATE_MASK] = frame;
+    // save the frame off in the backup array for later delta comparisons
+    cl.frames[currentframe & UPDATE_MASK] = frame;
 
-	if( cl_shownet->integer > 2 ) {
+    if( cl_shownet->integer > 2 ) {
         int rtt = 0;
-		if( cls.netchan ) {
+        if( cls.netchan ) {
             int seq = cls.netchan->incoming_acknowledged & CMD_MASK;
-			rtt = cls.realtime - cl.history[seq].sent;
-		}
-		Com_Printf( "%3"PRIz":frame:%d  delta:%d  rtt:%d\n",
-			msg_read.readcount - 1, frame.number, frame.delta, rtt );
-	}
+            rtt = cls.realtime - cl.history[seq].sent;
+        }
+        Com_Printf( "%3"PRIz":frame:%d  delta:%d  rtt:%d\n",
+            msg_read.readcount - 1, frame.number, frame.delta, rtt );
+    }
 
-	if( !frame.valid ) {
-		cl.frame.valid = qfalse;
-		return; // do not change anything
-	}
+    if( !frame.valid ) {
+        cl.frame.valid = qfalse;
+        return; // do not change anything
+    }
 
-	cl.oldframe = cl.frame;
-	cl.frame = frame;
+    cl.oldframe = cl.frame;
+    cl.frame = frame;
 
-	// getting a valid frame message ends the connection process
-	if( cls.state == ca_precached ) {
-		CL_SetActiveState();
-	}
+    // getting a valid frame message ends the connection process
+    if( cls.state == ca_precached ) {
+        CL_SetActiveState();
+    }
 
-	CL_DeltaFrame();
+    CL_DeltaFrame();
 
-	CL_CheckPredictionError();
+    CL_CheckPredictionError();
 }
 
 
@@ -679,7 +665,7 @@ static void CL_ParseFrame( int extrabits ) {
 */
 
 static void CL_ConfigString( int index, const char *string, size_t length ) {
-	size_t		maxlength;
+    size_t        maxlength;
 
     if( index >= CS_STATUSBAR && index < CS_AIRACCEL ) {
         maxlength = MAX_QPATH * ( CS_AIRACCEL - index );
@@ -687,15 +673,15 @@ static void CL_ConfigString( int index, const char *string, size_t length ) {
         maxlength = MAX_QPATH;
     }
     if( length >= maxlength ) {
-		Com_Error( ERR_DROP, "%s: index %d overflowed", __func__, index );
+        Com_Error( ERR_DROP, "%s: index %d overflowed", __func__, index );
     }
 
-	memcpy( cl.configstrings[index], string, length + 1 );
+    memcpy( cl.configstrings[index], string, length + 1 );
 
-	// do something apropriate 
+    // do something apropriate 
 
-	if( index == CS_MAXCLIENTS ) {
-		cl.maxclients = atoi( string );
+    if( index == CS_MAXCLIENTS ) {
+        cl.maxclients = atoi( string );
         return;
     }
     if( index == CS_MODELS + 1 ) {
@@ -706,34 +692,34 @@ static void CL_ConfigString( int index, const char *string, size_t length ) {
         cl.mapname[length - 9] = 0; // cut off ".bsp"
         return;
     }
-	if (index >= CS_LIGHTS && index < CS_LIGHTS+MAX_LIGHTSTYLES) {
-		CL_SetLightstyle( index - CS_LIGHTS, string, length );
+    if (index >= CS_LIGHTS && index < CS_LIGHTS+MAX_LIGHTSTYLES) {
+        CL_SetLightstyle( index - CS_LIGHTS, string, length );
         return;
     }
 
-	if( cls.state < ca_precached ) {
+    if( cls.state < ca_precached ) {
         return;
     }
 
-	if (index >= CS_MODELS && index < CS_MODELS+MAX_MODELS) {
+    if (index >= CS_MODELS && index < CS_MODELS+MAX_MODELS) {
         cl.model_draw[index-CS_MODELS] = ref.RegisterModel (string);
         if (*string == '*')
             cl.model_clip[index-CS_MODELS] = CM_InlineModel (&cl.cm, string);
         else
             cl.model_clip[index-CS_MODELS] = 0;
-	} else if (index >= CS_SOUNDS && index < CS_SOUNDS+MAX_MODELS) {
-		cl.sound_precache[index-CS_SOUNDS] = S_RegisterSound (string);
-	} else if (index >= CS_IMAGES && index < CS_IMAGES+MAX_MODELS) {
-		cl.image_precache[index-CS_IMAGES] = ref.RegisterPic (string);
-	} else if (index >= CS_PLAYERSKINS && index < CS_PLAYERSKINS+MAX_CLIENTS) {
+    } else if (index >= CS_SOUNDS && index < CS_SOUNDS+MAX_MODELS) {
+        cl.sound_precache[index-CS_SOUNDS] = S_RegisterSound (string);
+    } else if (index >= CS_IMAGES && index < CS_IMAGES+MAX_MODELS) {
+        cl.image_precache[index-CS_IMAGES] = ref.RegisterPic (string);
+    } else if (index >= CS_PLAYERSKINS && index < CS_PLAYERSKINS+MAX_CLIENTS) {
         CL_LoadClientinfo( &cl.clientinfo[index - CS_PLAYERSKINS], string );
-	} else if( index == CS_AIRACCEL && !cl.pmp.qwmod ) {
-		cl.pmp.airaccelerate = atoi( string ) ? qtrue : qfalse;
-	}
+    } else if( index == CS_AIRACCEL && !cl.pmp.qwmod ) {
+        cl.pmp.airaccelerate = atoi( string ) ? qtrue : qfalse;
+    }
 }
 
 static void CL_ParseGamestate( void ) {
-	int		index, bits;
+    int        index, bits;
     char    *string;
     size_t  length;
 
@@ -771,26 +757,26 @@ CL_ParseServerData
 ==================
 */
 static void CL_ParseServerData( void ) {
-	char	*str;
-	int		i, protocol, attractloop;
+    char    *str;
+    int        i, protocol, attractloop;
 
-	Cbuf_Execute();		// make sure any stuffed commands are done
-	
+    Cbuf_Execute();        // make sure any stuffed commands are done
+    
     // wipe the client_state_t struct
-	CL_ClearState();
+    CL_ClearState();
 
     // parse protocol version number
-	protocol = MSG_ReadLong();
-	cl.servercount = MSG_ReadLong();
-	attractloop = MSG_ReadByte();
+    protocol = MSG_ReadLong();
+    cl.servercount = MSG_ReadLong();
+    attractloop = MSG_ReadByte();
 
-	Com_DPrintf( "Serverdata packet received (protocol=%d, servercount=%d, attractloop=%d)\n",
-		protocol, cl.servercount, attractloop );
+    Com_DPrintf( "Serverdata packet received (protocol=%d, servercount=%d, attractloop=%d)\n",
+        protocol, cl.servercount, attractloop );
 
     // check protocol
-	if( cls.serverProtocol != protocol ) {
-		if( !cls.demoplayback ) { 
-			Com_Error( ERR_DROP, "Requested protocol version %d, but server returned %d.",
+    if( cls.serverProtocol != protocol ) {
+        if( !cls.demo.playback ) { 
+            Com_Error( ERR_DROP, "Requested protocol version %d, but server returned %d.",
                 cls.serverProtocol, protocol );
         }
 
@@ -800,38 +786,38 @@ static void CL_ParseServerData( void ) {
         } else if( protocol < PROTOCOL_VERSION_DEFAULT || protocol > PROTOCOL_VERSION_Q2PRO ) {
             Com_Error( ERR_DROP, "Demo uses unsupported protocol version %d.", protocol );
         }
-		cls.serverProtocol = protocol;
-	}
+        cls.serverProtocol = protocol;
+    }
 
-	// game directory
-	str = MSG_ReadString();
-	Q_strncpyz( cl.gamedir, str, sizeof( cl.gamedir ) );
+    // game directory
+    str = MSG_ReadString();
+    Q_strncpyz( cl.gamedir, str, sizeof( cl.gamedir ) );
 
-	// never allow demos to change gamedir
-	// do not set gamedir if connected to local sever,
-	// since it was already done by SV_InitGame
-	if( !cls.demoplayback && !sv_running->integer ) {
-		Cvar_UserSet( "game", cl.gamedir );
-		if( FS_NeedRestart() ) {
-			CL_RestartFilesystem();
-		}
-	}
+    // never allow demos to change gamedir
+    // do not set gamedir if connected to local sever,
+    // since it was already done by SV_InitGame
+    if( !cls.demo.playback && !sv_running->integer ) {
+        Cvar_UserSet( "game", cl.gamedir );
+        if( FS_NeedRestart() ) {
+            CL_RestartFilesystem();
+        }
+    }
 
-	// parse player entity number
-	cl.clientNum = MSG_ReadShort();
+    // parse player entity number
+    cl.clientNum = MSG_ReadShort();
 
-	// get the full level name
-	str = MSG_ReadString();
+    // get the full level name
+    str = MSG_ReadString();
 
     // setup default pmove parameters
-	cl.pmp.speedMultiplier = 1;
-	cl.pmp.maxspeed = 300;
-//	cl.pmp.upspeed = 350;
-	cl.pmp.friction = 6;
-	cl.pmp.waterfriction = 1;
+    cl.pmp.speedMultiplier = 1;
+    cl.pmp.maxspeed = 300;
+//    cl.pmp.upspeed = 350;
+    cl.pmp.friction = 6;
+    cl.pmp.waterfriction = 1;
     cl.pmp.flyfriction = 9;
-	cl.pmp.airaccelerate = 0;	
-	cl.gametype = GT_DEATHMATCH;
+    cl.pmp.airaccelerate = 0;    
+    cl.gametype = GT_DEATHMATCH;
 #ifdef PMOVE_HACK
     cl.pmp.highprec = qtrue;
 #endif
@@ -840,61 +826,61 @@ static void CL_ParseServerData( void ) {
     cl.frametime = 100;
     cl.framefrac = 0.01f;
 
-	if( cls.serverProtocol == PROTOCOL_VERSION_R1Q2 ) {
-		i = MSG_ReadByte();
-		if( i ) {
-			Com_Error( ERR_DROP, "'Enhanced' R1Q2 servers are not supported" );
-		}
-		i = MSG_ReadShort();
-		if( !R1Q2_SUPPORTED( i ) ) {
-			Com_Error( ERR_DROP, "Unsupported R1Q2 protocol version %d.\n"
+    if( cls.serverProtocol == PROTOCOL_VERSION_R1Q2 ) {
+        i = MSG_ReadByte();
+        if( i ) {
+            Com_Error( ERR_DROP, "'Enhanced' R1Q2 servers are not supported" );
+        }
+        i = MSG_ReadShort();
+        if( !R1Q2_SUPPORTED( i ) ) {
+            Com_Error( ERR_DROP, "Unsupported R1Q2 protocol version %d.\n"
                 "Current client version is %d.", i, PROTOCOL_VERSION_R1Q2_CURRENT );
-		}
+        }
         cls.protocolVersion = i;
-		i = MSG_ReadByte();
-		if( i ) { // seems to be no longer used
-			Com_DPrintf( "R1Q2 advancedDeltas enabled\n" );
-		}
-		cl.pmp.strafeHack = MSG_ReadByte();
-		if( cl.pmp.strafeHack ) {
-			Com_DPrintf( "R1Q2 strafeHack enabled\n" );
-		}
-		cl.pmp.speedMultiplier = 2;
-	} else if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO ) {
-		i = MSG_ReadShort();
-		if( !Q2PRO_SUPPORTED( i ) ) {
-			Com_Error( ERR_DROP, "Unsupported Q2PRO protocol version %d.\n"
+        i = MSG_ReadByte();
+        if( i ) { // seems to be no longer used
+            Com_DPrintf( "R1Q2 advancedDeltas enabled\n" );
+        }
+        cl.pmp.strafeHack = MSG_ReadByte();
+        if( cl.pmp.strafeHack ) {
+            Com_DPrintf( "R1Q2 strafeHack enabled\n" );
+        }
+        cl.pmp.speedMultiplier = 2;
+    } else if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO ) {
+        i = MSG_ReadShort();
+        if( !Q2PRO_SUPPORTED( i ) ) {
+            Com_Error( ERR_DROP, "Unsupported Q2PRO protocol version %d.\n"
                 "Current client version is %d.", i, PROTOCOL_VERSION_Q2PRO_CURRENT );
-		}
+        }
         cls.protocolVersion = i;
-		cl.gametype = MSG_ReadByte();
-		cl.pmp.strafeHack = MSG_ReadByte();
-		cl.pmp.qwmod = MSG_ReadByte(); //atu QWMod
-		cl.pmp.speedMultiplier = 2;		
+        cl.gametype = MSG_ReadByte();
+        cl.pmp.strafeHack = MSG_ReadByte();
+        cl.pmp.qwmod = MSG_ReadByte(); //atu QWMod
+        cl.pmp.speedMultiplier = 2;        
         cl.pmp.flyfix = qtrue;
         cl.pmp.flyfriction = 4;
 
-		if( cl.pmp.strafeHack ) {
-			Com_DPrintf( "Q2PRO strafeHack enabled\n" );
-		}
-		if( cl.pmp.qwmod ) {
-			Com_DPrintf( "Q2PRO QWMod enabled\n" );
+        if( cl.pmp.strafeHack ) {
+            Com_DPrintf( "Q2PRO strafeHack enabled\n" );
+        }
+        if( cl.pmp.qwmod ) {
+            Com_DPrintf( "Q2PRO QWMod enabled\n" );
 
-			cl.pmp.maxspeed = 320;
-			//cl.pmp.upspeed = ((cl.pmp.qwmod == 2) ? 310 : 350);
-			cl.pmp.friction = 4;
-			cl.pmp.waterfriction = 4;
-			cl.pmp.airaccelerate = qtrue;
-		}
-	}
+            cl.pmp.maxspeed = 320;
+            //cl.pmp.upspeed = ((cl.pmp.qwmod == 2) ? 310 : 350);
+            cl.pmp.friction = 4;
+            cl.pmp.waterfriction = 4;
+            cl.pmp.airaccelerate = qtrue;
+        }
+    }
 
-	if( cl.clientNum == -1 ) {
-	    // tell the server to advance to the next map / cinematic
-	    CL_ClientCommand( va( "nextserver %i\n", cl.servercount ) );
-	} else {
-		// seperate the printfs so the server message can have a color
-		Con_Printf( "\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n" );
-		Con_Printf( S_COLOR_ALT "%s\n\n", str );
+    if( cl.clientNum == -1 ) {
+        // tell the server to advance to the next map / cinematic
+        CL_ClientCommand( va( "nextserver %i\n", cl.servercount ) );
+    } else {
+        // seperate the printfs so the server message can have a color
+        Con_Printf( "\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n" );
+        Con_Printf( S_COLOR_ALT "%s\n\n", str );
 
         Sys_Printf( "\n\n%s\n", str );
 
@@ -902,7 +888,7 @@ static void CL_ParseServerData( void ) {
         if( cl.clientNum < 0 || cl.clientNum >= MAX_CLIENTS ) {
             cl.clientNum = CLIENTNUM_NONE;
         }
-	}
+    }
 
 }
 
@@ -912,14 +898,14 @@ CL_ParseBaseline
 ==================
 */
 static void CL_ParseBaseline( void ) {
-	int				bits;
-	int				newnum;
+    int                bits;
+    int                newnum;
 
-	newnum = MSG_ParseEntityBits( &bits );
-	if( newnum < 1 || newnum >= MAX_EDICTS ) {
-		Com_Error( ERR_DROP, "CL_ParseBaseline: bad entity number %i", newnum );
-	}
-	MSG_ParseDeltaEntity( NULL, &cl.baselines[newnum], newnum, bits );
+    newnum = MSG_ParseEntityBits( &bits );
+    if( newnum < 1 || newnum >= MAX_EDICTS ) {
+        Com_Error( ERR_DROP, "CL_ParseBaseline: bad entity number %i", newnum );
+    }
+    MSG_ParseDeltaEntity( NULL, &cl.baselines[newnum], newnum, bits );
 }
 
 /*
@@ -929,22 +915,22 @@ CL_LoadClientinfo
 ================
 */
 void CL_LoadClientinfo( clientinfo_t *ci, const char *s ) {
-	int         i;
-	char		*t;
-	char		model_name[MAX_QPATH];
-	char		skin_name[MAX_QPATH];
-	char		model_filename[MAX_QPATH];
-	char		skin_filename[MAX_QPATH];
-	char		weapon_filename[MAX_QPATH];
-	char		icon_filename[MAX_QPATH];
+    int         i;
+    char        *t;
+    char        model_name[MAX_QPATH];
+    char        skin_name[MAX_QPATH];
+    char        model_filename[MAX_QPATH];
+    char        skin_filename[MAX_QPATH];
+    char        weapon_filename[MAX_QPATH];
+    char        icon_filename[MAX_QPATH];
 
-	// isolate the player's name
-	strcpy( ci->name, s );
-	t = strchr( s, '\\' );
-	if( t ) {
-		ci->name[ t - s ] = 0;
-		s = t + 1;
-	}
+    // isolate the player's name
+    strcpy( ci->name, s );
+    t = strchr( s, '\\' );
+    if( t ) {
+        ci->name[ t - s ] = 0;
+        s = t + 1;
+    }
 
     strcpy( model_name, s );
 
@@ -1040,15 +1026,15 @@ void CL_LoadClientinfo( clientinfo_t *ci, const char *s ) {
     strcpy( ci->model_name, model_name );
     strcpy( ci->skin_name, skin_name );
 
-	// must have loaded all data types to be valid
-	if( !ci->skin || !ci->icon || !ci->model || !ci->weaponmodel[0] ) {
-		ci->skin = 0;
-		ci->icon = 0;
-		ci->model = 0;
-		ci->weaponmodel[0] = 0;
+    // must have loaded all data types to be valid
+    if( !ci->skin || !ci->icon || !ci->model || !ci->weaponmodel[0] ) {
+        ci->skin = 0;
+        ci->icon = 0;
+        ci->model = 0;
+        ci->weaponmodel[0] = 0;
         ci->model_name[0] = 0;
         ci->skin_name[0] = 0;
-	}
+    }
 }
 
 
@@ -1058,21 +1044,21 @@ CL_ParseConfigString
 ================
 */
 static void CL_ParseConfigString (void) {
-	int		i;
-	char	*s;
+    int        i;
+    char    *s;
     size_t  length;
 
-	i = MSG_ReadShort ();
-	if (i < 0 || i >= MAX_CONFIGSTRINGS)
-		Com_Error( ERR_DROP, "%s: bad index: %d", __func__, i );
+    i = MSG_ReadShort ();
+    if (i < 0 || i >= MAX_CONFIGSTRINGS)
+        Com_Error( ERR_DROP, "%s: bad index: %d", __func__, i );
 
-	s = MSG_ReadStringLength( &length );
+    s = MSG_ReadStringLength( &length );
 
-	if( cl_shownet->integer > 2 ) {
-		Com_Printf( "    %i \"%s\"\n", i, Q_FormatString( s ) );
-	}
+    if( cl_shownet->integer > 2 ) {
+        Com_Printf( "    %i \"%s\"\n", i, Q_FormatString( s ) );
+    }
 
-    if( cls.demorecording && cls.demopaused ) {
+    if( cls.demo.recording && cls.demo.paused ) {
         Q_SetBit( cl.dcs, i );
     }
 
@@ -1095,73 +1081,73 @@ CL_ParseStartSoundPacket
 */
 static void CL_ParseStartSoundPacket( void ) {
     vec3_t  pos_v;
-	float	*pos;
-    int 	channel, ent;
-    int 	sound_num;
-    float 	volume;
-    float 	attenuation; 
-	int		flags;
-	float	ofs;
+    float    *pos;
+    int     channel, ent;
+    int     sound_num;
+    float     volume;
+    float     attenuation; 
+    int        flags;
+    float    ofs;
 
-	flags = MSG_ReadByte();
-	sound_num = MSG_ReadByte();
-	if( sound_num == -1 ) {
-		Com_Error( ERR_DROP, "%s: read past end of message", __func__ );
-	}
+    flags = MSG_ReadByte();
+    sound_num = MSG_ReadByte();
+    if( sound_num == -1 ) {
+        Com_Error( ERR_DROP, "%s: read past end of message", __func__ );
+    }
 
     if( flags & SND_VOLUME )
-		volume = MSG_ReadByte() / 255.0;
-	else
-		volume = DEFAULT_SOUND_PACKET_VOLUME;
-	
+        volume = MSG_ReadByte() / 255.0;
+    else
+        volume = DEFAULT_SOUND_PACKET_VOLUME;
+    
     if( flags & SND_ATTENUATION )
-		attenuation = MSG_ReadByte() / 64.0;
-	else
-		attenuation = DEFAULT_SOUND_PACKET_ATTENUATION;	
+        attenuation = MSG_ReadByte() / 64.0;
+    else
+        attenuation = DEFAULT_SOUND_PACKET_ATTENUATION;    
 
     if( flags & SND_OFFSET )
-		ofs = MSG_ReadByte() / 1000.0;
-	else
-		ofs = 0;
+        ofs = MSG_ReadByte() / 1000.0;
+    else
+        ofs = 0;
 
-	if( flags & SND_ENT ) {	
-		// entity relative
-		channel = MSG_ReadShort(); 
-		ent = channel >> 3;
-		if( ent < 0 || ent >= MAX_EDICTS )
-			Com_Error( ERR_DROP, "%s: bad ent: %d", __func__, ent );
-		channel &= 7;
-	} else {
-		ent = 0;
-		channel = 0;
-	}
+    if( flags & SND_ENT ) {    
+        // entity relative
+        channel = MSG_ReadShort(); 
+        ent = channel >> 3;
+        if( ent < 0 || ent >= MAX_EDICTS )
+            Com_Error( ERR_DROP, "%s: bad ent: %d", __func__, ent );
+        channel &= 7;
+    } else {
+        ent = 0;
+        channel = 0;
+    }
 
-	if( flags & SND_POS ) {
-		// positioned in space
-		MSG_ReadPos( pos_v );
-		pos = pos_v;
-	} else {
-		if( !( flags & SND_ENT ) ) {
-			Com_Error( ERR_DROP, "%s: neither SND_ENT nor SND_POS set", __func__ );
-		}
+    if( flags & SND_POS ) {
+        // positioned in space
+        MSG_ReadPos( pos_v );
+        pos = pos_v;
+    } else {
+        if( !( flags & SND_ENT ) ) {
+            Com_Error( ERR_DROP, "%s: neither SND_ENT nor SND_POS set", __func__ );
+        }
         if( cl_entities[ent].serverframe != cl.frame.number ) {
             if( cl_entities[ent].serverframe ) { 
-                Com_DPrintf( "BUG: sound on entity %d last seen %d frames ago\n",
+                Com_DPrintf( "SERVER BUG: sound on entity %d last seen %d frames ago\n",
                     ent, cl.frame.number - cl_entities[ent].serverframe );
             } else {
-                Com_DPrintf( "BUG: sound on entity %d we have never seen\n", ent );
+                Com_DPrintf( "SERVER BUG: sound on entity %d we have never seen\n", ent );
             }
         }
-		// use entity number
-		pos = NULL;
-	}
+        // use entity number
+        pos = NULL;
+    }
 
-	if( cl_shownet->integer > 2 ) {
-		Com_Printf( "    %s\n", cl.configstrings[CS_SOUNDS+sound_num] );
-	}
+    if( cl_shownet->integer > 2 ) {
+        Com_Printf( "    %s\n", cl.configstrings[CS_SOUNDS+sound_num] );
+    }
 
-	if( cl.sound_precache[sound_num] ) {
-    	S_StartSound( pos, ent, channel, cl.sound_precache[sound_num],
+    if( cl.sound_precache[sound_num] ) {
+        S_StartSound( pos, ent, channel, cl.sound_precache[sound_num],
             volume, attenuation, ofs );
     }
 }
@@ -1172,30 +1158,28 @@ CL_ParseReconnect
 =====================
 */
 static void CL_ParseReconnect( void ) {
-	if( cls.demoplayback ) {
-		return;
-	}
+    if( cls.demo.playback ) {
+        return;
+    }
 
     S_StopAllSounds();
 
-	if ( cls.demorecording )
+    if( cls.demo.recording )
         CL_Stop_f();
 
-	Com_Printf( "Server disconnected, reconnecting\n" );
-	if( cls.download ) {
-		FS_FCloseFile( cls.download );
-		cls.download = 0;
-	}
+    Com_Printf( "Server disconnected, reconnecting\n" );
+
+    if( cls.download.file ) {
+        FS_FCloseFile( cls.download.file );
+    }
+    memset( &cls.download, 0, sizeof( cls.download ) );
 
     EXEC_TRIGGER( cl_changemapcmd );
 
-	cls.downloadtempname[0] = 0;
-	cls.downloadname[0] = 0;
-
-	CL_ClearState();
-	cls.state = ca_challenging;
+    CL_ClearState();
+    cls.state = ca_challenging;
     cls.connect_time = cls.realtime - CONNECT_DELAY;
-	cls.connect_count = 0;
+    cls.connect_count = 0;
 }
 
 #if USE_AUTOREPLY
@@ -1206,10 +1190,6 @@ CL_CheckForVersion
 */
 static void CL_CheckForVersion( const char *string ) {
     char *p;
-
-    if( cls.demoplayback ) {
-        return;
-    }
 
     p = strstr( string, ": " );
     if( !p ) {
@@ -1236,29 +1216,31 @@ CL_ParsePrint
 =====================
 */
 static void CL_ParsePrint( void ) {
-	int level;
-	char *string;
+    int level;
+    char *string;
 
-	level = MSG_ReadByte();
-	string = MSG_ReadString();
+    level = MSG_ReadByte();
+    string = MSG_ReadString();
 
-	if( cl_shownet->integer > 2 ) {
-		Com_Printf( "    %i \"%s\"\n", level, Q_FormatString( string ) );
-	}
+    if( cl_shownet->integer > 2 ) {
+        Com_Printf( "    %i \"%s\"\n", level, Q_FormatString( string ) );
+    }
 
-	if( level != PRINT_CHAT ) {
-		Com_Printf( "%s", string );
-		return;
-	}
+    if( level != PRINT_CHAT ) {
+        Com_Printf( "%s", string );
+        return;
+    }
 
 #if USE_AUTOREPLY
-	CL_CheckForVersion( string );
+    if( !cls.demo.playback ) {
+        CL_CheckForVersion( string );
+    }
 #endif
 
-	// disable notify
-	if( !cl_chat_notify->integer ) {
-		Con_SkipNotify( qtrue );
-	}
+    // disable notify
+    if( !cl_chat_notify->integer ) {
+        Con_SkipNotify( qtrue );
+    }
 
     // filter text
     if( cl_chat_filter->integer ) {
@@ -1266,19 +1248,19 @@ static void CL_ParsePrint( void ) {
         string[len] = '\n';
     }
 
-	Com_Printf( S_COLOR_ALT "%s", string );
+    Com_Printf( S_COLOR_ALT "%s", string );
 
-	Con_SkipNotify( qfalse );
+    Con_SkipNotify( qfalse );
 
 #if USE_CHATHUD
-	SCR_AddToChatHUD( string );
+    SCR_AddToChatHUD( string );
 #endif
 
     // play sound
-	if( cl_chat_sound->string[0] ) {
-		S_StartLocalSound_( cl_chat_sound->string );
-	}
-	
+    if( cl_chat_sound->string[0] ) {
+        S_StartLocalSound_( cl_chat_sound->string );
+    }
+    
 }
 
 /*
@@ -1287,13 +1269,13 @@ CL_ParseCenterPrint
 =====================
 */
 static void CL_ParseCenterPrint( void ) {
-	char *s;
+    char *s;
 
-	s = MSG_ReadString();
+    s = MSG_ReadString();
 
-	if( cl_shownet->integer > 2 ) {
-		Com_Printf( "    \"%s\"\n", Q_FormatString( s ) );
-	}
+    if( cl_shownet->integer > 2 ) {
+        Com_Printf( "    \"%s\"\n", Q_FormatString( s ) );
+    }
 
     SCR_CenterPrint( s );
 }
@@ -1304,29 +1286,29 @@ CL_ParseStuffText
 =====================
 */
 static void CL_ParseStuffText( void ) {
-	char *s, *p;
+    char *s, *p;
 
-	s = MSG_ReadString();
+    s = MSG_ReadString();
 
-	//if( cl_shownet->integer > 2 ) {
-	//	Com_Printf( "    \"%s\"\n", Q_FormatString( s ) );
-	//}
+    //if( cl_shownet->integer > 2 ) {
+    //    Com_Printf( "    \"%s\"\n", Q_FormatString( s ) );
+    //}
 
     // FIXME: this is uuugly...
-	if( cls.demoplayback &&
+    if( cls.demo.playback &&
         strcmp( s, "precache\n" ) &&
         strcmp( s, "changing\n" ) &&
         ( strncmp( s, "play ", 5 ) || !( p = strchr( s, '\n' ) ) ||
           p[1] || strchr( s, ';' ) || strchr( s, '$' ) ) &&
         strcmp( s, "reconnect\n" ) )
     {
-		Com_DPrintf( "ignored stufftext: %s\n", s );
-		return;
-	}
+        Com_DPrintf( "ignored stufftext: %s\n", s );
+        return;
+    }
 
-	Com_DPrintf( "stufftext: %s\n", Q_FormatString( s ) );
+    Com_DPrintf( "stufftext: %s\n", Q_FormatString( s ) );
 
-	Cbuf_AddText( s );
+    Cbuf_AddText( s );
 }
 
 /*
@@ -1335,15 +1317,15 @@ CL_ParseLayout
 =====================
 */
 static void CL_ParseLayout( void ) {
-	char *s;
+    char *s;
 
-	s = MSG_ReadString();
+    s = MSG_ReadString();
 
-	if( cl_shownet->integer > 2 ) {
-		Com_Printf( "    \"%s\"\n", Q_FormatString( s ) );
-	}
+    if( cl_shownet->integer > 2 ) {
+        Com_Printf( "    \"%s\"\n", Q_FormatString( s ) );
+    }
 
-	Q_strncpyz( cl.layout, s, sizeof( cl.layout ) );
+    Q_strncpyz( cl.layout, s, sizeof( cl.layout ) );
     cl.putaway = qfalse;
 }
 
@@ -1353,32 +1335,32 @@ CL_ParseInventory
 ================
 */
 static void CL_ParseInventory( void ) {
-	int		i;
+    int        i;
 
-	for( i = 0; i < MAX_ITEMS; i++ ) {
-		cl.inventory[i] = MSG_ReadShort();
-	}
+    for( i = 0; i < MAX_ITEMS; i++ ) {
+        cl.inventory[i] = MSG_ReadShort();
+    }
     cl.putaway = qfalse;
 }
 
 static void CL_ParseZPacket( void ) {
 #if USE_ZLIB
-	sizebuf_t	temp;
-	byte		buffer[MAX_MSGLEN];
-	unsigned	inlen, outlen;
+    sizebuf_t    temp;
+    byte        buffer[MAX_MSGLEN];
+    unsigned    inlen, outlen;
 
-	if( msg_read.data != msg_read_buffer ) {
-		Com_Error( ERR_DROP, "%s: recursively entered", __func__ );
-	}
-
-	inlen = MSG_ReadShort();
-    if( msg_read.readcount + inlen > msg_read.cursize ) {
-		Com_Error( ERR_DROP, "%s: read past end of message", __func__ );
+    if( msg_read.data != msg_read_buffer ) {
+        Com_Error( ERR_DROP, "%s: recursively entered", __func__ );
     }
 
-	outlen = MSG_ReadShort();
+    inlen = MSG_ReadShort();
+    if( msg_read.readcount + inlen > msg_read.cursize ) {
+        Com_Error( ERR_DROP, "%s: read past end of message", __func__ );
+    }
+
+    outlen = MSG_ReadShort();
     if( outlen > MAX_MSGLEN ) {
-		Com_Error( ERR_DROP, "%s: invalid output length", __func__ );
+        Com_Error( ERR_DROP, "%s: invalid output length", __func__ );
     }
 
     inflateReset( &cls.z );
@@ -1387,30 +1369,30 @@ static void CL_ParseZPacket( void ) {
     cls.z.avail_in = inlen;
     cls.z.next_out = buffer;
     cls.z.avail_out = outlen;
-	if( inflate( &cls.z, Z_FINISH ) != Z_STREAM_END ) {
-		Com_Error( ERR_DROP, "%s: inflate() failed: %s", __func__, cls.z.msg );
+    if( inflate( &cls.z, Z_FINISH ) != Z_STREAM_END ) {
+        Com_Error( ERR_DROP, "%s: inflate() failed: %s", __func__, cls.z.msg );
     }
 
-	msg_read.readcount += inlen;
+    msg_read.readcount += inlen;
 
-	temp = msg_read;
+    temp = msg_read;
     SZ_Init( &msg_read, buffer, outlen );
     msg_read.cursize = outlen;
 
     CL_ParseServerMessage();
 
-	msg_read = temp;
+    msg_read = temp;
 #else
-	Com_Error( ERR_DROP, "Compressed server packet received, "
+    Com_Error( ERR_DROP, "Compressed server packet received, "
         "but no zlib support linked in." );
 #endif
 }
 
 static void CL_ParseSetting( void ) {
-	uint32_t    index, value;
+    uint32_t    index, value;
 
-	index = MSG_ReadLong();
-	value = MSG_ReadLong();
+    index = MSG_ReadLong();
+    value = MSG_ReadLong();
 
     switch( index ) {
     case SVS_FPS:
@@ -1431,147 +1413,147 @@ CL_ParseServerMessage
 =====================
 */
 void CL_ParseServerMessage( void ) {
-	int			cmd, extrabits;
-	size_t		readcount;
+    int            cmd, extrabits;
+    size_t        readcount;
 
-	if( cl_shownet->integer == 1 ) {
-		Com_Printf( "%"PRIz" ", msg_read.cursize );
-	} else if( cl_shownet->integer > 1 ) {
-		Com_Printf( "------------------\n" );
-	}
+    if( cl_shownet->integer == 1 ) {
+        Com_Printf( "%"PRIz" ", msg_read.cursize );
+    } else if( cl_shownet->integer > 1 ) {
+        Com_Printf( "------------------\n" );
+    }
 
 //
 // parse the message
 //
-	while( 1 ) {
-		if( msg_read.readcount > msg_read.cursize ) {
-			Com_Error( ERR_DROP, "%s: read past end of server message", __func__ );
-		}
+    while( 1 ) {
+        if( msg_read.readcount > msg_read.cursize ) {
+            Com_Error( ERR_DROP, "%s: read past end of server message", __func__ );
+        }
 
         readcount = msg_read.readcount;
 
-		if( ( cmd = MSG_ReadByte() ) == -1 ) {
-			if( cl_shownet->integer > 1 ) {
-				Com_Printf( "%3"PRIz":END OF MESSAGE\n", msg_read.readcount - 1 );
-			}
-			break;
-		}
+        if( ( cmd = MSG_ReadByte() ) == -1 ) {
+            if( cl_shownet->integer > 1 ) {
+                Com_Printf( "%3"PRIz":END OF MESSAGE\n", msg_read.readcount - 1 );
+            }
+            break;
+        }
 
-		extrabits = cmd >> SVCMD_BITS;
-		cmd &= SVCMD_MASK;
+        extrabits = cmd >> SVCMD_BITS;
+        cmd &= SVCMD_MASK;
 
-		if( cl_shownet->integer > 1 ) {
-			MSG_ShowSVC( cmd );
-		}
-	
-	// other commands
-		switch( cmd ) {
-		default:
+        if( cl_shownet->integer > 1 ) {
+            MSG_ShowSVC( cmd );
+        }
+    
+    // other commands
+        switch( cmd ) {
+        default:
         badbyte:
-			Com_Error( ERR_DROP, "%s: illegible server message: %d", __func__, cmd );
-			break;
-			
-		case svc_nop:
-			break;
-			
-		case svc_disconnect:
-			Com_Error( ERR_DISCONNECT, "Server disconnected" );
-			break;
+            Com_Error( ERR_DROP, "%s: illegible server message: %d", __func__, cmd );
+            break;
+            
+        case svc_nop:
+            break;
+            
+        case svc_disconnect:
+            Com_Error( ERR_DISCONNECT, "Server disconnected" );
+            break;
 
-		case svc_reconnect:
-			CL_ParseReconnect();
-			return;
+        case svc_reconnect:
+            CL_ParseReconnect();
+            return;
 
-		case svc_print:
-			CL_ParsePrint();
-			break;
-			
-		case svc_centerprint:
-			CL_ParseCenterPrint();
-			break;
-			
-		case svc_stufftext:
-			CL_ParseStuffText();
-			break;
-			
-		case svc_serverdata:
-			CL_ParseServerData();
-			break;
-			
-		case svc_configstring:
-			CL_ParseConfigString();
-			break;
-			
-		case svc_sound:
-			CL_ParseStartSoundPacket();
-			break;
-			
-		case svc_spawnbaseline:
-			CL_ParseBaseline();
-			break;
+        case svc_print:
+            CL_ParsePrint();
+            break;
+            
+        case svc_centerprint:
+            CL_ParseCenterPrint();
+            break;
+            
+        case svc_stufftext:
+            CL_ParseStuffText();
+            break;
+            
+        case svc_serverdata:
+            CL_ParseServerData();
+            break;
+            
+        case svc_configstring:
+            CL_ParseConfigString();
+            break;
+            
+        case svc_sound:
+            CL_ParseStartSoundPacket();
+            break;
+            
+        case svc_spawnbaseline:
+            CL_ParseBaseline();
+            break;
 
-		case svc_temp_entity:
-			CL_ParseTEnt();
-			break;
+        case svc_temp_entity:
+            CL_ParseTEnt();
+            break;
 
-		case svc_muzzleflash:
-			CL_ParseMuzzleFlash();
-			break;
+        case svc_muzzleflash:
+            CL_ParseMuzzleFlash();
+            break;
 
-		case svc_muzzleflash2:
-			CL_ParseMuzzleFlash2();
-			break;
+        case svc_muzzleflash2:
+            CL_ParseMuzzleFlash2();
+            break;
 
-		case svc_download:
-			CL_ParseDownload();
-			continue;
+        case svc_download:
+            CL_ParseDownload();
+            continue;
 
-		case svc_frame:
-			CL_ParseFrame( extrabits );
-			continue;
+        case svc_frame:
+            CL_ParseFrame( extrabits );
+            continue;
 
-		case svc_inventory:
-			CL_ParseInventory();
-			break;
+        case svc_inventory:
+            CL_ParseInventory();
+            break;
 
-		case svc_layout:
-			CL_ParseLayout();
-			break;
+        case svc_layout:
+            CL_ParseLayout();
+            break;
 
-		case svc_zpacket:
+        case svc_zpacket:
             if( cls.serverProtocol < PROTOCOL_VERSION_R1Q2 ) {
                 goto badbyte;
             }
-			CL_ParseZPacket();
-			continue;
+            CL_ParseZPacket();
+            continue;
 
-		case svc_gamestate:
+        case svc_gamestate:
             if( cls.serverProtocol != PROTOCOL_VERSION_Q2PRO ) {
                 goto badbyte;
             }
-			CL_ParseGamestate();
-			continue;
+            CL_ParseGamestate();
+            continue;
 
-		case svc_setting:
+        case svc_setting:
             if( cls.serverProtocol < PROTOCOL_VERSION_R1Q2 ) {
                 goto badbyte;
             }
-			CL_ParseSetting();
-			continue;
-		}
+            CL_ParseSetting();
+            continue;
+        }
 
         // copy protocol invariant stuff
-        if( cls.demorecording && !cls.demopaused ) {
-            SZ_Write( &cls.demobuff, msg_read.data + readcount,
+        if( cls.demo.recording && !cls.demo.paused ) {
+            SZ_Write( &cls.demo.buffer, msg_read.data + readcount,
                 msg_read.readcount - readcount );
         }
-	}
+    }
 
 //
 // if recording demos, write the message out
 //
-    if( cls.demorecording && !cls.demopaused ) {
-        CL_WriteDemoMessage( &cls.demobuff );
+    if( cls.demo.recording && !cls.demo.paused ) {
+        CL_WriteDemoMessage( &cls.demo.buffer );
     }
 }
 

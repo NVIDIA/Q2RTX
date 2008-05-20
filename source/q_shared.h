@@ -311,8 +311,9 @@ void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, 
 int DirToByte( const vec3_t dir );
 void ByteToDir( int index, vec3_t dir );
 
-#define clamp(a,b,c) ((b)>=(c)?(a)=(b):(a)<(b)?(a)=(b):(a)>(c)?(a)=(c):(a))
-
+#define clamp(a,b,c)    ((a)<(b)?(a)=(b):(a)>(c)?(a)=(c):(a))
+#define cclamp(a,b,c)   ((b)>(c)?clamp(a,c,b):clamp(a,b,c)) 
+          
 #ifndef max
 #define max(a,b) ((a)>(b)?(a):(b))
 #endif

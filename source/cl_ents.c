@@ -121,7 +121,7 @@ void CL_DeltaFrame( void ) {
         }
 	}
 
-    if( cls.demorecording ) {
+    if( cls.demo.recording ) {
         CL_EmitDemoFrame();
     }
     
@@ -837,7 +837,7 @@ static void CL_CalcViewValues( void ) {
 	lerp = cl.lerpfrac;
 
 	// calculate the origin
-	if( !cls.demoplayback && cl_predict->integer && !( ps->pmove.pm_flags & PMF_NO_PREDICTION ) ) {	
+	if( !cls.demo.playback && cl_predict->integer && !( ps->pmove.pm_flags & PMF_NO_PREDICTION ) ) {	
 		// use predicted values
 		unsigned delta = cls.realtime - cl.predicted_step_time;
 		float backlerp = lerp - 1.0;
@@ -862,7 +862,7 @@ static void CL_CalcViewValues( void ) {
 	}
 
 	// if not running a demo or on a locked frame, add the local angle movement
-	if( cls.demoplayback ) {
+	if( cls.demo.playback ) {
 		if( cls.key_dest == KEY_GAME && Key_IsDown( K_SHIFT ) ) {
 			VectorCopy( cl.viewangles, cl.refdef.viewangles );
 		} else {
@@ -889,7 +889,7 @@ static void CL_CalcViewValues( void ) {
 	cl.delta_angles[2] = LerpShort( ops->pmove.delta_angles[2], ps->pmove.delta_angles[2], lerp );
 #endif
 
-	if( cls.demoplayback && ( info_uf->integer & UF_LOCALFOV ) ) {
+	if( cls.demo.playback && ( info_uf->integer & UF_LOCALFOV ) ) {
 		fov = info_fov->value;
         if( fov < 1 ) {
             fov = 90;

@@ -703,7 +703,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
 		}
 
 		if( cls.key_dest == KEY_GAME &&
-            !cls.demoplayback &&
+            !cls.demo.playback &&
 			cl.clientNum != -1 &&
 			cl.frame.ps.stats[STAT_LAYOUTS] &&
             !cl.putaway )

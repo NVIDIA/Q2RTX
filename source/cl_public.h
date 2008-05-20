@@ -33,14 +33,6 @@ typedef enum {
 	ca_active			// game views should be displayed
 } connstate_t;
 
-typedef enum {
-	dl_none,
-	dl_model,
-	dl_sound,
-	dl_skin,
-	dl_single
-} dltype_t;		// download type
-
 typedef struct {
 	char name[MAX_CLIENT_NAME];
 	int ping;

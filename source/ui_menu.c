@@ -1109,17 +1109,13 @@ SLIDER CONTROL
 ===================================================================
 */
 
-#define SLIDER_RANGE 10
-
 static void Slider_Push( menuSlider_t *s ) {
-    int val = ( s->cvar->value + s->add ) * s->mul;
-    clamp( val, s->minvalue, s->maxvalue );
-    s->curvalue = val;
+    s->curvalue = s->cvar->value;
+    cclamp( s->curvalue, s->minvalue, s->maxvalue );
 }
 
 void Slider_Pop( menuSlider_t *s ) {
-    float val = s->curvalue / s->mul - s->add;
-    Cvar_SetValue( s->cvar, val, CVAR_SET_CONSOLE );
+    Cvar_SetValue( s->cvar, s->curvalue, CVAR_SET_CONSOLE );
 }
 
 static void Slider_Free( menuSlider_t *s ) {
@@ -1133,13 +1129,9 @@ static void Slider_Init( menuSlider_t *s ) {
     s->generic.rect.x = s->generic.x + LCOLUMN_OFFSET - len;
     s->generic.rect.y = s->generic.y;
 
-    s->generic.rect.width = 32 + len + ( SLIDER_RANGE + 2 ) * CHAR_WIDTH;
+    s->generic.rect.width = ( RCOLUMN_OFFSET - LCOLUMN_OFFSET ) +
+        len + ( SLIDER_RANGE + 2 ) * CHAR_WIDTH;
     s->generic.rect.height = CHAR_HEIGHT;
-
-    if( s->curvalue > s->maxvalue )
-        s->curvalue = s->maxvalue;
-    else if( s->curvalue < s->minvalue )
-        s->curvalue = s->minvalue;
 }
 
 static int Slider_Key( menuSlider_t *s, int key ) {
@@ -1162,12 +1154,9 @@ Slider_DoSlide
 =================
 */
 static int Slider_DoSlide( menuSlider_t *s, int dir ) {
-    s->curvalue += dir;
+    s->curvalue += dir * s->step;
 
-    if( s->curvalue > s->maxvalue )
-        s->curvalue = s->maxvalue;
-    else if( s->curvalue < s->minvalue )
-        s->curvalue = s->minvalue;
+    cclamp( s->curvalue, s->minvalue, s->maxvalue );
 
     if( s->generic.change ) {
         menuSound_t sound = s->generic.change( &s->generic );
@@ -1206,13 +1195,8 @@ static void Slider_Draw( menuSlider_t *s ) {
 
     UI_DrawChar( RCOLUMN_OFFSET + s->generic.x + i * CHAR_WIDTH + CHAR_WIDTH, s->generic.y, flags | UI_LEFT, 130 );
 
-    if( s->maxvalue <= s->minvalue ) {
-        pos = 0;
-    } else {
-        pos = ( s->curvalue - s->minvalue ) /
-            ( float )( s->maxvalue - s->minvalue );
-        clamp( pos, 0, 1 );
-    }
+    pos = ( s->curvalue - s->minvalue ) / ( s->maxvalue - s->minvalue );
+    clamp( pos, 0, 1 );
 
     UI_DrawChar( CHAR_WIDTH + RCOLUMN_OFFSET + s->generic.x + ( SLIDER_RANGE - 1 ) * CHAR_WIDTH * pos, s->generic.y, flags | UI_LEFT, 131 );
 }

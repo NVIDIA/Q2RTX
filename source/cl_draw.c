@@ -451,7 +451,7 @@ void SCR_DrawLoading( void ) {
 	x = scr_glconfig.vidWidth / 2;
 	y = 8;
     
-    s = va( "%s %s", cls.demoplayback ? "Playing back " :
+    s = va( "%s %s", cls.demo.playback ? "Playing back " :
         "Connecting to ", cls.servername );
 	SCR_DrawString( x, y, UI_CENTER|UI_DROPSHADOW, s );
 	y += 16;
@@ -582,7 +582,7 @@ static void draw_following( void ) {
 		return;
 	}
 
-	if( !cls.demoplayback && cl.frame.clientNum == cl.clientNum ) {
+	if( !cls.demo.playback && cl.frame.clientNum == cl.clientNum ) {
 		return;
 	}
     if( cl.frame.ps.stats[STAT_LAYOUTS] ) {
@@ -709,7 +709,7 @@ void SCR_Draw2D( void ) {
     }
 
 	if( ( cl.frame.ps.stats[STAT_LAYOUTS] & 1 ) ||
-        ( cls.demoplayback && Key_IsDown( K_F1 ) ) )
+        ( cls.demo.playback && Key_IsDown( K_F1 ) ) )
     {
 		SCR_ExecuteLayoutString( cl.layout );
 	}

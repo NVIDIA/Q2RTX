@@ -769,13 +769,13 @@ void Con_DrawSolidConsole( void ) {
 //ZOID
 	// draw the download bar
 	// figure out width
-	if( cls.download ) {
+	if( cls.download.file ) {
 		int n, j;
 
-		if( ( text = strrchr( cls.downloadname, '/') ) != NULL )
+		if( ( text = strrchr( cls.download.name, '/') ) != NULL )
 			text++;
 		else
-			text = cls.downloadname;
+			text = cls.download.name;
 
 		x = con.linewidth - ( ( con.linewidth * 7 ) / 40 );
 		y = x - strlen( text ) - 8;
@@ -792,7 +792,7 @@ void Con_DrawSolidConsole( void ) {
 		i = strlen( buffer );
 		buffer[i++] = '\x80';
 		// where's the dot go?
-		n = y * cls.downloadpercent / 100;		
+		n = y * cls.download.percent / 100;		
 		for ( j = 0; j < y; j++ ) {
 			if ( j == n ) {
 				buffer[i++] = '\x83';
@@ -803,7 +803,7 @@ void Con_DrawSolidConsole( void ) {
 		buffer[i++] = '\x82';
 		buffer[i] = 0;
 
-		sprintf( buffer + i, " %02d%%", cls.downloadpercent );
+		sprintf( buffer + i, " %02d%%", cls.download.percent );
 
 		// draw it
 		y = vislines - 10;
@@ -884,7 +884,7 @@ void Con_RunConsole( void ) {
 	}
 
 	if( cls.state > ca_disconnected && cls.state < ca_active ) {
-#if 1
+#if 0
         // draw half-screen console
         con.destHeight = min( con.maxHeight, 0.5f );
         con.currentHeight = con.destHeight;

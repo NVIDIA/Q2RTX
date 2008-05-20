@@ -80,8 +80,8 @@ static void Parse_Pairs( menuFrameWork_t *menu ) {
 static void Parse_Range( menuFrameWork_t *menu ) {
     menuSlider_t *s;
 
-    if( Cmd_Argc() < 7 ) {
-        Com_Printf( "Usage: %s <name> <cvar> <add> <mul> <min> <max>\n", Cmd_Argv( 0 ) );
+    if( Cmd_Argc() < 5 ) {
+        Com_Printf( "Usage: %s <name> <cvar> <min> <max> [step]\n", Cmd_Argv( 0 ) );
         return;
     }
 
@@ -89,10 +89,13 @@ static void Parse_Range( menuFrameWork_t *menu ) {
     s->generic.type = MTYPE_SLIDER;
     s->generic.name = UI_CopyString( Cmd_Argv( 1 ) );
     s->cvar = Cvar_Ref( Cmd_Argv( 2 ) );
-    s->add = atof( Cmd_Argv( 3 ) );
-    s->mul = atof( Cmd_Argv( 4 ) );
-    s->minvalue = atoi( Cmd_Argv( 5 ) );
-    s->maxvalue = atoi( Cmd_Argv( 6 ) );
+    s->minvalue = atof( Cmd_Argv( 3 ) );
+    s->maxvalue = atof( Cmd_Argv( 4 ) );
+    if( Cmd_Argc() > 5 ) {
+        s->step = atof( Cmd_Argv( 5 ) );
+    } else {
+        s->step = ( s->maxvalue - s->minvalue ) / SLIDER_RANGE;
+    }
 
     Menu_AddItem( menu, s );
 }
@@ -195,12 +198,14 @@ static void Parse_Toggle( menuFrameWork_t *menu ) {
 
 static void Parse_Field( menuFrameWork_t *menu ) {
     static const cmd_option_t o_field[] = {
+        { "c", "center" },
         { "i", "integer" },
         { "s:", "status" },
         { "w:", "width" },
         { NULL }
     };
     menuField_t *f;
+    qboolean center = qfalse;
     int flags = 0;
     char *status = NULL;
     int width = 16;
@@ -208,6 +213,9 @@ static void Parse_Field( menuFrameWork_t *menu ) {
 
     while( ( c = Cmd_ParseOptions( o_field ) ) != -1 ) {
         switch( c ) {
+        case 'c':
+            center = qtrue;
+            break;
         case 'i':
             flags |= QMF_NUMBERSONLY;
             break;
@@ -228,10 +236,10 @@ static void Parse_Field( menuFrameWork_t *menu ) {
 
     f = UI_Mallocz( sizeof( *f ) );
     f->generic.type = MTYPE_FIELD;
-    f->generic.name = UI_CopyString( Cmd_Argv( cmd_optind ) );
+    f->generic.name = center ? NULL : UI_CopyString( Cmd_Argv( cmd_optind ) );
     f->generic.status = UI_CopyString( status );
     f->generic.flags = flags;
-    f->cvar = Cvar_Ref( Cmd_Argv( cmd_optind + 1 ) );
+    f->cvar = Cvar_Ref( Cmd_Argv( center ? cmd_optind : cmd_optind + 1 ) );
     f->width = width;
 
     Menu_AddItem( menu, f );

@@ -206,10 +206,10 @@ static void Cvar_EngineGet( cvar_t *var, const char *var_value, int flags ) {
 
         // optionally reset cvar back to default value
         if( ( ( flags & CVAR_ROM ) ||
-            ( ( flags & CVAR_NOSET ) && com_initialized ) ||
-            ( ( flags & CVAR_CHEAT ) && !CL_CheatsOK() ) ||
-            ( var->flags & CVAR_VOLATILE ) )
-            && strcmp( var_value, var->string ) )
+              ( ( flags & CVAR_NOSET ) && com_initialized ) ||
+              ( ( flags & CVAR_CHEAT ) && !CL_CheatsOK() ) ||
+              ( var->flags & CVAR_VOLATILE ) ) &&
+            strcmp( var_value, var->string ) )
         {
             Cvar_ChangeString( var, var_value, CVAR_SET_DIRECT );
         }

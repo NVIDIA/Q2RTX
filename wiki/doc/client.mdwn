@@ -96,7 +96,7 @@ refresh library. In software mode original particle based effect is
 used unconditionally.
 
 - `set cl_railtrail_type 0` (integer)  
-Defines which type of effect to use:
+Defines which type of rail trail effect to use:
   - 0 - use original effect
   - 1 - use alternative effect, draw rail core only
   - 2 - use alternative effect, draw rail core and spiral
@@ -104,17 +104,14 @@ Defines which type of effect to use:
 - `set cl_railtrail_time 1.0` (float)  
 Time, in seconds, for the rail trail to be visible. 
     
-- `set cl_railtrail_alpha 1.0` (float)  
-Initial opacity of the rail trail as it linearly fades to zero.
-
-- `set cl_railcore_color 0xFF0000` (integer)  
-Color of the rail core beam in the hexadecimal `0xRRGGBB` format.
+- `set cl_railcore_color "red"` (color)  
+Color of the rail core beam.
 
 - `set cl_railcore_width 3` (integer)  
 Width of the rail core beam.
 
-- `set cl_railspiral_color 0x0000FF` (integer)  
-Color of the rail spiral in the hexadecimal `0xRRGGBB` format.
+- `set cl_railspiral_color "blue"` (color)  
+Color of the rail spiral.
 
 - `set cl_railspiral_radius 3`  
 Radius of the rail spiral.
@@ -131,8 +128,11 @@ Disables rendering of animated models for the following effects:
   - 1 - grenade explosions
   - 2 - rocket explosions
 
-- `set s_ambient 1` (boolean)  
-Specifies whether ambient sounds are played or not.
+- `set s_ambient 1` (integer)  
+Specifies if ambient sounds are played:
+  - 0 - all ambient sounds are disabled
+  - 1 - all ambient sounds are enabled
+  - 2 - only ambient sounds from player entity are enabled
 
 
 Console
@@ -203,16 +203,14 @@ Video
 ----------
 
 Hard coded list of the fullscreen video modes is gone from Q2PRO, you can
-(and should) specify your own list in your configuration files. Vertical
-refresh frequency `freq` and bit depth `bpp` can be specified individually
-for each mode.
+specify your own list in configuration files. Vertical refresh frequency `freq`
+and bit depth `bpp` can be specified individually for each mode.
 
 Changing video modes no longer requires `vid_restart`, and is literally instant
-on some setups (e.g. X11 w/ LCD monitor). In windowed mode, size and position
-of the main window can be changed freely, by dragging window borders with
-mouse cursor or whatever.
+on some setups (e.g. X11 w/ LCD monitor). In windowed mode, size as well as
+position of the main window can be changed freely.
 
-- `set vid_modelist "640x480"` (string)  
+- `set vid_modelist "640x480 800x600 1024x768"` (string)  
 List of the fullscreen video modes. Full syntax is: `WxH[@freq][:bpp] [...]`.
 
 - `set vid_fullscreen 0` (integer)  
@@ -220,8 +218,9 @@ If set to default (zero), run in windowed mode. If set to non zero _value_,
 run in the specified fullscreen mode. This way, _value_ acts as index
 into the list of video modes specified by `vid_modelist`.
 
-- `set vid_placement "640x480"` (string)  
-Placement of the main window on your virtual desktop. Full syntax is: `WxH[+X+Y]`.
+- `set vid_geometry "640x480"` (string)  
+Size and optional position of the main window on virtual desktop.
+Full syntax is: `WxH[+X+Y]`.
 
 For example, `set vid_modelist "640x480@75 800x600@75:32"`, followed by
 `set vid_fullscreen 2` selects 800x600 video mode at 75 Hz vertical refresh
@@ -231,17 +230,17 @@ OpenGL renderer
 ----------
 
 - `set gl_gamma_scale_pics 0` (boolean)  
-Apply gamma scaling not only for textures and skins, but for all images.
+Apply gamma scaling not only to textures and skins, but to HUD pics too.
 
 - `set gl_noscrap 0` (boolean)  
-By default, OpenGL renderer combines small pics into single large texture called
-scrap. This cvar disables this optimization.
+By default, OpenGL renderer combines small HUD pics into single large
+texture called scrap. This cvar disables this optimization.
 
 - `set gl_bilerp_chars 0` (boolean)  
 Enable bilinear interpolation of charset images.
 
-- `set gl_fastsky 0` (boolean)  
-Skip skybox rendering and fill sky with solid color instead.
+- `set gl_drawsky 1` (boolean)  
+When disabled, sky box is drawn in solid black color.
 
 - `set gl_partscale 1.5` (float)  
 Specifies minimum size of particles.
@@ -267,7 +266,7 @@ lightmaps.
 
 - `set gl_fragment_program 0` (boolean)  
 Enables `GL_ARB_fragment_program` extension, if supported by video drivers.
-Currently this extension is used for warping liquid surfaces only.
+Currently this extension is used only for warping effect on liquid surfaces.
 
 - `set gl_vertex_buffer_object 0` (boolean)  
 Enables `GL_ARB_vertex_buffer_object` extension, if supported by video drivers.
@@ -275,14 +274,23 @@ This extension allows uploading vertex data at map load time into the special
 static memory area. Depending on your OpenGL implementation, this may
 speed up rendering.
 
+- `set r_override_textures 1` (boolean)  
+Enables automatic overriding of palettized textures (in WAL or PCX format)
+with truecolor replacements (in PNG, JPEG or TGA format).
+
+- `set r_override_models 0` (boolean)  
+Enables automatic overriding of MD2 models with MD3 replacements.
+
+- `set r_texture_formats "pjt"` (string)  
+Specifies the order in which truecolor texture replacements are searched.
+Default value means to try \*.png first, then \*.jpg, then \*.tga.
+
 Misc
 ----------
 
-- `set in_driver ""`  
-Specifies which non-keyboard (typically mouse) input driver to use:
-  - "video" or "" - input facilities provided by the window system
-  - "dinput" - DirectInput version 7 and higher
-  - "evdev" - native Linux kernel input device interface
+- `set in_direct 1`  (boolean)  
+Enables direct mouse input if supported on your platform. Otherwise,
+standard input facilities provided by the window system are used.
 
 - `set cl_chat_notify 1` (boolean)  
 Specifies whether to display chat lines in the notify area.
@@ -294,6 +302,12 @@ Set this to empty string to disable chat sound.
 - `set cl_chat_filter 0` (boolean)  
 Specifies whether to filter out unprintable characters from
 incoming chat messages.
+
+- `set cl_noskins 0` (integer)  
+Restricts which models and skins players can use:
+  - 0 - no restrictions, if skins exists, it will be loaded
+  - 1 - do not allow any skins except of `male/grunt`
+  - 2 - do not allow any skins except of `male/grunt` and `female/athena`
 
 - `set ui_open 1` (boolean)  
 When enabled, menu is automatically opened on startup, instead of full
@@ -377,7 +391,7 @@ specified and supports filename autocompletion on TAB. Loads file
 from `demos/` unless slash is prepended to _filename_, otherwise loads
 from the root of VFS.
 
-- `draw <name> <x> <y>`  
+- `draw <name> <x> <y> [color]`  
 Add console variable or macro identified by _name_ (without the `$` prefix)
 to the list of objects drawn on the screen. By default, text is positioned
 relative to the top left corner of the screen. Use negative values to align

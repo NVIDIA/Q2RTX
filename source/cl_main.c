@@ -279,7 +279,7 @@ static void CL_ForwardToServer_f( void ) {
         return;
     }
 
-    if ( cls.demoplayback ) {
+    if ( cls.demo.playback ) {
         return;
     }
 
@@ -320,7 +320,7 @@ static void CL_CheckForResend( void ) {
     char tail[MAX_QPATH];
     char userinfo[MAX_INFO_STRING];
 
-    if ( cls.demoplayback ) {
+    if ( cls.demo.playback ) {
         return;
     }
 
@@ -602,35 +602,35 @@ This is also called on Com_Error, so it shouldn't cause any errors
 =====================
 */
 void CL_Disconnect( comErrorType_t type, const char *text ) {
-    if ( cls.state > ca_disconnected ) {
+    if( cls.state > ca_disconnected ) {
         EXEC_TRIGGER( cl_disconnectcmd );
     }
 
-    if ( cls.ref_initialized )
+    if( cls.ref_initialized )
         ref.CinematicSetPalette( NULL );
 
     cls.connect_time = 0;
 	cls.connect_count = 0;
     cls.passive = qfalse;
 
-    if ( cls.demoplayback ) {
-        FS_FCloseFile( cls.demoplayback );
-        cls.demoplayback = 0;
+    // stop demo
+    if( cls.demo.recording ) {
+        CL_Stop_f();
+    }
+    if( cls.demo.playback ) {
+        FS_FCloseFile( cls.demo.playback );
 
-        if ( com_timedemo->integer ) {
+        if( com_timedemo->integer ) {
             unsigned msec = Sys_Milliseconds();
-
-            float sec = ( msec - cls.timeDemoStart ) * 0.001f;
-            float fps = cls.timeDemoFrames / sec;
+            float sec = ( msec - cls.demo.time_start ) * 0.001f;
+            float fps = cls.demo.time_frames / sec;
 
             Com_Printf( "%u frames, %3.1f seconds: %3.1f fps\n",
-                cls.timeDemoFrames, sec, fps );
+                cls.demo.time_frames, sec, fps );
         }
     }
+    memset( &cls.demo, 0, sizeof( cls.demo ) );
     
-    if ( cls.demorecording )
-        CL_Stop_f();
-
     if( cls.netchan ) {
         // send a disconnect message to the server
         MSG_WriteByte( clc_stringcmd );
@@ -647,13 +647,10 @@ void CL_Disconnect( comErrorType_t type, const char *text ) {
     }
 
     // stop download
-    if ( cls.download ) {
-        FS_FCloseFile( cls.download );
-        cls.download = 0;
+    if( cls.download.file ) {
+        FS_FCloseFile( cls.download.file );
     }
-
-    cls.downloadtempname[ 0 ] = 0;
-    cls.downloadname[ 0 ] = 0;
+    memset( &cls.download, 0, sizeof( cls.download ) );
 
     CL_ClearState ();
 
@@ -964,7 +961,7 @@ static void CL_Changing_f( void ) {
         return;
     }
 
-    if ( cls.demorecording )
+    if ( cls.demo.recording )
         CL_Stop_f();
 
     S_StopAllSounds();
@@ -1006,10 +1003,10 @@ static void CL_Reconnect_f( void ) {
     if( cls.state >= ca_connected ) {
         cls.state = ca_connected;
 
-        if ( cls.demoplayback ) {
+        if( cls.demo.playback ) {
             return;
         }
-        if ( cls.download ) {
+        if( cls.download.file ) {
             return; // if we are downloading, we don't change!
         }
 
@@ -1910,7 +1907,7 @@ static void CL_Precache_f( void ) {
 
     //Yet another hack to let old demos work
     //the old precache sequence
-    if( cls.demoplayback ) {
+    if( cls.demo.playback ) {
         CM_LoadMap( &cl.cm, cl.configstrings[ CS_MODELS + 1 ],
             CM_LOAD_CLIENT, NULL );
         CL_RegisterModels();
@@ -2142,7 +2139,7 @@ static size_t CL_Ups_m( char *buffer, size_t size ) {
 		return 0;
 	}
 
-	if( !cls.demoplayback && cl.frame.clientNum == cl.clientNum &&
+	if( !cls.demo.playback && cl.frame.clientNum == cl.clientNum &&
         cl_predict->integer )
     {
 		VectorCopy( cl.predicted_velocity, vel );
@@ -2475,7 +2472,7 @@ CL_CheatsOK
 ==================
 */
 qboolean CL_CheatsOK( void ) {
-    if( cls.state < ca_connected || cls.demoplayback ) {
+    if( cls.state < ca_connected || cls.demo.playback ) {
         return qtrue;
     }
 
@@ -2692,8 +2689,8 @@ void CL_Frame( int msec ) {
         }
         if( ref_extra < ref_msec ) {
             if( !cl_async->integer && !cl.sendPacketNow ) {
-#if 1
-                if( cls.demoplayback || cl.frame.ps.pmove.pm_type == PM_FREEZE ) {
+#if 0
+                if( cls.demo.playback || cl.frame.ps.pmove.pm_type == PM_FREEZE ) {
                     NET_Sleep( ref_msec - ref_extra );
                 }
 #endif
@@ -2703,7 +2700,7 @@ void CL_Frame( int msec ) {
         }
     }
 
-    if ( cls.demoplayback ) { // FIXME: HACK
+    if ( cls.demo.playback ) { // FIXME: HACK
         if( cl_paused->integer ) {
             if( !sv_paused->integer ) {
                 Cvar_Set( "sv_paused", "1" );
@@ -2728,8 +2725,8 @@ void CL_Frame( int msec ) {
     }
 
     // read next demo frame
-    if( cls.demoplayback ) {
-        if( cls.demorecording && cl_paused->integer == 2 && !cls.demopaused ) {
+    if( cls.demo.playback ) {
+        if( cls.demo.recording && cl_paused->integer == 2 && !cls.demo.paused ) {
             static int demo_extra;
             
             // XXX: record zero frames when manually paused
@@ -2808,8 +2805,6 @@ void CL_Frame( int msec ) {
 
 //============================================================================
 
-static byte     demo_buffer[MAX_PACKETLEN_WRITABLE_DEFAULT];
-
 /*
 ====================
 CL_Init
@@ -2845,8 +2840,6 @@ void CL_Init( void ) {
         Com_Error( ERR_FATAL, "inflateInit2() failed" );
     }
 #endif
-
-    SZ_Init( &cls.demobuff, demo_buffer, sizeof( demo_buffer ) );
 
     UI_OpenMenu( UIMENU_MAIN );
 

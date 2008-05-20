@@ -209,7 +209,7 @@ void CL_PredictMovement( void ) {
 		return;
 	}
 
-	if( cls.demoplayback ) {
+	if( cls.demo.playback ) {
 		return;
 	}
 
