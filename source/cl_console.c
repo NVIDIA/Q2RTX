@@ -63,7 +63,6 @@ typedef struct console_s {
 
 	float	currentHeight;	// aproaches scr_conlines at scr_conspeed
 	float	destHeight;		// 0.0 to 1.0 lines of console to display
-	float	maxHeight;
 
 	commandPrompt_t chatPrompt;
 	commandPrompt_t prompt;
@@ -415,7 +414,6 @@ void Con_Init( void ) {
 	scr_glconfig.vidWidth = 640;
 	scr_glconfig.vidHeight = 480;
 	con.linewidth = -1;
-	con.maxHeight = 1;
 	con.scale = 1;
 
 	Con_CheckResize();
@@ -862,10 +860,6 @@ void Con_DrawSolidConsole( void ) {
 
 //=============================================================================
 
-void Con_SetMaxHeight( float frac ) {
-	con.maxHeight = frac;
-}
-
 /*
 ==================
 Con_RunConsole
@@ -874,20 +868,18 @@ Scroll it up or down
 ==================
 */
 void Con_RunConsole( void ) {
-	Cvar_ClampValue( con_height, 0.1f, con.maxHeight );
+	Cvar_ClampValue( con_height, 0.1f, 1 );
 
 	if( cls.state == ca_disconnected && !( cls.key_dest & KEY_MENU ) ) {
 		// draw fullscreen console
-		con.destHeight = con.maxHeight;
-		con.currentHeight = con.destHeight;
+		con.destHeight = con.currentHeight = 1;
 		return;
 	}
 
 	if( cls.state > ca_disconnected && cls.state < ca_active ) {
 #if 0
         // draw half-screen console
-        con.destHeight = min( con.maxHeight, 0.5f );
-        con.currentHeight = con.destHeight;
+		con.destHeight = con.currentHeight = 0.5f;
         return;
 #endif
 	}

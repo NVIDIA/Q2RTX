@@ -849,7 +849,7 @@ char *Cmd_MacroExpandString( const char *text, qboolean aliasHack ) {
 	char	*scan, *start;
 	static	char	expanded[MAX_STRING_CHARS];
 	char	temporary[MAX_STRING_CHARS];
-	char	buffer[MAX_TOKEN_CHARS];
+	char	buffer[MAX_STRING_CHARS];
 	char	*token;
 	cmd_macro_t *macro;
 	cvar_t	*var;
@@ -944,7 +944,7 @@ char *Cmd_MacroExpandString( const char *text, qboolean aliasHack ) {
 			// check for macros first
 			macro = Cmd_FindMacro( temporary );
 			if( macro ) {
-				macro->function( buffer, sizeof( buffer ) );
+				macro->function( buffer, MAX_STRING_CHARS - len );
 				token = buffer;
             } else {
                 // than variables

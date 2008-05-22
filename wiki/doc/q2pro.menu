@@ -10,15 +10,20 @@
 *
 * C and C++ style comments are supported.
 *
-* Each menu should have a title, otherwise menu is considered transparent.
-*
 * Empty menu entries are ignored. Duplicate menu entries override previous ones.
 * Built-in menus (`demos', `servers' and `players') can not be overridden.
 *
 * include <filename>
 *
+* background <color|image>
+* font <image>
+* cursor <image>
+*
+* color <state> <color>
+*
 * begin <menuname>
 *    title <menutitle>
+*    background <color|image>
 *
 *    range <name> <cvar> <min> <max> [step]
 *
@@ -37,6 +42,15 @@
 * * * * * * * * * * * * * * * * * * * * * * * */
 
 // include test.menu
+
+background conback
+font conchars
+cursor ch1
+
+color normal #0f90eb64
+color active #0f90ff64
+color selection #0f90eb64
+color disabled #7f7f7f
 
 begin video
     title "Video Setup"
@@ -106,7 +120,6 @@ end
 
 begin startserver
     title "Start Server"
-    background conback
     strings "initial map" nextserver $com_maplist
     field --integer --status "0 - no time limit" --width 3 "time limit" timelimit
     field --integer --status "0 - no frag limit" --width 3 "frag limit" fraglimit

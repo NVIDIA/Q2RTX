@@ -2770,6 +2770,8 @@ void CL_Frame( int msec ) {
     // predict all unacknowledged movements
     CL_PredictMovement();
 
+    Con_RunConsole();
+
     if( ref_frame ) {
         // update the screen
         if ( host_speeds->integer )
@@ -2789,7 +2791,6 @@ void CL_Frame( int msec ) {
     // advance local effects for next frame
     CL_RunDLights();
     CL_RunLightStyles();
-    Con_RunConsole();
 
     // check connection timeout
     if( cls.netchan ) {

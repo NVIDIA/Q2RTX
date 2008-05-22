@@ -385,7 +385,7 @@ void M_Menu_Servers( void ) {
     m_join.menu.keydown = Keydown;
     m_join.menu.free    = Free;
     m_join.menu.image = uis.backgroundHandle;
-    *( uint32_t * )m_join.menu.color = *( uint32_t * )colorBlack;
+    *( uint32_t * )m_join.menu.color = *( uint32_t * )uis.color.background;
 
 //
 // server list

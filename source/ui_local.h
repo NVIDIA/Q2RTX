@@ -261,8 +261,13 @@ typedef struct uiStatic_s {
     qhandle_t cursorHandle;
     int cursorWidth, cursorHeight;
 
-    char m_demos_browse[MAX_OSPATH];
-    int m_demos_selection;
+    struct {
+        color_t background;
+        color_t normal;
+        color_t active;
+        color_t selection;
+        color_t disabled;
+    } color;
 } uiStatic_t;
 
 extern uiStatic_t   uis;

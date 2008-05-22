@@ -1114,7 +1114,6 @@ void CL_Frame (int msec);
 void Con_Print( const char *text );
 void Con_Printf( const char *fmt, ... );
 void Con_Close( void );
-void Con_SetMaxHeight( float frac );
 void SCR_BeginLoadingPlaque (void);
 void SCR_ModeChanged( void );
 void SCR_UpdateScreen( void );

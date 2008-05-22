@@ -20,12 +20,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "ui_local.h"
 
-static color_t colorField = { 15, 128, 235, 100 };
-static color_t colorGray = { 127, 127, 127, 255 };
-
-#define UI_CALLBACK( x, y, z ) \
-    (x)->generic.parent->callback( (x)->generic.id, y, z )
-
 /*
 ===================================================================
 
@@ -179,7 +173,7 @@ static void Keybind_Draw( menuKeybind_t *k ) {
         }
     } else {
         if( k->generic.parent->keywait ) {
-            color = colorGray;
+            color = uis.color.disabled;
             flags = 0;
         }
     }
@@ -325,9 +319,11 @@ Field_Draw
 */
 static void Field_Draw( menuField_t *f ) {
     int flags = f->generic.uiFlags;
+    byte *color = uis.color.normal;
 
     if( f->generic.flags & QMF_HASFOCUS ) {
         flags |= UI_DRAWCURSOR;
+        color = uis.color.active;
     }
 
     if( f->generic.name ) {
@@ -335,13 +331,13 @@ static void Field_Draw( menuField_t *f ) {
             f->generic.uiFlags | UI_RIGHT | UI_ALTCOLOR, f->generic.name );
 
         ref.DrawFillEx( f->generic.x + RCOLUMN_OFFSET, f->generic.y - 1,
-            f->field.visibleChars * CHAR_WIDTH, CHAR_HEIGHT + 2, colorField );
+            f->field.visibleChars * CHAR_WIDTH, CHAR_HEIGHT + 2, color );
 
         IF_Draw( &f->field, f->generic.x + RCOLUMN_OFFSET, f->generic.y,
             flags, uis.fontHandle );
     } else {
         ref.DrawFillEx( f->generic.rect.x, f->generic.rect.y - 1,
-            f->generic.rect.width, CHAR_HEIGHT + 2, colorField );
+            f->generic.rect.width, CHAR_HEIGHT + 2, color );
 
         IF_Draw( &f->field, f->generic.rect.x, f->generic.rect.y,
             flags, uis.fontHandle );
@@ -991,10 +987,6 @@ static void MenuList_Draw( menuList_t *l ) {
     float pageFrac, prestepFrac;
     int barHeight;
 
-    if( !l->items ) {
-        //return;
-    }
-
     x = l->generic.rect.x;
     y = l->generic.rect.y;
     width = l->generic.rect.width;
@@ -1004,11 +996,20 @@ static void MenuList_Draw( menuList_t *l ) {
     if( !( l->mlFlags & MLF_HIDE_HEADER ) ) {
         xx = x;
         for( j = 0; j < l->numcolumns; j++ ) {
+            int flags = UI_ALTCOLOR;
+            byte *color = uis.color.normal;
+
+            if( l->sortcol == j && l->sortdir ) {
+                flags = 0;
+                if( l->generic.flags & QMF_HASFOCUS ) {
+                    color = uis.color.active;
+                }
+            }
             ref.DrawFillEx( xx, y, l->columns[j].width - 1,
-                MLIST_SPACING - 1, colorField );
+                MLIST_SPACING - 1, color );
 
             if( l->columns[j].name ) {
-                MenuList_DrawString( xx, y, l->sortcol == j && l->sortdir ? 0 : UI_ALTCOLOR,
+                MenuList_DrawString( xx, y, flags,
                     &l->columns[j], l->columns[j].name );
             }
             xx += l->columns[j].width;
@@ -1026,7 +1027,7 @@ static void MenuList_Draw( menuList_t *l ) {
         // draw scrollbar background
         if( !( l->mlFlags & MLF_HIDE_BACKGROUND ) ) {
             ref.DrawFillEx( x + width, yy, MLIST_SCROLLBAR_WIDTH - 1,
-                barHeight, colorField );
+                barHeight, uis.color.normal );
         }
 
         if( l->numItems > l->maxItems ) {
@@ -1042,13 +1043,20 @@ static void MenuList_Draw( menuList_t *l ) {
             yy + Q_rint( barHeight * prestepFrac ),
             MLIST_SCROLLBAR_WIDTH - 1,
             Q_rint( barHeight * pageFrac ),
-            colorField );
+            uis.color.selection );
     }
 
     xx = x;
     for( j = 0; j < l->numcolumns; j++ ) {
+        byte *color = uis.color.normal;
+
+        if( l->sortcol == j && l->sortdir ) {
+            if( l->generic.flags & QMF_HASFOCUS ) {
+                color = uis.color.active;
+            }
+        }
         ref.DrawFillEx( xx, y, l->columns[j].width - 1,
-            height, colorField );
+            height, color );
         
         xx += l->columns[j].width;
     }
@@ -1058,7 +1066,12 @@ static void MenuList_Draw( menuList_t *l ) {
     for( i = l->prestep; i < k; i++ ) {
         // draw selection
         if( !( l->generic.flags & QMF_DISABLED ) && i == l->curvalue ) {
-            ref.DrawFillEx( x, yy, width - 1, MLIST_SPACING, colorField );
+            xx = x;
+            for( j = 0; j < l->numcolumns; j++ ) {
+                ref.DrawFillEx( xx, yy, l->columns[j].width - 1,
+                    MLIST_SPACING, uis.color.selection );   
+                xx += l->columns[j].width;
+            }
         }
 
         // draw contents
@@ -1273,6 +1286,9 @@ void Menu_Init( menuFrameWork_t *menu ) {
     void *item;
     int i;
     int focus = 0;
+
+    menu->y1 = 0;
+    menu->y2 = uis.height;
 
     if( !menu->size ) {
         menu->size = Menu_Size;

@@ -139,7 +139,7 @@ static void S_SoundList_f( void ) {
 			continue;
 		sc = sfx->cache;
 		if( sc ) {
-			size = sc->length * sc->width * sc->channels;
+			size = sc->length * sc->width;
 			total += size;
 			if( sc->loopstart >= 0 )
 				Com_Printf( "L" );
@@ -428,7 +428,7 @@ void S_EndRegistration( void ) {
 			// make sure it is paged in
             sc = sfx->cache;
 			if( sc ) {
-				size = sc->length * sc->width * sc->channels;
+				size = sc->length * sc->width;
 				Com_PageInMemory( sc, size );
 			}
 		}

@@ -268,6 +268,30 @@ static void Parse_Background( menuFrameWork_t *menu ) {
     }
 }
 
+static void Parse_Color( void ) {
+    char *s, *c;
+
+    if( Cmd_Argc() < 3 ) {
+        Com_Printf( "Usage: %s <state> <color>\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    s = Cmd_Argv( 1 );
+    c = Cmd_Argv( 2 );
+
+    if( !strcmp( s, "normal" ) ) {
+        COM_ParseColor( c, uis.color.normal );
+    } else if( !strcmp( s, "active" ) ) {
+        COM_ParseColor( c, uis.color.active );
+    } else if( !strcmp( s, "selection" ) ) {
+        COM_ParseColor( c, uis.color.selection );
+    } else if( !strcmp( s, "disabled" ) ) {
+        COM_ParseColor( c, uis.color.disabled );
+    } else {
+        Com_Printf( "Unknown state '%s'\n", s );
+    }
+}
+
 static qboolean Parse_File( const char *path, int depth ) {
     char *data, *p, *cmd;
     int argc;
@@ -338,12 +362,9 @@ static qboolean Parse_File( const char *path, int depth ) {
                     menu = UI_FindMenu( s );
                     if( menu ) {
                         if( menu->free ) {
-                            List_Remove( &menu->entry );
                             menu->free( menu );
-                        } else {
-                            Com_WPrintf( "Attempted to override built-in menu '%s'\n", s );
-                            break;
                         }
+                        List_Remove( &menu->entry );
                     }
                     menu = UI_Mallocz( sizeof( *menu ) );
                     menu->name = UI_CopyString( s );
@@ -351,7 +372,7 @@ static qboolean Parse_File( const char *path, int depth ) {
                     menu->pop = Menu_Pop;
                     menu->free = Menu_Free;
                     menu->image = uis.backgroundHandle;
-                    *( uint32_t * )menu->color = *( uint32_t * )colorBlack;
+                    *( uint32_t * )menu->color = *( uint32_t * )uis.color.background;
                 } else if( !strcmp( cmd, "include" ) ) {
                     char *s = Cmd_Argv( 1 );
                     if( !*s ) {
@@ -363,6 +384,22 @@ static qboolean Parse_File( const char *path, int depth ) {
                     } else {
                         Parse_File( s, depth + 1 );
                     }
+                } else if( !strcmp( cmd, "color" ) ) {
+                    Parse_Color();
+                } else if( !strcmp( cmd, "background" ) ) {
+                    char *s = Cmd_Argv( 1 );
+
+                    if( COM_ParseColor( s, uis.color.background ) ) {
+                        uis.backgroundHandle = 0;
+                    } else {
+                        uis.backgroundHandle = ref.RegisterPic( s );
+                    }
+                } else if( !strcmp( cmd, "font" ) ) {
+                    uis.fontHandle = ref.RegisterFont( Cmd_Argv( 1 ) );
+                } else if( !strcmp( cmd, "cursor" ) ) {
+                    uis.cursorHandle = ref.RegisterPic( Cmd_Argv( 1 ) );
+                    ref.DrawGetPicSize( &uis.cursorWidth,
+                        &uis.cursorHeight, uis.cursorHandle );
                 } else {
                     Com_WPrintf( "Unknown keyword '%s'\n", cmd );
                     break;

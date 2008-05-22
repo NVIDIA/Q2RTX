@@ -26,7 +26,6 @@ LIST_DECL( ui_menus );
 
 cvar_t    *ui_debug;
 static cvar_t    *ui_open;
-static cvar_t    *ui_background;
 static cvar_t    *ui_scale;
 
 // ===========================================================================
@@ -603,14 +602,6 @@ static const cmdreg_t c_ui[] = {
     { NULL, NULL }
 };
 
-static void ui_background_changed( cvar_t *self ) {
-    if( self->string[0] ) {
-        uis.backgroundHandle = ref.RegisterPic( self->string );
-    } else {
-        uis.backgroundHandle = 0;
-    }
-}
-
 static void ui_scale_changed( cvar_t *self ) {
     UI_Resize();
 }
@@ -642,9 +633,8 @@ UI_Init
 qboolean UI_Init( void ) {
     Cmd_Register( c_ui );
 
-    ui_debug = cvar.Get( "ui_debug", "0", 0 );
-    ui_open = cvar.Get( "ui_open", "0", CVAR_ARCHIVE );
-    ui_background = cvar.Get( "ui_background", "", 0 );
+    ui_debug = Cvar_Get( "ui_debug", "0", 0 );
+    ui_open = Cvar_Get( "ui_open", "0", CVAR_ARCHIVE );
 
     UI_ModeChanged();
 
@@ -652,23 +642,19 @@ qboolean UI_Init( void ) {
     uis.cursorHandle = ref.RegisterPic( "ch1" );
     ref.DrawGetPicSize( &uis.cursorWidth, &uis.cursorHeight, uis.cursorHandle );
 
-    if( uis.glconfig.renderer != GL_RENDERER_SOFTWARE ) {
-        if( ui_background->string[0] ) {
-            uis.backgroundHandle = ref.RegisterPic( ui_background->string );
-        }
-        ui_background->changed = ui_background_changed;
-    }
+    Vector4Set( uis.color.background, 0, 0, 0, 255 );
+    Vector4Set( uis.color.normal, 15, 128, 235, 100 );
+    Vector4Set( uis.color.active, 15, 128, 235, 100 );
+    Vector4Set( uis.color.selection, 15, 128, 235, 100 );
+    Vector4Set( uis.color.disabled, 127, 127, 127, 255 );
 
-    // Point to a nice location at startup
-    strcpy( uis.m_demos_browse, "/demos" );
+    // load custom menus
+    UI_LoadStript();
 
     // load built-in menus
     M_Menu_PlayerConfig();
     M_Menu_Servers();
     M_Menu_Demos();
-
-    // load custom menus
-    UI_LoadStript();
 
     Com_Printf( "Registered %d menus.\n", List_Count( &ui_menus ) );
 
@@ -685,7 +671,6 @@ UI_Shutdown
 void UI_Shutdown( void ) {
     UI_ForceMenuOff();
 
-    ui_background->changed = NULL;
     ui_scale->changed = NULL;
 
     PlayerModel_Free();

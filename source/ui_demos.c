@@ -49,6 +49,8 @@ typedef struct m_demos_s {
     menuList_t      list;
     int             numDirs;
     uint8_t         hash[16];
+    char    browse[MAX_OSPATH];
+    int     selection;
 } m_demos_t;
 
 static m_demos_t    m_demos;
@@ -78,7 +80,7 @@ static void BuildName( fsFileInfo_t *info, char **cache ) {
         }
         *cache = s;
     } else {
-        Q_concat( buffer, sizeof( buffer ), uis.m_demos_browse, "/", info->name, NULL );
+        Q_concat( buffer, sizeof( buffer ), m_demos.browse, "/", info->name, NULL );
         CL_GetDemoInfo( buffer, &demo );
     }
 
@@ -115,7 +117,7 @@ static char *LoadCache( void **list ) {
     size_t len;
     uint8_t hash[16];
 
-    Q_concat( buffer, sizeof( buffer ), uis.m_demos_browse, "/" COM_DEMOCACHE_NAME, NULL );
+    Q_concat( buffer, sizeof( buffer ), m_demos.browse, "/" COM_DEMOCACHE_NAME, NULL );
     len = fs.LoadFile( buffer, ( void ** )&cache );
     if( !cache ) {
         return NULL;
@@ -157,7 +159,7 @@ static void WriteCache( void ) {
         return;
     }
 
-    Q_concat( buffer, sizeof( buffer ), uis.m_demos_browse, "/" COM_DEMOCACHE_NAME, NULL );
+    Q_concat( buffer, sizeof( buffer ), m_demos.browse, "/" COM_DEMOCACHE_NAME, NULL );
     fs.FOpenFile( buffer, &f, FS_MODE_WRITE );
     if( !f ) {
         return;
@@ -216,9 +218,9 @@ static void BuildList( void ) {
     SCR_UpdateScreen();
     
     // alloc entries
-    dirlist = FS_ListFiles( uis.m_demos_browse, NULL, FS_PATH_GAME |
+    dirlist = FS_ListFiles( m_demos.browse, NULL, FS_PATH_GAME |
         FS_SEARCHDIRS_ONLY, &numDirs );
-    demolist = FS_ListFiles( uis.m_demos_browse, DEMO_EXTENSIONS, FS_PATH_GAME |
+    demolist = FS_ListFiles( m_demos.browse, DEMO_EXTENSIONS, FS_PATH_GAME |
         FS_SEARCH_EXTRAINFO, &numDemos );
 
     m_demos.list.items = UI_Malloc( sizeof( demoEntry_t * ) * ( numDirs + numDemos + 1 ) );
@@ -226,7 +228,7 @@ static void BuildList( void ) {
     m_demos.list.curvalue = 0;
     m_demos.list.prestep = 0;
 
-    if( uis.m_demos_browse[0] ) {
+    if( m_demos.browse[0] ) {
         BuildDir( "..", ENTRY_UP );
     }
 
@@ -285,7 +287,7 @@ static void LeaveDirectory( void ) {
     char *s;
     int i;
 
-    s = strrchr( uis.m_demos_browse, '/' );
+    s = strrchr( m_demos.browse, '/' );
     if( !s ) {
         return;
     }
@@ -305,9 +307,9 @@ static void LeaveDirectory( void ) {
         }
     }
 
-    if( s == uis.m_demos_browse ) {
-        uis.m_demos_browse[0] = '/';
-        uis.m_demos_browse[1] = 0;
+    if( s == m_demos.browse ) {
+        m_demos.browse[0] = '/';
+        m_demos.browse[1] = 0;
     }
 }
 
@@ -321,15 +323,15 @@ static menuSound_t Activate( menuCommon_t *self ) {
         return QMS_OUT;
 
     case ENTRY_DN:
-        baselen = strlen( uis.m_demos_browse );
+        baselen = strlen( m_demos.browse );
         len = strlen( e->name );
-        if( baselen + 1 + len >= sizeof( uis.m_demos_browse ) ) {
+        if( baselen + 1 + len >= sizeof( m_demos.browse ) ) {
             return QMS_BEEP;
         }
-        if( !baselen || uis.m_demos_browse[ baselen - 1 ] != '/' ) {
-            uis.m_demos_browse[ baselen++ ] = '/';
+        if( !baselen || m_demos.browse[ baselen - 1 ] != '/' ) {
+            m_demos.browse[ baselen++ ] = '/';
         }
-        memcpy( uis.m_demos_browse + baselen, e->name, len + 1 );
+        memcpy( m_demos.browse + baselen, e->name, len + 1 );
         
         // rebuild list
         FreeList();
@@ -338,8 +340,8 @@ static menuSound_t Activate( menuCommon_t *self ) {
         return QMS_IN;
 
     case ENTRY_DEMO:
-        Cbuf_AddText( va( "demo \"%s/%s\"\n", uis.m_demos_browse[1] ?
-            uis.m_demos_browse : "", e->name ) );
+        Cbuf_AddText( va( "demo \"%s/%s\"\n", m_demos.browse[1] ?
+            m_demos.browse : "", e->name ) );
         return QMS_SILENT;
     }
 
@@ -404,14 +406,14 @@ static menuSound_t Keydown( menuFrameWork_t *self, int key ) {
 
 static void Pop( menuFrameWork_t *self ) {
     // save previous position
-    uis.m_demos_selection = m_demos.list.curvalue;
+    m_demos.selection = m_demos.list.curvalue;
     FreeList();
 }
 
 static void Expose( menuFrameWork_t *self ) {
     BuildList();
     // move cursor to previous position
-    MenuList_SetValue( &m_demos.list, uis.m_demos_selection );
+    MenuList_SetValue( &m_demos.list, m_demos.selection );
 }
 
 static void Free( menuFrameWork_t *self ) {
@@ -422,13 +424,15 @@ void M_Menu_Demos( void ) {
     m_demos.menu.name = "demos";
     m_demos.menu.title = "Demo Browser";
 
+    strcpy( m_demos.browse, "/demos" );
+
     m_demos.menu.expose     = Expose;
     m_demos.menu.pop        = Pop;
     m_demos.menu.size       = Size;
     m_demos.menu.keydown    = Keydown;
     m_demos.menu.free       = Free;
     m_demos.menu.image = uis.backgroundHandle;
-    *( uint32_t * )m_demos.menu.color = *( uint32_t * )colorBlack;
+    *( uint32_t * )m_demos.menu.color = *( uint32_t * )uis.color.background;
 
     m_demos.list.generic.type   = MTYPE_LIST;
     m_demos.list.generic.flags  = QMF_HASFOCUS;
@@ -439,7 +443,7 @@ void M_Menu_Demos( void ) {
     m_demos.list.extrasize      = DEMO_EXTRASIZE;
     m_demos.list.sort           = Sort;
 
-    m_demos.list.columns[0].name    = uis.m_demos_browse;
+    m_demos.list.columns[0].name    = m_demos.browse;
     m_demos.list.columns[0].uiFlags = UI_LEFT;
     m_demos.list.columns[1].name    = "Size";
     m_demos.list.columns[1].uiFlags = UI_CENTER;

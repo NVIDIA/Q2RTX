@@ -60,7 +60,7 @@ CFLAGS+=$(ZLIB_CFLAGS)
 endif
 
 ifdef USE_ASM
-ASMFILES+=snd_mixa.s math.s
+ASMFILES+=math.s
 endif
 
 ifdef MINGW

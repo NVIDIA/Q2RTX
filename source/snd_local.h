@@ -20,19 +20,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // snd_loc.h -- private sound functions
 
 // !!! if this is changed, the asm code must change !!!
-typedef struct portable_samplepair_s
+typedef struct samplepair_s
 {
 	int			left;
 	int			right;
-} portable_samplepair_t;
+} samplepair_t;
 
 typedef struct sfxcache_s
 {
 	int 		length;
 	int 		loopstart;
-	int 		speed;			// not needed, because converted on load?
 	int 		width;
-	int 		channels;
 	byte		data[1];		// variable sized
 } sfxcache_t;
 
