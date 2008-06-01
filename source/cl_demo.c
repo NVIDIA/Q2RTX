@@ -286,6 +286,8 @@ static void CL_Record_f( void ) {
         case 'z':
             gzip = qtrue;
             break;
+        default:
+            return;
         }
     }
 
