@@ -1054,7 +1054,7 @@ static void Com_Setenv_f( void ) {
     int argc = Cmd_Argc();
 
     if( argc > 2 ) {
-        Sys_Setenv( Cmd_Argv( 1 ), Cmd_ArgsFrom( 2 ) );
+        Q_setenv( Cmd_Argv( 1 ), Cmd_ArgsFrom( 2 ) );
     } else if( argc == 2 ) {
         char *env = getenv( Cmd_Argv( 1 ) );
 
@@ -1574,8 +1574,12 @@ void Qcommon_Frame( void ) {
 			all, ev, sv, gm, cl, rf );
 	}
 #endif
+
+    if( cvar_modified & CVAR_FILES ) {
+        Cbuf_ExecuteText( EXEC_NOW, "fs_restart" );
+    }
     
-	cvar_infoModified = 0;
+	cvar_modified = 0;
 
     com_localTime += msec;
 	com_framenum++;

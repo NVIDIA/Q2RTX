@@ -91,6 +91,79 @@ static void SetHints( void ) {
 #endif
 }
 
+/*
+=================
+VID_GetClipboardData
+=================
+*/
+char *VID_GetClipboardData( void ) {
+#if USE_SDL && USE_X11
+	SDL_SysWMinfo	info;
+    Display *dpy;
+	Window sowner, win;
+	Atom type, property;
+	unsigned long len, bytes_left;
+	unsigned char *data;
+	int format, result;
+	char *ret;
+
+    if( SDL_WasInit( SDL_INIT_VIDEO ) != SDL_INIT_VIDEO ) {
+        return NULL;
+    }
+	SDL_VERSION( &info.version );
+	if( !SDL_GetWMInfo( &info ) ) {
+        return NULL;
+    }
+    if( info.subsystem != SDL_SYSWM_X11 ) {
+        return NULL;
+    }
+
+    dpy = info.info.x11.display;
+    win = info.info.x11.window;
+	
+	sowner = XGetSelectionOwner( dpy, XA_PRIMARY );
+	if( sowner == None ) {
+        return NULL;
+    }
+
+    property = XInternAtom( dpy, "GETCLIPBOARDDATA_PROP", False );
+		                       
+    XConvertSelection( dpy, XA_PRIMARY, XA_STRING, property, win, CurrentTime );
+		
+    XSync( dpy, False );
+		
+    result = XGetWindowProperty( dpy, win, property, 0, 0, False,
+        AnyPropertyType, &type, &format, &len, &bytes_left, &data );
+								   
+    if( result != Success ) {
+        return NULL;
+    }
+
+    ret = NULL;
+    if( bytes_left ) {
+        result = XGetWindowProperty( dpy, win, property, 0, bytes_left, True,
+            AnyPropertyType, &type, &format, &len, &bytes_left, &data );
+        if( result == Success ) {
+            ret = Z_CopyString( ( char * )data );
+        }
+    }
+
+	XFree( data );
+
+    return ret;
+#else
+    return NULL;
+#endif
+}
+
+/*
+=================
+VID_SetClipboardData
+=================
+*/
+void VID_SetClipboardData( const char *data ) {
+}
+
 static qboolean SetMode( int flags, int forcedepth ) {
     SDL_Surface *surf;
     vrect_t rc;
@@ -141,6 +214,12 @@ void VID_ModeChanged( void ) {
     if( !SetMode( sdl.surface->flags, sdl.surface->format->BitsPerPixel ) ) {
         Com_Error( ERR_FATAL, "Couldn't change video mode: %s", SDL_GetError() );
     }
+}
+
+void VID_FatalShutdown( void ) {
+    SDL_ShowCursor( SDL_ENABLE );
+    SDL_WM_GrabInput( SDL_GRAB_OFF );
+	SDL_Quit();
 }
 
 static qboolean InitVideo( void ) {

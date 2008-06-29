@@ -32,6 +32,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #if HAVE_ENDIAN_H
 #include <endian.h>
 #endif
+#ifdef _WIN32
+#include <direct.h>
+#else
+#include <sys/stat.h>
+#include <sys/types.h>
+#endif
 
 #ifdef __GNUC__
 
@@ -465,9 +471,18 @@ int Q_strncasecmp( const char *s1, const char *s2, size_t n );
 #define Q_stricmp	Q_strcasecmp
 #define Q_stricmpn	Q_strncasecmp
 
+#ifdef _WIN32
+#define Q_mkdir( p ) _mkdir( p )
+#define Q_unlink( p ) _unlink( p )
+#else
+#define Q_mkdir( p ) mkdir( p, 0775 )
+#define Q_unlink( p ) unlink( p )
+#endif
+
 int QDECL SortStrcmp( const void *p1, const void *p2 );
 
 char *Q_strchrnul( const char *s, int c );
+void Q_setenv( const char *name, const char *value );
 
 char *COM_SkipPath( const char *pathname );
 void COM_StripExtension( const char *in, char *out, size_t size );

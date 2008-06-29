@@ -271,6 +271,9 @@ static inline void CL_ParseDeltaEntity( server_frame_t  *frame,
         MSG_ShowDeltaEntityBits( bits );
     }
 
+    if( LONG_SOLID_SUPPORTED( cls.serverProtocol, cls.protocolVersion ) ) {
+       bits |= U_SOLID32;
+    }
     MSG_ParseDeltaEntity( old, state, newnum, bits );
 }
 
@@ -744,8 +747,11 @@ static void CL_ParseGamestate( void ) {
             break;
         }
         if( index < 1 || index >= MAX_EDICTS ) {
-            Com_Error( ERR_DROP, "%s: bad baseline index: %d",
+            Com_Error( ERR_DROP, "%s: bad entity number: %d",
                 __func__, index );
+        }
+        if( LONG_SOLID_SUPPORTED( cls.serverProtocol, cls.protocolVersion ) ) {
+           bits |= U_SOLID32;
         }
         MSG_ParseDeltaEntity( NULL, &cl.baselines[index], index, bits );
     }
@@ -817,7 +823,6 @@ static void CL_ParseServerData( void ) {
     cl.pmp.waterfriction = 1;
     cl.pmp.flyfriction = 9;
     cl.pmp.airaccelerate = 0;    
-    cl.gametype = GT_DEATHMATCH;
 #ifdef PMOVE_HACK
     cl.pmp.highprec = qtrue;
 #endif
@@ -853,7 +858,7 @@ static void CL_ParseServerData( void ) {
                 "Current client version is %d.", i, PROTOCOL_VERSION_Q2PRO_CURRENT );
         }
         cls.protocolVersion = i;
-        cl.gametype = MSG_ReadByte();
+        MSG_ReadByte(); // used to be gametype
         cl.pmp.strafeHack = MSG_ReadByte();
         cl.pmp.qwmod = MSG_ReadByte(); //atu QWMod
         cl.pmp.speedMultiplier = 2;        
@@ -903,7 +908,14 @@ static void CL_ParseBaseline( void ) {
 
     newnum = MSG_ParseEntityBits( &bits );
     if( newnum < 1 || newnum >= MAX_EDICTS ) {
-        Com_Error( ERR_DROP, "CL_ParseBaseline: bad entity number %i", newnum );
+        Com_Error( ERR_DROP, "%s: bad entity number: %d", __func__, newnum );
+    }
+    if( cl_shownet->integer > 2 ) {
+        MSG_ShowDeltaEntityBits( bits );
+        Com_Printf( "\n" );
+    }
+    if( LONG_SOLID_SUPPORTED( cls.serverProtocol, cls.protocolVersion ) ) {
+       bits |= U_SOLID32;
     }
     MSG_ParseDeltaEntity( NULL, &cl.baselines[newnum], newnum, bits );
 }
@@ -1135,7 +1147,7 @@ static void CL_ParseStartSoundPacket( void ) {
                 Com_DPrintf( "SERVER BUG: sound on entity %d last seen %d frames ago\n",
                     ent, cl.frame.number - cl_entities[ent].serverframe );
             } else {
-                Com_DPrintf( "SERVER BUG: sound on entity %d we have never seen\n", ent );
+                Com_DPrintf( "SERVER BUG: sound on entity %d never seen before\n", ent );
             }
         }
         // use entity number
@@ -1478,7 +1490,7 @@ void CL_ParseServerMessage( void ) {
             
         case svc_serverdata:
             CL_ParseServerData();
-            break;
+            continue;
             
         case svc_configstring:
             CL_ParseConfigString();

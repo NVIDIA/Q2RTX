@@ -237,8 +237,7 @@ typedef enum {
 } cvarSetSource_t;
 
 extern	cvar_t	*cvar_vars;
-extern	int	    cvar_latchedModified;
-extern	int	    cvar_infoModified;
+extern	int	    cvar_modified;
 
 void Cvar_SetByVar( cvar_t *var, const char *value, cvarSetSource_t source );
 
@@ -1037,10 +1036,7 @@ void	Sys_FreeLibrary( void *handle );
 void    *Sys_GetProcAddress( void *handle, const char *sym );
 
 unsigned	Sys_Milliseconds( void );
-char	*Sys_GetClipboardData( void );
-void	Sys_SetClipboardData( const char *data );
 void    Sys_Sleep( int msec );
-void    Sys_Setenv( const char *name, const char *value );
 
 void	Hunk_Begin( mempool_t *pool, size_t maxsize );
 void	*Hunk_Alloc( mempool_t *pool, size_t size );
@@ -1059,9 +1055,6 @@ void	Sys_Quit( void );
 
 void	**Sys_ListFiles( const char *path, const char *extension, int flags, size_t length, int *numFiles );
 
-qboolean Sys_Mkdir( const char *path );
-qboolean Sys_RemoveFile( const char *path );
-qboolean Sys_RenameFile( const char *from, const char *to );
 qboolean Sys_GetPathInfo( const char *path, fsFileInfo_t *info );
 qboolean Sys_GetFileInfo( FILE *fp, fsFileInfo_t *info );
 
@@ -1125,11 +1118,16 @@ void CL_UpdateUserinfo( cvar_t *var, cvarSetSource_t source );
 void IN_Frame( void );
 void IN_Activate( void );
 void IN_MouseEvent( int x, int y );
+void IN_WarpMouse( int x, int y );
 
 void	Key_Init( void );
 void	Key_Event( unsigned key, qboolean down, unsigned time );
 void	Key_CharEvent( int key );
 void	Key_WriteBindings( fileHandle_t f );
+
+char	*VID_GetClipboardData( void );
+void	VID_SetClipboardData( const char *data );
+void    VID_FatalShutdown( void );
 
 typedef enum {
 	ss_dead,			// no map loaded

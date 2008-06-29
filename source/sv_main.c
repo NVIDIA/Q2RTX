@@ -86,7 +86,7 @@ cvar_t	*sv_status_show;
 cvar_t	*sv_uptime;
 cvar_t	*sv_badauth_time;
 
-cvar_t  *g_features;
+//cvar_t  *g_features;
 
 //============================================================================
 
@@ -1795,12 +1795,10 @@ void SV_Init( void ) {
 	sv_badauth_time = Cvar_Get( "sv_badauth_time", "1", 0 );
 	sv_badauth_time->changed = sv_badauth_time_changed;
 
-    Cvar_Get( "sv_features", va( "%d", GMF_CLIENTNUM|GMF_MVDSPEC ), CVAR_ROM );
-    g_features = Cvar_Ref( "g_features" );
+    //Cvar_Get( "sv_features", va( "%d", GMF_CLIENTNUM|GMF_MVDSPEC ), CVAR_ROM );
+    //g_features = Cvar_Ref( "g_features" );
 
-	//
     // set up default pmove parameters
-	//
     sv_pmp.maxspeed = 300;
     //sv_pmp.upspeed = 350;
     sv_pmp.friction = 6;
@@ -1824,6 +1822,7 @@ static void SV_FinalMessage( const char *message, int cmd ) {
     tcpClient_t *t, *tnext;
     netchan_t   *netchan;
     uint16_t length;
+    int i;
 
 	MSG_WriteByte( svc_print );
 	MSG_WriteByte( PRINT_HIGH );
@@ -1832,29 +1831,18 @@ static void SV_FinalMessage( const char *message, int cmd ) {
 
 	// send it twice
 	// stagger the packets to crutch operating system limited buffers
-
-    FOR_EACH_CLIENT( client ) {
-		if( client->state == cs_zombie ) {
-			continue;
-		}
-        netchan = client->netchan;
-		while( netchan->fragment_pending ) {
-			netchan->TransmitNextFragment( netchan );
-		}
-		netchan->Transmit( netchan, msg_write.cursize, msg_write.data );
-	}
-
-    FOR_EACH_CLIENT( client ) {
-		if( client->state == cs_zombie ) {
-			continue;
-		}
-        netchan = client->netchan;
-		while( netchan->fragment_pending ) {
-			netchan->TransmitNextFragment( netchan );
-		}
-		netchan->Transmit( netchan, msg_write.cursize, msg_write.data );
-	}
-	SZ_Clear( &msg_write );
+    for( i = 0; i < 2; i++ ) {
+        FOR_EACH_CLIENT( client ) {
+            if( client->state == cs_zombie ) {
+                continue;
+            }
+            netchan = client->netchan;
+            while( netchan->fragment_pending ) {
+                netchan->TransmitNextFragment( netchan );
+            }
+            netchan->Transmit( netchan, msg_write.cursize, msg_write.data );
+        }
+    }
 
     // send EOF to MVD clients
     length = 0;

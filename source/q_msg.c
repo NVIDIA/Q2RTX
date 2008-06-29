@@ -713,8 +713,13 @@ void MSG_WriteDeltaEntity( const entity_state_t *from,
 		MSG_WriteByte (to->sound);
 	if (bits & U_EVENT)
 		MSG_WriteByte (to->event);
-	if (bits & U_SOLID)
-		MSG_WriteShort (to->solid);
+	if (bits & U_SOLID) {
+        if( flags & MSG_ES_LONGSOLID ) {
+		    MSG_WriteLong (to->solid);
+        } else {
+		    MSG_WriteShort (to->solid);
+        }
+    }
 }
 
 /*
@@ -1895,13 +1900,17 @@ MSG_ParseDeltaEntity
 Can go from either a baseline or a previous packet_entity
 ==================
 */
-void MSG_ParseDeltaEntity( const entity_state_t *from, entity_state_t *to, int number, int bits ) {
+void MSG_ParseDeltaEntity( const entity_state_t *from,
+                                 entity_state_t *to,
+                                 int            number,
+                                 int            bits )
+{
 	if( !to ) {
-		Com_Error( ERR_DROP, "MSG_ParseDeltaEntity: NULL" );
+		Com_Error( ERR_DROP, "%s: NULL", __func__ );
 	}
 
 	if( number < 1 || number >= MAX_EDICTS ) {
-		Com_Error( ERR_DROP, "MSG_ParseDeltaEntity: bad entity number %i", number );
+		Com_Error( ERR_DROP, "%s: bad entity number: %d", __func__, number );
 	}
 
 	// set everything to the state we are delta'ing from
@@ -1916,7 +1925,7 @@ void MSG_ParseDeltaEntity( const entity_state_t *from, entity_state_t *to, int n
 	to->number = number;
 	to->event = 0;
 
-	if( !bits ) {
+	if( ( bits & U_MASK ) == 0 ) {
 		return;
 	}
 
@@ -1992,7 +2001,11 @@ void MSG_ParseDeltaEntity( const entity_state_t *from, entity_state_t *to, int n
 	}
 
 	if( bits & U_SOLID ) {
-		to->solid = MSG_ReadWord();
+        if( bits & U_SOLID32 ) {
+    		to->solid = MSG_ReadLong();
+        } else {
+    		to->solid = MSG_ReadWord();
+        }
 	}
 }
 
@@ -2001,12 +2014,15 @@ void MSG_ParseDeltaEntity( const entity_state_t *from, entity_state_t *to, int n
 MSG_ParseDeltaPlayerstate_Default
 ===================
 */
-void MSG_ParseDeltaPlayerstate_Default( const player_state_t *from, player_state_t *to, int flags ) {
+void MSG_ParseDeltaPlayerstate_Default( const player_state_t *from,
+                                              player_state_t *to,
+                                              int            flags )
+{
 	int			i;
 	int			statbits;
 
 	if( !to ) {
-		Com_Error( ERR_DROP, "MSG_ParseDeltaPlayerstate_Default: NULL" );
+		Com_Error( ERR_DROP, "%s: NULL", __func__ );
 	}
 
 	// clear to old value before delta parsing
@@ -2119,7 +2135,7 @@ void MSG_ParseDeltaPlayerstate_Enhanced(    const player_state_t    *from,
 	int			statbits;
 
 	if( !to ) {
-		Com_Error( ERR_DROP, "MSG_ParseDeltaPlayerstate_Enhanced: NULL" );
+		Com_Error( ERR_DROP, "%s: NULL", __func__ );
 	}
 
 	// clear to old value before delta parsing
@@ -2242,12 +2258,15 @@ void MSG_ParseDeltaPlayerstate_Enhanced(    const player_state_t    *from,
 MSG_ParseDeltaPlayerstate_Packet
 ===================
 */
-void MSG_ParseDeltaPlayerstate_Packet( const player_state_t *from, player_state_t *to, int flags ) {
+void MSG_ParseDeltaPlayerstate_Packet( const player_state_t *from,
+                                             player_state_t *to,
+                                             int            flags )
+{
 	int			i;
 	int			statbits;
 
 	if( !to ) {
-		Com_Error( ERR_DROP, "MSG_ParseDeltaPlayerstate_Packet: NULL" );
+		Com_Error( ERR_DROP, "%s: NULL", __func__ );
 	}
 
 	// clear to old value before delta parsing

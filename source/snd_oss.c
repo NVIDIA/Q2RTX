@@ -37,13 +37,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "snd_local.h"
 
 static int audio_fd;
-static int snd_inited;
+static qboolean snd_inited;
 static struct audio_buf_info info;
 
-static cvar_t *sndbits;
-static cvar_t *sndspeed;
-static cvar_t *sndchannels;
-static cvar_t *snddevice;
+static cvar_t *s_bits;
+static cvar_t *s_channels;
+static cvar_t *s_device;
 
 static const int tryrates[] = { 22050, 11025, 44100, 48000, 8000 };
 
@@ -57,23 +56,22 @@ static sndinitstat_t OSS_Init ( void ) {
     if ( snd_inited )
         return SIS_SUCCESS;
 
-    sndbits = Cvar_Get ( "sndbits", "16", CVAR_ARCHIVE|CVAR_LATCHED );
-    sndspeed = Cvar_Get ( "sndspeed", "22050", CVAR_ARCHIVE|CVAR_LATCHED );
-    sndchannels = Cvar_Get ( "sndchannels", "2", CVAR_ARCHIVE|CVAR_LATCHED );
-    snddevice = Cvar_Get ( "snddevice", "/dev/dsp", CVAR_ARCHIVE|CVAR_LATCHED );
+    s_bits = Cvar_Get ( "s_bits", "16", CVAR_SOUND );
+    s_channels = Cvar_Get ( "s_channels", "2", CVAR_SOUND );
+    s_device = Cvar_Get ( "s_device", "/dev/dsp", CVAR_SOUND );
 
 // open /dev/dsp, confirm capability to mmap, and get size of dma buffer
 
-    audio_fd = open ( snddevice->string, O_RDWR );
+    audio_fd = open ( s_device->string, O_RDWR );
 
     if ( audio_fd < 0 ) {
-        Com_WPrintf ( "Could not open %s: %s\n", snddevice->string,
+        Com_WPrintf ( "Could not open %s: %s\n", s_device->string,
             strerror ( errno ) );
         return SIS_FAILURE;
     }
 
     if ( ioctl ( audio_fd, SNDCTL_DSP_GETCAPS, &caps ) == -1 ) {
-        Com_WPrintf ( "Could not get caps of %s: %s\n", snddevice->string,
+        Com_WPrintf ( "Could not get caps of %s: %s\n", s_device->string,
             strerror ( errno ) );
         goto fail;
     }
@@ -82,14 +80,14 @@ static sndinitstat_t OSS_Init ( void ) {
         (DSP_CAP_TRIGGER|DSP_CAP_MMAP) )
     {
         Com_WPrintf ( "%s does not support TRIGGER and/or MMAP capabilities\n",
-            snddevice->string );
+            s_device->string );
         goto fail;
     }
 
 
 // set sample bits & speed
 
-    dma.samplebits = sndbits->integer;
+    dma.samplebits = s_bits->integer;
     if ( dma.samplebits != 16 && dma.samplebits != 8 ) {
         ioctl ( audio_fd, SNDCTL_DSP_GETFMTS, &fmt );
         if ( fmt & AFMT_S16_LE ) {
@@ -99,29 +97,40 @@ static sndinitstat_t OSS_Init ( void ) {
         }
     }
 
-    dma.speed = sndspeed->integer;
-    if ( !dma.speed ) {
+	switch( s_khz->integer ) {
+    case 48:
+		dma.speed = 48000;
+        break;
+    case 44:
+		dma.speed = 44100;
+        break;
+    case 22:
+		dma.speed = 22050;
+        break;
+    case 11:
+		dma.speed = 11025;
+        break;
+    default:
         for ( i = 0; i < sizeof ( tryrates ) / 4; i++ ) {
             if ( !ioctl ( audio_fd, SNDCTL_DSP_SPEED, &tryrates[i] ) )
                 break;
         }
         if ( i == sizeof ( tryrates ) / 4 ) {
-            Com_WPrintf ( "%s supports no valid bitrates\n", snddevice->string );
+            Com_WPrintf ( "%s supports no valid bitrates\n", s_device->string );
             goto fail;
         }
         dma.speed = tryrates[i];
+        break;
     }
 
-    Cvar_ClampInteger ( sndchannels, 1, 2 );
-
-    dma.channels = sndchannels->integer;
+    dma.channels = s_channels->integer;
 
     tmp = 0;
     if ( dma.channels == 2 )
         tmp = 1;
     rc = ioctl ( audio_fd, SNDCTL_DSP_STEREO, &tmp );
     if ( rc < 0 ) {
-        Com_WPrintf ( "Could not set %s to %d channels: %s\n", snddevice->string,
+        Com_WPrintf ( "Could not set %s to %d channels: %s\n", s_device->string,
             dma.channels, strerror ( errno ) );
         goto fail;
     }
@@ -132,7 +141,7 @@ static sndinitstat_t OSS_Init ( void ) {
 
     rc = ioctl ( audio_fd, SNDCTL_DSP_SPEED, &dma.speed );
     if ( rc < 0 ) {
-        Com_WPrintf ( "Could not set %s speed to %d: %s\n", snddevice->string,
+        Com_WPrintf ( "Could not set %s speed to %d: %s\n", s_device->string,
             dma.speed, strerror ( errno ) );
         goto fail;
     }
@@ -168,7 +177,7 @@ static sndinitstat_t OSS_Init ( void ) {
     dma.buffer = ( byte * ) mmap ( NULL, info.fragstotal * info.fragsize,
         PROT_WRITE, MAP_FILE|MAP_SHARED, audio_fd, 0 );
     if ( !dma.buffer ) {
-        Com_WPrintf ( "Could not mmap %s: %s\n", snddevice->string,
+        Com_WPrintf ( "Could not mmap %s: %s\n", s_device->string,
             strerror ( errno ) );
         goto fail;
     }
@@ -196,7 +205,7 @@ static sndinitstat_t OSS_Init ( void ) {
 
     dma.samplepos = 0;
 
-    snd_inited = 1;
+    snd_inited = qtrue;
     return SIS_SUCCESS;
 
 fail:
@@ -222,7 +231,7 @@ static void OSS_BeginPainting ( void ) {
 
     if ( ioctl ( audio_fd, SNDCTL_DSP_GETOPTR, &count ) == -1 ) {
         Com_EPrintf ( "SNDCTL_DSP_GETOPTR failed on %s: %s\n",
-            snddevice->string, strerror ( errno ) );
+            s_device->string, strerror ( errno ) );
         OSS_Shutdown();
         return;
     }

@@ -1841,7 +1841,7 @@ void R_InitImageManager( void ) {
     int i;
 
 #ifdef TRUECOLOR_RENDERER
-	r_override_textures = cvar.Get( "r_override_textures", "1", CVAR_ARCHIVE|CVAR_LATCHED );
+	r_override_textures = cvar.Get( "r_override_textures", "1", CVAR_ARCHIVE|CVAR_FILES );
     r_texture_formats = cvar.Get( "r_texture_formats",
 #if USE_PNG
         "p"

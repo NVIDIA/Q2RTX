@@ -243,10 +243,46 @@ void PF_UnlinkEdict (edict_t *ent) {
 	ent->area.prev = ent->area.next = NULL;
 }
 
+static int SV_CalcSolid( vec3_t mins, vec3_t maxs ) {
+	int	i, j, k;
+
+    // assume that x/y are equal and symetric
+    i = maxs[0] / 8;
+    clamp( i, 1, 31 );
+
+    // z is not symetric
+    j = ( -mins[2] ) / 8;
+    clamp( j, 1, 31 );
+
+    // and z maxs can be negative...
+    k = ( maxs[2] + 32 ) / 8;
+    clamp( k, 1, 63 );
+
+    return ( k << 10 ) | ( j << 5 ) | i;
+}
+
+static int SV_CalcSolid32( vec3_t mins, vec3_t maxs ) {
+	int	i, j, k;
+
+    // assume that x/y are equal and symetric
+    i = maxs[0];
+    clamp( i, 1, 255 );
+
+    // z is not symetric
+    j = -mins[2];
+    clamp( j, 1, 255 );
+
+    // and z maxs can be negative...
+    k = maxs[2] + 32768;
+    clamp( k, 1, 65535 );
+
+    return ( k << 16 ) | ( j << 8 ) | i;
+}
 
 void PF_LinkEdict (edict_t *ent) {
 	areanode_t	*node;
-	int			i, j, k;
+    server_entity_t *sent;
+    int entnum;
 
 	if (ent->area.prev)
 		PF_UnlinkEdict (ent);	// unlink from old position
@@ -261,37 +297,29 @@ void PF_LinkEdict (edict_t *ent) {
 		return;
 	}
 
+    entnum = NUM_FOR_EDICT( ent );
+    sent = &sv.entities[entnum];
+
 	// encode the size into the entity_state for client prediction
-	if (ent->solid == SOLID_BBOX && !(ent->svflags & SVF_DEADMONSTER))
-	{	// assume that x/y are equal and symetric
-		i = ent->maxs[0]/8;
-		if (i<1)
-			i = 1;
-		if (i>31)
-			i = 31;
-
-		// z is not symetric
-		j = (-ent->mins[2])/8;
-		if (j<1)
-			j = 1;
-		if (j>31)
-			j = 31;
-
-		// and z maxs can be negative...
-		k = (ent->maxs[2]+32)/8;
-		if (k<1)
-			k = 1;
-		if (k>63)
-			k = 63;
-
-		ent->s.solid = (k<<10) | (j<<5) | i;
-	}
-	else if (ent->solid == SOLID_BSP)
-	{
+	switch( ent->solid ) {
+    case SOLID_BBOX:
+        if( ( ent->svflags & SVF_DEADMONSTER ) || VectorCompare( ent->mins, ent->maxs ) ) {
+            ent->s.solid = 0;
+            sent->solid32 = 0;
+        } else {
+            ent->s.solid = SV_CalcSolid( ent->mins, ent->maxs );
+            sent->solid32 = SV_CalcSolid32( ent->mins, ent->maxs );
+        }
+        break;
+    case SOLID_BSP:
 		ent->s.solid = 31;		// a solid_bbox will never create this value
-	}
-	else
+        sent->solid32 = 31;     // FIXME: use 255?
+        break;
+    default:
 		ent->s.solid = 0;
+        sent->solid32 = 0;
+        break;
+    }
 
     SV_LinkEdict( &sv.cm, ent );
 
@@ -434,7 +462,7 @@ int SV_PointContents (vec3_t p)
 	cnode_t		*headnode;
 
 	if( !sv.cm.cache ) {
-		Com_Error( ERR_DROP, "SV_PointContents: no map loaded" );
+		Com_Error( ERR_DROP, "%s: no map loaded", __func__ );
 	}
 
 	// get base contents from world
@@ -545,80 +573,15 @@ SV_Trace
 Moves the given mins/maxs volume through the world from start to end.
 
 Passedict and edicts owned by passedict are explicitly not checked.
-
 ==================
 */
-trace_t SV_Trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, edict_t *passedict, int contentmask) {
-	moveclip_t	clip;
-	trace_t trace;
-
-	if( !sv.cm.cache ) {
-		Com_Error( ERR_DROP, "SV_Trace: no map loaded" );
-	}
-
-	if( ++sv.tracecount > 10000 ) {
-		Com_EPrintf( "SV_Trace: game DLL caught in infinite loop!\n" );
-		memset( &trace, 0, sizeof( trace ) );
-		trace.fraction = 1;
-		trace.ent = ge->edicts;
-		VectorCopy( end, trace.endpos );
-		sv.tracecount = 0;
-		return trace;
-	}
-
-	if (!mins)
-		mins = vec3_origin;
-	if (!maxs)
-		maxs = vec3_origin;
-
-	// clip to world
-	CM_BoxTrace ( &trace, start, end, mins, maxs, sv.cm.cache->nodes, contentmask);
-	trace.ent = ge->edicts;
-	if (trace.fraction == 0) {
-		return trace;		// blocked by the world
-	}
-
-	memset( &clip, 0, sizeof( clip ) );
-	clip.trace = &trace;
-	clip.contentmask = contentmask;
-	clip.start = start;
-	clip.end = end;
-	clip.mins = mins;
-	clip.maxs = maxs;
-	clip.passedict = passedict;
-	
-	// create the bounding box of the entire move
-	SV_TraceBounds( &clip );
-
-	// clip to other solid entities
-	SV_ClipMoveToEntities( &clip );
-
-	return trace;
-}
-
-/*
-==================
-SV_Trace_Old
-
-HACK: different compilers (and even different versions
-of the same compiler) handle returning of structures differently.
-
-This function is intended to be binary-compatible with
-game DLLs built by earlier versions of GCC.
-
-Game DLLs built by MSVC seems to behave similary to old GCC
-(except they additionaly require pointer to destination
-structure to be retured in EAX register), so this function is linked in
-when building with MinGW, under assumption that no mods built with MinGW ever exist.
-==================
-*/
-trace_t *SV_Trace_Old (trace_t *trace, vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end,
+trace_t *SV_Trace(trace_t *trace, vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end,
 					   edict_t *passedict, int contentmask)
 {
 	moveclip_t	clip;
 
 	if( !sv.cm.cache ) {
-		Com_Error( ERR_DROP, "SV_Trace: no map loaded" );
+		Com_Error( ERR_DROP, "%s: no map loaded", __func__ );
 	}
 
 	if( ++sv.tracecount > 10000 ) {
@@ -657,6 +620,21 @@ trace_t *SV_Trace_Old (trace_t *trace, vec3_t start, vec3_t mins, vec3_t maxs, v
 
 	// clip to other solid entities
 	SV_ClipMoveToEntities( &clip );
+
+	return trace;
+}
+
+/*
+==================
+SV_Trace_Native
+
+Variant of SV_Trace for native game ABI
+==================
+*/
+trace_t SV_Trace_Native (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, edict_t *passedict, int contentmask) {
+	trace_t trace;
+
+    SV_Trace( &trace, start, mins, maxs, end, passedict, contentmask );
 
 	return trace;
 }

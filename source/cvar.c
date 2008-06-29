@@ -25,8 +25,7 @@ cvarAPI_t    cvar;
 
 cvar_t    *cvar_vars;
 
-//int        cvar_latchedModified;
-int        cvar_infoModified;
+int        cvar_modified;
 
 #define Cvar_Malloc( size )        Z_TagMalloc( size, TAG_CVAR )
 
@@ -170,15 +169,17 @@ static void Cvar_ChangeString( cvar_t *var, const char *value, cvarSetSource_t s
     Cvar_ParseString( var );
 
     if( var->flags & CVAR_INFOMASK ) {
-        cvar_infoModified |= var->flags & CVAR_INFOMASK;
         if( var->flags & CVAR_USERINFO ) {
             CL_UpdateUserinfo( var, source );
         }
     }
 
     var->modified = qtrue;
-    if( source != CVAR_SET_DIRECT && var->changed ) {
-        var->changed( var );
+    if( source != CVAR_SET_DIRECT ) {
+        cvar_modified |= var->flags & CVAR_MODIFYMASK;
+        if( var->changed ) {
+            var->changed( var );
+        }
     }
 }
 
@@ -190,15 +191,6 @@ Cvar_Get has been called from subsystem initialization routine.
 ============
 */
 static void Cvar_EngineGet( cvar_t *var, const char *var_value, int flags ) {
-    if( ( var->flags & CVAR_LATCHED ) && var->latched_string ) {
-        // update latched cvar
-        Z_Free( var->string );
-        var->string = var->latched_string;
-        var->latched_string = NULL;
-        Cvar_ParseString( var );
-        var->modified = qtrue;
-    }
-
     if( var->flags & (CVAR_CUSTOM|CVAR_VOLATILE) ) {
         // update default string if cvar was set from command line
         Z_Free( var->default_string );
@@ -216,7 +208,7 @@ static void Cvar_EngineGet( cvar_t *var, const char *var_value, int flags ) {
     }
 
     // some flags are not saved
-    var->flags &= ~(CVAR_LATCHED|CVAR_GAME|CVAR_CUSTOM|CVAR_VOLATILE);
+    var->flags &= ~(CVAR_GAME|CVAR_CUSTOM|CVAR_VOLATILE);
     var->flags |= flags;
 }
 
@@ -309,9 +301,7 @@ void Cvar_SetByVar( cvar_t *var, const char *value, cvarSetSource_t source ) {
     if( !value ) {
         value = "";
     }
-    if( !strcmp( value, var->string ) &&
-        !( var->flags & (CVAR_LATCHED|CVAR_LATCH) ) )
-    {
+    if( !strcmp( value, var->string ) && !( var->flags & CVAR_LATCH ) ) {
         return;        // not changed
     }
 
@@ -344,7 +334,7 @@ void Cvar_SetByVar( cvar_t *var, const char *value, cvarSetSource_t source ) {
             return;
         }
 
-        if( var->flags & (CVAR_LATCHED|CVAR_LATCH) ) {
+        if( var->flags & CVAR_LATCH ) {
             if( !strcmp( var->string, value ) ) {
                 // set back to current value
                 if( var->latched_string ) {
@@ -466,7 +456,6 @@ cvar_t *Cvar_FullSet( const char *var_name, const char *value, int flags, cvarSe
     // force retransmit of userinfo variables
     // needed for compatibility with q2admin
     if( ( var->flags | flags ) & CVAR_USERINFO ) {
-        cvar_infoModified |= CVAR_USERINFO;
         CL_UpdateUserinfo( var, source );
     }
 
@@ -585,14 +574,14 @@ Cvar_FixCheats
 ==================
 */
 void Cvar_FixCheats( void ) {
-   cvar_t *var;
+    cvar_t *var;
 
-    if ( CL_CheatsOK() ) {
+    if( CL_CheatsOK() ) {
         return;
     }
 
     // fix any cheating cvars
-    for( var = cvar_vars ; var ; var = var->next ) {
+    for( var = cvar_vars; var; var = var->next ) {
         if( var->flags & CVAR_CHEAT ) {
             Cvar_SetByVar( var, var->default_string, CVAR_SET_DIRECT );
         }
@@ -615,8 +604,6 @@ void Cvar_GetLatchedVars( void ) {
             var->flags &= ~CVAR_SERVERINFO;
         if( !(var->flags & CVAR_LATCH) )
             continue;
-        if( var->flags & CVAR_LATCHED )
-            continue; // don't update engine cvars
         if( !var->latched_string )
             continue;
         Z_Free( var->string );
@@ -624,6 +611,7 @@ void Cvar_GetLatchedVars( void ) {
         var->latched_string = NULL;
         Cvar_ParseString( var );
         var->modified = qtrue;
+        cvar_modified |= var->flags & CVAR_MODIFYMASK;
     }
 }
 
@@ -757,7 +745,7 @@ void Cvar_WriteVariables( fileHandle_t f, int mask, qboolean modified ) {
             continue;
         }
         if( var->flags & mask ) {
-            if( ( var->flags & CVAR_LATCHED ) && var->latched_string ) {
+            if( var->latched_string ) {
                 string = var->latched_string;
             } else {
                 string = var->string;
@@ -827,8 +815,7 @@ static void Cvar_List_f( void ) {
                         "S: included in serverinfo\n"
                         "N: set from command line only\n"
                         "R: read-only variable\n"
-                        "L: latched (requires subsystem restart)\n"
-                        "G: latched (requires game map restart)\n"
+                        "L: latched\n"
                         "?: created by user\n" );
             return;
         case 'l':
@@ -900,10 +887,8 @@ static void Cvar_List_f( void ) {
                 buffer[4] = 'R';
             else if( var->flags & CVAR_NOSET )
                 buffer[4] = 'N';
-            else if( var->flags & CVAR_LATCHED )
-                buffer[4] = 'L';
             else if( var->flags & CVAR_LATCH )
-                buffer[4] = 'G';
+                buffer[4] = 'L';
             else if( var->flags & CVAR_CUSTOM )
                 buffer[4] = '?';
 

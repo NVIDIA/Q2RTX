@@ -824,7 +824,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
 #ifndef USE_CHAR_EVENTS
 
 	if( keydown[K_CTRL] || keydown[K_ALT] ) {
-	//	return;
+		return;
 	}
 
 	switch( key ) {

@@ -37,6 +37,8 @@ typedef struct centity_s {
     entity_state_t    current;
     entity_state_t    prev;            // will always be valid, but might just be a copy of current
 
+    vec3_t          mins, maxs;
+
     int             serverframe;        // if not current, this ent isn't in the frame
 
     int             trailcount;            // for diminishing grenade trails
@@ -117,7 +119,7 @@ typedef struct client_state_s {
     vec3_t      prediction_error;
 
     // rebuilt each valid frame
-    entity_state_t  *solidEntities[MAX_PACKET_ENTITIES];
+    centity_t       *solidEntities[MAX_PACKET_ENTITIES];
     int             numSolidEntities;
 
     entity_state_t  baselines[MAX_EDICTS];
@@ -176,7 +178,6 @@ typedef struct client_state_s {
     //
     // server state information
     //
-    gametype_t  gametype;
     int         servercount;    // server identification for prespawns
     char        gamedir[MAX_QPATH];
     int         clientNum;            // never changed during gameplay, set by serverdata packet
@@ -579,7 +580,6 @@ laser_t *CL_AllocLaser( void );
 //
 void CL_PredictMovement (void);
 void CL_CheckPredictionError (void);
-void CL_BuildSolidList( void );
 
 //
 // cl_fx.c

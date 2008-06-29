@@ -36,7 +36,6 @@ int			s_registration_sequence;
 channel_t   channels[MAX_CHANNELS];
 
 qboolean	sound_started;
-qboolean	sound_modified;
 
 dma_t		dma;
 
@@ -156,10 +155,6 @@ static void S_SoundList_f( void ) {
 	Com_Printf( "Total resident: %i\n", total );
 }
 
-static void s_param_changed( cvar_t *self ) {
-    sound_modified = qtrue;
-}
-
 static const cmdreg_t c_sound[] = {
 	{ "play", S_Play_f, S_Play_c },
 	{ "stopsound", S_StopAllSounds },
@@ -177,8 +172,7 @@ S_Init
 void S_Init( void ) {
     sndinitstat_t ret = SIS_FAILURE;
 
-	s_enable = Cvar_Get( "s_enable", "1", 0 );
-    s_enable->changed = s_param_changed;
+	s_enable = Cvar_Get( "s_enable", "1", CVAR_SOUND );
 	if( !s_enable->integer ) {
 		Com_Printf( "Sound initialization disabled.\n" );
 		return;
@@ -186,10 +180,10 @@ void S_Init( void ) {
 
 	Com_Printf( "------- S_Init -------\n" );
 
-	s_khz = Cvar_Get( "s_khz", "22", CVAR_ARCHIVE );
+	s_khz = Cvar_Get( "s_khz", "22", CVAR_ARCHIVE|CVAR_SOUND );
 
 #if USE_DSOUND
-	s_direct = Cvar_Get( "s_direct", "1", 0 );
+	s_direct = Cvar_Get( "s_direct", "1", CVAR_ARCHIVE|CVAR_SOUND );
     if( s_direct->integer ) {
         DS_FillAPI( &snddma );
         ret = snddma.Init();
@@ -223,11 +217,6 @@ void S_Init( void ) {
 	paintedtime = 0;
 
 	s_registration_sequence = 1;
-
-#if USE_DSOUND
-    s_direct->changed = s_param_changed;
-#endif
-    s_khz->changed = s_param_changed;
 
 	Com_Printf( "sound sampling rate: %i\n", dma.speed );
 
@@ -1024,15 +1013,13 @@ S_Update
 Called once each time through the main loop
 ============
 */
-void S_Update( void )
-{
+void S_Update( void ) {
 	int			i;
 	int			total;
 	channel_t	*ch;
 
-    if( sound_modified ) {
+    if( cvar_modified & CVAR_SOUND ) {
         Cbuf_AddText( "snd_restart\n" );
-        sound_modified = qfalse;
         return;
     }
 

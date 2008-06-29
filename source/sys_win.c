@@ -638,32 +638,6 @@ unsigned Sys_Milliseconds( void ) {
 	return timeGetTime();
 }
 
-/*
-================
-Sys_Mkdir
-================
-*/
-qboolean Sys_Mkdir( const char *path ) {
-	if( !CreateDirectoryA( path, NULL ) ) {
-        return qfalse;
-    }
-    return qtrue;
-}
-
-qboolean Sys_RemoveFile( const char *path ) {
-	if( !DeleteFileA( path ) ) {
-		return qfalse;
-	}
-	return qtrue;
-}
-
-qboolean Sys_RenameFile( const char *from, const char *to ) {
-	if( !MoveFileA( from, to ) ) {
-		return qfalse;
-	}
-	return qtrue;
-}
-
 void Sys_AddDefaultConfig( void ) {
 }
 
@@ -703,75 +677,11 @@ qboolean Sys_GetFileInfo( FILE *fp, fsFileInfo_t *info ) {
 
 /*
 ================
-Sys_GetClipboardData
-
-================
-*/
-char *Sys_GetClipboardData( void ) {
-	HANDLE clipdata;
-	char *data = NULL;
-	char *cliptext;
-
-	if( OpenClipboard( NULL ) == FALSE ) {
-		Com_DPrintf( "Couldn't open clipboard.\n" );
-		return data;
-	}
-
-	if( ( clipdata = GetClipboardData( CF_TEXT ) ) != NULL ) {
-		if( ( cliptext = GlobalLock( clipdata ) ) != NULL ) {
-			data = Z_CopyString( cliptext );
-			GlobalUnlock( clipdata );
-		}
-	}
-	CloseClipboard();
-	
-	return data;
-}
-
-/*
-================
-Sys_SetClipboardData
-
-================
-*/
-void Sys_SetClipboardData( const char *data ) {
-	HANDLE clipdata;
-	char *cliptext;
-	size_t length;
-
-	if( !data[0] ) {
-		return;
-	}
-
-	if( OpenClipboard( NULL ) == FALSE ) {
-		Com_DPrintf( "Couldn't open clipboard.\n" );
-		return;
-	}
-
-	EmptyClipboard();
-
-	length = strlen( data ) + 1;
-	if( ( clipdata = GlobalAlloc( GMEM_MOVEABLE | GMEM_DDESHARE, length ) ) != NULL ) {
-		if( ( cliptext = GlobalLock( clipdata ) ) != NULL ) {
-			memcpy( cliptext, data, length );
-			GlobalUnlock( clipdata );
-			SetClipboardData( CF_TEXT, clipdata );
-		}
-	}
-	
-	CloseClipboard();
-}
-
-
-/*
-================
 Sys_FillAPI
 ================
 */
 void Sys_FillAPI( sysAPI_t *api ) {
 	api->Milliseconds = Sys_Milliseconds;
-	api->GetClipboardData = Sys_GetClipboardData;
-	api->SetClipboardData = Sys_SetClipboardData;
 	api->HunkBegin = Hunk_Begin;
 	api->HunkAlloc = Hunk_Alloc;
     api->HunkEnd = Hunk_End;
@@ -785,15 +695,6 @@ void Sys_FixFPCW( void ) {
 void Sys_Sleep( int msec ) {
     Sleep( msec );
 }
-
-void Sys_Setenv( const char *name, const char *value ) {
-#if( _MSC_VER >= 1400 )
-	_putenv_s( name, value );
-#else
-	_putenv( va( "%s=%s", name, value ) );
-#endif
-}
-
 
 /*
 ================

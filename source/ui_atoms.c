@@ -51,8 +51,10 @@ void UI_PushMenu( menuFrameWork_t *menu ) {
     }
 
     if( i == uis.menuDepth ) {
-        if( uis.menuDepth >= MAX_MENU_DEPTH )
-            Com_Error( ERR_FATAL, "UI_PushMenu: MAX_MENU_DEPTH" );
+        if( uis.menuDepth >= MAX_MENU_DEPTH ) {
+            Com_EPrintf( "UI_PushMenu: MAX_MENU_DEPTH exceeded\n" );
+            return;
+        }
         uis.layers[uis.menuDepth++] = menu;
     } else {
         for( j = i; j < uis.menuDepth; j++ ) {
@@ -75,7 +77,7 @@ void UI_PushMenu( menuFrameWork_t *menu ) {
 
     if( !uis.activeMenu ) {
         uis.entersound = qtrue;
-        //CL_WarpMouse( 0, 0 );
+        IN_WarpMouse( 0, menu->y1 );
     }
 
     uis.transparent |= menu->transparent;

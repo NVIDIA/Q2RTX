@@ -267,7 +267,7 @@ void R_Register (void)
 	r_lerpmodels = cvar.Get( "r_lerpmodels", "1", 0 );
 	r_novis = cvar.Get( "r_novis", "0", 0 );
 
-	vid_gamma = cvar.Get( "vid_gamma", "1.0", CVAR_ARCHIVE|CVAR_LATCHED );
+	vid_gamma = cvar.Get( "vid_gamma", "1.0", CVAR_ARCHIVE|CVAR_FILES );
 
 	cmd.AddCommand ("modellist", Mod_Modellist_f);
 	cmd.AddCommand( "screenshot", R_ScreenShot_f );

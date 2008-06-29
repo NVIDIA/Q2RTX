@@ -337,7 +337,7 @@ void CL_PumpEvents( void ) {
 #endif
         if( mode_changed & MODE_FULLSCREEN ) {
 			if( vid_fullscreen->integer ) {
-                Cbuf_AddText( "set _vid_fullscreen $vid_fullscreen\n" );
+                Cvar_Set( "_vid_fullscreen", vid_fullscreen->string );
 			}
             VID_ModeChanged();
         } else {
@@ -387,7 +387,7 @@ void CL_InitRefresh( void ) {
     vid_geometry = Cvar_Get( "vid_geometry", "640x480", CVAR_ARCHIVE );
     vid_fullscreen = Cvar_Get( "vid_fullscreen", "0", CVAR_ARCHIVE );
     _vid_fullscreen = Cvar_Get( "_vid_fullscreen", "1", CVAR_ARCHIVE );
-    vid_modelist = Cvar_Get( "vid_modelist", "640x480 800x600 1024x768", CVAR_ARCHIVE );
+    vid_modelist = Cvar_Get( "vid_modelist", "640x480 800x600 1024x768", 0 );
 
     if( vid_fullscreen->integer ) {
         Cvar_Set( "_vid_fullscreen", vid_fullscreen->string );

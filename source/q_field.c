@@ -22,9 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // field.c
 //
 
-#include <config.h>
-#include "q_shared.h"
-#include "com_public.h"
+#include "com_local.h"
 #include "key_public.h"
 #include "ref_public.h"
 #include "q_field.h"
@@ -36,13 +34,9 @@ IF_Init
 */
 void IF_Init( inputField_t *field, size_t visibleChars, size_t maxChars, const char *text ) {
 	memset( field, 0, sizeof( *field ) );
-	
-	clamp( maxChars, 1, sizeof( field->text ) );
-	clamp( visibleChars, 1, maxChars );
 
-	field->maxChars = maxChars;
-	field->visibleChars = visibleChars;
-
+	field->maxChars = clamp( maxChars, 1, sizeof( field->text ) );
+	field->visibleChars = clamp( visibleChars, 1, maxChars );
 	if( text ) {
 		field->cursorPos = Q_strncpyz( field->text, text, maxChars );
 	}
@@ -68,7 +62,6 @@ void IF_Replace( inputField_t *field, const char *text ) {
 }
 
 #ifndef DEDICATED_ONLY
-
 
 /*
 ================
@@ -125,7 +118,7 @@ qboolean IF_KeyEvent( inputField_t *field, int key ) {
     }
 
     if( key == 'c' && Key_IsDown( K_CTRL ) ) {
-        sys.SetClipboardData( field->text );
+        VID_SetClipboardData( field->text );
         return qtrue;
     }
 	
@@ -224,41 +217,34 @@ The input line scrolls horizontally if typing goes beyond the right edge.
 Returns x offset of the rightmost character drawn.
 ================
 */
-int IF_Draw( inputField_t *field, int x, int y, int flags, qhandle_t hFont ) {
-	char *text;
-	size_t cursorPos, offset;
+int IF_Draw( inputField_t *field, int x, int y, int flags, qhandle_t font ) {
+	char *text = field->text;
+	size_t cursorPos = field->cursorPos;
+    size_t offset = 0;
 	int ret;
 
-	if( field->cursorPos > sizeof( field->text ) - 1 ) {
+	if( cursorPos >= sizeof( field->text ) ) {
 		Com_Error( ERR_FATAL, "IF_Draw: bad field->cursorPos" );
 	}
 
-	text = field->text;
-	cursorPos = field->cursorPos;
-	offset = 0;
-
-	/* scroll horizontally */
+	// scroll horizontally
 	if( cursorPos > field->visibleChars - 1 ) {
 		cursorPos = field->visibleChars - 1;
 		offset = field->cursorPos - cursorPos;
 	}
-
-	if( !( flags & UI_DRAWCURSOR ) ) {
-        /* just draw text and return */
-        ret = ref.DrawString( x, y, flags, field->visibleChars,
-            text + offset, hFont );
-        return ret;
-    }
     
-	/* draw text */
+	// draw text
 	ret = ref.DrawString( x, y, flags, field->visibleChars,
-        text + offset, hFont );
+        text + offset, font );
 
-    /* draw blinking cursor */
-    if( ( sys.Milliseconds() >> 8 ) & 1 ) {
-        int c = Key_GetOverstrikeMode() ? 11 : '_';
-        ref.DrawChar( x + cursorPos * CHAR_WIDTH, y, flags, c, hFont );
+	if( flags & UI_DRAWCURSOR ) {
+    // draw blinking cursor
+        if( ( com_localTime >> 8 ) & 1 ) {
+            int c = Key_GetOverstrikeMode() ? 11 : '_';
+            ref.DrawChar( x + cursorPos * CHAR_WIDTH, y, flags, c, font );
+        }
     }
+
     return ret;
 }
 

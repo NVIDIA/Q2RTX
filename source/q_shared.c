@@ -1838,10 +1838,8 @@ int Q_strncasecmp( const char *s1, const char *s2, size_t n ) {
 			return 0;		/* strings are equal until end point */
 		
 		if( c1 != c2 ) {
-			if( c1 >= 'a' && c1 <= 'z' )
-				c1 -= ( 'a' - 'A' );
-			if( c2 >= 'a' && c2 <= 'z' )
-				c2 -= ( 'a' - 'A' );
+            c1 = Q_tolower( c1 );
+            c2 = Q_tolower( c2 );
 			if( c1 < c2 )
 				return -1;
 			if( c1 > c2 )
@@ -1860,10 +1858,8 @@ int Q_strcasecmp( const char *s1, const char *s2 ) {
 		c2 = *s2++;
 		
 		if( c1 != c2 ) {
-			if( c1 >= 'a' && c1 <= 'z' )
-				c1 -= ( 'a' - 'A' );
-			if( c2 >= 'a' && c2 <= 'z' )
-				c2 -= ( 'a' - 'A' );
+            c1 = Q_tolower( c1 );
+            c2 = Q_tolower( c2 );
 			if( c1 < c2 )
 				return -1;
 			if( c1 > c2 )
@@ -2041,6 +2037,25 @@ char *Q_strchrnul( const char *s, int c ) {
         s++;
     }
     return ( char * )s;
+}
+
+void Q_setenv( const char *name, const char *value ) {
+#ifdef _WIN32
+    if( !value ) {
+        value = "";
+    }
+#if( _MSC_VER >= 1400 )
+	_putenv_s( name, value );
+#else
+	_putenv( va( "%s=%s", name, value ) );
+#endif
+#else // _WIN32
+    if( value ) {
+        setenv( name, value, 1 );
+    } else {
+        unsetenv( name );
+    }
+#endif // !_WIN32
 }
 
 /*

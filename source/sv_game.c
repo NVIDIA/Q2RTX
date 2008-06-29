@@ -763,10 +763,7 @@ void SV_ShutdownGameProgs (void) {
     	Sys_FreeLibrary( game_library );
 	    game_library = NULL;
     }
-    if( g_features ) {
-        Cvar_SetByVar( g_features, NULL, CVAR_SET_DIRECT );
-        g_features->flags = CVAR_VOLATILE;
-    }
+    Q_setenv( "QUAKE2_GAME_FEATURES", NULL );
 }
 
 /*
@@ -780,6 +777,7 @@ void SV_InitGameProgs ( void ) {
 	game_import_t	import;
 	char	path[MAX_OSPATH];
     game_export_t	*(*entry)( game_import_t * ) = NULL;
+    char *s;
 
 	// unload anything we have now
 	SV_ShutdownGameProgs ();
@@ -830,15 +828,15 @@ void SV_InitGameProgs ( void ) {
 	import.BoxEdicts = SV_AreaEdicts;
 #ifdef _WIN32
 #ifdef __GNUC__
-	import.trace = ( sv_trace_t )SV_Trace_Old;
+	import.trace = ( sv_trace_t )SV_Trace;
 #else
-	import.trace = SV_Trace;
+	import.trace = SV_Trace_Native;
 #endif
 #else /* _WIN32 */
 	if( sv_oldgame_hack->integer ) {
-		import.trace = ( sv_trace_t )SV_Trace_Old;
+		import.trace = ( sv_trace_t )SV_Trace;
 	} else {
-		import.trace = SV_Trace;
+		import.trace = SV_Trace_Native;
 	}
 #endif /* !_WIN32 */
 	import.pointcontents = SV_PointContents;
@@ -891,8 +889,17 @@ void SV_InitGameProgs ( void ) {
             ge->apiversion, GAME_API_VERSION);
     }
 
+    // export server features
+    Q_setenv( "QUAKE2_SERVER_FEATURES", va( "%d", GMF_CLIENTNUM|GMF_MVDSPEC ) );
+
     // initialize
 	ge->Init ();
+
+    // get game features
+    s = getenv( "QUAKE2_GAME_FEATURES" );
+    if( s && *s ) {
+        svs.gameFeatures = atoi( s );
+    }
 
     Sys_FixFPCW();
 }

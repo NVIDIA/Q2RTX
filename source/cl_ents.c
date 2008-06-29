@@ -45,9 +45,28 @@ static void CL_SetEntityState( entity_state_t *state ) {
 	if( state->number == cl.frame.clientNum + 1 ) {
 		VectorCopy( cl.playerEntityOrigin, state->origin );
 		VectorCopy( cl.playerEntityAngles, state->angles );
-	}
+	} else if( state->solid ) {
+		cl.solidEntities[cl.numSolidEntities++] = ent;
+		if( state->solid != 31 ) {
+            int x, zd, zu;
+            
+            // encoded bbox
+            if( LONG_SOLID_SUPPORTED( cls.serverProtocol, cls.protocolVersion ) ) {
+                x = (state->solid & 255);
+                zd = ((state->solid>>8) & 255);
+                zu = ((state->solid>>16) & 65535) - 32768;
+            } else {
+                x = 8*(state->solid & 31);
+                zd = 8*((state->solid>>5) & 31);
+                zu = 8*((state->solid>>10) & 63) - 32;
+            }
 
-	ent = &cl_entities[state->number];
+			ent->mins[0] = ent->mins[1] = -x;
+			ent->maxs[0] = ent->maxs[1] = x;
+			ent->mins[2] = -zd;
+			ent->maxs[2] = zu;
+        }
+    }
 
 	if( ent->serverframe != cl.oldframe.number ) {
 		// wasn't in last update, so initialize some things
@@ -101,7 +120,7 @@ void CL_DeltaFrame( void ) {
 
     VectorScale( cl.frame.ps.pmove.origin, 0.125f, cl.playerEntityOrigin );
 
-	CL_BuildSolidList();
+	cl.numSolidEntities = 0;
 
 	for( i = 0; i < cl.frame.numEntities; i++ ) {
 		j = ( cl.frame.firstEntity + i ) & PARSE_ENTITIES_MASK;

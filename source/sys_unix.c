@@ -49,17 +49,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "q_field.h"
 #include "prompt.h"
 
-#ifdef DEDICATED_ONLY
-#undef USE_SDL
-#endif
-
-#if USE_SDL
-#include <SDL.h>
-#if USE_X11
-#include <SDL_syswm.h>
-#endif
-#endif
-
 cvar_t	*sys_basedir;
 cvar_t  *sys_libdir;
 cvar_t  *sys_refdir;
@@ -497,32 +486,6 @@ unsigned Sys_Milliseconds( void ) {
 
 /*
 ================
-Sys_Mkdir
-================
-*/
-qboolean Sys_Mkdir( const char *path ) {
-    if( mkdir( path, 0777 ) == -1 ) {
-        return qfalse;
-    }
-    return qtrue;
-}
-
-qboolean Sys_RemoveFile( const char *path ) {
-	if( unlink( path ) == -1 ) {
-		return qfalse;
-	}
-	return qtrue;
-}
-
-qboolean Sys_RenameFile( const char *from, const char *to ) {
-	if( rename( from, to ) == -1 ) {
-		return qfalse;
-	}
-	return qtrue;
-}
-
-/*
-================
 Sys_GetPathInfo
 ================
 */
@@ -578,79 +541,6 @@ void Sys_Quit( void ) {
 
 /*
 =================
-Sys_GetClipboardData
-=================
-*/
-char *Sys_GetClipboardData( void ) {
-#if USE_SDL && USE_X11
-	SDL_SysWMinfo	info;
-    Display *dpy;
-	Window sowner, win;
-	Atom type, property;
-	unsigned long len, bytes_left;
-	unsigned char *data;
-	int format, result;
-	char *ret;
-
-    if( SDL_WasInit( SDL_INIT_VIDEO ) != SDL_INIT_VIDEO ) {
-        return NULL;
-    }
-	SDL_VERSION( &info.version );
-	if( !SDL_GetWMInfo( &info ) ) {
-        return NULL;
-    }
-    if( info.subsystem != SDL_SYSWM_X11 ) {
-        return NULL;
-    }
-
-    dpy = info.info.x11.display;
-    win = info.info.x11.window;
-	
-	sowner = XGetSelectionOwner( dpy, XA_PRIMARY );
-	if( sowner == None ) {
-        return NULL;
-    }
-
-    property = XInternAtom( dpy, "GETCLIPBOARDDATA_PROP", False );
-		                       
-    XConvertSelection( dpy, XA_PRIMARY, XA_STRING, property, win, CurrentTime );
-		
-    XSync( dpy, False );
-		
-    result = XGetWindowProperty( dpy, win, property, 0, 0, False,
-        AnyPropertyType, &type, &format, &len, &bytes_left, &data );
-								   
-    if( result != Success ) {
-        return NULL;
-    }
-
-    ret = NULL;
-    if( bytes_left ) {
-        result = XGetWindowProperty( dpy, win, property, 0, bytes_left, True,
-            AnyPropertyType, &type, &format, &len, &bytes_left, &data );
-        if( result == Success ) {
-            ret = Z_CopyString( ( char * )data );
-        }
-    }
-
-	XFree( data );
-
-    return ret;
-#else
-    return NULL;
-#endif
-}
-
-/*
-=================
-Sys_SetClipboardData
-=================
-*/
-void Sys_SetClipboardData( const char *data ) {
-}
-
-/*
-=================
 Sys_GetCurrentDirectory
 =================
 */
@@ -691,10 +581,6 @@ void Sys_Sleep( int msec ) {
     nanosleep( &req, NULL );
 }
 
-void Sys_Setenv( const char *name, const char *value ) {
-    setenv( name, value, 1 );
-}
-
 #if USE_ANTICHEAT & 1
 qboolean Sys_GetAntiCheatAPI( void ) {
     Sys_Sleep( 1500 );
@@ -709,8 +595,6 @@ Sys_FillAPI
 */
 void Sys_FillAPI( sysAPI_t *api ) {
 	api->Milliseconds = Sys_Milliseconds;
-	api->GetClipboardData = Sys_GetClipboardData;
-	api->SetClipboardData = Sys_SetClipboardData;
     api->HunkBegin = Hunk_Begin;
     api->HunkAlloc = Hunk_Alloc;
     api->HunkEnd = Hunk_End;
@@ -760,10 +644,8 @@ Sys_Kill
 static void Sys_Kill( int signum ) {
     Sys_ShutdownTTY();
 
-#if USE_SDL
-    SDL_ShowCursor( SDL_ENABLE );
-    SDL_WM_GrabInput( SDL_GRAB_OFF );
-	SDL_Quit();
+#ifndef DEDICATED_ONLY
+    VID_FatalShutdown();
 #endif
 
 #ifdef _GNU_SOURCE
@@ -866,10 +748,8 @@ void Sys_Error( const char *error, ... ) {
 
     Sys_ShutdownTTY();
 
-#if USE_SDL
-    SDL_WM_GrabInput( SDL_GRAB_OFF );
-    SDL_ShowCursor( SDL_ENABLE );
-	SDL_Quit();
+#ifndef DEDICATED_ONLY
+    VID_FatalShutdown();
 #endif
 
     va_start( argptr, error );
@@ -881,12 +761,6 @@ void Sys_Error( const char *error, ... ) {
                      "********************\n", text );
     exit( 1 );
 }
-
-
-/*void floating_point_exception_handler( int whatever ) {
-	signal( SIGFPE, floating_point_exception_handler );
-}*/
-
 
 /*
 ========================================================================

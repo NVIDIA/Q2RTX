@@ -204,15 +204,12 @@ void SV_InitGame( qboolean ismvd ){
 		} else if( sv_maxclients->integer > CLIENTNUM_RESERVED ) {
 			Cvar_SetInteger( sv_maxclients, CLIENTNUM_RESERVED, CVAR_SET_DIRECT );
 		}
-		svs.gametype = GT_DEATHMATCH;
 	} else if( Cvar_VariableInteger( "coop" ) ) {
 		if( sv_maxclients->integer <= 1 || sv_maxclients->integer > 4 )
 			Cvar_Set( "maxclients", "4" );
-		svs.gametype = GT_COOP;
 	} else {	// non-deathmatch, non-coop is one player
 		Cvar_FullSet( "maxclients", "1", CVAR_SERVERINFO|CVAR_LATCH,
             CVAR_SET_DIRECT );
-		svs.gametype = GT_SINGLEPLAYER;
 	}
 
     // enable networking

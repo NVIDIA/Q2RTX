@@ -58,7 +58,11 @@ typedef struct {
 
 #define PAUSED_FRAMES   10
 
-typedef struct server_s {
+typedef struct {
+    int solid32;
+} server_entity_t;
+
+typedef struct {
 	server_state_t	state;	// precache commands are only valid during load
     int             spawncount;  // random number generated each server spawn
 
@@ -68,6 +72,8 @@ typedef struct server_s {
 	cm_t		cm;
 
 	char		configstrings[MAX_CONFIGSTRINGS][MAX_QPATH];
+
+    server_entity_t entities[MAX_EDICTS];
 
     struct {
 	    fileHandle_t	file;
@@ -324,9 +330,7 @@ typedef struct server_static_s {
 	qboolean	initialized;			// sv_init has completed
 	unsigned	realtime, time;			// always increasing, no clamping, etc
 
-	char		mapcmd[MAX_TOKEN_CHARS];	// ie: *intro.cin+base 
-
-	gametype_t	gametype;
+    int         gameFeatures;
 
 	client_t	*udp_client_pool;	 // [maxclients]
     list_t	    udp_client_list;         // linked list of non-free clients
@@ -637,9 +641,10 @@ int SV_PointContents (vec3_t p);
 
 typedef trace_t (*sv_trace_t)( vec3_t, vec3_t, vec3_t, vec3_t, edict_t *, int );
 
-trace_t SV_Trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, edict_t *passedict, int contentmask);
-trace_t *SV_Trace_Old (trace_t *trace, vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end,
-					   edict_t *passedict, int contentmask);
+trace_t SV_Trace_Native (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end,
+    edict_t *passedict, int contentmask);
+trace_t *SV_Trace (trace_t *trace, vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end,
+	edict_t *passedict, int contentmask);
 // mins and maxs are relative
 
 // if the entire move stays in a solid volume, trace.allsolid will be set,

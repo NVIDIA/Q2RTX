@@ -2275,7 +2275,6 @@ static void CL_RestartRefresh_f( void ) {
 
     // switch back to original state
     cls.state = cls_state;
-
 }
 
 /*

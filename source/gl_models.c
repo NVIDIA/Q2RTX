@@ -987,8 +987,7 @@ void GL_InitModels( void ) {
     }
 
 	gl_override_models = cvar.Get( "r_override_models", "0",
-        CVAR_ARCHIVE|CVAR_LATCHED );
-
+        CVAR_ARCHIVE|CVAR_FILES );
 
 	cmd.AddCommand( "modellist", Model_List_f );
 }

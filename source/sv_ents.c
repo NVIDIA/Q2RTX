@@ -35,10 +35,11 @@ SV_EmitPacketEntities
 Writes a delta update of an entity_state_t list to the message.
 =============
 */
-static void SV_EmitPacketEntities( client_frame_t  *from,
-                                   client_frame_t  *to,
-                                   int             clientEntityNum,
-                                   entity_state_t  **baselines )
+static void SV_EmitPacketEntities( client_frame_t   *from,
+                                   client_frame_t   *to,
+                                   int              clientEntityNum,
+                                   entity_state_t   **baselines,
+                                   msgEsFlags_t     baseflags )
 {
 	entity_state_t	*oldent, *newent;
     const entity_state_t  *base;
@@ -79,7 +80,7 @@ static void SV_EmitPacketEntities( client_frame_t  *from,
 			// in any bytes being emited if the entity has not changed at all
 			// note that players are always 'newentities', this updates their
             // oldorigin always and prevents warping
-			flags = 0;
+			flags = baseflags;
             //if( newent->number <= maxplayers ) {
                 // flags |= MSG_ES_NEWENTITY; // FIXME: why? waste of bandwidth
             //}
@@ -96,7 +97,7 @@ static void SV_EmitPacketEntities( client_frame_t  *from,
 
 		if( newnum < oldnum ) {	
 			// this is a new entity, send it from the baseline
-			flags = MSG_ES_FORCE|MSG_ES_NEWENTITY;
+			flags = baseflags|MSG_ES_FORCE|MSG_ES_NEWENTITY;
 			base = baselines[newnum >> SV_BASELINES_SHIFT];
 			if( base ) {
 				base += ( newnum & SV_BASELINES_MASK );
@@ -179,7 +180,7 @@ void SV_WriteFrameToClient_Default( client_t *client ) {
 	
 	// delta encode the entities
 	MSG_WriteByte( svc_packetentities );
-	SV_EmitPacketEntities( oldframe, frame, 0, client->baselines );
+	SV_EmitPacketEntities( oldframe, frame, 0, client->baselines, 0 );
 }
 
 /*
@@ -195,6 +196,7 @@ void SV_WriteFrameToClient_Enhanced( client_t *client ) {
 	byte *b1, *b2;
 	msgPsFlags_t	psFlags;
 	int clientEntityNum;
+    int baseflags;
 
 	// this is the frame we are creating
 	frame = &client->frames[sv.framenum & UPDATE_MASK];
@@ -275,7 +277,7 @@ void SV_WriteFrameToClient_Enhanced( client_t *client ) {
 
 	if( client->protocol == PROTOCOL_VERSION_Q2PRO ) {
         // delta encode the clientNum
-        if( client->version < PROTOCOL_VERSION_Q2PRO_CLIENTFIX ) {
+        if( client->version < PROTOCOL_VERSION_Q2PRO_CLIENTNUM_FIX ) {
             if( !oldframe || frame->clientNum != oldframe->clientNum ) {
                 extraflags |= EPS_CLIENTNUM;
                 MSG_WriteByte( frame->clientNum );
@@ -299,8 +301,14 @@ void SV_WriteFrameToClient_Enhanced( client_t *client ) {
 	client->surpressCount = 0;
     client->frameflags = 0;
 
+    baseflags = 0;
+    if( LONG_SOLID_SUPPORTED( client->protocol, client->version ) ) {
+        baseflags |= MSG_ES_LONGSOLID;
+    }
+
 	// delta encode the entities
-    SV_EmitPacketEntities( oldframe, frame, clientEntityNum, client->baselines );
+    SV_EmitPacketEntities( oldframe, frame, clientEntityNum,
+        client->baselines, baseflags );
 }
 
 /*
@@ -382,7 +390,7 @@ void SV_BuildClientFrame( client_t *client ) {
 	frame->ps = *ps;
 
     // grab the current clientNum
-    if( g_features->integer & GMF_CLIENTNUM ) {
+    if( svs.gameFeatures & GMF_CLIENTNUM ) {
     	frame->clientNum = clent->client->clientNum;
     } else {
 	    frame->clientNum = client->number;
@@ -399,7 +407,7 @@ void SV_BuildClientFrame( client_t *client ) {
 		ent = EDICT_POOL( client, e );
 
         // ignore entities not in use
-        if( ( g_features->integer & GMF_PROPERINUSE ) && !ent->inuse ) {
+        if( ( svs.gameFeatures & GMF_PROPERINUSE ) && !ent->inuse ) {
             continue;
         }
 
@@ -472,15 +480,18 @@ void SV_BuildClientFrame( client_t *client ) {
         // XXX: hide this enitity from renderer
 		if( ( client->protocol != PROTOCOL_VERSION_Q2PRO ||
               client->settings[CLS_RECORDING] ) &&
-            ( g_features->integer & GMF_CLIENTNUM ) &&
+            ( svs.gameFeatures & GMF_CLIENTNUM ) &&
 			e == frame->clientNum + 1 && ent != clent )
 		{
 			state->modelindex = 0;
 		}
 
 		// don't mark players missiles as solid
-		if( ent->owner == client->edict )
+		if( ent->owner == client->edict ) {
 			state->solid = 0;
+        } else if( LONG_SOLID_SUPPORTED( client->protocol, client->version ) ) {
+            state->solid = sv.entities[e].solid32;
+        }
 
         svs.nextEntityStates++;
 

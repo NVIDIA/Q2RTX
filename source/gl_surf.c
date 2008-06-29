@@ -358,9 +358,9 @@ void GL_BeginPostProcessing( void ) {
     lm.numMaps = 0;
     LM_InitBlock();
 
-	gl_coloredlightmaps = cvar.Get( "gl_coloredlightmaps", "1", CVAR_ARCHIVE|CVAR_LATCHED );
-	gl_brightness = cvar.Get( "gl_brightness", "0", CVAR_ARCHIVE|CVAR_LATCHED );
-	gl_modulate_hack = cvar.Get( "gl_modulate_hack", "0", CVAR_LATCHED );
+	gl_coloredlightmaps = cvar.Get( "gl_coloredlightmaps", "1", CVAR_ARCHIVE|CVAR_FILES );
+	gl_brightness = cvar.Get( "gl_brightness", "0", CVAR_ARCHIVE|CVAR_FILES );
+	gl_modulate_hack = cvar.Get( "gl_modulate_hack", "0", CVAR_FILES );
 
 	if( gl_coloredlightmaps->value < 0 ) {
 		cvar.Set( "gl_coloredlightmaps", "0" );

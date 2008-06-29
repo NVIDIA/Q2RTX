@@ -689,7 +689,7 @@ static void GL_Register( void ) {
 #endif
 	gl_celshading = cvar.Get( "gl_celshading", "0", 0 );
 	gl_modulate = cvar.Get( "gl_modulate", "1", CVAR_ARCHIVE );
-    gl_hwgamma = cvar.Get( "vid_hwgamma", "0", CVAR_ARCHIVE|CVAR_LATCHED );
+    gl_hwgamma = cvar.Get( "vid_hwgamma", "0", CVAR_ARCHIVE|CVAR_REFRESH );
 
     /* development variables */
 	gl_znear = cvar.Get( "gl_znear", "2", CVAR_CHEAT );
@@ -713,8 +713,8 @@ static void GL_Register( void ) {
     gl_polyblend = cvar.Get( "gl_polyblend", "1", 0 );
     gl_fullbright = cvar.Get( "r_fullbright", "0", CVAR_CHEAT );
     gl_showerrors = cvar.Get( "gl_showerrors", "1", 0 );
-    gl_fragment_program = cvar.Get( "gl_fragment_program", "0", CVAR_LATCHED );
-    gl_vertex_buffer_object = cvar.Get( "gl_vertex_buffer_object", "0", CVAR_LATCHED );
+    gl_fragment_program = cvar.Get( "gl_fragment_program", "0", CVAR_REFRESH );
+    gl_vertex_buffer_object = cvar.Get( "gl_vertex_buffer_object", "0", CVAR_REFRESH );
     
 	cmd.AddCommand( "screenshot", GL_ScreenShot_f );
 #if USE_JPEG

@@ -129,12 +129,15 @@ CVAR
 #define CVAR_CHEAT			( 1 << 5 )
 #define CVAR_PRIVATE		( 1 << 6 )
 #define CVAR_ROM			( 1 << 7 )
-#define CVAR_LATCHED		( 1 << 8 )
 #define CVAR_CUSTOM	        ( 1 << 9 )
 #define CVAR_VOLATILE      	( 1 << 10 )
 #define CVAR_GAME      	    ( 1 << 11 )
+#define CVAR_FILES      	( 1 << 13 )
+#define CVAR_REFRESH      	( 1 << 14 )
+#define CVAR_SOUND      	( 1 << 15 )
 
 #define CVAR_INFOMASK		(CVAR_USERINFO|CVAR_SERVERINFO)
+#define CVAR_MODIFYMASK		(CVAR_INFOMASK|CVAR_FILES|CVAR_REFRESH|CVAR_SOUND)
 #define CVAR_EXTENDED_MASK	(~31)
 
 typedef struct cvarAPI_s {
@@ -246,8 +249,6 @@ typedef struct {
 
 typedef struct sysAPI_s {
 	unsigned    (*Milliseconds)( void );
-	char	*(*GetClipboardData)( void );
-	void	(*SetClipboardData)( const char *data );
 	void	(*HunkBegin)( mempool_t *pool, size_t maxsize );
 	void	*(*HunkAlloc)( mempool_t *pool, size_t size );
 	void	(*HunkEnd)( mempool_t *pool );
@@ -265,7 +266,7 @@ MODULES
 */
 
 // if api_version is different, the dll cannot be used
-#define MODULES_APIVERSION	317
+#define MODULES_APIVERSION	318
 
 typedef enum moduleQuery_e {
 	MQ_GETINFO,

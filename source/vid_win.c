@@ -746,7 +746,7 @@ void Win_Init( void ) {
 
     // register variables
     vid_flip_on_switch = Cvar_Get( "vid_flip_on_switch", "0", 0 );
-    vid_hwgamma = Cvar_Get( "vid_hwgamma", "0", CVAR_ARCHIVE|CVAR_LATCHED );
+    vid_hwgamma = Cvar_Get( "vid_hwgamma", "0", CVAR_ARCHIVE|CVAR_REFRESH );
     win_noalttab = Cvar_Get( "win_noalttab", "0", CVAR_ARCHIVE );
     win_noalttab->changed = win_noalttab_changed;
     win_disablewinkey = Cvar_Get( "win_disablewinkey", "0", CVAR_ARCHIVE );
@@ -1000,6 +1000,65 @@ static void Win_GrabMouse( grab_t grab ) {
 
     win.mouse.state = 0;
     win.mouse.grabbed = grab;
+}
+
+/*
+================
+VID_GetClipboardData
+================
+*/
+char *VID_GetClipboardData( void ) {
+	HANDLE clipdata;
+	char *data = NULL;
+	char *cliptext;
+
+	if( OpenClipboard( NULL ) == FALSE ) {
+		Com_DPrintf( "Couldn't open clipboard.\n" );
+		return data;
+	}
+
+	if( ( clipdata = GetClipboardData( CF_TEXT ) ) != NULL ) {
+		if( ( cliptext = GlobalLock( clipdata ) ) != NULL ) {
+			data = Z_CopyString( cliptext );
+			GlobalUnlock( clipdata );
+		}
+	}
+	CloseClipboard();
+	
+	return data;
+}
+
+/*
+================
+VID_SetClipboardData
+================
+*/
+void VID_SetClipboardData( const char *data ) {
+	HANDLE clipdata;
+	char *cliptext;
+	size_t length;
+
+	if( !data[0] ) {
+		return;
+	}
+
+	if( OpenClipboard( NULL ) == FALSE ) {
+		Com_DPrintf( "Couldn't open clipboard.\n" );
+		return;
+	}
+
+	EmptyClipboard();
+
+	length = strlen( data ) + 1;
+	if( ( clipdata = GlobalAlloc( GMEM_MOVEABLE | GMEM_DDESHARE, length ) ) != NULL ) {
+		if( ( cliptext = GlobalLock( clipdata ) ) != NULL ) {
+			memcpy( cliptext, data, length );
+			GlobalUnlock( clipdata );
+			SetClipboardData( CF_TEXT, clipdata );
+		}
+	}
+	
+	CloseClipboard();
 }
 
 /*

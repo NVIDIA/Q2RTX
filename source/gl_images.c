@@ -1093,22 +1093,22 @@ void GL_InitImages( void ) {
     gl_texturemode->changed = gl_texturemode_changed;
 	gl_anisotropy = cvar.Get( "gl_anisotropy", "1", CVAR_ARCHIVE );
     gl_anisotropy->changed = gl_anisotropy_changed;
-	gl_noscrap = cvar.Get( "gl_noscrap", "0", CVAR_LATCHED );
-    gl_round_down = cvar.Get( "gl_round_down", "0", CVAR_LATCHED );
-    gl_picmip = cvar.Get( "gl_picmip", "0", CVAR_LATCHED );
-    gl_gamma_scale_pics = cvar.Get( "gl_gamma_scale_pics", "0", CVAR_LATCHED );
+	gl_noscrap = cvar.Get( "gl_noscrap", "0", CVAR_FILES );
+    gl_round_down = cvar.Get( "gl_round_down", "0", CVAR_FILES );
+    gl_picmip = cvar.Get( "gl_picmip", "0", CVAR_FILES );
+    gl_gamma_scale_pics = cvar.Get( "gl_gamma_scale_pics", "0", CVAR_FILES );
 	gl_texturealphamode = cvar.Get( "gl_texturealphamode",
-        "default", CVAR_ARCHIVE|CVAR_LATCHED );
+        "default", CVAR_ARCHIVE|CVAR_FILES );
 	gl_texturesolidmode = cvar.Get( "gl_texturesolidmode",
-        "default", CVAR_ARCHIVE|CVAR_LATCHED );
-	gl_saturation = cvar.Get( "gl_saturation", "1", CVAR_ARCHIVE|CVAR_LATCHED );
-	gl_intensity = cvar.Get( "intensity", "1", CVAR_ARCHIVE|CVAR_LATCHED );
-	gl_invert = cvar.Get( "gl_invert", "0", CVAR_ARCHIVE|CVAR_LATCHED );
+        "default", CVAR_ARCHIVE|CVAR_FILES );
+	gl_saturation = cvar.Get( "gl_saturation", "1", CVAR_ARCHIVE|CVAR_FILES );
+	gl_intensity = cvar.Get( "intensity", "1", CVAR_ARCHIVE|CVAR_FILES );
+	gl_invert = cvar.Get( "gl_invert", "0", CVAR_ARCHIVE|CVAR_FILES );
     if( gl_hwgamma->integer ) {
-        gl_gamma = cvar.Get( "vid_gamma", "1", 0 );
+        gl_gamma = cvar.Get( "vid_gamma", "1", CVAR_ARCHIVE );
         gl_gamma->changed = gl_gamma_changed;
     } else {
-        gl_gamma = cvar.Get( "vid_gamma", "1", CVAR_LATCHED );
+        gl_gamma = cvar.Get( "vid_gamma", "1", CVAR_ARCHIVE|CVAR_FILES );
     }
 
 	R_InitImageManager();

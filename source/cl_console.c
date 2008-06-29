@@ -693,6 +693,7 @@ void Con_DrawSolidConsole( void ) {
 	int				vislines;
 	float			alpha;
 	clipRect_t		clip;
+    int             widths[2];
 
 	vislines = con.vidHeight * con.currentHeight;
 	if( vislines <= 0 )
@@ -757,11 +758,13 @@ void Con_DrawSolidConsole( void ) {
 			
 		text = con.text[row & CON_TOTALLINES_MASK];
 
-		ref.DrawString( CHAR_WIDTH, y, 0, con.linewidth, text, con.charsetImage );
+		x = ref.DrawString( CHAR_WIDTH, y, 0, con.linewidth, text, con.charsetImage );
+        if( i < 2 ) {
+            widths[i] = x;
+        }
 
 		y -= CHAR_HEIGHT;
 		row--;
-
 	}
 
 //ZOID
@@ -836,17 +839,21 @@ void Con_DrawSolidConsole( void ) {
 	}
 
     y = vislines - CON_PRESTEP + CHAR_HEIGHT;
+    row = 0;
     if( x > con.vidWidth - 12 * CHAR_WIDTH ) {
         y -= CHAR_HEIGHT;
+        row++;
     }
 
 	ref.SetColor( DRAW_COLOR_RGBA, colorCyan );
 
 // draw clock
 	if( con_clock->integer ) {
-		Com_Time_m( buffer, sizeof( buffer ) );
-		SCR_DrawStringEx( con.vidWidth - CHAR_WIDTH, y - CHAR_HEIGHT,
-            UI_RIGHT, MAX_STRING_CHARS, buffer, con.charsetImage );
+		x = Com_Time_m( buffer, sizeof( buffer ) ) * CHAR_WIDTH;
+        if( widths[row] + x + CHAR_WIDTH <= con.vidWidth ) {
+    		ref.DrawString( con.vidWidth - CHAR_WIDTH - x, y - CHAR_HEIGHT,
+                UI_RIGHT, MAX_STRING_CHARS, buffer, con.charsetImage );
+        }
 	}
 
 // draw version
@@ -1000,7 +1007,7 @@ void Key_Console( int key ) {
 	{
 		char *cbd, *s;
 		
-		if( ( cbd = Sys_GetClipboardData() ) != NULL ) {
+		if( ( cbd = VID_GetClipboardData() ) != NULL ) {
 			s = cbd;
 			while( *s ) {
                 int c = *s++;

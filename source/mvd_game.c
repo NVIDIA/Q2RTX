@@ -1025,7 +1025,7 @@ static void MVD_GameInit( void ) {
     mvd_default_map = Cvar_Get( "mvd_default_map", "q2dm1", CVAR_LATCH );
     mvd_stats_hack = Cvar_Get( "mvd_stats_hack", "0", 0 );
     mvd_freeze_hack = Cvar_Get( "mvd_freeze_hack", "0", 0 );
-    Cvar_Get( "g_features", va( "%d", GMF_CLIENTNUM|GMF_PROPERINUSE ), CVAR_ROM );
+    svs.gameFeatures = GMF_CLIENTNUM|GMF_PROPERINUSE;
 
     Z_TagReserve( ( sizeof( edict_t ) +
         sizeof( udpClient_t ) ) * sv_maxclients->integer +
