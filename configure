@@ -260,6 +260,9 @@ if [ "$mingw" = "yes" ]; then
     homedir=""
     asmflags="-DUNDERSCORES"
     cfgfile="q2config.cfg"
+    if [ -z "$LDFLAGS" ]; then
+        LDFLAGS="-static"
+    fi
 else
     pathsep="/"
     exported="__attribute__((visibility(\"default\")))"
@@ -290,7 +293,7 @@ else
     LDFLAGS="-Wl,--no-undefined $LDFLAGS"
 fi
 
-gamelib="game$cpu.so"
+gamelib="game$cpu$libsuffix"
 
 vpath="\$(SRCDIR)/source"
 if [ "$use_asm" = "yes" ]; then
