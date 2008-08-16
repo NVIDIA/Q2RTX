@@ -23,20 +23,37 @@ distclean: clean
 	rm -f tags
 
 ifdef SINGLEUSER
+
 install:
 	echo "Single user mode configured, can't install" && exit 1
-else
+
+install:
+	echo "Single user mode configured, can't uninstall" && exit 1
+
+else # SINGLEUSER
+
 install:
 	for t in $(EXECUTABLES) ; do \
 		install -m 755 -D $$t $(DESTDIR)$(BINDIR)/$$t ; \
 	done
 	for t in $(LIBRARIES) ; do \
-		install -m 755 -D $$t $(DESTDIR)$(REFDIR)/$$t ; \
+		install -m 755 -D $$t $(DESTDIR)$(LIBDIR)/$$t ; \
 	done
 	install -m 644 -D $(SRCDIR)/q2pro.6 $(DESTDIR)$(MANDIR)/q2pro.6
 	install -m 644 -D $(SRCDIR)/wiki/doc/q2pro.menu \
 		$(DESTDIR)$(DATADIR)/baseq2/q2pro.menu
-endif # SINGLEUSER
+
+uninstall:
+	for t in $(EXECUTABLES) ; do \
+		rm -f $(DESTDIR)$(BINDIR)/$$t ; \
+	done
+	for t in $(LIBRARIES) ; do \
+		rm -f $(DESTDIR)$(LIBDIR)/$$t ; \
+	done
+	rm -f $(DESTDIR)$(MANDIR)/q2pro.6
+	rm -f $(DESTDIR)$(DATADIR)/baseq2/q2pro.menu
+
+endif # !SINGLEUSER
 
 strip:
 	for t in $(BINARIES) ; do \
