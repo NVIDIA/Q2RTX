@@ -23,6 +23,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 
 #include "com_local.h"
+#include "files.h"
+#include "protocol.h"
+#include "q_msg.h"
+#include "q_fifo.h"
+#include "net_sock.h"
+#include "net_stream.h"
+#include "sys_public.h"
 
 #if defined( _WIN32 )
 #define WIN32_LEAN_AND_MEAN

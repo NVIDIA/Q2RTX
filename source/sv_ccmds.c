@@ -41,7 +41,7 @@ static void SV_SetMaster_f( void ) {
 	int		i, j, slot;
     char    *s;
 
-#ifndef DEDICATED_ONLY
+#if USE_CLIENT
 	// only dedicated servers send heartbeats
 	if( !dedicated->integer ) {
 		Com_Printf( "Only dedicated servers use masters.\n" );
@@ -233,7 +233,7 @@ static void SV_Map_c( genctx_t *ctx, int argnum ) {
 }
 
 static void SV_DumpEnts_f( void ) {
-    cmcache_t *c = sv.cm.cache;
+    bsp_t *c = sv.cm.cache;
     fileHandle_t f;
     char *s, buffer[MAX_QPATH];
 
@@ -257,7 +257,7 @@ static void SV_DumpEnts_f( void ) {
 
     FS_FOpenFile( buffer, &f, FS_MODE_WRITE );
     if( f ) {
-        FS_Write( c->entitystring, c->numEntityChars, f );
+        FS_Write( c->entitystring, c->numentitychars, f );
         FS_FCloseFile( f );
         Com_Printf( "Dumped entity string to %s\n", buffer );
     } else {

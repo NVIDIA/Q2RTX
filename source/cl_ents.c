@@ -294,7 +294,7 @@ static void CL_AddPacketEntities( void ) {
                     char buffer[MAX_QPATH];
 
                     Q_concat( buffer, sizeof( buffer ), "players/", ci->model_name, "/disguise.pcx", NULL );
-					ent.skin = ref.RegisterSkin( buffer );
+					ent.skin = R_RegisterSkin( buffer );
 				}
 //PGM
 //============
@@ -651,43 +651,6 @@ skip:
 	}
 }
 
-
-#if 0
-static cvar_t *test_model;
-static cvar_t *test_pitch;
-static cvar_t *test_yaw;
-
-static void CL_AddTestModel( void ) {
-	entity_t	test;
-
-    if( !test_model ) {
-        test_model = Cvar_Get( "test_model", "", 0 );
-        test_pitch = Cvar_Get( "test_pitch", "0", 0 );
-        test_yaw = Cvar_Get( "test_yaw", "0", 0 );
-    }
-    if( !test_model->string[0] ) {
-        return;
-    }
-
-	memset( &test, 0, sizeof( test ) );
-    test.model = ref.RegisterModel( test_model->string );
-    if( !test.model ) {
-        return;
-    }
-    test.frame = 1;
-
-    VectorMA( cl.refdef.vieworg, 160, cl.v_forward, test.origin );
-//    VectorCopy( cl.refdef.viewangles, test.angles );
-    test.angles[YAW]+=test_yaw->value;
-    test.angles[PITCH]+=test_pitch->value;
-	test.flags = RF_MINLIGHT | RF_DEPTHHACK;
-
-	VectorCopy( test.origin, test.oldorigin );	// don't lerp at all
-	V_AddEntity( &test );
-}
-#endif
-
-
 /*
 ==============
 CL_AddViewWeapon
@@ -784,7 +747,7 @@ static void CL_SetupThirdPersionView( void ) {
 	VectorMA( cl.refdef.vieworg, -range * rscale, cl.v_right, cl.refdef.vieworg );
 
 	CM_BoxTrace( &trace, cl.playerEntityOrigin, cl.refdef.vieworg,
-            mins, maxs, cl.cm.cache->nodes, MASK_SOLID );
+            mins, maxs, cl.bsp->nodes, MASK_SOLID );
 	if( trace.fraction != 1.0f ) {
 		VectorCopy( trace.endpos, cl.refdef.vieworg );
 	}
@@ -962,7 +925,6 @@ static void CL_CalcViewValues( void ) {
 
 		// add the weapon
 		CL_AddViewWeapon( ps, ops );
-        //CL_AddTestModel();
 
 	    cl.thirdPersonView = qfalse;
 	}
@@ -997,7 +959,7 @@ Called to get the sound spatialization origin
 */
 void CL_GetEntitySoundOrigin( int entnum, vec3_t org ) {
 	centity_t	*ent;
-	cmodel_t	*cm;
+	mmodel_t	*cm;
 	vec3_t      mid;
 
 	if( entnum < 0 || entnum >= MAX_EDICTS ) {

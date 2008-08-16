@@ -41,7 +41,7 @@ static espan_t	*s_polygon_spans;
 
 polydesc_t	r_polydesc;
 
-msurface_t *r_alpha_surfaces;
+mface_t *r_alpha_surfaces;
 
 extern int *r_turb_turb;
 
@@ -51,109 +51,6 @@ vec5_t	r_clip_verts[2][MAXWORKINGVERTS+2];
 static int		s_minindex, s_maxindex;
 
 static void R_DrawPoly( int iswater );
-
-#ifdef TRUECOLOR_RENDERER
-
-void R_DrawSpanletOpaque( void ) {
-	byte *btemp;
-	unsigned ts, tt;
-
-	do {
-		ts = s_spanletvars.s >> 16;
-		tt = s_spanletvars.t >> 16;
-
-		btemp = s_spanletvars.pbase + ( ts << VID_SHIFT ) + tt * cachewidth;
-
-		if( *s_spanletvars.pz <= ( s_spanletvars.izi >> 16 ) ) {
-			byte *alphaTable, *oneMinusAlphaTable;
-
-			alphaTable = r_alphaTable[btemp[3]];
-			oneMinusAlphaTable = r_alphaTable[255 - btemp[3]];
-
-			*s_spanletvars.pz    = s_spanletvars.izi >> 16;
-			s_spanletvars.pdest[0] = oneMinusAlphaTable[s_spanletvars.pdest[0]] + alphaTable[btemp[2]];
-			s_spanletvars.pdest[1] = oneMinusAlphaTable[s_spanletvars.pdest[1]] + alphaTable[btemp[1]];
-			s_spanletvars.pdest[2] = oneMinusAlphaTable[s_spanletvars.pdest[2]] + alphaTable[btemp[0]];
-		}
-
-		s_spanletvars.izi += s_spanletvars.izistep;
-		s_spanletvars.pdest += VID_BYTES;
-		s_spanletvars.pz++;
-		s_spanletvars.s += s_spanletvars.sstep;
-		s_spanletvars.t += s_spanletvars.tstep;
-	} while( --s_spanletvars.spancount > 0 );
-}
-
-
-
-void R_DrawSpanletBlended( void ) {
-	byte *btemp;
-	unsigned ts, tt;
-
-	do {
-		ts = s_spanletvars.s >> 16;
-		tt = s_spanletvars.t >> 16;
-
-		btemp = s_spanletvars.pbase + ( ts << VID_SHIFT ) + tt * cachewidth;
-
-		if( *s_spanletvars.pz <= ( s_spanletvars.izi >> 16 ) ) {
-			s_spanletvars.pdest[0] = s_spanletvars.oneMinusAlphaTable[s_spanletvars.pdest[0]] + s_spanletvars.alphaTable[btemp[2]];
-			s_spanletvars.pdest[1] = s_spanletvars.oneMinusAlphaTable[s_spanletvars.pdest[1]] + s_spanletvars.alphaTable[btemp[1]];
-			s_spanletvars.pdest[2] = s_spanletvars.oneMinusAlphaTable[s_spanletvars.pdest[2]] + s_spanletvars.alphaTable[btemp[0]];
-		}
-
-		s_spanletvars.izi += s_spanletvars.izistep;
-		s_spanletvars.pdest += VID_BYTES;
-		s_spanletvars.pz++;
-		s_spanletvars.s += s_spanletvars.sstep;
-		s_spanletvars.t += s_spanletvars.tstep;
-	} while( --s_spanletvars.spancount > 0 );
-
-}
-
-
-
-void R_DrawSpanletConstant( void ) {
-	do {
-		if( *s_spanletvars.pz <= ( s_spanletvars.izi >> 16 ) ) {
-			s_spanletvars.pdest[0] = s_spanletvars.oneMinusAlphaTable[s_spanletvars.pdest[0]] + r_polyblendcolor[2];
-			s_spanletvars.pdest[1] = s_spanletvars.oneMinusAlphaTable[s_spanletvars.pdest[1]] + r_polyblendcolor[1];
-			s_spanletvars.pdest[2] = s_spanletvars.oneMinusAlphaTable[s_spanletvars.pdest[2]] + r_polyblendcolor[0];
-		}
-
-		s_spanletvars.izi += s_spanletvars.izistep;
-		s_spanletvars.pdest += VID_BYTES;
-		s_spanletvars.pz++;
-	} while( --s_spanletvars.spancount > 0 );
-}
-
-
-
-void R_DrawSpanletTurbulentBlended( void ) {
-	byte *btemp;
-	int	     sturb, tturb;
-
-	do {
-		sturb = ((s_spanletvars.s + r_turb_turb[(s_spanletvars.t>>16)&(CYCLE-1)])>>16)&63;
-		tturb = ((s_spanletvars.t + r_turb_turb[(s_spanletvars.s>>16)&(CYCLE-1)])>>16)&63;
-
-		btemp = s_spanletvars.pbase + ( sturb << VID_SHIFT ) + ( tturb << ( 6 + VID_SHIFT ) );
-
-		if( *s_spanletvars.pz <= ( s_spanletvars.izi >> 16 ) ) {
-			s_spanletvars.pdest[0] = s_spanletvars.oneMinusAlphaTable[s_spanletvars.pdest[0]] + s_spanletvars.alphaTable[btemp[2]];
-			s_spanletvars.pdest[1] = s_spanletvars.oneMinusAlphaTable[s_spanletvars.pdest[1]] + s_spanletvars.alphaTable[btemp[1]];
-			s_spanletvars.pdest[2] = s_spanletvars.oneMinusAlphaTable[s_spanletvars.pdest[2]] + s_spanletvars.alphaTable[btemp[0]];
-		}
-
-		s_spanletvars.izi += s_spanletvars.izistep;
-		s_spanletvars.pdest += VID_BYTES;
-		s_spanletvars.pz++;
-		s_spanletvars.s += s_spanletvars.sstep;
-		s_spanletvars.t += s_spanletvars.tstep;
-	} while( --s_spanletvars.spancount > 0 );
-}
-
-#else /* TRUECOLOR_RENDERER */
 
 /*
 ** R_DrawSpanletOpaque
@@ -603,8 +500,6 @@ void R_DrawSpanlet66Stipple( void )
 		}
 	}
 }
-
-#endif /* !TRUECOLOR_RENDERER */
 
 /*
 ** R_ClipPolyFace
@@ -1111,10 +1006,11 @@ void R_ClipAndDrawPoly ( float alpha, int isturbulent, qboolean textured )
 /*
 ** R_BuildPolygonFromSurface
 */
-void R_BuildPolygonFromSurface(msurface_t *fa)
+void R_BuildPolygonFromSurface(mface_t *fa)
 {
-	int			i, lindex, lnumverts;
-	medge_t		*pedges, *r_pedge;
+	int			i, lnumverts;
+	medge_t		*pedges;
+    msurfedge_t *surfedge;
 	int			vertpage;
 	float		*vec;
 	vec5_t     *pverts;
@@ -1123,42 +1019,31 @@ void R_BuildPolygonFromSurface(msurface_t *fa)
 	r_polydesc.nump = 0;
 
 	// reconstruct the polygon
-	pedges = currentmodel->edges;
-	lnumverts = fa->numedges;
+	pedges = r_worldmodel->edges;
+	lnumverts = fa->numsurfedges;
 	vertpage = 0;
 
 	pverts = r_clip_verts[0];
 
-	for (i=0 ; i<lnumverts ; i++)
+    surfedge = fa->firstsurfedge;
+	for (i=0 ; i<lnumverts ; i++, surfedge++)
 	{
-		lindex = currentmodel->surfedges[fa->firstedge + i];
-
-		if (lindex > 0)
-		{
-			r_pedge = &pedges[lindex];
-			vec = currentmodel->vertexes[r_pedge->v[0]].position;
-		}
-		else
-		{
-			r_pedge = &pedges[-lindex];
-			vec = currentmodel->vertexes[r_pedge->v[1]].position;
-		}
-
+		vec = surfedge->edge->v[surfedge->vert]->point;
 		VectorCopy (vec, pverts[i] );
 	}
 
-	VectorCopy( fa->texinfo->vecs[0], r_polydesc.vright );
-	VectorCopy( fa->texinfo->vecs[1], r_polydesc.vup );
+	VectorCopy( fa->texinfo->axis[0], r_polydesc.vright );
+	VectorCopy( fa->texinfo->axis[1], r_polydesc.vup );
 	VectorCopy( fa->plane->normal, r_polydesc.vpn );
 	VectorCopy( r_origin, r_polydesc.viewer_position );
 
-	if ( fa->flags & SURF_PLANEBACK )
+	if ( fa->drawflags & DSURF_PLANEBACK )
 	{
-		VectorSubtract( vec3_origin, r_polydesc.vpn, r_polydesc.vpn );
+		VectorInverse( r_polydesc.vpn );
 	}
 
 // PGM 09/16/98
-	if ( fa->texinfo->flags & (SURF_WARP|SURF_FLOWING) )
+	if ( fa->texinfo->c.flags & (SURF_WARP|SURF_FLOWING) )
 	{
 		r_polydesc.pixels       = fa->texinfo->image->pixels[0];
 		r_polydesc.pixel_width  = fa->texinfo->image->width;
@@ -1181,11 +1066,11 @@ void R_BuildPolygonFromSurface(msurface_t *fa)
 
 	r_polydesc.dist = DotProduct( r_polydesc.vpn, pverts[0] );
 
-	r_polydesc.s_offset = fa->texinfo->vecs[0][3] - tmins[0];
-	r_polydesc.t_offset = fa->texinfo->vecs[1][3] - tmins[1];
+	r_polydesc.s_offset = fa->texinfo->offset[0] - tmins[0];
+	r_polydesc.t_offset = fa->texinfo->offset[1] - tmins[1];
 
 	// scrolling texture addition
-	if (fa->texinfo->flags & SURF_FLOWING)
+	if (fa->texinfo->c.flags & SURF_FLOWING)
 	{
 		r_polydesc.s_offset += -128 * ( (r_newrefdef.time*0.25) - (int)(r_newrefdef.time*0.25) );
 	}
@@ -1295,9 +1180,9 @@ static void R_DrawPoly( int iswater )
 */
 void R_DrawAlphaSurfaces( void )
 {
-	msurface_t *s = r_alpha_surfaces;
+	mface_t *s = r_alpha_surfaces;
 
-	currentmodel = r_worldmodel;
+	//currentmodel = r_worldmodel;
 
 	modelorg[0] = -r_origin[0];
 	modelorg[1] = -r_origin[1];
@@ -1315,14 +1200,14 @@ void R_DrawAlphaSurfaces( void )
 //			R_ClipAndDrawPoly( 0.30f, ( s->texinfo->flags & SURF_WARP) != 0, qtrue );
 
 		// PGM - pass down all the texinfo flags, not just SURF_WARP.
-		if (s->texinfo->flags & SURF_TRANS66)
-			R_ClipAndDrawPoly( 0.60f, (s->texinfo->flags & (SURF_WARP|SURF_FLOWING)), qtrue );
+		if (s->texinfo->c.flags & SURF_TRANS66)
+			R_ClipAndDrawPoly( 0.60f, (s->texinfo->c.flags & (SURF_WARP|SURF_FLOWING)), qtrue );
 		else
-			R_ClipAndDrawPoly( 0.30f, (s->texinfo->flags & (SURF_WARP|SURF_FLOWING)), qtrue );
+			R_ClipAndDrawPoly( 0.30f, (s->texinfo->c.flags & (SURF_WARP|SURF_FLOWING)), qtrue );
 //PGM
 //=======
 
-		s = s->nextalphasurface;
+		s = s->next;
 	}
 	
 	r_alpha_surfaces = NULL;

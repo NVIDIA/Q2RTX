@@ -28,9 +28,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "in_public.h"
 #include "vid_local.h"
 
-// Structure containing functions exported from refresh DLL
-refAPI_t	ref;
-
 // Console variables that we need to access from this module
 cvar_t		*vid_ref;			// Name of Refresh DLL loaded
 cvar_t      *vid_geometry;
@@ -41,17 +38,8 @@ cvar_t      *_vid_fullscreen;
 #define MODE_GEOMETRY   1
 #define MODE_FULLSCREEN 2
 #define MODE_MODELIST   4
-#define MODE_REFRESH    8
 
 static int  mode_changed;
-
-
-#ifdef REF_HARD_LINKED
-qboolean Ref_APISetupCallback( api_type_t type, void *api );
-#else
-// Global variables used internally by this module
-static void		*reflib_library;		// Handle to refresh DLL 
-#endif
 
 /*
 ==========================================================================
@@ -188,141 +176,11 @@ LOADING / SHUTDOWN
 */
 
 /*
-==============
-CL_FreeRefresh
-==============
-*/
-static void CL_FreeRefresh( void ) {
-#ifndef REF_HARD_LINKED
-	Sys_FreeLibrary( reflib_library );
-	reflib_library = NULL;
-#endif
-	memset( &ref, 0, sizeof( ref ) );
-	cls.ref_initialized = qfalse;
-}
-
-#ifndef REF_HARD_LINKED
-
-/*
-==============
-CL_RefSetupCallback
-==============
-*/
-static qboolean CL_RefSetupCallback( api_type_t type, void *api ) {
-	switch( type ) {
-	case API_CMD:
-		Cmd_FillAPI( ( cmdAPI_t * )api );
-		break;
-	case API_CVAR:
-		Cvar_FillAPI( ( cvarAPI_t * )api );
-		break;
-	case API_FS:
-		FS_FillAPI( ( fsAPI_t * )api );
-		break;
-	case API_COMMON:
-		Com_FillAPI( ( commonAPI_t * )api );
-		break;
-	case API_SYSTEM:
-		Sys_FillAPI( ( sysAPI_t * )api );
-		break;
-	case API_VIDEO_SOFTWARE:
-		VID_FillSWAPI( ( videoAPI_t * )api );
-		break;
-	case API_VIDEO_OPENGL:
-		VID_FillGLAPI( ( videoAPI_t * )api );
-		break;
-	default:
-		Com_Error( ERR_FATAL, "CL_RefSetupCallback: bad api type" );
-	}
-
-	return qtrue;
-}
-
-#endif
-
-/*
-==============
-CL_LoadRefresh
-==============
-*/
-static qboolean CL_LoadRefresh( const char *name ) {
-#ifndef REF_HARD_LINKED
-	char path[MAX_OSPATH];
-	moduleEntry_t entry;
-	moduleInfo_t info;
-	moduleCapability_t caps;
-	APISetupCallback_t callback;
-#endif
-	
-	if( cls.ref_initialized ) {
-		ref.Shutdown( qtrue );
-		CL_FreeRefresh();
-	}
-
-	Com_Printf( "------- Loading %s -------\n", name );
-
-#ifdef REF_HARD_LINKED
-#ifdef SOFTWARE_RENDERER
-	VID_FillSWAPI( &video );
-#else
-	VID_FillGLAPI( &video );
-#endif
-
-	Ref_APISetupCallback( API_REFRESH, &ref );
-#else
-
-    Q_concat( path, sizeof( path ), sys_refdir->string, PATH_SEP_STRING,
-        name, LIBSUFFIX, NULL );
-    entry = Sys_LoadLibrary( path, "moduleEntry", &reflib_library );
-	if( !entry ) {
-		Com_WPrintf( "Couldn't load %s\n", name );
-		return qfalse;
-	}
-
-	entry( MQ_GETINFO, &info );
-	if( info.api_version != MODULES_APIVERSION ) {
-		Com_WPrintf( "%s has incompatible api_version: %i, should be %i\n",
-			name, info.api_version, MODULES_APIVERSION );
-		goto fail;
-	}
-
-	caps = ( moduleCapability_t )entry( MQ_GETCAPS, NULL );
-	if( !( caps & MCP_REFRESH ) ) {
-		Com_WPrintf( "%s doesn't have REFRESH capability\n", name );
-		goto fail;
-	}
-
-	callback = ( APISetupCallback_t )entry( MQ_SETUPAPI, ( void * )CL_RefSetupCallback );
-	if( !callback ) {
-		Com_WPrintf( "%s returned NULL callback\n", name );
-		goto fail;
-	}
-
-	callback( API_REFRESH, &ref );
-#endif
-
-	cls.ref_initialized = qtrue;
-	if( !ref.Init( qtrue ) ) {
-		goto fail;
-	}
-    
-    Sys_FixFPCW();
-
-	Com_Printf( "------------------------------------\n" );
-	
-	return qtrue;
-
-fail:
-	CL_FreeRefresh();
-	return qfalse;
-}
-
-/*
 ============
-CL_PumpEvents
+CL_RunResfresh
 ============
 */
-void CL_PumpEvents( void ) {
+void CL_RunRefresh( void ) {
 	if( !cls.ref_initialized ) {
         return;
     }
@@ -330,24 +188,19 @@ void CL_PumpEvents( void ) {
 	VID_PumpEvents();
 
     if( mode_changed ) {
-#ifndef REF_HARD_LINKED
-        if( mode_changed & MODE_REFRESH ) {
-            Cbuf_AddText( "vid_restart\n" );
-        } else
-#endif
         if( mode_changed & MODE_FULLSCREEN ) {
 			if( vid_fullscreen->integer ) {
                 Cvar_Set( "_vid_fullscreen", vid_fullscreen->string );
 			}
-            VID_ModeChanged();
+            VID_SetMode();
         } else {
             if( vid_fullscreen->integer ) {
                 if( mode_changed & MODE_MODELIST ) {
-                    VID_ModeChanged();
+                    VID_SetMode();
                 }
             } else {
                 if( mode_changed & MODE_GEOMETRY ) {
-                    VID_ModeChanged();
+                    VID_SetMode();
                 }
             }
         }
@@ -367,12 +220,6 @@ static void vid_modelist_changed( cvar_t *self ) {
     mode_changed |= MODE_MODELIST;
 }
 
-#ifndef REF_HARD_LINKED
-static void vid_ref_changed( cvar_t *self ) {
-    mode_changed |= MODE_REFRESH;
-}
-#endif
-
 /*
 ============
 CL_InitRefresh
@@ -384,6 +231,7 @@ void CL_InitRefresh( void ) {
 	}
 
 	// Create the video variables so we know how to start the graphics drivers
+	vid_ref = Cvar_Get( "vid_ref", VID_REF, CVAR_ROM );
     vid_geometry = Cvar_Get( "vid_geometry", "640x480", CVAR_ARCHIVE );
     vid_fullscreen = Cvar_Get( "vid_fullscreen", "0", CVAR_ARCHIVE );
     _vid_fullscreen = Cvar_Get( "_vid_fullscreen", "1", CVAR_ARCHIVE );
@@ -395,33 +243,12 @@ void CL_InitRefresh( void ) {
         Cvar_Set( "_vid_fullscreen", "1" );
     }
 
-#if REF_HARD_LINKED
-	vid_ref = Cvar_Get( "vid_ref", DEFAULT_REFRESH_DRIVER, CVAR_ROM );
-	if( !CL_LoadRefresh( "ref_" DEFAULT_REFRESH_DRIVER ) ) {
-		Com_Error( ERR_FATAL, "Couldn't load built-in video driver!" );
-	}
-#else
-	vid_ref = Cvar_Get( "vid_ref", DEFAULT_REFRESH_DRIVER, CVAR_ARCHIVE );
-		
-	// Start the graphics mode and load refresh DLL
-	while( 1 ) {
-		char buffer[MAX_QPATH];
-
-		Q_concat( buffer, sizeof( buffer ), "ref_", vid_ref->string, NULL );
-		if( CL_LoadRefresh( buffer ) ) {
-			break;
-		}
-
-		if( !strcmp( vid_ref->string, DEFAULT_REFRESH_DRIVER ) ) {
-			Com_Error( ERR_FATAL, "Couldn't fall back to %s driver!", buffer );
-		}
-
-		Com_Printf( "Falling back to default refresh...\n" );
-		Cvar_Set( "vid_ref", DEFAULT_REFRESH_DRIVER );	
+	if( !R_Init( qtrue ) ) {
+		Com_Error( ERR_FATAL, "Couldn't initialize refresh" );
 	}
 
-	vid_ref->changed = vid_ref_changed;
-#endif
+	cls.ref_initialized = qtrue;
+    
     vid_geometry->changed = vid_geometry_changed;
     vid_fullscreen->changed = vid_fullscreen_changed;
     vid_modelist->changed = vid_modelist_changed;
@@ -431,7 +258,9 @@ void CL_InitRefresh( void ) {
     // Initialize the rest of graphics subsystems
     V_Init();
     SCR_Init();
+#if USE_UI
     UI_Init();
+#endif
 
     SCR_RegisterMedia();
     Con_RegisterMedia();
@@ -450,21 +279,18 @@ void CL_ShutdownRefresh( void ) {
     // Shutdown the rest of graphics subsystems
     V_Shutdown();
     SCR_Shutdown();
+#if USE_UI
     UI_Shutdown();
+#endif
 
     vid_geometry->changed = NULL;
     vid_fullscreen->changed = NULL;
     vid_modelist->changed = NULL;
-#if !REF_HARD_LINKED
-	vid_ref->changed = NULL;
-#endif
 
-	ref.Shutdown( qtrue );
-	CL_FreeRefresh();
+	R_Shutdown( qtrue );
+
+	cls.ref_initialized = qfalse;
 
 	Z_LeakTest( TAG_RENDERER );
-
 }
-
-
 

@@ -28,7 +28,7 @@ static vec3_t oldscale;
 static vec3_t newscale;
 static vec3_t translate;
 
-typedef void (*meshTessFunc_t)( aliasMesh_t *, int, int );
+typedef void (*meshTessFunc_t)( maliasmesh_t *, int, int );
 
 #if USE_SHADING
 
@@ -45,8 +45,8 @@ static const vec_t *shadedots;
 
 #endif
 
-static void Tess_Mesh( aliasMesh_t *mesh, int oldframe, int newframe ) {
-	aliasVert_t *src_vert;
+static void Tess_Mesh( maliasmesh_t *mesh, int oldframe, int newframe ) {
+	maliasvert_t *src_vert;
 	vec_t *dst_vert;
     int i, count;
 	const vec_t *normal;
@@ -55,12 +55,12 @@ static void Tess_Mesh( aliasMesh_t *mesh, int oldframe, int newframe ) {
     vec_t d;
 #endif
 
-	src_vert = &mesh->verts[newframe * mesh->numVerts];
+	src_vert = &mesh->verts[newframe * mesh->numverts];
     dst_vert = tess.vertices;
-    count = mesh->numVerts;
+    count = mesh->numverts;
 	if( glr.ent->flags & RF_SHELL_MASK ) {
 		for( i = 0; i < count; i++ ) {
-			normal = bytedirs[src_vert->normalIndex];
+			normal = bytedirs[src_vert->normalindex];
 
 			dst_vert[0] = normal[0] * POWERSUIT_SCALE +
                 src_vert->pos[0] * newscale[0] + translate[0];
@@ -83,7 +83,7 @@ static void Tess_Mesh( aliasMesh_t *mesh, int oldframe, int newframe ) {
 			dst_vert += 4;
 
 #if USE_SHADING
-            d = shadedots[src_vert->normalIndex];
+            d = shadedots[src_vert->normalindex];
             dst_color[0] = shadelight[0] * d;
             dst_color[1] = shadelight[1] * d;
             dst_color[2] = shadelight[2] * d;
@@ -98,9 +98,9 @@ static void Tess_Mesh( aliasMesh_t *mesh, int oldframe, int newframe ) {
 	c.trisDrawn += count;
 }
 
-static void Tess_LerpedMesh( aliasMesh_t *mesh, int oldframe, int newframe ) {
-	aliasVert_t *src_oldvert;
-	aliasVert_t *src_newvert;
+static void Tess_LerpedMesh( maliasmesh_t *mesh, int oldframe, int newframe ) {
+	maliasvert_t *src_oldvert;
+	maliasvert_t *src_newvert;
 	vec_t *dst_vert;
     int i, count;
 	const vec_t *normal;
@@ -109,13 +109,13 @@ static void Tess_LerpedMesh( aliasMesh_t *mesh, int oldframe, int newframe ) {
     vec_t d;
 #endif
 
-	src_oldvert = &mesh->verts[oldframe * mesh->numVerts];
-	src_newvert = &mesh->verts[newframe * mesh->numVerts];
+	src_oldvert = &mesh->verts[oldframe * mesh->numverts];
+	src_newvert = &mesh->verts[newframe * mesh->numverts];
     dst_vert = tess.vertices;
-    count = mesh->numVerts;
+    count = mesh->numverts;
 	if( glr.ent->flags & RF_SHELL_MASK ) {
 		for( i = 0; i < count; i++ ) {
-			normal = bytedirs[src_newvert->normalIndex];
+			normal = bytedirs[src_newvert->normalindex];
 
 			dst_vert[0] = normal[0] * POWERSUIT_SCALE +
 				src_oldvert->pos[0] * oldscale[0] +
@@ -193,7 +193,7 @@ static void GL_SetAliasColor( vec3_t origin, vec_t *color ) {
 	} else if( ent->flags & RF_FULLBRIGHT ) {
 		VectorSet( color, 1, 1, 1 );
 	} else {
-		GL_LightPoint( origin, color );
+		R_LightPoint( origin, color );
 
 		if( ent->flags & RF_MINLIGHT ) {
 			for( i = 0; i < 3; i++ ) {
@@ -231,8 +231,8 @@ void GL_DrawAliasModel( model_t *model ) {
 	entity_t *ent = glr.ent;
 	image_t *image;
 	int oldframeIdx, newframeIdx;
-	aliasFrame_t *newframe, *oldframe;
-	aliasMesh_t *mesh, *last;
+	maliasframe_t *newframe, *oldframe;
+	maliasmesh_t *mesh, *last;
 	meshTessFunc_t tessFunc;
 	float frontlerp, backlerp;
 	vec3_t origin;
@@ -272,13 +272,13 @@ void GL_DrawAliasModel( model_t *model ) {
 #endif
 
 	newframeIdx = ent->frame;
-	if( newframeIdx < 0 || newframeIdx >= model->numFrames ) {
+	if( newframeIdx < 0 || newframeIdx >= model->numframes ) {
 		Com_DPrintf( "GL_DrawAliasModel: no such frame %d\n", newframeIdx );
 		newframeIdx = 0;
 	}
 
 	oldframeIdx = ent->oldframe;
-	if( oldframeIdx < 0 || oldframeIdx >= model->numFrames ) {
+	if( oldframeIdx < 0 || oldframeIdx >= model->numframes ) {
 		Com_DPrintf( "GL_DrawAliasModel: no such oldframe %d\n", oldframeIdx );
 		oldframeIdx = 0;
 	}
@@ -365,7 +365,7 @@ void GL_DrawAliasModel( model_t *model ) {
     scale = 0;
 	if( gl_celshading->value > 0 && ( ent->flags & RF_SHELL_MASK ) == 0 ) {
         if( gl_celshading->value > 5 ) {
-            cvar.Set( "gl_celshading", "5" );
+            Cvar_Set( "gl_celshading", "5" );
         }
         VectorSubtract( origin, glr.fd.vieworg, dir );
         scale = VectorLength( dir );
@@ -423,15 +423,15 @@ void GL_DrawAliasModel( model_t *model ) {
 	qglColor4fv( color );
 #endif
 
-	last = model->meshes + model->numMeshes;
+	last = model->meshes + model->nummeshes;
 	for( mesh = model->meshes; mesh < last; mesh++ ) {
 		if( ent->flags & RF_SHELL_MASK ) {
 			image = r_whiteimage;
 		} else {
 			if( ent->skin ) {
-				image = R_ImageForHandle( ent->skin );
+				image = IMG_ForHandle( ent->skin );
 			} else {
-				if( ( unsigned )ent->skinnum >= MAX_MD2SKINS ) {
+				if( ( unsigned )ent->skinnum >= MAX_ALIAS_SKINS ) {
 					Com_DPrintf( "GL_DrawAliasModel: no such skin: %d\n",
 						ent->skinnum );
 					image = mesh->skins[0];
@@ -458,9 +458,9 @@ void GL_DrawAliasModel( model_t *model ) {
 
 		qglTexCoordPointer( 2, GL_FLOAT, 0, mesh->tcoords );
 		if( qglLockArraysEXT ) {
-			qglLockArraysEXT( 0, mesh->numVerts );
+			qglLockArraysEXT( 0, mesh->numverts );
 		}
-		qglDrawElements( GL_TRIANGLES, mesh->numIndices, GL_UNSIGNED_INT,
+		qglDrawElements( GL_TRIANGLES, mesh->numindices, GL_UNSIGNED_INT,
 			mesh->indices );
 
 #if USE_CELSHADING
@@ -471,7 +471,7 @@ void GL_DrawAliasModel( model_t *model ) {
             qglLineWidth( gl_celshading->value*scale );
     	    GL_Bits( bits | GLS_BLEND_BLEND );
             qglColor4f( 0, 0, 0, scale );
-            qglDrawElements( GL_TRIANGLES, mesh->numIndices, GL_UNSIGNED_INT,
+            qglDrawElements( GL_TRIANGLES, mesh->numindices, GL_UNSIGNED_INT,
                 mesh->indices );
             qglCullFace( back );
             qglPolygonMode( back, GL_FILL );
@@ -482,7 +482,7 @@ void GL_DrawAliasModel( model_t *model ) {
 
 		if( gl_showtris->integer ) {
             GL_EnableOutlines();
-		    qglDrawElements( GL_TRIANGLES, mesh->numIndices, GL_UNSIGNED_INT,
+		    qglDrawElements( GL_TRIANGLES, mesh->numindices, GL_UNSIGNED_INT,
 			    mesh->indices );
             GL_DisableOutlines();
 		}

@@ -28,12 +28,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 ** QGL_Shutdown() - unloads libraries, NULLs function pointers
 */
 
-#include <config.h>
-#include "qgl_local.h"
-#include "q_shared.h"
-#include "com_public.h"
+#include "com_local.h"
 #include "in_public.h"
 #include "vid_public.h"
+#include "qgl_local.h"
 #include "qgl_api.h"
 
 static FILE *log_fp;
@@ -416,7 +414,7 @@ PFNGLGETBUFFERPOINTERVPROC          qglGetBufferPointervARB;
 #ifdef _WIN32
 PROC ( WINAPI * qglGetProcAddress )( LPCSTR );
 #else
-void *qglGetProcAddress( const char *symbol ) { return video.GetProcAddr( symbol ); }
+void *qglGetProcAddress( const char *symbol ) { return VID_GetProcAddr( symbol ); }
 #endif
 
 // ==========================================================
@@ -3021,7 +3019,7 @@ void QGL_Shutdown( void ) {
 #endif
 }
 
-#define GPA( a )	video.GetProcAddr( a )
+#define GPA( a )	VID_GetProcAddr( a )
 
 
 /*
@@ -3396,7 +3394,7 @@ void QGL_EnableLogging( qboolean enable )
 			asctime( newtime );
 
 			Com_sprintf( buffer, sizeof( buffer ), "%s/qgl.log",
-                    cvar.VariableString( "basedir" ) );
+                    Cvar_VariableString( "basedir" ) );
             log_fp = fopen( buffer, "w" );
             if( !log_fp ) {
                 return;

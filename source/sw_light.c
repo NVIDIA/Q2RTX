@@ -39,12 +39,12 @@ R_MarkLights
 */
 void R_MarkLights (dlight_t *light, int bit, mnode_t *node)
 {
-	mplane_t	*splitplane;
+	cplane_t	*splitplane;
 	float		dist;
-	msurface_t	*surf;
+	mface_t	*surf;
 	int			i;
 	
-	if (node->contents != -1)
+	if (!node->plane)
 		return;
 
 	splitplane = node->plane;
@@ -70,8 +70,8 @@ void R_MarkLights (dlight_t *light, int bit, mnode_t *node)
 	}
 		
 // mark the polygons
-	surf = r_worldmodel->surfaces + node->firstsurface;
-	for (i=0 ; i<node->numsurfaces ; i++, surf++)
+	surf = node->firstface;
+	for (i=0 ; i<node->numfaces ; i++, surf++)
 	{
 		if (surf->dlightframe != r_dlightframecount)
 		{
@@ -91,7 +91,7 @@ void R_MarkLights (dlight_t *light, int bit, mnode_t *node)
 R_PushDlights
 =============
 */
-void R_PushDlights (model_t *model)
+void R_PushDlights (mnode_t *headnode)
 {
 	int		i;
 	dlight_t	*l;
@@ -99,8 +99,7 @@ void R_PushDlights (model_t *model)
 	r_dlightframecount = r_framecount;
 	for (i=0, l = r_newrefdef.dlights ; i<r_newrefdef.num_dlights ; i++, l++)
 	{
-		R_MarkLights ( l, 1<<i, 
-			model->nodes + model->firstnode);
+		R_MarkLights ( l, 1 << i, headnode);
 	}
 }
 
@@ -113,105 +112,38 @@ LIGHT SAMPLING
 =============================================================================
 */
 
-vec3_t	pointcolor;
-mplane_t		*lightplane;		// used as shadow plane
-vec3_t			lightspot;
-
-int RecursiveLightPoint (mnode_t *node, vec3_t start, vec3_t end)
-{
-	float		front, back, frac;
-	int			side;
-	mplane_t	*plane;
-	vec3_t		mid;
-	msurface_t	*surf;
-	int			s, t, ds, dt;
-	int			i;
-	mtexinfo_t	*tex;
+static qboolean RecursiveLightPoint (vec3_t p, vec3_t color) {
+	mface_t	    *surf;
+	int			ds, dt;
 	byte		*lightmap;
 	float		*scales;
 	int			maps;
 	float		samp;
-	int			r;
+    vec3_t      end;
 
-	if (node->contents != -1)
-		return -1;		// didn't hit anything
-	
-// calculate mid point
+	end[0] = p[0];
+	end[1] = p[1];
+	end[2] = p[2] - 2048;
 
-// FIXME: optimize for axial
-	plane = node->plane;
-	front = DotProduct (start, plane->normal) - plane->dist;
-	back = DotProduct (end, plane->normal) - plane->dist;
-	side = front < 0;
-	
-	if ( (back < 0) == side)
-		return RecursiveLightPoint (node->children[side], start, end);
-	
-	frac = front / (front-back);
-	mid[0] = start[0] + (end[0] - start[0])*frac;
-	mid[1] = start[1] + (end[1] - start[1])*frac;
-	mid[2] = start[2] + (end[2] - start[2])*frac;
-	if (plane->type < 3)	// axial planes
-		mid[plane->type] = plane->dist;
+    surf = BSP_LightPoint( r_worldmodel->nodes, p, end, &ds, &dt );
+    if( !surf ) {
+        return qfalse;
+    }
 
-// go down front side	
-	r = RecursiveLightPoint (node->children[side], start, mid);
-	if (r >= 0)
-		return r;		// hit something
-		
-	if ( (back < 0) == side )
-		return -1;		// didn't hit anuthing
-		
-// check for impact on this node
-	VectorCopy (mid, lightspot);
-	lightplane = plane;
+    ds >>= 4;
+    dt >>= 4;
 
-	surf = r_worldmodel->surfaces + node->firstsurface;
-	for (i=0 ; i<node->numsurfaces ; i++, surf++)
-	{
-		if (surf->flags&(SURF_DRAWTURB|SURF_DRAWSKY)) 
-			continue;	// no lightmaps
+    lightmap = surf->lightmap;
+    lightmap += dt * ((surf->extents[0]>>4)+1) + ds;
 
-		tex = surf->texinfo;
-		
-		s = DotProduct (mid, tex->vecs[0]) + tex->vecs[0][3];
-		t = DotProduct (mid, tex->vecs[1]) + tex->vecs[1][3];
-		if (s < surf->texturemins[0] ||
-		t < surf->texturemins[1])
-			continue;
-		
-		ds = s - surf->texturemins[0];
-		dt = t - surf->texturemins[1];
-		
-		if ( ds > surf->extents[0] || dt > surf->extents[1] )
-			continue;
-
-		if (!surf->samples)
-			return 0;
-
-		ds >>= 4;
-		dt >>= 4;
-
-		lightmap = surf->samples;
-		VectorCopy (vec3_origin, pointcolor);
-		if (lightmap)
-		{
-			lightmap += dt * ((surf->extents[0]>>4)+1) + ds;
-
-			for (maps = 0 ; maps < MAXLIGHTMAPS && surf->styles[maps] != 255 ; maps++)
-			{
-				samp = *lightmap * (1.0/255);	// adjust for gl scale
-				scales = r_newrefdef.lightstyles[surf->styles[maps]].rgb;
-				VectorMA (pointcolor, samp, scales, pointcolor);
-				lightmap += ((surf->extents[0]>>4)+1) * ((surf->extents[1]>>4)+1);
-			}
-		}
-		
-		return 1;
-	}
-
-// go down back side
-	return RecursiveLightPoint (node->children[!side], mid, end);
+    for (maps = 0 ; maps < MAX_LIGHTMAPS && surf->styles[maps] != 255 ; maps++)
+    {
+        samp = *lightmap * (1.0/255);	// adjust for gl scale
+        scales = r_newrefdef.lightstyles[surf->styles[maps]].rgb;
+        VectorMA (color, samp, scales, color);
+        lightmap += ((surf->extents[0]>>4)+1) * ((surf->extents[1]>>4)+1);
+    }
+    return qtrue;
 }
 
 /*
@@ -221,34 +153,21 @@ R_LightPoint
 */
 void R_LightPoint (vec3_t p, vec3_t color)
 {
-	vec3_t		end;
-	float		r;
 	int			lnum;
 	dlight_t	*dl;
 	float		light;
 	vec3_t		dist;
 	float		add;
 	
-	if (!r_worldmodel || !r_worldmodel->lightdata || !r_newrefdef.lightstyles)
+	if (!r_worldmodel || !r_worldmodel->lightmap || !r_newrefdef.lightstyles)
 	{
 		color[0] = color[1] = color[2] = 1.0;
 		return;
 	}
 	
-	end[0] = p[0];
-	end[1] = p[1];
-	end[2] = p[2] - 2048;
-	
-	r = RecursiveLightPoint (r_worldmodel->nodes, p, end);
-	
-	if (r == -1)
-	{
-		VectorCopy (vec3_origin, color);
-	}
-	else
-	{
-		VectorCopy (pointcolor, color);
-	}
+    VectorClear( color );
+
+	RecursiveLightPoint (p, color);
 
 	//
 	// add dynamic lights
@@ -279,7 +198,7 @@ R_AddDynamicLights
 ===============
 */
 static void R_AddDynamicLights( void ) {
-	msurface_t *surf;
+	mface_t *surf;
 	int			lnum;
 	int			sd, td;
 	float		dist, rad, minlight;
@@ -309,8 +228,7 @@ static void R_AddDynamicLights( void ) {
 			rad = -rad;
 		}
 
-		dist = DotProduct (dl->origin, surf->plane->normal) -
-				surf->plane->dist;
+		dist = PlaneDiffFast (dl->origin, surf->plane);
 		rad -= fabs(dist);
 		minlight = 32;		// dl->minlight;
 		if (rad < minlight)
@@ -321,8 +239,8 @@ static void R_AddDynamicLights( void ) {
 			impact[i] = dl->origin[i] - surf->plane->normal[i]*dist;
 		}
 
-		local[0] = DotProduct (impact, tex->vecs[0]) + tex->vecs[0][3];
-		local[1] = DotProduct (impact, tex->vecs[1]) + tex->vecs[1][3];
+		local[0] = DotProduct (impact, tex->axis[0]) + tex->offset[0];
+		local[1] = DotProduct (impact, tex->axis[1]) + tex->offset[1];
 
 		local[0] -= surf->texturemins[0];
 		local[1] -= surf->texturemins[1];
@@ -340,26 +258,6 @@ static void R_AddDynamicLights( void ) {
 				else
 					dist = td + (sd>>1);*/
 				dist = sqrt( sd * sd + td * td );
-#ifdef TRUECOLOR_RENDERER
-				{
-					uint16 *dest = &blocklights[(t*smax + s)*3];
-					if( !negativeLight ) {
-						if( dist < minlight ) {
-							dest[0] += dl->color[0] * (rad - dist)*255;
-							dest[1] += dl->color[1] * (rad - dist)*255;
-							dest[2] += dl->color[2] * (rad - dist)*255;
-						}
-					} else {
-						if( dist < minlight ) {
-							dest[0] -= dl->color[0] * (rad - dist)*255;
-							dest[1] -= dl->color[1] * (rad - dist)*255;
-							dest[2] -= dl->color[2] * (rad - dist)*255;
-						}
-						//if(blocklights[t*smax + s] < minlight)
-						//	blocklights[t*smax + s] = minlight;
-					}
-				}
-#else
 				if(!negativeLight) {
 					if (dist < minlight)
 						blocklights[t*smax + s] += (rad - dist)*256;
@@ -369,7 +267,6 @@ static void R_AddDynamicLights( void ) {
 					if(blocklights[t*smax + s] < minlight)
 						blocklights[t*smax + s] = minlight;
 				}
-#endif
 			}
 		}
 	}
@@ -383,66 +280,6 @@ R_BuildLightMap
 Combine and scale multiple lightmaps into the 8.8 format in blocklights
 ===============
 */
-#ifdef TRUECOLOR_RENDERER
-
-void R_BuildLightMap( void ) {
-	int			smax, tmax;
-	int			t;
-	int			i, size;
-	byte		*lightmap;
-	int			maps;
-	msurface_t	*surf;
-	uint16 *dst;
-
-	surf = r_drawsurf.surf;
-
-	smax = ( surf->extents[0] >> 4 ) + 1;
-	tmax = ( surf->extents[1] >> 4 ) + 1;
-	size = smax * tmax;
-	if( size*3 > MAX_BLOCKLIGHTS ) {
-		Com_Error( ERR_DROP, "R_BuildLightMap: surface blocklights size %i > %i", size, MAX_BLOCKLIGHTS );
-	}
-
-// clear to no light
-	dst = blocklights;
-	for( i = 0; i < size; i++ ) {
-		dst[0] = 0;
-		dst[1] = 0;
-		dst[2] = 0;
-		dst += LIGHTMAP_BYTES;
-	}
-	
-	if( r_fullbright->integer || !r_worldmodel->lightdata ) {
-		return;
-	}
-
-// add all the lightmaps
-	lightmap = surf->samples;
-	if( lightmap ) {
-		for( maps = 0; maps < MAXLIGHTMAPS && surf->styles[maps] != 255; maps++ ) {
-
-			byte *scale;
-
-			dst = blocklights;
-			scale = r_drawsurf.lightadj[maps];
-			for( i = 0; i < size; i++ ) {
-				dst[0] += lightmap[0] * scale[0];
-				dst[1] += lightmap[1] * scale[1];
-				dst[2] += lightmap[2] * scale[2];
-				
-				lightmap += LIGHTMAP_BYTES;
-				dst += LIGHTMAP_BYTES;
-			}
-
-		}
-	}
-
-// add all the dynamic lights
-	if (surf->dlightframe == r_framecount)
-		R_AddDynamicLights ();
-}
-
-#else
 
 void R_BuildLightMap( void ) {
 	int			smax, tmax;
@@ -450,7 +287,7 @@ void R_BuildLightMap( void ) {
 	int			i, size;
 	byte		*lightmap;
 	int			maps;
-	msurface_t	*surf;
+	mface_t	*surf;
 	blocklight_t *dst;
 
 	surf = r_drawsurf.surf;
@@ -468,14 +305,14 @@ void R_BuildLightMap( void ) {
 		*dst++ = 0;
 	}
 	
-	if( r_fullbright->integer || !r_worldmodel->lightdata ) {
+	if( r_fullbright->integer || !r_worldmodel->lightmap ) {
 		return;
 	}
 
 // add all the lightmaps
-	lightmap = surf->samples;
+	lightmap = surf->lightmap;
 	if( lightmap ) {
-		for( maps = 0; maps < MAXLIGHTMAPS && surf->styles[maps] != 255; maps++ ) {
+		for( maps = 0; maps < MAX_LIGHTMAPS && surf->styles[maps] != 255; maps++ ) {
 			fixed8_t		scale;
 			
 			dst = blocklights;
@@ -507,4 +344,3 @@ void R_BuildLightMap( void ) {
 
 }
 
-#endif

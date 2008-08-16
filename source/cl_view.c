@@ -253,10 +253,12 @@ void CL_PrepRefresh (void) {
 		return;		// no map loaded
 
 	Con_Close();
+#if USE_UI
 	UI_OpenMenu( UIMENU_NONE );
+#endif
 
 	// register models, pics, and skins
-	ref.BeginRegistration( cl.mapname );
+	R_BeginRegistration( cl.mapname );
 
 	CL_LoadState( LOAD_MODELS );
 
@@ -265,7 +267,7 @@ void CL_PrepRefresh (void) {
 	cl.numWeaponModels = 1;
 	strcpy(cl.weaponModels[0], "weapon.md2");
 
-	for (i=1 ; i<MAX_MODELS ; i++) {
+	for (i=2 ; i<MAX_MODELS ; i++) {
 		name = cl.configstrings[CS_MODELS+i];
         if( !name[0] ) {
             break;
@@ -276,7 +278,7 @@ void CL_PrepRefresh (void) {
 				strcpy( cl.weaponModels[cl.numWeaponModels++], name + 1 );
 			}
 		}  else {
-			cl.model_draw[i] = ref.RegisterModel( name );
+			cl.model_draw[i] = R_RegisterModel( name );
 		}
 	}
 
@@ -290,7 +292,7 @@ void CL_PrepRefresh (void) {
         if( !name[0] ) {
             break;
         }
-		cl.image_precache[i] = ref.RegisterPic (name);
+		cl.image_precache[i] = R_RegisterPic (name);
 	}
 
 	CL_LoadState( LOAD_CLIENTS );
@@ -308,10 +310,10 @@ void CL_PrepRefresh (void) {
 	rotate = atof (cl.configstrings[CS_SKYROTATE]);
 	sscanf (cl.configstrings[CS_SKYAXIS], "%f %f %f", 
 		&axis[0], &axis[1], &axis[2]);
-	ref.SetSky (cl.configstrings[CS_SKY], rotate, axis);
+	R_SetSky (cl.configstrings[CS_SKY], rotate, axis);
 
 	// the renderer can now free unneeded stuff
-	ref.EndRegistration ();
+	R_EndRegistration ();
 
 	// clear any lines of console text
 	Con_ClearNotify_f ();
@@ -343,7 +345,7 @@ static void V_Gun_Model_f (void) {
 		return;
 	}
 	Q_concat (name, sizeof(name), "models/", Cmd_Argv(1), "/tris.md2", NULL );
-	gun_model = ref.RegisterModel (name);
+	gun_model = R_RegisterModel (name);
 }
 
 //============================================================================
@@ -367,7 +369,7 @@ static void V_SetLightLevel( void ) {
 	vec3_t shadelight;
 
 	// save off light value for server to look at (BIG HACK!)
-	ref.LightPoint( cl.refdef.vieworg, shadelight );
+	R_LightPoint( cl.refdef.vieworg, shadelight );
 
 	// pick the greatest component, which should be the same
 	// as the mono value returned by software
@@ -463,7 +465,7 @@ void V_RenderView( void ) {
         qsort( cl.refdef.entities, cl.refdef.num_entities, sizeof( cl.refdef.entities[0] ), (int (QDECL *)(const void *, const void *))entitycmpfnc );
 	}
 
-	ref.RenderFrame (&cl.refdef);
+	R_RenderFrame (&cl.refdef);
 	if (cl_stats->integer)
 		Com_Printf ("ent:%i  lt:%i  part:%i\n", r_numentities, r_numdlights, r_numparticles);
 

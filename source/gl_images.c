@@ -20,6 +20,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "gl_local.h"
+#include "d_pcx.h"
+#include "d_wal.h"
 
 image_t *r_notexture;
 image_t *r_particletexture;
@@ -37,7 +39,7 @@ int gl_tex_solid_format;
 static int  upload_width;
 static int  upload_height;
 static image_t  *upload_image;
-bspTexinfo_t    *upload_texinfo;
+mtexinfo_t    *upload_texinfo;
 
 static cvar_t *gl_noscrap;
 static cvar_t *gl_round_down;
@@ -53,7 +55,7 @@ static cvar_t *gl_intensity;
 static cvar_t *gl_gamma;
 static cvar_t *gl_invert;
 
-qboolean GL_Upload8( byte *data, int width, int height, qboolean mipmap );
+static qboolean GL_Upload8( byte *data, int width, int height, qboolean mipmap );
 
 typedef struct {
 	char *name;
@@ -112,9 +114,9 @@ static void gl_texturemode_changed( cvar_t *self ) {
 	}
 
 	if( i == numFilterModes ) {
-		Com_WPrintf( "Bad texture filter name\n" );
-		cvar.Set( "gl_texturemode", "GL_LINEAR_MIPMAP_NEAREST" );
-		gl_filter_min = GL_LINEAR_MIPMAP_NEAREST;
+		Com_WPrintf( "Bad texture mode: %s\n", self->string );
+		Cvar_Reset( self );
+		gl_filter_min = GL_LINEAR_MIPMAP_LINEAR;
 		gl_filter_max = GL_LINEAR;
 	} else {
 		gl_filter_min = filterModes[i].minimize;
@@ -130,6 +132,16 @@ static void gl_texturemode_changed( cvar_t *self ) {
 			qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
                     gl_filter_max );
 		}
+	}
+}
+
+static void gl_texturemode_g( genctx_t *ctx ) {
+    int i;
+    
+	for( i = 0; i < numFilterModes ; i++ ) {
+        if( !Prompt_AddMatch( ctx, filterModes[i].name ) ) {
+            break;
+        }
 	}
 }
 
@@ -179,19 +191,25 @@ static void GL_TextureAlphaMode( void ) {
 	int		i;
 
 	for( i = 0; i < numAlphaModes; i++ ) {
-		if( !Q_stricmp( alphaModes[i].name, gl_texturealphamode->string ) )
-			break;
+		if( !Q_stricmp( alphaModes[i].name, gl_texturealphamode->string ) ) {
+	        gl_tex_alpha_format = alphaModes[i].mode;
+			return;
+        }
 	}
 
-	if( i == numAlphaModes ) {
-		Com_Printf( "Bad texture alpha mode name %s\n",
-            gl_texturealphamode->string );
-		cvar.Set( "gl_texturealphamode", "default" );
-	    gl_tex_alpha_format = alphaModes[0].mode;
-		return;
-	}
+    Com_WPrintf( "Bad texture alpha mode: %s\n", gl_texturealphamode->string );
+    Cvar_Reset( gl_texturealphamode );
+    gl_tex_alpha_format = alphaModes[0].mode;
+}
 
-	gl_tex_alpha_format = alphaModes[i].mode;
+static void gl_texturealphamode_g( genctx_t *ctx ) {
+    int i;
+    
+	for( i = 0; i < numAlphaModes; i++ ) {
+        if( !Prompt_AddMatch( ctx, alphaModes[i].name ) ) {
+            break;
+        }
+	}
 }
 
 /*
@@ -203,19 +221,25 @@ static void GL_TextureSolidMode( void ) {
 	int		i;
 
 	for( i = 0; i < numSolidModes; i++ ) {
-		if( !Q_stricmp( solidModes[i].name, gl_texturesolidmode->string ) )
-			break;
+		if( !Q_stricmp( solidModes[i].name, gl_texturesolidmode->string ) ) {
+	        gl_tex_solid_format = solidModes[i].mode;
+			return;
+        }
 	}
 
-	if( i == numSolidModes ) {
-		Com_Printf( "Bad texture texture mode name %s\n",
-            gl_texturesolidmode->string );
-		cvar.Set( "gl_texturesolidmode", "default" );
-	    gl_tex_solid_format = solidModes[0].mode;
-		return;
-	}
+    Com_WPrintf( "Bad texture solid mode: %s\n", gl_texturesolidmode->string );
+    Cvar_Reset( gl_texturesolidmode );
+    gl_tex_solid_format = solidModes[0].mode;
+}
 
-	gl_tex_solid_format = solidModes[i].mode;
+static void gl_texturesolidmode_g( genctx_t *ctx ) {
+    int i;
+    
+	for( i = 0; i < numSolidModes; i++ ) {
+        if( !Prompt_AddMatch( ctx, solidModes[i].name ) ) {
+            break;
+        }
+	}
 }
 
 /*
@@ -467,6 +491,56 @@ static void GL_InvertTexture( byte *in, int inwidth, int inheight ) {
 
 /*
 ================
+GL_ResampleTexture
+================
+*/
+static void GL_ResampleTexture( const byte *in, int inwidth, int inheight, byte *out, int outwidth, int outheight ) {
+	int i, j;
+	const byte	*inrow1, *inrow2;
+	unsigned	frac, fracstep;
+	unsigned	p1[MAX_TEXTURE_SIZE], p2[MAX_TEXTURE_SIZE];
+	const byte	*pix1, *pix2, *pix3, *pix4;
+	float		heightScale;
+
+	if( outwidth > MAX_TEXTURE_SIZE ) {
+		Com_Error( ERR_FATAL, "%s: outwidth > %d", __func__, MAX_TEXTURE_SIZE );
+	}
+
+	fracstep = inwidth * 0x10000 / outwidth;
+
+	frac = fracstep >> 2;
+	for( i = 0; i < outwidth; i++ ) {
+		p1[i] = 4 * ( frac >> 16 );
+		frac += fracstep;
+	}
+	frac = 3 * ( fracstep >> 2 );
+	for( i = 0; i < outwidth; i++ ) {
+		p2[i] = 4 * ( frac >> 16 );
+		frac += fracstep;
+	}
+
+	heightScale = ( float )inheight / outheight;
+	inwidth <<= 2;
+	for( i = 0; i < outheight; i++ ) {
+		inrow1 = in + inwidth * ( int )( ( i + 0.25f ) * heightScale );
+		inrow2 = in + inwidth * ( int )( ( i + 0.75f ) * heightScale );
+		for( j = 0; j < outwidth; j++ ) {
+			pix1 = inrow1 + p1[j];
+			pix2 = inrow1 + p2[j];
+			pix3 = inrow2 + p1[j];
+			pix4 = inrow2 + p2[j];
+			out[0] = ( pix1[0] + pix2[0] + pix3[0] + pix4[0] ) >> 2;
+			out[1] = ( pix1[1] + pix2[1] + pix3[1] + pix4[1] ) >> 2;
+			out[2] = ( pix1[2] + pix2[2] + pix3[2] + pix4[2] ) >> 2;
+			out[3] = ( pix1[3] + pix2[3] + pix3[3] + pix4[3] ) >> 2;
+			out += 4;
+		}
+	}
+}
+
+
+/*
+================
 GL_MipMap
 
 Operates in place, quartering the size of the texture
@@ -494,7 +568,7 @@ static void GL_MipMap( byte *in, int width, int height ) {
 GL_Upload32
 ===============
 */
-qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap ) {
+static qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap ) {
 	byte		*scaled;
 	int			scaled_width, scaled_height;
 	int			i, c;
@@ -540,7 +614,7 @@ qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap ) {
     if( upload_image->type == it_wall &&
 	    gl_saturation->value != 1 &&
         ( !upload_texinfo ||
-          !( upload_texinfo->flags & (SURF_SKY|SURF_WARP) ) ) )
+          !( upload_texinfo->c.flags & (SURF_SKY|SURF_WARP) ) ) )
     {	
 		GL_Saturation( data, width, height );
         if( gl_saturation->value == 0 ) {
@@ -557,7 +631,7 @@ qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap ) {
     if( upload_image->type == it_wall &&
 	    gl_invert->integer &&
         ( !upload_texinfo ||
-          !( upload_texinfo->flags & (SURF_SKY|SURF_WARP) ) ) )
+          !( upload_texinfo->c.flags & (SURF_SKY|SURF_WARP) ) ) )
     {
 		GL_InvertTexture( data, width, height );
     }
@@ -578,8 +652,8 @@ qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap ) {
         /* optimized case, do not reallocate */
 		scaled = data;
 	} else {
-		scaled = fs.AllocTempMem( scaled_width * scaled_height * 4 );
-		R_ResampleTexture( data, width, height, scaled,
+		scaled = FS_AllocTempMem( scaled_width * scaled_height * 4 );
+		GL_ResampleTexture( data, width, height, scaled,
                 scaled_width, scaled_height );
 	}
 
@@ -622,7 +696,7 @@ qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap ) {
     
 
 	if( scaled != data ) {
-		fs.FreeFile( scaled );
+		FS_FreeFile( scaled );
 	}
 
 	return isalpha;
@@ -635,15 +709,15 @@ GL_Upload8
 Returns has_alpha
 ===============
 */
-qboolean GL_Upload8( byte *data, int width, int height, qboolean mipmap ) {
+static qboolean GL_Upload8( byte *data, int width, int height, qboolean mipmap ) {
 	byte	buffer[512*256*4];
-	byte		*dest;
-	int			i, s;
-	int			p;
+	byte    *dest;
+	int     i, s;
+	int     p;
 
 	s = width * height;
 	if( s > 512*256 ) {
-		Com_Error( ERR_FATAL, "GL_Upload8: %s is too large: width=%d height=%d",
+		Com_Error( ERR_FATAL, "GL_Upload8: %s is too large: %dx%d",
 			upload_image->name, width, height );
 	}
 
@@ -679,70 +753,48 @@ qboolean GL_Upload8( byte *data, int width, int height, qboolean mipmap ) {
 
 }
 
-/*
-===============
-R_ImageForHandle
-===============
-*/
-image_t *R_ImageForHandle( qhandle_t hPic ) {
-	if( hPic < 0 || hPic >= r_numImages ) {
-        *( int * )0 = 1;
-		Com_Error( ERR_FATAL, "R_ImageForHandle: %d out of range", hPic );
-	}
+static void GL_GetDimensions( image_t *image, imageflags_t flags ) {
+    char buffer[MAX_QPATH];
+    size_t length;
+    miptex_t	mt;
+    dpcx_t pcx;
+    fileHandle_t f;
 
-	return &r_images[hPic];
+    length = strlen( image->name );
+    if( length > 4 && image->name[ length - 4 ] == '.' ) {
+        strncpy( buffer, image->name, length - 4 );
+        if( flags & if_replace_wal ) {
+            strcpy( buffer + length - 4, ".wal" );
+            FS_FOpenFile( buffer, &f, FS_MODE_READ );
+            if( f ) {
+                length = FS_Read( &mt, sizeof( mt ), f );
+                if( length == sizeof( mt ) ) {
+                    image->width = LittleLong( mt.width );
+                    image->height = LittleLong( mt.height );
+                }
+                FS_FCloseFile( f );
+            }
+        } else {
+            strcpy( buffer + length - 4, ".pcx" );
+            FS_FOpenFile( buffer, &f, FS_MODE_READ );
+            if( f ) {
+                length = FS_Read( &pcx, sizeof( pcx ), f );
+                if( length == sizeof( pcx ) ) {
+                    image->width = LittleShort( pcx.xmax ) + 1;
+                    image->height = LittleShort( pcx.ymax ) + 1;
+                }
+                FS_FCloseFile( f );
+            }
+        }
+    }
 }
 
 /*
-===============
-R_RegisterSkin
-===============
-*/
-qhandle_t R_RegisterSkin( const char *name ) {
-	image_t	*image;
-
-	image = R_FindImage( name, it_skin );
-	if( !image ) {
-		return 0;
-	}
-
-	return ( image - r_images );
-}
-
-/*
 ================
-R_RegisterPic
+IMG_Load
 ================
 */
-qhandle_t R_RegisterPic( const char *name ) {
-	image_t	*image;
-	char	fullname[MAX_QPATH];
-
-	if( name[0] == '*' ) {
-		image = R_FindImage( name + 1, it_tmp );
-    } else if( name[0] == '/' || name[0] == '\\' ) {
-		image = R_FindImage( name + 1, it_pic );
-    } else {
-		Q_concat( fullname, sizeof( fullname ), "pics/", name, NULL );
-		COM_DefaultExtension( fullname, ".pcx", sizeof( fullname ) );
-		image = R_FindImage( fullname, it_pic );
-	}
-
-	if( !image ) {
-		return 0;
-	}
-
-	return ( image - r_images );
-}
-
-
-
-/*
-================
-R_LoadImage
-================
-*/
-void R_LoadImage( image_t *image, byte *pic, int width, int height,
+void IMG_Load( image_t *image, byte *pic, int width, int height,
         imagetype_t type, imageflags_t flags )
 {
 	qboolean mipmap, transparent;
@@ -756,41 +808,10 @@ void R_LoadImage( image_t *image, byte *pic, int width, int height,
 
 	// HACK: get dimensions from 8-bit texture
 	if( flags & (if_replace_wal|if_replace_pcx) ) {
-		char buffer[MAX_QPATH];
-		size_t length;
-	    miptex_t	mt;
-        pcx_t pcx;
-        fileHandle_t f;
-
-		length = strlen( image->name );
-		if( length > 4 && image->name[ length - 4 ] == '.' ) {
-		    strncpy( buffer, image->name, length - 4 );
-            if( flags & if_replace_wal ) {
-                strcpy( buffer + length - 4, ".wal" );
-                fs.FOpenFile( buffer, &f, FS_MODE_READ );
-                if( f ) {
-                    length = fs.Read( &mt, sizeof( mt ), f );
-                    if( length == sizeof( mt ) ) {
-                        image->width = LittleLong( mt.width );
-                        image->height = LittleLong( mt.height );
-                    }
-                    fs.FCloseFile( f );
-                }
-            } else {
-                strcpy( buffer + length - 4, ".pcx" );
-                fs.FOpenFile( buffer, &f, FS_MODE_READ );
-                if( f ) {
-                    length = fs.Read( &pcx, sizeof( pcx ), f );
-                    if( length == sizeof( pcx ) ) {
-                        image->width = LittleShort( pcx.xmax );
-                        image->height = LittleShort( pcx.ymax );
-                    }
-                    fs.FCloseFile( f );
-                }
-            }
-		}
+        GL_GetDimensions( image, flags );
 	}
-	
+
+    // load small 8-bit pics onto the scrap
 	if( type == it_pic && ( flags & if_paletted ) &&
 		width < 64 && height < 64 && !gl_noscrap->integer )
 	{
@@ -821,7 +842,7 @@ void R_LoadImage( image_t *image, byte *pic, int width, int height,
 				Scrap_Upload();
 			}
 
-			fs.FreeFile( pic );
+			FS_FreeFile( pic );
 
 			return;
 		}
@@ -830,10 +851,7 @@ void R_LoadImage( image_t *image, byte *pic, int width, int height,
 	if( type == it_skin && ( flags & if_paletted ) )
 		R_FloodFillSkin( pic, width, height );
 
-	mipmap = qfalse;
-    if( type == it_wall || type == it_skin ) {
-        mipmap = qtrue;
-    }
+	mipmap = ( type == it_wall || type == it_skin ) ? qtrue : qfalse;
     image->texnum = ( image - r_images ) + 1;
 	GL_BindTexture( image->texnum );
 	if( flags & if_paletted ) {
@@ -859,33 +877,38 @@ void R_LoadImage( image_t *image, byte *pic, int width, int height,
     }
 #endif
 
-	/* don't free autogenerated images */
+	// don't free autogenerated images
 	if( flags & if_auto ) {
 		return;
 	}
 		
-	/* don't free *.wal textures */
+	// don't free *.wal textures
 	if( type == it_wall && ( flags & if_paletted ) ) {
 		return;
 	}
 
-	fs.FreeFile( pic );
+	FS_FreeFile( pic );
 }
 
+void IMG_Unload( image_t *image ) {
+    if( !( image->flags & if_scrap ) ) {
+    	qglDeleteTextures( 1, &image->texnum );
+    }
+}
 
 /*
 ================
-R_LoadWal
+IMG_LoadWAL
 ================
 */
-image_t *R_LoadWal( const char *name ) {
+image_t *IMG_LoadWAL( const char *name ) {
 	miptex_t	*mt;
 	size_t	    width, height, offset, length, endpos;
 	image_t		*image;
 
-	length = fs.LoadFile( name, ( void ** )&mt );
+	length = FS_LoadFile( name, ( void ** )&mt );
 	if( !mt ) {
-		return r_notexture;
+		return NULL;
 	}
 
 	width = LittleLong( mt->width );
@@ -902,20 +925,14 @@ image_t *R_LoadWal( const char *name ) {
         goto fail;
 	}
 
-	image = R_CreateImage( name, ( byte * )mt + offset, width, height, it_wall, if_paletted );
+    image = IMG_Create( name, ( byte * )mt + offset, width, height, it_wall, if_paletted );
 
-	fs.FreeFile( mt );
+	FS_FreeFile( mt );
 	return image;
 
 fail:
-    fs.FreeFile( mt );
+    FS_FreeFile( mt );
     return NULL;
-}
-
-void R_FreeImage( image_t *image ) {
-    if( !( image->flags & if_scrap ) ) {
-    	qglDeleteTextures( 1, &image->texnum );
-    }
 }
 
 static void GL_BuildGammaTables( void ) {
@@ -941,7 +958,7 @@ static void GL_BuildGammaTables( void ) {
 
 static void gl_gamma_changed( cvar_t *self ) {
     GL_BuildGammaTables();
-    video.UpdateGamma( gammatable );
+    VID_UpdateGamma( gammatable );
 }
 
 static const byte dottexture[8][8] = {
@@ -971,7 +988,7 @@ static void GL_InitDefaultTexture( void ) {
 		}
 	}
     
-    r_notexture = R_CreateImage( "*notexture", pixels, 8, 8, it_wall, if_auto );
+    r_notexture = IMG_Create( "*notexture", pixels, 8, 8, it_wall, if_auto );
 }
 
 #define DLIGHT_TEXTURE_SIZE     16
@@ -999,7 +1016,7 @@ static void GL_InitParticleTexture( void ) {
         }
     }
     
-    r_particletexture = R_CreateImage( "*particleTexture", pixels,
+    r_particletexture = IMG_Create( "*particleTexture", pixels,
         DLIGHT_TEXTURE_SIZE, DLIGHT_TEXTURE_SIZE, it_pic, if_auto );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
@@ -1009,13 +1026,13 @@ static void GL_InitWhiteImage( void ) {
     uint32_t pixel;
     
     pixel = MakeColor( 0xff, 0xff, 0xff, 0xff );
-    r_whiteimage = R_CreateImage( "*whiteimage", ( byte * )&pixel, 1, 1,
+    r_whiteimage = IMG_Create( "*whiteimage", ( byte * )&pixel, 1, 1,
         it_pic, if_auto );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 
     pixel = MakeColor( 0, 0, 0, 0xff );
-    r_blackimage = R_CreateImage( "*blackimage", ( byte * )&pixel, 1, 1,
+    r_blackimage = IMG_Create( "*blackimage", ( byte * )&pixel, 1, 1,
         it_pic, if_auto );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
@@ -1042,7 +1059,7 @@ static void GL_InitBeamTexture( void ) {
         }
     }
     
-    r_beamtexture = R_CreateImage( "*beamTexture", pixels, 16, 16,
+    r_beamtexture = IMG_Create( "*beamTexture", pixels, 16, 16,
         it_pic, if_auto );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
@@ -1064,7 +1081,7 @@ static void GL_InitWarpTexture( void ) {
         }
     }
     
-    r_warptexture = R_CreateImage( "*warpTexture", pixels, 8, 8,
+    r_warptexture = IMG_Create( "*warpTexture", pixels, 8, 8,
         it_pic, if_auto );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
@@ -1079,44 +1096,40 @@ void GL_InitImages( void ) {
 	int i, j;
 	float f;
 
-	registration_sequence = 1;
-
-	if( r_numImages ) {
-		Com_Error( ERR_FATAL, "GL_InitImages: %d images still not freed",
-            r_numImages );
-	}
-
-	gl_bilerp_chars = cvar.Get( "gl_bilerp_chars", "0", 0 );
+	gl_bilerp_chars = Cvar_Get( "gl_bilerp_chars", "0", 0 );
     gl_bilerp_chars->changed = gl_bilerp_chars_changed;
-	gl_texturemode = cvar.Get( "gl_texturemode",
+	gl_texturemode = Cvar_Get( "gl_texturemode",
         "GL_LINEAR_MIPMAP_LINEAR", CVAR_ARCHIVE );
     gl_texturemode->changed = gl_texturemode_changed;
-	gl_anisotropy = cvar.Get( "gl_anisotropy", "1", CVAR_ARCHIVE );
+    gl_texturemode->generator = gl_texturemode_g;
+	gl_anisotropy = Cvar_Get( "gl_anisotropy", "1", CVAR_ARCHIVE );
     gl_anisotropy->changed = gl_anisotropy_changed;
-	gl_noscrap = cvar.Get( "gl_noscrap", "0", CVAR_FILES );
-    gl_round_down = cvar.Get( "gl_round_down", "0", CVAR_FILES );
-    gl_picmip = cvar.Get( "gl_picmip", "0", CVAR_FILES );
-    gl_gamma_scale_pics = cvar.Get( "gl_gamma_scale_pics", "0", CVAR_FILES );
-	gl_texturealphamode = cvar.Get( "gl_texturealphamode",
+	gl_noscrap = Cvar_Get( "gl_noscrap", "0", CVAR_FILES );
+    gl_round_down = Cvar_Get( "gl_round_down", "0", CVAR_FILES );
+    gl_picmip = Cvar_Get( "gl_picmip", "0", CVAR_FILES );
+    gl_gamma_scale_pics = Cvar_Get( "gl_gamma_scale_pics", "0", CVAR_FILES );
+	gl_texturealphamode = Cvar_Get( "gl_texturealphamode",
         "default", CVAR_ARCHIVE|CVAR_FILES );
-	gl_texturesolidmode = cvar.Get( "gl_texturesolidmode",
+    gl_texturealphamode->generator = gl_texturealphamode_g;
+	gl_texturesolidmode = Cvar_Get( "gl_texturesolidmode",
         "default", CVAR_ARCHIVE|CVAR_FILES );
-	gl_saturation = cvar.Get( "gl_saturation", "1", CVAR_ARCHIVE|CVAR_FILES );
-	gl_intensity = cvar.Get( "intensity", "1", CVAR_ARCHIVE|CVAR_FILES );
-	gl_invert = cvar.Get( "gl_invert", "0", CVAR_ARCHIVE|CVAR_FILES );
+    gl_texturesolidmode->generator = gl_texturesolidmode_g;
+	gl_saturation = Cvar_Get( "gl_saturation", "1", CVAR_ARCHIVE|CVAR_FILES );
+	gl_intensity = Cvar_Get( "intensity", "1", CVAR_ARCHIVE|CVAR_FILES );
+	gl_invert = Cvar_Get( "gl_invert", "0", CVAR_ARCHIVE|CVAR_FILES );
     if( gl_hwgamma->integer ) {
-        gl_gamma = cvar.Get( "vid_gamma", "1", CVAR_ARCHIVE );
+        gl_gamma = Cvar_Get( "vid_gamma", "1", CVAR_ARCHIVE );
         gl_gamma->changed = gl_gamma_changed;
     } else {
-        gl_gamma = cvar.Get( "vid_gamma", "1", CVAR_ARCHIVE|CVAR_FILES );
+        gl_gamma = Cvar_Get( "vid_gamma", "1", CVAR_ARCHIVE|CVAR_FILES );
     }
 
-	R_InitImageManager();
+	IMG_Init();
 
-	R_GetPalette( NULL );
+	IMG_GetPalette( NULL );
 
 	if( gl_intensity->value < 1 ) {
-		cvar.Set( "intensity", "1" );
+		Cvar_Set( "intensity", "1" );
 	}
 	f = gl_intensity->value;
 	for( i = 0; i < 256; i++ ) {
@@ -1159,6 +1172,9 @@ void GL_ShutdownImages( void ) {
 
     gl_bilerp_chars->changed = NULL;
     gl_texturemode->changed = NULL;
+    gl_texturemode->generator = NULL;
+    gl_texturealphamode->generator = NULL;
+    gl_texturesolidmode->generator = NULL;
     gl_anisotropy->changed = NULL;
     gl_gamma->changed = NULL;
 
@@ -1175,8 +1191,9 @@ void GL_ShutdownImages( void ) {
     r_whiteimage = NULL;
     r_blackimage = NULL;
 
-	R_FreeAllImages();
-	R_ShutdownImageManager();
+	IMG_FreeAll();
+	IMG_Shutdown();
+
     Scrap_Shutdown();
 }
 

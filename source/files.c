@@ -19,6 +19,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "com_local.h"
+#include "files.h"
+#include "sys_public.h"
+#include "cl_public.h"
+#include "d_pak.h"
 #if USE_ZLIB
 #include <zlib.h>
 #include "unzip.h"
@@ -137,8 +141,6 @@ static int          fs_count_read, fs_count_strcmp, fs_count_open;
 
 cvar_t      *fs_game;
 
-fsAPI_t     fs;
-
 /*
 
 All of Quake's data access is through a hierchal file system,
@@ -164,7 +166,7 @@ FS_pathcmp
 Portably compares quake paths
 ================
 */
-static int FS_pathcmp( const char *s1, const char *s2 ) {
+int FS_pathcmp( const char *s1, const char *s2 ) {
     int        c1, c2;
     
     do {
@@ -184,7 +186,7 @@ static int FS_pathcmp( const char *s1, const char *s2 ) {
     return 0;        /* strings are equal */
 }
 
-static int FS_pathcmpn( const char *s1, const char *s2, size_t n ) {
+int FS_pathcmpn( const char *s1, const char *s2, size_t n ) {
     int        c1, c2;
     
     do {
@@ -263,11 +265,7 @@ static fsFile_t *FS_FileForHandle( fileHandle_t f ) {
     }
 
     file = &fs_files[f - 1];
-    if( file->type == FS_FREE ) {
-        Com_Error( ERR_FATAL, "%s: free handle: %i", __func__, f );
-    }
-
-    if( file->type < FS_FREE || file->type >= FS_BAD ) {
+    if( file->type <= FS_FREE || file->type >= FS_BAD ) {
         Com_Error( ERR_FATAL, "%s: invalid file type: %i", __func__, file->type );
     }
 
@@ -301,12 +299,14 @@ static qboolean FS_ValidatePath( const char *s ) {
                 return qfalse;
             }
         }
+#ifdef _WIN32
         if( *s == ':' ) {
             // check for "X:\"
             if( s[1] == '\\' || s[1] == '/' ) {
                 return qfalse;
             }
         }
+#endif
         s++;
     }
 
@@ -318,6 +318,7 @@ static qboolean FS_ValidatePath( const char *s ) {
     return qtrue;
 }
 
+#ifdef _WIN32
 /*
 ================
 FS_ReplaceSeparators
@@ -336,7 +337,7 @@ char *FS_ReplaceSeparators( char *s, int separator ) {
 
     return s;
 }
-
+#endif
 
 /*
 ================
@@ -2629,28 +2630,6 @@ static void FS_Restart_f( void ) {
     CL_RestartFilesystem();
 }
 
-/*
-================
-FS_FillAPI
-================
-*/
-void FS_FillAPI( fsAPI_t *api ) {
-    api->LoadFile = FS_LoadFile;
-    api->LoadFileEx = FS_LoadFileEx;
-    api->AllocTempMem = FS_AllocTempMem;
-    api->FreeFile = FS_FreeFile;
-    api->FOpenFile = FS_FOpenFile;
-    api->FCloseFile = FS_FCloseFile;
-    api->Tell = FS_Tell;
-    api->RawTell = FS_RawTell;
-    api->Read = FS_Read;
-    api->Write = FS_Write;
-    api->ListFiles = FS_ListFiles;
-    api->FreeList = FS_FreeList;
-    api->FPrintf = FS_FPrintf;
-    api->ReadLine = FS_ReadLine;
-}
-
 static const cmdreg_t c_fs[] = {
     { "path", FS_Path_f },
     { "fdir", FS_FDir_f },
@@ -2699,8 +2678,6 @@ void FS_Init( void ) {
 
     FS_Path_f();
 
-    FS_FillAPI( &fs );
-    
     end = Sys_Milliseconds();
     Com_DPrintf( "%i msec to init filesystem\n", end - start );
     Com_Printf( "-----------------------------\n" );

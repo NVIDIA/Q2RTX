@@ -25,14 +25,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "gl_local.h"
 
-/* declare imports for this module */
-cmdAPI_t	cmd;
-cvarAPI_t	cvar;
-fsAPI_t		fs;
-commonAPI_t	com;
-sysAPI_t	sys;
-videoAPI_t	video;
-
 glRefdef_t glr;
 glStatic_t gl_static;
 glconfig_t gl_config;
@@ -41,7 +33,7 @@ statCounters_t  c;
 int registration_sequence;
 
 cvar_t *gl_partscale;
-#if USE_JPEG
+#if USE_JPG
 cvar_t *gl_screenshot_quality;
 #endif
 #if USE_PNG
@@ -273,12 +265,12 @@ void GL_DrawBox( const vec3_t origin, vec3_t bounds[2] ) {
 static void GL_DrawSpriteModel( model_t *model ) {
 	vec3_t point;
 	entity_t *e = glr.ent;
-	spriteFrame_t *frame;
+	mspriteframe_t *frame;
 	image_t *image;
 	int bits;
 	float alpha;
 
-	frame = &model->sframes[e->frame % model->numFrames];
+	frame = &model->spriteframes[e->frame % model->numframes];
 	image = frame->image;
 
 	GL_TexEnv( GL_MODULATE );
@@ -303,23 +295,23 @@ static void GL_DrawSpriteModel( model_t *model ) {
 	qglBegin( GL_QUADS );
 
 	qglTexCoord2f( 0, 1 );
-	VectorMA( e->origin, -frame->y, glr.viewaxis[2], point );
-	VectorMA( point, frame->x, glr.viewaxis[1], point );
+	VectorMA( e->origin, -frame->origin_y, glr.viewaxis[2], point );
+	VectorMA( point, frame->origin_x, glr.viewaxis[1], point );
 	qglVertex3fv( point );
 
 	qglTexCoord2f( 0, 0 );
-	VectorMA( e->origin, frame->height - frame->y, glr.viewaxis[2], point );
-	VectorMA( point, frame->x, glr.viewaxis[1], point );
+	VectorMA( e->origin, frame->height - frame->origin_y, glr.viewaxis[2], point );
+	VectorMA( point, frame->origin_x, glr.viewaxis[1], point );
 	qglVertex3fv( point );
 
 	qglTexCoord2f( 1, 0 );
-	VectorMA( e->origin, frame->height - frame->y, glr.viewaxis[2], point );
-	VectorMA( point, frame->x - frame->width, glr.viewaxis[1], point );
+	VectorMA( e->origin, frame->height - frame->origin_y, glr.viewaxis[2], point );
+	VectorMA( point, frame->origin_x - frame->width, glr.viewaxis[1], point );
 	qglVertex3fv( point );
 
 	qglTexCoord2f( 1, 1 );
-	VectorMA( e->origin, -frame->y, glr.viewaxis[2], point );
-	VectorMA( point, frame->x - frame->width, glr.viewaxis[1], point );
+	VectorMA( e->origin, -frame->origin_y, glr.viewaxis[2], point );
+	VectorMA( point, frame->origin_x - frame->width, glr.viewaxis[1], point );
 	qglVertex3fv( point );
 
 	qglEnd();
@@ -354,7 +346,7 @@ static void GL_DrawNullModel( void ) {
 
 static void GL_DrawEntities( int mask ) {
 	entity_t *ent, *last;
-	modelType_t *model;
+	model_t *model;
 
 	if( !gl_drawentities->integer ) {
 		return;
@@ -383,28 +375,37 @@ static void GL_DrawEntities( int mask ) {
 			VectorSet( glr.entaxis[2], 0, 0, 1 );
 		}
 
-		model = GL_ModelForHandle( ent->model );
+        // inline BSP model
+        if( ent->model & 0x80000000 ) {
+            bsp_t *bsp = gl_static.world.cache;
+            int index = ~ent->model;
+
+            if( !bsp ) {
+                Com_Error( ERR_DROP, "%s: inline model without world",
+                    __func__ );
+            }
+
+            if( index < 1 || index >= bsp->nummodels ) {
+                Com_Error( ERR_DROP, "%s: inline model %d out of range",
+                    __func__, index );
+            }
+
+			GL_DrawBspModel( &bsp->models[index] );
+            continue;
+        }
+
+		model = MOD_ForHandle( ent->model );
 		if( !model ) {
 			GL_DrawNullModel();
 			continue;
 		}
 
-		switch( *model ) {
-		case MODEL_NULL:
-			GL_DrawNullModel();
-			break;
-		case MODEL_BSP:
-			GL_DrawBspModel( ( bspSubmodel_t * )model );
-			break;
-		case MODEL_ALIAS:
-			GL_DrawAliasModel( ( model_t * )model );
-			break;
-		case MODEL_SPRITE:
-			GL_DrawSpriteModel( ( model_t * )model );
-			break;
-		default:
-			Com_Error( ERR_FATAL, "GL_DrawEntities: bad model type: %u", *model );
-			break;
+        if( model->frames ) {
+			GL_DrawAliasModel( model );
+        } else if( model->spriteframes ) {
+			GL_DrawSpriteModel( model );
+        } else {
+			Com_Error( ERR_FATAL, "%s: bad model type", __func__ );
 		}
 	}
 }
@@ -440,10 +441,10 @@ void GL_ShowErrors( const char *func ) {
     }
 }
 
-static void GL_RenderFrame( refdef_t *fd ) {
+void R_RenderFrame( refdef_t *fd ) {
 	GL_Flush2D();
 
-    if( !r_world.name[0] && !( fd->rdflags & RDF_NOWORLDMODEL ) ) {
+    if( !gl_static.world.cache && !( fd->rdflags & RDF_NOWORLDMODEL ) ) {
         Com_Error( ERR_FATAL, "GL_RenderView: NULL worldmodel" );
     }
 
@@ -488,7 +489,7 @@ static void GL_RenderFrame( refdef_t *fd ) {
     GL_ShowErrors( __func__ );
 }
 
-static void GL_BeginFrame( void ) {
+void R_BeginFrame( void ) {
 	if( gl_log->integer ) {
 		QGL_LogNewFrame();
 	}
@@ -504,7 +505,7 @@ static void GL_BeginFrame( void ) {
     GL_ShowErrors( __func__ );
 }
 
-static void GL_EndFrame( void ) {
+void R_EndFrame( void ) {
     if( gl_showstats->integer ) {
         Draw_Stats();
     }
@@ -517,7 +518,7 @@ static void GL_EndFrame( void ) {
 
     GL_ShowErrors( __func__ );
 	
-    video.EndFrame();
+    VID_EndFrame();
 
 //    qglFinish();
 }
@@ -530,11 +531,12 @@ static void GL_EndFrame( void ) {
 ============================================================================== 
 */
 
+#if USE_TGA || USE_JPG || USE_PNG
 static char *screenshot_path( char *buffer, const char *ext ) {
     int i;
 
-    if( cmd.Argc() > 1 ) {
-		Com_sprintf( buffer, MAX_OSPATH, SCREENSHOTS_DIRECTORY"/%s", cmd.Argv( 1 ) );
+    if( Cmd_Argc() > 1 ) {
+		Com_sprintf( buffer, MAX_OSPATH, SCREENSHOTS_DIRECTORY"/%s", Cmd_Argv( 1 ) );
 		COM_AppendExtension( buffer, ext, MAX_OSPATH );
         return buffer;
     }
@@ -543,7 +545,7 @@ static char *screenshot_path( char *buffer, const char *ext ) {
 // 
     for( i = 0; i < 1000; i++ ) {
         Com_sprintf( buffer, MAX_OSPATH, SCREENSHOTS_DIRECTORY"/quake%03d%s", i, ext );
-        if( fs.LoadFileEx( buffer, NULL, FS_PATH_GAME, TAG_FREE ) == INVALID_LENGTH ) {
+        if( FS_LoadFileEx( buffer, NULL, FS_PATH_GAME, TAG_FREE ) == INVALID_LENGTH ) {
             return buffer;	// file doesn't exist
         }
     }
@@ -551,6 +553,7 @@ static char *screenshot_path( char *buffer, const char *ext ) {
     Com_Printf( "All screenshot slots are full.\n" );
     return NULL;
 }
+#endif
 
 
 /* 
@@ -559,12 +562,13 @@ GL_ScreenShot_f
 ================== 
 */
 static void GL_ScreenShot_f( void )  {
+#if USE_TGA
 	char		buffer[MAX_OSPATH]; 
 	byte	    *bgr;
     qboolean    ret;
 
-	if( cmd.Argc() > 2 ) {
-		Com_Printf( "Usage: %s [name]\n", cmd.Argv( 0 ) );
+	if( Cmd_Argc() > 2 ) {
+		Com_Printf( "Usage: %s [name]\n", Cmd_Argv( 0 ) );
 		return;
 	}
 
@@ -572,29 +576,32 @@ static void GL_ScreenShot_f( void )  {
         return;
     }
 
-	bgr = fs.AllocTempMem( gl_config.vidWidth * gl_config.vidHeight * 3 );
+	bgr = FS_AllocTempMem( gl_config.vidWidth * gl_config.vidHeight * 3 );
 
 	qglReadPixels( 0, 0, gl_config.vidWidth, gl_config.vidHeight, GL_BGR,
         GL_UNSIGNED_BYTE, bgr );
 
-	ret = Image_WriteTGA( buffer, bgr, gl_config.vidWidth, gl_config.vidHeight );
+	ret = IMG_WriteTGA( buffer, bgr, gl_config.vidWidth, gl_config.vidHeight );
 
-	fs.FreeFile( bgr );
+	FS_FreeFile( bgr );
 
     if( ret ) {
     	Com_Printf( "Wrote %s\n", buffer );
     }
+#else
+    Com_Printf( "Couldn't create screenshot due to no TGA support linked in.\n" );
+#endif
 }
 
-#if USE_JPEG
+#if USE_JPG
 static void GL_ScreenShotJPG_f( void )  {
 	char		buffer[MAX_OSPATH]; 
 	byte	    *rgb;
     int         quality;
     qboolean    ret;
 
-	if( cmd.Argc() > 3 ) {
-		Com_Printf( "Usage: %s [name] [quality]\n", cmd.Argv( 0 ) );
+	if( Cmd_Argc() > 3 ) {
+		Com_Printf( "Usage: %s [name] [quality]\n", Cmd_Argv( 0 ) );
 		return;
 	}
 
@@ -602,20 +609,20 @@ static void GL_ScreenShotJPG_f( void )  {
         return;
     }
 
-	rgb = fs.AllocTempMem( gl_config.vidWidth * gl_config.vidHeight * 3 );
+	rgb = FS_AllocTempMem( gl_config.vidWidth * gl_config.vidHeight * 3 );
 
 	qglReadPixels( 0, 0, gl_config.vidWidth, gl_config.vidHeight, GL_RGB,
         GL_UNSIGNED_BYTE, rgb );
 
-    if( cmd.Argc() > 2 ) {
-        quality = atoi( cmd.Argv( 2 ) );
+    if( Cmd_Argc() > 2 ) {
+        quality = atoi( Cmd_Argv( 2 ) );
     } else {
         quality = gl_screenshot_quality->integer;
     }
 
-	ret = Image_WriteJPG( buffer, rgb, gl_config.vidWidth, gl_config.vidHeight, quality );
+	ret = IMG_WriteJPG( buffer, rgb, gl_config.vidWidth, gl_config.vidHeight, quality );
 
-	fs.FreeFile( rgb );
+	FS_FreeFile( rgb );
 
     if( ret ) {
     	Com_Printf( "Wrote %s\n", buffer );
@@ -630,8 +637,8 @@ static void GL_ScreenShotPNG_f( void )  {
     int         compression;
     qboolean    ret;
 
-	if( cmd.Argc() > 3 ) {
-		Com_Printf( "Usage: %s [name] [compression]\n", cmd.Argv( 0 ) );
+	if( Cmd_Argc() > 3 ) {
+		Com_Printf( "Usage: %s [name] [compression]\n", Cmd_Argv( 0 ) );
 		return;
 	}
 
@@ -639,20 +646,20 @@ static void GL_ScreenShotPNG_f( void )  {
         return;
     }
 
-	rgb = fs.AllocTempMem( gl_config.vidWidth * gl_config.vidHeight * 3 );
+	rgb = FS_AllocTempMem( gl_config.vidWidth * gl_config.vidHeight * 3 );
 
 	qglReadPixels( 0, 0, gl_config.vidWidth, gl_config.vidHeight, GL_RGB,
         GL_UNSIGNED_BYTE, rgb );
 
-    if( cmd.Argc() > 2 ) {
-        compression = atoi( cmd.Argv( 2 ) );
+    if( Cmd_Argc() > 2 ) {
+        compression = atoi( Cmd_Argv( 2 ) );
     } else {
         compression = gl_screenshot_compression->integer;
     }
 
-	ret = Image_WritePNG( buffer, rgb, gl_config.vidWidth, gl_config.vidHeight, compression );
+	ret = IMG_WritePNG( buffer, rgb, gl_config.vidWidth, gl_config.vidHeight, compression );
 
-	fs.FreeFile( rgb );
+	FS_FreeFile( rgb );
 
     if( ret ) {
     	Com_Printf( "Wrote %s\n", buffer );
@@ -669,72 +676,63 @@ static void GL_Strings_f( void ) {
 
 // ============================================================================== 
 
-
-static void GL_ModeChanged( int width, int height, int flags,
-    int rowbytes, void *pixels )
-{
-	gl_config.vidWidth = width & ~7;
-	gl_config.vidHeight = height & ~1;
-    gl_config.flags = flags;
-}
-
 static void GL_Register( void ) {
     /* misc */
-	gl_partscale = cvar.Get( "gl_partscale", "2", 0 );
-#if USE_JPEG
-	gl_screenshot_quality = cvar.Get( "gl_screenshot_quality", "100", 0 );
+	gl_partscale = Cvar_Get( "gl_partscale", "2", 0 );
+#if USE_JPG
+	gl_screenshot_quality = Cvar_Get( "gl_screenshot_quality", "100", 0 );
 #endif
 #if USE_PNG
-	gl_screenshot_compression = cvar.Get( "gl_screenshot_compression", "6", 0 );
+	gl_screenshot_compression = Cvar_Get( "gl_screenshot_compression", "6", 0 );
 #endif
-	gl_celshading = cvar.Get( "gl_celshading", "0", 0 );
-	gl_modulate = cvar.Get( "gl_modulate", "1", CVAR_ARCHIVE );
-    gl_hwgamma = cvar.Get( "vid_hwgamma", "0", CVAR_ARCHIVE|CVAR_REFRESH );
+	gl_celshading = Cvar_Get( "gl_celshading", "0", 0 );
+	gl_modulate = Cvar_Get( "gl_modulate", "1", CVAR_ARCHIVE );
+    gl_hwgamma = Cvar_Get( "vid_hwgamma", "0", CVAR_ARCHIVE|CVAR_REFRESH );
 
     /* development variables */
-	gl_znear = cvar.Get( "gl_znear", "2", CVAR_CHEAT );
-	gl_zfar = cvar.Get( "gl_zfar", "16384", 0 );
-	gl_log = cvar.Get( "gl_log", "0", 0 );
-	gl_drawworld = cvar.Get( "gl_drawworld", "1", CVAR_CHEAT );
-	gl_drawentities = cvar.Get( "gl_drawentities", "1", CVAR_CHEAT );
-    gl_drawsky = cvar.Get( "gl_drawsky", "1", 0 );
-    gl_showtris = cvar.Get( "gl_showtris", "0", CVAR_CHEAT );
-    gl_showstats = cvar.Get( "gl_showstats", "0", 0 );
-    gl_cull_nodes = cvar.Get( "gl_cull_nodes", "1", 0 );
-	gl_cull_models = cvar.Get( "gl_cull_models", "1", 0 );
-	gl_bind = cvar.Get( "gl_bind", "1", CVAR_CHEAT );
-    gl_clear = cvar.Get( "gl_clear", "0", 0 );
-    gl_novis = cvar.Get( "gl_novis", "0", 0 );
-    gl_lockpvs = cvar.Get( "gl_lockpvs", "0", CVAR_CHEAT );
-    gl_lightmap = cvar.Get( "gl_lightmap", "0", CVAR_CHEAT );
+	gl_znear = Cvar_Get( "gl_znear", "2", CVAR_CHEAT );
+	gl_zfar = Cvar_Get( "gl_zfar", "16384", 0 );
+	gl_log = Cvar_Get( "gl_log", "0", 0 );
+	gl_drawworld = Cvar_Get( "gl_drawworld", "1", CVAR_CHEAT );
+	gl_drawentities = Cvar_Get( "gl_drawentities", "1", CVAR_CHEAT );
+    gl_drawsky = Cvar_Get( "gl_drawsky", "1", 0 );
+    gl_showtris = Cvar_Get( "gl_showtris", "0", CVAR_CHEAT );
+    gl_showstats = Cvar_Get( "gl_showstats", "0", 0 );
+    gl_cull_nodes = Cvar_Get( "gl_cull_nodes", "1", 0 );
+	gl_cull_models = Cvar_Get( "gl_cull_models", "1", 0 );
+	gl_bind = Cvar_Get( "gl_bind", "1", CVAR_CHEAT );
+    gl_clear = Cvar_Get( "gl_clear", "0", 0 );
+    gl_novis = Cvar_Get( "gl_novis", "0", 0 );
+    gl_lockpvs = Cvar_Get( "gl_lockpvs", "0", CVAR_CHEAT );
+    gl_lightmap = Cvar_Get( "gl_lightmap", "0", CVAR_CHEAT );
 #if USE_DYNAMIC
-    gl_dynamic = cvar.Get( "gl_dynamic", "2", CVAR_ARCHIVE );
+    gl_dynamic = Cvar_Get( "gl_dynamic", "2", CVAR_ARCHIVE );
 #endif
-    gl_polyblend = cvar.Get( "gl_polyblend", "1", 0 );
-    gl_fullbright = cvar.Get( "r_fullbright", "0", CVAR_CHEAT );
-    gl_showerrors = cvar.Get( "gl_showerrors", "1", 0 );
-    gl_fragment_program = cvar.Get( "gl_fragment_program", "0", CVAR_REFRESH );
-    gl_vertex_buffer_object = cvar.Get( "gl_vertex_buffer_object", "0", CVAR_REFRESH );
+    gl_polyblend = Cvar_Get( "gl_polyblend", "1", 0 );
+    gl_fullbright = Cvar_Get( "r_fullbright", "0", CVAR_CHEAT );
+    gl_showerrors = Cvar_Get( "gl_showerrors", "1", 0 );
+    gl_fragment_program = Cvar_Get( "gl_fragment_program", "0", CVAR_REFRESH );
+    gl_vertex_buffer_object = Cvar_Get( "gl_vertex_buffer_object", "0", CVAR_REFRESH );
     
-	cmd.AddCommand( "screenshot", GL_ScreenShot_f );
-#if USE_JPEG
-	cmd.AddCommand( "screenshotjpg", GL_ScreenShotJPG_f );
+	Cmd_AddCommand( "screenshot", GL_ScreenShot_f );
+#if USE_JPG
+	Cmd_AddCommand( "screenshotjpg", GL_ScreenShotJPG_f );
 #else
-	cmd.AddCommand( "screenshotjpg", GL_ScreenShot_f );
+	Cmd_AddCommand( "screenshotjpg", GL_ScreenShot_f );
 #endif
 #if USE_PNG
-	cmd.AddCommand( "screenshotpng", GL_ScreenShotPNG_f );
+	Cmd_AddCommand( "screenshotpng", GL_ScreenShotPNG_f );
 #else
-	cmd.AddCommand( "screenshotpng", GL_ScreenShot_f );
+	Cmd_AddCommand( "screenshotpng", GL_ScreenShot_f );
 #endif
-	cmd.AddCommand( "strings", GL_Strings_f );
+	Cmd_AddCommand( "strings", GL_Strings_f );
 }
 
 static void GL_Unregister( void ) {
-	cmd.RemoveCommand( "screenshot" );
-	cmd.RemoveCommand( "screenshotjpg" );
-	cmd.RemoveCommand( "screenshotpng" );
-	cmd.RemoveCommand( "strings" );
+	Cmd_RemoveCommand( "screenshot" );
+	Cmd_RemoveCommand( "screenshotjpg" );
+	Cmd_RemoveCommand( "screenshotpng" );
+	Cmd_RemoveCommand( "strings" );
 }
 
 #define GPA( x )    do { q ## x = ( void * )qglGetProcAddress( #x ); } while( 0 )
@@ -870,12 +868,21 @@ static void GL_IdentifyRenderer( void ) {
 }
 
 static void GL_PostInit( void ) {
+	registration_sequence = 1;
+
 	GL_InitImages();
-    GL_InitModels();
+    MOD_Init();
 	GL_SetDefaultState();
 }
 
-static qboolean GL_Init( qboolean total ) {
+// ============================================================================== 
+
+/*
+===============
+R_Init
+===============
+*/
+qboolean R_Init( qboolean total ) {
 	Com_DPrintf( "GL_Init( %i )\n", total );
 
 	if( !total ) {
@@ -885,15 +892,15 @@ static qboolean GL_Init( qboolean total ) {
 
 	Com_Printf( "ref_gl " VERSION ", " __DATE__ "\n" );
 
-	/* initialize OS-specific parts of OpenGL */
-	/* create the window and set up the context */
-	if( !video.Init() ) {
+	// initialize OS-specific parts of OpenGL
+	// create the window and set up the context
+	if( !VID_Init() ) {
 		return qfalse;
 	}
 
 	GL_Register();
 
-	/* initialize our QGL dynamic bindings */
+	// initialize our QGL dynamic bindings
 	QGL_Init();
 
 #define GET_STRING( x )  ( const char * )qglGetString( x )
@@ -914,7 +921,7 @@ static qboolean GL_Init( qboolean total ) {
 	}
 
 	if( gl_hwgamma->integer && !( gl_config.flags & QVF_GAMMARAMP ) ) {
-		cvar.Set( "vid_hwgamma", "0" );
+		Cvar_Set( "vid_hwgamma", "0" );
 		Com_Printf( "Hardware gamma is not supported by this video driver\n" );
 	}
 
@@ -938,20 +945,8 @@ static qboolean GL_Init( qboolean total ) {
 fail:
     QGL_Shutdown();
 	GL_Unregister();
-	video.Shutdown();
+	VID_Shutdown();
     return qfalse;
-}
-
-static void GL_FreeWorld( void ) {
-    GLuint buf = 1;
-
-    Bsp_FreeWorld();
-
-    if( !gl_static.vertices && qglDeleteBuffersARB ) {
-        qglDeleteBuffersARB( 1, &buf );
-    }
-    
-    gl_static.vertices = NULL;
 }
 
 /*
@@ -959,12 +954,12 @@ static void GL_FreeWorld( void ) {
 R_Shutdown
 ===============
 */
-void GL_Shutdown( qboolean total ) {
+void R_Shutdown( qboolean total ) {
 	Com_DPrintf( "GL_Shutdown( %i )\n", total );
 
     GL_FreeWorld();
 	GL_ShutdownImages();
-    GL_ShutdownModels();
+    MOD_Shutdown();
 
 	if( !total ) {
 		return;
@@ -972,14 +967,10 @@ void GL_Shutdown( qboolean total ) {
     
     GL_ShutdownPrograms();
 
-	/*
-	** shut down OS specific OpenGL stuff like contexts, etc.
-	*/
-	video.Shutdown();
+	// shut down OS specific OpenGL stuff like contexts, etc.
+	VID_Shutdown();
 
-	/*
-	** shutdown our QGL subsystem
-	*/
+	// shutdown our QGL subsystem
 	QGL_Shutdown();
 
 	GL_Unregister();
@@ -988,11 +979,13 @@ void GL_Shutdown( qboolean total ) {
     memset( &gl_config, 0, sizeof( gl_config ) );
 }
 
-void GL_BeginRegistration( const char *name ) {
+/*
+===============
+R_BeginRegistration
+===============
+*/
+void R_BeginRegistration( const char *name ) {
     char fullname[MAX_QPATH];
-    bspTexinfo_t *texinfo, *lastexinfo;
-	bspLeaf_t *leaf, *lastleaf;
-	bspNode_t *node, *lastnode;
 
 	gl_static.registering = qtrue;
     registration_sequence++;
@@ -1001,225 +994,38 @@ void GL_BeginRegistration( const char *name ) {
 	glr.viewcluster1 = glr.viewcluster2 = -2;
     
 	Q_concat( fullname, sizeof( fullname ), "maps/", name, ".bsp", NULL );
-   
-	// check if the required world model was already loaded
-    if( !strcmp( r_world.name, fullname ) &&
-        !cvar.VariableInteger( "flushmap" ) )
-    {
-		lastexinfo = r_world.texinfos + r_world.numTexinfos;
-        for( texinfo = r_world.texinfos; texinfo < lastexinfo; texinfo++ ) {
-            texinfo->image->registration_sequence = registration_sequence;
-        }
-		lastleaf = r_world.leafs + r_world.numLeafs;
-	    for( leaf = r_world.leafs; leaf < lastleaf; leaf++ ) {
-            leaf->visframe = 0;
-        }
-		lastnode = r_world.nodes + r_world.numNodes;
-	    for( node = r_world.nodes; node < lastnode; node++ ) {
-            node->visframe = 0;
-        }
-		Com_DPrintf( "%s: reused old world model\n", __func__ );
-        return;
-    }
-     
-    // free previous model, if any
-    GL_FreeWorld();
-
-    // load fresh world model
-    Bsp_LoadWorld( fullname );
+    GL_LoadWorld( fullname ); 
 }
 
-void GL_EndRegistration( void ) {
-    R_FreeUnusedImages();
-	Model_FreeUnused();
+/*
+===============
+R_EndRegistration
+===============
+*/
+void R_EndRegistration( void ) {
+    IMG_FreeUnused();
+	MOD_FreeUnused();
 	Scrap_Upload();
 	gl_static.registering = qfalse;
 }
 
-void GL_SetPalette( const byte *pal ) {
-	int i;
-
-	if( pal == NULL ) {
-		for( i = 0; i < 256; i++ ) {
-			gl_static.palette[i] = d_8to24table[i];
-		}
-		return;
-	}
-
-	for( i = 0; i < 256; i++ ) {
-		gl_static.palette[i] = MakeColor( pal[0], pal[1], pal[2], 255 );
-		pal += 3;
-	}
+/*
+===============
+R_ModeChanged
+===============
+*/
+void R_ModeChanged( int width, int height, int flags, int rowbytes, void *pixels ) {
+	gl_config.vidWidth = width & ~7;
+	gl_config.vidHeight = height & ~1;
+    gl_config.flags = flags;
 }
 
-void GL_GetConfig( glconfig_t *config ) {
+/*
+===============
+R_GetConfig
+===============
+*/
+void R_GetConfig( glconfig_t *config ) {
     *config = gl_config;
 }
-
-#ifndef REF_HARD_LINKED
-// this is only here so the functions in q_shared.c can link
-
-void Com_Printf( const char *fmt, ... ) {
-	va_list		argptr;
-	char		text[MAXPRINTMSG];
-
-	va_start( argptr, fmt );
-	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
-	va_end( argptr );
-
-	com.Print( PRINT_ALL, text );
-}
-
-void Com_DPrintf( const char *fmt, ... ) {
-	va_list		argptr;
-	char		text[MAXPRINTMSG];
-
-	va_start( argptr, fmt );
-	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
-	va_end( argptr );
-
-	com.Print( PRINT_DEVELOPER, text );
-}
-
-void Com_WPrintf( const char *fmt, ... ) {
-	va_list		argptr;
-	char		text[MAXPRINTMSG];
-
-	va_start( argptr, fmt );
-	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
-	va_end( argptr );
-
-	com.Print( PRINT_WARNING, text );
-}
-
-void Com_EPrintf( const char *fmt, ... ) {
-	va_list		argptr;
-	char		text[MAXPRINTMSG];
-
-	va_start( argptr, fmt );
-	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
-	va_end( argptr );
-
-	com.Print( PRINT_ERROR, text );
-}
-
-void Com_Error( comErrorType_t type, const char *error, ... ) {
-	va_list		argptr;
-	char		text[MAXPRINTMSG];
-
-	va_start( argptr, error );
-	Q_vsnprintf( text, sizeof( text ), error, argptr );
-	va_end( argptr );
-
-	com.Error( type, text );
-}
-
-#endif /* !REF_HARD_LINKED */
-
-/*
-=================
-Ref_FillAPI
-=================
-*/
-static void Ref_FillAPI( refAPI_t *api ) {
-	api->BeginRegistration = GL_BeginRegistration;
-	api->RegisterModel = GL_RegisterModel;
-	api->RegisterSkin = R_RegisterSkin;
-	api->RegisterPic = R_RegisterPic;
-	api->RegisterFont = GL_RegisterFont;
-	api->SetSky = R_SetSky;
-	api->EndRegistration = GL_EndRegistration;
-	api->GetModelSize = GL_GetModelSize;
-
-	api->RenderFrame = GL_RenderFrame;
-	api->LightPoint = GL_LightPoint;
-
-    api->SetColor = Draw_SetColor;
-    api->SetClipRect = Draw_SetClipRect;
-	api->SetScale = Draw_SetScale;
-	api->DrawString = Draw_String;
-	api->DrawChar = Draw_Char;
-	api->DrawGetPicSize = Draw_GetPicSize;
-	api->DrawPic = Draw_Pic;
-	api->DrawStretchPicST = Draw_StretchPicST;
-	api->DrawStretchPic = Draw_StretchPic;
-	api->DrawTileClear = Draw_TileClear;
-	api->DrawFill = Draw_Fill;
-	api->DrawStretchRaw = Draw_StretchRaw;
-	api->DrawFillEx = Draw_FillEx;
-
-	api->Init = GL_Init;
-	api->Shutdown = GL_Shutdown;
-
-	api->CinematicSetPalette = GL_SetPalette;
-	api->BeginFrame = GL_BeginFrame;
-	api->EndFrame = GL_EndFrame;
-    api->ModeChanged = GL_ModeChanged;
-
-	api->GetConfig = GL_GetConfig;
-}
-
-/*
-=================
-Ref_APISetupCallback
-=================
-*/
-qboolean Ref_APISetupCallback( api_type_t type, void *api ) {
-	switch( type ) {
-	case API_REFRESH:
-		Ref_FillAPI( ( refAPI_t * )api );
-		break;
-	default:
-		return qfalse;
-	}
-
-	return qtrue;
-}
-
-#ifndef REF_HARD_LINKED
-
-/*
-@@@@@@@@@@@@@@@@@@@@@
-moduleEntry
-
-@@@@@@@@@@@@@@@@@@@@@
-*/
-EXPORTED void *moduleEntry( int query, void *data ) {
-	moduleInfo_t *info;
-	moduleCapability_t caps;
-	APISetupCallback_t callback;
-
-	switch( query ) {
-	case MQ_GETINFO:
-		info = ( moduleInfo_t * )data;
-		info->api_version = MODULES_APIVERSION;
-		Q_strncpyz( info->fullname, "OpenGL Refresh Driver",
-                sizeof( info->fullname ) );
-		Q_strncpyz( info->author, "Andrey Nazarov", sizeof( info->author ) );
-		return ( void * )qtrue;
-
-	case MQ_GETCAPS:
-		caps = MCP_REFRESH;
-		return ( void * )caps;
-
-	case MQ_SETUPAPI:
-		if( ( callback = ( APISetupCallback_t )data ) == NULL ) {
-			return NULL;
-		}
-		callback( API_CMD, &cmd );
-		callback( API_CVAR, &cvar );
-		callback( API_FS, &fs );
-		callback( API_COMMON, &com );
-		callback( API_SYSTEM, &sys );
-		callback( API_VIDEO_OPENGL, &video );
-
-		return ( void * )Ref_APISetupCallback;
-
-	}
-
-	/* quiet compiler warning */
-	return NULL;
-}
-
-#endif /* !REF_HARD_LINKED */
 

@@ -19,12 +19,22 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // common.c -- misc functions used in client and server
 #include "com_local.h"
+#include "files.h"
+#include "protocol.h"
+#include "q_msg.h"
+#include "q_fifo.h"
+#include "net_sock.h"
+#include "net_chan.h"
+#include "sys_public.h"
+#include "cl_public.h"
+#include "sv_public.h"
+#include "q_list.h"
+#include "bsp.h"
+#include "cmodel.h"
 #include <setjmp.h>
 #if USE_ZLIB
 #include <zlib.h>
 #endif
-
-commonAPI_t	com;
 
 static jmp_buf  abortframe;		// an ERR_DROP occured, exit the entire frame
 
@@ -33,9 +43,6 @@ static char		com_errorMsg[MAXPRINTMSG];
 static char     **com_argv;
 static int      com_argc;
 
-#ifndef DEDICATED_ONLY
-cvar_t	*host_speeds;
-#endif
 cvar_t	*developer;
 cvar_t	*timescale;
 cvar_t	*fixedtime;
@@ -64,7 +71,9 @@ unsigned    com_localTime;
 qboolean    com_initialized;
 time_t      com_startTime;
 
-#ifndef DEDICATED_ONLY
+#if USE_CLIENT
+cvar_t	*host_speeds;
+
 // host_speeds times
 unsigned	time_before_game;
 unsigned	time_after_game;
@@ -85,9 +94,9 @@ CLIENT / SERVER interactions
 */
 
 static int	rd_target;
-static char	*rd_buffer;
+static char *rd_buffer;
 static size_t	rd_buffersize;
-static size_t  rd_length;
+static size_t   rd_length;
 static rdflush_t    rd_flush;
 
 void Com_BeginRedirect( int target, char *buffer, size_t buffersize, rdflush_t flush ) {
@@ -950,19 +959,6 @@ size_t FIFO_Write( fifo_t *fifo, const void *buffer, size_t len ) {
 
 /*
 =============
-Com_FillAPI
-=============
-*/
-void Com_FillAPI( commonAPI_t *api ) {
-	api->Print = Com_LevelPrint;
-	api->Error = Com_LevelError;
-	api->TagMalloc = Z_TagMalloc;
-    api->Realloc = Z_Realloc;
-	api->Free = Z_Free;
-}
-
-/*
-=============
 Com_Time_m
 =============
 */
@@ -1277,13 +1273,11 @@ void Qcommon_Init( int argc, char **argv ) {
 	Prompt_Init();
 	Con_Init();
 	
-	Com_FillAPI( &com );
-
 	//
 	// init commands and vars
 	//
 	z_perturb = Cvar_Get( "z_perturb", "0", 0 );
-#ifndef DEDICATED_ONLY
+#if USE_CLIENT
 	host_speeds = Cvar_Get ("host_speeds", "0", 0);
 #endif
 	developer = Cvar_Get ("developer", "0", 0);
@@ -1293,10 +1287,10 @@ void Qcommon_Init( int argc, char **argv ) {
 	logfile_flush = Cvar_Get( "logfile_flush", "0", 0 );
 	logfile_name = Cvar_Get( "logfile_name", COM_LOGFILE_NAME, 0 );
 	logfile_prefix = Cvar_Get( "logfile_prefix", "[%Y-%m-%d %H:%M] ", 0 );
-#ifdef DEDICATED_ONLY
-	dedicated = Cvar_Get ("dedicated", "1", CVAR_ROM);
-#else
+#if USE_CLIENT
 	dedicated = Cvar_Get ("dedicated", "0", CVAR_NOSET);
+#else
+	dedicated = Cvar_Get ("dedicated", "1", CVAR_ROM);
 #endif
 	sv_running = Cvar_Get( "sv_running", "0", CVAR_ROM );
 	sv_paused = Cvar_Get( "sv_paused", "0", CVAR_ROM );
@@ -1340,7 +1334,7 @@ void Qcommon_Init( int argc, char **argv ) {
 
     Sys_RunConsole();
 
-    // do not accept CVAR_NOSET variable changes anymore
+    // no longer allow CVAR_NOSET modifications
     com_initialized = qtrue;
 
 	// after FS is initialized, open logfile
@@ -1375,6 +1369,7 @@ void Qcommon_Init( int argc, char **argv ) {
 
 	Netchan_Init();
 	NET_Init();
+	BSP_Init();
 	CM_Init();
 	SV_Init();
 	CL_Init();
@@ -1421,62 +1416,13 @@ Com_ProcessEvents
 ==============
 */
 void Com_ProcessEvents( void ) {
-	neterr_t ret;
-
-    do {
-        ret = NET_GetPacket( NS_SERVER );
-        if( ret == NET_AGAIN ) {
-            break;
-        }
-		SV_PacketEvent( ret );
-    } while( ret == NET_OK );
-
     Sys_RunConsole();
-
-#ifndef DEDICATED_ONLY
-    do {
-        ret = NET_GetPacket( NS_CLIENT );
-        if( ret == NET_AGAIN ) {
-            break;
-        }
-		if( cl_running->integer ) {
-			CL_PacketEvent( ret );
-		}
-    } while( ret == NET_OK );
-
-	CL_PumpEvents();
-	IN_Frame();
+    SV_ProcessEvents();
+#if USE_CLIENT
+	CL_ProcessEvents();
 #endif
 }
 
-#ifndef DEDICATED_ONLY
-/*
-==============
-Com_ProcessLoopback
-==============
-*/
-static void Com_ProcessLoopback( void ) {
-	int i;
-
-	memset( &net_from, 0, sizeof( net_from ) );
-	net_from.type = NA_LOOPBACK;
-
-	// Process loopback packets
-	for( i = 0; i < 2; i++ ) {
-		while( NET_GetLoopPacket( NS_SERVER ) ) {
-			if( sv_running->integer ) {
-				SV_PacketEvent( NET_OK );
-			}
-		}
-
-		while( NET_GetLoopPacket( NS_CLIENT ) ) {
-			if( cl_running->integer ) {
-				CL_PacketEvent( NET_OK );
-			}
-		}
-	}
-}
-#endif
 
 /*
 =================
@@ -1484,7 +1430,7 @@ Qcommon_Frame
 =================
 */
 void Qcommon_Frame( void ) {
-#ifndef DEDICATED_ONLY
+#if USE_CLIENT
 	unsigned	time_before, time_event, time_between, time_after;
 #endif
 	unsigned oldtime, msec;
@@ -1494,7 +1440,7 @@ void Qcommon_Frame( void ) {
 		return;			// an ERR_DROP was thrown
 	}
 
-#ifndef DEDICATED_ONLY
+#if USE_CLIENT
 	time_before = time_event = time_between = time_after = 0;
 
 	if( host_speeds->integer )
@@ -1511,7 +1457,7 @@ void Qcommon_Frame( void ) {
 
     Com_ProcessEvents();
 
-#ifndef DEDICATED_ONLY
+#if USE_CLIENT
     // spin until msec is non-zero if running a client
     if( !dedicated->integer ) {
         while( msec < 1 ) {
@@ -1540,18 +1486,16 @@ void Qcommon_Frame( void ) {
 	// this is the only place where console commands are processed.
     Cbuf_Execute();
 
-#ifndef DEDICATED_ONLY
+#if USE_CLIENT
 	if( host_speeds->integer )
 		time_event = Sys_Milliseconds();
 #endif
 
 	SV_Frame( msec );
 
-#ifndef DEDICATED_ONLY
+#if USE_CLIENT
 	if( host_speeds->integer )
 		time_between = Sys_Milliseconds();
-
-	Com_ProcessLoopback();
 
 	CL_Frame( msec );
 

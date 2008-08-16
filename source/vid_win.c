@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 
 #include "win_local.h"
+#include "cl_public.h"
 
 #define    WINDOW_CLASS_NAME "Quake2"
 
@@ -125,10 +126,10 @@ static void Win_Show( const vrect_t *rc, qboolean fullscreen ) {
 }
 
 void Win_ModeChanged( void ) {
-#ifndef REF_HARD_LINKED
+#if USE_REF == REF_SOFT
     SWimp_ModeChanged();
 #endif
-    ref.ModeChanged( win.rc.width, win.rc.height, win.flags,
+    R_ModeChanged( win.rc.width, win.rc.height, win.flags,
         win.pitch, win.buffer );
     SCR_ModeChanged();
 }
@@ -196,7 +197,7 @@ void Win_SetMode( void ) {
     win.flags &= ~QVF_FULLSCREEN;
 }
 
-void Win_UpdateGamma( const byte *table ) {
+void VID_UpdateGamma( const byte *table ) {
     WORD v;
     int i;
 
@@ -494,7 +495,7 @@ Win_MainWndProc
 main window procedure
 ====================
 */
-LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam ) {
+PRIVATE LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam ) {
     switch( uMsg ) {
     case WM_MOUSEWHEEL: {
             extern keydest_t Key_GetDest( void );
@@ -704,7 +705,7 @@ LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
     return DefWindowProc( hWnd, uMsg, wParam, lParam );
 }
 
-void VID_ModeChanged( void ) {
+void VID_SetMode( void ) {
     Win_SetMode();
     Win_ModeChanged();
 }

@@ -236,22 +236,25 @@ static void ClipSkyPolygon (int nump, vec3_t vecs, int stage)
 R_AddSkySurface
 =================
 */
-void R_AddSkySurface( bspSurface_t *fa ) {
+void R_AddSkySurface( mface_t *fa ) {
 	int			i;
 	vec3_t		verts[MAX_CLIP_VERTS];
-    vec_t *vert;
+	msurfedge_t *surfedge;
+	mvertex_t   *vert;
+	medge_t     *edge;
 
-    if( fa->numVerts > MAX_CLIP_VERTS ) {
+    if( fa->numsurfedges > MAX_CLIP_VERTS ) {
         Com_Error( ERR_DROP, "%s: too many verts", __func__ );
     }
 
 	// calculate vertex values for sky box
-    vert = fa->vertices;
-    for (i=0 ; i<fa->numVerts ; i++) {
-        VectorSubtract (vert, modelViewOrigin, verts[i]);
-        vert += 3;
+	surfedge = fa->firstsurfedge;
+    for( i = 0; i < fa->numsurfedges; i++, surfedge++ ) {
+		edge = surfedge->edge;
+		vert = edge->v[surfedge->vert];
+        VectorSubtract (vert->point, modelViewOrigin, verts[i]);
     }
-    ClipSkyPolygon (fa->numVerts, verts[0], 0);
+    ClipSkyPolygon (fa->numsurfedges, verts[0], 0);
 }
 
 
@@ -391,7 +394,7 @@ void R_SetSky( const char *name, float rotate, vec3_t axis ) {
 	for( i = 0; i < 6; i++ ) {
 		Q_concat( pathname, sizeof( pathname ),
             "env/", name, suf[i], ".tga", NULL );
-		sky_images[i] = R_FindImage( pathname, it_sky );
+		sky_images[i] = IMG_Find( pathname, it_sky );
 		if( !sky_images[i] ) {
             R_UnsetSky();
             return;

@@ -19,6 +19,62 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // net_chan.h
 
+typedef enum netchan_type_e {
+	NETCHAN_OLD,
+	NETCHAN_NEW
+} netchan_type_t;
+
+typedef struct netchan_s {
+	netchan_type_t	type;
+	int			protocol;
+    size_t      maxpacketlen;
+
+	qboolean	fatal_error;
+
+	netsrc_t	sock;
+
+	int			dropped;			// between last packet and previous
+
+	unsigned	last_received;		// for timeouts
+	unsigned	last_sent;			// for retransmits
+
+	netadr_t	remote_address;
+	int			qport;				// qport value to write when transmitting
+
+	sizebuf_t	message;		// writing buffer for reliable data
+
+	size_t		reliable_length;
+	
+	qboolean	reliable_ack_pending;	// set to qtrue each time reliable is received
+	qboolean	fragment_pending;
+
+	// sequencing variables
+	int			incoming_sequence;
+	int			incoming_acknowledged;
+	int			outgoing_sequence;
+
+	size_t		(*Transmit)( struct netchan_s *, size_t, const void * );
+	size_t		(*TransmitNextFragment)( struct netchan_s * );
+	qboolean	(*Process)( struct netchan_s * );
+	qboolean	(*ShouldUpdate)( struct netchan_s * );
+} netchan_t;
+
+extern cvar_t       *net_qport;
+extern cvar_t       *net_maxmsglen;
+extern cvar_t       *net_chantype;
+
+void Netchan_Init( void );
+neterr_t Netchan_OutOfBandPrint( netsrc_t sock, const netadr_t *adr,
+        const char *format, ... );
+netchan_t *Netchan_Setup( netsrc_t sock, netchan_type_t type,
+        const netadr_t *adr, int qport, size_t maxpacketlen, int protocol );
+void Netchan_Close( netchan_t *netchan );
+
+#define OOB_PRINT( sock, addr, string ) \
+	NET_SendPacket( sock, addr, sizeof( "\xff\xff\xff\xff" string ) - 1, "\xff\xff\xff\xff" string )
+
+//============================================================================
+
 typedef struct netchan_old_s {
 	netchan_t	pub;
 

@@ -1,7 +1,24 @@
 #!/bin/sh
 
+# Copyright (C) 2008 Andrey Nazarov
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+#
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+
 # -----------------------------
-# q2pro configuration script by [SkulleR]
+# Q2PRO configuration script
 # -----------------------------
 
 # build directories
@@ -9,21 +26,32 @@ sources=$(dirname $0)
 if [ "$sources" = "." ]; then
     sources=`pwd`
 fi
-
 if [ ! -f $sources/source/common.c ] ; then
     echo "ERROR: $sources does not look like Q2PRO source tree"
     exit 1
 fi
-
 outdir=`pwd`
+tmpc="/tmp/q2pro-${RANDOM}.c"
+tmpo="/tmp/q2pro-${RANDOM}.o"
+config_mk="config.mk"
+config_h="config.h"
 
 # defaults
-prefix="/usr/local"
-datadir="share/games/quake2"
-libdir="lib/games/quake2"
-refdir="lib/games/q2pro"
-bindir="games"
-mandir="share/man/man6"
+revision="238"
+help="no"
+exesuffix=""
+libsuffix=".so"
+targets=""
+executables=""
+libraries=""
+cpu=""
+singleuser="no"
+asmflags=""
+if [ -z "$CFLAGS" ]; then
+    CFLAGS="-O2 -Wall -Wstrict-prototypes"
+fi
+
+# build tools
 cross_prefix=""
 cc="gcc"
 make="make"
@@ -32,35 +60,35 @@ strip="strip"
 mingw="no"
 pngconfig="libpng-config"
 sdlconfig="sdl-config"
-exesuffix=""
-libsuffix=".so"
-dsound="no"
-dinput="no"
-zlib="yes"
-png="no"
-jpeg="no"
-sdl="yes"
-dl="no"
-x11="yes"
-client="yes"
-ref_soft="yes"
-ref_gl="yes"
-server="no"
-openffa="no"
-help="no"
-targets=""
-executables=""
-libraries=""
-hardlink="no"
-asm="???"
-cpu=""
-anticheat="no"
-singleuser="no"
-gldriver="libGL.so.1"
-indriver=""
+
+# install paths
+prefix="/usr/local"
+datadir="share/games/quake2"
+libdir="lib/games/quake2"
+bindir="games"
+mandir="share/man/man6"
 homedir="~/.q2pro"
 sitecfg="/etc/default/q2pro"
-asmflags=""
+
+# use flags
+use_dsound="no"
+use_dinput="no"
+use_zlib="yes"
+use_tga="yes"
+use_png="no"
+use_jpg="no"
+use_sdl="yes"
+use_dl="no"
+use_x11="yes"
+use_client="yes"
+use_ref="gl"
+use_ui="yes"
+use_server="no"
+use_anticheat="no"
+use_asm="???"
+use_openffa="no"
+
+# constants
 logfile="console.log"
 cfgfile="config.cfg"
 defcfg="default.cfg"
@@ -69,15 +97,8 @@ histfile=".conhistory"
 democache=".democache"
 screenshots="screenshots"
 scoreshots="scoreshots"
-revision="238"
-tmpc="/tmp/q2pro-${RANDOM}.c"
-tmpo="/tmp/q2pro-${RANDOM}.o"
-config_mk="config.mk"
-config_h="config.h"
-
-if [ -z "$CFLAGS" ]; then
-    CFLAGS="-O2 -Wall -Wstrict-prototypes"
-fi
+gldriver="libGL.so.1"
+indriver=""
 
 #parse options
 for opt do
@@ -102,35 +123,37 @@ for opt do
     ;;
     --strip=*) strip=`echo $opt | cut -d '=' -f 2`
     ;;
-    --hardlink) hardlink="yes"
+    --disable-client) use_client="no"
     ;;
-    --disable-client) client="no"
+    --enable-server) use_server="yes"
     ;;
-    --enable-server) server="yes"
+    --enable-openffa) use_openffa="yes"
     ;;
-    --enable-openffa) openffa="yes"
+    --enable-dsound) use_dsound="yes"
     ;;
-    --enable-dsound) dsound="yes"
+    --enable-dinput) use_dinput="yes"
     ;;
-    --enable-dinput) dinput="yes"
+    --disable-zlib) use_zlib="no"
     ;;
-    --disable-zlib) zlib="no"
+    --disable-tga) use_tga="no"
     ;;
-    --enable-png) png="yes"
+    --enable-png) use_png="yes"
     ;;
-    --enable-jpeg) jpeg="yes"
+    --enable-jpg) use_jpg="yes"
     ;;
-    --disable-asm) asm="no"
+    --disable-ui) use_ui="no"
     ;;
-    --enable-anticheat) anticheat="yes"
+    --use-ref=*) use_ref=`echo $opt | cut -d '=' -f 2`
+    ;;
+    --disable-asm) use_asm="no"
+    ;;
+    --enable-anticheat) use_anticheat="yes"
     ;;
     --single-user) singleuser="yes"
     ;;
     --datadir=*) datadir=`echo $opt | cut -d '=' -f 2`
     ;;
     --libdir=*) libdir=`echo $opt | cut -d '=' -f 2`
-    ;;
-    --refdir=*) refdir=`echo $opt | cut -d '=' -f 2`
     ;;
     --bindir=*) bindir=`echo $opt | cut -d '=' -f 2`
     ;;
@@ -152,7 +175,6 @@ echo "  --cross-prefix=PREFIX  add PREFIX to compile tools [$cross_prefix]"
 echo "  --cc=CC                use C compiler [$cc]"
 echo "  --make=MAKE            use MAKE processor [$make]"
 echo "  --windres=WINDRES      use RC compiler [$windres]"
-echo "  --hardlink             hard link client with ref_gl"
 echo "  --disable-client       do not build client"
 echo "  --enable-server        build dedicated server"
 echo "  --enable-openffa       build OpenFFA deathmatch mod"
@@ -160,15 +182,16 @@ echo "  --enable-mingw         enable Windows build"
 echo "  --enable-dsound        enable direct sound driver"
 echo "  --enable-dinput        enable direct input driver"
 echo "  --disable-zlib         disable linking with zlib"
-echo "  --enable-png           enable linking with PNG library"
-echo "  --enable-jpeg          enable linking with JPEG library"
+echo "  --disable-tga          disable TGA images support"
+echo "  --enable-png           enable PNG images support"
+echo "  --enable-jpg           enable JPG images support"
+echo "  --disable-ui           disable menu user interface"
 echo "  --disable-asm          disable i386 assembly optimizations"
 echo "  --enable-anticheat     enable r1ch.net anticheat server interface"
 echo "  --single-user          assume to be installed in home dir"
 echo "  --prefix=PREFIX        install in PREFIX [$prefix]"
-echo "  --datadir=DIR          game data tree [$datadir]"
-echo "  --libdir=DIR           game libraries tree [$libdir]"
-echo "  --refdir=DIR           refresh libraries directory [$refdir]"
+echo "  --datadir=DIR          path to game data tree [$datadir]"
+echo "  --libdir=DIR           path to game libs tree [$libdir]"
 echo "  --bindir=DIR           executables directory [$bindir]"
 echo "  --mandir=DIR           manpages directory [$mandir]"
 echo "  --homedir=DIR          home directory [$homedir]"
@@ -184,8 +207,8 @@ fi
 case $cpu in
 i386|i486|i586|i686)
 cpu="i386"
-if [ "$asm" != "no" ] ; then
-    asm="yes"
+if [ "$use_asm" != "no" ] ; then
+    use_asm="yes"
 fi
 CFLAGS="-ffloat-store -ffast-math $CFLAGS"
 ;;
@@ -217,7 +240,7 @@ mingw="yes"
 make="gmake"
 ;;
 Linux)
-dl="yes"
+use_dl="yes"
 ;;
 esac
 
@@ -231,7 +254,7 @@ if [ "$mingw" = "yes" ]; then
     pathsep='\\'
     exesuffix=".exe"
     libsuffix=".dll"
-    sdl="no"
+    use_sdl="no"
     gldriver="opengl32"
     exported="__attribute__((dllexport))"
     homedir=""
@@ -245,7 +268,6 @@ else
         prefix=""
         datadir="."
         libdir="."
-        refdir="."
         bindir=""
         mandir=""
         homedir=""
@@ -253,7 +275,6 @@ else
         if [ ! -z "$prefix" ]; then
             datadir="$prefix/$datadir"
             libdir="$prefix/$libdir"
-            refdir="$prefix/$refdir"
             bindir="$prefix/$bindir"
             mandir="$prefix/$mandir"
         fi
@@ -272,7 +293,7 @@ fi
 gamelib="game$cpu.so"
 
 vpath="\$(SRCDIR)/source"
-if [ "$client" = "yes" ]; then
+if [ "$use_asm" = "yes" ]; then
     vpath="$vpath \$(SRCDIR)/asm"
 fi
 
@@ -284,70 +305,50 @@ if [ ! -z "$cross_prefix" ]; then
 fi
 
 # echo configuration info
-echo "Build client       $client"
-if [ "$client" = "yes" ]; then
-    if [ "$hardlink" = "yes" ]; then
-        echo "Hard linked        $hardlink"
-    else
-        echo "Software refresh   $ref_soft"
-        echo "OpenGL refresh     $ref_gl"
-    fi
-fi
-echo "Build server       $server"
-echo "Build OpenFFA      $openffa"
+echo "Build client       $use_client"
+echo "Build server       $use_server"
+echo "Build OpenFFA      $use_openffa"
 if [ "$mingw" = "no" ]; then
     if [ "$singleuser" = "yes" ]; then
         echo "Single user        $singleuser"
     else
         echo "Data directory     $datadir"
         echo "Game libraries     $libdir"
-        if [ "$client" = "yes" ]; then
-            echo "Refresh libraries  $refdir"
-        fi
         echo "Binaries           $bindir"
         echo "Man pages          $mandir"
         echo "Home directory     $homedir"
     fi
 fi
-echo "zlib support       $zlib"
-if [ "$client" = "yes" ]; then
-    echo "Direct input       $dinput"
-    echo "Direct sound       $dsound"
-    echo "PNG support        $png"
-    echo "JPEG support       $jpeg"
+echo "zlib support       $use_zlib"
+if [ "$use_client" = "yes" ]; then
+    echo "Refresh type       $use_ref"
+    echo "Direct input       $use_dinput"
+    echo "Direct sound       $use_dsound"
+    echo "TGA support        $use_tga"
+    echo "JPG support        $use_jpg"
+    echo "PNG support        $use_png"
+    echo "UI support         $use_ui"
 fi
-test "$cpu" = "i386" && echo "i386 assembly      $asm"
+test "$cpu" = "i386" && echo "i386 assembly      $use_asm"
 
 CFLAGS="-I\$(OUTDIR) -MF \$*.d -MMD -pipe $CFLAGS -Wno-strict-aliasing"
 #LDFLAGS="$LDFLAGS"
 
 
 # determine what needs to be built
-if [ "$client" = "yes" ]; then
+if [ "$use_client" = "yes" ]; then
     targets="$targets q2pro"
     executables="$executables q2pro$exesuffix"
-
-    if [ "$hardlink" = "no" ]; then
-        if [ "$ref_soft" = "yes" ]; then
-            targets="$targets ref_soft"
-            libraries="$libraries ref_soft$libsuffix"
-        fi
-
-        if [ "$ref_gl" = "yes" ]; then
-            targets="$targets ref_gl"
-            libraries="$libraries ref_gl$libsuffix"
-        fi
-    fi
 else
-    sdl="no"
+    use_sdl="no"
 fi
 
-if [ "$server" = "yes" ]; then
+if [ "$use_server" = "yes" ]; then
     targets="$targets q2proded"
     executables="$executables q2proded$exesuffix"
 fi
 
-if [ "$openffa" = "yes" ]; then
+if [ "$use_openffa" = "yes" ]; then
     targets="$targets openffa"
     libraries="$libraries $gamelib"
 fi
@@ -371,7 +372,7 @@ echo "VPATH=$vpath" >> $config_mk
 echo "CFLAGS=$CFLAGS" >> $config_mk
 echo "LDFLAGS=$LDFLAGS" >> $config_mk
 test "$mingw" = "yes" && echo "RESFLAGS=-I\$(OUTDIR) -I\$(SRCDIR)/source" >> $config_mk
-test "$asm" = "yes" && echo "ASMFLAGS=$asmflags" >> $config_mk
+test "$use_asm" = "yes" && echo "ASMFLAGS=$asmflags" >> $config_mk
 
 echo "TARGETS=$targets" >> $config_mk
 echo "BINARIES=$executables $libraries" >> $config_mk
@@ -382,15 +383,14 @@ echo "REVISION=$revision" >> $config_mk
 echo "#define REVISION $revision" >> $config_h
 echo "#define VERSION \"r$revision\"" >> $config_h
 
+echo "#define PRIz \"zu\"" >> $config_h
+
 if [ "$mingw" = "no" ]; then
     echo "DATADIR=$datadir" >> $config_mk
     echo "#define DATADIR \"$datadir\"" >> $config_h
 
     echo "LIBDIR=$libdir" >> $config_mk
     echo "#define LIBDIR \"$libdir\"" >> $config_h
-
-    echo "REFDIR=$refdir" >> $config_mk
-    echo "#define REFDIR \"$refdir\"" >> $config_h
 
     echo "#define HOMEDIR \"$homedir\"" >> $config_h
 
@@ -425,13 +425,11 @@ echo "#define BUILDSTRING \"$targetos\"" >> $config_h
 echo "#define PATH_SEP_CHAR '$pathsep'" >> $config_h
 echo "#define PATH_SEP_STRING \"$pathsep\"" >> $config_h
 
-echo "#define DEFAULT_OPENGL_DRIVER \"$gldriver\"" >> $config_h
-
-if [ "$dl" = "yes" ]; then
+if [ "$use_dl" = "yes" ]; then
     echo "USE_DL=yes" >> $config_mk
 fi
 
-if [ "$zlib" = "yes" ]; then
+if [ "$use_zlib" = "yes" ]; then
     echo "USE_ZLIB=yes" >> $config_mk
     echo "ZLIB_LDFLAGS=-lz" >> $config_mk
     echo "ZLIB_CFLAGS=" >> $config_mk
@@ -440,26 +438,45 @@ else
     echo "#define USE_ZLIB 0" >> $config_h
 fi
 
-if [ "$png" = "yes" ]; then
+if [ "$use_ref" != "no" ]; then
+    echo "USE_REF=$use_ref" >> $config_mk
+    echo "#define REF_SOFT 1" >> $config_h
+    echo "#define REF_GL 2" >> $config_h
+    if [ "$use_ref" = "gl" ]; then
+        echo "#define DEFAULT_OPENGL_DRIVER \"$gldriver\"" >> $config_h
+    fi
+    echo "#define VID_REF \"$use_ref\"" >> $config_h
+fi
+
+if [ "$use_tga" = "yes" ]; then
+    echo "#define USE_TGA 1" >> $config_h
+fi
+
+if [ "$use_png" = "yes" ]; then
     echo "USE_PNG=yes" >> $config_mk
     echo "PNG_LDFLAGS=$($pngconfig --libs)" >> $config_mk
     echo "PNG_CFLAGS=$($pngconfig --cflags)" >> $config_mk
     echo "#define USE_PNG 1" >> $config_h
 fi
 
-if [ "$jpeg" = "yes" ]; then
-    echo "USE_JPEG=yes" >> $config_mk
-    echo "JPEG_LDFLAGS=-ljpeg" >> $config_mk
-    echo "JPEG_CFLAGS=" >> $config_mk
-    echo "#define USE_JPEG 1" >> $config_h
+if [ "$use_jpg" = "yes" ]; then
+    echo "USE_JPG=yes" >> $config_mk
+    echo "JPG_LDFLAGS=-ljpeg" >> $config_mk
+    echo "JPG_CFLAGS=" >> $config_mk
+    echo "#define USE_JPG 1" >> $config_h
 fi
 
-if [ "$sdl" = "yes" ]; then
+if [ "$use_ui" = "yes" ]; then
+    echo "USE_UI=yes" >> $config_mk
+    echo "#define USE_UI 1" >> $config_h
+fi
+
+if [ "$use_sdl" = "yes" ]; then
     echo "USE_SDL=yes" >> $config_mk
     echo "SDL_LDFLAGS=$($sdlconfig --libs)" >> $config_mk
     echo "SDL_CFLAGS=$($sdlconfig --cflags)" >> $config_mk
     echo "#define USE_SDL 1" >> $config_h
-    if [ "$x11" = "yes" ]; then
+    if [ "$use_x11" = "yes" ]; then
         echo "USE_X11=yes" >> $config_mk
         echo "X11_LDFLAGS=-lX11" >> $config_mk
         echo "X11_CFLAGS=" >> $config_mk
@@ -467,41 +484,28 @@ if [ "$sdl" = "yes" ]; then
     fi
 fi
 
-if [ "$dsound" = "yes" ]; then
+if [ "$use_dsound" = "yes" ]; then
     echo "USE_DSOUND=yes" >> $config_mk
     echo "#define USE_DSOUND 1" >> $config_h
 fi
 
-if [ "$dinput" = "yes" ]; then
+if [ "$use_dinput" = "yes" ]; then
     echo "USE_DINPUT=yes" >> $config_mk
     echo "#define USE_DINPUT 1" >> $config_h
 fi
 
-if [ "$asm" = "yes" ]; then
+if [ "$use_asm" = "yes" ]; then
     echo "USE_ASM=yes" >> $config_mk
     echo "#define USE_ASM 1" >> $config_h
 fi
 
-if [ "$anticheat" = "yes" ]; then
+if [ "$use_anticheat" = "yes" ]; then
     echo "USE_ANTICHEAT=yes" >> $config_mk
     echo "#define USE_ANTICHEAT 2" >> $config_h
 fi
 
 echo "#define USE_MAPCHECKSUM 1" >> $config_h
 echo "#define USE_AUTOREPLY 1" >> $config_h
-
-if [ "$hardlink" = "yes" ]; then
-    echo "REF_HARD_LINKED=yes" >> $config_mk
-    echo "#define REF_HARD_LINKED 1" >> $config_h
-
-    echo "#define OPENGL_RENDERER 1" >> $config_h
-    echo "#define TRUECOLOR_RENDERER 1" >> $config_h
-    echo "#define DEFAULT_REFRESH_DRIVER \"gl\"" >> $config_h
-else
-    echo "#define DEFAULT_REFRESH_DRIVER \"soft\"" >> $config_h
-fi
-
-echo "#define PRIz \"zu\"" >> $config_h
 
 for t in $targets ; do
     mkdir -p .$t ;

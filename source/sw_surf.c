@@ -106,7 +106,7 @@ void R_DrawSurface( void ) {
 // from a source range of 0 - 255
 	
 	/* width in bytes */
-	twidth = ( mt->upload_width >> r_drawsurf.surfmip ) * VID_BYTES;
+	twidth = mt->upload_width >> r_drawsurf.surfmip;
 
 	blocksize = 16 >> r_drawsurf.surfmip;
 	blockdivshift = 4 - r_drawsurf.surfmip;
@@ -121,14 +121,14 @@ void R_DrawSurface( void ) {
 
 	pblockdrawer = surfmiptable[r_drawsurf.surfmip];
 // TODO: only needs to be set when there is a display settings change
-	horzblockstep = blocksize << VID_SHIFT;
+	horzblockstep = blocksize;
 
 	smax = mt->upload_width >> r_drawsurf.surfmip;
 	tmax = mt->upload_height >> r_drawsurf.surfmip;
 	sourcetstep = twidth;
 	r_stepback = tmax * twidth;
 
-	r_sourcemax = r_source + ( tmax * smax * VID_BYTES );
+	r_sourcemax = r_source + tmax * smax;
 
 	soffset = r_drawsurf.surf->texturemins[0];
 	toffset = r_drawsurf.surf->texturemins[1];
@@ -146,7 +146,7 @@ void R_DrawSurface( void ) {
 
 		prowdestbase = pcolumndest;
 
-		pbasesource = basetptr + ( soffset << VID_SHIFT );
+		pbasesource = basetptr + soffset;
 
 		(*pblockdrawer)();
 
@@ -359,7 +359,7 @@ void D_SCDump_f (void)
 D_CacheSurface
 ================
 */
-surfcache_t *D_CacheSurface (msurface_t *surface, int miplevel)
+surfcache_t *D_CacheSurface (mface_t *surface, int miplevel)
 {
 	surfcache_t     *cache;
 

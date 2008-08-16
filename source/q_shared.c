@@ -466,7 +466,7 @@ BoxOnPlaneSide
 Returns 1, 2, or 1 + 2
 ==================
 */
-#ifndef USE_ASM
+#if !USE_ASM
 int BoxOnPlaneSide( vec3_t emins, vec3_t emaxs, cplane_t *p )
 {
 	float	dist1, dist2;

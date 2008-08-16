@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "ui_local.h"
+#include "files.h"
 
 /*
 =============================================================================
@@ -92,11 +93,11 @@ static void ClearSlot( serverSlot_t *slot ) {
     int i;
 
     for( i = 0; i < slot->numRules; i++ ) {
-        com.Free( slot->rules[i] );
+        Z_Free( slot->rules[i] );
         slot->rules[i] = NULL;
     }
     for( i = 0; i < slot->numPlayers; i++ ) {
-        com.Free( slot->players[i] );
+        Z_Free( slot->players[i] );
         slot->players[i] = NULL;
     }
     slot->numRules = slot->numPlayers = 0;
@@ -148,7 +149,7 @@ void UI_AddToServerList( const serverStatus_t *status ) {
         map = "???";
     } else {
         Com_sprintf( value, sizeof( value ), "maps/%s.bsp", map );
-        if( fs.LoadFile( value, NULL ) == INVALID_LENGTH ) {
+        if( FS_LoadFile( value, NULL ) == INVALID_LENGTH ) {
             Q_concat( value, sizeof( value ), S_COLOR_RED, map, NULL );
             map = value;
         }
@@ -161,7 +162,7 @@ void UI_AddToServerList( const serverStatus_t *status ) {
         status->numPlayers, j );
 
     if( m_join.names[i] ) {
-        com.Free( m_join.names[i] );
+        Z_Free( m_join.names[i] );
     }
     m_join.names[i] = UI_FormatColumns( 0, host, map, key, NULL );
 
@@ -193,7 +194,7 @@ static void PingSelected( void ) {
     serverSlot_t *s = &m_join.servers[m_join.list.curvalue];
 
     if( m_join.names[m_join.list.curvalue] ) {
-        com.Free( m_join.names[m_join.list.curvalue] );
+        Z_Free( m_join.names[m_join.list.curvalue] );
     }
     m_join.names[m_join.list.curvalue] = UI_FormatColumns( 0,
         s->address, "???", "?/?", NULL );
@@ -220,7 +221,7 @@ static void AddUnlistedServers( void ) {
     CL_SendStatusRequest( NULL, 0 );
 
     for( i = 0; i < MAX_STATUS_SERVERS; i++ ) {
-        var = cvar.Find( va( "adr%i", i ) );
+        var = Cvar_FindVar( va( "adr%i", i ) );
         if( !var ) {
             break;
         }
@@ -266,7 +267,7 @@ static void FreeListedServers( void ) {
 
     for( i = 0; i < m_join.list.numItems; i++ ) {
         if( m_join.names[i] ) {
-            com.Free( m_join.names[i] );
+            Z_Free( m_join.names[i] );
             m_join.names[i] = NULL;
         }
     }

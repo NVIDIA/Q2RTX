@@ -101,7 +101,7 @@ SV_ClearWorld
 ===============
 */
 void SV_ClearWorld( void ) {
-	cmodel_t *cm;
+	mmodel_t *cm;
 	edict_t *ent;
 	int i;
 
@@ -109,7 +109,7 @@ void SV_ClearWorld( void ) {
 	sv_numareanodes = 0;
 
 	if( sv.cm.cache ) {
-		cm = &sv.cm.cache->cmodels[0];
+		cm = &sv.cm.cache->models[0];
 		SV_CreateAreaNode( 0, cm->mins, cm->maxs );
 	}
 
@@ -130,12 +130,12 @@ Links entity to PVS leafs.
 ===============
 */
 void SV_LinkEdict( cm_t *cm, edict_t *ent ) {
-	cleaf_t		*leafs[MAX_TOTAL_ENT_LEAFS];
+	mleaf_t		*leafs[MAX_TOTAL_ENT_LEAFS];
 	int			clusters[MAX_TOTAL_ENT_LEAFS];
 	int			num_leafs;
 	int			i, j;
 	int			area;
-	cnode_t		*topnode;
+	mnode_t		*topnode;
 
 	// set the size
 	VectorSubtract (ent->maxs, ent->mins, ent->size);
@@ -431,16 +431,17 @@ Returns a headnode that can be used for testing or clipping an
 object of mins/maxs size.
 ================
 */
-static cnode_t *SV_HullForEntity( edict_t *ent ) {
-	cmodel_t	*model;
+static mnode_t *SV_HullForEntity( edict_t *ent ) {
+	mmodel_t	*model;
 
 	if( ent->solid == SOLID_BSP ) {
 		// explicit hulls in the BSP model
-		if( ent->s.modelindex < 2 || ent->s.modelindex > sv.cm.cache->numcmodels ) {
-			Com_Error( ERR_DROP, "SV_HullForEntity: inline model index %d out of range", ent->s.modelindex );
+		if( ent->s.modelindex < 2 || ent->s.modelindex > sv.cm.cache->nummodels ) {
+			Com_Error( ERR_DROP, "%s: inline model index %d out of range",
+                __func__, ent->s.modelindex );
 		}
 
-		model = &sv.cm.cache->cmodels[ ent->s.modelindex - 1 ];
+		model = &sv.cm.cache->models[ ent->s.modelindex - 1 ];
 
 		return model->headnode;
 	}
@@ -459,7 +460,7 @@ int SV_PointContents (vec3_t p)
 	edict_t		*touch[MAX_EDICTS], *hit;
 	int			i, num;
 	int			contents, c2;
-	cnode_t		*headnode;
+	mnode_t		*headnode;
 
 	if( !sv.cm.cache ) {
 		Com_Error( ERR_DROP, "%s: no map loaded", __func__ );
@@ -507,7 +508,7 @@ static void SV_ClipMoveToEntities( moveclip_t *clip ) {
 	int			i, num;
 	edict_t		*touchlist[MAX_EDICTS], *touch;
 	trace_t		trace;
-	cnode_t		*headnode;
+	mnode_t		*headnode;
 
 	num = SV_AreaEdicts (clip->boxmins, clip->boxmaxs, touchlist
 		, MAX_EDICTS, AREA_SOLID);

@@ -18,15 +18,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#include "config.h"
-#include "q_shared.h"
-#include "q_files.h"
-#include "com_public.h"
+#include "com_local.h"
+#include "files.h"
 #include "ref_public.h"
 #include "in_public.h"
 #include "vid_public.h"
+#include "sys_public.h"
 #include "q_list.h"
+#include "bsp.h"
 #include "r_shared.h"
+#include "d_md2.h"
+#include "r_models.h"
 
 #define REF_VERSION     "SOFT 0.01"
 
@@ -80,8 +82,6 @@ typedef struct {
 } oldrefdef_t;
 
 extern oldrefdef_t      r_refdef;
-
-#include "sw_model.h"
 
 /*
 ====================================================
@@ -185,6 +185,10 @@ TYPES
 ====================================================
 */
 
+#define DSURF_SKY     2
+#define DSURF_TURB      4
+#define DSURF_BACKGROUND     8
+
 typedef struct {
 	float   u, v;
 	float   s, t;
@@ -220,7 +224,8 @@ typedef struct {
 	int                                     pskindesc;
 	int                                     skinwidth;
 	int                                     skinheight;
-	dtriangle_t                     *ptriangles;
+//	dtriangle_t                     *ptriangles;
+    void                            *unused;
 	finalvert_t                     *pfinalverts;
 	int                                     numtriangles;
 	int                                     drawtype;
@@ -232,8 +237,8 @@ typedef struct {
 typedef struct drawsurf_s {
 	byte            *surfdat;       // destination for generated surface
 	int                     rowbytes;       // destination logical width in bytes
-	msurface_t      *surf;          // description for surface to generate
-	fixed8_t        lightadj[MAXLIGHTMAPS];
+	mface_t      *surf;          // description for surface to generate
+	fixed8_t        lightadj[MAX_LIGHTMAPS];
 							// adjust for lightmap levels for dynamic lighting
 	image_t			*image;
 	int                     surfmip;        // mipmapped ratio of surface texels / world pixels
@@ -265,20 +270,15 @@ typedef struct clipplane_s {
 	byte            reserved[2];
 } clipplane_t;
 
-#ifdef TRUECOLOR_RENDERER
-#define MAX_BLOCKLIGHTS	4096
-#define LIGHTMAP_BYTES	3
-#define blocklight_t	short
-#else
 #define MAX_BLOCKLIGHTS	1024
 #define LIGHTMAP_BYTES	1
-#define blocklight_t	int
-#endif
+
+typedef int blocklight_t;
 
 typedef struct surfcache_s {
 	struct surfcache_s      *next;
 	struct surfcache_s      **owner;                // NULL is an empty chunk of memory
-	int                     lightadj[MAXLIGHTMAPS]; // checked for strobe flush
+	int                     lightadj[MAX_LIGHTMAPS]; // checked for strobe flush
 	int                     dlight;
 	int                     size;           // including header
 	unsigned				width;
@@ -322,7 +322,7 @@ typedef struct surf_s {
 									// -1 = in inverted span (end before
 									//  start)
 	int                     flags;                          // currentface flags
-	msurface_t      *msurf;
+	mface_t      *msurf;
 	entity_t        *entity;
 	float           nearzi;                         // nearest 1/z on surface, for mipmapping
 	qboolean        insubmodel;
@@ -341,6 +341,29 @@ typedef struct edge_s {
 	float                   nearzi;
 	medge_t                 *owner;
 } edge_t;
+
+typedef struct maliasst_s {
+    signed short    s;
+    signed short    t;
+} maliasst_t;
+
+typedef struct maliastri_s {
+    unsigned short  index_xyz[3];
+    unsigned short  index_st[3];
+} maliastri_t;
+
+typedef struct maliasvert_s {
+    uint8_t    v[3];
+    uint8_t    lightnormalindex;
+} maliasvert_t;
+
+typedef struct maliasframe_s {
+	vec3_t scale;
+	vec3_t translate;
+	vec3_t bounds[2];
+	vec_t radius;
+    maliasvert_t *verts;
+} maliasframe_t;
 
 
 /*
@@ -398,7 +421,7 @@ void D_DrawZSpans (espan_t *pspans);
 void Turbulent8 (espan_t *pspan);
 void NonTurbulent8 (espan_t *pspan);	//PGM
 
-surfcache_t     *D_CacheSurface (msurface_t *surface, int miplevel);
+surfcache_t     *D_CacheSurface (mface_t *surface, int miplevel);
 
 extern int      d_vrectx, d_vrecty, d_vrectright_particle, d_vrectbottom_particle;
 
@@ -493,7 +516,7 @@ void R_RenderWorld (void);
 
 //=============================================================================
 
-extern  mplane_t        screenedge[4];
+extern  cplane_t        screenedge[4];
 
 extern  vec3_t  r_origin;
 
@@ -508,7 +531,7 @@ extern  float   xOrigin, yOrigin;
 
 extern  int             r_visframecount;
 
-extern msurface_t *r_alpha_surfaces;
+extern mface_t *r_alpha_surfaces;
 
 //=============================================================================
 
@@ -525,19 +548,17 @@ void R_DrawAlphaSurfaces( void );
 void R_DrawSprite (void);
 void R_DrawBeam( entity_t *e );
 
-void R_RenderFace (msurface_t *fa, int clipflags);
-void R_RenderBmodelFace (bedge_t *pedges, msurface_t *psurf);
-void R_TransformPlane (mplane_t *p, float *normal, float *dist);
+void R_RenderFace (mface_t *fa, int clipflags);
+void R_RenderBmodelFace (bedge_t *pedges, mface_t *psurf);
+void R_TransformPlane (cplane_t *p, float *normal, float *dist);
 void R_TransformFrustum (void);
 void R_DrawSurfaceBlock16 (void);
 void R_DrawSurfaceBlock8 (void);
 
-void R_GenSkyTile (void *pdest);
-void R_GenSkyTile16 (void *pdest);
 void R_Surf8Patch (void);
 void R_Surf16Patch (void);
-void R_DrawSubmodelPolygons (model_t *pmodel, int clipflags, mnode_t *topnode);
-void R_DrawSolidClippedSubmodelPolygons (model_t *pmodel, mnode_t *topnode);
+void R_DrawSubmodelPolygons (mmodel_t *pmodel, int clipflags, mnode_t *topnode);
+void R_DrawSolidClippedSubmodelPolygons (mmodel_t *pmodel, mnode_t *topnode);
 
 void R_AddPolygonEdges (emitpoint_t *pverts, int numverts, int miplevel);
 surf_t *R_GetSurf (void);
@@ -548,7 +569,7 @@ void D_DrawSurfaces (void);
 void R_InsertNewEdges (edge_t *edgestoadd, edge_t *edgelist);
 void R_StepActiveU (edge_t *pedge);
 void R_RemoveEdges (edge_t *pedge);
-void R_PushDlights (model_t *model);
+void R_PushDlights (mnode_t *headnode);
 
 extern void R_Surf8Start (void);
 extern void R_Surf8End (void);
@@ -580,8 +601,6 @@ void    R_InitTurb (void);
 void R_DrawParticles (void);
 void R_SurfacePatch (void);
 
-void R_BuildGammaTable( void );
-
 extern int              r_amodels_drawn;
 extern edge_t   *auxedges;
 extern int              r_numallocatededges;
@@ -595,19 +614,13 @@ extern  edge_t  edge_head;
 extern  edge_t  edge_tail;
 extern  edge_t  edge_aftertail;
 
-#ifdef TRUECOLOR_RENDERER
-color_t		r_aliasblendcolor;
-byte		*r_aliasAlphaTable, *r_aliasOneMinusAlphaTable;
-#else
 extern	int	r_aliasblendcolor;
-#endif
 
 extern float    aliasxscale, aliasyscale, aliasxcenter, aliasycenter;
 
 extern int              r_outofsurfaces;
 extern int              r_outofedges;
 
-extern mvertex_t        *r_pcurrentvertbase;
 extern int                      r_maxvalidedgeoffset;
 
 typedef struct {
@@ -633,10 +646,9 @@ extern	int			r_viewcluster, r_oldviewcluster;
 
 extern int              r_clipflags;
 extern int              r_dlightframecount;
-extern qboolean r_fov_greater_than_90;
 
-extern  image_t         *r_notexture_mip;
-extern  model_t         *r_worldmodel;
+extern  image_t         *r_notexture;
+extern  bsp_t           *r_worldmodel;
 
 void R_PrintAliasStats (void);
 void R_PrintTimes (void);
@@ -644,10 +656,8 @@ void R_PrintDSpeeds (void);
 void R_AnimateLight (void);
 void R_LightPoint (vec3_t p, vec3_t color);
 void R_SetupFrame (void);
-void R_cshift_f (void);
 void R_EmitEdge (mvertex_t *pv0, mvertex_t *pv1);
 void R_ClipEdge (mvertex_t *pv0, mvertex_t *pv1, clipplane_t *clip);
-void R_SplitEntityOnNode2 (mnode_t *node);
 
 extern  refdef_t        r_newrefdef;
 
@@ -684,9 +694,8 @@ void	R_ShutdownImages (void);
 
 void	R_GammaCorrectAndSetPalette( const byte *pal );
 
-extern mtexinfo_t  *sky_texinfo[6];
-
-void R_InitSkyBox (void);
+void    R_InitSkyBox( void );
+void    R_EmitSkyBox( void );
 
 void R_ApplySIRDAlgorithum( void );
 
@@ -701,9 +710,8 @@ typedef struct swstate_s {
 void R_IMFlatShadedQuad( vec3_t a, vec3_t b, vec3_t c, vec3_t d, int color, float alpha );
 
 int R_IndexForColor( const color_t color );
-image_t *R_ImageForHandle( qhandle_t hPic );
 
-void Draw_Fill (int x, int y, int w, int h, int c);
+void R_InitDraw( void );
 
 extern swstate_t sw_state;
 

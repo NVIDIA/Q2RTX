@@ -25,13 +25,13 @@ tesselator_t tess;
 #define FACE_HASH_SIZE  32
 #define FACE_HASH_MASK  ( FACE_HASH_SIZE - 1 )
 
-static bspSurface_t *faces_alpha, *faces_warp, *faces_alpha_warp, *faces_sky;
-static bspSurface_t *faces_hash[FACE_HASH_SIZE];
+static mface_t *faces_alpha, *faces_warp, *faces_alpha_warp;
+static mface_t *faces_hash[FACE_HASH_SIZE];
 
 void GL_Flush2D( void ) {
 	glStateBits_t bits;
 
-    if( !tess.numVertices ) {
+    if( !tess.numverts ) {
         return;
     }
 
@@ -53,14 +53,14 @@ void GL_Flush2D( void ) {
 	qglVertexPointer( 2, GL_FLOAT, 16, tess.vertices );
 
     if( qglLockArraysEXT ) {
-        qglLockArraysEXT( 0, tess.numVertices );
+        qglLockArraysEXT( 0, tess.numverts );
     }
    
-	qglDrawArrays( GL_QUADS, 0, tess.numVertices );
+	qglDrawArrays( GL_QUADS, 0, tess.numverts );
 
     if( gl_showtris->integer ) {
         GL_EnableOutlines();
-	    qglDrawArrays( GL_QUADS, 0, tess.numVertices );
+	    qglDrawArrays( GL_QUADS, 0, tess.numverts );
         GL_DisableOutlines();
     }
 
@@ -70,7 +70,7 @@ void GL_Flush2D( void ) {
 
 	qglDisableClientState( GL_COLOR_ARRAY );
     
-	tess.numVertices = 0;
+	tess.numverts = 0;
     tess.texnum[0] = 0;
 	tess.flags = 0;
 }
@@ -82,21 +82,21 @@ void GL_StretchPic( float x, float y, float w, float h,
     vec_t *dst_vert;
     uint32_t *dst_color;
     
-    if( tess.numVertices + 4 > TESS_MAX_VERTICES ||
-        ( tess.numVertices && tess.texnum[0] != image->texnum ) )
+    if( tess.numverts + 4 > TESS_MAX_VERTICES ||
+        ( tess.numverts && tess.texnum[0] != image->texnum ) )
     {
         GL_Flush2D();
     }
 
     tess.texnum[0] = image->texnum;
 
-    dst_vert = tess.vertices + tess.numVertices * 4;
+    dst_vert = tess.vertices + tess.numverts * 4;
     Vector4Set( dst_vert,      x,     y,     s1, t1 );
     Vector4Set( dst_vert +  4, x + w, y,     s2, t1 );
     Vector4Set( dst_vert +  8, x + w, y + h, s2, t2 );
     Vector4Set( dst_vert + 12, x,     y + h, s1, t2 );
 
-    dst_color = ( uint32_t * )tess.colors + tess.numVertices;
+    dst_color = ( uint32_t * )tess.colors + tess.numverts;
     dst_color[0] = *( const uint32_t * )color;
     dst_color[1] = *( const uint32_t * )color;
     dst_color[2] = *( const uint32_t * )color;
@@ -113,7 +113,7 @@ void GL_StretchPic( float x, float y, float w, float h,
 		tess.flags |= 2;
 	}
 
-    tess.numVertices += 4;
+    tess.numverts += 4;
 }
 
 void GL_DrawParticles( void ) {
@@ -122,7 +122,7 @@ void GL_DrawParticles( void ) {
     vec3_t transformed;
     vec_t scale, dist;
     color_t color;
-    int numVertices;
+    int numverts;
     vec_t *dst_vert;
     uint32_t *dst_color;
 
@@ -139,7 +139,7 @@ void GL_DrawParticles( void ) {
 	qglTexCoordPointer( 2, GL_FLOAT, 20, tess.vertices + 3 );
 	qglVertexPointer( 3, GL_FLOAT, 20, tess.vertices );
 
-    numVertices = 0;
+    numverts = 0;
     for( i = 0, p = glr.fd.particles; i < glr.fd.num_particles; i++, p++ ) {
         VectorSubtract( p->origin, glr.fd.vieworg, transformed );
         dist = DotProduct( transformed, glr.viewaxis[0] );
@@ -156,12 +156,12 @@ void GL_DrawParticles( void ) {
         }
         color[3] = p->alpha * 255;
 
-        if( numVertices + 3 > TESS_MAX_VERTICES ) {
-	        qglDrawArrays( GL_TRIANGLES, 0, numVertices );
-            numVertices = 0;
+        if( numverts + 3 > TESS_MAX_VERTICES ) {
+	        qglDrawArrays( GL_TRIANGLES, 0, numverts );
+            numverts = 0;
         }
         
-        dst_vert = tess.vertices + numVertices * 5;
+        dst_vert = tess.vertices + numverts * 5;
 //        VectorMA( p->origin, -scale*0.5f, glr.viewaxis[2], dst_vert );
         VectorMA( p->origin, scale*0.5f, glr.viewaxis[1], dst_vert );
         VectorMA( dst_vert, scale, glr.viewaxis[2], dst_vert + 5 );
@@ -171,15 +171,15 @@ void GL_DrawParticles( void ) {
         dst_vert[8] = 2; dst_vert[9] = 0;
         dst_vert[13] = 0; dst_vert[14] = 2;
 
-        dst_color = ( uint32_t * )tess.colors + numVertices;
+        dst_color = ( uint32_t * )tess.colors + numverts;
         dst_color[0] = *( uint32_t * )color;
         dst_color[1] = *( uint32_t * )color;
         dst_color[2] = *( uint32_t * )color;
 
-        numVertices += 3;
+        numverts += 3;
     }
 
-	qglDrawArrays( GL_TRIANGLES, 0, numVertices );
+	qglDrawArrays( GL_TRIANGLES, 0, numverts );
 	qglDisableClientState( GL_COLOR_ARRAY );
 }
 
@@ -191,7 +191,7 @@ void GL_DrawBeams( void ) {
     vec_t *dst_vert;
     uint32_t *dst_color;
 	vec_t length;
-	int numVertices;
+	int numverts;
 	entity_t *ent;
 	int i;
 
@@ -207,7 +207,7 @@ void GL_DrawBeams( void ) {
 	qglTexCoordPointer( 2, GL_FLOAT, 20, tess.vertices + 3 );
 	qglVertexPointer( 3, GL_FLOAT, 20, tess.vertices );
 
-	numVertices = 0;
+	numverts = 0;
 	for( i = 0, ent = glr.fd.entities; i < glr.fd.num_entities; i++, ent++ ) {
 		if( !( ent->flags & RF_BEAM ) ) {
 			continue;
@@ -230,12 +230,12 @@ void GL_DrawBeams( void ) {
 		}
 		color[3] = 255 * ent->alpha;
 
-        if( numVertices + 4 > TESS_MAX_VERTICES ) {
-	        qglDrawArrays( GL_QUADS, 0, numVertices );
-            numVertices = 0;
+        if( numverts + 4 > TESS_MAX_VERTICES ) {
+	        qglDrawArrays( GL_QUADS, 0, numverts );
+            numverts = 0;
         }
 
-		dst_vert = tess.vertices + numVertices * 5;
+		dst_vert = tess.vertices + numverts * 5;
 		VectorAdd( start, d3, dst_vert );
 		VectorSubtract( start, d3, dst_vert + 5 );
 		VectorSubtract( end, d3, dst_vert + 10 );
@@ -246,23 +246,23 @@ void GL_DrawBeams( void ) {
 		dst_vert[13] = 1; dst_vert[14] = length;
 		dst_vert[18] = 0; dst_vert[19] = length;
 	    
-		dst_color = ( uint32_t * )tess.colors + numVertices;
+		dst_color = ( uint32_t * )tess.colors + numverts;
 		dst_color[0] = *( uint32_t * )color;
 		dst_color[1] = *( uint32_t * )color;
 		dst_color[2] = *( uint32_t * )color;
 		dst_color[3] = *( uint32_t * )color;
 
-		numVertices += 4;
+		numverts += 4;
 	}
    
-	qglDrawArrays( GL_QUADS, 0, numVertices );
+	qglDrawArrays( GL_QUADS, 0, numverts );
 	qglDisableClientState( GL_COLOR_ARRAY );
 }
 
 static void GL_BindArrays( void ) {
     vec_t *ptr;
 
-    if( gl_static.vertices ) {
+    if( gl_static.world.vertices ) {
         ptr = tess.vertices;
     } else {
         ptr = NULL;
@@ -279,7 +279,7 @@ static void GL_BindArrays( void ) {
 }
 
 static void GL_UnbindArrays( void ) {
-    if( !gl_static.vertices ) {
+    if( !gl_static.world.vertices ) {
         qglBindBufferARB( GL_ARRAY_BUFFER_ARB, 0 );
     }
     qglClientActiveTextureARB( GL_TEXTURE1_ARB );
@@ -288,7 +288,7 @@ static void GL_UnbindArrays( void ) {
 }
 
 static void GL_Flush3D( void ) {
-    if( !tess.numIndices ) {
+    if( !tess.numindices ) {
         return;
     }
 
@@ -309,11 +309,11 @@ static void GL_Flush3D( void ) {
         GL_BindTexture( tess.texnum[1] );
     }
 
-    if( gl_static.vertices && qglLockArraysEXT ) {
-		qglLockArraysEXT( 0, tess.numVertices );
+    if( gl_static.world.vertices && qglLockArraysEXT ) {
+		qglLockArraysEXT( 0, tess.numverts );
     }
 
-    qglDrawElements( GL_TRIANGLES, tess.numIndices, GL_UNSIGNED_INT, tess.indices );
+    qglDrawElements( GL_TRIANGLES, tess.numindices, GL_UNSIGNED_INT, tess.indices );
 
     if( tess.texnum[1] ) {
         qglDisable( GL_TEXTURE_2D );
@@ -322,80 +322,95 @@ static void GL_Flush3D( void ) {
 
     if( gl_showtris->integer ) {
         GL_EnableOutlines();
-        qglDrawElements( GL_TRIANGLES, tess.numIndices, GL_UNSIGNED_INT, tess.indices );
+        qglDrawElements( GL_TRIANGLES, tess.numindices, GL_UNSIGNED_INT, tess.indices );
         GL_DisableOutlines();
     }
 
-	if( gl_static.vertices && qglUnlockArraysEXT ) {
+	if( gl_static.world.vertices && qglUnlockArraysEXT ) {
 		qglUnlockArraysEXT();
 	}
 
     c.batchesDrawn++;
 
     tess.texnum[0] = tess.texnum[1] = 0;
-    tess.numIndices = 0;
-    tess.numVertices = 0;
+    tess.numindices = 0;
+    tess.numverts = 0;
     tess.flags = 0;
 }
 
-static void GL_CopyVerts( bspSurface_t *surf ) {
-    uint32_t *src_vert, *dst_vert;
-    int i, j;
+static void GL_CopyVerts( mface_t *surf ) {
+    void *src, *dst;
 
-    if( tess.numVertices + surf->numVerts > TESS_MAX_VERTICES ) {
+    if( tess.numverts + surf->numsurfedges > TESS_MAX_VERTICES ) {
         GL_Flush3D();
     }
 
-    src_vert = ( uint32_t * )gl_static.vertices + surf->firstVert * VERTEX_SIZE;
-    dst_vert = ( uint32_t * )tess.vertices + tess.numVertices * VERTEX_SIZE;
-    for( i = 0; i < surf->numVerts; i++ ) {
-        for( j = 0; j < VERTEX_SIZE; j++ ) {
-            *dst_vert++ = *src_vert++;
-        }
-    }
-    tess.numVertices += surf->numVerts;
+    src = gl_static.world.vertices + surf->firstvert * VERTEX_SIZE;
+    dst = tess.vertices + tess.numverts * VERTEX_SIZE;
+    memcpy( dst, src, surf->numsurfedges * VERTEX_SIZE * sizeof( vec_t ) );
+
+    tess.numverts += surf->numsurfedges;
 }
 
-static void GL_DrawFace( bspSurface_t *surf ) {
+static int GL_TextureAnimation( mtexinfo_t *tex ) {
+	int		frame, c;
+
+	if( !tex->next )
+		return tex->image->texnum;
+
+	frame = ( int )( glr.fd.time * 2 );
+	c = frame % tex->numframes;
+	while( c ) {
+		tex = tex->next;
+		c--;
+	}
+
+	return tex->image->texnum;
+}
+
+static void GL_DrawFace( mface_t *surf ) {
+    int numindices = ( surf->numsurfedges - 2 ) * 3;
+    int diff = surf->texinfo->c.flags ^ tess.flags;
+    int texnum = GL_TextureAnimation( surf->texinfo );
     int *dst_indices;
     int i, j;
 
-    if( tess.texnum[0] != surf->texnum[0] ||
+    if( tess.texnum[0] != texnum ||
         tess.texnum[1] != surf->texnum[1] ||
-        ( ( surf->texflags ^ tess.flags ) & ( SURF_TRANS33 | SURF_TRANS66 | SURF_SKY ) ) ||
-        tess.numIndices + surf->numIndices > TESS_MAX_INDICES )
+        ( diff & (SURF_TRANS33|SURF_TRANS66|SURF_SKY) ) ||
+        tess.numindices + numindices > TESS_MAX_INDICES )
     {
         GL_Flush3D();
     }
 
-    if( gl_static.vertices ) {
-        j = tess.numVertices;
+    if( gl_static.world.vertices ) {
+        j = tess.numverts;
         GL_CopyVerts( surf );
     } else {
-        j = surf->firstVert;
+        j = surf->firstvert;
     }
 
     if( gl_lightmap->integer ) {
-        tess.texnum[0] = surf->texnum[1] ? surf->texnum[1] : surf->texnum[0];
+        tess.texnum[0] = surf->texnum[1] ? surf->texnum[1] : texnum;
         tess.texnum[1] = 0;
     } else {
-        tess.texnum[0] = surf->texnum[0];
+        tess.texnum[0] = texnum;
         tess.texnum[1] = surf->texnum[1];
     }
-    tess.flags = surf->texflags;
-    dst_indices = tess.indices + tess.numIndices;
-    for( i = 0; i < surf->numVerts - 2; i++ ) {
+    tess.flags = surf->texinfo->c.flags;
+    dst_indices = tess.indices + tess.numindices;
+    for( i = 0; i < surf->numsurfedges - 2; i++ ) {
         dst_indices[0] = j;
         dst_indices[1] = j + ( i + 1 );
         dst_indices[2] = j + ( i + 2 );
         dst_indices += 3;
     }
-    tess.numIndices += surf->numIndices;
-    c.trisDrawn += surf->numVerts - 2;
+    tess.numindices += numindices;
+    c.trisDrawn += surf->numsurfedges - 2;
 }
 
-static inline void GL_DrawChain( bspSurface_t **head ) {
-    bspSurface_t *face;
+static inline void GL_DrawChain( mface_t **head ) {
+    mface_t *face;
 
     for( face = *head; face; face = face->next ) {
         GL_DrawFace( face ); 
@@ -417,13 +432,6 @@ void GL_DrawSolidFaces( void ) {
         GL_DrawChain( &faces_warp );
         GL_Flush3D();
         GL_DisableWarp();
-    }
-
-    if( faces_sky ) {
-        qglDisable( GL_TEXTURE_2D );
-        GL_DrawChain( &faces_sky );
-        GL_Flush3D();
-        qglEnable( GL_TEXTURE_2D );
     }
 
     for( i = 0; i < FACE_HASH_SIZE; i++ ) {
@@ -454,8 +462,8 @@ void GL_DrawAlphaFaces( void ) {
     GL_UnbindArrays();
 }
 
-void GL_AddSolidFace( bspSurface_t *face ) {
-    if( face->type == DSURF_WARP ) {
+void GL_AddSolidFace( mface_t *face ) {
+    if( ( face->texinfo->c.flags & SURF_WARP ) && qglBindProgramARB ) {
         face->next = faces_warp;
         faces_warp = face;
     } else {
@@ -463,30 +471,27 @@ void GL_AddSolidFace( bspSurface_t *face ) {
         face->next = faces_hash[i];
         faces_hash[i] = face;
     }
-
+    // TODO: SURF_FLOWING support
     c.facesDrawn++;
 }
 
-void GL_AddFace( bspSurface_t *face ) {
-    if( face->type == DSURF_SKY ) {
+void GL_AddFace( mface_t *face ) {
+    int flags = face->texinfo->c.flags;
+
+    if( flags & SURF_SKY ) {
         R_AddSkySurface( face );
         return;
     }
 
-    if( face->texflags & SURF_SKY ) {
-        face->next = faces_sky;
-        faces_sky = face;
-        return;
-    }
-
-    if( face->texflags & (SURF_TRANS33|SURF_TRANS66) ) {
-        if( face->type == DSURF_WARP ) {
+    if( flags & (SURF_TRANS33|SURF_TRANS66) ) {
+        if( ( flags & SURF_WARP ) && qglBindProgramARB ) {
             face->next = faces_alpha_warp;
             faces_alpha_warp = face;
         } else {
             face->next = faces_alpha;
             faces_alpha = face;
         }
+        // TODO: SURF_FLOWING support
         c.facesDrawn++;
         return;
     }

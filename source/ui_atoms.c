@@ -321,7 +321,7 @@ qboolean UI_CursorInRect( vrect_t *rect ) {
 
 void UI_DrawString( int x, int y, const color_t color, int flags, const char *string ) {
     if( color ) {
-        ref.SetColor( DRAW_COLOR_RGBA, color );
+        R_SetColor( DRAW_COLOR_RGBA, color );
     }
     
     if( ( flags & UI_CENTER ) == UI_CENTER ) {
@@ -330,14 +330,14 @@ void UI_DrawString( int x, int y, const color_t color, int flags, const char *st
         x -= Q_DrawStrlen( string ) * 8;
     }
     
-    ref.DrawString( x, y, flags, MAX_STRING_CHARS, string, uis.fontHandle );
+    R_DrawString( x, y, flags, MAX_STRING_CHARS, string, uis.fontHandle );
     if( color ) {
-        ref.SetColor( DRAW_COLOR_CLEAR, NULL );
+        R_SetColor( DRAW_COLOR_CLEAR, NULL );
     }
 }
 
 void UI_DrawChar( int x, int y, int flags, int ch ) {
-    ref.DrawChar( x, y, flags, ch, uis.fontHandle );
+    R_DrawChar( x, y, flags, ch, uis.fontHandle );
 }
 
 void UI_StringDimensions( vrect_t *rc, int flags, const char *string ) {
@@ -352,17 +352,17 @@ void UI_StringDimensions( vrect_t *rc, int flags, const char *string ) {
 }
 
 void UI_DrawRect( const vrect_t *rc, int border, int color ) {
-	ref.DrawFill( rc->x, rc->y, border, rc->height, color ); // left
-	ref.DrawFill( rc->x + rc->width - border, rc->y, border, rc->height, color ); // right
-	ref.DrawFill( rc->x + border, rc->y, rc->width - border * 2, border, color ); // top
-	ref.DrawFill( rc->x + border, rc->y + rc->height - border, rc->width - border * 2, border, color ); // bottom
+	R_DrawFill( rc->x, rc->y, border, rc->height, color ); // left
+	R_DrawFill( rc->x + rc->width - border, rc->y, border, rc->height, color ); // right
+	R_DrawFill( rc->x + border, rc->y, rc->width - border * 2, border, color ); // top
+	R_DrawFill( rc->x + border, rc->y + rc->height - border, rc->width - border * 2, border, color ); // bottom
 }
 
 void UI_DrawRectEx( const vrect_t *rc, int border, const color_t color ) {
-	ref.DrawFillEx( rc->x, rc->y, border, rc->height, color ); // left
-	ref.DrawFillEx( rc->x + rc->width - border, rc->y, border, rc->height, color ); // right
-	ref.DrawFillEx( rc->x + border, rc->y, rc->width - border * 2, border, color ); // top
-	ref.DrawFillEx( rc->x + border, rc->y + rc->height - border, rc->width - border * 2, border, color ); // bottom
+	R_DrawFillEx( rc->x, rc->y, border, rc->height, color ); // left
+	R_DrawFillEx( rc->x + rc->width - border, rc->y, border, rc->height, color ); // right
+	R_DrawFillEx( rc->x + border, rc->y, rc->width - border * 2, border, color ); // top
+	R_DrawFillEx( rc->x + border, rc->y + rc->height - border, rc->width - border * 2, border, color ); // bottom
 }
 
 
@@ -432,11 +432,11 @@ void UI_Draw( int realtime ) {
         return;
     }
 
-    ref.SetColor( DRAW_COLOR_CLEAR, NULL );
+    R_SetColor( DRAW_COLOR_CLEAR, NULL );
     if( uis.glconfig.renderer == GL_RENDERER_SOFTWARE ) {
-        ref.SetClipRect( DRAW_CLIP_MASK, &uis.clipRect );
+        R_SetClipRect( DRAW_CLIP_MASK, &uis.clipRect );
     } else {
-        ref.SetScale( &uis.scale );
+        R_SetScale( &uis.scale );
     }
 
     if( !uis.transparent ) {
@@ -459,7 +459,7 @@ void UI_Draw( int realtime ) {
 
     // draw custom cursor in fullscreen mode
     if( uis.glconfig.flags & QVF_FULLSCREEN ) {
-        ref.DrawPic( uis.mouseCoords[0] - uis.cursorWidth / 2,
+        R_DrawPic( uis.mouseCoords[0] - uis.cursorWidth / 2,
             uis.mouseCoords[1] - uis.cursorHeight / 2, uis.cursorHandle );
     }
 
@@ -477,11 +477,11 @@ void UI_Draw( int realtime ) {
     }
 
     if( uis.glconfig.renderer == GL_RENDERER_SOFTWARE ) {
-        ref.SetClipRect( DRAW_CLIP_DISABLED, NULL );
+        R_SetClipRect( DRAW_CLIP_DISABLED, NULL );
     } else {
-        ref.SetScale( NULL );
+        R_SetScale( NULL );
     }
-    ref.SetColor( DRAW_COLOR_CLEAR, NULL );
+    R_SetColor( DRAW_COLOR_CLEAR, NULL );
 }
 
 /*
@@ -609,9 +609,9 @@ static void ui_scale_changed( cvar_t *self ) {
 }
 
 void UI_ModeChanged( void ) {
-    ui_scale = cvar.Get( "ui_scale", "1", 0 );
+    ui_scale = Cvar_Get( "ui_scale", "1", 0 );
     ui_scale->changed = ui_scale_changed;
-    ref.GetConfig( &uis.glconfig );
+    R_GetConfig( &uis.glconfig );
     UI_Resize();
 }
 
@@ -640,9 +640,9 @@ qboolean UI_Init( void ) {
 
     UI_ModeChanged();
 
-    uis.fontHandle = ref.RegisterFont( "conchars" );
-    uis.cursorHandle = ref.RegisterPic( "ch1" );
-    ref.DrawGetPicSize( &uis.cursorWidth, &uis.cursorHeight, uis.cursorHandle );
+    uis.fontHandle = R_RegisterFont( "conchars" );
+    uis.cursorHandle = R_RegisterPic( "ch1" );
+    R_GetPicSize( &uis.cursorWidth, &uis.cursorHeight, uis.cursorHandle );
 
     Vector4Set( uis.color.background, 0, 0, 0, 255 );
     Vector4Set( uis.color.normal, 15, 128, 235, 100 );

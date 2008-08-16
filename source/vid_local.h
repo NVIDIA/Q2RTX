@@ -28,10 +28,8 @@ extern cvar_t       *_vid_fullscreen;
 // vid_*.c
 //
 void VID_PumpEvents( void );
-void VID_ModeChanged( void );
+void VID_SetMode( void );
 void VID_FillInputAPI( inputAPI_t *api );
-void VID_FillGLAPI( videoAPI_t *api );
-void VID_FillSWAPI( videoAPI_t *api );
 
 //
 // cl_ref.c

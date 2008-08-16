@@ -18,17 +18,18 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#include <config.h>
-#include "qgl_local.h"
-#include "q_shared.h"
-#include "q_files.h"
-#include "com_public.h"
+#include "com_local.h"
+#include "files.h"
 #include "ref_public.h"
 #include "in_public.h"
 #include "vid_public.h"
 #include "cl_public.h"
+#include "sys_public.h"
 #include "q_list.h"
+#include "bsp.h"
 #include "r_shared.h"
+#include "r_models.h"
+#include "qgl_local.h"
 #include "qgl_api.h"
 
 /*
@@ -42,9 +43,12 @@ typedef struct {
     int numTextureUnits;
     int maxTextureSize;
 	qboolean registering;
-	uint32_t palette[256]; // cinematic palette
     GLuint prog_warp, prog_light;
-    vec_t *vertices;
+    struct {
+        bsp_t *cache;
+        mempool_t pool;
+        vec_t *vertices;
+    } world;
 } glStatic_t;
 
 typedef struct {
@@ -123,68 +127,36 @@ void GL_ShowErrors( const char *func );
  * 
  */
 
-typedef struct tcoord_s {
+typedef struct maliastc_s {
     float st[2];
-} tcoord_t;
+} maliastc_t;
 
-typedef struct aliasVert_s {
+typedef struct maliasvert_s {
 	short pos[3];
-	byte normalIndex;
+	byte normalindex;
 	byte pad;
-} aliasVert_t;
+} maliasvert_t;
 
-typedef struct aliasFrame_s {
+typedef struct maliasframe_s {
 	vec3_t scale;
 	vec3_t translate;
 	vec3_t bounds[2];
 	vec_t radius;
-} aliasFrame_t;
+} maliasframe_t;
 
-typedef struct aliasMesh_s {
-	int numVerts;
-	int numTris;
-	int numIndices;
+typedef struct maliasmesh_s {
+	int numverts;
+	int numtris;
+	int numindices;
 	uint32_t *indices;
-	aliasVert_t *verts;
-	tcoord_t *tcoords;
-	image_t *skins[MAX_MD2SKINS];
-	int numSkins;
-} aliasMesh_t;
-
-typedef struct spriteFrame_s {
-	int width, height;
-	int x, y;
-	image_t *image;
-} spriteFrame_t;
-
-typedef struct model_s {
-	modelType_t type;
-
-	char name[MAX_QPATH];
-	int registration_sequence;
-	mempool_t pool;
-
-	/* alias models */
-	int numFrames;
-	int numMeshes;
-	aliasFrame_t *frames;
-	aliasMesh_t *meshes;
-
-	/* sprite models */
-	spriteFrame_t *sframes;
-} model_t;
+	maliasvert_t *verts;
+	maliastc_t *tcoords;
+	image_t *skins[MAX_ALIAS_SKINS];
+	int numskins;
+} maliasmesh_t;
 
 /* xyz[3] + st[2] + lmst[2] */
 #define VERTEX_SIZE 7
-
-void GL_InitModels( void );
-void GL_ShutdownModels( void );
-void GL_GetModelSize( qhandle_t hModel, vec3_t mins, vec3_t maxs );
-qhandle_t GL_RegisterModel( const char *name );
-modelType_t *GL_ModelForHandle( qhandle_t hModel );
-
-void Model_FreeUnused( void );
-void Model_FreeAll( void );
 
 /*
  * gl_surf.c
@@ -195,9 +167,6 @@ void Model_FreeAll( void );
 #define LM_BLOCK_HEIGHT     256
 #define LM_TEXNUM			( MAX_RIMAGES + 2 )
 
-#define NOLIGHT_MASK \
-    (SURF_SKY|SURF_WARP|SURF_TRANS33|SURF_TRANS66)
-
 typedef struct {
     int inuse[LM_BLOCK_WIDTH];
     byte buffer[LM_BLOCK_WIDTH * LM_BLOCK_HEIGHT * 4];
@@ -207,9 +176,10 @@ typedef struct {
 
 extern lightmapBuilder_t lm;
 
-void GL_PostProcessSurface( bspSurface_t *surf );
-void GL_BeginPostProcessing( void );
-void GL_EndPostProcessing( void );
+void GL_AdjustColor( byte *dst, const byte *src, int what );
+
+void GL_LoadWorld( const char *name );
+void GL_FreeWorld( void );
 
 /*
  * gl_state.c
@@ -272,25 +242,6 @@ typedef struct {
 
 extern drawStatic_t	draw;
 
-qhandle_t GL_RegisterFont( const char *name );
-
-void Draw_SetColor( int flags, const color_t color );
-void Draw_SetClipRect( int flags, const clipRect_t *clip );
-void Draw_SetScale( float *scale );
-qboolean Draw_GetPicSize( int *w, int *h, qhandle_t hPic );
-void Draw_StretchPicST( int x, int y, int w, int h, float s1, float t1,
-        float s2, float t2, qhandle_t hPic );
-void Draw_StretchPic( int x, int y, int w, int h, qhandle_t hPic );
-void Draw_Pic( int x, int y, qhandle_t hPic );
-void Draw_StretchRaw( int x, int y, int w, int h, int cols,
-        int rows, const byte *data );
-void Draw_TileClear( int x, int y, int w, int h, qhandle_t hPic );
-void Draw_Fill( int x, int y, int w, int h, int c );
-void Draw_FillEx( int x, int y, int w, int h, const color_t color );
-void Draw_FadeScreen( void );
-void Draw_Char( int x, int y, int flags, int ch, qhandle_t hFont );
-int  Draw_String( int x, int y, int flags, size_t maxChars,
-        const char *string, qhandle_t hFont );
 void Draw_Stringf( int x, int y, const char *fmt, ... );
 void Draw_Stats( void );
 
@@ -337,17 +288,12 @@ typedef struct {
     int indices[TESS_MAX_INDICES];
     byte colors[4*TESS_MAX_VERTICES];
     int texnum[MAX_TMUS];
-    int numVertices;
-    int numIndices;
+    int numverts;
+    int numindices;
 	int flags;
 } tesselator_t;
 
 extern tesselator_t tess;
-
-void EndSurface_Multitextured( void );
-void EndSurface_Single( void );
-
-void Tess_DrawSurfaceTriangles( int *indices, int numIndices );
 
 void GL_StretchPic( float x, float y, float w, float h,
         float s1, float t1, float s2, float t2, const byte *color, image_t *image );
@@ -355,8 +301,8 @@ void GL_Flush2D( void );
 void GL_DrawParticles( void );
 void GL_DrawBeams( void );
 
-void GL_AddFace( bspSurface_t *face );
-void GL_AddSolidFace( bspSurface_t *face );
+void GL_AddFace( mface_t *face );
+void GL_AddSolidFace( mface_t *face );
 void GL_DrawAlphaFaces( void );
 void GL_DrawSolidFaces( void );
 
@@ -368,15 +314,15 @@ extern vec3_t modelViewOrigin;
 
 void GL_MarkLeaves( void );
 void GL_MarkLights( void );
-void GL_DrawBspModel( bspSubmodel_t *model );
+void GL_DrawBspModel( mmodel_t *model );
 void GL_DrawWorld( void );
-void GL_LightPoint( vec3_t origin, vec3_t dest );
+qboolean GL_LightPoint( vec3_t origin, vec3_t color );
 
 /*
  * gl_sky.c
  *
  */
-void R_AddSkySurface( bspSurface_t *surf );
+void R_AddSkySurface( mface_t *surf );
 void R_ClearSkyBox( void );
 void R_DrawSkyBox( void );
 void R_SetSky( const char *name, float rotate, vec3_t axis );

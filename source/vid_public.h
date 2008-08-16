@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2003-2006 Andrey Nazarov
+Copyright (C) 2003-2008 Andrey Nazarov
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -18,17 +18,18 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-typedef struct {
-	qboolean    (*Init)( void );
-	void        (*Shutdown)( void );
+// vid_public.h -- interface to the host window system
 
-	void    (*UpdateGamma)( const byte *table );
-	void    (*UpdatePalette)( const byte *palette );
-	void    *(*GetProcAddr)( const char *symbol );
+qboolean    VID_Init( void );
+void        VID_Shutdown( void );
+void        VID_FatalShutdown( void );
 
-	void    (*BeginFrame)( void );
-	void    (*EndFrame)( void );
-} videoAPI_t;
+void    VID_UpdateGamma( const byte *table );
+void    VID_UpdatePalette( const byte *palette );
+void    *VID_GetProcAddr( const char *symbol );
 
-extern videoAPI_t   video;
+void    VID_BeginFrame( void );
+void    VID_EndFrame( void );
 
+char    *VID_GetClipboardData( void );
+void    VID_SetClipboardData( const char *data );

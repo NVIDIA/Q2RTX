@@ -725,19 +725,28 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
 
 		if( cls.key_dest & KEY_CONSOLE ) {
 			if( cls.state == ca_disconnected && !( cls.key_dest & KEY_MENU ) ) {
+#if USE_UI
 				UI_OpenMenu( UIMENU_MAIN_FORCE );
+#endif
 			} else {
     			Con_Close();
             }
-		} else if( cls.key_dest & KEY_MENU ) {
+		}
+#if USE_UI
+        else if( cls.key_dest & KEY_MENU ) {
 			UI_Keydown( key );
-		} else if( cls.key_dest & KEY_MESSAGE ) {
+        }
+#endif
+        else if( cls.key_dest & KEY_MESSAGE ) {
 			Key_Message( key );
-		} else if( cls.state == ca_active ) {
+		}
+#if USE_UI
+        else if( cls.state == ca_active ) {
 			UI_OpenMenu( UIMENU_INGAME );
 		} else {
 			UI_OpenMenu( UIMENU_MAIN_FORCE );
 		}
+#endif
 		return;
 	}
 
@@ -815,9 +824,13 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
 
 	if( cls.key_dest & KEY_CONSOLE ) {
 		Key_Console( key );
-	} else if( cls.key_dest & KEY_MENU ) {
+	}
+#if USE_UI
+    else if( cls.key_dest & KEY_MENU ) {
 		UI_Keydown( key );
-	} else if( cls.key_dest & KEY_MESSAGE ) {
+	}
+#endif
+    else if( cls.key_dest & KEY_MESSAGE ) {
 		Key_Message( key );
 	}
 
@@ -886,9 +899,13 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
 
 	if( cls.key_dest & KEY_CONSOLE ) {
 		Char_Console( key );
-	} else if( cls.key_dest & KEY_MENU ) {
+	}
+#if USE_UI
+    else if( cls.key_dest & KEY_MENU ) {
 		UI_CharEvent( key );
-	} else if( cls.key_dest & KEY_MESSAGE ) {
+	}
+#endif
+    else if( cls.key_dest & KEY_MESSAGE ) {
 		Char_Message( key );
 	}
 
@@ -910,9 +927,13 @@ void Key_CharEvent( int key ) {
 
 	if( cls.key_dest & KEY_CONSOLE ) {
 		Char_Console( key );
-	} else if( cls.key_dest & KEY_MENU ) {
+	}
+#if USE_UI
+    else if( cls.key_dest & KEY_MENU ) {
 		UI_CharEvent( key );
-	} else if( cls.key_dest & KEY_MESSAGE ) {
+	}
+#endif
+    else if( cls.key_dest & KEY_MESSAGE ) {
 		Char_Message( key );
 	}
 }

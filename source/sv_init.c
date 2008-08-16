@@ -96,7 +96,7 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
 
     sprintf( sv.configstrings[CS_MAPCHECKSUM], "%d", ( int )cm->cache->checksum );
     
-    for( i = 1; i < sv.cm.cache->numcmodels; i++ ) {
+    for( i = 1; i < sv.cm.cache->nummodels; i++ ) {
         sprintf( sv.configstrings[ CS_MODELS + 1 + i ], "*%d", i );
     }
 
@@ -114,7 +114,7 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
 	sv.state = ss_loading;
 
 	// load and spawn all other entities
-	ge->SpawnEntities ( sv.name, CM_EntityString( &sv.cm ), spawnpoint );
+	ge->SpawnEntities ( sv.name, cm->cache->entitystring, spawnpoint );
 
 	// run two frames to allow everything to settle
 	ge->RunFrame ();
@@ -312,8 +312,6 @@ void SV_Map (const char *levelstring, qboolean restart) {
 	char	expanded[MAX_QPATH];
 	char	*ch;
     cm_t    cm;
-    uint32_t checksum;
-    const char *error;
 
 	// skip the end-of-unit flag if necessary
 	if( *levelstring == '*' ) {
@@ -342,8 +340,8 @@ void SV_Map (const char *levelstring, qboolean restart) {
     }
 
     Q_concat( expanded, sizeof( expanded ), "maps/", level, ".bsp", NULL );
-    if( ( error = CM_LoadMapEx( &cm, expanded, 0, &checksum ) ) != NULL ) {
-        Com_Printf( "Couldn't load %s: %s\n", expanded, error );
+    if( !CM_LoadMap( &cm, expanded ) ) {
+        Com_Printf( "Couldn't load %s: %s\n", expanded, BSP_GetError() );
         return;
     }
 

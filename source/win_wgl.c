@@ -131,9 +131,6 @@ qboolean WGL_Init( const char *dllname ) {
 	return qtrue;
 }
 
-void *WGL_GetProcAddress( const char *symbol ) {
-    return ( void * )GetProcAddress( glw.hinstOpenGL, symbol );
-}
 
 #undef GPA
 

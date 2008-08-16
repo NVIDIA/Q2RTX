@@ -49,7 +49,7 @@ subsystem.  Under OpenGL this means NULLing out the current DC and
 HGLRC, deleting the rendering context, and releasing the DC acquired
 for the window.  The state structure is also nulled out.
 */
-static void GLimp_Shutdown( void ) {
+void VID_Shutdown( void ) {
 	if( qwglMakeCurrent ) {
 		qwglMakeCurrent( NULL, NULL );
 	}
@@ -69,7 +69,7 @@ static void GLimp_Shutdown( void ) {
     memset( &glw, 0, sizeof( glw ) );
 }
 
-static qboolean GLimp_InitGL( void ) {
+static qboolean InitGL( void ) {
     PIXELFORMATDESCRIPTOR pfd = {
 		sizeof( PIXELFORMATDESCRIPTOR ),	// size of this pfd
 		1,								// version number
@@ -183,7 +183,7 @@ This routine is responsible for initializing the OS specific portions
 of OpenGL.  Under Win32 this means dealing with the pixelformats and
 doing the wgl interface stuff.
 */
-static qboolean GLimp_Init( void ) {
+qboolean VID_Init( void ) {
     const char *extensions;
 
 	gl_driver = Cvar_Get( "gl_driver", "opengl32", CVAR_ARCHIVE|CVAR_REFRESH );
@@ -194,13 +194,13 @@ static qboolean GLimp_Init( void ) {
 	Win_Init();
 
     // initialize OpenGL context
-    if( !GLimp_InitGL() ) {
+    if( !InitGL() ) {
         if( !glw.minidriver ) {
             goto fail;
         }
         Com_Printf( "...attempting to load opengl32\n" );
         Cvar_Set( "gl_driver","opengl32" );
-        if( !GLimp_InitGL() ) {
+        if( !InitGL() ) {
             goto fail;
         }
     }
@@ -216,8 +216,7 @@ static qboolean GLimp_Init( void ) {
 		Com_Printf( "WGL_EXT_swap_control not found\n" );
     }
 
-    Win_SetMode();
-    Win_ModeChanged();
+    VID_SetMode();
 
 	return qtrue;
 
@@ -227,7 +226,7 @@ fail:
 }
 
 
-static void GLimp_BeginFrame( void ) {
+void VID_BeginFrame( void ) {
 }
 
 /*
@@ -237,27 +236,17 @@ Responsible for doing a swapbuffers and possibly for other stuff
 as yet to be determined.  Probably better not to make this a GLimp
 function and instead do a call to GLimp_SwapBuffers.
 */
-static void GLimp_EndFrame( void ) {
+void VID_EndFrame( void ) {
     if( !qwglSwapBuffers( win.dc ) ) {
         int error = GetLastError();
 
         if( !IsIconic( win.wnd ) ) {
-            Com_Error( ERR_FATAL, "GLimp_EndFrame: wglSwapBuffers failed with error %#x", error );
+            Com_Error( ERR_FATAL, "wglSwapBuffers failed with error %#x", error );
         }
     }
 }
 
-/*
-@@@@@@@@@@@@
-VID_FillGLAPI
-@@@@@@@@@@@@
-*/
-void VID_FillGLAPI( videoAPI_t *api ) {
-	api->Init = GLimp_Init;
-	api->Shutdown = GLimp_Shutdown;
-	api->UpdateGamma = Win_UpdateGamma;
-	api->GetProcAddr = WGL_GetProcAddress;
-	api->BeginFrame = GLimp_BeginFrame;
-	api->EndFrame = GLimp_EndFrame;
+void *VID_GetProcAddr( const char *symbol ) {
+    return ( void * )GetProcAddress( glw.hinstOpenGL, symbol );
 }
 

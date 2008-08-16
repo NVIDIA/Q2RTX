@@ -164,7 +164,7 @@ void SCR_DrawDebugGraph (void)
 
 	x = w-1;
 	y = scr_glconfig.vidHeight;
-	ref.DrawFill (x, y-scr_graphheight->value,
+	R_DrawFill (x, y-scr_graphheight->value,
 		w, scr_graphheight->value, 8);
 
 	for (a=0 ; a<w ; a++)
@@ -177,7 +177,7 @@ void SCR_DrawDebugGraph (void)
 		if (v < 0)
 			v += scr_graphheight->value * (1+(int)(-v/scr_graphheight->value));
 		h = (int)v % (int)scr_graphheight->value;
-		ref.DrawFill (x, y - h, 1,	h, color);
+		R_DrawFill (x, y - h, 1,	h, color);
         x--;
 	}
 }
@@ -191,12 +191,12 @@ static void SCR_DrawPercentBar( int percent ) {
 
 	w = scr_hudWidth * percent / 100;
 
-	ref.DrawFill( 0, scr_hudHeight, w, CHAR_HEIGHT, 4 );
-	ref.DrawFill( w, scr_hudHeight, scr_hudWidth - w, CHAR_HEIGHT, 0 );
+	R_DrawFill( 0, scr_hudHeight, w, CHAR_HEIGHT, 4 );
+	R_DrawFill( w, scr_hudHeight, scr_hudWidth - w, CHAR_HEIGHT, 0 );
 
     length = sprintf( buffer, "%d%%", percent );
 	x = ( scr_hudWidth - length * CHAR_WIDTH ) / 2;
-	ref.DrawString( x, scr_hudHeight, 0, MAX_STRING_CHARS, buffer, scr_font );
+	R_DrawString( x, scr_hudHeight, 0, MAX_STRING_CHARS, buffer, scr_font );
 }
 
 /*
@@ -291,14 +291,14 @@ void SCR_DrawCenterString( void ) {
 		return;
 	}
 
-	ref.SetColor( DRAW_COLOR_ALPHA, ( byte * )&alpha );
+	R_SetColor( DRAW_COLOR_ALPHA, ( byte * )&alpha );
 
 	y = scr_hudHeight / 4 - scr_center_lines * 8 / 2;
 
 	SCR_DrawStringMulti( scr_hudWidth / 2, y, UI_CENTER,
 		MAX_STRING_CHARS, scr_centerstring, scr_font );
 
-	ref.SetColor( DRAW_COLOR_CLEAR, NULL );
+	R_SetColor( DRAW_COLOR_CLEAR, NULL );
 }
 
 //============================================================================
@@ -376,7 +376,7 @@ static void SCR_Sky_f( void ) {
 		axis[2] = atof(Cmd_Argv(5));
 	}
 
-	ref.SetSky (Cmd_Argv(1), rotate, axis);
+	R_SetSky (Cmd_Argv(1), rotate, axis);
 }
 
 /*
@@ -398,19 +398,19 @@ static void SCR_TimeRefresh_f (void) {
 
 	if (Cmd_Argc() == 2) {
 		// run without page flipping
-		ref.BeginFrame();
+		R_BeginFrame();
 		for (i=0 ; i<128 ; i++) {
 			cl.refdef.viewangles[1] = i/128.0f*360.0f;
-			ref.RenderFrame (&cl.refdef);
+			R_RenderFrame (&cl.refdef);
 		}
-		ref.EndFrame();
+		R_EndFrame();
 	} else {
 		for (i=0 ; i<128 ; i++) {
 			cl.refdef.viewangles[1] = i/128.0f*360.0f;
 
-			ref.BeginFrame();
-			ref.RenderFrame (&cl.refdef);
-			ref.EndFrame();
+			R_BeginFrame();
+			R_RenderFrame (&cl.refdef);
+			R_EndFrame();
 		}
 	}
 
@@ -435,10 +435,10 @@ void SCR_TouchPics( void ) {
 
 	for( i = 0; i < 2; i++ )
 		for( j = 0; j < 11; j++ )
-			sb_pics[i][j] = ref.RegisterPic( sb_nums[i][j] );
+			sb_pics[i][j] = R_RegisterPic( sb_nums[i][j] );
 
-	sb_inventory = ref.RegisterPic( "inventory" );
-	sb_field = ref.RegisterPic( "field_3" );
+	sb_inventory = R_RegisterPic( "inventory" );
+	sb_field = R_RegisterPic( "field_3" );
 
 	if( crosshair->integer ) {
 		if( crosshair->integer < 0 ) {
@@ -446,16 +446,17 @@ void SCR_TouchPics( void ) {
 		}
 
 		Com_sprintf( buffer, sizeof( buffer ), "ch%i", crosshair->integer );
-		crosshair_pic = ref.RegisterPic( buffer );
-		ref.DrawGetPicSize( &crosshair_width, &crosshair_height,
-                crosshair_pic );
+		crosshair_pic = R_RegisterPic( buffer );
+		R_GetPicSize( &crosshair_width, &crosshair_height, crosshair_pic );
 	}
 }
 
 void SCR_ModeChanged( void ) {
-	ref.GetConfig( &scr_glconfig );
+	R_GetConfig( &scr_glconfig );
     IN_Activate();
+#if USE_UI
     UI_ModeChanged();
+#endif
 }
 
 /*
@@ -464,18 +465,18 @@ SCR_RegisterMedia
 ==================
 */
 void SCR_RegisterMedia( void ) {
-	ref.GetConfig( &scr_glconfig );
+	R_GetConfig( &scr_glconfig );
 
-	scr_backtile = ref.RegisterPic( "backtile" );
-	scr_pause = ref.RegisterPic( "pause" );
-	scr_net = ref.RegisterPic( "net" );
-	scr_font = ref.RegisterFont( scr_fontvar->string );
+	scr_backtile = R_RegisterPic( "backtile" );
+	scr_pause = R_RegisterPic( "pause" );
+	scr_net = R_RegisterPic( "net" );
+	scr_font = R_RegisterFont( scr_fontvar->string );
 
-	ref.DrawGetPicSize( &scr_pause_width, &scr_pause_height, scr_pause );
+	R_GetPicSize( &scr_pause_width, &scr_pause_height, scr_pause );
 }
 
 static void scr_fontvar_changed( cvar_t *self ) {
-	scr_font = ref.RegisterFont( self->string );
+	scr_font = R_RegisterFont( self->string );
 }
 
 static const cmdreg_t scr_cmds[] = {
@@ -547,7 +548,7 @@ void SCR_DrawPause( void ) {
 
     x = ( scr_hudWidth - scr_pause_width ) / 2;
     y = ( scr_hudHeight - scr_pause_height ) / 2;
-	ref.DrawPic( x, y, scr_pause );
+	R_DrawPic( x, y, scr_pause );
 }
 
 //=============================================================================
@@ -559,7 +560,9 @@ SCR_BeginLoadingPlaque
 */
 void SCR_BeginLoadingPlaque( void ) {
 	Con_Close();
+#if USE_UI
 	UI_OpenMenu( UIMENU_NONE );
+#endif
 	S_StopAllSounds();
 }
 
@@ -595,17 +598,17 @@ static void SCR_TileClear( void ) {
 
 	
 	// clear above view screen
-	ref.DrawTileClear( 0, 0, scr_glconfig.vidWidth, top, scr_backtile );
+	R_TileClear( 0, 0, scr_glconfig.vidWidth, top, scr_backtile );
 
 	// clear below view screen
-	ref.DrawTileClear( 0, bottom, scr_glconfig.vidWidth,
+	R_TileClear( 0, bottom, scr_glconfig.vidWidth,
             scr_glconfig.vidHeight - bottom, scr_backtile );
 
 	// clear left of view screen
-	ref.DrawTileClear( 0, top, left, scr_vrect.height, scr_backtile );
+	R_TileClear( 0, top, left, scr_vrect.height, scr_backtile );
 	
 	// clear right of view screen
-	ref.DrawTileClear( right, top, scr_glconfig.vidWidth - right,
+	R_TileClear( right, top, scr_glconfig.vidWidth - right,
             scr_vrect.height, scr_backtile );
 
 }
@@ -619,10 +622,10 @@ STAT PROGRAMS
 */
 
 #define HUD_DrawString( x, y, string ) \
-    ref.DrawString( x, y, 0, MAX_STRING_CHARS, string, scr_font )
+    R_DrawString( x, y, 0, MAX_STRING_CHARS, string, scr_font )
 
 #define HUD_DrawAltString( x, y, string ) \
-    ref.DrawString( x, y, UI_ALTCOLOR, MAX_STRING_CHARS, string, scr_font )
+    R_DrawString( x, y, UI_ALTCOLOR, MAX_STRING_CHARS, string, scr_font )
 
 #define HUD_DrawCenterString( x, y, string ) \
     SCR_DrawStringEx( x, y, UI_CENTER, MAX_STRING_CHARS, string, scr_font )
@@ -663,7 +666,7 @@ void HUD_DrawNumber( int x, int y, int color, int width, int value ) {
 		else
 			frame = *ptr - '0';
 
-		ref.DrawPic( x, y, sb_pics[color][frame] );
+		R_DrawPic( x, y, sb_pics[color][frame] );
 		x += DIGIT_WIDTH;
 		ptr++;
 		l--;
@@ -707,7 +710,7 @@ void SCR_DrawInventory( void ) {
 	x = ( scr_hudWidth - 256 ) / 2;
 	y = ( scr_hudHeight - 240 ) / 2;
 
-	ref.DrawPic( x, y + 8, sb_inventory );
+	R_DrawPic( x, y + 8, sb_inventory );
 	y += 24;
 	x += 24;
 
@@ -732,7 +735,7 @@ void SCR_DrawInventory( void ) {
 		} else {	// draw a blinky cursor by the selected item
 			HUD_DrawString( x, y, string );
 			if( ( cls.realtime >> 8 ) & 1 ) {
-				ref.DrawChar( x - CHAR_WIDTH, y, 0, 15, scr_font );
+				R_DrawChar( x - CHAR_WIDTH, y, 0, 15, scr_font );
 			}
 		}
 		
@@ -820,7 +823,7 @@ void SCR_ExecuteLayoutString( const char *s ) {
 			}
 			token = cl.configstrings[CS_IMAGES + value];
 			if( token[0] ) {
-	            ref.DrawPic( x, y, ref.RegisterPic( token ) );
+	            R_DrawPic( x, y, R_RegisterPic( token ) );
 			}
 			continue;
 		}
@@ -861,7 +864,7 @@ void SCR_ExecuteLayoutString( const char *s ) {
 			if( !ci->icon ) {
 				ci = &cl.baseclientinfo;
 			}
-			ref.DrawPic( x, y, ci->icon );
+			R_DrawPic( x, y, ci->icon );
 			continue;
 		}
 
@@ -902,7 +905,7 @@ void SCR_ExecuteLayoutString( const char *s ) {
 		if( !strcmp( token, "picn" ) ) {	
 			// draw a pic from a name
 			token = COM_Parse( &s );
-	        ref.DrawPic( x, y, ref.RegisterPic( token ) );
+	        R_DrawPic( x, y, R_RegisterPic( token ) );
 			continue;
 		}
 
@@ -934,7 +937,7 @@ void SCR_ExecuteLayoutString( const char *s ) {
 				color = 1;
 
 			if( cl.frame.ps.stats[STAT_FLASHES] & 1 )
-				ref.DrawPic( x, y, sb_field );
+				R_DrawPic( x, y, sb_field );
 
 			HUD_DrawNumber( x, y, color, width, value );
 			continue;
@@ -954,7 +957,7 @@ void SCR_ExecuteLayoutString( const char *s ) {
 				continue;	// negative number = don't show
 
 			if( cl.frame.ps.stats[STAT_FLASHES] & 4 )
-				ref.DrawPic( x, y, sb_field );
+				R_DrawPic( x, y, sb_field );
 
 			HUD_DrawNumber( x, y, color, width, value );
 			continue;
@@ -972,7 +975,7 @@ void SCR_ExecuteLayoutString( const char *s ) {
 			color = 0;	// green
 
 			if( cl.frame.ps.stats[STAT_FLASHES] & 2 )
-				ref.DrawPic( x, y, sb_field );
+				R_DrawPic( x, y, sb_field );
 
 			HUD_DrawNumber( x, y, color, width, value );
 			continue;
@@ -1055,7 +1058,7 @@ static void SCR_DrawActiveFrame( void ) {
 	Cvar_ClampValue( scr_scale, 1, 9 );
 
 	scale = 1.0f / scr_scale->value;
-	ref.SetScale( &scale );
+	R_SetScale( &scale );
 
 	scr_hudHeight *= scale;
 	scr_hudWidth *= scale;
@@ -1063,7 +1066,7 @@ static void SCR_DrawActiveFrame( void ) {
 	// draw all 2D elements
 	SCR_Draw2D();
 
-	ref.SetScale( NULL );
+	R_SetScale( NULL );
 }
 
 //=======================================================
@@ -1088,7 +1091,7 @@ void SCR_UpdateScreen( void ) {
 
     recursive++;
 
-	ref.BeginFrame();
+	R_BeginFrame();
 	
 	switch( cls.state ) {
 	case ca_disconnected:
@@ -1098,13 +1101,18 @@ void SCR_UpdateScreen( void ) {
 			Con_RunConsole();
 		}
 
-		if( UI_IsTransparent() ) {
-			ref.DrawFill( 0, 0, scr_glconfig.vidWidth,
+#if USE_UI
+		if( UI_IsTransparent() )
+#endif
+        {
+			R_DrawFill( 0, 0, scr_glconfig.vidWidth,
                 scr_glconfig.vidHeight, 0 );
         }
 
+#if USE_UI
 		// draw main menu
 		UI_Draw( cls.realtime );
+#endif
 		break;
 
 	case ca_challenging:
@@ -1112,23 +1120,30 @@ void SCR_UpdateScreen( void ) {
 	case ca_connected:
 	case ca_loading:
 	case ca_precached:
+#if USE_UI
 		// make sure main menu is down
 		if( cls.key_dest & KEY_MENU ) {
 			UI_OpenMenu( UIMENU_NONE );
 		}
+#endif
 
 		// draw loading screen
 		SCR_DrawLoading();
 		break;
 
 	case ca_active:
-		if( UI_IsTransparent() ) {
+#if USE_UI
+		if( UI_IsTransparent() )
+#endif
+        {
 			// do 3D refresh drawing
 			SCR_DrawActiveFrame();
 		}
 
+#if USE_UI
 		// draw ingame menu
 		UI_Draw( cls.realtime );
+#endif
 		break;
 
 	default:
@@ -1145,7 +1160,7 @@ void SCR_UpdateScreen( void ) {
 		SCR_DrawDebugGraph();
     }
 
-	ref.EndFrame();
+	R_EndFrame();
 
     recursive--;
 }

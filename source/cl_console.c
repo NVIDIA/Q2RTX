@@ -578,19 +578,19 @@ Con_RegisterMedia
 ================
 */
 void Con_RegisterMedia( void ) {
-    con.charsetImage = ref.RegisterFont( con_font->string );
+    con.charsetImage = R_RegisterFont( con_font->string );
 	if( !con.charsetImage && strcmp( con_font->string, "conchars" ) ) {
 		Com_WPrintf( "Couldn't load console font: %s\n", con_font->string );
-		con.charsetImage = ref.RegisterFont( "conchars" );
+		con.charsetImage = R_RegisterFont( "conchars" );
 	}
     if( !con.charsetImage ) {
         Com_Error( ERR_FATAL, "Couldn't load pics/conchars.pcx" );
     }
 
-	con.backImage = ref.RegisterPic( con_background->string );
+	con.backImage = R_RegisterPic( con_background->string );
 	if( !con.backImage && strcmp( con_background->string, "conback" ) ) {
 		Com_WPrintf( "Couldn't load console background: %s\n", con_background->string );
-		con.backImage = ref.RegisterFont( "conback" );
+		con.backImage = R_RegisterFont( "conback" );
 	}
 }
 
@@ -652,14 +652,14 @@ void Con_DrawNotify( void ) {
 			alpha = 1;	// don't fade
 		}
 
-        ref.SetColor( DRAW_COLOR_ALPHA, ( byte * )&alpha );
-		ref.DrawString( CHAR_WIDTH, v, 0, con.linewidth, text,
+        R_SetColor( DRAW_COLOR_ALPHA, ( byte * )&alpha );
+		R_DrawString( CHAR_WIDTH, v, 0, con.linewidth, text,
             con.charsetImage );
 
 		v += CHAR_HEIGHT;
 	}
     
-    ref.SetColor( DRAW_COLOR_CLEAR, NULL );
+    R_SetColor( DRAW_COLOR_CLEAR, NULL );
 
 	if( cls.key_dest & KEY_MESSAGE ) {
 		if( con.chat == CHAT_TEAM ) {
@@ -670,7 +670,7 @@ void Con_DrawNotify( void ) {
 			skip = 5;
 		}
 
-		ref.DrawString( CHAR_WIDTH, v, 0, MAX_STRING_CHARS, text,
+		R_DrawString( CHAR_WIDTH, v, 0, MAX_STRING_CHARS, text,
             con.charsetImage );
 		IF_Draw( &con.chatPrompt.inputLine, skip * CHAR_WIDTH, v,
             UI_DRAWCURSOR, con.charsetImage );
@@ -712,23 +712,23 @@ void Con_DrawSolidConsole( void ) {
 		Cvar_ClampValue( con_alpha, 0, 1 );
 		alpha *= con_alpha->value;
 
-		ref.SetColor( DRAW_COLOR_ALPHA, ( byte * )&alpha );
+		R_SetColor( DRAW_COLOR_ALPHA, ( byte * )&alpha );
 	}
 
 	clip.left = 0;
 	clip.top = 0;
 	clip.right = 0;
 	clip.bottom = 0;
-	ref.SetClipRect( DRAW_CLIP_TOP, &clip );
+	R_SetClipRect( DRAW_CLIP_TOP, &clip );
 
 // draw the background
 	if( cls.state != ca_active || ( cls.key_dest & KEY_MENU ) || con_alpha->value ) {
-		ref.DrawStretchPic( 0, vislines - con.vidHeight,
+		R_DrawStretchPic( 0, vislines - con.vidHeight,
             con.vidWidth, con.vidHeight, con.backImage );
 	}
 #if 0
 	if( cls.state > ca_disconnected && cls.state < ca_active ) {
-        ref.DrawFill( 0, vislines, con.vidWidth, con.vidHeight - vislines, 0 );
+        R_DrawFill( 0, vislines, con.vidWidth, con.vidHeight - vislines, 0 );
     }
 #endif
 
@@ -738,9 +738,9 @@ void Con_DrawSolidConsole( void ) {
 
 // draw arrows to show the buffer is backscrolled
 	if( con.display != con.current ) {
-		ref.SetColor( DRAW_COLOR_RGBA, colorRed );
+		R_SetColor( DRAW_COLOR_RGBA, colorRed );
 		for( i = 1; i < con.linewidth / 2; i += 4 ) {
-			ref.DrawChar( i * CHAR_WIDTH, y, 0, '^', con.charsetImage );
+			R_DrawChar( i * CHAR_WIDTH, y, 0, '^', con.charsetImage );
 		}
 	
 		y -= CHAR_HEIGHT;
@@ -748,7 +748,7 @@ void Con_DrawSolidConsole( void ) {
 	}
 	
 // draw from the bottom up
-	ref.SetColor( DRAW_COLOR_CLEAR, NULL );
+	R_SetColor( DRAW_COLOR_CLEAR, NULL );
 	row = con.display;
 	for( i = 0; i < rows; i++ ) {
 		if( row < 0 )
@@ -758,7 +758,7 @@ void Con_DrawSolidConsole( void ) {
 			
 		text = con.text[row & CON_TOTALLINES_MASK];
 
-		x = ref.DrawString( CHAR_WIDTH, y, 0, con.linewidth, text, con.charsetImage );
+		x = R_DrawString( CHAR_WIDTH, y, 0, con.linewidth, text, con.charsetImage );
         if( i < 2 ) {
             widths[i] = x;
         }
@@ -808,7 +808,7 @@ void Con_DrawSolidConsole( void ) {
 
 		// draw it
 		y = vislines - 10;
-		ref.DrawString( CHAR_WIDTH, y, 0, CON_LINEWIDTH, buffer, con.charsetImage );
+		R_DrawString( CHAR_WIDTH, y, 0, CON_LINEWIDTH, buffer, con.charsetImage );
 	}
 //ZOID
 
@@ -829,9 +829,9 @@ void Con_DrawSolidConsole( void ) {
             i = 17;
             break;
         }
-        ref.SetColor( DRAW_COLOR_RGBA, colorYellow );
-		ref.DrawChar( CHAR_WIDTH, y, 0, i, con.charsetImage );
-        ref.SetColor( DRAW_COLOR_CLEAR, NULL );
+        R_SetColor( DRAW_COLOR_RGBA, colorYellow );
+		R_DrawChar( CHAR_WIDTH, y, 0, i, con.charsetImage );
+        R_SetColor( DRAW_COLOR_CLEAR, NULL );
 
 		// draw input line
 		x = IF_Draw( &con.prompt.inputLine, 2 * CHAR_WIDTH, y,
@@ -845,13 +845,13 @@ void Con_DrawSolidConsole( void ) {
         row++;
     }
 
-	ref.SetColor( DRAW_COLOR_RGBA, colorCyan );
+	R_SetColor( DRAW_COLOR_RGBA, colorCyan );
 
 // draw clock
 	if( con_clock->integer ) {
 		x = Com_Time_m( buffer, sizeof( buffer ) ) * CHAR_WIDTH;
         if( widths[row] + x + CHAR_WIDTH <= con.vidWidth ) {
-    		ref.DrawString( con.vidWidth - CHAR_WIDTH - x, y - CHAR_HEIGHT,
+    		R_DrawString( con.vidWidth - CHAR_WIDTH - x, y - CHAR_HEIGHT,
                 UI_RIGHT, MAX_STRING_CHARS, buffer, con.charsetImage );
         }
 	}
@@ -861,8 +861,8 @@ void Con_DrawSolidConsole( void ) {
         MAX_STRING_CHARS, APPLICATION " " VERSION, con.charsetImage );
 
 	// restore rendering parameters
-    ref.SetColor( DRAW_COLOR_CLEAR, NULL );
-	ref.SetClipRect( DRAW_CLIP_DISABLED, NULL );
+    R_SetColor( DRAW_COLOR_CLEAR, NULL );
+	R_SetClipRect( DRAW_CLIP_DISABLED, NULL );
 }
 
 //=============================================================================
@@ -920,13 +920,13 @@ void Con_DrawConsole( void ) {
 	Cvar_ClampValue( con_scale, 1, 9 );
 
 	con.scale = 1.0f / con_scale->value;
-	ref.SetScale( &con.scale );
+	R_SetScale( &con.scale );
 
 	Con_CheckResize();
 	Con_DrawSolidConsole();
 	Con_DrawNotify();	
 
-	ref.SetScale( NULL );
+	R_SetScale( NULL );
 }
 
 

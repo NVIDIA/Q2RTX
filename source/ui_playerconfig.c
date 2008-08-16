@@ -63,13 +63,13 @@ static void ReloadMedia( void ) {
     char *skin = uis.pmi[m_player.model.curvalue].skindisplaynames[m_player.skin.curvalue];
 
     Q_concat( scratch, sizeof( scratch ), "players/", model, "/tris.md2", NULL );
-    m_player.entities[0].model = ref.RegisterModel( scratch );
+    m_player.entities[0].model = R_RegisterModel( scratch );
 
     Q_concat( scratch, sizeof( scratch ), "players/", model, "/", skin, ".pcx", NULL );
-    m_player.entities[0].skin = ref.RegisterSkin( scratch );
+    m_player.entities[0].skin = R_RegisterSkin( scratch );
 
     Q_concat( scratch, sizeof( scratch ), "players/", model, "/w_railgun.md2", NULL );
-    m_player.entities[1].model = ref.RegisterModel( scratch );
+    m_player.entities[1].model = R_RegisterModel( scratch );
 }
 
 static void RunFrame( void ) {
@@ -111,7 +111,7 @@ static void Draw( menuFrameWork_t *self ) {
 
     Menu_Draw( self );    
 
-    ref.RenderFrame( &m_player.refdef );
+    R_RenderFrame( &m_player.refdef );
 }
 
 static void Size( menuFrameWork_t *self ) {

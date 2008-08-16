@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // for pure dedicated servers
 
 #include "com_local.h"
+#include "files.h"
 
 cvar_t *cl_paused;
 
@@ -55,9 +56,6 @@ void Con_Print( const char *text ) {
 
 qboolean CL_CheatsOK( void ) {
 	return qtrue;
-}
-
-void CL_PacketEvent( neterr_t ret ) {
 }
 
 void CL_UpdateUserinfo( cvar_t *var, cvarSetSource_t source ) {

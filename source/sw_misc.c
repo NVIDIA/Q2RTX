@@ -110,7 +110,7 @@ void D_ViewChanged (void)
 	if ( r_newrefdef.rdflags & RDF_NOWORLDMODEL )
 	{
 		memset( d_pzbuffer, 0xff, vid.width * vid.height * sizeof( d_pzbuffer[0] ) );
-		Draw_Fill( r_newrefdef.x, r_newrefdef.y, r_newrefdef.width, r_newrefdef.height, /*( int ) sw_clearcolor->value & 0xff*/0 );
+		R_DrawFill( r_newrefdef.x, r_newrefdef.y, r_newrefdef.width, r_newrefdef.height, /*( int ) sw_clearcolor->value & 0xff*/0 );
 	}
 
 	D_Patch ();
@@ -128,7 +128,7 @@ void R_PrintTimes (void)
 	int		r_time2;
 	int		ms;
 
-	r_time2 = sys.Milliseconds ();
+	r_time2 = Sys_Milliseconds ();
 
 	ms = r_time2 - r_time1;
 	
@@ -147,7 +147,7 @@ void R_PrintDSpeeds (void)
 {
 	int	ms, dp_time, r_time2, rw_time, db_time, se_time, de_time, da_time;
 
-	r_time2 = sys.Milliseconds ();
+	r_time2 = Sys_Milliseconds ();
 
 	da_time = (da_time2 - da_time1);
 	dp_time = (dp_time2 - dp_time1);
@@ -218,7 +218,7 @@ void TransformVector (vec3_t in, vec3_t out)
 R_TransformPlane
 ================
 */
-void R_TransformPlane (mplane_t *p, float *normal, float *dist)
+void R_TransformPlane (cplane_t *p, float *normal, float *dist)
 {
 	float	d;
 	
@@ -388,11 +388,11 @@ void R_SetupFrame (void)
 // current viewleaf
 	if ( !( r_newrefdef.rdflags & RDF_NOWORLDMODEL ) )
 	{
-		r_viewleaf = Mod_PointInLeaf (r_origin, r_worldmodel);
+		r_viewleaf = BSP_PointLeaf (r_worldmodel->nodes, r_origin);
 		r_viewcluster = r_viewleaf->cluster;
 	}
 
-	if (sw_waterwarp->value && (r_newrefdef.rdflags & RDF_UNDERWATER) )
+	if (sw_waterwarp->integer && (r_newrefdef.rdflags & RDF_UNDERWATER) )
 		r_dowarp = qtrue;
 	else
 		r_dowarp = qfalse;

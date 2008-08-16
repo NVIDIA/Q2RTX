@@ -320,7 +320,7 @@ Build a client frame structure
 */
 
 qboolean SV_EdictPV( cm_t *cm, edict_t *ent, byte *mask ) {
-    cnode_t *node;
+    mnode_t *node;
     int i, l;
 
     if( ent->num_clusters == -1 ) {	
@@ -357,9 +357,10 @@ void SV_BuildClientFrame( client_t *client ) {
     player_state_t  *ps;
 	int		l;
 	int		clientarea, clientcluster;
-	cleaf_t	*leaf;
-	byte	*clientphs;
-	byte	*clientpvs;
+	mleaf_t	*leaf;
+	byte	clientphs[MAX_MAP_VIS];
+	byte	clientpvs[MAX_MAP_VIS];
+    extern cvar_t *sv_novis;
 
 	clent = client->edict;
 	if( !clent->client )
@@ -396,8 +397,8 @@ void SV_BuildClientFrame( client_t *client ) {
 	    frame->clientNum = client->number;
     }
 
-	clientpvs = CM_FatPVS( client->cm, org );
-	clientphs = CM_ClusterPHS( client->cm, clientcluster );
+	CM_FatPVS( client->cm, clientpvs, org );
+	BSP_ClusterVis( client->cm->cache, clientphs, clientcluster, DVIS_PHS );
 
 	// build up the list of visible entities
 	frame->numEntities = 0;
@@ -430,7 +431,7 @@ void SV_BuildClientFrame( client_t *client ) {
 		}
 
 		// ignore if not touching a PV leaf
-		if( ent != clent ) {
+		if( ent != clent && !sv_novis->integer ) {
 			// check area
 			if( !CM_AreasConnected( client->cm, clientarea, ent->areanum ) ) {	
 				// doors can legally straddle two areas, so

@@ -87,9 +87,9 @@ CL_ClipMoveToEntities
 static void CL_ClipMoveToEntities( vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, trace_t *tr ) {
     int         i;
     trace_t     trace;
-    cnode_t     *headnode;
+    mnode_t     *headnode;
     centity_t   *ent;
-    cmodel_t    *cmodel;
+    mmodel_t    *cmodel;
 
     for( i = 0; i < cl.numSolidEntities; i++ ) {
         ent = cl.solidEntities[i];
@@ -125,7 +125,7 @@ static trace_t CL_Trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end) {
     trace_t    t;
 
     // check against world
-    CM_BoxTrace (&t, start, end, mins, maxs, cl.cm.cache->nodes, MASK_PLAYERSOLID);
+    CM_BoxTrace (&t, start, end, mins, maxs, cl.bsp->nodes, MASK_PLAYERSOLID);
     if (t.fraction < 1.0)
         t.ent = (struct edict_s *)1;
 
@@ -138,10 +138,10 @@ static trace_t CL_Trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end) {
 static int CL_PointContents (vec3_t point) {
     int         i;
     centity_t   *ent;
-    cmodel_t    *cmodel;
+    mmodel_t    *cmodel;
     int         contents;
 
-    contents = CM_PointContents (point, cl.cm.cache->nodes);
+    contents = CM_PointContents (point, cl.bsp->nodes);
 
     for (i=0 ; i<cl.numSolidEntities ; i++) {
         ent = cl.solidEntities[i];

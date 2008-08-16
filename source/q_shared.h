@@ -122,7 +122,6 @@ typedef enum comPrintType_e {
 	PRINT_ERROR			// print in red color
 } comPrintType_t;
 
-// FIXME: move these to com_public.h?
 void 		Com_Printf( const char *fmt, ... ) q_printf( 1, 2 );
 void 		Com_DPrintf( const char *fmt, ... ) q_printf( 1, 2 );
 void		Com_WPrintf( const char *fmt, ... ) q_printf( 1, 2 );

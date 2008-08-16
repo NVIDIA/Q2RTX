@@ -68,9 +68,9 @@ const char *MVD_ServerCommandString( int cmd ) {
 
 static void MVD_LinkEdict( mvd_t *mvd, edict_t *ent ) {
 	int			index;
-	cmodel_t	*cm;
+	mmodel_t	*cm;
 	int			x, zd, zu;
-	cmcache_t	*cache = mvd->cm.cache;
+	bsp_t	    *cache = mvd->cm.cache;
     
 	if( !cache ) {
 		return;
@@ -78,12 +78,12 @@ static void MVD_LinkEdict( mvd_t *mvd, edict_t *ent ) {
     
 	if( ent->s.solid == 31 ) {
 		index = ent->s.modelindex;
-		if( index < 1 || index > cache->numcmodels ) {
+		if( index < 1 || index > cache->nummodels ) {
 			Com_WPrintf( "%s: entity %d: bad inline model index: %d\n",
 				__func__, ent->s.number, index );
 			return;
 		}
-		cm = &cache->cmodels[ index - 1 ];
+		cm = &cache->models[ index - 1 ];
 		VectorCopy( cm->mins, ent->mins );
 		VectorCopy( cm->maxs, ent->maxs );
         ent->solid = SOLID_BSP;
@@ -205,10 +205,8 @@ void MVD_ParseEntityString( mvd_t *mvd ) {
 static void MVD_ParseMulticast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
 	udpClient_t	*client;
     client_t    *cl;
-	byte		*mask;
-	cleaf_t		*leaf;
-	int			cluster;
-	int			area1, area2;
+	byte		mask[MAX_MAP_VIS];
+	mleaf_t		*leaf1, *leaf2;
 	vec3_t		org;
     qboolean    reliable = qfalse;
 	player_state_t	*ps;
@@ -220,33 +218,27 @@ static void MVD_ParseMulticast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
 
 	switch( op ) {
 	case mvd_multicast_all_r:
-		reliable = qtrue;	// intentional fallthrough
+		reliable = qtrue;
+        // intentional fallthrough
 	case mvd_multicast_all:
-		area1 = 0;
-		cluster = 0;
-		mask = NULL;
+		leaf1 = NULL;
 		break;
-
 	case mvd_multicast_phs_r:
-		reliable = qtrue;	// intentional fallthrough
+		reliable = qtrue;
+        // intentional fallthrough
 	case mvd_multicast_phs:
         leafnum = MSG_ReadShort();
-		leaf = CM_LeafNum( &mvd->cm, leafnum );
-		area1 = CM_LeafArea( leaf );
-		cluster = CM_LeafCluster( leaf );
-		mask = CM_ClusterPHS( &mvd->cm, cluster );
+		leaf1 = CM_LeafNum( &mvd->cm, leafnum );
+		BSP_ClusterVis( mvd->cm.cache, mask, leaf1->cluster, DVIS_PHS );
 		break;
-
 	case mvd_multicast_pvs_r:
-		reliable = qtrue;	// intentional fallthrough
+		reliable = qtrue;
+        // intentional fallthrough
 	case mvd_multicast_pvs:
         leafnum = MSG_ReadShort();
-		leaf = CM_LeafNum( &mvd->cm, leafnum );
-		area1 = CM_LeafArea( leaf );
-		cluster = CM_LeafCluster( leaf );
-		mask = CM_ClusterPVS( &mvd->cm, cluster );
+		leaf1 = CM_LeafNum( &mvd->cm, leafnum );
+		BSP_ClusterVis( mvd->cm.cache, mask, leaf1->cluster, DVIS_PVS );
 		break;
-
 	default:
 		MVD_Destroyf( mvd, "bad op" );
 	}
@@ -270,16 +262,14 @@ static void MVD_ParseMulticast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
 			continue;
 		}
 
-		if( mask ) {
+		if( leaf1 ) {
 			// find the client's PVS
 			ps = &client->ps;
 			VectorMA( ps->viewoffset, 0.125f, ps->pmove.origin, org );
-			leaf = CM_PointLeaf( &mvd->cm, org );
-			area2 = CM_LeafArea( leaf );
-			if( !CM_AreasConnected( &mvd->cm, area1, area2 ) )
+			leaf2 = CM_PointLeaf( &mvd->cm, org );
+			if( !CM_AreasConnected( &mvd->cm, leaf1->area, leaf2->area ) )
 				continue;
-			cluster = CM_LeafCluster( leaf );
-			if( !Q_IsBitSet( mask, cluster ) ) {
+			if( !Q_IsBitSet( mask, leaf2->cluster ) ) {
 				continue;
 			}
 		}
@@ -511,9 +501,9 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
 	vec3_t		origin;
     udpClient_t *client;
 	client_t	*cl;
-	byte		*mask;
-	cleaf_t		*leaf;
-	int			area, cluster;
+	byte		mask[MAX_MAP_VIS];
+	mleaf_t		*leaf;
+	int			area;
     player_state_t  *ps;
     sound_packet_t  *msg;
     edict_t     *entity;
@@ -560,8 +550,7 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
                     continue;		// blocked by a door
                 }
             }
-            cluster = CM_LeafCluster( leaf );
-            mask = CM_ClusterPHS( &mvd->cm, cluster );
+		    BSP_ClusterVis( mvd->cm.cache, mask, leaf->cluster, DVIS_PHS );
             if( !SV_EdictPV( &mvd->cm, entity, mask ) ) {
                 continue; // not in PHS
             }
@@ -777,6 +766,11 @@ static void MVD_ParsePacketEntities( mvd_t *mvd ) {
 
         MSG_ParseDeltaEntity( &ent->s, &ent->s, number, bits );
 
+        // lazily relink even if removed
+        if( number > mvd->maxclients && ( bits & RELINK_MASK ) ) {
+            MVD_LinkEdict( mvd, ent );
+        }
+
 		if( bits & U_REMOVE ) {	
 			if( mvd_shownet->integer > 2 ) {
 				Com_Printf( "   remove: %d\n", number );
@@ -788,10 +782,6 @@ static void MVD_ParsePacketEntities( mvd_t *mvd ) {
         ent->inuse = qtrue;
         if( number >= mvd->pool.num_edicts ) {
             mvd->pool.num_edicts = number + 1;
-        }
-
-        if( number > mvd->maxclients && ( bits & RELINK_MASK ) ) {
-            MVD_LinkEdict( mvd, ent );
         }
 	}
 }
@@ -894,8 +884,6 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
 	int protocol;
     size_t length;
 	char *gamedir, *string, *p;
-    const char *error;
-	uint32_t checksum;
     int i, index;
     mvd_player_t *player;
 
@@ -984,13 +972,12 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
 	// load the world model (we are only interesed in
     // visibility info, do not load brushes and such)
     Com_Printf( "[%s] Loading %s...\n", mvd->name, string );
-    error = CM_LoadMapEx( &mvd->cm, string, CM_LOAD_VISONLY, &checksum );
-    if( error ) {
-        MVD_Destroyf( mvd, "Couldn't load %s: %s", string, error );
+    if( !CM_LoadMap( &mvd->cm, string ) ) {
+        MVD_Destroyf( mvd, "Couldn't load %s: %s", string, BSP_GetError() );
     }
 
 #if USE_MAPCHECKSUM
-    if( checksum != atoi( mvd->configstrings[CS_MAPCHECKSUM] ) ) {
+    if( mvd->cm.cache->checksum != atoi( mvd->configstrings[CS_MAPCHECKSUM] ) ) {
         MVD_Destroyf( mvd, "Local map version differs from server" );
     }
 #endif

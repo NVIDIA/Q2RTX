@@ -55,6 +55,7 @@ cvar_t *allow_download_other;
 cvar_t	*sv_airaccelerate;
 cvar_t	*sv_qwmod;				// atu QW Physics modificator
 cvar_t	*sv_noreload;			// don't reload level state when reentering
+cvar_t  *sv_novis;
 
 cvar_t	*sv_http_enable;
 cvar_t	*sv_http_maxclients;
@@ -1148,7 +1149,7 @@ static void SV_GiveMsec( void ) {
 SV_PacketEvent
 =================
 */
-void SV_PacketEvent( neterr_t ret ) {
+static void SV_PacketEvent( neterr_t ret ) {
 	client_t	*client;
     netchan_t   *netchan;
 	int			qport;
@@ -1225,6 +1226,32 @@ void SV_PacketEvent( neterr_t ret ) {
 		break;
 	}
 }
+
+void SV_ProcessEvents( void ) {
+	neterr_t ret;
+
+#if USE_CLIENT
+	memset( &net_from, 0, sizeof( net_from ) );
+	net_from.type = NA_LOOPBACK;
+
+	// process loopback packets
+    while( NET_GetLoopPacket( NS_SERVER ) ) {
+        if( sv_running->integer ) {
+            SV_PacketEvent( NET_OK );
+        }
+    }
+#endif
+
+    // process network packets
+    do {
+        ret = NET_GetPacket( NS_SERVER );
+        if( ret == NET_AGAIN ) {
+            break;
+        }
+		SV_PacketEvent( ret );
+    } while( ret == NET_OK );
+}
+
 
 /*
 ==================
@@ -1371,7 +1398,7 @@ SV_RunGameFrame
 =================
 */
 static void SV_RunGameFrame( void ) {
-#ifndef DEDICATED_ONLY
+#if USE_CLIENT
 	if( host_speeds->integer )
 		time_before_game = Sys_Milliseconds();
 #endif
@@ -1407,7 +1434,7 @@ static void SV_RunGameFrame( void ) {
 		svs.realtime = svs.time;
 	}
 
-#ifndef DEDICATED_ONLY
+#if USE_CLIENT
 	if( host_speeds->integer )
 		time_after_game = Sys_Milliseconds();
 #endif
@@ -1488,7 +1515,7 @@ SV_Frame
 void SV_Frame( int msec ) {
     int mvdconns;
 
-#ifndef DEDICATED_ONLY
+#if USE_CLIENT
 	time_before_game = time_after_game = 0;
 #endif
 
@@ -1504,7 +1531,7 @@ void SV_Frame( int msec ) {
 		return;
 	}
 
-#ifndef DEDICATED_ONLY
+#if USE_CLIENT
     // pause if there is only local client on the server
     if( !dedicated->integer && cl_paused->integer &&
         List_Count( &svs.udp_client_list ) == 1 && mvdconns == 0 &&
@@ -1770,6 +1797,7 @@ void SV_Init( void ) {
 	sv_password = Cvar_Get( "sv_password", "", CVAR_PRIVATE );
 	sv_reserved_password = Cvar_Get( "sv_reserved_password", "", CVAR_PRIVATE );
 	sv_locked = Cvar_Get( "sv_locked", "0", 0 );
+	sv_novis = Cvar_Get ("sv_novis", "0", 0);
 
 	sv_debug_send = Cvar_Get( "sv_debug_send", "0", 0 );
 	sv_pad_packets = Cvar_Get( "sv_pad_packets", "0", 0 );

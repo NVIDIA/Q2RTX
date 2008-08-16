@@ -325,7 +325,7 @@ Also sets mins and maxs for inline bmodels
 */
 static void PF_setmodel (edict_t *ent, const char *name) {
 	int		i;
-	cmodel_t	*mod;
+	mmodel_t	*mod;
 
 	if (!name)
 		Com_Error (ERR_DROP, "PF_setmodel: NULL");
@@ -403,6 +403,28 @@ static void PF_WriteFloat( float f ) {
 	Com_Error( ERR_DROP, "PF_WriteFloat not implemented" );
 }
 
+static qboolean PF_inVIS( vec3_t p1, vec3_t p2, int vis ) {
+	mleaf_t	*leaf1, *leaf2;
+	byte mask[MAX_MAP_VIS];
+    bsp_t *bsp = sv.cm.cache;
+    
+    if( !bsp ) {
+		Com_Error( ERR_DROP, "%s: no map loaded", __func__ );
+	}
+
+	leaf1 = BSP_PointLeaf( bsp->nodes, p1 );
+	BSP_ClusterVis( bsp, mask, leaf1->cluster, vis );
+
+	leaf2 = BSP_PointLeaf( bsp->nodes, p2 );
+	if( !Q_IsBitSet( mask, leaf2->cluster ) ) {
+		return qfalse;
+    }
+	if( !CM_AreasConnected( &sv.cm, leaf1->area, leaf2->area ) ) {
+		return qfalse;		// a door blocks it
+    }
+	return qtrue;
+}
+
 /*
 =================
 PF_inPVS
@@ -410,31 +432,9 @@ PF_inPVS
 Also checks portalareas so that doors block sight
 =================
 */
-static qboolean PF_inPVS (vec3_t p1, vec3_t p2) {
-	cleaf_t	*leaf;
-	int		cluster;
-	int		area1, area2;
-	byte	*mask;
-
-	if( !sv.cm.cache ) {
-		Com_Error( ERR_DROP, "PF_inPVS: no map loaded" );
-	}
-
-	leaf = CM_PointLeaf (&sv.cm, p1);
-	cluster = CM_LeafCluster (leaf);
-	area1 = CM_LeafArea (leaf);
-	mask = CM_ClusterPVS (&sv.cm, cluster);
-
-	leaf = CM_PointLeaf (&sv.cm, p2);
-	cluster = CM_LeafCluster (leaf);
-	area2 = CM_LeafArea (leaf);
-	if ( !Q_IsBitSet( mask, cluster ) )
-		return qfalse;
-	if (!CM_AreasConnected (&sv.cm, area1, area2))
-		return qfalse;		// a door blocks sight
-	return qtrue;
+static qboolean PF_inPVS( vec3_t p1, vec3_t p2 ) {
+    return PF_inVIS( p1, p2, DVIS_PVS );
 }
-
 
 /*
 =================
@@ -443,30 +443,8 @@ PF_inPHS
 Also checks portalareas so that doors block sound
 =================
 */
-static qboolean PF_inPHS (vec3_t p1, vec3_t p2) {
-	cleaf_t	*leaf;
-	int		cluster;
-	int		area1, area2;
-	byte	*mask;
-
-	if( !sv.cm.cache ) {
-		Com_Error( ERR_DROP, "PF_inPHS: no map loaded" );
-	}
-
-	leaf = CM_PointLeaf (&sv.cm, p1);
-	cluster = CM_LeafCluster (leaf);
-	area1 = CM_LeafArea (leaf);
-	mask = CM_ClusterPHS (&sv.cm, cluster);
-
-	leaf = CM_PointLeaf (&sv.cm, p2);
-	cluster = CM_LeafCluster (leaf);
-	area2 = CM_LeafArea (leaf);
-	if( !Q_IsBitSet( mask, cluster ) )
-		return qfalse;		// more than one bounce away
-	if (!CM_AreasConnected (&sv.cm, area1, area2))
-		return qfalse;		// a door blocks hearing
-
-	return qtrue;
+static qboolean PF_inPHS( vec3_t p1, vec3_t p2 ) {
+    return PF_inVIS( p1, p2, DVIS_PHS );
 }
 
 /*  
@@ -504,9 +482,9 @@ static void PF_StartSound( edict_t *edict, int channel,
 	int			ent;
 	vec3_t		origin;
 	client_t	*client;
-	byte		*mask;
-	cleaf_t		*leaf;
-	int			area, cluster;
+	byte		mask[MAX_MAP_VIS];
+	mleaf_t		*leaf;
+	int			area;
     player_state_t  *ps;
     sound_packet_t  *msg;
 
@@ -561,8 +539,7 @@ static void PF_StartSound( edict_t *edict, int channel,
                     continue;		// blocked by a door
                 }
             }
-            cluster = CM_LeafCluster( leaf );
-            mask = CM_ClusterPHS( &sv.cm, cluster );
+            BSP_ClusterVis( sv.cm.cache, mask, leaf->cluster, DVIS_PHS );
             if( !SV_EdictPV( &sv.cm, edict, mask ) ) {
                 continue; // not in PHS
             }
@@ -742,6 +719,23 @@ static qboolean PF_AreasConnected( int area1, int area2 ) {
 	return CM_AreasConnected( &sv.cm, area1, area2 );
 }
 
+static void *PF_TagMalloc( size_t size, unsigned tag ) {
+    if( tag + TAG_MAX < tag ) {
+        Com_Error( ERR_FATAL, "%s: bad tag", __func__ );
+    }
+    if( !size ) {
+        return NULL;
+    }
+    return memset( Z_TagMalloc( size, tag + TAG_MAX ), 0, size );
+}
+
+static void PF_FreeTags( unsigned tag ) {
+    if( tag + TAG_MAX < tag ) {
+        Com_Error( ERR_FATAL, "%s: bad tag", __func__ );
+    }
+    Z_FreeTags( tag + TAG_MAX );
+}
+
 //==============================================
 
 static void *game_library;
@@ -791,23 +785,26 @@ void SV_InitGameProgs ( void ) {
 	if( !entry )
 #endif
     {
-        // try gamedir first
+        // try ./game first
         if( fs_game->string[0] ) {
             Q_concat( path, sizeof( path ), sys_libdir->string,
                 PATH_SEP_STRING, fs_game->string, PATH_SEP_STRING GAMELIB, NULL );
             entry = Sys_LoadLibrary( path, "GetGameAPI", &game_library );
         }
         if( !entry ) {
-            // then try baseq2
+            // then try ./baseq2
             Q_concat( path, sizeof( path ), sys_libdir->string,
                 PATH_SEP_STRING BASEGAME PATH_SEP_STRING GAMELIB, NULL );
             entry = Sys_LoadLibrary( path, "GetGameAPI", &game_library );
             if( !entry ) {
-                // then try to fall back to refdir
-                Q_concat( path, sizeof( path ), sys_refdir->string,
+#ifdef __unix__
+                // then try ./
+                Q_concat( path, sizeof( path ), sys_libdir->string,
                     PATH_SEP_STRING GAMELIB, NULL );
                 entry = Sys_LoadLibrary( path, "GetGameAPI", &game_library );
-                if( !entry ) {
+                if( !entry )
+#endif
+                {
                     Com_Error( ERR_DROP, "Failed to load game DLL" );
                 }
             }
@@ -863,9 +860,9 @@ void SV_InitGameProgs ( void ) {
 	import.WriteDir = MSG_WriteDir;
 	import.WriteAngle = MSG_WriteAngle;
 
-	import.TagMalloc = Z_TagMallocz;
+	import.TagMalloc = PF_TagMalloc;
 	import.TagFree = Z_Free;
-	import.FreeTags = Z_FreeTags;
+	import.FreeTags = PF_FreeTags;
 
 	import.cvar = PF_cvar;
 	import.cvar_set = Cvar_UserSet;

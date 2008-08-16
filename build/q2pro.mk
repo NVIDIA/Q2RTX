@@ -1,74 +1,77 @@
-# -----------------------------
-# q2pro makefile by [SkulleR]
-# -----------------------------
+# Copyright (C) 2008 Andrey Nazarov
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+#
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 include ../config.mk
 
 TARGET=../q2pro$(EXESUFFIX)
 
 LDFLAGS+=-lm
+CFLAGS+=-DUSE_CLIENT=1
 
-SRCFILES=cmd.c cmodel.c common.c prompt.c crc.c cvar.c \
-	files.c mdfour.c net_common.c net_chan.c pmove.c sv_ccmds.c 	\
-	sv_ents.c sv_game.c sv_init.c sv_main.c sv_send.c	\
-	sv_user.c sv_world.c sv_mvd.c sv_http.c \
-	mvd_client.c mvd_parse.c mvd_game.c \
-	q_msg.c q_shared.c q_field.c	\
-	m_flash.c cl_demo.c cl_draw.c cl_ents.c cl_fx.c cl_input.c	\
-	cl_locs.c cl_main.c cl_newfx.c cl_parse.c cl_pred.c cl_ref.c	\
-	cl_scrn.c cl_tent.c cl_view.c cl_console.c cl_keys.c cl_aastat.c		\
-	snd_main.c snd_mem.c snd_mix.c \
-	ui_atoms.c ui_confirm.c ui_demos.c ui_menu.c ui_multiplayer.c \
-	ui_playerconfig.c ui_playermodels.c ui_script.c
+include $(SRCDIR)/build/common.mk
 
-ifdef USE_ANTICHEAT
-SRCFILES+=sv_ac.c
+SRCFILES+=m_flash.c \
+	cl_demo.c \
+	cl_draw.c \
+	cl_ents.c \
+	cl_fx.c \
+	cl_input.c \
+	cl_locs.c \
+	cl_main.c \
+	cl_newfx.c \
+	cl_parse.c \
+	cl_pred.c \
+	cl_ref.c \
+	cl_scrn.c \
+	cl_tent.c \
+	cl_view.c \
+	cl_console.c \
+	cl_keys.c \
+	cl_aastat.c \
+	snd_main.c \
+	snd_mem.c \
+	snd_mix.c
+
+ifdef USE_UI
+SRCFILES+=ui_atoms.c \
+	ui_confirm.c \
+	ui_demos.c \
+	ui_menu.c \
+	ui_multiplayer.c \
+	ui_playerconfig.c \
+	ui_playermodels.c \
+	ui_script.c
 endif
 
-ifdef REF_HARD_LINKED
-
-SRCFILES+=r_images.c  \
-	   r_bsp.c \
-	   gl_draw.c   \
-	   gl_images.c  \
-	   gl_models.c \
-	   gl_world.c \
-	   gl_mesh.c \
-	   gl_main.c  \
-	   gl_state.c  \
-	   gl_surf.c  \
-	   gl_tess.c   \
-	   gl_sky.c   \
-	   qgl_api.c
-
-ifdef USE_JPEG
-LDFLAGS+=$(JPEG_LDFLAGS)
-CFLAGS+=$(JPEG_CFLAGS)
+ifdef USE_REF
+SRCFILES+=r_images.c r_models.c
+include $(SRCDIR)/build/ref_$(USE_REF).mk
 endif
 
-ifdef USE_PNG
-LDFLAGS+=$(PNG_LDFLAGS)
-CFLAGS+=$(PNG_CFLAGS)
-endif
-
-endif #REF_HARD_LINKED
-
-ifdef USE_ZLIB
-SRCFILES+=ioapi.c unzip.c 
-LDFLAGS+=$(ZLIB_LDFLAGS)
-CFLAGS+=$(ZLIB_CFLAGS)
-endif
-
-ifdef USE_ASM
-ASMFILES+=math.s
-endif
+# ifdef USE_SERVER
+include $(SRCDIR)/build/server.mk
+# endif
 
 ifdef MINGW
 
-SRCFILES+=sys_win.c snd_wave.c vid_win.c win_glimp.c win_wgl.c
+SRCFILES+=sys_win.c snd_wave.c
 
-ifndef REF_HARD_LINKED
-SRCFILES+=win_swimp.c
+ifdef USE_REF
+SRCFILES+=vid_win.c
 endif
 
 ifdef USE_DSOUND

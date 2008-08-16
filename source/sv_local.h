@@ -24,7 +24,20 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "com_local.h"
 #include "q_list.h"
+#include "files.h"
+#include "sys_public.h"
+#include "bsp.h"
+#include "cmodel.h"
+#include "pmove.h"
+#include "protocol.h"
+#include "q_msg.h"
+#include "q_fifo.h"
+#include "net_sock.h"
+#include "net_stream.h"
+#include "net_chan.h"
 #include "g_public.h"
+#include "sv_public.h"
+#include "cl_public.h"
 #if USE_ZLIB
 #include <zlib.h>
 #endif

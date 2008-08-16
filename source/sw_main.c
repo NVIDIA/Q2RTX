@@ -21,34 +21,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "sw_local.h"
 
-#ifndef REF_HARD_LINKED
-/* declare imports for this module */
-cmdAPI_t	cmd;
-cvarAPI_t	cvar;
-fsAPI_t		fs;
-commonAPI_t	com;
-sysAPI_t	sys;
-videoAPI_t	vidsw;
-#else
-videoAPI_t	video;
-#define		vidsw		video
-#endif
-
 viddef_t	vid;
 
 unsigned	d_8to24table[256];
 
 entity_t	r_worldentity;
 
-char		skyname[MAX_QPATH];
-float		skyrotate;
-vec3_t		skyaxis;
-image_t		*sky_images[6];
-
 refdef_t	r_newrefdef;
 model_t		*currentmodel;
 
-model_t		*r_worldmodel;
+bsp_t		*r_worldmodel;
 
 byte		r_warpbuffer[WARP_WIDTH * WARP_HEIGHT];
 
@@ -63,8 +45,6 @@ int			r_outofsurfaces;
 int			r_outofedges;
 
 qboolean	r_dowarp;
-
-mvertex_t	*r_pcurrentvertbase;
 
 int			c_surf;
 int			r_maxsurfsseen, r_maxedgesseen, r_cnumsurfs;
@@ -94,7 +74,7 @@ int		r_screenwidth;
 float	verticalFieldOfView;
 float	xOrigin, yOrigin;
 
-mplane_t	screenedge[4];
+cplane_t	screenedge[4];
 
 //
 // refresh flags
@@ -111,8 +91,6 @@ int			r_frustum_indexes[4*6];
 
 mleaf_t		*r_viewleaf;
 int			r_viewcluster, r_oldviewcluster;
-
-image_t  	*r_notexture_mip;
 
 float	da_time1, da_time2, dp_time1, dp_time2, db_time1, db_time2, rw_time1, rw_time2;
 float	se_time1, se_time2, de_time1, de_time2;
@@ -153,7 +131,11 @@ cvar_t	*vid_gamma;
 cvar_t	*sw_lockpvs;
 //PGM
 
-#ifndef USE_ASM
+#if USE_ASM
+
+void            *d_pcolormap;
+
+#else // USE_ASM
 
 // all global and static refresh variables are collected in a contiguous block
 // to avoid cache conflicts.
@@ -178,46 +160,11 @@ short			*d_pzbuffer;
 unsigned int	d_zrowbytes;
 unsigned int	d_zwidth;
 
-#else
+#endif	// !USE_ASM
 
-void            *d_pcolormap;
-
-#endif	// USE_ASM
-
-byte	r_notexture_buffer[512];
-
-/*
-==================
-R_InitTextures
-==================
-*/
-void	R_InitTextures (void)
-{
-	int		x,y, m;
-	byte	*dest;
-	
-// create a simple checkerboard texture for the default
-	r_notexture_mip = (image_t *)&r_notexture_buffer;
-	
-	r_notexture_mip->width = r_notexture_mip->height = 16;
-	r_notexture_mip->upload_width = r_notexture_mip->upload_height = 16;
-	r_notexture_mip->pixels[0] = &r_notexture_buffer[sizeof(image_t)];
-	r_notexture_mip->pixels[1] = r_notexture_mip->pixels[0] + 16*16;
-	r_notexture_mip->pixels[2] = r_notexture_mip->pixels[1] + 8*8;
-	r_notexture_mip->pixels[3] = r_notexture_mip->pixels[2] + 4*4;
-	
-	for( m = 0; m < 4; m++ ) {
-		dest = r_notexture_mip->pixels[m];
-		for ( y = 0; y < ( 16 >> m ); y++ )
-			for( x = 0; x < ( 16 >> m ); x++ ) {
-				if( ( y < ( 8 >> m ) ) ^ ( x < ( 8 >> m ) ) )
-					*dest++ = 0;
-				else
-					*dest++ = 1;
-			}
-	}	
-}
-
+int		sintable[CYCLE*2];
+int		intsintable[CYCLE*2];
+int		blanktable[CYCLE*2];		// PGM
 
 /*
 ================
@@ -236,83 +183,77 @@ void R_InitTurb (void)
 	}
 }
 
-void R_ImageList_f( void );
 void D_SCDump_f (void);
 
 void R_Register (void)
 {
-	sw_aliasstats = cvar.Get ("sw_polymodelstats", "0", 0);
-	sw_allow_modex = cvar.Get( "sw_allow_modex", "1", CVAR_ARCHIVE );
-	sw_clearcolor = cvar.Get ("sw_clearcolor", "2", 0);
-	sw_drawflat = cvar.Get ("sw_drawflat", "0", CVAR_CHEAT);
-	sw_draworder = cvar.Get ("sw_draworder", "0", CVAR_CHEAT);
-	sw_maxedges = cvar.Get ("sw_maxedges", va( "%i", NUMSTACKEDGES ), 0);
-	sw_maxsurfs = cvar.Get ("sw_maxsurfs", va( "%i", NUMSTACKSURFACES ), 0);
-	sw_mipcap = cvar.Get ("sw_mipcap", "0", 0);
-	sw_mipscale = cvar.Get ("sw_mipscale", "1", 0);
-	sw_reportedgeout = cvar.Get ("sw_reportedgeout", "0", 0);
-	sw_reportsurfout = cvar.Get ("sw_reportsurfout", "0", 0);
-	sw_stipplealpha = cvar.Get( "sw_stipplealpha", "0", CVAR_ARCHIVE );
-	sw_waterwarp = cvar.Get ("sw_waterwarp", "1", 0);
+	sw_aliasstats = Cvar_Get ("sw_polymodelstats", "0", 0);
+	sw_allow_modex = Cvar_Get( "sw_allow_modex", "1", CVAR_ARCHIVE );
+	sw_clearcolor = Cvar_Get ("sw_clearcolor", "2", 0);
+	sw_drawflat = Cvar_Get ("sw_drawflat", "0", CVAR_CHEAT);
+	sw_draworder = Cvar_Get ("sw_draworder", "0", CVAR_CHEAT);
+	sw_maxedges = Cvar_Get ("sw_maxedges", va( "%i", NUMSTACKEDGES ), 0);
+	sw_maxsurfs = Cvar_Get ("sw_maxsurfs", va( "%i", NUMSTACKSURFACES ), 0);
+	sw_mipcap = Cvar_Get ("sw_mipcap", "0", 0);
+	sw_mipscale = Cvar_Get ("sw_mipscale", "1", 0);
+	sw_reportedgeout = Cvar_Get ("sw_reportedgeout", "0", 0);
+	sw_reportsurfout = Cvar_Get ("sw_reportsurfout", "0", 0);
+	sw_stipplealpha = Cvar_Get( "sw_stipplealpha", "0", CVAR_ARCHIVE );
+	sw_waterwarp = Cvar_Get ("sw_waterwarp", "1", 0);
 
 	//Start Added by Lewey
-	sw_drawsird = cvar.Get ("sw_drawsird", "0", 0);
+	sw_drawsird = Cvar_Get ("sw_drawsird", "0", 0);
 	//End Added by Lewey
 
-	r_speeds = cvar.Get ("r_speeds", "0", 0);
-	r_fullbright = cvar.Get ("r_fullbright", "0", CVAR_CHEAT);
-	r_drawentities = cvar.Get ("r_drawentities", "1", 0);
-	r_drawworld = cvar.Get ("r_drawworld", "1", CVAR_CHEAT);
-	r_dspeeds = cvar.Get ("r_dspeeds", "0", 0);
-	r_lerpmodels = cvar.Get( "r_lerpmodels", "1", 0 );
-	r_novis = cvar.Get( "r_novis", "0", 0 );
+	r_speeds = Cvar_Get ("r_speeds", "0", 0);
+	r_fullbright = Cvar_Get ("r_fullbright", "0", CVAR_CHEAT);
+	r_drawentities = Cvar_Get ("r_drawentities", "1", 0);
+	r_drawworld = Cvar_Get ("r_drawworld", "1", CVAR_CHEAT);
+	r_dspeeds = Cvar_Get ("r_dspeeds", "0", 0);
+	r_lerpmodels = Cvar_Get( "r_lerpmodels", "1", 0 );
+	r_novis = Cvar_Get( "r_novis", "0", 0 );
 
-	vid_gamma = cvar.Get( "vid_gamma", "1.0", CVAR_ARCHIVE|CVAR_FILES );
+	vid_gamma = Cvar_Get( "vid_gamma", "1.0", CVAR_ARCHIVE|CVAR_FILES );
 
-	cmd.AddCommand ("modellist", Mod_Modellist_f);
-	cmd.AddCommand( "screenshot", R_ScreenShot_f );
-	cmd.AddCommand( "scdump", D_SCDump_f );
+	Cmd_AddCommand( "screenshot", R_ScreenShot_f );
+	Cmd_AddCommand( "scdump", D_SCDump_f );
 
 	vid_gamma->modified = qtrue; // force us to rebuild the gamma table later
 
 //PGM
-	sw_lockpvs = cvar.Get ("sw_lockpvs", "0", 0);
+	sw_lockpvs = Cvar_Get ("sw_lockpvs", "0", 0);
 //PGM
 
 }
 
 void R_UnRegister (void)
 {
-	cmd.RemoveCommand( "screenshot" );
-	cmd.RemoveCommand ("modellist");
-	cmd.RemoveCommand( "scdump" );
+	Cmd_RemoveCommand( "screenshot" );
+	Cmd_RemoveCommand( "scdump" );
 }
 
-static void R_ModeChanged( int width, int height, int flags,
-    int rowbytes, void *pixels )
-{
+void R_ModeChanged( int width, int height, int flags, int rowbytes, void *pixels ) {
 	vid.width = width;
 	vid.height = height;
     vid.buffer = pixels;
     vid.rowbytes = rowbytes;
 
-	sw_surfcacheoverride = cvar.Get ("sw_surfcacheoverride", "0", 0);
+	sw_surfcacheoverride = Cvar_Get ("sw_surfcacheoverride", "0", 0);
 
     D_FlushCaches();
 
 	if( d_pzbuffer ) {
-		com.Free( d_pzbuffer );
+		Z_Free( d_pzbuffer );
 		d_pzbuffer = NULL;
 	}
 
 	// free surface cache
 	if( sc_base ) {
-		com.Free( sc_base );
+		Z_Free( sc_base );
 		sc_base = NULL;
 	}
 
-	d_pzbuffer = R_Malloc( vid.width * vid.height * 2 );
-    memset( d_pzbuffer, 0, vid.width * vid.height * 2 ); 
+	d_pzbuffer = R_Mallocz( vid.width * vid.height * 2 );
 
 	R_InitCaches();
 
@@ -329,8 +270,8 @@ qboolean R_Init( qboolean total ) {
 
 	if( !total ) {
 		R_InitImages();
-		Draw_Init();
-		Mod_Init();
+		R_InitDraw();
+		MOD_Init();
 		return qtrue;
 	}
 
@@ -345,16 +286,19 @@ qboolean R_Init( qboolean total ) {
 	r_aliasuvscale = 1.0;
 
 	// create the window
-	if( !vidsw.Init() ) {
+	if( !VID_Init() ) {
 		return qfalse;
 	}
 
 	R_Register();
 
-	R_InitImageManager();
+	IMG_Init();
+    MOD_Init();
 
 	/* get the palette before we create the window */
 	R_InitImages();
+
+	R_InitSkyBox();
 
 	view_clipplanes[0].leftedge = qtrue;
 	view_clipplanes[1].rightedge = qtrue;
@@ -368,13 +312,8 @@ qboolean R_Init( qboolean total ) {
 	r_refdef.xOrigin = XCENTERING;
 	r_refdef.yOrigin = YCENTERING;
 
-	R_InitTextures();
 	R_InitTurb();
 
-	Draw_Init();
-	Mod_Init();
-
-	R_BuildGammaTable();
 	R_GammaCorrectAndSetPalette( ( const byte * ) d_8to24table );
 
 	return qtrue;
@@ -390,9 +329,15 @@ void R_Shutdown( qboolean total ) {
 
 	D_FlushCaches();
 
-	Mod_FreeAll();
+	MOD_FreeAll();
 
 	R_ShutdownImages();
+
+    // free world model
+    if( r_worldmodel ) {
+        BSP_Free( r_worldmodel );
+        r_worldmodel = NULL;
+    }
 
 	if( !total ) {
 		return;
@@ -400,27 +345,28 @@ void R_Shutdown( qboolean total ) {
 
 	// free z buffer
 	if( d_pzbuffer ) {
-		com.Free( d_pzbuffer );
+		Z_Free( d_pzbuffer );
 		d_pzbuffer = NULL;
 	}
 
 	// free surface cache
 	if( sc_base ) {
-		com.Free( sc_base );
+		Z_Free( sc_base );
 		sc_base = NULL;
 	}
 
 	// free colormap
 	if( vid.colormap ) {
-		com.Free( vid.colormap );
+		Z_Free( vid.colormap );
 		vid.colormap = NULL;
 	}
 
 	R_UnRegister();
 
-	R_ShutdownImageManager();
+	IMG_Shutdown();
+    MOD_Shutdown();
 
-	vidsw.Shutdown();
+	VID_Shutdown();
 }
 
 /*
@@ -439,8 +385,7 @@ void R_NewMap (void)
 
 	if (r_cnumsurfs > NUMSTACKSURFACES)
 	{
-		surfaces = R_Malloc (r_cnumsurfs * sizeof(surf_t));
-        memset( surfaces, 0, r_cnumsurfs * sizeof(surf_t) );
+		surfaces = R_Mallocz (r_cnumsurfs * sizeof(surf_t));
 		surface_p = surfaces;
 		surf_max = &surfaces[r_cnumsurfs];
 		r_surfsonstack = qfalse;
@@ -468,8 +413,7 @@ void R_NewMap (void)
 	}
 	else
 	{
-		auxedges = R_Malloc (r_numallocatededges * sizeof(edge_t));
-        memset( auxedges, 0, r_numallocatededges * sizeof(edge_t) );
+		auxedges = R_Mallocz (r_numallocatededges * sizeof(edge_t));
 	}
 }
 
@@ -484,7 +428,7 @@ cluster
 */
 void R_MarkLeaves (void)
 {
-	byte	*vis;
+	byte	vis[MAX_MAP_VIS];
 	mnode_t	*node;
 	int		i;
 	mleaf_t	*leaf;
@@ -514,7 +458,7 @@ void R_MarkLeaves (void)
 		return;
 	}
 
-	vis = Mod_ClusterPVS (r_viewcluster, r_worldmodel);
+	BSP_ClusterVis (r_worldmodel, vis, r_viewcluster, DVIS_PVS);
 	
 	for (i=0,leaf=r_worldmodel->leafs ; i<r_worldmodel->numleafs ; i++, leaf++)
 	{
@@ -541,8 +485,50 @@ void R_MarkLeaves (void)
 **
 ** IMPLEMENT THIS!
 */
-void R_DrawNullModel( void )
-{
+static void R_DrawNullModel( void ) {
+}
+
+static int R_DrawEntities( int translucent ) {
+	int			i;
+	qboolean	translucent_entities = 0;
+
+	// all bmodels have already been drawn by the edge list
+	for( i = 0; i < r_newrefdef.num_entities; i++ ){
+		currententity = &r_newrefdef.entities[i];
+
+		if( ( currententity->flags & RF_TRANSLUCENT ) == translucent ) {
+			translucent_entities++;
+			continue;
+		}
+
+		if( currententity->flags & RF_BEAM ) {
+			modelorg[0] = -r_origin[0];
+			modelorg[1] = -r_origin[1];
+			modelorg[2] = -r_origin[2];
+			VectorCopy( vec3_origin, r_entorigin );
+			R_DrawBeam( currententity );
+		} else {
+            if( currententity->model & 0x80000000 ) {
+                continue;
+            }
+			currentmodel = MOD_ForHandle( currententity->model );
+			if( !currentmodel ) {
+				R_DrawNullModel();
+				continue;
+			}
+			VectorCopy (currententity->origin, r_entorigin);
+			VectorSubtract (r_origin, r_entorigin, modelorg);
+
+			if( currentmodel->frames ) {
+				R_AliasDrawModel();
+            } else if( currentmodel->spriteframes ) {
+				R_DrawSprite();
+            } else {
+                Com_Error( ERR_FATAL, "%s: bad model type", __func__ );
+            }
+		}
+	}
+    return translucent_entities;
 }
 
 /*
@@ -550,104 +536,16 @@ void R_DrawNullModel( void )
 R_DrawEntitiesOnList
 =============
 */
-void R_DrawEntitiesOnList (void)
-{
-	int			i;
-	qboolean	translucent_entities = qfalse;
+static void R_DrawEntitiesOnList( void ) {
+	int     	translucent_entities;
 
-	if (!r_drawentities->value)
+	if( !r_drawentities->integer )
 		return;
 
-	// all bmodels have already been drawn by the edge list
-	for (i=0 ; i<r_newrefdef.num_entities ; i++)
-	{
-		currententity = &r_newrefdef.entities[i];
-
-		if ( currententity->flags & RF_TRANSLUCENT )
-		{
-			translucent_entities = qtrue;
-			continue;
-		}
-
-		if ( currententity->flags & RF_BEAM )
-		{
-			modelorg[0] = -r_origin[0];
-			modelorg[1] = -r_origin[1];
-			modelorg[2] = -r_origin[2];
-			VectorCopy( vec3_origin, r_entorigin );
-			R_DrawBeam( currententity );
-		}
-		else
-		{
-			currentmodel = R_ModelForHandle( currententity->model );
-			if (!currentmodel)
-			{
-				R_DrawNullModel();
-				continue;
-			}
-			VectorCopy (currententity->origin, r_entorigin);
-			VectorSubtract (r_origin, r_entorigin, modelorg);
-
-			switch (currentmodel->type)
-			{
-			case mod_sprite:
-				R_DrawSprite ();
-				break;
-
-			case mod_alias:
-				R_AliasDrawModel ();
-				break;
-
-			default:
-				break;
-			}
-		}
-	}
-
-	if ( !translucent_entities )
-		return;
-
-	for (i=0 ; i<r_newrefdef.num_entities ; i++)
-	{
-		currententity = &r_newrefdef.entities[i];
-
-		if ( !( currententity->flags & RF_TRANSLUCENT ) )
-			continue;
-
-		if ( currententity->flags & RF_BEAM )
-		{
-			modelorg[0] = -r_origin[0];
-			modelorg[1] = -r_origin[1];
-			modelorg[2] = -r_origin[2];
-			VectorCopy( vec3_origin, r_entorigin );
-			R_DrawBeam( currententity );
-		}
-		else
-		{
-			currentmodel = R_ModelForHandle( currententity->model );
-			if (!currentmodel)
-			{
-				R_DrawNullModel();
-				continue;
-			}
-			VectorCopy (currententity->origin, r_entorigin);
-			VectorSubtract (r_origin, r_entorigin, modelorg);
-
-			switch (currentmodel->type)
-			{
-			case mod_sprite:
-				R_DrawSprite ();
-				break;
-
-			case mod_alias:
-				R_AliasDrawModel ();
-				break;
-
-			default:
-				break;
-			}
-		}
-	}
+    translucent_entities = R_DrawEntities( RF_TRANSLUCENT );
+	if( translucent_entities ) {
+        R_DrawEntities( 0 );
+    }
 }
 
 
@@ -706,27 +604,20 @@ Find the first node that splits the given box
 */
 mnode_t *R_FindTopnode (vec3_t mins, vec3_t maxs)
 {
-	mplane_t	*splitplane;
 	int			sides;
 	mnode_t *node;
 
 	node = r_worldmodel->nodes;
 
-	while (1)
-	{
-		if (node->visframe != r_visframecount)
-			return NULL;		// not visible at all
-		
-		if (node->contents != CONTENTS_NODE)
-		{
-			if (node->contents != CONTENTS_SOLID)
-				return	node; // we've reached a non-solid leaf, so it's
+	while (node->visframe == r_visframecount) {	
+		if (!node->plane) {
+			if (((mleaf_t * )node)->contents != CONTENTS_SOLID)
+				return node; // we've reached a non-solid leaf, so it's
 							//  visible and not BSP clipped
 			return NULL;	// in solid, so not visible
 		}
 		
-		splitplane = node->plane;
-		sides = BoxOnPlaneSideFast(mins, maxs, (cplane_t *)splitplane);
+		sides = BoxOnPlaneSideFast(mins, maxs, node->plane);
 		
 		if (sides == 3)
 			return node;	// this is the splitter
@@ -737,6 +628,8 @@ mnode_t *R_FindTopnode (vec3_t mins, vec3_t maxs)
 		else
 			node = node->children[1];
 	}
+
+	return NULL;		// not visible at all
 }
 
 
@@ -808,11 +701,12 @@ R_DrawBEntitiesOnList
 */
 void R_DrawBEntitiesOnList (void)
 {
-	int			i, clipflags;
+	int			i, index, clipflags;
 	vec3_t		oldorigin;
 	vec3_t		mins, maxs;
 	float		minmaxs[6];
 	mnode_t		*topnode;
+    mmodel_t    *model;
 
 	if (!r_drawentities->value)
 		return;
@@ -824,18 +718,23 @@ void R_DrawBEntitiesOnList (void)
 	for (i=0 ; i<r_newrefdef.num_entities ; i++)
 	{
 		currententity = &r_newrefdef.entities[i];
-		currentmodel = R_ModelForHandle( currententity->model );
-		if (!currentmodel)
-			continue;
-		if (currentmodel->nummodelsurfaces == 0)
+        index = currententity->model;
+        if( !( index & 0x80000000 ) ) {
+            continue;
+        }
+        index = ~index;
+        if( index < 1 || index >= r_worldmodel->nummodels ) {
+            Com_Error( ERR_DROP, "%s: inline model %d out of range",
+                __func__, index );
+        }
+		model = &r_worldmodel->models[index];
+		if (model->numfaces == 0)
 			continue;	// clip brush only
 		if ( currententity->flags & RF_BEAM )
 			continue;
-		if (currentmodel->type != mod_brush)
-			continue;
 	// see if the bounding box lets us trivially reject, also sets
 	// trivial accept status
-		RotatedBBox (currentmodel->mins, currentmodel->maxs,
+		RotatedBBox (model->mins, model->maxs,
 			currententity->angles, mins, maxs);
 		VectorAdd (mins, currententity->origin, minmaxs);
 		VectorAdd (maxs, currententity->origin, (minmaxs+3));
@@ -851,26 +750,24 @@ void R_DrawBEntitiesOnList (void)
 		VectorCopy (currententity->origin, r_entorigin);
 		VectorSubtract (r_origin, r_entorigin, modelorg);
 
-		r_pcurrentvertbase = currentmodel->vertexes;
-
 	// FIXME: stop transforming twice
 		R_RotateBmodel ();
 
 	// calculate dynamic lighting for bmodel
-		R_PushDlights (currentmodel);
+		R_PushDlights (model->headnode);
 
-		if (topnode->contents == CONTENTS_NODE)
+		if (topnode->plane)
 		{
 		// not a leaf; has to be clipped to the world BSP
 			r_clipflags = clipflags;
-			R_DrawSolidClippedSubmodelPolygons (currentmodel, topnode);
+			R_DrawSolidClippedSubmodelPolygons (model, topnode);
 		}
 		else
 		{
 		// falls entirely in one leaf, so we just put all the
 		// edges in the edge list and let 1/z sorting handle
 		// drawing order
-			R_DrawSubmodelPolygons (currentmodel, clipflags, topnode);
+			R_DrawSubmodelPolygons (model, clipflags, topnode);
 		}
 
 	// put back world rotation and frustum clipping		
@@ -926,14 +823,14 @@ void R_EdgeDrawing (void)
 
 	if (r_dspeeds->integer)
 	{
-		rw_time1 = sys.Milliseconds ();
+		rw_time1 = Sys_Milliseconds ();
 	}
 
 	R_RenderWorld ();
 
 	if (r_dspeeds->integer)
 	{
-		rw_time2 = sys.Milliseconds ();
+		rw_time2 = Sys_Milliseconds ();
 		db_time1 = rw_time2;
 	}
 
@@ -941,7 +838,7 @@ void R_EdgeDrawing (void)
 
 	if (r_dspeeds->integer)
 	{
-		db_time2 = sys.Milliseconds ();
+		db_time2 = Sys_Milliseconds ();
 		se_time1 = db_time2;
 	}
 
@@ -1023,19 +920,19 @@ void R_RenderFrame (refdef_t *fd)
 	VectorCopy (fd->viewangles, r_refdef.viewangles);
 
 	if (r_speeds->integer || r_dspeeds->integer)
-		r_time1 = sys.Milliseconds ();
+		r_time1 = Sys_Milliseconds ();
 
 	R_SetupFrame ();
 
 	R_MarkLeaves ();	// done here so we know if we're in water
 
-	R_PushDlights (r_worldmodel);
+	R_PushDlights (r_worldmodel->nodes);
 
 	R_EdgeDrawing ();
 
 	if (r_dspeeds->integer)
 	{
-		se_time2 = sys.Milliseconds ();
+		se_time2 = Sys_Milliseconds ();
 		de_time1 = se_time2;
 	}
 
@@ -1043,14 +940,14 @@ void R_RenderFrame (refdef_t *fd)
 
 	if (r_dspeeds->integer)
 	{
-		de_time2 = sys.Milliseconds ();
-		dp_time1 = sys.Milliseconds ();
+		de_time2 = Sys_Milliseconds ();
+		dp_time1 = Sys_Milliseconds ();
 	}
 
 	R_DrawParticles ();
 
 	if (r_dspeeds->integer)
-		dp_time2 = sys.Milliseconds ();
+		dp_time2 = Sys_Milliseconds ();
 
 	R_DrawAlphaSurfaces();
 
@@ -1069,10 +966,10 @@ void R_RenderFrame (refdef_t *fd)
 	//End Replaced by Lewey
 
 	if (r_dspeeds->integer)
-		da_time1 = sys.Milliseconds ();
+		da_time1 = Sys_Milliseconds ();
 
 	if (r_dspeeds->integer)
-		da_time2 = sys.Milliseconds ();
+		da_time2 = Sys_Milliseconds ();
 
 	R_CalcPalette ();
 
@@ -1096,11 +993,11 @@ void R_RenderFrame (refdef_t *fd)
 ** R_BeginFrame
 */
 void R_BeginFrame( void ) {
-	vidsw.BeginFrame();
+	VID_BeginFrame();
 }
 
 void R_EndFrame( void ) {
-	 vidsw.EndFrame();
+	 VID_EndFrame();
 }
 
 /*
@@ -1118,7 +1015,7 @@ void R_GammaCorrectAndSetPalette( const byte *palette ) {
 		palette += 4; dest += 4;
 	}
 
-	vidsw.UpdatePalette( sw_state.currentpalette );
+	VID_UpdatePalette( sw_state.currentpalette );
 }
 
 /*
@@ -1215,56 +1112,6 @@ void R_DrawBeam( entity_t *e )
 
 //===================================================================
 
-/*
-============
-R_SetSky
-============
-*/
-extern	mtexinfo_t		r_skytexinfo[6];
-
-void R_SetSky( const char *name, float rotate, vec3_t axis ) {
-    // 3dstudio environment map names
-    static const char	suf[6][3] = {"rt", "bk", "lf", "ft", "up", "dn"};
-    static const int	r_skysideimage[6] = {5, 2, 4, 1, 0, 3};
-	int		i;
-	char	pathname[MAX_QPATH];
-
-	strncpy (skyname, name, sizeof(skyname)-1);
-	skyrotate = rotate;
-	VectorCopy (axis, skyaxis);
-
-	for (i=0 ; i<6 ; i++)
-	{
-		Q_concat( pathname, sizeof( pathname ),
-            "env/", skyname, suf[r_skysideimage[i]], ".pcx", NULL );
-		r_skytexinfo[i].image = R_FindImage (pathname, it_sky);
-	}
-}
-
-
-
-
-/*
-=================
-R_GetModelSize
-=================
-*/
-void R_GetModelSize( qhandle_t hModel, vec3_t mins, vec3_t maxs ) {
-	model_t *mod;
-
-	mod = R_ModelForHandle( hModel );
-	if( !mod ) {
-		return;
-	}
-
-	if( mins ) {
-		VectorCopy( mod->mins, mins );
-	}
-	if( maxs ) {
-		VectorCopy( mod->maxs, maxs );
-	}
-}
-
 void R_GetConfig( glconfig_t *dest ) {
 	memset( dest, 0, sizeof( *dest ) );
 
@@ -1273,202 +1120,3 @@ void R_GetConfig( glconfig_t *dest ) {
 	dest->vidHeight = vid.height;
 }
 
-#ifndef REF_HARD_LINKED
-
-// this is only here so the functions in q_shared.c can link
-
-void Com_Printf( const char *fmt, ... ) {
-	va_list		argptr;
-	char		text[MAXPRINTMSG];
-
-	va_start( argptr, fmt );
-	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
-	va_end( argptr );
-
-	com.Print( PRINT_ALL, text );
-}
-
-void Com_DPrintf( const char *fmt, ... ) {
-	va_list		argptr;
-	char		text[MAXPRINTMSG];
-
-	va_start( argptr, fmt );
-	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
-	va_end( argptr );
-
-	com.Print( PRINT_DEVELOPER, text );
-}
-
-void Com_WPrintf( const char *fmt, ... ) {
-	va_list		argptr;
-	char		text[MAXPRINTMSG];
-
-	va_start( argptr, fmt );
-	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
-	va_end( argptr );
-
-	com.Print( PRINT_WARNING, text );
-}
-
-void Com_EPrintf( const char *fmt, ... ) {
-	va_list		argptr;
-	char		text[MAXPRINTMSG];
-
-	va_start( argptr, fmt );
-	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
-	va_end( argptr );
-
-	com.Print( PRINT_ERROR, text );
-}
-
-void Com_Error( comErrorType_t type, const char *error, ... ) {
-	va_list		argptr;
-	char		text[MAXPRINTMSG];
-
-	va_start( argptr, error );
-	Q_vsnprintf( text, sizeof( text ), error, argptr );
-	va_end( argptr );
-
-	com.Error( type, text );
-}
-
-#endif
-
-void		R_BeginRegistration( const char *model );
-qhandle_t	R_RegisterSkin( const char *name );
-qhandle_t	R_RegisterModel( const char *name );
-qhandle_t	R_RegisterPic( const char *name );
-qhandle_t	R_RegisterFont( const char *name );
-void		R_EndRegistration( void );
-
-void Draw_SetScale( float *scale ) {
-	if( scale ) {
-		*scale = 1;
-	}
-}
-
-void    Draw_SetColor( int flags, const color_t color );
-void    Draw_SetClipRect( int flags, const clipRect_t *clip );
-qboolean Draw_GetPicSize( int *w, int *h, qhandle_t hPic );
-void	Draw_Pic( int x, int y, qhandle_t hPic );
-void	Draw_StretchPic( int x, int y, int w, int h, qhandle_t hPic );
-void	Draw_StretchPicST( int x, int y, int w, int h, float s1, float t1,
-            float s2, float t2, qhandle_t hPic );
-void	Draw_TileClear( int x, int y, int w, int h, qhandle_t hPic );
-void	Draw_Fill( int x, int y, int w, int h, int c );
-void	Draw_FillEx( int x, int y, int w, int h, const color_t color );
-void	Draw_StretchRaw( int x, int y, int w, int h, int cols,
-            int rows, const byte *data );
-void    Draw_Char( int x, int y, int flags, int ch, qhandle_t hFont );
-int 	Draw_String( int x, int y, int flags, size_t maxChars,
-            const char *string, qhandle_t hFont );
-
-/*
-=================
-Ref_FillAPI
-=================
-*/
-static void Ref_FillAPI( refAPI_t *api ) {
-	api->BeginRegistration = R_BeginRegistration;
-	api->RegisterModel = R_RegisterModel;
-	api->RegisterSkin = R_RegisterSkin;
-	api->RegisterPic = R_RegisterPic;
-	api->RegisterFont = R_RegisterFont;
-	api->SetSky = R_SetSky;
-	api->EndRegistration = R_EndRegistration;
-	api->GetModelSize = R_GetModelSize;
-
-	api->RenderFrame = R_RenderFrame;
-	api->LightPoint = R_LightPoint;
-
-    api->SetColor = Draw_SetColor;
-    api->SetClipRect = Draw_SetClipRect;
-	api->SetScale = Draw_SetScale;
-	api->DrawGetPicSize = Draw_GetPicSize;
-	api->DrawPic = Draw_Pic;
-	api->DrawStretchPic = Draw_StretchPic;
-	api->DrawStretchPicST = Draw_StretchPicST;
-	api->DrawTileClear = Draw_TileClear;
-	api->DrawFill = Draw_Fill;
-	api->DrawStretchRaw = Draw_StretchRaw;
-	api->DrawChar  = Draw_Char;
-	api->DrawString  = Draw_String;
-
-	api->DrawFillEx = Draw_FillEx;
-
-	api->Init = R_Init;
-	api->Shutdown = R_Shutdown;
-
-	api->CinematicSetPalette = R_CinematicSetPalette;
-	api->BeginFrame = R_BeginFrame;
-	api->EndFrame = R_EndFrame;
-    api->ModeChanged = R_ModeChanged;
-
-	api->GetConfig = R_GetConfig;
-
-}
-
-/*
-=================
-Ref_APISetupCallback
-=================
-*/
-qboolean Ref_APISetupCallback( api_type_t type, void *api ) {
-	switch( type ) {
-	case API_REFRESH:
-		Ref_FillAPI( ( refAPI_t * )api );
-		break;
-	default:
-		/* not supported API type */
-		return qfalse;
-	}
-
-	return qtrue;
-}
-
-#ifndef REF_HARD_LINKED
-
-/*
-@@@@@@@@@@@@@@@@@@@@@
-moduleEntry
-
-@@@@@@@@@@@@@@@@@@@@@
-*/
-EXPORTED void *moduleEntry( int query, void *data ) {
-	moduleInfo_t *info;
-	moduleCapability_t caps;
-	APISetupCallback_t callback;
-
-	switch( query ) {
-	case MQ_GETINFO:
-		info = ( moduleInfo_t * )data;
-		info->api_version = MODULES_APIVERSION;
-		Q_strncpyz( info->fullname, "Software Refresh Driver",
-                sizeof( info->fullname ) );
-		Q_strncpyz( info->author, "ID Software, Inc", sizeof( info->author ) );
-		return ( void * )qtrue;
-
-	case MQ_GETCAPS:
-		caps = MCP_REFRESH;
-		return ( void * )caps;
-
-	case MQ_SETUPAPI:
-		if( ( callback = ( APISetupCallback_t )data ) == NULL ) {
-			return NULL;
-		}
-		callback( API_CMD, &cmd );
-		callback( API_CVAR, &cvar );
-		callback( API_FS, &fs );
-		callback( API_COMMON, &com );
-		callback( API_SYSTEM, &sys );
-		callback( API_VIDEO_SOFTWARE, &vidsw );
-
-		return ( void * )Ref_APISetupCallback;
-
-	}
-
-	/* quiet compiler warning */
-	return NULL;
-}
-
-#endif

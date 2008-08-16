@@ -28,6 +28,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "vid_public.h"
 #include "vid_local.h"
 #include "ref_public.h"
+#include "files.h"
+#include "sys_public.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>

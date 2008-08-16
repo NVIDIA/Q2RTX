@@ -124,7 +124,13 @@ static drawStatic_t	draw;
 
 static int	colorIndices[8];
 
-void Draw_Init( void ) {
+void R_SetScale( float *scale ) {
+	if( scale ) {
+		*scale = 1;
+	}
+}
+
+void R_InitDraw( void ) {
 	int i;
 
 	memset( &draw, 0, sizeof( draw ) );
@@ -135,7 +141,7 @@ void Draw_Init( void ) {
 	}
 }
 
-void Draw_SetColor( int flags, const color_t color ) {
+void R_SetColor( int flags, const color_t color ) {
 	draw.flags &= ~DRAW_COLOR_MASK;
 
 	if( flags == DRAW_COLOR_CLEAR ) {
@@ -161,7 +167,7 @@ void Draw_SetColor( int flags, const color_t color ) {
 	draw.flags |= flags;
 }
 
-void Draw_SetClipRect( int flags, const clipRect_t *clip ) {
+void R_SetClipRect( int flags, const clipRect_t *clip ) {
 	draw.flags &= ~DRAW_CLIP_MASK;
 
 	if( flags == DRAW_CLIP_DISABLED ) {
@@ -173,34 +179,27 @@ void Draw_SetClipRect( int flags, const clipRect_t *clip ) {
 
 /*
 =============
-Draw_GetPicSize
+R_GetPicSize
 =============
 */
-qboolean Draw_GetPicSize( int *w, int *h, qhandle_t hPic ) {
-	image_t *gl;
+qboolean R_GetPicSize( int *w, int *h, qhandle_t pic ) {
+	image_t *image = IMG_ForHandle( pic );
 
-	gl = R_ImageForHandle( hPic );
     if( w ) {
-    	*w = gl->width;
+    	*w = image->width;
     }
     if( h ) {
-    	*h = gl->height;
+    	*h = image->height;
     }
-    return gl->flags & if_transparent;
-}
-
-qhandle_t R_RegisterFont( const char *name ) {
-    qhandle_t R_RegisterPic( const char *name );
-
-    return R_RegisterPic( name );
+    return image->flags & if_transparent;
 }
 
 /*
 =============
-Draw_StretchData
+R_DrawStretchData
 =============
 */
-static void Draw_StretchData( int x, int y, int w, int h, int xx, int yy,
+static void R_DrawStretchData( int x, int y, int w, int h, int xx, int yy,
         int ww, int hh, int pitch, byte *data )
 {
 	byte			*srcpixels, *dstpixels, *dst, *src;
@@ -309,10 +308,10 @@ static void Draw_StretchData( int x, int y, int w, int h, int xx, int yy,
 
 /*
 =============
-Draw_FixedData
+R_DrawFixedData
 =============
 */
-static void Draw_FixedData( int x, int y, int w, int h,
+static void R_DrawFixedData( int x, int y, int w, int h,
         int pitch, byte *data )
 {
     byte *srcpixels, *dstpixels;
@@ -398,7 +397,7 @@ static void Draw_FixedData( int x, int y, int w, int h,
 
 }
 
-static void Draw_FixedDataAsMask( int x, int y, int w, int h,
+static void R_DrawFixedDataAsMask( int x, int y, int w, int h,
         int pitch, byte *data, byte tbyte )
 {
     byte *srcpixels, *dstpixels;
@@ -485,84 +484,63 @@ static void Draw_FixedDataAsMask( int x, int y, int w, int h,
 
 /*
 =============
-Draw_StretchPic
+R_DrawStretcpic
 =============
 */
-void Draw_StretchPicST( int x, int y, int w, int h, float s1, float t1,
-        float s2, float t2, qhandle_t hPic )
+void R_DrawStretcPicST( int x, int y, int w, int h, float s1, float t1,
+        float s2, float t2, qhandle_t pic )
 {
-	image_t *image;
+	image_t *image = IMG_ForHandle( pic );
 	int xx, yy, ww, hh;
-
-	image = R_ImageForHandle( hPic );
 
 	xx = image->width * s1;
 	yy = image->height * t1;
 	ww = image->width * ( s2 - s1 );
 	hh = image->height * ( t2 - t1 );
 
-	//draw_current->drawStretchPic
-		Draw_StretchData( x, y, w, h, xx, yy, ww, hh, image->width,
-                image->pixels[0] );
+	R_DrawStretchData( x, y, w, h, xx, yy, ww, hh,
+        image->width, image->pixels[0] );
 }
 
 /*
 =============
-Draw_StretchPic
+R_DrawStretchPic
 =============
 */
-void Draw_StretchPic( int x, int y, int w, int h, qhandle_t hPic ) {
-	image_t *image;
-
-	image = R_ImageForHandle( hPic );
+void R_DrawStretchPic( int x, int y, int w, int h, qhandle_t pic ) {
+	image_t *image = IMG_ForHandle( pic );
 
     if( w == image->width && h == image->height ) {
-		Draw_FixedData( x, y, image->width, image->height,
-                image->width, image->pixels[0] );
+		R_DrawFixedData( x, y, image->width, image->height,
+            image->width, image->pixels[0] );
         return;
     }
 
-	//draw_current->drawStretchPic
-		Draw_StretchData( x, y, w, h, 0, 0, image->width, image->height,
-                image->width, image->pixels[0] );
+	R_DrawStretchData( x, y, w, h, 0, 0, image->width, image->height,
+        image->width, image->pixels[0] );
 }
 
 /*
 =============
-Draw_StretchPic
+R_DrawStretcpic
 =============
 */
-void Draw_Pic( int x, int y, qhandle_t hPic ) {
-	image_t *image;
+void R_DrawPic( int x, int y, qhandle_t pic ) {
+	image_t *image = IMG_ForHandle( pic );
 
-	image = R_ImageForHandle( hPic );
-
-	//draw_current->drawFixedPic
-		Draw_FixedData( x, y, image->width, image->height,
-                image->width, image->pixels[0] );
-
+	R_DrawFixedData( x, y, image->width, image->height,
+        image->width, image->pixels[0] );
 }
 
-/*
-=============
-Draw_StretchRaw
-=============
-*/
-void Draw_StretchRaw( int x, int y, int w, int h, int cols,
-        int rows, const byte *data )
-{
-	Draw_StretchData( x, y, w, h, 0, 0, cols, rows, cols, ( byte * )data );
-}
-
-void Draw_Char( int x, int y, int flags, int ch, qhandle_t hFont ) {
+void R_DrawChar( int x, int y, int flags, int ch, qhandle_t font ) {
 	image_t *image;
     int xx, yy;
     byte *data;
 
-	if( !hFont ) {
+	if( !font ) {
 		return;
 	}
-	image = R_ImageForHandle( hFont );
+	image = IMG_ForHandle( font );
 	if( image->width != 128 || image->height != 128 ) {
 		return;
 	}
@@ -571,29 +549,29 @@ void Draw_Char( int x, int y, int flags, int ch, qhandle_t hFont ) {
     yy = ( ( ch >> 4 ) & 15 ) << 3;
     data = image->pixels[0] + yy * image->width + xx;
 	if( draw.colorIndex != -1 && !( ch & 128 ) ) {
-		Draw_FixedDataAsMask( x, y, 8, 8, image->width, data, draw.colorIndex );
+		R_DrawFixedDataAsMask( x, y, 8, 8, image->width, data, draw.colorIndex );
 	} else {
-		Draw_FixedData( x, y, 8, 8, image->width, data );
+		R_DrawFixedData( x, y, 8, 8, image->width, data );
 	}
 }
 
 /*
 ===============
-Draw_String
+R_DrawString
 ===============
 */
-int Draw_String( int x, int y, int flags, size_t maxChars,
-        const char *string, qhandle_t hFont )
+int R_DrawString( int x, int y, int flags, size_t maxChars,
+        const char *string, qhandle_t font )
 {
     image_t *image;
 	byte c, *data;
     int xx, yy;
     int color, mask;
 
-	if( !hFont ) {
+	if( !font ) {
 		return x;
 	}
-	image = R_ImageForHandle( hFont );
+	image = IMG_ForHandle( font );
 	if( image->width != 128 || image->height != 128 ) {
 		return x;
 	}
@@ -642,9 +620,9 @@ int Draw_String( int x, int y, int flags, size_t maxChars,
         yy = ( c >> 4 ) << 3;
         data = image->pixels[0] + yy * image->width + xx;
 		if( color != -1 && !( c & 128 ) ) {
-			Draw_FixedDataAsMask( x, y, 8, 8, image->width, data, color );
+			R_DrawFixedDataAsMask( x, y, 8, 8, image->width, data, color );
 		} else {
-			Draw_FixedData( x, y, 8, 8, image->width, data );
+			R_DrawFixedData( x, y, 8, 8, image->width, data );
 		}
 
 		x += 8;
@@ -654,30 +632,28 @@ int Draw_String( int x, int y, int flags, size_t maxChars,
 
 /*
 =============
-Draw_TileClear
+R_TileClear
 
 This repeats a 64*64 tile graphic to fill the screen around a sized down
 refresh window.
 =============
 */
-void Draw_TileClear( int x, int y, int w, int h, qhandle_t hPic ) {
+void R_TileClear( int x, int y, int w, int h, qhandle_t pic ) {
 	int			i, j;
 	byte		*psrc;
 	byte		*pdest;
-	image_t		*pic;
+	image_t		*image;
 	int			x2;
 
-	if( !hPic ) {
+	if( !pic ) {
 		return;
 	}
 
-	if (x < 0)
-	{
+	if (x < 0) {
 		w += x;
 		x = 0;
 	}
-	if (y < 0)
-	{
+	if (y < 0) {
 		h += y;
 		y = 0;
 	}
@@ -688,15 +664,14 @@ void Draw_TileClear( int x, int y, int w, int h, qhandle_t hPic ) {
 	if (w <= 0 || h <= 0)
 		return;
 
-	pic = R_ImageForHandle( hPic );
-	if( pic->width != 64 || pic->height != 64 ) {
+	image = IMG_ForHandle( pic );
+	if( image->width != 64 || image->height != 64 ) {
 		return;
 	}
 	x2 = x + w;
 	pdest = vid.buffer + y*vid.rowbytes;
-	for (i=0 ; i<h ; i++, pdest += vid.rowbytes)
-	{
-		psrc = pic->pixels[0] + pic->width * ((i+y)&63);
+	for (i=0 ; i<h ; i++, pdest += vid.rowbytes) {
+		psrc = image->pixels[0] + image->width * ((i+y)&63);
 		for (j=x ; j<x2 ; j++)
 			pdest[j] = psrc[j&63];
 	}
@@ -705,80 +680,80 @@ void Draw_TileClear( int x, int y, int w, int h, qhandle_t hPic ) {
 
 /*
 =============
-Draw_Fill
+R_DrawFill
 
 Fills a box of pixels with a single color
 =============
 */
-void Draw_Fill (int x, int y, int w, int h, int c)
-{
+void R_DrawFill( int x, int y, int w, int h, int c ) {
 	byte			*dest;
 	int				u, v;
 
-	if (x+w > vid.width)
+	if( x + w > vid.width )
 		w = vid.width - x;
-	if (y+h > vid.height)
+	if( y + h > vid.height )
 		h = vid.height - y;
-	if (x < 0)
-	{
+	if( x < 0 ) {
 		w += x;
 		x = 0;
 	}
-	if (y < 0)
-	{
+	if( y < 0 ) {
 		h += y;
 		y = 0;
 	}
-	if (w < 0 || h < 0)
+	if( w < 0 || h < 0 )
 		return;
-	dest = vid.buffer + y*vid.rowbytes + x;
-	for (v=0 ; v<h ; v++, dest += vid.rowbytes)
-		for (u=0 ; u<w ; u++)
+
+	dest = vid.buffer + y * vid.rowbytes + x;
+	for( v = 0; v < h; v++, dest += vid.rowbytes )
+		for( u = 0; u < w; u++ )
 			dest[u] = c;
 }
 
-static byte Blend33( int pcolor, int dstcolor ) {
-	return vid.alphamap[pcolor + dstcolor*256];
-}
-
-static byte Blend66( int pcolor, int dstcolor ) {
-	return vid.alphamap[pcolor*256+dstcolor];
-}
-
-void Draw_FillEx( int x, int y, int w, int h, const color_t color ) {
-	int colorIndex;
+void R_DrawFillEx( int x, int y, int w, int h, const color_t color ) {
+	int             c;
 	byte			*dest;
 	int				u, v;
-	byte (*blendfunc)( int, int );
 
-	colorIndex = color ? R_IndexForColor( color ) : 0xD7;
-
-	blendfunc = NULL;
-	if( color[3] < 172 ) {
-		blendfunc = color[3] > 84 ? Blend66 : Blend33;
-	}
-
-	if (x+w > vid.width)
+	if( x + w > vid.width )
 		w = vid.width - x;
-	if (y+h > vid.height)
+	if( y + h > vid.height )
 		h = vid.height - y;
-	if (x < 0)
-	{
+	if( x < 0 ) {
 		w += x;
 		x = 0;
 	}
-	if (y < 0)
-	{
+	if( y < 0 ) {
 		h += y;
 		y = 0;
 	}
-	if (w < 0 || h < 0)
+	if( w < 0 || h < 0 )
 		return;
-	dest = vid.buffer + y*vid.rowbytes + x;
-	for (v=0 ; v<h ; v++, dest += vid.rowbytes)
-		for (u=0 ; u<w ; u++)
-			dest[u] = blendfunc ? blendfunc( colorIndex, dest[u] ) : colorIndex;
-	
+
+	c = color ? R_IndexForColor( color ) : 0xD7;
+
+	dest = vid.buffer + y * vid.rowbytes + x;
+	if( color[3] < 172 ) {
+		if( color[3] > 84 ) {
+            for( v = 0; v < h; v++, dest += vid.rowbytes ) {
+                for( u = 0 ; u < w; u++ ) {
+                    dest[u] = vid.alphamap[c * 256 + dest[u]];
+                }
+            }
+        } else {
+            for( v = 0; v < h; v++, dest += vid.rowbytes ) {
+                for( u = 0 ; u < w; u++ ) {
+                    dest[u] = vid.alphamap[c + dest[u] * 256];
+                }
+            }
+        }
+    } else {
+        for( v = 0; v < h; v++, dest += vid.rowbytes ) {
+            for( u = 0 ; u < w; u++ ) {
+                dest[u] = c;
+            }
+        }
+    }
 }
 
 
@@ -786,11 +761,11 @@ void Draw_FillEx( int x, int y, int w, int h, const color_t color ) {
 
 /*
 ================
-Draw_FadeScreen
+R_DrawFadeScreen
 
 ================
 */
-void Draw_FadeScreen (void)
+void R_DrawFadeScreen (void)
 {
 	int			x,y;
 	byte		*pbuf;

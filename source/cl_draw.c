@@ -53,7 +53,7 @@ int SCR_DrawStringEx( int x, int y, int flags, size_t maxlen,
         x -= w;
     }
 
-    return ref.DrawString( x, y, flags, maxlen, s, font );
+    return R_DrawString( x, y, flags, maxlen, s, font );
 }
 
 
@@ -163,7 +163,7 @@ static void SCR_LagDraw( int x, int y ) {
 			v = LAG_HEIGHT;
 		}
 
-		ref.DrawFill( x + LAG_WIDTH - i - 1, y + LAG_HEIGHT - v, 1, v, c );
+		R_DrawFill( x + LAG_WIDTH - i - 1, y + LAG_HEIGHT - v, 1, v, c );
 	}
 }
 
@@ -359,7 +359,7 @@ static void draw_objects( void ) {
             y += scr_hudHeight - CHAR_HEIGHT + 1;
         }
         if( !( obj->flags & UI_IGNORECOLOR ) ) {
-            ref.SetColor( DRAW_COLOR_RGBA, obj->color );
+            R_SetColor( DRAW_COLOR_RGBA, obj->color );
         }
         if( obj->macro ) {
             obj->macro->function( buffer, sizeof( buffer ) );
@@ -367,7 +367,7 @@ static void draw_objects( void ) {
         } else {
             SCR_DrawString( x, y, obj->flags, obj->cvar->string );
         }
-        ref.SetColor( DRAW_COLOR_CLEAR, NULL );
+        R_SetColor( DRAW_COLOR_CLEAR, NULL );
     }
 }
 
@@ -442,10 +442,10 @@ void SCR_DrawLoading( void ) {
     int i;
 	qhandle_t h;
 
-    if( !cl.mapname[0] || !( h = ref.RegisterPic( va( "*levelshots/%s.jpg", cl.mapname ) ) ) ) {
-        ref.DrawFill( 0, 0, scr_glconfig.vidWidth, scr_glconfig.vidHeight, 0 );
+    if( !cl.mapname[0] || !( h = R_RegisterPic( va( "*levelshots/%s.jpg", cl.mapname ) ) ) ) {
+        R_DrawFill( 0, 0, scr_glconfig.vidWidth, scr_glconfig.vidHeight, 0 );
     } else {
-        ref.DrawStretchPic( 0, 0, scr_glconfig.vidWidth, scr_glconfig.vidHeight, h );
+        R_DrawStretchPic( 0, 0, scr_glconfig.vidWidth, scr_glconfig.vidHeight, h );
     }
 
 	x = scr_glconfig.vidWidth / 2;
@@ -458,9 +458,9 @@ void SCR_DrawLoading( void ) {
 
     s = cl.configstrings[CS_NAME];
 	if( *s ) {
-        ref.SetColor( DRAW_COLOR_RGB, colorYellow );
+        R_SetColor( DRAW_COLOR_RGB, colorYellow );
 		SCR_DrawString( x, y, UI_CENTER|UI_DROPSHADOW, s );
-        ref.SetColor( DRAW_COLOR_CLEAR, NULL );
+        R_SetColor( DRAW_COLOR_CLEAR, NULL );
 	}
 	y += 16;
 
@@ -527,9 +527,9 @@ void SCR_DrawLoading( void ) {
 
 	// draw message string
 	if( cls.state < ca_connected && cls.messageString[0] ) {
-        ref.SetColor( DRAW_COLOR_RGB, colorRed );
+        R_SetColor( DRAW_COLOR_RGB, colorRed );
 		SCR_DrawString( x, y + 16, UI_CENTER|UI_MULTILINE, cls.messageString );
-        ref.SetColor( DRAW_COLOR_CLEAR, NULL );
+        R_SetColor( DRAW_COLOR_CLEAR, NULL );
 	}
 }
 
@@ -571,7 +571,7 @@ static void draw_crosshair( void ) {
 
     x = ( scr_hudWidth - crosshair_width ) / 2;
     y = ( scr_hudHeight - crosshair_height ) / 2;
-    ref.DrawPic( x, y, crosshair_pic );
+    R_DrawPic( x, y, crosshair_pic );
 }
 
 static void draw_following( void ) {
@@ -596,7 +596,7 @@ static void draw_following( void ) {
 
 	x = ( scr_hudWidth - strlen( string ) * CHAR_WIDTH ) / 2;
 
-	ref.DrawString( x, 48, 0, MAX_STRING_CHARS, string, scr_font );
+	R_DrawString( x, 48, 0, MAX_STRING_CHARS, string, scr_font );
 }
 
 static void draw_turtle( void ) {
@@ -635,10 +635,10 @@ static void SCR_DrawStats( void ) {
     for( i = 0; i < j; i++ ) {
         Com_sprintf( buffer, sizeof( buffer ), "%2d: %d", i, cl.frame.ps.stats[i] );
         if( cl.oldframe.ps.stats[i] != cl.frame.ps.stats[i] ) {
-            ref.SetColor( DRAW_COLOR_RGBA, colorRed );
+            R_SetColor( DRAW_COLOR_RGBA, colorRed );
         }
-        ref.DrawString( x, y, 0, MAX_STRING_CHARS, buffer, scr_font );
-        ref.SetColor( DRAW_COLOR_CLEAR, NULL );
+        R_DrawString( x, y, 0, MAX_STRING_CHARS, buffer, scr_font );
+        R_SetColor( DRAW_COLOR_CLEAR, NULL );
         y += CHAR_HEIGHT;
     }
 }
@@ -660,13 +660,13 @@ static void SCR_DrawPmove( void ) {
     if( i > PM_FREEZE ) {
         i = PM_FREEZE;
     }
-    ref.DrawString( x, y, 0, MAX_STRING_CHARS, types[i], scr_font );
+    R_DrawString( x, y, 0, MAX_STRING_CHARS, types[i], scr_font );
     y += CHAR_HEIGHT;
 
     j = cl.frame.ps.pmove.pm_flags;
     for( i = 0; i < 8; i++ ) {
         if( j & ( 1 << i ) ) {
-            x = ref.DrawString( x, y, 0, MAX_STRING_CHARS, flags[i], scr_font );
+            x = R_DrawString( x, y, 0, MAX_STRING_CHARS, flags[i], scr_font );
             x += CHAR_WIDTH;
         }
     }
@@ -692,17 +692,17 @@ void SCR_Draw2D( void ) {
         rc.right = scr_hudWidth;
         rc.bottom = scr_hudHeight;
 
-        ref.SetClipRect( DRAW_CLIP_MASK, &rc );
+        R_SetClipRect( DRAW_CLIP_MASK, &rc );
     }
 
-	ref.SetColor( DRAW_COLOR_CLEAR, NULL );
+	R_SetColor( DRAW_COLOR_CLEAR, NULL );
 
     if( crosshair->integer ) {
     	draw_crosshair();
     }
 
 	Cvar_ClampValue( scr_alpha, 0, 1 );
-	ref.SetColor( DRAW_COLOR_ALPHA, ( byte * )&scr_alpha->value );
+	R_SetColor( DRAW_COLOR_ALPHA, ( byte * )&scr_alpha->value );
 
     if( scr_draw2d->integer > 1 ) {
     	SCR_ExecuteLayoutString( cl.configstrings[CS_STATUSBAR] );
@@ -737,7 +737,7 @@ void SCR_Draw2D( void ) {
 	// draw ping graph
     if( scr_lag_draw->integer ) {
         if( scr_lag_draw->integer > 1 ) {
-	        ref.DrawFill( x, y, LAG_WIDTH, LAG_HEIGHT, 4 );
+	        R_DrawFill( x, y, LAG_WIDTH, LAG_HEIGHT, 4 );
         }
         SCR_LagDraw( x, y );
     }
@@ -745,13 +745,13 @@ void SCR_Draw2D( void ) {
 	// draw phone jack
 	if( cls.netchan && cls.netchan->outgoing_sequence - cls.netchan->incoming_acknowledged >= CMD_BACKUP ) {
 		if( ( cls.realtime >> 8 ) & 3 ) {
-			ref.DrawStretchPic( x, y, LAG_WIDTH, LAG_HEIGHT, scr_net );
+			R_DrawStretchPic( x, y, LAG_WIDTH, LAG_HEIGHT, scr_net );
 		}
 	}
 
     draw_objects();
 
-	ref.SetColor( DRAW_COLOR_CLEAR, NULL );
+	R_SetColor( DRAW_COLOR_CLEAR, NULL );
 
     if( scr_showturtle->integer && cl.frameflags ) {
         draw_turtle();
@@ -767,7 +767,7 @@ void SCR_Draw2D( void ) {
     SCR_DrawPause();
 
     if( scr_glconfig.renderer == GL_RENDERER_SOFTWARE ) {
-        ref.SetClipRect( DRAW_CLIP_DISABLED, NULL );
+        R_SetClipRect( DRAW_CLIP_DISABLED, NULL );
     }
 }
 

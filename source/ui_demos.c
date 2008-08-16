@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "ui_local.h"
+#include "files.h"
 #include "mdfour.h"
 
 /*
@@ -118,7 +119,7 @@ static char *LoadCache( void **list ) {
     uint8_t hash[16];
 
     Q_concat( buffer, sizeof( buffer ), m_demos.browse, "/" COM_DEMOCACHE_NAME, NULL );
-    len = fs.LoadFile( buffer, ( void ** )&cache );
+    len = FS_LoadFile( buffer, ( void ** )&cache );
     if( !cache ) {
         return NULL;
     }
@@ -144,7 +145,7 @@ static char *LoadCache( void **list ) {
     return cache;
 
 fail:
-    fs.FreeFile( cache );
+    FS_FreeFile( cache );
     return NULL;
 }
 
@@ -160,23 +161,23 @@ static void WriteCache( void ) {
     }
 
     Q_concat( buffer, sizeof( buffer ), m_demos.browse, "/" COM_DEMOCACHE_NAME, NULL );
-    fs.FOpenFile( buffer, &f, FS_MODE_WRITE );
+    FS_FOpenFile( buffer, &f, FS_MODE_WRITE );
     if( !f ) {
         return;
     }
 
     for( i = 0; i < 16; i++ ) {
-        fs.FPrintf( f, "%02x", m_demos.hash[i] );
+        FS_FPrintf( f, "%02x", m_demos.hash[i] );
     }
-    fs.FPrintf( f, "\\" );
+    FS_FPrintf( f, "\\" );
 
     for( i = m_demos.numDirs; i < m_demos.list.numItems; i++ ) {
         e = m_demos.list.items[i];
         map = UI_GetColumn( e->name, 2 );
         pov = UI_GetColumn( e->name, 3 );
-        fs.FPrintf( f, "%s\\%s\\", map, pov );
+        FS_FPrintf( f, "%s\\%s\\", map, pov );
     }
-    fs.FCloseFile( f );
+    FS_FCloseFile( f );
 }
 
 static void CalcHash( void **list ) {
@@ -275,9 +276,9 @@ static void FreeList( void ) {
 
     if( m_demos.list.items ) {
         for( i = 0; i < m_demos.list.numItems; i++ ) {
-            com.Free( m_demos.list.items[i] );
+            Z_Free( m_demos.list.items[i] );
         }
-        com.Free( m_demos.list.items );
+        Z_Free( m_demos.list.items );
         m_demos.list.items = NULL;
         m_demos.list.numItems = 0;
     }

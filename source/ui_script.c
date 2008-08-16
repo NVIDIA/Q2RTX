@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "ui_local.h"
+#include "files.h"
 
 static menuSound_t Activate( menuCommon_t *self ) {
     menuAction_t *action = ( menuAction_t * )self;
@@ -263,8 +264,8 @@ static void Parse_Background( menuFrameWork_t *menu ) {
             menu->transparent = qtrue;
         }
     } else {
-        menu->image = ref.RegisterPic( s );
-        menu->transparent = ref.DrawGetPicSize( NULL, NULL, menu->image );
+        menu->image = R_RegisterPic( s );
+        menu->transparent = R_GetPicSize( NULL, NULL, menu->image );
     }
 }
 
@@ -392,13 +393,13 @@ static qboolean Parse_File( const char *path, int depth ) {
                     if( COM_ParseColor( s, uis.color.background ) ) {
                         uis.backgroundHandle = 0;
                     } else {
-                        uis.backgroundHandle = ref.RegisterPic( s );
+                        uis.backgroundHandle = R_RegisterPic( s );
                     }
                 } else if( !strcmp( cmd, "font" ) ) {
-                    uis.fontHandle = ref.RegisterFont( Cmd_Argv( 1 ) );
+                    uis.fontHandle = R_RegisterFont( Cmd_Argv( 1 ) );
                 } else if( !strcmp( cmd, "cursor" ) ) {
-                    uis.cursorHandle = ref.RegisterPic( Cmd_Argv( 1 ) );
-                    ref.DrawGetPicSize( &uis.cursorWidth,
+                    uis.cursorHandle = R_RegisterPic( Cmd_Argv( 1 ) );
+                    R_GetPicSize( &uis.cursorWidth,
                         &uis.cursorHeight, uis.cursorHandle );
                 } else {
                     Com_WPrintf( "Unknown keyword '%s'\n", cmd );

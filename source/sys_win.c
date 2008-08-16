@@ -23,15 +23,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "q_list.h"
 #include "prompt.h"
 #include <mmsystem.h>
-#ifdef DEDICATED_ONLY
+#if !USE_CLIENT
 #include <winsvc.h>
 #endif
 #ifdef USE_DBGHELP
 #include <dbghelp.h>
 #endif
 #include <float.h>
-
-sysAPI_t	sys;
 
 #define MAX_CONSOLE_INPUT_EVENTS	16
 
@@ -46,7 +44,7 @@ static qboolean			gotConsole;
 static volatile qboolean	errorEntered;
 static volatile qboolean	shouldExit;
 
-#ifdef DEDICATED_ONLY
+#if !USE_CLIENT
 static SERVICE_STATUS_HANDLE	statusHandle;
 #endif
 
@@ -56,7 +54,6 @@ qboolean iswinnt;
 
 cvar_t	*sys_basedir;
 cvar_t  *sys_libdir;
-cvar_t  *sys_refdir;
 cvar_t  *sys_homedir;
 
 static char		currentDirectory[MAX_OSPATH];
@@ -107,7 +104,7 @@ void Sys_Error( const char *error, ... ) {
 	Sys_Printf( S_COLOR_RED "********************\n"
                             "FATAL: %s\n"
                             "********************\n", text );
-#ifdef DEDICATED_ONLY
+#if !USE_CLIENT
 	if( !statusHandle )
 #endif
 	{
@@ -128,7 +125,7 @@ Sys_Quit
 void Sys_Quit( void ) {
 	timeEndPeriod( 1 );
 
-#ifndef DEDICATED_ONLY
+#if USE_CLIENT
 	if( dedicated && dedicated->integer ) {
 		FreeConsole();
     }
@@ -392,14 +389,14 @@ static BOOL WINAPI Sys_ConsoleCtrlHandler( DWORD dwCtrlType ) {
 static void Sys_ConsoleInit( void ) {
 	DWORD mode;
 
-#ifdef DEDICATED_ONLY
-	if( statusHandle ) {
-		return;
-	}
-#else
+#if USE_CLIENT
 	if( !AllocConsole() ) {
 		Com_EPrintf( "Couldn't create system console.\n"
 			"Console IO disabled.\n" );
+		return;
+	}
+#else
+	if( statusHandle ) {
 		return;
 	}
 #endif
@@ -433,7 +430,7 @@ SERVICE CONTROL
 ===============================================================================
 */
 
-#ifdef DEDICATED_ONLY
+#if !USE_CLIENT
 
 static void Sys_InstallService_f( void ) {
 	char servicePath[256];
@@ -675,19 +672,6 @@ qboolean Sys_GetFileInfo( FILE *fp, fsFileInfo_t *info ) {
     return qtrue;
 }
 
-/*
-================
-Sys_FillAPI
-================
-*/
-void Sys_FillAPI( sysAPI_t *api ) {
-	api->Milliseconds = Sys_Milliseconds;
-	api->HunkBegin = Hunk_Begin;
-	api->HunkAlloc = Hunk_Alloc;
-    api->HunkEnd = Hunk_End;
-	api->HunkFree = Hunk_Free;
-}
-
 void Sys_FixFPCW( void ) {
     _controlfp( _PC_24|_RC_NEAR, _MCW_PC|_MCW_RC );
 }
@@ -728,17 +712,15 @@ void Sys_Init( void ) {
 	// basedir <path>
 	// allows the game to run from outside the data tree
 	sys_basedir = Cvar_Get( "basedir", currentDirectory, CVAR_NOSET );
+	sys_libdir = Cvar_Get( "libdir", currentDirectory, CVAR_NOSET );
     
 	// homedir <path>
 	// specifies per-user writable directory for demos, screenshots, etc
 	sys_homedir = Cvar_Get( "homedir", "", CVAR_NOSET );
 
-	sys_libdir = Cvar_Get( "libdir", currentDirectory, CVAR_NOSET );
-	sys_refdir = Cvar_Get( "refdir", va( "%s\\baseq2pro", currentDirectory ), CVAR_NOSET );
-
 	sys_viewlog = Cvar_Get( "sys_viewlog", "0", CVAR_NOSET );
 
-#ifdef DEDICATED_ONLY
+#if !USE_CLIENT
 	Cmd_AddCommand( "installservice", Sys_InstallService_f );
 	Cmd_AddCommand( "deleteservice", Sys_DeleteService_f );
 #endif
@@ -747,8 +729,6 @@ void Sys_Init( void ) {
 	if( dedicated->integer || sys_viewlog->integer ) {
 		Sys_ConsoleInit();
 	}
-
-	Sys_FillAPI( &sys );
 }
 
 /*
@@ -979,7 +959,7 @@ char *Sys_GetCurrentDirectory( void ) {
 
 //=======================================================================
 
-#if !( defined DEDICATED_ONLY ) && ( USE_ANTICHEAT & 1 )
+#if ( USE_CLIENT ) && ( USE_ANTICHEAT & 1 )
 
 typedef PVOID (*FNINIT)( VOID );
 
@@ -1155,7 +1135,7 @@ PRIVATE DWORD Sys_ExceptionHandler( DWORD exceptionCode, LPEXCEPTION_POINTERS ex
 		"Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 	OSVERSIONINFO	vinfo;
 
-#ifndef DEDICATED_ONLY
+#if USE_CLIENT
 	Win_Shutdown();
 #endif
 
@@ -1164,7 +1144,7 @@ PRIVATE DWORD Sys_ExceptionHandler( DWORD exceptionCode, LPEXCEPTION_POINTERS ex
 		"Would you like to generate a crash report?",
 		"Unhandled Exception",
 		MB_ICONERROR | MB_YESNO
-#ifdef DEDICATED_ONLY
+#if !USE_CLIENT
 		| MB_SERVICE_NOTIFICATION
 #endif
 		);
@@ -1389,7 +1369,12 @@ static void msvcrt_sucks( const wchar_t *expr, const wchar_t *func, const wchar_
 #endif
 
 static int Sys_Main( int argc, char **argv ) {
-#ifdef DEDICATED_ONLY
+#if USE_CLIENT
+	if( !GetCurrentDirectory( sizeof( currentDirectory ) - 1, currentDirectory ) ) {
+		return 1;
+	}
+	currentDirectory[sizeof( currentDirectory ) - 1] = 0;
+#else
 	if( !GetModuleFileName( NULL, currentDirectory, sizeof( currentDirectory ) - 1 ) ) {
 		return 1;
 	}
@@ -1403,11 +1388,6 @@ static int Sys_Main( int argc, char **argv ) {
 			return 1;
 		}
 	}
-#else
-	if( !GetCurrentDirectory( sizeof( currentDirectory ) - 1, currentDirectory ) ) {
-		return 1;
-	}
-	currentDirectory[sizeof( currentDirectory ) - 1] = 0;
 #endif
 
 #if USE_DBGHELP
@@ -1449,7 +1429,62 @@ static int Sys_Main( int argc, char **argv ) {
 
 
 
-#ifdef DEDICATED_ONLY
+#if USE_CLIENT
+
+#define MAX_LINE_TOKENS	128
+
+static char	    *sys_argv[MAX_LINE_TOKENS];
+static int		sys_argc;
+
+/*
+===============
+Sys_ParseCommandLine
+
+===============
+*/
+static void Sys_ParseCommandLine( char *line ) {
+	sys_argc = 1;
+    sys_argv[0] = APPLICATION;
+	while( *line ) {
+		while( *line && *line <= 32 ) {
+            line++;
+        }
+        if( *line == 0 ) {
+            break;
+        }
+		sys_argv[sys_argc++] = line;
+		while( *line > 32 ) {
+            line++;
+        }
+        if( *line == 0 ) {
+            break;
+        }
+		*line = 0;
+		if( sys_argc == MAX_LINE_TOKENS ) {
+			break;
+		}
+        line++;
+	}
+}
+
+/*
+==================
+WinMain
+
+==================
+*/
+int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow ) {
+	// previous instances do not exist in Win32
+	if( hPrevInstance ) {
+		return 1;
+	}
+
+	hGlobalInstance = hInstance;
+	Sys_ParseCommandLine( lpCmdLine );
+	return Sys_Main( sys_argc, sys_argv );
+}
+
+#else // USE_CLIENT
 
 static char	    **sys_argv;
 static int		sys_argc;
@@ -1515,60 +1550,5 @@ int QDECL main( int argc, char **argv ) {
 	return Sys_Main( argc, argv );
 }
 
-#else // DEDICATED_ONLY
-
-#define MAX_LINE_TOKENS	128
-
-static char	    *sys_argv[MAX_LINE_TOKENS];
-static int		sys_argc;
-
-/*
-===============
-Sys_ParseCommandLine
-
-===============
-*/
-static void Sys_ParseCommandLine( char *line ) {
-	sys_argc = 1;
-    sys_argv[0] = APPLICATION;
-	while( *line ) {
-		while( *line && *line <= 32 ) {
-            line++;
-        }
-        if( *line == 0 ) {
-            break;
-        }
-		sys_argv[sys_argc++] = line;
-		while( *line > 32 ) {
-            line++;
-        }
-        if( *line == 0 ) {
-            break;
-        }
-		*line = 0;
-		if( sys_argc == MAX_LINE_TOKENS ) {
-			break;
-		}
-        line++;
-	}
-}
-
-/*
-==================
-WinMain
-
-==================
-*/
-int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow ) {
-	// previous instances do not exist in Win32
-	if( hPrevInstance ) {
-		return 1;
-	}
-
-	hGlobalInstance = hInstance;
-	Sys_ParseCommandLine( lpCmdLine );
-	return Sys_Main( sys_argc, sys_argv );
-}
-
-#endif // !DEDICATED_ONLY
+#endif // !USE_CLIENT
 

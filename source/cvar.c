@@ -20,8 +20,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // cvar.c -- dynamic variable tracking
 
 #include "com_local.h"
-
-cvarAPI_t    cvar;
+#include "cl_public.h"
+#include "files.h"
 
 cvar_t    *cvar_vars;
 
@@ -531,16 +531,20 @@ void Cvar_SetHex( cvar_t *var, int value, cvarSetSource_t source ) {
 Cvar_ClampInteger
 ============
 */
-void Cvar_ClampInteger( cvar_t *var, int min, int max ) {
+int Cvar_ClampInteger( cvar_t *var, int min, int max ) {
     char    val[32];
 
     if( var->integer < min ) {
         Com_sprintf( val, sizeof( val ), "%i", min );
         Cvar_SetByVar( var, val, CVAR_SET_DIRECT );
-    } else if( var->integer > max ) {
+        return min;
+    }
+    if( var->integer > max ) {
         Com_sprintf( val, sizeof( val ), "%i", max );
         Cvar_SetByVar( var, val, CVAR_SET_DIRECT );
+        return max;
     }
+    return var->integer;
 }
 
 /*
@@ -548,7 +552,7 @@ void Cvar_ClampInteger( cvar_t *var, int min, int max ) {
 Cvar_ClampValue
 ============
 */
-void Cvar_ClampValue( cvar_t *var, float min, float max ) {
+float Cvar_ClampValue( cvar_t *var, float min, float max ) {
     char    val[32];
 
     if( var->value < min ) {
@@ -558,14 +562,18 @@ void Cvar_ClampValue( cvar_t *var, float min, float max ) {
             Com_sprintf( val, sizeof( val ), "%f", min );
         }
         Cvar_SetByVar( var, val, CVAR_SET_DIRECT );
-    } else if( var->value > max ) {
+        return min;
+    }
+    if( var->value > max ) {
         if( max == (int)max ) {
             Com_sprintf( val, sizeof( val ), "%i", (int)max );
         } else {
             Com_sprintf( val, sizeof( val ), "%f", max );
         }
         Cvar_SetByVar( var, val, CVAR_SET_DIRECT );
+        return max;
     }
+    return var->value;
 }
 
 /*
@@ -726,7 +734,7 @@ static void Cvar_SetFlag_f( void ) {
     Cvar_FullSet( Cmd_Argv( 1 ), Cmd_ArgsFrom( 2 ), flags, CVAR_SET_CONSOLE );
 }
 
-#ifndef DEDICATED_ONLY
+#if USE_CLIENT
 
 /*
 ============
@@ -1060,22 +1068,6 @@ size_t Cvar_BitInfo( char *info, int bit ) {
     return total;
 }
 
-
-/*
-============
-Cvar_FillAPI
-============
-*/
-void Cvar_FillAPI( cvarAPI_t *api ) {
-    api->Get = Cvar_Get;
-    api->Set = Cvar_Set;
-    api->Find = Cvar_FindVar;
-    api->VariableValue = Cvar_VariableValue;
-    api->VariableInteger = Cvar_VariableInteger;
-    api->VariableString = Cvar_VariableString;
-    api->VariableStringBuffer = Cvar_VariableStringBuffer;
-}
-
 static const cmdreg_t c_cvar[] = {
     { "set", Cvar_Set_f, Cvar_Set_c },
     { "setu", Cvar_SetFlag_f, Cvar_Set_c },
@@ -1099,7 +1091,5 @@ void Cvar_Init( void ) {
     cvar_silent = Cvar_Get( "cvar_silent", "0", 0 );
     
     Cmd_Register( c_cvar );
-
-    Cvar_FillAPI( &cvar );
 }
 

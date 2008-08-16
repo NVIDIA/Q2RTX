@@ -815,7 +815,6 @@ follow:
 
 static void MVD_Invuse_f( udpClient_t *client ) {
     mvd_t *mvd;
-    int cursor = 0;
     int uf = client->uf;
 
     if( client->layout_type == LAYOUT_MENU ) {
@@ -864,19 +863,12 @@ static void MVD_Invuse_f( udpClient_t *client ) {
         return;
     }
 
-    if( client->layout_type != LAYOUT_CHANNELS ) {
-        return;
-    }
-
-    LIST_FOR_EACH( mvd_t, mvd, &mvd_channels, entry ) {
-        if( !mvd->framenum ) {
-            continue;
-        }
-        if( cursor == client->layout_cursor ) {
+    if( client->layout_type == LAYOUT_CHANNELS ) {
+        mvd = LIST_INDEX( mvd_t, client->layout_cursor, &mvd_ready, entry );
+        if( mvd ) {
             MVD_TrySwitchChannel( client, mvd );
-            return;
         }
-        cursor++;
+        return;
     }
 }
 
@@ -1011,7 +1003,7 @@ static void MVD_GameInit( void ) {
     cvar_t *mvd_default_map;
     char buffer[MAX_QPATH];
     unsigned checksum;
-    const char *error;
+    //const char *error;
 	int i;
 
 	Com_Printf( "----- MVD_GameInit -----\n" );
@@ -1029,7 +1021,7 @@ static void MVD_GameInit( void ) {
 
     Z_TagReserve( ( sizeof( edict_t ) +
         sizeof( udpClient_t ) ) * sv_maxclients->integer +
-        sizeof( edict_t ), TAG_GAME );
+        sizeof( edict_t ), TAG_MVD );
 	mvd_clients = Z_ReservedAllocz( sizeof( udpClient_t ) *
         sv_maxclients->integer );
     edicts = Z_ReservedAllocz( sizeof( edict_t ) *
@@ -1048,20 +1040,20 @@ static void MVD_GameInit( void ) {
     Com_sprintf( buffer, sizeof( buffer ),
         "maps/%s.bsp", mvd_default_map->string );
 
-    error = CM_LoadMapEx( &mvd->cm, buffer,
-        CM_LOAD_CLIENT|CM_LOAD_ENTONLY, &checksum );
-    if( error ) {
-        Com_WPrintf( "Couldn't load %s for the Waiting Room: %s\n", buffer, error );
+   // error = CM_LoadMapEx( &mvd->cm, buffer,
+     //   CM_LOAD_CLIENT|CM_LOAD_ENTONLY, &checksum );
+    //if( error ) {
+        //Com_WPrintf( "Couldn't load %s for the Waiting Room: %s\n", buffer, error );
         Cvar_Reset( mvd_default_map );
         strcpy( buffer, "maps/q2dm1.bsp" );
         checksum = 80717714;
         VectorSet( mvd->spawnOrigin, 984, 192, 784 );
         VectorSet( mvd->spawnAngles, 25, 72, 0 );
-    } else {
+    //} else {
         // get the spectator spawn point
-        MVD_ParseEntityString( mvd );
-        CM_FreeMap( &mvd->cm );
-    }
+       // MVD_ParseEntityString( mvd );
+        //CM_FreeMap( &mvd->cm );
+    //}
 
     strcpy( mvd->name, "Waiting Room" );
     Cvar_VariableStringBuffer( "game", mvd->gamedir, sizeof( mvd->gamedir ) );

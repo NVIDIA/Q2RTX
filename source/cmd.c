@@ -20,12 +20,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // cmd.c -- Quake script command processing module
 
 #include "com_local.h"
+#include "files.h"
 #include "q_list.h"
 
 #define Cmd_Malloc( size )		        Z_TagMalloc( size, TAG_CMD )
 #define Cmd_CopyString( string )		Z_TagCopyString( string, TAG_CMD )
-
-cmdAPI_t	cmd;
 
 /*
 =============================================================================
@@ -390,7 +389,7 @@ static void Cmd_UnAlias_f( void ) {
 	Z_Free( a );
 }
 
-#ifndef DEDICATED_ONLY
+#if USE_CLIENT
 void Cmd_WriteAliases( fileHandle_t f ) {
     cmdalias_t *a;
 
@@ -1465,23 +1464,6 @@ static void Cmd_Complete_f( void ) {
 void Com_Mixed_c( genctx_t *ctx, int argnum ) {
 }
 
-/*
-============
-Cmd_FillAPI
-============
-*/
-void Cmd_FillAPI( cmdAPI_t *api ) {
-	api->AddCommand = Cmd_AddCommand;
-	api->Register = Cmd_Register;
-	api->Deregister = Cmd_Deregister;
-	api->RemoveCommand = Cmd_RemoveCommand;
-	api->Argc = Cmd_Argc;
-	api->Argv = Cmd_Argv;
-	api->ArgsFrom = Cmd_ArgsFrom;
-	api->ExecuteText = Cbuf_ExecuteText;
-	api->FindFunction = Cmd_FindFunction;
-}
-
 static const cmdreg_t c_cmd[] = {
     { "cmdlist", Cmd_List_f },
     { "macrolist", Cmd_MacroList_f },
@@ -1516,6 +1498,5 @@ void Cmd_Init( void ) {
     }
 
     Cmd_Register( c_cmd );
-	Cmd_FillAPI( &cmd );
 }
 

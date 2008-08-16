@@ -20,7 +20,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <config.h>
 #include "q_shared.h"
-#include "com_public.h"
 #include "protocol.h"
 #include "q_msg.h"
 

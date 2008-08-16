@@ -1,43 +1,40 @@
-# -----------------------------
-# q2pro makefile by [SkulleR]
-# -----------------------------
+# Copyright (C) 2008 Andrey Nazarov
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+#
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 include ../config.mk
 
 TARGET=../q2proded$(EXESUFFIX)
 
-CFLAGS+=-DDEDICATED_ONLY
+CFLAGS+=-DUSE_CLIENT=0
 LDFLAGS+=-lm
 
-SRCFILES=cmd.c cmodel.c common.c crc.c cvar.c \
-	files.c mdfour.c net_common.c net_chan.c pmove.c sv_ccmds.c \
-	sv_ents.c sv_game.c sv_init.c sv_main.c sv_send.c \
-	sv_user.c sv_world.c sv_mvd.c sv_http.c \
-	mvd_client.c mvd_parse.c mvd_game.c \
-	q_shared.c q_msg.c q_field.c prompt.c cl_null.c
+include $(SRCDIR)/build/common.mk
 
-ifdef USE_ANTICHEAT
-SRCFILES+=sv_ac.c
-endif
+SRCFILES+=cl_null.c
 
-ifdef USE_ZLIB
-SRCFILES+=ioapi.c unzip.c 
-CFLAGS+=$(ZLIB_CFLAGS)
-LDFLAGS+=$(ZLIB_LDFLAGS)
-endif
+include $(SRCDIR)/build/server.mk
 
 ifdef MINGW
 SRCFILES+=sys_win.c
 LDFLAGS+=-mconsole -lws2_32 -lwinmm -ladvapi32
 RESFILES+=q2proded.rc
-RESFLAGS+=-DDEDICATED_ONLY
 else
 SRCFILES+=sys_unix.c
 LDFLAGS+=-ldl
-endif
-
-ifdef USE_ASM
-ASMFILES=math.s
 endif
 
 include $(SRCDIR)/build/target.mk

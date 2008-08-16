@@ -19,9 +19,7 @@ Description: Enhanced Quake2 engine (graphical client)
  increased security and overall performance, basic built-in demo editing
  capabilities, built-in server and demo browsers.
  .
- Both OpenGL and software refresh modules are included, so that 3D graphics
- accelerator is not mandatory to play Q2PRO, although recommended to
- take most of Q2PRO features.
+ This version of Q2PRO requires 3D graphics accelerator to play.
  .
  Homepage: http://q2pro.sf.net/
 

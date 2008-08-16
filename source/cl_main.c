@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // cl_main.c  -- client main loop
 
 #include "cl_local.h"
+#include "d_md2.h"
 
 cvar_t	*adr0;
 cvar_t	*adr1;
@@ -343,7 +344,9 @@ static void CL_CheckForResend( void ) {
         cls.passive = qfalse;
 
         Con_Close();
+#if USE_UI
         UI_OpenMenu( UIMENU_NONE );
+#endif
     }
 
     // resend if we haven't gotten a reply yet
@@ -481,7 +484,9 @@ usage:
 	Cvar_Set( "timedemo", "0" );
 
     Con_Close();
+#if USE_UI
     UI_OpenMenu( UIMENU_NONE );
+#endif
 }
 
 static void CL_PassiveConnect_f( void ) {
@@ -583,7 +588,7 @@ void CL_ClearState( void ) {
     LOC_FreeLocations();
 
     // wipe the entire cl structure
-	CM_FreeMap( &cl.cm );
+	BSP_Free( cl.bsp );
     memset( &cl, 0, sizeof( cl ) );
     memset( &cl_entities, 0, sizeof( cl_entities ) );
 
@@ -605,9 +610,6 @@ void CL_Disconnect( comErrorType_t type, const char *text ) {
     if( cls.state > ca_disconnected ) {
         EXEC_TRIGGER( cl_disconnectcmd );
     }
-
-    if( cls.ref_initialized )
-        ref.CinematicSetPalette( NULL );
 
     cls.connect_time = 0;
 	cls.connect_count = 0;
@@ -660,7 +662,9 @@ void CL_Disconnect( comErrorType_t type, const char *text ) {
     cls.messageString[ 0 ] = 0;
 	cls.userinfo_modified = 0;
 
+#if USE_UI
 	UI_ErrorMenu( type, text );
+#endif
 }
 
 /*
@@ -872,11 +876,13 @@ static void CL_ParsePrintMessage( void ) {
 			break;
 		case REQ_INFO:
 			break;
+#if USE_UI
 		case REQ_PING:
 			if( CL_ServerStatusResponse( string, &net_from, &serverStatus ) ) {
 				UI_AddToServerList( &serverStatus );
 			}
 			break;
+#endif
 		case REQ_RCON:
 			Com_Printf( "%s", string );
 			CL_AddRequest( &net_from, REQ_RCON );
@@ -1411,7 +1417,7 @@ static void CL_ConnectionlessPacket( void ) {
 CL_PacketEvent
 =================
 */
-void CL_PacketEvent( neterr_t ret ) {
+static void CL_PacketEvent( neterr_t ret ) {
     //
     // remote command packet
     //
@@ -1573,7 +1579,7 @@ static void CL_RegisterModels( void ) {
             break;
         }
         if( name[0] == '*' )
-            cl.model_clip[i] = CM_InlineModel( &cl.cm, name );
+            cl.model_clip[i] = BSP_InlineModel( cl.bsp, name );
         else
             cl.model_clip[i] = NULL;
 	}
@@ -1603,9 +1609,8 @@ static void *precache_model; // used for skin checking in alias models
 static const char env_suf[6][3] = { "rt", "bk", "lf", "ft", "up", "dn" };
 
 void CL_RequestNextDownload ( void ) {
-    unsigned map_checksum;		// for detecting cheater maps
     char fn[ MAX_QPATH ];
-    dmdl_t *pheader;
+    dmd2header_t *pheader;
     size_t length;
 
     if ( cls.state != ca_connected && cls.state != ca_loading )
@@ -1648,10 +1653,10 @@ void CL_RequestNextDownload ( void ) {
                         precache_check++;
                         continue; // couldn't load it
                     }
-                    pheader = ( dmdl_t * ) precache_model;
+                    pheader = ( dmd2header_t * ) precache_model;
                     if( length < sizeof( *pheader ) ||
-                        LittleLong( pheader->ident ) != IDALIASHEADER ||
-                        LittleLong( pheader->version ) != ALIAS_VERSION )
+                        LittleLong( pheader->ident ) != MD2_IDENT ||
+                        LittleLong( pheader->version ) != MD2_VERSION )
                     {
                         // not an alias model
                         FS_FreeFile( precache_model );
@@ -1662,8 +1667,8 @@ void CL_RequestNextDownload ( void ) {
                     }
                     num_skins = LittleLong( pheader->num_skins );
                     ofs_skins = LittleLong( pheader->ofs_skins );
-                    end_skins = ofs_skins + num_skins * MAX_SKINNAME;
-                    if( num_skins > MAX_MD2SKINS || end_skins < ofs_skins || end_skins > length ) {
+                    end_skins = ofs_skins + num_skins * MD2_MAX_SKINNAME;
+                    if( num_skins > MD2_MAX_SKINS || end_skins < ofs_skins || end_skins > length ) {
                         // bad alias model
                         FS_FreeFile( precache_model );
                         precache_model = NULL;
@@ -1673,13 +1678,13 @@ void CL_RequestNextDownload ( void ) {
                     }
                 }
 
-                pheader = ( dmdl_t * ) precache_model;
+                pheader = ( dmd2header_t * ) precache_model;
                 num_skins = LittleLong( pheader->num_skins );
                 ofs_skins = LittleLong( pheader->ofs_skins );
 
                 while ( precache_model_skin - 1 < num_skins ) {
                     Q_strncpyz( fn, ( char * )precache_model + ofs_skins +
-                        ( precache_model_skin - 1 ) * MAX_SKINNAME, sizeof( fn ) );
+                        ( precache_model_skin - 1 ) * MD2_MAX_SKINNAME, sizeof( fn ) );
                     if ( !CL_CheckOrDownloadFile( fn ) ) {
                         precache_model_skin++;
                         return; // started a download
@@ -1808,12 +1813,15 @@ void CL_RequestNextDownload ( void ) {
     if ( precache_check == ENV_CNT ) {
         precache_check = ENV_CNT + 1;
 
-        CM_LoadMap ( &cl.cm, cl.configstrings[ CS_MODELS + 1 ], CM_LOAD_CLIENT, &map_checksum );
+        if( ( cl.bsp = BSP_Load( cl.configstrings[ CS_MODELS + 1 ] ) ) == NULL ) {
+            Com_Error( ERR_DROP, "Couldn't load %s: %s",
+                cl.configstrings[ CS_MODELS + 1 ], BSP_GetError() );
+        }
 
 #if USE_MAPCHECKSUM
-        if ( map_checksum != atoi( cl.configstrings[ CS_MAPCHECKSUM ] ) ) {
+        if ( cl.bsp->checksum != atoi( cl.configstrings[ CS_MAPCHECKSUM ] ) ) {
             Com_Error ( ERR_DROP, "Local map version differs from server: %i != '%s'\n",
-                        map_checksum, cl.configstrings[ CS_MAPCHECKSUM ] );
+                        cl.bsp->checksum, cl.configstrings[ CS_MAPCHECKSUM ] );
             return;
         }
 #endif
@@ -1846,8 +1854,8 @@ void CL_RequestNextDownload ( void ) {
     // confirm existance of textures, download any that don't exist
     if ( precache_check == TEXTURE_CNT + 1 ) {
         if ( allow_download->integer && allow_download_maps->integer ) {
-			while ( precache_tex < cl.cm.cache->numtexinfo ) {
-				char *texname = cl.cm.cache->surfaces[ precache_tex++ ].rname;
+			while ( precache_tex < cl.bsp->numtexinfo ) {
+				char *texname = cl.bsp->texinfo[ precache_tex++ ].name;
 
                 // Also check if 32bit images are present
                 Q_concat( fn, sizeof( fn ), "textures/", texname, ".jpg", NULL );
@@ -1908,8 +1916,10 @@ static void CL_Precache_f( void ) {
     //Yet another hack to let old demos work
     //the old precache sequence
     if( cls.demo.playback ) {
-        CM_LoadMap( &cl.cm, cl.configstrings[ CS_MODELS + 1 ],
-            CM_LOAD_CLIENT, NULL );
+        if( ( cl.bsp = BSP_Load( cl.configstrings[ CS_MODELS + 1 ] ) ) == NULL ) {
+            Com_Error( ERR_DROP, "Couldn't load %s: %s",
+                cl.configstrings[ CS_MODELS + 1 ], BSP_GetError() );
+        }
         CL_RegisterModels();
         CL_PrepRefresh();
         CL_LoadState( LOAD_SOUNDS );
@@ -2194,39 +2204,46 @@ Flush caches and restart the VFS.
 void CL_RestartFilesystem( void ) {
     int	cls_state;
 
-    if ( !cl_running->integer ) {
+    if( !cl_running->integer ) {
         FS_Restart();
         return;
     }
 
     // temporary switch to loading state
     cls_state = cls.state;
-    if ( cls.state >= ca_precached ) {
+    if( cls.state >= ca_precached ) {
         cls.state = ca_loading;
     }
 
+#if USE_UI
     UI_Shutdown();
+#endif
 
     S_StopAllSounds();
 	S_FreeAllSounds();
 
     if( cls.ref_initialized ) {
-        ref.Shutdown( qfalse );
+        R_Shutdown( qfalse );
 
         FS_Restart();
 
-        ref.Init( qfalse );
+        R_Init( qfalse );
 
         SCR_RegisterMedia();
         Con_RegisterMedia();
+#if USE_UI
         UI_Init();
+#endif
     } else {
         FS_Restart();
     }
 
-    if ( cls_state == ca_disconnected ) {
+#if USE_UI
+    if( cls_state == ca_disconnected ) {
         UI_OpenMenu( UIMENU_MAIN );
-    } else if ( cls_state >= ca_loading ) {
+    } else
+#endif
+    if( cls_state >= ca_loading ) {
         CL_LoadState( LOAD_MAP );
         CL_RegisterModels();
         CL_PrepRefresh();
@@ -2237,7 +2254,6 @@ void CL_RestartFilesystem( void ) {
 
     // switch back to original state
     cls.state = cls_state;
-
 }
 
 /*
@@ -2265,9 +2281,12 @@ static void CL_RestartRefresh_f( void ) {
     CL_InitRefresh();
     IN_Init();
 
-    if ( cls_state == ca_disconnected ) {
+#if USE_UI
+    if( cls_state == ca_disconnected ) {
         UI_OpenMenu( UIMENU_MAIN );
-    } else if ( cls_state >= ca_loading ) {
+    } else
+#endif
+    if( cls_state >= ca_loading ) {
         CL_LoadState( LOAD_MAP );
         CL_PrepRefresh();
         CL_LoadState( LOAD_FINISH );
@@ -2803,6 +2822,40 @@ void CL_Frame( int msec ) {
     main_extra = 0;
 }
 
+/*
+============
+CL_ProcessEvents
+============
+*/
+void CL_ProcessEvents( void ) {
+    neterr_t ret;
+
+	if( !cl_running->integer ) {
+        return;
+    }
+
+    CL_RunRefresh();
+
+	IN_Frame();
+
+	memset( &net_from, 0, sizeof( net_from ) );
+	net_from.type = NA_LOOPBACK;
+
+    // process loopback packets
+    while( NET_GetLoopPacket( NS_CLIENT ) ) {
+        CL_PacketEvent( NET_OK );
+    }
+
+    do {
+        ret = NET_GetPacket( NS_CLIENT );
+        if( ret == NET_AGAIN ) {
+            break;
+        }
+		CL_PacketEvent( ret );
+    } while( ret == NET_OK );
+
+}
+
 //============================================================================
 
 /*
@@ -2841,7 +2894,9 @@ void CL_Init( void ) {
     }
 #endif
 
+#if USE_UI
     UI_OpenMenu( UIMENU_MAIN );
+#endif
 
     Con_PostInit();
     Con_RunConsole();

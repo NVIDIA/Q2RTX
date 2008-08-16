@@ -28,8 +28,66 @@ lightmapBuilder_t lm;
 
 static cvar_t   *gl_coloredlightmaps;
 static cvar_t   *gl_brightness;
+static cvar_t   *gl_modulate_mask;
 
-cvar_t *gl_modulate_hack;
+static float colorScale, colorAdj;
+
+/*
+=============================================================================
+
+LIGHTMAP COLOR ADJUSTING
+
+=============================================================================
+*/
+
+void GL_AdjustColor( byte *dst, const byte *src, int what ) {
+    float r, g, b, min, max, mid;
+
+    r = src[0];
+    g = src[1];
+    b = src[2];
+
+    if( colorScale != 1.0f ) {
+        min = max = r;
+        if ( g < min ) min = g;
+        if ( b < min ) min = b;
+        if ( g > max ) max = g;
+        if ( b > max ) max = b;
+        mid = 0.5 * ( min + max );
+        r = mid + ( r - mid ) * colorScale;
+        g = mid + ( g - mid ) * colorScale;
+        b = mid + ( b - mid ) * colorScale;
+    }
+
+    if( gl_modulate_mask->integer & what ) {
+        r *= gl_modulate->value;
+        g *= gl_modulate->value;
+        b *= gl_modulate->value;
+    } 
+
+    max = g;
+    if( r > max ) {
+        max = r;
+    }
+    if( b > max ) {
+        max = b;
+    }
+
+    if( max > 255 ) {
+        r *= 255.0f / max;
+        g *= 255.0f / max;
+        b *= 255.0f / max;
+    }
+
+    // atu brightness adjustments
+    r += colorAdj;
+    g += colorAdj;
+    b += colorAdj;
+
+    dst[0] = clamp( r, 0, 255 );
+    dst[1] = clamp( g, 0, 255 );
+    dst[2] = clamp( b, 0, 255 );
+}
 
 /*
 =============================================================================
@@ -38,8 +96,6 @@ LIGHTMAPS BUILDING
 
 =============================================================================
 */
-
-static float colorScale, brightness;
 
 static qboolean LM_AllocBlock( int w, int h, int *s, int *t ) {
     int i, j;
@@ -100,7 +156,7 @@ static void LM_UploadBlock( void ) {
     }
 }
 
-static void LM_BuildSurfaceLightmap( bspSurface_t *surf, vec_t *vbo ) {
+static void LM_BuildSurfaceLightmap( mface_t *surf, vec_t *vbo ) {
     byte *ptr, *dst, *src;
     int i, j;
     int smax, tmax, s, t;
@@ -126,63 +182,7 @@ static void LM_BuildSurfaceLightmap( bspSurface_t *surf, vec_t *vbo ) {
     for( i = 0; i < tmax; i++ ) {
         ptr = dst;
         for( j = 0; j < smax; j++ ) {
-			float r, g, b, min, max, mid;
-
-			r = src[0];
-			g = src[1];
-			b = src[2];
-
-			if( colorScale != 1.0f ) {
-			min = max = r;
-				if ( g < min ) min = g;
-				if ( b < min ) min = b;
-				if ( g > max ) max = g;
-				if ( b > max ) max = b;
-				mid = 0.5 * ( min + max );
-				r = mid + ( r - mid ) * colorScale;
-				g = mid + ( g - mid ) * colorScale;
-				b = mid + ( b - mid ) * colorScale;
-			}
-
-			if( !gl_modulate_hack->integer ) {
-				r *= gl_modulate->value;
-				g *= gl_modulate->value;
-				b *= gl_modulate->value;
-			} 
-
-			max = g;
-			if( r > max ) {
-				max = r;
-			}
-			if( b > max ) {
-				max = b;
-			}
-
-			if( max > 255 ) {
-				r *= 255.0f / max;
-				g *= 255.0f / max;
-				b *= 255.0f / max;
-			}
-
-			//atu brightness adjustments
-			brightness = 255.0f * gl_brightness->value;
-			r += brightness;
-			g += brightness;
-			b += brightness;
-			if ( r > 255.0f ) r = 255.0f;
-			else if ( r < 0.0f ) r = 0.0f;
-			if ( g > 255.0f ) g = 255.0f;
-			else if ( g < 0.0f ) g = 0.0f;
-			if ( b > 255.0f ) b = 255.0f;
-			else if ( b < 0.0f ) b = 0.0f;
-
-			src[0] = r;
-			src[1] = g;
-			src[2] = b;
-
-			ptr[0] = src[0];
-            ptr[1] = src[1];
-            ptr[2] = src[2];
+            GL_AdjustColor( ptr, src, 1 );
             ptr[3] = 255;
 
             src += 3; ptr += 4;
@@ -198,7 +198,7 @@ static void LM_BuildSurfaceLightmap( bspSurface_t *surf, vec_t *vbo ) {
     s -= surf->texturemins[0]; 
     t -= surf->texturemins[1];
 
-    for( i = 0; i < surf->numVerts; i++ ) {
+    for( i = 0; i < surf->numsurfedges; i++ ) {
         vbo[5] += s;
         vbo[6] += t;
         vbo[5] /= LM_BLOCK_WIDTH * 16;
@@ -215,38 +215,23 @@ POLYGONS BUILDING
 =============================================================================
 */
 
-static void GL_BuildSurfacePoly( bspSurface_t *surf, vec_t *vbo ) {
-	int *src_surfedge;
-	dvertex_t *src_vert;
-	dedge_t *src_edge;
-	bspTexinfo_t *texinfo = surf->texinfo;
-	int index, vertIndex;
-    int i, numEdges = surf->numSurfEdges;
+static void GL_BuildSurfacePoly( bsp_t *bsp, mface_t *surf, vec_t *vbo ) {
+	msurfedge_t *src_surfedge;
+	mvertex_t *src_vert;
+	medge_t *src_edge;
+	mtexinfo_t *texinfo = surf->texinfo;
+    int i;
     vec2_t scale, tc, mins, maxs;
     int bmins[2], bmaxs[2];
 	
-	surf->numVerts = numEdges;
-	surf->numIndices = ( numEdges - 2 ) * 3;
     surf->texnum[0] = texinfo->image->texnum;
-    surf->texflags = texinfo->flags;
-
-    if( texinfo->flags & SURF_WARP ) {
-        if( qglProgramStringARB ) {
-            surf->type = DSURF_WARP;
-            surf->texnum[1] = r_warptexture->texnum;
-        } else {
-		    surf->type = DSURF_NOLM;
-        }
-    } else if( !surf->lightmap || gl_fullbright->integer || ( texinfo->flags & NOLIGHT_MASK ) ) {
-		surf->type = DSURF_NOLM;
-	} else {
-		surf->type = DSURF_POLY;
-	}
 
     // normalize texture coordinates
     scale[0] = 1.0f / texinfo->image->width;
     scale[1] = 1.0f / texinfo->image->height;
-    if( surf->type == DSURF_WARP ) {
+
+    if( ( texinfo->c.flags & SURF_WARP ) && qglProgramStringARB ) {
+        surf->texnum[1] = r_warptexture->texnum;
         scale[0] *= 0.5f;
         scale[1] *= 0.5f;
     }
@@ -254,22 +239,11 @@ static void GL_BuildSurfacePoly( bspSurface_t *surf, vec_t *vbo ) {
 	mins[0] = mins[1] = 99999;
 	maxs[0] = maxs[1] = -99999;
 
-	src_surfedge = surf->firstSurfEdge;
-	for( i = 0; i < numEdges; i++ ) {
-		index = *src_surfedge++;
-		
-		vertIndex = 0;
-		if( index < 0 ) {
-			index = -index;
-			vertIndex = 1;
-		}
-
-		if( index >= r_world.numEdges ) {
-            Com_Error( ERR_DROP, "%s: bad edge index", __func__ );
-		}
-
-		src_edge = r_world.edges + index;
-		src_vert = r_world.vertices + src_edge->v[vertIndex];
+	src_surfedge = surf->firstsurfedge;
+	for( i = 0; i < surf->numsurfedges; i++ ) {
+		src_edge = src_surfedge->edge;
+		src_vert = src_edge->v[src_surfedge->vert];
+        src_surfedge++;
 
         // vertex coordinates
 		VectorCopy( src_vert->point, vbo );
@@ -288,7 +262,7 @@ static void GL_BuildSurfacePoly( bspSurface_t *surf, vec_t *vbo ) {
         vbo[4] = tc[1] * scale[1];
 
         // texture1 coordinates
-        if( surf->type == DSURF_WARP ) {
+        if( ( texinfo->c.flags & SURF_WARP ) && qglProgramStringARB ) {
             vbo[5] = vbo[3];
             vbo[6] = vbo[4];
         } else {
@@ -312,84 +286,84 @@ static void GL_BuildSurfacePoly( bspSurface_t *surf, vec_t *vbo ) {
 	surf->extents[1] = ( bmaxs[1] - bmins[1] ) << 4;
 }
 
-static void GL_BuildSkyPoly( bspSurface_t *surf ) {
-	int *src_surfedge;
-	dvertex_t *src_vert;
-	dedge_t *src_edge;
-	bspTexinfo_t *texinfo = surf->texinfo;
-	int index, vertIndex;
-    int i, numEdges = surf->numSurfEdges;
-    vec_t *dst_vert;
-	
-	surf->numVerts = numEdges;
-	surf->numIndices = ( numEdges - 2 ) * 3;
-    surf->texnum[0] = texinfo->image->texnum;
-    surf->texflags = texinfo->flags;
-	surf->type = DSURF_SKY;
+void GL_FreeWorld( void ) {
+    if( !gl_static.world.cache ) {
+        return;
+    }
 
-    surf->vertices = sys.HunkAlloc( &r_world.pool,
-        numEdges * 3 * sizeof( vec_t ) );
+    BSP_Free( gl_static.world.cache );
 
-	src_surfedge = surf->firstSurfEdge;
-    dst_vert = surf->vertices;
-	for( i = 0; i < numEdges; i++ ) {
-		index = *src_surfedge++;
-		
-		vertIndex = 0;
-		if( index < 0 ) {
-			index = -index;
-			vertIndex = 1;
-		}
+    if( gl_static.world.vertices ) {
+        Hunk_Free( &gl_static.world.pool );
+    } else if( qglDeleteBuffersARB ) {
+        GLuint buf = 1;
 
-		if( index >= r_world.numEdges ) {
-            Com_Error( ERR_DROP, "%s: bad edge index", __func__ );
-		}
+        qglDeleteBuffersARB( 1, &buf );
+    }
 
-		src_edge = r_world.edges + index;
-		src_vert = r_world.vertices + src_edge->v[vertIndex];
-
-		VectorCopy( src_vert->point, dst_vert );
-
-		dst_vert += 3;
-	}
-}
-
-void GL_BeginPostProcessing( void ) {
     lm.numMaps = 0;
     LM_InitBlock();
-
-	gl_coloredlightmaps = cvar.Get( "gl_coloredlightmaps", "1", CVAR_ARCHIVE|CVAR_FILES );
-	gl_brightness = cvar.Get( "gl_brightness", "0", CVAR_ARCHIVE|CVAR_FILES );
-	gl_modulate_hack = cvar.Get( "gl_modulate_hack", "0", CVAR_FILES );
-
-	if( gl_coloredlightmaps->value < 0 ) {
-		cvar.Set( "gl_coloredlightmaps", "0" );
-	} else if( gl_coloredlightmaps->value > 1 ) {
-		cvar.Set( "gl_coloredlightmaps", "1" );
-	}
-
-	if( gl_brightness->value < -1 ) {
-		cvar.Set( "gl_brightness", "-1" );
-	} else if( gl_brightness->value > 1 ) {
-		cvar.Set( "gl_brightness", "1" );
-	}
-
-	brightness = gl_brightness->value;
-	colorScale = gl_coloredlightmaps->value;
+    
+    memset( &gl_static.world, 0, sizeof( gl_static.world ) );
 }
     
-void GL_EndPostProcessing( void ) {
-    bspSurface_t *surf;
+void GL_LoadWorld( const char *name ) {
+    char buffer[MAX_QPATH];
+    mface_t *surf;
     int i, size, count;
-    vec_t *vbo = NULL;
-   
+    vec_t *vbo;
+    bsp_t *bsp;
+    mtexinfo_t *info;
+    image_t *image;
+
+    if( !( bsp = BSP_Load( name ) ) ) {
+        Com_Error( ERR_DROP, "%s: couldn't load %s: %s",
+            __func__, name, BSP_GetError() );
+    }
+
+	// check if the required world model was already loaded
+    if( gl_static.world.cache == bsp ) {
+        for( i = 0; i < bsp->numtexinfo; i++ ) {
+            bsp->texinfo[i].image->registration_sequence = registration_sequence;
+        }
+	    for( i = 0; i < bsp->numnodes; i++ ) {
+            bsp->nodes[i].visframe = 0;
+        }
+	    for( i = 0; i < bsp->numleafs; i++ ) {
+            bsp->leafs[i].visframe = 0;
+        }
+		Com_DPrintf( "%s: reused old world model\n", __func__ );
+        bsp->refcount--;
+        return;
+    }
+
+	gl_coloredlightmaps = Cvar_Get( "gl_coloredlightmaps", "1", CVAR_ARCHIVE|CVAR_FILES );
+	gl_brightness = Cvar_Get( "gl_brightness", "0", CVAR_ARCHIVE|CVAR_FILES );
+	gl_modulate_mask = Cvar_Get( "gl_modulate_mask", "3", CVAR_FILES );
+
+	colorScale = Cvar_ClampValue( gl_coloredlightmaps, 0, 1 );
+	colorAdj = 255 * Cvar_ClampValue( gl_brightness, -1, 1 );
+
+    // free previous model, if any
+    GL_FreeWorld();
+
+    gl_static.world.cache = bsp;
+
+    // registers all texinfo
+    for( i = 0, info = bsp->texinfo; i < bsp->numtexinfo; i++, info++ ) {
+		Q_concat( buffer, sizeof( buffer ), "textures/", info->name, ".wal", NULL );
+        image = IMG_Find( buffer, it_wall );
+        info->image = image ? image : r_notexture;
+    }
+
     // calculate vertex buffer size in bytes
     count = 0;
-    for( i = 0, surf = r_world.surfaces; i < r_world.numSurfaces; i++, surf++ ) {
-        count += surf->numSurfEdges;
+    for( i = 0, surf = bsp->faces; i < bsp->numfaces; i++, surf++ ) {
+        count += surf->numsurfedges;
     }
     size = count * VERTEX_SIZE * 4;
 
+    vbo = NULL;
     if( qglBindBufferARB ) {
         qglBindBufferARB( GL_ARRAY_BUFFER_ARB, 1 );
         
@@ -399,7 +373,7 @@ void GL_EndPostProcessing( void ) {
 
         vbo = qglMapBufferARB( GL_ARRAY_BUFFER_ARB, GL_READ_WRITE_ARB );
         if( vbo ) {
-            gl_static.vertices = NULL;
+            gl_static.world.vertices = NULL;
             Com_DPrintf( "%s: %d bytes of vertex data as VBO\n", __func__, size );
         } else {
             Com_EPrintf( "Failed to map VBO data in client memory\n" );
@@ -408,29 +382,34 @@ void GL_EndPostProcessing( void ) {
     }
     
     if( !vbo ) {
-        gl_static.vertices = vbo = sys.HunkAlloc( &r_world.pool, size );
+        Hunk_Begin( &gl_static.world.pool, size );
+        vbo = Hunk_Alloc( &gl_static.world.pool, size );
+        Hunk_End( &gl_static.world.pool );
+
         Com_DPrintf( "%s: %d bytes of vertex data on hunk\n", __func__, size );
+        gl_static.world.vertices = vbo;
     }
 
     // post process all surfaces
     count = 0;
-    for( i = 0, surf = r_world.surfaces; i < r_world.numSurfaces; i++, surf++ ) {
-        if( surf->texinfo->flags & SURF_SKY ) {
-            GL_BuildSkyPoly( surf );
+    for( i = 0, surf = bsp->faces; i < bsp->numfaces; i++, surf++ ) {
+        if( surf->texinfo->c.flags & SURF_SKY ) {
             continue;
         }
-        surf->firstVert = count;
-        GL_BuildSurfacePoly( surf, vbo );
+        surf->firstvert = count;
+        GL_BuildSurfacePoly( bsp, surf, vbo );
 
-        if( surf->type == DSURF_POLY ) {
+        if( surf->lightmap && !gl_fullbright->integer &&
+            !( surf->texinfo->c.flags & SURF_NOLM_MASK ) )
+        {
             LM_BuildSurfaceLightmap( surf, vbo );
         }
 
-        count += surf->numVerts;
-        vbo += surf->numVerts * VERTEX_SIZE;
+        count += surf->numsurfedges;
+        vbo += surf->numsurfedges * VERTEX_SIZE;
     }
     
-    if( qglBindBufferARB && !gl_static.vertices ) {
+    if( qglBindBufferARB && !gl_static.world.vertices ) {
         qglBindBufferARB( GL_ARRAY_BUFFER_ARB, 1 );
         if( !qglUnmapBufferARB( GL_ARRAY_BUFFER_ARB ) ) {
             Com_Error( ERR_DROP, "Failed to unmap VBO data" );

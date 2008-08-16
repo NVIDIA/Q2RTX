@@ -1334,7 +1334,7 @@ void AC_Connect( qboolean ismvd ) {
         return;
     }
 
-#ifndef DEDICATED_ONLY
+#if USE_CLIENT
     if( !dedicated->integer ) {
 		Com_Printf( "ANTICHEAT: Only supported on dedicated servers, disabling.\n" );
         Cvar_SetByVar( ac_required, "0", CVAR_SET_DIRECT );

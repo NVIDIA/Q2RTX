@@ -28,6 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "vid_local.h"
 #include "ref_public.h"
 #include "key_public.h"
+#include "cl_public.h"
 #include "q2pro.xbm"
 #include <SDL.h>
 #if USE_X11
@@ -48,7 +49,8 @@ typedef struct {
         grab_t      grabbed;
     } mouse;
 #ifdef __unix__
-    //PFNGLXGETVIDEOSYNCSGIPROC glXGetVideoSyncSGI;
+    PFNGLXGETVIDEOSYNCSGIPROC glXGetVideoSyncSGI;
+    PFNGLXSWAPINTERVALSGIPROC glXSwapIntervalSGI;
 #endif
 } sdl_state_t;
 
@@ -200,17 +202,17 @@ static qboolean SetMode( int flags, int forcedepth ) {
 success:
     SetHints();
     sdl.surface = surf;
-    ref.ModeChanged( rc.width, rc.height, sdl.flags, surf->pitch, surf->pixels );
+    R_ModeChanged( rc.width, rc.height, sdl.flags, surf->pitch, surf->pixels );
     SCR_ModeChanged();
     return qtrue;
 }
 
 /*
 ============
-VID_ModeChanged
+VID_SetMode
 ============
 */
-void VID_ModeChanged( void ) {
+void VID_SetMode( void ) {
     if( !SetMode( sdl.surface->flags, sdl.surface->format->BitsPerPixel ) ) {
         Com_Error( ERR_FATAL, "Couldn't change video mode: %s", SDL_GetError() );
     }
@@ -277,7 +279,7 @@ static qboolean InitVideo( void ) {
     return qtrue;
 }
 
-static void ShutdownVideo( void ) {
+void VID_Shutdown( void ) {
     if( sdl.flags & QVF_GAMMARAMP ) {
         SDL_SetGammaRamp( sdl.gamma[0], sdl.gamma[1], sdl.gamma[2] );
     }
@@ -293,7 +295,7 @@ static void ShutdownVideo( void ) {
     }
 }
 
-static void UpdateGamma( const byte *table ) {
+void VID_UpdateGamma( const byte *table ) {
     Uint16 ramp[256];
     int i;
 
@@ -449,7 +451,7 @@ void VID_PumpEvents( void ) {
             if( sdl.surface->flags & SDL_RESIZABLE ) {
                 Cvar_Set( "vid_geometry", va( "%dx%d",
                     event.resize.w, event.resize.h ) );
-                VID_ModeChanged();
+                VID_SetMode();
                 return;
             }
             break;
@@ -479,12 +481,62 @@ void VID_PumpEvents( void ) {
 /*
 ===============================================================================
 
-OPENGL SPECIFIC
+RENDERER SPECIFIC 
 
 ===============================================================================
 */
 
-static qboolean InitGL( void ) {
+#if USE_REF == REF_SOFT
+
+qboolean VID_Init( void ) {
+    if( !InitVideo() ) {
+        return qfalse;
+    }
+
+    if( !SetMode( SDL_SWSURFACE|SDL_HWPALETTE|SDL_RESIZABLE, 8 ) ) {
+        Com_EPrintf( "Couldn't set video mode: %s\n", SDL_GetError() );
+        VID_Shutdown();
+        return qfalse;
+    }
+
+    Activate();
+    return qtrue;
+}
+
+void VID_UpdatePalette( const byte *palette ) {
+    SDL_Color    colors[256];
+    SDL_Color    *c;
+
+    for( c = colors; c < colors + 256; c++ ) {
+        c->r = palette[0];
+        c->g = palette[1];
+        c->b = palette[2];
+        palette += 4;
+    }
+
+    SDL_SetPalette( sdl.surface, SDL_LOGPAL, colors, 0, 256 );
+}
+
+void VID_BeginFrame( void ) {
+     SDL_LockSurface( sdl.surface );
+}
+
+void VID_EndFrame( void ) {
+    SDL_UnlockSurface( sdl.surface );
+    SDL_Flip( sdl.surface );
+}
+
+#else // SOFTWARE_RENDERER
+
+static cvar_t *gl_swapinterval;
+
+static void gl_swapinterval_changed( cvar_t *self ) {
+	if( sdl.glXSwapIntervalSGI ) {
+	    sdl.glXSwapIntervalSGI( self->integer );
+	}
+}
+
+qboolean VID_Init( void ) {
     cvar_t *gl_driver;
 
     if( !InitVideo() ) {
@@ -492,6 +544,7 @@ static qboolean InitGL( void ) {
     }
 
     gl_driver = Cvar_Get( "gl_driver", DEFAULT_OPENGL_DRIVER, CVAR_LATCH );
+	gl_swapinterval = Cvar_Get( "gl_swapinterval", "1", CVAR_ARCHIVE );
 
     if( SDL_GL_LoadLibrary( gl_driver->string ) == -1 ) {
         Com_EPrintf( "Couldn't load OpenGL library: %s\n", SDL_GetError() );
@@ -510,13 +563,17 @@ static qboolean InitGL( void ) {
         Com_EPrintf( "Couldn't set video mode: %s\n", SDL_GetError() );
         goto fail;
     }
-//    sdl.glXGetVideoSyncSGI = SDL_GL_GetProcAddress( "glXGetVideoSyncSGI" );
+    sdl.glXGetVideoSyncSGI = SDL_GL_GetProcAddress( "glXGetVideoSyncSGI" );
+    sdl.glXSwapIntervalSGI = SDL_GL_GetProcAddress( "glXSwapIntervalSGI" );
+
+    gl_swapinterval->changed = gl_swapinterval_changed;
+    gl_swapinterval_changed( gl_swapinterval );
 
     Activate();
     return qtrue;
 
 fail:
-    ShutdownVideo();
+    VID_Shutdown();
     return qfalse;
 }
 
@@ -537,97 +594,24 @@ qboolean VideoSync( void ) {
 }
 #endif
 
-static void BeginFrameGL( void ) {
+void VID_BeginFrame( void ) {
 }
 
-static void EndFrameGL( void ) {
+void VID_EndFrame( void ) {
     SDL_GL_SwapBuffers();
 }
 
-/*
-============
-VID_FillGLAPI
-============
-*/
-void VID_FillGLAPI( videoAPI_t *api ) {
-    api->Init = InitGL;
-    api->Shutdown = ShutdownVideo;
-    api->UpdateGamma = UpdateGamma;
-    api->UpdatePalette = NULL;
-    api->GetProcAddr = SDL_GL_GetProcAddress;
-    api->BeginFrame = BeginFrameGL;
-    api->EndFrame = EndFrameGL;
+void *VID_GetProcAddr( const char *sym ) {
+    return SDL_GL_GetProcAddress( sym );
 }
+
+#endif // !SOFTWARE_RENDERER
+
 
 /*
 ===============================================================================
 
-SOFTWARE SPECIFIC
-
-===============================================================================
-*/
-
-#ifndef REF_HARD_LINKED
-
-static qboolean InitSoft( void ) {
-    if( !InitVideo() ) {
-        return qfalse;
-    }
-
-    if( !SetMode( SDL_SWSURFACE|SDL_HWPALETTE|SDL_RESIZABLE, 8 ) ) {
-        Com_EPrintf( "Couldn't set video mode: %s\n", SDL_GetError() );
-        ShutdownVideo();
-        return qfalse;
-    }
-
-    Activate();
-    return qtrue;
-}
-
-static void UpdatePalette( const byte *palette ) {
-    SDL_Color    colors[256];
-    SDL_Color    *c;
-
-    for( c = colors; c < colors + 256; c++ ) {
-        c->r = palette[0];
-        c->g = palette[1];
-        c->b = palette[2];
-        palette += 4;
-    }
-
-    SDL_SetPalette( sdl.surface, SDL_LOGPAL, colors, 0, 256 );
-}
-
-static void BeginFrameSoft( void ) {
-     SDL_LockSurface( sdl.surface );
-}
-
-static void EndFrameSoft( void ) {
-    SDL_UnlockSurface( sdl.surface );
-    SDL_Flip( sdl.surface );
-}
-
-/*
-============
-VID_FillSWAPI
-============
-*/
-void VID_FillSWAPI( videoAPI_t *api ) {
-    api->Init = InitSoft;
-    api->Shutdown = ShutdownVideo;
-    api->UpdateGamma = UpdateGamma;
-    api->UpdatePalette = UpdatePalette;
-    api->GetProcAddr = NULL;
-    api->BeginFrame = BeginFrameSoft;
-    api->EndFrame = EndFrameSoft;
-}
-
-#endif // !REF_HARD_LINKED
-
-/*
-===============================================================================
-
-SDL MOUSE DRIVER
+MOUSE DRIVER
 
 ===============================================================================
 */

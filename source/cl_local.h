@@ -21,12 +21,22 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "com_local.h"
 #include "q_list.h"
+#include "files.h"
+#include "sys_public.h"
+#include "pmove.h"
+#include "bsp.h"
+#include "cmodel.h"
+#include "protocol.h"
+#include "q_msg.h"
+#include "net_sock.h"
+#include "net_chan.h"
 #include "q_field.h"
 #include "ref_public.h"
 #include "key_public.h"
 #include "snd_public.h"
 #include "cl_public.h"
 #include "ui_public.h"
+#include "sv_public.h"
 #if USE_ZLIB
 #include <zlib.h>
 #endif
@@ -198,10 +208,10 @@ typedef struct client_state_s {
     //
     // locally derived information from server state
     //
-    cm_t        cm;
+    bsp_t        *bsp;
 
     qhandle_t model_draw[MAX_MODELS];
-    cmodel_t *model_clip[MAX_MODELS];
+    mmodel_t *model_clip[MAX_MODELS];
 
     qhandle_t sound_precache[MAX_SOUNDS];
     qhandle_t image_precache[MAX_IMAGES];
@@ -227,6 +237,17 @@ of server connections
 */
 
 #define CONNECT_DELAY    3000
+
+typedef enum {
+	ca_uninitialized,
+	ca_disconnected, 	// not talking to a server
+	ca_challenging,		// sending getchallenge packets to the server
+	ca_connecting,		// sending connect packets to the server
+	ca_connected,		// netchan_t established, waiting for svc_serverdata
+	ca_loading,			// loading level data
+    ca_precached,       // loaded level data, waiting for svc_frame
+	ca_active			// game views should be displayed
+} connstate_t;
 
 typedef struct client_static_s {
     connstate_t state;
@@ -643,6 +664,7 @@ void Char_Message( int key );
 //
 void    CL_InitRefresh( void );
 void    CL_ShutdownRefresh( void );
+void    CL_RunRefresh( void );
 
 //
 // cl_ui.c

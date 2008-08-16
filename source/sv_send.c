@@ -223,11 +223,9 @@ MULTICAST_PHS	send to clients potentially hearable from org
 */
 void SV_Multicast( vec3_t origin, multicast_t to ) {
 	client_t	*client;
-	byte		*mask;
-	cleaf_t		*leaf;
+	byte		mask[MAX_MAP_VIS];
+	mleaf_t		*leaf1, *leaf2;
     int         leafnum;
-	int			cluster;
-	int			area1, area2;
 	int			flags;
 	vec3_t		org;
 	player_state_t	*ps;
@@ -238,33 +236,30 @@ void SV_Multicast( vec3_t origin, multicast_t to ) {
 
 	switch( to ) {
 	case MULTICAST_ALL_R:
-		flags |= MSG_RELIABLE;	// intentional fallthrough
+		flags |= MSG_RELIABLE;	
         buf = &sv.mvd.message;
+        // intentional fallthrough
 	case MULTICAST_ALL:
-		area1 = 0;
+        leaf1 = NULL;
         leafnum = 0;
-		cluster = 0;
-		mask = NULL;
 		break;
 	case MULTICAST_PHS_R:
-		flags |= MSG_RELIABLE;	// intentional fallthrough
+		flags |= MSG_RELIABLE;
         buf = &sv.mvd.message;
+        // intentional fallthrough
 	case MULTICAST_PHS:
-		leaf = CM_PointLeaf( &sv.cm, origin );
-        leafnum = leaf - sv.cm.cache->leafs;
-		area1 = CM_LeafArea( leaf );
-		cluster = CM_LeafCluster( leaf );
-		mask = CM_ClusterPHS( &sv.cm, cluster );
+		leaf1 = CM_PointLeaf( &sv.cm, origin );
+        leafnum = leaf1 - sv.cm.cache->leafs;
+		BSP_ClusterVis( sv.cm.cache, mask, leaf1->cluster, DVIS_PHS );
 		break;
 	case MULTICAST_PVS_R:
-		flags |= MSG_RELIABLE;	// intentional fallthrough
+		flags |= MSG_RELIABLE;
         buf = &sv.mvd.message;
+        // intentional fallthrough
 	case MULTICAST_PVS:
-		leaf = CM_PointLeaf( &sv.cm, origin );
-        leafnum = leaf - sv.cm.cache->leafs;
-		area1 = CM_LeafArea( leaf );
-		cluster = CM_LeafCluster( leaf );
-		mask = CM_ClusterPVS( &sv.cm, cluster );
+		leaf1 = CM_PointLeaf( &sv.cm, origin );
+        leafnum = leaf1 - sv.cm.cache->leafs;
+		BSP_ClusterVis( sv.cm.cache, mask, leaf1->cluster, DVIS_PVS );
 		break;
 	default:
 		Com_Error( ERR_DROP, "SV_Multicast: bad to: %i", to );
@@ -282,23 +277,20 @@ void SV_Multicast( vec3_t origin, multicast_t to ) {
 			continue; 
 		}
 
-		if( mask ) {
+		if( leaf1 ) {
 			// find the client's PVS
 			ps = &client->edict->client->ps;
 			VectorMA( ps->viewoffset, 0.125f, ps->pmove.origin, org );
-			leaf = CM_PointLeaf( &sv.cm, org );
-			area2 = CM_LeafArea( leaf );
-			if( !CM_AreasConnected( &sv.cm, area1, area2 ) ) {
+			leaf2 = CM_PointLeaf( &sv.cm, org );
+			if( !CM_AreasConnected( &sv.cm, leaf1->area, leaf2->area ) ) {
 				continue;
             }
-			cluster = CM_LeafCluster( leaf );
-			if( !Q_IsBitSet( mask, cluster ) ) {
+			if( !Q_IsBitSet( mask, leaf2->cluster ) ) {
 				continue;
 			}
 		}
 
 		SV_ClientAddMessage( client, flags );
-
 	}
 
     // add to MVD datagram

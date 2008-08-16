@@ -155,9 +155,9 @@ typedef struct
 	void	(*WriteAngle) (float f);
 
 	// managed memory allocation
-	void	*(*TagMalloc) (size_t size, memtag_t tag);
+	void	*(*TagMalloc) (size_t size, unsigned tag);
 	void	(*TagFree) (void *block);
-	void	(*FreeTags) (memtag_t tag);
+	void	(*FreeTags) (unsigned tag);
 
 	// console variable interaction
 	cvar_t	*(*cvar) (const char *var_name, const char *value, int flags);

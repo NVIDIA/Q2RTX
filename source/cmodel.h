@@ -1,0 +1,86 @@
+/*
+Copyright (C) 1997-2001 Id Software, Inc.
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+
+See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+
+*/
+
+//
+// cmodel.h
+//
+
+typedef struct {
+    bsp_t       *cache;
+    int         *floodnums;     // if two areas have equal floodnums,
+                                // they are connected
+    qboolean    *portalopen;
+} cm_t;
+
+void        CM_Init( void );
+
+void        CM_FreeMap( cm_t *cm );
+qboolean    CM_LoadMap( cm_t *cm, const char *name );
+
+int         CM_NumClusters( cm_t *cm );
+int         CM_NumInlineModels( cm_t *cm );
+char        *CM_EntityString( cm_t *cm );
+mnode_t     *CM_NodeNum( cm_t *cm, int number );
+mleaf_t     *CM_LeafNum( cm_t *cm, int number );
+#define CM_InlineModel( cm, name ) BSP_InlineModel( (cm)->cache, name )
+
+#define CM_NumNode( cm, node )        ( (node) ? ( (node) - (cm)->cache->nodes ) : -1 )
+
+// creates a clipping hull for an arbitrary box
+mnode_t     *CM_HeadnodeForBox( vec3_t mins, vec3_t maxs );
+
+
+// returns an ORed contents mask
+int         CM_PointContents( vec3_t p, mnode_t *headnode );
+int         CM_TransformedPointContents( vec3_t p, mnode_t *headnode,
+                                        vec3_t origin, vec3_t angles );
+
+void        CM_BoxTrace( trace_t *trace, vec3_t start, vec3_t end,
+                          vec3_t mins, vec3_t maxs,
+                          mnode_t *headnode, int brushmask );
+void        CM_TransformedBoxTrace( trace_t *trace, vec3_t start, vec3_t end,
+                          vec3_t mins, vec3_t maxs,
+                          mnode_t * headnode, int brushmask,
+                          vec3_t origin, vec3_t angles );
+void        CM_ClipEntity( trace_t *dst, trace_t *src, struct edict_s *ent );
+
+// call with topnode set to the headnode, returns with topnode
+// set to the first node that splits the box
+int         CM_BoxLeafs( cm_t *cm, vec3_t mins, vec3_t maxs, mleaf_t **list,
+                        int listsize, mnode_t **topnode );
+mleaf_t     *CM_PointLeaf( cm_t *cm, vec3_t p );
+
+#define CM_LeafContents( leaf )        (leaf)->contents
+#define CM_LeafCluster( leaf )        (leaf)->cluster
+#define CM_LeafArea( leaf )        (leaf)->area
+
+byte        *CM_FatPVS( cm_t *cm, byte *mask, const vec3_t org );
+
+void        CM_SetAreaPortalState ( cm_t *cm, int portalnum, qboolean open );
+qboolean    CM_AreasConnected( cm_t *cm, int area1, int area2 );
+
+int         CM_WriteAreaBits( cm_t *cm, byte *buffer, int area );
+int         CM_WritePortalBits( cm_t *cm, byte *buffer );
+void        CM_SetPortalStates( cm_t *cm, byte *buffer, int bytes );
+qboolean    CM_HeadnodeVisible( mnode_t *headnode, byte *visbits );
+
+void        CM_WritePortalState( cm_t *cm, fileHandle_t f );
+void        CM_ReadPortalState( cm_t *cm, fileHandle_t f );
+

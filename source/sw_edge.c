@@ -116,7 +116,7 @@ void R_BeginEdgeFrame (void)
 	surface_p = &surfaces[2];	// background is surface 1,
 								//  surface 0 is a dummy
 	surfaces[1].spans = NULL;	// no background spans yet
-	surfaces[1].flags = SURF_DRAWBACKGROUND;
+	surfaces[1].flags = DSURF_BACKGROUND;
 
 // put the background behind everything in the world
 	if (sw_draworder->value)
@@ -128,7 +128,7 @@ void R_BeginEdgeFrame (void)
 	else
 	{
 		pdrawfunc = R_GenerateSpans;
-		surfaces[1].key = 0x7FFfFFFF;
+		surfaces[1].key = 0x7FFFFFFF;
 		r_currentkey = 0;
 	}
 
@@ -728,7 +728,7 @@ SURFACE FILLING
 =========================================================================
 */
 
-msurface_t		*pface;
+mface_t		*pface;
 surfcache_t		*pcurrentcache;
 vec3_t			transformed_modelorg;
 vec3_t			world_transformed_modelorg;
@@ -773,15 +773,10 @@ void D_FlatFillSurface( surf_t *surf, uint32_t color ) {
 	
 	for( span = surf->spans; span; span = span->pnext ) {
 		pdest = ( byte * )d_viewbuffer +
-			r_screenwidth * span->v + ( span->u << VID_SHIFT );
+			r_screenwidth * span->v + span->u;
 		count = span->count;
 		do {
-#ifdef TRUECOLOR_RENDERER
-			*( uint32_t * )pdest = color;
-#else
-			*pdest = color & 0xff;
-#endif
-			pdest += VID_BYTES;
+			*pdest++ = color & 0xff;
 		} while( --count );
 	}
 }
@@ -792,9 +787,9 @@ void D_FlatFillSurface( surf_t *surf, uint32_t color ) {
 D_CalcGradients
 ==============
 */
-void D_CalcGradients (msurface_t *pface)
+void D_CalcGradients (mface_t *pface)
 {
-	mplane_t	*pplane;
+	cplane_t	*pplane;
 	float		mipscale;
 	vec3_t		p_temp1;
 	vec3_t		p_saxis, p_taxis;
@@ -804,8 +799,8 @@ void D_CalcGradients (msurface_t *pface)
 
 	mipscale = 1.0 / (float)(1 << miplevel);
 
-	TransformVector (pface->texinfo->vecs[0], p_saxis);
-	TransformVector (pface->texinfo->vecs[1], p_taxis);
+	TransformVector (pface->texinfo->axis[0], p_saxis);
+	TransformVector (pface->texinfo->axis[1], p_taxis);
 
 	t = xscaleinv * mipscale;
 	d_sdivzstepu = p_saxis[0] * t;
@@ -825,15 +820,15 @@ void D_CalcGradients (msurface_t *pface)
 	t = 0x10000*mipscale;
 	sadjust = ((fixed16_t)(DotProduct (p_temp1, p_saxis) * 0x10000 + 0.5)) -
 			((pface->texturemins[0] << 16) >> miplevel)
-			+ pface->texinfo->vecs[0][3]*t;
+			+ pface->texinfo->offset[0]*t;
 	tadjust = ((fixed16_t)(DotProduct (p_temp1, p_taxis) * 0x10000 + 0.5)) -
 			((pface->texturemins[1] << 16) >> miplevel)
-			+ pface->texinfo->vecs[1][3]*t;
+			+ pface->texinfo->offset[1]*t;
 
 	// PGM - changing flow speed for non-warping textures.
-	if (pface->texinfo->flags & SURF_FLOWING)
+	if (pface->texinfo->c.flags & SURF_FLOWING)
 	{
-		if(pface->texinfo->flags & SURF_WARP)
+		if(pface->texinfo->c.flags & SURF_WARP)
 			sadjust += 0x10000 * (-128 * ( (r_newrefdef.time * 0.25) - (int)(r_newrefdef.time * 0.25) ));
 		else
 			sadjust += 0x10000 * (-128 * ( (r_newrefdef.time * 0.77) - (int)(r_newrefdef.time * 0.77) ));
@@ -881,7 +876,7 @@ void D_TurbulentSurf (surf_t *s)
 	pface = s->msurf;
 	miplevel = 0;
 	cacheblock = pface->texinfo->image->pixels[0];
-	cachewidth = 64 << VID_SHIFT;
+	cachewidth = 64;
 
 	if (s->insubmodel)
 	{
@@ -902,7 +897,7 @@ void D_TurbulentSurf (surf_t *s)
 //============
 //PGM
 	// textures that aren't warping are just flowing. Use NonTurbulent8 instead
-	if(!(pface->texinfo->flags & SURF_WARP))
+	if(!(pface->texinfo->c.flags & SURF_WARP))
 		NonTurbulent8 (s->spans);
 	else
 		Turbulent8 (s->spans);
@@ -946,7 +941,7 @@ void D_SkySurf (surf_t *s)
 		D_FlatFillSurface (s, 0);
 	} else {
 		cacheblock = pface->texinfo->image->pixels[0];
-		cachewidth = 256 << VID_SHIFT;
+		cachewidth = 256;
 
 		D_CalcGradients (pface);
 
@@ -1103,14 +1098,14 @@ void D_DrawSurfaces (void)
 
 			r_drawnpolycount++;
 
-			if (! (s->flags & (SURF_DRAWSKYBOX|SURF_DRAWBACKGROUND|SURF_DRAWTURB) ) )
-				D_SolidSurf (s);
-			else if (s->flags & SURF_DRAWSKYBOX)
+			if (s->flags & DSURF_SKY)
 				D_SkySurf (s);
-			else if (s->flags & SURF_DRAWBACKGROUND)
+			else if (s->flags & DSURF_BACKGROUND)
 				D_BackgroundSurf (s);
-			else if (s->flags & SURF_DRAWTURB)
+			else if (s->flags & DSURF_TURB)
 				D_TurbulentSurf (s);
+            else
+				D_SolidSurf (s);
 		}
 	}
 

@@ -22,7 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 extern polydesc_t r_polydesc;
 
-void R_BuildPolygonFromSurface(msurface_t *fa);
+void R_BuildPolygonFromSurface(mface_t *fa);
 void R_PolygonCalculateGradients (void);
 
 extern void R_PolyChooseSpanletRoutine( float alpha, qboolean isturbulent );
@@ -41,27 +41,14 @@ void R_DrawSprite (void)
 {
 	vec5_t		*pverts;
 	vec3_t		left, up, right, down;
-	dsprite_t	*s_psprite;
-	dsprframe_t	*s_psprframe;
+	mspriteframe_t	*frame;
 
+	frame = &currentmodel->spriteframes[
+        currententity->frame % currentmodel->numframes];
 
-	s_psprite = (dsprite_t *)currentmodel->pool.base;
-#if 0
-	if (currententity->frame >= s_psprite->numframes
-		|| currententity->frame < 0)
-	{
-		Com_Printf( "No such sprite frame %i\n", 
-			currententity->frame);
-		currententity->frame = 0;
-	}
-#endif
-	currententity->frame %= s_psprite->numframes;
-
-	s_psprframe = &s_psprite->frames[currententity->frame];
-
-	r_polydesc.pixels       = currentmodel->skins[currententity->frame]->pixels[0];
-	r_polydesc.pixel_width  = s_psprframe->width;
-	r_polydesc.pixel_height = s_psprframe->height;
+	r_polydesc.pixels       = frame->image->pixels[0];
+	r_polydesc.pixel_width  = frame->width;
+	r_polydesc.pixel_height = frame->height;
 	r_polydesc.dist         = 0;
 
 	// generate the sprite's axes, completely parallel to the viewplane.
@@ -71,13 +58,13 @@ void R_DrawSprite (void)
 
 // build the sprite poster in worldspace
 	VectorScale (r_polydesc.vright, 
-		s_psprframe->width - s_psprframe->origin_x, right);
+		frame->width - frame->origin_x, right);
 	VectorScale (r_polydesc.vup, 
-		s_psprframe->height - s_psprframe->origin_y, up);
+		frame->height - frame->origin_y, up);
 	VectorScale (r_polydesc.vright,
-		-s_psprframe->origin_x, left);
+		-frame->origin_x, left);
 	VectorScale (r_polydesc.vup,
-		-s_psprframe->origin_y, down);
+		-frame->origin_y, down);
 
 	// invert UP vector for sprites
 	VectorNegate( r_polydesc.vup, r_polydesc.vup );
@@ -93,20 +80,20 @@ void R_DrawSprite (void)
 	pverts[1][0] = r_entorigin[0] + up[0] + right[0];
 	pverts[1][1] = r_entorigin[1] + up[1] + right[1];
 	pverts[1][2] = r_entorigin[2] + up[2] + right[2];
-	pverts[1][3] = s_psprframe->width;
+	pverts[1][3] = frame->width;
 	pverts[1][4] = 0;
 
 	pverts[2][0] = r_entorigin[0] + down[0] + right[0];
 	pverts[2][1] = r_entorigin[1] + down[1] + right[1];
 	pverts[2][2] = r_entorigin[2] + down[2] + right[2];
-	pverts[2][3] = s_psprframe->width;
-	pverts[2][4] = s_psprframe->height;
+	pverts[2][3] = frame->width;
+	pverts[2][4] = frame->height;
 
 	pverts[3][0] = r_entorigin[0] + down[0] + left[0];
 	pverts[3][1] = r_entorigin[1] + down[1] + left[1];
 	pverts[3][2] = r_entorigin[2] + down[2] + left[2];
 	pverts[3][3] = 0;
-	pverts[3][4] = s_psprframe->height;
+	pverts[3][4] = frame->height;
 
 	r_polydesc.nump = 4;
 	r_polydesc.s_offset = ( r_polydesc.pixel_width  >> 1);

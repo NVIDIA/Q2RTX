@@ -22,17 +22,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MAX_DEMOINFO_CLIENTS	20
 #define MAX_STATUS_PLAYERS	64
 
-typedef enum {
-	ca_uninitialized,
-	ca_disconnected, 	// not talking to a server
-	ca_challenging,		// sending getchallenge packets to the server
-	ca_connecting,		// sending connect packets to the server
-	ca_connected,		// netchan_t established, waiting for svc_serverdata
-	ca_loading,			// loading level data
-    ca_precached,       // loaded level data, waiting for svc_frame
-	ca_active			// game views should be displayed
-} connstate_t;
-
 typedef struct {
 	char name[MAX_CLIENT_NAME];
 	int ping;
@@ -52,6 +41,45 @@ typedef struct {
     char pov[MAX_CLIENT_NAME];
 } demoInfo_t;
 
+typedef enum {
+    ACT_MINIMIZED,
+    ACT_RESTORED,
+    ACT_ACTIVATED
+} active_t;
 
+void CL_ProcessEvents( void );
+void CL_Init (void);
+void CL_Disconnect( comErrorType_t type, const char *text );
+void CL_Shutdown (void);
+void CL_Frame (int msec);
+void CL_LocalConnect( void );
+void CL_RestartFilesystem( void );
+void CL_Activate( active_t active );
+void CL_UpdateUserinfo( cvar_t *var, cvarSetSource_t source );
 qboolean CL_SendStatusRequest( char *buffer, size_t size );
 demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info );
+
+void Con_Print( const char *text );
+void Con_Printf( const char *fmt, ... );
+void Con_Close( void );
+
+// this is in the client code, but can be used for debugging from server
+void SCR_DebugGraph (float value, int color);
+void SCR_BeginLoadingPlaque (void);
+void SCR_ModeChanged( void );
+void SCR_UpdateScreen( void );
+
+void IN_Frame( void );
+void IN_Activate( void );
+void IN_MouseEvent( int x, int y );
+void IN_WarpMouse( int x, int y );
+
+void	Key_Init( void );
+void	Key_Event( unsigned key, qboolean down, unsigned time );
+void	Key_CharEvent( int key );
+void	Key_WriteBindings( fileHandle_t f );
+
+char	*VID_GetClipboardData( void );
+void	VID_SetClipboardData( const char *data );
+void    VID_FatalShutdown( void );
+

@@ -177,72 +177,55 @@ typedef struct {
 	int left, right, top, bottom;
 } clipRect_t;
 
+// called when the library is loaded
+qboolean	R_Init( qboolean total );
+
+// called before the library is unloaded
+void	    R_Shutdown( qboolean total );
+
+// All data that will be used in a level should be
+// registered before rendering any frames to prevent disk hits,
+// but they can still be registered at a later time
+// if necessary.
 //
-// these are the functions exported by the refresh module
+// EndRegistration will free any remaining data that wasn't registered.
+// Any model_s or skin_s pointers from before the BeginRegistration
+// are no longer valid after EndRegistration.
 //
-typedef struct refAPI_s {
-	// called when the library is loaded
-	qboolean	(*Init)( qboolean total );
+// Skins and images need to be differentiated, because skins
+// are flood filled to eliminate mip map edge errors, and pics have
+// an implicit "pics/" prepended to the name. (a pic name that starts with a
+// slash will not use the "pics/" prefix or the ".pcx" postfix)
+void	R_BeginRegistration( const char *map );
+qhandle_t R_RegisterModel( const char *name );
+qhandle_t R_RegisterSkin( const char *name );
+qhandle_t R_RegisterPic( const char *name );
+qhandle_t R_RegisterFont( const char *name );
+void	R_SetSky( const char *name, float rotate, vec3_t axis );
+void	R_EndRegistration( void );
 
-	// called before the library is unloaded
-	void	(*Shutdown)( qboolean total );
+void    R_RenderFrame( refdef_t *fd );
+void	R_LightPoint( vec3_t origin, vec3_t light );
 
-	// All data that will be used in a level should be
-	// registered before rendering any frames to prevent disk hits,
-	// but they can still be registered at a later time
-	// if necessary.
-	//
-	// EndRegistration will free any remaining data that wasn't registered.
-	// Any model_s or skin_s pointers from before the BeginRegistration
-	// are no longer valid after EndRegistration.
-	//
-	// Skins and images need to be differentiated, because skins
-	// are flood filled to eliminate mip map edge errors, and pics have
-	// an implicit "pics/" prepended to the name. (a pic name that starts with a
-	// slash will not use the "pics/" prefix or the ".pcx" postfix)
-	void	(*BeginRegistration)( const char *map );
-	qhandle_t (*RegisterModel)( const char *name );
-	qhandle_t (*RegisterSkin)( const char *name );
-	qhandle_t (*RegisterPic)( const char *name );
-	qhandle_t (*RegisterFont)( const char *name );
-	void	(*SetSky)( const char *name, float rotate, vec3_t axis );
-	void	(*EndRegistration)( void );
-	void	(*GetModelSize)( qhandle_t hModel, vec3_t mins, vec3_t maxs );
+void	R_SetColor( int flags, const color_t color );
+void	R_SetClipRect( int flags, const clipRect_t *clip );
+void	R_SetScale( float *scale );
+void    R_DrawChar( int x, int y, int flags, int ch, qhandle_t font );
+int 	R_DrawString( int x, int y, int flags, size_t maxChars,
+                      const char *string, qhandle_t font ); // returns advanced x coord
+qboolean R_GetPicSize( int *w, int *h, qhandle_t pic ); // returns transparency bit
+void	R_DrawPic( int x, int y, qhandle_t pic );
+void	R_DrawStretchPic( int x, int y, int w, int h, qhandle_t pic );
+void	R_DrawStretchPicST( int x, int y, int w, int h,
+        float s1, float t1, float s2, float t2, qhandle_t pic );
+void	R_TileClear( int x, int y, int w, int h, qhandle_t pic );
+void	R_DrawFill( int x, int y, int w, int h, int c );
+void	R_DrawFillEx( int x, int y, int w, int h, const color_t color );
 
-	void	(*RenderFrame)( refdef_t *fd );
-	void	(*LightPoint)( vec3_t origin, vec3_t light );
-
-	void	(*SetColor)( int flags, const color_t color );
-	void	(*SetClipRect)( int flags, const clipRect_t *clip );
-	void	(*SetScale)( float *scale );
-    void    (*DrawChar)( int x, int y, int flags, int ch, qhandle_t hFont );
-	int 	(*DrawString)( int x, int y, int flags, size_t maxChars,
-            const char *string, qhandle_t hFont ); // returns advanced x coord
-    // will return 0 0 if not found
-	qboolean (*DrawGetPicSize)( int *w, int *h, qhandle_t hPic ); // returns transparency bit
-	void	(*DrawPic)( int x, int y, qhandle_t hPic );
-	void	(*DrawStretchPic)( int x, int y, int w, int h, qhandle_t hPic );
-	void	(*DrawStretchPicST)( int x, int y, int w, int h,
-            float s1, float t1, float s2, float t2, qhandle_t hPic );
-	void	(*DrawTileClear)( int x, int y, int w, int h, qhandle_t hPic );
-	void	(*DrawFill)( int x, int y, int w, int h, int c );
-	void	(*DrawFillEx)( int x, int y, int w, int h, const color_t color );
-
-	// Draw images for cinematic rendering (which can have a different palette).
-	void	(*DrawStretchRaw)( int x, int y, int w, int h, int cols, int rows, const byte *data );
-
-	/*
-	** video mode and refresh state management entry points
-	*/
-	void	(*CinematicSetPalette)( const byte *palette );	// NULL = game palette
-	void	(*BeginFrame)( void );
-	void	(*EndFrame)( void );
-    void    (*ModeChanged)( int width, int height, int flags,
-        int rowbytes, void *pixels );
-
-	void	(*GetConfig)( glconfig_t *dest );
-} refAPI_t;
-
-extern refAPI_t		ref;
+// video mode and refresh state management entry points
+void	R_BeginFrame( void );
+void	R_EndFrame( void );
+void    R_ModeChanged( int width, int height, int flags, int rowbytes, void *pixels );
+void	R_GetConfig( glconfig_t *dest );
 
 #endif // __REF_H

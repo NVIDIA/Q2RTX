@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "ui_local.h"
+#include "files.h"
 
 /*
 =============================================================================
@@ -93,7 +94,7 @@ void PlayerModel_Load( void ) {
 	/*
 	** get a list of directories
 	*/
-	if( !( list = ( char ** )fs.ListFiles( NULL, "players/*/*", FS_SEARCH_BYFILTER|FS_SEARCH_SAVEPATH, &numFiles ) ) ) {
+	if( !( list = ( char ** )FS_ListFiles( NULL, "players/*/*", FS_SEARCH_BYFILTER|FS_SEARCH_SAVEPATH, &numFiles ) ) ) {
 		return;
 	}
 
@@ -119,7 +120,7 @@ void PlayerModel_Load( void ) {
 		}
 	}
 
-	fs.FreeList( ( void ** )list );
+	FS_FreeList( ( void ** )list );
 
 	if( !ndirs ) {
 		return;
@@ -140,13 +141,13 @@ void PlayerModel_Load( void ) {
 
 		// verify the existence of tris.md2
 		Q_concat( scratch, sizeof( scratch ), "players/", dirnames[i], "/tris.md2", NULL );
-		if( fs.LoadFile( scratch, NULL ) == INVALID_LENGTH ) {
+		if( FS_LoadFile( scratch, NULL ) == INVALID_LENGTH ) {
 			continue;
 		}
 
 		// verify the existence of at least one pcx skin
 		Q_concat( scratch, sizeof( scratch ), "players/", dirnames[i], NULL );
-		pcxnames = ( char ** )fs.ListFiles( scratch, ".pcx", 0, &npcxfiles );
+		pcxnames = ( char ** )FS_ListFiles( scratch, ".pcx", 0, &npcxfiles );
 		if( !pcxnames ) {
 			continue;
 		}
@@ -161,7 +162,7 @@ void PlayerModel_Load( void ) {
 		}
 
 		if( !nskins ) {
-			fs.FreeList( ( void ** )pcxnames );
+			FS_FreeList( ( void ** )pcxnames );
 			continue;
 		}
 
@@ -178,11 +179,11 @@ void PlayerModel_Load( void ) {
 			}
 		}
 
-		fs.FreeList( ( void ** )pcxnames );
+		FS_FreeList( ( void ** )pcxnames );
 
 		// load vweap models
 		Q_concat( scratch, sizeof( scratch ), "players/", dirnames[i], "/w_*.md2", NULL );
-		weaponNames = ( char ** )fs.ListFiles( NULL, scratch, FS_SEARCH_BYFILTER, &numWeapons );
+		weaponNames = ( char ** )FS_ListFiles( NULL, scratch, FS_SEARCH_BYFILTER, &numWeapons );
 
 		pmi = &uis.pmi[uis.numPlayerModels++];
 		pmi->numWeapons = 0;
@@ -199,7 +200,7 @@ void PlayerModel_Load( void ) {
 				}
 			}
 
-			fs.FreeList( ( void ** )weaponNames );
+			FS_FreeList( ( void ** )weaponNames );
 		}
 
 		// at this point we have a valid player model
@@ -211,7 +212,7 @@ void PlayerModel_Load( void ) {
 	}
 
 	for( i = 0; i < ndirs; i++ ) {
-		com.Free( dirnames[i] );
+		Z_Free( dirnames[i] );
 	}
 
 	qsort( uis.pmi, uis.numPlayerModels, sizeof( uis.pmi[0] ), pmicmpfnc );
@@ -226,15 +227,15 @@ void PlayerModel_Free( void ) {
 	for( i = 0, pmi = uis.pmi; i < uis.numPlayerModels; i++, pmi++ ) {
 		if( pmi->skindisplaynames ) {
 			for( j = 0; j < pmi->nskins; j++ ) {		
-				com.Free( pmi->skindisplaynames[j] );
+				Z_Free( pmi->skindisplaynames[j] );
 			}
-			com.Free( pmi->skindisplaynames );
+			Z_Free( pmi->skindisplaynames );
 		}
 		if( pmi->weaponNames ) {
 			for( j = 0; j < pmi->numWeapons; j++ ) {		
-				com.Free( pmi->weaponNames[j] );
+				Z_Free( pmi->weaponNames[j] );
 			}
-			com.Free( pmi->weaponNames );
+			Z_Free( pmi->weaponNames );
 		}
 		memset( pmi, 0, sizeof( *pmi ) );
 	}

@@ -25,6 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "com_local.h"
 #include "key_public.h"
 #include "ref_public.h"
+#include "vid_public.h"
 #include "q_field.h"
 
 /*
@@ -61,7 +62,7 @@ void IF_Replace( inputField_t *field, const char *text ) {
 	field->cursorPos = Q_strncpyz( field->text, text, sizeof( field->text ) );
 }
 
-#ifndef DEDICATED_ONLY
+#if USE_CLIENT
 
 /*
 ================
@@ -234,14 +235,13 @@ int IF_Draw( inputField_t *field, int x, int y, int flags, qhandle_t font ) {
 	}
     
 	// draw text
-	ret = ref.DrawString( x, y, flags, field->visibleChars,
-        text + offset, font );
+	ret = R_DrawString( x, y, flags, field->visibleChars, text + offset, font );
 
 	if( flags & UI_DRAWCURSOR ) {
     // draw blinking cursor
         if( ( com_localTime >> 8 ) & 1 ) {
             int c = Key_GetOverstrikeMode() ? 11 : '_';
-            ref.DrawChar( x + cursorPos * CHAR_WIDTH, y, flags, c, font );
+            R_DrawChar( x + cursorPos * CHAR_WIDTH, y, flags, c, font );
         }
     }
 

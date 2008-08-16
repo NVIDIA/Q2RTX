@@ -48,14 +48,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "q_list.h"
 #include "q_field.h"
 #include "prompt.h"
+#include "files.h"
+#if USE_REF
+#include "vid_public.h"
+#endif
+#include "sys_public.h"
 
 cvar_t	*sys_basedir;
 cvar_t  *sys_libdir;
-cvar_t  *sys_refdir;
 cvar_t  *sys_homedir;
 cvar_t  *sys_stdio;
-
-sysAPI_t sys;
 
 static qboolean         tty_enabled;
 static struct termios   tty_orig;
@@ -409,8 +411,8 @@ void Hunk_Begin( mempool_t *pool, size_t maxsize ) {
     buf = mmap( NULL, pool->maxsize, PROT_READ|PROT_WRITE,
 		MAP_PRIVATE|MAP_ANON, -1, 0 );
 	if( buf == NULL || buf == ( void * )-1 ) {
-		Com_Error( ERR_FATAL, "%s: unable to virtual allocate %"PRIz" bytes",
-            __func__, pool->maxsize );
+		Com_Error( ERR_FATAL, "%s: unable to reserve %"PRIz" bytes: %s",
+            __func__, pool->maxsize, strerror( errno ) );
     }
     pool->base = buf;
     pool->mapped = pool->maxsize;
@@ -588,19 +590,6 @@ qboolean Sys_GetAntiCheatAPI( void ) {
 }
 #endif
 
-/*
-================
-Sys_FillAPI
-================
-*/
-void Sys_FillAPI( sysAPI_t *api ) {
-	api->Milliseconds = Sys_Milliseconds;
-    api->HunkBegin = Hunk_Begin;
-    api->HunkAlloc = Hunk_Alloc;
-    api->HunkEnd = Hunk_End;
-    api->HunkFree = Hunk_Free;
-}
-
 void Sys_FixFPCW( void ) {
 #ifdef __i386__
     uint16_t cw;
@@ -644,7 +633,7 @@ Sys_Kill
 static void Sys_Kill( int signum ) {
     Sys_ShutdownTTY();
 
-#ifndef DEDICATED_ONLY
+#if USE_CLIENT && USE_REF
     VID_FatalShutdown();
 #endif
 
@@ -691,9 +680,7 @@ void Sys_Init( void ) {
         homedir = HOMEDIR;
     }
 	sys_homedir = Cvar_Get( "homedir", homedir, CVAR_NOSET );
-
 	sys_libdir = Cvar_Get( "libdir", LIBDIR, CVAR_NOSET );
-	sys_refdir = Cvar_Get( "refdir", REFDIR, CVAR_NOSET );
 
     sys_stdio = Cvar_Get( "sys_stdio", "2", CVAR_NOSET );
 
@@ -717,8 +704,6 @@ void Sys_Init( void ) {
     }
 
     Sys_FixFPCW();
-
-	Sys_FillAPI( &sys );
 }
 
 /*
@@ -748,7 +733,7 @@ void Sys_Error( const char *error, ... ) {
 
     Sys_ShutdownTTY();
 
-#ifndef DEDICATED_ONLY
+#if USE_CLIENT && USE_REF
     VID_FatalShutdown();
 #endif
 

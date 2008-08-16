@@ -330,13 +330,13 @@ static void Field_Draw( menuField_t *f ) {
         UI_DrawString( f->generic.x + LCOLUMN_OFFSET, f->generic.y, NULL,
             f->generic.uiFlags | UI_RIGHT | UI_ALTCOLOR, f->generic.name );
 
-        ref.DrawFillEx( f->generic.x + RCOLUMN_OFFSET, f->generic.y - 1,
+        R_DrawFillEx( f->generic.x + RCOLUMN_OFFSET, f->generic.y - 1,
             f->field.visibleChars * CHAR_WIDTH, CHAR_HEIGHT + 2, color );
 
         IF_Draw( &f->field, f->generic.x + RCOLUMN_OFFSET, f->generic.y,
             flags, uis.fontHandle );
     } else {
-        ref.DrawFillEx( f->generic.rect.x, f->generic.rect.y - 1,
+        R_DrawFillEx( f->generic.rect.x, f->generic.rect.y - 1,
             f->generic.rect.width, CHAR_HEIGHT + 2, color );
 
         IF_Draw( &f->field, f->generic.rect.x, f->generic.rect.y,
@@ -963,12 +963,12 @@ static void MenuList_DrawString( int x, int y, int flags,
         x += MLIST_PRESTEP;
     }
 
-    ref.SetClipRect( DRAW_CLIP_RIGHT|DRAW_CLIP_LEFT, &rc );
+    R_SetClipRect( DRAW_CLIP_RIGHT|DRAW_CLIP_LEFT, &rc );
     UI_DrawString( x, y + 1, NULL, column->uiFlags | flags, string );
     if( uis.glconfig.renderer == GL_RENDERER_SOFTWARE ) {
-        ref.SetClipRect( DRAW_CLIP_MASK, &uis.clipRect );
+        R_SetClipRect( DRAW_CLIP_MASK, &uis.clipRect );
     } else {
-        ref.SetClipRect( DRAW_CLIP_DISABLED, NULL );
+        R_SetClipRect( DRAW_CLIP_DISABLED, NULL );
     }
 }
 
@@ -1005,7 +1005,7 @@ static void MenuList_Draw( menuList_t *l ) {
                     color = uis.color.active;
                 }
             }
-            ref.DrawFillEx( xx, y, l->columns[j].width - 1,
+            R_DrawFillEx( xx, y, l->columns[j].width - 1,
                 MLIST_SPACING - 1, color );
 
             if( l->columns[j].name ) {
@@ -1026,7 +1026,7 @@ static void MenuList_Draw( menuList_t *l ) {
 
         // draw scrollbar background
         if( !( l->mlFlags & MLF_HIDE_BACKGROUND ) ) {
-            ref.DrawFillEx( x + width, yy, MLIST_SCROLLBAR_WIDTH - 1,
+            R_DrawFillEx( x + width, yy, MLIST_SCROLLBAR_WIDTH - 1,
                 barHeight, uis.color.normal );
         }
 
@@ -1039,7 +1039,7 @@ static void MenuList_Draw( menuList_t *l ) {
         }
 
         // draw scrollbar thumb
-        ref.DrawFillEx( x + width,
+        R_DrawFillEx( x + width,
             yy + Q_rint( barHeight * prestepFrac ),
             MLIST_SCROLLBAR_WIDTH - 1,
             Q_rint( barHeight * pageFrac ),
@@ -1055,7 +1055,7 @@ static void MenuList_Draw( menuList_t *l ) {
                 color = uis.color.active;
             }
         }
-        ref.DrawFillEx( xx, y, l->columns[j].width - 1,
+        R_DrawFillEx( xx, y, l->columns[j].width - 1,
             height, color );
         
         xx += l->columns[j].width;
@@ -1068,7 +1068,7 @@ static void MenuList_Draw( menuList_t *l ) {
         if( !( l->generic.flags & QMF_DISABLED ) && i == l->curvalue ) {
             xx = x;
             for( j = 0; j < l->numcolumns; j++ ) {
-                ref.DrawFillEx( xx, yy, l->columns[j].width - 1,
+                R_DrawFillEx( xx, yy, l->columns[j].width - 1,
                     MLIST_SPACING, uis.color.selection );   
                 xx += l->columns[j].width;
             }
@@ -1497,10 +1497,10 @@ void Menu_Draw( menuFrameWork_t *menu ) {
 // draw background
 //
     if( menu->image ) {
-        ref.DrawStretchPic( 0, menu->y1, uis.width,
+        R_DrawStretchPic( 0, menu->y1, uis.width,
             menu->y2 - menu->y1, menu->image );
     } else {
-        ref.DrawFillEx( 0, menu->y1, uis.width,
+        R_DrawFillEx( 0, menu->y1, uis.width,
             menu->y2 - menu->y1, menu->color );
     }
 
@@ -1565,7 +1565,7 @@ void Menu_Draw( menuFrameWork_t *menu ) {
 // draw status bar
 //
     if( menu->status ) {
-        ref.DrawFill( 0, menu->y2 - 8, uis.width, 8, 4 );
+        R_DrawFill( 0, menu->y2 - 8, uis.width, 8, 4 );
         UI_DrawString( uis.width / 2, menu->y2 - 8, NULL,
             UI_CENTER, menu->status );
     }
