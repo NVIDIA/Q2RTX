@@ -864,7 +864,7 @@ static void MVD_Invuse_f( udpClient_t *client ) {
     }
 
     if( client->layout_type == LAYOUT_CHANNELS ) {
-        mvd = LIST_INDEX( mvd_t, client->layout_cursor, &mvd_ready, entry );
+        mvd = LIST_INDEX( mvd_t, client->layout_cursor, &mvd_ready, ready );
         if( mvd ) {
             MVD_TrySwitchChannel( client, mvd );
         }

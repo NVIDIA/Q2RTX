@@ -1002,7 +1002,15 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
     MVD_ParseFrame( mvd );
 
     if( mvd->state < MVD_WAITING ) {
-        List_Append( &mvd_ready, &mvd->ready );
+        mvd_t *cur;
+
+        // sort this one into the list of ready channels
+        LIST_FOR_EACH( mvd_t, cur, &mvd_ready, ready ) {
+            if( cur->id > mvd->id ) {
+                break;
+            }
+        }
+        List_Append( &cur->ready, &mvd->ready );
         mvd->state = mvd->demoplayback ? MVD_READING : MVD_WAITING;
         mvd->waitTime = svs.realtime;
         mvd_dirty = qtrue;
