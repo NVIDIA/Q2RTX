@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 
 #include "win_local.h"
+#include "cl_public.h"
 
 #define DIRECTINPUT_VERSION 0x0700
 #include <dinput.h>

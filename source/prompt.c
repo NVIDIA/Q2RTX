@@ -129,7 +129,7 @@ static void Prompt_ShowIndividualMatches(
 	}
 }
 
-EXPORTED qboolean Prompt_AddMatch( genctx_t *ctx, const char *s ) {
+qboolean Prompt_AddMatch( genctx_t *ctx, const char *s ) {
     int r;
 
     if( ctx->count >= ctx->size ) {

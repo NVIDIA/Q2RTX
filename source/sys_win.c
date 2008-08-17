@@ -605,6 +605,8 @@ void *Hunk_Alloc( mempool_t *pool, size_t size ) {
 }
 
 void Hunk_End( mempool_t *pool ) {
+    // for statistics
+    pool->mapped = ( pool->cursize + 4095 ) & ~4095;
 }
 
 void Hunk_Free( mempool_t *pool ) {
