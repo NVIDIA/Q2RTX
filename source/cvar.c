@@ -230,9 +230,9 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
         Com_Error( ERR_FATAL, "Cvar_Get: NULL var_name" );
     }
     if( !var_value ) {
-        var_value = "";
+        return Cvar_FindVar( var_name );
     }
-    
+
     if( flags & CVAR_INFOMASK ) {
         if( Info_SubValidate( var_name ) == -1 ) {
             Com_WPrintf( "Invalid info cvar name '%s'.\n", var_name );
@@ -251,6 +251,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
         }
         return var;
     }
+
 
     // create new variable
     length = strlen( var_name ) + 1;
@@ -289,7 +290,7 @@ Cvar_Ref
 ============
 */
 cvar_t *Cvar_Ref( const char *var_name ) {
-    return Cvar_Get( var_name, NULL, CVAR_VOLATILE );
+    return Cvar_Get( var_name, "", CVAR_VOLATILE );
 }
 
 /*

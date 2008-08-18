@@ -266,7 +266,7 @@ static void SCR_Draw_f( void ) {
         obj->cvar = NULL;
         obj->macro = macro;
     } else {
-        obj->cvar = Cvar_Get( s, NULL, CVAR_VOLATILE );
+        obj->cvar = Cvar_Ref( s );
         obj->macro = NULL;
     }
 

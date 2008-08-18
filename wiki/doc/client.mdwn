@@ -264,6 +264,11 @@ Specifies additional brightness percentage added to world lightmaps.
 Default value of 0 means identity lightmaps, value of 1 means fullbright 
 lightmaps.
 
+- `set gl_modulate_mask 3` (bitmask)  
+Specifies where gl_modulate cvar applies:
+  - 1 - world lightmaps
+  - 2 - entity lighting
+
 - `set gl_fragment_program 0` (boolean)  
 Enables `GL_ARB_fragment_program` extension, if supported by video drivers.
 Currently this extension is used only for warping effect on liquid surfaces.

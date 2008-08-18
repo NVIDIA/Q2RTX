@@ -27,7 +27,7 @@ ifdef SINGLEUSER
 install:
 	echo "Single user mode configured, can't install" && exit 1
 
-install:
+uninstall:
 	echo "Single user mode configured, can't uninstall" && exit 1
 
 else # SINGLEUSER

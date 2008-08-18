@@ -48,7 +48,7 @@ typedef struct {
         qboolean    initialized;
         grab_t      grabbed;
     } mouse;
-#ifdef __unix__
+#if 0 // def __unix__
     PFNGLXGETVIDEOSYNCSGIPROC glXGetVideoSyncSGI;
     PFNGLXSWAPINTERVALSGIPROC glXSwapIntervalSGI;
 #endif
@@ -528,6 +528,7 @@ void VID_EndFrame( void ) {
 
 #else // SOFTWARE_RENDERER
 
+/*
 static cvar_t *gl_swapinterval;
 
 static void gl_swapinterval_changed( cvar_t *self ) {
@@ -535,6 +536,7 @@ static void gl_swapinterval_changed( cvar_t *self ) {
 	    sdl.glXSwapIntervalSGI( self->integer );
 	}
 }
+*/
 
 qboolean VID_Init( void ) {
     cvar_t *gl_driver;
@@ -544,7 +546,7 @@ qboolean VID_Init( void ) {
     }
 
     gl_driver = Cvar_Get( "gl_driver", DEFAULT_OPENGL_DRIVER, CVAR_LATCH );
-	gl_swapinterval = Cvar_Get( "gl_swapinterval", "1", CVAR_ARCHIVE );
+//	gl_swapinterval = Cvar_Get( "gl_swapinterval", "1", CVAR_ARCHIVE );
 
     if( SDL_GL_LoadLibrary( gl_driver->string ) == -1 ) {
         Com_EPrintf( "Couldn't load OpenGL library: %s\n", SDL_GetError() );
@@ -563,11 +565,13 @@ qboolean VID_Init( void ) {
         Com_EPrintf( "Couldn't set video mode: %s\n", SDL_GetError() );
         goto fail;
     }
+/*
     sdl.glXGetVideoSyncSGI = SDL_GL_GetProcAddress( "glXGetVideoSyncSGI" );
     sdl.glXSwapIntervalSGI = SDL_GL_GetProcAddress( "glXSwapIntervalSGI" );
 
     gl_swapinterval->changed = gl_swapinterval_changed;
     gl_swapinterval_changed( gl_swapinterval );
+*/
 
     Activate();
     return qtrue;

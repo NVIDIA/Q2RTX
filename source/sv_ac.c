@@ -1264,7 +1264,7 @@ static qboolean AC_Reconnect( void ) {
 
     if( NET_Connect( &address, &ac.stream ) == NET_ERROR ) {
         Com_EPrintf( "ANTICHEAT: %s to %s.\n",
-            NET_ErrorString(), ac_server_address->string );
+            NET_ErrorString(), NET_AdrToString( &address ) );
         goto fail;
     }
 
@@ -1357,7 +1357,7 @@ void AC_Connect( qboolean ismvd ) {
         return;
     }
 
-    // syncronize startup
+    // synchronize startup
     for( attempts = 0; attempts < 5000; attempts++ ) {
         Sys_RunConsole();
         Sys_Sleep( 1 );

@@ -27,9 +27,16 @@ if [ "$sources" = "." ]; then
     sources=`pwd`
 fi
 if [ ! -f $sources/source/common.c ] ; then
-    echo "ERROR: $sources does not look like Q2PRO source tree"
+    echo "$sources does not look like Q2PRO source tree!"
     exit 1
 fi
+if [ ! -f $sources/REVISION ] ; then
+    echo "REVISION does not exist. Did you check Q2PRO out of SVN repository?"
+    echo "You can create it by running 'svnversion > REVISION' at the root of source tree."
+    exit 1
+fi
+version=$(cat $sources/REVISION)
+revision=$(cat $sources/REVISION | tr -d -c [:digit:])
 outdir=`pwd`
 tmpc="/tmp/q2pro-${RANDOM}.c"
 tmpo="/tmp/q2pro-${RANDOM}.o"
@@ -37,7 +44,6 @@ config_mk="config.mk"
 config_h="config.h"
 
 # defaults
-revision="238"
 help="no"
 exesuffix=""
 libsuffix=".so"
@@ -47,6 +53,7 @@ libraries=""
 cpu=""
 singleuser="no"
 asmflags=""
+mingw="no"
 if [ -z "$CFLAGS" ]; then
     CFLAGS="-O2 -Wall -Wstrict-prototypes"
 fi
@@ -57,7 +64,6 @@ cc="gcc"
 make="make"
 windres="windres"
 strip="strip"
-mingw="no"
 pngconfig="libpng-config"
 sdlconfig="sdl-config"
 
@@ -384,7 +390,7 @@ echo "LIBRARIES=$libraries" >> $config_mk
 
 echo "REVISION=$revision" >> $config_mk
 echo "#define REVISION $revision" >> $config_h
-echo "#define VERSION \"r$revision\"" >> $config_h
+echo "#define VERSION \"r$version\"" >> $config_h
 
 echo "#define PRIz \"zu\"" >> $config_h
 
