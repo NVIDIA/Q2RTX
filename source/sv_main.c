@@ -1872,6 +1872,8 @@ static void SV_FinalMessage( const char *message, int cmd ) {
         }
     }
 
+    SZ_Clear( &msg_write );
+
     // send EOF to MVD clients
     length = 0;
     LIST_FOR_EACH( tcpClient_t, t, &svs.mvd.clients, mvdEntry ) {
