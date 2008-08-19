@@ -106,22 +106,14 @@ static void MVD_LinkEdict( mvd_t *mvd, edict_t *ent ) {
     SV_LinkEdict( &mvd->cm, ent );
 }
 
-void MVD_ParseEntityString( mvd_t *mvd ) {
-	const char *data, *p;
+void MVD_ParseEntityString( mvd_t *mvd, const char *data ) {
+	const char *p;
 	char key[MAX_STRING_CHARS];
 	char value[MAX_STRING_CHARS];
 	char classname[MAX_QPATH];
 	vec3_t origin;
 	vec3_t angles;
 	
-    if( !mvd->cm.cache ) {
-        return;
-    }
-	data = mvd->cm.cache->entitystring;
-	if( !data || !data[0] ) {
-		return;
-	}
-
 	while( data ) {
 		p = COM_Parse( &data );
 		if( !p[0] ) {
@@ -996,7 +988,7 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
     }
 
     // get the spawn point for spectators
-    MVD_ParseEntityString( mvd );
+    MVD_ParseEntityString( mvd, mvd->cm.cache->entitystring );
 
     // parse baseline frame
     MVD_ParseFrame( mvd );

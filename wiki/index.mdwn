@@ -1,7 +1,7 @@
 Introduction
 -----------------
 
-Q2PRO is a [Quake 2][] engine modification, based on source code released
+Q2PRO is a [Quake 2][q2] engine modification, based on source code released
 under the GPL by id Software. This is not a standalone game as it does not
 provide own media content, but rather an enhancement over original Quake 2
 release designed for everyday use.
@@ -59,7 +59,7 @@ Feature highlights
   servers. On other side, Q2PRO server itself is capable of serving
   anticheat-enabled clients.
 
-[quake2]: http://en.wikipedia.org/wiki/Quake_2 "id Software's Quake II"
+[q2]: http://en.wikipedia.org/wiki/Quake_2 "id Software's Quake II"
 [ac]: http://antiche.at "r1ch.net anticheat"
 
 
@@ -70,8 +70,4 @@ Navigation
 * [[documentation|doc]]
 * [[contact]]
 * [SF.net page](http://sourceforge.net/projects/q2pro/)
-
-<a href="http://sourceforge.net">
-<img src="http://sflogo.sourceforge.net/sflogo.php?group_id=113946&amp;type=2" width="125"
-height="37" style="border: 0px;" alt="SourceForge.net Logo" /></a>
 

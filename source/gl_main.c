@@ -277,14 +277,17 @@ static void GL_DrawSpriteModel( model_t *model ) {
 
 	alpha = ( e->flags & RF_TRANSLUCENT ) ? e->alpha : 1.0f;
 
+    bits = GLS_DEPTHMASK_FALSE;
     if( alpha == 1.0f ) {
         if( image->flags & if_transparent ) {
-            bits = GLS_ALPHATEST_ENABLE;
-        } else {
-            bits = GLS_DEFAULT;
+            if( image->flags & if_paletted ) {
+                bits |= GLS_ALPHATEST_ENABLE;
+            } else {
+                bits |= GLS_BLEND_BLEND;
+            }
         }
     } else {
-        bits = GLS_BLEND_BLEND;
+        bits |= GLS_BLEND_BLEND;
     }
 	GL_Bits( bits );
 

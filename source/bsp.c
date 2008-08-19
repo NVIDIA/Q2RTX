@@ -969,7 +969,11 @@ bsp_t *BSP_Load( const char *name ) {
     }
     
     // load into hunk
+#if USE_REF
     Hunk_Begin( &bsp->pool, 0x1000000 );
+#else
+    Hunk_Begin( &bsp->pool, 0x556000 );
+#endif
 
     // calculate the checksum
     bsp->checksum = LittleLong( Com_BlockChecksum( buf, filelen ) );

@@ -1,21 +1,13 @@
 Stable releases
 ----------------
-OpenGL client for Windows:
+OpenGL client for Win32:
 [q2pro-r179ac-win32.zip](../ac/q2pro-r179ac-win32.zip).  
 This binary is supported by r1ch.net [anticheat](http://antiche.at/) module.
 
-Development snapshots
+Nightly builds
 ----------------
-OpenGL client for Windows:
-[q2pro-win32.zip](../nightly/q2pro-win32.zip).
-
-Dedicated server for Windows:
-[q2proded-win32.zip](../nightly/q2proded-win32.zip).
-
-Dedicated server binary for GNU/Linux:
-[q2proded.bin.gz](../update/q2proded.bin.gz).  
-Use this binary for running Q2PRO server from
-your remote shell account.
+Binary builds and source snapshots from SVN trunk are
+[available](http://skuller.ath.cx/nightly/).
 
 Source code
 ----------------
