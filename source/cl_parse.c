@@ -1425,8 +1425,8 @@ CL_ParseServerMessage
 =====================
 */
 void CL_ParseServerMessage( void ) {
-    int            cmd, extrabits;
-    size_t        readcount;
+    int         cmd, extrabits;
+    size_t      readcount;
 
     if( cl_shownet->integer == 1 ) {
         Com_Printf( "%"PRIz" ", msg_read.cursize );

@@ -1082,7 +1082,7 @@ qboolean CL_SendStatusRequest( char *buffer, size_t size ) {
 
     OOB_PRINT( NS_CLIENT, &address, "status" );
 
-    Com_ProcessEvents();
+    // Com_ProcessEvents();
 
     return qtrue;
 }
@@ -1134,7 +1134,7 @@ static void CL_PingServers_f( void ) {
 
         OOB_PRINT( NS_CLIENT, &address, "status" );
 
-        Com_ProcessEvents();
+        // Com_ProcessEvents();
         SCR_UpdateScreen();
     }
 }
@@ -1589,7 +1589,7 @@ void CL_LoadState( load_state_t state ) {
     cl.load_state = state;
     cl.load_time[state] = Sys_Milliseconds();
 
-	Com_ProcessEvents();	
+	// Com_ProcessEvents();	
 	SCR_UpdateScreen();
 }
 

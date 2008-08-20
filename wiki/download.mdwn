@@ -8,7 +8,8 @@ Nightly builds
 ----------------
 Binary builds and source snapshots from SVN trunk are
 [available](http://skuller.ath.cx/q2pro/nightly/). They are regenerated
-automatically on nightly basis.
+automatically on nightly basis. You may also find SVN
+[changelog](http://q2pro.svn.sourceforge.net/viewvc/q2pro?view=log) useful.
 
 Source code
 ----------------
