@@ -519,6 +519,10 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
     }
 
     entity = &mvd->edicts[entnum];
+    if( !entity->inuse ) {
+        Com_DPrintf( "%s: entnum not in use: %d\n", __func__, entnum );
+        return;
+    }
 
     LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
         cl = client->cl;

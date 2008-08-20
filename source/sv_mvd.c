@@ -32,6 +32,7 @@ cvar_t	*sv_mvd_noblend;
 cvar_t	*sv_mvd_nogun;
 cvar_t	*sv_mvd_max_size;
 cvar_t	*sv_mvd_max_duration;
+cvar_t	*sv_mvd_max_levels;
 cvar_t	*sv_mvd_begincmd;
 cvar_t	*sv_mvd_scorecmd;
 #if USE_ZLIB
@@ -333,7 +334,7 @@ static void SV_DummyAddMessage( client_t *client, byte *data,
     }
 
 }
-void SV_MvdSpawnDummy( void ) {
+static void SV_MvdSpawnDummy( void ) {
     client_t *c = svs.mvd.dummy;
 	player_state_t *ps;
 	entity_state_t *es;
@@ -619,21 +620,21 @@ void SV_MvdEndFrame( void ) {
     }
 
     // write frame to demofile
-    if( sv.mvd.file ) {
-        FS_Write( &length, 2, sv.mvd.file );
-        FS_Write( sv.mvd.message.data, sv.mvd.message.cursize, sv.mvd.file );
-        FS_Write( msg_write.data, msg_write.cursize, sv.mvd.file );
-        FS_Write( sv.mvd.datagram.data, sv.mvd.datagram.cursize, sv.mvd.file );
+    if( svs.mvd.recording ) {
+        FS_Write( &length, 2, svs.mvd.recording );
+        FS_Write( sv.mvd.message.data, sv.mvd.message.cursize, svs.mvd.recording );
+        FS_Write( msg_write.data, msg_write.cursize, svs.mvd.recording );
+        FS_Write( sv.mvd.datagram.data, sv.mvd.datagram.cursize, svs.mvd.recording );
 
         if( sv_mvd_max_size->value > 0 ) {
-            int numbytes = FS_RawTell( sv.mvd.file );
+            int numbytes = FS_RawTell( svs.mvd.recording );
 
             if( numbytes > sv_mvd_max_size->value * 1000 ) {
                 Com_Printf( "Stopping MVD recording, maximum size reached.\n" );
                 SV_MvdRecStop();
             }
         } else if( sv_mvd_max_duration->value > 0 &&
-            sv.mvd.framenum > sv_mvd_max_duration->value * 600 )
+            ++svs.mvd.numframes > sv_mvd_max_duration->value * 600 )
         {
             Com_Printf( "Stopping MVD recording, maximum duration reached.\n" );
             SV_MvdRecStop();
@@ -736,7 +737,38 @@ static void SV_MvdEmitGamestate( void ) {
     patch[1] = ( length >> 8 ) & 255;
 }
 
-void SV_MvdClientNew( tcpClient_t *client ) {
+void SV_MvdMapChanged( void ) {
+    tcpClient_t *client;
+
+    if( !svs.mvd.dummy ) {
+        return;
+    }
+
+    SV_MvdSpawnDummy();
+    SV_MvdEmitGamestate();
+
+    // send gamestate to all MVD clients
+    LIST_FOR_EACH( tcpClient_t, client, &svs.mvd.clients, mvdEntry ) {
+        SV_HttpWrite( client, msg_write.data, msg_write.cursize );
+    }
+
+    if( svs.mvd.recording ) {
+        int maxlevels = sv_mvd_max_levels->integer;
+    
+        // check if it is time to stop recording
+        if( maxlevels > 0 && ++svs.mvd.numlevels >= maxlevels ) {
+            Com_Printf( "Stopping MVD recording, "
+                "maximum number of level changes reached.\n" );
+            SV_MvdRecStop();
+        } else {
+            FS_Write( msg_write.data, msg_write.cursize, svs.mvd.recording );
+        }
+    }
+
+    SZ_Clear( &msg_write );
+}
+
+static void SV_MvdClientNew( tcpClient_t *client ) {
 	Com_DPrintf( "Sending gamestate to MVD client %s\n",
         NET_AdrToString( &client->stream.address ) );
 	client->state = cs_spawned;
@@ -878,16 +910,16 @@ Stops server local MVD recording.
 void SV_MvdRecStop( void ) {
 	int length;
 
-	if( !sv.mvd.file ) {
+	if( !svs.mvd.recording ) {
 		return;
 	}
     
 	// write demo EOF marker
 	length = 0;
-	FS_Write( &length, 2, sv.mvd.file );
+	FS_Write( &length, 2, svs.mvd.recording );
 
-	FS_FCloseFile( sv.mvd.file );
-    sv.mvd.file = 0;
+	FS_FCloseFile( svs.mvd.recording );
+    svs.mvd.recording = 0;
 }
 
 const cmd_option_t o_mvdrecord[] = {
@@ -950,7 +982,7 @@ static void MVD_Record_f( void ) {
 		return;
 	}
 
-	if( sv.mvd.file ) {
+	if( svs.mvd.recording ) {
 		Com_Printf( "Already recording a local MVD.\n" );
 		return;
 	}
@@ -983,7 +1015,9 @@ static void MVD_Record_f( void ) {
         FS_FilterFile( demofile );
     }
 
-	sv.mvd.file = demofile;
+	svs.mvd.recording = demofile;
+    svs.mvd.numlevels = 0;
+    svs.mvd.numframes = 0;
 	
     magic = MVD_MAGIC;
     FS_Write( &magic, 4, demofile );
@@ -1008,7 +1042,7 @@ static void MVD_Stop_f( void ) {
         MVD_StreamedStop_f();
         return;
     }
-	if( !sv.mvd.file ) {
+	if( !svs.mvd.recording ) {
 		Com_Printf( "Not recording a local MVD.\n" );
 		return;
 	}
@@ -1039,6 +1073,7 @@ void SV_MvdRegister( void ) {
 	sv_mvd_wait = Cvar_Get( "sv_mvd_wait", "0", CVAR_ROM ); // TODO
 	sv_mvd_max_size = Cvar_Get( "sv_mvd_max_size", "0", 0 );
 	sv_mvd_max_duration = Cvar_Get( "sv_mvd_max_duration", "0", 0 );
+	sv_mvd_max_levels = Cvar_Get( "sv_mvd_max_levels", "1", 0 );
 	sv_mvd_noblend = Cvar_Get( "sv_mvd_noblend", "0", CVAR_LATCH );
 	sv_mvd_nogun = Cvar_Get( "sv_mvd_nogun", "1", CVAR_LATCH );
     sv_mvd_begincmd = Cvar_Get( "sv_mvd_begincmd",

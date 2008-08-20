@@ -173,27 +173,20 @@ static void MVD_HttpPrintf( mvd_t *mvd, const char *fmt, ... ) {
 }
 
 void MVD_ClearState( mvd_t *mvd ) {
-	mvd_cs_t *cs, *nextcs;
+	mvd_cs_t *cs, *next;
     mvd_player_t *player;
-    edict_t *ent;
 	int i;
 
-    for( i = 0; i < mvd->pool.num_edicts; i++ ) {
-        ent = &mvd->edicts[i];
-        memset( &ent->s, 0, sizeof( ent->s ) );
-        ent->inuse = qfalse;
-    }
+    memset( mvd->edicts, 0, sizeof( mvd->edicts[0] ) * mvd->pool.num_edicts );
     mvd->pool.num_edicts = 0;
 
     for( i = 0; i < mvd->maxclients; i++ ) {
         player = &mvd->players[i];
-        for( cs = player->configstrings; cs; cs = nextcs ) {
-            nextcs = cs->next;
+        for( cs = player->configstrings; cs; cs = next ) {
+            next = cs->next;
             Z_Free( cs );
         }
-        player->configstrings = NULL;
-        memset( &player->ps, 0, sizeof( player->ps ) );
-        player->inuse = qfalse;
+        memset( player, 0, sizeof( *player ) );
     }
 
     CM_FreeMap( &mvd->cm );

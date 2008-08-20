@@ -47,16 +47,11 @@ clients along with it.
 */
 static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint ) {
 	int			i;
-//	uint32_t	checksum;
 	char		string[MAX_QPATH];
 	client_t	*client;
-    tcpClient_t *t;
 
 	Com_Printf( "------- Server Initialization -------\n" );
 	Com_Printf( "SpawnServer: %s\n", server );
-
-	// force MVD recording to stop
-	SV_MvdRecStop();
 
 	CM_FreeMap( &sv.cm );
 	
@@ -126,16 +121,8 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
 	// all precaches are complete
 	sv.state = ss_game;
 
-    // respawn dummy MVD client and set base states
-    SV_MvdSpawnDummy();
-
-    LIST_FOR_EACH( tcpClient_t, t, &svs.mvd.clients, mvdEntry ) {
-		// needs to reconnect
-        if( t->state >= cs_connected ) {
-            t->state = cs_connected;
-            SV_MvdClientNew( t );
-        }
-    }
+    // respawn dummy MVD client, set base states, etc
+	SV_MvdMapChanged();
 
 	// set serverinfo variable
 	SV_InfoSet( "mapname", sv.name );

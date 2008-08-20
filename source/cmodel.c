@@ -911,12 +911,11 @@ void CM_FloodAreaConnections( cm_t *cm ) {
         floodnum++;
         FloodArea_r( cm, i, floodnum );
     }
-
 }
 
 void CM_SetAreaPortalState( cm_t *cm, int portalnum, qboolean open ) {
-    if( portalnum > cm->cache->numareaportals )
-        Com_Error( ERR_DROP, "CM_SetAreaPortalState: areaportal > numareaportals" );
+    if( portalnum >= cm->cache->numareaportals )
+        Com_Error( ERR_DROP, "%s: areaportal > numareaportals", __func__ );
 
     cm->portalopen[portalnum] = open;
     CM_FloodAreaConnections( cm );
@@ -935,7 +934,7 @@ qboolean CM_AreasConnected( cm_t *cm, int area1, int area2 ) {
         return qfalse;
     }
     if( area1 >= cache->numareas || area2 >= cache->numareas ) {
-        Com_Error( ERR_DROP, "CM_AreasConnected: area > numareas" );
+        Com_Error( ERR_DROP, "%s: area > numareas", __func__ );
     }
     if( cm->floodnums[area1] == cm->floodnums[area2] ) {
         return qtrue;

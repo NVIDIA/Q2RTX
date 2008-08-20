@@ -89,9 +89,7 @@ typedef struct {
     server_entity_t entities[MAX_EDICTS];
 
     struct {
-	    fileHandle_t	file;
 	    int     	    paused;
-        int             framenum;
         unsigned        layout_time;
         sizebuf_t       datagram;
         sizebuf_t       message; // reliable
@@ -362,6 +360,10 @@ typedef struct server_static_s {
         byte            *datagram_data;
         player_state_t  *players;  // [maxclients]
         entity_state_t  *entities; // [MAX_EDICTS]
+
+	    fileHandle_t	recording; 
+        int             numlevels; // stop after that many levels
+        int             numframes; // stop after that many frames
     } mvd;
 
 #if USE_ZLIB
@@ -525,11 +527,10 @@ void SV_MvdConfigstring( int index, const char *string );
 void SV_MvdBroadcastPrint( int level, const char *string );
 void SV_MvdRecStop( void );
 qboolean SV_MvdPlayerIsActive( edict_t *ent );
-void SV_MvdClientNew( tcpClient_t *client );
 void SV_MvdInitStream( void );
 void SV_MvdGetStream( const char *uri );
+void SV_MvdMapChanged( void );
 void SV_MvdRemoveDummy( void );
-void SV_MvdSpawnDummy( void );
 void SV_MvdDropDummy( const char *reason );
 
 //

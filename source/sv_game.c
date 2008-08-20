@@ -29,7 +29,7 @@ PF_FindIndex
 
 ================
 */
-static int SV_FindIndex( const char *name, int start, int max ) {
+static int PF_FindIndex( const char *name, int start, int max ) {
 	char *string;
 	int		i;
 	
@@ -55,15 +55,15 @@ static int SV_FindIndex( const char *name, int start, int max ) {
 }
 
 static int PF_ModelIndex (const char *name) {
-	return SV_FindIndex (name, CS_MODELS, MAX_MODELS);
+	return PF_FindIndex (name, CS_MODELS, MAX_MODELS);
 }
 
 static int PF_SoundIndex (const char *name) {
-	return SV_FindIndex (name, CS_SOUNDS, MAX_SOUNDS);
+	return PF_FindIndex (name, CS_SOUNDS, MAX_SOUNDS);
 }
 
 static int PF_ImageIndex (const char *name) {
-	return SV_FindIndex (name, CS_IMAGES, MAX_IMAGES);
+	return PF_FindIndex (name, CS_IMAGES, MAX_IMAGES);
 }
 
 /*
@@ -374,7 +374,7 @@ void PF_Configstring( int index, const char *val ) {
 	}
 
 	// change the string in sv
-	strcpy( sv.configstrings[index], val );
+	memcpy( sv.configstrings[index], val, length + 1 );
 	
 	if( sv.state == ss_loading ) {
 		return;
@@ -501,6 +501,11 @@ static void PF_StartSound( edict_t *edict, int channel,
 		Com_Error( ERR_DROP, "%s: soundindex = %d", __func__, soundindex );
 
 	ent = NUM_FOR_EDICT( edict );
+
+    if( ( svs.gameFeatures & GMF_PROPERINUSE ) && !edict->inuse ) {
+        Com_DPrintf( "%s: entnum not in use: %d\n", __func__, ent );
+        return;
+    }
 
 	sendchan = ( ent << 3 ) | ( channel & 7 );
 

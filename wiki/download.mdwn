@@ -1,13 +1,14 @@
 Stable releases
 ----------------
 OpenGL client for Win32:
-[q2pro-r179ac-win32.zip](../ac/q2pro-r179ac-win32.zip).  
+[q2pro-r179ac-win32.zip](http://q2pro.sourceforge.net/ac/q2pro-r179ac-win32.zip).
 This binary is supported by r1ch.net [anticheat](http://antiche.at/) module.
 
 Nightly builds
 ----------------
 Binary builds and source snapshots from SVN trunk are
-[available](http://skuller.ath.cx/nightly/).
+[available](http://skuller.ath.cx/q2pro/nightly/). They are regenerated
+automatically on nightly basis.
 
 Source code
 ----------------
@@ -27,6 +28,6 @@ You can also [browse](http://q2pro.svn.sourceforge.net/viewvc/q2pro/)
 Q2PRO source tree online.
 
 Update utility source tarball:
-[q2proupd.tar.gz](../nightly/q2proupd.tar.gz).  
+[q2proupd.tar.gz](http://q2pro.sourceforge.net/nightly/q2proupd.tar.gz).  
 You will need zlib and libCURL development files installed to build it.
 
