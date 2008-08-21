@@ -486,7 +486,7 @@ static void PF_StartSound( edict_t *edict, int channel,
 	mleaf_t		*leaf;
 	int			area;
     player_state_t  *ps;
-    sound_packet_t  *msg;
+    message_packet_t  *msg;
 
 	if( !edict )
 		return;
@@ -586,9 +586,9 @@ static void PF_StartSound( edict_t *edict, int channel,
             continue;
         }
 
-        msg = LIST_FIRST( sound_packet_t, &client->msg_free, entry );
+        msg = LIST_FIRST( message_packet_t, &client->msg_free, entry );
 
-        msg->cursize = 0; // !!! make sure this does not get Z_Free'ed
+        msg->cursize = 0;
         msg->flags = flags;
         msg->index = soundindex;
         msg->volume = volume * 255;
@@ -597,7 +597,8 @@ static void PF_StartSound( edict_t *edict, int channel,
         msg->sendchan = sendchan;
 
         List_Remove( &msg->entry );
-        List_Append( &client->msg_sound, &msg->entry );
+        List_Append( &client->msg_used[0], &msg->entry );
+        client->msg_bytes += MAX_SOUND_PACKET;
     }
 
     if( svs.mvd.dummy && sv.mvd.paused < PAUSED_FRAMES ) {

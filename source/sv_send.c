@@ -343,18 +343,18 @@ static inline void SV_PacketizedRemove( client_t *client, message_packet_t *msg 
     }
 }
 
+#define FOR_EACH_MSG_SAFE( list )     LIST_FOR_EACH_SAFE( message_packet_t, msg, next, list, entry )
+
 void SV_PacketizedClear( client_t *client ) {
 	message_packet_t	*msg, *next;
 
-    LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->msg_used[0], entry ) {
+    FOR_EACH_MSG_SAFE( &client->msg_used[0] ) {
 		SV_PacketizedRemove( client, msg );
 	}
-    LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->msg_used[1], entry ) {
+    FOR_EACH_MSG_SAFE( &client->msg_used[1] ) {
 		SV_PacketizedRemove( client, msg );
 	}
-    LIST_FOR_EACH_SAFE( message_packet_t, msg, next, &client->msg_sound, entry ) {
-		SV_PacketizedRemove( client, msg );
-	}
+    client->msg_bytes = 0;
 }
 
 message_packet_t *SV_PacketizedAdd( client_t *client, byte *data,
@@ -384,12 +384,14 @@ message_packet_t *SV_PacketizedAdd( client_t *client, byte *data,
 	msg->cursize = ( uint16_t )len;
 
     List_Append( &client->msg_used[reliable], &msg->entry );
+    if( !reliable ) {
+        client->msg_bytes += len;
+    }
 
     return msg;
 }
 
-static void SV_AddClientSounds( client_t *client, size_t maxsize ) {
-    sound_packet_t *msg, *next;
+static void emit_snd( client_t *client, message_packet_t *msg ) {
     edict_t *edict;
     entity_state_t *state;
     vec3_t origin;
@@ -397,75 +399,93 @@ static void SV_AddClientSounds( client_t *client, size_t maxsize ) {
     int flags, entnum;
     int i, j;
 
-	frame = &client->frames[sv.framenum & UPDATE_MASK];
+    entnum = msg->sendchan >> 3;
+    flags = msg->flags;
 
-    LIST_FOR_EACH_SAFE( sound_packet_t, msg, next, &client->msg_sound, entry ) {
-        entnum = msg->sendchan >> 3;
-        flags = msg->flags;
+    edict = EDICT_POOL( client, entnum );
+    
+    // send origin for invisible entities
+    if( edict->svflags & SVF_NOCLIENT ) {
+        flags |= SND_POS;
+    }
 
-        edict = EDICT_POOL( client, entnum );
-        
-        // send origin for invisible entities
-        if( edict->svflags & SVF_NOCLIENT ) {
-            flags |= SND_POS;
-        }
+    // default client doesn't know that bmodels have weird origins
+    if( edict->solid == SOLID_BSP && client->protocol == PROTOCOL_VERSION_DEFAULT ) {
+        flags |= SND_POS;
+    }
 
-        // default client doesn't know that bmodels have weird origins
-        if( edict->solid == SOLID_BSP && client->protocol == PROTOCOL_VERSION_DEFAULT ) {
-            flags |= SND_POS;
-        }
+    // check if position needs to be explicitly sent
+    if( ( flags & SND_POS ) == 0 ) {
+	    frame = &client->frames[sv.framenum & UPDATE_MASK];
 
-        // check if position needs to be explicitly sent
-        if( ( flags & SND_POS ) == 0 ) {
-            for( i = 0; i < frame->numEntities; i++ ) {
-                j = ( frame->firstEntity + i ) % svs.numEntityStates;
-                state = &svs.entityStates[j];
-                if( state->number == entnum ) {
-                    break;
-                }
-            }
-            if( i == frame->numEntities ) {
-                if( sv_debug_send->integer ) {
-                    Com_Printf( S_COLOR_BLUE "Forcing position on entity %d for %s\n",
-                        entnum, client->name );
-                }
-                flags |= SND_POS;   // entity is not present in frame
+        for( i = 0; i < frame->numEntities; i++ ) {
+            j = ( frame->firstEntity + i ) % svs.numEntityStates;
+            state = &svs.entityStates[j];
+            if( state->number == entnum ) {
+                break;
             }
         }
-
-		// if this msg fits, write it
-		if( msg_write.cursize + 16 > maxsize ) {
-            break;
-        }
-
-        MSG_WriteByte( svc_sound );
-        MSG_WriteByte( flags );
-        MSG_WriteByte( msg->index );
-
-        if( flags & SND_VOLUME )
-            MSG_WriteByte( msg->volume );
-        if( flags & SND_ATTENUATION )
-            MSG_WriteByte( msg->attenuation );
-        if( flags & SND_OFFSET )
-            MSG_WriteByte( msg->timeofs );
-
-        MSG_WriteShort( msg->sendchan );
-
-        if( flags & SND_POS ) {
-            // use the entity origin unless it is a bmodel
-            if( edict->solid == SOLID_BSP ) {
-                VectorAvg( edict->mins, edict->maxs, origin );
-                VectorAdd( edict->s.origin, origin, origin );
-            } else {
-                VectorCopy( edict->s.origin, origin );
+        if( i == frame->numEntities ) {
+            if( sv_debug_send->integer ) {
+                Com_Printf( S_COLOR_BLUE "Forcing position on entity %d for %s\n",
+                    entnum, client->name );
             }
+            flags |= SND_POS;   // entity is not present in frame
+        }
+    }
 
-            MSG_WritePos( origin );
+    MSG_WriteByte( svc_sound );
+    MSG_WriteByte( flags );
+    MSG_WriteByte( msg->index );
+
+    if( flags & SND_VOLUME )
+        MSG_WriteByte( msg->volume );
+    if( flags & SND_ATTENUATION )
+        MSG_WriteByte( msg->attenuation );
+    if( flags & SND_OFFSET )
+        MSG_WriteByte( msg->timeofs );
+
+    MSG_WriteShort( msg->sendchan );
+
+    if( flags & SND_POS ) {
+        // use the entity origin unless it is a bmodel
+        if( edict->solid == SOLID_BSP ) {
+            VectorAvg( edict->mins, edict->maxs, origin );
+            VectorAdd( edict->s.origin, origin, origin );
+        } else {
+            VectorCopy( edict->s.origin, origin );
         }
 
-        // move message to the free pool
-	    List_Remove( &msg->entry );
-        List_Insert( &client->msg_free, &msg->entry );
+        MSG_WritePos( origin );
+    }
+}
+
+static inline void write_snd( client_t *client, message_packet_t *msg, size_t maxsize ) {
+    // if this msg fits, write it
+    if( msg_write.cursize + MAX_SOUND_PACKET <= maxsize ) {
+        emit_snd( client, msg );
+    }
+	List_Remove( &msg->entry );
+    List_Insert( &client->msg_free, &msg->entry );
+}
+
+static inline void write_msg( client_t *client, message_packet_t *msg, size_t maxsize ) {
+    // if this msg fits, write it
+    if( msg_write.cursize + msg->cursize <= maxsize ) {
+        MSG_WriteData( msg->data, msg->cursize );
+    }
+	SV_PacketizedRemove( client, msg );
+}
+
+static inline void emit_messages( client_t *client, size_t maxsize ) {
+	message_packet_t	*msg, *next;
+
+    FOR_EACH_MSG_SAFE( &client->msg_used[0] ) {
+        if( msg->cursize ) {
+            write_msg( client, msg, maxsize );
+        } else {
+            write_snd( client, msg, maxsize );
+        }
     }
 }
 
@@ -477,9 +497,8 @@ FRAME UPDATES - DEFAULT, R1Q2 AND Q2PRO CLIENTS (OLD NETCHAN)
 ===============================================================================
 */
 
-#define FOR_EACH_MSG( list )     LIST_FOR_EACH_SAFE( message_packet_t, msg, next, list, entry )
 
-void SV_OldClientAddMessage( client_t *client, byte *data,
+void SV_ClientAddMessage_Old( client_t *client, byte *data,
 							  size_t len, qboolean reliable )
 {
 	if( len > client->netchan->maxpacketlen ) {
@@ -496,13 +515,13 @@ void SV_OldClientAddMessage( client_t *client, byte *data,
 
 /*
 =======================
-SV_OldClient_SendReliableMessages
+SV_ClientWriteReliableMessages_Old
 
 This should be the only place data is
 ever written to client->netchan.message
 =======================
 */
-void SV_OldClientWriteReliableMessages( client_t *client, size_t maxsize ) {
+void SV_ClientWriteReliableMessages_Old( client_t *client, size_t maxsize ) {
 	message_packet_t	*msg, *next;
     int count;
 
@@ -515,7 +534,7 @@ void SV_OldClientWriteReliableMessages( client_t *client, size_t maxsize ) {
 
 	// find at least one reliable message to send
     count = 0;
-    FOR_EACH_MSG( &client->msg_used[1] ) {
+    FOR_EACH_MSG_SAFE( &client->msg_used[1] ) {
 		// stop if this msg doesn't fit (reliables must be delivered in order)
 		if( client->netchan->message.cursize + msg->cursize > maxsize ) {
 			if( !count ) {
@@ -536,22 +555,69 @@ void SV_OldClientWriteReliableMessages( client_t *client, size_t maxsize ) {
 	}
 }
 
-static inline void write_msg( client_t *client, message_packet_t *msg, size_t maxsize ) {
-    // if this msg fits, write it
-    if( msg_write.cursize + msg->cursize <= maxsize ) {
-        MSG_WriteData( msg->data, msg->cursize );
-    }
-	SV_PacketizedRemove( client, msg );
-}
+static void repack_messages( client_t *client, size_t maxsize ) {
+	message_packet_t	*msg, *next;
 
+	if( msg_write.cursize + 4 > maxsize ) {
+        return;
+    }
+
+    // temp entities first
+    FOR_EACH_MSG_SAFE( &client->msg_used[0] ) {
+        if( !msg->cursize || msg->data[0] != svc_temp_entity ) {
+            continue;
+        }
+        // ignore some low-priority effects, these checks come from r1q2
+        if( msg->data[1] == TE_BLOOD || msg->data[1] == TE_SPLASH ||
+            msg->data[1] == TE_GUNSHOT || msg->data[1] == TE_BULLET_SPARKS ||
+            msg->data[1] == TE_SHOTGUN )
+        {
+            continue;
+        }
+        write_msg( client, msg, maxsize );
+    }
+
+	if( msg_write.cursize + 4 > maxsize ) {
+        return;
+    }
+
+    // then entity sounds
+    FOR_EACH_MSG_SAFE( &client->msg_used[0] ) {
+        if( !msg->cursize ) {
+            write_snd( client, msg, maxsize );
+        }
+    }
+
+	if( msg_write.cursize + 4 > maxsize ) {
+        return;
+    }
+
+	// then positioned sounds
+    FOR_EACH_MSG_SAFE( &client->msg_used[0] ) {
+        if( msg->cursize && msg->data[0] == svc_sound ) {
+            write_msg( client, msg, maxsize );
+        }
+    }
+
+    if( msg_write.cursize + 4 > maxsize ) {
+        return;
+    }
+
+    // then everything else left
+    FOR_EACH_MSG_SAFE( &client->msg_used[0] ) {
+        if( msg->cursize ) {
+            write_msg( client, msg, maxsize );
+        }
+    }
+}
 
 /*
 =======================
-OldClient_SendDatagram
+SV_ClientWriteDatagram_Old
 =======================
 */
-void SV_OldClientWriteDatagram( client_t *client ) {
-	message_packet_t	*msg, *next;
+void SV_ClientWriteDatagram_Old( client_t *client ) {
+	message_packet_t *msg;
 	size_t maxsize, cursize;
 
 	maxsize = client->netchan->maxpacketlen;
@@ -578,50 +644,19 @@ void SV_OldClientWriteDatagram( client_t *client ) {
 		SZ_Clear( &msg_write );
 	}
 
-	// now try to write unreliable messages
-	// it is necessary for this to be after the WriteEntities
+	// now write unreliable messages
+	// it is necessary for this to be after the WriteFrame
 	// so that entity references will be current
-	if( msg_write.cursize + 4 <= maxsize ) {
-		// temp entities first
-        FOR_EACH_MSG( &client->msg_used[0] ) {
-			if( msg->data[0] != svc_temp_entity ) {
-				continue;
-			}
-			// ignore some low-priority effects, these checks come from r1q2
-			if( msg->data[1] == TE_BLOOD || msg->data[1] == TE_SPLASH ||
-			    msg->data[1] == TE_GUNSHOT || msg->data[1] == TE_BULLET_SPARKS ||
-                msg->data[1] == TE_SHOTGUN )
-            {
-				continue;
-			}
-            write_msg( client, msg, maxsize );
-		}
+    if( msg_write.cursize + client->msg_bytes > maxsize ) {
+        // throw out some low priority effects
+        repack_messages( client, maxsize );
+    } else {
+        // all messages fit, write them in order
+        emit_messages( client, maxsize );
+    }
 
-		if( msg_write.cursize + 4 <= maxsize ) {
-            // then entity sounds
-            SV_AddClientSounds( client, maxsize );
-
-			// then positioned sounds
-		    if( msg_write.cursize + 4 <= maxsize ) {
-                FOR_EACH_MSG( &client->msg_used[0] ) {
-                    if( msg->data[0] != svc_sound ) {
-                        continue;
-                    }
-                    write_msg( client, msg, maxsize );
-                }
-
-                if( msg_write.cursize + 4 <= maxsize ) {
-                    // then everything else left
-                    FOR_EACH_MSG( &client->msg_used[0] ) {
-                        write_msg( client, msg, maxsize );
-                    }
-                }
-            }
-		}
-	}
-	
     // write at least one reliable message
-	SV_OldClientWriteReliableMessages( client,
+	SV_ClientWriteReliableMessages_Old( client,
         client->netchan->maxpacketlen - msg_write.cursize );
 
 	// send the datagram
@@ -634,19 +669,6 @@ void SV_OldClientWriteDatagram( client_t *client ) {
 	SZ_Clear( &msg_write );
 }
 
-void SV_OldClientFinishFrame( client_t *client ) {
-	message_packet_t	*msg, *next;
-
-	// clear all unreliable messages still left
-    FOR_EACH_MSG( &client->msg_used[0] ) {
-		SV_PacketizedRemove( client, msg );
-	}
-
-    FOR_EACH_MSG( &client->msg_sound ) {
-		SV_PacketizedRemove( client, msg );
-	}
-}
-
 /*
 ===============================================================================
 
@@ -655,14 +677,17 @@ FRAME UPDATES - Q2PRO CLIENTS (NEW NETCHAN)
 ===============================================================================
 */
 
-void SV_NewClientAddMessage( client_t *client, byte *data,
-							  size_t length, qboolean reliable )
+void SV_ClientAddMessage_New( client_t *client, byte *data,
+							  size_t len, qboolean reliable )
 {
-	sizebuf_t *buf = reliable ? &client->netchan->message : &client->datagram;
-	SZ_Write( buf, data, length );
+    if( reliable ) {
+	    SZ_Write( &client->netchan->message, data, len );
+    } else {
+        SV_PacketizedAdd( client, data, len, qfalse );
+    }
 }
 
-void SV_NewClientWriteDatagram( client_t *client ) {
+void SV_ClientWriteDatagram_New( client_t *client ) {
 	size_t cursize;
 
 	// send over all the relevant entity_state_t
@@ -675,19 +700,15 @@ void SV_NewClientWriteDatagram( client_t *client ) {
 		SZ_Clear( &msg_write );
 	}
 
-	// copy the accumulated multicast datagram
+	// now write unreliable messages
 	// for this client out to the message
-	// it is necessary for this to be after the WriteEntities
+	// it is necessary for this to be after the WriteFrame
 	// so that entity references will be current
-	if( client->datagram.overflowed ) {
-		Com_WPrintf( "Datagram overflowed for %s\n", client->name );
-	} else if( msg_write.cursize + client->datagram.cursize > msg_write.maxsize ) {
+    if( msg_write.cursize + client->msg_bytes > msg_write.maxsize ) {
 		Com_WPrintf( "Dumping datagram for %s\n", client->name );
-	} else {
-		MSG_WriteData( client->datagram.data, client->datagram.cursize );
-	}
-
-    SV_AddClientSounds( client, msg_write.maxsize );
+    } else {
+        emit_messages( client, msg_write.maxsize );
+    }
 
 	if( sv_pad_packets->integer ) {
         size_t pad = msg_write.cursize + sv_pad_packets->integer;
@@ -711,16 +732,6 @@ void SV_NewClientWriteDatagram( client_t *client ) {
 	SZ_Clear( &msg_write );
 }
 
-void SV_NewClientFinishFrame( client_t *client ) {
-	message_packet_t	*msg, *next;
-
-	// clear all unreliable messages still left
-	SZ_Clear( &client->datagram );
-
-    FOR_EACH_MSG( &client->msg_sound ) {
-		SV_PacketizedRemove( client, msg );
-	}
-}
 
 /*
 ===============================================================================
@@ -729,6 +740,15 @@ COMMON STUFF
 
 ===============================================================================
 */
+
+static void finish_frame( client_t *client ) {
+	message_packet_t	*msg, *next;
+
+    FOR_EACH_MSG_SAFE( &client->msg_used[0] ) {
+		SV_PacketizedRemove( client, msg );
+	}
+    client->msg_bytes = 0;
+}
 
 /*
 =======================
@@ -774,8 +794,8 @@ void SV_SendClientMessages( void ) {
         }
 
 finish:
-        // clear the unreliable datagram
-        client->FinishFrame( client );
+	    // clear all unreliable messages still left
+        finish_frame( client );
 	}
 
 }

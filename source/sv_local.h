@@ -138,22 +138,24 @@ typedef enum {
 #define MSG_RELIABLE	1
 #define MSG_CLEAR		2
 
-typedef struct {
-	list_t	    entry;
-	uint16_t	cursize;
-    byte		data[MSG_TRESHOLD];
-} message_packet_t;
+#define MAX_SOUND_PACKET   14
 
 typedef struct {
-    list_t      entry;
-    uint16_t    cursize;
-    uint8_t     flags;
-    uint8_t     index;
-    uint16_t    sendchan;
-    uint8_t     volume;
-    uint8_t     attenuation;
-    uint8_t     timeofs;
-} sound_packet_t;
+	list_t	    entry;
+	uint16_t	cursize;    // zero means sound packet
+    union {
+        uint8_t		    data[MSG_TRESHOLD];
+        struct {
+            uint8_t     flags;
+            uint8_t     index;
+            uint16_t    sendchan;
+            uint8_t     volume;
+            uint8_t     attenuation;
+            uint8_t     timeofs;
+        };
+    };
+} message_packet_t;
+
 
 #define	LATENCY_COUNTS	16
 #define LATENCY_MASK	( LATENCY_COUNTS - 1 )
@@ -224,16 +226,11 @@ typedef struct client_s {
     // spectator speed, etc
 	pmoveParams_t	pmp;
 
-    // packetized messages for clients without
-    // netchan level fragmentation support
+    // packetized messages
 	list_t			    msg_free;
-	list_t			    msg_used[2];
-	list_t			    msg_sound;
+	list_t			    msg_used[2]; // 0 - unreliable, 1 - reliable
 	message_packet_t	*msg_pool;
-
-    // bulk messages for clients with 
-    // netchan level fragmentation support
-	sizebuf_t		datagram;
+    size_t              msg_bytes; // total size of unreliable datagram
 
     // baselines are allocated per client
     entity_state_t  *baselines[SV_BASELINES_CHUNKS];
@@ -248,7 +245,6 @@ typedef struct client_s {
     // netchan type dependent methods
 	void			(*AddMessage)( struct client_s *, byte *, size_t, qboolean );
 	void			(*WriteFrame)( struct client_s * );
-	void			(*FinishFrame)( struct client_s * );
 	void			(*WriteDatagram)( struct client_s * );
 
 	netchan_t		*netchan;
@@ -496,16 +492,14 @@ void SV_BroadcastCommand( const char *fmt, ... ) q_printf( 1, 2 );
 void SV_ClientAddMessage( client_t *client, int flags );
 void SV_PacketizedClear( client_t *client );
 
-void SV_OldClientWriteDatagram( client_t *client );
-void SV_OldClientAddMessage( client_t *client, byte *data,
+void SV_ClientWriteDatagram_Old( client_t *client );
+void SV_ClientAddMessage_Old( client_t *client, byte *data,
 							  size_t length, qboolean reliable );
-void SV_OldClientWriteReliableMessages( client_t *client, size_t maxsize );
-void SV_OldClientFinishFrame( client_t *client );
+void SV_ClientWriteReliableMessages_Old( client_t *client, size_t maxsize );
 
-void SV_NewClientWriteDatagram( client_t *client );
-void SV_NewClientAddMessage( client_t *client, byte *data,
+void SV_ClientWriteDatagram_New( client_t *client );
+void SV_ClientAddMessage_New( client_t *client, byte *data,
 							  size_t length, qboolean reliable );
-void SV_NewClientFinishFrame( client_t *client );
 
 void SV_CalcSendTime( client_t *client, size_t messageSize );
 

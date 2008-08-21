@@ -98,12 +98,6 @@ void SV_RemoveClient( client_t *client ) {
         client->msg_pool = NULL;
     }
 
-    if( client->datagram.data ) {
-    	Z_Free( client->datagram.data );
-	    client->datagram.data = NULL;
-        client->datagram.maxsize = 0;
-    }
-
     if( client->netchan ) {
     	Netchan_Close( client->netchan );
 	    client->netchan = NULL;
@@ -522,7 +516,6 @@ static void SVC_DirectConnect( void ) {
     netchan_type_t nctype;
     char        *ncstring, *acstring;
     int         reserved;
-    byte        *buffer;
     int         zlib;
 
 	protocol = atoi( Cmd_Argv( 1 ) );
@@ -897,7 +890,6 @@ static void SVC_DirectConnect( void ) {
     List_Init( &newcl->msg_free );
     List_Init( &newcl->msg_used[0] );
     List_Init( &newcl->msg_used[1] );
-    List_Init( &newcl->msg_sound );
 
     newcl->msg_pool = SV_Malloc( sizeof( message_packet_t ) * MSG_POOLSIZE );
     for( i = 0; i < MSG_POOLSIZE; i++ ) {
@@ -906,15 +898,11 @@ static void SVC_DirectConnect( void ) {
 
     // setup protocol
     if( nctype == NETCHAN_NEW ) {
-        buffer = SV_Malloc( MAX_MSGLEN );
-        SZ_Init( &newcl->datagram, buffer, MAX_MSGLEN );
-        newcl->AddMessage = SV_NewClientAddMessage;
-        newcl->WriteDatagram = SV_NewClientWriteDatagram;
-        newcl->FinishFrame = SV_NewClientFinishFrame;
+        newcl->AddMessage = SV_ClientAddMessage_New;
+        newcl->WriteDatagram = SV_ClientWriteDatagram_New;
     } else {
-        newcl->AddMessage = SV_OldClientAddMessage;
-        newcl->WriteDatagram = SV_OldClientWriteDatagram;
-        newcl->FinishFrame = SV_OldClientFinishFrame;
+        newcl->AddMessage = SV_ClientAddMessage_Old;
+        newcl->WriteDatagram = SV_ClientWriteDatagram_Old;
     }
     if( protocol == PROTOCOL_VERSION_DEFAULT ) {
         newcl->WriteFrame = SV_WriteFrameToClient_Default;
@@ -1304,7 +1292,7 @@ void SV_SendAsyncPackets( void ) {
 
 		// just update reliable	if needed
 		if( netchan->type == NETCHAN_OLD ) {
-			SV_OldClientWriteReliableMessages( client, netchan->maxpacketlen );
+			SV_ClientWriteReliableMessages_Old( client, netchan->maxpacketlen );
 		}
 		if( netchan->message.cursize || netchan->reliable_ack_pending ||
             netchan->reliable_length || retransmit )
