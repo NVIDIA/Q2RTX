@@ -1128,10 +1128,8 @@ void GL_InitImages( void ) {
 
 	IMG_GetPalette( NULL );
 
-	if( gl_intensity->value < 1 ) {
-		Cvar_Set( "intensity", "1" );
-	}
-	f = gl_intensity->value;
+	f = Cvar_ClampValue( gl_intensity, 1, 5 );
+    gl_static.inverse_intensity = 1 / f;
 	for( i = 0; i < 256; i++ ) {
 		j = i * f;
 		if( j > 255 ) {

@@ -292,12 +292,14 @@ static void GL_Flush3D( void ) {
         return;
     }
 
-    if( tess.flags & SURF_TRANS33 ) {
-        qglColor4f( 1, 1, 1, 0.33f );
-    } else if( tess.flags & SURF_TRANS66 ) {
-        qglColor4f( 1, 1, 1, 0.66f );
-    } else if( tess.flags & SURF_SKY ) {
-        qglColor4f( 0, 0, 0, 1 );
+    if( tess.flags & (SURF_TRANS33|SURF_TRANS66) ) {
+        float f = gl_static.inverse_intensity;
+
+        if( tess.flags & SURF_TRANS33 ) {
+            qglColor4f( f, f, f, 0.33f );
+        } else {
+            qglColor4f( f, f, f, 0.66f );
+        }
     }
 
 	GL_BindTexture( tess.texnum[0] );
@@ -377,7 +379,7 @@ static void GL_DrawFace( mface_t *surf ) {
 
     if( tess.texnum[0] != texnum ||
         tess.texnum[1] != surf->texnum[1] ||
-        ( diff & (SURF_TRANS33|SURF_TRANS66|SURF_SKY) ) ||
+        ( diff & (SURF_TRANS33|SURF_TRANS66) ) ||
         tess.numindices + numindices > TESS_MAX_INDICES )
     {
         GL_Flush3D();

@@ -49,6 +49,7 @@ typedef struct {
         mempool_t pool;
         vec_t *vertices;
     } world;
+    float inverse_intensity;
 } glStatic_t;
 
 typedef struct {
