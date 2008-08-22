@@ -437,10 +437,11 @@ static void CM_ClipBoxToBrush (vec3_t mins, vec3_t maxs, vec3_t p1, vec3_t p2,
 
     if (!startout)
     {   // original point was inside brush
-        trace->fraction = 0;
         trace->startsolid = qtrue;
-        if (!getout)
+        if( !getout ) {
+            trace->fraction = 0;
             trace->allsolid = qtrue;
+        }
         return;
     }
     if (enterfrac < leavefrac)
