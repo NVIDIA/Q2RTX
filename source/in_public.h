@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 
 typedef enum {
+    IN_FREE,
     IN_SHOW,
     IN_HIDE,
     IN_GRAB

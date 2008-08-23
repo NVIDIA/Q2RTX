@@ -93,7 +93,7 @@ void IN_Activate( void ) {
 
     input.hideCursor = 0;
     if( cls.active != ACT_ACTIVATED ) {
-        grab = IN_SHOW;
+        grab = IN_FREE;
     } else if( scr_glconfig.flags & QVF_FULLSCREEN ) {
         grab = IN_GRAB;
     } else if( cls.key_dest & KEY_MENU ) {
