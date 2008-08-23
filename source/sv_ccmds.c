@@ -699,6 +699,7 @@ void SV_AddMatch_f( list_t *list ) {
     char	*s;
     addrmatch_t *match;
     uint32_t addr, mask;
+    size_t len;
 
     if( Cmd_Argc() < 2 ) {
 		Com_Printf( "Usage: %s <address/mask>\n", Cmd_Argv( 0 ) );
@@ -719,9 +720,12 @@ void SV_AddMatch_f( list_t *list ) {
     }
 #endif
 
-    match = Z_Malloc( sizeof( *match ) );
+    s = Cmd_ArgsFrom( 2 );
+    len = strlen( s );
+    match = Z_Malloc( sizeof( *match ) + len );
     match->addr = addr;
     match->mask = mask;
+    memcpy( match->comment, s, len + 1 );
     List_Append( list, &match->entry );
 }
 
@@ -787,6 +791,7 @@ remove:
 
 void SV_ListMatches_f( list_t *list ) {
     addrmatch_t *match;
+    char addr[32];
     byte ip[4];
     int i, count;
 
@@ -795,6 +800,8 @@ void SV_ListMatches_f( list_t *list ) {
         return;
     }
 
+    Com_Printf( "id address/mask       comment\n"
+                "-- ------------------ -------\n" );
     count = 1;
     LIST_FOR_EACH( addrmatch_t, match, list, entry ) {
         *( uint32_t * )ip = match->addr;
@@ -803,8 +810,9 @@ void SV_ListMatches_f( list_t *list ) {
                 break;
             }
         }
-        Com_Printf( "(%d) %d.%d.%d.%d/%d\n",
-            count, ip[0], ip[1], ip[2], ip[3], i );
+        Com_sprintf( addr, sizeof( addr ), "%d.%d.%d.%d/%d",
+            ip[0], ip[1], ip[2], ip[3], i );
+        Com_Printf( "%-2d %-18s %s\n", count, addr, match->comment );
         count++;
     }
 }

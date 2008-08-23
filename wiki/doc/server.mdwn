@@ -181,8 +181,9 @@ must be reachable. See `passive` [[client#index3h1]] command for more details.
 Dumps entity lump of the current map into `maps/<entname>.ent`, which you can later
 edit and use as `map_override` file (see above).
 
-- `addban <address[/mask]>`
-Adds specified address to the ban list. Specify _mask_ to ban the whole network.
+- `addban <address[/mask]> [comment ...]`
+Adds specified address to the ban list. Specify _mask_ to ban entire subnetwork.
+If specified, _comment_ will be printed to banned user(s) when they attempt to connect.
 
 - `delban <address[/mask]|id|all>`
 Deletes single matching address from the ban list. You can also specify

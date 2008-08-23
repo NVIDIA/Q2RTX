@@ -131,6 +131,8 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
 	Cvar_Set( "sv_paused", "0" );
 	Cvar_Set( "timedemo", "0" );
 
+    SV_SetConsoleTitle();
+
 	Com_Printf ("-------------------------------------\n");
 }
 

@@ -838,6 +838,8 @@ void MVD_Spawn_f( void ) {
     Cvar_Set( "sv_paused", "0" );
     Cvar_Set( "timedemo", "0" );
 
+    SV_SetConsoleTitle();
+
 	sv.spawncount = ( rand() | ( rand() << 16 ) ) ^ Sys_Milliseconds();
 	sv.spawncount &= 0x7FFFFFFF;
 

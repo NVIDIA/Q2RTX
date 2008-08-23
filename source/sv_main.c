@@ -534,12 +534,7 @@ static void SVC_DirectConnect( void ) {
     }
 
 	if( !NET_IsLocalAddress( &net_from ) ) {
-        // check for banned address
-        if( SV_MatchAddress( &sv_banlist, &net_from ) ) {
-            SV_OobPrintf( "Your IP address is banned.\n" );
-            Com_DPrintf( "   rejected connect from banned IP\n" );
-            return;
-        }
+        addrmatch_t *match;
 
 	    // see if the challenge is valid
 		for( i = 0; i < MAX_CHALLENGES; i++ ) {
@@ -560,6 +555,17 @@ static void SVC_DirectConnect( void ) {
 			return;
 		}
 		svs.challenges[i].challenge = 0;
+
+        // check for banned address
+        if( ( match = SV_MatchAddress( &sv_banlist, &net_from ) ) != NULL ) {
+            s = match->comment;
+            if( !*s ) {
+                s = "Your IP address is banned from this server.";
+            }
+            SV_OobPrintf( "%s\nConnection refused.\n", s );
+            Com_DPrintf( "   rejected connect from banned IP\n" );
+            return;
+        }
 
         if( sv_locked->integer ) {
 			SV_OobPrintf( "Server is locked.\n" );
@@ -1160,9 +1166,12 @@ static void SV_PacketEvent( neterr_t ret ) {
 				continue; // already a zombie
 			}
             netchan = client->netchan;
-			if( !NET_IsEqualAdr( &net_from, &netchan->remote_address ) ) {
+			if( !NET_IsEqualBaseAdr( &net_from, &netchan->remote_address ) ) {
 				continue;
 			}
+		    if( net_from.port && netchan->remote_address.port != net_from.port ) {
+                continue;
+            }
             client->flags |= CF_ERROR; // drop them soon
 			break;
 		}
@@ -1710,6 +1719,16 @@ void SV_UserinfoChanged( client_t *cl ) {
 
 //============================================================================
 
+void SV_SetConsoleTitle( void ) {
+    char buffer[MAX_STRING_CHARS];
+
+    Com_sprintf( buffer, sizeof( buffer ), "%s (port %d%s)",
+        sv_hostname->string, net_port->integer,
+        sv_running->integer ? "" : ", down" );
+
+    Sys_SetConsoleTitle( buffer );
+}
+
 static void sv_status_limit_changed( cvar_t *self ) {
 	SV_RateInit( &svs.ratelimit_status, self->integer, 1000 );
 }
@@ -1720,12 +1739,7 @@ static void sv_badauth_time_changed( cvar_t *self ) {
 }
 
 static void sv_hostname_changed( cvar_t *self ) {
-    char buffer[MAX_STRING_CHARS];
-
-    Com_sprintf( buffer, sizeof( buffer ), "%s (port %d)",
-        sv_hostname->string, net_port->integer );
-
-    Sys_SetConsoleTitle( buffer );
+    SV_SetConsoleTitle();
 }
 
 /*
@@ -1757,7 +1771,6 @@ void SV_Init( void ) {
 	sv_reserved_slots = Cvar_Get( "sv_reserved_slots", "0", CVAR_LATCH );
 	sv_hostname = Cvar_Get( "hostname", "noname", CVAR_SERVERINFO|CVAR_ARCHIVE );
     sv_hostname->changed = sv_hostname_changed;
-    sv_hostname->changed( sv_hostname );
 	sv_timeout = Cvar_Get( "timeout", "90", 0 );
 	sv_zombietime = Cvar_Get( "zombietime", "2", 0 );
 	sv_ghostime = Cvar_Get( "sv_ghostime", "6", 0 );
@@ -1821,6 +1834,8 @@ void SV_Init( void ) {
     sv_pmp.flyfriction = 9;
     sv_pmp.waterfriction = 1;
 	sv_pmp.speedMultiplier = 1;
+
+    SV_SetConsoleTitle();
 }
 
 /*
@@ -1907,7 +1922,7 @@ before Sys_Quit or Sys_Error
 void SV_Shutdown( const char *finalmsg, killtype_t type ) {
 	Cvar_Set( "sv_running", "0" );
 	Cvar_Set( "sv_paused", "0" );
-    
+
 	if( !svs.initialized ) {
         MVD_Shutdown(); // make sure MVD client is down
 		return;
@@ -1943,6 +1958,8 @@ void SV_Shutdown( const char *finalmsg, killtype_t type ) {
 
 	sv_client = NULL;
 	sv_player = NULL;
+
+    SV_SetConsoleTitle();
 
 	Z_LeakTest( TAG_SERVER );
 }

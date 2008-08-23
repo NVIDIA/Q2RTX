@@ -30,6 +30,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "net_sock.h"
 #include "net_stream.h"
 #include "sys_public.h"
+#include "sv_public.h"
 
 #if defined( _WIN32 )
 #define WIN32_LEAN_AND_MEAN
@@ -1155,6 +1156,8 @@ static void NET_Restart_f( void ) {
     if( sock != INVALID_SOCKET ) {
         NET_Listen( qtrue );
     }
+
+    SV_SetConsoleTitle();
 }
 
 /*
@@ -1224,6 +1227,10 @@ static size_t NET_DnRate_m( char *buffer, size_t size ) {
 	return Com_sprintf( buffer, size, "%"PRIz, net_rate_dn );
 }
 
+static void net_param_changed( cvar_t *self ) {
+    NET_Restart_f();
+}
+
 /*
 ====================
 NET_Init
@@ -1243,8 +1250,11 @@ void NET_Init( void ) {
 #endif
 
 	net_ip = Cvar_Get( "net_ip", "localhost", 0 );
+    net_ip->changed = net_param_changed;
 	net_port = Cvar_Get( "net_port", va( "%i", PORT_SERVER ), 0 );
+    net_port->changed = net_param_changed;
 	net_clientport = Cvar_Get( "net_clientport", va( "%i", PORT_ANY ), 0 );
+    net_clientport->changed = net_param_changed;
 	net_dropsim = Cvar_Get( "net_dropsim", "0", 0 );
 	net_log_active = Cvar_Get( "net_log_active", "0", 0 );
 	net_log_active->changed = net_log_active_changed;

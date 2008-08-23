@@ -846,8 +846,7 @@ void CM_TransformedBoxTrace ( trace_t *trace, vec3_t start, vec3_t end,
     trace->endpos[2] = start[2] + trace->fraction * (end[2] - start[2]);
 }
 
-
-void CM_ClipEntity( trace_t *dst, trace_t *src, struct edict_s *ent ) {
+void CM_ClipEntity( trace_t *dst, const trace_t *src, struct edict_s *ent ) {
     dst->allsolid |= src->allsolid;
     dst->startsolid |= src->startsolid;
     if( src->fraction < dst->fraction ) {

@@ -325,6 +325,7 @@ typedef struct {
     list_t  entry;
     uint32_t    addr;
     uint32_t    mask;
+    char        comment[1];
 } addrmatch_t;
 
 typedef struct {
