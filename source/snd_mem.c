@@ -54,7 +54,7 @@ static sfxcache_t *ResampleSfx( sfx_t *sfx, wavinfo_t *info ) {
     sc = sfx->cache = S_Malloc( outcount * info->width + sizeof( sfxcache_t ) - 1 );
     
     sc->length = outcount;
-    sc->loopstart = info->loopstart / stepscale;
+    sc->loopstart = info->loopstart == -1 ? -1 : info->loopstart / stepscale;
     sc->width = info->width;
 
 // resample / decimate to the current source rate
