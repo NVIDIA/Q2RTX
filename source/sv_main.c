@@ -65,6 +65,7 @@ cvar_t	*sv_maxclients;
 cvar_t	*sv_reserved_slots;
 cvar_t	*sv_showclamp;
 cvar_t  *sv_locked;
+cvar_t  *sv_downloadserver;
 
 cvar_t	*sv_hostname;
 cvar_t	*sv_public;			// should heartbeats be sent
@@ -515,6 +516,7 @@ static void SVC_DirectConnect( void ) {
     int         maxlength;
     netchan_type_t nctype;
     char        *ncstring, *acstring;
+    char        dlstring[MAX_INFO_STRING];
     int         reserved;
     int         zlib;
 
@@ -889,9 +891,16 @@ static void SVC_DirectConnect( void ) {
         acstring = "";
     }
 
+    if( sv_downloadserver->string[0] ) {
+        Com_sprintf( dlstring, sizeof( dlstring ), " dlserver=%s",
+            sv_downloadserver->string );
+    } else {
+        dlstring[0] = 0;
+    }
+
 	// send the connect packet to the client
-	Netchan_OutOfBandPrint( NS_SERVER, &net_from, "client_connect%s%s map=%s",
-        ncstring, acstring, newcl->mapname );
+	Netchan_OutOfBandPrint( NS_SERVER, &net_from, "client_connect%s%s%s map=%s",
+        ncstring, acstring, dlstring, newcl->mapname );
 
     List_Init( &newcl->msg_free );
     List_Init( &newcl->msg_used[0] );
@@ -1799,6 +1808,7 @@ void SV_Init( void ) {
 	sv_reserved_password = Cvar_Get( "sv_reserved_password", "", CVAR_PRIVATE );
 	sv_locked = Cvar_Get( "sv_locked", "0", 0 );
 	sv_novis = Cvar_Get ("sv_novis", "0", 0);
+	sv_downloadserver = Cvar_Get( "sv_downloadserver", "", 0 );
 
 	sv_debug_send = Cvar_Get( "sv_debug_send", "0", 0 );
 	sv_pad_packets = Cvar_Get( "sv_pad_packets", "0", 0 );

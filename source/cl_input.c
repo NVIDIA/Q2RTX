@@ -98,7 +98,10 @@ void IN_Activate( void ) {
         grab = IN_GRAB;
     } else if( cls.key_dest & KEY_MENU ) {
         grab = IN_SHOW;
-    } else if( ( cls.key_dest & KEY_CONSOLE ) || sv_paused->integer || cls.demo.playback || cl.frame.ps.pmove.pm_type == PM_FREEZE ) {
+    } else if( ( cls.key_dest & KEY_CONSOLE ) || sv_paused->integer ||
+        cls.demo.playback || cl.frame.ps.pmove.pm_type == PM_FREEZE ||
+        cls.state < ca_connected )
+    {
         grab = IN_HIDE;
         if( !input.hideCursor ) {
             input.hideCursor = 1;

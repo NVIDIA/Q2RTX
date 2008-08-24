@@ -527,8 +527,10 @@ void SCR_DrawLoading( void ) {
 
 	// draw message string
 	if( cls.state < ca_connected && cls.messageString[0] ) {
+	    x = scr_glconfig.vidWidth / 2;
         R_SetColor( DRAW_COLOR_RGB, colorRed );
-		SCR_DrawString( x, y + 16, UI_CENTER|UI_MULTILINE, cls.messageString );
+		SCR_DrawStringMulti( x, y + 16, UI_CENTER,
+            MAX_STRING_CHARS, cls.messageString, scr_font );
         R_SetColor( DRAW_COLOR_CLEAR, NULL );
 	}
 }
