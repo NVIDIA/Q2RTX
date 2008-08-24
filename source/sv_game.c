@@ -835,13 +835,13 @@ void SV_InitGameProgs ( void ) {
 #else
 	import.trace = SV_Trace_Native;
 #endif
-#else /* _WIN32 */
+#else // _WIN32
 	if( sv_oldgame_hack->integer ) {
 		import.trace = ( sv_trace_t )SV_Trace;
 	} else {
 		import.trace = SV_Trace_Native;
 	}
-#endif /* !_WIN32 */
+#endif // !_WIN32
 	import.pointcontents = SV_PointContents;
 	import.setmodel = PF_setmodel;
 	import.inPVS = PF_inPVS;
@@ -876,7 +876,8 @@ void SV_InitGameProgs ( void ) {
 
 	import.argc = Cmd_Argc;
 	import.argv = Cmd_Argv;
-	import.args = Cmd_Args;
+    // original Cmd_Args() did actually return raw arguments
+	import.args = Cmd_RawArgs;
 	import.AddCommandString = PF_AddCommandString;
 
 	import.DebugGraph = SCR_DebugGraph;

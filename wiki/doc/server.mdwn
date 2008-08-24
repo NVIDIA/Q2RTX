@@ -204,6 +204,20 @@ You can also specify `all` to clear the whole stuffcmd list.
 - `liststuffcmds <connect|begin>`
 Enumerates all registered commands in the specified stuffcmd list.
 
+- `addfiltercmd <command> [ignore|print|stuff|kick] [comment ...]`
+Prevents client command otherwise unknown to the server from being
+interpreted by the game mod, and takes the specified action instead.
+For _print_ and _stuff_ actions _comment_ argument is mandatory.
+Default action is _ignore_. Commands are matched in a case-insensitive way.
+
+- `delfiltercmd <id|cmd|all>`
+Deletes command identified by numeric ID or by name from the list of
+filtered commands. You can also specify `all` to clear the whole
+filtercmd list.
+
+- `listfiltercmds`
+Enumerates all filtered commands along with appropriate actions and comments.
+
 - `mvdplay [-hl:n:] <filename> [...]`  
 Play the local MVD identified by _filename_.
 

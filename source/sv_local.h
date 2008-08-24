@@ -334,6 +334,22 @@ typedef struct {
     char string[1];
 } stuffcmd_t;
 
+typedef enum {
+    FA_IGNORE,
+    FA_PRINT,
+    FA_STUFF,
+    FA_KICK,
+
+    FA_MAX
+} filteraction_t;
+
+typedef struct {
+    list_t entry;
+    filteraction_t action;
+    char *comment;
+    char string[1];
+} filtercmd_t;
+
 typedef struct server_static_s {
 	qboolean	initialized;			// sv_init has completed
 	unsigned	realtime, time;			// always increasing, no clamping, etc
@@ -387,6 +403,8 @@ extern  list_t      sv_blacklist;
 
 extern  list_t      sv_cmdlist_connect;
 extern  list_t      sv_cmdlist_begin;
+
+extern  list_t      sv_filterlist;
 
 extern	server_static_t	svs;				// persistant server info
 extern	server_t		sv;					// local server

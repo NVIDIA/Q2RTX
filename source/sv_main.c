@@ -26,9 +26,9 @@ netadr_t	master_adr[MAX_MASTERS];	// address of group servers
 pmoveParams_t   sv_pmp;
 
 LIST_DECL( sv_banlist );
-LIST_DECL( sv_blacklist );
 LIST_DECL( sv_cmdlist_connect );
 LIST_DECL( sv_cmdlist_begin );
+LIST_DECL( sv_filterlist );
 
 client_t	*sv_client;			// current client
 

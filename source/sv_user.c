@@ -801,6 +801,33 @@ static const ucmd_t ucmds[] = {
     { NULL, NULL }
 };
 
+static void handle_filtercmd( filtercmd_t *filter ) {
+    size_t len;
+
+    switch( filter->action ) {
+    case FA_PRINT:
+        MSG_WriteByte( svc_print );
+        MSG_WriteByte( PRINT_HIGH );
+        break;
+    case FA_STUFF:
+        MSG_WriteByte( svc_stufftext );
+        break;
+    case FA_KICK:
+        SV_DropClient( sv_client, filter->comment[0] ?
+            filter->comment : "issued banned command" );
+        // fall through
+    default:
+        return;
+    }
+
+    len = strlen( filter->comment );
+    MSG_WriteData( filter->comment, len );
+    MSG_WriteByte( '\n' );
+    MSG_WriteByte( 0 );
+
+    SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
+}
+
 /*
 ==================
 SV_ExecuteUserCommand
@@ -808,6 +835,7 @@ SV_ExecuteUserCommand
 */
 static void SV_ExecuteUserCommand( const char *s ) {
     const ucmd_t *u;
+    filtercmd_t *filter;
     char *c;
     
     Cmd_TokenizeString( s, qfalse );
@@ -826,6 +854,12 @@ static void SV_ExecuteUserCommand( const char *s ) {
     }
     if( sv.state < ss_game ) {
         return;
+    }
+    LIST_FOR_EACH( filtercmd_t, filter, &sv_filterlist, entry ) {
+        if( !Q_stricmp( filter->string, c ) ) {
+            handle_filtercmd( filter );
+            return;
+        }
     }
     ge->ClientCommand( sv_player );
 }

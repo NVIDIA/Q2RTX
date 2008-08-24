@@ -870,7 +870,7 @@ static void SV_DelStuffCmd_f( void ) {
     int i;
 
     if( Cmd_Argc() < 3 ) {
-		Com_Printf( "Usage: %s <list> <index>\n", Cmd_Argv( 0 ) );
+		Com_Printf( "Usage: %s <list> <id|all>\n", Cmd_Argv( 0 ) );
         return;
     }
 
@@ -925,9 +925,11 @@ static void SV_ListStuffCmds_f( void ) {
         return;
     }
 
+    Com_Printf( "id command\n"
+                "-- -------\n" );
     count = 1;
     LIST_FOR_EACH( stuffcmd_t, stuff, list, entry ) {
-        Com_Printf( "(%d) %s\n", count, stuff->string );
+        Com_Printf( "%-2d %s\n", count, stuff->string );
         count++;
     }
 }
@@ -936,6 +938,152 @@ static void SV_StuffCmd_c( genctx_t *ctx, int argnum ) {
     if( argnum == 1 ) {
         Prompt_AddMatch( ctx, "connect" );
         Prompt_AddMatch( ctx, "begin" );
+    }
+}
+
+static const char filteractions[FA_MAX][8] = {
+    "ignore", "print", "stuff", "kick"
+};
+
+static void SV_AddFilterCmd_f( void ) {
+    char *s, *comment;
+    filtercmd_t *filter;
+    filteraction_t action;
+    size_t len;
+
+    if( Cmd_Argc() < 2 ) {
+usage:
+		Com_Printf( "Usage: %s <command> [ignore|print|stuff|kick] [comment]\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    if( Cmd_Argc() > 2 ) {
+        s = Cmd_Argv( 2 );
+        for( action = 0; action < FA_MAX; action++ ) {
+            if( !strcmp( s, filteractions[action] ) ) {
+                break;
+            }
+        }
+        if( action == FA_MAX ) {
+            goto usage;
+        }
+        comment = Cmd_ArgsFrom( 3 );
+    } else {
+        action = FA_IGNORE;
+        comment = NULL;
+    }
+
+
+    s = Cmd_Argv( 1 );
+    LIST_FOR_EACH( filtercmd_t, filter, &sv_filterlist, entry ) {
+        if( !Q_stricmp( filter->string, s ) ) {
+            Com_Printf( "Filtercmd already exists: %s\n", s );
+            return;
+        }
+    }
+    len = strlen( s );
+    filter = Z_Malloc( sizeof( *filter ) + len );
+    memcpy( filter->string, s, len + 1 );
+    filter->action = action;
+    filter->comment = Z_CopyString( comment );
+    List_Append( &sv_filterlist, &filter->entry );
+}
+
+static void SV_AddFilterCmd_c( genctx_t *ctx, int argnum ) {
+    filteraction_t action;
+
+    if( argnum == 2 ) {
+        for( action = 0; action < FA_MAX; action++ ) {
+            Prompt_AddMatch( ctx, filteractions[action] );
+        }
+    }
+}
+
+static void SV_DelFilterCmd_f( void ) {
+    filtercmd_t *filter, *next;
+    char *s;
+    int i;
+
+    if( Cmd_Argc() < 2 ) {
+		Com_Printf( "Usage: %s <id|cmd|all>\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    if( LIST_EMPTY( &sv_filterlist ) ) {
+        Com_Printf( "No filtercmds registered.\n" );
+        return;
+    }
+
+    s = Cmd_Argv( 1 );
+    if( !strcmp( s, "all" ) ) {
+        LIST_FOR_EACH_SAFE( filtercmd_t, filter, next, &sv_filterlist, entry ) {
+            Z_Free( filter->comment );
+            Z_Free( filter );
+        }
+        List_Init( &sv_filterlist );
+        return;
+    }
+	if( COM_IsUint( s ) ) {
+        i = atoi( s );
+        if( i < 1 ) {
+            Com_Printf( "Bad filtercmd index: %d\n", i );
+            return;
+        }
+        filter = LIST_INDEX( filtercmd_t, i - 1, &sv_filterlist, entry );
+        if( !filter ) {
+            Com_Printf( "No such filtercmd index: %d\n", i );
+            return;
+        }
+    } else {
+        LIST_FOR_EACH( filtercmd_t, filter, &sv_filterlist, entry ) {
+            if( !Q_stricmp( filter->string, s ) ) {
+                goto remove;
+            }
+        }
+        Com_Printf( "No such filtercmd string: %s\n", s );
+        return;
+    }
+
+remove:
+    List_Remove( &filter->entry );
+    Z_Free( filter->comment );
+    Z_Free( filter );
+}
+
+static void SV_DelFilterCmd_c( genctx_t *ctx, int argnum ) {
+    filtercmd_t *filter;
+
+    if( argnum == 1 ) {
+        if( LIST_EMPTY( &sv_filterlist ) ) {
+            return;
+        }
+        ctx->ignorecase = qtrue;
+        Prompt_AddMatch( ctx, "all" );
+        LIST_FOR_EACH( filtercmd_t, filter, &sv_filterlist, entry ) {
+            if( !Prompt_AddMatch( ctx, filter->string ) ) {
+                break;
+            }
+        }
+    }
+}
+
+static void SV_ListFilterCmds_f( void ) {
+    filtercmd_t *filter;
+    int count;
+
+    if( LIST_EMPTY( &sv_filterlist ) ) {
+        Com_Printf( "No filtercmds registered.\n" );
+        return;
+    }
+
+    Com_Printf( "id command          action comment\n"
+                "-- ---------------- ------ -------\n" );
+    count = 1;
+    LIST_FOR_EACH( filtercmd_t, filter, &sv_filterlist, entry ) {
+        Com_Printf( "%-2d %-16s %-6s %s\n", count,
+            filter->string, filteractions[filter->action],
+            filter->comment ? filter->comment : "" );
+        count++;
     }
 }
 
@@ -977,6 +1125,9 @@ static const cmdreg_t c_server[] = {
 	{ "addstuffcmd", SV_AddStuffCmd_f, SV_StuffCmd_c },
 	{ "delstuffcmd", SV_DelStuffCmd_f, SV_StuffCmd_c },
 	{ "liststuffcmds", SV_ListStuffCmds_f, SV_StuffCmd_c },
+	{ "addfiltercmd", SV_AddFilterCmd_f, SV_AddFilterCmd_c },
+	{ "delfiltercmd", SV_DelFilterCmd_f, SV_DelFilterCmd_c },
+	{ "listfiltercmds", SV_ListFilterCmds_f },
 
     { NULL }
 };
