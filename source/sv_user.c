@@ -324,9 +324,11 @@ This will be sent on the initial connection and upon each server load.
 void SV_New_f( void ) {
     char junk[8][16];
     int i, j, c;
+    clstate_t oldstate;
 
     Com_DPrintf( "New() from %s\n", sv_client->name );
 
+    oldstate = sv_client->state;
     if( sv_client->state < cs_connected ) {
         Com_DPrintf( "Going from cs_assigned to cs_connected for %s\n",
             sv_client->name );
@@ -414,7 +416,7 @@ void SV_New_f( void ) {
     SV_ClientCommand( sv_client, "\n" );
 
     // send version string request
-    if( !sv_client->versionString ) {
+    if( oldstate == cs_assigned ) {
         SV_ClientCommand( sv_client, "cmd \177c version $version\n"
 #if USE_ANTICHEAT & 2
             "cmd \177c actoken $actoken\n"
@@ -436,10 +438,7 @@ void SV_New_f( void ) {
     memset( &sv_client->lastcmd, 0, sizeof( sv_client->lastcmd ) );
 
 #if USE_ZLIB
-    if( !( sv_client->flags & CF_DEFLATE ) ) {
-        write_plain_configstrings();
-        write_plain_baselines();
-    } else {
+    if( sv_client->flags & CF_DEFLATE ) {
         if( sv_client->netchan->type == NETCHAN_NEW ) {
             write_compressed_gamestate();
         } else {
@@ -447,11 +446,12 @@ void SV_New_f( void ) {
             write_compressed_configstrings();
             write_plain_baselines();
         }
+    } else
+#endif // USE_ZLIB
+    {
+        write_plain_configstrings();
+        write_plain_baselines();
     }
-#else // USE_ZLIB
-    write_plain_configstrings();
-    write_plain_baselines();
-#endif // !USE_ZLIB
 
     // send next command
     SV_ClientCommand( sv_client, "precache %i\n", sv.spawncount );
@@ -773,6 +773,13 @@ static void SV_AC_Info_f( void ) {
     Com_EndRedirect();
 }
 
+#else
+
+static void SV_AC_Null_f( void ) {
+    SV_ClientPrintf( sv_client, PRINT_HIGH,
+        "This server does not support anticheat.\n" );
+}
+
 #endif
 
 static const ucmd_t ucmds[] = {
@@ -796,6 +803,9 @@ static const ucmd_t ucmds[] = {
 #if USE_ANTICHEAT & 2
     { "aclist", SV_AC_List_f },
     { "acinfo", SV_AC_Info_f },
+#else
+    { "aclist", SV_AC_Null_f },
+    { "acinfo", SV_AC_Null_f },
 #endif
 
     { NULL, NULL }
