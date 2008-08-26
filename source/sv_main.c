@@ -43,6 +43,7 @@ cvar_t  *sv_password;
 cvar_t  *sv_reserved_password;
 
 cvar_t	*sv_force_reconnect;
+cvar_t  *sv_show_name_changes;
 
 cvar_t *allow_download;
 cvar_t *allow_download_players;
@@ -74,6 +75,7 @@ cvar_t	*sv_debug_send;
 cvar_t	*sv_pad_packets;
 cvar_t	*sv_lan_force_rate;
 cvar_t  *sv_calcpings_method;
+cvar_t  *sv_changemapcmd;
 
 cvar_t	*sv_strafejump_hack;
 cvar_t	*sv_bodyque_hack;
@@ -1678,7 +1680,7 @@ void SV_UserinfoChanged( client_t *cl ) {
 
 	// call prog code to allow overrides
 	ge->ClientUserinfoChanged( cl->edict, cl->userinfo );
-	
+
 	// name for C code
 	val = Info_ValueForKey( cl->userinfo, "name" );
 	len = Q_strncpyz( name, val, sizeof( name ) );
@@ -1692,6 +1694,9 @@ void SV_UserinfoChanged( client_t *cl ) {
         }
         if( sv.state == ss_broadcast ) {
             MVD_GameClientNameChanged( cl->edict, name );
+        } else if( sv_show_name_changes->integer ) {
+            SV_BroadcastPrintf( PRINT_HIGH, "%s changed name to %s\n",
+                cl->name, name );
         }
     }
     memcpy( cl->name, name, len + 1 );
@@ -1786,6 +1791,7 @@ void SV_Init( void ) {
 	sv_showclamp = Cvar_Get( "showclamp", "0", 0 );
 	sv_enforcetime = Cvar_Get ( "sv_enforcetime", "1", 0 );
 	sv_force_reconnect = Cvar_Get ( "sv_force_reconnect", "", CVAR_LATCH );
+	sv_show_name_changes = Cvar_Get( "sv_show_name_changes", "0", 0 );
 
     sv_http_enable = Cvar_Get( "sv_http_enable", "0", CVAR_LATCH );
     sv_http_maxclients = Cvar_Get( "sv_http_maxclients", "4", 0 );
@@ -1814,6 +1820,7 @@ void SV_Init( void ) {
 	sv_pad_packets = Cvar_Get( "sv_pad_packets", "0", 0 );
 	sv_lan_force_rate = Cvar_Get( "sv_lan_force_rate", "0", CVAR_LATCH );
 	sv_calcpings_method = Cvar_Get( "sv_calcpings_method", "1", 0 );
+	sv_changemapcmd = Cvar_Get( "sv_changemapcmd", "", 0 );
 
 	sv_strafejump_hack = Cvar_Get( "sv_strafejump_hack", "1", CVAR_LATCH );
 

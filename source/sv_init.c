@@ -131,6 +131,8 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
 	Cvar_Set( "sv_paused", "0" );
 	Cvar_Set( "timedemo", "0" );
 
+    EXEC_TRIGGER( sv_changemapcmd );
+
     SV_SetConsoleTitle();
 
 	Com_Printf ("-------------------------------------\n");
@@ -261,6 +263,7 @@ void SV_InitGame( qboolean ismvd ){
     List_Init( &svs.mvd.clients );
     List_Init( &svs.tcp_client_list );
     List_Init( &svs.tcp_client_pool );
+    List_Init( &svs.console_list );
 
 	for( i = 0; i < sv_maxclients->integer; i++ ) {
         client = svs.udp_client_pool + i;

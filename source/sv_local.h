@@ -379,6 +379,8 @@ typedef struct server_static_s {
         int             numframes; // stop after that many frames
     } mvd;
 
+    list_t          console_list;
+
 #if USE_ZLIB
     z_stream        z; // for compressing messages at once
 #endif
@@ -431,6 +433,7 @@ extern	cvar_t		*sv_debug_send;
 extern	cvar_t		*sv_pad_packets;
 extern	cvar_t		*sv_lan_force_rate;
 extern  cvar_t      *sv_calcpings_method;
+extern  cvar_t      *sv_changemapcmd;
 
 extern cvar_t		*sv_strafejump_hack;
 extern cvar_t		*sv_bodyque_hack;
