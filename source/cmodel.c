@@ -34,7 +34,6 @@ static int          floodvalid;
 static int          checkcount;
 
 static cvar_t       *map_noareas;
-static cvar_t       *map_override;
 
 void    CM_FloodAreaConnections( cm_t *cm );
 
@@ -1127,6 +1126,5 @@ void CM_Init( void ) {
     CM_InitBoxHull();
 
     map_noareas = Cvar_Get( "map_noareas", "0", 0 );
-    map_override = Cvar_Get( "map_override", "0", 0 );
 }
 

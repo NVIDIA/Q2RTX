@@ -31,7 +31,7 @@ void BSP_SetError( const char *fmt, ... ) q_printf( 1, 2 );
 
 extern mtexinfo_t nulltexinfo;
 
-static cvar_t *map_override;
+static cvar_t *map_override_path;
 
 /*
 ===============================================================================
@@ -767,13 +767,17 @@ EntityString
 =================
 */
 LOAD( EntityString ) {
+    char *path = map_override_path->string;
+
     // optionally load the entity string from external source
-    if( map_override->integer ) {
+    if( *path ) {
         char buffer[MAX_QPATH], *str;
+        char base[MAX_QPATH];
         size_t len;
 
-        COM_StripExtension( bsp->name, buffer, sizeof( buffer ) );
-        Q_strcat( buffer, sizeof( buffer ), ".ent" );
+        str = COM_SkipPath( bsp->name );
+        COM_StripExtension( str, base, sizeof( base ) );
+        Q_concat( buffer, sizeof( buffer ), path, base, ".ent", NULL );
         len = FS_LoadFile( buffer, ( void ** )&str );
         if( str ) {
             Com_DPrintf( "Loaded entity string from %s\n", buffer );
@@ -783,6 +787,7 @@ LOAD( EntityString ) {
             FS_FreeFile( str );
             return qtrue;
         }
+        Com_DPrintf( "Couldn't load entity string from %s\n", buffer );
     }
 
     bsp->numentitychars = count;
@@ -1174,7 +1179,7 @@ mmodel_t *BSP_InlineModel( bsp_t *bsp, const char *name ) {
 }
 
 void BSP_Init( void ) {
-    map_override = Cvar_Get( "map_override", "0", 0 );
+    map_override_path = Cvar_Get( "map_override_path", "", 0 );
 
     Cmd_AddCommand( "bsplist", BSP_List_f );
 
