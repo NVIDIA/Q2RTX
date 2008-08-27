@@ -62,6 +62,7 @@ cvar_t	*com_timedemo;
 cvar_t	*com_date_format;
 cvar_t	*com_time_format;
 cvar_t	*com_debug_break;
+cvar_t	*com_fatal_error;
 
 fileHandle_t    com_logFile;
 qboolean        com_logNewline;
@@ -373,9 +374,10 @@ void Com_Error( comErrorType_t code, const char *fmt, ... ) {
 	Q_vsnprintf( com_errorMsg, sizeof( com_errorMsg ), fmt, argptr );
 	va_end( argptr );
 
-    /* fix up drity message buffers */
-    MSG_Init(); 
+    // fix up drity message buffers
+    MSG_Init();
 
+    // abort any console redirects
     Com_AbortRedirect();
 	
 	if( code == ERR_DISCONNECT || code == ERR_SILENT ) {
@@ -390,6 +392,11 @@ void Com_Error( comErrorType_t code, const char *fmt, ... ) {
 	if( com_debug_break && com_debug_break->integer ) {
 		Sys_DebugBreak();
 	}
+
+    // make otherwise non-fatal errors fatal
+    if( com_fatal_error && com_fatal_error->integer ) {
+        code = ERR_FATAL;
+    }
 
 	if( code == ERR_DROP ) {
 		Com_Printf( S_COLOR_RED "********************\n"
@@ -1304,6 +1311,7 @@ void Qcommon_Init( int argc, char **argv ) {
 	com_time_format = Cvar_Get( "com_time_format", "%H:%M", 0 );
 #endif
 	com_debug_break = Cvar_Get( "com_debug_break", "0", 0 );
+	com_fatal_error = Cvar_Get( "com_fatal_error", "0", 0 );
 	com_version = Cvar_Get( "version", version, CVAR_SERVERINFO|CVAR_ROM );
 
 	Cmd_AddCommand ("z_stats", Z_Stats_f);

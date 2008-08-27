@@ -91,8 +91,8 @@ static void PF_Unicast( edict_t *ent, qboolean reliable ) {
     }
 
 	client = svs.udp_client_pool + clientNum;
-    if( client->state == cs_free ) {
-        Com_WPrintf( "PF_Unicast to a free client %d\n", clientNum );
+    if( client->state <= cs_zombie ) {
+        Com_WPrintf( "PF_Unicast to a free/zombie client %d\n", clientNum );
         goto clear;
     }
 
@@ -240,8 +240,9 @@ static void PF_cprintf( edict_t *ent, int level, const char *fmt, ... ) {
     }
 
 	client = svs.udp_client_pool + clientNum;
-    if( client->state == cs_free ) {
-        Com_Error( ERR_DROP, "PF_cprintf to a free client %d", clientNum );
+    if( client->state <= cs_zombie ) {
+        Com_WPrintf( "PF_cprintf to a free/zombie client %d", clientNum );
+        return;
     }
 
 	MSG_WriteByte( svc_print );
