@@ -57,13 +57,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 //=========================================
 
-#define PORT_MASTER        27900
-#define PORT_CLIENT        27901
-#define PORT_SERVER        27910
-#define PORT_MAX_SEARCH    5
-
-//=========================================
-
 #define    UPDATE_BACKUP    16  // copies of entity_state_t to keep buffered
                                 // must be power of two
 #define    UPDATE_MASK      ( UPDATE_BACKUP - 1 )

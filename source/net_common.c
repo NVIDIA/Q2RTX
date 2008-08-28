@@ -73,15 +73,22 @@ typedef struct {
 
 cvar_t	*net_ip;
 cvar_t	*net_port;
+#if USE_CLIENT
 static cvar_t	*net_clientport;
 static cvar_t	*net_dropsim;
+#endif
 static cvar_t	*net_log_active;
 static cvar_t	*net_log_name;
 static cvar_t	*net_log_flush;
 static cvar_t	*net_ignore_icmp;
-static cvar_t	*net_backlog;
+static cvar_t	*net_tcp_ip;
+static cvar_t	*net_tcp_port;
+static cvar_t	*net_tcp_clientport;
+static cvar_t	*net_tcp_backlog;
 
+#if USE_CLIENT
 static loopback_t	loopbacks[NS_COUNT];
+#endif
 static SOCKET		udp_sockets[NS_COUNT] = { INVALID_SOCKET, INVALID_SOCKET };
 static const char   socketNames[NS_COUNT][8] = { "Client", "Server" };
 static SOCKET       tcp_socket = INVALID_SOCKET;
@@ -346,6 +353,7 @@ static void NET_UpdateStats( void ) {
 }
 
 
+#if USE_CLIENT
 /*
 =============
 NET_GetLoopPacket
@@ -384,6 +392,7 @@ qboolean NET_GetLoopPacket( netsrc_t sock ) {
 
 	return qtrue;
 }
+#endif
 
 /*
 =============
@@ -493,6 +502,7 @@ neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, size_t length, const
 	}
 
 	switch( to->type ) {
+#if USE_CLIENT
 	case NA_LOOPBACK: {
 			loopback_t *loop;
 			loopmsg_t *msg;
@@ -519,6 +529,7 @@ neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, size_t length, const
             }
 		}
 		return NET_OK;
+#endif
 	case NA_IP:
 	case NA_BROADCAST:
 		break;
@@ -618,24 +629,21 @@ const char *NET_ErrorString( void ) {
 }
 
 static qboolean NET_StringToIface( const char *s, struct sockaddr_in *sadr ) {
-    if( !Q_stricmp( s, "localhost" ) ) {
-        // FIXME: this use of `localhost' is misleading
-        memset( sadr, 0, sizeof( *sadr ) );
-		sadr->sin_family = AF_INET;
-		sadr->sin_addr.s_addr = INADDR_ANY;
-        return qtrue;
+    if( *s ) {
+        return NET_StringToSockaddr( s, sadr );
     }
-    return NET_StringToSockaddr( s, sadr );
+
+    // empty string binds to all interfaces 
+    memset( sadr, 0, sizeof( *sadr ) );
+    sadr->sin_family = AF_INET;
+    sadr->sin_addr.s_addr = INADDR_ANY;
+    return qtrue;
 }
 
 static SOCKET UDP_OpenSocket( const char *interface, int port ) {
 	SOCKET				newsocket;
 	struct sockaddr_in	address;
 	u_long			    _true = 1;
-
-	if( !interface || !interface[0] ) {
-		interface = "localhost";
-	}
 
 	Com_DPrintf( "Opening UDP socket: %s:%i\n", interface, port );
 
@@ -674,6 +682,8 @@ static SOCKET UDP_OpenSocket( const char *interface, int port ) {
 fail:
     NET_GET_ERROR();
 	closesocket( newsocket );
+    Com_EPrintf( "%s: %s:%d: %s\n", __func__,
+        interface, port, NET_ErrorString() );
 	return INVALID_SOCKET;
 }
 
@@ -681,10 +691,6 @@ static SOCKET TCP_OpenSocket( const char *interface, int port, netsrc_t who ) {
 	SOCKET				newsocket;
 	struct sockaddr_in	address;
 	u_long			    _true;
-
-	if( !interface || !interface[0] ) {
-		interface = "localhost";
-	}
 
 	Com_DPrintf( "Opening TCP socket: %s:%i\n", interface, port );
 
@@ -725,6 +731,8 @@ static SOCKET TCP_OpenSocket( const char *interface, int port, netsrc_t who ) {
 fail:
     NET_GET_ERROR();
 	closesocket( newsocket );
+    Com_EPrintf( "%s: %s:%d: %s\n", __func__,
+        interface, port, NET_ErrorString() );
 	return INVALID_SOCKET;
 }
 
@@ -733,41 +741,48 @@ static void NET_OpenServer( void ) {
 
 	for( i = 0, port = net_port->integer; i < PORT_MAX_SEARCH; i++, port++ ) {
 		udp_sockets[NS_SERVER] = UDP_OpenSocket( net_ip->string, port );
-		if( udp_sockets[NS_SERVER] == INVALID_SOCKET ) {
-            Com_WPrintf( "%s opening server UDP port %d.\n",
-                NET_ErrorString(), port );
-            continue;
+		if( udp_sockets[NS_SERVER] != INVALID_SOCKET ) {
+            if( i > 0 ) {
+                // warn if bound to different port
+                Com_WPrintf( "Server bound to UDP port %d.\n", port );
+                Cvar_SetInteger( net_port, port, CVAR_SET_DIRECT );
+            }
+            // set this for compatibility with game mods
+            Cvar_Set( "port", net_port->string );
+            return;
         }
 
-        if( i ) {
-            Com_WPrintf( "Server bound to UDP port %d.\n", port );
-            Cvar_SetInteger( net_port, port, CVAR_SET_DIRECT );
-        }
-        // set this for compatibility with game mods
-        Cvar_Set( "port", net_port->string );
+        // continue searching for a free port if this one was in use
+#ifdef _WIN32
+        if( net_error != WSAEADDRINUSE )
+#else
+        if( net_error != EADDRINUSE )
+#endif
+            break;
+	}
+
+#if USE_CLIENT
+	if( !dedicated->integer ) {
+        Com_WPrintf( "Couldn't open server UDP port.\n" );
         return;
-	}
+    }
+#endif
 
-	if( dedicated->integer ) {
-		Com_Error( ERR_FATAL, "Couldn't open dedicated server UDP port" );
-	}
-
-    Com_WPrintf( "Couldn't open server UDP port.\n" );
+	Com_Error( ERR_FATAL, "Couldn't open dedicated server UDP port" );
 }
 
+#if USE_CLIENT
 static void NET_OpenClient( void ) {
     struct sockaddr_in address;
     socklen_t length;
 
-	udp_sockets[NS_CLIENT] = UDP_OpenSocket( net_ip->string, net_clientport->integer );
+	udp_sockets[NS_CLIENT] = UDP_OpenSocket( net_ip->string,
+        net_clientport->integer );
 	if( udp_sockets[NS_CLIENT] != INVALID_SOCKET ) {
 		return;
 	}
 
 	if( net_clientport->integer != PORT_ANY ) {
-        Com_WPrintf( "%s opening client UDP port %d.\n",
-            NET_ErrorString(), net_clientport->integer );
-
 		udp_sockets[NS_CLIENT] = UDP_OpenSocket( net_ip->string, PORT_ANY );
 		if( udp_sockets[NS_CLIENT] != INVALID_SOCKET ) {
             length = sizeof( address );
@@ -782,6 +797,7 @@ static void NET_OpenClient( void ) {
 
     Com_WPrintf( "Couldn't open client UDP port.\n" );
 }
+#endif
 
 //=============================================================================
 
@@ -808,11 +824,13 @@ neterr_t NET_Listen( qboolean arg ) {
         return NET_OK;
     }
 
-	tcp_socket = TCP_OpenSocket( net_ip->string, net_port->integer, NS_SERVER );
+    // zero TCP port means use default server port
+	tcp_socket = TCP_OpenSocket( net_tcp_ip->string,
+        net_tcp_port->integer, NS_SERVER );
     if( tcp_socket == INVALID_SOCKET ) {
         return NET_ERROR;
     }
-    if( listen( tcp_socket, net_backlog->integer ) == -1 ) {
+    if( listen( tcp_socket, net_tcp_backlog->integer ) == -1 ) {
         NET_GET_ERROR();
         closesocket( tcp_socket );
         tcp_socket = INVALID_SOCKET;
@@ -878,7 +896,8 @@ neterr_t NET_Connect( const netadr_t *peer, netstream_t *s ) {
     struct sockaddr_in address;
     int ret;
 
-	socket = TCP_OpenSocket( net_ip->string, net_clientport->integer, NS_CLIENT );
+	socket = TCP_OpenSocket( net_tcp_ip->string,
+        net_tcp_clientport->integer, NS_CLIENT );
     if( socket == INVALID_SOCKET ) {
         return NET_ERROR;
     }
@@ -1207,11 +1226,13 @@ void NET_Config( netflag_t flag ) {
 		return;
 	}
 
+#if USE_CLIENT
 	if( flag & NET_CLIENT ) {
 		if( udp_sockets[NS_CLIENT] == INVALID_SOCKET ) {
 			NET_OpenClient();
 		}
 	}
+#endif
 
 	if( flag & NET_SERVER ) {
 		if( udp_sockets[NS_SERVER] == INVALID_SOCKET ) {
@@ -1250,8 +1271,23 @@ static size_t NET_DnRate_m( char *buffer, size_t size ) {
 	return Com_sprintf( buffer, size, "%"PRIz, net_rate_dn );
 }
 
-static void net_param_changed( cvar_t *self ) {
+static void net_udp_param_changed( cvar_t *self ) {
+    // keep TCP socket vars in sync unless modified by user
+    if( !( net_tcp_ip->flags & CVAR_MODIFIED ) ) {
+        Cvar_SetByVar( net_tcp_ip, net_ip->string, CVAR_SET_DIRECT );
+    }
+    if( !( net_tcp_port->flags & CVAR_MODIFIED ) ) {
+        Cvar_SetByVar( net_tcp_port, net_port->string, CVAR_SET_DIRECT );
+    }
+
     NET_Restart_f();
+}
+
+static void net_tcp_param_changed( cvar_t *self ) {
+    if( tcp_socket != INVALID_SOCKET ) {
+        NET_Listen( qfalse );
+        NET_Listen( qtrue );
+    }
 }
 
 /*
@@ -1272,13 +1308,15 @@ void NET_Init( void ) {
 	Com_DPrintf( "Winsock Initialized\n" );
 #endif
 
-	net_ip = Cvar_Get( "net_ip", "localhost", 0 );
-    net_ip->changed = net_param_changed;
-	net_port = Cvar_Get( "net_port", va( "%i", PORT_SERVER ), 0 );
-    net_port->changed = net_param_changed;
-	net_clientport = Cvar_Get( "net_clientport", va( "%i", PORT_ANY ), 0 );
-    net_clientport->changed = net_param_changed;
+	net_ip = Cvar_Get( "net_ip", "", 0 );
+    net_ip->changed = net_udp_param_changed;
+	net_port = Cvar_Get( "net_port", PORT_SERVER_STRING, 0 );
+    net_port->changed = net_udp_param_changed;
+#if USE_CLIENT
+	net_clientport = Cvar_Get( "net_clientport", PORT_ANY_STRING, 0 );
+    net_clientport->changed = net_udp_param_changed;
 	net_dropsim = Cvar_Get( "net_dropsim", "0", 0 );
+#endif
 	net_log_active = Cvar_Get( "net_log_active", "0", 0 );
 	net_log_active->changed = net_log_active_changed;
 	net_log_name = Cvar_Get( "net_log_name", "qnetwork.log", 0 );
@@ -1286,7 +1324,6 @@ void NET_Init( void ) {
 	net_log_flush = Cvar_Get( "net_log_flush", "0", 0 );
 	net_log_flush->changed = net_log_param_changed;
 	net_ignore_icmp = Cvar_Get( "net_ignore_icmp", "0", 0 );
-	net_backlog = Cvar_Get( "net_backlog", "4", 0 );
 
     if( ( i = Cvar_VariableInteger( "ip_hostport" ) ) ||
         ( i = Cvar_VariableInteger( "hostport" ) ) ||
@@ -1297,6 +1334,7 @@ void NET_Init( void ) {
         Cvar_SetInteger( net_port, i, CVAR_SET_DIRECT );
     }
 
+#if USE_CLIENT
     if( ( i = Cvar_VariableInteger( "ip_clientport" ) ) ||
         ( i = Cvar_VariableInteger( "clientport" ) ) )
     {
@@ -1304,6 +1342,14 @@ void NET_Init( void ) {
             "by deprecated cvar\n", i );
         Cvar_SetInteger( net_clientport, i, CVAR_SET_DIRECT );
     }
+#endif
+
+	net_tcp_ip = Cvar_Get( "net_tcp_ip", net_ip->string, 0 );
+    net_tcp_ip->changed = net_tcp_param_changed;
+	net_tcp_port = Cvar_Get( "net_tcp_port", net_port->string, 0 );
+    net_tcp_port->changed = net_tcp_param_changed;
+	net_tcp_clientport = Cvar_Get( "net_tcp_clientport", PORT_ANY_STRING, 0 );
+	net_tcp_backlog = Cvar_Get( "net_tcp_backlog", "4", 0 );
 
     if( net_log_active->integer ) {
 		NetLogFile_Open();

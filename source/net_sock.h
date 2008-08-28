@@ -20,10 +20,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // net.h -- quake's interface to the networking layer
 
-#define	PORT_ANY	-1
+#define PORT_ANY            -1
+#define PORT_ANY_STRING     "-1"
+#define PORT_MASTER         27900
+#define PORT_SERVER         27910
+#define PORT_SERVER_STRING  "27910"
+#define PORT_MAX_SEARCH     5
 
 #define MAX_PACKETLEN	4096		// max length of a single packet
-#define	PACKET_HEADER	10			// two ints and a short (worst case)
+#define PACKET_HEADER	10			// two ints and a short (worst case)
 #define MAX_PACKETLEN_DEFAULT	1400		// default quake2 limit
 #define MAX_PACKETLEN_WRITABLE    ( MAX_PACKETLEN - PACKET_HEADER )
 #define MAX_PACKETLEN_WRITABLE_DEFAULT    ( MAX_PACKETLEN_DEFAULT - PACKET_HEADER )

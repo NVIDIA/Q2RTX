@@ -177,6 +177,7 @@ static void Cvar_ChangeString( cvar_t *var, const char *value, cvarSetSource_t s
     var->modified = qtrue;
     if( source != CVAR_SET_DIRECT ) {
         cvar_modified |= var->flags & CVAR_MODIFYMASK;
+        var->flags |= CVAR_MODIFIED;
         if( var->changed ) {
             var->changed( var );
         }

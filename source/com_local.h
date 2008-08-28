@@ -251,6 +251,7 @@ interface from being ambiguous.
 #define CVAR_CHEAT			( 1 << 5 )
 #define CVAR_PRIVATE		( 1 << 6 )
 #define CVAR_ROM			( 1 << 7 )
+#define CVAR_MODIFIED	    ( 1 << 8 )
 #define CVAR_CUSTOM	        ( 1 << 9 )
 #define CVAR_VOLATILE      	( 1 << 10 )
 #define CVAR_GAME      	    ( 1 << 11 )
