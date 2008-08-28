@@ -392,9 +392,9 @@ echo "REVISION=$revision" >> $config_mk
 echo "#define REVISION $revision" >> $config_h
 echo "#define VERSION \"r$version\"" >> $config_h
 
-echo "#define PRIz \"zu\"" >> $config_h
-
 if [ "$mingw" = "no" ]; then
+    echo "#define PRIz \"zu\"" >> $config_h
+
     echo "DATADIR=$datadir" >> $config_mk
     echo "#define DATADIR \"$datadir\"" >> $config_h
 
@@ -409,6 +409,8 @@ if [ "$mingw" = "no" ]; then
         echo "BINDIR=$bindir" >> $config_mk
         echo "MANDIR=$mandir" >> $config_mk
     fi
+else
+    echo "#define PRIz \"u\"" >> $config_h # FIXME: change this for x86_64
 fi
 
 echo "#define EXPORTED $exported" >> $config_h
