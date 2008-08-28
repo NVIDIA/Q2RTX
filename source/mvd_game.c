@@ -245,7 +245,7 @@ static void MVD_LayoutFollow( udpClient_t *client ) {
 
     // send the layout
 	MSG_WriteByte( svc_layout );
-    MSG_WriteString( va( "xv 0 yt 48 cstring \"%s\"", name ) );
+    MSG_WriteString( va( "xv 0 yt 2 cstring \"%s\"", name ) );
 	SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
 
 	client->layout_time = svs.realtime;
@@ -664,7 +664,8 @@ static void MVD_Say_f( udpClient_t *client ) {
     mvd_t *mvd = client->mvd;
     unsigned delta, delay = mvd_flood_waitdelay->value * 1000;
     unsigned treshold = mvd_flood_persecond->value * 1000;
-    char *text;
+    char text[150];
+    size_t len;
     int i;
 
     if( mvd_flood_mute->integer && !client->admin ) {
@@ -703,11 +704,14 @@ static void MVD_Say_f( udpClient_t *client ) {
     client->floodSamples[client->floodHead & FLOOD_MASK] = svs.realtime;
     client->floodHead++;
 
-    text = Cmd_Args();
-    //text[128] = 0; // don't let it be too long
+    len = Com_sprintf( text, sizeof( text ), "[MVD] %s: %s",
+        client->cl->name, Cmd_Args() );
+    for( i = 0; i < len; i++ ) {
+        text[i] |= 128;
+    }
 
-    MVD_BroadcastPrintf( mvd, PRINT_CHAT, client->admin ? 0 : UF_MUTE_OBSERVERS,
-        "[MVD] %s: %s\n", client->cl->name, text );
+    MVD_BroadcastPrintf( mvd, PRINT_MEDIUM, client->admin ?
+        0 : UF_MUTE_OBSERVERS, "%s\n", text );
 }
 
 static void MVD_Observe_f( udpClient_t *client ) {

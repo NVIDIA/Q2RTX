@@ -239,6 +239,75 @@ static void uri_mvdstream( const char *uri ) {
     }
 }
 
+void SV_ConsoleOutput( const char *msg ) {
+    tcpClient_t *client;
+	char text[MAXPRINTMSG];
+	char *p, *maxp;
+    size_t len;
+    int c;
+
+    if( !svs.initialized ) {
+        return;
+    }
+    if( LIST_EMPTY( &svs.console_list ) ) {
+        return;
+    }
+
+	p = text;
+    maxp = text + sizeof( text ) - 1;
+	while( *msg ) {
+		if( Q_IsColorString( msg ) ) {
+			msg += 2;
+			continue;
+		}
+
+        if( p == maxp ) {
+            break;
+        }
+
+        c = *msg++;
+        c &= 127;
+		
+		*p++ = c;
+	}
+	*p = 0;
+
+	len = p - text;
+
+    LIST_FOR_EACH( tcpClient_t, client, &svs.console_list, mvdEntry ) {
+        if( FIFO_Write( &client->stream.send, text, len ) != len ) {
+            SV_HttpDrop( client, "overflowed" );
+        }
+    }
+}
+
+static void uri_console( const char *uri ) {
+    char *auth = sv_console_auth->string;
+    char *cred = http_client->credentials;
+
+    if( !auth[0] || !cred || strcmp( cred, auth ) ) {
+        strcpy( http_header,
+            "WWW-Authenticate: Basic realm=\"console\"\r\n" );
+        SV_HttpReject( "401 Not Authorized",
+            "You are not authorized to access "
+            "console stream on this server." );
+        return;
+    }
+
+    if( http_client->method == HTTP_METHOD_HEAD ) {
+        SV_HttpPrintf( "HTTP/1.0 200 OK\r\n\r\n" );
+        SV_HttpDrop( http_client, "200 OK " );
+        return;
+    }
+
+    SV_HttpPrintf(
+        "HTTP/1.0 200 OK\r\n"
+        "Content-Type: text/plain\r\n"
+        "\r\n" );
+    List_Append( &svs.console_list, &http_client->mvdEntry );
+	http_client->state = cs_spawned;
+}
+
 #if 0
 static void uri_root( const char *uri ) {
     SV_HttpPrintf( "HTTP/1.0 200 OK\r\n" );
@@ -270,6 +339,7 @@ static const uriEntry_t rootURIs[] = {
     { "", uri_status },
     { "status", uri_status },
     { "mvdstream", uri_mvdstream },
+    { "console", uri_console },
     { NULL }
 };
 
@@ -716,6 +786,10 @@ void SV_HttpRun( void ) {
         // run network stream
         ret = NET_Run( &client->stream );
         if( ret == NET_AGAIN ) {
+            // don't timeout
+            if( client->state >= cs_connected && !FIFO_Usage( &client->stream.send ) ) {
+                client->lastmessage = svs.realtime;
+            }
             continue;
         }
         if( ret != NET_OK ) {

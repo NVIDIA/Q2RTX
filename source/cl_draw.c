@@ -598,7 +598,7 @@ static void draw_following( void ) {
 
 	x = ( scr_hudWidth - strlen( string ) * CHAR_WIDTH ) / 2;
 
-	R_DrawString( x, 48, 0, MAX_STRING_CHARS, string, scr_font );
+	R_DrawString( x, 2, 0, MAX_STRING_CHARS, string, scr_font );
 }
 
 static void draw_turtle( void ) {

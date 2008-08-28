@@ -284,6 +284,9 @@ void Com_Printf( const char *fmt, ... ) {
 		// debugging console
 		Sys_ConsoleOutput( msg );
 
+        // remote console
+        SV_ConsoleOutput( msg );
+
 		// logfile
 		if( com_logFile ) {
 			LogFile_Output( msg );

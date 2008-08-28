@@ -2641,9 +2641,9 @@ CL_Frame
  
 ==================
 */
-void CL_Frame( int msec ) {
-	static int ref_extra, phys_extra, main_extra;
-	int ref_msec, phys_msec;
+void CL_Frame( unsigned msec ) {
+	static unsigned ref_extra, phys_extra, main_extra;
+	unsigned ref_msec, phys_msec;
     qboolean phys_frame, ref_frame;
 
 	time_after_ref = time_before_ref = 0;

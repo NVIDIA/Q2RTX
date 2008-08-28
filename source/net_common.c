@@ -677,10 +677,10 @@ fail:
 	return INVALID_SOCKET;
 }
 
-static SOCKET TCP_OpenSocket( const char *interface, int port ) {
+static SOCKET TCP_OpenSocket( const char *interface, int port, netsrc_t who ) {
 	SOCKET				newsocket;
 	struct sockaddr_in	address;
-	u_long			    _true = 1;
+	u_long			    _true;
 
 	if( !interface || !interface[0] ) {
 		interface = "localhost";
@@ -695,9 +695,20 @@ static SOCKET TCP_OpenSocket( const char *interface, int port ) {
 	}
 
 	// make it non-blocking
+    _true = 1;
 	if( ioctlsocket( newsocket, FIONBIO, &_true ) == -1 ) {
 		goto fail;
 	}
+
+    // give it a chance to reuse previous port
+    if( who == NS_SERVER ) {
+        _true = 1;
+        if( setsockopt( newsocket, SOL_SOCKET, SO_REUSEADDR,
+                ( char * )&_true, sizeof( _true ) ) == -1 )
+        {
+            goto fail;
+        }
+    }
 
     if( !NET_StringToIface( interface, &address ) ) {
         Com_Printf( "Bad interface address: %s\n", interface );
@@ -797,7 +808,7 @@ neterr_t NET_Listen( qboolean arg ) {
         return NET_OK;
     }
 
-	tcp_socket = TCP_OpenSocket( net_ip->string, net_port->integer );
+	tcp_socket = TCP_OpenSocket( net_ip->string, net_port->integer, NS_SERVER );
     if( tcp_socket == INVALID_SOCKET ) {
         return NET_ERROR;
     }
@@ -867,7 +878,7 @@ neterr_t NET_Connect( const netadr_t *peer, netstream_t *s ) {
     struct sockaddr_in address;
     int ret;
 
-	socket = TCP_OpenSocket( net_ip->string, net_clientport->integer );
+	socket = TCP_OpenSocket( net_ip->string, net_clientport->integer, NS_CLIENT );
     if( socket == INVALID_SOCKET ) {
         return NET_ERROR;
     }
@@ -1065,6 +1076,21 @@ static void NET_DumpHostInfo( struct hostent *h ) {
 	}
 }
 
+static void dump_socket( SOCKET s, const char *s1, const char *s2 ) {
+    struct sockaddr_in sockaddr;
+    socklen_t len;
+    netadr_t adr;
+
+    len = sizeof( sockaddr );
+    if( getsockname( s, ( struct sockaddr * )&sockaddr, &len ) == -1 ) {
+        NET_GET_ERROR();
+        Com_EPrintf( "%s: getsockname: %s\n", __func__, NET_ErrorString() );
+        return;
+    }
+    NET_SockadrToNetadr( &sockaddr, &adr );
+    Com_Printf( "%s %s socket bound to %s\n", s1, s2, NET_AdrToString( &adr ) );
+}
+
 /*
 ====================
 NET_ShowIP_f
@@ -1073,17 +1099,16 @@ NET_ShowIP_f
 static void NET_ShowIP_f( void ) {
 	char buffer[256];
 	struct hostent *h;
-    struct sockaddr_in address;
-    socklen_t length;
-    netadr_t adr;
     netsrc_t sock;
 
 	if( gethostname( buffer, sizeof( buffer ) ) == -1 ) {
+        NET_GET_ERROR();
 		Com_EPrintf( "%s: gethostname: %s\n", __func__, NET_ErrorString() );
 		return;
 	}
 
 	if( !( h = gethostbyname( buffer ) ) ) {
+        NET_GET_ERROR();
 		Com_EPrintf( "%s: gethostbyname: %s\n", __func__, NET_ErrorString() );
 		return;
 	}
@@ -1092,13 +1117,11 @@ static void NET_ShowIP_f( void ) {
 
 	for( sock = 0; sock < NS_COUNT; sock++ ) {
     	if( udp_sockets[sock] != INVALID_SOCKET ) {
-            length = sizeof( address );
-            getsockname( udp_sockets[sock], ( struct sockaddr * )&address,
-                &length );
-            NET_SockadrToNetadr( &address, &adr );
-            Com_Printf( "%s bound to %s\n", socketNames[sock],
-                NET_AdrToString( &adr ) );
+            dump_socket( udp_sockets[sock], socketNames[sock], "UDP" );
         }
+    }
+    if( tcp_socket != INVALID_SOCKET ) {
+        dump_socket( tcp_socket, socketNames[NS_SERVER], "TCP" );
     }
 }
 

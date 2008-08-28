@@ -51,7 +51,7 @@ void CL_ProcessEvents( void );
 void CL_Init (void);
 void CL_Disconnect( comErrorType_t type, const char *text );
 void CL_Shutdown (void);
-void CL_Frame (int msec);
+void CL_Frame (unsigned msec);
 void CL_LocalConnect( void );
 void CL_RestartFilesystem( void );
 void CL_Activate( active_t active );

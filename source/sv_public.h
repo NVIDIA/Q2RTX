@@ -34,7 +34,8 @@ typedef enum {
 void SV_ProcessEvents( void );
 void SV_Init (void);
 void SV_Shutdown( const char *finalmsg, killtype_t type );
-void SV_Frame (int msec);
+void SV_Frame (unsigned msec);
 void SV_SetConsoleTitle( void );
+void SV_ConsoleOutput( const char *msg );
 qboolean MVD_GetDemoPercent( int *percent, int *bufferPercent );
 

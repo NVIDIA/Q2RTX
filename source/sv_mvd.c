@@ -27,7 +27,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 cvar_t	*sv_mvd_enable;
 cvar_t  *sv_mvd_auth;
-cvar_t	*sv_mvd_wait;
+//cvar_t	*sv_mvd_wait;
 cvar_t	*sv_mvd_noblend;
 cvar_t	*sv_mvd_nogun;
 cvar_t	*sv_mvd_max_size;
@@ -107,7 +107,7 @@ qboolean SV_MvdPlayerIsActive( edict_t *ent ) {
         }
     }
 
-	// they are likely following somene in case of PM_FREEZE
+	// they are likely following someone in case of PM_FREEZE
 	if( ent->client->ps.pmove.pm_type == PM_FREEZE ) {
         return qfalse;
 	}
@@ -486,6 +486,7 @@ into the multicast buffer.
 ==================
 */
 void SV_MvdBeginFrame( void ) {
+#if 0
 	int i, j;
 	int index;
 	size_t length;
@@ -550,6 +551,7 @@ void SV_MvdBeginFrame( void ) {
     }
 
 	sv.mvd.paused = 0;
+#endif
 }
 
 void SV_MvdEndFrame( void ) {
@@ -1070,7 +1072,7 @@ static const cmdreg_t c_svmvd[] = {
 void SV_MvdRegister( void ) {
 	sv_mvd_enable = Cvar_Get( "sv_mvd_enable", "0", CVAR_LATCH );
 	sv_mvd_auth = Cvar_Get( "sv_mvd_auth", "", CVAR_PRIVATE );
-	sv_mvd_wait = Cvar_Get( "sv_mvd_wait", "0", CVAR_ROM ); // TODO
+	//sv_mvd_wait = Cvar_Get( "sv_mvd_wait", "0", CVAR_ROM ); // TODO
 	sv_mvd_max_size = Cvar_Get( "sv_mvd_max_size", "0", 0 );
 	sv_mvd_max_duration = Cvar_Get( "sv_mvd_max_duration", "0", 0 );
 	sv_mvd_max_levels = Cvar_Get( "sv_mvd_max_levels", "1", 0 );

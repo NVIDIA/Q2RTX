@@ -80,6 +80,7 @@ typedef struct {
     int             spawncount;  // random number generated each server spawn
 
 	int			framenum;
+    unsigned    frametime;
 
 	char		name[MAX_QPATH];			// map name, or cinematic name
 	cm_t		cm;
@@ -352,8 +353,8 @@ typedef struct {
 } filtercmd_t;
 
 typedef struct server_static_s {
-	qboolean	initialized;			// sv_init has completed
-	unsigned	realtime, time;			// always increasing, no clamping, etc
+	qboolean	initialized;		// sv_init has completed
+	unsigned	realtime;			// always increasing, no clamping, etc
 
     int         gameFeatures;
 
@@ -429,6 +430,7 @@ extern	cvar_t		*sv_iplimit;
 extern	cvar_t		*sv_http_enable;
 extern	cvar_t		*sv_http_maxclients;
 extern	cvar_t		*sv_http_minclients;
+extern	cvar_t		*sv_console_auth;
 
 extern	cvar_t		*sv_debug_send;
 extern	cvar_t		*sv_pad_packets;

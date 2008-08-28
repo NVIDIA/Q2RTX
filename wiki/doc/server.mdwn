@@ -57,6 +57,9 @@ with `sv_iplimit` variable.
 When set to address string, forces new clients to reconnect to this address
 as an additional proxy protection measure. This reconnection process is FAST.
 
+- `set sv_show_name_changes 0` (boolean)  
+Broadcast player name changes to everyone.
+
 - `set sv_uptime 0` (boolean)  
 Display uptime in server info.
 
@@ -65,8 +68,8 @@ MVD server
 ----------
 
 - `set sv_http_enable 0` (boolean)  
-Enable HTTP connections, which are used for serving MVD clients and
-status queries in HTML.
+Enable HTTP connections used for serving MVD clients and answering
+status queries in HTML format.
 
 - `set sv_http_maxclients 4` (integer)  
 Maximum number of HTTP clients. Can be changed at any time, setting this to
@@ -77,18 +80,26 @@ Maximum number of HTTP clients to be kept in the special pool of recently
 used slots for faster access and avoiding memory fragmentation.
 
 - `set sv_mvd_nogun 1` (boolean)  
+Reduce bandwidth usage by filtering on-screen gun updates out of MVD stream.
 
 - `set sv_mvd_noblend 0` (boolean)  
+Reduce bandwidth usage by filtering on-screen blend effects out of MVD stream.
 
-- `set sv_mvd_max_duration 0` (boolean)  
+- `set sv_mvd_max_duration 0` (float)  
+Maximum duration in minutes of the locally recorded MVD.
+Setting this to zero disables the limit.
 
-- `set sv_mvd_max_size 0` (boolean)  
+- `set sv_mvd_max_size 0` (float)  
+Maximum size in KB of the locally recorded MVD.
+Setting this to zero disables the limit.
 
-- `set sv_mvd_wait 0` (boolean)  
+- `set sv_mvd_max_levels 1` (integer)  
+Maximum number of levels (map changes) locally recorded MVD may span.
+Setting this to zero disables the limit.
 
 - `set sv_mvd_auth ""` (string)  
 If not empty, perform Basic HTTP authentication of MVD connections.
-Value should be in form of `user:pass`.
+Value should have `user:pass` format.
 
 - `set sv_mvd_enable 0` (boolean)  
 Enable recording local MVDs and serving MVD clients over HTTP.
@@ -127,6 +138,9 @@ connection. This effectively specifies MVD stream delay seen by observers.
 - `set mvd_wait_percent 2` (float)  
 Inuse percentage of the input buffer when MVD state machine transitions
 into running state to prevent buffer overrun.
+
+- `set mvd_default_map "q2dm1"` (string)  
+Specifies default map used for the Waiting Room channel.
 
 Hacks
 ----------

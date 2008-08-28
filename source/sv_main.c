@@ -61,6 +61,7 @@ cvar_t  *sv_novis;
 cvar_t	*sv_http_enable;
 cvar_t	*sv_http_maxclients;
 cvar_t	*sv_http_minclients;
+cvar_t	*sv_console_auth;
 
 cvar_t	*sv_maxclients;
 cvar_t	*sv_reserved_slots;
@@ -1244,9 +1245,7 @@ void SV_ProcessEvents( void ) {
 
 	// process loopback packets
     while( NET_GetLoopPacket( NS_SERVER ) ) {
-        if( sv_running->integer ) {
-            SV_PacketEvent( NET_OK );
-        }
+        SV_PacketEvent( NET_OK );
     }
 #endif
 
@@ -1416,7 +1415,7 @@ static void SV_RunGameFrame( void ) {
 	// compression can get confused when a client
 	// has the "current" frame
 	sv.framenum++;
-	svs.time += 100;
+	sv.frametime = 0;
 
     if( svs.mvd.dummy ) {
     	SV_MvdBeginFrame();
@@ -1425,7 +1424,8 @@ static void SV_RunGameFrame( void ) {
 	ge->RunFrame();
 
 	if( msg_write.cursize ) {
-		Com_WPrintf( "Game DLL left %"PRIz" bytes in multicast buffer, cleared.\n",
+		Com_WPrintf( "Game DLL left %"PRIz" bytes "
+            "in multicast buffer, cleared.\n",
             msg_write.cursize );
 		SZ_Clear( &msg_write );
 	}
@@ -1434,13 +1434,6 @@ static void SV_RunGameFrame( void ) {
     if( svs.mvd.dummy ) {
 	    SV_MvdEndFrame();
     }
-
-	// never get more than one tic behind
-	if( svs.time < svs.realtime ) {
-		if( sv_showclamp->integer )
-			Com_Printf( "sv highclamp\n" );
-		svs.realtime = svs.time;
-	}
 
 #if USE_CLIENT
 	if( host_speeds->integer )
@@ -1520,7 +1513,7 @@ SV_Frame
 
 ==================
 */
-void SV_Frame( int msec ) {
+void SV_Frame( unsigned msec ) {
     int mvdconns;
 
 #if USE_CLIENT
@@ -1573,16 +1566,12 @@ void SV_Frame( int msec ) {
 	SV_SendAsyncPackets();
 
 	// move autonomous things around if enough time has passed
-	if( !com_timedemo->integer && svs.realtime < svs.time ) {
-		// never let the time get too far off
-		if( svs.time - svs.realtime > 100 ) {
-			if( sv_showclamp->integer )
-				Com_Printf( "sv lowclamp\n" );
-			svs.realtime = svs.time - 100;
-		}
-		if( dedicated->integer ) {
-    		NET_Sleep( svs.time - svs.realtime );
-		}
+    sv.frametime += msec;
+	if( !com_timedemo->integer && sv.frametime < 100 ) {
+#if USE_CLIENT
+		if( dedicated->integer )
+#endif
+    		NET_Sleep( 100 - sv.frametime );
 		return;
 	}
 
@@ -1593,7 +1582,7 @@ void SV_Frame( int msec ) {
 	SV_GiveMsec();
 
 	// let everything in the world think and move
-	SV_RunGameFrame();
+    SV_RunGameFrame();
 
 	// send messages back to the clients that had packets read this frame
 	SV_SendClientMessages();
@@ -1796,6 +1785,7 @@ void SV_Init( void ) {
     sv_http_enable = Cvar_Get( "sv_http_enable", "0", CVAR_LATCH );
     sv_http_maxclients = Cvar_Get( "sv_http_maxclients", "4", 0 );
     sv_http_minclients = Cvar_Get( "sv_http_minclients", "4", 0 );
+    sv_console_auth = Cvar_Get( "sv_console_auth", "", 0 );
 
 	allow_download = Cvar_Get( "allow_download", "1", CVAR_ARCHIVE );
 	allow_download_players = Cvar_Get( "allow_download_players", "0", CVAR_ARCHIVE );
@@ -1899,7 +1889,6 @@ static void SV_FinalMessage( const char *message, int cmd ) {
     LIST_FOR_EACH( tcpClient_t, t, &svs.mvd.clients, mvdEntry ) {
         SV_HttpWrite( t, &length, 2 );
         SV_HttpFinish( t );
-        NET_Run( &t->stream );
 	}
 
 	// free any data dynamically allocated
@@ -1910,12 +1899,15 @@ static void SV_FinalMessage( const char *message, int cmd ) {
 		SV_RemoveClient( client );
 	}
 
+    // drop any TCP clients, flushing pending data
     LIST_FOR_EACH_SAFE( tcpClient_t, t, tnext, &svs.tcp_client_list, entry ) {
         SV_HttpDrop( t, NULL );
+        NET_Run( &t->stream );
         NET_Close( &t->stream );
         Z_Free( t );
 	}
 
+    // free cached TCP client slots
     LIST_FOR_EACH_SAFE( tcpClient_t, t, tnext, &svs.tcp_client_pool, entry ) {
         Z_Free( t );
     }
@@ -1956,6 +1948,9 @@ void SV_Shutdown( const char *finalmsg, killtype_t type ) {
     } else {
         SV_FinalMessage( finalmsg, svc_disconnect );
     }
+
+    // close server TCP socket
+    NET_Listen( qfalse );
 
 	SV_MasterShutdown();
 	SV_ShutdownGameProgs();
