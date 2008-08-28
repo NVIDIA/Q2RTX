@@ -83,6 +83,7 @@ static cvar_t	*net_log_flush;
 static cvar_t	*net_ignore_icmp;
 static cvar_t	*net_tcp_ip;
 static cvar_t	*net_tcp_port;
+static cvar_t	*net_tcp_clientip;
 static cvar_t	*net_tcp_clientport;
 static cvar_t	*net_tcp_backlog;
 
@@ -896,7 +897,7 @@ neterr_t NET_Connect( const netadr_t *peer, netstream_t *s ) {
     struct sockaddr_in address;
     int ret;
 
-	socket = TCP_OpenSocket( net_tcp_ip->string,
+	socket = TCP_OpenSocket( net_tcp_clientip->string,
         net_tcp_clientport->integer, NS_CLIENT );
     if( socket == INVALID_SOCKET ) {
         return NET_ERROR;
@@ -1348,6 +1349,7 @@ void NET_Init( void ) {
     net_tcp_ip->changed = net_tcp_param_changed;
 	net_tcp_port = Cvar_Get( "net_tcp_port", net_port->string, 0 );
     net_tcp_port->changed = net_tcp_param_changed;
+	net_tcp_clientip = Cvar_Get( "net_tcp_clientip", "", 0 );
 	net_tcp_clientport = Cvar_Get( "net_tcp_clientport", PORT_ANY_STRING, 0 );
 	net_tcp_backlog = Cvar_Get( "net_tcp_backlog", "4", 0 );
 
