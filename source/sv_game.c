@@ -488,6 +488,7 @@ static void PF_StartSound( edict_t *edict, int channel,
 	int			area;
     player_state_t  *ps;
     message_packet_t  *msg;
+    int         i;
 
 	if( !edict )
 		return;
@@ -551,18 +552,18 @@ static void PF_StartSound( edict_t *edict, int channel,
             }
         }
 
+        // use the entity origin unless it is a bmodel
+        if( edict->solid == SOLID_BSP ) {
+            VectorAvg( edict->mins, edict->maxs, origin );
+            VectorAdd( edict->s.origin, origin, origin );
+        } else {
+            VectorCopy( edict->s.origin, origin );
+        }
+
         // reliable sounds will always have position explicitly set,
         // as no one gurantees reliables to be delivered in time
         // why should this happen anyway?
         if( channel & CHAN_RELIABLE ) {
-            // use the entity origin unless it is a bmodel
-            if( edict->solid == SOLID_BSP ) {
-                VectorAvg( edict->mins, edict->maxs, origin );
-                VectorAdd( edict->s.origin, origin, origin );
-            } else {
-                VectorCopy( edict->s.origin, origin );
-            }
-
             MSG_WriteByte( svc_sound );
             MSG_WriteByte( flags | SND_POS );
             MSG_WriteByte( soundindex );
@@ -587,6 +588,16 @@ static void PF_StartSound( edict_t *edict, int channel,
             continue;
         }
 
+        // send origin for invisible entities
+        if( edict->svflags & SVF_NOCLIENT ) {
+            flags |= SND_POS;
+        }
+
+        // default client doesn't know that bmodels have weird origins
+        if( edict->solid == SOLID_BSP && client->protocol == PROTOCOL_VERSION_DEFAULT ) {
+            flags |= SND_POS;
+        }
+
         msg = LIST_FIRST( message_packet_t, &client->msg_free, entry );
 
         msg->cursize = 0;
@@ -596,12 +607,16 @@ static void PF_StartSound( edict_t *edict, int channel,
         msg->attenuation = attenuation * 64;
         msg->timeofs = timeofs * 1000;
         msg->sendchan = sendchan;
+        for( i = 0; i < 3; i++ ) {
+            msg->pos[i] = origin[i] * 8;
+        }
 
         List_Remove( &msg->entry );
         List_Append( &client->msg_used[0], &msg->entry );
         client->msg_bytes += MAX_SOUND_PACKET;
     }
 
+    // FIXME: what about SVF_NOCLIENT entities? removed entities?
     if( svs.mvd.dummy && sv.mvd.paused < PAUSED_FRAMES ) {
         int extrabits = 0;
 

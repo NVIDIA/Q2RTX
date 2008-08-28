@@ -392,9 +392,7 @@ message_packet_t *SV_PacketizedAdd( client_t *client, byte *data,
 }
 
 static void emit_snd( client_t *client, message_packet_t *msg ) {
-    edict_t *edict;
     entity_state_t *state;
-    vec3_t origin;
     client_frame_t *frame;
     int flags, entnum;
     int i, j;
@@ -402,20 +400,8 @@ static void emit_snd( client_t *client, message_packet_t *msg ) {
     entnum = msg->sendchan >> 3;
     flags = msg->flags;
 
-    edict = EDICT_POOL( client, entnum );
-    
-    // send origin for invisible entities
-    if( edict->svflags & SVF_NOCLIENT ) {
-        flags |= SND_POS;
-    }
-
-    // default client doesn't know that bmodels have weird origins
-    if( edict->solid == SOLID_BSP && client->protocol == PROTOCOL_VERSION_DEFAULT ) {
-        flags |= SND_POS;
-    }
-
     // check if position needs to be explicitly sent
-    if( ( flags & SND_POS ) == 0 ) {
+    if( !( flags & SND_POS ) ) {
 	    frame = &client->frames[sv.framenum & UPDATE_MASK];
 
         for( i = 0; i < frame->numEntities; i++ ) {
@@ -448,15 +434,9 @@ static void emit_snd( client_t *client, message_packet_t *msg ) {
     MSG_WriteShort( msg->sendchan );
 
     if( flags & SND_POS ) {
-        // use the entity origin unless it is a bmodel
-        if( edict->solid == SOLID_BSP ) {
-            VectorAvg( edict->mins, edict->maxs, origin );
-            VectorAdd( edict->s.origin, origin, origin );
-        } else {
-            VectorCopy( edict->s.origin, origin );
+        for( i = 0; i < 3; i++ ) {
+            MSG_WriteShort( msg->pos[i] );
         }
-
-        MSG_WritePos( origin );
     }
 }
 

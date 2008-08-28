@@ -499,6 +499,7 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
     player_state_t  *ps;
     message_packet_t  *msg;
     edict_t     *entity;
+    int         i;
 
 	flags = MSG_ReadByte();
 	index = MSG_ReadByte();
@@ -552,18 +553,18 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
             }
         }
 
+        // use the entity origin unless it is a bmodel
+        if( entity->solid == SOLID_BSP ) {
+            VectorAvg( entity->mins, entity->maxs, origin );
+            VectorAdd( entity->s.origin, origin, origin );
+        } else {
+            VectorCopy( entity->s.origin, origin );
+        }
+
         // reliable sounds will always have position explicitly set,
         // as no one gurantees reliables to be delivered in time
         // why should this happen anyway?
         if( extrabits & 2 ) {
-            // use the entity origin unless it is a bmodel
-            if( entity->solid == SOLID_BSP ) {
-                VectorAvg( entity->mins, entity->maxs, origin );
-                VectorAdd( entity->s.origin, origin, origin );
-            } else {
-                VectorCopy( entity->s.origin, origin );
-            }
-
             MSG_WriteByte( svc_sound );
             MSG_WriteByte( flags | SND_POS );
             MSG_WriteByte( index );
@@ -588,6 +589,11 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
             continue;
         }
 
+        // default client doesn't know that bmodels have weird origins
+        if( entity->solid == SOLID_BSP && cl->protocol == PROTOCOL_VERSION_DEFAULT ) {
+            flags |= SND_POS;
+        }
+
         msg = LIST_FIRST( message_packet_t, &cl->msg_free, entry );
 
         msg->cursize = 0;
@@ -597,6 +603,9 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
         msg->attenuation = attenuation;
         msg->timeofs = offset;
         msg->sendchan = sendchan;
+        for( i = 0; i < 3; i++ ) {
+            msg->pos[i] = origin[i] * 8;
+        }
 
         List_Remove( &msg->entry );
         List_Append( &cl->msg_used[0], &msg->entry );
