@@ -58,6 +58,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #error Unknown target OS
 #endif
 
+#if USE_CLIENT
+
 #define	MAX_LOOPBACK	4
 
 typedef struct {
@@ -70,6 +72,10 @@ typedef struct {
 	unsigned	get;
 	unsigned	send;
 } loopback_t;
+
+static loopback_t	loopbacks[NS_COUNT];
+
+#endif
 
 cvar_t	*net_ip;
 cvar_t	*net_port;
@@ -87,9 +93,6 @@ static cvar_t	*net_tcp_clientip;
 static cvar_t	*net_tcp_clientport;
 static cvar_t	*net_tcp_backlog;
 
-#if USE_CLIENT
-static loopback_t	loopbacks[NS_COUNT];
-#endif
 static SOCKET		udp_sockets[NS_COUNT] = { INVALID_SOCKET, INVALID_SOCKET };
 static const char   socketNames[NS_COUNT][8] = { "Client", "Server" };
 static SOCKET       tcp_socket = INVALID_SOCKET;
@@ -185,11 +188,11 @@ static qboolean NET_StringToSockaddr( const char *s, struct sockaddr_in *sadr ) 
         if( addr == INADDR_NONE ) {
             return qfalse;
         }
-		*( uint32_t * )&sadr->sin_addr = addr;
+		sadr->sin_addr.s_addr = addr;
 	} else {
 		if( !( h = gethostbyname( copy ) ) )
 			return qfalse;
-		*( uint32_t * )&sadr->sin_addr = *( uint32_t * )h->h_addr_list[0];
+		sadr->sin_addr.s_addr = *( uint32_t * )h->h_addr_list[0];
 	}
 
 	return qtrue;

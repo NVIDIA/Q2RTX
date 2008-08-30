@@ -841,8 +841,10 @@ static void SVC_DirectConnect( void ) {
 		protocol == PROTOCOL_VERSION_Q2PRO )
 	{
 		newcl->pmp.speedMultiplier = 2;
-		newcl->pmp.strafeHack = sv_strafejump_hack->integer ? qtrue : qfalse;
-	}
+		newcl->pmp.strafeHack = sv_strafejump_hack->integer > 0 ? qtrue : qfalse;
+	} else {
+		newcl->pmp.strafeHack = sv_strafejump_hack->integer > 1 ? qtrue : qfalse;
+    }
 
     // q2pro extensions
 	if( protocol == PROTOCOL_VERSION_Q2PRO ) {

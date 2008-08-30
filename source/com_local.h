@@ -87,7 +87,7 @@ void Cbuf_ExecuteEx( cmdbuf_t *buf );
 // Normally called once per frame, but may be explicitly invoked.
 // Do not call inside a command function!
 
-char *Cbuf_Alloc( cmdbuf_t *buf, int length );
+char *Cbuf_Alloc( cmdbuf_t *buf, size_t len );
 
 #define Cbuf_AddText( text )	Cbuf_AddTextEx( &cmd_buffer, text )
 #define Cbuf_InsertText( text )	Cbuf_InsertTextEx( &cmd_buffer, text )

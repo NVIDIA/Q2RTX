@@ -58,6 +58,7 @@ cvar_t	*sys_basedir;
 cvar_t  *sys_libdir;
 cvar_t  *sys_homedir;
 cvar_t  *sys_stdio;
+cvar_t  *sys_parachute;
 
 static qboolean         tty_enabled;
 static struct termios   tty_orig;
@@ -656,10 +657,6 @@ void Sys_Init( void ) {
 
 	signal( SIGTERM, Sys_Term );
 	signal( SIGINT, Sys_Term );
-	signal( SIGSEGV, Sys_Kill );
-	signal( SIGILL, Sys_Kill );
-	signal( SIGFPE, Sys_Kill );
-	signal( SIGTRAP, Sys_Kill );
 	signal( SIGTTIN, SIG_IGN );
 	signal( SIGTTOU, SIG_IGN );
 
@@ -683,8 +680,9 @@ void Sys_Init( void ) {
 	sys_libdir = Cvar_Get( "libdir", LIBDIR, CVAR_NOSET );
 
     sys_stdio = Cvar_Get( "sys_stdio", "2", CVAR_NOSET );
+    sys_parachute = Cvar_Get( "sys_parachute", "1", CVAR_NOSET );
 
-    if( sys_stdio->integer ) {
+    if( sys_stdio->integer > 0 ) {
         // change stdin to non-blocking and stdout to blocking
         fcntl( 0, F_SETFL, fcntl( 0, F_GETFL, 0 ) | FNDELAY );
         fcntl( 1, F_SETFL, fcntl( 1, F_GETFL, 0 ) & ~FNDELAY );
@@ -701,6 +699,14 @@ void Sys_Init( void ) {
 	    signal( SIGHUP, Sys_Term );
     } else {
 	    signal( SIGHUP, SIG_IGN );
+    }
+
+    if( sys_parachute->integer ) {
+        // perform some cleanup when crashing
+        signal( SIGSEGV, Sys_Kill );
+        signal( SIGILL, Sys_Kill );
+        signal( SIGFPE, Sys_Kill );
+        signal( SIGTRAP, Sys_Kill );
     }
 
     Sys_FixFPCW();

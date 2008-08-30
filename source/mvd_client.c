@@ -188,6 +188,7 @@ void MVD_ClearState( mvd_t *mvd ) {
         }
         memset( player, 0, sizeof( *player ) );
     }
+    mvd->numplayers = 0;
 
     CM_FreeMap( &mvd->cm );
 

@@ -705,11 +705,13 @@ static void MVD_PlayerToEntityStates( mvd_t *mvd ) {
     edict_t *edict;
 	int i;
 
+    mvd->numplayers = 0;
     for( i = 1, player = mvd->players; i <= mvd->maxclients; i++, player++ ) {
-        if( !player->inuse ) {
+        if( !player->inuse || player == mvd->dummy ) {
             continue;
         }
 
+        mvd->numplayers++;
         if( player->ps.pmove.pm_type != PM_NORMAL ) {
             continue; // can be out of sync
         }

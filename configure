@@ -55,7 +55,7 @@ singleuser="no"
 asmflags=""
 mingw="no"
 if [ -z "$CFLAGS" ]; then
-    CFLAGS="-O2 -Wall -Wstrict-prototypes"
+    CFLAGS="-O2 -g -Wall -Wstrict-prototypes"
 fi
 
 # build tools

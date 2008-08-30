@@ -941,7 +941,7 @@ static void Cvar_Toggle_f( void ) {
             Cvar_SetByVar( var, "0", CVAR_SET_CONSOLE );
         } else {
             Com_Printf( "\"%s\" is \"%s\", can't toggle\n",
-                    var->name, var->string );
+                var->name, var->string );
         }
         return;
     }

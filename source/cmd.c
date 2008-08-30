@@ -84,14 +84,14 @@ void Cbuf_AddTextEx( cmdbuf_t *buf, const char *text ) {
     buf->cursize += l;
 }
 
-char *Cbuf_Alloc( cmdbuf_t *buf, int length ) {
+char *Cbuf_Alloc( cmdbuf_t *buf, size_t len ) {
     char *text;
 
-	if( buf->cursize + length > buf->maxsize ) {
+	if( buf->cursize + len > buf->maxsize ) {
 		return NULL;
 	}
     text = buf->text + buf->cursize;
-    buf->cursize += length;
+    buf->cursize += len;
 
     return text;
 }

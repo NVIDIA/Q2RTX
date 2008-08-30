@@ -117,8 +117,8 @@ static void MVD_LayoutChannels( udpClient_t *client ) {
         "xv 32 yv 8 picn inventory "
         "xv 240 yv 172 string2 " VERSION " "
         "xv 0 yv 32 cstring \"\020Channel Chooser\021\""
-        "xv 64 yv 48 string2 \"Name          Map     CL\""
-        "yv 56 string \"------------- ------- --\" xv 56 ";
+        "xv 64 yv 48 string2 \"Name         Map     P/S\""
+        "yv 56 string \"------------ ------- ---\" xv 56 ";
     static const char nochans[] =
         "yv 64 string \" <no channels>\"";
 	char layout[MAX_STRING_CHARS];
@@ -142,11 +142,12 @@ static void MVD_LayoutChannels( udpClient_t *client ) {
         cursor = 0;
         LIST_FOR_EACH( mvd_t, mvd, &mvd_ready, ready ) {
             length = Com_sprintf( buffer, sizeof( buffer ),
-                "yv %d string \"%c%-13.13s %-7.7s %d%s\" ", y,
+                "yv %d string%s \"%c%-12.12s %-7.7s %d/%d\" ", y,
+                mvd == client->mvd ? "2" : "",
                 cursor == client->layout_cursor ? 0x8d : 0x20,
                 mvd->name, mvd->mapname,
-                List_Count( &mvd->udpClients ),
-                mvd == client->mvd ? "+" : "" );
+                mvd->numplayers,
+                List_Count( &mvd->udpClients ) );
             if( total + length >= sizeof( layout ) ) {
                 break;
             }
@@ -660,7 +661,7 @@ static void MVD_Admin_f( udpClient_t *client ) {
 	SV_ClientPrintf( client->cl, PRINT_HIGH, "[MVD] Granted admin status.\n" );
 }
 
-static void MVD_Say_f( udpClient_t *client ) {
+static void MVD_Say_f( udpClient_t *client, int argnum ) {
     mvd_t *mvd = client->mvd;
     unsigned delta, delay = mvd_flood_waitdelay->value * 1000;
     unsigned treshold = mvd_flood_persecond->value * 1000;
@@ -705,7 +706,7 @@ static void MVD_Say_f( udpClient_t *client ) {
     client->floodHead++;
 
     len = Com_sprintf( text, sizeof( text ), "[MVD] %s: %s",
-        client->cl->name, Cmd_Args() );
+        client->cl->name, Cmd_ArgsFrom( argnum ) );
     for( i = 0; i < len; i++ ) {
         text[i] |= 128;
     }
@@ -906,7 +907,7 @@ static void MVD_GameClientCommand( edict_t *ent ) {
 		return;
 	}
 	if( !strcmp( cmd, "say" ) || !strcmp( cmd, "say_team" ) ) {
-        MVD_Say_f( client );
+        MVD_Say_f( client, 1 );
 		return;
 	}
 	if( !strcmp( cmd, "follow" ) || !strcmp( cmd, "chase" ) ) {
@@ -948,7 +949,7 @@ static void MVD_GameClientCommand( edict_t *ent ) {
         MVD_Invuse_f( client );
         return;
     }
-	if( !strcmp( cmd, "help" ) || !strncmp( cmd, "score", 5 ) ) {
+	if( !strcmp( cmd, "help" ) || !strcmp( cmd, "scores" ) ) {
 		if( client->layout_type == LAYOUT_SCORES ) {
 			MVD_SetDefaultLayout( client );
 		} else {
@@ -979,8 +980,8 @@ static void MVD_GameClientCommand( edict_t *ent ) {
         MVD_TrySwitchChannel( client, &mvd_waitingRoom );
         return;
     }
-	
-	SV_ClientPrintf( client->cl, PRINT_HIGH, "[MVD] Unknown command: %s\n", cmd );
+
+    MVD_Say_f( client, 0 );
 }
 
 /*
