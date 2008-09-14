@@ -241,7 +241,7 @@ static void PF_cprintf( edict_t *ent, int level, const char *fmt, ... ) {
 
 	client = svs.udp_client_pool + clientNum;
     if( client->state <= cs_zombie ) {
-        Com_WPrintf( "PF_cprintf to a free/zombie client %d", clientNum );
+        Com_WPrintf( "PF_cprintf to a free/zombie client %d\n", clientNum );
         return;
     }
 
