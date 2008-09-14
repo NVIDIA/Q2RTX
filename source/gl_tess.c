@@ -146,7 +146,7 @@ void GL_DrawParticles( void ) {
 
         scale = gl_partscale->value;
         if( dist > 20 ) {
-            scale += dist * 0.012f;
+            scale += dist * 0.01f;
         }
 
         if( p->color == 255 ) {
@@ -162,14 +162,14 @@ void GL_DrawParticles( void ) {
         }
         
         dst_vert = tess.vertices + numverts * 5;
-//        VectorMA( p->origin, -scale*0.5f, glr.viewaxis[2], dst_vert );
-        VectorMA( p->origin, scale*0.5f, glr.viewaxis[1], dst_vert );
+        VectorMA( p->origin, scale*0.25f, glr.viewaxis[1], dst_vert );
+        VectorMA( dst_vert, -scale*0.25f, glr.viewaxis[2], dst_vert );
         VectorMA( dst_vert, scale, glr.viewaxis[2], dst_vert + 5 );
         VectorMA( dst_vert, -scale, glr.viewaxis[1], dst_vert + 10 );
 
-        dst_vert[3] = 0; dst_vert[4] = 0;
-        dst_vert[8] = 2; dst_vert[9] = 0;
-        dst_vert[13] = 0; dst_vert[14] = 2;
+        dst_vert[ 3] = 0;     dst_vert[ 4] = 0;
+        dst_vert[ 8] = 1.75f; dst_vert[ 9] = 0;
+        dst_vert[13] = 0;     dst_vert[14] = 1.75f;
 
         dst_color = ( uint32_t * )tess.colors + numverts;
         dst_color[0] = *( uint32_t * )color;
@@ -181,6 +181,12 @@ void GL_DrawParticles( void ) {
 
 	qglDrawArrays( GL_TRIANGLES, 0, numverts );
 	qglDisableClientState( GL_COLOR_ARRAY );
+
+    if( gl_showtris->integer ) {
+        GL_EnableOutlines();
+	    qglDrawArrays( GL_TRIANGLES, 0, numverts );
+        GL_DisableOutlines();
+    }
 }
 
 /* all things serve the Beam */

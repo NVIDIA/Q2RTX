@@ -918,12 +918,10 @@ Cvar_Toggle_f
 ============
 */
 static void Cvar_Toggle_f( void ) {
-    char buffer[MAX_STRING_CHARS];
     cvar_t *var;
-    int i;
-    int numArgs;
+    int i, argc = Cmd_Argc();
 
-    if( Cmd_Argc() < 2 ) {
+    if( argc < 2 ) {
         Com_Printf( "Usage: %s <variable> [values]\n", Cmd_Argv( 0 ) );
         return;
     }
@@ -934,7 +932,7 @@ static void Cvar_Toggle_f( void ) {
         return;
     }
 
-    if( Cmd_Argc() < 3 ) {
+    if( argc < 3 ) {
         if( !strcmp( var->string, "0" ) ) {
             Cvar_SetByVar( var, "1", CVAR_SET_CONSOLE );
         } else if( !strcmp( var->string, "1" ) ) {
@@ -946,13 +944,10 @@ static void Cvar_Toggle_f( void ) {
         return;
     }
 
-    Q_strncpyz( buffer, Cmd_RawArgsFrom( 2 ), sizeof( buffer ) );
-    Cmd_TokenizeString( buffer, qfalse );
-    numArgs = Cmd_Argc();
-    for( i = 0; i < numArgs; i++ ) {
-        if( !Q_stricmp( var->string, Cmd_Argv( i ) ) ) {
-            i = ( i + 1 ) % numArgs;
-            Cvar_SetByVar( var, Cmd_Argv( i ), CVAR_SET_CONSOLE );
+    for( i = 0; i < argc - 2; i++ ) {
+        if( !Q_stricmp( var->string, Cmd_Argv( 2 + i ) ) ) {
+            i = ( i + 1 ) % ( argc - 2 );
+            Cvar_SetByVar( var, Cmd_Argv( 2 + i ), CVAR_SET_CONSOLE );
             return;
         }
     }

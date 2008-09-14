@@ -1338,17 +1338,54 @@ Just prints the rest of the line to the console
 ===============
 */
 static void Cmd_Echo_f( void ) {
-	Com_Printf( "%s\n", Cmd_RawArgs() );
+	Com_Printf( "%s\n", Cmd_Args() );
 }
 
-static void Cmd_ColoredEcho_f( void ) {
+static const cmd_option_t o_echo[] = {
+    { "h", "help", "display this message" },
+    { "e", "escapes", "enable interpretation of backslash escapes" },
+    { "c", "colors", "enable interpretation of color escapes" },
+    { "n", "no-newline", "do not output the trailing newline" },
+    { NULL }
+};
+
+static void Cmd_EchoEx_c( genctx_t *ctx, int argnum ) {
+    Cmd_Option_c( o_echo, NULL, ctx, argnum );
+}
+
+static void Cmd_EchoEx_f( void ) {
 	char buffer[MAX_STRING_CHARS];
 	char *src, *dst;
+    qboolean escapes = qfalse;
+    qboolean colors = qfalse;
+    const char *newline = "\n";
+    int c, c1, c2;
 
-	src = Cmd_RawArgs();
+    while( ( c = Cmd_ParseOptions( o_echo ) ) != -1 ) {
+        switch( c ) {
+        case 'h':
+            Cmd_PrintUsage( o_echo, "[text]" );
+            Com_Printf( "Print a line of text into the console.\n" );
+            Cmd_PrintHelp( o_echo );
+            return;
+        case 'e':
+            escapes = qtrue;
+            break;
+        case 'c':
+            colors = qtrue;
+            break;
+        case 'n':
+            newline = "";
+            break;
+        default:
+            return;
+        }
+    }
+
+	src = Cmd_RawArgsFrom( cmd_optind );
 	dst = buffer;
 	while( *src ) {
-		if( src[0] == '^' && src[1] ) {
+		if( colors && src[0] == '^' && src[1] ) {
 			if( src[1] == '^' ) {
 				*dst++ = '^';
 			} else {
@@ -1357,12 +1394,43 @@ static void Cmd_ColoredEcho_f( void ) {
 				dst += 2;
 			}
 			src += 2;
+        } else if( escapes && src[0] == '\\' && src[1] ) {
+            switch( src[1] ) {
+            case 't':
+                *dst++ = '\t';
+                break;
+            case 'b':
+                *dst++ = '\b';
+                break;
+            case 'r':
+                *dst++ = '\r';
+                break;
+            case 'n':
+                *dst++ = '\n';
+                break;
+            case '\\':
+                *dst++ = '\\';
+                break;
+            case 'x':
+                if( ( c1 = Q_charhex( src[2] ) ) == -1 ) {
+                    break;
+                }
+                if( ( c2 = Q_charhex( src[3] ) ) == -1 ) {
+                    break;
+                }
+                *dst++ = ( c1 << 4 ) | c2;
+                src += 2;
+                break;
+            default:
+                break;
+            }
+            src += 2;
 		} else {
 			*dst++ = *src++;
 		}
 	}
 	*dst = 0;
-	Com_Printf( "%s\n", buffer );
+	Com_Printf( "%s%s", buffer, newline );
 }
 
 /*
@@ -1470,7 +1538,7 @@ static const cmdreg_t c_cmd[] = {
     { "macrolist", Cmd_MacroList_f },
     { "exec", Cmd_Exec_f, Cmd_Exec_c },
     { "echo", Cmd_Echo_f },
-    { "_echo", Cmd_ColoredEcho_f },
+    { "_echo", Cmd_EchoEx_f, Cmd_EchoEx_c },
     { "alias", Cmd_Alias_f, Cmd_Alias_c },
     { "unalias", Cmd_UnAlias_f, Cmd_UnAlias_c },
     { "wait", Cmd_Wait_f },
