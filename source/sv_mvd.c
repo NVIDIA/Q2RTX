@@ -35,6 +35,7 @@ cvar_t	*sv_mvd_max_duration;
 cvar_t	*sv_mvd_max_levels;
 cvar_t	*sv_mvd_begincmd;
 cvar_t	*sv_mvd_scorecmd;
+cvar_t  *sv_mvd_autorecord;
 #if USE_ZLIB
 cvar_t	*sv_mvd_encoding;
 #endif
@@ -42,6 +43,11 @@ cvar_t	*sv_mvd_capture_flags;
 
 static cmdbuf_t	dummy_buffer;
 static char		dummy_buffer_text[MAX_STRING_CHARS];
+
+static qboolean SV_MvdCreateDummy( void );
+
+static qboolean SV_MvdRecAllow( void );
+static void     SV_MvdRecStart( fileHandle_t demofile );
 
 /*
 ==================
@@ -254,14 +260,65 @@ static void SV_DummyForward_f( void ) {
     ge->ClientCommand( svs.mvd.dummy->edict );
 }
 
+static void SV_DummyRecord_f( void ) {
+    char buffer[MAX_OSPATH];
+    fileHandle_t demofile;
+
+    if( !sv_mvd_autorecord->integer ) {
+        return;
+    }
+
+    if( Cmd_Argc() < 2 ) {
+        Com_Printf( "Usage: %s <filename>\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    if( !SV_MvdRecAllow() ) {
+        return;
+    }
+
+	Q_concat( buffer, sizeof( buffer ), "demos/", Cmd_Argv( 1 ), NULL );
+    COM_AppendExtension( buffer, ".mvd2", sizeof( buffer ) );
+
+	FS_FOpenFile( buffer, &demofile, FS_MODE_WRITE );
+	if( !demofile ) {
+		Com_EPrintf( "Couldn't open %s for writing\n", buffer );
+		return;
+	}
+
+    if( !SV_MvdCreateDummy() ) {
+        FS_FCloseFile( demofile );
+        return;
+    }
+
+    SV_MvdRecStart( demofile );
+
+	Com_Printf( "Auto-recording local MVD to %s\n", buffer );
+}
+
+static void SV_DummyStop_f( void ) {
+    if( !sv_mvd_autorecord->integer ) {
+        return;
+    }
+
+	if( !svs.mvd.recording ) {
+		Com_Printf( "Not recording a local MVD.\n" );
+		return;
+	}
+
+	Com_Printf( "Stopped local MVD auto-recording.\n" );
+	SV_MvdRecStop();
+}
+
 static const ucmd_t dummy_cmds[] = {
 	{ "cmd", SV_DummyForward_f },
-	//{ "connect", MVD_Connect_f },
 	{ "set", Cvar_Set_f },
 	{ "alias", Cmd_Alias_f },
 	{ "play", NULL },
 	{ "exec", NULL },
 	{ "wait", SV_DummyWait_f },
+	{ "record", SV_DummyRecord_f },
+	{ "stop", SV_DummyStop_f },
 	{ NULL, NULL }
 };
 
@@ -316,8 +373,6 @@ static void SV_DummyExecuteString( const char *line ) {
 static void SV_DummyAddMessage( client_t *client, byte *data,
 							  size_t length, qboolean reliable )
 {
-    tcpClient_t *t;
-
     if( !length || !reliable ) {
         return;
     }
@@ -327,13 +382,8 @@ static void SV_DummyAddMessage( client_t *client, byte *data,
 		Cbuf_AddTextEx( &dummy_buffer, ( char * )( data + 1 ) );
         return;
     }
-
-    LIST_FOR_EACH( tcpClient_t, t, &svs.mvd.clients, mvdEntry ) {
-        if( t->state >= cs_primed ) {
-        }
-    }
-
 }
+
 static void SV_MvdSpawnDummy( void ) {
     client_t *c = svs.mvd.dummy;
 	player_state_t *ps;
@@ -391,8 +441,32 @@ static void SV_MvdSpawnDummy( void ) {
 	}
 }
 
-qboolean SV_MvdCreateDummy( void ) {
-    client_t *newcl, *lastcl;
+static client_t *find_slot( void ) {
+    client_t *c;
+    int i, j;
+
+    // first check if there is a free reserved slot
+    j = sv_maxclients->integer - sv_reserved_slots->integer;
+    for( i = j; i < sv_maxclients->integer; i++ ) {
+        c = &svs.udp_client_pool[i];
+        if( !c->state ) {
+            return c;
+        }
+    }
+
+    // then check regular slots
+    for( i = 0; i < j; i++ ) {
+        c = &svs.udp_client_pool[i];
+        if( !c->state ) {
+            return c;
+        }
+    }
+
+    return NULL;
+}
+
+static qboolean SV_MvdCreateDummy( void ) {
+    client_t *newcl;
     char userinfo[MAX_INFO_STRING];
     char *s;
     qboolean allow;
@@ -403,14 +477,9 @@ qboolean SV_MvdCreateDummy( void ) {
     }
 
     // find a free client slot
-    lastcl = svs.udp_client_pool + sv_maxclients->integer;
-    for( newcl = svs.udp_client_pool; newcl < lastcl; newcl++ ) {
-        if( !newcl->state ) {
-            break;
-        }
-    }
-    if( newcl == lastcl ) {
-        Com_WPrintf( "No slot for dummy MVD client\n" );
+    newcl = find_slot();
+    if( !newcl ) {
+        Com_EPrintf( "No slot for dummy MVD client\n" );
         return qfalse;
     }
 
@@ -441,7 +510,7 @@ qboolean SV_MvdCreateDummy( void ) {
 	if ( !allow ) {
 	    s = Info_ValueForKey( userinfo, "rejmsg" );
         if( *s ) {
-            Com_WPrintf( "Dummy MVD client rejected by game DLL: %s\n", s );
+            Com_EPrintf( "Dummy MVD client rejected by game DLL: %s\n", s );
         }
         svs.mvd.dummy = NULL;
         return qfalse;
@@ -743,7 +812,13 @@ void SV_MvdMapChanged( void ) {
     tcpClient_t *client;
 
     if( !svs.mvd.dummy ) {
-        return;
+        if( !sv_mvd_autorecord->integer ) {
+            return; // not listening for autorecord command
+        }
+        if( !SV_MvdCreateDummy() ) {
+            return;
+        }
+        Com_Printf( "Spawning MVD dummy for auto-recording\n" );
     }
 
     SV_MvdSpawnDummy();
@@ -924,6 +999,34 @@ void SV_MvdRecStop( void ) {
     svs.mvd.recording = 0;
 }
 
+static qboolean SV_MvdRecAllow( void ) {
+	if( !svs.mvd.entities ) {
+		Com_Printf( "MVD recording is disabled on this server.\n" );
+		return qfalse;
+	}
+	if( svs.mvd.recording ) {
+		Com_Printf( "Already recording a local MVD.\n" );
+		return qfalse;
+	}
+    return qtrue;
+}
+
+static void SV_MvdRecStart( fileHandle_t demofile ) {
+    uint32_t magic;
+
+	svs.mvd.recording = demofile;
+    svs.mvd.numlevels = 0;
+    svs.mvd.numframes = 0;
+	
+    magic = MVD_MAGIC;
+    FS_Write( &magic, 4, demofile );
+
+    SV_MvdEmitGamestate();
+    FS_Write( msg_write.data, msg_write.cursize, demofile );
+    SZ_Clear( &msg_write );
+}
+
+
 const cmd_option_t o_mvdrecord[] = {
     { "h", "help", "display this message" },
     { "z", "gzip", "compress file with gzip" },
@@ -947,7 +1050,6 @@ Every entity, every playerinfo and every message will be recorded.
 static void MVD_Record_f( void ) {
 	char buffer[MAX_OSPATH];
 	fileHandle_t demofile;
-    uint32_t magic;
     qboolean gzip = qfalse;
     int c;
 
@@ -979,15 +1081,9 @@ static void MVD_Record_f( void ) {
         return;
     }
 
-	if( !svs.mvd.entities ) {
-		Com_Printf( "MVD recording is disabled on this server.\n" );
-		return;
-	}
-
-	if( svs.mvd.recording ) {
-		Com_Printf( "Already recording a local MVD.\n" );
-		return;
-	}
+    if( !SV_MvdRecAllow() ) {
+        return;
+    }
 
 	//
 	// open the demo file
@@ -1017,16 +1113,7 @@ static void MVD_Record_f( void ) {
         FS_FilterFile( demofile );
     }
 
-	svs.mvd.recording = demofile;
-    svs.mvd.numlevels = 0;
-    svs.mvd.numframes = 0;
-	
-    magic = MVD_MAGIC;
-    FS_Write( &magic, 4, demofile );
-
-    SV_MvdEmitGamestate();
-    FS_Write( msg_write.data, msg_write.cursize, demofile );
-    SZ_Clear( &msg_write );
+    SV_MvdRecStart( demofile );
 
 	Com_Printf( "Recording local MVD to %s\n", buffer );
 }
@@ -1056,6 +1143,7 @@ static void MVD_Stop_f( void ) {
 static void MVD_Stuff_f( void ) {
     if( svs.mvd.dummy ) {
         Cbuf_AddTextEx( &dummy_buffer, Cmd_RawArgs() );
+        Cbuf_AddTextEx( &dummy_buffer, "\n" );
     } else {
         Com_Printf( "Can't '%s', dummy MVD client is not active\n", Cmd_Argv( 0 ) );
     }
@@ -1082,6 +1170,7 @@ void SV_MvdRegister( void ) {
         "wait 50; putaway; wait 10; help;", 0 );
     sv_mvd_scorecmd = Cvar_Get( "sv_mvd_scorecmd",
         "putaway; wait 10; help;", 0 );
+    sv_mvd_autorecord = Cvar_Get( "sv_mvd_autorecord", "0", 0 );
 #if USE_ZLIB
     sv_mvd_encoding = Cvar_Get( "sv_mvd_encoding", "1", 0 );
 #endif

@@ -117,7 +117,7 @@ static void MVD_LayoutChannels( udpClient_t *client ) {
         "xv 32 yv 8 picn inventory "
         "xv 240 yv 172 string2 " VERSION " "
         "xv 0 yv 32 cstring \"\020Channel Chooser\021\""
-        "xv 64 yv 48 string2 \"Name         Map     P/S\""
+        "xv 64 yv 48 string2 \"Name         Map     S/P\""
         "yv 56 string \"------------ ------- ---\" xv 56 ";
     static const char nochans[] =
         "yv 64 string \" <no channels>\"";
@@ -146,8 +146,8 @@ static void MVD_LayoutChannels( udpClient_t *client ) {
                 mvd == client->mvd ? "2" : "",
                 cursor == client->layout_cursor ? 0x8d : 0x20,
                 mvd->name, mvd->mapname,
-                mvd->numplayers,
-                List_Count( &mvd->udpClients ) );
+                List_Count( &mvd->udpClients ),
+                mvd->numplayers );
             if( total + length >= sizeof( layout ) ) {
                 break;
             }
@@ -896,6 +896,61 @@ static void MVD_Join_f( udpClient_t *client ) {
     MVD_TrySwitchChannel( client, mvd );
 }
 
+static void MVD_Channels_f( udpClient_t *client ) {
+    mvd_t *mvd;
+    mvd_player_t *player;
+    char buffer[MAX_QPATH];
+    size_t len, total;
+    int i;
+
+    if( LIST_EMPTY( &mvd_ready ) ) {
+        Com_Printf( "No channels to watch.\n" );
+        return;
+    }
+
+	SV_ClientPrintf( client->cl, PRINT_HIGH,
+        "id name         map      spc plr who is playing\n"
+	    "-- ------------ -------- --- --- --------------\n" );
+
+    LIST_FOR_EACH( mvd_t, mvd, &mvd_ready, ready ) {
+        total = 0;
+        for( i = 0; i < mvd->maxclients; i++ ) {
+            player = &mvd->players[i];
+            if( !player->inuse || player == mvd->dummy ) {
+                continue;
+            }
+            len = strlen( player->name );
+            if( total + len + 2 >= sizeof( buffer ) ) {
+                break;
+            }
+            if( total ) {
+                buffer[total+0] = ',';
+                buffer[total+1] = ' ';
+                total += 2;
+            }
+            memcpy( buffer + total, player->name, len );
+            total += len;
+        }
+        if( total ) {
+            buffer[total] = 0;
+        } else {
+            strcpy( buffer, "<no players>" );
+        }
+
+	    SV_ClientPrintf( client->cl, PRINT_HIGH,
+            "%2d %-12.12s %-8.8s %3d %3d %s\n", mvd->id,
+            mvd->name, mvd->mapname,
+            List_Count( &mvd->udpClients ),
+            mvd->numplayers, buffer );
+    }
+}
+
+static void MVD_Clients_f( udpClient_t *client ) {
+    // TODO: dump them in console
+    client->layout_type = LAYOUT_CLIENTS;
+    client->layout_time = 0;
+}
+
 static void MVD_GameClientCommand( edict_t *ent ) {
 	udpClient_t *client = EDICT_MVDCL( ent );
 	char *cmd;
@@ -963,13 +1018,11 @@ static void MVD_GameClientCommand( edict_t *ent ) {
 		return;
 	}
 	if( !strcmp( cmd, "channels" ) ) {
-		client->layout_type = LAYOUT_CHANNELS;
-        client->layout_time = 0;
+        MVD_Channels_f( client );
 		return;
 	}
 	if( !strcmp( cmd, "clients" ) ) {
-		client->layout_type = LAYOUT_CLIENTS;
-        client->layout_time = 0;
+        MVD_Clients_f( client );
 		return;
 	}
 	if( !strcmp( cmd, "join" ) ) {
