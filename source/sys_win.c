@@ -880,11 +880,11 @@ void **Sys_ListFiles(   const char  *rawPath,
 		*numFiles = 0;
 	}
 
-	Q_strncpyz( path, rawPath, sizeof( path ) );
+	Q_strlcpy( path, rawPath, sizeof( path ) );
 	FS_ReplaceSeparators( path, '\\' );
 
 	if( flags & FS_SEARCH_BYFILTER ) {
-		Q_strncpyz( findPath, extension, sizeof( findPath ) );
+		Q_strlcpy( findPath, extension, sizeof( findPath ) );
 		FS_ReplaceSeparators( findPath, '\\' );
 		Sys_ListFilteredFiles( listedFiles, &count, path, findPath, flags, length );
 	} else {

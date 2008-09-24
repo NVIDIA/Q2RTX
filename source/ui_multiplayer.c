@@ -148,7 +148,7 @@ void UI_AddToServerList( const serverStatus_t *status ) {
     if( !map[0] ) {
         map = "???";
     } else {
-        Com_sprintf( value, sizeof( value ), "maps/%s.bsp", map );
+        Q_snprintf( value, sizeof( value ), "maps/%s.bsp", map );
         if( FS_LoadFile( value, NULL ) == INVALID_LENGTH ) {
             Q_concat( value, sizeof( value ), S_COLOR_RED, map, NULL );
             map = value;
@@ -157,7 +157,7 @@ void UI_AddToServerList( const serverStatus_t *status ) {
 
     j = atoi( Info_ValueForKey( info, "maxclients" ) );
     k = atoi( Info_ValueForKey( info, "needpass" ) );
-    Com_sprintf( key, sizeof( key ), "%s%d/%d",
+    Q_snprintf( key, sizeof( key ), "%s%d/%d",
         status->numPlayers < j ? k > 0 ? S_COLOR_YELLOW : "" : S_COLOR_RED,
         status->numPlayers, j );
 
@@ -178,8 +178,8 @@ void UI_AddToServerList( const serverStatus_t *status ) {
     } while( info && slot->numRules < MAX_STATUS_RULES );
 
     for( i = 0, player = status->players ; i < status->numPlayers; i++, player++ ) {
-        Com_sprintf( key, sizeof( key ), "%d", player->score );
-        Com_sprintf( value, sizeof( value ), "%d", player->ping );
+        Q_snprintf( key, sizeof( key ), "%d", player->score );
+        Q_snprintf( value, sizeof( value ), "%d", player->ping );
         slot->players[i] = UI_FormatColumns( 0,
             key, value, player->name, NULL );
     }
@@ -245,8 +245,8 @@ static void AddUnlistedServers( void ) {
         }
 
         // save original address
-        Q_strncpyz( slot->address, var->string, sizeof( slot->address ) );
-        Q_strncpyz( slot->realAddress, var->string, sizeof( slot->realAddress ) );
+        Q_strlcpy( slot->address, var->string, sizeof( slot->address ) );
+        Q_strlcpy( slot->realAddress, var->string, sizeof( slot->realAddress ) );
 
         m_join.names[m_join.list.numItems++] = UI_FormatColumns( 0,
             slot->address, "???", "?/?", NULL );

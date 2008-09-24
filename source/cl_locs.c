@@ -218,14 +218,14 @@ static size_t LOC_Here_m( char *buffer, size_t size ) {
 	location_t *loc;
     size_t ret;
 
-	ret = Q_strncpyz( buffer, "unknown", size );
+	ret = Q_strlcpy( buffer, "unknown", size );
 	if( cls.state != ca_active ) {
 		return ret;
 	}
 
 	loc = LOC_FindClosest( cl.playerEntityOrigin );
 	if( loc ) {
-		ret = Q_strncpyz( buffer, loc->name, size );
+		ret = Q_strlcpy( buffer, loc->name, size );
 	}
     return ret;
 }
@@ -241,7 +241,7 @@ static size_t LOC_There_m( char *buffer, size_t size ) {
 	trace_t trace;
     int ret;
 
-	ret = Q_strncpyz( buffer, "unknown", size );
+	ret = Q_strlcpy( buffer, "unknown", size );
 	if( cls.state != ca_active ) {
 		return ret;
 	}
@@ -252,7 +252,7 @@ static size_t LOC_There_m( char *buffer, size_t size ) {
 
 	loc = LOC_FindClosest( trace.endpos );
 	if( loc ) {
-		ret = Q_strncpyz( buffer, loc->name, size );
+		ret = Q_strlcpy( buffer, loc->name, size );
 	}
     return ret;
 }

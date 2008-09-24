@@ -49,7 +49,7 @@ static qboolean IconOfSkinExists( char *skin, char **pcxfiles, int npcxfiles ) {
 	char scratch[MAX_OSPATH];
 
 	COM_StripExtension( skin, scratch, sizeof( scratch ) );
-	Q_strcat( scratch, sizeof( scratch ), "_i.pcx" );
+	Q_strlcat( scratch, "_i.pcx", sizeof( scratch ) );
 
 	for( i = 0 ; i < npcxfiles ; i++ ) {
 		if( strcmp( pcxfiles[i], scratch ) == 0 )
@@ -99,7 +99,7 @@ void PlayerModel_Load( void ) {
 	}
 
 	for( i = 0; i < numFiles; i++ ) {
-		Q_strncpyz( scratch, list[i] + 8, sizeof( scratch ) );
+		Q_strlcpy( scratch, list[i] + 8, sizeof( scratch ) );
 		if( ( p = strchr( scratch, '/' ) ) ) {
 			*p = 0;
 		}

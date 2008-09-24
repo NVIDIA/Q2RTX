@@ -123,6 +123,11 @@ void SV_ClientPrintf( client_t *client, int level, const char *fmt, ... ) {
 	len = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
 	va_end( argptr );
 
+    if( len >= sizeof( string ) ) {
+        Com_WPrintf( "%s: overflow\n", __func__ );
+        return;
+    }
+
 	MSG_WriteByte( svc_print );
 	MSG_WriteByte( level );
 	MSG_WriteData( string, len + 1 );
@@ -148,6 +153,11 @@ void SV_BroadcastPrintf( int level, const char *fmt, ... ) {
 	len = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
 	va_end( argptr );
 
+    if( len >= sizeof( string ) ) {
+        Com_WPrintf( "%s: overflow\n", __func__ );
+        return;
+    }
+
 	MSG_WriteByte( svc_print );
 	MSG_WriteByte( level );
 	MSG_WriteData( string, len + 1 );
@@ -172,6 +182,11 @@ void SV_ClientCommand( client_t *client, const char *fmt, ... ) {
 	len = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
 	va_end( argptr );
 
+    if( len >= sizeof( string ) ) {
+        Com_WPrintf( "%s: overflow\n", __func__ );
+        return;
+    }
+
 	MSG_WriteByte( svc_stufftext );
 	MSG_WriteData( string, len + 1 );
 
@@ -195,6 +210,11 @@ void SV_BroadcastCommand( const char *fmt, ... ) {
 	va_start( argptr, fmt );
 	len = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
 	va_end( argptr );
+
+    if( len >= sizeof( string ) ) { 
+        Com_WPrintf( "%s: overflow\n", __func__ );
+        return;
+    }
 
 	MSG_WriteByte( svc_stufftext );
 	MSG_WriteData( string, len + 1 );

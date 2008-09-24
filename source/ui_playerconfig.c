@@ -196,7 +196,7 @@ static qboolean Push( menuFrameWork_t *self ) {
 
     if( ( p = strchr( currentdirectory, '/' ) ) || ( p = strchr( currentdirectory, '\\' ) ) ) {
         *p++ = 0;
-        Q_strncpyz( currentskin, p, sizeof( currentskin ) );
+        Q_strlcpy( currentskin, p, sizeof( currentskin ) );
     } else {
         strcpy( currentdirectory, "male" );
         strcpy( currentskin, "grunt" );

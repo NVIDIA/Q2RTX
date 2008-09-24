@@ -151,7 +151,7 @@ malformed:
 void VID_SetGeometry( vrect_t *rc ) {
     char buffer[MAX_QPATH];
 
-    Com_sprintf( buffer, sizeof( buffer ), "%dx%d+%d+%d",
+    Q_snprintf( buffer, sizeof( buffer ), "%dx%d+%d+%d",
         rc->width, rc->height, rc->x, rc->y );
     Cvar_SetByVar( vid_geometry, buffer, CVAR_SET_DIRECT );
 }

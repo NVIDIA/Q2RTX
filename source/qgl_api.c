@@ -3393,7 +3393,7 @@ void QGL_EnableLogging( qboolean enable )
 
 			asctime( newtime );
 
-			Com_sprintf( buffer, sizeof( buffer ), "%s/qgl.log",
+			Q_snprintf( buffer, sizeof( buffer ), "%s/qgl.log",
                     Cvar_VariableString( "basedir" ) );
             log_fp = fopen( buffer, "w" );
             if( !log_fp ) {

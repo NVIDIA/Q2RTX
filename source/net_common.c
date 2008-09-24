@@ -83,7 +83,7 @@ cvar_t	*net_port;
 static cvar_t	*net_clientport;
 static cvar_t	*net_dropsim;
 #endif
-static cvar_t	*net_log_active;
+static cvar_t	*net_log_enable;
 static cvar_t	*net_log_name;
 static cvar_t	*net_log_flush;
 static cvar_t	*net_ignore_icmp;
@@ -168,7 +168,7 @@ static qboolean NET_StringToSockaddr( const char *s, struct sockaddr_in *sadr ) 
 	sadr->sin_family = AF_INET;
 	sadr->sin_port = 0;
 
-	Q_strncpyz( copy, s, sizeof( copy ) );
+	Q_strlcpy( copy, s, sizeof( copy ) );
 	// strip off a trailing :port if present
     p = strchr( copy, ':' );
     if( p ) {
@@ -213,7 +213,7 @@ char *NET_AdrToString( const netadr_t *a ) {
 		return s;
 	case NA_IP:
 	case NA_BROADCAST:
-		Com_sprintf( s, sizeof( s ), "%u.%u.%u.%u:%u",
+		Q_snprintf( s, sizeof( s ), "%u.%u.%u.%u:%u",
             a->ip[0], a->ip[1], a->ip[2], a->ip[3], ntohs( a->port ) );
 		return s;
 	default:
@@ -253,7 +253,7 @@ qboolean NET_StringToAdr( const char *s, netadr_t *a, int port ) {
 
 //=============================================================================
 
-static void NetLogFile_Close( void ) {
+static void logfile_close( void ) {
 	if( !net_logFile ) {
 		return;
 	}
@@ -264,38 +264,45 @@ static void NetLogFile_Close( void ) {
 	net_logFile = 0;
 }
 
-static void NetLogFile_Open( void ) {
+static void logfile_open( void ) {
+    char buffer[MAX_OSPATH];
+    size_t len;
 	int mode;
 
-	mode = net_log_active->integer > 1 ? FS_MODE_APPEND : FS_MODE_WRITE;
+    len = Q_concat( buffer, sizeof( buffer ), "logs/",
+        net_log_name->string, ".log", NULL );
+    if( len >= sizeof( buffer ) ) {
+		Com_WPrintf( "Oversize logfile name specified\n" );
+		Cvar_Set( "net_log_enable", "0" );
+		return;
+    }
 
+	mode = net_log_enable->integer > 1 ? FS_MODE_APPEND : FS_MODE_WRITE;
 	if( net_log_flush->integer ) {
 		mode |= FS_FLUSH_SYNC;
 	}
 
-	FS_FOpenFile( net_log_name->string, &net_logFile, mode );
-
+	FS_FOpenFile( buffer, &net_logFile, mode );
 	if( !net_logFile ) {
-		Com_WPrintf( "Couldn't open %s\n", net_log_name->string );
-		Cvar_Set( "net_log_active", "0" );
+		Com_WPrintf( "Couldn't open %s\n", buffer );
+		Cvar_Set( "net_log_enable", "0" );
 		return;
 	}
 
-	Com_Printf( "Logging network packets to %s\n", net_log_name->string );
+	Com_Printf( "Logging network packets to %s\n", buffer );
 }
 
-static void net_log_active_changed( cvar_t *self ) {
-	if( !self->integer ) {
-		NetLogFile_Close();
-	} else {
-		NetLogFile_Open();
+static void net_log_enable_changed( cvar_t *self ) {
+	logfile_close();
+	if( self->integer ) {
+		logfile_open();
 	}	
-}	
+}
 
 static void net_log_param_changed( cvar_t *self ) {
-	if( net_log_active->integer ) {
-		NetLogFile_Close();
-		NetLogFile_Open();
+	if( net_log_enable->integer ) {
+		logfile_close();
+		logfile_open();
 	}	
 }
 
@@ -384,7 +391,7 @@ qboolean NET_GetLoopPacket( netsrc_t sock ) {
 
 	memcpy( msg_read_buffer, loopmsg->data, loopmsg->datalen );
 
-	if( net_log_active->integer ) {
+	if( net_log_enable->integer ) {
 		NET_LogPacket( &net_from, "LP recv", loopmsg->data, loopmsg->datalen );
 	}
     if( sock == NS_CLIENT ) {
@@ -472,7 +479,7 @@ neterr_t NET_GetPacket( netsrc_t sock ) {
 		return NET_AGAIN;
 	}
 
-	if( net_log_active->integer ) {
+	if( net_log_enable->integer ) {
 		NET_LogPacket( &net_from, "UDP recv", msg_read_buffer, ret );
 	}
 	
@@ -525,7 +532,7 @@ neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, size_t length, const
 			memcpy( msg->data, data, length );
 			msg->datalen = length;
 
-			if( net_log_active->integer ) {
+			if( net_log_enable->integer ) {
 				NET_LogPacket( to, "LB send", data, length );
 			}
             if( sock == NS_CLIENT ) {
@@ -607,7 +614,7 @@ neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, size_t length, const
             NET_AdrToString( to ) );
     }
 
-	if( net_log_active->integer ) {
+	if( net_log_enable->integer ) {
 		NET_LogPacket( to, "UDP send", data, ret );
 	}
     net_sent += ret;
@@ -998,7 +1005,7 @@ neterr_t NET_Run( netstream_t *s ) {
 
             FIFO_Commit( &s->recv, ret );
 
-            if( net_log_active->integer ) {
+            if( net_log_enable->integer ) {
                 NET_LogPacket( &s->address, "TCP recv", data, ret );
             }
             net_rcvd += ret;
@@ -1021,7 +1028,7 @@ neterr_t NET_Run( netstream_t *s ) {
 
             FIFO_Decommit( &s->send, ret );
 
-            if( net_log_active->integer ) {
+            if( net_log_enable->integer ) {
                 NET_LogPacket( &s->address, "TCP send", data, ret );
             }
             net_sent += ret;
@@ -1268,11 +1275,11 @@ qboolean NET_GetAddress( netsrc_t sock, netadr_t *adr ) {
 }
 
 static size_t NET_UpRate_m( char *buffer, size_t size ) {
-	return Com_sprintf( buffer, size, "%"PRIz, net_rate_up );
+	return Q_snprintf( buffer, size, "%"PRIz, net_rate_up );
 }
 
 static size_t NET_DnRate_m( char *buffer, size_t size ) {
-	return Com_sprintf( buffer, size, "%"PRIz, net_rate_dn );
+	return Q_snprintf( buffer, size, "%"PRIz, net_rate_dn );
 }
 
 static void net_udp_param_changed( cvar_t *self ) {
@@ -1321,9 +1328,9 @@ void NET_Init( void ) {
     net_clientport->changed = net_udp_param_changed;
 	net_dropsim = Cvar_Get( "net_dropsim", "0", 0 );
 #endif
-	net_log_active = Cvar_Get( "net_log_active", "0", 0 );
-	net_log_active->changed = net_log_active_changed;
-	net_log_name = Cvar_Get( "net_log_name", "qnetwork.log", 0 );
+	net_log_enable = Cvar_Get( "net_log_enable", "0", 0 );
+	net_log_enable->changed = net_log_enable_changed;
+	net_log_name = Cvar_Get( "net_log_name", "network", 0 );
 	net_log_name->changed = net_log_param_changed;
 	net_log_flush = Cvar_Get( "net_log_flush", "0", 0 );
 	net_log_flush->changed = net_log_param_changed;
@@ -1356,9 +1363,7 @@ void NET_Init( void ) {
 	net_tcp_clientport = Cvar_Get( "net_tcp_clientport", PORT_ANY_STRING, 0 );
 	net_tcp_backlog = Cvar_Get( "net_tcp_backlog", "4", 0 );
 
-    if( net_log_active->integer ) {
-		NetLogFile_Open();
-    }
+    net_log_enable_changed( net_log_enable );
 
     net_statTime = com_eventTime;
 

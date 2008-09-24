@@ -200,7 +200,7 @@ static void CL_AddPacketEntities( void ) {
 			continue;
 		}
 
-			// set frame
+		// set frame
 		if (effects & EF_ANIM01)
 			ent.frame = autoanim & 1;
 		else if (effects & EF_ANIM23)

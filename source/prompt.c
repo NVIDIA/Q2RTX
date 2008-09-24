@@ -240,10 +240,14 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 		// we have finished completion!
         s = Cmd_RawArgsFrom( currentArg + 1 ); 
         if( COM_HasSpaces( matches[0] ) ) {
-		    pos += Q_concat( text, size, "\"", matches[0], "\" ", s, NULL );
+		    len = Q_concat( text, size, "\"", matches[0], "\" ", s, NULL );
         } else {
-		    pos += Q_concat( text, size, matches[0], " ", s, NULL );
+		    len = Q_concat( text, size, matches[0], " ", s, NULL );
         }
+        if( len >= size ) {
+            len = size - 1;
+        }
+        pos += len;
 		inputLine->cursorPos = pos + 1;
         prompt->tooMany = qfalse;
         goto finish;
@@ -291,7 +295,11 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 
 	if( currentArg + 1 < argc ) {
         s = Cmd_RawArgsFrom( currentArg + 1 ); 
-		pos += Q_concat( text + len, size, " ", s, NULL );
+		len = Q_concat( text + len, size, " ", s, NULL );
+        if( len >= size ) {
+            len = size - 1;
+        }
+        pos += len;
 	}
 
 	inputLine->cursorPos = pos + 1;

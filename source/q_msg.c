@@ -441,9 +441,8 @@ void MSG_WriteDir( const vec3_t dir ) {
 	MSG_WriteByte( best );
 }
 
-/* values transmitted over network are discrete, so
- * we use special macros to check for delta conditions
- */
+// values transmitted over network are discrete, so
+// we use special macros to check for delta conditions
 #define Delta_Angle( a, b ) \
   ( ((int)((a)*256/360) & 255) != ((int)((b)*256/360) & 255) )
 
@@ -1405,13 +1404,18 @@ void MSG_FlushTo( sizebuf_t *dest ) {
 
 // NOTE: does not NUL-terminate the string
 void MSG_Printf( const char *fmt, ... ) {
-    char buffer[MAX_STRING_CHARS];
+    char        buffer[MAX_STRING_CHARS];
 	va_list		argptr;
 	size_t		len;
 
 	va_start( argptr, fmt );
 	len = Q_vsnprintf( buffer, sizeof( buffer ), fmt, argptr );
 	va_end( argptr );
+
+    if( len >= sizeof( buffer ) ) {
+        Com_WPrintf( "%s: overflow\n", __func__ );
+        return;
+    }
 
     MSG_WriteData( buffer, len );
 }
@@ -1506,86 +1510,60 @@ int MSG_ReadLong ( void )
 	return c;
 }
 
-char *MSG_ReadStringLength( size_t *length ) {
-	static char	string[2][MAX_NET_STRING];
-	static int index;
-	char	*s;
-	int		l, c;
-	
-	s = string[index];
-	index ^= 1;
+size_t MSG_ReadString( char *dest, size_t size ) {
+	int		c;
+    size_t  l = 0;
 
-	l = 0;
-	do {
-		c = MSG_ReadByte();
-		if( c == -1 || c == 0 ) {
-			break;
-		}
-		if( c == 0xFF ) {
-			c = '.';
-		}
-		s[l++] = c;
-	} while( l < MAX_NET_STRING - 1 );
-	
-	s[l] = 0;
-
-    if( length ) {
-        *length = l;
+    if( size ) {
+        while( 1 ) {
+            c = MSG_ReadByte();
+            if( c == -1 || c == 0 ) {
+                break;
+            }
+            if( l++ < size - 1 ) {
+                *dest++ = c;
+            }
+        }
+        *dest = 0;
+    } else {
+        while( 1 ) {
+            c = MSG_ReadByte();
+            if( c == -1 || c == 0 ) {
+                break;
+            }
+            l++;
+        }
     }
-	
-	return s;
+
+	return l;
 }
 
-char *MSG_ReadString( void ) {
-	static char	string[2][MAX_NET_STRING];
-	static int index;
-	char	*s;
-	int		l, c;
-	
-	s = string[index];
-	index ^= 1;
+size_t MSG_ReadStringLine( char *dest, size_t size ) {
+	int		c;
+    size_t  l = 0;
 
-	l = 0;
-	do {
-		c = MSG_ReadByte();
-		if( c == -1 || c == 0 ) {
-			break;
-		}
-		if( c == 0xFF ) {
-			c = '.';
-		}
-		s[l++] = c;
-	} while( l < MAX_NET_STRING - 1 );
-	
-	s[l] = 0;
-	
-	return s;
-}
+    if( size ) {
+        while( 1 ) {
+            c = MSG_ReadByte();
+            if( c == -1 || c == 0 || c == '\n' ) {
+                break;
+            }
+            if( l++ < size - 1 ) {
+                *dest++ = c;
+            }
+        }
+        *dest = 0;
+    } else {
+        while( 1 ) {
+            c = MSG_ReadByte();
+            if( c == -1 || c == 0 ) {
+                break;
+            }
+            l++;
+        }
+    }
 
-char *MSG_ReadStringLine( void ) {
-	static char	string[2][MAX_STRING_CHARS];
-	static int index;
-	char	*s;
-	int		l, c;
-	
-	s = string[index];
-	index ^= 1;
-
-	l = 0;
-	do {
-		c = MSG_ReadByte();
-		if( c == -1 || c == 0 || c == '\n' ) {
-			break;
-		}
-		if( c == 0xFF ) {
-			c = '.';
-		}
-		s[l++] = c;
-	} while( l < MAX_STRING_CHARS - 1 );
-	
-	s[l] = 0;
-	
-	return s;
+	return l;
 }
 
 float MSG_ReadCoord (void)
@@ -2780,10 +2758,6 @@ void *SZ_GetSpace( sizebuf_t *buf, size_t length ) {
 	return data;
 }
 
-void SZ_Write( sizebuf_t *buf, const void *data, size_t length ) {
-	memcpy( SZ_GetSpace( buf, length ), data, length );		
-}
-
 void SZ_WriteByte( sizebuf_t *sb, int c ) {
 	byte	*buf;
 
@@ -2809,15 +2783,8 @@ void SZ_WriteLong( sizebuf_t *sb, int c ) {
 	buf[3] = c >> 24;
 }
 
-void SZ_WritePos( sizebuf_t *sb, const vec3_t pos ) {
-	SZ_WriteShort( sb, ( int )( pos[0] * 8 ) );
-	SZ_WriteShort( sb, ( int )( pos[1] * 8 ) );
-	SZ_WriteShort( sb, ( int )( pos[2] * 8 ) );
-}
-
 void SZ_WriteString( sizebuf_t *sb, const char *string ) {
 	size_t length;
-	int c;
 
 	if( !string ) {
 		SZ_WriteByte( sb, 0 );
@@ -2825,23 +2792,12 @@ void SZ_WriteString( sizebuf_t *sb, const char *string ) {
 	}
 
 	length = strlen( string );
-	if( length > MAX_NET_STRING - 1 ) {
+	if( length >= MAX_NET_STRING ) {
 		Com_WPrintf( "%s: overflow: %"PRIz" chars", __func__, length );
 		SZ_WriteByte( sb, 0 );
 		return;
 	}
 
-	while( *string ) {
-		c = *string++;
-		if( c == '\xFF' ) {
-			c = '.';
-		}
-		SZ_WriteByte( sb, c );
-	}
-
-	SZ_WriteByte( sb, 0 );
+    SZ_Write( sb, string, length + 1 );
 }
-
-
-
 

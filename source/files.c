@@ -102,7 +102,6 @@ typedef enum fsFileType_e {
 } fsFileType_t;
 
 typedef struct fsFile_s {
-    char fullpath[MAX_OSPATH];
     fsFileType_t type;
     unsigned mode;
     FILE *fp;
@@ -373,10 +372,6 @@ size_t FS_GetFileLength( fileHandle_t f ) {
     return INVALID_LENGTH;
 }
 
-const char *FS_GetFileFullPath( fileHandle_t f ) {
-    return ( FS_FileForHandle( f ) )->fullpath;
-}
-
 /*
 ============
 FS_CreatePath
@@ -385,19 +380,18 @@ Creates any directories needed to store the given filename.
 Expects a fully qualified quake path (i.e. with / separators).
 ============
 */
-void FS_CreatePath( const char *path ) {
-    char buffer[MAX_OSPATH];
+static void FS_CreatePath( char *path ) {
     char *ofs;
 
-    Q_strncpyz( buffer, path, sizeof( buffer ) );
+    if( !*path ) {
+        return;
+    }
 
-    FS_DPrintf( "%s: %s\n", __func__, buffer );
-    
-    for( ofs = buffer + 1; *ofs; ofs++ ) {
+    for( ofs = path + 1; *ofs; ofs++ ) {
         if( *ofs == '/' ) {    
             // create the directory
             *ofs = 0;
-            Q_mkdir( buffer );
+            Q_mkdir( path );
             *ofs = '/';
         }
     }
@@ -454,7 +448,7 @@ FS_FCloseFile
 void FS_FCloseFile( fileHandle_t f ) {
     fsFile_t *file = FS_FileForHandle( f );
 
-    FS_DPrintf( "%s: %s\n", __func__, file->fullpath );
+    FS_DPrintf( "%s: %u\n", __func__, f );
 
     switch( file->type ) {
     case FS_REAL:
@@ -497,9 +491,11 @@ FS_FOpenFileWrite
 ============
 */
 static size_t FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
+    char fullpath[MAX_OSPATH];
     FILE *fp;
     char *modeStr;
     unsigned mode;
+    size_t len;
 
     if( !FS_ValidatePath( name ) ) {
         FS_DPrintf( "%s: refusing invalid path: %s\n", __func__, name );
@@ -508,15 +504,19 @@ static size_t FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
 
     if( ( file->mode & FS_PATH_MASK ) == FS_PATH_BASE ) {
         if( sys_homedir->string[0] ) {
-            Q_concat( file->fullpath, sizeof( file->fullpath ),
+            len = Q_concat( fullpath, sizeof( fullpath ),
                 sys_homedir->string, "/" BASEGAME "/", name, NULL );
         } else {
-            Q_concat( file->fullpath, sizeof( file->fullpath ),
+            len = Q_concat( fullpath, sizeof( fullpath ),
                 sys_basedir->string, "/" BASEGAME "/", name, NULL );
         }
     } else {
-        Q_concat( file->fullpath, sizeof( file->fullpath ),
+        len = Q_concat( fullpath, sizeof( fullpath ),
             fs_gamedir, "/", name, NULL );
+    }
+    if( len >= sizeof( fullpath ) ) {
+        FS_DPrintf( "%s: refusing oversize path: %s\n", __func__, name );
+        return INVALID_LENGTH;
     }
 
     mode = file->mode & FS_MODE_MASK;
@@ -532,30 +532,30 @@ static size_t FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
         break;
     default:
         Com_Error( ERR_FATAL, "%s: %s: invalid mode mask",
-            __func__, file->fullpath );
+            __func__, name );
         modeStr = NULL;
         break;
     }
 
-    FS_CreatePath( file->fullpath );
+    FS_CreatePath( fullpath );
 
-    fp = fopen( file->fullpath, modeStr );
+    fp = fopen( fullpath, modeStr );
     if( !fp ) {
         FS_DPrintf( "%s: %s: fopen(%s): %s\n",
-            __func__, file->fullpath, modeStr, strerror( errno ) );
+            __func__, fullpath, modeStr, strerror( errno ) );
         return INVALID_LENGTH;
     }
 
 #ifdef __unix__
     if( !Sys_GetFileInfo( fp, NULL ) ) {
         FS_DPrintf( "%s: %s: couldn't get info\n",
-            __func__, file->fullpath );
+            __func__, fullpath );
         fclose( fp );
         return INVALID_LENGTH;
     }
 #endif
 
-    FS_DPrintf( "%s: %s: succeeded\n", __func__, file->fullpath );
+    FS_DPrintf( "%s: %s: succeeded\n", __func__, fullpath );
 
     file->fp = fp;
     file->type = FS_REAL;
@@ -574,11 +574,7 @@ static size_t FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
 }
 
 static size_t FS_FOpenFromPak( fsFile_t *file, pack_t *pak, packfile_t *entry, qboolean unique ) {
-    // found it!
     fs_fileFromPak = qtrue;
-
-    Q_concat( file->fullpath, sizeof( file->fullpath ),
-        pak->filename, "/", entry->name, NULL );
 
     // open a new file on the pakfile
 #if USE_ZLIB
@@ -651,13 +647,15 @@ a seperate file.
 ===========
 */
 static size_t FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean unique ) {
+    char            fullpath[MAX_OSPATH];
     searchpath_t    *search;
-    pack_t            *pak;
+    pack_t          *pak;
     unsigned        hash;
-    packfile_t        *entry;
+    packfile_t      *entry;
     FILE            *fp;
     fsFileInfo_t    info;
     int             valid = -1;
+    size_t          len;
 
     fs_fileFromPak = qfalse;
     fs_count_read++;
@@ -685,6 +683,7 @@ static size_t FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean uniqu
             for( ; entry; entry = entry->hashNext ) {
                 fs_count_strcmp++;
                 if( !FS_pathcmp( entry->name, name ) ) {
+                    // found it!
                     return FS_FOpenFromPak( file, pak, entry, unique );
                 }
             }
@@ -703,18 +702,23 @@ static size_t FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean uniqu
                 continue;
             }
     // check a file in the directory tree
-            Q_concat( file->fullpath, sizeof( file->fullpath ),
+            len = Q_concat( fullpath, sizeof( fullpath ),
                 search->filename, "/", name, NULL );
+            if( len >= sizeof( fullpath ) ) {
+                FS_DPrintf( "%s: refusing oversize path: %s\n",
+                    __func__, name );
+                continue;
+            }
 
             fs_count_open++;
-            fp = fopen( file->fullpath, "rb" );
+            fp = fopen( fullpath, "rb" );
             if( !fp ) {
                 continue;
             }
 
             if( !Sys_GetFileInfo( fp, &info ) ) {
                 FS_DPrintf( "%s: %s: couldn't get info\n",
-                    __func__, file->fullpath );
+                    __func__, fullpath );
                 fclose( fp );
                 continue;
             }
@@ -724,7 +728,7 @@ static size_t FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean uniqu
             file->unique = qtrue;
             file->length = info.size;
 
-            FS_DPrintf( "%s: %s: succeeded\n", __func__, file->fullpath );
+            FS_DPrintf( "%s: %s: succeeded\n", __func__, fullpath );
 
             return file->length;
         }
@@ -1173,106 +1177,44 @@ void FS_FreeFile( void *buffer ) {
 }
 
 /*
-=============
-FS_CopyFile
-=============
-*/
-qboolean FS_CopyFile( const char *src, const char *dst ) {
-    fileHandle_t hSrc, hDst;
-    byte    buffer[MAX_READ];
-    size_t    len, size;
-
-    size = FS_FOpenFile( src, &hSrc, FS_MODE_READ );
-    if( !hSrc ) {
-        return qfalse;
-    }
-
-    FS_FOpenFile( dst, &hDst, FS_MODE_WRITE );
-    if( !hDst ) {
-        FS_FCloseFile( hSrc );
-        return qfalse;
-    }
-
-    while( size ) {
-        len = size;
-        if( len > sizeof( buffer ) ) {
-            len = sizeof( buffer );
-        }
-        if( !( len = FS_Read( buffer, len, hSrc ) ) ) {
-            break;
-        }
-        FS_Write( buffer, len, hDst );
-        size -= len;
-    }
-
-    FS_FCloseFile( hSrc );
-    FS_FCloseFile( hDst );
-
-    if( size ) {
-        return qfalse;
-    }
-
-    return qtrue;
-}
-
-/*
 ================
-FS_RemoveFile
-================
-*/
-qboolean FS_RemoveFile( const char *filename ) {
-    char path[MAX_OSPATH];
-
-    if( *filename == '/' ) {
-        filename++;
-    }
-
-    if( !FS_ValidatePath( filename ) ) {
-        FS_DPrintf( "%s: refusing invalid path: %s\n", __func__, filename );
-        return qfalse;
-    }
-
-    Q_concat( path, sizeof( path ), fs_gamedir, "/", filename, NULL );
-    //FS_ConvertToSysPath( path );
-
-    if( Q_unlink( path ) ) {
-        return qfalse;
-    }
-
-    return qtrue;
-}
-
-/*
-================
-FS_RemoveFile
+FS_RenameFile
 ================
 */
 qboolean FS_RenameFile( const char *from, const char *to ) {
     char frompath[MAX_OSPATH];
     char topath[MAX_OSPATH];
+    size_t len;
 
     if( *from == '/' ) {
         from++;
     }
+    if( !FS_ValidatePath( from ) ) {
+        FS_DPrintf( "%s: refusing invalid source path: %s\n", __func__, from );
+        return qfalse;
+    }
+    len = Q_concat( frompath, sizeof( frompath ), fs_gamedir, "/", from, NULL );
+    if( len >= sizeof( frompath ) ) {
+        FS_DPrintf( "%s: refusing oversize source path: %s\n", __func__, frompath );
+        return qfalse;
+    }
+
     if( *to == '/' ) {
         to++;
     }
-
-    if( !FS_ValidatePath( from ) || !FS_ValidatePath( to ) ) {
-        FS_DPrintf( "%s: refusing invalid path: %s to %s\n",
-            __func__, from, to );
+    if( !FS_ValidatePath( to ) ) {
+        FS_DPrintf( "%s: refusing invalid destination path: %s\n", __func__, to );
         return qfalse;
     }
-
-    Q_concat( frompath, sizeof( frompath ), fs_gamedir, "/", from, NULL );
-    Q_concat( topath, sizeof( topath ), fs_gamedir, "/", to, NULL );
+    len = Q_concat( topath, sizeof( topath ), fs_gamedir, "/", to, NULL );
+    if( len >= sizeof( topath ) ) {
+        FS_DPrintf( "%s: refusing oversize destination path: %s\n", __func__, topath );
+        return qfalse;
+    }
 
     if( rename( frompath, topath ) ) {
-        FS_DPrintf( "%s: rename failed: %s to %s\n",
-            __func__, frompath, topath );
         return qfalse;
     }
-
     return qtrue;
 }
 
@@ -1289,6 +1231,10 @@ void FS_FPrintf( fileHandle_t f, const char *format, ... ) {
     va_start( argptr, format );
     len = Q_vsnprintf( string, sizeof( string ), format, argptr );
     va_end( argptr );
+
+    if( len >= sizeof( string ) ) {
+        len = sizeof( string ) - 1;
+    }
 
     FS_Write( string, len, f );
 }
@@ -1558,11 +1504,11 @@ alphacmp:
 }
 
 static void FS_LoadPackFiles( int mode, const char *extension, pack_t *(loadfunc)( const char * ) ) {
-    int                i;
+    int             i;
     searchpath_t    *search;
-    pack_t            *pak;
+    pack_t          *pak;
     void            **list;
-    int                numFiles;
+    int             numFiles;
     char            path[MAX_OSPATH];
 
     list = Sys_ListFiles( fs_gamedir, extension, FS_SEARCH_NOSORT, 0, &numFiles );
@@ -1602,6 +1548,11 @@ static void q_printf( 2, 3 ) FS_AddGameDirectory( int mode, const char *fmt, ...
     va_start( argptr, fmt );
     len = Q_vsnprintf( fs_gamedir, sizeof( fs_gamedir ), fmt, argptr );
     va_end( argptr );
+
+    if( len >= sizeof( fs_gamedir ) ) {
+        Com_EPrintf( "%s: refusing oversize path\n", __func__ );
+        return;
+    }
 
 #ifdef _WIN32
     FS_ReplaceSeparators( fs_gamedir, '/' );
@@ -2045,27 +1996,6 @@ void FS_File_g( const char *path, const char *ext, int flags, genctx_t *ctx ) {
     Z_Free( list );
 }
 
-
-/*
-=================
-FS_CopyFile_f
-
-extract file from *.pak, *.pk2 or *.gz
-=================
-*/
-static void FS_CopyFile_f( void ) {
-    if( Cmd_Argc() < 2 ) {
-        Com_Printf( "Usage: %s <sourcePath> <destPath>\n", Cmd_Argv( 0 ) );
-        return;
-    }
-
-    if( FS_CopyFile( Cmd_Argv( 1 ), Cmd_Argv( 2 ) ) ) {
-        Com_Printf( "File copied successfully\n" );
-    } else {
-        Com_Printf( "Failed to copy file\n" );
-    }
-}
-
 /*
 ============
 FS_FDir_f
@@ -2143,6 +2073,7 @@ static void FS_WhereIs_f( void ) {
     char *path;
     fsFileInfo_t info;
     int total;
+    size_t len;
 
     if( Cmd_Argc() < 2 ) {
         Com_Printf( "Usage: %s <path> [all]\n", Cmd_Argv( 0 ) );
@@ -2176,8 +2107,11 @@ static void FS_WhereIs_f( void ) {
                 }
             }
         } else {
-            Q_concat( fullpath, sizeof( fullpath ),
+            len = Q_concat( fullpath, sizeof( fullpath ),
                 search->filename, "/", path, NULL );
+            if( len >= sizeof( fullpath ) ) {
+                continue;
+            }
             //FS_ConvertToSysPath( fullpath );
             if( Sys_GetPathInfo( fullpath, &info ) ) {
                 Com_Printf( "%s/%s (%"PRIz" bytes)\n", search->filename, filename, info.size );
@@ -2450,8 +2384,7 @@ void FS_Shutdown( qboolean total ) {
         // close file handles
         for( i = 0, file = fs_files; i < MAX_FILE_HANDLES; i++, file++ ) {
             if( file->type != FS_FREE ) {
-                Com_WPrintf( "FS_Shutdown: closing handle %i: %s\n",
-                    i + 1, file->fullpath );
+                Com_WPrintf( "%s: closing handle %d\n", __func__, i + 1 );
                 FS_FCloseFile( i + 1 );
             }
         }
@@ -2586,8 +2519,7 @@ void FS_Restart( void ) {
             continue;
         }
         if( file->mode == FS_MODE_READ ) {
-            Com_Error( ERR_FATAL, "FS_Restart: closing handle %i: %s",
-                i + 1, file->fullpath );
+            Com_Error( ERR_FATAL, "%s: closing handle %d", __func__, i + 1 );
         }
     }
     
@@ -2634,7 +2566,6 @@ static const cmdreg_t c_fs[] = {
     { "path", FS_Path_f },
     { "fdir", FS_FDir_f },
     { "dir", FS_Dir_f },
-    { "copyfile", FS_CopyFile_f },
     { "fs_stats", FS_Stats_f },
     { "whereis", FS_WhereIs_f },
     { "link", FS_Link_f, FS_Link_c },

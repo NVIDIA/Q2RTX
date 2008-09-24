@@ -263,6 +263,7 @@ static void SV_DummyForward_f( void ) {
 static void SV_DummyRecord_f( void ) {
     char buffer[MAX_OSPATH];
     fileHandle_t demofile;
+    size_t len;
 
     if( !sv_mvd_autorecord->integer ) {
         return;
@@ -277,8 +278,11 @@ static void SV_DummyRecord_f( void ) {
         return;
     }
 
-	Q_concat( buffer, sizeof( buffer ), "demos/", Cmd_Argv( 1 ), NULL );
-    COM_AppendExtension( buffer, ".mvd2", sizeof( buffer ) );
+	len = Q_concat( buffer, sizeof( buffer ), "demos/", Cmd_Argv( 1 ), ".mvd2", NULL );
+    if( len >= sizeof( buffer ) ) {
+        Com_EPrintf( "Oversize filename specified.\n" );
+        return;
+    }
 
 	FS_FOpenFile( buffer, &demofile, FS_MODE_WRITE );
 	if( !demofile ) {
@@ -495,7 +499,7 @@ static qboolean SV_MvdCreateDummy( void ) {
 
     List_Init( &newcl->entry );
 
-    Com_sprintf( userinfo, sizeof( userinfo ),
+    Q_snprintf( userinfo, sizeof( userinfo ),
         "\\name\\[MVDSPEC]\\skin\\male/grunt\\mvdspec\\%d\\ip\\loopback",
         PROTOCOL_VERSION_MVD_CURRENT );
 
@@ -1052,6 +1056,7 @@ static void MVD_Record_f( void ) {
 	fileHandle_t demofile;
     qboolean gzip = qfalse;
     int c;
+    size_t len;
 
 	if( sv.state != ss_game ) {
         if( sv.state == ss_broadcast ) {
@@ -1088,15 +1093,12 @@ static void MVD_Record_f( void ) {
 	//
 	// open the demo file
 	//
-	if( cmd_optarg[0] == '/' ) {
-		Q_strncpyz( buffer, cmd_optarg + 1, sizeof( buffer ) );
-	} else {
-		Q_concat( buffer, sizeof( buffer ), "demos/", cmd_optarg, NULL );
-    	COM_AppendExtension( buffer, ".mvd2", sizeof( buffer ) );
-        if( gzip ) {
-        	COM_AppendExtension( buffer, ".gz", sizeof( buffer ) );
-        }
-	}
+    len = Q_concat( buffer, sizeof( buffer ), "demos/", cmd_optarg,
+        gzip ? ".mvd2.gz" : ".mvd2", NULL );
+    if( len >= sizeof( buffer ) ) {
+        Com_EPrintf( "Oversize filename specified.\n" );
+        return;
+    }
 
 	FS_FOpenFile( buffer, &demofile, FS_MODE_WRITE );
 	if( !demofile ) {

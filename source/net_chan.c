@@ -129,6 +129,11 @@ neterr_t Netchan_OutOfBandPrint( netsrc_t sock, const netadr_t *address,
 	len = Q_vsnprintf( buffer + 4, sizeof( buffer ) - 4, format, argptr );
 	va_end( argptr );
 
+    if( len >= sizeof( buffer ) - 4 ) {
+        Com_WPrintf( "%s: overflow\n", __func__ );
+        return NET_ERROR;
+    }
+
     // send the datagram
 	return NET_SendPacket( sock, address, len + 4, buffer );
 }

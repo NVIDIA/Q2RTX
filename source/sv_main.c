@@ -342,6 +342,11 @@ static void q_printf( 1, 2 ) SV_OobPrintf( const char *format, ... ) {
 	len = Q_vsnprintf( buffer + 10, sizeof( buffer ) - 10, format, argptr );
 	va_end( argptr );
 
+    if( len >= sizeof( buffer ) - 10 ) {
+        Com_WPrintf( "%s: overflow\n", __func__ );
+        return;
+    }
+
     // send the datagram
 	NET_SendPacket( NS_SERVER, &net_from, len + 10, buffer );
 }
@@ -430,10 +435,13 @@ static void SVC_Info( void ) {
 			count++;
     }
 
-	len = Com_sprintf (string, sizeof(string),
+	len = Q_snprintf (string, sizeof(string),
         "\xff\xff\xff\xffinfo\n%16s %8s %2i/%2i\n",
 		sv_hostname->string, sv.name, count, sv_maxclients->integer -
         sv_reserved_slots->integer );
+    if( len >= sizeof( string ) ) {
+        return;
+    }
 	
 	NET_SendPacket( NS_SERVER, &net_from, len, string );
 }
@@ -749,7 +757,7 @@ static void SVC_DirectConnect( void ) {
         reserved = sv_reserved_slots->integer;
     }
 
-	Q_strncpyz( userinfo, info, sizeof( userinfo ) );
+	Q_strlcpy( userinfo, info, sizeof( userinfo ) );
 
     // make sure mvdspec key is not set
     Info_RemoveKey( userinfo, "mvdspec" );
@@ -884,7 +892,7 @@ static void SVC_DirectConnect( void ) {
         qport, maxlength, protocol );
 
 	// parse some info from the info strings
-	Q_strncpyz( newcl->userinfo, userinfo, sizeof( newcl->userinfo ) );
+	Q_strlcpy( newcl->userinfo, userinfo, sizeof( newcl->userinfo ) );
 	SV_UserinfoChanged( newcl );
 
 #if USE_ANTICHEAT & 2
@@ -897,7 +905,7 @@ static void SVC_DirectConnect( void ) {
     }
 
     if( sv_downloadserver->string[0] ) {
-        Com_sprintf( dlstring, sizeof( dlstring ), " dlserver=%s",
+        Q_snprintf( dlstring, sizeof( dlstring ), " dlserver=%s",
             sv_downloadserver->string );
     } else {
         dlstring[0] = 0;
@@ -1014,15 +1022,21 @@ connectionless packets.
 =================
 */
 static void SV_ConnectionlessPacket( void ) {
-	char	*s, *c;
+    char    string[MAX_STRING_CHARS];
+	char	*c;
     int     i;
+    size_t  len;
 
 	MSG_BeginReading();
 	MSG_ReadLong();		// skip the -1 marker
 
-	s = MSG_ReadStringLine();
+	len = MSG_ReadStringLine( string, sizeof( string ) );
+    if( len >= sizeof( string ) ) {
+        Com_DPrintf( "ignored oversize message\n" );
+        return;
+    }
 
-	Cmd_TokenizeString( s, qfalse );
+	Cmd_TokenizeString( string, qfalse );
 
 	c = Cmd_Argv( 0 );
 	Com_DPrintf( "ServerPacket[%s]: %s\n", NET_AdrToString( &net_from ), c );
@@ -1674,7 +1688,10 @@ void SV_UserinfoChanged( client_t *cl ) {
 
 	// name for C code
 	val = Info_ValueForKey( cl->userinfo, "name" );
-	len = Q_strncpyz( name, val, sizeof( name ) );
+	len = Q_strlcpy( name, val, sizeof( name ) );
+    if( len >= sizeof( name ) ) {
+        len = sizeof( name ) - 1;
+    }
 	// mask off high bit
 	for( i = 0; i < len; i++ )
 		name[i] &= 127;
@@ -1727,7 +1744,7 @@ void SV_UserinfoChanged( client_t *cl ) {
 void SV_SetConsoleTitle( void ) {
     char buffer[MAX_STRING_CHARS];
 
-    Com_sprintf( buffer, sizeof( buffer ), "%s (port %d%s)",
+    Q_snprintf( buffer, sizeof( buffer ), "%s (port %d%s)",
         sv_hostname->string, net_port->integer,
         sv_running->integer ? "" : ", down" );
 

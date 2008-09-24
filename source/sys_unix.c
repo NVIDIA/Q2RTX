@@ -237,13 +237,15 @@ void Sys_ConsoleOutput( const char *string ) {
 
 void Sys_SetConsoleTitle( const char *title ) {
     char buffer[MAX_STRING_CHARS];
-    int len;
+    size_t len;
 
 	if( !tty_enabled ) {
         return;
     }
-    len = Com_sprintf( buffer, sizeof( buffer ), "\033]0;%s\007", title );
-    Sys_ConsoleWrite( buffer, len );	
+    len = Q_snprintf( buffer, sizeof( buffer ), "\033]0;%s\007", title );
+    if( len < sizeof( buffer ) ) {
+        Sys_ConsoleWrite( buffer, len );	
+    }
 }
 
 /*
@@ -824,7 +826,7 @@ static void Sys_ListFilteredFiles(  void        **listedFiles,
                                     const char  *path,
                                     const char  *filter,
                                     int         flags,
-                                    size_t      length,
+                                    size_t      baselen,
                                     int         depth )
 {
 	struct dirent *findInfo;
@@ -832,6 +834,7 @@ static void Sys_ListFilteredFiles(  void        **listedFiles,
     struct  stat st;
 	char	findPath[MAX_OSPATH];
 	char	*name;
+    size_t  len;
 
     if( depth >= 32 ) {
         return;
@@ -852,8 +855,11 @@ static void Sys_ListFilteredFiles(  void        **listedFiles,
         if( !strcmp( findInfo->d_name, ".." ) ) {
             continue;
         }
-        Q_concat( findPath, sizeof( findPath ),
+        len = Q_concat( findPath, sizeof( findPath ),
             path, "/", findInfo->d_name, NULL );
+        if( len >= sizeof( findPath ) ) {
+            continue;
+        }
 
         if( stat( findPath, &st ) == -1 ) {
             continue;
@@ -861,7 +867,7 @@ static void Sys_ListFilteredFiles(  void        **listedFiles,
 
 		if( st.st_mode & S_IFDIR ) {
 			Sys_ListFilteredFiles( listedFiles, count, findPath,
-                filter, flags, length, depth + 1 );
+                filter, flags, baselen, depth + 1 );
 		}
 
 		if( ( flags & FS_SEARCHDIRS_MASK ) == FS_SEARCHDIRS_ONLY ) {
@@ -874,11 +880,11 @@ static void Sys_ListFilteredFiles(  void        **listedFiles,
 			}
 		}
 
-		if( !FS_WildCmp( filter, findPath + length ) ) {
+		if( !FS_WildCmp( filter, findPath + baselen ) ) {
 			continue;
 		}
         if( flags & FS_SEARCH_SAVEPATH ) {
-    		name = findPath + length;
+    		name = findPath + baselen;
         } else {
             name = findInfo->d_name;
         }
@@ -907,7 +913,7 @@ Sys_ListFiles
 void **Sys_ListFiles(   const char  *path,
                         const char  *extension,
                         int         flags,
-                        size_t      length,
+                        size_t      baselen,
                         int         *numFiles )
 {
 	struct dirent *findInfo;
@@ -917,6 +923,7 @@ void **Sys_ListFiles(   const char  *path,
 	void	*listedFiles[MAX_LISTED_FILES];
 	int		count = 0;
     char    *s;
+    size_t  len;
 
 	if( numFiles ) {
 		*numFiles = 0;
@@ -924,7 +931,7 @@ void **Sys_ListFiles(   const char  *path,
 
 	if( flags & FS_SEARCH_BYFILTER ) {
 		Sys_ListFilteredFiles( listedFiles, &count, path,
-            extension, flags, length, 0 );
+            extension, flags, baselen, 0 );
 	} else {
 		if( ( findHandle = opendir( path ) ) == NULL ) {
 			return NULL;
@@ -938,8 +945,11 @@ void **Sys_ListFiles(   const char  *path,
 				continue;
 			}
 
-			Q_concat( findPath, sizeof( findPath ),
+			len = Q_concat( findPath, sizeof( findPath ),
                 path, "/", findInfo->d_name, NULL );
+            if( len >= sizeof( findPath ) ) {
+                continue;
+            }
 
 			if( stat( findPath, &st ) == -1 ) {
 				continue;
@@ -959,7 +969,7 @@ void **Sys_ListFiles(   const char  *path,
 			}
             
 			if( flags & FS_SEARCH_SAVEPATH ) {
-				s = findPath + length;
+				s = findPath + baselen;
 			} else {
 				s = findInfo->d_name;
 			}

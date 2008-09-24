@@ -39,21 +39,17 @@ qboolean CL_CheckOrDownloadFile( const char *path ) {
         "bsp", "txt", "loc", "ent", ""
     };
     fileHandle_t    f;
-    int        i, length;
-    char filename[MAX_QPATH];
-    char *ext;
+    int i;
+    size_t len;
 
-    Q_strncpyz( filename, path, sizeof( filename ) );
-    Q_strlwr( filename );
-
-    length = strlen( filename );
-    if( !length
-        || !Q_ispath( filename[0] )
-        || !Q_ispath( filename[ length - 1 ] )
-        || strchr( filename, '\\' )
-        || strchr( filename, ':' )
-        || !strchr( filename, '/' )
-        || strstr( filename, ".." ) )
+    len = strlen( path );
+    if( len < 4 || len >= MAX_QPATH
+        || !Q_ispath( path[0] )
+        || !Q_ispath( path[ len - 1 ] )
+        || strchr( path, '\\' )
+        || strchr( path, ':' )
+        || !strchr( path, '/' )
+        || strstr( path, ".." ) )
     {
         Com_WPrintf( "Refusing to download file with invalid path.\n" );
         return qtrue;
@@ -61,13 +57,12 @@ qboolean CL_CheckOrDownloadFile( const char *path ) {
 
     // a trivial attempt to prevent malicious server from
     // uploading trojan executables to the win32 client
-    ext = COM_FileExtension( filename );
-    if( *ext != '.' ) {
+    if( path[ len - 4 ] != '.' ) {
         Com_WPrintf( "Refusing to download file without extension.\n" );
         return qtrue;
     }
     for( i = 0; validExts[i][0]; i++ ) {
-        if( !strcmp( ext + 1, validExts[i] ) ) {
+        if( !strcmp( path + len - 3, validExts[i] ) ) {
             break;
         }
     }
@@ -76,29 +71,24 @@ qboolean CL_CheckOrDownloadFile( const char *path ) {
         return qtrue;
     }
 
-    if( FS_LoadFile( filename, NULL ) != INVALID_LENGTH ) {    
+    if( FS_LoadFile( path, NULL ) != INVALID_LENGTH ) {    
         // it exists, no need to download
         return qtrue;
     }
 
-    strcpy( cls.download.name, filename );
+    memcpy( cls.download.name, path, len + 1 );
 
     // download to a temp name, and only rename
     // to the real name when done, so if interrupted
     // a runt file wont be left
-    COM_StripExtension( cls.download.name, cls.download.temp, MAX_QPATH );
-    
-    if( strlen( cls.download.temp ) >= MAX_QPATH - 5 ) {
-        strcpy( cls.download.temp + MAX_QPATH - 5, ".tmp" );
-    } else {
-        strcat( cls.download.temp, ".tmp" );
-    }
+    memcpy( cls.download.temp, path, len - 4 );
+    memcpy( cls.download.temp + len - 4, ".tmp", 5 );
 
 //ZOID
     // check to see if we already have a tmp for this file, if so, try to resume
     // open the file if not opened yet
-    length = FS_FOpenFile( cls.download.temp, &f, FS_MODE_RDWR );
-    if( length < 0 && f ) {
+    len = FS_FOpenFile( cls.download.temp, &f, FS_MODE_RDWR );
+    if( len == INVALID_LENGTH && f ) {
         Com_WPrintf( "Couldn't determine size of %s\n", cls.download.temp );
         FS_FCloseFile( f );
         f = 0;
@@ -107,7 +97,7 @@ qboolean CL_CheckOrDownloadFile( const char *path ) {
         cls.download.file = f;
         // give the server an offset to start the download
         Com_Printf( "Resuming %s\n", cls.download.name );
-        CL_ClientCommand( va( "download \"%s\" %i", cls.download.name, length ) );
+        CL_ClientCommand( va( "download \"%s\" %i", cls.download.name, len ) );
     } else {
         Com_Printf( "Downloading %s\n", cls.download.name );
         CL_ClientCommand( va( "download \"%s\"", cls.download.name ) );
@@ -667,19 +657,29 @@ static void CL_ParseFrame( int extrabits ) {
 =====================================================================
 */
 
-static void CL_ConfigString( int index, const char *string, size_t length ) {
-    size_t        maxlength;
+static void CL_ParseConfigstring( int index ) {
+    size_t  len, maxlen;
+    char    *string;
 
-    if( index >= CS_STATUSBAR && index < CS_AIRACCEL ) {
-        maxlength = MAX_QPATH * ( CS_AIRACCEL - index );
-    } else {
-        maxlength = MAX_QPATH;
+    if( index < 0 || index >= MAX_CONFIGSTRINGS ) {
+        Com_Error( ERR_DROP, "%s: bad index: %d", __func__, index );
     }
-    if( length >= maxlength ) {
+    string = cl.configstrings[index];
+
+    maxlen = CS_SIZE( index );
+    len = MSG_ReadString( string, maxlen );
+    if( len >= maxlen ) {
         Com_Error( ERR_DROP, "%s: index %d overflowed", __func__, index );
     }
 
-    memcpy( cl.configstrings[index], string, length + 1 );
+    if( cl_shownet->integer > 2 ) {
+        Com_Printf( "    %d \"%s\"\n", index, Q_FormatString( string ) );
+    }
+
+    if( cls.demo.recording && cls.demo.paused ) {
+        Q_SetBit( cl.dcs, index );
+    }
+
 
     // do something apropriate 
 
@@ -688,15 +688,15 @@ static void CL_ConfigString( int index, const char *string, size_t length ) {
         return;
     }
     if( index == CS_MODELS + 1 ) {
-        if( length <= 9 ) {
+        if( len <= 9 ) {
             Com_Error( ERR_DROP, "%s: bad world model: %s", __func__, string );
         }
-        strcpy( cl.mapname, string + 5 ); // skip "maps/"
-        cl.mapname[length - 9] = 0; // cut off ".bsp"
+        memcpy( cl.mapname, string + 5, len - 9 ); // skip "maps/"
+        cl.mapname[len - 9] = 0; // cut off ".bsp"
         return;
     }
     if (index >= CS_LIGHTS && index < CS_LIGHTS+MAX_LIGHTSTYLES) {
-        CL_SetLightstyle( index - CS_LIGHTS, string, length );
+        CL_SetLightstyle( index - CS_LIGHTS, string, len );
         return;
     }
 
@@ -721,39 +721,45 @@ static void CL_ConfigString( int index, const char *string, size_t length ) {
     }
 }
 
+static void CL_ParseBaseline( int index, int bits ) {
+    if( index < 1 || index >= MAX_EDICTS ) {
+        Com_Error( ERR_DROP, "%s: bad index: %d", __func__, index );
+    }
+    if( cl_shownet->integer > 2 ) {
+        MSG_ShowDeltaEntityBits( bits );
+        Com_Printf( "\n" );
+    }
+    if( LONG_SOLID_SUPPORTED( cls.serverProtocol, cls.protocolVersion ) ) {
+       bits |= U_SOLID32;
+    }
+    MSG_ParseDeltaEntity( NULL, &cl.baselines[index], index, bits );
+}
+
+/*
+==================
+CL_ParseGamestate
+
+Instead of wasting space for svc_configstring and svc_spawnbaseline
+bytes, entire game state is compressed into a single stream.
+==================
+*/
 static void CL_ParseGamestate( void ) {
     int        index, bits;
-    char    *string;
-    size_t  length;
 
-    while( 1 ) {
+    while( msg_read.readcount < msg_read.cursize ) {
         index = MSG_ReadShort();
         if( index == MAX_CONFIGSTRINGS ) {
             break;
         }
-        if( index < 0 || index >= MAX_CONFIGSTRINGS ) {
-            Com_Error( ERR_DROP, "%s: bad configstring index: %d",
-                __func__, index );
-        }
-
-        string = MSG_ReadStringLength( &length );
-
-        CL_ConfigString( index, string, length );
+        CL_ParseConfigstring( index );
     }
 
-    while( 1 ) {
+    while( msg_read.readcount < msg_read.cursize ) {
         index = MSG_ParseEntityBits( &bits );
         if( !index ) {
             break;
         }
-        if( index < 1 || index >= MAX_EDICTS ) {
-            Com_Error( ERR_DROP, "%s: bad entity number: %d",
-                __func__, index );
-        }
-        if( LONG_SOLID_SUPPORTED( cls.serverProtocol, cls.protocolVersion ) ) {
-           bits |= U_SOLID32;
-        }
-        MSG_ParseDeltaEntity( NULL, &cl.baselines[index], index, bits );
+        CL_ParseBaseline( index, bits );
     }
 }
 
@@ -763,8 +769,9 @@ CL_ParseServerData
 ==================
 */
 static void CL_ParseServerData( void ) {
-    char    *str;
-    int        i, protocol, attractloop;
+    char    levelname[MAX_QPATH];
+    int     i, protocol, attractloop;
+    size_t  len;
 
     Cbuf_Execute();        // make sure any stuffed commands are done
     
@@ -796,8 +803,10 @@ static void CL_ParseServerData( void ) {
     }
 
     // game directory
-    str = MSG_ReadString();
-    Q_strncpyz( cl.gamedir, str, sizeof( cl.gamedir ) );
+    len = MSG_ReadString( cl.gamedir, sizeof( cl.gamedir ) );
+    if( len >= sizeof( cl.gamedir ) ) {
+        Com_Error( ERR_DROP, "Oversize gamedir string" );
+    }
 
     // never allow demos to change gamedir
     // do not set gamedir if connected to local sever,
@@ -813,7 +822,7 @@ static void CL_ParseServerData( void ) {
     cl.clientNum = MSG_ReadShort();
 
     // get the full level name
-    str = MSG_ReadString();
+    MSG_ReadString( levelname, sizeof( levelname ) );
 
     // setup default pmove parameters
     cl.pmp.speedMultiplier = 1;
@@ -885,9 +894,9 @@ static void CL_ParseServerData( void ) {
     } else {
         // seperate the printfs so the server message can have a color
         Con_Printf( "\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n" );
-        Con_Printf( S_COLOR_ALT "%s\n\n", str );
+        Con_Printf( S_COLOR_ALT "%s\n\n", levelname );
 
-        Sys_Printf( "\n\n%s\n", str );
+        Sys_Printf( "\n\n%s\n", levelname );
 
         // make sure clientNum is in range
         if( cl.clientNum < 0 || cl.clientNum >= MAX_CLIENTS ) {
@@ -895,29 +904,6 @@ static void CL_ParseServerData( void ) {
         }
     }
 
-}
-
-/*
-==================
-CL_ParseBaseline
-==================
-*/
-static void CL_ParseBaseline( void ) {
-    int                bits;
-    int                newnum;
-
-    newnum = MSG_ParseEntityBits( &bits );
-    if( newnum < 1 || newnum >= MAX_EDICTS ) {
-        Com_Error( ERR_DROP, "%s: bad entity number: %d", __func__, newnum );
-    }
-    if( cl_shownet->integer > 2 ) {
-        MSG_ShowDeltaEntityBits( bits );
-        Com_Printf( "\n" );
-    }
-    if( LONG_SOLID_SUPPORTED( cls.serverProtocol, cls.protocolVersion ) ) {
-       bits |= U_SOLID32;
-    }
-    MSG_ParseDeltaEntity( NULL, &cl.baselines[newnum], newnum, bits );
 }
 
 /*
@@ -1048,35 +1034,6 @@ void CL_LoadClientinfo( clientinfo_t *ci, const char *s ) {
         ci->skin_name[0] = 0;
     }
 }
-
-
-/*
-================
-CL_ParseConfigString
-================
-*/
-static void CL_ParseConfigString (void) {
-    int        i;
-    char    *s;
-    size_t  length;
-
-    i = MSG_ReadShort ();
-    if (i < 0 || i >= MAX_CONFIGSTRINGS)
-        Com_Error( ERR_DROP, "%s: bad index: %d", __func__, i );
-
-    s = MSG_ReadStringLength( &length );
-
-    if( cl_shownet->integer > 2 ) {
-        Com_Printf( "    %i \"%s\"\n", i, Q_FormatString( s ) );
-    }
-
-    if( cls.demo.recording && cls.demo.paused ) {
-        Q_SetBit( cl.dcs, i );
-    }
-
-    CL_ConfigString( i, s, length );
-}
-
 
 /*
 =====================================================================
@@ -1229,10 +1186,10 @@ CL_ParsePrint
 */
 static void CL_ParsePrint( void ) {
     int level;
-    char *string;
+    char string[MAX_STRING_CHARS];
 
     level = MSG_ReadByte();
-    string = MSG_ReadString();
+    MSG_ReadString( string, sizeof( string ) );
 
     if( cl_shownet->integer > 2 ) {
         Com_Printf( "    %i \"%s\"\n", level, Q_FormatString( string ) );
@@ -1281,15 +1238,15 @@ CL_ParseCenterPrint
 =====================
 */
 static void CL_ParseCenterPrint( void ) {
-    char *s;
+    char string[MAX_STRING_CHARS];
 
-    s = MSG_ReadString();
+    MSG_ReadString( string, sizeof( string ) );
 
     if( cl_shownet->integer > 2 ) {
-        Com_Printf( "    \"%s\"\n", Q_FormatString( s ) );
+        Com_Printf( "    \"%s\"\n", Q_FormatString( string ) );
     }
 
-    SCR_CenterPrint( s );
+    SCR_CenterPrint( string );
 }
 
 /*
@@ -1298,9 +1255,9 @@ CL_ParseStuffText
 =====================
 */
 static void CL_ParseStuffText( void ) {
-    char *s, *p;
+    char s[MAX_STRING_CHARS], *p;
 
-    s = MSG_ReadString();
+    MSG_ReadString( s, sizeof( s ) );
 
     //if( cl_shownet->integer > 2 ) {
     //    Com_Printf( "    \"%s\"\n", Q_FormatString( s ) );
@@ -1329,15 +1286,12 @@ CL_ParseLayout
 =====================
 */
 static void CL_ParseLayout( void ) {
-    char *s;
-
-    s = MSG_ReadString();
+    MSG_ReadString( cl.layout, sizeof( cl.layout ) );
 
     if( cl_shownet->integer > 2 ) {
-        Com_Printf( "    \"%s\"\n", Q_FormatString( s ) );
+        Com_Printf( "    \"%s\"\n", Q_FormatString( cl.layout ) );
     }
 
-    Q_strncpyz( cl.layout, s, sizeof( cl.layout ) );
     cl.putaway = qfalse;
 }
 
@@ -1427,6 +1381,7 @@ CL_ParseServerMessage
 void CL_ParseServerMessage( void ) {
     int         cmd, extrabits;
     size_t      readcount;
+    int         index, bits;
 
     if( cl_shownet->integer == 1 ) {
         Com_Printf( "%"PRIz" ", msg_read.cursize );
@@ -1493,15 +1448,17 @@ void CL_ParseServerMessage( void ) {
             continue;
             
         case svc_configstring:
-            CL_ParseConfigString();
+            index = MSG_ReadShort();
+            CL_ParseConfigstring( index );
             break;
-            
+ 
         case svc_sound:
             CL_ParseStartSoundPacket();
             break;
             
         case svc_spawnbaseline:
-            CL_ParseBaseline();
+            index = MSG_ParseEntityBits( &bits );
+            CL_ParseBaseline( index, bits );
             break;
 
         case svc_temp_entity:

@@ -537,17 +537,21 @@ void R_EndFrame( void ) {
 #if USE_TGA || USE_JPG || USE_PNG
 static char *screenshot_path( char *buffer, const char *ext ) {
     int i;
+    size_t len;
 
     if( Cmd_Argc() > 1 ) {
-		Com_sprintf( buffer, MAX_OSPATH, SCREENSHOTS_DIRECTORY"/%s", Cmd_Argv( 1 ) );
-		COM_AppendExtension( buffer, ext, MAX_OSPATH );
+		len = Q_concat( buffer, MAX_OSPATH, SCREENSHOTS_DIRECTORY "/", Cmd_Argv( 1 ), ext, NULL );
+        if( len >= MAX_OSPATH ) {
+            Com_EPrintf( "Oversize filename specified.\n" );
+            return NULL;
+        }
         return buffer;
     }
 // 
 // find a file name to save it to 
 // 
     for( i = 0; i < 1000; i++ ) {
-        Com_sprintf( buffer, MAX_OSPATH, SCREENSHOTS_DIRECTORY"/quake%03d%s", i, ext );
+        Q_snprintf( buffer, MAX_OSPATH, SCREENSHOTS_DIRECTORY"/quake%03d%s", i, ext );
         if( FS_LoadFileEx( buffer, NULL, FS_PATH_GAME, TAG_FREE ) == INVALID_LENGTH ) {
             return buffer;	// file doesn't exist
         }
@@ -841,8 +845,8 @@ static qboolean GL_SetupExtensions( void ) {
 static void GL_IdentifyRenderer( void ) {
     char renderer_buffer[MAX_STRING_CHARS];
 
-	Q_strncpyz( renderer_buffer, gl_config.rendererString,
-            sizeof( renderer_buffer ) );
+	Q_strlcpy( renderer_buffer, gl_config.rendererString,
+        sizeof( renderer_buffer ) );
 	Q_strlwr( renderer_buffer );
 
 	if( strstr( renderer_buffer, "voodoo" ) ) {

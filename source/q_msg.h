@@ -45,12 +45,15 @@ void SZ_Init( sizebuf_t *buf, void *data, size_t length );
 void SZ_TagInit( sizebuf_t *buf, void *data, size_t length, uint32_t tag );
 void SZ_Clear( sizebuf_t *buf );
 void *SZ_GetSpace( sizebuf_t *buf, size_t length );
-void SZ_Write( sizebuf_t *buf, const void *data, size_t length );
 void SZ_WriteByte( sizebuf_t *sb, int c );
 void SZ_WriteShort( sizebuf_t *sb, int c );
 void SZ_WriteLong( sizebuf_t *sb, int c );
-void SZ_WritePos( sizebuf_t *sb, const vec3_t pos );
 void SZ_WriteString( sizebuf_t *sb, const char *string );
+
+static inline void *SZ_Write( sizebuf_t *buf, const void *data, size_t length ) {
+	return memcpy( SZ_GetSpace( buf, length ), data, length );		
+}
+
 
 //============================================================================
 
@@ -107,8 +110,8 @@ void	MSG_WriteDeltaPlayerstate_Packet( const player_state_t *from, const player_
 void	MSG_FlushTo( sizebuf_t *dest );
 void    MSG_Printf( const char *fmt, ... ) q_printf( 1, 2 ); 
 
-static inline void MSG_WriteData( const void *data, size_t length ) {
-	memcpy( SZ_GetSpace( &msg_write, length ), data, length );		
+static inline void *MSG_WriteData( const void *data, size_t length ) {
+	return memcpy( SZ_GetSpace( &msg_write, length ), data, length );		
 }
 
 void	MSG_BeginReading( void );
@@ -118,9 +121,8 @@ int		MSG_ReadShort( void );
 int     MSG_ReadWord( void );
 int		MSG_ReadLong( void );
 float	MSG_ReadFloat( void );
-char	*MSG_ReadString( void );
-char	*MSG_ReadStringLine( void );
-char    *MSG_ReadStringLength( size_t *length );
+size_t  MSG_ReadString( char *dest, size_t size );
+size_t  MSG_ReadStringLine( char *dest, size_t size );
 float	MSG_ReadCoord( void );
 void	MSG_ReadPos( vec3_t pos );
 float	MSG_ReadAngle( void );

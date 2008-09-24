@@ -135,7 +135,7 @@ void MVD_ParseEntityString( mvd_t *mvd, const char *data ) {
 				Com_Error( ERR_DROP, "expected key, found '{'" );
 			}
 
-			Q_strncpyz( key, p, sizeof( key ) );
+			Q_strlcpy( key, p, sizeof( key ) );
 			
 			p = COM_Parse( &data );
 			if( !data ) {
@@ -146,11 +146,11 @@ void MVD_ParseEntityString( mvd_t *mvd, const char *data ) {
 			}
 
 			if( !strcmp( key, "classname" ) ) {
-				Q_strncpyz( classname, p, sizeof( classname ) );
+				Q_strlcpy( classname, p, sizeof( classname ) );
 				continue;
 			}
 
-			Q_strncpyz( value, p, sizeof( value ) );
+			Q_strlcpy( value, p, sizeof( value ) );
 
 			p = value;
 			if( !strcmp( key, "origin" ) ) {
@@ -289,15 +289,14 @@ static void MVD_UnicastSend( mvd_t *mvd, qboolean reliable, byte *data, size_t l
 }
 
 static void MVD_UnicastLayout( mvd_t *mvd, qboolean reliable, mvd_player_t *player ) {
-    char *string;
     udpClient_t *client;
 
-    string = MSG_ReadString();
-    if( player != mvd->dummy ) {
+    if( player == mvd->dummy ) {
+        MSG_ReadString( NULL, 0 );
         return; // we don't care about others
     }
 
-    Q_strncpyz( mvd->layout, string, sizeof( mvd->layout ) );
+    MSG_ReadString( mvd->layout, sizeof( mvd->layout ) );
 
 	// send to all relevant clients
     LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
@@ -312,7 +311,7 @@ static void MVD_UnicastLayout( mvd_t *mvd, qboolean reliable, mvd_player_t *play
 
 static void MVD_UnicastString( mvd_t *mvd, qboolean reliable, mvd_player_t *player ) {
     int index;
-    char *string;
+    char string[MAX_QPATH];
     mvd_cs_t *cs;
     byte *data;
     size_t readcount, length;
@@ -321,7 +320,7 @@ static void MVD_UnicastString( mvd_t *mvd, qboolean reliable, mvd_player_t *play
     readcount = msg_read.readcount - 1;
 
     index = MSG_ReadShort();
-    string = MSG_ReadStringLength( &length );
+    length = MSG_ReadString( string, sizeof( string ) );
 
     if( index < 0 || index >= MAX_CONFIGSTRINGS ) {
         MVD_Destroyf( mvd, "%s: bad index: %d", __func__, index );
@@ -330,7 +329,7 @@ static void MVD_UnicastString( mvd_t *mvd, qboolean reliable, mvd_player_t *play
         Com_DPrintf( "%s: common configstring: %d\n", __func__, index );
         return;
     }
-    if( length >= MAX_QPATH ) {
+    if( length >= sizeof( string ) ) {
         Com_DPrintf( "%s: oversize configstring: %d\n", __func__, index );
         return;
     }
@@ -355,7 +354,6 @@ static void MVD_UnicastString( mvd_t *mvd, qboolean reliable, mvd_player_t *play
 
 static void MVD_UnicastPrint( mvd_t *mvd, qboolean reliable, mvd_player_t *player ) {
     int level;
-    char *string;
     byte *data;
     size_t readcount, length;
     udpClient_t *client;
@@ -366,7 +364,7 @@ static void MVD_UnicastPrint( mvd_t *mvd, qboolean reliable, mvd_player_t *playe
     readcount = msg_read.readcount - 1;
 
     level = MSG_ReadByte();
-    string = MSG_ReadString();
+    MSG_ReadString( NULL, 0 );
 
     length = msg_read.readcount - readcount;
     
@@ -390,14 +388,14 @@ static void MVD_UnicastPrint( mvd_t *mvd, qboolean reliable, mvd_player_t *playe
 }
 
 static void MVD_UnicastStuff( mvd_t *mvd, qboolean reliable, mvd_player_t *player ) {
-    char *string;
+    char string[8];
     byte *data;
     size_t readcount, length;
 
 	data = msg_read.data + msg_read.readcount - 1;
     readcount = msg_read.readcount - 1;
 
-    string = MSG_ReadString();
+    MSG_ReadString( string, sizeof( string ) );
     if( strncmp( string, "play ", 5 ) ) {
         return;
     }
@@ -615,7 +613,7 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
 
 static void MVD_ParseConfigstring( mvd_t *mvd ) {
 	int index;
-	size_t len;
+	size_t len, maxlen;
 	char *string, *p;
 	udpClient_t *client;
     mvd_player_t *player;
@@ -623,25 +621,21 @@ static void MVD_ParseConfigstring( mvd_t *mvd ) {
     int i;
 
 	index = MSG_ReadShort();
-
 	if( index < 0 || index >= MAX_CONFIGSTRINGS ) {
 		MVD_Destroyf( mvd, "%s: bad index: %d", __func__, index );
 	}
 
-	string = MSG_ReadStringLength( &len );
+    string = mvd->configstrings[index];
+    maxlen = CS_SIZE( index );
+    len = MSG_ReadString( string, maxlen );
+    if( len >= maxlen ) {
+		MVD_Destroyf( mvd, "%s: index %d overflowed", __func__, index );
+    }
 
-	if( MAX_QPATH * index + len >= sizeof( mvd->configstrings ) ) {
-		MVD_Destroyf( mvd, "%s: oversize configstring: %d", __func__, index );
-	}
-
-	if( !strcmp( mvd->configstrings[index], string ) ) {
-		return;
-	}
-    
 	if( index >= CS_PLAYERSKINS && index < CS_PLAYERSKINS + mvd->maxclients ) {
         // update player name
         player = &mvd->players[ index - CS_PLAYERSKINS ];
-        Q_strncpyz( player->name, string, sizeof( player->name ) );
+        Q_strlcpy( player->name, string, sizeof( player->name ) );
         p = strchr( player->name, '\\' );
         if( p ) {
             *p = 0;
@@ -671,8 +665,6 @@ static void MVD_ParseConfigstring( mvd_t *mvd ) {
         }
     }
 
-	memcpy( mvd->configstrings[index], string, len + 1 );
-
 	MSG_WriteByte( svc_configstring );
 	MSG_WriteShort( index );
 	MSG_WriteData( string, len + 1 );
@@ -689,8 +681,11 @@ static void MVD_ParseConfigstring( mvd_t *mvd ) {
 }
 
 static void MVD_ParsePrint( mvd_t *mvd ) {
-    int level = MSG_ReadByte();
-    char *string = MSG_ReadString();
+    int level;
+    char string[MAX_STRING_CHARS];
+
+    level = MSG_ReadByte();
+    MSG_ReadString( string, sizeof( string ) );
 
     MVD_BroadcastPrintf( mvd, level, level == PRINT_CHAT ?
         UF_MUTE_PLAYERS : 0, "%s", string );
@@ -890,8 +885,8 @@ static void MVD_ParseFrame( mvd_t *mvd ) {
 
 static void MVD_ParseServerData( mvd_t *mvd ) {
 	int protocol;
-    size_t length;
-	char *gamedir, *string, *p;
+    size_t len, maxlen;
+	char *string, *p;
     int i, index;
     mvd_player_t *player;
 
@@ -912,13 +907,15 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
     }
 
 	mvd->servercount = MSG_ReadLong();
-	gamedir = MSG_ReadString();
+    len = MSG_ReadString( mvd->gamedir, sizeof( mvd->gamedir ) );
+    if( len >= sizeof( mvd->gamedir ) ) {
+        MVD_Destroyf( mvd, "Oversize gamedir string" );
+    }
     mvd->clientNum = MSG_ReadShort();
-	
+
 	// change gamedir unless playing a demo
-    Q_strncpyz( mvd->gamedir, gamedir, sizeof( mvd->gamedir ) );
 	if( !mvd->demoplayback ) {
-		Cvar_UserSet( "game", gamedir );
+		Cvar_UserSet( "game", mvd->gamedir );
         if( FS_NeedRestart() ) {
             FS_Restart();
         }
@@ -936,13 +933,12 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
             MVD_Destroyf( mvd, "Bad configstring index: %d", index );
         }
 
-        string = MSG_ReadStringLength( &length );
-
-        if( MAX_QPATH * index + length > sizeof( mvd->configstrings ) - 1 ) {
-            MVD_Destroyf( mvd, "Oversize configstring" );
+        string = mvd->configstrings[index];
+        maxlen = CS_SIZE( index );
+        len = MSG_ReadString( string, maxlen );
+        if( len >= maxlen ) {
+            MVD_Destroyf( mvd, "Configstring %d overflowed", index );
         }
-
-        memcpy( mvd->configstrings[index], string, length + 1 );
 
         if( msg_read.readcount > msg_read.cursize ) {
             MVD_Destroyf( mvd, "Read past end of message" );
@@ -969,16 +965,15 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
     mvd->dummy = mvd->players + mvd->clientNum;
 
     // parse world model
-    string = mvd->configstrings[ CS_MODELS + 1]; 
-    length = strlen( string );
-    if( length <= 9 ) {
+    string = mvd->configstrings[ CS_MODELS + 1 ]; 
+    len = strlen( string );
+    if( len <= 9 ) {
         MVD_Destroyf( mvd, "Bad world model: %s", string );
     }
-    strcpy( mvd->mapname, string + 5 ); // skip "maps/"
-    mvd->mapname[length - 9] = 0; // cut off ".bsp"
+    memcpy( mvd->mapname, string + 5, len - 9 ); // skip "maps/"
+    mvd->mapname[len - 9] = 0; // cut off ".bsp"
 
-	// load the world model (we are only interesed in
-    // visibility info, do not load brushes and such)
+	// load the world model (we are only interesed in visibility info)
     Com_Printf( "[%s] Loading %s...\n", mvd->name, string );
     if( !CM_LoadMap( &mvd->cm, string ) ) {
         MVD_Destroyf( mvd, "Couldn't load %s: %s", string, BSP_GetError() );
@@ -995,7 +990,7 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
         player = &mvd->players[i];
         string = mvd->configstrings[ CS_PLAYERSKINS + i ];
         if( *string ) {
-            Q_strncpyz( player->name, string, sizeof( player->name ) );
+            Q_strlcpy( player->name, string, sizeof( player->name ) );
             p = strchr( player->name, '\\' );
             if( p ) {
                 *p = 0;

@@ -197,23 +197,22 @@ Save the console contents out to a file
 */
 static void Con_Dump_f( void ) {
 	int		l;
-	char	*line, *string;
+	char	*line;
 	fileHandle_t	f;
 	char	buffer[CON_LINEWIDTH];
 	char	name[MAX_OSPATH];
+    size_t  len;
 
 	if( Cmd_Argc() != 2 ) {
 		Com_Printf( "Usage: %s <filename>\n", Cmd_Argv( 0 ) );
 		return;
 	}
 
-    string = Cmd_Argv( 1 );
-	if( *string == '/' ) {
-		Q_strncpyz( name, string + 1, sizeof( name ) );
-	} else {
-		Q_concat( name, sizeof( name ), "condumps/", string, NULL );
-    	COM_AppendExtension( name, ".txt", sizeof( name ) );
-	}
+	len = Q_concat( name, sizeof( name ), "condumps/", Cmd_Argv( 1 ), ".txt", NULL );
+    if( len >= sizeof( name ) ) {
+		Com_EPrintf( "Oversize filename specified.\n" );
+        return;
+    }
 
 	FS_FOpenFile( name, &f, FS_MODE_WRITE );
 	if( !f ) {

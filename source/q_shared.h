@@ -487,8 +487,7 @@ char *COM_SkipPath( const char *pathname );
 void COM_StripExtension( const char *in, char *out, size_t size );
 void COM_FileBase (char *in, char *out);
 void COM_FilePath( const char *in, char *out, size_t size );
-void COM_DefaultExtension( char *path, const char *ext, size_t size );
-void COM_AppendExtension( char *path, const char *ext, size_t size );
+size_t COM_DefaultExtension( char *path, const char *ext, size_t size );
 char *COM_FileExtension( const char *in );
 
 qboolean COM_IsFloat( const char *s );
@@ -508,11 +507,12 @@ unsigned Com_HashString( const char *string, int hashSize );
 unsigned Com_HashPath( const char *string, int hashSize );
 
 // buffer safe operations
-size_t Q_strncpyz( char *dest, const char *src, size_t destsize );
-size_t Q_strcat( char *dest, size_t destsize, const char *src );
-size_t Q_concat( char *dest, size_t destsize, ... ) q_sentinel;
-size_t Com_sprintf( char *dest, size_t destsize, const char *fmt, ... ) q_printf( 3, 4 );
-size_t Q_vsnprintf( char *dest, size_t destsize, const char *fmt, va_list argptr );
+size_t Q_strlcpy( char *dst, const char *src, size_t size );
+size_t Q_strlcat( char *dst, const char *src, size_t size );
+
+size_t Q_concat( char *dest, size_t size, ... ) q_sentinel;
+size_t Q_snprintf( char *dest, size_t size, const char *fmt, ... ) q_printf( 3, 4 );
+size_t Q_vsnprintf( char *dest, size_t size, const char *fmt, va_list argptr );
 
 void Com_PageInMemory (void *buffer, int size);
 
@@ -1473,6 +1473,11 @@ ROGUE - VERSIONS
 #define	CS_PLAYERSKINS		(CS_ITEMS+MAX_ITEMS)
 #define CS_GENERAL			(CS_PLAYERSKINS+MAX_CLIENTS)
 #define	MAX_CONFIGSTRINGS	(CS_GENERAL+MAX_GENERAL)
+
+// Some mods actually exploit CS_STATUSBAR to take space up to CS_AIRACCEL
+#define CS_SIZE( cs ) \
+    ( (cs) >= CS_STATUSBAR && (cs) < CS_AIRACCEL ? \
+      MAX_QPATH * ( CS_AIRACCEL - (cs) ) : MAX_QPATH )
 
 
 //==============================================

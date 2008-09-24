@@ -132,7 +132,8 @@ Disables rendering of animated models for the following effects:
 Specifies if ambient sounds are played:
   - 0 - all ambient sounds are disabled
   - 1 - all ambient sounds are enabled
-  - 2 - only ambient sounds from player entity are enabled
+  - 2 - only ambient sounds from visible entities are enabled (rocket flyby, etc)
+  - 3 - only ambient sounds from player entity are enabled (railgun hum, hand grenade ticks, etc)
 
 
 Console

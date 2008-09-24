@@ -318,7 +318,7 @@ sfxcache_t *S_LoadSound (sfx_t *s) {
         name = s->name;
 
     if (name[0] == '#')
-        Q_strncpyz( namebuffer, name + 1, sizeof( namebuffer ) );
+        Q_strlcpy( namebuffer, name + 1, sizeof( namebuffer ) );
     else
         Q_concat( namebuffer, sizeof( namebuffer ), "sound/", name, NULL );
 

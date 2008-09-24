@@ -70,12 +70,12 @@ static void BuildName( fsFileInfo_t *info, char **cache ) {
         char *p = strchr( s, '\\' );
         if( p ) {
             *p = 0;
-            Q_strncpyz( demo.map, s, sizeof( demo.map ) );
+            Q_strlcpy( demo.map, s, sizeof( demo.map ) );
             s = p + 1;
             p = strchr( s, '\\' );
             if( p ) {
                 *p = 0;
-                Q_strncpyz( demo.pov, s, sizeof( demo.pov ) );
+                Q_strlcpy( demo.pov, s, sizeof( demo.pov ) );
                 s = p + 1;
             }
         }
@@ -155,12 +155,16 @@ static void WriteCache( void ) {
     int i;
     char *map, *pov;
     demoEntry_t *e;
+    size_t len;
 
     if( m_demos.list.numItems == m_demos.numDirs ) {
         return;
     }
 
-    Q_concat( buffer, sizeof( buffer ), m_demos.browse, "/" COM_DEMOCACHE_NAME, NULL );
+    len = Q_concat( buffer, sizeof( buffer ), m_demos.browse, "/" COM_DEMOCACHE_NAME, NULL );
+    if( len >= sizeof( buffer ) ) {
+        return;
+    }
     FS_FOpenFile( buffer, &f, FS_MODE_WRITE );
     if( !f ) {
         return;

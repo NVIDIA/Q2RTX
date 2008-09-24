@@ -39,8 +39,9 @@ void IF_Init( inputField_t *field, size_t visibleChars, size_t maxChars, const c
 	field->maxChars = clamp( maxChars, 1, sizeof( field->text ) );
 	field->visibleChars = clamp( visibleChars, 1, maxChars );
 	if( text ) {
-		field->cursorPos = Q_strncpyz( field->text, text, maxChars );
-	}
+        size_t len = Q_strlcpy( field->text, text, maxChars );
+		field->cursorPos = len >= maxChars ? maxChars - 1 : len;
+    }
 }
 
 /*
@@ -59,7 +60,10 @@ IF_Replace
 ================
 */
 void IF_Replace( inputField_t *field, const char *text ) {
-	field->cursorPos = Q_strncpyz( field->text, text, sizeof( field->text ) );
+	if( text ) {
+        size_t len = Q_strlcpy( field->text, text, field->maxChars );
+		field->cursorPos = len >= field->maxChars ? field->maxChars - 1 : len;
+    }
 }
 
 #if USE_CLIENT

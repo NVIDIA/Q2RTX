@@ -80,7 +80,7 @@ static void TH_DrawNumber( char *dst, int x, int y, int width, int value ) {
 	if( width > 5 )
 		width = 5;
 
-	l = Com_sprintf( num, sizeof( num ), "%d", value );
+	l = Q_snprintf( num, sizeof( num ), "%d", value );
 	if( l > width )
 		l = width;
 	x += width - l;
@@ -181,11 +181,11 @@ static void TH_DrawLayoutString( char *dst, const char *s ) {
 
             len = strlen( ci->name );
 			TH_DrawString( dst, x + 4, y, ci->name, len );
-            len = Com_sprintf( buffer, sizeof( buffer ), "Score: %i", score ); 
+            len = Q_snprintf( buffer, sizeof( buffer ), "Score: %i", score ); 
 			TH_DrawString( dst, x + 4, y + 1, buffer, len );
-            len = Com_sprintf( buffer, sizeof( buffer ), "Ping:  %i", ping ); 
+            len = Q_snprintf( buffer, sizeof( buffer ), "Ping:  %i", ping ); 
 			TH_DrawString( dst, x + 4, y + 2, buffer, len );
-            len = Com_sprintf( buffer, sizeof( buffer ), "Time:  %i", time ); 
+            len = Q_snprintf( buffer, sizeof( buffer ), "Time:  %i", time ); 
 			TH_DrawString( dst, x + 4, y + 3, buffer, len );
 			continue;
 		}
@@ -214,7 +214,7 @@ static void TH_DrawLayoutString( char *dst, const char *s ) {
 			if( ping > 999 )
 				ping = 999;
 
-			len = Com_sprintf( buffer, sizeof( buffer ), "%3d %3d %-12.12s",
+			len = Q_snprintf( buffer, sizeof( buffer ), "%3d %3d %-12.12s",
                 score, ping, ci->name );
 			TH_DrawString( dst, x, y, buffer, len );
 			continue;
@@ -291,8 +291,9 @@ static void TH_DrawLayoutString( char *dst, const char *s ) {
 
 static void SCR_ScoreShot_f( void ) {
     char buffer[( TH_WIDTH + 1 ) * TH_HEIGHT];
-	char path[MAX_QPATH];
+	char path[MAX_OSPATH];
 	fileHandle_t f;
+    size_t len;
     int i;
 
     if( cls.state != ca_active ) {
@@ -301,11 +302,14 @@ static void SCR_ScoreShot_f( void ) {
     }
 
 	if( Cmd_Argc() > 1 ) {
-	    Q_concat( path, sizeof( path ), SCORESHOTS_DIRECTORY "/", Cmd_Argv( 1 ), NULL );
-    	COM_AppendExtension( path, ".txt", sizeof( path ) );
+	    len = Q_concat( path, sizeof( path ), SCORESHOTS_DIRECTORY "/", Cmd_Argv( 1 ), ".txt", NULL );
+        if( len >= sizeof( path ) ) {
+		    Com_EPrintf( "Oversize filename specified.\n" );
+            return;
+        }
     } else {
         for( i = 0; i < 1000; i++ ) {
-            Com_sprintf( path, sizeof( path ), SCORESHOTS_DIRECTORY "/quake%03d.txt", i );
+            Q_snprintf( path, sizeof( path ), SCORESHOTS_DIRECTORY "/quake%03d.txt", i );
             if( FS_LoadFileEx( path, NULL, FS_PATH_GAME, TAG_FREE ) == INVALID_LENGTH ) {
                 break;	// file doesn't exist
             }

@@ -416,7 +416,7 @@ void SCR_AddToChatHUD( const char *string ) {
 	scr_currentChatMsg++;
 	msg = &scr_chatMsgs[scr_currentChatMsg & CHAT_MASK];
 
-	Q_strncpyz( msg->text, string, sizeof( msg->text ) );
+	Q_strlcpy( msg->text, string, sizeof( msg->text ) );
 	msg->time = cls.realtime;
 
 	// clamp to single line
@@ -635,7 +635,7 @@ static void SCR_DrawStats( void ) {
     x = CHAR_WIDTH;
     y = ( scr_hudHeight - j * CHAR_HEIGHT ) / 2;
     for( i = 0; i < j; i++ ) {
-        Com_sprintf( buffer, sizeof( buffer ), "%2d: %d", i, cl.frame.ps.stats[i] );
+        Q_snprintf( buffer, sizeof( buffer ), "%2d: %d", i, cl.frame.ps.stats[i] );
         if( cl.oldframe.ps.stats[i] != cl.frame.ps.stats[i] ) {
             R_SetColor( DRAW_COLOR_RGBA, colorRed );
         }

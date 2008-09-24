@@ -235,7 +235,8 @@ static void SV_Map_c( genctx_t *ctx, int argnum ) {
 static void SV_DumpEnts_f( void ) {
     bsp_t *c = sv.cm.cache;
     fileHandle_t f;
-    char *s, buffer[MAX_QPATH];
+    char buffer[MAX_OSPATH];
+    size_t len;
 
     if( !c || !c->entitystring ) {
         Com_Printf( "No map loaded.\n" );
@@ -243,26 +244,26 @@ static void SV_DumpEnts_f( void ) {
     }
 
 	if( Cmd_Argc() != 2 ) {
-		Com_Printf( "Usage: %s <entname>\n", Cmd_Argv( 0 ) );
+		Com_Printf( "Usage: %s <filename>\n", Cmd_Argv( 0 ) );
 		return;
 	}
 
-	s = Cmd_Argv( 1 );
-	if( *s == '/' ) {
-		Q_strncpyz( buffer, s + 1, sizeof( buffer ) );
-	} else {
-		Q_concat( buffer, sizeof( buffer ), "maps/", s, NULL );
-    	COM_AppendExtension( buffer, ".ent", sizeof( buffer ) );
-	}
+	len = Q_concat( buffer, sizeof( buffer ), "maps/", Cmd_Argv( 1 ), ".ent", NULL );
+    if( len >= sizeof( buffer ) ) {
+        Com_EPrintf( "Oversize filename specified.\n" );
+        return;
+    }
 
     FS_FOpenFile( buffer, &f, FS_MODE_WRITE );
-    if( f ) {
-        FS_Write( c->entitystring, c->numentitychars, f );
-        FS_FCloseFile( f );
-        Com_Printf( "Dumped entity string to %s\n", buffer );
-    } else {
-        Com_Printf( "Failed to dump entity string to %s\n", buffer );
+    if( !f ) {
+        Com_EPrintf( "Couldn't open %s for writing\n", buffer );
+        return;
     }
+
+    FS_Write( c->entitystring, c->numentitychars, f );
+    FS_FCloseFile( f );
+
+    Com_Printf( "Dumped entity string to %s\n", buffer );
 }
 
 //===============================================================
@@ -810,7 +811,7 @@ void SV_ListMatches_f( list_t *list ) {
                 break;
             }
         }
-        Com_sprintf( addr, sizeof( addr ), "%d.%d.%d.%d/%d",
+        Q_snprintf( addr, sizeof( addr ), "%d.%d.%d.%d/%d",
             ip[0], ip[1], ip[2], ip[3], i );
         Com_Printf( "%-2d %-18s %s\n", count, addr, match->comment );
         count++;
@@ -1087,20 +1088,6 @@ static void SV_ListFilterCmds_f( void ) {
     }
 }
 
-static size_t SV_Client_m( char *buffer, size_t size ) {
-	if( !sv_client ) {
-		return Q_strncpyz( buffer, "unknown", size );
-	}
-	return Q_strncpyz( buffer, sv_client->name, size );
-}
-
-static size_t SV_ClientNum_m( char *buffer, size_t size ) {
-	if( !sv_client ) {
-		return Q_strncpyz( buffer, "", size );
-	}
-    return Com_sprintf( buffer, size, "%d", sv_client->number );
-}
-
 //===========================================================
 
 static const cmdreg_t c_server[] = {
@@ -1143,8 +1130,5 @@ void SV_InitOperatorCommands( void ) {
 
 	if ( dedicated->integer )
 		Cmd_AddCommand( "say", SV_ConSay_f );
-
-	Cmd_AddMacro( "sv_client", SV_Client_m );
-	Cmd_AddMacro( "sv_clientnum", SV_ClientNum_m );
 }
  

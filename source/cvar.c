@@ -119,15 +119,6 @@ char *Cvar_VariableString( const char *var_name ) {
     return var->string;
 }
 
-/*
-============
-Cvar_VariableStringBuffer
-============
-*/
-void Cvar_VariableStringBuffer( const char *var_name, char *buffer, int size ) {
-    Q_strncpyz( buffer, Cvar_VariableString( var_name ), size );
-}
-
 void Cvar_Variable_g( genctx_t *ctx ) {
     cvar_t *c;
     
@@ -495,9 +486,9 @@ void Cvar_SetValue( cvar_t *var, float value, cvarSetSource_t source ) {
     char    val[32];
 
     if( value == (int)value )
-        Com_sprintf( val, sizeof( val ), "%i", (int)value );
+        Q_snprintf( val, sizeof( val ), "%i", (int)value );
     else
-        Com_sprintf( val, sizeof( val ), "%f", value);
+        Q_snprintf( val, sizeof( val ), "%f", value);
 
     Cvar_SetByVar( var, val, source );
 }
@@ -510,7 +501,7 @@ Cvar_SetInteger
 void Cvar_SetInteger( cvar_t *var, int value, cvarSetSource_t source ) {
     char    val[32];
 
-    Com_sprintf( val, sizeof( val ), "%i", value );
+    Q_snprintf( val, sizeof( val ), "%i", value );
 
     Cvar_SetByVar( var, val, source );
 }
@@ -523,7 +514,7 @@ Cvar_SetHex
 void Cvar_SetHex( cvar_t *var, int value, cvarSetSource_t source ) {
     char    val[32];
 
-    Com_sprintf( val, sizeof( val ), "0x%X", value );
+    Q_snprintf( val, sizeof( val ), "0x%X", value );
 
     Cvar_SetByVar( var, val, source );
 }
@@ -537,12 +528,12 @@ int Cvar_ClampInteger( cvar_t *var, int min, int max ) {
     char    val[32];
 
     if( var->integer < min ) {
-        Com_sprintf( val, sizeof( val ), "%i", min );
+        Q_snprintf( val, sizeof( val ), "%i", min );
         Cvar_SetByVar( var, val, CVAR_SET_DIRECT );
         return min;
     }
     if( var->integer > max ) {
-        Com_sprintf( val, sizeof( val ), "%i", max );
+        Q_snprintf( val, sizeof( val ), "%i", max );
         Cvar_SetByVar( var, val, CVAR_SET_DIRECT );
         return max;
     }
@@ -559,18 +550,18 @@ float Cvar_ClampValue( cvar_t *var, float min, float max ) {
 
     if( var->value < min ) {
         if( min == (int)min ) {
-            Com_sprintf( val, sizeof( val ), "%i", (int)min );
+            Q_snprintf( val, sizeof( val ), "%i", (int)min );
         } else {
-            Com_sprintf( val, sizeof( val ), "%f", min );
+            Q_snprintf( val, sizeof( val ), "%f", min );
         }
         Cvar_SetByVar( var, val, CVAR_SET_DIRECT );
         return min;
     }
     if( var->value > max ) {
         if( max == (int)max ) {
-            Com_sprintf( val, sizeof( val ), "%i", (int)max );
+            Q_snprintf( val, sizeof( val ), "%i", (int)max );
         } else {
-            Com_sprintf( val, sizeof( val ), "%f", max );
+            Q_snprintf( val, sizeof( val ), "%f", max );
         }
         Cvar_SetByVar( var, val, CVAR_SET_DIRECT );
         return max;
@@ -1006,9 +997,9 @@ static void Cvar_Inc_f( void ) {
     value += var->value;
 
     if( value == ( int )value )
-        Com_sprintf( val, sizeof( val ), "%i", ( int )value );
+        Q_snprintf( val, sizeof( val ), "%i", ( int )value );
     else
-        Com_sprintf( val, sizeof( val ), "%f", value );
+        Q_snprintf( val, sizeof( val ), "%f", value );
 
     Cvar_SetByVar( var, val, CVAR_SET_CONSOLE );
 }
@@ -1042,9 +1033,9 @@ static void Cvar_Reset_c( genctx_t *ctx, int argnum ) {
 }
 
 size_t Cvar_BitInfo( char *info, int bit ) {
-    char newi[MAX_INFO_STRING];
-    cvar_t    *var;
-    size_t length, total = 0;
+    char    newi[MAX_INFO_STRING];
+    cvar_t  *var;
+    size_t  len, total = 0;
 
     for( var = cvar_vars; var; var = var->next ) {
         if( !( var->flags & bit ) ) {
@@ -1053,13 +1044,16 @@ size_t Cvar_BitInfo( char *info, int bit ) {
         if( !var->string[0] ) {
             continue;
         }
-        length = Q_concat( newi, sizeof( newi ),
+        len = Q_concat( newi, sizeof( newi ),
             "\\", var->name, "\\", var->string, NULL );
-        if( total + length >= MAX_INFO_STRING ) {
+        if( len >= sizeof( newi ) ) {
+            continue;
+        }
+        if( total + len >= MAX_INFO_STRING ) {
             break;
         }
-        memcpy( info + total, newi, length );
-        total += length;
+        memcpy( info + total, newi, len );
+        total += len;
     }
     info[total] = 0;
     return total;

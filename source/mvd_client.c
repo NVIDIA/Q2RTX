@@ -159,7 +159,7 @@ void MVD_DPrintf( const char *fmt, ... ) {
 }
 
 static void MVD_HttpPrintf( mvd_t *mvd, const char *fmt, ... ) {
-    char buffer[MAX_STRING_CHARS];
+    char        buffer[MAX_STRING_CHARS];
 	va_list		argptr;
     size_t      len;
 
@@ -167,7 +167,7 @@ static void MVD_HttpPrintf( mvd_t *mvd, const char *fmt, ... ) {
 	len = Q_vsnprintf( buffer, sizeof( buffer ), fmt, argptr );
 	va_end( argptr );
 
-    if( FIFO_Write( &mvd->stream.send, buffer, len ) != len ) {
+    if( len >= sizeof( buffer ) || FIFO_Write( &mvd->stream.send, buffer, len ) != len ) {
         MVD_Dropf( mvd, "%s: overflow", __func__ );
     }
 }
@@ -332,7 +332,7 @@ void MVD_GetStatus( void ) {
 
     count = SV_CountClients();
     len = Q_EscapeMarkup( buffer, sv_hostname->string, sizeof( buffer ) );
-    Com_sprintf( buffer + len, sizeof( buffer ) - len, " - %d/%d",
+    Q_snprintf( buffer + len, sizeof( buffer ) - len, " - %d/%d",
         count, sv_maxclients->integer - sv_reserved_slots->integer );
 
     SV_HttpHeader( buffer );
@@ -518,7 +518,7 @@ static void MVD_PlayNext( mvd_t *mvd, string_entry_t *entry ) {
     mvd->demoentry = entry;
 
     // set channel address
-    Q_strncpyz( mvd->address, COM_SkipPath( entry->string ), sizeof( mvd->address ) );
+    Q_strlcpy( mvd->address, COM_SkipPath( entry->string ), sizeof( mvd->address ) );
 }
 
 void MVD_Finish( mvd_t *mvd, const char *reason ) {
@@ -922,6 +922,7 @@ void MVD_StreamedRecord_f( void ) {
     uint32_t magic;
     qboolean gzip = qfalse;
     int c;
+    size_t len;
 
     while( ( c = Cmd_ParseOptions( o_mvdrecord ) ) != -1 ) {
         switch( c ) {
@@ -960,15 +961,12 @@ void MVD_StreamedRecord_f( void ) {
 	//
 	// open the demo file
 	//
-	if( cmd_optarg[0] == '/' ) {
-		Q_strncpyz( buffer, cmd_optarg + 1, sizeof( buffer ) );
-	} else {
-		Q_concat( buffer, sizeof( buffer ), "demos/", cmd_optarg, NULL );
-    	COM_AppendExtension( buffer, ".mvd2", sizeof( buffer ) );
-        if( gzip ) {
-        	COM_AppendExtension( buffer, ".gz", sizeof( buffer ) );
-        }
-	}
+    len = Q_concat( buffer, sizeof( buffer ), "demos/", cmd_optarg,
+        gzip ? ".mvd2.gz" : ".mvd2", NULL );
+    if( len >= sizeof( buffer ) ) {
+		Com_EPrintf( "Oversize filename specified.\n" );
+        return;
+    }
 
 	FS_FOpenFile( buffer, &f, FS_MODE_WRITE );
 	if( !f ) {
@@ -1133,12 +1131,12 @@ void MVD_Connect_f( void ) {
 
     // set channel name
     if( name ) {
-        Q_strncpyz( mvd->name, name, sizeof( mvd->name ) );
+        Q_strlcpy( mvd->name, name, sizeof( mvd->name ) );
     } else {
-        Com_sprintf( mvd->name, sizeof( mvd->name ), "net%d", mvd->id );
+        Q_snprintf( mvd->name, sizeof( mvd->name ), "net%d", mvd->id );
     }
 
-    Q_strncpyz( mvd->address, host, sizeof( mvd->address ) );
+    Q_strlcpy( mvd->address, host, sizeof( mvd->address ) );
 
     Com_Printf( "[%s] Connecting to %s...\n", mvd->name, NET_AdrToString( &adr ) );
 
@@ -1265,7 +1263,7 @@ static void MVD_Control_f( void ) {
 
     if( name ) {
         Com_Printf( "[%s] Channel renamed to %s.\n", mvd->name, name );
-        Q_strncpyz( mvd->name, name, sizeof( mvd->name ) );
+        Q_strlcpy( mvd->name, name, sizeof( mvd->name ) );
     }
     if( loop != -1 ) {
         Com_Printf( "[%s] Loop count changed to %d.\n", mvd->name, loop );
@@ -1334,11 +1332,11 @@ void MVD_Play_f( void ) {
     for( i = argc - 1; i >= cmd_optind; i-- ) {
 	    s = Cmd_Argv( i );
         if( *s == '/' ) {
-            Q_strncpyz( buffer, s + 1, sizeof( buffer ) );
+            Q_strlcpy( buffer, s + 1, sizeof( buffer ) );
         } else {
             Q_concat( buffer, sizeof( buffer ), "demos/", s, NULL );
             if( FS_LoadFile( buffer, NULL ) == INVALID_LENGTH ) {
-                COM_AppendExtension( buffer, ".mvd2", sizeof( buffer ) );
+                COM_DefaultExtension( buffer, ".mvd2", sizeof( buffer ) );
             }
         }
         if( FS_LoadFile( buffer, NULL ) == INVALID_LENGTH ) {
@@ -1377,9 +1375,9 @@ void MVD_Play_f( void ) {
 
     // set channel name
     if( name ) {
-        Q_strncpyz( mvd->name, name, sizeof( mvd->name ) );
+        Q_strlcpy( mvd->name, name, sizeof( mvd->name ) );
     } else {
-        Com_sprintf( mvd->name, sizeof( mvd->name ), "dem%d", mvd->id );
+        Q_snprintf( mvd->name, sizeof( mvd->name ), "dem%d", mvd->id );
     }
 
     MVD_PlayNext( mvd, mvd->demohead );

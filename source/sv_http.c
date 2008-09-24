@@ -117,7 +117,7 @@ static void SV_GetStatus( void ) {
 
     count = SV_CountClients();
     len = Q_EscapeMarkup( buffer, sv_hostname->string, sizeof( buffer ) );
-    Com_sprintf( buffer + len, sizeof( buffer ) - len, " - %d/%d",
+    Q_snprintf( buffer + len, sizeof( buffer ) - len, " - %d/%d",
         count, sv_maxclients->integer - sv_reserved_slots->integer );
 
     SV_HttpHeader( buffer );
@@ -461,7 +461,7 @@ void SV_HttpFinish( tcpClient_t *client ) {
 }
 
 void SV_HttpPrintf( const char *fmt, ... ) {
-    char buffer[MAX_STRING_CHARS];
+    char        buffer[MAX_STRING_CHARS];
 	va_list		argptr;
     size_t      len;
 
@@ -473,7 +473,7 @@ void SV_HttpPrintf( const char *fmt, ... ) {
 	len = Q_vsnprintf( buffer, sizeof( buffer ), fmt, argptr );
 	va_end( argptr );
 
-    if( FIFO_Write( &http_client->stream.send, buffer, len ) != len ) {
+    if( len >= sizeof( buffer ) || FIFO_Write( &http_client->stream.send, buffer, len ) != len ) {
         SV_HttpDrop( http_client, "overflowed" );
     }
 }

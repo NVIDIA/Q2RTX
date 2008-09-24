@@ -106,26 +106,6 @@ static void S_SoundInfo_f( void ) {
 }
 
 
-static void S_Play_c( genctx_t *ctx, int state ) {
-    FS_File_g( "sound", "*.wav", FS_SEARCH_SAVEPATH | FS_SEARCH_BYFILTER | 0x80000000, ctx );
-}
-
-static void S_Play_f( void ) {
-	int 	i;
-	char name[MAX_QPATH];
-
-	if( Cmd_Argc() < 2 ) {
-		Com_Printf( "Usage: %s <sound> [...]\n", Cmd_Argv( 0 ) );
-		return;
-	}
-
-	for( i = 1; i < Cmd_Argc(); i++ ) {
-		Cmd_ArgvBuffer( i, name, sizeof( name ) );
-		COM_DefaultExtension( name, ".wav", sizeof( name ) );
-		S_StartLocalSound( name );
-	}
-}
-
 static void S_SoundList_f( void ) {
 	int		i;
 	sfx_t	*sfx;
@@ -156,7 +136,6 @@ static void S_SoundList_f( void ) {
 }
 
 static const cmdreg_t c_sound[] = {
-	{ "play", S_Play_f, S_Play_c },
 	{ "stopsound", S_StopAllSounds },
 	{ "soundlist", S_SoundList_f },
 	{ "soundinfo", S_SoundInfo_f },
@@ -316,7 +295,7 @@ static sfx_t *S_AllocSfx( const char *name ) {
 	}
 	
 	memset( sfx, 0, sizeof( *sfx ) );
-	Q_strncpyz( sfx->name, name, sizeof( sfx->name ) );
+	Q_strlcpy( sfx->name, name, sizeof( sfx->name ) );
 	sfx->registration_sequence = s_registration_sequence;
 
     return sfx;
@@ -859,7 +838,7 @@ that are automatically started, stopped, and merged together
 as the entities are sent to the client
 ==================
 */
-void S_AddLoopSounds (void)
+static void S_AddLoopSounds (void)
 {
 	int			i, j;
 	int			sounds[MAX_PACKET_ENTITIES];
@@ -884,7 +863,9 @@ void S_AddLoopSounds (void)
 	for( i = 0; i < cl.frame.numEntities; i++ ) {
 		num = ( cl.frame.firstEntity + i ) & PARSE_ENTITIES_MASK;
 		ent = &cl.entityStates[num];
-	    if( s_ambient->integer == 2 && ent->number != listener_entnum ) {
+	    if( s_ambient->integer == 2 && !ent->modelindex ) {
+            sounds[i] = 0;
+        } else if( s_ambient->integer == 3 && ent->number != listener_entnum ) {
 		    sounds[i] = 0;
         } else {
 		    sounds[i] = ent->sound;

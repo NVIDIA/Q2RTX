@@ -95,7 +95,6 @@ use_asm="???"
 use_openffa="no"
 
 # constants
-logfile="console.log"
 cfgfile="config.cfg"
 defcfg="default.cfg"
 autocfg="autoexec.cfg"
@@ -419,7 +418,6 @@ echo "#define QDECL" >> $config_h
 echo "GAMELIB=$gamelib" >> $config_mk
 echo "#define GAMELIB \"$gamelib\"" >> $config_h
 
-echo "#define COM_LOGFILE_NAME \"$logfile\"" >> $config_h
 echo "#define COM_CONFIG_NAME \"$cfgfile\"" >> $config_h
 echo "#define COM_DEFAULTCFG_NAME \"$defcfg\"" >> $config_h
 echo "#define COM_AUTOEXECCFG_NAME \"$autocfg\"" >> $config_h

@@ -70,8 +70,8 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
     }
 
 	// save name for levels that don't set message
-	Q_strncpyz( sv.configstrings[CS_NAME], server, MAX_QPATH );
-	Q_strncpyz( sv.name, server, sizeof( sv.name ) );
+	Q_strlcpy( sv.configstrings[CS_NAME], server, MAX_QPATH );
+	Q_strlcpy( sv.name, server, sizeof( sv.name ) );
 	
 	if( Cvar_VariableInteger( "deathmatch" ) ) {
 		sprintf( sv.configstrings[CS_AIRACCEL],
@@ -311,7 +311,7 @@ void SV_Map (const char *levelstring, qboolean restart) {
 	}
 
 	// save levelstring as it typically points to cmd_argv
-	Q_strncpyz( level, levelstring, sizeof( level ) );
+	Q_strlcpy( level, levelstring, sizeof( level ) );
 
 	// if there is a + in the map, set nextserver to the remainder
 	ch = strchr(level, '+');

@@ -163,6 +163,11 @@ static void PF_bprintf( int level, const char *fmt, ... ) {
 	len = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
 	va_end( argptr );
 
+    if( len >= sizeof( string ) ) {
+        Com_WPrintf( "%s: overflow\n", __func__ );
+        return;
+    }
+
     if( svs.mvd.dummy && sv.mvd.paused < PAUSED_FRAMES ) {
     	SV_MvdBroadcastPrint( level, string );
     }
@@ -229,6 +234,11 @@ static void PF_cprintf( edict_t *ent, int level, const char *fmt, ... ) {
 	len = Q_vsnprintf( msg, sizeof( msg ), fmt, argptr );
 	va_end( argptr );
 
+    if( len >= sizeof( msg ) ) {
+        Com_WPrintf( "%s: overflow\n", __func__ );
+        return;
+    }
+
 	if( !ent ) {
 		Com_Printf( "%s", msg );
 		return;
@@ -236,12 +246,12 @@ static void PF_cprintf( edict_t *ent, int level, const char *fmt, ... ) {
 
 	clientNum = NUM_FOR_EDICT( ent ) - 1;
 	if( clientNum < 0 || clientNum >= sv_maxclients->integer ) {
-		Com_Error( ERR_DROP, "PF_cprintf to a non-client %d", clientNum );
+		Com_Error( ERR_DROP, "%s to a non-client %d", __func__, clientNum );
     }
 
 	client = svs.udp_client_pool + clientNum;
     if( client->state <= cs_zombie ) {
-        Com_WPrintf( "PF_cprintf to a free/zombie client %d\n", clientNum );
+        Com_WPrintf( "%s to a free/zombie client %d\n", __func__, clientNum );
         return;
     }
 
@@ -283,13 +293,18 @@ static void PF_centerprintf( edict_t *ent, const char *fmt, ... ) {
 	
 	n = NUM_FOR_EDICT( ent );
 	if( n < 1 || n > sv_maxclients->integer ) {
-        Com_WPrintf( "PF_centerprintf to a non-client\n" );
+        Com_WPrintf( "%s to a non-client %d\n", __func__, n - 1 );
 		return;
     }
 
 	va_start( argptr, fmt );
 	len = Q_vsnprintf( msg, sizeof( msg ), fmt, argptr );
 	va_end( argptr );
+
+    if( len >= sizeof( msg ) ) {
+        Com_WPrintf( "%s: overflow\n", __func__ );
+        return;
+    }
 
 	MSG_WriteByte( svc_centerprint );
 	MSG_WriteData( msg, len + 1 );

@@ -54,9 +54,9 @@ static void MVD_LayoutClients( udpClient_t *client ) {
     static const char header[] = 
         "xv 16 yv 0 string2 \"    Name            RTT Status\"";
 	char layout[MAX_STRING_CHARS];
-	char buffer[MAX_STRING_CHARS];
+	char buffer[MAX_QPATH];
 	char status[MAX_QPATH];
-	size_t length, total;
+	size_t len, total;
 	udpClient_t *cl;
     mvd_t *mvd = client->mvd;
 	int y, i, prestep;
@@ -91,14 +91,17 @@ static void MVD_LayoutClients( udpClient_t *client ) {
         } else {
             strcpy( status, "observing" );
         }
-		length = Com_sprintf( buffer, sizeof( buffer ),
+		len = Q_snprintf( buffer, sizeof( buffer ),
 			"yv %d string \"%3d %-15.15s %3d %s\"",
 			y, i, cl->cl->name, cl->ping, status );
-		if( total + length >= sizeof( layout ) ) {
+        if( len >= sizeof( buffer ) ) {
+            continue;
+        }
+		if( total + len >= sizeof( layout ) ) {
 			break;
 		}
-		memcpy( layout + total, buffer, length );
-		total += length;
+		memcpy( layout + total, buffer, len );
+		total += len;
 		y += 8;
 	}
 
@@ -122,15 +125,22 @@ static void MVD_LayoutChannels( udpClient_t *client ) {
     static const char nochans[] =
         "yv 64 string \" <no channels>\"";
 	char layout[MAX_STRING_CHARS];
-	char buffer[MAX_STRING_CHARS];
+	char buffer[MAX_QPATH];
     mvd_t *mvd;
-	size_t length, total;
+	size_t len, total;
 	int cursor, y;
 
     memcpy( layout, header, sizeof( header ) - 1 );
     total = sizeof( header ) - 1;
 
-    cursor = List_Count( &mvd_ready );
+    // FIXME: improve this
+    cursor = 0;
+    LIST_FOR_EACH( mvd_t, mvd, &mvd_ready, ready ) {
+        if( mvd->numplayers ) {
+            cursor++;
+        }
+    }
+
     if( cursor ) {
         if( client->layout_cursor < 0 ) {
             client->layout_cursor = cursor - 1;
@@ -141,18 +151,24 @@ static void MVD_LayoutChannels( udpClient_t *client ) {
         y = 64;
         cursor = 0;
         LIST_FOR_EACH( mvd_t, mvd, &mvd_ready, ready ) {
-            length = Com_sprintf( buffer, sizeof( buffer ),
+            if( !mvd->numplayers ) {
+                continue;
+            }
+            len = Q_snprintf( buffer, sizeof( buffer ),
                 "yv %d string%s \"%c%-12.12s %-7.7s %d/%d\" ", y,
                 mvd == client->mvd ? "2" : "",
                 cursor == client->layout_cursor ? 0x8d : 0x20,
                 mvd->name, mvd->mapname,
                 List_Count( &mvd->udpClients ),
                 mvd->numplayers );
-            if( total + length >= sizeof( layout ) ) {
+            if( len >= sizeof( buffer ) ) {
+                continue;
+            }
+            if( total + len >= sizeof( layout ) ) {
                 break;
             }
-            memcpy( layout + total, buffer, length );
-            total += length;
+            memcpy( layout + total, buffer, len );
+            total += len;
             y += 8;
             if( y > 172 ) {
                 break;
@@ -209,7 +225,7 @@ static void MVD_LayoutMenu( udpClient_t *client ) {
     memset( cur, 0x20, sizeof( cur ) );
     cur[client->layout_cursor] = 0x8d;
 
-    total = Com_sprintf( layout, sizeof( layout ), format,
+    total = Q_snprintf( layout, sizeof( layout ), format,
         cur[0], client->target ? "Leave" : "Enter", cur[1],
         cur[2], List_Count( &client->mvd->udpClients ),
         cur[3], List_Count( &mvd_ready ), cur[4],
@@ -553,7 +569,7 @@ SPECTATOR COMMANDS
 
 void MVD_BroadcastPrintf( mvd_t *mvd, int level, int mask, const char *fmt, ... ) {
 	va_list		argptr;
-	char		text[MAXPRINTMSG];
+	char		text[MAX_STRING_CHARS];
     size_t      len;
     udpClient_t *other;
     client_t    *cl;
@@ -561,6 +577,11 @@ void MVD_BroadcastPrintf( mvd_t *mvd, int level, int mask, const char *fmt, ... 
 	va_start( argptr, fmt );
 	len = Q_vsnprintf( text, sizeof( text ), fmt, argptr );
 	va_end( argptr );
+
+    if( len >= sizeof( text ) ) {
+        Com_WPrintf( "%s: overflow\n", __func__ );
+        return;
+    }
 
     if( level == PRINT_CHAT && mvd_filter_version->integer ) {
         char *s = strstr( text, "!version" );
@@ -665,8 +686,7 @@ static void MVD_Say_f( udpClient_t *client, int argnum ) {
     mvd_t *mvd = client->mvd;
     unsigned delta, delay = mvd_flood_waitdelay->value * 1000;
     unsigned treshold = mvd_flood_persecond->value * 1000;
-    char text[150];
-    size_t len;
+    char text[150], *p;
     int i;
 
     if( mvd_flood_mute->integer && !client->admin ) {
@@ -705,10 +725,10 @@ static void MVD_Say_f( udpClient_t *client, int argnum ) {
     client->floodSamples[client->floodHead & FLOOD_MASK] = svs.realtime;
     client->floodHead++;
 
-    len = Com_sprintf( text, sizeof( text ), "[MVD] %s: %s",
+    Q_snprintf( text, sizeof( text ), "[MVD] %s: %s",
         client->cl->name, Cmd_ArgsFrom( argnum ) );
-    for( i = 0; i < len; i++ ) {
-        text[i] |= 128;
+    for( p = text; *p; p++ ) {
+        *p |= 128;
     }
 
     MVD_BroadcastPrintf( mvd, PRINT_MEDIUM, client->admin ?
@@ -869,9 +889,17 @@ static void MVD_Invuse_f( udpClient_t *client ) {
     }
 
     if( client->layout_type == LAYOUT_CHANNELS ) {
-        mvd = LIST_INDEX( mvd_t, client->layout_cursor, &mvd_ready, ready );
-        if( mvd ) {
-            MVD_TrySwitchChannel( client, mvd );
+        int cursor = 0;
+
+        // FIXME: improve this
+        LIST_FOR_EACH( mvd_t, mvd, &mvd_ready, ready ) {
+            if( mvd->numplayers ) {
+                if( cursor == client->layout_cursor ) {
+                    MVD_TrySwitchChannel( client, mvd );
+                    return;
+                }
+                cursor++;
+            }
         }
         return;
     }
@@ -913,6 +941,9 @@ static void MVD_Channels_f( udpClient_t *client ) {
 	    "-- ------------ -------- --- --- --------------\n" );
 
     LIST_FOR_EACH( mvd_t, mvd, &mvd_ready, ready ) {
+        if( !mvd->numplayers ) {
+            continue;
+        }
         total = 0;
         for( i = 0; i < mvd->maxclients; i++ ) {
             player = &mvd->players[i];
@@ -931,11 +962,7 @@ static void MVD_Channels_f( udpClient_t *client ) {
             memcpy( buffer + total, player->name, len );
             total += len;
         }
-        if( total ) {
-            buffer[total] = 0;
-        } else {
-            strcpy( buffer, "<no players>" );
-        }
+        buffer[total] = 0;
 
 	    SV_ClientPrintf( client->cl, PRINT_HIGH,
             "%2d %-12.12s %-8.8s %3d %3d %s\n", mvd->id,
@@ -1004,7 +1031,7 @@ static void MVD_GameClientCommand( edict_t *ent ) {
         MVD_Invuse_f( client );
         return;
     }
-	if( !strcmp( cmd, "help" ) || !strcmp( cmd, "scores" ) ) {
+	if( !strcmp( cmd, "help" ) || !strcmp( cmd, "score" ) ) {
 		if( client->layout_type == LAYOUT_SCORES ) {
 			MVD_SetDefaultLayout( client );
 		} else {
@@ -1095,7 +1122,7 @@ static void MVD_GameInit( void ) {
     mvd_ge.num_edicts = sv_maxclients->integer + 1;
     mvd_ge.max_edicts = sv_maxclients->integer + 1;
 
-    Com_sprintf( buffer, sizeof( buffer ),
+    Q_snprintf( buffer, sizeof( buffer ),
         "maps/%s.bsp", mvd_default_map->string );
 
     if( ( bsp = BSP_Load( buffer ) ) == NULL ) {
@@ -1115,7 +1142,7 @@ static void MVD_GameInit( void ) {
 
     strcpy( mvd->name, "Waiting Room" );
     Cvar_VariableStringBuffer( "game", mvd->gamedir, sizeof( mvd->gamedir ) );
-    Q_strncpyz( mvd->mapname, mvd_default_map->string, sizeof( mvd->mapname ) );
+    Q_strlcpy( mvd->mapname, mvd_default_map->string, sizeof( mvd->mapname ) );
     List_Init( &mvd->udpClients );
 
     strcpy( mvd->configstrings[CS_NAME], "Waiting Room" );

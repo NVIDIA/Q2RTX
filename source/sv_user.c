@@ -1077,11 +1077,11 @@ The current net_message is parsed for the given client
 */
 void SV_ExecuteClientMessage( client_t *client ) {
     int         c;
-    char        *s;
     qboolean    move_issued;
     int         stringCmdCount;
     int         userinfoUpdateCount;
     int         net_drop;
+    size_t      len;
 
     sv_client = client;
     sv_player = sv_client->edict;
@@ -1115,17 +1115,24 @@ void SV_ExecuteClientMessage( client_t *client ) {
         case clc_nop:
             break;
 
-        case clc_userinfo:
-            s = MSG_ReadString();
+        case clc_userinfo: {
+                char buffer[MAX_INFO_STRING];
 
-            // malicious users may try sending too many userinfo updates
-            if( userinfoUpdateCount == MAX_PACKET_USERINFOS ) {
-                Com_DPrintf( "Too many userinfos from %s\n", client->name );
-                break;
+                len = MSG_ReadString( buffer, sizeof( buffer ) );
+                if( len >= sizeof( buffer ) ) {
+                    SV_DropClient( client, "oversize userinfo" );
+                    break;
+                }
+
+                // malicious users may try sending too many userinfo updates
+                if( userinfoUpdateCount == MAX_PACKET_USERINFOS ) {
+                    Com_DPrintf( "Too many userinfos from %s\n", client->name );
+                    break;
+                }
+
+                SV_UpdateUserinfo( buffer );
+                userinfoUpdateCount++;
             }
-
-            SV_UpdateUserinfo( s );
-            userinfoUpdateCount++;
             break;
 
         case clc_move:
@@ -1139,18 +1146,25 @@ void SV_ExecuteClientMessage( client_t *client ) {
             SV_OldClientExecuteMove( net_drop );
             break;
 
-        case clc_stringcmd:    
-            s = MSG_ReadString();
+        case clc_stringcmd: {
+                char buffer[MAX_STRING_CHARS];
 
-            Com_DPrintf( "ClientCommand( %s ): %s\n", client->name, s );
+                len = MSG_ReadString( buffer, sizeof( buffer ) );
+                if( len >= sizeof( buffer ) ) {
+                    SV_DropClient( client, "oversize stringcmd" );
+                    break;
+                }
 
-            // malicious users may try using too many string commands
-            if( stringCmdCount == MAX_PACKET_STRINGCMDS ) {
-                Com_DPrintf( "Too many stringcmds from %s\n", client->name );
-                break;
+                Com_DPrintf( "ClientCommand( %s ): %s\n", client->name, buffer );
+
+                // malicious users may try using too many string commands
+                if( stringCmdCount == MAX_PACKET_STRINGCMDS ) {
+                    Com_DPrintf( "Too many stringcmds from %s\n", client->name );
+                    break;
+                }
+                SV_ExecuteUserCommand( buffer );
+                stringCmdCount++;
             }
-            SV_ExecuteUserCommand( s );
-            stringCmdCount++;
             break;
 
         // r1q2 specific operations
@@ -1187,15 +1201,24 @@ void SV_ExecuteClientMessage( client_t *client ) {
             break;
 
         case clc_userinfo_delta: {
-                char *key, *value;
+                char key[MAX_INFO_KEY], value[MAX_INFO_VALUE];
                 char buffer[MAX_INFO_STRING];
                 
                 if( client->protocol != PROTOCOL_VERSION_Q2PRO ) {
                     goto badbyte;
                 }
 
-                key = MSG_ReadString();
-                value = MSG_ReadString();
+                len = MSG_ReadString( key, sizeof( key ) );
+                if( len >= sizeof( key ) ) {
+                    SV_DropClient( client, "oversize delta key" );
+                    break;
+                }
+
+                len = MSG_ReadString( value, sizeof( value ) );
+                if( len >= sizeof( value ) ) {
+                    SV_DropClient( client, "oversize delta value" );
+                    break;
+                }
 
                 // malicious users may try sending too many userinfo updates
                 if( userinfoUpdateCount == MAX_PACKET_USERINFOS ) {

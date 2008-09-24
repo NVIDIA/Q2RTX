@@ -381,12 +381,12 @@ static void CL_CheckForResend( void ) {
     // add protocol dependent stuff
 	switch( cls.serverProtocol ) {
     case PROTOCOL_VERSION_R1Q2:
-        Com_sprintf( tail, sizeof( tail ), " %d %d",
+        Q_snprintf( tail, sizeof( tail ), " %d %d",
             net_maxmsglen->integer, PROTOCOL_VERSION_R1Q2_CURRENT );
         cls.quakePort = net_qport->integer & 0xff;
         break;
     case PROTOCOL_VERSION_Q2PRO:
-        Com_sprintf( tail, sizeof( tail ), " %d %d %d %d",
+        Q_snprintf( tail, sizeof( tail ), " %d %d %d %d",
             net_maxmsglen->integer, net_chantype->integer, USE_ZLIB,
             PROTOCOL_VERSION_Q2PRO_CURRENT );
         cls.quakePort = net_qport->integer & 0xff;
@@ -458,7 +458,7 @@ usage:
     }
 
     // copy early to avoid potential cmd_argv[1] clobbering
-    Q_strncpyz( cls.servername, server, sizeof( cls.servername ) );
+    Q_strlcpy( cls.servername, server, sizeof( cls.servername ) );
 
     if ( sv_running->integer ) {
         // if running a local server, kill it and reissue
@@ -735,27 +735,25 @@ static int QDECL SortPlayers( const void *v1, const void *v2 ) {
 CL_ServerStatusResponse
 ====================
 */
-static qboolean CL_ServerStatusResponse( const char *status,
-    const netadr_t *from, serverStatus_t *dest )
-{
+static qboolean CL_ServerStatusResponse( const char *status, size_t len, serverStatus_t *dest ) {
 	const char *s;
     playerStatus_t *player;
-    int length;
+    size_t infolen;
 
     memset( dest, 0, sizeof( *dest ) );
 
-    s = strchr( status, '\n' );
-    if ( !s ) {
+    s = memchr( status, '\n', len );
+    if( !s ) {
 		return qfalse;
     }
-    length = s - status;
-	if( length > MAX_STRING_CHARS - 1 ) {
+    infolen = s - status;
+	if( !infolen || infolen >= MAX_STRING_CHARS ) {
 		return qfalse;
 	}
     s++;
 
-    strcpy( dest->address, NET_AdrToString( from ) );
-    strncpy( dest->infostring, status, length );
+    strcpy( dest->address, NET_AdrToString( &net_from ) );
+    memcpy( dest->infostring, status, infolen );
     
     // HACK: check if this is a status response
 	if( !strstr( dest->infostring, "\\hostname\\" ) ) {
@@ -773,7 +771,7 @@ static qboolean CL_ServerStatusResponse( const char *status,
         if( !s ) {
             break;
         } 
-        Q_strncpyz( player->name, COM_Parse( &s ), sizeof( player->name ) );
+        Q_strlcpy( player->name, COM_Parse( &s ), sizeof( player->name ) );
 
         if ( ++dest->numPlayers == MAX_STATUS_PLAYERS ) {
             break;
@@ -826,11 +824,12 @@ CL_ParsePrintMessage
 static void CL_ParsePrintMessage( void ) {
 	request_t *r;
     serverStatus_t serverStatus;
-    char *string;
+    char string[MAX_NET_STRING];
     int i, oldest;
     unsigned delta;
+    size_t len;
 
-    string = MSG_ReadString();
+    len = MSG_ReadString( string, sizeof( string ) );
 
     if ( ( cls.state == ca_challenging || cls.state == ca_connecting ) &&
             NET_IsEqualBaseAdr( &net_from, &cls.serverAddress ) )
@@ -840,7 +839,7 @@ static void CL_ParsePrintMessage( void ) {
 			Com_Error( ERR_DROP, "Server rejected loopback connection" );
 		}
 		Com_Printf( "%s", string );
-        Q_strncpyz( cls.messageString, string, sizeof( cls.messageString ) );
+        Q_strlcpy( cls.messageString, string, sizeof( cls.messageString ) );
 		cls.state = ca_challenging;
 		//cls.connectCount = 0;
 		return;
@@ -870,7 +869,7 @@ static void CL_ParsePrintMessage( void ) {
 		}
 		switch( r->type ) {
 		case REQ_STATUS:
-			if( CL_ServerStatusResponse( string, &net_from, &serverStatus ) ) {
+			if( CL_ServerStatusResponse( string, len, &serverStatus ) ) {
 			    CL_DumpServerInfo( &serverStatus );
             }
 			break;
@@ -878,7 +877,7 @@ static void CL_ParsePrintMessage( void ) {
 			break;
 #if USE_UI
 		case REQ_PING:
-			if( CL_ServerStatusResponse( string, &net_from, &serverStatus ) ) {
+			if( CL_ServerStatusResponse( string, len, &serverStatus ) ) {
 				UI_AddToServerList( &serverStatus );
 			}
 			break;
@@ -987,7 +986,7 @@ static void CL_Changing_f( void ) {
     for( i = 1; i < j; i++ ) {
         s = Cmd_Argv( i );
         if( !strncmp( s, "map=", 4 ) ) {
-            Q_strncpyz( cl.mapname, s + 4, sizeof( cl.mapname ) );
+            Q_strlcpy( cl.mapname, s + 4, sizeof( cl.mapname ) );
         }
     }
 
@@ -1074,7 +1073,7 @@ qboolean CL_SendStatusRequest( char *buffer, size_t size ) {
 
         // return resolved address
         if( size > 0 ) {
-            Q_strncpyz( buffer, NET_AdrToString( &address ), size );
+            Q_strlcpy( buffer, NET_AdrToString( &address ), size );
         }
     }
 
@@ -1116,7 +1115,7 @@ static void CL_PingServers_f( void ) {
 
     // send a packet to each address book entry
     for( i = 0; i < 64; i++ ) {
-        Com_sprintf( buffer, sizeof( buffer ), "adr%i", i );
+        Q_snprintf( buffer, sizeof( buffer ), "adr%i", i );
         var = Cvar_FindVar( buffer );
         if( !var ) {
             break;
@@ -1202,20 +1201,25 @@ Responses to broadcasts, etc
 =================
 */
 static void CL_ConnectionlessPacket( void ) {
-    char	*s;
-    char	*c;
-    int	i, j, k;
+    char    string[MAX_STRING_CHARS];
+    char	*s, *c;
+    int	    i, j, k;
+    size_t  len;
 
     MSG_BeginReading();
     MSG_ReadLong();	// skip the -1
 
-    s = MSG_ReadStringLine();
+    len = MSG_ReadStringLine( string, sizeof( string ) );
+    if( len >= sizeof( string ) ) {
+        Com_DPrintf( "Oversize message received.  Ignored.\n" );
+        return;
+    }
 
-    Cmd_TokenizeString( s, qfalse );
+    Cmd_TokenizeString( string, qfalse );
 
     c = Cmd_Argv( 0 );
 
-    Com_DPrintf( "%s: %s\n", NET_AdrToString ( &net_from ), s );
+    Com_DPrintf( "%s: %s\n", NET_AdrToString ( &net_from ), string );
 
     // challenge from the server we are connecting to
     if ( !strcmp( c, "challenge" ) ) {
@@ -1330,7 +1334,7 @@ static void CL_ConnectionlessPacket( void ) {
                     }
                 }
             } else if( !strncmp( s, "map=", 4 ) ) {
-                Q_strncpyz( mapname, s + 4, sizeof( mapname ) );
+                Q_strlcpy( mapname, s + 4, sizeof( mapname ) );
             }
         }
 
@@ -1391,7 +1395,7 @@ static void CL_ConnectionlessPacket( void ) {
 
         cls.serverAddress = net_from;
         cls.serverProtocol = cl_protocol->integer;
-        Q_strncpyz( cls.servername, s, sizeof( cls.servername ) );
+        Q_strlcpy( cls.servername, s, sizeof( cls.servername ) );
         cls.passive = qfalse;
 
         cls.state = ca_challenging;
@@ -1475,7 +1479,7 @@ static void CL_FixUpGender( void ) {
     char *p;
     char sk[MAX_QPATH];
 
-    Q_strncpyz( sk, info_skin->string, sizeof( sk ) );
+    Q_strlcpy( sk, info_skin->string, sizeof( sk ) );
     if ( ( p = strchr( sk, '/' ) ) != NULL )
         *p = 0;
     if ( Q_stricmp( sk, "male" ) == 0 || Q_stricmp( sk, "cyborg" ) == 0 )
@@ -1557,17 +1561,45 @@ static void CL_RegisterSounds( void ) {
 
 /*
 =================
-CL_Snd_Restart_f
+CL_RestartSound_f
  
 Restart the sound subsystem so it can pick up
 new parameters and flush all sounds
 =================
 */
-static void CL_Snd_Restart_f ( void ) {
-    S_Shutdown ();
-    S_Init ();
-    CL_RegisterSounds ();
+static void CL_RestartSound_f( void ) {
+    S_Shutdown();
+    S_Init();
+    CL_RegisterSounds();
 }
+
+/*
+=================
+CL_PlaySound_f
+
+Moved here from sound code so that command is always registered.
+=================
+*/
+static void CL_PlaySound_c( genctx_t *ctx, int state ) {
+    FS_File_g( "sound", "*.wav", FS_SEARCH_SAVEPATH | FS_SEARCH_BYFILTER | 0x80000000, ctx );
+}
+
+static void CL_PlaySound_f( void ) {
+	int 	i;
+	char name[MAX_QPATH];
+
+	if( Cmd_Argc() < 2 ) {
+		Com_Printf( "Usage: %s <sound> [...]\n", Cmd_Argv( 0 ) );
+		return;
+	}
+
+	for( i = 1; i < Cmd_Argc(); i++ ) {
+		Cmd_ArgvBuffer( i, name, sizeof( name ) );
+		COM_DefaultExtension( name, ".wav", sizeof( name ) );
+		S_StartLocalSound( name );
+	}
+}
+
 
 static void CL_RegisterModels( void ) {
     int i;
@@ -1683,7 +1715,7 @@ void CL_RequestNextDownload ( void ) {
                 ofs_skins = LittleLong( pheader->ofs_skins );
 
                 while ( precache_model_skin - 1 < num_skins ) {
-                    Q_strncpyz( fn, ( char * )precache_model + ofs_skins +
+                    Q_strlcpy( fn, ( char * )precache_model + ofs_skins +
                         ( precache_model_skin - 1 ) * MD2_MAX_SKINNAME, sizeof( fn ) );
                     if ( !CL_CheckOrDownloadFile( fn ) ) {
                         precache_model_skin++;
@@ -1748,7 +1780,7 @@ void CL_RequestNextDownload ( void ) {
                     p++;
                 else
                     p = cl.configstrings[ CS_PLAYERSKINS + i ];
-                Q_strncpyz( model, p, sizeof( model ) );
+                Q_strlcpy( model, p, sizeof( model ) );
                 p = strchr( model, '/' );
                 if ( !p )
                     p = strchr( model, '\\' );
@@ -1962,11 +1994,12 @@ static void CL_DumpClients_f( void ) {
     }
 }
 
-static void CL_DumpStatusbar_f( void ) {
-	char buffer[MAX_QPATH];
+static void dump_program( const char *text, const char *name ) {
+	char buffer[MAX_OSPATH];
 	fileHandle_t f;
+    size_t len;
 
-    if ( cls.state != ca_active ) {
+    if( cls.state != ca_active ) {
 		Com_Printf( "Must be in a level to dump.\n" );
         return;
     }
@@ -1976,8 +2009,16 @@ static void CL_DumpStatusbar_f( void ) {
 		return;
 	}
 
-	Cmd_ArgvBuffer( 1, buffer, sizeof( buffer ) );
-	COM_DefaultExtension( buffer, ".txt", sizeof( buffer ) );
+	if( !*text ) {
+		Com_Printf( "No %s to dump.\n", name );
+		return;
+	}
+
+    len = Q_concat( buffer, sizeof( buffer ), "layouts/", Cmd_Argv( 1 ), ".txt", NULL );
+    if( len >= sizeof( buffer ) ) {
+		Com_EPrintf( "Oversize filename specified.\n" );
+        return;
+    }
 
 	FS_FOpenFile( buffer, &f, FS_MODE_WRITE );
 	if( !f ) {
@@ -1985,50 +2026,19 @@ static void CL_DumpStatusbar_f( void ) {
 		return;
 	}
 
-	FS_FPrintf( f, "// status bar program dump of '%s' mod\n",
-        Cvar_VariableString( "gamedir" ) );
-	FS_FPrintf( f, "%s\n", cl.configstrings[CS_STATUSBAR] );
+	FS_FPrintf( f, "%s\n", text );
 
 	FS_FCloseFile( f );
 
-	Com_Printf( "Dumped status bar program to %s.\n", buffer );
+	Com_Printf( "Dumped %s program to %s.\n", name, buffer );
+}
+
+static void CL_DumpStatusbar_f( void ) {
+    dump_program( cl.configstrings[CS_STATUSBAR], "status bar" );
 }
 
 static void CL_DumpLayout_f( void ) {
-	char buffer[MAX_QPATH];
-	fileHandle_t f;
-
-    if ( cls.state != ca_active ) {
-		Com_Printf( "Must be in a level to dump.\n" );
-        return;
-    }
-
-	if( Cmd_Argc() != 2 ) {
-		Com_Printf( "Usage: %s <filename>\n", Cmd_Argv( 0 ) );
-		return;
-	}
-
-	if( !cl.layout[0] ) {
-		Com_Printf( "No layout to dump.\n" );
-		return;
-	}
-
-	Cmd_ArgvBuffer( 1, buffer, sizeof( buffer ) );
-	COM_DefaultExtension( buffer, ".txt", sizeof( buffer ) );
-
-	FS_FOpenFile( buffer, &f, FS_MODE_WRITE );
-	if( !f ) {
-		Com_EPrintf( "Couldn't open %s for writing.\n", buffer );
-		return;
-	}
-
-	FS_FPrintf( f, "// layout program dump of '%s' mod\n",
-            Cvar_VariableString( "gamedir" ) );
-	FS_FPrintf( f, "%s\n", cl.layout );
-
-	FS_FCloseFile( f );
-
-	Com_Printf( "Dumped layout program to %s.\n", buffer );
+	dump_program( cl.layout, "layout" );
 }
 
 static const cmd_option_t o_writeconfig[] = {
@@ -2050,11 +2060,11 @@ CL_WriteConfig_f
 ===============
 */
 static void CL_WriteConfig_f( void ) {
-	char buffer[MAX_QPATH];
+	char buffer[MAX_OSPATH];
     qboolean aliases = qfalse, bindings = qfalse, modified = qfalse;
-    int mask = 0;
+    int c, mask = 0;
 	fileHandle_t f;
-    int c;
+    size_t len;
 
     while( ( c = Cmd_ParseOptions( o_writeconfig ) ) != -1 ) {
         switch( c ) {
@@ -2092,8 +2102,11 @@ static void CL_WriteConfig_f( void ) {
         mask = CVAR_ARCHIVE;
     }
 
-	Q_strncpyz( buffer, cmd_optarg, sizeof( buffer ) );
-	COM_AppendExtension( buffer, ".cfg", sizeof( buffer ) );
+    len = Q_concat( buffer, sizeof( buffer ), "configs/", cmd_optarg, ".cfg", NULL );
+    if( len >= sizeof( buffer ) ) {
+		Com_EPrintf( "Oversize filename specified.\n" );
+        return;
+    }
 
 	FS_FOpenFile( buffer, &f, FS_MODE_WRITE );
 	if( !f ) {
@@ -2126,17 +2139,11 @@ static void CL_Say_c( genctx_t *ctx, int argnum ) {
 }
 
 static size_t CL_Mapname_m( char *buffer, size_t size ) {
-    if( !cl.mapname[0] ) {
-        return Q_strncpyz( buffer, "nomap", size );
-    }
-    return Q_strncpyz( buffer, cl.mapname, size );
+    return Q_strlcpy( buffer, cl.mapname, size );
 }
 
 static size_t CL_Server_m( char *buffer, size_t size ) {
-    if( cls.state <= ca_disconnected ) {
-        return Q_strncpyz( buffer, "noserver", size );
-    }
-    return Q_strncpyz( buffer, cls.servername, size );
+    return Q_strlcpy( buffer, cls.servername, size );
 }
 
 static size_t CL_Ups_m( char *buffer, size_t size ) {
@@ -2145,7 +2152,9 @@ static size_t CL_Ups_m( char *buffer, size_t size ) {
 	player_state_t *ps;
 
 	if( cl.frame.clientNum == CLIENTNUM_NONE ) {
-		buffer[0] = 0;
+        if( size ) {
+    		*buffer = 0;
+        }
 		return 0;
 	}
 
@@ -2162,7 +2171,7 @@ static size_t CL_Ups_m( char *buffer, size_t size ) {
 	}
 
 	ups = VectorLength( vel );
-	return Com_sprintf( buffer, size, "%d", ups );
+	return Q_snprintf( buffer, size, "%d", ups );
 }
 
 static size_t CL_Timer_m( char *buffer, size_t size ) {
@@ -2173,25 +2182,25 @@ static size_t CL_Timer_m( char *buffer, size_t size ) {
 	hour = min / 60; min %= 60;
 
 	if( hour ) {
-		return Com_sprintf( buffer, size, "%i:%i:%02i", hour, min, sec );
+		return Q_snprintf( buffer, size, "%i:%i:%02i", hour, min, sec );
     }
-	return Com_sprintf( buffer, size, "%i:%02i", min, sec );
+	return Q_snprintf( buffer, size, "%i:%02i", min, sec );
 }
 
 static size_t CL_Fps_m( char *buffer, size_t size ) {
-	return Com_sprintf( buffer, size, "%i", cls.fps );
+	return Q_snprintf( buffer, size, "%i", cls.fps );
 }
 static size_t CL_Ping_m( char *buffer, size_t size ) {
-	return Com_sprintf( buffer, size, "%i", cls.ping );
+	return Q_snprintf( buffer, size, "%i", cls.ping );
 }
 static size_t CL_Health_m( char *buffer, size_t size ) {
-	return Com_sprintf( buffer, size, "%i", cl.frame.ps.stats[STAT_HEALTH] );
+	return Q_snprintf( buffer, size, "%i", cl.frame.ps.stats[STAT_HEALTH] );
 }
 static size_t CL_Ammo_m( char *buffer, size_t size ) {
-	return Com_sprintf( buffer, size, "%i", cl.frame.ps.stats[STAT_AMMO] );
+	return Q_snprintf( buffer, size, "%i", cl.frame.ps.stats[STAT_AMMO] );
 }
 static size_t CL_Armor_m( char *buffer, size_t size ) {
-	return Com_sprintf( buffer, size, "%i", cl.frame.ps.stats[STAT_ARMOR] );
+	return Q_snprintf( buffer, size, "%i", cl.frame.ps.stats[STAT_ARMOR] );
 }
 
 /*
@@ -2338,7 +2347,8 @@ static const cmdreg_t c_client[] = {
     { "pingservers", CL_PingServers_f },
     { "skins", CL_Skins_f },
     { "userinfo", CL_Userinfo_f },
-    { "snd_restart", CL_Snd_Restart_f },
+    { "snd_restart", CL_RestartSound_f },
+    { "play", CL_PlaySound_f, CL_PlaySound_c },
     { "changing", CL_Changing_f },
     { "disconnect", CL_Disconnect_f },
     { "connect", CL_Connect_f, CL_Connect_c },

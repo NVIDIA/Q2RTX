@@ -49,7 +49,7 @@ cvar_t	*fixedtime;
 cvar_t	*dedicated;
 cvar_t	*com_version;
 
-cvar_t	*logfile_active;	// 1 = create new, 2 = append to existing
+cvar_t	*logfile_enable;	// 1 = create new, 2 = append to existing
 cvar_t	*logfile_flush;		// 1 = flush after each print
 cvar_t	*logfile_name;
 cvar_t	*logfile_prefix;
@@ -149,7 +149,7 @@ static void Com_Redirect( const char *msg, size_t total ) {
     }
 }
 
-static void LogFile_Close( void ) {
+static void logfile_close( void ) {
 	if( !com_logFile ) {
 		return;
 	}
@@ -160,47 +160,50 @@ static void LogFile_Close( void ) {
 	com_logFile = 0;
 }
 
-static void LogFile_Open( void ) {
-	unsigned mode;
+static void logfile_open( void ) {
+    char buffer[MAX_OSPATH];
+    size_t len;
+	int mode;
 
-	if( com_logFile ) {
-        LogFile_Close();
+    len = Q_concat( buffer, sizeof( buffer ), "logs/",
+        logfile_name->string, ".log", NULL );
+    if( len >= sizeof( buffer ) ) {
+		Com_WPrintf( "Oversize logfile name specified\n" );
+		Cvar_Set( "logfile", "0" );
+		return;
     }
 
-	mode = logfile_active->integer > 1 ? FS_MODE_APPEND : FS_MODE_WRITE;
-
+	mode = logfile_enable->integer > 1 ? FS_MODE_APPEND : FS_MODE_WRITE;
 	if( logfile_flush->integer ) {
 		mode |= FS_FLUSH_SYNC;
 	}
 
-	FS_FOpenFile( logfile_name->string, &com_logFile, mode );
-
+	FS_FOpenFile( buffer, &com_logFile, mode );
 	if( !com_logFile ) {
-		Com_WPrintf( "Couldn't open %s\n", logfile_name->string );
+		Com_WPrintf( "Couldn't open %s for writing\n", buffer );
 		Cvar_Set( "logfile", "0" );
 		return;
 	}
 
     com_logNewline = qtrue;
-	Com_Printf( "Logging console to %s\n", logfile_name->string );
+	Com_Printf( "Logging console to %s\n", buffer );
 }
 
-static void logfile_active_changed( cvar_t *self ) {
-	if( !self->integer ) {
-		LogFile_Close();
-	} else {
-		LogFile_Open();
+static void logfile_enable_changed( cvar_t *self ) {
+	logfile_close();
+	if( self->integer ) {
+		logfile_open();
 	}	
 }
 
 static void logfile_param_changed( cvar_t *self ) {
-	if( logfile_active->integer ) {
-		LogFile_Close();
-		LogFile_Open();
+	if( logfile_enable->integer ) {
+		logfile_close();
+		logfile_open();
 	}	
 }
 
-static void LogFile_Output( const char *string ) {
+static void logfile_write( const char *string ) {
 	char text[MAXPRINTMSG];
     char timebuf[MAX_QPATH];
 	char *p, *maxp;
@@ -275,6 +278,10 @@ void Com_Printf( const char *fmt, ... ) {
 	len = Q_vsnprintf( msg, sizeof( msg ), fmt, argptr );
 	va_end( argptr );
 
+    if( len >= sizeof( msg ) ) {
+        len = sizeof( msg ) - 1;
+    }
+
 	if( rd_target ) {
         Com_Redirect( msg, len );
 	} else {
@@ -289,7 +296,7 @@ void Com_Printf( const char *fmt, ... ) {
 
 		// logfile
 		if( com_logFile ) {
-			LogFile_Output( msg );
+			logfile_write( msg );
 		}
 	}
 
@@ -465,7 +472,7 @@ void Com_Quit( const char *reason ) {
     if( reason && *reason ) {
         char buffer[MAX_STRING_TOKENS];
 
-        Com_sprintf( buffer, sizeof( buffer ),
+        Q_snprintf( buffer, sizeof( buffer ),
             "Server quit: %s\n", reason );
 	    SV_Shutdown( buffer, KILL_DROP );
     } else {
@@ -1011,16 +1018,16 @@ size_t Com_Uptime_m( char *buffer, size_t size ) {
     day = hour / 24; hour %= 24;
 
     if( day ) {
-        return Com_sprintf( buffer, size, "%d+%d:%02d.%02d", day, hour, min, sec );
+        return Q_snprintf( buffer, size, "%d+%d:%02d.%02d", day, hour, min, sec );
     }
     if( hour ) {
-        return Com_sprintf( buffer, size, "%d:%02d.%02d", hour, min, sec );
+        return Q_snprintf( buffer, size, "%d:%02d.%02d", hour, min, sec );
     }
-    return Com_sprintf( buffer, size, "%02d.%02d", min, sec );
+    return Q_snprintf( buffer, size, "%02d.%02d", min, sec );
 }
 
 size_t Com_Random_m( char *buffer, size_t size ) {
-    return Com_sprintf( buffer, size, "%d", ( rand() ^ ( rand() >> 8 ) ) % 10 );
+    return Q_snprintf( buffer, size, "%d", ( rand() ^ ( rand() >> 8 ) ) % 10 );
 }
 
 static size_t Com_MapList_m( char *buffer, size_t size ) {
@@ -1293,9 +1300,9 @@ void Qcommon_Init( int argc, char **argv ) {
 	developer = Cvar_Get ("developer", "0", 0);
 	timescale = Cvar_Get ("timescale", "1", CVAR_CHEAT );
 	fixedtime = Cvar_Get ("fixedtime", "0", CVAR_CHEAT );
-	logfile_active = Cvar_Get( "logfile", "0", 0 );
+	logfile_enable = Cvar_Get( "logfile", "0", 0 );
 	logfile_flush = Cvar_Get( "logfile_flush", "0", 0 );
-	logfile_name = Cvar_Get( "logfile_name", COM_LOGFILE_NAME, 0 );
+	logfile_name = Cvar_Get( "logfile_name", "console", 0 );
 	logfile_prefix = Cvar_Get( "logfile_prefix", "[%Y-%m-%d %H:%M] ", 0 );
 #if USE_CLIENT
 	dedicated = Cvar_Get ("dedicated", "0", CVAR_NOSET);
@@ -1349,10 +1356,10 @@ void Qcommon_Init( int argc, char **argv ) {
     com_initialized = qtrue;
 
 	// after FS is initialized, open logfile
-	logfile_active->changed = logfile_active_changed;
+	logfile_enable->changed = logfile_enable_changed;
 	logfile_flush->changed = logfile_param_changed;
 	logfile_name->changed = logfile_param_changed;
-	logfile_active_changed( logfile_active );
+	logfile_enable_changed( logfile_enable );
 
 	Cbuf_AddText( "exec "COM_DEFAULTCFG_NAME"\n" );
 	Cbuf_Execute();
@@ -1547,7 +1554,7 @@ Qcommon_Shutdown
 */
 void Qcommon_Shutdown( qboolean fatalError ) {
     NET_Shutdown();
-	LogFile_Close();
+	logfile_close();
 	FS_Shutdown( qtrue );
 }
 

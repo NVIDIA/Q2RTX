@@ -264,7 +264,7 @@ void SCR_CenterPrint( const char *str ) {
         return;
     }
 
-	Q_strncpyz( scr_centerstring, str, sizeof( scr_centerstring ) );
+	Q_strlcpy( scr_centerstring, str, sizeof( scr_centerstring ) );
 
 	// count the number of lines for centering
 	scr_center_lines = 1;
@@ -445,7 +445,7 @@ void SCR_TouchPics( void ) {
 			Cvar_Set( "crosshair", "0" );
 		}
 
-		Com_sprintf( buffer, sizeof( buffer ), "ch%i", crosshair->integer );
+		Q_snprintf( buffer, sizeof( buffer ), "ch%i", crosshair->integer );
 		crosshair_pic = R_RegisterPic( buffer );
 		R_GetPicSize( &crosshair_width, &crosshair_height, crosshair_pic );
 	}
@@ -654,7 +654,7 @@ void HUD_DrawNumber( int x, int y, int color, int width, int value ) {
 
 	color &= 1;
 
-	l = Com_sprintf( num, sizeof( num ), "%i", value );
+	l = Q_snprintf( num, sizeof( num ), "%i", value );
 	if( l > width )
 		l = width;
 	x += 2 + DIGIT_WIDTH * ( width - l );
@@ -727,7 +727,7 @@ void SCR_DrawInventory( void ) {
             "use ", cl.configstrings[CS_ITEMS + item], NULL );
 		bind = Key_GetBinding( string );
 
-		Com_sprintf( string, sizeof( string ), "%6s %3i %s",
+		Q_snprintf( string, sizeof( string ), "%6s %3i %s",
             bind, cl.inventory[item], cl.configstrings[CS_ITEMS + item] );
 		
 		if( item != selected ) {
@@ -854,11 +854,11 @@ void SCR_ExecuteLayoutString( const char *s ) {
 			time = atoi( token );
 
 			HUD_DrawString( x + 32, y, ci->name );
-            Com_sprintf( buffer, sizeof( buffer ), "Score: %i", score ); 
+            Q_snprintf( buffer, sizeof( buffer ), "Score: %i", score ); 
 			HUD_DrawString( x + 32, y + CHAR_HEIGHT, buffer );
-            Com_sprintf( buffer, sizeof( buffer ), "Ping:  %i", ping ); 
+            Q_snprintf( buffer, sizeof( buffer ), "Ping:  %i", ping ); 
 			HUD_DrawString( x + 32, y + 2 * CHAR_HEIGHT, buffer );
-            Com_sprintf( buffer, sizeof( buffer ), "Time:  %i", time ); 
+            Q_snprintf( buffer, sizeof( buffer ), "Time:  %i", time ); 
 			HUD_DrawString( x + 32, y + 3 * CHAR_HEIGHT, buffer );
 
 			if( !ci->icon ) {
@@ -892,7 +892,7 @@ void SCR_ExecuteLayoutString( const char *s ) {
 			if( ping > 999 )
 				ping = 999;
 
-			Com_sprintf( buffer, sizeof( buffer ), "%3d %3d %-12.12s",
+			Q_snprintf( buffer, sizeof( buffer ), "%3d %3d %-12.12s",
                 score, ping, ci->name );
             if( value == cl.frame.clientNum ) {
 				HUD_DrawAltString( x, y, buffer );

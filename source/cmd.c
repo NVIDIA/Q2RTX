@@ -588,7 +588,7 @@ void Cmd_ArgvBuffer( int arg, char *buffer, int size ) {
 		s = cmd_argv[arg];
 	}
 
-	Q_strncpyz( buffer, s, size );	
+	Q_strlcpy( buffer, s, size );	
 }
 
 
@@ -633,7 +633,7 @@ Cmd_ArgsBuffer
 ============
 */
 void Cmd_ArgsBuffer( char *buffer, int size ) {
-	Q_strncpyz( buffer, Cmd_Args(), size );	
+	Q_strlcpy( buffer, Cmd_Args(), size );	
 }
 
 /*
@@ -798,7 +798,7 @@ void Cmd_PrintHelp( const cmd_option_t *opt ) {
             Q_concat( buffer, sizeof( buffer ),
                 opt->lo, "=<", opt->sh + 2, ">", NULL );
         } else {
-            Q_strncpyz( buffer, opt->lo, sizeof( buffer ) );
+            Q_strlcpy( buffer, opt->lo, sizeof( buffer ) );
         }
         Com_Printf( "-%c | --%-16.16s | %s\n", opt->sh[0], buffer, opt->help );
         opt++;
@@ -1030,7 +1030,11 @@ void Cmd_TokenizeString( const char *text, qboolean macroExpand ) {
 		}
 	}
 
-	cmd_string_len = Q_strncpyz( cmd_string, text, sizeof( cmd_string ) );
+	cmd_string_len = Q_strlcpy( cmd_string, text, sizeof( cmd_string ) );
+    if( cmd_string_len >= sizeof( cmd_string ) ) {
+		Com_Printf( "Line exceeded %i chars, discarded.\n", MAX_STRING_CHARS );
+        return;
+    }
 
 	dest = cmd_data;
 	start = data = cmd_string;
@@ -1302,7 +1306,7 @@ static void Cmd_Exec_f( void ) {
 	FS_LoadFile( buffer, ( void ** )&f );
 	if( !f ) {
         // try with *.cfg extension
-        COM_AppendExtension( buffer, ".cfg", sizeof( buffer ) );
+        COM_DefaultExtension( buffer, ".cfg", sizeof( buffer ) );
         FS_LoadFile( buffer, ( void ** )&f );
 		if( !f ) {
 			Com_Printf( "Couldn't exec %s\n", buffer );

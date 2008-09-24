@@ -81,8 +81,6 @@ qboolean    FS_NeedRestart( void );
 void        FS_Restart( void );
 qboolean    FS_SafeToRestart( void );
 
-qboolean FS_CopyFile( const char *src, const char *dst );
-qboolean FS_RemoveFile( const char *path );
 qboolean FS_RenameFile( const char *from, const char *to );
 
 char    *FS_CopyExtraInfo( const char *name, const fsFileInfo_t *info );
@@ -121,11 +119,6 @@ fsFileInfo_t *FS_CopyInfo( const char *name, size_t size, time_t ctime, time_t m
 void	FS_FreeList( void **list );
 
 qboolean	FS_LastFileFromPak( void );
-
-void	FS_CreatePath( const char *path );
-
-//const char *FS_GetFileName( fileHandle_t f );
-const char *FS_GetFileFullPath( fileHandle_t f );
 
 char    *FS_ReplaceSeparators( char *s, int separator );
 

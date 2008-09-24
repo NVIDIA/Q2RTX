@@ -778,7 +778,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
         if( !down ) {
             kb = keybindings[key];
             if( kb && kb[0] == '+' ) {
-                Com_sprintf( cmd, sizeof( cmd ), "-%s %i %i\n",
+                Q_snprintf( cmd, sizeof( cmd ), "-%s %i %i\n",
                     kb + 1, key, time );
                 Cbuf_InsertText( cmd );
             }
@@ -786,7 +786,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
             if( keyshift[key] != key ) {
                 kb = keybindings[keyshift[key]];
                 if( kb && kb[0] == '+' ) {
-                    Com_sprintf( cmd, sizeof( cmd ), "-%s %i %i\n",
+                    Q_snprintf( cmd, sizeof( cmd ), "-%s %i %i\n",
                         kb + 1, key, time );
                     Cbuf_InsertText( cmd );
                 }
@@ -809,7 +809,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
 		if( kb ) {
 			if( kb[0] == '+' ) {	
 				// button commands add keynum and time as a parm
-				Com_sprintf( cmd, sizeof( cmd ), "%s %i %i\n", kb, key, time );
+				Q_snprintf( cmd, sizeof( cmd ), "%s %i %i\n", kb, key, time );
 				Cbuf_InsertText( cmd );
 			} else {
 				Cbuf_InsertText( kb );

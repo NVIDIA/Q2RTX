@@ -206,7 +206,7 @@ static void AC_ParseHash( const char *data, int linenum, const char *path ) {
     int i;
 
     if( *data == '!' ) {
-        Q_strncpyz( acs.hashlist_name, data + 1, sizeof( acs.hashlist_name ) );
+        Q_strlcpy( acs.hashlist_name, data + 1, sizeof( acs.hashlist_name ) );
         return;
     }
 
@@ -420,7 +420,7 @@ static void AC_LoadChecks( void ) {
             "please check the " AC_HASHES_NAME ".\n" );
         strcpy( acs.hashlist_name, "none" );
     } else if( !acs.hashlist_name[0] ) {
-         Com_sprintf( acs.hashlist_name, MAX_QPATH, "unknown (%d %s)",
+         Q_snprintf( acs.hashlist_name, MAX_QPATH, "unknown (%d %s)",
              acs.num_files, acs.num_files == 1 ? "entry" : "entries" );
     }
 
@@ -532,6 +532,11 @@ static void AC_Announce( client_t *client, const char *fmt, ... ) {
 	len = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
 	va_end( argptr );
 
+    if( len >= sizeof( string ) ) {
+        Com_WPrintf( "%s: overflow\n", __func__ );
+        return;
+    }
+
 	MSG_WriteByte( svc_print );
 	MSG_WriteByte( PRINT_HIGH );
 	MSG_WriteData( AC_MESSAGE, sizeof( AC_MESSAGE ) - 1 );
@@ -585,7 +590,8 @@ static client_t *AC_ParseClient( void ) {
 
 static void AC_ParseViolation( void ) {
 	client_t		*cl;
-    char		*reason, *clientreason;
+    char		    reason[32];
+    char            clientreason[64];
 
     cl = AC_ParseClient();
     if( !cl ) {
@@ -597,12 +603,12 @@ static void AC_ParseViolation( void ) {
         return;
     }
 
-	reason = MSG_ReadString();
+	MSG_ReadString( reason, sizeof( reason ) );
 
 	if( msg_read.readcount < msg_read.cursize ) {
-		clientreason = MSG_ReadString();
+		MSG_ReadString( clientreason, sizeof( clientreason ) );
     } else {
-		clientreason = NULL;
+		clientreason[0] = 0;
     }
 
     // FIXME: should we notify other players about anticheat violations 
@@ -616,7 +622,7 @@ static void AC_ParseViolation( void ) {
         char	showreason[32];
 
         if( ac_show_violation_reason->integer )
-            Com_sprintf( showreason, sizeof( showreason ), " (%s)", reason );
+            Q_snprintf( showreason, sizeof( showreason ), " (%s)", reason );
         else
             showreason[0] = 0;
 
@@ -626,7 +632,7 @@ static void AC_ParseViolation( void ) {
         Com_Printf( "ANTICHEAT VIOLATION: %s[%s] was kicked: %s\n",
             cl->name, NET_AdrToString( &cl->netchan->remote_address ), reason );
 
-        if( clientreason )
+        if( clientreason[0] )
             SV_ClientPrintf( cl, PRINT_HIGH, "%s\n", clientreason );
 
         // hack to fix late zombies race condition
@@ -681,7 +687,8 @@ static void AC_ParseClientAck( void ) {
 static void AC_ParseFileViolation( void ) {
 	string_entry_t	*bad;
 	client_t	*cl;
-	char		*path, *hash;
+	char		path[MAX_QPATH];
+    char        hash[MAX_QPATH];
     int			action;
 	size_t		pathlen;
     ac_file_t	*f;
@@ -696,11 +703,17 @@ static void AC_ParseFileViolation( void ) {
         return;
     }
 
-	path = MSG_ReadStringLength( &pathlen );
-	if( msg_read.readcount < msg_read.cursize )
-		hash = MSG_ReadString();
-	else
-		hash = "no hash?";
+	pathlen = MSG_ReadString( path, sizeof( path ) );
+    if( pathlen >= sizeof( path ) ) {
+        Com_WPrintf( "ANTICHEAT: Oversize path in %s\n", __func__ );
+        pathlen = sizeof( path ) - 1;
+    }
+
+	if( msg_read.readcount < msg_read.cursize ) {
+		MSG_ReadString( hash, sizeof( hash ) );
+    } else {
+		strcpy( hash, "no hash?" );
+    }
 
     cl->ac_file_failures++;
 
@@ -817,6 +830,14 @@ static void AC_ParseDisconnect ( void ) {
 	}
 }
 
+static void AC_ParseError( void ) {
+    char string[MAX_STRING_CHARS];
+
+    MSG_ReadString( string, sizeof( string ) );
+    Com_EPrintf( "ANTICHEAT: %s\n", string );
+    AC_Disable();
+}
+
 static qboolean AC_ParseMessage( void ) {
     uint16_t msglen;
     byte *data;
@@ -873,8 +894,7 @@ static qboolean AC_ParseMessage( void ) {
         AC_ParseQueryReply();
         break;
     case ACS_ERROR:
-        Com_EPrintf( "ANTICHEAT: %s\n", MSG_ReadString() );
-        AC_Disable();
+        AC_ParseError();
         return qfalse;
     case ACS_NOACCESS:
         Com_WPrintf( "ANTICHEAT: You do not have permission to "

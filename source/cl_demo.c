@@ -258,13 +258,12 @@ Begins recording a demo from the current position
 */
 static void CL_Record_f( void ) {
     char    name[MAX_OSPATH];
-    int        i;
-    size_t    length;
-    entity_state_t    *ent;
-    char *string;
-    fileHandle_t demofile;
-    qboolean gzip = qfalse;
-    int c;
+    int     i, c;
+    size_t  len;
+    entity_state_t  *ent;
+    char            *string;
+    fileHandle_t    demofile;
+    qboolean        gzip = qfalse;
 
     if( cls.demo.recording ) {
         Com_Printf( "Already recording.\n" );
@@ -300,14 +299,11 @@ static void CL_Record_f( void ) {
     //
     // open the demo file
     //
-    if( cmd_optarg[0] == '/' ) {
-        Q_strncpyz( name, cmd_optarg + 1, sizeof( name ) );
-    } else {
-        Q_concat( name, sizeof( name ), "demos/", cmd_optarg, NULL );
-        COM_AppendExtension( name, ".dm2", sizeof( name ) );
-        if( gzip ) {
-            COM_AppendExtension( name, ".gz", sizeof( name ) );
-        }
+    len = Q_concat( name, sizeof( name ), "demos/", cmd_optarg,
+        gzip ? ".dm2.gz" : ".dm2", NULL );
+    if( len >= sizeof( name ) ) {
+		Com_EPrintf( "Oversize filename specified.\n" );
+        return;
     }
 
     FS_FOpenFile( name, &demofile, FS_MODE_WRITE );
@@ -359,18 +355,18 @@ static void CL_Record_f( void ) {
             continue;
         }
 
-        length = strlen( string );
-        if( length > MAX_QPATH ) {
-            length = MAX_QPATH;
+        len = strlen( string );
+        if( len > MAX_QPATH ) {
+            len = MAX_QPATH;
         }
         
-        if( msg_write.cursize + length + 4 > MAX_PACKETLEN_WRITABLE_DEFAULT ) {
+        if( msg_write.cursize + len + 4 > MAX_PACKETLEN_WRITABLE_DEFAULT ) {
             CL_WriteDemoMessage( &msg_write );
         }
 
         MSG_WriteByte( svc_configstring );
         MSG_WriteShort( i );
-        MSG_WriteData( string, length );
+        MSG_WriteData( string, len );
         MSG_WriteByte( 0 );
     }
 
@@ -599,14 +595,14 @@ static void CL_PlayDemo_f( void ) {
     arg = Cmd_Argv( 1 );
     if( arg[0] == '/' ) {
         // Assume full path is given
-        Q_strncpyz( name, arg + 1, sizeof( name ) );
+        Q_strlcpy( name, arg + 1, sizeof( name ) );
         FS_FOpenFile( name, &demofile, FS_MODE_READ );
     } else {
         // Search for matching extensions
         Q_concat( name, sizeof( name ), "demos/", arg, NULL );
         FS_FOpenFile( name, &demofile, FS_MODE_READ );    
         if( !demofile ) {
-            COM_AppendExtension( name, ".dm2", sizeof( name ) );
+            COM_DefaultExtension( name, ".dm2", sizeof( name ) );
             FS_FOpenFile( name, &demofile, FS_MODE_READ );
         }
     }
@@ -651,7 +647,7 @@ static void CL_PlayDemo_f( void ) {
 
     cls.demo.playback = demofile;
     cls.state = ca_connected;
-    Q_strncpyz( cls.servername, COM_SkipPath( name ), sizeof( cls.servername ) );
+    Q_strlcpy( cls.servername, COM_SkipPath( name ), sizeof( cls.servername ) );
     cls.serverAddress.type = NA_LOOPBACK;
 
     SCR_UpdateScreen();
@@ -689,16 +685,17 @@ static void CL_ParseInfoString( demoInfo_t *info, int clientNum, int index, cons
 
     if( index >= CS_PLAYERSKINS && index < CS_PLAYERSKINS + MAX_CLIENTS ) {
         if( index - CS_PLAYERSKINS == clientNum ) {
-            p = strchr( string, '\\' );
+            Q_strlcpy( info->pov, string, sizeof( info->pov ) );
+            p = strchr( info->pov, '\\' );
             if( p ) {
                 *p = 0;
             }
-            Q_strncpyz( info->pov, string, sizeof( info->pov ) );
         }
     } else if( index == CS_MODELS + 1 ) {
-        if( strlen( string ) > 9 ) {
-            len = Q_strncpyz( info->map, string + 5, sizeof( info->map ) ); // skip "maps/"
-            info->map[ len - 4 ] = 0; // cut off ".bsp"
+        len = strlen( string );
+        if( len > 9 ) {
+            memcpy( info->map, string + 5, len - 9 ); // skip "maps/"
+            info->map[ len - 9 ] = 0; // cut off ".bsp"
         }
     }
 }
@@ -711,7 +708,7 @@ CL_GetDemoInfo
 demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info ) {
     fileHandle_t f;
     int c, index;
-    char *string;
+    char string[MAX_QPATH];
     int clientNum, type;
 
     FS_FOpenFile( path, &f, FS_MODE_READ );
@@ -733,9 +730,9 @@ demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info ) {
         }
         MSG_ReadLong();
         MSG_ReadByte();
-        MSG_ReadString();
+        MSG_ReadString( NULL, 0);
         clientNum = MSG_ReadShort();
-        MSG_ReadString();
+        MSG_ReadString( NULL, 0 );
 
         while( 1 ) {
             c = MSG_ReadByte();
@@ -752,7 +749,7 @@ demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info ) {
             if( index < 0 || index >= MAX_CONFIGSTRINGS ) {
                 goto fail;
             }
-            string = MSG_ReadString();
+            MSG_ReadString( string, sizeof( string ) );
             CL_ParseInfoString( info, clientNum, index, string );
         }
     } else {
@@ -764,7 +761,7 @@ demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info ) {
         }
         MSG_ReadShort();
         MSG_ReadLong();
-        MSG_ReadString();
+        MSG_ReadString( NULL, 0 );
         clientNum = MSG_ReadShort();
 
         while( 1 ) {
@@ -775,7 +772,7 @@ demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info ) {
             if( index < 0 || index >= MAX_CONFIGSTRINGS ) {
                 goto fail;
             }
-            string = MSG_ReadString();
+            MSG_ReadString( string, sizeof( string ) );
             CL_ParseInfoString( info, clientNum, index, string );
         }
     }

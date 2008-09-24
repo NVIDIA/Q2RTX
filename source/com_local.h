@@ -340,8 +340,11 @@ int Cvar_VariableInteger( const char *var_name );
 // returns 0 if not defined or non numeric
 
 char	*Cvar_VariableString( const char *var_name );
-void Cvar_VariableStringBuffer( const char *var_name, char *buffer, int bufferSize );
 // returns an empty string if not defined
+
+static inline size_t Cvar_VariableStringBuffer( const char *var_name, char *buffer, size_t size ) {
+    return Q_strlcpy( buffer, Cvar_VariableString( var_name ), size );
+}
 
 cvar_t *Cvar_FindVar( const char *var_name );
 
