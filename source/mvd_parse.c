@@ -291,7 +291,7 @@ static void MVD_UnicastSend( mvd_t *mvd, qboolean reliable, byte *data, size_t l
 static void MVD_UnicastLayout( mvd_t *mvd, qboolean reliable, mvd_player_t *player ) {
     udpClient_t *client;
 
-    if( player == mvd->dummy ) {
+    if( player != mvd->dummy ) {
         MSG_ReadString( NULL, 0 );
         return; // we don't care about others
     }
