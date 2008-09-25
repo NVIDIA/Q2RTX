@@ -171,13 +171,13 @@ Sys_ConsoleInput
 ================
 */
 void Sys_RunConsole( void ) {
-	INPUT_RECORD	recs[MAX_CONSOLE_INPUT_EVENTS];
-	DWORD		dummy;
+	INPUT_RECORD    recs[MAX_CONSOLE_INPUT_EVENTS];
+	DWORD   dummy;
 	int		ch;
-	DWORD numread, numevents;
-	int i;
-	inputField_t *f;
-	char *s;
+	DWORD   numread, numevents;
+	int     i;
+	inputField_t    *f;
+	char    *s;
 
 	if( hinput == INVALID_HANDLE_VALUE ) {
 		return;
@@ -209,7 +209,26 @@ void Sys_RunConsole( void ) {
 			
 		for( i = 0; i < numread; i++ ) {
 			if( recs[i].EventType == WINDOW_BUFFER_SIZE_EVENT ) {
-				sys_con.widthInChars = recs[i].Event.WindowBufferSizeEvent.dwSize.X;
+                // determine terminal width
+                size_t width = recs[i].Event.WindowBufferSizeEvent.dwSize.X;
+
+                if( !width ) {
+                    Com_EPrintf( "Invalid console buffer width.\n" );
+			        gotConsole = qfalse;
+                    return;
+                }
+                
+				sys_con.widthInChars = width;
+                 
+                // figure out input line width
+                width--;
+                if( width > MAX_FIELD_TEXT - 1 ) {
+                    width = MAX_FIELD_TEXT - 1;
+                }
+
+                Sys_HideInput();
+                IF_Init( &sys_con.inputLine, width, width );
+                Sys_ShowInput();
 				continue;
 			}
 			if( recs[i].EventType != KEY_EVENT ) {
@@ -255,6 +274,7 @@ void Sys_RunConsole( void ) {
 			case VK_TAB:
 				Sys_HideInput();
 				Prompt_CompleteCommand( &sys_con, qfalse );
+                f->cursorPos = strlen( f->text );
 				Sys_ShowInput();
 				break;
 			default:
@@ -295,12 +315,12 @@ Print text to the dedicated console
 ================
 */
 void Sys_ConsoleOutput( const char *string ) {
-	DWORD		dummy;
+	DWORD	dummy;
 	char	text[MAXPRINTMSG];
-	char *maxp, *p;
-	int length;	
-	WORD attr, w;
-	int c;
+	char    *maxp, *p;
+	size_t length;	
+	WORD    attr, w;
+	int     c;
 
 	if( houtput == INVALID_HANDLE_VALUE ) {
 		return;
@@ -383,7 +403,7 @@ static BOOL WINAPI Sys_ConsoleCtrlHandler( DWORD dwCtrlType ) {
 
 static void Sys_ConsoleInit( void ) {
 	DWORD mode;
-    int width;
+    size_t width;
 
 #if USE_CLIENT
 	if( !AllocConsole() ) {
