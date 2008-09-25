@@ -2414,7 +2414,6 @@ void FS_Shutdown( qboolean total ) {
     Cmd_RemoveCommand( "path" );
     Cmd_RemoveCommand( "fdir" );
     Cmd_RemoveCommand( "dir" );
-    Cmd_RemoveCommand( "copyfile" );
     Cmd_RemoveCommand( "fs_stats" );
     Cmd_RemoveCommand( "link" );
     Cmd_RemoveCommand( "unlink" );

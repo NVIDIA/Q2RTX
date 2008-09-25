@@ -190,8 +190,7 @@ void Sys_RunConsole( void ) {
 	f = &sys_con.inputLine;
 	while( 1 ) {
 		if( !GetNumberOfConsoleInputEvents( hinput, &numevents ) ) {
-			Com_EPrintf( "Error %lu getting number of console events.\n"
-				"Console IO disabled.\n", GetLastError() );
+			Com_EPrintf( "Error %lu getting number of console events.\n", GetLastError() );
 			gotConsole = qfalse;
 			return;
 		}
@@ -203,8 +202,7 @@ void Sys_RunConsole( void ) {
 		}
 
 		if( !ReadConsoleInput( hinput, recs, numevents, &numread ) ) {
-			Com_EPrintf( "Error %lu reading console input.\n"
-				"Console IO disabled.\n", GetLastError() );
+			Com_EPrintf( "Error %lu reading console input.\n", GetLastError() );
 			gotConsole = qfalse;
 			return;
 		}
@@ -250,15 +248,13 @@ void Sys_RunConsole( void ) {
 				break;
 			case VK_BACK:
 				if( f->cursorPos ) {
-					f->cursorPos--;
-					f->text[f->cursorPos] = 0;
+					f->text[--f->cursorPos] = 0;
 					WriteFile( houtput, "\b \b", 3, &dummy, NULL );	
 				}
 				break;
 			case VK_TAB:
 				Sys_HideInput();
 				Prompt_CompleteCommand( &sys_con, qfalse );
-				f->cursorPos = ( int )strlen( f->text );
 				Sys_ShowInput();
 				break;
 			default:
@@ -266,11 +262,10 @@ void Sys_RunConsole( void ) {
 				if( ch < 32 ) {
 					break;
 				}
-				if( f->cursorPos < sizeof( f->text ) - 1 ) {
+				if( f->cursorPos < f->maxChars - 1 ) {
 					WriteFile( houtput, &ch, 1, &dummy, NULL );
 					f->text[f->cursorPos] = ch;
-					f->text[f->cursorPos+1] = 0;
-					f->cursorPos++;
+					f->text[++f->cursorPos] = 0;
 				}
 				break;
 			}
@@ -281,7 +276,7 @@ void Sys_RunConsole( void ) {
 #define FOREGROUND_BLACK	0
 #define FOREGROUND_WHITE	(FOREGROUND_BLUE|FOREGROUND_GREEN|FOREGROUND_RED)
 
-static WORD textColors[8] = {
+static const WORD textColors[8] = {
 	FOREGROUND_BLACK,
 	FOREGROUND_RED,
 	FOREGROUND_GREEN,
@@ -381,18 +376,18 @@ static BOOL WINAPI Sys_ConsoleCtrlHandler( DWORD dwCtrlType ) {
 	if( errorEntered ) {
 		exit( 1 );
 	}
-	/* 32 bit writes are guranteed to be atomic */
+	// 32 bit writes are guranteed to be atomic
 	shouldExit = qtrue;
 	return TRUE;
 }
 
 static void Sys_ConsoleInit( void ) {
 	DWORD mode;
+    int width;
 
 #if USE_CLIENT
 	if( !AllocConsole() ) {
-		Com_EPrintf( "Couldn't create system console.\n"
-			"Console IO disabled.\n" );
+		Com_EPrintf( "Couldn't create system console.\n" );
 		return;
 	}
 #else
@@ -404,19 +399,32 @@ static void Sys_ConsoleInit( void ) {
 	hinput = GetStdHandle( STD_INPUT_HANDLE );
 	houtput = GetStdHandle( STD_OUTPUT_HANDLE );
 	if( !GetConsoleScreenBufferInfo( houtput, &sbinfo ) ) {
-		Com_EPrintf( "Couldn't get console buffer info.\n"
-			"Console IO disabled.\n" );
+		Com_EPrintf( "Couldn't get console buffer info.\n" );
 		return;
 	}
+
+    // determine terminal width
+    width = sbinfo.dwSize.X;
+    if( !width ) {
+		Com_EPrintf( "Invalid console buffer width.\n" );
+        return;
+    }
+	sys_con.widthInChars = width;
+	sys_con.printf = Sys_Printf;
+	gotConsole = qtrue;
 
 	SetConsoleTitle( APPLICATION " console" );
 	SetConsoleCtrlHandler( Sys_ConsoleCtrlHandler, TRUE );
 	GetConsoleMode( hinput, &mode );
 	mode |= ENABLE_WINDOW_INPUT;
 	SetConsoleMode( hinput, mode );
-	sys_con.widthInChars = sbinfo.dwSize.X;
-	sys_con.printf = Sys_Printf;
-	gotConsole = qtrue;
+
+    // figure out input line width
+    width--;
+    if( width > MAX_FIELD_TEXT - 1 ) {
+        width = MAX_FIELD_TEXT - 1;
+    }
+    IF_Init( &sys_con.inputLine, width, width );
 
 	Com_DPrintf( "System console initialized (%d cols, %d rows).\n",
 		sbinfo.dwSize.X, sbinfo.dwSize.Y );

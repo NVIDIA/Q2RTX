@@ -404,8 +404,8 @@ void Con_Init( void ) {
 	con_scroll = Cvar_Get( "con_scroll", "0", CVAR_ARCHIVE );
 	con_history = Cvar_Get( "con_history", "0", 0 );
 
-	IF_Init( &con.prompt.inputLine, 1, MAX_FIELD_TEXT, NULL );
-	IF_Init( &con.chatPrompt.inputLine, 1, MAX_FIELD_TEXT, NULL );
+	IF_Init( &con.prompt.inputLine, 0, MAX_FIELD_TEXT - 1 );
+	IF_Init( &con.chatPrompt.inputLine, 0, MAX_FIELD_TEXT - 1 );
 
 	con.prompt.printf = Con_Printf;
 

@@ -162,7 +162,7 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
     int numCommands = 0, numCvars = 0, numAliases = 0;
 
 	text = inputLine->text;
-	size = sizeof( inputLine->text );
+	size = inputLine->maxChars + 1;
 	pos = inputLine->cursorPos;
 
     // prepend backslash if missing
@@ -227,9 +227,9 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
     }
 
 	if( !ctx.count ) {
-		inputLine->cursorPos = strlen( inputLine->text );
+        pos = strlen( inputLine->text );
         prompt->tooMany = qfalse;
-		return; // nothing found
+		goto finish2; // nothing found
 	}
 
 	pos = Cmd_ArgOffset( currentArg );
@@ -240,25 +240,20 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 		// we have finished completion!
         s = Cmd_RawArgsFrom( currentArg + 1 ); 
         if( COM_HasSpaces( matches[0] ) ) {
-		    len = Q_concat( text, size, "\"", matches[0], "\" ", s, NULL );
+		    pos += Q_concat( text, size, "\"", matches[0], "\" ", s, NULL );
         } else {
-		    len = Q_concat( text, size, matches[0], " ", s, NULL );
+		    pos += Q_concat( text, size, matches[0], " ", s, NULL );
         }
-        if( len >= size ) {
-            len = size - 1;
-        }
-        pos += len;
-		inputLine->cursorPos = pos + 1;
+        pos++;
         prompt->tooMany = qfalse;
-        goto finish;
+        goto finish1;
 	}
 
     if( ctx.count > com_completion_treshold->integer && !prompt->tooMany ) {
-        prompt->printf( "Press TAB again to display all %d possibilities.\n",
-            ctx.count );
-		inputLine->cursorPos = strlen( inputLine->text );
+        prompt->printf( "Press TAB again to display all %d possibilities.\n", ctx.count );
+        pos = strlen( inputLine->text );
         prompt->tooMany = qtrue;
-        goto finish;
+        goto finish1;
     }
 
     prompt->tooMany = qfalse;
@@ -293,16 +288,13 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
     pos += len;
     size -= len;
 
+    // copy trailing arguments
 	if( currentArg + 1 < argc ) {
         s = Cmd_RawArgsFrom( currentArg + 1 ); 
-		len = Q_concat( text + len, size, " ", s, NULL );
-        if( len >= size ) {
-            len = size - 1;
-        }
-        pos += len;
+		pos += Q_concat( text + len, size, " ", s, NULL );
 	}
 
-	inputLine->cursorPos = pos + 1;
+    pos++;
 
 	prompt->printf( "]\\%s\n", Cmd_ArgsFrom( 0 ) );
 	if( argnum ) {
@@ -328,11 +320,18 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 		break;
 	}
 
-finish:
+finish1:
 	// free matches
 	for( i = 0; i < ctx.count; i++ ) {
 		Z_Free( matches[i] );
 	}
+
+finish2:
+    // move cursor
+    if( pos >= inputLine->maxChars ) {
+        pos = inputLine->maxChars - 1;
+    }
+    inputLine->cursorPos = pos;
 }
 
 void Prompt_CompleteHistory( commandPrompt_t *prompt, qboolean forward ) {

@@ -274,7 +274,8 @@ FIELD CONTROL
 */
 
 static void Field_Push( menuField_t *f ) {
-    IF_Init( &f->field, f->width, MAX_FIELD_TEXT, f->cvar->string );
+    IF_Init( &f->field, f->width, MAX_FIELD_TEXT - 1 );
+    IF_Replace( &f->field, f->cvar->string );
 }
 
 static void Field_Pop( menuField_t *f ) {

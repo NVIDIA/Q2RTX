@@ -126,6 +126,7 @@ static void Sys_InitTTY( void ) {
 #ifdef TIOCGWINSZ
     struct winsize ws;
 #endif
+    int width;
     
     tcgetattr( 0, &tty_orig );
     tty = tty_orig;
@@ -133,14 +134,26 @@ static void Sys_InitTTY( void ) {
     tty.c_cc[VMIN] = 1;
     tty.c_cc[VTIME] = 0;
     tcsetattr( 0, TCSADRAIN, &tty );
-    tty_prompt.widthInChars = 80;
+
+    // determine terminal width
+    width = 80;
 #ifdef TIOCGWINSZ
     if( ioctl( 0, TIOCGWINSZ, &ws ) == 0 ) {
-        tty_prompt.widthInChars = ws.ws_col;
+        if( ws.ws_col ) {
+            width = ws.ws_col;
+        }
     }
 #endif
+    tty_prompt.widthInChars = width;
     tty_prompt.printf = Sys_Printf;
     tty_enabled = qtrue;
+
+    // figure out input line width
+    width--;
+    if( width > MAX_FIELD_TEXT - 1 ) {
+        width = MAX_FIELD_TEXT - 1;
+    }
+    IF_Init( &tty_prompt.inputLine, width, width );
 
     Sys_ConsoleWrite( " ", 1 );	
 }
@@ -284,11 +297,15 @@ static void Sys_ParseInput( const char *text ) {
         }
 
         if( key >= 32 ) {
-            if( f->cursorPos < sizeof( f->text ) - 1 ) {
-                char c = key;
-                Sys_ConsoleWrite( &c, 1 );	
-                f->text[f->cursorPos] = c;
-                f->text[++f->cursorPos] = 0;
+            if( f->cursorPos == f->maxChars - 1 ) {
+                Sys_ConsoleWrite( va( "\b \b%c", key ), 4 );	
+                f->text[f->cursorPos+0] = key;
+                f->text[f->cursorPos+1] = 0;
+            } else {
+                Sys_ConsoleWrite( va( "%c", key ), 1 );	
+                f->text[f->cursorPos+0] = key;
+                f->text[f->cursorPos+1] = 0;
+                f->cursorPos++;
             }
             continue;
         }
@@ -310,10 +327,12 @@ static void Sys_ParseInput( const char *text ) {
         }
 
         if( key == '\t' ) {
+            //Con_Print(va("before=%d (%s)\n",tty_prompt.inputLine.cursorPos,tty_prompt.inputLine.text) );
             Sys_HideInput();
             Prompt_CompleteCommand( &tty_prompt, qfalse );
-            f->cursorPos = strlen( f->text );
+            f->cursorPos = strlen( f->text ); // FIXME
             Sys_ShowInput();
+            //Con_Print(va("after=%d (%s)\n",tty_prompt.inputLine.cursorPos,tty_prompt.inputLine.text) );
             continue;
         }
 

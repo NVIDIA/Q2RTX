@@ -1154,8 +1154,11 @@ void SV_ExecuteClientMessage( client_t *client ) {
                     SV_DropClient( client, "oversize stringcmd" );
                     break;
                 }
-
-                Com_DPrintf( "ClientCommand( %s ): %s\n", client->name, buffer );
+                
+                if( developer->integer ) {
+                    Com_Printf( S_COLOR_BLUE "ClientCommand( %s ): %s\n",
+                        client->name, Q_FormatString( buffer ) );
+                }
 
                 // malicious users may try using too many string commands
                 if( stringCmdCount == MAX_PACKET_STRINGCMDS ) {

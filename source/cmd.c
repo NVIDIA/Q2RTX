@@ -1036,6 +1036,15 @@ void Cmd_TokenizeString( const char *text, qboolean macroExpand ) {
         return;
     }
 
+// strip off any trailing whitespace
+    while( cmd_string_len ) {
+        if( cmd_string[ cmd_string_len - 1 ] > ' ' ) {
+            break;
+        }
+        cmd_string[ cmd_string_len - 1 ] = 0;
+        cmd_string_len--;
+    }
+
 	dest = cmd_data;
 	start = data = cmd_string;
 	while( cmd_argc < MAX_STRING_TOKENS ) {

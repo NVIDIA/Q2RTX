@@ -216,7 +216,8 @@ static qboolean Push( menuFrameWork_t *self ) {
         }
     }
 
-    IF_Init( &m_player.name.field, 16, 16, Cvar_VariableString( "name" ) );
+    IF_Init( &m_player.name.field, 16, 16 );
+    IF_Replace( &m_player.name.field, Cvar_VariableString( "name" ) );
 
     m_player.model.curvalue = currentdirectoryindex;
     m_player.model.itemnames = m_player.pmnames;
