@@ -1288,10 +1288,11 @@ NET_Init
 void NET_Init( void ) {
 #ifdef _WIN32
 	WSADATA		ws;
+    int ret;
 
-	i = WSAStartup( MAKEWORD( 1, 1 ), &ws );
-	if( i ) {
-		Com_Error( ERR_FATAL, "Winsock initialization failed, returned %d", i );
+	ret = WSAStartup( MAKEWORD( 1, 1 ), &ws );
+	if( ret ) {
+		Com_Error( ERR_FATAL, "Winsock initialization failed, returned %d", ret );
 	}
 
 	Com_DPrintf( "Winsock Initialized\n" );
