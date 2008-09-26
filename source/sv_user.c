@@ -387,7 +387,7 @@ void SV_New_f( void ) {
     // send the serverdata
     MSG_WriteByte( svc_serverdata );
     MSG_WriteLong( sv_client->protocol );
-    MSG_WriteLong( sv.spawncount );
+    MSG_WriteLong( sv_client->spawncount );
     MSG_WriteByte( 0 ); // no attract loop
     MSG_WriteString( sv_client->gamedir );
     MSG_WriteShort( sv_client->slot );
@@ -454,7 +454,7 @@ void SV_New_f( void ) {
     }
 
     // send next command
-    SV_ClientCommand( sv_client, "precache %i\n", sv.spawncount );
+    SV_ClientCommand( sv_client, "precache %i\n", sv_client->spawncount );
 }
 
 /*

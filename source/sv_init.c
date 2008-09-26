@@ -83,6 +83,7 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
     FOR_EACH_CLIENT( client ) {
 		// needs to reconnect
         SV_ClientReset( client );
+        client->spawncount = sv.spawncount;
 	}
 
     Q_concat( string, sizeof( string ), "maps/", server, ".bsp", NULL );

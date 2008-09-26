@@ -258,11 +258,21 @@ static void MVD_LayoutScores( udpClient_t *client ) {
 }
 
 static void MVD_LayoutFollow( udpClient_t *client ) {
+    mvd_t *mvd = client->mvd;
     char *name = client->target ? client->target->name : "<no target>";
+    char layout[MAX_STRING_CHARS];
+    size_t total;
+
+    total = Q_snprintf( layout, sizeof( layout ),
+        "xv 0 yb -64 string \"[%s] Chasing %s\"",
+        mvd->name, name );
+    if( total >= sizeof( layout ) ) {
+        return;
+    }
 
     // send the layout
 	MSG_WriteByte( svc_layout );
-    MSG_WriteString( va( "xv 0 yt 2 cstring \"%s\"", name ) );
+    MSG_WriteData( layout, total + 1 );
 	SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
 
 	client->layout_time = svs.realtime;
@@ -275,9 +285,7 @@ static void MVD_SetDefaultLayout( udpClient_t *client ) {
     	client->layout_type = LAYOUT_CHANNELS;
 	} else if( mvd->intermission ) {
         client->layout_type = LAYOUT_SCORES;
-	} else if( client->target && ( client->cl->protocol !=
-        PROTOCOL_VERSION_Q2PRO || client->cl->settings[CLS_RECORDING] ) )
-    {
+	} else if( client->target ) {
         client->layout_type = LAYOUT_FOLLOW;
     } else {
 		client->layout_type = LAYOUT_NONE;
@@ -626,6 +634,7 @@ void MVD_SwitchChannel( udpClient_t *client, mvd_t *mvd ) {
     cl->slot = mvd->clientNum;
     cl->cm = &mvd->cm;
     cl->pool = &mvd->pool;
+    cl->spawncount = mvd->servercount;
 
     // needs to reconnect
     MSG_WriteByte( svc_stufftext );
@@ -637,9 +646,8 @@ void MVD_SwitchChannel( udpClient_t *client, mvd_t *mvd ) {
 void MVD_TrySwitchChannel( udpClient_t *client, mvd_t *mvd ) {
     if( mvd == client->mvd ) {
         SV_ClientPrintf( client->cl, PRINT_HIGH,
-            mvd == &mvd_waitingRoom ?
-            "[MVD] You are already in the Waiting Room.\n" :
-            "[MVD] You are already on this channel.\n" );
+            "[MVD] You are already %s.\n", mvd == &mvd_waitingRoom ?
+            "in the Waiting Room" : "on this channel" );
         return; // nothing to do
     }
     if( client->begin_time ) {
@@ -1153,6 +1161,7 @@ static void MVD_GameInit( void ) {
 
     mvd->dummy = &mvd_dummy;
     mvd->pm_type = PM_FREEZE;
+    mvd->servercount = sv.spawncount;
 
     // set serverinfo variables
 	SV_InfoSet( "mapname", mvd->mapname );

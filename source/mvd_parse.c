@@ -611,10 +611,20 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
 	}
 }
 
+static void set_player_name( mvd_player_t *player, const char *string ) {
+    char *p;
+
+    Q_strlcpy( player->name, string, sizeof( player->name ) );
+    p = strchr( player->name, '\\' );
+    if( p ) {
+        *p = 0;
+    }
+}
+
 static void MVD_ParseConfigstring( mvd_t *mvd ) {
 	int index;
 	size_t len, maxlen;
-	char *string, *p;
+	char *string;
 	udpClient_t *client;
     mvd_player_t *player;
     mvd_cs_t *cs, **pcs;
@@ -635,11 +645,7 @@ static void MVD_ParseConfigstring( mvd_t *mvd ) {
 	if( index >= CS_PLAYERSKINS && index < CS_PLAYERSKINS + mvd->maxclients ) {
         // update player name
         player = &mvd->players[ index - CS_PLAYERSKINS ];
-        Q_strlcpy( player->name, string, sizeof( player->name ) );
-        p = strchr( player->name, '\\' );
-        if( p ) {
-            *p = 0;
-        }
+        set_player_name( player, string );
         LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
             if( client->cl->state < cs_spawned ) {
                 continue;
@@ -886,7 +892,7 @@ static void MVD_ParseFrame( mvd_t *mvd ) {
 static void MVD_ParseServerData( mvd_t *mvd ) {
 	int protocol;
     size_t len, maxlen;
-	char *string, *p;
+	char *string;
     int i, index;
     mvd_player_t *player;
 
@@ -989,13 +995,7 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
     for( i = 0; i < mvd->maxclients; i++ ) {
         player = &mvd->players[i];
         string = mvd->configstrings[ CS_PLAYERSKINS + i ];
-        if( *string ) {
-            Q_strlcpy( player->name, string, sizeof( player->name ) );
-            p = strchr( player->name, '\\' );
-            if( p ) {
-                *p = 0;
-            }
-        }
+        set_player_name( player, string );
     }
 
     // get the spawn point for spectators

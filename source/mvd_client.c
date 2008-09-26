@@ -28,6 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 LIST_DECL( mvd_channels );
 LIST_DECL( mvd_ready );
+LIST_DECL( mvd_active );
 
 mvd_t       mvd_waitingRoom;
 qboolean    mvd_dirty;
@@ -74,6 +75,7 @@ void MVD_Free( mvd_t *mvd ) {
 #endif
     Z_Free( mvd->players );
 
+    List_Remove( &mvd->active );
     List_Remove( &mvd->ready );
     List_Remove( &mvd->entry );
     Z_Free( mvd );
@@ -462,10 +464,11 @@ void MVD_ChangeLevel( mvd_t *mvd ) {
 
     // cause all UDP clients to reconnect
 	MSG_WriteByte( svc_stufftext );
-	MSG_WriteString( "changing; reconnect\n" );
+	MSG_WriteString( va( "changing map=%s; reconnect\n", mvd->mapname ) );
 
     LIST_FOR_EACH( udpClient_t, u, &mvd->udpClients, entry ) {
         SV_ClientReset( u->cl );
+        u->cl->spawncount = mvd->servercount;
 		SV_ClientAddMessage( u->cl, MSG_RELIABLE );
 	}
 
@@ -841,6 +844,7 @@ void MVD_Spawn_f( void ) {
 
     SV_SetConsoleTitle();
 
+    // generate spawncount for Waiting Room
 	sv.spawncount = ( rand() | ( rand() << 16 ) ) ^ Sys_Milliseconds();
 	sv.spawncount &= 0x7FFFFFFF;
 
@@ -1126,8 +1130,9 @@ void MVD_Connect_f( void ) {
     mvd->waitDelay = mvd_wait_delay->value * 1000;
     List_Init( &mvd->udpClients );
     List_Init( &mvd->tcpClients );
-    List_Init( &mvd->ready );
     List_Append( &mvd_channels, &mvd->entry );
+    List_Init( &mvd->ready );
+    List_Init( &mvd->active );
 
     // set channel name
     if( name ) {
@@ -1370,8 +1375,9 @@ void MVD_Play_f( void ) {
     mvd->pm_type = PM_SPECTATOR;
     List_Init( &mvd->udpClients );
     List_Init( &mvd->tcpClients );
-    List_Init( &mvd->ready );
     List_Append( &mvd_channels, &mvd->entry );
+    List_Init( &mvd->ready );
+    List_Init( &mvd->active );
 
     // set channel name
     if( name ) {
@@ -1395,6 +1401,7 @@ void MVD_Shutdown( void ) {
 
     List_Init( &mvd_channels );
     List_Init( &mvd_ready );
+    List_Init( &mvd_active );
 
 	if( mvd_clients ) {
 		Z_Free( mvd_clients );

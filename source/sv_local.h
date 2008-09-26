@@ -237,12 +237,13 @@ typedef struct client_s {
     // baselines are allocated per client
     entity_state_t  *baselines[SV_BASELINES_CHUNKS];
 
-    // server state pointers (MVD channels hack)
+    // server state pointers (hack for MVD channels implementation)
     char            *configstrings;
     char            *gamedir, *mapname;
     edict_pool_t    *pool;
     cm_t            *cm;
     int             slot;
+    int             spawncount;
 
     // netchan type dependent methods
 	void			(*AddMessage)( struct client_s *, byte *, size_t, qboolean );

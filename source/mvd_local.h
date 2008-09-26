@@ -99,6 +99,7 @@ typedef struct {
 typedef struct mvd_s {
     list_t      entry;
     list_t      ready;
+    list_t      active;
 
     int         id;
     char        name[MAX_QPATH];
@@ -159,6 +160,7 @@ typedef struct mvd_s {
 
 extern list_t           mvd_channels;
 extern list_t           mvd_ready;
+extern list_t           mvd_active;
 extern mvd_t            mvd_waitingRoom;
 extern qboolean         mvd_dirty;
 

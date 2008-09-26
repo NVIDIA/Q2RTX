@@ -834,6 +834,7 @@ static void SVC_DirectConnect( void ) {
     newcl->configstrings = ( char * )sv.configstrings;
     newcl->pool = ( edict_pool_t * )&ge->edicts;
     newcl->cm = &sv.cm;
+    newcl->spawncount = sv.spawncount;
     strcpy( newcl->reconnect_var, reconnect_var );
     strcpy( newcl->reconnect_val, reconnect_val );
 
