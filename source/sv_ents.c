@@ -35,10 +35,10 @@ SV_EmitPacketEntities
 Writes a delta update of an entity_state_t list to the message.
 =============
 */
-static void SV_EmitPacketEntities( client_frame_t   *from,
+static void SV_EmitPacketEntities( client_t         *client,
+                                   client_frame_t   *from,
                                    client_frame_t   *to,
                                    int              clientEntityNum,
-                                   entity_state_t   **baselines,
                                    msgEsFlags_t     baseflags )
 {
 	entity_state_t	*oldent, *newent;
@@ -81,9 +81,12 @@ static void SV_EmitPacketEntities( client_frame_t   *from,
 			// note that players are always 'newentities', this updates their
             // oldorigin always and prevents warping
 			flags = baseflags;
-            //if( newent->number <= maxplayers ) {
-                // flags |= MSG_ES_NEWENTITY; // FIXME: why? waste of bandwidth
-            //}
+            if( client->protocol < PROTOCOL_VERSION_Q2PRO ) {
+                // don't waste bandwidth for Q2PRO clients
+                if( newent->number <= client->maxclients ) {
+                    flags |= MSG_ES_NEWENTITY;
+                }
+            }
             if( newent->number == clientEntityNum ) {
                 flags |= MSG_ES_FIRSTPERSON;
 		        VectorCopy( oldent->origin, newent->origin );
@@ -98,7 +101,7 @@ static void SV_EmitPacketEntities( client_frame_t   *from,
 		if( newnum < oldnum ) {	
 			// this is a new entity, send it from the baseline
 			flags = baseflags|MSG_ES_FORCE|MSG_ES_NEWENTITY;
-			base = baselines[newnum >> SV_BASELINES_SHIFT];
+			base = client->baselines[newnum >> SV_BASELINES_SHIFT];
 			if( base ) {
 				base += ( newnum & SV_BASELINES_MASK );
 			} else {
@@ -180,7 +183,7 @@ void SV_WriteFrameToClient_Default( client_t *client ) {
 	
 	// delta encode the entities
 	MSG_WriteByte( svc_packetentities );
-	SV_EmitPacketEntities( oldframe, frame, 0, client->baselines, 0 );
+	SV_EmitPacketEntities( client, oldframe, frame, 0, 0 );
 }
 
 /*
@@ -307,8 +310,8 @@ void SV_WriteFrameToClient_Enhanced( client_t *client ) {
     }
 
 	// delta encode the entities
-    SV_EmitPacketEntities( oldframe, frame, clientEntityNum,
-        client->baselines, baseflags );
+    SV_EmitPacketEntities( client, oldframe, frame,
+        clientEntityNum, baseflags );
 }
 
 /*

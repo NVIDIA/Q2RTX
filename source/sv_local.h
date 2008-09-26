@@ -244,6 +244,7 @@ typedef struct client_s {
     cm_t            *cm;
     int             slot;
     int             spawncount;
+    int             maxclients;
 
     // netchan type dependent methods
 	void			(*AddMessage)( struct client_s *, byte *, size_t, qboolean );

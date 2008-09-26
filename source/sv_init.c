@@ -127,6 +127,7 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
 
 	// set serverinfo variable
 	SV_InfoSet( "mapname", sv.name );
+    SV_InfoSet( "port", net_port->string );
 
 	Cvar_SetInteger( sv_running, ss_game, CVAR_SET_DIRECT );
 	Cvar_Set( "sv_paused", "0" );

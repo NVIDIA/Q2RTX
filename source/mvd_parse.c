@@ -1004,6 +1004,7 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
     // parse baseline frame
     MVD_ParseFrame( mvd );
 
+    // if the channel has been just created, init some things
     if( mvd->state < MVD_WAITING ) {
         mvd_t *cur;
 
@@ -1016,7 +1017,9 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
         List_Append( &cur->ready, &mvd->ready );
         mvd->state = mvd->demoplayback ? MVD_READING : MVD_WAITING;
         mvd->waitTime = svs.realtime;
-        mvd_dirty = qtrue;
+
+        // for local client
+        MVD_CheckActive( mvd );
     }
 
     MVD_ChangeLevel( mvd );

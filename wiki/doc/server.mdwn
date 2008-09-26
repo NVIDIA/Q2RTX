@@ -3,6 +3,32 @@
 Variables
 ==========
 
+Network
+----------
+
+All cvars below can be changed at runtime and will take effect immediately.
+
+- `set net_ip ""` (string)  
+Specifies network interface address server UDP socket should be bound to.
+Empty string means listening on all interfaces.
+
+- `set net_port 27910` (integer)  
+Specifies UDP port number server should listen on.
+
+- `set net_tcp_ip $net_ip` (string)  
+Specifies network interface address server TCP socket should be bound to.
+Empty string means listening on all interfaces.
+This cvar mirrors `net_ip` unless manually overridden.
+
+- `set net_tcp_port $net_port` (integer)  
+Specifies TCP port number server should listen on.
+This cvar mirrors `net_port` unless manually overridden.
+
+- `set net_tcp_clientip ""` (string)  
+Specifies network interface address server should use for outgoing TCP
+connections (this includes MVD and anticheat connections).
+Empty string means default network interface.
+
 Misc
 ----------
 

@@ -86,6 +86,11 @@ void MVD_Destroy( mvd_t *mvd ) {
     tcpClient_t *t;
     uint16_t length;
 
+    // update channel menus
+    if( !LIST_EMPTY( &mvd->active ) ) {
+        mvd_dirty = qtrue;
+    }
+
     // cause UDP clients to reconnect
     LIST_FOR_EACH_SAFE( udpClient_t, u, unext, &mvd->udpClients, entry ) {
         MVD_SwitchChannel( u, &mvd_waitingRoom );
@@ -103,8 +108,6 @@ void MVD_Destroy( mvd_t *mvd ) {
     MVD_Disconnect( mvd );
     MVD_ClearState( mvd );
     MVD_Free( mvd );
-
-    mvd_dirty = qtrue;
 }
 
 void MVD_Drop( mvd_t *mvd ) {
@@ -841,6 +844,7 @@ void MVD_Spawn_f( void ) {
     Cvar_SetInteger( sv_running, ss_broadcast, CVAR_SET_DIRECT );
     Cvar_Set( "sv_paused", "0" );
     Cvar_Set( "timedemo", "0" );
+    SV_InfoSet( "port", net_port->string );
 
     SV_SetConsoleTitle();
 

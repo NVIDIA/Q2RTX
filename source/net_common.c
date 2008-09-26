@@ -90,7 +90,6 @@ static cvar_t	*net_ignore_icmp;
 static cvar_t	*net_tcp_ip;
 static cvar_t	*net_tcp_port;
 static cvar_t	*net_tcp_clientip;
-static cvar_t	*net_tcp_clientport;
 static cvar_t	*net_tcp_backlog;
 
 static SOCKET		udp_sockets[NS_COUNT] = { INVALID_SOCKET, INVALID_SOCKET };
@@ -748,29 +747,10 @@ fail:
 }
 
 static void NET_OpenServer( void ) {
-	int i, port;
-
-	for( i = 0, port = net_port->integer; i < PORT_MAX_SEARCH; i++, port++ ) {
-		udp_sockets[NS_SERVER] = UDP_OpenSocket( net_ip->string, port );
-		if( udp_sockets[NS_SERVER] != INVALID_SOCKET ) {
-            if( i > 0 ) {
-                // warn if bound to different port
-                Com_WPrintf( "Server bound to UDP port %d.\n", port );
-                Cvar_SetInteger( net_port, port, CVAR_SET_DIRECT );
-            }
-            // set this for compatibility with game mods
-            Cvar_Set( "port", net_port->string );
-            return;
-        }
-
-        // continue searching for a free port if this one was in use
-#ifdef _WIN32
-        if( net_error != WSAEADDRINUSE )
-#else
-        if( net_error != EADDRINUSE )
-#endif
-            break;
-	}
+    udp_sockets[NS_SERVER] = UDP_OpenSocket( net_ip->string, net_port->integer );
+    if( udp_sockets[NS_SERVER] != INVALID_SOCKET ) {
+        return;
+    }
 
 #if USE_CLIENT
 	if( !dedicated->integer ) {
@@ -907,8 +887,7 @@ neterr_t NET_Connect( const netadr_t *peer, netstream_t *s ) {
     struct sockaddr_in address;
     int ret;
 
-	socket = TCP_OpenSocket( net_tcp_clientip->string,
-        net_tcp_clientport->integer, NS_CLIENT );
+	socket = TCP_OpenSocket( net_tcp_clientip->string, PORT_ANY, NS_CLIENT );
     if( socket == INVALID_SOCKET ) {
         return NET_ERROR;
     }
@@ -1307,7 +1286,6 @@ NET_Init
 ====================
 */
 void NET_Init( void ) {
-    int i;
 #ifdef _WIN32
 	WSADATA		ws;
 
@@ -1335,32 +1313,11 @@ void NET_Init( void ) {
 	net_log_flush = Cvar_Get( "net_log_flush", "0", 0 );
 	net_log_flush->changed = net_log_param_changed;
 	net_ignore_icmp = Cvar_Get( "net_ignore_icmp", "0", 0 );
-
-    if( ( i = Cvar_VariableInteger( "ip_hostport" ) ) ||
-        ( i = Cvar_VariableInteger( "hostport" ) ) ||
-        ( i = Cvar_VariableInteger( "port" ) ) )
-    {
-        Com_Printf( "NOTICE: net_port overriden to %d "
-            "by deprecated cvar\n", i );
-        Cvar_SetInteger( net_port, i, CVAR_SET_DIRECT );
-    }
-
-#if USE_CLIENT
-    if( ( i = Cvar_VariableInteger( "ip_clientport" ) ) ||
-        ( i = Cvar_VariableInteger( "clientport" ) ) )
-    {
-        Com_Printf( "NOTICE: net_clientport overriden to %d "
-            "by deprecated cvar\n", i );
-        Cvar_SetInteger( net_clientport, i, CVAR_SET_DIRECT );
-    }
-#endif
-
 	net_tcp_ip = Cvar_Get( "net_tcp_ip", net_ip->string, 0 );
     net_tcp_ip->changed = net_tcp_param_changed;
 	net_tcp_port = Cvar_Get( "net_tcp_port", net_port->string, 0 );
     net_tcp_port->changed = net_tcp_param_changed;
 	net_tcp_clientip = Cvar_Get( "net_tcp_clientip", "", 0 );
-	net_tcp_clientport = Cvar_Get( "net_tcp_clientport", PORT_ANY_STRING, 0 );
 	net_tcp_backlog = Cvar_Get( "net_tcp_backlog", "4", 0 );
 
     net_log_enable_changed( net_log_enable );

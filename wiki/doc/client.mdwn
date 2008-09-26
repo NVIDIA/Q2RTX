@@ -75,6 +75,20 @@ protocol, allows some degree of bandwidth savings since the server stops
 sending footstep events at all.
 
 
+Network
+----------
+
+All cvars below can be changed at runtime and will take effect immediately.
+
+- `set net_ip ""` (string)  
+Specifies network interface address client should use for outgoing connections.
+Empty string means default network interface.
+
+- `set net_clientport -1` (integer)  
+Specifies UDP port number client should use for outgoing connections.
+Value of -1 means random port number chosen at socket creation time.
+
+
 Triggers
 ----------
 
