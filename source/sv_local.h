@@ -59,6 +59,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define SV_InfoSet( var, val ) \
 	Cvar_FullSet( var, val, CVAR_SERVERINFO|CVAR_ROM, CVAR_SET_DIRECT )
 
+// game features this server supports
+#define SV_FEATURES (GMF_CLIENTNUM|GMF_PROPERINUSE|GMF_MVDSPEC|GMF_WANT_ALL_DISCONNECTS)
+
 typedef struct {
 	unsigned	numEntities;
 	unsigned	firstEntity;

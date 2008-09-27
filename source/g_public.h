@@ -42,6 +42,7 @@ typedef enum {
 #define GMF_CLIENTNUM   1
 #define GMF_PROPERINUSE 2
 #define GMF_MVDSPEC     4
+#define GMF_WANT_ALL_DISCONNECTS 8
 
 //===============================================================
 

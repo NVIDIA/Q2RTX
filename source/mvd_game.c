@@ -123,7 +123,10 @@ static void MVD_LayoutChannels( udpClient_t *client ) {
         "xv 64 yv 48 string2 \"Name         Map     S/P\""
         "yv 56 string \"------------ ------- ---\" xv 56 ";
     static const char nochans[] =
-        "yv 64 string \" <no active channels>\"";
+        "yv 72 string \" No active channels.\""
+        "yv 80 string \" Please wait until players\""
+        "yv 88 string \" connect.\""
+        ;
 	char layout[MAX_STRING_CHARS];
 	char buffer[MAX_QPATH];
     mvd_t *mvd;
@@ -921,48 +924,66 @@ static void MVD_Join_f( udpClient_t *client ) {
     MVD_TrySwitchChannel( client, mvd );
 }
 
-static void MVD_Channels_f( udpClient_t *client ) {
-    mvd_t *mvd;
+static void print_channel( client_t *cl, mvd_t *mvd ) {
     mvd_player_t *player;
     char buffer[MAX_QPATH];
     size_t len, total;
     int i;
 
-    if( LIST_EMPTY( &mvd_active ) ) {
-        Com_Printf( "No channels to watch.\n" );
-        return;
+    total = 0;
+    for( i = 0; i < mvd->maxclients; i++ ) {
+        player = &mvd->players[i];
+        if( !player->inuse || player == mvd->dummy ) {
+            continue;
+        }
+        len = strlen( player->name );
+        if( total + len + 2 >= sizeof( buffer ) ) {
+            break;
+        }
+        if( total ) {
+            buffer[total+0] = ',';
+            buffer[total+1] = ' ';
+            total += 2;
+        }
+        memcpy( buffer + total, player->name, len );
+        total += len;
+    }
+    buffer[total] = 0;
+
+    SV_ClientPrintf( cl, PRINT_HIGH,
+        "%2d %-12.12s %-8.8s %3d %3d %s\n", mvd->id,
+        mvd->name, mvd->mapname,
+        List_Count( &mvd->udpClients ),
+        mvd->numplayers, buffer );
+}
+
+static void MVD_Channels_f( udpClient_t *client ) {
+    mvd_t *mvd;
+
+    if( Cmd_Argc() > 1 ) {
+        if( LIST_EMPTY( &mvd_ready ) ) {
+            Com_Printf( "No ready channels.\n" );
+            return;
+        }
+    } else {
+        if( LIST_EMPTY( &mvd_active ) ) {
+            Com_Printf( "No active channels.\n" );
+            return;
+        }
     }
 
 	SV_ClientPrintf( client->cl, PRINT_HIGH,
         "id name         map      spc plr who is playing\n"
 	    "-- ------------ -------- --- --- --------------\n" );
 
-    LIST_FOR_EACH( mvd_t, mvd, &mvd_active, active ) {
-        total = 0;
-        for( i = 0; i < mvd->maxclients; i++ ) {
-            player = &mvd->players[i];
-            if( !player->inuse || player == mvd->dummy ) {
-                continue;
-            }
-            len = strlen( player->name );
-            if( total + len + 2 >= sizeof( buffer ) ) {
-                break;
-            }
-            if( total ) {
-                buffer[total+0] = ',';
-                buffer[total+1] = ' ';
-                total += 2;
-            }
-            memcpy( buffer + total, player->name, len );
-            total += len;
+    if( Cmd_Argc() > 1 ) {
+        LIST_FOR_EACH( mvd_t, mvd, &mvd_ready, ready ) {
+            print_channel( client->cl, mvd );
         }
-        buffer[total] = 0;
-
-	    SV_ClientPrintf( client->cl, PRINT_HIGH,
-            "%2d %-12.12s %-8.8s %3d %3d %s\n", mvd->id,
-            mvd->name, mvd->mapname,
-            List_Count( &mvd->udpClients ),
-            mvd->numplayers, buffer );
+    } else {
+        LIST_FOR_EACH( mvd_t, mvd, &mvd_active, active ) {
+            print_channel( client->cl, mvd );
+        }
     }
 }
 
@@ -970,6 +991,18 @@ static void MVD_Clients_f( udpClient_t *client ) {
     // TODO: dump them in console
     client->layout_type = LAYOUT_CLIENTS;
     client->layout_time = 0;
+}
+
+static void MVD_Commands_f( udpClient_t *client ) {
+	SV_ClientPrintf( client->cl, PRINT_HIGH,
+        "chase [player_id]      toggle chasecam mode\n"
+        "observe                toggle observer mode\n"
+        "menu                   show main menu\n"
+        "score                  show scoreboard\n"
+        "channels [all]         list active (or all) channels\n"
+        "join [channel_id]      join specified channel\n"
+        "leave                  leave into the Waiting Room\n"
+    );
 }
 
 static void MVD_GameClientCommand( edict_t *ent ) {
@@ -1054,6 +1087,10 @@ static void MVD_GameClientCommand( edict_t *ent ) {
         MVD_TrySwitchChannel( client, &mvd_waitingRoom );
         return;
     }
+	if( !strcmp( cmd, "commands" ) ) {
+        MVD_Commands_f( client );
+        return;
+    }
 
     MVD_Say_f( client, 0 );
 }
@@ -1096,7 +1133,7 @@ static void MVD_GameInit( void ) {
     mvd_default_map = Cvar_Get( "mvd_default_map", "q2dm1", CVAR_LATCH );
     mvd_stats_hack = Cvar_Get( "mvd_stats_hack", "0", 0 );
     mvd_freeze_hack = Cvar_Get( "mvd_freeze_hack", "1", 0 );
-    Cvar_Set( "g_features", va( "%d", GMF_CLIENTNUM|GMF_PROPERINUSE ) );
+    Cvar_Set( "g_features", va( "%d", MVD_FEATURES ) );
 
     Z_TagReserve( ( sizeof( edict_t ) +
         sizeof( udpClient_t ) ) * sv_maxclients->integer +

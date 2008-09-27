@@ -28,6 +28,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define EDICT_MVDCL( ent )  (( udpClient_t * )( (ent)->client ))
 #define CS_NUM( c, n )      ( ( char * )(c) + (n) * MAX_QPATH )
 
+// game features MVD client supports
+#define MVD_FEATURES (GMF_CLIENTNUM|GMF_PROPERINUSE|GMF_WANT_ALL_DISCONNECTS)
+
 typedef enum {
     MVD_DEAD,       // not active at all
 	MVD_CONNECTING, // connect() in progress

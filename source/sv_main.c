@@ -197,7 +197,7 @@ void SV_DropClient( client_t *client, const char *reason ) {
 	MSG_WriteByte( svc_disconnect );
 	SV_ClientAddMessage( client, MSG_RELIABLE|MSG_CLEAR );
 
-	if( oldstate == cs_spawned ) {
+	if( oldstate == cs_spawned || ( g_features->integer & GMF_WANT_ALL_DISCONNECTS ) ) {
 		// call the prog function for removing a client
 		// this will remove the body, among other things
 		ge->ClientDisconnect( client->edict );
@@ -1852,7 +1852,7 @@ void SV_Init( void ) {
 	sv_badauth_time = Cvar_Get( "sv_badauth_time", "1", 0 );
 	sv_badauth_time->changed = sv_badauth_time_changed;
 
-    Cvar_Get( "sv_features", va( "%d", GMF_CLIENTNUM|GMF_MVDSPEC ), CVAR_ROM );
+    Cvar_Get( "sv_features", va( "%d", SV_FEATURES ), CVAR_ROM );
     g_features = Cvar_Get( "g_features", "0", CVAR_ROM );
 
     // set up default pmove parameters
