@@ -1892,7 +1892,9 @@ void MSG_ParseDeltaEntity( const entity_state_t *from,
 
 	// set everything to the state we are delta'ing from
 	if( from ) {
-		memcpy( to, from, sizeof( *to ) );
+        if( to != from ) {
+    		memcpy( to, from, sizeof( *to ) );
+        }
 		VectorCopy( from->origin, to->old_origin );
 	} else {
 		memset( to, 0, sizeof( *to ) );
