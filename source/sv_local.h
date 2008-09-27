@@ -358,8 +358,6 @@ typedef struct server_static_s {
 	qboolean	initialized;		// sv_init has completed
 	unsigned	realtime;			// always increasing, no clamping, etc
 
-    int         gameFeatures;
-
 	client_t	*udp_client_pool;	 // [maxclients]
     list_t	    udp_client_list;         // linked list of non-free clients
 

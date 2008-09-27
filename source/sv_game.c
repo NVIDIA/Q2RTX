@@ -519,7 +519,7 @@ static void PF_StartSound( edict_t *edict, int channel,
 
 	ent = NUM_FOR_EDICT( edict );
 
-    if( ( svs.gameFeatures & GMF_PROPERINUSE ) && !edict->inuse ) {
+    if( ( g_features->integer & GMF_PROPERINUSE ) && !edict->inuse ) {
         Com_DPrintf( "%s: entnum not in use: %d\n", __func__, ent );
         return;
     }
@@ -548,7 +548,7 @@ static void PF_StartSound( edict_t *edict, int channel,
 		}
 
         // PHS cull this sound
-        if( ( channel & CHAN_NO_PHS_ADD ) == 0 ) {
+        if( !( channel & CHAN_NO_PHS_ADD ) ) {
             // get client viewpos
             ps = &client->edict->client->ps;
             VectorMA( ps->viewoffset, 0.125f, ps->pmove.origin, origin );
@@ -577,7 +577,6 @@ static void PF_StartSound( edict_t *edict, int channel,
 
         // reliable sounds will always have position explicitly set,
         // as no one gurantees reliables to be delivered in time
-        // why should this happen anyway?
         if( channel & CHAN_RELIABLE ) {
             MSG_WriteByte( svc_sound );
             MSG_WriteByte( flags | SND_POS );
@@ -731,7 +730,7 @@ void PF_Pmove( pmove_t *pm ) {
 
 static cvar_t *PF_cvar( const char *name, const char *value, int flags ) {
 	if( flags & CVAR_EXTENDED_MASK ) {
-		Com_WPrintf( "Game DLL attemped to set extended flags on variable '%s', cleared.\n", name );
+		Com_WPrintf( "Game attemped to set extended flags on '%s', masked out.\n", name );
 		flags &= ~CVAR_EXTENDED_MASK;
 	}
 
@@ -794,7 +793,7 @@ void SV_ShutdownGameProgs (void) {
     	Sys_FreeLibrary( game_library );
 	    game_library = NULL;
     }
-    Q_setenv( "QUAKE2_GAME_FEATURES", NULL );
+    Cvar_Set( "g_features", "0" );
 }
 
 /*
@@ -808,7 +807,6 @@ void SV_InitGameProgs ( void ) {
 	game_import_t	import;
 	char	path[MAX_OSPATH];
     game_export_t	*(*entry)( game_import_t * ) = NULL;
-    char *s;
 
 	// unload anything we have now
 	SV_ShutdownGameProgs ();
@@ -924,17 +922,8 @@ void SV_InitGameProgs ( void ) {
             ge->apiversion, GAME_API_VERSION);
     }
 
-    // export server features
-    Q_setenv( "QUAKE2_SERVER_FEATURES", va( "%d", GMF_CLIENTNUM|GMF_MVDSPEC ) );
-
     // initialize
 	ge->Init ();
-
-    // get game features
-    s = getenv( "QUAKE2_GAME_FEATURES" );
-    if( s && *s ) {
-        svs.gameFeatures = atoi( s );
-    }
 
     Sys_FixFPCW();
 }

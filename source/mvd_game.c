@@ -1096,7 +1096,7 @@ static void MVD_GameInit( void ) {
     mvd_default_map = Cvar_Get( "mvd_default_map", "q2dm1", CVAR_LATCH );
     mvd_stats_hack = Cvar_Get( "mvd_stats_hack", "0", 0 );
     mvd_freeze_hack = Cvar_Get( "mvd_freeze_hack", "1", 0 );
-    svs.gameFeatures = GMF_CLIENTNUM|GMF_PROPERINUSE;
+    Cvar_Set( "g_features", va( "%d", GMF_CLIENTNUM|GMF_PROPERINUSE ) );
 
     Z_TagReserve( ( sizeof( edict_t ) +
         sizeof( udpClient_t ) ) * sv_maxclients->integer +
@@ -1165,6 +1165,8 @@ static void MVD_GameShutdown( void ) {
     mvd_ge.edict_size = 0;
     mvd_ge.num_edicts = 0;
     mvd_ge.max_edicts = 0;
+
+    Cvar_Set( "g_features", "0" );
 }
 
 static void MVD_GameSpawnEntities( const char *mapname, const char *entstring, const char *spawnpoint ) {
@@ -1186,7 +1188,6 @@ static qboolean MVD_GameClientConnect( edict_t *ent, char *userinfo ) {
     // if there is exactly one active channel, assign them to it,
     // otherwise, assign to Waiting Room
     count = List_Count( &mvd_active );
-    Com_Printf( "%d channels active\n",count);
     if( count == 1 ) {
         mvd = LIST_FIRST( mvd_t, &mvd_active, active );
     } else {

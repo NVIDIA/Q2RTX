@@ -2433,7 +2433,7 @@ static void FS_DefaultGamedir( void ) {
     Cvar_Set( "game", "" );
     Cvar_Set( "gamedir", "" );
 
-    Q_setenv( "QUAKE2_GAME_PATH", fs_gamedir );
+    Cvar_Set( "fs_gamedir", fs_gamedir );
 }
 
 
@@ -2475,7 +2475,7 @@ static void FS_SetupGamedir( void ) {
         FS_AddGameDirectory( FS_PATH_GAME, "%s/%s", sys_homedir->string, fs_game->string );
     }
     
-    Q_setenv( "QUAKE2_GAME_PATH", fs_gamedir );
+    Cvar_Set( "fs_gamedir", fs_gamedir );
 }
 
 qboolean FS_SafeToRestart( void ) {
@@ -2590,6 +2590,7 @@ void FS_Init( void ) {
 
     fs_debug = Cvar_Get( "fs_debug", "0", 0 );
     fs_restrict_mask = Cvar_Get( "fs_restrict_mask", "0", CVAR_NOSET );
+    Cvar_Get( "fs_gamedir", "", CVAR_ROM );
 
     if( ( fs_restrict_mask->integer & 7 ) == 7 ) {
         Com_WPrintf( "Invalid fs_restrict_mask value %d. "

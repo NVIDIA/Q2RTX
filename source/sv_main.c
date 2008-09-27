@@ -91,7 +91,7 @@ cvar_t	*sv_status_show;
 cvar_t	*sv_uptime;
 cvar_t	*sv_badauth_time;
 
-//cvar_t  *g_features;
+cvar_t  *g_features;
 
 //============================================================================
 
@@ -1852,8 +1852,8 @@ void SV_Init( void ) {
 	sv_badauth_time = Cvar_Get( "sv_badauth_time", "1", 0 );
 	sv_badauth_time->changed = sv_badauth_time_changed;
 
-    //Cvar_Get( "sv_features", va( "%d", GMF_CLIENTNUM|GMF_MVDSPEC ), CVAR_ROM );
-    //g_features = Cvar_Ref( "g_features" );
+    Cvar_Get( "sv_features", va( "%d", GMF_CLIENTNUM|GMF_MVDSPEC ), CVAR_ROM );
+    g_features = Cvar_Get( "g_features", "0", CVAR_ROM );
 
     // set up default pmove parameters
     sv_pmp.maxspeed = 300;

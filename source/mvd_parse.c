@@ -532,7 +532,7 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
 		}
 
         // PHS cull this sound
-        if( extrabits & 1 ) {
+        if( !( extrabits & 1 ) ) {
             // get client viewpos
             ps = &client->ps;
             VectorMA( ps->viewoffset, 0.125f, ps->pmove.origin, origin );
@@ -561,7 +561,6 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
 
         // reliable sounds will always have position explicitly set,
         // as no one gurantees reliables to be delivered in time
-        // why should this happen anyway?
         if( extrabits & 2 ) {
             MSG_WriteByte( svc_sound );
             MSG_WriteByte( flags | SND_POS );

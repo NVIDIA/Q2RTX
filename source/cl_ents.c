@@ -963,7 +963,7 @@ void CL_GetEntitySoundOrigin( int entnum, vec3_t org ) {
 	vec3_t      mid;
 
 	if( entnum < 0 || entnum >= MAX_EDICTS ) {
-		Com_Error( ERR_DROP, "CL_GetEntitySoundOrigin: bad entnum: %d", entnum );
+		Com_Error( ERR_DROP, "%s: bad entnum: %d", __func__, entnum );
 	}
 	if( !entnum ) {
 		// should this ever happen?
