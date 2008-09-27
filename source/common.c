@@ -1392,10 +1392,6 @@ void Qcommon_Init( int argc, char **argv ) {
 	SV_Init();
 	CL_Init();
 
-	if( dedicated->integer ) {
-		NET_Config( NET_SERVER );
-	}
-
     Sys_RunConsole();
 
 	// add + commands from command line
@@ -1414,6 +1410,12 @@ void Qcommon_Init( int argc, char **argv ) {
 		SCR_EndLoadingPlaque();
 	}
 
+    // even not given a starting map, dedicated server starts
+    // listening for rcon commands (create socket after all configs
+    // are executed to make sure port number is properly set)
+	if( dedicated->integer ) {
+		NET_Config( NET_SERVER );
+	}
 
 	Com_Printf( "====== " APPLICATION " initialized ======\n\n" );
 	Com_Printf( S_COLOR_CYAN APPLICATION " " VERSION ", " __DATE__ "\n"
