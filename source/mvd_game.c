@@ -59,7 +59,7 @@ static void MVD_LayoutClients( udpClient_t *client ) {
 	size_t len, total;
 	udpClient_t *cl;
     mvd_t *mvd = client->mvd;
-	int y, i, prestep;
+	int y, i, prestep, flags;
 
     // calculate prestep
     if( client->layout_cursor < 0 ) {
@@ -107,10 +107,16 @@ static void MVD_LayoutClients( udpClient_t *client ) {
 
     layout[total] = 0;
 
+    // the very first layout update is reliably delivered
+    flags = MSG_CLEAR;
+    if( !client->layout_time ) {
+        flags |= MSG_RELIABLE;
+    }
+
     // send the layout
 	MSG_WriteByte( svc_layout );
 	MSG_WriteData( layout, total + 1 );
-	SV_ClientAddMessage( client->cl, MSG_CLEAR );
+	SV_ClientAddMessage( client->cl, flags );
 
 	client->layout_time = svs.realtime;
 }
@@ -242,11 +248,17 @@ static void MVD_LayoutScores( udpClient_t *client ) {
     mvd_t *mvd = client->mvd;
     char *layout = mvd->layout[0] ? mvd->layout :
         "xv 100 yv 60 string \"<no scoreboard>\"";
+    int flags = MSG_CLEAR;
+
+    // end-of-match scoreboard is reliably delivered
+    if( mvd->intermission ) {
+        flags |= MSG_RELIABLE;
+    }
 
     // send the layout
 	MSG_WriteByte( svc_layout );
     MSG_WriteString( layout );
-	SV_ClientAddMessage( client->cl, MSG_CLEAR );
+	SV_ClientAddMessage( client->cl, flags );
 
 	client->layout_time = svs.realtime;
 }
@@ -658,7 +670,7 @@ void MVD_TrySwitchChannel( udpClient_t *client, mvd_t *mvd ) {
             return;
         }
         MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM, UF_MUTE_MISC,
-            "[MVD] %s left the channel.\n", client->cl->name );
+            "[MVD] %s left the channel\n", client->cl->name );
     }
 
     MVD_SwitchChannel( client, mvd );
@@ -864,9 +876,11 @@ static void MVD_Invuse_f( udpClient_t *client ) {
             break;
         case 2:
 			client->layout_type = LAYOUT_CLIENTS;
+            client->layout_cursor = 0;
             break;
         case 3:
 			client->layout_type = LAYOUT_CHANNELS;
+            client->layout_cursor = 0;
             break;
         case 4:
             MVD_TrySwitchChannel( client, &mvd_waitingRoom );
@@ -962,12 +976,14 @@ static void MVD_Channels_f( udpClient_t *client ) {
 
     if( Cmd_Argc() > 1 ) {
         if( LIST_EMPTY( &mvd_ready ) ) {
-            Com_Printf( "No ready channels.\n" );
+	        SV_ClientPrintf( client->cl, PRINT_HIGH,
+                "No ready channels.\n" );
             return;
         }
     } else {
         if( LIST_EMPTY( &mvd_active ) ) {
-            Com_Printf( "No active channels.\n" );
+	        SV_ClientPrintf( client->cl, PRINT_HIGH,
+                "No active channels.\n" );
             return;
         }
     }
@@ -991,6 +1007,7 @@ static void MVD_Clients_f( udpClient_t *client ) {
     // TODO: dump them in console
     client->layout_type = LAYOUT_CLIENTS;
     client->layout_time = 0;
+    client->layout_cursor = 0;
 }
 
 static void MVD_Commands_f( udpClient_t *client ) {
@@ -1249,6 +1266,9 @@ static void MVD_GameClientBegin( edict_t *ent ) {
 	memset( &client->lastcmd, 0, sizeof( client->lastcmd ) );
 	memset( &client->ps, 0, sizeof( client->ps ) );
     client->jump_held = qfalse;
+    client->layout_type = LAYOUT_NONE;
+    client->layout_time = 0;
+    client->layout_cursor = 0;
 	
 	if( !client->begin_time ) {
 		MVD_BroadcastPrintf( mvd, PRINT_MEDIUM, UF_MUTE_MISC,
@@ -1422,7 +1442,9 @@ static void MVD_IntermissionStart( mvd_t *mvd ) {
         }
         client->oldtarget = client->target;
         client->target = mvd->dummy;
-        MVD_SetFollowLayout( client );
+        if( client->layout_type < LAYOUT_SCORES ) {
+            MVD_SetDefaultLayout( client );
+        }
     }
 }
 

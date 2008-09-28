@@ -201,7 +201,7 @@ void MVD_ClearState( mvd_t *mvd ) {
     mvd->layout[0] = 0;
 
     mvd->framenum = 0;
-    mvd->intermission = qfalse;
+    //mvd->intermission = qfalse;
 }
 
 void MVD_BeginWaiting( mvd_t *mvd ) {
@@ -458,7 +458,7 @@ void MVD_GetStream( const char *uri ) {
 }
 
 void MVD_ChangeLevel( mvd_t *mvd ) {
-	udpClient_t *u;
+	udpClient_t *client;
 
     if( sv.state != ss_broadcast ) {
         MVD_Spawn_f(); // the game is just starting
@@ -469,13 +469,20 @@ void MVD_ChangeLevel( mvd_t *mvd ) {
 	MSG_WriteByte( svc_stufftext );
 	MSG_WriteString( va( "changing map=%s; reconnect\n", mvd->mapname ) );
 
-    LIST_FOR_EACH( udpClient_t, u, &mvd->udpClients, entry ) {
-        SV_ClientReset( u->cl );
-        u->cl->spawncount = mvd->servercount;
-		SV_ClientAddMessage( u->cl, MSG_RELIABLE );
+    LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
+        if( mvd->intermission && client->cl->state == cs_spawned ) {
+            // make them switch to previous target instead of MVD dummy
+            client->target = client->oldtarget;
+            client->oldtarget = NULL;
+        }
+        SV_ClientReset( client->cl );
+        client->cl->spawncount = mvd->servercount;
+		SV_ClientAddMessage( client->cl, MSG_RELIABLE );
 	}
 
 	SZ_Clear( &msg_write );
+
+    mvd->intermission = qfalse;
 
     SV_SendAsyncPackets();
 }

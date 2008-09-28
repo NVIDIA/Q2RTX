@@ -298,7 +298,7 @@ static void MVD_UnicastLayout( mvd_t *mvd, qboolean reliable, mvd_player_t *play
 
     MSG_ReadString( mvd->layout, sizeof( mvd->layout ) );
 
-	// send to all relevant clients
+	// force an update to all relevant clients
     LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
         if( client->cl->state < cs_spawned ) {
             continue;
@@ -1021,6 +1021,7 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
         MVD_CheckActive( mvd );
     }
 
+    // case all UDP clients to reconnect
     MVD_ChangeLevel( mvd );
 }
 
