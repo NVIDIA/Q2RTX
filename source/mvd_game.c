@@ -34,6 +34,7 @@ static cvar_t	*mvd_flood_mute;
 static cvar_t	*mvd_filter_version;
 static cvar_t	*mvd_stats_hack;
 static cvar_t	*mvd_freeze_hack;
+static cvar_t	*mvd_chase_prefix;
 
 udpClient_t     *mvd_clients;
 
@@ -270,8 +271,8 @@ static void MVD_LayoutFollow( udpClient_t *client ) {
     size_t total;
 
     total = Q_snprintf( layout, sizeof( layout ),
-        "xv 0 yb -64 string \"[%s] Chasing %s\"",
-        mvd->name, name );
+        "%s string \"[%s] Chasing %s\"",
+        mvd_chase_prefix->string, mvd->name, name );
     if( total >= sizeof( layout ) ) {
         return;
     }
@@ -1150,6 +1151,7 @@ static void MVD_GameInit( void ) {
     mvd_default_map = Cvar_Get( "mvd_default_map", "q2dm1", CVAR_LATCH );
     mvd_stats_hack = Cvar_Get( "mvd_stats_hack", "0", 0 );
     mvd_freeze_hack = Cvar_Get( "mvd_freeze_hack", "1", 0 );
+    mvd_chase_prefix = Cvar_Get( "mvd_chase_prefix", "xv 0 yb -64", 0 );
     Cvar_Set( "g_features", va( "%d", MVD_FEATURES ) );
 
     Z_TagReserve( ( sizeof( edict_t ) +
@@ -1265,7 +1267,7 @@ static void MVD_GameClientBegin( edict_t *ent ) {
 	client->floodHead = 0;
 	memset( &client->lastcmd, 0, sizeof( client->lastcmd ) );
 	memset( &client->ps, 0, sizeof( client->ps ) );
-    client->jump_held = qfalse;
+    client->jump_held = 0;
     client->layout_type = LAYOUT_NONE;
     client->layout_time = 0;
     client->layout_cursor = 0;
@@ -1378,14 +1380,21 @@ static void MVD_GameClientThink( edict_t *ent, usercmd_t *cmd ) {
 
 	if( client->target ) {
 		if( cmd->upmove >= 10 ) {
-            if( !client->jump_held ) {
+            if( client->jump_held < 1 ) {
                 if( !client->mvd->intermission ) {
         			MVD_FollowNext( client );
                 }
-                client->jump_held = qtrue;
+                client->jump_held = 1;
+            }
+        } else if( cmd->upmove <= -10 ) {
+            if( client->jump_held > -1 ) {
+                if( !client->mvd->intermission ) {
+        			MVD_FollowPrev( client );
+                }
+                client->jump_held = -1;
             }
 		} else {
-            client->jump_held = qfalse;
+            client->jump_held = 0;
         }
 	} else {
         memset( &pm, 0, sizeof( pm ) );

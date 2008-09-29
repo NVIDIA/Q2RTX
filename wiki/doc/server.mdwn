@@ -146,14 +146,6 @@ Each `wait` cycle lasts 0.1 second here.
 MVD client
 ----------
 
-- `set mvd_shownet 0` (integer)  
-Dump contents of the MVD stream as it is parsed.
-Higher values mean higher verbosity.
-
-- `set mvd_debug 0` (integer)  
-Display some MVD client related development information.
-Higher values mean higher verbosity.
-
 - `set mvd_timeout 120` (float)    
 Specifies MVD connection timeout value, in seconds.
 
@@ -167,6 +159,9 @@ into running state to prevent buffer overrun.
 
 - `set mvd_default_map "q2dm1"` (string)  
 Specifies default map used for the Waiting Room channel.
+
+- `set mvd_chase_prefix "xv 0 yb -64"` (string)  
+Specifies POV info string position on the screen.
 
 Hacks
 ----------
@@ -193,13 +188,6 @@ When enabled, each time server map is loaded, file `maps/<mapname>.ent`
 is searched. If this file exists, then entity lump of the map being loaded
 is replaced with the contents of this file. Use this feature _only_ if you
 know what you are doing.
-
-Macros
-==========
-
-- `$sv_client` Expands to the name of the client currently being processed.
-- `$sv_clientnum` Expands to the numeric ID of the client currently being processed.
-
 
 Commands
 ==========

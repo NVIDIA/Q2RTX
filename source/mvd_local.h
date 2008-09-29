@@ -96,7 +96,7 @@ typedef struct {
 
 	usercmd_t lastcmd;
 	//short delta_angles[3];
-    qboolean jump_held;
+    int jump_held;
 } udpClient_t;
 
 typedef struct mvd_s {
