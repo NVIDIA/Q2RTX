@@ -42,6 +42,7 @@ cvar_t	*mvd_debug;
 cvar_t	*mvd_timeout;
 cvar_t	*mvd_wait_delay;
 cvar_t	*mvd_wait_percent;
+cvar_t	*mvd_chase_msgs;
 
 // ====================================================================
 
@@ -1451,6 +1452,7 @@ void MVD_Register( void ) {
 	mvd_timeout = Cvar_Get( "mvd_timeout", "120", 0 );
 	mvd_wait_delay = Cvar_Get( "mvd_wait_delay", "20", 0 );
 	mvd_wait_percent = Cvar_Get( "mvd_wait_percent", "50", 0 );
+	mvd_chase_msgs = Cvar_Get( "mvd_chase_msgs", "0", 0 );
 
     Cmd_Register( c_mvd );
 }

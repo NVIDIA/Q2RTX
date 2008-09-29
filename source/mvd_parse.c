@@ -380,7 +380,8 @@ static void MVD_UnicastPrint( mvd_t *mvd, qboolean reliable, mvd_player_t *playe
         if( level == PRINT_CHAT && ( client->uf & UF_MUTE_PLAYERS ) ) {
             continue;
         }
-        target = client->target ? client->target : mvd->dummy;
+        target = mvd_chase_msgs->integer ?
+            client->target ? client->target : mvd->dummy : mvd->dummy;
 		if( target == player ) {
 		    cl->AddMessage( cl, data, length, reliable );
 		}

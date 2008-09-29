@@ -161,7 +161,13 @@ into running state to prevent buffer overrun.
 Specifies default map used for the Waiting Room channel.
 
 - `set mvd_chase_prefix "xv 0 yb -64"` (string)  
-Specifies POV info string position on the screen.
+Specifies POV info string position on the screen. This should be a valid
+fragment of the Quake 2 layout script.
+
+- `set mvd_chase_msgs 0` (boolean)  
+When enabled, observers in chasecam mode will receive messages routed to
+the chase target, otherwise they will receive messages routed to the dummy
+MVD client (which is normally in observer mode on the game server side).
 
 Hacks
 ----------

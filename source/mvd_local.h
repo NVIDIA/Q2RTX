@@ -169,11 +169,8 @@ extern qboolean         mvd_dirty;
 
 extern cvar_t	*mvd_shownet;
 extern cvar_t	*mvd_debug;
-extern cvar_t	*mvd_pause;
-extern cvar_t	*mvd_nextserver;
 extern cvar_t	*mvd_timeout;
-extern cvar_t	*mvd_autoscores;
-extern cvar_t	*mvd_safecmd;
+extern cvar_t	*mvd_chase_msgs;
 
 void MVD_DPrintf( const char *fmt, ... ) q_printf( 1, 2 );
 void MVD_Dropf( mvd_t *mvd, const char *fmt, ... )
