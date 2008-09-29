@@ -61,7 +61,7 @@ whether given player is to be captured, instead of relying on
 this stupid and complex hack.
 ==================
 */
-qboolean SV_MvdPlayerIsActive( edict_t *ent ) {
+qboolean SV_MvdPlayerIsActive( const edict_t *ent ) {
     int num;
 
 	if( !ent->inuse ) {
@@ -126,7 +126,7 @@ qboolean SV_MvdPlayerIsActive( edict_t *ent ) {
 	return qtrue;
 }
 
-static void SV_MvdCopyEntity( entity_state_t *dst, entity_state_t *src, int flags ) {
+static void SV_MvdCopyEntity( entity_state_t *dst, const entity_state_t *src, int flags ) {
     if( !( flags & MSG_ES_FIRSTPERSON ) ) {
 		VectorCopy( src->origin, dst->origin );
 		VectorCopy( src->angles, dst->angles );

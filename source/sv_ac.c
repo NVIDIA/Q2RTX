@@ -799,7 +799,7 @@ static void AC_ParseQueryReply( void ) {
 	}
 
 	if( cl->state < cs_connected || cl->state > cs_primed ) {
-		Com_DPrintf( "ANTICHEAT: %s with client in state %d\n",
+		Com_WPrintf( "ANTICHEAT: %s with client in state %d\n",
             __func__, cl->state );
     	SV_DropClient( cl, NULL );
 		return;

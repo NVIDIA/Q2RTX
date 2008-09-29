@@ -182,7 +182,9 @@ void MVD_ClearState( mvd_t *mvd ) {
     mvd_player_t *player;
 	int i;
 
-    memset( mvd->edicts, 0, sizeof( mvd->edicts[0] ) * mvd->pool.num_edicts );
+    // clear all entities, don't trust num_edicts as it is possible
+    // to miscount removed entities
+    memset( mvd->edicts, 0, sizeof( mvd->edicts ) );
     mvd->pool.num_edicts = 0;
 
     for( i = 0; i < mvd->maxclients; i++ ) {

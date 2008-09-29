@@ -548,7 +548,7 @@ void SV_MvdMulticast( sizebuf_t *buf, int leafnum, mvd_ops_t op );
 void SV_MvdConfigstring( int index, const char *string );
 void SV_MvdBroadcastPrint( int level, const char *string );
 void SV_MvdRecStop( void );
-qboolean SV_MvdPlayerIsActive( edict_t *ent );
+qboolean SV_MvdPlayerIsActive( const edict_t *ent );
 void SV_MvdInitStream( void );
 void SV_MvdGetStream( const char *uri );
 void SV_MvdMapChanged( void );
