@@ -1797,7 +1797,7 @@ void SV_Init( void ) {
     sv_hostname->changed = sv_hostname_changed;
 	sv_timeout = Cvar_Get( "timeout", "90", 0 );
 	sv_zombietime = Cvar_Get( "zombietime", "2", 0 );
-	sv_ghostime = Cvar_Get( "sv_ghostime", "6", 0 );
+	sv_ghostime = Cvar_Get( "sv_ghostime", "10", 0 );
 	sv_showclamp = Cvar_Get( "showclamp", "0", 0 );
 	sv_enforcetime = Cvar_Get ( "sv_enforcetime", "1", 0 );
 	sv_force_reconnect = Cvar_Get ( "sv_force_reconnect", "", CVAR_LATCH );
