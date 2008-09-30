@@ -21,9 +21,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MVD_DEBUG( s ) do { if( mvd_debug->integer ) \
     Com_Printf( S_COLOR_BLUE "%s: %s", __func__, s ); } while( 0 )
 
-#define MVD_Malloc( size )     Z_TagMalloc( size, TAG_MVD )
+#define MVD_Malloc( size )      Z_TagMalloc( size, TAG_MVD )
 #define MVD_Mallocz( size )     Z_TagMallocz( size, TAG_MVD )
-#define MVD_CopyString( s )		Z_TagCopyString( s, TAG_MVD )
+#define MVD_CopyString( s )     Z_TagCopyString( s, TAG_MVD )
 
 #define EDICT_MVDCL( ent )  (( udpClient_t * )( (ent)->client ))
 #define CS_NUM( c, n )      ( ( char * )(c) + (n) * MAX_QPATH )
@@ -33,41 +33,41 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 typedef enum {
     MVD_DEAD,       // not active at all
-	MVD_CONNECTING, // connect() in progress
-	MVD_CONNECTED,  // HTTP request sent
+    MVD_CONNECTING, // connect() in progress
+    MVD_CONNECTED,  // HTTP request sent
     MVD_CHECKING,   // got response, checking magic
     MVD_PREPARING,  // got magic, waiting for gamestate
     MVD_WAITING,    // stalled, buffering more data
     MVD_READING,    // actively running
-	MVD_DISCONNECTED // disconnected, running until EOB
+    MVD_DISCONNECTED // disconnected, running until EOB
 } mvdState_t;
 
-#define LAYOUT_MSEC		3000
+#define LAYOUT_MSEC        3000
 
 typedef enum {
-	LAYOUT_NONE,		// no layout at all
+    LAYOUT_NONE,        // no layout at all
     LAYOUT_FOLLOW,      // display chase target name
-	LAYOUT_SCORES,		// layout of the MVD dummy
+    LAYOUT_SCORES,      // layout of the MVD dummy
+    LAYOUT_OLDSCORES,   // saved at intermission time
     LAYOUT_MENU,        // MVD main menu
-	LAYOUT_CLIENTS,		// MVD clients list
+    LAYOUT_CLIENTS,     // MVD clients list
     LAYOUT_CHANNELS     // MVD channel list
 } mvd_layout_t;
 
-#define FLOOD_SAMPLES	16
-#define	FLOOD_MASK		( FLOOD_SAMPLES - 1 )
-
+#define FLOOD_SAMPLES    16
+#define FLOOD_MASK      ( FLOOD_SAMPLES - 1 )
 
 typedef struct mvd_cs_s {
-	struct mvd_cs_s *next;
-	int index;
-	char string[1];
+    struct mvd_cs_s *next;
+    int index;
+    char string[1];
 } mvd_cs_t;
 
 typedef struct {
     player_state_t ps;
     qboolean inuse;
     char name[16];
-	mvd_cs_t *configstrings;
+    mvd_cs_t *configstrings;
 } mvd_player_t;
 
 typedef struct {
@@ -79,23 +79,23 @@ typedef struct {
 
     list_t          entry;
     struct mvd_s    *mvd;
-	client_t        *cl;
+    client_t        *cl;
     qboolean    admin;
-	unsigned    begin_time;
-	mvd_player_t *target, *oldtarget;
-	float       fov;
+    unsigned    begin_time;
+    mvd_player_t *target, *oldtarget;
+    float       fov;
     int         uf;
 
-	mvd_layout_t    layout_type;
-	unsigned        layout_time;
+    mvd_layout_t    layout_type;
+    unsigned        layout_time;
     int             layout_cursor;
 
-	unsigned    floodSamples[FLOOD_SAMPLES];
-	unsigned    floodHead;
-	unsigned    floodTime;
+    unsigned    floodSamples[FLOOD_SAMPLES];
+    unsigned    floodHead;
+    unsigned    floodTime;
 
-	usercmd_t lastcmd;
-	//short delta_angles[3];
+    usercmd_t lastcmd;
+    //short delta_angles[3];
     int jump_held;
 } udpClient_t;
 
@@ -107,18 +107,18 @@ typedef struct mvd_s {
     int         id;
     char        name[MAX_QPATH];
 
-	// demo related variables
-	fileHandle_t	demoplayback;
-	fileHandle_t	demorecording;
+    // demo related variables
+    fileHandle_t    demoplayback;
+    fileHandle_t    demorecording;
     int             demoloop;
     string_entry_t  *demohead, *demoentry;
 
-	// connection variables
-	mvdState_t	state;
-	int			servercount;
-	int			clientNum;
+    // connection variables
+    mvdState_t  state;
+    int         servercount;
+    int         clientNum;
     netstream_t stream;
-	char		address[MAX_QPATH];
+    char        address[MAX_QPATH];
     char        response[MAX_NET_STRING];
     size_t      responseLength;
     size_t      contentLength;
@@ -139,19 +139,20 @@ typedef struct mvd_s {
     char    mapname[MAX_QPATH];
     int     maxclients;
     edict_pool_t pool;
-	cm_t    cm;
-	vec3_t  spawnOrigin;
-	vec3_t  spawnAngles;
+    cm_t    cm;
+    vec3_t  spawnOrigin;
+    vec3_t  spawnAngles;
     int     pm_type;
-	char            configstrings[MAX_CONFIGSTRINGS][MAX_QPATH];
+    char            configstrings[MAX_CONFIGSTRINGS][MAX_QPATH];
     edict_t         edicts[MAX_EDICTS];
     mvd_player_t    *players; // [maxclients]
     mvd_player_t    *dummy; // &players[clientNum]
     int             numplayers; // number of active players in frame
     char        layout[MAX_STRING_CHARS];
+    char        oldscores[MAX_STRING_CHARS]; // layout is copied here
     qboolean    intermission;
 
-	// client lists
+    // client lists
     list_t udpClients;
     list_t tcpClients;
 } mvd_t;
@@ -167,10 +168,10 @@ extern list_t           mvd_active;
 extern mvd_t            mvd_waitingRoom;
 extern qboolean         mvd_dirty;
 
-extern cvar_t	*mvd_shownet;
-extern cvar_t	*mvd_debug;
-extern cvar_t	*mvd_timeout;
-extern cvar_t	*mvd_chase_msgs;
+extern cvar_t    *mvd_shownet;
+extern cvar_t    *mvd_debug;
+extern cvar_t    *mvd_timeout;
+extern cvar_t    *mvd_chase_msgs;
 
 void MVD_DPrintf( const char *fmt, ... ) q_printf( 1, 2 );
 void MVD_Dropf( mvd_t *mvd, const char *fmt, ... )
@@ -212,8 +213,8 @@ void MVD_ParseEntityString( mvd_t *mvd, const char *data );
 // mvd_game.c
 //
 
-extern udpClient_t      *mvd_clients;	/* [svs.maxclients] */
-extern game_export_t	mvd_ge;
+extern udpClient_t      *mvd_clients;    /* [svs.maxclients] */
+extern game_export_t    mvd_ge;
 
 void MVD_UpdateClient( udpClient_t *client );
 void MVD_SwitchChannel( udpClient_t *client, mvd_t *mvd );

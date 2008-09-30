@@ -245,14 +245,16 @@ static void MVD_LayoutMenu( udpClient_t *client ) {
 	client->layout_time = svs.realtime;
 }
 
-static void MVD_LayoutScores( udpClient_t *client ) {
+static void MVD_LayoutScores( udpClient_t *client, const char *layout ) {
     mvd_t *mvd = client->mvd;
-    char *layout = mvd->layout[0] ? mvd->layout :
-        "xv 100 yv 60 string \"<no scoreboard>\"";
     int flags = MSG_CLEAR;
 
+    if( !layout || !layout[0] ) {
+        layout = "xv 100 yv 60 string \"<no scoreboard>\"";
+    }
+
     // end-of-match scoreboard is reliably delivered
-    if( mvd->intermission ) {
+    if( !client->layout_time || mvd->intermission ) {
         flags |= MSG_RELIABLE;
     }
 
@@ -335,9 +337,14 @@ static void MVD_UpdateLayouts( mvd_t *mvd ) {
                 MVD_LayoutFollow( client );
             }
             break;
+        case LAYOUT_OLDSCORES:
+            if( !client->layout_time ) {
+                MVD_LayoutScores( client, mvd->oldscores );
+            }
+            break;
         case LAYOUT_SCORES:
             if( !client->layout_time ) {
-                MVD_LayoutScores( client );
+                MVD_LayoutScores( client, mvd->layout );
             }
             break;
         case LAYOUT_MENU:
@@ -426,7 +433,7 @@ static void MVD_FollowStart( udpClient_t *client, mvd_player_t *target ) {
         SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
 	}
 
-    SV_ClientPrintf( client->cl, PRINT_LOW, "[MVD] Following %s.\n", target->name );
+    SV_ClientPrintf( client->cl, PRINT_LOW, "[MVD] Chasing %s.\n", target->name );
 
     MVD_SetFollowLayout( client );
     MVD_UpdateClient( client );
@@ -446,7 +453,7 @@ static void MVD_FollowFirst( udpClient_t *client ) {
         }
     }
 
-    SV_ClientPrintf( client->cl, PRINT_MEDIUM, "[MVD] No players to follow.\n" );
+    SV_ClientPrintf( client->cl, PRINT_MEDIUM, "[MVD] No players to chase.\n" );
 }
 
 static void MVD_FollowLast( udpClient_t *client ) {
@@ -463,7 +470,7 @@ static void MVD_FollowLast( udpClient_t *client ) {
         }
     }
 
-    SV_ClientPrintf( client->cl, PRINT_MEDIUM, "[MVD] No players to follow.\n" );
+    SV_ClientPrintf( client->cl, PRINT_MEDIUM, "[MVD] No players to chase.\n" );
 }
 
 static void MVD_FollowNext( udpClient_t *client ) {
@@ -1085,6 +1092,15 @@ static void MVD_GameClientCommand( edict_t *ent ) {
 		}
 		return;
 	}
+	if( !strcmp( cmd, "oldscore" ) ) {
+		if( client->layout_type == LAYOUT_OLDSCORES ) {
+			MVD_SetDefaultLayout( client );
+		} else {
+			client->layout_type = LAYOUT_OLDSCORES;
+            client->layout_time = 0;
+		}
+        return;
+    }
 	if( !strcmp( cmd, "putaway" ) ) {
 		MVD_SetDefaultLayout( client );
 		return;
@@ -1417,7 +1433,8 @@ static void MVD_GameClientThink( edict_t *ent, usercmd_t *cmd ) {
 void MVD_CheckActive( mvd_t *mvd ) {
     mvd_t *cur;
 
-    if( mvd->numplayers ) {
+    // demo channels are always marked as active
+    if( mvd->numplayers || mvd->demoplayback ) {
         if( LIST_EMPTY( &mvd->active ) ) {
             // sort this one into the list of active channels
             LIST_FOR_EACH( mvd_t, cur, &mvd_active, active ) {
@@ -1443,8 +1460,13 @@ static void MVD_IntermissionStart( mvd_t *mvd ) {
     // set this early so MVD_SetDefaultLayout works
     mvd->intermission = qtrue;
 
+    // save oldscores
+    // FIXME: unfortunately this will also reset oldscores during
+    // match timeout with certain mods (OpenTDM should work fine though)
+    strcpy( mvd->oldscores, mvd->layout );
+
     // force all clients to switch to the MVD dummy
-    // and open the scoreboard
+    // and open the scoreboard, unless they had some special layout up
     LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
         if( client->cl->state != cs_spawned ) {
             continue;

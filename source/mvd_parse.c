@@ -714,7 +714,8 @@ static void MVD_PlayerToEntityStates( mvd_t *mvd ) {
 
         mvd->numplayers++;
         if( player->ps.pmove.pm_type != PM_NORMAL ) {
-            continue; // can be out of sync
+            continue;   // can be out of sync, in this case
+                        // server should provide valid data
         }
 
         edict = &mvd->edicts[i];
@@ -776,7 +777,7 @@ static void MVD_ParsePacketEntities( mvd_t *mvd ) {
         MSG_ParseDeltaEntity( &ent->s, &ent->s, number, bits );
 
         // lazily relink even if removed
-        if( number > mvd->maxclients && ( bits & RELINK_MASK ) ) {
+        if( bits & RELINK_MASK ) {
             MVD_LinkEdict( mvd, ent );
         }
 

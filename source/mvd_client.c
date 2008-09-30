@@ -200,11 +200,16 @@ void MVD_ClearState( mvd_t *mvd ) {
 
     CM_FreeMap( &mvd->cm );
 
+    if( mvd->intermission ) {
+        // save oldscores
+        strcpy( mvd->oldscores, mvd->layout );
+    }
+
     memset( mvd->configstrings, 0, sizeof( mvd->configstrings ) );
     mvd->layout[0] = 0;
 
     mvd->framenum = 0;
-    //mvd->intermission = qfalse;
+    // intermission flag will be cleared in MVD_ChangeLevel
 }
 
 void MVD_BeginWaiting( mvd_t *mvd ) {

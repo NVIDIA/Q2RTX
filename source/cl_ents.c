@@ -75,10 +75,15 @@ static void CL_SetEntityState( entity_state_t *state ) {
 		// duplicate the current state so lerping doesn't hurt anything
 		ent->prev = *state;
 
-		// old_origin is valid for new entities,
-        // so use it as starting point for interpolating between
-		VectorCopy( state->old_origin, ent->prev.origin );
-		VectorCopy( state->old_origin, ent->lerp_origin );
+		if( state->event == EV_PLAYER_TELEPORT || state->event == EV_OTHER_TELEPORT ) {
+            // no lerping if teleported
+		    VectorCopy( state->origin, ent->lerp_origin );
+        } else {
+    		// old_origin is valid for new entities,
+            // so use it as starting point for interpolating between
+		    VectorCopy( state->old_origin, ent->prev.origin );
+		    VectorCopy( state->old_origin, ent->lerp_origin );
+        }
     } else if( state->modelindex != ent->current.modelindex
 		|| state->modelindex2 != ent->current.modelindex2
 		|| state->modelindex3 != ent->current.modelindex3
@@ -95,7 +100,7 @@ static void CL_SetEntityState( entity_state_t *state ) {
 		// duplicate the current state so lerping doesn't hurt anything
 		ent->prev = *state;
         
-        // no lerping
+        // no lerping if teleported or morphed
 		VectorCopy( state->origin, ent->lerp_origin );
 	} else {    // shuffle the last state to previous
 		ent->prev = ent->current;

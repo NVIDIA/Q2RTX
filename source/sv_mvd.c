@@ -227,6 +227,8 @@ static void SV_MvdEmitFrame( void ) {
         if( i <= sv_maxclients->integer ) {
             oldps = &svs.mvd.players[ i - 1 ];
             if( PPS_INUSE( oldps ) && oldps->pmove.pm_type == PM_NORMAL ) {
+                // do not waste bandwidth on origin/angle updates,
+                // client will recover them from player state
                 flags |= MSG_ES_FIRSTPERSON;
             }
         }
