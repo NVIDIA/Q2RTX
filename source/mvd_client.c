@@ -36,36 +36,44 @@ int         mvd_chanid;
 
 jmp_buf     mvd_jmpbuf;
 
-cvar_t	*mvd_running;
-cvar_t	*mvd_shownet;
-cvar_t	*mvd_debug;
-cvar_t	*mvd_timeout;
-cvar_t	*mvd_wait_delay;
-cvar_t	*mvd_wait_percent;
-cvar_t	*mvd_chase_msgs;
+cvar_t    *mvd_running;
+cvar_t    *mvd_shownet;
+cvar_t    *mvd_debug;
+cvar_t    *mvd_timeout;
+cvar_t    *mvd_wait_delay;
+cvar_t    *mvd_wait_percent;
+cvar_t    *mvd_chase_msgs;
 
 // ====================================================================
 
 
 void MVD_Disconnect( mvd_t *mvd ) {
-	if( mvd->demorecording ) {
-        uint16_t msglen = 0;
-        FS_Write( &msglen, 2, mvd->demorecording );
-        FS_FCloseFile( mvd->demorecording );
-        mvd->demorecording = 0;
-	}
-    if( mvd->stream.state ) {
+    if( mvd->demoplayback ) {
+        FS_FCloseFile( mvd->demoplayback );
+        mvd->demoplayback = 0;
+    } else {
+        if( Com_IsDedicated() ) {
+            MVD_BroadcastPrintf( mvd, PRINT_HIGH, 0,
+                "[MVD] Disconnected from the game server!\n" );
+        }
         NET_Close( &mvd->stream );
     }
-	if( mvd->demoplayback ) {
-		FS_FCloseFile( mvd->demoplayback );
-        mvd->demoplayback = 0;
-	}
 
     mvd->state = MVD_DISCONNECTED;
 }
 
+static void MVD_FreePlayer( mvd_player_t *player ) {
+    mvd_cs_t *cs, *next;
+
+    for( cs = player->configstrings; cs; cs = next ) {
+        next = cs->next;
+        Z_Free( cs );
+    }
+}
+
 void MVD_Free( mvd_t *mvd ) {
+    int i;
+
 #if USE_ZLIB
     if( mvd->z.state ) {
         inflateEnd( &mvd->z );
@@ -74,7 +82,12 @@ void MVD_Free( mvd_t *mvd ) {
         Z_Free( mvd->zbuf.data );
     }
 #endif
+    for( i = 0; i < mvd->maxclients; i++ ) {
+        MVD_FreePlayer( &mvd->players[i] );
+    }
     Z_Free( mvd->players );
+
+    CM_FreeMap( &mvd->cm );
 
     List_Remove( &mvd->active );
     List_Remove( &mvd->ready );
@@ -83,7 +96,7 @@ void MVD_Free( mvd_t *mvd ) {
 }
 
 void MVD_Destroy( mvd_t *mvd ) {
-	udpClient_t *u, *unext;
+    udpClient_t *u, *unext;
     tcpClient_t *t;
     uint16_t length;
 
@@ -104,10 +117,20 @@ void MVD_Destroy( mvd_t *mvd ) {
         SV_HttpFinish( t );
         SV_HttpDrop( t, "channel destroyed" );
         NET_Run( &t->stream );
-	}
+    }
 
+    // stop demo recording
+    if( mvd->demorecording ) {
+        uint16_t msglen = 0;
+        FS_Write( &msglen, 2, mvd->demorecording );
+        FS_FCloseFile( mvd->demorecording );
+        mvd->demorecording = 0;
+    }
+
+    // disconnect if still connected
     MVD_Disconnect( mvd );
-    MVD_ClearState( mvd );
+
+    // free all channel data
     MVD_Free( mvd );
 }
 
@@ -120,14 +143,14 @@ void MVD_Drop( mvd_t *mvd ) {
 }
 
 void MVD_Destroyf( mvd_t *mvd, const char *fmt, ... ) {
-	va_list		argptr;
-	char		text[MAXPRINTMSG];
+    va_list     argptr;
+    char        text[MAXPRINTMSG];
 
-	va_start( argptr, fmt );
-	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
-	va_end( argptr );
+    va_start( argptr, fmt );
+    Q_vsnprintf( text, sizeof( text ), fmt, argptr );
+    va_end( argptr );
 
-	Com_Printf( "[%s] %s\n", mvd->name, text );
+    Com_Printf( "[%s] %s\n", mvd->name, text );
 
     MVD_Destroy( mvd );
 
@@ -135,14 +158,14 @@ void MVD_Destroyf( mvd_t *mvd, const char *fmt, ... ) {
 }
 
 void MVD_Dropf( mvd_t *mvd, const char *fmt, ... ) {
-	va_list		argptr;
-	char		text[MAXPRINTMSG];
+    va_list     argptr;
+    char        text[MAXPRINTMSG];
 
-	va_start( argptr, fmt );
-	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
-	va_end( argptr );
+    va_start( argptr, fmt );
+    Q_vsnprintf( text, sizeof( text ), fmt, argptr );
+    va_end( argptr );
 
-	Com_Printf( "[%s] %s\n", mvd->name, text );
+    Com_Printf( "[%s] %s\n", mvd->name, text );
 
     MVD_Drop( mvd );
 
@@ -150,28 +173,28 @@ void MVD_Dropf( mvd_t *mvd, const char *fmt, ... ) {
 }
 
 void MVD_DPrintf( const char *fmt, ... ) {
-	va_list		argptr;
-	char		text[MAXPRINTMSG];
+    va_list     argptr;
+    char        text[MAXPRINTMSG];
 
-	if( !mvd_debug->integer ) {
+    if( !mvd_debug->integer ) {
         return;
-	}
+    }
 
-	va_start( argptr, fmt );
-	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
-	va_end( argptr );
+    va_start( argptr, fmt );
+    Q_vsnprintf( text, sizeof( text ), fmt, argptr );
+    va_end( argptr );
 
-	Com_Printf( S_COLOR_BLUE "%s", text );
+    Com_Printf( S_COLOR_BLUE "%s", text );
 }
 
 static void MVD_HttpPrintf( mvd_t *mvd, const char *fmt, ... ) {
     char        buffer[MAX_STRING_CHARS];
-	va_list		argptr;
+    va_list     argptr;
     size_t      len;
 
-	va_start( argptr, fmt );
-	len = Q_vsnprintf( buffer, sizeof( buffer ), fmt, argptr );
-	va_end( argptr );
+    va_start( argptr, fmt );
+    len = Q_vsnprintf( buffer, sizeof( buffer ), fmt, argptr );
+    va_end( argptr );
 
     if( len >= sizeof( buffer ) || FIFO_Write( &mvd->stream.send, buffer, len ) != len ) {
         MVD_Dropf( mvd, "%s: overflow", __func__ );
@@ -179,30 +202,28 @@ static void MVD_HttpPrintf( mvd_t *mvd, const char *fmt, ... ) {
 }
 
 void MVD_ClearState( mvd_t *mvd ) {
-	mvd_cs_t *cs, *next;
     mvd_player_t *player;
-	int i;
+    int i;
 
     // clear all entities, don't trust num_edicts as it is possible
     // to miscount removed entities
     memset( mvd->edicts, 0, sizeof( mvd->edicts ) );
     mvd->pool.num_edicts = 0;
 
+    // clear all players
     for( i = 0; i < mvd->maxclients; i++ ) {
         player = &mvd->players[i];
-        for( cs = player->configstrings; cs; cs = next ) {
-            next = cs->next;
-            Z_Free( cs );
-        }
+        MVD_FreePlayer( player );
         memset( player, 0, sizeof( *player ) );
     }
     mvd->numplayers = 0;
 
+    // free current map
     CM_FreeMap( &mvd->cm );
 
     if( mvd->intermission ) {
         // save oldscores
-        strcpy( mvd->oldscores, mvd->layout );
+        //strcpy( mvd->oldscores, mvd->layout );
     }
 
     memset( mvd->configstrings, 0, sizeof( mvd->configstrings ) );
@@ -213,84 +234,79 @@ void MVD_ClearState( mvd_t *mvd ) {
 }
 
 void MVD_BeginWaiting( mvd_t *mvd ) {
-    //int maxDelay = mvd_wait_delay->value * 1000;
+    int maxDelay = mvd_wait_delay->value * 1000;
 
     mvd->state = MVD_WAITING;
     mvd->waitTime = svs.realtime;
-#if 0
-    mvd->waitDelay += 5000;
-    if( maxDelay < 5000 ) {
-        maxDelay = 5000;
-    }
+    mvd->waitDelay = 5000 + 1000 * mvd->waitCount;
     if( mvd->waitDelay > maxDelay ) {
         mvd->waitDelay = maxDelay;
     }
-#endif
-
+    mvd->waitCount++;
 }
 
 static void MVD_EmitGamestate( mvd_t *mvd ) {
-	char		*string;
-	int			i, j;
-	entity_state_t	*es;
+    char        *string;
+    int         i, j;
+    entity_state_t    *es;
     player_state_t *ps;
     size_t      length;
     uint8_t     *patch;
-	int flags, extra, portalbytes;
-    byte portalbits[MAX_MAP_AREAS/8];
+    int         flags, extra, portalbytes;
+    byte        portalbits[MAX_MAP_AREAS/8];
 
     patch = SZ_GetSpace( &msg_write, 2 );
 
-	// send the serverdata
-	MSG_WriteByte( mvd_serverdata );
-	MSG_WriteLong( PROTOCOL_VERSION_MVD );
-	MSG_WriteShort( PROTOCOL_VERSION_MVD_CURRENT );
-	MSG_WriteLong( mvd->servercount );
-	MSG_WriteString( mvd->gamedir );
-	MSG_WriteShort( mvd->clientNum );
+    // send the serverdata
+    MSG_WriteByte( mvd_serverdata );
+    MSG_WriteLong( PROTOCOL_VERSION_MVD );
+    MSG_WriteShort( PROTOCOL_VERSION_MVD_CURRENT );
+    MSG_WriteLong( mvd->servercount );
+    MSG_WriteString( mvd->gamedir );
+    MSG_WriteShort( mvd->clientNum );
 
     // send configstrings
-	for( i = 0; i < MAX_CONFIGSTRINGS; i++ ) {
+    for( i = 0; i < MAX_CONFIGSTRINGS; i++ ) {
         string = mvd->configstrings[i];
-		if( !string[0] ) {
-			continue;
-		}
-		length = strlen( string );
-		if( length > MAX_QPATH ) {
-			length = MAX_QPATH;
-		}
+        if( !string[0] ) {
+            continue;
+        }
+        length = strlen( string );
+        if( length > MAX_QPATH ) {
+            length = MAX_QPATH;
+        }
 
-		MSG_WriteShort( i );
-		MSG_WriteData( string, length );
-		MSG_WriteByte( 0 );
-	}
-	MSG_WriteShort( MAX_CONFIGSTRINGS );
+        MSG_WriteShort( i );
+        MSG_WriteData( string, length );
+        MSG_WriteByte( 0 );
+    }
+    MSG_WriteShort( MAX_CONFIGSTRINGS );
 
     // send baseline frame
-	portalbytes = CM_WritePortalBits( &sv.cm, portalbits );
-	MSG_WriteByte( portalbytes );
-	MSG_WriteData( portalbits, portalbytes );
-	
+    portalbytes = CM_WritePortalBits( &sv.cm, portalbits );
+    MSG_WriteByte( portalbytes );
+    MSG_WriteData( portalbits, portalbytes );
+    
     // send base player states
-	flags = 0;
-	if( sv_mvd_noblend->integer ) {
-		flags |= MSG_PS_IGNORE_BLEND;
-	}
-	if( sv_mvd_nogun->integer ) {
-		flags |= MSG_PS_IGNORE_GUNINDEX|MSG_PS_IGNORE_GUNFRAMES;
-	}
-	for( i = 0; i < mvd->maxclients; i++ ) {
+    flags = 0;
+    if( sv_mvd_noblend->integer ) {
+        flags |= MSG_PS_IGNORE_BLEND;
+    }
+    if( sv_mvd_nogun->integer ) {
+        flags |= MSG_PS_IGNORE_GUNINDEX|MSG_PS_IGNORE_GUNFRAMES;
+    }
+    for( i = 0; i < mvd->maxclients; i++ ) {
         ps = &mvd->players[i].ps;
         extra = 0;
         if( !PPS_INUSE( ps ) ) {
             extra |= MSG_PS_REMOVE;
         }
-		MSG_WriteDeltaPlayerstate_Packet( NULL, ps, i, flags | extra );
-	}
-	MSG_WriteByte( CLIENTNUM_NONE );
+        MSG_WriteDeltaPlayerstate_Packet( NULL, ps, i, flags | extra );
+    }
+    MSG_WriteByte( CLIENTNUM_NONE );
 
     // send base entity states
-	for( i = 1; i < mvd->pool.num_edicts; i++ ) {
+    for( i = 1; i < mvd->pool.num_edicts; i++ ) {
         es = &mvd->edicts[i].s;
         flags = 0;
         if( i <= mvd->maxclients ) {
@@ -305,8 +321,8 @@ static void MVD_EmitGamestate( mvd_t *mvd ) {
         es->number = i;
         MSG_WriteDeltaEntity( NULL, es, flags );
         es->number = j;
-	}
-	MSG_WriteShort( 0 );
+    }
+    MSG_WriteShort( 0 );
 
     // TODO: write private layouts/configstrings
 
@@ -318,9 +334,9 @@ static void MVD_EmitGamestate( mvd_t *mvd ) {
 void MVD_SendGamestate( tcpClient_t *client ) {
     MVD_EmitGamestate( client->mvd );
 
-	Com_DPrintf( "Sent gamestate to MVD client %s\n",
+    Com_DPrintf( "Sent gamestate to MVD client %s\n",
         NET_AdrToString( &client->stream.address ) );
-	client->state = cs_spawned;
+    client->state = cs_spawned;
 
     SV_HttpWrite( client, msg_write.data, msg_write.cursize );
     SZ_Clear( &msg_write );
@@ -355,15 +371,15 @@ void MVD_GetStatus( void ) {
 
     count = List_Count( &mvd_ready );
     if( count ) {
-        SV_HttpPrintf( "%d channel%s available. ",
-            count, count == 1 ? "" : "s" );
+        SV_HttpPrintf( "%d channel%s available, %d active. ",
+            count, count == 1 ? "" : "s", List_Count( &mvd_active ) );
     } else {
         SV_HttpPrintf( "no channels available. " );
     }
 
     count = List_Count( &mvd_waitingRoom.udpClients ); 
     if( count ) {
-        SV_HttpPrintf( "Waiting room has %d client%s.</p>",
+        SV_HttpPrintf( "Waiting room has %d spectator%s.</p>",
             count, count == 1 ? "" : "s" );
     } else {
         SV_HttpPrintf( "Waiting room is empty.</p>" );
@@ -372,7 +388,7 @@ void MVD_GetStatus( void ) {
     if( !LIST_EMPTY( &mvd_ready ) ) {
         SV_HttpPrintf(
             "<table border=\"1\"><tr>"
-            "<th>ID</th><th>Name</th><th>Map</th><th>Clients</th></tr>" );
+            "<th>ID</th><th>Name</th><th>Map</th><th>Specs</th><th>Players</th></tr>" );
 
         LIST_FOR_EACH( mvd_t, mvd, &mvd_ready, ready ) {
             SV_HttpPrintf( "<tr><td>" );
@@ -394,7 +410,8 @@ void MVD_GetStatus( void ) {
 
             Q_EscapeMarkup( buffer, mvd->mapname, sizeof( buffer ) );
             count = List_Count( &mvd->udpClients );
-            SV_HttpPrintf( "</td><td>%s</td><td>%d</td></tr>", buffer, count );
+            SV_HttpPrintf( "</td><td>%s</td><td>%d</td><td>%d</td></tr>",
+                buffer, count, mvd->numplayers );
         }
         SV_HttpPrintf( "</table>" );
     }
@@ -466,7 +483,7 @@ void MVD_GetStream( const char *uri ) {
 }
 
 void MVD_ChangeLevel( mvd_t *mvd ) {
-	udpClient_t *client;
+    udpClient_t *client;
 
     if( sv.state != ss_broadcast ) {
         MVD_Spawn_f(); // the game is just starting
@@ -474,8 +491,8 @@ void MVD_ChangeLevel( mvd_t *mvd ) {
     }
 
     // cause all UDP clients to reconnect
-	MSG_WriteByte( svc_stufftext );
-	MSG_WriteString( va( "changing map=%s; reconnect\n", mvd->mapname ) );
+    MSG_WriteByte( svc_stufftext );
+    MSG_WriteString( va( "changing map=%s; reconnect\n", mvd->mapname ) );
 
     LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
         if( mvd->intermission && client->cl->state == cs_spawned ) {
@@ -485,10 +502,10 @@ void MVD_ChangeLevel( mvd_t *mvd ) {
         }
         SV_ClientReset( client->cl );
         client->cl->spawncount = mvd->servercount;
-		SV_ClientAddMessage( client->cl, MSG_RELIABLE );
-	}
+        SV_ClientAddMessage( client->cl, MSG_RELIABLE );
+    }
 
-	SZ_Clear( &msg_write );
+    SZ_Clear( &msg_write );
 
     mvd->intermission = qfalse;
 
@@ -543,7 +560,7 @@ static void MVD_PlayNext( mvd_t *mvd, string_entry_t *entry ) {
 }
 
 void MVD_Finish( mvd_t *mvd, const char *reason ) {
-	Com_Printf( "[%s] %s\n", mvd->name, reason );
+    Com_Printf( "[%s] %s\n", mvd->name, reason );
 
     if( mvd->demoentry ) {
         MVD_PlayNext( mvd, mvd->demoentry->next );
@@ -785,9 +802,6 @@ int MVD_Frame( void ) {
             }
             // fall through
         case MVD_WAITING:
-            if( mvd->waitTime > svs.realtime ) {
-                mvd->waitTime = svs.realtime;
-            }
             if( svs.realtime - mvd->waitTime >= mvd->waitDelay ) {
                 Com_Printf( "[%s] Waiting finished, reading...\n", mvd->name );
                 mvd->state = MVD_READING;
@@ -864,8 +878,8 @@ void MVD_Spawn_f( void ) {
     SV_SetConsoleTitle();
 
     // generate spawncount for Waiting Room
-	sv.spawncount = ( rand() | ( rand() << 16 ) ) ^ Sys_Milliseconds();
-	sv.spawncount &= 0x7FFFFFFF;
+    sv.spawncount = ( rand() | ( rand() << 16 ) ) ^ Sys_Milliseconds();
+    sv.spawncount &= 0x7FFFFFFF;
 
     sv.state = ss_broadcast;
 }
@@ -875,26 +889,27 @@ void MVD_ListChannels_f( void ) {
     int usage;
 
     if( LIST_EMPTY( &mvd_channels ) ) {
-        Com_Printf( "No active channels.\n" );
+        Com_Printf( "No channels.\n" );
         return;
     }
 
-	Com_Printf( "id name             map      stat buf address       \n"
-	            "-- ---------------- -------- ---- --- --------------\n" );
+    Com_Printf( "id name         map      spc plr stat buf address       \n"
+                "-- ------------ -------- --- --- ---- --- --------------\n" );
 
     LIST_FOR_EACH( mvd_t, mvd, &mvd_channels, entry ) {
-        Com_Printf( "%2d %-16.16s %-8.8s ", mvd->id,
-            mvd->name, mvd->mapname );
+        Com_Printf( "%2d %-12.12s %-8.8s %3d %3d ",
+            mvd->id, mvd->name, mvd->mapname,
+            List_Count( &mvd->udpClients ), mvd->numplayers );
         switch( mvd->state ) {
         case MVD_DEAD:
             Com_Printf( "DEAD" );
             break;
-	    case MVD_CONNECTING:
-	    case MVD_CONNECTED:
+        case MVD_CONNECTING:
+        case MVD_CONNECTED:
             Com_Printf( "CNCT" );
             break;
-	    case MVD_CHECKING:
-	    case MVD_PREPARING:
+        case MVD_CHECKING:
+        case MVD_PREPARING:
             Com_Printf( "PREP" );
             break;
         case MVD_WAITING:
@@ -914,7 +929,7 @@ void MVD_ListChannels_f( void ) {
 
 void MVD_StreamedStop_f( void ) {
     mvd_t *mvd;
-	uint16_t msglen;
+    uint16_t msglen;
 
     mvd = MVD_SetChannel( 1 );
     if( !mvd ) {
@@ -922,25 +937,25 @@ void MVD_StreamedStop_f( void ) {
         return;
     }
 
-	if( !mvd->demorecording ) {
-		Com_Printf( "[%s] Not recording a demo.\n", mvd->name );
-		return;
-	}
+    if( !mvd->demorecording ) {
+        Com_Printf( "[%s] Not recording a demo.\n", mvd->name );
+        return;
+    }
 
-	msglen = 0;
-	FS_Write( &msglen, 2, mvd->demorecording );
+    msglen = 0;
+    FS_Write( &msglen, 2, mvd->demorecording );
 
-	FS_FCloseFile( mvd->demorecording );
-	mvd->demorecording = 0;
+    FS_FCloseFile( mvd->demorecording );
+    mvd->demorecording = 0;
 
-	Com_Printf( "[%s] Stopped recording.\n", mvd->name );
+    Com_Printf( "[%s] Stopped recording.\n", mvd->name );
 }
 
 extern const cmd_option_t o_mvdrecord[];
 
 void MVD_StreamedRecord_f( void ) {
-	char buffer[MAX_OSPATH];
-	fileHandle_t f;
+    char buffer[MAX_OSPATH];
+    fileHandle_t f;
     mvd_t *mvd;
     uint32_t magic;
     qboolean gzip = qfalse;
@@ -966,50 +981,50 @@ void MVD_StreamedRecord_f( void ) {
         return;
     }
     
-	if( ( mvd = MVD_SetChannel( cmd_optind + 1 ) ) == NULL ) {
+    if( ( mvd = MVD_SetChannel( cmd_optind + 1 ) ) == NULL ) {
         Cmd_PrintHint();
-		return;
-	}
-
-	if( mvd->demorecording ) {
-		Com_Printf( "[%s] Already recording.\n", mvd->name );
-		return;
-	}
-
-	if( mvd->state < MVD_WAITING ) {
-		Com_Printf( "[%s] Channel not ready.\n", mvd->name );
-		return;
-	}
-
-	//
-	// open the demo file
-	//
-    len = Q_concat( buffer, sizeof( buffer ), "demos/", cmd_optarg,
-        gzip ? ".mvd2.gz" : ".mvd2", NULL );
-    if( len >= sizeof( buffer ) ) {
-		Com_EPrintf( "Oversize filename specified.\n" );
         return;
     }
 
-	FS_FOpenFile( buffer, &f, FS_MODE_WRITE );
-	if( !f ) {
-		Com_EPrintf( "Couldn't open %s for writing\n", buffer );
-		return;
-	}
-	
-	Com_Printf( "[%s] Recording into %s.\n", mvd->name, buffer );
+    if( mvd->demorecording ) {
+        Com_Printf( "[%s] Already recording.\n", mvd->name );
+        return;
+    }
 
-	if( gzip ) {
+    if( mvd->state < MVD_WAITING ) {
+        Com_Printf( "[%s] Channel not ready.\n", mvd->name );
+        return;
+    }
+
+    //
+    // open the demo file
+    //
+    len = Q_concat( buffer, sizeof( buffer ), "demos/", cmd_optarg,
+        gzip ? ".mvd2.gz" : ".mvd2", NULL );
+    if( len >= sizeof( buffer ) ) {
+        Com_EPrintf( "Oversize filename specified.\n" );
+        return;
+    }
+
+    FS_FOpenFile( buffer, &f, FS_MODE_WRITE );
+    if( !f ) {
+        Com_EPrintf( "Couldn't open %s for writing\n", buffer );
+        return;
+    }
+    
+    Com_Printf( "[%s] Recording into %s.\n", mvd->name, buffer );
+
+    if( gzip ) {
         FS_FilterFile( f );
     }
 
-	mvd->demorecording = f;
+    mvd->demorecording = f;
 
     MVD_EmitGamestate( mvd );
 
     magic = MVD_MAGIC;
     FS_Write( &magic, 4, mvd->demorecording );
-	FS_Write( msg_write.data, msg_write.cursize, mvd->demorecording );
+    FS_Write( msg_write.data, msg_write.cursize, mvd->demorecording );
 
     SZ_Clear( &msg_write );
 }
@@ -1035,12 +1050,12 @@ MVD_Connect_f
 ==============
 */
 void MVD_Connect_f( void ) {
-	netadr_t adr;
+    netadr_t adr;
     netstream_t stream;
     char buffer[MAX_STRING_CHARS];
     char resource[MAX_STRING_CHARS];
     char credentials[MAX_STRING_CHARS];
-	char *id = "", *name = NULL, *referer = NULL, *host, *p;
+    char *id = "", *name = NULL, *referer = NULL, *host, *p;
     htcoding_t coding = HTTP_CODING_NONE;
     mvd_t *mvd;
     uint16_t port;
@@ -1089,7 +1104,7 @@ void MVD_Connect_f( void ) {
         return;
     }
 
-	Cmd_ArgvBuffer( cmd_optind, buffer, sizeof( buffer ) );
+    Cmd_ArgvBuffer( cmd_optind, buffer, sizeof( buffer ) );
 
     // skip optional http:// prefix
     host = buffer;
@@ -1119,10 +1134,10 @@ void MVD_Connect_f( void ) {
     }
 
     // resolve hostname
-	if( !NET_StringToAdr( host, &adr, port ) ) {
-		Com_Printf( "Bad server address: %s\n", host );
-		return;
-	}
+    if( !NET_StringToAdr( host, &adr, port ) ) {
+        Com_Printf( "Bad server address: %s\n", host );
+        return;
+    }
 
     if( NET_Connect( &adr, &stream ) == NET_ERROR ) {
         Com_Printf( "%s to %s\n", NET_ErrorString(),
@@ -1311,10 +1326,10 @@ static void MVD_Play_c( genctx_t *ctx, int argnum ) {
 }
 
 void MVD_Play_f( void ) {
-	char *name = NULL, *s;
-	char buffer[MAX_OSPATH];
+    char *name = NULL, *s;
+    char buffer[MAX_OSPATH];
     int loop = 1;
-	size_t len;
+    size_t len;
     mvd_t *mvd;
     int c, argc;
     string_entry_t *entry, *head;
@@ -1354,7 +1369,7 @@ void MVD_Play_f( void ) {
 
     head = NULL;
     for( i = argc - 1; i >= cmd_optind; i-- ) {
-	    s = Cmd_Argv( i );
+        s = Cmd_Argv( i );
         if( *s == '/' ) {
             Q_strlcpy( buffer, s + 1, sizeof( buffer ) );
         } else {
@@ -1414,7 +1429,6 @@ void MVD_Shutdown( void ) {
 
     LIST_FOR_EACH_SAFE( mvd_t, mvd, next, &mvd_channels, entry ) {
         MVD_Disconnect( mvd );
-        MVD_ClearState( mvd );
         MVD_Free( mvd );
     }
 
@@ -1422,10 +1436,10 @@ void MVD_Shutdown( void ) {
     List_Init( &mvd_ready );
     List_Init( &mvd_active );
 
-	if( mvd_clients ) {
-		Z_Free( mvd_clients );
+    if( mvd_clients ) {
+        Z_Free( mvd_clients );
         mvd_clients = NULL;
-	}
+    }
 
     mvd_chanid = 0;
 
@@ -1433,14 +1447,14 @@ void MVD_Shutdown( void ) {
 }
 
 static const cmdreg_t c_mvd[] = {
-	{ "mvdplay", MVD_Play_f, MVD_Play_c },
-	{ "mvdconnect", MVD_Connect_f, MVD_Connect_c },
-	{ "mvdisconnect", MVD_Disconnect_f },
-	{ "mvdkill", MVD_Kill_f },
-	{ "mvdspawn", MVD_Spawn_f },
-	{ "mvdchannels", MVD_ListChannels_f },
-	{ "mvdcontrol", MVD_Control_f },
-	{ "mvdpause", MVD_Pause_f },
+    { "mvdplay", MVD_Play_f, MVD_Play_c },
+    { "mvdconnect", MVD_Connect_f, MVD_Connect_c },
+    { "mvdisconnect", MVD_Disconnect_f },
+    { "mvdkill", MVD_Kill_f },
+    { "mvdspawn", MVD_Spawn_f },
+    { "mvdchannels", MVD_ListChannels_f },
+    { "mvdcontrol", MVD_Control_f },
+    { "mvdpause", MVD_Pause_f },
 
     { NULL }
 };
@@ -1452,12 +1466,12 @@ MVD_Register
 ==============
 */
 void MVD_Register( void ) {
-	mvd_shownet = Cvar_Get( "mvd_shownet", "0", 0 );
-	mvd_debug = Cvar_Get( "mvd_debug", "0", 0 );
-	mvd_timeout = Cvar_Get( "mvd_timeout", "120", 0 );
-	mvd_wait_delay = Cvar_Get( "mvd_wait_delay", "20", 0 );
-	mvd_wait_percent = Cvar_Get( "mvd_wait_percent", "50", 0 );
-	mvd_chase_msgs = Cvar_Get( "mvd_chase_msgs", "0", 0 );
+    mvd_shownet = Cvar_Get( "mvd_shownet", "0", 0 );
+    mvd_debug = Cvar_Get( "mvd_debug", "0", 0 );
+    mvd_timeout = Cvar_Get( "mvd_timeout", "120", 0 );
+    mvd_wait_delay = Cvar_Get( "mvd_wait_delay", "20", 0 );
+    mvd_wait_percent = Cvar_Get( "mvd_wait_percent", "50", 0 );
+    mvd_chase_msgs = Cvar_Get( "mvd_chase_msgs", "0", 0 );
 
     Cmd_Register( c_mvd );
 }

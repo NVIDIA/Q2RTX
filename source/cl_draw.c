@@ -26,7 +26,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 cvar_t      *scr_draw2d;
 cvar_t      *scr_showturtle;
-cvar_t		*scr_showfollowing;
 cvar_t		*scr_showstats;
 cvar_t		*scr_showpmove;
 cvar_t		*scr_lag_x;
@@ -576,31 +575,6 @@ static void draw_crosshair( void ) {
     R_DrawPic( x, y, crosshair_pic );
 }
 
-static void draw_following( void ) {
-	char *string;
-	int x;
-
-	if( !scr_showfollowing->integer ) {
-		return;
-	}
-
-	if( !cls.demo.playback && cl.frame.clientNum == cl.clientNum ) {
-		return;
-	}
-    if( cl.frame.ps.stats[STAT_LAYOUTS] ) {
-        return;
-    }
-
-	string = cl.clientinfo[cl.frame.clientNum].name;
-	if( !string[0] ) {
-		return;
-	}
-
-	x = ( scr_hudWidth - strlen( string ) * CHAR_WIDTH ) / 2;
-
-	R_DrawString( x, 2, 0, MAX_STRING_CHARS, string, scr_font );
-}
-
 static void draw_turtle( void ) {
     int x = 8;
     int y = scr_hudHeight - 88;
@@ -720,10 +694,6 @@ void SCR_Draw2D( void ) {
 		SCR_DrawInventory();
 	}
 
-	if( cl.frame.clientNum != CLIENTNUM_NONE ) {
-		draw_following();
-	}
-
 	SCR_DrawCenterString();
 
     x = scr_lag_x->integer;
@@ -790,7 +760,6 @@ SCR_InitDraw
 void SCR_InitDraw( void ) {
 	scr_draw2d = Cvar_Get( "scr_draw2d", "2", 0 );
 	scr_showturtle = Cvar_Get( "scr_showturtle", "1", 0 );
-	scr_showfollowing = Cvar_Get( "scr_showfollowing", "1", 0 );
 	scr_lag_x = Cvar_Get( "scr_lag_x", "-1", 0 );
 	scr_lag_y = Cvar_Get( "scr_lag_y", "-1", 0 );
     scr_lag_draw = Cvar_Get( "scr_lag_draw", "0", 0 );

@@ -99,13 +99,15 @@ typedef struct {
     int jump_held;
 } udpClient_t;
 
+#define MAX_MVD_NAME    16
+
 typedef struct mvd_s {
     list_t      entry;
     list_t      ready;
     list_t      active;
 
     int         id;
-    char        name[MAX_QPATH];
+    char        name[MAX_MVD_NAME];
 
     // demo related variables
     fileHandle_t    demoplayback;
@@ -132,7 +134,7 @@ typedef struct mvd_s {
     fifo_t      zbuf;
     unsigned    framenum;
     unsigned    lastReceived;
-    unsigned    waitTime, waitDelay;
+    unsigned    waitTime, waitDelay, waitCount;
 
     // game state
     char    gamedir[MAX_QPATH];

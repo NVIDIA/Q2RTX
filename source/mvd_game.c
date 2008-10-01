@@ -1024,9 +1024,10 @@ static void MVD_Commands_f( udpClient_t *client ) {
         "observe                toggle observer mode\n"
         "menu                   show main menu\n"
         "score                  show scoreboard\n"
+        "oldscore               show previous scoreboard\n"
         "channels [all]         list active (or all) channels\n"
         "join [channel_id]      join specified channel\n"
-        "leave                  leave into the Waiting Room\n"
+        "leave                  go to the Waiting Room\n"
     );
 }
 
@@ -1109,7 +1110,7 @@ static void MVD_GameClientCommand( edict_t *ent ) {
         MVD_Channels_f( client );
 		return;
 	}
-	if( !strcmp( cmd, "clients" ) ) {
+	if( !strcmp( cmd, "clients" ) || !strcmp( cmd, "players" ) ) {
         MVD_Clients_f( client );
 		return;
 	}
