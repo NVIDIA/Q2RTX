@@ -477,7 +477,7 @@ void SV_Begin_f( void ) {
     }
 
     if( sv_force_reconnect->string[0] && !( sv_client->flags & CF_RECONNECTED ) ) {
-        if( dedicated->integer ) {
+        if( Com_IsDedicated() ) {
             Com_Printf( "%s[%s]: failed to reconnect\n", sv_client->name,
                 NET_AdrToString( &sv_client->netchan->remote_address ) );
         }
@@ -702,7 +702,7 @@ The client is going to disconnect, so remove the connection immediately
 =================
 */
 static void SV_Disconnect_f( void ) {
-    if( dedicated->integer && sv_client->netchan ) {
+    if( Com_IsDedicated() && sv_client->netchan ) {
         Com_Printf( "%s[%s] disconnected\n", sv_client->name,
             NET_AdrToString( &sv_client->netchan->remote_address ) );
     }
@@ -738,7 +738,7 @@ static void SV_CvarResult_f( void ) {
     if( !strcmp( c, "version" ) ) {
         if( !sv_client->versionString ) {
             v = Cmd_RawArgsFrom( 2 );
-            if( dedicated->integer ) {
+            if( Com_IsDedicated() ) {
                 Com_Printf( "%s[%s]: %s\n", sv_client->name,
                     NET_AdrToString( &sv_client->netchan->remote_address ), v );
             }

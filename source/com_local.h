@@ -166,11 +166,6 @@ void	Cmd_ExecuteString( const char *text );
 // Parses a single line of text into arguments and tries to execute it
 // as if it was typed at the console
 
-qboolean	Cmd_ForwardToServer( void );
-// adds the current command line as a clc_stringcmd to the client message.
-// things like godmode, noclip, etc, are commands directed to the server,
-// so when they are typed in at the console, they will need to be forwarded.
-
 char *Cmd_MacroExpandString( const char *text, qboolean aliasHack );
 
 void Cbuf_ExecuteText( cbufExecWhen_t exec_when, const char *text );
@@ -444,7 +439,9 @@ void		Com_ProcessEvents( void );
 
 void        Com_Address_g( genctx_t *ctx );
 void        Com_Generic_c( genctx_t *ctx, int argnum );
+#if USE_CLIENT
 void        Com_Color_g( genctx_t *ctx );
+#endif
 
 qboolean    Prompt_AddMatch( genctx_t *ctx, const char *s );
 
@@ -453,16 +450,23 @@ size_t      Com_Uptime_m( char *buffer, size_t size );
 
 uint32_t    Com_BlockChecksum( void *buffer, size_t len );
 
+#if USE_CLIENT
+#define Com_IsDedicated() ( dedicated->integer != 0 )
+#else
+#define Com_IsDedicated() 1
+#endif
+
 extern	cvar_t	*developer;
 extern	cvar_t	*dedicated;
 extern	cvar_t	*host_speeds;
 extern	cvar_t	*com_version;
 
-extern	cvar_t	*mvd_running;
+#if USE_CLIENT
+extern  cvar_t  *cl_running;
+extern  cvar_t  *cl_paused;
+#endif
 extern	cvar_t	*sv_running;
 extern	cvar_t	*sv_paused;
-extern	cvar_t	*cl_running;
-extern	cvar_t	*cl_paused;
 extern	cvar_t	*com_timedemo;
 extern	cvar_t	*com_sleep;
 

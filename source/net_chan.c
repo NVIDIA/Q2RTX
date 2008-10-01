@@ -141,7 +141,7 @@ neterr_t Netchan_OutOfBandPrint( netsrc_t sock, const netadr_t *address,
 // ============================================================================
 
 static size_t NetchanOld_TransmitNextFragment( netchan_t *netchan ) {
-	Com_Error( ERR_FATAL, "NetchanOld_TransmitNextFragment: not implemented" );
+	Com_Error( ERR_FATAL, "%s: not implemented", __func__ );
 	return 0;
 }
 
@@ -205,6 +205,7 @@ static size_t NetchanOld_Transmit( netchan_t *netchan, size_t length, const void
 	SZ_WriteLong( &send, w1 );
 	SZ_WriteLong( &send, w2 );
 
+#if USE_CLIENT
 	// send the qport if we are a client
 	if( netchan->sock == NS_CLIENT ) {
 		if( netchan->protocol < PROTOCOL_VERSION_R1Q2 ) {
@@ -213,6 +214,7 @@ static size_t NetchanOld_Transmit( netchan_t *netchan, size_t length, const void
 			SZ_WriteByte( &send, netchan->qport );
 		}
 	}
+#endif
 
 // copy the reliable message to the packet first
 	if( send_reliable ) {
@@ -227,6 +229,7 @@ static size_t NetchanOld_Transmit( netchan_t *netchan, size_t length, const void
 		Com_WPrintf( "%s: dumped unreliable\n",
             NET_AdrToString( &netchan->remote_address ) );
 
+#if USE_CLIENT
 	if( showpackets->integer ) {
         Com_Printf( "send %4"PRIz" : s=%d ack=%d rack=%d",
             send.cursize,
@@ -238,6 +241,7 @@ static size_t NetchanOld_Transmit( netchan_t *netchan, size_t length, const void
 		}
         Com_Printf( "\n" );
 	}
+#endif
 
 	// send the datagram
 	ret = NET_SendPacket( netchan->sock, &netchan->remote_address,
@@ -268,13 +272,16 @@ static qboolean NetchanOld_Process( netchan_t *netchan ) {
 	sequence_ack = MSG_ReadLong();
 
 	// read the qport if we are a server
-	if( netchan->sock == NS_SERVER ) {
+#if USE_CLIENT
+	if( netchan->sock == NS_SERVER )
+#endif
+    {
 		if( netchan->protocol < PROTOCOL_VERSION_R1Q2 ) {
 			MSG_ReadShort();
 		} else if( netchan->qport ) {
 			MSG_ReadByte();
 		}
-	}
+    }
 
 	reliable_message = sequence >> 31;
 	reliable_ack = sequence_ack >> 31;
@@ -282,6 +289,7 @@ static qboolean NetchanOld_Process( netchan_t *netchan ) {
 	sequence &= ~( 1 << 31 );
 	sequence_ack &= ~( 1 << 31 );	
 
+#if USE_CLIENT
 	if( showpackets->integer ) {
         Com_Printf( "recv %4"PRIz" : s=%d ack=%d rack=%d",
             msg_read.cursize,
@@ -293,6 +301,7 @@ static qboolean NetchanOld_Process( netchan_t *netchan ) {
         }
         Com_Printf( "\n" );
 	}
+#endif
 
 //
 // discard stale or duplicated packets
@@ -430,10 +439,12 @@ static size_t NetchanNew_TransmitNextFragment( netchan_t *netchan ) {
 	SZ_WriteLong( &send, w1 );
 	SZ_WriteLong( &send, w2 );
 
+#if USE_CLIENT
 	// send the qport if we are a client
 	if( netchan->sock == NS_CLIENT && netchan->qport ) {
 		SZ_WriteByte( &send, netchan->qport );
 	}
+#endif
 
 	fragment_length = chan->fragment_out.cursize - chan->fragment_out.readcount;
 	if( fragment_length > netchan->maxpacketlen ) {
@@ -456,6 +467,7 @@ static size_t NetchanNew_TransmitNextFragment( netchan_t *netchan ) {
 	SZ_Write( &send, chan->fragment_out.data + chan->fragment_out.readcount,
         fragment_length );
 	
+#if USE_CLIENT
 	if( showpackets->integer ) {
 		Com_Printf( "send %4"PRIz" : s=%d ack=%d rack=%d "
                     "fragment_offset=%"PRIz" more_fragments=%d",
@@ -470,6 +482,7 @@ static size_t NetchanNew_TransmitNextFragment( netchan_t *netchan ) {
 		}
 		Com_Printf( "\n" );
 	}
+#endif
 
 	chan->fragment_out.readcount += fragment_length;
 	netchan->fragment_pending = more_fragments;
@@ -566,10 +579,12 @@ static size_t NetchanNew_Transmit( netchan_t *netchan, size_t length, const void
 	SZ_WriteLong( &send, w1 );
 	SZ_WriteLong( &send, w2 );
 
+#if USE_CLIENT
 	// send the qport if we are a client
 	if( netchan->sock == NS_CLIENT && netchan->qport ) {
 		SZ_WriteByte( &send, netchan->qport );
 	}
+#endif
 	
 	// copy the reliable message to the packet first
 	if( send_reliable ) {
@@ -580,6 +595,7 @@ static size_t NetchanNew_Transmit( netchan_t *netchan, size_t length, const void
 	// add the unreliable part
 	SZ_Write( &send, data, length );
 
+#if USE_CLIENT
 	if( showpackets->integer ) {
         Com_Printf( "send %4"PRIz" : s=%d ack=%d rack=%d",
             send.cursize,
@@ -591,6 +607,7 @@ static size_t NetchanNew_Transmit( netchan_t *netchan, size_t length, const void
         }
         Com_Printf( "\n" );
 	}
+#endif
 
 	// send the datagram
 	ret = NET_SendPacket( netchan->sock, &netchan->remote_address,
@@ -620,9 +637,12 @@ static qboolean NetchanNew_Process( netchan_t *netchan ) {
 	sequence_ack = MSG_ReadLong();
 
 	// read the qport if we are a server
-	if( netchan->sock == NS_SERVER && netchan->qport ) {
-		MSG_ReadByte();
-	}
+#if USE_CLIENT
+	if( netchan->sock == NS_SERVER )
+#endif
+        if( netchan->qport ) {
+		    MSG_ReadByte();
+        }
 
 	reliable_message = sequence >> 31;
 	reliable_ack = sequence_ack >> 31;
@@ -639,6 +659,7 @@ static qboolean NetchanNew_Process( netchan_t *netchan ) {
 		fragment_offset &= 0x7FFF;
 	}
 
+#if USE_CLIENT
 	if( showpackets->integer ) {
 		Com_Printf( "recv %4"PRIz" : s=%d ack=%d rack=%d",
             msg_read.cursize, sequence, sequence_ack, reliable_ack );
@@ -651,6 +672,7 @@ static qboolean NetchanNew_Process( netchan_t *netchan ) {
 		}
 		Com_Printf( "\n" );
 	}
+#endif
 
 //
 // discard stale or duplicated packets

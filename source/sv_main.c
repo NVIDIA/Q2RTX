@@ -187,7 +187,7 @@ void SV_DropClient( client_t *client, const char *reason ) {
             client->name, reason );
 
         // print to server console
-        if( dedicated->integer ) {
+        if( Com_IsDedicated() ) {
             Com_Printf( "%s[%s] was dropped: %s\n", client->name,
                 NET_AdrToString( &client->netchan->remote_address ), reason );
         }
@@ -1472,7 +1472,7 @@ static void SV_MasterHeartbeat( void ) {
     size_t  len;
 	int		i;
 
-	if( !dedicated->integer )
+	if( !Com_IsDedicated() )
 		return;		// only dedicated servers send heartbeats
 
 	if( !sv_public->integer )
@@ -1509,7 +1509,7 @@ Informs all masters that this server is going down
 static void SV_MasterShutdown( void ) {
 	int			i;
 
-	if( !dedicated->integer )
+	if( !Com_IsDedicated() )
 		return;		// only dedicated servers send heartbeats
 
 	if( !sv_public->integer )
@@ -1544,8 +1544,9 @@ void SV_Frame( unsigned msec ) {
 
 	// if server is not active, do nothing
 	if( !svs.initialized ) {
-		if( dedicated->integer ) {
+		if( Com_IsDedicated() ) {
 			Sys_Sleep( 1 );
+            goto runbuf;
 		}
 		return;
 	}
@@ -1586,10 +1587,9 @@ void SV_Frame( unsigned msec ) {
 	// move autonomous things around if enough time has passed
     sv.frametime += msec;
 	if( !com_timedemo->integer && sv.frametime < 100 ) {
-#if USE_CLIENT
-		if( dedicated->integer )
-#endif
+		if( Com_IsDedicated() ) {
     		NET_Sleep( 100 - sv.frametime );
+        }
 		return;
 	}
 
@@ -1614,6 +1614,14 @@ void SV_Frame( unsigned msec ) {
     } else {
 		SV_PrepWorldFrame();
 	}
+
+	if( Com_IsDedicated() ) {
+runbuf:
+        // run cmd buffer in dedicated mode
+        if( cmd_buffer.waitCount > 0 ) {
+            cmd_buffer.waitCount--;
+        }
+    }
 }
 
 //============================================================================
@@ -1698,7 +1706,7 @@ void SV_UserinfoChanged( client_t *cl ) {
 	for( i = 0; i < len; i++ )
 		name[i] &= 127;
     if( cl->name[0] && strcmp( cl->name, name ) ) {
-        if( dedicated->integer ) {
+        if( Com_IsDedicated() ) {
             Com_Printf( "%s[%s] changed name to %s\n", cl->name,
                 NET_AdrToString( &cl->netchan->remote_address ), name );
         }

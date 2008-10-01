@@ -158,9 +158,11 @@ void SV_InitGame( qboolean ismvd ){
 		// cause any connected clients to reconnect
 		SV_Shutdown( "Server restarted\n", KILL_RESTART );
 	} else {
+#if USE_CLIENT
 		// make sure the client is down
 		CL_Disconnect( ERR_SILENT, NULL );
 		SCR_BeginLoadingPlaque();
+#endif
 
 		CM_FreeMap( &sv.cm );
 		memset( &sv, 0, sizeof( sv ) );
@@ -184,7 +186,7 @@ void SV_InitGame( qboolean ismvd ){
 
 		// dedicated servers can't be single player and are usually DM
 		// so unless they explicity set coop, force it to deathmatch
-		if( dedicated->integer ) {
+		if( Com_IsDedicated() ) {
 			if( !Cvar_VariableInteger( "coop" ) )
 				Cvar_Set( "deathmatch", "1" );
 		}
@@ -348,7 +350,9 @@ void SV_Map (const char *levelstring, qboolean restart) {
         sv.state = ss_loading;
     }
     
+#if USE_CLIENT
     SCR_BeginLoadingPlaque();			// for local system
+#endif
     SV_BroadcastCommand( "changing map=%s\n", level );
     SV_SendClientMessages();
     SV_SendAsyncPackets();

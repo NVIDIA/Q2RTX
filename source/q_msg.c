@@ -166,7 +166,7 @@ void MSG_WriteString( const char *string ) {
 MSG_WriteCoord
 =============
 */
-void MSG_WriteCoord( float f ) {
+static inline void MSG_WriteCoord( float f ) {
 	MSG_WriteShort( ( int )( f * 8 ) );
 }
 
@@ -195,9 +195,11 @@ void MSG_WriteAngle( float f ) {
 MSG_WriteAngle16
 =============
 */
-void MSG_WriteAngle16( float f ) {
+static inline void MSG_WriteAngle16( float f ) {
 	MSG_WriteShort( ANGLE2SHORT( f ) );
 }
+
+#if USE_CLIENT
 
 /*
 =============
@@ -433,6 +435,8 @@ int MSG_WriteDeltaUsercmd_Enhanced( const usercmd_t *from,
 
 	return bits;
 }
+
+#endif // USE_CLIENT
 
 void MSG_WriteDir( const vec3_t dir ) {
 	int		best;
@@ -1566,28 +1570,28 @@ size_t MSG_ReadStringLine( char *dest, size_t size ) {
 	return l;
 }
 
-float MSG_ReadCoord (void)
-{
+static inline float MSG_ReadCoord (void) {
 	return MSG_ReadShort() * (1.0/8);
 }
 
-void MSG_ReadPos ( vec3_t pos)
-{
+#if !USE_CLIENT
+static inline
+#endif
+void MSG_ReadPos ( vec3_t pos) {
 	pos[0] = MSG_ReadShort() * (1.0/8);
 	pos[1] = MSG_ReadShort() * (1.0/8);
 	pos[2] = MSG_ReadShort() * (1.0/8);
 }
 
-float MSG_ReadAngle (void)
-{
+static inline float MSG_ReadAngle (void) {
 	return MSG_ReadChar() * (360.0/256);
 }
 
-float MSG_ReadAngle16 (void)
-{
+static inline float MSG_ReadAngle16 (void) {
 	return SHORT2ANGLE(MSG_ReadShort());
 }
 
+#if USE_CLIENT
 void MSG_ReadDir( vec3_t dir ) {
 	int		b;
 
@@ -1596,6 +1600,7 @@ void MSG_ReadDir( vec3_t dir ) {
 		Com_Error( ERR_DROP, "MSG_ReadDir: out of range" );
 	VectorCopy( bytedirs[b], dir );
 }
+#endif
 
 void MSG_ReadDeltaUsercmd( const usercmd_t *from, usercmd_t *to ) {
 	int bits;
@@ -1826,14 +1831,25 @@ void MSG_ReadDeltaUsercmd_Enhanced( const usercmd_t *from,
 	}
 }
 
+#if 0
+size_t MSG_ReadData( void *data, size_t len ) {
+    size_t remaining;
 
-void MSG_ReadData ( void *data, int len)
-{
-	int		i;
+    if( msg_read.readcount >= msg_read.cursize ) {
+        return 0;
+    }
 
-	for (i=0 ; i<len ; i++)
-		((byte *)data)[i] = MSG_ReadByte ();
+    remaining = msg_read.cursize - msg_read.readcount;
+    if( len > remaining ) {
+        len = remining;
+    }
+
+    memcpy( data, msg_read.data + msg_read.readcount, len );
+    msg_read.readcount += len;
+
+    return len;
 }
+#endif
 
 /*
 =================
@@ -1987,6 +2003,8 @@ void MSG_ParseDeltaEntity( const entity_state_t *from,
         }
 	}
 }
+
+#if USE_CLIENT
 
 /*
 ===================
@@ -2232,6 +2250,8 @@ void MSG_ParseDeltaPlayerstate_Enhanced(    const player_state_t    *from,
 	
 }
 
+#endif // USE_CLIENT
+
 /*
 ===================
 MSG_ParseDeltaPlayerstate_Packet
@@ -2420,6 +2440,8 @@ void MSG_ShowDeltaEntityBits( int bits ) {
 
 }
 
+#if USE_CLIENT
+
 void MSG_ShowDeltaPlayerstateBits_Default( int flags ) {
 	if( flags & PS_M_TYPE ) {
 		SHOWBITS( "pmove.pm_type" );
@@ -2574,6 +2596,8 @@ void MSG_ShowDeltaPlayerstateBits_Enhanced( int flags ) {
 	}
 }
 
+#endif // USE_CLIENT
+
 void MSG_ShowDeltaPlayerstateBits_Packet( int flags ) {
 	if( flags & PPS_M_TYPE ) {
 		SHOWBITS( "pmove.pm_type" );
@@ -2636,6 +2660,8 @@ void MSG_ShowDeltaPlayerstateBits_Packet( int flags ) {
 	}
 }
 
+#if USE_CLIENT
+
 void MSG_ShowDeltaUsercmdBits_Enhanced( int bits ) {
 	if( !bits ) {
 		SHOWBITS( "<none>" );
@@ -2660,6 +2686,8 @@ void MSG_ShowDeltaUsercmdBits_Enhanced( int bits ) {
  	if( bits & CM_IMPULSE )
 	    SHOWBITS( "msec" );
 }
+
+#endif // USE_CLIENT
 
 static const char *const svc_strings[svc_num_types] = {
 	"svc_bad",

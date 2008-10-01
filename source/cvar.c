@@ -160,9 +160,11 @@ static void Cvar_ChangeString( cvar_t *var, const char *value, cvarSetSource_t s
     Cvar_ParseString( var );
 
     if( var->flags & CVAR_INFOMASK ) {
+#if USE_CLIENT
         if( var->flags & CVAR_USERINFO ) {
             CL_UpdateUserinfo( var, source );
         }
+#endif
     }
 
     var->modified = qtrue;
@@ -446,11 +448,13 @@ cvar_t *Cvar_FullSet( const char *var_name, const char *value, int flags, cvarSe
 
     Cvar_SetByVar( var, value, source );
 
+#if USE_CLIENT
     // force retransmit of userinfo variables
     // needed for compatibility with q2admin
     if( ( var->flags | flags ) & CVAR_USERINFO ) {
         CL_UpdateUserinfo( var, source );
     }
+#endif
 
     var->flags &= ~CVAR_INFOMASK;
     var->flags |= flags;

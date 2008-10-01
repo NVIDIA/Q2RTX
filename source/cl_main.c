@@ -250,14 +250,14 @@ void CL_ClientCommand( const char *string ) {
 
 /*
 ===================
-Cmd_ForwardToServer
+CL_ForwardToServer
  
 adds the current command line as a clc_stringcmd to the client message.
 things like godmode, noclip, etc, are commands directed to the server,
 so when they are typed in at the console, they will need to be forwarded.
 ===================
 */
-qboolean Cmd_ForwardToServer( void ) {
+qboolean CL_ForwardToServer( void ) {
     char	*cmd;
 
     cmd = Cmd_Argv( 0 );
@@ -2659,10 +2659,6 @@ void CL_Frame( unsigned msec ) {
 	time_after_ref = time_before_ref = 0;
 
 	if( !cl_running->integer ) {
-        // still run cmd buffer in dedicated mode
-        if( cmd_buffer.waitCount > 0 ) {
-            cmd_buffer.waitCount--;
-        }
         return;
 	}
 

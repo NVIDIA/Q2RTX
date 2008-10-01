@@ -177,7 +177,7 @@ static void PF_bprintf( int level, const char *fmt, ... ) {
 	MSG_WriteData( string, len + 1 );
 
 	// echo to console
-	if( dedicated->integer ) {
+	if( Com_IsDedicated() ) {
 		// mask off high bits
 		for( i = 0; i < len; i++ )
 			string[i] &= 127;

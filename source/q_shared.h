@@ -179,6 +179,7 @@ extern vec3_t vec3_origin;
 
 extern const vec3_t bytedirs[NUMVERTEXNORMALS];
 
+#if USE_CLIENT
 extern const color_t colorBlack;
 extern const color_t colorRed;
 extern const color_t colorGreen;
@@ -191,6 +192,7 @@ extern const color_t colorWhite;
 extern const color_t colorTable[8];
 
 extern const char colorNames[10][8];
+#endif
 
 typedef struct vrect_s {
 	int				x, y, width, height;
@@ -287,7 +289,6 @@ void UnionBounds( vec3_t a[2], vec3_t b[2], vec3_t c[2] );
 vec_t VectorNormalize (vec3_t v);		// returns vector length
 vec_t VectorNormalize2 (vec3_t v, vec3_t out);
 
-int Q_log2(int val);
 int Q_CeilPowerOfTwo( int value );
 float Com_CalcFov( float fov_x, float width, float height );
 
@@ -311,7 +312,6 @@ static inline float anglemod( float a ) {
 
 void ProjectPointOnPlane( vec3_t dst, const vec3_t p, const vec3_t normal );
 void PerpendicularVector( vec3_t dst, const vec3_t src );
-void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, float degrees );
 
 int DirToByte( const vec3_t dir );
 void ByteToDir( int index, vec3_t dir );

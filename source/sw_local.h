@@ -665,6 +665,8 @@ extern  surfcache_t     *sc_rover, *sc_base;
 
 //====================================================================
 
+void R_RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, float degrees );
+
 float R_DLightPoint (vec3_t p);
 
 void R_NewMap (void);

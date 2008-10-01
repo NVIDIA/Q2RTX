@@ -24,54 +24,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "com_local.h"
 #include "files.h"
 
-cvar_t *cl_paused;
-
-void Key_Bind_Null_f( void ) {
-}
-
-void CL_Init( void ) {
-	cl_paused = Cvar_Get( "cl_paused", "0", CVAR_ROM );
-}
-
-void CL_Drop( void ) {
-}
-
-void CL_Disconnect( comErrorType_t type, const char *text ) {
-}
-
-void CL_Shutdown( void ) {
-}
-
-void CL_Frame( int msec ) {
-    if( cmd_buffer.waitCount > 0 ) {
-        cmd_buffer.waitCount--;
-    }
-}
-
-void Con_Init( void ) {
-}
-
-void Con_Print( const char *text ) {
-}
-
 qboolean CL_CheatsOK( void ) {
-	return qtrue;
-}
-
-void CL_UpdateUserinfo( cvar_t *var, cvarSetSource_t source ) {
-}
-
-qboolean Cmd_ForwardToServer( void ) {
-    return qfalse;
+    // developer option
+    if( Cvar_VariableInteger( "cheats" ) ) {
+		return qtrue;
+    }
+	return qfalse;
 }
 
 void SCR_DebugGraph( float value, int color ) {
-}
-
-void SCR_BeginLoadingPlaque( void ) {
-}
-
-void SCR_EndLoadingPlaque( void ) {
 }
 
 void CL_RestartFilesystem( void ) {
@@ -84,25 +45,7 @@ void CL_LocalConnect( void ) {
 	}
 }
 
-void CL_PumpEvents( void ) {
-}
-
-void CL_AppActivate( qboolean active ) {
-}
-
-void Key_WriteBindings( fileHandle_t f ) {
-}
-
-void Key_Event( unsigned key, qboolean down, unsigned time ) {
-}
-
-void Key_CharEvent( int key ) {
-}
-
-void CL_MouseEvent( int x, int y ) {
-}
-
-void CL_InputFrame( void ) {
+static void Key_Bind_Null_f( void ) {
 }
 
 void Key_Init( void ) {

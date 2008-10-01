@@ -557,7 +557,8 @@ static void CL_ParseFrame( int extrabits ) {
         if( length > sizeof( frame.areabits ) ) {
             Com_Error( ERR_DROP, "%s: invalid areabits length", __func__ );
         }
-        MSG_ReadData( frame.areabits, length );
+        memcpy( frame.areabits, msg_read.data + msg_read.readcount, length );
+        msg_read.readcount += length;
         frame.areabytes = length;
     } else {
         frame.areabytes = 0;

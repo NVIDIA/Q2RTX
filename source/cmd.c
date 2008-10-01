@@ -22,6 +22,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "com_local.h"
 #include "files.h"
 #include "q_list.h"
+#if USE_CLIENT
+#include "cl_public.h"
+#endif
 
 #define Cmd_Malloc( size )		        Z_TagMalloc( size, TAG_CMD )
 #define Cmd_CopyString( string )		Z_TagCopyString( string, TAG_CMD )
@@ -1262,7 +1265,11 @@ void Cmd_ExecuteString( const char *text ) {
 	if( cmd ) {
         if( cmd->function ) {
             cmd->function();
-        } else if( !Cmd_ForwardToServer() ) {
+        } else
+#if USE_CLIENT
+            if( !CL_ForwardToServer() )
+#endif
+        {
             Com_Printf( "Can't \"%s\", not connected\n", cmd_argv[0] );
         }
 		return;
@@ -1290,8 +1297,11 @@ void Cmd_ExecuteString( const char *text ) {
 		return;
     }
 
+#if USE_CLIENT
 	// send it as a server command if we are connected
-	if( !Cmd_ForwardToServer() ) {
+	if( !CL_ForwardToServer() )
+#endif
+    {
         Com_Printf( "Unknown command \"%s\"\n", cmd_argv[0] );
     }
 }

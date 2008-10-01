@@ -25,10 +25,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "sv_local.h"
 #include "mvd_local.h"
 
-#define MVD_ShowSVC( cmd ) do { \
+#define MVD_ShowSVC( cmd ) \
 	Com_Printf( "%3"PRIz":%s\n", msg_read.readcount - 1, \
-        MVD_ServerCommandString( cmd ) ); \
-    } while( 0 )
+        MVD_ServerCommandString( cmd ) )
 
 static const char mvd_strings[mvd_num_types][20] = {
     "mvd_bad",
@@ -52,7 +51,7 @@ static const char mvd_strings[mvd_num_types][20] = {
     "mvd_stufftext"
 };
 
-const char *MVD_ServerCommandString( int cmd ) {
+static const char *MVD_ServerCommandString( int cmd ) {
     const char *s;
 
     if( cmd == -1 ) {

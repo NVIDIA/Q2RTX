@@ -1091,7 +1091,7 @@ void R_DrawBeam( entity_t *e )
 
 	for ( i = 0; i < NUM_BEAM_SEGS; i++ )
 	{
-		RotatePointAroundVector( start_points[i], normalized_direction,
+		R_RotatePointAroundVector( start_points[i], normalized_direction,
                 perpvec, (360.0/NUM_BEAM_SEGS)*i );
 		VectorAdd( start_points[i], origin, start_points[i] );
 		VectorAdd( start_points[i], direction, end_points[i] );

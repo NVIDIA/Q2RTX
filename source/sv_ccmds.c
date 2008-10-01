@@ -470,7 +470,7 @@ void SV_ConSay_f( void ) {
 		SV_ClientPrintf( client, PRINT_CHAT, "console: %s\n", s );
 	}
 
-    if( dedicated->integer ) {
+    if( Com_IsDedicated() ) {
     	Com_Printf( "console: %s\n", s );
     }
 }
@@ -1128,7 +1128,7 @@ SV_InitOperatorCommands
 void SV_InitOperatorCommands( void ) {
     Cmd_Register( c_server );
 
-	if ( dedicated->integer )
+	if ( Com_IsDedicated() )
 		Cmd_AddCommand( "say", SV_ConSay_f );
 }
  

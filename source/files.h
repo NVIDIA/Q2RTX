@@ -81,7 +81,9 @@ qboolean    FS_NeedRestart( void );
 void        FS_Restart( void );
 qboolean    FS_SafeToRestart( void );
 
+#if USE_CLIENT
 qboolean FS_RenameFile( const char *from, const char *to );
+#endif
 
 char    *FS_CopyExtraInfo( const char *name, const fsFileInfo_t *info );
 

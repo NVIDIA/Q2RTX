@@ -48,15 +48,15 @@ QUAKE FILESYSTEM
 
 // macros for dealing portably with files at OS level
 #ifdef _WIN32
-#define FS_strcmp  Q_strcasecmp
+#define FS_strcmp   Q_strcasecmp
 #define FS_strncmp  Q_strncasecmp
 #else
-#define FS_strcmp  strcmp
+#define FS_strcmp   strcmp
 #define FS_strncmp  strncmp
 #endif
 
-#define    MAX_READ    0x40000        // read in blocks of 256k
-#define    MAX_WRITE    0x40000        // write in blocks of 256k
+#define MAX_READ    0x40000        // read in blocks of 256k
+#define MAX_WRITE   0x40000        // write in blocks of 256k
 
 
 //
@@ -1176,6 +1176,8 @@ void FS_FreeFile( void *buffer ) {
     }
 }
 
+#if USE_CLIENT
+
 /*
 ================
 FS_RenameFile
@@ -1217,6 +1219,8 @@ qboolean FS_RenameFile( const char *from, const char *to ) {
     }
     return qtrue;
 }
+
+#endif // USE_CLIENT
 
 /*
 ================

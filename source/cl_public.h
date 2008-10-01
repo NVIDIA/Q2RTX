@@ -59,6 +59,12 @@ void CL_UpdateUserinfo( cvar_t *var, cvarSetSource_t source );
 qboolean CL_SendStatusRequest( char *buffer, size_t size );
 demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info );
 
+qboolean CL_ForwardToServer( void );
+// adds the current command line as a clc_stringcmd to the client message.
+// things like godmode, noclip, etc, are commands directed to the server,
+// so when they are typed in at the console, they will need to be forwarded.
+
+void Con_Init( void );
 void Con_Print( const char *text );
 void Con_Printf( const char *fmt, ... );
 void Con_Close( void );
@@ -66,6 +72,7 @@ void Con_Close( void );
 // this is in the client code, but can be used for debugging from server
 void SCR_DebugGraph (float value, int color);
 void SCR_BeginLoadingPlaque (void);
+void SCR_EndLoadingPlaque( void );
 void SCR_ModeChanged( void );
 void SCR_UpdateScreen( void );
 

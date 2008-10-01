@@ -31,6 +31,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "q_list.h"
 #include "bsp.h"
 #include "cmodel.h"
+#include "q_field.h"
+#include "prompt.h"
 #include <setjmp.h>
 #if USE_ZLIB
 #include <zlib.h>
@@ -54,10 +56,12 @@ cvar_t	*logfile_flush;		// 1 = flush after each print
 cvar_t	*logfile_name;
 cvar_t	*logfile_prefix;
 
-cvar_t	*sv_running;
-cvar_t	*sv_paused;
+#if USE_CLIENT
 cvar_t	*cl_running;
 cvar_t	*cl_paused;
+#endif
+cvar_t	*sv_running;
+cvar_t	*sv_paused;
 cvar_t	*com_timedemo;
 cvar_t	*com_date_format;
 cvar_t	*com_time_format;
@@ -81,10 +85,6 @@ unsigned	time_after_game;
 unsigned	time_before_ref;
 unsigned	time_after_ref;
 #endif
-
-void Con_Init( void );
-void Prompt_Init( void );
-void SCR_EndLoadingPlaque( void );
 
 /*
 ============================================================================
@@ -285,8 +285,10 @@ void Com_Printf( const char *fmt, ... ) {
 	if( rd_target ) {
         Com_Redirect( msg, len );
 	} else {
+#if USE_CLIENT
         // graphical console
 		Con_Print( msg );
+#endif
 
 		// debugging console
 		Sys_ConsoleOutput( msg );
@@ -393,7 +395,9 @@ void Com_Error( comErrorType_t code, const char *fmt, ... ) {
 	if( code == ERR_DISCONNECT || code == ERR_SILENT ) {
 		SV_Shutdown( va( "Server was killed: %s", com_errorMsg ),
             KILL_DISCONNECT );
+#if USE_CLIENT
 		CL_Disconnect( code, com_errorMsg );
+#endif
 		Com_Printf( S_COLOR_YELLOW "%s\n", com_errorMsg );
 		recursive = qfalse;
 		longjmp( abortframe, -1 );
@@ -413,7 +417,9 @@ void Com_Error( comErrorType_t code, const char *fmt, ... ) {
                                 "ERROR: %s\n"
                                 "********************\n", com_errorMsg );
 		SV_Shutdown( va( "Server crashed: %s\n", com_errorMsg ), KILL_DROP );
+#if USE_CLIENT
 		CL_Disconnect( ERR_DROP, com_errorMsg );
+#endif
 		recursive = qfalse;
 		longjmp( abortframe, -1 );
 	}
@@ -423,7 +429,9 @@ void Com_Error( comErrorType_t code, const char *fmt, ... ) {
 	}
 
 	SV_Shutdown( va( "Server fatal crashed: %s\n", com_errorMsg ), KILL_DROP );
+#if USE_CLIENT
 	CL_Shutdown();
+#endif
 	Qcommon_Shutdown( qtrue );
 
 	Sys_Error( "%s", com_errorMsg );
@@ -478,7 +486,9 @@ void Com_Quit( const char *reason ) {
     } else {
 	    SV_Shutdown( "Server quit\n", KILL_DROP );
     }
+#if USE_CLIENT
 	CL_Shutdown();
+#endif
 	Qcommon_Shutdown( qfalse );
 
 	Sys_Quit();
@@ -1171,6 +1181,7 @@ void Com_Generic_c( genctx_t *ctx, int argnum ) {
     }
 }
 
+#if USE_CLIENT
 void Com_Color_g( genctx_t *ctx ) {
     int color;
 
@@ -1180,6 +1191,7 @@ void Com_Color_g( genctx_t *ctx ) {
         }
     }
 }
+#endif
 
 /*
 ===============
@@ -1288,7 +1300,9 @@ void Qcommon_Init( int argc, char **argv ) {
 	Cvar_Init();
 	Key_Init();
 	Prompt_Init();
+#if USE_CLIENT
 	Con_Init();
+#endif
 	
 	//
 	// init commands and vars
@@ -1306,13 +1320,13 @@ void Qcommon_Init( int argc, char **argv ) {
 	logfile_prefix = Cvar_Get( "logfile_prefix", "[%Y-%m-%d %H:%M] ", 0 );
 #if USE_CLIENT
 	dedicated = Cvar_Get ("dedicated", "0", CVAR_NOSET);
+	cl_running = Cvar_Get( "cl_running", "0", CVAR_ROM );
+	cl_paused = Cvar_Get( "cl_paused", "0", CVAR_ROM );
 #else
 	dedicated = Cvar_Get ("dedicated", "1", CVAR_ROM);
 #endif
 	sv_running = Cvar_Get( "sv_running", "0", CVAR_ROM );
 	sv_paused = Cvar_Get( "sv_paused", "0", CVAR_ROM );
-	cl_running = Cvar_Get( "cl_running", "0", CVAR_ROM );
-	cl_paused = Cvar_Get( "cl_paused", "0", CVAR_ROM );
 	com_timedemo = Cvar_Get( "timedemo", "0", CVAR_CHEAT );
 	com_date_format = Cvar_Get( "com_date_format", "%Y-%m-%d", 0 );
 #ifdef _WIN32
@@ -1390,30 +1404,35 @@ void Qcommon_Init( int argc, char **argv ) {
 	BSP_Init();
 	CM_Init();
 	SV_Init();
+#if USE_CLIENT
 	CL_Init();
+#endif
 
     Sys_RunConsole();
 
 	// add + commands from command line
 	if( !Com_AddLateCommands() ) {
 		// if the user didn't give any commands, run default action
-		if( dedicated->integer ) {
+		if( Com_IsDedicated() ) {
 			Cbuf_AddText( "dedicated_start\n" );
 		} else {
 			// TODO
 			//Cbuf_AddText( "d1\n" );
 		}
 		Cbuf_Execute();
-	} else {
+	}
+#if USE_CLIENT
+    else {
 		// the user asked for something explicit
 		// so drop the loading plaque
 		SCR_EndLoadingPlaque();
 	}
+#endif
 
     // even not given a starting map, dedicated server starts
     // listening for rcon commands (create socket after all configs
     // are executed to make sure port number is properly set)
-	if( dedicated->integer ) {
+	if( Com_IsDedicated() ) {
 		NET_Config( NET_SERVER );
 	}
 
