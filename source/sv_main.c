@@ -1433,7 +1433,7 @@ static void SV_RunGameFrame( void ) {
 	// compression can get confused when a client
 	// has the "current" frame
 	sv.framenum++;
-	sv.frametime = 0;
+	sv.frametime -= 100;
 
     if( svs.mvd.dummy ) {
     	SV_MvdBeginFrame();
