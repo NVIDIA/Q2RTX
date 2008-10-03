@@ -63,12 +63,6 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
     // reset entity counter
 	svs.nextEntityStates = 0;
 
-    if( sv_mvd_enable->integer ) {
-        // setup buffers for accumulating datagrams
-        SZ_Init( &sv.mvd.message, svs.mvd.message_data, MAX_MSGLEN );
-        SZ_Init( &sv.mvd.datagram, svs.mvd.datagram_data, MAX_MSGLEN );
-    }
-
 	// save name for levels that don't set message
 	Q_strlcpy( sv.configstrings[CS_NAME], server, MAX_QPATH );
 	Q_strlcpy( sv.name, server, sizeof( sv.name ) );
@@ -221,19 +215,9 @@ void SV_InitGame( qboolean ismvd ){
 	svs.numEntityStates = sv_maxclients->integer * UPDATE_BACKUP * MAX_PACKET_ENTITIES;
 	svs.entityStates = SV_Mallocz( sizeof( entity_state_t ) * svs.numEntityStates );
 
-    // allocate MVD recorder buffers
-    if( !ismvd && sv_mvd_enable->integer ) {
-        Z_TagReserve( sizeof( player_state_t ) * sv_maxclients->integer +
-            sizeof( entity_state_t ) * MAX_EDICTS + MAX_MSGLEN * 2, TAG_SERVER );
-        svs.mvd.message_data = Z_ReservedAlloc( MAX_MSGLEN );
-        svs.mvd.datagram_data = Z_ReservedAlloc( MAX_MSGLEN );
-        svs.mvd.players = Z_ReservedAlloc( sizeof( player_state_t ) * sv_maxclients->integer );
-        svs.mvd.entities = Z_ReservedAlloc( sizeof( entity_state_t ) * MAX_EDICTS );
-
-        // reserve the slot for dummy MVD client
-        if( !sv_reserved_slots->integer ) {
-            Cvar_Set( "sv_reserved_slots", "1" );
-        }
+    // initialize MVD server
+    if( !ismvd ) {
+        SV_MvdInit();
     }
 
     Cvar_ClampInteger( sv_http_minclients, 0, sv_http_maxclients->integer );
@@ -264,7 +248,6 @@ void SV_InitGame( qboolean ismvd ){
 	SV_RateInit( &svs.ratelimit_badrcon, 1, sv_badauth_time->value * 1000 );
 
     List_Init( &svs.udp_client_list );
-    List_Init( &svs.mvd.clients );
     List_Init( &svs.tcp_client_list );
     List_Init( &svs.tcp_client_pool );
     List_Init( &svs.console_list );

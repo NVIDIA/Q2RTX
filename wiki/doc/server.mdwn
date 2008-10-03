@@ -6,7 +6,8 @@ Variables
 Network
 ----------
 
-All cvars below can be changed at runtime and will take effect immediately.
+All network related cvars below can be changed at runtime and will
+take effect immediately.
 
 - `set net_ip ""` (string)  
 Specifies network interface address server UDP socket should be bound to.
@@ -34,7 +35,8 @@ Misc
 
 - `set sv_iplimit 3` (integer)  
 Maximum number of simultaneous connections allowed from
-single IP address. Setting this variable to 0 disables the limit.
+single IP address (per connection type, like TCP and UDP).
+Setting this variable to 0 disables the limit.
 
 - `set sv_status_show 2` (integer)  
 Specifies how the server should respond to status queries
@@ -72,19 +74,20 @@ dummy MVD observer. Clients set their passwords via `password` userinfo variable
 When enabled, do not enforce any rate limits for clients whose IP is from
 private address space (127.x.x.x, 10.x.x.x, 192.168.x.x, 172.16.x.x).
 
-- `set sv_ghostime 6` (float)  
-Maximum time, in seconds, to keep clients which passed initial
+- `set sv_ghostime 10` (float)  
+Maximum time, in seconds, before dropping clients which passed initial
 challenge-response connection stage but not yet requested server data chunk.
 This also applies to HTTP clients in request processing stage.
 Helps to avoid attacks flooding server with zombie clients, combined
 with `sv_iplimit` variable.
 
 - `set sv_force_reconnect ""` (string)  
-When set to address string, forces new clients to reconnect to this address
-as an additional proxy protection measure. This reconnection process is FAST.
+When set to address string, forces new clients to quickly reconnect to
+this address as an additional proxy protection measure.
 
 - `set sv_show_name_changes 0` (boolean)  
-Broadcast player name changes to everyone.
+Broadcast player name changes to everyone. You should probably enable this
+unless game mod already shows name changes.
 
 - `set sv_uptime 0` (boolean)  
 Display uptime in server info.
@@ -120,7 +123,7 @@ Maximum size in KB of the locally recorded MVD.
 Setting this to zero disables the limit.
 
 - `set sv_mvd_max_levels 1` (integer)  
-Maximum number of levels (map changes) locally recorded MVD may span.
+Maximum number of levels (map changes) locally recorded MVD may contain.
 Setting this to zero disables the limit.
 
 - `set sv_mvd_auth ""` (string)  
@@ -153,9 +156,9 @@ Specifies MVD connection timeout value, in seconds.
 Time, in seconds, for MVD client to buffer data right after initial
 connection. This effectively specifies MVD stream delay seen by observers.
 
-- `set mvd_wait_percent 2` (float)  
-Inuse percentage of the input buffer when MVD state machine transitions
-into running state to prevent buffer overrun.
+- `set mvd_wait_percent 50` (float)  
+Maximum inuse percentage of the input buffer before MVD stops buffering
+phase to prevent overrun, regardless of `mvd_wait_delay` value.
 
 - `set mvd_default_map "q2dm1"` (string)  
 Specifies default map used for the Waiting Room channel.
@@ -185,15 +188,10 @@ slots for "body queue" and disables client side interpolation of
 those entities. Use this hack with caution as it may not be compatible
 with all mods and causes slightly higher bandwidth usage.
 
-- `set sv_strafejump_hack 1` (boolean)  
+- `set sv_strafejump_hack 1` (integer)  
 Enables FPS-independent strafe jumping mode for clients using R1Q2
-and Q2PRO protocols.
-
-- `set map_override 0` (boolean)
-When enabled, each time server map is loaded, file `maps/<mapname>.ent`
-is searched. If this file exists, then entity lump of the map being loaded
-is replaced with the contents of this file. Use this feature _only_ if you
-know what you are doing.
+and Q2PRO protocols. Values higher than 1 will force this mode for all
+clients, regardless of their protocol version.
 
 Commands
 ==========
@@ -210,10 +208,6 @@ This is useful if the server is behind NAT or firewall and can not accept remote
 connections. Remote client must support passive connections (R1Q2 and Q2PRO
 clients do), must be in passive connection mode and the specified _port_
 must be reachable. See `passive` [[client#index3h1]] command for more details.
-
-- `dumpents [/]<entname>`
-Dumps entity lump of the current map into `maps/<entname>.ent`, which you can later
-edit and use as `map_override` file (see above).
 
 - `addban <address[/mask]> [comment ...]`
 Adds specified address to the ban list. Specify _mask_ to ban entire subnetwork.
@@ -269,7 +263,7 @@ Kill the specified channel. There is no need to specify `chanid` if
 there is only one active channel.
 
 - `mvdspawn`  
-Spawn MVD client instance, that is, Waiting Room channel.
+(Re)spawn MVD client instance (that is, Waiting Room channel).
 
 - `mvdchannels`  
 Display status of all MVD channels.

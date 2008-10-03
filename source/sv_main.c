@@ -211,9 +211,8 @@ void SV_DropClient( client_t *client, const char *reason ) {
 
 	Com_DPrintf( "Going to cs_zombie for %s\n", client->name );
 
-    if( client == svs.mvd.dummy ) {
-        SV_MvdDropDummy( reason );
-    }
+    // give MVD server a chance to detect if it's dummy client was dropped
+    SV_MvdClientDropped( client, reason );
 }
 
 
@@ -1034,7 +1033,7 @@ static void SV_ConnectionlessPacket( void ) {
 
 	len = MSG_ReadStringLine( string, sizeof( string ) );
     if( len >= sizeof( string ) ) {
-        Com_DPrintf( "ignored oversize message\n" );
+        Com_DPrintf( "ignored oversize connectionless packet\n" );
         return;
     }
 
@@ -1268,13 +1267,9 @@ void SV_ProcessEvents( void ) {
 #endif
 
     // process network packets
-    do {
-        ret = NET_GetPacket( NS_SERVER );
-        if( ret == NET_AGAIN ) {
-            break;
-        }
+    while( ( ret = NET_GetPacket( NS_SERVER ) ) != NET_AGAIN ) {
 		SV_PacketEvent( ret );
-    } while( ret == NET_OK );
+    }
 }
 
 
@@ -1435,10 +1430,6 @@ static void SV_RunGameFrame( void ) {
 	sv.framenum++;
 	sv.frametime -= 100;
 
-    if( svs.mvd.dummy ) {
-    	SV_MvdBeginFrame();
-    }
-	
 	ge->RunFrame();
 
 	if( msg_write.cursize ) {
@@ -1449,9 +1440,7 @@ static void SV_RunGameFrame( void ) {
 	}
 
 	// save the entire world state if recording a serverdemo
-    if( svs.mvd.dummy ) {
-	    SV_MvdEndFrame();
-    }
+	SV_MvdRunFrame();
 
 #if USE_CLIENT
 	if( host_speeds->integer )
@@ -1888,7 +1877,6 @@ static void SV_FinalMessage( const char *message, int cmd ) {
 	client_t	*client, *next;
     tcpClient_t *t, *tnext;
     netchan_t   *netchan;
-    uint16_t length;
     int i;
 
 	MSG_WriteByte( svc_print );
@@ -1913,13 +1901,6 @@ static void SV_FinalMessage( const char *message, int cmd ) {
 
     SZ_Clear( &msg_write );
 
-    // send EOF to MVD clients
-    length = 0;
-    LIST_FOR_EACH( tcpClient_t, t, &svs.mvd.clients, mvdEntry ) {
-        SV_HttpWrite( t, &length, 2 );
-        SV_HttpFinish( t );
-	}
-
 	// free any data dynamically allocated
     LIST_FOR_EACH_SAFE( client_t, client, next, &svs.udp_client_list, entry ) {
 		if( client->state != cs_zombie ) {
@@ -1939,12 +1920,6 @@ static void SV_FinalMessage( const char *message, int cmd ) {
     // free cached TCP client slots
     LIST_FOR_EACH_SAFE( tcpClient_t, t, tnext, &svs.tcp_client_pool, entry ) {
         Z_Free( t );
-    }
-
-    if( svs.mvd.dummy ) {
-		SV_CleanClient( svs.mvd.dummy );
-		SV_RemoveClient( svs.mvd.dummy );
-        svs.mvd.dummy = NULL;
     }
 }
 
@@ -1970,7 +1945,8 @@ void SV_Shutdown( const char *finalmsg, killtype_t type ) {
     AC_Disconnect();
 #endif
 
-	SV_MvdRecStop();
+    // shutdown MVD server
+    SV_MvdShutdown();
 
     if( type == KILL_RESTART ) {
         SV_FinalMessage( finalmsg, svc_reconnect );
@@ -1991,7 +1967,6 @@ void SV_Shutdown( const char *finalmsg, killtype_t type ) {
 	// free server static data
 	Z_Free( svs.udp_client_pool );
 	Z_Free( svs.entityStates );
-	Z_Free( svs.mvd.message_data );
 #if USE_ZLIB
     deflateEnd( &svs.z );
 #endif

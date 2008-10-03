@@ -92,14 +92,6 @@ typedef struct {
 
     server_entity_t entities[MAX_EDICTS];
 
-    struct {
-	    int     	    paused;
-        unsigned        layout_time;
-        sizebuf_t       datagram;
-        sizebuf_t       message; // reliable
-	    byte		    dcs[CS_BITMAP_BYTES];
-    } mvd;
-
 	unsigned	tracecount;
 } server_t;
 
@@ -371,19 +363,6 @@ typedef struct server_static_s {
     list_t          tcp_client_pool;
     list_t          tcp_client_list;
 
-    struct {
-        list_t          clients;
-        client_t        *dummy;
-        byte            *message_data;
-        byte            *datagram_data;
-        player_state_t  *players;  // [maxclients]
-        entity_state_t  *entities; // [MAX_EDICTS]
-
-	    fileHandle_t	recording; 
-        int             numlevels; // stop after that many levels
-        int             numframes; // stop after that many frames
-    } mvd;
-
     list_t          console_list;
 
 #if USE_ZLIB
@@ -470,6 +449,7 @@ extern	edict_t		*sv_player;
 //
 void SV_DropClient( client_t *drop, const char *reason );
 void SV_RemoveClient( client_t *client );
+void SV_CleanClient( client_t *client );
 
 void SV_InitOperatorCommands (void);
 
@@ -541,19 +521,22 @@ extern cvar_t	*sv_mvd_noblend;
 extern cvar_t	*sv_mvd_nogun;
 
 void SV_MvdRegister( void );
-void SV_MvdBeginFrame( void );
-void SV_MvdEndFrame( void );
-void SV_MvdUnicast( sizebuf_t *buf, int clientNum, mvd_ops_t op );
-void SV_MvdMulticast( sizebuf_t *buf, int leafnum, mvd_ops_t op );
+void SV_MvdInit( void );
+void SV_MvdShutdown( void ) ;
+void SV_MvdRunFrame( void );
+void SV_MvdMapChanged( void );
+void SV_MvdClientDropped( client_t *client, const char *reason );
+
+void SV_MvdUnicast( edict_t *ent, int clientNum, qboolean reliable );
+void SV_MvdMulticast( int leafnum, multicast_t to );
 void SV_MvdConfigstring( int index, const char *string );
 void SV_MvdBroadcastPrint( int level, const char *string );
-void SV_MvdRecStop( void );
-qboolean SV_MvdPlayerIsActive( const edict_t *ent );
+void SV_MvdStartSound( int entnum, int channel, int flags,
+					    int soundindex, int volume,
+					    int attenuation, int timeofs );
+
 void SV_MvdInitStream( void );
 void SV_MvdGetStream( const char *uri );
-void SV_MvdMapChanged( void );
-void SV_MvdRemoveDummy( void );
-void SV_MvdDropDummy( const char *reason );
 
 //
 // sv_http.c

@@ -410,6 +410,7 @@ NET_GetPacket
 
 Fills msg_read_buffer with packet contents,
 net_from variable receives source address.
+Returns NET_ERROR only in case of ICMP error.
 =============
 */
 neterr_t NET_GetPacket( netsrc_t sock ) {
@@ -500,15 +501,21 @@ neterr_t NET_GetPacket( netsrc_t sock ) {
 /*
 =============
 NET_SendPacket
+
+Returns NET_ERROR only in case of ICMP error.
 =============
 */
 neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, size_t length, const void *data ) {
 	struct sockaddr_in	addr;
     int    ret;
 
-	if( length < 1 || length > MAX_PACKETLEN ) {
-		Com_WPrintf( "%s: bad length: %"PRIz" bytes\n", __func__, length );
-		return NET_ERROR;
+    if( !length ) {
+        return NET_AGAIN;
+    }
+
+	if( length > MAX_PACKETLEN ) {
+		Com_WPrintf( "%s: oversize length: %"PRIz" bytes\n", __func__, length );
+		return NET_AGAIN;
 	}
 
 	switch( to->type ) {

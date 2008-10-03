@@ -2852,14 +2852,10 @@ void CL_ProcessEvents( void ) {
         CL_PacketEvent( NET_OK );
     }
 
-    do {
-        ret = NET_GetPacket( NS_CLIENT );
-        if( ret == NET_AGAIN ) {
-            break;
-        }
+    // process network packets
+    while( ( ret = NET_GetPacket( NS_CLIENT ) ) != NET_AGAIN ) {
 		CL_PacketEvent( ret );
-    } while( ret == NET_OK );
-
+    }
 }
 
 //============================================================================

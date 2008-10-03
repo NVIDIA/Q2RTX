@@ -107,7 +107,7 @@ static void SV_GetStatus( void ) {
 
     if( http_client->method == HTTP_METHOD_HEAD ) {
         SV_HttpPrintf( "\r\n" );
-        SV_HttpDrop( http_client, "200 OK " );
+        SV_HttpDrop( http_client, "200 OK" );
         return;
     }
 

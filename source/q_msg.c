@@ -617,7 +617,7 @@ void MSG_WriteDeltaEntity( const entity_state_t *from,
 		return;		// nothing to send!
 
 	if( flags & MSG_ES_REMOVE ) {
-        bits |= U_REMOVE;
+        bits |= U_REMOVE; // used for MVD stream only
     }
 
 	//----------
@@ -1304,7 +1304,7 @@ void MSG_WriteDeltaPlayerstate_Packet(  const player_state_t   *from,
 	}
 
     if( flags & MSG_PS_REMOVE ) {
-        pflags |= PPS_REMOVE;
+        pflags |= PPS_REMOVE; // used for MVD stream only
     }
 
 	//

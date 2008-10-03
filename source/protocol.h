@@ -238,7 +238,8 @@ typedef enum clc_ops_e {
 #define PPS_STATS           (1<<14)
 #define PPS_REMOVE          (1<<15)
 
-#define PPS_NUM( ps )       (ps)->pmove.pm_flags
+// this is just a small hack to store inuse flag
+// in a field left otherwise unused by MVD code
 #define PPS_INUSE( ps )     (ps)->pmove.pm_time
 
 //==============================================

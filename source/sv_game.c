@@ -76,9 +76,7 @@ Archived in MVD stream.
 */
 static void PF_Unicast( edict_t *ent, qboolean reliable ) {
 	client_t	*client;
-	int flags, clientNum;
-    svc_ops_t   op;
-    sizebuf_t *buf;
+	int         clientNum;
 
 	if( !ent ) {
         goto clear;
@@ -86,58 +84,23 @@ static void PF_Unicast( edict_t *ent, qboolean reliable ) {
 
 	clientNum = NUM_FOR_EDICT( ent ) - 1;
 	if( clientNum < 0 || clientNum >= sv_maxclients->integer ) {
-        Com_WPrintf( "PF_Unicast to a non-client %d\n", clientNum );
+        Com_WPrintf( "%s to a non-client %d\n", __func__, clientNum );
         goto clear;
     }
 
 	client = svs.udp_client_pool + clientNum;
     if( client->state <= cs_zombie ) {
-        Com_WPrintf( "PF_Unicast to a free/zombie client %d\n", clientNum );
+        Com_WPrintf( "%s to a free/zombie client %d\n", __func__, clientNum );
         goto clear;
     }
 
-	if( reliable ) {
-		flags = MSG_RELIABLE;
-        op = mvd_unicast_r;
-        buf = &sv.mvd.message;
-	} else {
-        flags = 0;
-        op = mvd_unicast;
-        buf = &sv.mvd.datagram;
-    }
+    SV_ClientAddMessage( client, reliable ? MSG_RELIABLE : 0 );
 
-    // HACK: fix anti-kicking exploit
     if( msg_write.data[0] == svc_disconnect ) {
-        SV_ClientAddMessage( client, flags );
+        // fix anti-kicking exploit for broken mods
         client->flags |= CF_DROP;
-        goto clear;
-    }
-
-	if( client == svs.mvd.dummy ) {
-		if( msg_write.data[0] == svc_stufftext &&
-            memcmp( msg_write.data + 1, "play ", 5 ) )
-        {
-            // let MVD client process this internally
-			SV_ClientAddMessage( client, flags );
-		} else if( sv.mvd.paused < PAUSED_FRAMES ) {
-            // send this to all observers
-            if( msg_write.data[0] == svc_layout ) {
-                sv.mvd.layout_time = svs.realtime;
-            }
-            SV_MvdUnicast( buf, clientNum, op );
-        }
-	} else {
-        SV_ClientAddMessage( client, flags );
-        if( svs.mvd.dummy && sv.mvd.paused < PAUSED_FRAMES &&
-            SV_MvdPlayerIsActive( ent ) )
-        {
-            if( msg_write.data[0] != svc_layout &&
-                ( msg_write.data[0] != svc_stufftext ||
-                  !memcmp( msg_write.data + 1, "play ", 5 ) ) )
-            {
-                SV_MvdUnicast( buf, clientNum, op );
-            }
-        }
+    } else {
+        SV_MvdUnicast( ent, clientNum, reliable );
     }
 
 clear:
@@ -168,9 +131,7 @@ static void PF_bprintf( int level, const char *fmt, ... ) {
         return;
     }
 
-    if( svs.mvd.dummy && sv.mvd.paused < PAUSED_FRAMES ) {
-    	SV_MvdBroadcastPrint( level, string );
-    }
+    SV_MvdBroadcastPrint( level, string );
 
 	MSG_WriteByte( svc_print );
 	MSG_WriteByte( level );
@@ -263,11 +224,7 @@ static void PF_cprintf( edict_t *ent, int level, const char *fmt, ... ) {
         SV_ClientAddMessage( client, MSG_RELIABLE );
     }
 
-    if( svs.mvd.dummy && sv.mvd.paused < PAUSED_FRAMES &&
-        ( client == svs.mvd.dummy || SV_MvdPlayerIsActive( ent ) ) )
-    {
-        SV_MvdUnicast( &sv.mvd.message, clientNum, mvd_unicast_r );
-    }
+    SV_MvdUnicast( ent, clientNum, qtrue );
 
     SZ_Clear( &msg_write );
 }
@@ -369,7 +326,7 @@ Archived in MVD stream.
 ===============
 */
 void PF_Configstring( int index, const char *val ) {
-	size_t length, maxlength;
+	size_t len, maxlen;
 	client_t *client;
 
 	if( index < 0 || index >= MAX_CONFIGSTRINGS )
@@ -378,11 +335,12 @@ void PF_Configstring( int index, const char *val ) {
 	if( !val )
 		val = "";
 
-	length = strlen( val );
-	maxlength = sizeof( sv.configstrings ) - MAX_QPATH * index;
-	if( length >= maxlength ) {
-		Com_Error( ERR_DROP, "%s: index %d overflowed: %"PRIz" > %"PRIz"\n", __func__,
-            index, length, maxlength - 1 );
+	len = strlen( val );
+    maxlen = CS_SIZE( index );
+	if( len >= maxlen ) {
+		Com_Error( ERR_DROP,
+            "%s: index %d overflowed: %"PRIz" > %"PRIz"\n",
+            __func__, index, len, maxlen - 1 );
 	}
 
 	if( !strcmp( sv.configstrings[index], val ) ) {
@@ -390,20 +348,18 @@ void PF_Configstring( int index, const char *val ) {
 	}
 
 	// change the string in sv
-	memcpy( sv.configstrings[index], val, length + 1 );
+	memcpy( sv.configstrings[index], val, len + 1 );
 	
 	if( sv.state == ss_loading ) {
 		return;
 	}
 
-    if( svs.mvd.dummy ) {
-        SV_MvdConfigstring( index, val );
-    }
+    SV_MvdConfigstring( index, val );
 
 	// send the update to everyone
 	MSG_WriteByte( svc_configstring );
 	MSG_WriteShort( index );
-	MSG_WriteData( val, length + 1 );
+	MSG_WriteData( val, len + 1 );
 
     FOR_EACH_CLIENT( client ) {
 		if( client->state < cs_primed ) {
@@ -630,30 +586,8 @@ static void PF_StartSound( edict_t *edict, int channel,
         client->msg_bytes += MAX_SOUND_PACKET;
     }
 
-    // FIXME: what about SVF_NOCLIENT entities? removed entities?
-    if( svs.mvd.dummy && sv.mvd.paused < PAUSED_FRAMES ) {
-        int extrabits = 0;
-
-        if( channel & CHAN_NO_PHS_ADD ) {
-            extrabits |= 1 << SVCMD_BITS;
-        }
-	    if( channel & CHAN_RELIABLE ) {
-            extrabits |= 2 << SVCMD_BITS;
-        }
-
-        SZ_WriteByte( &sv.mvd.datagram, mvd_sound | extrabits );
-        SZ_WriteByte( &sv.mvd.datagram, flags );
-        SZ_WriteByte( &sv.mvd.datagram, soundindex );
-
-        if( flags & SND_VOLUME )
-            SZ_WriteByte( &sv.mvd.datagram, volume * 255 );
-        if( flags & SND_ATTENUATION )
-            SZ_WriteByte( &sv.mvd.datagram, attenuation * 64 );
-        if( flags & SND_OFFSET )
-            SZ_WriteByte( &sv.mvd.datagram, timeofs * 1000 );
-
-        SZ_WriteShort( &sv.mvd.datagram, sendchan );
-    }
+    SV_MvdStartSound( ent, channel, flags, soundindex,
+        volume * 255, attenuation * 64, timeofs * 1000 );
 }
 
 static void PF_PositionedSound( vec3_t origin, edict_t *entity, int channel,
