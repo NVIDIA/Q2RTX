@@ -925,7 +925,10 @@ neterr_t NET_Connect( const netadr_t *peer, netstream_t *s ) {
 
 neterr_t NET_RunConnect( netstream_t *s ) {
     struct timeval tv;
-    fd_set fd;
+    fd_set wfd;
+#ifdef _WIN32
+    fd_set efd;
+#endif
     socklen_t len;
     int ret, err;
 
@@ -935,23 +938,34 @@ neterr_t NET_RunConnect( netstream_t *s ) {
 
     tv.tv_sec = 0;
     tv.tv_usec = 0;
-    FD_ZERO( &fd );
-    FD_SET( s->socket, &fd );
-
-	ret = select( s->socket + 1, NULL,
+    FD_ZERO( &wfd );
+    FD_SET( s->socket, &wfd );
 #ifdef _WIN32
-        NULL, &fd,
-#else
-        &fd, NULL,
+    FD_ZERO( &efd );
+    FD_SET( s->socket, &efd );
 #endif
-        &tv );
+
+	ret = select( s->socket + 1, NULL, &wfd,
+#ifdef _WIN32
+        &efd,
+#else
+        NULL,
+#endif
+        &tv
+    );
+
     if( ret == -1 ) {
         goto error1;
     }
     if( !ret ) {
         return NET_AGAIN;
     }
-    if( !FD_ISSET( s->socket, &fd ) ) {
+    if( !FD_ISSET( s->socket, &wfd )
+#ifdef _WIN32
+        && !FD_ISSET( s->socket, &efd )
+#endif
+      )
+    {
         return NET_AGAIN;
     }
 
