@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2003-2006 Andrey Nazarov
+Copyright (C) 2003-2008 Andrey Nazarov
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -19,20 +19,46 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 //
-// sv_mvd.c - MVD server and local recorder
+// sv_mvd.c - GTV server and local MVD recorder
 //
 
 #include "sv_local.h"
+#include "gtv.h"
 
-cvar_t  *sv_mvd_enable;
-cvar_t  *sv_mvd_auth;
-cvar_t  *sv_mvd_noblend;
-cvar_t  *sv_mvd_nogun;
-cvar_t  *sv_mvd_nomsgs;
+#define FOR_EACH_GTV( client ) \
+    LIST_FOR_EACH( gtv_client_t, client, &gtv_client_list, entry )
+
+#define FOR_EACH_ACTIVE_GTV( client ) \
+    LIST_FOR_EACH( gtv_client_t, client, &gtv_active_list, active )
 
 typedef struct {
+    list_t      entry;
+    list_t      active;
+    clstate_t   state;
+    netstream_t stream;
+#if USE_ZLIB
+    z_stream    z;
+#endif
+    unsigned    msglen;
+    unsigned    lastmessage; 
+
+    unsigned    flags;
+    unsigned    maxbuf;
+    unsigned    bufcount;
+
+    byte        buffer[256];
+    byte        *data;
+
+    char        name[MAX_CLIENT_NAME];
+    char        version[MAX_QPATH];
+} gtv_client_t;
+
+typedef struct {
+    qboolean        active;
     client_t        *dummy;
     unsigned        layout_time;
+    unsigned        clients_active;
+    unsigned        players_active;
 
     // reliable data, may not be discarded
     sizebuf_t       message;
@@ -48,29 +74,47 @@ typedef struct {
     fileHandle_t    recording; 
     int             numlevels; // stop after that many levels
     int             numframes; // stop after that many frames
+
+    // TCP client pool
+    gtv_client_t    *clients; // [sv_mvd_maxclients]
 } mvd_server_t;
 
 static mvd_server_t     mvd;
 
-// TCP client list
-static LIST_DECL( mvd_client_list );
+// TCP client lists
+static LIST_DECL( gtv_client_list );
+static LIST_DECL( gtv_active_list );
 
-static cvar_t  *sv_mvd_max_size;
-static cvar_t  *sv_mvd_max_duration;
-static cvar_t  *sv_mvd_max_levels;
-static cvar_t  *sv_mvd_begincmd;
-static cvar_t  *sv_mvd_scorecmd;
-static cvar_t  *sv_mvd_autorecord;
+static LIST_DECL( gtv_host_list );
+
+static cvar_t   *sv_mvd_enable;
+static cvar_t   *sv_mvd_maxclients;
+static cvar_t   *sv_mvd_auth;
+static cvar_t   *sv_mvd_noblend;
+static cvar_t   *sv_mvd_nogun;
+static cvar_t   *sv_mvd_nomsgs;
+static cvar_t   *sv_mvd_maxsize;
+static cvar_t   *sv_mvd_maxtime;
+static cvar_t   *sv_mvd_maxmaps;
+static cvar_t   *sv_mvd_begincmd;
+static cvar_t   *sv_mvd_scorecmd;
+static cvar_t   *sv_mvd_autorecord;
+static cvar_t   *sv_mvd_capture_flags;
+
+static qboolean mvd_enable( void );
+static void     mvd_disable( void );
+static void     mvd_drop( gtv_serverop_t op );
+
+static void     write_stream( gtv_client_t *client, void *data, size_t len );
+static void     write_message( gtv_client_t *client, gtv_serverop_t op );
 #if USE_ZLIB
-static cvar_t  *sv_mvd_encoding;
+static void     flush_stream( gtv_client_t *client, int flush );
 #endif
-static cvar_t  *sv_mvd_capture_flags;
-
-static qboolean init_mvd( void );
 
 static void     rec_stop( void ); 
 static qboolean rec_allowed( void );
 static void     rec_start( fileHandle_t demofile );
+static void     rec_write( void );
 
 
 /*
@@ -138,7 +182,7 @@ static void dummy_record_f( void ) {
         return;
     }
 
-    if( !init_mvd() ) {
+    if( !mvd_enable() ) {
         FS_FCloseFile( demofile );
         return;
     }
@@ -252,7 +296,7 @@ static void dummy_spawn( void ) {
     mvd.dummy->state = cs_spawned;
 }
 
-static client_t *find_slot( void ) {
+static client_t *dummy_find_slot( void ) {
     client_t *c;
     int i, j;
 
@@ -284,7 +328,7 @@ static qboolean dummy_create( void ) {
     int number;
 
     // find a free client slot
-    newcl = find_slot();
+    newcl = dummy_find_slot();
     if( !newcl ) {
         Com_EPrintf( "No slot for dummy MVD client\n" );
         return qfalse;
@@ -355,22 +399,6 @@ static void dummy_run( void ) {
             mvd.layout_time = svs.realtime;
         }
     }
-}
-
-static void dummy_drop( const char *reason ) {
-    tcpClient_t *client;
-
-    rec_stop();
-
-    LIST_FOR_EACH( tcpClient_t, client, &mvd_client_list, mvdEntry ) {
-        SV_HttpDrop( client, reason );
-    }
-
-    SV_RemoveClient( mvd.dummy );
-    mvd.dummy = NULL;
-
-    SZ_Clear( &mvd.datagram );
-    SZ_Clear( &mvd.message );
 }
 
 /*
@@ -531,11 +559,8 @@ static void emit_gamestate( void ) {
     player_state_t  *ps;
     entity_state_t  *es;
     size_t      length;
-    uint8_t     *patch;
     int         flags, extra, portalbytes;
     byte        portalbits[MAX_MAP_AREAS/8];
-
-    patch = SZ_GetSpace( &msg_write, 2 );
 
     // send the serverdata
     MSG_WriteByte( mvd_serverdata );
@@ -601,10 +626,6 @@ static void emit_gamestate( void ) {
         es->number = j;
     }
     MSG_WriteShort( 0 );
-
-    length = msg_write.cursize - 2;
-    patch[0] = length & 255;
-    patch[1] = ( length >> 8 ) & 255;
 }
 
 
@@ -735,92 +756,177 @@ static void emit_frame( void ) {
     MSG_WriteShort( 0 );    // end of packetentities
 }
 
-// if dummy is not yet connected, create and spawn it
-static qboolean init_mvd( void ) {
+#define MVD_CLIENTS_TIMEOUT     (15*60*1000)
+#define MVD_PLAYERS_TIMEOUT     (5*60*1000)
+
+/*
+==================
+SV_MvdBeginFrame
+==================
+*/
+void SV_MvdBeginFrame( void ) {
+    gtv_client_t *client;
+    int i;
+
+    // do nothing if not active
     if( !mvd.dummy ) {
-        if( !dummy_create() ) {
-            return qfalse;
-        }
-        dummy_spawn();
-        build_gamestate();
+        return;
     }
-    return qtrue;
+
+    // disconnect MVD dummy if no MVD clients are active for 15 minutes
+    if( !sv_mvd_autorecord->integer ) {
+        if( mvd.recording || !LIST_EMPTY( &gtv_active_list ) ) {
+            mvd.clients_active = svs.realtime;
+        } else if( svs.realtime - mvd.clients_active > MVD_CLIENTS_TIMEOUT ) {
+            Com_Printf( "No MVD clients active for 15 minutes, "
+                "disconnecting dummy client.\n" );
+            SV_DropClient( mvd.dummy, NULL );
+            return;
+        }
+    }
+
+    // suspend all MVD streams if no players are active for 5 minutes
+    for( i = 0; i < sv_maxclients->integer; i++ ) {
+        edict_t * ent = EDICT_NUM( i + 1 );
+        if( ent != mvd.dummy->edict && player_is_active( ent ) ) {
+            mvd.players_active = svs.realtime;
+            break;
+        }
+    }
+
+    if( svs.realtime - mvd.players_active > MVD_PLAYERS_TIMEOUT ) {
+        if( mvd.active ) {
+            FOR_EACH_ACTIVE_GTV( client ) {
+                // send stream stop marker
+                write_message( client, GTS_STREAM_STOP );
+#if USE_ZLIB
+                flush_stream( client, Z_SYNC_FLUSH );
+#endif
+            }
+            Com_Printf( "No players active for 5 minutes, "
+                "suspending MVD streams.\n" );
+            mvd.active = qfalse;
+        }
+    } else if( !mvd.active ) {
+        // build and emit gamestate
+        build_gamestate();
+        emit_gamestate();
+
+        FOR_EACH_ACTIVE_GTV( client ) {
+            // send stream start marker
+            write_message( client, GTS_STREAM_START );
+
+            // send gamestate
+            write_message( client, GTS_STREAM_DATA );
+#if USE_ZLIB
+            flush_stream( client, Z_SYNC_FLUSH );
+#endif
+        }
+
+        // write it to demofile
+        if( mvd.recording ) {
+            rec_write();
+        }
+
+        // clear gamestate
+        SZ_Clear( &msg_write );
+
+        SZ_Clear( &mvd.datagram );
+        SZ_Clear( &mvd.message );
+
+        Com_Printf( "Resuming MVD streams.\n" );
+        mvd.active = qtrue;
+    }
 }
 
 /*
 ==================
-SV_MvdRunFrame
+SV_MvdEndFrame
 ==================
 */
-void SV_MvdRunFrame( void ) {
-    tcpClient_t *client;
-    uint16_t length;
+void SV_MvdEndFrame( void ) {
+    gtv_client_t *client;
+    size_t total;
+    byte header[3];
 
+    // do nothing if not active
     if( !mvd.dummy ) {
         return;
     }
 
     dummy_run();
 
+    if( !mvd.active ) {
+        return;
+    }
+
+    // if reliable message overflowed, kick all clients
     if( mvd.message.overflowed ) {
-        // if reliable message overflowed, kick all clients
-        Com_EPrintf( "Reliable MVD message overflowed\n" );
-        dummy_drop( "overflowed" );
-        goto clear;
+        Com_EPrintf( "Reliable MVD message overflowed!\n" );
+        SV_DropClient( mvd.dummy, NULL );
+        return;
     }
 
     if( mvd.datagram.overflowed ) {
-        Com_WPrintf( "Unreliable MVD datagram overflowed\n" );
+        Com_WPrintf( "Unreliable MVD datagram overflowed.\n" );
         SZ_Clear( &mvd.datagram );
     }
 
-    // emit a single delta update
+    // emit a delta update common to all clients
     emit_frame();
 
-    // check if frame fits
-    // FIXME: dumping frame should not be allowed in current design
-    if( mvd.message.cursize + msg_write.cursize > MAX_MSGLEN ) {
-        Com_WPrintf( "Dumping MVD frame: %"PRIz" bytes\n", msg_write.cursize );
+    // if reliable message and frame update don't fit, kick all clients
+    if( mvd.message.cursize + msg_write.cursize >= MAX_MSGLEN ) {
+        Com_EPrintf( "MVD frame overflowed!\n" );
         SZ_Clear( &msg_write );
+        SV_DropClient( mvd.dummy, NULL );
+        return;
     }
 
     // check if unreliable datagram fits
-    if( mvd.message.cursize + msg_write.cursize + mvd.datagram.cursize > MAX_MSGLEN ) {
-        Com_WPrintf( "Dumping unreliable MVD datagram: %"PRIz" bytes\n", mvd.datagram.cursize );
+    if( mvd.message.cursize + msg_write.cursize + mvd.datagram.cursize >= MAX_MSGLEN ) {
+        Com_WPrintf( "Dumping unreliable MVD datagram.\n" );
         SZ_Clear( &mvd.datagram );
     }
 
-    length = LittleShort( mvd.message.cursize + msg_write.cursize + mvd.datagram.cursize );
+    // build message header
+    total = mvd.message.cursize + msg_write.cursize + mvd.datagram.cursize + 1;
+    header[0] = total & 255;
+    header[1] = ( total >> 8 ) & 255;
+    header[2] = GTS_STREAM_DATA;
 
     // send frame to clients
-    LIST_FOR_EACH( tcpClient_t, client, &mvd_client_list, mvdEntry ) {
-        if( client->state == cs_spawned ) {
-            SV_HttpWrite( client, &length, 2 );
-            SV_HttpWrite( client, mvd.message.data, mvd.message.cursize );
-            SV_HttpWrite( client, msg_write.data, msg_write.cursize );
-            SV_HttpWrite( client, mvd.datagram.data, mvd.datagram.cursize );
+    FOR_EACH_ACTIVE_GTV( client ) {
+        write_stream( client, header, sizeof( header ) );
+        write_stream( client, mvd.message.data, mvd.message.cursize );
+        write_stream( client, msg_write.data, msg_write.cursize );
+        write_stream( client, mvd.datagram.data, mvd.datagram.cursize );
 #if USE_ZLIB
-            client->noflush++;
-#endif
+        if( ++client->bufcount > client->maxbuf ) {
+            flush_stream( client, Z_SYNC_FLUSH );
         }
+#endif
     }
 
     // write frame to demofile
     if( mvd.recording ) {
-        FS_Write( &length, 2, mvd.recording );
+        uint16_t len;
+
+        len = LittleShort( total - 1 );
+        FS_Write( &len, 2, mvd.recording );
         FS_Write( mvd.message.data, mvd.message.cursize, mvd.recording );
         FS_Write( msg_write.data, msg_write.cursize, mvd.recording );
         FS_Write( mvd.datagram.data, mvd.datagram.cursize, mvd.recording );
 
-        if( sv_mvd_max_size->value > 0 ) {
+        if( sv_mvd_maxsize->value > 0 ) {
             int numbytes = FS_RawTell( mvd.recording );
 
-            if( numbytes > sv_mvd_max_size->value * 1000 ) {
+            if( numbytes > sv_mvd_maxsize->value * 1000 ) {
                 Com_Printf( "Stopping MVD recording, maximum size reached.\n" );
                 rec_stop();
             }
-        } else if( sv_mvd_max_duration->value > 0 &&
-            ++mvd.numframes > sv_mvd_max_duration->value * 600 )
+        } else if( sv_mvd_maxtime->value > 0 &&
+            ++mvd.numframes > sv_mvd_maxtime->value * 600 )
         {
             Com_Printf( "Stopping MVD recording, maximum duration reached.\n" );
             rec_stop();
@@ -829,228 +935,10 @@ void SV_MvdRunFrame( void ) {
 
     SZ_Clear( &msg_write );
 
-clear:
     SZ_Clear( &mvd.datagram );
     SZ_Clear( &mvd.message );
 }
 
-/*
-==============================================================================
-
-CLIENT HANDLING
-
-==============================================================================
-*/
-
-static void SV_MvdClientNew( tcpClient_t *client ) {
-    Com_DPrintf( "Sending gamestate to MVD client %s\n",
-        NET_AdrToString( &client->stream.address ) );
-    client->state = cs_spawned;
-
-    emit_gamestate();
-
-#if USE_ZLIB
-    client->noflush = 99999;
-#endif
-
-    SV_HttpWrite( client, msg_write.data, msg_write.cursize );
-    SZ_Clear( &msg_write );
-}
-
-void SV_MvdInitStream( void ) {
-    uint32_t magic;
-#if USE_ZLIB
-    int bits;
-#endif
-
-    SV_HttpPrintf( "HTTP/1.0 200 OK\r\n" );
-
-#if USE_ZLIB
-    switch( sv_mvd_encoding->integer ) {
-    case 1:
-        SV_HttpPrintf( "Content-Encoding: gzip\r\n" );
-        bits = 31;
-        break;
-    case 2:
-        SV_HttpPrintf( "Content-Encoding: deflate\r\n" );
-        bits = 15;
-        break;
-    default:
-        bits = 0;
-        break;
-    }
-#endif
-
-    SV_HttpPrintf(
-        "Content-Type: application/octet-stream\r\n"
-        "Content-Disposition: attachment; filename=\"stream.mvd2\"\r\n"
-        "\r\n" );
-
-#if USE_ZLIB
-    if( bits ) {
-        deflateInit2( &http_client->z, Z_DEFAULT_COMPRESSION,
-            Z_DEFLATED, bits, 8, Z_DEFAULT_STRATEGY );
-    }
-#endif
-
-    magic = MVD_MAGIC;
-    SV_HttpWrite( http_client, &magic, 4 );
-}
-
-void SV_MvdGetStream( const char *uri ) {
-    if( http_client->method == HTTP_METHOD_HEAD ) {
-        SV_HttpPrintf( "HTTP/1.0 200 OK\r\n\r\n" );
-        SV_HttpDrop( http_client, "200 OK " );
-        return;
-    }
-
-    if( !init_mvd() ) {
-        SV_HttpReject( "503 Service Unavailable",
-            "Unable to create dummy MVD client. Server is full." );
-        return;
-    }
-
-    List_Append( &mvd_client_list, &http_client->mvdEntry );
-
-    SV_MvdInitStream();
-
-    SV_MvdClientNew( http_client );
-}
-
-/*
-==============================================================================
-
-SERVER HOOKS
-
-These hooks are called by server code when some event occurs.
-
-==============================================================================
-*/
-
-/*
-==================
-SV_MvdMapChanged
-
-Server has just changed the map, spawn the MVD dummy and go!
-==================
-*/
-void SV_MvdMapChanged( void ) {
-    tcpClient_t *client;
-
-    if( !sv_mvd_enable->integer ) {
-        return; // do noting if disabled
-    }
-
-    if( !mvd.dummy ) {
-        if( !sv_mvd_autorecord->integer ) {
-            return; // not listening for autorecord command
-        }
-        if( !dummy_create() ) {
-            return;
-        }
-        Com_Printf( "Spawning MVD dummy for auto-recording\n" );
-    }
-
-    SZ_Clear( &mvd.datagram );
-    SZ_Clear( &mvd.message );
-
-    dummy_spawn();
-    build_gamestate();
-    emit_gamestate();
-
-    // send gamestate to all MVD clients
-    LIST_FOR_EACH( tcpClient_t, client, &mvd_client_list, mvdEntry ) {
-        SV_HttpWrite( client, msg_write.data, msg_write.cursize );
-    }
-
-    if( mvd.recording ) {
-        int maxlevels = sv_mvd_max_levels->integer;
-    
-        // check if it is time to stop recording
-        if( maxlevels > 0 && ++mvd.numlevels >= maxlevels ) {
-            Com_Printf( "Stopping MVD recording, "
-                "maximum number of level changes reached.\n" );
-            rec_stop();
-        } else {
-            FS_Write( msg_write.data, msg_write.cursize, mvd.recording );
-        }
-    }
-
-    SZ_Clear( &msg_write );
-}
-
-/*
-==================
-SV_MvdClientDropped
-
-Server has just dropped a client, check if that was our MVD dummy client.
-==================
-*/
-void SV_MvdClientDropped( client_t *client, const char *reason ) {
-    if( client == mvd.dummy ) {
-        dummy_drop( reason );
-    }
-}
-
-/*
-==================
-SV_MvdInit
-
-Server is initializing, prepare MVD server for this game.
-==================
-*/
-void SV_MvdInit( void ) {
-    if( !sv_mvd_enable->integer ) {
-        return; // do noting if disabled
-    }
-
-    // allocate buffers
-    Z_TagReserve( sizeof( player_state_t ) * sv_maxclients->integer +
-        sizeof( entity_state_t ) * MAX_EDICTS + MAX_MSGLEN * 2, TAG_SERVER );
-    SZ_Init( &mvd.message, Z_ReservedAlloc( MAX_MSGLEN ), MAX_MSGLEN );
-    SZ_Init( &mvd.datagram, Z_ReservedAlloc( MAX_MSGLEN ), MAX_MSGLEN );
-    mvd.players = Z_ReservedAlloc( sizeof( player_state_t ) * sv_maxclients->integer );
-    mvd.entities = Z_ReservedAlloc( sizeof( entity_state_t ) * MAX_EDICTS );
-
-    // reserve the slot for dummy MVD client
-    if( !sv_reserved_slots->integer ) {
-        Cvar_Set( "sv_reserved_slots", "1" );
-    }
-}
-
-/*
-==================
-SV_MvdShutdown
-
-Server is shutting down, clean everything up.
-==================
-*/
-void SV_MvdShutdown( void ) {
-    tcpClient_t *t;
-    uint16_t length;
-
-    // stop recording
-    rec_stop();
-
-    // send EOF to MVD clients
-    // NOTE: not clearing mvd_client_list as clients will be
-    // properly dropped by SV_FinalMessage just after
-    length = 0;
-    LIST_FOR_EACH( tcpClient_t, t, &mvd_client_list, mvdEntry ) {
-        SV_HttpWrite( t, &length, 2 );
-        SV_HttpFinish( t );
-    }
-
-    // remove MVD dummy
-    if( mvd.dummy ) {
-        SV_RemoveClient( mvd.dummy );
-    }
-
-    // free static data
-    Z_Free( mvd.message.data );
-
-    memset( &mvd, 0, sizeof( mvd ) );
-}
 
 
 /*
@@ -1079,7 +967,7 @@ void SV_MvdMulticast( int leafnum, multicast_t to ) {
     int         bits;
     
     // do nothing if not active
-    if( !mvd.dummy ) {
+    if( !mvd.active ) {
         return;
     }
 
@@ -1111,7 +999,7 @@ void SV_MvdUnicast( edict_t *ent, int clientNum, qboolean reliable ) {
     int         bits;
 
     // do nothing if not active
-    if( !mvd.dummy ) {
+    if( !mvd.active ) {
         return;
     }
 
@@ -1167,7 +1055,7 @@ SV_MvdConfigstring
 ==============
 */
 void SV_MvdConfigstring( int index, const char *string ) {
-    if( mvd.dummy ) {
+    if( mvd.active ) {
         SZ_WriteByte( &mvd.message, mvd_configstring );
         SZ_WriteShort( &mvd.message, index );
         SZ_WriteString( &mvd.message, string );
@@ -1180,7 +1068,7 @@ SV_MvdBroadcastPrint
 ==============
 */
 void SV_MvdBroadcastPrint( int level, const char *string ) {
-    if( mvd.dummy ) {
+    if( mvd.active ) {
         SZ_WriteByte( &mvd.message, mvd_print );
         SZ_WriteByte( &mvd.message, level );
         SZ_WriteString( &mvd.message, string );
@@ -1200,7 +1088,7 @@ void SV_MvdStartSound( int entnum, int channel, int flags,
 {
     int extrabits, sendchan;
 
-    if( !mvd.dummy ) {
+    if( !mvd.active ) {
         return;
     }
 
@@ -1232,10 +1120,758 @@ void SV_MvdStartSound( int entnum, int channel, int flags,
 /*
 ==============================================================================
 
+TCP CLIENTS HANDLING
+
+==============================================================================
+*/
+
+
+static void remove_client( gtv_client_t *client ) {
+    NET_Close( &client->stream );
+    List_Remove( &client->entry );
+    if( client->data ) {
+        Z_Free( client->data );
+        client->data = NULL;
+    }
+    client->state = cs_free;
+}
+
+#if USE_ZLIB
+static void flush_stream( gtv_client_t *client, int flush ) {
+    fifo_t *fifo = &client->stream.send;
+    z_streamp z = &client->z;
+    byte *data;
+    size_t len;
+    int ret;
+
+    if( !z->state ) {
+        return;
+    }
+
+    z->next_in = NULL;
+    z->avail_in = 0;
+
+    do {
+        data = FIFO_Reserve( fifo, &len );
+        if( !len ) {
+            // FIXME: this is not an error when flushing
+            return;
+        }
+
+        z->next_out = data;
+        z->avail_out = ( uInt )len;
+
+        ret = deflate( z, flush );
+
+        len -= z->avail_out;
+        if( len ) {
+            FIFO_Commit( fifo, len );
+            client->bufcount = 0;
+        }
+    } while( ret == Z_OK );
+}
+#endif
+
+static void drop_client( gtv_client_t *client, const char *error ) {
+    if( client->state <= cs_zombie ) {
+        return;
+    }
+    if( error ) {
+        // notify console
+        Com_Printf( "TCP client %s[%s] dropped: %s\n", client->name,
+            NET_AdrToString( &client->stream.address ), error );
+
+    }
+
+#if USE_ZLIB
+    if( client->z.state ) {
+        // finish zlib stream
+        flush_stream( client, Z_FINISH );
+        deflateEnd( &client->z );
+    }
+#endif
+
+    List_Remove( &client->active );
+    client->state = cs_zombie;
+    client->lastmessage = svs.realtime;
+}
+
+
+static void write_stream( gtv_client_t *client, void *data, size_t len ) {
+    fifo_t *fifo = &client->stream.send;
+
+    if( client->state <= cs_zombie ) {
+        return;
+    }
+
+    if( !len ) {
+        return;
+    }
+
+#if USE_ZLIB
+    if( client->z.state ) {
+        z_streamp z = &client->z;
+
+        z->next_in = data;
+        z->avail_in = ( uInt )len;
+
+        do {
+            data = FIFO_Reserve( fifo, &len );
+            if( !len ) {
+                drop_client( client, "overflowed" );
+                return;
+            }
+
+            z->next_out = data;
+            z->avail_out = ( uInt )len;
+
+            if( deflate( z, Z_NO_FLUSH ) != Z_OK ) {
+                drop_client( client, "deflate() failed" );
+                return;
+            }
+
+            len -= z->avail_out;
+            if( len ) {
+                FIFO_Commit( fifo, len );
+                client->bufcount = 0;
+            }
+        } while( z->avail_in );
+    } else
+#endif
+
+    if( !FIFO_TryWrite( fifo, data, len ) ) {
+        drop_client( client, "overflowed" );
+    }
+}
+
+static void write_message( gtv_client_t *client, gtv_serverop_t op ) {
+    byte header[3];
+    size_t len = msg_write.cursize + 1;
+
+    header[0] = len & 255;
+    header[1] = ( len >> 8 ) & 255;
+    header[2] = op;
+    write_stream( client, header, sizeof( header ) );
+
+    write_stream( client, msg_write.data, msg_write.cursize );
+}
+
+static void parse_hello( gtv_client_t *client ) {
+    int protocol, flags, maxbuf;
+    byte *data;
+
+    if( client->state >= cs_primed ) {
+        write_message( client, GTS_BADREQUEST );
+        drop_client( client, "duplicated hello message" );
+        return;
+    }
+
+    protocol = MSG_ReadWord();
+    if( protocol != GTV_PROTOCOL_VERSION ) {
+        write_message( client, GTS_BADREQUEST );
+        drop_client( client, "bad protocol" );
+        return;
+    }
+
+    flags = MSG_ReadLong();
+    maxbuf = MSG_ReadShort();
+    MSG_ReadLong();
+    MSG_ReadString( client->name, sizeof( client->name ) );
+    MSG_ReadString( client->version, sizeof( client->version ) );
+
+    if( !SV_MatchAddress( &gtv_host_list, &client->stream.address ) ) {
+        write_message( client, GTS_NOACCESS );
+        drop_client( client, "not authorized" );
+        return;
+    }
+
+    data = SV_Malloc( MAX_MSGLEN * 2 );
+
+    // TODO: expand recv buffer
+    client->stream.send.data = data;
+    client->stream.send.size = MAX_MSGLEN * 2;
+    client->data = data;
+    client->flags = flags;
+    client->maxbuf = maxbuf;
+    client->state = cs_primed;
+
+    // send hello
+    MSG_WriteLong( flags );
+    write_message( client, GTS_HELLO );
+    SZ_Clear( &msg_write );
+
+#if USE_ZLIB
+    // the rest of the stream will be deflated
+    if( flags & GTF_DEFLATE ) {
+        client->z.zalloc = SV_Zalloc;
+        client->z.zfree = SV_Zfree;
+        if( deflateInit( &client->z, Z_DEFAULT_COMPRESSION ) != Z_OK ) {
+            drop_client( client, "deflateInit failed" );
+            return;
+        }
+    }
+#endif
+
+    mvd.clients_active = svs.realtime;
+
+    Com_Printf( "Accepted MVD client %s[%s]\n", client->name,
+        NET_AdrToString( &client->stream.address ) );
+}
+
+static void parse_ping( gtv_client_t *client ) {
+    if( client->state < cs_primed ) {
+        return;
+    }
+
+    // send ping reply
+    write_message( client, GTS_PONG );
+#if USE_ZLIB
+    flush_stream( client, Z_SYNC_FLUSH );
+#endif
+}
+
+static void parse_stream_start( gtv_client_t *client ) {
+    if( client->state < cs_primed ) {
+        return;
+    }
+
+    client->state = cs_spawned;
+
+    List_Append( &gtv_active_list, &client->active );
+
+    if( !mvd_enable() ) {
+        write_message( client, GTS_ERROR );
+        drop_client( client, "couldn't create MVD dummy" );
+        return;
+    }
+
+    // do nothing if not active
+    if( !mvd.active ) {
+        return;
+    }
+
+    // send stream start marker
+    write_message( client, GTS_STREAM_START );
+
+    // send gamestate
+    emit_gamestate();
+    write_message( client, GTS_STREAM_DATA );
+#if USE_ZLIB
+    flush_stream( client, Z_SYNC_FLUSH );
+#endif
+    SZ_Clear( &msg_write );
+}
+
+static void parse_stream_stop( gtv_client_t *client ) {
+    if( client->state < cs_spawned ) {
+        return;
+    }
+
+    client->state = cs_primed;
+
+    List_Delete( &client->active );
+
+    // do nothing if not active
+    if( !mvd.active ) {
+        return;
+    }
+
+    // send stream stop marker
+    write_message( client, GTS_STREAM_STOP );
+#if USE_ZLIB
+    flush_stream( client, Z_SYNC_FLUSH );
+#endif
+}
+
+static qboolean parse_message( gtv_client_t *client ) {
+    uint32_t magic;
+    uint16_t msglen;
+    int cmd;
+
+    if( client->state <= cs_zombie ) {
+        return qfalse;
+    }
+
+    // check magic
+    if( client->state < cs_connected ) {
+        if( !FIFO_TryRead( &client->stream.recv, &magic, 4 ) ) {
+            return qfalse;
+        }
+        if( magic != MVD_MAGIC ) {
+            drop_client( client, "not a MVD/GTV stream" );
+            return qfalse;
+        }
+        client->state = cs_connected;
+
+        // send it back
+        write_stream( client, &magic, 4 );
+    }
+
+    // parse msglen
+    if( !client->msglen ) {
+        if( !FIFO_TryRead( &client->stream.recv, &msglen, 2 ) ) {
+            return qfalse;
+        }
+        msglen = LittleShort( msglen );
+        if( !msglen ) {
+            drop_client( client, "end of stream" );
+            return qfalse;
+        }
+        if( msglen > 128 ) {
+            drop_client( client, "oversize message" );
+            return qfalse;
+        }
+        client->msglen = msglen;
+    }
+
+    // read this message
+    if( !FIFO_ReadMessage( &client->stream.recv, client->msglen ) ) {
+        return qfalse;
+    }
+
+    client->msglen = 0;
+
+    cmd = MSG_ReadByte();
+    switch( cmd ) {
+    case GTC_HELLO:
+        parse_hello( client );
+        break;
+    case GTC_PING:
+        parse_ping( client );
+        break;
+    case GTC_STREAM_START:
+        parse_stream_start( client );
+        break;
+    case GTC_STREAM_STOP:
+        parse_stream_stop( client );
+        break;
+    default:
+        drop_client( client, "unknown command byte" );
+        return qfalse;
+    }
+
+    if( msg_read.readcount > msg_read.cursize ) {
+        drop_client( client, "read past end of message" );
+        return qfalse;
+    }
+    
+    client->lastmessage = svs.realtime; // don't timeout
+    return qtrue;
+}
+
+static gtv_client_t *find_slot( void ) {
+    gtv_client_t *client;
+    int i;
+
+    for( i = 0; i < sv_mvd_maxclients->integer; i++ ) {
+        client = &mvd.clients[i];
+        if( !client->state ) {
+            return client;
+        }
+    }
+    return NULL;
+}
+
+static void accept_client( netstream_t *stream ) {
+    gtv_client_t *client;
+    netstream_t *s;
+
+    // limit number of connections from single IP
+    if( sv_iplimit->integer > 0 ) {
+        int count = 0;
+
+        FOR_EACH_GTV( client ) {
+            if( NET_IsEqualBaseAdr( &client->stream.address, &stream->address ) ) {
+                count++;
+            }
+        }
+        if( count >= sv_iplimit->integer ) {
+            Com_Printf( "TCP client [%s] rejected: too many connections\n",
+                NET_AdrToString( &stream->address ) );
+            NET_Close( stream );
+            return;
+        }
+    }
+
+    // find a free client slot
+    client = find_slot();
+    if( !client ) {
+        Com_Printf( "TCP client [%s] rejected: no free slots\n",
+            NET_AdrToString( &stream->address ) );
+        NET_Close( stream );
+        return;
+    }
+
+    memset( client, 0, sizeof( *client ) );
+
+    s = &client->stream;
+    s->recv.data = client->buffer;
+    s->recv.size = 128;
+    s->send.data = client->buffer + 128;
+    s->send.size = 128;
+    s->socket = stream->socket;
+    s->address = stream->address;
+    s->state = stream->state;
+
+    client->lastmessage = svs.realtime;
+    client->state = cs_assigned;
+    List_SeqAdd( &gtv_client_list, &client->entry );
+    List_Init( &client->active );
+
+    Com_DPrintf( "TCP client [%s] accepted\n",
+        NET_AdrToString( &stream->address ) );
+}
+
+void SV_MvdRunClients( void ) {
+    gtv_client_t *client;
+    neterr_t    ret;
+    netstream_t stream;
+    unsigned    zombie_time = 1000 * sv_zombietime->value;
+    unsigned    drop_time = 1000 * sv_timeout->value;
+    unsigned    ghost_time = 1000 * sv_ghostime->value;
+    unsigned    delta;
+
+    // accept new connections
+    ret = NET_Accept( &net_from, &stream );
+    if( ret == NET_ERROR ) {
+        Com_DPrintf( "%s from %s, ignored\n", NET_ErrorString(),
+            NET_AdrToString( &net_from ) );
+    } else if( ret == NET_OK ) {
+        accept_client( &stream );
+    }
+
+    // run existing connections
+    FOR_EACH_GTV( client ) {
+        // check timeouts
+        delta = svs.realtime - client->lastmessage;
+        switch( client->state ) {
+        case cs_zombie:
+            if( delta > zombie_time || !FIFO_Usage( &client->stream.send ) ) {
+                remove_client( client );
+                continue;
+            }
+            break;
+        case cs_assigned:
+        case cs_connected:
+            if( delta > ghost_time || delta > drop_time ) {
+                drop_client( client, "request timed out" );
+                remove_client( client );
+                continue;
+            }
+            break;
+        default:
+            if( delta > drop_time ) {
+                drop_client( client, "connection timed out" );
+                remove_client( client );
+                continue;
+            }
+            break;
+        }
+
+        // run network stream
+        ret = NET_RunStream( &client->stream );
+        switch( ret ) {
+        case NET_AGAIN:
+            break;
+        case NET_OK:
+            // parse the message
+            while( parse_message( client ) )
+                ;
+            break;
+        case NET_CLOSED:
+            drop_client( client, "EOF from client" );
+            remove_client( client );
+            break;
+        case NET_ERROR:
+            drop_client( client, "connection reset by peer" );
+            remove_client( client );
+            break;
+        }
+    }
+}
+
+static void dump_clients( void ) {
+    gtv_client_t    *client;
+    int count;
+
+    Com_Printf(
+"num name             buf lastmsg address               state\n"
+"--- ---------------- --- ------- --------------------- -----\n" );
+    count = 0;
+    FOR_EACH_GTV( client ) {
+        Com_Printf( "%3d %-16.16s %3"PRIz" %7u %-21s ",
+            count, client->name, FIFO_Usage( &client->stream.send ),
+            svs.realtime - client->lastmessage,
+            NET_AdrToString( &client->stream.address ) );
+
+        switch( client->state ) {
+        case cs_zombie:
+            Com_Printf( "ZMBI " );
+            break;
+        case cs_assigned:
+            Com_Printf( "ASGN " );
+            break;
+        case cs_connected:
+            Com_Printf( "CNCT " );
+            break;
+        case cs_primed:
+            Com_Printf( "PRIM " );
+            break;
+        default:
+            Com_Printf( "SEND " );
+            break;
+        }
+        Com_Printf( "\n" );
+
+        count++;
+    }
+}
+
+static void dump_versions( void ) {
+    gtv_client_t *client;
+    int count;
+
+    Com_Printf(
+"num name             version\n"
+"--- ---------------- -----------------------------------------\n" );
+
+    FOR_EACH_GTV( client ) {
+    count = 0;
+        Com_Printf( "%3i %-16.16s %-40.40s\n",
+            count, client->name, client->version );
+        count++;
+    }
+}
+
+void SV_MvdStatus_f( void ) {
+    if( LIST_EMPTY( &gtv_client_list ) ) {
+        Com_Printf( "No TCP clients.\n" );
+    } else {
+        if( Cmd_Argc() > 1 ) {
+            dump_versions();
+        } else {
+            dump_clients();
+        }
+    }
+    Com_Printf( "\n" );
+}
+
+static void mvd_disable( void ) {
+    // remove MVD dummy
+    if( mvd.dummy ) {
+        SV_RemoveClient( mvd.dummy );
+        mvd.dummy = NULL;
+    }
+
+    SZ_Clear( &mvd.datagram );
+    SZ_Clear( &mvd.message );
+
+    mvd.active = qfalse;
+}
+
+// something bad happened, remove all clients
+static void mvd_drop( gtv_serverop_t op ) {
+    gtv_client_t *client;
+
+    // stop recording
+    rec_stop();
+
+    // drop GTV clients
+    FOR_EACH_GTV( client ) {
+        switch( client->state ) {
+        case cs_spawned:
+            if( mvd.active ) {
+                write_message( client, GTS_STREAM_STOP );
+            }
+            // fall through
+        case cs_primed:
+            write_message( client, op );
+            drop_client( client, NULL );
+            NET_RunStream( &client->stream );
+            NET_RunStream( &client->stream );
+            remove_client( client );
+            break;
+        default:
+            drop_client( client, NULL );
+            remove_client( client );
+            break;
+        }
+    }
+
+    mvd_disable();
+}
+
+// if dummy is not yet connected, create and spawn it
+static qboolean mvd_enable( void ) {
+    if( !mvd.dummy ) {
+        if( !dummy_create() ) {
+            return qfalse;
+        }
+        dummy_spawn();
+        build_gamestate();
+        mvd.clients_active = mvd.players_active = svs.realtime;
+        mvd.active = qtrue;
+    }
+    return qtrue;
+}
+
+
+/*
+==============================================================================
+
+SERVER HOOKS
+
+These hooks are called by server code when some event occurs.
+
+==============================================================================
+*/
+
+/*
+==================
+SV_MvdMapChanged
+
+Server has just changed the map, spawn the MVD dummy and go!
+==================
+*/
+void SV_MvdMapChanged( void ) {
+    gtv_client_t *client;
+
+    if( !sv_mvd_enable->integer ) {
+        return; // do noting if disabled
+    }
+
+    if( !mvd.dummy ) {
+        if( !sv_mvd_autorecord->integer ) {
+            return; // not listening for autorecord command
+        }
+        if( !dummy_create() ) {
+            return;
+        }
+        Com_Printf( "Spawning MVD dummy for auto-recording\n" );
+    }
+
+    dummy_spawn();
+
+    if( mvd.active ) {
+        // build and emit gamestate
+        build_gamestate();
+        emit_gamestate();
+
+        // send gamestate to all MVD clients
+        FOR_EACH_ACTIVE_GTV( client ) {
+            write_message( client, GTS_STREAM_DATA );
+        }
+    }
+
+    if( mvd.recording ) {
+        int maxlevels = sv_mvd_maxmaps->integer;
+    
+        // check if it is time to stop recording
+        if( maxlevels > 0 && ++mvd.numlevels >= maxlevels ) {
+            Com_Printf( "Stopping MVD recording, "
+                "maximum number of level changes reached.\n" );
+            rec_stop();
+        } else if( mvd.active ) {
+            // write gamestate to demofile
+            rec_write();
+        }
+    }
+
+    // clear gamestate
+    SZ_Clear( &msg_write );
+
+    SZ_Clear( &mvd.datagram );
+    SZ_Clear( &mvd.message );
+}
+
+/*
+==================
+SV_MvdClientDropped
+
+Server has just dropped a client, check if that was our MVD dummy client.
+==================
+*/
+void SV_MvdClientDropped( client_t *client, const char *reason ) {
+    if( client == mvd.dummy ) {
+        mvd_drop( GTS_ERROR );
+    }
+}
+
+/*
+==================
+SV_MvdInit
+
+Server is initializing, prepare MVD server for this game.
+==================
+*/
+void SV_MvdInit( void ) {
+    if( !sv_mvd_enable->integer ) {
+        return; // do noting if disabled
+    }
+
+    // allocate buffers
+    Z_TagReserve( sizeof( player_state_t ) * sv_maxclients->integer +
+        sizeof( entity_state_t ) * MAX_EDICTS + MAX_MSGLEN * 2, TAG_SERVER );
+    SZ_Init( &mvd.message, Z_ReservedAlloc( MAX_MSGLEN ), MAX_MSGLEN );
+    SZ_Init( &mvd.datagram, Z_ReservedAlloc( MAX_MSGLEN ), MAX_MSGLEN );
+    mvd.players = Z_ReservedAlloc( sizeof( player_state_t ) * sv_maxclients->integer );
+    mvd.entities = Z_ReservedAlloc( sizeof( entity_state_t ) * MAX_EDICTS );
+
+    // reserve the slot for dummy MVD client
+    if( !sv_reserved_slots->integer ) {
+        Cvar_Set( "sv_reserved_slots", "1" );
+    }
+
+    Cvar_ClampInteger( sv_mvd_maxclients, 1, 256 );
+
+    // open server TCP socket
+    if( sv_mvd_enable->integer > 1 ) {
+        if( NET_Listen( qtrue ) == NET_OK ) {
+            mvd.clients = SV_Mallocz( sizeof( gtv_client_t ) * sv_mvd_maxclients->integer );
+        } else {
+            Com_EPrintf( "%s while opening server TCP port.\n", NET_ErrorString() );
+            Cvar_Set( "sv_mvd_enable", "1" );
+        }
+    }
+}
+
+/*
+==================
+SV_MvdShutdown
+
+Server is shutting down, clean everything up.
+==================
+*/
+void SV_MvdShutdown( killtype_t type ) {
+    // drop all clients
+    mvd_drop( type == KILL_RESTART ? GTS_RECONNECT : GTS_DISCONNECT );
+
+    // free static data
+    Z_Free( mvd.message.data );
+    Z_Free( mvd.clients );
+
+    // close server TCP socket
+    NET_Listen( qfalse );
+
+    memset( &mvd, 0, sizeof( mvd ) );
+}
+
+
+/*
+==============================================================================
+
 LOCAL MVD RECORDER
 
 ==============================================================================
 */
+
+static void rec_write( void ) {
+    uint16_t msglen;
+
+    msglen = LittleShort( msg_write.cursize );
+    FS_Write( &msglen, 2, mvd.recording );
+    FS_Write( msg_write.data, msg_write.cursize, mvd.recording );
+}
 
 /*
 ==============
@@ -1245,15 +1881,15 @@ Stops server local MVD recording.
 ==============
 */
 static void rec_stop( void ) {
-    uint16_t length;
+    uint16_t msglen;
 
     if( !mvd.recording ) {
         return;
     }
     
     // write demo EOF marker
-    length = 0;
-    FS_Write( &length, 2, mvd.recording );
+    msglen = 0;
+    FS_Write( &msglen, 2, mvd.recording );
 
     FS_FCloseFile( mvd.recording );
     mvd.recording = 0;
@@ -1277,12 +1913,13 @@ static void rec_start( fileHandle_t demofile ) {
     mvd.recording = demofile;
     mvd.numlevels = 0;
     mvd.numframes = 0;
+    mvd.clients_active = svs.realtime;
     
     magic = MVD_MAGIC;
     FS_Write( &magic, 4, demofile );
 
     emit_gamestate();
-    FS_Write( msg_write.data, msg_write.cursize, demofile );
+    rec_write();
     SZ_Clear( &msg_write );
 }
 
@@ -1293,14 +1930,13 @@ const cmd_option_t o_mvdrecord[] = {
     { NULL }
 };
 
-extern void MVD_StreamedStop_f( void );
-extern void MVD_StreamedRecord_f( void );
-extern void MVD_File_g( genctx_t *ctx );
-
 static void SV_MvdRecord_c( genctx_t *ctx, int argnum ) {
+#if USE_MVD_CLIENT
+    // TODO
     if( argnum == 1 ) {
         MVD_File_g( ctx );
     }
+#endif
 }
 
 /*
@@ -1319,9 +1955,12 @@ static void SV_MvdRecord_f( void ) {
     size_t len;
 
     if( sv.state != ss_game ) {
+#if USE_MVD_CLIENT
         if( sv.state == ss_broadcast ) {
             MVD_StreamedRecord_f();
-        } else {
+        } else
+#endif
+        {
             Com_Printf( "No server running.\n" );
         }
         return;
@@ -1366,7 +2005,7 @@ static void SV_MvdRecord_f( void ) {
         return;
     }
 
-    if( !init_mvd() ) {
+    if( !mvd_enable() ) {
         FS_FCloseFile( demofile );
         return;
     }
@@ -1389,10 +2028,12 @@ Ends server MVD recording
 ==============
 */
 static void SV_MvdStop_f( void ) {
+#if USE_MVD_CLIENT
     if( sv.state == ss_broadcast ) {
         MVD_StreamedStop_f();
         return;
     }
+#endif
     if( !mvd.recording ) {
         Com_Printf( "Not recording a local MVD.\n" );
         return;
@@ -1411,20 +2052,34 @@ static void SV_MvdStuff_f( void ) {
     }
 }
 
+static void SV_AddGtvHost_f( void ) {
+    SV_AddMatch_f( &gtv_host_list );
+}
+static void SV_DelGtvHost_f( void ) {
+    SV_DelMatch_f( &gtv_host_list );
+}
+static void SV_ListGtvHosts_f( void ) {
+    SV_ListMatches_f( &gtv_host_list );
+}
+
 static const cmdreg_t c_svmvd[] = {
     { "mvdrecord", SV_MvdRecord_f, SV_MvdRecord_c },
     { "mvdstop", SV_MvdStop_f },
     { "mvdstuff", SV_MvdStuff_f },
+    { "addgtvhost", SV_AddGtvHost_f },
+    { "delgtvhost", SV_DelGtvHost_f },
+    { "listgtvhosts", SV_ListGtvHosts_f },
 
     { NULL }
 };
 
 void SV_MvdRegister( void ) {
     sv_mvd_enable = Cvar_Get( "sv_mvd_enable", "0", CVAR_LATCH );
+    sv_mvd_maxclients = Cvar_Get( "sv_mvd_maxclients", "8", CVAR_LATCH );
     sv_mvd_auth = Cvar_Get( "sv_mvd_auth", "", CVAR_PRIVATE );
-    sv_mvd_max_size = Cvar_Get( "sv_mvd_max_size", "0", 0 );
-    sv_mvd_max_duration = Cvar_Get( "sv_mvd_max_duration", "0", 0 );
-    sv_mvd_max_levels = Cvar_Get( "sv_mvd_max_levels", "1", 0 );
+    sv_mvd_maxsize = Cvar_Get( "sv_mvd_maxsize", "0", 0 );
+    sv_mvd_maxtime = Cvar_Get( "sv_mvd_maxtime", "0", 0 );
+    sv_mvd_maxmaps = Cvar_Get( "sv_mvd_maxmaps", "1", 0 );
     sv_mvd_noblend = Cvar_Get( "sv_mvd_noblend", "0", CVAR_LATCH );
     sv_mvd_nogun = Cvar_Get( "sv_mvd_nogun", "1", CVAR_LATCH );
     sv_mvd_nomsgs = Cvar_Get( "sv_mvd_nomsgs", "1", CVAR_LATCH );
@@ -1432,10 +2087,7 @@ void SV_MvdRegister( void ) {
         "wait 50; putaway; wait 10; help;", 0 );
     sv_mvd_scorecmd = Cvar_Get( "sv_mvd_scorecmd",
         "putaway; wait 10; help;", 0 );
-    sv_mvd_autorecord = Cvar_Get( "sv_mvd_autorecord", "0", 0 );
-#if USE_ZLIB
-    sv_mvd_encoding = Cvar_Get( "sv_mvd_encoding", "1", 0 );
-#endif
+    sv_mvd_autorecord = Cvar_Get( "sv_mvd_autorecord", "0", CVAR_LATCH );
     sv_mvd_capture_flags = Cvar_Get( "sv_mvd_capture_flags", "5", 0 );
 
     dummy_buffer.text = dummy_buffer_text;

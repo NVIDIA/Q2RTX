@@ -91,6 +91,8 @@ use_ref="gl"
 use_ui="yes"
 use_server="no"
 use_anticheat="no"
+use_mvd_server="yes"
+use_mvd_client="yes"
 use_asm="???"
 use_openffa="no"
 
@@ -154,6 +156,10 @@ for opt do
     ;;
     --enable-anticheat) use_anticheat="yes"
     ;;
+    --disable-mvd-server) use_mvd_server="no"
+    ;;
+    --disable-mvd-client) use_mvd_client="no"
+    ;;
     --single-user) singleuser="yes"
     ;;
     --datadir=*) datadir=`echo $opt | cut -d '=' -f 2`
@@ -193,6 +199,8 @@ echo "  --enable-jpg           enable JPG images support"
 echo "  --disable-ui           disable menu user interface"
 echo "  --disable-asm          disable i386 assembly optimizations"
 echo "  --enable-anticheat     enable r1ch.net anticheat server interface"
+echo "  --disable-mvd-server   disable MVD/GTV server"
+echo "  --disable-mvd-client   disable MVD/GTV client"
 echo "  --single-user          assume to be installed in home dir"
 echo "  --prefix=PREFIX        install in PREFIX [$prefix]"
 echo "  --datadir=DIR          path to game data tree [$datadir]"
@@ -511,6 +519,16 @@ fi
 if [ "$use_anticheat" = "yes" ]; then
     echo "USE_ANTICHEAT=yes" >> $config_mk
     echo "#define USE_ANTICHEAT 2" >> $config_h
+fi
+
+if [ "$use_mvd_server" = "yes" ]; then
+    echo "USE_MVD_SERVER=yes" >> $config_mk
+    echo "#define USE_MVD_SERVER 1" >> $config_h
+fi
+
+if [ "$use_mvd_client" = "yes" ]; then
+    echo "USE_MVD_CLIENT=yes" >> $config_mk
+    echo "#define USE_MVD_CLIENT 1" >> $config_h
 fi
 
 echo "#define USE_MAPCHECKSUM 1" >> $config_h

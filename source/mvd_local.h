@@ -18,29 +18,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#define MVD_DEBUG( s ) do { if( mvd_debug->integer ) \
-    Com_Printf( S_COLOR_BLUE "%s: %s", __func__, s ); } while( 0 )
-
 #define MVD_Malloc( size )      Z_TagMalloc( size, TAG_MVD )
 #define MVD_Mallocz( size )     Z_TagMallocz( size, TAG_MVD )
 #define MVD_CopyString( s )     Z_TagCopyString( s, TAG_MVD )
 
-#define EDICT_MVDCL( ent )  (( udpClient_t * )( (ent)->client ))
+#define EDICT_MVDCL( ent )  (( mvd_client_t * )( (ent)->client ))
 #define CS_NUM( c, n )      ( ( char * )(c) + (n) * MAX_QPATH )
 
 // game features MVD client supports
 #define MVD_FEATURES (GMF_CLIENTNUM|GMF_PROPERINUSE|GMF_WANT_ALL_DISCONNECTS)
-
-typedef enum {
-    MVD_DEAD,       // not active at all
-    MVD_CONNECTING, // connect() in progress
-    MVD_CONNECTED,  // HTTP request sent
-    MVD_CHECKING,   // got response, checking magic
-    MVD_PREPARING,  // got magic, waiting for gamestate
-    MVD_WAITING,    // stalled, buffering more data
-    MVD_READING,    // actively running
-    MVD_DISCONNECTED // disconnected, running until EOB
-} mvdState_t;
 
 #define LAYOUT_MSEC        3000
 
@@ -97,48 +83,42 @@ typedef struct {
     usercmd_t lastcmd;
     //short delta_angles[3];
     int jump_held;
-} udpClient_t;
+} mvd_client_t;
 
 #define MAX_MVD_NAME    16
 
+typedef enum {
+    MVD_DEAD,       // no gamestate received yet, unusable
+    MVD_WAITING,    // buffering more frames
+    MVD_READING     // reading frames
+} mvd_state_t;
+
+struct gtv_s;
+
 typedef struct mvd_s {
     list_t      entry;
-    list_t      ready;
     list_t      active;
 
-    int         id;
-    char        name[MAX_MVD_NAME];
+    mvd_state_t     state;
+    int             id;
+    char            name[MAX_MVD_NAME];
+    struct gtv_s    *gtv;
+    qboolean        (*read_frame)( struct mvd_s * );
 
     // demo related variables
-    fileHandle_t    demoplayback;
     fileHandle_t    demorecording;
-    int             demoloop;
-    string_entry_t  *demohead, *demoentry;
 
-    // connection variables
-    mvdState_t  state;
-    int         servercount;
-    int         clientNum;
-    netstream_t stream;
-    char        address[MAX_QPATH];
-    char        response[MAX_NET_STRING];
-    size_t      responseLength;
-    size_t      contentLength;
-    htcoding_t  contentCoding;
-    int         statusCode;
-    char        statusText[MAX_QPATH];
+    // delay buffer
+    fifo_t      delay;
     size_t      msglen;
-#if USE_ZLIB
-    z_stream    z;
-#endif
-    fifo_t      zbuf;
+    unsigned    num_packets, min_packets;
+    unsigned    underflows, overflows;
     unsigned    framenum;
-    unsigned    lastReceived;
-    unsigned    waitTime, waitDelay, waitCount;
 
     // game state
     char    gamedir[MAX_QPATH];
     char    mapname[MAX_QPATH];
+    int     servercount;
     int     maxclients;
     edict_pool_t pool;
     cm_t    cm;
@@ -150,13 +130,13 @@ typedef struct mvd_s {
     mvd_player_t    *players; // [maxclients]
     mvd_player_t    *dummy; // &players[clientNum]
     int             numplayers; // number of active players in frame
+    int             clientNum;
     char        layout[MAX_STRING_CHARS];
     char        oldscores[MAX_STRING_CHARS]; // layout is copied here
     qboolean    intermission;
 
-    // client lists
-    list_t udpClients;
-    list_t tcpClients;
+    // UDP client list
+    list_t      clients;
 } mvd_t;
 
 
@@ -165,28 +145,19 @@ typedef struct mvd_s {
 //
 
 extern list_t           mvd_channels;
-extern list_t           mvd_ready;
 extern list_t           mvd_active;
 extern mvd_t            mvd_waitingRoom;
 extern qboolean         mvd_dirty;
 
 extern cvar_t    *mvd_shownet;
-extern cvar_t    *mvd_debug;
 extern cvar_t    *mvd_timeout;
 extern cvar_t    *mvd_chase_msgs;
 
-void MVD_DPrintf( const char *fmt, ... ) q_printf( 1, 2 );
-void MVD_Dropf( mvd_t *mvd, const char *fmt, ... )
-    q_noreturn q_printf( 2, 3 );
 void MVD_Destroyf( mvd_t *mvd, const char *fmt, ... )
     q_noreturn q_printf( 2, 3 );
 void MVD_Disconnect( mvd_t *mvd );
 void MVD_BeginWaiting( mvd_t *mvd );
-void MVD_ClearState( mvd_t *mvd );
-void MVD_ChangeLevel( mvd_t *mvd ); 
 void MVD_Finish( mvd_t *mvd, const char *reason ) q_noreturn;
-void MVD_GetStream( const char *uri );
-void MVD_GetStatus( void );
 void MVD_Free( mvd_t *mvd ); 
 void MVD_Shutdown( void );
 
@@ -194,7 +165,6 @@ mvd_t *MVD_SetChannel( int arg );
 
 void MVD_File_g( genctx_t *ctx );
 
-void MVD_Connect_f( void );
 void MVD_Spawn_f( void ); 
 
 void MVD_StreamedStop_f( void );
@@ -207,19 +177,19 @@ int MVD_Frame( void );
 // mvd_parse.c
 //
 
-qboolean MVD_Parse( mvd_t *mvd ); 
+void MVD_ParseMessage( mvd_t *mvd );
 void MVD_ParseEntityString( mvd_t *mvd, const char *data );
+void MVD_FreePlayer( mvd_player_t *player );
 
 
 //
 // mvd_game.c
 //
 
-extern udpClient_t      *mvd_clients;    /* [svs.maxclients] */
-extern game_export_t    mvd_ge;
+extern mvd_client_t     *mvd_clients;   // [maxclients]
 
-void MVD_UpdateClient( udpClient_t *client );
-void MVD_SwitchChannel( udpClient_t *client, mvd_t *mvd );
+void MVD_UpdateClient( mvd_client_t *client );
+void MVD_SwitchChannel( mvd_client_t *client, mvd_t *mvd );
 void MVD_RemoveClient( client_t *client );
 void MVD_BroadcastPrintf( mvd_t *mvd, int level,
     int mask, const char *fmt, ... ) q_printf( 4, 5 );

@@ -38,6 +38,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "g_public.h"
 #include "sv_public.h"
 #include "cl_public.h"
+#if USE_MVD_CLIENT
+#include "mvd_public.h"
+#endif
 #if USE_ZLIB
 #include <zlib.h>
 #endif
@@ -260,40 +263,6 @@ typedef struct client_s {
 #endif
 } client_t;
 
-typedef enum {
-    HTTP_METHOD_BAD,
-    HTTP_METHOD_GET,
-    HTTP_METHOD_HEAD,
-    HTTP_METHOD_POST
-} htmethod_t;
-
-typedef enum {
-    HTTP_CODING_NONE,
-    HTTP_CODING_GZIP,
-    HTTP_CODING_DEFLATE,
-    HTTP_CODING_UNKNOWN
-} htcoding_t;
-
-typedef struct {
-    list_t      entry;
-	clstate_t	state;
-    netstream_t stream;
-#if USE_ZLIB
-    z_stream    z;
-    int         noflush;
-#endif
-    unsigned    lastmessage; 
-
-    char        request[MAX_NET_STRING];
-    size_t      requestLength;
-    htmethod_t  method;
-    char        *resource, *host, *agent, *credentials;
-
-    // MVD clients specific
-    list_t      mvdEntry;
-    struct mvd_s *mvd;
-} tcpClient_t;
-
 // a client can leave the server in one of four ways:
 // dropping properly by quiting or disconnecting
 // timing out if no valid messages are received for timeout.value seconds
@@ -360,11 +329,6 @@ typedef struct server_static_s {
 	unsigned		nextEntityStates;	// next entityState to use
 	entity_state_t	*entityStates;		// [numEntityStates]
 
-    list_t          tcp_client_pool;
-    list_t          tcp_client_list;
-
-    list_t          console_list;
-
 #if USE_ZLIB
     z_stream        z; // for compressing messages at once
 #endif
@@ -409,13 +373,12 @@ extern	cvar_t		*sv_enforcetime;
 extern	cvar_t		*sv_force_reconnect;
 extern	cvar_t		*sv_iplimit;
 
-extern	cvar_t		*sv_http_enable;
-extern	cvar_t		*sv_http_maxclients;
-extern	cvar_t		*sv_http_minclients;
-extern	cvar_t		*sv_console_auth;
+//extern	cvar_t		*sv_console_auth;
 
+#if USE_CLIENT
 extern	cvar_t		*sv_debug_send;
 extern	cvar_t		*sv_pad_packets;
+#endif
 extern	cvar_t		*sv_lan_force_rate;
 extern  cvar_t      *sv_calcpings_method;
 extern  cvar_t      *sv_changemapcmd;
@@ -465,6 +428,10 @@ addrmatch_t *SV_MatchAddress( list_t *list, netadr_t *address );
 
 int SV_CountClients( void );
 
+#if USE_ZLIB
+voidpf SV_Zalloc OF(( voidpf opaque, uInt items, uInt size ));
+void SV_Zfree OF(( voidpf opaque, voidpf address ));
+#endif
 
 void Master_Heartbeat (void);
 void Master_Packet (void);
@@ -514,16 +481,13 @@ void SV_CalcSendTime( client_t *client, size_t messageSize );
 //
 // sv_mvd.c
 //
-
-extern cvar_t	*sv_mvd_enable;
-extern cvar_t	*sv_mvd_auth;
-extern cvar_t	*sv_mvd_noblend;
-extern cvar_t	*sv_mvd_nogun;
-
 void SV_MvdRegister( void );
 void SV_MvdInit( void );
-void SV_MvdShutdown( void ) ;
-void SV_MvdRunFrame( void );
+void SV_MvdShutdown( killtype_t type );
+void SV_MvdBeginFrame( void );
+void SV_MvdEndFrame( void );
+void SV_MvdRunClients( void );
+void SV_MvdStatus_f( void );
 void SV_MvdMapChanged( void );
 void SV_MvdClientDropped( client_t *client, const char *reason );
 
@@ -535,34 +499,10 @@ void SV_MvdStartSound( int entnum, int channel, int flags,
 					    int soundindex, int volume,
 					    int attenuation, int timeofs );
 
-void SV_MvdInitStream( void );
-void SV_MvdGetStream( const char *uri );
-
-//
-// sv_http.c
-//
-
-extern tcpClient_t  *http_client;
-extern char         http_host[MAX_STRING_CHARS];
-extern char         http_header[MAX_STRING_CHARS];
-
-void SV_HttpRun( void ); 
-
-void SV_HttpRemove( tcpClient_t *client ); 
-void SV_HttpDrop( tcpClient_t *client, const char *error ); 
-void SV_HttpWrite( tcpClient_t *client, void *data, size_t length ); 
-void SV_HttpFinish( tcpClient_t *client );
-
-void SV_HttpPrintf( const char *fmt, ... ) q_printf( 1, 2 );
-void SV_HttpHeader( const char *title ); 
-void SV_HttpFooter( void );
-void SV_HttpReject( const char *error, const char *reason ); 
-
 #if USE_ANTICHEAT
 
 // 
 // sv_ac.c
-//
 //
 char *AC_ClientConnect( client_t *cl );
 void AC_ClientDisconnect( client_t *cl );

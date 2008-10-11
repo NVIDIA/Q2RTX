@@ -20,7 +20,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // sv_user.c -- server code for moving users
 
 #include "sv_local.h"
-#include "mvd_local.h"
 
 edict_t    *sv_player;
 
@@ -208,10 +207,12 @@ static void write_compressed_gamestate( void ) {
         return;
     }
 
+#if USE_CLIENT
     if( sv_debug_send->integer ) {
         Com_Printf( S_COLOR_BLUE"%s: comp: %lu into %lu\n",
             sv_client->name, svs.z.total_in, svs.z.total_out );
     }
+#endif
 
     patch[0] = svs.z.total_out & 255;
     patch[1] = ( svs.z.total_out >> 8 ) & 255;
@@ -226,10 +227,12 @@ static inline int z_flush( byte *buffer ) {
         return ret;
     }
 
+#if USE_CLIENT
     if( sv_debug_send->integer ) {
         Com_Printf( S_COLOR_BLUE"%s: comp: %lu into %lu\n",
             sv_client->name, svs.z.total_in, svs.z.total_out );
     }
+#endif
 
     MSG_WriteByte( svc_zpacket );
     MSG_WriteShort( svs.z.total_out );

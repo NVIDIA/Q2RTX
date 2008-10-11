@@ -294,7 +294,7 @@ void Com_Printf( const char *fmt, ... ) {
 		Sys_ConsoleOutput( msg );
 
         // remote console
-        SV_ConsoleOutput( msg );
+        //SV_ConsoleOutput( msg );
 
 		// logfile
 		if( com_logFile ) {
@@ -975,6 +975,28 @@ size_t FIFO_Write( fifo_t *fifo, const void *buffer, size_t len ) {
 
     return tail + wrapped;
 }
+
+qboolean FIFO_ReadMessage( fifo_t *fifo, size_t msglen ) {
+    size_t len;
+    byte *data;
+
+    data = FIFO_Peek( fifo, &len );
+    if( len < msglen ) {
+        // read in two chunks into message buffer
+        if( !FIFO_TryRead( fifo, msg_read_buffer, msglen ) ) {
+            return qfalse; // not yet available
+        }
+        SZ_Init( &msg_read, msg_read_buffer, sizeof( msg_read_buffer ) );
+    } else {
+        // read in a single block without copying any memory
+        SZ_Init( &msg_read, data, msglen );
+        FIFO_Decommit( fifo, msglen );
+    }
+
+    msg_read.cursize = msglen;
+    return qtrue;
+}
+
 
 /*
 ==============================================================================

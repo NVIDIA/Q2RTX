@@ -194,7 +194,7 @@ void MVD_ParseEntityString( mvd_t *mvd, const char *data ) {
 }
 
 static void MVD_ParseMulticast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
-	udpClient_t	*client;
+	mvd_client_t	*client;
     client_t    *cl;
 	byte		mask[MAX_MAP_VIS];
 	mleaf_t		*leaf1, *leaf2;
@@ -242,7 +242,7 @@ static void MVD_ParseMulticast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
 	}
 
 	// send the data to all relevent clients
-    LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
+    LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
         cl = client->cl;
         if( cl->state < cs_primed ) {
             continue;
@@ -271,11 +271,11 @@ static void MVD_ParseMulticast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
 
 static void MVD_UnicastSend( mvd_t *mvd, qboolean reliable, byte *data, size_t length, mvd_player_t *player ) {
     mvd_player_t *target;
-    udpClient_t *client;
+    mvd_client_t *client;
     client_t *cl;
     
 	// send to all relevant clients
-    LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
+    LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
         cl = client->cl;
         if( cl->state < cs_spawned ) {
             continue;
@@ -288,7 +288,7 @@ static void MVD_UnicastSend( mvd_t *mvd, qboolean reliable, byte *data, size_t l
 }
 
 static void MVD_UnicastLayout( mvd_t *mvd, qboolean reliable, mvd_player_t *player ) {
-    udpClient_t *client;
+    mvd_client_t *client;
 
     if( player != mvd->dummy ) {
         MSG_ReadString( NULL, 0 );
@@ -298,7 +298,7 @@ static void MVD_UnicastLayout( mvd_t *mvd, qboolean reliable, mvd_player_t *play
     MSG_ReadString( mvd->layout, sizeof( mvd->layout ) );
 
 	// force an update to all relevant clients
-    LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
+    LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
         if( client->cl->state < cs_spawned ) {
             continue;
         }
@@ -355,7 +355,7 @@ static void MVD_UnicastPrint( mvd_t *mvd, qboolean reliable, mvd_player_t *playe
     int level;
     byte *data;
     size_t readcount, length;
-    udpClient_t *client;
+    mvd_client_t *client;
     client_t *cl;
     mvd_player_t *target;
 
@@ -368,7 +368,7 @@ static void MVD_UnicastPrint( mvd_t *mvd, qboolean reliable, mvd_player_t *playe
     length = msg_read.readcount - readcount;
     
 	// send to all relevant clients
-    LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
+    LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
         cl = client->cl;
         if( cl->state < cs_spawned ) {
             continue;
@@ -489,7 +489,7 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
     int volume, attenuation, offset, sendchan;
 	int			entnum;
 	vec3_t		origin;
-    udpClient_t *client;
+    mvd_client_t *client;
 	client_t	*cl;
 	byte		mask[MAX_MAP_VIS];
 	mleaf_t		*leaf;
@@ -523,7 +523,7 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
         return;
     }
 
-    LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
+    LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
         cl = client->cl;
 
 		// do not send unreliables to connecting clients
@@ -610,6 +610,15 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
 	}
 }
 
+void MVD_FreePlayer( mvd_player_t *player ) {
+    mvd_cs_t *cs, *next;
+
+    for( cs = player->configstrings; cs; cs = next ) {
+        next = cs->next;
+        Z_Free( cs );
+    }
+}
+
 static void set_player_name( mvd_player_t *player, const char *string ) {
     char *p;
 
@@ -624,7 +633,7 @@ static void MVD_ParseConfigstring( mvd_t *mvd ) {
 	int index;
 	size_t len, maxlen;
 	char *string;
-	udpClient_t *client;
+	mvd_client_t *client;
     mvd_player_t *player;
     mvd_cs_t *cs, **pcs;
     int i;
@@ -645,7 +654,7 @@ static void MVD_ParseConfigstring( mvd_t *mvd ) {
         // update player name
         player = &mvd->players[ index - CS_PLAYERSKINS ];
         set_player_name( player, string );
-        LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
+        LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
             if( client->cl->state < cs_spawned ) {
                 continue;
             }
@@ -675,7 +684,7 @@ static void MVD_ParseConfigstring( mvd_t *mvd ) {
 	MSG_WriteData( string, len + 1 );
 	
     // broadcast configstring change
-    LIST_FOR_EACH( udpClient_t, client, &mvd->udpClients, entry ) {
+    LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
         if( client->cl->state < cs_primed ) {
             continue;
         }
@@ -889,6 +898,68 @@ static void MVD_ParseFrame( mvd_t *mvd ) {
     mvd->framenum++;
 }
 
+static void MVD_ClearState( mvd_t *mvd ) {
+    mvd_player_t *player;
+    int i;
+
+    // clear all entities, don't trust num_edicts as it is possible
+    // to miscount removed entities
+    memset( mvd->edicts, 0, sizeof( mvd->edicts ) );
+    mvd->pool.num_edicts = 0;
+
+    // clear all players
+    for( i = 0; i < mvd->maxclients; i++ ) {
+        player = &mvd->players[i];
+        MVD_FreePlayer( player );
+        memset( player, 0, sizeof( *player ) );
+    }
+    mvd->numplayers = 0;
+
+    // free current map
+    CM_FreeMap( &mvd->cm );
+
+    if( mvd->intermission ) {
+        // save oldscores
+        //strcpy( mvd->oldscores, mvd->layout );
+    }
+
+    memset( mvd->configstrings, 0, sizeof( mvd->configstrings ) );
+    mvd->layout[0] = 0;
+
+    mvd->framenum = 0;
+    // intermission flag will be cleared in MVD_ChangeLevel
+}
+
+static void MVD_ChangeLevel( mvd_t *mvd ) {
+    mvd_client_t *client;
+
+    if( sv.state != ss_broadcast ) {
+        MVD_Spawn_f(); // the game is just starting
+        return;
+    }
+
+    // cause all UDP clients to reconnect
+    MSG_WriteByte( svc_stufftext );
+    MSG_WriteString( va( "changing map=%s; reconnect\n", mvd->mapname ) );
+
+    LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
+        if( mvd->intermission && client->cl->state == cs_spawned ) {
+            // make them switch to previous target instead of MVD dummy
+            client->target = client->oldtarget;
+            client->oldtarget = NULL;
+        }
+        SV_ClientReset( client->cl );
+        client->cl->spawncount = mvd->servercount;
+        SV_ClientAddMessage( client->cl, MSG_RELIABLE );
+    }
+
+    SZ_Clear( &msg_write );
+
+    mvd->intermission = qfalse;
+
+    SV_SendAsyncPackets();
+}
+
 static void MVD_ParseServerData( mvd_t *mvd ) {
 	int protocol;
     size_t len, maxlen;
@@ -920,7 +991,7 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
     mvd->clientNum = MSG_ReadShort();
 
 	// change gamedir unless playing a demo
-	if( !mvd->demoplayback ) {
+	/*if( !mvd->demoplayback )*/ {
 		Cvar_UserSet( "game", mvd->gamedir );
         if( FS_NeedRestart() ) {
             FS_Restart();
@@ -961,6 +1032,7 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
         mvd->players = MVD_Mallocz( sizeof( mvd_player_t ) * index );
         mvd->maxclients = index;
     } else if( index != mvd->maxclients ) {
+        // TODO: allow this!
         MVD_Destroyf( mvd, "Unexpected maxclients change" );
     }
 
@@ -1005,18 +1077,17 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
     MVD_ParseFrame( mvd );
 
     // if the channel has been just created, init some things
-    if( mvd->state < MVD_WAITING ) {
+    if( !mvd->state ) {
         mvd_t *cur;
 
         // sort this one into the list of ready channels
-        LIST_FOR_EACH( mvd_t, cur, &mvd_ready, ready ) {
+        LIST_FOR_EACH( mvd_t, cur, &mvd_channels, entry ) {
             if( cur->id > mvd->id ) {
                 break;
             }
         }
-        List_Append( &cur->ready, &mvd->ready );
-        mvd->state = mvd->demoplayback ? MVD_READING : MVD_WAITING;
-        mvd->waitTime = svs.realtime;
+        List_Append( &cur->entry, &mvd->entry );
+        mvd->state = MVD_WAITING;
 
         // for local client
         MVD_CheckActive( mvd );
@@ -1026,53 +1097,8 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
     MVD_ChangeLevel( mvd );
 }
 
-static qboolean MVD_ParseMessage( mvd_t *mvd, fifo_t *fifo ) {
-    uint16_t    msglen;
-    uint32_t    magic;
-    void        *data;
-    size_t      length;
+void MVD_ParseMessage( mvd_t *mvd ) {
 	int			cmd, extrabits;
-
-    // parse magic
-    if( mvd->state == MVD_CHECKING ) {
-        if( !FIFO_TryRead( fifo, &magic, 4 ) ) {
-            return qfalse;
-        }
-        if( magic != MVD_MAGIC ) {
-            MVD_Destroyf( mvd, "Not a MVD stream" );
-        }
-        mvd->state = MVD_PREPARING;
-    }
-
-    // parse msglen
-    if( !mvd->msglen ) {
-        if( !FIFO_TryRead( fifo, &msglen, 2 ) ) {
-            return qfalse;
-        }
-        if( !msglen ) {
-            MVD_Finish( mvd, "End of MVD stream reached" );
-        }
-        msglen = LittleShort( msglen );
-        if( msglen > MAX_MSGLEN ) {
-            MVD_Destroyf( mvd, "Invalid MVD message length: %u bytes", msglen );
-        }
-        mvd->msglen = msglen;
-    }
-
-    // first, try to read in a single block
-    data = FIFO_Peek( fifo, &length );
-    if( length < mvd->msglen ) {
-        if( !FIFO_TryRead( fifo, msg_read_buffer, mvd->msglen ) ) {
-            return qfalse; // not yet available
-        }
-        SZ_Init( &msg_read, msg_read_buffer, sizeof( msg_read_buffer ) );
-    } else {
-        SZ_Init( &msg_read, data, mvd->msglen );
-        FIFO_Decommit( fifo, mvd->msglen );
-    }
-
-    msg_read.cursize = mvd->msglen;
-    mvd->msglen = 0;
 
 	if( mvd_shownet->integer == 1 ) {
 		Com_Printf( "%"PRIz" ", msg_read.cursize );
@@ -1087,21 +1113,21 @@ static qboolean MVD_ParseMessage( mvd_t *mvd, fifo_t *fifo ) {
 		if( msg_read.readcount > msg_read.cursize ) {
             MVD_Destroyf( mvd, "Read past end of message" );
 		}
-
-		if( ( cmd = MSG_ReadByte() ) == -1 ) {
+		if( msg_read.readcount == msg_read.cursize ) {
 			if( mvd_shownet->integer > 1 ) {
 				Com_Printf( "%3"PRIz":END OF MESSAGE\n", msg_read.readcount - 1 );
 			}
 			break;
 		}
 
+		cmd = MSG_ReadByte();
         extrabits = cmd >> SVCMD_BITS;
         cmd &= SVCMD_MASK;
 
 		if( mvd_shownet->integer > 1 ) {
 			MVD_ShowSVC( cmd );
 		}
-
+    
 		switch( cmd ) {
 		case mvd_serverdata:
 			MVD_ParseServerData( mvd );
@@ -1124,10 +1150,6 @@ static qboolean MVD_ParseMessage( mvd_t *mvd, fifo_t *fifo ) {
 		case mvd_frame:
 			MVD_ParseFrame( mvd );
 			break;
-		//case mvd_frame_nodelta:
-            //MVD_ResetFrame( mvd );
-			//MVD_ParseFrame( mvd );
-			//break;
 		case mvd_sound:
 			MVD_ParseSound( mvd, extrabits );
 			break;
@@ -1139,81 +1161,5 @@ static qboolean MVD_ParseMessage( mvd_t *mvd, fifo_t *fifo ) {
                 msg_read.readcount - 1, cmd );
 		}
 	}
-
-    return qtrue;
-}
-
-#if USE_ZLIB
-static int MVD_Decompress( mvd_t *mvd ) {
-    byte        *data;
-    size_t      avail_in, avail_out;
-    z_streamp   z = &mvd->z;
-    int         ret = Z_BUF_ERROR;
-
-    do {
-        data = FIFO_Peek( &mvd->stream.recv, &avail_in );
-        if( !avail_in ) {
-            break;
-        }
-        z->next_in = data;
-        z->avail_in = ( uInt )avail_in;
-
-        data = FIFO_Reserve( &mvd->zbuf, &avail_out );
-        if( !avail_out ) {
-            break;
-        }
-        z->next_out = data;
-        z->avail_out = ( uInt )avail_out;
-
-        ret = inflate( z, Z_SYNC_FLUSH );
-
-        FIFO_Decommit( &mvd->stream.recv, avail_in - z->avail_in );
-        FIFO_Commit( &mvd->zbuf, avail_out - z->avail_out );
-    } while( ret == Z_OK );
-
-    return ret;
-}
-#endif
-
-qboolean MVD_Parse( mvd_t *mvd ) {
-    fifo_t *fifo;
-
-#if USE_ZLIB
-    if( mvd->z.state ) {
-        int ret = MVD_Decompress( mvd );
-
-        switch( ret ) {
-        case Z_BUF_ERROR:
-        case Z_OK:
-            break;
-        case Z_STREAM_END:
-            Com_DPrintf( "End of zlib stream reached\n" );
-            inflateEnd( &mvd->z );
-            break;
-        default:
-            MVD_Destroyf( mvd, "inflate() failed: %s", mvd->z.msg );
-        }
-    }
-    if( mvd->zbuf.data ) {
-        fifo = &mvd->zbuf;
-    } else
-#endif
-    {
-        fifo = &mvd->stream.recv;
-    }
-
-    if( MVD_ParseMessage( mvd, fifo ) ) {
-        return qtrue;
-    }
-
-    // ran out of buffers
-    if( mvd->state == MVD_DISCONNECTED ) {
-        MVD_Finish( mvd, "MVD stream was truncated" );
-    }
-    if( mvd->state == MVD_READING ) {
-        Com_Printf( "[%s] Buffering data...\n", mvd->name );
-        MVD_BeginWaiting( mvd );
-    }
-    return qfalse;
 }
 

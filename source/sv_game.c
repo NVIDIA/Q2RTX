@@ -99,9 +99,12 @@ static void PF_Unicast( edict_t *ent, qboolean reliable ) {
     if( msg_write.data[0] == svc_disconnect ) {
         // fix anti-kicking exploit for broken mods
         client->flags |= CF_DROP;
-    } else {
-        SV_MvdUnicast( ent, clientNum, reliable );
+        goto clear;
     }
+
+#if USE_MVD_SERVER
+    SV_MvdUnicast( ent, clientNum, reliable );
+#endif
 
 clear:
     SZ_Clear( &msg_write );
@@ -131,7 +134,9 @@ static void PF_bprintf( int level, const char *fmt, ... ) {
         return;
     }
 
+#if USE_MVD_SERVER
     SV_MvdBroadcastPrint( level, string );
+#endif
 
 	MSG_WriteByte( svc_print );
 	MSG_WriteByte( level );
@@ -224,7 +229,9 @@ static void PF_cprintf( edict_t *ent, int level, const char *fmt, ... ) {
         SV_ClientAddMessage( client, MSG_RELIABLE );
     }
 
+#if USE_MVD_SERVER
     SV_MvdUnicast( ent, clientNum, qtrue );
+#endif
 
     SZ_Clear( &msg_write );
 }
@@ -354,7 +361,9 @@ void PF_Configstring( int index, const char *val ) {
 		return;
 	}
 
+#if USE_MVD_SERVER
     SV_MvdConfigstring( index, val );
+#endif
 
 	// send the update to everyone
 	MSG_WriteByte( svc_configstring );
@@ -586,8 +595,10 @@ static void PF_StartSound( edict_t *edict, int channel,
         client->msg_bytes += MAX_SOUND_PACKET;
     }
 
+#if USE_MVD_SERVER
     SV_MvdStartSound( ent, channel, flags, soundindex,
         volume * 255, attenuation * 64, timeofs * 1000 );
+#endif
 }
 
 static void PF_PositionedSound( vec3_t origin, edict_t *entity, int channel,

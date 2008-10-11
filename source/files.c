@@ -474,15 +474,7 @@ void FS_FCloseFile( fileHandle_t f ) {
         break;
     }
 
-    // don't clear name and mode, in case
-    // this handle will be reopened later
-    file->type = FS_FREE;
-    file->fp = NULL;
-#if USE_ZLIB
-    file->zfp = NULL;
-#endif
-    file->pak = NULL;
-    file->unique = qfalse;
+    memset( file, 0, sizeof( *file ) );
 }
 
 /*
@@ -2516,12 +2508,16 @@ void FS_Restart( void ) {
     temp = com_logFile;
     com_logFile = 0;
 
-    // make sure no files are opened for reading
+    // make sure no files from paks are opened
     for( i = 0, file = fs_files; i < MAX_FILE_HANDLES; i++, file++ ) {
-        if( file->type == FS_FREE ) {
-            continue;
-        }
-        if( file->mode == FS_MODE_READ ) {
+        switch( file->type ) {
+        case FS_FREE:
+        case FS_REAL:
+#if USE_ZLIB
+        case FS_GZIP:
+#endif
+            break;
+        default:
             Com_Error( ERR_FATAL, "%s: closing handle %d", __func__, i + 1 );
         }
     }

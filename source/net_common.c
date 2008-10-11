@@ -923,15 +923,67 @@ neterr_t NET_Connect( const netadr_t *peer, netstream_t *s ) {
     return NET_OK;
 }
 
-neterr_t NET_Run( netstream_t *s ) {
+neterr_t NET_RunConnect( netstream_t *s ) {
     struct timeval tv;
-    fd_set rfd, wfd, efd;
+    fd_set fd;
+    socklen_t len;
     int ret, err;
-    size_t length;
+
+    if( s->state != NS_CONNECTING ) {
+        return NET_AGAIN;
+    }
+
+    tv.tv_sec = 0;
+    tv.tv_usec = 0;
+    FD_ZERO( &fd );
+    FD_SET( s->socket, &fd );
+
+	ret = select( s->socket + 1, NULL,
+#ifdef _WIN32
+        NULL, &fd,
+#else
+        &fd, NULL,
+#endif
+        &tv );
+    if( ret == -1 ) {
+        goto error1;
+    }
+    if( !ret ) {
+        return NET_AGAIN;
+    }
+    if( !FD_ISSET( s->socket, &fd ) ) {
+        return NET_AGAIN;
+    }
+
+    len = sizeof( err );
+    ret = getsockopt( s->socket, SOL_SOCKET, SO_ERROR, ( char * )&err, &len );
+    if( ret == -1 ) {
+        goto error1;
+    }
+    if( err ) {
+        net_error = err;
+        goto error2;
+    }
+
+    s->state = NS_CONNECTED;
+    return NET_OK;
+
+error1:
+    NET_GET_ERROR();
+error2:
+    s->state = NS_BROKEN;
+    return NET_ERROR;
+}
+
+neterr_t NET_RunStream( netstream_t *s ) {
+    struct timeval tv;
+    fd_set rfd, wfd;
+    int ret;
+    size_t len;
     byte *data;
     neterr_t result = NET_AGAIN;
 
-    if( s->state < NS_CONNECTING || s->state > NS_CONNECTED ) {
+    if( s->state != NS_CONNECTED ) {
         return result;
     }
 
@@ -941,9 +993,7 @@ neterr_t NET_Run( netstream_t *s ) {
     FD_SET( s->socket, &rfd );
     FD_ZERO( &wfd );
     FD_SET( s->socket, &wfd );
-    FD_ZERO( &efd );
-    FD_SET( s->socket, &efd );
-	ret = select( s->socket + 1, &rfd, &wfd, &efd, &tv );
+	ret = select( s->socket + 1, &rfd, &wfd, NULL, &tv );
     if( ret == -1 ) {
         goto error;
     }
@@ -952,36 +1002,11 @@ neterr_t NET_Run( netstream_t *s ) {
         return result;
     }
 
-    result = NET_AGAIN;
-    if( s->state == NS_CONNECTING ) {
-        socklen_t length;
-
-        if( !FD_ISSET( s->socket, &wfd ) && !FD_ISSET( s->socket, &efd ) ) {
-            return result;
-        }
-
-        length = sizeof( err );
-        ret = getsockopt( s->socket, SOL_SOCKET, SO_ERROR,
-			( char * )&err, &length );
-        if( ret == -1 ) {
-            goto error;
-        }
-
-        if( err ) {
-            net_error = err;
-            s->state = NS_BROKEN;
-            return NET_ERROR;
-        }
-
-        s->state = NS_CONNECTED;
-        result = NET_OK;
-    }
-
     if( FD_ISSET( s->socket, &rfd ) ) {
         // read as much as we can
-        data = FIFO_Reserve( &s->recv, &length );
-        if( length ) {
-            ret = recv( s->socket, data, length, 0 );
+        data = FIFO_Reserve( &s->recv, &len );
+        if( len ) {
+            ret = recv( s->socket, data, len, 0 );
             if( !ret ) {
                 goto closed;
             }
@@ -1002,9 +1027,9 @@ neterr_t NET_Run( netstream_t *s ) {
 
     if( FD_ISSET( s->socket, &wfd ) ) {
         // write as much as we can
-        data = FIFO_Peek( &s->send, &length );
-        if( length ) {
-            ret = send( s->socket, data, length, 0 );
+        data = FIFO_Peek( &s->send, &len );
+        if( len ) {
+            ret = send( s->socket, data, len, 0 );
             if( !ret ) {
                 goto closed;
             }

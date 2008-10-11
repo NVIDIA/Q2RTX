@@ -245,7 +245,11 @@ void CL_Stop_f( void ) {
     Com_Printf( "Stopped demo (%u bytes written).\n", msglen );
 }
 
-extern const cmd_option_t o_mvdrecord[];
+static const cmd_option_t o_record[] = {
+    { "h", "help", "display this message" },
+    { "z", "gzip", "compress file with gzip" },
+    { NULL }
+};
 
 /*
 ====================
@@ -275,12 +279,12 @@ static void CL_Record_f( void ) {
         return;
     }
 
-    while( ( c = Cmd_ParseOptions( o_mvdrecord ) ) != -1 ) {
+    while( ( c = Cmd_ParseOptions( o_record ) ) != -1 ) {
         switch( c ) {
         case 'h':
-            Cmd_PrintUsage( o_mvdrecord, "[/]<filename>" );
+            Cmd_PrintUsage( o_record, "[/]<filename>" );
             Com_Printf( "Begin client demo recording.\n" );
-            Cmd_PrintHelp( o_mvdrecord );
+            Cmd_PrintHelp( o_record );
             return;
         case 'z':
             gzip = qtrue;

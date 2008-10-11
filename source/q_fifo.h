@@ -28,21 +28,21 @@ typedef struct {
     size_t ax, ay, bs;
 } fifo_t;
 
-static inline void *FIFO_Reserve( fifo_t *fifo, size_t *reserved ) {
+static inline void *FIFO_Reserve( fifo_t *fifo, size_t *len ) {
     size_t tail;
 
     if( fifo->bs ) {
-        *reserved = fifo->ax - fifo->bs;
+        *len = fifo->ax - fifo->bs;
         return fifo->data + fifo->bs;
     }
 
     tail = fifo->size - fifo->ay;
-    if( fifo->ax < tail ) {
-        *reserved = tail;
+    if( tail ) {
+        *len = tail;
         return fifo->data + fifo->ay;
     }
 
-    *reserved = fifo->ax;
+    *len = fifo->ax;
     return fifo->data;
 }
 
@@ -55,7 +55,7 @@ static inline void FIFO_Commit( fifo_t *fifo, size_t len ) {
     }
 
     tail = fifo->size - fifo->ay;
-    if( fifo->ax < tail ) {
+    if( tail ) {
         fifo->ay += len;
         return;
     }
@@ -111,4 +111,6 @@ static inline qboolean FIFO_TryWrite( fifo_t *fifo, void *buffer, size_t len ) {
     FIFO_Write( fifo, buffer, len );
     return qtrue;
 }
+
+qboolean FIFO_ReadMessage( fifo_t *fifo, size_t msglen );
 

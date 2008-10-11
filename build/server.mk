@@ -24,12 +24,17 @@ SRCFILES+=sv_ccmds.c \
 	sv_main.c \
 	sv_send.c \
 	sv_user.c \
-	sv_world.c \
-	sv_mvd.c \
-	sv_http.c \
-	mvd_client.c \
+	sv_world.c
+
+ifdef USE_MVD_SERVER
+SRCFILES+=sv_mvd.c
+endif
+
+ifdef USE_MVD_CLIENT
+SRCFILES+=mvd_client.c \
 	mvd_parse.c \
 	mvd_game.c
+endif
 
 ifdef USE_ANTICHEAT
 SRCFILES+=sv_ac.c

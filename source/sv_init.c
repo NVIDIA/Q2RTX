@@ -19,7 +19,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "sv_local.h"
-#include "mvd_local.h"
 
 server_static_t	svs;				// persistant server info
 server_t		sv;					// local server
@@ -116,8 +115,10 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
 	// all precaches are complete
 	sv.state = ss_game;
 
+#if USE_MVD_SERVER
     // respawn dummy MVD client, set base states, etc
 	SV_MvdMapChanged();
+#endif
 
 	// set serverinfo variable
 	SV_InfoSet( "mapname", sv.name );
@@ -134,7 +135,6 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
 	Com_Printf ("-------------------------------------\n");
 }
 
-
 /*
 ==============
 SV_InitGame
@@ -143,7 +143,7 @@ A brand new game has been started.
 If ismvd is true, load the built-in MVD game module.
 ==============
 */
-void SV_InitGame( qboolean ismvd ){
+void SV_InitGame( qboolean ismvd ) {
 	int		i, entnum;
 	edict_t	*ent;
 	client_t *client;
@@ -204,10 +204,6 @@ void SV_InitGame( qboolean ismvd ){
     // enable networking
 	if( sv_maxclients->integer > 1 ) {
 		NET_Config( NET_SERVER );
-        if( sv_http_enable->integer && NET_Listen( qtrue ) == NET_ERROR ) {
-            Com_EPrintf( "%s while opening server TCP port.\n", NET_ErrorString() );
-            Cvar_Set( "sv_http_enable", "0" );
-        }
     }
 
 	svs.udp_client_pool = SV_Mallocz( sizeof( client_t ) * sv_maxclients->integer );
@@ -215,15 +211,18 @@ void SV_InitGame( qboolean ismvd ){
 	svs.numEntityStates = sv_maxclients->integer * UPDATE_BACKUP * MAX_PACKET_ENTITIES;
 	svs.entityStates = SV_Mallocz( sizeof( entity_state_t ) * svs.numEntityStates );
 
+#if USE_MVD_SERVER
     // initialize MVD server
     if( !ismvd ) {
         SV_MvdInit();
     }
+#endif
 
-    Cvar_ClampInteger( sv_http_minclients, 0, sv_http_maxclients->integer );
     Cvar_ClampInteger( sv_reserved_slots, 0, sv_maxclients->integer - 1 );
 
 #if USE_ZLIB
+    svs.z.zalloc = SV_Zalloc;
+    svs.z.zfree = SV_Zfree;
 	if( deflateInit2( &svs.z, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
         -15, 9, Z_DEFAULT_STRATEGY ) != Z_OK )
     {
@@ -232,15 +231,16 @@ void SV_InitGame( qboolean ismvd ){
 #endif
 
 	// init game
+#if USE_MVD_CLIENT
 	if( ismvd ) {
 		if( ge ) {
 			SV_ShutdownGameProgs();
 		}
 		ge = &mvd_ge;
 		ge->Init();
-	} else {
+	} else
+#endif
 		SV_InitGameProgs();
-	}
 
 	// init rate limits
 	SV_RateInit( &svs.ratelimit_status, sv_status_limit->integer, 1000 );
@@ -248,9 +248,6 @@ void SV_InitGame( qboolean ismvd ){
 	SV_RateInit( &svs.ratelimit_badrcon, 1, sv_badauth_time->value * 1000 );
 
     List_Init( &svs.udp_client_list );
-    List_Init( &svs.tcp_client_list );
-    List_Init( &svs.tcp_client_pool );
-    List_Init( &svs.console_list );
 
 	for( i = 0; i < sv_maxclients->integer; i++ ) {
         client = svs.udp_client_pool + i;
@@ -324,7 +321,7 @@ void SV_Map (const char *levelstring, qboolean restart) {
         return;
     }
 
-	if( sv.state == ss_dead || sv.state == ss_broadcast || restart ) {
+	if( sv.state != ss_game || restart ) {
 		SV_InitGame( qfalse );	// the game is just starting
 	}
 

@@ -92,7 +92,7 @@ typedef struct {
     qboolean ready;
     qboolean ping_pending;
     unsigned last_ping;
-    netstream_t  stream;
+    netstream_t stream;
     size_t msglen;
 } ac_locals_t;
 
@@ -134,8 +134,8 @@ static ac_static_t  acs;
 static LIST_DECL( ac_required_list );
 static LIST_DECL( ac_exempt_list );
 
-static byte         ac_send_buffer[AC_SEND_SIZE];
-static byte         ac_recv_buffer[AC_RECV_SIZE];
+static byte     ac_send_buffer[AC_SEND_SIZE];
+static byte     ac_recv_buffer[AC_RECV_SIZE];
 
 static cvar_t   *ac_required;
 static cvar_t   *ac_server_address;
@@ -840,8 +840,6 @@ static void AC_ParseError( void ) {
 
 static qboolean AC_ParseMessage( void ) {
     uint16_t msglen;
-    byte *data;
-    size_t length;
     int cmd;
 
     // parse msglen
@@ -861,19 +859,11 @@ static qboolean AC_ParseMessage( void ) {
         ac.msglen = msglen;
     }
 
-    // first, try to read in a single block
-    data = FIFO_Peek( &ac.stream.recv, &length );
-    if( length < ac.msglen ) {
-        if( !FIFO_TryRead( &ac.stream.recv, msg_read_buffer, ac.msglen ) ) {
-            return qfalse; // not yet available
-        }
-        SZ_Init( &msg_read, msg_read_buffer, sizeof( msg_read_buffer ) );
-    } else {
-        SZ_Init( &msg_read, data, ac.msglen );
-        FIFO_Decommit( &ac.stream.recv, ac.msglen );
+    // read this message
+    if( !FIFO_ReadMessage( &ac.stream.recv, ac.msglen ) ) {
+        return qfalse;
     }
 
-    msg_read.cursize = ac.msglen;
     ac.msglen = 0;
 
     cmd = MSG_ReadByte();
@@ -1305,7 +1295,7 @@ fail:
 
 
 void AC_Run( void ) {
-    neterr_t ret;
+    neterr_t ret = NET_AGAIN;
     time_t clock;
 
     if( acs.retry_time ) {
@@ -1321,28 +1311,32 @@ void AC_Run( void ) {
         return;
     }
 
-    ret = NET_Run( &ac.stream );
-    switch( ret ) {
-    case NET_AGAIN:
-        if( ac.connected ) {
-            AC_CheckTimeouts();
+    if( !ac.connected ) {
+        ret = NET_RunConnect( &ac.stream );
+        if( ret == NET_OK ) {
+            Com_Printf( "ANTICHEAT: Connected to anticheat server!\n" );
+            ac.connected = qtrue;
+            AC_SendHello();
         }
-        break;
+    }
+
+    if( ac.connected ) {
+        ret = NET_RunStream( &ac.stream );
+        if( ret == NET_OK ) {
+            while( AC_ParseMessage() )
+                ;
+        }
+        AC_CheckTimeouts();
+    }
+
+    switch( ret ) {
     case NET_ERROR:
         Com_EPrintf( "ANTICHEAT: %s to %s.\n", NET_ErrorString(),
             NET_AdrToString( &ac.stream.address ) );
     case NET_CLOSED:
         AC_Drop();
         break;
-    case NET_OK:
-        if( !ac.connected ) {
-            Com_Printf( "ANTICHEAT: Connected to anticheat server!\n" );
-            ac.connected = qtrue;
-            AC_SendHello();
-        }
-        while( AC_ParseMessage() )
-            ;
-        AC_CheckTimeouts();
+    default:
         break;
     }
 }

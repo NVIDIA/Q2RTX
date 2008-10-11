@@ -20,7 +20,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // sv_send.c
 
 #include "sv_local.h"
-#include "mvd_local.h"
 
 /*
 =============================================================================
@@ -308,8 +307,10 @@ void SV_Multicast( vec3_t origin, multicast_t to ) {
 		SV_ClientAddMessage( client, flags );
 	}
 
+#if USE_MVD_SERVER
     // add to MVD datagram
 	SV_MvdMulticast( leafnum, to );
+#endif
 
 	// clear the buffer 
 	SZ_Clear( &msg_write );
@@ -327,10 +328,12 @@ unless told otherwise.
 =======================
 */
 void SV_ClientAddMessage( client_t *client, int flags ) {
+#if USE_CLIENT
     if( sv_debug_send->integer > 1 ) {
         Com_Printf( S_COLOR_BLUE"%s: add%c: %"PRIz"\n", client->name,
             ( flags & MSG_RELIABLE ) ? 'r' : 'u', msg_write.cursize );
     }
+#endif
 
 	if( !msg_write.cursize ) {
 		return;
@@ -425,10 +428,12 @@ static void emit_snd( client_t *client, message_packet_t *msg ) {
             }
         }
         if( i == frame->numEntities ) {
+#if USE_CLIENT
             if( sv_debug_send->integer ) {
                 Com_Printf( S_COLOR_BLUE "Forcing position on entity %d for %s\n",
                     entnum, client->name );
             }
+#endif
             flags |= SND_POS;   // entity is not present in frame
         }
     }
@@ -519,9 +524,11 @@ void SV_ClientWriteReliableMessages_Old( client_t *client, size_t maxsize ) {
     int count;
 
 	if( client->netchan->reliable_length ) {
+#if USE_CLIENT
 		if( sv_debug_send->integer > 1 ) {
 			Com_Printf( S_COLOR_BLUE"%s: unacked\n", client->name );
 		}
+#endif
 		return;	// there is still outgoing reliable message pending
 	}
 
@@ -537,10 +544,12 @@ void SV_ClientWriteReliableMessages_Old( client_t *client, size_t maxsize ) {
 			break;
 		}
 
+#if USE_CLIENT
 		if( sv_debug_send->integer > 1 ) {
 			Com_Printf( S_COLOR_BLUE"%s: wrt%d: %d\n",
                 client->name, count, msg->cursize );
 		}
+#endif
 
 		SZ_Write( &client->netchan->message, msg->data, msg->cursize );
 		SV_PacketizedRemove( client, msg );
@@ -630,10 +639,12 @@ void SV_ClientWriteDatagram_Old( client_t *client ) {
 	// and the player_state_t
 	client->WriteFrame( client );
 	if( msg_write.cursize > maxsize ) {
+#if USE_CLIENT
 		if( sv_debug_send->integer ) {
 			Com_Printf( S_COLOR_BLUE"Frame overflowed for %s: %"PRIz" > %"PRIz"\n",
                 client->name, msg_write.cursize, maxsize );
 		}
+#endif
 		SZ_Clear( &msg_write );
 	}
 
@@ -703,6 +714,7 @@ void SV_ClientWriteDatagram_New( client_t *client ) {
         emit_messages( client, msg_write.maxsize );
     }
 
+#if USE_CLIENT
 	if( sv_pad_packets->integer ) {
         size_t pad = msg_write.cursize + sv_pad_packets->integer;
 
@@ -713,6 +725,7 @@ void SV_ClientWriteDatagram_New( client_t *client ) {
 		    MSG_WriteByte( svc_nop );
 	    }
     }
+#endif
 
 	// send the datagram
 	cursize = client->netchan->Transmit( client->netchan,
@@ -769,10 +782,12 @@ void SV_SendClientMessages( void ) {
 
 		// don't overrun bandwidth
 		if( SV_RateDrop( client ) ) {
+#if USE_CLIENT
 			if( sv_debug_send->integer ) {
 				Com_Printf( "Frame %d surpressed for %s\n",
                     sv.framenum, client->name );
 			}
+#endif
 			client->surpressCount++;
 		} else {
             // don't write any frame data until all fragments are sent

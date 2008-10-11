@@ -397,10 +397,6 @@ char *Q_UnescapeString( const char *string );
 int Q_ClearColorStr( char *out, const char *in, int bufsize ); 
 int Q_ClearStr( char *out, const char *in, int bufsize ); 
 int Q_HighlightStr( char *out, const char *in, int bufsize ); 
-int Q_EscapeMarkup( char *out, const char *in, int bufsize );
-int Q_EscapeURI( char *out, const char *in, int bufsize );
-int Q_Decode64( char *out, const char *in, int bufsize ); 
-int Q_Encode64( char *out, const char *in, int bufsize ); 
 
 //=============================================
 

@@ -19,7 +19,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "sv_local.h"
-#include "mvd_local.h"
 
 netadr_t	master_adr[MAX_MASTERS];	// address of group servers
 
@@ -58,11 +57,6 @@ cvar_t	*sv_qwmod;				// atu QW Physics modificator
 cvar_t	*sv_noreload;			// don't reload level state when reentering
 cvar_t  *sv_novis;
 
-cvar_t	*sv_http_enable;
-cvar_t	*sv_http_maxclients;
-cvar_t	*sv_http_minclients;
-cvar_t	*sv_console_auth;
-
 cvar_t	*sv_maxclients;
 cvar_t	*sv_reserved_slots;
 cvar_t	*sv_showclamp;
@@ -72,8 +66,10 @@ cvar_t  *sv_downloadserver;
 cvar_t	*sv_hostname;
 cvar_t	*sv_public;			// should heartbeats be sent
 
+#if USE_CLIENT
 cvar_t	*sv_debug_send;
 cvar_t	*sv_pad_packets;
+#endif
 cvar_t	*sv_lan_force_rate;
 cvar_t  *sv_calcpings_method;
 cvar_t  *sv_changemapcmd;
@@ -110,10 +106,12 @@ void SV_RemoveClient( client_t *client ) {
     // unlink them from active client list
     List_Remove( &client->entry );
 
+#if USE_MVD_CLIENT
 	// unlink them from MVD client list
 	if( sv.state == ss_broadcast ) {
 		MVD_RemoveClient( client );
 	}
+#endif
 
 	Com_DPrintf( "Going from cs_zombie to cs_free for %s\n", client->name );
 
@@ -174,9 +172,12 @@ void SV_DropClient( client_t *client, const char *reason ) {
 	if( reason ) {
         if( oldstate == cs_spawned ) {
             // announce to others
+#if USE_MVD_CLIENT
             if( sv.state == ss_broadcast ) {
                 MVD_GameClientDrop( client->edict, reason );
-            } else {
+            } else
+#endif
+            {
                 SV_BroadcastPrintf( PRINT_HIGH, "%s was dropped: %s\n",
                     client->name, reason );
             }
@@ -211,8 +212,10 @@ void SV_DropClient( client_t *client, const char *reason ) {
 
 	Com_DPrintf( "Going to cs_zombie for %s\n", client->name );
 
+#if USE_MVD_SERVER
     // give MVD server a chance to detect if it's dummy client was dropped
     SV_MvdClientDropped( client, reason );
+#endif
 }
 
 
@@ -310,9 +313,12 @@ static size_t SV_StatusString( char *status ) {
             if( cl->state == cs_zombie ) {
                 continue;
             }
+#if USE_MVD_CLIENT
             if( sv.state == ss_broadcast ) {
                 j = 0;
-            } else {
+            } else
+#endif
+            {
                 j = cl->edict->client->ps.stats[STAT_FRAGS];
             }
             length = sprintf( entry, "%i %i \"%s\"\n",
@@ -1241,9 +1247,9 @@ static void SV_PacketEvent( neterr_t ret ) {
 		if( netchan->Process( netchan ) ) {
 			// this is a valid, sequenced packet, so process it
 			if( client->state != cs_zombie ) {
-                if( client->state != cs_assigned ) {
+                //if( client->state != cs_assigned ) {
     				client->lastmessage = svs.realtime;	// don't timeout
-                }
+                //}
                 client->flags &= ~CF_ERROR; // don't drop
 				SV_ExecuteClientMessage( client );
 			}
@@ -1302,10 +1308,12 @@ void SV_SendAsyncPackets( void ) {
         // make sure all fragments are transmitted first
         if( netchan->fragment_pending ) {
             cursize = netchan->TransmitNextFragment( netchan );
+#if USE_CLIENT
 			if( sv_debug_send->integer ) {
 				Com_Printf( S_COLOR_BLUE"%s: frag: %"PRIz"\n",
                     client->name, cursize );
             }
+#endif
             goto calctime;
         }
 
@@ -1330,10 +1338,12 @@ void SV_SendAsyncPackets( void ) {
             netchan->reliable_length || retransmit )
         {
 			cursize = netchan->Transmit( netchan, 0, NULL );
+#if USE_CLIENT
 			if( sv_debug_send->integer ) {
 				Com_Printf( S_COLOR_BLUE"%s: send: %"PRIz"\n",
                     client->name, cursize );
             }
+#endif
 calctime:
 			SV_CalcSendTime( client, cursize );
 		}
@@ -1430,6 +1440,11 @@ static void SV_RunGameFrame( void ) {
 	sv.framenum++;
 	sv.frametime -= 100;
 
+#if USE_MVD_SERVER
+	// save the entire world state if recording a serverdemo
+	SV_MvdBeginFrame();
+#endif
+
 	ge->RunFrame();
 
 	if( msg_write.cursize ) {
@@ -1439,8 +1454,10 @@ static void SV_RunGameFrame( void ) {
 		SZ_Clear( &msg_write );
 	}
 
+#if USE_MVD_SERVER
 	// save the entire world state if recording a serverdemo
-	SV_MvdRunFrame();
+	SV_MvdEndFrame();
+#endif
 
 #if USE_CLIENT
 	if( host_speeds->integer )
@@ -1529,7 +1546,11 @@ void SV_Frame( unsigned msec ) {
 
 	svs.realtime += msec;
 
+#if USE_MVD_CLIENT
 	mvdconns = MVD_Frame();
+#else
+    mvdconns = 0;
+#endif
 
 	// if server is not active, do nothing
 	if( !svs.initialized ) {
@@ -1563,10 +1584,6 @@ void SV_Frame( unsigned msec ) {
     AC_Run();
 #endif
 
-    if( sv_http_enable->integer ) {
-        SV_HttpRun();
-    }
-
 	// check timeouts
 	SV_CheckTimeouts ();
 
@@ -1591,16 +1608,24 @@ void SV_Frame( unsigned msec ) {
 	// let everything in the world think and move
     SV_RunGameFrame();
 
-	// send messages back to the clients that had packets read this frame
+	// send messages back to the UDP clients
 	SV_SendClientMessages();
+
+#if USE_MVD_SERVER
+    // run TCP client connections
+    SV_MvdRunClients();
+#endif
 
 	// send a heartbeat to the master if needed
 	SV_MasterHeartbeat();
 
 	// clear teleport flags, etc for next frame
+#if USE_MVD_CLIENT
 	if( sv.state == ss_broadcast ) {
 		MVD_PrepWorldFrame();
-    } else {
+    } else
+#endif
+    {
 		SV_PrepWorldFrame();
 	}
 
@@ -1699,9 +1724,12 @@ void SV_UserinfoChanged( client_t *cl ) {
             Com_Printf( "%s[%s] changed name to %s\n", cl->name,
                 NET_AdrToString( &cl->netchan->remote_address ), name );
         }
+#if USE_MVD_CLIENT
         if( sv.state == ss_broadcast ) {
             MVD_GameClientNameChanged( cl->edict, name );
-        } else if( sv_show_name_changes->integer ) {
+        } else
+#endif
+        if( sv_show_name_changes->integer ) {
             SV_BroadcastPrintf( PRINT_HIGH, "%s changed name to %s\n",
                 cl->name, name );
         }
@@ -1763,6 +1791,16 @@ static void sv_hostname_changed( cvar_t *self ) {
     SV_SetConsoleTitle();
 }
 
+#if USE_ZLIB
+voidpf SV_Zalloc OF(( voidpf opaque, uInt items, uInt size )) {
+    return SV_Malloc( items * size );
+}
+
+void SV_Zfree OF(( voidpf opaque, voidpf address )) {
+    Z_Free( address );
+}
+#endif
+
 /*
 ===============
 SV_Init
@@ -1772,8 +1810,15 @@ Only called at quake2.exe startup, not for each game
 */
 void SV_Init( void ) {
 	SV_InitOperatorCommands	();
+
+#if USE_MVD_SERVER
     SV_MvdRegister();
+#endif
+
+#if USE_MVD_CLIENT
 	MVD_Register();
+#endif
+
 #if USE_ANTICHEAT & 2
     AC_Register();
 #endif
@@ -1794,16 +1839,11 @@ void SV_Init( void ) {
     sv_hostname->changed = sv_hostname_changed;
 	sv_timeout = Cvar_Get( "timeout", "90", 0 );
 	sv_zombietime = Cvar_Get( "zombietime", "2", 0 );
-	sv_ghostime = Cvar_Get( "sv_ghostime", "10", 0 );
+	sv_ghostime = Cvar_Get( "sv_ghostime", "6", 0 );
 	sv_showclamp = Cvar_Get( "showclamp", "0", 0 );
 	sv_enforcetime = Cvar_Get ( "sv_enforcetime", "1", 0 );
 	sv_force_reconnect = Cvar_Get ( "sv_force_reconnect", "", CVAR_LATCH );
 	sv_show_name_changes = Cvar_Get( "sv_show_name_changes", "0", 0 );
-
-    sv_http_enable = Cvar_Get( "sv_http_enable", "0", CVAR_LATCH );
-    sv_http_maxclients = Cvar_Get( "sv_http_maxclients", "4", 0 );
-    sv_http_minclients = Cvar_Get( "sv_http_minclients", "4", 0 );
-    sv_console_auth = Cvar_Get( "sv_console_auth", "", 0 );
 
 	allow_download = Cvar_Get( "allow_download", "1", CVAR_ARCHIVE );
 	allow_download_players = Cvar_Get( "allow_download_players", "0", CVAR_ARCHIVE );
@@ -1824,8 +1864,10 @@ void SV_Init( void ) {
 	sv_novis = Cvar_Get ("sv_novis", "0", 0);
 	sv_downloadserver = Cvar_Get( "sv_downloadserver", "", 0 );
 
+#if USE_CLIENT
 	sv_debug_send = Cvar_Get( "sv_debug_send", "0", 0 );
 	sv_pad_packets = Cvar_Get( "sv_pad_packets", "0", 0 );
+#endif
 	sv_lan_force_rate = Cvar_Get( "sv_lan_force_rate", "0", CVAR_LATCH );
 	sv_calcpings_method = Cvar_Get( "sv_calcpings_method", "1", 0 );
 	sv_changemapcmd = Cvar_Get( "sv_changemapcmd", "", 0 );
@@ -1875,7 +1917,6 @@ server is going to totally exit after returning from this function.
 */
 static void SV_FinalMessage( const char *message, int cmd ) {
 	client_t	*client, *next;
-    tcpClient_t *t, *tnext;
     netchan_t   *netchan;
     int i;
 
@@ -1908,19 +1949,6 @@ static void SV_FinalMessage( const char *message, int cmd ) {
 		}
 		SV_RemoveClient( client );
 	}
-
-    // drop any TCP clients, flushing pending data
-    LIST_FOR_EACH_SAFE( tcpClient_t, t, tnext, &svs.tcp_client_list, entry ) {
-        SV_HttpDrop( t, NULL );
-        NET_Run( &t->stream );
-        NET_Close( &t->stream );
-        Z_Free( t );
-	}
-
-    // free cached TCP client slots
-    LIST_FOR_EACH_SAFE( tcpClient_t, t, tnext, &svs.tcp_client_pool, entry ) {
-        Z_Free( t );
-    }
 }
 
 
@@ -1937,7 +1965,9 @@ void SV_Shutdown( const char *finalmsg, killtype_t type ) {
 	Cvar_Set( "sv_paused", "0" );
 
 	if( !svs.initialized ) {
+#if USE_MVD_CLIENT
         MVD_Shutdown(); // make sure MVD client is down
+#endif
 		return;
 	}
 
@@ -1945,17 +1975,16 @@ void SV_Shutdown( const char *finalmsg, killtype_t type ) {
     AC_Disconnect();
 #endif
 
+#if USE_MVD_SERVER
     // shutdown MVD server
-    SV_MvdShutdown();
+    SV_MvdShutdown( type );
+#endif
 
     if( type == KILL_RESTART ) {
         SV_FinalMessage( finalmsg, svc_reconnect );
     } else {
         SV_FinalMessage( finalmsg, svc_disconnect );
     }
-
-    // close server TCP socket
-    NET_Listen( qfalse );
 
 	SV_MasterShutdown();
 	SV_ShutdownGameProgs();

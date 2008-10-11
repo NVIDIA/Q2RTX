@@ -671,6 +671,7 @@ void Con_DrawNotify( void ) {
 
 		R_DrawString( CHAR_WIDTH, v, 0, MAX_STRING_CHARS, text,
             con.charsetImage );
+	    con.chatPrompt.inputLine.visibleChars = con.linewidth - skip + 1;
 		IF_Draw( &con.chatPrompt.inputLine, skip * CHAR_WIDTH, v,
             UI_DRAWCURSOR, con.charsetImage );
 	}

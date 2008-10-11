@@ -22,7 +22,9 @@ typedef enum {
 	ss_dead,			// no map loaded
 	ss_loading,			// spawning level edicts
 	ss_game,			// actively running
-	ss_broadcast
+#if USE_MVD_CLIENT
+	ss_broadcast        // running MVD client
+#endif
 } server_state_t;
 
 typedef enum {
@@ -37,5 +39,5 @@ void SV_Shutdown( const char *finalmsg, killtype_t type );
 void SV_Frame (unsigned msec);
 void SV_SetConsoleTitle( void );
 void SV_ConsoleOutput( const char *msg );
-qboolean MVD_GetDemoPercent( int *percent, int *bufferPercent );
+//qboolean MVD_GetDemoPercent( int *percent, int *bufferPercent );
 

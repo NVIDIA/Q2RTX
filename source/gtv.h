@@ -18,26 +18,27 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-typedef enum netstate_e {
-    NS_DISCONNECTED,// no socket opened
-    NS_CONNECTING,  // connect() not yet completed
-    NS_CONNECTED,   // may transmit data
-    NS_CLOSED,      // peer has preformed orderly shutdown
-    NS_BROKEN       // fatal error has been signaled
-} netstate_t;
+#define GTV_PROTOCOL_VERSION 0xED01
 
-typedef struct netstream_s {
-    int         socket;
-    netadr_t    address;
-    netstate_t  state;
-    fifo_t      recv;
-    fifo_t      send;
-} netstream_t;
+#define GTF_DEFLATE 1
 
-void NET_Close( netstream_t *s );
-neterr_t NET_Listen( qboolean listen );
-neterr_t NET_Accept( netadr_t *peer, netstream_t *s );
-neterr_t NET_Connect( const netadr_t *peer, netstream_t *s );
-neterr_t NET_RunConnect( netstream_t *s );
-neterr_t NET_RunStream( netstream_t *s );
+typedef enum {
+    GTS_HELLO,
+    GTS_PONG,
+    GTS_STREAM_START,
+    GTS_STREAM_STOP,
+    GTS_STREAM_DATA,
+    GTS_ERROR,
+    GTS_BADREQUEST,
+    GTS_NOACCESS,
+    GTS_DISCONNECT,
+    GTS_RECONNECT
+} gtv_serverop_t;
+
+typedef enum {
+    GTC_HELLO,
+    GTC_PING,
+    GTC_STREAM_START,
+    GTC_STREAM_STOP
+} gtv_clientop_t;
 

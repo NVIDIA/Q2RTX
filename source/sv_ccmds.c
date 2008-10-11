@@ -296,7 +296,7 @@ void SV_Kick_f( void ) {
 	sv_player = NULL;
 }
 
-static void SV_DumpUdpClients( void ) {
+static void SV_DumpClients( void ) {
 	client_t	*client;
 
 	Com_Printf(
@@ -304,9 +304,12 @@ static void SV_DumpUdpClients( void ) {
 "--- ----- ---- ---------------- ------- --------------------- ----- -----\n" );
     FOR_EACH_CLIENT( client ) {
 		Com_Printf( "%3i ", client->number );
+#if USE_MVD_CLIENT
 		if( sv.state == ss_broadcast ) {
 			Com_Printf( "      " );
-		} else {
+		} else
+#endif
+        {
 			Com_Printf( "%5i ", client->edict->client->ps.stats[STAT_FRAGS] );
 		}
 
@@ -339,7 +342,7 @@ static void SV_DumpUdpClients( void ) {
 
 }
 
-static void SV_DumpUdpVersions( void ) {
+static void SV_DumpVersions( void ) {
 	client_t	*client;
 
 	Com_Printf(
@@ -350,58 +353,6 @@ static void SV_DumpUdpVersions( void ) {
         Com_Printf( "%3i %-16.16s %-40.40s\n",
             client->number, client->name,
             client->versionString ? client->versionString : "" );
-    }
-}
-
-static void SV_DumpTcpClients( void ) {
-	tcpClient_t	*client;
-    int count;
-
-	Com_Printf(
-"num resource             buf lastmsg address               state\n"
-"--- -------------------- --- ------- --------------------- -----\n" );
-    count = 0;
-    LIST_FOR_EACH( tcpClient_t, client, &svs.tcp_client_list, entry ) {
-        Com_Printf( "%3d %-20.20s %3"PRIz" %7u %-21s ",
-            count, client->resource ? client->resource : "",
-            FIFO_Usage( &client->stream.send ),
-            svs.realtime - client->lastmessage,
-            NET_AdrToString( &client->stream.address ) );
-
-		switch( client->state ) {
-		case cs_zombie:
-			Com_Printf( "ZMBI " );
-			break;
-		case cs_assigned:
-			Com_Printf( "ASGN " );
-			break;
-		case cs_connected:
-			Com_Printf( "CNCT " );
-			break;
-		default:
-			Com_Printf( "SEND " );
-			break;
-		}
-        Com_Printf( "\n" );
-
-        count++;
-    }
-}
-
-static void SV_DumpTcpVersions( void ) {
-	tcpClient_t	*client;
-    int count;
-
-	Com_Printf(
-"num address               user-agent\n"
-"--- --------------------- -----------------------------------------\n" );
-		
-    count = 0;
-    LIST_FOR_EACH( tcpClient_t, client, &svs.tcp_client_list, entry ) {
-        Com_Printf( "%3i %-21s %-40.40s\n",
-            count, NET_AdrToString( &client->stream.address ),
-            client->agent ? client->agent : "" );
-        count++;
     }
 }
 
@@ -425,23 +376,16 @@ static void SV_Status_f( void ) {
         Com_Printf( "No UDP clients.\n" );
     } else {
 	    if( Cmd_Argc() > 1 ) {
-            SV_DumpUdpVersions();
+            SV_DumpVersions();
         } else {
-            SV_DumpUdpClients();
+            SV_DumpClients();
         }
     }
     Com_Printf( "\n" );
 
-    if( LIST_EMPTY( &svs.tcp_client_list ) ) {
-        Com_Printf( "No TCP clients.\n" );
-    } else {
-	    if( Cmd_Argc() > 1 ) {
-            SV_DumpTcpVersions();
-        } else {
-            SV_DumpTcpClients();
-        }
-    }
-    Com_Printf( "\n" );
+#if USE_MVD_SERVER
+    SV_MvdStatus_f();
+#endif
 }
 
 /*
