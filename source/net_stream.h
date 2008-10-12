@@ -36,7 +36,7 @@ typedef struct netstream_s {
 
 void NET_Close( netstream_t *s );
 neterr_t NET_Listen( qboolean listen );
-neterr_t NET_Accept( netadr_t *peer, netstream_t *s );
+neterr_t NET_Accept( netstream_t *s );
 neterr_t NET_Connect( const netadr_t *peer, netstream_t *s );
 neterr_t NET_RunConnect( netstream_t *s );
 neterr_t NET_RunStream( netstream_t *s );

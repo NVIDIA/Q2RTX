@@ -35,8 +35,10 @@ typedef enum {
     GTV_CONNECTING, // connect() in progress
     GTV_PREPARING,  // waiting for server hello
     GTV_CONNECTED,  // keeping connection alive
+    GTV_RESUMING,   // stream start request sent
     GTV_ACTIVE,     // actively running MVD stream
-    GTV_OVERFLOWED  // recovering from delay buffer overflow
+    GTV_SUSPENDING, // stream stop request sent
+    GTV_NUM_STATES
 } gtv_state_t;
 
 typedef struct gtv_s {
@@ -71,10 +73,20 @@ typedef struct gtv_s {
     string_entry_t  *demohead, *demoentry;
 } gtv_t;
 
-static LIST_DECL( mvd_gtvs );
+static const char *const gtv_states[GTV_NUM_STATES] = {
+    "disconnected",
+    "connecting",
+    "preparing",
+    "connected",
+    "resuming",
+    "active",
+    "suspending"
+};
 
-LIST_DECL( mvd_channels );
-LIST_DECL( mvd_active );
+static LIST_DECL( mvd_gtv_list );
+
+LIST_DECL( mvd_channel_list );
+LIST_DECL( mvd_active_list );
 
 mvd_t       mvd_waitingRoom;
 qboolean    mvd_dirty;
@@ -82,11 +94,13 @@ int         mvd_chanid;
 
 jmp_buf     mvd_jmpbuf;
 
-cvar_t  *mvd_shownet;
-cvar_t  *mvd_timeout;
-cvar_t  *mvd_wait_delay;
-cvar_t  *mvd_wait_percent;
-cvar_t  *mvd_chase_msgs;
+cvar_t      *mvd_shownet;
+
+static qboolean mvd_active;
+
+static cvar_t  *mvd_timeout;
+static cvar_t  *mvd_wait_delay;
+static cvar_t  *mvd_wait_percent;
 
 // ====================================================================
 
@@ -158,14 +172,14 @@ mvd_t *MVD_SetChannel( int arg ) {
     mvd_t *mvd;
     int id;
 
-    if( LIST_EMPTY( &mvd_channels ) ) {
+    if( LIST_EMPTY( &mvd_channel_list ) ) {
         Com_Printf( "No active channels.\n" );
         return NULL;
     }
 
     if( !*s ) {
-        if( List_Count( &mvd_channels ) == 1 ) {
-            return LIST_FIRST( mvd_t, &mvd_channels, entry );
+        if( List_Count( &mvd_channel_list ) == 1 ) {
+            return LIST_FIRST( mvd_t, &mvd_channel_list, entry );
         }
         Com_Printf( "Please specify an exact channel ID.\n" );
         return NULL;
@@ -173,13 +187,13 @@ mvd_t *MVD_SetChannel( int arg ) {
 
     if( COM_IsUint( s ) ) {
         id = atoi( s );
-        LIST_FOR_EACH( mvd_t, mvd, &mvd_channels, entry ) {
+        LIST_FOR_EACH( mvd_t, mvd, &mvd_channel_list, entry ) {
             if( mvd->id == id ) {
                 return mvd;
             }
         }
     } else {
-        LIST_FOR_EACH( mvd_t, mvd, &mvd_channels, entry ) {
+        LIST_FOR_EACH( mvd_t, mvd, &mvd_channel_list, entry ) {
             if( !strcmp( mvd->name, s ) ) {
                 return mvd;
             }
@@ -255,14 +269,14 @@ static gtv_t *gtv_set_conn( int arg ) {
     gtv_t *gtv;
     int id;
 
-    if( LIST_EMPTY( &mvd_gtvs ) ) {
+    if( LIST_EMPTY( &mvd_gtv_list ) ) {
         Com_Printf( "No GTV connections.\n" );
         return NULL;
     }
 
     if( !*s ) {
-        if( List_Count( &mvd_gtvs ) == 1 ) {
-            return LIST_FIRST( gtv_t, &mvd_gtvs, entry );
+        if( List_Count( &mvd_gtv_list ) == 1 ) {
+            return LIST_FIRST( gtv_t, &mvd_gtv_list, entry );
         }
         Com_Printf( "Please specify an exact connection ID.\n" );
         return NULL;
@@ -270,13 +284,13 @@ static gtv_t *gtv_set_conn( int arg ) {
 
     if( COM_IsUint( s ) ) {
         id = atoi( s );
-        LIST_FOR_EACH( gtv_t, gtv, &mvd_gtvs, entry ) {
+        LIST_FOR_EACH( gtv_t, gtv, &mvd_gtv_list, entry ) {
             if( gtv->id == id ) {
                 return gtv;
             }
         }
     } else {
-        LIST_FOR_EACH( gtv_t, gtv, &mvd_gtvs, entry ) {
+        LIST_FOR_EACH( gtv_t, gtv, &mvd_gtv_list, entry ) {
             if( !strcmp( gtv->name, s ) ) {
                 return gtv;
             }
@@ -295,11 +309,27 @@ Called from main server loop.
 ==============
 */
 int MVD_Frame( void ) {
+    static unsigned prevtime;
     gtv_t *gtv, *next;
     int connections = 0;
 
+    if( sv.state == ss_broadcast ) {
+        if( !LIST_EMPTY( &svs.udp_client_list ) ) {
+            prevtime = svs.realtime;
+            if( !mvd_active ) {
+                Com_DPrintf( "Resuming MVD streams.\n" );
+                mvd_active = qtrue;
+            }
+        } else if( svs.realtime - prevtime > 5*60*1000 ) {
+            if( mvd_active ) {
+                Com_DPrintf( "Suspending MVD streams.\n" );
+                mvd_active = qfalse;
+            }
+        }
+    }
+
     // run all GTV connections (but not demos)
-    LIST_FOR_EACH_SAFE( gtv_t, gtv, next, &mvd_gtvs, entry ) {
+    LIST_FOR_EACH_SAFE( gtv_t, gtv, next, &mvd_gtv_list, entry ) {
         if( setjmp( mvd_jmpbuf ) ) {
             continue;
         }
@@ -513,6 +543,8 @@ static void gtv_wait_start( mvd_t *mvd ) {
         mvd->min_packets = tr;
     }
     mvd->underflows++;
+
+    MVD_CheckActive( mvd );
 }
 
 static qboolean gtv_read_frame( mvd_t *mvd ) {
@@ -581,6 +613,59 @@ static void write_message( gtv_t *gtv, gtv_clientop_t op ) {
     write_stream( gtv, msg_write.data, msg_write.cursize );
 }
 
+static void send_hello( gtv_t *gtv ) {
+    int flags = 0;
+
+#if USE_ZLIB
+    flags |= GTF_DEFLATE;
+#endif
+
+    MSG_WriteShort( GTV_PROTOCOL_VERSION );
+    MSG_WriteLong( flags );
+    MSG_WriteLong( 0 ); // reserved
+    MSG_WriteString( NULL ); // name
+    MSG_WriteString( NULL ); // password
+    MSG_WriteString( com_version->string );
+    write_message( gtv, GTC_HELLO );
+    SZ_Clear( &msg_write );
+
+    Com_Printf( "[%s] Sending client hello...\n", gtv->name );
+
+    gtv->state = GTV_PREPARING;
+}
+
+static void send_stream_start( gtv_t *gtv ) {
+    int maxbuf;
+
+    if( gtv->mvd ) {
+        maxbuf = gtv->mvd->min_packets - 10;
+    } else {
+        maxbuf = mvd_wait_delay->value * 10 - 10;
+    }
+    if( maxbuf < 10 ) {
+        maxbuf = 10;
+    }
+
+    // send stream start request
+    MSG_WriteShort( maxbuf );
+    write_message( gtv, GTC_STREAM_START );
+    SZ_Clear( &msg_write );
+
+    Com_Printf( "[%s] Sending stream start request...\n", gtv->name );
+
+    gtv->state = GTV_RESUMING;
+}
+
+static void send_stream_stop( gtv_t *gtv ) {
+    // send stream stop request
+    write_message( gtv, GTC_STREAM_STOP );
+
+    Com_Printf( "[%s] Sending stream stop request...\n", gtv->name );
+
+    gtv->state = GTV_SUSPENDING;
+}
+
+
 #if USE_ZLIB
 static voidpf gtv_zalloc OF(( voidpf opaque, uInt items, uInt size )) {
     return MVD_Malloc( items * size );
@@ -617,23 +702,26 @@ static void parse_hello( gtv_t *gtv ) {
         gtv->z_act = qtrue; // remaining data is deflated
     }
 #endif
+    
+    Com_Printf( "[%s] Server hello done.\n", gtv->name );
+
+    if( sv.state != ss_broadcast ) {
+        MVD_Spawn_f(); // the game is just starting
+    }
 
     gtv->state = GTV_CONNECTED;
-
-    Com_Printf( "[%s] Sending stream request...\n", gtv->name );
-
-    // send stream request
-    write_message( gtv, GTC_STREAM_START );
 }
 
 static void parse_stream_start( gtv_t *gtv ) {
-    if( gtv->state != GTV_CONNECTED ) {
-        gtv_destroyf( gtv, "Unexpected stream start packet" );
+    mvd_t *mvd = gtv->mvd;
+
+    if( gtv->state != GTV_RESUMING ) {
+        gtv_destroyf( gtv, "Unexpected stream start ack in state %u", gtv->state );
     }
 
     // create the channel
-    if( !gtv->mvd ) {
-        mvd_t *mvd = create_channel( gtv );
+    if( !mvd ) {
+        mvd = create_channel( gtv );
 
         // allocate delay buffer
         mvd->delay.data = MVD_Malloc( MAX_MSGLEN * 2 );
@@ -642,33 +730,22 @@ static void parse_stream_start( gtv_t *gtv ) {
 
         gtv->mvd = mvd;
     } else {
-        if( Com_IsDedicated() ) {
-            // notify spectators
-            MVD_BroadcastPrintf( gtv->mvd, PRINT_HIGH, 0,
-                "[MVD] Stream has been resumed.\n" );
-        }
         // reset delay to default
-        gtv->mvd->min_packets = mvd_wait_delay->value * 10;
-        gtv->mvd->underflows = 0;
+        mvd->min_packets = mvd_wait_delay->value * 10;
+        mvd->underflows = 0;
     }
 
-    Com_Printf( "[%s] Stream start marker received.\n", gtv->name );
+    Com_Printf( "[%s] Stream start ack received.\n", gtv->name );
 
     gtv->state = GTV_ACTIVE;
 }
 
 static void parse_stream_stop( gtv_t *gtv ) {
-    if( gtv->state < GTV_ACTIVE ) {
-        gtv_destroyf( gtv, "Unexpected stream stop packet" );
+    if( gtv->state != GTV_SUSPENDING ) {
+        gtv_destroyf( gtv, "Unexpected stream stop ack in state %u", gtv->state );
     }
 
-    if( gtv->mvd && Com_IsDedicated() && gtv->state == GTV_ACTIVE ) {
-        // notify spectators
-        MVD_BroadcastPrintf( gtv->mvd, PRINT_HIGH, 0,
-            "[MVD] Stream has been suspended.\n" );
-    }
-
-    Com_Printf( "[%s] Stream stop marker received.\n", gtv->name );
+    Com_Printf( "[%s] Stream stop ack received.\n", gtv->name );
 
     gtv->state = GTV_CONNECTED;
 }
@@ -680,9 +757,28 @@ static void parse_stream_data( gtv_t *gtv ) {
         gtv_destroyf( gtv, "Unexpected stream data packet" );
     }
 
-    // ignore if still recovering from overflow
-    if( gtv->state == GTV_OVERFLOWED ) {
+    // ignore any pending data while suspending
+    if( gtv->state > GTV_ACTIVE ) {
         msg_read.readcount = msg_read.cursize;
+        return;
+    }
+
+    // empty data part acts as stream suspend marker
+    if( msg_read.readcount == msg_read.cursize ) {
+        Com_Printf( "[%s] Stream suspended by server.\n", gtv->name );
+#if 0
+        if( gtv->mvd && Com_IsDedicated() ) {
+            // notify spectators if server suspended us
+            MVD_BroadcastPrintf( gtv->mvd, PRINT_HIGH, 0,
+                "[MVD] Stream has been suspended.\n" );
+        }
+
+        if( Com_IsDedicated() ) {
+            // notify spectators if server resumed us
+            MVD_BroadcastPrintf( mvd, PRINT_HIGH, 0,
+                "[MVD] Stream has been resumed.\n" );
+        }
+#endif
         return;
     }
 
@@ -716,13 +812,11 @@ static void parse_stream_data( gtv_t *gtv ) {
             mvd->state = MVD_WAITING;
             mvd->min_packets = 50;
             mvd->overflows++;
+            MVD_CheckActive( mvd );
 
-            // request restart of the stream
+            // send stream stop request
             write_message( gtv, GTC_STREAM_STOP );
-            write_message( gtv, GTC_STREAM_START );
-
-            // ignore any pending data
-            gtv->state = GTV_OVERFLOWED;
+            gtv->state = GTV_SUSPENDING;
             return;
         }
 
@@ -738,34 +832,6 @@ static void parse_stream_data( gtv_t *gtv ) {
     }
 }
 
-static void send_hello( gtv_t *gtv ) {
-    int flags, maxbuf;
-
-    flags = 0;
-#if USE_ZLIB
-    flags |= GTF_DEFLATE;
-#endif
-
-    if( gtv->mvd ) {
-        maxbuf = gtv->mvd->min_packets - 10;
-    } else {
-        maxbuf = mvd_wait_delay->value * 10 - 10;
-    }
-    if( maxbuf < 0 ) {
-        maxbuf = 0;
-    }
-
-    MSG_WriteShort( GTV_PROTOCOL_VERSION );
-    MSG_WriteLong( flags );
-    MSG_WriteShort( maxbuf );
-    MSG_WriteLong( 0 );
-    MSG_WriteString( NULL );
-    MSG_WriteString( com_version->string );
-    write_message( gtv, GTC_HELLO );
-    SZ_Clear( &msg_write );
-}
-
-
 static qboolean parse_message( gtv_t *gtv, fifo_t *fifo ) {
     uint32_t magic;
     uint16_t msglen;
@@ -779,7 +845,6 @@ static qboolean parse_message( gtv_t *gtv, fifo_t *fifo ) {
         if( magic != MVD_MAGIC ) {
             gtv_destroyf( gtv, "Not a MVD/GTV stream" );
         }
-        gtv->state = GTV_PREPARING;
 
         // send client hello
         send_hello( gtv );
@@ -958,6 +1023,7 @@ static neterr_t run_stream( gtv_t *gtv ) {
     if( mvd_shownet->integer == -1 ) {
         Com_Printf( "\n" );
     }
+
     return NET_OK;
 }
 
@@ -969,10 +1035,20 @@ static void check_timeouts( gtv_t *gtv ) {
         gtv_dropf( gtv, "Server connection timed out." );
     }
 
-    // ping if no data has been sent for too long
     if( gtv->state < GTV_CONNECTED ) {
         return;
     }
+
+    // stop/start stream depending on global state
+    if( mvd_active ) {
+        if( gtv->state == GTV_CONNECTED ) {
+            send_stream_start( gtv );
+        }
+    } else if( gtv->state == GTV_ACTIVE ) {
+        send_stream_stop( gtv );
+    }
+
+    // ping if no data has been sent for too long
     if( svs.realtime - gtv->last_sent > 60000 ) {
         write_message( gtv, GTC_PING );
     }
@@ -1142,7 +1218,7 @@ static void MVD_ListChannels_f( void ) {
     mvd_t *mvd;
     int usage;
 
-    if( LIST_EMPTY( &mvd_channels ) ) {
+    if( LIST_EMPTY( &mvd_channel_list ) ) {
         Com_Printf( "No channels.\n" );
         return;
     }
@@ -1150,7 +1226,7 @@ static void MVD_ListChannels_f( void ) {
     Com_Printf( "id name         map      spc plr stat buf pack address       \n"
                 "-- ------------ -------- --- --- ---- --- ---- --------------\n" );
 
-    LIST_FOR_EACH( mvd_t, mvd, &mvd_channels, entry ) {
+    LIST_FOR_EACH( mvd_t, mvd, &mvd_channel_list, entry ) {
         Com_Printf( "%2d %-12.12s %-8.8s %3d %3d ",
             mvd->id, mvd->name, mvd->mapname,
             List_Count( &mvd->clients ), mvd->numplayers );
@@ -1174,35 +1250,18 @@ static void MVD_ListChannels_f( void ) {
 static void MVD_ListGtvs_f( void ) {
     gtv_t *gtv;
 
-    if( LIST_EMPTY( &mvd_gtvs ) ) {
+    if( LIST_EMPTY( &mvd_gtv_list ) ) {
         Com_Printf( "No GTV connections.\n" );
         return;
     }
 
-    Com_Printf( "id name         stat address       \n"
-                "-- ------------ ---- --------------\n" );
+    Com_Printf( "id name         state        address       \n"
+                "-- ------------ ------------ --------------\n" );
 
-    LIST_FOR_EACH( gtv_t, gtv, &mvd_gtvs, entry ) {
-        Com_Printf( "%2d %-12.12s ", gtv->id, gtv->name );
-        switch( gtv->state ) {
-        case GTV_DISCONNECTED:
-            Com_Printf( "DISC" );
-            break;
-        case GTV_CONNECTING:
-        case GTV_PREPARING:
-            Com_Printf( "CNCT" );
-            break;
-        case GTV_CONNECTED:
-            Com_Printf( "IDLE" );
-            break;
-        case GTV_ACTIVE:
-            Com_Printf( "STRM" );
-            break;
-        case GTV_OVERFLOWED:
-            Com_Printf( "OVER" );
-            break;
-        }
-        Com_Printf( " %s\n", NET_AdrToString( &gtv->stream.address ) );
+    LIST_FOR_EACH( gtv_t, gtv, &mvd_gtv_list, entry ) {
+        Com_Printf( "%2d %-12.12s %-12.12s %s\n",
+            gtv->id, gtv->name, gtv_states[gtv->state],
+            NET_AdrToString( &gtv->stream.address ) );
     }
 }
 
@@ -1433,7 +1492,7 @@ static void MVD_Connect_f( void ) {
     }
 
     // don't allow multiple connections
-    LIST_FOR_EACH( gtv_t, gtv, &mvd_gtvs, entry ) {
+    LIST_FOR_EACH( gtv_t, gtv, &mvd_gtv_list, entry ) {
         if( NET_IsEqualAdr( &adr, &gtv->stream.address ) ) {
             Com_Printf( "Already connected to %s\n",
                 NET_AdrToString( &adr ) );
@@ -1457,7 +1516,7 @@ static void MVD_Connect_f( void ) {
     gtv->run = gtv_run;
     gtv->drop = gtv_drop;
     gtv->destroy = gtv_destroy;
-    List_Append( &mvd_gtvs, &gtv->entry );
+    List_Append( &mvd_gtv_list, &gtv->entry );
 
     // set channel name
     if( name ) {
@@ -1676,7 +1735,7 @@ static void MVD_Play_f( void ) {
     gtv->demoloop = loop;
     gtv->drop = demo_destroy;
     gtv->destroy = demo_destroy;
-    //List_Append( &mvd_gtvs, &gtv->entry );
+    //List_Append( &mvd_gtv_list, &gtv->entry );
 
     // set channel name
     if( name ) {
@@ -1694,23 +1753,25 @@ void MVD_Shutdown( void ) {
     mvd_t *mvd, *mvd_next;
 
     // kill all connections
-    LIST_FOR_EACH_SAFE( gtv_t, gtv, gtv_next, &mvd_gtvs, entry ) {
+    LIST_FOR_EACH_SAFE( gtv_t, gtv, gtv_next, &mvd_gtv_list, entry ) {
         gtv->destroy( gtv );
     }
 
     // kill all channels
-    LIST_FOR_EACH_SAFE( mvd_t, mvd, mvd_next, &mvd_channels, entry ) {
+    LIST_FOR_EACH_SAFE( mvd_t, mvd, mvd_next, &mvd_channel_list, entry ) {
         MVD_Free( mvd );
     }
 
-    List_Init( &mvd_gtvs );
-    List_Init( &mvd_channels );
-    List_Init( &mvd_active );
+    List_Init( &mvd_gtv_list );
+    List_Init( &mvd_channel_list );
+    List_Init( &mvd_active_list );
 
     Z_Free( mvd_clients );
     mvd_clients = NULL;
 
     mvd_chanid = 0;
+
+    mvd_active = qfalse;
 
     Z_LeakTest( TAG_MVD );
 }
@@ -1740,7 +1801,6 @@ void MVD_Register( void ) {
     mvd_timeout = Cvar_Get( "mvd_timeout", "90", 0 );
     mvd_wait_delay = Cvar_Get( "mvd_wait_delay", "20", 0 );
     mvd_wait_percent = Cvar_Get( "mvd_wait_percent", "35", 0 );
-    mvd_chase_msgs = Cvar_Get( "mvd_chase_msgs", "0", 0 );
 
     Cmd_Register( c_mvd );
 }

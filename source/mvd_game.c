@@ -144,7 +144,7 @@ static void MVD_LayoutChannels( mvd_client_t *client ) {
     total = sizeof( header ) - 1;
 
     // FIXME: improve this
-    cursor = List_Count( &mvd_active );
+    cursor = List_Count( &mvd_active_list );
     if( cursor ) {
         if( client->layout_cursor < 0 ) {
             client->layout_cursor = cursor - 1;
@@ -154,7 +154,7 @@ static void MVD_LayoutChannels( mvd_client_t *client ) {
 
         y = 64;
         cursor = 0;
-        LIST_FOR_EACH( mvd_t, mvd, &mvd_active, active ) {
+        LIST_FOR_EACH( mvd_t, mvd, &mvd_active_list, active ) {
             len = Q_snprintf( buffer, sizeof( buffer ),
                 "yv %d string%s \"%c%-12.12s %-7.7s %d/%d\" ", y,
                 mvd == client->mvd ? "2" : "",
@@ -229,7 +229,7 @@ static void MVD_LayoutMenu( mvd_client_t *client ) {
     total = Q_snprintf( layout, sizeof( layout ), format,
         cur[0], client->target ? "Leave" : "Enter", cur[1],
         cur[2], List_Count( &client->mvd->clients ),
-        cur[3], List_Count( &mvd_active ), cur[4],
+        cur[3], List_Count( &mvd_active_list ), cur[4],
         cur[5], ( client->uf & UF_MUTE_OBSERVERS ) ? YES : NO,
         cur[6], ( client->uf & UF_MUTE_MISC ) ? YES : NO,
         cur[7], ( client->uf & UF_MUTE_PLAYERS ) ? YES: NO,
@@ -917,7 +917,7 @@ static void MVD_Invuse_f( mvd_client_t *client ) {
     }
 
     if( client->layout_type == LAYOUT_CHANNELS ) {
-        mvd = LIST_INDEX( mvd_t, client->layout_cursor, &mvd_active, active );
+        mvd = LIST_INDEX( mvd_t, client->layout_cursor, &mvd_active_list, active );
         if( mvd ) {
             MVD_TrySwitchChannel( client, mvd );
         } else {
@@ -979,17 +979,17 @@ static void print_channel( client_t *cl, mvd_t *mvd ) {
         mvd->numplayers, buffer );
 }
 
-static void MVD_Channels_f( mvd_client_t *client ) {
+static void mvd_channel_list_f( mvd_client_t *client ) {
     mvd_t *mvd;
 
     if( Cmd_Argc() > 1 ) {
-        if( LIST_EMPTY( &mvd_channels ) ) {
+        if( LIST_EMPTY( &mvd_channel_list ) ) {
 	        SV_ClientPrintf( client->cl, PRINT_HIGH,
                 "No ready channels.\n" );
             return;
         }
     } else {
-        if( LIST_EMPTY( &mvd_active ) ) {
+        if( LIST_EMPTY( &mvd_active_list ) ) {
 	        SV_ClientPrintf( client->cl, PRINT_HIGH,
                 "No active channels.\n" );
             return;
@@ -1001,11 +1001,11 @@ static void MVD_Channels_f( mvd_client_t *client ) {
 	    "-- ------------ -------- --- --- --------------\n" );
 
     if( Cmd_Argc() > 1 ) {
-        LIST_FOR_EACH( mvd_t, mvd, &mvd_channels, entry ) {
+        LIST_FOR_EACH( mvd_t, mvd, &mvd_channel_list, entry ) {
             print_channel( client->cl, mvd );
         }
     } else {
-        LIST_FOR_EACH( mvd_t, mvd, &mvd_active, active ) {
+        LIST_FOR_EACH( mvd_t, mvd, &mvd_active_list, active ) {
             print_channel( client->cl, mvd );
         }
     }
@@ -1111,7 +1111,7 @@ static void MVD_GameClientCommand( edict_t *ent ) {
 		return;
 	}
 	if( !strcmp( cmd, "channels" ) ) {
-        MVD_Channels_f( client );
+        mvd_channel_list_f( client );
 		return;
 	}
 	if( !strcmp( cmd, "clients" ) || !strcmp( cmd, "players" ) ) {
@@ -1264,9 +1264,9 @@ static qboolean MVD_GameClientConnect( edict_t *ent, char *userinfo ) {
 
     // if there is exactly one active channel, assign them to it,
     // otherwise, assign to Waiting Room
-    count = List_Count( &mvd_active );
+    count = List_Count( &mvd_active_list );
     if( count == 1 ) {
-        mvd = LIST_FIRST( mvd_t, &mvd_active, active );
+        mvd = LIST_FIRST( mvd_t, &mvd_active_list, active );
     } else {
         mvd = &mvd_waitingRoom;
     }
@@ -1439,10 +1439,10 @@ void MVD_CheckActive( mvd_t *mvd ) {
     mvd_t *cur;
 
     // demo channels are always marked as active
-    if( mvd->numplayers /*|| mvd->demoplayback*/ ) {
+    if( mvd->state == MVD_READING && mvd->numplayers /*|| mvd->demoplayback*/ ) {
         if( LIST_EMPTY( &mvd->active ) ) {
             // sort this one into the list of active channels
-            LIST_FOR_EACH( mvd_t, cur, &mvd_active, active ) {
+            LIST_FOR_EACH( mvd_t, cur, &mvd_active_list, active ) {
                 if( cur->id > mvd->id ) {
                     break;
                 }
@@ -1515,7 +1515,7 @@ static void MVD_GameRunFrame( void ) {
     mvd_t *mvd, *next;
     mvd_client_t *client;
 
-    LIST_FOR_EACH_SAFE( mvd_t, mvd, next, &mvd_channels, entry ) {
+    LIST_FOR_EACH_SAFE( mvd_t, mvd, next, &mvd_channel_list, entry ) {
         if( setjmp( mvd_jmpbuf ) ) {
             continue;
         }
@@ -1573,7 +1573,7 @@ void MVD_PrepWorldFrame( void ) {
     int i;
 
     // reset events and old origins
-    LIST_FOR_EACH( mvd_t, mvd, &mvd_channels, entry ) {
+    LIST_FOR_EACH( mvd_t, mvd, &mvd_channel_list, entry ) {
         for( i = 1, ent = &mvd->edicts[1]; i < mvd->pool.num_edicts; i++, ent++ ) {
             if( !ent->inuse ) {
                 continue;

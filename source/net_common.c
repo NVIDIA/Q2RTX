@@ -838,7 +838,8 @@ neterr_t NET_Listen( qboolean arg ) {
     return NET_OK;
 }
 
-neterr_t NET_Accept( netadr_t *peer, netstream_t *s ) {
+// net_from variable receives source address
+neterr_t NET_Accept( netstream_t *s ) {
 	struct sockaddr_in from;
     socklen_t fromlen;
 	u_long _true = 1;
@@ -857,6 +858,9 @@ neterr_t NET_Accept( netadr_t *peer, netstream_t *s ) {
     tv.tv_usec = 0;
     ret = select( tcp_socket + 1, &fd, NULL, NULL, &tv );
     if( ret == -1 ) {
+        // fill in dummy IP address
+        memset( &net_from, 0, sizeof( net_from ) );
+        net_from.type = NA_IP;
         NET_GET_ERROR();
         return NET_ERROR;
     }
@@ -867,6 +871,9 @@ neterr_t NET_Accept( netadr_t *peer, netstream_t *s ) {
 
 	fromlen = sizeof( from );
     newsocket = accept( tcp_socket, ( struct sockaddr * )&from, &fromlen );
+
+	NET_SockadrToNetadr( &from, &net_from );
+
     if( newsocket == -1 ) {
         NET_GET_ERROR();
         return NET_ERROR;
@@ -879,11 +886,10 @@ neterr_t NET_Accept( netadr_t *peer, netstream_t *s ) {
         return NET_ERROR;
 	}
 
-	NET_SockadrToNetadr( &from, peer );
-
+    // initialize stream
     memset( s, 0, sizeof( *s ) );
     s->socket = newsocket;
-    s->address = *peer;
+    s->address = net_from;
     s->state = NS_CONNECTED;
 
     return NET_OK;

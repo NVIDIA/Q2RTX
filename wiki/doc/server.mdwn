@@ -27,7 +27,7 @@ This cvar mirrors `net_port` unless manually overridden.
 
 - `set net_tcp_clientip ""` (string)  
 Specifies network interface address server should use for outgoing TCP
-connections (this includes MVD and anticheat connections).
+connections (this includes MVD/GTV and anticheat connections).
 Empty string means default network interface.
 
 Misc
@@ -35,12 +35,11 @@ Misc
 
 - `set sv_iplimit 3` (integer)  
 Maximum number of simultaneous connections allowed from
-single IP address (per connection type, like TCP and UDP).
+single IP address (per connection type, TCP and UDP client lists are separate).
 Setting this variable to 0 disables the limit.
 
 - `set sv_status_show 2` (integer)  
-Specifies how the server should respond to status queries
-over UDP datagrams and HTTP.
+Specifies how the server should respond to status queries.
    - 0 - do not respond at all
    - 1 - respond with server info only
    - 2 - respond with server info and player list
@@ -74,10 +73,11 @@ dummy MVD observer. Clients set their passwords via `password` userinfo variable
 When enabled, do not enforce any rate limits for clients whose IP is from
 private address space (127.x.x.x, 10.x.x.x, 192.168.x.x, 172.16.x.x).
 
-- `set sv_ghostime 10` (float)  
-Maximum time, in seconds, before dropping clients which passed initial
-challenge-response connection stage but not yet requested server data chunk.
-This also applies to HTTP clients in request processing stage.
+- `set sv_ghostime 6` (float)  
+Maximum time, in seconds, before dropping clients which have passed initial
+challenge-response connection stage but have not yet sent any data over
+newly established connection.
+This also applies to MVD/GTV clients in request processing stage.
 Helps to avoid attacks flooding server with zombie clients, combined
 with `sv_iplimit` variable.
 
@@ -96,17 +96,14 @@ Display uptime in server info.
 MVD server
 ----------
 
-- `set sv_http_enable 0` (boolean)  
-Enable HTTP connections used for serving MVD clients and answering
-status queries in HTML format.
+- `set sv_mvd_enable 0` (integer)  
+Enables MVD/GTV server functionality.
+   - 0 - MVD server is disabled
+   - 1 - local MVD recording is allowed
+   - 2 - local MVD recording and remote GTV connections are allowed
 
-- `set sv_http_maxclients 4` (integer)  
-Maximum number of HTTP clients. Can be changed at any time, setting this to
-zero effectively disables new HTTP connections.
-
-- `set sv_http_minclients 4` (integer)  
-Maximum number of HTTP clients to be kept in the special pool of recently
-used slots for faster access and avoiding memory fragmentation.
+- `set sv_mvd_maxclients 8` (integer)  
+Total number of MVD/GTV client slots on the server.
 
 - `set sv_mvd_nogun 1` (boolean)  
 Reduce bandwidth usage by filtering on-screen gun updates out of MVD stream.
@@ -114,24 +111,22 @@ Reduce bandwidth usage by filtering on-screen gun updates out of MVD stream.
 - `set sv_mvd_noblend 0` (boolean)  
 Reduce bandwidth usage by filtering on-screen blend effects out of MVD stream.
 
-- `set sv_mvd_max_duration 0` (float)  
+- `set sv_mvd_nomsgs 1` (boolean)  
+When enabled, MVD/GTV spectators in chasecam mode will not receive any text
+messages routed to their chase targets (which are normally on a team), but will
+receive messages routed to the dummy MVD observer only.
+
+- `set sv_mvd_maxtime 0` (float)  
 Maximum duration in minutes of the locally recorded MVD.
 Setting this to zero disables the limit.
 
-- `set sv_mvd_max_size 0` (float)  
+- `set sv_mvd_maxsize 0` (float)  
 Maximum size in KB of the locally recorded MVD.
 Setting this to zero disables the limit.
 
-- `set sv_mvd_max_levels 1` (integer)  
-Maximum number of levels (map changes) locally recorded MVD may contain.
+- `set sv_mvd_maxmaps 1` (integer)  
+Specifies number of map changes local MVD recording is stopped after.
 Setting this to zero disables the limit.
-
-- `set sv_mvd_auth ""` (string)  
-If not empty, perform Basic HTTP authentication of MVD connections.
-Value should have `user:pass` format.
-
-- `set sv_mvd_enable 0` (boolean)  
-Enable recording local MVDs and serving MVD clients over HTTP.
 
 - `set sv_mvd_begincmd "wait 50; putaway; wait 10; help;"` (string)  
 Issue this command on behaf of dummy MVD observer as soon as it
@@ -166,11 +161,6 @@ Specifies default map used for the Waiting Room channel.
 - `set mvd_chase_prefix "xv 0 yb -64"` (string)  
 Specifies POV info string position on the screen. This should be a valid
 fragment of the Quake 2 layout script.
-
-- `set mvd_chase_msgs 0` (boolean)  
-When enabled, observers in chasecam mode will receive messages routed to
-the chase target, otherwise they will receive messages routed to the dummy
-MVD client (which is normally in observer mode on the game server side).
 
 Hacks
 ----------

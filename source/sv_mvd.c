@@ -562,8 +562,13 @@ static void emit_gamestate( void ) {
     int         flags, extra, portalbytes;
     byte        portalbits[MAX_MAP_AREAS/8];
 
+    extra = 0;
+    if( sv_mvd_nomsgs->integer ) {
+        extra |= 1 << SVCMD_BITS;
+    }
+
     // send the serverdata
-    MSG_WriteByte( mvd_serverdata );
+    MSG_WriteByte( mvd_serverdata | extra );
     MSG_WriteLong( PROTOCOL_VERSION_MVD );
     MSG_WriteShort( PROTOCOL_VERSION_MVD_CURRENT );
     MSG_WriteLong( sv.spawncount );
@@ -768,18 +773,18 @@ void SV_MvdBeginFrame( void ) {
     gtv_client_t *client;
     int i;
 
-    // do nothing if not active
+    // do nothing if not enabled
     if( !mvd.dummy ) {
         return;
     }
 
     // disconnect MVD dummy if no MVD clients are active for 15 minutes
     if( !sv_mvd_autorecord->integer ) {
-        if( mvd.recording || !LIST_EMPTY( &gtv_active_list ) ) {
+        // FIXME: should not really count unauthenticated/zombie clients, etc
+        if( mvd.recording || !LIST_EMPTY( &gtv_client_list ) ) {
             mvd.clients_active = svs.realtime;
         } else if( svs.realtime - mvd.clients_active > MVD_CLIENTS_TIMEOUT ) {
-            Com_Printf( "No MVD clients active for 15 minutes, "
-                "disconnecting dummy client.\n" );
+            Com_DPrintf( "Disconnecting dummy MVD client.\n" );
             SV_DropClient( mvd.dummy, NULL );
             return;
         }
@@ -794,18 +799,19 @@ void SV_MvdBeginFrame( void ) {
         }
     }
 
-    if( svs.realtime - mvd.players_active > MVD_PLAYERS_TIMEOUT ) {
+    if( i == sv_maxclients->integer ) {
         if( mvd.active ) {
-            FOR_EACH_ACTIVE_GTV( client ) {
-                // send stream stop marker
-                write_message( client, GTS_STREAM_STOP );
+            if( svs.realtime - mvd.players_active > MVD_PLAYERS_TIMEOUT ) {
+                FOR_EACH_ACTIVE_GTV( client ) {
+                    // send stream suspend marker
+                    write_message( client, GTS_STREAM_DATA );
 #if USE_ZLIB
-                flush_stream( client, Z_SYNC_FLUSH );
+                    flush_stream( client, Z_SYNC_FLUSH );
 #endif
+                }
+                Com_DPrintf( "Suspending MVD streams.\n" );
+                mvd.active = qfalse;
             }
-            Com_Printf( "No players active for 5 minutes, "
-                "suspending MVD streams.\n" );
-            mvd.active = qfalse;
         }
     } else if( !mvd.active ) {
         // build and emit gamestate
@@ -813,9 +819,6 @@ void SV_MvdBeginFrame( void ) {
         emit_gamestate();
 
         FOR_EACH_ACTIVE_GTV( client ) {
-            // send stream start marker
-            write_message( client, GTS_STREAM_START );
-
             // send gamestate
             write_message( client, GTS_STREAM_DATA );
 #if USE_ZLIB
@@ -834,7 +837,7 @@ void SV_MvdBeginFrame( void ) {
         SZ_Clear( &mvd.datagram );
         SZ_Clear( &mvd.message );
 
-        Com_Printf( "Resuming MVD streams.\n" );
+        Com_DPrintf( "Resuming MVD streams.\n" );
         mvd.active = qtrue;
     }
 }
@@ -849,13 +852,14 @@ void SV_MvdEndFrame( void ) {
     size_t total;
     byte header[3];
 
-    // do nothing if not active
+    // do nothing if not enabled
     if( !mvd.dummy ) {
         return;
     }
 
     dummy_run();
 
+    // do nothing if not active
     if( !mvd.active ) {
         return;
     }
@@ -933,8 +937,10 @@ void SV_MvdEndFrame( void ) {
         }
     }
 
+    // clear frame
     SZ_Clear( &msg_write );
 
+    // clear datagrams
     SZ_Clear( &mvd.datagram );
     SZ_Clear( &mvd.message );
 }
@@ -1088,6 +1094,7 @@ void SV_MvdStartSound( int entnum, int channel, int flags,
 {
     int extrabits, sendchan;
 
+    // do nothing if not active
     if( !mvd.active ) {
         return;
     }
@@ -1176,11 +1183,11 @@ static void drop_client( gtv_client_t *client, const char *error ) {
     if( client->state <= cs_zombie ) {
         return;
     }
+
     if( error ) {
         // notify console
         Com_Printf( "TCP client %s[%s] dropped: %s\n", client->name,
             NET_AdrToString( &client->stream.address ), error );
-
     }
 
 #if USE_ZLIB
@@ -1257,7 +1264,7 @@ static void write_message( gtv_client_t *client, gtv_serverop_t op ) {
 }
 
 static void parse_hello( gtv_client_t *client ) {
-    int protocol, flags, maxbuf;
+    int protocol, flags;
     byte *data;
 
     if( client->state >= cs_primed ) {
@@ -1274,9 +1281,9 @@ static void parse_hello( gtv_client_t *client ) {
     }
 
     flags = MSG_ReadLong();
-    maxbuf = MSG_ReadShort();
     MSG_ReadLong();
     MSG_ReadString( client->name, sizeof( client->name ) );
+    MSG_ReadString( NULL, 0 );
     MSG_ReadString( client->version, sizeof( client->version ) );
 
     if( !SV_MatchAddress( &gtv_host_list, &client->stream.address ) ) {
@@ -1292,7 +1299,6 @@ static void parse_hello( gtv_client_t *client ) {
     client->stream.send.size = MAX_MSGLEN * 2;
     client->data = data;
     client->flags = flags;
-    client->maxbuf = maxbuf;
     client->state = cs_primed;
 
     // send hello
@@ -1331,10 +1337,18 @@ static void parse_ping( gtv_client_t *client ) {
 }
 
 static void parse_stream_start( gtv_client_t *client ) {
+    int maxbuf;
+
     if( client->state < cs_primed ) {
         return;
     }
 
+    maxbuf = MSG_ReadShort();
+    if( maxbuf < 10 ) {
+        maxbuf = 10;
+    }
+
+    client->maxbuf = maxbuf;
     client->state = cs_spawned;
 
     List_Append( &gtv_active_list, &client->active );
@@ -1345,21 +1359,22 @@ static void parse_stream_start( gtv_client_t *client ) {
         return;
     }
 
-    // do nothing if not active
-    if( !mvd.active ) {
-        return;
-    }
-
-    // send stream start marker
+    // send ack to client
     write_message( client, GTS_STREAM_START );
 
-    // send gamestate
-    emit_gamestate();
-    write_message( client, GTS_STREAM_DATA );
+    // send gamestate if active
+    if( mvd.active ) {
+        emit_gamestate();
+        write_message( client, GTS_STREAM_DATA );
+        SZ_Clear( &msg_write );
+    } else {
+        // send stream suspend marker
+        write_message( client, GTS_STREAM_DATA );
+    }
+
 #if USE_ZLIB
     flush_stream( client, Z_SYNC_FLUSH );
 #endif
-    SZ_Clear( &msg_write );
 }
 
 static void parse_stream_stop( gtv_client_t *client ) {
@@ -1371,12 +1386,7 @@ static void parse_stream_stop( gtv_client_t *client ) {
 
     List_Delete( &client->active );
 
-    // do nothing if not active
-    if( !mvd.active ) {
-        return;
-    }
-
-    // send stream stop marker
+    // send ack to client
     write_message( client, GTS_STREAM_STOP );
 #if USE_ZLIB
     flush_stream( client, Z_SYNC_FLUSH );
@@ -1532,7 +1542,7 @@ void SV_MvdRunClients( void ) {
     unsigned    delta;
 
     // accept new connections
-    ret = NET_Accept( &net_from, &stream );
+    ret = NET_Accept( &stream );
     if( ret == NET_ERROR ) {
         Com_DPrintf( "%s from %s, ignored\n", NET_ErrorString(),
             NET_AdrToString( &net_from ) );
@@ -1708,9 +1718,13 @@ static qboolean mvd_enable( void ) {
             return qfalse;
         }
         dummy_spawn();
+#if 0
         build_gamestate();
         mvd.clients_active = mvd.players_active = svs.realtime;
         mvd.active = qtrue;
+#else
+        SV_MvdBeginFrame();
+#endif
     }
     return qtrue;
 }
@@ -1806,7 +1820,7 @@ Server is initializing, prepare MVD server for this game.
 */
 void SV_MvdInit( void ) {
     if( !sv_mvd_enable->integer ) {
-        return; // do noting if disabled
+        return; // do nothing if disabled
     }
 
     // allocate buffers
@@ -1918,9 +1932,11 @@ static void rec_start( fileHandle_t demofile ) {
     magic = MVD_MAGIC;
     FS_Write( &magic, 4, demofile );
 
-    emit_gamestate();
-    rec_write();
-    SZ_Clear( &msg_write );
+    if( mvd.active ) {
+        emit_gamestate();
+        rec_write();
+        SZ_Clear( &msg_write );
+    }
 }
 
 

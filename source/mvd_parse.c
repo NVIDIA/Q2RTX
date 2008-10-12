@@ -379,8 +379,9 @@ static void MVD_UnicastPrint( mvd_t *mvd, qboolean reliable, mvd_player_t *playe
         if( level == PRINT_CHAT && ( client->uf & UF_MUTE_PLAYERS ) ) {
             continue;
         }
-        target = mvd_chase_msgs->integer ?
-            client->target ? client->target : mvd->dummy : mvd->dummy;
+        // decide if message should be routed or not
+        target = ( mvd->flags & 1 ) ? mvd->dummy :
+            client->target ? client->target : mvd->dummy;
 		if( target == player ) {
 		    cl->AddMessage( cl, data, length, reliable );
 		}
@@ -960,7 +961,7 @@ static void MVD_ChangeLevel( mvd_t *mvd ) {
     SV_SendAsyncPackets();
 }
 
-static void MVD_ParseServerData( mvd_t *mvd ) {
+static void MVD_ParseServerData( mvd_t *mvd, int extrabits ) {
 	int protocol;
     size_t len, maxlen;
 	char *string;
@@ -989,6 +990,7 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
         MVD_Destroyf( mvd, "Oversize gamedir string" );
     }
     mvd->clientNum = MSG_ReadShort();
+    mvd->flags = extrabits;
 
 	// change gamedir unless playing a demo
 	/*if( !mvd->demoplayback )*/ {
@@ -1081,7 +1083,7 @@ static void MVD_ParseServerData( mvd_t *mvd ) {
         mvd_t *cur;
 
         // sort this one into the list of ready channels
-        LIST_FOR_EACH( mvd_t, cur, &mvd_channels, entry ) {
+        LIST_FOR_EACH( mvd_t, cur, &mvd_channel_list, entry ) {
             if( cur->id > mvd->id ) {
                 break;
             }
@@ -1130,7 +1132,7 @@ void MVD_ParseMessage( mvd_t *mvd ) {
     
 		switch( cmd ) {
 		case mvd_serverdata:
-			MVD_ParseServerData( mvd );
+			MVD_ParseServerData( mvd, extrabits );
 			break;
 		case mvd_multicast_all:
 	    case mvd_multicast_pvs:

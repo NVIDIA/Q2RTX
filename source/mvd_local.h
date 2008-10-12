@@ -131,6 +131,7 @@ typedef struct mvd_s {
     mvd_player_t    *dummy; // &players[clientNum]
     int             numplayers; // number of active players in frame
     int             clientNum;
+    int             flags;
     char        layout[MAX_STRING_CHARS];
     char        oldscores[MAX_STRING_CHARS]; // layout is copied here
     qboolean    intermission;
@@ -144,14 +145,12 @@ typedef struct mvd_s {
 // mvd_client.c
 //
 
-extern list_t           mvd_channels;
-extern list_t           mvd_active;
+extern list_t           mvd_channel_list;
+extern list_t           mvd_active_list;
 extern mvd_t            mvd_waitingRoom;
 extern qboolean         mvd_dirty;
 
 extern cvar_t    *mvd_shownet;
-extern cvar_t    *mvd_timeout;
-extern cvar_t    *mvd_chase_msgs;
 
 void MVD_Destroyf( mvd_t *mvd, const char *fmt, ... )
     q_noreturn q_printf( 2, 3 );
