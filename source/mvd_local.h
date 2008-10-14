@@ -90,7 +90,9 @@ typedef struct {
 typedef enum {
     MVD_DEAD,       // no gamestate received yet, unusable
     MVD_WAITING,    // buffering more frames
-    MVD_READING     // reading frames
+    MVD_READING,    // reading frames
+
+    MVD_NUM_STATES
 } mvd_state_t;
 
 struct gtv_s;

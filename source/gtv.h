@@ -18,8 +18,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#define GTV_PROTOCOL_VERSION 0xED02
+#define GTV_PROTOCOL_VERSION 0xED03
 
+#define MAX_GTS_MSGLEN  MAX_MSGLEN  // maximum GTV server message length
+#define MAX_GTC_MSGLEN  256         // maximum GTV client message length
+
+// flags used in hello packet
 #define GTF_DEFLATE 1
 
 typedef enum {

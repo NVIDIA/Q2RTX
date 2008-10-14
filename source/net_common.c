@@ -119,8 +119,8 @@ static void NET_NetadrToSockadr( const netadr_t *a, struct sockaddr_in *s ) {
 	switch( a->type ) {
 	case NA_BROADCAST:
 		s->sin_family = AF_INET;
-		s->sin_port = a->port;
 		s->sin_addr.s_addr = INADDR_BROADCAST;
+		s->sin_port = a->port;
 		break;
 	case NA_IP:
 		s->sin_family = AF_INET;

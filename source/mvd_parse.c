@@ -1030,12 +1030,21 @@ static void MVD_ParseServerData( mvd_t *mvd, int extrabits ) {
         MVD_Destroyf( mvd, "Invalid maxclients" );
     }
 
-    if( !mvd->players ) {
+    // check if maxclients changed
+    if( index != mvd->maxclients ) {
+        mvd_client_t *client;
+
+        // free any old players
+        Z_Free( mvd->players );
+
+        // allocate new players
         mvd->players = MVD_Mallocz( sizeof( mvd_player_t ) * index );
         mvd->maxclients = index;
-    } else if( index != mvd->maxclients ) {
-        // TODO: allow this!
-        MVD_Destroyf( mvd, "Unexpected maxclients change" );
+
+        // clear chase targets
+        LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
+            client->target = client->oldtarget = NULL;
+        }
     }
 
     // validate clientNum
@@ -1054,7 +1063,7 @@ static void MVD_ParseServerData( mvd_t *mvd, int extrabits ) {
     mvd->mapname[len - 9] = 0; // cut off ".bsp"
 
 	// load the world model (we are only interesed in visibility info)
-    Com_Printf( "[%s] Loading %s...\n", mvd->name, string );
+    Com_Printf( "[%s] -=- Loading %s...\n", mvd->name, string );
     if( !CM_LoadMap( &mvd->cm, string ) ) {
         MVD_Destroyf( mvd, "Couldn't load %s: %s", string, BSP_GetError() );
     }

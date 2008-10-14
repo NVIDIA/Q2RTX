@@ -1296,6 +1296,10 @@ static void MVD_GameClientBegin( edict_t *ent ) {
 	if( !client->begin_time ) {
 		MVD_BroadcastPrintf( mvd, PRINT_MEDIUM, UF_MUTE_MISC,
             "[MVD] %s entered the channel\n", client->cl->name );
+        if( Com_IsDedicated() && mvd->state == MVD_WAITING ) {
+            SV_ClientPrintf( client->cl, PRINT_HIGH,
+                "[MVD] Buffering data, please wait...\n" );
+        }
         target = MVD_MostFollowed( mvd );
 	} else {
         target = client->target;
@@ -1439,7 +1443,7 @@ void MVD_CheckActive( mvd_t *mvd ) {
     mvd_t *cur;
 
     // demo channels are always marked as active
-    if( mvd->state == MVD_READING && mvd->numplayers /*|| mvd->demoplayback*/ ) {
+    if( mvd->numplayers /*|| mvd->demoplayback*/ ) {
         if( LIST_EMPTY( &mvd->active ) ) {
             // sort this one into the list of active channels
             LIST_FOR_EACH( mvd_t, cur, &mvd_active_list, active ) {
