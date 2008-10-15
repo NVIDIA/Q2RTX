@@ -36,7 +36,8 @@ typedef enum {
     GTV_PREPARING,  // waiting for server hello
     GTV_CONNECTED,  // keeping connection alive
     GTV_RESUMING,   // stream start request sent
-    GTV_ACTIVE,     // actively running MVD stream
+    GTV_WAITING,    // server is suspended
+    GTV_READING,    // server is resumed
     GTV_SUSPENDING, // stream stop request sent
     GTV_NUM_STATES
 } gtv_state_t;
@@ -48,12 +49,14 @@ typedef struct gtv_s {
     char        name[MAX_MVD_NAME];
     gtv_state_t state;
     mvd_t       *mvd;
+    char        *username, *password;
 
     // connection variables
     netstream_t stream;
     char        address[MAX_QPATH];
     byte        *data;
     size_t      msglen;
+    unsigned    flags;
 #if USE_ZLIB
     qboolean    z_act; // true when actively inflating
     z_stream    z_str;
@@ -84,9 +87,7 @@ static const char *const gtv_states[GTV_NUM_STATES] = {
 };
 
 static const char *const mvd_states[MVD_NUM_STATES] = {
-    "DEAD",
-    "WAIT",
-    "READ"
+    "DEAD", "WAIT", "READ"
 };
 
 static LIST_DECL( mvd_gtv_list );
@@ -212,6 +213,31 @@ mvd_t *MVD_SetChannel( int arg ) {
 
     Com_Printf( "No such channel ID: %s\n", s );
     return NULL;
+}
+
+void MVD_CheckActive( mvd_t *mvd ) {
+    mvd_t *cur;
+
+    if( mvd->state == MVD_READING || ( mvd->gtv &&
+            mvd->gtv->state == GTV_READING ) )
+    {
+        if( LIST_EMPTY( &mvd->active ) ) {
+            // sort this one into the list of active channels
+            LIST_FOR_EACH( mvd_t, cur, &mvd_active_list, active ) {
+                if( cur->id > mvd->id ) {
+                    break;
+                }
+            }
+            List_Append( &cur->active, &mvd->active );
+            mvd_dirty = qtrue;
+        }
+    } else {
+        if( !LIST_EMPTY( &mvd->active ) ) {
+            // delete this one from the list of active channels
+            List_Delete( &mvd->active );
+            mvd_dirty = qtrue;
+        }
+    }
 }
 
 
@@ -534,27 +560,40 @@ static qboolean gtv_wait_stop( mvd_t *mvd ) {
 
 // ran out of buffers
 static void gtv_wait_start( mvd_t *mvd ) {
+    gtv_t *gtv = mvd->gtv;
     int tr = mvd_wait_delay->value * 10;
 
     // if not connected, kill it
-    if( !mvd->gtv ) {
+    if( !gtv ) {
         MVD_Destroyf( mvd, "End of MVD stream reached" );
     }
 
     Com_Printf( "[%s] -=- Buffering data...\n", mvd->name );
 
-    // notify spectators
-    if( Com_IsDedicated() ) {
-        MVD_BroadcastPrintf( mvd, PRINT_HIGH, 0,
-            "[MVD] Buffering data, please wait...\n" );
+    mvd->state = MVD_WAITING;
+
+    if( gtv->state == GTV_READING ) {
+        // oops, if this happened in the middle of the game,
+        // resume as quickly as possible after there is some
+        // data available again
+        mvd->min_packets = 50 + 5 * mvd->underflows;
+        if( mvd->min_packets > tr ) {
+            mvd->min_packets = tr;
+        }
+        mvd->underflows++;
+
+        // notify spectators
+        if( Com_IsDedicated() ) {
+            MVD_BroadcastPrintf( mvd, PRINT_HIGH, 0,
+                "[MVD] Buffering data, please wait...\n" );
+        }
+    } else {
+        // this is a `normal' underflow, reset delay to default
+        mvd->min_packets = tr;
+        mvd->underflows = 0;
     }
 
-    mvd->state = MVD_WAITING;
-    mvd->min_packets = 50 + 10 * mvd->underflows;
-    if( mvd->min_packets > tr ) {
-        mvd->min_packets = tr;
-    }
-    mvd->underflows++;
+    MVD_CheckActive( mvd );
 }
 
 static qboolean gtv_read_frame( mvd_t *mvd ) {
@@ -623,8 +662,44 @@ static void write_message( gtv_t *gtv, gtv_clientop_t op ) {
     write_stream( gtv, msg_write.data, msg_write.cursize );
 }
 
+static qboolean gtv_forward_cmd( mvd_client_t *client ) {
+    mvd_t *mvd = client->mvd;
+    gtv_t *gtv = mvd->gtv;
+    char *text;
+    size_t len;
+
+    if( !gtv || gtv->state < GTV_CONNECTED ) {
+	    SV_ClientPrintf( client->cl, PRINT_HIGH,
+            "[MVD] Not connected to the game server.\n" );
+        return qfalse;
+    }
+    if( !( gtv->flags & GTF_STRINGCMDS ) ) {
+	    SV_ClientPrintf( client->cl, PRINT_HIGH,
+            "[MVD] Game server does not allow command forwarding.\n" );
+        return qfalse;
+    }
+    if( FIFO_Usage( &gtv->stream.send ) ) {
+	    SV_ClientPrintf( client->cl, PRINT_HIGH,
+            "[MVD] Send buffer not empty, please wait.\n" );
+        return qfalse;
+    }
+
+    text = Cmd_Args();
+    len = strlen( text );
+    if( len > 150 ) {
+        len = 150;
+    }
+
+    // send it
+    MSG_WriteData( text, len );
+    MSG_WriteByte( 0 );
+    write_message( gtv, GTC_STRINGCMD );
+    SZ_Clear( &msg_write );
+    return qtrue;
+}
+
 static void send_hello( gtv_t *gtv ) {
-    int flags = 0;
+    int flags = GTF_STRINGCMDS;
 
 #if USE_ZLIB
     flags |= GTF_DEFLATE;
@@ -633,8 +708,8 @@ static void send_hello( gtv_t *gtv ) {
     MSG_WriteShort( GTV_PROTOCOL_VERSION );
     MSG_WriteLong( flags );
     MSG_WriteLong( 0 ); // reserved
-    MSG_WriteString( mvd_username->string );
-    MSG_WriteString( mvd_password->string );
+    MSG_WriteString( gtv->username ? gtv->username : mvd_username->string );
+    MSG_WriteString( gtv->password ? gtv->password : mvd_password->string );
     MSG_WriteString( com_version->string );
     write_message( gtv, GTC_HELLO );
     SZ_Clear( &msg_write );
@@ -695,8 +770,8 @@ static void parse_hello( gtv_t *gtv ) {
 
     flags = MSG_ReadLong();
 
-#if USE_ZLIB
     if( flags & GTF_DEFLATE ) {
+#if USE_ZLIB
         if( !gtv->z_str.state ) {
             gtv->z_str.zalloc = gtv_zalloc;
             gtv->z_str.zfree = gtv_zfree;
@@ -710,8 +785,10 @@ static void parse_hello( gtv_t *gtv ) {
             gtv->z_buf.size = MAX_GTS_MSGLEN;
         }
         gtv->z_act = qtrue; // remaining data is deflated
-    }
+#else
+        gtv_destroyf( gtv, "Server sending deflated data" );
 #endif
+    }
     
     Com_Printf( "[%s] -=- Server hello done.\n", gtv->name );
 
@@ -719,6 +796,7 @@ static void parse_hello( gtv_t *gtv ) {
         MVD_Spawn_f(); // the game is just starting
     }
 
+    gtv->flags = flags;
     gtv->state = GTV_CONNECTED;
 }
 
@@ -741,6 +819,7 @@ static void parse_stream_start( gtv_t *gtv ) {
         mvd->delay.data = MVD_Malloc( size );
         mvd->delay.size = size;
         mvd->read_frame = gtv_read_frame;
+        mvd->forward_cmd = gtv_forward_cmd;
 
         gtv->mvd = mvd;
     } else {
@@ -751,7 +830,7 @@ static void parse_stream_start( gtv_t *gtv ) {
 
     Com_Printf( "[%s] -=- Stream start ack received.\n", gtv->name );
 
-    gtv->state = GTV_ACTIVE;
+    gtv->state = GTV_READING;
 }
 
 static void parse_stream_stop( gtv_t *gtv ) {
@@ -767,33 +846,29 @@ static void parse_stream_stop( gtv_t *gtv ) {
 static void parse_stream_data( gtv_t *gtv ) {
     mvd_t *mvd = gtv->mvd;
 
-    if( gtv->state < GTV_ACTIVE ) {
+    if( gtv->state < GTV_WAITING ) {
         gtv_destroyf( gtv, "Unexpected stream data packet" );
     }
 
     // ignore any pending data while suspending
-    if( gtv->state > GTV_ACTIVE ) {
+    if( gtv->state == GTV_SUSPENDING ) {
         msg_read.readcount = msg_read.cursize;
         return;
     }
 
     // empty data part acts as stream suspend marker
     if( msg_read.readcount == msg_read.cursize ) {
-#if 0
-        Com_Printf( "[%s] -=- Stream suspended by server.\n", gtv->name );
-        if( gtv->mvd && Com_IsDedicated() ) {
-            // notify spectators if server suspended us
-            MVD_BroadcastPrintf( gtv->mvd, PRINT_HIGH, 0,
-                "[MVD] Stream has been suspended.\n" );
+        if( gtv->state == GTV_READING ) {
+            Com_Printf( "[%s] -=- Stream suspended by server.\n", gtv->name );
+            gtv->state = GTV_WAITING;
         }
-
-        if( Com_IsDedicated() ) {
-            // notify spectators if server resumed us
-            MVD_BroadcastPrintf( mvd, PRINT_HIGH, 0,
-                "[MVD] Stream has been resumed.\n" );
-        }
-#endif
         return;
+    }
+
+    // non-empty data part act as stream resume marker
+    if( gtv->state == GTV_WAITING ) {
+        Com_Printf( "[%s] -=- Stream resumed by server.\n", gtv->name );
+        gtv->state = GTV_READING;
     }
 
     if( !mvd->state ) {
@@ -1057,7 +1132,7 @@ static void check_timeouts( gtv_t *gtv ) {
         if( gtv->state == GTV_CONNECTED ) {
             send_stream_start( gtv );
         }
-    } else if( gtv->state == GTV_ACTIVE ) {
+    } else if( gtv->state == GTV_WAITING || gtv->state == GTV_READING ) {
         send_stream_stop( gtv );
     }
 
@@ -1159,6 +1234,8 @@ static void gtv_destroy( gtv_t *gtv ) {
     List_Remove( &gtv->entry );
 
     // free all memory buffers
+    Z_Free( gtv->username );
+    Z_Free( gtv->password );
 #if USE_ZLIB
     inflateEnd( &gtv->z_str );
     Z_Free( gtv->z_buf.data );
@@ -1455,8 +1532,8 @@ void MVD_StreamedRecord_f( void ) {
 static const cmd_option_t o_mvdconnect[] = {
     { "h", "help", "display this message" },
     { "n:string", "name", "specify channel name as <string>" },
-    //{ "u:string", "user", "specify username as <string>" },
-    //{ "p:string", "pass", "specify password as <string>" },
+    { "u:string", "user", "specify username as <string>" },
+    { "p:string", "pass", "specify password as <string>" },
     { NULL }
 };
 
@@ -1472,7 +1549,7 @@ MVD_Connect_f
 static void MVD_Connect_f( void ) {
     netadr_t adr;
     netstream_t stream;
-    char *name = NULL;
+    char *name = NULL, *username = NULL, *password = NULL;
     gtv_t *gtv;
     int c;
 
@@ -1485,6 +1562,12 @@ static void MVD_Connect_f( void ) {
             return;
         case 'n':
             name = cmd_optarg;
+            break;
+        case 'u':
+            username = cmd_optarg;
+            break;
+        case 'p':
+            password = cmd_optarg;
             break;
         default:
             return;
@@ -1528,6 +1611,8 @@ static void MVD_Connect_f( void ) {
     gtv->run = gtv_run;
     gtv->drop = gtv_drop;
     gtv->destroy = gtv_destroy;
+    gtv->username = MVD_CopyString( username );
+    gtv->password = MVD_CopyString( password );
     List_Append( &mvd_gtv_list, &gtv->entry );
 
     // set channel name
@@ -1742,7 +1827,7 @@ static void MVD_Play_f( void ) {
     // create new connection
     gtv = MVD_Mallocz( sizeof( *gtv ) );
     gtv->id = mvd_chanid++;
-    gtv->state = GTV_CONNECTED;
+    gtv->state = GTV_READING;
     gtv->demohead = head;
     gtv->demoloop = loop;
     gtv->drop = demo_destroy;

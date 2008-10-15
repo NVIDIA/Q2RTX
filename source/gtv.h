@@ -18,13 +18,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#define GTV_PROTOCOL_VERSION 0xED03
+#define GTV_PROTOCOL_VERSION 0xED04
 
 #define MAX_GTS_MSGLEN  MAX_MSGLEN  // maximum GTV server message length
 #define MAX_GTC_MSGLEN  256         // maximum GTV client message length
 
 // flags used in hello packet
-#define GTF_DEFLATE 1
+#define GTF_DEFLATE     1
+#define GTF_STRINGCMDS  2
 
 typedef enum {
     GTS_HELLO,
@@ -43,6 +44,7 @@ typedef enum {
     GTC_HELLO,
     GTC_PING,
     GTC_STREAM_START,
-    GTC_STREAM_STOP
+    GTC_STREAM_STOP,
+    GTC_STRINGCMD
 } gtv_clientop_t;
 

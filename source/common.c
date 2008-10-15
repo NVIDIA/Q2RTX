@@ -241,7 +241,12 @@ static void logfile_write( const char *string ) {
         }
 
         c = *string++;
-        c &= 127;
+        if( c & 128 ) {
+            c &= 127;
+            if( c < 32 ) {
+                continue;
+            }
+        }
         if( c == '\n' ) {
             com_logNewline = qtrue;
         }

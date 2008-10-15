@@ -90,7 +90,7 @@ static LIST_DECL( gtv_host_list );
 static cvar_t   *sv_mvd_enable;
 static cvar_t   *sv_mvd_maxclients;
 static cvar_t   *sv_mvd_bufsize;
-static cvar_t   *sv_mvd_auth;
+static cvar_t   *sv_mvd_password;
 static cvar_t   *sv_mvd_noblend;
 static cvar_t   *sv_mvd_nogun;
 static cvar_t   *sv_mvd_nomsgs;
@@ -103,6 +103,7 @@ static cvar_t   *sv_mvd_autorecord;
 static cvar_t   *sv_mvd_capture_flags;
 static cvar_t   *sv_mvd_disconnect_time;
 static cvar_t   *sv_mvd_suspend_time;
+static cvar_t   *sv_mvd_allow_stufftext;
 
 static qboolean mvd_enable( void );
 static void     mvd_disable( void );
@@ -144,15 +145,18 @@ static void dummy_wait_f( void ) {
     dummy_buffer.waitCount = count;
 }
 
-static void dummy_forward_f( void ) {
-    Cmd_Shift();
-    Com_DPrintf( "dummy cmd: %s %s\n", Cmd_Argv( 0 ), Cmd_Args() );
-
+static void dummy_command( void ) {
     sv_client = mvd.dummy;
     sv_player = sv_client->edict;
     ge->ClientCommand( sv_player );
     sv_client = NULL;
     sv_player = NULL;
+}
+
+static void dummy_forward_f( void ) {
+    Cmd_Shift();
+    Com_DPrintf( "dummy cmd: %s %s\n", Cmd_Argv( 0 ), Cmd_Args() );
+    dummy_command();
 }
 
 static void dummy_record_f( void ) {
@@ -214,7 +218,9 @@ static const ucmd_t dummy_cmds[] = {
     { "set", Cvar_Set_f },
     { "alias", Cmd_Alias_f },
     { "play", NULL },
+    { "stopsound", NULL },
     { "exec", NULL },
+    { "screenshot", NULL },
     { "wait", dummy_wait_f },
     { "record", dummy_record_f },
     { "stop", dummy_stop_f },
@@ -236,19 +242,17 @@ static void dummy_exec_string( const char *line ) {
     if( !cmd[0] ) {
         return;
     }
-    for( u = dummy_cmds; u->name; u++ ) {
-        if( !strcmp( cmd, u->name ) ) {
-            if( u->func ) {
-                u->func();
-            }
-            return;
+    if( ( u = Com_Find( dummy_cmds, cmd ) ) != NULL ) {
+        if( u->func ) {
+            u->func();
         }
+        return;
     }
 
     alias = Cmd_AliasCommand( cmd );
     if( alias ) {
         if( ++dummy_buffer.aliasCount == ALIAS_LOOP_COUNT ) {
-            Com_WPrintf( "dummy_exec_string: runaway alias loop\n" );
+            Com_WPrintf( "%s: runaway alias loop\n", __func__ );
             return;
         }
         Cbuf_InsertTextEx( &dummy_buffer, alias );
@@ -261,26 +265,27 @@ static void dummy_exec_string( const char *line ) {
         return;
     }
 
-    Com_DPrintf( "dummy stufftext: %s\n", line );
-    sv_client = mvd.dummy;
-    sv_player = mvd.dummy->edict;
-    ge->ClientCommand( sv_player );
-    sv_client = NULL;
-    sv_player = NULL;
+    Com_DPrintf( "dummy forward: %s\n", line );
+    dummy_command();
 }
 
 static void dummy_add_message( client_t *client, byte *data,
                               size_t length, qboolean reliable )
 {
-    if( !length || !reliable ) {
-        return;
+    char *text;
+
+    if( !length || !reliable || data[0] != svc_stufftext ) {
+        return; // not interesting
     }
 
-    if( data[0] == svc_stufftext ) {
-        data[length] = 0;
-        Cbuf_AddTextEx( &dummy_buffer, ( char * )( data + 1 ) );
-        return;
+    if( sv_mvd_allow_stufftext->integer <= 0 ) {
+        return; // not allowed
     }
+
+    data[length] = 0;
+    text = ( char * )( data + 1 );
+    Com_DPrintf( "dummy stufftext: %s\n", text );
+    Cbuf_AddTextEx( &dummy_buffer, text );
 }
 
 static void dummy_spawn( void ) {
@@ -1285,7 +1290,21 @@ static void write_message( gtv_client_t *client, gtv_serverop_t op ) {
     write_stream( client, msg_write.data, msg_write.cursize );
 }
 
+static qboolean auth_client( gtv_client_t *client, const char *password ) {
+    if( SV_MatchAddress( &gtv_host_list, &client->stream.address ) ) {
+        return qtrue; // dedicated GTV hosts don't need password
+    }
+    if( !sv_mvd_password->string[0] ) {
+        return qfalse; // no password set on the server
+    }
+    if( strcmp( sv_mvd_password->string, password ) ) {
+        return qfalse; // password doesn't match
+    }
+    return qtrue;
+}
+
 static void parse_hello( gtv_client_t *client ) {
+    char password[MAX_QPATH];
     int protocol, flags;
     size_t size;
     byte *data;
@@ -1311,13 +1330,18 @@ static void parse_hello( gtv_client_t *client ) {
     flags = MSG_ReadLong();
     MSG_ReadLong();
     MSG_ReadString( client->name, sizeof( client->name ) );
-    MSG_ReadString( NULL, 0 );
+    MSG_ReadString( password, sizeof( password ) );
     MSG_ReadString( client->version, sizeof( client->version ) );
 
-    if( !SV_MatchAddress( &gtv_host_list, &client->stream.address ) ) {
+    // authorize access
+    if( !auth_client( client, password ) ) {
         write_message( client, GTS_NOACCESS );
         drop_client( client, "not authorized" );
         return;
+    }
+
+    if( sv_mvd_allow_stufftext->integer >= 0 ) {
+        flags &= ~GTF_STRINGCMDS;
     }
 
 #if !USE_ZLIB
@@ -1427,6 +1451,29 @@ static void parse_stream_stop( gtv_client_t *client ) {
 #endif
 }
 
+static void parse_stringcmd( gtv_client_t *client ) {
+    char string[MAX_GTC_MSGLEN];
+
+    if( client->state < cs_primed ) {
+        drop_client( client, "unexpected stringcmd message" );
+        return;
+    }
+
+    if( !mvd.dummy || !( client->flags & GTF_STRINGCMDS ) ) {
+        Com_DPrintf( "ignored stringcmd from %s[%s]\n", client->name,
+            NET_AdrToString( &client->stream.address ) );
+        return;
+    }
+
+    MSG_ReadString( string, sizeof( string ) );
+
+    Cmd_TokenizeString( string, qfalse );
+
+    Com_DPrintf( "dummy stringcmd from %s[%s]: %s\n", client->name,
+        NET_AdrToString( &client->stream.address ), string );
+    dummy_command();
+}
+
 static qboolean parse_message( gtv_client_t *client ) {
     uint32_t magic;
     uint16_t msglen;
@@ -1489,6 +1536,9 @@ static qboolean parse_message( gtv_client_t *client ) {
         break;
     case GTC_STREAM_STOP:
         parse_stream_stop( client );
+        break;
+    case GTC_STRINGCMD:
+        parse_stringcmd( client );
         break;
     default:
         drop_client( client, "unknown command byte" );
@@ -1875,6 +1925,10 @@ void SV_MvdInit( void ) {
             Cvar_Set( "sv_mvd_enable", "1" );
         }
     }
+
+    dummy_buffer.text = dummy_buffer_text;
+    dummy_buffer.maxsize = sizeof( dummy_buffer_text );
+    dummy_buffer.exec = dummy_exec_string;
 }
 
 /*
@@ -1896,6 +1950,8 @@ void SV_MvdShutdown( killtype_t type ) {
     NET_Listen( qfalse );
 
     memset( &mvd, 0, sizeof( mvd ) );
+
+    memset( &dummy_buffer, 0, sizeof( dummy_buffer ) );
 }
 
 
@@ -2121,7 +2177,7 @@ void SV_MvdRegister( void ) {
     sv_mvd_enable = Cvar_Get( "sv_mvd_enable", "0", CVAR_LATCH );
     sv_mvd_maxclients = Cvar_Get( "sv_mvd_maxclients", "8", CVAR_LATCH );
     sv_mvd_bufsize = Cvar_Get( "sv_mvd_bufsize", "2", CVAR_LATCH );
-    sv_mvd_auth = Cvar_Get( "sv_mvd_auth", "", CVAR_PRIVATE );
+    sv_mvd_password = Cvar_Get( "sv_mvd_password", "", CVAR_PRIVATE );
     sv_mvd_maxsize = Cvar_Get( "sv_mvd_maxsize", "0", 0 );
     sv_mvd_maxtime = Cvar_Get( "sv_mvd_maxtime", "0", 0 );
     sv_mvd_maxmaps = Cvar_Get( "sv_mvd_maxmaps", "1", 0 );
@@ -2136,10 +2192,7 @@ void SV_MvdRegister( void ) {
     sv_mvd_capture_flags = Cvar_Get( "sv_mvd_capture_flags", "5", 0 );
     sv_mvd_disconnect_time = Cvar_Get( "sv_mvd_disconnect_time", "15", 0 );
     sv_mvd_suspend_time = Cvar_Get( "sv_mvd_suspend_time", "5", 0 );
-
-    dummy_buffer.text = dummy_buffer_text;
-    dummy_buffer.maxsize = sizeof( dummy_buffer_text );
-    dummy_buffer.exec = dummy_exec_string;
+    sv_mvd_allow_stufftext = Cvar_Get( "sv_mvd_allow_stufftext", "0", CVAR_LATCH );
 
     Cmd_Register( c_svmvd );
 }

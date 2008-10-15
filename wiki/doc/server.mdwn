@@ -19,11 +19,11 @@ Specifies UDP port number server should listen on.
 - `set net_tcp_ip $net_ip` (string)  
 Specifies network interface address server TCP socket should be bound to.
 Empty string means listening on all interfaces.
-This cvar mirrors `net_ip` unless manually overridden.
+Value of this cvar mirrors `net_ip` unless modified by user.
 
 - `set net_tcp_port $net_port` (integer)  
 Specifies TCP port number server should listen on.
-This cvar mirrors `net_port` unless manually overridden.
+Value of this cvar mirrors `net_port` unless modified by user.
 
 - `set net_tcp_clientip ""` (string)  
 Specifies network interface address server should use for outgoing TCP
@@ -90,7 +90,7 @@ Broadcast player name changes to everyone. You should probably enable this
 unless game mod already shows name changes.
 
 - `set sv_uptime 0` (boolean)  
-Display uptime in server info.
+Display uptime string in server info.
 
 
 MVD server
@@ -114,7 +114,7 @@ Reduce bandwidth usage by filtering on-screen blend effects out of MVD stream.
 - `set sv_mvd_nomsgs 1` (boolean)  
 When enabled, MVD/GTV spectators in chasecam mode will not receive any text
 messages routed to their chase targets (which are normally on a team), but will
-receive messages routed to the dummy MVD observer only.
+receive messages routed to the dummy MVD observer.
 
 - `set sv_mvd_maxtime 0` (float)  
 Maximum duration in minutes of the locally recorded MVD.
@@ -129,31 +129,48 @@ Specifies number of map changes local MVD recording is stopped after.
 Setting this to zero disables the limit.
 
 - `set sv_mvd_begincmd "wait 50; putaway; wait 10; help;"` (string)  
-Issue this command on behaf of dummy MVD observer as soon as it
-enters the game. Do any game mod dependant preparations here to make sure
-MVD observer enters an appropriate spectator team, opens the scoreboard, etc.
-Each `wait` cycle lasts 0.1 second here.
+This command is issued on behaf of dummy MVD observer as soon as it
+enters the game. Do whatever preparations are needed here to make sure
+MVD observer enters an appropriate observing mode, opens the scoreboard, etc.
+MVD observer has it's own command buffer and each `wait` cycle
+lasts 100 ms there.
 
 - `set sv_mvd_scorecmd "putaway; wait 10; help;"` (string)  
-Issue this command on behaf of dummy MVD observer each time no layout
+This command is issued on behaf of dummy MVD observer each time no layout
 updates are detected for more than 9 seconds. Useful for reopening the
 scoreboard if the game mod closes it for some reason.
-Each `wait` cycle lasts 0.1 second here.
+MVD observer has it's own command buffer and each `wait` cycle
+lasts 100 ms there.
 
+- `set sv_mvd_suspend_time 5` (float)  
+GTV connections are suspended after this period of time, in minutes,
+counted from the moment last active player disconnects or becomes inactive.
+Setting this to zero disables server side suspending entirely.
 
 MVD client
 ----------
 
-- `set mvd_timeout 120` (float)    
+- `set mvd_username "unnamed"` (string)  
+Default username to use for outgoing GTV connections.
+
+- `set mvd_password ""` (string)  
+Default password to use for outgoing GTV connections.
+
+- `set mvd_timeout 90` (float)    
 Specifies MVD connection timeout value, in seconds.
 
+- `set mvd_suspend_time 5` (float)    
+GTV connections are suspended after this period of time, in minutes,
+counted from the moment last MVD spectator disconnects.
+Setting this to zero disables client side suspending entirely.
+
 - `set mvd_wait_delay 20` (float)  
-Time, in seconds, for MVD client to buffer data right after initial
-connection. This effectively specifies MVD stream delay seen by observers.
+Time, in seconds, for MVD channel to buffer data initially.
+This effectively specifies MVD stream delay seen by observers.
 
 - `set mvd_wait_percent 50` (float)  
-Maximum inuse percentage of the input buffer before MVD stops buffering
-phase to prevent overrun, regardless of `mvd_wait_delay` value.
+Maximum inuse percentage of the delay buffer when MVD channel stops
+buffering data to prevent overrun, ignoring `mvd_wait_delay` value.
 
 - `set mvd_default_map "q2dm1"` (string)  
 Specifies default map used for the Waiting Room channel.
@@ -239,24 +256,29 @@ Enumerates all filtered commands along with appropriate actions and comments.
 - `mvdplay [-hl:n:] <filename> [...]`  
 Play the local MVD identified by _filename_.
 
-- `mvdconnect [-hi:n:] [http://][user:pass@]<host>[:port][/resource]`  
-Connect to the MVD resource identified by _URI_. If _resource_ part is given,
-default port is 80. Otherwise, default port is 27910 and _streamID_ identifies
-the live MVD stream on server.
+- `mvdconnect [-hi:n:] <address[:port]>`  
+Connect to the specified GTV server. Separate MVD channel will be
+created for this connection as soon as there is any MVD stream data available.
 
-- `mvdisconnect [chanid]`  
-Disconnect the specified channel from the server. There is no need to
-specify `chanid` if there is only one active channel.
+- `mvdisconnect [connection_id]`  
+Disconnect the specified channel from the server.
+There is no need to specify `chanid` if there is only one active channel.
 
-- `mvdkill [chanid]`  
-Kill the specified channel. There is no need to specify `chanid` if
-there is only one active channel.
+- `mvdkill [channel_id]`  
+Kill the specified MVD channel (and any parent GTV connection).
+There is no need to specify `chanid` if there is only one active channel.
 
 - `mvdspawn`  
-(Re)spawn MVD client instance (that is, Waiting Room channel).
+Put the server into MVD/GTV mode, creating the Waiting Room channel.
+This is equivalent to a full server restart. Done automatically
+when the very first GTV connection is established or local MVD file
+is replayed.
 
 - `mvdchannels`  
-Display status of all MVD channels.
+List all MVD channels.
+
+- `mvdservers`  
+List all GTV connections.
 
 - `mvdstuff <text>`  
 Stuff the specified text into command buffer of the dummy MVD observer.

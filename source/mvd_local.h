@@ -106,6 +106,7 @@ typedef struct mvd_s {
     char            name[MAX_MVD_NAME];
     struct gtv_s    *gtv;
     qboolean        (*read_frame)( struct mvd_s * );
+    qboolean        (*forward_cmd)( mvd_client_t * );
 
     // demo related variables
     fileHandle_t    demorecording;

@@ -708,6 +708,24 @@ static void MVD_Admin_f( mvd_client_t *client ) {
 	SV_ClientPrintf( client->cl, PRINT_HIGH, "[MVD] Granted admin status.\n" );
 }
 
+static void MVD_Forward_f( mvd_client_t *client ) {
+    mvd_t *mvd = client->mvd;
+
+    if( !client->admin ) {
+	    SV_ClientPrintf( client->cl, PRINT_HIGH,
+            "[MVD] You don't have admin status.\n" );
+        return;
+    }
+
+    if( !mvd->forward_cmd ) {
+	    SV_ClientPrintf( client->cl, PRINT_HIGH,
+            "[MVD] This channel does not support command forwarding.\n" );
+        return;
+    }
+
+    mvd->forward_cmd( client );
+}
+
 static void MVD_Say_f( mvd_client_t *client, int argnum ) {
     mvd_t *mvd = client->mvd;
     unsigned delta, delay = mvd_flood_waitdelay->value * 1000;
@@ -1045,6 +1063,10 @@ static void MVD_GameClientCommand( edict_t *ent ) {
         MVD_Admin_f( client );
 		return;
 	}
+	if( !strcmp( cmd, "fwd" ) ) {
+        MVD_Forward_f( client );
+        return;
+    }
 	if( !strcmp( cmd, "say" ) || !strcmp( cmd, "say_team" ) ) {
         MVD_Say_f( client, 1 );
 		return;
@@ -1296,10 +1318,6 @@ static void MVD_GameClientBegin( edict_t *ent ) {
 	if( !client->begin_time ) {
 		MVD_BroadcastPrintf( mvd, PRINT_MEDIUM, UF_MUTE_MISC,
             "[MVD] %s entered the channel\n", client->cl->name );
-        if( Com_IsDedicated() && mvd->state == MVD_WAITING ) {
-            SV_ClientPrintf( client->cl, PRINT_HIGH,
-                "[MVD] Buffering data, please wait...\n" );
-        }
         target = MVD_MostFollowed( mvd );
 	} else {
         target = client->target;
@@ -1437,30 +1455,6 @@ static void MVD_GameClientThink( edict_t *ent, usercmd_t *cmd ) {
     }
 
 	*old = *cmd;
-}
-
-void MVD_CheckActive( mvd_t *mvd ) {
-    mvd_t *cur;
-
-    // demo channels are always marked as active
-    if( mvd->numplayers /*|| mvd->demoplayback*/ ) {
-        if( LIST_EMPTY( &mvd->active ) ) {
-            // sort this one into the list of active channels
-            LIST_FOR_EACH( mvd_t, cur, &mvd_active_list, active ) {
-                if( cur->id > mvd->id ) {
-                    break;
-                }
-            }
-            List_Append( &cur->active, &mvd->active );
-            mvd_dirty = qtrue;
-        }
-    } else if( !mvd->intermission ) {
-        if( !LIST_EMPTY( &mvd->active ) ) {
-            // delete this one from the list of active channels
-            List_Delete( &mvd->active );
-            mvd_dirty = qtrue;
-        }
-    }
 }
 
 static void MVD_IntermissionStart( mvd_t *mvd ) {

@@ -177,7 +177,7 @@ Sys_ConsoleOutput
 void Sys_ConsoleOutput( const char *string ) {
     char    buffer[MAXPRINTMSG*2];
 	char    *m, *p;
-    int     color = 0;
+    int     c, color = 0;
 
     p = buffer;
     m = buffer + sizeof( buffer );
@@ -191,7 +191,14 @@ void Sys_ConsoleOutput( const char *string ) {
             if( p + 1 > m ) {
                 break;
             }
-            *p++ = *string++ & 127;
+            c = *string++;
+            if( c & 128 ) {
+                c &= 127;
+                if( c < 32 ) {
+                    continue;
+                }
+            }
+            *p++ = c;
         }
 
         Sys_ConsoleWrite( buffer, p - buffer );
@@ -229,7 +236,14 @@ void Sys_ConsoleOutput( const char *string ) {
         if( p + 1 > m ) {
             break;
         }
-        *p++ = *string++ & 127;
+        c = *string++;
+        if( c & 128 ) {
+            c &= 127;
+            if( c < 32 ) {
+                continue;
+            }
+        }
+        *p++ = c;
     }
 
     if( color ) {
