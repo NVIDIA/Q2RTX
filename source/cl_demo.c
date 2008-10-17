@@ -635,7 +635,7 @@ static void CL_PlayDemo_f( void ) {
 
     if( type == 1 ) {
         Com_DPrintf( "%s is a MVD file\n", name );
-        Cbuf_InsertText( va( "mvdplay /%s\n", name ) );
+        Cbuf_InsertText( va( "mvdplay --replace @@ /%s\n", name ) );
         FS_FCloseFile( demofile );
         return;
     }

@@ -303,15 +303,8 @@ static void SV_DumpClients( void ) {
 "num score ping name             lastmsg address                rate proto\n"
 "--- ----- ---- ---------------- ------- --------------------- ----- -----\n" );
     FOR_EACH_CLIENT( client ) {
-		Com_Printf( "%3i ", client->number );
-#if USE_MVD_CLIENT
-		if( sv.state == ss_broadcast ) {
-			Com_Printf( "      " );
-		} else
-#endif
-        {
-			Com_Printf( "%5i ", client->edict->client->ps.stats[STAT_FRAGS] );
-		}
+		Com_Printf( "%3i %5i ", client->number,
+			client->edict->client->ps.stats[STAT_FRAGS] );
 
 		switch( client->state ) {
 		case cs_zombie:
@@ -339,7 +332,6 @@ static void SV_DumpClients( void ) {
     	Com_Printf( "%2i ", client->protocol );
 		Com_Printf( "\n" );
 	}
-
 }
 
 static void SV_DumpVersions( void ) {

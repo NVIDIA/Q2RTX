@@ -638,9 +638,7 @@ void CL_Disconnect( comErrorType_t type, const char *text ) {
         MSG_WriteByte( clc_stringcmd );
         MSG_WriteData( "disconnect", 11 );
 
-        cls.netchan->Transmit( cls.netchan, msg_write.cursize, msg_write.data );
-        cls.netchan->Transmit( cls.netchan, msg_write.cursize, msg_write.data );
-        cls.netchan->Transmit( cls.netchan, msg_write.cursize, msg_write.data );
+        cls.netchan->Transmit( cls.netchan, msg_write.cursize, msg_write.data, 3 );
 
         SZ_Clear( &msg_write );
             
@@ -1351,7 +1349,7 @@ static void CL_ConnectionlessPacket( void ) {
         if( anticheat ) {
 			MSG_WriteByte( clc_nop );
 			MSG_FlushTo( &cls.netchan->message );
-			cls.netchan->Transmit( cls.netchan, 0, NULL );
+			cls.netchan->Transmit( cls.netchan, 0, NULL, 3 );
 			S_StopAllSounds();
 	        cls.connect_count = -1;
 			Com_Printf( "Loading anticheat, this may take a few moments...\n" );

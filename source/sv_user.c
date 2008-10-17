@@ -734,6 +734,30 @@ static void SV_NoGameData_f( void ) {
     sv_client->flags ^= CF_NODATA;
 }
 
+#if USE_PACKETDUP
+static void SV_PacketdupHack_f( void ) {
+    int numdups = sv_client->numpackets - 1;
+
+    if( Cmd_Argc() > 1 ) {
+        numdups = atoi( Cmd_Argv( 1 ) );
+        if( numdups < 0 || numdups > sv_packetdup_hack->integer ) {
+            SV_ClientPrintf( sv_client, PRINT_HIGH,
+                "Packetdup of %d is not allowed on this server.\n", numdups );
+            return;
+        }
+
+        sv_client->numpackets = numdups + 1;
+    }
+
+    SV_ClientPrintf( sv_client, PRINT_HIGH,
+        "Server is sending %d duplicate packet%s to you.\n",
+        numdups, numdups == 1 ? "" : "s" );
+    if( numdups > 1 ) {
+        SV_ClientPrintf( sv_client, PRINT_MEDIUM, "Poor, poor server...\n" );
+    }
+}
+#endif
+
 static void SV_CvarResult_f( void ) {
     char *c, *v;
 
@@ -803,6 +827,9 @@ static const ucmd_t ucmds[] = {
 
     { "\177c", SV_CvarResult_f },
     { "nogamedata", SV_NoGameData_f },
+#if USE_PACKETDUP
+    { "packetdup", SV_PacketdupHack_f },
+#endif
 #if USE_ANTICHEAT & 2
     { "aclist", SV_AC_List_f },
     { "acinfo", SV_AC_Info_f },

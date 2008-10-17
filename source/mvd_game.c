@@ -32,16 +32,18 @@ static cvar_t	*mvd_flood_persecond;
 static cvar_t	*mvd_flood_waitdelay;
 static cvar_t	*mvd_flood_mute;
 static cvar_t	*mvd_filter_version;
+static cvar_t	*mvd_stats_score;
 static cvar_t	*mvd_stats_hack;
 static cvar_t	*mvd_freeze_hack;
 static cvar_t	*mvd_chase_prefix;
 
-mvd_client_t     *mvd_clients;
+mvd_client_t    *mvd_clients;
 
 mvd_player_t    mvd_dummy;
 
-extern jmp_buf     mvd_jmpbuf;
+extern jmp_buf  mvd_jmpbuf;
 
+static void MVD_UpdateClient( mvd_client_t *client );
 
 /*
 ==============================================================================
@@ -541,7 +543,7 @@ static mvd_player_t *MVD_MostFollowed( mvd_t *mvd ) {
     return target;
 }
 
-void MVD_UpdateClient( mvd_client_t *client ) {
+static void MVD_UpdateClient( mvd_client_t *client ) {
     mvd_t *mvd = client->mvd;
     mvd_player_t *target = client->target;
     int i;
@@ -552,32 +554,41 @@ void MVD_UpdateClient( mvd_client_t *client ) {
         for( i = 0; i < MAX_STATS; i++ ) {
             client->ps.stats[i] = target->ps.stats[i];
         }
-        return;
-    }
+    } else {
+        if( !target->inuse ) {
+            // player is no longer active
+            MVD_FollowStop( client );
+            return;
+        }
 
-    if( !target->inuse ) {
-        // player is no longer active
-        MVD_FollowStop( client );
-        return;
-    }
+        // copy entire player state
+        client->ps = target->ps;
+        if( client->uf & UF_LOCALFOV ) {
+            client->ps.fov = client->fov;
+        }
+        client->ps.pmove.pm_flags |= PMF_NO_PREDICTION;
+        client->ps.pmove.pm_type = PM_FREEZE;
+        client->clientNum = target - mvd->players;
 
-    // copy entire player state
-	client->ps = target->ps;
-    if( client->uf & UF_LOCALFOV ) {
-    	client->ps.fov = client->fov;
-    }
-	client->ps.pmove.pm_flags |= PMF_NO_PREDICTION;
-	client->ps.pmove.pm_type = PM_FREEZE;
-    client->clientNum = target - mvd->players;
-
-    if( mvd_stats_hack->integer && target != mvd->dummy ) {
-        // copy stats of the dummy MVD observer
-        target = mvd->dummy;
-        for( i = 0; i < MAX_STATS; i++ ) {
-            if( mvd_stats_hack->integer & ( 1 << i ) ) {
-                client->ps.stats[i] = target->ps.stats[i];
+        if( mvd_stats_hack->integer && target != mvd->dummy ) {
+            // copy stats of the dummy MVD observer
+            target = mvd->dummy;
+            for( i = 0; i < MAX_STATS; i++ ) {
+                if( mvd_stats_hack->integer & ( 1 << i ) ) {
+                    client->ps.stats[i] = target->ps.stats[i];
+                }
             }
         }
+    }
+
+    // override score
+    switch( mvd_stats_score->integer ) {
+    case 0:
+        client->ps.stats[STAT_FRAGS] = 0;
+        break;
+    case 1:
+        client->ps.stats[STAT_FRAGS] = mvd->id;
+        break;
     }
 }
 
@@ -1192,6 +1203,7 @@ static void MVD_GameInit( void ) {
 	mvd_flood_mute = Cvar_Get( "flood_mute", "0", 0 );
 	mvd_filter_version = Cvar_Get( "mvd_filter_version", "0", 0 );
     mvd_default_map = Cvar_Get( "mvd_default_map", "q2dm1", CVAR_LATCH );
+    mvd_stats_score = Cvar_Get( "mvd_stats_score", "0", 0 );
     mvd_stats_hack = Cvar_Get( "mvd_stats_hack", "0", 0 );
     mvd_freeze_hack = Cvar_Get( "mvd_freeze_hack", "1", 0 );
     mvd_chase_prefix = Cvar_Get( "mvd_chase_prefix", "xv 0 yb -64", 0 );
@@ -1253,6 +1265,7 @@ static void MVD_GameInit( void ) {
 //	SV_InfoSet( "gamedir", "gtv" );
 	SV_InfoSet( "gamename", "gtv" );
 	SV_InfoSet( "gamedate", __DATE__ );
+    MVD_InfoSet( "channels", "0" );
 }
 
 static void MVD_GameShutdown( void ) {
@@ -1558,8 +1571,11 @@ update:
     }
 
     MVD_UpdateLayouts( &mvd_waitingRoom );
-    
-    mvd_dirty = qfalse;
+   
+    if( mvd_dirty ) {
+        MVD_InfoSet( "channels", va( "%d", List_Count( &mvd_active_list ) ) );
+        mvd_dirty = qfalse;
+    }
 }
 
 static void MVD_GameServerCommand( void ) {

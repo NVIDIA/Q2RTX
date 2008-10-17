@@ -179,6 +179,13 @@ Specifies default map used for the Waiting Room channel.
 Specifies POV info string position on the screen. This should be a valid
 fragment of the Quake 2 layout script.
 
+- `set mvd_stats_score 0` (integer)  
+Specifies what `score` stats field should contain for MVD observers.
+This field is externally visible to server browsers, etc.
+   - 0 - always zero
+   - 1 - MVD channel ID spectator is on
+   - 2 - score of the chase target
+
 Hacks
 ----------
 

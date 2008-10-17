@@ -196,7 +196,18 @@ mvd_t *MVD_SetChannel( int arg ) {
         return NULL;
     }
 
-    if( COM_IsUint( s ) ) {
+    // special value of @@ returns the channel local client is on
+    if( !Com_IsDedicated() && !strcmp( s, "@@" ) ) {
+        LIST_FOR_EACH( mvd_t, mvd, &mvd_channel_list, entry ) {
+            mvd_client_t *client;
+
+            LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
+                if( NET_IsLocalAddress( &client->cl->netchan->remote_address ) ) {
+                    return mvd;
+                }
+            }
+        }
+    } else if( COM_IsUint( s ) ) {
         id = atoi( s );
         LIST_FOR_EACH( mvd_t, mvd, &mvd_channel_list, entry ) {
             if( mvd->id == id ) {
@@ -504,8 +515,18 @@ static void demo_play_next( gtv_t *gtv, string_entry_t *entry ) {
     Q_strlcpy( gtv->address, COM_SkipPath( entry->string ), sizeof( gtv->address ) );
 }
 
-static void demo_destroy( gtv_t *gtv ) {
+static void demo_free_playlist( gtv_t *gtv ) {
     string_entry_t *entry, *next;
+
+    for( entry = gtv->demohead; entry; entry = next ) {
+        next = entry->next;
+        Z_Free( entry );
+    }
+
+    gtv->demohead = gtv->demoentry = NULL;
+}
+
+static void demo_destroy( gtv_t *gtv ) {
     mvd_t *mvd = gtv->mvd;
 
     if( mvd ) {
@@ -520,10 +541,7 @@ static void demo_destroy( gtv_t *gtv ) {
         gtv->demoplayback = 0;
     }
 
-    for( entry = gtv->demohead; entry; entry = next ) {
-        next = entry->next;
-        Z_Free( entry );
-    }
+    demo_free_playlist( gtv );
 
     Z_Free( gtv );
 }
@@ -1743,6 +1761,9 @@ static const cmd_option_t o_mvdplay[] = {
     { "h", "help", "display this message" },
     { "l:number", "loop", "replay <number> of times (0 means forever)" },
     { "n:string", "name", "specify channel name as <string>" },
+    //{ "i:chan_id", "insert", "insert new entries before <chan_id> playlist" },
+    //{ "a:chan_id", "append", "append new entries after <chan_id> playlist" },
+    { "r:chan_id", "replace", "replace <chan_id> playlist with new entries" },
     { NULL }
 };
 
@@ -1757,9 +1778,9 @@ static void MVD_Play_c( genctx_t *ctx, int argnum ) {
 static void MVD_Play_f( void ) {
     char *name = NULL, *s;
     char buffer[MAX_OSPATH];
-    int loop = 1;
+    int loop = -1, chan_id = -1;
     size_t len;
-    gtv_t *gtv;
+    gtv_t *gtv = NULL;
     int c, argc;
     string_entry_t *entry, *head;
     int i;
@@ -1767,7 +1788,7 @@ static void MVD_Play_f( void ) {
     while( ( c = Cmd_ParseOptions( o_mvdplay ) ) != -1 ) {
         switch( c ) {
         case 'h':
-            Cmd_PrintUsage( o_mvdplay, "[/]<filename>" );
+            Cmd_PrintUsage( o_mvdplay, "[/]<filename> [...]" );
             Com_Printf( "Create new MVD channel and begin demo playback.\n" );
             Cmd_PrintHelp( o_mvdplay );
             Com_Printf( "Final path is formatted as demos/<filename>.mvd2.\n"
@@ -1784,6 +1805,9 @@ static void MVD_Play_f( void ) {
         case 'n':
             name = cmd_optarg;
             break;
+        case 'r':
+            chan_id = cmd_optind - 1;
+            break;
         default:
             return;
         }
@@ -1794,6 +1818,13 @@ static void MVD_Play_f( void ) {
         Com_Printf( "Missing filename argument.\n" );
         Cmd_PrintHint();
         return;
+    }
+
+    if( chan_id != -1 ) {
+        mvd_t *mvd = MVD_SetChannel( chan_id );
+        if( mvd ) {
+            gtv = mvd->gtv;
+        }
     }
 
     // build the playlist
@@ -1824,24 +1855,35 @@ static void MVD_Play_f( void ) {
         return;
     }
 
-    // create new connection
-    gtv = MVD_Mallocz( sizeof( *gtv ) );
-    gtv->id = mvd_chanid++;
-    gtv->state = GTV_READING;
-    gtv->demohead = head;
-    gtv->demoloop = loop;
-    gtv->drop = demo_destroy;
-    gtv->destroy = demo_destroy;
-    //List_Append( &mvd_gtv_list, &gtv->entry );
+    if( gtv ) {
+        // free existing playlist
+        demo_free_playlist( gtv );
+    } else {
+        // create new connection
+        gtv = MVD_Mallocz( sizeof( *gtv ) );
+        gtv->id = mvd_chanid++;
+        gtv->state = GTV_READING;
+        gtv->drop = demo_destroy;
+        gtv->destroy = demo_destroy;
+        gtv->demoloop = 1;
+        Q_snprintf( gtv->name, sizeof( gtv->name ), "dem%d", gtv->id );
+    }
 
     // set channel name
     if( name ) {
         Q_strlcpy( gtv->name, name, sizeof( gtv->name ) );
-    } else {
-        Q_snprintf( gtv->name, sizeof( gtv->name ), "dem%d", gtv->id );
     }
 
-    demo_play_next( gtv, gtv->demohead );
+    // set loop parameter
+    if( loop != -1 ) {
+        gtv->demoloop = loop;
+    }
+
+    // set new playlist
+    gtv->demohead = head;
+    gtv->demoloop = loop;
+
+    demo_play_next( gtv, head );
 }
 
 

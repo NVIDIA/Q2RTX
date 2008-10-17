@@ -79,7 +79,9 @@ cvar_t	*sv_bodyque_hack;
 #ifndef _WIN32
 cvar_t	*sv_oldgame_hack;
 #endif
-cvar_t	*sv_disconnect_hack;
+#if USE_PACKETDUP
+cvar_t  *sv_packetdup_hack;
+#endif
 
 cvar_t	*sv_iplimit;
 cvar_t	*sv_status_limit;
@@ -273,20 +275,20 @@ addrmatch_t *SV_MatchAddress( list_t *list, netadr_t *address ) {
 ===============
 SV_StatusString
 
-Builds the string that is sent as heartbeats and status replies
+Builds the string that is sent as heartbeats and status replies.
+It is assumed that size of status buffer is at least SV_OUTPUTBUF_LENGTH!
 ===============
 */
 static size_t SV_StatusString( char *status ) {
 	char	entry[MAX_STRING_CHARS];
 	client_t	*cl;
-	int		j;
-	size_t	total, length;
+	size_t	total, len;
     char    *tmp = sv_maxclients->string;
 
     // XXX: ugly hack to hide reserved slots
     if( sv_reserved_slots->integer ) {
-        sprintf( entry, "%d", sv_maxclients->integer - 
-            sv_reserved_slots->integer );
+        Q_snprintf( entry, sizeof( entry ), "%d",
+            sv_maxclients->integer - sv_reserved_slots->integer );
         sv_maxclients->string = entry;
     }
 
@@ -297,11 +299,11 @@ static size_t SV_StatusString( char *status ) {
 
     // add uptime
     if( sv_uptime->integer ) {
-        length = Com_Uptime_m( entry, MAX_INFO_VALUE );
-        if( total + 8 + length < MAX_INFO_STRING ) {
+        len = Com_Uptime_m( entry, MAX_INFO_VALUE );
+        if( len < MAX_INFO_VALUE && total + 8 + len < MAX_INFO_STRING ) {
             memcpy( status + total, "\\uptime\\", 8 );
-            memcpy( status + total + 8, entry, length );
-            total += 8 + length;
+            memcpy( status + total + 8, entry, len );
+            total += 8 + len;
         }
     }
 
@@ -313,20 +315,18 @@ static size_t SV_StatusString( char *status ) {
             if( cl->state == cs_zombie ) {
                 continue;
             }
-#if USE_MVD_CLIENT
-            if( sv.state == ss_broadcast ) {
-                j = 0;
-            } else
-#endif
-            {
-                j = cl->edict->client->ps.stats[STAT_FRAGS];
+            len = Q_snprintf( entry, sizeof( entry ),
+                "%i %i \"%s\"\n",
+                cl->edict->client->ps.stats[STAT_FRAGS],
+                cl->ping, cl->name );
+            if( len >= sizeof( entry ) ) {
+                continue;
             }
-            length = sprintf( entry, "%i %i \"%s\"\n",
-                j, cl->ping, cl->name );
-            if( total + length >= SV_OUTPUTBUF_LENGTH )
+            if( total + len >= SV_OUTPUTBUF_LENGTH ) {
                 break;		// can't hold any more
-            memcpy( status + total, entry, length );
-            total += length;
+            }
+            memcpy( status + total, entry, len );
+            total += len;
         }
     }
 
@@ -897,6 +897,7 @@ static void SVC_DirectConnect( void ) {
     // setup netchan
     newcl->netchan = Netchan_Setup( NS_SERVER, nctype, &net_from,
         qport, maxlength, protocol );
+    newcl->numpackets = 1;
 
 	// parse some info from the info strings
 	Q_strlcpy( newcl->userinfo, userinfo, sizeof( newcl->userinfo ) );
@@ -1337,7 +1338,7 @@ void SV_SendAsyncPackets( void ) {
 		if( netchan->message.cursize || netchan->reliable_ack_pending ||
             netchan->reliable_length || retransmit )
         {
-			cursize = netchan->Transmit( netchan, 0, NULL );
+			cursize = netchan->Transmit( netchan, 0, NULL, 1 );
 #if USE_CLIENT
 			if( sv_debug_send->integer ) {
 				Com_Printf( S_COLOR_BLUE"%s: send: %"PRIz"\n",
@@ -1878,6 +1879,9 @@ void SV_Init( void ) {
 #ifndef _WIN32
 	sv_oldgame_hack = Cvar_Get( "sv_oldgame_hack", "0", CVAR_LATCH );
 #endif
+#if USE_PACKETDUP
+	sv_packetdup_hack = Cvar_Get( "sv_packetdup_hack", "0", 0 );
+#endif
 
 	sv_iplimit = Cvar_Get( "sv_iplimit", "3", 0 );
 
@@ -1936,7 +1940,7 @@ static void SV_FinalMessage( const char *message, int cmd ) {
             while( netchan->fragment_pending ) {
                 netchan->TransmitNextFragment( netchan );
             }
-            netchan->Transmit( netchan, msg_write.cursize, msg_write.data );
+            netchan->Transmit( netchan, msg_write.cursize, msg_write.data, 1 );
         }
     }
 

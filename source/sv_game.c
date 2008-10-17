@@ -23,6 +23,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 game_export_t	*ge;
 
+static void PF_configstring( int index, const char *val );
+
 /*
 ================
 PF_FindIndex
@@ -49,7 +51,7 @@ static int PF_FindIndex( const char *name, int start, int max ) {
 	if( i == max )
 		Com_Error( ERR_DROP, "PF_FindIndex: overflow" );
 
-	PF_Configstring( i + start, name );
+	PF_configstring( i + start, name );
 
 	return i;
 }
@@ -326,13 +328,13 @@ static void PF_setmodel (edict_t *ent, const char *name) {
 
 /*
 ===============
-PF_Configstring
+PF_configstring
 
 If game is actively running, broadcasts configstring change.
 Archived in MVD stream.
 ===============
 */
-void PF_Configstring( int index, const char *val ) {
+static void PF_configstring( int index, const char *val ) {
 	size_t len, maxlen;
 	client_t *client;
 
@@ -826,7 +828,7 @@ void SV_InitGameProgs ( void ) {
 	import.soundindex = PF_SoundIndex;
 	import.imageindex = PF_ImageIndex;
 
-	import.configstring = PF_Configstring;
+	import.configstring = PF_configstring;
 	import.sound = PF_StartSound;
 	import.positioned_sound = PF_PositionedSound;
 

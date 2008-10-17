@@ -25,6 +25,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define EDICT_MVDCL( ent )  (( mvd_client_t * )( (ent)->client ))
 #define CS_NUM( c, n )      ( ( char * )(c) + (n) * MAX_QPATH )
 
+#define MVD_InfoSet( var, val ) \
+	Cvar_FullSet( var, val, CVAR_SERVERINFO|CVAR_GAME, CVAR_SET_DIRECT )
+
 // game features MVD client supports
 #define MVD_FEATURES (GMF_CLIENTNUM|GMF_PROPERINUSE|GMF_WANT_ALL_DISCONNECTS)
 
@@ -190,7 +193,6 @@ void MVD_FreePlayer( mvd_player_t *player );
 
 extern mvd_client_t     *mvd_clients;   // [maxclients]
 
-void MVD_UpdateClient( mvd_client_t *client );
 void MVD_SwitchChannel( mvd_client_t *client, mvd_t *mvd );
 void MVD_RemoveClient( client_t *client );
 void MVD_BroadcastPrintf( mvd_t *mvd, int level,

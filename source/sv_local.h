@@ -250,6 +250,7 @@ typedef struct client_s {
 	void			(*WriteDatagram)( struct client_s * );
 
 	netchan_t		*netchan;
+    int             numpackets; // for that nasty packetdup hack
 
 #if USE_ANTICHEAT & 2
     qboolean        ac_valid;
@@ -387,6 +388,9 @@ extern cvar_t		*sv_strafejump_hack;
 extern cvar_t		*sv_bodyque_hack;
 #ifndef _WIN32
 extern cvar_t		*sv_oldgame_hack;
+#endif
+#if USE_PACKETDUP
+extern cvar_t		*sv_packetdup_hack;
 #endif
 
 extern cvar_t		*sv_status_limit;
@@ -557,7 +561,6 @@ void SV_InitGameProgs( void );
 void SV_ShutdownGameProgs (void);
 void SV_InitEdict (edict_t *e);
 
-void PF_Configstring( int index, const char *val );
 void PF_Pmove( pmove_t *pm );
 
 //============================================================

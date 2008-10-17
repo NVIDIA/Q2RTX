@@ -665,7 +665,7 @@ void SV_ClientWriteDatagram_Old( client_t *client ) {
 
 	// send the datagram
 	cursize = client->netchan->Transmit( client->netchan,
-        msg_write.cursize, msg_write.data );
+        msg_write.cursize, msg_write.data, client->numpackets );
 
 	// record the size for rate estimation
 	SV_CalcSendTime( client, cursize );
@@ -729,7 +729,7 @@ void SV_ClientWriteDatagram_New( client_t *client ) {
 
 	// send the datagram
 	cursize = client->netchan->Transmit( client->netchan,
-        msg_write.cursize, msg_write.data );
+        msg_write.cursize, msg_write.data, client->numpackets );
 
 	// record the size for rate estimation
 	SV_CalcSendTime( client, cursize );

@@ -155,13 +155,14 @@ transmition / retransmition of the reliable messages.
 A 0 length will still generate a packet and deal with the reliable messages.
 ================
 */
-static size_t NetchanOld_Transmit( netchan_t *netchan, size_t length, const void *data ) {
+static size_t NetchanOld_Transmit( netchan_t *netchan, size_t length, const void *data, int numpackets ) {
 	netchan_old_t *chan = ( netchan_old_t * )netchan;
 	sizebuf_t	send;
 	byte		send_buf[MAX_PACKETLEN];
 	qboolean	send_reliable;
 	uint32_t	w1, w2;
 	neterr_t	ret;
+    int         i;
 
 // check for message overflow
 	if( netchan->message.overflowed ) {
@@ -244,13 +245,15 @@ static size_t NetchanOld_Transmit( netchan_t *netchan, size_t length, const void
 #endif
 
 	// send the datagram
-	ret = NET_SendPacket( netchan->sock, &netchan->remote_address,
-        send.cursize, send.data );
-	if( ret == NET_ERROR ) {
-		return 0;
-	}
+    for( i = 0; i < numpackets; i++ ) {
+        ret = NET_SendPacket( netchan->sock, &netchan->remote_address,
+            send.cursize, send.data );
+        if( ret == NET_ERROR ) {
+            return 0;
+        }
+    }
 
-	return send.cursize;
+	return send.cursize * numpackets;
 }
 
 /*
@@ -509,13 +512,14 @@ static size_t NetchanNew_TransmitNextFragment( netchan_t *netchan ) {
 NetchanNew_Transmit
 ================
 */
-static size_t NetchanNew_Transmit( netchan_t *netchan, size_t length, const void *data ) {
+static size_t NetchanNew_Transmit( netchan_t *netchan, size_t length, const void *data, int numpackets ) {
 	netchan_new_t *chan = ( netchan_new_t * )netchan;
 	sizebuf_t	send;
 	byte		send_buf[MAX_PACKETLEN];
 	qboolean	send_reliable;
 	uint32_t	w1, w2;
 	neterr_t	ret;
+    int         i;
 
 // check for message overflow
 	if( netchan->message.overflowed ) {
@@ -610,13 +614,15 @@ static size_t NetchanNew_Transmit( netchan_t *netchan, size_t length, const void
 #endif
 
 	// send the datagram
-	ret = NET_SendPacket( netchan->sock, &netchan->remote_address,
-        send.cursize, send.data );
-	if( ret == NET_ERROR ) {
-		return 0;
-	}
+    for( i = 0; i < numpackets; i++ ) {
+        ret = NET_SendPacket( netchan->sock, &netchan->remote_address,
+            send.cursize, send.data );
+        if( ret == NET_ERROR ) {
+            return 0;
+        }
+    }
 
-	return send.cursize;
+	return send.cursize * numpackets;
 }
 
 /*

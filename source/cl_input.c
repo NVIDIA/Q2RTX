@@ -878,7 +878,7 @@ static void CL_SendDefaultCmd( void ) {
     //
     // deliver the message
     //
-    cursize = cls.netchan->Transmit( cls.netchan, msg_write.cursize, msg_write.data );
+    cursize = cls.netchan->Transmit( cls.netchan, msg_write.cursize, msg_write.data, 1 );
     if( cl_showpackets->integer ) {
         Com_Printf( "%"PRIz" ", cursize );
     }
@@ -966,7 +966,7 @@ static void CL_SendBatchedCmd( void ) {
     //
     // deliver the message
     //
-    cursize = cls.netchan->Transmit( cls.netchan, msg_write.cursize, msg_write.data );
+    cursize = cls.netchan->Transmit( cls.netchan, msg_write.cursize, msg_write.data, 1 );
     if( cl_showpackets->integer == 1 ) {
         Com_Printf( "%"PRIz"(%i) ", cursize, totalCmds );
     } else if( cl_showpackets->integer == 2 ) {
@@ -1036,7 +1036,7 @@ void CL_SendCmd( void ) {
 
         // just keepalive or update reliable
         if( cls.netchan->ShouldUpdate( cls.netchan ) ) {
-            cls.netchan->Transmit( cls.netchan, 0, NULL );
+            cls.netchan->Transmit( cls.netchan, 0, NULL, 1 );
         }
         cl.lastframe = -1;
         cl.lastTransmitCmdNumber = cl.cmdNumber;
