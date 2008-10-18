@@ -125,7 +125,7 @@ void SV_ClearWorld( void ) {
 ===============
 SV_LinkEdict
 
-General purpose routine shared by game DLL and MVD code.
+General purpose routine shared between game DLL and MVD code.
 Links entity to PVS leafs.
 ===============
 */
@@ -435,14 +435,15 @@ static mnode_t *SV_HullForEntity( edict_t *ent ) {
 	mmodel_t	*model;
 
 	if( ent->solid == SOLID_BSP ) {
+        int index = ent->s.modelindex - 1;
+
 		// explicit hulls in the BSP model
-		if( ent->s.modelindex < 2 || ent->s.modelindex > sv.cm.cache->nummodels ) {
-			Com_Error( ERR_DROP, "%s: inline model index %d out of range",
-                __func__, ent->s.modelindex );
+		if( index <= 0 || index >= sv.cm.cache->nummodels ) {
+			Com_Error( ERR_DROP, "%s: inline model %d out of range",
+                __func__, index );
 		}
 
-		model = &sv.cm.cache->models[ ent->s.modelindex - 1 ];
-
+		model = &sv.cm.cache->models[index];
 		return model->headnode;
 	}
 
@@ -479,7 +480,8 @@ int SV_PointContents (vec3_t p)
 		// might intersect, so do an exact clip
 		headnode = SV_HullForEntity (hit);
 
-		c2 = CM_TransformedPointContents (p, headnode, hit->s.origin, hit->s.angles);
+		c2 = CM_TransformedPointContents (p, headnode,
+            hit->s.origin, hit->s.angles);
 
 		contents |= c2;
 	}

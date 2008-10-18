@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 
 #include "sv_local.h"
-#include "gtv.h"
+#include "mvd_gtv.h"
 
 #define FOR_EACH_GTV( client ) \
     LIST_FOR_EACH( gtv_client_t, client, &gtv_client_list, entry )
@@ -570,9 +570,10 @@ static void emit_gamestate( void ) {
     int         flags, extra, portalbytes;
     byte        portalbits[MAX_MAP_AREAS/8];
 
+    // pack MVD stream flags into extra bits
     extra = 0;
     if( sv_mvd_nomsgs->integer ) {
-        extra |= 1 << SVCMD_BITS;
+        extra |= MVF_NOMSGS << SVCMD_BITS;
     }
 
     // send the serverdata
@@ -938,10 +939,10 @@ void SV_MvdEndFrame( void ) {
 
     // write frame to demofile
     if( mvd.recording ) {
-        uint16_t len;
+        uint16_t msglen;
 
-        len = LittleShort( total - 1 );
-        FS_Write( &len, 2, mvd.recording );
+        msglen = LittleShort( total - 1 );
+        FS_Write( &msglen, 2, mvd.recording );
         FS_Write( mvd.message.data, mvd.message.cursize, mvd.recording );
         FS_Write( msg_write.data, msg_write.cursize, mvd.recording );
         FS_Write( mvd.datagram.data, mvd.datagram.cursize, mvd.recording );
@@ -1387,6 +1388,7 @@ static void parse_ping( gtv_client_t *client ) {
 
     // send ping reply
     write_message( client, GTS_PONG );
+
 #if USE_ZLIB
     flush_stream( client, Z_SYNC_FLUSH );
 #endif

@@ -380,7 +380,7 @@ static void MVD_UnicastPrint( mvd_t *mvd, qboolean reliable, mvd_player_t *playe
             continue;
         }
         // decide if message should be routed or not
-        target = ( mvd->flags & 1 ) ? mvd->dummy :
+        target = ( mvd->flags & MVF_NOMSGS ) ? mvd->dummy :
             client->target ? client->target : mvd->dummy;
 		if( target == player ) {
 		    cl->AddMessage( cl, data, length, reliable );
@@ -1165,6 +1165,8 @@ void MVD_ParseMessage( mvd_t *mvd ) {
 			break;
         case mvd_print:
             MVD_ParsePrint( mvd );
+            break;
+        case mvd_nop:
             break;
 		default:
             MVD_Destroyf( mvd, "Illegible command at %"PRIz": %d",

@@ -140,7 +140,7 @@ typedef enum mvd_ops_e {
     mvd_serverdata,
     mvd_configstring,
     mvd_frame,
-    mvd_frame_nodelta,
+    mvd_frame_nodelta,  // reserved
     mvd_unicast,
     mvd_unicast_r,
     mvd_multicast_all,
@@ -150,11 +150,18 @@ typedef enum mvd_ops_e {
     mvd_multicast_pvs_r,
     mvd_multicast_phs_r,
     mvd_sound,
-    mvd_print,          // reserved
+    mvd_print,
     mvd_stufftext,      // reserved
 
     mvd_num_types
 } mvd_ops_t;
+
+// MVD stream flags (only 3 bits can be used)
+typedef enum {
+    MVF_NOMSGS      = 1,
+    MVF_RESERVED1   = 2,
+    MVF_RESERVED2   = 4
+} mvd_flags_t;
 
 //==============================================
 

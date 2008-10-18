@@ -24,11 +24,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "sv_local.h"
 #include "mvd_local.h"
-#include "gtv.h"
+#include "mvd_gtv.h"
 #include <setjmp.h>
 
-#define GTV_DEFAULT_BACKOFF (5*1000)
-#define GTV_MAXIMUM_BACKOFF (5*3600*1000)
+#define GTV_DEFAULT_BACKOFF (5*1000)        // 5 seconds
+#define GTV_MAXIMUM_BACKOFF (5*3600*1000)   // 5 hours
+
+#define GTV_PING_INTERVAL   (60*1000)       // 1 minute
 
 typedef enum {
     GTV_DISCONNECTED, // disconnected
@@ -82,7 +84,8 @@ static const char *const gtv_states[GTV_NUM_STATES] = {
     "preparing",
     "connected",
     "resuming",
-    "active",
+    "waiting",
+    "reading",
     "suspending"
 };
 
@@ -555,6 +558,27 @@ GTV CONNECTIONS
 ====================================================================
 */
 
+static void write_stream( gtv_t *gtv, void *data, size_t len ) {
+    if( FIFO_Write( &gtv->stream.send, data, len ) != len ) {
+        gtv_destroyf( gtv, "Send buffer overflowed" );
+    }
+
+    // don't timeout
+    gtv->last_sent = svs.realtime;
+}
+
+static void write_message( gtv_t *gtv, gtv_clientop_t op ) {
+    byte header[3];
+    size_t len = msg_write.cursize + 1;
+
+    header[0] = len & 255;
+    header[1] = ( len >> 8 ) & 255;
+    header[2] = op;
+    write_stream( gtv, header, sizeof( header ) );
+
+    write_stream( gtv, msg_write.data, msg_write.cursize );
+}
+
 static qboolean gtv_wait_stop( mvd_t *mvd ) {
     int usage;
 
@@ -605,6 +629,9 @@ static void gtv_wait_start( mvd_t *mvd ) {
             MVD_BroadcastPrintf( mvd, PRINT_HIGH, 0,
                 "[MVD] Buffering data, please wait...\n" );
         }
+
+        // send ping to force server to flush
+        write_message( gtv, GTC_PING );
     } else {
         // this is a `normal' underflow, reset delay to default
         mvd->min_packets = tr;
@@ -657,27 +684,6 @@ static qboolean gtv_read_frame( mvd_t *mvd ) {
     // parse it
     MVD_ParseMessage( mvd );
     return qtrue;
-}
-
-static void write_stream( gtv_t *gtv, void *data, size_t len ) {
-    if( FIFO_Write( &gtv->stream.send, data, len ) != len ) {
-        gtv_destroyf( gtv, "Send buffer overflowed" );
-    }
-
-    // don't timeout
-    gtv->last_sent = svs.realtime;
-}
-
-static void write_message( gtv_t *gtv, gtv_clientop_t op ) {
-    byte header[3];
-    size_t len = msg_write.cursize + 1;
-
-    header[0] = len & 255;
-    header[1] = ( len >> 8 ) & 255;
-    header[2] = op;
-    write_stream( gtv, header, sizeof( header ) );
-
-    write_stream( gtv, msg_write.data, msg_write.cursize );
 }
 
 static qboolean gtv_forward_cmd( mvd_client_t *client ) {
@@ -741,9 +747,9 @@ static void send_stream_start( gtv_t *gtv ) {
     int maxbuf;
 
     if( gtv->mvd ) {
-        maxbuf = gtv->mvd->min_packets - 10;
+        maxbuf = gtv->mvd->min_packets / 2;
     } else {
-        maxbuf = mvd_wait_delay->value * 10 - 10;
+        maxbuf = mvd_wait_delay->value * 10 / 2;
     }
     if( maxbuf < 10 ) {
         maxbuf = 10;
@@ -980,10 +986,6 @@ static qboolean parse_message( gtv_t *gtv, fifo_t *fifo ) {
 
     cmd = MSG_ReadByte();
 
-    if( mvd_shownet->integer == -1 ) {
-        Com_Printf( "[%"PRIz"]%d ", msg_read.cursize, cmd );
-    }
-
     switch( cmd ) {
     case GTS_HELLO:
         parse_hello( gtv );
@@ -1107,27 +1109,40 @@ static neterr_t run_connect( gtv_t *gtv ) {
 
 static neterr_t run_stream( gtv_t *gtv ) {
     neterr_t ret;
+    int count;
+    size_t usage;
 
     // run network stream
     if( ( ret = NET_RunStream( &gtv->stream ) ) != NET_OK ) {
         return ret;
     }
 
+    count = 0;
+    usage = FIFO_Usage( &gtv->stream.recv );
+
 #if USE_ZLIB
     if( gtv->z_act ) {
-        do {
+        while( 1 ) {
             // decompress more data
             if( gtv->z_act ) {
                 inflate_more( gtv );
             }
-        } while( parse_message( gtv, &gtv->z_buf ) );
+            if( !parse_message( gtv, &gtv->z_buf ) ) {
+                break;
+            }
+            count++;
+        }
     } else
 #endif
-        while( parse_message( gtv, &gtv->stream.recv ) )
-            ;
+        while( parse_message( gtv, &gtv->stream.recv ) ) {
+            count++;
+        }
 
     if( mvd_shownet->integer == -1 ) {
-        Com_Printf( "\n" );
+        size_t total = usage - FIFO_Usage( &gtv->stream.recv );
+
+        Com_Printf( "[%s] %"PRIz" bytes, %d msgs\n",
+            gtv->name, total, count );
     }
 
     return NET_OK;
@@ -1155,7 +1170,7 @@ static void check_timeouts( gtv_t *gtv ) {
     }
 
     // ping if no data has been sent for too long
-    if( svs.realtime - gtv->last_sent > 60000 ) {
+    if( svs.realtime - gtv->last_sent > GTV_PING_INTERVAL ) {
         write_message( gtv, GTC_PING );
     }
 }

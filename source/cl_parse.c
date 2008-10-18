@@ -1051,13 +1051,13 @@ CL_ParseStartSoundPacket
 */
 static void CL_ParseStartSoundPacket( void ) {
     vec3_t  pos_v;
-    float    *pos;
+    float   *pos;
     int     channel, ent;
     int     sound_num;
-    float     volume;
-    float     attenuation; 
-    int        flags;
-    float    ofs;
+    float   volume;
+    float   attenuation; 
+    int     flags;
+    float   ofs;
 
     flags = MSG_ReadByte();
     sound_num = MSG_ReadByte();
@@ -1312,9 +1312,9 @@ static void CL_ParseInventory( void ) {
 
 static void CL_ParseZPacket( void ) {
 #if USE_ZLIB
-    sizebuf_t    temp;
+    sizebuf_t   temp;
     byte        buffer[MAX_MSGLEN];
-    unsigned    inlen, outlen;
+    size_t      inlen, outlen;
 
     if( msg_read.data != msg_read_buffer ) {
         Com_Error( ERR_DROP, "%s: recursively entered", __func__ );
@@ -1333,9 +1333,9 @@ static void CL_ParseZPacket( void ) {
     inflateReset( &cls.z );
 
     cls.z.next_in = msg_read.data + msg_read.readcount;
-    cls.z.avail_in = inlen;
+    cls.z.avail_in = ( uInt )inlen;
     cls.z.next_out = buffer;
-    cls.z.avail_out = outlen;
+    cls.z.avail_out = ( uInt )outlen;
     if( inflate( &cls.z, Z_FINISH ) != Z_STREAM_END ) {
         Com_Error( ERR_DROP, "%s: inflate() failed: %s", __func__, cls.z.msg );
     }

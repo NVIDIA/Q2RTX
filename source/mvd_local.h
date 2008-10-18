@@ -91,8 +91,8 @@ typedef struct {
 #define MAX_MVD_NAME    16
 
 typedef enum {
-    MVD_DEAD,       // no gamestate received yet, unusable
-    MVD_WAITING,    // buffering more frames
+    MVD_DEAD,       // no gamestate received yet, unusable for observers
+    MVD_WAITING,    // buffering more frames, stalled
     MVD_READING,    // reading frames
 
     MVD_NUM_STATES
@@ -100,6 +100,8 @@ typedef enum {
 
 struct gtv_s;
 
+// FIXME: entire struct is > 400 K in size!
+// need to eliminate those large static arrays below...
 typedef struct mvd_s {
     list_t      entry;
     list_t      active;
@@ -131,13 +133,13 @@ typedef struct mvd_s {
     vec3_t  spawnOrigin;
     vec3_t  spawnAngles;
     int     pm_type;
-    char            configstrings[MAX_CONFIGSTRINGS][MAX_QPATH];
-    edict_t         edicts[MAX_EDICTS];
+    char            configstrings[MAX_CONFIGSTRINGS][MAX_QPATH]; // 133 K
+    edict_t         edicts[MAX_EDICTS]; // 266 K
     mvd_player_t    *players; // [maxclients]
     mvd_player_t    *dummy; // &players[clientNum]
     int             numplayers; // number of active players in frame
     int             clientNum;
-    int             flags;
+    mvd_flags_t     flags;
     char        layout[MAX_STRING_CHARS];
     char        oldscores[MAX_STRING_CHARS]; // layout is copied here
     qboolean    intermission;

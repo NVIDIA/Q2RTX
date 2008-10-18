@@ -26,42 +26,42 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "sv_local.h"
 
 typedef enum {
-	ACS_BAD,
-	ACS_CLIENTACK,
-	ACS_VIOLATION,
-	ACS_NOACCESS,
-	ACS_FILE_VIOLATION,
-	ACS_READY,
-	ACS_QUERYREPLY,
-	ACS_PONG,
-	ACS_UPDATE_REQUIRED,
-	ACS_DISCONNECT,
-	ACS_ERROR
+    ACS_BAD,
+    ACS_CLIENTACK,
+    ACS_VIOLATION,
+    ACS_NOACCESS,
+    ACS_FILE_VIOLATION,
+    ACS_READY,
+    ACS_QUERYREPLY,
+    ACS_PONG,
+    ACS_UPDATE_REQUIRED,
+    ACS_DISCONNECT,
+    ACS_ERROR
 } ac_serverbyte_t;
 
 typedef enum {
-	ACC_BAD,
-	ACC_VERSION,
-	ACC_PREF,
-	ACC_REQUESTCHALLENGE,
-	ACC_CLIENTDISCONNECT,
-	ACC_QUERYCLIENT,
-	ACC_PING,
-	ACC_UPDATECHECKS,
-	ACC_SETPREFERENCES
+    ACC_BAD,
+    ACC_VERSION,
+    ACC_PREF,
+    ACC_REQUESTCHALLENGE,
+    ACC_CLIENTDISCONNECT,
+    ACC_QUERYCLIENT,
+    ACC_PING,
+    ACC_UPDATECHECKS,
+    ACC_SETPREFERENCES
 } ac_clientbyte_t;
 
 typedef enum {
-	OP_INVALID,
-	OP_EQUAL,
-	OP_NEQUAL,
-	OP_GTEQUAL,
-	OP_LTEQUAL,
-	OP_LT,
-	OP_GT,
-	OP_STREQUAL,
-	OP_STRNEQUAL,
-	OP_STRSTR
+    OP_INVALID,
+    OP_EQUAL,
+    OP_NEQUAL,
+    OP_GTEQUAL,
+    OP_LTEQUAL,
+    OP_LT,
+    OP_GT,
+    OP_STREQUAL,
+    OP_STRNEQUAL,
+    OP_STRSTR
 } ac_opcode_t;
 
 typedef enum {
@@ -111,12 +111,12 @@ typedef struct {
     char hashlist_name[MAX_QPATH];
 } ac_static_t;
 
-#define ACP_BLOCKPLAY	( 1 << 0 )
+#define ACP_BLOCKPLAY   ( 1 << 0 )
 
-#define	ACH_REQUIRED	( 1 << 0 )
-#define	ACH_NEGATIVE	( 1 << 1 )
+#define ACH_REQUIRED    ( 1 << 0 )
+#define ACH_NEGATIVE    ( 1 << 1 )
 
-#define AC_PROTOCOL_VERSION	0xAC03
+#define AC_PROTOCOL_VERSION     0xAC03
 
 #define AC_DEFAULT_BACKOFF  30
 
@@ -272,7 +272,7 @@ static void AC_ParseCvar( const char *data, int linenum, const char *path ) {
     ac_cvar_t *cvar;
     const ac_cvarop_t *op;
     int i;
-	size_t len;
+    size_t len;
 
     name = COM_SimpleParse( &data, &namelen );
     if( !name[0] ) {
@@ -478,7 +478,7 @@ static void AC_Drop( void ) {
     NET_Close( &ac.stream );
 
     if( !ac.connected ) {
-		Com_Printf( "ANTICHEAT: Server connection failed. "
+        Com_Printf( "ANTICHEAT: Server connection failed. "
             "Retrying in %d seconds.\n", acs.retry_backoff );
         clock = time( NULL );
         acs.retry_time = clock + acs.retry_backoff;
@@ -491,23 +491,23 @@ static void AC_Drop( void ) {
         cl->ac_file_failures = 0;
     }
 
-	// inform
-	if( ac.ready ) {
-		SV_BroadcastPrintf( PRINT_HIGH, AC_MESSAGE
+    // inform
+    if( ac.ready ) {
+        SV_BroadcastPrintf( PRINT_HIGH, AC_MESSAGE
             "This server has lost the connection to the anticheat server. "
             "Any anticheat clients are no longer valid.\n" );
 
-		if( ac_required->integer == 2 ) {
-			SV_BroadcastPrintf( PRINT_HIGH, AC_MESSAGE 
+        if( ac_required->integer == 2 ) {
+            SV_BroadcastPrintf( PRINT_HIGH, AC_MESSAGE 
                 "You will need to reconnect once the server has "
                 "re-established the anticheat connection.\n" );
         }
         acs.retry_backoff = AC_DEFAULT_BACKOFF;
-	} else {
+    } else {
         acs.retry_backoff += 30; // this generally indicates a server problem
     }
 
-	Com_WPrintf(
+    Com_WPrintf(
         "ANTICHEAT: Lost connection to anticheat server! "
         "Will attempt to reconnect in %d seconds.\n", acs.retry_backoff );
 
@@ -524,23 +524,23 @@ static void AC_Disable( void ) {
 
 
 static void AC_Announce( client_t *client, const char *fmt, ... ) {
-	va_list		argptr;
-	char		string[MAX_STRING_CHARS];
+    va_list     argptr;
+    char        string[MAX_STRING_CHARS];
     size_t      len;
-	
-	va_start( argptr, fmt );
-	len = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
-	va_end( argptr );
+    
+    va_start( argptr, fmt );
+    len = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
+    va_end( argptr );
 
     if( len >= sizeof( string ) ) {
         Com_WPrintf( "%s: overflow\n", __func__ );
         return;
     }
 
-	MSG_WriteByte( svc_print );
-	MSG_WriteByte( PRINT_HIGH );
-	MSG_WriteData( AC_MESSAGE, sizeof( AC_MESSAGE ) - 1 );
-	MSG_WriteData( string, len + 1 );
+    MSG_WriteByte( svc_print );
+    MSG_WriteByte( PRINT_HIGH );
+    MSG_WriteData( AC_MESSAGE, sizeof( AC_MESSAGE ) - 1 );
+    MSG_WriteData( string, len + 1 );
 
     if( client->state == cs_spawned ) {
         FOR_EACH_CLIENT( client ) {
@@ -552,13 +552,13 @@ static void AC_Announce( client_t *client, const char *fmt, ... ) {
         SV_ClientAddMessage( client, MSG_RELIABLE );
     }
 
-	SZ_Clear( &msg_write );
+    SZ_Clear( &msg_write );
 }
 
 static client_t *AC_ParseClient( void ) {
     client_t *cl;
-	uint16_t clientID;
-    uint32_t challenge;
+    unsigned clientID;
+    unsigned challenge;
 
     if( msg_read.readcount + 6 > msg_read.cursize ) {
         Com_DPrintf( "ANTICHEAT: Message too short in %s\n", __func__ );
@@ -566,22 +566,22 @@ static client_t *AC_ParseClient( void ) {
     }
 
     clientID = MSG_ReadWord();
-	challenge = MSG_ReadLong();
+    challenge = MSG_ReadLong();
 
-	if( clientID >= sv_maxclients->integer ) {
-		Com_WPrintf( "ANTICHEAT: Illegal client ID: %u\n", clientID );
-		return NULL;
-	}
-
-	cl = &svs.udp_client_pool[clientID];
-
-	// we check challenge to ensure we don't get
-    // a race condition if a client reconnects.
-	if( cl->challenge != challenge ) {
-		return NULL;
+    if( clientID >= sv_maxclients->integer ) {
+        Com_WPrintf( "ANTICHEAT: Illegal client ID: %u\n", clientID );
+        return NULL;
     }
 
-	if( cl->state < cs_assigned ) {
+    cl = &svs.udp_client_pool[clientID];
+
+    // we check challenge to ensure we don't get
+    // a race condition if a client reconnects.
+    if( cl->challenge != challenge ) {
+        return NULL;
+    }
+
+    if( cl->state < cs_assigned ) {
         return NULL;
     }
 
@@ -589,8 +589,8 @@ static client_t *AC_ParseClient( void ) {
 }
 
 static void AC_ParseViolation( void ) {
-	client_t		*cl;
-    char		    reason[32];
+    client_t        *cl;
+    char            reason[32];
     char            clientreason[64];
 
     cl = AC_ParseClient();
@@ -603,12 +603,12 @@ static void AC_ParseViolation( void ) {
         return;
     }
 
-	MSG_ReadString( reason, sizeof( reason ) );
+    MSG_ReadString( reason, sizeof( reason ) );
 
-	if( msg_read.readcount < msg_read.cursize ) {
-		MSG_ReadString( clientreason, sizeof( clientreason ) );
+    if( msg_read.readcount < msg_read.cursize ) {
+        MSG_ReadString( clientreason, sizeof( clientreason ) );
     } else {
-		clientreason[0] = 0;
+        clientreason[0] = 0;
     }
 
     // FIXME: should we notify other players about anticheat violations 
@@ -619,7 +619,7 @@ static void AC_ParseViolation( void ) {
 
     // fixme maybe
     if( strcmp( reason, "disconnected" ) ) {
-        char	showreason[32];
+        char    showreason[32];
 
         if( ac_show_violation_reason->integer )
             Q_snprintf( showreason, sizeof( showreason ), " (%s)", reason );
@@ -661,7 +661,7 @@ static void AC_ParseViolation( void ) {
 }
 
 static void AC_ParseClientAck( void ) {
-	client_t		*cl;
+    client_t        *cl;
 
     cl = AC_ParseClient();
     if( !cl ) {
@@ -673,25 +673,25 @@ static void AC_ParseClientAck( void ) {
         return;
     }
 
-	if( cl->state > cs_primed ) {
-		Com_DPrintf( "ANTICHEAT: %s with client in state %d\n",
+    if( cl->state > cs_primed ) {
+        Com_DPrintf( "ANTICHEAT: %s with client in state %d\n",
             __func__, cl->state );
-		return;
-	}
+        return;
+    }
 
     Com_DPrintf( "ANTICHEAT: %s for %s\n", __func__, cl->name );
-	cl->ac_client_type = MSG_ReadByte();
-	cl->ac_valid = qtrue;
+    cl->ac_client_type = MSG_ReadByte();
+    cl->ac_valid = qtrue;
 }
 
 static void AC_ParseFileViolation( void ) {
-	string_entry_t	*bad;
-	client_t	*cl;
-	char		path[MAX_QPATH];
+    string_entry_t    *bad;
+    client_t    *cl;
+    char        path[MAX_QPATH];
     char        hash[MAX_QPATH];
-    int			action;
-	size_t		pathlen;
-    ac_file_t	*f;
+    int         action;
+    size_t      pathlen;
+    ac_file_t   *f;
 
     cl = AC_ParseClient();
     if( !cl ) {
@@ -703,16 +703,16 @@ static void AC_ParseFileViolation( void ) {
         return;
     }
 
-	pathlen = MSG_ReadString( path, sizeof( path ) );
+    pathlen = MSG_ReadString( path, sizeof( path ) );
     if( pathlen >= sizeof( path ) ) {
         Com_WPrintf( "ANTICHEAT: Oversize path in %s\n", __func__ );
         pathlen = sizeof( path ) - 1;
     }
 
-	if( msg_read.readcount < msg_read.cursize ) {
-		MSG_ReadString( hash, sizeof( hash ) );
+    if( msg_read.readcount < msg_read.cursize ) {
+        MSG_ReadString( hash, sizeof( hash ) );
     } else {
-		strcpy( hash, "no hash?" );
+        strcpy( hash, "no hash?" );
     }
 
     cl->ac_file_failures++;
@@ -767,17 +767,17 @@ static void AC_ParseFileViolation( void ) {
 }
 
 static void AC_ParseReady( void ) {
-	ac.ready = qtrue;
+    ac.ready = qtrue;
     ac.last_ping = svs.realtime;
-	acs.retry_backoff = AC_DEFAULT_BACKOFF;
-	Com_Printf( "ANTICHEAT: Ready to serve anticheat clients.\n" );
-	Cvar_FullSet( "anticheat", ac_required->string,
+    acs.retry_backoff = AC_DEFAULT_BACKOFF;
+    Com_Printf( "ANTICHEAT: Ready to serve anticheat clients.\n" );
+    Cvar_FullSet( "anticheat", ac_required->string,
         CVAR_SERVERINFO | CVAR_NOSET, CVAR_SET_DIRECT );
 }
 
 static void AC_ParseQueryReply( void ) {
-	client_t		*cl;
-	int				type, valid;
+    client_t        *cl;
+    int             type, valid;
 
     cl = AC_ParseClient();
     if( !cl ) {
@@ -790,27 +790,27 @@ static void AC_ParseQueryReply( void ) {
     }
 
     valid = MSG_ReadByte();
-	type = MSG_ReadByte();
+    type = MSG_ReadByte();
 
-	cl->ac_query_sent = AC_QUERY_DONE;
-	if( valid == 1 ) {
-		cl->ac_client_type = type;
-		cl->ac_valid = qtrue;
-	}
+    cl->ac_query_sent = AC_QUERY_DONE;
+    if( valid == 1 ) {
+        cl->ac_client_type = type;
+        cl->ac_valid = qtrue;
+    }
 
-	if( cl->state < cs_connected || cl->state > cs_primed ) {
-		Com_WPrintf( "ANTICHEAT: %s with client in state %d\n",
+    if( cl->state < cs_connected || cl->state > cs_primed ) {
+        Com_WPrintf( "ANTICHEAT: %s with client in state %d\n",
             __func__, cl->state );
-    	SV_DropClient( cl, NULL );
-		return;
-	}
+        SV_DropClient( cl, NULL );
+        return;
+    }
 
     Com_DPrintf( "ANTICHEAT: %s for %s\n", __func__, cl->name );
 
     // SV_Begin_f will handle possible map change
     sv_client = cl;
     sv_player = cl->edict;
-	SV_Begin_f();
+    SV_Begin_f();
     sv_client = NULL;
     sv_player = NULL;
 }
@@ -821,13 +821,13 @@ static void AC_ParseQueryReply( void ) {
 // udp message and thus showing "%s lost connection" right before the
 // player leaves the server
 static void AC_ParseDisconnect ( void ) {
-	client_t		*cl;
+    client_t        *cl;
 
     cl = AC_ParseClient();
     if( cl ) {
-		Com_Printf( "ANTICHEAT: Dropping %s, disconnect message.\n", cl->name );
-		SV_DropClient( cl, NULL );
-	}
+        Com_Printf( "ANTICHEAT: Dropping %s, disconnect message.\n", cl->name );
+        SV_DropClient( cl, NULL );
+    }
 }
 
 static void AC_ParseError( void ) {
@@ -867,7 +867,7 @@ static qboolean AC_ParseMessage( void ) {
     ac.msglen = 0;
 
     cmd = MSG_ReadByte();
-	switch( cmd ) {
+    switch( cmd ) {
     case ACS_VIOLATION:
         AC_ParseViolation();
         break;
@@ -911,7 +911,7 @@ static qboolean AC_ParseMessage( void ) {
             "Anticheat disabled.\n", cmd );
         AC_Disable();
         return qfalse;
-	}
+    }
 
     if( msg_read.readcount > msg_read.cursize ) {
         Com_WPrintf( "ANTICHEAT: Read %d bytes past end of message %d\n",
@@ -941,24 +941,28 @@ static void AC_Write( const char *func ) {
 }
 
 static void AC_ClientQuery( client_t *cl ) {
-	cl->ac_query_sent = AC_QUERY_SENT;
-	cl->ac_query_time = svs.realtime;
+    cl->ac_query_sent = AC_QUERY_SENT;
+    cl->ac_query_time = svs.realtime;
 
-	if( !ac.ready )
-		return;
+    if( !ac.ready )
+        return;
 
-	//if( ac_nag_time->integer )
-	//	cl->anticheat_nag_time = svs.realtime;
+    //if( ac_nag_time->integer )
+    //    cl->anticheat_nag_time = svs.realtime;
 
     MSG_WriteShort( 9 );
-	MSG_WriteByte( ACC_QUERYCLIENT );
-	MSG_WriteLong( cl->number );
+    MSG_WriteByte( ACC_QUERYCLIENT );
+    MSG_WriteLong( cl->number );
     MSG_WriteLong( cl->challenge );
     AC_Write( __func__ );
 }
 
 qboolean AC_ClientBegin( client_t *cl ) {
-	if( cl->ac_required == AC_EXEMPT ) {
+    if( !ac_required->integer ) {
+        return qtrue; // anticheat is not in use
+    }
+
+    if( cl->ac_required == AC_EXEMPT ) {
         return qtrue; // client is EXEMPT
     }
 
@@ -971,7 +975,7 @@ qboolean AC_ClientBegin( client_t *cl ) {
         return qfalse; // not yet QUERIED
     }
 
-	if( cl->ac_required != AC_REQUIRED ) {
+    if( cl->ac_required != AC_REQUIRED ) {
         return qtrue; // anticheat is NOT REQUIRED
     }
 
@@ -1003,10 +1007,10 @@ qboolean AC_ClientBegin( client_t *cl ) {
 }
 
 void AC_ClientAnnounce( client_t *cl ) {
-	if( !ac_required->integer ) {
-        return;
+    if( !ac_required->integer ) {
+        return; // anticheat is not in use
     }
-	if( cl->state <= cs_zombie ) {
+    if( cl->state <= cs_zombie ) {
         return;
     }
     if( cl->ac_required == AC_EXEMPT ) {
@@ -1027,7 +1031,7 @@ void AC_ClientAnnounce( client_t *cl ) {
 
 char *AC_ClientConnect( client_t *cl ) {
     if( !ac_required->integer ) {
-        return "";
+        return ""; // anticheat is not in use
     }
 
     if( SV_MatchAddress( &ac_exempt_list, &net_from ) ) {
@@ -1059,15 +1063,15 @@ char *AC_ClientConnect( client_t *cl ) {
 }
 
 void AC_ClientDisconnect( client_t *cl ) {
-	cl->ac_query_sent = AC_QUERY_UNSENT;
-	cl->ac_valid = qfalse;
+    cl->ac_query_sent = AC_QUERY_UNSENT;
+    cl->ac_valid = qfalse;
 
-	if( !ac.ready )
-		return;
+    if( !ac.ready )
+        return;
 
     MSG_WriteShort( 9 );
-	MSG_WriteByte( ACC_CLIENTDISCONNECT );
-	MSG_WriteLong( cl->number );
+    MSG_WriteByte( ACC_CLIENTDISCONNECT );
+    MSG_WriteLong( cl->number );
     MSG_WriteLong( cl->challenge );
     AC_Write( __func__ );
 }
@@ -1075,6 +1079,10 @@ void AC_ClientDisconnect( client_t *cl ) {
 void AC_ClientToken( client_t *cl, const char *token ) {
     string_entry_t *tok;
     client_t *other;
+
+    if( !ac_required->integer ) {
+        return; // anticheat is not in use
+    }
 
     for( tok = acs.tokens; tok; tok = tok->next ) {
         if( !strcmp( tok->string, token ) ) {
@@ -1088,12 +1096,13 @@ void AC_ClientToken( client_t *cl, const char *token ) {
 
     FOR_EACH_CLIENT( other ) {
         // FIXME: after `svacupdate' this check is incorrect
-        if( other->ac_token == token ) {
+        if( other->ac_token == tok->string ) {
             SV_DropClient( other, "duplicate anticheat token" );
         }
     }
 
-    Com_Printf( "ANTICHEAT: %s bypassed anticheat requirements with token '%s'\n",
+    Com_Printf(
+        "ANTICHEAT: %s bypassed anticheat requirements with token '%s'\n",
         cl->name, tok->string );
     cl->ac_token = tok->string;
     cl->ac_required = AC_EXEMPT;
@@ -1233,7 +1242,7 @@ static void AC_CheckTimeouts( void ) {
 
     if( ac.ping_pending ) {
         if( svs.realtime - ac.last_ping > AC_PING_TIMEOUT ) {
-			Com_Printf( "ANTICHEAT: Server ping timeout, disconnecting.\n" );
+            Com_Printf( "ANTICHEAT: Server ping timeout, disconnecting.\n" );
             AC_Drop();
             return;
         }
@@ -1244,7 +1253,7 @@ static void AC_CheckTimeouts( void ) {
     }
 
     FOR_EACH_CLIENT( cl ) {
-		if( cl->state < cs_connected || cl->state > cs_primed ) {
+        if( cl->state < cs_connected || cl->state > cs_primed ) {
             continue;
         }
         if( cl->ac_query_sent != AC_QUERY_SENT ) {
@@ -1258,7 +1267,7 @@ static void AC_CheckTimeouts( void ) {
             SV_Begin_f();
             sv_client = NULL;
             sv_player = NULL;
-		}
+        }
     }
 }
 
@@ -1301,7 +1310,7 @@ void AC_Run( void ) {
     if( acs.retry_time ) {
         clock = time( NULL );
         if( acs.retry_time < clock ) {
-		    Com_Printf( "ANTICHEAT: Attempting to reconnect to anticheat server...\n" );
+            Com_Printf( "ANTICHEAT: Attempting to reconnect to anticheat server...\n" );
             AC_Reconnect();
         }
         return;
@@ -1350,20 +1359,20 @@ void AC_Connect( qboolean ismvd ) {
 
 #if USE_CLIENT
     if( !dedicated->integer ) {
-		Com_Printf( "ANTICHEAT: Only supported on dedicated servers, disabling.\n" );
+        Com_Printf( "ANTICHEAT: Only supported on dedicated servers, disabling.\n" );
         Cvar_SetByVar( ac_required, "0", CVAR_SET_DIRECT );
         return;
     }
 #endif
     if( ismvd ) {
-		Com_Printf( "ANTICHEAT: Only supported on game servers, disabling.\n" );
+        Com_Printf( "ANTICHEAT: Only supported on game servers, disabling.\n" );
         Cvar_SetByVar( ac_required, "0", CVAR_SET_DIRECT );
         return;
     }
 
     AC_LoadChecks();
 
-	Com_Printf( "ANTICHEAT: Attempting to connect to %s...\n", ac_server_address->string );
+    Com_Printf( "ANTICHEAT: Attempting to connect to %s...\n", ac_server_address->string );
     Sys_RunConsole();
 
     acs.retry_backoff = AC_DEFAULT_BACKOFF;
@@ -1381,7 +1390,7 @@ void AC_Connect( qboolean ismvd ) {
         }
     }
 
-	Com_WPrintf( "ANTICHEAT: Still not ready, resuming server initialization.\n" );
+    Com_WPrintf( "ANTICHEAT: Still not ready, resuming server initialization.\n" );
 }
 
 void AC_Disconnect( void ) {
@@ -1395,34 +1404,34 @@ void AC_Disconnect( void ) {
 }
 
 void AC_List_f( void ) {
-	client_t	*cl;
-	char	*sub;
-    int i;
+    client_t    *cl;
+    char        *sub;
+    int         i;
 
     if( !svs.initialized ) {
-		Com_Printf( "No server running.\n" );
+        Com_Printf( "No server running.\n" );
         return;
     }
 
-	if( !ac_required->integer ) {
-		Com_Printf( "The anticheat module is not in use on this server.\n"
+    if( !ac_required->integer ) {
+        Com_Printf( "The anticheat module is not in use on this server.\n"
             "For information on anticheat, please visit http://antiche.at/\n" );
-		return;
-	}
+        return;
+    }
 
-	sub = Cmd_Argv( 1 );
+    sub = Cmd_Argv( 1 );
 
-	Com_Printf(
-		"+----------------+--------+-----+------+\n"
-		"|  Player Name   |AC Valid|Files|Client|\n"
-		"+----------------+--------+-----+------+\n" );
+    Com_Printf(
+        "+----------------+--------+-----+------+\n"
+        "|  Player Name   |AC Valid|Files|Client|\n"
+        "+----------------+--------+-----+------+\n" );
 
     FOR_EACH_CLIENT( cl ) {
-		if( cl->state < cs_spawned ) {
-			continue;
+        if( cl->state < cs_spawned ) {
+            continue;
         }
 
-		if( *sub && !strstr( cl->name, sub ) ) {
+        if( *sub && !strstr( cl->name, sub ) ) {
             continue;
         }
 
@@ -1438,9 +1447,9 @@ void AC_List_f( void ) {
         } else {
             Com_Printf( "|%-16s|   NO   | N/A | N/A  |\n", cl->name );
         }
-	}
+    }
 
-	Com_Printf( "+----------------+--------+-----+------+\n" );
+    Com_Printf( "+----------------+--------+-----+------+\n" );
 
     if( ac.ready ) {
         Com_Printf( "File check list in use: %s\n", acs.hashlist_name );
@@ -1453,115 +1462,122 @@ void AC_List_f( void ) {
 }
 
 void AC_Info_f( void ) {
-	client_t			*cl;
-	string_entry_t	    *bad;
-    char    *substring, *filesubstring;
-    int     clientID;
+    client_t *cl;
+    string_entry_t *bad;
+    char *substring, *filesubstring;
+    int clientID;
 
     if( !svs.initialized ) {
-		Com_Printf( "No server running.\n" );
+        Com_Printf( "No server running.\n" );
         return;
     }
 
-	if( !ac_required->integer ) {
-		Com_Printf( "The anticheat module is not in use on this server.\n"
+    if( !ac_required->integer ) {
+        Com_Printf( "The anticheat module is not in use on this server.\n"
             "For information on anticheat, please visit http://antiche.at/\n" );
-		return;
-	}
+        return;
+    }
 
-	if( Cmd_Argc() == 1 ) {
+    if( Cmd_Argc() == 1 ) {
         if( !sv_client ) {
-		    Com_Printf( "Usage: %s [substring|id] [filesubstring]\n", Cmd_Argv( 0 ) );
+            Com_Printf( "Usage: %s [substring|id] [filesubstring]\n", Cmd_Argv( 0 ) );
             return;
         }
-		cl = sv_client;
-		filesubstring = "";
-	} else {
-		substring = Cmd_Argv( 1 );
-		filesubstring = Cmd_Argv( 2 );
+        cl = sv_client;
+        filesubstring = "";
+    } else {
+        substring = Cmd_Argv( 1 );
+        filesubstring = Cmd_Argv( 2 );
 
-		if( COM_IsUint( substring ) ) {
-			clientID = atoi( substring );
-			if( clientID < 0 || clientID >= sv_maxclients->integer ) {
-				Com_Printf( "Invalid client ID.\n" );
-				return;
-			}
+        if( COM_IsUint( substring ) ) {
+            clientID = atoi( substring );
+            if( clientID < 0 || clientID >= sv_maxclients->integer ) {
+                Com_Printf( "Invalid client ID.\n" );
+                return;
+            }
             cl = &svs.udp_client_pool[clientID];
             if( cl->state < cs_spawned ) {
                 Com_Printf( "Player is not active.\n" );
                 return;
             }
-		} else {
+        } else {
             FOR_EACH_CLIENT( cl ) {
-				if( cl->state < cs_spawned ) {
-					continue;
+                if( cl->state < cs_spawned ) {
+                    continue;
                 }
-				if( strstr( cl->name, substring ) ) {
-					goto found;
-				}
-			}
+                if( strstr( cl->name, substring ) ) {
+                    goto found;
+                }
+            }
             Com_Printf( "Player not found.\n" );
             return;
-		}
-	}
+        }
+    }
 
 found:
-	if( !cl->ac_valid ) {
-		Com_Printf( "%s is not using anticheat.\n", cl->name );
-		return;
-	}
+    if( !cl->ac_valid ) {
+        Com_Printf( "%s is not using anticheat.\n", cl->name );
+        return;
+    }
     
     if( cl->ac_bad_files ) {
-	    Com_Printf( "File check failures for %s:\n", cl->name );
+        Com_Printf( "File check failures for %s:\n", cl->name );
         for( bad = cl->ac_bad_files; bad; bad = bad->next ) {
             if( !filesubstring[0] || strstr( bad->string, filesubstring ) ) {
-    	        Com_Printf( "%s\n", bad->string );
+                Com_Printf( "%s\n", bad->string );
             }
         }
     } else {
-	    Com_Printf( "%s has no file check failures.\n", cl->name );
+        Com_Printf( "%s has no file check failures.\n", cl->name );
     }
 }
 
 static void AC_Invalidate_f( void ) {
-	client_t	*cl;
+    client_t    *cl;
 
     if( !svs.initialized ) {
-		Com_Printf( "No server running.\n" );
+        Com_Printf( "No server running.\n" );
         return;
     }
-	if( !ac.ready ) {
-		Com_Printf( "Anticheat is not ready.\n" );
-		return;
-	}
+    if( !ac.ready ) {
+        Com_Printf( "Anticheat is not ready.\n" );
+        return;
+    }
     
     FOR_EACH_CLIENT( cl ) {
-		if( cl->state > cs_connected ) {
-			AC_ClientDisconnect( cl );
+        if( cl->state > cs_connected ) {
+            AC_ClientDisconnect( cl );
         }
-	}
+    }
 
-	Com_Printf( "All clients marked as invalid.\n" );
+    Com_Printf( "All clients marked as invalid.\n" );
 }
 
 static void AC_Update_f( void ) {
+    client_t    *cl;
+
     if( !svs.initialized ) {
-		Com_Printf( "No server running.\n" );
+        Com_Printf( "No server running.\n" );
         return;
     }
     if( !ac_required->integer ) {
-		Com_Printf( "Anticheat is not in use.\n" );
-		return;
+        Com_Printf( "Anticheat is not in use.\n" );
+        return;
     }
 
     AC_FreeChecks();
     AC_LoadChecks();
 
-	if( ac.connected ) {
-	    AC_SendChecks();
-	}
+    if( ac.connected ) {
+        AC_SendChecks();
+    }
 
-	Com_Printf( "Anticheat configuration updated.\n" );
+    // reset all tokens
+    FOR_EACH_CLIENT( cl ) {
+        cl->ac_token = NULL;
+    }
+
+    Com_Printf( "Anticheat configuration updated.\n" );
 }
 
 static void AC_AddException_f( void ) {

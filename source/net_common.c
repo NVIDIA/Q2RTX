@@ -37,7 +37,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <windows.h>
 #include <winsock2.h>
 #define socklen_t int
-#define NET_GET_ERROR()   do { net_error = WSAGetLastError(); } while( 0 )
+#define NET_GET_ERROR()   ( net_error = WSAGetLastError() )
 #elif defined( __unix__ )
 #include <unistd.h>
 #include <sys/socket.h>
@@ -53,7 +53,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define INVALID_SOCKET -1
 #define closesocket close
 #define ioctlsocket ioctl
-#define NET_GET_ERROR()   do { net_error = errno; } while( 0 )
+#define NET_GET_ERROR()   ( net_error = errno )
 #else
 #error Unknown target OS
 #endif
@@ -822,7 +822,6 @@ neterr_t NET_Listen( qboolean arg ) {
         return NET_OK;
     }
 
-    // zero TCP port means use default server port
 	tcp_socket = TCP_OpenSocket( net_tcp_ip->string,
         net_tcp_port->integer, NS_SERVER );
     if( tcp_socket == INVALID_SOCKET ) {
@@ -995,6 +994,7 @@ error2:
     return NET_ERROR;
 }
 
+// returns NET_OK only when there was some data read
 neterr_t NET_RunStream( netstream_t *s ) {
     struct timeval tv;
     fd_set rfd, wfd;
@@ -1064,7 +1064,7 @@ neterr_t NET_RunStream( netstream_t *s ) {
             }
             net_sent += ret;
 
-            result = NET_OK;
+            //result = NET_OK;
         }
     }
 
