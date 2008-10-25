@@ -31,9 +31,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "pmove.h"
 #include "protocol.h"
 #include "q_msg.h"
-#include "q_fifo.h"
 #include "net_sock.h"
-#include "net_stream.h"
 #include "net_chan.h"
 #include "g_public.h"
 #include "sv_public.h"
@@ -74,8 +72,6 @@ typedef struct {
 	unsigned	sentTime;			// for ping calculations
     int         clientNum;
 } client_frame_t;
-
-#define PAUSED_FRAMES   10
 
 typedef struct {
     int solid32;
@@ -345,8 +341,6 @@ typedef struct server_static_s {
 
 //=============================================================================
 
-extern	netadr_t	net_from;
-
 extern	netadr_t	master_adr[MAX_MASTERS];	// address of the master server
 
 extern  list_t      sv_banlist;
@@ -367,7 +361,6 @@ extern	cvar_t		*sv_hostname;
 extern	cvar_t		*sv_maxclients;
 extern	cvar_t		*sv_password;
 extern	cvar_t		*sv_reserved_slots;
-extern	cvar_t		*sv_noreload;			// don't reload level state when reentering
 extern	cvar_t		*sv_airaccelerate;		// development tool
 extern	cvar_t		*sv_qwmod;				// atu QW Physics modificator											
 extern	cvar_t		*sv_enforcetime;

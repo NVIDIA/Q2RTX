@@ -2359,6 +2359,8 @@ void MSG_ParseDeltaPlayerstate_Packet( const player_state_t *from,
 	
 }
 
+#if USE_CLIENT
+
 #define SHOWBITS( data ) \
 	do { Com_Printf( "%s ", data ); } while( 0 )
 
@@ -2437,10 +2439,7 @@ void MSG_ShowDeltaEntityBits( int bits ) {
 	if( bits & U_SOLID ) {
 		SHOWBITS( "solid" );
 	}
-
 }
-
-#if USE_CLIENT
 
 void MSG_ShowDeltaPlayerstateBits_Default( int flags ) {
 	if( flags & PS_M_TYPE ) {
@@ -2502,7 +2501,6 @@ void MSG_ShowDeltaPlayerstateBits_Default( int flags ) {
 	if( flags & PS_RDFLAGS ) {
 		SHOWBITS( "rdflags" );
 	}
-	
 }
 
 void MSG_ShowDeltaPlayerstateBits_Enhanced( int flags ) {
@@ -2596,8 +2594,6 @@ void MSG_ShowDeltaPlayerstateBits_Enhanced( int flags ) {
 	}
 }
 
-#endif // USE_CLIENT
-
 void MSG_ShowDeltaPlayerstateBits_Packet( int flags ) {
 	if( flags & PPS_M_TYPE ) {
 		SHOWBITS( "pmove.pm_type" );
@@ -2660,8 +2656,6 @@ void MSG_ShowDeltaPlayerstateBits_Packet( int flags ) {
 	}
 }
 
-#if USE_CLIENT
-
 void MSG_ShowDeltaUsercmdBits_Enhanced( int bits ) {
 	if( !bits ) {
 		SHOWBITS( "<none>" );
@@ -2686,8 +2680,6 @@ void MSG_ShowDeltaUsercmdBits_Enhanced( int bits ) {
  	if( bits & CM_IMPULSE )
 	    SHOWBITS( "msec" );
 }
-
-#endif // USE_CLIENT
 
 static const char *const svc_strings[svc_num_types] = {
 	"svc_bad",
@@ -2737,6 +2729,8 @@ const char *MSG_ServerCommandString( int cmd ) {
 
     return s;
 }
+
+#endif // USE_CLIENT
 
 //===========================================================================
 

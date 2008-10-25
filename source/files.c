@@ -342,9 +342,10 @@ char *FS_ReplaceSeparators( char *s, int separator ) {
 ================
 FS_GetFileLength
 
-Returns current length for files opened for writing.
-Returns cached length for files opened for reading.
-Returns compressed length for GZIP files.
+Returns:
+- current length for files opened for writing.
+- cached length for files opened for reading.
+- INVALID_LENGTH for gzip-compressed files.
 ================
 */
 size_t FS_GetFileLength( fileHandle_t f ) {
@@ -358,10 +359,11 @@ size_t FS_GetFileLength( fileHandle_t f ) {
         }
         return info.size;
     case FS_PAK:
-        return file->length;
 #if USE_ZLIB
     case FS_PK2:
+#endif
         return file->length;
+#if USE_ZLIB
     case FS_GZIP:
         return INVALID_LENGTH;
 #endif
@@ -371,6 +373,69 @@ size_t FS_GetFileLength( fileHandle_t f ) {
 
     return INVALID_LENGTH;
 }
+
+/*
+============
+FS_Tell
+============
+*/
+size_t FS_Tell( fileHandle_t f ) {
+    fsFile_t *file = FS_FileForHandle( f );
+    int length;
+
+    switch( file->type ) {
+    case FS_REAL:
+        length = ftell( file->fp );
+        break;
+    case FS_PAK:
+        length = ftell( file->fp ) - file->pak->filepos;
+        break;
+#if USE_ZLIB
+    case FS_PK2:
+        length = unztell( file->zfp );
+        break;
+    case FS_GZIP:
+        return INVALID_LENGTH;
+#endif
+    default:
+        Com_Error( ERR_FATAL, "%s: bad file type", __func__ );
+    }
+
+    return length;
+}
+
+/*
+============
+FS_Seek
+============
+*/
+qboolean FS_Seek( fileHandle_t f, size_t offset ) {
+    fsFile_t *file = FS_FileForHandle( f );
+
+    switch( file->type ) {
+    case FS_REAL:
+    case FS_PAK:
+        if( fseek( file->fp, offset, SEEK_CUR ) == -1 ) {
+            return qfalse;
+        }
+        break;
+#if USE_ZLIB
+    case FS_GZIP:
+        if( gzseek( file->zfp, offset, SEEK_CUR ) == -1 ) {
+            return qfalse;
+        }
+        break;
+    //case FS_PK2:
+    //    length = unztell( file->zfp );
+    //    break;
+#endif
+    default:
+        return qfalse;
+    }
+
+    return qtrue;
+}
+
 
 /*
 ============
@@ -966,69 +1031,6 @@ size_t FS_FOpenFile( const char *name, fileHandle_t *f, int mode ) {
 }
 
 
-/*
-============
-FS_Tell
-============
-*/
-int FS_Tell( fileHandle_t f ) {
-    fsFile_t *file = FS_FileForHandle( f );
-    int length;
-
-    switch( file->type ) {
-    case FS_REAL:
-        length = ftell( file->fp );
-        break;
-    case FS_PAK:
-        length = ftell( file->fp ) - file->pak->filepos;
-        break;
-#if USE_ZLIB
-    case FS_GZIP:
-        length = gztell( file->zfp );
-        break;
-    case FS_PK2:
-        length = unztell( file->zfp );
-        break;
-#endif
-    default:
-        length = -1;
-        break;
-    }
-
-    return length;
-}
-
-/*
-============
-FS_RawTell
-============
-*/
-int FS_RawTell( fileHandle_t f ) {
-    fsFile_t *file = FS_FileForHandle( f );
-    int length;
-
-    switch( file->type ) {
-    case FS_REAL:
-        length = ftell( file->fp );
-        break;
-    case FS_PAK:
-        length = ftell( file->fp ) - file->pak->filepos;
-        break;
-#if USE_ZLIB
-    case FS_GZIP:
-        length = ftell( file->fp );
-        break;
-    case FS_PK2:
-        length = unztell( file->zfp );
-        break;
-#endif
-    default:
-        length = -1;
-        break;
-    }
-
-    return length;
-}
 
 #define MAX_LOAD_BUFFER        0x100000        // 1 MiB
 

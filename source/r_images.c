@@ -610,8 +610,8 @@ JPEG LOADING
 #if USE_JPG
 
 typedef struct my_error_mgr {
-    struct jpeg_error_mgr    pub;
-    jmp_buf                    setjmp_buffer;
+    struct jpeg_error_mgr   pub;
+    jmp_buf                 setjmp_buffer;
     const char              *filename;
 } *my_error_ptr;
 
@@ -768,8 +768,8 @@ JPEG WRITING
 typedef struct my_destination_mgr {
     struct jpeg_destination_mgr pub; /* public fields */
 
-    fileHandle_t hFile;        /* target stream */
-    JOCTET *buffer;        /* start of buffer */
+    fileHandle_t hFile;     /* target stream */
+    JOCTET *buffer;         /* start of buffer */
 } *my_dest_ptr;
 
 
@@ -1128,6 +1128,7 @@ IMAGE MANAGER
 */
 
 #define RIMAGES_HASH    256
+
 
 image_t     r_images[MAX_RIMAGES];
 list_t      r_imageHash[RIMAGES_HASH];
@@ -1584,11 +1585,11 @@ IMG_ForHandle
 ===============
 */
 image_t *IMG_ForHandle( qhandle_t h ) {
-	if( h < 0 || h >= r_numImages ) {
-		Com_Error( ERR_FATAL, "%s: %d out of range", __func__, h );
-	}
+    if( h < 0 || h >= r_numImages ) {
+        Com_Error( ERR_FATAL, "%s: %d out of range", __func__, h );
+    }
 
-	return &r_images[h];
+    return &r_images[h];
 }
 
 /*
@@ -1597,14 +1598,17 @@ R_RegisterSkin
 ===============
 */
 qhandle_t R_RegisterSkin( const char *name ) {
-	image_t	*image;
+    image_t *image;
 
-	image = IMG_Find( name, it_skin );
-	if( !image ) {
-		return 0;
-	}
+    if( !r_numImages ) {
+        return 0;
+    }
+    image = IMG_Find( name, it_skin );
+    if( !image ) {
+        return 0;
+    }
 
-	return ( image - r_images );
+    return ( image - r_images );
 }
 
 /*
@@ -1613,24 +1617,28 @@ R_RegisterPic
 ================
 */
 qhandle_t R_RegisterPic( const char *name ) {
-	image_t	*image;
-	char	fullname[MAX_QPATH];
+    image_t *image;
+    char    fullname[MAX_QPATH];
 
-	if( name[0] == '*' ) {
-		image = IMG_Find( name + 1, it_tmp );
+    if( !r_numImages ) {
+        return 0;
+    }
+
+    if( name[0] == '*' ) {
+        image = IMG_Find( name + 1, it_tmp );
     } else if( name[0] == '/' || name[0] == '\\' ) {
-		image = IMG_Find( name + 1, it_pic );
+        image = IMG_Find( name + 1, it_pic );
     } else {
-		Q_concat( fullname, sizeof( fullname ), "pics/", name, NULL );
-		COM_DefaultExtension( fullname, ".pcx", sizeof( fullname ) );
-		image = IMG_Find( fullname, it_pic );
-	}
+        Q_concat( fullname, sizeof( fullname ), "pics/", name, NULL );
+        COM_DefaultExtension( fullname, ".pcx", sizeof( fullname ) );
+        image = IMG_Find( fullname, it_pic );
+    }
 
-	if( !image ) {
-		return 0;
-	}
+    if( !image ) {
+        return 0;
+    }
 
-	return ( image - r_images );
+    return ( image - r_images );
 }
 
 /*
@@ -1639,22 +1647,26 @@ R_RegisterFont
 ================
 */
 qhandle_t R_RegisterFont( const char *name ) {
-	image_t	*image;
-	char	fullname[MAX_QPATH];
+    image_t *image;
+    char    fullname[MAX_QPATH];
 
-	if( name[0] == '/' || name[0] == '\\' ) {
-		image = IMG_Find( name + 1, it_charset );
+    if( !r_numImages ) {
+        return 0;
+    }
+
+    if( name[0] == '/' || name[0] == '\\' ) {
+        image = IMG_Find( name + 1, it_charset );
     } else {
-		Q_concat( fullname, sizeof( fullname ), "pics/", name, NULL );
-		COM_DefaultExtension( fullname, ".pcx", sizeof( fullname ) );
-		image = IMG_Find( fullname, it_charset );
-	}
+        Q_concat( fullname, sizeof( fullname ), "pics/", name, NULL );
+        COM_DefaultExtension( fullname, ".pcx", sizeof( fullname ) );
+        image = IMG_Find( fullname, it_charset );
+    }
 
-	if( !image ) {
-		return 0;
-	}
+    if( !image ) {
+        return 0;
+    }
 
-	return ( image - r_images );
+    return ( image - r_images );
 }
 
 /*
@@ -1672,7 +1684,7 @@ void IMG_FreeUnused( void ) {
     last = r_images + r_numImages;
     for( image = r_images; image < last; image++ ) {
         if( image->registration_sequence == registration_sequence ) {
-#if SOFTWARE_RENDERER
+#if USE_REF == REF_SOFT
             Com_PageInMemory( image->pixels[0], image->width * image->height * VID_BYTES );
 #endif
             continue;        // used this sequence
@@ -1754,9 +1766,9 @@ void IMG_GetPalette( byte **pic ) {
 void IMG_Init( void ) {
     int i;
 
-	if( r_numImages ) {
-		Com_Error( ERR_FATAL, "%s: %d images not freed", __func__, r_numImages );
-	}
+    if( r_numImages ) {
+        Com_Error( ERR_FATAL, "%s: %d images not freed", __func__, r_numImages );
+    }
 
 
 #if USE_PNG || USE_JPG || USE_TGA

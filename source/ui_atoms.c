@@ -671,6 +671,9 @@ UI_Shutdown
 =================
 */
 void UI_Shutdown( void ) {
+    if( !uis.initialized ) {
+        return;
+    }
     UI_ForceMenuOff();
 
     ui_scale->changed = NULL;

@@ -107,8 +107,8 @@ size_t  FS_ReadLine( fileHandle_t f, char *buffer, int size );
 
 void    FS_Flush( fileHandle_t f );
 
-int		FS_Tell( fileHandle_t f );
-int		FS_RawTell( fileHandle_t f );
+size_t	FS_Tell( fileHandle_t f );
+qboolean FS_Seek( fileHandle_t f, size_t offset );
 
 size_t	FS_GetFileLength( fileHandle_t f );
 

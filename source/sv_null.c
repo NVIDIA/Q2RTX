@@ -31,11 +31,3 @@ void SV_Frame( int msec ) {
 void SV_ProcessEvents( void ) {
 }
 
-#if 0
-qboolean MVD_GetDemoPercent( int *percent, int *bufferPercent ) {
-	*percent = 0;
-	*bufferPercent = 0;
-
-	return qfalse;
-}
-#endif

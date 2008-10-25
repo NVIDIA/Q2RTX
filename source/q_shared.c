@@ -1407,22 +1407,14 @@ Q_strlcat
 ===============
 */
 size_t Q_strlcat( char *dst, const char *src, size_t size ) {
-    size_t srclen = strlen( src );
-    size_t dstlen = strlen( dst );
-    size_t ret = srclen + dstlen;
+    size_t ret, len = strlen( dst );
 
-    if( dstlen >= size ) {
+    if( len >= size ) {
         Com_Error( ERR_FATAL, "%s: already overflowed", __func__ );
     }
 
-    size -= dstlen;
-    dst += dstlen;
-
-    if( size ) {
-        size_t len = srclen >= size ? size - 1 : srclen;
-        memcpy( dst, src, len );
-        dst[len] = 0;
-    }
+    ret = Q_strlcpy( dst + len, src, size - len );
+    ret += len;
 
     return ret;
 }
@@ -1432,31 +1424,25 @@ size_t Q_strlcat( char *dst, const char *src, size_t size ) {
 Q_concat
 ===============
 */
-size_t Q_concat( char *dest, size_t destsize, ... ) {
+size_t Q_concat( char *dest, size_t size, ... ) {
     va_list argptr;
     const char *s;
     size_t len, total = 0;
 
-    va_start( argptr, destsize );
-
-    if( destsize ) {
-        while( ( s = va_arg( argptr, const char * ) ) != NULL ) {
-            len = strlen( s );
-            if( total + len < destsize ) {
-                memcpy( dest, s, len );
-                dest += len;
-            }
-            total += len;
+    va_start( argptr, size );
+    while( ( s = va_arg( argptr, const char * ) ) != NULL ) {
+        len = strlen( s );
+        if( total + len < size ) {
+            memcpy( dest, s, len );
+            dest += len;
         }
-        *dest = 0;
-    } else {
-        while( ( s = va_arg( argptr, const char * ) ) != NULL ) {
-            len = strlen( s );
-            total += len;
-        }
+        total += len;
     }
-
     va_end( argptr );
+
+    if( size ) {
+        *dest = 0;
+    }
 
     return total;
 }
@@ -1465,7 +1451,7 @@ size_t Q_concat( char *dest, size_t destsize, ... ) {
 ===============
 Q_vsnprintf
 
-Work around broken M$ CRT semantics.
+Work around broken M$ C runtime semantics.
 ===============
 */
 size_t Q_vsnprintf( char *dest, size_t size, const char *fmt, va_list argptr ) {

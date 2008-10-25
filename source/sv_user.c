@@ -917,18 +917,18 @@ USER CMD EXECUTION
 SV_ClientThink
 ==================
 */
-static inline void SV_ClientThink( client_t *cl, usercmd_t *cmd ) {
-    cl->commandMsec -= cmd->msec;
+static inline void SV_ClientThink( usercmd_t *cmd ) {
+    sv_client->commandMsec -= cmd->msec;
 
-    if( cl->commandMsec < 0 && sv_enforcetime->integer ) {
+    if( sv_client->commandMsec < 0 && sv_enforcetime->integer ) {
 #ifdef _DEBUG
         Com_DPrintf( "commandMsec underflow from %s: %d\n",
-            cl->name, cl->commandMsec );
+            sv_client->name, sv_client->commandMsec );
 #endif
         return;
     }
 
-    ge->ClientThink( cl->edict, cmd );
+    ge->ClientThink( sv_player, cmd );
 }
 
 static inline void SV_SetLastFrame( int lastframe ) {
@@ -983,22 +983,21 @@ static void SV_OldClientExecuteMove( int net_drop ) {
 
     if( net_drop > 2 ) {
         sv_client->frameflags |= FF_CLIENTPRED;
-//        Com_DPrintf( "%s: net_drop %i\n", sv_client->name, net_drop );
     } 
 
     if( net_drop < 20 ) {
         while( net_drop > 2 ) {
-            SV_ClientThink( sv_client, &sv_client->lastcmd );
+            SV_ClientThink( &sv_client->lastcmd );
             net_drop--;
         }
         if( net_drop > 1 )
-            SV_ClientThink( sv_client, &oldest );
+            SV_ClientThink( &oldest );
 
         if( net_drop > 0 )
-            SV_ClientThink( sv_client, &oldcmd );
+            SV_ClientThink( &oldcmd );
 
     }
-    SV_ClientThink( sv_client, &newcmd );
+    SV_ClientThink( &newcmd );
     
     sv_client->lastcmd = newcmd;
 }
@@ -1069,13 +1068,12 @@ static void SV_NewClientExecuteMove( int c, int net_drop ) {
 
     if( net_drop > numDups ) {
         sv_client->frameflags |= FF_CLIENTPRED;
-//        Com_DPrintf( "%s: net_drop %i\n", sv_client->name, net_drop );
     } 
 
     if( net_drop < 20 ) {
         // run lastcmd multiple times if no backups available
         while( net_drop > numDups ) {
-            SV_ClientThink( sv_client, &sv_client->lastcmd );
+            SV_ClientThink( &sv_client->lastcmd );
             net_drop--;
         }
 
@@ -1083,7 +1081,7 @@ static void SV_NewClientExecuteMove( int c, int net_drop ) {
         while( net_drop > 0 ) {
             i = numDups - net_drop;
             for( j = 0; j < numCmds[i]; j++ ) {
-                SV_ClientThink( sv_client, &cmds[i][j] );
+                SV_ClientThink(  &cmds[i][j] );
             }
             net_drop--;
         }
@@ -1092,7 +1090,7 @@ static void SV_NewClientExecuteMove( int c, int net_drop ) {
 
     // run new cmds
     for( j = 0; j < numCmds[numDups]; j++ ) {
-        SV_ClientThink( sv_client, &cmds[numDups][j] );
+        SV_ClientThink( &cmds[numDups][j] );
     }
     
     sv_client->lastcmd = *lastcmd;

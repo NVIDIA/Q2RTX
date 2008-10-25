@@ -526,7 +526,7 @@ void VID_EndFrame( void ) {
     SDL_Flip( sdl.surface );
 }
 
-#else // SOFTWARE_RENDERER
+#else // USE_REF == REF_SOFT
 
 /*
 static cvar_t *gl_swapinterval;
@@ -609,7 +609,7 @@ void *VID_GetProcAddr( const char *sym ) {
     return SDL_GL_GetProcAddress( sym );
 }
 
-#endif // !SOFTWARE_RENDERER
+#endif // USE_REF == REF_GL
 
 
 /*

@@ -22,20 +22,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // mvd_game.c
 //
 
-#include "sv_local.h"
 #include "mvd_local.h"
 #include <setjmp.h>
 
-static cvar_t	*mvd_admin_password;
-static cvar_t	*mvd_flood_msgs;
-static cvar_t	*mvd_flood_persecond;
-static cvar_t	*mvd_flood_waitdelay;
-static cvar_t	*mvd_flood_mute;
-static cvar_t	*mvd_filter_version;
-static cvar_t	*mvd_stats_score;
-static cvar_t	*mvd_stats_hack;
-static cvar_t	*mvd_freeze_hack;
-static cvar_t	*mvd_chase_prefix;
+static cvar_t   *mvd_admin_password;
+static cvar_t   *mvd_flood_msgs;
+static cvar_t   *mvd_flood_persecond;
+static cvar_t   *mvd_flood_waitdelay;
+static cvar_t   *mvd_flood_mute;
+static cvar_t   *mvd_filter_version;
+static cvar_t   *mvd_stats_score;
+static cvar_t   *mvd_stats_hack;
+static cvar_t   *mvd_freeze_hack;
+static cvar_t   *mvd_chase_prefix;
 
 mvd_client_t    *mvd_clients;
 
@@ -56,13 +55,13 @@ LAYOUTS
 static void MVD_LayoutClients( mvd_client_t *client ) {
     static const char header[] = 
         "xv 16 yv 0 string2 \"    Name            RTT Status\"";
-	char layout[MAX_STRING_CHARS];
-	char buffer[MAX_QPATH];
-	char status[MAX_QPATH];
-	size_t len, total;
-	mvd_client_t *cl;
+    char layout[MAX_STRING_CHARS];
+    char buffer[MAX_QPATH];
+    char status[MAX_QPATH];
+    size_t len, total;
+    mvd_client_t *cl;
     mvd_t *mvd = client->mvd;
-	int y, i, prestep, flags;
+    int y, i, prestep, flags;
 
     // calculate prestep
     if( client->layout_cursor < 0 ) {
@@ -77,36 +76,36 @@ static void MVD_LayoutClients( mvd_client_t *client ) {
     prestep = client->layout_cursor * 10;
 
     memcpy( layout, header, sizeof( header ) - 1 );
-	total = sizeof( header ) - 1;
+    total = sizeof( header ) - 1;
 
-	y = 8;
+    y = 8;
     i = 0;
     LIST_FOR_EACH( mvd_client_t, cl, &mvd->clients, entry ) {
         if( ++i < prestep ) {
             continue;
         }
-		if( cl->cl->state < cs_spawned ) {
+        if( cl->cl->state < cs_spawned ) {
             continue;
         }
         if( cl->target ) {
-			strcpy( status, "-> " );
+            strcpy( status, "-> " );
             strcpy( status + 3, cl->target->name );
         } else {
             strcpy( status, "observing" );
         }
-		len = Q_snprintf( buffer, sizeof( buffer ),
-			"yv %d string \"%3d %-15.15s %3d %s\"",
-			y, i, cl->cl->name, cl->ping, status );
+        len = Q_snprintf( buffer, sizeof( buffer ),
+            "yv %d string \"%3d %-15.15s %3d %s\"",
+            y, i, cl->cl->name, cl->ping, status );
         if( len >= sizeof( buffer ) ) {
             continue;
         }
-		if( total + len >= sizeof( layout ) ) {
-			break;
-		}
-		memcpy( layout + total, buffer, len );
-		total += len;
-		y += 8;
-	}
+        if( total + len >= sizeof( layout ) ) {
+            break;
+        }
+        memcpy( layout + total, buffer, len );
+        total += len;
+        y += 8;
+    }
 
     layout[total] = 0;
 
@@ -117,11 +116,11 @@ static void MVD_LayoutClients( mvd_client_t *client ) {
     }
 
     // send the layout
-	MSG_WriteByte( svc_layout );
-	MSG_WriteData( layout, total + 1 );
-	SV_ClientAddMessage( client->cl, flags );
+    MSG_WriteByte( svc_layout );
+    MSG_WriteData( layout, total + 1 );
+    SV_ClientAddMessage( client->cl, flags );
 
-	client->layout_time = svs.realtime;
+    client->layout_time = svs.realtime;
 }
 
 static void MVD_LayoutChannels( mvd_client_t *client ) {
@@ -136,11 +135,11 @@ static void MVD_LayoutChannels( mvd_client_t *client ) {
         "yv 80 string \" Please wait until players\""
         "yv 88 string \" connect.\""
         ;
-	char layout[MAX_STRING_CHARS];
-	char buffer[MAX_QPATH];
+    char layout[MAX_STRING_CHARS];
+    char buffer[MAX_QPATH];
     mvd_t *mvd;
-	size_t len, total;
-	int cursor, y;
+    size_t len, total;
+    int cursor, y;
 
     memcpy( layout, header, sizeof( header ) - 1 );
     total = sizeof( header ) - 1;
@@ -188,11 +187,11 @@ static void MVD_LayoutChannels( mvd_client_t *client ) {
     layout[total] = 0;
 
     // send the layout
-	MSG_WriteByte( svc_layout );
-	MSG_WriteData( layout, total + 1 );				
-	SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
+    MSG_WriteByte( svc_layout );
+    MSG_WriteData( layout, total + 1 );                
+    SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
 
-	client->layout_time = svs.realtime;
+    client->layout_time = svs.realtime;
 }
 
 #define MENU_ITEMS  10
@@ -215,7 +214,7 @@ static void MVD_LayoutMenu( mvd_client_t *client ) {
         "yv 128 string \" (use 'set uf %d u' in cfg)\""
         "yv 144 string2 \"%cExit menu\""
         "xv 240 yv 172 string2 " VERSION;
-	char layout[MAX_STRING_CHARS];
+    char layout[MAX_STRING_CHARS];
     char cur[MENU_ITEMS];
     size_t total;
 
@@ -240,11 +239,11 @@ static void MVD_LayoutMenu( mvd_client_t *client ) {
         cur[9] );
 
     // send the layout
-	MSG_WriteByte( svc_layout );
-	MSG_WriteData( layout, total + 1 );				
-	SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
+    MSG_WriteByte( svc_layout );
+    MSG_WriteData( layout, total + 1 );                
+    SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
 
-	client->layout_time = svs.realtime;
+    client->layout_time = svs.realtime;
 }
 
 static void MVD_LayoutScores( mvd_client_t *client, const char *layout ) {
@@ -261,11 +260,11 @@ static void MVD_LayoutScores( mvd_client_t *client, const char *layout ) {
     }
 
     // send the layout
-	MSG_WriteByte( svc_layout );
+    MSG_WriteByte( svc_layout );
     MSG_WriteString( layout );
-	SV_ClientAddMessage( client->cl, flags );
+    SV_ClientAddMessage( client->cl, flags );
 
-	client->layout_time = svs.realtime;
+    client->layout_time = svs.realtime;
 }
 
 static void MVD_LayoutFollow( mvd_client_t *client ) {
@@ -282,25 +281,25 @@ static void MVD_LayoutFollow( mvd_client_t *client ) {
     }
 
     // send the layout
-	MSG_WriteByte( svc_layout );
+    MSG_WriteByte( svc_layout );
     MSG_WriteData( layout, total + 1 );
-	SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
+    SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
 
-	client->layout_time = svs.realtime;
+    client->layout_time = svs.realtime;
 }
 
 static void MVD_SetDefaultLayout( mvd_client_t *client ) {
     mvd_t *mvd = client->mvd;
 
-	if( mvd == &mvd_waitingRoom ) {
-    	client->layout_type = LAYOUT_CHANNELS;
-	} else if( mvd->intermission ) {
+    if( mvd == &mvd_waitingRoom ) {
+        client->layout_type = LAYOUT_CHANNELS;
+    } else if( mvd->intermission ) {
         client->layout_type = LAYOUT_SCORES;
-	} else if( client->target ) {
+    } else if( client->target ) {
         client->layout_type = LAYOUT_FOLLOW;
     } else {
-		client->layout_type = LAYOUT_NONE;
-	}
+        client->layout_type = LAYOUT_NONE;
+    }
 
     // force an update
     client->layout_time = 0;
@@ -320,7 +319,7 @@ static void MVD_UpdateLayouts( mvd_t *mvd ) {
     mvd_client_t *client;
 
     LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
-		if( client->cl->state != cs_spawned ) {
+        if( client->cl->state != cs_spawned ) {
             continue;
         }
         client->ps.stats[STAT_LAYOUTS] = client->layout_type ? 1 : 0;
@@ -382,21 +381,21 @@ CHASE CAMERA
 static void MVD_FollowStop( mvd_client_t *client ) {
     mvd_t *mvd = client->mvd;
     mvd_cs_t *cs;
-	int i;
+    int i;
 
-	client->ps.viewangles[ROLL] = 0;
+    client->ps.viewangles[ROLL] = 0;
 
-	for( i = 0; i < 3; i++ ) {
-		client->ps.pmove.delta_angles[i] = ANGLE2SHORT(
+    for( i = 0; i < 3; i++ ) {
+        client->ps.pmove.delta_angles[i] = ANGLE2SHORT(
             client->ps.viewangles[i] ) - client->lastcmd.angles[i];
-	}
+    }
 
-	VectorClear( client->ps.kick_angles );
+    VectorClear( client->ps.kick_angles );
     Vector4Clear( client->ps.blend );
-	client->ps.pmove.pm_flags = 0;
-	client->ps.pmove.pm_type = mvd->pm_type;
-	client->ps.rdflags = 0;
-	client->ps.gunindex = 0;
+    client->ps.pmove.pm_flags = 0;
+    client->ps.pmove.pm_type = mvd->pm_type;
+    client->ps.rdflags = 0;
+    client->ps.gunindex = 0;
     client->ps.fov = client->fov;
 
     for( cs = mvd->dummy->configstrings; cs; cs = cs->next ) {
@@ -420,20 +419,20 @@ static void MVD_FollowStop( mvd_client_t *client ) {
 static void MVD_FollowStart( mvd_client_t *client, mvd_player_t *target ) {
     mvd_cs_t *cs;
 
-	if( client->target == target ) {
-		return;
-	}
+    if( client->target == target ) {
+        return;
+    }
 
     client->oldtarget = client->target;
-	client->target = target;
+    client->target = target;
 
-	// send delta configstrings
+    // send delta configstrings
     for( cs = target->configstrings; cs; cs = cs->next ) {
         MSG_WriteByte( svc_configstring );
         MSG_WriteShort( cs->index );
         MSG_WriteString( cs->string );
         SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
-	}
+    }
 
     SV_ClientPrintf( client->cl, PRINT_LOW, "[MVD] Chasing %s.\n", target->name );
 
@@ -443,8 +442,8 @@ static void MVD_FollowStart( mvd_client_t *client, mvd_player_t *target ) {
 
 static void MVD_FollowFirst( mvd_client_t *client ) {
     mvd_t *mvd = client->mvd;
-	mvd_player_t *target;
-	int i;
+    mvd_player_t *target;
+    int i;
 
     // pick up the first active player
     for( i = 0; i < mvd->maxclients; i++ ) {
@@ -460,8 +459,8 @@ static void MVD_FollowFirst( mvd_client_t *client ) {
 
 static void MVD_FollowLast( mvd_client_t *client ) {
     mvd_t *mvd = client->mvd;
-	mvd_player_t *target;
-	int i;
+    mvd_player_t *target;
+    int i;
 
     // pick up the last active player
     for( i = 0; i < mvd->maxclients; i++ ) {
@@ -477,7 +476,7 @@ static void MVD_FollowLast( mvd_client_t *client ) {
 
 static void MVD_FollowNext( mvd_client_t *client ) {
     mvd_t *mvd = client->mvd;
-	mvd_player_t *target = client->target;
+    mvd_player_t *target = client->target;
 
     if( !target ) {
         MVD_FollowFirst( client );
@@ -495,12 +494,12 @@ static void MVD_FollowNext( mvd_client_t *client ) {
         }
     } while( !target->inuse || target == mvd->dummy );
 
-	MVD_FollowStart( client, target );
+    MVD_FollowStart( client, target );
 }
 
 static void MVD_FollowPrev( mvd_client_t *client ) {
     mvd_t *mvd = client->mvd;
-	mvd_player_t *target = client->target;
+    mvd_player_t *target = client->target;
 
     if( !target ) {
         MVD_FollowLast( client );
@@ -518,7 +517,7 @@ static void MVD_FollowPrev( mvd_client_t *client ) {
         }
     } while( !target->inuse || target == mvd->dummy );
 
-	MVD_FollowStart( client, target );
+    MVD_FollowStart( client, target );
 }
 
 static mvd_player_t *MVD_MostFollowed( mvd_t *mvd ) {
@@ -601,15 +600,15 @@ SPECTATOR COMMANDS
 */
 
 void MVD_BroadcastPrintf( mvd_t *mvd, int level, int mask, const char *fmt, ... ) {
-	va_list		argptr;
-	char		text[MAX_STRING_CHARS];
+    va_list     argptr;
+    char        text[MAX_STRING_CHARS];
     size_t      len;
     mvd_client_t *other;
     client_t    *cl;
 
-	va_start( argptr, fmt );
-	len = Q_vsnprintf( text, sizeof( text ), fmt, argptr );
-	va_end( argptr );
+    va_start( argptr, fmt );
+    len = Q_vsnprintf( text, sizeof( text ), fmt, argptr );
+    va_end( argptr );
 
     if( len >= sizeof( text ) ) {
         Com_WPrintf( "%s: overflow\n", __func__ );
@@ -632,14 +631,14 @@ void MVD_BroadcastPrintf( mvd_t *mvd, int level, int mask, const char *fmt, ... 
         if( cl->state < cs_spawned ) {
             continue;
         }
-		if( level < cl->messagelevel ) {
-			continue;
+        if( level < cl->messagelevel ) {
+            continue;
         }
         if( other->uf & mask ) {
             continue;
         }
-		SV_ClientAddMessage( cl, MSG_RELIABLE );
-	}
+        SV_ClientAddMessage( cl, MSG_RELIABLE );
+    }
 
     SZ_Clear( &msg_write );
 }
@@ -658,7 +657,7 @@ static void MVD_SetServerState( client_t *cl, mvd_t *mvd ) {
 void MVD_SwitchChannel( mvd_client_t *client, mvd_t *mvd ) {
     client_t *cl = client->cl;
 
-	List_Remove( &client->entry );
+    List_Remove( &client->entry );
     List_Append( &mvd->clients, &client->entry );
     client->mvd = mvd;
     client->begin_time = 0;
@@ -700,7 +699,7 @@ static void MVD_Admin_f( mvd_client_t *client ) {
 
     if( client->admin ) {
         client->admin = qfalse;
-    	SV_ClientPrintf( client->cl, PRINT_HIGH, "[MVD] Lost admin status.\n" );
+        SV_ClientPrintf( client->cl, PRINT_HIGH, "[MVD] Lost admin status.\n" );
         return;
     }
 
@@ -716,20 +715,20 @@ static void MVD_Admin_f( mvd_client_t *client ) {
     }
 
     client->admin = qtrue;
-	SV_ClientPrintf( client->cl, PRINT_HIGH, "[MVD] Granted admin status.\n" );
+    SV_ClientPrintf( client->cl, PRINT_HIGH, "[MVD] Granted admin status.\n" );
 }
 
 static void MVD_Forward_f( mvd_client_t *client ) {
     mvd_t *mvd = client->mvd;
 
     if( !client->admin ) {
-	    SV_ClientPrintf( client->cl, PRINT_HIGH,
+        SV_ClientPrintf( client->cl, PRINT_HIGH,
             "[MVD] You don't have admin status.\n" );
         return;
     }
 
     if( !mvd->forward_cmd ) {
-	    SV_ClientPrintf( client->cl, PRINT_HIGH,
+        SV_ClientPrintf( client->cl, PRINT_HIGH,
             "[MVD] This channel does not support command forwarding.\n" );
         return;
     }
@@ -909,14 +908,14 @@ static void MVD_Invuse_f( mvd_client_t *client ) {
             MVD_Observe_f( client );
             return;
         case 1:
-			client->layout_type = LAYOUT_SCORES;
+            client->layout_type = LAYOUT_SCORES;
             break;
         case 2:
-			client->layout_type = LAYOUT_CLIENTS;
+            client->layout_type = LAYOUT_CLIENTS;
             client->layout_cursor = 0;
             break;
         case 3:
-			client->layout_type = LAYOUT_CHANNELS;
+            client->layout_type = LAYOUT_CHANNELS;
             client->layout_cursor = 0;
             break;
         case 4:
@@ -959,9 +958,9 @@ static void MVD_Invuse_f( mvd_client_t *client ) {
 static void MVD_Join_f( mvd_client_t *client ) {
     mvd_t *mvd;
         
-	SV_BeginRedirect( RD_CLIENT );
+    SV_BeginRedirect( RD_CLIENT );
     mvd = MVD_SetChannel( 1 );
-	Com_EndRedirect();
+    Com_EndRedirect();
 
     if( !mvd ) {
         return;
@@ -1013,21 +1012,21 @@ static void mvd_channel_list_f( mvd_client_t *client ) {
 
     if( Cmd_Argc() > 1 ) {
         if( LIST_EMPTY( &mvd_channel_list ) ) {
-	        SV_ClientPrintf( client->cl, PRINT_HIGH,
+            SV_ClientPrintf( client->cl, PRINT_HIGH,
                 "No ready channels.\n" );
             return;
         }
     } else {
         if( LIST_EMPTY( &mvd_active_list ) ) {
-	        SV_ClientPrintf( client->cl, PRINT_HIGH,
+            SV_ClientPrintf( client->cl, PRINT_HIGH,
                 "No active channels.\n" );
             return;
         }
     }
 
-	SV_ClientPrintf( client->cl, PRINT_HIGH,
+    SV_ClientPrintf( client->cl, PRINT_HIGH,
         "id name         map      spc plr who is playing\n"
-	    "-- ------------ -------- --- --- --------------\n" );
+        "-- ------------ -------- --- --- --------------\n" );
 
     if( Cmd_Argc() > 1 ) {
         LIST_FOR_EACH( mvd_t, mvd, &mvd_channel_list, entry ) {
@@ -1048,7 +1047,7 @@ static void MVD_Clients_f( mvd_client_t *client ) {
 }
 
 static void MVD_Commands_f( mvd_client_t *client ) {
-	SV_ClientPrintf( client->cl, PRINT_HIGH,
+    SV_ClientPrintf( client->cl, PRINT_HIGH,
         "chase [player_id]      toggle chasecam mode\n"
         "observe                toggle observer mode\n"
         "menu                   show main menu\n"
@@ -1061,46 +1060,46 @@ static void MVD_Commands_f( mvd_client_t *client ) {
 }
 
 static void MVD_GameClientCommand( edict_t *ent ) {
-	mvd_client_t *client = EDICT_MVDCL( ent );
-	char *cmd;
+    mvd_client_t *client = EDICT_MVDCL( ent );
+    char *cmd;
 
     if( client->cl->state < cs_spawned ) {
         return;
     }
 
-	cmd = Cmd_Argv( 0 );
+    cmd = Cmd_Argv( 0 );
 
-	if( !strcmp( cmd, "!mvdadmin" ) ) {
+    if( !strcmp( cmd, "!mvdadmin" ) ) {
         MVD_Admin_f( client );
-		return;
-	}
-	if( !strcmp( cmd, "fwd" ) ) {
+        return;
+    }
+    if( !strcmp( cmd, "fwd" ) ) {
         MVD_Forward_f( client );
         return;
     }
-	if( !strcmp( cmd, "say" ) || !strcmp( cmd, "say_team" ) ) {
+    if( !strcmp( cmd, "say" ) || !strcmp( cmd, "say_team" ) ) {
         MVD_Say_f( client, 1 );
-		return;
-	}
-	if( !strcmp( cmd, "follow" ) || !strcmp( cmd, "chase" ) ) {
+        return;
+    }
+    if( !strcmp( cmd, "follow" ) || !strcmp( cmd, "chase" ) ) {
         MVD_Follow_f( client );
-		return;
-	}
-	if( !strcmp( cmd, "observe" ) ) {
+        return;
+    }
+    if( !strcmp( cmd, "observe" ) ) {
         MVD_Observe_f( client );
-		return;
-	}
-	if( !strcmp( cmd, "inven" ) || !strcmp( cmd, "menu" ) ) {
-		if( client->layout_type == LAYOUT_MENU ) {
-			MVD_SetDefaultLayout( client );
-		} else {
-			client->layout_type = LAYOUT_MENU;
+        return;
+    }
+    if( !strcmp( cmd, "inven" ) || !strcmp( cmd, "menu" ) ) {
+        if( client->layout_type == LAYOUT_MENU ) {
+            MVD_SetDefaultLayout( client );
+        } else {
+            client->layout_type = LAYOUT_MENU;
             client->layout_time = 0;
-		}
-		return;
-	}
-	if( !strcmp( cmd, "invnext" ) ) {
-		if( client->layout_type >= LAYOUT_MENU ) {
+        }
+        return;
+    }
+    if( !strcmp( cmd, "invnext" ) ) {
+        if( client->layout_type >= LAYOUT_MENU ) {
             client->layout_cursor++;
             client->layout_time = 0;
         } else if( !client->mvd->intermission ) {
@@ -1108,8 +1107,8 @@ static void MVD_GameClientCommand( edict_t *ent ) {
         }
         return;
     }
-	if( !strcmp( cmd, "invprev" ) ) {
-		if( client->layout_type >= LAYOUT_MENU ) {
+    if( !strcmp( cmd, "invprev" ) ) {
+        if( client->layout_type >= LAYOUT_MENU ) {
             client->layout_cursor--;
             client->layout_time = 0;
         } else if( !client->mvd->intermission ) {
@@ -1117,49 +1116,49 @@ static void MVD_GameClientCommand( edict_t *ent ) {
         }
         return;
     }
-	if( !strcmp( cmd, "invuse" ) ) {
+    if( !strcmp( cmd, "invuse" ) ) {
         MVD_Invuse_f( client );
         return;
     }
-	if( !strcmp( cmd, "help" ) || !strcmp( cmd, "score" ) ) {
-		if( client->layout_type == LAYOUT_SCORES ) {
-			MVD_SetDefaultLayout( client );
-		} else {
-			client->layout_type = LAYOUT_SCORES;
+    if( !strcmp( cmd, "help" ) || !strcmp( cmd, "score" ) ) {
+        if( client->layout_type == LAYOUT_SCORES ) {
+            MVD_SetDefaultLayout( client );
+        } else {
+            client->layout_type = LAYOUT_SCORES;
             client->layout_time = 0;
-		}
-		return;
-	}
-	if( !strcmp( cmd, "oldscore" ) ) {
-		if( client->layout_type == LAYOUT_OLDSCORES ) {
-			MVD_SetDefaultLayout( client );
-		} else {
-			client->layout_type = LAYOUT_OLDSCORES;
-            client->layout_time = 0;
-		}
+        }
         return;
     }
-	if( !strcmp( cmd, "putaway" ) ) {
-		MVD_SetDefaultLayout( client );
-		return;
-	}
-	if( !strcmp( cmd, "channels" ) ) {
+    if( !strcmp( cmd, "oldscore" ) ) {
+        if( client->layout_type == LAYOUT_OLDSCORES ) {
+            MVD_SetDefaultLayout( client );
+        } else {
+            client->layout_type = LAYOUT_OLDSCORES;
+            client->layout_time = 0;
+        }
+        return;
+    }
+    if( !strcmp( cmd, "putaway" ) ) {
+        MVD_SetDefaultLayout( client );
+        return;
+    }
+    if( !strcmp( cmd, "channels" ) ) {
         mvd_channel_list_f( client );
-		return;
-	}
-	if( !strcmp( cmd, "clients" ) || !strcmp( cmd, "players" ) ) {
+        return;
+    }
+    if( !strcmp( cmd, "clients" ) || !strcmp( cmd, "players" ) ) {
         MVD_Clients_f( client );
-		return;
-	}
-	if( !strcmp( cmd, "join" ) ) {
+        return;
+    }
+    if( !strcmp( cmd, "join" ) ) {
         MVD_Join_f( client );
         return;
     }
-	if( !strcmp( cmd, "leave" ) ) {
+    if( !strcmp( cmd, "leave" ) ) {
         MVD_TrySwitchChannel( client, &mvd_waitingRoom );
         return;
     }
-	if( !strcmp( cmd, "commands" ) ) {
+    if( !strcmp( cmd, "commands" ) ) {
         MVD_Commands_f( client );
         return;
     }
@@ -1176,13 +1175,13 @@ MISC GAME FUNCTIONS
 */
 
 void MVD_RemoveClient( client_t *client ) {
-	int index = client - svs.udp_client_pool;
-	mvd_client_t *cl = &mvd_clients[index];
+    int index = client - svs.udp_client_pool;
+    mvd_client_t *cl = &mvd_clients[index];
 
     List_Remove( &cl->entry );
 
-	memset( cl, 0, sizeof( *cl ) );
-	cl->cl = client;
+    memset( cl, 0, sizeof( *cl ) );
+    cl->cl = client;
 }
 
 static void MVD_GameInit( void ) {
@@ -1192,16 +1191,16 @@ static void MVD_GameInit( void ) {
     char buffer[MAX_QPATH];
     unsigned checksum;
     bsp_t *bsp;
-	int i;
+    int i;
 
-	Com_Printf( "----- MVD_GameInit -----\n" );
+    Com_Printf( "----- MVD_GameInit -----\n" );
 
-	mvd_admin_password = Cvar_Get( "mvd_admin_password", "", CVAR_PRIVATE );
-	mvd_flood_msgs = Cvar_Get( "flood_msgs", "4", 0 );
-	mvd_flood_persecond = Cvar_Get( "flood_persecond", "4", 0 ); // FIXME: rename this
-	mvd_flood_waitdelay = Cvar_Get( "flood_waitdelay", "10", 0 );
-	mvd_flood_mute = Cvar_Get( "flood_mute", "0", 0 );
-	mvd_filter_version = Cvar_Get( "mvd_filter_version", "0", 0 );
+    mvd_admin_password = Cvar_Get( "mvd_admin_password", "", CVAR_PRIVATE );
+    mvd_flood_msgs = Cvar_Get( "flood_msgs", "4", 0 );
+    mvd_flood_persecond = Cvar_Get( "flood_persecond", "4", 0 ); // FIXME: rename this
+    mvd_flood_waitdelay = Cvar_Get( "flood_waitdelay", "10", 0 );
+    mvd_flood_mute = Cvar_Get( "flood_mute", "0", 0 );
+    mvd_filter_version = Cvar_Get( "mvd_filter_version", "0", 0 );
     mvd_default_map = Cvar_Get( "mvd_default_map", "q2dm1", CVAR_LATCH );
     mvd_stats_score = Cvar_Get( "mvd_stats_score", "0", 0 );
     mvd_stats_hack = Cvar_Get( "mvd_stats_hack", "0", 0 );
@@ -1212,15 +1211,15 @@ static void MVD_GameInit( void ) {
     Z_TagReserve( ( sizeof( edict_t ) +
         sizeof( mvd_client_t ) ) * sv_maxclients->integer +
         sizeof( edict_t ), TAG_MVD );
-	mvd_clients = Z_ReservedAllocz( sizeof( mvd_client_t ) *
+    mvd_clients = Z_ReservedAllocz( sizeof( mvd_client_t ) *
         sv_maxclients->integer );
     edicts = Z_ReservedAllocz( sizeof( edict_t ) *
         ( sv_maxclients->integer + 1 ) );
 
-	for( i = 0; i < sv_maxclients->integer; i++ ) {
-		mvd_clients[i].cl = &svs.udp_client_pool[i];
+    for( i = 0; i < sv_maxclients->integer; i++ ) {
+        mvd_clients[i].cl = &svs.udp_client_pool[i];
         edicts[i + 1].client = ( gclient_t * )&mvd_clients[i];
-	}
+    }
 
     mvd_ge.edicts = edicts;
     mvd_ge.edict_size = sizeof( edict_t );
@@ -1261,15 +1260,15 @@ static void MVD_GameInit( void ) {
     mvd->servercount = sv.spawncount;
 
     // set serverinfo variables
-	SV_InfoSet( "mapname", mvd->mapname );
-//	SV_InfoSet( "gamedir", "gtv" );
-	SV_InfoSet( "gamename", "gtv" );
-	SV_InfoSet( "gamedate", __DATE__ );
+    SV_InfoSet( "mapname", mvd->mapname );
+//    SV_InfoSet( "gamedir", "gtv" );
+    SV_InfoSet( "gamename", "gtv" );
+    SV_InfoSet( "gamedate", __DATE__ );
     MVD_InfoSet( "channels", "0" );
 }
 
 static void MVD_GameShutdown( void ) {
-	Com_Printf( "----- MVD_GameShutdown -----\n" );
+    Com_Printf( "----- MVD_GameShutdown -----\n" );
 
     MVD_Shutdown();
 
@@ -1293,7 +1292,7 @@ static void MVD_GameReadLevel( const char *filename ) {
 }
 
 static qboolean MVD_GameClientConnect( edict_t *ent, char *userinfo ) {
-	mvd_client_t *client = EDICT_MVDCL( ent );
+    mvd_client_t *client = EDICT_MVDCL( ent );
     mvd_t *mvd;
     int count;
 
@@ -1311,34 +1310,34 @@ static qboolean MVD_GameClientConnect( edict_t *ent, char *userinfo ) {
     // override server state
     MVD_SetServerState( client->cl, mvd );
 
-	return qtrue;
+    return qtrue;
 }
 
 static void MVD_GameClientBegin( edict_t *ent ) {
-	mvd_client_t *client = EDICT_MVDCL( ent );
+    mvd_client_t *client = EDICT_MVDCL( ent );
     mvd_t *mvd = client->mvd;
     mvd_player_t *target;
 
-	client->floodTime = 0;
-	client->floodHead = 0;
-	memset( &client->lastcmd, 0, sizeof( client->lastcmd ) );
-	memset( &client->ps, 0, sizeof( client->ps ) );
+    client->floodTime = 0;
+    client->floodHead = 0;
+    memset( &client->lastcmd, 0, sizeof( client->lastcmd ) );
+    memset( &client->ps, 0, sizeof( client->ps ) );
     client->jump_held = 0;
     client->layout_type = LAYOUT_NONE;
     client->layout_time = 0;
     client->layout_cursor = 0;
-	
-	if( !client->begin_time ) {
-		MVD_BroadcastPrintf( mvd, PRINT_MEDIUM, UF_MUTE_MISC,
+    
+    if( !client->begin_time ) {
+        MVD_BroadcastPrintf( mvd, PRINT_MEDIUM, UF_MUTE_MISC,
             "[MVD] %s entered the channel\n", client->cl->name );
         target = MVD_MostFollowed( mvd );
-	} else {
+    } else {
         target = client->target;
     }
     client->oldtarget = NULL;
-	client->begin_time = svs.realtime;
+    client->begin_time = svs.realtime;
 
-	MVD_SetDefaultLayout( client );
+    MVD_SetDefaultLayout( client );
 
     if( mvd->intermission ) {
         // force them to chase dummy MVD client
@@ -1357,28 +1356,28 @@ static void MVD_GameClientBegin( edict_t *ent ) {
 }
 
 static void MVD_GameClientUserinfoChanged( edict_t *ent, char *userinfo ) {
-	mvd_client_t *client = EDICT_MVDCL( ent );
+    mvd_client_t *client = EDICT_MVDCL( ent );
     char *s;
-	float fov;
+    float fov;
 
     s = Info_ValueForKey( userinfo, "uf" );
     client->uf = atoi( s );
 
     s = Info_ValueForKey( userinfo, "fov" );
-	fov = atof( s );
-	if( fov < 1 ) {
-		fov = 90;
-	} else if( fov > 160 ) {
-		fov = 160;
-	}
-	client->fov = fov;
+    fov = atof( s );
+    if( fov < 1 ) {
+        fov = 90;
+    } else if( fov > 160 ) {
+        fov = 160;
+    }
+    client->fov = fov;
     if( client->uf & UF_LOCALFOV ) {
-    	client->ps.fov = fov;
+        client->ps.fov = fov;
     }
 }
 
 void MVD_GameClientNameChanged( edict_t *ent, const char *name ) {
-	mvd_client_t *client = EDICT_MVDCL( ent );
+    mvd_client_t *client = EDICT_MVDCL( ent );
     client_t *cl = client->cl;
 
     if( client->begin_time ) {
@@ -1389,7 +1388,7 @@ void MVD_GameClientNameChanged( edict_t *ent, const char *name ) {
 
 // called early from SV_Drop to prevent multiple disconnect messages
 void MVD_GameClientDrop( edict_t *ent, const char *reason ) {
-	mvd_client_t *client = EDICT_MVDCL( ent );
+    mvd_client_t *client = EDICT_MVDCL( ent );
     client_t *cl = client->cl;
 
     if( client->begin_time ) {
@@ -1400,13 +1399,13 @@ void MVD_GameClientDrop( edict_t *ent, const char *reason ) {
 }
 
 static void MVD_GameClientDisconnect( edict_t *ent ) {
-	mvd_client_t *client = EDICT_MVDCL( ent );
+    mvd_client_t *client = EDICT_MVDCL( ent );
     client_t *cl = client->cl;
 
     if( client->begin_time ) {
-    	MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM, UF_MUTE_MISC,
+        MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM, UF_MUTE_MISC,
             "[MVD] %s disconnected\n", cl->name );
-		client->begin_time = 0;
+        client->begin_time = 0;
     }
 }
 
@@ -1426,33 +1425,33 @@ static int MVD_PointContents( vec3_t p ) {
 }
 
 static void MVD_GameClientThink( edict_t *ent, usercmd_t *cmd ) {
-	mvd_client_t *client = EDICT_MVDCL( ent );
+    mvd_client_t *client = EDICT_MVDCL( ent );
     usercmd_t *old = &client->lastcmd;
-	pmove_t pm;
+    pmove_t pm;
 
-	if( ( cmd->buttons & ~old->buttons ) & BUTTON_ATTACK ) {
+    if( ( cmd->buttons & ~old->buttons ) & BUTTON_ATTACK ) {
         MVD_Observe_f( client );
-	}
+    }
 
-	if( client->target ) {
-		if( cmd->upmove >= 10 ) {
+    if( client->target ) {
+        if( cmd->upmove >= 10 ) {
             if( client->jump_held < 1 ) {
                 if( !client->mvd->intermission ) {
-        			MVD_FollowNext( client );
+                    MVD_FollowNext( client );
                 }
                 client->jump_held = 1;
             }
         } else if( cmd->upmove <= -10 ) {
             if( client->jump_held > -1 ) {
                 if( !client->mvd->intermission ) {
-        			MVD_FollowPrev( client );
+                    MVD_FollowPrev( client );
                 }
                 client->jump_held = -1;
             }
-		} else {
+        } else {
             client->jump_held = 0;
         }
-	} else {
+    } else {
         memset( &pm, 0, sizeof( pm ) );
         pm.trace = MVD_Trace;
         pm.pointcontents = MVD_PointContents;
@@ -1467,7 +1466,7 @@ static void MVD_GameClientThink( edict_t *ent, usercmd_t *cmd ) {
         }
     }
 
-	*old = *cmd;
+    *old = *cmd;
 }
 
 static void MVD_IntermissionStart( mvd_t *mvd ) {
@@ -1562,7 +1561,7 @@ static void MVD_GameRunFrame( void ) {
         // write this message to demofile
         if( mvd->demorecording ) {
             uint16_t length = LittleShort( msg_read.cursize );
-        	FS_Write( &length, 2, mvd->demorecording );
+            FS_Write( &length, 2, mvd->demorecording );
             FS_Write( msg_read.data, msg_read.cursize, mvd->demorecording );
         }
 
@@ -1602,22 +1601,22 @@ void MVD_PrepWorldFrame( void ) {
 
 
 game_export_t mvd_ge = {
-	GAME_API_VERSION,
+    GAME_API_VERSION,
 
-	MVD_GameInit,
-	MVD_GameShutdown,
-	MVD_GameSpawnEntities,
-	MVD_GameWriteGame,
-	MVD_GameReadGame,
-	MVD_GameWriteLevel,
-	MVD_GameReadLevel,
-	MVD_GameClientConnect,
-	MVD_GameClientBegin,
-	MVD_GameClientUserinfoChanged,
-	MVD_GameClientDisconnect,
-	MVD_GameClientCommand,
-	MVD_GameClientThink,
-	MVD_GameRunFrame,
-	MVD_GameServerCommand
+    MVD_GameInit,
+    MVD_GameShutdown,
+    MVD_GameSpawnEntities,
+    MVD_GameWriteGame,
+    MVD_GameReadGame,
+    MVD_GameWriteLevel,
+    MVD_GameReadLevel,
+    MVD_GameClientConnect,
+    MVD_GameClientBegin,
+    MVD_GameClientUserinfoChanged,
+    MVD_GameClientDisconnect,
+    MVD_GameClientCommand,
+    MVD_GameClientThink,
+    MVD_GameRunFrame,
+    MVD_GameServerCommand
 };
 

@@ -18,6 +18,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
+#include "sv_local.h"
+#include "q_fifo.h"
+
 #define MVD_Malloc( size )      Z_TagMalloc( size, TAG_MVD )
 #define MVD_Mallocz( size )     Z_TagMallocz( size, TAG_MVD )
 #define MVD_CopyString( s )     Z_TagCopyString( s, TAG_MVD )
@@ -158,7 +161,9 @@ extern list_t           mvd_active_list;
 extern mvd_t            mvd_waitingRoom;
 extern qboolean         mvd_dirty;
 
+#if USE_CLIENT
 extern cvar_t    *mvd_shownet;
+#endif
 
 void MVD_Destroyf( mvd_t *mvd, const char *fmt, ... )
     q_noreturn q_printf( 2, 3 );

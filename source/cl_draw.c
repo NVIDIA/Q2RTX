@@ -107,8 +107,8 @@ LAGOMETER
 #define LAG_CRIT    0xF2
 
 static struct {
-	int samples[LAG_WIDTH];
-    int head;
+	unsigned samples[LAG_WIDTH];
+    unsigned head;
 } lag;
 
 void SCR_LagClear( void ) {
@@ -118,15 +118,16 @@ void SCR_LagClear( void ) {
 void SCR_LagSample( void ) {
     int i = cls.netchan->incoming_acknowledged & CMD_MASK;
     client_history_t *h = &cl.history[i];
-    int ping = cls.realtime - h->sent;
+    unsigned ping;
 
     h->rcvd = cls.realtime;
-    if( !h->cmdNumber ) {
+    if( !h->cmdNumber || h->rcvd < h->sent ) {
         return;
     }
 
+    ping = h->rcvd - h->sent;
     for( i = 0; i < cls.netchan->dropped; i++ ) {
-        lag.samples[lag.head % LAG_WIDTH] = LAG_MAX | LAG_CRIT_BIT;
+        lag.samples[lag.head % LAG_WIDTH] = ping | LAG_CRIT_BIT;
     	lag.head++;
     }
 

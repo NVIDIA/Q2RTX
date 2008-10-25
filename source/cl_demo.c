@@ -235,7 +235,7 @@ void CL_Stop_f( void ) {
     FS_Write( &msglen, 4, cls.demo.recording );
 
     FS_Flush( cls.demo.recording );
-    msglen = FS_RawTell( cls.demo.recording );
+    msglen = FS_Tell( cls.demo.recording );
 
 // close demofile
     FS_FCloseFile( cls.demo.recording );
@@ -571,7 +571,7 @@ static void CL_ParseNextDemoMessage( void ) {
     CL_ParseServerMessage();
 
     if( cls.demo.file_size ) {
-        pos = FS_RawTell( cls.demo.playback ) - cls.demo.file_offset;
+        pos = FS_Tell( cls.demo.playback ) - cls.demo.file_offset;
         if( pos < 0 ) {
             pos = 0;
         }

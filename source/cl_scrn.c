@@ -194,7 +194,7 @@ static void SCR_DrawPercentBar( int percent ) {
 	R_DrawFill( 0, scr_hudHeight, w, CHAR_HEIGHT, 4 );
 	R_DrawFill( w, scr_hudHeight, scr_hudWidth - w, CHAR_HEIGHT, 0 );
 
-    length = sprintf( buffer, "%d%%", percent );
+    length = Q_snprintf( buffer, sizeof( buffer ), "%d%%", percent );
 	x = ( scr_hudWidth - length * CHAR_WIDTH ) / 2;
 	R_DrawString( x, scr_hudHeight, 0, MAX_STRING_CHARS, buffer, scr_font );
 }
@@ -205,7 +205,7 @@ SCR_DrawDemoBar
 ================
 */
 static void SCR_DrawDemoBar( void ) {
-	//int percent, bufferPercent;
+	int percent;
 
 	if( !scr_demobar->integer ) {
 		return;
@@ -217,23 +217,18 @@ static void SCR_DrawDemoBar( void ) {
         }
 		return;
 	}
-#if 0		
+
+#if USE_MVD_CLIENT	
 	if( sv_running->integer != ss_broadcast ) {
 		return;
 	}
 
-	if(	!MVD_GetDemoPercent( &percent, &bufferPercent ) ) {
+	if(	( percent = MVD_GetDemoPercent() ) == -1 ) {
 		return;
 	}
 
-	if( scr_demobar->integer & 1 ) {
-		SCR_DrawPercentBar( percent );
-	}
-	if( scr_demobar->integer & 2 ) {
-		SCR_DrawPercentBar( bufferPercent );
-	}
+	SCR_DrawPercentBar( percent );
 #endif
-	
 }
 
 /*

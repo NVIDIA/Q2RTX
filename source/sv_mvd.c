@@ -23,6 +23,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 
 #include "sv_local.h"
+#include "q_fifo.h"
+#include "net_stream.h"
 #include "mvd_gtv.h"
 
 #define FOR_EACH_GTV( client ) \
@@ -948,7 +950,7 @@ void SV_MvdEndFrame( void ) {
         FS_Write( mvd.datagram.data, mvd.datagram.cursize, mvd.recording );
 
         if( sv_mvd_maxsize->value > 0 ) {
-            int numbytes = FS_RawTell( mvd.recording );
+            int numbytes = FS_Tell( mvd.recording );
 
             if( numbytes > sv_mvd_maxsize->value * 1000 ) {
                 Com_Printf( "Stopping MVD recording, maximum size reached.\n" );

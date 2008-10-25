@@ -138,18 +138,16 @@ void    MSG_ParseDeltaPlayerstate_Enhanced( const player_state_t *from, player_s
 #endif
 void    MSG_ParseDeltaPlayerstate_Packet( const player_state_t *from, player_state_t *to, int flags );
 
-void    MSG_ShowDeltaEntityBits( int bits );
 #if USE_CLIENT
+void    MSG_ShowDeltaEntityBits( int bits );
 void    MSG_ShowDeltaPlayerstateBits_Default( int flags );
 void    MSG_ShowDeltaPlayerstateBits_Enhanced( int flags );
-#endif
 void    MSG_ShowDeltaPlayerstateBits_Packet( int flags );
-#if USE_CLIENT
 void    MSG_ShowDeltaUsercmdBits_Enhanced( int bits );
-#endif
 const char *MSG_ServerCommandString( int cmd );
 
 #define MSG_ShowSVC( cmd ) \
     Com_Printf( "%3"PRIz":%s\n", msg_read.readcount - 1, \
         MSG_ServerCommandString( cmd ) )
 
+#endif // USE_CLIENT
