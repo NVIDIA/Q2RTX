@@ -62,7 +62,7 @@ void	Sys_DebugBreak( void );
 
 void    Sys_FixFPCW( void );
 
-#ifdef USE_ANTICHEAT
+#ifdef USE_AC_CLIENT
 qboolean Sys_GetAntiCheatAPI( void );
 #endif
 

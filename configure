@@ -186,7 +186,7 @@ echo "  --cross-prefix=PREFIX  add PREFIX to compile tools [$cross_prefix]"
 echo "  --cc=CC                use C compiler [$cc]"
 echo "  --make=MAKE            use MAKE processor [$make]"
 echo "  --windres=WINDRES      use RC compiler [$windres]"
-echo "  --disable-client       do not build client"
+echo "  --disable-client       do not build graphical client"
 echo "  --enable-server        build dedicated server"
 echo "  --enable-openffa       build OpenFFA deathmatch mod"
 echo "  --enable-mingw         enable Windows build"
@@ -517,8 +517,8 @@ if [ "$use_asm" = "yes" ]; then
 fi
 
 if [ "$use_anticheat" = "yes" ]; then
-    echo "USE_ANTICHEAT=yes" >> $config_mk
-    echo "#define USE_ANTICHEAT 2" >> $config_h
+    echo "USE_AC_SERVER=yes" >> $config_mk
+    echo "#define USE_AC_SERVER 1" >> $config_h
 fi
 
 if [ "$use_mvd_server" = "yes" ]; then

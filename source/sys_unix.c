@@ -619,7 +619,7 @@ void Sys_Sleep( int msec ) {
     nanosleep( &req, NULL );
 }
 
-#if USE_ANTICHEAT & 1
+#if USE_AC_CLIENT
 qboolean Sys_GetAntiCheatAPI( void ) {
     Sys_Sleep( 1500 );
     return qfalse;

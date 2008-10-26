@@ -23,16 +23,22 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 
 #include "com_local.h"
+#if USE_CLIENT
 #include "key_public.h"
 #include "in_public.h"
 #include "vid_public.h"
 #include "vid_local.h"
 #include "ref_public.h"
+#endif
 #include "files.h"
 #include "sys_public.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+
+#define PRIVATE	static
+
+#if USE_CLIENT
 
 #define IDI_APP 100
 
@@ -60,8 +66,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define __LPCGUID_DEFINED__
 typedef const GUID *LPCGUID;
 #endif
-
-#define PRIVATE	static
 
 #define MAX_VIDEO_MODES   128
 
@@ -96,13 +100,21 @@ typedef struct {
     } mouse;
 } win_state_t;
 
-extern HINSTANCE		hGlobalInstance;
 extern win_state_t      win;
-extern qboolean         iswinnt;
 
 void Win_Init( void );
 void Win_Shutdown( void );
 void Win_SetMode( void ); 
 void Win_ModeChanged( void );
-void Win_UpdateGamma( const byte *table ); 
+void Win_UpdateGamma( const byte *table );
+
+#endif // USE_CLIENT
+
+extern HINSTANCE		hGlobalInstance;
+extern qboolean         iswinnt;
+
+#if USE_DBGHELP
+DWORD Sys_ExceptionHandler( DWORD                   exceptionCode,
+                            LPEXCEPTION_POINTERS    exceptionInfo );
+#endif
 

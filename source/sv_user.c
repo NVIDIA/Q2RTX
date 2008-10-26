@@ -421,7 +421,7 @@ void SV_New_f( void ) {
     // send version string request
     if( oldstate == cs_assigned ) {
         SV_ClientCommand( sv_client, "cmd \177c version $version\n"
-#if USE_ANTICHEAT & 2
+#if USE_AC_SERVER
             "cmd \177c actoken $actoken\n"
 #endif
             );
@@ -488,7 +488,7 @@ void SV_Begin_f( void ) {
         return;
     }
 
-#if USE_ANTICHEAT & 2
+#if USE_AC_SERVER
     if( !AC_ClientBegin( sv_client ) ) {
         return;
     }
@@ -506,7 +506,7 @@ void SV_Begin_f( void ) {
     // call the game begin function
     ge->ClientBegin( sv_player );
 
-#if USE_ANTICHEAT & 2
+#if USE_AC_SERVER
     AC_ClientAnnounce( sv_client );
 #endif
 }
@@ -779,14 +779,14 @@ static void SV_CvarResult_f( void ) {
             }
         }
     }
-#if USE_ANTICHEAT & 2
+#if USE_AC_SERVER
     else if( !strcmp( c, "actoken" ) ) {
         AC_ClientToken( sv_client, Cmd_Argv( 2 ) );
     }
 #endif
 }
 
-#if USE_ANTICHEAT & 2
+#if USE_AC_SERVER
 
 static void SV_AC_List_f( void ) {
     SV_BeginRedirect( RD_CLIENT );
@@ -830,7 +830,7 @@ static const ucmd_t ucmds[] = {
 #if USE_PACKETDUP
     { "packetdup", SV_PacketdupHack_f },
 #endif
-#if USE_ANTICHEAT & 2
+#if USE_AC_SERVER
     { "aclist", SV_AC_List_f },
     { "acinfo", SV_AC_Info_f },
 #else

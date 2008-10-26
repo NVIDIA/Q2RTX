@@ -24,6 +24,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 
 #include "sv_local.h"
+#include "q_fifo.h"
+#include "net_stream.h"
 
 typedef enum {
     ACS_BAD,

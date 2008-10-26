@@ -122,7 +122,7 @@ void SV_RemoveClient( client_t *client ) {
 
 void SV_CleanClient( client_t *client ) {
     int i;
-#if USE_ANTICHEAT & 2
+#if USE_AC_SERVER
     string_entry_t *bad, *next;
 
     for( bad = client->ac_bad_files; bad; bad = next ) {
@@ -205,7 +205,7 @@ void SV_DropClient( client_t *client, const char *reason ) {
         ge->ClientDisconnect( client->edict );
     }
 
-#if USE_ANTICHEAT & 2
+#if USE_AC_SERVER
     AC_ClientDisconnect( client );
 #endif
 
@@ -902,7 +902,7 @@ static void SVC_DirectConnect( void ) {
     Q_strlcpy( newcl->userinfo, userinfo, sizeof( newcl->userinfo ) );
     SV_UserinfoChanged( newcl );
 
-#if USE_ANTICHEAT & 2
+#if USE_AC_SERVER
     if( !sv_force_reconnect->string[0] || reconnect_var[0] ) {
         acstring = AC_ClientConnect( newcl );
     } else
@@ -1580,7 +1580,7 @@ void SV_Frame( unsigned msec ) {
     }
 #endif
 
-#if USE_ANTICHEAT & 2
+#if USE_AC_SERVER
     AC_Run();
 #endif
 
@@ -1819,7 +1819,7 @@ void SV_Init( void ) {
     MVD_Register();
 #endif
 
-#if USE_ANTICHEAT & 2
+#if USE_AC_SERVER
     AC_Register();
 #endif
 
@@ -1973,7 +1973,7 @@ void SV_Shutdown( const char *finalmsg, killtype_t type ) {
         return;
     }
 
-#if USE_ANTICHEAT & 2
+#if USE_AC_SERVER
     AC_Disconnect();
 #endif
 

@@ -1345,7 +1345,7 @@ static void CL_ConnectionlessPacket( void ) {
 		cls.netchan = Netchan_Setup( NS_CLIENT, type, &cls.serverAddress,
                 cls.quakePort, 1024, cls.serverProtocol );
 
-#if USE_ANTICHEAT & 1
+#if USE_AC_CLIENT
         if( anticheat ) {
 			MSG_WriteByte( clc_nop );
 			MSG_FlushTo( &cls.netchan->message );

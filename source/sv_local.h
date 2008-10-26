@@ -111,7 +111,7 @@ typedef enum {
 	cs_spawned		// client is fully in game
 } clstate_t;
 
-#if USE_ANTICHEAT & 2
+#if USE_AC_SERVER
 
 typedef enum {
     AC_NORMAL,
@@ -125,7 +125,7 @@ typedef enum {
     AC_QUERY_DONE
 } ac_query_t;
 
-#endif // USE_ANTICHEAT
+#endif // USE_AC_SERVER
 
 #define MSG_POOLSIZE		1024
 #define MSG_TRESHOLD	    ( 64 - 10 )		// keep pmsg_s 64 bytes aligned
@@ -248,7 +248,7 @@ typedef struct client_s {
 	netchan_t		*netchan;
     int             numpackets; // for that nasty packetdup hack
 
-#if USE_ANTICHEAT & 2
+#if USE_AC_SERVER
     qboolean        ac_valid;
     ac_query_t      ac_query_sent;
     ac_required_t   ac_required;
@@ -475,6 +475,8 @@ void SV_ClientAddMessage_New( client_t *client, byte *data,
 
 void SV_CalcSendTime( client_t *client, size_t messageSize );
 
+#if USE_MVD_SERVER
+
 //
 // sv_mvd.c
 //
@@ -495,8 +497,9 @@ void SV_MvdBroadcastPrint( int level, const char *string );
 void SV_MvdStartSound( int entnum, int channel, int flags,
 					    int soundindex, int volume,
 					    int attenuation, int timeofs );
+#endif // USE_MVD_SERVER
 
-#if USE_ANTICHEAT
+#if USE_AC_SERVER
 
 // 
 // sv_ac.c
@@ -515,7 +518,7 @@ void AC_Run( void );
 void AC_List_f( void );
 void AC_Info_f( void );
 
-#endif // USE_ANTICHEAT
+#endif // USE_AC_SERVER
 
 //
 // sv_user.c

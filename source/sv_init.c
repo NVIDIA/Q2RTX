@@ -258,7 +258,7 @@ void SV_InitGame( qboolean ismvd ) {
         client->number = i;
 	}
 
-#if USE_ANTICHEAT & 2
+#if USE_AC_SERVER
     AC_Connect( ismvd );
 #endif
 
