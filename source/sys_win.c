@@ -245,7 +245,7 @@ Print text to the dedicated console
 void Sys_ConsoleOutput( const char *string ) {
     DWORD   dummy;
     char    text[MAXPRINTMSG];
-    char    *maxp, *p;
+    char    *m, *p;
     size_t  length;    
     WORD    attr, w;
     int     c;
@@ -256,14 +256,21 @@ void Sys_ConsoleOutput( const char *string ) {
 
     if( !gotConsole ) {
         p = text;
-        maxp = text + sizeof( text ) - 1;
+        m = text + sizeof( text ) - 1;
         while( *string ) {
             if( Q_IsColorString( string ) ) {
                 string += 2;
                 continue;
             }
-            *p++ = *string++ & 127;
-            if( p == maxp ) {
+            c = *string++;
+            if( c & 128 ) {
+                c &= 127;
+                if( c < 32 ) {
+                    continue;
+                }
+            }
+            *p++ = c;
+            if( p == m ) {
                 break;
             }
         }
@@ -295,10 +302,17 @@ void Sys_ConsoleOutput( const char *string ) {
         }
 
         p = text;
-        maxp = text + sizeof( text ) - 1;
+        m = text + sizeof( text ) - 1;
         do {
-            *p++ = *string++ & 127;
-            if( p == maxp ) {
+            c = *string++;
+            if( c & 128 ) {
+                c &= 127;
+                if( c < 32 ) {
+                    continue;
+                }
+            }
+            *p++ = c;
+            if( p == m ) {
                 break;
             }
         } while( *string && !Q_IsColorString( string ) );
@@ -324,7 +338,6 @@ static BOOL WINAPI Sys_ConsoleCtrlHandler( DWORD dwCtrlType ) {
     if( errorEntered ) {
         exit( 1 );
     }
-    // 32 bit writes are guranteed to be atomic
     shouldExit = qtrue;
     return TRUE;
 }
@@ -882,7 +895,6 @@ static void Sys_ListFilteredFiles(  void        **listedFiles,
         } else {
             listedFiles[( *count )++] = FS_CopyString( name );
         }
-
     } while( *count < MAX_LISTED_FILES && FindNextFileA( findHandle, &findInfo ) != FALSE );
 
     FindClose( findHandle );

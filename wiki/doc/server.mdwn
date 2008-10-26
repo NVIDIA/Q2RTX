@@ -10,25 +10,25 @@ All network related cvars below can be changed at runtime and will
 take effect immediately.
 
 - `set net_ip ""` (string)  
-Specifies network interface address server UDP socket should be bound to.
-Empty string means listening on all interfaces.
+Specifies network interface address server should listen on
+for UDP connections. The same interface is also used for outgoing
+TCP connections (these include MVD/GTV and anticheat connections).
+Empty string means listening on all interfaces. *This configuration
+is not supported on multi IP systems if you plan to use anticheat!*
 
 - `set net_port 27910` (integer)  
-Specifies UDP port number server should listen on.
+Specifies port number server should listen on for UDP connections.
 
 - `set net_tcp_ip $net_ip` (string)  
-Specifies network interface address server TCP socket should be bound to.
+Specifies network interface address server should listen on
+for TCP connections (these include MVD/GTV connections, enabled
+only when `sv_mvd_enable` is set properly, see below).
 Empty string means listening on all interfaces.
 Value of this cvar mirrors `net_ip` unless modified by user.
 
 - `set net_tcp_port $net_port` (integer)  
-Specifies TCP port number server should listen on.
+Specifies port number server should listen on for TCP connections.
 Value of this cvar mirrors `net_port` unless modified by user.
-
-- `set net_tcp_clientip ""` (string)  
-Specifies network interface address server should use for outgoing TCP
-connections (this includes MVD/GTV and anticheat connections).
-Empty string means default network interface.
 
 Misc
 ----------
