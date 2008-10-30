@@ -34,7 +34,9 @@ LDFLAGS+=-mconsole -lws2_32 -lwinmm -ladvapi32
 RESFILES+=q2proded.rc
 else
 SRCFILES+=sys_unix.c
+ifdef USE_DL
 LDFLAGS+=-ldl
+endif
 endif
 
 include $(SRCDIR)/build/target.mk

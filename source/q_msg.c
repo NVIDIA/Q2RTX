@@ -1194,6 +1194,8 @@ int MSG_WriteDeltaPlayerstate_Enhanced( const player_state_t    *from,
 	return extraflags;
 }
 
+#if USE_MVD_SERVER || USE_MVD_CLIENT
+
 /*
 ==================
 MSG_WriteDeltaPlayerstate_Packet
@@ -1396,6 +1398,8 @@ void MSG_WriteDeltaPlayerstate_Packet(  const player_state_t   *from,
 	}
 }
 
+#endif // USE_MVD_SERVER || USE_MVD_CLIENT
+
 /*
 =============
 MSG_FlushTo
@@ -1406,6 +1410,7 @@ void MSG_FlushTo( sizebuf_t *dest ) {
 	SZ_Clear( &msg_write );
 }
 
+#if 0
 // NOTE: does not NUL-terminate the string
 void MSG_Printf( const char *fmt, ... ) {
     char        buffer[MAX_STRING_CHARS];
@@ -1423,6 +1428,7 @@ void MSG_Printf( const char *fmt, ... ) {
 
     MSG_WriteData( buffer, len );
 }
+#endif
 
 //============================================================
 
@@ -1516,58 +1522,44 @@ int MSG_ReadLong ( void )
 
 size_t MSG_ReadString( char *dest, size_t size ) {
 	int		c;
-    size_t  l = 0;
+    size_t  len = 0;
 
+    while( 1 ) {
+        c = MSG_ReadByte();
+        if( c == -1 || c == 0 ) {
+            break;
+        }
+        if( len + 1 < size ) {
+            *dest++ = c;
+        }
+        len++;
+    }
     if( size ) {
-        while( 1 ) {
-            c = MSG_ReadByte();
-            if( c == -1 || c == 0 ) {
-                break;
-            }
-            if( l++ < size - 1 ) {
-                *dest++ = c;
-            }
-        }
         *dest = 0;
-    } else {
-        while( 1 ) {
-            c = MSG_ReadByte();
-            if( c == -1 || c == 0 ) {
-                break;
-            }
-            l++;
-        }
     }
 
-	return l;
+	return len;
 }
 
 size_t MSG_ReadStringLine( char *dest, size_t size ) {
 	int		c;
-    size_t  l = 0;
+    size_t  len = 0;
 
+    while( 1 ) {
+        c = MSG_ReadByte();
+        if( c == -1 || c == 0 || c == '\n' ) {
+            break;
+        }
+        if( len + 1 < size ) {
+            *dest++ = c;
+        }
+        len++;
+    }
     if( size ) {
-        while( 1 ) {
-            c = MSG_ReadByte();
-            if( c == -1 || c == 0 || c == '\n' ) {
-                break;
-            }
-            if( l++ < size - 1 ) {
-                *dest++ = c;
-            }
-        }
         *dest = 0;
-    } else {
-        while( 1 ) {
-            c = MSG_ReadByte();
-            if( c == -1 || c == 0 ) {
-                break;
-            }
-            l++;
-        }
     }
 
-	return l;
+	return len;
 }
 
 static inline float MSG_ReadCoord (void) {
@@ -1851,6 +1843,8 @@ size_t MSG_ReadData( void *data, size_t len ) {
 }
 #endif
 
+#if USE_CLIENT || USE_MVD_CLIENT
+
 /*
 =================
 MSG_ParseEntityBits
@@ -2003,6 +1997,8 @@ void MSG_ParseDeltaEntity( const entity_state_t *from,
         }
 	}
 }
+
+#endif // USE_CLIENT || USE_MVD_CLIENT
 
 #if USE_CLIENT
 
@@ -2252,6 +2248,8 @@ void MSG_ParseDeltaPlayerstate_Enhanced(    const player_state_t    *from,
 
 #endif // USE_CLIENT
 
+#if USE_MVD_CLIENT
+
 /*
 ===================
 MSG_ParseDeltaPlayerstate_Packet
@@ -2356,8 +2354,9 @@ void MSG_ParseDeltaPlayerstate_Packet( const player_state_t *from,
 			}
 		}
 	}
-	
 }
+
+#endif // USE_MVD_CLIENT
 
 #if USE_CLIENT
 
@@ -2770,7 +2769,7 @@ void *SZ_GetSpace( sizebuf_t *buf, size_t length ) {
                 __func__, buf->tag, length, buf->maxsize );
 		}
 
-		Com_DPrintf( "SZ_GetSpace: %#x: overflow\n", buf->tag );
+		Com_DPrintf( "%s: %#x: overflow\n", __func__, buf->tag );
 		SZ_Clear( buf ); 
 		buf->overflowed = qtrue;
 	}
@@ -2807,6 +2806,8 @@ void SZ_WriteLong( sizebuf_t *sb, int c ) {
 	buf[3] = c >> 24;
 }
 
+#if USE_MVD_SERVER
+
 void SZ_WriteString( sizebuf_t *sb, const char *string ) {
 	size_t length;
 
@@ -2824,4 +2825,7 @@ void SZ_WriteString( sizebuf_t *sb, const char *string ) {
 
     SZ_Write( sb, string, length + 1 );
 }
+
+#endif
+
 

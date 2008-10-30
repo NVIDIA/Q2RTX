@@ -49,6 +49,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <sys/uio.h>
 #include <errno.h>
 #include <arpa/inet.h>
+#ifdef __linux__
+#include <linux/types.h>
+#include <linux/errqueue.h>
+#endif
 #define SOCKET int
 #define INVALID_SOCKET -1
 #define closesocket close
@@ -406,6 +410,96 @@ qboolean NET_GetLoopPacket( netsrc_t sock ) {
 
 #endif
 
+#ifdef __unix__
+
+static neterr_t get_icmp_error( int s ) {
+#ifdef __linux__
+    byte buffer[1024];
+    struct sockaddr_in from;
+    struct msghdr msg;
+    struct cmsghdr *cmsg;
+    struct sock_extended_err *ee;
+    //struct sockaddr_in *off;
+
+    memset( &from, 0, sizeof( from ) );
+
+    memset( &msg, 0, sizeof( msg ) );
+    msg.msg_name = &from;
+    msg.msg_namelen = sizeof( from );
+    msg.msg_control = buffer;
+    msg.msg_controllen = sizeof( buffer );
+
+    if( recvmsg( s, &msg, MSG_ERRQUEUE ) == -1 ) {
+        NET_GET_ERROR();
+
+        switch( net_error ) {
+        case EWOULDBLOCK:
+            // wouldblock is silent
+            break;
+        default:
+            Com_EPrintf( "%s: %s\n", __func__, NET_ErrorString() );
+        }
+
+        return NET_AGAIN;
+    }
+
+    if( !( msg.msg_flags & MSG_ERRQUEUE ) ) {
+        Com_DPrintf( "%s: no extended error received\n", __func__ );
+        return NET_AGAIN;
+    }
+
+    // find an ICMP error message
+    for( cmsg = CMSG_FIRSTHDR( &msg );
+        cmsg != NULL;
+        cmsg = CMSG_NXTHDR( &msg, cmsg ) ) 
+    {
+        if( cmsg->cmsg_level != IPPROTO_IP ) {
+            continue;
+        }
+        if( cmsg->cmsg_type != IP_RECVERR ) {
+            continue;
+        }
+        ee = ( struct sock_extended_err * )CMSG_DATA( cmsg );
+        if( ee->ee_origin == SO_EE_ORIGIN_ICMP ) {
+            break;
+        }
+    }
+
+    if( !cmsg ) {
+        Com_DPrintf( "%s: no ICMP error found\n", __func__ );
+        return NET_AGAIN;
+    }
+
+    /*
+    off = ( struct sockaddr_in * )SO_EE_OFFENDER( err );
+    if( off->sin_family == AF_INET ) {
+    }
+    */
+
+    NET_SockadrToNetadr( &from, &net_from );
+
+    // handle most common ICMP errors (defined in linux/net/ipv4/icmp.c)
+    net_error = ee->ee_errno;
+    switch( net_error ) {
+    case ENETUNREACH:
+    case EHOSTUNREACH:
+    case EHOSTDOWN:
+    case ECONNREFUSED:
+    case ENONET:
+        Com_DPrintf( "%s: %s from %s\n", __func__,
+            NET_ErrorString(), NET_AdrToString( &net_from ) );
+        return NET_ERROR;
+    default:
+        Com_EPrintf( "%s: %s from %s\n", __func__,
+            NET_ErrorString(), NET_AdrToString( &net_from ) );
+    }
+#endif
+
+    return NET_AGAIN;
+}
+
+#endif // __unix__
+
 /*
 =============
 NET_GetPacket
@@ -425,6 +519,8 @@ neterr_t NET_GetPacket( netsrc_t sock ) {
     }
 
     NET_UpdateStats();
+
+    memset( &from, 0, sizeof( from ) );
 
     fromlen = sizeof( from );
     ret = recvfrom( udp_sockets[sock], msg_read_buffer, MAX_PACKETLEN, 0,
@@ -465,11 +561,15 @@ neterr_t NET_GetPacket( netsrc_t sock ) {
         case EWOULDBLOCK:
             // wouldblock is silent
             break;
+        case ENETUNREACH:
+        case EHOSTUNREACH:
+        case EHOSTDOWN:
         case ECONNREFUSED:
-            Com_DPrintf( "%s: %s from %s\n", __func__,
-                NET_ErrorString(), NET_AdrToString( &net_from ) );
+        case ENONET:
+            //Com_DPrintf( "%s: %s from %s\n", __func__,
+            //    NET_ErrorString(), NET_AdrToString( &net_from ) );
             if( !net_ignore_icmp->integer ) {
-                return NET_ERROR;
+                return get_icmp_error( udp_sockets[sock] );
             }
             break;
         default:
@@ -598,10 +698,12 @@ neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, size_t length, const
         case EWOULDBLOCK:
             // wouldblock is silent
             break;
+        case ECONNREFUSED:
         case ECONNRESET:
         case EHOSTUNREACH:
         case ENETUNREACH:
         case ENETDOWN:
+        case EPERM: // not ICMP, but local firewall
             Com_DPrintf( "%s: %s to %s\n", __func__,
                 NET_ErrorString(), NET_AdrToString( to ) );
             if( !net_ignore_icmp->integer ) {
@@ -685,6 +787,18 @@ static SOCKET UDP_OpenSocket( const char *interface, int port ) {
         goto fail;
     }
 
+#ifdef __linux__
+    // enable ICMP error queue
+    if( !net_ignore_icmp->integer ) {
+        _true = 1;
+        if( setsockopt( newsocket, IPPROTO_IP, IP_RECVERR,
+            ( char * )&_true, sizeof( _true ) ) == -1 )
+        {
+            goto fail;
+        }
+    }
+#endif
+
     if( !NET_StringToIface( interface, &address ) ) {
         Com_Printf( "Bad interface address: %s\n", interface );
         goto fail;
@@ -729,7 +843,7 @@ static SOCKET TCP_OpenSocket( const char *interface, int port, netsrc_t who ) {
     if( who == NS_SERVER ) {
         _true = 1;
         if( setsockopt( newsocket, SOL_SOCKET, SO_REUSEADDR,
-                ( char * )&_true, sizeof( _true ) ) == -1 )
+            ( char * )&_true, sizeof( _true ) ) == -1 )
         {
             goto fail;
         }
@@ -756,8 +870,18 @@ fail:
 }
 
 static void NET_OpenServer( void ) {
+    static int saved_port;
+
     udp_sockets[NS_SERVER] = UDP_OpenSocket( net_ip->string, net_port->integer );
     if( udp_sockets[NS_SERVER] != INVALID_SOCKET ) {
+        saved_port = net_port->integer;
+        return;
+    }
+
+    if( saved_port && saved_port != net_port->integer ) {
+        // revert to the last valid port
+        Com_Printf( "Reverting to the last valid port %d...\n", saved_port );
+        Cbuf_AddText( va( "set net_port %d\n", saved_port ) );
         return;
     }
 
@@ -1235,6 +1359,8 @@ NET_Restart_f
 static void NET_Restart_f( void ) {
     netflag_t flag = net_active;
     SOCKET sock = tcp_socket;
+
+    Com_DPrintf( "%s\n", __func__ );
 
     if( sock != INVALID_SOCKET ) {
         NET_Listen( qfalse );

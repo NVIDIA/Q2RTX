@@ -614,6 +614,7 @@ void CL_Disconnect( comErrorType_t type, const char *text ) {
     cls.connect_time = 0;
 	cls.connect_count = 0;
     cls.passive = qfalse;
+    cls.errorReceived = qfalse;
 
     // stop demo
     if( cls.demo.recording ) {
@@ -1420,10 +1421,30 @@ CL_PacketEvent
 =================
 */
 static void CL_PacketEvent( neterr_t ret ) {
+    if( ret == NET_ERROR ) {
+        //
+        // error packet from server
+        //
+        if( cls.state < ca_connected ) {
+            return;
+        }
+        if( !cls.netchan ) {
+            return;		// dump it if not connected
+        }
+        if( !NET_IsEqualBaseAdr( &net_from, &cls.netchan->remote_address ) ) {
+            return;
+        }
+        if( net_from.port && net_from.port != cls.netchan->remote_address.port ) {
+            return;
+        }
+        cls.errorReceived = qtrue; // drop connection soon
+        return;
+    }
+
     //
     // remote command packet
     //
-    if ( ret == NET_OK && *( int * )msg_read.data == -1 ) {
+    if( *( int * )msg_read.data == -1 ) {
         CL_ConnectionlessPacket();
         return;
     }
@@ -1432,11 +1453,11 @@ static void CL_PacketEvent( neterr_t ret ) {
 		return;
 	}
 
-	if ( !cls.netchan ) {
+	if( !cls.netchan ) {
         return;		// dump it if not connected
 	}
 
-    if ( ret == NET_OK && msg_read.cursize < 8 ) {
+    if( msg_read.cursize < 8 ) {
         Com_DPrintf( "%s: runt packet\n", NET_AdrToString( &net_from ) );
         return;
     }
@@ -1444,19 +1465,16 @@ static void CL_PacketEvent( neterr_t ret ) {
     //
     // packet from server
     //
-    if ( !NET_IsEqualAdr( &net_from, &cls.netchan->remote_address ) ) {
+    if( !NET_IsEqualAdr( &net_from, &cls.netchan->remote_address ) ) {
         Com_DPrintf( "%s: sequenced packet without connection\n",
             NET_AdrToString( &net_from ) );
         return;
     }
 
-	if( ret == NET_ERROR ) {
-		Com_Error( ERR_DISCONNECT, "Connection reset by peer" );
-	}
-
-    if ( !cls.netchan->Process( cls.netchan ) )
+    if( !cls.netchan->Process( cls.netchan ) )
         return;		// wasn't accepted for some reason
 
+    cls.errorReceived = qfalse; // don't drop
 
     CL_ParseServerMessage();
 
@@ -2627,11 +2645,20 @@ static void CL_CheckForReply( void ) {
 #endif
 
 static void CL_CheckTimeout( void ) {
-    unsigned delta = cl_timeout->value * 1000;
+    unsigned delta;
 
     if( NET_IsLocalAddress( &cls.netchan->remote_address ) ) {
         return;
     }
+
+    if( cls.errorReceived ) {
+        delta = 5000;
+        if( com_localTime - cls.netchan->last_received > delta )  {
+            Com_Error( ERR_DISCONNECT, "Server connection was reset." );
+        }
+    }
+    
+    delta = cl_timeout->value * 1000;
     if( com_localTime - cls.netchan->last_received > delta )  {
         // timeoutcount saves debugger
         if ( ++cl.timeoutcount > 5 ) {

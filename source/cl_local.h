@@ -311,6 +311,8 @@ typedef struct client_static_s {
         sizebuf_t       buffer;
         qboolean        paused;
     } demo;
+
+    qboolean            errorReceived; // got an ICMP error from server
 } client_static_t;
 
 extern client_static_t    cls;

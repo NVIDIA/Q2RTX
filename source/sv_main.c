@@ -1330,7 +1330,7 @@ void SV_SendAsyncPackets( void ) {
             continue;
         }
 
-        // just update reliable    if needed
+        // just update reliable if needed
         if( netchan->type == NETCHAN_OLD ) {
             SV_ClientWriteReliableMessages_Old( client, netchan->maxpacketlen );
         }
@@ -1355,8 +1355,7 @@ calctime:
 SV_CheckTimeouts
 
 If a packet has not been received from a client for timeout->value
-seconds, drop the conneciton.  Server frames are used instead of
-realtime to avoid dropping the local client while debugging.
+seconds, drop the conneciton.
 
 When a client is normally dropped, the client_t goes into a zombie state
 for a few seconds to make sure any final reliable message gets resent
@@ -1366,8 +1365,8 @@ if necessary
 static void SV_CheckTimeouts( void ) {
     client_t    *client;
     unsigned    zombie_time = 1000 * sv_zombietime->value;
-    unsigned    drop_time = 1000 * sv_timeout->value;
-    unsigned    ghost_time = 1000 * sv_ghostime->value;
+    unsigned    drop_time   = 1000 * sv_timeout->value;
+    unsigned    ghost_time  = 1000 * sv_ghostime->value;
     unsigned    delta;
 
     FOR_EACH_CLIENT( client ) {

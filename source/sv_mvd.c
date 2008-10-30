@@ -1626,8 +1626,8 @@ void SV_MvdRunClients( void ) {
     neterr_t    ret;
     netstream_t stream;
     unsigned    zombie_time = 1000 * sv_zombietime->value;
-    unsigned    drop_time = 1000 * sv_timeout->value;
-    unsigned    ghost_time = 1000 * sv_ghostime->value;
+    unsigned    drop_time   = 1000 * sv_timeout->value;
+    unsigned    ghost_time  = 1000 * sv_ghostime->value;
     unsigned    delta;
 
     // accept new connections

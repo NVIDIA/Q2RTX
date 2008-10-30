@@ -710,6 +710,7 @@ static void SV_Disconnect_f( void ) {
             NET_AdrToString( &sv_client->netchan->remote_address ) );
     }
     SV_DropClient( sv_client, NULL );
+    SV_RemoveClient( sv_client ); // don't bother with zombie state
 }
 
 
