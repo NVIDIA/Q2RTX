@@ -784,7 +784,7 @@ void *Sys_LoadLibrary( const char *path, const char *sym, void **handle ) {
         return NULL;
     }
 
-    entry = GetProcAddressA( module, sym );
+    entry = GetProcAddress( module, sym );
     if( !entry ) {
         Com_DPrintf( "%s failed: GetProcAddress returned %lu on %s\n",
             __func__, GetLastError(), path );
@@ -800,7 +800,7 @@ void *Sys_LoadLibrary( const char *path, const char *sym, void **handle ) {
 }
 
 void *Sys_GetProcAddress( void *handle, const char *sym ) {
-    return GetProcAddressA( handle, sym );
+    return GetProcAddress( handle, sym );
 }
 
 /*
