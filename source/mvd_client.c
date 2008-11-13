@@ -1555,6 +1555,7 @@ static void MVD_EmitGamestate( mvd_t *mvd ) {
         } else {
             flags |= MSG_ES_REMOVE;
         }
+        ent->s.number = i;
         MSG_WriteDeltaEntity( NULL, &ent->s, flags );
     }
     MSG_WriteShort( 0 );
