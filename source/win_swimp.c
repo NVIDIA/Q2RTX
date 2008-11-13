@@ -94,9 +94,11 @@ SWimp_Shutdown
 System specific graphics subsystem shutdown routine.
 Destroys DIB surfaces as appropriate.
 */
-static void SWimp_Shutdown( void ) {
+void VID_Shutdown( void ) {
 	if ( sww.palettized ) {
+#ifndef __COREDLL__
         SetSystemPaletteUse( win.dc, SYSPAL_STATIC );
+#endif
         SetSysColors( NUM_SYS_COLORS, s_syspalindices, sww.oldsyscolors );
     }
 
@@ -187,7 +189,7 @@ SWimp_Init
 This routine is responsible for initializing the implementation
 specific stuff in a software rendering subsystem.
 */
-static qboolean SWimp_Init( void ) {
+qboolean VID_Init( void ) {
 	int i;
 
     // create the window
@@ -219,11 +221,11 @@ static qboolean SWimp_Init( void ) {
 
 fail:
     Com_Printf( "GetLastError() = %#lx", GetLastError() );
-	SWimp_Shutdown();
+	VID_Shutdown();
 	return qfalse;
 }
 
-static void SWimp_BeginFrame( void ) {
+void VID_BeginFrame( void ) {
 }
 
 /*
@@ -232,7 +234,7 @@ SWimp_EndFrame
 This does an implementation specific copy from the backbuffer to the
 front buffer.  In the Win32 case it uses BitBlt if we're using DIB sections/GDI.
 */
-static void SWimp_EndFrame( void ) {
+void VID_EndFrame( void ) {
 	BitBlt( win.dc, 0, 0, win.rc.width, win.rc.height, sww.dibdc, 0, 0, SRCCOPY );
 }
 
@@ -249,7 +251,7 @@ G = offset 1
 B = offset 2
 A = offset 3
 */
-static void SWimp_UpdatePalette( const byte *_pal ) {
+void VID_UpdatePalette( const byte *_pal ) {
     const byte *pal = _pal;
 	RGBQUAD			colors[256];
 	int				i;
@@ -284,9 +286,11 @@ static void SWimp_UpdatePalette( const byte *_pal ) {
         identitypalette_t ipal;
 		LOGPALETTE		*pLogPal = ( LOGPALETTE * )&ipal;
 
+#ifndef __COREDLL__
 		if ( SetSystemPaletteUse( win.dc, SYSPAL_NOSTATIC ) == SYSPAL_ERROR ) {
 			Com_Error( ERR_FATAL, "DIB_SetPalette: SetSystemPaletteUse() failed\n" );
 		}
+#endif
 
 		// destroy our old palette
 		if ( sww.pal ) {
@@ -331,18 +335,4 @@ static void SWimp_UpdatePalette( const byte *_pal ) {
 	}
 }
 
-/*
-@@@@@@@@@@@@
-VID_FillSWAPI
-@@@@@@@@@@@@
-*/
-void VID_FillSWAPI( videoAPI_t *api ) {
-	api->Init = SWimp_Init;
-	api->Shutdown = SWimp_Shutdown;
-	api->UpdateGamma = Win_UpdateGamma;
-	api->UpdatePalette = SWimp_UpdatePalette;
-	api->GetProcAddr = NULL;
-	api->BeginFrame = SWimp_BeginFrame;
-	api->EndFrame = SWimp_EndFrame;
-}
 

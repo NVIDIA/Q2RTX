@@ -40,6 +40,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #if USE_CLIENT
 
+#include <tchar.h>
+
 #define IDI_APP 100
 
 #ifndef WM_MOUSEWHEEL
@@ -67,6 +69,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 typedef const GUID *LPCGUID;
 #endif
 
+#ifdef __COREDLL__
+#define ChangeDisplaySettings( mode, flags ) \
+    ChangeDisplaySettingsEx( NULL, mode, NULL, flags, NULL )
+#define AdjustWindowRect( rect, style, menu ) \
+    AdjustWindowRectEx( rect, style, menu, 0 )
+#endif
+
 #define MAX_VIDEO_MODES   128
 
 typedef struct {
@@ -79,8 +88,10 @@ typedef struct {
     HHOOK   kbdHook;
 
     vidFlags_t flags;
+#ifndef __COREDLL__
     SHORT   gamma_cust[3][256];
     SHORT   gamma_orig[3][256];
+#endif
     vrect_t rc;
 	byte	*buffer;
 	int		pitch;

@@ -205,7 +205,9 @@ SCR_DrawDemoBar
 ================
 */
 static void SCR_DrawDemoBar( void ) {
+#if USE_MVD_CLIENT	
 	int percent;
+#endif
 
 	if( !scr_demobar->integer ) {
 		return;

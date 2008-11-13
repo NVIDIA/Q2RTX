@@ -37,8 +37,10 @@ void SV_ProcessEvents( void );
 void SV_Init (void);
 void SV_Shutdown( const char *finalmsg, killtype_t type );
 void SV_Frame (unsigned msec);
+#if USE_SYSCON
 void SV_SetConsoleTitle( void );
-void SV_ConsoleOutput( const char *msg );
+#endif
+//void SV_ConsoleOutput( const char *msg );
 
 #if USE_MVD_CLIENT && USE_CLIENT
 int MVD_GetDemoPercent( void );

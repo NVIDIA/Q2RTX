@@ -141,9 +141,9 @@ static sndinitstat_t WAVE_Init (void) {
 		}
 
 		if (MessageBox (NULL,
-						__TEXT("The sound hardware is in use by another app.\n\n")
-					    __TEXT("Select Retry to try to start sound again or Cancel to run ") __TEXT("q2pro") __TEXT(" with no sound."),
-						__TEXT("Sound not available"),
+						_T("The sound hardware is in use by another app.\n\n")
+					    _T("Select Retry to try to start sound again or Cancel to run ") _T("q2pro") _T(" with no sound."),
+						_T("Sound not available"),
 						MB_RETRYCANCEL | MB_SETFOREGROUND | MB_ICONEXCLAMATION) != IDRETRY)
 		{
 			Com_DPrintf ("hw in use\n" );
@@ -160,10 +160,10 @@ static sndinitstat_t WAVE_Init (void) {
 	*/ 
 	Com_DPrintf ("...allocating waveform buffer: ");
 	gSndBufSize = WAV_BUFFERS*WAV_BUFFER_SIZE;
-	hData = GlobalAlloc(GMEM_MOVEABLE | GMEM_SHARE, gSndBufSize); 
+	hData = GlobalAlloc(GMEM_MOVEABLE /*| GMEM_SHARE*/, gSndBufSize); 
 	if (!hData) 
 	{ 
-		Com_DPrintf( " failed\n" );
+		Com_DPrintf( " failed with error %#lx\n", GetLastError() );
 		WAVE_Shutdown();
 		return SIS_FAILURE;
 	}
@@ -173,7 +173,7 @@ static sndinitstat_t WAVE_Init (void) {
 	lpData = GlobalLock(hData);
 	if (!lpData)
 	{ 
-		Com_DPrintf( " failed\n" );
+		Com_DPrintf( " failed with error %#lx\n", GetLastError() );
 		WAVE_Shutdown();
 		return SIS_FAILURE;
 	} 
@@ -186,12 +186,11 @@ static sndinitstat_t WAVE_Init (void) {
 	 * GMEM_SHARE flags. 
 	 */ 
 	Com_DPrintf ("...allocating waveform header: ");
-	hWaveHdr = GlobalAlloc(GMEM_MOVEABLE | GMEM_SHARE, 
+	hWaveHdr = GlobalAlloc(GMEM_MOVEABLE /*| GMEM_SHARE*/, 
 		(DWORD) sizeof(WAVEHDR) * WAV_BUFFERS); 
-
 	if (hWaveHdr == NULL)
 	{ 
-		Com_DPrintf( "failed\n" );
+		Com_DPrintf( "failed with error %#lx\n", GetLastError() );
 		WAVE_Shutdown();
 		return SIS_FAILURE;
 	} 
@@ -199,10 +198,9 @@ static sndinitstat_t WAVE_Init (void) {
 
 	Com_DPrintf ("...locking waveform header: ");
 	lpWaveHdr = (LPWAVEHDR) GlobalLock(hWaveHdr); 
-
 	if (lpWaveHdr == NULL)
 	{ 
-		Com_DPrintf( "failed\n" );
+		Com_DPrintf( "failed with error %#lx\n", GetLastError() );
 		WAVE_Shutdown();
 		return SIS_FAILURE;
 	}

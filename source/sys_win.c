@@ -23,27 +23,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "q_list.h"
 #include "prompt.h"
 #include <mmsystem.h>
-#if !USE_CLIENT
+#if USE_WINSVC
 #include <winsvc.h>
 #endif
 #include <float.h>
-
-#define MAX_CONSOLE_INPUT_EVENTS    16
-
-static HANDLE   hinput = INVALID_HANDLE_VALUE;
-static HANDLE   houtput = INVALID_HANDLE_VALUE;
-
-static cvar_t           *sys_viewlog;
-static commandPrompt_t  sys_con;
-static int              sys_hidden;
-static CONSOLE_SCREEN_BUFFER_INFO   sbinfo;
-static qboolean             gotConsole;
-static volatile qboolean    errorEntered;
-static volatile qboolean    shouldExit;
-
-#if !USE_CLIENT
-static SERVICE_STATUS_HANDLE        statusHandle;
-#endif
 
 HINSTANCE   hGlobalInstance;
 
@@ -55,6 +38,13 @@ cvar_t  *sys_homedir;
 
 static char currentDirectory[MAX_OSPATH];
 
+#if USE_WINSVC
+static SERVICE_STATUS_HANDLE        statusHandle;
+#endif
+
+static volatile qboolean    errorEntered;
+static volatile qboolean    shouldExit;
+
 /*
 ===============================================================================
 
@@ -62,6 +52,22 @@ CONSOLE I/O
 
 ===============================================================================
 */
+
+#if USE_SYSCON
+
+#define MAX_CONSOLE_INPUT_EVENTS    16
+
+static HANDLE   hinput = INVALID_HANDLE_VALUE;
+static HANDLE   houtput = INVALID_HANDLE_VALUE;
+
+#if USE_CLIENT
+static cvar_t           *sys_viewlog;
+#endif
+
+static commandPrompt_t  sys_con;
+static int              sys_hidden;
+static CONSOLE_SCREEN_BUFFER_INFO   sbinfo;
+static qboolean             gotConsole;
 
 static void Sys_HideInput( void ) {
     DWORD dummy;
@@ -391,6 +397,8 @@ static void Sys_ConsoleInit( void ) {
         sbinfo.dwSize.X, sbinfo.dwSize.Y );
 }
 
+#endif // USE_SYSCON
+
 /*
 ===============================================================================
 
@@ -399,7 +407,7 @@ SERVICE CONTROL
 ===============================================================================
 */
 
-#if !USE_CLIENT
+#if USE_WINSVC
 
 static void Sys_InstallService_f( void ) {
     char servicePath[256];
@@ -530,7 +538,7 @@ fail:
     CloseServiceHandle( scm );
 }
 
-#endif
+#endif // USE_WINSVC
 
 /*
 ===============================================================================
@@ -597,6 +605,7 @@ MISC
 ===============================================================================
 */
 
+#if USE_SYSCON
 /*
 ================
 Sys_Printf
@@ -612,6 +621,7 @@ void Sys_Printf( const char *fmt, ... ) {
 
     Sys_ConsoleOutput( msg );
 }
+#endif
 
 /*
 ================
@@ -628,16 +638,21 @@ void Sys_Error( const char *error, ... ) {
 
     errorEntered = qtrue;
 
+#if USE_SYSCON
     Sys_Printf( S_COLOR_RED "********************\n"
                             "FATAL: %s\n"
                             "********************\n", text );
-#if !USE_CLIENT
+#endif
+
+#if USE_WINSVC
     if( !statusHandle )
 #endif
     {
+#if USE_SYSCON
         if( gotConsole ) {
             Sleep( INFINITE );
         }
+#endif
         MessageBoxA( NULL, text, APPLICATION " Fatal Error", MB_ICONERROR | MB_OK );
     }
 
@@ -653,10 +668,12 @@ void Sys_Quit( void ) {
     timeEndPeriod( 1 );
 
 #if USE_CLIENT
+#if USE_SYSCON
     if( dedicated && dedicated->integer ) {
         FreeConsole();
     }
-#else
+#endif
+#elif USE_WINSVC
     if( !statusHandle )
 #endif
         exit( 0 );
@@ -674,7 +691,9 @@ void Sys_AddDefaultConfig( void ) {
 }
 
 void Sys_FixFPCW( void ) {
+#ifdef __i386__ // FIXME: MSVC?
     _controlfp( _PC_24|_RC_NEAR, _MCW_PC|_MCW_RC );
+#endif
 }
 
 void Sys_Sleep( int msec ) {
@@ -719,17 +738,20 @@ void Sys_Init( void ) {
     // specifies per-user writable directory for demos, screenshots, etc
     sys_homedir = Cvar_Get( "homedir", "", CVAR_NOSET );
 
-    sys_viewlog = Cvar_Get( "sys_viewlog", "0", CVAR_NOSET );
-
-#if !USE_CLIENT
+#if USE_WINSVC
     Cmd_AddCommand( "installservice", Sys_InstallService_f );
     Cmd_AddCommand( "deleteservice", Sys_DeleteService_f );
 #endif
 
+#if USE_SYSCON
     houtput = GetStdHandle( STD_OUTPUT_HANDLE );
-    if( dedicated->integer || sys_viewlog->integer ) {
+#if USE_CLIENT
+    sys_viewlog = Cvar_Get( "sys_viewlog", "0", CVAR_NOSET );
+
+    if( dedicated->integer || sys_viewlog->integer )
+#endif
         Sys_ConsoleInit();
-    }
+#endif
 }
 
 /*
@@ -762,7 +784,7 @@ void *Sys_LoadLibrary( const char *path, const char *sym, void **handle ) {
         return NULL;
     }
 
-    entry = GetProcAddress( module, sym );
+    entry = GetProcAddressA( module, sym );
     if( !entry ) {
         Com_DPrintf( "%s failed: GetProcAddress returned %lu on %s\n",
             __func__, GetLastError(), path );
@@ -778,7 +800,7 @@ void *Sys_LoadLibrary( const char *path, const char *sym, void **handle ) {
 }
 
 void *Sys_GetProcAddress( void *handle, const char *sym ) {
-    return GetProcAddress( handle, sym );
+    return GetProcAddressA( handle, sym );
 }
 
 /*
@@ -1022,15 +1044,17 @@ static int Sys_Main( int argc, char **argv ) {
     char *p;
 
     // fix current directory to point to the basedir
-    if( !GetModuleFileName( NULL, currentDirectory, sizeof( currentDirectory ) - 1 ) ) {
+    if( !GetModuleFileNameA( NULL, currentDirectory, sizeof( currentDirectory ) - 1 ) ) {
         return 1;
     }
     if( ( p = strrchr( currentDirectory, '\\' ) ) != NULL ) {
         *p = 0;
     }
-    if( !SetCurrentDirectory( currentDirectory ) ) {
+#ifndef UNDER_CE
+    if( !SetCurrentDirectoryA( currentDirectory ) ) {
         return 1;
     }
+#endif
 
 #if USE_DBGHELP
     // install our exception handler
@@ -1106,18 +1130,23 @@ WinMain
 
 ==================
 */
-int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow ) {
+int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow ) {
     // previous instances do not exist in Win32
     if( hPrevInstance ) {
         return 1;
     }
 
     hGlobalInstance = hInstance;
+#ifndef UNICODE
+    // TODO: wince support
     Sys_ParseCommandLine( lpCmdLine );
+#endif
     return Sys_Main( sys_argc, sys_argv );
 }
 
 #else // USE_CLIENT
+
+#if USE_WINSVC
 
 static char     **sys_argv;
 static int      sys_argc;
@@ -1154,6 +1183,8 @@ static SERVICE_TABLE_ENTRY serviceTable[] = {
     { NULL, NULL }
 };
 
+#endif // USE_WINSVC
+
 /*
 ==================
 main
@@ -1161,10 +1192,13 @@ main
 ==================
 */
 int QDECL main( int argc, char **argv ) {
+#if USE_WINSVC
     int i;
+#endif
 
     hGlobalInstance = GetModuleHandle( NULL );
 
+#if USE_WINSVC
     for( i = 1; i < argc; i++ ) {
         if( !strcmp( argv[i], "-service" ) ) {
             argv[i] = NULL;
@@ -1179,6 +1213,7 @@ int QDECL main( int argc, char **argv ) {
             return 1;
         }
     }
+#endif
     
     return Sys_Main( argc, argv );
 }

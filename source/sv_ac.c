@@ -1140,7 +1140,9 @@ static qboolean AC_Flush( void ) {
         Com_WPrintf( "ANTICHEAT: Send buffer length exceeded, "
             "server may be frozen for a short while!\n" );
         do {
+#if USE_SYSCON
             Sys_RunConsole();
+#endif
             Sys_Sleep( 1 );
             AC_Run();
             if( !ac.connected ) {
@@ -1375,7 +1377,9 @@ void AC_Connect( qboolean ismvd ) {
     AC_LoadChecks();
 
     Com_Printf( "ANTICHEAT: Attempting to connect to %s...\n", ac_server_address->string );
+#if USE_SYSCON
     Sys_RunConsole();
+#endif
 
     acs.retry_backoff = AC_DEFAULT_BACKOFF;
     if( !AC_Reconnect() ) {
@@ -1384,7 +1388,9 @@ void AC_Connect( qboolean ismvd ) {
 
     // synchronize startup
     for( attempts = 0; attempts < 5000; attempts++ ) {
+#if USE_SYSCON
         Sys_RunConsole();
+#endif
         Sys_Sleep( 1 );
         AC_Run();
         if( ac.ready || !ac.stream.state ) {

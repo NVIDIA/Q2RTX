@@ -1,14 +1,31 @@
-Stable releases
+Windows
 ----------------
 OpenGL-only client for Win32:
 [q2pro-r179ac-win32.zip](http://skuller.ath.cx/q2pro/releases/q2pro-r179ac-win32.zip).
 This binary is supported by r1ch.net [anticheat](http://antiche.at/) module.
+_Keep in mind this version is quite outdated and is known to contain bugs.
+If something does not work as expected, please try a nightly build below._
+
+Debian GNU/Linux
+----------------
+Those running stable Debian destribution (currently Etch) on i386
+architecture can conveniently install pre-built Q2PRO packages from
+skuller.ath.cx Debian [repository](http://skuller.ath.cx/debian/).
+Just add the following line(s) into your `/etc/apt/sources.list`
+and run `aptitude update`:
+
+    deb http://skuller.ath.cx/debian/ etch q2pro
+    deb-src http://skuller.ath.cx/debian/ etch q2pro
+
+Users of Secure APT may need to import the repository signing key first:
+
+    wget -O - http://skuller.ath.cx/debian/archive.key | apt-key add -
 
 Nightly builds
 ----------------
 Binary builds and source snapshots from SVN trunk are
 [available](http://skuller.ath.cx/q2pro/nightly/). They are regenerated
-automatically on nightly basis. You may also find SVN
+automatically on nightly basis. You can also find SVN
 [changelog](http://q2pro.svn.sourceforge.net/viewvc/q2pro?view=log) useful.
 
 Source code
@@ -20,7 +37,7 @@ the `q2pro` directory:
     svn co https://q2pro.svn.sourceforge.net/svnroot/q2pro/trunk q2pro
 
 If you are looking for the source code snapshot corresponding to
-a particular binary release, try the following command, replacing XXX
+a stable binary release, try the following command, replacing XXX
 with release number:
 
     svn co https://q2pro.svn.sourceforge.net/svnroot/q2pro/tags/rXXX q2pro-rXXX

@@ -245,12 +245,6 @@ void CL_Stop_f( void ) {
     Com_Printf( "Stopped demo (%u bytes written).\n", msglen );
 }
 
-static const cmd_option_t o_record[] = {
-    { "h", "help", "display this message" },
-    { "z", "gzip", "compress file with gzip" },
-    { NULL }
-};
-
 /*
 ====================
 CL_Record_f

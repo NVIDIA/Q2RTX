@@ -32,13 +32,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "sys_public.h"
 #include "sv_public.h"
 
-#if defined( _WIN32 )
+#if( defined _WIN32 )
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <winsock2.h>
 #define socklen_t int
+#ifdef _WIN32_WCE
+#define NET_GET_ERROR()   ( net_error = GetLastError() )
+#else
 #define NET_GET_ERROR()   ( net_error = WSAGetLastError() )
-#elif defined( __unix__ )
+#endif
+#elif( defined __unix__ )
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -523,8 +527,8 @@ neterr_t NET_GetPacket( netsrc_t sock ) {
     memset( &from, 0, sizeof( from ) );
 
     fromlen = sizeof( from );
-    ret = recvfrom( udp_sockets[sock], msg_read_buffer, MAX_PACKETLEN, 0,
-        ( struct sockaddr * )&from, &fromlen );
+    ret = recvfrom( udp_sockets[sock], ( void * )msg_read_buffer,
+        MAX_PACKETLEN, 0, ( struct sockaddr * )&from, &fromlen );
 
     if( !ret ) {
         return NET_AGAIN;
@@ -1128,7 +1132,7 @@ neterr_t NET_RunStream( netstream_t *s ) {
     fd_set rfd, wfd;
     int ret;
     size_t len;
-    byte *data;
+    void *data;
     neterr_t result = NET_AGAIN;
 
     if( s->state != NS_CONNECTED ) {
@@ -1371,7 +1375,9 @@ static void NET_Restart_f( void ) {
         NET_Listen( qtrue );
     }
 
+#if USE_SYSCON
     SV_SetConsoleTitle();
+#endif
 }
 
 /*

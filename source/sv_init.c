@@ -130,7 +130,9 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
 
     EXEC_TRIGGER( sv_changemapcmd );
 
+#if USE_SYSCON
     SV_SetConsoleTitle();
+#endif
 
 	Com_Printf ("-------------------------------------\n");
 }

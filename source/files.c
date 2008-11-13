@@ -27,7 +27,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <zlib.h>
 #include "unzip.h"
 #endif
-#include <errno.h>
 
 /*
 =============================================================================
@@ -598,8 +597,8 @@ static size_t FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
 
     fp = fopen( fullpath, modeStr );
     if( !fp ) {
-        FS_DPrintf( "%s: %s: fopen(%s): %s\n",
-            __func__, fullpath, modeStr, strerror( errno ) );
+        FS_DPrintf( "%s: %s: couldn't open\n",
+            __func__, fullpath );
         return INVALID_LENGTH;
     }
 
@@ -1030,7 +1029,7 @@ size_t FS_FOpenFile( const char *name, fileHandle_t *f, int mode ) {
     return ret;
 }
 
-
+#if USE_LOADBUF
 
 #define MAX_LOAD_BUFFER        0x100000        // 1 MiB
 
@@ -1045,6 +1044,8 @@ static int loadStack;
 // for statistics
 static int loadCount;
 static int loadCountStatic;
+
+#endif // USE_LOADBUF
 
 /*
 ============
@@ -1128,6 +1129,7 @@ size_t FS_LoadFile( const char *path, void **buffer ) {
 void *FS_AllocTempMem( size_t length ) {
     byte *buf;
 
+#if USE_LOADBUF
     if( loadInuse + length <= MAX_LOAD_BUFFER && !( fs_restrict_mask->integer & 16 ) ) {
         buf = &loadBuffer[loadInuse];
         loadLast = buf;
@@ -1136,10 +1138,14 @@ void *FS_AllocTempMem( size_t length ) {
         loadInuse = ( loadInuse + 31 ) & ~31;
         loadStack++;
         loadCountStatic++;
-    } else {
+    } else
+#endif
+    {
        // Com_Printf(S_COLOR_MAGENTA"alloc %d\n",length);
         buf = FS_Malloc( length );
+#if USE_LOADBUF
         loadCount++;
+#endif
     }
     return buf;
 }
@@ -1153,6 +1159,7 @@ void FS_FreeFile( void *buffer ) {
     if( !buffer ) {
         Com_Error( ERR_FATAL, "%s: NULL", __func__ );
     }
+#if USE_LOADBUF
     if( ( byte * )buffer >= loadBuffer && ( byte * )buffer < loadBuffer + MAX_LOAD_BUFFER ) {
         if( loadStack == 0 ) {
             Com_Error( ERR_FATAL, "%s: empty load stack", __func__ );
@@ -1165,7 +1172,9 @@ void FS_FreeFile( void *buffer ) {
             loadInuse = loadSaved;
     //        Com_Printf(S_COLOR_MAGENTA"partial\n");
         }
-    } else {
+    } else
+#endif
+    {
         Z_Free( buffer );
     }
 }
@@ -2208,8 +2217,10 @@ static void FS_Stats_f( void ) {
         //totalHashSize += pack->hashSize;
     }
 
+#if USE_LOADBUF
     Com_Printf( "LoadFile counter: %d\n", loadCount );
     Com_Printf( "Static LoadFile counter: %d\n", loadCountStatic );
+#endif
     Com_Printf( "Total calls to OpenFileRead: %d\n", fs_count_read );
     Com_Printf( "Total path comparsions: %d\n", fs_count_strcmp );
     Com_Printf( "Total calls to fopen: %d\n", fs_count_open );

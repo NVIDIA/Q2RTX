@@ -20,7 +20,7 @@ include ../config.mk
 TARGET=../q2proded$(EXESUFFIX)
 
 CFLAGS+=-DUSE_CLIENT=0
-LDFLAGS+=-lm
+#LDFLAGS+=-lm
 
 include $(SRCDIR)/build/common.mk
 
@@ -30,7 +30,13 @@ include $(SRCDIR)/build/server.mk
 
 ifdef MINGW
 SRCFILES+=sys_win.c
-LDFLAGS+=-mconsole -lws2_32 -lwinmm -ladvapi32
+LDFLAGS+=-mconsole
+ifdef WINCE
+SRCFILES+=win_ascii.c
+LDFLAGS+=-lwinsock -lmmtimer
+else
+LDFLAGS+=-lws2_32 -lwinmm -ladvapi32
+endif
 RESFILES+=q2proded.rc
 else
 SRCFILES+=sys_unix.c

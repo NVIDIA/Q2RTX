@@ -1,54 +1,54 @@
 Source: q2pro
 Section: contrib/games
-Priority: extra
-Maintainer: Andrey Nazarov <skuller-vidnoe@yandex.ru>
+Priority: optional
+Maintainer: Andrey Nazarov <skuller@skuller.ath.cx>
 Build-Depends: cdbs, debhelper (>= 5), libx11-dev, libsdl1.2-dev,
  libpng12-dev, libjpeg62-dev, zlib1g-dev, mesa-common-dev
 Standards-Version: 3.7.2
 
 Package: q2pro-client
 Architecture: any
-Depends: ${shlibs:Depends}, q2pro-common
+Depends: ${shlibs:Depends}, q2pro-common (= ${binary:Version})
 Recommends: quake2-data
-Description: Enhanced Quake2 engine (graphical client)
- Q2PRO is a Quake2 engine modification designed for online play,
+Description: Enhanced Quake 2 engine (graphical client)
+ Q2PRO is a Quake 2 engine modification designed for online play,
  fully compatible with original Quake2 clients and servers.
  .
- Q2PRO features enhanced graphical console, support for 32-bit textures and
- MD3 models, network protocol optimizations, freely resizable windows,
+ Q2PRO features enhanced graphical console, support for JPEG/PNG textures
+ and MD3 models, network protocol optimizations, freely resizable main window,
  increased security and overall performance, basic built-in demo editing
  capabilities, built-in server and demo browsers.
  .
- This version of Q2PRO requires 3D graphics accelerator to play.
+ This version of Q2PRO requires a 3D graphics accelerator to play.
  .
- Homepage: http://q2pro.sf.net/
+ Homepage: http://skuller.ath.cx/q2pro/
 
 Package: q2pro-server
 Architecture: any
-Depends: ${shlibs:Depends}, q2pro-common
+Depends: ${shlibs:Depends}, q2pro-common (= ${binary:Version})
 Recommends: quake2-data
-Description: Enhanced Quake2 engine (dedicated server)
- Q2PRO is a Quake2 engine modification designed for online play,
- fully compatible with original Quake2 clients and servers.
+Description: Enhanced Quake 2 engine (dedicated server)
+ Q2PRO is a Quake 2 engine modification designed for online play,
+ fully compatible with original Quake 2 clients and servers.
  .
  Q2PRO dedicated server features multi-view demo recording capabilities,
  game television support, network protocol optimizations, increased security
  and overall performance.
  .
  This package contains streamlined server executable, with all client side
- code stripped out. Use it for hosting Quake2 servers.
+ code stripped out. Use it for hosting Quake 2 servers.
  .
- Homepage: http://q2pro.sf.net/
+ Homepage: http://skuller.ath.cx/q2pro/
 
 Package: q2pro-common
 Architecture: any
 Depends: ${shlibs:Depends}
-Description: Enhanced Quake2 engine (common files)
- This package contains common files between Q2PRO server and client.
+Description: Enhanced Quake 2 engine (common files)
+ This package contains files common between Q2PRO server and client.
  Currently, OpenFFA deathmatch mod is packaged, which provides game
  library essential for server startup.
  .
  OpenFFA is a simple deathmatch mod for Quake2. It features familiar
  scoreboard, voting system, map rotation support, high scores logging.
  .
- Homepage: http://q2pro.sf.net/
+ Homepage: http://skuller.ath.cx/q2pro/

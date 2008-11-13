@@ -295,8 +295,10 @@ void Com_Printf( const char *fmt, ... ) {
 		Con_Print( msg );
 #endif
 
+#if USE_SYSCON
 		// debugging console
 		Sys_ConsoleOutput( msg );
+#endif
 
         // remote console
         //SV_ConsoleOutput( msg );
@@ -1100,6 +1102,7 @@ static void Com_LastError_f( void ) {
 	}
 }
 
+#ifndef __COREDLL__
 static void Com_Setenv_f( void ) {
     int argc = Cmd_Argc();
 
@@ -1117,6 +1120,7 @@ static void Com_Setenv_f( void ) {
         Com_Printf( "Usage: %s <name> [value]\n", Cmd_Argv( 0 ) );
     }
 }
+#endif
 
 #ifdef _DEBUG
 
@@ -1219,6 +1223,15 @@ void Com_Color_g( genctx_t *ctx ) {
     }
 }
 #endif
+
+#if USE_CLIENT || USE_MVD_CLIENT || USE_MVD_SERVER
+const cmd_option_t o_record[] = {
+    { "h", "help", "display this message" },
+    { "z", "gzip", "compress file with gzip" },
+    { NULL }
+};
+#endif
+
 
 /*
 ===============
@@ -1367,7 +1380,9 @@ void Qcommon_Init( int argc, char **argv ) {
 
 	Cmd_AddCommand ("z_stats", Z_Stats_f);
 
+#ifndef __COREDLL__
 	Cmd_AddCommand( "setenv", Com_Setenv_f );
+#endif
 
 	Cmd_AddMacro( "com_date", Com_Date_m );
 	Cmd_AddMacro( "com_time", Com_Time_m );
@@ -1387,11 +1402,15 @@ void Qcommon_Init( int argc, char **argv ) {
 
 	Sys_Init();
 
+#if USE_SYSCON
     Sys_RunConsole();
+#endif
 
 	FS_Init();
 
+#if USE_SYSCON
     Sys_RunConsole();
+#endif
 
     // no longer allow CVAR_NOSET modifications
     com_initialized = qtrue;
@@ -1435,7 +1454,9 @@ void Qcommon_Init( int argc, char **argv ) {
 	CL_Init();
 #endif
 
+#if USE_SYSCON
     Sys_RunConsole();
+#endif
 
 	// add + commands from command line
 	if( !Com_AddLateCommands() ) {
@@ -1482,8 +1503,12 @@ Com_ProcessEvents
 ==============
 */
 void Com_ProcessEvents( void ) {
+#if USE_SYSCON
     Sys_RunConsole();
+#endif
+#if USE_SERVER
     SV_ProcessEvents();
+#endif
 #if USE_CLIENT
 	CL_ProcessEvents();
 #endif

@@ -294,16 +294,17 @@ static void Parse_Color( void ) {
 }
 
 static qboolean Parse_File( const char *path, int depth ) {
-    char *data, *p, *cmd;
+    char *raw, *data, *p, *cmd;
     int argc;
     menuFrameWork_t *menu = NULL;
 
-    FS_LoadFile( path, ( void ** )&data );
-    if( !data ) {
+    FS_LoadFile( path, ( void ** )&raw );
+    if( !raw ) {
         Com_Printf( "Couldn't load %s\n", path );
         return qfalse;
     }
 
+    data = raw;
     COM_Compress( data );
 
     while( *data ) {
@@ -415,7 +416,7 @@ static qboolean Parse_File( const char *path, int depth ) {
         data = p + 1;
     }
 
-    FS_FreeFile( data );
+    FS_FreeFile( raw );
 
     return qtrue;
 }

@@ -97,7 +97,6 @@ static const char *const mvd_states[MVD_NUM_STATES] = {
 static LIST_DECL( mvd_gtv_list );
 
 LIST_DECL( mvd_channel_list );
-LIST_DECL( mvd_active_list );
 
 mvd_t       mvd_waitingRoom;
 qboolean    mvd_dirty;
@@ -147,7 +146,6 @@ void MVD_Free( mvd_t *mvd ) {
 
     Z_Free( mvd->delay.data );
 
-    List_Remove( &mvd->active );
     List_Remove( &mvd->entry );
     Z_Free( mvd );
 }
@@ -156,7 +154,7 @@ void MVD_Destroy( mvd_t *mvd ) {
     mvd_client_t *client, *next;
 
     // update channel menus
-    if( !LIST_EMPTY( &mvd->active ) ) {
+    if( !LIST_EMPTY( &mvd->entry ) ) {
         mvd_dirty = qtrue;
     }
 
@@ -245,31 +243,6 @@ mvd_t *MVD_SetChannel( int arg ) {
     return NULL;
 }
 
-void MVD_CheckActive( mvd_t *mvd ) {
-    mvd_t *cur;
-
-    if( mvd->state == MVD_READING || ( mvd->gtv &&
-            mvd->gtv->state == GTV_READING ) )
-    {
-        if( LIST_EMPTY( &mvd->active ) ) {
-            // sort this one into the list of active channels
-            LIST_FOR_EACH( mvd_t, cur, &mvd_active_list, active ) {
-                if( cur->id > mvd->id ) {
-                    break;
-                }
-            }
-            List_Append( &cur->active, &mvd->active );
-            mvd_dirty = qtrue;
-        }
-    } else {
-        if( !LIST_EMPTY( &mvd->active ) ) {
-            // delete this one from the list of active channels
-            List_Delete( &mvd->active );
-            mvd_dirty = qtrue;
-        }
-    }
-}
-
 /*
 ====================================================================
 
@@ -324,7 +297,6 @@ static mvd_t *create_channel( gtv_t *gtv ) {
     mvd->min_packets = mvd_wait_delay->value * 10;
     List_Init( &mvd->clients );
     List_Init( &mvd->entry );
-    List_Init( &mvd->active );
 
     return mvd;
 }
@@ -677,24 +649,32 @@ static void write_message( gtv_t *gtv, gtv_clientop_t op ) {
 }
 
 static qboolean gtv_wait_stop( mvd_t *mvd ) {
+    gtv_t *gtv = mvd->gtv;
     int usage;
+
+    // if not connected, flush any data left
+    if( !gtv || gtv->state != GTV_READING ) {
+        goto stop;
+    }
 
     // see how many frames are buffered
     if( mvd->num_packets >= mvd->min_packets ) {
-        Com_Printf( "[%s] -=- Waiting finished, reading...\n", mvd->name );
-        mvd->state = MVD_READING;
-        return qtrue;
+        Com_Printf( "[%s] -=- Waiting stoped, reading...\n", mvd->name );
+        goto stop;
     }
 
     // see how much data is buffered
     usage = FIFO_Percent( &mvd->delay );
     if( usage >= mvd_wait_percent->value ) {
-        Com_Printf( "[%s] -=- Buffering finished, reading...\n", mvd->name );
-        mvd->state = MVD_READING;
-        return qtrue;
+        Com_Printf( "[%s] -=- Buffering stoped, reading...\n", mvd->name );
+        goto stop;
     }
 
     return qfalse;
+
+stop:
+    mvd->state = MVD_READING;
+    return qtrue;
 }
 
 // ran out of buffers
@@ -707,36 +687,37 @@ static void gtv_wait_start( mvd_t *mvd ) {
         MVD_Destroyf( mvd, "End of MVD stream reached" );
     }
 
-    Com_Printf( "[%s] -=- Buffering data...\n", mvd->name );
+    // if connection is suspended, kill it
+    if( gtv->state != GTV_READING ) {
+        Com_Printf( "[%s] -=- Ran out of buffers.\n", mvd->name );
 
-    mvd->state = MVD_WAITING;
+        gtv->mvd = NULL;
+        mvd->gtv = NULL;
+        MVD_Destroy( mvd );
 
-    if( gtv->state == GTV_READING ) {
-        // oops, if this happened in the middle of the game,
-        // resume as quickly as possible after there is some
-        // data available again
-        mvd->min_packets = 50 + 5 * mvd->underflows;
-        if( mvd->min_packets > tr ) {
-            mvd->min_packets = tr;
-        }
-        mvd->underflows++;
-
-        // notify spectators
-        if( Com_IsDedicated() ) {
-            MVD_BroadcastPrintf( mvd, PRINT_HIGH, 0,
-                "[MVD] Buffering data, please wait...\n" );
-        }
-
-        // send ping to force server to flush
-        write_message( gtv, GTC_PING );
-    } else {
-        // channel is expected to underflow after suspend,
-        // reset delay to default
-        mvd->min_packets = tr;
-        mvd->underflows = 0;
+        longjmp( mvd_jmpbuf, -1 );
     }
 
-    MVD_CheckActive( mvd );
+    Com_Printf( "[%s] -=- Buffering data...\n", mvd->name );
+
+    // oops, underflowed in the middle of the game,
+    // resume as quickly as possible after there is some
+    // data available again
+    mvd->min_packets = 50 + 5 * mvd->underflows;
+    if( mvd->min_packets > tr ) {
+        mvd->min_packets = tr;
+    }
+    mvd->underflows++;
+    mvd->state = MVD_WAITING;
+
+    // notify spectators
+    if( Com_IsDedicated() ) {
+        MVD_BroadcastPrintf( mvd, PRINT_HIGH, 0,
+            "[MVD] Buffering data, please wait...\n" );
+    }
+
+    // send ping to force server to flush
+    write_message( gtv, GTC_PING );
 }
 
 static qboolean gtv_read_frame( mvd_t *mvd ) {
@@ -923,31 +904,8 @@ static void parse_hello( gtv_t *gtv ) {
 }
 
 static void parse_stream_start( gtv_t *gtv ) {
-    mvd_t *mvd = gtv->mvd;
-    size_t size;
-
     if( gtv->state != GTV_RESUMING ) {
         gtv_destroyf( gtv, "Unexpected stream start ack in state %u", gtv->state );
-    }
-
-    // create the channel
-    if( !mvd ) {
-        mvd = create_channel( gtv );
-
-        Cvar_ClampInteger( mvd_buffer_size, 2, 10 );
-
-        // allocate delay buffer
-        size = mvd_buffer_size->integer * MAX_MSGLEN;
-        mvd->delay.data = MVD_Malloc( size );
-        mvd->delay.size = size;
-        mvd->read_frame = gtv_read_frame;
-        mvd->forward_cmd = gtv_forward_cmd;
-
-        gtv->mvd = mvd;
-    } else {
-        // reset delay to default
-        mvd->min_packets = mvd_wait_delay->value * 10;
-        mvd->underflows = 0;
     }
 
     Com_Printf( "[%s] -=- Stream start ack received.\n", gtv->name );
@@ -967,6 +925,7 @@ static void parse_stream_stop( gtv_t *gtv ) {
 
 static void parse_stream_data( gtv_t *gtv ) {
     mvd_t *mvd = gtv->mvd;
+    size_t size;
 
     if( gtv->state < GTV_WAITING ) {
         gtv_destroyf( gtv, "Unexpected stream data packet" );
@@ -993,8 +952,24 @@ static void parse_stream_data( gtv_t *gtv ) {
         gtv->state = GTV_READING;
     }
 
+    // create the channel, if not yet created
+    if( !mvd ) {
+        mvd = create_channel( gtv );
+
+        Cvar_ClampInteger( mvd_buffer_size, 2, 10 );
+
+        // allocate delay buffer
+        size = mvd_buffer_size->integer * MAX_MSGLEN;
+        mvd->delay.data = MVD_Malloc( size );
+        mvd->delay.size = size;
+        mvd->read_frame = gtv_read_frame;
+        mvd->forward_cmd = gtv_forward_cmd;
+
+        gtv->mvd = mvd;
+    }
+
     if( !mvd->state ) {
-        // parse it in place
+        // parse it in place until we get a gamestate
         MVD_ParseMessage( mvd );
     } else {
         byte *data = msg_read.data + 1;
@@ -1019,8 +994,10 @@ static void parse_stream_data( gtv_t *gtv ) {
             }
 
             // clear entire delay buffer
+            // minimize the delay
             FIFO_Clear( &mvd->delay );
             mvd->state = MVD_WAITING;
+            mvd->num_packets = 0;
             mvd->min_packets = 50;
             mvd->overflows++;
 
@@ -1428,7 +1405,9 @@ void MVD_Spawn_f( void ) {
     Cvar_Set( "timedemo", "0" );
     SV_InfoSet( "port", net_port->string );
 
+#if USE_SYSCON
     SV_SetConsoleTitle();
+#endif
 
     // generate spawncount for Waiting Room
     sv.spawncount = ( rand() | ( rand() << 16 ) ) ^ Sys_Milliseconds();
@@ -1515,13 +1494,16 @@ static void MVD_EmitGamestate( mvd_t *mvd ) {
     char        *string;
     int         i;
     edict_t     *ent;
-    player_state_t *ps;
+    mvd_player_t *player;
     size_t      length;
-    int         flags, portalbytes;
+    int         flags, extra, portalbytes;
     byte        portalbits[MAX_MAP_AREAS/8];
 
+    // pack MVD stream flags into extra bits
+    extra = mvd->flags << SVCMD_BITS;
+
     // send the serverdata
-    MSG_WriteByte( mvd_serverdata );
+    MSG_WriteByte( mvd_serverdata | extra );
     MSG_WriteLong( PROTOCOL_VERSION_MVD );
     MSG_WriteShort( PROTOCOL_VERSION_MVD_CURRENT );
     MSG_WriteLong( mvd->servercount );
@@ -1549,29 +1531,28 @@ static void MVD_EmitGamestate( mvd_t *mvd ) {
     portalbytes = CM_WritePortalBits( &sv.cm, portalbits );
     MSG_WriteByte( portalbytes );
     MSG_WriteData( portalbits, portalbytes );
-    
+ 
     // send base player states
-    for( i = 0; i < mvd->maxclients; i++ ) {
-        ps = &mvd->players[i].ps;
+    for( i = 0, player = mvd->players; i < mvd->maxclients; i++, player++ ) {
         flags = 0;
-        if( !PPS_INUSE( ps ) ) {
+        if( !player->inuse ) {
             flags |= MSG_PS_REMOVE;
         }
-        MSG_WriteDeltaPlayerstate_Packet( NULL, ps, i, flags );
+        MSG_WriteDeltaPlayerstate_Packet( NULL, &player->ps, i, flags );
     }
     MSG_WriteByte( CLIENTNUM_NONE );
 
     // send base entity states
-    for( i = 1; i < mvd->pool.num_edicts; i++ ) {
-        ent = &mvd->edicts[i];
+    for( i = 1, ent = mvd->edicts + 1; i < mvd->pool.num_edicts; i++, ent++ ) {
         flags = 0;
-        if( i <= mvd->maxclients ) {
-            ps = &mvd->players[ i - 1 ].ps;
-            if( PPS_INUSE( ps ) && ps->pmove.pm_type == PM_NORMAL ) {
-                flags |= MSG_ES_FIRSTPERSON;
+        if( ent->inuse ) {
+            if( i <= mvd->maxclients ) {
+                player = &mvd->players[ i - 1 ];
+                if( player->inuse && player->ps.pmove.pm_type == PM_NORMAL ) {
+                    flags |= MSG_ES_FIRSTPERSON;
+                }
             }
-        }
-        if( !ent->inuse ) {
+        } else {
             flags |= MSG_ES_REMOVE;
         }
         MSG_WriteDeltaEntity( NULL, &ent->s, flags );
@@ -1580,8 +1561,6 @@ static void MVD_EmitGamestate( mvd_t *mvd ) {
 
     // TODO: write private layouts/configstrings
 }
-
-extern const cmd_option_t o_mvdrecord[];
 
 void MVD_StreamedRecord_f( void ) {
     char buffer[MAX_OSPATH];
@@ -1593,12 +1572,12 @@ void MVD_StreamedRecord_f( void ) {
     int c;
     size_t len;
 
-    while( ( c = Cmd_ParseOptions( o_mvdrecord ) ) != -1 ) {
+    while( ( c = Cmd_ParseOptions( o_record ) ) != -1 ) {
         switch( c ) {
         case 'h':
-            Cmd_PrintUsage( o_mvdrecord, "[/]<filename> [chanid]" );
+            Cmd_PrintUsage( o_record, "[/]<filename> [chanid]" );
             Com_Printf( "Begin MVD recording on the specified channel.\n" );
-            Cmd_PrintHelp( o_mvdrecord );
+            Cmd_PrintHelp( o_record );
             return;
         case 'z':
             gzip = qtrue;
@@ -2040,7 +2019,6 @@ void MVD_Shutdown( void ) {
 
     List_Init( &mvd_gtv_list );
     List_Init( &mvd_channel_list );
-    List_Init( &mvd_active_list );
 
     Z_Free( mvd_clients );
     mvd_clients = NULL;

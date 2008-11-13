@@ -2657,9 +2657,9 @@ static void CL_CheckTimeout( void ) {
             Com_Error( ERR_DISCONNECT, "Server connection was reset." );
         }
     }
-    
+ 
     delta = cl_timeout->value * 1000;
-    if( com_localTime - cls.netchan->last_received > delta )  {
+    if( delta && com_localTime - cls.netchan->last_received > delta )  {
         // timeoutcount saves debugger
         if ( ++cl.timeoutcount > 5 ) {
             Com_Error( ERR_DISCONNECT, "Server connection timed out." );

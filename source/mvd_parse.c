@@ -1112,7 +1112,7 @@ static void MVD_ParseServerData( mvd_t *mvd, int extrabits ) {
     if( !mvd->state ) {
         mvd_t *cur;
 
-        // sort this one into the list of ready channels
+        // sort this one into the list of active channels
         LIST_FOR_EACH( mvd_t, cur, &mvd_channel_list, entry ) {
             if( cur->id > mvd->id ) {
                 break;
@@ -1121,8 +1121,7 @@ static void MVD_ParseServerData( mvd_t *mvd, int extrabits ) {
         List_Append( &cur->entry, &mvd->entry );
         mvd->state = MVD_WAITING;
 
-        // for local client
-        MVD_CheckActive( mvd );
+        mvd_dirty = qtrue;
     }
 
     // case all UDP clients to reconnect

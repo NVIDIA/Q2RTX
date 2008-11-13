@@ -2,9 +2,19 @@ Introduction
 -----------------
 
 Q2PRO is a [Quake 2][q2] engine modification, based on source code released
-under the GPL by id Software. This is not a standalone game as it does not
-provide own media content, but rather an enhancement over original Quake 2
-release designed for multiplayer use.
+under the terms of GPL by id Software. This is not a standalone game as it
+does not provide any media content, but rather a backwards compatible
+enhancement over original Quake 2 release designed for multiplayer use.
+
+
+Important news
+-----------------
+* __2008-Oct-30:__ Q2PRO server versions from [r307 and up][dl] now implement
+  improved MVD/GTV protocol capable of automatic connection recovery and
+  feature special "suspension mode" for additional bandwidth savings in
+  case there are no players/spectators on a channel.
+
+[dl]: http://skuller.ath.cx/q2pro/nightly/
 
 
 Feature highlights

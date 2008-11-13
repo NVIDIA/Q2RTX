@@ -107,7 +107,6 @@ struct gtv_s;
 // need to eliminate those large static arrays below...
 typedef struct mvd_s {
     list_t      entry;
-    list_t      active;
 
     mvd_state_t     state;
     int             id;
@@ -157,7 +156,6 @@ typedef struct mvd_s {
 //
 
 extern list_t           mvd_channel_list;
-extern list_t           mvd_active_list;
 extern mvd_t            mvd_waitingRoom;
 extern qboolean         mvd_dirty;
 
@@ -167,9 +165,6 @@ extern cvar_t    *mvd_shownet;
 
 void MVD_Destroyf( mvd_t *mvd, const char *fmt, ... )
     q_noreturn q_printf( 2, 3 );
-void MVD_Disconnect( mvd_t *mvd );
-void MVD_BeginWaiting( mvd_t *mvd );
-void MVD_Finish( mvd_t *mvd, const char *reason ) q_noreturn;
 void MVD_Free( mvd_t *mvd ); 
 void MVD_Shutdown( void );
 
@@ -207,5 +202,4 @@ void MVD_BroadcastPrintf( mvd_t *mvd, int level,
 void MVD_PrepWorldFrame( void );
 void MVD_GameClientNameChanged( edict_t *ent, const char *name );
 void MVD_GameClientDrop( edict_t *ent, const char *reason );
-void MVD_CheckActive( mvd_t *mvd );
 

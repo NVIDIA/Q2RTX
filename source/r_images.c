@@ -1685,7 +1685,7 @@ void IMG_FreeUnused( void ) {
     for( image = r_images; image < last; image++ ) {
         if( image->registration_sequence == registration_sequence ) {
 #if USE_REF == REF_SOFT
-            Com_PageInMemory( image->pixels[0], image->width * image->height * VID_BYTES );
+            Com_PageInMemory( image->pixels[0], image->width * image->height );
 #endif
             continue;        // used this sequence
         }

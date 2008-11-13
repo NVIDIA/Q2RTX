@@ -897,7 +897,9 @@ static void CL_ParseServerData( void ) {
         Con_Printf( "\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n" );
         Con_Printf( S_COLOR_ALT "%s\n\n", levelname );
 
+#if USE_SYSCON
         Sys_Printf( "\n\n%s\n", levelname );
+#endif
 
         // make sure clientNum is in range
         if( cl.clientNum < 0 || cl.clientNum >= MAX_CLIENTS ) {

@@ -82,7 +82,13 @@ ifdef USE_DINPUT
 SRCFILES+=in_dx.c
 endif
 
-LDFLAGS+=-mwindows -lws2_32 -lwinmm
+LDFLAGS+=-mwindows
+ifdef WINCE
+SRCFILES+=win_ascii.c
+LDFLAGS+=-lwinsock -lmmtimer
+else
+LDFLAGS+=-lws2_32 -lwinmm
+endif
 
 RESFILES=q2pro.rc
 

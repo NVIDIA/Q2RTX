@@ -628,13 +628,14 @@ static void emit_gamestate( void ) {
     // send entity states
     for( i = 1, es = mvd.entities + 1; i < ge->num_edicts; i++, es++ ) {
         flags = 0;
-        if( i <= sv_maxclients->integer ) {
-            ps = &mvd.players[ i - 1 ];
-            if( PPS_INUSE( ps ) && ps->pmove.pm_type == PM_NORMAL ) {
-                flags |= MSG_ES_FIRSTPERSON;
+        if( ( j = es->number ) != 0 ) {
+            if( i <= sv_maxclients->integer ) {
+                ps = &mvd.players[ i - 1 ];
+                if( PPS_INUSE( ps ) && ps->pmove.pm_type == PM_NORMAL ) {
+                    flags |= MSG_ES_FIRSTPERSON;
+                }
             }
-        }
-        if( ( j = es->number ) == 0 ) {
+        } else {
             flags |= MSG_ES_REMOVE;
         }
         es->number = i;
@@ -2028,12 +2029,6 @@ static void rec_start( fileHandle_t demofile ) {
 }
 
 
-const cmd_option_t o_mvdrecord[] = {
-    { "h", "help", "display this message" },
-    { "z", "gzip", "compress file with gzip" },
-    { NULL }
-};
-
 static void SV_MvdRecord_c( genctx_t *ctx, int argnum ) {
 #if USE_MVD_CLIENT
     // TODO
@@ -2070,12 +2065,12 @@ static void SV_MvdRecord_f( void ) {
         return;
     }
 
-    while( ( c = Cmd_ParseOptions( o_mvdrecord ) ) != -1 ) {
+    while( ( c = Cmd_ParseOptions( o_record ) ) != -1 ) {
         switch( c ) {
         case 'h':
-            Cmd_PrintUsage( o_mvdrecord, "[/]<filename>" );
+            Cmd_PrintUsage( o_record, "[/]<filename>" );
             Com_Printf( "Begin local MVD recording.\n" );
-            Cmd_PrintHelp( o_mvdrecord );
+            Cmd_PrintHelp( o_record );
             return;
         case 'z':
             gzip = qtrue;

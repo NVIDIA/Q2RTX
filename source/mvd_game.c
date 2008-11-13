@@ -145,7 +145,7 @@ static void MVD_LayoutChannels( mvd_client_t *client ) {
     total = sizeof( header ) - 1;
 
     // FIXME: improve this
-    cursor = List_Count( &mvd_active_list );
+    cursor = List_Count( &mvd_channel_list );
     if( cursor ) {
         if( client->layout_cursor < 0 ) {
             client->layout_cursor = cursor - 1;
@@ -155,7 +155,7 @@ static void MVD_LayoutChannels( mvd_client_t *client ) {
 
         y = 64;
         cursor = 0;
-        LIST_FOR_EACH( mvd_t, mvd, &mvd_active_list, active ) {
+        LIST_FOR_EACH( mvd_t, mvd, &mvd_channel_list, entry ) {
             len = Q_snprintf( buffer, sizeof( buffer ),
                 "yv %d string%s \"%c%-12.12s %-7.7s %d/%d\" ", y,
                 mvd == client->mvd ? "2" : "",
@@ -213,7 +213,7 @@ static void MVD_LayoutMenu( mvd_client_t *client ) {
         "yv 120 string \"%cIgnore player FOV:     %s\""
         "yv 128 string \" (use 'set uf %d u' in cfg)\""
         "yv 144 string2 \"%cExit menu\""
-        "xv 240 yv 172 string2 " VERSION;
+        "%s xv 240 yv 172 string2 " VERSION;
     char layout[MAX_STRING_CHARS];
     char cur[MENU_ITEMS];
     size_t total;
@@ -230,13 +230,14 @@ static void MVD_LayoutMenu( mvd_client_t *client ) {
     total = Q_snprintf( layout, sizeof( layout ), format,
         cur[0], client->target ? "Leave" : "Enter", cur[1],
         cur[2], List_Count( &client->mvd->clients ),
-        cur[3], List_Count( &mvd_active_list ), cur[4],
+        cur[3], List_Count( &mvd_channel_list ), cur[4],
         cur[5], ( client->uf & UF_MUTE_OBSERVERS ) ? YES : NO,
         cur[6], ( client->uf & UF_MUTE_MISC ) ? YES : NO,
         cur[7], ( client->uf & UF_MUTE_PLAYERS ) ? YES: NO,
         cur[8], ( client->uf & UF_LOCALFOV ) ? YES : NO,
         client->uf,
-        cur[9] );
+        cur[9], client->mvd->state == MVD_WAITING ?
+        "xv 0 yv 160 cstring [BUFFERING]" : "" );
 
     // send the layout
     MSG_WriteByte( svc_layout );
@@ -945,7 +946,7 @@ static void MVD_Invuse_f( mvd_client_t *client ) {
     }
 
     if( client->layout_type == LAYOUT_CHANNELS ) {
-        mvd = LIST_INDEX( mvd_t, client->layout_cursor, &mvd_active_list, active );
+        mvd = LIST_INDEX( mvd_t, client->layout_cursor, &mvd_channel_list, entry );
         if( mvd ) {
             MVD_TrySwitchChannel( client, mvd );
         } else {
@@ -1010,32 +1011,12 @@ static void print_channel( client_t *cl, mvd_t *mvd ) {
 static void mvd_channel_list_f( mvd_client_t *client ) {
     mvd_t *mvd;
 
-    if( Cmd_Argc() > 1 ) {
-        if( LIST_EMPTY( &mvd_channel_list ) ) {
-            SV_ClientPrintf( client->cl, PRINT_HIGH,
-                "No ready channels.\n" );
-            return;
-        }
-    } else {
-        if( LIST_EMPTY( &mvd_active_list ) ) {
-            SV_ClientPrintf( client->cl, PRINT_HIGH,
-                "No active channels.\n" );
-            return;
-        }
-    }
-
     SV_ClientPrintf( client->cl, PRINT_HIGH,
         "id name         map      spc plr who is playing\n"
         "-- ------------ -------- --- --- --------------\n" );
 
-    if( Cmd_Argc() > 1 ) {
-        LIST_FOR_EACH( mvd_t, mvd, &mvd_channel_list, entry ) {
-            print_channel( client->cl, mvd );
-        }
-    } else {
-        LIST_FOR_EACH( mvd_t, mvd, &mvd_active_list, active ) {
-            print_channel( client->cl, mvd );
-        }
+    LIST_FOR_EACH( mvd_t, mvd, &mvd_channel_list, entry ) {
+        print_channel( client->cl, mvd );
     }
 }
 
@@ -1298,9 +1279,9 @@ static qboolean MVD_GameClientConnect( edict_t *ent, char *userinfo ) {
 
     // if there is exactly one active channel, assign them to it,
     // otherwise, assign to Waiting Room
-    count = List_Count( &mvd_active_list );
+    count = List_Count( &mvd_channel_list );
     if( count == 1 ) {
-        mvd = LIST_FIRST( mvd_t, &mvd_active_list, active );
+        mvd = LIST_FIRST( mvd_t, &mvd_channel_list, entry );
     } else {
         mvd = &mvd_waitingRoom;
     }
@@ -1548,9 +1529,6 @@ static void MVD_GameRunFrame( void ) {
             MVD_IntermissionStop( mvd );
         }
 
-        // check for active players
-        MVD_CheckActive( mvd );
-
         // update UDP clients
         LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
             if( client->cl->state == cs_spawned ) {
@@ -1572,7 +1550,7 @@ update:
     MVD_UpdateLayouts( &mvd_waitingRoom );
    
     if( mvd_dirty ) {
-        MVD_InfoSet( "channels", va( "%d", List_Count( &mvd_active_list ) ) );
+        MVD_InfoSet( "channels", va( "%d", List_Count( &mvd_channel_list ) ) );
         mvd_dirty = qfalse;
     }
 }

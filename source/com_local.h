@@ -488,6 +488,10 @@ extern time_t       com_startTime;
 
 extern fileHandle_t	com_logFile;
 
+#if USE_CLIENT || USE_MVD_CLIENT || USE_MVD_SERVER
+extern const cmd_option_t o_record[];
+#endif
+
 void Qcommon_Init( int argc, char **argv );
 void Qcommon_Frame( void );
 void Qcommon_Shutdown( qboolean fatalError );

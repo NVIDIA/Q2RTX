@@ -1767,6 +1767,7 @@ void SV_UserinfoChanged( client_t *cl ) {
 
 //============================================================================
 
+#if USE_SYSCON
 void SV_SetConsoleTitle( void ) {
     char buffer[MAX_STRING_CHARS];
 
@@ -1776,6 +1777,7 @@ void SV_SetConsoleTitle( void ) {
 
     Sys_SetConsoleTitle( buffer );
 }
+#endif
 
 static void sv_status_limit_changed( cvar_t *self ) {
     SV_RateInit( &svs.ratelimit_status, self->integer, 1000 );
@@ -1786,9 +1788,11 @@ static void sv_badauth_time_changed( cvar_t *self ) {
     SV_RateInit( &svs.ratelimit_badrcon, 1, self->value * 1000 );
 }
 
+#if USE_SYSCON
 static void sv_hostname_changed( cvar_t *self ) {
     SV_SetConsoleTitle();
 }
+#endif
 
 #if USE_ZLIB
 voidpf SV_Zalloc OF(( voidpf opaque, uInt items, uInt size )) {
@@ -1835,7 +1839,9 @@ void SV_Init( void ) {
     sv_maxclients = Cvar_Get( "maxclients", "8", CVAR_SERVERINFO|CVAR_LATCH );
     sv_reserved_slots = Cvar_Get( "sv_reserved_slots", "0", CVAR_LATCH );
     sv_hostname = Cvar_Get( "hostname", "noname", CVAR_SERVERINFO|CVAR_ARCHIVE );
+#if USE_SYSCON
     sv_hostname->changed = sv_hostname_changed;
+#endif
     sv_timeout = Cvar_Get( "timeout", "90", 0 );
     sv_zombietime = Cvar_Get( "zombietime", "2", 0 );
     sv_ghostime = Cvar_Get( "sv_ghostime", "6", 0 );
@@ -1903,7 +1909,9 @@ void SV_Init( void ) {
     sv_pmp.waterfriction = 1;
     sv_pmp.speedMultiplier = 1;
 
+#if USE_SYSCON
     SV_SetConsoleTitle();
+#endif
 }
 
 /*
@@ -2005,7 +2013,9 @@ void SV_Shutdown( const char *finalmsg, killtype_t type ) {
     sv_client = NULL;
     sv_player = NULL;
 
+#if USE_SYSCON
     SV_SetConsoleTitle();
+#endif
 
     Z_LeakTest( TAG_SERVER );
 }
