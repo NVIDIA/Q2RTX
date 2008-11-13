@@ -364,14 +364,15 @@ static void AC_ParseToken( const char *data, int linenum, const char *path ) {
 }
 
 static qboolean AC_ParseFile( const char *path, ac_parse_t parse, int depth ) {
-    char *data, *p;
+    char *raw, *data, *p;
     int linenum = 1;
 
-    FS_LoadFile( path, ( void ** )&data );
-    if( !data ) {
+    FS_LoadFile( path, ( void ** )&raw );
+    if( !raw ) {
         return qfalse;
     }
 
+    data = raw;
     while( *data ) {
         p = strchr( data, '\n' );
         if( p ) {
@@ -407,7 +408,7 @@ static qboolean AC_ParseFile( const char *path, ac_parse_t parse, int depth ) {
         data = p + 1;
     }
 
-    FS_FreeFile( data );
+    FS_FreeFile( raw );
 
     return qtrue;
 }
