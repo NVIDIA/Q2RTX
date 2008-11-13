@@ -659,14 +659,14 @@ static qboolean gtv_wait_stop( mvd_t *mvd ) {
 
     // see how many frames are buffered
     if( mvd->num_packets >= mvd->min_packets ) {
-        Com_Printf( "[%s] -=- Waiting stoped, reading...\n", mvd->name );
+        Com_Printf( "[%s] -=- Waiting finished, reading...\n", mvd->name );
         goto stop;
     }
 
     // see how much data is buffered
     usage = FIFO_Percent( &mvd->delay );
     if( usage >= mvd_wait_percent->value ) {
-        Com_Printf( "[%s] -=- Buffering stoped, reading...\n", mvd->name );
+        Com_Printf( "[%s] -=- Buffering finished, reading...\n", mvd->name );
         goto stop;
     }
 
