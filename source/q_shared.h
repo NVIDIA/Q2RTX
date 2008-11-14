@@ -33,7 +33,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <endian.h>
 #endif
 #ifdef _WIN32
+#ifdef _MSC_VER
+#include <direct.h>
+#else
 #include <io.h>
+#endif
 #else
 #include <sys/stat.h>
 #include <sys/types.h>
