@@ -43,10 +43,18 @@ static qboolean			di_initialized;
 static LPDIRECTINPUT	di;
 static LPDIRECTINPUTDEVICE	di_mouse;
 
+#define DEFINE_STATIC_GUID( name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8 ) \
+		static const GUID _##name = { l, w1, w2, { b1, b2, b3, b4, b5, b6, b7, b8 } }
+
+DEFINE_STATIC_GUID( GUID_SysMouse,	0x6F1D2B60, 0xD5A0, 0x11CF, 0xBF, 0xC7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 );
+DEFINE_STATIC_GUID( GUID_XAxis,	0xA36D02E0, 0xC9F3, 0x11CF, 0xBF, 0xC7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 );
+DEFINE_STATIC_GUID( GUID_YAxis,	0xA36D02E1, 0xC9F3, 0x11CF, 0xBF, 0xC7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 );
+DEFINE_STATIC_GUID( GUID_ZAxis,	0xA36D02E2, 0xC9F3, 0x11CF, 0xBF, 0xC7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 );
+
 static const DIOBJECTDATAFORMAT mouseObjectDataFormat[] = {
-	{ &GUID_XAxis,	DIMOFS_X,		DIDFT_RELAXIS|DIDFT_ANYINSTANCE,				0 },
-	{ &GUID_YAxis,	DIMOFS_Y,		DIDFT_RELAXIS|DIDFT_ANYINSTANCE,				0 },
-	{ &GUID_ZAxis,	DIMOFS_Z,		DIDFT_RELAXIS|DIDFT_ANYINSTANCE|DIDFT_OPTIONAL,	0 },
+	{ &_GUID_XAxis,	DIMOFS_X,		DIDFT_RELAXIS|DIDFT_ANYINSTANCE,				0 },
+	{ &_GUID_YAxis,	DIMOFS_Y,		DIDFT_RELAXIS|DIDFT_ANYINSTANCE,				0 },
+	{ &_GUID_ZAxis,	DIMOFS_Z,		DIDFT_RELAXIS|DIDFT_ANYINSTANCE|DIDFT_OPTIONAL,	0 },
 	{ NULL,			DIMOFS_BUTTON0,	DIDFT_BUTTON|DIDFT_ANYINSTANCE,					0 },
 	{ NULL,			DIMOFS_BUTTON1,	DIDFT_BUTTON|DIDFT_ANYINSTANCE,					0 },
 	{ NULL,			DIMOFS_BUTTON2,	DIDFT_BUTTON|DIDFT_ANYINSTANCE|DIDFT_OPTIONAL,	0 },
@@ -75,18 +83,6 @@ static const DIPROPDWORD mouseBufferSize = {
 	},
 	32
 };
-
-#ifdef DEFINE_GUID
-#undef DEFINE_GUID
-#endif
-
-#define DEFINE_GUID( name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8 ) \
-		static const GUID name = { l, w1, w2, { b1, b2, b3, b4, b5, b6, b7, b8 } }
-
-DEFINE_GUID( GUID_SysMouse,	0x6F1D2B60, 0xD5A0, 0x11CF, 0xBF, 0xC7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 );
-DEFINE_GUID( GUID_XAxis,	0xA36D02E0, 0xC9F3, 0x11CF, 0xBF, 0xC7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 );
-DEFINE_GUID( GUID_YAxis,	0xA36D02E1, 0xC9F3, 0x11CF, 0xBF, 0xC7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 );
-DEFINE_GUID( GUID_ZAxis,	0xA36D02E2, 0xC9F3, 0x11CF, 0xBF, 0xC7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 );
 
 /*
 ===========
@@ -236,7 +232,7 @@ static qboolean DI_InitMouse( void ) {
 		goto fail;
 	}
 
-	hr = IDirectInput_CreateDevice( di, &GUID_SysMouse, &di_mouse, NULL );
+	hr = IDirectInput_CreateDevice( di, &_GUID_SysMouse, &di_mouse, NULL );
 	if( FAILED( hr ) ) {
 		Com_EPrintf( "CreateDevice failed with error 0x%lX\n", hr );
 		goto fail;

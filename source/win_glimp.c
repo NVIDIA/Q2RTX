@@ -139,7 +139,7 @@ static qboolean InitGL( void ) {
 	}
 	Com_DPrintf( "ok\n" );
 
-    renderer = qglGetString( GL_RENDERER );
+    renderer = ( const char * )qglGetString( GL_RENDERER );
 
     if( pfd.dwFlags & PFD_GENERIC_ACCELERATED ) {
         win.flags |= QVF_ACCELERATED;
@@ -206,7 +206,7 @@ qboolean VID_Init( void ) {
     }
 
     // initialize WGL extensions
-	extensions = qglGetString( GL_EXTENSIONS );
+	extensions = ( const char * )qglGetString( GL_EXTENSIONS );
 	if( extensions && strstr( extensions, "WGL_EXT_swap_control" ) ) {
 		Com_Printf( "...enabling WGL_EXT_swap_control\n" );
 		qwglSwapIntervalEXT = ( PFNWGLSWAPINTERWALEXTPROC )qwglGetProcAddress( "wglSwapIntervalEXT" );        
