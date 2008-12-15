@@ -1,11 +1,3 @@
-Windows
-----------------
-OpenGL-only client for Win32:
-[q2pro-r179ac-win32.zip](http://skuller.ath.cx/q2pro/releases/q2pro-r179ac-win32.zip).
-This binary is supported by r1ch.net [anticheat](http://antiche.at/) module.
-_Keep in mind this version is quite outdated and is known to contain bugs.
-If something does not work as expected, please try a nightly build below._
-
 Debian GNU/Linux
 ----------------
 Those running stable Debian destribution (currently Etch) on i386
@@ -19,14 +11,16 @@ and run `aptitude update`:
 
 Users of Secure APT may need to import the repository signing key first:
 
-    wget -O - http://skuller.ath.cx/debian/archive.key | apt-key add -
+    wget -q -O - http://skuller.ath.cx/debian/archive.key | apt-key add -
 
-Nightly builds
+Nighly builds
 ----------------
-Binary builds and source snapshots from SVN trunk are
-[available](http://skuller.ath.cx/q2pro/nightly/). They are regenerated
-automatically on nightly basis. You can also find SVN
-[changelog](http://q2pro.svn.sourceforge.net/viewvc/q2pro?view=log) useful.
+Generic GNU/Linux and Win32 binary builds from SVN trunk are
+[available][nightly], along with source snapshots. You might also
+find SVN [changelog][svnlog] useful.
+
+[nightly]: http://skuller.ath.cx/q2pro/nightly/
+[svnlog]: http://q2pro.svn.sourceforge.net/viewvc/q2pro?view=log
 
 Source code
 ----------------

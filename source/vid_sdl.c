@@ -99,7 +99,7 @@ VID_GetClipboardData
 =================
 */
 char *VID_GetClipboardData( void ) {
-#if USE_SDL && USE_X11
+#if USE_X11
 	SDL_SysWMinfo	info;
     Display *dpy;
 	Window sowner, win;

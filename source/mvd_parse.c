@@ -30,40 +30,28 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
     Com_Printf( "%3"PRIz":%s\n", msg_read.readcount - 1, \
         MVD_ServerCommandString( cmd ) )
 
-static const char mvd_strings[mvd_num_types][20] = {
-    "mvd_bad",
-    "mvd_nop",
-    "mvd_disconnect",
-    "mvd_reconnect",
-    "mvd_serverdata",
-    "mvd_configstring",
-    "mvd_frame",
-    "mvd_frame_nodelta",
-    "mvd_unicast",
-    "mvd_unicast_r",
-    "mvd_multicast_all",
-    "mvd_multicast_pvs",
-    "mvd_multicast_phs",
-    "mvd_multicast_all_r",
-    "mvd_multicast_pvs_r",
-    "mvd_multicast_phs_r",
-    "mvd_sound",
-    "mvd_print",
-    "mvd_stufftext"
-};
-
 static const char *MVD_ServerCommandString( int cmd ) {
-    const char *s;
-
-    if( cmd == -1 ) {
-        s = "END OF MESSAGE";
-    } else if( cmd >= 0 && cmd < mvd_num_types ) {
-        s = mvd_strings[cmd];
-    } else {
-        s = "UNKNOWN COMMAND";
+    switch( cmd ) {
+        case -1: return "END OF MESSAGE";
+        default: return "UNKNOWN COMMAND";
+#define M(x) \
+        case mvd_##x: return "mvd_" #x;
+        M(bad)
+        M(nop)
+        M(serverdata)
+        M(configstring)
+        M(frame)
+        M(unicast)
+        M(unicast_r)
+        M(multicast_all)
+        M(multicast_pvs)
+        M(multicast_phs)
+        M(multicast_all_r)
+        M(multicast_pvs_r)
+        M(multicast_phs_r)
+        M(sound)
+        M(print)
     }
-
-    return s;
 }
 
 #endif // USE_CLIENT
@@ -252,14 +240,22 @@ static void MVD_ParseMulticast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
         }
 
         // do not send unreliables to connecting clients
-        if( !reliable && ( cl->state != cs_spawned || cl->download || ( cl->flags & CF_NODATA ) ) ) {
+        if( !reliable && ( cl->state != cs_spawned ||
+            cl->download || ( cl->flags & CF_NODATA ) ) )
+        {
             continue;
         }
 
         if( leaf1 ) {
             // find the client's PVS
             ps = &client->ps;
+#if 0
             VectorMA( ps->viewoffset, 0.125f, ps->pmove.origin, org );
+#else
+            // FIXME: for some strange reason, game code assumes the server
+            // uses entity origin for PVS/PHS culling, not the view origin
+            VectorScale( ps->pmove.origin, 0.125f, org );
+#endif
             leaf2 = CM_PointLeaf( &mvd->cm, org );
             if( !CM_AreasConnected( &mvd->cm, leaf1->area, leaf2->area ) )
                 continue;
@@ -722,6 +718,7 @@ extracting data from player state.
 static void MVD_PlayerToEntityStates( mvd_t *mvd ) {
     mvd_player_t *player;
     edict_t *edict;
+    vec_t pitch;
     int i;
 
     mvd->numplayers = 0;
@@ -741,16 +738,15 @@ static void MVD_PlayerToEntityStates( mvd_t *mvd ) {
             continue; // not present in this frame
         }
 
-        VectorCopy( edict->s.origin, edict->s.old_origin );
-
         VectorScale( player->ps.pmove.origin, 0.125f, edict->s.origin );
-        VectorCopy( player->ps.viewangles, edict->s.angles );
 
-        if( edict->s.angles[PITCH] > 180 ) {
-            edict->s.angles[PITCH] -= 360;
+        pitch = player->ps.viewangles[PITCH];
+        if( pitch > 180 ) {
+            pitch -= 360;
         }
-
-        edict->s.angles[PITCH] = edict->s.angles[PITCH] / 3;
+        edict->s.angles[PITCH] = pitch / 3;
+        edict->s.angles[YAW] = player->ps.viewangles[YAW];
+        edict->s.angles[ROLL] = 0;
 
         MVD_LinkEdict( mvd, edict );
     }

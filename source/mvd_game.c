@@ -325,15 +325,6 @@ static void MVD_UpdateLayouts( mvd_t *mvd ) {
         }
         client->ps.stats[STAT_LAYOUTS] = client->layout_type ? 1 : 0;
         switch( client->layout_type ) {
-        case LAYOUT_NONE:
-            if( client->cl->protocol != PROTOCOL_VERSION_Q2PRO ) {
-                break;
-            }
-            if( client->target && client->cl->settings[CLS_RECORDING] ) {
-                client->layout_type = LAYOUT_FOLLOW;
-                MVD_LayoutFollow( client );
-            }
-            break;
         case LAYOUT_FOLLOW:
             if( !client->layout_time ) {
                 MVD_LayoutFollow( client );

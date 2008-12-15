@@ -41,22 +41,17 @@ LIGHTMAP COLOR ADJUSTING
 */
 
 void GL_AdjustColor( byte *dst, const byte *src, int what ) {
-    float r, g, b, min, max, mid;
+    float r, g, b, y, max;
 
     r = src[0];
     g = src[1];
     b = src[2];
 
     if( colorScale != 1.0f ) {
-        min = max = r;
-        if ( g < min ) min = g;
-        if ( b < min ) min = b;
-        if ( g > max ) max = g;
-        if ( b > max ) max = b;
-        mid = 0.5 * ( min + max );
-        r = mid + ( r - mid ) * colorScale;
-        g = mid + ( g - mid ) * colorScale;
-        b = mid + ( b - mid ) * colorScale;
+        y = r * 0.2126f + g * 0.7152f + b * 0.0722f;
+        r = y + ( r - y ) * colorScale;
+        g = y + ( g - y ) * colorScale;
+        b = y + ( b - y ) * colorScale;
     }
 
     if( gl_modulate_mask->integer & what ) {

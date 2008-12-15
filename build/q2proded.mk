@@ -20,7 +20,7 @@ include ../config.mk
 TARGET=../q2proded$(EXESUFFIX)
 
 CFLAGS+=-DUSE_CLIENT=0
-#LDFLAGS+=-lm
+LDFLAGS+=-lm
 
 include $(SRCDIR)/build/common.mk
 

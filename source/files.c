@@ -1257,19 +1257,19 @@ of the list so they override previous pack files.
 =================
 */
 static pack_t *FS_LoadPakFile( const char *packfile ) {
-    dpackheader_t    header;
-    int                i;
-    packfile_t        *file;
-    dpackfile_t        *dfile;
-    int                numpackfiles;
+    dpackheader_t   header;
+    int             i;
+    packfile_t      *file;
+    dpackfile_t     *dfile;
+    int             numpackfiles;
     char            *names;
-    size_t            namesLength;
-    pack_t            *pack;
+    size_t          namesLength;
+    pack_t          *pack;
     FILE            *packhandle;
-    dpackfile_t        info[MAX_FILES_IN_PACK];
-    int                hashSize;
+    dpackfile_t     info[MAX_FILES_IN_PACK];
+    int             hashSize;
     unsigned        hash;
-    size_t            len;
+    size_t          len;
 
     packhandle = fopen( packfile, "rb" );
     if( !packhandle ) {
@@ -1374,19 +1374,19 @@ FS_LoadZipFile
 =================
 */
 static pack_t *FS_LoadZipFile( const char *packfile ) {
-    int                i;
-    packfile_t        *file;
+    int             i;
+    packfile_t      *file;
     char            *names;
-    int                numFiles;
-    pack_t            *pack;
-    unzFile            zFile;
-    unz_global_info    zGlobalInfo;
-    unz_file_info    zInfo;
+    int             numFiles;
+    pack_t          *pack;
+    unzFile         zFile;
+    unz_global_info zGlobalInfo;
+    unz_file_info   zInfo;
     char            name[MAX_QPATH];
-    size_t            namesLength;
-    int                hashSize;
+    size_t          namesLength;
+    int             hashSize;
     unsigned        hash;
-    size_t            len;
+    size_t          len;
 
     zFile = unzOpen( packfile );
     if( !zFile ) {

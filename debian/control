@@ -12,7 +12,7 @@ Depends: ${shlibs:Depends}, q2pro-common (= ${binary:Version})
 Recommends: quake2-data
 Description: Enhanced Quake 2 engine (graphical client)
  Q2PRO is a Quake 2 engine modification designed for online play,
- fully compatible with original Quake2 clients and servers.
+ fully compatible with original Quake 2 clients and servers.
  .
  Q2PRO features enhanced graphical console, support for JPEG/PNG textures
  and MD3 models, network protocol optimizations, freely resizable main window,
@@ -48,7 +48,7 @@ Description: Enhanced Quake 2 engine (common files)
  Currently, OpenFFA deathmatch mod is packaged, which provides game
  library essential for server startup.
  .
- OpenFFA is a simple deathmatch mod for Quake2. It features familiar
+ OpenFFA is a simple deathmatch mod for Quake 2. It features familiar
  scoreboard, voting system, map rotation support, high scores logging.
  .
  Homepage: http://skuller.ath.cx/q2pro/

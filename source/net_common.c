@@ -1235,8 +1235,8 @@ void NET_Sleep( int msec ) {
     timeout.tv_sec = msec / 1000;
     timeout.tv_usec = ( msec % 1000 ) * 1000;
     FD_ZERO( &fdset );
-#ifdef __unix__
-    if( sys_stdio->integer ) {
+#if USE_SYSCON && ( defined __unix__ )
+    if( sys_console->integer ) {
         FD_SET( 0, &fdset ); // stdin
     }
 #endif

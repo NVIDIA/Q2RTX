@@ -6,12 +6,16 @@ under the terms of GPL by id Software. This is not a standalone game as it
 does not provide any media content, but rather a backwards compatible
 enhancement over original Quake 2 release designed for multiplayer use.
 
+Currently, Q2PRO does not support Quake 2 singleplayer mode, although this
+may change in the future.
+
+[q2]: http://en.wikipedia.org/wiki/Quake_2 "id Software's Quake II"
 
 Important news
 -----------------
 * __2008-Oct-30:__ Q2PRO server versions from [r307 and up][dl] now implement
   improved MVD/GTV protocol capable of automatic connection recovery and
-  feature special "suspension mode" for additional bandwidth savings in
+  feature special «suspension mode» for additional bandwidth savings in
   case there are no players/spectators on a channel.
 
 [dl]: http://skuller.ath.cx/q2pro/nightly/
@@ -27,49 +31,42 @@ Feature highlights
 
 * __Enhanced console input.__ Autocompletes not just command and cvar names,
   but also arguments of many frequently used commands. Graphical client console
-  supports most of readline(3) key bindings, what makes command line editing
+  supports most of readline(3) key bindings, making command line editing
   much more convenient.
 
 * __Basic demo editing.__ Allows one to record a demo while playing
   back another one. There is no longer need for external demo editor to perform
   basic operations like cutting interesting frags out of a demo.
 
-* __Integrated demo and server browsers.__ Allows one to easily manage
+* __Integrated demo and server browsers.__ Allows one to easily navigate through
   their demo collection by providing integrated demo browser. Address book
   functionality is greatly improved by providing integrated server browser.
 
 * __Multi View Demo support.__ Server is capable of recording and playing
   back demos in special MVD format, capturing views from each player in game.
-  During playback, spectators themselves choose which view they would like to watch.
-  This is completely transparent and supported for _all_ Quake 2 clients.
+  During playback, spectators themselves choose which view they would like
+  to watch. This is completely transparent and supported for _any_ Quake 2
+  client.
 
-* __Game TeleVision support.__ Server may act as game retranslator node,
-  allowing large amount of spectators watch game in real time without putting any
-  additional load on the game server itself. Furthermore, broadcasting is
-  done with all benefits of MVD format. There is no need for "camera man",
+* __Game TeleVision support.__ Server may act as game relay node, allowing
+  large amount of spectators watch game in real time without putting any
+  additional load on the game server itself. Furthermore, live game streaming
+  is done with all benefits of MVD format. There is no need for «camera man»,
   unlike other GTV implementations.
 
-* __Frame rates separation.__ Client provides "true" networking, physics,
-  rendering and input polling frame rates separation. Unlike other Quake 2 clients,
-  Q2PRO will not waste CPU cycles drawing frames never actually seen on screen,
-  but will poll for user input instead in order to minimize input latency.
-
-* __Anti-cheat measures.__ Client builds for Windows may optionally load
-  [r1ch.net anticheat][ac] module to authenticate themselves to anticheat-enabled
-  servers. On the other side, Q2PRO server itself is capable of serving
-  anticheat-enabled clients.
+* __Frame rates separation.__ Client provides «true» networking, physics,
+  rendering and input polling frame rates separation. Unlike other Quake 2 
+  clients, Q2PRO will not waste CPU cycles drawing frames never actually
+  seen on screen, but will poll for user input instead in order to minimize
+  input latency.
 
 * __Improved security and stability.__ Developed with security in mind, Q2PRO
   carefully handles all untrusted data, including data coming from the network
-  as well as local files like game media.
+  as well as locally stored, downloadable files like game media.
 
-* __Support for several platforms.__ Client and server run natively on
+* __Support for multiple platforms.__ Client and server run natively on
   Windows as well as many Unix-like systems, where Q2PRO client uses highly
   portable SDL library for graphical and sound output.
-
-[q2]: http://en.wikipedia.org/wiki/Quake_2 "id Software's Quake II"
-[ac]: http://antiche.at "r1ch.net anticheat"
-
 
 Navigation
 -----------------

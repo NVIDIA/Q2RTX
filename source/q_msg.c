@@ -2680,53 +2680,37 @@ void MSG_ShowDeltaUsercmdBits_Enhanced( int bits ) {
 	    SHOWBITS( "msec" );
 }
 
-static const char *const svc_strings[svc_num_types] = {
-	"svc_bad",
-
-	// these ops are known to the game dll
-	"svc_muzzleflash",
-	"svc_muzzleflash2",
-	"svc_temp_entity",
-	"svc_layout",
-	"svc_inventory",
-
-	// the rest are private to the client and server
-	"svc_nop",
-	"svc_disconnect",
-	"svc_reconnect",
-	"svc_sound",
-	"svc_print",
-	"svc_stufftext",
-	"svc_serverdata",
-	"svc_configstring",
-	"svc_spawnbaseline",
-	"svc_centerprint",
-	"svc_download",
-	"svc_playerinfo",
-	"svc_packetentities",
-	"svc_deltapacketentities",
-	"svc_frame",
-
-	// r1q2 specific operations
-	"svc_zpacket",
-	"svc_zdownload",
-
-    // q2pro specific operations
-    "svc_gamestate"
-};
-
 const char *MSG_ServerCommandString( int cmd ) {
-    const char *s;
-
-    if( cmd == -1 ) {
-        s = "END OF MESSAGE";
-    } else if( cmd >= 0 && cmd < svc_num_types ) {
-        s = svc_strings[cmd];
-    } else {
-		s = "UNKNOWN COMMAND";
-	}
-
-    return s;
+    switch( cmd ) {
+        case -1: return "END OF MESSAGE";
+        default: return "UNKNOWN COMMAND";
+#define S(x) \
+        case svc_##x: return "svc_" #x;
+        S(bad)
+        S(muzzleflash)
+        S(muzzleflash2)
+        S(temp_entity)
+        S(layout)
+        S(inventory)
+        S(nop)
+        S(disconnect)
+        S(reconnect)
+        S(sound)
+        S(print)
+        S(stufftext)
+        S(serverdata)
+        S(configstring)
+        S(spawnbaseline)
+        S(centerprint)
+        S(download)
+        S(playerinfo)
+        S(packetentities)
+        S(deltapacketentities)
+        S(frame)
+        S(zpacket)
+        S(zdownload)
+        S(gamestate)
+    }
 }
 
 #endif // USE_CLIENT

@@ -97,7 +97,7 @@ qboolean CL_CheckOrDownloadFile( const char *path ) {
         cls.download.file = f;
         // give the server an offset to start the download
         Com_Printf( "Resuming %s\n", cls.download.name );
-        CL_ClientCommand( va( "download \"%s\" %i", cls.download.name, len ) );
+        CL_ClientCommand( va( "download \"%s\" %"PRIz, cls.download.name, len ) );
     } else {
         Com_Printf( "Downloading %s\n", cls.download.name );
         CL_ClientCommand( va( "download \"%s\"", cls.download.name ) );
@@ -670,7 +670,8 @@ static void CL_ParseConfigstring( int index ) {
     maxlen = CS_SIZE( index );
     len = MSG_ReadString( string, maxlen );
     if( len >= maxlen ) {
-        Com_Error( ERR_DROP, "%s: index %d overflowed", __func__, index );
+        Com_Error( ERR_DROP, "%s: index %d overflowed: %"PRIz" > %"PRIz,
+            __func__, index, len, maxlen - 1 );
     }
 
     if( cl_shownet->integer > 2 ) {

@@ -92,7 +92,7 @@ typedef enum {
 typedef struct image_s {
     list_t          entry;
     char            name[MAX_QPATH]; // game path, without extension
-    int             baselength; // length of the path without extension
+    //int             baselength; // length of the path without extension
     imagetype_t     type;
     int             width, height; // source image
     int             upload_width, upload_height; // after power of two and picmip

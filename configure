@@ -84,6 +84,7 @@ use_zlib="yes"
 use_tga="yes"
 use_png="no"
 use_jpg="no"
+use_md3="yes"
 use_sdl="yes"
 use_dl="no"
 use_x11="yes"
@@ -155,6 +156,8 @@ for opt do
     ;;
     --enable-jpg) use_jpg="yes"
     ;;
+    --disable-md3) use_md3="no"
+    ;;
     --disable-ui) use_ui="no"
     ;;
     --use-ref=*) use_ref=`echo $opt | cut -d '=' -f 2`
@@ -203,6 +206,7 @@ echo "  --disable-zlib         disable linking with zlib"
 echo "  --disable-tga          disable TGA images support"
 echo "  --enable-png           enable PNG images support"
 echo "  --enable-jpg           enable JPG images support"
+echo "  --disable-md3          disable MD3 models support"
 echo "  --disable-ui           disable menu user interface"
 echo "  --disable-asm          disable i386 assembly optimizations"
 echo "  --enable-anticheat     enable r1ch.net anticheat server interface"
@@ -363,9 +367,12 @@ if [ "$use_client" = "yes" ]; then
     echo "Refresh type       $use_ref"
     echo "Direct input       $use_dinput"
     echo "Direct sound       $use_dsound"
-    echo "TGA support        $use_tga"
-    echo "JPG support        $use_jpg"
-    echo "PNG support        $use_png"
+    if [ "$use_ref" = "gl" ]; then
+        echo "TGA support        $use_tga"
+        echo "JPG support        $use_jpg"
+        echo "PNG support        $use_png"
+        echo "MD3 support        $use_md3"
+    fi
     echo "UI support         $use_ui"
 fi
 test "$cpu" = "i386" && echo "i386 assembly      $use_asm"
@@ -379,7 +386,15 @@ if [ "$use_client" = "yes" ]; then
     targets="$targets q2pro"
     executables="$executables q2pro$exesuffix"
 else
+    use_dsound="no"
+    use_dinput="no"
+    use_tga="no"
+    use_png="no"
+    use_jpg="no"
+    use_md3="no"
     use_sdl="no"
+    use_ref="no"
+    use_ui="no"
 fi
 
 if [ "$use_server" = "yes" ]; then
@@ -510,6 +525,10 @@ if [ "$use_jpg" = "yes" ]; then
     echo "JPG_LDFLAGS=-ljpeg" >> $config_mk
     echo "JPG_CFLAGS=" >> $config_mk
     echo "#define USE_JPG 1" >> $config_h
+fi
+
+if [ "$use_md3" = "yes" ]; then
+    echo "#define USE_MD3 1" >> $config_h
 fi
 
 if [ "$use_ui" = "yes" ]; then

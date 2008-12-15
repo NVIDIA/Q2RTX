@@ -65,7 +65,7 @@ void	Sys_DebugBreak( void );
 
 void    Sys_FixFPCW( void );
 
-#ifdef USE_AC_CLIENT
+#if USE_AC_CLIENT
 qboolean Sys_GetAntiCheatAPI( void );
 #endif
 
@@ -73,7 +73,7 @@ extern cvar_t   *sys_basedir;
 extern cvar_t   *sys_libdir;
 extern cvar_t   *sys_refdir;
 extern cvar_t   *sys_homedir;
-#ifdef __unix__
-extern cvar_t   *sys_stdio;
+#if USE_SYSCON && ( defined __unix__ )
+extern cvar_t   *sys_console;
 #endif
 

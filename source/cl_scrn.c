@@ -982,7 +982,7 @@ void SCR_ExecuteLayoutString( const char *s ) {
 			token = COM_Parse( &s );
 			index = atoi( token );
 			if( index < 0 || index >= MAX_STATS ) {
-				Com_Error( ERR_DROP, "%s: invalid string index", __func__ );
+				Com_Error( ERR_DROP, "%s: invalid stat index", __func__ );
 			}
 			index = cl.frame.ps.stats[index];
 			if( index < 0 || index >= MAX_CONFIGSTRINGS ) {

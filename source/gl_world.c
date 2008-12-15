@@ -208,7 +208,7 @@ void GL_MarkLeaves( void ) {
 		tmp[2] -= 16;	
 	} else {
 		tmp[2] += 16;	
-	}
+    }	
 	leaf = BSP_PointLeaf( bsp->nodes, tmp );
 	if( !( leaf->contents & CONTENTS_SOLID ) ) {
 		cluster2 = leaf->cluster;
@@ -241,7 +241,7 @@ void GL_MarkLeaves( void ) {
 	BSP_ClusterVis( bsp, vis1, cluster1, DVIS_PVS );
 	if( cluster1 != cluster2 ) {
 	    BSP_ClusterVis( bsp, vis2, cluster2, DVIS_PVS );
-		longs = ( bsp->visrowsize + 31 ) >> 5;
+		longs = ( bsp->visrowsize + 3 ) / 4;
 		src1 = ( uint32_t * )vis1;
 		src2 = ( uint32_t * )vis2;
 		while( longs-- ) {

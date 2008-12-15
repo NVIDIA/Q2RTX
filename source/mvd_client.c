@@ -177,6 +177,12 @@ void MVD_Destroyf( mvd_t *mvd, const char *fmt, ... ) {
 
     Com_Printf( "[%s] =X= %s\n", mvd->name, text );
 
+    // notify spectators
+    if( Com_IsDedicated() ) {
+        MVD_BroadcastPrintf( mvd, PRINT_HIGH, 0,
+            "[MVD] %s\n", text );
+    }
+
     MVD_Destroy( mvd );
 
     longjmp( mvd_jmpbuf, -1 );
@@ -650,15 +656,15 @@ static void write_message( gtv_t *gtv, gtv_clientop_t op ) {
 
 static qboolean gtv_wait_stop( mvd_t *mvd ) {
     gtv_t *gtv = mvd->gtv;
-    int usage;
+    int min_packets = mvd->min_packets, usage;
 
     // if not connected, flush any data left
     if( !gtv || gtv->state != GTV_READING ) {
-        goto stop;
+        min_packets = 1;
     }
 
     // see how many frames are buffered
-    if( mvd->num_packets >= mvd->min_packets ) {
+    if( mvd->num_packets >= min_packets ) {
         Com_Printf( "[%s] -=- Waiting finished, reading...\n", mvd->name );
         goto stop;
     }
@@ -687,15 +693,11 @@ static void gtv_wait_start( mvd_t *mvd ) {
         MVD_Destroyf( mvd, "End of MVD stream reached" );
     }
 
-    // if connection is suspended, kill it
+    // FIXME: if connection is suspended, kill it
     if( gtv->state != GTV_READING ) {
-        Com_Printf( "[%s] -=- Ran out of buffers.\n", mvd->name );
-
         gtv->mvd = NULL;
-        mvd->gtv = NULL;
-        MVD_Destroy( mvd );
-
-        longjmp( mvd_jmpbuf, -1 );
+        mvd->gtv = NULL; // but don't kill connection!
+        MVD_Destroyf( mvd, "Ran out of buffers" );
     }
 
     Com_Printf( "[%s] -=- Buffering data...\n", mvd->name );

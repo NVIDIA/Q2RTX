@@ -13,8 +13,8 @@ take effect immediately.
 Specifies network interface address server should listen on
 for UDP connections. The same interface is also used for outgoing
 TCP connections (these include MVD/GTV and anticheat connections).
-Empty string means listening on all interfaces. *This configuration
-is not supported on multi IP systems if you plan to use anticheat!*
+Empty string means listening on all interfaces. *The latter is not
+supported on multi IP systems if you plan to use anticheat!*
 
 - `set net_port 27910` (integer)  
 Specifies port number server should listen on for UDP connections.
@@ -58,12 +58,12 @@ Authenticated clients are allowed to occupy reserved slots, see below.
 Clients set their passwords via `password` userinfo variable.
 
 - `set sv_reserved_slots 0` (integer)  
-Number of client slots to be occupied only by clients who
-know `sv_reserved_password` or `sv_password`. Must be less than
-`maxclients` value. If `sv_mvd_enable` is non-zero and `sv_reserved_slots`
-is zero, `sv_reserved_slots` is automatically set to one to reserve a slot
-for dummy MVD observer. NOTE: `sv_reserved_slots` value is subtracted from
-`maxclients` value when displayed in server info!
+Number of client slots reserved for clients who know `sv_reserved_password`
+or `sv_password`. Must be strictly less than `maxclients` value.
+If `sv_mvd_enable` is non-zero and `sv_reserved_slots` is zero,
+`sv_reserved_slots` is automatically set to one to reserve a slot
+for dummy MVD observer. Note that `sv_reserved_slots` value is subtracted from
+`maxclients` value visible in the server info.
 
 - `set sv_reserved_password ""` (string)  
 See above. If empty, no one is allowed to occupy reserved slot(s), except of

@@ -415,8 +415,7 @@ atu 20061129
 static void GL_Saturation( byte *in, int inwidth, int inheight ) {
 	int		i, c;
 	byte	*p;
-	int	    r, g, b, min, max, mid;
-    float   sat;
+	float	r, g, b, y, sat;
 
 	p = in;
 	c = inwidth * inheight;
@@ -428,20 +427,15 @@ static void GL_Saturation( byte *in, int inwidth, int inheight ) {
     if( sat < 0 ) {
         sat = 0;
     }
-	
+
 	for( i = 0; i < c; i++, p += 4 ) {
 		r = p[0];
 		g = p[1];
 		b = p[2];
-		min = max = r;
-		if ( g < min ) min = g;
-		if ( b < min ) min = b;
-		if ( g > max ) max = g;
-		if ( b > max ) max = b;
-		mid = ( min + max ) >> 1;
-		p[0] = mid + ( r - mid ) * sat;
-		p[1] = mid + ( g - mid ) * sat;
-		p[2] = mid + ( b - mid ) * sat;
+        y = r * 0.2126f + g * 0.7152f + b * 0.0722f;
+		p[0] = y + ( r - y ) * sat;
+		p[1] = y + ( g - y ) * sat;
+		p[2] = y + ( b - y ) * sat;
 	}
 }
 
