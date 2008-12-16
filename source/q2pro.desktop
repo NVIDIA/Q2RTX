@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Q2PRO
+GenericName=Quake 2 client
+Exec=q2pro
+Icon=q2pro
+Terminal=false
+Type=Application
+Categories=Game;ActionGame;

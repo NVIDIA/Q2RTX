@@ -1090,6 +1090,37 @@ int SV_CountClients( void ) {
     return count;
 }
 
+static int ping_nop( client_t *cl ) {
+    return 0;
+}
+
+static int ping_min( client_t *cl ) {
+    int         j;
+    int         count = 9999;
+
+    for( j = 0; j < LATENCY_COUNTS; j++ ) {
+        if( cl->frame_latency[j] > 0 ) {
+            if( count > cl->frame_latency[j] ) {
+                count = cl->frame_latency[j];
+            }
+        }
+    }
+    return count == 9999 ? 0 : count;
+}
+
+static int ping_avg( client_t *cl ) {
+    int         j;
+    int         total = 0, count = 0;
+
+    for( j = 0; j < LATENCY_COUNTS; j++ ) {
+        if( cl->frame_latency[j] > 0 ) {
+            count++;
+            total += cl->frame_latency[j];
+        }
+    }
+    return count ? total / count : 0;
+}
+
 /*
 ===================
 SV_CalcPings
@@ -1098,57 +1129,20 @@ Updates the cl->ping variables
 ===================
 */
 static void SV_CalcPings( void ) {
-    int         j;
     client_t    *cl;
-    int         total, count;
+    int         (*calc)( client_t * );
 
     switch( sv_calcpings_method->integer ) {
-    case 0:
-        FOR_EACH_CLIENT( cl ) {
-            if( cl->state != cs_spawned )
-                continue;
-            cl->ping = 0;
-            cl->edict->client->ping = 0;
-        }
-        break;
-    case 2:
-        FOR_EACH_CLIENT( cl ) {
-            if( cl->state != cs_spawned )
-                continue;
+        case 0:  calc = ping_nop; break;
+        case 2:  calc = ping_min; break;
+        default: calc = ping_avg; break;
+    }
 
-            count = 9999;
-            for( j = 0; j < LATENCY_COUNTS; j++ ) {
-                if( cl->frame_latency[j] > 0 ) {
-                    if( count > cl->frame_latency[j] ) {
-                        count = cl->frame_latency[j];
-                    }
-                }
-            }
-            cl->ping = count == 9999 ? 0 : count;
+    FOR_EACH_CLIENT( cl ) {
+        cl->ping = cl->state == cs_spawned ? calc( cl ) : 0;
 
-            // let the game dll know about the ping
-            cl->edict->client->ping = cl->ping;
-        }
-        break;
-    default:
-        FOR_EACH_CLIENT( cl ) {
-            if( cl->state != cs_spawned )
-                continue;
-
-            total = 0;
-            count = 0;
-            for( j = 0; j < LATENCY_COUNTS; j++ ) {
-                if( cl->frame_latency[j] > 0 ) {
-                    count++;
-                    total += cl->frame_latency[j];
-                }
-            }
-            cl->ping = count ? total / count : 0;
-
-            // let the game dll know about the ping
-            cl->edict->client->ping = cl->ping;
-        }
-        break;
+        // let the game dll know about the ping
+        cl->edict->client->ping = cl->ping;
     }
 }
 

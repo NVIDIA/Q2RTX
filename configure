@@ -74,6 +74,8 @@ datadir="share/games/quake2"
 libdir="lib/games/quake2"
 bindir="games"
 mandir="share/man/man6"
+appdir="share/applications"
+pixdir="share/pixmaps"
 homedir="~/.q2pro"
 sitecfg="/etc/default/q2pro"
 
@@ -180,6 +182,10 @@ for opt do
     ;;
     --mandir=*) mandir=`echo $opt | cut -d '=' -f 2`
     ;;
+    --appdir=*) appdir=`echo $opt | cut -d '=' -f 2`
+    ;;
+    --pixdir=*) pixdir=`echo $opt | cut -d '=' -f 2`
+    ;;
     --homedir=*) homedir=`echo $opt | cut -d '=' -f 2`
     ;;
     *) echo "Unknown option: $opt (try --help)" && exit 1
@@ -218,6 +224,8 @@ echo "  --datadir=DIR          path to game data tree [$datadir]"
 echo "  --libdir=DIR           path to game libs tree [$libdir]"
 echo "  --bindir=DIR           executables directory [$bindir]"
 echo "  --mandir=DIR           manpages directory [$mandir]"
+echo "  --appdir=DIR           directory for .desktop files [$appdir]"
+echo "  --pixdir=DIR           directory for pixmaps [$pixdir]"
 echo "  --homedir=DIR          home directory [$homedir]"
 echo ""
 echo "Object files are built in the directory from which configure is run."
@@ -307,6 +315,8 @@ else
         libdir="."
         bindir=""
         mandir=""
+        appdir=""
+        pixdir=""
         homedir=""
     else
         if [ ! -z "$prefix" ]; then
@@ -314,6 +324,8 @@ else
             libdir="$prefix/$libdir"
             bindir="$prefix/$bindir"
             mandir="$prefix/$mandir"
+            appdir="$prefix/$appdir"
+            pixdir="$prefix/$pixdir"
         fi
     fi
 
@@ -331,6 +343,7 @@ if [ "$use_ref" = "soft" ]; then
     use_tga="no"
     use_png="no"
     use_jpg="no"
+    use_md3="no"
 fi
 
 gamelib="game$cpu$libsuffix"
@@ -359,6 +372,8 @@ if [ "$mingw" = "no" ]; then
         echo "Game libraries     $libdir"
         echo "Binaries           $bindir"
         echo "Man pages          $mandir"
+        echo "Desktop files      $appdir"
+        echo "Pixmap files       $pixdir"
         echo "Home directory     $homedir"
     fi
 fi
@@ -454,6 +469,8 @@ if [ "$mingw" = "no" ]; then
     else
         echo "BINDIR=$bindir" >> $config_mk
         echo "MANDIR=$mandir" >> $config_mk
+        echo "APPDIR=$appdir" >> $config_mk
+        echo "PIXDIR=$pixdir" >> $config_mk
     fi
 else
     echo "#define PRIz \"u\"" >> $config_h # FIXME: change this for x86_64

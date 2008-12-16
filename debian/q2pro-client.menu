@@ -1,1 +1,1 @@
-?package(q2pro-client):needs="x11" section="Games/Arcade" title="Q2PRO" command="q2pro"
+?package(q2pro-client):needs="x11" section="Games/Action" title="Q2PRO" command="q2pro"
