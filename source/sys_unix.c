@@ -1052,7 +1052,7 @@ int main( int argc, char **argv ) {
 
     if( !getuid() || !geteuid() ) {
         printf(  "You can not run " APPLICATION " as superuser "
-                 "for security reasons!" );
+                 "for security reasons!\n" );
         return 1;
     }
 

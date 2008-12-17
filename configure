@@ -242,7 +242,6 @@ cpu="i386"
 if [ "$use_asm" != "no" ] ; then
     use_asm="yes"
 fi
-CFLAGS="-ffloat-store -ffast-math $CFLAGS"
 ;;
 ia64)
 cpu="ia64"
@@ -392,7 +391,7 @@ if [ "$use_client" = "yes" ]; then
 fi
 test "$cpu" = "i386" && echo "i386 assembly      $use_asm"
 
-CFLAGS="-I\$(OUTDIR) -MF \$*.d -MMD -pipe $CFLAGS -Wno-strict-aliasing"
+CFLAGS="-I\$(OUTDIR) -MF \$*.d -MMD -pipe -ffloat-store $CFLAGS -Wno-strict-aliasing"
 #LDFLAGS="$LDFLAGS"
 
 
@@ -490,7 +489,10 @@ echo "#define COM_DEMOCACHE_NAME \"$democache\"" >> $config_h
 echo "#define SCREENSHOTS_DIRECTORY \"$screenshots\"" >> $config_h
 echo "#define SCORESHOTS_DIRECTORY \"$scoreshots\"" >> $config_h
 
-test "$mingw" = "no" && echo "#define SYS_SITECFG_NAME \"$sitecfg\"" >> $config_h
+if [ "$mingw" = "no" ]; then
+    echo "#define SYS_SITECFG_NAME \"$sitecfg\"" >> $config_h
+    echo "SITECFG=$sitecfg" >> $config_mk
+fi
 
 echo "#define CPUSTRING \"$cpu\"" >> $config_h
 echo "#define BUILDSTRING \"$targetos\"" >> $config_h

@@ -39,13 +39,16 @@ install:
 	for t in $(LIBRARIES) ; do \
 		install -m 755 -D $$t $(DESTDIR)$(LIBDIR)/$$t ; \
 	done
-	install -m 644 -D $(SRCDIR)/q2pro.6 $(DESTDIR)$(MANDIR)/q2pro.6
+	install -m 644 -D $(SRCDIR)/q2pro.6 \
+		$(DESTDIR)$(MANDIR)/q2pro.6
 	install -m 644 -D $(SRCDIR)/wiki/doc/q2pro.menu \
 		$(DESTDIR)$(DATADIR)/baseq2/q2pro.menu
 	install -m 644 -D $(SRCDIR)/source/q2pro.desktop \
 		$(DESTDIR)$(APPDIR)/q2pro.desktop
 	install -m 644 -D $(SRCDIR)/source/q2pro.xpm \
 		$(DESTDIR)$(PIXDIR)/q2pro.xpm
+	install -m 644 -D $(SRCDIR)/source/q2pro.default \
+		$(DESTDIR)$(SITECFG)
 
 uninstall:
 	for t in $(EXECUTABLES) ; do \
@@ -58,6 +61,7 @@ uninstall:
 	rm -f $(DESTDIR)$(DATADIR)/baseq2/q2pro.menu
 	rm -f $(DESTDIR)$(APPDIR)/q2pro.desktop
 	rm -f $(DESTDIR)$(PIXDIR)/q2pro.xpm
+	rm -f $(DESTDIR)$(SITECFG)
 
 endif # !SINGLEUSER
 

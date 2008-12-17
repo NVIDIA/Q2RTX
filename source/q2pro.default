@@ -1,0 +1,5 @@
+/*
+ * This config is executed by both q2pro/q2proded at the very beginning
+ * of initialization sequence, before any command line options are processed.
+ * You can put any site specific defaults here, like base/library paths, etc.
+ */
