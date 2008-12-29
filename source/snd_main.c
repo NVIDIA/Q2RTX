@@ -248,10 +248,8 @@ void S_Shutdown( void ) {
 }
 
 void S_Activate( void ) {
-	if( sound_started ) {
-#ifdef _WIN32
-        S_StopAllSounds(); // FIXME
-#endif
+	if( sound_started && snddma.Activate ) {
+        S_StopAllSounds();
 		snddma.Activate( cls.active == ACT_ACTIVATED ? qtrue : qfalse );
 	}
 }
@@ -888,7 +886,7 @@ static void S_AddLoopSounds (void)
 		cent = &cl_entities[ent->number];
 
 		// find the total contribution of all sounds of this type
-		S_SpatializeOrigin (cent->current.origin, 255.0, SOUND_LOOPATTENUATE,
+		S_SpatializeOrigin (cent->lerp_origin, 255.0, SOUND_LOOPATTENUATE,
 			&left_total, &right_total);
 		for (j=i+1 ; j<cl.frame.numEntities ; j++)
 		{
@@ -900,7 +898,7 @@ static void S_AddLoopSounds (void)
 			ent = &cl.entityStates[num];
 			cent = &cl_entities[ent->number];
 
-			S_SpatializeOrigin (cent->current.origin, 255.0, SOUND_LOOPATTENUATE, 
+			S_SpatializeOrigin (cent->lerp_origin, 255.0, SOUND_LOOPATTENUATE, 
 				&left, &right);
 			left_total += left;
 			right_total += right;

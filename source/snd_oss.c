@@ -241,14 +241,10 @@ static void OSS_BeginPainting ( void ) {
 static void OSS_Submit ( void ) {
 }
 
-static void OSS_Activate ( qboolean active ) {
-}
-
 void DS_FillAPI ( snddmaAPI_t *api ) {
     api->Init = OSS_Init;
     api->Shutdown = OSS_Shutdown;
     api->BeginPainting = OSS_BeginPainting;
     api->Submit = OSS_Submit;
-    api->Activate = OSS_Activate;
 }
 

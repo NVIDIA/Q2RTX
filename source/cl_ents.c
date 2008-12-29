@@ -41,11 +41,8 @@ cl.frame should be set to current frame before calling this function.
 static void CL_SetEntityState( entity_state_t *state ) {
 	centity_t *ent = &cl_entities[state->number];
 
-	// copy predicted values for own entity
-	if( state->number == cl.frame.clientNum + 1 ) {
-		VectorCopy( cl.playerEntityOrigin, state->origin );
-		VectorCopy( cl.playerEntityAngles, state->angles );
-	} else if( state->solid ) {
+	// if entity is solid, decode mins/maxs and add to the list
+	if( state->solid && state->number != cl.frame.clientNum + 1 ) {
 		cl.solidEntities[cl.numSolidEntities++] = ent;
 		if( state->solid != 31 ) {
             int x, zd, zu;
@@ -108,6 +105,14 @@ static void CL_SetEntityState( entity_state_t *state ) {
 
 	ent->serverframe = cl.frame.number;
 	ent->current = *state;
+
+    // copy predicted values for own entity
+    if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO &&
+        state->number == cl.frame.clientNum + 1 )
+    {
+        VectorCopy( cl.playerEntityOrigin, ent->current.origin );
+        VectorCopy( cl.playerEntityAngles, ent->current.angles );
+    }
 }
 
 /*
@@ -185,7 +190,7 @@ static void CL_AddPacketEntities( void ) {
 	unsigned int		effects, renderfx;
 
 	// bonus items rotate at a fixed rate
-	autorotate = anglemod( cl.time / 10 );
+	autorotate = anglemod( cl.time * 0.1f );
 
 	// brush models can auto animate their frames
 	autoanim = 2 * cl.time / 1000;

@@ -394,7 +394,7 @@ static void CL_ParsePacketEntities( server_frame_t *oldframe,
     // any remaining entities in the old frame are copied over
     while( oldnum != 99999 ) {    
         // one or more entities from the old packet are unchanged
-        if( cl_shownet->integer > 2 ) {
+        if( cl_shownet->integer > 3 ) {
             Com_Printf( "   unchanged: %i\n", oldnum );
         }
         CL_ParseDeltaEntity( frame, oldnum, oldstate, 0 );
