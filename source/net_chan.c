@@ -110,13 +110,13 @@ void Netchan_Init( void ) {
 
 /*
 ===============
-Netchan_OutOfBandPrint
+Netchan_OutOfBand
 
 Sends a text message in an out-of-band datagram
 ================
 */
-neterr_t Netchan_OutOfBandPrint( netsrc_t sock, const netadr_t *address,
-                                 const char *format, ... )
+neterr_t Netchan_OutOfBand( netsrc_t sock, const netadr_t *address,
+                            const char *format, ... )
 {
 	va_list		argptr;
 	char        buffer[MAX_PACKETLEN_DEFAULT];
@@ -124,18 +124,19 @@ neterr_t Netchan_OutOfBandPrint( netsrc_t sock, const netadr_t *address,
 
     // write the packet header
 	*( uint32_t * )buffer = 0xffffffff;
+    len = 4;
 	
 	va_start( argptr, format );
-	len = Q_vsnprintf( buffer + 4, sizeof( buffer ) - 4, format, argptr );
+	len += Q_vsnprintf( buffer + len, sizeof( buffer ) - len, format, argptr );
 	va_end( argptr );
 
-    if( len >= sizeof( buffer ) - 4 ) {
+    if( len >= sizeof( buffer ) ) {
         Com_WPrintf( "%s: overflow\n", __func__ );
         return NET_ERROR;
     }
 
     // send the datagram
-	return NET_SendPacket( sock, address, len + 4, buffer );
+	return NET_SendPacket( sock, address, len, buffer );
 }
 
 // ============================================================================

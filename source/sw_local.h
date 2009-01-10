@@ -667,6 +667,9 @@ extern  surfcache_t     *sc_rover, *sc_base;
 
 void R_RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, float degrees );
 
+void R_ConcatRotations (float in1[3][3], float in2[3][3], float out[3][3]);
+void R_ConcatTransforms (float in1[3][4], float in2[3][4], float out[3][4]);
+
 float R_DLightPoint (vec3_t p);
 
 void R_NewMap (void);

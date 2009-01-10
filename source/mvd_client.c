@@ -121,13 +121,8 @@ static cvar_t  *mvd_password;
 // ====================================================================
 
 
-void MVD_Free( mvd_t *mvd ) {
+static void MVD_Free( mvd_t *mvd ) {
     int i;
-
-    // destroy any existing connection
-    if( mvd->gtv ) {
-        mvd->gtv->destroy( mvd->gtv );
-    }
 
     // stop demo recording
     if( mvd->demorecording ) {
@@ -150,7 +145,7 @@ void MVD_Free( mvd_t *mvd ) {
     Z_Free( mvd );
 }
 
-void MVD_Destroy( mvd_t *mvd ) {
+static void MVD_Destroy( mvd_t *mvd ) {
     mvd_client_t *client, *next;
 
     // update channel menus
@@ -161,6 +156,12 @@ void MVD_Destroy( mvd_t *mvd ) {
     // cause UDP clients to reconnect
     LIST_FOR_EACH_SAFE( mvd_client_t, client, next, &mvd->clients, entry ) {
         MVD_SwitchChannel( client, &mvd_waitingRoom );
+    }
+
+    // destroy any existing GTV connection
+    if( mvd->gtv ) {
+        mvd->gtv->mvd = NULL; // don't double destroy
+        mvd->gtv->destroy( mvd->gtv );
     }
 
     // free all channel data
@@ -607,11 +608,10 @@ static void demo_free_playlist( gtv_t *gtv ) {
 static void demo_destroy( gtv_t *gtv ) {
     mvd_t *mvd = gtv->mvd;
 
+    // destroy any associated MVD channel
     if( mvd ) {
         mvd->gtv = NULL;
-        if( !mvd->state ) {
-            MVD_Free( mvd );
-        }
+        MVD_Destroy( mvd );
     }
 
     if( gtv->demoplayback ) {
@@ -1325,9 +1325,9 @@ static void gtv_run( gtv_t *gtv ) {
 static void gtv_destroy( gtv_t *gtv ) {
     mvd_t *mvd = gtv->mvd;
 
-    // any associated MVD channel is orphaned
+    // drop any associated MVD channel
     if( mvd ) {
-        mvd->gtv = NULL;
+        mvd->gtv = NULL; // don't double destroy
         if( !mvd->state ) {
             // free it here, since it is not yet
             // added to global channel list
@@ -2010,13 +2010,17 @@ void MVD_Shutdown( void ) {
     gtv_t *gtv, *gtv_next;
     mvd_t *mvd, *mvd_next;
 
-    // kill all connections
+    // kill all GTV connections
     LIST_FOR_EACH_SAFE( gtv_t, gtv, gtv_next, &mvd_gtv_list, entry ) {
         gtv->destroy( gtv );
     }
 
-    // kill all channels
+    // kill all MVD channels (including demo GTVs)
     LIST_FOR_EACH_SAFE( mvd_t, mvd, mvd_next, &mvd_channel_list, entry ) {
+        if( mvd->gtv ) {
+            mvd->gtv->mvd = NULL; // don't double destroy
+            mvd->gtv->destroy( mvd->gtv );
+        }
         MVD_Free( mvd );
     }
 

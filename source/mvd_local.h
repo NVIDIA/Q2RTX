@@ -165,7 +165,6 @@ extern cvar_t    *mvd_shownet;
 
 void MVD_Destroyf( mvd_t *mvd, const char *fmt, ... )
     q_noreturn q_printf( 2, 3 );
-void MVD_Free( mvd_t *mvd ); 
 void MVD_Shutdown( void );
 
 mvd_t *MVD_SetChannel( int arg );

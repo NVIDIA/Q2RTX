@@ -68,6 +68,17 @@ cvar_t  *com_time_format;
 cvar_t  *com_debug_break;
 cvar_t  *com_fatal_error;
 
+cvar_t  *allow_download;
+cvar_t  *allow_download_players;
+cvar_t  *allow_download_models;
+cvar_t  *allow_download_sounds;
+cvar_t  *allow_download_maps;
+cvar_t  *allow_download_textures;
+cvar_t  *allow_download_pics;
+cvar_t  *allow_download_others;
+
+cvar_t  *rcon_password;
+
 fileHandle_t    com_logFile;
 qboolean        com_logNewline;
 unsigned    com_framenum;
@@ -280,12 +291,8 @@ void Com_Printf( const char *fmt, ... ) {
     recursive++;
 
     va_start( argptr, fmt );
-    len = Q_vsnprintf( msg, sizeof( msg ), fmt, argptr );
+    len = Q_vscnprintf( msg, sizeof( msg ), fmt, argptr );
     va_end( argptr );
-
-    if( len >= sizeof( msg ) ) {
-        len = sizeof( msg ) - 1;
-    }
 
     if( rd_target ) {
         Com_Redirect( msg, len );
@@ -1057,16 +1064,16 @@ size_t Com_Uptime_m( char *buffer, size_t size ) {
     day = hour / 24; hour %= 24;
 
     if( day ) {
-        return Q_snprintf( buffer, size, "%d+%d:%02d.%02d", day, hour, min, sec );
+        return Q_scnprintf( buffer, size, "%d+%d:%02d.%02d", day, hour, min, sec );
     }
     if( hour ) {
-        return Q_snprintf( buffer, size, "%d:%02d.%02d", hour, min, sec );
+        return Q_scnprintf( buffer, size, "%d:%02d.%02d", hour, min, sec );
     }
-    return Q_snprintf( buffer, size, "%02d.%02d", min, sec );
+    return Q_scnprintf( buffer, size, "%02d.%02d", min, sec );
 }
 
 size_t Com_Random_m( char *buffer, size_t size ) {
-    return Q_snprintf( buffer, size, "%d", ( rand() ^ ( rand() >> 8 ) ) % 10 );
+    return Q_scnprintf( buffer, size, "%d", ( rand() ^ ( rand() >> 8 ) ) % 10 );
 }
 
 static size_t Com_MapList_m( char *buffer, size_t size ) {
@@ -1376,6 +1383,17 @@ void Qcommon_Init( int argc, char **argv ) {
     com_fatal_error = Cvar_Get( "com_fatal_error", "0", 0 );
     com_version = Cvar_Get( "version", version, CVAR_SERVERINFO|CVAR_ROM );
 
+    allow_download = Cvar_Get( "allow_download", "0", CVAR_ARCHIVE );
+    allow_download_players = Cvar_Get( "allow_download_players", "1", CVAR_ARCHIVE );
+    allow_download_models = Cvar_Get( "allow_download_models", "1", CVAR_ARCHIVE );
+    allow_download_sounds = Cvar_Get( "allow_download_sounds", "1", CVAR_ARCHIVE );
+    allow_download_maps = Cvar_Get( "allow_download_maps", "1", CVAR_ARCHIVE );
+    allow_download_textures = Cvar_Get( "allow_download_textures", "1", CVAR_ARCHIVE );
+    allow_download_pics = Cvar_Get( "allow_download_pics", "1", CVAR_ARCHIVE );
+    allow_download_others = Cvar_Get( "allow_download_others", "0", 0 );
+
+    rcon_password = Cvar_Get( "rcon_password", "", CVAR_PRIVATE );
+
     Cmd_AddCommand ("z_stats", Z_Stats_f);
 
 #ifndef __COREDLL__
@@ -1551,7 +1569,7 @@ void Qcommon_Frame( void ) {
 
 #if USE_CLIENT
     // spin until msec is non-zero if running a client
-    if( !dedicated->integer ) {
+    if( !dedicated->integer && !com_timedemo->integer ) {
         while( msec < 1 ) {
             Com_ProcessEvents();
             com_eventTime = Sys_Milliseconds();

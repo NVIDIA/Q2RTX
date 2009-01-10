@@ -2,5 +2,6 @@ Documentation for Q2PRO.
 
 * [[Server_commands_and_cvars|server]].
 * [[Client_commands_and_cvars|client]].
-* Building instructions for [[MinGW]].
-* [[Netcode]] details.
+* Building instructions for Win32 hosted [[MinGW]].
+* Some technical [[netcode]] details.
+* Online Q2PRO [configurator](http://skuller.ath.cx/q2pro/config.cgi).

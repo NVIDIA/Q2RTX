@@ -185,7 +185,7 @@ void SCR_DrawDebugGraph (void)
 static void SCR_DrawPercentBar( int percent ) {
 	char buffer[16];
 	int x, w;
-	int length;
+	size_t len;
 
 	scr_hudHeight -= CHAR_HEIGHT;
 
@@ -194,8 +194,8 @@ static void SCR_DrawPercentBar( int percent ) {
 	R_DrawFill( 0, scr_hudHeight, w, CHAR_HEIGHT, 4 );
 	R_DrawFill( w, scr_hudHeight, scr_hudWidth - w, CHAR_HEIGHT, 0 );
 
-    length = Q_snprintf( buffer, sizeof( buffer ), "%d%%", percent );
-	x = ( scr_hudWidth - length * CHAR_WIDTH ) / 2;
+    len = Q_scnprintf( buffer, sizeof( buffer ), "%d%%", percent );
+	x = ( scr_hudWidth - len * CHAR_WIDTH ) / 2;
 	R_DrawString( x, scr_hudHeight, 0, MAX_STRING_CHARS, buffer, scr_font );
 }
 
@@ -651,7 +651,7 @@ void HUD_DrawNumber( int x, int y, int color, int width, int value ) {
 
 	color &= 1;
 
-	l = Q_snprintf( num, sizeof( num ), "%i", value );
+	l = Q_scnprintf( num, sizeof( num ), "%i", value );
 	if( l > width )
 		l = width;
 	x += 2 + DIGIT_WIDTH * ( width - l );

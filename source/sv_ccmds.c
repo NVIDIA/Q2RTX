@@ -218,10 +218,33 @@ For development work
 ==================
 */
 static void SV_Map_f( void ) {
-	if( Cmd_Argc() != 2 ) {
+	if( Cmd_Argc() < 2 ) {
 		Com_Printf( "Usage: %s <mapname>\n", Cmd_Argv( 0 ) );
 		return;
 	}
+
+    if( sv.state == ss_game && sv_allow_map->integer != 1 &&
+        Cvar_CountLatchedVars() == 0 && strcmp( Cmd_Argv( 2 ), "force" ) )
+    {
+        if( sv_allow_map->integer == 0 ) {
+            static qboolean warned;
+
+            Com_Printf(
+                "Using '%s' command will cause full server restart, "
+                "which is likely not what you want. Use 'gamemap' "
+                "command for changing maps.\n", Cmd_Argv( 0 ) );
+            if( !warned ) {
+                Com_Printf(
+                    "(You can set 'sv_allow_map' to 1 "
+                    "if you wish to disable this check.)\n" );
+                warned = qtrue;
+            }
+            return;
+        }
+
+	    SV_Map( Cmd_Argv( 1 ), qfalse );
+        return;
+    }
 
 	SV_Map( Cmd_Argv( 1 ), qtrue );
 }
@@ -248,7 +271,8 @@ static void SV_DumpEnts_f( void ) {
 		return;
 	}
 
-	len = Q_concat( buffer, sizeof( buffer ), "maps/", Cmd_Argv( 1 ), ".ent", NULL );
+	len = Q_concat( buffer, sizeof( buffer ),
+        "maps/", Cmd_Argv( 1 ), ".ent", NULL );
     if( len >= sizeof( buffer ) ) {
         Com_EPrintf( "Oversize filename specified.\n" );
         return;
@@ -292,16 +316,29 @@ void SV_Kick_f( void ) {
 	SV_DropClient( sv_client, "kicked" );
 	sv_client->lastmessage = svs.realtime;	// min case there is a funny zombie
 
+    // optionally ban their IP address
+    if( !strcmp( Cmd_Argv( 0 ), "kickban" ) ) {
+        netadr_t *addr = &sv_client->netchan->remote_address;
+        if( addr->type == NA_IP ) {
+            addrmatch_t *match = Z_Malloc( sizeof( *match ) );
+            match->addr = BigLong( *( uint32_t * )addr->ip );
+            match->mask = 0xffffffffU;
+            match->hits = 0;
+            match->comment[0] = 0;
+            List_Append( &sv_banlist, &match->entry );
+        }
+    }
+
 	sv_client = NULL;
 	sv_player = NULL;
 }
 
-static void SV_DumpClients( void ) {
+static void dump_clients( void ) {
 	client_t	*client;
 
 	Com_Printf(
-"num score ping name             lastmsg address                rate proto\n"
-"--- ----- ---- ---------------- ------- --------------------- ----- -----\n" );
+"num score ping name             lastmsg address                rate pr fps\n"
+"--- ----- ---- ---------------- ------- --------------------- ----- -- ---\n" );
     FOR_EACH_CLIENT( client ) {
 		Com_Printf( "%3i %5i ", client->number,
 			client->edict->client->ps.stats[STAT_FRAGS] );
@@ -330,24 +367,38 @@ static void SV_DumpClients( void ) {
             &client->netchan->remote_address ) );
     	Com_Printf( "%5"PRIz" ", client->rate );
     	Com_Printf( "%2i ", client->protocol );
+    	Com_Printf( "%3i ", client->fps );
 		Com_Printf( "\n" );
 	}
 }
 
-static void SV_DumpVersions( void ) {
+static void dump_versions( void ) {
 	client_t	*client;
 
 	Com_Printf(
 "num name             version\n"
 "--- ---------------- -----------------------------------------\n" );
-		
+
     FOR_EACH_CLIENT( client ) {
         Com_Printf( "%3i %-16.16s %-40.40s\n",
             client->number, client->name,
-            client->versionString ? client->versionString : "" );
+            client->versionString ? client->versionString : "-" );
     }
 }
 
+static void dump_downloads( void ) {
+	client_t    *client;
+
+	Com_Printf(
+"num name             download\n"
+"--- ---------------- -----------------------------------------\n" );
+
+    FOR_EACH_CLIENT( client ) {
+        Com_Printf( "%3i %-16.16s %-40.40s\n",
+            client->number, client->name,
+            client->downloadname ? client->downloadname : "-" );
+    }
+}
 
 /*
 ================
@@ -368,9 +419,13 @@ static void SV_Status_f( void ) {
         Com_Printf( "No UDP clients.\n" );
     } else {
 	    if( Cmd_Argc() > 1 ) {
-            SV_DumpVersions();
+            if( *Cmd_Argv( 1 ) == 'd' ) {
+                dump_downloads();
+            } else {
+                dump_versions();
+            }
         } else {
-            SV_DumpClients();
+            dump_clients();
         }
     }
     Com_Printf( "\n" );
@@ -418,7 +473,7 @@ SV_Heartbeat_f
 ==================
 */
 static void SV_Heartbeat_f( void ) {
-	svs.last_heartbeat = 0;
+    svs.last_heartbeat = svs.realtime - HEARTBEAT_SECONDS*1000;
 }
 
 
@@ -460,16 +515,24 @@ static void SV_DumpUser_f( void ) {
 	if( !SV_SetPlayer() )
 		return;
 
-	Com_Printf( "userinfo\n" );
+	Com_Printf( "\nuserinfo\n" );
 	Com_Printf( "--------\n" );
 	Info_Print( sv_client->userinfo );
-	if( sv_client->versionString ) {
-		Com_Printf( "version              %s\n", sv_client->versionString );
-	}
+
+	Com_Printf( "\nmiscinfo\n" );
+	Com_Printf( "--------\n" );
+	Com_Printf( "version              %s\n",
+        sv_client->versionString ? sv_client->versionString : "-" );
+    Com_Printf( "protocol             %d/%d\n",
+        sv_client->protocol, sv_client->version );
+    Com_Printf( "ping                 %d\n", sv_client->ping );
+    Com_Printf( "fps                  %d\n", sv_client->fps );
+#ifdef USE_PACKETDUP
+    Com_Printf( "packetdup            %d\n", sv_client->numpackets - 1 );
+#endif
 
 	sv_client = NULL;
 	sv_player = NULL;
-
 }
 
 /*
@@ -627,8 +690,8 @@ static qboolean SV_ParseMask( const char *s, uint32_t *addr, uint32_t *mask ) {
         return qfalse;
     }
 
-    *addr = *( uint32_t * )address.ip;
-    *mask = 0xffffffffU >> ( 32 - bits ); // LE
+    *addr = BigLong( *( uint32_t * )address.ip );
+    *mask = ~( ( 1 << ( 32 - bits ) ) - 1 );
     return qtrue;
 }
 
@@ -639,7 +702,7 @@ void SV_AddMatch_f( list_t *list ) {
     size_t len;
 
     if( Cmd_Argc() < 2 ) {
-		Com_Printf( "Usage: %s <address/mask>\n", Cmd_Argv( 0 ) );
+		Com_Printf( "Usage: %s <address[/mask]> [comment]\n", Cmd_Argv( 0 ) );
         return;
     }
 
@@ -662,6 +725,7 @@ void SV_AddMatch_f( list_t *list ) {
     match = Z_Malloc( sizeof( *match ) + len );
     match->addr = addr;
     match->mask = mask;
+    match->hits = 0;
     memcpy( match->comment, s, len + 1 );
     List_Append( list, &match->entry );
 }
@@ -673,7 +737,7 @@ void SV_DelMatch_f( list_t *list ) {
     int i;
 
     if( Cmd_Argc() < 2 ) {
-		Com_Printf( "Usage: %s <address/mask|id|all>\n", Cmd_Argv( 0 ) );
+		Com_Printf( "Usage: %s <address[/mask]|id|all>\n", Cmd_Argv( 0 ) );
         return;
     }
 
@@ -737,19 +801,20 @@ void SV_ListMatches_f( list_t *list ) {
         return;
     }
 
-    Com_Printf( "id address/mask       comment\n"
-                "-- ------------------ -------\n" );
+    Com_Printf( "id address/mask       hits comment\n"
+                "-- ------------------ ---- -------\n" );
     count = 1;
     LIST_FOR_EACH( addrmatch_t, match, list, entry ) {
-        *( uint32_t * )ip = match->addr;
+        *( uint32_t * )ip = BigLong( match->addr );
         for( i = 0; i < 32; i++ ) {
-            if( ( match->mask & ( 1 << i ) ) == 0 ) {
+            if( match->mask & ( 1 << i ) ) {
                 break;
             }
         }
         Q_snprintf( addr, sizeof( addr ), "%d.%d.%d.%d/%d",
-            ip[0], ip[1], ip[2], ip[3], i );
-        Com_Printf( "%-2d %-18s %s\n", count, addr, match->comment );
+            ip[0], ip[1], ip[2], ip[3], 32 - i );
+        Com_Printf( "%-2d %-18s %-4u %s\n", count, addr,
+            match->hits, match->comment );
         count++;
     }
 }
@@ -1029,6 +1094,7 @@ static void SV_ListFilterCmds_f( void ) {
 static const cmdreg_t c_server[] = {
 	{ "heartbeat", SV_Heartbeat_f },
 	{ "kick", SV_Kick_f, SV_SetPlayer_c },
+	{ "kickban", SV_Kick_f, SV_SetPlayer_c },
 	{ "status", SV_Status_f },
 	{ "serverinfo", SV_Serverinfo_f },
 	{ "dumpuser", SV_DumpUser_f, SV_SetPlayer_c },

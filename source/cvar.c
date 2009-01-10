@@ -199,6 +199,8 @@ static void Cvar_EngineGet( cvar_t *var, const char *var_value, int flags ) {
         {
             Cvar_ChangeString( var, var_value, CVAR_SET_DIRECT );
         }
+    } else {
+        flags &= ~CVAR_GAME;
     }
 
     // some flags are not saved
@@ -618,6 +620,21 @@ void Cvar_GetLatchedVars( void ) {
         var->modified = qtrue;
         cvar_modified |= var->flags & CVAR_MODIFYMASK;
     }
+}
+
+int Cvar_CountLatchedVars( void ) {
+    cvar_t  *var;
+    int     total = 0;
+
+    for( var = cvar_vars; var; var = var->next ) {
+        if( !(var->flags & CVAR_LATCH) )
+            continue;
+        if( !var->latched_string )
+            continue;
+        total++;
+    }
+
+    return total;
 }
 
 /*

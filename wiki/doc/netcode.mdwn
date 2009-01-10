@@ -25,17 +25,17 @@ Key features of Q2PRO protocol from technical perspective:
   predicted position.
 * Server is able to filter gibs/footsteps on per-client basis.
 * Netchan level packet fragmentation support with possible
-  asynchronous delivery (i.e. fragments are sent with less then 100ms
-  granularity which depends on client `rate` setting). No more frame
+  asynchronous delivery (i.e. fragments are sent with less then 100 ms
+  granularity as soon as client `rate` limit allows). No more frame
   overflows in mods with extremly high activity. Faster map load times
   due to the higher game state compression ratio, as all configstrings
-  and baselines are compressed in single block.
+  and baselines are compressed in a single pass.
 * Per-key delta userinfo updates. E.g. if you often update your
   FOV setting, only a few bytes will be transmitted instead of
   the whole userinfo string.
-* Ability to dynamically update client entity number.
-  Needed for in-eyes chasecam mode to work properly
-  (requires support from game DLL, only used by MVD subsystem for now).
+* Ability to dynamically update client entity number. Needed for in-eyes
+  chasecam mode to work properly. This requires support from the game mod,
+  currently provided by the MVD subsystem and modern mods such as OpenTDM.
 
 [r1q2]: http://r-1.ch/r1q2-protocol.txt
 

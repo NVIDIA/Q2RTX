@@ -290,6 +290,7 @@ void Cvar_Default_g( genctx_t *ctx );
 // attempts to match a partial variable name for command line completion
 // returns NULL if nothing fits
 
+int     Cvar_CountLatchedVars( void );
 void	Cvar_GetLatchedVars (void);
 // any CVAR_LATCHEDED variables that have been set will now take effect
 
@@ -458,7 +459,9 @@ uint32_t    Com_BlockChecksum( void *buffer, size_t len );
 
 extern	cvar_t	*developer;
 extern	cvar_t	*dedicated;
+#if USE_CLIENT
 extern	cvar_t	*host_speeds;
+#endif
 extern	cvar_t	*com_version;
 
 #if USE_CLIENT
@@ -470,7 +473,16 @@ extern	cvar_t	*sv_paused;
 extern	cvar_t	*com_timedemo;
 extern	cvar_t	*com_sleep;
 
-extern	FILE *log_stats_file;
+extern	cvar_t *allow_download;
+extern	cvar_t *allow_download_players;
+extern	cvar_t *allow_download_models;
+extern	cvar_t *allow_download_sounds;
+extern	cvar_t *allow_download_maps;
+extern	cvar_t *allow_download_textures;
+extern	cvar_t *allow_download_pics;
+extern	cvar_t *allow_download_others;
+
+extern  cvar_t *rcon_password;
 
 #if USE_CLIENT
 // host_speeds times
@@ -495,21 +507,5 @@ extern const cmd_option_t o_record[];
 void Qcommon_Init( int argc, char **argv );
 void Qcommon_Frame( void );
 void Qcommon_Shutdown( qboolean fatalError );
-
-/*
-==============================================================
-
-CLIENT / SERVER SYSTEMS
-
-==============================================================
-*/
-
-extern	cvar_t *allow_download;
-extern	cvar_t *allow_download_players;
-extern	cvar_t *allow_download_models;
-extern	cvar_t *allow_download_sounds;
-extern	cvar_t *allow_download_maps;
-extern	cvar_t *allow_download_demos;
-extern	cvar_t *allow_download_other;
 
 

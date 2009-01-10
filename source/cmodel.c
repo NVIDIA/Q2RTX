@@ -34,6 +34,7 @@ static int          floodvalid;
 static int          checkcount;
 
 static cvar_t       *map_noareas;
+static cvar_t       *map_allsolid_bug;
 
 void    CM_FloodAreaConnections( cm_t *cm );
 
@@ -438,8 +439,12 @@ static void CM_ClipBoxToBrush (vec3_t mins, vec3_t maxs, vec3_t p1, vec3_t p2,
     {   // original point was inside brush
         trace->startsolid = qtrue;
         if( !getout ) {
-            trace->fraction = 0;
             trace->allsolid = qtrue;
+            if( !map_allsolid_bug->integer ) {
+                // original Q2 didn't set these
+                trace->fraction = 0;
+                trace->contents = brush->contents;
+            }
         }
         return;
     }
@@ -1126,5 +1131,6 @@ void CM_Init( void ) {
     CM_InitBoxHull();
 
     map_noareas = Cvar_Get( "map_noareas", "0", 0 );
+    map_allsolid_bug = Cvar_Get( "map_allsolid_bug", "0", 0 );
 }
 

@@ -1039,21 +1039,6 @@ size_t Q_UnescapeString( char *out, const char *in, size_t bufsize, escape_t fla
 #endif
 
 /*
-================
-Com_LocalTime
-================
-*/
-void Com_LocalTime( qtime_t *qtime ) {
-    time_t clock;
-    struct tm    *localTime;
-
-    time( &clock );
-    localTime = localtime( &clock );
-
-    *qtime = *localTime;
-}
-
-/*
 ============
 va
 
@@ -1323,7 +1308,7 @@ Com_PageInMemory
 */
 int    paged_total;
 
-void Com_PageInMemory (void *buffer, int size)
+void Com_PageInMemory (void *buffer, size_t size)
 {
     int        i;
 
@@ -1387,6 +1372,8 @@ int Q_strcasecmp( const char *s1, const char *s2 ) {
 /*
 ===============
 Q_strlcpy
+
+Returns length of the source string.
 ===============
 */
 size_t Q_strlcpy( char *dst, const char *src, size_t size ) {
@@ -1404,6 +1391,8 @@ size_t Q_strlcpy( char *dst, const char *src, size_t size ) {
 /*
 ===============
 Q_strlcat
+
+Returns length of the source and destinations strings combined.
 ===============
 */
 size_t Q_strlcat( char *dst, const char *src, size_t size ) {
@@ -1422,6 +1411,10 @@ size_t Q_strlcat( char *dst, const char *src, size_t size ) {
 /*
 ===============
 Q_concat
+
+Returns number of characters that would be written into the buffer,
+excluding trailing '\0'. If the returned value is equal to or greater than
+buffer size, resulting string is truncated.
 ===============
 */
 size_t Q_concat( char *dest, size_t size, ... ) {
@@ -1451,13 +1444,20 @@ size_t Q_concat( char *dest, size_t size, ... ) {
 ===============
 Q_vsnprintf
 
-Work around broken M$ C runtime semantics.
+Returns number of characters that would be written into the buffer,
+excluding trailing '\0'. If the returned value is equal to or greater than
+buffer size, resulting string is truncated.
 ===============
 */
 size_t Q_vsnprintf( char *dest, size_t size, const char *fmt, va_list argptr ) {
     int ret;
 
+    if( size > INT_MAX ) {
+        Com_Error( ERR_FATAL, "%s: bad buffer size", __func__ );
+    }
+
 #ifdef _WIN32
+    // work around broken M$ C runtime semantics.
     if( !size ) {
         return 0;
     }
@@ -1469,6 +1469,7 @@ size_t Q_vsnprintf( char *dest, size_t size, const char *fmt, va_list argptr ) {
     ret = vsnprintf( dest, size, fmt, argptr );
 #endif
 
+    // this shouldn't happen
     if( ret < 0 ) {
         if( size ) {
             *dest = 0;
@@ -1476,12 +1477,37 @@ size_t Q_vsnprintf( char *dest, size_t size, const char *fmt, va_list argptr ) {
         ret = 0;
     }
 
-    return ret;
+    return ( size_t )ret;
 }
 
 /*
 ===============
+Q_vscnprintf
+
+Returns number of characters actually written into the buffer,
+excluding trailing '\0'. If buffer size is 0, this function does nothing
+and returns 0.
+===============
+*/
+size_t Q_vscnprintf( char *dest, size_t size, const char *fmt, va_list argptr ) {
+    size_t ret;
+    
+    if( !size ) {
+        return 0;
+    }
+
+    ret = Q_vsnprintf( dest, size, fmt, argptr );
+    return ret >= size ? size - 1 : ret;
+}
+
+
+/*
+===============
 Q_snprintf
+
+Returns number of characters that would be written into the buffer,
+excluding trailing '\0'. If the returned value is equal to or greater than
+buffer size, resulting string is truncated.
 ===============
 */
 size_t Q_snprintf( char *dest, size_t size, const char *fmt, ... ) {
@@ -1495,11 +1521,28 @@ size_t Q_snprintf( char *dest, size_t size, const char *fmt, ... ) {
     return ret;
 }
 
+/*
+===============
+Q_scnprintf
+
+Returns number of characters actually written into the buffer,
+excluding trailing '\0'. If buffer size is 0, this function does nothing
+and returns 0.
+===============
+*/
+size_t Q_scnprintf( char *dest, size_t size, const char *fmt, ... ) {
+    va_list argptr;
+    size_t  ret;
+
+    va_start( argptr, fmt );
+    ret = Q_vscnprintf( dest, size, fmt, argptr );
+    va_end( argptr );
+
+    return ret;
+}
+
 char *Q_strchrnul( const char *s, int c ) {
-    while( *s ) {
-        if( *s == c ) {
-            return ( char * )s;
-        }
+    while( *s && *s != c ) {
         s++;
     }
     return ( char * )s;

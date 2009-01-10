@@ -32,7 +32,6 @@ cvar_t	*adr6;
 cvar_t	*adr7;
 cvar_t	*adr8;
 
-extern cvar_t	*rcon_password;
 cvar_t	*rcon_address;
 
 cvar_t	*cl_noskins;
@@ -398,7 +397,7 @@ static void CL_CheckForResend( void ) {
 	}
 
     Cvar_BitInfo( userinfo, CVAR_USERINFO );
-    ret = Netchan_OutOfBandPrint( NS_CLIENT, &cls.serverAddress,
+    ret = Netchan_OutOfBand( NS_CLIENT, &cls.serverAddress,
         "connect %i %i %i \"%s\"%s\n", cls.serverProtocol, cls.quakePort,
         cls.challenge, userinfo, tail );
 	if( ret == NET_ERROR ) {
@@ -522,7 +521,7 @@ void CL_SendRcon( const netadr_t *adr, const char *pass, const char *cmd ) {
 
 	CL_AddRequest( adr, REQ_RCON );
 
-    ret = Netchan_OutOfBandPrint( NS_CLIENT, adr,
+    ret = Netchan_OutOfBand( NS_CLIENT, adr,
 		"rcon \"%s\" %s", pass, cmd );
 	if( ret == NET_ERROR ) {
 		Com_Printf( "%s to %s\n", NET_ErrorString(),
@@ -1765,13 +1764,15 @@ void CL_RequestNextDownload ( void ) {
         precache_check = CS_IMAGES;
     }
     if ( precache_check >= CS_IMAGES && precache_check < CS_IMAGES + MAX_IMAGES ) {
-        if ( precache_check == CS_IMAGES )
-            precache_check++; // zero is blank
-        while ( precache_check < CS_IMAGES + MAX_IMAGES &&
-                cl.configstrings[ precache_check ][ 0 ] ) {
-            Q_concat( fn, sizeof( fn ), "pics/", cl.configstrings[ precache_check++ ], ".pcx", NULL );
-            if ( !CL_CheckOrDownloadFile( fn ) )
-                return; // started a download
+        if ( allow_download_pics->integer ) {
+            if ( precache_check == CS_IMAGES )
+                precache_check++; // zero is blank
+            while ( precache_check < CS_IMAGES + MAX_IMAGES &&
+                    cl.configstrings[ precache_check ][ 0 ] ) {
+                Q_concat( fn, sizeof( fn ), "pics/", cl.configstrings[ precache_check++ ], ".pcx", NULL );
+                if ( !CL_CheckOrDownloadFile( fn ) )
+                    return; // started a download
+            }
         }
         precache_check = CS_PLAYERSKINS;
     }
@@ -1877,7 +1878,7 @@ void CL_RequestNextDownload ( void ) {
     }
 
     if ( precache_check > ENV_CNT && precache_check < TEXTURE_CNT ) {
-        if ( allow_download->integer && allow_download_maps->integer ) {
+        if ( allow_download->integer && allow_download_textures->integer ) {
             while ( precache_check < TEXTURE_CNT ) {
                 int n = precache_check++ - ENV_CNT - 1;
 
@@ -1901,7 +1902,7 @@ void CL_RequestNextDownload ( void ) {
 
     // confirm existance of textures, download any that don't exist
     if ( precache_check == TEXTURE_CNT + 1 ) {
-        if ( allow_download->integer && allow_download_maps->integer ) {
+        if ( allow_download->integer && allow_download_textures->integer ) {
 			while ( precache_tex < cl.bsp->numtexinfo ) {
 				char *texname = cl.bsp->texinfo[ precache_tex++ ].name;
 
@@ -2187,7 +2188,7 @@ static size_t CL_Ups_m( char *buffer, size_t size ) {
 	}
 
 	ups = VectorLength( vel );
-	return Q_snprintf( buffer, size, "%d", ups );
+	return Q_scnprintf( buffer, size, "%d", ups );
 }
 
 static size_t CL_Timer_m( char *buffer, size_t size ) {
@@ -2198,25 +2199,25 @@ static size_t CL_Timer_m( char *buffer, size_t size ) {
 	hour = min / 60; min %= 60;
 
 	if( hour ) {
-		return Q_snprintf( buffer, size, "%i:%i:%02i", hour, min, sec );
+		return Q_scnprintf( buffer, size, "%i:%i:%02i", hour, min, sec );
     }
-	return Q_snprintf( buffer, size, "%i:%02i", min, sec );
+	return Q_scnprintf( buffer, size, "%i:%02i", min, sec );
 }
 
 static size_t CL_Fps_m( char *buffer, size_t size ) {
-	return Q_snprintf( buffer, size, "%i", cls.fps );
+	return Q_scnprintf( buffer, size, "%i", cls.fps );
 }
 static size_t CL_Ping_m( char *buffer, size_t size ) {
-	return Q_snprintf( buffer, size, "%i", cls.ping );
+	return Q_scnprintf( buffer, size, "%i", cls.ping );
 }
 static size_t CL_Health_m( char *buffer, size_t size ) {
-	return Q_snprintf( buffer, size, "%i", cl.frame.ps.stats[STAT_HEALTH] );
+	return Q_scnprintf( buffer, size, "%i", cl.frame.ps.stats[STAT_HEALTH] );
 }
 static size_t CL_Ammo_m( char *buffer, size_t size ) {
-	return Q_snprintf( buffer, size, "%i", cl.frame.ps.stats[STAT_AMMO] );
+	return Q_scnprintf( buffer, size, "%i", cl.frame.ps.stats[STAT_AMMO] );
 }
 static size_t CL_Armor_m( char *buffer, size_t size ) {
-	return Q_snprintf( buffer, size, "%i", cl.frame.ps.stats[STAT_ARMOR] );
+	return Q_scnprintf( buffer, size, "%i", cl.frame.ps.stats[STAT_ARMOR] );
 }
 
 /*
@@ -2449,7 +2450,6 @@ static void CL_InitLocal ( void ) {
     cl_showclamp = Cvar_Get ( "showclamp", "0", 0 );
     cl_timeout = Cvar_Get ( "cl_timeout", "120", 0 );
 
-    rcon_password = Cvar_Get ( "rcon_password", "", CVAR_PRIVATE );
     rcon_address = Cvar_Get ( "rcon_address", "", CVAR_PRIVATE );
     rcon_address->generator = Com_Address_g;
 
@@ -2832,10 +2832,11 @@ void CL_Frame( unsigned msec ) {
             time_after_ref = Sys_Milliseconds();
 
 	    ref_extra = 0;
-    }
-
+        //
     // update audio after the 3D view was drawn
     S_Update();
+
+    }
 
     // advance local effects for next frame
     CL_RunDLights();

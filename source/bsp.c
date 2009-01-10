@@ -943,6 +943,7 @@ bsp_t *BSP_Load( const char *name ) {
     BSP_SetError( "no error" );
 
     if( ( bsp = BSP_Find( name ) ) != NULL ) {
+		Com_PageInMemory( bsp->pool.base, bsp->pool.cursize );
         bsp->refcount++;
         return bsp;
     }

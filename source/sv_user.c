@@ -546,6 +546,8 @@ static void SV_NextDownload_f( void ) {
     if( sv_client->downloadcount == sv_client->downloadsize ) {
         Z_Free( sv_client->download );
         sv_client->download = NULL;
+        Z_Free( sv_client->downloadname );
+        sv_client->downloadname = NULL;
     }
         
     SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
@@ -570,7 +572,6 @@ static void SV_BeginDownload_f( void ) {
     int     offset = 0;
     cvar_t  *allow;
     int     length;
-    char    *filename;
 
     length = Q_ClearStr( name, Cmd_Argv( 1 ),  sizeof( name ) );
     Q_strlwr( name );
@@ -604,14 +605,22 @@ static void SV_BeginDownload_f( void ) {
 
     if( strncmp( name, "players/", 8 ) == 0 ) {
         allow = allow_download_players;
-    } else if( strncmp( name, "models/", 7 ) == 0 ) {
+    } else if( strncmp( name, "models/", 7 ) == 0 ||
+        strncmp( name, "sprites/", 8 ) == 0 )
+    {
         allow = allow_download_models;
     } else if( strncmp( name, "sound/", 6 ) == 0 ) {
         allow = allow_download_sounds;
     } else if( strncmp( name, "maps/", 5 ) == 0 ) {
         allow = allow_download_maps;
+    } else if( strncmp( name, "textures/", 9 ) == 0 ||
+        strncmp( name, "env/", 4 ) == 0 )
+    {
+        allow = allow_download_textures;
+    } else if( strncmp( name, "pics/", 5 ) == 0 ) {
+        allow = allow_download_pics;
     } else {
-        allow = allow_download_other;
+        allow = allow_download_others;
     }
 
     if( !allow->integer ) {
@@ -626,9 +635,7 @@ static void SV_BeginDownload_f( void ) {
         sv_client->download = NULL;
     }
 
-    filename = name;
-
-    downloadsize = FS_LoadFileEx( filename, NULL, 0, TAG_SERVER );
+    downloadsize = FS_LoadFileEx( name, NULL, 0, TAG_SERVER );
     
     if( downloadsize == INVALID_LENGTH || downloadsize == 0
         // special check for maps, if it came from a pak file, don't allow
@@ -661,9 +668,10 @@ static void SV_BeginDownload_f( void ) {
         return;
     }
 
-    sv_client->downloadsize = FS_LoadFileEx( filename,
+    sv_client->downloadsize = FS_LoadFileEx( name,
         ( void ** )&sv_client->download, 0, TAG_SERVER );
     sv_client->downloadcount = offset;
+    sv_client->downloadname = SV_CopyString( name );
 
     Com_DPrintf( "Downloading %s to %s\n", name, sv_client->name );
 
@@ -689,9 +697,12 @@ static void SV_StopDownload_f( void ) {
     MSG_WriteByte( percent );
     SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
 
-    Com_DPrintf( "Download for %s stopped by user request\n", sv_client->name );
+    Com_DPrintf( "Download of %s to %s stopped by user request\n",
+        sv_client->downloadname, sv_client->name );
     Z_Free( sv_client->download );
     sv_client->download = NULL;
+    Z_Free( sv_client->downloadname );
+    sv_client->downloadname = NULL;
 }
 
 //============================================================================
@@ -920,6 +931,7 @@ SV_ClientThink
 */
 static inline void SV_ClientThink( usercmd_t *cmd ) {
     sv_client->commandMsec -= cmd->msec;
+    sv_client->numMoves++;
 
     if( sv_client->commandMsec < 0 && sv_enforcetime->integer ) {
 #ifdef _DEBUG

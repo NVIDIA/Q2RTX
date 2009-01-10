@@ -473,7 +473,7 @@ void Con_Print( const char *txt ) {
 	int color;
 	static qboolean	cr;
 	char *p;
-	int		l;
+	int l;
 
 	if( !con.initialized )
 		return;

@@ -296,9 +296,6 @@ vec_t VectorNormalize2 (vec3_t v, vec3_t out);
 int Q_CeilPowerOfTwo( int value );
 float Com_CalcFov( float fov_x, float width, float height );
 
-void R_ConcatRotations (float in1[3][3], float in2[3][3], float out[3][3]);
-void R_ConcatTransforms (float in1[3][4], float in2[3][4], float out[3][4]);
-
 void AngleVectors (vec3_t angles, vec3_t forward, vec3_t right, vec3_t up);
 
 static inline float LerpAngle( float a2, float a1, float frac ) {
@@ -511,10 +508,13 @@ size_t Q_strlcpy( char *dst, const char *src, size_t size );
 size_t Q_strlcat( char *dst, const char *src, size_t size );
 
 size_t Q_concat( char *dest, size_t size, ... ) q_sentinel;
-size_t Q_snprintf( char *dest, size_t size, const char *fmt, ... ) q_printf( 3, 4 );
-size_t Q_vsnprintf( char *dest, size_t size, const char *fmt, va_list argptr );
 
-void Com_PageInMemory (void *buffer, int size);
+size_t Q_vsnprintf( char *dest, size_t size, const char *fmt, va_list argptr );
+size_t Q_vscnprintf( char *dest, size_t size, const char *fmt, va_list argptr );
+size_t Q_snprintf( char *dest, size_t size, const char *fmt, ... ) q_printf( 3, 4 );
+size_t Q_scnprintf( char *dest, size_t size, const char *fmt, ... ) q_printf( 3, 4 );
+
+void Com_PageInMemory (void *buffer, size_t size);
 
 unsigned COM_ParseHex( const char *string );
 qboolean COM_ParseColor( const char *s, color_t color );
@@ -555,23 +555,23 @@ static inline float FloatSwap( float f ) {
 }
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-#define BigShort	ShortSwap
-#define BigLong	LongSwap
+#define BigShort    ShortSwap
+#define BigLong     LongSwap
 #define BigFloat	FloatSwap
-#define LittleShort( x )    (( uint16_t )(x))
-#define LittleLong( x )     (( uint32_t )(x))
-#define LittleFloat( x )    (( float )(x))
-#define MakeLong( b1, b2, b3, b4 ) (((b4)<<24)|((b3)<<16)|((b2)<<8)|(b1))
-#define MakeShort( b1, b2 ) (((b2)<<8)|(b1))
+#define LittleShort(x)    ((uint16_t)(x))
+#define LittleLong(x)     ((uint32_t)(x))
+#define LittleFloat(x)    ((float)(x))
+#define MakeLong(b1,b2,b3,b4) (((b4)<<24)|((b3)<<16)|((b2)<<8)|(b1))
+#define MakeShort(b1,b2) (((b2)<<8)|(b1))
 #elif __BYTE_ORDER == __BIG_ENDIAN
-#define BigShort        (( uint16_t )(x))
-#define BigLong         (( uint32_t )(x))
-#define BigFloat        (( float )(x))
+#define BigShort        ((uint16_t)(x))
+#define BigLong         ((uint32_t)(x))
+#define BigFloat        ((float)(x))
 #define LittleShort	ShortSwap
-#define LittleLong		LongSwap
+#define LittleLong	LongSwap
 #define LittleFloat	FloatSwap
-#define MakeLong( b1, b2, b3, b4 ) (((b1)<<24)|((b2)<<16)|((b3)<<8)|(b4))
-#define MakeShort( b1, b2 ) (((b1)<<8)|(b2))
+#define MakeLong(b1,b2,b3,b4) (((b1)<<24)|((b2)<<16)|((b3)<<8)|(b4))
+#define MakeShort(b1,b2) (((b1)<<8)|(b2))
 #else
 #error Unknown byte order
 #endif
@@ -594,12 +594,6 @@ qboolean	Info_Validate( const char *s );
 int 	Info_SubValidate( const char *s );
 void	Info_NextPair( const char **string, char *key, char *value );
 void	Info_Print( const char *infostring );
-
-//=============================================
-
-typedef struct tm	qtime_t;
-
-void Com_LocalTime( qtime_t *time );
 
 /*
 ==========================================================

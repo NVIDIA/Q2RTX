@@ -1236,12 +1236,8 @@ void FS_FPrintf( fileHandle_t f, const char *format, ... ) {
     size_t len;
 
     va_start( argptr, format );
-    len = Q_vsnprintf( string, sizeof( string ), format, argptr );
+    len = Q_vscnprintf( string, sizeof( string ), format, argptr );
     va_end( argptr );
-
-    if( len >= sizeof( string ) ) {
-        len = sizeof( string ) - 1;
-    }
 
     FS_Write( string, len, f );
 }

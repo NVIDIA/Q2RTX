@@ -37,20 +37,11 @@ cvar_t  *sv_timeout;            // seconds without any message
 cvar_t  *sv_zombietime;         // seconds to sink messages after disconnect
 cvar_t  *sv_ghostime;
 
-cvar_t  *rcon_password;         // password for remote server commands
 cvar_t  *sv_password;
 cvar_t  *sv_reserved_password;
 
 cvar_t  *sv_force_reconnect;
 cvar_t  *sv_show_name_changes;
-
-cvar_t  *allow_download;
-cvar_t  *allow_download_players;
-cvar_t  *allow_download_models;
-cvar_t  *allow_download_sounds;
-cvar_t  *allow_download_maps;
-cvar_t  *allow_download_demos;
-cvar_t  *allow_download_other;
 
 cvar_t  *sv_airaccelerate;
 cvar_t  *sv_qwmod;              // atu QW Physics modificator
@@ -74,13 +65,13 @@ cvar_t  *sv_calcpings_method;
 cvar_t  *sv_changemapcmd;
 
 cvar_t  *sv_strafejump_hack;
-cvar_t  *sv_bodyque_hack;
 #ifndef _WIN32
 cvar_t  *sv_oldgame_hack;
 #endif
 #if USE_PACKETDUP
 cvar_t  *sv_packetdup_hack;
 #endif
+cvar_t  *sv_allow_map;
 
 cvar_t  *sv_iplimit;
 cvar_t  *sv_status_limit;
@@ -135,6 +126,10 @@ void SV_CleanClient( client_t *client ) {
     if( client->download ) {
         Z_Free( client->download );
         client->download = NULL;
+    }
+    if( client->downloadname ) {
+        Z_Free( client->downloadname );
+        client->downloadname = NULL;
     }
 
     if( client->versionString ) {
@@ -259,11 +254,12 @@ void SV_RateInit( ratelimit_t *r, int limit, int period ) {
 }
 
 addrmatch_t *SV_MatchAddress( list_t *list, netadr_t *address ) {
-    uint32_t addr = *( uint32_t * )address->ip;
+    uint32_t addr = BigLong( *( uint32_t * )address->ip );
     addrmatch_t *match;
 
     LIST_FOR_EACH( addrmatch_t, match, list, entry ) {
         if( ( addr & match->mask ) == ( match->addr & match->mask ) ) {
+            match->hits++;
             return match;
         }
     }
@@ -334,28 +330,6 @@ static size_t SV_StatusString( char *status ) {
     return total;
 }
 
-static void q_printf( 1, 2 ) SV_OobPrintf( const char *format, ... ) {
-    va_list argptr;
-    char    buffer[MAX_PACKETLEN_DEFAULT];
-    size_t  len;
-
-    // write the packet header
-    memcpy( buffer, "\xff\xff\xff\xffprint\n", 10 );
-    
-    va_start( argptr, format );
-    len = Q_vsnprintf( buffer + 10, sizeof( buffer ) - 10, format, argptr );
-    va_end( argptr );
-
-    if( len >= sizeof( buffer ) - 10 ) {
-        Com_WPrintf( "%s: overflow\n", __func__ );
-        return;
-    }
-
-    // send the datagram
-    NET_SendPacket( NS_SERVER, &net_from, len + 10, buffer );
-}
-
-
 /*
 ================
 SVC_Status
@@ -381,11 +355,12 @@ static void SVC_Status( void ) {
 
     // write the packet header
     memcpy( buffer, "\xff\xff\xff\xffprint\n", 10 );
+    len = 10;
 
-    len = SV_StatusString( buffer + 10 );
+    len += SV_StatusString( buffer + len );
 
     // send the datagram
-    NET_SendPacket( NS_SERVER, &net_from, len + 10, buffer );
+    NET_SendPacket( NS_SERVER, &net_from, len, buffer );
 }
 
 /*
@@ -422,7 +397,6 @@ static void SVC_Info( void ) {
     size_t  len;
     int     count;
     int     version;
-    client_t *client;
 
     if (sv_maxclients->integer == 1)
         return;        // ignore in single player
@@ -433,11 +407,7 @@ static void SVC_Info( void ) {
         return;
     }
     
-    count = 0;
-    FOR_EACH_CLIENT( client ) {
-        if (client->state != cs_zombie)
-            count++;
-    }
+    count = SV_CountClients();
 
     len = Q_snprintf (string, sizeof(string),
         "\xff\xff\xff\xffinfo\n%16s %8s %2i/%2i\n",
@@ -505,9 +475,12 @@ static void SVC_GetChallenge( void ) {
     }
 
     // send it back
-    Netchan_OutOfBandPrint( NS_SERVER, &net_from,
+    Netchan_OutOfBand( NS_SERVER, &net_from,
         "challenge %u p=34,35,36", challenge );
 }
+
+#define SV_OobPrintf(...) \
+    Netchan_OutOfBand( NS_SERVER, &net_from, "print\n" __VA_ARGS__ )
 
 /*
 ==================
@@ -919,7 +892,7 @@ static void SVC_DirectConnect( void ) {
     }
 
     // send the connect packet to the client
-    Netchan_OutOfBandPrint( NS_SERVER, &net_from, "client_connect%s%s%s map=%s",
+    Netchan_OutOfBand( NS_SERVER, &net_from, "client_connect%s%s%s map=%s",
         ncstring, acstring, dlstring, newcl->mapname );
 
     List_Init( &newcl->msg_free );
@@ -1095,8 +1068,7 @@ static int ping_nop( client_t *cl ) {
 }
 
 static int ping_min( client_t *cl ) {
-    int         j;
-    int         count = 9999;
+    int j, count = 9999;
 
     for( j = 0; j < LATENCY_COUNTS; j++ ) {
         if( cl->frame_latency[j] > 0 ) {
@@ -1109,8 +1081,7 @@ static int ping_min( client_t *cl ) {
 }
 
 static int ping_avg( client_t *cl ) {
-    int         j;
-    int         total = 0, count = 0;
+    int j, total = 0, count = 0;
 
     for( j = 0; j < LATENCY_COUNTS; j++ ) {
         if( cl->frame_latency[j] > 0 ) {
@@ -1163,6 +1134,14 @@ static void SV_GiveMsec( void ) {
 
     FOR_EACH_CLIENT( cl ) {
         cl->commandMsec = 1800;        // 1600 + some slop
+    }
+
+    if( sv.framenum & 63 )
+        return;
+
+    FOR_EACH_CLIENT( cl ) {
+        cl->fps = ( cl->numMoves * 10 ) >> 6;
+        cl->numMoves = 0;
     }
 }
 
@@ -1388,7 +1367,7 @@ static void SV_CheckTimeouts( void ) {
             }
         }
         if( delta > drop_time || ( client->state == cs_assigned && delta > ghost_time ) ) {
-            SV_DropClient( client, "timed out" );
+            SV_DropClient( client, "connection timed out" );
             SV_RemoveClient( client );    // don't bother with zombie state
         }
     }
@@ -1484,16 +1463,17 @@ static void SV_MasterHeartbeat( void ) {
 
     // write the packet header
     memcpy( buffer, "\xff\xff\xff\xffheartbeat\n", 14 );
+    len = 14;
 
     // send the same string that we would give for a status OOB command
-    len = SV_StatusString( buffer + 14 );
+    len += SV_StatusString( buffer + len );
 
     // send to group master
     for( i = 0; i < MAX_MASTERS; i++ ) {
         if( master_adr[i].port ) {
             Com_DPrintf( "Sending heartbeat to %s\n",
                 NET_AdrToString( &master_adr[i] ) );
-            NET_SendPacket( NS_SERVER, &master_adr[i], len + 14, buffer );
+            NET_SendPacket( NS_SERVER, &master_adr[i], len, buffer );
         }
     }
 }
@@ -1844,18 +1824,9 @@ void SV_Init( void ) {
     sv_force_reconnect = Cvar_Get ( "sv_force_reconnect", "", CVAR_LATCH );
     sv_show_name_changes = Cvar_Get( "sv_show_name_changes", "0", 0 );
 
-    allow_download = Cvar_Get( "allow_download", "1", CVAR_ARCHIVE );
-    allow_download_players = Cvar_Get( "allow_download_players", "0", CVAR_ARCHIVE );
-    allow_download_models = Cvar_Get( "allow_download_models", "1", CVAR_ARCHIVE );
-    allow_download_sounds = Cvar_Get( "allow_download_sounds", "1", CVAR_ARCHIVE );
-    allow_download_maps    = Cvar_Get( "allow_download_maps", "1", CVAR_ARCHIVE );
-    allow_download_demos = Cvar_Get( "allow_download_demos", "0", 0 );
-    allow_download_other = Cvar_Get( "allow_download_other", "0", 0 );
-
     sv_airaccelerate = Cvar_Get("sv_airaccelerate", "0", CVAR_LATCH);
     sv_qwmod = Cvar_Get( "sv_qwmod", "0", CVAR_LATCH ); //atu QWMod
     sv_public = Cvar_Get( "public", "0", CVAR_LATCH );
-    rcon_password = Cvar_Get( "rcon_password", "", CVAR_PRIVATE );
     sv_password = Cvar_Get( "sv_password", "", CVAR_PRIVATE );
     sv_reserved_password = Cvar_Get( "sv_reserved_password", "", CVAR_PRIVATE );
     sv_locked = Cvar_Get( "sv_locked", "0", 0 );
@@ -1872,13 +1843,14 @@ void SV_Init( void ) {
 
     sv_strafejump_hack = Cvar_Get( "sv_strafejump_hack", "1", CVAR_LATCH );
 
-    sv_bodyque_hack = Cvar_Get( "sv_bodyque_hack", "0", 0 );
 #ifndef _WIN32
     sv_oldgame_hack = Cvar_Get( "sv_oldgame_hack", "0", CVAR_LATCH );
 #endif
 #if USE_PACKETDUP
     sv_packetdup_hack = Cvar_Get( "sv_packetdup_hack", "0", 0 );
 #endif
+
+    sv_allow_map = Cvar_Get( "sv_allow_map", "0", 0 );
 
     sv_iplimit = Cvar_Get( "sv_iplimit", "3", 0 );
 

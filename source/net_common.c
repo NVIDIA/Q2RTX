@@ -489,7 +489,9 @@ static neterr_t get_icmp_error( int s ) {
     case EHOSTUNREACH:
     case EHOSTDOWN:
     case ECONNREFUSED:
+#ifdef ENONET
     case ENONET:
+#endif
         Com_DPrintf( "%s: %s from %s\n", __func__,
             NET_ErrorString(), NET_AdrToString( &net_from ) );
         return NET_ERROR;
@@ -1442,11 +1444,11 @@ qboolean NET_GetAddress( netsrc_t sock, netadr_t *adr ) {
 }
 
 static size_t NET_UpRate_m( char *buffer, size_t size ) {
-    return Q_snprintf( buffer, size, "%"PRIz, net_rate_up );
+    return Q_scnprintf( buffer, size, "%"PRIz, net_rate_up );
 }
 
 static size_t NET_DnRate_m( char *buffer, size_t size ) {
-    return Q_snprintf( buffer, size, "%"PRIz, net_rate_dn );
+    return Q_scnprintf( buffer, size, "%"PRIz, net_rate_dn );
 }
 
 static void net_udp_param_changed( cvar_t *self ) {

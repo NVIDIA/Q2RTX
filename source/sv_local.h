@@ -187,6 +187,8 @@ typedef struct client_s {
 
 	int				commandMsec;	// every seconds this is reset, if user
 									// commands exhaust it, assume time cheating
+    int             numMoves;
+    int             fps;
 
 	int				frame_latency[LATENCY_COUNTS];
 	int				ping;
@@ -210,6 +212,7 @@ typedef struct client_s {
 	byte			*download; // file being downloaded
 	int				downloadsize; // total bytes (can't use EOF because of paks)
 	int				downloadcount; // bytes sent
+    char            *downloadname; // name of the file
 
 	unsigned		lastmessage; // svs.realtime when packet was last received
 
@@ -290,6 +293,7 @@ typedef struct {
     list_t  entry;
     uint32_t    addr;
     uint32_t    mask;
+    unsigned    hits;
     char        comment[1];
 } addrmatch_t;
 
@@ -378,13 +382,13 @@ extern  cvar_t      *sv_calcpings_method;
 extern  cvar_t      *sv_changemapcmd;
 
 extern cvar_t		*sv_strafejump_hack;
-extern cvar_t		*sv_bodyque_hack;
 #ifndef _WIN32
 extern cvar_t		*sv_oldgame_hack;
 #endif
 #if USE_PACKETDUP
 extern cvar_t		*sv_packetdup_hack;
 #endif
+extern cvar_t		*sv_allow_map;
 
 extern cvar_t		*sv_status_limit;
 extern cvar_t		*sv_status_show;

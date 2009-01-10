@@ -190,17 +190,10 @@ Hacks
 ----------
 
 - `set sv_oldgame_hack 0` (boolean)  
-On Unix systems, enables ABI compatibility mode which allows loading of
+On UNIX-like systems, enables ABI compatibility mode which allows loading of
 game libraries built using ancient GCC versions. If you happen to run closed
 source game mod and your server crashes while loading a map, try enabling
 this variable.
-
-- `set sv_bodyque_hack 0` (boolean)  
-Attempts to prevent "flying bodies" effect introduced by some buggy
-mods. This hack assumes the mod allocates certain range of entity
-slots for "body queue" and disables client side interpolation of
-those entities. Use this hack with caution as it may not be compatible
-with all mods and causes slightly higher bandwidth usage.
 
 - `set sv_strafejump_hack 1` (integer)  
 Enables FPS-independent strafe jumping mode for clients using R1Q2
@@ -234,6 +227,10 @@ the whole ban list.
 
 - `listbans`
 Enumerates all registered address/mask pairs in the ban list.
+
+- `kickban <userid>`  
+Kick the specified client and add his IP address to the
+ban list (with a default mask of 32).
 
 - `addstuffcmd <connect|begin> <command> [...]`
 Adds command to be automatically stuffed to every client as they initially

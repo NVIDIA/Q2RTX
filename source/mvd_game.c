@@ -227,7 +227,7 @@ static void MVD_LayoutMenu( mvd_client_t *client ) {
     memset( cur, 0x20, sizeof( cur ) );
     cur[client->layout_cursor] = 0x8d;
 
-    total = Q_snprintf( layout, sizeof( layout ), format,
+    total = Q_scnprintf( layout, sizeof( layout ), format,
         cur[0], client->target ? "Leave" : "Enter", cur[1],
         cur[2], List_Count( &client->mvd->clients ),
         cur[3], List_Count( &mvd_channel_list ), cur[4],
@@ -274,12 +274,9 @@ static void MVD_LayoutFollow( mvd_client_t *client ) {
     char layout[MAX_STRING_CHARS];
     size_t total;
 
-    total = Q_snprintf( layout, sizeof( layout ),
+    total = Q_scnprintf( layout, sizeof( layout ),
         "%s string \"[%s] Chasing %s\"",
         mvd_chase_prefix->string, mvd->name, name );
-    if( total >= sizeof( layout ) ) {
-        return;
-    }
 
     // send the layout
     MSG_WriteByte( svc_layout );
@@ -608,8 +605,9 @@ void MVD_BroadcastPrintf( mvd_t *mvd, int level, int mask, const char *fmt, ... 
     }
 
     if( level == PRINT_CHAT && mvd_filter_version->integer ) {
-        char *s = strstr( text, "!version" );
-        if( s ) {
+        char *s;
+
+        while( ( s = strstr( text, "!version" ) ) != NULL ) {
             s[6] = '0';
         }
     }

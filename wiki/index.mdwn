@@ -15,7 +15,7 @@ Important news
 -----------------
 * __2008-Oct-30:__ Q2PRO server versions from [r307 and up][dl] now implement
   improved MVD/GTV protocol capable of automatic connection recovery and
-  feature special «suspension mode» for additional bandwidth savings in
+  feature special ‘suspension mode’ for additional bandwidth savings in
   case there are no players/spectators on a channel.
 
 [dl]: http://skuller.ath.cx/q2pro/nightly/
@@ -45,16 +45,16 @@ Feature highlights
 * __Multi View Demo support.__ Server is capable of recording and playing
   back demos in special MVD format, capturing views from each player in game.
   During playback, spectators themselves choose which view they would like
-  to watch. This is completely transparent and supported for _any_ Quake 2
-  client.
+  to watch. This is completely transparent to and supported for _any_ Quake 2
+  client connected to a Q2PRO server.
 
 * __Game TeleVision support.__ Server may act as game relay node, allowing
   large amount of spectators watch game in real time without putting any
   additional load on the game server itself. Furthermore, live game streaming
-  is done with all benefits of MVD format. There is no need for «camera man»,
+  is done with all benefits of MVD format. There is no need for ‘camera man’,
   unlike other GTV implementations.
 
-* __Frame rates separation.__ Client provides «true» networking, physics,
+* __Frame rates separation.__ Client provides ‘true’ networking, physics,
   rendering and input polling frame rates separation. Unlike other Quake 2 
   clients, Q2PRO will not waste CPU cycles drawing frames never actually
   seen on screen, but will poll for user input instead in order to minimize
@@ -62,10 +62,11 @@ Feature highlights
 
 * __Improved security and stability.__ Developed with security in mind, Q2PRO
   carefully handles all untrusted data, including data coming from the network
-  as well as locally stored, downloadable files like game media.
+  as well as locally stored files like game media, which could be potentionally
+  downloaded from an untrusted location.
 
 * __Support for multiple platforms.__ Client and server run natively on
-  Windows as well as many Unix-like systems, where Q2PRO client uses highly
+  Win32 as well as many UNIX-like systems, where Q2PRO client uses highly
   portable SDL library for graphical and sound output.
 
 Navigation
@@ -74,5 +75,5 @@ Navigation
 * [[download]]
 * [[documentation|doc]]
 * [[contact]]
-* [SF.net page](http://sourceforge.net/projects/q2pro/)
+* [project page at SF.net](http://sourceforge.net/projects/q2pro/)
 

@@ -138,7 +138,7 @@ void SV_ClientPrintf( client_t *client, int level, const char *fmt, ... ) {
 =================
 SV_BroadcastPrintf
 
-Sends text to all active clients, including MVD clients.
+Sends text to all active clients.
 NOT archived in MVD stream.
 =================
 */

@@ -181,11 +181,11 @@ static void TH_DrawLayoutString( char *dst, const char *s ) {
 
             len = strlen( ci->name );
 			TH_DrawString( dst, x + 4, y, ci->name, len );
-            len = Q_snprintf( buffer, sizeof( buffer ), "Score: %i", score ); 
+            len = Q_scnprintf( buffer, sizeof( buffer ), "Score: %i", score ); 
 			TH_DrawString( dst, x + 4, y + 1, buffer, len );
-            len = Q_snprintf( buffer, sizeof( buffer ), "Ping:  %i", ping ); 
+            len = Q_scnprintf( buffer, sizeof( buffer ), "Ping:  %i", ping ); 
 			TH_DrawString( dst, x + 4, y + 2, buffer, len );
-            len = Q_snprintf( buffer, sizeof( buffer ), "Time:  %i", time ); 
+            len = Q_scnprintf( buffer, sizeof( buffer ), "Time:  %i", time ); 
 			TH_DrawString( dst, x + 4, y + 3, buffer, len );
 			continue;
 		}
@@ -214,7 +214,7 @@ static void TH_DrawLayoutString( char *dst, const char *s ) {
 			if( ping > 999 )
 				ping = 999;
 
-			len = Q_snprintf( buffer, sizeof( buffer ), "%3d %3d %-12.12s",
+			len = Q_scnprintf( buffer, sizeof( buffer ), "%3d %3d %-12.12s",
                 score, ping, ci->name );
 			TH_DrawString( dst, x, y, buffer, len );
 			continue;
