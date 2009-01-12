@@ -276,7 +276,8 @@ static void GL_BindArrays( void ) {
     }
 
 	qglVertexPointer( 3, GL_FLOAT, 4*VERTEX_SIZE, ptr + 0 );
-	qglTexCoordPointer( 2, GL_FLOAT, 4*VERTEX_SIZE, ptr + 3 );
+	qglTexCoordPointer( 2, GL_FLOAT, 4*VERTEX_SIZE,
+        gl_lightmap->integer ? ptr + 5 : ptr + 3 );
 
     qglClientActiveTextureARB( GL_TEXTURE1_ARB );
 	qglEnableClientState( GL_TEXTURE_COORD_ARRAY );
