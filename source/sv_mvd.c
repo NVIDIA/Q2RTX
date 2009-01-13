@@ -1088,11 +1088,12 @@ void SV_MvdUnicast( edict_t *ent, int clientNum, qboolean reliable ) {
 SV_MvdConfigstring
 ==============
 */
-void SV_MvdConfigstring( int index, const char *string ) {
+void SV_MvdConfigstring( int index, const char *string, size_t len ) {
     if( mvd.active ) {
         SZ_WriteByte( &mvd.message, mvd_configstring );
         SZ_WriteShort( &mvd.message, index );
-        SZ_WriteString( &mvd.message, string );
+        SZ_Write( &mvd.message, string, len );
+        SZ_WriteByte( &mvd.message, 0 );
     }
 }
 

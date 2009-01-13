@@ -665,26 +665,28 @@ static void CL_ParseConfigstring( int index ) {
     if( index < 0 || index >= MAX_CONFIGSTRINGS ) {
         Com_Error( ERR_DROP, "%s: bad index: %d", __func__, index );
     }
-    string = cl.configstrings[index];
 
+    string = cl.configstrings[index];
     maxlen = CS_SIZE( index );
     len = MSG_ReadString( string, maxlen );
-    if( len >= maxlen ) {
-        Com_Error( ERR_DROP, "%s: index %d overflowed: %"PRIz" > %"PRIz,
-            __func__, index, len, maxlen - 1 );
-    }
 
     if( cl_shownet->integer > 2 ) {
         Com_Printf( "    %d \"%s\"\n", index, Q_FormatString( string ) );
+    }
+
+    maxlen = CS_SIZE( index );
+    if( len >= maxlen ) {
+        Com_WPrintf(
+            "%s: index %d overflowed: %"PRIz" > %"PRIz"\n",
+            __func__, index, len, maxlen - 1 );
+        len = maxlen - 1; 
     }
 
     if( cls.demo.recording && cls.demo.paused ) {
         Q_SetBit( cl.dcs, index );
     }
 
-
     // do something apropriate 
-
     if( index == CS_MAXCLIENTS ) {
         cl.maxclients = atoi( string );
         return;
@@ -705,7 +707,6 @@ static void CL_ParseConfigstring( int index ) {
     if( cls.state < ca_precached ) {
         return;
     }
-
     if (index >= CS_MODELS+2 && index < CS_MODELS+MAX_MODELS) {
         cl.model_draw[index-CS_MODELS] = R_RegisterModel (string);
         if (*string == '*')

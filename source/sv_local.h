@@ -496,7 +496,7 @@ void SV_MvdClientDropped( client_t *client, const char *reason );
 
 void SV_MvdUnicast( edict_t *ent, int clientNum, qboolean reliable );
 void SV_MvdMulticast( int leafnum, multicast_t to );
-void SV_MvdConfigstring( int index, const char *string );
+void SV_MvdConfigstring( int index, const char *string, size_t len );
 void SV_MvdBroadcastPrint( int level, const char *string );
 void SV_MvdStartSound( int entnum, int channel, int flags,
 					    int soundindex, int volume,

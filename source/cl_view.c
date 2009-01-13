@@ -308,8 +308,12 @@ void CL_PrepRefresh (void) {
 
 	// set sky textures and speed
 	rotate = atof (cl.configstrings[CS_SKYROTATE]);
-	sscanf (cl.configstrings[CS_SKYAXIS], "%f %f %f", 
-		&axis[0], &axis[1], &axis[2]);
+	if( sscanf (cl.configstrings[CS_SKYAXIS], "%f %f %f", 
+		&axis[0], &axis[1], &axis[2]) != 3 )
+    {
+        Com_DPrintf( "Couldn't parse CS_SKYAXIS\n" );
+        VectorClear( axis );
+    }
 	R_SetSky (cl.configstrings[CS_SKY], rotate, axis);
 
 	// the renderer can now free unneeded stuff
