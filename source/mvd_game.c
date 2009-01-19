@@ -42,6 +42,8 @@ mvd_player_t    mvd_dummy;
 
 extern jmp_buf  mvd_jmpbuf;
 
+static int      mvd_numplayers;
+
 static void MVD_UpdateClient( mvd_client_t *client );
 
 /*
@@ -1234,7 +1236,9 @@ static void MVD_GameInit( void ) {
 //    SV_InfoSet( "gamedir", "gtv" );
     SV_InfoSet( "gamename", "gtv" );
     SV_InfoSet( "gamedate", __DATE__ );
-    MVD_InfoSet( "channels", "0" );
+    MVD_InfoSet( "mvd_channels", "0" );
+    MVD_InfoSet( "mvd_players", "0" );
+    mvd_numplayers = 0;
 }
 
 static void MVD_GameShutdown( void ) {
@@ -1494,6 +1498,7 @@ static void MVD_IntermissionStop( mvd_t *mvd ) {
 static void MVD_GameRunFrame( void ) {
     mvd_t *mvd, *next;
     mvd_client_t *client;
+    int numplayers = 0;
 
     LIST_FOR_EACH_SAFE( mvd_t, mvd, next, &mvd_channel_list, entry ) {
         if( setjmp( mvd_jmpbuf ) ) {
@@ -1534,13 +1539,18 @@ static void MVD_GameRunFrame( void ) {
 
 update:
         MVD_UpdateLayouts( mvd );
+        numplayers += mvd->numplayers;
     }
 
     MVD_UpdateLayouts( &mvd_waitingRoom );
    
     if( mvd_dirty ) {
-        MVD_InfoSet( "channels", va( "%d", List_Count( &mvd_channel_list ) ) );
+        MVD_InfoSet( "mvd_channels", va( "%d", List_Count( &mvd_channel_list ) ) );
         mvd_dirty = qfalse;
+    }
+    if( numplayers != mvd_numplayers ) {
+        MVD_InfoSet( "mvd_players", va( "%d", numplayers ) );
+        mvd_numplayers = numplayers;
     }
 }
 

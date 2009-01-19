@@ -1050,15 +1050,13 @@ static size_t Com_Date_m( char *buffer, size_t size ) {
     return strftime( buffer, size, com_date_format->string, local );
 }
 
-size_t Com_Uptime_m( char *buffer, size_t size ) {
+size_t Com_TimeDiff( char *buffer, size_t size, time_t start, time_t end ) {
     int     sec, min, hour, day;
-    time_t  clock;
 
-    time( &clock );
-    if( com_startTime > clock ) {
-        com_startTime = clock;
+    if( start > end ) {
+        start = end;
     }
-    sec = clock - com_startTime;
+    sec = end - start;
     min = sec / 60; sec %= 60;
     hour = min / 60; min %= 60;
     day = hour / 24; hour %= 24;
@@ -1070,6 +1068,10 @@ size_t Com_Uptime_m( char *buffer, size_t size ) {
         return Q_scnprintf( buffer, size, "%d:%02d.%02d", hour, min, sec );
     }
     return Q_scnprintf( buffer, size, "%02d.%02d", min, sec );
+}
+
+size_t Com_Uptime_m( char *buffer, size_t size ) {
+    return Com_TimeDiff( buffer, size, com_startTime, time( NULL ) );
 }
 
 size_t Com_Random_m( char *buffer, size_t size ) {

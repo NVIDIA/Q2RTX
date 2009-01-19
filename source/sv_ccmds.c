@@ -400,6 +400,23 @@ static void dump_downloads( void ) {
     }
 }
 
+static void dump_time( void ) {
+	client_t    *client;
+    char        buffer[MAX_QPATH];
+    time_t      clock = time( NULL );
+
+	Com_Printf(
+"num name             time\n"
+"--- ---------------- --------\n" );
+
+    FOR_EACH_CLIENT( client ) {
+        Com_TimeDiff( buffer, sizeof( buffer ),
+            client->connect_time, clock );
+        Com_Printf( "%3i %-16.16s %s\n",
+            client->number, client->name, buffer );
+    }
+}
+
 /*
 ================
 SV_Status_f
@@ -419,7 +436,10 @@ static void SV_Status_f( void ) {
         Com_Printf( "No UDP clients.\n" );
     } else {
 	    if( Cmd_Argc() > 1 ) {
-            if( *Cmd_Argv( 1 ) == 'd' ) {
+            char *w = Cmd_Argv( 1 );
+            if( *w == 't' ) {
+                dump_time();
+            } else if( *w == 'd' ) {
                 dump_downloads();
             } else {
                 dump_versions();
@@ -502,6 +522,8 @@ Examine all a users info strings
 ===========
 */
 static void SV_DumpUser_f( void ) {
+    char buffer[MAX_QPATH];
+
 	if( !svs.initialized ) {
 		Com_Printf( "No server running\n" );
 		return;
@@ -530,6 +552,9 @@ static void SV_DumpUser_f( void ) {
 #ifdef USE_PACKETDUP
     Com_Printf( "packetdup            %d\n", sv_client->numpackets - 1 );
 #endif
+    Com_TimeDiff( buffer, sizeof( buffer ),
+        sv_client->connect_time, time( NULL ) );
+    Com_Printf( "time                 %s\n", buffer );
 
 	sv_client = NULL;
 	sv_player = NULL;

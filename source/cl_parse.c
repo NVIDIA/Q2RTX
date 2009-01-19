@@ -674,7 +674,6 @@ static void CL_ParseConfigstring( int index ) {
         Com_Printf( "    %d \"%s\"\n", index, Q_FormatString( string ) );
     }
 
-    maxlen = CS_SIZE( index );
     if( len >= maxlen ) {
         Com_WPrintf(
             "%s: index %d overflowed: %"PRIz" > %"PRIz"\n",

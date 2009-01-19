@@ -2354,15 +2354,17 @@ extern qhandle_t cl_sfx_footsteps[4];
 
 void CL_EntityEvent (entity_state_t *ent)
 {
+	centity_t *cent = &cl_entities[ent->number];
+
 	switch (ent->event)
 	{
 	case EV_ITEM_RESPAWN:
 		S_StartSound (NULL, ent->number, CHAN_WEAPON, S_RegisterSound("items/respawn1.wav"), 1, ATTN_IDLE, 0);
-		CL_ItemRespawnParticles (ent->origin);
+		CL_ItemRespawnParticles (cent->current.origin);
 		break;
 	case EV_PLAYER_TELEPORT:
 		S_StartSound (NULL, ent->number, CHAN_WEAPON, S_RegisterSound("misc/tele1.wav"), 1, ATTN_IDLE, 0);
-		CL_TeleportParticles (ent->origin);
+		CL_TeleportParticles (cent->current.origin);
 		break;
 	case EV_FOOTSTEP:
 		if (cl_footsteps->integer)

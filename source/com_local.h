@@ -446,6 +446,9 @@ void        Com_Color_g( genctx_t *ctx );
 
 qboolean    Prompt_AddMatch( genctx_t *ctx, const char *s );
 
+size_t      Com_TimeDiff( char *buffer, size_t size,
+                time_t start, time_t end );
+
 size_t      Com_Time_m( char *buffer, size_t size );
 size_t      Com_Uptime_m( char *buffer, size_t size );
 
