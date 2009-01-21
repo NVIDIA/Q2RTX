@@ -311,6 +311,17 @@ static inline float anglemod( float a ) {
 	return a;
 }
 
+static inline int rand_byte( void ) {
+    int r = rand();
+
+    int b1 = ( r >> 24 ) & 255;
+    int b2 = ( r >> 16 ) & 255;
+    int b3 = ( r >>  8 ) & 255;
+    int b4 = ( r       ) & 255;
+
+    return b1 ^ b2 ^ b3 ^ b4;
+}
+
 void ProjectPointOnPlane( vec3_t dst, const vec3_t p, const vec3_t normal );
 void PerpendicularVector( vec3_t dst, const vec3_t src );
 
@@ -463,9 +474,11 @@ static inline int Q_charhex( int c ) {
 // portable case insensitive compare
 int Q_strcasecmp( const char *s1, const char *s2 );
 int Q_strncasecmp( const char *s1, const char *s2, size_t n );
+char *Q_strcasestr( const char *s1, const char *s2 );
 
 #define Q_stricmp	Q_strcasecmp
 #define Q_stricmpn	Q_strncasecmp
+#define Q_stristr	Q_strcasestr
 
 #ifdef _WIN32
 #define Q_mkdir( p ) _mkdir( p )
