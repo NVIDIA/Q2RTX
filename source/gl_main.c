@@ -48,6 +48,7 @@ cvar_t *gl_drawworld;
 cvar_t *gl_drawentities;
 cvar_t *gl_drawsky;
 cvar_t *gl_showtris;
+cvar_t *gl_showorigins;
 cvar_t *gl_cull_nodes;
 cvar_t *gl_cull_models;
 cvar_t *gl_showstats;
@@ -410,6 +411,11 @@ static void GL_DrawEntities( int mask ) {
         } else {
 			Com_Error( ERR_FATAL, "%s: bad model type", __func__ );
 		}
+
+        if( gl_showorigins->integer ) {
+			GL_DrawNullModel();
+        }
+
 	}
 }
 
@@ -704,6 +710,7 @@ static void GL_Register( void ) {
 	gl_drawentities = Cvar_Get( "gl_drawentities", "1", CVAR_CHEAT );
     gl_drawsky = Cvar_Get( "gl_drawsky", "1", 0 );
     gl_showtris = Cvar_Get( "gl_showtris", "0", CVAR_CHEAT );
+    gl_showorigins = Cvar_Get( "gl_showorigins", "0", CVAR_CHEAT );
     gl_showstats = Cvar_Get( "gl_showstats", "0", 0 );
     gl_cull_nodes = Cvar_Get( "gl_cull_nodes", "1", 0 );
 	gl_cull_models = Cvar_Get( "gl_cull_models", "1", 0 );

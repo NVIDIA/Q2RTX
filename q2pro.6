@@ -1,6 +1,6 @@
 .TH "Q2PRO" "6" 
 .SH "NAME" 
-Q2PRO \(em enhanced Quake II engine 
+Q2PRO \(em enhanced Quake 2 engine 
 .SH "SYNOPSIS" 
 .PP 
 \fBq2pro\fR [\fB+command \fIarguments\fR\fP]  
@@ -8,26 +8,22 @@ Q2PRO \(em enhanced Quake II engine
 .PP 
 This manual page documents briefly the \fBq2pro\fR program.
 .PP 
-Q2PRO is a Quake II engine modification, mostly compatible with the
-original one. Q2PRO is designed to be secure, fast and doesn't provide
-any graphical enhancements that are contrary to the `classic' Quake II
-look and feel. Among features Q2PRO provides are server side Multi
-View Demos, built-in GTV capabilities, network protocol optimizations.
+Q2PRO is a Quake 2 engine modification designed for online play,
+fully compatible with original Quake 2 clients and servers.
 .PP
-Both OpenGL and software refresh modules are provided, so that 3D graphics
-accelerator is not mandatory to play Q2PRO, although recommended.
+Q2PRO features enhanced graphical console, support for JPEG/PNG textures
+and MD3 models, network protocol optimizations, freely resizable main window,
+increased security and overall performance, basic built-in demo editing
+capabilities, built-in server and demo browsers.
 .PP
-Q2PRO uses SDL for video output and OSS for sound output.
+This version of Q2PRO requires a 3D graphics accelerator to play.
+Q2PRO uses SDL for video output and SDL/OSS for sound output.
 .SH "OPTIONS" 
 .PP 
-Commands on command line start with a `+', and continue until
-another `+' or end of line. Variables given on command line
-override those in normal configuration files. If the variable does not exist,
-it will be created for future use.
-.IP "\fB+set vid_ref soft\fP" 7 
-Load software refresh module (default).
-.IP "\fB+set vid_ref gl\fP" 7
-Load OpenGL refresh module. 
+Commands given on the command line start with a `+', and continue until
+another `+' or end of line. Variables given on command line override those
+given in normal configuration files. If the variable does not exist,
+it will be created for future use. Some examples of possible commands follow.
 .IP "\fB+set dedicated 1\fP" 7
 Start in dedicated server mode with no graphical output. 
 .IP "\fB+set deathmatch 1\fP" 7
@@ -43,12 +39,9 @@ Show version and exit.
 .IP "\fB/etc/default/q2pro\fP" 7
 System wide configuration file. The first one to be executed.
 .IP "\fB/usr/share/games/quake2\fP" 7
-Static Quake II data hierarchy, possibly shared with other Quake II engines.
+Root of the static Quake 2 game data hierarchy.
 .IP "\fB/usr/lib/games/quake2\fP" 7
-Quake II mod-specific .so libraries, possibly shared
-with other Quake II engines.
-.IP "\fB/usr/lib/games/q2pro\fP" 7
-Q2PRO specific game libraries and refresh modules.
+Quake 2 game mod shared libraries.
 .IP "\fB~/.q2pro\fP" 7
 User's local data hierarchy. Overrides system hierarchy.
 Any dynamic data Q2PRO produces (savegames, screenshots, demos, etc)
@@ -57,15 +50,15 @@ is written here.
 .SH "BUGS" 
 .PP 
 There are a lot more commands and variables, registered dynamically as
-various subsystems are loaded, than those few ones documented here.
+various subsystems are loaded. They are not yet documented here.
 .PP 
 Q2PRO graphical menu subsystem is incomplete.
 .SH "AUTHOR" 
 .PP 
-Quake II was written by ID Software, Inc. 
-Q2PRO was written by Andrey Nazarov <skuller-vidnoe@yandex.ru>. 
+Quake 2 engine was written by ID Software, Inc. 
+Q2PRO was written by Andrey Nazarov <skuller@skuller.ath.cx>. 
 .PP 
-This manual page was written by Andrey Nazarov <skuller-vidnoe@yandex.ru> for 
+This manual page was written by Andrey Nazarov <skuller@skuller.ath.cx> for 
 the \fBDebian\fP system (but may be used by others).  Permission is 
 granted to copy, distribute and/or modify this document under 
 the terms of the GNU General Public License, Version 2 any  
