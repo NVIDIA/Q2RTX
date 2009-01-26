@@ -34,6 +34,8 @@ typedef struct netchan_s {
 	netsrc_t	sock;
 
 	int			dropped;			// between last packet and previous
+    unsigned    total_dropped;      // for statistics
+    unsigned    total_received;
 
 	unsigned	last_received;		// for timeouts
 	unsigned	last_sent;			// for retransmits

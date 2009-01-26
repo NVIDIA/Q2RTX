@@ -354,6 +354,9 @@ static qboolean NetchanOld_Process( netchan_t *netchan ) {
 //
 	netchan->last_received = com_localTime;
 
+    netchan->total_dropped += netchan->dropped;
+    netchan->total_received += netchan->dropped + 1;
+
 	return qtrue;
 }
 
@@ -765,7 +768,7 @@ static qboolean NetchanNew_Process( netchan_t *netchan ) {
             chan->fragment_in.cursize );
 		SZ_Clear( &chan->fragment_in );
 	}
-	
+
 	netchan->incoming_sequence = sequence;
 	netchan->incoming_acknowledged = sequence_ack;
 	
@@ -782,6 +785,9 @@ static qboolean NetchanNew_Process( netchan_t *netchan ) {
 //
 	netchan->last_received = com_localTime;
 
+    netchan->total_dropped += netchan->dropped;
+    netchan->total_received += netchan->dropped + 1;
+    
 	return qtrue;
 }
 

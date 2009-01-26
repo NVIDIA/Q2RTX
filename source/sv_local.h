@@ -191,7 +191,8 @@ typedef struct client_s {
     int             fps;
 
 	int				frame_latency[LATENCY_COUNTS];
-	int				ping;
+	int				ping, min_ping, max_ping;
+    int             avg_ping_time, avg_ping_count;
 
 	size_t			message_size[RATE_MESSAGES];	// used to rate drop packets
 	size_t			rate;
@@ -208,6 +209,7 @@ typedef struct client_s {
 	clientSetting_t	settings[CLS_MAX];
 
 	client_frame_t	frames[UPDATE_BACKUP];	// updates can be delta'd from here
+    unsigned        frames_sent, frames_acked;
 
 	byte			*download; // file being downloaded
 	int				downloadsize; // total bytes (can't use EOF because of paks)
@@ -538,6 +540,7 @@ void SV_ExecuteClientMessage (client_t *cl);
 void SV_AddMatch_f( list_t *list );
 void SV_DelMatch_f( list_t *list );
 void SV_ListMatches_f( list_t *list );
+client_t *SV_EnhancedSetPlayer( char *s );
 
 //
 // sv_ents.c

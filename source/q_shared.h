@@ -110,7 +110,7 @@ typedef int fileHandle_t;
 #define	MAX_ITEMS			256
 #define MAX_GENERAL			(MAX_CLIENTS*2)	// general config strings
 
-#define MAX_CLIENT_NAME		32
+#define MAX_CLIENT_NAME		16
 
 typedef enum comErrorType_e {
 	ERR_FATAL,			// exit the entire game with a popup window

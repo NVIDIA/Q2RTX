@@ -683,14 +683,6 @@ static void SVC_DirectConnect( void ) {
         return;
     }
 
-    length = strlen( s );
-    if( length > MAX_CLIENT_NAME - 1 ) {
-        SV_OobPrintf( "Names longer than %d characters are not allowed.\n"
-            "Your name is %"PRIz" characters long.\n", MAX_CLIENT_NAME - 1, length );
-        Com_DPrintf( "    rejected - oversize name (%"PRIz" chars).\n", length );
-        return;
-    }
-    
     s = Info_ValueForKey( info, "skin" );
     if( !s[0] ) {
         SV_OobPrintf( "Please set your skin before connecting.\n" );
@@ -930,6 +922,7 @@ static void SVC_DirectConnect( void ) {
     newcl->state = cs_assigned;
     newcl->lastframe = -1;
     newcl->lastmessage = svs.realtime;    // don't timeout
+    newcl->min_ping = 9999;
 }
 
 static int Rcon_Validate (void)
@@ -1110,7 +1103,22 @@ static void SV_CalcPings( void ) {
     }
 
     FOR_EACH_CLIENT( cl ) {
-        cl->ping = cl->state == cs_spawned ? calc( cl ) : 0;
+        if( cl->state == cs_spawned ) {
+            cl->ping = calc( cl );
+            if( cl->ping ) {
+                if( cl->ping < cl->min_ping ) {
+                    cl->min_ping = cl->ping;
+                } else if( cl->ping > cl->max_ping ) {
+                    cl->max_ping = cl->ping;
+                }
+                if( ( sv.framenum % 100 ) == 0 ) {
+                    cl->avg_ping_time += cl->ping;
+                    cl->avg_ping_count++;
+                }
+            }
+        } else {
+            cl->ping = 0;
+        }
 
         // let the game dll know about the ping
         cl->edict->client->ping = cl->ping;
@@ -1636,8 +1644,7 @@ void SV_UpdateUserinfo( char *userinfo ) {
     }
 
     s = Info_ValueForKey( userinfo, "name" );
-    len = strlen( s );
-    if( len >= MAX_CLIENT_NAME || Q_IsWhiteSpace( s ) ) {
+    if( !s[0] || Q_IsWhiteSpace( s ) ) {
         if( sv_client->name[0] ) {
             SV_ClientCommand( sv_client, "set name \"%s\"\n", sv_client->name );
         } else {

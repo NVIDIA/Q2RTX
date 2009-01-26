@@ -746,6 +746,37 @@ static void SV_NoGameData_f( void ) {
     sv_client->flags ^= CF_NODATA;
 }
 
+static void SV_Lag_f( void ) {
+    client_t *cl;
+    float c2s, s2c;
+    int avg_ping;
+
+    if( Cmd_Argc() > 1 ) {
+        SV_BeginRedirect( RD_CLIENT );
+        cl = SV_EnhancedSetPlayer( Cmd_Argv( 1 ) );
+        Com_EndRedirect();
+        if( !cl ) {
+            return;
+        }
+    } else {
+        cl = sv_client;
+    }
+
+    avg_ping = cl->avg_ping_count ?
+        cl->avg_ping_time / cl->avg_ping_count : cl->ping;
+
+    s2c = ( 1.0f - (float)cl->frames_acked / cl->frames_sent ) * 100.0f;
+    c2s = ( (float)cl->netchan->total_dropped /
+        cl->netchan->total_received ) * 100.0f;
+
+    SV_ClientPrintf( cl, PRINT_HIGH,
+        "Lag stats for:       %s\n"
+        "RTT (min/avg/max):   %d/%d/%d ms\n"
+        "Server to client PL: %.2f%% (approx)\n"
+        "Client to server PL: %.2f%%\n",
+        cl->name, cl->min_ping, avg_ping, cl->max_ping, s2c, c2s );
+}
+
 #if USE_PACKETDUP
 static void SV_PacketdupHack_f( void ) {
     int numdups = sv_client->numpackets - 1;
@@ -839,6 +870,7 @@ static const ucmd_t ucmds[] = {
 
     { "\177c", SV_CvarResult_f },
     { "nogamedata", SV_NoGameData_f },
+    { "lag", SV_Lag_f },
 #if USE_PACKETDUP
     { "packetdup", SV_PacketdupHack_f },
 #endif
@@ -955,6 +987,10 @@ static inline void SV_SetLastFrame( int lastframe ) {
         sentTime = sv_client->frames[lastframe & UPDATE_MASK].sentTime;
         if( sentTime <= com_eventTime ) {
             sv_client->frame_latency[lastframe & LATENCY_MASK] = com_eventTime - sentTime;
+        }
+
+        if( sv_client->state == cs_spawned ) {
+            sv_client->frames_acked++;
         }
     }
 

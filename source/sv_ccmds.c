@@ -38,71 +38,121 @@ Specify a list of master servers
 */
 static void SV_SetMaster_f( void ) {
     netadr_t adr;
-	int		i, j, slot;
+    int     i, j, slot;
     char    *s;
 
 #if USE_CLIENT
-	// only dedicated servers send heartbeats
-	if( !dedicated->integer ) {
-		Com_Printf( "Only dedicated servers use masters.\n" );
-		return;
-	}
+    // only dedicated servers send heartbeats
+    if( !dedicated->integer ) {
+        Com_Printf( "Only dedicated servers use masters.\n" );
+        return;
+    }
 #endif
 
-	memset( &master_adr, 0, sizeof( master_adr ) );
+    memset( &master_adr, 0, sizeof( master_adr ) );
 
-	slot = 0;
-	for( i = 1; i < Cmd_Argc(); i++ ) {
-		if( slot == MAX_MASTERS ) {
-		    Com_Printf( "Too many masters.\n" );
-			break;
+    slot = 0;
+    for( i = 1; i < Cmd_Argc(); i++ ) {
+        if( slot == MAX_MASTERS ) {
+            Com_Printf( "Too many masters.\n" );
+            break;
         }
 
         s = Cmd_Argv( i );
-		if( !NET_StringToAdr( s, &adr, PORT_MASTER ) ) {
-			Com_Printf( "Bad address: %s\n", s );
-			continue;
-		}
+        if( !NET_StringToAdr( s, &adr, PORT_MASTER ) ) {
+            Com_Printf( "Bad address: %s\n", s );
+            continue;
+        }
 
         s = NET_AdrToString( &adr );
         for( j = 0; j < slot; j++ ) {
             if( NET_IsEqualBaseAdr( &master_adr[j], &adr ) ) {
-			    Com_Printf( "Ignoring duplicate at %s.\n", s );
+                Com_Printf( "Ignoring duplicate at %s.\n", s );
                 break;
             }
         }
 
         if( j == slot ) {
-    		Com_Printf( "Master server at %s.\n", s );
-	    	master_adr[slot++] = adr;
+            Com_Printf( "Master server at %s.\n", s );
+            master_adr[slot++] = adr;
         }
-	}
+    }
 
     if( slot ) {
-    	// make sure the server is listed public
-	    Cvar_Set( "public", "1" );
+        // make sure the server is listed public
+        Cvar_Set( "public", "1" );
 
-    	svs.last_heartbeat = svs.realtime - HEARTBEAT_SECONDS*1000;
+        svs.last_heartbeat = svs.realtime - HEARTBEAT_SECONDS*1000;
     }
+}
+
+client_t *SV_EnhancedSetPlayer( char *s ) {
+    client_t    *other, *match;
+    int         i, count;
+
+    // numeric values are just slot numbers
+    if( COM_IsUint( s ) ) {
+        i = atoi( s );
+        if( i < 0 || i >= sv_maxclients->integer ) {
+            Com_Printf( "Bad client slot number: %d\n", i );
+            return NULL;
+        }
+
+        other = &svs.udp_client_pool[i];
+        if( other->state <= cs_zombie ) {
+            Com_Printf( "Client %d is not active.\n", i );
+            return NULL;
+        }
+        return other;
+    }
+
+    // check for a name match
+    match = NULL;
+    count = 0;
+    for( i = 0; i < sv_maxclients->integer; i++ ) {
+        other = &svs.udp_client_pool[i];
+        if( other->state <= cs_zombie ) {
+            continue;
+        }
+        if( !Q_stricmp( other->name, s ) ) {
+            return other; // exact match
+        }
+        if( Q_stristr( other->name, s ) ) {
+            match = other; // partial match
+            count++;
+        }
+    }
+
+    if( !match ) {
+        Com_Printf( "No clients matching '%s' found.\n", s );
+        return NULL;
+    }
+
+    if( count > 1 ) {
+        Com_Printf( "'%s' matches multiple clients.\n", s );
+        return NULL;
+    }
+
+    return match;
 }
 
 static void SV_Player_g( genctx_t *ctx ) {
     int i;
     client_t *c;
 
-	if( !svs.initialized ) {
-		return;
-	}
+    if( !svs.initialized ) {
+        return;
+    }
     
-	for( i = 0; i < sv_maxclients->integer; i++ ) {
-		c = &svs.udp_client_pool[i];
-		if( !c->state || c->protocol == -1 ) {
-			continue;
-		}
-		if( !Prompt_AddMatch( ctx, c->name ) ) {
-			break;
-		}
-	}
+    for( i = 0; i < sv_maxclients->integer; i++ ) {
+        c = &svs.udp_client_pool[i];
+        if( !c->state || c->protocol == -1 ) {
+            continue;
+        }
+        if( !Prompt_AddMatch( ctx, c->name ) ) {
+            break;
+        }
+    }
 }
 
 static void SV_SetPlayer_c( genctx_t *ctx, int argnum ) {
@@ -120,52 +170,44 @@ Sets sv_client and sv_player to the player with idnum Cmd_Argv(1)
 ==================
 */
 static qboolean SV_SetPlayer( void ) {
-	client_t	*cl;
-	int			idnum;
-	char		*s;
+    client_t    *cl;
+    int         idnum;
+    char        *s;
 
-	s = Cmd_Argv( 1 );
+    s = Cmd_Argv( 1 );
     if( !s[0] ) {
         return qfalse;
     }
 
-    // allow numeric value escape
-    if( *s == '\\' ) {
-        s++;
-        goto namecmp;
+    // numeric values are just slot numbers
+    if( COM_IsUint( s ) ) {
+        idnum = atoi( s );
+        if( idnum < 0 || idnum >= sv_maxclients->integer ) {
+            Com_Printf( "Bad client slot number: %d\n", idnum );
+            return qfalse;
+        }
+
+        sv_client = &svs.udp_client_pool[idnum];
+        sv_player = sv_client->edict;
+        if( sv_client->state <= cs_zombie ) {
+            Com_Printf( "Client %d is not active.\n", idnum );
+            return qfalse;
+        }
+        return qtrue;
     }
 
-	// numeric values are just slot numbers
-	if( COM_IsUint( s ) ) {
-		idnum = atoi( s );
-		if( idnum < 0 || idnum >= sv_maxclients->integer ) {
-			Com_Printf( "Bad client slot: %i\n", idnum );
-			return qfalse;
-		}
-
-		sv_client = &svs.udp_client_pool[idnum];
-		sv_player = sv_client->edict;
-		if( !sv_client->state ) {
-			Com_Printf( "Client %i is not active\n", idnum );
-			return qfalse;
-		}
-		return qtrue;
-	}
-
-namecmp:
-	// check for a name match
+    // check for a name match
     FOR_EACH_CLIENT( cl ) {
-		if( !strcmp( cl->name, s ) ) {
-			sv_client = cl;
-			sv_player = sv_client->edict;
-			return qtrue;
-		}
-	}
+        if( !strcmp( cl->name, s ) ) {
+            sv_client = cl;
+            sv_player = sv_client->edict;
+            return qtrue;
+        }
+    }
 
-	Com_Printf( "Userid %s is not on the server\n", s );
-	return qfalse;
+    Com_Printf( "Userid %s is not on the server.\n", s );
+    return qfalse;
 }
-
 
 //=========================================================
 
@@ -201,12 +243,12 @@ goes to map jail.bsp.
 ==================
 */
 static void SV_GameMap_f( void ) {
-	if( Cmd_Argc() != 2 ) {
-		Com_Printf( "Usage: %s <mapname>\n", Cmd_Argv( 0 ) );
-		return;
-	}
+    if( Cmd_Argc() != 2 ) {
+        Com_Printf( "Usage: %s <mapname>\n", Cmd_Argv( 0 ) );
+        return;
+    }
 
-	SV_Map( Cmd_Argv( 1 ), qfalse );
+    SV_Map( Cmd_Argv( 1 ), qfalse );
 }
 
 /*
@@ -218,10 +260,10 @@ For development work
 ==================
 */
 static void SV_Map_f( void ) {
-	if( Cmd_Argc() < 2 ) {
-		Com_Printf( "Usage: %s <mapname>\n", Cmd_Argv( 0 ) );
-		return;
-	}
+    if( Cmd_Argc() < 2 ) {
+        Com_Printf( "Usage: %s <mapname>\n", Cmd_Argv( 0 ) );
+        return;
+    }
 
     if( sv.state == ss_game && sv_allow_map->integer != 1 &&
         Cvar_CountLatchedVars() == 0 && strcmp( Cmd_Argv( 2 ), "force" ) )
@@ -242,16 +284,16 @@ static void SV_Map_f( void ) {
             return;
         }
 
-	    SV_Map( Cmd_Argv( 1 ), qfalse );
+        SV_Map( Cmd_Argv( 1 ), qfalse );
         return;
     }
 
-	SV_Map( Cmd_Argv( 1 ), qtrue );
+    SV_Map( Cmd_Argv( 1 ), qtrue );
 }
 
 static void SV_Map_c( genctx_t *ctx, int argnum ) {
     if( argnum == 1 ) {
-    	FS_File_g( "maps", ".bsp", 0x80000000, ctx );
+        FS_File_g( "maps", ".bsp", 0x80000000, ctx );
     }
 }
 
@@ -266,12 +308,12 @@ static void SV_DumpEnts_f( void ) {
         return;
     }
 
-	if( Cmd_Argc() != 2 ) {
-		Com_Printf( "Usage: %s <filename>\n", Cmd_Argv( 0 ) );
-		return;
-	}
+    if( Cmd_Argc() != 2 ) {
+        Com_Printf( "Usage: %s <filename>\n", Cmd_Argv( 0 ) );
+        return;
+    }
 
-	len = Q_concat( buffer, sizeof( buffer ),
+    len = Q_concat( buffer, sizeof( buffer ),
         "maps/", Cmd_Argv( 1 ), ".ent", NULL );
     if( len >= sizeof( buffer ) ) {
         Com_EPrintf( "Oversize filename specified.\n" );
@@ -300,21 +342,21 @@ Kick a user off of the server
 ==================
 */
 void SV_Kick_f( void ) {
-	if( !svs.initialized ) {
-		Com_Printf( "No server running.\n" );
-		return;
-	}
+    if( !svs.initialized ) {
+        Com_Printf( "No server running.\n" );
+        return;
+    }
 
-	if( Cmd_Argc() != 2 ) {
-		Com_Printf( "Usage: %s <userid>\n", Cmd_Argv( 0 ) );
-		return;
-	}
+    if( Cmd_Argc() != 2 ) {
+        Com_Printf( "Usage: %s <userid>\n", Cmd_Argv( 0 ) );
+        return;
+    }
 
-	if( !SV_SetPlayer() )
-		return;
+    if( !SV_SetPlayer() )
+        return;
 
-	SV_DropClient( sv_client, "kicked" );
-	sv_client->lastmessage = svs.realtime;	// min case there is a funny zombie
+    SV_DropClient( sv_client, "kicked" );
+    sv_client->lastmessage = svs.realtime;    // min case there is a funny zombie
 
     // optionally ban their IP address
     if( !strcmp( Cmd_Argv( 0 ), "kickban" ) ) {
@@ -329,53 +371,53 @@ void SV_Kick_f( void ) {
         }
     }
 
-	sv_client = NULL;
-	sv_player = NULL;
+    sv_client = NULL;
+    sv_player = NULL;
 }
 
 static void dump_clients( void ) {
-	client_t	*client;
+    client_t    *client;
 
-	Com_Printf(
+    Com_Printf(
 "num score ping name             lastmsg address                rate pr fps\n"
 "--- ----- ---- ---------------- ------- --------------------- ----- -- ---\n" );
     FOR_EACH_CLIENT( client ) {
-		Com_Printf( "%3i %5i ", client->number,
-			client->edict->client->ps.stats[STAT_FRAGS] );
+        Com_Printf( "%3i %5i ", client->number,
+            client->edict->client->ps.stats[STAT_FRAGS] );
 
-		switch( client->state ) {
-		case cs_zombie:
-			Com_Printf( "ZMBI " );
-			break;
-		case cs_assigned:
-			Com_Printf( "ASGN " );
-			break;
-		case cs_connected:
-			Com_Printf( "CNCT " );
-			break;
-		case cs_primed:
-			Com_Printf( "PRIM " );
-			break;
-		default:
-			Com_Printf( "%4i ", client->ping < 9999 ? client->ping : 9999 );
-			break;
-		}
+        switch( client->state ) {
+        case cs_zombie:
+            Com_Printf( "ZMBI " );
+            break;
+        case cs_assigned:
+            Com_Printf( "ASGN " );
+            break;
+        case cs_connected:
+            Com_Printf( "CNCT " );
+            break;
+        case cs_primed:
+            Com_Printf( "PRIM " );
+            break;
+        default:
+            Com_Printf( "%4i ", client->ping < 9999 ? client->ping : 9999 );
+            break;
+        }
 
-		Com_Printf( "%-16.16s ", client->name );
-		Com_Printf( "%7u ", svs.realtime - client->lastmessage );
-		Com_Printf( "%-21s ", NET_AdrToString(
+        Com_Printf( "%-16.16s ", client->name );
+        Com_Printf( "%7u ", svs.realtime - client->lastmessage );
+        Com_Printf( "%-21s ", NET_AdrToString(
             &client->netchan->remote_address ) );
-    	Com_Printf( "%5"PRIz" ", client->rate );
-    	Com_Printf( "%2i ", client->protocol );
-    	Com_Printf( "%3i ", client->fps );
-		Com_Printf( "\n" );
-	}
+        Com_Printf( "%5"PRIz" ", client->rate );
+        Com_Printf( "%2i ", client->protocol );
+        Com_Printf( "%3i ", client->fps );
+        Com_Printf( "\n" );
+    }
 }
 
 static void dump_versions( void ) {
-	client_t	*client;
+    client_t    *client;
 
-	Com_Printf(
+    Com_Printf(
 "num name             version\n"
 "--- ---------------- -----------------------------------------\n" );
 
@@ -387,9 +429,9 @@ static void dump_versions( void ) {
 }
 
 static void dump_downloads( void ) {
-	client_t    *client;
+    client_t    *client;
 
-	Com_Printf(
+    Com_Printf(
 "num name             download\n"
 "--- ---------------- -----------------------------------------\n" );
 
@@ -401,11 +443,11 @@ static void dump_downloads( void ) {
 }
 
 static void dump_time( void ) {
-	client_t    *client;
+    client_t    *client;
     char        buffer[MAX_QPATH];
     time_t      clock = time( NULL );
 
-	Com_Printf(
+    Com_Printf(
 "num name             time\n"
 "--- ---------------- --------\n" );
 
@@ -423,19 +465,19 @@ SV_Status_f
 ================
 */
 static void SV_Status_f( void ) {
-	if( !svs.initialized ) {
-		Com_Printf( "No server running.\n" );
-		return;
-	}
+    if( !svs.initialized ) {
+        Com_Printf( "No server running.\n" );
+        return;
+    }
 
-	if( sv.name[0] ) {
-	    Com_Printf( "Current map: %s\n\n", sv.name );
+    if( sv.name[0] ) {
+        Com_Printf( "Current map: %s\n\n", sv.name );
     }
 
     if( LIST_EMPTY( &svs.udp_client_list ) ) {
         Com_Printf( "No UDP clients.\n" );
     } else {
-	    if( Cmd_Argc() > 1 ) {
+        if( Cmd_Argc() > 1 ) {
             char *w = Cmd_Argv( 1 );
             if( *w == 't' ) {
                 dump_time();
@@ -461,28 +503,28 @@ SV_ConSay_f
 ==================
 */
 void SV_ConSay_f( void ) {
-	client_t *client;
-	char *s;
+    client_t *client;
+    char *s;
 
-	if( !svs.initialized ) {
-		Com_Printf( "No server running\n" );
-		return;
-	}
+    if( !svs.initialized ) {
+        Com_Printf( "No server running\n" );
+        return;
+    }
 
-	if( Cmd_Argc() < 2 ) {
-		Com_Printf( "Usage: %s <raw text>\n", Cmd_Argv( 0 ) );
-		return;
-	}
+    if( Cmd_Argc() < 2 ) {
+        Com_Printf( "Usage: %s <raw text>\n", Cmd_Argv( 0 ) );
+        return;
+    }
 
-	s = Cmd_RawArgs();
+    s = Cmd_RawArgs();
     FOR_EACH_CLIENT( client ) {
-		if( client->state != cs_spawned )
-			continue;
-		SV_ClientPrintf( client, PRINT_CHAT, "console: %s\n", s );
-	}
+        if( client->state != cs_spawned )
+            continue;
+        SV_ClientPrintf( client, PRINT_CHAT, "console: %s\n", s );
+    }
 
     if( Com_IsDedicated() ) {
-    	Com_Printf( "console: %s\n", s );
+        Com_Printf( "console: %s\n", s );
     }
 }
 
@@ -509,8 +551,8 @@ static void SV_Serverinfo_f( void ) {
 
     Cvar_BitInfo( serverinfo, CVAR_SERVERINFO );
 
-	Com_Printf( "Server info settings:\n" );
-	Info_Print( serverinfo );
+    Com_Printf( "Server info settings:\n" );
+    Info_Print( serverinfo );
 }
 
 
@@ -524,26 +566,26 @@ Examine all a users info strings
 static void SV_DumpUser_f( void ) {
     char buffer[MAX_QPATH];
 
-	if( !svs.initialized ) {
-		Com_Printf( "No server running\n" );
-		return;
-	}
+    if( !svs.initialized ) {
+        Com_Printf( "No server running\n" );
+        return;
+    }
 
-	if( Cmd_Argc() != 2 ) {
-		Com_Printf( "Usage: %s <userid>\n", Cmd_Argv( 0 ) );
-		return;
-	}
+    if( Cmd_Argc() != 2 ) {
+        Com_Printf( "Usage: %s <userid>\n", Cmd_Argv( 0 ) );
+        return;
+    }
 
-	if( !SV_SetPlayer() )
-		return;
+    if( !SV_SetPlayer() )
+        return;
 
-	Com_Printf( "\nuserinfo\n" );
-	Com_Printf( "--------\n" );
-	Info_Print( sv_client->userinfo );
+    Com_Printf( "\nuserinfo\n" );
+    Com_Printf( "--------\n" );
+    Info_Print( sv_client->userinfo );
 
-	Com_Printf( "\nmiscinfo\n" );
-	Com_Printf( "--------\n" );
-	Com_Printf( "version              %s\n",
+    Com_Printf( "\nmiscinfo\n" );
+    Com_Printf( "--------\n" );
+    Com_Printf( "version              %s\n",
         sv_client->versionString ? sv_client->versionString : "-" );
     Com_Printf( "protocol             %d/%d\n",
         sv_client->protocol, sv_client->version );
@@ -556,8 +598,8 @@ static void SV_DumpUser_f( void ) {
         sv_client->connect_time, time( NULL ) );
     Com_Printf( "time                 %s\n", buffer );
 
-	sv_client = NULL;
-	sv_player = NULL;
+    sv_client = NULL;
+    sv_player = NULL;
 }
 
 /*
@@ -568,25 +610,25 @@ Stuff raw command string to the client.
 ==================
 */
 void SV_Stuff_f( void ) {
-	if( !svs.initialized ) {
-		Com_Printf( "No server running.\n" );
-		return;
-	}
+    if( !svs.initialized ) {
+        Com_Printf( "No server running.\n" );
+        return;
+    }
 
-	if( Cmd_Argc() < 3 ) {
-		Com_Printf( "Usage: %s <userid> <raw text>\n", Cmd_Argv( 0 ) );
-		return;
-	}
+    if( Cmd_Argc() < 3 ) {
+        Com_Printf( "Usage: %s <userid> <raw text>\n", Cmd_Argv( 0 ) );
+        return;
+    }
 
-	if( !SV_SetPlayer() )
-		return;
+    if( !SV_SetPlayer() )
+        return;
 
-	MSG_WriteByte( svc_stufftext );
-	MSG_WriteString( Cmd_RawArgsFrom( 2 ) );
-	SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
+    MSG_WriteByte( svc_stufftext );
+    MSG_WriteString( Cmd_RawArgsFrom( 2 ) );
+    SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
 
-	sv_client = NULL;
-	sv_player = NULL;
+    sv_client = NULL;
+    sv_player = NULL;
 }
 
 /*
@@ -597,44 +639,44 @@ Stuff raw command string to all clients.
 ==================
 */
 void SV_Stuffall_f( void ) {
-	client_t *client;
+    client_t *client;
 
-	if( !svs.initialized ) {
-		Com_Printf( "No server running.\n" );
-		return;
-	}
+    if( !svs.initialized ) {
+        Com_Printf( "No server running.\n" );
+        return;
+    }
 
-	if( Cmd_Argc() < 2 ) {
-		Com_Printf( "Usage: %s <raw text>\n", Cmd_Argv( 0 ) );
-		return;
-	}
+    if( Cmd_Argc() < 2 ) {
+        Com_Printf( "Usage: %s <raw text>\n", Cmd_Argv( 0 ) );
+        return;
+    }
 
-	MSG_WriteByte( svc_stufftext );
-	MSG_WriteString( Cmd_RawArgsFrom( 1 ) );
+    MSG_WriteByte( svc_stufftext );
+    MSG_WriteString( Cmd_RawArgsFrom( 1 ) );
 
     FOR_EACH_CLIENT( client ) {
-		SV_ClientAddMessage( client, MSG_RELIABLE );
-	}
+        SV_ClientAddMessage( client, MSG_RELIABLE );
+    }
 
-	SZ_Clear( &msg_write );
+    SZ_Clear( &msg_write );
 
 }
 
 static void SV_PickClient_f( void ) {
-    char	*s;
+    char *s;
     netadr_t address;
 
-	if( !svs.initialized ) {
-		Com_Printf( "No server running.\n" );
-		return;
-	}
+    if( !svs.initialized ) {
+        Com_Printf( "No server running.\n" );
+        return;
+    }
     if( sv_maxclients->integer == 1 ) {
-		Com_Printf( "Single player server running.\n" );
-		return;
+        Com_Printf( "Single player server running.\n" );
+        return;
     }
 
     if ( Cmd_Argc() < 2 ) {
-		Com_Printf( "Usage: %s <address>\n", Cmd_Argv( 0 ) );
+        Com_Printf( "Usage: %s <address>\n", Cmd_Argv( 0 ) );
         return;
     }
 
@@ -648,7 +690,7 @@ static void SV_PickClient_f( void ) {
         return;
     }
 
-	OOB_PRINT( NS_SERVER, &address, "passive_connect\n" );
+    OOB_PRINT( NS_SERVER, &address, "passive_connect\n" );
 }
 
 
@@ -661,12 +703,12 @@ Kick everyone off, possibly in preparation for a new game
 ===============
 */
 void SV_KillServer_f( void ) {
-	if( !svs.initialized ) {
-		Com_Printf( "No server running.\n" );
-		return;
-	}
+    if( !svs.initialized ) {
+        Com_Printf( "No server running.\n" );
+        return;
+    }
 
-	SV_Shutdown( "Server was killed.\n", KILL_DROP );
+    SV_Shutdown( "Server was killed.\n", KILL_DROP );
 }
 
 /*
@@ -677,12 +719,12 @@ Let the game dll handle a command
 ===============
 */
 static void SV_ServerCommand_f( void ) {
-	if( !ge ) {
-		Com_Printf( "No game loaded.\n" );
-		return;
-	}
+    if( !ge ) {
+        Com_Printf( "No game loaded.\n" );
+        return;
+    }
 
-	ge->ServerCommand();
+    ge->ServerCommand();
 }
 
 // ( ip & mask ) == ( addr & mask )
@@ -721,13 +763,13 @@ static qboolean SV_ParseMask( const char *s, uint32_t *addr, uint32_t *mask ) {
 }
 
 void SV_AddMatch_f( list_t *list ) {
-    char	*s;
+    char *s;
     addrmatch_t *match;
     uint32_t addr, mask;
     size_t len;
 
     if( Cmd_Argc() < 2 ) {
-		Com_Printf( "Usage: %s <address[/mask]> [comment]\n", Cmd_Argv( 0 ) );
+        Com_Printf( "Usage: %s <address[/mask]> [comment]\n", Cmd_Argv( 0 ) );
         return;
     }
 
@@ -756,13 +798,13 @@ void SV_AddMatch_f( list_t *list ) {
 }
 
 void SV_DelMatch_f( list_t *list ) {
-    char	*s;
+    char *s;
     addrmatch_t *match, *next;
     uint32_t addr, mask;
     int i;
 
     if( Cmd_Argc() < 2 ) {
-		Com_Printf( "Usage: %s <address[/mask]|id|all>\n", Cmd_Argv( 0 ) );
+        Com_Printf( "Usage: %s <address[/mask]|id|all>\n", Cmd_Argv( 0 ) );
         return;
     }
 
@@ -780,14 +822,14 @@ void SV_DelMatch_f( list_t *list ) {
         return;
     }
 
-	// numeric values are just slot numbers
-	for( i = 0; s[i]; i++ ) {
-		if( !Q_isdigit( s[i] ) ) {
-			break;
-		}
-	} 
-	if( !s[i] ) {
-		i = atoi( s );
+    // numeric values are just slot numbers
+    for( i = 0; s[i]; i++ ) {
+        if( !Q_isdigit( s[i] ) ) {
+            break;
+        }
+    } 
+    if( !s[i] ) {
+        i = atoi( s );
         if( i < 1 ) {
             Com_Printf( "Bad index: %d\n", i );
             return;
@@ -868,13 +910,13 @@ static list_t *SV_FindStuffList( void ) {
 }
 
 static void SV_AddStuffCmd_f( void ) {
-    char	*s;
+    char *s;
     list_t *list;
     stuffcmd_t *stuff;
     int len;
 
     if( Cmd_Argc() < 3 ) {
-		Com_Printf( "Usage: %s <list> <command>\n", Cmd_Argv( 0 ) );
+        Com_Printf( "Usage: %s <list> <command>\n", Cmd_Argv( 0 ) );
         return;
     }
 
@@ -897,7 +939,7 @@ static void SV_DelStuffCmd_f( void ) {
     int i;
 
     if( Cmd_Argc() < 3 ) {
-		Com_Printf( "Usage: %s <list> <id|all>\n", Cmd_Argv( 0 ) );
+        Com_Printf( "Usage: %s <list> <id|all>\n", Cmd_Argv( 0 ) );
         return;
     }
 
@@ -939,7 +981,7 @@ static void SV_ListStuffCmds_f( void ) {
     int count;
 
     if( Cmd_Argc() != 2 ) {
-		Com_Printf( "Usage: %s <list>\n", Cmd_Argv( 0 ) );
+        Com_Printf( "Usage: %s <list>\n", Cmd_Argv( 0 ) );
         return;
     }
 
@@ -980,7 +1022,7 @@ static void SV_AddFilterCmd_f( void ) {
 
     if( Cmd_Argc() < 2 ) {
 usage:
-		Com_Printf( "Usage: %s <command> [ignore|print|stuff|kick] [comment]\n", Cmd_Argv( 0 ) );
+        Com_Printf( "Usage: %s <command> [ignore|print|stuff|kick] [comment]\n", Cmd_Argv( 0 ) );
         return;
     }
 
@@ -1032,7 +1074,7 @@ static void SV_DelFilterCmd_f( void ) {
     int i;
 
     if( Cmd_Argc() < 2 ) {
-		Com_Printf( "Usage: %s <id|cmd|all>\n", Cmd_Argv( 0 ) );
+        Com_Printf( "Usage: %s <id|cmd|all>\n", Cmd_Argv( 0 ) );
         return;
     }
 
@@ -1050,7 +1092,7 @@ static void SV_DelFilterCmd_f( void ) {
         List_Init( &sv_filterlist );
         return;
     }
-	if( COM_IsUint( s ) ) {
+    if( COM_IsUint( s ) ) {
         i = atoi( s );
         if( i < 1 ) {
             Com_Printf( "Bad filtercmd index: %d\n", i );
@@ -1117,31 +1159,31 @@ static void SV_ListFilterCmds_f( void ) {
 //===========================================================
 
 static const cmdreg_t c_server[] = {
-	{ "heartbeat", SV_Heartbeat_f },
-	{ "kick", SV_Kick_f, SV_SetPlayer_c },
-	{ "kickban", SV_Kick_f, SV_SetPlayer_c },
-	{ "status", SV_Status_f },
-	{ "serverinfo", SV_Serverinfo_f },
-	{ "dumpuser", SV_DumpUser_f, SV_SetPlayer_c },
-	{ "stuff", SV_Stuff_f, SV_SetPlayer_c },
-	{ "stuffall", SV_Stuffall_f },
-	{ "map", SV_Map_f, SV_Map_c },
-	{ "demomap", SV_DemoMap_f },
-	{ "gamemap", SV_GameMap_f, SV_Map_c },
-	{ "dumpents", SV_DumpEnts_f },
-	{ "setmaster", SV_SetMaster_f },
-	{ "killserver", SV_KillServer_f },
-	{ "sv", SV_ServerCommand_f },
-	{ "pickclient", SV_PickClient_f },
-	{ "addban", SV_AddBan_f },
-	{ "delban", SV_DelBan_f },
-	{ "listbans", SV_ListBans_f },
-	{ "addstuffcmd", SV_AddStuffCmd_f, SV_StuffCmd_c },
-	{ "delstuffcmd", SV_DelStuffCmd_f, SV_StuffCmd_c },
-	{ "liststuffcmds", SV_ListStuffCmds_f, SV_StuffCmd_c },
-	{ "addfiltercmd", SV_AddFilterCmd_f, SV_AddFilterCmd_c },
-	{ "delfiltercmd", SV_DelFilterCmd_f, SV_DelFilterCmd_c },
-	{ "listfiltercmds", SV_ListFilterCmds_f },
+    { "heartbeat", SV_Heartbeat_f },
+    { "kick", SV_Kick_f, SV_SetPlayer_c },
+    { "kickban", SV_Kick_f, SV_SetPlayer_c },
+    { "status", SV_Status_f },
+    { "serverinfo", SV_Serverinfo_f },
+    { "dumpuser", SV_DumpUser_f, SV_SetPlayer_c },
+    { "stuff", SV_Stuff_f, SV_SetPlayer_c },
+    { "stuffall", SV_Stuffall_f },
+    { "map", SV_Map_f, SV_Map_c },
+    { "demomap", SV_DemoMap_f },
+    { "gamemap", SV_GameMap_f, SV_Map_c },
+    { "dumpents", SV_DumpEnts_f },
+    { "setmaster", SV_SetMaster_f },
+    { "killserver", SV_KillServer_f },
+    { "sv", SV_ServerCommand_f },
+    { "pickclient", SV_PickClient_f },
+    { "addban", SV_AddBan_f },
+    { "delban", SV_DelBan_f },
+    { "listbans", SV_ListBans_f },
+    { "addstuffcmd", SV_AddStuffCmd_f, SV_StuffCmd_c },
+    { "delstuffcmd", SV_DelStuffCmd_f, SV_StuffCmd_c },
+    { "liststuffcmds", SV_ListStuffCmds_f, SV_StuffCmd_c },
+    { "addfiltercmd", SV_AddFilterCmd_f, SV_AddFilterCmd_c },
+    { "delfiltercmd", SV_DelFilterCmd_f, SV_DelFilterCmd_c },
+    { "listfiltercmds", SV_ListFilterCmds_f },
 
     { NULL }
 };
@@ -1155,7 +1197,7 @@ SV_InitOperatorCommands
 void SV_InitOperatorCommands( void ) {
     Cmd_Register( c_server );
 
-	if ( Com_IsDedicated() )
-		Cmd_AddCommand( "say", SV_ConSay_f );
+    if ( Com_IsDedicated() )
+        Cmd_AddCommand( "say", SV_ConSay_f );
 }
  
