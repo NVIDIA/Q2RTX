@@ -32,20 +32,20 @@ MISC
 char sv_outputbuf[SV_OUTPUTBUF_LENGTH];
 
 void SV_FlushRedirect( int redirected, char *outputbuf, size_t len ) {
-	byte    buffer[MAX_PACKETLEN_DEFAULT];
+    byte    buffer[MAX_PACKETLEN_DEFAULT];
 
-	if( redirected == RD_PACKET ) {
-	    memcpy( buffer, "\xff\xff\xff\xffprint\n", 10 );
+    if( redirected == RD_PACKET ) {
+        memcpy( buffer, "\xff\xff\xff\xffprint\n", 10 );
         memcpy( buffer + 10, outputbuf, len );
-	    NET_SendPacket( NS_SERVER, &net_from, len + 10, buffer );
-	} else if( redirected == RD_CLIENT ) {
-		MSG_WriteByte( svc_print );
-		MSG_WriteByte( PRINT_HIGH );
-		MSG_WriteData( outputbuf, len );
+        NET_SendPacket( NS_SERVER, &net_from, len + 10, buffer );
+    } else if( redirected == RD_CLIENT ) {
+        MSG_WriteByte( svc_print );
+        MSG_WriteByte( PRINT_HIGH );
+        MSG_WriteData( outputbuf, len );
         MSG_WriteByte( 0 );
         //Sys_Printf("redirect: %d bytes: %s", outputbuf);
-		SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
-	}
+        SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
+    }
 }
 
 /*
@@ -57,40 +57,40 @@ bandwidth estimation and should not be sent another packet
 =======================
 */
 static qboolean SV_RateDrop( client_t *client ) {
-	size_t	total;
-	int		i;
+    size_t  total;
+    int     i;
 
-	// never drop over the loopback
-	if( !client->rate ) {
-		return qfalse;
-	}
+    // never drop over the loopback
+    if( !client->rate ) {
+        return qfalse;
+    }
 
-	total = 0;
-	for( i = 0; i < RATE_MESSAGES; i++ ) {
-		total += client->message_size[i];
-	}
+    total = 0;
+    for( i = 0; i < RATE_MESSAGES; i++ ) {
+        total += client->message_size[i];
+    }
 
-	if( total > client->rate ) {
-		client->surpressCount++;
-		client->message_size[sv.framenum % RATE_MESSAGES] = 0;
-		return qtrue;
-	}
+    if( total > client->rate ) {
+        client->surpressCount++;
+        client->message_size[sv.framenum % RATE_MESSAGES] = 0;
+        return qtrue;
+    }
 
-	return qfalse;
+    return qfalse;
 }
 
 void SV_CalcSendTime( client_t *client, size_t size ) {
-	// never drop over the loopback
-	if( !client->rate ) {
+    // never drop over the loopback
+    if( !client->rate ) {
         client->send_time = svs.realtime;
         client->send_delta = 0;
-		return;
-	}
+        return;
+    }
 
-	client->message_size[sv.framenum % RATE_MESSAGES] = size;
+    client->message_size[sv.framenum % RATE_MESSAGES] = size;
 
     client->send_time = svs.realtime;
-	client->send_delta = size * 1000 / client->rate;
+    client->send_delta = size * 1000 / client->rate;
 }
 
 /*
@@ -111,27 +111,27 @@ NOT archived in MVD stream.
 =================
 */
 void SV_ClientPrintf( client_t *client, int level, const char *fmt, ... ) {
-	va_list		argptr;
-	char		string[MAX_STRING_CHARS];
+    va_list     argptr;
+    char        string[MAX_STRING_CHARS];
     size_t      len;
-	
-	if( level < client->messagelevel )
-		return;
-	
-	va_start( argptr, fmt );
-	len = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
-	va_end( argptr );
+    
+    if( level < client->messagelevel )
+        return;
+    
+    va_start( argptr, fmt );
+    len = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
+    va_end( argptr );
 
     if( len >= sizeof( string ) ) {
         Com_WPrintf( "%s: overflow\n", __func__ );
         return;
     }
 
-	MSG_WriteByte( svc_print );
-	MSG_WriteByte( level );
-	MSG_WriteData( string, len + 1 );
+    MSG_WriteByte( svc_print );
+    MSG_WriteByte( level );
+    MSG_WriteData( string, len + 1 );
 
-	SV_ClientAddMessage( client, MSG_RELIABLE|MSG_CLEAR );
+    SV_ClientAddMessage( client, MSG_RELIABLE|MSG_CLEAR );
 }
 
 /*
@@ -143,53 +143,53 @@ NOT archived in MVD stream.
 =================
 */
 void SV_BroadcastPrintf( int level, const char *fmt, ... ) {
-	va_list		argptr;
-	char		string[MAX_STRING_CHARS];
-	client_t	*client;
-	size_t		len;
+    va_list     argptr;
+    char        string[MAX_STRING_CHARS];
+    client_t    *client;
+    size_t      len;
 
-	va_start( argptr, fmt );
-	len = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
-	va_end( argptr );
+    va_start( argptr, fmt );
+    len = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
+    va_end( argptr );
 
     if( len >= sizeof( string ) ) {
         Com_WPrintf( "%s: overflow\n", __func__ );
         return;
     }
 
-	MSG_WriteByte( svc_print );
-	MSG_WriteByte( level );
-	MSG_WriteData( string, len + 1 );
+    MSG_WriteByte( svc_print );
+    MSG_WriteByte( level );
+    MSG_WriteData( string, len + 1 );
 
     FOR_EACH_CLIENT( client ) {
-		if( client->state != cs_spawned )
-			continue;
-		if( level < client->messagelevel )
-			continue;
-		SV_ClientAddMessage( client, MSG_RELIABLE );
-	}
+        if( client->state != cs_spawned )
+            continue;
+        if( level < client->messagelevel )
+            continue;
+        SV_ClientAddMessage( client, MSG_RELIABLE );
+    }
 
-	SZ_Clear( &msg_write );
+    SZ_Clear( &msg_write );
 }
 
 void SV_ClientCommand( client_t *client, const char *fmt, ... ) {
-	va_list		argptr;
-	char		string[MAX_STRING_CHARS];
+    va_list     argptr;
+    char        string[MAX_STRING_CHARS];
     size_t      len;
-	
-	va_start( argptr, fmt );
-	len = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
-	va_end( argptr );
+    
+    va_start( argptr, fmt );
+    len = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
+    va_end( argptr );
 
     if( len >= sizeof( string ) ) {
         Com_WPrintf( "%s: overflow\n", __func__ );
         return;
     }
 
-	MSG_WriteByte( svc_stufftext );
-	MSG_WriteData( string, len + 1 );
+    MSG_WriteByte( svc_stufftext );
+    MSG_WriteData( string, len + 1 );
 
-	SV_ClientAddMessage( client, MSG_RELIABLE|MSG_CLEAR );
+    SV_ClientAddMessage( client, MSG_RELIABLE|MSG_CLEAR );
 }
 
 /*
@@ -201,28 +201,28 @@ NOT archived in MVD stream.
 =================
 */
 void SV_BroadcastCommand( const char *fmt, ... ) {
-	va_list		argptr;
-	char		string[MAX_STRING_CHARS];
-	client_t	*client;
+    va_list     argptr;
+    char        string[MAX_STRING_CHARS];
+    client_t    *client;
     size_t      len;
-	
-	va_start( argptr, fmt );
-	len = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
-	va_end( argptr );
+    
+    va_start( argptr, fmt );
+    len = Q_vsnprintf( string, sizeof( string ), fmt, argptr );
+    va_end( argptr );
 
     if( len >= sizeof( string ) ) { 
         Com_WPrintf( "%s: overflow\n", __func__ );
         return;
     }
 
-	MSG_WriteByte( svc_stufftext );
-	MSG_WriteData( string, len + 1 );
+    MSG_WriteByte( svc_stufftext );
+    MSG_WriteData( string, len + 1 );
 
     FOR_EACH_CLIENT( client ) {
-    	SV_ClientAddMessage( client, MSG_RELIABLE );
-	}
+        SV_ClientAddMessage( client, MSG_RELIABLE );
+    }
 
-	SZ_Clear( &msg_write );
+    SZ_Clear( &msg_write );
 }
 
 
@@ -235,90 +235,90 @@ then clears the write buffer.
 
 Archived in MVD stream.
 
-MULTICAST_ALL	same as broadcast (origin can be NULL)
-MULTICAST_PVS	send to clients potentially visible from org
-MULTICAST_PHS	send to clients potentially hearable from org
+MULTICAST_ALL    same as broadcast (origin can be NULL)
+MULTICAST_PVS    send to clients potentially visible from org
+MULTICAST_PHS    send to clients potentially hearable from org
 =================
 */
 void SV_Multicast( vec3_t origin, multicast_t to ) {
-	client_t	*client;
-	byte		mask[MAX_MAP_VIS];
-	mleaf_t		*leaf1, *leaf2;
+    client_t    *client;
+    byte        mask[MAX_MAP_VIS];
+    mleaf_t     *leaf1, *leaf2;
     int         leafnum;
-	int			flags;
-	vec3_t		org;
+    int         flags;
+    vec3_t      org;
 
-	flags = 0;
+    flags = 0;
 
-	switch( to ) {
-	case MULTICAST_ALL_R:
-		flags |= MSG_RELIABLE;	
+    switch( to ) {
+    case MULTICAST_ALL_R:
+        flags |= MSG_RELIABLE;    
         // intentional fallthrough
-	case MULTICAST_ALL:
+    case MULTICAST_ALL:
         leaf1 = NULL;
         leafnum = 0;
-		break;
-	case MULTICAST_PHS_R:
-		flags |= MSG_RELIABLE;
+        break;
+    case MULTICAST_PHS_R:
+        flags |= MSG_RELIABLE;
         // intentional fallthrough
-	case MULTICAST_PHS:
-		leaf1 = CM_PointLeaf( &sv.cm, origin );
+    case MULTICAST_PHS:
+        leaf1 = CM_PointLeaf( &sv.cm, origin );
         leafnum = leaf1 - sv.cm.cache->leafs;
-		BSP_ClusterVis( sv.cm.cache, mask, leaf1->cluster, DVIS_PHS );
-		break;
-	case MULTICAST_PVS_R:
-		flags |= MSG_RELIABLE;
+        BSP_ClusterVis( sv.cm.cache, mask, leaf1->cluster, DVIS_PHS );
+        break;
+    case MULTICAST_PVS_R:
+        flags |= MSG_RELIABLE;
         // intentional fallthrough
-	case MULTICAST_PVS:
-		leaf1 = CM_PointLeaf( &sv.cm, origin );
+    case MULTICAST_PVS:
+        leaf1 = CM_PointLeaf( &sv.cm, origin );
         leafnum = leaf1 - sv.cm.cache->leafs;
-		BSP_ClusterVis( sv.cm.cache, mask, leaf1->cluster, DVIS_PVS );
-		break;
-	default:
-		Com_Error( ERR_DROP, "SV_Multicast: bad to: %i", to );
-	}
+        BSP_ClusterVis( sv.cm.cache, mask, leaf1->cluster, DVIS_PVS );
+        break;
+    default:
+        Com_Error( ERR_DROP, "SV_Multicast: bad to: %i", to );
+    }
 
-	// send the data to all relevent clients
+    // send the data to all relevent clients
     FOR_EACH_CLIENT( client ) {
-		if( client->state < cs_primed ) {
-			continue;
-		}
-		// do not send unreliables to connecting clients
-		if( !( flags & MSG_RELIABLE ) && ( client->state != cs_spawned ||
+        if( client->state < cs_primed ) {
+            continue;
+        }
+        // do not send unreliables to connecting clients
+        if( !( flags & MSG_RELIABLE ) && ( client->state != cs_spawned ||
             client->download || ( client->flags & CF_NODATA ) ) )
         {
-			continue; 
-		}
+            continue; 
+        }
 
-		if( leaf1 ) {
-			// find the client's PVS
+        if( leaf1 ) {
+            // find the client's PVS
 #if 0
-	        player_state_t *ps = &client->edict->client->ps;
-			VectorMA( ps->viewoffset, 0.125f, ps->pmove.origin, org );
+            player_state_t *ps = &client->edict->client->ps;
+            VectorMA( ps->viewoffset, 0.125f, ps->pmove.origin, org );
 #else
             // FIXME: for some strange reason, game code assumes the server
             // uses entity origin for PVS/PHS culling, not the view origin
-			VectorCopy( client->edict->s.origin, org );
+            VectorCopy( client->edict->s.origin, org );
 #endif
-			leaf2 = CM_PointLeaf( &sv.cm, org );
-			if( !CM_AreasConnected( &sv.cm, leaf1->area, leaf2->area ) ) {
-				continue;
+            leaf2 = CM_PointLeaf( &sv.cm, org );
+            if( !CM_AreasConnected( &sv.cm, leaf1->area, leaf2->area ) ) {
+                continue;
             }
-			if( !Q_IsBitSet( mask, leaf2->cluster ) ) {
-				continue;
-			}
-		}
+            if( !Q_IsBitSet( mask, leaf2->cluster ) ) {
+                continue;
+            }
+        }
 
-		SV_ClientAddMessage( client, flags );
-	}
+        SV_ClientAddMessage( client, flags );
+    }
 
 #if USE_MVD_SERVER
     // add to MVD datagram
-	SV_MvdMulticast( leafnum, to );
+    SV_MvdMulticast( leafnum, to );
 #endif
 
-	// clear the buffer 
-	SZ_Clear( &msg_write );
+    // clear the buffer 
+    SZ_Clear( &msg_write );
 }
 
 
@@ -340,76 +340,106 @@ void SV_ClientAddMessage( client_t *client, int flags ) {
     }
 #endif
 
-	if( !msg_write.cursize ) {
-		return;
-	}
+    if( !msg_write.cursize ) {
+        return;
+    }
 
 //    if( client->state > cs_zombie ) {
         client->AddMessage( client, msg_write.data, msg_write.cursize,
             ( flags & MSG_RELIABLE ) ? qtrue : qfalse );
   //  }
 
-	if( flags & MSG_CLEAR ) {
-		SZ_Clear( &msg_write );
-	}
+    if( flags & MSG_CLEAR ) {
+        SZ_Clear( &msg_write );
+    }
 }
 
-static inline void SV_PacketizedRemove( client_t *client, message_packet_t *msg ) {
-	List_Remove( &msg->entry );
+/*
+===============================================================================
 
-	if( msg->cursize > MSG_TRESHOLD ) {
-		Z_Free( msg );
+FRAME UPDATES - COMMON
+
+===============================================================================
+*/
+
+static inline void free_msg_packet( client_t *client, message_packet_t *msg ) {
+    List_Remove( &msg->entry );
+
+    if( msg->cursize > MSG_TRESHOLD ) {
+        if( msg->cursize > client->msg_dynamic_bytes ) {
+            Com_Error( ERR_FATAL, "%s: bad packet size", __func__ );
+        }
+        Z_Free( msg );
+        client->msg_dynamic_bytes -= msg->cursize;
     } else {
-        List_Insert( &client->msg_free, &msg->entry );
+        List_Insert( &client->msg_free_list, &msg->entry );
     }
 }
 
 #define FOR_EACH_MSG_SAFE( list )     LIST_FOR_EACH_SAFE( message_packet_t, msg, next, list, entry )
 
-void SV_PacketizedClear( client_t *client ) {
-	message_packet_t	*msg, *next;
+static void free_all_messages( client_t *client ) {
+    message_packet_t *msg, *next;
 
-    FOR_EACH_MSG_SAFE( &client->msg_used[0] ) {
-		SV_PacketizedRemove( client, msg );
-	}
-    FOR_EACH_MSG_SAFE( &client->msg_used[1] ) {
-		SV_PacketizedRemove( client, msg );
-	}
-    client->msg_bytes = 0;
+    FOR_EACH_MSG_SAFE( &client->msg_unreliable_list ) {
+        free_msg_packet( client, msg );
+    }
+    FOR_EACH_MSG_SAFE( &client->msg_reliable_list ) {
+        free_msg_packet( client, msg );
+    }
+    client->msg_unreliable_bytes = 0;
+    client->msg_dynamic_bytes = 0;
 }
 
-message_packet_t *SV_PacketizedAdd( client_t *client, byte *data,
-							  size_t len, qboolean reliable )
+static void add_msg_packet( client_t    *client,
+                            byte        *data,
+                            size_t      len,
+                            qboolean    reliable )
 {
-	message_packet_t	*msg;
+    message_packet_t    *msg;
 
-	if( len > MSG_TRESHOLD ) {
-		if( len > MAX_MSGLEN ) {
-			Com_Error( ERR_FATAL, "%s: oversize packet", __func__ );
-		}
-		msg = SV_Malloc( sizeof( *msg ) + len - MSG_TRESHOLD );
-	} else {
-        if( LIST_EMPTY( &client->msg_free ) ) {
-            Com_WPrintf( "Out of message slots for %s!\n", client->name );
-            if( reliable ) {
-                SV_PacketizedClear( client );
-                SV_DropClient( client, "no slot for reliable message" );
-            }
-            return NULL;
-        }
-        msg = LIST_FIRST( message_packet_t, &client->msg_free, entry );
-    	List_Remove( &msg->entry );
-	}
-
-	memcpy( msg->data, data, len );
-	msg->cursize = ( uint16_t )len;
-
-    List_Append( &client->msg_used[reliable], &msg->entry );
-    if( !reliable ) {
-        client->msg_bytes += len;
+    if( !client->msg_pool ) {
+        return; // already dropped
     }
 
-    return msg;
+    if( len > MSG_TRESHOLD ) {
+        if( len > MAX_MSGLEN ) {
+            Com_Error( ERR_FATAL, "%s: oversize packet", __func__ );
+        }
+        if( client->msg_dynamic_bytes + len > MAX_MSGLEN ) {
+            Com_WPrintf( "%s: %s: out of dynamic memory\n",
+                __func__, client->name );
+            goto overflowed;
+        }
+        msg = SV_Malloc( sizeof( *msg ) + len - MSG_TRESHOLD );
+        client->msg_dynamic_bytes += len;
+    } else {
+        if( LIST_EMPTY( &client->msg_free_list ) ) {
+            Com_WPrintf( "%s: %s: out of message slots\n",
+                __func__, client->name );
+            goto overflowed;
+        }
+        msg = LIST_FIRST( message_packet_t, &client->msg_free_list, entry );
+        List_Remove( &msg->entry );
+    }
+
+    memcpy( msg->data, data, len );
+    msg->cursize = ( uint16_t )len;
+
+    if( reliable ) {
+        List_Append( &client->msg_reliable_list, &msg->entry );
+    } else {
+        List_Append( &client->msg_unreliable_list, &msg->entry );
+        client->msg_unreliable_bytes += len;
+    }
+
+    return;
+
+overflowed:
+    if( reliable ) {
+        free_all_messages( client );
+        SV_DropClient( client, "reliable message overflowed" );
+    }
 }
 
 static void emit_snd( client_t *client, message_packet_t *msg ) {
@@ -423,7 +453,7 @@ static void emit_snd( client_t *client, message_packet_t *msg ) {
 
     // check if position needs to be explicitly sent
     if( !( flags & SND_POS ) ) {
-	    frame = &client->frames[sv.framenum & UPDATE_MASK];
+        frame = &client->frames[sv.framenum & UPDATE_MASK];
 
         for( i = 0; i < frame->numEntities; i++ ) {
             j = ( frame->firstEntity + i ) % svs.numEntityStates;
@@ -468,8 +498,8 @@ static inline void write_snd( client_t *client, message_packet_t *msg, size_t ma
     if( msg_write.cursize + MAX_SOUND_PACKET <= maxsize ) {
         emit_snd( client, msg );
     }
-	List_Remove( &msg->entry );
-    List_Insert( &client->msg_free, &msg->entry );
+    List_Remove( &msg->entry );
+    List_Insert( &client->msg_free_list, &msg->entry );
 }
 
 static inline void write_msg( client_t *client, message_packet_t *msg, size_t maxsize ) {
@@ -477,13 +507,13 @@ static inline void write_msg( client_t *client, message_packet_t *msg, size_t ma
     if( msg_write.cursize + msg->cursize <= maxsize ) {
         MSG_WriteData( msg->data, msg->cursize );
     }
-	SV_PacketizedRemove( client, msg );
+    free_msg_packet( client, msg );
 }
 
 static inline void emit_messages( client_t *client, size_t maxsize ) {
-	message_packet_t	*msg, *next;
+    message_packet_t    *msg, *next;
 
-    FOR_EACH_MSG_SAFE( &client->msg_used[0] ) {
+    FOR_EACH_MSG_SAFE( &client->msg_unreliable_list ) {
         if( msg->cursize ) {
             write_msg( client, msg, maxsize );
         } else {
@@ -495,82 +525,81 @@ static inline void emit_messages( client_t *client, size_t maxsize ) {
 /*
 ===============================================================================
 
-FRAME UPDATES - DEFAULT, R1Q2 AND Q2PRO CLIENTS (OLD NETCHAN)
+FRAME UPDATES - OLD NETCHAN
 
 ===============================================================================
 */
 
-
-void SV_ClientAddMessage_Old( client_t *client, byte *data,
-							  size_t len, qboolean reliable )
+static void add_message_old( client_t *client, byte *data,
+                              size_t len, qboolean reliable )
 {
-	if( len > client->netchan->maxpacketlen ) {
-		if( reliable ) {
-			SV_DropClient( client, "oversize reliable message" );
-		} else {
+    if( len > client->netchan->maxpacketlen ) {
+        if( reliable ) {
+            SV_DropClient( client, "oversize reliable message" );
+        } else {
             Com_DPrintf( "Dumped oversize unreliable for %s\n", client->name );
         }
-		return;
-	}
+        return;
+    }
 
-    SV_PacketizedAdd( client, data, len, reliable );
+    add_msg_packet( client, data, len, reliable );
 }
 
 /*
 =======================
-SV_ClientWriteReliableMessages_Old
+write_reliable_messages_old
 
 This should be the only place data is
 ever written to client->netchan.message
 =======================
 */
-void SV_ClientWriteReliableMessages_Old( client_t *client, size_t maxsize ) {
-	message_packet_t	*msg, *next;
+static void write_reliable_messages_old( client_t *client, size_t maxsize ) {
+    message_packet_t *msg, *next;
     int count;
 
-	if( client->netchan->reliable_length ) {
+    if( client->netchan->reliable_length ) {
 #if USE_CLIENT
-		if( sv_debug_send->integer > 1 ) {
-			Com_Printf( S_COLOR_BLUE"%s: unacked\n", client->name );
-		}
+        if( sv_debug_send->integer > 1 ) {
+            Com_Printf( S_COLOR_BLUE"%s: unacked\n", client->name );
+        }
 #endif
-		return;	// there is still outgoing reliable message pending
-	}
+        return;    // there is still outgoing reliable message pending
+    }
 
-	// find at least one reliable message to send
+    // find at least one reliable message to send
     count = 0;
-    FOR_EACH_MSG_SAFE( &client->msg_used[1] ) {
-		// stop if this msg doesn't fit (reliables must be delivered in order)
-		if( client->netchan->message.cursize + msg->cursize > maxsize ) {
-			if( !count ) {
-				Com_WPrintf( "Overflow on the first reliable message "
-					"for %s (should not happen).\n", client->name );
-			}
-			break;
-		}
+    FOR_EACH_MSG_SAFE( &client->msg_reliable_list ) {
+        // stop if this msg doesn't fit (reliables must be delivered in order)
+        if( client->netchan->message.cursize + msg->cursize > maxsize ) {
+            if( !count ) {
+                Com_WPrintf( "Overflow on the first reliable message "
+                    "for %s (should not happen).\n", client->name );
+            }
+            break;
+        }
 
 #if USE_CLIENT
-		if( sv_debug_send->integer > 1 ) {
-			Com_Printf( S_COLOR_BLUE"%s: wrt%d: %d\n",
+        if( sv_debug_send->integer > 1 ) {
+            Com_Printf( S_COLOR_BLUE"%s: wrt%d: %d\n",
                 client->name, count, msg->cursize );
-		}
+        }
 #endif
 
-		SZ_Write( &client->netchan->message, msg->data, msg->cursize );
-		SV_PacketizedRemove( client, msg );
+        SZ_Write( &client->netchan->message, msg->data, msg->cursize );
+        free_msg_packet( client, msg );
         count++;
-	}
+    }
 }
 
 static void repack_messages( client_t *client, size_t maxsize ) {
-	message_packet_t	*msg, *next;
+    message_packet_t *msg, *next;
 
-	if( msg_write.cursize + 4 > maxsize ) {
+    if( msg_write.cursize + 4 > maxsize ) {
         return;
     }
 
     // temp entities first
-    FOR_EACH_MSG_SAFE( &client->msg_used[0] ) {
+    FOR_EACH_MSG_SAFE( &client->msg_unreliable_list ) {
         if( !msg->cursize || msg->data[0] != svc_temp_entity ) {
             continue;
         }
@@ -584,23 +613,23 @@ static void repack_messages( client_t *client, size_t maxsize ) {
         write_msg( client, msg, maxsize );
     }
 
-	if( msg_write.cursize + 4 > maxsize ) {
+    if( msg_write.cursize + 4 > maxsize ) {
         return;
     }
 
     // then entity sounds
-    FOR_EACH_MSG_SAFE( &client->msg_used[0] ) {
+    FOR_EACH_MSG_SAFE( &client->msg_unreliable_list ) {
         if( !msg->cursize ) {
             write_snd( client, msg, maxsize );
         }
     }
 
-	if( msg_write.cursize + 4 > maxsize ) {
+    if( msg_write.cursize + 4 > maxsize ) {
         return;
     }
 
-	// then positioned sounds
-    FOR_EACH_MSG_SAFE( &client->msg_used[0] ) {
+    // then positioned sounds
+    FOR_EACH_MSG_SAFE( &client->msg_unreliable_list ) {
         if( msg->cursize && msg->data[0] == svc_sound ) {
             write_msg( client, msg, maxsize );
         }
@@ -611,52 +640,47 @@ static void repack_messages( client_t *client, size_t maxsize ) {
     }
 
     // then everything else left
-    FOR_EACH_MSG_SAFE( &client->msg_used[0] ) {
+    FOR_EACH_MSG_SAFE( &client->msg_unreliable_list ) {
         if( msg->cursize ) {
             write_msg( client, msg, maxsize );
         }
     }
 }
 
-/*
-=======================
-SV_ClientWriteDatagram_Old
-=======================
-*/
-void SV_ClientWriteDatagram_Old( client_t *client ) {
-	message_packet_t *msg;
-	size_t maxsize, cursize;
+static void write_datagram_old( client_t *client ) {
+    message_packet_t *msg;
+    size_t maxsize, cursize;
 
-	maxsize = client->netchan->maxpacketlen;
-	if( client->netchan->reliable_length ) {
-		// there is still unacked reliable message pending
-		maxsize -= client->netchan->reliable_length;
-	} else {
-		// find at least one reliable message to send
-		// and make sure to reserve space for it
-        if( !LIST_EMPTY( &client->msg_used[1] ) ) {
-            msg = LIST_FIRST( message_packet_t, &client->msg_used[1], entry );
+    maxsize = client->netchan->maxpacketlen;
+    if( client->netchan->reliable_length ) {
+        // there is still unacked reliable message pending
+        maxsize -= client->netchan->reliable_length;
+    } else {
+        // find at least one reliable message to send
+        // and make sure to reserve space for it
+        if( !LIST_EMPTY( &client->msg_reliable_list ) ) {
+            msg = LIST_FIRST( message_packet_t, &client->msg_reliable_list, entry );
             maxsize -= msg->cursize;
         }
-	}
+    }
 
-	// send over all the relevant entity_state_t
-	// and the player_state_t
-	client->WriteFrame( client );
-	if( msg_write.cursize > maxsize ) {
+    // send over all the relevant entity_state_t
+    // and the player_state_t
+    client->WriteFrame( client );
+    if( msg_write.cursize > maxsize ) {
 #if USE_CLIENT
-		if( sv_debug_send->integer ) {
-			Com_Printf( S_COLOR_BLUE"Frame overflowed for %s: %"PRIz" > %"PRIz"\n",
+        if( sv_debug_send->integer ) {
+            Com_Printf( S_COLOR_BLUE"Frame overflowed for %s: %"PRIz" > %"PRIz"\n",
                 client->name, msg_write.cursize, maxsize );
-		}
+        }
 #endif
-		SZ_Clear( &msg_write );
-	}
+        SZ_Clear( &msg_write );
+    }
 
-	// now write unreliable messages
-	// it is necessary for this to be after the WriteFrame
-	// so that entity references will be current
-    if( msg_write.cursize + client->msg_bytes > maxsize ) {
+    // now write unreliable messages
+    // it is necessary for this to be after the WriteFrame
+    // so that entity references will be current
+    if( msg_write.cursize + client->msg_unreliable_bytes > maxsize ) {
         // throw out some low priority effects
         repack_messages( client, maxsize );
     } else {
@@ -665,82 +689,82 @@ void SV_ClientWriteDatagram_Old( client_t *client ) {
     }
 
     // write at least one reliable message
-	SV_ClientWriteReliableMessages_Old( client,
+    write_reliable_messages_old( client,
         client->netchan->maxpacketlen - msg_write.cursize );
 
-	// send the datagram
-	cursize = client->netchan->Transmit( client->netchan,
+    // send the datagram
+    cursize = client->netchan->Transmit( client->netchan,
         msg_write.cursize, msg_write.data, client->numpackets );
 
-	// record the size for rate estimation
-	SV_CalcSendTime( client, cursize );
+    // record the size for rate estimation
+    SV_CalcSendTime( client, cursize );
 
-	SZ_Clear( &msg_write );
+    SZ_Clear( &msg_write );
 }
 
 /*
 ===============================================================================
 
-FRAME UPDATES - Q2PRO CLIENTS (NEW NETCHAN)
+FRAME UPDATES - NEW NETCHAN
 
 ===============================================================================
 */
 
-void SV_ClientAddMessage_New( client_t *client, byte *data,
-							  size_t len, qboolean reliable )
+static void add_message_new( client_t *client, byte *data,
+                              size_t len, qboolean reliable )
 {
     if( reliable ) {
-	    SZ_Write( &client->netchan->message, data, len );
+        SZ_Write( &client->netchan->message, data, len );
     } else {
-        SV_PacketizedAdd( client, data, len, qfalse );
+        add_msg_packet( client, data, len, qfalse );
     }
 }
 
-void SV_ClientWriteDatagram_New( client_t *client ) {
-	size_t cursize;
+static void write_datagram_new( client_t *client ) {
+    size_t cursize;
 
-	// send over all the relevant entity_state_t
-	// and the player_state_t
-	client->WriteFrame( client );
+    // send over all the relevant entity_state_t
+    // and the player_state_t
+    client->WriteFrame( client );
 
-	if( msg_write.overflowed ) {
-		// should never really happen
-		Com_WPrintf( "Frame overflowed for %s\n", client->name );
-		SZ_Clear( &msg_write );
-	}
+    if( msg_write.overflowed ) {
+        // should never really happen
+        Com_WPrintf( "Frame overflowed for %s\n", client->name );
+        SZ_Clear( &msg_write );
+    }
 
-	// now write unreliable messages
-	// for this client out to the message
-	// it is necessary for this to be after the WriteFrame
-	// so that entity references will be current
-    if( msg_write.cursize + client->msg_bytes > msg_write.maxsize ) {
-		Com_WPrintf( "Dumping datagram for %s\n", client->name );
+    // now write unreliable messages
+    // for this client out to the message
+    // it is necessary for this to be after the WriteFrame
+    // so that entity references will be current
+    if( msg_write.cursize + client->msg_unreliable_bytes > msg_write.maxsize ) {
+        Com_WPrintf( "Dumping datagram for %s\n", client->name );
     } else {
         emit_messages( client, msg_write.maxsize );
     }
 
 #if USE_CLIENT
-	if( sv_pad_packets->integer ) {
+    if( sv_pad_packets->integer ) {
         size_t pad = msg_write.cursize + sv_pad_packets->integer;
 
         if( pad > msg_write.maxsize ) {
             pad = msg_write.maxsize;
         }
-		for( ; pad > 0; pad-- ) {
-		    MSG_WriteByte( svc_nop );
-	    }
+        for( ; pad > 0; pad-- ) {
+            MSG_WriteByte( svc_nop );
+        }
     }
 #endif
 
-	// send the datagram
-	cursize = client->netchan->Transmit( client->netchan,
+    // send the datagram
+    cursize = client->netchan->Transmit( client->netchan,
         msg_write.cursize, msg_write.data, client->numpackets );
 
-	// record the size for rate estimation
-	SV_CalcSendTime( client, cursize );
+    // record the size for rate estimation
+    SV_CalcSendTime( client, cursize );
 
-	// clear the write buffer
-	SZ_Clear( &msg_write );
+    // clear the write buffer
+    SZ_Clear( &msg_write );
 }
 
 
@@ -753,12 +777,12 @@ COMMON STUFF
 */
 
 static void finish_frame( client_t *client ) {
-	message_packet_t	*msg, *next;
+    message_packet_t *msg, *next;
 
-    FOR_EACH_MSG_SAFE( &client->msg_used[0] ) {
-		SV_PacketizedRemove( client, msg );
-	}
-    client->msg_bytes = 0;
+    FOR_EACH_MSG_SAFE( &client->msg_unreliable_list ) {
+        free_msg_packet( client, msg );
+    }
+    client->msg_unreliable_bytes = 0;
 }
 
 /*
@@ -770,31 +794,31 @@ Clients in earlier connection state are handled in SV_SendAsyncPackets.
 =======================
 */
 void SV_SendClientMessages( void ) {
-	client_t	*client;
+    client_t    *client;
     size_t      cursize;
 
-	// send a message to each connected client
+    // send a message to each connected client
     FOR_EACH_CLIENT( client ) {
-		if( client->state != cs_spawned || client->download || ( client->flags & CF_NODATA ) )
+        if( client->state != cs_spawned || client->download || ( client->flags & CF_NODATA ) )
             goto finish;
 
-		// if the reliable message overflowed,
-		// drop the client (should never happen)
-		if( client->netchan->message.overflowed ) {
-			SZ_Clear( &client->netchan->message );
-			SV_DropClient( client, "overflowed" );
-		}
+        // if the reliable message overflowed,
+        // drop the client (should never happen)
+        if( client->netchan->message.overflowed ) {
+            SZ_Clear( &client->netchan->message );
+            SV_DropClient( client, "reliable message overflowed" );
+        }
 
-		// don't overrun bandwidth
-		if( SV_RateDrop( client ) ) {
+        // don't overrun bandwidth
+        if( SV_RateDrop( client ) ) {
 #if USE_CLIENT
-			if( sv_debug_send->integer ) {
-				Com_Printf( "Frame %d surpressed for %s\n",
+            if( sv_debug_send->integer ) {
+                Com_Printf( "Frame %d surpressed for %s\n",
                     sv.framenum, client->name );
-			}
+            }
 #endif
-			client->surpressCount++;
-		} else {
+            client->surpressCount++;
+        } else {
             // don't write any frame data until all fragments are sent
             if( client->netchan->fragment_pending ) {
                 cursize = client->netchan->TransmitNextFragment( client->netchan );
@@ -807,9 +831,110 @@ void SV_SendClientMessages( void ) {
         }
 
 finish:
-	    // clear all unreliable messages still left
+        // clear all unreliable messages still left
         finish_frame( client );
-	}
+    }
+}
 
+/*
+==================
+SV_SendAsyncPackets
+
+If the client is just connecting, it is pointless to wait another 100ms
+before sending next command and/or reliable acknowledge, send it as soon
+as client rate limit allows.
+
+For spawned clients, this is not used, as we are forced to send svc_frame
+packets synchronously with game DLL ticks.
+==================
+*/
+void SV_SendAsyncPackets( void ) {
+    qboolean    retransmit;
+    client_t    *client;
+    netchan_t   *netchan;
+    size_t      cursize;
+    
+    FOR_EACH_CLIENT( client ) {
+        // don't overrun bandwidth
+        if( svs.realtime - client->send_time < client->send_delta ) {
+            continue;
+        }
+
+        netchan = client->netchan;
+        
+        // make sure all fragments are transmitted first
+        if( netchan->fragment_pending ) {
+            cursize = netchan->TransmitNextFragment( netchan );
+#if USE_CLIENT
+            if( sv_debug_send->integer ) {
+                Com_Printf( S_COLOR_BLUE"%s: frag: %"PRIz"\n",
+                    client->name, cursize );
+            }
+#endif
+            goto calctime;
+        }
+
+        // spawned clients are handled elsewhere
+        if( client->state == cs_spawned && !client->download && !( client->flags & CF_NODATA ) ) {
+            continue;
+        }
+
+        // see if it's time to resend a (possibly dropped) packet
+        retransmit = com_localTime - netchan->last_sent > 1000 ? qtrue : qfalse;
+
+        // don't write new reliables if not yet acknowledged
+        if( netchan->reliable_length && !retransmit && client->state != cs_zombie ) {
+            continue;
+        }
+
+        // just update reliable if needed
+        if( netchan->type == NETCHAN_OLD ) {
+            write_reliable_messages_old( client, netchan->maxpacketlen );
+        }
+        if( netchan->message.cursize || netchan->reliable_ack_pending ||
+            netchan->reliable_length || retransmit )
+        {
+            cursize = netchan->Transmit( netchan, 0, NULL, 1 );
+#if USE_CLIENT
+            if( sv_debug_send->integer ) {
+                Com_Printf( S_COLOR_BLUE"%s: send: %"PRIz"\n",
+                    client->name, cursize );
+            }
+#endif
+calctime:
+            SV_CalcSendTime( client, cursize );
+        }
+    }
+}
+
+void SV_InitClientSend( client_t *newcl ) {
+    int i;
+
+    List_Init( &newcl->msg_free_list );
+    List_Init( &newcl->msg_unreliable_list );
+    List_Init( &newcl->msg_reliable_list );
+
+    newcl->msg_pool = SV_Malloc( sizeof( message_packet_t ) * MSG_POOLSIZE );
+    for( i = 0; i < MSG_POOLSIZE; i++ ) {
+        List_Append( &newcl->msg_free_list, &newcl->msg_pool[i].entry );
+    }
+
+    // setup protocol
+    if( newcl->netchan->type == NETCHAN_NEW ) {
+        newcl->AddMessage = add_message_new;
+        newcl->WriteDatagram = write_datagram_new;
+    } else {
+        newcl->AddMessage = add_message_old;
+        newcl->WriteDatagram = write_datagram_old;
+    }
+}
+
+void SV_ShutdownClientSend( client_t *client ) {
+    free_all_messages( client );
+
+    Z_Free( client->msg_pool );
+    client->msg_pool = NULL;
+
+    List_Init( &client->msg_free_list );
 }
 

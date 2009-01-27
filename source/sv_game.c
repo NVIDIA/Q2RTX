@@ -577,7 +577,7 @@ static void PF_StartSound( edict_t *edict, int channel,
             continue;
         }
 
-        if( LIST_EMPTY( &client->msg_free ) ) {
+        if( LIST_EMPTY( &client->msg_free_list ) ) {
             Com_WPrintf( "%s: %s: out of message slots\n",
                 __func__, client->name );
             continue;
@@ -593,7 +593,7 @@ static void PF_StartSound( edict_t *edict, int channel,
             flags |= SND_POS;
         }
 
-        msg = LIST_FIRST( message_packet_t, &client->msg_free, entry );
+        msg = LIST_FIRST( message_packet_t, &client->msg_free_list, entry );
 
         msg->cursize = 0;
         msg->flags = flags;
@@ -607,8 +607,8 @@ static void PF_StartSound( edict_t *edict, int channel,
         }
 
         List_Remove( &msg->entry );
-        List_Append( &client->msg_used[0], &msg->entry );
-        client->msg_bytes += MAX_SOUND_PACKET;
+        List_Append( &client->msg_unreliable_list, &msg->entry );
+        client->msg_unreliable_bytes += MAX_SOUND_PACKET;
     }
 
 #if USE_MVD_SERVER

@@ -228,10 +228,12 @@ typedef struct client_s {
 	pmoveParams_t	pmp;
 
     // packetized messages
-	list_t			    msg_free;
-	list_t			    msg_used[2]; // 0 - unreliable, 1 - reliable
+	list_t			    msg_free_list;
+	list_t			    msg_unreliable_list;
+	list_t			    msg_reliable_list;
 	message_packet_t	*msg_pool;
-    size_t              msg_bytes; // total size of unreliable datagram
+    size_t              msg_unreliable_bytes; // total size of unreliable datagram
+    size_t              msg_dynamic_bytes; // total size of dynamic memory allocated
 
     // baselines are allocated per client
     entity_state_t  *baselines[SV_BASELINES_CHUNKS];
@@ -422,8 +424,6 @@ void SV_InitOperatorCommands (void);
 void SV_UserinfoChanged (client_t *cl);
 void SV_UpdateUserinfo( char *userinfo );
 
-void SV_SendAsyncPackets( void );
-
 qboolean SV_RateLimited( ratelimit_t *r );
 void SV_RateInit( ratelimit_t *r, int limit, int period );
 
@@ -459,8 +459,8 @@ extern	char	sv_outputbuf[SV_OUTPUTBUF_LENGTH];
 
 void SV_FlushRedirect( int redirected, char *outputbuf, size_t len );
 
-void SV_DemoCompleted (void);
 void SV_SendClientMessages (void);
+void SV_SendAsyncPackets( void );
 
 void SV_Multicast (vec3_t origin, multicast_t to);
 void SV_ClientPrintf( client_t *cl, int level, const char *fmt, ... ) q_printf( 3, 4 );
@@ -468,17 +468,8 @@ void SV_BroadcastPrintf( int level, const char *fmt, ... ) q_printf( 2, 3 );
 void SV_ClientCommand( client_t *cl, const char *fmt, ... ) q_printf( 2, 3 );
 void SV_BroadcastCommand( const char *fmt, ... ) q_printf( 1, 2 );
 void SV_ClientAddMessage( client_t *client, int flags );
-void SV_PacketizedClear( client_t *client );
-
-void SV_ClientWriteDatagram_Old( client_t *client );
-void SV_ClientAddMessage_Old( client_t *client, byte *data,
-							  size_t length, qboolean reliable );
-void SV_ClientWriteReliableMessages_Old( client_t *client, size_t maxsize );
-
-void SV_ClientWriteDatagram_New( client_t *client );
-void SV_ClientAddMessage_New( client_t *client, byte *data,
-							  size_t length, qboolean reliable );
-
+void SV_ShutdownClientSend( client_t *client );
+void SV_InitClientSend( client_t *newcl );
 void SV_CalcSendTime( client_t *client, size_t messageSize );
 
 #if USE_MVD_SERVER

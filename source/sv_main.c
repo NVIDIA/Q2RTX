@@ -85,9 +85,7 @@ cvar_t  *g_features;
 
 void SV_RemoveClient( client_t *client ) {
     if( client->msg_pool ) {
-        SV_PacketizedClear( client );
-        Z_Free( client->msg_pool );
-        client->msg_pool = NULL;
+        SV_ShutdownClientSend( client );
     }
 
     if( client->netchan ) {
@@ -887,23 +885,8 @@ static void SVC_DirectConnect( void ) {
     Netchan_OutOfBand( NS_SERVER, &net_from, "client_connect%s%s%s map=%s",
         ncstring, acstring, dlstring, newcl->mapname );
 
-    List_Init( &newcl->msg_free );
-    List_Init( &newcl->msg_used[0] );
-    List_Init( &newcl->msg_used[1] );
+    SV_InitClientSend( newcl );
 
-    newcl->msg_pool = SV_Malloc( sizeof( message_packet_t ) * MSG_POOLSIZE );
-    for( i = 0; i < MSG_POOLSIZE; i++ ) {
-        List_Append( &newcl->msg_free, &newcl->msg_pool[i].entry );
-    }
-
-    // setup protocol
-    if( nctype == NETCHAN_NEW ) {
-        newcl->AddMessage = SV_ClientAddMessage_New;
-        newcl->WriteDatagram = SV_ClientWriteDatagram_New;
-    } else {
-        newcl->AddMessage = SV_ClientAddMessage_Old;
-        newcl->WriteDatagram = SV_ClientWriteDatagram_Old;
-    }
     if( protocol == PROTOCOL_VERSION_DEFAULT ) {
         newcl->WriteFrame = SV_WriteFrameToClient_Default;
     } else {
@@ -1259,77 +1242,6 @@ void SV_ProcessEvents( void ) {
     }
 }
 
-
-/*
-==================
-SV_SendAsyncPackets
-
-If the client is just connecting, it is pointless to wait another 100ms
-before sending next command and/or reliable acknowledge, send it as soon
-as client rate limit allows.
-
-For spawned clients, this is not used, as we are forced to send svc_frame
-packets synchronously with game DLL ticks.
-==================
-*/
-void SV_SendAsyncPackets( void ) {
-    qboolean    retransmit;
-    client_t    *client;
-    netchan_t   *netchan;
-    size_t      cursize;
-    
-    FOR_EACH_CLIENT( client ) {
-        // don't overrun bandwidth
-        if( svs.realtime - client->send_time < client->send_delta ) {
-            continue;
-        }
-
-        netchan = client->netchan;
-        
-        // make sure all fragments are transmitted first
-        if( netchan->fragment_pending ) {
-            cursize = netchan->TransmitNextFragment( netchan );
-#if USE_CLIENT
-            if( sv_debug_send->integer ) {
-                Com_Printf( S_COLOR_BLUE"%s: frag: %"PRIz"\n",
-                    client->name, cursize );
-            }
-#endif
-            goto calctime;
-        }
-
-        // spawned clients are handled elsewhere
-        if( client->state == cs_spawned && !client->download && !( client->flags & CF_NODATA ) ) {
-            continue;
-        }
-
-        // see if it's time to resend a (possibly dropped) packet
-        retransmit = com_localTime - netchan->last_sent > 1000 ? qtrue : qfalse;
-
-        // don't write new reliables if not yet acknowledged
-        if( netchan->reliable_length && !retransmit && client->state != cs_zombie ) {
-            continue;
-        }
-
-        // just update reliable if needed
-        if( netchan->type == NETCHAN_OLD ) {
-            SV_ClientWriteReliableMessages_Old( client, netchan->maxpacketlen );
-        }
-        if( netchan->message.cursize || netchan->reliable_ack_pending ||
-            netchan->reliable_length || retransmit )
-        {
-            cursize = netchan->Transmit( netchan, 0, NULL, 1 );
-#if USE_CLIENT
-            if( sv_debug_send->integer ) {
-                Com_Printf( S_COLOR_BLUE"%s: send: %"PRIz"\n",
-                    client->name, cursize );
-            }
-#endif
-calctime:
-            SV_CalcSendTime( client, cursize );
-        }
-    }
-}
 
 /*
 ==================
