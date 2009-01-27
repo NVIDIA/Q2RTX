@@ -769,7 +769,7 @@ static void SV_Lag_f( void ) {
     c2s = ( (float)cl->netchan->total_dropped /
         cl->netchan->total_received ) * 100.0f;
 
-    SV_ClientPrintf( cl, PRINT_HIGH,
+    SV_ClientPrintf( sv_client, PRINT_HIGH,
         "Lag stats for:       %s\n"
         "RTT (min/avg/max):   %d/%d/%d ms\n"
         "Server to client PL: %.2f%% (approx)\n"
