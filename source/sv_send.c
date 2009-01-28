@@ -369,14 +369,17 @@ static inline void free_msg_packet( client_t *client, message_packet_t *msg ) {
         if( msg->cursize > client->msg_dynamic_bytes ) {
             Com_Error( ERR_FATAL, "%s: bad packet size", __func__ );
         }
-        Z_Free( msg );
         client->msg_dynamic_bytes -= msg->cursize;
+        Z_Free( msg );
     } else {
         List_Insert( &client->msg_free_list, &msg->entry );
     }
 }
 
-#define FOR_EACH_MSG_SAFE( list )     LIST_FOR_EACH_SAFE( message_packet_t, msg, next, list, entry )
+#define FOR_EACH_MSG_SAFE( list ) \
+    LIST_FOR_EACH_SAFE( message_packet_t, msg, next, list, entry )
+#define MSG_FIRST( list ) \
+    LIST_FIRST( message_packet_t, list, entry )
 
 static void free_all_messages( client_t *client ) {
     message_packet_t *msg, *next;
@@ -419,7 +422,7 @@ static void add_msg_packet( client_t    *client,
                 __func__, client->name );
             goto overflowed;
         }
-        msg = LIST_FIRST( message_packet_t, &client->msg_free_list, entry );
+        msg = MSG_FIRST( &client->msg_free_list );
         List_Remove( &msg->entry );
     }
 
@@ -465,7 +468,8 @@ static void emit_snd( client_t *client, message_packet_t *msg ) {
         if( i == frame->numEntities ) {
 #if USE_CLIENT
             if( sv_debug_send->integer ) {
-                Com_Printf( S_COLOR_BLUE "Forcing position on entity %d for %s\n",
+                Com_Printf( S_COLOR_BLUE
+                    "Forcing position on entity %d for %s\n",
                     entnum, client->name );
             }
 #endif
@@ -572,8 +576,9 @@ static void write_reliable_messages_old( client_t *client, size_t maxsize ) {
         // stop if this msg doesn't fit (reliables must be delivered in order)
         if( client->netchan->message.cursize + msg->cursize > maxsize ) {
             if( !count ) {
-                Com_WPrintf( "Overflow on the first reliable message "
-                    "for %s (should not happen).\n", client->name );
+                // this should never happen
+                Com_WPrintf( "%s: %s: overflow on the first message\n",
+                    __func__, client->name );
             }
             break;
         }
@@ -659,7 +664,7 @@ static void write_datagram_old( client_t *client ) {
         // find at least one reliable message to send
         // and make sure to reserve space for it
         if( !LIST_EMPTY( &client->msg_reliable_list ) ) {
-            msg = LIST_FIRST( message_packet_t, &client->msg_reliable_list, entry );
+            msg = MSG_FIRST( &client->msg_reliable_list );
             maxsize -= msg->cursize;
         }
     }
@@ -880,7 +885,7 @@ void SV_SendAsyncPackets( void ) {
         }
 
         // see if it's time to resend a (possibly dropped) packet
-        retransmit = com_localTime - netchan->last_sent > 1000 ? qtrue : qfalse;
+        retransmit = ( com_localTime - netchan->last_sent > 1000 );
 
         // don't write new reliables if not yet acknowledged
         if( netchan->reliable_length && !retransmit && client->state != cs_zombie ) {
