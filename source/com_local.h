@@ -181,7 +181,7 @@ void	Cmd_AddCommand( const char *cmd_name, xcommand_t function );
 void    Cmd_Deregister( const cmdreg_t *reg );
 void	Cmd_RemoveCommand( const char *cmd_name );
 
-void Cmd_AddMacro( const char *name, xmacro_t function );
+void    Cmd_AddMacro( const char *name, xmacro_t function );
 
 int		Cmd_Argc( void );
 char	*Cmd_Argv( int arg );
@@ -189,12 +189,12 @@ char	*Cmd_Args( void );
 char	*Cmd_RawArgs( void );
 char	*Cmd_ArgsFrom( int from );
 char	*Cmd_RawArgsFrom( int from );
-void	Cmd_ArgsBuffer( char *buffer, int bufferSize );
-void	Cmd_ArgvBuffer( int arg, char *buffer, int bufferSize );
-size_t Cmd_ArgOffset( int arg );
-int Cmd_FindArgForOffset( size_t offset );
-char *Cmd_RawString( void );
-void Cmd_Shift( void );
+size_t	Cmd_ArgsBuffer( char *buffer, size_t size );
+size_t	Cmd_ArgvBuffer( int arg, char *buffer, size_t size );
+size_t  Cmd_ArgOffset( int arg );
+int     Cmd_FindArgForOffset( size_t offset );
+char    *Cmd_RawString( void );
+void    Cmd_Shift( void );
 // The functions that execute commands get their parameters with these
 // functions. Cmd_Argv () will return an empty string, not a NULL
 // if arg > argc, so string operations are always safe.
@@ -405,6 +405,12 @@ MISC
 
 #define	MAXPRINTMSG		4096
 
+typedef enum {
+	KILL_RESTART,
+	KILL_DISCONNECT,
+	KILL_DROP
+} killtype_t;
+
 typedef struct {
 	const char	*name;
 	void	(* const func)( void );
@@ -432,7 +438,7 @@ void		Com_EndRedirect (void);
 void		Com_LevelPrint( comPrintType_t type, const char *str );
 void		Com_LevelError( comErrorType_t code, const char *str ) q_noreturn;
 
-void 		Com_Quit( const char *reason );
+void 		Com_Quit( const char *reason, killtype_t type );
 
 byte		COM_BlockSequenceCRCByte (byte *base, size_t length, int sequence);
 
@@ -443,6 +449,7 @@ void        Com_Generic_c( genctx_t *ctx, int argnum );
 #if USE_CLIENT
 void        Com_Color_g( genctx_t *ctx );
 #endif
+void        Com_PlayerToEntityState( const player_state_t *ps, entity_state_t *es );
 
 qboolean    Prompt_AddMatch( genctx_t *ctx, const char *s );
 
@@ -453,6 +460,10 @@ size_t      Com_Time_m( char *buffer, size_t size );
 size_t      Com_Uptime_m( char *buffer, size_t size );
 
 uint32_t    Com_BlockChecksum( void *buffer, size_t len );
+
+#ifdef __unix__
+void        Com_FlushLogs( void );
+#endif
 
 #if USE_CLIENT
 #define Com_IsDedicated() ( dedicated->integer != 0 )
@@ -476,16 +487,16 @@ extern	cvar_t	*sv_paused;
 extern	cvar_t	*com_timedemo;
 extern	cvar_t	*com_sleep;
 
-extern	cvar_t *allow_download;
-extern	cvar_t *allow_download_players;
-extern	cvar_t *allow_download_models;
-extern	cvar_t *allow_download_sounds;
-extern	cvar_t *allow_download_maps;
-extern	cvar_t *allow_download_textures;
-extern	cvar_t *allow_download_pics;
-extern	cvar_t *allow_download_others;
+extern	cvar_t  *allow_download;
+extern	cvar_t  *allow_download_players;
+extern	cvar_t  *allow_download_models;
+extern	cvar_t  *allow_download_sounds;
+extern	cvar_t  *allow_download_maps;
+extern	cvar_t  *allow_download_textures;
+extern	cvar_t  *allow_download_pics;
+extern	cvar_t  *allow_download_others;
 
-extern  cvar_t *rcon_password;
+extern  cvar_t  *rcon_password;
 
 #if USE_CLIENT
 // host_speeds times
@@ -509,6 +520,6 @@ extern const cmd_option_t o_record[];
 
 void Qcommon_Init( int argc, char **argv );
 void Qcommon_Frame( void );
-void Qcommon_Shutdown( qboolean fatalError );
+void Qcommon_Shutdown( void );
 
 

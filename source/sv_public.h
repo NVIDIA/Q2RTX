@@ -27,12 +27,6 @@ typedef enum {
 #endif
 } server_state_t;
 
-typedef enum {
-	KILL_RESTART,
-	KILL_DISCONNECT,
-	KILL_DROP
-} killtype_t;
-
 void SV_ProcessEvents( void );
 void SV_Init (void);
 void SV_Shutdown( const char *finalmsg, killtype_t type );

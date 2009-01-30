@@ -725,7 +725,7 @@ void VID_PumpEvents( void ) {
 
     while( PeekMessage( &msg, NULL, 0, 0, PM_REMOVE ) ) {
     	if( msg.message == WM_QUIT ) {
-    		Com_Quit( NULL );
+    		Com_Quit( NULL, KILL_DROP );
     		break;
     	}
         win.lastMsgTime = msg.time;

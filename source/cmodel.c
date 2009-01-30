@@ -1131,6 +1131,6 @@ void CM_Init( void ) {
     CM_InitBoxHull();
 
     map_noareas = Cvar_Get( "map_noareas", "0", 0 );
-    map_allsolid_bug = Cvar_Get( "map_allsolid_bug", "0", 0 );
+    map_allsolid_bug = Cvar_Get( "map_allsolid_bug", "1", 0 );
 }
 

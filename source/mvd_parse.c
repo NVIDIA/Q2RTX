@@ -718,7 +718,6 @@ extracting data from player state.
 static void MVD_PlayerToEntityStates( mvd_t *mvd ) {
     mvd_player_t *player;
     edict_t *edict;
-    vec_t pitch;
     int i;
 
     mvd->numplayers = 0;
@@ -738,15 +737,7 @@ static void MVD_PlayerToEntityStates( mvd_t *mvd ) {
             continue; // not present in this frame
         }
 
-        VectorScale( player->ps.pmove.origin, 0.125f, edict->s.origin );
-
-        pitch = player->ps.viewangles[PITCH];
-        if( pitch > 180 ) {
-            pitch -= 360;
-        }
-        edict->s.angles[PITCH] = pitch / 3;
-        edict->s.angles[YAW] = player->ps.viewangles[YAW];
-        edict->s.angles[ROLL] = 0;
+        Com_PlayerToEntityState( &player->ps, &edict->s );
 
         MVD_LinkEdict( mvd, edict );
     }

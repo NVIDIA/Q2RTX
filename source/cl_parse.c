@@ -162,8 +162,7 @@ static void CL_ParseDownload( void ) {
     int        size, percent;
 
     if( !cls.download.temp[0] ) {
-        Com_Error( ERR_DROP, "Server sending download, but "
-            "no download was requested" );
+        Com_Error( ERR_DROP, "%s: no download requested", __func__ );
     }
 
     // read the data
@@ -183,11 +182,11 @@ static void CL_ParseDownload( void ) {
     }
 
     if( size < 0 ) {
-        Com_Error( ERR_DROP, "CL_ParseDownload: bad size: %d", size );
+        Com_Error( ERR_DROP, "%s: bad size: %d", __func__, size );
     }
 
     if( msg_read.readcount + size > msg_read.cursize ) {
-        Com_Error( ERR_DROP, "CL_ParseDownload: read past end of message" );
+        Com_Error( ERR_DROP, "%s: read past end of message", __func__ );
     }
 
     // open the file if not opened yet
@@ -785,7 +784,8 @@ static void CL_ParseServerData( void ) {
     cl.servercount = MSG_ReadLong();
     attractloop = MSG_ReadByte();
 
-    Com_DPrintf( "Serverdata packet received (protocol=%d, servercount=%d, attractloop=%d)\n",
+    Com_DPrintf( "Serverdata packet received "
+        "(protocol=%d, servercount=%d, attractloop=%d)\n",
         protocol, cl.servercount, attractloop );
 
     // check protocol
@@ -848,10 +848,17 @@ static void CL_ParseServerData( void ) {
             Com_Error( ERR_DROP, "'Enhanced' R1Q2 servers are not supported" );
         }
         i = MSG_ReadShort();
+        // for some reason, R1Q2 servers always report the highest protocol
+        // version they support, while still using the lower version
+        // client specified in the 'connect' packet. oh well...
         if( !R1Q2_SUPPORTED( i ) ) {
-            Com_Error( ERR_DROP, "Unsupported R1Q2 protocol version %d.\n"
-                "Current client version is %d.", i, PROTOCOL_VERSION_R1Q2_CURRENT );
+            Com_WPrintf(
+                "R1Q2 server reports unsupported protocol version %d.\n"
+                "Assuming it really uses our current client version %d.\n"
+                "Things will break if it does not!\n", i, PROTOCOL_VERSION_R1Q2_CURRENT );
+            clamp( i, PROTOCOL_VERSION_R1Q2_MINIMUM, PROTOCOL_VERSION_R1Q2_CURRENT );
         }
+        Com_DPrintf( "Using minor R1Q2 protocol version %d\n", i );
         cls.protocolVersion = i;
         i = MSG_ReadByte();
         if( i ) { // seems to be no longer used
@@ -865,9 +872,11 @@ static void CL_ParseServerData( void ) {
     } else if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO ) {
         i = MSG_ReadShort();
         if( !Q2PRO_SUPPORTED( i ) ) {
-            Com_Error( ERR_DROP, "Unsupported Q2PRO protocol version %d.\n"
+            Com_Error( ERR_DROP,
+                "Q2PRO server reports unsupported protocol version %d.\n"
                 "Current client version is %d.", i, PROTOCOL_VERSION_Q2PRO_CURRENT );
         }
+        Com_DPrintf( "Using minor Q2PRO protocol version %d\n", i );
         cls.protocolVersion = i;
         MSG_ReadByte(); // used to be gametype
         cl.pmp.strafeHack = MSG_ReadByte();
@@ -1517,8 +1526,14 @@ void CL_ParseServerMessage( void ) {
 
         // copy protocol invariant stuff
         if( cls.demo.recording && !cls.demo.paused ) {
-            SZ_Write( &cls.demo.buffer, msg_read.data + readcount,
-                msg_read.readcount - readcount );
+            size_t len = msg_read.readcount - readcount;
+
+            // with modern servers, it is easily possible to overflow
+            // the small protocol 34 demo frame... attempt to preserve
+            // reliable messages at least, which should come first
+            if( cls.demo.buffer.cursize + len < cls.demo.buffer.maxsize ) {
+                SZ_Write( &cls.demo.buffer, msg_read.data + readcount, len );
+            }
         }
     }
 

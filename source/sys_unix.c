@@ -594,7 +594,7 @@ char *Sys_GetCurrentDirectory( void ) {
 void Sys_AddDefaultConfig( void ) {
     FILE *fp;
     struct stat st;
-    char *text;
+    size_t len, r;
 
     fp = fopen( SYS_SITECFG_NAME, "r" );
     if( !fp ) {
@@ -602,11 +602,17 @@ void Sys_AddDefaultConfig( void ) {
     }
 
     if( fstat( fileno( fp ), &st ) == 0 ) {
-        text = Cbuf_Alloc( &cmd_buffer, st.st_size );
-        if( text ) {
-            Com_Printf( "Execing " SYS_SITECFG_NAME "\n" );
-            fread( text, st.st_size, 1, fp );
+        Com_Printf( "Execing " SYS_SITECFG_NAME "\n" );
+
+        len = st.st_size;
+        if( len >= cmd_buffer.maxsize ) {
+            len = cmd_buffer.maxsize - 1;
         }
+
+        r = fread( cmd_buffer.text, 1, len, fp );
+        cmd_buffer.text[r] = 0;
+
+        cmd_buffer.cursize = COM_Compress( cmd_buffer.text );
     }
 
     fclose( fp );
@@ -648,13 +654,17 @@ void Sys_FixFPCW( void ) {
 #endif
 }
 
+static void hup_handler( int signum ) {
+    Com_FlushLogs();
+}
+
 static void term_handler( int signum ) {
 #ifdef _GNU_SOURCE
     Com_Printf( "%s\n", strsignal( signum ) );
 #else
     Com_Printf( "Received signal %d, exiting\n", signum );
 #endif
-    Com_Quit( NULL );
+    Com_Quit( NULL, KILL_DROP );
 }
 
 static void kill_handler( int signum ) {
@@ -726,8 +736,8 @@ void Sys_Init( void ) {
         signal( SIGHUP, term_handler );
     } else
 #endif
-    {
-        signal( SIGHUP, SIG_IGN );
+    if( Com_IsDedicated() ) {
+        signal( SIGHUP, hup_handler );
     }
 
     sys_parachute = Cvar_Get( "sys_parachute", "1", CVAR_NOSET );

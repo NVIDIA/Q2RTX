@@ -303,3 +303,4 @@ Q2PRO anticheat server interface is implemented on top of R1Q2 reference
 implementation. All R1Q2 variables and commands related to anticheat are
 supported, except of `sv_anticheat_nag_*`, `sv_anticheat_client_restrictions`
 and `sv_anticheat_force_protocol35` variables.
+

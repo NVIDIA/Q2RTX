@@ -445,7 +445,7 @@ void VID_PumpEvents( void ) {
             Activate();
             break;
         case SDL_QUIT:
-            Com_Quit( NULL );
+            Com_Quit( NULL, KILL_DROP );
             break;
         case SDL_VIDEORESIZE:
             if( sdl.surface->flags & SDL_RESIZABLE ) {

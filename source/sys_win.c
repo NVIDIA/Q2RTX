@@ -1074,7 +1074,7 @@ static int Sys_Main( int argc, char **argv ) {
         Qcommon_Frame();
     }
 
-    Com_Quit( NULL );
+    Com_Quit( NULL, KILL_DROP );
 
 #if USE_DBGHELP
     } __except( Sys_ExceptionHandler( GetExceptionCode(), GetExceptionInformation() ) ) {

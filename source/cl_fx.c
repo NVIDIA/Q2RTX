@@ -1008,7 +1008,7 @@ void CL_ParticleEffect3 (vec3_t org, vec3_t dir, int color, int count)
 CL_TeleporterParticles
 ===============
 */
-void CL_TeleporterParticles (entity_state_t *ent)
+void CL_TeleporterParticles (vec3_t org)
 {
 	int			i, j;
 	cparticle_t	*p;
@@ -1027,11 +1027,11 @@ void CL_TeleporterParticles (entity_state_t *ent)
 
 		for (j=0 ; j<2 ; j++)
 		{
-			p->org[j] = ent->origin[j] - 16 + (rand()&31);
+			p->org[j] = org[j] - 16 + (rand()&31);
 			p->vel[j] = crand()*14;
 		}
 
-		p->org[2] = ent->origin[2] - 8 + (rand()&7);
+		p->org[2] = org[2] - 8 + (rand()&7);
 		p->vel[2] = 80 + (rand()&7);
 
 		p->accel[0] = p->accel[1] = 0;
@@ -1174,7 +1174,7 @@ void CL_BigTeleportParticles (vec3_t org)
 	int			i;
 	cparticle_t	*p;
 	float		angle, dist;
-	static int colortable[4] = {2*8,13*8,21*8,18*8};
+	static const int colortable[4] = {2*8,13*8,21*8,18*8};
 
 	for (i=0 ; i<4096 ; i++)
 	{
@@ -2346,38 +2346,41 @@ void CL_AddParticles (void)
 CL_EntityEvent
 
 An entity has just been parsed that has an event value
-
-the female events are there for backwards compatability
 ==============
 */
 extern qhandle_t cl_sfx_footsteps[4];
 
-void CL_EntityEvent (entity_state_t *ent)
+void CL_EntityEvent (int number)
 {
-	centity_t *cent = &cl_entities[ent->number];
+	centity_t *cent = &cl_entities[number];
 
-	switch (ent->event)
+	// EF_TELEPORTER acts like an event, but is not cleared each frame
+	if( cent->current.effects & EF_TELEPORTER ) {
+		CL_TeleporterParticles( cent->current.origin );
+    }
+
+	switch (cent->current.event)
 	{
 	case EV_ITEM_RESPAWN:
-		S_StartSound (NULL, ent->number, CHAN_WEAPON, S_RegisterSound("items/respawn1.wav"), 1, ATTN_IDLE, 0);
+		S_StartSound (NULL, number, CHAN_WEAPON, S_RegisterSound("items/respawn1.wav"), 1, ATTN_IDLE, 0);
 		CL_ItemRespawnParticles (cent->current.origin);
 		break;
 	case EV_PLAYER_TELEPORT:
-		S_StartSound (NULL, ent->number, CHAN_WEAPON, S_RegisterSound("misc/tele1.wav"), 1, ATTN_IDLE, 0);
+		S_StartSound (NULL, number, CHAN_WEAPON, S_RegisterSound("misc/tele1.wav"), 1, ATTN_IDLE, 0);
 		CL_TeleportParticles (cent->current.origin);
 		break;
 	case EV_FOOTSTEP:
 		if (cl_footsteps->integer)
-			S_StartSound (NULL, ent->number, CHAN_BODY, cl_sfx_footsteps[rand()&3], 1, ATTN_NORM, 0);
+			S_StartSound (NULL, number, CHAN_BODY, cl_sfx_footsteps[rand()&3], 1, ATTN_NORM, 0);
 		break;
 	case EV_FALLSHORT:
-		S_StartSound (NULL, ent->number, CHAN_AUTO, S_RegisterSound ("player/land1.wav"), 1, ATTN_NORM, 0);
+		S_StartSound (NULL, number, CHAN_AUTO, S_RegisterSound ("player/land1.wav"), 1, ATTN_NORM, 0);
 		break;
 	case EV_FALL:
-		S_StartSound (NULL, ent->number, CHAN_AUTO, S_RegisterSound ("*fall2.wav"), 1, ATTN_NORM, 0);
+		S_StartSound (NULL, number, CHAN_AUTO, S_RegisterSound ("*fall2.wav"), 1, ATTN_NORM, 0);
 		break;
 	case EV_FALLFAR:
-		S_StartSound (NULL, ent->number, CHAN_AUTO, S_RegisterSound ("*fall1.wav"), 1, ATTN_NORM, 0);
+		S_StartSound (NULL, number, CHAN_AUTO, S_RegisterSound ("*fall1.wav"), 1, ATTN_NORM, 0);
 		break;
 	}
 }

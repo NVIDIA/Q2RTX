@@ -270,6 +270,22 @@ static void logfile_write( const char *string ) {
     FS_Write( text, len, com_logFile );
 }
 
+#ifdef __unix__
+/*
+=============
+Com_FlushLogs
+
+When called from SIGHUP handler on UNIX-like systems,
+will close and reopen logfile handle for rotation.
+=============
+*/
+void Com_FlushLogs( void ) {
+    if( logfile_enable ) {
+        logfile_enable_changed( logfile_enable );
+    }
+}
+#endif
+
 /*
 =============
 Com_Printf
@@ -446,7 +462,7 @@ void Com_Error( comErrorType_t code, const char *fmt, ... ) {
 #if USE_CLIENT
     CL_Shutdown();
 #endif
-    Qcommon_Shutdown( qtrue );
+    Qcommon_Shutdown();
 
     Sys_Error( "%s", com_errorMsg );
 }
@@ -490,27 +506,36 @@ Both client and server can use this, and it will
 do the apropriate things.
 =============
 */
-void Com_Quit( const char *reason ) {
-    if( reason && *reason ) {
-        char buffer[MAX_STRING_TOKENS];
+void Com_Quit( const char *reason, killtype_t type ) {
+    char buffer[MAX_STRING_TOKENS];
+    char *what = type == KILL_RESTART ? "restarted" : "quit";
 
+    if( reason && *reason ) {
         Q_snprintf( buffer, sizeof( buffer ),
-            "Server quit: %s\n", reason );
-        SV_Shutdown( buffer, KILL_DROP );
+            "Server %s: %s\n", what, reason );
     } else {
-        SV_Shutdown( "Server quit\n", KILL_DROP );
+        Q_snprintf( buffer, sizeof( buffer ),
+            "Server %s\n", what );
     }
+    SV_Shutdown( buffer, type );
+
 #if USE_CLIENT
     CL_Shutdown();
 #endif
-    Qcommon_Shutdown( qfalse );
+    Qcommon_Shutdown();
 
     Sys_Quit();
 }
 
 static void Com_Quit_f( void ) {
-    Com_Quit( Cmd_Args() );
+    Com_Quit( Cmd_Args(), KILL_DROP );
 }
+
+#if !USE_CLIENT
+static void Com_Recycle_f( void ) {
+    Com_Quit( Cmd_Args(), KILL_RESTART );
+}
+#endif
 
 
 /*
@@ -1075,7 +1100,7 @@ size_t Com_Uptime_m( char *buffer, size_t size ) {
 }
 
 size_t Com_Random_m( char *buffer, size_t size ) {
-    return Q_scnprintf( buffer, size, "%d", ( rand() ^ ( rand() >> 8 ) ) % 10 );
+    return Q_scnprintf( buffer, size, "%d", rand_byte() % 10 );
 }
 
 static size_t Com_MapList_m( char *buffer, size_t size ) {
@@ -1232,6 +1257,20 @@ void Com_Color_g( genctx_t *ctx ) {
     }
 }
 #endif
+
+void Com_PlayerToEntityState( const player_state_t *ps, entity_state_t *es ) {
+    vec_t pitch;
+
+    VectorScale( ps->pmove.origin, 0.125f, es->origin );
+
+    pitch = ps->viewangles[PITCH];
+    if( pitch > 180 ) {
+        pitch -= 360;
+    }
+    es->angles[PITCH] = pitch / 3;
+    es->angles[YAW] = ps->viewangles[YAW];
+    es->angles[ROLL] = 0;
+}
 
 #if USE_CLIENT || USE_MVD_CLIENT || USE_MVD_SERVER
 const cmd_option_t o_record[] = {
@@ -1463,6 +1502,9 @@ void Qcommon_Init( int argc, char **argv ) {
     Cmd_AddCommand( "lasterror", Com_LastError_f );
 
     Cmd_AddCommand( "quit", Com_Quit_f );
+#if !USE_CLIENT
+    Cmd_AddCommand( "recycle", Com_Recycle_f );
+#endif
 
     srand( Sys_Milliseconds() );
 
@@ -1646,7 +1688,7 @@ void Qcommon_Frame( void ) {
 Qcommon_Shutdown
 =================
 */
-void Qcommon_Shutdown( qboolean fatalError ) {
+void Qcommon_Shutdown( void ) {
     NET_Shutdown();
     logfile_close();
     FS_Shutdown( qtrue );

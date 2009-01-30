@@ -420,7 +420,7 @@ typedef struct cl_sustain_s {
 #define MAX_SUSTAINS        32
 void CL_ParticleSteamEffect2(cl_sustain_t *self);
 
-void CL_TeleporterParticles (entity_state_t *ent);
+void CL_TeleporterParticles (vec3_t org);
 void CL_ParticleEffect (vec3_t org, vec3_t dir, int color, int count);
 void CL_ParticleEffect2 (vec3_t org, vec3_t dir, int color, int count);
 
@@ -614,7 +614,7 @@ void CL_DiminishingTrail (vec3_t start, vec3_t end, centity_t *old, int flags);
 void CL_FlyEffect (centity_t *ent, vec3_t origin);
 void CL_BfgParticles (entity_t *ent);
 void CL_AddParticles (void);
-void CL_EntityEvent (entity_state_t *ent);
+void CL_EntityEvent (int number);
 // RAFAEL
 void CL_TrapParticles (entity_t *ent);
 

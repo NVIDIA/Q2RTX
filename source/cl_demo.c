@@ -40,7 +40,7 @@ void CL_WriteDemoMessage( sizebuf_t *buf ) {
 
     if( buf->overflowed ) {
         SZ_Clear( buf );
-        Com_WPrintf( "Demo message overflowed.\n" );
+        Com_WPrintf( "Demo message overflowed (should never happen).\n" );
         return;
     }
     if( !buf->cursize ) {
@@ -63,7 +63,7 @@ Writes a delta update of an entity_state_t list to the message.
 */
 static void CL_EmitPacketEntities( server_frame_t *from, server_frame_t *to ) {
     entity_state_t    *oldent, *newent;
-    int        oldindex, newindex;
+    int     oldindex, newindex;
     int     oldnum, newnum;
     int     i, from_num_entities;
 
@@ -172,8 +172,7 @@ void CL_EmitDemoFrame( void ) {
     CL_EmitPacketEntities( oldframe, &cl.frame );
 
     if( cls.demo.buffer.cursize + msg_write.cursize > cls.demo.buffer.maxsize ) {
-        Com_WPrintf( "Oversize demo frame: %"PRIz" bytes\n",
-            cls.demo.buffer.cursize + msg_write.cursize );
+        Com_DPrintf( "Demo frame overflowed\n" );
     } else {
         SZ_Write( &cls.demo.buffer, msg_write.data, msg_write.cursize );
         cl.demoframe = cl.frame.number;

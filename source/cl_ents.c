@@ -106,12 +106,13 @@ static void CL_SetEntityState( entity_state_t *state ) {
 	ent->serverframe = cl.frame.number;
 	ent->current = *state;
 
-    // copy predicted values for own entity
+    // override position of the player's own entity from playerstate
+    // needed since the Q2PRO server skips any origin/angles updates
+    // on it as an additional optimization
     if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO &&
         state->number == cl.frame.clientNum + 1 )
     {
-        VectorCopy( cl.playerEntityOrigin, ent->current.origin );
-        VectorCopy( cl.playerEntityAngles, ent->current.angles );
+        Com_PlayerToEntityState( &cl.frame.ps, &ent->current );
     }
 }
 
@@ -122,15 +123,19 @@ CL_DeltaFrame
 ==================
 */
 void CL_DeltaFrame( void ) {
+    centity_t           *ent;
 	entity_state_t		*state;
 	int					i, j;
 
     // set server time
 	cl.servertime = ( cl.frame.number - cl.serverdelta ) * cl.frametime;
-
-    VectorScale( cl.frame.ps.pmove.origin, 0.125f, cl.playerEntityOrigin );
-
 	cl.numSolidEntities = 0;
+
+    // update position of the player's own entity from playerstate
+    // useful in situations when player entity is invisible, but 
+    // server sends an effect referencing it's origin (such as MZ_LOGIN, etc)
+    ent = &cl_entities[ cl.frame.clientNum + 1 ];
+    Com_PlayerToEntityState( &cl.frame.ps, &ent->current );
 
 	for( i = 0; i < cl.frame.numEntities; i++ ) {
 		j = ( cl.frame.firstEntity + i ) & PARSE_ENTITIES_MASK;
@@ -140,14 +145,7 @@ void CL_DeltaFrame( void ) {
 		CL_SetEntityState( state );
 
 		// fire events
-		if( state->event ) {
-			CL_EntityEvent( state );
-		}
-
-		// EF_TELEPORTER acts like an event, but is not cleared each frame
-		if( state->effects & EF_TELEPORTER ) {
-			CL_TeleporterParticles( state );
-        }
+		CL_EntityEvent( state->number );
 	}
 
     if( cls.demo.recording ) {

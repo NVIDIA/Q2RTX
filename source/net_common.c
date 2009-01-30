@@ -571,7 +571,9 @@ neterr_t NET_GetPacket( netsrc_t sock ) {
         case EHOSTUNREACH:
         case EHOSTDOWN:
         case ECONNREFUSED:
+#ifdef ENONET
         case ENONET:
+#endif
             //Com_DPrintf( "%s: %s from %s\n", __func__,
             //    NET_ErrorString(), NET_AdrToString( &net_from ) );
             if( !net_ignore_icmp->integer ) {
