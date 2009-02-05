@@ -379,8 +379,8 @@ static void dump_clients( void ) {
     client_t    *client;
 
     Com_Printf(
-"num score ping name             lastmsg address                rate pr fps\n"
-"--- ----- ---- ---------------- ------- --------------------- ----- -- ---\n" );
+"num score ping name            lastmsg address                rate pr fps\n"
+"--- ----- ---- --------------- ------- --------------------- ----- -- ---\n" );
     FOR_EACH_CLIENT( client ) {
         Com_Printf( "%3i %5i ", client->number,
             client->edict->client->ps.stats[STAT_FRAGS] );
@@ -403,7 +403,7 @@ static void dump_clients( void ) {
             break;
         }
 
-        Com_Printf( "%-16.16s ", client->name );
+        Com_Printf( "%-15.15s ", client->name );
         Com_Printf( "%7u ", svs.realtime - client->lastmessage );
         Com_Printf( "%-21s ", NET_AdrToString(
             &client->netchan->remote_address ) );
@@ -418,11 +418,11 @@ static void dump_versions( void ) {
     client_t    *client;
 
     Com_Printf(
-"num name             version\n"
-"--- ---------------- -----------------------------------------\n" );
+"num name            version\n"
+"--- --------------- -----------------------------------------\n" );
 
     FOR_EACH_CLIENT( client ) {
-        Com_Printf( "%3i %-16.16s %-40.40s\n",
+        Com_Printf( "%3i %-15.15s %-40.40s\n",
             client->number, client->name,
             client->versionString ? client->versionString : "-" );
     }
@@ -430,15 +430,23 @@ static void dump_versions( void ) {
 
 static void dump_downloads( void ) {
     client_t    *client;
+    int         size, percent;
 
     Com_Printf(
-"num name             download\n"
-"--- ---------------- -----------------------------------------\n" );
+"num name            download                                 size    done\n"
+"--- --------------- ---------------------------------------- ------- ----\n" );
 
     FOR_EACH_CLIENT( client ) {
-        Com_Printf( "%3i %-16.16s %-40.40s\n",
+        if( !client->download ) {
+            continue;
+        }
+        size = client->downloadsize;
+        if( !size )
+            size = 1;
+        percent = client->downloadcount*100/size;
+        Com_Printf( "%3i %-15.15s %-40.40s %-7d %3d%%\n",
             client->number, client->name,
-            client->downloadname ? client->downloadname : "-" );
+            client->downloadname, client->downloadsize, percent );
     }
 }
 
@@ -448,13 +456,13 @@ static void dump_time( void ) {
     time_t      clock = time( NULL );
 
     Com_Printf(
-"num name             time\n"
-"--- ---------------- --------\n" );
+"num name            time\n"
+"--- --------------- --------\n" );
 
     FOR_EACH_CLIENT( client ) {
         Com_TimeDiff( buffer, sizeof( buffer ),
             client->connect_time, clock );
-        Com_Printf( "%3i %-16.16s %s\n",
+        Com_Printf( "%3i %-15.15s %s\n",
             client->number, client->name, buffer );
     }
 }

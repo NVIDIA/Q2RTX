@@ -700,13 +700,14 @@ LOAD( Submodels ) {
 /*
 =================
 AreaPortals
+
+These are validated after all the areas are loaded
 =================
 */
 LOAD( AreaPortals ) {
     dareaportal_t   *in;
     mareaportal_t   *out;
     int         i;
-    unsigned    portalnum, otherarea;
 
     bsp->numareaportals = count;
     bsp->areaportals = BSP_Malloc( sizeof( *out ) * count );
@@ -714,18 +715,8 @@ LOAD( AreaPortals ) {
     in = base;
     out = bsp->areaportals;
     for( i = 0; i < count; i++, in++, out++ ) {
-        portalnum = LittleLong (in->portalnum);
-        if( portalnum >= MAX_MAP_AREAPORTALS ) {
-            BSP_SetError( "%s: bad portalnum", __func__ );
-            return qfalse;
-        }
-        out->portalnum = portalnum;
-        otherarea = LittleLong (in->otherarea);
-        if( otherarea >= MAX_MAP_AREAS ) {
-            BSP_SetError( "%s: bad otherarea", __func__ );
-            return qfalse;
-        }
-        out->otherarea = otherarea;
+        out->portalnum = LittleLong (in->portalnum);
+        out->otherarea = LittleLong (in->otherarea);
     }
     return qtrue;
 }
@@ -755,7 +746,7 @@ LOAD( Areas ) {
             return qfalse;
         }
         out->numareaportals = numareaportals;
-        out->firstareaportal = firstareaportal;
+        out->firstareaportal = bsp->areaportals + firstareaportal;
         out->floodvalid = 0;
     }
     return qtrue;
@@ -895,6 +886,31 @@ static qboolean BSP_SetParent( mnode_t *node ) {
     return qtrue;
 }
 
+// also calculates the last portal number used
+// by CM code to allocate portalopen[] array
+static qboolean BSP_ValidateAreaPortals( bsp_t *bsp ) {
+    mareaportal_t   *p;
+    int             i;
+
+    bsp->lastareaportal = 0;
+    for( i = 0, p = bsp->areaportals; i < bsp->numareaportals; i++, p++ ) {
+        if( p->portalnum >= MAX_MAP_AREAPORTALS ) {
+            BSP_SetError( "%s: bad portalnum", __func__ );
+            return qfalse;
+        }
+        if( p->portalnum > bsp->lastareaportal ) {
+            bsp->lastareaportal = p->portalnum;
+        }
+        if( p->otherarea >= bsp->numareas ) {
+            BSP_SetError( "%s: bad otherarea", __func__ );
+            return qfalse;
+        }
+    }
+
+    return qtrue;
+}
+
+
 void BSP_SetError( const char *fmt, ... ) {
 	va_list		argptr;
 
@@ -1005,6 +1021,10 @@ bsp_t *BSP_Load( const char *name ) {
         if( !info->load( bsp, buf + ofs, count ) ) {
             goto fail1;
         }
+    }
+
+    if( !BSP_ValidateAreaPortals( bsp ) ) {
+        goto fail1;
     }
 
     if( !BSP_SetParent( bsp->nodes ) ) {

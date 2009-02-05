@@ -515,6 +515,19 @@ void SV_Begin_f( void ) {
 
 #define MAX_DOWNLOAD_CHUNK    1024
 
+void SV_CloseDownload( client_t *client ) {
+    if( client->download ) {
+        Z_Free( client->download );
+        client->download = NULL;
+    }
+    if( client->downloadname ) {
+        Z_Free( client->downloadname );
+        client->downloadname = NULL;
+    }
+    client->downloadsize = 0;
+    client->downloadcount = 0;
+}
+
 /*
 ==================
 SV_NextDownload_f
@@ -544,10 +557,7 @@ static void SV_NextDownload_f( void ) {
     MSG_WriteData( sv_client->download + sv_client->downloadcount - r, r );
 
     if( sv_client->downloadcount == sv_client->downloadsize ) {
-        Z_Free( sv_client->download );
-        sv_client->download = NULL;
-        Z_Free( sv_client->downloadname );
-        sv_client->downloadname = NULL;
+        SV_CloseDownload( sv_client );
     }
         
     SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
@@ -631,8 +641,7 @@ static void SV_BeginDownload_f( void ) {
 
     if( sv_client->download ) {
         Com_DPrintf( "Closing existing download for %s (should not happen)\n", sv_client->name );
-        FS_FreeFile( sv_client->download );
-        sv_client->download = NULL;
+        SV_CloseDownload( sv_client );
     }
 
     downloadsize = FS_LoadFileEx( name, NULL, 0, TAG_SERVER );
@@ -699,10 +708,7 @@ static void SV_StopDownload_f( void ) {
 
     Com_DPrintf( "Download of %s to %s stopped by user request\n",
         sv_client->downloadname, sv_client->name );
-    Z_Free( sv_client->download );
-    sv_client->download = NULL;
-    Z_Free( sv_client->downloadname );
-    sv_client->downloadname = NULL;
+    SV_CloseDownload( sv_client );
 }
 
 //============================================================================

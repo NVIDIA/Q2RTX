@@ -68,7 +68,7 @@ qboolean CM_LoadMap( cm_t *cm, const char *name ) {
 
     cm->cache = cache;
     cm->floodnums = Z_TagMallocz( sizeof( int ) * cm->cache->numareas +
-        sizeof( qboolean ) * cm->cache->numareaportals, TAG_CMODEL );
+        sizeof( qboolean ) * ( cm->cache->lastareaportal + 1 ), TAG_CMODEL );
     cm->portalopen = ( qboolean * )( cm->floodnums + cm->cache->numareas );
     CM_FloodAreaConnections( cm );
 
@@ -873,8 +873,8 @@ AREAPORTALS
 */
 
 static void FloodArea_r( cm_t *cm, int number, int floodnum ) {
-    int     i;
-    mareaportal_t   *p;
+    int i;
+    mareaportal_t *p;
     marea_t *area;
 
     area = &cm->cache->areas[number];
@@ -886,7 +886,7 @@ static void FloodArea_r( cm_t *cm, int number, int floodnum ) {
 
     cm->floodnums[number] = floodnum;
     area->floodvalid = floodvalid;
-    p = &cm->cache->areaportals[area->firstareaportal];
+    p = area->firstareaportal;
     for( i = 0; i < area->numareaportals; i++, p++ ) {
         if( cm->portalopen[p->portalnum] )
             FloodArea_r( cm, p->otherarea, floodnum );
@@ -918,8 +918,15 @@ void CM_FloodAreaConnections( cm_t *cm ) {
 }
 
 void CM_SetAreaPortalState( cm_t *cm, int portalnum, qboolean open ) {
-    if( portalnum >= cm->cache->numareaportals )
-        Com_Error( ERR_DROP, "%s: areaportal > numareaportals", __func__ );
+    if( portalnum < 0 || portalnum >= MAX_MAP_AREAPORTALS ) {
+        Com_Error( ERR_DROP, "%s: portalnum %d is out of range", __func__, portalnum );
+    }
+
+    // ignore areaportals not referenced by areas
+    if( portalnum > cm->cache->lastareaportal ) {
+        Com_DPrintf( "%s: portalnum %d is not in use\n", __func__, portalnum );
+        return;
+    }
 
     cm->portalopen[portalnum] = open;
     CM_FloodAreaConnections( cm );
@@ -994,7 +1001,7 @@ int CM_WritePortalBits( cm_t *cm, byte *buffer ) {
         return 0;
     }
 
-    numportals = cm->cache->numareaportals;
+    numportals = cm->cache->lastareaportal + 1;
     if( numportals > MAX_MAP_AREAS ) {
         /* HACK: use the same array size as areabytes!
          * It is nonsense for a map to have > 256 areaportals anyway. */
@@ -1017,16 +1024,16 @@ void CM_SetPortalStates( cm_t *cm, byte *buffer, int bytes ) {
     int     i, numportals;
 
     if( !bytes ) {
-        for( i = 0; i < cm->cache->numareaportals; i++ ) {
+        for( i = 0; i <= cm->cache->lastareaportal; i++ ) {
             cm->portalopen[i] = qtrue;
         }
     } else {
         numportals = bytes << 3;
-        if( numportals > cm->cache->numareaportals ) {
-            numportals = cm->cache->numareaportals;
+        if( numportals > cm->cache->lastareaportal + 1 ) {
+            numportals = cm->cache->lastareaportal + 1;
         }
         for( i = 0; i < numportals; i++ ) {
-            cm->portalopen[i] = Q_IsBitSet( buffer, i ) ? qtrue : qfalse;
+            cm->portalopen[i] = Q_IsBitSet( buffer, i );
         }
     }
 

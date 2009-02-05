@@ -2210,6 +2210,11 @@ static size_t CL_Fps_m( char *buffer, size_t size ) {
 static size_t CL_Ping_m( char *buffer, size_t size ) {
 	return Q_scnprintf( buffer, size, "%i", cls.ping );
 }
+static size_t CL_Lag_m( char *buffer, size_t size ) {
+	return Q_scnprintf( buffer, size, "%.2f%%", cls.netchan ?
+        ( (float)cls.netchan->total_dropped /
+          cls.netchan->total_received ) * 100.0f : 0 );
+}
 static size_t CL_Health_m( char *buffer, size_t size ) {
 	return Q_scnprintf( buffer, size, "%i", cl.frame.ps.stats[STAT_HEALTH] );
 }
@@ -2493,7 +2498,7 @@ static void CL_InitLocal ( void ) {
     info_fov = Cvar_Get( "fov", "90", CVAR_USERINFO | CVAR_ARCHIVE );
     info_gender = Cvar_Get( "gender", "male", CVAR_USERINFO | CVAR_ARCHIVE );
     info_gender->modified = qfalse; // clear this so we know when user sets it manually
-    info_uf = Cvar_Get( "uf", "0", CVAR_USERINFO );
+    info_uf = Cvar_Get( "uf", va( "%d", UF_LOCALFOV ), CVAR_USERINFO );
 
 
     //
@@ -2505,6 +2510,7 @@ static void CL_InitLocal ( void ) {
 	Cmd_AddMacro( "cl_ups", CL_Ups_m );
 	Cmd_AddMacro( "cl_fps", CL_Fps_m );
 	Cmd_AddMacro( "cl_ping", CL_Ping_m );
+	Cmd_AddMacro( "cl_lag", CL_Lag_m );
 	Cmd_AddMacro( "cl_health", CL_Health_m );
 	Cmd_AddMacro( "cl_ammo", CL_Ammo_m );
 	Cmd_AddMacro( "cl_armor", CL_Armor_m );
@@ -2960,7 +2966,7 @@ static void CL_WriteConfig( void ) {
 ===============
 CL_Shutdown
  
-FIXME: this is a callback from Sys_Quit and Com_Error.  It would be better
+FIXME: this is a callback from Com_Quit and Com_Error.  It would be better
 to run quit through here before the final handoff to the sys code.
 ===============
 */

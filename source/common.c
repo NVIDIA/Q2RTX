@@ -423,14 +423,13 @@ void Com_Error( comErrorType_t code, const char *fmt, ... ) {
     Com_AbortRedirect();
     
     if( code == ERR_DISCONNECT || code == ERR_SILENT ) {
+        Com_Printf( S_COLOR_YELLOW "%s\n", com_errorMsg );
         SV_Shutdown( va( "Server was killed: %s", com_errorMsg ),
             KILL_DISCONNECT );
 #if USE_CLIENT
         CL_Disconnect( code, com_errorMsg );
 #endif
-        Com_Printf( S_COLOR_YELLOW "%s\n", com_errorMsg );
-        recursive = qfalse;
-        longjmp( abortframe, -1 );
+        goto abort;
     }
 
     if( com_debug_break && com_debug_break->integer ) {
@@ -450,8 +449,7 @@ void Com_Error( comErrorType_t code, const char *fmt, ... ) {
 #if USE_CLIENT
         CL_Disconnect( ERR_DROP, com_errorMsg );
 #endif
-        recursive = qfalse;
-        longjmp( abortframe, -1 );
+        goto abort;
     }
 
     if( com_logFile ) {
@@ -465,7 +463,21 @@ void Com_Error( comErrorType_t code, const char *fmt, ... ) {
     Qcommon_Shutdown();
 
     Sys_Error( "%s", com_errorMsg );
+    // doesn't get there
+
+abort:
+    if( com_logFile ) {
+        FS_Flush( com_logFile );
+    }
+    recursive = qfalse;
+    longjmp( abortframe, -1 );
 }
+
+#ifdef _WIN32
+void Com_AbortFrame( void ) {
+    longjmp( abortframe, -1 );
+}
+#endif
 
 /*
 ===================
@@ -503,7 +515,7 @@ void Com_LevelError( comErrorType_t code, const char *str ) {
 Com_Quit
 
 Both client and server can use this, and it will
-do the apropriate things.
+do the apropriate things. This function never returns.
 =============
 */
 void Com_Quit( const char *reason, killtype_t type ) {

@@ -121,14 +121,8 @@ void SV_CleanClient( client_t *client ) {
     client->ac_bad_files = NULL;
 #endif
 
-    if( client->download ) {
-        Z_Free( client->download );
-        client->download = NULL;
-    }
-    if( client->downloadname ) {
-        Z_Free( client->downloadname );
-        client->downloadname = NULL;
-    }
+    // close any existing donwload
+    SV_CloseDownload( client );
 
     if( client->versionString ) {
         Z_Free( client->versionString );
@@ -1850,8 +1844,7 @@ static void SV_FinalMessage( const char *message, int cmd ) {
 ================
 SV_Shutdown
 
-Called when each game quits,
-before Sys_Quit or Sys_Error
+Called when each game quits, from Com_Quit or Com_Error
 ================
 */
 void SV_Shutdown( const char *finalmsg, killtype_t type ) {

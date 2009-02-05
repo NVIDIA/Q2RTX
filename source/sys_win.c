@@ -39,11 +39,17 @@ cvar_t  *sys_homedir;
 static char currentDirectory[MAX_OSPATH];
 
 #if USE_WINSVC
-static SERVICE_STATUS_HANDLE        statusHandle;
+static SERVICE_STATUS_HANDLE    statusHandle;
 #endif
 
-static volatile qboolean    errorEntered;
-static volatile qboolean    shouldExit;
+typedef enum {
+    SE_NOT,
+    SE_YES,
+    SE_FULL
+} should_exit_t;
+
+static volatile should_exit_t   shouldExit;
+static volatile qboolean        errorEntered;
 
 /*
 ===============================================================================
@@ -344,7 +350,7 @@ static BOOL WINAPI Sys_ConsoleCtrlHandler( DWORD dwCtrlType ) {
     if( errorEntered ) {
         exit( 1 );
     }
-    shouldExit = qtrue;
+    shouldExit = SE_FULL;
     return TRUE;
 }
 
@@ -662,6 +668,8 @@ void Sys_Error( const char *error, ... ) {
 /*
 ================
 Sys_Quit
+
+This function never returns.
 ================
 */
 void Sys_Quit( void ) {
@@ -674,9 +682,13 @@ void Sys_Quit( void ) {
     }
 #endif
 #elif USE_WINSVC
-    if( !statusHandle )
+    if( statusHandle && !shouldExit ) {
+        shouldExit = SE_YES;
+        Com_AbortFrame();
+    }
 #endif
-        exit( 0 );
+
+    exit( 0 );
 }
 
 void Sys_DebugBreak( void ) {
@@ -1070,11 +1082,17 @@ static int Sys_Main( int argc, char **argv ) {
     Qcommon_Init( argc, argv );
 
     // main program loop
-    while( !shouldExit ) {
+    while( 1 ) {
         Qcommon_Frame();
+#if USE_WINSVC
+        if( shouldExit ) {
+            if( shouldExit == SE_FULL ) {
+                Com_Quit( NULL, KILL_DROP );
+            }
+            break;
+        }
+#endif
     }
-
-    Com_Quit( NULL, KILL_DROP );
 
 #if USE_DBGHELP
     } __except( Sys_ExceptionHandler( GetExceptionCode(), GetExceptionInformation() ) ) {
@@ -1153,7 +1171,7 @@ static int      sys_argc;
 
 static VOID WINAPI ServiceHandler( DWORD fdwControl ) {
     if( fdwControl == SERVICE_CONTROL_STOP ) {
-        shouldExit = qtrue;
+        shouldExit = SE_FULL;
     }
 }
 

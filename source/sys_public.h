@@ -18,9 +18,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-// if api_version is different, the dll cannot be used
-#define MODULES_APIVERSION	318
-
 typedef struct {
 	void	*base;
 	size_t	maxsize;
@@ -52,9 +49,10 @@ void    Sys_Printf( const char *fmt, ... ) q_printf( 1, 2 );
 #endif
 
 void	Sys_Error( const char *error, ... ) q_noreturn q_printf( 1, 2 );
-void	Sys_Quit( void );
+void	Sys_Quit( void ) q_noreturn;
 
-void	**Sys_ListFiles( const char *path, const char *extension, int flags, size_t length, int *numFiles );
+void	**Sys_ListFiles( const char *path, const char *extension,
+                         int flags, size_t length, int *numFiles );
 
 qboolean Sys_GetPathInfo( const char *path, fsFileInfo_t *info );
 qboolean Sys_GetFileInfo( FILE *fp, fsFileInfo_t *info );

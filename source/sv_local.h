@@ -524,6 +524,7 @@ void SV_New_f( void );
 void SV_Begin_f( void );
 void SV_Nextserver (void);
 void SV_ExecuteClientMessage (client_t *cl);
+void SV_CloseDownload( client_t *client );
 
 //
 // sv_ccmds.c

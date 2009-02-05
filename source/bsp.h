@@ -162,15 +162,15 @@ typedef struct {
 } mleaf_t;
 
 typedef struct {
-    int        numareaportals;
-    int        firstareaportal;
-    int        floodvalid;
-} marea_t;
-
-typedef struct {
     unsigned    portalnum;
     unsigned    otherarea;
 } mareaportal_t;
+
+typedef struct {
+    int             numareaportals;
+    mareaportal_t   *firstareaportal;
+    int             floodvalid;
+} marea_t;
 
 typedef struct mmodel_s {
 #if USE_REF
@@ -232,7 +232,8 @@ typedef struct bsp_s {
     int             numareas;
     marea_t         *areas;
 
-    int             numareaportals;
+    int             lastareaportal; // largest portal number used
+    int             numareaportals; // size of the array below
     mareaportal_t   *areaportals;
 
 #if USE_REF

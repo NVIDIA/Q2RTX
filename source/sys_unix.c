@@ -569,6 +569,8 @@ qboolean Sys_GetFileInfo( FILE *fp, fsFileInfo_t *info ) {
 /*
 =================
 Sys_Quit
+
+This function never returns.
 =================
 */
 void Sys_Quit( void ) {
