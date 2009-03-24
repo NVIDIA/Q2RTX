@@ -68,7 +68,7 @@ void CL_CheckPredictionError( void ) {
         VectorClear( cl.prediction_error );
     } else {
         if( cl_showmiss->integer && ( delta[0] || delta[1] || delta[2] ) ) {
-            Com_Printf( "prediction miss on %i: %i\n", cl.frame.number, len );
+            Com_Printf( "prediction miss on %i: %i (%d %d %d)\n", cl.frame.number, len, delta[0], delta[1], delta[2]);
         }
 
         VectorCopy( ps->pmove.origin, cl.predicted_origins[cmd] );

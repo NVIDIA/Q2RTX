@@ -145,6 +145,7 @@ typedef struct mvd_s {
     char        layout[MAX_STRING_CHARS];
     char        oldscores[MAX_STRING_CHARS]; // layout is copied here
     qboolean    intermission;
+    qboolean    dirty;
 
     // UDP client list
     list_t      clients;

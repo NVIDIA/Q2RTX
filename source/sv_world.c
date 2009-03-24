@@ -593,7 +593,7 @@ trace_t *SV_Trace(  trace_t     *trace,
     }
 
     if( ++sv.tracecount > 10000 ) {
-        Com_EPrintf( "SV_Trace: game DLL caught in infinite loop!\n" );
+        Com_EPrintf( "%s: game DLL caught in infinite loop!\n", __func__ );
         memset( trace, 0, sizeof( *trace ) );
         trace->fraction = 1;
         trace->ent = ge->edicts;

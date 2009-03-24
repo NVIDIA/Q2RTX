@@ -521,6 +521,7 @@ static  char    *cmd_null_string = "";
 // complete command string, left untouched
 static  char    cmd_string[MAX_STRING_CHARS];
 static  size_t  cmd_string_len;
+size_t  cmd_string_tail;
 
 // offsets of individual tokens into cmd_string
 static  size_t  cmd_offsets[MAX_STRING_TOKENS];
@@ -553,7 +554,7 @@ int Cmd_FindArgForOffset( size_t offset ) {
             break;
         }
     }
-    return i - 1;    
+    return i - 1; 
 }
 
 /*
@@ -1075,12 +1076,14 @@ void Cmd_TokenizeString( const char *text, qboolean macroExpand ) {
     }
 
 // strip off any trailing whitespace
+    cmd_string_tail = 0;
     while( cmd_string_len ) {
         if( cmd_string[ cmd_string_len - 1 ] > ' ' ) {
             break;
         }
         cmd_string[ cmd_string_len - 1 ] = 0;
         cmd_string_len--;
+        cmd_string_tail++;
     }
 
     dest = cmd_data;

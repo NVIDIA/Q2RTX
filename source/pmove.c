@@ -504,8 +504,7 @@ static void PM_WaterMove (void)
 		VectorScale (wishvel, pmp->maxspeed / wishspeed, wishvel);
 		wishspeed = pmp->maxspeed;
 	}
-	wishspeed *= ( (pmp->qwmod) ? 0.7 : 0.5 ); //atu QWMod
-	
+	wishspeed *= pmp->watermult;
 
 	PM_Accelerate (wishdir, wishspeed, pm_wateraccelerate);
 
@@ -630,7 +629,7 @@ static void PM_CategorizePosition (void)
 // see if standing on something solid	
 	point[0] = pml.origin[0];
 	point[1] = pml.origin[1];
-	point[2] = pml.origin[2] - ( (pmp->qwmod == 2) ? 1 : 0.25 ); //atu QWMod
+	point[2] = pml.origin[2] - 0.25f;
 	if (pml.velocity[2] > 180) //!!ZOID changed from 100 to 180 (ramp accel)
 	{
 		pm->s.pm_flags &= ~PMF_ON_GROUND;
@@ -663,7 +662,7 @@ static void PM_CategorizePosition (void)
 			{	// just hit the ground
 				pm->s.pm_flags |= PMF_ON_GROUND;
 				// don't do landing time if we were just going down a slope
-				if (pml.velocity[2] < -200 && !pmp->strafeHack )
+				if (pml.velocity[2] < -200 && !pmp->strafehack )
 				{
 					pm->s.pm_flags |= PMF_TIME_LAND;
 					// don't allow another jump for a little while
@@ -742,9 +741,14 @@ static void PM_CheckJump (void)
 	{	// swimming, not jumping
 		pm->groundentity = NULL;
 
+        if (pmp->waterhack)
+            return;
+
 		if (pml.velocity[2] <= -300)
 			return;
 
+        // FIXME: makes velocity dependent on client FPS,
+        // even causes prediction misses
 		if (pm->watertype == CONTENTS_WATER)
 			pml.velocity[2] = 100;
 		else if (pm->watertype == CONTENTS_SLIME)
@@ -823,7 +827,7 @@ static void PM_CheckSpecialMovement (void)
 PM_FlyMove
 ===============
 */
-static void PM_FlyMove (qboolean doclip)
+static void PM_FlyMove (void)
 {
 	float	speed, drop, friction, control, newspeed;
 	float	currentspeed, addspeed, accelspeed;
@@ -832,8 +836,6 @@ static void PM_FlyMove (qboolean doclip)
 	float		fmove, smove;
 	vec3_t		wishdir;
 	float		wishspeed;
-	vec3_t		end;
-	trace_t	trace;
 
 	pm->viewheight = 22;
 
@@ -887,7 +889,7 @@ static void PM_FlyMove (qboolean doclip)
 	currentspeed = DotProduct(pml.velocity, wishdir);
 	addspeed = wishspeed - currentspeed;
 	if (addspeed <= 0) {
-        if (!pmp->flyfix) {
+        if (!pmp->flyhack) {
     		return; // original buggy behaviour
         }
     } else {
@@ -899,6 +901,7 @@ static void PM_FlyMove (qboolean doclip)
             pml.velocity[i] += accelspeed*wishdir[i];
     }
 
+#if 0
 	if (doclip) {
 		for (i=0 ; i<3 ; i++)
 			end[i] = pml.origin[i] + pml.frametime * pml.velocity[i];
@@ -906,7 +909,9 @@ static void PM_FlyMove (qboolean doclip)
 		trace = pm->trace (pml.origin, pm->mins, pm->maxs, end);
 
 		VectorCopy (trace.endpos, pml.origin);
-	} else {
+	} else
+#endif
+    {
 		// move
 		VectorMA (pml.origin, pml.frametime, pml.velocity, pml.origin);
 	}
@@ -1190,7 +1195,7 @@ void Pmove( pmove_t *pmove, pmoveParams_t *params )
 	pm->numtouch = 0;
 	VectorClear (pm->viewangles);
 	pm->viewheight = 0;
-	pm->groundentity = 0;
+	pm->groundentity = NULL;
 	pm->watertype = 0;
 	pm->waterlevel = 0;
 
@@ -1208,8 +1213,8 @@ void Pmove( pmove_t *pmove, pmoveParams_t *params )
 
 	if (pm->s.pm_type == PM_SPECTATOR)
 	{
-		pml.frametime = pmp->speedMultiplier * pm->cmd.msec * 0.001f;
-		PM_FlyMove (qfalse);
+		pml.frametime = pmp->speedmult * pm->cmd.msec * 0.001f;
+		PM_FlyMove ();
 		PM_SnapPosition ();
 		return;
 	}
@@ -1297,5 +1302,27 @@ void Pmove( pmove_t *pmove, pmoveParams_t *params )
 	PM_CategorizePosition ();
 
 	PM_SnapPosition ();
+}
+
+void PmoveInit( pmoveParams_t *pmp ) {
+    // set up default pmove parameters
+    memset( pmp, 0, sizeof( *pmp ) );
+
+    pmp->speedmult = 1;
+    pmp->watermult = 0.5f;
+    pmp->maxspeed = 300;
+    pmp->friction = 6;
+    pmp->waterfriction = 1;
+    pmp->flyfriction = 9;
+}
+
+void PmoveEnableQW( pmoveParams_t *pmp ) {
+    pmp->qwmode = qtrue;
+    pmp->watermult = 0.7f;
+    pmp->maxspeed = 320;
+    //pmp->upspeed = ( sv_qwmod->integer > 1 ) ? 310 : 350;
+    pmp->friction = 4;
+    pmp->waterfriction = 4;
+    pmp->airaccelerate = qtrue;
 }
 

@@ -41,46 +41,46 @@ static void SV_EmitPacketEntities( client_t         *client,
                                    int              clientEntityNum,
                                    msgEsFlags_t     baseflags )
 {
-	entity_state_t	*oldent, *newent;
+    entity_state_t    *oldent, *newent;
     const entity_state_t  *base;
-	unsigned	oldindex, newindex;
-	int		    oldnum, newnum;
-	unsigned    from_num_entities;
-	msgEsFlags_t flags;
+    unsigned oldindex, newindex;
+    int oldnum, newnum;
+    unsigned from_num_entities;
+    msgEsFlags_t flags;
     unsigned    i;
 
-	if( !from )
-		from_num_entities = 0;
-	else
-		from_num_entities = from->numEntities;
+    if( !from )
+        from_num_entities = 0;
+    else
+        from_num_entities = from->numEntities;
 
-	newindex = 0;
-	oldindex = 0;
-	oldent = newent = NULL;
-	while( newindex < to->numEntities || oldindex < from_num_entities ) {
-		if( newindex >= to->numEntities ) {
-			newnum = 9999;
-		} else {
+    newindex = 0;
+    oldindex = 0;
+    oldent = newent = NULL;
+    while( newindex < to->numEntities || oldindex < from_num_entities ) {
+        if( newindex >= to->numEntities ) {
+            newnum = 9999;
+        } else {
             i = ( to->firstEntity + newindex ) % svs.numEntityStates;
-			newent = &svs.entityStates[i];
-			newnum = newent->number;
-		}
+            newent = &svs.entityStates[i];
+            newnum = newent->number;
+        }
 
-		if( oldindex >= from_num_entities ) {
-			oldnum = 9999;
-		} else {
+        if( oldindex >= from_num_entities ) {
+            oldnum = 9999;
+        } else {
             i = ( from->firstEntity + oldindex ) % svs.numEntityStates;
-			oldent = &svs.entityStates[i];
-			oldnum = oldent->number;
-		}
+            oldent = &svs.entityStates[i];
+            oldnum = oldent->number;
+        }
 
-		if( newnum == oldnum ) {
-			// delta update from old position
-			// because the force parm is false, this will not result
-			// in any bytes being emited if the entity has not changed at all
-			// note that players are always 'newentities', this updates their
+        if( newnum == oldnum ) {
+            // delta update from old position
+            // because the force parm is false, this will not result
+            // in any bytes being emited if the entity has not changed at all
+            // note that players are always 'newentities', this updates their
             // oldorigin always and prevents warping
-			flags = baseflags;
+            flags = baseflags;
             if( client->protocol < PROTOCOL_VERSION_Q2PRO ) {
                 // don't waste bandwidth for Q2PRO clients
                 if( newent->number <= client->maxclients ) {
@@ -89,44 +89,44 @@ static void SV_EmitPacketEntities( client_t         *client,
             }
             if( newent->number == clientEntityNum ) {
                 flags |= MSG_ES_FIRSTPERSON;
-		        VectorCopy( oldent->origin, newent->origin );
-		        VectorCopy( oldent->angles, newent->angles );
+                VectorCopy( oldent->origin, newent->origin );
+                VectorCopy( oldent->angles, newent->angles );
             }
-			MSG_WriteDeltaEntity( oldent, newent, flags );
-			oldindex++;
-			newindex++;
-			continue;
-		}
+            MSG_WriteDeltaEntity( oldent, newent, flags );
+            oldindex++;
+            newindex++;
+            continue;
+        }
 
-		if( newnum < oldnum ) {	
-			// this is a new entity, send it from the baseline
-			flags = baseflags|MSG_ES_FORCE|MSG_ES_NEWENTITY;
-			base = client->baselines[newnum >> SV_BASELINES_SHIFT];
-			if( base ) {
-				base += ( newnum & SV_BASELINES_MASK );
-			} else {
-				base = &nullEntityState;
-			}
+        if( newnum < oldnum ) {    
+            // this is a new entity, send it from the baseline
+            flags = baseflags|MSG_ES_FORCE|MSG_ES_NEWENTITY;
+            base = client->baselines[newnum >> SV_BASELINES_SHIFT];
+            if( base ) {
+                base += ( newnum & SV_BASELINES_MASK );
+            } else {
+                base = &nullEntityState;
+            }
             if( newent->number == clientEntityNum ) {
                 flags |= MSG_ES_FIRSTPERSON;
-		        VectorCopy( base->origin, newent->origin );
-		        VectorCopy( base->angles, newent->angles );
-		        VectorCopy( base->old_origin, newent->old_origin );
+                VectorCopy( base->origin, newent->origin );
+                VectorCopy( base->angles, newent->angles );
+                VectorCopy( base->old_origin, newent->old_origin );
             }
-			MSG_WriteDeltaEntity( base, newent, flags );
-			newindex++;
-			continue;
-		}
+            MSG_WriteDeltaEntity( base, newent, flags );
+            newindex++;
+            continue;
+        }
 
-		if( newnum > oldnum ) {
-			// the old entity isn't present in the new message
-			MSG_WriteDeltaEntity( oldent, NULL, MSG_ES_FORCE );
-			oldindex++;
-			continue;
-		}
-	}
+        if( newnum > oldnum ) {
+            // the old entity isn't present in the new message
+            MSG_WriteDeltaEntity( oldent, NULL, MSG_ES_FORCE );
+            oldindex++;
+            continue;
+        }
+    }
 
-	MSG_WriteShort( 0 );	// end of packetentities
+    MSG_WriteShort( 0 );    // end of packetentities
 }
 
 /*
@@ -135,55 +135,55 @@ SV_WriteFrameToClient_Default
 ==================
 */
 void SV_WriteFrameToClient_Default( client_t *client ) {
-	client_frame_t		*frame, *oldframe;
-	player_state_t		*oldstate;
-	int					lastframe;
+    client_frame_t      *frame, *oldframe;
+    player_state_t      *oldstate;
+    int                 lastframe;
 
-	// this is the frame we are creating
-	frame = &client->frames[sv.framenum & UPDATE_MASK];
+    // this is the frame we are creating
+    frame = &client->frames[sv.framenum & UPDATE_MASK];
 
-	if( client->lastframe <= 0 ) {
-		// client is asking for a retransmit
-		oldframe = NULL;
+    if( client->lastframe <= 0 ) {
+        // client is asking for a retransmit
+        oldframe = NULL;
         oldstate = NULL;
-		lastframe = -1;
-	} else if( sv.framenum - client->lastframe > UPDATE_BACKUP - 1 ) {
-		// client hasn't gotten a good message through in a long time
-		Com_DPrintf( "%s: delta request from out-of-date packet.\n", client->name );
-		oldframe = NULL;
+        lastframe = -1;
+    } else if( sv.framenum - client->lastframe > UPDATE_BACKUP - 1 ) {
+        // client hasn't gotten a good message through in a long time
+        Com_DPrintf( "%s: delta request from out-of-date packet.\n", client->name );
+        oldframe = NULL;
         oldstate = NULL;
-		lastframe = -1;
-	} else {
-		// we have a valid message to delta from
-		oldframe = &client->frames[client->lastframe & UPDATE_MASK];
-		oldstate = &oldframe->ps;
-		lastframe = client->lastframe;
-		if( svs.nextEntityStates - oldframe->firstEntity > svs.numEntityStates ) {
-			Com_DPrintf( "%s: delta request from out-of-date entities.\n", client->name );
-			oldframe = NULL;
+        lastframe = -1;
+    } else {
+        // we have a valid message to delta from
+        oldframe = &client->frames[client->lastframe & UPDATE_MASK];
+        oldstate = &oldframe->ps;
+        lastframe = client->lastframe;
+        if( svs.nextEntityStates - oldframe->firstEntity > svs.numEntityStates ) {
+            Com_DPrintf( "%s: delta request from out-of-date entities.\n", client->name );
+            oldframe = NULL;
             oldstate = NULL;
-			lastframe = -1;
-		}
-	}
+            lastframe = -1;
+        }
+    }
 
-	MSG_WriteByte( svc_frame );
-	MSG_WriteLong( sv.framenum );
-	MSG_WriteLong( lastframe );	// what we are delta'ing from
-	MSG_WriteByte( client->surpressCount );	// rate dropped packets
-	client->surpressCount = 0;
+    MSG_WriteByte( svc_frame );
+    MSG_WriteLong( sv.framenum );
+    MSG_WriteLong( lastframe );    // what we are delta'ing from
+    MSG_WriteByte( client->surpressCount );    // rate dropped packets
+    client->surpressCount = 0;
     client->frameflags = 0;
 
-	// send over the areabits
-	MSG_WriteByte( frame->areabytes );
-	MSG_WriteData( frame->areabits, frame->areabytes );
+    // send over the areabits
+    MSG_WriteByte( frame->areabytes );
+    MSG_WriteData( frame->areabits, frame->areabytes );
 
-	// delta encode the playerstate
-	MSG_WriteByte( svc_playerinfo );
-	MSG_WriteDeltaPlayerstate_Default( oldstate, &frame->ps );
-	
-	// delta encode the entities
-	MSG_WriteByte( svc_packetentities );
-	SV_EmitPacketEntities( client, oldframe, frame, 0, 0 );
+    // delta encode the playerstate
+    MSG_WriteByte( svc_playerinfo );
+    MSG_WriteDeltaPlayerstate_Default( oldstate, &frame->ps );
+    
+    // delta encode the entities
+    MSG_WriteByte( svc_packetentities );
+    SV_EmitPacketEntities( client, oldframe, frame, 0, 0 );
 }
 
 /*
@@ -192,93 +192,93 @@ SV_WriteFrameToClient_Enhanced
 ==================
 */
 void SV_WriteFrameToClient_Enhanced( client_t *client ) {
-	client_frame_t		*frame, *oldframe;
-	player_state_t		*oldstate;
-	uint32_t	extraflags;
-	int			delta, surpressed;
-	byte *b1, *b2;
-	msgPsFlags_t	psFlags;
-	int clientEntityNum;
-    int baseflags;
+    client_frame_t  *frame, *oldframe;
+    player_state_t  *oldstate;
+    uint32_t        extraflags;
+    int             delta, surpressed;
+    byte            *b1, *b2;
+    msgPsFlags_t    psFlags;
+    int             clientEntityNum;
+    int             baseflags;
 
-	// this is the frame we are creating
-	frame = &client->frames[sv.framenum & UPDATE_MASK];
+    // this is the frame we are creating
+    frame = &client->frames[sv.framenum & UPDATE_MASK];
 
-	if( client->lastframe <= 0 ) {
-		// client is asking for a retransmit
-		oldframe = NULL;
+    if( client->lastframe <= 0 ) {
+        // client is asking for a retransmit
+        oldframe = NULL;
         oldstate = NULL;
-		delta = 31;
-	} else if( sv.framenum - client->lastframe > UPDATE_BACKUP - 1 ) {
-		// client hasn't gotten a good message through in a long time
-		Com_DPrintf( "%s: delta request from out-of-date packet.\n", client->name );
-		oldframe = NULL;
+        delta = 31;
+    } else if( sv.framenum - client->lastframe > UPDATE_BACKUP - 1 ) {
+        // client hasn't gotten a good message through in a long time
+        Com_DPrintf( "%s: delta request from out-of-date packet.\n", client->name );
+        oldframe = NULL;
         oldstate = NULL;
-		delta = 31;
-	} else {
-		// we have a valid message to delta from
-		oldframe = &client->frames[client->lastframe & UPDATE_MASK];
-		oldstate = &oldframe->ps;
-		delta = sv.framenum - client->lastframe;
-		if( svs.nextEntityStates - oldframe->firstEntity > svs.numEntityStates ) {
-			Com_DPrintf( "%s: delta request from out-of-date entities.\n", client->name );
-			oldframe = NULL;
+        delta = 31;
+    } else {
+        // we have a valid message to delta from
+        oldframe = &client->frames[client->lastframe & UPDATE_MASK];
+        oldstate = &oldframe->ps;
+        delta = sv.framenum - client->lastframe;
+        if( svs.nextEntityStates - oldframe->firstEntity > svs.numEntityStates ) {
+            Com_DPrintf( "%s: delta request from out-of-date entities.\n", client->name );
+            oldframe = NULL;
             oldstate = NULL;
-			delta = 31;
-		}
-	}
+            delta = 31;
+        }
+    }
 
-	// first byte to be patched
-	b1 = SZ_GetSpace( &msg_write, 1 );
+    // first byte to be patched
+    b1 = SZ_GetSpace( &msg_write, 1 );
 
-	MSG_WriteLong( ( sv.framenum & FRAMENUM_MASK ) | ( delta << FRAMENUM_BITS ) );
+    MSG_WriteLong( ( sv.framenum & FRAMENUM_MASK ) | ( delta << FRAMENUM_BITS ) );
 
-	// second byte to be patched
-	b2 = SZ_GetSpace( &msg_write, 1 );
+    // second byte to be patched
+    b2 = SZ_GetSpace( &msg_write, 1 );
 
-	// send over the areabits
-	MSG_WriteByte( frame->areabytes );
-	MSG_WriteData( frame->areabits, frame->areabytes );
+    // send over the areabits
+    MSG_WriteByte( frame->areabytes );
+    MSG_WriteData( frame->areabits, frame->areabytes );
 
-	// ignore some parts of playerstate if not recording demo
-	psFlags = 0;
-	if( !client->settings[CLS_RECORDING] ) {
-		if( client->settings[CLS_NOGUN] ) {
-			psFlags |= MSG_PS_IGNORE_GUNFRAMES;
-			if( client->settings[CLS_NOGUN] != 2 ) {
-				psFlags |= MSG_PS_IGNORE_GUNINDEX;
-			}
-		}
-		if( client->settings[CLS_NOBLEND] ) {
-			psFlags |= MSG_PS_IGNORE_BLEND;
-		}
-		if( frame->ps.pmove.pm_type < PM_DEAD ) {
-			if( !( frame->ps.pmove.pm_flags & PMF_NO_PREDICTION ) ) {
-				psFlags |= MSG_PS_IGNORE_VIEWANGLES;
-			}
-		} else {
-			// lying dead on a rotating platform?
-			psFlags |= MSG_PS_IGNORE_DELTAANGLES;
-		}
-	}
+    // ignore some parts of playerstate if not recording demo
+    psFlags = 0;
+    if( !client->settings[CLS_RECORDING] ) {
+        if( client->settings[CLS_NOGUN] ) {
+            psFlags |= MSG_PS_IGNORE_GUNFRAMES;
+            if( client->settings[CLS_NOGUN] != 2 ) {
+                psFlags |= MSG_PS_IGNORE_GUNINDEX;
+            }
+        }
+        if( client->settings[CLS_NOBLEND] ) {
+            psFlags |= MSG_PS_IGNORE_BLEND;
+        }
+        if( frame->ps.pmove.pm_type < PM_DEAD ) {
+            if( !( frame->ps.pmove.pm_flags & PMF_NO_PREDICTION ) ) {
+                psFlags |= MSG_PS_IGNORE_VIEWANGLES;
+            }
+        } else {
+            // lying dead on a rotating platform?
+            psFlags |= MSG_PS_IGNORE_DELTAANGLES;
+        }
+    }
 
-	clientEntityNum = 0;
-	if( client->protocol == PROTOCOL_VERSION_Q2PRO ) {
+    clientEntityNum = 0;
+    if( client->protocol == PROTOCOL_VERSION_Q2PRO ) {
         if( frame->ps.pmove.pm_type < PM_DEAD ) {
             clientEntityNum = frame->clientNum + 1;
         }
-		if( client->settings[CLS_NOPREDICT] ) {
-			psFlags |= MSG_PS_IGNORE_PREDICTION;
-		}
+        if( client->settings[CLS_NOPREDICT] ) {
+            psFlags |= MSG_PS_IGNORE_PREDICTION;
+        }
         surpressed = client->frameflags;
-	} else {
+    } else {
         surpressed = client->surpressCount;
     }
 
-	// delta encode the playerstate
-	extraflags = MSG_WriteDeltaPlayerstate_Enhanced( oldstate, &frame->ps, psFlags );
+    // delta encode the playerstate
+    extraflags = MSG_WriteDeltaPlayerstate_Enhanced( oldstate, &frame->ps, psFlags );
 
-	if( client->protocol == PROTOCOL_VERSION_Q2PRO ) {
+    if( client->protocol == PROTOCOL_VERSION_Q2PRO ) {
         // delta encode the clientNum
         if( client->version < PROTOCOL_VERSION_Q2PRO_CLIENTNUM_FIX ) {
             if( !oldframe || frame->clientNum != oldframe->clientNum ) {
@@ -294,14 +294,14 @@ void SV_WriteFrameToClient_Enhanced( client_t *client ) {
         }
     }
 
-	// save 3 high bits of extraflags
-	*b1 = svc_frame | ( ( ( extraflags & 0x70 ) << 1 ) );
+    // save 3 high bits of extraflags
+    *b1 = svc_frame | ( ( ( extraflags & 0x70 ) << 1 ) );
 
-	// save 4 low bits of extraflags
-	*b2 = ( surpressed & SURPRESSCOUNT_MASK ) |
+    // save 4 low bits of extraflags
+    *b2 = ( surpressed & SURPRESSCOUNT_MASK ) |
         ( ( extraflags & 0x0F ) << SURPRESSCOUNT_BITS );
 
-	client->surpressCount = 0;
+    client->surpressCount = 0;
     client->frameflags = 0;
 
     baseflags = 0;
@@ -309,7 +309,7 @@ void SV_WriteFrameToClient_Enhanced( client_t *client ) {
         baseflags |= MSG_ES_LONGSOLID;
     }
 
-	// delta encode the entities
+    // delta encode the entities
     SV_EmitPacketEntities( client, oldframe, frame,
         clientEntityNum, baseflags );
 }
@@ -326,7 +326,7 @@ qboolean SV_EdictPV( cm_t *cm, edict_t *ent, byte *mask ) {
     mnode_t *node;
     int i, l;
 
-    if( ent->num_clusters == -1 ) {	
+    if( ent->num_clusters == -1 ) {    
         // too many leafs for individual check, go by headnode
         node = CM_NodeNum( cm, ent->headnode );
         return CM_HeadnodeVisible( node, mask );
@@ -339,7 +339,7 @@ qboolean SV_EdictPV( cm_t *cm, edict_t *ent, byte *mask ) {
             return qtrue;
         }
     }
-    return qfalse;		// not visible
+    return qfalse;        // not visible
 }
 
 /*
@@ -351,158 +351,158 @@ copies off the playerstat and areabits.
 =============
 */
 void SV_BuildClientFrame( client_t *client ) {
-	int		e;
-	vec3_t	org;
-	edict_t	*ent;
-	edict_t	*clent;
-	client_frame_t	*frame;
-	entity_state_t	*state;
+    int         e;
+    vec3_t      org;
+    edict_t     *ent;
+    edict_t     *clent;
+    client_frame_t  *frame;
+    entity_state_t  *state;
     player_state_t  *ps;
-	int		l;
-	int		clientarea, clientcluster;
-	mleaf_t	*leaf;
-	byte	clientphs[MAX_MAP_VIS];
-	byte	clientpvs[MAX_MAP_VIS];
-    extern cvar_t *sv_novis;
+    int         l;
+    int         clientarea, clientcluster;
+    mleaf_t     *leaf;
+    byte        clientphs[MAX_MAP_VIS];
+    byte        clientpvs[MAX_MAP_VIS];
 
-	clent = client->edict;
-	if( !clent->client )
-		return;		// not in game yet
+    clent = client->edict;
+    if( !clent->client )
+        return;        // not in game yet
 
-	// this is the frame we are creating
-	frame = &client->frames[sv.framenum & UPDATE_MASK];
-	client->frame_latency[sv.framenum & LATENCY_MASK] = -1;
+    // this is the frame we are creating
+    frame = &client->frames[sv.framenum & UPDATE_MASK];
+    client->frame_latency[sv.framenum & LATENCY_MASK] = -1;
     client->frames_sent++;
 
-	frame->sentTime = com_eventTime; // save it for ping calc later
+    frame->sentTime = com_eventTime; // save it for ping calc later
 
-	// find the client's PVS
+    // find the client's PVS
     ps = &clent->client->ps;
-	VectorMA( ps->viewoffset, 0.125f, ps->pmove.origin, org );
+    VectorMA( ps->viewoffset, 0.125f, ps->pmove.origin, org );
 
-	leaf = CM_PointLeaf( client->cm, org );
-	clientarea = CM_LeafArea( leaf );
-	clientcluster = CM_LeafCluster( leaf );
+    leaf = CM_PointLeaf( client->cm, org );
+    clientarea = CM_LeafArea( leaf );
+    clientcluster = CM_LeafCluster( leaf );
 
-	// calculate the visible areas
-	frame->areabytes = CM_WriteAreaBits( client->cm, frame->areabits, clientarea );
+    // calculate the visible areas
+    frame->areabytes = CM_WriteAreaBits( client->cm, frame->areabits, clientarea );
     if( !frame->areabytes && client->protocol != PROTOCOL_VERSION_Q2PRO ) {
         frame->areabits[0] = 255;
         frame->areabytes = 1;
     }
 
-	// grab the current player_state_t
-	frame->ps = *ps;
+    // grab the current player_state_t
+    frame->ps = *ps;
 
     // grab the current clientNum
     if( g_features->integer & GMF_CLIENTNUM ) {
-    	frame->clientNum = clent->client->clientNum;
+        frame->clientNum = clent->client->clientNum;
     } else {
-	    frame->clientNum = client->number;
+        frame->clientNum = client->number;
     }
 
-	CM_FatPVS( client->cm, clientpvs, org );
-	BSP_ClusterVis( client->cm->cache, clientphs, clientcluster, DVIS_PHS );
+    CM_FatPVS( client->cm, clientpvs, org );
+    BSP_ClusterVis( client->cm->cache, clientphs, clientcluster, DVIS_PHS );
 
-	// build up the list of visible entities
-	frame->numEntities = 0;
-	frame->firstEntity = svs.nextEntityStates;
+    // build up the list of visible entities
+    frame->numEntities = 0;
+    frame->firstEntity = svs.nextEntityStates;
 
-	for( e = 1; e < client->pool->num_edicts; e++ ) {
-		ent = EDICT_POOL( client, e );
+    for( e = 1; e < client->pool->num_edicts; e++ ) {
+        ent = EDICT_POOL( client, e );
 
         // ignore entities not in use
         if( ( g_features->integer & GMF_PROPERINUSE ) && !ent->inuse ) {
             continue;
         }
 
-		// ignore ents without visible models
-		if( ent->svflags & SVF_NOCLIENT )
-			continue;
+        // ignore ents without visible models
+        if( ent->svflags & SVF_NOCLIENT )
+            continue;
 
-		// ignore ents without visible models unless they have an effect
-		if( !ent->s.modelindex && !ent->s.effects && !ent->s.sound ) {
-			if( !ent->s.event ) {
-				continue;
-			}
-			if( ent->s.event == EV_FOOTSTEP && client->settings[CLS_NOFOOTSTEPS] ) {
-				continue;
-			}
-		}
+        // ignore ents without visible models unless they have an effect
+        if( !ent->s.modelindex && !ent->s.effects && !ent->s.sound ) {
+            if( !ent->s.event ) {
+                continue;
+            }
+            if( ent->s.event == EV_FOOTSTEP && client->settings[CLS_NOFOOTSTEPS] ) {
+                continue;
+            }
+        }
 
-		if( ( ent->s.effects & EF_GIB ) && client->settings[CLS_NOGIBS] ) {
-			continue;
-		}
+        if( ( ent->s.effects & EF_GIB ) && client->settings[CLS_NOGIBS] ) {
+            continue;
+        }
 
-		// ignore if not touching a PV leaf
-		if( ent != clent && !sv_novis->integer ) {
-			// check area
-			if( !CM_AreasConnected( client->cm, clientarea, ent->areanum ) ) {	
-				// doors can legally straddle two areas, so
-				// we may need to check another one
-				if( !CM_AreasConnected( client->cm, clientarea, ent->areanum2 ) ) {
-					continue;		// blocked by a door
+        // ignore if not touching a PV leaf
+        if( ent != clent && !sv_novis->integer ) {
+            // check area
+            if( !CM_AreasConnected( client->cm, clientarea, ent->areanum ) ) {    
+                // doors can legally straddle two areas, so
+                // we may need to check another one
+                if( !CM_AreasConnected( client->cm, clientarea, ent->areanum2 ) ) {
+                    continue;        // blocked by a door
                 }
-			}
+            }
 
-			// beams just check one point for PHS
-			if( ent->s.renderfx & RF_BEAM ) {
-				l = ent->clusternums[0];
-				if( !Q_IsBitSet( clientphs, l ) )
-					continue;
-			} else {
+            // beams just check one point for PHS
+            if( ent->s.renderfx & RF_BEAM ) {
+                l = ent->clusternums[0];
+                if( !Q_IsBitSet( clientphs, l ) )
+                    continue;
+            } else {
                 if( !SV_EdictPV( client->cm, ent, clientpvs ) ) {
                     continue;
                 }
 
-				if( !ent->s.modelindex ) {	
-					// don't send sounds if they will be attenuated away
-					vec3_t	delta;
-					float	len;
+                if( !ent->s.modelindex ) {    
+                    // don't send sounds if they will be attenuated away
+                    vec3_t    delta;
+                    float    len;
 
-					VectorSubtract( org, ent->s.origin, delta );
-					len = VectorLength( delta );
-					if( len > 400 )
-						continue;
-				}
-			}
-		}
+                    VectorSubtract( org, ent->s.origin, delta );
+                    len = VectorLength( delta );
+                    if( len > 400 )
+                        continue;
+                }
+            }
+        }
 
-		if( ent->s.number != e ) {
-			Com_DPrintf( "FIXING ENT->S.NUMBER!!!\n" );
-			ent->s.number = e;
-		}
+        if( ent->s.number != e ) {
+            Com_WPrintf( "%s: fixing ent->s.number: %d to %d\n",
+                __func__, ent->s.number, e );
+            ent->s.number = e;
+        }
 
-		// add it to the circular client_entities array
+        // add it to the circular client_entities array
         state = &svs.entityStates[svs.nextEntityStates % svs.numEntityStates];
-		*state = ent->s;
+        *state = ent->s;
 
         // clear footsteps
-		if( ent->s.event == EV_FOOTSTEP && client->settings[CLS_NOFOOTSTEPS] ) {
-			state->event = 0;
-		}
+        if( ent->s.event == EV_FOOTSTEP && client->settings[CLS_NOFOOTSTEPS] ) {
+            state->event = 0;
+        }
 
         // XXX: hide this enitity from renderer
-		if( ( client->protocol != PROTOCOL_VERSION_Q2PRO ||
+        if( ( client->protocol != PROTOCOL_VERSION_Q2PRO ||
               client->settings[CLS_RECORDING] ) &&
             ( g_features->integer & GMF_CLIENTNUM ) &&
-			e == frame->clientNum + 1 && ent != clent )
-		{
-			state->modelindex = 0;
-		}
+            e == frame->clientNum + 1 && ent != clent )
+        {
+            state->modelindex = 0;
+        }
 
-		// don't mark players missiles as solid
-		if( ent->owner == client->edict ) {
-			state->solid = 0;
+        // don't mark players missiles as solid
+        if( ent->owner == client->edict ) {
+            state->solid = 0;
         } else if( LONG_SOLID_SUPPORTED( client->protocol, client->version ) ) {
             state->solid = sv.entities[e].solid32;
         }
 
         svs.nextEntityStates++;
 
-		if( ++frame->numEntities == MAX_PACKET_ENTITIES ) {
-			break;
-		}
-	}
+        if( ++frame->numEntities == MAX_PACKET_ENTITIES ) {
+            break;
+        }
+    }
 }
 

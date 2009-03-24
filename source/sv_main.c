@@ -32,6 +32,9 @@ LIST_DECL( sv_filterlist );
 client_t    *sv_client;         // current client
 
 cvar_t  *sv_enforcetime;
+#if USE_FPS
+cvar_t  *sv_fps;
+#endif
 
 cvar_t  *sv_timeout;            // seconds without any message
 cvar_t  *sv_zombietime;         // seconds to sink messages after disconnect
@@ -65,6 +68,7 @@ cvar_t  *sv_calcpings_method;
 cvar_t  *sv_changemapcmd;
 
 cvar_t  *sv_strafejump_hack;
+cvar_t  *sv_waterjump_hack;
 #ifndef _WIN32
 cvar_t  *sv_oldgame_hack;
 #endif
@@ -803,33 +807,30 @@ static void SVC_DirectConnect( void ) {
     // copy default pmove parameters
     newcl->pmp = sv_pmp;
     newcl->pmp.airaccelerate = sv_airaccelerate->integer ? qtrue : qfalse;
-#ifdef PMOVE_HACK
-    newcl->pmp.highprec = qtrue;
-#endif
 
     // r1q2 extensions
+    i = 2;
     if( protocol == PROTOCOL_VERSION_R1Q2 ||
         protocol == PROTOCOL_VERSION_Q2PRO )
     {
-        newcl->pmp.speedMultiplier = 2;
-        newcl->pmp.strafeHack = sv_strafejump_hack->integer > 0 ? qtrue : qfalse;
-    } else {
-        newcl->pmp.strafeHack = sv_strafejump_hack->integer > 1 ? qtrue : qfalse;
+        newcl->pmp.speedmult = 2;
+        i = 1;
     }
+    newcl->pmp.strafehack = sv_strafejump_hack->integer >= i ? qtrue : qfalse;
 
     // q2pro extensions
+    i = 2;
     if( protocol == PROTOCOL_VERSION_Q2PRO ) {
         if( sv_qwmod->integer ) {
-            newcl->pmp.qwmod = sv_qwmod->integer;
-            newcl->pmp.maxspeed = 320;
-            //newcl->pmp.upspeed = ( sv_qwmod->integer > 1 ) ? 310 : 350;
-            newcl->pmp.friction = 4;
-            newcl->pmp.waterfriction = 4;
-            newcl->pmp.airaccelerate = qtrue;
+            PmoveEnableQW( &newcl->pmp );
         }
-        newcl->pmp.flyfix = qtrue;
+        newcl->pmp.flyhack = qtrue;
         newcl->pmp.flyfriction = 4;
+        if( version >= PROTOCOL_VERSION_Q2PRO_WATERJUMP_HACK ) {
+            i = 1;
+        }
     }
+    newcl->pmp.waterhack = sv_waterjump_hack->integer >= i ? qtrue : qfalse;
 
     // get the game a chance to reject this connection or modify the userinfo
     sv_client = newcl;
@@ -1072,12 +1073,16 @@ Updates the cl->ping variables
 static void SV_CalcPings( void ) {
     client_t    *cl;
     int         (*calc)( client_t * );
+    int         res;
 
     switch( sv_calcpings_method->integer ) {
         case 0:  calc = ping_nop; break;
         case 2:  calc = ping_min; break;
         default: calc = ping_avg; break;
     }
+
+    // update avg ping every 10 seconds
+    res = sv.framenum % 100;
 
     FOR_EACH_CLIENT( cl ) {
         if( cl->state == cs_spawned ) {
@@ -1088,7 +1093,7 @@ static void SV_CalcPings( void ) {
                 } else if( cl->ping > cl->max_ping ) {
                     cl->max_ping = cl->ping;
                 }
-                if( ( sv.framenum % 100 ) == 0 ) {
+                if( !res ) {
                     cl->avg_ping_time += cl->ping;
                     cl->avg_ping_count++;
                 }
@@ -1118,14 +1123,14 @@ static void SV_GiveMsec( void ) {
         return;
 
     FOR_EACH_CLIENT( cl ) {
-        cl->commandMsec = 1800;        // 1600 + some slop
+        cl->commandMsec = 18 * SV_FRAMETIME;        // 1600 + some slop
     }
 
     if( sv.framenum & 63 )
         return;
 
     FOR_EACH_CLIENT( cl ) {
-        cl->fps = ( cl->numMoves * 10 ) >> 6;
+        cl->fps = ( cl->numMoves * SV_FPS ) >> 6;
         cl->numMoves = 0;
     }
 }
@@ -1324,7 +1329,7 @@ static void SV_RunGameFrame( void ) {
     // compression can get confused when a client
     // has the "current" frame
     sv.framenum++;
-    sv.frametime -= 100;
+    sv.frameresidual -= SV_FRAMETIME;
 
 #if USE_MVD_SERVER
     // save the entire world state if recording a serverdemo
@@ -1478,10 +1483,10 @@ void SV_Frame( unsigned msec ) {
     SV_SendAsyncPackets();
 
     // move autonomous things around if enough time has passed
-    sv.frametime += msec;
-    if( !com_timedemo->integer && sv.frametime < 100 ) {
+    sv.frameresidual += msec;
+    if( !com_timedemo->integer && sv.frameresidual < SV_FRAMETIME ) {
         if( Com_IsDedicated() ) {
-            NET_Sleep( 100 - sv.frametime );
+            NET_Sleep( SV_FRAMETIME - sv.frameresidual );
         }
         return;
     }
@@ -1733,8 +1738,11 @@ void SV_Init( void ) {
     sv_zombietime = Cvar_Get( "zombietime", "2", 0 );
     sv_ghostime = Cvar_Get( "sv_ghostime", "6", 0 );
     sv_showclamp = Cvar_Get( "showclamp", "0", 0 );
-    sv_enforcetime = Cvar_Get ( "sv_enforcetime", "1", 0 );
-    sv_force_reconnect = Cvar_Get ( "sv_force_reconnect", "", CVAR_LATCH );
+    sv_enforcetime = Cvar_Get( "sv_enforcetime", "1", 0 );
+#if USE_FPS
+    sv_fps = Cvar_Get( "sv_fps", "10", CVAR_LATCH );
+#endif
+    sv_force_reconnect = Cvar_Get( "sv_force_reconnect", "", CVAR_LATCH );
     sv_show_name_changes = Cvar_Get( "sv_show_name_changes", "0", 0 );
 
     sv_airaccelerate = Cvar_Get("sv_airaccelerate", "0", CVAR_LATCH);
@@ -1755,6 +1763,7 @@ void SV_Init( void ) {
     sv_changemapcmd = Cvar_Get( "sv_changemapcmd", "", 0 );
 
     sv_strafejump_hack = Cvar_Get( "sv_strafejump_hack", "1", CVAR_LATCH );
+    sv_waterjump_hack = Cvar_Get( "sv_waterjump_hack", "0", CVAR_LATCH );
 
 #ifndef _WIN32
     sv_oldgame_hack = Cvar_Get( "sv_oldgame_hack", "0", CVAR_LATCH );
@@ -1781,12 +1790,7 @@ void SV_Init( void ) {
     g_features = Cvar_Get( "g_features", "0", CVAR_ROM );
 
     // set up default pmove parameters
-    sv_pmp.maxspeed = 300;
-    //sv_pmp.upspeed = 350;
-    sv_pmp.friction = 6;
-    sv_pmp.flyfriction = 9;
-    sv_pmp.waterfriction = 1;
-    sv_pmp.speedMultiplier = 1;
+    PmoveInit( &sv_pmp );
 
 #if USE_SYSCON
     SV_SetConsoleTitle();

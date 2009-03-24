@@ -402,13 +402,16 @@ void SV_New_f( void ) {
         MSG_WriteByte( 0 ); // not enhanced
         MSG_WriteShort( sv_client->version );
         MSG_WriteByte( 0 ); // no advanced deltas
-        MSG_WriteByte( sv_strafejump_hack->integer ? 1 : 0 );
+        MSG_WriteByte( sv_client->pmp.strafehack );
         break;
     case PROTOCOL_VERSION_Q2PRO:
         MSG_WriteShort( sv_client->version );
         MSG_WriteByte( 2 ); // used to be GT_DEATHMATCH
-        MSG_WriteByte( sv_strafejump_hack->integer ? 1 : 0 );
-        MSG_WriteByte( sv_qwmod->integer );
+        MSG_WriteByte( sv_client->pmp.strafehack );
+        MSG_WriteByte( sv_client->pmp.qwmode );
+        if( sv_client->version >= PROTOCOL_VERSION_Q2PRO_WATERJUMP_HACK ) {
+            MSG_WriteByte( sv_client->pmp.waterhack );
+        }
         break;
     default:
         break;

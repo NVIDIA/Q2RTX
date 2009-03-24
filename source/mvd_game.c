@@ -125,6 +125,18 @@ static void MVD_LayoutClients( mvd_client_t *client ) {
     client->layout_time = svs.realtime;
 }
 
+static int MVD_CountClients( mvd_t *mvd ) {
+    mvd_client_t *c;
+    int count = 0;
+
+    LIST_FOR_EACH( mvd_client_t, c, &mvd->clients, entry ) {
+        if( c->cl->state == cs_spawned ) {
+            count++;
+        }
+    }
+    return count;
+}
+
 static void MVD_LayoutChannels( mvd_client_t *client ) {
     static const char header[] =
         "xv 32 yv 8 picn inventory "
@@ -163,8 +175,7 @@ static void MVD_LayoutChannels( mvd_client_t *client ) {
                 mvd == client->mvd ? "2" : "",
                 cursor == client->layout_cursor ? 0x8d : 0x20,
                 mvd->name, mvd->mapname,
-                List_Count( &mvd->clients ),
-                mvd->numplayers );
+                MVD_CountClients( mvd ), mvd->numplayers );
             if( len >= sizeof( buffer ) ) {
                 continue;
             }
@@ -231,7 +242,7 @@ static void MVD_LayoutMenu( mvd_client_t *client ) {
 
     total = Q_scnprintf( layout, sizeof( layout ), format,
         cur[0], client->target ? "Leave" : "Enter", cur[1],
-        cur[2], List_Count( &client->mvd->clients ),
+        cur[2], MVD_CountClients( client->mvd ),
         cur[3], List_Count( &mvd_channel_list ), cur[4],
         cur[5], ( client->uf & UF_MUTE_OBSERVERS ) ? YES : NO,
         cur[6], ( client->uf & UF_MUTE_MISC ) ? YES : NO,
@@ -340,7 +351,7 @@ static void MVD_UpdateLayouts( mvd_t *mvd ) {
             }
             break;
         case LAYOUT_MENU:
-            if( !client->layout_time ) {
+            if( mvd->dirty || !client->layout_time ) {
                 MVD_LayoutMenu( client );
             }
             break;
@@ -358,6 +369,8 @@ static void MVD_UpdateLayouts( mvd_t *mvd ) {
             break;
         }
     }
+
+    mvd->dirty = qfalse;
 }
 
 
@@ -1327,6 +1340,8 @@ static void MVD_GameClientBegin( edict_t *ent ) {
         VectorCopy( mvd->spawnAngles, client->ps.viewangles );
         MVD_FollowStop( client );
     }
+
+    mvd_dirty = qtrue;
 }
 
 static void MVD_GameClientUserinfoChanged( edict_t *ent, char *userinfo ) {
@@ -1548,6 +1563,7 @@ update:
         MVD_InfoSet( "mvd_channels", va( "%d", List_Count( &mvd_channel_list ) ) );
         mvd_dirty = qfalse;
     }
+
     if( numplayers != mvd_numplayers ) {
         MVD_InfoSet( "mvd_players", va( "%d", numplayers ) );
         mvd_numplayers = numplayers;

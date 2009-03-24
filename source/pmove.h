@@ -29,22 +29,20 @@ Common between server and client so prediction matches
 */
 
 typedef struct {
+    qboolean    qwmode;
 	qboolean	airaccelerate;
-	qboolean	strafeHack;
-    qboolean    flyfix;
-	int			qwmod;
-	float		speedMultiplier;
-//	float		upspeed;
+	qboolean	strafehack;
+    qboolean    flyhack;
+    qboolean    waterhack;
+	float		speedmult;
+    float       watermult;
 	float		maxspeed;
 	float		friction;
 	float		waterfriction;
     float       flyfriction;
-#ifdef PMOVE_HACK
-	vec3_t		origin;
-	vec3_t		velocity;
-	qboolean	highprec;
-#endif
 } pmoveParams_t;
 
 void Pmove( pmove_t *pmove, pmoveParams_t *params );
 
+void PmoveInit( pmoveParams_t *pmp );
+void PmoveEnableQW( pmoveParams_t *pmp );

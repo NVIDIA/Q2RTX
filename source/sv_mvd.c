@@ -747,6 +747,12 @@ static void emit_frame( void ) {
             continue;
         }
 
+        if( newes->number != i ) {
+            Com_WPrintf( "%s: fixing ent->s.number: %d to %d\n",
+                __func__, newes->number, i );
+            newes->number = i;
+        }
+
         // calculate flags
         flags = 0;
         if( i <= sv_maxclients->integer ) {
@@ -2076,6 +2082,8 @@ static void SV_MvdRecord_f( void ) {
         case 'z':
             gzip = qtrue;
             break;
+        default:
+            return;
         }
     }
 

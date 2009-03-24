@@ -36,6 +36,19 @@ void SV_ClientReset( client_t *client ) {
     memset( &client->lastcmd, 0, sizeof( client->lastcmd ) );
 }
 
+#if USE_FPS
+static void SV_SetFrameTime( void ) {
+    int i = sv_fps->integer / 10;
+
+    clamp( i, 1, 6 );
+
+    sv.frametime = 100 / i;
+    sv.framemult = i;
+
+    Cvar_SetInteger( sv_fps, i * 10, CVAR_SET_DIRECT );
+}
+#endif
+
 /*
 ================
 SV_SpawnServer
@@ -97,6 +110,9 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
 	//
 	// spawn the rest of the entities on the map
 	//	
+#if USE_FPS
+    SV_SetFrameTime();
+#endif
 
 	// precache and static commands can be issued during
 	// map initialization

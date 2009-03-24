@@ -344,7 +344,7 @@ void GL_LoadWorld( const char *name ) {
 
     gl_static.world.cache = bsp;
 
-    // registers all texinfo
+    // register all texinfo
     for( i = 0, info = bsp->texinfo; i < bsp->numtexinfo; i++, info++ ) {
 		Q_concat( buffer, sizeof( buffer ), "textures/", info->name, ".wal", NULL );
         image = IMG_Find( buffer, it_wall );

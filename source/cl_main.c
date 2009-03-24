@@ -69,9 +69,11 @@ cvar_t	*cl_changemapcmd;
 cvar_t	*cl_beginmapcmd;
 
 cvar_t  *cl_gibs;
+#if USE_FPS
 cvar_t  *cl_updaterate;
+#endif
 
-cvar_t *cl_protocol;
+cvar_t  *cl_protocol;
 
 cvar_t	*gender_auto;
 
@@ -218,6 +220,7 @@ static void CL_UpdatePredictSetting( void ) {
     MSG_FlushTo( &cls.netchan->message );
 }
 
+#if USE_FPS
 static void CL_UpdateRateSetting( void ) {
     if( cls.state < ca_connected ) {
         return;
@@ -231,6 +234,7 @@ static void CL_UpdateRateSetting( void ) {
     MSG_WriteShort( cl_updaterate->integer );
     MSG_FlushTo( &cls.netchan->message );
 }
+#endif
 
 /*
 ===================
@@ -1939,7 +1943,9 @@ void CL_RequestNextDownload ( void ) {
     CL_UpdateGibSetting();
     CL_UpdateFootstepsSetting();
 	CL_UpdatePredictSetting();
+#if USE_FPS
 	CL_UpdateRateSetting();
+#endif
 
     cls.state = ca_precached;
 }
@@ -2359,9 +2365,11 @@ static void cl_predict_changed( cvar_t *self ) {
     CL_UpdatePredictSetting();
 }
 
+#if USE_FPS
 static void cl_updaterate_changed( cvar_t *self ) {
     CL_UpdateRateSetting();
 }
+#endif
 
 static const cmdreg_t c_client[] = {
     { "cmd", CL_ForwardToServer_f },
@@ -2467,8 +2475,10 @@ static void CL_InitLocal ( void ) {
     cl_gibs = Cvar_Get( "cl_gibs", "1", 0 );
 	cl_gibs->changed = cl_gibs_changed;
 
+#if USE_FPS
     cl_updaterate = Cvar_Get( "cl_updaterate", "0", 0 );
 	cl_updaterate->changed = cl_updaterate_changed;
+#endif
 
     cl_chat_notify = Cvar_Get( "cl_chat_notify", "1", 0 );
     cl_chat_sound = Cvar_Get( "cl_chat_sound", "misc/talk.wav", 0 );

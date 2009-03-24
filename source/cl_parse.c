@@ -717,7 +717,7 @@ static void CL_ParseConfigstring( int index ) {
         cl.image_precache[index-CS_IMAGES] = R_RegisterPic (string);
     } else if (index >= CS_PLAYERSKINS && index < CS_PLAYERSKINS+MAX_CLIENTS) {
         CL_LoadClientinfo( &cl.clientinfo[index - CS_PLAYERSKINS], string );
-    } else if( index == CS_AIRACCEL && !cl.pmp.qwmod ) {
+    } else if( index == CS_AIRACCEL && !cl.pmp.qwmode ) {
         cl.pmp.airaccelerate = atoi( string ) ? qtrue : qfalse;
     }
 }
@@ -827,16 +827,7 @@ static void CL_ParseServerData( void ) {
     MSG_ReadString( levelname, sizeof( levelname ) );
 
     // setup default pmove parameters
-    cl.pmp.speedMultiplier = 1;
-    cl.pmp.maxspeed = 300;
-//    cl.pmp.upspeed = 350;
-    cl.pmp.friction = 6;
-    cl.pmp.waterfriction = 1;
-    cl.pmp.flyfriction = 9;
-    cl.pmp.airaccelerate = 0;    
-#ifdef PMOVE_HACK
-    cl.pmp.highprec = qtrue;
-#endif
+    PmoveInit( &cl.pmp );
 
     // setup default frame times
     cl.frametime = 100;
@@ -860,15 +851,13 @@ static void CL_ParseServerData( void ) {
         }
         Com_DPrintf( "Using minor R1Q2 protocol version %d\n", i );
         cls.protocolVersion = i;
+        MSG_ReadByte(); // used to be advanced deltas
         i = MSG_ReadByte();
-        if( i ) { // seems to be no longer used
-            Com_DPrintf( "R1Q2 advancedDeltas enabled\n" );
+        if( i ) {
+            Com_DPrintf( "R1Q2 strafejump hack enabled\n" );
+            cl.pmp.strafehack = qtrue;
         }
-        cl.pmp.strafeHack = MSG_ReadByte();
-        if( cl.pmp.strafeHack ) {
-            Com_DPrintf( "R1Q2 strafeHack enabled\n" );
-        }
-        cl.pmp.speedMultiplier = 2;
+        cl.pmp.speedmult = 2;
     } else if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO ) {
         i = MSG_ReadShort();
         if( !Q2PRO_SUPPORTED( i ) ) {
@@ -879,24 +868,26 @@ static void CL_ParseServerData( void ) {
         Com_DPrintf( "Using minor Q2PRO protocol version %d\n", i );
         cls.protocolVersion = i;
         MSG_ReadByte(); // used to be gametype
-        cl.pmp.strafeHack = MSG_ReadByte();
-        cl.pmp.qwmod = MSG_ReadByte(); //atu QWMod
-        cl.pmp.speedMultiplier = 2;        
-        cl.pmp.flyfix = qtrue;
+        i = MSG_ReadByte();
+        if( i ) {
+            Com_DPrintf( "Q2PRO strafejump hack enabled\n" );
+            cl.pmp.strafehack = qtrue;
+        }
+        i = MSG_ReadByte(); //atu QWMod
+        if( i ) {
+            Com_DPrintf( "Q2PRO QW mode enabled\n" );
+            PmoveEnableQW( &cl.pmp );
+        }
+        if( cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_WATERJUMP_HACK ) {
+            i = MSG_ReadByte();
+            if( i ) {
+                Com_DPrintf( "Q2PRO waterjump hack enabled\n" );
+                cl.pmp.waterhack = qtrue;
+            }
+        }
+        cl.pmp.speedmult = 2;        
+        cl.pmp.flyhack = qtrue; // fly hack is unconditionally enabled
         cl.pmp.flyfriction = 4;
-
-        if( cl.pmp.strafeHack ) {
-            Com_DPrintf( "Q2PRO strafeHack enabled\n" );
-        }
-        if( cl.pmp.qwmod ) {
-            Com_DPrintf( "Q2PRO QWMod enabled\n" );
-
-            cl.pmp.maxspeed = 320;
-            //cl.pmp.upspeed = ((cl.pmp.qwmod == 2) ? 310 : 350);
-            cl.pmp.friction = 4;
-            cl.pmp.waterfriction = 4;
-            cl.pmp.airaccelerate = qtrue;
-        }
     }
 
     if( cl.clientNum == -1 ) {
@@ -1374,6 +1365,7 @@ static void CL_ParseSetting( void ) {
     value = MSG_ReadLong();
 
     switch( index ) {
+#if USE_FPS
     case SVS_FPS:
         if( !value ) {
             value = 10;
@@ -1381,6 +1373,7 @@ static void CL_ParseSetting( void ) {
         cl.frametime = 1000 / value;
         cl.framefrac = value * 0.001f;
         break;
+#endif
     default:
         break;
     }

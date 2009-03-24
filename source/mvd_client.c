@@ -680,6 +680,7 @@ static qboolean gtv_wait_stop( mvd_t *mvd ) {
 
 stop:
     mvd->state = MVD_READING;
+    mvd->dirty = qtrue;
     return qtrue;
 }
 
@@ -711,6 +712,7 @@ static void gtv_wait_start( mvd_t *mvd ) {
     }
     mvd->underflows++;
     mvd->state = MVD_WAITING;
+    mvd->dirty = qtrue;
 
     // notify spectators
     if( Com_IsDedicated() ) {

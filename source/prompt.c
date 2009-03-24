@@ -160,6 +160,7 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
     genctx_t ctx;
     char *matches[MAX_MATCHES], *sortedMatches[MAX_MATCHES];
     int numCommands = 0, numCvars = 0, numAliases = 0;
+    extern size_t cmd_string_tail;
 
 	text = inputLine->text;
 	size = inputLine->maxChars + 1;
@@ -180,13 +181,13 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 
 	argc = Cmd_Argc();
 
+    // determine argument number to be completed
 	currentArg = Cmd_FindArgForOffset( pos );
-	len = strlen( text );
-	if( len > 0 && text[ len - 1 ] == ' ' ) {
-		if( currentArg == argc - 1 ) {
-			currentArg++;
-		}
+	if( currentArg == argc - 1 && cmd_string_tail ) {
+        // start completing new argument if command line has trailing whitespace
+		currentArg++;
 	}
+
     argnum = 0;
     s = Cmd_Argv( 0 );
     for( i = 0; i < currentArg; i++ ) {
@@ -235,6 +236,13 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 	pos = Cmd_ArgOffset( currentArg );
 	text += pos;
 	size -= pos;
+
+    // append whitespace since Cmd_TokenizeString eats it
+    if( currentArg == argc && cmd_string_tail ) {
+        *text++ = ' ';
+        pos++;
+        size--;
+    }
 
 	if( ctx.count == 1 ) {
 		// we have finished completion!

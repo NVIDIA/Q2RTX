@@ -1,19 +1,34 @@
 Debian GNU/Linux
 ----------------
-Those running stable Debian destribution (currently Etch) on i386
-architecture can conveniently install pre-built Q2PRO packages from
-skuller.ath.cx Debian [repository](http://skuller.ath.cx/debian/).
-Just add the following line(s) into your `/etc/apt/sources.list`
-and run `aptitude update`:
+Prebuilt Q2PRO packages are available for the stable Debian distribution
+for i386 and amd64 architectures.
 
-    deb http://skuller.ath.cx/debian/ etch q2pro
-    deb-src http://skuller.ath.cx/debian/ etch q2pro
+In order to get Q2PRO repository contents automatically managed by APT,
+add the following lines into your `/etc/apt/sources.list` file:
 
-Users of Secure APT may need to import the repository signing key first:
+    deb http://skuller.ath.cx/debian/ lenny q2pro
+    deb-src http://skuller.ath.cx/debian/ lenny q2pro
+
+Users of Secure APT also need to import the repository signing key:
 
     wget -q -O - http://skuller.ath.cx/debian/archive.key | apt-key add -
 
-Nighly builds
+Finally, run the following commands to install or upgrade Q2PRO:
+
+    aptitude update
+    aptitude install q2pro-client   # install the graphical client
+    aptitude install q2pro-server   # install the dedicated server
+
+It is also possible to download the individual [.deb][debs] packages
+and install them manually using `dpkg -i` command.
+
+Note that Q2PRO packages above are not providing any game media files
+for Quake 2 like textures and maps. You need to install them yourself,
+otherwise graphical client won't run.
+
+[debs]: http://skuller.ath.cx/debian/pool/q2pro/
+
+Nightly builds
 ----------------
 Generic GNU/Linux and Win32 binary builds from SVN trunk are
 [available][nightly], along with source snapshots. You might also
