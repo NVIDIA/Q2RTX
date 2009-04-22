@@ -406,6 +406,7 @@ int Q_DrawStrlenTo( const char *string, int maxChars );
 qboolean Q_IsWhiteSpace( const char *string );
 char *Q_FormatString( const char *string );
 char *Q_UnescapeString( const char *string );
+size_t Q_FormatFileSize( char *dest, size_t bytes, size_t size );
 int Q_ClearColorStr( char *out, const char *in, int bufsize ); 
 int Q_ClearStr( char *out, const char *in, int bufsize ); 
 int Q_HighlightStr( char *out, const char *in, int bufsize ); 
@@ -504,7 +505,6 @@ qboolean COM_IsFloat( const char *s );
 qboolean COM_IsUint( const char *s );
 qboolean COM_HasSpaces( const char *s );
 
-char *COM_SimpleParse( const char **data_p, int *length );
 char *COM_Parse( const char **data_p );
 // data is an in/out parm, returns a parsed out token
 int COM_Compress( char *data );

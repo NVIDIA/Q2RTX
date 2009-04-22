@@ -68,7 +68,7 @@ typedef struct {
     unsigned    firstEntity;
     player_state_t ps;
     int         areabytes;
-    byte        areabits[MAX_MAP_AREAS/8];  // portalarea visibility bits
+    byte        areabits[MAX_MAP_AREA_BYTES];  // portalarea visibility bits
     unsigned    sentTime;                   // for ping calculations
     int         clientNum;
 } client_frame_t;
@@ -104,7 +104,7 @@ typedef struct {
 #define EDICT_POOL(c,n) ((edict_t *)((byte *)(c)->pool->edicts + (c)->pool->edict_size*(n)))
 
 #define EDICT_NUM(n) ((edict_t *)((byte *)ge->edicts + ge->edict_size*(n)))
-#define NUM_FOR_EDICT(e) ( ((byte *)(e)-(byte *)ge->edicts ) / ge->edict_size)
+#define NUM_FOR_EDICT(e) ((int)(((byte *)(e)-(byte *)ge->edicts ) / ge->edict_size))
 
 #define MAX_TOTAL_ENT_LEAFS        128
 

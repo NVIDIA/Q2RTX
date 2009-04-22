@@ -85,13 +85,7 @@ static void BuildName( fsFileInfo_t *info, char **cache ) {
         CL_GetDemoInfo( buffer, &demo );
     }
 
-    if( info->size >= 1000000 ) {
-        sprintf( buffer, "%2.1fM", ( float )info->size / 1000000 );
-    } else if( info->size >= 1000 ) {
-        sprintf( buffer, "%3"PRIz"K", info->size / 1000 );
-    } else {
-        sprintf( buffer, "%3"PRIz"b", info->size );
-    }
+    Q_FormatFileSize( buffer, info->size, sizeof( buffer ) );
 
     e = UI_FormatColumns( DEMO_EXTRASIZE,
         info->name, buffer, demo.map, demo.pov, NULL );

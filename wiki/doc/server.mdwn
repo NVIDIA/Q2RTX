@@ -1,4 +1,4 @@
-[[toc ]]
+[[!toc levels=2 ]]
 
 Variables
 ==========
@@ -6,15 +6,11 @@ Variables
 Network
 ----------
 
-All network related cvars below can be changed at runtime and will
-take effect immediately.
-
 - `set net_ip ""` (string)  
 Specifies network interface address server should listen on
 for UDP connections. The same interface is also used for outgoing
 TCP connections (these include MVD/GTV and anticheat connections).
-Empty string means listening on all interfaces. *The latter is not
-supported on multi IP systems if you plan to use anticheat!*
+Empty string means listening on all interfaces.
 
 - `set net_port 27910` (integer)  
 Specifies port number server should listen on for UDP connections.
@@ -29,6 +25,12 @@ Value of this cvar mirrors `net_ip` unless modified by user.
 - `set net_tcp_port $net_port` (integer)  
 Specifies port number server should listen on for TCP connections.
 Value of this cvar mirrors `net_port` unless modified by user.
+
+*NOTE*: There is a limitation preventing anticheat to work correctly on
+servers accessible from multiple IP addresses. If you are running the server
+on multi IP system and plan to use anticheat, you need to explicitly bind
+the server to one of your network interfaces using the `net_ip` cvar, otherwise
+expect any kinds of problems.
 
 Misc
 ----------
@@ -93,7 +95,7 @@ unless game mod already shows name changes.
 Display uptime string in server info.
 
 
-MVD server
+MVD/GTV server
 ----------
 
 - `set sv_mvd_enable 0` (integer)  
@@ -104,6 +106,11 @@ Enables MVD/GTV server functionality.
 
 - `set sv_mvd_maxclients 8` (integer)  
 Total number of MVD/GTV client slots on the server.
+
+- `set sv_mvd_password ""` (string)  
+Password used to authenticate MVD/GTV clients. If password is not set, only those clients
+can connect, whose IP address is added to the list of trusted MVD/GTV hosts using ‘addgtvhos
+command.
 
 - `set sv_mvd_nogun 1` (boolean)  
 Reduce bandwidth usage by filtering on-screen gun updates out of MVD stream.
@@ -147,7 +154,7 @@ GTV connections are suspended after this period of time, in minutes,
 counted from the moment last active player disconnects or becomes inactive.
 Setting this to zero disables server side suspending entirely.
 
-MVD client
+MVD/GTV client
 ----------
 
 - `set mvd_username "unnamed"` (string)  
@@ -203,6 +210,9 @@ clients, regardless of their protocol version.
 Commands
 ==========
 
+Misc
+----------
+
 - `stuff <userid> <text ...>`  
 Stuff the given _text_ into command buffer of the client identified by _userid_.
 
@@ -216,57 +226,86 @@ connections. Remote client must support passive connections (R1Q2 and Q2PRO
 clients do), must be in passive connection mode and the specified _port_
 must be reachable. See `passive` [[client#index3h1]] command for more details.
 
-- `addban <address[/mask]> [comment ...]`
+- `addban <address[/mask]> [comment ...]`  
 Adds specified address to the ban list. Specify _mask_ to ban entire subnetwork.
 If specified, _comment_ will be printed to banned user(s) when they attempt to connect.
 
-- `delban <address[/mask]|id|all>`
+- `delban <address[/mask]|id|all>`  
 Deletes single matching address from the ban list. You can also specify
-numeric ID of the address/mask pair to delete, or `all` to clear
-the whole ban list.
+numeric ID of the address/mask pair to delete, or use special keyword `all`
+to clear the entire list.
 
-- `listbans`
-Enumerates all registered address/mask pairs in the ban list.
+- `listbans`  
+Displays all address/mask pairs added to the ban list along with their IDs.
 
-- `kickban <userid>`  
+- `kickban <userid>`    
 Kick the specified client and add his IP address to the
 ban list (with a default mask of 32).
 
-- `addstuffcmd <connect|begin> <command> [...]`
+- `addstuffcmd <connect|begin> <command> [...]`  
 Adds command to be automatically stuffed to every client as they initially
 connect or each time they enter new map.
 
-- `delstuffcmd <connect|begin> <id|all>`
+- `delstuffcmd <connect|begin> <id|all>`  
 Deletes command identified by numeric ID from the specified list.
 You can also specify `all` to clear the whole stuffcmd list.
 
-- `liststuffcmds <connect|begin>`
+- `liststuffcmds <connect|begin>`  
 Enumerates all registered commands in the specified stuffcmd list.
 
-- `addfiltercmd <command> [ignore|print|stuff|kick] [comment ...]`
+- `addfiltercmd <command> [ignore|print|stuff|kick] [comment ...]`  
 Prevents client command otherwise unknown to the server from being
 interpreted by the game mod, and takes the specified action instead.
 For _print_ and _stuff_ actions _comment_ argument is mandatory.
 Default action is _ignore_. Commands are matched in a case-insensitive way.
 
-- `delfiltercmd <id|cmd|all>`
+- `delfiltercmd <id|cmd|all>`  
 Deletes command identified by numeric ID or by name from the list of
 filtered commands. You can also specify `all` to clear the whole
 filtercmd list.
 
-- `listfiltercmds`
+- `listfiltercmds`  
 Enumerates all filtered commands along with appropriate actions and comments.
+
+MVD/GTV server
+----------
+
+- `mvdrecord [-hz] <filename>`  
+Start local MVD recording into `demos/<filename>.mvd2`.
+
+- `mvdstop`  
+Stop local MVD recording.
+
+- `mvdstuff <text>`  
+Execute the given _text_ on behaf of dummy MVD observer.
+
+- `addgtvhost <address[/mask]>`  
+Adds specified address to the list of trusted MVD/GTV hosts allowed to connect
+to this server without password. Specify _mask_ to allow entire subnetwork.
+
+- `delgtvhost <address[/mask]|id|all>`  
+Deletes single matching address from the list of trusted MVD/GTV hosts.
+You can also specify numeric ID of the address/mask pair to delete,
+or use special keyword `all` to clear the entire list.
+
+- `listgtvhosts`  
+Displays all address/mask pairs added to the list of trusted MVD/GTV hosts
+along with their IDs.
+
+MVD/GTV client
+----------
 
 - `mvdplay [-hl:n:] <filename> [...]`  
 Play the local MVD identified by _filename_.
 
 - `mvdconnect [-hi:n:] <address[:port]>`  
 Connect to the specified GTV server. Separate MVD channel will be
-created for this connection as soon as there is any MVD stream data available.
+automatically created for this connection as soon as there is some data available,
+and MVD channel will be destroyed after the server suspends the connection.
 
 - `mvdisconnect [connection_id]`  
-Disconnect the specified channel from the server.
-There is no need to specify `chanid` if there is only one active channel.
+Disconnect the specified channel from the server (allowing it to replay any remaining
+data to spectators). There is no need to specify `chanid` if there is only one active channel.
 
 - `mvdkill [channel_id]`  
 Kill the specified MVD channel (and any parent GTV connection).
@@ -279,28 +318,27 @@ when the very first GTV connection is established or local MVD file
 is replayed.
 
 - `mvdchannels`  
-List all MVD channels.
+List all MVD channels (there may be none, if all GTV connections are suspended).
 
 - `mvdservers`  
 List all GTV connections.
 
-- `mvdstuff <text>`  
-Stuff the specified text into command buffer of the dummy MVD observer.
-Should be issued on _game_ server, not on MVD client.
-
 Anticheat
 ==========
 
-Q2PRO server supports r1ch.net anticheat server interface, which means it is
-capable of serving clients supported by the proprietary client side anticheat
-module (currently, these include Windows builds of R1Q2, EGL, AprQ2 and Q2PRO).
+Q2PRO server supports r1ch.net anticheat server interface, and is capable of serving
+Win32 clients supported by the proprietary anticheat module.
 
-See this [thread](http://www.r1ch.net/forum/index.php?topic=944.0) on r1ch.net
-forums for more information on how to setup your server to use anticheat
-interface.
+Please see this [forum thread][1] for more information on how to setup your server
+to use the anticheat interface.
 
-Q2PRO anticheat server interface is implemented on top of R1Q2 reference
-implementation. All R1Q2 variables and commands related to anticheat are
-supported, except of `sv_anticheat_nag_*`, `sv_anticheat_client_restrictions`
-and `sv_anticheat_force_protocol35` variables.
+Q2PRO anticheat server interface is based on R1Q2 reference implementation.
+All R1Q2 variables and commands related to anticheat are supported, with the
+following exceptions:
+
+- `sv_anticheat_nag_*`
+- `sv_anticheat_client_restrictions`
+- `sv_anticheat_force_protocol35`
+
+[1]: http://www.r1ch.net/forum/index.php?topic=944.0
 

@@ -570,7 +570,7 @@ static void emit_gamestate( void ) {
     entity_state_t  *es;
     size_t      length;
     int         flags, extra, portalbytes;
-    byte        portalbits[MAX_MAP_AREAS/8];
+    byte        portalbits[MAX_MAP_PORTAL_BYTES];
 
     // pack MVD stream flags into extra bits
     extra = 0;
@@ -679,7 +679,7 @@ static void emit_frame( void ) {
     entity_state_t *oldes, *newes;
     edict_t *ent;
     int flags, portalbytes;
-    byte portalbits[MAX_MAP_AREAS/8];
+    byte portalbits[MAX_MAP_PORTAL_BYTES];
     int i;
 
     MSG_WriteByte( mvd_frame );
@@ -2075,7 +2075,7 @@ static void SV_MvdRecord_f( void ) {
     while( ( c = Cmd_ParseOptions( o_record ) ) != -1 ) {
         switch( c ) {
         case 'h':
-            Cmd_PrintUsage( o_record, "[/]<filename>" );
+            Cmd_PrintUsage( o_record, "<filename>" );
             Com_Printf( "Begin local MVD recording.\n" );
             Cmd_PrintHelp( o_record );
             return;

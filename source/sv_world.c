@@ -290,8 +290,10 @@ void PF_LinkEdict (edict_t *ent) {
     if (ent == ge->edicts)
         return;        // don't add the world
 
-    if (!ent->inuse)
+    if (!ent->inuse) {
+        Com_DPrintf( "%s: entity %d is not in use\n", __func__, NUM_FOR_EDICT( ent ) );
         return;
+    }
 
     if( !sv.cm.cache ) {
         return;

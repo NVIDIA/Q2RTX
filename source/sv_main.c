@@ -55,6 +55,7 @@ cvar_t  *sv_reserved_slots;
 cvar_t  *sv_showclamp;
 cvar_t  *sv_locked;
 cvar_t  *sv_downloadserver;
+cvar_t  *sv_redirect_address;
 
 cvar_t  *sv_hostname;
 cvar_t  *sv_public;            // should heartbeats be sent
@@ -475,6 +476,21 @@ static void SVC_GetChallenge( void ) {
         "challenge %u p=34,35,36", challenge );
 }
 
+static void send_redirect_hack( const char *addr ) {
+    Netchan_OutOfBand( NS_SERVER, &net_from, "client_connect" );
+
+    MSG_WriteLong( 1 );
+    MSG_WriteLong( 0 );
+    MSG_WriteByte( svc_print );
+    MSG_WriteByte( PRINT_HIGH );
+    MSG_WriteString( va( "Server is full.\nRedirecting you to %s...\n", addr ) );
+    MSG_WriteByte( svc_stufftext );
+    MSG_WriteString( va( "connect %s\n", addr ) );
+
+    NET_SendPacket( NS_SERVER, &net_from, msg_write.cursize, msg_write.data );
+    SZ_Clear( &msg_write );
+}
+
 #define SV_OobPrintf(...) \
     Netchan_OutOfBand( NS_SERVER, &net_from, "print\n" __VA_ARGS__ )
 
@@ -778,6 +794,11 @@ static void SVC_DirectConnect( void ) {
             } else {
                 SV_OobPrintf( "Server is full.\n" );
                 Com_DPrintf( "    rejected - server is full.\n" );
+
+                // optionally redirect them to a different address
+                if( sv_redirect_address->string[0] ) {
+                    send_redirect_hack( sv_redirect_address->string );
+                }
             }
             return;
         }
@@ -1753,6 +1774,7 @@ void SV_Init( void ) {
     sv_locked = Cvar_Get( "sv_locked", "0", 0 );
     sv_novis = Cvar_Get ("sv_novis", "0", 0);
     sv_downloadserver = Cvar_Get( "sv_downloadserver", "", 0 );
+    sv_redirect_address = Cvar_Get( "sv_redirect_address", "", 0 );
 
 #if USE_CLIENT
     sv_debug_send = Cvar_Get( "sv_debug_send", "0", 0 );

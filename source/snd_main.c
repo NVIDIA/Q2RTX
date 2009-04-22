@@ -999,6 +999,7 @@ void S_Update( void ) {
 
     if( cvar_modified & CVAR_SOUND ) {
         Cbuf_AddText( "snd_restart\n" );
+        cvar_modified &= ~CVAR_SOUND;
         return;
     }
 

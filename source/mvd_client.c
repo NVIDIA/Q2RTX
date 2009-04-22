@@ -47,13 +47,17 @@ typedef enum {
 typedef struct gtv_s {
     list_t      entry;
 
+    // common stuff
     int         id;
     char        name[MAX_MVD_NAME];
     gtv_state_t state;
     mvd_t       *mvd;
-    char        *username, *password;
+    void        (*drop)( struct gtv_s * );
+    void        (*destroy)( struct gtv_s * );
+    void        (*run)( struct gtv_s * );
 
     // connection variables
+    char        *username, *password;
     netstream_t stream;
     char        address[MAX_QPATH];
     byte        *data;
@@ -66,9 +70,6 @@ typedef struct gtv_s {
 #endif
     unsigned    last_rcvd;
     unsigned    last_sent;
-    void        (*drop)( struct gtv_s * );
-    void        (*destroy)( struct gtv_s * );
-    void        (*run)( struct gtv_s * );
     unsigned    retry_time;
     unsigned    retry_backoff;
 
@@ -130,6 +131,8 @@ static void MVD_Free( mvd_t *mvd ) {
         FS_Write( &msglen, 2, mvd->demorecording );
         FS_FCloseFile( mvd->demorecording );
         mvd->demorecording = 0;
+        Z_Free( mvd->demoname );
+        mvd->demoname = NULL;
     }
 
     for( i = 0; i < mvd->maxclients; i++ ) {
@@ -1420,13 +1423,8 @@ void MVD_Spawn_f( void ) {
     sv.state = ss_broadcast;
 }
 
-static void MVD_ListChannels_f( void ) {
+static void list_generic( void ) {
     mvd_t *mvd;
-
-    if( LIST_EMPTY( &mvd_channel_list ) ) {
-        Com_Printf( "No MVD channels.\n" );
-        return;
-    }
 
     Com_Printf(
         "id name         map      spc plr stat buf pckt address       \n"
@@ -1439,6 +1437,48 @@ static void MVD_ListChannels_f( void ) {
             mvd_states[mvd->state],
             FIFO_Percent( &mvd->delay ), mvd->num_packets,
             mvd->gtv ? mvd->gtv->address : "<disconnected>" );
+    }
+}
+
+static void list_recordings( void ) {
+    mvd_t *mvd;
+    char buffer[8];
+    size_t bytes;
+
+    Com_Printf(
+        "id name         map      size name\n"
+        "-- ------------ -------- ---- --------------\n" );
+
+    LIST_FOR_EACH( mvd_t, mvd, &mvd_channel_list, entry ) {
+        if( mvd->demorecording ) {
+            bytes = FS_Tell( mvd->demorecording );
+            if( bytes == INVALID_LENGTH ) {
+                strcpy( buffer, "???" );
+            } else {
+                Q_FormatFileSize( buffer, bytes, sizeof( buffer ) );
+            }
+        } else {
+            strcpy( buffer, "-" );
+        }
+        Com_Printf( "%2d %-12.12s %-8.8s %-4s %s\n",
+            mvd->id, mvd->name, mvd->mapname,
+            buffer, mvd->demoname ? mvd->demoname : "-" );
+    }
+}
+
+static void MVD_ListChannels_f( void ) {
+    char *s;
+
+    if( LIST_EMPTY( &mvd_channel_list ) ) {
+        Com_Printf( "No MVD channels.\n" );
+        return;
+    }
+
+    s = Cmd_Argv( 1 );
+    if( *s == 'r' ) {
+        list_recordings();
+    } else {
+        list_generic();
     }
 }
 
@@ -1501,7 +1541,7 @@ static void MVD_EmitGamestate( mvd_t *mvd ) {
     mvd_player_t *player;
     size_t      length;
     int         flags, extra, portalbytes;
-    byte        portalbits[MAX_MAP_AREAS/8];
+    byte        portalbits[MAX_MAP_PORTAL_BYTES];
 
     // pack MVD stream flags into extra bits
     extra = mvd->flags << SVCMD_BITS;
@@ -1631,6 +1671,7 @@ void MVD_StreamedRecord_f( void ) {
     }
 
     mvd->demorecording = f;
+    mvd->demoname = MVD_CopyString( buffer );
 
     MVD_EmitGamestate( mvd );
 

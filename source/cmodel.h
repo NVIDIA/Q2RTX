@@ -22,6 +22,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // cmodel.h
 //
 
+// bitmasks communicated by server
+#define MAX_MAP_AREA_BYTES      ( MAX_MAP_AREAS / 8 )
+#define MAX_MAP_PORTAL_BYTES    MAX_MAP_AREA_BYTES
+
 typedef struct {
     bsp_t       *cache;
     int         *floodnums;     // if two areas have equal floodnums,

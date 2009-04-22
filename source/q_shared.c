@@ -1038,6 +1038,16 @@ size_t Q_UnescapeString( char *out, const char *in, size_t bufsize, escape_t fla
 }
 #endif
 
+size_t Q_FormatFileSize( char *dest, size_t bytes, size_t size ) {
+    if( bytes >= 1000000 ) {
+        return Q_snprintf( dest, size, "%2.1fM", ( float )bytes / 1000000 );
+    }
+    if( bytes >= 1000 ) {
+        return Q_snprintf( dest, size, "%3"PRIz"K", bytes / 1000 );
+    }
+    return Q_snprintf( dest, size, "%3"PRIz, bytes );
+}
+
 /*
 ============
 va
@@ -1061,67 +1071,8 @@ char *va( const char *format, ... ) {
     return buffers[index];    
 }
 
-
 static char     com_token[4][MAX_TOKEN_CHARS];
 static int      com_tokidx;
-
-static char *COM_GetToken( void ) {
-    return com_token[com_tokidx++ & 3];
-}
-
-/*
-==============
-COM_SimpleParse
-
-Parse a token out of a string.
-==============
-*/
-char *COM_SimpleParse( const char **data_p, int *length ) {
-    int         c;
-    int         len;
-    const char  *data;
-    char        *s = COM_GetToken();
-
-    data = *data_p;
-    len = 0;
-    s[0] = 0;
-    if( length ) {
-        *length = 0;
-    }
-    
-    if( !data ) {
-        *data_p = NULL;
-        return s;
-    }
-        
-// skip whitespace
-    while( ( c = *data ) <= ' ' ) {
-        if( c == 0 ) {
-            *data_p = NULL;
-            return s;
-        }
-        data++;
-    }
-    
-// parse a regular word
-    do {
-        if( len < MAX_TOKEN_CHARS - 1 ) {
-            s[len++] = c;
-        }
-        data++;
-        c = *data;
-    } while( c > 32 );
-
-    s[len] = 0;
-
-    if( length ) {
-        *length = len;
-    }
-
-    *data_p = data;
-    return s;
-}
-
 
 /*
 ==============
@@ -1135,7 +1086,7 @@ char *COM_Parse( const char **data_p ) {
     int         c;
     int         len;
     const char  *data;
-    char        *s = COM_GetToken();
+    char        *s = com_token[com_tokidx++ & 3];
 
     data = *data_p;
     len = 0;

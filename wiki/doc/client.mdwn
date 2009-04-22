@@ -1,4 +1,4 @@
-[[toc ]]
+[[!toc levels=2]]
 
 Variables
 ==========

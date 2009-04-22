@@ -1687,9 +1687,8 @@ void Qcommon_Frame( void ) {
 
     if( cvar_modified & CVAR_FILES ) {
         Cbuf_ExecuteText( EXEC_NOW, "fs_restart" );
+        cvar_modified &= ~CVAR_FILES;
     }
-    
-    cvar_modified = 0;
 
     com_localTime += msec;
     com_framenum++;

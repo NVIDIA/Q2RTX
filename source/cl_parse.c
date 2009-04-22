@@ -438,7 +438,9 @@ static void CL_SetActiveState( void ) {
     SCR_EndLoadingPlaque ();    // get rid of loading plaque
     Con_Close();                // close console
 
-    EXEC_TRIGGER( cl_beginmapcmd );
+    if( !cls.demo.playback ) {
+        EXEC_TRIGGER( cl_beginmapcmd );
+    }
 
     Cvar_Set( "cl_paused", "0" );
 }

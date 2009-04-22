@@ -241,7 +241,11 @@ void CL_Stop_f( void ) {
     cls.demo.recording = 0;
     cls.demo.paused = qfalse;
 
-    Com_Printf( "Stopped demo (%u bytes written).\n", msglen );
+    if( msglen == INVALID_LENGTH ) {
+        Com_Printf( "Stopped demo.\n" );
+    } else {
+        Com_Printf( "Stopped demo (%u bytes written).\n", msglen );
+    }
 }
 
 /*

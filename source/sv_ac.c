@@ -176,7 +176,7 @@ FILE PARSING
 
 #define AC_MAX_INCLUDES 16
 
-typedef void (*ac_parse_t)( const char *, int, const char * );
+typedef void (*ac_parse_t)( char *, int, const char * );
 
 typedef struct {
     char str[4];
@@ -198,10 +198,35 @@ static const ac_cvarop_t ac_cvarops[] = {
     { "" }
 };
 
+static char *AC_SimpleParse( char **data_p, size_t *len_p ) {
+    char *data, *p;
 
-static void AC_ParseHash( const char *data, int linenum, const char *path ) {
+    data = *data_p;
+    if( !data ) {
+        if( len_p ) {
+            *len_p = 0;
+        }
+        return NULL;
+    }
+
+    p = Q_strchrnul( data, '\t' );
+    if( *p ) {
+        *p = 0;
+        *data_p = p + 1;
+    } else {
+        *data_p = NULL;
+    }
+
+    if( len_p ) {
+        *len_p = p - data;
+    }
+
+    return data;
+}
+
+static void AC_ParseHash( char *data, int linenum, const char *path ) {
     char *pstr, *hstr;
-    int pathlen, hashlen;
+    size_t pathlen, hashlen;
     int flags;
     byte hash[20];
     ac_file_t *file;
@@ -212,11 +237,11 @@ static void AC_ParseHash( const char *data, int linenum, const char *path ) {
         return;
     }
 
-    pstr = COM_SimpleParse( &data, &pathlen );
+    pstr = AC_SimpleParse( &data, &pathlen );
     if( !pstr[0] ) {
         return;
     }
-    hstr = COM_SimpleParse( &data, &hashlen );
+    hstr = AC_SimpleParse( &data, &hashlen );
     if( !hstr[0] ) {
         Com_WPrintf( "ANTICHEAT: Incomplete line %d in %s\n", linenum, path );
         return;
@@ -266,23 +291,22 @@ badhash:
     acs.num_files++;
 }
 
-static void AC_ParseCvar( const char *data, int linenum, const char *path ) {
+static void AC_ParseCvar( char *data, int linenum, const char *path ) {
     char *values[256], *p;
     byte lengths[256];
     char *name, *opstr, *val, *def;
-    int num_values, namelen, vallen, deflen;
+    size_t len, namelen, vallen, deflen;
     ac_cvar_t *cvar;
     const ac_cvarop_t *op;
-    int i;
-    size_t len;
+    int i, num_values;
 
-    name = COM_SimpleParse( &data, &namelen );
+    name = AC_SimpleParse( &data, &namelen );
     if( !name[0] ) {
         return;
     }
-    opstr = COM_SimpleParse( &data, NULL );
-    val = COM_SimpleParse( &data, &vallen );
-    def = COM_SimpleParse( &data, &deflen );
+    opstr = AC_SimpleParse( &data, NULL );
+    val = AC_SimpleParse( &data, &vallen );
+    def = AC_SimpleParse( &data, &deflen );
     if( !opstr[0] || !val[0] || !def[0] ) {
         Com_WPrintf( "ANTICHEAT: Incomplete line %d in %s\n", linenum, path );
         return;
@@ -353,7 +377,7 @@ static void AC_ParseCvar( const char *data, int linenum, const char *path ) {
     acs.num_cvars++;
 }
 
-static void AC_ParseToken( const char *data, int linenum, const char *path ) {
+static void AC_ParseToken( char *data, int linenum, const char *path ) {
     string_entry_t *tok;
     size_t len = strlen( data );
 
@@ -376,6 +400,9 @@ static qboolean AC_ParseFile( const char *path, ac_parse_t parse, int depth ) {
     while( *data ) {
         p = strchr( data, '\n' );
         if( p ) {
+            if( p > data && *( p - 1 ) == '\r' ) {
+                *( p - 1 ) = 0;
+            }
             *p = 0;
         }
 

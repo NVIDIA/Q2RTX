@@ -871,7 +871,7 @@ static void MVD_ParseFrame( mvd_t *mvd ) {
         if( length < 0 || msg_read.readcount + length > msg_read.cursize ) {
             MVD_Destroyf( mvd, "%s: read past end of message", __func__ );
         }
-        if( length > MAX_MAP_AREAS/8 ) {
+        if( length > MAX_MAP_PORTAL_BYTES ) {
             MVD_Destroyf( mvd, "%s: bad portalbits length: %d", __func__, length );
         }
         CM_SetPortalStates( &mvd->cm, msg_read.data +

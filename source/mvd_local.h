@@ -117,6 +117,7 @@ typedef struct mvd_s {
 
     // demo related variables
     fileHandle_t    demorecording;
+    char            *demoname;
 
     // delay buffer
     fifo_t      delay;

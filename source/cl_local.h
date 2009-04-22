@@ -81,7 +81,7 @@ typedef struct {
     int             number;
     int             delta;
 
-    byte            areabits[MAX_MAP_AREAS / 8];
+    byte            areabits[MAX_MAP_AREA_BYTES];
     int             areabytes;
 
     player_state_t  ps;

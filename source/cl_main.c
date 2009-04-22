@@ -610,7 +610,7 @@ This is also called on Com_Error, so it shouldn't cause any errors
 =====================
 */
 void CL_Disconnect( comErrorType_t type, const char *text ) {
-    if( cls.state > ca_disconnected ) {
+    if( cls.state > ca_disconnected && !cls.demo.playback ) {
         EXEC_TRIGGER( cl_disconnectcmd );
     }
 
@@ -975,7 +975,9 @@ static void CL_Changing_f( void ) {
 
     Com_Printf( "Changing map...\n" );
 
-    EXEC_TRIGGER( cl_changemapcmd );
+    if( !cls.demo.playback ) {
+        EXEC_TRIGGER( cl_changemapcmd );
+    }
 
     SCR_BeginLoadingPlaque();
 
@@ -2340,7 +2342,6 @@ CL_LocalConnect
 */
 void CL_LocalConnect( void ) {
     if ( FS_NeedRestart() ) {
-        cls.state = ca_challenging;
         CL_RestartFilesystem();
     }
 }
@@ -2908,11 +2909,11 @@ CL_Init
 ====================
 */
 void CL_Init( void ) {
-    if ( dedicated->integer ) {
+    if( dedicated->integer ) {
         return; // nothing running on the client
     }
 
-    if ( cl_running->integer ) {
+    if( cl_running->integer ) {
         return;
     }
 
@@ -2982,12 +2983,16 @@ to run quit through here before the final handoff to the sys code.
 */
 void CL_Shutdown( void ) {
     static qboolean isdown = qfalse;
-
-    if ( isdown ) {
+    
+    if( isdown ) {
         Com_Printf( "CL_Shutdown: recursive shutdown\n" );
         return;
     }
     isdown = qtrue;
+
+    if( !cl_running || !cl_running->integer ) {
+        return;
+    }
 
     CL_Disconnect( ERR_SILENT, NULL );
 
