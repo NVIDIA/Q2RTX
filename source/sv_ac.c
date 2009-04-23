@@ -238,17 +238,14 @@ static void AC_ParseHash( char *data, int linenum, const char *path ) {
     }
 
     pstr = AC_SimpleParse( &data, &pathlen );
-    if( !pstr[0] ) {
-        return;
-    }
-    hstr = AC_SimpleParse( &data, &hashlen );
-    if( !hstr[0] ) {
+    if( !data ) {
         Com_WPrintf( "ANTICHEAT: Incomplete line %d in %s\n", linenum, path );
         return;
     }
+    hstr = AC_SimpleParse( &data, &hashlen );
 
-    if( pathlen >= MAX_QPATH ) {
-        Com_WPrintf( "ANTICHEAT: Too long quake path on line %d in %s\n", linenum, path );
+    if( pathlen < 1 || pathlen >= MAX_QPATH ) {
+        Com_WPrintf( "ANTICHEAT: Invalid quake path length on line %d in %s\n", linenum, path );
         return;
     }
     if( strchr( pstr, '\\' ) || !Q_isalnum( pstr[0] ) ) {
@@ -301,23 +298,28 @@ static void AC_ParseCvar( char *data, int linenum, const char *path ) {
     int i, num_values;
 
     name = AC_SimpleParse( &data, &namelen );
-    if( !name[0] ) {
-        return;
-    }
-    opstr = AC_SimpleParse( &data, NULL );
-    val = AC_SimpleParse( &data, &vallen );
-    def = AC_SimpleParse( &data, &deflen );
-    if( !opstr[0] || !val[0] || !def[0] ) {
+    if( !data ) {
         Com_WPrintf( "ANTICHEAT: Incomplete line %d in %s\n", linenum, path );
         return;
     }
-
-    if( namelen >= 64 ) {
-        Com_WPrintf( "ANTICHEAT: Too long cvar name on line %d in %s\n", linenum, path );
+    opstr = AC_SimpleParse( &data, NULL );
+    if( !data ) {
+        Com_WPrintf( "ANTICHEAT: Incomplete line %d in %s\n", linenum, path );
         return;
     }
-    if( deflen >= 64 ) {
-        Com_WPrintf( "ANTICHEAT: Too long default value on line %d in %s\n", linenum, path );
+    val = AC_SimpleParse( &data, &vallen );
+    if( !data ) {
+        Com_WPrintf( "ANTICHEAT: Incomplete line %d in %s\n", linenum, path );
+        return;
+    }
+    def = AC_SimpleParse( &data, &deflen );
+
+    if( namelen < 1 || namelen >= 64 ) {
+        Com_WPrintf( "ANTICHEAT: Invalid cvar name length on line %d in %s\n", linenum, path );
+        return;
+    }
+    if( deflen < 1 || deflen >= 64 ) {
+        Com_WPrintf( "ANTICHEAT: Invalid default value length on line %d in %s\n", linenum, path );
         return;
     }
 
