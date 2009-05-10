@@ -757,123 +757,152 @@ const char *NET_ErrorString( void ) {
 #endif
 }
 
-static qboolean NET_StringToIface( const char *s, struct sockaddr_in *sadr ) {
-    if( *s ) {
-        return NET_StringToSockaddr( s, sadr );
+static qboolean get_bind_addr( const char *iface, int port, struct sockaddr_in *sadr ) {
+    if( *iface ) {
+        if( !NET_StringToSockaddr( iface, sadr ) ) {
+            return qfalse;
+        }
+    } else {
+        // empty string binds to all interfaces 
+        memset( sadr, 0, sizeof( *sadr ) );
+        sadr->sin_family = AF_INET;
+        sadr->sin_addr.s_addr = INADDR_ANY;
+    }
+    if( port != PORT_ANY ) {
+        sadr->sin_port = htons( ( u_short )port );
     }
 
-    // empty string binds to all interfaces 
-    memset( sadr, 0, sizeof( *sadr ) );
-    sadr->sin_family = AF_INET;
-    sadr->sin_addr.s_addr = INADDR_ANY;
     return qtrue;
 }
 
-static SOCKET UDP_OpenSocket( const char *interface, int port ) {
-    SOCKET              newsocket;
-    struct sockaddr_in  address;
-    u_long              _true = 1;
+static SOCKET create_socket( int type, int proto ) {
+    SOCKET  ret = socket( PF_INET, type, proto );
 
-    Com_DPrintf( "Opening UDP socket: %s:%i\n", interface, port );
+    NET_GET_ERROR();
+    return ret;
+}
 
-    newsocket = socket( PF_INET, SOCK_DGRAM, IPPROTO_UDP );
-    if( newsocket == INVALID_SOCKET ) {
-        NET_GET_ERROR();
+static int enable_option( SOCKET s, int level, int optname ) {
+    u_long  _true = 1;
+    int     ret = setsockopt( s, level, optname, ( char * )&_true, sizeof( _true ) );
+
+    NET_GET_ERROR();
+    return ret;
+}
+
+static int make_nonblock( SOCKET s ) {
+    u_long  _true = 1;
+    int     ret = ioctlsocket( s, FIONBIO, &_true );
+
+    NET_GET_ERROR();
+    return ret;
+}
+
+static int bind_socket( SOCKET s, struct sockaddr_in *sadr ) {
+    int     ret = bind( s, ( struct sockaddr * )sadr, sizeof( *sadr ) );
+
+    NET_GET_ERROR();
+    return ret;
+}
+
+static SOCKET UDP_OpenSocket( const char *iface, int port ) {
+    SOCKET              s;
+    struct sockaddr_in  sadr;
+
+    Com_DPrintf( "Opening UDP socket: %s:%i\n", iface, port );
+
+    s = create_socket( SOCK_DGRAM, IPPROTO_UDP );
+    if( s == INVALID_SOCKET ) {
+        Com_EPrintf( "%s: %s:%d: can't create socket: %s\n",
+            __func__, iface, port, NET_ErrorString() );
         return INVALID_SOCKET;
     }
 
     // make it non-blocking
-    if( ioctlsocket( newsocket, FIONBIO, &_true ) == -1 ) {
+    if( make_nonblock( s ) == -1 ) {
+        Com_EPrintf( "%s: %s:%d: can't make socket non-blocking: %s\n",
+            __func__, iface, port, NET_ErrorString() );
         goto fail;
     }
 
     // make it broadcast capable
-    _true = 1;
-    if( setsockopt( newsocket, SOL_SOCKET, SO_BROADCAST,
-        ( char * )&_true, sizeof( _true ) ) == -1 )
-    {
-        goto fail;
+    if( enable_option( s, SOL_SOCKET, SO_BROADCAST ) == -1 ) {
+        Com_WPrintf( "%s: %s:%d: can't make socket broadcast capable: %s\n",
+            __func__, iface, port, NET_ErrorString() );
     }
 
 #ifdef __linux__
     // enable ICMP error queue
     if( !net_ignore_icmp->integer ) {
-        _true = 1;
-        if( setsockopt( newsocket, IPPROTO_IP, IP_RECVERR,
-            ( char * )&_true, sizeof( _true ) ) == -1 )
-        {
-            goto fail;
+        if( enable_option( s, IPPROTO_IP, IP_RECVERR ) == -1 ) {
+            Com_WPrintf( "%s: %s:%d: can't enable ICMP error queue: %s\n",
+                __func__, iface, port, NET_ErrorString() );
         }
     }
 #endif
 
-    if( !NET_StringToIface( interface, &address ) ) {
-        Com_Printf( "Bad interface address: %s\n", interface );
+    // resolve iface sadr
+    if( !get_bind_addr( iface, port, &sadr ) ) {
+        Com_EPrintf( "%s: %s:%d: bad interface address\n",
+            __func__, iface, port );
         goto fail;
     }
 
-    if( port != PORT_ANY ) {
-        address.sin_port = htons( ( u_short )port );
+    if( bind_socket( s, &sadr ) == -1 ) {
+        Com_EPrintf( "%s: %s:%d: can't bind socket: %s\n",
+            __func__, iface, port, NET_ErrorString() );
+        goto fail;
     }
 
-    if( !bind( newsocket, ( struct sockaddr * )&address, sizeof( address ) ) ) {
-        return newsocket;
-    }
+    return s;
 
 fail:
-    NET_GET_ERROR();
-    closesocket( newsocket );
-    Com_EPrintf( "%s: %s:%d: %s\n", __func__,
-        interface, port, NET_ErrorString() );
+    closesocket( s );
     return INVALID_SOCKET;
 }
 
-static SOCKET TCP_OpenSocket( const char *interface, int port, netsrc_t who ) {
-    SOCKET              newsocket;
-    struct sockaddr_in  address;
-    u_long              _true;
+static SOCKET TCP_OpenSocket( const char *iface, int port, netsrc_t who ) {
+    SOCKET              s;
+    struct sockaddr_in  sadr;
 
-    Com_DPrintf( "Opening TCP socket: %s:%i\n", interface, port );
+    Com_DPrintf( "Opening TCP socket: %s:%i\n", iface, port );
 
-    newsocket = socket( PF_INET, SOCK_STREAM, IPPROTO_TCP );
-    if( newsocket == INVALID_SOCKET ) {
-        NET_GET_ERROR();
+    s = create_socket( SOCK_STREAM, IPPROTO_TCP );
+    if( s == INVALID_SOCKET ) {
+        Com_EPrintf( "%s: %s:%d: can't create socket: %s\n",
+            __func__, iface, port, NET_ErrorString() );
         return INVALID_SOCKET;
     }
 
     // make it non-blocking
-    _true = 1;
-    if( ioctlsocket( newsocket, FIONBIO, &_true ) == -1 ) {
+    if( make_nonblock( s ) == -1 ) {
+        Com_EPrintf( "%s: %s:%d: can't make socket non-blocking: %s\n",
+            __func__, iface, port, NET_ErrorString() );
         goto fail;
     }
 
     // give it a chance to reuse previous port
     if( who == NS_SERVER ) {
-        _true = 1;
-        if( setsockopt( newsocket, SOL_SOCKET, SO_REUSEADDR,
-            ( char * )&_true, sizeof( _true ) ) == -1 )
-        {
-            goto fail;
+        if( enable_option( s, SOL_SOCKET, SO_REUSEADDR ) == -1 ) {
+            Com_WPrintf( "%s: %s:%d: can't force socket to reuse address: %s\n",
+                __func__, iface, port, NET_ErrorString() );
         }
     }
 
-    if( !NET_StringToIface( interface, &address ) ) {
-        Com_Printf( "Bad interface address: %s\n", interface );
+    if( !get_bind_addr( iface, port, &sadr ) ) {
+        Com_EPrintf( "%s: %s:%d: bad interface address\n",
+            __func__, iface, port );
         goto fail;
     }
-    if( port != PORT_ANY ) {
-        address.sin_port = htons( ( u_short )port );
-    }
 
-    if( !bind( newsocket, ( struct sockaddr * )&address, sizeof( address ) ) ) {
-        return newsocket;
+    if( bind_socket( s, &sadr ) == -1 ) {
+        Com_EPrintf( "%s: %s:%d: can't bind socket: %s\n",
+            __func__, iface, port, NET_ErrorString() );
+        goto fail;
     }
 
 fail:
-    NET_GET_ERROR();
-    closesocket( newsocket );
-    Com_EPrintf( "%s: %s:%d: %s\n", __func__,
-        interface, port, NET_ErrorString() );
+    closesocket( s );
     return INVALID_SOCKET;
 }
 
