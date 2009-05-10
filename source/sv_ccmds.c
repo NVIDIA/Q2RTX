@@ -467,6 +467,34 @@ static void dump_time( void ) {
     }
 }
 
+static void dump_lag( void ) {
+    client_t    *cl;
+
+#ifdef USE_PACKETDUP
+#define PD1 " dup"
+#define PD2 " ---"
+#define PD3 " %3d"
+#else
+#define PD1
+#define PD2
+#define PD3
+#endif
+
+    Com_Printf(
+"num name            PLs2c PLc2s Rmin Ravg Rmax"PD1"\n"
+"--- --------------- ----- ----- ---- ---- ----"PD2"\n" );
+
+    FOR_EACH_CLIENT( cl ) {
+        Com_Printf( "%3i %-15.15s %5.2f %5.2f %4d %4d %4d"PD3"\n",
+            cl->number, cl->name, PL_S2C( cl ), PL_C2S( cl ), 
+            cl->min_ping, AVG_PING( cl ), cl->max_ping
+#ifdef USE_PACKETDUP
+            , cl->netchan->numpackets - 1
+#endif
+            );
+    }
+}
+
 /*
 ================
 SV_Status_f
@@ -487,12 +515,11 @@ static void SV_Status_f( void ) {
     } else {
         if( Cmd_Argc() > 1 ) {
             char *w = Cmd_Argv( 1 );
-            if( *w == 't' ) {
-                dump_time();
-            } else if( *w == 'd' ) {
-                dump_downloads();
-            } else {
-                dump_versions();
+            switch( *w ) {
+                case 't': dump_time(); break;
+                case 'd': dump_downloads(); break;
+                case 'l': dump_lag(); break;
+                default: dump_versions(); break;
             }
         } else {
             dump_clients();
@@ -595,16 +622,20 @@ static void SV_DumpUser_f( void ) {
     Com_Printf( "--------\n" );
     Com_Printf( "version              %s\n",
         sv_client->versionString ? sv_client->versionString : "-" );
-    Com_Printf( "protocol             %d/%d\n",
+    Com_Printf( "protocol (min/maj)   %d/%d\n",
         sv_client->protocol, sv_client->version );
     Com_Printf( "ping                 %d\n", sv_client->ping );
     Com_Printf( "fps                  %d\n", sv_client->fps );
+    Com_Printf( "RTT (min/avg/max)    %d/%d/%d ms\n",
+        sv_client->min_ping, AVG_PING( sv_client ), sv_client->max_ping );
+    Com_Printf( "PL server to client  %.2f%% (approx)\n", PL_S2C( sv_client ) );
+    Com_Printf( "PL client to server  %.2f%%\n", PL_C2S( sv_client ) );
 #ifdef USE_PACKETDUP
     Com_Printf( "packetdup            %d\n", sv_client->numpackets - 1 );
 #endif
     Com_TimeDiff( buffer, sizeof( buffer ),
         sv_client->connect_time, time( NULL ) );
-    Com_Printf( "time                 %s\n", buffer );
+    Com_Printf( "connection time      %s\n", buffer );
 
     sv_client = NULL;
     sv_player = NULL;

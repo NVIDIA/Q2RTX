@@ -45,13 +45,13 @@ typedef struct mtexinfo_s {  // used internally due to name len probs //ZOID
 
 #if USE_REF
 typedef struct {
-	vec3_t		point;
+    vec3_t      point;
 } mvertex_t;
 
 typedef struct {
-	mvertex_t	*v[2];
+    mvertex_t   *v[2];
 #if USE_REF == REF_SOFT
-	unsigned    cachededgeoffset;
+    unsigned    cachededgeoffset;
 #endif
 } medge_t;
 
@@ -85,7 +85,7 @@ typedef struct mface_s {
     int             texnum[2];
     int             firstvert;
 #else
-	struct surfcache_s	*cachespots[MIPLEVELS]; // surface generation data
+    struct surfcache_s    *cachespots[MIPLEVELS]; // surface generation data
 #endif
 
     int             drawframe;

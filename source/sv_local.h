@@ -168,6 +168,10 @@ typedef struct {
 #define FOR_EACH_CLIENT( client ) \
     LIST_FOR_EACH( client_t, client, &svs.udp_client_list, entry )
 
+#define PL_S2C(cl)  ((1.0f-(float)cl->frames_acked/cl->frames_sent)*100.0f)
+#define PL_C2S(cl)  (((float)cl->netchan->total_dropped/cl->netchan->total_received)*100.0f)
+#define AVG_PING(cl)    (cl->avg_ping_count?cl->avg_ping_time/cl->avg_ping_count:cl->ping)
+
 typedef enum {
     CF_RECONNECTED  = ( 1 << 0 ),
     CF_NODATA       = ( 1 << 1 ),
@@ -216,7 +220,7 @@ typedef struct client_s {
     clientSetting_t settings[CLS_MAX];
 
     client_frame_t  frames[UPDATE_BACKUP];    // updates can be delta'd from here
-    unsigned        frames_sent, frames_acked;
+    unsigned        frames_sent, frames_acked, frames_nodelta;
 
     byte            *download; // file being downloaded
     int             downloadsize; // total bytes (can't use EOF because of paks)

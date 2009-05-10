@@ -227,5 +227,8 @@ void	R_BeginFrame( void );
 void	R_EndFrame( void );
 void    R_ModeChanged( int width, int height, int flags, int rowbytes, void *pixels );
 void	R_GetConfig( glconfig_t *dest );
+#if USE_REF == REF_SOFT
+void    R_CinematicSetPalette( const byte *palette );
+#endif
 
 #endif // __REF_H

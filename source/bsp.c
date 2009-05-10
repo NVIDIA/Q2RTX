@@ -65,7 +65,7 @@ LOAD( Visibility ) {
 
     numclusters = LittleLong( bsp->vis->numclusters );
     if( numclusters > ( count - 4 ) / 8 ) {
-		BSP_SetError( "%s: bad numclusters", __func__ );
+        BSP_SetError( "%s: bad numclusters", __func__ );
     }
     bsp->vis->numclusters = numclusters;
     bsp->visrowsize = ( numclusters + 7 ) >> 3;
@@ -73,7 +73,7 @@ LOAD( Visibility ) {
         for( j = 0; j < 2; j++ ) {
             bitofs = LittleLong( bsp->vis->bitofs[i][j] );
             if( bitofs >= count ) {
-				BSP_SetError( "%s: bad bitofs", __func__ );
+                BSP_SetError( "%s: bad bitofs", __func__ );
                 return qfalse;
             }
             bsp->vis->bitofs[i][j] = bitofs;
@@ -114,31 +114,31 @@ LOAD( Texinfo ) {
 #if USE_REF
         for( j = 0; j < 2; j++ ) {
             for( k = 0; k < 3; k++ ) {
-        		out->axis[j][k] = LittleFloat( in->vecs[j][k] );
+                out->axis[j][k] = LittleFloat( in->vecs[j][k] );
             }
-		    out->offset[j] = LittleFloat( in->vecs[j][k] );
+            out->offset[j] = LittleFloat( in->vecs[j][k] );
         }
 
-		next = LittleLong( in->nexttexinfo );
-		if( next > 0 ) {
-			if( next >= count ) {
-				BSP_SetError( "%s: bad anim chain", __func__ );
+        next = LittleLong( in->nexttexinfo );
+        if( next > 0 ) {
+            if( next >= count ) {
+                BSP_SetError( "%s: bad anim chain", __func__ );
                 return qfalse;
-			}
-			out->next = bsp->texinfo + next;
-		} else {
-			out->next = NULL;
-		}
+            }
+            out->next = bsp->texinfo + next;
+        } else {
+            out->next = NULL;
+        }
 #endif
     }
 
 #if USE_REF
-	// count animation frames
+    // count animation frames
     out = bsp->texinfo;
-	for( i = 0; i < count; i++, out++ ) {
-		out->numframes = 1;
-		for( step = out->next; step && step != out; step = step->next ) {
-			out->numframes++;
+    for( i = 0; i < count; i++, out++ ) {
+        out->numframes = 1;
+        for( step = out->next; step && step != out; step = step->next ) {
+            out->numframes++;
         }
     }
 #endif
@@ -295,14 +295,14 @@ LOAD( Lightmap ) {
     // by taking the brightest component
     in = base;
     out = bsp->lightmap;
-	for( i = 0; i < count; i++, in += 3, out++ ) {
-		if( in[0] > in[1] && in[0] > in[2] )
-			*out = in[0];
-		else if( in[1] > in[0] && in[1] > in[2] )
-			*out = in[1];
-		else
-			*out = in[2];
-	}
+    for( i = 0; i < count; i++, in += 3, out++ ) {
+        if( in[0] > in[1] && in[0] > in[2] )
+            *out = in[0];
+        else if( in[1] > in[0] && in[1] > in[2] )
+            *out = in[1];
+        else
+            *out = in[2];
+    }
 #else
     memcpy( bsp->lightmap, base, count );
 #endif
@@ -326,7 +326,7 @@ LOAD( Vertices ) {
     out = bsp->vertices;
     for( i = 0; i < count; i++, out++, in++ ) {
         for( j = 0; j < 3; j++ ) {
-    		out->point[j] = LittleFloat( in->point[j] );
+            out->point[j] = LittleFloat( in->point[j] );
         }
     }
     return qtrue;
@@ -350,7 +350,7 @@ LOAD( Edges ) {
     out = bsp->edges;
     for( i = 0; i < count; i++, out++, in++ ) {
         for( j = 0; j < 2; j++ ) {
-    		vertnum = LittleShort( in->v[j] );
+            vertnum = LittleShort( in->v[j] );
             if( vertnum >= bsp->numvertices ) {
                 BSP_SetError( "%s: bad vertnum", __func__ );
                 return qfalse;
@@ -380,15 +380,15 @@ LOAD( SurfEdges ) {
     for( i = 0; i < count; i++, out++, in++ ) {
         index = ( signed int )LittleLong( *in );
 
-		vert = 0;
-		if( index < 0 ) {
-			index = -index;
-			vert = 1;
-		}
+        vert = 0;
+        if( index < 0 ) {
+            index = -index;
+            vert = 1;
+        }
 
-		if( index >= bsp->numedges ) {
+        if( index >= bsp->numedges ) {
             BSP_SetError( "%s: bad edgenum", __func__ );
-		}
+        }
 
         out->edge = bsp->edges + index;
         out->vert = vert;
@@ -402,14 +402,14 @@ Faces
 =================
 */
 LOAD( Faces ) {
-	dface_t *in;
-	mface_t *out;
-	int i;
+    dface_t *in;
+    mface_t *out;
+    int i;
 #if USE_REF == REF_SOFT
-	int j;
+    int j;
 #endif
-	unsigned texinfo, lightofs;
-	unsigned firstedge, numedges, lastedge;
+    unsigned texinfo, lightofs;
+    unsigned firstedge, numedges, lastedge;
     unsigned planenum, side;
 
     bsp->numfaces = count;
@@ -418,13 +418,13 @@ LOAD( Faces ) {
     in = base;
     out = bsp->faces;
     for( i = 0; i < count; i++, in++, out++ ) {
-		firstedge = LittleLong( in->firstedge );
-		numedges = LittleShort( in->numedges );
+        firstedge = LittleLong( in->firstedge );
+        numedges = LittleShort( in->numedges );
         lastedge = firstedge + numedges;
-		if( numedges < 3 || lastedge < firstedge || lastedge > bsp->numsurfedges ) {
-			BSP_SetError( "%s: bad surfedges", __func__ );
+        if( numedges < 3 || lastedge < firstedge || lastedge > bsp->numsurfedges ) {
+            BSP_SetError( "%s: bad surfedges", __func__ );
             return qfalse;
-		}
+        }
         out->firstsurfedge = bsp->surfedges + firstedge;
         out->numsurfedges = numedges;
 
@@ -435,16 +435,16 @@ LOAD( Faces ) {
         }
         out->plane = bsp->planes + planenum;
 
-		texinfo = LittleShort( in->texinfo );
-		if( texinfo >= bsp->numtexinfo ) {
-			BSP_SetError( "%s: bad texinfo", __func__ );
+        texinfo = LittleShort( in->texinfo );
+        if( texinfo >= bsp->numtexinfo ) {
+            BSP_SetError( "%s: bad texinfo", __func__ );
             return qfalse;
-		}
+        }
         out->texinfo = bsp->texinfo + texinfo;
 
 #if USE_REF == REF_SOFT
-		for( j = 0; j < MAX_LIGHTMAPS; j++ ) {
-			out->styles[j] = in->styles[j];
+        for( j = 0; j < MAX_LIGHTMAPS; j++ ) {
+            out->styles[j] = in->styles[j];
         }
 #endif
         
@@ -453,7 +453,7 @@ LOAD( Faces ) {
             out->lightmap = NULL;
         } else {
 #if USE_REF == REF_SOFT
-	        // lighting info is converted from 24 bit on disk to 8 bit
+            // lighting info is converted from 24 bit on disk to 8 bit
             lightofs /= 3;
 #endif
             if( lightofs >= bsp->numlightmapbytes ) {
@@ -465,7 +465,7 @@ LOAD( Faces ) {
 
         side = LittleShort( in->side );
         out->drawflags = side & DSURF_PLANEBACK;
-	}
+    }
     return qtrue;
 }
 
@@ -555,13 +555,13 @@ LOAD( Leafs ) {
         out->firstleafface = bsp->leaffaces + firstleafface;
         out->numleaffaces = numleaffaces;
 
-		for( j = 0; j < 3; j++ ) {
+        for( j = 0; j < 3; j++ ) {
             out->mins[j] = ( signed short )LittleShort( in->mins[j] );
             out->maxs[j] = ( signed short )LittleShort( in->maxs[j] );
         }
 
-		out->parent = NULL;
-		out->visframe = -1;
+        out->parent = NULL;
+        out->visframe = -1;
 #endif
     }
 
@@ -624,23 +624,23 @@ LOAD( Nodes ) {
         }
 
 #if USE_REF
-		firstface = LittleLong( in->firstface );
-		numfaces = LittleLong( in->numfaces );
+        firstface = LittleShort( in->firstface );
+        numfaces = LittleShort( in->numfaces );
         lastface = firstface + numfaces;
-		if( lastface < firstface || lastface > bsp->numfaces ) {
-			BSP_SetError( "%s: bad faces", __func__ );
+        if( lastface < firstface || lastface > bsp->numfaces ) {
+            BSP_SetError( "%s: bad faces", __func__ );
             return qfalse;
-		}
-		out->firstface = bsp->faces + firstface;
-		out->numfaces = numfaces;
+        }
+        out->firstface = bsp->faces + firstface;
+        out->numfaces = numfaces;
 
-		for( j = 0; j < 3; j++ ) {
+        for( j = 0; j < 3; j++ ) {
             out->mins[j] = ( signed short )LittleShort( in->mins[j] );
             out->maxs[j] = ( signed short )LittleShort( in->maxs[j] );
         }
 
-		out->parent = NULL;
-		out->visframe = -1;
+        out->parent = NULL;
+        out->visframe = -1;
 #endif
     }
     return qtrue;
@@ -681,17 +681,17 @@ LOAD( Submodels ) {
             out->headnode = bsp->nodes + headnode;
         }
 #if USE_REF
-		firstface = LittleLong( in->firstface );
-		numfaces = LittleLong( in->numfaces );
+        firstface = LittleLong( in->firstface );
+        numfaces = LittleLong( in->numfaces );
         lastface = firstface + numfaces;
-		if( lastface < firstface || lastface > bsp->numfaces ) {
-			BSP_SetError( "%s: bad faces", __func__ );
+        if( lastface < firstface || lastface > bsp->numfaces ) {
+            BSP_SetError( "%s: bad faces", __func__ );
             return qfalse;
-		}
-		out->firstface = bsp->faces + firstface;
-		out->numfaces = numfaces;
+        }
+        out->firstface = bsp->faces + firstface;
+        out->numfaces = numfaces;
 
-		out->radius = RadiusFromBounds( out->mins, out->maxs );
+        out->radius = RadiusFromBounds( out->mins, out->maxs );
 #endif
     }
     return qtrue;
@@ -817,12 +817,12 @@ static const lump_info_t bsp_lumps[] = {
     LUMP( AreaPortals,  AREAPORTALS,    dareaportal_t   ),
     LUMP( Areas,        AREAS,          darea_t         ),
 #if USE_REF
-	LUMP( Lightmap,     LIGHTING,       byte            ),
-	LUMP( Vertices,     VERTEXES,       dvertex_t       ),
-	LUMP( Edges,        EDGES,          dedge_t         ),
-	LUMP( SurfEdges,    SURFEDGES,      uint32_t        ),
-	LUMP( Faces,        FACES,          dface_t         ),
-	LUMP( LeafFaces,    LEAFFACES,      uint16_t        ),
+    LUMP( Lightmap,     LIGHTING,       byte            ),
+    LUMP( Vertices,     VERTEXES,       dvertex_t       ),
+    LUMP( Edges,        EDGES,          dedge_t         ),
+    LUMP( SurfEdges,    SURFEDGES,      uint32_t        ),
+    LUMP( Faces,        FACES,          dface_t         ),
+    LUMP( LeafFaces,    LEAFFACES,      uint16_t        ),
 #endif
     LUMP( Leafs,        LEAFS,          dleaf_t         ),
     LUMP( Nodes,        NODES,          dnode_t         ),
@@ -843,7 +843,7 @@ static void BSP_List_f( void ) {
         return;
     }
 
-	Com_Printf( "------------------\n");
+    Com_Printf( "------------------\n");
     bytes = 0;
 
     LIST_FOR_EACH( bsp_t, bsp, &bsp_cache, entry ) {
@@ -851,7 +851,7 @@ static void BSP_List_f( void ) {
             bsp->pool.mapped, bsp->name, bsp->refcount );
         bytes += bsp->pool.mapped;
     }
-	Com_Printf( "Total resident: %"PRIz"\n", bytes );
+    Com_Printf( "Total resident: %"PRIz"\n", bytes );
 }
 
 static bsp_t *BSP_Find( const char *name ) {
@@ -866,23 +866,23 @@ static bsp_t *BSP_Find( const char *name ) {
 }
 
 static qboolean BSP_SetParent( mnode_t *node ) {
-	mnode_t *child;
-	
-	while( node->plane ) {
-		child = node->children[0];
+    mnode_t *child;
+    
+    while( node->plane ) {
+        child = node->children[0];
         if( child->parent ) {
             return qfalse;
         }
-		child->parent = node;
-		BSP_SetParent( child );
-		
-		child = node->children[1];
+        child->parent = node;
+        BSP_SetParent( child );
+        
+        child = node->children[1];
         if( child->parent ) {
             return qfalse;
         }
-		child->parent = node;
-		node = child;
-	}
+        child->parent = node;
+        node = child;
+    }
     return qtrue;
 }
 
@@ -912,11 +912,11 @@ static qboolean BSP_ValidateAreaPortals( bsp_t *bsp ) {
 
 
 void BSP_SetError( const char *fmt, ... ) {
-	va_list		argptr;
+    va_list        argptr;
 
-	va_start( argptr, fmt );
-	Q_vsnprintf( bsp_error, sizeof( bsp_error ), fmt, argptr );
-	va_end( argptr );
+    va_start( argptr, fmt );
+    Q_vsnprintf( bsp_error, sizeof( bsp_error ), fmt, argptr );
+    va_end( argptr );
 }
 
 const char *BSP_GetError( void ) {
@@ -959,7 +959,7 @@ bsp_t *BSP_Load( const char *name ) {
     BSP_SetError( "no error" );
 
     if( ( bsp = BSP_Find( name ) ) != NULL ) {
-		Com_PageInMemory( bsp->pool.base, bsp->pool.cursize );
+        Com_PageInMemory( bsp->pool.base, bsp->pool.cursize );
         bsp->refcount++;
         return bsp;
     }
@@ -1058,16 +1058,16 @@ HELPER FUNCTIONS
 #if USE_REF
 
 mface_t *BSP_LightPoint( mnode_t *node, vec3_t start, vec3_t end, int *ps, int *pt ) {
-	vec_t startFrac, endFrac, midFrac;
-	vec3_t _start, mid;
-	int side;
-	mface_t *surf;
-	mtexinfo_t *texinfo;
-	int i;
-	int s, t;
+    vec_t startFrac, endFrac, midFrac;
+    vec3_t _start, mid;
+    int side;
+    mface_t *surf;
+    mtexinfo_t *texinfo;
+    int i;
+    int s, t;
 
     VectorCopy( start, _start );
-	while( node->plane ) {
+    while( node->plane ) {
         // calculate distancies
         startFrac = PlaneDiffFast( _start, node->plane );
         endFrac = PlaneDiffFast( end, node->plane );
@@ -1120,7 +1120,7 @@ mface_t *BSP_LightPoint( mnode_t *node, vec3_t start, vec3_t end, int *ps, int *
         node = node->children[side^1];
     }
 
-	return NULL;
+    return NULL;
 }
 
 #endif

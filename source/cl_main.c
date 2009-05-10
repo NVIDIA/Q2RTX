@@ -614,6 +614,12 @@ void CL_Disconnect( comErrorType_t type, const char *text ) {
         EXEC_TRIGGER( cl_disconnectcmd );
     }
 
+#if USE_REF == REF_SOFT
+    if( cls.ref_initialized ) {
+        R_CinematicSetPalette( NULL );
+    }
+#endif
+
     cls.connect_time = 0;
 	cls.connect_count = 0;
     cls.passive = qfalse;

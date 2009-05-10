@@ -1620,7 +1620,7 @@ void MVD_StreamedRecord_f( void ) {
     while( ( c = Cmd_ParseOptions( o_record ) ) != -1 ) {
         switch( c ) {
         case 'h':
-            Cmd_PrintUsage( o_record, "[/]<filename> [chanid]" );
+            Cmd_PrintUsage( o_record, "<filename> [chanid]" );
             Com_Printf( "Begin MVD recording on the specified channel.\n" );
             Cmd_PrintHelp( o_record );
             return;
@@ -1644,7 +1644,8 @@ void MVD_StreamedRecord_f( void ) {
     }
 
     if( mvd->demorecording ) {
-        Com_Printf( "[%s] Already recording.\n", mvd->name );
+        Com_Printf( "[%s] Already recording into %s.\n",
+            mvd->name, mvd->demoname );
         return;
     }
 
@@ -1660,7 +1661,7 @@ void MVD_StreamedRecord_f( void ) {
 
     FS_FOpenFile( buffer, &f, FS_MODE_WRITE );
     if( !f ) {
-        Com_EPrintf( "Couldn't open %s for writing\n", buffer );
+        Com_EPrintf( "Couldn't open %s for writing.\n", buffer );
         return;
     }
     

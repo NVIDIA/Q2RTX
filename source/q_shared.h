@@ -577,9 +577,9 @@ static inline float FloatSwap( float f ) {
 #define MakeLong(b1,b2,b3,b4) (((b4)<<24)|((b3)<<16)|((b2)<<8)|(b1))
 #define MakeShort(b1,b2) (((b2)<<8)|(b1))
 #elif __BYTE_ORDER == __BIG_ENDIAN
-#define BigShort        ((uint16_t)(x))
-#define BigLong         ((uint32_t)(x))
-#define BigFloat        ((float)(x))
+#define BigShort(x)     ((uint16_t)(x))
+#define BigLong(x)      ((uint32_t)(x))
+#define BigFloat(x)     ((float)(x))
 #define LittleShort	ShortSwap
 #define LittleLong	LongSwap
 #define LittleFloat	FloatSwap
@@ -589,7 +589,10 @@ static inline float FloatSwap( float f ) {
 #error Unknown byte order
 #endif
 
-#define LittleVector(a,b)		((b)[0]=LittleFloat((a)[0]),(b)[1]=LittleFloat((a)[1]),(b)[2]=LittleFloat((a)[2]))
+#define LittleVector(a,b) \
+    ((b)[0]=LittleFloat((a)[0]),\
+     (b)[1]=LittleFloat((a)[1]),\
+     (b)[2]=LittleFloat((a)[2]))
 
 //=============================================
 

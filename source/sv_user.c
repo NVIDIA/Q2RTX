@@ -757,8 +757,6 @@ static void SV_NoGameData_f( void ) {
 
 static void SV_Lag_f( void ) {
     client_t *cl;
-    float c2s, s2c;
-    int avg_ping;
 
     if( Cmd_Argc() > 1 ) {
         SV_BeginRedirect( RD_CLIENT );
@@ -771,19 +769,13 @@ static void SV_Lag_f( void ) {
         cl = sv_client;
     }
 
-    avg_ping = cl->avg_ping_count ?
-        cl->avg_ping_time / cl->avg_ping_count : cl->ping;
-
-    s2c = ( 1.0f - (float)cl->frames_acked / cl->frames_sent ) * 100.0f;
-    c2s = ( (float)cl->netchan->total_dropped /
-        cl->netchan->total_received ) * 100.0f;
-
     SV_ClientPrintf( sv_client, PRINT_HIGH,
         "Lag stats for:       %s\n"
         "RTT (min/avg/max):   %d/%d/%d ms\n"
         "Server to client PL: %.2f%% (approx)\n"
         "Client to server PL: %.2f%%\n",
-        cl->name, cl->min_ping, avg_ping, cl->max_ping, s2c, c2s );
+        cl->name, cl->min_ping, AVG_PING( cl ), cl->max_ping,
+        PL_S2C( cl ), PL_C2S( cl ) );
 }
 
 #if USE_PACKETDUP
@@ -989,8 +981,11 @@ static inline void SV_SetLastFrame( int lastframe ) {
     unsigned sentTime;
 
     if( lastframe > 0 ) {
+        if( lastframe > sv.framenum ) {
+            return; // ignore bogus acks
+        }
         if( lastframe <= sv_client->lastframe ) {
-            return;
+            return; // ignore duplicate acks
         }
 
         sentTime = sv_client->frames[lastframe & UPDATE_MASK].sentTime;

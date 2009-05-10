@@ -22,7 +22,7 @@
 # -----------------------------
 
 # build directories
-sources=$(dirname $0)
+sources=`dirname $0`
 if [ "$sources" = "." ]; then
     sources=`pwd`
 fi
@@ -35,8 +35,8 @@ if [ ! -f $sources/REVISION ] ; then
     echo "You can create it by running 'svnversion > REVISION' at the root of source tree."
     exit 1
 fi
-version=$(cat $sources/REVISION)
-revision=$(cat $sources/REVISION | tr -d -c [:digit:])
+version=`< $sources/REVISION`
+revision=`tr -d -c [:digit:] < $sources/REVISION`
 outdir=`pwd`
 tmpc="/tmp/q2pro-${RANDOM}.c"
 tmpo="/tmp/q2pro-${RANDOM}.o"
@@ -58,6 +58,7 @@ wince="no"
 if [ -z "$CFLAGS" ]; then
     CFLAGS="-O2 -g -Wall -Wstrict-prototypes"
 fi
+have_endian_h="no"
 
 # build tools
 cross_prefix=""
@@ -236,24 +237,25 @@ fi
 if [ -z "$cpu" ] ; then
     cpu=`uname -m`
 fi
+
 case $cpu in
-i386|i486|i586|i686)
+i?86)
 cpu="i386"
 if [ "$use_asm" != "no" ] ; then
     use_asm="yes"
 fi
 ;;
-ia64)
-cpu="ia64"
-;;
-x86_64|amd64)
+amd64)
 cpu="x86_64"
 ;;
 arm*)
 cpu="arm"
 ;;
-*)
-cpu="unknown"
+ppc*)
+cpu="powerpc"
+;;
+mips*)
+cpu="mips"
 ;;
 esac
 
@@ -272,6 +274,7 @@ make="gmake"
 ;;
 Linux)
 use_dl="yes"
+have_endian_h="yes"
 ;;
 esac
 
@@ -608,6 +611,10 @@ fi
 
 echo "#define USE_MAPCHECKSUM 1" >> $config_h
 echo "#define USE_AUTOREPLY 1" >> $config_h
+
+if [ "$have_endian_h" = "yes" ]; then
+    echo "#define HAVE_ENDIAN_H 1" >> $config_h
+fi
 
 for t in $targets ; do
     mkdir -p .$t ;

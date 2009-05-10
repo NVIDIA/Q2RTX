@@ -329,7 +329,7 @@ void R_Shutdown( qboolean total ) {
 
 	D_FlushCaches();
 
-	MOD_FreeAll();
+	MOD_Shutdown();
 
 	R_ShutdownImages();
 
@@ -364,7 +364,6 @@ void R_Shutdown( qboolean total ) {
 	R_UnRegister();
 
 	IMG_Shutdown();
-    MOD_Shutdown();
 
 	VID_Shutdown();
 }

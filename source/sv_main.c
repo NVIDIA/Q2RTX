@@ -32,6 +32,7 @@ LIST_DECL( sv_filterlist );
 client_t    *sv_client;         // current client
 
 cvar_t  *sv_enforcetime;
+cvar_t  *sv_allow_nodelta;
 #if USE_FPS
 cvar_t  *sv_fps;
 #endif
@@ -1309,6 +1310,12 @@ static void SV_CheckTimeouts( void ) {
         if( delta > drop_time || ( client->state == cs_assigned && delta > ghost_time ) ) {
             SV_DropClient( client, "connection timed out" );
             SV_RemoveClient( client );    // don't bother with zombie state
+            continue;
+        }
+
+        if( client->frames_nodelta > 64 && !sv_allow_nodelta->integer ) {
+            SV_DropClient( client, "too many nodelta frames" );
+            continue;
         }
     }
 }
@@ -1760,6 +1767,7 @@ void SV_Init( void ) {
     sv_ghostime = Cvar_Get( "sv_ghostime", "6", 0 );
     sv_showclamp = Cvar_Get( "showclamp", "0", 0 );
     sv_enforcetime = Cvar_Get( "sv_enforcetime", "1", 0 );
+    sv_allow_nodelta = Cvar_Get( "sv_allow_nodelta", "1", 0 );
 #if USE_FPS
     sv_fps = Cvar_Get( "sv_fps", "10", CVAR_LATCH );
 #endif

@@ -129,6 +129,33 @@ static void SV_EmitPacketEntities( client_t         *client,
     MSG_WriteShort( 0 );    // end of packetentities
 }
 
+static client_frame_t *get_last_frame( client_t *client ) {
+    client_frame_t *frame;
+
+    if( client->lastframe <= 0 ) {
+        // client is asking for a retransmit
+        client->frames_nodelta++;
+        return NULL;
+    }
+    client->frames_nodelta = 0;
+
+    if( sv.framenum - client->lastframe > UPDATE_BACKUP - 1 ) {
+        // client hasn't gotten a good message through in a long time
+        Com_DPrintf( "%s: delta request from out-of-date packet.\n", client->name );
+        return NULL;
+    }
+
+    // we have a valid message to delta from
+    frame = &client->frames[client->lastframe & UPDATE_MASK];
+    if( svs.nextEntityStates - frame->firstEntity > svs.numEntityStates ) {
+        // but entities are too old
+        Com_DPrintf( "%s: delta request from out-of-date entities.\n", client->name );
+        return NULL;
+    }
+
+    return frame;
+}
+
 /*
 ==================
 SV_WriteFrameToClient_Default
@@ -142,28 +169,14 @@ void SV_WriteFrameToClient_Default( client_t *client ) {
     // this is the frame we are creating
     frame = &client->frames[sv.framenum & UPDATE_MASK];
 
-    if( client->lastframe <= 0 ) {
-        // client is asking for a retransmit
-        oldframe = NULL;
-        oldstate = NULL;
-        lastframe = -1;
-    } else if( sv.framenum - client->lastframe > UPDATE_BACKUP - 1 ) {
-        // client hasn't gotten a good message through in a long time
-        Com_DPrintf( "%s: delta request from out-of-date packet.\n", client->name );
-        oldframe = NULL;
-        oldstate = NULL;
-        lastframe = -1;
-    } else {
-        // we have a valid message to delta from
-        oldframe = &client->frames[client->lastframe & UPDATE_MASK];
+    // this is the frame we are delta'ing from
+    oldframe = get_last_frame( client );
+    if( oldframe ) {
         oldstate = &oldframe->ps;
         lastframe = client->lastframe;
-        if( svs.nextEntityStates - oldframe->firstEntity > svs.numEntityStates ) {
-            Com_DPrintf( "%s: delta request from out-of-date entities.\n", client->name );
-            oldframe = NULL;
-            oldstate = NULL;
-            lastframe = -1;
-        }
+    } else {
+        oldstate = NULL;
+        lastframe = -1;
     }
 
     MSG_WriteByte( svc_frame );
@@ -204,28 +217,14 @@ void SV_WriteFrameToClient_Enhanced( client_t *client ) {
     // this is the frame we are creating
     frame = &client->frames[sv.framenum & UPDATE_MASK];
 
-    if( client->lastframe <= 0 ) {
-        // client is asking for a retransmit
-        oldframe = NULL;
-        oldstate = NULL;
-        delta = 31;
-    } else if( sv.framenum - client->lastframe > UPDATE_BACKUP - 1 ) {
-        // client hasn't gotten a good message through in a long time
-        Com_DPrintf( "%s: delta request from out-of-date packet.\n", client->name );
-        oldframe = NULL;
-        oldstate = NULL;
-        delta = 31;
-    } else {
-        // we have a valid message to delta from
-        oldframe = &client->frames[client->lastframe & UPDATE_MASK];
+    // this is the frame we are delta'ing from
+    oldframe = get_last_frame( client );
+    if( oldframe ) {
         oldstate = &oldframe->ps;
         delta = sv.framenum - client->lastframe;
-        if( svs.nextEntityStates - oldframe->firstEntity > svs.numEntityStates ) {
-            Com_DPrintf( "%s: delta request from out-of-date entities.\n", client->name );
-            oldframe = NULL;
-            oldstate = NULL;
-            delta = 31;
-        }
+    } else {
+        oldstate = NULL;
+        delta = 31;
     }
 
     // first byte to be patched

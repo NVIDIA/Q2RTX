@@ -790,7 +790,7 @@ static void MVD_Say_f( mvd_client_t *client, int argnum ) {
         *p |= 128;
     }
 
-    MVD_BroadcastPrintf( mvd, PRINT_MEDIUM, client->admin ?
+    MVD_BroadcastPrintf( mvd, PRINT_HIGH, client->admin ?
         0 : UF_MUTE_OBSERVERS, "%s\n", text );
 }
 
