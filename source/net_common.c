@@ -37,6 +37,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <windows.h>
 #include <winsock2.h>
 #define socklen_t int
+#define IOCTLSOCKET_PARAM u_long
+#define SETSOCKOPT_PARAM BOOL
 #ifdef _WIN32_WCE
 #define NET_GET_ERROR()   ( net_error = GetLastError() )
 #else
@@ -61,6 +63,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define INVALID_SOCKET -1
 #define closesocket close
 #define ioctlsocket ioctl
+#define IOCTLSOCKET_PARAM int
+#define SETSOCKOPT_PARAM int
 #define NET_GET_ERROR()   ( net_error = errno )
 #else
 #error Unknown target OS
@@ -790,30 +794,30 @@ static qboolean get_bind_addr( const char *iface, int port, struct sockaddr_in *
 }
 
 static SOCKET create_socket( int type, int proto ) {
-    SOCKET  ret = socket( PF_INET, type, proto );
+    SOCKET ret = socket( PF_INET, type, proto );
 
     NET_GET_ERROR();
     return ret;
 }
 
 static int enable_option( SOCKET s, int level, int optname ) {
-    int     _true = 1;
-    int     ret = setsockopt( s, level, optname, ( char * )&_true, sizeof( _true ) );
+    SETSOCKOPT_PARAM _true = 1;
+    int ret = setsockopt( s, level, optname, ( char * )&_true, sizeof( _true ) );
 
     NET_GET_ERROR();
     return ret;
 }
 
 static int make_nonblock( SOCKET s ) {
-    int     _true = 1;
-    int     ret = ioctlsocket( s, FIONBIO, &_true );
+    IOCTLSOCKET_PARAM _true = 1;
+    int ret = ioctlsocket( s, FIONBIO, &_true );
 
     NET_GET_ERROR();
     return ret;
 }
 
 static int bind_socket( SOCKET s, struct sockaddr_in *sadr ) {
-    int     ret = bind( s, ( struct sockaddr * )sadr, sizeof( *sadr ) );
+    int ret = bind( s, ( struct sockaddr * )sadr, sizeof( *sadr ) );
 
     NET_GET_ERROR();
     return ret;
