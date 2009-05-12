@@ -489,7 +489,7 @@ static void dump_lag( void ) {
             cl->number, cl->name, PL_S2C( cl ), PL_C2S( cl ), 
             cl->min_ping, AVG_PING( cl ), cl->max_ping
 #ifdef USE_PACKETDUP
-            , cl->netchan->numpackets - 1
+            , cl->numpackets - 1
 #endif
             );
     }
