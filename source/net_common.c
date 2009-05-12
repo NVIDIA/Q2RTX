@@ -92,9 +92,11 @@ cvar_t          *net_port;
 static cvar_t   *net_clientport;
 static cvar_t   *net_dropsim;
 #endif
+#ifdef _DEBUG
 static cvar_t   *net_log_enable;
 static cvar_t   *net_log_name;
 static cvar_t   *net_log_flush;
+#endif
 static cvar_t   *net_ignore_icmp;
 static cvar_t   *net_tcp_ip;
 static cvar_t   *net_tcp_port;
@@ -260,6 +262,8 @@ qboolean NET_StringToAdr( const char *s, netadr_t *a, int port ) {
 
 //=============================================================================
 
+#ifdef _DEBUG
+
 static void logfile_close( void ) {
     if( !net_logFile ) {
         return;
@@ -355,6 +359,8 @@ static void NET_LogPacket( const netadr_t *address, const char *prefix,
     FS_FPrintf( net_logFile, "\n" );
 }
 
+#endif
+
 static void NET_UpdateStats( void ) {
     if( net_statTime > com_eventTime ) {
         net_statTime = com_eventTime;
@@ -399,9 +405,11 @@ qboolean NET_GetLoopPacket( netsrc_t sock ) {
 
     memcpy( msg_read_buffer, loopmsg->data, loopmsg->datalen );
 
+#ifdef _DEBUG
     if( net_log_enable->integer ) {
         NET_LogPacket( &net_from, "LP recv", loopmsg->data, loopmsg->datalen );
     }
+#endif
     if( sock == NS_CLIENT ) {
         net_rcvd += loopmsg->datalen;
     }
@@ -589,9 +597,11 @@ neterr_t NET_GetPacket( netsrc_t sock ) {
         return NET_AGAIN;
     }
 
+#ifdef _DEBUG
     if( net_log_enable->integer ) {
         NET_LogPacket( &net_from, "UDP recv", msg_read_buffer, ret );
     }
+#endif
     
     if( ret > MAX_PACKETLEN ) {
         Com_WPrintf( "%s: oversize packet from %s\n", __func__,
@@ -648,9 +658,11 @@ neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, size_t length, const
             memcpy( msg->data, data, length );
             msg->datalen = length;
 
+#ifdef _DEBUG
             if( net_log_enable->integer ) {
                 NET_LogPacket( to, "LB send", data, length );
             }
+#endif
             if( sock == NS_CLIENT ) {
                 net_sent += length;
             }
@@ -732,9 +744,11 @@ neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, size_t length, const
             NET_AdrToString( to ) );
     }
 
+#ifdef _DEBUG
     if( net_log_enable->integer ) {
         NET_LogPacket( to, "UDP send", data, ret );
     }
+#endif
     net_sent += ret;
 
     return NET_OK;
@@ -783,7 +797,7 @@ static SOCKET create_socket( int type, int proto ) {
 }
 
 static int enable_option( SOCKET s, int level, int optname ) {
-    u_long  _true = 1;
+    int     _true = 1;
     int     ret = setsockopt( s, level, optname, ( char * )&_true, sizeof( _true ) );
 
     NET_GET_ERROR();
@@ -791,7 +805,7 @@ static int enable_option( SOCKET s, int level, int optname ) {
 }
 
 static int make_nonblock( SOCKET s ) {
-    u_long  _true = 1;
+    int     _true = 1;
     int     ret = ioctlsocket( s, FIONBIO, &_true );
 
     NET_GET_ERROR();
@@ -1004,7 +1018,6 @@ neterr_t NET_Listen( qboolean arg ) {
 neterr_t NET_Accept( netstream_t *s ) {
     struct sockaddr_in from;
     socklen_t fromlen;
-    u_long _true = 1;
     SOCKET newsocket;
     struct timeval tv;
     fd_set fd;
@@ -1042,8 +1055,7 @@ neterr_t NET_Accept( netstream_t *s ) {
     }
 
     // make it non-blocking
-    if( ioctlsocket( newsocket, FIONBIO, &_true ) == -1 ) {
-        NET_GET_ERROR();
+    if( make_nonblock( newsocket ) == -1 ) {
         closesocket( newsocket );
         return NET_ERROR;
     }
@@ -1201,9 +1213,11 @@ neterr_t NET_RunStream( netstream_t *s ) {
 
             FIFO_Commit( &s->recv, ret );
 
+#if _DEBUG
             if( net_log_enable->integer ) {
                 NET_LogPacket( &s->address, "TCP recv", data, ret );
             }
+#endif
             net_rcvd += ret;
 
             result = NET_OK;
@@ -1224,9 +1238,11 @@ neterr_t NET_RunStream( netstream_t *s ) {
 
             FIFO_Decommit( &s->send, ret );
 
+#if _DEBUG
             if( net_log_enable->integer ) {
                 NET_LogPacket( &s->address, "TCP send", data, ret );
             }
+#endif
             net_sent += ret;
 
             //result = NET_OK;
@@ -1528,12 +1544,14 @@ void NET_Init( void ) {
     net_clientport->changed = net_udp_param_changed;
     net_dropsim = Cvar_Get( "net_dropsim", "0", 0 );
 #endif
+#if _DEBUG
     net_log_enable = Cvar_Get( "net_log_enable", "0", 0 );
     net_log_enable->changed = net_log_enable_changed;
     net_log_name = Cvar_Get( "net_log_name", "network", 0 );
     net_log_name->changed = net_log_param_changed;
     net_log_flush = Cvar_Get( "net_log_flush", "0", 0 );
     net_log_flush->changed = net_log_param_changed;
+#endif
     net_ignore_icmp = Cvar_Get( "net_ignore_icmp", "0", 0 );
     net_tcp_ip = Cvar_Get( "net_tcp_ip", net_ip->string, 0 );
     net_tcp_ip->changed = net_tcp_param_changed;
@@ -1541,7 +1559,9 @@ void NET_Init( void ) {
     net_tcp_port->changed = net_tcp_param_changed;
     net_tcp_backlog = Cvar_Get( "net_tcp_backlog", "4", 0 );
 
+#if _DEBUG
     net_log_enable_changed( net_log_enable );
+#endif
 
     net_statTime = com_eventTime;
 
