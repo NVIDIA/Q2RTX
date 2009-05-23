@@ -177,7 +177,9 @@ typedef enum {
     CF_NODATA       = ( 1 << 1 ),
     CF_DEFLATE      = ( 1 << 2 ),
     CF_DROP         = ( 1 << 3 ),
-    CF_ERROR        = ( 1 << 4 )
+#if USE_ICMP
+    CF_ERROR        = ( 1 << 4 ),
+#endif
 } client_flags_t;
 
 typedef struct client_s {

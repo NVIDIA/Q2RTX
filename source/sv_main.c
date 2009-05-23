@@ -1163,38 +1163,19 @@ static void SV_GiveMsec( void ) {
 SV_PacketEvent
 =================
 */
-static void SV_PacketEvent( neterr_t ret ) {
+static void SV_PacketEvent( void ) {
     client_t    *client;
     netchan_t   *netchan;
     int         qport;
 
     // check for connectionless packet (0xffffffff) first
     // connectionless packets are processed even if the server is down
-    if( ret == NET_OK && *( int * )msg_read.data == -1 ) {
+    if( *( int * )msg_read.data == -1 ) {
         SV_ConnectionlessPacket();
         return;
     }
 
     if( !svs.initialized ) {
-        return;
-    }
-
-    if( ret == NET_ERROR ) {
-        // check for errors from connected clients
-        FOR_EACH_CLIENT( client ) {
-            if( client->state == cs_zombie ) {
-                continue; // already a zombie
-            }
-            netchan = client->netchan;
-            if( !NET_IsEqualBaseAdr( &net_from, &netchan->remote_address ) ) {
-                continue;
-            }
-            if( net_from.port && netchan->remote_address.port != net_from.port ) {
-                continue;
-            }
-            client->flags |= CF_ERROR; // drop them soon
-            break;
-        }
         return;
     }
 
@@ -1235,7 +1216,9 @@ static void SV_PacketEvent( neterr_t ret ) {
                 //if( client->state != cs_assigned ) {
                     client->lastmessage = svs.realtime;    // don't timeout
                 //}
+#if USE_ICMP
                 client->flags &= ~CF_ERROR; // don't drop
+#endif
                 SV_ExecuteClientMessage( client );
             }
         }
@@ -1244,22 +1227,48 @@ static void SV_PacketEvent( neterr_t ret ) {
     }
 }
 
-void SV_ProcessEvents( void ) {
-    neterr_t ret;
+#if USE_ICMP
+/*
+=================
+SV_ErrorEvent
+=================
+*/
+void SV_ErrorEvent( void ) {
+    client_t    *client;
+    netchan_t   *netchan;
 
+    // check for errors from connected clients
+    FOR_EACH_CLIENT( client ) {
+        if( client->state == cs_zombie ) {
+            continue; // already a zombie
+        }
+        netchan = client->netchan;
+        if( !NET_IsEqualBaseAdr( &net_from, &netchan->remote_address ) ) {
+            continue;
+        }
+        if( net_from.port && netchan->remote_address.port != net_from.port ) {
+            continue;
+        }
+        client->flags |= CF_ERROR; // drop them soon
+        break;
+    }
+}
+#endif
+
+void SV_ProcessEvents( void ) {
 #if USE_CLIENT
     memset( &net_from, 0, sizeof( net_from ) );
     net_from.type = NA_LOOPBACK;
 
     // process loopback packets
     while( NET_GetLoopPacket( NS_SERVER ) ) {
-        SV_PacketEvent( NET_OK );
+        SV_PacketEvent();
     }
 #endif
 
     // process network packets
-    while( ( ret = NET_GetPacket( NS_SERVER ) ) != NET_AGAIN ) {
-        SV_PacketEvent( ret );
+    while( NET_GetPacket( NS_SERVER ) ) {
+        SV_PacketEvent();
     }
 }
 
@@ -1300,6 +1309,7 @@ static void SV_CheckTimeouts( void ) {
             SV_DropClient( client, NULL );
             continue;
         }
+#if USE_ICMP
         if( client->flags & CF_ERROR ) {
             if( delta > ghost_time ) {
                 SV_DropClient( client, "connection reset by peer" );
@@ -1307,6 +1317,7 @@ static void SV_CheckTimeouts( void ) {
                 continue;
             }
         }
+#endif
         if( delta > drop_time || ( client->state == cs_assigned && delta > ghost_time ) ) {
             SV_DropClient( client, "connection timed out" );
             SV_RemoveClient( client );    // don't bother with zombie state

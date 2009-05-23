@@ -54,6 +54,9 @@ LAYOUTS
 ==============================================================================
 */
 
+// clients per screen page
+#define PAGE_CLIENTS    16
+
 static void MVD_LayoutClients( mvd_client_t *client ) {
     static const char header[] = 
         "xv 16 yv 0 string2 \"    Name            RTT Status\"";
@@ -70,12 +73,12 @@ static void MVD_LayoutClients( mvd_client_t *client ) {
         client->layout_cursor = 0;
     } else if( client->layout_cursor ) {
         total = List_Count( &mvd->clients );
-        if( client->layout_cursor > total / 10 ) {
-            client->layout_cursor = total / 10;
+        if( client->layout_cursor > total / PAGE_CLIENTS ) {
+            client->layout_cursor = total / PAGE_CLIENTS;
         }
     }
 
-    prestep = client->layout_cursor * 10;
+    prestep = client->layout_cursor * PAGE_CLIENTS;
 
     memcpy( layout, header, sizeof( header ) - 1 );
     total = sizeof( header ) - 1;
@@ -106,6 +109,10 @@ static void MVD_LayoutClients( mvd_client_t *client ) {
         }
         memcpy( layout + total, buffer, len );
         total += len;
+
+        if( y > 8 * PAGE_CLIENTS ) {
+            break;
+        }
         y += 8;
     }
 
@@ -412,6 +419,7 @@ static void MVD_FollowStop( mvd_client_t *client ) {
     client->clientNum = mvd->clientNum;
     client->oldtarget = client->target;
     client->target = NULL;
+    client->chase_mask = 0;
 
     if( client->layout_type == LAYOUT_FOLLOW ) {
         MVD_SetDefaultLayout( client );
@@ -429,6 +437,7 @@ static void MVD_FollowStart( mvd_client_t *client, mvd_player_t *target ) {
 
     client->oldtarget = client->target;
     client->target = target;
+    client->chase_mask = 0;
 
     // send delta configstrings
     for( cs = target->configstrings; cs; cs = cs->next ) {
@@ -548,9 +557,26 @@ static mvd_player_t *MVD_MostFollowed( mvd_t *mvd ) {
 
 static void MVD_UpdateClient( mvd_client_t *client ) {
     mvd_t *mvd = client->mvd;
-    mvd_player_t *target = client->target;
-    int i;
+    mvd_player_t *target;
+    int i, mask = client->chase_mask;
+    entity_state_t *ent;
 
+    if( mask ) {
+        // find new target for auto chasecam
+        for( i = 0, target = mvd->players; i < mvd->maxclients; i++, target++ ) {
+            if( !target->inuse || target == mvd->dummy ) {
+                continue;
+            }
+            ent = &mvd->edicts[ i + 1 ].s;
+            if( ent->effects & mask ) {
+                MVD_FollowStart( client, target );
+                client->chase_mask = mask;
+                goto copy;
+            }
+        }
+    }
+
+    target = client->target;
     if( !target ) {
         // copy stats of the dummy MVD observer
         target = mvd->dummy;
@@ -563,7 +589,7 @@ static void MVD_UpdateClient( mvd_client_t *client ) {
             MVD_FollowStop( client );
             return;
         }
-
+copy:
         // copy entire player state
         client->ps = target->ps;
         if( client->uf & UF_LOCALFOV ) {
@@ -667,6 +693,7 @@ void MVD_SwitchChannel( mvd_client_t *client, mvd_t *mvd ) {
     client->mvd = mvd;
     client->begin_time = 0;
     client->target = client->oldtarget = NULL;
+    client->chase_mask = 0;
     MVD_SetServerState( cl, mvd );
 
     // needs to reconnect
@@ -800,6 +827,7 @@ static void MVD_Observe_f( mvd_client_t *client ) {
             "[MVD] Please enter a channel first.\n" );
         return;
     }
+    client->chase_mask = 0;
     if( client->mvd->intermission ) {
         return;
     }
@@ -812,12 +840,66 @@ static void MVD_Observe_f( mvd_client_t *client ) {
     }
 }
 
+static mvd_player_t *MVD_SetPlayer( mvd_client_t *client, const char *s ) {
+    mvd_t *mvd = client->mvd;
+    mvd_player_t *player, *match;
+    int i, count;
+
+    // numeric values are just slot numbers
+    if( COM_IsUint( s ) ) {
+        i = atoi( s );
+        if( i < 0 || i >= mvd->maxclients ) {
+            SV_ClientPrintf( client->cl, PRINT_HIGH,
+                "[MVD] Player number %d is invalid.\n", i );
+            return NULL;
+        }
+
+        player = &mvd->players[i];
+        if( !player->inuse || player == mvd->dummy ) {
+            SV_ClientPrintf( client->cl, PRINT_HIGH,
+                "[MVD] Player %d is not active.\n", i );
+            return NULL;
+        }
+
+        return player;
+    }
+
+    // check for a name match
+    match = NULL;
+    count = 0;
+    for( i = 0, player = mvd->players; i < mvd->maxclients; i++, player++ ) {
+        if( !player->inuse || player == mvd->dummy ) {
+            continue;
+        }
+        if( !Q_stricmp( player->name, s ) ) {
+            return player; // exact match
+        }
+        if( Q_stristr( player->name, s ) ) {
+            match = player; // partial match
+            count++;
+        }
+    }
+
+    if( !match ) {
+        SV_ClientPrintf( client->cl, PRINT_HIGH,
+            "[MVD] No players matching '%s' found.\n", s );
+        return NULL;
+    }
+
+    if( count > 1 ) {
+        SV_ClientPrintf( client->cl, PRINT_HIGH,
+            "[MVD] '%s' matches multiple players.\n", s );
+        return NULL;
+    }
+
+    return match;
+}
+
 static void MVD_Follow_f( mvd_client_t *client ) {
     mvd_t *mvd = client->mvd;
     mvd_player_t *player;
-    entity_state_t *ent;
     char *s;
-    int i, mask;
+    int mask;
 
     if( mvd == &mvd_waitingRoom ) {
         SV_ClientPrintf( client->cl, PRINT_HIGH,
@@ -835,8 +917,9 @@ static void MVD_Follow_f( mvd_client_t *client ) {
     }
 
     s = Cmd_Argv( 1 );
-    if( s[0] == '!' ) {
-        switch( s[1] ) {
+    if( *s == '!' ) {
+        s++;
+        switch( *s ) {
         case 'q':
             mask = EF_QUAD;
             break;
@@ -849,6 +932,8 @@ static void MVD_Follow_f( mvd_client_t *client ) {
         case 'b':
             mask = EF_FLAG2;
             break;
+        case '!':
+            goto match;
         case 'p':
             if( client->oldtarget && client->oldtarget->inuse ) {
                 MVD_FollowStart( client, client->oldtarget );
@@ -864,37 +949,17 @@ static void MVD_Follow_f( mvd_client_t *client ) {
                 "b (blue flag), p (previous target).\n", s + 1 );
             return;
         }
-        for( i = 0; i < mvd->maxclients; i++ ) {
-            player = &mvd->players[i];
-            if( !player->inuse || player == mvd->dummy ) {
-                continue;
-            }
-            ent = &mvd->edicts[ i + 1 ].s;
-            if( ent->effects & mask ) {
-                goto follow;
-            }
-        }
-        SV_ClientPrintf( client->cl, PRINT_HIGH,
-            "[MVD] No players with '%s' powerup.\n", s + 1 );
+        SV_ClientPrintf( client->cl, PRINT_MEDIUM,
+            "[MVD] Chasing players with '%s' powerup.\n", s + 1 );
+        client->chase_mask = mask;
         return;
     }
 
-    i = atoi( s );
-    if( i < 0 || i >= mvd->maxclients ) {
-        SV_ClientPrintf( client->cl, PRINT_HIGH,
-            "[MVD] Player number %d is invalid.\n", i );
-        return;
+match:
+    player = MVD_SetPlayer( client, s );
+    if( player ) {
+        MVD_FollowStart( client, player );
     }
-
-    player = &mvd->players[i];
-    if( !player->inuse || player == mvd->dummy ) {
-        SV_ClientPrintf( client->cl, PRINT_HIGH,
-            "[MVD] Player %d is not active.\n", i );
-        return;
-    }
-
-follow:
-    MVD_FollowStart( client, player );
 }
 
 static void MVD_Invuse_f( mvd_client_t *client ) {
@@ -1038,7 +1103,7 @@ static void MVD_Commands_f( mvd_client_t *client ) {
         "menu                   show main menu\n"
         "score                  show scoreboard\n"
         "oldscore               show previous scoreboard\n"
-        "channels [all]         list active (or all) channels\n"
+        "channels               list active channels\n"
         "join [channel_id]      join specified channel\n"
         "leave                  go to the Waiting Room\n"
     );

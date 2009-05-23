@@ -1191,16 +1191,20 @@ static neterr_t run_connect( gtv_t *gtv ) {
 
 static neterr_t run_stream( gtv_t *gtv ) {
     neterr_t ret;
+#if USE_CLIENT
     int count;
     size_t usage;
+#endif
 
     // run network stream
     if( ( ret = NET_RunStream( &gtv->stream ) ) != NET_OK ) {
         return ret;
     }
 
+#if USE_CLIENT
     count = 0;
     usage = FIFO_Usage( &gtv->stream.recv );
+#endif
 
 #if USE_ZLIB
     if( gtv->z_act ) {
@@ -1212,12 +1216,16 @@ static neterr_t run_stream( gtv_t *gtv ) {
             if( !parse_message( gtv, &gtv->z_buf ) ) {
                 break;
             }
+#if USE_CLIENT
             count++;
+#endif
         }
     } else
 #endif
         while( parse_message( gtv, &gtv->stream.recv ) ) {
+#if USE_CLIENT
             count++;
+#endif
         }
 
 #if USE_CLIENT

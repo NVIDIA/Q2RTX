@@ -184,18 +184,8 @@ extern vec3_t vec3_origin;
 extern const vec3_t bytedirs[NUMVERTEXNORMALS];
 
 #if USE_CLIENT
-extern const color_t colorBlack;
-extern const color_t colorRed;
-extern const color_t colorGreen;
-extern const color_t colorYellow;
-extern const color_t colorBlue;
-extern const color_t colorCyan;
-extern const color_t colorMagenta;
-extern const color_t colorWhite;
-
-extern const color_t colorTable[8];
-
-extern const char colorNames[10][8];
+extern const color_t    colorTable[8];
+extern const char       colorNames[10][8];
 #endif
 
 typedef struct vrect_s {
@@ -377,6 +367,15 @@ void ByteToDir( int index, vec3_t dir );
 
 #define S_COLOR_ALT			Q_COLOR_ESCAPE_STRING "8"
 #define S_COLOR_RESET		Q_COLOR_ESCAPE_STRING "9"
+
+#define colorBlack      colorTable[ColorIndex(COLOR_BLACK)]
+#define colorRed        colorTable[ColorIndex(COLOR_RED)]
+#define colorGreen      colorTable[ColorIndex(COLOR_GREEN)]
+#define colorYellow     colorTable[ColorIndex(COLOR_YELLOW)]
+#define colorBlue       colorTable[ColorIndex(COLOR_BLUE)]
+#define colorCyan       colorTable[ColorIndex(COLOR_CYAN)]
+#define colorMagenta    colorTable[ColorIndex(COLOR_MAGENTA)]
+#define colorWhite      colorTable[ColorIndex(COLOR_WHITE)]
 
 #define MAKERGB(v,r,g,b)	((v)[0]=(r),(v)[1]=(g),(v)[2]=(b))
 #define MAKERGBA(v,r,g,b,a)	((v)[0]=(r),(v)[1]=(g),(v)[2]=(b),(v)[3]=(a))

@@ -134,8 +134,8 @@ void		NET_Shutdown( void );
 void		NET_Config( netflag_t flag );
 qboolean    NET_GetAddress( netsrc_t sock, netadr_t *adr );
 
-neterr_t	NET_GetPacket( netsrc_t sock );
-neterr_t	NET_SendPacket( netsrc_t sock, const netadr_t *to, size_t length, const void *data );
+qboolean 	NET_GetPacket( netsrc_t sock );
+qboolean 	NET_SendPacket( netsrc_t sock, const netadr_t *to, size_t length, const void *data );
 qboolean	NET_GetLoopPacket( netsrc_t sock );
 
 char *		NET_AdrToString( const netadr_t *a );

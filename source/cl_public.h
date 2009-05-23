@@ -48,6 +48,9 @@ typedef enum {
 } active_t;
 
 void CL_ProcessEvents( void );
+#if USE_ICMP
+void CL_ErrorEvent( void );
+#endif
 void CL_Init (void);
 void CL_Disconnect( comErrorType_t type, const char *text );
 void CL_Shutdown (void);

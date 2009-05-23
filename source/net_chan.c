@@ -115,8 +115,8 @@ Netchan_OutOfBand
 Sends a text message in an out-of-band datagram
 ================
 */
-neterr_t Netchan_OutOfBand( netsrc_t sock, const netadr_t *address,
-                            const char *format, ... )
+void Netchan_OutOfBand( netsrc_t sock, const netadr_t *address,
+                        const char *format, ... )
 {
 	va_list		argptr;
 	char        buffer[MAX_PACKETLEN_DEFAULT];
@@ -132,11 +132,11 @@ neterr_t Netchan_OutOfBand( netsrc_t sock, const netadr_t *address,
 
     if( len >= sizeof( buffer ) ) {
         Com_WPrintf( "%s: overflow\n", __func__ );
-        return NET_ERROR;
+        return;
     }
 
     // send the datagram
-	return NET_SendPacket( sock, address, len, buffer );
+	NET_SendPacket( sock, address, len, buffer );
 }
 
 // ============================================================================
@@ -162,7 +162,6 @@ static size_t NetchanOld_Transmit( netchan_t *netchan, size_t length, const void
 	byte		send_buf[MAX_PACKETLEN];
 	qboolean	send_reliable;
 	uint32_t	w1, w2;
-	neterr_t	ret;
     int         i;
 
 // check for message overflow
@@ -247,11 +246,8 @@ static size_t NetchanOld_Transmit( netchan_t *netchan, size_t length, const void
 
 	// send the datagram
     for( i = 0; i < numpackets; i++ ) {
-        ret = NET_SendPacket( netchan->sock, &netchan->remote_address,
+        NET_SendPacket( netchan->sock, &netchan->remote_address,
             send.cursize, send.data );
-        if( ret == NET_ERROR ) {
-            return 0;
-        }
     }
 
 	return send.cursize * numpackets;
@@ -431,7 +427,6 @@ static size_t NetchanNew_TransmitNextFragment( netchan_t *netchan ) {
 	uint16_t	offset;
 	size_t		fragment_length;
 	qboolean	more_fragments;
-	neterr_t	ret;
 
 	send_reliable = netchan->reliable_length ? qtrue : qfalse;
 
@@ -502,11 +497,8 @@ static size_t NetchanNew_TransmitNextFragment( netchan_t *netchan ) {
 	}
 
 	// send the datagram
-	ret = NET_SendPacket( netchan->sock, &netchan->remote_address,
+	NET_SendPacket( netchan->sock, &netchan->remote_address,
         send.cursize, send.data );
-	if( ret == NET_ERROR ) {
-		return 0;
-	}
 
 	return send.cursize;
 }
@@ -522,7 +514,6 @@ static size_t NetchanNew_Transmit( netchan_t *netchan, size_t length, const void
 	byte		send_buf[MAX_PACKETLEN];
 	qboolean	send_reliable;
 	uint32_t	w1, w2;
-	neterr_t	ret;
     int         i;
 
 // check for message overflow
@@ -619,11 +610,8 @@ static size_t NetchanNew_Transmit( netchan_t *netchan, size_t length, const void
 
 	// send the datagram
     for( i = 0; i < numpackets; i++ ) {
-        ret = NET_SendPacket( netchan->sock, &netchan->remote_address,
+        NET_SendPacket( netchan->sock, &netchan->remote_address,
             send.cursize, send.data );
-        if( ret == NET_ERROR ) {
-            return 0;
-        }
     }
 
 	return send.cursize * numpackets;

@@ -75,6 +75,7 @@ typedef struct {
     qboolean    admin;
     unsigned    begin_time;
     mvd_player_t *target, *oldtarget;
+    int         chase_mask;
     float       fov;
     int         uf;
 

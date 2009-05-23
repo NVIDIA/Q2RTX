@@ -1087,13 +1087,10 @@ static size_t Com_Date_m( char *buffer, size_t size ) {
     return strftime( buffer, size, com_date_format->string, local );
 }
 
-size_t Com_TimeDiff( char *buffer, size_t size, time_t start, time_t end ) {
+size_t Com_FormatTime( char *buffer, size_t size, time_t t ) {
     int     sec, min, hour, day;
 
-    if( start > end ) {
-        start = end;
-    }
-    sec = end - start;
+    sec = (int)t;
     min = sec / 60; sec %= 60;
     hour = min / 60; min %= 60;
     day = hour / 24; hour %= 24;
@@ -1105,6 +1102,16 @@ size_t Com_TimeDiff( char *buffer, size_t size, time_t start, time_t end ) {
         return Q_scnprintf( buffer, size, "%d:%02d.%02d", hour, min, sec );
     }
     return Q_scnprintf( buffer, size, "%02d.%02d", min, sec );
+}
+
+size_t Com_TimeDiff( char *buffer, size_t size, time_t start, time_t end ) {
+    time_t diff;
+
+    if( start > end ) {
+        start = end;
+    }
+    diff = end - start;
+    return Com_FormatTime( buffer, size, diff );
 }
 
 size_t Com_Uptime_m( char *buffer, size_t size ) {

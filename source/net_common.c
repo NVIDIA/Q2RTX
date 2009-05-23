@@ -31,6 +31,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "net_stream.h"
 #include "sys_public.h"
 #include "sv_public.h"
+#include "cl_public.h"
 
 #if( defined _WIN32 )
 #define WIN32_LEAN_AND_MEAN
@@ -57,7 +58,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <arpa/inet.h>
 #ifdef __linux__
 #include <linux/types.h>
+#if USE_ICMP
 #include <linux/errqueue.h>
+#endif
 #endif
 #define SOCKET int
 #define INVALID_SOCKET -1
@@ -96,29 +99,48 @@ cvar_t          *net_port;
 static cvar_t   *net_clientport;
 static cvar_t   *net_dropsim;
 #endif
+
 #ifdef _DEBUG
 static cvar_t   *net_log_enable;
 static cvar_t   *net_log_name;
 static cvar_t   *net_log_flush;
 #endif
-static cvar_t   *net_ignore_icmp;
+
 static cvar_t   *net_tcp_ip;
 static cvar_t   *net_tcp_port;
 static cvar_t   *net_tcp_backlog;
 
-static SOCKET       udp_sockets[NS_COUNT] = { INVALID_SOCKET, INVALID_SOCKET };
-static const char   socketNames[NS_COUNT][8] = { "Client", "Server" };
-static SOCKET       tcp_socket = INVALID_SOCKET;
+#if USE_ICMP
+static cvar_t   *net_ignore_icmp;
+#endif
 
-static fileHandle_t net_logFile;
 static netflag_t    net_active;
 static int          net_error;
 
-static unsigned     net_statTime;
-static size_t       net_rcvd;
-static size_t       net_sent;
+static SOCKET       udp_sockets[NS_COUNT] = { INVALID_SOCKET, INVALID_SOCKET };
+static const char   socketNames[NS_COUNT][8] = { "Client", "Server" };
+static SOCKET       tcp_socket = INVALID_SOCKET;
+#ifdef _DEBUG
+static fileHandle_t net_logFile;
+#endif
+
+// current rate measurement
+static unsigned     net_rate_time;
+static size_t       net_rate_rcvd;
+static size_t       net_rate_sent;
 static size_t       net_rate_dn;
 static size_t       net_rate_up;
+
+// lifetime statistics
+static unsigned long long    net_recv_errors;
+static unsigned long long    net_send_errors;
+#if USE_ICMP
+static unsigned long long    net_icmp_errors;
+#endif
+static unsigned long long    net_bytes_rcvd;
+static unsigned long long    net_bytes_sent;
+static unsigned long long    net_packets_rcvd;
+static unsigned long long    net_packets_sent;
 
 //=============================================================================
 
@@ -365,19 +387,24 @@ static void NET_LogPacket( const netadr_t *address, const char *prefix,
 
 #endif
 
+#define RATE_SECS    3
+
 static void NET_UpdateStats( void ) {
-    if( net_statTime > com_eventTime ) {
-        net_statTime = com_eventTime;
+    unsigned diff;
+
+    if( net_rate_time > com_eventTime ) {
+        net_rate_time = com_eventTime;
     }
-    if( com_eventTime - net_statTime < 1000 ) {
+    diff = com_eventTime - net_rate_time;
+    if( diff < RATE_SECS * 1000 ) {
         return;
     }
-    net_statTime = com_eventTime;
+    net_rate_time = com_eventTime;
 
-    net_rate_dn = net_rcvd;
-    net_rate_up = net_sent;
-    net_sent = 0;
-    net_rcvd = 0;
+    net_rate_dn = net_rate_rcvd / RATE_SECS;
+    net_rate_up = net_rate_sent / RATE_SECS;
+    net_rate_sent = 0;
+    net_rate_rcvd = 0;
 }
 
 
@@ -415,7 +442,7 @@ qboolean NET_GetLoopPacket( netsrc_t sock ) {
     }
 #endif
     if( sock == NS_CLIENT ) {
-        net_rcvd += loopmsg->datalen;
+        net_rate_rcvd += loopmsg->datalen;
     }
 
     SZ_Init( &msg_read, msg_read_buffer, sizeof( msg_read_buffer ) );
@@ -426,10 +453,39 @@ qboolean NET_GetLoopPacket( netsrc_t sock ) {
 
 #endif
 
-#ifdef __unix__
+#if USE_ICMP
 
-static neterr_t get_icmp_error( int s ) {
+// prevents infinite retry loops caused by broken TCP/IP stacks
+#define MAX_ERROR_RETRIES   64
+
+static void icmp_error_event( netsrc_t sock ) {
+    if( net_ignore_icmp->integer ) {
+        return;
+    }
+
+    Com_DPrintf( "%s: %s from %s\n", __func__,
+        NET_ErrorString(), NET_AdrToString( &net_from ) );
+    net_icmp_errors++;
+
+    switch( sock ) {
+    case NS_SERVER:
+        SV_ErrorEvent();
+        break;
+#if USE_CLIENT
+    case NS_CLIENT:
+        CL_ErrorEvent();
+        break;
+#endif
+    default:
+        break;
+    }
+}
+
 #ifdef __linux__
+
+// Linux at least supports receiving ICMP errors on unconnected UDP sockets
+// via IP_RECVERR cruft below... What about BSD?
+static void process_error_queue( netsrc_t sock ) {
     byte buffer[1024];
     struct sockaddr_in from;
     struct msghdr msg;
@@ -437,6 +493,7 @@ static neterr_t get_icmp_error( int s ) {
     struct sock_extended_err *ee;
     //struct sockaddr_in *off;
 
+retry:
     memset( &from, 0, sizeof( from ) );
 
     memset( &msg, 0, sizeof( msg ) );
@@ -445,7 +502,7 @@ static neterr_t get_icmp_error( int s ) {
     msg.msg_control = buffer;
     msg.msg_controllen = sizeof( buffer );
 
-    if( recvmsg( s, &msg, MSG_ERRQUEUE ) == -1 ) {
+    if( recvmsg( udp_sockets[sock], &msg, MSG_ERRQUEUE ) == -1 ) {
         NET_GET_ERROR();
 
         switch( net_error ) {
@@ -455,13 +512,12 @@ static neterr_t get_icmp_error( int s ) {
         default:
             Com_EPrintf( "%s: %s\n", __func__, NET_ErrorString() );
         }
-
-        return NET_AGAIN;
+        return;
     }
 
     if( !( msg.msg_flags & MSG_ERRQUEUE ) ) {
         Com_DPrintf( "%s: no extended error received\n", __func__ );
-        return NET_AGAIN;
+        return;
     }
 
     // find an ICMP error message
@@ -483,7 +539,7 @@ static neterr_t get_icmp_error( int s ) {
 
     if( !cmsg ) {
         Com_DPrintf( "%s: no ICMP error found\n", __func__ );
-        return NET_AGAIN;
+        return;
     }
 
     /*
@@ -501,22 +557,18 @@ static neterr_t get_icmp_error( int s ) {
     case EHOSTUNREACH:
     case EHOSTDOWN:
     case ECONNREFUSED:
-#ifdef ENONET
     case ENONET:
-#endif
-        Com_DPrintf( "%s: %s from %s\n", __func__,
-            NET_ErrorString(), NET_AdrToString( &net_from ) );
-        return NET_ERROR;
+        icmp_error_event( sock );
+        goto retry;
     default:
         Com_EPrintf( "%s: %s from %s\n", __func__,
             NET_ErrorString(), NET_AdrToString( &net_from ) );
     }
-#endif
-
-    return NET_AGAIN;
 }
 
-#endif // __unix__
+#endif // __linux__
+
+#endif // USE_ICMP
 
 /*
 =============
@@ -524,20 +576,27 @@ NET_GetPacket
 
 Fills msg_read_buffer with packet contents,
 net_from variable receives source address.
-Returns NET_ERROR only in case of ICMP error.
 =============
 */
-neterr_t NET_GetPacket( netsrc_t sock ) {
+qboolean NET_GetPacket( netsrc_t sock ) {
     struct sockaddr_in from;
     socklen_t fromlen;
     int ret;
+#if USE_ICMP
+    int tries;
+#endif
 
     if( udp_sockets[sock] == INVALID_SOCKET ) {
-        return NET_AGAIN;
+        return qfalse;
     }
 
     NET_UpdateStats();
 
+#if USE_ICMP
+    tries = 0;
+
+retry:
+#endif
     memset( &from, 0, sizeof( from ) );
 
     fromlen = sizeof( from );
@@ -545,7 +604,7 @@ neterr_t NET_GetPacket( netsrc_t sock ) {
         MAX_PACKETLEN, 0, ( struct sockaddr * )&from, &fromlen );
 
     if( !ret ) {
-        return NET_AGAIN;
+        return qfalse;
     }
 
     NET_SockadrToNetadr( &from, &net_from );
@@ -558,47 +617,56 @@ neterr_t NET_GetPacket( netsrc_t sock ) {
         case WSAEWOULDBLOCK:
             // wouldblock is silent
             break;
+#if USE_ICMP
         case WSAECONNRESET:
+        case WSAENETRESET:
+            // winsock has already provided us with
+            // a valid address from ICMP error packet
+            icmp_error_event( sock );
+            if( ++tries < MAX_ERROR_RETRIES ) {
+                goto retry;
+            }
+            // intentional fallthrough
+#endif // USE_ICMP
+        default:
             Com_DPrintf( "%s: %s from %s\n", __func__,
                 NET_ErrorString(), NET_AdrToString( &net_from ) );
-            if( !net_ignore_icmp->integer ) {
-                return NET_ERROR;
-            }
-            break;
-        case WSAEMSGSIZE:
-            Com_WPrintf( "%s: oversize packet from %s\n", __func__,
-                NET_AdrToString( &net_from ) );
-            break;
-        default:
-            Com_EPrintf( "%s: %s from %s\n", __func__,
-                NET_ErrorString(), NET_AdrToString( &net_from ) );
+            net_recv_errors++;
             break;
         }
-#else
+#else // _WIN32
         switch( net_error ) {
         case EWOULDBLOCK:
             // wouldblock is silent
             break;
+#if USE_ICMP
         case ENETUNREACH:
         case EHOSTUNREACH:
         case EHOSTDOWN:
         case ECONNREFUSED:
-#ifdef ENONET
         case ENONET:
-#endif
-            //Com_DPrintf( "%s: %s from %s\n", __func__,
-            //    NET_ErrorString(), NET_AdrToString( &net_from ) );
-            if( !net_ignore_icmp->integer ) {
-                return get_icmp_error( udp_sockets[sock] );
+            // recvfrom() fails on Linux if there's an ICMP originated
+            // pending error on socket. suck up error queue and retry...
+            process_error_queue( sock );
+            if( ++tries < MAX_ERROR_RETRIES ) {
+                goto retry;
             }
-            break;
+            // intentional fallthrough
+#endif
         default:
-            Com_EPrintf( "%s: %s from %s\n", __func__,
+            Com_DPrintf( "%s: %s from %s\n", __func__,
                 NET_ErrorString(), NET_AdrToString( &net_from ) );
+            net_recv_errors++;
             break;
         }
-#endif
-        return NET_AGAIN;
+#endif // !_WIN32
+        return qfalse;
+    }
+
+    if( ret > MAX_PACKETLEN ) {
+        Com_EPrintf( "%s: oversize packet from %s\n", __func__,
+            NET_AdrToString( &net_from ) );
+        return qfalse;
     }
 
 #ifdef _DEBUG
@@ -606,18 +674,14 @@ neterr_t NET_GetPacket( netsrc_t sock ) {
         NET_LogPacket( &net_from, "UDP recv", msg_read_buffer, ret );
     }
 #endif
-    
-    if( ret > MAX_PACKETLEN ) {
-        Com_WPrintf( "%s: oversize packet from %s\n", __func__,
-            NET_AdrToString( &net_from ) );
-        return NET_AGAIN;
-    }
 
     SZ_Init( &msg_read, msg_read_buffer, sizeof( msg_read_buffer ) );
     msg_read.cursize = ret;
-    net_rcvd += ret;
+    net_rate_rcvd += ret;
+    net_bytes_rcvd += ret;
+    net_packets_rcvd++;
 
-    return NET_OK;
+    return qtrue;
 }
 
 //=============================================================================
@@ -626,20 +690,23 @@ neterr_t NET_GetPacket( netsrc_t sock ) {
 =============
 NET_SendPacket
 
-Returns NET_ERROR only in case of ICMP error.
 =============
 */
-neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, size_t length, const void *data ) {
+qboolean NET_SendPacket( netsrc_t sock, const netadr_t *to, size_t length, const void *data ) {
     struct sockaddr_in addr;
     int ret;
+#if USE_ICMP && ( defined __linux__ )
+    int tries;
+#endif
 
     if( !length ) {
-        return NET_AGAIN;
+        return qfalse;
     }
 
     if( length > MAX_PACKETLEN ) {
-        Com_WPrintf( "%s: oversize length: %"PRIz" bytes\n", __func__, length );
-        return NET_AGAIN;
+        Com_EPrintf( "%s: oversize packet to %s\n", __func__,
+            NET_AdrToString( to ) );
+        return qfalse;
     }
 
     switch( to->type ) {
@@ -668,10 +735,10 @@ neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, size_t length, const
             }
 #endif
             if( sock == NS_CLIENT ) {
-                net_sent += length;
+                net_rate_sent += length;
             }
         }
-        return NET_OK;
+        return qtrue;
 #endif
     case NA_IP:
     case NA_BROADCAST:
@@ -682,11 +749,16 @@ neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, size_t length, const
     }
 
     if( udp_sockets[sock] == INVALID_SOCKET ) {
-        return NET_AGAIN;
+        return qfalse;
     }
 
     NET_NetadrToSockadr( to, &addr );
 
+#if USE_ICMP && ( defined __linux__ )
+    tries = 0;
+
+retry:
+#endif
     ret = sendto( udp_sockets[sock], data, length, 0,
         ( struct sockaddr * )&addr, sizeof( addr ) );
     if( ret == -1 ) {
@@ -698,14 +770,6 @@ neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, size_t length, const
         case WSAEINTR:
             // wouldblock is silent
             break;
-        case WSAECONNRESET:
-        case WSAEHOSTUNREACH:
-            Com_DPrintf( "%s: %s to %s\n", __func__,
-                NET_ErrorString(), NET_AdrToString( to ) );
-            if( !net_ignore_icmp->integer ) {
-                return NET_ERROR;
-            }
-            break;
         case WSAEADDRNOTAVAIL:
             // some PPP links do not allow broadcasts
             if( to->type == NA_BROADCAST ) {
@@ -713,34 +777,38 @@ neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, size_t length, const
             }
             // intentional fallthrough
         default:
-            Com_EPrintf( "%s: %s to %s\n", __func__,
+            Com_DPrintf( "%s: %s to %s\n", __func__,
                 NET_ErrorString(), NET_AdrToString( to ) );
+            net_send_errors++;
             break;
         }
-#else
+#else // _WIN32
         switch( net_error ) {
         case EWOULDBLOCK:
             // wouldblock is silent
             break;
-        case ECONNREFUSED:
-        case ECONNRESET:
-        case EHOSTUNREACH:
+#if USE_ICMP
         case ENETUNREACH:
-        case ENETDOWN:
-        case EPERM: // not ICMP, but local firewall
+        case EHOSTUNREACH:
+        case EHOSTDOWN:
+        case ECONNREFUSED:
+        case ENONET:
+            // sendto() fails on Linux if there's an ICMP originated
+            // pending error on socket. suck up error queue and retry...
+            process_error_queue( sock );
+            if( ++tries < MAX_ERROR_RETRIES ) {
+                goto retry;
+            }
+            // intentional fallthrough
+#endif
+        default:
             Com_DPrintf( "%s: %s to %s\n", __func__,
                 NET_ErrorString(), NET_AdrToString( to ) );
-            if( !net_ignore_icmp->integer ) {
-                return NET_ERROR;
-            }
-            break;
-        default:
-            Com_EPrintf( "%s: %s to %s\n", __func__,
-                NET_ErrorString(), NET_AdrToString( to ) );
+            net_send_errors++;
             break;
         }
-#endif
-        return NET_AGAIN;
+#endif // !_WIN32
+        return qfalse;
     }
 
     if( ret != length ) {
@@ -753,9 +821,11 @@ neterr_t NET_SendPacket( netsrc_t sock, const netadr_t *to, size_t length, const
         NET_LogPacket( to, "UDP send", data, ret );
     }
 #endif
-    net_sent += ret;
+    net_rate_sent += ret;
+    net_bytes_sent += ret;
+    net_packets_sent++;
 
-    return NET_OK;
+    return qtrue;
 }
 
 
@@ -849,12 +919,13 @@ static SOCKET UDP_OpenSocket( const char *iface, int port ) {
             __func__, iface, port, NET_ErrorString() );
     }
 
-#ifdef __linux__
+#if USE_ICMP && ( defined __linux__ )
     // enable ICMP error queue
     if( !net_ignore_icmp->integer ) {
         if( enable_option( s, IPPROTO_IP, IP_RECVERR ) == -1 ) {
             Com_WPrintf( "%s: %s:%d: can't enable ICMP error queue: %s\n",
                 __func__, iface, port, NET_ErrorString() );
+            Cvar_Set( "net_ignore_icmp", "1" );
         }
     }
 #endif
@@ -1048,7 +1119,9 @@ neterr_t NET_Accept( netstream_t *s ) {
         return NET_AGAIN;
     }
 
+    memset( &from, 0, sizeof( from ) );
     fromlen = sizeof( from );
+
     newsocket = accept( tcp_socket, ( struct sockaddr * )&from, &fromlen );
 
     NET_SockadrToNetadr( &from, &net_from );
@@ -1222,7 +1295,8 @@ neterr_t NET_RunStream( netstream_t *s ) {
                 NET_LogPacket( &s->address, "TCP recv", data, ret );
             }
 #endif
-            net_rcvd += ret;
+            net_rate_rcvd += ret;
+            net_bytes_rcvd += ret;
 
             result = NET_OK;
         }
@@ -1247,7 +1321,8 @@ neterr_t NET_RunStream( netstream_t *s ) {
                 NET_LogPacket( &s->address, "TCP send", data, ret );
             }
 #endif
-            net_sent += ret;
+            net_rate_sent += ret;
+            net_bytes_sent += ret;
 
             //result = NET_OK;
         }
@@ -1298,6 +1373,44 @@ void NET_Sleep( int msec ) {
 }
 
 //===================================================================
+
+/*
+====================
+NET_Stats_f
+====================
+*/
+static void NET_Stats_f( void ) {
+    time_t diff, now = time( NULL );
+    char buffer[MAX_QPATH];
+
+    if( com_startTime > now ) {
+        com_startTime = now;
+    }
+    diff = now - com_startTime;
+    if( diff < 1 ) {
+        diff = 1;
+    }
+
+    Com_FormatTime( buffer, sizeof( buffer ), diff );
+    Com_Printf( "Network uptime: %s\n", buffer );
+    Com_Printf( "Bytes sent: %llu (%llu bytes/sec)\n",
+        net_bytes_sent, net_bytes_sent / diff );
+    Com_Printf( "Bytes rcvd: %llu (%llu bytes/sec)\n",
+        net_bytes_rcvd, net_bytes_rcvd / diff );
+    Com_Printf( "Packets sent: %llu (%llu packets/sec)\n",
+        net_packets_sent, net_packets_sent / diff );
+    Com_Printf( "Packets rcvd: %llu (%llu packets/sec)\n",
+        net_packets_rcvd, net_packets_rcvd / diff );
+#if USE_ICMP
+    Com_Printf( "Total errors: %llu/%llu/%llu (send/recv/icmp)\n",
+        net_send_errors, net_recv_errors, net_icmp_errors );
+#else
+    Com_Printf( "Total errors: %llu/%llu (send/recv)\n",
+        net_send_errors, net_recv_errors );
+#endif
+    Com_Printf( "Current upload rate: %"PRIz" bytes/sec\n", net_rate_up );
+    Com_Printf( "Current download rate: %"PRIz" bytes/sec\n", net_rate_dn );
+}
 
 /*
 ====================
@@ -1556,7 +1669,9 @@ void NET_Init( void ) {
     net_log_flush = Cvar_Get( "net_log_flush", "0", 0 );
     net_log_flush->changed = net_log_param_changed;
 #endif
+#if USE_ICMP
     net_ignore_icmp = Cvar_Get( "net_ignore_icmp", "0", 0 );
+#endif
     net_tcp_ip = Cvar_Get( "net_tcp_ip", net_ip->string, 0 );
     net_tcp_ip->changed = net_tcp_param_changed;
     net_tcp_port = Cvar_Get( "net_tcp_port", net_port->string, 0 );
@@ -1567,9 +1682,10 @@ void NET_Init( void ) {
     net_log_enable_changed( net_log_enable );
 #endif
 
-    net_statTime = com_eventTime;
+    net_rate_time = com_eventTime;
 
     Cmd_AddCommand( "net_restart", NET_Restart_f );
+    Cmd_AddCommand( "net_stats", NET_Stats_f );
     Cmd_AddCommand( "showip", NET_ShowIP_f );
     Cmd_AddCommand( "dns", NET_Dns_f );
 
@@ -1583,10 +1699,12 @@ NET_Shutdown
 ====================
 */
 void NET_Shutdown( void ) {
+#if _DEBUG
     if( net_logFile ) {
         FS_FCloseFile( net_logFile );
         net_logFile = 0;
     }
+#endif
 
     NET_Listen( qfalse );
     NET_Config( NET_NONE );
@@ -1596,6 +1714,7 @@ void NET_Shutdown( void ) {
 #endif
 
     Cmd_RemoveCommand( "net_restart" );
+    Cmd_RemoveCommand( "net_stats" );
     Cmd_RemoveCommand( "showip" );
     Cmd_RemoveCommand( "dns" );
 }

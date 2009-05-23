@@ -102,6 +102,7 @@ use_asm="???"
 use_openffa="no"
 use_syscon="yes"
 use_winsvc="no"
+use_icmp="???"
 
 # constants
 cfgfile="config.cfg"
@@ -173,6 +174,8 @@ for opt do
     ;;
     --disable-mvd-client) use_mvd_client="no"
     ;;
+    --disable-icmp) use_icmp="no"
+    ;;
     --single-user) singleuser="yes"
     ;;
     --datadir=*) datadir=`echo $opt | cut -d '=' -f 2`
@@ -219,6 +222,7 @@ echo "  --disable-asm          disable i386 assembly optimizations"
 echo "  --enable-anticheat     enable r1ch.net anticheat server interface"
 echo "  --disable-mvd-server   disable MVD/GTV server"
 echo "  --disable-mvd-client   disable MVD/GTV client"
+echo "  --disable-icmp         disable ICMP error handling"
 echo "  --single-user          assume to be installed in home dir"
 echo "  --prefix=PREFIX        install in PREFIX [$prefix]"
 echo "  --datadir=DIR          path to game data tree [$datadir]"
@@ -275,6 +279,9 @@ make="gmake"
 Linux)
 use_dl="yes"
 have_endian_h="yes"
+if [ "$use_icmp" != "no" ] ; then
+    use_icmp="yes"
+fi
 ;;
 esac
 
@@ -306,6 +313,9 @@ if [ "$mingw" = "yes" ]; then
         use_winsvc="no"
     else
         use_winsvc="yes"
+        if [ "$use_icmp" != "no" ] ; then
+            use_icmp="yes"
+        fi
     fi
     have_endian_h="no"
 else
@@ -608,6 +618,10 @@ fi
 
 if [ "$use_winsvc" = "yes" ]; then
     echo "#define USE_WINSVC !USE_CLIENT" >> $config_h
+fi
+
+if [ "$use_icmp" = "yes" ]; then
+    echo "#define USE_ICMP 1" >> $config_h
 fi
 
 echo "#define USE_MAPCHECKSUM 1" >> $config_h

@@ -740,7 +740,6 @@ void SCR_DrawInventory( void ) {
 	}
 }
 
-
 /*
 ================
 SCR_ExecuteLayoutString 

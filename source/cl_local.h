@@ -312,7 +312,9 @@ typedef struct client_static_s {
         qboolean        paused;
     } demo;
 
+#if USE_ICMP
     qboolean            errorReceived; // got an ICMP error from server
+#endif
 } client_static_t;
 
 extern client_static_t    cls;

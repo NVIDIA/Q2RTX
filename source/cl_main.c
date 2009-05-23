@@ -114,7 +114,7 @@ typedef struct {
 	unsigned time;
 } request_t;
 
-#define MAX_REQUESTS	32
+#define MAX_REQUESTS	64
 #define REQUEST_MASK	( MAX_REQUESTS - 1 )
 
 static request_t	clientRequests[MAX_REQUESTS];
@@ -401,13 +401,9 @@ static void CL_CheckForResend( void ) {
 	}
 
     Cvar_BitInfo( userinfo, CVAR_USERINFO );
-    ret = Netchan_OutOfBand( NS_CLIENT, &cls.serverAddress,
+    Netchan_OutOfBand( NS_CLIENT, &cls.serverAddress,
         "connect %i %i %i \"%s\"%s\n", cls.serverProtocol, cls.quakePort,
         cls.challenge, userinfo, tail );
-	if( ret == NET_ERROR ) {
-		Com_Error( ERR_DISCONNECT, "%s to %s\n", NET_ErrorString(),
-            NET_AdrToString( &cls.serverAddress ) );
-	}
 }
 
 static void CL_Connect_c( genctx_t *ctx, int argnum ) {
@@ -519,18 +515,11 @@ static void CL_PassiveConnect_f( void ) {
 }
 
 void CL_SendRcon( const netadr_t *adr, const char *pass, const char *cmd ) {
-	neterr_t	ret;
-
 	NET_Config( NET_CLIENT );
 
 	CL_AddRequest( adr, REQ_RCON );
 
-    ret = Netchan_OutOfBand( NS_CLIENT, adr,
-		"rcon \"%s\" %s", pass, cmd );
-	if( ret == NET_ERROR ) {
-		Com_Printf( "%s to %s\n", NET_ErrorString(),
-            NET_AdrToString( adr ) );
-	}
+    Netchan_OutOfBand( NS_CLIENT, adr, "rcon \"%s\" %s", pass, cmd );
 }
 
 
@@ -623,7 +612,9 @@ void CL_Disconnect( comErrorType_t type, const char *text ) {
     cls.connect_time = 0;
 	cls.connect_count = 0;
     cls.passive = qfalse;
+#if USE_ICMP
     cls.errorReceived = qfalse;
+#endif
 
     // stop demo
     if( cls.demo.recording ) {
@@ -902,7 +893,7 @@ static void CL_ParsePrintMessage( void ) {
 		return;
 	}
 
-	Com_DPrintf( "Dropped unrequested packet\n" );
+	Com_DPrintf( "%s: dropped unrequested packet\n", __func__ );
 }
 
 
@@ -1431,27 +1422,7 @@ static void CL_ConnectionlessPacket( void ) {
 CL_PacketEvent
 =================
 */
-static void CL_PacketEvent( neterr_t ret ) {
-    if( ret == NET_ERROR ) {
-        //
-        // error packet from server
-        //
-        if( cls.state < ca_connected ) {
-            return;
-        }
-        if( !cls.netchan ) {
-            return;		// dump it if not connected
-        }
-        if( !NET_IsEqualBaseAdr( &net_from, &cls.netchan->remote_address ) ) {
-            return;
-        }
-        if( net_from.port && net_from.port != cls.netchan->remote_address.port ) {
-            return;
-        }
-        cls.errorReceived = qtrue; // drop connection soon
-        return;
-    }
-
+static void CL_PacketEvent( void ) {
     //
     // remote command packet
     //
@@ -1485,7 +1456,9 @@ static void CL_PacketEvent( neterr_t ret ) {
     if( !cls.netchan->Process( cls.netchan ) )
         return;		// wasn't accepted for some reason
 
+#if USE_ICMP
     cls.errorReceived = qfalse; // don't drop
+#endif
 
     CL_ParseServerMessage();
 
@@ -1493,6 +1466,28 @@ static void CL_PacketEvent( neterr_t ret ) {
 
     SCR_LagSample();
 }
+
+#if USE_ICMP
+void CL_ErrorEvent( void ) {
+    //
+    // error packet from server
+    //
+    if( cls.state < ca_connected ) {
+        return;
+    }
+    if( !cls.netchan ) {
+        return;		// dump it if not connected
+    }
+    if( !NET_IsEqualBaseAdr( &net_from, &cls.netchan->remote_address ) ) {
+        return;
+    }
+    if( net_from.port && net_from.port != cls.netchan->remote_address.port ) {
+        return;
+    }
+
+    cls.errorReceived = qtrue; // drop connection soon
+}
+#endif
 
 
 //=============================================================================
@@ -2674,12 +2669,14 @@ static void CL_CheckTimeout( void ) {
         return;
     }
 
+#if USE_ICMP
     if( cls.errorReceived ) {
         delta = 5000;
         if( com_localTime - cls.netchan->last_received > delta )  {
             Com_Error( ERR_DISCONNECT, "Server connection was reset." );
         }
     }
+#endif
  
     delta = cl_timeout->value * 1000;
     if( delta && com_localTime - cls.netchan->last_received > delta )  {
@@ -2883,8 +2880,6 @@ CL_ProcessEvents
 ============
 */
 void CL_ProcessEvents( void ) {
-    neterr_t ret;
-
 	if( !cl_running->integer ) {
         return;
     }
@@ -2898,12 +2893,12 @@ void CL_ProcessEvents( void ) {
 
     // process loopback packets
     while( NET_GetLoopPacket( NS_CLIENT ) ) {
-        CL_PacketEvent( NET_OK );
+        CL_PacketEvent();
     }
 
     // process network packets
-    while( ( ret = NET_GetPacket( NS_CLIENT ) ) != NET_AGAIN ) {
-		CL_PacketEvent( ret );
+    while( NET_GetPacket( NS_CLIENT ) ) {
+		CL_PacketEvent();
     }
 }
 

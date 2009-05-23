@@ -24,15 +24,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 vec3_t vec3_origin = { 0, 0, 0 };
 
 #if USE_CLIENT
-const color_t colorBlack    = {   0,   0,   0, 255 };
-const color_t colorRed      = { 255,   0,   0, 255 };
-const color_t colorGreen    = {   0, 255,   0, 255 };
-const color_t colorYellow   = { 255, 255,   0, 255 };
-const color_t colorBlue     = {   0,   0, 255, 255 };
-const color_t colorCyan     = {   0, 255, 255, 255 };
-const color_t colorMagenta  = { 255,   0, 255, 255 };
-const color_t colorWhite    = { 255, 255, 255, 255 };
-
 const color_t colorTable[8] = {
     {   0,   0,   0, 255 },
     { 255,   0,   0, 255 },
