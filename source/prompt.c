@@ -27,8 +27,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "q_field.h"
 #include "prompt.h"
 
-static cvar_t	*com_completion_mode;
-static cvar_t	*com_completion_treshold;
+static cvar_t   *com_completion_mode;
+static cvar_t   *com_completion_treshold;
 
 static void Prompt_ShowMatches( commandPrompt_t *prompt, char **matches,
                                 int start, int end )
@@ -36,20 +36,20 @@ static void Prompt_ShowMatches( commandPrompt_t *prompt, char **matches,
     int count = end - start;
     int numCols = 7, numLines;
     int i, j, k;
-	size_t maxlen, len, total;
+    size_t maxlen, len, total;
     size_t colwidths[6];
     char *match;
 
     // determine number of columns needed
-	do {
-		numCols--;
-		numLines = ceil( ( float )count / numCols );
+    do {
+        numCols--;
+        numLines = ceil( ( float )count / numCols );
         total = 0;
         for( i = 0; i < numCols; i++ ) {
             k = start + numLines * i;
-			if( k >= end ) {
-				break;
-			}
+            if( k >= end ) {
+                break;
+            }
             maxlen = 0;
             for( j = k; j < k + numLines && j < end; j++ ) {
                 len = strlen( matches[j] );
@@ -61,7 +61,7 @@ static void Prompt_ShowMatches( commandPrompt_t *prompt, char **matches,
             if( maxlen > prompt->widthInChars ) {
                 maxlen = prompt->widthInChars;
             }
-			colwidths[i] = maxlen;
+            colwidths[i] = maxlen;
             total += maxlen;
         }
         if( total < prompt->widthInChars ) {
@@ -81,7 +81,7 @@ static void Prompt_ShowMatches( commandPrompt_t *prompt, char **matches,
             if( len < colwidths[j] ) {
                 // pad with spaces
                 for( k = 0; k < colwidths[j] - len; k++ ) {
-				    prompt->printf( " " );
+                    prompt->printf( " " );
                 }
             }
         }
@@ -96,37 +96,37 @@ static void Prompt_ShowIndividualMatches(
     int             numAliases,
     int             numCvars )
 {
-	int offset = 0;
+    int offset = 0;
 
-	if( numCommands ) {
-		qsort( matches + offset, numCommands, sizeof( matches[0] ), SortStrcmp );
+    if( numCommands ) {
+        qsort( matches + offset, numCommands, sizeof( matches[0] ), SortStrcmp );
 
-		prompt->printf( "\n" S_COLOR_YELLOW "%i possible command%s:\n",
-			numCommands, numCommands != 1 ? "s" : "" );
+        prompt->printf( "\n" S_COLOR_YELLOW "%i possible command%s:\n",
+            numCommands, numCommands != 1 ? "s" : "" );
 
         Prompt_ShowMatches( prompt, matches, offset, offset + numCommands );
-		offset += numCommands;
-	}
+        offset += numCommands;
+    }
 
-	if( numCvars ) {
-		qsort( matches + offset, numCvars, sizeof( matches[0] ), SortStrcmp );
+    if( numCvars ) {
+        qsort( matches + offset, numCvars, sizeof( matches[0] ), SortStrcmp );
 
-		prompt->printf( "\n" S_COLOR_YELLOW "%i possible variable%s:\n",
-			numCvars, numCvars != 1 ? "s" : "" );
+        prompt->printf( "\n" S_COLOR_YELLOW "%i possible variable%s:\n",
+            numCvars, numCvars != 1 ? "s" : "" );
 
         Prompt_ShowMatches( prompt, matches, offset, offset + numCvars );
-		offset += numCvars;
-	}
+        offset += numCvars;
+    }
 
-	if( numAliases ) {
-		qsort( matches + offset, numAliases, sizeof( matches[0] ), SortStrcmp );
+    if( numAliases ) {
+        qsort( matches + offset, numAliases, sizeof( matches[0] ), SortStrcmp );
 
-		prompt->printf( "\n" S_COLOR_YELLOW "%i possible alias%s:\n",
-			numAliases, numAliases != 1 ? "es" : "" );
+        prompt->printf( "\n" S_COLOR_YELLOW "%i possible alias%s:\n",
+            numAliases, numAliases != 1 ? "es" : "" );
 
         Prompt_ShowMatches( prompt, matches, offset, offset + numAliases );
-		offset += numAliases;
-	}
+        offset += numAliases;
+    }
 }
 
 qboolean Prompt_AddMatch( genctx_t *ctx, const char *s ) {
@@ -140,7 +140,7 @@ qboolean Prompt_AddMatch( genctx_t *ctx, const char *s ) {
     } else {
         r = strncmp( ctx->partial, s, ctx->length );
     }
-	if( !r ) {
+    if( !r ) {
         ctx->matches[ctx->count++] = Z_CopyString( s );
     }
     return qtrue;
@@ -152,41 +152,41 @@ Prompt_CompleteCommand
 ====================
 */
 void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
-	inputField_t *inputLine = &prompt->inputLine;
-	char *text, *partial, *s;
-	int i, argc, currentArg, argnum;
-	size_t size, len, pos;
-	char *first, *last;
+    inputField_t *inputLine = &prompt->inputLine;
+    char *text, *partial, *s;
+    int i, argc, currentArg, argnum;
+    size_t size, len, pos;
+    char *first, *last;
     genctx_t ctx;
     char *matches[MAX_MATCHES], *sortedMatches[MAX_MATCHES];
     int numCommands = 0, numCvars = 0, numAliases = 0;
     extern size_t cmd_string_tail;
 
-	text = inputLine->text;
-	size = inputLine->maxChars + 1;
-	pos = inputLine->cursorPos;
+    text = inputLine->text;
+    size = inputLine->maxChars + 1;
+    pos = inputLine->cursorPos;
 
     // prepend backslash if missing
-	if( backslash ) {
-		if( inputLine->text[0] != '\\' && inputLine->text[0] != '/' ) {
-			memmove( inputLine->text + 1, inputLine->text, size - 1 );
-			inputLine->text[0] = '\\';
-		}
-		text++;
+    if( backslash ) {
+        if( inputLine->text[0] != '\\' && inputLine->text[0] != '/' ) {
+            memmove( inputLine->text + 1, inputLine->text, size - 1 );
+            inputLine->text[0] = '\\';
+        }
+        text++;
         size--;
         pos--;
-	}
-	
-	Cmd_TokenizeString( text, qfalse );
+    }
+    
+    Cmd_TokenizeString( text, qfalse );
 
-	argc = Cmd_Argc();
+    argc = Cmd_Argc();
 
     // determine argument number to be completed
-	currentArg = Cmd_FindArgForOffset( pos );
-	if( currentArg == argc - 1 && cmd_string_tail ) {
+    currentArg = Cmd_FindArgForOffset( pos );
+    if( currentArg == argc - 1 && cmd_string_tail ) {
         // start completing new argument if command line has trailing whitespace
-		currentArg++;
-	}
+        currentArg++;
+    }
 
     argnum = 0;
     s = Cmd_Argv( 0 );
@@ -194,12 +194,12 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
         partial = Cmd_Argv( i );
         argnum++;
         if( *partial == ';' ) {
-	        s = Cmd_Argv( i + 1 );
+            s = Cmd_Argv( i + 1 );
             argnum = 0;
         }
     }
 
-	partial = Cmd_Argv( currentArg );
+    partial = Cmd_Argv( currentArg );
     if( *partial == ';' ) {
         currentArg++;
         partial = Cmd_Argv( currentArg );
@@ -227,15 +227,15 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
         numAliases = ctx.count - numCvars - numCommands;
     }
 
-	if( !ctx.count ) {
+    if( !ctx.count ) {
         pos = strlen( inputLine->text );
         prompt->tooMany = qfalse;
-		goto finish2; // nothing found
-	}
+        goto finish2; // nothing found
+    }
 
-	pos = Cmd_ArgOffset( currentArg );
-	text += pos;
-	size -= pos;
+    pos = Cmd_ArgOffset( currentArg );
+    text += pos;
+    size -= pos;
 
     // append whitespace since Cmd_TokenizeString eats it
     if( currentArg == argc && cmd_string_tail ) {
@@ -244,18 +244,18 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
         size--;
     }
 
-	if( ctx.count == 1 ) {
-		// we have finished completion!
+    if( ctx.count == 1 ) {
+        // we have finished completion!
         s = Cmd_RawArgsFrom( currentArg + 1 ); 
         if( COM_HasSpaces( matches[0] ) ) {
-		    pos += Q_concat( text, size, "\"", matches[0], "\" ", s, NULL );
+            pos += Q_concat( text, size, "\"", matches[0], "\" ", s, NULL );
         } else {
-		    pos += Q_concat( text, size, matches[0], " ", s, NULL );
+            pos += Q_concat( text, size, matches[0], " ", s, NULL );
         }
         pos++;
         prompt->tooMany = qfalse;
         goto finish1;
-	}
+    }
 
     if( ctx.count > com_completion_treshold->integer && !prompt->tooMany ) {
         prompt->printf( "Press TAB again to display all %d possibilities.\n", ctx.count );
@@ -266,73 +266,73 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
 
     prompt->tooMany = qfalse;
 
-	// sort matches alphabethically
-	for( i = 0; i < ctx.count; i++ ) {
-		sortedMatches[i] = matches[i];
-	}
-	qsort( sortedMatches, ctx.count, sizeof( sortedMatches[0] ),
+    // sort matches alphabethically
+    for( i = 0; i < ctx.count; i++ ) {
+        sortedMatches[i] = matches[i];
+    }
+    qsort( sortedMatches, ctx.count, sizeof( sortedMatches[0] ),
         ctx.ignorecase ? SortStricmp : SortStrcmp );
 
-	// copy matching part
-	first = sortedMatches[0];
-	last = sortedMatches[ ctx.count - 1 ];
-	len = 0;
-	do {
+    // copy matching part
+    first = sortedMatches[0];
+    last = sortedMatches[ ctx.count - 1 ];
+    len = 0;
+    do {
         if( *first != *last ) {
             if( !ctx.ignorecase || Q_tolower( *first ) != Q_tolower( *last ) ) {
                 break;
             }
         }
-		text[len++] = *first;
-		if( len == size - 1 ) {
-			break;
-		}
+        text[len++] = *first;
+        if( len == size - 1 ) {
+            break;
+        }
 
-		first++;
-		last++;
-	} while( *first );
+        first++;
+        last++;
+    } while( *first );
 
-	text[len] = 0;
+    text[len] = 0;
     pos += len;
     size -= len;
 
     // copy trailing arguments
-	if( currentArg + 1 < argc ) {
+    if( currentArg + 1 < argc ) {
         s = Cmd_RawArgsFrom( currentArg + 1 ); 
-		pos += Q_concat( text + len, size, " ", s, NULL );
-	}
+        pos += Q_concat( text + len, size, " ", s, NULL );
+    }
 
     pos++;
 
-	prompt->printf( "]\\%s\n", Cmd_ArgsFrom( 0 ) );
-	if( argnum ) {
-		goto multi;
-	}
+    prompt->printf( "]\\%s\n", Cmd_ArgsFrom( 0 ) );
+    if( argnum ) {
+        goto multi;
+    }
     
-	switch( com_completion_mode->integer ) {
-	case 0:
-		// print in solid list
-		for( i = 0 ; i < ctx.count; i++ ) {
-			prompt->printf( "%s\n", sortedMatches[i] ); 
-		}
-		break;
-	case 1:
+    switch( com_completion_mode->integer ) {
+    case 0:
+        // print in solid list
+        for( i = 0 ; i < ctx.count; i++ ) {
+            prompt->printf( "%s\n", sortedMatches[i] ); 
+        }
+        break;
+    case 1:
     multi:
-		// print in multiple columns
+        // print in multiple columns
         Prompt_ShowMatches( prompt, sortedMatches, 0, ctx.count );
-		break;
-	case 2:
-	default:
-		// resort matches by type and print in multiple columns
-		Prompt_ShowIndividualMatches( prompt, matches, numCommands, numAliases, numCvars );
-		break;
-	}
+        break;
+    case 2:
+    default:
+        // resort matches by type and print in multiple columns
+        Prompt_ShowIndividualMatches( prompt, matches, numCommands, numAliases, numCvars );
+        break;
+    }
 
 finish1:
-	// free matches
-	for( i = 0; i < ctx.count; i++ ) {
-		Z_Free( matches[i] );
-	}
+    // free matches
+    for( i = 0; i < ctx.count; i++ ) {
+        Z_Free( matches[i] );
+    }
 
 finish2:
     // move cursor
@@ -388,7 +388,7 @@ void Prompt_CompleteHistory( commandPrompt_t *prompt, qboolean forward ) {
     }
 
     prompt->historyLineNum = i;
-	IF_Replace( &prompt->inputLine, prompt->history[i & HISTORY_MASK] );
+    IF_Replace( &prompt->inputLine, prompt->history[i & HISTORY_MASK] );
 }
 
 void Prompt_ClearState( commandPrompt_t *prompt ) {
@@ -408,33 +408,33 @@ User just pressed enter
 */
 char *Prompt_Action( commandPrompt_t *prompt ) {
     char *s = prompt->inputLine.text;
-	int i, j;
-	
+    int i, j;
+    
     Prompt_ClearState( prompt );
-	if( s[0] == 0 || ( ( s[0] == '/' || s[0] == '\\' ) && s[1] == 0 ) ) {
-		IF_Clear( &prompt->inputLine );
-		return NULL; // empty line
-	}
+    if( s[0] == 0 || ( ( s[0] == '/' || s[0] == '\\' ) && s[1] == 0 ) ) {
+        IF_Clear( &prompt->inputLine );
+        return NULL; // empty line
+    }
 
-	// save current line in history
-	i = prompt->inputLineNum & HISTORY_MASK;
-	j = ( prompt->inputLineNum - 1 ) & HISTORY_MASK;
+    // save current line in history
+    i = prompt->inputLineNum & HISTORY_MASK;
+    j = ( prompt->inputLineNum - 1 ) & HISTORY_MASK;
     if( !prompt->history[j] || strcmp( prompt->history[j], s ) ) {
-    	if( prompt->history[i] ) {
-	    	Z_Free( prompt->history[i] );
-	    }
-	    prompt->history[i] = Z_CopyString( s );
-	    prompt->inputLineNum++;
+        if( prompt->history[i] ) {
+            Z_Free( prompt->history[i] );
+        }
+        prompt->history[i] = Z_CopyString( s );
+        prompt->inputLineNum++;
     } else {
         i = j;
     }
 
     // stop history search
-	prompt->historyLineNum = prompt->inputLineNum;
-	
-	IF_Clear( &prompt->inputLine );
+    prompt->historyLineNum = prompt->inputLineNum;
+    
+    IF_Clear( &prompt->inputLine );
 
-	return prompt->history[i];
+    return prompt->history[i];
 }
 
 /*
@@ -447,14 +447,14 @@ void Prompt_HistoryUp( commandPrompt_t *prompt ) {
 
     Prompt_ClearState( prompt );
 
-	if( prompt->historyLineNum == prompt->inputLineNum ) {
-		// save current line in history
-	    i = prompt->inputLineNum & HISTORY_MASK;
+    if( prompt->historyLineNum == prompt->inputLineNum ) {
+        // save current line in history
+        i = prompt->inputLineNum & HISTORY_MASK;
         if( prompt->history[i] ) {
             Z_Free( prompt->history[i] );
         }
         prompt->history[i] = Z_CopyString( prompt->inputLine.text );
-	}
+    }
 
     if( prompt->inputLineNum - prompt->historyLineNum < HISTORY_SIZE &&
         prompt->historyLineNum > 0 ) 
@@ -463,7 +463,7 @@ void Prompt_HistoryUp( commandPrompt_t *prompt ) {
     }
 
     i = prompt->historyLineNum & HISTORY_MASK;
-	IF_Replace( &prompt->inputLine, prompt->history[i] );
+    IF_Replace( &prompt->inputLine, prompt->history[i] );
 }
 
 /*
@@ -476,14 +476,14 @@ void Prompt_HistoryDown( commandPrompt_t *prompt ) {
 
     Prompt_ClearState( prompt );
 
-	if( prompt->historyLineNum == prompt->inputLineNum ) {
-		return;
-	}
+    if( prompt->historyLineNum == prompt->inputLineNum ) {
+        return;
+    }
     
     prompt->historyLineNum++;
     
     i = prompt->historyLineNum & HISTORY_MASK;
-	IF_Replace( &prompt->inputLine, prompt->history[i] );
+    IF_Replace( &prompt->inputLine, prompt->history[i] );
 }
 
 /*
@@ -492,21 +492,21 @@ Prompt_Clear
 ====================
 */
 void Prompt_Clear( commandPrompt_t *prompt ) {
-	int i;
+    int i;
 
     Prompt_ClearState( prompt );
-	
-	for( i = 0; i < HISTORY_SIZE; i++ ) {
-		if( prompt->history[i] ) {
-			Z_Free( prompt->history[i] );
-			prompt->history[i] = NULL;
-		}
-	}
-	
-	prompt->historyLineNum = 0;
-	prompt->inputLineNum = 0;
-	
-	IF_Clear( &prompt->inputLine );
+    
+    for( i = 0; i < HISTORY_SIZE; i++ ) {
+        if( prompt->history[i] ) {
+            Z_Free( prompt->history[i] );
+            prompt->history[i] = NULL;
+        }
+    }
+    
+    prompt->historyLineNum = 0;
+    prompt->inputLineNum = 0;
+    
+    IF_Clear( &prompt->inputLine );
 }
 
 void Prompt_SaveHistory( commandPrompt_t *prompt, const char *filename, int lines ) {
@@ -541,27 +541,27 @@ void Prompt_LoadHistory( commandPrompt_t *prompt, const char *filename ) {
     char buffer[MAX_FIELD_TEXT];
     fileHandle_t f;
     int i;
-	size_t len;
+    size_t len;
 
     FS_FOpenFile( filename, &f, FS_MODE_READ|FS_TYPE_REAL|FS_PATH_BASE );
     if( !f ) {
         return;
     }
 
-	for( i = 0; i < HISTORY_SIZE; i++ ) {
+    for( i = 0; i < HISTORY_SIZE; i++ ) {
         if( ( len = FS_ReadLine( f, buffer, sizeof( buffer ) ) ) < 1 ) {
             break;
         }
-		if( prompt->history[i] ) {
-			Z_Free( prompt->history[i] );
+        if( prompt->history[i] ) {
+            Z_Free( prompt->history[i] );
         }
-		prompt->history[i] = memcpy( Z_Malloc( len + 1 ), buffer, len + 1 );
-	}
+        prompt->history[i] = memcpy( Z_Malloc( len + 1 ), buffer, len + 1 );
+    }
 
     FS_FCloseFile( f );
 
-	prompt->historyLineNum = i;
-	prompt->inputLineNum = i;
+    prompt->historyLineNum = i;
+    prompt->inputLineNum = i;
 }
 
 /*
@@ -570,8 +570,8 @@ Prompt_Init
 ====================
 */
 void Prompt_Init( void ) {
-	com_completion_mode = Cvar_Get( "com_completion_mode", "1", CVAR_ARCHIVE );
-	com_completion_treshold = Cvar_Get( "com_completion_treshold", "50",
+    com_completion_mode = Cvar_Get( "com_completion_mode", "1", CVAR_ARCHIVE );
+    com_completion_treshold = Cvar_Get( "com_completion_treshold", "50",
         CVAR_ARCHIVE );
 }
 

@@ -97,18 +97,18 @@ static sndinitstat_t OSS_Init ( void ) {
         }
     }
 
-	switch( s_khz->integer ) {
+    switch( s_khz->integer ) {
     case 48:
-		dma.speed = 48000;
+        dma.speed = 48000;
         break;
     case 44:
-		dma.speed = 44100;
+        dma.speed = 44100;
         break;
     case 22:
-		dma.speed = 22050;
+        dma.speed = 22050;
         break;
     case 11:
-		dma.speed = 11025;
+        dma.speed = 11025;
         break;
     default:
         for ( i = 0; i < sizeof ( tryrates ) / 4; i++ ) {

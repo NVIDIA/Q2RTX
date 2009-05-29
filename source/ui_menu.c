@@ -362,7 +362,7 @@ static int Field_Key( menuField_t *f, int key ) {
             return QMS_SILENT;
         }
     } else {
-	    if( key >= 32 && key < 127 ) {
+        if( key >= 32 && key < 127 ) {
             return QMS_SILENT;
         }
     }

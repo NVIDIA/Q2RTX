@@ -303,7 +303,7 @@ static void CL_Record_f( void ) {
     len = Q_concat( name, sizeof( name ), "demos/", cmd_optarg,
         gzip ? ".dm2.gz" : ".dm2", NULL );
     if( len >= sizeof( name ) ) {
-		Com_EPrintf( "Oversize filename specified.\n" );
+        Com_EPrintf( "Oversize filename specified.\n" );
         return;
     }
 

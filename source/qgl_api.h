@@ -27,7 +27,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 void    QGL_Init( void );
 void    QGL_Shutdown( void );
 void    QGL_EnableLogging( qboolean enable );
-void	QGL_LogNewFrame( void );
+void    QGL_LogNewFrame( void );
 
 #ifndef APIENTRY
 #  define APIENTRY

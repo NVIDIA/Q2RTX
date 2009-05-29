@@ -25,16 +25,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cl_local.h"
 
 typedef struct {
-	list_t entry;
-	vec3_t origin;
-	char name[1];
+    list_t entry;
+    vec3_t origin;
+    char name[1];
 } location_t;
 
 static LIST_DECL( cl_locations );
 
-static cvar_t	*loc_draw;
-static cvar_t	*loc_trace;
-static cvar_t	*loc_dist;
+static cvar_t   *loc_draw;
+static cvar_t   *loc_trace;
+static cvar_t   *loc_dist;
 
 /*
 ==============
@@ -42,18 +42,18 @@ LOC_Alloc
 ==============
 */
 static location_t *LOC_Alloc( const char *name ) {
-	location_t *loc;
-	char buffer[MAX_QPATH];
-	size_t length;
+    location_t *loc;
+    char buffer[MAX_QPATH];
+    size_t length;
 
-	Q_ClearStr( buffer, name, sizeof( buffer ) );
+    Q_ClearStr( buffer, name, sizeof( buffer ) );
 
-	length = strlen( buffer );
-	loc = Z_Malloc( sizeof( *loc ) + length );
-	memcpy( loc->name, buffer, length + 1 );
-	List_Append( &cl_locations, &loc->entry );
+    length = strlen( buffer );
+    loc = Z_Malloc( sizeof( *loc ) + length );
+    memcpy( loc->name, buffer, length + 1 );
+    List_Append( &cl_locations, &loc->entry );
 
-	return loc;
+    return loc;
 }
 
 /*
@@ -62,53 +62,53 @@ LOC_LoadLocations
 ==============
 */
 void LOC_LoadLocations( void ) {
-	char path[MAX_OSPATH];
-	char *buffer, *s, *p;
-	int line, count;
-	location_t *loc;
-	int argc;
+    char path[MAX_OSPATH];
+    char *buffer, *s, *p;
+    int line, count;
+    location_t *loc;
+    int argc;
 
-	// load from main directory
-	Q_concat( path, sizeof( path ), "locs/", cl.mapname, ".loc", NULL );
+    // load from main directory
+    Q_concat( path, sizeof( path ), "locs/", cl.mapname, ".loc", NULL );
 
-	FS_LoadFile( path, (void **)&buffer );
-	if( !buffer ) {
-		Com_DPrintf( "Couldn't load %s\n", path );
-		return;
-	}
+    FS_LoadFile( path, (void **)&buffer );
+    if( !buffer ) {
+        Com_DPrintf( "Couldn't load %s\n", path );
+        return;
+    }
 
-	s = buffer;
-	line = count = 0;
-	while( *s ) {
-		p = strchr( s, '\n' );
-		if( p ) {
-			*p = 0;
-		}
+    s = buffer;
+    line = count = 0;
+    while( *s ) {
+        p = strchr( s, '\n' );
+        if( p ) {
+            *p = 0;
+        }
 
-		Cmd_TokenizeString( s, qfalse );
-		line++;
+        Cmd_TokenizeString( s, qfalse );
+        line++;
 
-		argc = Cmd_Argc();
-		if( argc != 0 && argc < 4 ) {
-			Com_WPrintf( "Line %i is incomplete in %s\n", line, path );
-		} else {
-			loc = LOC_Alloc( Cmd_RawArgsFrom( 3 ) );
-			loc->origin[0] = atof( Cmd_Argv( 0 ) ) * 0.125f;
-			loc->origin[1] = atof( Cmd_Argv( 1 ) ) * 0.125f;
-			loc->origin[2] = atof( Cmd_Argv( 2 ) ) * 0.125f;
-			count++;
-		}
+        argc = Cmd_Argc();
+        if( argc != 0 && argc < 4 ) {
+            Com_WPrintf( "Line %i is incomplete in %s\n", line, path );
+        } else {
+            loc = LOC_Alloc( Cmd_RawArgsFrom( 3 ) );
+            loc->origin[0] = atof( Cmd_Argv( 0 ) ) * 0.125f;
+            loc->origin[1] = atof( Cmd_Argv( 1 ) ) * 0.125f;
+            loc->origin[2] = atof( Cmd_Argv( 2 ) ) * 0.125f;
+            count++;
+        }
 
-		if( !p ) {
-			break;
-		}
+        if( !p ) {
+            break;
+        }
 
-		s = p + 1;
-	}
+        s = p + 1;
+    }
 
-	Com_Printf( "Loaded %i locations from %s\n", count, path );
+    Com_Printf( "Loaded %i locations from %s\n", count, path );
 
-	FS_FreeFile( buffer );
+    FS_FreeFile( buffer );
 
 }
 
@@ -118,12 +118,12 @@ LOC_FreeLocations
 ==============
 */
 void LOC_FreeLocations( void ) {
-	location_t *loc, *next;
+    location_t *loc, *next;
 
     LIST_FOR_EACH_SAFE( location_t, loc, next, &cl_locations, entry ) {
         Z_Free( loc );
     }
-	List_Init( &cl_locations );
+    List_Init( &cl_locations );
 }
 
 /*
@@ -132,36 +132,36 @@ LOC_FindClosest
 ==============
 */
 static location_t *LOC_FindClosest( vec3_t pos ) {
-	location_t *loc, *nearest;
-	vec3_t dir;
-	float dist, minDist;
-	trace_t trace;
+    location_t *loc, *nearest;
+    vec3_t dir;
+    float dist, minDist;
+    trace_t trace;
 
-	minDist = 99999;
-	nearest = NULL;
+    minDist = 99999;
+    nearest = NULL;
     LIST_FOR_EACH( location_t, loc, &cl_locations, entry ) {
-		VectorSubtract( pos, loc->origin, dir );
-		dist = VectorLength( dir );
+        VectorSubtract( pos, loc->origin, dir );
+        dist = VectorLength( dir );
 
-		if( dist > loc_dist->value ) {
-			continue;
-		}
+        if( dist > loc_dist->value ) {
+            continue;
+        }
 
-		if( loc_trace->integer ) {
-			CM_BoxTrace( &trace, pos, loc->origin, vec3_origin, vec3_origin,
+        if( loc_trace->integer ) {
+            CM_BoxTrace( &trace, pos, loc->origin, vec3_origin, vec3_origin,
                 cl.bsp->nodes, MASK_SOLID );
-			if( trace.fraction != 1.0f ) {
-				continue;
-			}
-		}
-		
-		if( dist < minDist ) {
-			minDist = dist;
-			nearest = loc;
-		}
-	}
+            if( trace.fraction != 1.0f ) {
+                continue;
+            }
+        }
+        
+        if( dist < minDist ) {
+            minDist = dist;
+            nearest = loc;
+        }
+    }
 
-	return nearest;
+    return nearest;
 }
 
 /*
@@ -170,42 +170,42 @@ LOC_AddLocationsToScene
 ==============
 */
 void LOC_AddLocationsToScene( void ) {
-	location_t *loc, *nearest;
-	vec3_t dir;
-	float dist;
-	entity_t ent;
+    location_t *loc, *nearest;
+    vec3_t dir;
+    float dist;
+    entity_t ent;
 
-	if( !loc_draw->integer ) {
-		return;
-	}
+    if( !loc_draw->integer ) {
+        return;
+    }
 
-	memset( &ent, 0, sizeof( ent ) );
-	ent.model = R_RegisterModel( "models/items/c_head/tris.md2" );
-	ent.skin = R_RegisterSkin( "models/items/c_head/skin.pcx" );
+    memset( &ent, 0, sizeof( ent ) );
+    ent.model = R_RegisterModel( "models/items/c_head/tris.md2" );
+    ent.skin = R_RegisterSkin( "models/items/c_head/skin.pcx" );
 
-	nearest = LOC_FindClosest( cl.playerEntityOrigin );
-	if( !nearest ) {
-		return;
-	}
+    nearest = LOC_FindClosest( cl.playerEntityOrigin );
+    if( !nearest ) {
+        return;
+    }
 
     LIST_FOR_EACH( location_t, loc, &cl_locations, entry ) {
-		VectorSubtract( cl.playerEntityOrigin, loc->origin, dir );
-		dist = VectorLength( dir );
+        VectorSubtract( cl.playerEntityOrigin, loc->origin, dir );
+        dist = VectorLength( dir );
 
-		if( dist > loc_dist->integer ) {
-			continue;
-		}
+        if( dist > loc_dist->integer ) {
+            continue;
+        }
 
-		VectorCopy( loc->origin, ent.origin );
+        VectorCopy( loc->origin, ent.origin );
 
-		if( loc == nearest ) {
-			ent.origin[2] += 10.0f * sin( cl.time * 0.01f );
-			V_AddLight( loc->origin, 200, 1, 1, 1 );
-		}
+        if( loc == nearest ) {
+            ent.origin[2] += 10.0f * sin( cl.time * 0.01f );
+            V_AddLight( loc->origin, 200, 1, 1, 1 );
+        }
 
-		V_AddEntity( &ent );
+        V_AddEntity( &ent );
 
-	}
+    }
 
 }
 
@@ -215,18 +215,18 @@ LOC_Here_m
 ==============
 */
 static size_t LOC_Here_m( char *buffer, size_t size ) {
-	location_t *loc;
+    location_t *loc;
     size_t ret;
 
-	ret = Q_strlcpy( buffer, "unknown", size );
-	if( cls.state != ca_active ) {
-		return ret;
-	}
+    ret = Q_strlcpy( buffer, "unknown", size );
+    if( cls.state != ca_active ) {
+        return ret;
+    }
 
-	loc = LOC_FindClosest( cl.playerEntityOrigin );
-	if( loc ) {
-		ret = Q_strlcpy( buffer, loc->name, size );
-	}
+    loc = LOC_FindClosest( cl.playerEntityOrigin );
+    if( loc ) {
+        ret = Q_strlcpy( buffer, loc->name, size );
+    }
     return ret;
 }
 
@@ -236,24 +236,24 @@ LOC_There_m
 ==============
 */
 static size_t LOC_There_m( char *buffer, size_t size ) {
-	location_t *loc;
-	vec3_t pos;
-	trace_t trace;
+    location_t *loc;
+    vec3_t pos;
+    trace_t trace;
     int ret;
 
-	ret = Q_strlcpy( buffer, "unknown", size );
-	if( cls.state != ca_active ) {
-		return ret;
-	}
+    ret = Q_strlcpy( buffer, "unknown", size );
+    if( cls.state != ca_active ) {
+        return ret;
+    }
 
-	VectorMA( cl.playerEntityOrigin, 8192, cl.v_forward, pos );
-	CM_BoxTrace( &trace, cl.playerEntityOrigin, pos, vec3_origin, vec3_origin,
+    VectorMA( cl.playerEntityOrigin, 8192, cl.v_forward, pos );
+    CM_BoxTrace( &trace, cl.playerEntityOrigin, pos, vec3_origin, vec3_origin,
         cl.bsp->nodes, MASK_SOLID );
 
-	loc = LOC_FindClosest( trace.endpos );
-	if( loc ) {
-		ret = Q_strlcpy( buffer, loc->name, size );
-	}
+    loc = LOC_FindClosest( trace.endpos );
+    if( loc ) {
+        ret = Q_strlcpy( buffer, loc->name, size );
+    }
     return ret;
 }
 
@@ -263,12 +263,12 @@ LOC_Init
 ==============
 */
 void LOC_Init( void ) {
-//	loc_enable = Cvar_Get( "loc_enable", "0", 0 );
-	loc_trace = Cvar_Get( "loc_trace", "0", 0 );
-	loc_draw = Cvar_Get( "loc_draw", "0", 0 );
-	loc_dist = Cvar_Get( "loc_dist", "500", 0 );
+//  loc_enable = Cvar_Get( "loc_enable", "0", 0 );
+    loc_trace = Cvar_Get( "loc_trace", "0", 0 );
+    loc_draw = Cvar_Get( "loc_draw", "0", 0 );
+    loc_dist = Cvar_Get( "loc_dist", "500", 0 );
 
-	Cmd_AddMacro( "loc_here", LOC_Here_m );
-	Cmd_AddMacro( "loc_there", LOC_There_m );
+    Cmd_AddMacro( "loc_here", LOC_Here_m );
+    Cmd_AddMacro( "loc_there", LOC_There_m );
 }
 

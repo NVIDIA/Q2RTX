@@ -26,8 +26,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <GL/glu.h>
 
 typedef struct {
-	HGLRC   hGLRC;			    // handle to GL rendering context
-	HINSTANCE	hinstOpenGL;    // handle to GL library
+    HGLRC   hGLRC;              // handle to GL rendering context
+    HINSTANCE   hinstOpenGL;    // handle to GL library
     qboolean minidriver;
 } glwstate_t;
 

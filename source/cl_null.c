@@ -27,30 +27,30 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 qboolean CL_CheatsOK( void ) {
     // developer option
     if( Cvar_VariableInteger( "cheats" ) ) {
-		return qtrue;
+        return qtrue;
     }
-	return qfalse;
+    return qfalse;
 }
 
 void SCR_DebugGraph( float value, int color ) {
 }
 
 void CL_RestartFilesystem( void ) {
-	FS_Restart();
+    FS_Restart();
 }
 
 void CL_LocalConnect( void ) {
-	if( FS_NeedRestart() ) {
-		FS_Restart();
-	}
+    if( FS_NeedRestart() ) {
+        FS_Restart();
+    }
 }
 
 static void Key_Bind_Null_f( void ) {
 }
 
 void Key_Init( void ) {
-	Cmd_AddCommand( "bind", Key_Bind_Null_f );
-	Cmd_AddCommand( "unbind", Key_Bind_Null_f );
-	Cmd_AddCommand( "unbindall", Key_Bind_Null_f );
+    Cmd_AddCommand( "bind", Key_Bind_Null_f );
+    Cmd_AddCommand( "unbind", Key_Bind_Null_f );
+    Cmd_AddCommand( "unbindall", Key_Bind_Null_f );
 }
 

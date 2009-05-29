@@ -32,7 +32,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <SDL.h>
 
-static cvar_t	*in_device;
+static cvar_t   *in_device;
 
 static struct {
     qboolean initialized;
@@ -50,17 +50,17 @@ Evdev_RunMouse
 ===========
 */
 static void Evdev_RunMouse( void ) {
-	struct input_event ev[MAX_EVENTS];
-	fd_set fdset;
-	struct timeval timeout;
-	int bytes, count;
-	int dx, dy;
-	int i, button;
+    struct input_event ev[MAX_EVENTS];
+    fd_set fdset;
+    struct timeval timeout;
+    int bytes, count;
+    int dx, dy;
+    int i, button;
     unsigned time;
 
-	if( !evdev.initialized || !evdev.grabbed ) {
-		return;
-	}
+    if( !evdev.initialized || !evdev.grabbed ) {
+        return;
+    }
 
     FD_ZERO( &fdset );
     FD_SET( evdev.fd, &fdset );
@@ -121,9 +121,9 @@ static void Evdev_RunMouse( void ) {
 }
 
 static qboolean Evdev_GetMouseMotion( int *dx, int *dy ) {
-	if( !evdev.initialized || !evdev.grabbed ) {
-		return qfalse;
-	}
+    if( !evdev.initialized || !evdev.grabbed ) {
+        return qfalse;
+    }
     *dx = evdev.dx;
     *dy = evdev.dy;
     evdev.dx = 0;
@@ -150,10 +150,10 @@ Evdev_StartupMouse
 ===========
 */
 static qboolean Evdev_InitMouse( void ) {
-	in_device = Cvar_Get( "in_device", "/dev/input/event2", CVAR_LATCH );
+    in_device = Cvar_Get( "in_device", "/dev/input/event2", CVAR_LATCH );
     
     evdev.fd = open( in_device->string, O_RDONLY );
-	if( evdev.fd == -1 ) {
+    if( evdev.fd == -1 ) {
         Com_EPrintf( "Couldn't open %s: %s\n", in_device->string,
             strerror( errno ) );
         return qfalse;
@@ -162,9 +162,9 @@ static qboolean Evdev_InitMouse( void ) {
     fcntl( evdev.fd, F_SETFL, fcntl( evdev.fd, F_GETFL, 0 ) | FNDELAY );
 
     Com_Printf( "Event interface initialized.\n" );
-	evdev.initialized = qtrue;
+    evdev.initialized = qtrue;
 
-	return qtrue;
+    return qtrue;
 }
 
 /*
@@ -173,16 +173,16 @@ Evdev_GrabMouse
 ===========
 */
 static void Evdev_GrabMouse( grab_t grab ) {
-	if( !evdev.initialized ) {
-		return;
-	}
+    if( !evdev.initialized ) {
+        return;
+    }
 
-	if( evdev.grabbed == grab ) {
-		return;
-	}
+    if( evdev.grabbed == grab ) {
+        return;
+    }
     
 #ifdef EVIOCGRAB
-	if( ioctl( evdev.fd, EVIOCGRAB, active ) == -1 ) {
+    if( ioctl( evdev.fd, EVIOCGRAB, active ) == -1 ) {
         Com_EPrintf( "Grab/Release failed: %s\n", strerror( errno ) );
     }
 #endif // EVIOCGRAB
@@ -190,17 +190,17 @@ static void Evdev_GrabMouse( grab_t grab ) {
     if( grab ) {
         struct input_event ev;
         
-	    SDL_ShowCursor( SDL_DISABLE );
+        SDL_ShowCursor( SDL_DISABLE );
         
         while( read( evdev.fd, &ev, EVENT_SIZE ) == EVENT_SIZE )
             ;
     } else {
-	    SDL_ShowCursor( SDL_ENABLE );
+        SDL_ShowCursor( SDL_ENABLE );
     }
 
     evdev.dx = 0;
     evdev.dy = 0;
-	evdev.grabbed = grab;
+    evdev.grabbed = grab;
 }
 
 /*
@@ -209,11 +209,11 @@ DI_FillAPI
 @@@@@@@@@@@@@@@@@@@
 */
 void DI_FillAPI( inputAPI_t *api ) {
-	api->Init = Evdev_InitMouse;
-	api->Shutdown = Evdev_ShutdownMouse;
-	api->Grab = Evdev_GrabMouse;
-	api->GetEvents = Evdev_GetMouseEvents;
-	api->GetMotion = Evdev_GetMouseMotion;
+    api->Init = Evdev_InitMouse;
+    api->Shutdown = Evdev_ShutdownMouse;
+    api->Grab = Evdev_GrabMouse;
+    api->GetEvents = Evdev_GetMouseEvents;
+    api->GetMotion = Evdev_GetMouseMotion;
 }
 
 

@@ -27,9 +27,9 @@ vec3_t r_pright, r_pup, r_ppn;
 
 typedef struct
 {
-	particle_t *particle;
-	int         level;
-	int         color;
+    particle_t *particle;
+    int         level;
+    int         color;
 } partparms_t;
 
 static partparms_t partparms;
@@ -49,65 +49,65 @@ static partparms_t partparms;
 */
 static void R_DrawParticle( void )
 {
-	particle_t *pparticle = partparms.particle;
-	int         level     = partparms.level;
-	vec3_t	local, transformed;
-	float	zi;
-	byte	*pdest;
-	short	*pz;
-	int      color = pparticle->color;
-	int		i, izi, pix, count, u, v;
+    particle_t *pparticle = partparms.particle;
+    int         level     = partparms.level;
+    vec3_t  local, transformed;
+    float   zi;
+    byte    *pdest;
+    short   *pz;
+    int      color = pparticle->color;
+    int     i, izi, pix, count, u, v;
 
-	/*
-	** transform the particle
-	*/
-	VectorSubtract (pparticle->origin, r_origin, local);
+    /*
+    ** transform the particle
+    */
+    VectorSubtract (pparticle->origin, r_origin, local);
 
-	transformed[0] = DotProduct(local, r_pright);
-	transformed[1] = DotProduct(local, r_pup);
-	transformed[2] = DotProduct(local, r_ppn);		
+    transformed[0] = DotProduct(local, r_pright);
+    transformed[1] = DotProduct(local, r_pup);
+    transformed[2] = DotProduct(local, r_ppn);      
 
-	if (transformed[2] < PARTICLE_Z_CLIP)
-		return;
+    if (transformed[2] < PARTICLE_Z_CLIP)
+        return;
 
-	/*
-	** project the point
-	*/
-	// FIXME: preadjust xcenter and ycenter
-	zi = 1.0 / transformed[2];
-	u = (int)(xcenter + zi * transformed[0] + 0.5);
-	v = (int)(ycenter - zi * transformed[1] + 0.5);
+    /*
+    ** project the point
+    */
+    // FIXME: preadjust xcenter and ycenter
+    zi = 1.0 / transformed[2];
+    u = (int)(xcenter + zi * transformed[0] + 0.5);
+    v = (int)(ycenter - zi * transformed[1] + 0.5);
 
-	if ((v > d_vrectbottom_particle) || 
-		(u > d_vrectright_particle) ||
-		(v < d_vrecty) ||
-		(u < d_vrectx))
-	{
-		return;
-	}
+    if ((v > d_vrectbottom_particle) || 
+        (u > d_vrectright_particle) ||
+        (v < d_vrecty) ||
+        (u < d_vrectx))
+    {
+        return;
+    }
 
-	/*
-	** compute addresses of zbuffer, framebuffer, and 
-	** compute the Z-buffer reference value.
-	*/
-	pz = d_pzbuffer + (d_zwidth * v) + u;
-	pdest = d_viewbuffer + d_scantable[v] + u;
-	izi = (int)(zi * 0x8000);
+    /*
+    ** compute addresses of zbuffer, framebuffer, and 
+    ** compute the Z-buffer reference value.
+    */
+    pz = d_pzbuffer + (d_zwidth * v) + u;
+    pdest = d_viewbuffer + d_scantable[v] + u;
+    izi = (int)(zi * 0x8000);
 
-	/*
-	** determine the screen area covered by the particle,
-	** which also means clamping to a min and max
-	*/
-	pix = izi >> d_pix_shift;
-	if (pix < d_pix_min)
-		pix = d_pix_min;
-	else if (pix > d_pix_max)
-		pix = d_pix_max;
+    /*
+    ** determine the screen area covered by the particle,
+    ** which also means clamping to a min and max
+    */
+    pix = izi >> d_pix_shift;
+    if (pix < d_pix_min)
+        pix = d_pix_min;
+    else if (pix > d_pix_max)
+        pix = d_pix_max;
 
-	/*
-	** render the appropriate pixels
-	*/
-	count = pix;
+    /*
+    ** render the appropriate pixels
+    */
+    count = pix;
 
     switch (level) {
     case PARTICLE_33 :
@@ -165,27 +165,27 @@ static void R_DrawParticle( void )
 */
 void R_DrawParticles (void)
 {
-	particle_t *p;
-	int         i;
+    particle_t *p;
+    int         i;
 
-	VectorScale( vright, xscaleshrink, r_pright );
-	VectorScale( vup, yscaleshrink, r_pup );
-	VectorCopy( vpn, r_ppn );
+    VectorScale( vright, xscaleshrink, r_pright );
+    VectorScale( vup, yscaleshrink, r_pup );
+    VectorCopy( vpn, r_ppn );
 
-	for (p=r_newrefdef.particles, i=0 ; i<r_newrefdef.num_particles ; i++,p++)
-	{
+    for (p=r_newrefdef.particles, i=0 ; i<r_newrefdef.num_particles ; i++,p++)
+    {
 
-		if ( p->alpha > 0.66 )
-			partparms.level = PARTICLE_OPAQUE;
-		else if ( p->alpha > 0.33 )
-			partparms.level = PARTICLE_66;
-		else
-			partparms.level = PARTICLE_33;
+        if ( p->alpha > 0.66 )
+            partparms.level = PARTICLE_OPAQUE;
+        else if ( p->alpha > 0.33 )
+            partparms.level = PARTICLE_66;
+        else
+            partparms.level = PARTICLE_33;
 
-		partparms.particle = p;
-		partparms.color    = p->color;
+        partparms.particle = p;
+        partparms.color    = p->color;
 
-		R_DrawParticle();
-	}
+        R_DrawParticle();
+    }
 }
 

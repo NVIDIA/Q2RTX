@@ -19,25 +19,25 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #define MAX_LOCAL_SERVERS 16
-#define MAX_DEMOINFO_CLIENTS	20
-#define MAX_STATUS_PLAYERS	64
+#define MAX_DEMOINFO_CLIENTS    20
+#define MAX_STATUS_PLAYERS  64
 
 typedef struct {
-	char name[MAX_CLIENT_NAME];
-	int ping;
-	int score;
+    char name[MAX_CLIENT_NAME];
+    int ping;
+    int score;
 } playerStatus_t;
 
 typedef struct {
-	char	address[MAX_QPATH];
-	char	infostring[MAX_STRING_CHARS]; // BIG infostring
-	playerStatus_t	players[MAX_STATUS_PLAYERS];
-	int	numPlayers;
-	int ping;
+    char    address[MAX_QPATH];
+    char    infostring[MAX_STRING_CHARS]; // BIG infostring
+    playerStatus_t  players[MAX_STATUS_PLAYERS];
+    int numPlayers;
+    int ping;
 } serverStatus_t;
 
 typedef struct {
-	char map[MAX_QPATH];
+    char map[MAX_QPATH];
     char pov[MAX_CLIENT_NAME];
 } demoInfo_t;
 
@@ -84,12 +84,12 @@ void IN_Activate( void );
 void IN_MouseEvent( int x, int y );
 void IN_WarpMouse( int x, int y );
 
-void	Key_Init( void );
-void	Key_Event( unsigned key, qboolean down, unsigned time );
-void	Key_CharEvent( int key );
-void	Key_WriteBindings( fileHandle_t f );
+void    Key_Init( void );
+void    Key_Event( unsigned key, qboolean down, unsigned time );
+void    Key_CharEvent( int key );
+void    Key_WriteBindings( fileHandle_t f );
 
-char	*VID_GetClipboardData( void );
-void	VID_SetClipboardData( const char *data );
+char    *VID_GetClipboardData( void );
+void    VID_SetClipboardData( const char *data );
 void    VID_FatalShutdown( void );
 

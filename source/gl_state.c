@@ -31,7 +31,7 @@ void GL_BindTexture( int texnum ) {
         return;
     }
     
-	qglBindTexture( GL_TEXTURE_2D, texnum );
+    qglBindTexture( GL_TEXTURE_2D, texnum );
     c.texSwitches++;
     gls.texnum[gls.tmu] = texnum;
 }
@@ -109,15 +109,15 @@ void GL_Bits( glStateBits_t bits ) {
     }
 
     if( diff & GLS_BLEND_MASK ) {
-		if( bits & GLS_BLEND_MASK ) {
-			qglEnable( GL_BLEND );
-			if( bits & GLS_BLEND_BLEND ) {
-        		qglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-			} else if( bits & GLS_BLEND_ADD ) {
-				qglBlendFunc( GL_SRC_ALPHA, GL_ONE );
-			} else if( bits & GLS_BLEND_MODULATE ) {
-				qglBlendFunc( GL_DST_COLOR, GL_ONE );
-			}
+        if( bits & GLS_BLEND_MASK ) {
+            qglEnable( GL_BLEND );
+            if( bits & GLS_BLEND_BLEND ) {
+                qglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+            } else if( bits & GLS_BLEND_ADD ) {
+                qglBlendFunc( GL_SRC_ALPHA, GL_ONE );
+            } else if( bits & GLS_BLEND_MODULATE ) {
+                qglBlendFunc( GL_DST_COLOR, GL_ONE );
+            }
         } else {
             qglDisable( GL_BLEND );
         }
@@ -139,7 +139,7 @@ void GL_Bits( glStateBits_t bits ) {
         }
     }
 
-	if( diff & GLS_ALPHATEST_ENABLE ) {
+    if( diff & GLS_ALPHATEST_ENABLE ) {
         if( bits & GLS_ALPHATEST_ENABLE ) {
             qglEnable( GL_ALPHA_TEST );
         } else {
@@ -151,24 +151,24 @@ void GL_Bits( glStateBits_t bits ) {
 }
 
 void GL_Setup2D( void ) {
-	qglViewport( 0, 0, gl_config.vidWidth, gl_config.vidHeight );
+    qglViewport( 0, 0, gl_config.vidWidth, gl_config.vidHeight );
 
-	qglMatrixMode( GL_PROJECTION );
-	qglLoadIdentity();
+    qglMatrixMode( GL_PROJECTION );
+    qglLoadIdentity();
 
-	qglOrtho( 0, gl_config.vidWidth, gl_config.vidHeight, 0, -1, 1 );
-	draw.scale = 1;
+    qglOrtho( 0, gl_config.vidWidth, gl_config.vidHeight, 0, -1, 1 );
+    draw.scale = 1;
 
-	*( uint32_t * )draw.color = *( uint32_t * )colorWhite;
+    *( uint32_t * )draw.color = *( uint32_t * )colorWhite;
 
-	if( draw.flags & DRAW_CLIP_MASK ) {
-		qglDisable( GL_SCISSOR_TEST );
-	}
+    if( draw.flags & DRAW_CLIP_MASK ) {
+        qglDisable( GL_SCISSOR_TEST );
+    }
 
-	draw.flags = 0;
+    draw.flags = 0;
 
-	qglMatrixMode( GL_MODELVIEW );
-	qglLoadIdentity();
+    qglMatrixMode( GL_MODELVIEW );
+    qglLoadIdentity();
 
     GL_Bits( GLS_DEPTHTEST_DISABLE );
     GL_CullFace( GLS_CULL_DISABLE );
@@ -176,13 +176,13 @@ void GL_Setup2D( void ) {
 
 void GL_Setup3D( void ) {
     GLdouble xmin, xmax, ymin, ymax, aspect;
-	int yb = glr.fd.y + glr.fd.height;
+    int yb = glr.fd.y + glr.fd.height;
 
-	qglViewport( glr.fd.x, gl_config.vidHeight - yb,
+    qglViewport( glr.fd.x, gl_config.vidHeight - yb,
         glr.fd.width, glr.fd.height );
 
-	qglMatrixMode( GL_PROJECTION );
-	qglLoadIdentity();
+    qglMatrixMode( GL_PROJECTION );
+    qglLoadIdentity();
 
     ymax = gl_znear->value * tan( glr.fd.fov_y * M_PI / 360.0 );
     ymin = -ymax;
@@ -192,24 +192,24 @@ void GL_Setup3D( void ) {
     xmax = ymax * aspect;
 
     qglFrustum( xmin, xmax, ymin, ymax, gl_znear->value, gl_zfar->value );
-	
+    
     qglMatrixMode( GL_MODELVIEW );
-	qglLoadIdentity();
+    qglLoadIdentity();
 
-	qglRotatef( -90, 1, 0, 0 ); /* put z axis up */
-	qglRotatef(  90, 0, 0, 1 ); /* put y axis west, x axis north */
-	qglRotatef( -glr.fd.viewangles[ROLL],  1, 0, 0 );
-	qglRotatef( -glr.fd.viewangles[PITCH], 0, 1, 0 );
-	qglRotatef( -glr.fd.viewangles[YAW],   0, 0, 1 );
-	qglTranslatef( -glr.fd.vieworg[0], -glr.fd.vieworg[1], -glr.fd.vieworg[2] );
+    qglRotatef( -90, 1, 0, 0 ); /* put z axis up */
+    qglRotatef(  90, 0, 0, 1 ); /* put y axis west, x axis north */
+    qglRotatef( -glr.fd.viewangles[ROLL],  1, 0, 0 );
+    qglRotatef( -glr.fd.viewangles[PITCH], 0, 1, 0 );
+    qglRotatef( -glr.fd.viewangles[YAW],   0, 0, 1 );
+    qglTranslatef( -glr.fd.vieworg[0], -glr.fd.vieworg[1], -glr.fd.vieworg[2] );
 
     AngleVectors( glr.fd.viewangles,
         glr.viewaxis[0], glr.viewaxis[1], glr.viewaxis[2] );
-	VectorInverse( glr.viewaxis[1] );
+    VectorInverse( glr.viewaxis[1] );
 
-	glr.scroll = -64 * ( ( glr.fd.time / 40.0f ) - ( int )( glr.fd.time / 40.0f ) );
-	if( glr.scroll == 0 )
-		glr.scroll = -64.0f;
+    glr.scroll = -64 * ( ( glr.fd.time / 40.0f ) - ( int )( glr.fd.time / 40.0f ) );
+    if( glr.scroll == 0 )
+        glr.scroll = -64.0f;
 
 #if 0
     {
@@ -240,30 +240,30 @@ void GL_Setup3D( void ) {
     GL_Bits( GLS_DEFAULT );
     GL_CullFace( GLS_CULL_FRONT );
 
-	qglClear( GL_DEPTH_BUFFER_BIT );
+    qglClear( GL_DEPTH_BUFFER_BIT );
 }
 
 void GL_SetDefaultState( void ) {
-	qglDrawBuffer( GL_BACK );
-	qglClearColor( 0, 0, 0, 1 );
-	qglClearDepth( 1 );
-	qglClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-	qglEnable( GL_DEPTH_TEST );
-	qglDepthFunc( GL_LEQUAL );
-	qglDepthRange( 0, 1 );
-	qglDepthMask( GL_TRUE );
-	qglDisable( GL_BLEND );
-	qglDisable( GL_ALPHA_TEST ); 
-	qglAlphaFunc( GL_GREATER, 0.666f );
-	qglHint( GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST );
+    qglDrawBuffer( GL_BACK );
+    qglClearColor( 0, 0, 0, 1 );
+    qglClearDepth( 1 );
+    qglClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+    qglEnable( GL_DEPTH_TEST );
+    qglDepthFunc( GL_LEQUAL );
+    qglDepthRange( 0, 1 );
+    qglDepthMask( GL_TRUE );
+    qglDisable( GL_BLEND );
+    qglDisable( GL_ALPHA_TEST ); 
+    qglAlphaFunc( GL_GREATER, 0.666f );
+    qglHint( GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST );
     qglPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 
-	qglEnableClientState( GL_VERTEX_ARRAY );
+    qglEnableClientState( GL_VERTEX_ARRAY );
     qglEnableClientState( GL_TEXTURE_COORD_ARRAY );
     
-	GL_SelectTMU( 0 );
+    GL_SelectTMU( 0 );
     GL_BindTexture( 0 );
-	qglEnable( GL_TEXTURE_2D );
+    qglEnable( GL_TEXTURE_2D );
     GL_Bits( GLS_DEFAULT );
 }
 

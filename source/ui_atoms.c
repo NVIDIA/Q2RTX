@@ -352,17 +352,17 @@ void UI_StringDimensions( vrect_t *rc, int flags, const char *string ) {
 }
 
 void UI_DrawRect( const vrect_t *rc, int border, int color ) {
-	R_DrawFill( rc->x, rc->y, border, rc->height, color ); // left
-	R_DrawFill( rc->x + rc->width - border, rc->y, border, rc->height, color ); // right
-	R_DrawFill( rc->x + border, rc->y, rc->width - border * 2, border, color ); // top
-	R_DrawFill( rc->x + border, rc->y + rc->height - border, rc->width - border * 2, border, color ); // bottom
+    R_DrawFill( rc->x, rc->y, border, rc->height, color ); // left
+    R_DrawFill( rc->x + rc->width - border, rc->y, border, rc->height, color ); // right
+    R_DrawFill( rc->x + border, rc->y, rc->width - border * 2, border, color ); // top
+    R_DrawFill( rc->x + border, rc->y + rc->height - border, rc->width - border * 2, border, color ); // bottom
 }
 
 void UI_DrawRectEx( const vrect_t *rc, int border, const color_t color ) {
-	R_DrawFillEx( rc->x, rc->y, border, rc->height, color ); // left
-	R_DrawFillEx( rc->x + rc->width - border, rc->y, border, rc->height, color ); // right
-	R_DrawFillEx( rc->x + border, rc->y, rc->width - border * 2, border, color ); // top
-	R_DrawFillEx( rc->x + border, rc->y + rc->height - border, rc->width - border * 2, border, color ); // bottom
+    R_DrawFillEx( rc->x, rc->y, border, rc->height, color ); // left
+    R_DrawFillEx( rc->x + rc->width - border, rc->y, border, rc->height, color ); // right
+    R_DrawFillEx( rc->x + border, rc->y, rc->width - border * 2, border, color ); // top
+    R_DrawFillEx( rc->x + border, rc->y + rc->height - border, rc->width - border * 2, border, color ); // bottom
 }
 
 

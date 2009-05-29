@@ -30,11 +30,11 @@ typedef enum {
 } grab_t;
 
 typedef struct inputAPI_s {
-	qboolean	(*Init)( void );
-	void	    (*Shutdown)( void );
-	void	    (*Grab)( grab_t grab );
+    qboolean    (*Init)( void );
+    void        (*Shutdown)( void );
+    void        (*Grab)( grab_t grab );
     void        (*Warp)( int x, int y );
-	void	    (*GetEvents)( void );
-	qboolean 	(*GetMotion)( int *dx, int *dy );
+    void        (*GetEvents)( void );
+    qboolean    (*GetMotion)( int *dx, int *dy );
 } inputAPI_t;
 

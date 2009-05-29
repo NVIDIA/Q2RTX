@@ -22,24 +22,24 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // prompt.h
 //
 
-#define HISTORY_SIZE	128
-#define HISTORY_MASK	( HISTORY_SIZE - 1 )
+#define HISTORY_SIZE    128
+#define HISTORY_MASK    ( HISTORY_SIZE - 1 )
 
-#define MAX_MATCHES		1024
-#define MAX_PARTIAL		32
+#define MAX_MATCHES     1024
+#define MAX_PARTIAL     32
 
 typedef struct commandPrompt_s {
-	int		inputLineNum;
-	int		historyLineNum;
+    int     inputLineNum;
+    int     historyLineNum;
 
-	inputField_t inputLine;
-	char		*history[HISTORY_SIZE];
+    inputField_t inputLine;
+    char        *history[HISTORY_SIZE];
     char        *search;
 
-	int			widthInChars;
+    int         widthInChars;
     qboolean    tooMany;
 
-	void		(* q_printf( 1, 2 ) printf)( const char *fmt, ... );
+    void        (* q_printf( 1, 2 ) printf)( const char *fmt, ... );
 } commandPrompt_t;
 
 

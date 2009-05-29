@@ -42,7 +42,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 typedef struct {
     int numTextureUnits;
     int maxTextureSize;
-	qboolean registering;
+    qboolean registering;
     GLuint prog_warp, prog_light;
     struct {
         bsp_t *cache;
@@ -58,13 +58,13 @@ typedef struct {
     int visframe;
     int drawframe;
     int viewcluster1;
-	int viewcluster2;
+    int viewcluster2;
     cplane_t frustumPlanes[4];
-	entity_t	*ent;
-	vec3_t		entaxis[3];
-	qboolean	entrotated;
-	float	scroll;
-	int		num_beams;
+    entity_t    *ent;
+    vec3_t      entaxis[3];
+    qboolean    entrotated;
+    float   scroll;
+    int     num_beams;
 } glRefdef_t;
 
 extern glStatic_t gl_static;
@@ -81,9 +81,9 @@ typedef struct {
     int batchesDrawn;
     int nodesCulled;
     int facesCulled;
-	int boxesCulled;
-	int spheresCulled;
-	int rotatedBoxesCulled;
+    int boxesCulled;
+    int spheresCulled;
+    int rotatedBoxesCulled;
 } statCounters_t;
 
 extern statCounters_t c;
@@ -108,9 +108,9 @@ extern cvar_t *gl_hwgamma;
 extern cvar_t *gl_fullscreen;
 
 typedef enum {
-	CULL_OUT,
-	CULL_IN,
-	CULL_CLIP
+    CULL_OUT,
+    CULL_IN,
+    CULL_CLIP
 } glCullResult_t;
 
 glCullResult_t GL_CullBox( vec3_t bounds[2] );
@@ -133,27 +133,27 @@ typedef struct maliastc_s {
 } maliastc_t;
 
 typedef struct maliasvert_s {
-	short pos[3];
-	byte normalindex;
-	byte pad;
+    short pos[3];
+    byte normalindex;
+    byte pad;
 } maliasvert_t;
 
 typedef struct maliasframe_s {
-	vec3_t scale;
-	vec3_t translate;
-	vec3_t bounds[2];
-	vec_t radius;
+    vec3_t scale;
+    vec3_t translate;
+    vec3_t bounds[2];
+    vec_t radius;
 } maliasframe_t;
 
 typedef struct maliasmesh_s {
-	int numverts;
-	int numtris;
-	int numindices;
-	uint32_t *indices;
-	maliasvert_t *verts;
-	maliastc_t *tcoords;
-	image_t *skins[MAX_ALIAS_SKINS];
-	int numskins;
+    int numverts;
+    int numtris;
+    int numindices;
+    uint32_t *indices;
+    maliasvert_t *verts;
+    maliastc_t *tcoords;
+    image_t *skins[MAX_ALIAS_SKINS];
+    int numskins;
 } maliasmesh_t;
 
 /* xyz[3] + st[2] + lmst[2] */
@@ -166,7 +166,7 @@ typedef struct maliasmesh_s {
 #define LM_MAX_LIGHTMAPS    32
 #define LM_BLOCK_WIDTH      256
 #define LM_BLOCK_HEIGHT     256
-#define LM_TEXNUM			( MAX_RIMAGES + 2 )
+#define LM_TEXNUM           ( MAX_RIMAGES + 2 )
 
 typedef struct {
     int inuse[LM_BLOCK_WIDTH];
@@ -196,13 +196,13 @@ typedef enum {
     GLS_DEFAULT             = 0,
     GLS_DEPTHMASK_FALSE     = ( 1 << 0 ),
     GLS_DEPTHTEST_DISABLE   = ( 1 << 1 ),
-	GLS_BLEND_BLEND         = ( 1 << 2 ),
-	GLS_BLEND_ADD           = ( 1 << 3 ),
-	GLS_BLEND_MODULATE      = ( 1 << 4 ),
-	GLS_ALPHATEST_ENABLE    = ( 1 << 5 )
+    GLS_BLEND_BLEND         = ( 1 << 2 ),
+    GLS_BLEND_ADD           = ( 1 << 3 ),
+    GLS_BLEND_MODULATE      = ( 1 << 4 ),
+    GLS_ALPHATEST_ENABLE    = ( 1 << 5 )
 } glStateBits_t;
 
-#define GLS_BLEND_MASK	(GLS_BLEND_BLEND|GLS_BLEND_ADD|GLS_BLEND_MODULATE)
+#define GLS_BLEND_MASK  (GLS_BLEND_BLEND|GLS_BLEND_ADD|GLS_BLEND_MODULATE)
 
 typedef struct {
     int tmu;
@@ -237,11 +237,11 @@ void GL_DisableOutlines( void );
  */
 typedef struct {
     color_t color;
-	int flags;
-	float scale;
+    int flags;
+    float scale;
 } drawStatic_t;
 
-extern drawStatic_t	draw;
+extern drawStatic_t draw;
 
 void Draw_Stringf( int x, int y, const char *fmt, ... );
 void Draw_Stats( void );
@@ -291,7 +291,7 @@ typedef struct {
     int texnum[MAX_TMUS];
     int numverts;
     int numindices;
-	int flags;
+    int flags;
 } tesselator_t;
 
 extern tesselator_t tess;

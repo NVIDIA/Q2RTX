@@ -66,13 +66,13 @@ COMMON SDL VIDEO RELATED ROUTINES
 
 static void SetHints( void ) {
 #if USE_X11
-	SDL_SysWMinfo	info;
+    SDL_SysWMinfo   info;
     Display *dpy;
-	Window win;
+    Window win;
     XSizeHints hints;
 
-	SDL_VERSION( &info.version );
-	if( !SDL_GetWMInfo( &info ) ) {
+    SDL_VERSION( &info.version );
+    if( !SDL_GetWMInfo( &info ) ) {
         return;
     }
     if( info.subsystem != SDL_SYSWM_X11 ) {
@@ -100,20 +100,20 @@ VID_GetClipboardData
 */
 char *VID_GetClipboardData( void ) {
 #if USE_X11
-	SDL_SysWMinfo	info;
+    SDL_SysWMinfo   info;
     Display *dpy;
-	Window sowner, win;
-	Atom type, property;
-	unsigned long len, bytes_left;
-	unsigned char *data;
-	int format, result;
-	char *ret;
+    Window sowner, win;
+    Atom type, property;
+    unsigned long len, bytes_left;
+    unsigned char *data;
+    int format, result;
+    char *ret;
 
     if( SDL_WasInit( SDL_INIT_VIDEO ) != SDL_INIT_VIDEO ) {
         return NULL;
     }
-	SDL_VERSION( &info.version );
-	if( !SDL_GetWMInfo( &info ) ) {
+    SDL_VERSION( &info.version );
+    if( !SDL_GetWMInfo( &info ) ) {
         return NULL;
     }
     if( info.subsystem != SDL_SYSWM_X11 ) {
@@ -122,21 +122,21 @@ char *VID_GetClipboardData( void ) {
 
     dpy = info.info.x11.display;
     win = info.info.x11.window;
-	
-	sowner = XGetSelectionOwner( dpy, XA_PRIMARY );
-	if( sowner == None ) {
+    
+    sowner = XGetSelectionOwner( dpy, XA_PRIMARY );
+    if( sowner == None ) {
         return NULL;
     }
 
     property = XInternAtom( dpy, "GETCLIPBOARDDATA_PROP", False );
-		                       
+                               
     XConvertSelection( dpy, XA_PRIMARY, XA_STRING, property, win, CurrentTime );
-		
+        
     XSync( dpy, False );
-		
+        
     result = XGetWindowProperty( dpy, win, property, 0, 0, False,
         AnyPropertyType, &type, &format, &len, &bytes_left, &data );
-								   
+                                   
     if( result != Success ) {
         return NULL;
     }
@@ -150,7 +150,7 @@ char *VID_GetClipboardData( void ) {
         }
     }
 
-	XFree( data );
+    XFree( data );
 
     return ret;
 #else
@@ -221,7 +221,7 @@ void VID_SetMode( void ) {
 void VID_FatalShutdown( void ) {
     SDL_ShowCursor( SDL_ENABLE );
     SDL_WM_GrabInput( SDL_GRAB_OFF );
-	SDL_Quit();
+    SDL_Quit();
 }
 
 static qboolean InitVideo( void ) {
@@ -532,9 +532,9 @@ void VID_EndFrame( void ) {
 static cvar_t *gl_swapinterval;
 
 static void gl_swapinterval_changed( cvar_t *self ) {
-	if( sdl.glXSwapIntervalSGI ) {
-	    sdl.glXSwapIntervalSGI( self->integer );
-	}
+    if( sdl.glXSwapIntervalSGI ) {
+        sdl.glXSwapIntervalSGI( self->integer );
+    }
 }
 */
 
@@ -546,7 +546,7 @@ qboolean VID_Init( void ) {
     }
 
     gl_driver = Cvar_Get( "gl_driver", DEFAULT_OPENGL_DRIVER, CVAR_LATCH );
-//	gl_swapinterval = Cvar_Get( "gl_swapinterval", "1", CVAR_ARCHIVE );
+//  gl_swapinterval = Cvar_Get( "gl_swapinterval", "1", CVAR_ARCHIVE );
 
     if( SDL_GL_LoadLibrary( gl_driver->string ) == -1 ) {
         Com_EPrintf( "Couldn't load OpenGL library: %s\n", SDL_GetError() );

@@ -36,7 +36,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-#define PRIVATE	static
+#define PRIVATE static
 
 #ifdef __COREDLL__
 #ifdef GetProcAddress
@@ -56,7 +56,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 
 #ifndef SPI_GETWHEELSCROLLLINES
-#define SPI_GETWHEELSCROLLLINES	104
+#define SPI_GETWHEELSCROLLLINES 104
 #endif
 
 #ifndef WM_XBUTTONDOWN
@@ -69,7 +69,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MK_XBUTTON2         0x0040
 #endif
 
-#define MOUSE_BUTTONS	5
+#define MOUSE_BUTTONS   5
 
 #ifndef __LPCGUID_DEFINED__
 #define __LPCGUID_DEFINED__
@@ -91,7 +91,7 @@ typedef struct {
 
     DEVMODE  dm;
 
-    DWORD	lastMsgTime;
+    DWORD   lastMsgTime;
     HHOOK   kbdHook;
 
     vidFlags_t flags;
@@ -100,21 +100,21 @@ typedef struct {
     SHORT   gamma_orig[3][256];
 #endif
     vrect_t rc;
-	byte	*buffer;
-	int		pitch;
+    byte    *buffer;
+    int     pitch;
 
     int     center_x, center_y;
 
-    qboolean	alttab_disabled;
+    qboolean    alttab_disabled;
     int         mode_changed;
 
     struct {
-        qboolean	initialized;
-        grab_t	    grabbed;
-        int			state;
+        qboolean    initialized;
+        grab_t      grabbed;
+        int         state;
         qboolean    parmsvalid;
-        qboolean	restoreparms;
-        int		    originalparms[3];
+        qboolean    restoreparms;
+        int         originalparms[3];
     } mouse;
 } win_state_t;
 
@@ -128,7 +128,7 @@ void Win_UpdateGamma( const byte *table );
 
 #endif // USE_CLIENT
 
-extern HINSTANCE		hGlobalInstance;
+extern HINSTANCE        hGlobalInstance;
 extern qboolean         iswinnt;
 
 #if USE_DBGHELP

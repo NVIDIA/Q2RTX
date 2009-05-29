@@ -239,14 +239,14 @@ of server connections
 #define CONNECT_DELAY    3000
 
 typedef enum {
-	ca_uninitialized,
-	ca_disconnected, 	// not talking to a server
-	ca_challenging,		// sending getchallenge packets to the server
-	ca_connecting,		// sending connect packets to the server
-	ca_connected,		// netchan_t established, waiting for svc_serverdata
-	ca_loading,			// loading level data
+    ca_uninitialized,
+    ca_disconnected,    // not talking to a server
+    ca_challenging,     // sending getchallenge packets to the server
+    ca_connecting,      // sending connect packets to the server
+    ca_connected,       // netchan_t established, waiting for svc_serverdata
+    ca_loading,         // loading level data
     ca_precached,       // loaded level data, waiting for svc_frame
-	ca_active			// game views should be displayed
+    ca_active           // game views should be displayed
 } connstate_t;
 
 typedef struct client_static_s {

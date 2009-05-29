@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 
 typedef struct list_s {
-	struct list_s	*prev; // head
+    struct list_s   *prev; // head
     struct list_s   *next; // tail
 } list_t;
 
@@ -110,17 +110,17 @@ static inline void List_Remove( list_t *elem ) {
     LIST_PREV( type, entry, member ) )
 
 #define LIST_FOR_EACH( type, cursor, list, member ) \
-	for( cursor = LIST_FIRST( type, list, member ); \
+    for( cursor = LIST_FIRST( type, list, member ); \
         &(cursor)->member != list; \
         cursor = LIST_NEXT( type, cursor, member ) )
 
 #define LIST_FOR_EACH_REVERSED( type, cursor, list, member ) \
-	for( cursor = LIST_LAST( type, list, member ); \
+    for( cursor = LIST_LAST( type, list, member ); \
         &(cursor)->member != list; \
         cursor = LIST_PREV( type, cursor, member ) )
 
 #define LIST_FOR_EACH_SAFE( type, cursor, next, list, member ) \
-	for( cursor = LIST_FIRST( type, list, member ); \
+    for( cursor = LIST_FIRST( type, list, member ); \
         next = LIST_NEXT( type, cursor, member ), \
         &(cursor)->member != list; \
         cursor = next )

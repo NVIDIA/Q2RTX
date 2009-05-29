@@ -22,9 +22,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // win_wgl.h
 //
 
-qboolean	WGL_Init( const char *dllname );
-void		WGL_Shutdown( void );
-void		*WGL_GetProcAddress( const char *symbol );
+qboolean    WGL_Init( const char *dllname );
+void        WGL_Shutdown( void );
+void        *WGL_GetProcAddress( const char *symbol );
 
 extern  void ( APIENTRY * qglDrawBuffer )(GLenum mode);
 extern  const GLubyte * ( APIENTRY * qglGetString )(GLenum name);

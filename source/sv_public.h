@@ -19,11 +19,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 typedef enum {
-	ss_dead,			// no map loaded
-	ss_loading,			// spawning level edicts
-	ss_game,			// actively running
+    ss_dead,            // no map loaded
+    ss_loading,         // spawning level edicts
+    ss_game,            // actively running
 #if USE_MVD_CLIENT
-	ss_broadcast        // running MVD client
+    ss_broadcast        // running MVD client
 #endif
 } server_state_t;
 

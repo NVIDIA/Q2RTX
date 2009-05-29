@@ -54,37 +54,37 @@ BOOL ( WINAPI * qwglSetDeviceGammaRampEXT)( const unsigned char *, const unsigne
 
 void WGL_Shutdown( void ) {
     if( glw.hinstOpenGL ) {
-    	FreeLibrary( glw.hinstOpenGL );
-	    glw.hinstOpenGL = NULL;
+        FreeLibrary( glw.hinstOpenGL );
+        glw.hinstOpenGL = NULL;
     }
 
-	qglDrawBuffer	= NULL;
-	qglGetString	= NULL;
+    qglDrawBuffer   = NULL;
+    qglGetString    = NULL;
 
-	qwglCopyContext              = NULL;
-	qwglCreateContext            = NULL;
-	qwglCreateLayerContext       = NULL;
-	qwglDeleteContext            = NULL;
-	qwglDescribeLayerPlane       = NULL;
-	qwglGetCurrentContext        = NULL;
-	qwglGetCurrentDC             = NULL;
-	qwglGetLayerPaletteEntries   = NULL;
-	qwglGetProcAddress           = NULL;
-	qwglMakeCurrent              = NULL;
-	qwglRealizeLayerPalette      = NULL;
-	qwglSetLayerPaletteEntries   = NULL;
-	qwglShareLists               = NULL;
-	qwglSwapLayerBuffers         = NULL;
+    qwglCopyContext              = NULL;
+    qwglCreateContext            = NULL;
+    qwglCreateLayerContext       = NULL;
+    qwglDeleteContext            = NULL;
+    qwglDescribeLayerPlane       = NULL;
+    qwglGetCurrentContext        = NULL;
+    qwglGetCurrentDC             = NULL;
+    qwglGetLayerPaletteEntries   = NULL;
+    qwglGetProcAddress           = NULL;
+    qwglMakeCurrent              = NULL;
+    qwglRealizeLayerPalette      = NULL;
+    qwglSetLayerPaletteEntries   = NULL;
+    qwglShareLists               = NULL;
+    qwglSwapLayerBuffers         = NULL;
 
-	qwglChoosePixelFormat        = NULL;
-	qwglDescribePixelFormat      = NULL;
-	qwglGetPixelFormat           = NULL;
-	qwglSetPixelFormat           = NULL;
-	qwglSwapBuffers              = NULL;
+    qwglChoosePixelFormat        = NULL;
+    qwglDescribePixelFormat      = NULL;
+    qwglGetPixelFormat           = NULL;
+    qwglSetPixelFormat           = NULL;
+    qwglSwapBuffers              = NULL;
 
-	qwglSwapIntervalEXT          = NULL;
-	qwglGetDeviceGammaRampEXT    = NULL;
-	qwglSetDeviceGammaRampEXT    = NULL;
+    qwglSwapIntervalEXT          = NULL;
+    qwglGetDeviceGammaRampEXT    = NULL;
+    qwglSetDeviceGammaRampEXT    = NULL;
 }
 
 
@@ -96,39 +96,39 @@ void WGL_Shutdown( void ) {
     } while( 0 )
 
 qboolean WGL_Init( const char *dllname ) {
-	if( ( glw.hinstOpenGL = LoadLibrary( dllname ) ) == NULL ) {
-		return qfalse;
-	}
+    if( ( glw.hinstOpenGL = LoadLibrary( dllname ) ) == NULL ) {
+        return qfalse;
+    }
 
-	GPA( glDrawBuffer );
-	GPA( glGetString );
+    GPA( glDrawBuffer );
+    GPA( glGetString );
 
-	GPA( wglCopyContext );
-	GPA( wglCreateContext );
-	GPA( wglCreateLayerContext );
-	GPA( wglDeleteContext );
-	GPA( wglDescribeLayerPlane );
-	GPA( wglGetCurrentContext );
-	GPA( wglGetCurrentDC );
-	GPA( wglGetLayerPaletteEntries );
-	GPA( wglGetProcAddress );
-	GPA( wglMakeCurrent );
-	GPA( wglRealizeLayerPalette );
-	GPA( wglSetLayerPaletteEntries );
-	GPA( wglShareLists );
-	GPA( wglSwapLayerBuffers );
+    GPA( wglCopyContext );
+    GPA( wglCreateContext );
+    GPA( wglCreateLayerContext );
+    GPA( wglDeleteContext );
+    GPA( wglDescribeLayerPlane );
+    GPA( wglGetCurrentContext );
+    GPA( wglGetCurrentDC );
+    GPA( wglGetLayerPaletteEntries );
+    GPA( wglGetProcAddress );
+    GPA( wglMakeCurrent );
+    GPA( wglRealizeLayerPalette );
+    GPA( wglSetLayerPaletteEntries );
+    GPA( wglShareLists );
+    GPA( wglSwapLayerBuffers );
 
-	GPA( wglChoosePixelFormat );
-	GPA( wglDescribePixelFormat );
-	GPA( wglGetPixelFormat );
-	GPA( wglSetPixelFormat );
-	GPA( wglSwapBuffers );
+    GPA( wglChoosePixelFormat );
+    GPA( wglDescribePixelFormat );
+    GPA( wglGetPixelFormat );
+    GPA( wglSetPixelFormat );
+    GPA( wglSwapBuffers );
 
-	qwglSwapIntervalEXT			 = NULL;
-	qwglGetDeviceGammaRampEXT	 = NULL;
-	qwglSetDeviceGammaRampEXT	 = NULL;
+    qwglSwapIntervalEXT          = NULL;
+    qwglGetDeviceGammaRampEXT    = NULL;
+    qwglSetDeviceGammaRampEXT    = NULL;
 
-	return qtrue;
+    return qtrue;
 }
 
 

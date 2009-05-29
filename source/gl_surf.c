@@ -96,7 +96,7 @@ static qboolean LM_AllocBlock( int w, int h, int *s, int *t ) {
     int i, j;
     int x, y, maxInuse, minInuse;
 
-	x = 0; y = LM_BLOCK_HEIGHT;
+    x = 0; y = LM_BLOCK_HEIGHT;
     minInuse = LM_BLOCK_HEIGHT;
     for( i = 0; i < LM_BLOCK_WIDTH - w; i++ ) {
         maxInuse = 0;
@@ -140,7 +140,7 @@ static void LM_UploadBlock( void ) {
 
     qglActiveTextureARB( GL_TEXTURE1_ARB );
     qglBindTexture( GL_TEXTURE_2D, LM_TEXNUM + lm.numMaps );
-	qglTexImage2D( GL_TEXTURE_2D, 0, comp, LM_BLOCK_WIDTH, LM_BLOCK_HEIGHT, 0,
+    qglTexImage2D( GL_TEXTURE_2D, 0, comp, LM_BLOCK_WIDTH, LM_BLOCK_HEIGHT, 0,
         GL_RGBA, GL_UNSIGNED_BYTE, lm.buffer );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
@@ -211,14 +211,14 @@ POLYGONS BUILDING
 */
 
 static void GL_BuildSurfacePoly( bsp_t *bsp, mface_t *surf, vec_t *vbo ) {
-	msurfedge_t *src_surfedge;
-	mvertex_t *src_vert;
-	medge_t *src_edge;
-	mtexinfo_t *texinfo = surf->texinfo;
+    msurfedge_t *src_surfedge;
+    mvertex_t *src_vert;
+    medge_t *src_edge;
+    mtexinfo_t *texinfo = surf->texinfo;
     int i;
     vec2_t scale, tc, mins, maxs;
     int bmins[2], bmaxs[2];
-	
+    
     surf->texnum[0] = texinfo->image->texnum;
 
     // normalize texture coordinates
@@ -231,27 +231,27 @@ static void GL_BuildSurfacePoly( bsp_t *bsp, mface_t *surf, vec_t *vbo ) {
         scale[1] *= 0.5f;
     }
 
-	mins[0] = mins[1] = 99999;
-	maxs[0] = maxs[1] = -99999;
+    mins[0] = mins[1] = 99999;
+    maxs[0] = maxs[1] = -99999;
 
-	src_surfedge = surf->firstsurfedge;
-	for( i = 0; i < surf->numsurfedges; i++ ) {
-		src_edge = src_surfedge->edge;
-		src_vert = src_edge->v[src_surfedge->vert];
+    src_surfedge = surf->firstsurfedge;
+    for( i = 0; i < surf->numsurfedges; i++ ) {
+        src_edge = src_surfedge->edge;
+        src_vert = src_edge->v[src_surfedge->vert];
         src_surfedge++;
 
         // vertex coordinates
-		VectorCopy( src_vert->point, vbo );
-		
-		// texture0 coordinates
-		tc[0] = DotProduct( vbo, texinfo->axis[0] ) + texinfo->offset[0];
-		tc[1] = DotProduct( vbo, texinfo->axis[1] ) + texinfo->offset[1];
+        VectorCopy( src_vert->point, vbo );
+        
+        // texture0 coordinates
+        tc[0] = DotProduct( vbo, texinfo->axis[0] ) + texinfo->offset[0];
+        tc[1] = DotProduct( vbo, texinfo->axis[1] ) + texinfo->offset[1];
 
-		if( mins[0] > tc[0] ) mins[0] = tc[0];
-		if( maxs[0] < tc[0] ) maxs[0] = tc[0];
-		
-		if( mins[1] > tc[1] ) mins[1] = tc[1];
-		if( maxs[1] < tc[1] ) maxs[1] = tc[1];
+        if( mins[0] > tc[0] ) mins[0] = tc[0];
+        if( maxs[0] < tc[0] ) maxs[0] = tc[0];
+        
+        if( mins[1] > tc[1] ) mins[1] = tc[1];
+        if( maxs[1] < tc[1] ) maxs[1] = tc[1];
 
         vbo[3] = tc[0] * scale[0];
         vbo[4] = tc[1] * scale[1];
@@ -265,8 +265,8 @@ static void GL_BuildSurfacePoly( bsp_t *bsp, mface_t *surf, vec_t *vbo ) {
             vbo[6] = tc[1];
         }
 
-		vbo += VERTEX_SIZE;
-	}
+        vbo += VERTEX_SIZE;
+    }
 
     // calculate surface extents
     bmins[0] = floor( mins[0] / 16 );
@@ -274,11 +274,11 @@ static void GL_BuildSurfacePoly( bsp_t *bsp, mface_t *surf, vec_t *vbo ) {
     bmaxs[0] = ceil( maxs[0] / 16 );
     bmaxs[1] = ceil( maxs[1] / 16 );
 
-	surf->texturemins[0] = bmins[0] << 4;
-	surf->texturemins[1] = bmins[1] << 4;
+    surf->texturemins[0] = bmins[0] << 4;
+    surf->texturemins[1] = bmins[1] << 4;
 
-	surf->extents[0] = ( bmaxs[0] - bmins[0] ) << 4;
-	surf->extents[1] = ( bmaxs[1] - bmins[1] ) << 4;
+    surf->extents[0] = ( bmaxs[0] - bmins[0] ) << 4;
+    surf->extents[1] = ( bmaxs[1] - bmins[1] ) << 4;
 }
 
 void GL_FreeWorld( void ) {
@@ -316,28 +316,28 @@ void GL_LoadWorld( const char *name ) {
             __func__, name, BSP_GetError() );
     }
 
-	// check if the required world model was already loaded
+    // check if the required world model was already loaded
     if( gl_static.world.cache == bsp ) {
         for( i = 0; i < bsp->numtexinfo; i++ ) {
             bsp->texinfo[i].image->registration_sequence = registration_sequence;
         }
-	    for( i = 0; i < bsp->numnodes; i++ ) {
+        for( i = 0; i < bsp->numnodes; i++ ) {
             bsp->nodes[i].visframe = 0;
         }
-	    for( i = 0; i < bsp->numleafs; i++ ) {
+        for( i = 0; i < bsp->numleafs; i++ ) {
             bsp->leafs[i].visframe = 0;
         }
-		Com_DPrintf( "%s: reused old world model\n", __func__ );
+        Com_DPrintf( "%s: reused old world model\n", __func__ );
         bsp->refcount--;
         return;
     }
 
-	gl_coloredlightmaps = Cvar_Get( "gl_coloredlightmaps", "1", CVAR_ARCHIVE|CVAR_FILES );
-	gl_brightness = Cvar_Get( "gl_brightness", "0", CVAR_ARCHIVE|CVAR_FILES );
-	gl_modulate_mask = Cvar_Get( "gl_modulate_mask", "3", CVAR_FILES );
+    gl_coloredlightmaps = Cvar_Get( "gl_coloredlightmaps", "1", CVAR_ARCHIVE|CVAR_FILES );
+    gl_brightness = Cvar_Get( "gl_brightness", "0", CVAR_ARCHIVE|CVAR_FILES );
+    gl_modulate_mask = Cvar_Get( "gl_modulate_mask", "3", CVAR_FILES );
 
-	colorScale = Cvar_ClampValue( gl_coloredlightmaps, 0, 1 );
-	colorAdj = 255 * Cvar_ClampValue( gl_brightness, -1, 1 );
+    colorScale = Cvar_ClampValue( gl_coloredlightmaps, 0, 1 );
+    colorAdj = 255 * Cvar_ClampValue( gl_brightness, -1, 1 );
 
     // free previous model, if any
     GL_FreeWorld();
@@ -346,7 +346,7 @@ void GL_LoadWorld( const char *name ) {
 
     // register all texinfo
     for( i = 0, info = bsp->texinfo; i < bsp->numtexinfo; i++, info++ ) {
-		Q_concat( buffer, sizeof( buffer ), "textures/", info->name, ".wal", NULL );
+        Q_concat( buffer, sizeof( buffer ), "textures/", info->name, ".wal", NULL );
         image = IMG_Find( buffer, it_wall );
         info->image = image ? image : r_notexture;
     }

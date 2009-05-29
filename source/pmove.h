@@ -30,15 +30,15 @@ Common between server and client so prediction matches
 
 typedef struct {
     qboolean    qwmode;
-	qboolean	airaccelerate;
-	qboolean	strafehack;
+    qboolean    airaccelerate;
+    qboolean    strafehack;
     qboolean    flyhack;
     qboolean    waterhack;
-	float		speedmult;
+    float       speedmult;
     float       watermult;
-	float		maxspeed;
-	float		friction;
-	float		waterfriction;
+    float       maxspeed;
+    float       friction;
+    float       waterfriction;
     float       flyfriction;
 } pmoveParams_t;
 

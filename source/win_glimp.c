@@ -37,8 +37,8 @@ GLimp_SwitchFullscreen
 
 glwstate_t glw;
 
-static cvar_t	*gl_driver;
-static cvar_t	*gl_drawbuffer;
+static cvar_t   *gl_driver;
+static cvar_t   *gl_drawbuffer;
 static cvar_t   *gl_swapinterval;
 
 /*
@@ -50,16 +50,16 @@ HGLRC, deleting the rendering context, and releasing the DC acquired
 for the window.  The state structure is also nulled out.
 */
 void VID_Shutdown( void ) {
-	if( qwglMakeCurrent ) {
-		qwglMakeCurrent( NULL, NULL );
-	}
+    if( qwglMakeCurrent ) {
+        qwglMakeCurrent( NULL, NULL );
+    }
 
-	if( glw.hGLRC && qwglDeleteContext ) {
-		qwglDeleteContext( glw.hGLRC );
-		glw.hGLRC = NULL;
-	}
+    if( glw.hGLRC && qwglDeleteContext ) {
+        qwglDeleteContext( glw.hGLRC );
+        glw.hGLRC = NULL;
+    }
 
-	WGL_Shutdown();
+    WGL_Shutdown();
     Win_Shutdown();
 
     if( gl_swapinterval ) {
@@ -71,109 +71,109 @@ void VID_Shutdown( void ) {
 
 static qboolean InitGL( void ) {
     PIXELFORMATDESCRIPTOR pfd = {
-		sizeof( PIXELFORMATDESCRIPTOR ),	// size of this pfd
-		1,								// version number
-		PFD_DRAW_TO_WINDOW |			// support window
-		PFD_SUPPORT_OPENGL |			// support OpenGL
-		PFD_DOUBLEBUFFER,				// double buffered
-		PFD_TYPE_RGBA,					// RGBA type
-		24,								// 24-bit color depth
-		0, 0, 0, 0, 0, 0,				// color bits ignored
-		0,								// no alpha buffer
-		0,								// shift bit ignored
-		0,								// no accumulation buffer
-		0, 0, 0, 0, 					// accum bits ignored
-		32,								// 32-bit z-buffer	
-		0,								// no stencil buffer
-		0,								// no auxiliary buffer
-		PFD_MAIN_PLANE,					// main layer
-		0,								// reserved
-		0, 0, 0							// layer masks ignored
+        sizeof( PIXELFORMATDESCRIPTOR ),    // size of this pfd
+        1,                              // version number
+        PFD_DRAW_TO_WINDOW |            // support window
+        PFD_SUPPORT_OPENGL |            // support OpenGL
+        PFD_DOUBLEBUFFER,               // double buffered
+        PFD_TYPE_RGBA,                  // RGBA type
+        24,                             // 24-bit color depth
+        0, 0, 0, 0, 0, 0,               // color bits ignored
+        0,                              // no alpha buffer
+        0,                              // shift bit ignored
+        0,                              // no accumulation buffer
+        0, 0, 0, 0,                     // accum bits ignored
+        32,                             // 32-bit z-buffer  
+        0,                              // no stencil buffer
+        0,                              // no auxiliary buffer
+        PFD_MAIN_PLANE,                 // main layer
+        0,                              // reserved
+        0, 0, 0                         // layer masks ignored
     };
     int pixelformat;
     const char *renderer;
 
-	// figure out if we're running on a minidriver or not
-	if( !strstr( gl_driver->string, "opengl32" ) ) {
-		Com_Printf( "...running a minidriver: %s\n", gl_driver->string );
-		glw.minidriver = qtrue;
-	}
+    // figure out if we're running on a minidriver or not
+    if( !strstr( gl_driver->string, "opengl32" ) ) {
+        Com_Printf( "...running a minidriver: %s\n", gl_driver->string );
+        glw.minidriver = qtrue;
+    }
 
-	// load OpenGL library
-	Com_DPrintf( "...initializing WGL: " );
-	if( !WGL_Init( gl_driver->string ) ) {
-		goto fail1;
-	}
-	Com_DPrintf( "ok\n" );
+    // load OpenGL library
+    Com_DPrintf( "...initializing WGL: " );
+    if( !WGL_Init( gl_driver->string ) ) {
+        goto fail1;
+    }
+    Com_DPrintf( "ok\n" );
 
-	Com_DPrintf( "...setting pixel format: " );
-	if( glw.minidriver ) {
-		if ( ( pixelformat = qwglChoosePixelFormat( win.dc, &pfd ) ) == 0 ) {
-		    goto fail1;
-		}
-		if( qwglSetPixelFormat( win.dc, pixelformat, &pfd ) == FALSE ) {
-		    goto fail1;
-		}
-		qwglDescribePixelFormat( win.dc, pixelformat, sizeof( pfd ), &pfd );
-	} else {
-		if( ( pixelformat = ChoosePixelFormat( win.dc, &pfd ) ) == 0 ) {
-		    goto fail1;
-		}
-		if( SetPixelFormat( win.dc, pixelformat, &pfd ) == FALSE ) {
-		    goto fail1;
-		}
-		DescribePixelFormat( win.dc, pixelformat, sizeof( pfd ), &pfd );
-	}
-	Com_DPrintf( "ok\n" );
+    Com_DPrintf( "...setting pixel format: " );
+    if( glw.minidriver ) {
+        if ( ( pixelformat = qwglChoosePixelFormat( win.dc, &pfd ) ) == 0 ) {
+            goto fail1;
+        }
+        if( qwglSetPixelFormat( win.dc, pixelformat, &pfd ) == FALSE ) {
+            goto fail1;
+        }
+        qwglDescribePixelFormat( win.dc, pixelformat, sizeof( pfd ), &pfd );
+    } else {
+        if( ( pixelformat = ChoosePixelFormat( win.dc, &pfd ) ) == 0 ) {
+            goto fail1;
+        }
+        if( SetPixelFormat( win.dc, pixelformat, &pfd ) == FALSE ) {
+            goto fail1;
+        }
+        DescribePixelFormat( win.dc, pixelformat, sizeof( pfd ), &pfd );
+    }
+    Com_DPrintf( "ok\n" );
 
-	// startup the OpenGL subsystem by creating a context and making it current
-	Com_DPrintf( "...creating OpenGL context: " );
-	if( ( glw.hGLRC = qwglCreateContext( win.dc ) ) == NULL ) {
-		goto fail1;
-	}
-	Com_DPrintf( "ok\n" );
+    // startup the OpenGL subsystem by creating a context and making it current
+    Com_DPrintf( "...creating OpenGL context: " );
+    if( ( glw.hGLRC = qwglCreateContext( win.dc ) ) == NULL ) {
+        goto fail1;
+    }
+    Com_DPrintf( "ok\n" );
 
-	Com_DPrintf( "...making context current: " );
+    Com_DPrintf( "...making context current: " );
     if( !qwglMakeCurrent( win.dc, glw.hGLRC ) ) {
-		goto fail1;
-	}
-	Com_DPrintf( "ok\n" );
+        goto fail1;
+    }
+    Com_DPrintf( "ok\n" );
 
     renderer = ( const char * )qglGetString( GL_RENDERER );
 
     if( pfd.dwFlags & PFD_GENERIC_ACCELERATED ) {
         win.flags |= QVF_ACCELERATED;
     } else if( !renderer || !renderer[0] || !Q_stricmp( renderer, "gdi generic" ) ) {
-		Com_Printf( "No hardware OpenGL acceleration detected.\n" );
-		goto fail2;
+        Com_Printf( "No hardware OpenGL acceleration detected.\n" );
+        goto fail2;
     }
 
-	// print out PFD specifics
-	Com_Printf( "GL_VENDOR: %s\n", qglGetString( GL_VENDOR ) );
-	Com_Printf( "GL_RENDERER: %s\n", renderer );
-	Com_Printf( "GL_PFD: color(%d-bits: %d,%d,%d,%d) Z(%d-bit) stencil(%d-bit)\n",
-		pfd.cColorBits, pfd.cRedBits, pfd.cGreenBits, pfd.cBlueBits,
-		pfd.cAlphaBits, pfd.cDepthBits, pfd.cStencilBits );
+    // print out PFD specifics
+    Com_Printf( "GL_VENDOR: %s\n", qglGetString( GL_VENDOR ) );
+    Com_Printf( "GL_RENDERER: %s\n", renderer );
+    Com_Printf( "GL_PFD: color(%d-bits: %d,%d,%d,%d) Z(%d-bit) stencil(%d-bit)\n",
+        pfd.cColorBits, pfd.cRedBits, pfd.cGreenBits, pfd.cBlueBits,
+        pfd.cAlphaBits, pfd.cDepthBits, pfd.cStencilBits );
 
-	return qtrue;
+    return qtrue;
 
 fail1:
-	Com_DPrintf( "failed with error %#lx\n", GetLastError() );
+    Com_DPrintf( "failed with error %#lx\n", GetLastError() );
 fail2:
-	if( glw.hGLRC && qwglDeleteContext ) {
-		qwglDeleteContext( glw.hGLRC );
-		glw.hGLRC = NULL;
-	}
+    if( glw.hGLRC && qwglDeleteContext ) {
+        qwglDeleteContext( glw.hGLRC );
+        glw.hGLRC = NULL;
+    }
 
-	WGL_Shutdown();
+    WGL_Shutdown();
 
-	return qfalse;
+    return qfalse;
 }
 
 static void gl_swapinterval_changed( cvar_t *self ) {
-	if( qwglSwapIntervalEXT ) {
-		qwglSwapIntervalEXT( self->integer );
-	}
+    if( qwglSwapIntervalEXT ) {
+        qwglSwapIntervalEXT( self->integer );
+    }
 }
 
 /*
@@ -186,12 +186,12 @@ doing the wgl interface stuff.
 qboolean VID_Init( void ) {
     const char *extensions;
 
-	gl_driver = Cvar_Get( "gl_driver", "opengl32", CVAR_ARCHIVE|CVAR_REFRESH );
-	gl_drawbuffer = Cvar_Get( "gl_drawbuffer", "GL_BACK", 0 );
-	gl_swapinterval = Cvar_Get( "gl_swapinterval", "1", CVAR_ARCHIVE );
+    gl_driver = Cvar_Get( "gl_driver", "opengl32", CVAR_ARCHIVE|CVAR_REFRESH );
+    gl_drawbuffer = Cvar_Get( "gl_drawbuffer", "GL_BACK", 0 );
+    gl_swapinterval = Cvar_Get( "gl_swapinterval", "1", CVAR_ARCHIVE );
 
     // create the window
-	Win_Init();
+    Win_Init();
 
     // initialize OpenGL context
     if( !InitGL() ) {
@@ -206,19 +206,19 @@ qboolean VID_Init( void ) {
     }
 
     // initialize WGL extensions
-	extensions = ( const char * )qglGetString( GL_EXTENSIONS );
-	if( extensions && strstr( extensions, "WGL_EXT_swap_control" ) ) {
-		Com_Printf( "...enabling WGL_EXT_swap_control\n" );
-		qwglSwapIntervalEXT = ( PFNWGLSWAPINTERWALEXTPROC )qwglGetProcAddress( "wglSwapIntervalEXT" );        
+    extensions = ( const char * )qglGetString( GL_EXTENSIONS );
+    if( extensions && strstr( extensions, "WGL_EXT_swap_control" ) ) {
+        Com_Printf( "...enabling WGL_EXT_swap_control\n" );
+        qwglSwapIntervalEXT = ( PFNWGLSWAPINTERWALEXTPROC )qwglGetProcAddress( "wglSwapIntervalEXT" );        
         gl_swapinterval->changed = gl_swapinterval_changed;
         gl_swapinterval_changed( gl_swapinterval );
-	} else {
-		Com_Printf( "WGL_EXT_swap_control not found\n" );
+    } else {
+        Com_Printf( "WGL_EXT_swap_control not found\n" );
     }
 
     VID_SetMode();
 
-	return qtrue;
+    return qtrue;
 
 fail:
     Win_Shutdown();

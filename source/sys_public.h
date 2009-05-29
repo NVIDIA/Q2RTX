@@ -19,47 +19,47 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 typedef struct {
-	void	*base;
-	size_t	maxsize;
-	size_t	cursize;
+    void    *base;
+    size_t  maxsize;
+    size_t  cursize;
     size_t  mapped;
 } mempool_t;
 
 // loads the dll and returns entry pointer
 void    *Sys_LoadLibrary( const char *path, const char *sym, void **handle );
-void	Sys_FreeLibrary( void *handle );
+void    Sys_FreeLibrary( void *handle );
 void    *Sys_GetProcAddress( void *handle, const char *sym );
 
-unsigned	Sys_Milliseconds( void );
+unsigned    Sys_Milliseconds( void );
 void    Sys_Sleep( int msec );
 
-void	Hunk_Begin( mempool_t *pool, size_t maxsize );
-void	*Hunk_Alloc( mempool_t *pool, size_t size );
+void    Hunk_Begin( mempool_t *pool, size_t maxsize );
+void    *Hunk_Alloc( mempool_t *pool, size_t size );
 void    Hunk_End( mempool_t *pool );
-void	Hunk_Free( mempool_t *pool );
+void    Hunk_Free( mempool_t *pool );
 
-void	Sys_Init( void );
+void    Sys_Init( void );
 void    Sys_AddDefaultConfig( void );
 
 #if USE_SYSCON
 void    Sys_RunConsole( void );
-void	Sys_ConsoleOutput( const char *string );
+void    Sys_ConsoleOutput( const char *string );
 void    Sys_SetConsoleTitle( const char *title );
 void    Sys_Printf( const char *fmt, ... ) q_printf( 1, 2 );
 #endif
 
-void	Sys_Error( const char *error, ... ) q_noreturn q_printf( 1, 2 );
-void	Sys_Quit( void ) q_noreturn;
+void    Sys_Error( const char *error, ... ) q_noreturn q_printf( 1, 2 );
+void    Sys_Quit( void ) q_noreturn;
 
-void	**Sys_ListFiles( const char *path, const char *extension,
+void    **Sys_ListFiles( const char *path, const char *extension,
                          int flags, size_t length, int *numFiles );
 
 qboolean Sys_GetPathInfo( const char *path, fsFileInfo_t *info );
 qboolean Sys_GetFileInfo( FILE *fp, fsFileInfo_t *info );
 
-char	*Sys_GetCurrentDirectory( void );
+char    *Sys_GetCurrentDirectory( void );
 
-void	Sys_DebugBreak( void );
+void    Sys_DebugBreak( void );
 
 void    Sys_FixFPCW( void );
 

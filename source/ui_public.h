@@ -26,15 +26,15 @@ typedef enum {
 } uiMenu_t;
 
 qboolean    UI_Init( void );
-void    	UI_Shutdown( void );
+void        UI_Shutdown( void );
 void        UI_ModeChanged( void );
-void    	UI_Keydown( int key );
-void    	UI_CharEvent( int key );
-void    	UI_Draw( int realtime );
-void    	UI_OpenMenu( uiMenu_t menu );
-void    	UI_ErrorMenu( comErrorType_t type, const char *text );
-void    	UI_AddToServerList( const serverStatus_t *status );
-void    	UI_MouseEvent( int x, int y );
+void        UI_Keydown( int key );
+void        UI_CharEvent( int key );
+void        UI_Draw( int realtime );
+void        UI_OpenMenu( uiMenu_t menu );
+void        UI_ErrorMenu( comErrorType_t type, const char *text );
+void        UI_AddToServerList( const serverStatus_t *status );
+void        UI_MouseEvent( int x, int y );
 qboolean    UI_IsTransparent( void );
-void    	UI_DrawLoading( int realtime );
+void        UI_DrawLoading( int realtime );
 

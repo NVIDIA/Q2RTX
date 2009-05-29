@@ -26,7 +26,7 @@ MODEL MANAGER
 =============================================================================
 */
 
-#define Model_Malloc( size )	Hunk_Alloc( &model->pool, size )
+#define Model_Malloc( size )    Hunk_Alloc( &model->pool, size )
 
 // FIXME: MD3 has 256 limit
 #define MAX_ALIAS_SKINS     32
@@ -38,16 +38,16 @@ typedef struct mspriteframe_s {
 } mspriteframe_t;
 
 typedef struct model_s {
-	char name[MAX_QPATH];
-	int registration_sequence;
-	mempool_t pool;
+    char name[MAX_QPATH];
+    int registration_sequence;
+    mempool_t pool;
 
-	// alias models
-	int numframes;
-	struct maliasframe_s *frames;
+    // alias models
+    int numframes;
+    struct maliasframe_s *frames;
 #if USE_REF == REF_GL
-	int nummeshes;
-	struct maliasmesh_s *meshes;
+    int nummeshes;
+    struct maliasmesh_s *meshes;
 #else
     int numskins;
     struct image_s *skins[MAX_ALIAS_SKINS];
@@ -58,8 +58,8 @@ typedef struct model_s {
     int numverts;
 #endif
 
-	// sprite models
-	struct mspriteframe_s *spriteframes;
+    // sprite models
+    struct mspriteframe_s *spriteframes;
 } model_t;
 
 extern int registration_sequence;

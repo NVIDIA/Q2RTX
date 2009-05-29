@@ -26,10 +26,10 @@ qboolean GL_LightPoint( vec3_t origin, vec3_t color ) {
     bsp_t *bsp = gl_static.world.cache;
     mface_t *surf;
     int s, t;
-	byte *b1, *b2, *b3, *b4;
-	int fracu, fracv;
-	int w1, w2, w3, w4;
-	byte temp[3];
+    byte *b1, *b2, *b3, *b4;
+    int fracu, fracv;
+    int w1, w2, w3, w4;
+    byte temp[3];
     int pitch;
     vec3_t point;
 
@@ -37,9 +37,9 @@ qboolean GL_LightPoint( vec3_t origin, vec3_t color ) {
         return qfalse;
     }
 
-	point[0] = origin[0];
-	point[1] = origin[1];
-	point[2] = origin[2] - 8192;
+    point[0] = origin[0];
+    point[1] = origin[1];
+    point[2] = origin[2] - 8192;
     
     surf = BSP_LightPoint( bsp->nodes, origin, point, &s, &t );
     if( !surf ) {
@@ -117,8 +117,8 @@ void GL_MarkLights( void ) {
     dlight_t *light;
 
     for( i = 0, light = glr.fd.dlights; i < glr.fd.num_dlights; i++, light++ ) {
-		light->index = i;
-		VectorCopy( light->origin, light->transformed );
+        light->index = i;
+        VectorCopy( light->origin, light->transformed );
         GL_MarkLights_r( gl_static.world.cache->nodes, light );
     }
 }
@@ -126,48 +126,48 @@ void GL_MarkLights( void ) {
 static void GL_TransformLights( mmodel_t *model ) {
     int i;
     dlight_t *light;
-	vec3_t temp;
+    vec3_t temp;
 
-	if( !model->headnode ) {
-		return;
-	}
-	
+    if( !model->headnode ) {
+        return;
+    }
+    
     for( i = 0, light = glr.fd.dlights; i < glr.fd.num_dlights; i++, light++ ) {
-		light->index = i;
-		VectorSubtract( light->origin, glr.ent->origin, temp );
-		light->transformed[0] = DotProduct( temp, glr.entaxis[0] );
-		light->transformed[1] = DotProduct( temp, glr.entaxis[1] );
-		light->transformed[2] = DotProduct( temp, glr.entaxis[2] );
+        light->index = i;
+        VectorSubtract( light->origin, glr.ent->origin, temp );
+        light->transformed[0] = DotProduct( temp, glr.entaxis[0] );
+        light->transformed[1] = DotProduct( temp, glr.entaxis[1] );
+        light->transformed[2] = DotProduct( temp, glr.entaxis[2] );
 
-		GL_MarkLights_r( model->headnode, light );
+        GL_MarkLights_r( model->headnode, light );
     }
 }
 
 void GL_AddLights( vec3_t origin, vec3_t color ) {
-	dlight_t *light;
-	vec3_t dir;
-	vec_t dist, f;
+    dlight_t *light;
+    vec3_t dir;
+    vec_t dist, f;
     int i;
 
     for( i = 0, light = glr.fd.dlights; i < glr.fd.num_dlights; i++, light++ ) {
-		VectorSubtract( light->origin, origin, dir );
-		dist = VectorLength( dir );
-		if( dist > light->intensity ) {
-			continue;
-		}
+        VectorSubtract( light->origin, origin, dir );
+        dist = VectorLength( dir );
+        if( dist > light->intensity ) {
+            continue;
+        }
         f = 1.0f - dist / light->intensity;
-		VectorMA( color, f, light->color, color );
-	}
+        VectorMA( color, f, light->color, color );
+    }
 }
 #endif
 
 void R_LightPoint( vec3_t origin, vec3_t color ) {
     int i;
 
-	if( gl_fullbright->integer ) {
+    if( gl_fullbright->integer ) {
         VectorSet( color, 1, 1, 1 );
-		return;
-	}
+        return;
+    }
 
     // get lighting from world
     if( !GL_LightPoint( origin, color ) ) {
@@ -181,94 +181,94 @@ void R_LightPoint( vec3_t origin, vec3_t color ) {
     }
 #endif
 
-	// apply modulate twice to mimic original ref_gl behavior
-	VectorScale( color, gl_modulate->value, color );
+    // apply modulate twice to mimic original ref_gl behavior
+    VectorScale( color, gl_modulate->value, color );
 
-	for( i = 0; i < 3; i++ ) {
+    for( i = 0; i < 3; i++ ) {
         clamp( color[i], 0, 1 );
-	}
+    }
 }
 
 void GL_MarkLeaves( void ) {
     static int lastNodesVisible;
-	byte vis1[MAX_MAP_VIS];
-	byte vis2[MAX_MAP_VIS];
-	mleaf_t *leaf;
-	mnode_t *node;
-	uint32_t *src1, *src2;
-	int cluster1, cluster2, longs;
-	vec3_t tmp;
+    byte vis1[MAX_MAP_VIS];
+    byte vis2[MAX_MAP_VIS];
+    mleaf_t *leaf;
+    mnode_t *node;
+    uint32_t *src1, *src2;
+    int cluster1, cluster2, longs;
+    vec3_t tmp;
     int i;
     bsp_t *bsp = gl_static.world.cache;
 
-	leaf = BSP_PointLeaf( bsp->nodes, glr.fd.vieworg );
-	cluster1 = cluster2 = leaf->cluster;
-	VectorCopy( glr.fd.vieworg, tmp );
-	if( !leaf->contents ) {
-		tmp[2] -= 16;	
-	} else {
-		tmp[2] += 16;	
-    }	
-	leaf = BSP_PointLeaf( bsp->nodes, tmp );
-	if( !( leaf->contents & CONTENTS_SOLID ) ) {
-		cluster2 = leaf->cluster;
-	}
+    leaf = BSP_PointLeaf( bsp->nodes, glr.fd.vieworg );
+    cluster1 = cluster2 = leaf->cluster;
+    VectorCopy( glr.fd.vieworg, tmp );
+    if( !leaf->contents ) {
+        tmp[2] -= 16;   
+    } else {
+        tmp[2] += 16;   
+    }   
+    leaf = BSP_PointLeaf( bsp->nodes, tmp );
+    if( !( leaf->contents & CONTENTS_SOLID ) ) {
+        cluster2 = leaf->cluster;
+    }
     
-	if( cluster1 == glr.viewcluster1 && cluster2 == glr.viewcluster2 ) {
-		goto finish;
-	}
-		
-	if( gl_lockpvs->integer ) {
+    if( cluster1 == glr.viewcluster1 && cluster2 == glr.viewcluster2 ) {
+        goto finish;
+    }
+        
+    if( gl_lockpvs->integer ) {
         goto finish;
     }
 
-	glr.visframe++;
+    glr.visframe++;
     glr.viewcluster1 = cluster1;
-	glr.viewcluster2 = cluster2;
+    glr.viewcluster2 = cluster2;
 
     if( !bsp->vis || gl_novis->integer || cluster1 == -1 ) {
         // mark everything visible
-	    for( i = 0; i < bsp->numnodes; i++ ) {
+        for( i = 0; i < bsp->numnodes; i++ ) {
             bsp->nodes[i].visframe = glr.visframe;
         }
-	    for( i = 0; i < bsp->numleafs; i++ ) {
+        for( i = 0; i < bsp->numleafs; i++ ) {
             bsp->leafs[i].visframe = glr.visframe;
         }
-		lastNodesVisible = bsp->numnodes;
+        lastNodesVisible = bsp->numnodes;
         goto finish;
     }
 
-	BSP_ClusterVis( bsp, vis1, cluster1, DVIS_PVS );
-	if( cluster1 != cluster2 ) {
-	    BSP_ClusterVis( bsp, vis2, cluster2, DVIS_PVS );
-		longs = ( bsp->visrowsize + 3 ) / 4;
-		src1 = ( uint32_t * )vis1;
-		src2 = ( uint32_t * )vis2;
-		while( longs-- ) {
-			*src1++ |= *src2++;
-		}
-	}
+    BSP_ClusterVis( bsp, vis1, cluster1, DVIS_PVS );
+    if( cluster1 != cluster2 ) {
+        BSP_ClusterVis( bsp, vis2, cluster2, DVIS_PVS );
+        longs = ( bsp->visrowsize + 3 ) / 4;
+        src1 = ( uint32_t * )vis1;
+        src2 = ( uint32_t * )vis2;
+        while( longs-- ) {
+            *src1++ |= *src2++;
+        }
+    }
 
     lastNodesVisible = 0;
-	for( i = 0, leaf = bsp->leafs; i < bsp->numleafs; i++, leaf++ ) {
-		cluster1 = leaf->cluster;
-		if( cluster1 == -1 ) {
-			continue;
-		}
-		if( Q_IsBitSet( vis1, cluster1 ) ) {
-			node = ( mnode_t * )leaf;
+    for( i = 0, leaf = bsp->leafs; i < bsp->numleafs; i++, leaf++ ) {
+        cluster1 = leaf->cluster;
+        if( cluster1 == -1 ) {
+            continue;
+        }
+        if( Q_IsBitSet( vis1, cluster1 ) ) {
+            node = ( mnode_t * )leaf;
 
             // mark parent nodes visible
-			do {
-				if( node->visframe == glr.visframe ) {
-					break;
-				}
-				node->visframe = glr.visframe;
-				node = node->parent;
-				lastNodesVisible++;
-			} while( node );
-		}
-	}
+            do {
+                if( node->visframe == glr.visframe ) {
+                    break;
+                }
+                node->visframe = glr.visframe;
+                node = node->parent;
+                lastNodesVisible++;
+            } while( node );
+        }
+    }
     
 finish:
     c.nodesVisible = lastNodesVisible;
@@ -277,85 +277,85 @@ finish:
 
 
 
-#define BACKFACE_EPSILON	0.001f
+#define BACKFACE_EPSILON    0.001f
 
 #define BSP_CullFace( face, dot ) \
-		( ( (dot) < -BACKFACE_EPSILON && !( (face)->drawflags & DSURF_PLANEBACK ) ) || \
-		  ( (dot) >  BACKFACE_EPSILON &&  ( (face)->drawflags & DSURF_PLANEBACK ) ) )
+        ( ( (dot) < -BACKFACE_EPSILON && !( (face)->drawflags & DSURF_PLANEBACK ) ) || \
+          ( (dot) >  BACKFACE_EPSILON &&  ( (face)->drawflags & DSURF_PLANEBACK ) ) )
 
 void GL_DrawBspModel( mmodel_t *model ) {
-	mface_t *face;
-	int count;
-	vec3_t bounds[2];
-	vec_t dot;
-	vec3_t temp;
-	entity_t *ent = glr.ent;
-	glCullResult_t cull;
-	
-	if( glr.entrotated ) {
-		cull = GL_CullSphere( ent->origin, model->radius );
-		if( cull == CULL_OUT ) {
-			c.spheresCulled++;
-			return;
-		}
-		if( cull == CULL_CLIP ) {
-			VectorCopy( model->mins, bounds[0] );
-			VectorCopy( model->maxs, bounds[1] );
-			cull = GL_CullLocalBox( ent->origin, bounds );
-			if( cull == CULL_OUT ) {
-				c.rotatedBoxesCulled++;
-				return;
-			}
-		}
-		VectorSubtract( glr.fd.vieworg, ent->origin, temp );
-		modelViewOrigin[0] = DotProduct( temp, glr.entaxis[0] );
-		modelViewOrigin[1] = DotProduct( temp, glr.entaxis[1] );
-		modelViewOrigin[2] = DotProduct( temp, glr.entaxis[2] );
-	} else {
-		VectorAdd( model->mins, ent->origin, bounds[0] );
-		VectorAdd( model->maxs, ent->origin, bounds[1] );
-		cull = GL_CullBox( bounds );
-		if( cull == CULL_OUT ) {
-			c.boxesCulled++;
-			return;
-		}
-		VectorSubtract( glr.fd.vieworg, ent->origin, modelViewOrigin );
-	}
+    mface_t *face;
+    int count;
+    vec3_t bounds[2];
+    vec_t dot;
+    vec3_t temp;
+    entity_t *ent = glr.ent;
+    glCullResult_t cull;
+    
+    if( glr.entrotated ) {
+        cull = GL_CullSphere( ent->origin, model->radius );
+        if( cull == CULL_OUT ) {
+            c.spheresCulled++;
+            return;
+        }
+        if( cull == CULL_CLIP ) {
+            VectorCopy( model->mins, bounds[0] );
+            VectorCopy( model->maxs, bounds[1] );
+            cull = GL_CullLocalBox( ent->origin, bounds );
+            if( cull == CULL_OUT ) {
+                c.rotatedBoxesCulled++;
+                return;
+            }
+        }
+        VectorSubtract( glr.fd.vieworg, ent->origin, temp );
+        modelViewOrigin[0] = DotProduct( temp, glr.entaxis[0] );
+        modelViewOrigin[1] = DotProduct( temp, glr.entaxis[1] );
+        modelViewOrigin[2] = DotProduct( temp, glr.entaxis[2] );
+    } else {
+        VectorAdd( model->mins, ent->origin, bounds[0] );
+        VectorAdd( model->maxs, ent->origin, bounds[1] );
+        cull = GL_CullBox( bounds );
+        if( cull == CULL_OUT ) {
+            c.boxesCulled++;
+            return;
+        }
+        VectorSubtract( glr.fd.vieworg, ent->origin, modelViewOrigin );
+    }
 
-	glr.drawframe++;
+    glr.drawframe++;
 
 #if USE_DYNAMIC
-	if( gl_dynamic->integer ) {
-		GL_TransformLights( model );
-	}
+    if( gl_dynamic->integer ) {
+        GL_TransformLights( model );
+    }
 #endif
 
-	qglPushMatrix();
-	qglTranslatef( ent->origin[0], ent->origin[1], ent->origin[2] );
-	if( glr.entrotated ) {
-		qglRotatef( ent->angles[YAW],   0, 0, 1 );
-		qglRotatef( ent->angles[PITCH], 0, 1, 0 );
-		qglRotatef( ent->angles[ROLL],  1, 0, 0 );
-	}
+    qglPushMatrix();
+    qglTranslatef( ent->origin[0], ent->origin[1], ent->origin[2] );
+    if( glr.entrotated ) {
+        qglRotatef( ent->angles[YAW],   0, 0, 1 );
+        qglRotatef( ent->angles[PITCH], 0, 1, 0 );
+        qglRotatef( ent->angles[ROLL],  1, 0, 0 );
+    }
 
-	/* draw visible faces */
-	/* FIXME: go by headnode instead? */
-	face = model->firstface;
+    /* draw visible faces */
+    /* FIXME: go by headnode instead? */
+    face = model->firstface;
     count = model->numfaces;
-	while( count-- ) {
-		dot = PlaneDiffFast( modelViewOrigin, face->plane );
+    while( count-- ) {
+        dot = PlaneDiffFast( modelViewOrigin, face->plane );
         if( BSP_CullFace( face, dot ) ) {
-			c.facesCulled++;
-		} else {
+            c.facesCulled++;
+        } else {
             /* FIXME: trans surfaces are not supported on inline models */
             GL_AddSolidFace( face );  
-		}
-		face++;
-	}
+        }
+        face++;
+    }
 
     GL_DrawSolidFaces();
 
-	qglPopMatrix();
+    qglPopMatrix();
 }
 
 #define NODE_CLIPPED    0
@@ -410,7 +410,7 @@ static inline void GL_DrawNode( mnode_t *node, vec_t dot ) {
             continue;
         }
         if( BSP_CullFace( face, dot ) ) {
-			c.facesCulled++;
+            c.facesCulled++;
         } else {
             GL_AddFace( face );
         }
@@ -420,7 +420,7 @@ static inline void GL_DrawNode( mnode_t *node, vec_t dot ) {
 }
 
 static void GL_WorldNode_r( mnode_t *node, int clipflags ) {
-	int side;
+    int side;
     vec_t dot;
 
     while( node->visframe == glr.visframe ) {
@@ -449,7 +449,7 @@ static void GL_WorldNode_r( mnode_t *node, int clipflags ) {
     }
 }
 
-void GL_DrawWorld( void ) {	
+void GL_DrawWorld( void ) { 
     GL_MarkLeaves();
 
 #if USE_DYNAMIC
@@ -460,7 +460,7 @@ void GL_DrawWorld( void ) {
     
     R_ClearSkyBox();
 
-	VectorCopy( glr.fd.vieworg, modelViewOrigin );
+    VectorCopy( glr.fd.vieworg, modelViewOrigin );
 
     GL_WorldNode_r( gl_static.world.cache->nodes,
         gl_cull_nodes->integer ? NODE_CLIPPED : NODE_UNCLIPPED );

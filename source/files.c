@@ -191,8 +191,8 @@ int FS_pathcmpn( const char *s1, const char *s2, size_t n ) {
         c1 = *s1++;
         c2 = *s2++;
 
-		if( !n-- )
-			return 0;		/* strings are equal until end point */
+        if( !n-- )
+            return 0;       /* strings are equal until end point */
         
         if( c1 != c2 ) {
             c1 = c1 == '\\' ? '/' : Q_tolower( c1 );

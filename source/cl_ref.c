@@ -29,7 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "vid_local.h"
 
 // Console variables that we need to access from this module
-cvar_t		*vid_ref;			// Name of Refresh DLL loaded
+cvar_t      *vid_ref;           // Name of Refresh DLL loaded
 cvar_t      *vid_geometry;
 cvar_t      *vid_modelist;
 cvar_t      *vid_fullscreen;
@@ -181,17 +181,17 @@ CL_RunResfresh
 ============
 */
 void CL_RunRefresh( void ) {
-	if( !cls.ref_initialized ) {
+    if( !cls.ref_initialized ) {
         return;
     }
     
-	VID_PumpEvents();
+    VID_PumpEvents();
 
     if( mode_changed ) {
         if( mode_changed & MODE_FULLSCREEN ) {
-			if( vid_fullscreen->integer ) {
+            if( vid_fullscreen->integer ) {
                 Cvar_Set( "_vid_fullscreen", vid_fullscreen->string );
-			}
+            }
             VID_SetMode();
         } else {
             if( vid_fullscreen->integer ) {
@@ -226,12 +226,12 @@ CL_InitRefresh
 ============
 */
 void CL_InitRefresh( void ) {
-	if( cls.ref_initialized ) {
-		return;
-	}
+    if( cls.ref_initialized ) {
+        return;
+    }
 
-	// Create the video variables so we know how to start the graphics drivers
-	vid_ref = Cvar_Get( "vid_ref", VID_REF, CVAR_ROM );
+    // Create the video variables so we know how to start the graphics drivers
+    vid_ref = Cvar_Get( "vid_ref", VID_REF, CVAR_ROM );
     vid_fullscreen = Cvar_Get( "vid_fullscreen", "0", CVAR_ARCHIVE );
     _vid_fullscreen = Cvar_Get( "_vid_fullscreen", "1", CVAR_ARCHIVE );
     vid_modelist = Cvar_Get( "vid_modelist", VID_MODELIST, CVAR_ARCHIVE );
@@ -243,11 +243,11 @@ void CL_InitRefresh( void ) {
         Cvar_Set( "_vid_fullscreen", "1" );
     }
 
-	if( !R_Init( qtrue ) ) {
-		Com_Error( ERR_FATAL, "Couldn't initialize refresh" );
-	}
+    if( !R_Init( qtrue ) ) {
+        Com_Error( ERR_FATAL, "Couldn't initialize refresh" );
+    }
 
-	cls.ref_initialized = qtrue;
+    cls.ref_initialized = qtrue;
     
     vid_geometry->changed = vid_geometry_changed;
     vid_fullscreen->changed = vid_fullscreen_changed;
@@ -272,9 +272,9 @@ CL_ShutdownRefresh
 ============
 */
 void CL_ShutdownRefresh( void ) {
-	if( !cls.ref_initialized ) {
-		return;
-	}
+    if( !cls.ref_initialized ) {
+        return;
+    }
 
     // Shutdown the rest of graphics subsystems
     V_Shutdown();
@@ -287,10 +287,10 @@ void CL_ShutdownRefresh( void ) {
     vid_fullscreen->changed = NULL;
     vid_modelist->changed = NULL;
 
-	R_Shutdown( qtrue );
+    R_Shutdown( qtrue );
 
-	cls.ref_initialized = qfalse;
+    cls.ref_initialized = qfalse;
 
-	Z_LeakTest( TAG_RENDERER );
+    Z_LeakTest( TAG_RENDERER );
 }
 
