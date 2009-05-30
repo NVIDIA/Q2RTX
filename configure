@@ -99,7 +99,7 @@ use_anticheat="no"
 use_mvd_server="yes"
 use_mvd_client="yes"
 use_asm="???"
-use_openffa="no"
+use_baseq2="no"
 use_syscon="yes"
 use_winsvc="no"
 use_icmp="???"
@@ -146,7 +146,7 @@ for opt do
     ;;
     --enable-server) use_server="yes"
     ;;
-    --enable-openffa) use_openffa="yes"
+    --enable-baseq2) use_baseq2="yes"
     ;;
     --enable-dsound) use_dsound="yes"
     ;;
@@ -208,7 +208,7 @@ echo "  --make=MAKE            use MAKE processor [$make]"
 echo "  --windres=WINDRES      use RC compiler [$windres]"
 echo "  --disable-client       do not build graphical client"
 echo "  --enable-server        build dedicated server"
-echo "  --enable-openffa       build OpenFFA deathmatch mod"
+echo "  --enable-baseq2        build baseq2 game module"
 echo "  --enable-mingw         enable Windows build"
 echo "  --enable-dsound        enable direct sound driver"
 echo "  --enable-dinput        enable direct input driver"
@@ -376,7 +376,7 @@ fi
 # echo configuration info
 echo "Build client       $use_client"
 echo "Build server       $use_server"
-echo "Build OpenFFA      $use_openffa"
+echo "Build baseq2       $use_baseq2"
 if [ "$mingw" = "no" ]; then
     if [ "$singleuser" = "yes" ]; then
         echo "Single user        $singleuser"
@@ -430,8 +430,8 @@ if [ "$use_server" = "yes" ]; then
     executables="$executables q2proded$exesuffix"
 fi
 
-if [ "$use_openffa" = "yes" ]; then
-    targets="$targets openffa"
+if [ "$use_baseq2" = "yes" ]; then
+    targets="$targets baseq2"
     libraries="$libraries $gamelib"
 fi
 

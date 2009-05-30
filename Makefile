@@ -74,5 +74,5 @@ docs:
 	$(MAKE) -C wiki
 
 tags:
-	ctags $(SRCDIR)/source/*.[ch] $(SRCDIR)/source/openffa/*.[ch]
+	ctags $(SRCDIR)/source/*.[ch] $(SRCDIR)/source/baseq2/*.[ch]
 
