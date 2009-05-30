@@ -22,7 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "g_local.h"
 
 
-void G_ProjectSource (vec3_t point, vec3_t distance, vec3_t forward, vec3_t right, vec3_t result)
+void G_ProjectSource (const vec3_t point, const vec3_t distance, const vec3_t forward, const vec3_t right, vec3_t result)
 {
     result[0] = point[0] + forward[0] * distance[0] + right[0] * distance[1];
     result[1] = point[1] + forward[1] * distance[0] + right[1] * distance[1];

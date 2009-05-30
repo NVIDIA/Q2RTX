@@ -396,6 +396,8 @@ void ED_ParseField (char *key, char *value, edict_t *ent)
                 break;
             case F_IGNORE:
                 break;
+            default:
+                break;
             }
             return;
         }
@@ -411,7 +413,7 @@ Parses an edict out of the given string, returning the new position
 ed should be a properly initialized empty edict.
 ====================
 */
-char *ED_ParseEdict (char *data, edict_t *ent)
+void ED_ParseEdict (const char **data, edict_t *ent)
 {
     qboolean    init;
     char        keyname[256];
@@ -424,17 +426,17 @@ char *ED_ParseEdict (char *data, edict_t *ent)
     while (1)
     {   
     // parse key
-        com_token = COM_Parse (&data);
+        com_token = COM_Parse (data);
         if (com_token[0] == '}')
             break;
-        if (!data)
+        if (!*data)
             gi.error ("ED_ParseEntity: EOF without closing brace");
 
         strncpy (keyname, com_token, sizeof(keyname)-1);
         
     // parse value  
-        com_token = COM_Parse (&data);
-        if (!data)
+        com_token = COM_Parse (data);
+        if (!*data)
             gi.error ("ED_ParseEntity: EOF without closing brace");
 
         if (com_token[0] == '}')
@@ -452,8 +454,6 @@ char *ED_ParseEdict (char *data, edict_t *ent)
 
     if (!init)
         memset (ent, 0, sizeof(*ent));
-
-    return data;
 }
 
 
@@ -517,7 +517,7 @@ Creates a server's entity / program execution context by
 parsing textual entity definitions out of an ent file.
 ==============
 */
-void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
+void SpawnEntities (const char *mapname, const char *entities, const char *spawnpoint)
 {
     edict_t     *ent;
     int         inhibit;
@@ -564,7 +564,7 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
             ent = g_edicts;
         else
             ent = G_Spawn ();
-        entities = ED_ParseEdict (entities, ent);
+        ED_ParseEdict (&entities, ent);
 
         // yet another map hack
         if (!Q_stricmp(level.mapname, "command") && !Q_stricmp(ent->classname, "trigger_once") && !Q_stricmp(ent->model, "*27"))

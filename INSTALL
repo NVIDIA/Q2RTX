@@ -3,7 +3,7 @@ Prerequisities
 Q2PRO client currently uses OSS for sound output and libSDL for video output.
 Both client and dedicated server require zlib support for full network
 protocol compatibility. OpenGL refresh library recommends libjpeg and
-libpng+zlib for 32-bit textures support.
+libpng+zlib for 32 bit textures support.
 
 
 Installation
@@ -27,18 +27,14 @@ Generic configuration
   Prepend PREFIX to compile tools names. Use for cross-compiling,
   for example: `./configure --cross-prefix=i586-mingw32-msvc'.
 
---hardlink
-  Do not build ref_gl and mod_ui modules but hard link them into the client
-  executable instead. Software renderer is not built at all.
-
 --disable-client
-  Do not build client executable and related modules.
+  Do not build graphical client.
 
 --enable-server
   Build dedicated server.
 
---enable-openffa
-  Build OpenFFA deathmatch mod.
+--enable-baseq2
+  Build base Quake 2 game module.
 
 --disable-asm
   Do not use optimized i386 assembly code.

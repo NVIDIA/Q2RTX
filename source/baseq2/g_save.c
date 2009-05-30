@@ -20,8 +20,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "g_local.h"
 
-#define Function(f) {#f, f}
-
 mmove_t mmove_reloc;
 
 field_t fields[] = {
@@ -315,6 +313,8 @@ void WriteField2 (FILE *f, field_t *field, byte *base)
             fwrite (*(char **)p, len, 1, f);
         }
         break;
+    default:
+        break;
     }
 }
 
@@ -458,7 +458,7 @@ A single player death will automatically restore from the
 last save position.
 ============
 */
-void WriteGame (char *filename, qboolean autosave)
+void WriteGame (const char *filename, qboolean autosave)
 {
     FILE    *f;
     int     i;
@@ -485,7 +485,7 @@ void WriteGame (char *filename, qboolean autosave)
     fclose (f);
 }
 
-void ReadGame (char *filename)
+void ReadGame (const char *filename)
 {
     FILE    *f;
     int     i;
@@ -626,7 +626,7 @@ WriteLevel
 
 =================
 */
-void WriteLevel (char *filename)
+void WriteLevel (const char *filename)
 {
     int     i;
     edict_t *ent;
@@ -680,7 +680,7 @@ calling ReadLevel.
 No clients are connected yet.
 =================
 */
-void ReadLevel (char *filename)
+void ReadLevel (const char *filename)
 {
     int     entnum;
     FILE    *f;
@@ -717,7 +717,7 @@ void ReadLevel (char *filename)
         gi.error ("ReadLevel: function pointers have moved");
     }
 #else
-    gi.dprintf("Function offsets %d\n", ((byte *)base) - ((byte *)InitGame));
+    //gi.dprintf("Function offsets %d\n", ((byte *)base) - ((byte *)InitGame));
 #endif
 
     // load the level locals
@@ -768,3 +768,4 @@ void ReadLevel (char *filename)
                 ent->nextthink = level.time + ent->delay;
     }
 }
+

@@ -45,10 +45,9 @@ Architecture: any
 Depends: ${shlibs:Depends}
 Description: Enhanced Quake 2 engine (common files)
  This package contains files common between Q2PRO server and client.
- Currently, OpenFFA deathmatch mod is packaged, which provides game
- library essential for server startup.
  .
- OpenFFA is a simple deathmatch mod for Quake 2. It features familiar
- scoreboard, voting system, map rotation support, high scores logging.
+ Base Quake 2 game library is included in this package. It provides
+ the single player campaign and also features cooperative mode
+ and a very simple deathmatch mode.
  .
  Homepage: http://skuller.ath.cx/q2pro/
