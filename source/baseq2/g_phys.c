@@ -386,7 +386,9 @@ typedef struct
     edict_t *ent;
     vec3_t  origin;
     vec3_t  angles;
-    float   deltayaw;
+#if USE_SMOOTH_DELTA_ANGLES
+    int     deltayaw;
+#endif
 } pushed_t;
 pushed_t    pushed[MAX_EDICTS], *pushed_p;
 
@@ -436,8 +438,10 @@ qboolean SV_Push (edict_t *pusher, vec3_t move, vec3_t amove)
     pushed_p->ent = pusher;
     VectorCopy (pusher->s.origin, pushed_p->origin);
     VectorCopy (pusher->s.angles, pushed_p->angles);
+#if USE_SMOOTH_DELTA_ANGLES
     if (pusher->client)
         pushed_p->deltayaw = pusher->client->ps.pmove.delta_angles[YAW];
+#endif
     pushed_p++;
 
 // move the pusher to it's final position
@@ -483,14 +487,21 @@ qboolean SV_Push (edict_t *pusher, vec3_t move, vec3_t amove)
             pushed_p->ent = check;
             VectorCopy (check->s.origin, pushed_p->origin);
             VectorCopy (check->s.angles, pushed_p->angles);
+#if USE_SMOOTH_DELTA_ANGLES
+            if (check->client)
+                pushed_p->deltayaw = check->client->ps.pmove.delta_angles[YAW];
+#endif
             pushed_p++;
 
             // try moving the contacted entity 
             VectorAdd (check->s.origin, move, check->s.origin);
+#if USE_SMOOTH_DELTA_ANGLES
             if (check->client)
             {   // FIXME: doesn't rotate monsters?
-                check->client->ps.pmove.delta_angles[YAW] += amove[YAW];
+                // FIXME: skuller: needs client side interpolation
+                check->client->ps.pmove.delta_angles[YAW] += ANGLE2SHORT( amove[YAW] );
             }
+#endif
 
             // figure movement due to the pusher's amove
             VectorSubtract (check->s.origin, pusher->s.origin, org);
@@ -534,10 +545,12 @@ qboolean SV_Push (edict_t *pusher, vec3_t move, vec3_t amove)
         {
             VectorCopy (p->origin, p->ent->s.origin);
             VectorCopy (p->angles, p->ent->s.angles);
+#if USE_SMOOTH_DELTA_ANGLES
             if (p->ent->client)
             {
                 p->ent->client->ps.pmove.delta_angles[YAW] = p->deltayaw;
             }
+#endif
             gi.linkentity (p->ent);
         }
         return qfalse;
@@ -645,6 +658,8 @@ void SV_Physics_Noclip (edict_t *ent)
 // regular thinking
     if (!SV_RunThink (ent))
         return;
+    if (!ent->inuse)
+        return;
     
     VectorMA (ent->s.angles, FRAMETIME, ent->avelocity, ent->s.angles);
     VectorMA (ent->s.origin, FRAMETIME, ent->velocity, ent->s.origin);
@@ -679,6 +694,8 @@ void SV_Physics_Toss (edict_t *ent)
 
 // regular thinking
     SV_RunThink (ent);
+    if (!ent->inuse)
+        return;
 
     // if not a team captain, so movement will be handled elsewhere
     if ( ent->flags & FL_TEAMSLAVE)
