@@ -811,7 +811,8 @@ void ReadGame (const char *filename) {
 
     read_fields( f, gamefields, &game );
 
-    if( game.maxclients < 1 || game.maxclients > MAX_CLIENTS ) {
+    // should agree with server's version
+    if( game.maxclients != (int)maxclients->value ) {
         fclose (f);
         gi.error ("Savegame has bad maxclients.\n");
     }
@@ -924,7 +925,7 @@ void ReadLevel (const char *filename) {
         entnum = read_int( f );
         if( entnum == -1 )
             break;
-        if( entnum < 0 || entnum >= MAX_EDICTS ) {
+        if( entnum < 0 || entnum >= game.maxentities ) {
             gi.error( "%s: bad entity number", __func__ );
         }
         if( entnum >= globals.num_edicts )
