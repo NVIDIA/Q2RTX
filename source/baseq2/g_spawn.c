@@ -20,12 +20,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "g_local.h"
 
-typedef struct
-{
+typedef struct {
     char    *name;
     void    (*spawn)(edict_t *ent);
-} spawn_t;
+} spawn_func_t;
 
+typedef struct {
+    char    *name;
+    size_t  ofs;
+    fieldtype_t type;
+} spawn_field_t;
 
 void SP_item_health (edict_t *self);
 void SP_item_health_small (edict_t *self);
@@ -144,8 +148,7 @@ void SP_turret_breach (edict_t *self);
 void SP_turret_base (edict_t *self);
 void SP_turret_driver (edict_t *self);
 
-
-spawn_t spawns[] = {
+static const spawn_func_t spawn_funcs[] = {
     {"item_health", SP_item_health},
     {"item_health_small", SP_item_health_small},
     {"item_health_large", SP_item_health_large},
@@ -268,6 +271,66 @@ spawn_t spawns[] = {
     {NULL, NULL}
 };
 
+static const spawn_field_t spawn_fields[] = {
+    {"classname", FOFS(classname), F_LSTRING},
+    {"model", FOFS(model), F_LSTRING},
+    {"spawnflags", FOFS(spawnflags), F_INT},
+    {"speed", FOFS(speed), F_FLOAT},
+    {"accel", FOFS(accel), F_FLOAT},
+    {"decel", FOFS(decel), F_FLOAT},
+    {"target", FOFS(target), F_LSTRING},
+    {"targetname", FOFS(targetname), F_LSTRING},
+    {"pathtarget", FOFS(pathtarget), F_LSTRING},
+    {"deathtarget", FOFS(deathtarget), F_LSTRING},
+    {"killtarget", FOFS(killtarget), F_LSTRING},
+    {"combattarget", FOFS(combattarget), F_LSTRING},
+    {"message", FOFS(message), F_LSTRING},
+    {"team", FOFS(team), F_LSTRING},
+    {"wait", FOFS(wait), F_FLOAT},
+    {"delay", FOFS(delay), F_FLOAT},
+    {"random", FOFS(random), F_FLOAT},
+    {"move_origin", FOFS(move_origin), F_VECTOR},
+    {"move_angles", FOFS(move_angles), F_VECTOR},
+    {"style", FOFS(style), F_INT},
+    {"count", FOFS(count), F_INT},
+    {"health", FOFS(health), F_INT},
+    {"sounds", FOFS(sounds), F_INT},
+    {"light", 0, F_IGNORE},
+    {"dmg", FOFS(dmg), F_INT},
+    {"mass", FOFS(mass), F_INT},
+    {"volume", FOFS(volume), F_FLOAT},
+    {"attenuation", FOFS(attenuation), F_FLOAT},
+    {"map", FOFS(map), F_LSTRING},
+    {"origin", FOFS(s.origin), F_VECTOR},
+    {"angles", FOFS(s.angles), F_VECTOR},
+    {"angle", FOFS(s.angles), F_ANGLEHACK},
+
+    {NULL}
+};
+
+// temp spawn vars -- only valid when the spawn function is called
+static const spawn_field_t temp_fields[] = {
+    {"lip", STOFS(lip), F_INT},
+    {"distance", STOFS(distance), F_INT},
+    {"height", STOFS(height), F_INT},
+    {"noise", STOFS(noise), F_LSTRING},
+    {"pausetime", STOFS(pausetime), F_FLOAT},
+    {"item", STOFS(item), F_LSTRING},
+
+    {"gravity", STOFS(gravity), F_LSTRING},
+    {"sky", STOFS(sky), F_LSTRING},
+    {"skyrotate", STOFS(skyrotate), F_FLOAT},
+    {"skyaxis", STOFS(skyaxis), F_VECTOR},
+    {"minyaw", STOFS(minyaw), F_FLOAT},
+    {"maxyaw", STOFS(maxyaw), F_FLOAT},
+    {"minpitch", STOFS(minpitch), F_FLOAT},
+    {"maxpitch", STOFS(maxpitch), F_FLOAT},
+    {"nextmap", STOFS(nextmap), F_LSTRING},
+
+    {NULL}
+};
+
+
 /*
 ===============
 ED_CallSpawn
@@ -277,7 +340,7 @@ Finds the spawn function for the entity and calls it
 */
 void ED_CallSpawn (edict_t *ent)
 {
-    spawn_t *s;
+    const spawn_func_t *s;
     gitem_t *item;
     int     i;
 
@@ -300,7 +363,7 @@ void ED_CallSpawn (edict_t *ent)
     }
 
     // check normal spawn functions
-    for (s=spawns ; s->name ; s++)
+    for (s=spawn_funcs ; s->name ; s++)
     {
         if (!strcmp(s->name, ent->classname))
         {   // found it
@@ -355,22 +418,16 @@ Takes a key/value pair and sets the binary values
 in an edict
 ===============
 */
-void ED_ParseField (char *key, char *value, edict_t *ent)
+static qboolean ED_ParseField (const spawn_field_t *fields, char *key, char *value, byte *b)
 {
-    field_t *f;
-    byte    *b;
+    const spawn_field_t *f;
     float   v;
     vec3_t  vec;
 
     for (f=fields ; f->name ; f++)
     {
-        if (!(f->flags & FFL_NOSPAWN) && !Q_stricmp(f->name, key))
+        if (!Q_stricmp(f->name, key))
         {   // found it
-            if (f->flags & FFL_SPAWNTEMP)
-                b = (byte *)&st;
-            else
-                b = (byte *)ent;
-
             switch (f->type)
             {
             case F_LSTRING:
@@ -399,10 +456,10 @@ void ED_ParseField (char *key, char *value, edict_t *ent)
             default:
                 break;
             }
-            return;
+            return qtrue;
         }
     }
-    gi.dprintf ("%s is not a field\n", key);
+    return qfalse;
 }
 
 /*
@@ -449,7 +506,11 @@ void ED_ParseEdict (const char **data, edict_t *ent)
         if (keyname[0] == '_')
             continue;
 
-        ED_ParseField (keyname, com_token, ent);
+        if( !ED_ParseField( spawn_fields, keyname, com_token, ( byte * )ent ) ) {
+            if( !ED_ParseField( temp_fields, keyname, com_token, ( byte * )&st ) ) {
+                gi.dprintf ("%s is not a field\n", keyname);
+            }
+        }
     }
 
     if (!init)

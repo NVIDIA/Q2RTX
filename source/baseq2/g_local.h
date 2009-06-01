@@ -510,6 +510,7 @@ extern  edict_t         *g_edicts;
 #define FOFS(x) q_offsetof(edict_t, x)
 #define STOFS(x) q_offsetof(spawn_temp_t, x)
 #define LLOFS(x) q_offsetof(level_locals_t, x)
+#define GLOFS(x) q_offsetof(game_locals_t, x)
 #define CLOFS(x) q_offsetof(gclient_t, x)
 
 #define random()    ((rand () & 0x7fff) / ((float)0x7fff))
@@ -568,36 +569,26 @@ extern  cvar_t  *sv_maplist;
 // fields are needed for spawning from the entity string
 // and saving / loading games
 //
-#define FFL_SPAWNTEMP       1
-#define FFL_NOSPAWN         2
-
 typedef enum {
+    F_BAD,
+    F_BYTE,
+    F_SHORT,
     F_INT, 
     F_FLOAT,
     F_LSTRING,          // string on disk, pointer in memory, TAG_LEVEL
     F_GSTRING,          // string on disk, pointer in memory, TAG_GAME
+    F_ZSTRING,          // string on disk, string in memory
     F_VECTOR,
     F_ANGLEHACK,
     F_EDICT,            // index on disk, pointer in memory
     F_ITEM,             // index on disk, pointer in memory
     F_CLIENT,           // index on disk, pointer in memory
     F_FUNCTION,
-    F_MMOVE,
+    F_POINTER,
     F_IGNORE
 } fieldtype_t;
 
-typedef struct
-{
-    char    *name;
-    int     ofs;
-    fieldtype_t type;
-    int     flags;
-} field_t;
-
-
-extern  field_t fields[];
 extern  gitem_t itemlist[];
-
 
 //
 // g_cmds.c
@@ -942,10 +933,10 @@ struct gclient_s
     qboolean    anim_run;
 
     // powerup timers
-    float       quad_framenum;
-    float       invincible_framenum;
-    float       breather_framenum;
-    float       enviro_framenum;
+    int         quad_framenum;
+    int         invincible_framenum;
+    int         breather_framenum;
+    int         enviro_framenum;
 
     qboolean    grenade_blew_up;
     float       grenade_time;

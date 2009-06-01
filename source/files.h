@@ -131,3 +131,4 @@ void FS_File_g( const char *path, const char *ext, int flags, genctx_t *ctx );
 
 extern cvar_t   *fs_game;
 
+extern char     fs_gamedir[];

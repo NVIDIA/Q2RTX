@@ -1223,6 +1223,10 @@ static const cmdreg_t c_server[] = {
     { "addfiltercmd", SV_AddFilterCmd_f, SV_AddFilterCmd_c },
     { "delfiltercmd", SV_DelFilterCmd_f, SV_DelFilterCmd_c },
     { "listfiltercmds", SV_ListFilterCmds_f },
+#if USE_CLIENT
+    { "savegame", SV_Savegame_f },
+    { "loadgame", SV_Loadgame_f },
+#endif
 
     { NULL }
 };

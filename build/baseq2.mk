@@ -39,7 +39,8 @@ g_cmds.c    g_phys.c     g_utils.c    m_boss3.c    m_gladiator.c  m_mutant.c    
 g_combat.c  g_save.c     g_weapon.c   m_brain.c    m_gunner.c     m_parasite.c   p_view.c \
 g_func.c    g_spawn.c    m_actor.c    m_chick.c    m_hover.c      m_soldier.c    p_weapon.c \
 g_items.c   g_svcmds.c   m_berserk.c  m_flash.c    m_infantry.c   m_supertank.c \
-g_main.c    g_target.c   m_boss2.c    m_flipper.c  m_insane.c     m_tank.c
+g_main.c    g_target.c   m_boss2.c    m_flipper.c  m_insane.c     m_tank.c \
+g_ptrs.c
 
 include $(SRCDIR)/build/target.mk
 

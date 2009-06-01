@@ -120,7 +120,7 @@ typedef struct fsLink_s {
 } fsLink_t;
 
 // these point to user home directory
-static char        fs_gamedir[MAX_OSPATH];
+char        fs_gamedir[MAX_OSPATH];
 //static char        fs_basedir[MAX_OSPATH];
 
 static cvar_t    *fs_debug;

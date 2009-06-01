@@ -64,6 +64,7 @@ endif
 
 # ifdef USE_SERVER
 include $(SRCDIR)/build/server.mk
+SRCFILES+=sv_save.c
 # endif
 
 ifdef MINGW

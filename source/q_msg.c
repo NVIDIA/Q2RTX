@@ -1441,44 +1441,50 @@ void MSG_BeginReading( void ) {
     msg_read.bitpos = 0;
 }
 
+static inline void underflowed( const char *func ) {
+    if( !msg_read.allowunderflow ) {
+        Com_Error( ERR_DROP, "%s: read past end of message", func );
+    }
+}
+
 // returns -1 if no more characters are available
-int MSG_ReadChar (void)
-{
+int MSG_ReadChar( void ) {
     int c;
     
-    if (msg_read.readcount+1 > msg_read.cursize)
-        c = -1;
-    else
+    if (msg_read.readcount+1 > msg_read.cursize) {
+        c = -1; underflowed( __func__ );
+    } else {
         c = (signed char)msg_read.data[msg_read.readcount];
+    }
     msg_read.readcount++;
     msg_read.bitpos = msg_read.readcount << 3;
     
     return c;
 }
 
-int MSG_ReadByte( void )
-{
+int MSG_ReadByte( void ) {
     int c;
     
-    if (msg_read.readcount+1 > msg_read.cursize)
-        c = -1;
-    else
+    if (msg_read.readcount+1 > msg_read.cursize) {
+        c = -1; underflowed( __func__ );
+    } else {
         c = (unsigned char)msg_read.data[msg_read.readcount];
+    }
     msg_read.readcount++;
     msg_read.bitpos = msg_read.readcount << 3;
     
     return c;
 }
 
-int MSG_ReadShort( void )
-{
+int MSG_ReadShort( void ) {
     int c;
     
-    if (msg_read.readcount+2 > msg_read.cursize)
-        c = -1;
-    else        
+    if (msg_read.readcount+2 > msg_read.cursize) {
+        c = -1; underflowed( __func__ );
+    } else {
         c = (short)(msg_read.data[msg_read.readcount]
         + (msg_read.data[msg_read.readcount+1]<<8));
+    }
     
     msg_read.readcount += 2;
     msg_read.bitpos = msg_read.readcount << 3;
@@ -1486,15 +1492,15 @@ int MSG_ReadShort( void )
     return c;
 }
 
-int MSG_ReadWord( void )
-{
+int MSG_ReadWord( void ) {
     int c;
     
-    if (msg_read.readcount+2 > msg_read.cursize)
-        c = -1;
-    else        
+    if (msg_read.readcount+2 > msg_read.cursize) {
+        c = -1; underflowed( __func__ );
+    } else {
         c = (unsigned short)(msg_read.data[msg_read.readcount]
         + (msg_read.data[msg_read.readcount+1]<<8));
+    }
     
     msg_read.readcount += 2;
     msg_read.bitpos = msg_read.readcount << 3;
@@ -1502,17 +1508,17 @@ int MSG_ReadWord( void )
     return c;
 }
 
-int MSG_ReadLong ( void )
-{
+int MSG_ReadLong( void ) {
     int c;
     
-    if (msg_read.readcount+4 > msg_read.cursize)
-        c = -1;
-    else
+    if (msg_read.readcount+4 > msg_read.cursize) {
+        c = -1; underflowed( __func__ );
+    } else {
         c = msg_read.data[msg_read.readcount]
         + (msg_read.data[msg_read.readcount+1]<<8)
         + (msg_read.data[msg_read.readcount+2]<<16)
         + (msg_read.data[msg_read.readcount+3]<<24);
+    }
     
     msg_read.readcount += 4;
     msg_read.bitpos = msg_read.readcount << 3;
@@ -1823,25 +1829,18 @@ void MSG_ReadDeltaUsercmd_Enhanced( const usercmd_t *from,
     }
 }
 
-#if 0
-size_t MSG_ReadData( void *data, size_t len ) {
-    size_t remaining;
+void *MSG_ReadData( size_t len ) {
+    void *p;
 
-    if( msg_read.readcount >= msg_read.cursize ) {
-        return 0;
+    if( msg_read.readcount + len > msg_read.cursize ) {
+        underflowed( __func__ ); return NULL;
     }
 
-    remaining = msg_read.cursize - msg_read.readcount;
-    if( len > remaining ) {
-        len = remining;
-    }
-
-    memcpy( data, msg_read.data + msg_read.readcount, len );
+    p = msg_read.data + msg_read.readcount;
     msg_read.readcount += len;
 
-    return len;
+    return p;
 }
-#endif
 
 #if USE_CLIENT || USE_MVD_CLIENT
 
@@ -2729,6 +2728,7 @@ void SZ_Init( sizebuf_t *buf, void *data, size_t length ) {
     buf->data = data;
     buf->maxsize = length;
     buf->allowoverflow = qtrue;
+    buf->allowunderflow = qtrue;
 }
 
 void SZ_Clear( sizebuf_t *buf ) {

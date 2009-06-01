@@ -395,7 +395,7 @@ void fire_blaster (edict_t *self, vec3_t start, vec3_t dir, int damage, int spee
 fire_grenade
 =================
 */
-static void Grenade_Explode (edict_t *ent)
+void Grenade_Explode (edict_t *ent)
 {
     vec3_t      origin;
     int         mod;
@@ -452,7 +452,7 @@ static void Grenade_Explode (edict_t *ent)
     G_FreeEdict (ent);
 }
 
-static void Grenade_Touch (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf)
+void Grenade_Touch (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf)
 {
     if (other == ent->owner)
         return;

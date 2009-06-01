@@ -570,6 +570,14 @@ void SV_InitEdict (edict_t *e);
 
 void PF_Pmove( pmove_t *pm );
 
+#if USE_CLIENT
+//
+// sv_save.c
+//
+void SV_Savegame_f( void );
+void SV_Loadgame_f( void );
+#endif
+
 //============================================================
 
 //

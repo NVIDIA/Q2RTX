@@ -33,6 +33,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 typedef struct sizebuf_s {
     uint32_t    tag;
     qboolean    allowoverflow;
+    qboolean    allowunderflow;
     qboolean    overflowed;        // set to qtrue if the buffer size failed
     byte        *data;
     size_t      maxsize;
@@ -129,7 +130,7 @@ int     MSG_ReadBits( int bits );
 void    MSG_ReadDeltaUsercmd( const usercmd_t *from, usercmd_t *cmd );
 void    MSG_ReadDeltaUsercmd_Hacked( const usercmd_t *from, usercmd_t *to );
 void    MSG_ReadDeltaUsercmd_Enhanced( const usercmd_t *from, usercmd_t *to, int version );
-//void    MSG_ReadData( void *buffer, int size );
+void    *MSG_ReadData( size_t len );
 int     MSG_ParseEntityBits( int *bits );
 void    MSG_ParseDeltaEntity( const entity_state_t *from, entity_state_t *to, int number, int bits );
 #if USE_CLIENT
