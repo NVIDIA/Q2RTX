@@ -379,7 +379,7 @@ void ED_CallSpawn (edict_t *ent)
 ED_NewString
 =============
 */
-char *ED_NewString (char *string)
+static char *ED_NewString (const char *string)
 {
     char    *newb, *new_p;
     int     i,l;
@@ -418,7 +418,7 @@ Takes a key/value pair and sets the binary values
 in an edict
 ===============
 */
-static qboolean ED_ParseField (const spawn_field_t *fields, char *key, char *value, byte *b)
+static qboolean ED_ParseField (const spawn_field_t *fields, const char *key, const char *value, byte *b)
 {
     const spawn_field_t *f;
     float   v;
@@ -434,7 +434,10 @@ static qboolean ED_ParseField (const spawn_field_t *fields, char *key, char *val
                 *(char **)(b+f->ofs) = ED_NewString (value);
                 break;
             case F_VECTOR:
-                sscanf (value, "%f %f %f", &vec[0], &vec[1], &vec[2]);
+				if( sscanf (value, "%f %f %f", &vec[0], &vec[1], &vec[2]) != 3 ) {
+                    gi.dprintf( "%s: couldn't parse '%s'\n", __func__, key );
+                    VectorClear( vec );
+                }
                 ((float *)(b+f->ofs))[0] = vec[0];
                 ((float *)(b+f->ofs))[1] = vec[1];
                 ((float *)(b+f->ofs))[2] = vec[2];
@@ -473,8 +476,7 @@ ed should be a properly initialized empty edict.
 void ED_ParseEdict (const char **data, edict_t *ent)
 {
     qboolean    init;
-    char        keyname[256];
-    char        *com_token;
+    char        *key, *value;
 
     init = qfalse;
     memset (&st, 0, sizeof(st));
@@ -483,32 +485,30 @@ void ED_ParseEdict (const char **data, edict_t *ent)
     while (1)
     {   
     // parse key
-        com_token = COM_Parse (data);
-        if (com_token[0] == '}')
+        key = COM_Parse (data);
+        if (key[0] == '}')
             break;
         if (!*data)
-            gi.error ("ED_ParseEntity: EOF without closing brace");
+            gi.error ("%s: EOF without closing brace", __func__);
 
-        strncpy (keyname, com_token, sizeof(keyname)-1);
-        
     // parse value  
-        com_token = COM_Parse (data);
+        value = COM_Parse (data);
         if (!*data)
-            gi.error ("ED_ParseEntity: EOF without closing brace");
+            gi.error ("%s: EOF without closing brace", __func__);
 
-        if (com_token[0] == '}')
-            gi.error ("ED_ParseEntity: closing brace without data");
+        if (value[0] == '}')
+            gi.error ("%s: closing brace without data", __func__);
 
         init = qtrue;    
 
     // keynames with a leading underscore are used for utility comments,
     // and are immediately discarded by quake
-        if (keyname[0] == '_')
+        if (key[0] == '_')
             continue;
 
-        if( !ED_ParseField( spawn_fields, keyname, com_token, ( byte * )ent ) ) {
-            if( !ED_ParseField( temp_fields, keyname, com_token, ( byte * )&st ) ) {
-                gi.dprintf ("%s is not a field\n", keyname);
+        if( !ED_ParseField( spawn_fields, key, value, ( byte * )ent ) ) {
+            if( !ED_ParseField( temp_fields, key, value, ( byte * )&st ) ) {
+                gi.dprintf ("%s: %s is not a field\n", __func__, key);
             }
         }
     }
