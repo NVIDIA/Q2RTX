@@ -168,6 +168,11 @@ static void read_server_file( void ) {
     // start a new game fresh with new cvars
     SV_InitGame( qfalse );
 
+    // error out immediately if game doesn't support safe savegames
+    if( !( g_features->integer & GMF_ENHANCED_SAVEGAMES ) ) {
+        Com_Error( ERR_DROP, "Game does not support enhanced savegames" );
+    }
+
     // read game state
     Q_snprintf (name, sizeof(name), "%s/save/current/game.state", fs_gamedir);
     ge->ReadGame (name);
@@ -235,8 +240,6 @@ void SV_Loadgame_f (void) {
         return;
     }
 
-    Com_Printf ("Loading game...\n");
-
     dir = Cmd_Argv(1);
     if (strstr (dir, "..") || strchr (dir, '/') || strchr (dir, '\\') ) {
         Com_Printf ("Bad savedir.\n");
@@ -249,6 +252,8 @@ void SV_Loadgame_f (void) {
         Com_Printf ("No such savegame: %s\n", name);
         return;
     }
+
+    Com_Printf ("Loading game...\n");
 
     //SV_CopySaveGame (Cmd_Argv(1), "current");
 
@@ -281,14 +286,15 @@ void SV_Savegame_f( void ) {
         Com_Printf ("Savegames are for listen servers only\n");
         return;
     }
-
-    if (Cvar_VariableInteger("deathmatch")) {
-        Com_Printf ("Can't savegame in a deathmatch\n");
+   
+    // don't bother saving if we can't read them back!
+    if( !( g_features->integer & GMF_ENHANCED_SAVEGAMES ) ) {
+        Com_Printf ("Game does not support enhanced savegames\n");
         return;
     }
 
-    if (!strcmp (Cmd_Argv(1), "current")) {
-        Com_Printf ("Can't save to 'current'\n");
+    if (Cvar_VariableInteger("deathmatch")) {
+        Com_Printf ("Can't savegame in a deathmatch\n");
         return;
     }
 
@@ -300,6 +306,12 @@ void SV_Savegame_f( void ) {
     dir = Cmd_Argv(1);
     if (strstr (dir, "..") || strchr (dir, '/') || strchr (dir, '\\') ) {
         Com_Printf ("Bad savedir.\n");
+        return;
+    }
+
+    if (!strcmp (dir, "current")) {
+        Com_Printf ("Can't save to 'current'\n");
+        return;
     }
 
     Com_Printf ("Saving game...\n");

@@ -29,6 +29,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define GAME_INCLUDE
 #include "g_public.h"
 
+// features this game supports
+#define G_FEATURES  (GMF_PROPERINUSE|GMF_WANT_ALL_DISCONNECTS|GMF_ENHANCED_SAVEGAMES)
+
 // the "gameversion" client command will print this plus compile date
 #define GAMEVERSION "baseq2"
 
@@ -553,6 +556,8 @@ extern  cvar_t  *flood_persecond;
 extern  cvar_t  *flood_waitdelay;
 
 extern  cvar_t  *sv_maplist;
+
+extern  cvar_t  *sv_features;
 
 #define world   (&g_edicts[0])
 

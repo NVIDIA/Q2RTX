@@ -893,13 +893,13 @@ void ReadLevel (const char *filename) {
     int     i;
     edict_t *ent;
 
-    f = fopen (filename, "rb");
-    if (!f)
-        gi.error ("Couldn't open %s", filename);
-
     // free any dynamic memory allocated by loading the level
     // base state
     gi.FreeTags (TAG_LEVEL);
+
+    f = fopen (filename, "rb");
+    if (!f)
+        gi.error ("Couldn't open %s", filename);
 
     // wipe all the entities
     memset (g_edicts, 0, game.maxentities*sizeof(g_edicts[0]));

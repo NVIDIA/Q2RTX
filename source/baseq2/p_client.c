@@ -1524,7 +1524,7 @@ Will not be called between levels.
 */
 void ClientDisconnect (edict_t *ent)
 {
-    int     playernum;
+    //int     playernum;
 
     if (!ent->client)
         return;
@@ -1539,13 +1539,17 @@ void ClientDisconnect (edict_t *ent)
 
     gi.unlinkentity (ent);
     ent->s.modelindex = 0;
+    ent->s.sound = 0;
+    ent->s.event = 0;
+    ent->s.effects = 0;
     ent->solid = SOLID_NOT;
     ent->inuse = qfalse;
     ent->classname = "disconnected";
     ent->client->pers.connected = qfalse;
 
-    playernum = ent-g_edicts-1;
-    gi.configstring (CS_PLAYERSKINS+playernum, "");
+    // FIXME: don't break skins on corpses, etc
+    //playernum = ent-g_edicts-1;
+    //gi.configstring (CS_PLAYERSKINS+playernum, "");
 }
 
 

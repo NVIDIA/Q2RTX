@@ -72,6 +72,8 @@ cvar_t  *flood_waitdelay;
 
 cvar_t  *sv_maplist;
 
+cvar_t  *sv_features;
+
 void SpawnEntities (const char *mapname, const char *entities, const char *spawnpoint);
 void ClientThink (edict_t *ent, usercmd_t *cmd);
 qboolean ClientConnect (edict_t *ent, char *userinfo);
@@ -161,6 +163,12 @@ void InitGame (void)
 
     // dm map list
     sv_maplist = gi.cvar ("sv_maplist", "", 0);
+
+    // obtain server features
+    sv_features = gi.cvar( "sv_features", NULL, 0 );
+
+    // export our own features
+    gi.cvar_forceset( "g_features", va( "%d", G_FEATURES ) );
 
     // items
     InitItems ();

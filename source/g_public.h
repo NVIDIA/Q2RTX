@@ -43,6 +43,7 @@ typedef enum {
 #define GMF_PROPERINUSE 2
 #define GMF_MVDSPEC     4
 #define GMF_WANT_ALL_DISCONNECTS 8
+#define GMF_ENHANCED_SAVEGAMES 1024
 
 //===============================================================
 
