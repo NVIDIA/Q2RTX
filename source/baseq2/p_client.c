@@ -947,17 +947,26 @@ void CopyToBodyQue (edict_t *ent)
 {
     edict_t     *body;
 
+    gi.unlinkentity (ent);
+
     // grab a body que and cycle to the next one
-    body = &g_edicts[(int)maxclients->value + level.body_que + 1];
+    body = &g_edicts[game.maxclients + level.body_que + 1];
     level.body_que = (level.body_que + 1) % BODY_QUEUE_SIZE;
 
-    // FIXME: send an effect on the removed body
-
-    gi.unlinkentity (ent);
+    // send an effect on the removed body
+    if (body->s.modelindex)
+    {
+        gi.WriteByte (svc_temp_entity);
+        gi.WriteByte (TE_BLOOD);
+        gi.WritePosition (body->s.origin);
+        gi.WriteDir (vec3_origin);
+        gi.multicast (body->s.origin, MULTICAST_PVS);
+    }  
 
     gi.unlinkentity (body);
     body->s = ent->s;
     body->s.number = body - g_edicts;
+    body->s.event = EV_OTHER_TELEPORT;
 
     body->svflags = ent->svflags;
     VectorCopy (ent->mins, body->mins);
@@ -965,17 +974,19 @@ void CopyToBodyQue (edict_t *ent)
     VectorCopy (ent->absmin, body->absmin);
     VectorCopy (ent->absmax, body->absmax);
     VectorCopy (ent->size, body->size);
+    VectorCopy (ent->velocity, body->velocity);
+    VectorCopy (ent->avelocity, body->avelocity);
     body->solid = ent->solid;
     body->clipmask = ent->clipmask;
     body->owner = ent->owner;
     body->movetype = ent->movetype;
+    body->groundentity = ent->groundentity;
 
     body->die = body_die;
     body->takedamage = DAMAGE_YES;
 
     gi.linkentity (body);
 }
-
 
 void respawn (edict_t *self)
 {
