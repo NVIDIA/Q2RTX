@@ -166,14 +166,11 @@ void InitGame (void)
     InitItems ();
 
     game.helpmessage1[0] = 0;
-
     game.helpmessage2[0] = 0;
 
     // initialize all entities for this game
     game.maxentities = maxentities->value;
-    if( game.maxentities > MAX_EDICTS ) {
-        game.maxentities = MAX_EDICTS;
-    }
+    clamp( game.maxentities, (int)maxclients->value + 1, MAX_EDICTS );
     g_edicts = gi.TagMalloc (game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
     globals.edicts = g_edicts;
     globals.max_edicts = game.maxentities;

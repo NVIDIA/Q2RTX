@@ -114,7 +114,7 @@ void SV_ClearWorld( void ) {
     }
 
     // make sure all entities are unlinked
-    for( i = 0; i < MAX_EDICTS; i++ ) {
+    for( i = 0; i < ge->max_edicts; i++ ) {
         ent = EDICT_NUM( i );
         ent->area.prev = ent->area.next = NULL;
     }

@@ -882,6 +882,11 @@ void SV_InitGameProgs ( void ) {
     // initialize
     ge->Init ();
 
+    // sanitize max_edicts
+    if( ge->max_edicts <= sv_maxclients->integer || ge->max_edicts > MAX_EDICTS ) {
+        Com_Error (ERR_DROP, "Game DLL returned bad number of max_edicts");
+    }
+
     Sys_FixFPCW();
 }
 
