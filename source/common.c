@@ -1330,7 +1330,7 @@ static void Com_AddEarlyCommands( qboolean clear ) {
             com_argc = i;
             break;
         }
-        Cvar_SetEx( com_argv[ i + 1 ], com_argv[ i + 2 ], CVAR_SET_COMMAND_LINE );
+        Cvar_SetEx( com_argv[ i + 1 ], com_argv[ i + 2 ], FROM_CMDLINE );
         if( clear ) {
             com_argv[i] = com_argv[ i + 1 ] = com_argv[ i + 2 ] = NULL;
         }
@@ -1363,19 +1363,19 @@ static qboolean Com_AddLateCommands( void ) {
         }
         if( *s == '+' ) {
             if( ret ) {
-                Cbuf_AddText( "\n" );
+                Cbuf_AddText( &cmd_buffer, "\n" );
             }
             s++;
         } else if( ret ) {
-            Cbuf_AddText( " " );
+            Cbuf_AddText( &cmd_buffer, " " );
         }
-        Cbuf_AddText( s );
+        Cbuf_AddText( &cmd_buffer, s );
         ret = qtrue;
     }
 
     if( ret ) {
-        Cbuf_AddText( "\n" );
-        Cbuf_Execute();
+        Cbuf_AddText( &cmd_buffer, "\n" );
+        Cbuf_Execute( &cmd_buffer );
     }
 
     return ret;
@@ -1468,7 +1468,7 @@ void Qcommon_Init( int argc, char **argv ) {
 
     // add any system-wide configuration files
     Sys_AddDefaultConfig();
-    Cbuf_Execute();
+    Cbuf_Execute( &cmd_buffer );
     
     // we need to add the early commands twice, because
     // a basedir or cddir needs to be set before execing
@@ -1500,14 +1500,14 @@ void Qcommon_Init( int argc, char **argv ) {
     logfile_name->changed = logfile_param_changed;
     logfile_enable_changed( logfile_enable );
 
-    Cbuf_AddText( "exec "COM_DEFAULTCFG_NAME"\n" );
-    Cbuf_Execute();
+    Cbuf_AddText( &cmd_buffer, "exec "COM_DEFAULTCFG_NAME"\n" );
+    Cbuf_Execute( &cmd_buffer );
     
-    Cbuf_AddText( "exec "COM_CONFIG_NAME"\n" );
-    Cbuf_Execute();
+    Cbuf_AddText( &cmd_buffer, "exec "COM_CONFIG_NAME"\n" );
+    Cbuf_Execute( &cmd_buffer );
 
-    Cbuf_AddText( "exec "COM_AUTOEXECCFG_NAME"\n" );
-    Cbuf_Execute();
+    Cbuf_AddText( &cmd_buffer, "exec "COM_AUTOEXECCFG_NAME"\n" );
+    Cbuf_Execute( &cmd_buffer );
 
     Com_AddEarlyCommands( qtrue );
 
@@ -1544,12 +1544,12 @@ void Qcommon_Init( int argc, char **argv ) {
     if( !Com_AddLateCommands() ) {
         // if the user didn't give any commands, run default action
         if( Com_IsDedicated() ) {
-            Cbuf_AddText( "dedicated_start\n" );
+            Cbuf_AddText( &cmd_buffer, "dedicated_start\n" );
         } else {
             // TODO
             //Cbuf_AddText( "d1\n" );
         }
-        Cbuf_Execute();
+        Cbuf_Execute( &cmd_buffer );
     }
 #if USE_CLIENT
     else {
@@ -1657,7 +1657,7 @@ void Qcommon_Frame( void ) {
     }
 
     // this is the only place where console commands are processed.
-    Cbuf_Execute();
+    Cbuf_Execute( &cmd_buffer );
 
 #if USE_CLIENT
     if( host_speeds->integer )
@@ -1693,7 +1693,7 @@ void Qcommon_Frame( void ) {
 #endif
 
     if( cvar_modified & CVAR_FILES ) {
-        Cbuf_ExecuteText( EXEC_NOW, "fs_restart" );
+        Cmd_ExecuteString( &cmd_buffer, "fs_restart" );
         cvar_modified &= ~CVAR_FILES;
     }
 

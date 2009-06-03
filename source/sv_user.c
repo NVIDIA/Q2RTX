@@ -1241,10 +1241,12 @@ void SV_ExecuteClientMessage( client_t *client ) {
                         client->name, Q_FormatString( buffer ) );
                 }
 
-                // malicious users may try using too many string commands
-                if( stringCmdCount == MAX_PACKET_STRINGCMDS ) {
-                    Com_DPrintf( "Too many stringcmds from %s\n", client->name );
-                    break;
+                if( !NET_IsLocalAddress( &client->netchan->remote_address ) ) {
+                    // malicious users may try using too many string commands
+                    if( stringCmdCount == MAX_PACKET_STRINGCMDS ) {
+                        Com_DPrintf( "Too many stringcmds from %s\n", client->name );
+                        break;
+                    }
                 }
                 SV_ExecuteUserCommand( buffer );
                 stringCmdCount++;

@@ -324,7 +324,7 @@ static void tty_parse_input( const char *text ) {
                     s++;
                 }
                 Sys_Printf( "]%s\n", s );
-                Cbuf_AddText( s );
+                Cbuf_AddText( &cmd_buffer, s );
             } else {
                 write( 1, "]\n", 2 );    
             }
@@ -420,7 +420,7 @@ void Sys_RunConsole( void ) {
     text[ret] = 0;
 
     if( !tty_enabled ) {    
-        Cbuf_AddText( text );
+        Cbuf_AddText( &cmd_buffer, text );
         return;
     }
 

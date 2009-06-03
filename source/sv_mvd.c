@@ -229,7 +229,7 @@ static const ucmd_t dummy_cmds[] = {
     { NULL, NULL }
 };
 
-static void dummy_exec_string( const char *line ) {
+static void dummy_exec_string( cmdbuf_t *buf, const char *line ) {
     char *cmd, *alias;
     const ucmd_t *u;
     cvar_t *v;
@@ -257,7 +257,7 @@ static void dummy_exec_string( const char *line ) {
             Com_WPrintf( "%s: runaway alias loop\n", __func__ );
             return;
         }
-        Cbuf_InsertTextEx( &dummy_buffer, alias );
+        Cbuf_InsertText( &dummy_buffer, alias );
         return;
     }
 
@@ -287,7 +287,7 @@ static void dummy_add_message( client_t *client, byte *data,
     data[length] = 0;
     text = ( char * )( data + 1 );
     Com_DPrintf( "dummy stufftext: %s\n", text );
-    Cbuf_AddTextEx( &dummy_buffer, text );
+    Cbuf_AddText( &dummy_buffer, text );
 }
 
 static void dummy_spawn( void ) {
@@ -298,7 +298,7 @@ static void dummy_spawn( void ) {
     sv_player = NULL;
 
     if( sv_mvd_begincmd->string[0] ) {
-        Cbuf_AddTextEx( &dummy_buffer, sv_mvd_begincmd->string );
+        Cbuf_AddText( &dummy_buffer, sv_mvd_begincmd->string );
     }
 
     mvd.layout_time = svs.realtime;
@@ -387,7 +387,7 @@ static qboolean dummy_create( void ) {
 static void dummy_run( void ) {
     usercmd_t cmd;
 
-    Cbuf_ExecuteEx( &dummy_buffer );
+    Cbuf_Execute( &dummy_buffer );
     if( dummy_buffer.waitCount > 0 ) {
         dummy_buffer.waitCount--;
     }
@@ -405,7 +405,7 @@ static void dummy_run( void ) {
     // game mod has probably closed the scoreboard, open it again
     if( mvd.active && sv_mvd_scorecmd->string[0] ) {
         if( svs.realtime - mvd.layout_time > 9000 ) {
-            Cbuf_AddTextEx( &dummy_buffer, sv_mvd_scorecmd->string );
+            Cbuf_AddText( &dummy_buffer, sv_mvd_scorecmd->string );
             mvd.layout_time = svs.realtime;
         }
     }
@@ -1938,6 +1938,7 @@ void SV_MvdInit( void ) {
         }
     }
 
+    dummy_buffer.from = FROM_CONSOLE;
     dummy_buffer.text = dummy_buffer_text;
     dummy_buffer.maxsize = sizeof( dummy_buffer_text );
     dummy_buffer.exec = dummy_exec_string;
@@ -2153,8 +2154,8 @@ static void SV_MvdStop_f( void ) {
 
 static void SV_MvdStuff_f( void ) {
     if( mvd.dummy ) {
-        Cbuf_AddTextEx( &dummy_buffer, Cmd_RawArgs() );
-        Cbuf_AddTextEx( &dummy_buffer, "\n" );
+        Cbuf_AddText( &dummy_buffer, Cmd_RawArgs() );
+        Cbuf_AddText( &dummy_buffer, "\n" );
     } else {
         Com_Printf( "Can't '%s', dummy MVD client is not active\n", Cmd_Argv( 0 ) );
     }

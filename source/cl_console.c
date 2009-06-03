@@ -939,9 +939,7 @@ void Con_DrawConsole( void ) {
 */
 
 static void Con_Say( char *msg ) {
-    Cbuf_AddText( con.chat == CHAT_TEAM ? "say_team \"" : "say \"" );
-    Cbuf_AddText( msg );
-    Cbuf_AddText( "\"\n" );
+    CL_ClientCommand( va( "say%s \"%s\"", con.chat == CHAT_TEAM ? "_team" : "", msg ) );
 }
 
 static void Con_Action( void ) {
@@ -957,8 +955,8 @@ static void Con_Action( void ) {
         if( con.mode == CON_REMOTE ) {
             CL_SendRcon( &con.remoteAddress, con.remotePassword, cmd + 1 );
         } else {
-            Cbuf_AddText( cmd + 1 );    // skip slash
-            Cbuf_AddText( "\n" );
+            Cbuf_AddText( &cmd_buffer, cmd + 1 );    // skip slash
+            Cbuf_AddText( &cmd_buffer, "\n" );
         }
     } else {
         if( con.mode == CON_REMOTE ) {
@@ -966,8 +964,8 @@ static void Con_Action( void ) {
         } else if( cls.state == ca_active && con.mode == CON_CHAT ) {
             Con_Say( cmd );
         } else {
-            Cbuf_AddText( cmd );
-            Cbuf_AddText( "\n" );
+            Cbuf_AddText( &cmd_buffer, cmd );
+            Cbuf_AddText( &cmd_buffer, "\n" );
         }
     }
 

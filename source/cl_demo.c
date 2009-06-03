@@ -558,8 +558,8 @@ static void CL_ParseNextDemoMessage( void ) {
         if( !s[0] ) {
             Com_Error( ERR_SILENT, "Demo finished" );
         }
-        Cbuf_AddText( s );
-        Cbuf_AddText( "\n" );
+        Cbuf_AddText( &cmd_buffer, s );
+        Cbuf_AddText( &cmd_buffer, "\n" );
         Cvar_Set( "nextserver", "" );
         cls.state = ca_connected;
         return;
@@ -632,7 +632,7 @@ static void CL_PlayDemo_f( void ) {
 
     if( type == 1 ) {
         Com_DPrintf( "%s is a MVD file\n", name );
-        Cbuf_InsertText( va( "mvdplay --replace @@ /%s\n", name ) );
+        Cbuf_InsertText( &cmd_buffer, va( "mvdplay --replace @@ /%s\n", name ) );
         FS_FCloseFile( demofile );
         return;
     }
@@ -655,7 +655,7 @@ static void CL_PlayDemo_f( void ) {
 
     CL_ParseServerMessage();
     while( cls.state == ca_connected ) {
-        Cbuf_Execute();
+        Cbuf_Execute( &cl_cmdbuf );
         CL_ParseNextDemoMessage();
     }
 

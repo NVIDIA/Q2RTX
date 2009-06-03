@@ -40,6 +40,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 char            cmd_buffer_text[CMD_BUFFER_SIZE];
 cmdbuf_t        cmd_buffer;
 
+// points to the buffer current command is executed from
+cmdbuf_t        *cmd_current;
+
 /*
 ============
 Cmd_Wait_f
@@ -50,11 +53,13 @@ bind g "impulse 5 ; +attack ; wait ; -attack ; impulse 2"
 ============
 */
 static void Cmd_Wait_f( void ) {
-    if( Cmd_Argc() > 1 ) {
-        cmd_buffer.waitCount = atoi( Cmd_Argv( 1 ) );
-    } else {
-        cmd_buffer.waitCount = 1;
+    int count;
+ 
+    count = atoi( Cmd_Argv( 1 ) );
+    if( count < 1 ) {
+        count = 1;
     }
+    cmd_current->waitCount += count;
 }
 
 /*
@@ -64,6 +69,7 @@ Cbuf_Init
 */
 void Cbuf_Init( void ) {
     memset( &cmd_buffer, 0, sizeof( cmd_buffer ) );
+    cmd_buffer.from = FROM_CONSOLE;
     cmd_buffer.text = cmd_buffer_text;
     cmd_buffer.maxsize = sizeof( cmd_buffer_text );
     cmd_buffer.exec = Cmd_ExecuteString;
@@ -76,7 +82,7 @@ Cbuf_AddText
 Adds command text at the end of the buffer
 ============
 */
-void Cbuf_AddTextEx( cmdbuf_t *buf, const char *text ) {
+void Cbuf_AddText( cmdbuf_t *buf, const char *text ) {
     size_t l = strlen( text );
 
     if( buf->cursize + l > buf->maxsize ) {
@@ -107,7 +113,7 @@ Adds command text at the beginning of command buffer.
 Adds a \n to the text.
 ============
 */
-void Cbuf_InsertTextEx( cmdbuf_t *buf, const char *text ) {
+void Cbuf_InsertText( cmdbuf_t *buf, const char *text ) {
     size_t l = strlen( text );
 
 // add the entire text of the file
@@ -127,31 +133,10 @@ void Cbuf_InsertTextEx( cmdbuf_t *buf, const char *text ) {
 
 /*
 ============
-Cbuf_ExecuteText
-============
-*/
-void Cbuf_ExecuteText( cbufExecWhen_t exec_when, const char *text ) {
-    switch( exec_when ) {
-    case EXEC_NOW:
-        Cmd_ExecuteString( text );
-        break;
-    case EXEC_INSERT:
-        Cbuf_InsertText( text );
-        break;
-    case EXEC_APPEND:
-        Cbuf_AddText( text );
-        break;
-    default:
-        Com_Error( ERR_FATAL, "%s: bad exec_when", __func__ );
-    }
-}
-
-/*
-============
 Cbuf_Execute
 ============
 */
-void Cbuf_ExecuteEx( cmdbuf_t *buf ) {
+void Cbuf_Execute( cmdbuf_t *buf ) {
     int     i;
     char    *text;
     char    line[MAX_STRING_CHARS];
@@ -197,8 +182,8 @@ void Cbuf_ExecuteEx( cmdbuf_t *buf ) {
         }
 
 // execute the command line
-        buf->exec( line );
-
+        cmd_current = buf;
+        buf->exec( buf, line );
     }
 
     buf->aliasCount = 0;        // don't allow infinite alias loops
@@ -535,6 +520,10 @@ static  char    cmd_args[MAX_STRING_CHARS];
 int             cmd_optind;
 char            *cmd_optarg;
 char            *cmd_optopt;
+
+from_t Cmd_From( void ) {
+    return cmd_current->from;
+}
 
 size_t Cmd_ArgOffset( int arg ) {
     if( arg < 0 ) {
@@ -1279,24 +1268,11 @@ void Cmd_Command_g( genctx_t *ctx ) {
     }
 }
 
-/*
-============
-Cmd_ExecuteString
-
-A complete command line has been parsed, so try to execute it
-============
-*/
-void Cmd_ExecuteString( const char *text ) {    
+void Cmd_ExecuteCommand( cmdbuf_t *buf ) {
     cmd_function_t  *cmd;
     cmdalias_t      *a;
     cvar_t          *v;
-
-    Cmd_TokenizeString( text, qtrue );
-            
-    // execute the command line
-    if( !cmd_argc ) {
-        return;        // no tokens
-    }
+    char            *text;
 
     // check functions
     cmd = Cmd_Find( cmd_argv[0] );
@@ -1316,18 +1292,18 @@ void Cmd_ExecuteString( const char *text ) {
     // check aliases
     a = Cmd_AliasFind( cmd_argv[0] );
     if( a ) {
-        if( cmd_buffer.aliasCount == ALIAS_LOOP_COUNT ) {
+        if( buf->aliasCount == ALIAS_LOOP_COUNT ) {
             Com_WPrintf( "Runaway alias loop\n" );
             return;
         }
         text = Cmd_MacroExpandString( a->value, qtrue );
         if( text ) {
-            cmd_buffer.aliasCount++;
-            Cbuf_InsertText( text );
+            buf->aliasCount++;
+            Cbuf_InsertText( buf, text );
         }
         return;
     }
-    
+ 
     // check variables
     v = Cvar_FindVar( cmd_argv[0] );
     if( v ) {
@@ -1345,6 +1321,24 @@ void Cmd_ExecuteString( const char *text ) {
 }
 
 /*
+============
+Cmd_ExecuteString
+
+A complete command line has been parsed, so try to execute it
+============
+*/
+void Cmd_ExecuteString( cmdbuf_t *buf, const char *text ) {    
+    Cmd_TokenizeString( text, qtrue );
+            
+    // execute the command line
+    if( !cmd_argc ) {
+        return;        // no tokens
+    }
+
+    Cmd_ExecuteCommand( buf );
+}
+
+/*
 ===============
 Cmd_Exec_f
 ===============
@@ -1352,6 +1346,8 @@ Cmd_Exec_f
 static void Cmd_Exec_f( void ) {
     char    buffer[MAX_QPATH];
     char    *f;
+    size_t  len;
+    int     i;
 
     if( Cmd_Argc() != 2 ) {
         Com_Printf( "%s <filename> : execute a script file\n", Cmd_Argv( 0 ) );
@@ -1360,14 +1356,21 @@ static void Cmd_Exec_f( void ) {
 
     Cmd_ArgvBuffer( 1, buffer, sizeof( buffer ) );
 
-    FS_LoadFile( buffer, ( void ** )&f );
+    len = FS_LoadFile( buffer, ( void ** )&f );
     if( !f ) {
         // try with *.cfg extension
         COM_DefaultExtension( buffer, ".cfg", sizeof( buffer ) );
-        FS_LoadFile( buffer, ( void ** )&f );
+        len = FS_LoadFile( buffer, ( void ** )&f );
         if( !f ) {
             Com_Printf( "Couldn't exec %s\n", buffer );
             return;
+        }
+    }
+
+    for( i = 0; i < len; i++ ) {
+        if( f[i] == 0 ) {
+            Com_Printf( "Refusing to exec binary file\n" );
+            goto finish;
         }
     }
 
@@ -1376,8 +1379,10 @@ static void Cmd_Exec_f( void ) {
     // FIXME: bad thing to do in place
     COM_Compress( f );
 
-    Cbuf_InsertText( f );
+    // FIXME: always insert into generic command buffer
+    Cbuf_InsertText( &cmd_buffer, f );
 
+finish:
     FS_FreeFile( f );
 }
 
@@ -1548,8 +1553,8 @@ static void Cmd_MacroList_f( void ) {
 }
 
 static void Cmd_Text_f( void ) {
-    Cbuf_AddText( Cmd_Args() );
-    Cbuf_AddText( "\n" );
+    Cbuf_AddText( cmd_current, Cmd_Args() );
+    Cbuf_AddText( cmd_current, "\n" );
 }
 
 static void Cmd_Complete_f( void ) {

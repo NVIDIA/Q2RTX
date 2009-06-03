@@ -121,7 +121,7 @@ IN_Frame
 */
 void IN_Frame( void ) {
     if( input.modified ) {
-        Cbuf_AddText( "in_restart\n" );
+        Cbuf_AddText( &cmd_buffer, "in_restart\n" );
         input.modified = qfalse;
     } else if( input.initialized ) {
         if( input.api.GetEvents ) {

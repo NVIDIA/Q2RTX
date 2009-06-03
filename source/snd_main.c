@@ -998,7 +998,7 @@ void S_Update( void ) {
     channel_t   *ch;
 
     if( cvar_modified & CVAR_SOUND ) {
-        Cbuf_AddText( "snd_restart\n" );
+        Cbuf_AddText( &cmd_buffer, "snd_restart\n" );
         cvar_modified &= ~CVAR_SOUND;
         return;
     }

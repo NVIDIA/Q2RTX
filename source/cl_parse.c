@@ -120,17 +120,13 @@ void CL_Download_f( void ) {
         Com_Printf( "Must be connected to a server.\n" );
         return;
     }
-
-    if( Cmd_Argc() != 2 ) {
-        Com_Printf( "Usage: download <filename>\n" );
+    if( !allow_download->integer ) {
+        Com_Printf( "Downloading is disabled.\n" );
         return;
     }
 
-    path = Cmd_Argv( 1 );
-
-    if( !allow_download->integer ) {
-        Com_Printf( "Couldn't download '%s', "
-            "downloading is locally disabled.\n", path );
+    if( Cmd_Argc() != 2 ) {
+        Com_Printf( "Usage: download <filename>\n" );
         return;
     }
 
@@ -141,6 +137,8 @@ void CL_Download_f( void ) {
         }
         return;
     }
+
+    path = Cmd_Argv( 1 );
 
     if( FS_LoadFile( path, NULL ) != INVALID_LENGTH ) {    
         Com_Printf( "File '%s' already exists.\n", path );
@@ -776,7 +774,7 @@ static void CL_ParseServerData( void ) {
     int     i, protocol, attractloop;
     size_t  len;
 
-    Cbuf_Execute();        // make sure any stuffed commands are done
+    Cbuf_Execute( &cl_cmdbuf );        // make sure any stuffed commands are done
     
     // wipe the client_state_t struct
     CL_ClearState();
@@ -901,7 +899,7 @@ static void CL_ParseServerData( void ) {
         Con_Printf( S_COLOR_ALT "%s\n\n", levelname );
 
 #if USE_SYSCON
-        Sys_Printf( "\n\n%s\n", levelname );
+        Sys_Printf( "%s\n", levelname );
 #endif
 
         // make sure clientNum is in range
@@ -1155,6 +1153,8 @@ static void CL_ParseReconnect( void ) {
     cls.state = ca_challenging;
     cls.connect_time = cls.realtime - CONNECT_DELAY;
     cls.connect_count = 0;
+
+    CL_CheckForResend();
 }
 
 #if USE_AUTOREPLY
@@ -1261,29 +1261,15 @@ CL_ParseStuffText
 =====================
 */
 static void CL_ParseStuffText( void ) {
-    char s[MAX_STRING_CHARS], *p;
+    char s[MAX_STRING_CHARS];
 
     MSG_ReadString( s, sizeof( s ) );
 
-    //if( cl_shownet->integer > 2 ) {
-    //    Com_Printf( "    \"%s\"\n", Q_FormatString( s ) );
-    //}
-
-    // FIXME: this is uuugly...
-    if( cls.demo.playback &&
-        strcmp( s, "precache\n" ) &&
-        strcmp( s, "changing\n" ) &&
-        ( strncmp( s, "play ", 5 ) || !( p = strchr( s, '\n' ) ) ||
-          p[1] || strchr( s, ';' ) || strchr( s, '$' ) ) &&
-        strcmp( s, "reconnect\n" ) )
-    {
-        Com_DPrintf( "ignored stufftext: %s\n", s );
-        return;
+    if( cl_shownet->integer > 2 ) {
+        Com_Printf( "    \"%s\"\n", Q_FormatString( s ) );
     }
 
-    Com_DPrintf( "stufftext: %s\n", Q_FormatString( s ) );
-
-    Cbuf_AddText( s );
+    Cbuf_AddText( &cl_cmdbuf, s );
 }
 
 /*

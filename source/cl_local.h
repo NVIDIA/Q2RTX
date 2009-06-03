@@ -319,6 +319,9 @@ typedef struct client_static_s {
 
 extern client_static_t    cls;
 
+extern cmdbuf_t    cl_cmdbuf;
+extern char        cl_cmdbuf_text[MAX_STRING_CHARS];
+
 //=============================================================================
 
 #define NOPART_GRENADE_EXPLOSION    1
@@ -402,7 +405,9 @@ extern cdlight_t    cl_dlights[MAX_DLIGHTS];
 //=============================================================================
 
 
+#ifdef _DEBUG
 void CL_AddNetgraph (void);
+#endif
 
 //ROGUE
 typedef struct cl_sustain_s {
@@ -523,6 +528,7 @@ void CL_Init (void);
 void CL_Quit_f (void);
 void CL_Disconnect( comErrorType_t type, const char *text );
 void CL_RequestNextDownload (void);
+void CL_CheckForResend( void );
 void CL_ClearState (void);
 void CL_RestartFilesystem( void );
 void CL_RestartRefresh( void );

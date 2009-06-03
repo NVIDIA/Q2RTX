@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 static menuSound_t Activate( menuCommon_t *self ) {
     menuAction_t *action = ( menuAction_t * )self;
-    Cbuf_AddText( action->cmd );
+    Cbuf_AddText( &cmd_buffer, action->cmd );
     return QMS_NOTHANDLED;
 }
 

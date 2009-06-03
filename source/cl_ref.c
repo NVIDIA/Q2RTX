@@ -153,7 +153,7 @@ void VID_SetGeometry( vrect_t *rc ) {
 
     Q_snprintf( buffer, sizeof( buffer ), "%dx%d+%d+%d",
         rc->width, rc->height, rc->x, rc->y );
-    Cvar_SetByVar( vid_geometry, buffer, CVAR_SET_DIRECT );
+    Cvar_SetByVar( vid_geometry, buffer, FROM_CODE );
 }
 
 void VID_ToggleFullscreen( void ) {
@@ -161,9 +161,9 @@ void VID_ToggleFullscreen( void ) {
         if( !_vid_fullscreen->integer ) {
             Cvar_Set( "_vid_fullscreen", "1" );
         }
-        Cbuf_AddText( "set vid_fullscreen $_vid_fullscreen\n" );
+        Cbuf_AddText( &cmd_buffer, "set vid_fullscreen $_vid_fullscreen\n" );
     } else {
-        Cbuf_AddText( "set vid_fullscreen 0\n" );
+        Cbuf_AddText( &cmd_buffer, "set vid_fullscreen 0\n" );
     }
 }
 

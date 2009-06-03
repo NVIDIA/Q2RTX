@@ -1007,7 +1007,7 @@ static void NET_OpenServer( void ) {
     if( saved_port && saved_port != net_port->integer ) {
         // revert to the last valid port
         Com_Printf( "Reverting to the last valid port %d...\n", saved_port );
-        Cbuf_AddText( va( "set net_port %d\n", saved_port ) );
+        Cbuf_AddText( &cmd_buffer, va( "set net_port %d\n", saved_port ) );
         return;
     }
 
@@ -1040,7 +1040,7 @@ static void NET_OpenClient( void ) {
                 ( struct sockaddr * )&address, &length );
             Com_WPrintf( "Client bound to UDP port %d.\n",
                 ntohs( address.sin_port ) );
-            Cvar_SetByVar( net_clientport, va( "%d", PORT_ANY ), CVAR_SET_DIRECT );
+            Cvar_SetByVar( net_clientport, va( "%d", PORT_ANY ), FROM_CODE );
             return;
         }
     }
@@ -1618,10 +1618,10 @@ static size_t NET_DnRate_m( char *buffer, size_t size ) {
 static void net_udp_param_changed( cvar_t *self ) {
     // keep TCP socket vars in sync unless modified by user
     if( !( net_tcp_ip->flags & CVAR_MODIFIED ) ) {
-        Cvar_SetByVar( net_tcp_ip, net_ip->string, CVAR_SET_DIRECT );
+        Cvar_SetByVar( net_tcp_ip, net_ip->string, FROM_CODE );
     }
     if( !( net_tcp_port->flags & CVAR_MODIFIED ) ) {
-        Cvar_SetByVar( net_tcp_port, net_port->string, CVAR_SET_DIRECT );
+        Cvar_SetByVar( net_tcp_port, net_port->string, FROM_CODE );
     }
 
     NET_Restart_f();

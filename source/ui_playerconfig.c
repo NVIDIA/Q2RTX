@@ -165,15 +165,15 @@ static menuSound_t Change( menuCommon_t *self ) {
 static void Pop( menuFrameWork_t *self ) {
     char scratch[MAX_OSPATH];
 
-    Cvar_SetEx( "name", m_player.name.field.text, CVAR_SET_CONSOLE );
+    Cvar_SetEx( "name", m_player.name.field.text, FROM_CONSOLE );
 
     Q_concat( scratch, sizeof( scratch ),
         uis.pmi[m_player.model.curvalue].directory, "/",
         uis.pmi[m_player.model.curvalue].skindisplaynames[m_player.skin.curvalue], NULL );
 
-    Cvar_SetEx( "skin", scratch, CVAR_SET_CONSOLE );
+    Cvar_SetEx( "skin", scratch, FROM_CONSOLE );
 
-    Cvar_SetEx( "hand", va( "%d", m_player.hand.curvalue ), CVAR_SET_CONSOLE );
+    Cvar_SetEx( "hand", va( "%d", m_player.hand.curvalue ), FROM_CONSOLE );
 }
 
 static qboolean Push( menuFrameWork_t *self ) {

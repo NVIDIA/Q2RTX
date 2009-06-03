@@ -279,7 +279,7 @@ static void Field_Push( menuField_t *f ) {
 }
 
 static void Field_Pop( menuField_t *f ) {
-    Cvar_SetByVar( f->cvar, f->field.text, CVAR_SET_CONSOLE );
+    Cvar_SetByVar( f->cvar, f->field.text, FROM_CONSOLE );
 }
 
 static void Field_Free( menuField_t *f ) {
@@ -406,7 +406,7 @@ static void SpinControl_Push( menuSpinControl_t *s ) {
 }
 
 static void SpinControl_Pop( menuSpinControl_t *s ) {
-    Cvar_SetInteger( s->cvar, s->curvalue, CVAR_SET_CONSOLE );
+    Cvar_SetInteger( s->cvar, s->curvalue, FROM_CONSOLE );
 }
 
 static void SpinControl_Free( menuSpinControl_t *s ) {
@@ -538,7 +538,7 @@ static void BitField_Pop( menuSpinControl_t *s ) {
     } else {
         val &= ~s->mask;
     }
-    Cvar_SetInteger( s->cvar, val, CVAR_SET_CONSOLE );
+    Cvar_SetInteger( s->cvar, val, FROM_CONSOLE );
 }
 
 static void BitField_Free( menuSpinControl_t *s ) {
@@ -566,7 +566,7 @@ static void Pairs_Push( menuSpinControl_t *s ) {
 }
 
 static void Pairs_Pop( menuSpinControl_t *s ) {
-    Cvar_SetByVar( s->cvar, s->itemvalues[s->curvalue], CVAR_SET_CONSOLE );
+    Cvar_SetByVar( s->cvar, s->itemvalues[s->curvalue], FROM_CONSOLE );
 }
 
 static void Pairs_Free( menuSpinControl_t *s ) {
@@ -602,7 +602,7 @@ static void Strings_Push( menuSpinControl_t *s ) {
 }
 
 static void Strings_Pop( menuSpinControl_t *s ) {
-    Cvar_SetByVar( s->cvar, s->itemnames[s->curvalue], CVAR_SET_CONSOLE );
+    Cvar_SetByVar( s->cvar, s->itemnames[s->curvalue], FROM_CONSOLE );
 }
 
 /*
@@ -1129,7 +1129,7 @@ static void Slider_Push( menuSlider_t *s ) {
 }
 
 void Slider_Pop( menuSlider_t *s ) {
-    Cvar_SetValue( s->cvar, s->curvalue, CVAR_SET_CONSOLE );
+    Cvar_SetValue( s->cvar, s->curvalue, FROM_CONSOLE );
 }
 
 static void Slider_Free( menuSlider_t *s ) {

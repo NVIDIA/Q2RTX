@@ -709,7 +709,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
             !cl.putaway )
         {    
             // put away help computer / inventory
-            Cbuf_AddText( "cmd putaway\n" );
+            CL_ClientCommand( "putaway" );
             cl.putaway = qtrue;
             return;
         }
@@ -780,7 +780,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
             if( kb && kb[0] == '+' ) {
                 Q_snprintf( cmd, sizeof( cmd ), "-%s %i %i\n",
                     kb + 1, key, time );
-                Cbuf_InsertText( cmd );
+                Cbuf_InsertText( &cmd_buffer, cmd );
             }
 #ifndef USE_CHAR_EVENTS
             if( keyshift[key] != key ) {
@@ -788,7 +788,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
                 if( kb && kb[0] == '+' ) {
                     Q_snprintf( cmd, sizeof( cmd ), "-%s %i %i\n",
                         kb + 1, key, time );
-                    Cbuf_InsertText( cmd );
+                    Cbuf_InsertText( &cmd_buffer, cmd );
                 }
             }
 #endif // USE_CHAR_EVENTS
@@ -810,10 +810,10 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
             if( kb[0] == '+' ) {    
                 // button commands add keynum and time as a parm
                 Q_snprintf( cmd, sizeof( cmd ), "%s %i %i\n", kb, key, time );
-                Cbuf_InsertText( cmd );
+                Cbuf_InsertText( &cmd_buffer, cmd );
             } else {
-                Cbuf_InsertText( kb );
-                Cbuf_InsertText( "\n" );
+                Cbuf_InsertText( &cmd_buffer, kb );
+                Cbuf_InsertText( &cmd_buffer, "\n" );
             }
         }
         return;

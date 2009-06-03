@@ -152,7 +152,7 @@ static void Cvar_ParseString( cvar_t *var ) {
     }
 }
 
-static void Cvar_ChangeString( cvar_t *var, const char *value, cvarSetSource_t source ) {
+static void Cvar_ChangeString( cvar_t *var, const char *value, from_t from ) {
     // free the old value string
     Z_Free( var->string );
 
@@ -162,13 +162,13 @@ static void Cvar_ChangeString( cvar_t *var, const char *value, cvarSetSource_t s
     if( var->flags & CVAR_INFOMASK ) {
 #if USE_CLIENT
         if( var->flags & CVAR_USERINFO ) {
-            CL_UpdateUserinfo( var, source );
+            CL_UpdateUserinfo( var, from );
         }
 #endif
     }
 
     var->modified = qtrue;
-    if( source != CVAR_SET_DIRECT ) {
+    if( from != FROM_CODE ) {
         cvar_modified |= var->flags & CVAR_MODIFYMASK;
         var->flags |= CVAR_MODIFIED;
         if( var->changed ) {
@@ -197,7 +197,7 @@ static void Cvar_EngineGet( cvar_t *var, const char *var_value, int flags ) {
               ( var->flags & CVAR_VOLATILE ) ) &&
             strcmp( var_value, var->string ) )
         {
-            Cvar_ChangeString( var, var_value, CVAR_SET_DIRECT );
+            Cvar_ChangeString( var, var_value, FROM_CODE );
         }
     } else {
         flags &= ~CVAR_GAME;
@@ -294,7 +294,7 @@ cvar_t *Cvar_Ref( const char *var_name ) {
 Cvar_SetByVar
 ============
 */
-void Cvar_SetByVar( cvar_t *var, const char *value, cvarSetSource_t source ) {
+void Cvar_SetByVar( cvar_t *var, const char *value, from_t from ) {
     if( !value ) {
         value = "";
     }
@@ -310,7 +310,7 @@ void Cvar_SetByVar( cvar_t *var, const char *value, cvarSetSource_t source ) {
     }
 
     // some cvars may not be changed by user at all
-    if( source != CVAR_SET_DIRECT ) {
+    if( from != FROM_CODE ) {
         if( var->flags & CVAR_ROM ) {
             Com_Printf( "%s is read-only.\n", var->name );
             return;
@@ -325,7 +325,7 @@ void Cvar_SetByVar( cvar_t *var, const char *value, cvarSetSource_t source ) {
     }
 
     // some cvars may require special processing if set by user from console
-    if( source == CVAR_SET_CONSOLE && com_initialized ) {
+    if( from <= FROM_CONSOLE && com_initialized ) {
         if( var->flags & CVAR_NOSET ) {
             Com_Printf( "%s may be set from command line only.\n", var->name );
             return;
@@ -410,7 +410,7 @@ void Cvar_SetByVar( cvar_t *var, const char *value, cvarSetSource_t source ) {
         var->latched_string = NULL;
     }
 
-    Cvar_ChangeString( var, value, source );
+    Cvar_ChangeString( var, value, from );
 }
 
 /*
@@ -418,9 +418,7 @@ void Cvar_SetByVar( cvar_t *var, const char *value, cvarSetSource_t source ) {
 Cvar_SetEx
 ============
 */
-cvar_t *Cvar_SetEx( const char *var_name, const char *value,
-        cvarSetSource_t source )
-{
+cvar_t *Cvar_SetEx( const char *var_name, const char *value, from_t from ) {
     cvar_t    *var;
 
     var = Cvar_FindVar( var_name );
@@ -429,7 +427,7 @@ cvar_t *Cvar_SetEx( const char *var_name, const char *value,
         return Cvar_Get( var_name, value, CVAR_CUSTOM );
     }
 
-    Cvar_SetByVar( var, value, source );
+    Cvar_SetByVar( var, value, from );
 
     return var;
 }
@@ -439,7 +437,7 @@ cvar_t *Cvar_SetEx( const char *var_name, const char *value,
 Cvar_FullSet
 ============
 */
-cvar_t *Cvar_FullSet( const char *var_name, const char *value, int flags, cvarSetSource_t source ) {
+cvar_t *Cvar_FullSet( const char *var_name, const char *value, int flags, from_t from ) {
     cvar_t *var;
 
     var = Cvar_FindVar( var_name );
@@ -448,13 +446,13 @@ cvar_t *Cvar_FullSet( const char *var_name, const char *value, int flags, cvarSe
         return Cvar_Get( var_name, value, flags | CVAR_CUSTOM );
     }
 
-    Cvar_SetByVar( var, value, source );
+    Cvar_SetByVar( var, value, from );
 
 #if USE_CLIENT
     // force retransmit of userinfo variables
     // needed for compatibility with q2admin
     if( ( var->flags | flags ) & CVAR_USERINFO ) {
-        CL_UpdateUserinfo( var, source );
+        CL_UpdateUserinfo( var, from );
     }
 #endif
 
@@ -470,7 +468,7 @@ Cvar_Set
 ============
 */
 cvar_t *Cvar_Set( const char *var_name, const char *value ) {
-    return Cvar_SetEx( var_name, value, CVAR_SET_DIRECT );
+    return Cvar_SetEx( var_name, value, FROM_CODE );
 }
 
 /*
@@ -479,7 +477,7 @@ Cvar_UserSet
 ============
 */
 cvar_t *Cvar_UserSet( const char *var_name, const char *value ) {
-    return Cvar_SetEx( var_name, value, CVAR_SET_CONSOLE );
+    return Cvar_SetEx( var_name, value, FROM_CONSOLE );
 }
 
 
@@ -488,7 +486,7 @@ cvar_t *Cvar_UserSet( const char *var_name, const char *value ) {
 Cvar_SetValue
 ============
 */
-void Cvar_SetValue( cvar_t *var, float value, cvarSetSource_t source ) {
+void Cvar_SetValue( cvar_t *var, float value, from_t from ) {
     char    val[32];
 
     if( value == (int)value )
@@ -496,7 +494,7 @@ void Cvar_SetValue( cvar_t *var, float value, cvarSetSource_t source ) {
     else
         Q_snprintf( val, sizeof( val ), "%f", value);
 
-    Cvar_SetByVar( var, val, source );
+    Cvar_SetByVar( var, val, from );
 }
 
 /*
@@ -504,12 +502,12 @@ void Cvar_SetValue( cvar_t *var, float value, cvarSetSource_t source ) {
 Cvar_SetInteger
 ============
 */
-void Cvar_SetInteger( cvar_t *var, int value, cvarSetSource_t source ) {
+void Cvar_SetInteger( cvar_t *var, int value, from_t from ) {
     char    val[32];
 
     Q_snprintf( val, sizeof( val ), "%i", value );
 
-    Cvar_SetByVar( var, val, source );
+    Cvar_SetByVar( var, val, from );
 }
 
 /*
@@ -517,12 +515,12 @@ void Cvar_SetInteger( cvar_t *var, int value, cvarSetSource_t source ) {
 Cvar_SetHex
 ============
 */
-void Cvar_SetHex( cvar_t *var, int value, cvarSetSource_t source ) {
+void Cvar_SetHex( cvar_t *var, int value, from_t from ) {
     char    val[32];
 
     Q_snprintf( val, sizeof( val ), "0x%X", value );
 
-    Cvar_SetByVar( var, val, source );
+    Cvar_SetByVar( var, val, from );
 }
 
 /*
@@ -535,12 +533,12 @@ int Cvar_ClampInteger( cvar_t *var, int min, int max ) {
 
     if( var->integer < min ) {
         Q_snprintf( val, sizeof( val ), "%i", min );
-        Cvar_SetByVar( var, val, CVAR_SET_DIRECT );
+        Cvar_SetByVar( var, val, FROM_CODE );
         return min;
     }
     if( var->integer > max ) {
         Q_snprintf( val, sizeof( val ), "%i", max );
-        Cvar_SetByVar( var, val, CVAR_SET_DIRECT );
+        Cvar_SetByVar( var, val, FROM_CODE );
         return max;
     }
     return var->integer;
@@ -560,7 +558,7 @@ float Cvar_ClampValue( cvar_t *var, float min, float max ) {
         } else {
             Q_snprintf( val, sizeof( val ), "%f", min );
         }
-        Cvar_SetByVar( var, val, CVAR_SET_DIRECT );
+        Cvar_SetByVar( var, val, FROM_CODE );
         return min;
     }
     if( var->value > max ) {
@@ -569,7 +567,7 @@ float Cvar_ClampValue( cvar_t *var, float min, float max ) {
         } else {
             Q_snprintf( val, sizeof( val ), "%f", max );
         }
-        Cvar_SetByVar( var, val, CVAR_SET_DIRECT );
+        Cvar_SetByVar( var, val, FROM_CODE );
         return max;
     }
     return var->value;
@@ -590,7 +588,7 @@ void Cvar_FixCheats( void ) {
     // fix any cheating cvars
     for( var = cvar_vars; var; var = var->next ) {
         if( var->flags & CVAR_CHEAT ) {
-            Cvar_SetByVar( var, var->default_string, CVAR_SET_DIRECT );
+            Cvar_SetByVar( var, var->default_string, FROM_CODE );
         }
     }
 }
@@ -656,7 +654,7 @@ void Cvar_Command( cvar_t *v ) {
         }
         Com_Printf( "\n" );
     } else {
-        Cvar_SetByVar( v, Cmd_ArgsFrom( 1 ), CVAR_SET_CONSOLE );
+        Cvar_SetByVar( v, Cmd_ArgsFrom( 1 ), Cmd_From() );
     }
 }
 
@@ -698,7 +696,7 @@ void Cvar_Set_f( void ) {
     }
 
     if( c == 3 ) {
-        Cvar_SetEx( Cmd_Argv( 1 ), Cmd_Argv( 2 ), CVAR_SET_CONSOLE );
+        Cvar_SetEx( Cmd_Argv( 1 ), Cmd_Argv( 2 ), Cmd_From() );
         return;
     }
 
@@ -711,12 +709,12 @@ void Cvar_Set_f( void ) {
         } else {
             goto set;
         }
-        Cvar_FullSet( Cmd_Argv( 1 ), Cmd_Argv( 2 ), flags, CVAR_SET_CONSOLE );
+        Cvar_FullSet( Cmd_Argv( 1 ), Cmd_Argv( 2 ), flags, Cmd_From() );
         return;
     }
 
 set:
-    Cvar_SetEx( Cmd_Argv( 1 ), Cmd_ArgsFrom( 2 ), CVAR_SET_CONSOLE );
+    Cvar_SetEx( Cmd_Argv( 1 ), Cmd_ArgsFrom( 2 ), Cmd_From() );
 }
 
 /*
@@ -728,7 +726,7 @@ Allows setting and defining of arbitrary cvars from console
 */
 static void Cvar_SetFlag_f( void ) {
     char    *s = Cmd_Argv( 0 );
-    int        flags;
+    int     flags;
 
     if( Cmd_Argc() < 3 ) {
         Com_Printf( "Usage: %s <variable> <value>\n", s );
@@ -745,7 +743,7 @@ static void Cvar_SetFlag_f( void ) {
         return;
     }
 
-    Cvar_FullSet( Cmd_Argv( 1 ), Cmd_ArgsFrom( 2 ), flags, CVAR_SET_CONSOLE );
+    Cvar_FullSet( Cmd_Argv( 1 ), Cmd_ArgsFrom( 2 ), flags, Cmd_From() );
 }
 
 #if USE_CLIENT
@@ -946,9 +944,9 @@ static void Cvar_Toggle_f( void ) {
 
     if( argc < 3 ) {
         if( !strcmp( var->string, "0" ) ) {
-            Cvar_SetByVar( var, "1", CVAR_SET_CONSOLE );
+            Cvar_SetByVar( var, "1", Cmd_From() );
         } else if( !strcmp( var->string, "1" ) ) {
-            Cvar_SetByVar( var, "0", CVAR_SET_CONSOLE );
+            Cvar_SetByVar( var, "0", Cmd_From() );
         } else {
             Com_Printf( "\"%s\" is \"%s\", can't toggle\n",
                 var->name, var->string );
@@ -959,7 +957,7 @@ static void Cvar_Toggle_f( void ) {
     for( i = 0; i < argc - 2; i++ ) {
         if( !Q_stricmp( var->string, Cmd_Argv( 2 + i ) ) ) {
             i = ( i + 1 ) % ( argc - 2 );
-            Cvar_SetByVar( var, Cmd_Argv( 2 + i ), CVAR_SET_CONSOLE );
+            Cvar_SetByVar( var, Cmd_Argv( 2 + i ), Cmd_From() );
             return;
         }
     }
@@ -1022,7 +1020,7 @@ static void Cvar_Inc_f( void ) {
     else
         Q_snprintf( val, sizeof( val ), "%f", value );
 
-    Cvar_SetByVar( var, val, CVAR_SET_CONSOLE );
+    Cvar_SetByVar( var, val, Cmd_From() );
 }
 
 /*
@@ -1044,7 +1042,7 @@ static void Cvar_Reset_f( void ) {
         return;
     }
 
-    Cvar_SetByVar( var, var->default_string, CVAR_SET_CONSOLE );
+    Cvar_SetByVar( var, var->default_string, Cmd_From() );
 }
 
 static void Cvar_Reset_c( genctx_t *ctx, int argnum ) {

@@ -198,8 +198,8 @@ void Sys_RunConsole( void ) {
                         s++;
                     }
                     Sys_Printf( "]%s\n", s );
-                    Cbuf_AddText( s );
-                    Cbuf_AddText( "\n" );
+                    Cbuf_AddText( &cmd_buffer, s );
+                    Cbuf_AddText( &cmd_buffer, "\n" );
                 } else {
                     WriteFile( houtput, "\n", 2, &dummy, NULL );    
                 }

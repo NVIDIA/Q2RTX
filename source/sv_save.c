@@ -319,7 +319,7 @@ void SV_Savegame_f( void ) {
     // archive current level, including all client edicts.
     // when the level is reloaded, they will be shells awaiting
     // a connecting client
-    write_level_file ();
+    write_level_file();
 
     // save server state
     write_server_file( qfalse );

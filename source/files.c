@@ -2469,8 +2469,7 @@ static void FS_SetupGamedir( void ) {
     }
 
     // this one is left for compatibility with server browsers, etc
-    Cvar_FullSet( "gamedir", fs_game->string, CVAR_ROM|CVAR_SERVERINFO,
-        CVAR_SET_DIRECT );
+    Cvar_FullSet( "gamedir", fs_game->string, CVAR_ROM|CVAR_SERVERINFO, FROM_CODE );
 
     FS_AddGameDirectory( FS_PATH_GAME, "%s/%s", sys_basedir->string, fs_game->string );
 

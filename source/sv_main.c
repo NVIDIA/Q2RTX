@@ -618,9 +618,11 @@ static void SVC_DirectConnect( void ) {
         }
     }
 
-    // cap maximum message length
-    if( net_maxmsglen->integer > 0 && maxlength > net_maxmsglen->integer ) {
-        maxlength = net_maxmsglen->integer;
+    if( !NET_IsLocalAddress( &net_from ) ) {
+        // cap maximum message length for real connections
+        if( net_maxmsglen->integer > 0 && maxlength > net_maxmsglen->integer ) {
+            maxlength = net_maxmsglen->integer;
+        }
     }
 
     if( protocol == PROTOCOL_VERSION_R1Q2 ) {
@@ -969,7 +971,7 @@ static void SVC_RemoteCommand( void ) {
 
     SV_BeginRedirect( RD_PACKET );
 
-    Cmd_ExecuteString( string );
+    Cmd_ExecuteString( &cmd_buffer, string );
 
     Com_EndRedirect();
 }

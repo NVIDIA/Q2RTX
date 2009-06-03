@@ -298,7 +298,7 @@ static void PingServers( void ) {
 static menuSound_t Connect( menuCommon_t *self ) {
     serverSlot_t *s = &m_join.servers[m_join.list.curvalue];
 
-    Cbuf_AddText( va( "connect \"%s\"\n", s->realAddress ) );
+    Cbuf_AddText( &cmd_buffer, va( "connect \"%s\"\n", s->realAddress ) );
     UI_PopMenu();
     return QMS_IN;
 }

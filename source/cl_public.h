@@ -58,7 +58,7 @@ void CL_Frame (unsigned msec);
 void CL_LocalConnect( void );
 void CL_RestartFilesystem( void );
 void CL_Activate( active_t active );
-void CL_UpdateUserinfo( cvar_t *var, cvarSetSource_t source );
+void CL_UpdateUserinfo( cvar_t *var, from_t from );
 qboolean CL_SendStatusRequest( char *buffer, size_t size );
 demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info );
 

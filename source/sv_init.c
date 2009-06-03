@@ -141,7 +141,7 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
     SV_InfoSet( "mapname", sv.name );
     SV_InfoSet( "port", net_port->string );
 
-    Cvar_SetInteger( sv_running, ss_game, CVAR_SET_DIRECT );
+    Cvar_SetInteger( sv_running, ss_game, FROM_CODE );
     Cvar_Set( "sv_paused", "0" );
     Cvar_Set( "timedemo", "0" );
 
@@ -208,16 +208,15 @@ void SV_InitGame( qboolean ismvd ) {
     // init clients
     if( Cvar_VariableInteger( "deathmatch" ) ) {
         if( sv_maxclients->integer <= 1 ) {
-            Cvar_SetInteger( sv_maxclients, 8, CVAR_SET_DIRECT );
+            Cvar_SetInteger( sv_maxclients, 8, FROM_CODE );
         } else if( sv_maxclients->integer > CLIENTNUM_RESERVED ) {
-            Cvar_SetInteger( sv_maxclients, CLIENTNUM_RESERVED, CVAR_SET_DIRECT );
+            Cvar_SetInteger( sv_maxclients, CLIENTNUM_RESERVED, FROM_CODE );
         }
     } else if( Cvar_VariableInteger( "coop" ) ) {
         if( sv_maxclients->integer <= 1 || sv_maxclients->integer > 4 )
             Cvar_Set( "maxclients", "4" );
     } else {    // non-deathmatch, non-coop is one player
-        Cvar_FullSet( "maxclients", "1", CVAR_SERVERINFO|CVAR_LATCH,
-            CVAR_SET_DIRECT );
+        Cvar_FullSet( "maxclients", "1", CVAR_SERVERINFO|CVAR_LATCH, FROM_CODE );
     }
 
     // enable networking

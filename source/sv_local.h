@@ -58,7 +58,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define SV_BASELINES_CHUNKS         ( MAX_EDICTS >> SV_BASELINES_SHIFT )
 
 #define SV_InfoSet( var, val ) \
-    Cvar_FullSet( var, val, CVAR_SERVERINFO|CVAR_ROM, CVAR_SET_DIRECT )
+    Cvar_FullSet( var, val, CVAR_SERVERINFO|CVAR_ROM, FROM_CODE )
 
 // game features this server supports
 #define SV_FEATURES (GMF_CLIENTNUM|GMF_PROPERINUSE|GMF_MVDSPEC|\

@@ -29,7 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define CS_NUM( c, n )      ( ( char * )(c) + (n) * MAX_QPATH )
 
 #define MVD_InfoSet( var, val ) \
-    Cvar_FullSet( var, val, CVAR_SERVERINFO|CVAR_GAME, CVAR_SET_DIRECT )
+    Cvar_FullSet( var, val, CVAR_SERVERINFO|CVAR_GAME, FROM_CODE )
 
 // game features MVD client supports
 #define MVD_FEATURES (GMF_CLIENTNUM|GMF_PROPERINUSE|GMF_WANT_ALL_DISCONNECTS)

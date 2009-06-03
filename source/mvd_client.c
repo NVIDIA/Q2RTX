@@ -1415,7 +1415,7 @@ OPERATOR COMMANDS
 void MVD_Spawn_f( void ) {
     SV_InitGame( qtrue );
 
-    Cvar_SetInteger( sv_running, ss_broadcast, CVAR_SET_DIRECT );
+    Cvar_SetInteger( sv_running, ss_broadcast, FROM_CODE );
     Cvar_Set( "sv_paused", "0" );
     Cvar_Set( "timedemo", "0" );
     SV_InfoSet( "port", net_port->string );

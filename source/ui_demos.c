@@ -339,7 +339,7 @@ static menuSound_t Activate( menuCommon_t *self ) {
         return QMS_IN;
 
     case ENTRY_DEMO:
-        Cbuf_AddText( va( "demo \"%s/%s\"\n", m_demos.browse[1] ?
+        Cbuf_AddText( &cmd_buffer, va( "demo \"%s/%s\"\n", m_demos.browse[1] ?
             m_demos.browse : "", e->name ) );
         return QMS_SILENT;
     }

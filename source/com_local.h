@@ -45,17 +45,31 @@ Command text buffering and command execution
 
 #define ALIAS_LOOP_COUNT    16
 
-typedef struct {
+// where did current command come from?
+typedef enum {
+    FROM_STUFFTEXT,
+    FROM_RCON,
+    //FROM_GAME,
+    FROM_CONSOLE,
+    FROM_CMDLINE,
+    FROM_CODE
+} from_t;
+
+typedef struct cmdbuf_s {
+    from_t      from;
     char        *text; // may not be NULL terminated
     size_t      cursize;
     size_t      maxsize;
     int         waitCount;
     int         aliasCount; // for detecting runaway loops
-    void        (*exec)( const char * );
+    void        (*exec)( struct cmdbuf_s *, const char * );
 } cmdbuf_t;
 
+// generic console buffer
 extern char         cmd_buffer_text[CMD_BUFFER_SIZE];
 extern cmdbuf_t     cmd_buffer;
+
+extern cmdbuf_t     *cmd_current;
 
 /*
 
@@ -72,26 +86,22 @@ The game starts with a Cbuf_AddText ("exec quake.rc\n"); Cbuf_Execute ();
 void Cbuf_Init( void );
 // allocates an initial text buffer that will grow as needed
 
-void Cbuf_AddTextEx( cmdbuf_t *buf, const char *text );
+void Cbuf_AddText( cmdbuf_t *buf, const char *text );
 // as new commands are generated from the console or keybindings,
 // the text is added to the end of the command buffer.
 
-void Cbuf_InsertTextEx( cmdbuf_t *buf, const char *text );
+void Cbuf_InsertText( cmdbuf_t *buf, const char *text );
 // when a command wants to issue other commands immediately, the text is
 // inserted at the beginning of the buffer, before any remaining unexecuted
 // commands.
 
-void Cbuf_ExecuteEx( cmdbuf_t *buf );
+void Cbuf_Execute( cmdbuf_t *buf );
 // Pulls off \n terminated lines of text from the command buffer and sends
 // them through Cmd_ExecuteString.  Stops when the buffer is empty.
 // Normally called once per frame, but may be explicitly invoked.
 // Do not call inside a command function!
 
 char *Cbuf_Alloc( cmdbuf_t *buf, size_t len );
-
-#define Cbuf_AddText( text )    Cbuf_AddTextEx( &cmd_buffer, text )
-#define Cbuf_InsertText( text ) Cbuf_InsertTextEx( &cmd_buffer, text )
-#define Cbuf_Execute()          Cbuf_ExecuteEx( &cmd_buffer )
 
 //===========================================================================
 
@@ -101,12 +111,6 @@ Command execution takes a null terminated string, breaks it into tokens,
 then searches for a command or variable that matches the first token.
 
 */
-
-typedef enum {
-    EXEC_NOW,       // don't return until completed
-    EXEC_INSERT,    // insert at current position, but don't run yet
-    EXEC_APPEND     // add to end of the command buffer
-} cbufExecWhen_t;
 
 typedef struct genctx_s {
     const char  *partial;
@@ -119,6 +123,7 @@ typedef struct genctx_s {
 } genctx_t;
 
 typedef void ( *xcommand_t )( void );
+typedef void ( *xcommandex_t )( cmdbuf_t * );
 typedef size_t ( *xmacro_t )( char *, size_t );
 typedef void ( *xcompleter_t )( struct genctx_s *, int );
 
@@ -162,14 +167,14 @@ void Cmd_TokenizeString( const char *text, qboolean macroExpand );
 // Takes a null terminated string.  Does not need to be /n terminated.
 // breaks the string up into arg tokens.
 
-void Cmd_ExecuteString( const char *text );
+void Cmd_ExecuteCommand( cmdbuf_t *buf );
+// execute already tokenized string
+
+void Cmd_ExecuteString( cmdbuf_t *buf, const char *text );
 // Parses a single line of text into arguments and tries to execute it
 // as if it was typed at the console
 
 char *Cmd_MacroExpandString( const char *text, qboolean aliasHack );
-
-void Cbuf_ExecuteText( cbufExecWhen_t exec_when, const char *text );
-// this can be used in place of either Cbuf_AddText or Cbuf_InsertText
 
 void Cmd_Register( const cmdreg_t *reg );
 void Cmd_AddCommand( const char *cmd_name, xcommand_t function );
@@ -183,6 +188,7 @@ void Cmd_RemoveCommand( const char *cmd_name );
 
 void Cmd_AddMacro( const char *name, xmacro_t function );
 
+from_t  Cmd_From( void );
 int     Cmd_Argc( void );
 char    *Cmd_Argv( int arg );
 char    *Cmd_Args( void );
@@ -206,7 +212,7 @@ void Cmd_WriteAliases( fileHandle_t f );
 #define EXEC_TRIGGER( var ) \
     do { \
         if( (var)->string[0] ) { \
-            Cbuf_AddText( (var)->string ); \
+            Cbuf_AddText( &cmd_buffer, (var)->string ); \
         } \
     } while( 0 )
 
@@ -258,19 +264,13 @@ interface from being ambiguous.
 #define CVAR_MODIFYMASK     (CVAR_INFOMASK|CVAR_FILES|CVAR_REFRESH|CVAR_SOUND)
 #define CVAR_EXTENDED_MASK  (~31)
 
-typedef enum {
-    CVAR_SET_CONSOLE,
-    CVAR_SET_COMMAND_LINE,
-    CVAR_SET_DIRECT
-} cvarSetSource_t;
-
 extern cvar_t   *cvar_vars;
 extern int      cvar_modified;
 
-void Cvar_SetByVar( cvar_t *var, const char *value, cvarSetSource_t source );
+void Cvar_SetByVar( cvar_t *var, const char *value, from_t from );
 
 #define Cvar_Reset( x ) \
-    Cvar_SetByVar( x, (x)->default_string, CVAR_SET_DIRECT )
+    Cvar_SetByVar( x, (x)->default_string, FROM_CODE )
 
 cvar_t *Cvar_UserSet( const char *var_name, const char *value );
 
@@ -278,7 +278,7 @@ cvar_t *Cvar_ForceSet (const char *var_name, const char *value);
 // will set the variable even if NOSET or LATCH
 
 cvar_t *Cvar_FullSet( const char *var_name, const char *value,
-                      int flags, cvarSetSource_t source );
+                      int flags, from_t from );
 
 int Cvar_ClampInteger( cvar_t *var, int min, int max );
 float Cvar_ClampValue( cvar_t *var, float min, float max );
@@ -323,12 +323,12 @@ cvar_t *Cvar_Get( const char *var_name, const char *value, int flags );
 cvar_t *Cvar_Ref( const char *var_name );
 
 cvar_t *Cvar_Set( const char *var_name, const char *value );
-cvar_t *Cvar_SetEx( const char *var_name, const char *value, cvarSetSource_t source );
+cvar_t *Cvar_SetEx( const char *var_name, const char *value, from_t from );
 // will create the variable if it doesn't exist
 
-void Cvar_SetValue( cvar_t *var, float value, cvarSetSource_t source );
-void Cvar_SetInteger( cvar_t *var, int value, cvarSetSource_t source );
-void Cvar_SetHex( cvar_t *var, int value, cvarSetSource_t source );
+void Cvar_SetValue( cvar_t *var, float value, from_t from );
+void Cvar_SetInteger( cvar_t *var, int value, from_t from );
+void Cvar_SetHex( cvar_t *var, int value, from_t from );
 // expands value to a string and calls Cvar_Set
 
 float Cvar_VariableValue( const char *var_name );

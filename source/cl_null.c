@@ -32,9 +32,6 @@ qboolean CL_CheatsOK( void ) {
     return qfalse;
 }
 
-void SCR_DebugGraph( float value, int color ) {
-}
-
 void CL_RestartFilesystem( void ) {
     FS_Restart();
 }

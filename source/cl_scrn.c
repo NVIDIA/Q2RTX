@@ -33,12 +33,15 @@ cvar_t      *scr_centertime;
 cvar_t      *scr_showpause;
 cvar_t      *scr_printspeed;
 
+#ifdef _DEBUG
 cvar_t      *scr_netgraph;
 cvar_t      *scr_timegraph;
 cvar_t      *scr_debuggraph;
 cvar_t      *scr_graphheight;
 cvar_t      *scr_graphscale;
 cvar_t      *scr_graphshift;
+#endif
+
 cvar_t      *scr_demobar;
 cvar_t      *scr_fontvar;
 cvar_t      *scr_scale;
@@ -88,6 +91,7 @@ BAR GRAPHS
 ===============================================================================
 */
 
+#ifdef _DEBUG
 /*
 ==============
 CL_AddNetgraph
@@ -181,6 +185,7 @@ void SCR_DrawDebugGraph (void)
         x--;
     }
 }
+#endif
 
 static void SCR_DrawPercentBar( int percent ) {
     char buffer[16];
@@ -334,7 +339,7 @@ Keybinding command
 =================
 */
 static void SCR_SizeUp_f( void ) {
-    Cvar_SetInteger( scr_viewsize, scr_viewsize->integer + 10, CVAR_SET_CONSOLE );
+    Cvar_SetInteger( scr_viewsize, scr_viewsize->integer + 10, FROM_CONSOLE );
 }
 
 /*
@@ -345,7 +350,7 @@ Keybinding command
 =================
 */
 static void SCR_SizeDown_f( void ) {
-    Cvar_SetInteger( scr_viewsize, scr_viewsize->integer - 10, CVAR_SET_CONSOLE );
+    Cvar_SetInteger( scr_viewsize, scr_viewsize->integer - 10, FROM_CONSOLE );
 }
 
 /*
@@ -493,6 +498,7 @@ void SCR_Init( void ) {
     scr_viewsize = Cvar_Get ("viewsize", "100", CVAR_ARCHIVE);
     scr_showpause = Cvar_Get ("scr_showpause", "1", 0);
     scr_centertime = Cvar_Get ("scr_centertime", "2.5", 0);
+#ifdef _DEBUG
     scr_printspeed = Cvar_Get ("scr_printspeed", "8", 0);
     scr_netgraph = Cvar_Get ("netgraph", "0", 0);
     scr_timegraph = Cvar_Get ("timegraph", "0", 0);
@@ -500,6 +506,7 @@ void SCR_Init( void ) {
     scr_graphheight = Cvar_Get ("graphheight", "32", 0);
     scr_graphscale = Cvar_Get ("graphscale", "1", 0);
     scr_graphshift = Cvar_Get ("graphshift", "0", 0);
+#endif
     scr_demobar = Cvar_Get( "scr_demobar", "1", CVAR_ARCHIVE );
     scr_fontvar = Cvar_Get( "scr_font", "conchars", CVAR_ARCHIVE );
     scr_fontvar->changed = scr_fontvar_changed;
@@ -625,10 +632,10 @@ STAT PROGRAMS
     R_DrawString( x, y, UI_ALTCOLOR, MAX_STRING_CHARS, string, scr_font )
 
 #define HUD_DrawCenterString( x, y, string ) \
-    SCR_DrawStringEx( x, y, UI_CENTER, MAX_STRING_CHARS, string, scr_font )
+    SCR_DrawStringMulti( x, y, UI_CENTER, MAX_STRING_CHARS, string, scr_font )
 
 #define HUD_DrawAltCenterString( x, y, string ) \
-    SCR_DrawStringEx( x, y, UI_CENTER|UI_ALTCOLOR, MAX_STRING_CHARS, string, scr_font )
+    SCR_DrawStringMulti( x, y, UI_CENTER|UI_ALTCOLOR, MAX_STRING_CHARS, string, scr_font )
 
 
 
@@ -702,7 +709,12 @@ void SCR_DrawInventory( void ) {
 
     // determine scroll point
     top = selected_num - DISPLAY_ITEMS / 2;
-    clamp( top, 0, num - DISPLAY_ITEMS );
+    if( top > num - DISPLAY_ITEMS ) {
+        top = num - DISPLAY_ITEMS;
+    }
+    if( top < 0 ) {
+        top = 0;
+    }
 
     x = ( scr_hudWidth - 256 ) / 2;
     y = ( scr_hudHeight - 240 ) / 2;
@@ -1149,12 +1161,14 @@ void SCR_UpdateScreen( void ) {
 
     Con_DrawConsole();
 
+#ifdef _DEBUG
     if( scr_timegraph->integer )
         SCR_DebugGraph( cls.frametime*300, 0 );
 
     if( scr_debuggraph->integer || scr_timegraph->integer || scr_netgraph->integer ) {
         SCR_DrawDebugGraph();
     }
+#endif
 
     R_EndFrame();
 

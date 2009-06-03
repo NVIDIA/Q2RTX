@@ -695,7 +695,7 @@ static cvar_t *PF_cvar( const char *name, const char *value, int flags ) {
 }
 
 static void PF_AddCommandString( const char *string ) {
-    Cbuf_AddTextEx( &cmd_buffer, string );
+    Cbuf_AddText( &cmd_buffer, string );
 }
 
 static void PF_SetAreaPortalState( int portalnum, qboolean open ) {
@@ -727,6 +727,12 @@ static void PF_FreeTags( unsigned tag ) {
         Com_Error( ERR_FATAL, "%s: bad tag", __func__ );
     }
     Z_FreeTags( tag + TAG_MAX );
+}
+
+static void PF_DebugGraph( float value, int color ) {
+#if (defined _DEBUG) && USE_CLIENT
+    SCR_DebugGraph( value, color );
+#endif
 }
 
 //==============================================
@@ -866,7 +872,7 @@ void SV_InitGameProgs ( void ) {
     import.args = Cmd_RawArgs;
     import.AddCommandString = PF_AddCommandString;
 
-    import.DebugGraph = SCR_DebugGraph;
+    import.DebugGraph = PF_DebugGraph;
     import.SetAreaPortalState = PF_SetAreaPortalState;
     import.AreasConnected = PF_AreasConnected;
 

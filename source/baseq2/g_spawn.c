@@ -434,7 +434,7 @@ static qboolean ED_ParseField (const spawn_field_t *fields, const char *key, con
                 *(char **)(b+f->ofs) = ED_NewString (value);
                 break;
             case F_VECTOR:
-				if( sscanf (value, "%f %f %f", &vec[0], &vec[1], &vec[2]) != 3 ) {
+                if( sscanf (value, "%f %f %f", &vec[0], &vec[1], &vec[2]) != 3 ) {
                     gi.dprintf( "%s: couldn't parse '%s'\n", __func__, key );
                     VectorClear( vec );
                 }
@@ -706,7 +706,7 @@ void SpawnEntities (const char *mapname, const char *entities, const char *spawn
 
 #endif
 
-char *single_statusbar = 
+static const char single_statusbar[] = 
 "yb -24 "
 
 // health
@@ -764,7 +764,7 @@ char *single_statusbar =
 "endif "
 ;
 
-char *dm_statusbar =
+static const char dm_statusbar[] =
 "yb -24 "
 
 // health

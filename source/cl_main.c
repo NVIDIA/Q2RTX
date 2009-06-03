@@ -98,6 +98,10 @@ client_state_t  cl;
 
 centity_t   cl_entities[ MAX_EDICTS ];
 
+// used for executing stringcmds
+cmdbuf_t    cl_cmdbuf;
+char        cl_cmdbuf_text[MAX_STRING_CHARS];
+
 //======================================================================
 
 typedef enum {
@@ -319,10 +323,10 @@ CL_CheckForResend
 Resend a connect message if the last one has timed out
 =================
 */
-static void CL_CheckForResend( void ) {
-    neterr_t ret;
+void CL_CheckForResend( void ) {
     char tail[MAX_QPATH];
     char userinfo[MAX_INFO_STRING];
+    int maxmsglen;
 
     if ( cls.demo.playback ) {
         return;
@@ -366,11 +370,7 @@ static void CL_CheckForResend( void ) {
 
     if ( cls.state == ca_challenging ) {
         Com_Printf( "Requesting challenge... %i\n", cls.connect_count );
-        ret = OOB_PRINT( NS_CLIENT, &cls.serverAddress, "getchallenge\n" );
-        if( ret == NET_ERROR ) {
-            Com_Error( ERR_DISCONNECT, "%s to %s\n", NET_ErrorString(),
-                NET_AdrToString( &cls.serverAddress ) );
-        }
+        OOB_PRINT( NS_CLIENT, &cls.serverAddress, "getchallenge\n" );
         return;
     }
 
@@ -381,16 +381,22 @@ static void CL_CheckForResend( void ) {
 
     cls.userinfo_modified = 0;
 
+    // use maximum allowed msglen for loopback
+    maxmsglen = net_maxmsglen->integer;
+    if( NET_IsLocalAddress( &cls.serverAddress ) ) {
+        maxmsglen = MAX_PACKETLEN_WRITABLE;
+    }
+
     // add protocol dependent stuff
     switch( cls.serverProtocol ) {
     case PROTOCOL_VERSION_R1Q2:
         Q_snprintf( tail, sizeof( tail ), " %d %d",
-            net_maxmsglen->integer, PROTOCOL_VERSION_R1Q2_CURRENT );
+            maxmsglen, PROTOCOL_VERSION_R1Q2_CURRENT );
         cls.quakePort = net_qport->integer & 0xff;
         break;
     case PROTOCOL_VERSION_Q2PRO:
         Q_snprintf( tail, sizeof( tail ), " %d %d %d %d",
-            net_maxmsglen->integer, net_chantype->integer, USE_ZLIB,
+            maxmsglen, net_chantype->integer, USE_ZLIB,
             PROTOCOL_VERSION_Q2PRO_CURRENT );
         cls.quakePort = net_qport->integer & 0xff;
         break;
@@ -1462,7 +1468,9 @@ static void CL_PacketEvent( void ) {
 
     CL_ParseServerMessage();
 
+#ifdef _DEBUG
     CL_AddNetgraph();
+#endif
 
     SCR_LagSample();
 }
@@ -1513,12 +1521,10 @@ static void CL_FixUpGender( void ) {
     info_gender->modified = qfalse;
 }
 
-void CL_UpdateUserinfo( cvar_t *var, cvarSetSource_t source ) {
+void CL_UpdateUserinfo( cvar_t *var, from_t from ) {
     int i;
 
-    if( var == info_skin && source != CVAR_SET_CONSOLE &&
-        gender_auto->integer )
-    {
+    if( var == info_skin && from > FROM_CONSOLE && gender_auto->integer ) {
          CL_FixUpGender();
     }
     if( !cls.netchan ) {
@@ -2347,6 +2353,43 @@ void CL_LocalConnect( void ) {
     }
 }
 
+// execute string in server command buffer
+static void exec_server_string( cmdbuf_t *buf, const char *text ) {
+    char *s;
+
+    Cmd_TokenizeString( text, qtrue );
+            
+    // execute the command line
+    if( !Cmd_Argc() ) {
+        return;        // no tokens
+    }
+
+    s = Cmd_Argv( 0 );
+
+    Com_DPrintf( "stufftext: %s\n", s );
+ 
+    // handle private client commands
+    if( !strcmp( s, "changing" ) ) {
+        CL_Changing_f();
+        return;
+    }
+    if( !strcmp( s, "precache" ) ) {
+        CL_Precache_f();
+        return;
+    }
+
+    // forbid nearly every command from demos
+    if( cls.demo.playback ) {
+        if( strcmp( s, "play" ) ) {
+            return;
+        }
+    }
+
+    // execute regular commands
+    Cmd_ExecuteCommand( buf );
+}
+
+
 static void cl_gun_changed( cvar_t *self ) {
     CL_UpdateGunSetting();
 }
@@ -2381,13 +2424,13 @@ static const cmdreg_t c_client[] = {
     { "userinfo", CL_Userinfo_f },
     { "snd_restart", CL_RestartSound_f },
     { "play", CL_PlaySound_f, CL_PlaySound_c },
-    { "changing", CL_Changing_f },
+    //{ "changing", CL_Changing_f },
     { "disconnect", CL_Disconnect_f },
     { "connect", CL_Connect_f, CL_Connect_c },
     { "passive", CL_PassiveConnect_f },
     { "reconnect", CL_Reconnect_f },
     { "rcon", CL_Rcon_f, CL_Rcon_c },
-    { "precache", CL_Precache_f },
+    //{ "precache", CL_Precache_f },
     { "download", CL_Download_f },
     { "serverstatus", CL_ServerStatus_f, CL_ServerStatus_c },
     { "dumpclients", CL_DumpClients_f },
@@ -2654,9 +2697,7 @@ static void CL_CheckForReply( void ) {
         return;
     }
 
-    Cbuf_AddText( "cmd say \"" );
-    Cbuf_AddText( com_version->string );
-    Cbuf_AddText( "\"\n" );
+    CL_ClientCommand( va( "say \"%s\"", com_version->string ) );
 
     cl.reply_delta = 0;
 }
@@ -2706,6 +2747,8 @@ void CL_Frame( unsigned msec ) {
     if( !cl_running->integer ) {
         return;
     }
+
+    Cbuf_Execute( &cl_cmdbuf );
 
     ref_extra += msec;
     main_extra += msec;
@@ -2852,10 +2895,9 @@ void CL_Frame( unsigned msec ) {
             time_after_ref = Sys_Milliseconds();
 
         ref_extra = 0;
-        //
-    // update audio after the 3D view was drawn
-    S_Update();
 
+        // update audio after the 3D view was drawn
+        S_Update();
     }
 
     // advance local effects for next frame
@@ -2946,6 +2988,11 @@ void CL_Init( void ) {
 
     Con_PostInit();
     Con_RunConsole();
+
+    cl_cmdbuf.from = FROM_STUFFTEXT;
+    cl_cmdbuf.text = cl_cmdbuf_text;
+    cl_cmdbuf.maxsize = sizeof( cl_cmdbuf_text );
+    cl_cmdbuf.exec = exec_server_string;
 
     Cvar_Set( "cl_running", "1" );
 }
