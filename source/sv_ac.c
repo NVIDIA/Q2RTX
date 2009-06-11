@@ -551,7 +551,7 @@ static void AC_Drop( void ) {
 
 static void AC_Disable( void ) {
     AC_Disconnect();
-    Cvar_SetByVar( ac_required, "0", CVAR_SET_DIRECT );
+    Cvar_SetByVar( ac_required, "0", FROM_CODE );
 }
 
 
@@ -804,7 +804,7 @@ static void AC_ParseReady( void ) {
     acs.retry_backoff = AC_DEFAULT_BACKOFF;
     Com_Printf( "ANTICHEAT: Ready to serve anticheat clients.\n" );
     Cvar_FullSet( "anticheat", ac_required->string,
-        CVAR_SERVERINFO | CVAR_NOSET, CVAR_SET_DIRECT );
+        CVAR_SERVERINFO | CVAR_NOSET, FROM_CODE );
 }
 
 static void AC_ParseQueryReply( void ) {
@@ -1394,13 +1394,13 @@ void AC_Connect( qboolean ismvd ) {
 #if USE_CLIENT
     if( !dedicated->integer ) {
         Com_Printf( "ANTICHEAT: Only supported on dedicated servers, disabling.\n" );
-        Cvar_SetByVar( ac_required, "0", CVAR_SET_DIRECT );
+        Cvar_SetByVar( ac_required, "0", FROM_CODE );
         return;
     }
 #endif
     if( ismvd ) {
         Com_Printf( "ANTICHEAT: Only supported on game servers, disabling.\n" );
-        Cvar_SetByVar( ac_required, "0", CVAR_SET_DIRECT );
+        Cvar_SetByVar( ac_required, "0", FROM_CODE );
         return;
     }
 
@@ -1438,7 +1438,7 @@ void AC_Disconnect( void ) {
 
     memset( &ac, 0, sizeof( ac ) );
     memset( &acs, 0, sizeof( acs ) );
-    Cvar_FullSet( "anticheat", "0", CVAR_NOSET, CVAR_SET_DIRECT );
+    Cvar_FullSet( "anticheat", "0", CVAR_NOSET, FROM_CODE );
 }
 
 void AC_List_f( void ) {

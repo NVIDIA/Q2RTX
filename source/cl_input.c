@@ -704,6 +704,9 @@ void CL_FinalizeCmd( void ) {
     if( cmd_buffer.waitCount > 0 ) {
         cmd_buffer.waitCount--;
     }
+    if( cl_cmdbuf.waitCount > 0 ) {
+        cl_cmdbuf.waitCount--;
+    }
 
     if( cls.state < ca_active ) {
         return; // not talking to a server

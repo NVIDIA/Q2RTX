@@ -990,6 +990,8 @@ static SOCKET TCP_OpenSocket( const char *iface, int port, netsrc_t who ) {
         goto fail;
     }
 
+    return s;
+
 fail:
     closesocket( s );
     return INVALID_SOCKET;
