@@ -30,12 +30,14 @@ qhandle_t   gun_model;
 
 //=============
 
-cvar_t      *cl_testparticles;
-cvar_t      *cl_testentities;
-cvar_t      *cl_testlights;
-cvar_t      *cl_testblend;
+#ifdef _DEBUG
+static cvar_t   *cl_testparticles;
+static cvar_t   *cl_testentities;
+static cvar_t   *cl_testlights;
+static cvar_t   *cl_testblend;
 
-cvar_t      *cl_stats;
+static cvar_t   *cl_stats;
+#endif
 
 
 int         r_numdlights;
@@ -129,6 +131,7 @@ void V_AddLightStyle (int style, vec4_t value) {
     ls->white = value[3];
 }
 
+#ifdef _DEBUG
 /*
 ================
 V_TestParticles
@@ -230,6 +233,7 @@ static void V_TestLights (void) {
         dl->intensity = 200;
     }
 }
+#endif
 
 //===================================================================
 
@@ -251,11 +255,6 @@ void CL_PrepRefresh (void) {
     }
     if (!cl.mapname[0])
         return;     // no map loaded
-
-    Con_Close();
-#if USE_UI
-    UI_OpenMenu( UIMENU_NONE );
-#endif
 
     // register models, pics, and skins
     R_BeginRegistration( cl.mapname );
@@ -283,10 +282,6 @@ void CL_PrepRefresh (void) {
     }
 
     CL_LoadState( LOAD_IMAGES );
-
-    // precache status bar pics
-    SCR_TouchPics ();
-
     for (i=1 ; i<MAX_IMAGES; i++) {
         name = cl.configstrings[CS_IMAGES+i];
         if( !name[0] ) {
@@ -409,6 +404,7 @@ void V_RenderView( void ) {
         // v_forward, etc.
         CL_AddEntities ();
 
+#ifdef _DEBUG
         if (cl_testparticles->integer)
             V_TestParticles ();
         if (cl_testentities->integer)
@@ -422,6 +418,7 @@ void V_RenderView( void ) {
             cl.refdef.blend[2] = 0.25;
             cl.refdef.blend[3] = 0.5;
         }
+#endif
 
         // never let it sit exactly on a node line, because a water plane can
         // dissapear when viewed with the eye exactly on it.
@@ -470,11 +467,12 @@ void V_RenderView( void ) {
     }
 
     R_RenderFrame (&cl.refdef);
+#ifdef _DEBUG
     if (cl_stats->integer)
         Com_Printf ("ent:%i  lt:%i  part:%i\n", r_numentities, r_numdlights, r_numparticles);
+#endif
 
     V_SetLightLevel();
-
 }
 
 
@@ -505,12 +503,14 @@ V_Init
 void V_Init( void ) {
     Cmd_Register( v_cmds );
 
+#ifdef _DEBUG
     cl_testblend = Cvar_Get ("cl_testblend", "0", 0);
     cl_testparticles = Cvar_Get ("cl_testparticles", "0", 0);
     cl_testentities = Cvar_Get ("cl_testentities", "0", 0);
     cl_testlights = Cvar_Get ("cl_testlights", "0", CVAR_CHEAT);
 
     cl_stats = Cvar_Get ("cl_stats", "0", 0);
+#endif
 }
 
 void V_Shutdown( void ) {

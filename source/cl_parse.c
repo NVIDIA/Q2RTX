@@ -429,12 +429,7 @@ static void CL_SetActiveState( void ) {
         VectorCopy( cl.frame.ps.viewangles, cl.predicted_angles );
     }
     
-    SCR_LagClear();
-#if USE_CHATHUD
-    SCR_ClearChatHUD_f();
-#endif
     SCR_EndLoadingPlaque ();    // get rid of loading plaque
-    Con_Close();                // close console
 
     if( !cls.demo.playback ) {
         EXEC_TRIGGER( cl_beginmapcmd );

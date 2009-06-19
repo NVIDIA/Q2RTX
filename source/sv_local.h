@@ -312,6 +312,7 @@ typedef struct {
     uint32_t    addr;
     uint32_t    mask;
     unsigned    hits;
+    time_t      time;   // time of the last hit
     char        comment[1];
 } addrmatch_t;
 

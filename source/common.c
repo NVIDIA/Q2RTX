@@ -1090,8 +1090,7 @@ static size_t Com_Date_m( char *buffer, size_t size ) {
 size_t Com_FormatTime( char *buffer, size_t size, time_t t ) {
     int     sec, min, hour, day;
 
-    sec = (int)t;
-    min = sec / 60; sec %= 60;
+    min = t / 60; sec = t % 60;
     hour = min / 60; min %= 60;
     day = hour / 24; hour %= 24;
 
@@ -1104,6 +1103,40 @@ size_t Com_FormatTime( char *buffer, size_t size, time_t t ) {
     return Q_scnprintf( buffer, size, "%02d.%02d", min, sec );
 }
 
+size_t Com_FormatTimeLong( char *buffer, size_t size, time_t t ) {
+    int     sec, min, hour, day;
+    size_t  len;
+
+    if( !t ) {
+        return Q_scnprintf( buffer, size, "0 secs" );
+    }
+
+    min = t / 60; sec = t % 60;
+    hour = min / 60; min %= 60;
+    day = hour / 24; hour %= 24;
+
+    len = 0;
+
+    if( day ) {
+        len += Q_scnprintf( buffer + len, size - len,
+            "%d day%s%s", day, day == 1 ? "" : "s", ( hour || min || sec ) ? ", " : "" );
+    }
+    if( hour ) {
+        len += Q_scnprintf( buffer + len, size - len,
+            "%d hour%s%s", hour, hour == 1 ? "" : "s", ( min || sec ) ? ", " : "" );
+    }
+    if( min ) {
+        len += Q_scnprintf( buffer + len, size - len,
+            "%d min%s%s", min, min == 1 ? "" : "s", sec ? ", " : "" );
+    }
+    if( sec ) {
+        len += Q_scnprintf( buffer + len, size - len,
+            "%d sec%s", sec, sec == 1 ? "" : "s" );
+    }
+
+    return len;
+}
+
 size_t Com_TimeDiff( char *buffer, size_t size, time_t start, time_t end ) {
     time_t diff;
 
@@ -1114,8 +1147,22 @@ size_t Com_TimeDiff( char *buffer, size_t size, time_t start, time_t end ) {
     return Com_FormatTime( buffer, size, diff );
 }
 
+size_t Com_TimeDiffLong( char *buffer, size_t size, time_t start, time_t end ) {
+    time_t diff;
+
+    if( start > end ) {
+        start = end;
+    }
+    diff = end - start;
+    return Com_FormatTimeLong( buffer, size, diff );
+}
+
 size_t Com_Uptime_m( char *buffer, size_t size ) {
     return Com_TimeDiff( buffer, size, com_startTime, time( NULL ) );
+}
+
+size_t Com_UptimeLong_m( char *buffer, size_t size ) {
+    return Com_TimeDiffLong( buffer, size, com_startTime, time( NULL ) );
 }
 
 size_t Com_Random_m( char *buffer, size_t size ) {
@@ -1463,6 +1510,7 @@ void Qcommon_Init( int argc, char **argv ) {
     Cmd_AddMacro( "com_date", Com_Date_m );
     Cmd_AddMacro( "com_time", Com_Time_m );
     Cmd_AddMacro( "com_uptime", Com_Uptime_m );
+    Cmd_AddMacro( "com_uptime_long", Com_UptimeLong_m );
     Cmd_AddMacro( "random", Com_Random_m );
     Cmd_AddMacro( "com_maplist", Com_MapList_m );
 

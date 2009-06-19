@@ -22,7 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // protocol.h -- communications protocols
 //
 
-#define    MAX_MSGLEN        0x8000        // max length of a message, 32k
+#define MAX_MSGLEN  0x8000  // max length of a message, 32k
 
 #define PROTOCOL_VERSION_OLD        26
 #define PROTOCOL_VERSION_DEFAULT    34
@@ -43,43 +43,45 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define PROTOCOL_VERSION_MVD_MINIMUM            2009    // r168
 #define PROTOCOL_VERSION_MVD_CURRENT            2010    // r177
 
-#define R1Q2_SUPPORTED( x )     ( (x) >= PROTOCOL_VERSION_R1Q2_MINIMUM && \
-                                  (x) <= PROTOCOL_VERSION_R1Q2_CURRENT )
+#define R1Q2_SUPPORTED(x) \
+    ((x)>=PROTOCOL_VERSION_R1Q2_MINIMUM && \
+     (x)<=PROTOCOL_VERSION_R1Q2_CURRENT)
 
-#define Q2PRO_SUPPORTED( x )    ( (x) >= PROTOCOL_VERSION_Q2PRO_MINIMUM && \
-                                  (x) <= PROTOCOL_VERSION_Q2PRO_CURRENT )
+#define Q2PRO_SUPPORTED(x) \
+    ((x)>=PROTOCOL_VERSION_Q2PRO_MINIMUM && \
+     (x)<=PROTOCOL_VERSION_Q2PRO_CURRENT)
 
-#define MVD_SUPPORTED( x )    ( (x) >= PROTOCOL_VERSION_MVD_MINIMUM && \
-                                (x) <= PROTOCOL_VERSION_MVD_CURRENT )
+#define MVD_SUPPORTED(x) \
+    ((x)>=PROTOCOL_VERSION_MVD_MINIMUM && \
+     (x)<=PROTOCOL_VERSION_MVD_CURRENT)
 
-#define LONG_SOLID_SUPPORTED( major, minor ) \
-    ( ( (major) == PROTOCOL_VERSION_Q2PRO && (minor) >= PROTOCOL_VERSION_Q2PRO_LONG_SOLID ) || \
-      ( (major) == PROTOCOL_VERSION_R1Q2 && (minor) >= PROTOCOL_VERSION_R1Q2_LONG_SOLID ) )
+#define LONG_SOLID_SUPPORTED(major,minor) \
+    (((major)==PROTOCOL_VERSION_Q2PRO&&(minor)>=PROTOCOL_VERSION_Q2PRO_LONG_SOLID) || \
+     ((major)==PROTOCOL_VERSION_R1Q2 &&(minor)>=PROTOCOL_VERSION_R1Q2_LONG_SOLID))
 
 //=========================================
 
-#define    UPDATE_BACKUP    16  // copies of entity_state_t to keep buffered
-                                // must be power of two
-#define    UPDATE_MASK      ( UPDATE_BACKUP - 1 )
+#define UPDATE_BACKUP   16  // copies of entity_state_t to keep buffered
+                            // must be power of two
+#define UPDATE_MASK     (UPDATE_BACKUP-1)
 
-#define    CMD_BACKUP       128 // allow a lot of command backups for very fast systems
-                                // increased from 64
-#define CMD_MASK            ( CMD_BACKUP - 1 )
-
+#define CMD_BACKUP      128 // allow a lot of command backups for very fast systems
+                            // increased from 64
+#define CMD_MASK        (CMD_BACKUP-1)
 
 
 #define SVCMD_BITS              5
-#define SVCMD_MASK              ( ( 1 << SVCMD_BITS ) - 1 )
+#define SVCMD_MASK              ((1<<SVCMD_BITS)-1)
 
 #define FRAMENUM_BITS           27
-#define FRAMENUM_MASK           ( ( 1 << FRAMENUM_BITS ) - 1 )
+#define FRAMENUM_MASK           ((1<<FRAMENUM_BITS)-1)
 
 #define SURPRESSCOUNT_BITS      4
-#define SURPRESSCOUNT_MASK      ( ( 1 << SURPRESSCOUNT_BITS ) - 1 )
+#define SURPRESSCOUNT_MASK      ((1<<SURPRESSCOUNT_BITS)-1)
 
 #define MAX_PACKET_ENTITIES     128
 #define MAX_PARSE_ENTITIES      2048    // should be MAX_PACKET_ENTITIES * UPDATE_BACKUP
-#define PARSE_ENTITIES_MASK     ( MAX_PARSE_ENTITIES - 1 )
+#define PARSE_ENTITIES_MASK     (MAX_PARSE_ENTITIES-1)
 
 #define MAX_PACKET_USERCMDS     32
 #define MAX_PACKET_FRAMES       4
@@ -87,15 +89,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MAX_PACKET_STRINGCMDS   8
 #define MAX_PACKET_USERINFOS    8
 
-#define CS_BITMAP_BYTES        ( MAX_CONFIGSTRINGS / 8 ) // 260
-#define CS_BITMAP_LONGS        ( CS_BITMAP_BYTES / 4 )
+#define CS_BITMAP_BYTES        (MAX_CONFIGSTRINGS/8) // 260
+#define CS_BITMAP_LONGS        (CS_BITMAP_BYTES/4 )
 
-#define MVD_MAGIC   MakeLong( 'M', 'V', 'D', '2' )
+#define MVD_MAGIC               MakeLong('M','V','D','2')
 
 //
 // server to client
 //
-typedef enum svc_ops_e {
+typedef enum {
     svc_bad,
 
     // these ops are known to the game dll
@@ -133,7 +135,7 @@ typedef enum svc_ops_e {
 } svc_ops_t;
 
 // MVD protocol specific operations
-typedef enum mvd_ops_e {
+typedef enum {
     mvd_bad,
     mvd_nop,
     mvd_disconnect,     // reserved
@@ -169,7 +171,7 @@ typedef enum {
 //
 // client to server
 //
-typedef enum clc_ops_e {
+typedef enum {
     clc_bad,
     clc_nop,         
     clc_move,               // [usercmd_t]
@@ -208,7 +210,7 @@ typedef enum clc_ops_e {
 #define PS_RESERVED         (1<<15)
 
 #define PS_BITS             16
-#define PS_MASK             ( ( 1 << PS_BITS ) - 1 )
+#define PS_MASK             ((1<<PS_BITS)-1)
 
 // r1q2 protocol specific extra flags
 #define EPS_GUNOFFSET       (1<<0)
@@ -222,7 +224,7 @@ typedef enum clc_ops_e {
 #define EPS_CLIENTNUM       (1<<6)
 
 #define EPS_BITS            7
-#define EPS_MASK            ( ( 1 << EPS_BITS ) - 1 )
+#define EPS_MASK            ((1<<EPS_BITS)-1)
 
 //==============================================
 
@@ -248,7 +250,7 @@ typedef enum clc_ops_e {
 
 // this is just a small hack to store inuse flag
 // in a field left otherwise unused by MVD code
-#define PPS_INUSE( ps )     (ps)->pmove.pm_time
+#define PPS_INUSE(ps)       (ps)->pmove.pm_time
 
 //==============================================
 
@@ -322,17 +324,17 @@ typedef enum clc_ops_e {
 #define U_SKIN16        (1<<25)
 #define U_SOUND         (1<<26)
 #define U_SOLID         (1<<27)
-#define U_MASK          ((1<<28)-1)
 
 // not sent over the network
+#define U_MASK          ((1<<28)-1)
 #define U_SOLID32       (1<<31)
 
 // ==============================================================
 
-#define CLIENTNUM_NONE        ( MAX_CLIENTS - 1 )
-#define CLIENTNUM_RESERVED    ( MAX_CLIENTS - 1 )
+#define CLIENTNUM_NONE        (MAX_CLIENTS-1)
+#define CLIENTNUM_RESERVED    (MAX_CLIENTS-1)
 
-typedef enum clientSetting_e {
+typedef enum {
     // r1q2 specific
     CLS_NOGUN,
     CLS_NOBLEND,
@@ -348,7 +350,7 @@ typedef enum clientSetting_e {
     CLS_MAX
 } clientSetting_t;
 
-typedef enum serverSetting_e {
+typedef enum {
     // r1q2 specific
     SVS_PLAYERUPDATES,
     SVS_FPS,

@@ -26,7 +26,6 @@ include $(SRCDIR)/build/common.mk
 
 SRCFILES+=m_flash.c \
 	cl_demo.c \
-	cl_draw.c \
 	cl_ents.c \
 	cl_fx.c \
 	cl_input.c \

@@ -366,6 +366,7 @@ void SV_Kick_f( void ) {
             match->addr = BigLong( *( uint32_t * )addr->ip );
             match->mask = 0xffffffffU;
             match->hits = 0;
+            match->time = 0;
             match->comment[0] = 0;
             List_Append( &sv_banlist, &match->entry );
         }
@@ -832,6 +833,7 @@ void SV_AddMatch_f( list_t *list ) {
     match->addr = addr;
     match->mask = mask;
     match->hits = 0;
+    match->time = 0;
     memcpy( match->comment, s, len + 1 );
     List_Append( list, &match->entry );
 }
@@ -898,6 +900,7 @@ remove:
 
 void SV_ListMatches_f( list_t *list ) {
     addrmatch_t *match;
+    char last[32];
     char addr[32];
     byte ip[4];
     int i, count;
@@ -907,8 +910,8 @@ void SV_ListMatches_f( list_t *list ) {
         return;
     }
 
-    Com_Printf( "id address/mask       hits comment\n"
-                "-- ------------------ ---- -------\n" );
+    Com_Printf( "id address/mask       hits last hit     comment\n"
+                "-- ------------------ ---- ------------ -------\n" );
     count = 1;
     LIST_FOR_EACH( addrmatch_t, match, list, entry ) {
         *( uint32_t * )ip = BigLong( match->addr );
@@ -919,8 +922,14 @@ void SV_ListMatches_f( list_t *list ) {
         }
         Q_snprintf( addr, sizeof( addr ), "%d.%d.%d.%d/%d",
             ip[0], ip[1], ip[2], ip[3], 32 - i );
-        Com_Printf( "%-2d %-18s %-4u %s\n", count, addr,
-            match->hits, match->comment );
+        if( !match->time ) {
+            strcpy( last, "never" );
+        } else {
+            strftime( last, sizeof( last ), "%d %b %H:%M",
+                localtime( &match->time ) );
+        }
+        Com_Printf( "%-2d %-18s %-4u %-12s %s\n", count, addr,
+            match->hits, last, match->comment );
         count++;
     }
 }

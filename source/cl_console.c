@@ -120,7 +120,7 @@ void Con_Close( void ) {
 
     Key_SetDest( cls.key_dest & ~KEY_CONSOLE );
 
-    con.currentHeight = 0;
+    con.destHeight = con.currentHeight = 0;
     con.mode = CON_DEFAULT;
     con.chat = CHAT_DEFAULT;
 }
@@ -131,6 +131,8 @@ Con_ToggleConsole_f
 ================
 */
 void Con_ToggleConsole_f( void ) {
+    SCR_EndLoadingPlaque();    // get rid of loading plaque
+
     Con_ClearTyping();
     Con_ClearNotify_f();
 
@@ -875,25 +877,27 @@ Scroll it up or down
 ==================
 */
 void Con_RunConsole( void ) {
-    Cvar_ClampValue( con_height, 0.1f, 1 );
-
-    if( cls.state == ca_disconnected && !( cls.key_dest & KEY_MENU ) ) {
-        // draw fullscreen console
-        con.destHeight = con.currentHeight = 1;
+    if( cls.disable_screen ) {
+        con.destHeight = con.currentHeight = 0;
         return;
     }
 
-    if( cls.state > ca_disconnected && cls.state < ca_active ) {
-#if 0
-        // draw half-screen console
-        con.destHeight = con.currentHeight = 0.5f;
-        return;
-#endif
+    if( !( cls.key_dest & KEY_MENU ) ) {
+        if( cls.state == ca_disconnected ) {
+            // draw fullscreen console
+            con.destHeight = con.currentHeight = 1;
+            return;
+        }
+        if( cls.state > ca_disconnected && cls.state < ca_active ) {
+            // draw half-screen console
+            con.destHeight = con.currentHeight = 0.5f;
+            return;
+        }
     }
 
 // decide on the height of the console
     if( cls.key_dest & KEY_CONSOLE ) {
-        con.destHeight = con_height->value;     // half screen
+        con.destHeight = Cvar_ClampValue( con_height, 0.1f, 1 );
     } else {
         con.destHeight = 0;             // none visible
     }

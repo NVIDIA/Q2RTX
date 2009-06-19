@@ -37,7 +37,7 @@ install:
 		install -m 755 -D $$t $(DESTDIR)$(BINDIR)/$$t ; \
 	done
 	for t in $(LIBRARIES) ; do \
-		install -m 755 -D $$t $(DESTDIR)$(LIBDIR)/$$t ; \
+		install -m 755 -D $$t $(DESTDIR)$(LIBDIR)/baseq2/$$t ; \
 	done
 	install -m 644 -D $(SRCDIR)/q2pro.6 \
 		$(DESTDIR)$(MANDIR)/q2pro.6
@@ -55,7 +55,7 @@ uninstall:
 		rm -f $(DESTDIR)$(BINDIR)/$$t ; \
 	done
 	for t in $(LIBRARIES) ; do \
-		rm -f $(DESTDIR)$(LIBDIR)/$$t ; \
+		rm -f $(DESTDIR)$(LIBDIR)/baseq2/$$t ; \
 	done
 	rm -f $(DESTDIR)$(MANDIR)/q2pro.6
 	rm -f $(DESTDIR)$(DATADIR)/baseq2/q2pro.menu

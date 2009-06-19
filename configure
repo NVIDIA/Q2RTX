@@ -71,8 +71,8 @@ sdlconfig="sdl-config"
 
 # install paths
 prefix="/usr/local"
-datadir="share/games/quake2"
-libdir="lib/games/quake2"
+datadir="share/games/q2pro"
+libdir="lib/games/q2pro"
 bindir="games"
 mandir="share/man/man6"
 appdir="share/applications"

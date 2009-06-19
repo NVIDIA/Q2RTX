@@ -258,6 +258,7 @@ addrmatch_t *SV_MatchAddress( list_t *list, netadr_t *address ) {
     LIST_FOR_EACH( addrmatch_t, match, list, entry ) {
         if( ( addr & match->mask ) == ( match->addr & match->mask ) ) {
             match->hits++;
+            match->time = time( NULL );
             return match;
         }
     }
@@ -291,9 +292,13 @@ static size_t SV_StatusString( char *status ) {
     sv_maxclients->string = tmp;
 
     // add uptime
-    if( sv_uptime->integer ) {
-        len = Com_Uptime_m( entry, MAX_INFO_VALUE );
-        if( len < MAX_INFO_VALUE && total + 8 + len < MAX_INFO_STRING ) {
+    if( sv_uptime->integer > 0 ) {
+        if( sv_uptime->integer > 1 ) {
+            len = Com_UptimeLong_m( entry, MAX_INFO_VALUE );
+        } else {
+            len = Com_Uptime_m( entry, MAX_INFO_VALUE );
+        }
+        if( total + 8 + len < MAX_INFO_STRING ) {
             memcpy( status + total, "\\uptime\\", 8 );
             memcpy( status + total + 8, entry, len );
             total += 8 + len;
@@ -1494,7 +1499,7 @@ void SV_Frame( unsigned msec ) {
         return;
     }
 
-#if USE_CLIENT
+#if 0//USE_CLIENT
     // pause if there is only local client on the server
     if( !dedicated->integer && cl_paused->integer &&
         List_Count( &svs.udp_client_list ) == 1 && mvdconns == 0 &&

@@ -605,6 +605,8 @@ This is also called on Com_Error, so it shouldn't cause any errors
 =====================
 */
 void CL_Disconnect( comErrorType_t type, const char *text ) {
+    SCR_EndLoadingPlaque();    // get rid of loading plaque
+
     if( cls.state > ca_disconnected && !cls.demo.playback ) {
         EXEC_TRIGGER( cl_disconnectcmd );
     }
@@ -1646,8 +1648,31 @@ static void CL_RegisterModels( void ) {
 }
 
 void CL_LoadState( load_state_t state ) {
-    cl.load_state = state;
-    cl.load_time[state] = Sys_Milliseconds();
+    char *s;
+
+    switch( state ) {
+    case LOAD_MAP:
+        s = cl.configstrings[ CS_MODELS + 1 ];
+        break;
+    case LOAD_MODELS:
+        s = "models";
+        break;
+    case LOAD_IMAGES:
+        s = "images";
+        break;
+    case LOAD_CLIENTS:
+        s = "clients";
+        break;
+    case LOAD_SOUNDS:
+        s = "sounds";
+        break;
+    case LOAD_FINISH:
+        Con_Printf( "\r" ); 
+        return;
+    default:
+        return;
+    }
+    Con_Printf( "\rLoading %s...", s ); 
 
     // Com_ProcessEvents(); 
     SCR_UpdateScreen();

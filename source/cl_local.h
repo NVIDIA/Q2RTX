@@ -202,9 +202,6 @@ typedef struct client_state_s {
     unsigned    reply_delta;
 #endif
 
-    load_state_t    load_state;
-    unsigned        load_time[ LOAD_FINISH + 1 ];
-
     //
     // locally derived information from server state
     //
@@ -256,8 +253,8 @@ typedef struct client_static_s {
     active_t    active;
 
     qboolean    ref_initialized;
+    unsigned    disable_screen;
     qboolean    _unused1;
-    qboolean    _unused2;
 
     int         userinfo_modified;
     cvar_t      *userinfo_updates[MAX_PACKET_USERINFOS];
@@ -685,22 +682,8 @@ void        CL_ShutdownUI( void );
 //
 // cl_scrn.c
 //
-
-extern cvar_t       *scr_viewsize;
-extern cvar_t       *scr_draw2d;
-
-extern cvar_t       *crosshair;
-extern qhandle_t    crosshair_pic;
-extern int          crosshair_width, crosshair_height;
-
-extern qhandle_t    scr_net;
-extern qhandle_t    scr_font;
-
 extern glconfig_t   scr_glconfig;
 extern vrect_t      scr_vrect;        // position of render window
-
-extern int          scr_hudWidth;
-extern int          scr_hudHeight;
 
 void    SCR_Init (void);
 void    SCR_Shutdown( void );
@@ -714,38 +697,10 @@ void    SCR_DebugGraph ( float value, int color );
 void    SCR_TouchPics ( void );
 void    SCR_RegisterMedia( void );
 void    SCR_ModeChanged( void );
-void    SCR_RunConsole (void);
-void    SCR_ExecuteLayoutString( const char *s );
-void    SCR_DrawInventory( void );
-void    SCR_DrawPause( void );
-void    SCR_DrawNet( void );
-void    SCR_DrawCenterString( void );
-
-
-//
-// cl_cin.c
-//
-void        SCR_PlayCinematic( const char *name );
-qboolean    SCR_DrawCinematic( void );
-void        SCR_RunCinematic( void );
-void        SCR_StopCinematic( void );
-void        SCR_FinishCinematic( void );
-
-//
-// cl_draw.c
-//
-void    SCR_InitDraw( void );
-void    SCR_ShutdownDraw( void );
-void    SCR_Draw2D( void );
-void    SCR_DrawLoading( void );
-float    SCR_FadeAlpha( unsigned startTime, unsigned visTime, unsigned fadeTime );
-#if USE_CHATHUD
-void    SCR_ClearChatHUD_f( void );
-void    SCR_AddToChatHUD( const char *string );
-#endif
 void    SCR_LagSample( void );
 void    SCR_LagClear( void );
 
+float   SCR_FadeAlpha( unsigned startTime, unsigned visTime, unsigned fadeTime );
 int     SCR_DrawStringEx( int x, int y, int flags, size_t maxlen, const char *s, qhandle_t font );
 void    SCR_DrawStringMulti( int x, int y, int flags, size_t maxlen, const char *s, qhandle_t font );
 

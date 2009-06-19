@@ -21,66 +21,161 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "cl_local.h"
 
-qboolean    scr_initialized;        // ready to draw
+#define STAT_PICS       11
+#define STAT_MINUS      (STAT_PICS-1)  // num frame for '-' stats digit
 
-vrect_t     scr_vrect;      // position of render window on screen
+static struct {
+    qboolean    initialized;        // ready to draw
 
-glconfig_t  scr_glconfig;
+    qhandle_t   crosshair_pic;
+    int         crosshair_width, crosshair_height;
 
+    qhandle_t   pause_pic;
+    int         pause_width, pause_height;
 
-cvar_t      *scr_viewsize;
-cvar_t      *scr_centertime;
-cvar_t      *scr_showpause;
-cvar_t      *scr_printspeed;
+    qhandle_t   loading_pic;
+    int         loading_width, loading_height;
+    qboolean    draw_loading;
+
+    qhandle_t   sb_pics[2][STAT_PICS];
+    qhandle_t   inven_pic;
+    qhandle_t   field_pic;
+
+    qhandle_t   backtile_pic;
+
+    qhandle_t   net_pic;
+    qhandle_t   font_pic;
+
+    int         hud_width, hud_height;
+} scr;
+
+static cvar_t   *scr_viewsize;
+static cvar_t   *scr_centertime;
+static cvar_t   *scr_showpause;
+#ifdef _DEBUG
+static cvar_t   *scr_showstats;
+static cvar_t   *scr_showpmove;
+#endif
+static cvar_t   *scr_showturtle;
+
+static cvar_t   *scr_draw2d;
+static cvar_t   *scr_lag_x;
+static cvar_t   *scr_lag_y;
+static cvar_t   *scr_lag_draw;
+static cvar_t   *scr_alpha;
+
+static cvar_t   *scr_demobar;
+static cvar_t   *scr_font;
+static cvar_t   *scr_scale;
+
+static cvar_t   *scr_crosshair;
 
 #ifdef _DEBUG
 cvar_t      *scr_netgraph;
 cvar_t      *scr_timegraph;
 cvar_t      *scr_debuggraph;
-cvar_t      *scr_graphheight;
-cvar_t      *scr_graphscale;
-cvar_t      *scr_graphshift;
+
+static cvar_t   *scr_graphheight;
+static cvar_t   *scr_graphscale;
+static cvar_t   *scr_graphshift;
 #endif
 
-cvar_t      *scr_demobar;
-cvar_t      *scr_fontvar;
-cvar_t      *scr_scale;
+vrect_t     scr_vrect;      // position of render window on screen
+glconfig_t  scr_glconfig;
 
-cvar_t      *crosshair;
-
-qhandle_t   crosshair_pic;
-int         crosshair_width, crosshair_height;
-
-qhandle_t   scr_backtile;
-
-qhandle_t   scr_pause;
-int         scr_pause_width, scr_pause_height;
-
-qhandle_t   scr_net;
-qhandle_t   scr_font;
-
-int         scr_hudWidth;
-int         scr_hudHeight;
-
-#define STAT_MINUS      10  // num frame for '-' stats digit
-
-static const char   sb_nums[2][11][11] = {
+static const char *const sb_nums[2][STAT_PICS] = {
     { "num_0", "num_1", "num_2", "num_3", "num_4", "num_5",
     "num_6", "num_7", "num_8", "num_9", "num_minus" },
     { "anum_0", "anum_1", "anum_2", "anum_3", "anum_4", "anum_5",
     "anum_6", "anum_7", "anum_8", "anum_9", "anum_minus" }
 };
 
-static qhandle_t    sb_pics[2][11];
-static qhandle_t    sb_inventory;
-static qhandle_t    sb_field;
+/*
+===============================================================================
 
-#define ICON_WIDTH  24
-#define ICON_HEIGHT 24
-#define DIGIT_WIDTH 16
-#define ICON_SPACE  8
+UTILS
 
-void SCR_Loading_f (void);
+===============================================================================
+*/
+
+#define SCR_DrawString( x, y, flags, string ) \
+    SCR_DrawStringEx( x, y, flags, MAX_STRING_CHARS, string, scr.font_pic )
+
+/*
+==============
+SCR_DrawStringEx
+==============
+*/
+int SCR_DrawStringEx( int x, int y, int flags, size_t maxlen,
+                      const char *s, qhandle_t font )
+{
+    int w = Q_DrawStrlenTo( s, maxlen ) * CHAR_WIDTH;
+
+    if( ( flags & UI_CENTER ) == UI_CENTER ) {
+        x -= w / 2;
+    } else if( flags & UI_RIGHT ) {
+        x -= w;
+    }
+
+    return R_DrawString( x, y, flags, maxlen, s, font );
+}
+
+
+/*
+==============
+SCR_DrawStringMulti
+==============
+*/
+void SCR_DrawStringMulti( int x, int y, int flags, size_t maxlen,
+                          const char *s, qhandle_t font )
+{
+    char    *p;
+    size_t  len;
+
+    while( *s ) {
+        p = strchr( s, '\n' );
+        if( !p ) {
+            SCR_DrawStringEx( x, y, flags, maxlen, s, font );
+            break;
+        }
+
+        len = p - s;
+        if( len > maxlen ) {
+            len = maxlen;
+        }
+        SCR_DrawStringEx( x, y, flags, len, s, font );
+
+        y += CHAR_HEIGHT;
+        s = p + 1;
+    }
+}
+
+
+/*
+=================
+SCR_FadeAlpha
+=================
+*/
+float SCR_FadeAlpha( unsigned startTime, unsigned visTime, unsigned fadeTime ) {
+    float alpha;
+    unsigned timeLeft, delta = cls.realtime - startTime;
+
+    if( delta >= visTime ) {
+        return 0;
+    }
+
+    if( fadeTime > visTime ) {
+        fadeTime = visTime;
+    }
+
+    alpha = 1;
+    timeLeft = visTime - delta;
+    if( timeLeft < fadeTime ) {
+        alpha = ( float )timeLeft / fadeTime;
+    }
+
+    return alpha;
+}
 
 
 /*
@@ -105,7 +200,7 @@ void CL_AddNetgraph (void)
     int     in;
     int     ping;
 
-    if (!scr_initialized)
+    if (!scr.initialized)
         return;
 
     // if using the debuggraph for something else, don't
@@ -187,29 +282,24 @@ void SCR_DrawDebugGraph (void)
 }
 #endif
 
-static void SCR_DrawPercentBar( int percent ) {
+static void draw_percent_bar( int percent ) {
     char buffer[16];
     int x, w;
     size_t len;
 
-    scr_hudHeight -= CHAR_HEIGHT;
+    scr.hud_height -= CHAR_HEIGHT;
 
-    w = scr_hudWidth * percent / 100;
+    w = scr.hud_width * percent / 100;
 
-    R_DrawFill( 0, scr_hudHeight, w, CHAR_HEIGHT, 4 );
-    R_DrawFill( w, scr_hudHeight, scr_hudWidth - w, CHAR_HEIGHT, 0 );
+    R_DrawFill( 0, scr.hud_height, w, CHAR_HEIGHT, 4 );
+    R_DrawFill( w, scr.hud_height, scr.hud_width - w, CHAR_HEIGHT, 0 );
 
     len = Q_scnprintf( buffer, sizeof( buffer ), "%d%%", percent );
-    x = ( scr_hudWidth - len * CHAR_WIDTH ) / 2;
-    R_DrawString( x, scr_hudHeight, 0, MAX_STRING_CHARS, buffer, scr_font );
+    x = ( scr.hud_width - len * CHAR_WIDTH ) / 2;
+    R_DrawString( x, scr.hud_height, 0, MAX_STRING_CHARS, buffer, scr.font_pic );
 }
 
-/*
-================
-SCR_DrawDemoBar
-================
-*/
-static void SCR_DrawDemoBar( void ) {
+static void draw_demo_bar( void ) {
 #if USE_MVD_CLIENT  
     int percent;
 #endif
@@ -220,7 +310,7 @@ static void SCR_DrawDemoBar( void ) {
 
     if( cls.demo.playback ) {
         if( cls.demo.file_size ) {
-            SCR_DrawPercentBar( cls.demo.file_percent );
+            draw_percent_bar( cls.demo.file_percent );
         }
         return;
     }
@@ -234,7 +324,7 @@ static void SCR_DrawDemoBar( void ) {
         return;
     }
 
-    SCR_DrawPercentBar( percent );
+    draw_percent_bar( percent );
 #endif
 }
 
@@ -282,7 +372,7 @@ void SCR_CenterPrint( const char *str ) {
     Con_ClearNotify_f();
 }
 
-void SCR_DrawCenterString( void ) {
+static void draw_center_string( void ) {
     int y;
     float alpha;
 
@@ -295,40 +385,430 @@ void SCR_DrawCenterString( void ) {
 
     R_SetColor( DRAW_COLOR_ALPHA, ( byte * )&alpha );
 
-    y = scr_hudHeight / 4 - scr_center_lines * 8 / 2;
+    y = scr.hud_height / 4 - scr_center_lines * 8 / 2;
 
-    SCR_DrawStringMulti( scr_hudWidth / 2, y, UI_CENTER,
-        MAX_STRING_CHARS, scr_centerstring, scr_font );
+    SCR_DrawStringMulti( scr.hud_width / 2, y, UI_CENTER,
+        MAX_STRING_CHARS, scr_centerstring, scr.font_pic );
 
     R_SetColor( DRAW_COLOR_CLEAR, NULL );
 }
 
-//============================================================================
+/*
+===============================================================================
+
+LAGOMETER
+
+===============================================================================
+*/
+
+#define LAG_WIDTH     48
+#define LAG_HEIGHT    48
+
+#define LAG_MAX     200
+
+#define LAG_CRIT_BIT    ( 1 << 31 )
+#define LAG_WARN_BIT    ( 1 << 30 )
+
+#define LAG_BASE    0xD5
+#define LAG_WARN    0xDC
+#define LAG_CRIT    0xF2
+
+static struct {
+    unsigned samples[LAG_WIDTH];
+    unsigned head;
+} lag;
+
+void SCR_LagClear( void ) {
+    lag.head = 0;
+}
+
+void SCR_LagSample( void ) {
+    int i = cls.netchan->incoming_acknowledged & CMD_MASK;
+    client_history_t *h = &cl.history[i];
+    unsigned ping;
+
+    h->rcvd = cls.realtime;
+    if( !h->cmdNumber || h->rcvd < h->sent ) {
+        return;
+    }
+
+    ping = h->rcvd - h->sent;
+    for( i = 0; i < cls.netchan->dropped; i++ ) {
+        lag.samples[lag.head % LAG_WIDTH] = ping | LAG_CRIT_BIT;
+        lag.head++;
+    }
+
+    if( cl.frameflags & FF_SURPRESSED ) {
+        ping |= LAG_WARN_BIT;
+    }
+    lag.samples[lag.head % LAG_WIDTH] = ping;
+    lag.head++;
+}
+
+static void draw_ping_graph( int x, int y ) {
+    int i, j, v, c;
+
+    for( i = 0; i < LAG_WIDTH; i++ ) {
+        j = lag.head - i - 1;
+        if( j < 0 ) {
+            break;
+        }
+
+        v = lag.samples[j % LAG_WIDTH];
+
+        if( v & LAG_CRIT_BIT ) {
+            c = LAG_CRIT;
+        } else if( v & LAG_WARN_BIT ) {
+            c = LAG_WARN;
+        } else {
+            c = LAG_BASE;
+        }
+
+        v &= ~(LAG_WARN_BIT|LAG_CRIT_BIT);
+        v = v * LAG_HEIGHT / LAG_MAX;
+        if( v > LAG_HEIGHT ) {
+            v = LAG_HEIGHT;
+        }
+
+        R_DrawFill( x + LAG_WIDTH - i - 1, y + LAG_HEIGHT - v, 1, v, c );
+    }
+}
+
+static void draw_lagometer( void ) {
+    int x = scr_lag_x->integer;
+    int y = scr_lag_y->integer;
+
+    if( x < 0 ) {
+        x += scr.hud_width - LAG_WIDTH + 1;
+    }
+    if( y < 0 ) {
+        y += scr.hud_height - LAG_HEIGHT + 1;
+    }
+
+    // draw ping graph
+    if( scr_lag_draw->integer ) {
+        if( scr_lag_draw->integer > 1 ) {
+            R_DrawFill( x, y, LAG_WIDTH, LAG_HEIGHT, 4 );
+        }
+        draw_ping_graph( x, y );
+    }
+
+    // draw phone jack
+    if( cls.netchan && cls.netchan->outgoing_sequence - cls.netchan->incoming_acknowledged >= CMD_BACKUP ) {
+        if( ( cls.realtime >> 8 ) & 3 ) {
+            R_DrawStretchPic( x, y, LAG_WIDTH, LAG_HEIGHT, scr.net_pic );
+        }
+    }
+}
+
 
 /*
-=================
-SCR_CalcVrect
+===============================================================================
 
-Sets scr_vrect, the coordinates of the rendered window
-=================
+DRAW OBJECTS
+
+===============================================================================
 */
-static void SCR_CalcVrect( void ) {
+
+typedef struct {
+    list_t  entry;
+    int     x, y;
+    cvar_t *cvar;
+    cmd_macro_t *macro;
+    int flags;
+    color_t color;
+} drawobj_t;
+
+static LIST_DECL( scr_objects );
+
+static void SCR_Color_g( genctx_t *ctx ) {
+    int color;
+
+    for( color = 0; color < 10; color++ ) {
+        if( !Prompt_AddMatch( ctx, colorNames[color] ) ) {
+            break;
+        }
+    }
+}
+
+static void SCR_Draw_c( genctx_t *ctx, int argnum ) {
+    if( argnum == 1 ) {
+        Cvar_Variable_g( ctx );
+        Cmd_Macro_g( ctx );
+    } else if( argnum == 4 ) {
+        SCR_Color_g( ctx );
+    }
+}
+
+// draw cl_fps -1 80
+static void SCR_Draw_f( void ) {
+    int x, y;
+    const char *s, *c;
+    drawobj_t *obj;
+    cmd_macro_t *macro;
+   // int stat;
+    color_t color = { 0, 0, 0, 0 };
+    int flags = UI_IGNORECOLOR;
+    int argc = Cmd_Argc();
+
+    if( argc == 1 ) {
+        if( LIST_EMPTY( &scr_objects ) ) {
+            Com_Printf( "No draw strings registered.\n" );
+            return;
+        }
+        Com_Printf( "Name               X    Y\n"
+                    "--------------- ---- ----\n" );
+        LIST_FOR_EACH( drawobj_t, obj, &scr_objects, entry ) {
+            s = obj->macro ? obj->macro->name : obj->cvar->name;
+            Com_Printf( "%-15s %4d %4d\n", s, obj->x, obj->y );
+        }
+        return;
+    }
+
+    if( argc < 4 ) {
+        Com_Printf( "Usage: %s <name> <x> <y> [color]\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    s = Cmd_Argv( 1 );
+    x = atoi( Cmd_Argv( 2 ) );
+    if( x < 0 ) {
+        flags |= UI_RIGHT;
+    }
+    y = atoi( Cmd_Argv( 3 ) );
+
+    if( argc > 4 ) {
+        c = Cmd_Argv( 4 );
+        if( !strcmp( c, "alt" ) ) {
+            flags |= UI_ALTCOLOR;
+        } else {
+            if( !COM_ParseColor( c, color ) ) {
+                Com_Printf( "Unknown color '%s'\n", c );
+                return;
+            }
+            flags &= ~UI_IGNORECOLOR;
+        }
+    }
+
+    obj = Z_Malloc( sizeof( *obj ) );
+    obj->x = x;
+    obj->y = y;
+    obj->flags = flags;
+    *( uint32_t * )obj->color = *( uint32_t * )color;
+
+    macro = Cmd_FindMacro( s );
+    if( macro ) {
+        obj->cvar = NULL;
+        obj->macro = macro;
+    } else {
+        obj->cvar = Cvar_Ref( s );
+        obj->macro = NULL;
+    }
+
+    List_Append( &scr_objects, &obj->entry );
+}
+
+static void SCR_Draw_g( genctx_t *ctx ) {
+    drawobj_t *obj;
+    const char *s;
+
+    if( LIST_EMPTY( &scr_objects ) ) {
+        return;
+    }
+
+    Prompt_AddMatch( ctx, "all" );
+    
+    LIST_FOR_EACH( drawobj_t, obj, &scr_objects, entry ) {
+        s = obj->macro ? obj->macro->name : obj->cvar->name;
+        if( !Prompt_AddMatch( ctx, s ) ) {
+            break;
+        }
+    }
+}
+
+static void SCR_UnDraw_c( genctx_t *ctx, int argnum ) {
+    if( argnum == 1 ) {
+        SCR_Draw_g( ctx );
+    }
+}
+
+static void SCR_UnDraw_f( void ) {
+    char *s;
+    drawobj_t *obj, *next;
+    cmd_macro_t *macro;
+    cvar_t *cvar;
+    qboolean deleted;
+
+    if( Cmd_Argc() != 2 ) {
+        Com_Printf( "Usage: %s <name>\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    if( LIST_EMPTY( &scr_objects ) ) {
+        Com_Printf( "No draw strings registered.\n" );
+        return;
+    }
+
+    s = Cmd_Argv( 1 );
+    if( !strcmp( s, "all" ) ) {
+        LIST_FOR_EACH_SAFE( drawobj_t, obj, next, &scr_objects, entry ) {
+            Z_Free( obj );
+        }
+        List_Init( &scr_objects );
+        Com_Printf( "Deleted all draw strings.\n" );
+        return;
+    }
+
+    cvar = NULL;
+    macro = Cmd_FindMacro( s );
+    if( !macro ) {
+        cvar = Cvar_Ref( s );
+    }
+
+    deleted = qfalse;
+    LIST_FOR_EACH_SAFE( drawobj_t, obj, next, &scr_objects, entry ) {
+        if( obj->macro == macro && obj->cvar == cvar ) {
+            List_Remove( &obj->entry );
+            Z_Free( obj );
+            deleted = qtrue;
+        }
+    }
+
+    if( !deleted ) {
+        Com_Printf( "Draw string '%s' not found.\n", s );
+    }
+}
+
+static void draw_objects( void ) {
+    char buffer[MAX_QPATH];
+    int x, y;
+    drawobj_t *obj;
+
+    LIST_FOR_EACH( drawobj_t, obj, &scr_objects, entry ) {
+        x = obj->x;
+        y = obj->y;
+        if( x < 0 ) {
+            x += scr.hud_width + 1;
+        }
+        if( y < 0 ) {
+            y += scr.hud_height - CHAR_HEIGHT + 1;
+        }
+        if( !( obj->flags & UI_IGNORECOLOR ) ) {
+            R_SetColor( DRAW_COLOR_RGBA, obj->color );
+        }
+        if( obj->macro ) {
+            obj->macro->function( buffer, sizeof( buffer ) );
+            SCR_DrawString( x, y, obj->flags, buffer );
+        } else {
+            SCR_DrawString( x, y, obj->flags, obj->cvar->string );
+        }
+        R_SetColor( DRAW_COLOR_CLEAR, NULL );
+    }
+}
+
+/*
+===============================================================================
+
+DEBUG STUFF
+
+===============================================================================
+*/
+
+static void draw_turtle( void ) {
+    int x = 8;
+    int y = scr.hud_height - 88;
+
+#define DF( f ) if( cl.frameflags & FF_ ## f ) { \
+                    SCR_DrawString( x, y, UI_ALTCOLOR, #f ); \
+                    y += 8; \
+                }
+
+    DF( SURPRESSED )
+    DF( CLIENTPRED )
+    else
+    DF( CLIENTDROP )
+    DF( SERVERDROP )
+    DF( BADFRAME )
+    DF( OLDFRAME )
+    DF( OLDENT )
+    DF( NODELTA )
+
+#undef DF
+}
+
+#ifdef _DEBUG
+
+static void draw_stats( void ) {
+    char buffer[MAX_QPATH];
+    int i, j;
+    int x, y;
+
+    j = scr_showstats->integer;
+    if( j > MAX_STATS ) {
+        j = MAX_STATS;
+    }
+    x = CHAR_WIDTH;
+    y = ( scr.hud_height - j * CHAR_HEIGHT ) / 2;
+    for( i = 0; i < j; i++ ) {
+        Q_snprintf( buffer, sizeof( buffer ), "%2d: %d", i, cl.frame.ps.stats[i] );
+        if( cl.oldframe.ps.stats[i] != cl.frame.ps.stats[i] ) {
+            R_SetColor( DRAW_COLOR_RGBA, colorRed );
+        }
+        R_DrawString( x, y, 0, MAX_STRING_CHARS, buffer, scr.font_pic );
+        R_SetColor( DRAW_COLOR_CLEAR, NULL );
+        y += CHAR_HEIGHT;
+    }
+}
+
+static void draw_pmove( void ) {
+    static const char * const types[] = {
+        "NORMAL", "SPECTATOR", "DEAD", "GIB", "FREEZE"
+    };
+    static const char * const flags[] = {
+        "DUCKED", "JUMP_HELD", "ON_GROUND",
+        "TIME_WATERJUMP", "TIME_LAND", "TIME_TELEPORT",
+        "NO_PREDICTION", "TELEPORT_BIT"
+    };
+    int x = CHAR_WIDTH;
+    int y = ( scr.hud_height - 2 * CHAR_HEIGHT ) / 2;
+    unsigned i, j;
+
+    i = cl.frame.ps.pmove.pm_type;
+    if( i > PM_FREEZE ) {
+        i = PM_FREEZE;
+    }
+    R_DrawString( x, y, 0, MAX_STRING_CHARS, types[i], scr.font_pic );
+    y += CHAR_HEIGHT;
+
+    j = cl.frame.ps.pmove.pm_flags;
+    for( i = 0; i < 8; i++ ) {
+        if( j & ( 1 << i ) ) {
+            x = R_DrawString( x, y, 0, MAX_STRING_CHARS, flags[i], scr.font_pic );
+            x += CHAR_WIDTH;
+        }
+    }
+}
+
+#endif
+
+//============================================================================
+
+// Sets scr_vrect, the coordinates of the rendered window
+static void calc_vrect( void ) {
     int     size;
 
     // bound viewsize
-    Cvar_ClampInteger( scr_viewsize, 40, 100 );
+    size = Cvar_ClampInteger( scr_viewsize, 40, 100 );
     scr_viewsize->modified = qfalse;
 
-    size = scr_viewsize->integer;
-
-    scr_vrect.width = scr_hudWidth * size / 100;
+    scr_vrect.width = scr.hud_width * size / 100;
     scr_vrect.width &= ~7;
 
-    scr_vrect.height = scr_hudHeight * size / 100;
+    scr_vrect.height = scr.hud_height * size / 100;
     scr_vrect.height &= ~1;
 
-    scr_vrect.x = ( scr_hudWidth - scr_vrect.width ) / 2;
-    scr_vrect.y = ( scr_hudHeight - scr_vrect.height ) / 2;
+    scr_vrect.x = ( scr.hud_width - scr_vrect.width ) / 2;
+    scr_vrect.y = ( scr.hud_height - scr_vrect.height ) / 2;
 }
 
 /*
@@ -424,32 +904,15 @@ static void SCR_TimeRefresh_f (void) {
 
 //============================================================================
 
-/*
-===============
-SCR_TouchPics
+static void scr_crosshair_changed( cvar_t *self ) {
+    char buffer[16];
 
-Allows rendering code to cache all needed sbar graphics
-===============
-*/
-void SCR_TouchPics( void ) {
-    int     i, j;
-    char    buffer[16];
-
-    for( i = 0; i < 2; i++ )
-        for( j = 0; j < 11; j++ )
-            sb_pics[i][j] = R_RegisterPic( sb_nums[i][j] );
-
-    sb_inventory = R_RegisterPic( "inventory" );
-    sb_field = R_RegisterPic( "field_3" );
-
-    if( crosshair->integer ) {
-        if( crosshair->integer < 0 ) {
-            Cvar_Set( "crosshair", "0" );
-        }
-
-        Q_snprintf( buffer, sizeof( buffer ), "ch%i", crosshair->integer );
-        crosshair_pic = R_RegisterPic( buffer );
-        R_GetPicSize( &crosshair_width, &crosshair_height, crosshair_pic );
+    if( self->integer > 0 ) {
+        Q_snprintf( buffer, sizeof( buffer ), "ch%i", scr_crosshair->integer );
+        scr.crosshair_pic = R_RegisterPic( buffer );
+        R_GetPicSize( &scr.crosshair_width, &scr.crosshair_height, scr.crosshair_pic );
+    } else {
+        scr.crosshair_pic = 0;
     }
 }
 
@@ -467,18 +930,33 @@ SCR_RegisterMedia
 ==================
 */
 void SCR_RegisterMedia( void ) {
+    int     i, j;
+
     R_GetConfig( &scr_glconfig );
 
-    scr_backtile = R_RegisterPic( "backtile" );
-    scr_pause = R_RegisterPic( "pause" );
-    scr_net = R_RegisterPic( "net" );
-    scr_font = R_RegisterFont( scr_fontvar->string );
+    for( i = 0; i < 2; i++ )
+        for( j = 0; j < STAT_PICS; j++ )
+            scr.sb_pics[i][j] = R_RegisterPic( sb_nums[i][j] );
 
-    R_GetPicSize( &scr_pause_width, &scr_pause_height, scr_pause );
+    scr.inven_pic = R_RegisterPic( "inventory" );
+    scr.field_pic = R_RegisterPic( "field_3" );
+
+    scr.backtile_pic = R_RegisterPic( "backtile" );
+
+    scr.pause_pic = R_RegisterPic( "pause" );
+    R_GetPicSize( &scr.pause_width, &scr.pause_height, scr.pause_pic );
+
+    scr.loading_pic = R_RegisterPic( "loading" );
+    R_GetPicSize( &scr.loading_width, &scr.loading_height, scr.loading_pic );
+
+    scr.net_pic = R_RegisterPic( "net" );
+    scr.font_pic = R_RegisterFont( scr_font->string );
+
+    scr_crosshair_changed( scr_crosshair );
 }
 
-static void scr_fontvar_changed( cvar_t *self ) {
-    scr_font = R_RegisterFont( self->string );
+static void scr_font_changed( cvar_t *self ) {
+    scr.font_pic = R_RegisterFont( self->string );
 }
 
 static const cmdreg_t scr_cmds[] = {
@@ -486,6 +964,8 @@ static const cmdreg_t scr_cmds[] = {
     { "sizeup", SCR_SizeUp_f }, 
     { "sizedown", SCR_SizeDown_f },
     { "sky", SCR_Sky_f },
+    { "draw", SCR_Draw_f, SCR_Draw_c },
+    { "undraw", SCR_UnDraw_f, SCR_UnDraw_c },
     { NULL }
 };
 
@@ -499,7 +979,6 @@ void SCR_Init( void ) {
     scr_showpause = Cvar_Get ("scr_showpause", "1", 0);
     scr_centertime = Cvar_Get ("scr_centertime", "2.5", 0);
 #ifdef _DEBUG
-    scr_printspeed = Cvar_Get ("scr_printspeed", "8", 0);
     scr_netgraph = Cvar_Get ("netgraph", "0", 0);
     scr_timegraph = Cvar_Get ("timegraph", "0", 0);
     scr_debuggraph = Cvar_Get ("debuggraph", "0", 0);
@@ -508,51 +987,34 @@ void SCR_Init( void ) {
     scr_graphshift = Cvar_Get ("graphshift", "0", 0);
 #endif
     scr_demobar = Cvar_Get( "scr_demobar", "1", CVAR_ARCHIVE );
-    scr_fontvar = Cvar_Get( "scr_font", "conchars", CVAR_ARCHIVE );
-    scr_fontvar->changed = scr_fontvar_changed;
+    scr_font = Cvar_Get( "scr_font", "conchars", CVAR_ARCHIVE );
+    scr_font->changed = scr_font_changed;
     scr_scale = Cvar_Get( "scr_scale", "1", CVAR_ARCHIVE );
-    crosshair = Cvar_Get ("crosshair", "0", CVAR_ARCHIVE);
+    scr_crosshair = Cvar_Get ("crosshair", "0", CVAR_ARCHIVE);
+    scr_crosshair->changed = scr_crosshair_changed;
+
+    scr_draw2d = Cvar_Get( "scr_draw2d", "2", 0 );
+    scr_showturtle = Cvar_Get( "scr_showturtle", "1", 0 );
+    scr_lag_x = Cvar_Get( "scr_lag_x", "-1", 0 );
+    scr_lag_y = Cvar_Get( "scr_lag_y", "-1", 0 );
+    scr_lag_draw = Cvar_Get( "scr_lag_draw", "0", 0 );
+    scr_alpha = Cvar_Get( "scr_alpha", "1", 0 );
+#ifdef _DEBUG
+    scr_showstats = Cvar_Get( "scr_showstats", "0", 0 );
+    scr_showpmove = Cvar_Get( "scr_showpmove", "0", 0 );
+#endif
 
     Cmd_Register( scr_cmds );
-
-    SCR_InitDraw();
 
     scr_glconfig.vidWidth = 640;
     scr_glconfig.vidHeight = 480;
 
-    scr_initialized = qtrue;
+    scr.initialized = qtrue;
 }
 
 void SCR_Shutdown( void ) {
     Cmd_Deregister( scr_cmds );
-
-    SCR_ShutdownDraw();
-
-    scr_initialized = qfalse;
-}
-
-/*
-==============
-SCR_DrawPause
-==============
-*/
-void SCR_DrawPause( void ) {
-    int     x, y;
-
-    if( !sv_paused->integer ) {
-        return;
-    }
-    if( cl_paused->integer != 2 ) {
-        return;
-    }
-
-    if( !scr_showpause->integer ) {     // turn off for screenshots
-        return;
-    }
-
-    x = ( scr_hudWidth - scr_pause_width ) / 2;
-    y = ( scr_hudHeight - scr_pause_height ) / 2;
-    R_DrawPic( x, y, scr_pause );
+    scr.initialized = qfalse;
 }
 
 //=============================================================================
@@ -563,11 +1025,21 @@ SCR_BeginLoadingPlaque
 ================
 */
 void SCR_BeginLoadingPlaque( void ) {
-    Con_Close();
-#if USE_UI
-    UI_OpenMenu( UIMENU_NONE );
-#endif
-    S_StopAllSounds();
+    if( cls.disable_screen ) {
+        return;
+    }
+    if( developer->integer ) {
+        return;
+    }
+    // if at console or menu, don't bring up the plaque
+    if( cls.key_dest & (KEY_CONSOLE|KEY_MENU) ) {
+        return;
+    }
+
+    scr.draw_loading = qtrue;
+    SCR_UpdateScreen();
+
+    cls.disable_screen = Sys_Milliseconds();
 }
 
 /*
@@ -576,17 +1048,16 @@ SCR_EndLoadingPlaque
 ================
 */
 void SCR_EndLoadingPlaque( void ) {
+    cls.disable_screen = 0;
     Con_ClearNotify_f();
+    SCR_LagClear();
+#if USE_CHATHUD
+    SCR_ClearChatHUD_f();
+#endif
 }
 
-/*
-==============
-SCR_TileClear
-
-Clear any parts of the tiled background that were drawn on last frame
-==============
-*/
-static void SCR_TileClear( void ) {
+// Clear any parts of the tiled background that were drawn on last frame
+static void tile_clear( void ) {
     int top, bottom, left, right;
 
     //if( con.currentHeight == 1 )
@@ -599,22 +1070,20 @@ static void SCR_TileClear( void ) {
     bottom = top + scr_vrect.height - 1;
     left = scr_vrect.x;
     right = left + scr_vrect.width - 1;
-
     
     // clear above view screen
-    R_TileClear( 0, 0, scr_glconfig.vidWidth, top, scr_backtile );
+    R_TileClear( 0, 0, scr_glconfig.vidWidth, top, scr.backtile_pic );
 
     // clear below view screen
     R_TileClear( 0, bottom, scr_glconfig.vidWidth,
-            scr_glconfig.vidHeight - bottom, scr_backtile );
+        scr_glconfig.vidHeight - bottom, scr.backtile_pic );
 
     // clear left of view screen
-    R_TileClear( 0, top, left, scr_vrect.height, scr_backtile );
+    R_TileClear( 0, top, left, scr_vrect.height, scr.backtile_pic );
     
     // clear right of view screen
     R_TileClear( right, top, scr_glconfig.vidWidth - right,
-            scr_vrect.height, scr_backtile );
-
+        scr_vrect.height, scr.backtile_pic );
 }
 
 /*
@@ -625,26 +1094,24 @@ STAT PROGRAMS
 ===============================================================================
 */
 
+#define ICON_WIDTH  24
+#define ICON_HEIGHT 24
+#define DIGIT_WIDTH 16
+#define ICON_SPACE  8
+
 #define HUD_DrawString( x, y, string ) \
-    R_DrawString( x, y, 0, MAX_STRING_CHARS, string, scr_font )
+    R_DrawString( x, y, 0, MAX_STRING_CHARS, string, scr.font_pic )
 
 #define HUD_DrawAltString( x, y, string ) \
-    R_DrawString( x, y, UI_ALTCOLOR, MAX_STRING_CHARS, string, scr_font )
+    R_DrawString( x, y, UI_ALTCOLOR, MAX_STRING_CHARS, string, scr.font_pic )
 
 #define HUD_DrawCenterString( x, y, string ) \
-    SCR_DrawStringMulti( x, y, UI_CENTER, MAX_STRING_CHARS, string, scr_font )
+    SCR_DrawStringMulti( x, y, UI_CENTER, MAX_STRING_CHARS, string, scr.font_pic )
 
 #define HUD_DrawAltCenterString( x, y, string ) \
-    SCR_DrawStringMulti( x, y, UI_CENTER|UI_ALTCOLOR, MAX_STRING_CHARS, string, scr_font )
+    SCR_DrawStringMulti( x, y, UI_CENTER|UI_ALTCOLOR, MAX_STRING_CHARS, string, scr.font_pic )
 
-
-
-/*
-==============
-HUD_DrawNumber
-==============
-*/
-void HUD_DrawNumber( int x, int y, int color, int width, int value ) {
+static void HUD_DrawNumber( int x, int y, int color, int width, int value ) {
     char    num[16], *ptr;
     int     l;
     int     frame;
@@ -670,21 +1137,16 @@ void HUD_DrawNumber( int x, int y, int color, int width, int value ) {
         else
             frame = *ptr - '0';
 
-        R_DrawPic( x, y, sb_pics[color][frame] );
+        R_DrawPic( x, y, scr.sb_pics[color][frame] );
         x += DIGIT_WIDTH;
         ptr++;
         l--;
     }
 }
 
-/*
-================
-CL_DrawInventory
-================
-*/
 #define DISPLAY_ITEMS   17
 
-void SCR_DrawInventory( void ) {
+static void draw_inventory( void ) {
     int     i;
     int     num, selected_num, item;
     int     index[MAX_ITEMS];
@@ -716,10 +1178,10 @@ void SCR_DrawInventory( void ) {
         top = 0;
     }
 
-    x = ( scr_hudWidth - 256 ) / 2;
-    y = ( scr_hudHeight - 240 ) / 2;
+    x = ( scr.hud_width - 256 ) / 2;
+    y = ( scr.hud_height - 240 ) / 2;
 
-    R_DrawPic( x, y + 8, sb_inventory );
+    R_DrawPic( x, y + 8, scr.inven_pic );
     y += 24;
     x += 24;
 
@@ -744,7 +1206,7 @@ void SCR_DrawInventory( void ) {
         } else {    // draw a blinky cursor by the selected item
             HUD_DrawString( x, y, string );
             if( ( cls.realtime >> 8 ) & 1 ) {
-                R_DrawChar( x - CHAR_WIDTH, y, 0, 15, scr_font );
+                R_DrawChar( x - CHAR_WIDTH, y, 0, 15, scr.font_pic );
             }
         }
         
@@ -752,13 +1214,7 @@ void SCR_DrawInventory( void ) {
     }
 }
 
-/*
-================
-SCR_ExecuteLayoutString 
-
-================
-*/
-void SCR_ExecuteLayoutString( const char *s ) {
+static void draw_layout_string( const char *s ) {
     char    buffer[MAX_QPATH];
     int     x, y;
     int     value;
@@ -786,13 +1242,13 @@ void SCR_ExecuteLayoutString( const char *s ) {
 
                 if( token[1] == 'r' ) {
                     token = COM_Parse( &s );
-                    x = scr_hudWidth + atoi( token );
+                    x = scr.hud_width + atoi( token );
                     continue;
                 }
 
                 if( token[1] == 'v' ) {
                     token = COM_Parse( &s );
-                    x = scr_hudWidth / 2 - 160 + atoi( token );
+                    x = scr.hud_width / 2 - 160 + atoi( token );
                     continue;
                 }
             }
@@ -806,13 +1262,13 @@ void SCR_ExecuteLayoutString( const char *s ) {
 
                 if( token[1] == 'b' ) {
                     token = COM_Parse( &s );
-                    y = scr_hudHeight + atoi( token );
+                    y = scr.hud_height + atoi( token );
                     continue;
                 }
 
                 if( token[1] == 'v' ) {
                     token = COM_Parse( &s );
-                    y = scr_hudHeight / 2 - 120 + atoi( token );
+                    y = scr.hud_height / 2 - 120 + atoi( token );
                     continue;
                 }
             }
@@ -841,9 +1297,9 @@ void SCR_ExecuteLayoutString( const char *s ) {
             int     score, ping, time;
 
             token = COM_Parse( &s );
-            x = scr_hudWidth / 2 - 160 + atoi( token );
+            x = scr.hud_width / 2 - 160 + atoi( token );
             token = COM_Parse( &s );
-            y = scr_hudHeight / 2 - 120 + atoi( token );
+            y = scr.hud_height / 2 - 120 + atoi( token );
 
             token = COM_Parse( &s );
             value = atoi( token );
@@ -881,9 +1337,9 @@ void SCR_ExecuteLayoutString( const char *s ) {
             int     score, ping;
 
             token = COM_Parse( &s );
-            x = scr_hudWidth / 2 - 160 + atoi( token );
+            x = scr.hud_width / 2 - 160 + atoi( token );
             token = COM_Parse( &s );
-            y = scr_hudHeight / 2 - 120 + atoi( token );
+            y = scr.hud_height / 2 - 120 + atoi( token );
 
             token = COM_Parse( &s );
             value = atoi( token );
@@ -945,7 +1401,7 @@ void SCR_ExecuteLayoutString( const char *s ) {
                 color = 1;
 
             if( cl.frame.ps.stats[STAT_FLASHES] & 1 )
-                R_DrawPic( x, y, sb_field );
+                R_DrawPic( x, y, scr.field_pic );
 
             HUD_DrawNumber( x, y, color, width, value );
             continue;
@@ -965,7 +1421,7 @@ void SCR_ExecuteLayoutString( const char *s ) {
                 continue;   // negative number = don't show
 
             if( cl.frame.ps.stats[STAT_FLASHES] & 4 )
-                R_DrawPic( x, y, sb_field );
+                R_DrawPic( x, y, scr.field_pic );
 
             HUD_DrawNumber( x, y, color, width, value );
             continue;
@@ -983,7 +1439,7 @@ void SCR_ExecuteLayoutString( const char *s ) {
             color = 0;  // green
 
             if( cl.frame.ps.stats[STAT_FLASHES] & 2 )
-                R_DrawPic( x, y, sb_field );
+                R_DrawPic( x, y, scr.field_pic );
 
             HUD_DrawNumber( x, y, color, width, value );
             continue;
@@ -1047,32 +1503,139 @@ void SCR_ExecuteLayoutString( const char *s ) {
     }
 }
 
-static void SCR_DrawActiveFrame( void ) {
+static void draw_pause( void ) {
+    int     x, y;
+
+    if( !sv_paused->integer ) {
+        return;
+    }
+    if( cl_paused->integer != 2 ) {
+        return;
+    }
+
+    if( !scr_showpause->integer ) {     // turn off for screenshots
+        return;
+    }
+
+    x = ( scr.hud_width - scr.pause_width ) / 2;
+    y = ( scr.hud_height - scr.pause_height ) / 2;
+    R_DrawPic( x, y, scr.pause_pic );
+}
+
+static void draw_loading( void ) {
+    int x = ( scr_glconfig.vidWidth - scr.loading_width ) / 2;
+    int y = ( scr_glconfig.vidHeight - scr.loading_height ) / 2;
+
+    R_DrawPic( x, y, scr.loading_pic );
+}
+
+static void draw_crosshair( void ) {
+    int x, y;
+
+    x = ( scr.hud_width - scr.crosshair_width ) / 2;
+    y = ( scr.hud_height - scr.crosshair_height ) / 2;
+    R_DrawPic( x, y, scr.crosshair_pic );
+}
+
+static void draw_2d( void ) {
+#if USE_REF == REF_SOFT
+    clipRect_t rc;
+
+    // avoid DoS by making sure nothing is drawn out of bounds
+    rc.left = 0;
+    rc.top = 0;
+    rc.right = scr.hud_width;
+    rc.bottom = scr.hud_height;
+
+    R_SetClipRect( DRAW_CLIP_MASK, &rc );
+#endif
+
+    R_SetColor( DRAW_COLOR_CLEAR, NULL );
+
+    if( scr_crosshair->integer ) {
+        draw_crosshair();
+    }
+
+    Cvar_ClampValue( scr_alpha, 0, 1 );
+    R_SetColor( DRAW_COLOR_ALPHA, ( byte * )&scr_alpha->value );
+
+    if( scr_draw2d->integer > 1 ) {
+        draw_layout_string( cl.configstrings[CS_STATUSBAR] );
+    }
+
+    if( ( cl.frame.ps.stats[STAT_LAYOUTS] & 1 ) ||
+        ( cls.demo.playback && Key_IsDown( K_F1 ) ) )
+    {
+        draw_layout_string( cl.layout );
+    }
+
+    if( cl.frame.ps.stats[STAT_LAYOUTS] & 2 ) {
+        draw_inventory();
+    }
+
+    draw_center_string();
+
+    draw_objects();
+
+    draw_lagometer();
+
+    R_SetColor( DRAW_COLOR_CLEAR, NULL );
+
+    if( scr_showturtle->integer && cl.frameflags ) {
+        draw_turtle();
+    }
+
+#ifdef _DEBUG
+    if( scr_showstats->integer ) {
+        draw_stats();
+    }
+    if( scr_showpmove->integer ) {
+        draw_pmove();
+    }
+#endif
+
+    draw_pause();
+
+#if USE_REF == REF_SOFT
+    R_SetClipRect( DRAW_CLIP_DISABLED, NULL );
+#endif
+}
+
+static void draw_active_frame( void ) {
     float scale;
 
-    scr_hudHeight = scr_glconfig.vidHeight;
-    scr_hudWidth = scr_glconfig.vidWidth;
+    if( cls.state < ca_active ) {
+        // draw black background if not active
+        R_DrawFill( 0, 0, scr_glconfig.vidWidth,
+            scr_glconfig.vidHeight, 0 );
+        return;
+    }
 
-    SCR_DrawDemoBar();
+    scr.hud_height = scr_glconfig.vidHeight;
+    scr.hud_width = scr_glconfig.vidWidth;
 
-    SCR_CalcVrect();
+    draw_demo_bar();
+
+    calc_vrect();
 
     // clear any dirty part of the background
-    SCR_TileClear();
+    tile_clear();
 
     // draw 3D game view
     V_RenderView();
 
-    Cvar_ClampValue( scr_scale, 1, 9 );
+    if( scr_scale->value != 1 ) {
+        scale = 1.0f / Cvar_ClampValue( scr_scale, 1, 9 );
+        R_SetScale( &scale );
 
-    scale = 1.0f / scr_scale->value;
-    R_SetScale( &scale );
-
-    scr_hudHeight *= scale;
-    scr_hudWidth *= scale;
+        scr.hud_height *= scale;
+        scr.hud_width *= scale;
+    }
 
     // draw all 2D elements
-    SCR_Draw2D();
+    if( scr_draw2d->integer && !( cls.key_dest & KEY_MENU ) ) {
+        draw_2d();
+    }
 
     R_SetScale( NULL );
 }
@@ -1090,8 +1653,21 @@ text to the screen.
 void SCR_UpdateScreen( void ) {
     static int recursive;
 
-    if( !scr_initialized )
+    if( !scr.initialized ) {
         return;             // not initialized yet
+    }
+
+    // if the screen is disabled (loading plaque is up), do nothing at all
+    if( cls.disable_screen ) {
+        unsigned delta = Sys_Milliseconds() - cls.disable_screen;
+
+        if( delta < 120*1000 ) {
+            return;
+        }
+
+        cls.disable_screen = 0;
+        Com_Printf( "Loading plaque timed out.\n" );
+    }
 
     if( recursive > 1 ) {
         Com_Error( ERR_FATAL, "%s: recursively called", __func__ );
@@ -1100,68 +1676,31 @@ void SCR_UpdateScreen( void ) {
     recursive++;
 
     R_BeginFrame();
-    
-    switch( cls.state ) {
-    case ca_disconnected:
-        // make sure at least fullscreen console or main menu is up
-        if( !( cls.key_dest & (KEY_MENU|KEY_CONSOLE) ) ) {
-            Key_SetDest( cls.key_dest | KEY_CONSOLE );
-            Con_RunConsole();
-        }
 
 #if USE_UI
-        if( UI_IsTransparent() )
-#endif
-        {
-            R_DrawFill( 0, 0, scr_glconfig.vidWidth,
-                scr_glconfig.vidHeight, 0 );
-        }
-
-#if USE_UI
-        // draw main menu
-        UI_Draw( cls.realtime );
-#endif
-        break;
-
-    case ca_challenging:
-    case ca_connecting:
-    case ca_connected:
-    case ca_loading:
-    case ca_precached:
-#if USE_UI
-        // make sure main menu is down
-        if( cls.key_dest & KEY_MENU ) {
-            UI_OpenMenu( UIMENU_NONE );
-        }
-#endif
-
-        // draw loading screen
-        SCR_DrawLoading();
-        break;
-
-    case ca_active:
-#if USE_UI
-        if( UI_IsTransparent() )
-#endif
-        {
-            // do 3D refresh drawing
-            SCR_DrawActiveFrame();
-        }
-
-#if USE_UI
-        // draw ingame menu
-        UI_Draw( cls.realtime );
-#endif
-        break;
-
-    default:
-        Com_Error( ERR_FATAL, "%s: bad cls.state", __func__ );
-        break;
+    if( UI_IsTransparent() ) {
+        // do 3D refresh drawing
+        draw_active_frame();
     }
 
+    // draw main menu
+    UI_Draw( cls.realtime );
+#else
+    // do 3D refresh drawing
+    draw_active_frame();
+#endif
+
+    // draw console
     Con_DrawConsole();
 
+    // draw loading plaque
+    if( scr.draw_loading ) {
+        draw_loading();
+        scr.draw_loading = qfalse;
+    }
+
 #ifdef _DEBUG
+    // draw debug graphs
     if( scr_timegraph->integer )
         SCR_DebugGraph( cls.frametime*300, 0 );
 

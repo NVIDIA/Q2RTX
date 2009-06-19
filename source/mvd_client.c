@@ -1370,6 +1370,9 @@ static void gtv_destroy( gtv_t *gtv ) {
 }
 
 static void gtv_drop( gtv_t *gtv ) {
+    time_t sec;
+    char buffer[MAX_QPATH];
+
     if( gtv->stream.state < NS_CONNECTED ) {
         gtv->retry_backoff += 15*1000;
     } else {
@@ -1389,8 +1392,10 @@ static void gtv_drop( gtv_t *gtv ) {
     if( gtv->retry_backoff > GTV_MAXIMUM_BACKOFF ) {
         gtv->retry_backoff = GTV_MAXIMUM_BACKOFF;
     }
-    Com_Printf( "[%s] -=- Reconnecting in %d seconds.\n",
-        gtv->name, gtv->retry_backoff / 1000 );
+
+    sec = gtv->retry_backoff / 1000;
+    Com_FormatTimeLong( buffer, sizeof( buffer ), sec );
+    Com_Printf( "[%s] -=- Reconnecting in %s.\n", gtv->name, buffer );
 
     NET_Close( &gtv->stream );
 #if USE_ZLIB

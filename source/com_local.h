@@ -457,11 +457,15 @@ void        Com_PlayerToEntityState( const player_state_t *ps, entity_state_t *e
 qboolean    Prompt_AddMatch( genctx_t *ctx, const char *s );
 
 size_t      Com_FormatTime( char *buffer, size_t size, time_t t );
+size_t      Com_FormatTimeLong( char *buffer, size_t size, time_t t );
 size_t      Com_TimeDiff( char *buffer, size_t size,
+                time_t start, time_t end );
+size_t      Com_TimeDiffLong( char *buffer, size_t size,
                 time_t start, time_t end );
 
 size_t      Com_Time_m( char *buffer, size_t size );
 size_t      Com_Uptime_m( char *buffer, size_t size );
+size_t      Com_UptimeLong_m( char *buffer, size_t size );
 
 uint32_t    Com_BlockChecksum( void *buffer, size_t len );
 

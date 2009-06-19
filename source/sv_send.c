@@ -441,7 +441,7 @@ static void add_msg_packet( client_t    *client,
 overflowed:
     if( reliable ) {
         free_all_messages( client );
-        SV_DropClient( client, "reliable message overflowed" );
+        SV_DropClient( client, "reliable queue overflowed" );
     }
 }
 
