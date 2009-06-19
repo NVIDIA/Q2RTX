@@ -74,7 +74,8 @@ typedef enum {
     MSG_ES_NEWENTITY    = ( 1 << 1 ),
     MSG_ES_FIRSTPERSON  = ( 1 << 2 ),
     MSG_ES_LONGSOLID    = ( 1 << 3 ),
-    MSG_ES_REMOVE       = ( 1 << 4 )
+    MSG_ES_ANGLES16     = ( 1 << 4 ),
+    MSG_ES_REMOVE       = ( 1 << 5 )
 } msgEsFlags_t;
     
 extern sizebuf_t    msg_write;
@@ -132,7 +133,7 @@ void    MSG_ReadDeltaUsercmd_Hacked( const usercmd_t *from, usercmd_t *to );
 void    MSG_ReadDeltaUsercmd_Enhanced( const usercmd_t *from, usercmd_t *to, int version );
 void    *MSG_ReadData( size_t len );
 int     MSG_ParseEntityBits( int *bits );
-void    MSG_ParseDeltaEntity( const entity_state_t *from, entity_state_t *to, int number, int bits );
+void    MSG_ParseDeltaEntity( const entity_state_t *from, entity_state_t *to, int number, int bits, msgEsFlags_t flags );
 #if USE_CLIENT
 void    MSG_ParseDeltaPlayerstate_Default( const player_state_t *from, player_state_t *to, int flags );
 void    MSG_ParseDeltaPlayerstate_Enhanced( const player_state_t *from, player_state_t *to, int flags, int extraflags );

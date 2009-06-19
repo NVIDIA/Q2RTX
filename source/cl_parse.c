@@ -258,10 +258,7 @@ static inline void CL_ParseDeltaEntity( server_frame_t  *frame,
         MSG_ShowDeltaEntityBits( bits );
     }
 
-    if( LONG_SOLID_SUPPORTED( cls.serverProtocol, cls.protocolVersion ) ) {
-       bits |= U_SOLID32;
-    }
-    MSG_ParseDeltaEntity( old, state, newnum, bits );
+    MSG_ParseDeltaEntity( old, state, newnum, bits, cl.esFlags );
 }
 
 /*
@@ -725,10 +722,7 @@ static void CL_ParseBaseline( int index, int bits ) {
         MSG_ShowDeltaEntityBits( bits );
         Com_Printf( "\n" );
     }
-    if( LONG_SOLID_SUPPORTED( cls.serverProtocol, cls.protocolVersion ) ) {
-       bits |= U_SOLID32;
-    }
-    MSG_ParseDeltaEntity( NULL, &cl.baselines[index], index, bits );
+    MSG_ParseDeltaEntity( NULL, &cl.baselines[index], index, bits, cl.esFlags );
 }
 
 /*
@@ -852,6 +846,9 @@ static void CL_ParseServerData( void ) {
             Com_DPrintf( "R1Q2 strafejump hack enabled\n" );
             cl.pmp.strafehack = qtrue;
         }
+        if( cls.protocolVersion >= PROTOCOL_VERSION_R1Q2_LONG_SOLID ) {
+            cl.esFlags |= MSG_ES_LONGSOLID;
+        }
         cl.pmp.speedmult = 2;
     } else if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO ) {
         i = MSG_ReadShort();
@@ -873,12 +870,18 @@ static void CL_ParseServerData( void ) {
             Com_DPrintf( "Q2PRO QW mode enabled\n" );
             PmoveEnableQW( &cl.pmp );
         }
+        if( cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_LONG_SOLID ) {
+            cl.esFlags |= MSG_ES_LONGSOLID;
+        }
         if( cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_WATERJUMP_HACK ) {
             i = MSG_ReadByte();
             if( i ) {
                 Com_DPrintf( "Q2PRO waterjump hack enabled\n" );
                 cl.pmp.waterhack = qtrue;
             }
+        }
+        if( cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_ANGLES16 ) {
+            cl.esFlags |= MSG_ES_ANGLES16;
         }
         cl.pmp.speedmult = 2;        
         cl.pmp.flyhack = qtrue; // fly hack is unconditionally enabled

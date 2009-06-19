@@ -1509,7 +1509,7 @@ static void draw_pause( void ) {
     if( !sv_paused->integer ) {
         return;
     }
-    if( cl_paused->integer != 2 ) {
+    if( !cl_paused->integer ) {
         return;
     }
 

@@ -222,6 +222,8 @@ typedef struct client_s {
 
     clientSetting_t settings[CLS_MAX];
 
+    msgEsFlags_t    esFlags;
+
     client_frame_t  frames[UPDATE_BACKUP];    // updates can be delta'd from here
     unsigned        frames_sent, frames_acked, frames_nodelta;
 

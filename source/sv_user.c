@@ -76,8 +76,11 @@ static void create_baselines( void ) {
         base = *chunk + ( i & SV_BASELINES_MASK );
 
         *base = ent->s;
-    }
 
+        if( sv_client->esFlags & MSG_ES_LONGSOLID ) {
+            base->solid = sv.entities[i].solid32;
+        }
+    }
 }
 
 static void write_plain_configstrings( void ) {
@@ -96,8 +99,7 @@ static void write_plain_configstrings( void ) {
             length = MAX_QPATH;
         }
         // check if this configstring will overflow
-        if( msg_write.cursize + length + 64 > sv_client->netchan->maxpacketlen )
-        {
+        if( msg_write.cursize + length + 64 > sv_client->netchan->maxpacketlen ) {
             SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
         }
 
@@ -110,13 +112,8 @@ static void write_plain_configstrings( void ) {
     SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
 }
 
-static void write_baseline( entity_state_t *base ) {
-    msgEsFlags_t flags = MSG_ES_FORCE;
-
-    if( LONG_SOLID_SUPPORTED( sv_client->protocol, sv_client->version ) ) {
-        flags |= MSG_ES_LONGSOLID;
-    }
-    MSG_WriteDeltaEntity( NULL, base, flags );
+static inline void write_baseline( entity_state_t *base ) {
+    MSG_WriteDeltaEntity( NULL, base, sv_client->esFlags | MSG_ES_FORCE );
 }
 
 static void write_plain_baselines( void ) {
@@ -132,8 +129,7 @@ static void write_plain_baselines( void ) {
         for( j = 0; j < SV_BASELINES_PER_CHUNK; j++ ) {
             if( base->number ) {
                 // check if this baseline will overflow
-                if( msg_write.cursize + 64 > sv_client->netchan->maxpacketlen ) 
-                {
+                if( msg_write.cursize + 64 > sv_client->netchan->maxpacketlen ) {
                     SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
                 }
 

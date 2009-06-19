@@ -780,7 +780,7 @@ static void MVD_ParsePacketEntities( mvd_t *mvd ) {
         }
 #endif
 
-        MSG_ParseDeltaEntity( &ent->s, &ent->s, number, bits );
+        MSG_ParseDeltaEntity( &ent->s, &ent->s, number, bits, 0 );
 
         // lazily relink even if removed
         if( bits & RELINK_MASK ) {

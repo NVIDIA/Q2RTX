@@ -43,10 +43,6 @@ cvar_t  *cl_maxfps;
 cvar_t  *cl_async;
 cvar_t  *r_maxfps;
 
-cvar_t  *cl_add_particles;
-cvar_t  *cl_add_lights;
-cvar_t  *cl_add_entities;
-cvar_t  *cl_add_blend;
 cvar_t  *cl_kickangles;
 cvar_t  *cl_rollhack;
 
@@ -2510,10 +2506,6 @@ static void CL_InitLocal ( void ) {
     //
     // register our variables
     //
-    cl_add_blend = Cvar_Get ( "cl_blend", "1", CVAR_ARCHIVE );
-    cl_add_lights = Cvar_Get ( "cl_lights", "1", 0 );
-    cl_add_particles = Cvar_Get ( "cl_particles", "1", 0 );
-    cl_add_entities = Cvar_Get ( "cl_entities", "1", 0 );
     cl_gun = Cvar_Get ( "cl_gun", "1", 0 );
     cl_gun->changed = cl_gun_changed;
     cl_footsteps = Cvar_Get( "cl_footsteps", "1", 0 );

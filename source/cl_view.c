@@ -30,6 +30,11 @@ qhandle_t   gun_model;
 
 //=============
 
+static cvar_t   *cl_add_particles;
+static cvar_t   *cl_add_lights;
+static cvar_t   *cl_add_entities;
+static cvar_t   *cl_add_blend;
+
 #ifdef _DEBUG
 static cvar_t   *cl_testparticles;
 static cvar_t   *cl_testentities;
@@ -447,10 +452,8 @@ void V_RenderView( void ) {
             r_numparticles = 0;
         if (!cl_add_lights->integer)
             r_numdlights = 0;
-        //if (!cl_add_blend->value)
-        //{
-        //  VectorClear (cl.refdef.blend);
-        //}
+        if (!cl_add_blend->integer)
+          Vector4Clear (cl.refdef.blend);
 
         cl.refdef.num_entities = r_numentities;
         cl.refdef.entities = r_entities;
@@ -511,6 +514,11 @@ void V_Init( void ) {
 
     cl_stats = Cvar_Get ("cl_stats", "0", 0);
 #endif
+
+    cl_add_lights = Cvar_Get ( "cl_lights", "1", 0 );
+    cl_add_particles = Cvar_Get ( "cl_particles", "1", 0 );
+    cl_add_entities = Cvar_Get ( "cl_entities", "1", 0 );
+    cl_add_blend = Cvar_Get ( "cl_blend", "1", CVAR_ARCHIVE );
 }
 
 void V_Shutdown( void ) {

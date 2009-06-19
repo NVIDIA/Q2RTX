@@ -847,6 +847,12 @@ static void SVC_DirectConnect( void ) {
     }
     newcl->pmp.strafehack = sv_strafejump_hack->integer >= i ? qtrue : qfalse;
 
+    if( protocol == PROTOCOL_VERSION_R1Q2 ) {
+        if( version >= PROTOCOL_VERSION_R1Q2_LONG_SOLID ) {
+            newcl->esFlags |= MSG_ES_LONGSOLID;
+        }
+    }
+
     // q2pro extensions
     i = 2;
     if( protocol == PROTOCOL_VERSION_Q2PRO ) {
@@ -855,8 +861,14 @@ static void SVC_DirectConnect( void ) {
         }
         newcl->pmp.flyhack = qtrue;
         newcl->pmp.flyfriction = 4;
+        if( version >= PROTOCOL_VERSION_Q2PRO_LONG_SOLID ) {
+            newcl->esFlags |= MSG_ES_LONGSOLID;
+        }
         if( version >= PROTOCOL_VERSION_Q2PRO_WATERJUMP_HACK ) {
             i = 1;
+        }
+        if( version >= PROTOCOL_VERSION_Q2PRO_ANGLES16 ) {
+            newcl->esFlags |= MSG_ES_ANGLES16;
         }
     }
     newcl->pmp.waterhack = sv_waterjump_hack->integer >= i ? qtrue : qfalse;
@@ -1499,11 +1511,12 @@ void SV_Frame( unsigned msec ) {
         return;
     }
 
-#if 0//USE_CLIENT
-    // pause if there is only local client on the server
+#if USE_CLIENT
+    // pause if there is only local client spawned on the server
     if( !dedicated->integer && cl_paused->integer &&
         List_Count( &svs.udp_client_list ) == 1 && mvdconns == 0 &&
-        LIST_FIRST( client_t, &svs.udp_client_list, entry )->state == cs_spawned )
+        LIST_FIRST( client_t, &svs.udp_client_list, entry )->state == cs_spawned &&
+        LIST_FIRST( client_t, &svs.udp_client_list, entry )->lastframe > 0 )
     {
         if( !sv_paused->integer ) {
             Cvar_Set( "sv_paused", "1" );

@@ -697,13 +697,21 @@ void MSG_WriteDeltaEntity( const entity_state_t *from,
     if (bits & U_ORIGIN3)
         MSG_WriteCoord (to->origin[2]);
 
-    if (bits & U_ANGLE1)
-        MSG_WriteAngle(to->angles[0]);
-    if (bits & U_ANGLE2){
-        MSG_WriteAngle(to->angles[1]);
+    if( flags & MSG_ES_ANGLES16 ) {
+        if (bits & U_ANGLE1)
+            MSG_WriteAngle16(to->angles[0]);
+        if (bits & U_ANGLE2)
+            MSG_WriteAngle16(to->angles[1]);
+        if (bits & U_ANGLE3)
+            MSG_WriteAngle16(to->angles[2]);
+    } else {
+        if (bits & U_ANGLE1)
+            MSG_WriteAngle(to->angles[0]);
+        if (bits & U_ANGLE2)
+            MSG_WriteAngle(to->angles[1]);
+        if (bits & U_ANGLE3)
+            MSG_WriteAngle(to->angles[2]);
     }
-    if (bits & U_ANGLE3)
-        MSG_WriteAngle(to->angles[2]);
 
     if (bits & U_OLDORIGIN) {
         MSG_WriteCoord (to->old_origin[0]);
@@ -1889,7 +1897,8 @@ Can go from either a baseline or a previous packet_entity
 void MSG_ParseDeltaEntity( const entity_state_t *from,
                                  entity_state_t *to,
                                  int            number,
-                                 int            bits )
+                                 int            bits,
+                                 msgEsFlags_t   flags )
 {
     if( !to ) {
         Com_Error( ERR_DROP, "%s: NULL", __func__ );
@@ -1913,7 +1922,7 @@ void MSG_ParseDeltaEntity( const entity_state_t *from,
     to->number = number;
     to->event = 0;
 
-    if( ( bits & U_MASK ) == 0 ) {
+    if( !bits ) {
         return;
     }
 
@@ -1966,14 +1975,26 @@ void MSG_ParseDeltaEntity( const entity_state_t *from,
         to->origin[2] = MSG_ReadCoord();
     }
         
-    if( bits & U_ANGLE1 ) {
-        to->angles[0] = MSG_ReadAngle();
-    }
-    if( bits & U_ANGLE2 ) {
-        to->angles[1] = MSG_ReadAngle();
-    }
-    if( bits & U_ANGLE3 ) {
-        to->angles[2] = MSG_ReadAngle();
+    if( flags & MSG_ES_ANGLES16 ) {
+        if( bits & U_ANGLE1 ) {
+            to->angles[0] = MSG_ReadAngle16();
+        }
+        if( bits & U_ANGLE2 ) {
+            to->angles[1] = MSG_ReadAngle16();
+        }
+        if( bits & U_ANGLE3 ) {
+            to->angles[2] = MSG_ReadAngle16();
+        }
+    } else {
+        if( bits & U_ANGLE1 ) {
+            to->angles[0] = MSG_ReadAngle();
+        }
+        if( bits & U_ANGLE2 ) {
+            to->angles[1] = MSG_ReadAngle();
+        }
+        if( bits & U_ANGLE3 ) {
+            to->angles[2] = MSG_ReadAngle();
+        }
     }
 
     if( bits & U_OLDORIGIN ) {
@@ -1989,7 +2010,7 @@ void MSG_ParseDeltaEntity( const entity_state_t *from,
     }
 
     if( bits & U_SOLID ) {
-        if( bits & U_SOLID32 ) {
+        if( flags & MSG_ES_LONGSOLID ) {
             to->solid = MSG_ReadLong();
         } else {
             to->solid = MSG_ReadWord();

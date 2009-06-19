@@ -137,6 +137,8 @@ typedef struct client_state_s {
     entity_state_t  entityStates[MAX_PARSE_ENTITIES];
     int             numEntityStates;
 
+    msgEsFlags_t    esFlags;
+
     server_frame_t  frames[UPDATE_BACKUP];
     server_frame_t  frame;                // received from server
     server_frame_t  oldframe;
@@ -334,10 +336,6 @@ extern char        cl_cmdbuf_text[MAX_STRING_CHARS];
 // cvars
 //
 extern cvar_t    *cl_gun;
-extern cvar_t    *cl_add_blend;
-extern cvar_t    *cl_add_lights;
-extern cvar_t    *cl_add_particles;
-extern cvar_t    *cl_add_entities;
 extern cvar_t    *cl_predict;
 extern cvar_t    *cl_footsteps;
 extern cvar_t    *cl_noskins;
@@ -363,7 +361,6 @@ extern cvar_t    *cl_beginmapcmd;
 
 extern cvar_t    *cl_gibs;
 
-extern cvar_t    *cl_demo_local_fov;
 extern cvar_t    *cl_thirdperson;
 extern cvar_t    *cl_thirdperson_angle;
 extern cvar_t    *cl_thirdperson_range;

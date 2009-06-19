@@ -48,7 +48,7 @@ static void CL_SetEntityState( entity_state_t *state ) {
             int x, zd, zu;
             
             // encoded bbox
-            if( LONG_SOLID_SUPPORTED( cls.serverProtocol, cls.protocolVersion ) ) {
+            if( cl.esFlags & MSG_ES_LONGSOLID ) {
                 x = (state->solid & 255);
                 zd = ((state->solid>>8) & 255);
                 zu = ((state->solid>>16) & 65535) - 32768;
@@ -893,11 +893,7 @@ static void CL_CalcViewValues( void ) {
     }
 
     // don't interpolate blend color
-    if( cl_add_blend->integer ) {
-        Vector4Copy( ps->blend, cl.refdef.blend );
-    } else {
-        Vector4Clear( cl.refdef.blend );
-    }
+    Vector4Copy( ps->blend, cl.refdef.blend );
 
     AngleVectors( cl.refdef.viewangles, cl.v_forward, cl.v_right, cl.v_up );
 
