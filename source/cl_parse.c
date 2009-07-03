@@ -870,6 +870,7 @@ static void CL_ParseServerData( void ) {
             Com_DPrintf( "Q2PRO QW mode enabled\n" );
             PmoveEnableQW( &cl.pmp );
         }
+        cl.esFlags |= MSG_ES_UMASK;
         if( cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_LONG_SOLID ) {
             cl.esFlags |= MSG_ES_LONGSOLID;
         }
@@ -879,9 +880,6 @@ static void CL_ParseServerData( void ) {
                 Com_DPrintf( "Q2PRO waterjump hack enabled\n" );
                 cl.pmp.waterhack = qtrue;
             }
-        }
-        if( cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_ANGLES16 ) {
-            cl.esFlags |= MSG_ES_ANGLES16;
         }
         cl.pmp.speedmult = 2;        
         cl.pmp.flyhack = qtrue; // fly hack is unconditionally enabled
@@ -893,7 +891,9 @@ static void CL_ParseServerData( void ) {
         CL_ClientCommand( va( "nextserver %i\n", cl.servercount ) );
     } else {
         // seperate the printfs so the server message can have a color
-        Con_Printf( "\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n" );
+        Con_Printf( "\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36"
+            "\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36"
+            "\36\36\36\36\36\36\37\n\n" );
         Con_Printf( S_COLOR_ALT "%s\n\n", levelname );
 
 #if USE_SYSCON

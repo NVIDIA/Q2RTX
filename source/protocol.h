@@ -39,8 +39,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define PROTOCOL_VERSION_Q2PRO_CLIENTNUM_FIX    1013    // r226
 #define PROTOCOL_VERSION_Q2PRO_LONG_SOLID       1014    // r243
 #define PROTOCOL_VERSION_Q2PRO_WATERJUMP_HACK   1015    // r335
-#define PROTOCOL_VERSION_Q2PRO_ANGLES16         1016    // r364
-#define PROTOCOL_VERSION_Q2PRO_CURRENT          1016    // r364
+#define PROTOCOL_VERSION_Q2PRO_RESERVED         1016    // r364
+#define PROTOCOL_VERSION_Q2PRO_CURRENT          1015    // r335
 #define PROTOCOL_VERSION_MVD_MINIMUM            2009    // r168
 #define PROTOCOL_VERSION_MVD_CURRENT            2010    // r177
 
@@ -303,7 +303,7 @@ typedef enum {
 #define U_ANGLE1    (1<<10)
 #define U_MODEL     (1<<11)
 #define U_RENDERFX8 (1<<12)        // fullbright, etc
-#define U_ANGLES16  (1<<13)
+#define U_NOTUSED   (1<<13)
 #define U_EFFECTS8  (1<<14)        // autorotate, trails, etc
 #define U_MOREBITS2 (1<<15)        // read one additional byte
 

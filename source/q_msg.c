@@ -166,8 +166,12 @@ void MSG_WriteString( const char *string ) {
 MSG_WriteCoord
 =============
 */
+
+#define COORD2SHORT(x)  ((int)((x)*8.0f))
+#define SHORT2COORD(x)  ((x)*(1.0f/8))
+
 static inline void MSG_WriteCoord( float f ) {
-    MSG_WriteShort( ( int )( f * 8 ) );
+    MSG_WriteShort( COORD2SHORT(f) );
 }
 
 /*
@@ -176,9 +180,9 @@ MSG_WritePos
 =============
 */
 void MSG_WritePos( const vec3_t pos ) {
-    MSG_WriteShort( ( int )( pos[0] * 8 ) );
-    MSG_WriteShort( ( int )( pos[1] * 8 ) );
-    MSG_WriteShort( ( int )( pos[2] * 8 ) );
+    MSG_WriteCoord( pos[0] );
+    MSG_WriteCoord( pos[1] );
+    MSG_WriteCoord( pos[2] );
 }
 
 /*
@@ -186,8 +190,12 @@ void MSG_WritePos( const vec3_t pos ) {
 MSG_WriteAngle
 =============
 */
+
+#define ANGLE2BYTE(x)   ((int)((x)*256.0f/360)&255)
+#define BYTE2ANGLE(x)   ((x)*(360.0f/256))
+
 void MSG_WriteAngle( float f ) {
-    MSG_WriteByte( ( int )( f * 256 / 360 ) & 255 );
+    MSG_WriteByte( ANGLE2BYTE( f ) );
 }
 
 /*
@@ -447,38 +455,29 @@ void MSG_WriteDir( const vec3_t dir ) {
 
 // values transmitted over network are discrete, so
 // we use special macros to check for delta conditions
-#define Delta_Angle( a, b ) \
-  ( ((int)((a)*256/360) & 255) != ((int)((b)*256/360) & 255) )
-
-#define Delta_Coord( a, b ) \
-  ( (int)((b)*8) != (int)((a)*8) )
-
-#define Delta_Pos( a, b ) \
-  ( (int)((b)[0]*8) != (int)((a)[0]*8) || \
-    (int)((b)[1]*8) != (int)((a)[1]*8) || \
-    (int)((b)[2]*8) != (int)((a)[2]*8) )
-
-#define Delta_VecChar( a, b ) \
-  ( (int)((b)[0]*4) != (int)((a)[0]*4) || \
-    (int)((b)[1]*4) != (int)((a)[1]*4) || \
-    (int)((b)[2]*4) != (int)((a)[2]*4) )
-
-#define Delta_Blend( a, b ) \
-  ( (int)((b)[0]*255) != (int)((a)[0]*255) || \
-    (int)((b)[1]*255) != (int)((a)[1]*255) || \
-    (int)((b)[2]*255) != (int)((a)[2]*255) || \
-    (int)((b)[3]*255) != (int)((a)[3]*255) )
-
-#define Delta_Angle16( a, b ) \
-    ( ANGLE2SHORT(b) != ANGLE2SHORT(a) )
-
-#define Delta_VecAngle16( a, b ) \
-  ( ANGLE2SHORT((b)[0]) != ANGLE2SHORT((a)[0]) || \
-    ANGLE2SHORT((b)[1]) != ANGLE2SHORT((a)[1]) || \
-    ANGLE2SHORT((b)[2]) != ANGLE2SHORT((a)[2]) )
-
-#define Delta_Fov( a, b ) \
-    ( (int)(b) != (int)(a) )
+#define delta_angle(a,b) (ANGLE2BYTE(b)!=ANGLE2BYTE(a))
+#define delta_angle16(a,b) (ANGLE2SHORT(b)!=ANGLE2SHORT(a))
+#define delta_angle16_v(a,b) \
+   (delta_angle16(a[0],b[0])|| \
+    delta_angle16(a[1],b[1])|| \
+    delta_angle16(a[2],b[2]))
+#define delta_coord(a,b) (COORD2SHORT(b)!=COORD2SHORT(a))
+#define delta_pos_v(a,b) \
+   (delta_coord(a[0],b[0])|| \
+    delta_coord(a[1],b[1])|| \
+    delta_coord(a[2],b[2]))
+#define delta_ofs(a,b) ((int)((b)*4)!=(int)((a)*4))
+#define delta_ofs_v(a,b) \
+   (delta_ofs(a[0],b[0])|| \
+    delta_ofs(a[1],b[1])|| \
+    delta_ofs(a[2],b[2]))
+#define delta_blend(a,b) ((int)((b)*255)!=(int)((a)*255))
+#define delta_blend_v(a,b) \
+   (delta_blend(a[0],b[0])|| \
+    delta_blend(a[1],b[1])|| \
+    delta_blend(a[2],b[2])|| \
+    delta_blend(a[3],b[3]))
+#define delta_fov(a,b) ((int)(b)!=(int)(a))
 
 /*
 ==================
@@ -492,7 +491,7 @@ void MSG_WriteDeltaEntity( const entity_state_t *from,
                            const entity_state_t *to,
                            msgEsFlags_t         flags )
 {
-    int     bits;
+    unsigned    bits, mask;
 
     if( !to ) {
         if( !from ) {
@@ -530,29 +529,35 @@ void MSG_WriteDeltaEntity( const entity_state_t *from,
     bits = 0;
 
     if( !( flags & MSG_ES_FIRSTPERSON ) ) {
-        if( Delta_Coord( to->origin[0], from->origin[0] ) )
+        if( delta_coord( to->origin[0], from->origin[0] ) )
             bits |= U_ORIGIN1;
-        if( Delta_Coord( to->origin[1], from->origin[1] ) )
+        if( delta_coord( to->origin[1], from->origin[1] ) )
             bits |= U_ORIGIN2;
-        if( Delta_Coord( to->origin[2], from->origin[2] ) )
+        if( delta_coord( to->origin[2], from->origin[2] ) )
             bits |= U_ORIGIN3;
 
-        if( Delta_Angle( to->angles[0], from->angles[0] ) )
+        if( delta_angle( to->angles[0], from->angles[0] ) )
             bits |= U_ANGLE1;       
-        if( Delta_Angle( to->angles[1], from->angles[1] ) )
+        if( delta_angle( to->angles[1], from->angles[1] ) )
             bits |= U_ANGLE2;
-        if( Delta_Angle( to->angles[2], from->angles[2] ) )
+        if( delta_angle( to->angles[2], from->angles[2] ) )
             bits |= U_ANGLE3;
 
         if( flags & MSG_ES_NEWENTITY ) {
-            if( Delta_Pos( to->old_origin, from->old_origin ) ) {
+            if( delta_pos_v( to->old_origin, from->old_origin ) ) {
                 bits |= U_OLDORIGIN;
             }
         }
     }
 
+    if( flags & MSG_ES_UMASK ) {
+        mask = 0xffff0000;
+    } else {
+        mask = 0xffff8000;  // don't confuse old clients
+    }
+
     if( to->skinnum != from->skinnum ) {
-        if( to->skinnum & 0xffff8000 ) {
+        if( to->skinnum & mask ) {
             bits |= U_SKIN8|U_SKIN16;
         } else if( to->skinnum & 0x0000ff00 ) {
             bits |= U_SKIN16;
@@ -569,7 +574,7 @@ void MSG_WriteDeltaEntity( const entity_state_t *from,
     }
 
     if( to->effects != from->effects ) {
-        if( to->effects & 0xffff8000 ) {
+        if( to->effects & mask ) {
             bits |= U_EFFECTS8|U_EFFECTS16;
         } else if( to->effects & 0x0000ff00 ) {
             bits |= U_EFFECTS16;
@@ -578,8 +583,8 @@ void MSG_WriteDeltaEntity( const entity_state_t *from,
         }
     }
     
-    if ( to->renderfx != from->renderfx ) {
-        if( to->renderfx & 0xffff8000 ) {
+    if( to->renderfx != from->renderfx ) {
+        if( to->renderfx & mask ) {
             bits |= U_RENDERFX8|U_RENDERFX16;
         } else if( to->renderfx & 0x0000ff00 ) {
             bits |= U_RENDERFX16;
@@ -588,23 +593,23 @@ void MSG_WriteDeltaEntity( const entity_state_t *from,
         }
     }
     
-    if ( to->solid != from->solid )
+    if( to->solid != from->solid )
         bits |= U_SOLID;
 
     // event is not delta compressed, just 0 compressed
-    if ( to->event  )
+    if( to->event  )
         bits |= U_EVENT;
     
-    if ( to->modelindex != from->modelindex )
+    if( to->modelindex != from->modelindex )
         bits |= U_MODEL;
-    if ( to->modelindex2 != from->modelindex2 )
+    if( to->modelindex2 != from->modelindex2 )
         bits |= U_MODEL2;
-    if ( to->modelindex3 != from->modelindex3 )
+    if( to->modelindex3 != from->modelindex3 )
         bits |= U_MODEL3;
-    if ( to->modelindex4 != from->modelindex4 )
+    if( to->modelindex4 != from->modelindex4 )
         bits |= U_MODEL4;
 
-    if ( to->sound != from->sound )
+    if( to->sound != from->sound )
         bits |= U_SOUND;
 
     if( ( to->renderfx & RF_BEAM ) )
@@ -638,12 +643,10 @@ void MSG_WriteDeltaEntity( const entity_state_t *from,
         MSG_WriteByte ((bits>>8)&255 );
         MSG_WriteByte ((bits>>16)&255 );
         MSG_WriteByte ((bits>>24)&255 );
-    }
-    else if (bits & 0x00ff0000) {
+    } else if (bits & 0x00ff0000) {
         MSG_WriteByte ((bits>>8)&255 );
         MSG_WriteByte ((bits>>16)&255 );
-    }
-    else if (bits & 0x0000ff00) {
+    } else if (bits & 0x0000ff00) {
         MSG_WriteByte ((bits>>8)&255 );
     }
 
@@ -665,7 +668,7 @@ void MSG_WriteDeltaEntity( const entity_state_t *from,
 
     if (bits & U_FRAME8)
         MSG_WriteByte (to->frame);
-    if (bits & U_FRAME16)
+    else if (bits & U_FRAME16)
         MSG_WriteShort (to->frame);
 
     if ((bits & (U_SKIN8|U_SKIN16)) == (U_SKIN8|U_SKIN16) )     //used for laser colors
@@ -674,7 +677,6 @@ void MSG_WriteDeltaEntity( const entity_state_t *from,
         MSG_WriteByte (to->skinnum);
     else if (bits & U_SKIN16)
         MSG_WriteShort (to->skinnum);
-
 
     if ( (bits & (U_EFFECTS8|U_EFFECTS16)) == (U_EFFECTS8|U_EFFECTS16) )
         MSG_WriteLong (to->effects);
@@ -697,27 +699,15 @@ void MSG_WriteDeltaEntity( const entity_state_t *from,
     if (bits & U_ORIGIN3)
         MSG_WriteCoord (to->origin[2]);
 
-    if( flags & MSG_ES_ANGLES16 ) {
-        if (bits & U_ANGLE1)
-            MSG_WriteAngle16(to->angles[0]);
-        if (bits & U_ANGLE2)
-            MSG_WriteAngle16(to->angles[1]);
-        if (bits & U_ANGLE3)
-            MSG_WriteAngle16(to->angles[2]);
-    } else {
-        if (bits & U_ANGLE1)
-            MSG_WriteAngle(to->angles[0]);
-        if (bits & U_ANGLE2)
-            MSG_WriteAngle(to->angles[1]);
-        if (bits & U_ANGLE3)
-            MSG_WriteAngle(to->angles[2]);
-    }
+    if (bits & U_ANGLE1)
+        MSG_WriteAngle(to->angles[0]);
+    if (bits & U_ANGLE2)
+        MSG_WriteAngle(to->angles[1]);
+    if (bits & U_ANGLE3)
+        MSG_WriteAngle(to->angles[2]);
 
-    if (bits & U_OLDORIGIN) {
-        MSG_WriteCoord (to->old_origin[0]);
-        MSG_WriteCoord (to->old_origin[1]);
-        MSG_WriteCoord (to->old_origin[2]);
-    }
+    if (bits & U_OLDORIGIN)
+        MSG_WritePos (to->old_origin);
 
     if (bits & U_SOUND)
         MSG_WriteByte (to->sound);
@@ -788,31 +778,31 @@ void MSG_WriteDeltaPlayerstate_Default( const player_state_t *from, const player
         pflags |= PS_M_DELTA_ANGLES;
     }
 
-    if( Delta_VecChar( to->viewoffset, from->viewoffset ) ) {
+    if( delta_ofs_v( to->viewoffset, from->viewoffset ) ) {
         pflags |= PS_VIEWOFFSET;
     }
 
-    if( Delta_VecAngle16( to->viewangles, from->viewangles ) ) {
+    if( delta_angle16_v( to->viewangles, from->viewangles ) ) {
         pflags |= PS_VIEWANGLES;
     }
 
-    if( Delta_VecChar( to->kick_angles, from->kick_angles ) ) {
+    if( delta_ofs_v( to->kick_angles, from->kick_angles ) ) {
         pflags |= PS_KICKANGLES;
     }
 
-    if( Delta_Blend( to->blend, from->blend ) ) {
+    if( delta_blend_v( to->blend, from->blend ) ) {
         pflags |= PS_BLEND;
     }
 
-    if( Delta_Fov( to->fov, from->fov ) )
+    if( delta_fov( to->fov, from->fov ) )
         pflags |= PS_FOV;
 
     if( to->rdflags != from->rdflags )
         pflags |= PS_RDFLAGS;
 
     if( to->gunframe != from->gunframe ||
-        Delta_VecChar( to->gunoffset, from->gunoffset ) ||
-        Delta_VecChar( to->gunangles, from->gunangles ) )
+        delta_ofs_v( to->gunoffset, from->gunoffset ) ||
+        delta_ofs_v( to->gunangles, from->gunangles ) )
     {
         pflags |= PS_WEAPONFRAME;
     }
@@ -998,18 +988,18 @@ int MSG_WriteDeltaPlayerstate_Enhanced( const player_state_t    *from,
         VectorCopy( from->pmove.delta_angles, to->pmove.delta_angles );
     }
 
-    if( Delta_VecChar( from->viewoffset, to->viewoffset ) ) {
+    if( delta_ofs_v( from->viewoffset, to->viewoffset ) ) {
         pflags |= PS_VIEWOFFSET;
     }
 
     if( !( flags & MSG_PS_IGNORE_VIEWANGLES ) ) {
-        if( Delta_Angle16( from->viewangles[0], to->viewangles[0] ) ||
-            Delta_Angle16( from->viewangles[1], to->viewangles[1] ) )
+        if( delta_angle16( from->viewangles[0], to->viewangles[0] ) ||
+            delta_angle16( from->viewangles[1], to->viewangles[1] ) )
         {
             pflags |= PS_VIEWANGLES;
         }
 
-        if( Delta_Angle16( from->viewangles[2], to->viewangles[2] ) ) {
+        if( delta_angle16( from->viewangles[2], to->viewangles[2] ) ) {
             extraflags |= EPS_VIEWANGLE2;
         }
     } else {
@@ -1019,12 +1009,12 @@ int MSG_WriteDeltaPlayerstate_Enhanced( const player_state_t    *from,
         to->viewangles[2] = from->viewangles[2];
     }
 
-    if( Delta_VecChar( from->kick_angles, to->kick_angles ) ) {
+    if( delta_ofs_v( from->kick_angles, to->kick_angles ) ) {
         pflags |= PS_KICKANGLES;
     }
 
     if( !( flags & MSG_PS_IGNORE_BLEND ) ) {
-        if( Delta_Blend( from->blend, to->blend ) ) {
+        if( delta_blend_v( from->blend, to->blend ) ) {
             pflags |= PS_BLEND;
         }
     } else {
@@ -1035,7 +1025,7 @@ int MSG_WriteDeltaPlayerstate_Enhanced( const player_state_t    *from,
         to->blend[3] = from->blend[3];
     }
 
-    if( Delta_Fov( from->fov, to->fov ) )
+    if( delta_fov( from->fov, to->fov ) )
         pflags |= PS_FOV;
 
     if( to->rdflags != from->rdflags )
@@ -1053,11 +1043,11 @@ int MSG_WriteDeltaPlayerstate_Enhanced( const player_state_t    *from,
         if( to->gunframe != from->gunframe )
             pflags |= PS_WEAPONFRAME;
 
-        if( Delta_VecChar( from->gunoffset, to->gunoffset ) ) {
+        if( delta_ofs_v( from->gunoffset, to->gunoffset ) ) {
             extraflags |= EPS_GUNOFFSET;
         }
 
-        if( Delta_VecChar( from->gunangles, to->gunangles ) ) {
+        if( delta_ofs_v( from->gunangles, to->gunangles ) ) {
             extraflags |= EPS_GUNANGLES;
         }
     } else {
@@ -1253,31 +1243,31 @@ void MSG_WriteDeltaPlayerstate_Packet(  const player_state_t   *from,
         pflags |= PPS_M_ORIGIN2;
     }
 
-    if( Delta_VecChar( from->viewoffset, to->viewoffset ) ) {
+    if( delta_ofs_v( from->viewoffset, to->viewoffset ) ) {
         pflags |= PPS_VIEWOFFSET;
     }
 
-    if( Delta_Angle16( from->viewangles[0], to->viewangles[0] ) ||
-        Delta_Angle16( from->viewangles[1], to->viewangles[1] ) )
+    if( delta_angle16( from->viewangles[0], to->viewangles[0] ) ||
+        delta_angle16( from->viewangles[1], to->viewangles[1] ) )
     {
         pflags |= PPS_VIEWANGLES;
     }
 
-    if( Delta_Angle16( from->viewangles[2], to->viewangles[2] ) ) {
+    if( delta_angle16( from->viewangles[2], to->viewangles[2] ) ) {
         pflags |= PPS_VIEWANGLE2;
     }
 
-    if( Delta_VecChar( from->kick_angles, to->kick_angles ) ) {
+    if( delta_ofs_v( from->kick_angles, to->kick_angles ) ) {
         pflags |= PPS_KICKANGLES;
     }
 
     if( !( flags & MSG_PS_IGNORE_BLEND ) ) {
-        if( Delta_Blend( from->blend, to->blend ) ) {
+        if( delta_blend_v( from->blend, to->blend ) ) {
             pflags |= PPS_BLEND;
         }
     }
 
-    if( Delta_Fov( from->fov, to->fov ) )
+    if( delta_fov( from->fov, to->fov ) )
         pflags |= PPS_FOV;
 
     if( to->rdflags != from->rdflags )
@@ -1292,11 +1282,11 @@ void MSG_WriteDeltaPlayerstate_Packet(  const player_state_t   *from,
         if( to->gunframe != from->gunframe )
             pflags |= PPS_WEAPONFRAME;
 
-        if( Delta_VecChar( from->gunoffset, to->gunoffset ) ) {
+        if( delta_ofs_v( from->gunoffset, to->gunoffset ) ) {
             pflags |= PPS_GUNOFFSET;
         }
 
-        if( Delta_VecChar( from->gunangles, to->gunangles ) ) {
+        if( delta_ofs_v( from->gunangles, to->gunangles ) ) {
             pflags |= PPS_GUNANGLES;
         }
     }
@@ -1449,88 +1439,85 @@ void MSG_BeginReading( void ) {
     msg_read.bitpos = 0;
 }
 
-static inline void underflowed( const char *func ) {
-    if( !msg_read.allowunderflow ) {
-        Com_Error( ERR_DROP, "%s: read past end of message", func );
+byte *MSG_ReadData( size_t len ) {
+    byte *buf = msg_read.data + msg_read.readcount;
+
+    msg_read.readcount += len;
+    msg_read.bitpos = msg_read.readcount << 3;
+
+    if( msg_read.readcount > msg_read.cursize ) {
+        if( !msg_read.allowunderflow ) {
+            Com_Error( ERR_DROP, "%s: read past end of message", __func__ );
+        }
+        return NULL;
     }
+
+    return buf;
 }
 
 // returns -1 if no more characters are available
 int MSG_ReadChar( void ) {
+    byte *buf = MSG_ReadData( 1 );
     int c;
     
-    if (msg_read.readcount+1 > msg_read.cursize) {
-        c = -1; underflowed( __func__ );
+    if (!buf) {
+        c = -1;
     } else {
-        c = (signed char)msg_read.data[msg_read.readcount];
+        c = (signed char)buf[0];
     }
-    msg_read.readcount++;
-    msg_read.bitpos = msg_read.readcount << 3;
     
     return c;
 }
 
 int MSG_ReadByte( void ) {
+    byte *buf = MSG_ReadData( 1 );
     int c;
     
-    if (msg_read.readcount+1 > msg_read.cursize) {
-        c = -1; underflowed( __func__ );
+    if (!buf) {
+        c = -1;
     } else {
-        c = (unsigned char)msg_read.data[msg_read.readcount];
+        c = (unsigned char)buf[0];
     }
-    msg_read.readcount++;
-    msg_read.bitpos = msg_read.readcount << 3;
-    
+ 
     return c;
 }
 
 int MSG_ReadShort( void ) {
+    byte *buf = MSG_ReadData( 2 );
     int c;
     
-    if (msg_read.readcount+2 > msg_read.cursize) {
-        c = -1; underflowed( __func__ );
+    if (!buf) {
+        c = -1;
     } else {
-        c = (short)(msg_read.data[msg_read.readcount]
-        + (msg_read.data[msg_read.readcount+1]<<8));
+        c = (signed short)(buf[0] | (buf[1]<<8));
     }
-    
-    msg_read.readcount += 2;
-    msg_read.bitpos = msg_read.readcount << 3;
     
     return c;
 }
 
 int MSG_ReadWord( void ) {
+    byte *buf = MSG_ReadData( 2 );
     int c;
-    
-    if (msg_read.readcount+2 > msg_read.cursize) {
-        c = -1; underflowed( __func__ );
+
+    if (!buf) {
+        c = -1;
     } else {
-        c = (unsigned short)(msg_read.data[msg_read.readcount]
-        + (msg_read.data[msg_read.readcount+1]<<8));
+        c = (unsigned short)(buf[0] | (buf[1]<<8));
     }
-    
-    msg_read.readcount += 2;
-    msg_read.bitpos = msg_read.readcount << 3;
     
     return c;
 }
 
 int MSG_ReadLong( void ) {
+    byte *buf = MSG_ReadData( 4 );
     int c;
     
-    if (msg_read.readcount+4 > msg_read.cursize) {
-        c = -1; underflowed( __func__ );
+    if (!buf) {
+        c = -1;
     } else {
-        c = msg_read.data[msg_read.readcount]
-        + (msg_read.data[msg_read.readcount+1]<<8)
-        + (msg_read.data[msg_read.readcount+2]<<16)
-        + (msg_read.data[msg_read.readcount+3]<<24);
+        c = buf[0] | (buf[1]<<8) | (buf[2]<<16) | (buf[3]<<24);
     }
-    
-    msg_read.readcount += 4;
-    msg_read.bitpos = msg_read.readcount << 3;
-    
+
     return c;
 }
 
@@ -1577,20 +1564,20 @@ size_t MSG_ReadStringLine( char *dest, size_t size ) {
 }
 
 static inline float MSG_ReadCoord (void) {
-    return MSG_ReadShort() * (1.0/8);
+    return SHORT2COORD(MSG_ReadShort());
 }
 
 #if !USE_CLIENT
 static inline
 #endif
-void MSG_ReadPos ( vec3_t pos) {
-    pos[0] = MSG_ReadShort() * (1.0/8);
-    pos[1] = MSG_ReadShort() * (1.0/8);
-    pos[2] = MSG_ReadShort() * (1.0/8);
+void MSG_ReadPos( vec3_t pos ) {
+    pos[0] = MSG_ReadCoord();
+    pos[1] = MSG_ReadCoord();
+    pos[2] = MSG_ReadCoord();
 }
 
 static inline float MSG_ReadAngle (void) {
-    return MSG_ReadChar() * (360.0/256);
+    return BYTE2ANGLE(MSG_ReadChar());
 }
 
 static inline float MSG_ReadAngle16 (void) {
@@ -1837,19 +1824,6 @@ void MSG_ReadDeltaUsercmd_Enhanced( const usercmd_t *from,
     }
 }
 
-void *MSG_ReadData( size_t len ) {
-    void *p;
-
-    if( msg_read.readcount + len > msg_read.cursize ) {
-        underflowed( __func__ ); return NULL;
-    }
-
-    p = msg_read.data + msg_read.readcount;
-    msg_read.readcount += len;
-
-    return p;
-}
-
 #if USE_CLIENT || USE_MVD_CLIENT
 
 /*
@@ -1949,21 +1923,21 @@ void MSG_ParseDeltaEntity( const entity_state_t *from,
     else if( bits & U_SKIN8 )
         to->skinnum = MSG_ReadByte();
     else if( bits & U_SKIN16 )
-        to->skinnum = MSG_ReadShort();
+        to->skinnum = MSG_ReadWord();
 
     if( (bits & (U_EFFECTS8|U_EFFECTS16)) == (U_EFFECTS8|U_EFFECTS16) )
         to->effects = MSG_ReadLong();
     else if( bits & U_EFFECTS8 )
         to->effects = MSG_ReadByte();
     else if( bits & U_EFFECTS16 )
-        to->effects = MSG_ReadWord();//Short();
+        to->effects = MSG_ReadWord();
 
     if( (bits & (U_RENDERFX8|U_RENDERFX16)) == (U_RENDERFX8|U_RENDERFX16) )
         to->renderfx = MSG_ReadLong();
     else if( bits & U_RENDERFX8 )
         to->renderfx = MSG_ReadByte();
     else if( bits & U_RENDERFX16 )
-        to->renderfx = MSG_ReadWord();//Short();
+        to->renderfx = MSG_ReadWord();
 
     if( bits & U_ORIGIN1 ) {
         to->origin[0] = MSG_ReadCoord();
@@ -1975,26 +1949,14 @@ void MSG_ParseDeltaEntity( const entity_state_t *from,
         to->origin[2] = MSG_ReadCoord();
     }
         
-    if( flags & MSG_ES_ANGLES16 ) {
-        if( bits & U_ANGLE1 ) {
-            to->angles[0] = MSG_ReadAngle16();
-        }
-        if( bits & U_ANGLE2 ) {
-            to->angles[1] = MSG_ReadAngle16();
-        }
-        if( bits & U_ANGLE3 ) {
-            to->angles[2] = MSG_ReadAngle16();
-        }
-    } else {
-        if( bits & U_ANGLE1 ) {
-            to->angles[0] = MSG_ReadAngle();
-        }
-        if( bits & U_ANGLE2 ) {
-            to->angles[1] = MSG_ReadAngle();
-        }
-        if( bits & U_ANGLE3 ) {
-            to->angles[2] = MSG_ReadAngle();
-        }
+    if( bits & U_ANGLE1 ) {
+        to->angles[0] = MSG_ReadAngle();
+    }
+    if( bits & U_ANGLE2 ) {
+        to->angles[1] = MSG_ReadAngle();
+    }
+    if( bits & U_ANGLE3 ) {
+        to->angles[2] = MSG_ReadAngle();
     }
 
     if( bits & U_OLDORIGIN ) {

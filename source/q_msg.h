@@ -74,7 +74,7 @@ typedef enum {
     MSG_ES_NEWENTITY    = ( 1 << 1 ),
     MSG_ES_FIRSTPERSON  = ( 1 << 2 ),
     MSG_ES_LONGSOLID    = ( 1 << 3 ),
-    MSG_ES_ANGLES16     = ( 1 << 4 ),
+    MSG_ES_UMASK        = ( 1 << 4 ),
     MSG_ES_REMOVE       = ( 1 << 5 )
 } msgEsFlags_t;
     
@@ -116,6 +116,7 @@ static inline void *MSG_WriteData( const void *data, size_t length ) {
 }
 
 void    MSG_BeginReading( void );
+byte    *MSG_ReadData( size_t len );
 int     MSG_ReadChar( void );
 int     MSG_ReadByte( void );
 int     MSG_ReadShort( void );
@@ -131,7 +132,6 @@ int     MSG_ReadBits( int bits );
 void    MSG_ReadDeltaUsercmd( const usercmd_t *from, usercmd_t *cmd );
 void    MSG_ReadDeltaUsercmd_Hacked( const usercmd_t *from, usercmd_t *to );
 void    MSG_ReadDeltaUsercmd_Enhanced( const usercmd_t *from, usercmd_t *to, int version );
-void    *MSG_ReadData( size_t len );
 int     MSG_ParseEntityBits( int *bits );
 void    MSG_ParseDeltaEntity( const entity_state_t *from, entity_state_t *to, int number, int bits, msgEsFlags_t flags );
 #if USE_CLIENT
