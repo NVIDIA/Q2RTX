@@ -557,6 +557,34 @@ static void GL_MipMap( byte *in, int width, int height ) {
     }
 }
 
+static inline qboolean is_a_wall( void ) {
+    if( upload_image->type != it_wall ) {
+        return qfalse; // not a wall texture
+    }
+    if( !upload_texinfo ) {
+        return qtrue; // don't know what type of surface it is
+    }  
+    if( upload_texinfo->c.flags & (SURF_SKY|SURF_WARP) ) {
+        return qfalse; // don't desaturate or invert sky and liquid surfaces
+    }
+    return qtrue;
+}
+
+static inline qboolean is_alpha( byte *data, int width, int height ) {
+    int         i, c;
+    byte        *scan;
+
+    c = width * height;
+    scan = data + 3;
+    for( i = 0; i < c; i++, scan += 4 ) {
+        if( *scan != 255 ) {
+            return qtrue;
+        }
+    }
+
+    return qfalse;
+}
+
 /*
 ===============
 GL_Upload32
@@ -565,8 +593,6 @@ GL_Upload32
 static qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap ) {
     byte        *scaled;
     int         scaled_width, scaled_height;
-    int         i, c;
-    byte        *scan;
     int         comp;
     qboolean    isalpha;
 
@@ -574,11 +600,12 @@ static qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap 
     scaled_height = Q_CeilPowerOfTwo( height );
 
     if( mipmap ) {
-        if( gl_round_down->integer && scaled_width > width )
-            scaled_width >>= 1;
-
-        if( gl_round_down->integer && scaled_height > height )
-            scaled_height >>= 1;
+        if( gl_round_down->integer ) {
+            if( scaled_width > width )
+                scaled_width >>= 1;
+            if( scaled_height > height )
+                scaled_height >>= 1;
+        }
 
         // let people sample down the world textures for speed
         scaled_width >>= gl_picmip->integer;
@@ -587,7 +614,7 @@ static qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap 
 
     // don't ever bother with >256 textures
     while( scaled_width > gl_static.maxTextureSize ||
-            scaled_height > gl_static.maxTextureSize )
+           scaled_height > gl_static.maxTextureSize )
     {
         scaled_width >>= 1;
         scaled_height >>= 1;
@@ -605,11 +632,7 @@ static qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap 
 
     // set saturation and lightscale before mipmap
     comp = gl_tex_solid_format;
-    if( upload_image->type == it_wall &&
-        gl_saturation->value != 1 &&
-        ( !upload_texinfo ||
-          !( upload_texinfo->c.flags & (SURF_SKY|SURF_WARP) ) ) )
-    {   
+    if( is_a_wall() && gl_saturation->value != 1 ) {   
         GL_Saturation( data, width, height );
         if( gl_saturation->value == 0 ) {
             comp = GL_LUMINANCE;
@@ -622,35 +645,24 @@ static qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap 
         GL_LightScaleTexture( data, width, height, mipmap );
     }
 
-    if( upload_image->type == it_wall &&
-        gl_invert->integer &&
-        ( !upload_texinfo ||
-          !( upload_texinfo->c.flags & (SURF_SKY|SURF_WARP) ) ) )
-    {
+    if( is_a_wall() && gl_invert->integer ) {
         GL_InvertTexture( data, width, height );
     }
 
     // scan the texture for any non-255 alpha
-    c = width * height;
-    scan = data + 3;
-    isalpha = qfalse;
-    for( i = 0; i < c; i++, scan += 4 ) {
-        if( *scan != 255 ) {
-            isalpha = qtrue;
-            comp = gl_tex_alpha_format;
-            break;
-        }
+    isalpha = is_alpha( data, width, height );
+    if( isalpha ) {
+        comp = gl_tex_alpha_format;
     }
 
     if( scaled_width == width && scaled_height == height ) {
-        /* optimized case, do not reallocate */
+        // optimized case, do not reallocate
         scaled = data;
     } else {
         scaled = FS_AllocTempMem( scaled_width * scaled_height * 4 );
         GL_ResampleTexture( data, width, height, scaled,
                 scaled_width, scaled_height );
     }
-
 
     qglTexImage2D( GL_TEXTURE_2D, 0, comp, scaled_width, scaled_height, 0,
             GL_RGBA, GL_UNSIGNED_BYTE, scaled );

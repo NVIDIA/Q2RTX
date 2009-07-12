@@ -264,6 +264,8 @@ extern float gl_filter_anisotropy;
 extern int gl_tex_alpha_format;
 extern int gl_tex_solid_format;
 
+extern mtexinfo_t *upload_texinfo;
+
 void Scrap_Upload( void );
 
 void GL_InitImages( void );
