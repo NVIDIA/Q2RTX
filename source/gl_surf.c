@@ -220,6 +220,7 @@ static void GL_BuildSurfacePoly( bsp_t *bsp, mface_t *surf, vec_t *vbo ) {
     int bmins[2], bmaxs[2];
     
     surf->texnum[0] = texinfo->image->texnum;
+    surf->texnum[1] = 0;
 
     // normalize texture coordinates
     scale[0] = 1.0f / texinfo->image->width;
