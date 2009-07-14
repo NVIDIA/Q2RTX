@@ -1064,28 +1064,6 @@ static void GL_InitBeamTexture( void ) {
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 }
 
-static void GL_InitWarpTexture( void ) {
-    byte pixels[8*8*4];
-    byte *dst;
-    int i, j;
-
-    dst = pixels;
-    for( i = 0; i < 8; i++ ) {
-        for( j = 0; j < 8; j++ ) {
-            dst[0] = rand() & 255;
-            dst[1] = rand() & 255;
-            dst[2] = 255;
-            dst[3] = 255;
-            dst += 4;
-        }
-    }
-    
-    GL_BindTexture( TEXNUM_WARP );
-    GL_Upload32( pixels, 8, 8, qfalse );
-    qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-    qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-}
-
 /*
 ===============
 GL_InitImages
@@ -1150,9 +1128,11 @@ void GL_InitImages( void ) {
     gl_anisotropy_changed( gl_anisotropy );
     gl_bilerp_chars_changed( gl_bilerp_chars );
 
+    upload_image = NULL;
+    upload_texinfo = NULL;
+
     // make sure r_notexture == &r_images[0]
     GL_InitDefaultTexture();
-    GL_InitWarpTexture();
     GL_InitParticleTexture();
     GL_InitWhiteImage();
     GL_InitBeamTexture();

@@ -257,7 +257,6 @@ enum {
     TEXNUM_SCRAP = MAX_RIMAGES + 1,
     TEXNUM_PARTICLE,
     TEXNUM_BEAM,
-    TEXNUM_WARP,
     TEXNUM_WHITE,
     TEXNUM_BLACK,
     TEXNUM_LIGHTMAP // must be the last one

@@ -226,12 +226,6 @@ static void GL_BuildSurfacePoly( bsp_t *bsp, mface_t *surf, vec_t *vbo ) {
     scale[0] = 1.0f / texinfo->image->width;
     scale[1] = 1.0f / texinfo->image->height;
 
-    if( ( texinfo->c.flags & SURF_WARP ) && qglProgramStringARB ) {
-        surf->texnum[1] = TEXNUM_WARP;
-        scale[0] *= 0.5f;
-        scale[1] *= 0.5f;
-    }
-
     mins[0] = mins[1] = 99999;
     maxs[0] = maxs[1] = -99999;
 
@@ -258,13 +252,8 @@ static void GL_BuildSurfacePoly( bsp_t *bsp, mface_t *surf, vec_t *vbo ) {
         vbo[4] = tc[1] * scale[1];
 
         // texture1 coordinates
-        if( ( texinfo->c.flags & SURF_WARP ) && qglProgramStringARB ) {
-            vbo[5] = vbo[3];
-            vbo[6] = vbo[4];
-        } else {
-            vbo[5] = tc[0];
-            vbo[6] = tc[1];
-        }
+        vbo[5] = tc[0];
+        vbo[6] = tc[1];
 
         vbo += VERTEX_SIZE;
     }
@@ -350,6 +339,7 @@ void GL_LoadWorld( const char *name ) {
         Q_concat( buffer, sizeof( buffer ), "textures/", info->name, ".wal", NULL );
         upload_texinfo = info;
         image = IMG_Find( buffer, it_wall );
+        upload_texinfo = NULL;
         info->image = image ? image : r_notexture;
     }
 

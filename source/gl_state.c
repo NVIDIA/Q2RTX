@@ -287,8 +287,8 @@ void GL_EnableWarp( void ) {
 
     qglEnable( GL_FRAGMENT_PROGRAM_ARB );
     qglBindProgramARB( GL_FRAGMENT_PROGRAM_ARB, PROGNUM_WARP );
-    param[0] = glr.fd.time * 0.125f;
-    param[1] = glr.fd.time * 0.125f;
+    param[0] = glr.fd.time;
+    param[1] = glr.fd.time;
     param[2] = param[3] = 0;
     qglProgramLocalParameter4fvARB( GL_FRAGMENT_PROGRAM_ARB, 0, param );
 }
