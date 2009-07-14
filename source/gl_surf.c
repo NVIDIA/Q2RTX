@@ -139,7 +139,7 @@ static void LM_UploadBlock( void ) {
     int comp = colorScale ? GL_RGB : GL_LUMINANCE;
 
     qglActiveTextureARB( GL_TEXTURE1_ARB );
-    qglBindTexture( GL_TEXTURE_2D, LM_TEXNUM + lm.numMaps );
+    qglBindTexture( GL_TEXTURE_2D, TEXNUM_LIGHTMAP + lm.numMaps );
     qglTexImage2D( GL_TEXTURE_2D, 0, comp, LM_BLOCK_WIDTH, LM_BLOCK_HEIGHT, 0,
         GL_RGBA, GL_UNSIGNED_BYTE, lm.buffer );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
@@ -184,8 +184,8 @@ static void LM_BuildSurfaceLightmap( mface_t *surf, vec_t *vbo ) {
         }
         dst += LM_BLOCK_WIDTH * 4;
     }
-    
-    surf->texnum[1] = LM_TEXNUM + lm.numMaps;
+ 
+    surf->texnum[1] = TEXNUM_LIGHTMAP + lm.numMaps;
 
     s = ( s << 4 ) + 8;
     t = ( t << 4 ) + 8;
@@ -227,7 +227,7 @@ static void GL_BuildSurfacePoly( bsp_t *bsp, mface_t *surf, vec_t *vbo ) {
     scale[1] = 1.0f / texinfo->image->height;
 
     if( ( texinfo->c.flags & SURF_WARP ) && qglProgramStringARB ) {
-        surf->texnum[1] = r_warptexture->texnum;
+        surf->texnum[1] = TEXNUM_WARP;
         scale[0] *= 0.5f;
         scale[1] *= 0.5f;
     }

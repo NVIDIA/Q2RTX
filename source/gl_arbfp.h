@@ -1,4 +1,5 @@
-/*static const char gl_prog_warp[] =
+#if 0
+static const char gl_prog_warp[] =
     "!!ARBfp1.0\n"
 
     "TEMP tmp, s, t, coord, diffuse;\n"
@@ -14,8 +15,8 @@
 
     "MUL result.color, diffuse, fragment.color;\n"
     "END\n"
-;*/
-
+;
+#else
 static const char gl_prog_warp[] =
     "!!ARBfp1.0\n"
 
@@ -28,7 +29,9 @@ static const char gl_prog_warp[] =
     "MUL result.color, diffuse, fragment.color;\n"
     "END\n"
 ;
+#endif
 
+/*
 static const char gl_prog_light[] =
     "!!ARBfp1.0\n"
 
@@ -39,3 +42,4 @@ static const char gl_prog_light[] =
     "MUL result.color, diffuse, light;\n"
     "END\n"
 ;
+*/

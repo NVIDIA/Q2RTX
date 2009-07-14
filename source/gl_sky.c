@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 static float    skyrotate;
 static vec3_t   skyaxis;
-static image_t  *sky_images[6];
+static int      sky_images[6];
 
 static const vec3_t skyclip[6] = {
     {1,1,0},
@@ -357,7 +357,7 @@ void R_DrawSkyBox( void ) {
             continue;
         }
 
-        GL_BindTexture (sky_images[skytexorder[i]]->texnum);
+        GL_BindTexture (sky_images[skytexorder[i]]);
 
         qglBegin (GL_QUADS);
         MakeSkyVec (skymins[0][i], skymins[1][i], i);
@@ -374,7 +374,7 @@ void R_UnsetSky( void ) {
 
     skyrotate = 0;
     for( i = 0; i < 6; i++ ) {
-        sky_images[i] = r_blackimage;
+        sky_images[i] = TEXNUM_BLACK;
     }
 }
 
@@ -386,6 +386,7 @@ R_SetSky
 void R_SetSky( const char *name, float rotate, vec3_t axis ) {
     int     i;
     char    pathname[MAX_QPATH];
+    image_t *image;
     // 3dstudio environment map names
     static const char suf[6][3] = { "rt", "bk", "lf", "ft", "up", "dn" };
 
@@ -400,11 +401,12 @@ void R_SetSky( const char *name, float rotate, vec3_t axis ) {
     for( i = 0; i < 6; i++ ) {
         Q_concat( pathname, sizeof( pathname ),
             "env/", name, suf[i], ".tga", NULL );
-        sky_images[i] = IMG_Find( pathname, it_sky );
-        if( !sky_images[i] ) {
+        image = IMG_Find( pathname, it_sky );
+        if( !image ) {
             R_UnsetSky();
             return;
         }
+        sky_images[i] = image->texnum;
     }
 }
 

@@ -280,11 +280,13 @@ void GL_DisableOutlines( void ) {
    qglEnable( GL_TEXTURE_2D );
 }
 
+#define PROGNUM_WARP 1
+
 void GL_EnableWarp( void ) {
     vec4_t param;
 
     qglEnable( GL_FRAGMENT_PROGRAM_ARB );
-    qglBindProgramARB( GL_FRAGMENT_PROGRAM_ARB, gl_static.prog_warp );
+    qglBindProgramARB( GL_FRAGMENT_PROGRAM_ARB, PROGNUM_WARP );
     param[0] = glr.fd.time * 0.125f;
     param[1] = glr.fd.time * 0.125f;
     param[2] = param[3] = 0;
@@ -299,25 +301,28 @@ void GL_InitPrograms( void ) {
     if( !qglProgramStringARB ) {
         return;
     }
-    qglGenProgramsARB( 1, &gl_static.prog_warp );
-    qglBindProgramARB( GL_FRAGMENT_PROGRAM_ARB, gl_static.prog_warp );
+    qglBindProgramARB( GL_FRAGMENT_PROGRAM_ARB, PROGNUM_WARP );
     qglProgramStringARB( GL_FRAGMENT_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB,
         sizeof( gl_prog_warp ) - 1, gl_prog_warp );
-    //Com_Printf( "%s\n", qglGetString( GL_PROGRAM_ERROR_STRING_ARB ) );
 
+#if 0
     qglGenProgramsARB( 1, &gl_static.prog_light );
     qglBindProgramARB( GL_FRAGMENT_PROGRAM_ARB, gl_static.prog_light );
     qglProgramStringARB( GL_FRAGMENT_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB,
         sizeof( gl_prog_light ) - 1, gl_prog_light );
+#endif
 
     GL_ShowErrors( __func__ );
 }
 
 void GL_ShutdownPrograms( void ) {
+    GLuint i;
+
     if( !qglProgramStringARB ) {
         return;
     }
-    qglDeleteProgramsARB( 1, &gl_static.prog_warp );
+    i = PROGNUM_WARP;
+    qglDeleteProgramsARB( 1, &i );
 }
 
 

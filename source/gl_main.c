@@ -51,7 +51,9 @@ cvar_t *gl_showtris;
 cvar_t *gl_showorigins;
 cvar_t *gl_cull_nodes;
 cvar_t *gl_cull_models;
+#ifdef _DEBUG
 cvar_t *gl_showstats;
+#endif
 cvar_t *gl_bind;
 cvar_t *gl_clear;
 cvar_t *gl_novis;
@@ -115,22 +117,6 @@ static void GL_SetupFrustum( void ) {
     SetPlaneSignbits( f );
     SetPlaneType( f );
 
-}
-
-static void GL_Blend( void ) {
-    color_t color;
-    
-    if( !gl_polyblend->integer || glr.fd.blend[3] == 0 ) {
-        return;
-    }
-
-    color[0] = glr.fd.blend[0] * 255;
-    color[1] = glr.fd.blend[1] * 255;
-    color[2] = glr.fd.blend[2] * 255;
-    color[3] = glr.fd.blend[3] * 255;
-
-    GL_StretchPic( 0, 0, gl_config.vidWidth, gl_config.vidHeight, 0, 0, 1, 1,
-        color, r_whiteimage );
 }
 
 glCullResult_t GL_CullBox( vec3_t bounds[2] ) {
@@ -493,7 +479,9 @@ void R_RenderFrame( refdef_t *fd ) {
     /* go back into 2D mode */
     GL_Setup2D();
 
-    GL_Blend();
+    if( gl_polyblend->integer && glr.fd.blend[3] != 0 ) {
+        GL_Blend();
+    }
 
     GL_ShowErrors( __func__ );
 }
@@ -515,9 +503,11 @@ void R_BeginFrame( void ) {
 }
 
 void R_EndFrame( void ) {
+#ifdef _DEBUG
     if( gl_showstats->integer ) {
         Draw_Stats();
     }
+#endif
     GL_Flush2D();
 
     if( gl_log->modified ) {
@@ -711,7 +701,9 @@ static void GL_Register( void ) {
     gl_drawsky = Cvar_Get( "gl_drawsky", "1", 0 );
     gl_showtris = Cvar_Get( "gl_showtris", "0", CVAR_CHEAT );
     gl_showorigins = Cvar_Get( "gl_showorigins", "0", CVAR_CHEAT );
+#ifdef _DEBUG
     gl_showstats = Cvar_Get( "gl_showstats", "0", 0 );
+#endif
     gl_cull_nodes = Cvar_Get( "gl_cull_nodes", "1", 0 );
     gl_cull_models = Cvar_Get( "gl_cull_models", "1", 0 );
     gl_bind = Cvar_Get( "gl_bind", "1", CVAR_CHEAT );

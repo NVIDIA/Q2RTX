@@ -273,13 +273,13 @@ void GL_DrawAliasModel( model_t *model ) {
 
     newframeIdx = ent->frame;
     if( newframeIdx < 0 || newframeIdx >= model->numframes ) {
-        Com_DPrintf( "GL_DrawAliasModel: no such frame %d\n", newframeIdx );
+        Com_DPrintf( "%s: no such frame %d\n", __func__, newframeIdx );
         newframeIdx = 0;
     }
 
     oldframeIdx = ent->oldframe;
     if( oldframeIdx < 0 || oldframeIdx >= model->numframes ) {
-        Com_DPrintf( "GL_DrawAliasModel: no such oldframe %d\n", oldframeIdx );
+        Com_DPrintf( "%s: no such oldframe %d\n", __func__, oldframeIdx );
         oldframeIdx = 0;
     }
 
@@ -426,14 +426,15 @@ void GL_DrawAliasModel( model_t *model ) {
     last = model->meshes + model->nummeshes;
     for( mesh = model->meshes; mesh < last; mesh++ ) {
         if( ent->flags & RF_SHELL_MASK ) {
-            image = r_whiteimage;
+            GL_Bits( bits );
+            GL_BindTexture( TEXNUM_WHITE );
         } else {
             if( ent->skin ) {
                 image = IMG_ForHandle( ent->skin );
             } else {
                 if( ( unsigned )ent->skinnum >= MAX_ALIAS_SKINS ) {
-                    Com_DPrintf( "GL_DrawAliasModel: no such skin: %d\n",
-                        ent->skinnum );
+                    Com_DPrintf( "%s: no such skin: %d\n",
+                        __func__, ent->skinnum );
                     image = mesh->skins[0];
                 } else {
                     image = mesh->skins[ent->skinnum];
@@ -445,14 +446,14 @@ void GL_DrawAliasModel( model_t *model ) {
             if( !image ) {
                 image = r_notexture;
             }
-        }
 
-        if( ( image->flags & ( if_transparent|if_paletted ) ) == if_transparent ) {
-            GL_Bits( bits | GLS_BLEND_BLEND );
-        } else {
-            GL_Bits( bits );
+            if( ( image->flags & ( if_transparent|if_paletted ) ) == if_transparent ) {
+                GL_Bits( bits | GLS_BLEND_BLEND );
+            } else {
+                GL_Bits( bits );
+            }
+            GL_BindTexture( image->texnum );
         }
-        GL_BindTexture( image->texnum );
 
         tessFunc( mesh, oldframeIdx, newframeIdx );
 

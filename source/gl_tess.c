@@ -75,47 +75,6 @@ void GL_Flush2D( void ) {
     tess.flags = 0;
 }
 
-void GL_StretchPic( float x, float y, float w, float h,
-        float s1, float t1, float s2, float t2,
-        const byte *color, image_t *image )
-{
-    vec_t *dst_vert;
-    uint32_t *dst_color;
-    
-    if( tess.numverts + 4 > TESS_MAX_VERTICES ||
-        ( tess.numverts && tess.texnum[0] != image->texnum ) )
-    {
-        GL_Flush2D();
-    }
-
-    tess.texnum[0] = image->texnum;
-
-    dst_vert = tess.vertices + tess.numverts * 4;
-    Vector4Set( dst_vert,      x,     y,     s1, t1 );
-    Vector4Set( dst_vert +  4, x + w, y,     s2, t1 );
-    Vector4Set( dst_vert +  8, x + w, y + h, s2, t2 );
-    Vector4Set( dst_vert + 12, x,     y + h, s1, t2 );
-
-    dst_color = ( uint32_t * )tess.colors + tess.numverts;
-    dst_color[0] = *( const uint32_t * )color;
-    dst_color[1] = *( const uint32_t * )color;
-    dst_color[2] = *( const uint32_t * )color;
-    dst_color[3] = *( const uint32_t * )color;
-    
-    if( image->flags & if_transparent ) {
-        if( ( image->flags & if_paletted ) && draw.scale == 1 ) {
-            tess.flags |= 1;
-        } else {
-            tess.flags |= 2;
-        }
-    }
-    if( color[3] != 255 ) {
-        tess.flags |= 2;
-    }
-
-    tess.numverts += 4;
-}
-
 void GL_DrawParticles( void ) {
     particle_t *p;
     int i;
@@ -130,7 +89,7 @@ void GL_DrawParticles( void ) {
         return;
     }
 
-    GL_BindTexture( r_particletexture->texnum );
+    GL_BindTexture( TEXNUM_PARTICLE );
     GL_TexEnv( GL_MODULATE );
     GL_Bits( GLS_BLEND_BLEND | GLS_DEPTHMASK_FALSE );
 
@@ -205,7 +164,7 @@ void GL_DrawBeams( void ) {
         return;
     }
 
-    GL_BindTexture( r_beamtexture->texnum );
+    GL_BindTexture( TEXNUM_BEAM );
     GL_TexEnv( GL_MODULATE );
     GL_Bits( GLS_BLEND_BLEND | GLS_DEPTHMASK_FALSE );
     qglEnableClientState( GL_COLOR_ARRAY );

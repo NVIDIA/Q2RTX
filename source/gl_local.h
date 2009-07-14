@@ -43,7 +43,6 @@ typedef struct {
     int numTextureUnits;
     int maxTextureSize;
     qboolean registering;
-    GLuint prog_warp, prog_light;
     struct {
         bsp_t *cache;
         mempool_t pool;
@@ -166,7 +165,6 @@ typedef struct maliasmesh_s {
 #define LM_MAX_LIGHTMAPS    32
 #define LM_BLOCK_WIDTH      256
 #define LM_BLOCK_HEIGHT     256
-#define LM_TEXNUM           ( MAX_RIMAGES + 2 )
 
 typedef struct {
     int inuse[LM_BLOCK_WIDTH];
@@ -243,26 +241,31 @@ typedef struct {
 
 extern drawStatic_t draw;
 
+#ifdef _DEBUG
 void Draw_Stringf( int x, int y, const char *fmt, ... );
 void Draw_Stats( void );
+#endif
+
+void GL_Blend( void );
 
 
 /*
  * gl_images.c
  *
  */
-extern image_t *r_notexture;
-extern image_t *r_particletexture;
-extern image_t *r_beamtexture;
-extern image_t *r_warptexture;
-extern image_t *r_whiteimage;
-extern image_t *r_blackimage;
+enum {
+    TEXNUM_SCRAP = MAX_RIMAGES + 1,
+    TEXNUM_PARTICLE,
+    TEXNUM_BEAM,
+    TEXNUM_WARP,
+    TEXNUM_WHITE,
+    TEXNUM_BLACK,
+    TEXNUM_LIGHTMAP // must be the last one
+};
 
-extern int gl_filter_min;
-extern int gl_filter_max;
-extern float gl_filter_anisotropy;
-extern int gl_tex_alpha_format;
-extern int gl_tex_solid_format;
+#define NUM_TEXNUMS (TEXNUM_LIGHTMAP+LM_MAX_LIGHTMAPS-TEXNUM_SCRAP)
+
+extern image_t *r_notexture;
 
 extern mtexinfo_t *upload_texinfo;
 
@@ -298,8 +301,6 @@ typedef struct {
 
 extern tesselator_t tess;
 
-void GL_StretchPic( float x, float y, float w, float h,
-        float s1, float t1, float s2, float t2, const byte *color, image_t *image );
 void GL_Flush2D( void );
 void GL_DrawParticles( void );
 void GL_DrawBeams( void );
