@@ -891,14 +891,16 @@ static void CL_ParseServerData( void ) {
         CL_ClientCommand( va( "nextserver %i\n", cl.servercount ) );
     } else {
         // seperate the printfs so the server message can have a color
-        Con_Printf( "\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36"
-            "\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36"
-            "\36\36\36\36\36\36\37\n\n" );
-        Con_Printf( S_COLOR_ALT "%s\n\n", levelname );
+        Con_Printf(
+            "\n\n"
+            "\35\36\36\36\36\36\36\36\36\36\36\36"
+            "\36\36\36\36\36\36\36\36\36\36\36\36"
+            "\36\36\36\36\36\36\36\36\36\36\36\37"
+            "\n\n" );
 
-#if USE_SYSCON
-        Sys_Printf( "%s\n", levelname );
-#endif
+        Com_SetColor( COLOR_ALT );
+        Com_Printf( "%s\n", levelname );
+        Com_SetColor( COLOR_NONE );
 
         // make sure clientNum is in range
         if( cl.clientNum < 0 || cl.clientNum >= MAX_CLIENTS ) {
@@ -1221,7 +1223,9 @@ static void CL_ParsePrint( void ) {
         string[len] = '\n';
     }
 
-    Com_Printf( S_COLOR_ALT "%s", string );
+    Com_SetColor( COLOR_ALT );
+    Com_Printf( "%s", string );
+    Com_SetColor( COLOR_NONE );
 
     Con_SkipNotify( qfalse );
 

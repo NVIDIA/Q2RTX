@@ -150,7 +150,7 @@ static void Keybind_Init( menuKeybind_t *k ) {
         k->generic.uiFlags | UI_RIGHT, k->generic.name );
 
     k->generic.rect.width += ( RCOLUMN_OFFSET - LCOLUMN_OFFSET ) +
-        Q_DrawStrlen( k->binding ) * CHAR_WIDTH;
+        strlen( k->binding ) * CHAR_WIDTH;
 }
 
 /*
@@ -442,7 +442,7 @@ void SpinControl_Init( menuSpinControl_t *s ) {
     s->numItems = 0;
     n = s->itemnames;
     while( *n ) {
-        length = Q_DrawStrlen( *n );
+        length = strlen( *n );
         
         if( maxLength < length ) {
             maxLength = length;

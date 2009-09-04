@@ -83,19 +83,23 @@ void R_SetColor( int flags, const color_t color ) {
     draw.flags &= ~DRAW_COLOR_MASK;
 
     if( flags == DRAW_COLOR_CLEAR ) {
-        *( uint32_t * )draw.color = *( uint32_t * )colorWhite;
+        FastColorCopy( colorWhite, draw.colors[0] );
+        FastColorCopy( colorWhite, draw.colors[1] );
         return;
     }
     if( flags == DRAW_COLOR_ALPHA ) {
-        draw.color[3] = *( float * )color * 255;
+        draw.colors[0][3] = *( float * )color * 255;
+        draw.colors[1][3] = *( float * )color * 255;
     } else if( flags == DRAW_COLOR_INDEXED ) {
-        *( uint32_t * )draw.color = d_8to24table[ *( uint32_t * )color & 255 ];
+        *( uint32_t * )draw.colors[0] = d_8to24table[ *( uint32_t * )color & 255 ];
     } else {
         if( flags & DRAW_COLOR_RGB ) {
-            VectorCopy( color, draw.color );
+            VectorCopy( color, draw.colors[0] );
+            VectorCopy( colorWhite, draw.colors[1] );
         }
         if( flags & DRAW_COLOR_ALPHA ) {
-            draw.color[3] = color[3];
+            draw.colors[0][3] = color[3];
+            draw.colors[1][3] = color[3];
         }
     }
 
@@ -196,21 +200,21 @@ void R_DrawStretchPicST( int x, int y, int w, int h, float s1, float t1,
         float s2, float t2, qhandle_t pic )
 {
     /* TODO: scrap support */
-    GL_StretchPic( x, y, w, h, s1, t1, s2, t2, draw.color, IMG_ForHandle( pic ) );
+    GL_StretchPic( x, y, w, h, s1, t1, s2, t2, draw.colors[0], IMG_ForHandle( pic ) );
 }
 
 void R_DrawStretchPic( int x, int y, int w, int h, qhandle_t pic ) {
     image_t *image = IMG_ForHandle( pic );
 
     GL_StretchPic( x, y, w, h, image->sl, image->tl, image->sh, image->th,
-        draw.color, image );
+        draw.colors[0], image );
 }
 
 void R_DrawPic( int x, int y, qhandle_t pic ) {
     image_t *image = IMG_ForHandle( pic );
 
     GL_StretchPic( x, y, image->width, image->height,
-        image->sl, image->tl, image->sh, image->th, draw.color, image );
+        image->sl, image->tl, image->sh, image->th, draw.colors[0], image );
 }
 
 #define DIV64 ( 1.0f / 64.0f )
@@ -232,65 +236,34 @@ void R_DrawFillEx( int x, int y, int w, int h, const color_t color ) {
 void R_FadeScreen( void ) {
 }
 
-void R_DrawChar( int x, int y, int flags, int ch, qhandle_t font ) {
+static inline void draw_char( int x, int y, int c, qboolean alt, image_t *image ) {
     float s, t;
-    
-    ch &= 255;
-    s = ( ch & 15 ) * 0.0625f;
-    t = ( ch >> 4 ) * 0.0625f;
+        
+    if( ( c & 127 ) == 32 ) {
+        return;
+    }
 
-    GL_StretchPic( x, y, 8, 8, s, t, s + 0.0625f, t + 0.0625f,
-        draw.color, IMG_ForHandle( font ) );
+    c |= alt << 7;
+    s = ( c & 15 ) * 0.0625f;
+    t = ( c >> 4 ) * 0.0625f;
+    GL_StretchPic( x, y, 8, 8, s, t, s + 0.0625f, t + 0.0625f, draw.colors[alt], image );
 }
 
-int R_DrawString( int x, int y, int flags, size_t maxChars,
-                 const char *string, qhandle_t font )
-{
-    byte c;
-    float s, t;
-    image_t *image;
-    color_t colors[2];
-    int mask, altmask = 0;
+void R_DrawChar( int x, int y, int flags, int c, qhandle_t font ) {
+    qboolean alt = ( flags & UI_ALTCOLOR ) ? qtrue : qfalse;
+    draw_char( x, y, c & 255, alt, IMG_ForHandle( font ) );
+}
 
-    image = IMG_ForHandle( font );
+int R_DrawString( int x, int y, int flags, size_t maxlen, const char *s, qhandle_t font ) {
+    image_t *image = IMG_ForHandle( font );
+    qboolean alt = ( flags & UI_ALTCOLOR ) ? qtrue : qfalse;
 
-    if( flags & UI_ALTCOLOR ) {
-        altmask |= 128;
-    }
-    mask = altmask;
-
-    *( uint32_t * )colors[0] = *( uint32_t * )draw.color;
-    *( uint32_t * )colors[1] = MakeColor( 255, 255, 255, draw.color[3] );
-    while( maxChars-- && *string ) {
-        if( Q_IsColorString( string ) ) {
-            c = string[1];
-            if( c == COLOR_ALT ) {
-                mask |= 128;
-            } else if( c == COLOR_RESET ) {
-                *( uint32_t * )colors[0] = *( uint32_t * )draw.color;
-                mask = altmask;
-            } else {
-                VectorCopy( colorTable[ ColorIndex( c ) ], colors[0] );
-                mask = 0;
-            }
-            string += 2;
-            continue;
-        }
-        
-        c = *string++;
-        if( ( c & 127 ) == 32 ) {
-            x += 8;
-            continue;
-        }
-
-        c |= mask;
-        s = ( c & 15 ) * 0.0625f;
-        t = ( c >> 4 ) * 0.0625f;
-
-        GL_StretchPic( x, y, 8, 8, s, t, s + 0.0625f, t + 0.0625f,
-            colors[ ( c >> 7 ) & 1 ], image );
+    while( maxlen-- && *s ) {
+        byte c = *s++;
+        draw_char( x, y, c, alt, image );
         x += 8;
     }
+
     return x;
 }
 

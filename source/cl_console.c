@@ -49,6 +49,8 @@ typedef struct console_s {
     int     current;        // line where next message will be printed
     int     x;              // offset in current line for next print
     int     display;        // bottom of console displays this line
+    int     color;
+    qboolean newline;
 
     int     linewidth;      // characters across screen
     int     vidWidth, vidHeight;
@@ -201,7 +203,6 @@ static void Con_Dump_f( void ) {
     int     l;
     char    *line;
     fileHandle_t    f;
-    char    buffer[CON_LINEWIDTH];
     char    name[MAX_OSPATH];
     size_t  len;
 
@@ -232,9 +233,7 @@ static void Con_Dump_f( void ) {
     // write the remaining lines
     for( ; l <= con.current ; l++ ) {
         line = con.text[l & CON_TOTALLINES_MASK];
-        Q_ClearColorStr( buffer, line, sizeof( buffer ) );
-
-        FS_FPrintf( f, "%s\n", buffer );
+        FS_FPrintf( f, "%s\n", line + 1 );
     }
 
     FS_FCloseFile( f );
@@ -337,7 +336,7 @@ static void Con_CheckResize( void ) {
 
     con.linewidth = width > CON_LINEWIDTH ? CON_LINEWIDTH : width;
     con.prompt.inputLine.visibleChars = con.linewidth;
-    con.prompt.widthInChars = con.linewidth;
+    con.prompt.widthInChars = con.linewidth - 1; // account for color byte
     con.chatPrompt.inputLine.visibleChars = con.linewidth;
 }
 
@@ -416,6 +415,9 @@ void Con_Init( void ) {
     scr_glconfig.vidHeight = 480;
     con.linewidth = -1;
     con.scale = 1;
+    con.color = COLOR_NONE;
+    con.text[0][0] = COLOR_NONE;
+    con.x = 1;
 
     Con_CheckResize();
 
@@ -440,25 +442,38 @@ void Con_Shutdown( void ) {
     Prompt_Clear( &con.prompt );
 }
 
+static void Con_CarriageRet( void ) {
+    char *p;
+
+    p = con.text[con.current & CON_TOTALLINES_MASK];
+    memset( p, 0, sizeof( con.text[0] ) );
+
+    // add color from last line
+    con.x = 0;
+    p[con.x++] = con.color;
+}
+
 /*
 ===============
 Con_Linefeed
 ===============
 */
-void Con_Linefeed( void ) {
-    con.x = 0;
-
+static void Con_Linefeed( void ) {
     if( con.display == con.current )
         con.display++;
     con.current++;
 
-    memset( con.text[con.current & CON_TOTALLINES_MASK], 0, sizeof( con.text[0] ) );
+    Con_CarriageRet();
 
     if( con_scroll->integer & 2 ) {
         con.display = con.current;
     } else {
         Con_CheckTop();
     }
+}
+
+void Con_SetColor( color_index_t color ) {
+    con.color = color;
 }
 
 /*
@@ -472,8 +487,6 @@ If no console is visible, the text will appear at the top of the game window
 */
 void Con_Print( const char *txt ) {
     int prevline;
-    int color;
-    static qboolean cr;
     char *p;
     int l;
 
@@ -482,67 +495,39 @@ void Con_Print( const char *txt ) {
 
     prevline = con.current;
 
-    color = 0;
     while( *txt ) {
-    // count word length
-        l = 0;
-        p = ( char * )txt;
-        while( *p > 32 || *p == Q_COLOR_ESCAPE ) {
-            if( Q_IsColorString( p ) ) {
-                p += 2;
-            } else {
-                l++; p++;
-            }
+        if( con.newline ) {
+            Con_Linefeed();
+            con.newline = qfalse;
         }
+
+    // count word length
+        for( p = ( char * )txt; *p > 32; p++ )
+            ;
+        l = p - txt;
 
     // word wrap
-        p = con.text[con.current & CON_TOTALLINES_MASK];
-        if( l < con.linewidth && ( Q_DrawStrlen( p ) + l > con.linewidth ) )
-            con.x = 0;
-
-        if( cr ) {
-            cr = qfalse;
-            con.current--;
-        }
-        
-        if( !con.x ) {
+        if( l < con.linewidth && con.x + l > con.linewidth ) {
             Con_Linefeed();
-
-        // add color from last line
-            if( color ) {
-                p = con.text[con.current & CON_TOTALLINES_MASK];
-                p[con.x++] = Q_COLOR_ESCAPE;
-                p[con.x++] = color;
-            }
         }
 
         switch( *txt ) {
         case '\r':
-            cr = qtrue;
-        case '\n':
-            con.x = 0;
-            //color = 0;
+            Con_CarriageRet();
             break;
-        case Q_COLOR_ESCAPE:
-            if( !txt[1] ) {
-                break;
-            }
-            txt++;
-            color = *txt;
-            p = con.text[con.current & CON_TOTALLINES_MASK];
-            p[con.x++] = Q_COLOR_ESCAPE;
-            p[con.x++] = color;
+        case '\n':
+            con.newline = qtrue;
             break;
         default:    // display character and advance
+            if( con.x == con.linewidth ) {
+                Con_Linefeed();
+            }
             p = con.text[con.current & CON_TOTALLINES_MASK];
             p[con.x++] = *txt;
-            if( Q_DrawStrlen( p ) > con.linewidth )
-                con.x = 0;
             break;
         }
 
         txt++;
-        
     }
 
     // update time for transparent overlay
@@ -551,7 +536,6 @@ void Con_Print( const char *txt ) {
             con.times[l & CON_TIMES_MASK] = cls.realtime;
         }
     }
-
 }
 
 /*
@@ -603,6 +587,30 @@ DRAWING
 ==============================================================================
 */
 
+static int Con_DrawLine( int v, int line, float alpha ) {
+    char *p = con.text[line & CON_TOTALLINES_MASK];
+    color_index_t c = *p;
+    color_t color;
+    int flags = 0;
+
+    switch( c ) {
+    case COLOR_ALT:
+        flags = UI_ALTCOLOR;
+        // fall through
+    case COLOR_NONE:
+        R_SetColor( DRAW_COLOR_CLEAR, NULL );
+        break;
+    default:
+        VectorCopy( colorTable[c & 7], color );
+        color[3] = alpha * 255;
+        R_SetColor( DRAW_COLOR_RGBA, color );
+        break;
+    }
+
+    return R_DrawString( CHAR_WIDTH, v, flags, con.linewidth - 1, p + 1,
+        con.charsetImage );
+}
+
 #define CON_PRESTEP     ( 10 + CHAR_HEIGHT * 2 )
 
 /*
@@ -647,15 +655,11 @@ void Con_DrawNotify( void ) {
         alpha = SCR_FadeAlpha( time, con_notifytime->value * 1000, 300 );
         if( !alpha )
             continue;
-        text = con.text[i & CON_TOTALLINES_MASK];
-
         if( v || i != con.current ) {
             alpha = 1;  // don't fade
         }
 
-        R_SetColor( DRAW_COLOR_ALPHA, ( byte * )&alpha );
-        R_DrawString( CHAR_WIDTH, v, 0, con.linewidth, text,
-            con.charsetImage );
+        Con_DrawLine( v, i, alpha );
 
         v += CHAR_HEIGHT;
     }
@@ -758,9 +762,7 @@ void Con_DrawSolidConsole( void ) {
         if( con.current - row > CON_TOTALLINES - 1 )
             break;      // past scrollback wrap point
             
-        text = con.text[row & CON_TOTALLINES_MASK];
-
-        x = R_DrawString( CHAR_WIDTH, y, 0, con.linewidth, text, con.charsetImage );
+        x = Con_DrawLine( y, row, 1 );
         if( i < 2 ) {
             widths[i] = x;
         }
@@ -768,6 +770,8 @@ void Con_DrawSolidConsole( void ) {
         y -= CHAR_HEIGHT;
         row--;
     }
+    
+    R_SetColor( DRAW_COLOR_CLEAR, NULL );
 
 //ZOID
     // draw the download bar

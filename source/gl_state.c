@@ -159,7 +159,8 @@ void GL_Setup2D( void ) {
     qglOrtho( 0, gl_config.vidWidth, gl_config.vidHeight, 0, -1, 1 );
     draw.scale = 1;
 
-    *( uint32_t * )draw.color = *( uint32_t * )colorWhite;
+    FastColorCopy( colorWhite, draw.colors[0] );
+    FastColorCopy( colorWhite, draw.colors[1] );
 
     if( draw.flags & DRAW_CLIP_MASK ) {
         qglDisable( GL_SCISSOR_TEST );

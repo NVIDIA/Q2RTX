@@ -152,91 +152,50 @@ static void tty_shutdown_input( void ) {
     }
 }
 
-static const char color_to_ansi[8] = {
-    '0', '1', '2', '3', '4', '6', '5', '7' };
+void Sys_SetConsoleColor( color_index_t color ) {
+    static const char color_to_ansi[8] =
+        { '0', '1', '2', '3', '4', '6', '5', '7' };
+    char buf[5];
+    size_t len;
 
-static void tty_write_output( const char *text ) {
-    char    buffer[MAXPRINTMSG];
-    char    *p = buffer, *m = buffer + sizeof( buffer );
-    int     c, color = 0;
-
-    while( *text ) {
-        if( Q_IsColorString( text ) ) {
-            color = text[1];
-            text += 2;
-            if( p + 5 > m ) {
-                break;
-            }
-            p[0] = '\033';
-            p[1] = '[';
-            if( color == COLOR_RESET ) {
-                p[2] = '0';
-                p[3] = 'm';
-                p += 4;
-            } else if( color == COLOR_ALT ) {
-                p[2] = '3';
-                p[3] = '2';
-                p[4] = 'm';
-                p += 5;
-            } else {
-                p[2] = '3';
-                p[3] = color_to_ansi[ ColorIndex( color ) ];
-                p[4] = 'm';
-                p += 5;
-            }
-            continue;
-        }
-        if( p + 1 > m ) {
-            break;
-        }
-        c = *text++;
-        if( c & 128 ) {
-            c &= 127;
-            if( c < 32 ) {
-                continue;
-            }
-        }
-        *p++ = c;
+    buf[0] = '\033';
+    buf[1] = '[';
+    switch( color ) {
+    case COLOR_NONE:
+        buf[2] = '0';
+        buf[3] = 'm';
+        len = 4;
+        break;
+    case COLOR_ALT:
+        buf[2] = '3';
+        buf[3] = '2';
+        buf[4] = 'm';
+        len = 5;
+        break;
+    default:
+        buf[2] = '3';
+        buf[3] = color_to_ansi[color];
+        buf[4] = 'm';
+        len = 5;
+        break;
     }
 
-    if( color ) {
-        if( p + 4 > m ) {
-            p = m - 4;
-        }
-        p[0] = '\033';
-        p[1] = '[';
-        p[2] = '0';
-        p[3] = 'm';
-        p += 4;
-    }
-
-    write( 1, buffer, p - buffer );
+    write( 1, buf, len );
 }
 
-static void simple_write_output( const char *text ) {
-    char    buffer[MAXPRINTMSG];
-    char    *p = buffer, *m = buffer + sizeof( buffer );
-    int     c;
+static void tty_write_output( const char *text ) {
+    char    buf[MAXPRINTMSG];
+    size_t  len;
 
-    while( *text ) {
-        if( Q_IsColorString( text ) ) {
-            text += 2;
-            continue;
-        }
-        if( p + 1 > m ) {
+    for( len = 0; len < MAXPRINTMSG; len++ ) {
+        int c = *text++;
+        if( !c ) {
             break;
         }
-        c = *text++;
-        if( c & 128 ) {
-            c &= 127;
-            if( c < 32 ) {
-                continue;
-            }
-        }
-        *p++ = c;
+        buf[len] = Q_charascii( c );
     }
 
-    write( 1, buffer, p - buffer );
+    write( 1, buf, len );
 }
 
 /*
@@ -250,13 +209,12 @@ void Sys_ConsoleOutput( const char *text ) {
     }
 
     if( !tty_enabled ) {
-        simple_write_output( text );
-        return;
+        tty_write_output( text );
+    } else {
+        tty_hide_input();
+        tty_write_output( text );
+        tty_show_input();
     }
-
-    tty_hide_input();
-    tty_write_output( text );
-    tty_show_input();
 }
 
 void Sys_SetConsoleTitle( const char *title ) {
@@ -333,16 +291,13 @@ static void tty_parse_input( const char *text ) {
         }
 
         if( key == '\t' ) {
-            //Con_Print(va("before=%d (%s)\n",tty_prompt.inputLine.cursorPos,tty_prompt.inputLine.text) );
             tty_hide_input();
             Prompt_CompleteCommand( &tty_prompt, qfalse );
             f->cursorPos = strlen( f->text ); // FIXME
             tty_show_input();
-            //Con_Print(va("after=%d (%s)\n",tty_prompt.inputLine.cursorPos,tty_prompt.inputLine.text) );
             continue;
         }
 
-        //Com_Printf( "%s\n",Q_FormatString(text));
         if( *text ) {
             key = *text++;
             if( key == '[' || key == 'O' ) {

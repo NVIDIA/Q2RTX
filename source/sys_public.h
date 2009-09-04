@@ -45,6 +45,7 @@ void    Sys_AddDefaultConfig( void );
 void    Sys_RunConsole( void );
 void    Sys_ConsoleOutput( const char *string );
 void    Sys_SetConsoleTitle( const char *title );
+void    Sys_SetConsoleColor( color_index_t color );
 void    Sys_Printf( const char *fmt, ... ) q_printf( 1, 2 );
 #endif
 

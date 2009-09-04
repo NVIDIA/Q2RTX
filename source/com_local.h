@@ -453,6 +453,20 @@ MISC
 #define MAXPRINTMSG     4096
 
 typedef enum {
+    COLOR_BLACK,
+    COLOR_RED,
+    COLOR_GREEN,
+    COLOR_YELLOW,
+    COLOR_BLUE,
+    COLOR_CYAN,
+    COLOR_MAGENTA,
+    COLOR_WHITE,
+
+    COLOR_ALT,
+    COLOR_NONE
+} color_index_t;
+
+typedef enum {
     KILL_RESTART,
     KILL_DISCONNECT,
     KILL_DROP
@@ -482,14 +496,13 @@ typedef void (*rdflush_t)( int target, char *buffer, size_t len );
 void        Com_BeginRedirect (int target, char *buffer, size_t buffersize, rdflush_t flush);
 void        Com_EndRedirect (void);
 
-void        Com_LevelPrint( comPrintType_t type, const char *str );
-void        Com_LevelError( comErrorType_t code, const char *str ) q_noreturn;
-
 #ifdef _WIN32
 void        Com_AbortFrame( void );
 #endif
 
 void        Com_Quit( const char *reason, killtype_t type ) q_noreturn;
+
+void        Com_SetColor( color_index_t color );
 
 byte        COM_BlockSequenceCRCByte (byte *base, size_t length, int sequence);
 

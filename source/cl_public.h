@@ -68,6 +68,7 @@ qboolean CL_ForwardToServer( void );
 // so when they are typed in at the console, they will need to be forwarded.
 
 void Con_Init( void );
+void Con_SetColor( color_index_t color );
 void Con_Print( const char *text );
 void Con_Printf( const char *fmt, ... );
 void Con_Close( void );
@@ -78,6 +79,43 @@ void SCR_BeginLoadingPlaque (void);
 void SCR_EndLoadingPlaque( void );
 void SCR_ModeChanged( void );
 void SCR_UpdateScreen( void );
+
+#define colorBlack      colorTable[COLOR_BLACK]
+#define colorRed        colorTable[COLOR_RED]
+#define colorGreen      colorTable[COLOR_GREEN]
+#define colorYellow     colorTable[COLOR_YELLOW]
+#define colorBlue       colorTable[COLOR_BLUE]
+#define colorCyan       colorTable[COLOR_CYAN]
+#define colorMagenta    colorTable[COLOR_MAGENTA]
+#define colorWhite      colorTable[COLOR_WHITE]
+
+#define MAKERGB(v,r,g,b)    ((v)[0]=(r),(v)[1]=(g),(v)[2]=(b))
+#define MAKERGBA(v,r,g,b,a) ((v)[0]=(r),(v)[1]=(g),(v)[2]=(b),(v)[3]=(a))
+
+#define SCREEN_WIDTH    640
+#define SCREEN_HEIGHT   480
+
+#define CHAR_WIDTH  8
+#define CHAR_HEIGHT 8
+
+#define UI_LEFT             0x00000001
+#define UI_RIGHT            0x00000002
+#define UI_CENTER           (UI_LEFT|UI_RIGHT)
+#define UI_BOTTOM           0x00000004
+#define UI_TOP              0x00000008
+#define UI_MIDDLE           (UI_BOTTOM|UI_TOP)
+#define UI_DROPSHADOW       0x00000010
+#define UI_ALTCOLOR         0x00000020
+#define UI_IGNORECOLOR      0x00000040
+#define UI_ALTESCAPES       0x00000080
+#define UI_AUTOWRAP         0x00000100
+#define UI_MULTILINE        0x00000200
+#define UI_DRAWCURSOR       0x00000400
+
+extern const color_t    colorTable[8];
+extern const char       colorNames[10][8];
+
+qboolean COM_ParseColor( const char *s, color_t color );
 
 float V_CalcFov( float fov_x, float width, float height );
 

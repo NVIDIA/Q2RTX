@@ -1451,7 +1451,7 @@ static void Cmd_EchoEx_f( void ) {
     src = Cmd_RawArgsFrom( cmd_optind );
     dst = buffer;
     while( *src ) {
-        if( colors && src[0] == '^' && src[1] ) {
+        /*if( colors && src[0] == '^' && src[1] ) {
             if( src[1] == '^' ) {
                 *dst++ = '^';
             } else {
@@ -1460,7 +1460,7 @@ static void Cmd_EchoEx_f( void ) {
                 dst += 2;
             }
             src += 2;
-        } else if( escapes && src[0] == '\\' && src[1] ) {
+        } else */if( escapes && src[0] == '\\' && src[1] ) {
             switch( src[1] ) {
             case 't':
                 *dst++ = '\t';

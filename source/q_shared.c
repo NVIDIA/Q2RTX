@@ -23,27 +23,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 vec3_t vec3_origin = { 0, 0, 0 };
 
-#if USE_CLIENT
-const color_t colorTable[8] = {
-    {   0,   0,   0, 255 },
-    { 255,   0,   0, 255 },
-    {   0, 255,   0, 255 },
-    { 255, 255,   0, 255 },
-    {   0,   0, 255, 255 },
-    {   0, 255, 255, 255 },
-    { 255,   0, 255, 255 },
-    { 255, 255, 255, 255 }
-};
-
-const char colorNames[10][8] = {
-    "black", "red", "green", "yellow",
-    "blue", "cyan", "magenta", "white",
-    "alt", "none"
-};
-#endif // USE_CLIENT
-
-//============================================================================
-
 void AngleVectors (vec3_t angles, vec3_t forward, vec3_t right, vec3_t up)
 {
     float        angle;
@@ -392,54 +371,6 @@ unsigned COM_ParseHex( const char *s ) {
     return result;
 }
 
-#if USE_CLIENT
-qboolean COM_ParseColor( const char *s, color_t color ) {
-    int i;
-    int c[8];
-
-    if( *s == '#' ) {
-        s++;
-        for( i = 0; s[i]; i++ ) {
-            c[i] = Q_charhex( s[i] );
-            if( c[i] == -1 ) {
-                return qfalse;
-            }
-        }
-        switch( i ) {
-        case 3:
-            color[0] = c[0] | ( c[0] << 4 );
-            color[1] = c[1] | ( c[1] << 4 );
-            color[2] = c[2] | ( c[2] << 4 );
-            color[3] = 255;
-            break;
-        case 6:
-            color[0] = c[1] | ( c[0] << 4 );
-            color[1] = c[3] | ( c[2] << 4 );
-            color[2] = c[5] | ( c[4] << 4 );
-            color[3] = 255;
-            break;
-        case 8:
-            color[0] = c[1] | ( c[0] << 4 );
-            color[1] = c[3] | ( c[2] << 4 );
-            color[2] = c[5] | ( c[4] << 4 );
-            color[3] = c[7] | ( c[6] << 4 );
-            break;
-        default:
-            return qfalse;
-        }
-        return qtrue;
-    } else {
-        for( i = 0; i < 8; i++ ) {
-            if( !strcmp( colorNames[i], s ) ) {
-                *( uint32_t * )color = *( uint32_t * )colorTable[i];
-                return qtrue;
-            }
-        }
-        return qfalse;
-    }
-}
-#endif // USE_CLIENT
-
 /*
 =================
 SortStrcmp
@@ -522,87 +453,6 @@ unsigned Com_HashPath( const char *string, int hashSize ) {
 
     hash = ( hash >> 20 ) ^ ( hash >> 10 ) ^ hash;
     return hash & ( hashSize - 1 );
-}
-
-/*
-================
-Q_DrawStrlen
-================
-*/
-int Q_DrawStrlen( const char *string ) {
-    int length;
-
-    length = 0;
-    while( *string ) {
-        if( Q_IsColorString( string ) ) {
-            string++;
-        } else {
-            length++;
-        }
-        string++;
-    }
-
-    return length;
-}
-
-/*
-================
-Q_DrawStrlenTo
-================
-*/
-int Q_DrawStrlenTo( const char *string, int maxChars ) {
-    int length;
-
-    if( maxChars < 1 ) {
-        maxChars = MAX_STRING_CHARS;
-    }
-
-    length = 0;
-    while( *string && maxChars-- ) {
-        if( Q_IsColorString( string ) ) {
-            string++;
-        } else {
-            length++;
-        }
-        string++;
-    }
-
-    return length;
-}
-
-/*
-================
-Q_ClearColorStr
-
-Removes color escape codes, high-bit and unprintable characters.
-Return number of characters written, not including the NULL character.
-================
-*/
-int Q_ClearColorStr( char *out, const char *in, int bufsize ) {
-    char *p, *m;
-    int c;
-
-    if( bufsize < 1 ) {
-        Com_Error( ERR_FATAL, "%s: bad bufsize: %d", __func__, bufsize );
-    }
-
-    p = out;
-    m = out + bufsize - 1;
-    while( *in && p < m ) {
-        if( Q_IsColorString( in ) ) {
-            in += 2;
-            continue;
-        }
-        c = *in++;
-        c &= 127;
-        if( Q_isprint( c ) ) {
-            *p++ = c;
-        }
-    }
-
-    *p = 0;
-
-    return p - out;
 }
 
 /*
@@ -735,73 +585,6 @@ char *Q_FormatString( const char *string ) {
 
     return buffer;
 }
-
-#if 0
-
-typedef enum {
-    ESC_CHR = ( 1 << 0 ),
-    ESC_CLR = ( 1 << 1 )
-} escape_t;
-
-/*
-================
-Q_UnescapeString
-================
-*/
-size_t Q_UnescapeString( char *out, const char *in, size_t bufsize, escape_t flags ) {
-    char    *dst, *last;
-    int        c;
-
-    if( bufsize < 1 ) {
-        Com_Error( ERR_FATAL, "%s: bad bufsize: %d", __func__, bufsize );
-    }
-
-    p = out;
-    m = out + bufsize - 1;
-    while( *in && p < m ) {
-        c = *in++;
-
-        if( ( flags & ESC_CHR ) && c == '\\' ) {
-            c = *in++;
-            switch( c ) {
-            case 0:
-                goto breakOut;
-            case 't':
-                c = '\t';
-                break;
-            case 'b':
-                c = '\b';
-                break;
-            case 'r':
-                c = '\r';
-                break;
-            case 'n':
-                c = '\n';
-                break;
-            case '\\':
-                c = '\\';
-                break;
-            case 'x':
-                if( ( c = Q_charhex( in[0] ) ) == -1 ) {
-                    goto breakOut;
-                }
-                    result = c | ( r << 4 );
-                }
-                break;
-            default:
-                break;
-            }
-
-            *p++ = c;
-        }
-    }
-
-    *dst = 0;
-
-    return buffer;
-
-}
-#endif
 
 size_t Q_FormatFileSize( char *dest, size_t bytes, size_t size ) {
     if( bytes >= 1000000 ) {

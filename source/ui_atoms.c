@@ -325,9 +325,9 @@ void UI_DrawString( int x, int y, const color_t color, int flags, const char *st
     }
     
     if( ( flags & UI_CENTER ) == UI_CENTER ) {
-        x -= Q_DrawStrlen( string ) * 8 / 2;
+        x -= strlen( string ) * 8 / 2;
     } else if( flags & UI_RIGHT ) {
-        x -= Q_DrawStrlen( string ) * 8;
+        x -= strlen( string ) * 8;
     }
     
     R_DrawString( x, y, flags, MAX_STRING_CHARS, string, uis.fontHandle );
@@ -342,7 +342,7 @@ void UI_DrawChar( int x, int y, int flags, int ch ) {
 
 void UI_StringDimensions( vrect_t *rc, int flags, const char *string ) {
     rc->height = 8;
-    rc->width = 8 * Q_DrawStrlen( string );
+    rc->width = 8 * strlen( string );
     
     if( ( flags & UI_CENTER ) == UI_CENTER ) {
         rc->x -= rc->width / 2;

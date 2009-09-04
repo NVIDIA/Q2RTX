@@ -566,7 +566,8 @@ int R_DrawString( int x, int y, int flags, size_t maxChars,
     image_t *image;
     byte c, *data;
     int xx, yy;
-    int color, mask;
+    int color;
+    qboolean alt;
 
     if( !font ) {
         return x;
@@ -576,48 +577,20 @@ int R_DrawString( int x, int y, int flags, size_t maxChars,
         return x;
     }
 
-    mask = 0;
-    if( flags & UI_ALTCOLOR ) {
-        mask |= 128;
-    }
-
+    alt = ( flags & UI_ALTCOLOR ) ? qtrue : qfalse;
     color = draw.colorIndex;
 
-    while( *string ) {
-        if( Q_IsColorString( string ) ) {
-            string++;
-            c = *string++;
-            if( c == COLOR_ALT ) {
-                mask |= 128;
-            } else if( c == COLOR_RESET ) {
-                color = draw.colorIndex;
-                mask = 0;
-                if( flags & UI_ALTCOLOR ) {
-                    mask |= 128;
-                }
-            } else if( !( flags & UI_IGNORECOLOR ) ) {
-                color = colorIndices[ ColorIndex( c ) ];
-            }
-            continue;
-        }
-
-        if( !maxChars-- ) {
-            break;
-        }
-
-        if( !( c = *string++ ) ) {
-            break;
-        }
-
-        c |= mask;
-
+    while( maxChars-- && *string ) {
+        c = *string++;
         if( ( c & 127 ) == 32 ) {
-            x += 8; /* optimized case */
+            x += 8;
             continue;
         }
 
+        c |= alt << 7;
         xx = ( c & 15 ) << 3;
         yy = ( c >> 4 ) << 3;
+
         data = image->pixels[0] + yy * image->width + xx;
         if( color != -1 && !( c & 128 ) ) {
             R_DrawFixedDataAsMask( x, y, 8, 8, image->width, data, color );

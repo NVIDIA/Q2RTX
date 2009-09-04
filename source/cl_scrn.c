@@ -90,6 +90,23 @@ static const char *const sb_nums[2][STAT_PICS] = {
     "anum_6", "anum_7", "anum_8", "anum_9", "anum_minus" }
 };
 
+const color_t colorTable[8] = {
+    {   0,   0,   0, 255 },
+    { 255,   0,   0, 255 },
+    {   0, 255,   0, 255 },
+    { 255, 255,   0, 255 },
+    {   0,   0, 255, 255 },
+    {   0, 255, 255, 255 },
+    { 255,   0, 255, 255 },
+    { 255, 255, 255, 255 }
+};
+
+const char colorNames[10][8] = {
+    "black", "red", "green", "yellow",
+    "blue", "cyan", "magenta", "white",
+    "alt", "none"
+};
+
 /*
 ===============================================================================
 
@@ -109,12 +126,16 @@ SCR_DrawStringEx
 int SCR_DrawStringEx( int x, int y, int flags, size_t maxlen,
                       const char *s, qhandle_t font )
 {
-    int w = Q_DrawStrlenTo( s, maxlen ) * CHAR_WIDTH;
-
+    size_t len = strlen( s );
+    
+    if( len > maxlen ) {
+        len = maxlen;
+    }
+        
     if( ( flags & UI_CENTER ) == UI_CENTER ) {
-        x -= w / 2;
+        x -= len * CHAR_WIDTH / 2;
     } else if( flags & UI_RIGHT ) {
-        x -= w;
+        x -= len * CHAR_WIDTH;
     }
 
     return R_DrawString( x, y, flags, maxlen, s, font );
@@ -177,6 +198,51 @@ float SCR_FadeAlpha( unsigned startTime, unsigned visTime, unsigned fadeTime ) {
     return alpha;
 }
 
+qboolean COM_ParseColor( const char *s, color_t color ) {
+    int i;
+    int c[8];
+
+    if( *s == '#' ) {
+        s++;
+        for( i = 0; s[i]; i++ ) {
+            c[i] = Q_charhex( s[i] );
+            if( c[i] == -1 ) {
+                return qfalse;
+            }
+        }
+        switch( i ) {
+        case 3:
+            color[0] = c[0] | ( c[0] << 4 );
+            color[1] = c[1] | ( c[1] << 4 );
+            color[2] = c[2] | ( c[2] << 4 );
+            color[3] = 255;
+            break;
+        case 6:
+            color[0] = c[1] | ( c[0] << 4 );
+            color[1] = c[3] | ( c[2] << 4 );
+            color[2] = c[5] | ( c[4] << 4 );
+            color[3] = 255;
+            break;
+        case 8:
+            color[0] = c[1] | ( c[0] << 4 );
+            color[1] = c[3] | ( c[2] << 4 );
+            color[2] = c[5] | ( c[4] << 4 );
+            color[3] = c[7] | ( c[6] << 4 );
+            break;
+        default:
+            return qfalse;
+        }
+        return qtrue;
+    } else {
+        for( i = 0; i < 8; i++ ) {
+            if( !strcmp( colorNames[i], s ) ) {
+                *( uint32_t * )color = *( uint32_t * )colorTable[i];
+                return qtrue;
+            }
+        }
+        return qfalse;
+    }
+}
 
 /*
 ===============================================================================

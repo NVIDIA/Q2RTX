@@ -179,11 +179,6 @@ struct cplane_s;
 
 extern vec3_t vec3_origin;
 
-#if USE_CLIENT
-extern const color_t    colorTable[8];
-extern const char       colorNames[10][8];
-#endif
-
 typedef struct vrect_s {
     int             x, y, width, height;
 } vrect_t;
@@ -271,6 +266,8 @@ static inline float Q_fabs( float f ) {
 #define Vector4Negate(a,b)      ((b)[0]=-(a)[0],(b)[1]=-(a)[1],(b)[2]=-(a)[2],(b)[3]=-(a)[3])
 #define Vector4Set(v, a, b, c, d)   ((v)[0]=(a),(v)[1]=(b),(v)[2]=(c),(v)[3]=(d))
 
+#define FastColorCopy(a,b)      (*(uint32_t*)(b)=*(uint32_t*)(a))
+
 void AngleVectors (vec3_t angles, vec3_t forward, vec3_t right, vec3_t up);
 vec_t VectorNormalize (vec3_t v);       // returns vector length
 vec_t VectorNormalize2 (vec3_t v, vec3_t out);
@@ -331,75 +328,9 @@ static inline int rand_byte( void ) {
 #define Q_SetBit( data, bit )       ( (data)[(bit) >> 3] |= ( 1 << ( (bit) & 7 ) ) )
 #define Q_ClearBit( data, bit )     ( (data)[(bit) >> 3] &= ~( 1 << ( (bit) & 7 ) ) )
 
-/* use escape character server will never send */
-#define Q_COLOR_ESCAPE  '\x7F'
-#define Q_COLOR_ESCAPE_STRING   "\x7F"
-#define Q_IsColorString(p)  ( *(p) == Q_COLOR_ESCAPE && *( (p) + 1 ) )
-
-#define COLOR_BLACK     '0'
-#define COLOR_RED       '1'
-#define COLOR_GREEN     '2'
-#define COLOR_YELLOW    '3'
-#define COLOR_BLUE      '4'
-#define COLOR_CYAN      '5'
-#define COLOR_MAGENTA   '6'
-#define COLOR_WHITE     '7'
-#define ColorIndex(c)   ( ( (c) - '0' ) & 7 )
-
-#define COLOR_ALT       '8'
-#define COLOR_RESET     '9'
-
-#define S_COLOR_BLACK       Q_COLOR_ESCAPE_STRING "0"
-#define S_COLOR_RED         Q_COLOR_ESCAPE_STRING "1"
-#define S_COLOR_GREEN       Q_COLOR_ESCAPE_STRING "2"
-#define S_COLOR_YELLOW      Q_COLOR_ESCAPE_STRING "3"
-#define S_COLOR_BLUE        Q_COLOR_ESCAPE_STRING "4"
-#define S_COLOR_CYAN        Q_COLOR_ESCAPE_STRING "5"
-#define S_COLOR_MAGENTA     Q_COLOR_ESCAPE_STRING "6"
-#define S_COLOR_WHITE       Q_COLOR_ESCAPE_STRING "7"
-
-#define S_COLOR_ALT         Q_COLOR_ESCAPE_STRING "8"
-#define S_COLOR_RESET       Q_COLOR_ESCAPE_STRING "9"
-
-#define colorBlack      colorTable[ColorIndex(COLOR_BLACK)]
-#define colorRed        colorTable[ColorIndex(COLOR_RED)]
-#define colorGreen      colorTable[ColorIndex(COLOR_GREEN)]
-#define colorYellow     colorTable[ColorIndex(COLOR_YELLOW)]
-#define colorBlue       colorTable[ColorIndex(COLOR_BLUE)]
-#define colorCyan       colorTable[ColorIndex(COLOR_CYAN)]
-#define colorMagenta    colorTable[ColorIndex(COLOR_MAGENTA)]
-#define colorWhite      colorTable[ColorIndex(COLOR_WHITE)]
-
-#define MAKERGB(v,r,g,b)    ((v)[0]=(r),(v)[1]=(g),(v)[2]=(b))
-#define MAKERGBA(v,r,g,b,a) ((v)[0]=(r),(v)[1]=(g),(v)[2]=(b),(v)[3]=(a))
-
-#define SCREEN_WIDTH    640
-#define SCREEN_HEIGHT   480
-
-#define UI_LEFT             0x00000001
-#define UI_RIGHT            0x00000002
-#define UI_CENTER           (UI_LEFT|UI_RIGHT)
-#define UI_BOTTOM           0x00000004
-#define UI_TOP              0x00000008
-#define UI_MIDDLE           (UI_BOTTOM|UI_TOP)
-#define UI_DROPSHADOW       0x00000010
-#define UI_ALTCOLOR         0x00000020
-#define UI_IGNORECOLOR      0x00000040
-#define UI_ALTESCAPES       0x00000080
-#define UI_AUTOWRAP         0x00000100
-#define UI_MULTILINE        0x00000200
-#define UI_DRAWCURSOR       0x00000400
-
-#define CHAR_WIDTH  8
-#define CHAR_HEIGHT 8
-
-int Q_DrawStrlen( const char *string );
-int Q_DrawStrlenTo( const char *string, int maxChars );
 qboolean Q_IsWhiteSpace( const char *string );
 char *Q_FormatString( const char *string );
-char *Q_UnescapeString( const char *string );
 size_t Q_FormatFileSize( char *dest, size_t bytes, size_t size );
-int Q_ClearColorStr( char *out, const char *in, int bufsize ); 
 int Q_ClearStr( char *out, const char *in, int bufsize ); 
 int Q_HighlightStr( char *out, const char *in, int bufsize ); 
 
@@ -541,7 +472,6 @@ size_t Q_snprintf( char *dest, size_t size, const char *fmt, ... ) q_printf( 3, 
 size_t Q_scnprintf( char *dest, size_t size, const char *fmt, ... ) q_printf( 3, 4 );
 
 unsigned COM_ParseHex( const char *string );
-qboolean COM_ParseColor( const char *s, color_t color );
 
 char    *va( const char *format, ... ) q_printf( 1, 2 );
 

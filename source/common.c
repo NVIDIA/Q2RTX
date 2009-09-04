@@ -292,6 +292,20 @@ void Com_FlushLogs( void ) {
 }
 #endif
 
+void Com_SetColor( color_index_t color ) {
+    if( rd_target ) {
+        return;
+    }
+#if USE_CLIENT
+    // graphical console
+    Con_SetColor( color );
+#endif
+#if USE_SYSCON
+    // debugging console
+    Sys_SetConsoleColor( color );
+#endif
+}
+
 /*
 =============
 Com_Printf
@@ -360,7 +374,7 @@ void Com_DPrintf( const char *fmt, ... ) {
     Q_vsnprintf( msg, sizeof( msg ), fmt, argptr );
     va_end( argptr );
     
-    Com_Printf( S_COLOR_BLUE "%s", msg );
+    Com_Printf( "%s", msg );
 }
 
 /*
@@ -377,7 +391,7 @@ void Com_WPrintf( const char *fmt, ... ) {
     Q_vsnprintf( msg, sizeof( msg ), fmt, argptr );
     va_end( argptr );
     
-    Com_Printf( S_COLOR_YELLOW "WARNING: %s", msg );
+    Com_Printf( "WARNING: %s", msg );
 }
 
 /*
@@ -394,9 +408,8 @@ void Com_EPrintf( const char *fmt, ... ) {
     Q_vsnprintf( msg, sizeof( msg ), fmt, argptr );
     va_end( argptr );
     
-    Com_Printf( S_COLOR_RED "ERROR: %s", msg );
+    Com_Printf( "ERROR: %s", msg );
 }
-
 
 /*
 =============
@@ -429,7 +442,7 @@ void Com_Error( comErrorType_t code, const char *fmt, ... ) {
     Com_AbortRedirect();
     
     if( code == ERR_DISCONNECT || code == ERR_SILENT ) {
-        Com_Printf( S_COLOR_YELLOW "%s\n", com_errorMsg );
+        Com_Printf( "%s\n", com_errorMsg );
         SV_Shutdown( va( "Server was killed: %s", com_errorMsg ),
             KILL_DISCONNECT );
 #if USE_CLIENT
@@ -448,9 +461,9 @@ void Com_Error( comErrorType_t code, const char *fmt, ... ) {
     }
 
     if( code == ERR_DROP ) {
-        Com_Printf( S_COLOR_RED "********************\n"
-                                "ERROR: %s\n"
-                                "********************\n", com_errorMsg );
+        Com_Printf( "********************\n"
+                    "ERROR: %s\n"
+                    "********************\n", com_errorMsg );
         SV_Shutdown( va( "Server crashed: %s\n", com_errorMsg ), KILL_DROP );
 #if USE_CLIENT
         CL_Disconnect( ERR_DROP, com_errorMsg );
@@ -484,37 +497,6 @@ void Com_AbortFrame( void ) {
     longjmp( abortframe, -1 );
 }
 #endif
-
-/*
-===================
-Com_LevelPrint
-===================
-*/
-void Com_LevelPrint( comPrintType_t type, const char *str ) {
-    switch( type ) {
-    case PRINT_DEVELOPER:
-        Com_DPrintf( "%s", str );
-        break;
-    case PRINT_WARNING:
-        Com_WPrintf( "%s", str );
-        break;
-    case PRINT_ERROR:
-        Com_EPrintf( "%s", str );
-        break;
-    default:
-        Com_Printf( "%s", str );
-        break;
-    }
-}
-
-/*
-===================
-Com_LevelError
-===================
-*/
-void Com_LevelError( comErrorType_t code, const char *str ) {
-    Com_Error( code, "%s", str );
-}
 
 /*
 =============
@@ -673,11 +655,11 @@ void Z_LeakTest( memtag_t tag ) {
     }
 
     if( numLeaks ) {
-        Com_Printf( S_COLOR_YELLOW "************* Z_LeakTest *************\n"
-                                   "%s leaked %"PRIz" bytes of memory (%"PRIz" object%s)\n"
-                                   "**************************************\n",
-                                   z_tagnames[tag < TAG_MAX ? tag : TAG_FREE],
-                                   numBytes, numLeaks, numLeaks == 1 ? "" : "s" );
+        Com_Printf( "************* Z_LeakTest *************\n"
+                    "%s leaked %"PRIz" bytes of memory (%"PRIz" object%s)\n"
+                    "**************************************\n",
+                    z_tagnames[tag < TAG_MAX ? tag : TAG_FREE],
+                    numBytes, numLeaks, numLeaks == 1 ? "" : "s" );
     }
 }
 
@@ -1649,7 +1631,9 @@ void Qcommon_Init( int argc, char **argv ) {
 #endif
 
     // print version
-    Com_Printf( S_COLOR_CYAN "%s\n", version );
+    Com_SetColor( COLOR_CYAN );
+    Com_Printf( "%s\n", version );
+    Com_SetColor( COLOR_NONE );
 
     FS_Init();
 
@@ -1733,12 +1717,10 @@ void Qcommon_Init( int argc, char **argv ) {
     }
 
     Com_Printf( "====== " APPLICATION " initialized ======\n\n" );
-    Com_Printf( S_COLOR_CYAN APPLICATION " " VERSION ", " __DATE__ "\n"
-#if USE_ZLIB
-                S_COLOR_RESET   "w/ zlib " ZLIB_VERSION "\n"
-#endif
-    );
-    Com_Printf( "http://q2pro.sf.net\n\n" );
+    Com_SetColor( COLOR_CYAN );
+    Com_Printf( APPLICATION " " VERSION ", " __DATE__ "\n" );
+    Com_SetColor( COLOR_NONE );
+    Com_Printf( "http://skuller.ath.cx/q2pro/\n\n" );
 
     time( &com_startTime );
 

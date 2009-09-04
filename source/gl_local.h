@@ -234,7 +234,7 @@ void GL_DisableOutlines( void );
  *
  */
 typedef struct {
-    color_t color;
+    color_t colors[2]; // 0 - actual color, 1 - transparency (for text drawing)
     int flags;
     float scale;
 } drawStatic_t;
