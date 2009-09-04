@@ -217,7 +217,7 @@ static qboolean NET_StringToSockaddr( const char *s, struct sockaddr_in *sadr ) 
             break;
         }
     }
-    if( *p == 0 && dots == 3 ) {
+    if( *p == 0 && dots <= 3 ) {
         uint32_t addr = inet_addr( copy );
 
         if( addr == INADDR_NONE ) {
