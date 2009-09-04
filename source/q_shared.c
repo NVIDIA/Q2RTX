@@ -42,39 +42,6 @@ const char colorNames[10][8] = {
 };
 #endif // USE_CLIENT
 
-const vec3_t bytedirs[NUMVERTEXNORMALS] = {
-#include "anorms.h"
-};
-
-int DirToByte( const vec3_t dir ) {
-    int     i, best;
-    float   d, bestd;
-    
-    if( !dir ) {
-        return 0;
-    }
-
-    bestd = 0;
-    best = 0;
-    for( i = 0; i < NUMVERTEXNORMALS; i++ ) {
-        d = DotProduct( dir, bytedirs[i] );
-        if( d > bestd ) {
-            bestd = d;
-            best = i;
-        }
-    }
-    
-    return best;
-}
-
-void ByteToDir( int index, vec3_t dir ) {
-    if( index < 0 || index >= NUMVERTEXNORMALS ) {
-        Com_Error( ERR_FATAL, "ByteToDir: illegal index" );
-    }
-
-    VectorCopy( bytedirs[index], dir );
-}
-
 //============================================================================
 
 void AngleVectors (vec3_t angles, vec3_t forward, vec3_t right, vec3_t up)
@@ -111,128 +78,6 @@ void AngleVectors (vec3_t angles, vec3_t forward, vec3_t right, vec3_t up)
         up[2] = cr*cp;
     }
 }
-
-
-void ProjectPointOnPlane( vec3_t dst, const vec3_t p, const vec3_t normal )
-{
-    float d;
-    vec3_t n;
-    float inv_denom;
-
-    inv_denom = 1.0F / DotProduct( normal, normal );
-
-    d = DotProduct( normal, p ) * inv_denom;
-
-    n[0] = normal[0] * inv_denom;
-    n[1] = normal[1] * inv_denom;
-    n[2] = normal[2] * inv_denom;
-
-    dst[0] = p[0] - d * n[0];
-    dst[1] = p[1] - d * n[1];
-    dst[2] = p[2] - d * n[2];
-}
-
-/*
-** assumes "src" is normalized
-*/
-void PerpendicularVector( vec3_t dst, const vec3_t src )
-{
-    int pos;
-    int i;
-    float minelem = 1.0F;
-    vec3_t tempvec;
-
-    /*
-    ** find the smallest magnitude axially aligned vector
-    */
-    for ( pos = 0, i = 0; i < 3; i++ )
-    {
-        if ( fabs( src[i] ) < minelem )
-        {
-            pos = i;
-            minelem = fabs( src[i] );
-        }
-    }
-    tempvec[0] = tempvec[1] = tempvec[2] = 0.0F;
-    tempvec[pos] = 1.0F;
-
-    /*
-    ** project the point onto the plane defined by src
-    */
-    ProjectPointOnPlane( dst, tempvec, src );
-
-    /*
-    ** normalize the result
-    */
-    VectorNormalize( dst );
-}
-
-
-
-//============================================================================
-
-/*
-==================
-BoxOnPlaneSide
-
-Returns 1, 2, or 1 + 2
-==================
-*/
-#if !USE_ASM
-int BoxOnPlaneSide( vec3_t emins, vec3_t emaxs, cplane_t *p )
-{
-    float   dist1, dist2;
-    int     sides;
-    
-// general case
-    switch (p->signbits)
-    {
-    case 0:
-dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
-dist2 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
-        break;
-    case 1:
-dist1 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
-dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
-        break;
-    case 2:
-dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
-dist2 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
-        break;
-    case 3:
-dist1 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
-dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
-        break;
-    case 4:
-dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
-dist2 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
-        break;
-    case 5:
-dist1 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
-dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
-        break;
-    case 6:
-dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
-dist2 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
-        break;
-    case 7:
-dist1 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
-dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
-        break;
-    default:
-        dist1 = dist2 = 0;        // shut up compiler
-        break;
-    }
-
-    sides = 0;
-    if (dist1 >= p->dist)
-        sides = 1;
-    if (dist2 < p->dist)
-        sides |= 2;
-
-    return sides;
-}
-#endif // USE_ASM
 
 vec_t VectorNormalize (vec3_t v)
 {
@@ -320,77 +165,6 @@ vec_t RadiusFromBounds (const vec3_t mins, const vec3_t maxs) {
 
     return VectorLength (corner);
 }
-
-/*
-===============
-Q_CeilPowerOfTwo
-===============
-*/
-int Q_CeilPowerOfTwo( int value ) {
-    int i;
-
-    for( i = 1; i < value; i <<= 1 )
-        ;
-
-    return i;
-}
-
-
-/*
-====================
-Com_CalcFov
-====================
-*/
-float Com_CalcFov( float fov_x, float width, float height ) {
-    float    a;
-    float    x;
-
-    if( fov_x < 1 || fov_x > 179 )
-        Com_Error( ERR_DROP, "%s: bad fov: %f", __func__, fov_x );
-
-    x = width / tan( fov_x / 360 * M_PI );
-
-    a = atan( height / x );
-    a = a * 360/ M_PI;
-
-    return a;
-}
-
-void SetPlaneType( cplane_t *plane ) {
-    vec_t *normal = plane->normal;
-    
-    if( normal[0] == 1 ) {
-        plane->type = PLANE_X;
-        return;
-    }
-    if( normal[1] == 1 ) {
-        plane->type = PLANE_Y;
-        return;
-    }
-    if( normal[2] == 1 ) {
-        plane->type = PLANE_Z;
-        return;
-    }
-
-    plane->type = PLANE_NON_AXIAL;
-}
-
-void SetPlaneSignbits( cplane_t *plane ) {
-    int bits = 0;
-    
-    if( plane->normal[0] < 0 ) {
-        bits |= 1;
-    }
-    if( plane->normal[1] < 0 ) {
-        bits |= 2;
-    }
-    if( plane->normal[2] < 0 ) {
-        bits |= 4;
-    }
-    plane->signbits = bits;
-}
-
-
 
 //====================================================================================
 
@@ -1240,25 +1014,6 @@ finish:
 
     return d - data;
 }
-
-
-/*
-===============
-Com_PageInMemory
-
-===============
-*/
-int    paged_total;
-
-void Com_PageInMemory (void *buffer, size_t size)
-{
-    int        i;
-
-    for (i=size-1 ; i>0 ; i-=4096)
-        paged_total += (( byte * )buffer)[i];
-}
-
-
 
 /*
 ============================================================================

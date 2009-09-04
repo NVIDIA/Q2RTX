@@ -1048,6 +1048,115 @@ qboolean FIFO_ReadMessage( fifo_t *fifo, size_t msglen ) {
     return qtrue;
 }
 
+/*
+==============================================================================
+
+                        MATH
+
+==============================================================================
+*/
+
+const vec3_t bytedirs[NUMVERTEXNORMALS] = {
+#include "anorms.h"
+};
+
+int DirToByte( const vec3_t dir ) {
+    int     i, best;
+    float   d, bestd;
+    
+    if( !dir ) {
+        return 0;
+    }
+
+    bestd = 0;
+    best = 0;
+    for( i = 0; i < NUMVERTEXNORMALS; i++ ) {
+        d = DotProduct( dir, bytedirs[i] );
+        if( d > bestd ) {
+            bestd = d;
+            best = i;
+        }
+    }
+    
+    return best;
+}
+
+void ByteToDir( int index, vec3_t dir ) {
+    if( index < 0 || index >= NUMVERTEXNORMALS ) {
+        Com_Error( ERR_FATAL, "ByteToDir: illegal index" );
+    }
+
+    VectorCopy( bytedirs[index], dir );
+}
+
+void SetPlaneType( cplane_t *plane ) {
+    vec_t *normal = plane->normal;
+    
+    if( normal[0] == 1 ) {
+        plane->type = PLANE_X;
+        return;
+    }
+    if( normal[1] == 1 ) {
+        plane->type = PLANE_Y;
+        return;
+    }
+    if( normal[2] == 1 ) {
+        plane->type = PLANE_Z;
+        return;
+    }
+
+    plane->type = PLANE_NON_AXIAL;
+}
+
+void SetPlaneSignbits( cplane_t *plane ) {
+    int bits = 0;
+    
+    if( plane->normal[0] < 0 ) {
+        bits |= 1;
+    }
+    if( plane->normal[1] < 0 ) {
+        bits |= 2;
+    }
+    if( plane->normal[2] < 0 ) {
+        bits |= 4;
+    }
+    plane->signbits = bits;
+}
+
+/*
+==================
+BoxOnPlaneSide
+
+Returns 1, 2, or 1 + 2
+==================
+*/
+#if !USE_ASM
+int BoxOnPlaneSide( vec3_t emins, vec3_t emaxs, cplane_t *p ) {
+    vec_t   *bounds[2] = { emins, emaxs };
+    int     i = p->signbits & 1;
+    int     j = ( p->signbits >> 1 ) & 1;
+    int     k = ( p->signbits >> 2 ) & 1;
+
+#define P(i,j,k) \
+    p->normal[0]*bounds[i][0]+ \
+    p->normal[1]*bounds[j][1]+ \
+    p->normal[2]*bounds[k][2]
+
+    vec_t   dist1 = P( i ^ 1, j ^ 1, k ^ 1 );
+    vec_t   dist2 = P( i, j, k );
+    int     sides = 0;
+
+#undef P
+
+    if (dist1 >= p->dist)
+        sides = 1;
+    if (dist2 < p->dist)
+        sides |= 2;
+
+    return sides;
+}
+#endif // USE_ASM
+
 
 /*
 ==============================================================================
@@ -1056,6 +1165,21 @@ qboolean FIFO_ReadMessage( fifo_t *fifo, size_t msglen ) {
 
 ==============================================================================
 */
+
+/*
+===============
+Com_PageInMemory
+
+===============
+*/
+int    paged_total;
+
+void Com_PageInMemory( void *buffer, size_t size ) {
+    int        i;
+
+    for( i = size - 1; i > 0; i -= 4096 )
+        paged_total += (( byte * )buffer)[i];
+}
 
 /*
 =============

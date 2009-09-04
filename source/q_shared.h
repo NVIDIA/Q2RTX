@@ -179,10 +179,6 @@ struct cplane_s;
 
 extern vec3_t vec3_origin;
 
-#define NUMVERTEXNORMALS    162
-
-extern const vec3_t bytedirs[NUMVERTEXNORMALS];
-
 #if USE_CLIENT
 extern const color_t    colorTable[8];
 extern const char       colorNames[10][8];
@@ -275,18 +271,21 @@ static inline float Q_fabs( float f ) {
 #define Vector4Negate(a,b)      ((b)[0]=-(a)[0],(b)[1]=-(a)[1],(b)[2]=-(a)[2],(b)[3]=-(a)[3])
 #define Vector4Set(v, a, b, c, d)   ((v)[0]=(a),(v)[1]=(b),(v)[2]=(c),(v)[3]=(d))
 
+void AngleVectors (vec3_t angles, vec3_t forward, vec3_t right, vec3_t up);
+vec_t VectorNormalize (vec3_t v);       // returns vector length
+vec_t VectorNormalize2 (vec3_t v, vec3_t out);
 void ClearBounds (vec3_t mins, vec3_t maxs);
 void AddPointToBounds (const vec3_t v, vec3_t mins, vec3_t maxs);
 vec_t RadiusFromBounds (const vec3_t mins, const vec3_t maxs);
 void UnionBounds( vec3_t a[2], vec3_t b[2], vec3_t c[2] );
-/*vec_t VectorLength (vec3_t v);*/
-vec_t VectorNormalize (vec3_t v);       // returns vector length
-vec_t VectorNormalize2 (vec3_t v, vec3_t out);
 
-int Q_CeilPowerOfTwo( int value );
-float Com_CalcFov( float fov_x, float width, float height );
+static inline int Q_CeilPowerOfTwo( int value ) {
+    int i;
 
-void AngleVectors (vec3_t angles, vec3_t forward, vec3_t right, vec3_t up);
+    for( i = 1; i < value; i <<= 1 )
+        ;
+    return i;
+}
 
 static inline float LerpAngle( float a2, float a1, float frac ) {
     if (a1 - a2 > 180)
@@ -297,7 +296,7 @@ static inline float LerpAngle( float a2, float a1, float frac ) {
 }
 
 static inline float anglemod( float a ) {
-    a = (360.0/65536) * ((int)(a*(65536/360.0)) & 65535);
+    a = (360.0f/65536) * ((int)(a*(65536/360.0f)) & 65535);
     return a;
 }
 
@@ -311,12 +310,6 @@ static inline int rand_byte( void ) {
 
     return b1 ^ b2 ^ b3 ^ b4;
 }
-
-void ProjectPointOnPlane( vec3_t dst, const vec3_t p, const vec3_t normal );
-void PerpendicularVector( vec3_t dst, const vec3_t src );
-
-int DirToByte( const vec3_t dir );
-void ByteToDir( int index, vec3_t dir );
 
 #define clamp(a,b,c)    ((a)<(b)?(a)=(b):(a)>(c)?(a)=(c):(a))
 #define cclamp(a,b,c)   ((b)>(c)?clamp(a,c,b):clamp(a,b,c)) 
@@ -525,8 +518,6 @@ size_t Q_vsnprintf( char *dest, size_t size, const char *fmt, va_list argptr );
 size_t Q_vscnprintf( char *dest, size_t size, const char *fmt, va_list argptr );
 size_t Q_snprintf( char *dest, size_t size, const char *fmt, ... ) q_printf( 3, 4 );
 size_t Q_scnprintf( char *dest, size_t size, const char *fmt, ... ) q_printf( 3, 4 );
-
-void Com_PageInMemory (void *buffer, size_t size);
 
 unsigned COM_ParseHex( const char *string );
 qboolean COM_ParseColor( const char *s, color_t color );
@@ -763,39 +754,6 @@ typedef struct cplane_s
 #define CPLANE_PAD0             18
 #define CPLANE_PAD1             19
 
-void SetPlaneType( cplane_t *plane );
-void SetPlaneSignbits( cplane_t *plane );
-
-#define BOX_INFRONT     1
-#define BOX_BEHIND      2
-#define BOX_INTERSECTS  3
-
-int BoxOnPlaneSide( vec3_t emins, vec3_t emaxs, cplane_t *p );
-
-static inline int BoxOnPlaneSideFast( vec3_t emins, vec3_t emaxs, cplane_t *p ) {
-    // fast axial cases
-    if( p->type < 3 ) {
-        if( p->dist <= emins[p->type] )
-            return 1;
-        if( p->dist >= emaxs[p->type] )
-            return 2;
-        return 3;
-    }
-
-    // slow generic case
-    return BoxOnPlaneSide( emins, emaxs, p );
-}
-
-static inline vec_t PlaneDiffFast( vec3_t v, cplane_t *p ) {
-    // fast axial cases
-    if( p->type < 3 ) {
-        return v[p->type] - p->dist;
-    }
-
-    // slow generic case
-    return PlaneDiff( v, p );
-}
-
 typedef struct csurface_s
 {
     char        name[16];
@@ -815,8 +773,6 @@ typedef struct
     int         contents;   // contents on other side of surface hit
     struct edict_s  *ent;       // not set by CM_*() functions
 } trace_t;
-
-
 
 // pmove_state_t is the information necessary for client side movement
 // prediction

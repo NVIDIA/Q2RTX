@@ -79,6 +79,8 @@ void SCR_EndLoadingPlaque( void );
 void SCR_ModeChanged( void );
 void SCR_UpdateScreen( void );
 
+float V_CalcFov( float fov_x, float width, float height );
+
 void IN_Frame( void );
 void IN_Activate( void );
 void IN_MouseEvent( int x, int y );

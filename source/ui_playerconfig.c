@@ -124,7 +124,7 @@ static void Size( menuFrameWork_t *self ) {
     m_player.refdef.height = uis.height / uis.scale - 122;
 
     m_player.refdef.fov_x = 40;
-    m_player.refdef.fov_y = Com_CalcFov( m_player.refdef.fov_x,
+    m_player.refdef.fov_y = V_CalcFov( m_player.refdef.fov_x,
         m_player.refdef.width, m_player.refdef.height );
 
     m_player.name.generic.x        = x;

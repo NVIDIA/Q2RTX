@@ -393,6 +393,27 @@ static void V_SetLightLevel( void ) {
 }
 
 /*
+====================
+V_CalcFov
+====================
+*/
+float V_CalcFov( float fov_x, float width, float height ) {
+    float    a;
+    float    x;
+
+    if( fov_x < 1 || fov_x > 179 )
+        Com_Error( ERR_DROP, "%s: bad fov: %f", __func__, fov_x );
+
+    x = width / tan( fov_x / 360 * M_PI );
+
+    a = atan( height / x );
+    a = a * 360/ M_PI;
+
+    return a;
+}
+
+
+/*
 ==================
 V_RenderView
 
@@ -437,7 +458,7 @@ void V_RenderView( void ) {
         cl.refdef.width = scr_vrect.width;
         cl.refdef.height = scr_vrect.height;
 
-        cl.refdef.fov_y = Com_CalcFov (cl.refdef.fov_x, cl.refdef.width, cl.refdef.height);
+        cl.refdef.fov_y = V_CalcFov (cl.refdef.fov_x, cl.refdef.width, cl.refdef.height);
         cl.refdef.time = cl.time*0.001;
 
         if( cl.frame.areabytes ) {

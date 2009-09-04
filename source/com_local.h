@@ -397,6 +397,54 @@ char    *Z_ReservedCopyString( const char *in ) q_malloc;
 /*
 ==============================================================
 
+MATH
+
+==============================================================
+*/
+
+#define NUMVERTEXNORMALS    162
+extern const vec3_t bytedirs[NUMVERTEXNORMALS];
+
+int DirToByte( const vec3_t dir );
+void ByteToDir( int index, vec3_t dir );
+
+void SetPlaneType( cplane_t *plane );
+void SetPlaneSignbits( cplane_t *plane );
+
+#define BOX_INFRONT     1
+#define BOX_BEHIND      2
+#define BOX_INTERSECTS  3
+
+int BoxOnPlaneSide( vec3_t emins, vec3_t emaxs, cplane_t *p );
+
+static inline int BoxOnPlaneSideFast( vec3_t emins, vec3_t emaxs, cplane_t *p ) {
+    // fast axial cases
+    if( p->type < 3 ) {
+        if( p->dist <= emins[p->type] )
+            return BOX_INFRONT;
+        if( p->dist >= emaxs[p->type] )
+            return BOX_BEHIND;
+        return BOX_INTERSECTS;
+    }
+
+    // slow generic case
+    return BoxOnPlaneSide( emins, emaxs, p );
+}
+
+static inline vec_t PlaneDiffFast( vec3_t v, cplane_t *p ) {
+    // fast axial cases
+    if( p->type < 3 ) {
+        return v[p->type] - p->dist;
+    }
+
+    // slow generic case
+    return PlaneDiff( v, p );
+}
+
+
+/*
+==============================================================
+
 MISC
 
 ==============================================================
@@ -468,6 +516,8 @@ size_t      Com_Uptime_m( char *buffer, size_t size );
 size_t      Com_UptimeLong_m( char *buffer, size_t size );
 
 uint32_t    Com_BlockChecksum( void *buffer, size_t len );
+
+void        Com_PageInMemory( void *buffer, size_t size );
 
 #ifdef __unix__
 void        Com_FlushLogs( void );
