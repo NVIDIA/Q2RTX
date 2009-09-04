@@ -45,7 +45,9 @@ static char     com_errorMsg[MAXPRINTMSG];
 static char     **com_argv;
 static int      com_argc;
 
+#ifdef _DEBUG
 cvar_t  *developer;
+#endif
 cvar_t  *timescale;
 cvar_t  *fixedtime;
 cvar_t  *dedicated;
@@ -314,7 +316,7 @@ Both client and server can use this, and it will output
 to the apropriate place.
 =============
 */
-void Com_Printf( const char *fmt, ... ) {
+void Com_LPrintf( print_type_t type, const char *fmt, ... ) {
     va_list     argptr;
     char        msg[MAXPRINTMSG];
     static int  recursive;
@@ -333,6 +335,17 @@ void Com_Printf( const char *fmt, ... ) {
     if( rd_target ) {
         Com_Redirect( msg, len );
     } else {
+        switch( type ) {
+        case PRINT_WARNING:
+            Com_SetColor( COLOR_YELLOW );
+            break;
+        case PRINT_ERROR:
+            Com_SetColor( COLOR_RED );
+            break;
+        default:
+            break;
+        }
+
 #if USE_CLIENT
         // graphical console
         Con_Print( msg );
@@ -350,66 +363,20 @@ void Com_Printf( const char *fmt, ... ) {
         if( com_logFile ) {
             logfile_write( msg );
         }
+
+        switch( type ) {
+        case PRINT_WARNING:
+        case PRINT_ERROR:
+            Com_SetColor( COLOR_NONE );
+            break;
+        default:
+            break;
+        }
     }
 
     recursive--;
 }
 
-
-/*
-================
-Com_DPrintf
-
-A Com_Printf that only shows up if the "developer" cvar is set
-================
-*/
-void Com_DPrintf( const char *fmt, ... ) {
-    va_list     argptr;
-    char        msg[MAXPRINTMSG];
-        
-    if( !developer || !developer->integer )
-        return;     // don't confuse non-developers with techie stuff...
-
-    va_start( argptr, fmt );
-    Q_vsnprintf( msg, sizeof( msg ), fmt, argptr );
-    va_end( argptr );
-    
-    Com_Printf( "%s", msg );
-}
-
-/*
-================
-Com_WPrintf
-
-================
-*/
-void Com_WPrintf( const char *fmt, ... ) {
-    va_list     argptr;
-    char        msg[MAXPRINTMSG];
-
-    va_start( argptr, fmt );
-    Q_vsnprintf( msg, sizeof( msg ), fmt, argptr );
-    va_end( argptr );
-    
-    Com_Printf( "WARNING: %s", msg );
-}
-
-/*
-================
-Com_EPrintf
-
-================
-*/
-void Com_EPrintf( const char *fmt, ... ) {
-    va_list     argptr;
-    char        msg[MAXPRINTMSG];
-
-    va_start( argptr, fmt );
-    Q_vsnprintf( msg, sizeof( msg ), fmt, argptr );
-    va_end( argptr );
-    
-    Com_Printf( "ERROR: %s", msg );
-}
 
 /*
 =============
@@ -419,7 +386,7 @@ Both client and server can use this, and it will
 do the apropriate things.
 =============
 */
-void Com_Error( comErrorType_t code, const char *fmt, ... ) {
+void Com_Error( error_type_t code, const char *fmt, ... ) {
     va_list argptr;
     static qboolean recursive;
 
@@ -442,7 +409,7 @@ void Com_Error( comErrorType_t code, const char *fmt, ... ) {
     Com_AbortRedirect();
     
     if( code == ERR_DISCONNECT || code == ERR_SILENT ) {
-        Com_Printf( "%s\n", com_errorMsg );
+        Com_WPrintf( "%s\n", com_errorMsg );
         SV_Shutdown( va( "Server was killed: %s", com_errorMsg ),
             KILL_DISCONNECT );
 #if USE_CLIENT
@@ -461,9 +428,9 @@ void Com_Error( comErrorType_t code, const char *fmt, ... ) {
     }
 
     if( code == ERR_DROP ) {
-        Com_Printf( "********************\n"
-                    "ERROR: %s\n"
-                    "********************\n", com_errorMsg );
+        Com_EPrintf( "********************\n"
+                     "ERROR: %s\n"
+                     "********************\n", com_errorMsg );
         SV_Shutdown( va( "Server crashed: %s\n", com_errorMsg ), KILL_DROP );
 #if USE_CLIENT
         CL_Disconnect( ERR_DROP, com_errorMsg );
@@ -655,11 +622,11 @@ void Z_LeakTest( memtag_t tag ) {
     }
 
     if( numLeaks ) {
-        Com_Printf( "************* Z_LeakTest *************\n"
-                    "%s leaked %"PRIz" bytes of memory (%"PRIz" object%s)\n"
-                    "**************************************\n",
-                    z_tagnames[tag < TAG_MAX ? tag : TAG_FREE],
-                    numBytes, numLeaks, numLeaks == 1 ? "" : "s" );
+        Com_WPrintf( "************* Z_LeakTest *************\n"
+                     "%s leaked %"PRIz" bytes of memory (%"PRIz" object%s)\n"
+                     "**************************************\n",
+                     z_tagnames[tag < TAG_MAX ? tag : TAG_FREE],
+                     numBytes, numLeaks, numLeaks == 1 ? "" : "s" );
     }
 }
 
@@ -1563,7 +1530,9 @@ void Qcommon_Init( int argc, char **argv ) {
 #if USE_CLIENT
     host_speeds = Cvar_Get ("host_speeds", "0", 0);
 #endif
+#ifdef _DEBUG
     developer = Cvar_Get ("developer", "0", 0);
+#endif
     timescale = Cvar_Get ("timescale", "1", CVAR_CHEAT );
     fixedtime = Cvar_Get ("fixedtime", "0", CVAR_CHEAT );
     logfile_enable = Cvar_Get( "logfile", "0", 0 );

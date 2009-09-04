@@ -61,8 +61,8 @@ cvar_t  *sv_redirect_address;
 cvar_t  *sv_hostname;
 cvar_t  *sv_public;            // should heartbeats be sent
 
-#if USE_CLIENT
-cvar_t  *sv_debug_send;
+#ifdef _DEBUG
+cvar_t  *sv_debug;
 cvar_t  *sv_pad_packets;
 #endif
 cvar_t  *sv_lan_force_rate;
@@ -1816,8 +1816,8 @@ void SV_Init( void ) {
     sv_downloadserver = Cvar_Get( "sv_downloadserver", "", 0 );
     sv_redirect_address = Cvar_Get( "sv_redirect_address", "", 0 );
 
-#if USE_CLIENT
-    sv_debug_send = Cvar_Get( "sv_debug_send", "0", 0 );
+#ifdef _DEBUG
+    sv_debug = Cvar_Get( "sv_debug", "0", 0 );
     sv_pad_packets = Cvar_Get( "sv_pad_packets", "0", 0 );
 #endif
     sv_lan_force_rate = Cvar_Get( "sv_lan_force_rate", "0", CVAR_LATCH );

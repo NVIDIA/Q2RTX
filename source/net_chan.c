@@ -80,8 +80,19 @@ then a packet only needs to be delivered if there is something in the
 unacknowledged reliable
 */
 
+#ifdef _DEBUG
 static cvar_t       *showpackets;
 static cvar_t       *showdrop;
+#define SHOWPACKET(...) \
+    if( showpackets->integer ) \
+        Com_LPrintf( PRINT_DEVELOPER, __VA_ARGS__ )
+#define SHOWDROP(...) \
+    if( showdrop->integer ) \
+        Com_LPrintf( PRINT_DEVELOPER, __VA_ARGS__ )
+#else
+#define SHOWPACKET(...)
+#define SHOWDROP(...)
+#endif
 
 cvar_t      *net_qport;
 cvar_t      *net_maxmsglen;
@@ -98,11 +109,13 @@ Netchan_Init
 void Netchan_Init( void ) {
     int     port;
 
-    // pick a port value that should be nice and random
-    port = Sys_Milliseconds() & 0xffff;
-
+#ifdef _DEBUG
     showpackets = Cvar_Get( "showpackets", "0", 0 );
     showdrop = Cvar_Get( "showdrop", "0", 0 );
+#endif
+
+    // pick a port value that should be nice and random
+    port = Sys_Milliseconds() & 0xffff;
     net_qport = Cvar_Get( "qport", va( "%d", port ), 0 );
     net_maxmsglen = Cvar_Get( "net_maxmsglen", "1390", 0 );
     net_chantype = Cvar_Get( "net_chantype", "1", 0 );
@@ -230,19 +243,15 @@ static size_t NetchanOld_Transmit( netchan_t *netchan, size_t length, const void
         Com_WPrintf( "%s: dumped unreliable\n",
             NET_AdrToString( &netchan->remote_address ) );
 
-#if USE_CLIENT
-    if( showpackets->integer ) {
-        Com_Printf( "send %4"PRIz" : s=%d ack=%d rack=%d",
-            send.cursize,
-            netchan->outgoing_sequence - 1,
-            netchan->incoming_sequence,
-            chan->incoming_reliable_sequence );
-        if( send_reliable ) {
-            Com_Printf( " reliable=%i", chan->reliable_sequence );
-        }
-        Com_Printf( "\n" );
+    SHOWPACKET( "send %4"PRIz" : s=%d ack=%d rack=%d",
+        send.cursize,
+        netchan->outgoing_sequence - 1,
+        netchan->incoming_sequence,
+        chan->incoming_reliable_sequence );
+    if( send_reliable ) {
+        SHOWPACKET( " reliable=%i", chan->reliable_sequence );
     }
-#endif
+    SHOWPACKET( "\n" );
 
     // send the datagram
     for( i = 0; i < numpackets; i++ ) {
@@ -289,29 +298,23 @@ static qboolean NetchanOld_Process( netchan_t *netchan ) {
     sequence &= ~( 1 << 31 );
     sequence_ack &= ~( 1 << 31 );   
 
-#if USE_CLIENT
-    if( showpackets->integer ) {
-        Com_Printf( "recv %4"PRIz" : s=%d ack=%d rack=%d",
-            msg_read.cursize,
-            sequence,
-            sequence_ack,
-            reliable_ack );
-        if( reliable_message ) {
-            Com_Printf( " reliable=%d", chan->incoming_reliable_sequence ^ 1 );
-        }
-        Com_Printf( "\n" );
+    SHOWPACKET( "recv %4"PRIz" : s=%d ack=%d rack=%d",
+        msg_read.cursize,
+        sequence,
+        sequence_ack,
+        reliable_ack );
+    if( reliable_message ) {
+        SHOWPACKET( " reliable=%d", chan->incoming_reliable_sequence ^ 1 );
     }
-#endif
+    SHOWPACKET( "\n" );
 
 //
 // discard stale or duplicated packets
 //
     if( sequence <= netchan->incoming_sequence ) {
-        if( showdrop->integer )
-            Com_Printf( "%s: out of order packet %i at %i\n",
-                NET_AdrToString( &netchan->remote_address ),
-                sequence,
-                netchan->incoming_sequence );
+        SHOWDROP( "%s: out of order packet %i at %i\n",
+            NET_AdrToString( &netchan->remote_address ),
+            sequence, netchan->incoming_sequence );
         return qfalse;
     }
 
@@ -320,11 +323,9 @@ static qboolean NetchanOld_Process( netchan_t *netchan ) {
 //
     netchan->dropped = sequence - ( netchan->incoming_sequence + 1 );
     if( netchan->dropped > 0 ) {
-        if( showdrop->integer )
-            Com_Printf( "%s: dropped %i packets at %i\n",
+        SHOWDROP( "%s: dropped %i packets at %i\n",
             NET_AdrToString( &netchan->remote_address ),
-            netchan->dropped,
-            sequence );
+            netchan->dropped, sequence );
     }
 
 //
@@ -469,22 +470,18 @@ static size_t NetchanNew_TransmitNextFragment( netchan_t *netchan ) {
     SZ_Write( &send, chan->fragment_out.data + chan->fragment_out.readcount,
         fragment_length );
     
-#if USE_CLIENT
-    if( showpackets->integer ) {
-        Com_Printf( "send %4"PRIz" : s=%d ack=%d rack=%d "
-                    "fragment_offset=%"PRIz" more_fragments=%d",
-            send.cursize,
-            netchan->outgoing_sequence,
-            netchan->incoming_sequence,
-            chan->incoming_reliable_sequence,
-            chan->fragment_out.readcount,
-            more_fragments );
-        if( send_reliable ) {
-            Com_Printf( " reliable=%i ", chan->reliable_sequence );
-        }
-        Com_Printf( "\n" );
+    SHOWPACKET( "send %4"PRIz" : s=%d ack=%d rack=%d "
+                "fragment_offset=%"PRIz" more_fragments=%d",
+        send.cursize,
+        netchan->outgoing_sequence,
+        netchan->incoming_sequence,
+        chan->incoming_reliable_sequence,
+        chan->fragment_out.readcount,
+        more_fragments );
+    if( send_reliable ) {
+        SHOWPACKET( " reliable=%i ", chan->reliable_sequence );
     }
-#endif
+    SHOWPACKET( "\n" );
 
     chan->fragment_out.readcount += fragment_length;
     netchan->fragment_pending = more_fragments;
@@ -594,19 +591,15 @@ static size_t NetchanNew_Transmit( netchan_t *netchan, size_t length, const void
     // add the unreliable part
     SZ_Write( &send, data, length );
 
-#if USE_CLIENT
-    if( showpackets->integer ) {
-        Com_Printf( "send %4"PRIz" : s=%d ack=%d rack=%d",
-            send.cursize,
-            netchan->outgoing_sequence - 1,
-            netchan->incoming_sequence,
-            chan->incoming_reliable_sequence );
-        if( send_reliable ) {
-            Com_Printf( " reliable=%d", chan->reliable_sequence );
-        }
-        Com_Printf( "\n" );
+    SHOWPACKET( "send %4"PRIz" : s=%d ack=%d rack=%d",
+        send.cursize,
+        netchan->outgoing_sequence - 1,
+        netchan->incoming_sequence,
+        chan->incoming_reliable_sequence );
+    if( send_reliable ) {
+        SHOWPACKET( " reliable=%d", chan->reliable_sequence );
     }
-#endif
+    SHOWPACKET( "\n" );
 
     // send the datagram
     for( i = 0; i < numpackets; i++ ) {
@@ -657,30 +650,24 @@ static qboolean NetchanNew_Process( netchan_t *netchan ) {
         fragment_offset &= 0x7FFF;
     }
 
-#if USE_CLIENT
-    if( showpackets->integer ) {
-        Com_Printf( "recv %4"PRIz" : s=%d ack=%d rack=%d",
-            msg_read.cursize, sequence, sequence_ack, reliable_ack );
-        if( fragmented_message ) {
-            Com_Printf( " fragment_offset=%d more_fragments=%d",
-                fragment_offset, more_fragments );
-        }
-        if( reliable_message ) {
-            Com_Printf( " reliable=%d", chan->incoming_reliable_sequence ^ 1 );
-        }
-        Com_Printf( "\n" );
+    SHOWPACKET( "recv %4"PRIz" : s=%d ack=%d rack=%d",
+        msg_read.cursize, sequence, sequence_ack, reliable_ack );
+    if( fragmented_message ) {
+        SHOWPACKET( " fragment_offset=%d more_fragments=%d",
+            fragment_offset, more_fragments );
     }
-#endif
+    if( reliable_message ) {
+        SHOWPACKET( " reliable=%d", chan->incoming_reliable_sequence ^ 1 );
+    }
+    SHOWPACKET( "\n" );
 
 //
 // discard stale or duplicated packets
 //
     if( sequence <= netchan->incoming_sequence ) {
-        if( showdrop->integer || showpackets->integer ) {
-            Com_Printf( "%s: out of order packet %i at %i\n",
-                NET_AdrToString( &netchan->remote_address ),
-                    sequence, netchan->incoming_sequence );
-        }
+        SHOWDROP( "%s: out of order packet %i at %i\n",
+            NET_AdrToString( &netchan->remote_address ),
+            sequence, netchan->incoming_sequence );
         return qfalse;
     }
 
@@ -689,11 +676,9 @@ static qboolean NetchanNew_Process( netchan_t *netchan ) {
 //
     netchan->dropped = sequence - ( netchan->incoming_sequence + 1 );
     if( netchan->dropped > 0 ) {
-        if( showdrop->integer || showpackets->integer ) {
-            Com_Printf( "%s: dropped %i packets at %i\n",
-                NET_AdrToString( &netchan->remote_address ),
-                    netchan->dropped, sequence );
-        }
+        SHOWDROP( "%s: dropped %i packets at %i\n",
+            NET_AdrToString( &netchan->remote_address ),
+            netchan->dropped, sequence );
     }
 
 //
@@ -717,30 +702,21 @@ static qboolean NetchanNew_Process( netchan_t *netchan ) {
         }
 
         if( fragment_offset < chan->fragment_in.cursize ) {
-            if( showdrop->integer || showpackets->integer ) {
-                Com_Printf( "%s: out of order fragment at %i\n",
-                    NET_AdrToString( &netchan->remote_address ),
-                        sequence );
-            }
+            SHOWDROP( "%s: out of order fragment at %i\n",
+                NET_AdrToString( &netchan->remote_address ), sequence );
             return qfalse;
         }
 
         if( fragment_offset > chan->fragment_in.cursize ) {
-            if( showdrop->integer || showpackets->integer ) {
-                Com_Printf( "%s: dropped fragment(s) at %i\n",
-                    NET_AdrToString( &netchan->remote_address ),
-                        sequence );
-            }
+            SHOWDROP( "%s: dropped fragment(s) at %i\n",
+                NET_AdrToString( &netchan->remote_address ), sequence );
             return qfalse;
         }
 
         length = msg_read.cursize - msg_read.readcount;
         if( chan->fragment_in.cursize + length > chan->fragment_in.maxsize ) {
-            if( showdrop->integer || showpackets->integer ) {
-                Com_Printf( "%s: oversize fragment at %i\n",
-                    NET_AdrToString( &netchan->remote_address ),
-                        sequence );
-            }
+            SHOWDROP( "%s: oversize fragment at %i\n",
+                NET_AdrToString( &netchan->remote_address ), sequence );
             return qfalse;
         }
 

@@ -57,6 +57,13 @@ QUAKE FILESYSTEM
 #define MAX_READ    0x40000        // read in blocks of 256k
 #define MAX_WRITE   0x40000        // write in blocks of 256k
 
+#ifdef _DEBUG
+#define FS_DPrintf(...) \
+    if( fs_debug && fs_debug->integer ) \
+        Com_LPrintf( PRINT_DEVELOPER, __VA_ARGS__ )
+#else
+#define FS_DPrintf(...)
+#endif
 
 //
 // in memory
@@ -123,7 +130,9 @@ typedef struct fsLink_s {
 char        fs_gamedir[MAX_OSPATH];
 //static char        fs_basedir[MAX_OSPATH];
 
+#ifdef _DEBUG
 static cvar_t    *fs_debug;
+#endif
 static cvar_t    *fs_restrict_mask;
 
 static searchpath_t    *fs_searchpaths;
@@ -135,7 +144,9 @@ static fsFile_t     fs_files[MAX_FILE_HANDLES];
 
 static qboolean     fs_fileFromPak;
 
+#ifdef _DEBUG
 static int          fs_count_read, fs_count_strcmp, fs_count_open;
+#endif
 
 cvar_t      *fs_game;
 
@@ -205,26 +216,6 @@ int FS_pathcmpn( const char *s1, const char *s2, size_t n ) {
     } while( c1 );
     
     return 0;        /* strings are equal */
-}
-
-/*
-================
-FS_DPrintf
-================
-*/
-static void FS_DPrintf( char *format, ... ) {
-    va_list argptr;
-    char string[MAXPRINTMSG];
-
-    if( !fs_debug || !fs_debug->integer ) {
-        return;
-    }
-
-    va_start( argptr, format );
-    Q_vsnprintf( string, sizeof( string ), format, argptr );
-    va_end( argptr );
-
-    Com_Printf( S_COLOR_CYAN "%s", string );
 }
 
 /*
@@ -714,7 +705,9 @@ static size_t FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean uniqu
     size_t          len;
 
     fs_fileFromPak = qfalse;
+#ifdef _DEBUG
     fs_count_read++;
+#endif
 
 //
 // search through the path, one element at a time
@@ -737,7 +730,9 @@ static size_t FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean uniqu
             pak = search->pack;
             entry = pak->fileHash[ hash & ( pak->hashSize - 1 ) ];
             for( ; entry; entry = entry->hashNext ) {
+#ifdef _DEBUG
                 fs_count_strcmp++;
+#endif
                 if( !FS_pathcmp( entry->name, name ) ) {
                     // found it!
                     return FS_FOpenFromPak( file, pak, entry, unique );
@@ -766,7 +761,9 @@ static size_t FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean uniqu
                 continue;
             }
 
+#ifdef _DEBUG
             fs_count_open++;
+#endif
             fp = fopen( fullpath, "rb" );
             if( !fp ) {
                 continue;
@@ -2213,6 +2210,7 @@ static void FS_Stats_f( void ) {
         //totalHashSize += pack->hashSize;
     }
 
+#ifdef _DEBUG
 #if USE_LOADBUF
     Com_Printf( "LoadFile counter: %d\n", loadCount );
     Com_Printf( "Static LoadFile counter: %d\n", loadCountStatic );
@@ -2233,6 +2231,7 @@ static void FS_Stats_f( void ) {
             Com_Printf( "%s\n", file->name );
         }
     }
+#endif // _DEBUG
 }
 
 static void FS_Link_g( genctx_t *ctx ) {
@@ -2596,7 +2595,9 @@ void FS_Init( void ) {
 
     Cmd_Register( c_fs );
 
+#ifdef _DEBUG
     fs_debug = Cvar_Get( "fs_debug", "0", 0 );
+#endif
     fs_restrict_mask = Cvar_Get( "fs_restrict_mask", "0", CVAR_NOSET );
     Cvar_Get( "fs_gamedir", "", CVAR_ROM );
 

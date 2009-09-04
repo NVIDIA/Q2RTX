@@ -246,7 +246,7 @@ static inline void CL_ParseDeltaEntity( server_frame_t  *frame,
 {
     entity_state_t    *state;
 
-    if( frame->numEntities == MAX_PACKET_ENTITIES ) {
+    if( frame->numEntities >= MAX_PACKET_ENTITIES ) {
         Com_Error( ERR_DROP, "%s: MAX_PACKET_ENTITIES exceeded", __func__ );
     }
 
@@ -254,9 +254,12 @@ static inline void CL_ParseDeltaEntity( server_frame_t  *frame,
     cl.numEntityStates++;
     frame->numEntities++;
 
-    if( cl_shownet->integer > 2 ) {
+#ifdef _DEBUG
+    if( cl_shownet->integer > 2 && bits ) {
         MSG_ShowDeltaEntityBits( bits );
+        Com_Printf( "\n" );
     }
+#endif
 
     MSG_ParseDeltaEntity( old, state, newnum, bits, cl.esFlags );
 }
@@ -309,9 +312,7 @@ static void CL_ParsePacketEntities( server_frame_t *oldframe,
 
         while( oldnum < newnum ) {
             // one or more entities from the old packet are unchanged
-            if( cl_shownet->integer > 2 ) {
-                Com_Printf( "   unchanged: %i\n", oldnum );
-            }
+            SHOWNET( 2, "   unchanged: %i\n", oldnum );
             CL_ParseDeltaEntity( frame, oldnum, oldstate, 0 );
             
             oldindex++;
@@ -327,9 +328,7 @@ static void CL_ParsePacketEntities( server_frame_t *oldframe,
 
         if( bits & U_REMOVE ) {    
             // the entity present in oldframe is not in the current frame
-            if( cl_shownet->integer > 2 ) {
-                Com_Printf( "   remove: %i\n", newnum );
-            }
+            SHOWNET( 2, "   remove: %i\n", newnum );
             if( oldnum != newnum ) {
                 Com_DPrintf( "U_REMOVE: oldnum != newnum\n" );
             }
@@ -351,13 +350,8 @@ static void CL_ParsePacketEntities( server_frame_t *oldframe,
 
         if( oldnum == newnum ) {    
             // delta from previous state
-            if( cl_shownet->integer > 2 ) {
-                Com_Printf( "   delta: %i ", newnum );
-            }
+            SHOWNET( 2, "   delta: %i ", newnum );
             CL_ParseDeltaEntity( frame, newnum, oldstate, bits );
-            if( cl_shownet->integer > 2 ) {
-                Com_Printf( "\n" );
-            }
 
             oldindex++;
 
@@ -373,13 +367,8 @@ static void CL_ParsePacketEntities( server_frame_t *oldframe,
 
         if( oldnum > newnum ) {    
             // delta from baseline
-            if( cl_shownet->integer > 2 ) {
-                Com_Printf( "   baseline: %i ", newnum );
-            }
+            SHOWNET( 2, "   baseline: %i ", newnum );
             CL_ParseDeltaEntity( frame, newnum, &cl.baselines[newnum], bits );
-            if( cl_shownet->integer > 2 ) {
-                Com_Printf( "\n" );
-            }
             continue;
         }
 
@@ -388,11 +377,9 @@ static void CL_ParsePacketEntities( server_frame_t *oldframe,
     // any remaining entities in the old frame are copied over
     while( oldnum != 99999 ) {    
         // one or more entities from the old packet are unchanged
-        if( cl_shownet->integer > 3 ) {
-            Com_Printf( "   unchanged: %i\n", oldnum );
-        }
+        SHOWNET( 3, "   unchanged: %i\n", oldnum );
         CL_ParseDeltaEntity( frame, oldnum, oldstate, 0 );
-        
+ 
         oldindex++;
 
         if( oldindex >= oldframe->numEntities ) {
@@ -561,18 +548,18 @@ static void CL_ParseFrame( int extrabits ) {
         }
     }
 
-    if( cl_shownet->integer > 2 ) {
-        Com_Printf( "%3"PRIz":playerinfo\n", msg_read.readcount - 1 );
-    }
+    SHOWNET( 2, "%3"PRIz":playerinfo\n", msg_read.readcount - 1 );
 
     // parse playerstate
     bits = MSG_ReadShort();
     if( cls.serverProtocol > PROTOCOL_VERSION_DEFAULT ) {
         MSG_ParseDeltaPlayerstate_Enhanced( from, &frame.ps, bits, extraflags );
+#ifdef _DEBUG
         if( cl_shownet->integer > 2 ) {
             MSG_ShowDeltaPlayerstateBits_Enhanced( bits );
             Com_Printf( "\n" );
         }
+#endif
         if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO ) {
             // parse clientNum
             if( extraflags & EPS_CLIENTNUM ) {
@@ -585,10 +572,12 @@ static void CL_ParseFrame( int extrabits ) {
         }
     } else {
         MSG_ParseDeltaPlayerstate_Default( from, &frame.ps, bits );
+#ifdef _DEBUG
         if( cl_shownet->integer > 2 ) {
             MSG_ShowDeltaPlayerstateBits_Default( bits );
             Com_Printf( "\n" );
         }
+#endif
         frame.clientNum = cl.clientNum;
     }
     if( !frame.ps.fov ) {
@@ -603,15 +592,14 @@ static void CL_ParseFrame( int extrabits ) {
         }
     }
 
-    if( cl_shownet->integer > 2 ) {
-        Com_Printf( "%3"PRIz":packetentities\n", msg_read.readcount - 1 );
-    }
+    SHOWNET( 2, "%3"PRIz":packetentities\n", msg_read.readcount - 1 );
 
     CL_ParsePacketEntities( oldframe, &frame );
 
     // save the frame off in the backup array for later delta comparisons
     cl.frames[currentframe & UPDATE_MASK] = frame;
 
+#ifdef _DEBUG
     if( cl_shownet->integer > 2 ) {
         int rtt = 0;
         if( cls.netchan ) {
@@ -621,6 +609,7 @@ static void CL_ParseFrame( int extrabits ) {
         Com_Printf( "%3"PRIz":frame:%d  delta:%d  rtt:%d\n",
             msg_read.readcount - 1, frame.number, frame.delta, rtt );
     }
+#endif
 
     if( !frame.valid ) {
         cl.frame.valid = qfalse;
@@ -661,9 +650,7 @@ static void CL_ParseConfigstring( int index ) {
     maxlen = CS_SIZE( index );
     len = MSG_ReadString( string, maxlen );
 
-    if( cl_shownet->integer > 2 ) {
-        Com_Printf( "    %d \"%s\"\n", index, Q_FormatString( string ) );
-    }
+    SHOWNET( 2, "    %d \"%s\"\n", index, string );
 
     if( len >= maxlen ) {
         Com_WPrintf(
@@ -718,10 +705,12 @@ static void CL_ParseBaseline( int index, int bits ) {
     if( index < 1 || index >= MAX_EDICTS ) {
         Com_Error( ERR_DROP, "%s: bad index: %d", __func__, index );
     }
+#ifdef _DEBUG
     if( cl_shownet->integer > 2 ) {
         MSG_ShowDeltaEntityBits( bits );
         Com_Printf( "\n" );
     }
+#endif
     MSG_ParseDeltaEntity( NULL, &cl.baselines[index], index, bits, cl.esFlags );
 }
 
@@ -1115,9 +1104,7 @@ static void CL_ParseStartSoundPacket( void ) {
         pos = NULL;
     }
 
-    if( cl_shownet->integer > 2 ) {
-        Com_Printf( "    %s\n", cl.configstrings[CS_SOUNDS+sound_num] );
-    }
+    SHOWNET( 2, "    %s\n", cl.configstrings[CS_SOUNDS+sound_num] );
 
     if( cl.sound_precache[sound_num] ) {
         S_StartSound( pos, ent, channel, cl.sound_precache[sound_num],
@@ -1197,9 +1184,7 @@ static void CL_ParsePrint( void ) {
     level = MSG_ReadByte();
     MSG_ReadString( string, sizeof( string ) );
 
-    if( cl_shownet->integer > 2 ) {
-        Com_Printf( "    %i \"%s\"\n", level, Q_FormatString( string ) );
-    }
+    SHOWNET( 2, "    %i \"%s\"\n", level, string );
 
     if( level != PRINT_CHAT ) {
         Com_Printf( "%s", string );
@@ -1249,11 +1234,7 @@ static void CL_ParseCenterPrint( void ) {
     char string[MAX_STRING_CHARS];
 
     MSG_ReadString( string, sizeof( string ) );
-
-    if( cl_shownet->integer > 2 ) {
-        Com_Printf( "    \"%s\"\n", Q_FormatString( string ) );
-    }
-
+    SHOWNET( 2, "    \"%s\"\n", string );
     SCR_CenterPrint( string );
 }
 
@@ -1266,11 +1247,7 @@ static void CL_ParseStuffText( void ) {
     char s[MAX_STRING_CHARS];
 
     MSG_ReadString( s, sizeof( s ) );
-
-    if( cl_shownet->integer > 2 ) {
-        Com_Printf( "    \"%s\"\n", Q_FormatString( s ) );
-    }
-
+    SHOWNET( 2, "    \"%s\"\n", s );
     Cbuf_AddText( &cl_cmdbuf, s );
 }
 
@@ -1281,11 +1258,7 @@ CL_ParseLayout
 */
 static void CL_ParseLayout( void ) {
     MSG_ReadString( cl.layout, sizeof( cl.layout ) );
-
-    if( cl_shownet->integer > 2 ) {
-        Com_Printf( "    \"%s\"\n", Q_FormatString( cl.layout ) );
-    }
-
+    SHOWNET( 2, "    \"%s\"\n", cl.layout );
     cl.putaway = qfalse;
 }
 
@@ -1379,11 +1352,13 @@ void CL_ParseServerMessage( void ) {
     size_t      readcount;
     int         index, bits;
 
+#ifdef _DEBUG
     if( cl_shownet->integer == 1 ) {
         Com_Printf( "%"PRIz" ", msg_read.cursize );
     } else if( cl_shownet->integer > 1 ) {
         Com_Printf( "------------------\n" );
     }
+#endif
 
 //
 // parse the message
@@ -1396,18 +1371,18 @@ void CL_ParseServerMessage( void ) {
         readcount = msg_read.readcount;
 
         if( ( cmd = MSG_ReadByte() ) == -1 ) {
-            if( cl_shownet->integer > 1 ) {
-                Com_Printf( "%3"PRIz":END OF MESSAGE\n", msg_read.readcount - 1 );
-            }
+            SHOWNET( 1, "%3"PRIz":END OF MESSAGE\n", msg_read.readcount - 1 );
             break;
         }
 
         extrabits = cmd >> SVCMD_BITS;
         cmd &= SVCMD_MASK;
 
+#ifdef _DEBUG
         if( cl_shownet->integer > 1 ) {
             MSG_ShowSVC( cmd );
         }
+#endif
     
     // other commands
         switch( cmd ) {

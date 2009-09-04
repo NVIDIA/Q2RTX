@@ -72,7 +72,9 @@ static cvar_t       *s_enable;
 #if USE_DSOUND
 static cvar_t       *s_direct;
 #endif
+#ifdef _DEBUG
 static cvar_t       *s_show;
+#endif
 static cvar_t       *s_mixahead;
 static cvar_t       *s_ambient;
 
@@ -182,7 +184,9 @@ void S_Init( void ) {
 
     s_volume = Cvar_Get( "s_volume", "0.7", CVAR_ARCHIVE );
     s_mixahead = Cvar_Get( "s_mixahead", "0.2", CVAR_ARCHIVE );
+#ifdef _DEBUG
     s_show = Cvar_Get( "s_show", "0", 0 );
+#endif
     s_testsound = Cvar_Get( "s_testsound", "0", 0 );
     s_ambient = Cvar_Get( "s_ambient", "1", 0 );
     
@@ -590,8 +594,10 @@ void S_IssuePlaysound( playsound_t *ps ) {
     channel_t   *ch;
     sfxcache_t  *sc;
 
+#ifdef _DEBUG
     if( s_show->integer )
         Com_Printf( "Issue %i\n", ps->begin );
+#endif
     // pick a channel to play on
     ch = S_PickChannel( ps->entnum, ps->entchannel );
     if( !ch ) {
@@ -994,7 +1000,6 @@ Called once each time through the main loop
 */
 void S_Update( void ) {
     int         i;
-    int         total;
     channel_t   *ch;
 
     if( cvar_modified & CVAR_SOUND ) {
@@ -1049,12 +1054,13 @@ void S_Update( void ) {
     // add loopsounds
     S_AddLoopSounds ();
 
+#ifdef _DEBUG
     //
     // debugging output
     //
     if (s_show->integer)
     {
-        total = 0;
+        int total = 0;
         ch = channels;
         for (i=0 ; i<MAX_CHANNELS; i++, ch++)
             if (ch->sfx && (ch->leftvol || ch->rightvol) )
@@ -1067,6 +1073,7 @@ void S_Update( void ) {
             Com_Printf ("----(%i)---- painted: %i\n", total, paintedtime);
         }
     }
+#endif
 
 // mix some sound
     S_Update_();

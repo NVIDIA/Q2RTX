@@ -24,7 +24,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "mvd_local.h"
 
-#if USE_CLIENT
+#ifdef _DEBUG
+#define SHOWNET(level,...) \
+    if( mvd_shownet->integer > level ) \
+        Com_LPrintf( PRINT_DEVELOPER, __VA_ARGS__ )
 
 #define MVD_ShowSVC( cmd ) \
     Com_Printf( "%3"PRIz":%s\n", msg_read.readcount - 1, \
@@ -53,8 +56,9 @@ static const char *MVD_ServerCommandString( int cmd ) {
         M(print)
     }
 }
-
-#endif // USE_CLIENT
+#else
+#define SHOWNET(...)
+#endif
 
 static void MVD_LinkEdict( mvd_t *mvd, edict_t *ent ) {
     int         index;
@@ -437,7 +441,7 @@ static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
 
     while( msg_read.readcount < last ) {
         cmd = MSG_ReadByte();
-#if USE_CLIENT
+#ifdef _DEBUG
         if( mvd_shownet->integer > 1 ) {
             MSG_ShowSVC( cmd );
         }
@@ -456,11 +460,7 @@ static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
             MVD_UnicastStuff( mvd, reliable, player );
             break;
         default:
-#if USE_CLIENT
-            if( mvd_shownet->integer > 1 ) {
-                Com_Printf( "%"PRIz":SKIPPING UNICAST\n", msg_read.readcount - 1 );
-            }
-#endif
+            SHOWNET( 1, "%"PRIz":SKIPPING UNICAST\n", msg_read.readcount - 1 );
             // send remaining data and return
             data = msg_read.data + msg_read.readcount - 1;
             length = last - msg_read.readcount + 1;
@@ -470,11 +470,7 @@ static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
         }
     }
 
-#if USE_CLIENT
-    if( mvd_shownet->integer > 1 ) {
-        Com_Printf( "%"PRIz":END OF UNICAST\n", msg_read.readcount - 1 );
-    }
-#endif
+    SHOWNET( 1, "%"PRIz":END OF UNICAST\n", msg_read.readcount - 1 );
 
     if( msg_read.readcount > last ) {
         MVD_Destroyf( mvd, "%s: read past end of unicast", __func__ );
@@ -771,7 +767,7 @@ static void MVD_ParsePacketEntities( mvd_t *mvd ) {
 
         ent = &mvd->edicts[number];
 
-#if USE_CLIENT
+#ifdef _DEBUG
         if( mvd_shownet->integer > 2 ) {
             Com_Printf( "   %s: %d ", ent->inuse ?
                 "delta" : "baseline", number );
@@ -788,11 +784,7 @@ static void MVD_ParsePacketEntities( mvd_t *mvd ) {
         }
 
         if( bits & U_REMOVE ) {
-#if USE_CLIENT
-            if( mvd_shownet->integer > 2 ) {
-                Com_Printf( "   remove: %d\n", number );
-            }
-#endif
+            SHOWNET( 2, "   remove: %d\n", number );
             ent->inuse = qfalse;
             continue;
         }
@@ -832,7 +824,7 @@ static void MVD_ParsePacketPlayers( mvd_t *mvd ) {
 
         bits = MSG_ReadShort();
 
-#if USE_CLIENT
+#ifdef _DEBUG
         if( mvd_shownet->integer > 2 ) {
             Com_Printf( "   %s: %d ", player->inuse ?
                 "delta" : "baseline", number );
@@ -844,11 +836,7 @@ static void MVD_ParsePacketPlayers( mvd_t *mvd ) {
         MSG_ParseDeltaPlayerstate_Packet( &player->ps, &player->ps, bits );
 
         if( bits & PPS_REMOVE ) {    
-#if USE_CLIENT
-            if( mvd_shownet->integer > 2 ) {
-                Com_Printf( "   remove: %d\n", number );
-            }
-#endif
+            SHOWNET( 2, "   remove: %d\n", number );
             player->inuse = qfalse;
             continue;
         }
@@ -881,28 +869,11 @@ static void MVD_ParseFrame( mvd_t *mvd ) {
         CM_SetPortalStates( &mvd->cm, NULL, 0 );
     }
 
-#if USE_CLIENT
-    if( mvd_shownet->integer > 1 ) {
-        Com_Printf( "%3"PRIz":playerinfo\n", msg_read.readcount - 1 );
-    }
-#endif
-
+    SHOWNET( 1, "%3"PRIz":playerinfo\n", msg_read.readcount - 1 );
     MVD_ParsePacketPlayers( mvd );
-
-#if USE_CLIENT
-    if( mvd_shownet->integer > 1 ) {
-        Com_Printf( "%3"PRIz":packetentities\n", msg_read.readcount - 1 );
-    }
-#endif
-
+    SHOWNET( 1, "%3"PRIz":packetentities\n", msg_read.readcount - 1 );
     MVD_ParsePacketEntities( mvd );
-
-#if USE_CLIENT
-    if( mvd_shownet->integer > 1 ) {
-        Com_Printf( "%3"PRIz":frame:%u\n", msg_read.readcount - 1, mvd->framenum );
-    }
-#endif
-
+    SHOWNET( 1, "%3"PRIz":frame:%u\n", msg_read.readcount - 1, mvd->framenum );
     MVD_PlayerToEntityStates( mvd );
 
     mvd->framenum++;
@@ -1118,7 +1089,7 @@ static void MVD_ParseServerData( mvd_t *mvd, int extrabits ) {
 void MVD_ParseMessage( mvd_t *mvd ) {
     int     cmd, extrabits;
 
-#if USE_CLIENT
+#ifdef _DEBUG
     if( mvd_shownet->integer == 1 ) {
         Com_Printf( "%"PRIz" ", msg_read.cursize );
     } else if( mvd_shownet->integer > 1 ) {
@@ -1134,11 +1105,7 @@ void MVD_ParseMessage( mvd_t *mvd ) {
             MVD_Destroyf( mvd, "Read past end of message" );
         }
         if( msg_read.readcount == msg_read.cursize ) {
-#if USE_CLIENT
-            if( mvd_shownet->integer > 1 ) {
-                Com_Printf( "%3"PRIz":END OF MESSAGE\n", msg_read.readcount - 1 );
-            }
-#endif
+            SHOWNET( 1, "%3"PRIz":END OF MESSAGE\n", msg_read.readcount - 1 );
             break;
         }
 
@@ -1146,7 +1113,7 @@ void MVD_ParseMessage( mvd_t *mvd ) {
         extrabits = cmd >> SVCMD_BITS;
         cmd &= SVCMD_MASK;
 
-#if USE_CLIENT
+#ifdef _DEBUG
         if( mvd_shownet->integer > 1 ) {
             MVD_ShowSVC( cmd );
         }

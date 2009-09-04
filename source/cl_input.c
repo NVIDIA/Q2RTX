@@ -28,7 +28,9 @@ static cvar_t    *cl_nodelta;
 static cvar_t    *cl_maxpackets;
 static cvar_t    *cl_packetdup;
 static cvar_t    *cl_fuzzhack;
+#ifdef _DEBUG
 static cvar_t    *cl_showpackets;
+#endif
 static cvar_t    *cl_instantpacket;
 
 static cvar_t    *m_filter;
@@ -673,7 +675,9 @@ void CL_RegisterInput( void ) {
     cl_maxpackets = Cvar_Get( "cl_maxpackets", "30", 0 );
     cl_fuzzhack = Cvar_Get( "cl_fuzzhack", "0", 0 );
     cl_packetdup = Cvar_Get( "cl_packetdup", "1", 0 );
+#ifdef _DEBUG
     cl_showpackets = Cvar_Get( "cl_showpackets", "0", 0 );
+#endif
     cl_instantpacket = Cvar_Get( "cl_instantpacket", "1", 0 );
 
     cl_upspeed = Cvar_Get ( "cl_upspeed", "200", 0 );
@@ -882,9 +886,11 @@ static void CL_SendDefaultCmd( void ) {
     // deliver the message
     //
     cursize = cls.netchan->Transmit( cls.netchan, msg_write.cursize, msg_write.data, 1 );
+#ifdef _DEBUG
     if( cl_showpackets->integer ) {
         Com_Printf( "%"PRIz" ", cursize );
     }
+#endif
 
     SZ_Clear( &msg_write );
 }
@@ -959,9 +965,11 @@ static void CL_SendBatchedCmd( void ) {
             cmd = &cl.cmds[j & CMD_MASK];
             totalMsec += cmd->msec;
             bits = MSG_WriteDeltaUsercmd_Enhanced( oldcmd, cmd, cls.protocolVersion );
+#ifdef _DEBUG
             if( cl_showpackets->integer == 3 ) {
                 MSG_ShowDeltaUsercmdBits_Enhanced( bits );
             }
+#endif
             oldcmd = cmd;
         }
     }
@@ -970,6 +978,7 @@ static void CL_SendBatchedCmd( void ) {
     // deliver the message
     //
     cursize = cls.netchan->Transmit( cls.netchan, msg_write.cursize, msg_write.data, 1 );
+#ifdef _DEBUG
     if( cl_showpackets->integer == 1 ) {
         Com_Printf( "%"PRIz"(%i) ", cursize, totalCmds );
     } else if( cl_showpackets->integer == 2 ) {
@@ -977,6 +986,7 @@ static void CL_SendBatchedCmd( void ) {
     } else if( cl_showpackets->integer == 3 ) {
         Com_Printf( " | " );
     }
+#endif
 
     SZ_Clear( &msg_write );
 

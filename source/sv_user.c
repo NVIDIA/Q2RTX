@@ -203,12 +203,8 @@ static void write_compressed_gamestate( void ) {
         return;
     }
 
-#if USE_CLIENT
-    if( sv_debug_send->integer ) {
-        Com_Printf( S_COLOR_BLUE"%s: comp: %lu into %lu\n",
-            sv_client->name, svs.z.total_in, svs.z.total_out );
-    }
-#endif
+    SV_DPrintf( 0, "%s: comp: %lu into %lu\n",
+        sv_client->name, svs.z.total_in, svs.z.total_out );
 
     patch[0] = svs.z.total_out & 255;
     patch[1] = ( svs.z.total_out >> 8 ) & 255;
@@ -223,12 +219,8 @@ static inline int z_flush( byte *buffer ) {
         return ret;
     }
 
-#if USE_CLIENT
-    if( sv_debug_send->integer ) {
-        Com_Printf( S_COLOR_BLUE"%s: comp: %lu into %lu\n",
-            sv_client->name, svs.z.total_in, svs.z.total_out );
-    }
-#endif
+    SV_DPrintf( 0, "%s: comp: %lu into %lu\n",
+        sv_client->name, svs.z.total_in, svs.z.total_out );
 
     MSG_WriteByte( svc_zpacket );
     MSG_WriteShort( svs.z.total_out );
@@ -1232,10 +1224,8 @@ void SV_ExecuteClientMessage( client_t *client ) {
                     break;
                 }
                 
-                if( developer->integer ) {
-                    Com_Printf( S_COLOR_BLUE "ClientCommand( %s ): %s\n",
-                        client->name, Q_FormatString( buffer ) );
-                }
+                Com_DPrintf( "ClientCommand( %s ): %s\n",
+                    client->name, buffer );
 
                 if( !NET_IsLocalAddress( &client->netchan->remote_address ) ) {
                     // malicious users may try using too many string commands

@@ -162,7 +162,7 @@ extern list_t           mvd_channel_list;
 extern mvd_t            mvd_waitingRoom;
 extern qboolean         mvd_dirty;
 
-#if USE_CLIENT
+#ifdef _DEBUG
 extern cvar_t    *mvd_shownet;
 #endif
 

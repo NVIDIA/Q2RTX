@@ -46,9 +46,11 @@ cvar_t  *r_maxfps;
 cvar_t  *cl_kickangles;
 cvar_t  *cl_rollhack;
 
+#ifdef _DEBUG
 cvar_t  *cl_shownet;
 cvar_t  *cl_showmiss;
 cvar_t  *cl_showclamp;
+#endif
 
 cvar_t  *cl_thirdperson;
 cvar_t  *cl_thirdperson_angle;
@@ -600,7 +602,7 @@ Sends a disconnect message to the server
 This is also called on Com_Error, so it shouldn't cause any errors
 =====================
 */
-void CL_Disconnect( comErrorType_t type, const char *text ) {
+void CL_Disconnect( error_type_t type, const char *text ) {
     SCR_EndLoadingPlaque();    // get rid of loading plaque
 
     if( cls.state > ca_disconnected && !cls.demo.playback ) {
@@ -2520,9 +2522,12 @@ static void CL_InitLocal ( void ) {
     r_maxfps = Cvar_Get( "r_maxfps", "0", CVAR_ARCHIVE );
     cl_rollhack = Cvar_Get( "cl_rollhack", "1", 0 );
 
+#ifdef _DEBUG
     cl_shownet = Cvar_Get( "cl_shownet", "0", 0 );
     cl_showmiss = Cvar_Get ( "cl_showmiss", "0", 0 );
     cl_showclamp = Cvar_Get ( "showclamp", "0", 0 );
+#endif
+
     cl_timeout = Cvar_Get ( "cl_timeout", "120", 0 );
 
     rcon_address = Cvar_Get ( "rcon_address", "", CVAR_PRIVATE );
@@ -2648,23 +2653,18 @@ static void CL_SetClientTime( void ) {
 
     prevtime = cl.servertime - cl.frametime;
     if( cl.time > cl.servertime ) {
-        if( cl_showclamp->integer )
-            Com_Printf( "high clamp %i\n", cl.time - cl.servertime );
+        SHOWCLAMP( 1, "high clamp %i\n", cl.time - cl.servertime );
         cl.time = cl.servertime;
         cl.lerpfrac = 1.0f;
     } else if( cl.time < prevtime ) {
-        if( cl_showclamp->integer )
-            Com_Printf( "low clamp %i\n", prevtime - cl.time );
+        SHOWCLAMP( 1, "low clamp %i\n", prevtime - cl.time );
         cl.time = prevtime;
         cl.lerpfrac = 0;
     } else {
         cl.lerpfrac = ( cl.time - prevtime ) * cl.framefrac;
     }
 
-    if( cl_showclamp->integer == 2 ) {
-        Com_Printf( "time %i, lerpfrac %.3f\n",
-            cl.time, cl.lerpfrac );
-    }
+    SHOWCLAMP( 2, "time %i, lerpfrac %.3f\n", cl.time, cl.lerpfrac );
 }
 
 static void CL_MeasureStats( void ) {

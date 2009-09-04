@@ -2339,87 +2339,12 @@ void MSG_ParseDeltaPlayerstate_Packet( const player_state_t *from,
 
 #endif // USE_MVD_CLIENT
 
-#if USE_CLIENT
+#ifdef _DEBUG
 
 #define SHOWBITS( data ) \
     do { Com_Printf( "%s ", data ); } while( 0 )
 
-void MSG_ShowDeltaEntityBits( int bits ) {
-    if( bits & U_MODEL ) {
-        SHOWBITS( "modelindex" );
-    }
-    if( bits & U_MODEL2 ) {
-        SHOWBITS( "modelindex2" );
-    }
-    if( bits & U_MODEL3 ) {
-        SHOWBITS( "modelindex3" );
-    }
-    if( bits & U_MODEL4 ) {
-        SHOWBITS( "modelindex4" );
-    }
-
-    if( bits & U_FRAME8 )
-        SHOWBITS( "frame8" );
-    if( bits & U_FRAME16 )
-        SHOWBITS( "frame16" );
-
-    if( ( bits & ( U_SKIN8 | U_SKIN16 ) ) == ( U_SKIN8 | U_SKIN16 ) )
-        SHOWBITS( "skinnum32" );
-    else if( bits & U_SKIN8 )
-        SHOWBITS( "skinnum8" );
-    else if( bits & U_SKIN16 )
-        SHOWBITS( "skinnum16" );
-
-    if( ( bits & ( U_EFFECTS8 | U_EFFECTS16 ) ) == ( U_EFFECTS8 | U_EFFECTS16 ) )
-        SHOWBITS( "effects32" );
-    else if( bits & U_EFFECTS8 )
-        SHOWBITS( "effects8" );
-    else if( bits & U_EFFECTS16 )
-        SHOWBITS( "effects16" );
-
-    if( ( bits & ( U_RENDERFX8 | U_RENDERFX16 ) ) == ( U_RENDERFX8 | U_RENDERFX16 ) )
-        SHOWBITS( "renderfx32" );
-    else if( bits & U_RENDERFX8 )
-        SHOWBITS( "renderfx8" );
-    else if( bits & U_RENDERFX16 )
-        SHOWBITS( "renderfx16" );
-
-    if( bits & U_ORIGIN1 ) {
-        SHOWBITS( "origin[0]" );
-    }
-    if( bits & U_ORIGIN2 ) {
-        SHOWBITS( "origin[1]" );
-    }
-    if( bits & U_ORIGIN3 ) {
-        SHOWBITS( "origin[2]" );
-    }
-        
-    if( bits & U_ANGLE1 ) {
-        SHOWBITS( "angles[0]" );
-    }
-    if( bits & U_ANGLE2 ) {
-        SHOWBITS( "angles[2]" );
-    }
-    if( bits & U_ANGLE3 ) {
-        SHOWBITS( "angles[3]" );
-    }
-
-    if( bits & U_OLDORIGIN ) {
-        SHOWBITS( "old_origin" );
-    }
-
-    if( bits & U_SOUND ) {
-        SHOWBITS( "sound" );
-    }
-
-    if( bits & U_EVENT ) {
-        SHOWBITS( "event" );
-    }
-
-    if( bits & U_SOLID ) {
-        SHOWBITS( "solid" );
-    }
-}
+#if USE_CLIENT
 
 void MSG_ShowDeltaPlayerstateBits_Default( int flags ) {
     if( flags & PS_M_TYPE ) {
@@ -2574,6 +2499,113 @@ void MSG_ShowDeltaPlayerstateBits_Enhanced( int flags ) {
     }
 }
 
+
+void MSG_ShowDeltaUsercmdBits_Enhanced( int bits ) {
+    if( !bits ) {
+        SHOWBITS( "<none>" );
+        return;
+    }
+    if( bits & CM_ANGLE1 )
+        SHOWBITS( "angle1" );
+    if( bits & CM_ANGLE2 )
+        SHOWBITS( "angle2" );
+    if( bits & CM_ANGLE3 )
+        SHOWBITS( "angle3" );
+    
+    if( bits & CM_FORWARD )
+        SHOWBITS( "forward" );
+    if( bits & CM_SIDE )
+        SHOWBITS( "side" );
+    if( bits & CM_UP )
+        SHOWBITS( "up" );
+
+    if( bits & CM_BUTTONS )
+        SHOWBITS( "buttons" );
+    if( bits & CM_IMPULSE )
+        SHOWBITS( "msec" );
+}
+
+#endif // USE_CLIENT
+
+#if USE_CLIENT || USE_MVD_CLIENT
+
+void MSG_ShowDeltaEntityBits( int bits ) {
+    if( bits & U_MODEL ) {
+        SHOWBITS( "modelindex" );
+    }
+    if( bits & U_MODEL2 ) {
+        SHOWBITS( "modelindex2" );
+    }
+    if( bits & U_MODEL3 ) {
+        SHOWBITS( "modelindex3" );
+    }
+    if( bits & U_MODEL4 ) {
+        SHOWBITS( "modelindex4" );
+    }
+
+    if( bits & U_FRAME8 )
+        SHOWBITS( "frame8" );
+    if( bits & U_FRAME16 )
+        SHOWBITS( "frame16" );
+
+    if( ( bits & ( U_SKIN8 | U_SKIN16 ) ) == ( U_SKIN8 | U_SKIN16 ) )
+        SHOWBITS( "skinnum32" );
+    else if( bits & U_SKIN8 )
+        SHOWBITS( "skinnum8" );
+    else if( bits & U_SKIN16 )
+        SHOWBITS( "skinnum16" );
+
+    if( ( bits & ( U_EFFECTS8 | U_EFFECTS16 ) ) == ( U_EFFECTS8 | U_EFFECTS16 ) )
+        SHOWBITS( "effects32" );
+    else if( bits & U_EFFECTS8 )
+        SHOWBITS( "effects8" );
+    else if( bits & U_EFFECTS16 )
+        SHOWBITS( "effects16" );
+
+    if( ( bits & ( U_RENDERFX8 | U_RENDERFX16 ) ) == ( U_RENDERFX8 | U_RENDERFX16 ) )
+        SHOWBITS( "renderfx32" );
+    else if( bits & U_RENDERFX8 )
+        SHOWBITS( "renderfx8" );
+    else if( bits & U_RENDERFX16 )
+        SHOWBITS( "renderfx16" );
+
+    if( bits & U_ORIGIN1 ) {
+        SHOWBITS( "origin[0]" );
+    }
+    if( bits & U_ORIGIN2 ) {
+        SHOWBITS( "origin[1]" );
+    }
+    if( bits & U_ORIGIN3 ) {
+        SHOWBITS( "origin[2]" );
+    }
+        
+    if( bits & U_ANGLE1 ) {
+        SHOWBITS( "angles[0]" );
+    }
+    if( bits & U_ANGLE2 ) {
+        SHOWBITS( "angles[2]" );
+    }
+    if( bits & U_ANGLE3 ) {
+        SHOWBITS( "angles[3]" );
+    }
+
+    if( bits & U_OLDORIGIN ) {
+        SHOWBITS( "old_origin" );
+    }
+
+    if( bits & U_SOUND ) {
+        SHOWBITS( "sound" );
+    }
+
+    if( bits & U_EVENT ) {
+        SHOWBITS( "event" );
+    }
+
+    if( bits & U_SOLID ) {
+        SHOWBITS( "solid" );
+    }
+}
+
 void MSG_ShowDeltaPlayerstateBits_Packet( int flags ) {
     if( flags & PPS_M_TYPE ) {
         SHOWBITS( "pmove.pm_type" );
@@ -2636,31 +2668,6 @@ void MSG_ShowDeltaPlayerstateBits_Packet( int flags ) {
     }
 }
 
-void MSG_ShowDeltaUsercmdBits_Enhanced( int bits ) {
-    if( !bits ) {
-        SHOWBITS( "<none>" );
-        return;
-    }
-    if( bits & CM_ANGLE1 )
-        SHOWBITS( "angle1" );
-    if( bits & CM_ANGLE2 )
-        SHOWBITS( "angle2" );
-    if( bits & CM_ANGLE3 )
-        SHOWBITS( "angle3" );
-    
-    if( bits & CM_FORWARD )
-        SHOWBITS( "forward" );
-    if( bits & CM_SIDE )
-        SHOWBITS( "side" );
-    if( bits & CM_UP )
-        SHOWBITS( "up" );
-
-    if( bits & CM_BUTTONS )
-        SHOWBITS( "buttons" );
-    if( bits & CM_IMPULSE )
-        SHOWBITS( "msec" );
-}
-
 const char *MSG_ServerCommandString( int cmd ) {
     switch( cmd ) {
         case -1: return "END OF MESSAGE";
@@ -2694,7 +2701,9 @@ const char *MSG_ServerCommandString( int cmd ) {
     }
 }
 
-#endif // USE_CLIENT
+#endif // USE_CLIENT || USE_MVD_CLIENT
+
+#endif // _DEBUG
 
 //===========================================================================
 
@@ -2735,7 +2744,7 @@ void *SZ_GetSpace( sizebuf_t *buf, size_t length ) {
                 __func__, buf->tag, length, buf->maxsize );
         }
 
-        Com_DPrintf( "%s: %#x: overflow\n", __func__, buf->tag );
+        //Com_DPrintf( "%s: %#x: overflow\n", __func__, buf->tag );
         SZ_Clear( buf ); 
         buf->overflowed = qtrue;
     }

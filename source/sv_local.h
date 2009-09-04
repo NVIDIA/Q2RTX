@@ -52,6 +52,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define SV_Mallocz( size )      Z_TagMallocz( size, TAG_SERVER )
 #define SV_CopyString( s )      Z_TagCopyString( s, TAG_SERVER )
 
+#ifdef _DEBUG
+#define SV_DPrintf(level,...) \
+    if( sv_debug && sv_debug->integer > level ) \
+        Com_LPrintf( PRINT_DEVELOPER, __VA_ARGS__ )
+#else
+#define SV_DPrintf(...)
+#endif
+
 #define SV_BASELINES_SHIFT          6
 #define SV_BASELINES_PER_CHUNK      ( 1 << SV_BASELINES_SHIFT )
 #define SV_BASELINES_MASK           ( SV_BASELINES_PER_CHUNK - 1 )
@@ -394,8 +402,8 @@ extern cvar_t       *sv_fps;
 extern cvar_t       *sv_force_reconnect;
 extern cvar_t       *sv_iplimit;
 
-#if USE_CLIENT
-extern cvar_t       *sv_debug_send;
+#ifdef _DEBUG
+extern cvar_t       *sv_debug;
 extern cvar_t       *sv_pad_packets;
 #endif
 extern cvar_t       *sv_novis;

@@ -1094,9 +1094,11 @@ void SCR_BeginLoadingPlaque( void ) {
     if( cls.disable_screen ) {
         return;
     }
+#ifdef _DEBUG
     if( developer->integer ) {
         return;
     }
+#endif
     // if at console or menu, don't bring up the plaque
     if( cls.key_dest & (KEY_CONSOLE|KEY_MENU) ) {
         return;

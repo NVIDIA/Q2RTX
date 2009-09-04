@@ -342,9 +342,24 @@ extern cvar_t    *cl_noskins;
 extern cvar_t    *cl_kickangles;
 extern cvar_t    *cl_rollhack;
 
+#ifdef _DEBUG
+#define SHOWNET(level,...) \
+    if( cl_shownet->integer > level ) \
+        Com_LPrintf( PRINT_DEVELOPER, __VA_ARGS__ )
+#define SHOWCLAMP(level,...) \
+    if( cl_showclamp->integer > level ) \
+        Com_LPrintf( PRINT_DEVELOPER, __VA_ARGS__ )
+#define SHOWMISS(...) \
+    if( cl_showmiss->integer ) \
+        Com_LPrintf( PRINT_DEVELOPER, __VA_ARGS__ )
 extern cvar_t    *cl_shownet;
 extern cvar_t    *cl_showmiss;
 extern cvar_t    *cl_showclamp;
+#else
+#define SHOWNET(...)
+#define SHOWCLAMP(...)
+#define SHOWMISS(...)
+#endif
 
 extern cvar_t    *cl_vwep;
 
@@ -520,7 +535,7 @@ void CL_AddLightStyles (void);
 
 void CL_Init (void);
 void CL_Quit_f (void);
-void CL_Disconnect( comErrorType_t type, const char *text );
+void CL_Disconnect( error_type_t type, const char *text );
 void CL_RequestNextDownload (void);
 void CL_CheckForResend( void );
 void CL_ClearState (void);
@@ -700,6 +715,7 @@ void    SCR_LagClear( void );
 float   SCR_FadeAlpha( unsigned startTime, unsigned visTime, unsigned fadeTime );
 int     SCR_DrawStringEx( int x, int y, int flags, size_t maxlen, const char *s, qhandle_t font );
 void    SCR_DrawStringMulti( int x, int y, int flags, size_t maxlen, const char *s, qhandle_t font );
+
 
 //
 // cl_keys.c

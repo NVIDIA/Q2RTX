@@ -101,7 +101,7 @@ static void Prompt_ShowIndividualMatches(
     if( numCommands ) {
         qsort( matches + offset, numCommands, sizeof( matches[0] ), SortStrcmp );
 
-        prompt->printf( "\n" S_COLOR_YELLOW "%i possible command%s:\n",
+        prompt->printf( "\n%i possible command%s:\n",
             numCommands, numCommands != 1 ? "s" : "" );
 
         Prompt_ShowMatches( prompt, matches, offset, offset + numCommands );
@@ -111,7 +111,7 @@ static void Prompt_ShowIndividualMatches(
     if( numCvars ) {
         qsort( matches + offset, numCvars, sizeof( matches[0] ), SortStrcmp );
 
-        prompt->printf( "\n" S_COLOR_YELLOW "%i possible variable%s:\n",
+        prompt->printf( "\n%i possible variable%s:\n",
             numCvars, numCvars != 1 ? "s" : "" );
 
         Prompt_ShowMatches( prompt, matches, offset, offset + numCvars );
@@ -121,7 +121,7 @@ static void Prompt_ShowIndividualMatches(
     if( numAliases ) {
         qsort( matches + offset, numAliases, sizeof( matches[0] ), SortStrcmp );
 
-        prompt->printf( "\n" S_COLOR_YELLOW "%i possible alias%s:\n",
+        prompt->printf( "\n%i possible alias%s:\n",
             numAliases, numAliases != 1 ? "es" : "" );
 
         Prompt_ShowMatches( prompt, matches, offset, offset + numAliases );

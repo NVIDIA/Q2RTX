@@ -67,8 +67,9 @@ void CL_CheckPredictionError( void ) {
         // a teleport or something
         VectorClear( cl.prediction_error );
     } else {
-        if( cl_showmiss->integer && ( delta[0] || delta[1] || delta[2] ) ) {
-            Com_Printf( "prediction miss on %i: %i (%d %d %d)\n", cl.frame.number, len, delta[0], delta[1], delta[2]);
+        if( delta[0] || delta[1] || delta[2] ) {
+            SHOWMISS( "prediction miss on %i: %i (%d %d %d)\n",
+                cl.frame.number, len, delta[0], delta[1], delta[2]);
         }
 
         VectorCopy( ps->pmove.origin, cl.predicted_origins[cmd] );
@@ -203,16 +204,12 @@ void CL_PredictMovement( void ) {
 
     // if we are too far out of date, just freeze
     if( current - ack > CMD_BACKUP - 1 ) {
-        if( cl_showmiss->integer ) {
-            Com_Printf( "%i: exceeded CMD_BACKUP\n", cl.frame.number );
-        }
+        SHOWMISS( "%i: exceeded CMD_BACKUP\n", cl.frame.number );
         return;    
     }
 
     if( !cl.cmd.msec && current == ack ) {
-        if( cl_showmiss->integer ) {
-            Com_Printf( "%i: not moved\n", cl.frame.number );
-        }
+        SHOWMISS( "%i: not moved\n", cl.frame.number );
         return;
     }
 

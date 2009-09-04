@@ -93,7 +93,7 @@ static menuSound_t ErrorKeydown( menuFrameWork_t *self, int key ) {
     return QMS_OUT;
 }
 
-void M_Menu_Error( comErrorType_t type, const char *text ) {
+void M_Menu_Error( error_type_t type, const char *text ) {
     color_t color;
 
     if( !text ) {

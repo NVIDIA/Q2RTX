@@ -238,7 +238,7 @@ void UI_OpenMenu( uiMenu_t type ) {
     UI_PushMenu( menu );
 }
 
-void UI_ErrorMenu( comErrorType_t type, const char *text ) {
+void UI_ErrorMenu( error_type_t type, const char *text ) {
     if( !uis.initialized ) {
         return;
     }

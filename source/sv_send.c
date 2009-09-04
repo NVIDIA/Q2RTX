@@ -333,12 +333,8 @@ unless told otherwise.
 =======================
 */
 void SV_ClientAddMessage( client_t *client, int flags ) {
-#if USE_CLIENT
-    if( sv_debug_send->integer > 1 ) {
-        Com_Printf( S_COLOR_BLUE"%s: add%c: %"PRIz"\n", client->name,
-            ( flags & MSG_RELIABLE ) ? 'r' : 'u', msg_write.cursize );
-    }
-#endif
+    SV_DPrintf( 1, "Added %sreliable message to %s: %"PRIz" bytes\n",
+        ( flags & MSG_RELIABLE ) ? "" : "un", client->name, msg_write.cursize );
 
     if( !msg_write.cursize ) {
         return;
@@ -466,13 +462,8 @@ static void emit_snd( client_t *client, message_packet_t *msg ) {
             }
         }
         if( i == frame->numEntities ) {
-#if USE_CLIENT
-            if( sv_debug_send->integer ) {
-                Com_Printf( S_COLOR_BLUE
-                    "Forcing position on entity %d for %s\n",
-                    entnum, client->name );
-            }
-#endif
+            SV_DPrintf( 0, "Forcing position on entity %d for %s\n",
+                entnum, client->name );
             flags |= SND_POS;   // entity is not present in frame
         }
     }
@@ -562,11 +553,7 @@ static void write_reliable_messages_old( client_t *client, size_t maxsize ) {
     int count;
 
     if( client->netchan->reliable_length ) {
-#if USE_CLIENT
-        if( sv_debug_send->integer > 1 ) {
-            Com_Printf( S_COLOR_BLUE"%s: unacked\n", client->name );
-        }
-#endif
+        SV_DPrintf( 1, "%s to %s: unacked\n", __func__, client->name );
         return;    // there is still outgoing reliable message pending
     }
 
@@ -577,18 +564,14 @@ static void write_reliable_messages_old( client_t *client, size_t maxsize ) {
         if( client->netchan->message.cursize + msg->cursize > maxsize ) {
             if( !count ) {
                 // this should never happen
-                Com_WPrintf( "%s: %s: overflow on the first message\n",
+                Com_WPrintf( "%s to %s: overflow on the first message\n",
                     __func__, client->name );
             }
             break;
         }
 
-#if USE_CLIENT
-        if( sv_debug_send->integer > 1 ) {
-            Com_Printf( S_COLOR_BLUE"%s: wrt%d: %d\n",
-                client->name, count, msg->cursize );
-        }
-#endif
+        SV_DPrintf( 1, "%s to %s: writing msg %d: %d bytes\n",
+            __func__, client->name, count, msg->cursize );
 
         SZ_Write( &client->netchan->message, msg->data, msg->cursize );
         free_msg_packet( client, msg );
@@ -673,12 +656,8 @@ static void write_datagram_old( client_t *client ) {
     // and the player_state_t
     client->WriteFrame( client );
     if( msg_write.cursize > maxsize ) {
-#if USE_CLIENT
-        if( sv_debug_send->integer ) {
-            Com_Printf( S_COLOR_BLUE"Frame overflowed for %s: %"PRIz" > %"PRIz"\n",
-                client->name, msg_write.cursize, maxsize );
-        }
-#endif
+        SV_DPrintf( 0, "Frame %d overflowed for %s: %"PRIz" > %"PRIz"\n",
+            sv.framenum, client->name, msg_write.cursize, maxsize );
         SZ_Clear( &msg_write );
     }
 
@@ -748,7 +727,7 @@ static void write_datagram_new( client_t *client ) {
         emit_messages( client, msg_write.maxsize );
     }
 
-#if USE_CLIENT
+#ifdef _DEBUG
     if( sv_pad_packets->integer ) {
         size_t pad = msg_write.cursize + sv_pad_packets->integer;
 
@@ -816,12 +795,8 @@ void SV_SendClientMessages( void ) {
 
         // don't overrun bandwidth
         if( SV_RateDrop( client ) ) {
-#if USE_CLIENT
-            if( sv_debug_send->integer ) {
-                Com_Printf( "Frame %d surpressed for %s\n",
-                    sv.framenum, client->name );
-            }
-#endif
+            SV_DPrintf( 0, "Frame %d surpressed for %s\n",
+                sv.framenum, client->name );
             client->surpressCount++;
         } else {
             // don't write any frame data until all fragments are sent
@@ -870,12 +845,7 @@ void SV_SendAsyncPackets( void ) {
         // make sure all fragments are transmitted first
         if( netchan->fragment_pending ) {
             cursize = netchan->TransmitNextFragment( netchan );
-#if USE_CLIENT
-            if( sv_debug_send->integer ) {
-                Com_Printf( S_COLOR_BLUE"%s: frag: %"PRIz"\n",
-                    client->name, cursize );
-            }
-#endif
+            SV_DPrintf( 0, "%s: frag: %"PRIz"\n", client->name, cursize );
             goto calctime;
         }
 
@@ -900,12 +870,7 @@ void SV_SendAsyncPackets( void ) {
             netchan->reliable_length || retransmit )
         {
             cursize = netchan->Transmit( netchan, 0, NULL, 1 );
-#if USE_CLIENT
-            if( sv_debug_send->integer ) {
-                Com_Printf( S_COLOR_BLUE"%s: send: %"PRIz"\n",
-                    client->name, cursize );
-            }
-#endif
+            SV_DPrintf( 0, "%s: send: %"PRIz"\n", client->name, cursize );
 calctime:
             SV_CalcSendTime( client, cursize );
         }

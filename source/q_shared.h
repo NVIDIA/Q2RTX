@@ -112,26 +112,28 @@ typedef int fileHandle_t;
 
 #define MAX_CLIENT_NAME     16
 
-typedef enum comErrorType_e {
+typedef enum {
     ERR_FATAL,          // exit the entire game with a popup window
     ERR_DROP,           // print to console and disconnect from game
     ERR_DISCONNECT,     // don't kill server
     ERR_SILENT
-} comErrorType_t;
+} error_type_t;
 
-typedef enum comPrintType_e {
+typedef enum {
     PRINT_ALL,          // general messages
     PRINT_DEVELOPER,    // only print when "developer 1"
     PRINT_WARNING,      // print in yellow color
     PRINT_ERROR         // print in red color
-} comPrintType_t;
+} print_type_t;
 
-void        Com_Printf( const char *fmt, ... ) q_printf( 1, 2 );
-void        Com_DPrintf( const char *fmt, ... ) q_printf( 1, 2 );
-void        Com_WPrintf( const char *fmt, ... ) q_printf( 1, 2 );
-void        Com_EPrintf( const char *fmt, ... ) q_printf( 1, 2 );
-void        Com_Error( comErrorType_t code, const char *fmt, ... )
-                q_noreturn q_printf( 2, 3 );
+void    Com_LPrintf( print_type_t type, const char *fmt, ... )
+            q_printf( 2, 3 );
+void    Com_Error( error_type_t code, const char *fmt, ... )
+            q_noreturn q_printf( 2, 3 );
+
+#define Com_Printf(...) Com_LPrintf( PRINT_ALL, __VA_ARGS__ )
+#define Com_WPrintf(...) Com_LPrintf( PRINT_WARNING, __VA_ARGS__ )
+#define Com_EPrintf(...) Com_LPrintf( PRINT_ERROR, __VA_ARGS__ )
 
 // game print flags
 #define PRINT_LOW           0       // pickup messages
@@ -140,7 +142,7 @@ void        Com_Error( comErrorType_t code, const char *fmt, ... )
 #define PRINT_CHAT          3       // chat messages    
 
 // destination class for gi.multicast()
-typedef enum multicast_e {
+typedef enum {
     MULTICAST_ALL,
     MULTICAST_PHS,
     MULTICAST_PVS,
@@ -329,7 +331,6 @@ static inline int rand_byte( void ) {
 #define Q_ClearBit( data, bit )     ( (data)[(bit) >> 3] &= ~( 1 << ( (bit) & 7 ) ) )
 
 qboolean Q_IsWhiteSpace( const char *string );
-char *Q_FormatString( const char *string );
 size_t Q_FormatFileSize( char *dest, size_t bytes, size_t size );
 int Q_ClearStr( char *out, const char *in, int bufsize ); 
 int Q_HighlightStr( char *out, const char *in, int bufsize ); 

@@ -105,7 +105,7 @@ int         mvd_chanid;
 
 jmp_buf     mvd_jmpbuf;
 
-#if USE_CLIENT
+#ifdef _DEBUG
 cvar_t      *mvd_shownet;
 #endif
 
@@ -1191,7 +1191,7 @@ static neterr_t run_connect( gtv_t *gtv ) {
 
 static neterr_t run_stream( gtv_t *gtv ) {
     neterr_t ret;
-#if USE_CLIENT
+#ifdef _DEBUG
     int count;
     size_t usage;
 #endif
@@ -1201,7 +1201,7 @@ static neterr_t run_stream( gtv_t *gtv ) {
         return ret;
     }
 
-#if USE_CLIENT
+#ifdef _DEBUG
     count = 0;
     usage = FIFO_Usage( &gtv->stream.recv );
 #endif
@@ -1216,19 +1216,19 @@ static neterr_t run_stream( gtv_t *gtv ) {
             if( !parse_message( gtv, &gtv->z_buf ) ) {
                 break;
             }
-#if USE_CLIENT
+#ifdef _DEBUG
             count++;
 #endif
         }
     } else
 #endif
         while( parse_message( gtv, &gtv->stream.recv ) ) {
-#if USE_CLIENT
+#ifdef _DEBUG
             count++;
 #endif
         }
 
-#if USE_CLIENT
+#ifdef _DEBUG
     if( mvd_shownet->integer == -1 ) {
         size_t total = usage - FIFO_Usage( &gtv->stream.recv );
 
@@ -2116,7 +2116,7 @@ MVD_Register
 ==============
 */
 void MVD_Register( void ) {
-#if USE_CLIENT
+#ifdef _DEBUG
     mvd_shownet = Cvar_Get( "mvd_shownet", "0", 0 );
 #endif
     mvd_timeout = Cvar_Get( "mvd_timeout", "90", 0 );

@@ -542,7 +542,17 @@ void        Com_FlushLogs( void );
 #define Com_IsDedicated() 1
 #endif
 
+#ifdef _DEBUG
+#define Com_DPrintf(...) \
+    if( developer && developer->integer ) \
+        Com_LPrintf( PRINT_DEVELOPER, __VA_ARGS__ )
+#else
+#define Com_DPrintf(...)
+#endif
+
+#ifdef _DEBUG
 extern cvar_t   *developer;
+#endif
 extern cvar_t   *dedicated;
 #if USE_CLIENT
 extern cvar_t   *host_speeds;

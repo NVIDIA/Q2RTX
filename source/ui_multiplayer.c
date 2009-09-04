@@ -147,18 +147,18 @@ void UI_AddToServerList( const serverStatus_t *status ) {
     map = Info_ValueForKey( info, "mapname" );
     if( !map[0] ) {
         map = "???";
-    } else {
+    } /*else {
         Q_snprintf( value, sizeof( value ), "maps/%s.bsp", map );
         if( FS_LoadFile( value, NULL ) == INVALID_LENGTH ) {
             Q_concat( value, sizeof( value ), S_COLOR_RED, map, NULL );
             map = value;
         }
-    }
+    }*/
 
     j = atoi( Info_ValueForKey( info, "maxclients" ) );
     k = atoi( Info_ValueForKey( info, "needpass" ) );
-    Q_snprintf( key, sizeof( key ), "%s%d/%d",
-        status->numPlayers < j ? k > 0 ? S_COLOR_YELLOW : "" : S_COLOR_RED,
+    Q_snprintf( key, sizeof( key ), "%d/%d",
+        //status->numPlayers < j ? k > 0 ? S_COLOR_YELLOW : "" : S_COLOR_RED,
         status->numPlayers, j );
 
     if( m_join.names[i] ) {

@@ -512,78 +512,18 @@ int Q_HighlightStr( char *out, const char *in, int bufsize ) {
 Q_IsWhiteSpace
 ================
 */
-qboolean Q_IsWhiteSpace( const char *string ) {
-    while( *string ) {
-        if( ( *string & 127 ) > 32 ) {
+qboolean Q_IsWhiteSpace( const char *s ) {
+    int c;
+
+    while( *s ) {
+        c = *s++;
+        c &= 127;
+        if( Q_isgraph( c ) ) {
             return qfalse;
         }
-        string++;
     }
 
     return qtrue;
-}
-
-/*
-================
-Q_FormatString
-
-replaces some common escape codes and unprintable characters
-================
-*/
-char *Q_FormatString( const char *string ) {
-    static char buffer[MAX_STRING_CHARS];
-    char    *dst;
-    int        c;
-
-    dst = buffer;
-    while( *string ) {
-        c = *string++;
-
-        switch( c ) {
-        case '\t':
-            *dst++ = '\\';
-            *dst++ = 't';
-            break;
-        case '\b':
-            *dst++ = '\\';
-            *dst++ = 'b';
-            break;
-        case '\r':
-            *dst++ = '\\';
-            *dst++ = 'r';
-            break;
-        case '\n':
-            *dst++ = '\\';
-            *dst++ = 'n';
-            break;
-        case '\\':
-            *dst++ = '\\';
-            *dst++ = '\\';
-            break;
-        case '\"':
-            *dst++ = '\\';
-            *dst++ = '\"';
-            break;
-        default:
-            if( c < 32 || c >= 127 ) {
-                *dst++ = '\\';
-                *dst++ = 'x';
-                *dst++ = hexchars[c >> 4];
-                *dst++ = hexchars[c & 15];
-            } else {
-                *dst++ = c;
-            }
-            break;
-        }
-
-        if( dst - buffer >= MAX_STRING_CHARS - 4 ) {
-            break;
-        }
-    }
-
-    *dst = 0;
-
-    return buffer;
 }
 
 size_t Q_FormatFileSize( char *dest, size_t bytes, size_t size ) {

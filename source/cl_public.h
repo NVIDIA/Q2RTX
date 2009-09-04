@@ -52,7 +52,7 @@ void CL_ProcessEvents( void );
 void CL_ErrorEvent( void );
 #endif
 void CL_Init (void);
-void CL_Disconnect( comErrorType_t type, const char *text );
+void CL_Disconnect( error_type_t type, const char *text );
 void CL_Shutdown (void);
 void CL_Frame (unsigned msec);
 void CL_LocalConnect( void );
