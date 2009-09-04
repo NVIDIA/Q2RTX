@@ -1036,7 +1036,7 @@ static void PM_SnapPosition (void)
     int     i, j, bits;
     short   base[3];
     // try all single bits first
-    static const int jitterbits[8] = {0,4,1,2,3,5,6,7};
+    static const byte jitterbits[8] = {0,4,1,2,3,5,6,7};
 
     // snap velocity to eigths
     for (i=0 ; i<3 ; i++)
@@ -1122,7 +1122,7 @@ static void PM_InitialSnapPosition(void)
 {
     int        x, y, z;
     short      base[3];
-    static const int offset[3] = { 0, -1, 1 };
+    static const short offset[3] = { 0, -1, 1 };
 
     VectorCopy (pm->s.origin, base);
 
