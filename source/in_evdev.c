@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "com_local.h"
 #include "key_public.h"
 #include "in_public.h"
+#include "cl_public.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -46,10 +47,10 @@ static struct {
 
 /*
 ===========
-Evdev_RunMouse
+Evdev_GetMouseEvents
 ===========
 */
-static void Evdev_RunMouse( void ) {
+static void Evdev_GetMouseEvents( void ) {
     struct input_event ev[MAX_EVENTS];
     fd_set fdset;
     struct timeval timeout;
@@ -150,8 +151,12 @@ Evdev_StartupMouse
 ===========
 */
 static qboolean Evdev_InitMouse( void ) {
-    in_device = Cvar_Get( "in_device", "/dev/input/event2", CVAR_LATCH );
-    
+    in_device = Cvar_Get( "in_device", "", CVAR_LATCH );
+    if( !in_device->string[0] ) {
+        Com_EPrintf( "No input device specified\n" );
+        return qfalse;
+    }
+ 
     evdev.fd = open( in_device->string, O_RDONLY );
     if( evdev.fd == -1 ) {
         Com_EPrintf( "Couldn't open %s: %s\n", in_device->string,
@@ -181,7 +186,7 @@ static void Evdev_GrabMouse( grab_t grab ) {
         return;
     }
     
-#ifdef EVIOCGRAB
+#if 0//def EVIOCGRAB
     if( ioctl( evdev.fd, EVIOCGRAB, active ) == -1 ) {
         Com_EPrintf( "Grab/Release failed: %s\n", strerror( errno ) );
     }
