@@ -214,20 +214,34 @@ static void logfile_param_changed( cvar_t *self ) {
     }    
 }
 
+static size_t format_local_time( char *buffer, size_t size, const char *fmt ) {
+    time_t t;
+    struct tm *tm;
+
+    if( !size ) {
+        return 0;
+    }
+
+    buffer[0] = 0;
+
+    t = time( NULL );
+    tm = localtime( &t );
+    if( !tm ) {
+        return 0;
+    }
+
+    return strftime( buffer, size, fmt, tm );
+}
+
 static void logfile_write( const char *string ) {
     char text[MAXPRINTMSG];
-    char timebuf[MAX_QPATH];
+    char buf[MAX_QPATH];
     char *p, *maxp;
     size_t len;
-    time_t clock;
-    struct tm *tm;
     int c;
 
     if( logfile_prefix->string[0] ) {
-        time( &clock );
-        tm = localtime( &clock );
-        len = strftime( timebuf, sizeof( timebuf ),
-            logfile_prefix->string, tm );
+        len = format_local_time( buf, sizeof( buf ), logfile_prefix->string );
     } else {
         len = 0;
     }
@@ -235,13 +249,9 @@ static void logfile_write( const char *string ) {
     p = text;
     maxp = text + sizeof( text ) - 1;
     while( *string ) {
-        if( Q_IsColorString( string ) ) {
-            string += 2;
-            continue;
-        }
         if( com_logNewline ) {
             if( len > 0 && p + len < maxp ) {
-                memcpy( p, timebuf, len );
+                memcpy( p, buf, len );
                 p += len;
             }
             com_logNewline = qfalse;
@@ -252,14 +262,10 @@ static void logfile_write( const char *string ) {
         }
 
         c = *string++;
-        if( c & 128 ) {
-            c &= 127;
-            if( c < 32 ) {
-                continue;
-            }
-        }
         if( c == '\n' ) {
             com_logNewline = qtrue;
+        } else {
+            c = Q_charascii( c );
         }
         
         *p++ = c;
@@ -1187,13 +1193,7 @@ Com_Time_m
 =============
 */
 size_t Com_Time_m( char *buffer, size_t size ) {
-    time_t clock;
-    struct tm *local;
-
-    time( &clock );
-    local = localtime( &clock );
-
-    return strftime( buffer, size, com_time_format->string, local );
+    return format_local_time( buffer, size, com_time_format->string );
 }
 
 /*
@@ -1202,13 +1202,7 @@ Com_Date_m
 =============
 */
 static size_t Com_Date_m( char *buffer, size_t size ) {
-    time_t clock;
-    struct tm *local;
-
-    time( &clock );
-    local = localtime( &clock );
-
-    return strftime( buffer, size, com_date_format->string, local );
+    return format_local_time( buffer, size, com_date_format->string );
 }
 
 size_t Com_FormatTime( char *buffer, size_t size, time_t t ) {
