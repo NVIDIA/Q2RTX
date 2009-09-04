@@ -780,7 +780,7 @@ static qboolean SV_ParseMask( const char *s, uint32_t *addr, uint32_t *mask ) {
     if( p ) {
         *p++ = 0;
         if( *p == 0 ) {
-            Com_Printf( "Please specify a mask.\n" );
+            Com_Printf( "Please specify a mask after '/'.\n" );
             return qfalse;
         }
         bits = atoi( p );
@@ -818,14 +818,12 @@ void SV_AddMatch_f( list_t *list ) {
         return;
     }
 
-#if 0
     LIST_FOR_EACH( addrmatch_t, match, list, entry ) {
-        if( ( match->addr & match->mask ) == ( addr & mask ) ) {
-            Com_Printf( "Address already matches.\n" );
+        if( match->addr == addr && match->mask == mask ) {
+            Com_Printf( "Address/mask entry %s already exists.\n", s );
             return;
         }
     }
-#endif
 
     s = Cmd_ArgsFrom( 2 );
     len = strlen( s );
@@ -895,7 +893,7 @@ remove:
             return;
         }
     }
-    Com_Printf( "No such address/mask: %s\n", s );
+    Com_Printf( "No such address/mask entry: %s\n", s );
 }
 
 void SV_ListMatches_f( list_t *list ) {
