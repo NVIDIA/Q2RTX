@@ -218,7 +218,7 @@ The flags will be or'ed in if the variable exists.
 ============
 */
 cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
-    cvar_t    *var, *c, **p;
+    cvar_t *var, *c, **p;
     unsigned hash;
     size_t length;
 
@@ -1052,9 +1052,10 @@ static void Cvar_Reset_c( genctx_t *ctx, int argnum ) {
 }
 
 size_t Cvar_BitInfo( char *info, int bit ) {
-    char    newi[MAX_INFO_STRING];
+    char    newi[MAX_INFO_STRING], *v;
     cvar_t  *var;
     size_t  len, total = 0;
+    int     c;
 
     for( var = cvar_vars; var; var = var->next ) {
         if( !( var->flags & bit ) ) {
@@ -1071,9 +1072,17 @@ size_t Cvar_BitInfo( char *info, int bit ) {
         if( total + len >= MAX_INFO_STRING ) {
             break;
         }
-        memcpy( info + total, newi, len );
-        total += len;
+
+        // only copy ascii values
+        v = newi;
+        while( *v ) {
+            c = *v++;
+            c &= 127;        // strip high bits
+            if( Q_isprint( c ) )
+                info[total++] = c;
+        }
     }
+
     info[total] = 0;
     return total;
 }
