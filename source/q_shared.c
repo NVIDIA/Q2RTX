@@ -1116,30 +1116,35 @@ Also checks the length of keys/values and the whole string.
 ==================
 */
 qboolean Info_Validate( const char *s ) {
-    const char  *start;
-    int         c, len;
+    size_t len, total;
+    int c;
     
-    start = s;
+    total = 0;
     while( 1 ) {
         //
         // validate key
         //
         if( *s == '\\' ) {
             s++;
+            if( ++total == MAX_INFO_STRING ) {
+                return qfalse;    // oversize infostring
+            }
         }
         if( !*s ) {
             return qfalse;    // missing key
         }
         len = 0;
         while( *s != '\\' ) {
-            c = *s & 127;
-            if( c == '\\' || c == '\"' || c == ';' ) {
+            c = *s++;
+            if( !Q_isprint( c ) || c == '\"' || c == ';' ) {
                 return qfalse;    // illegal characters
             }
-            if( len == MAX_INFO_KEY - 1 ) {
+            if( ++len == MAX_INFO_KEY ) {
                 return qfalse;    // oversize key
             }
-            s++; len++;
+            if( ++total == MAX_INFO_STRING ) {
+                return qfalse;    // oversize infostring
+            }
             if( !*s ) {
                 return qfalse;    // missing value
             }
@@ -1149,23 +1154,25 @@ qboolean Info_Validate( const char *s ) {
         // validate value
         //
         s++;
+        if( ++total == MAX_INFO_STRING ) {
+            return qfalse;    // oversize infostring
+        }
         if( !*s ) {
             return qfalse;    // missing value
         }
         len = 0;
         while( *s != '\\' ) {
-            c = *s & 127;
-            if( c == '\\' || c == '\"' || c == ';' ) {
+            c = *s++;
+            if( !Q_isprint( c ) || c == '\"' || c == ';' ) {
                 return qfalse;    // illegal characters
             }
-            if( len == MAX_INFO_VALUE - 1 ) {
+            if( ++len == MAX_INFO_VALUE ) {
                 return qfalse;    // oversize value
             }
-            s++; len++;
+            if( ++total == MAX_INFO_STRING ) {
+                return qfalse;    // oversize infostring
+            }
             if( !*s ) {
-                if( s - start > MAX_INFO_STRING ) {
-                    return qfalse;
-                }
                 return qtrue;    // end of string
             }
         }
