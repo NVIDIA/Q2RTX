@@ -208,6 +208,21 @@ static void Cvar_EngineGet( cvar_t *var, const char *var_value, int flags ) {
     var->flags |= flags;
 }
 
+static qboolean validate_info_cvar( const char *s ) {
+    size_t len = Info_SubValidate( s );
+
+    if( len == SIZE_MAX ) {
+        Com_WPrintf( "Info cvars should not contain '\\', ';' or '\"' characters.\n" );
+        return qfalse;
+    }
+
+    if( len >= MAX_QPATH ) {
+        Com_WPrintf( "Info cvars should be less than 64 characters long.\n" );
+        return qfalse;
+    }
+
+    return qtrue;
+}
 
 /*
 ============
@@ -230,12 +245,10 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
     }
 
     if( flags & CVAR_INFOMASK ) {
-        if( Info_SubValidate( var_name ) == -1 ) {
-            Com_WPrintf( "Invalid info cvar name '%s'.\n", var_name );
+        if( !validate_info_cvar( var_name ) ) {
             return NULL;
         }
-        if( Info_SubValidate( var_value ) == -1 ) {
-            Com_WPrintf( "Invalid info cvar value '%s' for '%s'.\n", var_value, var_name );
+        if( !validate_info_cvar( var_value ) ) {
             return NULL;
         }
     }
@@ -303,8 +316,7 @@ void Cvar_SetByVar( cvar_t *var, const char *value, from_t from ) {
     }
 
     if( var->flags & CVAR_INFOMASK ) {
-        if( Info_SubValidate( value ) == -1 ) {
-            Com_WPrintf( "Invalid info cvar value '%s' for '%s'.\n", value, var->name );
+        if( !validate_info_cvar( value ) ) {
             return;
         }
     }

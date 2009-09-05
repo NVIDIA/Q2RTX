@@ -1183,23 +1183,23 @@ qboolean Info_Validate( const char *s ) {
 
 /*
 ============
-Info_ValidateSubstring
+Info_SubValidate
 ============
 */
-int Info_SubValidate( const char *s ) {
-    const char *start;
-    int c, len;
+size_t Info_SubValidate( const char *s ) {
+    size_t len;
+    int c;
 
-    for( start = s; *s; s++ ) {
-        c = *s & 127;
+    len = 0;
+    while( *s ) {
+        c = *s++;
+        c &= 127;       // strip high bits
         if( c == '\\' || c == '\"' || c == ';' ) {
-            return -1;
+            return SIZE_MAX;  // illegal characters
         }
-    }
-
-    len = s - start;
-    if( len >= MAX_QPATH ) {
-        return -1;
+        if( ++len == MAX_QPATH ) {
+            return MAX_QPATH;  // oversize value
+        }
     }
 
     return len;
@@ -1212,17 +1212,18 @@ Info_SetValueForKey
 */
 qboolean Info_SetValueForKey( char *s, const char *key, const char *value ) {
     char    newi[MAX_INFO_STRING], *v;
-    int     c, l, kl, vl;
+    size_t  l, kl, vl;
+    int     c;
 
     // validate key
     kl = Info_SubValidate( key );
-    if( kl == -1 ) {
+    if( kl >= MAX_QPATH ) {
         return qfalse;
     }
 
     // validate value
     vl = Info_SubValidate( value );
-    if( vl == -1 ) {
+    if( vl >= MAX_QPATH ) {
         return qfalse;
     }
 
@@ -1231,7 +1232,7 @@ qboolean Info_SetValueForKey( char *s, const char *key, const char *value ) {
         return qtrue;
     }
 
-    l = ( int )strlen( s );
+    l = strlen( s );
     if( l + kl + vl + 2 >= MAX_INFO_STRING ) {
         return qfalse;
     }

@@ -549,7 +549,7 @@ char    *Info_ValueForKey( const char *s, const char *key );
 void    Info_RemoveKey( char *s, const char *key );
 qboolean    Info_SetValueForKey( char *s, const char *key, const char *value );
 qboolean    Info_Validate( const char *s );
-int     Info_SubValidate( const char *s );
+size_t  Info_SubValidate( const char *s );
 void    Info_NextPair( const char **string, char *key, char *value );
 void    Info_Print( const char *infostring );
 
