@@ -434,8 +434,6 @@ char *Q_strcasestr( const char *s1, const char *s2 );
 #define Q_unlink( p ) unlink( p )
 #endif
 
-int QDECL SortStrcmp( const void *p1, const void *p2 );
-
 char *Q_strchrnul( const char *s, int c );
 void Q_setenv( const char *name, const char *value );
 
@@ -454,12 +452,8 @@ char *COM_Parse( const char **data_p );
 // data is an in/out parm, returns a parsed out token
 int COM_Compress( char *data );
 
-int Com_WildCmp( const char *filter, const char *string, qboolean ignoreCase );
 int QDECL SortStrcmp( const void *p1, const void *p2 );
 int QDECL SortStricmp( const void *p1, const void *p2 );
-
-unsigned Com_HashString( const char *string, int hashSize );
-unsigned Com_HashPath( const char *string, int hashSize );
 
 // buffer safe operations
 size_t Q_strlcpy( char *dst, const char *src, size_t size );

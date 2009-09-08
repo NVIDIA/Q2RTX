@@ -1116,10 +1116,105 @@ int BoxOnPlaneSide( vec3_t emins, vec3_t emaxs, cplane_t *p ) {
 /*
 ==============================================================================
 
-                        INIT / SHUTDOWN
+                        MISC
 
 ==============================================================================
 */
+
+#if USE_CLIENT || USE_MVD_CLIENT || USE_MVD_SERVER
+const cmd_option_t o_record[] = {
+    { "h", "help", "display this message" },
+    { "z", "gzip", "compress file with gzip" },
+    { NULL }
+};
+#endif
+
+/*
+================
+Com_PlayerToEntityState
+
+Restores entity origin and angles from player state
+================
+*/
+void Com_PlayerToEntityState( const player_state_t *ps, entity_state_t *es ) {
+    vec_t pitch;
+
+    VectorScale( ps->pmove.origin, 0.125f, es->origin );
+
+    pitch = ps->viewangles[PITCH];
+    if( pitch > 180 ) {
+        pitch -= 360;
+    }
+    es->angles[PITCH] = pitch / 3;
+    es->angles[YAW] = ps->viewangles[YAW];
+    es->angles[ROLL] = 0;
+}
+
+/*
+=================
+Com_WildCmp
+
+Wildcard compare.
+Returns non-zero if matches, zero otherwise.
+=================
+*/
+int Com_WildCmp( const char *filter, const char *string, qboolean ignoreCase ) {
+    switch( *filter ) {
+    case '\0':
+        return !*string;
+
+    case '*':
+        return Com_WildCmp( filter + 1, string, ignoreCase ) || (*string && Com_WildCmp( filter, string + 1, ignoreCase ));
+
+    case '?':
+        return *string && Com_WildCmp( filter + 1, string + 1, ignoreCase );
+
+    default:
+        return ((*filter == *string) || (ignoreCase && (Q_toupper( *filter ) == Q_toupper( *string )))) && Com_WildCmp( filter + 1, string + 1, ignoreCase );
+    }
+}
+
+/*
+================
+Com_HashString
+================
+*/
+unsigned Com_HashString( const char *string, int hashSize ) {
+    unsigned hash, c;
+
+    hash = 0;
+    while( *string ) {
+        c = *string++;
+        hash = 127 * hash + c;
+    }
+
+    hash = ( hash >> 20 ) ^ ( hash >> 10 ) ^ hash;
+    return hash & ( hashSize - 1 );
+}
+
+/*
+================
+Com_HashPath
+================
+*/
+unsigned Com_HashPath( const char *string, int hashSize ) {
+    unsigned hash, c;
+
+    hash = 0;
+    while( *string ) {
+        c = *string++;
+        if( c == '\\' ) {
+            c = '/';
+        } else {
+            c = Q_tolower( c );
+        }
+        hash = 127 * hash + c;
+    }
+
+    hash = ( hash >> 20 ) ^ ( hash >> 10 ) ^ hash;
+    return hash & ( hashSize - 1 );
+}
+
 
 /*
 ===============
@@ -1134,24 +1229,6 @@ void Com_PageInMemory( void *buffer, size_t size ) {
 
     for( i = size - 1; i > 0; i -= 4096 )
         paged_total += (( byte * )buffer)[i];
-}
-
-/*
-=============
-Com_Time_m
-=============
-*/
-size_t Com_Time_m( char *buffer, size_t size ) {
-    return format_local_time( buffer, size, com_time_format->string );
-}
-
-/*
-=============
-Com_Date_m
-=============
-*/
-static size_t Com_Date_m( char *buffer, size_t size ) {
-    return format_local_time( buffer, size, com_date_format->string );
 }
 
 size_t Com_FormatTime( char *buffer, size_t size, time_t t ) {
@@ -1222,6 +1299,33 @@ size_t Com_TimeDiffLong( char *buffer, size_t size, time_t start, time_t end ) {
     }
     diff = end - start;
     return Com_FormatTimeLong( buffer, size, diff );
+}
+
+
+/*
+==============================================================================
+
+                        INIT / SHUTDOWN
+
+==============================================================================
+*/
+
+/*
+=============
+Com_Time_m
+=============
+*/
+size_t Com_Time_m( char *buffer, size_t size ) {
+    return format_local_time( buffer, size, com_time_format->string );
+}
+
+/*
+=============
+Com_Date_m
+=============
+*/
+static size_t Com_Date_m( char *buffer, size_t size ) {
+    return format_local_time( buffer, size, com_date_format->string );
 }
 
 size_t Com_Uptime_m( char *buffer, size_t size ) {
@@ -1390,29 +1494,6 @@ void Com_Color_g( genctx_t *ctx ) {
     }
 }
 #endif
-
-void Com_PlayerToEntityState( const player_state_t *ps, entity_state_t *es ) {
-    vec_t pitch;
-
-    VectorScale( ps->pmove.origin, 0.125f, es->origin );
-
-    pitch = ps->viewangles[PITCH];
-    if( pitch > 180 ) {
-        pitch -= 360;
-    }
-    es->angles[PITCH] = pitch / 3;
-    es->angles[YAW] = ps->viewangles[YAW];
-    es->angles[ROLL] = 0;
-}
-
-#if USE_CLIENT || USE_MVD_CLIENT || USE_MVD_SERVER
-const cmd_option_t o_record[] = {
-    { "h", "help", "display this message" },
-    { "z", "gzip", "compress file with gzip" },
-    { NULL }
-};
-#endif
-
 
 /*
 ===============

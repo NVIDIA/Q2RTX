@@ -158,7 +158,7 @@ char *COM_SkipPath( const char *pathname ) {
     char    *last;
 
     if( !pathname ) {
-        Com_Error( ERR_FATAL, "COM_SkipPath: NULL" );
+        Com_Error( ERR_FATAL, "%s: NULL", __func__ );
     }
     
     last = (char *)pathname;
@@ -371,88 +371,12 @@ unsigned COM_ParseHex( const char *s ) {
     return result;
 }
 
-/*
-=================
-SortStrcmp
-=================
-*/
 int QDECL SortStrcmp( const void *p1, const void *p2 ) {
-    const char *s1 = *( const char ** )p1;
-    const char *s2 = *( const char ** )p2;
-
-    return strcmp( s1, s2 );
+    return strcmp( *( const char ** )p1, *( const char ** )p2 );
 }
 
 int QDECL SortStricmp( const void *p1, const void *p2 ) {
-    const char *s1 = *( const char ** )p1;
-    const char *s2 = *( const char ** )p2;
-
-    return Q_stricmp( s1, s2 );
-}
-
-/*
-=================
-Com_WildCmp
-
-Wildcard compare.
-Returns non-zero if matches, zero otherwise.
-=================
-*/
-int Com_WildCmp( const char *filter, const char *string, qboolean ignoreCase ) {
-    switch( *filter ) {
-    case '\0':
-        return !*string;
-
-    case '*':
-        return Com_WildCmp( filter + 1, string, ignoreCase ) || (*string && Com_WildCmp( filter, string + 1, ignoreCase ));
-
-    case '?':
-        return *string && Com_WildCmp( filter + 1, string + 1, ignoreCase );
-
-    default:
-        return ((*filter == *string) || (ignoreCase && (Q_toupper( *filter ) == Q_toupper( *string )))) && Com_WildCmp( filter + 1, string + 1, ignoreCase );
-    }
-}
-
-/*
-================
-Com_HashString
-================
-*/
-unsigned Com_HashString( const char *string, int hashSize ) {
-    unsigned hash, c;
-
-    hash = 0;
-    while( *string ) {
-        c = *string++;
-        hash = 127 * hash + c;
-    }
-
-    hash = ( hash >> 20 ) ^ ( hash >> 10 ) ^ hash;
-    return hash & ( hashSize - 1 );
-}
-
-/*
-================
-Com_HashPath
-================
-*/
-unsigned Com_HashPath( const char *string, int hashSize ) {
-    unsigned hash, c;
-
-    hash = 0;
-    while( *string ) {
-        c = *string++;
-        if( c == '\\' ) {
-            c = '/';
-        } else {
-            c = Q_tolower( c );
-        }
-        hash = 127 * hash + c;
-    }
-
-    hash = ( hash >> 20 ) ^ ( hash >> 10 ) ^ hash;
-    return hash & ( hashSize - 1 );
+    return Q_stricmp( *( const char ** )p1, *( const char ** )p2 );
 }
 
 /*
