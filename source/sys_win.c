@@ -75,33 +75,32 @@ static int              sys_hidden;
 static CONSOLE_SCREEN_BUFFER_INFO   sbinfo;
 static qboolean             gotConsole;
 
-static void Sys_HideInput( void ) {
+static void write_console_data( void *data, size_t len ) {
     DWORD dummy;
+
+    WriteFile( houtput, data, len, &dummy, NULL );    
+}
+
+static void hide_console_input( void ) {
     int i;
 
     if( !sys_hidden ) {
         for( i = 0; i <= sys_con.inputLine.cursorPos; i++ ) {
-            WriteFile( houtput, "\b \b", 3, &dummy, NULL );    
+            write_console_data( "\b \b", 3 );    
         }
     }
     sys_hidden++;
 }
 
-static void Sys_ShowInput( void ) {
-    DWORD dummy;
-    int i;
-
+static void show_console_input( void ) {
     if( !sys_hidden ) {
-        Com_EPrintf( "Sys_ShowInput: not hidden\n" );
         return;
     }
 
     sys_hidden--;
     if( !sys_hidden ) {
-        WriteFile( houtput, "]", 1, &dummy, NULL );    
-        for( i = 0; i < sys_con.inputLine.cursorPos; i++ ) {
-            WriteFile( houtput, &sys_con.inputLine.text[i], 1, &dummy, NULL );    
-        }
+        write_console_data( "]", 1 );
+        write_console_data( sys_con.inputLine.text, sys_con.inputLine.cursorPos );
     }
 }
 
@@ -112,7 +111,6 @@ Sys_ConsoleInput
 */
 void Sys_RunConsole( void ) {
     INPUT_RECORD    recs[MAX_CONSOLE_INPUT_EVENTS];
-    DWORD   dummy;
     int     ch;
     DWORD   numread, numevents;
     int     i;
@@ -166,9 +164,9 @@ void Sys_RunConsole( void ) {
                     width = MAX_FIELD_TEXT - 1;
                 }
 
-                Sys_HideInput();
+                hide_console_input();
                 IF_Init( &sys_con.inputLine, width, width );
-                Sys_ShowInput();
+                show_console_input();
                 continue;
             }
             if( recs[i].EventType != KEY_EVENT ) {
@@ -181,17 +179,17 @@ void Sys_RunConsole( void ) {
 
             switch( recs[i].Event.KeyEvent.wVirtualKeyCode ) {
             case VK_UP:
-                Sys_HideInput();
+                hide_console_input();
                 Prompt_HistoryUp( &sys_con );
-                Sys_ShowInput();
+                show_console_input();
                 break;
             case VK_DOWN:
-                Sys_HideInput();
+                hide_console_input();
                 Prompt_HistoryDown( &sys_con );
-                Sys_ShowInput();
+                show_console_input();
                 break;
             case VK_RETURN:
-                Sys_HideInput();
+                hide_console_input();
                 s = Prompt_Action( &sys_con );
                 if( s ) {
                     if( *s == '\\' || *s == '/' ) {
@@ -201,21 +199,21 @@ void Sys_RunConsole( void ) {
                     Cbuf_AddText( &cmd_buffer, s );
                     Cbuf_AddText( &cmd_buffer, "\n" );
                 } else {
-                    WriteFile( houtput, "\n", 2, &dummy, NULL );    
+                    write_console_data( "\n", 1 );
                 }
-                Sys_ShowInput();
+                show_console_input();
                 break;
             case VK_BACK:
                 if( f->cursorPos ) {
                     f->text[--f->cursorPos] = 0;
-                    WriteFile( houtput, "\b \b", 3, &dummy, NULL );    
+                    write_console_data( "\b \b", 3 );
                 }
                 break;
             case VK_TAB:
-                Sys_HideInput();
+                hide_console_input();
                 Prompt_CompleteCommand( &sys_con, qfalse );
                 f->cursorPos = strlen( f->text );
-                Sys_ShowInput();
+                show_console_input();
                 break;
             default:
                 ch = recs[i].Event.KeyEvent.uChar.AsciiChar;
@@ -223,7 +221,7 @@ void Sys_RunConsole( void ) {
                     break;
                 }
                 if( f->cursorPos < f->maxChars - 1 ) {
-                    WriteFile( houtput, &ch, 1, &dummy, NULL );
+                    write_console_data( &ch, 1 );
                     f->text[f->cursorPos] = ch;
                     f->text[++f->cursorPos] = 0;
                 }
@@ -247,6 +245,49 @@ static const WORD textColors[8] = {
     FOREGROUND_WHITE
 };
 
+void Sys_SetConsoleColor( color_index_t color ) {
+    WORD    attr, w;
+
+    if( houtput == INVALID_HANDLE_VALUE ) {
+        return;
+    }
+
+    if( !gotConsole ) {
+        return;
+    }
+
+    attr = sbinfo.wAttributes & ~FOREGROUND_WHITE;
+
+    switch( color ) {
+    case COLOR_NONE:
+        w = sbinfo.wAttributes;
+        break;
+    case COLOR_ALT:
+        w = attr | FOREGROUND_GREEN;
+        break;
+    default:
+        w = attr | textColors[color];
+        break;
+    }
+
+    SetConsoleTextAttribute( houtput, w );
+}
+
+static void write_console_output( const char *text ) {
+    char    buf[MAXPRINTMSG];
+    size_t  len;
+
+    for( len = 0; len < MAXPRINTMSG; len++ ) {
+        int c = *text++;
+        if( !c ) {
+            break;
+        }
+        buf[len] = Q_charascii( c );
+    }
+
+    write_console_data( buf, len );
+}
+
 /*
 ================
 Sys_ConsoleOutput
@@ -254,90 +295,18 @@ Sys_ConsoleOutput
 Print text to the dedicated console
 ================
 */
-void Sys_ConsoleOutput( const char *string ) {
-    DWORD   dummy;
-    char    text[MAXPRINTMSG];
-    char    *m, *p;
-    size_t  length;    
-    WORD    attr, w;
-    int     c;
-
+void Sys_ConsoleOutput( const char *text ) {
     if( houtput == INVALID_HANDLE_VALUE ) {
         return;
     }
 
     if( !gotConsole ) {
-        p = text;
-        m = text + sizeof( text ) - 1;
-        while( *string ) {
-            if( Q_IsColorString( string ) ) {
-                string += 2;
-                continue;
-            }
-            c = *string++;
-            if( c & 128 ) {
-                c &= 127;
-                if( c < 32 ) {
-                    continue;
-                }
-            }
-            *p++ = c;
-            if( p == m ) {
-                break;
-            }
-        }
-
-        *p = 0;
-
-        length = p - text;
-        WriteFile( houtput, text, length, &dummy, NULL );
-        return;
+        write_console_output( text );
+    } else {
+        hide_console_input();
+        write_console_output( text );
+        show_console_input();
     }
-
-    Sys_HideInput();
-
-    attr = sbinfo.wAttributes & ~FOREGROUND_WHITE;
-    
-    while( *string ) {
-        if( Q_IsColorString( string ) ) {
-            c = string[1];
-            string += 2;
-            if( c == COLOR_ALT ) {
-                w = attr | FOREGROUND_GREEN;
-            } else if( c == COLOR_RESET ) {
-                w = sbinfo.wAttributes;
-            } else {
-                w = attr | textColors[ ColorIndex( c ) ];
-            }
-            SetConsoleTextAttribute( houtput, w );
-            continue;
-        }
-
-        p = text;
-        m = text + sizeof( text ) - 1;
-        do {
-            c = *string++;
-            if( c & 128 ) {
-                c &= 127;
-                if( c < 32 ) {
-                    continue;
-                }
-            }
-            *p++ = c;
-            if( p == m ) {
-                break;
-            }
-        } while( *string && !Q_IsColorString( string ) );
-
-        *p = 0;
-
-        length = p - text;
-        WriteFile( houtput, text, length, &dummy, NULL );
-    }
-
-    SetConsoleTextAttribute( houtput, sbinfo.wAttributes );
-
-    Sys_ShowInput();
 }
 
 void Sys_SetConsoleTitle( const char *title ) {
@@ -645,9 +614,11 @@ void Sys_Error( const char *error, ... ) {
     errorEntered = qtrue;
 
 #if USE_SYSCON
-    Sys_Printf( S_COLOR_RED "********************\n"
-                            "FATAL: %s\n"
-                            "********************\n", text );
+    Sys_SetConsoleColor( COLOR_RED );
+    Sys_Printf( "********************\n"
+                "FATAL: %s\n"
+                "********************\n", text );
+    Sys_SetConsoleColor( COLOR_NONE );
 #endif
 
 #if USE_WINSVC
