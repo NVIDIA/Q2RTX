@@ -158,6 +158,14 @@ void Sys_SetConsoleColor( color_index_t color ) {
     char buf[5];
     size_t len;
 
+    if( !sys_console || !sys_console->integer ) {
+        return;
+    }
+
+    if( !tty_enabled ) {
+        return;
+    }
+
     buf[0] = '\033';
     buf[1] = '[';
     switch( color ) {
@@ -221,9 +229,14 @@ void Sys_SetConsoleTitle( const char *title ) {
     char buffer[MAX_STRING_CHARS];
     size_t len;
 
+    if( !sys_console || !sys_console->integer ) {
+        return;
+    }
+
     if( !tty_enabled ) {
         return;
     }
+
     len = Q_snprintf( buffer, sizeof( buffer ), "\033]0;%s\007", title );
     if( len < sizeof( buffer ) ) {
         write( 1, buffer, len );    
