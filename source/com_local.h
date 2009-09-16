@@ -536,6 +536,8 @@ uint32_t    Com_BlockChecksum( void *buffer, size_t len );
 
 void        Com_PageInMemory( void *buffer, size_t size );
 
+color_index_t Com_ParseColor( const char *s, color_index_t last );
+
 #ifdef __unix__
 void        Com_FlushLogs( void );
 #endif
@@ -602,6 +604,8 @@ extern fileHandle_t    com_logFile;
 #if USE_CLIENT || USE_MVD_CLIENT || USE_MVD_SERVER
 extern const cmd_option_t o_record[];
 #endif
+
+extern const char   colorNames[10][8];
 
 void Qcommon_Init( int argc, char **argv );
 void Qcommon_Frame( void );

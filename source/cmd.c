@@ -1476,8 +1476,7 @@ static void Cmd_EchoEx_f( void ) {
             escapes = qtrue;
             break;
         case 'c':
-            color = atoi( cmd_optarg );
-            clamp( color, COLOR_BLACK, COLOR_NONE ); 
+            color = Com_ParseColor( cmd_optarg, COLOR_NONE );
             break;
         case 'n':
             newline = "";

@@ -113,9 +113,8 @@ void SCR_UpdateScreen( void );
 #define UI_DRAWCURSOR       0x00000400
 
 extern const color_t    colorTable[8];
-extern const char       colorNames[10][8];
 
-qboolean COM_ParseColor( const char *s, color_t color );
+qboolean SCR_ParseColor( const char *s, color_t color );
 
 float V_CalcFov( float fov_x, float width, float height );
 

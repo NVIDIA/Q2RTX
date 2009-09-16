@@ -101,12 +101,6 @@ const color_t colorTable[8] = {
     { 255, 255, 255, 255 }
 };
 
-const char colorNames[10][8] = {
-    "black", "red", "green", "yellow",
-    "blue", "cyan", "magenta", "white",
-    "alt", "none"
-};
-
 /*
 ===============================================================================
 
@@ -198,7 +192,7 @@ float SCR_FadeAlpha( unsigned startTime, unsigned visTime, unsigned fadeTime ) {
     return alpha;
 }
 
-qboolean COM_ParseColor( const char *s, color_t color ) {
+qboolean SCR_ParseColor( const char *s, color_t color ) {
     int i;
     int c[8];
 
@@ -234,13 +228,13 @@ qboolean COM_ParseColor( const char *s, color_t color ) {
         }
         return qtrue;
     } else {
-        for( i = 0; i < 8; i++ ) {
-            if( !strcmp( colorNames[i], s ) ) {
-                *( uint32_t * )color = *( uint32_t * )colorTable[i];
-                return qtrue;
-            }
+        i = Com_ParseColor( s, COLOR_WHITE );
+        if( i == COLOR_NONE ) {
+            return qfalse;
         }
-        return qfalse;
+
+        FastColorCopy( colorTable[i], color );
+        return qtrue;
     }
 }
 
@@ -648,7 +642,7 @@ static void SCR_Draw_f( void ) {
         if( !strcmp( c, "alt" ) ) {
             flags |= UI_ALTCOLOR;
         } else {
-            if( !COM_ParseColor( c, color ) ) {
+            if( !SCR_ParseColor( c, color ) ) {
                 Com_Printf( "Unknown color '%s'\n", c );
                 return;
             }

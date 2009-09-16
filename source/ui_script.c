@@ -258,7 +258,7 @@ static void Parse_Blank( menuFrameWork_t *menu ) {
 static void Parse_Background( menuFrameWork_t *menu ) {
     char *s = Cmd_Argv( 1 );
 
-    if( COM_ParseColor( s, menu->color ) ) {
+    if( SCR_ParseColor( s, menu->color ) ) {
         menu->image = 0;
         if( menu->color[3] != 255 ) {
             menu->transparent = qtrue;
@@ -281,13 +281,13 @@ static void Parse_Color( void ) {
     c = Cmd_Argv( 2 );
 
     if( !strcmp( s, "normal" ) ) {
-        COM_ParseColor( c, uis.color.normal );
+        SCR_ParseColor( c, uis.color.normal );
     } else if( !strcmp( s, "active" ) ) {
-        COM_ParseColor( c, uis.color.active );
+        SCR_ParseColor( c, uis.color.active );
     } else if( !strcmp( s, "selection" ) ) {
-        COM_ParseColor( c, uis.color.selection );
+        SCR_ParseColor( c, uis.color.selection );
     } else if( !strcmp( s, "disabled" ) ) {
-        COM_ParseColor( c, uis.color.disabled );
+        SCR_ParseColor( c, uis.color.disabled );
     } else {
         Com_Printf( "Unknown state '%s'\n", s );
     }
@@ -391,7 +391,7 @@ static qboolean Parse_File( const char *path, int depth ) {
                 } else if( !strcmp( cmd, "background" ) ) {
                     char *s = Cmd_Argv( 1 );
 
-                    if( COM_ParseColor( s, uis.color.background ) ) {
+                    if( SCR_ParseColor( s, uis.color.background ) ) {
                         uis.backgroundHandle = 0;
                     } else {
                         uis.backgroundHandle = R_RegisterPic( s );

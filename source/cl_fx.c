@@ -1684,14 +1684,14 @@ static cvar_t *cl_railspiral_radius;
 
 
 static void cl_railcore_color_changed( cvar_t *self ) {
-    if( !COM_ParseColor( self->string, railcore_color ) ) {
+    if( !SCR_ParseColor( self->string, railcore_color ) ) {
         Com_WPrintf( "Invalid value '%s' for '%s'\n", self->string, self->name );
         *( uint32_t *)railcore_color = *( uint32_t * )colorRed;
     }
 }
 
 static void cl_railspiral_color_changed( cvar_t *self ) {
-    if( !COM_ParseColor( self->string, railspiral_color ) ) {
+    if( !SCR_ParseColor( self->string, railspiral_color ) ) {
         Com_WPrintf( "Invalid value '%s' for '%s'\n", self->string, self->name );
         *( uint32_t *)railspiral_color = *( uint32_t * )colorBlue;
     }

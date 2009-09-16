@@ -1129,6 +1129,36 @@ const cmd_option_t o_record[] = {
 };
 #endif
 
+const char colorNames[10][8] = {
+    "black", "red", "green", "yellow",
+    "blue", "cyan", "magenta", "white",
+    "alt", "none"
+};
+
+/*
+================
+Com_ParseColor
+
+Parses color name or index up to the maximum allowed index.
+Returns COLOR_NONE in case of error.
+================
+*/
+color_index_t Com_ParseColor( const char *s, color_index_t last ) {
+    color_index_t i;
+
+    if( COM_IsUint( s ) ) {
+        i = strtoul( s, NULL, 10 );
+        return i > last ? COLOR_NONE : i;
+    }
+
+    for( i = 0; i <= last; i++ ) {
+        if( !strcmp( colorNames[i], s ) ) {
+            return i;
+        }
+    }
+    return COLOR_NONE;
+}
+
 /*
 ================
 Com_PlayerToEntityState
