@@ -579,6 +579,11 @@ typedef struct {
     color_t color;
 } drawobj_t;
 
+#define FOR_EACH_DRAWOBJ( obj ) \
+    LIST_FOR_EACH( drawobj_t, obj, &scr_objects, entry )
+#define FOR_EACH_DRAWOBJ_SAFE( obj, next ) \
+    LIST_FOR_EACH_SAFE( drawobj_t, obj, next, &scr_objects, entry )
+
 static LIST_DECL( scr_objects );
 
 static void SCR_Color_g( genctx_t *ctx ) {
@@ -618,7 +623,7 @@ static void SCR_Draw_f( void ) {
         }
         Com_Printf( "Name               X    Y\n"
                     "--------------- ---- ----\n" );
-        LIST_FOR_EACH( drawobj_t, obj, &scr_objects, entry ) {
+        FOR_EACH_DRAWOBJ( obj ) {
             s = obj->macro ? obj->macro->name : obj->cvar->name;
             Com_Printf( "%-15s %4d %4d\n", s, obj->x, obj->y );
         }
@@ -678,7 +683,7 @@ static void SCR_Draw_g( genctx_t *ctx ) {
 
     Prompt_AddMatch( ctx, "all" );
     
-    LIST_FOR_EACH( drawobj_t, obj, &scr_objects, entry ) {
+    FOR_EACH_DRAWOBJ( obj ) {
         s = obj->macro ? obj->macro->name : obj->cvar->name;
         if( !Prompt_AddMatch( ctx, s ) ) {
             break;
@@ -711,7 +716,7 @@ static void SCR_UnDraw_f( void ) {
 
     s = Cmd_Argv( 1 );
     if( !strcmp( s, "all" ) ) {
-        LIST_FOR_EACH_SAFE( drawobj_t, obj, next, &scr_objects, entry ) {
+        FOR_EACH_DRAWOBJ_SAFE( obj, next ) {
             Z_Free( obj );
         }
         List_Init( &scr_objects );
@@ -726,7 +731,7 @@ static void SCR_UnDraw_f( void ) {
     }
 
     deleted = qfalse;
-    LIST_FOR_EACH_SAFE( drawobj_t, obj, next, &scr_objects, entry ) {
+    FOR_EACH_DRAWOBJ_SAFE( obj, next ) {
         if( obj->macro == macro && obj->cvar == cvar ) {
             List_Remove( &obj->entry );
             Z_Free( obj );
@@ -744,7 +749,7 @@ static void draw_objects( void ) {
     int x, y;
     drawobj_t *obj;
 
-    LIST_FOR_EACH( drawobj_t, obj, &scr_objects, entry ) {
+    FOR_EACH_DRAWOBJ( obj ) {
         x = obj->x;
         y = obj->y;
         if( x < 0 ) {
