@@ -6,5 +6,5 @@ include /usr/share/cdbs/1/class/autotools.mk
 DEB_DH_INSTALL_SOURCEDIR := debian/tmp
 
 DEB_CONFIGURE_NORMAL_ARGS := --prefix=$(DEB_CONFIGURE_PREFIX) --cpu=$(DEB_HOST_GNU_CPU) \
-	--enable-png --enable-jpg --enable-dsound --enable-server --enable-anticheat --enable-baseq2
+	--enable-png --enable-jpg --enable-dsound --enable-dinput --enable-server --enable-anticheat --enable-baseq2
 
