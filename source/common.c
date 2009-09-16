@@ -474,7 +474,7 @@ do the apropriate things. This function never returns.
 =============
 */
 void Com_Quit( const char *reason, killtype_t type ) {
-    char buffer[MAX_STRING_TOKENS];
+    char buffer[MAX_STRING_CHARS];
     char *what = type == KILL_RESTART ? "restarted" : "quit";
 
     if( reason && *reason ) {
