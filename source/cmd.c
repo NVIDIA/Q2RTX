@@ -1410,7 +1410,7 @@ static void Cmd_Echo_f( void ) {
 static const cmd_option_t o_echo[] = {
     { "h", "help", "display this message" },
     { "e", "escapes", "enable interpretation of backslash escapes" },
-    { "c", "colors", "enable interpretation of color escapes" },
+    { "c:color", "color", "print text in this color" },
     { "n", "no-newline", "do not output the trailing newline" },
     { NULL }
 };
@@ -1419,13 +1419,51 @@ static void Cmd_EchoEx_c( genctx_t *ctx, int argnum ) {
     Cmd_Option_c( o_echo, NULL, ctx, argnum );
 }
 
+static char *unescape_string( char *dst, const char *src ) {
+    int c1, c2;
+    char *p = dst;
+
+    while( *src ) {
+        if( src[0] == '\\' && src[1] ) {
+            switch( src[1] ) {
+            case 'a': *p++ = '\a'; break;
+            case 'b': *p++ = '\b'; break;
+            case 't': *p++ = '\t'; break;
+            case 'n': *p++ = '\n'; break;
+            case 'v': *p++ = '\v'; break;
+            case 'f': *p++ = '\f'; break;
+            case 'r': *p++ = '\r'; break;
+            case '\\': *p++ = '\\'; break;
+            case 'x':
+                if( ( c1 = Q_charhex( src[2] ) ) == -1 ) {
+                    break;
+                }
+                if( ( c2 = Q_charhex( src[3] ) ) == -1 ) {
+                    break;
+                }
+                *p++ = ( c1 << 4 ) | c2;
+                src += 2;
+                break;
+            default:
+                *p++ = src[1];
+                break;
+            }
+            src += 2;
+        } else {
+            *p++ = *src++;
+        }
+    }
+    *p = 0;
+
+    return dst;
+}
+
 static void Cmd_EchoEx_f( void ) {
-    char buffer[MAX_STRING_CHARS];
-    char *src, *dst;
+    char buffer[MAX_STRING_CHARS], *s;
     qboolean escapes = qfalse;
-    qboolean colors = qfalse;
+    color_index_t color = COLOR_NONE;
     const char *newline = "\n";
-    int c, c1, c2;
+    int c;
 
     while( ( c = Cmd_ParseOptions( o_echo ) ) != -1 ) {
         switch( c ) {
@@ -1438,7 +1476,8 @@ static void Cmd_EchoEx_f( void ) {
             escapes = qtrue;
             break;
         case 'c':
-            colors = qtrue;
+            color = atoi( cmd_optarg );
+            clamp( color, COLOR_BLACK, COLOR_NONE ); 
             break;
         case 'n':
             newline = "";
@@ -1448,55 +1487,14 @@ static void Cmd_EchoEx_f( void ) {
         }
     }
 
-    src = Cmd_RawArgsFrom( cmd_optind );
-    dst = buffer;
-    while( *src ) {
-        /*if( colors && src[0] == '^' && src[1] ) {
-            if( src[1] == '^' ) {
-                *dst++ = '^';
-            } else {
-                dst[0] = Q_COLOR_ESCAPE;
-                dst[1] = src[1];
-                dst += 2;
-            }
-            src += 2;
-        } else */if( escapes && src[0] == '\\' && src[1] ) {
-            switch( src[1] ) {
-            case 't':
-                *dst++ = '\t';
-                break;
-            case 'b':
-                *dst++ = '\b';
-                break;
-            case 'r':
-                *dst++ = '\r';
-                break;
-            case 'n':
-                *dst++ = '\n';
-                break;
-            case '\\':
-                *dst++ = '\\';
-                break;
-            case 'x':
-                if( ( c1 = Q_charhex( src[2] ) ) == -1 ) {
-                    break;
-                }
-                if( ( c2 = Q_charhex( src[3] ) ) == -1 ) {
-                    break;
-                }
-                *dst++ = ( c1 << 4 ) | c2;
-                src += 2;
-                break;
-            default:
-                break;
-            }
-            src += 2;
-        } else {
-            *dst++ = *src++;
-        }
+    s = Cmd_RawArgsFrom( cmd_optind );
+    if( escapes ) {
+        s = unescape_string( buffer, s );
     }
-    *dst = 0;
-    Com_Printf( "%s%s", buffer, newline );
+
+    Com_SetColor( color );
+    Com_Printf( "%s%s", s, newline );
+    Com_SetColor( COLOR_NONE );
 }
 
 /*
