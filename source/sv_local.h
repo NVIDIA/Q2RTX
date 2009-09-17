@@ -419,6 +419,9 @@ extern cvar_t       *sv_oldgame_hack;
 extern cvar_t       *sv_packetdup_hack;
 #endif
 extern cvar_t       *sv_allow_map;
+#if !USE_CLIENT
+extern cvar_t       *sv_recycle;
+#endif
 
 extern cvar_t       *sv_status_limit;
 extern cvar_t       *sv_status_show;

@@ -78,6 +78,9 @@ cvar_t  *sv_oldgame_hack;
 cvar_t  *sv_packetdup_hack;
 #endif
 cvar_t  *sv_allow_map;
+#if !USE_CLIENT
+cvar_t  *sv_recycle;
+#endif
 
 cvar_t  *sv_iplimit;
 cvar_t  *sv_status_limit;
@@ -530,8 +533,8 @@ static void SVC_DirectConnect( void ) {
     qport = atoi( Cmd_Argv( 2 ) ) ;
     challenge = atoi( Cmd_Argv( 3 ) );
 
-    Com_DPrintf( "SVC_DirectConnect: protocol=%i, qport=%i, challenge=%i\n",
-        protocol, qport, challenge );
+    Com_DPrintf( "%s: protocol=%i, qport=%i, challenge=%i\n",
+        __func__, protocol, qport, challenge );
 
     if( protocol < PROTOCOL_VERSION_DEFAULT ||
         protocol > PROTOCOL_VERSION_Q2PRO )
@@ -700,7 +703,7 @@ static void SVC_DirectConnect( void ) {
     }
 
     s = Info_ValueForKey( info, "name" );
-    if( !s[0] || Q_IsWhiteSpace( s ) ) {
+    if( Q_IsWhiteSpace( s ) ) {
         SV_OobPrintf( "Please set your name before connecting.\n" );
         Com_DPrintf( "    rejected - empty name.\n" );
         return;
@@ -1615,7 +1618,7 @@ void SV_UpdateUserinfo( char *userinfo ) {
     }
 
     s = Info_ValueForKey( userinfo, "name" );
-    if( !s[0] || Q_IsWhiteSpace( s ) ) {
+    if( Q_IsWhiteSpace( s ) ) {
         if( sv_client->name[0] ) {
             SV_ClientCommand( sv_client, "set name \"%s\"\n", sv_client->name );
         } else {
@@ -1835,6 +1838,10 @@ void SV_Init( void ) {
 #endif
 
     sv_allow_map = Cvar_Get( "sv_allow_map", "0", 0 );
+
+#if !USE_CLIENT
+    sv_recycle = Cvar_Get( "sv_recycle", "0", 0 );
+#endif
 
     sv_iplimit = Cvar_Get( "sv_iplimit", "3", 0 );
 

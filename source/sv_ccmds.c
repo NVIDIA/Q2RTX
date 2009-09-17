@@ -220,8 +220,13 @@ Puts the server in demo mode on a specific map/cinematic
 ==================
 */
 static void SV_DemoMap_f( void ) {
-    Com_Printf( "This command is no longer supported.\n"
-        "To play a demo, use 'demo' command instead.\n" );
+    Com_Printf( "'%s' command is no longer supported.\n", Cmd_Argv( 0 ) );
+#if USE_CLIENT
+    Com_Printf( "To play a client demo, use 'demo' command instead.\n" );
+#endif
+#if USE_MVD_CLIENT
+    Com_Printf( "To play a MVD, use 'mvdplay' command.\n" );
+#endif
 }
 
 /*
@@ -248,6 +253,17 @@ static void SV_GameMap_f( void ) {
         return;
     }
 
+#if !USE_CLIENT
+    // admin option to reload the game DLL or entire server
+    if( sv_recycle->integer > 0 ) {
+        if( sv_recycle->integer > 1 ) {
+            Com_Quit( NULL, KILL_RESTART );
+        }
+        SV_Map( Cmd_Argv( 1 ), qtrue );
+        return;
+    }
+#endif
+    
     SV_Map( Cmd_Argv( 1 ), qfalse );
 }
 
@@ -265,8 +281,13 @@ static void SV_Map_f( void ) {
         return;
     }
 
-    if( sv.state == ss_game && sv_allow_map->integer != 1 &&
-        Cvar_CountLatchedVars() == 0 && strcmp( Cmd_Argv( 2 ), "force" ) )
+    if( sv.state == ss_game &&
+        sv_allow_map->integer != 1 &&
+#if !USE_CLIENT
+        sv_recycle->integer == 0 &&
+#endif
+        Cvar_CountLatchedVars() == 0 &&
+        strcmp( Cmd_Argv( 2 ), "force" ) != 0 )
     {
         if( sv_allow_map->integer == 0 ) {
             static qboolean warned;

@@ -184,6 +184,10 @@ void SV_InitGame( qboolean ismvd ) {
     // get any latched variable changes (maxclients, etc)
     Cvar_GetLatchedVars ();
 
+#if !USE_CLIENT
+    Cvar_Reset( sv_recycle );
+#endif
+
     CL_LocalConnect();
 
     if( ismvd ) {
