@@ -612,6 +612,8 @@ static void PF_StartSound( edict_t *edict, int channel,
         List_Remove( &msg->entry );
         List_Append( &client->msg_unreliable_list, &msg->entry );
         client->msg_unreliable_bytes += MAX_SOUND_PACKET;
+
+        flags &= ~SND_POS;
     }
 
 #if USE_MVD_SERVER
