@@ -485,13 +485,16 @@ static void icmp_error_event( netsrc_t sock ) {
 
 // Linux at least supports receiving ICMP errors on unconnected UDP sockets
 // via IP_RECVERR cruft below... What about BSD?
-static void process_error_queue( netsrc_t sock ) {
+static int process_error_queue( netsrc_t sock ) {
     byte buffer[1024];
     struct sockaddr_in from;
     struct msghdr msg;
     struct cmsghdr *cmsg;
     struct sock_extended_err *ee;
     //struct sockaddr_in *off;
+    int tries;
+
+    tries = 0;
 
 retry:
     memset( &from, 0, sizeof( from ) );
@@ -512,12 +515,12 @@ retry:
         default:
             Com_EPrintf( "%s: %s\n", __func__, NET_ErrorString() );
         }
-        return;
+        return tries;
     }
 
     if( !( msg.msg_flags & MSG_ERRQUEUE ) ) {
         Com_DPrintf( "%s: no extended error received\n", __func__ );
-        return;
+        return tries;
     }
 
     // find an ICMP error message
@@ -539,7 +542,7 @@ retry:
 
     if( !cmsg ) {
         Com_DPrintf( "%s: no ICMP error found\n", __func__ );
-        return;
+        return tries;
     }
 
     /*
@@ -550,20 +553,15 @@ retry:
 
     NET_SockadrToNetadr( &from, &net_from );
 
-    // handle most common ICMP errors (defined in linux/net/ipv4/icmp.c)
+    // handle ICMP errors
     net_error = ee->ee_errno;
-    switch( net_error ) {
-    case ENETUNREACH:
-    case EHOSTUNREACH:
-    case EHOSTDOWN:
-    case ECONNREFUSED:
-    case ENONET:
-        icmp_error_event( sock );
+    icmp_error_event( sock );
+
+    if( ++tries < MAX_ERROR_RETRIES ) {
         goto retry;
-    default:
-        Com_EPrintf( "%s: %s from %s\n", __func__,
-            NET_ErrorString(), NET_AdrToString( &net_from ) );
     }
+
+    return tries;
 }
 
 #endif // __linux__
@@ -639,21 +637,16 @@ retry:
         case EWOULDBLOCK:
             // wouldblock is silent
             break;
+        default:
 #if USE_ICMP
-        case ENETUNREACH:
-        case EHOSTUNREACH:
-        case EHOSTDOWN:
-        case ECONNREFUSED:
-        case ENONET:
             // recvfrom() fails on Linux if there's an ICMP originated
             // pending error on socket. suck up error queue and retry...
-            process_error_queue( sock );
-            if( ++tries < MAX_ERROR_RETRIES ) {
-                goto retry;
+            if( process_error_queue( sock ) ) {
+                if( ++tries < MAX_ERROR_RETRIES ) {
+                    goto retry;
+                }
             }
-            // intentional fallthrough
 #endif
-        default:
             Com_DPrintf( "%s: %s from %s\n", __func__,
                 NET_ErrorString(), NET_AdrToString( &net_from ) );
             net_recv_errors++;
@@ -787,21 +780,16 @@ retry:
         case EWOULDBLOCK:
             // wouldblock is silent
             break;
+        default:
 #if USE_ICMP
-        case ENETUNREACH:
-        case EHOSTUNREACH:
-        case EHOSTDOWN:
-        case ECONNREFUSED:
-        case ENONET:
             // sendto() fails on Linux if there's an ICMP originated
             // pending error on socket. suck up error queue and retry...
-            process_error_queue( sock );
-            if( ++tries < MAX_ERROR_RETRIES ) {
-                goto retry;
+            if( process_error_queue( sock ) ) {
+                if( ++tries < MAX_ERROR_RETRIES ) {
+                    goto retry;
+                }
             }
-            // intentional fallthrough
 #endif
-        default:
             Com_DPrintf( "%s: %s to %s\n", __func__,
                 NET_ErrorString(), NET_AdrToString( to ) );
             net_send_errors++;
