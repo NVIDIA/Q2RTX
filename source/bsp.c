@@ -66,6 +66,7 @@ LOAD( Visibility ) {
     numclusters = LittleLong( bsp->vis->numclusters );
     if( numclusters > ( count - 4 ) / 8 ) {
         BSP_SetError( "%s: bad numclusters", __func__ );
+        return qfalse;
     }
     bsp->vis->numclusters = numclusters;
     bsp->visrowsize = ( numclusters + 7 ) >> 3;
