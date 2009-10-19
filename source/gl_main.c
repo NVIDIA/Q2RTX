@@ -116,7 +116,6 @@ static void GL_SetupFrustum( void ) {
     f->dist = DotProduct( glr.fd.vieworg, f->normal );
     SetPlaneSignbits( f );
     SetPlaneType( f );
-
 }
 
 glCullResult_t GL_CullBox( vec3_t bounds[2] ) {
@@ -153,7 +152,7 @@ glCullResult_t GL_CullSphere( const vec3_t origin, float radius ) {
 
     cull = CULL_IN;
     for( i = 0, p = glr.frustumPlanes; i < 4; i++, p++ ) {
-        dist = DotProduct( origin, p->normal ) - p->dist;
+        dist = PlaneDiff( origin, p );
         if( dist < -radius ) {
             return CULL_OUT;
         }
@@ -163,6 +162,21 @@ glCullResult_t GL_CullSphere( const vec3_t origin, float radius ) {
     }
 
     return cull;
+}
+
+static inline void make_box_points( const vec3_t    origin,
+                                          vec3_t    bounds[2],
+                                          vec3_t    points[8] )
+{
+    int i;
+
+    for( i = 0; i < 8; i++ ) {
+        VectorCopy( origin, points[i] );
+        VectorMA( points[i], bounds[(i>>0)&1][0], glr.entaxis[0], points[i] );
+        VectorMA( points[i], bounds[(i>>1)&1][1], glr.entaxis[1], points[i] );
+        VectorMA( points[i], bounds[(i>>2)&1][2], glr.entaxis[2], points[i] );
+    }
+
 }
 
 glCullResult_t GL_CullLocalBox( const vec3_t origin, vec3_t bounds[2] ) {
@@ -177,12 +191,7 @@ glCullResult_t GL_CullLocalBox( const vec3_t origin, vec3_t bounds[2] ) {
         return CULL_IN;
     }
 
-    for( i = 0; i < 8; i++ ) {
-        VectorCopy( origin, points[i] );
-        VectorMA( points[i], bounds[(i>>0)&1][0], glr.entaxis[0], points[i] );
-        VectorMA( points[i], bounds[(i>>1)&1][1], glr.entaxis[1], points[i] );
-        VectorMA( points[i], bounds[(i>>2)&1][2], glr.entaxis[2], points[i] );
-    }
+    make_box_points( origin, bounds, points );
 
     cull = CULL_IN;
     for( i = 0, p = glr.frustumPlanes; i < 4; i++, p++ ) {
@@ -210,7 +219,7 @@ glCullResult_t GL_CullLocalBox( const vec3_t origin, vec3_t bounds[2] ) {
 }
 
 void GL_DrawBox( const vec3_t origin, vec3_t bounds[2] ) {
-    static int indices[2][4] = {
+    static const int indices[2][4] = {
         { 0, 1, 3, 2 },
         { 4, 5, 7, 6 }
     };
@@ -222,13 +231,8 @@ void GL_DrawBox( const vec3_t origin, vec3_t bounds[2] ) {
     qglDisable( GL_DEPTH_TEST );
     qglColor4f( 1, 1, 1, 1 );
 
-    for( i = 0; i < 8; i++ ) {
-        VectorCopy( origin, points[i] );
-        VectorMA( points[i], bounds[(i>>0)&1][0], glr.entaxis[0], points[i] );
-        VectorMA( points[i], bounds[(i>>1)&1][1], glr.entaxis[1], points[i] );
-        VectorMA( points[i], bounds[(i>>2)&1][2], glr.entaxis[2], points[i] );
-    }
-    
+    make_box_points( origin, bounds, points );
+
     for( i = 0; i < 2; i++ ) {
         qglBegin( GL_LINE_LOOP );
         for( j = 0; j < 4; j++ ) {
@@ -246,7 +250,6 @@ void GL_DrawBox( const vec3_t origin, vec3_t bounds[2] ) {
     
     qglEnable( GL_DEPTH_TEST );
     qglEnable( GL_TEXTURE_2D );
-
 }
 
 static void GL_DrawSpriteModel( model_t *model ) {
