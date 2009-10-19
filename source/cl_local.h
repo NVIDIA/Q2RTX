@@ -293,7 +293,7 @@ typedef struct client_static_s {
 
     struct {
         fileHandle_t    file;            // file transfer from server
-        char            temp[MAX_QPATH];
+        char            temp[MAX_QPATH+4]; // account 4 bytes for .tmp suffix
         char            name[MAX_QPATH];
         int             percent;
     } download;

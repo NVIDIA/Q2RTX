@@ -23,7 +23,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 //=============================================================================
 
-
 /*
 ===============
 CL_CheckOrDownloadFile
@@ -33,17 +32,11 @@ to start a download from the server.
 ===============
 */
 qboolean CL_CheckOrDownloadFile( const char *path ) {
-    static const char validExts[][4] = {
-        "pcx", "wal", "tga", "jpg", "png",
-        "md2", "md3", "sp2", "wav", "dm2",
-        "bsp", "txt", "loc", "ent", ""
-    };
-    fileHandle_t    f;
-    int i;
+    fileHandle_t f;
     size_t len;
 
     len = strlen( path );
-    if( len < 4 || len >= MAX_QPATH
+    if( len < 1 || len >= MAX_QPATH
         || !Q_ispath( path[0] )
         || !Q_ispath( path[ len - 1 ] )
         || strchr( path, '\\' )
@@ -51,23 +44,7 @@ qboolean CL_CheckOrDownloadFile( const char *path ) {
         || !strchr( path, '/' )
         || strstr( path, ".." ) )
     {
-        Com_WPrintf( "Refusing to download file with invalid path.\n" );
-        return qtrue;
-    }
-
-    // a trivial attempt to prevent malicious server from
-    // uploading trojan executables to the win32 client
-    if( path[ len - 4 ] != '.' ) {
-        Com_WPrintf( "Refusing to download file without extension.\n" );
-        return qtrue;
-    }
-    for( i = 0; validExts[i][0]; i++ ) {
-        if( !strcmp( path + len - 3, validExts[i] ) ) {
-            break;
-        }
-    }
-    if( !validExts[i][0] ) {
-        Com_WPrintf( "Refusing to download file with invalid extension.\n" );
+        Com_Printf( "Refusing to download file with invalid path.\n" );
         return qtrue;
     }
 
@@ -81,8 +58,8 @@ qboolean CL_CheckOrDownloadFile( const char *path ) {
     // download to a temp name, and only rename
     // to the real name when done, so if interrupted
     // a runt file wont be left
-    memcpy( cls.download.temp, path, len - 4 );
-    memcpy( cls.download.temp + len - 4, ".tmp", 5 );
+    memcpy( cls.download.temp, path, len );
+    memcpy( cls.download.temp + len, ".tmp", 5 );
 
 //ZOID
     // check to see if we already have a tmp for this file, if so, try to resume
@@ -772,11 +749,8 @@ static void CL_ParseServerData( void ) {
             Com_Error( ERR_DROP, "Requested protocol version %d, but server returned %d.",
                 cls.serverProtocol, protocol );
         }
-
         // BIG HACK to let demos from release work with the 3.0x patch!!!
-        if( protocol == PROTOCOL_VERSION_OLD ) {
-            Com_DPrintf( "Using protocol %d for compatibility with old demos.\n", PROTOCOL_VERSION_OLD );
-        } else if( protocol < PROTOCOL_VERSION_DEFAULT || protocol > PROTOCOL_VERSION_Q2PRO ) {
+        if( protocol < PROTOCOL_VERSION_OLD || protocol > PROTOCOL_VERSION_Q2PRO ) {
             Com_Error( ERR_DROP, "Demo uses unsupported protocol version %d.", protocol );
         }
         cls.serverProtocol = protocol;
