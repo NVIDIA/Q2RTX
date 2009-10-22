@@ -1597,10 +1597,9 @@ static void draw_loading( void ) {
 }
 
 static void draw_crosshair( void ) {
-    int x, y;
+    int x = ( scr.hud_width - scr.crosshair_width ) / 2;
+    int y = ( scr.hud_height - scr.crosshair_height ) / 2;
 
-    x = ( scr.hud_width - scr.crosshair_width ) / 2;
-    y = ( scr.hud_height - scr.crosshair_height ) / 2;
     R_DrawPic( x, y, scr.crosshair_pic );
 }
 
