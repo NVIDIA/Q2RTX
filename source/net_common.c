@@ -32,6 +32,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "sys_public.h"
 #include "sv_public.h"
 #include "cl_public.h"
+#include "io_sleep.h"
 
 #if( defined _WIN32 )
 #define WIN32_LEAN_AND_MEAN
@@ -117,8 +118,8 @@ static cvar_t   *net_ignore_icmp;
 static netflag_t    net_active;
 static int          net_error;
 
-static SOCKET       udp_sockets[NS_COUNT] = { INVALID_SOCKET, INVALID_SOCKET };
 static const char   socketNames[NS_COUNT][8] = { "Client", "Server" };
+static SOCKET       udp_sockets[NS_COUNT] = { INVALID_SOCKET, INVALID_SOCKET };
 static SOCKET       tcp_socket = INVALID_SOCKET;
 #ifdef _DEBUG
 static fileHandle_t net_logFile;
@@ -583,12 +584,18 @@ qboolean NET_GetPacket( netsrc_t sock ) {
 #if USE_ICMP
     int tries;
 #endif
+    ioentry_t *e;
 
     if( udp_sockets[sock] == INVALID_SOCKET ) {
         return qfalse;
     }
 
     NET_UpdateStats();
+
+    e = IO_Get( udp_sockets[sock] );
+    if( !e->canread ) {
+        return qfalse;
+    }
 
 #if USE_ICMP
     tries = 0;
@@ -987,10 +994,15 @@ fail:
 
 static void NET_OpenServer( void ) {
     static int saved_port;
+    ioentry_t *e;
+    SOCKET s;
 
-    udp_sockets[NS_SERVER] = UDP_OpenSocket( net_ip->string, net_port->integer );
-    if( udp_sockets[NS_SERVER] != INVALID_SOCKET ) {
+    s = UDP_OpenSocket( net_ip->string, net_port->integer );
+    if( s != INVALID_SOCKET ) {
         saved_port = net_port->integer;
+        udp_sockets[NS_SERVER] = s;
+        e = IO_Add( s );
+        e->wantread = qtrue;
         return;
     }
 
@@ -1013,29 +1025,30 @@ static void NET_OpenServer( void ) {
 
 #if USE_CLIENT
 static void NET_OpenClient( void ) {
-    struct sockaddr_in address;
-    socklen_t length;
+    ioentry_t *e;
+    SOCKET s;
+    struct sockaddr_in sadr;
+    socklen_t len;
 
-    udp_sockets[NS_CLIENT] = UDP_OpenSocket( net_ip->string,
-        net_clientport->integer );
-    if( udp_sockets[NS_CLIENT] != INVALID_SOCKET ) {
-        return;
-    }
-
-    if( net_clientport->integer != PORT_ANY ) {
-        udp_sockets[NS_CLIENT] = UDP_OpenSocket( net_ip->string, PORT_ANY );
-        if( udp_sockets[NS_CLIENT] != INVALID_SOCKET ) {
-            length = sizeof( address );
-            getsockname( udp_sockets[NS_CLIENT],
-                ( struct sockaddr * )&address, &length );
-            Com_WPrintf( "Client bound to UDP port %d.\n",
-                ntohs( address.sin_port ) );
-            Cvar_SetByVar( net_clientport, va( "%d", PORT_ANY ), FROM_CODE );
+    s = UDP_OpenSocket( net_ip->string, net_clientport->integer );
+    if( s == INVALID_SOCKET ) {
+        // now try with random port
+        if( net_clientport->integer != PORT_ANY ) {
+            s = UDP_OpenSocket( net_ip->string, PORT_ANY );
+        }
+        if( s == INVALID_SOCKET ) {
+            Com_WPrintf( "Couldn't open client UDP port.\n" );
             return;
         }
+        len = sizeof( sadr );
+        getsockname( s, ( struct sockaddr * )&sadr, &len );
+        Com_WPrintf( "Client bound to UDP port %d.\n", ntohs( sadr.sin_port ) );
+        Cvar_SetByVar( net_clientport, va( "%d", PORT_ANY ), FROM_CODE );
     }
 
-    Com_WPrintf( "Couldn't open client UDP port.\n" );
+    udp_sockets[NS_CLIENT] = s;
+    e = IO_Add( s );
+    e->wantread = qtrue;
 }
 #endif
 
@@ -1046,14 +1059,19 @@ void NET_Close( netstream_t *s ) {
         return;
     }
 
+    IO_Remove( s->socket );
     closesocket( s->socket );
     s->socket = INVALID_SOCKET;
     s->state = NS_DISCONNECTED;
 }
 
 neterr_t NET_Listen( qboolean arg ) {
+    SOCKET s;
+    ioentry_t *e;
+
     if( !arg ) {
         if( tcp_socket != INVALID_SOCKET ) {
+            IO_Remove( tcp_socket );
             closesocket( tcp_socket );
             tcp_socket = INVALID_SOCKET;
         }
@@ -1064,17 +1082,20 @@ neterr_t NET_Listen( qboolean arg ) {
         return NET_OK;
     }
 
-    tcp_socket = TCP_OpenSocket( net_tcp_ip->string,
+    s = TCP_OpenSocket( net_tcp_ip->string,
         net_tcp_port->integer, NS_SERVER );
-    if( tcp_socket == INVALID_SOCKET ) {
+    if( s == INVALID_SOCKET ) {
         return NET_ERROR;
     }
-    if( listen( tcp_socket, net_tcp_backlog->integer ) == -1 ) {
+    if( listen( s, net_tcp_backlog->integer ) == -1 ) {
         NET_GET_ERROR();
-        closesocket( tcp_socket );
-        tcp_socket = INVALID_SOCKET;
+        closesocket( s );
         return NET_ERROR;
     }
+
+    tcp_socket = s;
+    e = IO_Add( s );
+    e->wantread = qtrue;
 
     return NET_OK;
 }
@@ -1084,34 +1105,19 @@ neterr_t NET_Accept( netstream_t *s ) {
     struct sockaddr_in from;
     socklen_t fromlen;
     SOCKET newsocket;
-    struct timeval tv;
-    fd_set fd;
-    int ret;
+    ioentry_t *e;
 
     if( tcp_socket == INVALID_SOCKET ) {
         return NET_AGAIN;
     }
 
-    FD_ZERO( &fd );
-    FD_SET( tcp_socket, &fd );
-    tv.tv_sec = 0;
-    tv.tv_usec = 0;
-    ret = select( tcp_socket + 1, &fd, NULL, NULL, &tv );
-    if( ret == -1 ) {
-        // fill in dummy IP address
-        memset( &net_from, 0, sizeof( net_from ) );
-        net_from.type = NA_IP;
-        NET_GET_ERROR();
-        return NET_ERROR;
-    }
-
-    if( !ret ) {
+    e = IO_Get( tcp_socket );
+    if( !e->canread ) {
         return NET_AGAIN;
     }
 
     memset( &from, 0, sizeof( from ) );
     fromlen = sizeof( from );
-
     newsocket = accept( tcp_socket, ( struct sockaddr * )&from, &fromlen );
 
     NET_SockadrToNetadr( &from, &net_from );
@@ -1133,12 +1139,18 @@ neterr_t NET_Accept( netstream_t *s ) {
     s->address = net_from;
     s->state = NS_CONNECTED;
 
+    // initialize io entry
+    e = IO_Add( newsocket );
+    //e->wantwrite = qtrue;
+    e->wantread = qtrue;
+
     return NET_OK;
 }
 
 neterr_t NET_Connect( const netadr_t *peer, netstream_t *s ) {
     SOCKET socket;
-    struct sockaddr_in address;
+    ioentry_t *e;
+    struct sockaddr_in sadr;
     int ret;
 
     // always bind to `net_ip' for outgoing TCP connections
@@ -1147,11 +1159,10 @@ neterr_t NET_Connect( const netadr_t *peer, netstream_t *s ) {
     if( socket == INVALID_SOCKET ) {
         return NET_ERROR;
     }
-    NET_NetadrToSockadr( peer, &address );
 
-    memset( s, 0, sizeof( *s ) );
+    NET_NetadrToSockadr( peer, &sadr );
 
-    ret = connect( socket, ( struct sockaddr * )&address, sizeof( address ) );
+    ret = connect( socket, ( struct sockaddr * )&sadr, sizeof( sadr ) );
     if( ret == -1 ) {
         NET_GET_ERROR();
 
@@ -1165,53 +1176,35 @@ neterr_t NET_Connect( const netadr_t *peer, netstream_t *s ) {
         }
     }
 
+    // initialize stream
+    memset( s, 0, sizeof( *s ) );
     s->state = NS_CONNECTING;
     s->address = *peer;
     s->socket = socket;
+
+    // initialize io entry
+    e = IO_Add( socket );
+    e->wantwrite = qtrue;
+#ifdef _WIN32
+    e->wantexcept = qtrue;
+#endif
 
     return NET_OK;
 }
 
 neterr_t NET_RunConnect( netstream_t *s ) {
-    struct timeval tv;
-    fd_set wfd;
-#ifdef _WIN32
-    fd_set efd;
-#endif
     socklen_t len;
     int ret, err;
+    ioentry_t *e;
 
     if( s->state != NS_CONNECTING ) {
         return NET_AGAIN;
     }
 
-    tv.tv_sec = 0;
-    tv.tv_usec = 0;
-    FD_ZERO( &wfd );
-    FD_SET( s->socket, &wfd );
+    e = IO_Get( s->socket );
+    if( !e->canwrite
 #ifdef _WIN32
-    FD_ZERO( &efd );
-    FD_SET( s->socket, &efd );
-#endif
-
-    ret = select( s->socket + 1, NULL, &wfd,
-#ifdef _WIN32
-        &efd,
-#else
-        NULL,
-#endif
-        &tv
-    );
-
-    if( ret == -1 ) {
-        goto error1;
-    }
-    if( !ret ) {
-        return NET_AGAIN;
-    }
-    if( !FD_ISSET( s->socket, &wfd )
-#ifdef _WIN32
-        && !FD_ISSET( s->socket, &efd )
+        && !e->canexcept
 #endif
       )
     {
@@ -1228,6 +1221,11 @@ neterr_t NET_RunConnect( netstream_t *s ) {
         goto error2;
     }
 
+    e->wantwrite = qfalse;
+    e->wantread = qtrue;
+#ifdef _WIN32
+    e->wantexcept = qfalse;
+#endif
     s->state = NS_CONNECTED;
     return NET_OK;
 
@@ -1235,38 +1233,46 @@ error1:
     NET_GET_ERROR();
 error2:
     s->state = NS_BROKEN;
+    e->wantwrite = qfalse;
+    e->wantread = qfalse;
+#ifdef _WIN32
+    e->wantexcept = qfalse;
+#endif
     return NET_ERROR;
+}
+
+// updates wantread/wantwrite
+void NET_UpdateStream( netstream_t *s ) {
+    size_t len;
+    ioentry_t *e;
+
+    if( s->state != NS_CONNECTED ) {
+        return;
+    }
+
+    e = IO_Get( s->socket );
+
+    FIFO_Reserve( &s->recv, &len );
+    e->wantread = len ? qtrue : qfalse;
+
+    FIFO_Peek( &s->send, &len );
+    e->wantwrite = len ? qtrue : qfalse;
 }
 
 // returns NET_OK only when there was some data read
 neterr_t NET_RunStream( netstream_t *s ) {
-    struct timeval tv;
-    fd_set rfd, wfd;
     int ret;
     size_t len;
     void *data;
     neterr_t result = NET_AGAIN;
+    ioentry_t *e;
 
     if( s->state != NS_CONNECTED ) {
         return result;
     }
 
-    tv.tv_sec = 0;
-    tv.tv_usec = 0;
-    FD_ZERO( &rfd );
-    FD_SET( s->socket, &rfd );
-    FD_ZERO( &wfd );
-    FD_SET( s->socket, &wfd );
-    ret = select( s->socket + 1, &rfd, &wfd, NULL, &tv );
-    if( ret == -1 ) {
-        goto error;
-    }
-
-    if( !ret ) {
-        return result;
-    }
-
-    if( FD_ISSET( s->socket, &rfd ) ) {
+    e = IO_Get( s->socket );
+    if( e->canread ) {
         // read as much as we can
         data = FIFO_Reserve( &s->recv, &len );
         if( len ) {
@@ -1292,7 +1298,7 @@ neterr_t NET_RunStream( netstream_t *s ) {
         }
     }
 
-    if( FD_ISSET( s->socket, &wfd ) ) {
+    if( e->canwrite ) {
         // write as much as we can
         data = FIFO_Peek( &s->send, &len );
         if( len ) {
@@ -1318,48 +1324,25 @@ neterr_t NET_RunStream( netstream_t *s ) {
         }
     }
 
+    FIFO_Reserve( &s->recv, &len );
+    e->wantread = len ? qtrue : qfalse;
+
+    FIFO_Peek( &s->send, &len );
+    e->wantwrite = len ? qtrue : qfalse;
+
     return result;
 
 closed:
     s->state = NS_CLOSED;
+    e->wantread = qfalse;
     return NET_CLOSED;
 
 error:
     NET_GET_ERROR();
     s->state = NS_BROKEN;
+    e->wantread = qfalse;
+    e->wantwrite = qfalse;
     return NET_ERROR;
-}
-
-/*
-====================
-NET_Sleep
-
-sleeps msec or until server UDP socket is ready
-====================
-*/
-void NET_Sleep( int msec ) {
-    struct timeval timeout;
-    fd_set fdset;
-    SOCKET s = udp_sockets[NS_SERVER];
-
-    if( s == INVALID_SOCKET ) {
-        s = udp_sockets[NS_CLIENT];
-        if( s == INVALID_SOCKET ) {
-            Sys_Sleep( msec );
-            return;
-        }
-    }
-
-    timeout.tv_sec = msec / 1000;
-    timeout.tv_usec = ( msec % 1000 ) * 1000;
-    FD_ZERO( &fdset );
-#if USE_SYSCON && ( defined __unix__ )
-    if( sys_console->integer ) {
-        FD_SET( 0, &fdset ); // stdin
-    }
-#endif
-    FD_SET( s, &fdset );
-    select( s + 1, &fdset, NULL, NULL, &timeout );
 }
 
 //===================================================================
@@ -1426,17 +1409,17 @@ static void NET_DumpHostInfo( struct hostent *h ) {
 }
 
 static void dump_socket( SOCKET s, const char *s1, const char *s2 ) {
-    struct sockaddr_in sockaddr;
+    struct sockaddr_in sadr;
     socklen_t len;
     netadr_t adr;
 
-    len = sizeof( sockaddr );
-    if( getsockname( s, ( struct sockaddr * )&sockaddr, &len ) == -1 ) {
+    len = sizeof( sadr );
+    if( getsockname( s, ( struct sockaddr * )&sadr, &len ) == -1 ) {
         NET_GET_ERROR();
         Com_EPrintf( "%s: getsockname: %s\n", __func__, NET_ErrorString() );
         return;
     }
-    NET_SockadrToNetadr( &sockaddr, &adr );
+    NET_SockadrToNetadr( &sadr, &adr );
     Com_Printf( "%s %s socket bound to %s\n", s1, s2, NET_AdrToString( &adr ) );
 }
 
@@ -1518,16 +1501,16 @@ NET_Restart_f
 */
 static void NET_Restart_f( void ) {
     netflag_t flag = net_active;
-    SOCKET sock = tcp_socket;
+    qboolean listen = tcp_socket != INVALID_SOCKET;
 
     Com_DPrintf( "%s\n", __func__ );
 
-    if( sock != INVALID_SOCKET ) {
+    if( listen ) {
         NET_Listen( qfalse );
     }
     NET_Config( NET_NONE );
     NET_Config( flag );
-    if( sock != INVALID_SOCKET ) {
+    if( listen ) {
         NET_Listen( qtrue );
     }
 
@@ -1552,6 +1535,7 @@ void NET_Config( netflag_t flag ) {
         // shut down any existing sockets
         for( sock = 0; sock < NS_COUNT; sock++ ) {
             if( udp_sockets[sock] != INVALID_SOCKET ) {
+                IO_Remove( udp_sockets[sock] );
                 closesocket( udp_sockets[sock] );
                 udp_sockets[sock] = INVALID_SOCKET;
             }
@@ -1561,38 +1545,33 @@ void NET_Config( netflag_t flag ) {
     }
 
 #if USE_CLIENT
-    if( flag & NET_CLIENT ) {
-        if( udp_sockets[NS_CLIENT] == INVALID_SOCKET ) {
-            NET_OpenClient();
-        }
+    if( ( flag & NET_CLIENT ) && udp_sockets[NS_CLIENT] == INVALID_SOCKET ) {
+        NET_OpenClient();
     }
 #endif
 
-    if( flag & NET_SERVER ) {
-        if( udp_sockets[NS_SERVER] == INVALID_SOCKET ) {
-            NET_OpenServer();
-        }
+    if( ( flag & NET_SERVER ) && udp_sockets[NS_SERVER] == INVALID_SOCKET ) {
+        NET_OpenServer();
     }
 
     net_active |= flag;
 }
 
 qboolean NET_GetAddress( netsrc_t sock, netadr_t *adr ) {
-    struct sockaddr_in address;
-    socklen_t length;
+    struct sockaddr_in sadr;
+    socklen_t len;
+    SOCKET s = udp_sockets[sock];
 
-    if( udp_sockets[sock] == INVALID_SOCKET ) {
+    if( s == INVALID_SOCKET ) {
         return qfalse;
     }
 
-    length = sizeof( address );
-    if( getsockname( udp_sockets[sock], ( struct sockaddr * )
-        &address, &length ) == -1 )
-    {
+    len = sizeof( sadr );
+    if( getsockname( s, ( struct sockaddr * )&sadr, &len ) == -1 ) {
         return qfalse;
     }
 
-    NET_SockadrToNetadr( &address, adr );
+    NET_SockadrToNetadr( &sadr, adr );
 
     return qtrue;
 }

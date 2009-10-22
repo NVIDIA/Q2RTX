@@ -944,6 +944,7 @@ void SV_MvdEndFrame( void ) {
             flush_stream( client, Z_SYNC_FLUSH );
         }
 #endif
+        NET_UpdateStream( &client->stream );
     }
 
     // write frame to demofile
@@ -1684,6 +1685,7 @@ void SV_MvdRunClients( void ) {
             // parse the message
             while( parse_message( client ) )
                 ;
+            NET_UpdateStream( &client->stream );
             break;
         case NET_CLOSED:
             drop_client( client, "EOF from client" );

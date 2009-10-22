@@ -1485,6 +1485,29 @@ static void SV_MasterShutdown( void ) {
     }
 }
 
+#if USE_CLIENT
+static inline qboolean check_paused( int mvdconns ) {
+    // pause if there is only local client spawned on the server
+    if( !dedicated->integer && cl_paused->integer /*&& sv_mvd_enable->integer < 2*/ &&
+        List_Count( &svs.udp_client_list ) == 1 && mvdconns == 0 &&
+        LIST_FIRST( client_t, &svs.udp_client_list, entry )->state == cs_spawned &&
+        LIST_FIRST( client_t, &svs.udp_client_list, entry )->lastframe > 0 )
+    {
+        if( !sv_paused->integer ) {
+            Cvar_Set( "sv_paused", "1" );
+            IN_Activate();
+        }
+        return qtrue; // don't run if paused
+    }
+
+    if( sv_paused->integer ) {
+        Cvar_Set( "sv_paused", "0" );
+        IN_Activate();
+    }
+    return qfalse;
+}
+#endif
+
 /*
 ==================
 SV_Frame
@@ -1509,33 +1532,22 @@ void SV_Frame( unsigned msec ) {
     // if server is not active, do nothing
     if( !svs.initialized ) {
         if( Com_IsDedicated() ) {
-            Sys_Sleep( 1 );
+            IO_Sleep( 100 );
             goto runbuf;
         }
+        IO_Sleep( 0 );
         return;
     }
 
 #if USE_CLIENT
     // pause if there is only local client spawned on the server
-    if( !dedicated->integer && cl_paused->integer &&
-        List_Count( &svs.udp_client_list ) == 1 && mvdconns == 0 &&
-        LIST_FIRST( client_t, &svs.udp_client_list, entry )->state == cs_spawned &&
-        LIST_FIRST( client_t, &svs.udp_client_list, entry )->lastframe > 0 )
-    {
-        if( !sv_paused->integer ) {
-            Cvar_Set( "sv_paused", "1" );
-            IN_Activate();
-        }
-        return; // don't run if paused
-    }
-
-    if( sv_paused->integer ) {
-        Cvar_Set( "sv_paused", "0" );
-        IN_Activate();
+    if( check_paused( mvdconns ) ) {
+        return;
     }
 #endif
 
 #if USE_AC_SERVER
+    // run anticheat server connection
     AC_Run();
 #endif
 
@@ -1545,11 +1557,18 @@ void SV_Frame( unsigned msec ) {
     // deliver fragments and reliable messages for connecting clients
     SV_SendAsyncPackets();
 
+#if USE_MVD_SERVER
+    // run TCP client connections
+    SV_MvdRunClients();
+#endif
+
     // move autonomous things around if enough time has passed
     sv.frameresidual += msec;
     if( !com_timedemo->integer && sv.frameresidual < SV_FRAMETIME ) {
         if( Com_IsDedicated() ) {
-            NET_Sleep( SV_FRAMETIME - sv.frameresidual );
+            IO_Sleep( SV_FRAMETIME - sv.frameresidual );
+        } else {
+            IO_Sleep( 0 );
         }
         return;
     }
@@ -1565,11 +1584,6 @@ void SV_Frame( unsigned msec ) {
 
     // send messages back to the UDP clients
     SV_SendClientMessages();
-
-#if USE_MVD_SERVER
-    // run TCP client connections
-    SV_MvdRunClients();
-#endif
 
     // send a heartbeat to the master if needed
     SV_MasterHeartbeat();

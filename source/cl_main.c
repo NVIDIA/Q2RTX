@@ -2804,14 +2804,14 @@ void CL_Frame( unsigned msec ) {
             if( cls.active == ACT_MINIMIZED ) {
                 // run at 10 fps if minimized
                 if( main_extra < 100 ) {
-                    NET_Sleep( 100 - main_extra );
+                    IO_Sleep( 100 - main_extra );
                     return;
                 }
                 ref_frame = qfalse;
             } else if( cls.active == ACT_RESTORED || cls.state < ca_active ) {
                 // run at 60 fps if not active
                 if( main_extra < 16 ) {
-                    NET_Sleep( 16 - main_extra );
+                    IO_Sleep( 16 - main_extra );
                     return;
                 }
             }
@@ -2820,7 +2820,7 @@ void CL_Frame( unsigned msec ) {
             if( !cl_async->integer && !cl.sendPacketNow ) {
 #if 0
                 if( cls.demo.playback || cl.frame.ps.pmove.pm_type == PM_FREEZE ) {
-                    NET_Sleep( ref_msec - ref_extra );
+                    IO_Sleep( ref_msec - ref_extra );
                 }
 #endif
                 return; // everything ticks in sync with refresh

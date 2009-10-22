@@ -969,7 +969,10 @@ static void AC_Write( const char *func ) {
 
     if( !FIFO_TryWrite( &ac.stream.send, src, len ) ) {
         Com_WPrintf( "ANTICHEAT: Send buffer exceeded in %s\n", func );
+        return;
     }
+
+    NET_UpdateStream( &ac.stream );
 }
 
 static void AC_ClientQuery( client_t *cl ) {
@@ -1148,6 +1151,15 @@ STARTUP STUFF
 ==============================================================================
 */
 
+static void AC_Spin( void ) {
+    // sleep on stdin and AC server socket
+    IO_Sleepv( 100, 0, ac.stream.socket, -1 );
+#if USE_SYSCON
+    Sys_RunConsole();
+#endif
+    AC_Run();
+}
+
 static qboolean AC_Flush( void ) {
     byte *src = msg_write.data;
     size_t ret, len = msg_write.cursize;
@@ -1164,17 +1176,15 @@ static qboolean AC_Flush( void ) {
             break;
         }
 
+        NET_UpdateStream( &ac.stream );
+
         len -= ret;
         src += ret;
 
         Com_WPrintf( "ANTICHEAT: Send buffer length exceeded, "
             "server may be frozen for a short while!\n" );
         do {
-#if USE_SYSCON
-            Sys_RunConsole();
-#endif
-            Sys_Sleep( 1 );
-            AC_Run();
+            AC_Spin();
             if( !ac.connected ) {
                 return qfalse;
             }
@@ -1368,6 +1378,7 @@ void AC_Run( void ) {
         if( ret == NET_OK ) {
             while( AC_ParseMessage() )
                 ;
+            NET_UpdateStream( &ac.stream );
         }
         AC_CheckTimeouts();
     }
@@ -1417,12 +1428,8 @@ void AC_Connect( qboolean ismvd ) {
     }
 
     // synchronize startup
-    for( attempts = 0; attempts < 5000; attempts++ ) {
-#if USE_SYSCON
-        Sys_RunConsole();
-#endif
-        Sys_Sleep( 1 );
-        AC_Run();
+    for( attempts = 0; attempts < 50; attempts++ ) {
+        AC_Spin();
         if( ac.ready || !ac.stream.state ) {
             return;
         }

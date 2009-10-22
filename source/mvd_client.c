@@ -1324,6 +1324,7 @@ static void gtv_run( gtv_t *gtv ) {
     case NET_AGAIN:
     case NET_OK:
         check_timeouts( gtv );
+        NET_UpdateStream( &gtv->stream );
         break;
     case NET_ERROR:
         gtv_dropf( gtv, "%s to %s", NET_ErrorString(),

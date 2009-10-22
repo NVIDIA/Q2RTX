@@ -140,7 +140,6 @@ qboolean    NET_GetLoopPacket( netsrc_t sock );
 
 char *      NET_AdrToString( const netadr_t *a );
 qboolean    NET_StringToAdr( const char *s, netadr_t *a, int port );
-void        NET_Sleep( int msec );
 
 #if USE_CLIENT && USE_SERVER
 #define     NET_IsLocalAddress( adr )   ( (adr)->type == NA_LOOPBACK )

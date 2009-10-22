@@ -40,4 +40,4 @@ neterr_t NET_Accept( netstream_t *s );
 neterr_t NET_Connect( const netadr_t *peer, netstream_t *s );
 neterr_t NET_RunConnect( netstream_t *s );
 neterr_t NET_RunStream( netstream_t *s );
-
+void NET_UpdateStream( netstream_t *s );

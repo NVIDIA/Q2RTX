@@ -29,7 +29,8 @@ SRCFILES+=cmd.c \
 	pmove.c \
 	q_msg.c \
 	q_shared.c \
-	q_field.c
+	q_field.c \
+	io_sleep.c
 
 ifdef USE_ZLIB
 SRCFILES+=ioapi.c unzip.c 

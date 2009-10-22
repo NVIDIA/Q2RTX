@@ -53,6 +53,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "vid_public.h"
 #endif
 #include "sys_public.h"
+#include "io_sleep.h"
 
 cvar_t  *sys_basedir;
 cvar_t  *sys_libdir;
@@ -74,8 +75,10 @@ cvar_t  *sys_console;
 
 static qboolean         tty_enabled;
 static struct termios   tty_orig;
-static commandPrompt_t    tty_prompt;
-static int                tty_hidden;
+static commandPrompt_t  tty_prompt;
+static int              tty_hidden;
+static ioentry_t        *tty_io;
+
 
 static void tty_hide_input( void ) {
     int i;
@@ -146,9 +149,14 @@ static void tty_init_input( void ) {
 }
 
 static void tty_shutdown_input( void ) {
+    if( tty_io ) {
+        IO_Remove( 0 );
+        tty_io = NULL;
+    }
     if( tty_enabled ) {
         tty_hide_input();
         tcsetattr( 0, TCSADRAIN, &tty_orig );
+        tty_enabled = qfalse;
     }
 }
 
@@ -243,11 +251,6 @@ void Sys_SetConsoleTitle( const char *title ) {
     }
 }
 
-/*
-=================
-tty_parse_input
-=================
-*/
 static void tty_parse_input( const char *text ) {
     inputField_t *f;
     char *s;
@@ -349,8 +352,6 @@ static void tty_parse_input( const char *text ) {
 }
 
 void Sys_RunConsole( void ) {
-    fd_set fd;
-    struct timeval tv;
     char text[MAX_STRING_CHARS];
     int ret;
 
@@ -358,16 +359,7 @@ void Sys_RunConsole( void ) {
         return;
     }
 
-    FD_ZERO( &fd );
-    FD_SET( 0, &fd ); // stdin
-    tv.tv_sec = 0;
-    tv.tv_usec = 0;
-    if( select( 1, &fd, NULL, NULL, &tv ) == -1 ) {
-        Com_Error( ERR_FATAL, "%s: select() failed: %s",
-            __func__, strerror( errno ) );
-    }
-
-    if( !FD_ISSET( 0, &fd ) ) {
+    if( !tty_io || !tty_io->canread ) {
         return;
     }
 
@@ -699,6 +691,10 @@ void Sys_Init( void ) {
         // change stdin to non-blocking and stdout to blocking
         fcntl( 0, F_SETFL, fcntl( 0, F_GETFL, 0 ) | FNDELAY );
         fcntl( 1, F_SETFL, fcntl( 1, F_GETFL, 0 ) & ~FNDELAY );
+
+        // add stdin to the list of descriptors to wait on
+        tty_io = IO_Add( 0 );
+        tty_io->wantread = qtrue;
 
         // init optional TTY support
         if( sys_console->integer > 1 ) {
