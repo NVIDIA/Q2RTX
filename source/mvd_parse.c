@@ -609,6 +609,8 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
         List_Remove( &msg->entry );
         List_Append( &cl->msg_unreliable_list, &msg->entry );
         cl->msg_unreliable_bytes += MAX_SOUND_PACKET;
+
+        flags &= ~SND_POS;
     }
 }
 
