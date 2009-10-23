@@ -507,15 +507,11 @@ retry:
     msg.msg_controllen = sizeof( buffer );
 
     if( recvmsg( udp_sockets[sock], &msg, MSG_ERRQUEUE ) == -1 ) {
-        NET_GET_ERROR();
-
-        switch( net_error ) {
-        case EWOULDBLOCK:
+        if( NET_GET_ERROR() == EWOULDBLOCK ) {
             // wouldblock is silent
-            break;
-        default:
-            Com_EPrintf( "%s: %s\n", __func__, NET_ErrorString() );
+            return tries;
         }
+        Com_EPrintf( "%s: %s\n", __func__, NET_ErrorString() );
         return tries;
     }
 
@@ -621,6 +617,7 @@ retry:
         switch( net_error ) {
         case WSAEWOULDBLOCK:
             // wouldblock is silent
+            e->canread = qfalse;
             break;
 #if USE_ICMP
         case WSAECONNRESET:
@@ -643,6 +640,7 @@ retry:
         switch( net_error ) {
         case EWOULDBLOCK:
             // wouldblock is silent
+            e->canread = qfalse;
             break;
         default:
 #if USE_ICMP
@@ -1164,13 +1162,12 @@ neterr_t NET_Connect( const netadr_t *peer, netstream_t *s ) {
 
     ret = connect( socket, ( struct sockaddr * )&sadr, sizeof( sadr ) );
     if( ret == -1 ) {
-        NET_GET_ERROR();
-
 #ifdef _WIN32
-        if( net_error != WSAEWOULDBLOCK ) {
+        if( NET_GET_ERROR() != WSAEWOULDBLOCK ) {
 #else
-        if( net_error != EINPROGRESS ) {
+        if( NET_GET_ERROR() != EINPROGRESS ) {
 #endif
+            // wouldblock is silent
             closesocket( socket );
             return NET_ERROR;
         }
@@ -1281,20 +1278,28 @@ neterr_t NET_RunStream( netstream_t *s ) {
                 goto closed;
             }
             if( ret == -1 ) {
-                goto error;
-            }
-
-            FIFO_Commit( &s->recv, ret );
-
-#if _DEBUG
-            if( net_log_enable->integer ) {
-                NET_LogPacket( &s->address, "TCP recv", data, ret );
-            }
+#ifdef _WIN32
+                if( NET_GET_ERROR() == WSAEWOULDBLOCK ) {
+#else
+                if( NET_GET_ERROR() == EWOULDBLOCK ) {
 #endif
-            net_rate_rcvd += ret;
-            net_bytes_rcvd += ret;
+                    // wouldblock is silent
+                    e->canread = qfalse;
+                } else {
+                    goto error;
+                }
+            } else {
+                FIFO_Commit( &s->recv, ret );
+#if _DEBUG
+                if( net_log_enable->integer ) {
+                    NET_LogPacket( &s->address, "TCP recv", data, ret );
+                }
+#endif
+                net_rate_rcvd += ret;
+                net_bytes_rcvd += ret;
 
-            result = NET_OK;
+                result = NET_OK;
+            }
         }
     }
 
@@ -1307,20 +1312,28 @@ neterr_t NET_RunStream( netstream_t *s ) {
                 goto closed;
             }
             if( ret == -1 ) {
-                goto error;
-            }
-
-            FIFO_Decommit( &s->send, ret );
-
-#if _DEBUG
-            if( net_log_enable->integer ) {
-                NET_LogPacket( &s->address, "TCP send", data, ret );
-            }
+#ifdef _WIN32
+                if( NET_GET_ERROR() == WSAEWOULDBLOCK ) {
+#else
+                if( NET_GET_ERROR() == EWOULDBLOCK ) {
 #endif
-            net_rate_sent += ret;
-            net_bytes_sent += ret;
+                    // wouldblock is silent
+                    e->canwrite = qfalse;
+                } else {
+                    goto error;
+                }
+            } else {
+                FIFO_Decommit( &s->send, ret );
+#if _DEBUG
+                if( net_log_enable->integer ) {
+                    NET_LogPacket( &s->address, "TCP send", data, ret );
+                }
+#endif
+                net_rate_sent += ret;
+                net_bytes_sent += ret;
 
-            //result = NET_OK;
+                //result = NET_OK;
+            }
         }
     }
 
@@ -1338,7 +1351,6 @@ closed:
     return NET_CLOSED;
 
 error:
-    NET_GET_ERROR();
     s->state = NS_BROKEN;
     e->wantread = qfalse;
     e->wantwrite = qfalse;
