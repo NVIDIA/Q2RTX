@@ -201,7 +201,7 @@ static mvd_t *find_local_channel( void ) {
     mvd_t *mvd;
 
     FOR_EACH_MVD( mvd ) {
-        LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
+        FOR_EACH_MVDCL( client, mvd ) {
             if( NET_IsLocalAddress( &client->cl->netchan->remote_address ) ) {
                 return mvd;
             }
@@ -685,6 +685,11 @@ static qboolean gtv_wait_stop( mvd_t *mvd ) {
     return qfalse;
 
 stop:
+    // notify spectators
+    if( Com_IsDedicated() ) {
+        MVD_BroadcastPrintf( mvd, PRINT_HIGH, 0,
+            "[MVD] Streaming resumed.\n" );
+    }
     mvd->state = MVD_READING;
     mvd->dirty = qtrue;
     return qtrue;
@@ -695,12 +700,12 @@ static void gtv_wait_start( mvd_t *mvd ) {
     gtv_t *gtv = mvd->gtv;
     int tr = mvd_wait_delay->value * 10;
 
-    // if not connected, kill it
+    // if not connected, kill the channel
     if( !gtv ) {
         MVD_Destroyf( mvd, "End of MVD stream reached" );
     }
 
-    // FIXME: if connection is suspended, kill it
+    // FIXME: if connection is suspended, kill the channel
     if( gtv->state != GTV_READING ) {
         gtv->mvd = NULL;
         mvd->gtv = NULL; // but don't kill connection!
@@ -907,6 +912,12 @@ static void parse_hello( gtv_t *gtv ) {
 
     if( sv.state != ss_broadcast ) {
         MVD_Spawn_f(); // the game is just starting
+    } else {
+        // notify spectators
+        if( Com_IsDedicated() && gtv->mvd ) {
+            MVD_BroadcastPrintf( gtv->mvd, PRINT_HIGH, 0,
+                "[MVD] Restored connection to the game server!\n" );
+        }
     }
 
     gtv->flags = flags;

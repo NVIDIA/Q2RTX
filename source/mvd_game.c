@@ -1378,10 +1378,15 @@ static void MVD_GameClientBegin( edict_t *ent ) {
     client->layout_type = LAYOUT_NONE;
     client->layout_time = 0;
     client->layout_cursor = 0;
-    
+ 
     if( !client->begin_time ) {
         MVD_BroadcastPrintf( mvd, PRINT_MEDIUM, UF_MUTE_MISC,
             "[MVD] %s entered the channel\n", client->cl->name );
+        // notify them if channel is in waiting state
+        if( Com_IsDedicated() && mvd->state == MVD_WAITING ) {
+            SV_ClientPrintf( client->cl, PRINT_HIGH,
+                "[MVD] Buffering data, please wait...\n" );
+        }
         target = MVD_MostFollowed( mvd );
     } else {
         target = client->target;
