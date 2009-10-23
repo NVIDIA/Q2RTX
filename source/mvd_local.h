@@ -25,6 +25,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MVD_Mallocz( size )     Z_TagMallocz( size, TAG_MVD )
 #define MVD_CopyString( s )     Z_TagCopyString( s, TAG_MVD )
 
+#define FOR_EACH_MVD( mvd ) \
+    LIST_FOR_EACH( mvd_t, mvd, &mvd_channel_list, entry )
+
+#define FOR_EACH_MVDCL( cl, mvd ) \
+    LIST_FOR_EACH( mvd_client_t, cl, &(mvd)->clients, entry )
+
 #define EDICT_MVDCL( ent )  (( mvd_client_t * )( (ent)->client ))
 #define CS_NUM( c, n )      ( ( char * )(c) + (n) * MAX_QPATH )
 

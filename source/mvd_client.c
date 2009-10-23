@@ -27,6 +27,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "net_stream.h"
 #include <setjmp.h>
 
+#define FOR_EACH_GTV( gtv ) \
+    LIST_FOR_EACH( gtv_t, gtv, &mvd_gtv_list, entry )
+
 #define GTV_DEFAULT_BACKOFF (5*1000)        // 5 seconds
 #define GTV_MAXIMUM_BACKOFF (5*3600*1000)   // 5 hours
 
@@ -197,7 +200,7 @@ static mvd_t *find_local_channel( void ) {
     mvd_client_t *client;
     mvd_t *mvd;
 
-    LIST_FOR_EACH( mvd_t, mvd, &mvd_channel_list, entry ) {
+    FOR_EACH_MVD( mvd ) {
         LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
             if( NET_IsLocalAddress( &client->cl->netchan->remote_address ) ) {
                 return mvd;
@@ -236,13 +239,13 @@ mvd_t *MVD_SetChannel( int arg ) {
 #endif
     if( COM_IsUint( s ) ) {
         id = atoi( s );
-        LIST_FOR_EACH( mvd_t, mvd, &mvd_channel_list, entry ) {
+        FOR_EACH_MVD( mvd ) {
             if( mvd->id == id ) {
                 return mvd;
             }
         }
     } else {
-        LIST_FOR_EACH( mvd_t, mvd, &mvd_channel_list, entry ) {
+        FOR_EACH_MVD( mvd ) {
             if( !strcmp( mvd->name, s ) ) {
                 return mvd;
             }
@@ -331,13 +334,13 @@ static gtv_t *gtv_set_conn( int arg ) {
 
     if( COM_IsUint( s ) ) {
         id = atoi( s );
-        LIST_FOR_EACH( gtv_t, gtv, &mvd_gtv_list, entry ) {
+        FOR_EACH_GTV( gtv ) {
             if( gtv->id == id ) {
                 return gtv;
             }
         }
     } else {
-        LIST_FOR_EACH( gtv_t, gtv, &mvd_gtv_list, entry ) {
+        FOR_EACH_GTV( gtv ) {
             if( !strcmp( gtv->name, s ) ) {
                 return gtv;
             }
@@ -1444,7 +1447,7 @@ static void list_generic( void ) {
         "id name         map      spc plr stat buf pckt address       \n"
         "-- ------------ -------- --- --- ---- --- ---- --------------\n" );
 
-    LIST_FOR_EACH( mvd_t, mvd, &mvd_channel_list, entry ) {
+    FOR_EACH_MVD( mvd ) {
         Com_Printf( "%2d %-12.12s %-8.8s %3d %3d %-4.4s %3d %4u %s\n",
             mvd->id, mvd->name, mvd->mapname,
             List_Count( &mvd->clients ), mvd->numplayers,
@@ -1463,7 +1466,7 @@ static void list_recordings( void ) {
         "id name         map      size name\n"
         "-- ------------ -------- ---- --------------\n" );
 
-    LIST_FOR_EACH( mvd_t, mvd, &mvd_channel_list, entry ) {
+    FOR_EACH_MVD( mvd ) {
         if( mvd->demorecording ) {
             bytes = FS_Tell( mvd->demorecording );
             if( bytes == INVALID_LENGTH ) {
@@ -1509,7 +1512,7 @@ static void MVD_ListServers_f( void ) {
         "id name         state        ratio lastmsg address       \n"
         "-- ------------ ------------ ----- ------- --------------\n" );
 
-    LIST_FOR_EACH( gtv_t, gtv, &mvd_gtv_list, entry ) {
+    FOR_EACH_GTV( gtv ) {
         ratio = 100;
 #if USE_ZLIB
         if( gtv->z_act && gtv->z_str.total_out ) {
@@ -1760,9 +1763,9 @@ static void MVD_Connect_f( void ) {
     }
 
     // don't allow multiple connections
-    LIST_FOR_EACH( gtv_t, gtv, &mvd_gtv_list, entry ) {
+    FOR_EACH_GTV( gtv ) {
         if( NET_IsEqualAdr( &adr, &gtv->stream.address ) ) {
-            Com_Printf( "[%s] =!= Already connected to %s\n",
+            Com_Printf( "[%s] =!= Connection to %s already exists.\n",
                 gtv->name, NET_AdrToString( &adr ) );
             return;
         }

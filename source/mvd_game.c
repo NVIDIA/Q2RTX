@@ -85,7 +85,7 @@ static void MVD_LayoutClients( mvd_client_t *client ) {
 
     y = 8;
     i = 0;
-    LIST_FOR_EACH( mvd_client_t, cl, &mvd->clients, entry ) {
+    FOR_EACH_MVDCL( cl, mvd ) {
         if( ++i < prestep ) {
             continue;
         }
@@ -136,7 +136,7 @@ static int MVD_CountClients( mvd_t *mvd ) {
     mvd_client_t *c;
     int count = 0;
 
-    LIST_FOR_EACH( mvd_client_t, c, &mvd->clients, entry ) {
+    FOR_EACH_MVDCL( c, mvd ) {
         if( c->cl->state == cs_spawned ) {
             count++;
         }
@@ -176,7 +176,7 @@ static void MVD_LayoutChannels( mvd_client_t *client ) {
 
         y = 64;
         cursor = 0;
-        LIST_FOR_EACH( mvd_t, mvd, &mvd_channel_list, entry ) {
+        FOR_EACH_MVD( mvd ) {
             len = Q_snprintf( buffer, sizeof( buffer ),
                 "yv %d string%s \"%c%-12.12s %-7.7s %d/%d\" ", y,
                 mvd == client->mvd ? "2" : "",
@@ -336,7 +336,7 @@ static void MVD_SetFollowLayout( mvd_client_t *client ) {
 static void MVD_UpdateLayouts( mvd_t *mvd ) {
     mvd_client_t *client;
 
-    LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
+    FOR_EACH_MVDCL( client, mvd ) {
         if( client->cl->state != cs_spawned ) {
             continue;
         }
@@ -541,7 +541,7 @@ static mvd_player_t *MVD_MostFollowed( mvd_t *mvd ) {
 
     memset( count, 0, sizeof( count ) );
 
-    LIST_FOR_EACH( mvd_client_t, other, &mvd->clients, entry ) {
+    FOR_EACH_MVDCL( other, mvd ) {
         if( other->cl->state == cs_spawned && other->target ) {
             count[ other->target - mvd->players ]++;
         }
@@ -657,7 +657,7 @@ void MVD_BroadcastPrintf( mvd_t *mvd, int level, int mask, const char *fmt, ... 
     MSG_WriteByte( level );
     MSG_WriteData( text, len + 1 );
 
-    LIST_FOR_EACH( mvd_client_t, other, &mvd->clients, entry ) {
+    FOR_EACH_MVDCL( other, mvd ) {
         cl = other->cl;
         if( cl->state < cs_spawned ) {
             continue;
@@ -1084,7 +1084,7 @@ static void mvd_channel_list_f( mvd_client_t *client ) {
         "id name         map      spc plr who is playing\n"
         "-- ------------ -------- --- --- --------------\n" );
 
-    LIST_FOR_EACH( mvd_t, mvd, &mvd_channel_list, entry ) {
+    FOR_EACH_MVD( mvd ) {
         print_channel( client->cl, mvd );
     }
 }
@@ -1536,7 +1536,7 @@ static void MVD_IntermissionStart( mvd_t *mvd ) {
 
     // force all clients to switch to the MVD dummy
     // and open the scoreboard, unless they had some special layout up
-    LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
+    FOR_EACH_MVDCL( client, mvd ) {
         if( client->cl->state != cs_spawned ) {
             continue;
         }
@@ -1557,7 +1557,7 @@ static void MVD_IntermissionStop( mvd_t *mvd ) {
 
     // force all clients to switch to previous mode
     // and close the scoreboard
-    LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
+    FOR_EACH_MVDCL( client, mvd ) {
         if( client->cl->state != cs_spawned ) {
             continue;
         }
@@ -1604,7 +1604,7 @@ static void MVD_GameRunFrame( void ) {
         }
 
         // update UDP clients
-        LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
+        FOR_EACH_MVDCL( client, mvd ) {
             if( client->cl->state == cs_spawned ) {
                 MVD_UpdateClient( client );
             }
@@ -1644,7 +1644,7 @@ void MVD_PrepWorldFrame( void ) {
     int i;
 
     // reset events and old origins
-    LIST_FOR_EACH( mvd_t, mvd, &mvd_channel_list, entry ) {
+    FOR_EACH_MVD( mvd ) {
         for( i = 1, ent = &mvd->edicts[1]; i < mvd->pool.num_edicts; i++, ent++ ) {
             if( !ent->inuse ) {
                 continue;

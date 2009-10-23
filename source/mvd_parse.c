@@ -237,7 +237,7 @@ static void MVD_ParseMulticast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
     }
 
     // send the data to all relevent clients
-    LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
+    FOR_EACH_MVDCL( client, mvd ) {
         cl = client->cl;
         if( cl->state < cs_primed ) {
             continue;
@@ -278,7 +278,7 @@ static void MVD_UnicastSend( mvd_t *mvd, qboolean reliable, byte *data, size_t l
     client_t *cl;
     
     // send to all relevant clients
-    LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
+    FOR_EACH_MVDCL( client, mvd ) {
         cl = client->cl;
         if( cl->state < cs_spawned ) {
             continue;
@@ -301,7 +301,7 @@ static void MVD_UnicastLayout( mvd_t *mvd, qboolean reliable, mvd_player_t *play
     MSG_ReadString( mvd->layout, sizeof( mvd->layout ) );
 
     // force an update to all relevant clients
-    LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
+    FOR_EACH_MVDCL( client, mvd ) {
         if( client->cl->state < cs_spawned ) {
             continue;
         }
@@ -371,7 +371,7 @@ static void MVD_UnicastPrint( mvd_t *mvd, qboolean reliable, mvd_player_t *playe
     length = msg_read.readcount - readcount;
     
     // send to all relevant clients
-    LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
+    FOR_EACH_MVDCL( client, mvd ) {
         cl = client->cl;
         if( cl->state < cs_spawned ) {
             continue;
@@ -525,7 +525,7 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
         return;
     }
 
-    LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
+    FOR_EACH_MVDCL( client, mvd ) {
         cl = client->cl;
 
         // do not send unreliables to connecting clients
@@ -656,7 +656,7 @@ static void MVD_ParseConfigstring( mvd_t *mvd ) {
         // update player name
         player = &mvd->players[ index - CS_PLAYERSKINS ];
         set_player_name( player, string );
-        LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
+        FOR_EACH_MVDCL( client, mvd ) {
             if( client->cl->state < cs_spawned ) {
                 continue;
             }
@@ -686,7 +686,7 @@ static void MVD_ParseConfigstring( mvd_t *mvd ) {
     MSG_WriteData( string, len + 1 );
     
     // broadcast configstring change
-    LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
+    FOR_EACH_MVDCL( client, mvd ) {
         if( client->cl->state < cs_primed ) {
             continue;
         }
@@ -923,7 +923,7 @@ static void MVD_ChangeLevel( mvd_t *mvd ) {
     MSG_WriteByte( svc_stufftext );
     MSG_WriteString( va( "changing map=%s; reconnect\n", mvd->mapname ) );
 
-    LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
+    FOR_EACH_MVDCL( client, mvd ) {
         if( mvd->intermission && client->cl->state == cs_spawned ) {
             // make them switch to previous target instead of MVD dummy
             client->target = client->oldtarget;
@@ -1021,7 +1021,7 @@ static void MVD_ParseServerData( mvd_t *mvd, int extrabits ) {
         mvd->maxclients = index;
 
         // clear chase targets
-        LIST_FOR_EACH( mvd_client_t, client, &mvd->clients, entry ) {
+        FOR_EACH_MVDCL( client, mvd ) {
             client->target = client->oldtarget = NULL;
         }
     }
@@ -1071,7 +1071,7 @@ static void MVD_ParseServerData( mvd_t *mvd, int extrabits ) {
         mvd_t *cur;
 
         // sort this one into the list of active channels
-        LIST_FOR_EACH( mvd_t, cur, &mvd_channel_list, entry ) {
+        FOR_EACH_MVD( cur ) {
             if( cur->id > mvd->id ) {
                 break;
             }
