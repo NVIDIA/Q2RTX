@@ -1172,11 +1172,11 @@ static qboolean AC_Flush( void ) {
 
     while( 1 ) {
         ret = FIFO_Write( &ac.stream.send, src, len );
+        NET_UpdateStream( &ac.stream );
+
         if( ret == len ) {
             break;
         }
-
-        NET_UpdateStream( &ac.stream );
 
         len -= ret;
         src += ret;
