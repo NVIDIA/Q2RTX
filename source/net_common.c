@@ -1269,7 +1269,7 @@ neterr_t NET_RunStream( netstream_t *s ) {
     }
 
     e = IO_Get( s->socket );
-    if( e->canread ) {
+    if( e->wantread && e->canread ) {
         // read as much as we can
         data = FIFO_Reserve( &s->recv, &len );
         if( len ) {
@@ -1299,11 +1299,17 @@ neterr_t NET_RunStream( netstream_t *s ) {
                 net_bytes_rcvd += ret;
 
                 result = NET_OK;
+
+                // now see if there's more space to read
+                FIFO_Reserve( &s->recv, &len );
+                if( !len ) {
+                    e->wantread = qfalse;
+                }
             }
         }
     }
 
-    if( e->canwrite ) {
+    if( e->wantwrite && e->canwrite ) {
         // write as much as we can
         data = FIFO_Peek( &s->send, &len );
         if( len ) {
@@ -1333,15 +1339,16 @@ neterr_t NET_RunStream( netstream_t *s ) {
                 net_bytes_sent += ret;
 
                 //result = NET_OK;
+
+                // now see if there's more data to write
+                FIFO_Peek( &s->send, &len );
+                if( !len ) {
+                    e->wantwrite = qfalse;
+                }
+
             }
         }
     }
-
-    FIFO_Reserve( &s->recv, &len );
-    e->wantread = len ? qtrue : qfalse;
-
-    FIFO_Peek( &s->send, &len );
-    e->wantwrite = len ? qtrue : qfalse;
 
     return result;
 
