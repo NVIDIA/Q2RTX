@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "key_public.h"
 #include "in_public.h"
 #include "cl_public.h"
+#include "io_sleep.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -40,6 +41,7 @@ static struct {
     qboolean grabbed;
     int      fd;
     int      dx, dy;
+    ioentry_t *io;
 } evdev;
 
 #define MAX_EVENTS    64
@@ -52,26 +54,12 @@ Evdev_GetMouseEvents
 */
 static void Evdev_GetMouseEvents( void ) {
     struct input_event ev[MAX_EVENTS];
-    fd_set fdset;
-    struct timeval timeout;
     int bytes, count;
     int dx, dy;
     int i, button;
     unsigned time;
 
-    if( !evdev.initialized || !evdev.grabbed ) {
-        return;
-    }
-
-    FD_ZERO( &fdset );
-    FD_SET( evdev.fd, &fdset );
-    timeout.tv_sec = 0;
-    timeout.tv_usec = 0;
-    if( select( FD_SETSIZE, &fdset, NULL, NULL, &timeout ) == -1 ) {
-        return;
-    }
-        
-    if( !FD_ISSET( evdev.fd, &fdset ) ) {
+    if( !evdev.initialized || !evdev.grabbed || !evdev.io->canread ) {
         return;
     }
 
@@ -141,6 +129,7 @@ static void Evdev_ShutdownMouse( void ) {
     if( !evdev.initialized ) {
         return;
     }
+    IO_Remove( evdev.fd );
     close( evdev.fd );
     memset( &evdev, 0, sizeof( evdev ) );
 }
@@ -165,6 +154,7 @@ static qboolean Evdev_InitMouse( void ) {
     }
     
     fcntl( evdev.fd, F_SETFL, fcntl( evdev.fd, F_GETFL, 0 ) | FNDELAY );
+    evdev.io = IO_Add( evdev.fd );
 
     Com_Printf( "Event interface initialized.\n" );
     evdev.initialized = qtrue;
@@ -197,10 +187,12 @@ static void Evdev_GrabMouse( grab_t grab ) {
         
         SDL_ShowCursor( SDL_DISABLE );
         
+        evdev.io->wantread = qtrue;
         while( read( evdev.fd, &ev, EVENT_SIZE ) == EVENT_SIZE )
             ;
     } else {
         SDL_ShowCursor( SDL_ENABLE );
+        evdev.io->wantread = qfalse;
     }
 
     evdev.dx = 0;
