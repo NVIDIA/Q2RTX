@@ -27,13 +27,12 @@ typedef enum {
 #endif
 } server_state_t;
 
-void SV_ProcessEvents( void );
 #if USE_ICMP
 void SV_ErrorEvent( void );
 #endif
 void SV_Init (void);
 void SV_Shutdown( const char *finalmsg, killtype_t type );
-void SV_Frame (unsigned msec);
+unsigned SV_Frame (unsigned msec);
 #if USE_SYSCON
 void SV_SetConsoleTitle( void );
 #endif

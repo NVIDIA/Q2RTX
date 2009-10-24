@@ -1260,6 +1260,10 @@ void SV_ErrorEvent( void ) {
     client_t    *client;
     netchan_t   *netchan;
 
+    if( !svs.initialized ) {
+        return;
+    }
+
     // check for errors from connected clients
     FOR_EACH_CLIENT( client ) {
         if( client->state == cs_zombie ) {
@@ -1278,7 +1282,7 @@ void SV_ErrorEvent( void ) {
 }
 #endif
 
-void SV_ProcessEvents( void ) {
+static void SV_ReadPackets( void ) {
 #if USE_CLIENT
     memset( &net_from, 0, sizeof( net_from ) );
     net_from.type = NA_LOOPBACK;
@@ -1366,6 +1370,13 @@ static void SV_PrepWorldFrame( void ) {
     edict_t    *ent;
     int        i;
 
+#if USE_MVD_CLIENT
+    if( sv.state == ss_broadcast ) {
+        MVD_PrepWorldFrame();
+        return;
+    }
+#endif
+
     for( i = 1; i < ge->num_edicts; i++, ent++ ) {
         ent = EDICT_NUM( i );
         // events only last for a single message
@@ -1375,30 +1386,63 @@ static void SV_PrepWorldFrame( void ) {
     sv.tracecount = 0;
 }
 
+#if USE_CLIENT
+static inline qboolean check_paused( void ) {
+    if( !dedicated->integer && cl_paused->integer &&
+        List_Count( &svs.udp_client_list ) == 1  )
+    {
+        if( !sv_paused->integer ) {
+            Cvar_Set( "sv_paused", "1" );
+            IN_Activate();
+        }
+        return qtrue; // don't run if paused
+    }
+
+    if( sv_paused->integer ) {
+        Cvar_Set( "sv_paused", "0" );
+        IN_Activate();
+    }
+    return qfalse;
+
+}
+#endif
+
+
 /*
 =================
 SV_RunGameFrame
 =================
 */
 static void SV_RunGameFrame( void ) {
-#if USE_CLIENT
-    if( host_speeds->integer )
-        time_before_game = Sys_Milliseconds();
-#endif
-
     // we always need to bump framenum, even if we
     // don't run the world, otherwise the delta
     // compression can get confused when a client
     // has the "current" frame
     sv.framenum++;
-    sv.frameresidual -= SV_FRAMETIME;
+
+#if USE_CLIENT
+    // pause if there is only local client on the server
+    if( check_paused() ) {
+        return;
+    }
+#endif
 
 #if USE_MVD_SERVER
     // save the entire world state if recording a serverdemo
     SV_MvdBeginFrame();
 #endif
 
+#if USE_CLIENT
+    if( host_speeds->integer )
+        time_before_game = Sys_Milliseconds();
+#endif
+
     ge->RunFrame();
+
+#if USE_CLIENT
+    if( host_speeds->integer )
+        time_after_game = Sys_Milliseconds();
+#endif
 
     if( msg_write.cursize ) {
         Com_WPrintf( "Game DLL left %"PRIz" bytes "
@@ -1412,10 +1456,6 @@ static void SV_RunGameFrame( void ) {
     SV_MvdEndFrame();
 #endif
 
-#if USE_CLIENT
-    if( host_speeds->integer )
-        time_after_game = Sys_Milliseconds();
-#endif
 }
 
 /*
@@ -1485,126 +1525,90 @@ static void SV_MasterShutdown( void ) {
     }
 }
 
-#if USE_CLIENT
-static inline qboolean check_paused( int mvdconns ) {
-    // pause if there is only local client spawned on the server
-    if( !dedicated->integer && cl_paused->integer /*&& sv_mvd_enable->integer < 2*/ &&
-        List_Count( &svs.udp_client_list ) == 1 && mvdconns == 0 &&
-        LIST_FIRST( client_t, &svs.udp_client_list, entry )->state == cs_spawned &&
-        LIST_FIRST( client_t, &svs.udp_client_list, entry )->lastframe > 0 )
-    {
-        if( !sv_paused->integer ) {
-            Cvar_Set( "sv_paused", "1" );
-            IN_Activate();
-        }
-        return qtrue; // don't run if paused
-    }
-
-    if( sv_paused->integer ) {
-        Cvar_Set( "sv_paused", "0" );
-        IN_Activate();
-    }
-    return qfalse;
-}
-#endif
-
 /*
 ==================
 SV_Frame
 
+Some things like MVD client connections and command buffer
+processing are run even when server is not yet initalized.
+
+Returns amount of extra frametime available for sleeping on IO.
 ==================
 */
-void SV_Frame( unsigned msec ) {
-    int mvdconns;
-
+unsigned SV_Frame( unsigned msec ) {
 #if USE_CLIENT
     time_before_game = time_after_game = 0;
 #endif
 
+    // advance local server time
     svs.realtime += msec;
 
 #if USE_MVD_CLIENT
-    mvdconns = MVD_Frame();
-#else
-    mvdconns = 0;
+    // run connections to MVD/GTV servers
+    MVD_Frame();
 #endif
 
-    // if server is not active, do nothing
-    if( !svs.initialized ) {
-        if( Com_IsDedicated() ) {
-            IO_Sleep( 100 );
-            goto runbuf;
-        }
-        IO_Sleep( 0 );
-        return;
-    }
+    // read packets from UDP clients
+    SV_ReadPackets();
 
-#if USE_CLIENT
-    // pause if there is only local client spawned on the server
-    if( check_paused( mvdconns ) ) {
-        return;
-    }
-#endif
-
+    if( svs.initialized ) {
 #if USE_AC_SERVER
-    // run anticheat server connection
-    AC_Run();
+        // run connection to the anticheat server
+        AC_Run();
 #endif
-
-    // check timeouts
-    SV_CheckTimeouts ();
-
-    // deliver fragments and reliable messages for connecting clients
-    SV_SendAsyncPackets();
 
 #if USE_MVD_SERVER
-    // run TCP client connections
-    SV_MvdRunClients();
+        // run connections from MVD/GTV clients
+        SV_MvdRunClients();
 #endif
+
+        // deliver fragments and reliable messages for connecting clients
+        SV_SendAsyncPackets();
+    }
 
     // move autonomous things around if enough time has passed
     sv.frameresidual += msec;
-    if( !com_timedemo->integer && sv.frameresidual < SV_FRAMETIME ) {
-        if( Com_IsDedicated() ) {
-            IO_Sleep( SV_FRAMETIME - sv.frameresidual );
-        } else {
-            IO_Sleep( 0 );
-        }
-        return;
+    if( sv.frameresidual < SV_FRAMETIME ) {
+        return SV_FRAMETIME - sv.frameresidual;
     }
 
-    // update ping based on the last known frame from all clients
-    SV_CalcPings();
+    if( svs.initialized ) {
+        // check timeouts
+        SV_CheckTimeouts();
 
-    // give the clients some timeslices
-    SV_GiveMsec();
+        // update ping based on the last known frame from all clients
+        SV_CalcPings();
 
-    // let everything in the world think and move
-    SV_RunGameFrame();
+        // give the clients some timeslices
+        SV_GiveMsec();
 
-    // send messages back to the UDP clients
-    SV_SendClientMessages();
+        // let everything in the world think and move
+        SV_RunGameFrame();
 
-    // send a heartbeat to the master if needed
-    SV_MasterHeartbeat();
+        // send messages back to the UDP clients
+        SV_SendClientMessages();
 
-    // clear teleport flags, etc for next frame
-#if USE_MVD_CLIENT
-    if( sv.state == ss_broadcast ) {
-        MVD_PrepWorldFrame();
-    } else
-#endif
-    {
+        // send a heartbeat to the master if needed
+        SV_MasterHeartbeat();
+
+        // clear teleport flags, etc for next frame
         SV_PrepWorldFrame();
     }
 
     if( Com_IsDedicated() ) {
-runbuf:
         // run cmd buffer in dedicated mode
         if( cmd_buffer.waitCount > 0 ) {
             cmd_buffer.waitCount--;
         }
     }
+
+    // decide how long to sleep next frame
+    sv.frameresidual -= SV_FRAMETIME;
+    if( sv.frameresidual < SV_FRAMETIME ) {
+        return SV_FRAMETIME - sv.frameresidual;
+    }
+
+    return 0;
 }
 
 //============================================================================

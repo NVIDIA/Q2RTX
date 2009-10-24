@@ -506,8 +506,6 @@ void        Com_SetColor( color_index_t color );
 
 byte        COM_BlockSequenceCRCByte (byte *base, size_t length, int sequence);
 
-void        Com_ProcessEvents( void );
-
 void        Com_Address_g( genctx_t *ctx );
 void        Com_Generic_c( genctx_t *ctx, int argnum );
 #if USE_CLIENT

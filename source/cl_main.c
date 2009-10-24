@@ -2765,6 +2765,8 @@ void CL_Frame( unsigned msec ) {
         return;
     }
 
+    CL_ProcessEvents();
+
     Cbuf_Execute( &cl_cmdbuf );
 
     ref_extra += msec;

@@ -33,6 +33,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cmodel.h"
 #include "q_field.h"
 #include "prompt.h"
+#include "io_sleep.h"
 #include <setjmp.h>
 #if USE_ZLIB
 #include <zlib.h>
@@ -1800,30 +1801,12 @@ void Qcommon_Init( int argc, char **argv ) {
     Com_SetColor( COLOR_CYAN );
     Com_Printf( APPLICATION " " VERSION ", " __DATE__ "\n" );
     Com_SetColor( COLOR_NONE );
-    Com_Printf( "http://skuller.ath.cx/q2pro/\n\n" );
+    Com_Printf( "http://skuller.net/q2pro/\n\n" );
 
     time( &com_startTime );
 
     com_eventTime = Sys_Milliseconds();
 }
-
-/*
-==============
-Com_ProcessEvents
-==============
-*/
-void Com_ProcessEvents( void ) {
-#if USE_SYSCON
-    Sys_RunConsole();
-#endif
-#if USE_SERVER
-    SV_ProcessEvents();
-#endif
-#if USE_CLIENT
-    CL_ProcessEvents();
-#endif
-}
-
 
 /*
 =================
@@ -1835,6 +1818,7 @@ void Qcommon_Frame( void ) {
     unsigned time_before, time_event, time_between, time_after;
 #endif
     unsigned oldtime, msec;
+    static unsigned remaining;
     static float frac;
 
     if( setjmp( abortframe ) ) {
@@ -1848,7 +1832,15 @@ void Qcommon_Frame( void ) {
         time_before = Sys_Milliseconds();
 #endif
 
-    // calculate time spent running last frame
+    // sleep on network sockets when running a dedicated server
+    // still do a select(), but don't sleep when running a client!
+    if( Com_IsDedicated() ) {
+        IO_Sleep( remaining );
+    } else {
+        IO_Sleep( 0 );
+    }
+
+    // calculate time spent running last frame and sleeping
     oldtime = com_eventTime;
     com_eventTime = Sys_Milliseconds();
     if( oldtime > com_eventTime ) {
@@ -1856,13 +1848,11 @@ void Qcommon_Frame( void ) {
     }
     msec = com_eventTime - oldtime;
 
-    Com_ProcessEvents();
-
 #if USE_CLIENT
     // spin until msec is non-zero if running a client
     if( !dedicated->integer && !com_timedemo->integer ) {
         while( msec < 1 ) {
-            Com_ProcessEvents();
+            CL_ProcessEvents();
             com_eventTime = Sys_Milliseconds();
             msec = com_eventTime - oldtime;
         }
@@ -1884,15 +1874,17 @@ void Qcommon_Frame( void ) {
         frac -= msec;
     }
 
-    // this is the only place where console commands are processed.
-    Cbuf_Execute( &cmd_buffer );
-
 #if USE_CLIENT
     if( host_speeds->integer )
         time_event = Sys_Milliseconds();
 #endif
 
-    SV_Frame( msec );
+#if USE_SYSCON
+    // run system console
+    Sys_RunConsole();
+#endif
+
+    remaining = SV_Frame( msec );
 
 #if USE_CLIENT
     if( host_speeds->integer )
@@ -1919,6 +1911,9 @@ void Qcommon_Frame( void ) {
             all, ev, sv, gm, cl, rf );
     }
 #endif
+
+    // this is the only place where console commands are processed.
+    Cbuf_Execute( &cmd_buffer );
 
     if( cvar_modified & CVAR_FILES ) {
         Cmd_ExecuteString( &cmd_buffer, "fs_restart" );
