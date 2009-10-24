@@ -788,6 +788,7 @@ static void suspend_streams( void ) {
 #if USE_ZLIB
         flush_stream( client, Z_SYNC_FLUSH );
 #endif
+        NET_UpdateStream( &client->stream );
     }
     Com_DPrintf( "Suspending MVD streams.\n" );
     mvd.active = qfalse;
@@ -806,6 +807,7 @@ static void resume_streams( void ) {
 #if USE_ZLIB
         flush_stream( client, Z_SYNC_FLUSH );
 #endif
+        NET_UpdateStream( &client->stream );
     }
 
     // write it to demofile
@@ -1866,6 +1868,7 @@ void SV_MvdMapChanged( void ) {
         // send gamestate to all MVD clients
         FOR_EACH_ACTIVE_GTV( client ) {
             write_message( client, GTS_STREAM_DATA );
+            NET_UpdateStream( &client->stream );
         }
     }
 

@@ -733,6 +733,7 @@ static void gtv_wait_start( mvd_t *mvd ) {
 
     // send ping to force server to flush
     write_message( gtv, GTC_PING );
+    NET_UpdateStream( &gtv->stream );
 }
 
 static qboolean gtv_read_frame( mvd_t *mvd ) {
@@ -813,6 +814,7 @@ static qboolean gtv_forward_cmd( mvd_client_t *client ) {
     MSG_WriteByte( 0 );
     write_message( gtv, GTC_STRINGCMD );
     SZ_Clear( &msg_write );
+    NET_UpdateStream( &gtv->stream );
     return qtrue;
 }
 
