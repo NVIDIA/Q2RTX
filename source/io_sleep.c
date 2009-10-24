@@ -119,18 +119,18 @@ int IO_Sleep( int msec ) {
         if( !e->inuse ) {
             continue;
         }
+        e->canread = qfalse;
         if( e->wantread ) {
             FD_SET( i, &rfd );
-            e->canread = qfalse;
         }
+        e->canwrite = qfalse;
         if( e->wantwrite ) {
             FD_SET( i, &wfd );
-            e->canwrite = qfalse;
         }
 #ifdef _WIN32
+        e->canexcept = qfalse;
         if( e->wantexcept ) {
             FD_SET( i, &efd );
-            e->canexcept = qfalse;
         }
 #endif
     }
@@ -216,18 +216,18 @@ int IO_Sleepv( int msec, ... ) {
         if( !e->inuse ) {
             continue;
         }
+        e->canread = qfalse;
         if( e->wantread ) {
             FD_SET( i, &rfd );
-            e->canread = qfalse;
         }
+        e->canwrite = qfalse;
         if( e->wantwrite ) {
             FD_SET( i, &wfd );
-            e->canwrite = qfalse;
         }
 #ifdef _WIN32
+        e->canexcept = qfalse;
         if( e->wantexcept ) {
             FD_SET( i, &efd );
-            e->canexcept = qfalse;
         }
 #endif
     }
