@@ -42,9 +42,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define IOCTLSOCKET_PARAM u_long
 #define SETSOCKOPT_PARAM BOOL
 #ifdef _WIN32_WCE
-#define NET_GET_ERROR()   ( net_error = GetLastError() )
+#define NET_GET_ERROR()     ( net_error = GetLastError() )
 #else
-#define NET_GET_ERROR()   ( net_error = WSAGetLastError() )
+#define NET_GET_ERROR()     ( net_error = WSAGetLastError() )
+#define NET_WOULD_BLOCK()   ( NET_GET_ERROR() == WSAEWOULDBLOCK )
 #endif
 #elif( defined __unix__ )
 #include <unistd.h>
@@ -69,7 +70,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define ioctlsocket ioctl
 #define IOCTLSOCKET_PARAM int
 #define SETSOCKOPT_PARAM int
-#define NET_GET_ERROR()   ( net_error = errno )
+#define NET_GET_ERROR()     ( net_error = errno )
+#define NET_WOULD_BLOCK()   ( NET_GET_ERROR() == EWOULDBLOCK )
 #else
 #error Unknown target OS
 #endif
@@ -507,7 +509,7 @@ retry:
     msg.msg_controllen = sizeof( buffer );
 
     if( recvmsg( udp_sockets[sock], &msg, MSG_ERRQUEUE ) == -1 ) {
-        if( NET_GET_ERROR() == EWOULDBLOCK ) {
+        if( NET_WOULD_BLOCK() ) {
             // wouldblock is silent
             return tries;
         }
@@ -1121,7 +1123,11 @@ neterr_t NET_Accept( netstream_t *s ) {
     NET_SockadrToNetadr( &from, &net_from );
 
     if( newsocket == -1 ) {
-        NET_GET_ERROR();
+        if( NET_WOULD_BLOCK() ) {
+            // wouldblock is silent
+            e->canread = qfalse;
+            return NET_AGAIN;
+        }
         return NET_ERROR;
     }
 
@@ -1278,11 +1284,7 @@ neterr_t NET_RunStream( netstream_t *s ) {
                 goto closed;
             }
             if( ret == -1 ) {
-#ifdef _WIN32
-                if( NET_GET_ERROR() == WSAEWOULDBLOCK ) {
-#else
-                if( NET_GET_ERROR() == EWOULDBLOCK ) {
-#endif
+                if( NET_WOULD_BLOCK() ) {
                     // wouldblock is silent
                     e->canread = qfalse;
                 } else {
@@ -1318,11 +1320,7 @@ neterr_t NET_RunStream( netstream_t *s ) {
                 goto closed;
             }
             if( ret == -1 ) {
-#ifdef _WIN32
-                if( NET_GET_ERROR() == WSAEWOULDBLOCK ) {
-#else
-                if( NET_GET_ERROR() == EWOULDBLOCK ) {
-#endif
+                if( NET_WOULD_BLOCK() ) {
                     // wouldblock is silent
                     e->canwrite = qfalse;
                 } else {
