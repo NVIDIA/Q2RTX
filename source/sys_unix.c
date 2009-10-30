@@ -417,7 +417,7 @@ void *Hunk_Alloc( mempool_t *pool, size_t size ) {
     void *buf;
 
     // round to cacheline
-    size = ( size + 31 ) & ~31;
+    size = ( size + 63 ) & ~63;
     if( pool->cursize + size > pool->maxsize ) {
         Com_Error( ERR_FATAL, "%s: unable to allocate %"PRIz" bytes out of %"PRIz,
             __func__, size, pool->maxsize );

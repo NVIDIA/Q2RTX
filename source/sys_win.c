@@ -539,7 +539,7 @@ void *Hunk_Alloc( mempool_t *pool, size_t size ) {
     void    *buf;
 
     // round to cacheline
-    size = ( size + 31 ) & ~ 31;
+    size = ( size + 63 ) & ~63;
 
     pool->cursize += size;
     if( pool->cursize > pool->maxsize )
