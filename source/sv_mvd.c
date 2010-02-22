@@ -627,7 +627,7 @@ static void emit_gamestate( void ) {
 
     // send entity states
     for( i = 1, es = mvd.entities + 1; i < ge->num_edicts; i++, es++ ) {
-        flags = 0;
+        flags = MSG_ES_UMASK;
         if( ( j = es->number ) != 0 ) {
             if( i <= sv_maxclients->integer ) {
                 ps = &mvd.players[ i - 1 ];
@@ -754,7 +754,7 @@ static void emit_frame( void ) {
         }
 
         // calculate flags
-        flags = 0;
+        flags = MSG_ES_UMASK;
         if( i <= sv_maxclients->integer ) {
             oldps = &mvd.players[ i - 1 ];
             if( PPS_INUSE( oldps ) && oldps->pmove.pm_type == PM_NORMAL ) {

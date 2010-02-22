@@ -1618,7 +1618,7 @@ static void MVD_EmitGamestate( mvd_t *mvd ) {
 
     // send base entity states
     for( i = 1, ent = mvd->edicts + 1; i < mvd->pool.num_edicts; i++, ent++ ) {
-        flags = 0;
+        flags = MSG_ES_UMASK;
         if( ent->inuse ) {
             if( i <= mvd->maxclients ) {
                 player = &mvd->players[ i - 1 ];
