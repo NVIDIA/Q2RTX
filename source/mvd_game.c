@@ -1636,6 +1636,7 @@ update:
     if( numplayers != mvd_numplayers ) {
         MVD_InfoSet( "mvd_players", va( "%d", numplayers ) );
         mvd_numplayers = numplayers;
+        mvd_dirty = qtrue; // update layouts next frame
     }
 }
 

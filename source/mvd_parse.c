@@ -940,6 +940,8 @@ static void MVD_ChangeLevel( mvd_t *mvd ) {
 
     mvd->intermission = qfalse;
 
+    mvd_dirty = qtrue;
+
     SV_SendAsyncPackets();
 }
 
@@ -1080,8 +1082,6 @@ static void MVD_ParseServerData( mvd_t *mvd, int extrabits ) {
         }
         List_Append( &cur->entry, &mvd->entry );
         mvd->state = MVD_WAITING;
-
-        mvd_dirty = qtrue;
     }
 
     // case all UDP clients to reconnect
