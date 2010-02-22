@@ -944,13 +944,12 @@ static void MVD_Follow_f( mvd_client_t *client ) {
             return;
         default:
             SV_ClientPrintf( client->cl, PRINT_HIGH,
-                "[MVD] Unknown target '%s'. Valid targets:\n"
-                "q (quad), i (invulner), r (red flag), "
-                "b (blue flag), p (previous target).\n", s + 1 );
+                "[MVD] Unknown target '%s'. Valid targets are: "
+                "q[uad]/i[nvulner]/r[ed_flag]/b[lue_flag]/p[revious_target].\n", s );
             return;
         }
         SV_ClientPrintf( client->cl, PRINT_MEDIUM,
-            "[MVD] Chasing players with '%s' powerup.\n", s + 1 );
+            "[MVD] Chasing players with '%s' powerup.\n", s );
         client->chase_mask = mask;
         return;
     }
