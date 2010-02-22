@@ -140,7 +140,7 @@ Evdev_StartupMouse
 ===========
 */
 static qboolean Evdev_InitMouse( void ) {
-    in_device = Cvar_Get( "in_device", "", CVAR_LATCH );
+    in_device = Cvar_Get( "in_device", "", 0 );
     if( !in_device->string[0] ) {
         Com_EPrintf( "No input device specified\n" );
         return qfalse;
@@ -152,7 +152,7 @@ static qboolean Evdev_InitMouse( void ) {
             strerror( errno ) );
         return qfalse;
     }
-    
+ 
     fcntl( evdev.fd, F_SETFL, fcntl( evdev.fd, F_GETFL, 0 ) | FNDELAY );
     evdev.io = IO_Add( evdev.fd );
 
