@@ -320,6 +320,7 @@ void GL_MarkLights( void );
 void GL_DrawBspModel( mmodel_t *model );
 void GL_DrawWorld( void );
 qboolean GL_LightPoint( vec3_t origin, vec3_t color );
+void _R_LightPoint( vec3_t origin, vec3_t color );
 
 /*
  * gl_sky.c

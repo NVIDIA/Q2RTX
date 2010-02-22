@@ -193,7 +193,7 @@ static void GL_SetAliasColor( vec3_t origin, vec_t *color ) {
     } else if( ent->flags & RF_FULLBRIGHT ) {
         VectorSet( color, 1, 1, 1 );
     } else {
-        R_LightPoint( origin, color );
+        _R_LightPoint( origin, color );
 
         if( ent->flags & RF_MINLIGHT ) {
             for( i = 0; i < 3; i++ ) {
@@ -211,18 +211,20 @@ static void GL_SetAliasColor( vec3_t origin, vec_t *color ) {
             for( i = 0; i < 3; i++ ) {
                 m = color[i] * 0.8f;
                 color[i] += f;
-                clamp( color[i], m, 1 );
+                if( color[i] < m )
+                    color[i] = m;
             }
         }
+
+        for( i = 0; i < 3; i++ ) {
+            clamp( color[i], 0, 1 );
+        }
+        
     }
 
     if( glr.fd.rdflags & RDF_IRGOGGLES && ent->flags & RF_IR_VISIBLE ) {
         VectorSet( color, 1, 0, 0 );
     }
-
-/*  for( i = 0; i < 3; i++ ) {
-        clamp( color[i], 0, 255 );
-    }*/
 }
 
 #define USE_CELSHADING  1

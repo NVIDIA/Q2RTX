@@ -161,9 +161,7 @@ void GL_AddLights( vec3_t origin, vec3_t color ) {
 }
 #endif
 
-void R_LightPoint( vec3_t origin, vec3_t color ) {
-    int i;
-
+void _R_LightPoint( vec3_t origin, vec3_t color ) {
     if( gl_fullbright->integer ) {
         VectorSet( color, 1, 1, 1 );
         return;
@@ -183,6 +181,12 @@ void R_LightPoint( vec3_t origin, vec3_t color ) {
 
     // apply modulate twice to mimic original ref_gl behavior
     VectorScale( color, gl_modulate->value, color );
+}
+
+void R_LightPoint( vec3_t origin, vec3_t color ) {
+    int i;
+
+    _R_LightPoint( origin, color );
 
     for( i = 0; i < 3; i++ ) {
         clamp( color[i], 0, 1 );
