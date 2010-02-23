@@ -664,7 +664,6 @@ void CL_Disconnect( error_type_t type, const char *text ) {
     Cvar_Set( "cl_paused", "0" );
 
     cls.state = ca_disconnected;
-    cls.messageString[ 0 ] = 0;
     cls.userinfo_modified = 0;
 
 #if USE_UI
@@ -839,12 +838,7 @@ static void CL_ParsePrintMessage( void ) {
     if ( ( cls.state == ca_challenging || cls.state == ca_connecting ) &&
             NET_IsEqualBaseAdr( &net_from, &cls.serverAddress ) )
     {
-        // server rejected our connect request
-        if( NET_IsLocalAddress( &cls.serverAddress ) ) {
-            Com_Error( ERR_DROP, "Server rejected loopback connection" );
-        }
         Com_Printf( "%s", string );
-        Q_strlcpy( cls.messageString, string, sizeof( cls.messageString ) );
         cls.state = ca_challenging;
         //cls.connectCount = 0;
         return;
@@ -1289,8 +1283,6 @@ static void CL_ConnectionlessPacket( void ) {
         }
         Com_DPrintf( "Selected protocol %d\n", cls.serverProtocol );
 
-        cls.messageString[0] = 0;
-
         CL_CheckForResend();
         return;
     }
@@ -1378,7 +1370,6 @@ static void CL_ConnectionlessPacket( void ) {
 
         CL_ClientCommand( "new" );
         cls.state = ca_connected;
-        cls.messageString[0] = 0;
         cls.connect_count = 0;
         strcpy( cl.mapname, mapname ); // for levelshot screen
         return;

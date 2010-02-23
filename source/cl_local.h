@@ -277,7 +277,9 @@ typedef struct client_static_s {
     char        servername[MAX_OSPATH];    // name of server from original connect
     unsigned    connect_time;        // for connection retransmits
     int         connect_count;
+#if USE_AC_CLIENT
     char        messageString[MAX_STRING_CHARS];
+#endif
     qboolean    passive;
 
 #if USE_ZLIB
