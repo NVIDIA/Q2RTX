@@ -541,7 +541,7 @@ void CL_RequestNextDownload (void);
 void CL_CheckForResend( void );
 void CL_ClearState (void);
 void CL_RestartFilesystem( qboolean total );
-void CL_RestartRefresh( void );
+void CL_RestartRefresh( qboolean total );
 void CL_ClientCommand( const char *string );
 void CL_UpdateLocalFovSetting( void );
 void CL_LoadState( load_state_t state );

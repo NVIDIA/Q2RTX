@@ -206,6 +206,11 @@ void CL_RunRefresh( void ) {
         }
         mode_changed = 0;
     }
+
+    if( cvar_modified & CVAR_FILES ) {
+        CL_RestartRefresh( qfalse );
+        cvar_modified &= ~CVAR_FILES;
+    }
 }
 
 static void vid_geometry_changed( cvar_t *self ) {
@@ -264,6 +269,8 @@ void CL_InitRefresh( void ) {
 
     SCR_RegisterMedia();
     Con_RegisterMedia();
+    
+    cvar_modified &= ~CVAR_FILES;
 }
 
 /*

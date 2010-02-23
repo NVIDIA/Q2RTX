@@ -2446,8 +2446,6 @@ static void setup_gamedir( void ) {
 
     // this var is used by the game library to find it's home directory
     Cvar_FullSet( "fs_gamedir", fs_gamedir, CVAR_ROM, FROM_CODE );
-
-    cvar_modified &= ~CVAR_FILES;
 }
 
 qboolean FS_SafeToRestart( void ) {
@@ -2473,9 +2471,6 @@ FS_NeedRestart
 ================
 */
 qboolean FS_NeedRestart( void ) {
-    if( cvar_modified & CVAR_FILES ) {
-        return qtrue;
-    }
     if( fs_game->latched_string ) {
         return qtrue;
     }
@@ -2612,7 +2607,7 @@ void FS_Init( void ) {
     fs_debug = Cvar_Get( "fs_debug", "0", 0 );
 #endif
 
-    fs_game = Cvar_Get( "game", "", CVAR_FILES|CVAR_LATCH|CVAR_SERVERINFO );
+    fs_game = Cvar_Get( "game", "", CVAR_LATCH|CVAR_SERVERINFO );
 
     // start up with baseq2 by default
     setup_basedir();

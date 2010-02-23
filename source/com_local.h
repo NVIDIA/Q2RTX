@@ -256,7 +256,7 @@ interface from being ambiguous.
 #define CVAR_CUSTOM         ( 1 << 9 )
 #define CVAR_VOLATILE       ( 1 << 10 )
 #define CVAR_GAME           ( 1 << 11 )
-#define CVAR_FILES          ( 1 << 13 )
+#define CVAR_FILES          ( 1 << 13 ) // refresh files for now
 #define CVAR_REFRESH        ( 1 << 14 )
 #define CVAR_SOUND          ( 1 << 15 )
 

@@ -2323,14 +2323,11 @@ void CL_RestartFilesystem( qboolean total ) {
 
     // switch back to original state
     cls.state = cls_state;
+
+    cvar_modified &= ~CVAR_FILES;
 }
 
-/*
-====================
-CL_RestartRefresh
-====================
-*/
-static void CL_RestartRefresh_f( void ) {
+void CL_RestartRefresh( qboolean total ) {
     int cls_state;
 
     if( !cls.ref_initialized ) {
@@ -2345,10 +2342,23 @@ static void CL_RestartRefresh_f( void ) {
 
     S_StopAllSounds();
    
-    IN_Shutdown();
-    CL_ShutdownRefresh();
-    CL_InitRefresh();
-    IN_Init();
+    if( total ) {
+        IN_Shutdown();
+        CL_ShutdownRefresh();
+        CL_InitRefresh();
+        IN_Init();
+    } else {
+#if USE_UI
+        UI_Shutdown();
+#endif
+        R_Shutdown( qfalse );
+        R_Init( qfalse );
+        SCR_RegisterMedia();
+        Con_RegisterMedia();
+#if USE_UI
+        UI_Init();
+#endif
+    }
 
 #if USE_UI
     if( cls_state == ca_disconnected ) {
@@ -2363,6 +2373,30 @@ static void CL_RestartRefresh_f( void ) {
 
     // switch back to original state
     cls.state = cls_state;
+
+    cvar_modified &= ~CVAR_FILES;
+}
+
+/*
+====================
+CL_ReloadRefresh
+ 
+Flush caches and reload all models and textures.
+====================
+*/
+static void CL_ReloadRefresh_f( void ) {
+    CL_RestartRefresh( qfalse );
+}
+
+/*
+====================
+CL_RestartRefresh
+
+Perform complete restart of the renderer subsystem.
+====================
+*/
+static void CL_RestartRefresh_f( void ) {
+    CL_RestartRefresh( qtrue );
 }
 
 /*
@@ -2462,6 +2496,7 @@ static const cmdreg_t c_client[] = {
     { "writeconfig", CL_WriteConfig_f, CL_WriteConfig_c },
 //    { "msgtab", CL_Msgtab_f, CL_Msgtab_g },
     { "vid_restart", CL_RestartRefresh_f },
+    { "r_reload", CL_ReloadRefresh_f },
 
     //
     // forward to server commands

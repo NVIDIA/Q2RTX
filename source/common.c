@@ -1915,11 +1915,6 @@ void Qcommon_Frame( void ) {
     // this is the only place where console commands are processed.
     Cbuf_Execute( &cmd_buffer );
 
-    if( cvar_modified & CVAR_FILES ) {
-        Cmd_ExecuteString( &cmd_buffer, "fs_restart" );
-        cvar_modified &= ~CVAR_FILES;
-    }
-
     com_localTime += msec;
     com_framenum++;
 }
