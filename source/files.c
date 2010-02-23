@@ -77,7 +77,7 @@ typedef struct packfile_s {
     struct packfile_s *hashNext;
 } packfile_t;
 
-typedef struct pack_s {
+typedef struct {
 #if USE_ZLIB
     unzFile zFile;
 #endif
@@ -92,23 +92,21 @@ typedef struct pack_s {
 typedef struct searchpath_s {
     struct searchpath_s *next;
     int mode;
-    struct pack_s *pack;        // only one of filename / pack will be used
+    pack_t *pack;        // only one of filename / pack will be used
     char filename[1];
 } searchpath_t;
 
-typedef enum fsFileType_e {
-    FS_FREE,
-    FS_REAL,
-    FS_PAK,
+typedef struct {
+    enum {
+        FS_FREE,
+        FS_REAL,
+        FS_PAK,
 #if USE_ZLIB
-    FS_PK2,
-    FS_GZIP,
+        FS_PK2,
+        FS_GZIP,
 #endif
-    FS_BAD
-} fsFileType_t;
-
-typedef struct fsFile_s {
-    fsFileType_t type;
+        FS_BAD
+    } type;
     unsigned mode;
     FILE *fp;
 #if USE_ZLIB
@@ -117,14 +115,15 @@ typedef struct fsFile_s {
     packfile_t *pak;
     qboolean unique;
     size_t length;
-} fsFile_t;
+} file_t;
 
-typedef struct fsLink_s {
+typedef struct symlink_s {
+    struct symlink_s *next;
+    size_t targlen;
+    size_t namelen;
     char *target;
-    size_t targlen, namelen;
-    struct fsLink_s *next;
     char name[1];
-} fsLink_t;
+} symlink_t;
 
 // these point to user home directory
 char        fs_gamedir[MAX_OSPATH];
@@ -138,9 +137,9 @@ static cvar_t    *fs_restrict_mask;
 static searchpath_t    *fs_searchpaths;
 static searchpath_t    *fs_base_searchpaths;
 
-static fsLink_t     *fs_links;
+static symlink_t     *fs_links;
 
-static fsFile_t     fs_files[MAX_FILE_HANDLES];
+static file_t     fs_files[MAX_FILE_HANDLES];
 
 static qboolean     fs_fileFromPak;
 
@@ -223,8 +222,8 @@ int FS_pathcmpn( const char *s1, const char *s2, size_t n ) {
 FS_AllocHandle
 ================
 */
-static fsFile_t *FS_AllocHandle( fileHandle_t *f ) {
-    fsFile_t *file;
+static file_t *FS_AllocHandle( fileHandle_t *f ) {
+    file_t *file;
     int i;
 
     for( i = 0, file = fs_files; i < MAX_FILE_HANDLES; i++, file++ ) {
@@ -246,8 +245,8 @@ static fsFile_t *FS_AllocHandle( fileHandle_t *f ) {
 FS_FileForHandle
 ================
 */
-static fsFile_t *FS_FileForHandle( fileHandle_t f ) {
-    fsFile_t *file;
+static file_t *FS_FileForHandle( fileHandle_t f ) {
+    file_t *file;
 
     if( f <= 0 || f >= MAX_FILE_HANDLES + 1 ) {
         Com_Error( ERR_FATAL, "%s: invalid handle: %i", __func__, f );
@@ -339,8 +338,8 @@ Returns:
 ================
 */
 size_t FS_GetFileLength( fileHandle_t f ) {
-    fsFile_t *file = FS_FileForHandle( f );
-    fsFileInfo_t info;
+    file_t *file = FS_FileForHandle( f );
+    file_info_t info;
 
     switch( file->type ) {
     case FS_REAL:
@@ -370,7 +369,7 @@ FS_Tell
 ============
 */
 size_t FS_Tell( fileHandle_t f ) {
-    fsFile_t *file = FS_FileForHandle( f );
+    file_t *file = FS_FileForHandle( f );
     int length;
 
     switch( file->type ) {
@@ -400,7 +399,7 @@ FS_Seek
 ============
 */
 qboolean FS_Seek( fileHandle_t f, size_t offset ) {
-    fsFile_t *file = FS_FileForHandle( f );
+    file_t *file = FS_FileForHandle( f );
 
     switch( file->type ) {
     case FS_REAL:
@@ -454,7 +453,7 @@ static void FS_CreatePath( char *path ) {
 
 qboolean FS_FilterFile( fileHandle_t f ) {
 #if USE_ZLIB
-    fsFile_t *file = FS_FileForHandle( f );
+    file_t *file = FS_FileForHandle( f );
     int mode;
     char *modeStr;
     void *zfp;
@@ -501,7 +500,7 @@ FS_FCloseFile
 ==============
 */
 void FS_FCloseFile( fileHandle_t f ) {
-    fsFile_t *file = FS_FileForHandle( f );
+    file_t *file = FS_FileForHandle( f );
 
     FS_DPrintf( "%s: %u\n", __func__, f );
 
@@ -537,7 +536,7 @@ void FS_FCloseFile( fileHandle_t f ) {
 FS_FOpenFileWrite
 ============
 */
-static size_t FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
+static size_t FS_FOpenFileWrite( file_t *file, const char *name ) {
     char fullpath[MAX_OSPATH];
     FILE *fp;
     char *modeStr;
@@ -620,7 +619,7 @@ static size_t FS_FOpenFileWrite( fsFile_t *file, const char *name ) {
     return ( size_t )ftell( fp );
 }
 
-static size_t FS_FOpenFromPak( fsFile_t *file, pack_t *pak, packfile_t *entry, qboolean unique ) {
+static size_t FS_FOpenFromPak( file_t *file, pack_t *pak, packfile_t *entry, qboolean unique ) {
     fs_fileFromPak = qtrue;
 
     // open a new file on the pakfile
@@ -687,20 +686,20 @@ static size_t FS_FOpenFromPak( fsFile_t *file, pack_t *pak, packfile_t *entry, q
 FS_FOpenFileRead
 
 Finds the file in the search path.
-Fills fsFile_t and returns file length.
+Fills file_t and returns file length.
 In case of GZIP files, returns *raw* (compressed) length!
 Used for streaming data out of either a pak file or
 a seperate file.
 ===========
 */
-static size_t FS_FOpenFileRead( fsFile_t *file, const char *name, qboolean unique ) {
+static size_t FS_FOpenFileRead( file_t *file, const char *name, qboolean unique ) {
     char            fullpath[MAX_OSPATH];
     searchpath_t    *search;
     pack_t          *pak;
     unsigned        hash;
     packfile_t      *entry;
     FILE            *fp;
-    fsFileInfo_t    info;
+    file_info_t    info;
     int             valid = -1;
     size_t          len;
 
@@ -810,9 +809,9 @@ Properly handles partial reads
 =================
 */
 size_t FS_Read( void *buffer, size_t len, fileHandle_t hFile ) {
-    size_t    block, remaining = len, read = 0;
-    byte    *buf = (byte *)buffer;
-    fsFile_t    *file = FS_FileForHandle( hFile );
+    size_t      block, remaining = len, read = 0;
+    byte        *buf = (byte *)buffer;
+    file_t   *file = FS_FileForHandle( hFile );
 
     // read in chunks for progress bar
     while( remaining ) {
@@ -850,7 +849,7 @@ size_t FS_Read( void *buffer, size_t len, fileHandle_t hFile ) {
 }
 
 size_t FS_ReadLine( fileHandle_t f, char *buffer, int size ) {
-    fsFile_t    *file = FS_FileForHandle( f );
+    file_t *file = FS_FileForHandle( f );
     char *s;
     size_t len;
 
@@ -870,7 +869,7 @@ size_t FS_ReadLine( fileHandle_t f, char *buffer, int size ) {
 }
 
 void FS_Flush( fileHandle_t f ) {
-    fsFile_t *file = FS_FileForHandle( f );
+    file_t *file = FS_FileForHandle( f );
 
     switch( file->type ) {
     case FS_REAL:
@@ -894,9 +893,9 @@ Properly handles partial writes
 =================
 */
 size_t FS_Write( const void *buffer, size_t len, fileHandle_t hFile ) {
-    size_t    block, remaining = len, write = 0;
-    byte    *buf = (byte *)buffer;
-    fsFile_t    *file = FS_FileForHandle( hFile );
+    size_t      block, remaining = len, write = 0;
+    byte        *buf = (byte *)buffer;
+    file_t   *file = FS_FileForHandle( hFile );
 
     // read in chunks for progress bar
     while( remaining ) {
@@ -946,23 +945,23 @@ size_t FS_Write( const void *buffer, size_t len, fileHandle_t hFile ) {
 }
 
 static char *FS_ExpandLinks( const char *filename ) {
-    static char        buffer[MAX_OSPATH];
-    fsLink_t    *l;
-    size_t      length;
+    static char buffer[MAX_OSPATH];
+    symlink_t   *link;
+    size_t      len;
 
-    length = strlen( filename );
-    for( l = fs_links; l; l = l->next ) {
-        if( l->namelen > length ) {
+    len = strlen( filename );
+    for( link = fs_links; link; link = link->next ) {
+        if( link->namelen > len ) {
             continue;
         }
-        if( !FS_pathcmpn( l->name, filename, l->namelen ) ) {
-            if( l->targlen + length - l->namelen >= MAX_OSPATH ) {
+        if( !FS_pathcmpn( link->name, filename, link->namelen ) ) {
+            if( link->targlen + len - link->namelen >= MAX_OSPATH ) {
                 FS_DPrintf( "%s: %s: MAX_OSPATH exceeded\n", __func__, filename );
                 return ( char * )filename;
             }
-            memcpy( buffer, l->target, l->targlen );
-            memcpy( buffer + l->targlen, filename + l->namelen,
-                length - l->namelen + 1 );
+            memcpy( buffer, link->target, link->targlen );
+            memcpy( buffer + link->targlen, filename + link->namelen,
+                len - link->namelen + 1 );
             FS_DPrintf( "%s: %s --> %s\n", __func__, filename, buffer );
             return buffer;
         }
@@ -977,7 +976,7 @@ FS_FOpenFile
 ============
 */
 size_t FS_FOpenFile( const char *name, fileHandle_t *f, int mode ) {
-    fsFile_t    *file;
+    file_t    *file;
     fileHandle_t hFile;
     size_t        ret = INVALID_LENGTH;
 
@@ -1053,7 +1052,7 @@ a null buffer will just return the file length without loading
 ============
 */
 size_t FS_LoadFileEx( const char *path, void **buffer, int flags, memtag_t tag ) {
-    fsFile_t *file;
+    file_t *file;
     fileHandle_t f;
     byte    *buf;
     size_t    len;
@@ -1592,8 +1591,8 @@ static void q_printf( 2, 3 ) FS_AddGameDirectory( int mode, const char *fmt, ...
 FS_CopyInfo
 =================
 */
-fsFileInfo_t *FS_CopyInfo( const char *name, size_t size, time_t ctime, time_t mtime ) {
-    fsFileInfo_t    *out;
+file_info_t *FS_CopyInfo( const char *name, size_t size, time_t ctime, time_t mtime ) {
+    file_info_t    *out;
     size_t            len;
 
     if( !name ) {
@@ -1724,8 +1723,8 @@ rescan:
 }
 
 static int infocmp( const void *p1, const void *p2 ) {
-    fsFileInfo_t *n1 = *( fsFileInfo_t ** )p1;
-    fsFileInfo_t *n2 = *( fsFileInfo_t ** )p2;
+    file_info_t *n1 = *( file_info_t ** )p1;
+    file_info_t *n2 = *( file_info_t ** )p2;
 
     return FS_pathcmp( n1->name, n2->name );
 }
@@ -1996,30 +1995,12 @@ void FS_File_g( const char *path, const char *ext, int flags, genctx_t *ctx ) {
     Z_Free( list );
 }
 
-/*
-============
-FS_FDir_f
-============
-*/
-static void FS_FDir_f( void ) {
+static void print_file_list( const char *path, const char *ext, int flags ) {
     void    **list;
-    int        ndirs = 0;
+    int     ndirs = 0;
     int     i;
-    char    *filter;
 
-    if( Cmd_Argc() < 2 ) {
-        Com_Printf( "Usage: %s <filter> [fullPath]\n", Cmd_Argv( 0 ) );
-        return;
-    }
-
-    filter = Cmd_Argv( 1 );
-
-    i = FS_SEARCH_BYFILTER;
-    if( Cmd_Argc() > 2 ) {
-        i |= FS_SEARCH_SAVEPATH;
-    }
-
-    if( ( list = FS_ListFiles( NULL, filter, i, &ndirs ) ) != NULL ) {
+    if( ( list = FS_ListFiles( path, ext, flags, &ndirs ) ) != NULL ) {
         for( i = 0; i < ndirs; i++ ) {
             Com_Printf( "%s\n", ( char * )list[i] );
         }
@@ -2030,32 +2011,49 @@ static void FS_FDir_f( void ) {
 
 /*
 ============
+FS_FDir_f
+============
+*/
+static void FS_FDir_f( void ) {
+    int     flags;
+    char    *filter;
+
+    if( Cmd_Argc() < 2 ) {
+        Com_Printf( "Usage: %s <filter> [full_path]\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    filter = Cmd_Argv( 1 );
+
+    flags = FS_SEARCH_BYFILTER;
+    if( Cmd_Argc() > 2 ) {
+        flags |= FS_SEARCH_SAVEPATH;
+    }
+
+    print_file_list( NULL, filter, flags );
+}
+
+/*
+============
 FS_Dir_f
 ============
 */
 static void FS_Dir_f( void ) {
-    void    **list;
-    int        ndirs = 0;
-    int     i;
-    char    *ext;
+    char    *path, *ext;
 
     if( Cmd_Argc() < 2 ) {
         Com_Printf( "Usage: %s <directory> [.extension]\n", Cmd_Argv( 0 ) );
         return;
     }
+
+    path = Cmd_Argv( 1 );
     if( Cmd_Argc() > 2 ) {
         ext = Cmd_Argv( 2 );
     } else {
         ext = NULL;
     }
-    list = FS_ListFiles( Cmd_Argv( 1 ), ext, 0, &ndirs );
-    if( list ) {
-        for( i = 0; i < ndirs; i++ ) {
-            Com_Printf( "%s\n", ( char * )list[i] );
-        }
-        FS_FreeList( list );
-    }
-    Com_Printf( "%i files listed\n", ndirs );
+
+    print_file_list( path, ext, 0 );
 }
 
 /*
@@ -2071,7 +2069,7 @@ static void FS_WhereIs_f( void ) {
     char filename[MAX_OSPATH];
     char fullpath[MAX_OSPATH];
     char *path;
-    fsFileInfo_t info;
+    file_info_t info;
     int total;
     size_t len;
 
@@ -2137,29 +2135,25 @@ FS_Path_f
 ============
 */
 void FS_Path_f( void ) {
-    searchpath_t    *s;
-    int                numFilesInPAK = 0;
+    searchpath_t *s;
+    int numFilesInPAK = 0;
 #if USE_ZLIB
-    int                numFilesInPK2 = 0;
+    int numFilesInPK2 = 0;
 #endif
 
     Com_Printf( "Current search path:\n" );
     for( s = fs_searchpaths; s; s = s->next ) {
         if( s->pack ) {
 #if USE_ZLIB
-            if( s->pack->zFile ) {
+            if( s->pack->zFile )
                 numFilesInPK2 += s->pack->numfiles;
-            } else
+            else
 #endif
-            {
                 numFilesInPAK += s->pack->numfiles;
-            }
-        }
-
-        if( s->pack )
             Com_Printf( "%s (%i files)\n", s->pack->filename, s->pack->numfiles );
-        else
+        } else {
             Com_Printf( "%s\n", s->filename );
+        }
     }
 
     if( numFilesInPAK ) {
@@ -2235,7 +2229,7 @@ static void FS_Stats_f( void ) {
 }
 
 static void FS_Link_g( genctx_t *ctx ) {
-    fsLink_t *link;
+    symlink_t *link;
 
     for( link = fs_links; link; link = link->next ) {
         if( !Prompt_AddMatch( ctx, link->name ) ) {
@@ -2250,13 +2244,24 @@ static void FS_Link_c( genctx_t *ctx, int argnum ) {
     }
 }
 
+static void free_all_links( void ) {
+    symlink_t *link, *next;
+
+    for( link = fs_links; link; link = next ) {
+        next = link->next;
+        Z_Free( link->target );
+        Z_Free( link );
+    }
+    fs_links = NULL;
+}
+
 static void FS_UnLink_f( void ) {
     static const cmd_option_t options[] = {
         { "a", "all", "delete all links" },
         { "h", "help", "display this message" },
         { NULL }
     };
-    fsLink_t *l, *next, **back;
+    symlink_t *link, **next_p;
     char *name;
     int c;
 
@@ -2268,12 +2273,7 @@ static void FS_UnLink_f( void ) {
             Cmd_PrintHelp( options );
             return;
         case 'a':
-            for( l = fs_links; l; l = next ) {
-                next = l->next;
-                Z_Free( l->target );
-                Z_Free( l );
-            }
-            fs_links = NULL;
+            free_all_links();
             Com_Printf( "Deleted all symbolic links.\n" );
             return;
         default:
@@ -2288,32 +2288,32 @@ static void FS_UnLink_f( void ) {
         return;
     }
 
-    for( l = fs_links, back = &fs_links; l; l = l->next ) {
-        if( !FS_pathcmp( l->name, name ) ) {
+    for( link = fs_links, next_p = &fs_links; link; link = link->next ) {
+        if( !FS_pathcmp( link->name, name ) ) {
             break;
         }
-        back = &l->next;
+        next_p = &link->next;
     }
-    if( !l ) {
+    if( !link ) {
         Com_Printf( "Symbolic link %s does not exist.\n", name );
         return;
     }
 
-    *back = l->next;
-    Z_Free( l->target );
-    Z_Free( l );
+    *next_p = link->next;
+    Z_Free( link->target );
+    Z_Free( link );
 }
 
 static void FS_Link_f( void ) {
     int argc, count;
-    size_t length;
-    fsLink_t *l;
+    size_t len;
+    symlink_t *link;
     char *name, *target;
 
     argc = Cmd_Argc();
     if( argc == 1 ) {
-        for( l = fs_links, count = 0; l; l = l->next, count++ ) {
-            Com_Printf( "%s --> %s\n", l->name, l->target );
+        for( link = fs_links, count = 0; link; link = link->next, count++ ) {
+            Com_Printf( "%s --> %s\n", link->name, link->target );
         }
         Com_Printf( "------------------\n"
                 "%d symbolic links listed.\n", count );
@@ -2321,34 +2321,32 @@ static void FS_Link_f( void ) {
     }
     if( argc != 3 ) {
         Com_Printf( "Usage: %s <name> <target>\n"
-                "Creates symbolic link to target with the specified name.\n"
-                "Virtual quake paths are accepted.\n"
-                "Links are effective only for reading.\n",
-                    Cmd_Argv( 0 ) );
+            "Creates symbolic link to target with the specified name.\n"
+            "Virtual quake paths are accepted.\n"
+            "Links are effective only for reading.\n",
+            Cmd_Argv( 0 ) );
         return;
     }
 
     name = Cmd_Argv( 1 );
-    for( l = fs_links; l; l = l->next ) {
-        if( !FS_pathcmp( l->name, name ) ) {
-            break;
+    for( link = fs_links; link; link = link->next ) {
+        if( !FS_pathcmp( link->name, name ) ) {
+            Z_Free( link->target );
+            goto update;
         }
     }
 
-    if( !l ) {
-        length = strlen( name );
-        l = FS_Malloc( sizeof( *l ) + length );
-        strcpy( l->name, name );
-        l->namelen = length;
-        l->next = fs_links;
-        fs_links = l;
-    } else {
-        Z_Free( l->target );
-    }
+    len = strlen( name );
+    link = FS_Malloc( sizeof( *link ) + len );
+    memcpy( link->name, name, len + 1 );
+    link->namelen = len;
+    link->next = fs_links;
+    fs_links = link;
 
+update:
     target = Cmd_Argv( 2 );
-    l->target = FS_CopyString( target );
-    l->targlen = strlen( target );
+    link->target = FS_CopyString( target );
+    link->targlen = strlen( target );
 }
 
 static void FS_FreeSearchPath( searchpath_t *path ) {
@@ -2376,9 +2374,8 @@ FS_Shutdown
 */
 void FS_Shutdown( qboolean total ) {
     searchpath_t    *path, *next;
-    fsLink_t *l, *nextLink;
-    fsFile_t *file;
-    int i;
+    file_t       *file;
+    int             i;
 
     if( !fs_searchpaths ) {
         return;
@@ -2394,13 +2391,7 @@ void FS_Shutdown( qboolean total ) {
         }
 
         // free symbolic links
-        for( l = fs_links; l; l = nextLink ) {
-            nextLink = l->next;
-            Z_Free( l->target );
-            Z_Free( l );
-        }
-
-        fs_links = NULL;
+        free_all_links();
     }
 
     // free search paths
@@ -2482,8 +2473,8 @@ static void FS_SetupGamedir( void ) {
 }
 
 qboolean FS_SafeToRestart( void ) {
-    fsFile_t    *file;
-    int            i;
+    file_t   *file;
+    int         i;
     
     // make sure no files are opened for reading
     for( i = 0, file = fs_files; i < MAX_FILE_HANDLES; i++, file++ ) {
@@ -2504,8 +2495,8 @@ FS_Restart
 ================
 */
 void FS_Restart( void ) {
-    fsFile_t    *file;
-    int            i;
+    file_t    *file;
+    int             i;
     fileHandle_t temp;
     searchpath_t *path, *next;
     

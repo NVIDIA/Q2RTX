@@ -20,12 +20,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define MAX_LISTED_FILES    4096
 
-typedef struct fsFileInfo_s {
+typedef struct {
     size_t  size;
     time_t  ctime;
     time_t  mtime;
     char    name[1];
-} fsFileInfo_t;
+} file_info_t;
 
 /* bits 0 - 1, enum */
 #define     FS_MODE_APPEND          0x00000000
@@ -85,7 +85,7 @@ qboolean    FS_SafeToRestart( void );
 qboolean FS_RenameFile( const char *from, const char *to );
 #endif
 
-char    *FS_CopyExtraInfo( const char *name, const fsFileInfo_t *info );
+char    *FS_CopyExtraInfo( const char *name, const file_info_t *info );
 
 size_t  FS_FOpenFile( const char *filename, fileHandle_t *f, int mode );
 void    FS_FCloseFile( fileHandle_t hFile );
@@ -117,7 +117,7 @@ qboolean FS_ExtCmp( const char *extension, const char *string );
 
 void    **FS_ListFiles( const char *path, const char *extension, int flags, int *numFiles );
 void    **FS_CopyList( void **list, int count );
-fsFileInfo_t *FS_CopyInfo( const char *name, size_t size, time_t ctime, time_t mtime );
+file_info_t *FS_CopyInfo( const char *name, size_t size, time_t ctime, time_t mtime );
 void    FS_FreeList( void **list );
 
 qboolean    FS_LastFileFromPak( void );

@@ -56,7 +56,7 @@ typedef struct m_demos_s {
 
 static m_demos_t    m_demos;
 
-static void BuildName( fsFileInfo_t *info, char **cache ) {
+static void BuildName( file_info_t *info, char **cache ) {
     char buffer[MAX_OSPATH];
     demoInfo_t demo;
     demoEntry_t *e;
@@ -180,7 +180,7 @@ static void WriteCache( void ) {
 
 static void CalcHash( void **list ) {
     struct mdfour md;
-    fsFileInfo_t *info;
+    file_info_t *info;
     size_t len;
 
     mdfour_begin( &md );

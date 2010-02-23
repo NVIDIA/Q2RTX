@@ -486,7 +486,7 @@ unsigned Sys_Milliseconds( void ) {
 Sys_GetPathInfo
 ================
 */
-qboolean Sys_GetPathInfo( const char *path, fsFileInfo_t *info ) {
+qboolean Sys_GetPathInfo( const char *path, file_info_t *info ) {
     struct stat st;
 
     if( stat( path, &st ) == -1 ) {
@@ -506,7 +506,7 @@ qboolean Sys_GetPathInfo( const char *path, fsFileInfo_t *info ) {
     return qtrue;
 }
 
-qboolean Sys_GetFileInfo( FILE *fp, fsFileInfo_t *info ) {
+qboolean Sys_GetFileInfo( FILE *fp, file_info_t *info ) {
     struct stat st;
 
     if( fstat( fileno( fp ), &st ) == -1 ) {

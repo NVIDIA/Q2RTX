@@ -804,7 +804,7 @@ static inline time_t file_time_to_unix( FILETIME *f ) {
 Sys_GetPathInfo
 ================
 */
-qboolean Sys_GetPathInfo( const char *path, fsFileInfo_t *info ) {
+qboolean Sys_GetPathInfo( const char *path, file_info_t *info ) {
     WIN32_FILE_ATTRIBUTE_DATA    data;
 
     if( !GetFileAttributesExA( path, GetFileExInfoStandard, &data ) ) {
@@ -820,7 +820,7 @@ qboolean Sys_GetPathInfo( const char *path, fsFileInfo_t *info ) {
     return qtrue;
 }
 
-qboolean Sys_GetFileInfo( FILE *fp, fsFileInfo_t *info ) {
+qboolean Sys_GetFileInfo( FILE *fp, file_info_t *info ) {
     int pos;
 
     pos = ftell( fp );
