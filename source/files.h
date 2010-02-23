@@ -76,9 +76,9 @@ typedef struct {
 #define FS_CopyString( string )     Z_TagCopyString( string, TAG_FILESYSTEM )
 
 void    FS_Init( void );
-void    FS_Shutdown( qboolean total );
+void    FS_Shutdown( void );
 qboolean    FS_NeedRestart( void );
-void        FS_Restart( void );
+void        FS_Restart( qboolean total );
 qboolean    FS_SafeToRestart( void );
 
 #if USE_CLIENT

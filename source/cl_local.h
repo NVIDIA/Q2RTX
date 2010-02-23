@@ -540,7 +540,7 @@ void CL_Disconnect( error_type_t type, const char *text );
 void CL_RequestNextDownload (void);
 void CL_CheckForResend( void );
 void CL_ClearState (void);
-void CL_RestartFilesystem( void );
+void CL_RestartFilesystem( qboolean total );
 void CL_RestartRefresh( void );
 void CL_ClientCommand( const char *string );
 void CL_UpdateLocalFovSetting( void );

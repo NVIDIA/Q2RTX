@@ -2347,122 +2347,107 @@ static void FS_FreeSearchPath( searchpath_t *path ) {
 
     if( ( pak = path->pack ) != NULL ) {
 #if USE_ZLIB
-        if( pak->zFile ) {
+        if( pak->zFile )
             unzClose( pak->zFile );
-        } else
+        else
 #endif
-        {
             fclose( pak->fp );
-        }
         Z_Free( pak );
     }
 
     Z_Free( path );
 }
 
-/*
-================
-FS_Shutdown
-================
-*/
-void FS_Shutdown( qboolean total ) {
-    searchpath_t    *path, *next;
-    file_t       *file;
-    int             i;
+static void free_all_paths( void ) {
+    searchpath_t *path, *next;
 
-    if( !fs_searchpaths ) {
-        return;
-    }
-
-    if( total ) {
-        // close file handles
-        for( i = 0, file = fs_files; i < MAX_FILE_HANDLES; i++, file++ ) {
-            if( file->type != FS_FREE ) {
-                Com_WPrintf( "%s: closing handle %d\n", __func__, i + 1 );
-                FS_FCloseFile( i + 1 );
-            }
-        }
-
-        // free symbolic links
-        free_all_links();
-    }
-
-    // free search paths
     for( path = fs_searchpaths; path; path = next ) {
         next = path->next;
         FS_FreeSearchPath( path );
     }
 
     fs_searchpaths = NULL;
-
-    if( total ) {
-        Z_LeakTest( TAG_FILESYSTEM );
-    }
-
-    Cmd_RemoveCommand( "path" );
-    Cmd_RemoveCommand( "fdir" );
-    Cmd_RemoveCommand( "dir" );
-    Cmd_RemoveCommand( "fs_stats" );
-    Cmd_RemoveCommand( "link" );
-    Cmd_RemoveCommand( "unlink" );
 }
 
-/*
-================
-FS_DefaultGamedir
-================
-*/
-static void FS_DefaultGamedir( void ) {
-    if( sys_homedir->string[0] ) {
-        FS_AddGameDirectory( FS_PATH_BASE|FS_PATH_GAME,
-            "%s/"BASEGAME, sys_homedir->string );
+static void free_game_paths( void ) {
+    searchpath_t *path, *next;
+
+    for( path = fs_searchpaths; path != fs_base_searchpaths; path = next ) {
+        next = path->next;
+        FS_FreeSearchPath( path );
     }
 
-    Cvar_Set( "game", "" );
-    Cvar_Set( "gamedir", "" );
-
-    Cvar_Set( "fs_gamedir", fs_gamedir );
+    fs_searchpaths = fs_base_searchpaths;
 }
 
+static void setup_basedir( void ) {
+    FS_AddGameDirectory( FS_PATH_BASE|FS_PATH_GAME, "%s/"BASEGAME, sys_basedir->string );
+    fs_base_searchpaths = fs_searchpaths;
+}
 
-/*
-================
-FS_SetupGamedir
+// returns true if 'game' value is set and valid
+static qboolean check_gamedir( void ) {
+    size_t len;
 
-Sets the gamedir and path to a different directory.
-================
-*/
-static void FS_SetupGamedir( void ) {
-    fs_game = Cvar_Get( "game", "", CVAR_FILES|CVAR_LATCH|CVAR_SERVERINFO );
+    if( !fs_game->string[0] ) {
+        return qfalse; // not set
+    }
+
+    if( !FS_strcmp( fs_game->string, BASEGAME ) ) {
+        goto reset; // normalize it
+    }
+
+    if( strchr( fs_game->string, '/' ) ) {
+        Com_WPrintf( "'%s' should be a single directory name, not a path.\n", fs_game->name );
+        goto reset;
+    }
+
+    // since gamedir is exported to server info, validate it
+    len = Info_SubValidate( fs_game->string );
+    if( len == SIZE_MAX ) {
+        Com_WPrintf( "'%s' should not contain '\\', ';' or '\"' characters.\n", fs_game->name );
+        goto reset;
+    }
+
+    if( len >= MAX_QPATH ) {
+        Com_WPrintf( "'%s' should be less than 64 characters long.\n", fs_game->name );
+        goto reset;
+    }
+
+    return qtrue;
+
+reset:
+    Cvar_Reset( fs_game );
+    return qfalse;
+}
+
+// Sets the gamedir and path to a different directory.
+static void setup_gamedir( void ) {
+    if( check_gamedir() ) {
+        // add system path first
+        FS_AddGameDirectory( FS_PATH_GAME, "%s/%s", sys_basedir->string, fs_game->string );
+
+        // home paths override system paths
+        if( sys_homedir->string[0] ) {
+            FS_AddGameDirectory( FS_PATH_BASE, "%s/"BASEGAME, sys_homedir->string );
+            FS_AddGameDirectory( FS_PATH_GAME, "%s/%s", sys_homedir->string, fs_game->string );
+        }
+
+        // this var is set for compatibility with server browsers, etc
+        Cvar_FullSet( "gamedir", fs_game->string, CVAR_ROM|CVAR_SERVERINFO, FROM_CODE );
+    } else {
+        if( sys_homedir->string[0] ) {
+            FS_AddGameDirectory( FS_PATH_BASE|FS_PATH_GAME,
+                "%s/"BASEGAME, sys_homedir->string );
+        }
+
+        Cvar_FullSet( "gamedir", "", CVAR_ROM, FROM_CODE );
+    }
+
+    // this var is used by the game library to find it's home directory
+    Cvar_FullSet( "fs_gamedir", fs_gamedir, CVAR_ROM, FROM_CODE );
 
     cvar_modified &= ~CVAR_FILES;
-
-    if( !fs_game->string[0] || !FS_strcmp( fs_game->string, BASEGAME ) ) {
-        FS_DefaultGamedir();
-        return;
-    }
-
-    if( !FS_ValidatePath( fs_game->string ) ||
-        strchr( fs_game->string, '/' ) ||
-        strchr( fs_game->string, '\\' ) )
-    {
-        Com_WPrintf( "Gamedir should be a single filename, not a path.\n" );
-        FS_DefaultGamedir();
-        return;
-    }
-
-    // this one is left for compatibility with server browsers, etc
-    Cvar_FullSet( "gamedir", fs_game->string, CVAR_ROM|CVAR_SERVERINFO, FROM_CODE );
-
-    FS_AddGameDirectory( FS_PATH_GAME, "%s/%s", sys_basedir->string, fs_game->string );
-
-    // home paths override system paths
-    if( sys_homedir->string[0] ) {
-        FS_AddGameDirectory( FS_PATH_BASE, "%s/"BASEGAME, sys_homedir->string );
-        FS_AddGameDirectory( FS_PATH_GAME, "%s/%s", sys_homedir->string, fs_game->string );
-    }
-    
-    Cvar_Set( "fs_gamedir", fs_gamedir );
 }
 
 qboolean FS_SafeToRestart( void ) {
@@ -2484,15 +2469,31 @@ qboolean FS_SafeToRestart( void ) {
 
 /*
 ================
-FS_Restart
+FS_NeedRestart
 ================
 */
-void FS_Restart( void ) {
-    file_t    *file;
-    int             i;
+qboolean FS_NeedRestart( void ) {
+    if( cvar_modified & CVAR_FILES ) {
+        return qtrue;
+    }
+    if( fs_game->latched_string ) {
+        return qtrue;
+    }
+    return qfalse;
+}
+
+/*
+================
+FS_Restart
+
+Unless total is true, reloads paks only up to base dir
+================
+*/
+void FS_Restart( qboolean total ) {
+    file_t  *file;
+    int     i;
     fileHandle_t temp;
-    searchpath_t *path, *next;
-    
+
     Com_Printf( "---------- FS_Restart ----------\n" );
     
     // temporary disable logfile
@@ -2513,22 +2514,18 @@ void FS_Restart( void ) {
         }
     }
     
-    if( 0 ) {
+    if( total ) {
         // perform full reset
-        FS_Shutdown( qfalse );
-        FS_Init();
+        free_all_paths();
+        setup_basedir();
     } else {
         // just change gamedir
-        for( path = fs_searchpaths; path != fs_base_searchpaths; path = next ) {
-            next = path->next;
-            FS_FreeSearchPath( path );
-        }
-
-        fs_searchpaths = fs_base_searchpaths;
-
-        FS_SetupGamedir();
-        FS_Path_f();
+        free_game_paths();
     }
+
+    setup_gamedir();
+
+    FS_Path_f();
 
     // re-enable logfile
     com_logFile = temp;
@@ -2540,7 +2537,7 @@ void FS_Restart( void ) {
 ============
 FS_Restart_f
  
-Console command to re-start the file system.
+Console command to fully re-start the file system.
 ============
 */
 static void FS_Restart_f( void ) {
@@ -2550,9 +2547,9 @@ static void FS_Restart_f( void ) {
     }
     
 #if USE_CLIENT
-    CL_RestartFilesystem();
+    CL_RestartFilesystem( qtrue );
 #else
-    FS_Restart();
+    FS_Restart( qtrue );
 #endif
 }
 
@@ -2571,14 +2568,42 @@ static const cmdreg_t c_fs[] = {
 
 /*
 ================
+FS_Shutdown
+================
+*/
+void FS_Shutdown( void ) {
+    file_t *file;
+    int i;
+
+    if( !fs_searchpaths ) {
+        return;
+    }
+
+    // close file handles
+    for( i = 0, file = fs_files; i < MAX_FILE_HANDLES; i++, file++ ) {
+        if( file->type != FS_FREE ) {
+            Com_WPrintf( "%s: closing handle %d\n", __func__, i + 1 );
+            FS_FCloseFile( i + 1 );
+        }
+    }
+
+    // free symbolic links
+    free_all_links();
+
+    // free search paths
+    free_all_paths();
+
+    Z_LeakTest( TAG_FILESYSTEM );
+
+    Cmd_Deregister( c_fs );
+}
+
+/*
+================
 FS_Init
 ================
 */
 void FS_Init( void ) {
-    unsigned start, end;
-
-    start = Sys_Milliseconds();
-
     Com_Printf( "---------- FS_Init ----------\n" );
 
     Cmd_Register( c_fs );
@@ -2586,35 +2611,17 @@ void FS_Init( void ) {
 #ifdef _DEBUG
     fs_debug = Cvar_Get( "fs_debug", "0", 0 );
 #endif
-    Cvar_Get( "fs_gamedir", "", CVAR_ROM );
+
+    fs_game = Cvar_Get( "game", "", CVAR_FILES|CVAR_LATCH|CVAR_SERVERINFO );
 
     // start up with baseq2 by default
-    FS_AddGameDirectory( FS_PATH_BASE|FS_PATH_GAME, "%s/"BASEGAME, sys_basedir->string );
-
-    fs_base_searchpaths = fs_searchpaths;
+    setup_basedir();
 
     // check for game override
-    FS_SetupGamedir();
+    setup_gamedir();
 
     FS_Path_f();
 
-    end = Sys_Milliseconds();
-    Com_DPrintf( "%i msec to init filesystem\n", end - start );
     Com_Printf( "-----------------------------\n" );
-}
-
-/*
-================
-FS_NeedRestart
-================
-*/
-qboolean FS_NeedRestart( void ) {
-    if( cvar_modified & CVAR_FILES ) {
-        return qtrue;
-    }
-    if( fs_game->latched_string ) {
-        return qtrue;
-    }
-    return qfalse;
 }
 

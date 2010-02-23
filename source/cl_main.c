@@ -2270,11 +2270,11 @@ CL_RestartFilesystem
 Flush caches and restart the VFS.
 ====================
 */
-void CL_RestartFilesystem( void ) {
+void CL_RestartFilesystem( qboolean total ) {
     int cls_state;
 
     if( !cl_running->integer ) {
-        FS_Restart();
+        FS_Restart( total );
         return;
     }
 
@@ -2294,7 +2294,7 @@ void CL_RestartFilesystem( void ) {
     if( cls.ref_initialized ) {
         R_Shutdown( qfalse );
 
-        FS_Restart();
+        FS_Restart( total );
 
         R_Init( qfalse );
 
@@ -2304,7 +2304,7 @@ void CL_RestartFilesystem( void ) {
         UI_Init();
 #endif
     } else {
-        FS_Restart();
+        FS_Restart( total );
     }
 
 #if USE_UI
@@ -2372,7 +2372,7 @@ CL_LocalConnect
 */
 void CL_LocalConnect( void ) {
     if ( FS_NeedRestart() ) {
-        CL_RestartFilesystem();
+        CL_RestartFilesystem( qfalse );
     }
 }
 

@@ -768,7 +768,7 @@ static void CL_ParseServerData( void ) {
     if( !cls.demo.playback && !sv_running->integer ) {
         Cvar_UserSet( "game", cl.gamedir );
         if( FS_NeedRestart() ) {
-            CL_RestartFilesystem();
+            CL_RestartFilesystem( qfalse );
         }
     }
 

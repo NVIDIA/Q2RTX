@@ -32,10 +32,6 @@ qboolean CL_CheatsOK( void ) {
     return qfalse;
 }
 
-void CL_RestartFilesystem( void ) {
-    FS_Restart();
-}
-
 void CL_LocalConnect( void ) {
     if( FS_NeedRestart() ) {
         FS_Restart();
