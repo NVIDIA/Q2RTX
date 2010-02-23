@@ -132,7 +132,6 @@ char        fs_gamedir[MAX_OSPATH];
 #ifdef _DEBUG
 static cvar_t    *fs_debug;
 #endif
-static cvar_t    *fs_restrict_mask;
 
 static searchpath_t    *fs_searchpaths;
 static searchpath_t    *fs_base_searchpaths;
@@ -1126,7 +1125,7 @@ void *FS_AllocTempMem( size_t length ) {
     byte *buf;
 
 #if USE_LOADBUF
-    if( loadInuse + length <= MAX_LOAD_BUFFER && !( fs_restrict_mask->integer & 16 ) ) {
+    if( loadInuse + length <= MAX_LOAD_BUFFER ) {
         buf = &loadBuffer[loadInuse];
         loadLast = buf;
         loadSaved = loadInuse;
@@ -1560,29 +1559,23 @@ static void q_printf( 2, 3 ) FS_AddGameDirectory( int mode, const char *fmt, ...
     //
     // add the directory to the search path
     //
-    if( !( fs_restrict_mask->integer & 1 ) ) {
-        search = FS_Malloc( sizeof( searchpath_t ) + len );
-        search->mode = mode;
-        search->pack = NULL;
-        memcpy( search->filename, fs_gamedir, len + 1 );
-        search->next = fs_searchpaths;
-        fs_searchpaths = search;
-    }
+    search = FS_Malloc( sizeof( searchpath_t ) + len );
+    search->mode = mode;
+    search->pack = NULL;
+    memcpy( search->filename, fs_gamedir, len + 1 );
+    search->next = fs_searchpaths;
+    fs_searchpaths = search;
 
     //
     // add any pak files in the format *.pak
     //
-    if( !( fs_restrict_mask->integer & 2 ) ) {
-        FS_LoadPackFiles( mode, ".pak", FS_LoadPakFile );
-    }
+    FS_LoadPackFiles( mode, ".pak", FS_LoadPakFile );
 
 #if USE_ZLIB
     //
     // add any zip files in the format *.pkz
     //
-    if( !( fs_restrict_mask->integer & 4 ) ) {
-        FS_LoadPackFiles( mode, ".pkz", FS_LoadZipFile );
-    }
+    FS_LoadPackFiles( mode, ".pkz", FS_LoadZipFile );
 #endif
 }
 
@@ -2520,7 +2513,7 @@ void FS_Restart( void ) {
         }
     }
     
-    if( fs_restrict_mask->latched_string ) {
+    if( 0 ) {
         // perform full reset
         FS_Shutdown( qfalse );
         FS_Init();
@@ -2556,7 +2549,11 @@ static void FS_Restart_f( void ) {
         return;
     }
     
+#if USE_CLIENT
     CL_RestartFilesystem();
+#else
+    FS_Restart();
+#endif
 }
 
 static const cmdreg_t c_fs[] = {
@@ -2589,15 +2586,7 @@ void FS_Init( void ) {
 #ifdef _DEBUG
     fs_debug = Cvar_Get( "fs_debug", "0", 0 );
 #endif
-    fs_restrict_mask = Cvar_Get( "fs_restrict_mask", "0", CVAR_NOSET );
     Cvar_Get( "fs_gamedir", "", CVAR_ROM );
-
-    if( ( fs_restrict_mask->integer & 7 ) == 7 ) {
-        Com_WPrintf( "Invalid fs_restrict_mask value %d. "
-            "Falling back to default.\n",
-                fs_restrict_mask->integer );
-        Cvar_Set( "fs_restrict_mask", "0" );
-    }
 
     // start up with baseq2 by default
     FS_AddGameDirectory( FS_PATH_BASE|FS_PATH_GAME, "%s/"BASEGAME, sys_basedir->string );
@@ -2623,7 +2612,7 @@ qboolean FS_NeedRestart( void ) {
     if( cvar_modified & CVAR_FILES ) {
         return qtrue;
     }
-    if( fs_game->latched_string || fs_restrict_mask->latched_string ) {
+    if( fs_game->latched_string ) {
         return qtrue;
     }
     return qfalse;
