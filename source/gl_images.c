@@ -1005,12 +1005,10 @@ static void GL_InitParticleTexture( void ) {
             y = i - DLIGHT_TEXTURE_SIZE/2 + 0.5f;
             f = sqrt( x * x + y * y );
             f = 1.0f - f / ( DLIGHT_TEXTURE_SIZE/2 - 1.5f );
-            if( f < 0 ) f = 0;
-            else if( f > 1 ) f = 1;
             dst[0] = 255;
             dst[1] = 255;
             dst[2] = 255;
-            dst[3] = 255*f;
+            dst[3] = 255 * clamp( f, 0, 1 );
             dst += 4;
         }
     }
@@ -1046,14 +1044,12 @@ static void GL_InitBeamTexture( void ) {
     dst = pixels;
     for( i = 0; i < 16; i++ ) {
         for( j = 0; j < 16; j++ ) {
-            f = fabs( j - 16/2 ) - 0.5f;
+            f = abs( j - 16/2 ) - 0.5f;
             f = 1.0f - f / ( 16/2 - 2.5f );
-            if( f < 0 ) f = 0;
-            else if( f > 1 ) f = 1;
-            dst[0] = 255;// * f;
-            dst[1] = 255;// * f;
-            dst[2] = 255;// * f;
-            dst[3] = 255 * f;
+            dst[0] = 255;
+            dst[1] = 255;
+            dst[2] = 255;
+            dst[3] = 255 * clamp( f, 0, 1 );
             dst += 4;
         }
     }
