@@ -509,12 +509,11 @@ void CL_ColorExplosionParticles (vec3_t org, int color, int run);
 void CL_ParticleSmokeEffect (vec3_t org, vec3_t dir, int color, int count, int magnitude);
 void CL_Widowbeamout (cl_sustain_t *self);
 void CL_Nukeblast (cl_sustain_t *self);
-void CL_WidowSplash (vec3_t org);
+void CL_WidowSplash (void);
 // PGM
 // ========
 
 
-void CL_ParseTEnt (void);
 void CL_ParseMuzzleFlash (void);
 void CL_ParseMuzzleFlash2 (void);
 void SmokeAndFlash(vec3_t origin);
@@ -571,6 +570,22 @@ void CL_SendCmd( void );
 //
 // cl_parse.c
 //
+
+typedef struct {
+    int type;
+    vec3_t pos1;
+    vec3_t pos2;
+    vec3_t offset;
+    vec3_t dir;
+    int count;
+    int color;
+    int entity1;
+    int entity2;
+    int time;
+} tent_params_t;
+
+extern tent_params_t    te;
+
 qboolean CL_CheckOrDownloadFile( const char *filename );
 void CL_ParseServerMessage (void);
 void CL_LoadClientinfo (clientinfo_t *ci, const char *s);
@@ -616,6 +631,8 @@ typedef struct laser_s {
 } laser_t;
 
 laser_t *CL_AllocLaser( void );
+
+void CL_AddTEnt (void);
 
 
 //

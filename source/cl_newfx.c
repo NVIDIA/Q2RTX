@@ -819,7 +819,7 @@ void CL_Nukeblast (cl_sustain_t *self)
     }
 }
 
-void CL_WidowSplash (vec3_t org)
+void CL_WidowSplash (void)
 {
     static int colortable[4] = {2*8,13*8,21*8,18*8};
     int         i;
@@ -842,7 +842,7 @@ void CL_WidowSplash (vec3_t org)
         dir[1] = crand();
         dir[2] = crand();
         VectorNormalize(dir);
-        VectorMA(org, 45.0, dir, p->org);
+        VectorMA(te.pos1, 45.0, dir, p->org);
         VectorMA(vec3_origin, 40.0, dir, p->vel);
 
         p->accel[0] = p->accel[1] = 0;
