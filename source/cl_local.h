@@ -520,6 +520,8 @@ void SmokeAndFlash(vec3_t origin);
 
 void CL_SetLightstyle( int index, const char *string, size_t length );
 
+void CL_ParseLaser( int colors );
+
 void CL_RunParticles (void);
 void CL_RunDLights (void);
 void CL_RunLightStyles (void);
@@ -527,6 +529,7 @@ void CL_RunLightStyles (void);
 void CL_AddEntities (void);
 void CL_AddDLights (void);
 void CL_AddTEnts (void);
+void CL_AddLasers( void );
 void CL_AddLightStyles (void);
 
 //=================================================
@@ -613,24 +616,6 @@ void CL_PrepRefresh (void);
 void CL_RegisterTEntSounds (void);
 void CL_RegisterTEntModels (void);
 void CL_SmokeAndFlash(vec3_t origin);
-
-#define LASER_FADE_NOT    1
-#define LASER_FADE_ALPHA    2
-#define LASER_FADE_RGBA        3
-
-typedef struct laser_s {
-    entity_t    ent;
-    vec3_t      start;
-    vec3_t      end;
-    int         fadeType;
-    qboolean    indexed;
-    color_t     color;
-    float       width;
-    int         lifeTime;
-    int         startTime;
-} laser_t;
-
-laser_t *CL_AllocLaser( void );
 
 void CL_AddTEnt (void);
 

@@ -946,13 +946,12 @@ void CL_AddEntities( void ) {
     CL_CalcViewValues();
     CL_AddPacketEntities();
     CL_AddTEnts();
+    CL_AddLasers();
     CL_AddParticles();
     CL_AddDLights();
     CL_AddLightStyles();
     LOC_AddLocationsToScene();
 }
-
-
 
 /*
 ===============

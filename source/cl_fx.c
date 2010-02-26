@@ -227,6 +227,118 @@ void CL_RunDLights (void)
 }
 
 /*
+==============================================================
+
+LASER BEAM MANAGEMENT
+
+==============================================================
+*/
+
+#define LASER_FADE_NOT      1
+#define LASER_FADE_ALPHA    2
+#define LASER_FADE_RGBA     3
+
+typedef struct {
+    entity_t    ent;
+    vec3_t      start;
+    vec3_t      end;
+    int         fadeType;
+    qboolean    indexed;
+    color_t     color;
+    float       width;
+    int         lifeTime;
+    int         startTime;
+} laser_t;
+
+#define MAX_LASERS  32
+
+static laser_t     cl_lasers[MAX_LASERS];
+
+static laser_t *alloc_laser( void ) {
+    laser_t *l;
+    int i;
+
+    for( i=0, l=cl_lasers ; i<MAX_LASERS ; i++, l++ ) {
+        if( cl.time - l->startTime >= l->lifeTime ) {
+            memset( l, 0, sizeof( *l ) );
+            l->startTime = cl.time;
+            return l;
+        }
+    }
+
+    return NULL;
+}
+
+void CL_AddLasers( void ) {
+    laser_t     *l;
+    entity_t    ent;
+    int         i;
+    //color_t       color;
+    int time;
+    float f;
+
+    memset( &ent, 0, sizeof( ent ) );
+
+    for( i = 0, l = cl_lasers; i < MAX_LASERS; i++, l++ ) {
+        time = l->lifeTime - ( cl.time - l->startTime );
+        if( time < 0 ) {
+            continue;
+        }
+
+        ent.alpha = l->color[3] / 255.0f;
+
+        if( l->fadeType != LASER_FADE_NOT ) {
+            f = (float)time / (float)l->lifeTime;
+
+            ent.alpha *= f;
+            /*if( l->fadeType == LASER_FADE_RGBA ) {
+                *(int *)color = *(int *)l->color;
+                color[0] *= f;
+                color[1] *= f;
+                color[2] *= f;
+                ent.skinnum = *(int *)color;
+            }*/
+        } /*else*/ {
+            ent.skinnum = *(int *)l->color;
+        }
+
+        ent.flags = RF_TRANSLUCENT|RF_BEAM;
+        VectorCopy( l->start, ent.origin );
+        VectorCopy( l->end, ent.oldorigin );
+        ent.frame = l->width;
+        ent.lightstyle = !l->indexed;
+
+        V_AddEntity( &ent );
+    }
+}
+
+/*
+=================
+CL_ParseLaser
+=================
+*/
+void CL_ParseLaser( int colors ) {
+    laser_t *l;
+
+    l = alloc_laser();
+    if (!l)
+        return;
+
+    VectorCopy( te.pos1, l->start );
+    VectorCopy( te.pos2, l->end );
+    l->fadeType = LASER_FADE_NOT;
+    l->lifeTime = 100;
+    l->indexed = qtrue;
+    l->color[0] = ( colors >> ( ( rand() % 4 ) * 8 ) ) & 0xff;
+    l->color[1] = 0;
+    l->color[2] = 0;
+    l->color[3] = 77;
+    l->width = 4;
+}
+
+// ==============================================================
+
+/*
 ==============
 CL_ParseMuzzleFlash
 ==============
@@ -1657,11 +1769,11 @@ static void cl_railspiral_color_changed( cvar_t *self ) {
 }
 
 static void CL_NewRailCore( vec3_t start, vec3_t end ) {
-    laser_t *l = CL_AllocLaser();
+    laser_t *l;
 
-    if( !l ) {
+    l = alloc_laser();
+    if (!l)
         return;
-    }
 
     VectorCopy( start, l->start );
     VectorCopy( end, l->end );
@@ -2327,6 +2439,7 @@ void CL_ClearEffects (void)
     CL_ClearParticles ();
     CL_ClearDlights ();
     CL_ClearLightStyles ();
+    memset (cl_lasers, 0, sizeof(cl_lasers));
 }
 
 void CL_InitEffects( void ) {
