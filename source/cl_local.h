@@ -436,7 +436,6 @@ typedef struct cl_sustain_s {
     void    (*think)(struct cl_sustain_s *self);
 } cl_sustain_t;
 
-#define MAX_SUSTAINS        32
 void CL_ParticleSteamEffect2(cl_sustain_t *self);
 
 void CL_TeleporterParticles (vec3_t org);
@@ -466,6 +465,7 @@ typedef struct cparticle_s{
     color_t rgb;
 } cparticle_t;
 
+cparticle_t *CL_AllocParticle( void );
 
 #define PARTICLE_GRAVITY        40
 #define BLASTER_PARTICLE_COLOR  0xe0

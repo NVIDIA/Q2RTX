@@ -21,16 +21,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "cl_local.h"
 
-typedef enum
-{
-    ex_free, ex_explosion, ex_misc, ex_flash, ex_mflash, ex_poly, ex_poly2, ex_light
-} exptype_t;
+typedef struct {
+    enum {
+        ex_free,
+        ex_explosion,
+        ex_misc,
+        ex_flash,
+        ex_mflash,
+        ex_poly,
+        ex_poly2,
+        ex_light
+    } type;
 
-typedef struct
-{
-    exptype_t   type;
     entity_t    ent;
-
     int         frames;
     float       light;
     vec3_t      lightcolor;
@@ -38,15 +41,11 @@ typedef struct
     int         baseframe;
 } explosion_t;
 
-
-
 #define MAX_EXPLOSIONS  32
-explosion_t cl_explosions[MAX_EXPLOSIONS];
 
+static explosion_t cl_explosions[MAX_EXPLOSIONS];
 
-#define MAX_BEAMS   32
-typedef struct
-{
+typedef struct {
     int     entity;
     int     dest_entity;
     qhandle_t model;
@@ -54,12 +53,19 @@ typedef struct
     vec3_t  offset;
     vec3_t  start, end;
 } beam_t;
-beam_t      cl_beams[MAX_BEAMS];
-//PMM - added this for player-linked beams.  Currently only used by the plasma beam
-beam_t      cl_playerbeams[MAX_BEAMS];
+
+#define MAX_BEAMS   32
+
+static beam_t      cl_beams[MAX_BEAMS];
+
+//PMM - added this for player-linked beams.
+//Currently only used by the plasma beam
+static beam_t      cl_playerbeams[MAX_BEAMS];
+
+#define MAX_SUSTAINS        32
 
 //ROGUE
-cl_sustain_t    cl_sustains[MAX_SUSTAINS];
+static cl_sustain_t    cl_sustains[MAX_SUSTAINS];
 //ROGUE
 
 //PGM
@@ -110,7 +116,7 @@ qhandle_t   cl_mod_explo4_big;
 
 #define MAX_LASERS  32
 
-laser_t     cl_lasers[MAX_LASERS];
+static laser_t     cl_lasers[MAX_LASERS];
 
 /*
 =================
@@ -132,12 +138,7 @@ laser_t *CL_AllocLaser( void ) {
     return NULL;
 }
 
-/*
-=================
-CL_AddLasers
-=================
-*/
-void CL_AddLasers( void ) {
+static void CL_AddLasers( void ) {
     laser_t     *l;
     entity_t    ent;
     int         i;
@@ -286,12 +287,7 @@ void CL_ClearTEnts (void)
 //ROGUE
 }
 
-/*
-=================
-CL_AllocExplosion
-=================
-*/
-explosion_t *CL_AllocExplosion (void)
+static explosion_t *CL_AllocExplosion (void)
 {
     int     i;
     int     time;
@@ -345,19 +341,14 @@ void CL_SmokeAndFlash(vec3_t origin)
     ex->ent.model = cl_mod_flash;
 }
 
-/*
-=================
-CL_ParseBeam
-=================
-*/
 static void CL_ParseBeam (qhandle_t model)
 {
     beam_t  *b;
     int     i;
     
-// override any beam with the same entity
+// override any beam with the same source AND destination entities
     for (i=0, b=cl_beams ; i< MAX_BEAMS ; i++, b++)
-        if (b->entity == te.entity1)
+        if (b->entity == te.entity1 && b->dest_entity == te.entity2)
             goto override;
 
 // find a free beam
@@ -367,6 +358,7 @@ static void CL_ParseBeam (qhandle_t model)
         {
 override:
             b->entity = te.entity1;
+            b->dest_entity = te.entity2;
             b->model = model;
             b->endtime = cl.time + 200;
             VectorCopy (te.pos1, b->start);
@@ -378,12 +370,6 @@ override:
 }
 
 // ROGUE
-/*
-=================
-CL_ParsePlayerBeam
-  - adds to the cl_playerbeam array instead of the cl_beams array
-=================
-*/
 static void CL_ParsePlayerBeam (qhandle_t model)
 {
     beam_t  *b;
@@ -425,41 +411,6 @@ static void CL_ParsePlayerBeam (qhandle_t model)
 
 /*
 =================
-CL_ParseLightning
-=================
-*/
-static void CL_ParseLightning (void)
-{
-    beam_t  *b;
-    int     i;
-
-    S_StartSound (NULL, te.entity1, CHAN_WEAPON, cl_sfx_lightning, 1, ATTN_NORM, 0);
-
-// override any beam with the same source AND destination entities
-    for (i=0, b=cl_beams ; i< MAX_BEAMS ; i++, b++)
-        if (b->entity == te.entity1 && b->dest_entity == te.entity2)
-            goto override;
-
-// find a free beam
-    for (i=0, b=cl_beams ; i< MAX_BEAMS ; i++, b++)
-    {
-        if (!b->model || b->endtime < cl.time)
-        {
-override:
-            b->entity = te.entity1;
-            b->dest_entity = te.entity2;
-            b->model = cl_mod_lightning;
-            b->endtime = cl.time + 200;
-            VectorCopy (te.pos1, b->start);
-            VectorCopy (te.pos2, b->end);
-            VectorClear (b->offset);
-            return;
-        }
-    }
-}
-
-/*
-=================
 CL_ParseLaser
 =================
 */
@@ -482,95 +433,72 @@ static void CL_ParseLaser( int colors ) {
     l->width = 4;
 }
 
+static cl_sustain_t *alloc_sustain( void ) {
+    int     i;
+    cl_sustain_t    *s;
+
+    for (i=0, s=cl_sustains; i<MAX_SUSTAINS; i++, s++) {
+        if (s->id == 0) {
+            return s;
+        }
+    }
+    return NULL;
+}
+
 //=============
 //ROGUE
-static void CL_ParseSteam (void)
-{
-    int     i;
-    cl_sustain_t    *s, *free_sustain;
+static void CL_ParseSteam (void) {
+    cl_sustain_t    *s;
 
     if( te.entity1 == -1 ) {
         CL_ParticleSteamEffect (te.pos1, te.dir, te.color & 0xff, te.count, te.entity2);
         return;
     }
         
-    // sustains
-
-    free_sustain = NULL;
-    for (i=0, s=cl_sustains; i<MAX_SUSTAINS; i++, s++)
-    {
-        if (s->id == 0)
-        {
-            free_sustain = s;
-            break;
-        }
-    }
-    if (free_sustain)
-    {
-        s->id = te.entity1;
-        s->count = te.count;
-        VectorCopy( te.pos1, s->org );
-        VectorCopy( te.dir, s->dir );
-        s->color = te.color & 0xff;
-        s->magnitude = te.entity2;
-        s->endtime = cl.time + te.time;
-        s->think = CL_ParticleSteamEffect2;
-        s->thinkinterval = 100;
-        s->nextthink = cl.time;
-    }
+    s = alloc_sustain();
+    if (!s)
+        return;
     
-
-    
+    s->id = te.entity1;
+    s->count = te.count;
+    VectorCopy( te.pos1, s->org );
+    VectorCopy( te.dir, s->dir );
+    s->color = te.color & 0xff;
+    s->magnitude = te.entity2;
+    s->endtime = cl.time + te.time;
+    s->think = CL_ParticleSteamEffect2;
+    s->thinkinterval = 100;
+    s->nextthink = cl.time;
 }
 
-static void CL_ParseWidow (void)
-{
-    int     i;
-    cl_sustain_t    *s, *free_sustain;
+static void CL_ParseWidow (void) {
+    cl_sustain_t    *s;
 
-    free_sustain = NULL;
-    for (i=0, s=cl_sustains; i<MAX_SUSTAINS; i++, s++)
-    {
-        if (s->id == 0)
-        {
-            free_sustain = s;
-            break;
-        }
-    }
-    if (free_sustain)
-    {
-        s->id = te.entity1;
-        VectorCopy (te.pos1, s->org);
-        s->endtime = cl.time + 2100;
-        s->think = CL_Widowbeamout;
-        s->thinkinterval = 1;
-        s->nextthink = cl.time;
-    }
+    s = alloc_sustain();
+    if (!s)
+        return;
+
+    s->id = te.entity1;
+    VectorCopy (te.pos1, s->org);
+    s->endtime = cl.time + 2100;
+    s->think = CL_Widowbeamout;
+    s->thinkinterval = 1;
+    s->nextthink = cl.time;
 }
 
-static void CL_ParseNuke (void)
-{
-    int     i;
-    cl_sustain_t    *s, *free_sustain;
+static void CL_ParseNuke (void) {
+    cl_sustain_t    *s;
 
-    free_sustain = NULL;
-    for (i=0, s=cl_sustains; i<MAX_SUSTAINS; i++, s++)
-    {
-        if (s->id == 0)
-        {
-            free_sustain = s;
-            break;
-        }
-    }
-    if (free_sustain)
-    {
-        s->id = 21000;
-        VectorCopy (te.pos1, s->org);
-        s->endtime = cl.time + 1000;
-        s->think = CL_Nukeblast;
-        s->thinkinterval = 1;
-        s->nextthink = cl.time;
-    }
+    s = alloc_sustain();
+    if (!s)
+        return;
+
+    s->id = 21000;
+    VectorCopy (te.pos1, s->org);
+    s->endtime = cl.time + 1000;
+    s->think = CL_Nukeblast;
+    s->thinkinterval = 1;
+    s->nextthink = cl.time;
 }
 
 //ROGUE
@@ -847,6 +775,7 @@ void CL_AddTEnt (void)
     case TE_PARASITE_ATTACK:
     case TE_MEDIC_CABLE_ATTACK:
         VectorClear( te.offset );
+        te.entity2 = 0;
         CL_ParseBeam (cl_mod_parasite_segment);
         break;
 
@@ -856,6 +785,7 @@ void CL_AddTEnt (void)
         break;
 
     case TE_GRAPPLE_CABLE:
+        te.entity2 = 0;
         CL_ParseBeam (cl_mod_grapple_cable);
         break;
 
@@ -938,7 +868,9 @@ void CL_AddTEnt (void)
 
 
     case TE_LIGHTNING:
-        CL_ParseLightning ();
+        S_StartSound (NULL, te.entity1, CHAN_WEAPON, cl_sfx_lightning, 1, ATTN_NORM, 0);
+        VectorClear( te.offset );
+        CL_ParseBeam (cl_mod_lightning);
         break;
 
     case TE_DEBUGTRAIL:
@@ -1042,7 +974,7 @@ void CL_AddTEnt (void)
 //==============
 
     default:
-        Com_Error (ERR_DROP, "CL_ParseTEnt: bad type");
+        Com_Error (ERR_DROP, "%s: bad type", __func__);
     }
 }
 
@@ -1051,7 +983,7 @@ void CL_AddTEnt (void)
 CL_AddBeams
 =================
 */
-void CL_AddBeams (void)
+static void CL_AddBeams (void)
 {
     int         i,j;
     beam_t      *b;
@@ -1177,7 +1109,7 @@ ROGUE - draw player locked beams
 CL_AddPlayerBeams
 =================
 */
-void CL_AddPlayerBeams (void)
+static void CL_AddPlayerBeams (void)
 {
     int         i,j;
     beam_t      *b;
@@ -1267,7 +1199,7 @@ void CL_AddPlayerBeams (void)
             VectorMA (dist, (hand_multiplier * b->offset[0]), r, dist);
             VectorMA (dist, b->offset[1], f, dist);
             VectorMA (dist, b->offset[2], u, dist);
-            if (info_hand->value == 2) {
+            if (info_hand->integer == 2) {
                 VectorMA (org, -1, cl.v_up, org);
             }
         }
@@ -1419,7 +1351,7 @@ void CL_AddPlayerBeams (void)
 CL_AddExplosions
 =================
 */
-void CL_AddExplosions (void)
+static void CL_AddExplosions (void)
 {
     entity_t    *ent;
     int         i;
@@ -1513,11 +1445,8 @@ void CL_AddExplosions (void)
     }
 }
 
-
-
-
-/* PMM - CL_Sustains */
-void CL_ProcessSustain (void)
+// PMM - CL_Sustains
+static void CL_ProcessSustain (void)
 {
     cl_sustain_t    *s;
     int             i;
