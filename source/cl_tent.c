@@ -221,32 +221,29 @@ void CL_ClearTEnts (void)
 //ROGUE
 }
 
-static explosion_t *CL_AllocExplosion (void)
-{
+static explosion_t *alloc_explosion( void ) {
+    explosion_t *e, *oldest;
     int     i;
     int     time;
-    int     index;
     
-    for (i=0 ; i<MAX_EXPLOSIONS ; i++)
-    {
-        if (cl_explosions[i].type == ex_free)
-        {
-            memset (&cl_explosions[i], 0, sizeof (cl_explosions[i]));
-            return &cl_explosions[i];
+    for( i = 0, e = cl_explosions; i < MAX_EXPLOSIONS; i++, e++ ) {
+        if (e->type == ex_free) {
+            memset (e, 0, sizeof (*e));
+            return e;
         }
     }
 // find the oldest explosion
     time = cl.time;
-    index = 0;
+    oldest = cl_explosions;
 
-    for (i=0 ; i<MAX_EXPLOSIONS ; i++)
-        if (cl_explosions[i].start < time)
-        {
-            time = cl_explosions[i].start;
-            index = i;
+    for(i = 0, e = cl_explosions; i < MAX_EXPLOSIONS; i++, e++ ) {
+        if ( e->start < time) {
+            time = e->start;
+            oldest = e;
         }
-    memset (&cl_explosions[index], 0, sizeof (cl_explosions[index]));
-    return &cl_explosions[index];
+    }
+    memset (oldest, 0, sizeof (*oldest));
+    return oldest;
 }
 
 /*
@@ -258,7 +255,7 @@ void CL_SmokeAndFlash(vec3_t origin)
 {
     explosion_t *ex;
 
-    ex = CL_AllocExplosion ();
+    ex = alloc_explosion ();
     VectorCopy (origin, ex->ent.origin);
     ex->type = ex_misc;
     ex->frames = 4;
@@ -266,7 +263,7 @@ void CL_SmokeAndFlash(vec3_t origin)
     ex->start = cl.servertime - cl.frametime;
     ex->ent.model = cl_mod_smoke;
 
-    ex = CL_AllocExplosion ();
+    ex = alloc_explosion ();
     VectorCopy (origin, ex->ent.origin);
     ex->type = ex_flash;
     ex->ent.flags = RF_FULLBRIGHT;
@@ -414,25 +411,36 @@ static void CL_ParseNuke (void) {
 //ROGUE
 //=============
 
-static explosion_t *CL_RocketExplosion( vec3_t pos, qhandle_t hModel ) {
+static explosion_t *plain_explosion( void ) {
     explosion_t *ex;
 
-    ex = CL_AllocExplosion ();
-    VectorCopy (pos, ex->ent.origin);
+    ex = alloc_explosion ();
+    VectorCopy (te.pos1, ex->ent.origin);
     ex->type = ex_poly;
     ex->ent.flags = RF_FULLBRIGHT;
     ex->start = cl.servertime - cl.frametime;
     ex->light = 350;
-    ex->lightcolor[0] = 1.0;
-    ex->lightcolor[1] = 0.5;
-    ex->lightcolor[2] = 0.5;
+    VectorSet( ex->lightcolor, 1.0, 0.5, 0.5 );
     ex->ent.angles[1] = rand() % 360;
-    ex->ent.model = hModel;
+    ex->ent.model = cl_mod_explo4;
     if (frand() < 0.5)
         ex->baseframe = 15;
     ex->frames = 15;
 
     return ex;
+}
+
+static void dirtoangles( vec3_t angles ) {
+    angles[0] = acos(te.dir[2])/M_PI*180;
+// PMM - fixed to correct for pitch of 0
+    if (te.dir[0])
+        angles[1] = atan2(te.dir[1], te.dir[0])/M_PI*180;
+    else if (te.dir[1] > 0)
+        angles[1] = 90;
+    else if (te.dir[1] < 0)
+        angles[1] = 270;
+    else
+        angles[1] = 0;
 }
 
 /*
@@ -524,18 +532,9 @@ void CL_AddTEnt (void)
     case TE_BLASTER:            // blaster hitting wall
         CL_BlasterParticles( te.pos1, te.dir );
 
-        ex = CL_AllocExplosion ();
+        ex = alloc_explosion ();
         VectorCopy (te.pos1, ex->ent.origin);
-        ex->ent.angles[0] = acos(te.dir[2])/M_PI*180;
-    // PMM - fixed to correct for pitch of 0
-        if (te.dir[0])
-            ex->ent.angles[1] = atan2(te.dir[1], te.dir[0])/M_PI*180;
-        else if (te.dir[1] > 0)
-            ex->ent.angles[1] = 90;
-        else if (te.dir[1] < 0)
-            ex->ent.angles[1] = 270;
-        else
-            ex->ent.angles[1] = 0;
+        dirtoangles( ex->ent.angles );
 
         ex->type = ex_misc;
         ex->ent.flags = RF_FULLBRIGHT|RF_TRANSLUCENT;
@@ -555,19 +554,9 @@ void CL_AddTEnt (void)
 
     case TE_GRENADE_EXPLOSION:
     case TE_GRENADE_EXPLOSION_WATER:
-        ex = CL_AllocExplosion ();
-        VectorCopy (te.pos1, ex->ent.origin);
-        ex->type = ex_poly;
-        ex->ent.flags = RF_FULLBRIGHT;
-        ex->start = cl.servertime - cl.frametime;
-        ex->light = 350;
-        ex->lightcolor[0] = 1.0;
-        ex->lightcolor[1] = 0.5;
-        ex->lightcolor[2] = 0.5;
-        ex->ent.model = cl_mod_explo4;
+        ex = plain_explosion ();
         ex->frames = 19;
         ex->baseframe = 30;
-        ex->ent.angles[1] = rand() % 360;
 
         if( cl_disable_explosions->integer & NOEXP_GRENADE ) {
             ex->type = ex_light;
@@ -583,20 +572,9 @@ void CL_AddTEnt (void)
         break;
 
     case TE_EXPLOSION2:
-        ex = CL_AllocExplosion ();
-        VectorCopy (te.pos1, ex->ent.origin);
-        ex->type = ex_poly;
-        ex->ent.flags = RF_FULLBRIGHT;
-        ex->start = cl.servertime - cl.frametime;
-        ex->light = 350;
-        ex->lightcolor[0] = 1.0;
-        ex->lightcolor[1] = 0.5;
-        ex->lightcolor[2] = 0.5;
-        ex->ent.model = cl_mod_explo4;
+        ex = plain_explosion ();
         ex->frames = 19;
         ex->baseframe = 30;
-        ex->ent.angles[1] = rand() % 360;
-
         CL_ExplosionParticles( te.pos1 );
         S_StartSound (te.pos1, 0, 0, cl_sfx_grenexp, 1, ATTN_NORM, 0);
         break;
@@ -604,27 +582,14 @@ void CL_AddTEnt (void)
 
     // RAFAEL
     case TE_PLASMA_EXPLOSION:
-        ex = CL_AllocExplosion ();
-        VectorCopy (te.pos1, ex->ent.origin);
-        ex->type = ex_poly;
-        ex->ent.flags = RF_FULLBRIGHT;
-        ex->start = cl.servertime - cl.frametime;
-        ex->light = 350;
-        ex->lightcolor[0] = 1.0; 
-        ex->lightcolor[1] = 0.5;
-        ex->lightcolor[2] = 0.5;
-        ex->ent.angles[1] = rand() % 360;
-        ex->ent.model = cl_mod_explo4;
-        if (frand() < 0.5)
-            ex->baseframe = 15;
-        ex->frames = 15;
+        plain_explosion();
         CL_ExplosionParticles (te.pos1);
         S_StartSound (te.pos1, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
         break;
 
     case TE_ROCKET_EXPLOSION:
     case TE_ROCKET_EXPLOSION_WATER:
-        ex = CL_RocketExplosion( te.pos1, cl_mod_explo4 );
+        ex = plain_explosion();
         if( cl_disable_explosions->integer & NOEXP_ROCKET ) {
             ex->type = ex_light;
         }
@@ -639,23 +604,24 @@ void CL_AddTEnt (void)
         break;
     
     case TE_EXPLOSION1:
-        CL_RocketExplosion( te.pos1, cl_mod_explo4 );
+        plain_explosion();
         CL_ExplosionParticles( te.pos1 );
         S_StartSound( te.pos1, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0 );
         break;
 
     case TE_EXPLOSION1_NP:                      // PMM
-        CL_RocketExplosion( te.pos1, cl_mod_explo4 );
+        plain_explosion();
         S_StartSound( te.pos1, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0 );
         break;
 
     case TE_EXPLOSION1_BIG:                     // PMM
-        CL_RocketExplosion( te.pos1, cl_mod_explo4_big );
+        ex = plain_explosion();
+        ex->ent.model = cl_mod_explo4_big;
         S_StartSound( te.pos1, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0 );
         break;
 
     case TE_BFG_EXPLOSION:
-        ex = CL_AllocExplosion ();
+        ex = alloc_explosion ();
         VectorCopy (te.pos1, ex->ent.origin);
         ex->type = ex_poly;
         ex->ent.flags = RF_FULLBRIGHT;
@@ -703,7 +669,7 @@ void CL_AddTEnt (void)
     case TE_WELDING_SPARKS:
         CL_ParticleEffect2 (te.pos1, te.dir, te.color, te.count);
 
-        ex = CL_AllocExplosion ();
+        ex = alloc_explosion ();
         VectorCopy (te.pos1, ex->ent.origin);
         ex->type = ex_flash;
         // note to self
@@ -738,18 +704,9 @@ void CL_AddTEnt (void)
         else
             CL_BlasterParticles2 (te.pos1, te.dir, 0x6f); // 75
 
-        ex = CL_AllocExplosion ();
+        ex = alloc_explosion ();
         VectorCopy (te.pos1, ex->ent.origin);
-        ex->ent.angles[0] = acos(te.dir[2])/M_PI*180;
-    // PMM - fixed to correct for pitch of 0
-        if (te.dir[0])
-            ex->ent.angles[1] = atan2(te.dir[1], te.dir[0])/M_PI*180;
-        else if (te.dir[1] > 0)
-            ex->ent.angles[1] = 90;
-        else if (te.dir[1] < 0)
-            ex->ent.angles[1] = 270;
-        else
-            ex->ent.angles[1] = 0;
+        dirtoangles( ex->ent.angles );
 
         ex->type = ex_misc;
         ex->ent.flags = RF_FULLBRIGHT|RF_TRANSLUCENT;
@@ -788,21 +745,7 @@ void CL_AddTEnt (void)
         break;
 
     case TE_PLAIN_EXPLOSION:
-        ex = CL_AllocExplosion ();
-        VectorCopy (te.pos1, ex->ent.origin);
-        ex->type = ex_poly;
-        ex->ent.flags = RF_FULLBRIGHT;
-        ex->start = cl.servertime - cl.frametime;
-        ex->light = 350;
-        ex->lightcolor[0] = 1.0;
-        ex->lightcolor[1] = 0.5;
-        ex->lightcolor[2] = 0.5;
-        ex->ent.angles[1] = rand() % 360;
-        ex->ent.model = cl_mod_explo4;
-        if (frand() < 0.5)
-            ex->baseframe = 15;
-        ex->frames = 15;
-        S_StartSound (te.pos1, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
+        plain_explosion();
         break;
 
     case TE_FLASHLIGHT:
