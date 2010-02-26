@@ -530,18 +530,34 @@ void CL_AddTEnt (void)
         break;
 
     case TE_BLASTER:            // blaster hitting wall
-        CL_BlasterParticles( te.pos1, te.dir );
-
+    case TE_BLASTER2:           // green blaster hitting wall
+    case TE_FLECHETTE:          // flechette
         ex = alloc_explosion ();
         VectorCopy (te.pos1, ex->ent.origin);
         dirtoangles( ex->ent.angles );
-
         ex->type = ex_misc;
         ex->ent.flags = RF_FULLBRIGHT|RF_TRANSLUCENT;
+        switch(te.type) {
+        case TE_BLASTER:
+            CL_BlasterParticles( te.pos1, te.dir );
+            ex->lightcolor[0] = 1;
+            ex->lightcolor[1] = 1;
+            break;
+        case TE_BLASTER2:
+            CL_BlasterParticles2 (te.pos1, te.dir, 0xd0);
+            ex->ent.skinnum = 1;
+            ex->lightcolor[1] = 1;
+            break;
+        case TE_FLECHETTE:
+            CL_BlasterParticles2 (te.pos1, te.dir, 0x6f); // 75
+            ex->ent.skinnum = 2;
+            ex->lightcolor[0] = 0.19;
+            ex->lightcolor[1] = 0.41;
+            ex->lightcolor[2] = 0.75;
+            break;
+        }
         ex->start = cl.servertime - cl.frametime;
         ex->light = 150;
-        ex->lightcolor[0] = 1;
-        ex->lightcolor[1] = 1;
         ex->ent.model = cl_mod_explode;
         ex->frames = 4;
         S_StartSound (te.pos1,  0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
@@ -691,46 +707,6 @@ void CL_AddTEnt (void)
     // RAFAEL
     case TE_TUNNEL_SPARKS:
         CL_ParticleEffect3 (te.pos1, te.dir, te.color, te.count);
-        break;
-
-//=============
-//PGM
-        // PMM -following code integrated for flechette (different color)
-    case TE_BLASTER2:           // green blaster hitting wall
-    case TE_FLECHETTE:          // flechette
-        // PMM
-        if (te.type == TE_BLASTER2)
-            CL_BlasterParticles2 (te.pos1, te.dir, 0xd0);
-        else
-            CL_BlasterParticles2 (te.pos1, te.dir, 0x6f); // 75
-
-        ex = alloc_explosion ();
-        VectorCopy (te.pos1, ex->ent.origin);
-        dirtoangles( ex->ent.angles );
-
-        ex->type = ex_misc;
-        ex->ent.flags = RF_FULLBRIGHT|RF_TRANSLUCENT;
-
-        // PMM
-        if (te.type == TE_BLASTER2)
-            ex->ent.skinnum = 1;
-        else // flechette
-            ex->ent.skinnum = 2;
-
-        ex->start = cl.servertime - cl.frametime;
-        ex->light = 150;
-        // PMM
-        if (te.type == TE_BLASTER2)
-            ex->lightcolor[1] = 1;
-        else // flechette
-        {
-            ex->lightcolor[0] = 0.19;
-            ex->lightcolor[1] = 0.41;
-            ex->lightcolor[2] = 0.75;
-        }
-        ex->ent.model = cl_mod_explode;
-        ex->frames = 4;
-        S_StartSound (te.pos1,  0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
         break;
 
 
