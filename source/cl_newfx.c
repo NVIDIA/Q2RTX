@@ -1035,3 +1035,202 @@ void CL_BlasterTrail2 (vec3_t start, vec3_t end)
         VectorAdd (move, vec, move);
     }
 }
+
+// RAFAEL
+/*
+===============
+CL_IonripperTrail
+===============
+*/
+void CL_IonripperTrail (vec3_t start, vec3_t ent)
+{
+    vec3_t  move;
+    vec3_t  vec;
+    float   len;
+    int     j;
+    cparticle_t *p;
+    int     dec;
+    int     left = 0;
+
+    VectorCopy (start, move);
+    VectorSubtract (ent, start, vec);
+    len = VectorNormalize (vec);
+
+    dec = 5;
+    VectorScale (vec, 5, vec);
+
+    while (len > 0)
+    {
+        len -= dec;
+
+        p = CL_AllocParticle();
+        if (!p)
+            return;
+        VectorClear (p->accel);
+
+        p->time = cl.time;
+        p->alpha = 0.5;
+        p->alphavel = -1.0 / (0.3 + frand() * 0.2);
+        p->color = 0xe4 + (rand()&3);
+
+        for (j=0; j<3; j++)
+        {
+            p->org[j] = move[j];
+            p->accel[j] = 0;
+        }
+        if (left)
+        {
+            left = 0;
+            p->vel[0] = 10;
+        }
+        else 
+        {
+            left = 1;
+            p->vel[0] = -10;
+        }
+
+        p->vel[1] = 0;
+        p->vel[2] = 0;
+
+        VectorAdd (move, vec, move);
+    }
+}
+
+/*
+===============
+CL_TrapParticles
+===============
+*/
+// RAFAEL
+void CL_TrapParticles (entity_t *ent)
+{
+    vec3_t      move;
+    vec3_t      vec;
+    vec3_t      start, end;
+    float       len;
+    int         j;
+    cparticle_t *p;
+    int         dec;
+
+    ent->origin[2]-=14;
+    VectorCopy (ent->origin, start);
+    VectorCopy (ent->origin, end);
+    end[2]+=64;
+
+    VectorCopy (start, move);
+    VectorSubtract (end, start, vec);
+    len = VectorNormalize (vec);
+
+    dec = 5;
+    VectorScale (vec, 5, vec);
+
+    // FIXME: this is a really silly way to have a loop
+    while (len > 0)
+    {
+        len -= dec;
+
+        p = CL_AllocParticle();
+        if (!p)
+            return;
+        VectorClear (p->accel);
+        
+        p->time = cl.time;
+
+        p->alpha = 1.0;
+        p->alphavel = -1.0 / (0.3+frand()*0.2);
+        p->color = 0xe0;
+        for (j=0 ; j<3 ; j++)
+        {
+            p->org[j] = move[j] + crand();
+            p->vel[j] = crand()*15;
+            p->accel[j] = 0;
+        }
+        p->accel[2] = PARTICLE_GRAVITY;
+
+        VectorAdd (move, vec, move);
+    }
+
+    {
+
+    
+    int         i, j, k;
+    cparticle_t *p;
+    float       vel;
+    vec3_t      dir;
+    vec3_t      org;
+
+    
+    ent->origin[2]+=14;
+    VectorCopy (ent->origin, org);
+
+
+    for (i=-2 ; i<=2 ; i+=4)
+        for (j=-2 ; j<=2 ; j+=4)
+            for (k=-2 ; k<=4 ; k+=4)
+            {
+                p = CL_AllocParticle();
+                if (!p)
+                    return;
+
+                p->time = cl.time;
+                p->color = 0xe0 + (rand()&3);
+
+                p->alpha = 1.0;
+                p->alphavel = -1.0 / (0.3 + (rand()&7) * 0.02);
+                
+                p->org[0] = org[0] + i + ((rand()&23) * crand());
+                p->org[1] = org[1] + j + ((rand()&23) * crand());
+                p->org[2] = org[2] + k + ((rand()&23) * crand());
+    
+                dir[0] = j * 8;
+                dir[1] = i * 8;
+                dir[2] = k * 8;
+    
+                VectorNormalize (dir);                      
+                vel = 50 + (rand()&63);
+                VectorScale (dir, vel, p->vel);
+
+                p->accel[0] = p->accel[1] = 0;
+                p->accel[2] = -PARTICLE_GRAVITY;
+            }
+    }
+}
+
+// RAFAEL
+/*
+===============
+CL_ParticleEffect3
+===============
+*/
+void CL_ParticleEffect3 (vec3_t org, vec3_t dir, int color, int count)
+{
+    int         i, j;
+    cparticle_t *p;
+    float       d;
+
+    for (i=0 ; i<count ; i++)
+    {
+        p = CL_AllocParticle();
+        if (!p)
+            return;
+
+        p->time = cl.time;
+        p->color = color;
+
+        d = rand()&7;
+        for (j=0 ; j<3 ; j++)
+        {
+            p->org[j] = org[j] + ((rand()&7)-4) + d*dir[j];
+            p->vel[j] = crand()*20;
+        }
+
+        p->accel[0] = p->accel[1] = 0;
+        p->accel[2] = PARTICLE_GRAVITY;
+        p->alpha = 1.0;
+
+        p->alphavel = -1.0 / (0.5 + frand()*0.3);
+    }
+}
+
+
+

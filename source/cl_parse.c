@@ -1012,7 +1012,7 @@ ACTION MESSAGES
 
 tent_params_t    te;
 
-static void CL_ParseTEnt( void ) {
+static void CL_ParseTEntParams( void ) {
     te.type = MSG_ReadByte();
 
     switch( te.type ) {
@@ -1132,7 +1132,7 @@ static void CL_ParseTEnt( void ) {
         Com_Error( ERR_DROP, "%s: bad type", __func__ );
     }
 
-    CL_AddTEnt();
+    CL_ParseTEnt();
 }
 
 /*
@@ -1532,7 +1532,7 @@ void CL_ParseServerMessage( void ) {
             break;
 
         case svc_temp_entity:
-            CL_ParseTEnt();
+            CL_ParseTEntParams();
             break;
 
         case svc_muzzleflash:

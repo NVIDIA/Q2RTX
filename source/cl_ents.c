@@ -117,6 +117,48 @@ static void CL_SetEntityState( entity_state_t *state ) {
 }
 
 /*
+==============
+CL_EntityEvent
+
+An entity has just been parsed that has an event value
+==============
+*/
+extern qhandle_t cl_sfx_footsteps[4];
+
+static void CL_EntityEvent (int number) {
+    centity_t *cent = &cl_entities[number];
+
+    // EF_TELEPORTER acts like an event, but is not cleared each frame
+    if( cent->current.effects & EF_TELEPORTER ) {
+        CL_TeleporterParticles( cent->current.origin );
+    }
+
+    switch (cent->current.event) {
+    case EV_ITEM_RESPAWN:
+        S_StartSound (NULL, number, CHAN_WEAPON, S_RegisterSound("items/respawn1.wav"), 1, ATTN_IDLE, 0);
+        CL_ItemRespawnParticles (cent->current.origin);
+        break;
+    case EV_PLAYER_TELEPORT:
+        S_StartSound (NULL, number, CHAN_WEAPON, S_RegisterSound("misc/tele1.wav"), 1, ATTN_IDLE, 0);
+        CL_TeleportParticles (cent->current.origin);
+        break;
+    case EV_FOOTSTEP:
+        if (cl_footsteps->integer)
+            S_StartSound (NULL, number, CHAN_BODY, cl_sfx_footsteps[rand()&3], 1, ATTN_NORM, 0);
+        break;
+    case EV_FALLSHORT:
+        S_StartSound (NULL, number, CHAN_AUTO, S_RegisterSound ("player/land1.wav"), 1, ATTN_NORM, 0);
+        break;
+    case EV_FALL:
+        S_StartSound (NULL, number, CHAN_AUTO, S_RegisterSound ("*fall2.wav"), 1, ATTN_NORM, 0);
+        break;
+    case EV_FALLFAR:
+        S_StartSound (NULL, number, CHAN_AUTO, S_RegisterSound ("*fall1.wav"), 1, ATTN_NORM, 0);
+        break;
+    }
+}
+
+/*
 ==================
 CL_DeltaFrame
 
@@ -946,7 +988,6 @@ void CL_AddEntities( void ) {
     CL_CalcViewValues();
     CL_AddPacketEntities();
     CL_AddTEnts();
-    CL_AddLasers();
     CL_AddParticles();
     CL_AddDLights();
     CL_AddLightStyles();

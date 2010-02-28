@@ -2523,6 +2523,7 @@ static void CL_InitLocal ( void ) {
     LOC_Init();
     CL_InitAscii();
     CL_InitEffects();
+    CL_InitTEnts();
 
     Cmd_Register( c_client );
 

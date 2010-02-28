@@ -24,10 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 void CL_LogoutEffect (vec3_t org, int type);
 void CL_ItemRespawnParticles (vec3_t org);
 
-static vec3_t avelocities [NUMVERTEXNORMALS];
-
-extern  qhandle_t cl_mod_smoke;
-extern  qhandle_t cl_mod_flash;
+static vec3_t avelocities[NUMVERTEXNORMALS];
 
 /*
 ==============================================================
@@ -48,12 +45,7 @@ static clightstyle_t    cl_lightstyles[MAX_LIGHTSTYLES];
 static LIST_DECL( cl_lightlist );
 static int          cl_lastofs;
 
-/*
-================
-CL_ClearLightStyles
-================
-*/
-void CL_ClearLightStyles( void ) {
+static void clear_lightstyles( void ) {
     memset( cl_lightstyles, 0, sizeof( cl_lightstyles ) );
     List_Init( &cl_lightlist );
     cl_lastofs = -1;
@@ -124,15 +116,9 @@ DLIGHT MANAGEMENT
 ==============================================================
 */
 
-cdlight_t       cl_dlights[MAX_DLIGHTS];
+static cdlight_t       cl_dlights[MAX_DLIGHTS];
 
-/*
-================
-CL_ClearDlights
-================
-*/
-void CL_ClearDlights (void)
-{
+static void clear_dlights (void) {
     memset (cl_dlights, 0, sizeof(cl_dlights));
 }
 
@@ -182,24 +168,6 @@ cdlight_t *CL_AllocDlight (int key)
 
 /*
 ===============
-CL_NewDlight
-===============
-*/
-void CL_NewDlight (int key, float x, float y, float z, float radius, float time)
-{
-    cdlight_t   *dl;
-
-    dl = CL_AllocDlight (key);
-    dl->origin[0] = x;
-    dl->origin[1] = y;
-    dl->origin[2] = z;
-    dl->radius = radius;
-    dl->die = cl.time + time;
-}
-
-
-/*
-===============
 CL_RunDLights
 
 ===============
@@ -227,113 +195,51 @@ void CL_RunDLights (void)
 }
 
 /*
-==============================================================
+===============
+CL_AddDLights
 
-LASER BEAM MANAGEMENT
-
-==============================================================
+===============
 */
-
-#define LASER_FADE_NOT      1
-#define LASER_FADE_ALPHA    2
-#define LASER_FADE_RGBA     3
-
-typedef struct {
-    entity_t    ent;
-    vec3_t      start;
-    vec3_t      end;
-    int         fadeType;
-    qboolean    indexed;
-    color_t     color;
-    float       width;
-    int         lifeTime;
-    int         startTime;
-} laser_t;
-
-#define MAX_LASERS  32
-
-static laser_t     cl_lasers[MAX_LASERS];
-
-static laser_t *alloc_laser( void ) {
-    laser_t *l;
-    int i;
-
-    for( i=0, l=cl_lasers ; i<MAX_LASERS ; i++, l++ ) {
-        if( cl.time - l->startTime >= l->lifeTime ) {
-            memset( l, 0, sizeof( *l ) );
-            l->startTime = cl.time;
-            return l;
-        }
-    }
-
-    return NULL;
-}
-
-void CL_AddLasers( void ) {
-    laser_t     *l;
-    entity_t    ent;
+void CL_AddDLights (void)
+{
     int         i;
-    //color_t       color;
-    int time;
-    float f;
+    cdlight_t   *dl;
 
-    memset( &ent, 0, sizeof( ent ) );
+    dl = cl_dlights;
 
-    for( i = 0, l = cl_lasers; i < MAX_LASERS; i++, l++ ) {
-        time = l->lifeTime - ( cl.time - l->startTime );
-        if( time < 0 ) {
-            continue;
+//=====
+//PGM
+    if( scr_glconfig.renderer != GL_RENDERER_SOFTWARE )
+    {
+        for (i=0 ; i<MAX_DLIGHTS ; i++, dl++)
+        {
+            if (!dl->radius)
+                continue;
+            V_AddLight (dl->origin, dl->radius,
+                dl->color[0], dl->color[1], dl->color[2]);
         }
-
-        ent.alpha = l->color[3] / 255.0f;
-
-        if( l->fadeType != LASER_FADE_NOT ) {
-            f = (float)time / (float)l->lifeTime;
-
-            ent.alpha *= f;
-            /*if( l->fadeType == LASER_FADE_RGBA ) {
-                *(int *)color = *(int *)l->color;
-                color[0] *= f;
-                color[1] *= f;
-                color[2] *= f;
-                ent.skinnum = *(int *)color;
-            }*/
-        } /*else*/ {
-            ent.skinnum = *(int *)l->color;
-        }
-
-        ent.flags = RF_TRANSLUCENT|RF_BEAM;
-        VectorCopy( l->start, ent.origin );
-        VectorCopy( l->end, ent.oldorigin );
-        ent.frame = l->width;
-        ent.lightstyle = !l->indexed;
-
-        V_AddEntity( &ent );
     }
-}
+    else
+    {
+        for (i=0 ; i<MAX_DLIGHTS ; i++, dl++)
+        {
+            if (!dl->radius)
+                continue;
 
-/*
-=================
-CL_ParseLaser
-=================
-*/
-void CL_ParseLaser( int colors ) {
-    laser_t *l;
-
-    l = alloc_laser();
-    if (!l)
-        return;
-
-    VectorCopy( te.pos1, l->start );
-    VectorCopy( te.pos2, l->end );
-    l->fadeType = LASER_FADE_NOT;
-    l->lifeTime = 100;
-    l->indexed = qtrue;
-    l->color[0] = ( colors >> ( ( rand() % 4 ) * 8 ) ) & 0xff;
-    l->color[1] = 0;
-    l->color[2] = 0;
-    l->color[3] = 77;
-    l->width = 4;
+            // negative light in softwaref. only black allowed
+            if ((dl->color[0] < 0) || (dl->color[1] < 0) || (dl->color[2] < 0))
+            {
+                dl->radius = -(dl->radius);
+                dl->color[0] = 1;
+                dl->color[1] = 1;
+                dl->color[2] = 1;
+            }
+            V_AddLight (dl->origin, dl->radius,
+                dl->color[0], dl->color[1], dl->color[2]);
+        }
+    }
+//PGM
+//=====
 }
 
 // ==============================================================
@@ -913,57 +819,6 @@ void CL_ParseMuzzleFlash2 (void)
     }
 }
 
-
-/*
-===============
-CL_AddDLights
-
-===============
-*/
-void CL_AddDLights (void)
-{
-    int         i;
-    cdlight_t   *dl;
-
-    dl = cl_dlights;
-
-//=====
-//PGM
-    if( scr_glconfig.renderer != GL_RENDERER_SOFTWARE )
-    {
-        for (i=0 ; i<MAX_DLIGHTS ; i++, dl++)
-        {
-            if (!dl->radius)
-                continue;
-            V_AddLight (dl->origin, dl->radius,
-                dl->color[0], dl->color[1], dl->color[2]);
-        }
-    }
-    else
-    {
-        for (i=0 ; i<MAX_DLIGHTS ; i++, dl++)
-        {
-            if (!dl->radius)
-                continue;
-
-            // negative light in softwaref. only black allowed
-            if ((dl->color[0] < 0) || (dl->color[1] < 0) || (dl->color[2] < 0))
-            {
-                dl->radius = -(dl->radius);
-                dl->color[0] = 1;
-                dl->color[1] = 1;
-                dl->color[2] = 1;
-            }
-            V_AddLight (dl->origin, dl->radius,
-                dl->color[0], dl->color[1], dl->color[2]);
-        }
-    }
-//PGM
-//=====
-}
-
-
-
 /*
 ==============================================================
 
@@ -977,13 +832,7 @@ static cparticle_t  *active_particles, *free_particles;
 static cparticle_t  particles[MAX_PARTICLES];
 static const int    cl_numparticles = MAX_PARTICLES;
 
-
-/*
-===============
-CL_ClearParticles
-===============
-*/
-void CL_ClearParticles (void)
+static void clear_particles (void)
 {
     int     i;
     
@@ -1081,42 +930,6 @@ void CL_ParticleEffect2 (vec3_t org, vec3_t dir, int color, int count)
     }
 }
 
-
-// RAFAEL
-/*
-===============
-CL_ParticleEffect3
-===============
-*/
-void CL_ParticleEffect3 (vec3_t org, vec3_t dir, int color, int count)
-{
-    int         i, j;
-    cparticle_t *p;
-    float       d;
-
-    for (i=0 ; i<count ; i++)
-    {
-        p = CL_AllocParticle();
-        if (!p)
-            return;
-
-        p->time = cl.time;
-        p->color = color;
-
-        d = rand()&7;
-        for (j=0 ; j<3 ; j++)
-        {
-            p->org[j] = org[j] + ((rand()&7)-4) + d*dir[j];
-            p->vel[j] = crand()*20;
-        }
-
-        p->accel[0] = p->accel[1] = 0;
-        p->accel[2] = PARTICLE_GRAVITY;
-        p->alpha = 1.0;
-
-        p->alphavel = -1.0 / (0.5 + frand()*0.3);
-    }
-}
 
 /*
 ===============
@@ -1743,166 +1556,6 @@ void CL_OldRailTrail (vec3_t start, vec3_t end)
     }
 }
 
-static color_t  railcore_color;
-static color_t  railspiral_color;
-
-static cvar_t *cl_railtrail_type;
-static cvar_t *cl_railtrail_time;
-static cvar_t *cl_railcore_color;
-static cvar_t *cl_railcore_width;
-static cvar_t *cl_railspiral_color;
-static cvar_t *cl_railspiral_radius;
-
-
-static void cl_railcore_color_changed( cvar_t *self ) {
-    if( !SCR_ParseColor( self->string, railcore_color ) ) {
-        Com_WPrintf( "Invalid value '%s' for '%s'\n", self->string, self->name );
-        *( uint32_t *)railcore_color = *( uint32_t * )colorRed;
-    }
-}
-
-static void cl_railspiral_color_changed( cvar_t *self ) {
-    if( !SCR_ParseColor( self->string, railspiral_color ) ) {
-        Com_WPrintf( "Invalid value '%s' for '%s'\n", self->string, self->name );
-        *( uint32_t *)railspiral_color = *( uint32_t * )colorBlue;
-    }
-}
-
-static void CL_NewRailCore( vec3_t start, vec3_t end ) {
-    laser_t *l;
-
-    l = alloc_laser();
-    if (!l)
-        return;
-
-    VectorCopy( start, l->start );
-    VectorCopy( end, l->end );
-    l->fadeType = LASER_FADE_RGBA;
-    l->lifeTime = 1000 * cl_railtrail_time->value;
-    l->indexed = qfalse;
-    l->width = cl_railcore_width->value;
-    *( uint32_t * )l->color = *( uint32_t * )railcore_color;
-}
-
-static void CL_NewRailSpiral( vec3_t start, vec3_t end ) {
-    vec3_t      move;
-    vec3_t      vec;
-    float       len;
-    int         j;
-    cparticle_t *p;
-//  float       dec;
-    vec3_t      right, up;
-    int         i;
-    float       d, c, s;
-    vec3_t      dir;
-
-    VectorCopy( start, move );
-    VectorSubtract( end, start, vec );
-    len = VectorNormalize( vec );
-
-    MakeNormalVectors( vec, right, up );
-
-    for( i=0 ; i<len ; i++ ) {
-        p = CL_AllocParticle();
-        if (!p)
-            return;
-        
-        p->time = cl.time;
-        VectorClear( p->accel );
-
-        d = i * 0.1;
-        c = cos( d );
-        s = sin( d );
-
-        VectorScale( right, c, dir );
-        VectorMA( dir, s, up, dir );
-
-        p->alpha = railspiral_color[3] / 255.0f;
-        p->alphavel = -1.0 / ( cl_railtrail_time->value + frand() * 0.2 );
-        p->color = 0xff;
-        *( uint32_t * )p->rgb = *( uint32_t * )railspiral_color;
-        for( j=0 ; j<3 ; j++ ) {
-            p->org[j] = move[j] + dir[j] * cl_railspiral_radius->value;
-            p->vel[j] = dir[j] * 6;
-        }
-
-        VectorAdd( move, vec, move );
-    }
-}
-
-void CL_RailTrail( vec3_t start, vec3_t end ) {
-    if( !cl_railtrail_type->integer || scr_glconfig.renderer == GL_RENDERER_SOFTWARE ) {
-        CL_OldRailTrail( start, end );
-    } else {
-        CL_NewRailCore( start, end );
-        if( cl_railtrail_type->integer > 1 ) {
-            CL_NewRailSpiral( start, end );
-        }
-    }
-}
-
-
-
-// RAFAEL
-/*
-===============
-CL_IonripperTrail
-===============
-*/
-void CL_IonripperTrail (vec3_t start, vec3_t ent)
-{
-    vec3_t  move;
-    vec3_t  vec;
-    float   len;
-    int     j;
-    cparticle_t *p;
-    int     dec;
-    int     left = 0;
-
-    VectorCopy (start, move);
-    VectorSubtract (ent, start, vec);
-    len = VectorNormalize (vec);
-
-    dec = 5;
-    VectorScale (vec, 5, vec);
-
-    while (len > 0)
-    {
-        len -= dec;
-
-        p = CL_AllocParticle();
-        if (!p)
-            return;
-        VectorClear (p->accel);
-
-        p->time = cl.time;
-        p->alpha = 0.5;
-        p->alphavel = -1.0 / (0.3 + frand() * 0.2);
-        p->color = 0xe4 + (rand()&3);
-
-        for (j=0; j<3; j++)
-        {
-            p->org[j] = move[j];
-            p->accel[j] = 0;
-        }
-        if (left)
-        {
-            left = 0;
-            p->vel[0] = 10;
-        }
-        else 
-        {
-            left = 1;
-            p->vel[0] = -10;
-        }
-
-        p->vel[1] = 0;
-        p->vel[2] = 0;
-
-        VectorAdd (move, vec, move);
-    }
-}
-
 
 /*
 ===============
@@ -1970,13 +1623,6 @@ void CL_FlyParticles (vec3_t origin, int count)
 
     if (count > NUMVERTEXNORMALS)
         count = NUMVERTEXNORMALS;
-
-    if (!avelocities[0][0])
-    {
-        for (i=0 ; i<NUMVERTEXNORMALS*3 ; i++)
-            avelocities[0][i] = (rand()&255) * 0.01;
-    }
-
 
     ltime = (float)cl.time / 1000.0;
     for (i=0 ; i<count ; i+=2)
@@ -2067,13 +1713,6 @@ void CL_BfgParticles (entity_t *ent)
     vec3_t      v;
     float       ltime;
     
-    if (!avelocities[0][0])
-    {
-        for (i=0 ; i<NUMVERTEXNORMALS*3 ; i++)
-            avelocities[0][i] = (rand()&255) * 0.01;
-    }
-
-
     ltime = (float)cl.time / 1000.0;
     for (i=0 ; i<NUMVERTEXNORMALS ; i++)
     {
@@ -2112,107 +1751,6 @@ void CL_BfgParticles (entity_t *ent)
 
         p->alpha = 1.0 - dist;
         p->alphavel = -100;
-    }
-}
-
-
-/*
-===============
-CL_TrapParticles
-===============
-*/
-// RAFAEL
-void CL_TrapParticles (entity_t *ent)
-{
-    vec3_t      move;
-    vec3_t      vec;
-    vec3_t      start, end;
-    float       len;
-    int         j;
-    cparticle_t *p;
-    int         dec;
-
-    ent->origin[2]-=14;
-    VectorCopy (ent->origin, start);
-    VectorCopy (ent->origin, end);
-    end[2]+=64;
-
-    VectorCopy (start, move);
-    VectorSubtract (end, start, vec);
-    len = VectorNormalize (vec);
-
-    dec = 5;
-    VectorScale (vec, 5, vec);
-
-    // FIXME: this is a really silly way to have a loop
-    while (len > 0)
-    {
-        len -= dec;
-
-        p = CL_AllocParticle();
-        if (!p)
-            return;
-        VectorClear (p->accel);
-        
-        p->time = cl.time;
-
-        p->alpha = 1.0;
-        p->alphavel = -1.0 / (0.3+frand()*0.2);
-        p->color = 0xe0;
-        for (j=0 ; j<3 ; j++)
-        {
-            p->org[j] = move[j] + crand();
-            p->vel[j] = crand()*15;
-            p->accel[j] = 0;
-        }
-        p->accel[2] = PARTICLE_GRAVITY;
-
-        VectorAdd (move, vec, move);
-    }
-
-    {
-
-    
-    int         i, j, k;
-    cparticle_t *p;
-    float       vel;
-    vec3_t      dir;
-    vec3_t      org;
-
-    
-    ent->origin[2]+=14;
-    VectorCopy (ent->origin, org);
-
-
-    for (i=-2 ; i<=2 ; i+=4)
-        for (j=-2 ; j<=2 ; j+=4)
-            for (k=-2 ; k<=4 ; k+=4)
-            {
-                p = CL_AllocParticle();
-                if (!p)
-                    return;
-
-                p->time = cl.time;
-                p->color = 0xe0 + (rand()&3);
-
-                p->alpha = 1.0;
-                p->alphavel = -1.0 / (0.3 + (rand()&7) * 0.02);
-                
-                p->org[0] = org[0] + i + ((rand()&23) * crand());
-                p->org[1] = org[1] + j + ((rand()&23) * crand());
-                p->org[2] = org[2] + k + ((rand()&23) * crand());
-    
-                dir[0] = j * 8;
-                dir[1] = i * 8;
-                dir[2] = k * 8;
-    
-                VectorNormalize (dir);                      
-                vel = 50 + (rand()&63);
-                VectorScale (dir, vel, p->vel);
-
-                p->accel[0] = p->accel[1] = 0;
-                p->accel[2] = -PARTICLE_GRAVITY;
-            }
     }
 }
 
@@ -2385,75 +1923,22 @@ void CL_AddParticles (void)
 
 /*
 ==============
-CL_EntityEvent
-
-An entity has just been parsed that has an event value
-==============
-*/
-extern qhandle_t cl_sfx_footsteps[4];
-
-void CL_EntityEvent (int number)
-{
-    centity_t *cent = &cl_entities[number];
-
-    // EF_TELEPORTER acts like an event, but is not cleared each frame
-    if( cent->current.effects & EF_TELEPORTER ) {
-        CL_TeleporterParticles( cent->current.origin );
-    }
-
-    switch (cent->current.event)
-    {
-    case EV_ITEM_RESPAWN:
-        S_StartSound (NULL, number, CHAN_WEAPON, S_RegisterSound("items/respawn1.wav"), 1, ATTN_IDLE, 0);
-        CL_ItemRespawnParticles (cent->current.origin);
-        break;
-    case EV_PLAYER_TELEPORT:
-        S_StartSound (NULL, number, CHAN_WEAPON, S_RegisterSound("misc/tele1.wav"), 1, ATTN_IDLE, 0);
-        CL_TeleportParticles (cent->current.origin);
-        break;
-    case EV_FOOTSTEP:
-        if (cl_footsteps->integer)
-            S_StartSound (NULL, number, CHAN_BODY, cl_sfx_footsteps[rand()&3], 1, ATTN_NORM, 0);
-        break;
-    case EV_FALLSHORT:
-        S_StartSound (NULL, number, CHAN_AUTO, S_RegisterSound ("player/land1.wav"), 1, ATTN_NORM, 0);
-        break;
-    case EV_FALL:
-        S_StartSound (NULL, number, CHAN_AUTO, S_RegisterSound ("*fall2.wav"), 1, ATTN_NORM, 0);
-        break;
-    case EV_FALLFAR:
-        S_StartSound (NULL, number, CHAN_AUTO, S_RegisterSound ("*fall1.wav"), 1, ATTN_NORM, 0);
-        break;
-    }
-}
-
-
-/*
-==============
 CL_ClearEffects
 
 ==============
 */
 void CL_ClearEffects (void)
 {
-    CL_ClearParticles ();
-    CL_ClearDlights ();
-    CL_ClearLightStyles ();
-    memset (cl_lasers, 0, sizeof(cl_lasers));
+    clear_particles ();
+    clear_dlights ();
+    clear_lightstyles ();
 }
 
 void CL_InitEffects( void ) {
-    cl_railtrail_type = Cvar_Get( "cl_railtrail_type", "0", 0 );
-    cl_railtrail_time = Cvar_Get( "cl_railtrail_time", "1.0", 0 );
-    cl_railcore_color = Cvar_Get( "cl_railcore_color", "red", 0 );
-    cl_railcore_color->changed = cl_railcore_color_changed;
-    cl_railcore_color->generator = Com_Color_g;
-    cl_railcore_color_changed( cl_railcore_color );
-    cl_railcore_width = Cvar_Get( "cl_railcore_width", "2", 0 );
-    cl_railspiral_color = Cvar_Get( "cl_railspiral_color", "blue", 0 );
-    cl_railspiral_color->changed = cl_railspiral_color_changed;
-    cl_railspiral_color->generator = Com_Color_g;
-    cl_railspiral_color_changed( cl_railspiral_color );
-    cl_railspiral_radius = Cvar_Get( "cl_railspiral_radius", "3", 0 );
+    int i;
+
+    for (i=0 ; i<NUMVERTEXNORMALS*3 ; i++)
+        avelocities[0][i] = (rand()&255) * 0.01;
+
 }
 
