@@ -966,14 +966,12 @@ static void MenuList_DrawString( int x, int y, int flags,
 
     R_SetClipRect( DRAW_CLIP_RIGHT|DRAW_CLIP_LEFT, &rc );
     UI_DrawString( x, y + 1, NULL, column->uiFlags | flags, string );
-    if( uis.glconfig.renderer == GL_RENDERER_SOFTWARE ) {
-        R_SetClipRect( DRAW_CLIP_MASK, &uis.clipRect );
-    } else {
-        R_SetClipRect( DRAW_CLIP_DISABLED, NULL );
-    }
+#if USE_REF == REF_SOFT
+    R_SetClipRect( DRAW_CLIP_MASK, &uis.clipRect );
+#else
+    R_SetClipRect( DRAW_CLIP_DISABLED, NULL );
+#endif
 }
-
-
 
 /*
 =================

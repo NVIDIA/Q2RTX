@@ -91,14 +91,6 @@ void CL_ColorFlash (vec3_t pos, int ent, int intensity, float r, float g, float 
 {
     cdlight_t   *dl;
 
-    if(( scr_glconfig.renderer == GL_RENDERER_SOFTWARE ) && ((r < 0) || (g<0) || (b<0)))
-    {
-        intensity = -intensity;
-        r = -r;
-        g = -g;
-        b = -b;
-    }
-
     dl = CL_AllocDlight (ent);
     VectorCopy (pos,  dl->origin);
     dl->radius = intensity;
@@ -429,11 +421,12 @@ void CL_Heatbeam (vec3_t start, vec3_t forward)
 //  MakeNormalVectors (vec, right, up);
     VectorCopy (cl.v_right, right);
     VectorCopy (cl.v_up, up);
-    if( scr_glconfig.renderer != GL_RENDERER_SOFTWARE )
+#if USE_REF == REF_GL
     { // GL mode
         VectorMA (move, -0.5, right, move);
         VectorMA (move, -0.5, up, move);
     }
+#endif
     // otherwise assume SOFT
 
     ltime = (float) cl.time/1000.0;

@@ -93,20 +93,20 @@ void UI_PushMenu( menuFrameWork_t *menu ) {
 void UI_Resize( void ) {
     int i;
 
-    if( uis.glconfig.renderer == GL_RENDERER_SOFTWARE ) {
-        uis.clipRect.left = 0;
-        uis.clipRect.top = 0;
-        uis.clipRect.right = uis.glconfig.vidWidth;
-        uis.clipRect.bottom = uis.glconfig.vidHeight;
-        uis.scale = 1;
-        uis.width = uis.glconfig.vidWidth;
-        uis.height = uis.glconfig.vidHeight;
-    } else {
-        Cvar_ClampValue( ui_scale, 1, 9 );
-        uis.scale = 1 / ui_scale->value;
-        uis.width = uis.glconfig.vidWidth * uis.scale;
-        uis.height = uis.glconfig.vidHeight * uis.scale;
-    }
+#if USE_REF == REF_SOFT
+    uis.clipRect.left = 0;
+    uis.clipRect.top = 0;
+    uis.clipRect.right = uis.glconfig.vidWidth;
+    uis.clipRect.bottom = uis.glconfig.vidHeight;
+    uis.scale = 1;
+    uis.width = uis.glconfig.vidWidth;
+    uis.height = uis.glconfig.vidHeight;
+#else
+    Cvar_ClampValue( ui_scale, 1, 9 );
+    uis.scale = 1 / ui_scale->value;
+    uis.width = uis.glconfig.vidWidth * uis.scale;
+    uis.height = uis.glconfig.vidHeight * uis.scale;
+#endif
 
     for( i = 0; i < uis.menuDepth; i++ ) {
         Menu_Init( uis.layers[i] );
@@ -433,11 +433,11 @@ void UI_Draw( int realtime ) {
     }
 
     R_SetColor( DRAW_COLOR_CLEAR, NULL );
-    if( uis.glconfig.renderer == GL_RENDERER_SOFTWARE ) {
-        R_SetClipRect( DRAW_CLIP_MASK, &uis.clipRect );
-    } else {
-        R_SetScale( &uis.scale );
-    }
+#if USE_REF == REF_SOFT
+    R_SetClipRect( DRAW_CLIP_MASK, &uis.clipRect );
+#else
+    R_SetScale( &uis.scale );
+#endif
 
     if( !uis.transparent ) {
         // draw top menu
@@ -476,11 +476,11 @@ void UI_Draw( int realtime ) {
         S_StartLocalSound( "misc/menu1.wav" );
     }
 
-    if( uis.glconfig.renderer == GL_RENDERER_SOFTWARE ) {
-        R_SetClipRect( DRAW_CLIP_DISABLED, NULL );
-    } else {
-        R_SetScale( NULL );
-    }
+#if USE_REF == REF_SOFT
+    R_SetClipRect( DRAW_CLIP_DISABLED, NULL );
+#else
+    R_SetScale( NULL );
+#endif
     R_SetColor( DRAW_COLOR_CLEAR, NULL );
 }
 

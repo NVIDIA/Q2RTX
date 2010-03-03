@@ -646,12 +646,8 @@ static void CL_AddPacketEntities( void ) {
                     float intensity;
 
                     intensity = 50 + (500 * (sin(cl.time/500.0) + 1.0));
-                    // FIXME - check out this effect in rendition
-                    if( scr_glconfig.renderer != GL_RENDERER_SOFTWARE )
-                        V_AddLight (ent.origin, intensity, -1.0, -1.0, -1.0);
-                    else
-                        V_AddLight (ent.origin, -1.0 * intensity, 1.0, 1.0, 1.0);
-                    }
+                    V_AddLight (ent.origin, intensity, -1.0, -1.0, -1.0);
+                }
                 else
                 {
                     CL_Tracker_Shell (cent->lerp_origin);
@@ -662,10 +658,7 @@ static void CL_AddPacketEntities( void ) {
             {
                 CL_TrackerTrail (cent->lerp_origin, ent.origin, 0);
                 // FIXME - check out this effect in rendition
-                if( scr_glconfig.renderer != GL_RENDERER_SOFTWARE )
-                    V_AddLight (ent.origin, 200, -1, -1, -1);
-                else
-                    V_AddLight (ent.origin, -200, 1, 1, 1);
+                V_AddLight (ent.origin, 200, -1, -1, -1);
             }
 //ROGUE
 //======

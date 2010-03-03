@@ -1015,6 +1015,8 @@ static void CL_ParseNuke (void) {
 
 //==============================================================
 
+#if USE_REF == REF_GL
+
 static color_t  railcore_color;
 static color_t  railspiral_color;
 
@@ -1102,7 +1104,7 @@ static void CL_RailSpiral( void ) {
 }
 
 static void CL_RailTrail( void ) {
-    if( !cl_railtrail_type->integer || scr_glconfig.renderer == GL_RENDERER_SOFTWARE ) {
+    if( !cl_railtrail_type->integer ) {
         CL_OldRailTrail( te.pos1, te.pos2 );
     } else {
         CL_RailCore();
@@ -1112,6 +1114,9 @@ static void CL_RailTrail( void ) {
     }
 }
 
+#else
+#define CL_RailTrail CL_OldRailTrail
+#endif
 
 static void dirtoangles( vec3_t angles ) {
     angles[0] = acos(te.dir[2])/M_PI*180;
@@ -1522,6 +1527,7 @@ void CL_ClearTEnts (void) {
 
 
 void CL_InitTEnts( void ) {
+#if USE_REF == REF_GL
     cl_railtrail_type = Cvar_Get( "cl_railtrail_type", "0", 0 );
     cl_railtrail_time = Cvar_Get( "cl_railtrail_time", "1.0", 0 );
     cl_railcore_color = Cvar_Get( "cl_railcore_color", "red", 0 );
@@ -1534,7 +1540,6 @@ void CL_InitTEnts( void ) {
     cl_railspiral_color->generator = Com_Color_g;
     cl_railspiral_color_changed( cl_railspiral_color );
     cl_railspiral_radius = Cvar_Get( "cl_railspiral_radius", "3", 0 );
+#endif
 }
-
-
 

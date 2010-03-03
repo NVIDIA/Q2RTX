@@ -206,40 +206,13 @@ void CL_AddDLights (void)
     cdlight_t   *dl;
 
     dl = cl_dlights;
-
-//=====
-//PGM
-    if( scr_glconfig.renderer != GL_RENDERER_SOFTWARE )
+    for (i=0 ; i<MAX_DLIGHTS ; i++, dl++)
     {
-        for (i=0 ; i<MAX_DLIGHTS ; i++, dl++)
-        {
-            if (!dl->radius)
-                continue;
-            V_AddLight (dl->origin, dl->radius,
-                dl->color[0], dl->color[1], dl->color[2]);
-        }
+        if (!dl->radius)
+            continue;
+        V_AddLight (dl->origin, dl->radius,
+            dl->color[0], dl->color[1], dl->color[2]);
     }
-    else
-    {
-        for (i=0 ; i<MAX_DLIGHTS ; i++, dl++)
-        {
-            if (!dl->radius)
-                continue;
-
-            // negative light in softwaref. only black allowed
-            if ((dl->color[0] < 0) || (dl->color[1] < 0) || (dl->color[2] < 0))
-            {
-                dl->radius = -(dl->radius);
-                dl->color[0] = 1;
-                dl->color[1] = 1;
-                dl->color[2] = 1;
-            }
-            V_AddLight (dl->origin, dl->radius,
-                dl->color[0], dl->color[1], dl->color[2]);
-        }
-    }
-//PGM
-//=====
 }
 
 // ==============================================================
@@ -733,9 +706,7 @@ void CL_ParseMuzzleFlash2 (void)
     case MZ2_BOSS2_MACHINEGUN_R5:
     case MZ2_CARRIER_MACHINEGUN_R1:         // PMM
     case MZ2_CARRIER_MACHINEGUN_R2:         // PMM
-
         dl->color[0] = 1;dl->color[1] = 1;dl->color[2] = 0;
-
         CL_ParticleEffect (origin, vec3_origin, 0, 40);
         CL_SmokeAndFlash(origin);
         break;

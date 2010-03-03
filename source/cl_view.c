@@ -109,6 +109,16 @@ void V_AddLight (vec3_t org, float intensity, float r, float g, float b) {
         return;
     dl = &r_dlights[r_numdlights++];
     VectorCopy (org, dl->origin);
+#if USE_REF == REF_SOFT
+    // negative light in softwaref. only black allowed
+    if( r < 0 || g < 0 || b < 0 ) {
+        dl->intensity = -intensity;
+        dl->color[0] = 1;
+        dl->color[1] = 1;
+        dl->color[2] = 1;
+        return;
+    }
+#endif
     dl->intensity = intensity;
     dl->color[0] = r;
     dl->color[1] = g;
