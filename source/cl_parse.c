@@ -1012,7 +1012,8 @@ ACTION MESSAGES
 =====================================================================
 */
 
-tent_params_t    te;
+tent_params_t   te;
+mz_params_t     mz;
 
 static void CL_ParseTEntParams( void ) {
     te.type = MSG_ReadByte();
@@ -1135,6 +1136,34 @@ static void CL_ParseTEntParams( void ) {
     }
 
     CL_ParseTEnt();
+}
+
+static void CL_ParseMuzzleFlashParams( void ) {
+    int entity, weapon;
+
+    entity = MSG_ReadShort();
+    if( entity < 1 || entity >= MAX_EDICTS )
+        Com_Error( ERR_DROP, "%s: bad entity", __func__ );
+
+    weapon = MSG_ReadByte();
+    mz.silenced = weapon & MZ_SILENCED;
+    mz.weapon = weapon & ~MZ_SILENCED;
+    mz.entity = entity;
+
+    CL_ParseMuzzleFlash();
+}
+
+static void CL_ParseMuzzleFlashParams2( void ) {
+    int entity;
+
+    entity = MSG_ReadShort();
+    if( entity < 1 || entity >= MAX_EDICTS )
+        Com_Error( ERR_DROP, "%s: bad entity", __func__ );
+
+    mz.weapon = MSG_ReadByte();
+    mz.entity = entity;
+
+    CL_ParseMuzzleFlash2();
 }
 
 /*
@@ -1538,11 +1567,11 @@ void CL_ParseServerMessage( void ) {
             break;
 
         case svc_muzzleflash:
-            CL_ParseMuzzleFlash();
+            CL_ParseMuzzleFlashParams();
             break;
 
         case svc_muzzleflash2:
-            CL_ParseMuzzleFlash2();
+            CL_ParseMuzzleFlashParams2();
             break;
 
         case svc_download:

@@ -68,6 +68,7 @@ void vectoangles2 (vec3_t value1, vec3_t angles)
 
 //=============
 //=============
+#if USE_DLIGHTS
 void CL_Flashlight (int ent, vec3_t pos)
 {
     cdlight_t   *dl;
@@ -100,6 +101,7 @@ void CL_ColorFlash (vec3_t pos, int ent, int intensity, float r, float g, float 
     dl->color[1] = g;
     dl->color[2] = b;
 }
+#endif
 
 
 /*

@@ -449,7 +449,14 @@ typedef struct {
     int time;
 } tent_params_t;
 
+typedef struct {
+    int entity;
+    int weapon;
+    int silenced;
+} mz_params_t;
+
 extern tent_params_t    te;
+extern mz_params_t      mz;
 
 qboolean CL_CheckOrDownloadFile( const char *filename );
 void CL_ParseServerMessage (void);
@@ -477,8 +484,14 @@ void V_Shutdown( void );
 void V_RenderView( void );
 void V_AddEntity (entity_t *ent);
 void V_AddParticle( particle_t *p );
+#if USE_DLIGHTS
 void V_AddLight (vec3_t org, float intensity, float r, float g, float b);
+#else
+#define V_AddLight(org,intensity,r,g,b)
+#endif
+#if USE_LIGHTSTYLES
 void V_AddLightStyle (int style, vec4_t value);
+#endif
 void CL_PrepRefresh (void);
 
 //
@@ -542,6 +555,7 @@ typedef struct cparticle_s {
     color_t rgb;
 } cparticle_t;
 
+#if USE_DLIGHTS
 typedef struct cdlight_s {
     int     key;        // so entities can reuse same entry
     vec3_t  color;
@@ -551,9 +565,8 @@ typedef struct cdlight_s {
     float   decay;      // drop this each second
     float   minlight;   // don't add when contributing less
 } cdlight_t;
+#endif
 
-cdlight_t *CL_AllocDlight (int key);
-cparticle_t *CL_AllocParticle( void );
 void CL_BigTeleportParticles (vec3_t org);
 void CL_RocketTrail (vec3_t start, vec3_t end, centity_t *old);
 void CL_DiminishingTrail (vec3_t start, vec3_t end, centity_t *old, int flags);
@@ -576,10 +589,14 @@ void CL_TeleporterParticles (vec3_t org);
 void CL_TeleportParticles (vec3_t org);
 void CL_ParticleEffect (vec3_t org, vec3_t dir, int color, int count);
 void CL_ParticleEffect2 (vec3_t org, vec3_t dir, int color, int count);
+cparticle_t *CL_AllocParticle( void );
 void CL_RunParticles (void);
 void CL_AddParticles (void);
+#if USE_DLIGHTS
+cdlight_t *CL_AllocDlight (int key);
 void CL_RunDLights (void);
 void CL_AddDLights (void);
+#endif
 #if USE_LIGHTSTYLES
 void CL_SetLightStyle( int index, const char *string, size_t length );
 void CL_RunLightStyles (void);
@@ -596,7 +613,9 @@ void CL_BlasterParticles2 (vec3_t org, vec3_t dir, unsigned int color);
 void CL_BlasterTrail2 (vec3_t start, vec3_t end);
 void CL_DebugTrail (vec3_t start, vec3_t end);
 void CL_SmokeTrail (vec3_t start, vec3_t end, int colorStart, int colorRun, int spacing);
+#if USE_DLIGHTS
 void CL_Flashlight (int ent, vec3_t pos);
+#endif
 void CL_ForceWall (vec3_t start, vec3_t end, int color);
 void CL_FlameEffects (centity_t *ent, vec3_t origin);
 void CL_GenericParticleEffect (vec3_t org, vec3_t dir, int color, int count, int numcolors, int dirspread, float alphavel);
@@ -606,7 +625,9 @@ void CL_ParticleSteamEffect (vec3_t org, vec3_t dir, int color, int count, int m
 void CL_TrackerTrail (vec3_t start, vec3_t end, int particleColor);
 void CL_Tracker_Explode(vec3_t origin);
 void CL_TagTrail (vec3_t start, vec3_t end, float color);
+#if USE_DLIGHTS
 void CL_ColorFlash (vec3_t pos, int ent, int intensity, float r, float g, float b);
+#endif
 void CL_Tracker_Shell(vec3_t origin);
 void CL_MonsterPlasma_Shell(vec3_t origin);
 void CL_ColorExplosionParticles (vec3_t org, int color, int run);

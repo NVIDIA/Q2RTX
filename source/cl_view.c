@@ -31,7 +31,9 @@ qhandle_t   gun_model;
 //=============
 
 static cvar_t   *cl_add_particles;
+#if USE_DLIGHTS
 static cvar_t   *cl_add_lights;
+#endif
 static cvar_t   *cl_add_entities;
 static cvar_t   *cl_add_blend;
 
@@ -44,9 +46,10 @@ static cvar_t   *cl_testblend;
 static cvar_t   *cl_stats;
 #endif
 
-
+#if USE_DLIGHTS
 int         r_numdlights;
 dlight_t    r_dlights[MAX_DLIGHTS];
+#endif
 
 int         r_numentities;
 entity_t    r_entities[MAX_ENTITIES];
@@ -66,7 +69,9 @@ Specifies the model that will be used as the world
 ====================
 */
 static void V_ClearScene (void) {
+#if USE_DLIGHTS
     r_numdlights = 0;
+#endif
     r_numentities = 0;
     r_numparticles = 0;
 }
@@ -98,6 +103,7 @@ void V_AddParticle( particle_t *p ) {
     r_particles[r_numparticles++] = *p;
 }
 
+#if USE_DLIGHTS
 /*
 =====================
 V_AddLight
@@ -126,6 +132,7 @@ void V_AddLight (vec3_t org, float intensity, float r, float g, float b) {
     dl->color[1] = g;
     dl->color[2] = b;
 }
+#endif
 
 #if USE_LIGHTSTYLES
 /*
@@ -150,6 +157,7 @@ void V_AddLightStyle (int style, vec4_t value) {
 #endif
 
 #ifdef _DEBUG
+
 /*
 ================
 V_TestParticles
@@ -210,6 +218,7 @@ static void V_TestEntities (void) {
     }
 }
 
+#if USE_DLIGHTS
 /*
 ================
 V_TestLights
@@ -251,6 +260,8 @@ static void V_TestLights (void) {
         dl->intensity = 200;
     }
 }
+#endif
+
 #endif
 
 //===================================================================
@@ -448,8 +459,10 @@ void V_RenderView( void ) {
             V_TestParticles ();
         if (cl_testentities->integer)
             V_TestEntities ();
+#if USE_DLIGHTS
         if (cl_testlights->integer)
             V_TestLights ();
+#endif
         if (cl_testblend->integer)
         {
             cl.refdef.blend[0] = 1;
@@ -484,8 +497,10 @@ void V_RenderView( void ) {
             r_numentities = 0;
         if (!cl_add_particles->integer)
             r_numparticles = 0;
+#if USE_DLIGHTS
         if (!cl_add_lights->integer)
             r_numdlights = 0;
+#endif
         if (!cl_add_blend->integer)
           Vector4Clear (cl.refdef.blend);
 
@@ -493,8 +508,10 @@ void V_RenderView( void ) {
         cl.refdef.entities = r_entities;
         cl.refdef.num_particles = r_numparticles;
         cl.refdef.particles = r_particles;
+#if USE_DLIGHTS
         cl.refdef.num_dlights = r_numdlights;
         cl.refdef.dlights = r_dlights;
+#endif
 #if USE_LIGHTSTYLES
         cl.refdef.lightstyles = r_lightstyles;
 #endif
@@ -546,12 +563,16 @@ void V_Init( void ) {
     cl_testblend = Cvar_Get ("cl_testblend", "0", 0);
     cl_testparticles = Cvar_Get ("cl_testparticles", "0", 0);
     cl_testentities = Cvar_Get ("cl_testentities", "0", 0);
+#if USE_DLIGHTS
     cl_testlights = Cvar_Get ("cl_testlights", "0", CVAR_CHEAT);
+#endif
 
     cl_stats = Cvar_Get ("cl_stats", "0", 0);
 #endif
 
+#if USE_DLIGHTS
     cl_add_lights = Cvar_Get ( "cl_lights", "1", 0 );
+#endif
     cl_add_particles = Cvar_Get ( "cl_particles", "1", 0 );
     cl_add_entities = Cvar_Get ( "cl_entities", "1", 0 );
     cl_add_blend = Cvar_Get ( "cl_blend", "1", CVAR_ARCHIVE );

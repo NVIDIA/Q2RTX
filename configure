@@ -538,6 +538,7 @@ if [ "$use_ref" != "no" ]; then
         echo "#define DEFAULT_OPENGL_DRIVER \"$gldriver\"" >> $config_h
     else
         echo "#define USE_LIGHTSTYLES 1" >> $config_h
+        echo "#define USE_DLIGHTS 1" >> $config_h
     fi
     echo "#define VID_REF \"$use_ref\"" >> $config_h
     echo "#define VID_MODELIST \"$vid_modelist\"" >> $config_h

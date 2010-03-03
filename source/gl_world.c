@@ -74,7 +74,7 @@ qboolean GL_LightPoint( vec3_t origin, vec3_t color ) {
     return qtrue;
 }
 
-#if USE_DYNAMIC
+#if USE_DLIGHTS
 static void GL_MarkLights_r( mnode_t *node, dlight_t *light ) {
     vec_t dot;
     int count;
@@ -172,7 +172,7 @@ void _R_LightPoint( vec3_t origin, vec3_t color ) {
         VectorSet( color, 1, 1, 1 );
     }
 
-#if USE_DYNAMIC
+#if USE_DLIGHTS
     if( gl_dynamic->integer ) {
         // add dynamic lights
         GL_AddLights( origin, color );
@@ -328,7 +328,7 @@ void GL_DrawBspModel( mmodel_t *model ) {
 
     glr.drawframe++;
 
-#if USE_DYNAMIC
+#if USE_DLIGHTS
     if( gl_dynamic->integer ) {
         GL_TransformLights( model );
     }
@@ -456,7 +456,7 @@ static void GL_WorldNode_r( mnode_t *node, int clipflags ) {
 void GL_DrawWorld( void ) { 
     GL_MarkLeaves();
 
-#if USE_DYNAMIC
+#if USE_DLIGHTS
     if( gl_dynamic->integer ) {
         GL_MarkLights();
     }

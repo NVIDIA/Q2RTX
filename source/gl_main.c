@@ -59,7 +59,7 @@ cvar_t *gl_clear;
 cvar_t *gl_novis;
 cvar_t *gl_lockpvs;
 cvar_t *gl_lightmap;
-#if USE_DYNAMIC
+#if USE_DLIGHTS
 cvar_t *gl_dynamic;
 #endif
 cvar_t *gl_polyblend;
@@ -451,7 +451,7 @@ void R_RenderFrame( refdef_t *fd ) {
     glr.fd = *fd;
     glr.num_beams = 0;
 
-#if USE_DYNAMIC
+#if USE_DLIGHTS
     if( !gl_dynamic->integer ) {
         glr.fd.num_dlights = 0;
     }
@@ -714,7 +714,7 @@ static void GL_Register( void ) {
     gl_novis = Cvar_Get( "gl_novis", "0", 0 );
     gl_lockpvs = Cvar_Get( "gl_lockpvs", "0", CVAR_CHEAT );
     gl_lightmap = Cvar_Get( "gl_lightmap", "0", CVAR_CHEAT );
-#if USE_DYNAMIC
+#if USE_DLIGHTS
     gl_dynamic = Cvar_Get( "gl_dynamic", "2", CVAR_ARCHIVE );
 #endif
     gl_polyblend = Cvar_Get( "gl_polyblend", "1", 0 );

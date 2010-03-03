@@ -2947,7 +2947,9 @@ void CL_Frame( unsigned msec ) {
     }
 
     // advance local effects for next frame
+#if USE_DLIGHTS
     CL_RunDLights();
+#endif
 #if USE_LIGHTSTYLES
     CL_RunLightStyles();
 #endif
