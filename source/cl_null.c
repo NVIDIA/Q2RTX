@@ -32,12 +32,6 @@ qboolean CL_CheatsOK( void ) {
     return qfalse;
 }
 
-void CL_LocalConnect( void ) {
-    if( FS_NeedRestart() ) {
-        FS_Restart();
-    }
-}
-
 static void Key_Bind_Null_f( void ) {
 }
 

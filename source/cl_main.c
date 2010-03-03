@@ -2390,17 +2390,6 @@ static void CL_RestartRefresh_f( void ) {
     CL_RestartRefresh( qtrue );
 }
 
-/*
-============
-CL_LocalConnect
-============
-*/
-void CL_LocalConnect( void ) {
-    if ( FS_NeedRestart() ) {
-        CL_RestartFilesystem( qfalse );
-    }
-}
-
 // execute string in server command buffer
 static void exec_server_string( cmdbuf_t *buf, const char *text ) {
     char *s;
