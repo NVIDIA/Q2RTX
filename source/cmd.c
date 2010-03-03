@@ -917,7 +917,7 @@ char *Cmd_MacroExpandString( const char *text, qboolean aliasHack ) {
         if( *start == '{' ) {
             // allow ${variable} syntax
             start++;
-            if( *start == '$' ) { // allow ${$varibale} syntax
+            if( *start == '$' ) { // allow ${$variable} syntax
                 start++;
             }
             while( *start ) {
