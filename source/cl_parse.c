@@ -653,10 +653,12 @@ static void CL_ParseConfigstring( int index ) {
         cl.mapname[len - 9] = 0; // cut off ".bsp"
         return;
     }
+#if USE_LIGHTSTYLES
     if (index >= CS_LIGHTS && index < CS_LIGHTS+MAX_LIGHTSTYLES) {
-        CL_SetLightstyle( index - CS_LIGHTS, string, len );
+        CL_SetLightStyle( index - CS_LIGHTS, string, len );
         return;
     }
+#endif
 
     if( cls.state < ca_precached ) {
         return;

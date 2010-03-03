@@ -983,7 +983,9 @@ void CL_AddEntities( void ) {
     CL_AddTEnts();
     CL_AddParticles();
     CL_AddDLights();
+#if USE_LIGHTSTYLES
     CL_AddLightStyles();
+#endif
     LOC_AddLocationsToScene();
 }
 

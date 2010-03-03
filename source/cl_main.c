@@ -2948,7 +2948,9 @@ void CL_Frame( unsigned msec ) {
 
     // advance local effects for next frame
     CL_RunDLights();
+#if USE_LIGHTSTYLES
     CL_RunLightStyles();
+#endif
 
     // check connection timeout
     if( cls.netchan ) {

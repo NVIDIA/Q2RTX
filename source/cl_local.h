@@ -576,13 +576,15 @@ void CL_TeleporterParticles (vec3_t org);
 void CL_TeleportParticles (vec3_t org);
 void CL_ParticleEffect (vec3_t org, vec3_t dir, int color, int count);
 void CL_ParticleEffect2 (vec3_t org, vec3_t dir, int color, int count);
-void CL_SetLightstyle( int index, const char *string, size_t length );
 void CL_RunParticles (void);
-void CL_RunDLights (void);
-void CL_RunLightStyles (void);
 void CL_AddParticles (void);
+void CL_RunDLights (void);
 void CL_AddDLights (void);
+#if USE_LIGHTSTYLES
+void CL_SetLightStyle( int index, const char *string, size_t length );
+void CL_RunLightStyles (void);
 void CL_AddLightStyles (void);
+#endif
 
 //
 // cl_newfx.c

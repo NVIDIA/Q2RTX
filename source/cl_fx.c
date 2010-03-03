@@ -34,6 +34,8 @@ LIGHT STYLE MANAGEMENT
 ==============================================================
 */
 
+#if USE_LIGHTSTYLES
+
 typedef struct clightstyle_s {
     list_t  entry;
     int     length;
@@ -71,8 +73,7 @@ void CL_RunLightStyles( void ) {
     }
 }
 
-
-void CL_SetLightstyle( int index, const char *string, size_t length ) {
+void CL_SetLightStyle( int index, const char *string, size_t length ) {
     int     i;
     clightstyle_t   *dest;
 
@@ -107,6 +108,8 @@ void CL_AddLightStyles( void ) {
     for( i = 0, ls = cl_lightstyles; i < MAX_LIGHTSTYLES; i++, ls++ )
         V_AddLightStyle( i, ls->value );
 }
+
+#endif
 
 /*
 ==============================================================
@@ -1902,7 +1905,9 @@ void CL_ClearEffects (void)
 {
     clear_particles ();
     clear_dlights ();
+#if USE_LIGHTSTYLES
     clear_lightstyles ();
+#endif
 }
 
 void CL_InitEffects( void ) {
