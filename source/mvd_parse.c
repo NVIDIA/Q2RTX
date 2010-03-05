@@ -1048,12 +1048,13 @@ static void MVD_ParseServerData( mvd_t *mvd, int extrabits ) {
     // load the world model (we are only interesed in visibility info)
     Com_Printf( "[%s] -=- Loading %s...\n", mvd->name, string );
     if( !CM_LoadMap( &mvd->cm, string ) ) {
-        MVD_Destroyf( mvd, "Couldn't load %s: %s", string, BSP_GetError() );
+        Com_EPrintf( "[%s] =!= Couldn't load %s: %s\n", mvd->name, string, BSP_GetError() );
+        // continue with null visibility
     }
-
 #if USE_MAPCHECKSUM
-    if( mvd->cm.cache->checksum != atoi( mvd->configstrings[CS_MAPCHECKSUM] ) ) {
-        MVD_Destroyf( mvd, "Local map version differs from server" );
+    else if( mvd->cm.cache->checksum != atoi( mvd->configstrings[CS_MAPCHECKSUM] ) ) {
+        Com_EPrintf( "[%s] =!= Local map version differs from server!\n", mvd->name );
+        CM_FreeMap( &mvd->cm );
     }
 #endif
 
@@ -1064,8 +1065,10 @@ static void MVD_ParseServerData( mvd_t *mvd, int extrabits ) {
         set_player_name( player, string );
     }
 
-    // get the spawn point for spectators
-    MVD_ParseEntityString( mvd, mvd->cm.cache->entitystring );
+    if( mvd->cm.cache ) {
+        // get the spawn point for spectators
+        MVD_ParseEntityString( mvd, mvd->cm.cache->entitystring );
+    }
 
     // parse baseline frame
     MVD_ParseFrame( mvd );
