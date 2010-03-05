@@ -36,7 +36,7 @@ static int          checkcount;
 static cvar_t       *map_noareas;
 static cvar_t       *map_allsolid_bug;
 
-void    CM_FloodAreaConnections( cm_t *cm );
+static void    FloodAreaConnections( cm_t *cm );
 
 /*
 ==================
@@ -70,32 +70,32 @@ qboolean CM_LoadMap( cm_t *cm, const char *name ) {
     cm->floodnums = Z_TagMallocz( sizeof( int ) * cm->cache->numareas +
         sizeof( qboolean ) * ( cm->cache->lastareaportal + 1 ), TAG_CMODEL );
     cm->portalopen = ( qboolean * )( cm->floodnums + cm->cache->numareas );
-    CM_FloodAreaConnections( cm );
+    FloodAreaConnections( cm );
 
     return qtrue;
 }
 
-
-
 mnode_t *CM_NodeNum( cm_t *cm, int number ) {
     if( !cm->cache ) {
-        Com_Error( ERR_DROP, "%s: NULL cache", __func__ );
+        return ( mnode_t * )&nullleaf;
     }
     if( number == -1 ) {
         return ( mnode_t * )cm->cache->leafs; // special case for solid leaf
     }
     if( number < 0 || number >= cm->cache->numnodes ) {
-        Com_Error( ERR_DROP, "%s: bad number: %d", __func__, number );
+        Com_EPrintf( "%s: bad number: %d\n", __func__, number );
+        return ( mnode_t * )&nullleaf;
     }
     return cm->cache->nodes + number;
 }
 
 mleaf_t *CM_LeafNum( cm_t *cm, int number ) {
     if( !cm->cache ) {
-        Com_Error( ERR_DROP, "%s: NULL cache", __func__ );
+        return &nullleaf;
     }
     if( number < 0 || number >= cm->cache->numleafs ) {
-        Com_Error( ERR_DROP, "%s: bad number: %d", __func__, number );
+        Com_EPrintf( "%s: bad number: %d\n", __func__, number );
+        return &nullleaf;
     }
     return cm->cache->leafs + number;
 }
@@ -893,12 +893,7 @@ static void FloodArea_r( cm_t *cm, int number, int floodnum ) {
     }
 }
 
-/*
-====================
-CM_FloodAreaConnections
-====================
-*/
-void CM_FloodAreaConnections( cm_t *cm ) {
+static void FloodAreaConnections( cm_t *cm ) {
     int     i;
     marea_t *area;
     int     floodnum;
@@ -918,8 +913,13 @@ void CM_FloodAreaConnections( cm_t *cm ) {
 }
 
 void CM_SetAreaPortalState( cm_t *cm, int portalnum, qboolean open ) {
+    if( !cm->cache ) {
+        return;
+    }
+
     if( portalnum < 0 || portalnum >= MAX_MAP_AREAPORTALS ) {
-        Com_Error( ERR_DROP, "%s: portalnum %d is out of range", __func__, portalnum );
+        Com_EPrintf( "%s: portalnum %d is out of range\n", __func__, portalnum );
+        return;
     }
 
     // ignore areaportals not referenced by areas
@@ -929,7 +929,7 @@ void CM_SetAreaPortalState( cm_t *cm, int portalnum, qboolean open ) {
     }
 
     cm->portalopen[portalnum] = open;
-    CM_FloodAreaConnections( cm );
+    FloodAreaConnections( cm );
 }
 
 qboolean CM_AreasConnected( cm_t *cm, int area1, int area2 ) {
@@ -945,7 +945,8 @@ qboolean CM_AreasConnected( cm_t *cm, int area1, int area2 ) {
         return qfalse;
     }
     if( area1 >= cache->numareas || area2 >= cache->numareas ) {
-        Com_Error( ERR_DROP, "%s: area > numareas", __func__ );
+        Com_EPrintf( "%s: area > numareas\n", __func__ );
+        return qfalse;
     }
     if( cm->floodnums[area1] == cm->floodnums[area2] ) {
         return qtrue;
@@ -1005,7 +1006,7 @@ int CM_WritePortalBits( cm_t *cm, byte *buffer ) {
     if( numportals > MAX_MAP_AREAS ) {
         /* HACK: use the same array size as areabytes!
          * It is nonsense for a map to have > 256 areaportals anyway. */
-        Com_WPrintf( "CM_WritePortalBits: too many areaportals\n" );
+        Com_WPrintf( "%s: too many areaportals\n", __func__ );
         numportals = MAX_MAP_AREAS;
     }
 
@@ -1023,6 +1024,10 @@ int CM_WritePortalBits( cm_t *cm, byte *buffer ) {
 void CM_SetPortalStates( cm_t *cm, byte *buffer, int bytes ) {
     int     i, numportals;
 
+    if( !cm->cache ) {
+        return;
+    }
+
     if( !bytes ) {
         for( i = 0; i <= cm->cache->lastareaportal; i++ ) {
             cm->portalopen[i] = qtrue;
@@ -1037,7 +1042,7 @@ void CM_SetPortalStates( cm_t *cm, byte *buffer, int bytes ) {
         }
     }
 
-    CM_FloodAreaConnections( cm );
+    FloodAreaConnections( cm );
 }
 
 
@@ -1136,6 +1141,8 @@ CM_Init
 */
 void CM_Init( void ) {
     CM_InitBoxHull();
+
+    nullleaf.cluster = -1;
 
     map_noareas = Cvar_Get( "map_noareas", "0", 0 );
     map_allsolid_bug = Cvar_Get( "map_allsolid_bug", "1", 0 );
