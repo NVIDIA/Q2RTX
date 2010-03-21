@@ -218,6 +218,15 @@ static void MVD_LayoutChannels( mvd_client_t *client ) {
 #define YES "\xD9\xE5\xF3"
 #define NO "\xCE\xEF"
 
+static int clamp_menu_cursor( mvd_client_t *client ) {
+    if( client->layout_cursor < 0 ) {
+        client->layout_cursor = MENU_ITEMS - 1;
+    } else if( client->layout_cursor > MENU_ITEMS - 1 ) {
+        client->layout_cursor = 0;
+    }
+    return client->layout_cursor;
+}
+
 static void MVD_LayoutMenu( mvd_client_t *client ) {
     static const char format[] =
         "xv 32 yv 8 picn inventory "
@@ -238,14 +247,8 @@ static void MVD_LayoutMenu( mvd_client_t *client ) {
     char cur[MENU_ITEMS];
     size_t total;
 
-    if( client->layout_cursor < 0 ) {
-        client->layout_cursor = MENU_ITEMS - 1;
-    } else if( client->layout_cursor > MENU_ITEMS - 1 ) {
-        client->layout_cursor = 0;
-    }
-
     memset( cur, 0x20, sizeof( cur ) );
-    cur[client->layout_cursor] = 0x8d;
+    cur[ clamp_menu_cursor( client ) ] = 0x8d;
 
     total = Q_scnprintf( layout, sizeof( layout ), format,
         cur[0], client->target ? "Leave" : "Enter", cur[1],
@@ -267,10 +270,16 @@ static void MVD_LayoutMenu( mvd_client_t *client ) {
     client->layout_time = svs.realtime;
 }
 
-static void MVD_LayoutScores( mvd_client_t *client, const char *layout ) {
+static void MVD_LayoutScores( mvd_client_t *client ) {
     mvd_t *mvd = client->mvd;
     int flags = MSG_CLEAR;
+    char *layout;
 
+    if( client->layout_type == LAYOUT_OLDSCORES ) {
+        layout = mvd->oldscores;
+    } else {
+        layout = mvd->layout;
+    }
     if( !layout || !layout[0] ) {
         layout = "xv 100 yv 60 string \"<no scoreboard>\"";
     }
@@ -306,22 +315,36 @@ static void MVD_LayoutFollow( mvd_client_t *client ) {
     client->layout_time = svs.realtime;
 }
 
-static void MVD_SetDefaultLayout( mvd_client_t *client ) {
-    mvd_t *mvd = client->mvd;
-
-    if( mvd == &mvd_waitingRoom ) {
-        client->layout_type = LAYOUT_CHANNELS;
-    } else if( mvd->intermission ) {
-        client->layout_type = LAYOUT_SCORES;
-    } else if( client->target ) {
-        client->layout_type = LAYOUT_FOLLOW;
-    } else {
-        client->layout_type = LAYOUT_NONE;
-    }
-
+static void MVD_SetNewLayout( mvd_client_t *client, mvd_layout_t type ) {
     // force an update
+    client->layout_type = type;
     client->layout_time = 0;
     client->layout_cursor = 0;
+}
+
+static void MVD_SetDefaultLayout( mvd_client_t *client ) {
+    mvd_t *mvd = client->mvd;
+    mvd_layout_t type;
+
+    if( mvd == &mvd_waitingRoom ) {
+        type = LAYOUT_CHANNELS;
+    } else if( mvd->intermission ) {
+        type = LAYOUT_SCORES;
+    } else if( client->target ) {
+        type = LAYOUT_FOLLOW;
+    } else {
+        type = LAYOUT_NONE;
+    }
+
+    MVD_SetNewLayout( client, type );
+}
+
+static void MVD_ToggleLayout( mvd_client_t *client, mvd_layout_t type ) {
+    if( client->layout_type == type ) {
+        MVD_SetDefaultLayout( client );
+    } else {
+        MVD_SetNewLayout( client, type );
+    }
 }
 
 static void MVD_SetFollowLayout( mvd_client_t *client ) {
@@ -348,13 +371,9 @@ static void MVD_UpdateLayouts( mvd_t *mvd ) {
             }
             break;
         case LAYOUT_OLDSCORES:
-            if( !client->layout_time ) {
-                MVD_LayoutScores( client, mvd->oldscores );
-            }
-            break;
         case LAYOUT_SCORES:
             if( !client->layout_time ) {
-                MVD_LayoutScores( client, mvd->layout );
+                MVD_LayoutScores( client );
             }
             break;
         case LAYOUT_MENU:
@@ -389,9 +408,17 @@ CHASE CAMERA
 ==============================================================================
 */
 
+static void write_cs_list( mvd_client_t *client, mvd_cs_t *cs ) {
+    for( ; cs; cs = cs->next ) {
+        MSG_WriteByte( svc_configstring );
+        MSG_WriteShort( cs->index );
+        MSG_WriteString( cs->string );
+        SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
+    }
+}
+
 static void MVD_FollowStop( mvd_client_t *client ) {
     mvd_t *mvd = client->mvd;
-    mvd_cs_t *cs;
     int i;
 
     client->ps.viewangles[ROLL] = 0;
@@ -409,12 +436,8 @@ static void MVD_FollowStop( mvd_client_t *client ) {
     client->ps.gunindex = 0;
     client->ps.fov = client->fov;
 
-    for( cs = mvd->dummy->configstrings; cs; cs = cs->next ) {
-        MSG_WriteByte( svc_configstring );
-        MSG_WriteShort( cs->index );
-        MSG_WriteString( cs->string );
-        SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
-    }
+    // send delta configstrings
+    write_cs_list( client, mvd->dummy->configstrings );
 
     client->clientNum = mvd->clientNum;
     client->oldtarget = client->target;
@@ -429,8 +452,6 @@ static void MVD_FollowStop( mvd_client_t *client ) {
 }
 
 static void MVD_FollowStart( mvd_client_t *client, mvd_player_t *target ) {
-    mvd_cs_t *cs;
-
     if( client->target == target ) {
         return;
     }
@@ -440,12 +461,7 @@ static void MVD_FollowStart( mvd_client_t *client, mvd_player_t *target ) {
     client->chase_mask = 0;
 
     // send delta configstrings
-    for( cs = target->configstrings; cs; cs = cs->next ) {
-        MSG_WriteByte( svc_configstring );
-        MSG_WriteShort( cs->index );
-        MSG_WriteString( cs->string );
-        SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
-    }
+    write_cs_list( client, target->configstrings );
 
     SV_ClientPrintf( client->cl, PRINT_LOW, "[MVD] Chasing %s.\n", target->name );
 
@@ -966,26 +982,19 @@ static void MVD_Invuse_f( mvd_client_t *client ) {
     int uf = client->uf;
 
     if( client->layout_type == LAYOUT_MENU ) {
-        if( client->layout_cursor < 0 ) {
-            client->layout_cursor = MENU_ITEMS - 1;
-        } else if( client->layout_cursor > MENU_ITEMS - 1 ) {
-            client->layout_cursor = 0;
-        }
-        switch( client->layout_cursor ) {
+        switch( clamp_menu_cursor( client ) ) {
         case 0:
             MVD_SetDefaultLayout( client );
             MVD_Observe_f( client );
             return;
         case 1:
-            client->layout_type = LAYOUT_SCORES;
+            MVD_SetNewLayout( client, LAYOUT_SCORES );
             break;
         case 2:
-            client->layout_type = LAYOUT_CLIENTS;
-            client->layout_cursor = 0;
+            MVD_SetNewLayout( client, LAYOUT_CLIENTS );
             break;
         case 3:
-            client->layout_type = LAYOUT_CHANNELS;
-            client->layout_cursor = 0;
+            MVD_SetNewLayout( client, LAYOUT_CHANNELS );
             break;
         case 4:
             MVD_TrySwitchChannel( client, &mvd_waitingRoom );
@@ -1008,8 +1017,8 @@ static void MVD_Invuse_f( mvd_client_t *client ) {
         }
         if( uf != client->uf ) {
             SV_ClientCommand( client->cl, "set uf %d u\n", client->uf );
+            client->layout_time = 0; // force an update
         }
-        client->layout_time = 0;
         return;
     }
 
@@ -1017,8 +1026,6 @@ static void MVD_Invuse_f( mvd_client_t *client ) {
         mvd = LIST_INDEX( mvd_t, client->layout_cursor, &mvd_channel_list, entry );
         if( mvd ) {
             MVD_TrySwitchChannel( client, mvd );
-        } else {
-            client->layout_time = 0;
         }
         return;
     }
@@ -1134,17 +1141,15 @@ static void MVD_GameClientCommand( edict_t *ent ) {
         MVD_Follow_f( client );
         return;
     }
-    if( !strcmp( cmd, "observe" ) ) {
+    if( !strcmp( cmd, "observe" ) || !strcmp( cmd, "spectate" ) ||
+        !strcmp( cmd, "observer" ) || !strcmp( cmd, "spectator" ) ||
+        !strcmp( cmd, "obs" ) || !strcmp( cmd, "spec" ) )
+    {
         MVD_Observe_f( client );
         return;
     }
     if( !strcmp( cmd, "inven" ) || !strcmp( cmd, "menu" ) ) {
-        if( client->layout_type == LAYOUT_MENU ) {
-            MVD_SetDefaultLayout( client );
-        } else {
-            client->layout_type = LAYOUT_MENU;
-            client->layout_time = 0;
-        }
+        MVD_ToggleLayout( client, LAYOUT_MENU );
         return;
     }
     if( !strcmp( cmd, "invnext" ) ) {
@@ -1170,21 +1175,13 @@ static void MVD_GameClientCommand( edict_t *ent ) {
         return;
     }
     if( !strcmp( cmd, "help" ) || !strcmp( cmd, "score" ) ) {
-        if( client->layout_type == LAYOUT_SCORES ) {
-            MVD_SetDefaultLayout( client );
-        } else {
-            client->layout_type = LAYOUT_SCORES;
-            client->layout_time = 0;
-        }
+        MVD_ToggleLayout( client, LAYOUT_SCORES );
         return;
     }
-    if( !strcmp( cmd, "oldscore" ) ) {
-        if( client->layout_type == LAYOUT_OLDSCORES ) {
-            MVD_SetDefaultLayout( client );
-        } else {
-            client->layout_type = LAYOUT_OLDSCORES;
-            client->layout_time = 0;
-        }
+    if( !strcmp( cmd, "oldscore" ) || !strcmp( cmd, "oldscores" ) ||
+        !strcmp( cmd, "lastscore" ) || !strcmp( cmd, "lastscores" ) )
+    {
+        MVD_ToggleLayout( client, LAYOUT_OLDSCORES );
         return;
     }
     if( !strcmp( cmd, "putaway" ) ) {
