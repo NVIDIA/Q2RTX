@@ -1536,10 +1536,12 @@ static void MVD_IntermissionStart( mvd_t *mvd ) {
     // set this early so MVD_SetDefaultLayout works
     mvd->intermission = qtrue;
 
+#if 0
     // save oldscores
     // FIXME: unfortunately this will also reset oldscores during
     // match timeout with certain mods (OpenTDM should work fine though)
     strcpy( mvd->oldscores, mvd->layout );
+#endif
 
     // force all clients to switch to the MVD dummy
     // and open the scoreboard, unless they had some special layout up

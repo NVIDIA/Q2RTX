@@ -24,6 +24,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "mvd_local.h"
 
+static qboolean match_ended_hack;
+
 #ifdef _DEBUG
 #define SHOWNET(level,...) \
     if( mvd_shownet->integer > level ) \
@@ -299,6 +301,11 @@ static void MVD_UnicastLayout( mvd_t *mvd, qboolean reliable, mvd_player_t *play
     }
 
     MSG_ReadString( mvd->layout, sizeof( mvd->layout ) );
+
+    // HACK: if we got "match ended" string this frame, save oldscores
+    if( match_ended_hack ) {
+        strcpy( mvd->oldscores, mvd->layout );
+    }
 
     // force an update to all relevant clients
     FOR_EACH_MVDCL( client, mvd ) {
@@ -705,6 +712,10 @@ static void MVD_ParsePrint( mvd_t *mvd ) {
     level = MSG_ReadByte();
     MSG_ReadString( string, sizeof( string ) );
 
+    if( strstr( string, "Match ended." ) ) {
+        match_ended_hack = qtrue;
+    }
+
     MVD_BroadcastPrintf( mvd, level, level == PRINT_CHAT ?
         UF_MUTE_PLAYERS : 0, "%s", string );
 }
@@ -1105,6 +1116,7 @@ void MVD_ParseMessage( mvd_t *mvd ) {
 //
 // parse the message
 //
+    match_ended_hack = qfalse;
     while( 1 ) {
         if( msg_read.readcount > msg_read.cursize ) {
             MVD_Destroyf( mvd, "Read past end of message" );
