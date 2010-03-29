@@ -1561,6 +1561,9 @@ void MVD_StreamedStop_f( void ) {
     FS_FCloseFile( mvd->demorecording );
     mvd->demorecording = 0;
 
+    Z_Free( mvd->demoname );
+    mvd->demoname = NULL;
+
     Com_Printf( "[%s] Stopped recording.\n", mvd->name );
 }
 
