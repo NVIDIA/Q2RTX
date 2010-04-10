@@ -100,6 +100,10 @@ cvar_t      *net_chantype;
 
 netadr_t    net_from;
 
+static void net_maxmsglen_changed( cvar_t *self ) {
+    Cvar_ClampInteger( self, 0, MAX_PACKETLEN_WRITABLE );
+}
+
 /*
 ===============
 Netchan_Init
@@ -118,6 +122,7 @@ void Netchan_Init( void ) {
     port = Sys_Milliseconds() & 0xffff;
     net_qport = Cvar_Get( "qport", va( "%d", port ), 0 );
     net_maxmsglen = Cvar_Get( "net_maxmsglen", "1390", 0 );
+    net_maxmsglen->changed = net_maxmsglen_changed;
     net_chantype = Cvar_Get( "net_chantype", "1", 0 );
 }
 
