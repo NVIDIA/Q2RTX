@@ -1034,10 +1034,6 @@ void CL_SendCmd( void ) {
         return; // not talking to a server
     }
 
-    if( sv_paused->integer ) {
-        return;
-    }
-
     // generate usercmds while playing a demo,
     // but do not send them
     if( !cls.netchan ) {
@@ -1056,8 +1052,13 @@ void CL_SendCmd( void ) {
         return;
     }
 
+    // are there any new usercmds to send after all?
     if( cl.lastTransmitCmdNumber == cl.cmdNumber ) {
-        return; // nothing to send
+        // we still need to send an empty packet if server
+        // is paused to make delta compression code happy
+        if( !sv_paused->integer ) {
+            return; // nothing to send
+        }
     }
 
     // send a userinfo update if needed
