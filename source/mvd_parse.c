@@ -628,15 +628,59 @@ void MVD_FreePlayer( mvd_player_t *player ) {
         next = cs->next;
         Z_Free( cs );
     }
+    player->configstrings = NULL;
 }
 
-static void set_player_name( mvd_player_t *player, const char *string ) {
-    char *p;
+static void reset_unicast_strings( mvd_t *mvd, int index ) {
+    mvd_cs_t *cs, **next_p;
+    mvd_player_t *player;
+    int i;
 
+    for( i = 0; i < mvd->maxclients; i++ ) {
+        player = &mvd->players[i];
+        next_p = &player->configstrings;
+        for( cs = player->configstrings; cs; cs = cs->next ) {
+            if( cs->index == index ) {
+                Com_DPrintf( "%s: reset %d on %d\n", __func__, index, i );
+                *next_p = cs->next;
+                Z_Free( cs );
+                break;
+            }
+            next_p = &cs->next;
+        }
+    }
+}
+
+static void set_player_name( mvd_t *mvd, int index ) {
+    mvd_player_t *player;
+    char *string, *p;
+
+    string = mvd->configstrings[ CS_PLAYERSKINS + index ];
+    player = &mvd->players[index];
     Q_strlcpy( player->name, string, sizeof( player->name ) );
     p = strchr( player->name, '\\' );
     if( p ) {
         *p = 0;
+    }
+}
+
+static void update_player_name( mvd_t *mvd, int index ) {
+    mvd_client_t *client;
+
+    // parse player name
+    set_player_name( mvd, index );
+
+    // update layouts
+    FOR_EACH_MVDCL( client, mvd ) {
+        if( client->cl->state < cs_spawned ) {
+            continue;
+        }
+        if( client->layout_type != LAYOUT_FOLLOW ) {
+            continue;
+        }
+        if( client->target == mvd->players + index ) {
+            client->layout_time = 0;
+        }
     }
 }
 
@@ -645,9 +689,6 @@ static void MVD_ParseConfigstring( mvd_t *mvd ) {
     size_t len, maxlen;
     char *string;
     mvd_client_t *client;
-    mvd_player_t *player;
-    mvd_cs_t *cs, **pcs;
-    int i;
 
     index = MSG_ReadShort();
     if( index < 0 || index >= MAX_CONFIGSTRINGS ) {
@@ -663,31 +704,10 @@ static void MVD_ParseConfigstring( mvd_t *mvd ) {
 
     if( index >= CS_PLAYERSKINS && index < CS_PLAYERSKINS + mvd->maxclients ) {
         // update player name
-        player = &mvd->players[ index - CS_PLAYERSKINS ];
-        set_player_name( player, string );
-        FOR_EACH_MVDCL( client, mvd ) {
-            if( client->cl->state < cs_spawned ) {
-                continue;
-            }
-            if( client->target == player && client->layout_type == LAYOUT_FOLLOW ) {
-                client->layout_time = 0;
-            }
-        }
+        update_player_name( mvd, index - CS_PLAYERSKINS );
     } else if( index >= CS_GENERAL ) {
         // reset unicast versions of this string
-        for( i = 0; i < mvd->maxclients; i++ ) {
-            player = &mvd->players[i];
-            pcs = &player->configstrings;
-            for( cs = player->configstrings; cs; cs = cs->next ) {
-                if( cs->index == index ) {
-                    Com_DPrintf( "%s: reset %d on %d\n", __func__, index, i );
-                    *pcs = cs->next;
-                    Z_Free( cs );
-                    break;
-                }
-                pcs = &cs->next;
-            }
-        }
+        reset_unicast_strings( mvd, index );
     }
 
     MSG_WriteByte( svc_configstring );
@@ -712,7 +732,7 @@ static void MVD_ParsePrint( mvd_t *mvd ) {
     level = MSG_ReadByte();
     MSG_ReadString( string, sizeof( string ) );
 
-    if( strstr( string, "Match ended." ) ) {
+    if( level == PRINT_HIGH && strstr( string, "Match ended." ) ) {
         match_ended_hack = qtrue;
     }
 
@@ -961,7 +981,6 @@ static void MVD_ParseServerData( mvd_t *mvd, int extrabits ) {
     size_t len, maxlen;
     char *string;
     int i, index;
-    mvd_player_t *player;
 
     // clear the leftover from previous level
     MVD_ClearState( mvd );
@@ -1071,9 +1090,7 @@ static void MVD_ParseServerData( mvd_t *mvd, int extrabits ) {
 
     // set player names
     for( i = 0; i < mvd->maxclients; i++ ) {
-        player = &mvd->players[i];
-        string = mvd->configstrings[ CS_PLAYERSKINS + i ];
-        set_player_name( player, string );
+        set_player_name( mvd, i );
     }
 
     if( mvd->cm.cache ) {
