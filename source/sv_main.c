@@ -1608,6 +1608,12 @@ unsigned SV_Frame( unsigned msec ) {
         return SV_FRAMETIME - sv.frameresidual;
     }
 
+    // don't accumulate bogus residual
+    if( sv.frameresidual > 250 ) {
+        Com_DPrintf( "Reset residual %u\n", sv.frameresidual );
+        sv.frameresidual = 100;
+    }
+
     return 0;
 }
 
