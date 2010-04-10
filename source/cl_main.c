@@ -105,7 +105,7 @@ char        cl_cmdbuf_text[MAX_STRING_CHARS];
 typedef enum {
     REQ_FREE,
     REQ_STATUS,
-    REQ_INFO,
+    //REQ_INFO,
     REQ_PING,
     REQ_RCON
 } requestType_t;
@@ -760,7 +760,7 @@ static qboolean CL_ServerStatusResponse( const char *status, size_t len, serverS
     memcpy( dest->infostring, status, infolen );
     
     // HACK: check if this is a status response
-    if( !strstr( dest->infostring, "\\hostname\\" ) ) {
+    if( !strstr( dest->infostring, "\\maxclients\\" ) ) {
         return qfalse;
     }
 
@@ -835,15 +835,6 @@ static void CL_ParsePrintMessage( void ) {
 
     len = MSG_ReadString( string, sizeof( string ) );
 
-    if ( ( cls.state == ca_challenging || cls.state == ca_connecting ) &&
-            NET_IsEqualBaseAdr( &net_from, &cls.serverAddress ) )
-    {
-        Com_Printf( "%s", string );
-        cls.state = ca_challenging;
-        //cls.connectCount = 0;
-        return;
-    }
-
     oldest = currentRequest - MAX_REQUESTS;
     if( oldest < 0 ) {
         oldest = 0;
@@ -868,28 +859,40 @@ static void CL_ParsePrintMessage( void ) {
         }
         switch( r->type ) {
         case REQ_STATUS:
-            if( CL_ServerStatusResponse( string, len, &serverStatus ) ) {
-                CL_DumpServerInfo( &serverStatus );
+            if( !CL_ServerStatusResponse( string, len, &serverStatus ) ) {
+                continue;
             }
+            CL_DumpServerInfo( &serverStatus );
             break;
-        case REQ_INFO:
-            break;
+        //case REQ_INFO:
+        //    break;
 #if USE_UI
         case REQ_PING:
-            if( CL_ServerStatusResponse( string, len, &serverStatus ) ) {
-                UI_AddToServerList( &serverStatus );
+            if( !CL_ServerStatusResponse( string, len, &serverStatus ) ) {
+                continue;
             }
+            UI_AddToServerList( &serverStatus );
             break;
 #endif
         case REQ_RCON:
             Com_Printf( "%s", string );
-            CL_AddRequest( &net_from, REQ_RCON );
-            break;
+            continue; // rcon may come in multiple packets
         default:
             break;
         }
 
         r->type = REQ_FREE;
+        return;
+    }
+
+    // finally, check is this is response from the server we are connecting to
+    // and if so, start channenge cycle again
+    if ( ( cls.state == ca_challenging || cls.state == ca_connecting ) &&
+            NET_IsEqualBaseAdr( &net_from, &cls.serverAddress ) )
+    {
+        Com_Printf( "%s", string );
+        cls.state = ca_challenging;
+        //cls.connectCount = 0;
         return;
     }
 
