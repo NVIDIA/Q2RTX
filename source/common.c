@@ -68,7 +68,9 @@ cvar_t  *sv_paused;
 cvar_t  *com_timedemo;
 cvar_t  *com_date_format;
 cvar_t  *com_time_format;
+#ifdef _DEBUG
 cvar_t  *com_debug_break;
+#endif
 cvar_t  *com_fatal_error;
 
 cvar_t  *allow_download;
@@ -419,9 +421,11 @@ void Com_Error( error_type_t code, const char *fmt, ... ) {
         goto abort;
     }
 
+#ifdef _DEBUG
     if( com_debug_break && com_debug_break->integer ) {
         Sys_DebugBreak();
     }
+#endif
 
     // make otherwise non-fatal errors fatal
     if( com_fatal_error && com_fatal_error->integer ) {
@@ -1667,7 +1671,9 @@ void Qcommon_Init( int argc, char **argv ) {
 #else
     com_time_format = Cvar_Get( "com_time_format", "%H:%M", 0 );
 #endif
+#ifdef _DEBUG
     com_debug_break = Cvar_Get( "com_debug_break", "0", 0 );
+#endif
     com_fatal_error = Cvar_Get( "com_fatal_error", "0", 0 );
     com_version = Cvar_Get( "version", version, CVAR_SERVERINFO|CVAR_ROM );
 
