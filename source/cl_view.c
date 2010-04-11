@@ -40,7 +40,9 @@ static cvar_t   *cl_add_blend;
 #ifdef _DEBUG
 static cvar_t   *cl_testparticles;
 static cvar_t   *cl_testentities;
+#if USE_DLIGHTS
 static cvar_t   *cl_testlights;
+#endif
 static cvar_t   *cl_testblend;
 
 static cvar_t   *cl_stats;
@@ -525,7 +527,11 @@ void V_RenderView( void ) {
     R_RenderFrame (&cl.refdef);
 #ifdef _DEBUG
     if (cl_stats->integer)
+#if USE_DLIGHTS
         Com_Printf ("ent:%i  lt:%i  part:%i\n", r_numentities, r_numdlights, r_numparticles);
+#else
+        Com_Printf ("ent:%i  part:%i\n", r_numentities, r_numparticles);
+#endif
 #endif
 
     V_SetLightLevel();
