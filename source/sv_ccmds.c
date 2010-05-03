@@ -792,7 +792,7 @@ static void SV_ServerCommand_f( void ) {
 // bits = 32 --> mask = 255.255.255.255
 // bits = 24 --> mask = 255.255.255.0
 
-static qboolean SV_ParseMask( const char *s, uint32_t *addr, uint32_t *mask ) {
+static qboolean parse_mask( const char *s, uint32_t *addr, uint32_t *mask ) {
     netadr_t address;
     char *p;
     int bits;
@@ -823,8 +823,22 @@ static qboolean SV_ParseMask( const char *s, uint32_t *addr, uint32_t *mask ) {
     return qtrue;
 }
 
+static size_t format_mask( addrmatch_t *match, char *buf, size_t size ) {
+    byte ip[4];
+    int i;
+
+    *( uint32_t * )ip = BigLong( match->addr );
+    for( i = 0; i < 32; i++ ) {
+        if( match->mask & ( 1 << i ) ) {
+            break;
+        }
+    }
+    return Q_snprintf( buf, size, "%d.%d.%d.%d/%d",
+        ip[0], ip[1], ip[2], ip[3], 32 - i );
+}
+
 void SV_AddMatch_f( list_t *list ) {
-    char *s;
+    char *s, buf[32];
     addrmatch_t *match;
     uint32_t addr, mask;
     size_t len;
@@ -835,13 +849,14 @@ void SV_AddMatch_f( list_t *list ) {
     }
 
     s = Cmd_Argv( 1 );
-    if( !SV_ParseMask( s, &addr, &mask ) ) {
+    if( !parse_mask( s, &addr, &mask ) ) {
         return;
     }
 
     LIST_FOR_EACH( addrmatch_t, match, list, entry ) {
         if( match->addr == addr && match->mask == mask ) {
-            Com_Printf( "Address/mask entry %s already exists.\n", s );
+            format_mask( match, buf, sizeof( buf ) );
+            Com_Printf( "Entry %s already exists.\n", buf );
             return;
         }
     }
@@ -883,12 +898,7 @@ void SV_DelMatch_f( list_t *list ) {
     }
 
     // numeric values are just slot numbers
-    for( i = 0; s[i]; i++ ) {
-        if( !Q_isdigit( s[i] ) ) {
-            break;
-        }
-    } 
-    if( !s[i] ) {
+    if( COM_IsUint( s ) ) {
         i = atoi( s );
         if( i < 1 ) {
             Com_Printf( "Bad index: %d\n", i );
@@ -902,7 +912,7 @@ void SV_DelMatch_f( list_t *list ) {
         return;
     }
 
-    if( !SV_ParseMask( s, &addr, &mask ) ) {
+    if( !parse_mask( s, &addr, &mask ) ) {
         return;
     }
 
@@ -914,15 +924,14 @@ remove:
             return;
         }
     }
-    Com_Printf( "No such address/mask entry: %s\n", s );
+    Com_Printf( "No such entry: %s\n", s );
 }
 
 void SV_ListMatches_f( list_t *list ) {
     addrmatch_t *match;
     char last[32];
     char addr[32];
-    byte ip[4];
-    int i, count;
+    int count;
 
     if( LIST_EMPTY( list ) ) {
         Com_Printf( "Address list is empty.\n" );
@@ -933,14 +942,7 @@ void SV_ListMatches_f( list_t *list ) {
                 "-- ------------------ ---- ------------ -------\n" );
     count = 1;
     LIST_FOR_EACH( addrmatch_t, match, list, entry ) {
-        *( uint32_t * )ip = BigLong( match->addr );
-        for( i = 0; i < 32; i++ ) {
-            if( match->mask & ( 1 << i ) ) {
-                break;
-            }
-        }
-        Q_snprintf( addr, sizeof( addr ), "%d.%d.%d.%d/%d",
-            ip[0], ip[1], ip[2], ip[3], 32 - i );
+        format_mask( match, addr, sizeof( addr ) );
         if( !match->time ) {
             strcpy( last, "never" );
         } else {
