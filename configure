@@ -83,6 +83,7 @@ sitecfg="/etc/default/q2pro"
 # use flags
 use_dsound="no"
 use_dinput="no"
+use_lirc="no"
 use_zlib="yes"
 use_tga="yes"
 use_png="no"
@@ -151,6 +152,8 @@ for opt do
     --enable-dsound) use_dsound="yes"
     ;;
     --enable-dinput) use_dinput="yes"
+    ;;
+    --enable-lirc) use_lirc="yes"
     ;;
     --disable-zlib) use_zlib="no"
     ;;
@@ -395,6 +398,9 @@ if [ "$use_client" = "yes" ]; then
     echo "Refresh type       $use_ref"
     echo "Direct input       $use_dinput"
     echo "Direct sound       $use_dsound"
+    if [ "$mingw" = "no" ]; then
+        echo "LIRC support       $use_lirc"
+    fi
     if [ "$use_ref" = "gl" ]; then
         echo "TGA support        $use_tga"
         echo "JPG support        $use_jpg"
@@ -416,6 +422,7 @@ if [ "$use_client" = "yes" ]; then
 else
     use_dsound="no"
     use_dinput="no"
+    use_lirc="no"
     use_tga="no"
     use_png="no"
     use_jpg="no"
@@ -593,6 +600,11 @@ fi
 if [ "$use_dinput" = "yes" ]; then
     echo "USE_DINPUT=yes" >> $config_mk
     echo "#define USE_DINPUT 1" >> $config_h
+fi
+
+if [ "$use_lirc" = "yes" ]; then
+    echo "USE_LIRC=yes" >> $config_mk
+    echo "#define USE_LIRC 1" >> $config_h
 fi
 
 if [ "$use_asm" = "yes" ]; then

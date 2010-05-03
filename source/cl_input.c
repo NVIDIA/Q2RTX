@@ -23,6 +23,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "in_public.h"
 #include "vid_public.h"
 #include "vid_local.h"
+#if USE_LIRC
+#include "in_lirc.h"
+#endif
 
 static cvar_t    *cl_nodelta;
 static cvar_t    *cl_maxpackets;
@@ -134,6 +137,9 @@ void IN_Frame( void ) {
             input.hideCursor = 1;
         }
     }
+#if USE_LIRC
+    Lirc_GetEvents();
+#endif
 }
 
 /*
@@ -187,6 +193,9 @@ void IN_Shutdown( void ) {
         input.api.Shutdown();
         memset( &input, 0, sizeof( input ) );
     }
+#if USE_LIRC
+    Lirc_Shutdown();
+#endif
 }
 
 static void in_param_changed( cvar_t *self ) {
@@ -200,6 +209,10 @@ IN_Init
 */
 void IN_Init( void ) {
     qboolean ret = qfalse;
+
+#if USE_LIRC
+    Lirc_Init();
+#endif
 
     in_enable = Cvar_Get( "in_enable", "1", 0 );
     in_enable->changed = in_param_changed;
