@@ -134,7 +134,7 @@ void AL_PlayChannel( channel_t *ch ) {
     //qalSourcei( ch->srcnum, AL_LOOPING, sc->loopstart == -1 ? AL_FALSE : AL_TRUE );
     qalSourcei( ch->srcnum, AL_LOOPING, ch->autosound ? AL_TRUE : AL_FALSE );
     qalSourcef( ch->srcnum, AL_GAIN, ch->master_vol );
-#if 0
+#if 1
     // anything coming from the view entity will always be full volume
     if( ch->entnum == -1 || ch->entnum == listener_entnum ) {
         qalSourcef( ch->srcnum, AL_MIN_GAIN, 1 );

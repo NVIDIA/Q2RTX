@@ -204,8 +204,6 @@ void S_Init( void ) {
             }
         }
 
-        S_ClearBuffer();
-
         Com_Printf( "sound sampling rate: %i\n", dma.speed );
         s_started = SS_DMA;
     }
@@ -217,6 +215,9 @@ void S_Init( void ) {
     s_ambient = Cvar_Get( "s_ambient", "1", 0 );
     
     Cmd_Register( c_sound );
+
+    // init playsound list
+    S_StopAllSounds();
 
     S_InitScaletable();
 
