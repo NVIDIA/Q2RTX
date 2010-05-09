@@ -45,6 +45,10 @@ SRCFILES+=m_flash.c \
 	snd_mem.c \
 	snd_mix.c
 
+ifdef USE_OPENAL
+SRCFILES+=snd_al.c qal_api.c
+endif
+
 ifdef USE_UI
 SRCFILES+=ui_atoms.c \
 	ui_confirm.c \

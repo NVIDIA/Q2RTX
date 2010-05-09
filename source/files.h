@@ -20,7 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define MAX_LISTED_FILES    4096
 
-typedef struct {
+typedef struct file_info_s {
     size_t  size;
     time_t  ctime;
     time_t  mtime;

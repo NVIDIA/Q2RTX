@@ -81,6 +81,7 @@ homedir="~/.q2pro"
 sitecfg="/etc/default/q2pro"
 
 # use flags
+use_openal="no"
 use_dsound="no"
 use_dinput="no"
 use_lirc="no"
@@ -114,6 +115,7 @@ democache=".democache"
 screenshots="screenshots"
 scoreshots="scoreshots"
 gldriver="libGL.so.1"
+aldriver="libopenal.so.1"
 indriver=""
 vid_modelist="640x480 800x600 1024x768"
 vid_geometry="640x480"
@@ -148,6 +150,8 @@ for opt do
     --enable-server) use_server="yes"
     ;;
     --enable-baseq2) use_baseq2="yes"
+    ;;
+    --enable-openal) use_openal="yes"
     ;;
     --enable-dsound) use_dsound="yes"
     ;;
@@ -213,8 +217,10 @@ echo "  --disable-client       do not build graphical client"
 echo "  --enable-server        build dedicated server"
 echo "  --enable-baseq2        build baseq2 game module"
 echo "  --enable-mingw         enable Windows build"
+echo "  --enable-openal        enable OpenAL sound interface"
 echo "  --enable-dsound        enable direct sound driver"
 echo "  --enable-dinput        enable direct input driver"
+echo "  --enable-lirc          enable LIRC input interface"
 echo "  --disable-zlib         disable linking with zlib"
 echo "  --disable-tga          disable TGA images support"
 echo "  --enable-png           enable PNG images support"
@@ -300,6 +306,7 @@ if [ "$mingw" = "yes" ]; then
     libsuffix=".dll"
     use_sdl="no"
     gldriver="opengl32"
+    aldriver="soft_oal"
     exported="__attribute__((dllexport))"
     homedir=""
     asmflags="-DUNDERSCORES"
@@ -398,6 +405,7 @@ if [ "$use_client" = "yes" ]; then
     echo "Refresh type       $use_ref"
     echo "Direct input       $use_dinput"
     echo "Direct sound       $use_dsound"
+    echo "OpenAL support     $use_openal"
     if [ "$mingw" = "no" ]; then
         echo "LIRC support       $use_lirc"
     fi
@@ -420,6 +428,7 @@ if [ "$use_client" = "yes" ]; then
     targets="$targets q2pro"
     executables="$executables q2pro$exesuffix"
 else
+    use_openal="no"
     use_dsound="no"
     use_dinput="no"
     use_lirc="no"
@@ -590,6 +599,12 @@ if [ "$use_sdl" = "yes" ]; then
         echo "X11_CFLAGS=" >> $config_mk
         echo "#define USE_X11 1" >> $config_h
     fi
+fi
+
+if [ "$use_openal" = "yes" ]; then
+    echo "USE_OPENAL=yes" >> $config_mk
+    echo "#define DEFAULT_OPENAL_DRIVER \"$aldriver\"" >> $config_h
+    echo "#define USE_OPENAL 1" >> $config_h
 fi
 
 if [ "$use_dsound" = "yes" ]; then

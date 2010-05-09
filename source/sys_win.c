@@ -767,12 +767,16 @@ void *Sys_LoadLibrary( const char *path, const char *sym, void **handle ) {
         return NULL;
     }
 
-    entry = GetProcAddress( module, sym );
-    if( !entry ) {
-        Com_DPrintf( "%s failed: GetProcAddress returned %lu on %s\n",
-            __func__, GetLastError(), path );
-        FreeLibrary( module );
-        return NULL;
+    if( sym ) {
+        entry = GetProcAddress( module, sym );
+        if( !entry ) {
+            Com_DPrintf( "%s failed: GetProcAddress returned %lu on %s\n",
+                __func__, GetLastError(), path );
+            FreeLibrary( module );
+            return NULL;
+        }
+    } else {
+        entry = NULL;
     }
 
     *handle = module;

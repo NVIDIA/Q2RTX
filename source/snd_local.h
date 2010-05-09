@@ -31,6 +31,10 @@ typedef struct sfxcache_s
     int         length;
     int         loopstart;
     int         width;
+#if USE_OPENAL
+    int         size;
+    int         bufnum;
+#endif
     byte        data[1];        // variable sized
 } sfxcache_t;
 
@@ -82,11 +86,23 @@ typedef struct channel_s
     int         entchannel;     //
     vec3_t      origin;         // only use if fixed_origin is set
     vec_t       dist_mult;      // distance multiplier (attenuation/clipK)
-    int         master_vol;     // 0-255 master volume
+    float       master_vol;     // 0.0-1.0 master volume
     qboolean    fixed_origin;   // use origin instead of fetching entnum's origin
     qboolean    autosound;      // from an entity->sound, cleared each frame
+#if USE_OPENAL
+    int         autoframe;
+    int         srcnum;
+#endif
 } channel_t;
 
+typedef struct {
+    char    *name;
+    int     rate;
+    int     width;
+    int     loopstart;
+    int     samples;
+    byte    *data;
+} wavinfo_t;
 
 /*
 ====================================================================
@@ -112,7 +128,28 @@ typedef struct snddmaAPI_s {
 
 extern snddmaAPI_t  snddma;
 
+#if USE_OPENAL
+void AL_SoundInfo( void );
+qboolean AL_Init( void );
+void AL_Shutdown( void ); 
+sfxcache_t *AL_UploadSfx( sfx_t *s );
+void AL_DeleteSfx( sfx_t *s );
+void AL_StopChannel( channel_t *ch );
+void AL_PlayChannel( channel_t *ch );
+void AL_StopAllChannels( void );
+void AL_Update( void );
+#endif
+
 //====================================================================
+
+// only begin attenuating sound volumes when outside the FULLVOLUME range
+#define     SOUND_FULLVOLUME    80
+
+#define     SOUND_LOOPATTENUATE 0.003
+
+typedef enum { SS_NOT, SS_DMA, SS_OAL } sndstarted_t;
+
+extern sndstarted_t s_started;
 
 #define MAX_CHANNELS            32
 extern  channel_t   channels[MAX_CHANNELS];
@@ -121,21 +158,28 @@ extern  int     paintedtime;
 extern  dma_t   dma;
 extern  playsound_t s_pendingplays;
 
+extern  vec3_t      listener_origin;
+extern  vec3_t      listener_forward;
+extern  vec3_t      listener_right;
+extern  vec3_t      listener_up;
+extern  int         listener_entnum;
+
+extern  wavinfo_t   s_info;
+
 extern cvar_t   *s_volume;
 extern cvar_t   *s_khz;
 extern cvar_t   *s_testsound;
+extern cvar_t   *s_ambient;
+extern cvar_t   *s_show;
 
 #define S_Malloc( x )   Z_TagMalloc( x, TAG_SOUND )
 #define S_CopyString( x )   Z_TagCopyString( x, TAG_SOUND )
 
+sfx_t *S_SfxForHandle( qhandle_t hSfx );
 void S_InitScaletable (void);
-
 sfxcache_t *S_LoadSound (sfx_t *s);
-
+channel_t *S_PickChannel( int entnum, int entchannel );
 void S_IssuePlaysound (playsound_t *ps);
-
 void S_PaintChannels(int endtime);
-
-// spatializes a channel
-void S_Spatialize(channel_t *ch);
+void S_BuildSoundList( int *sounds );
 

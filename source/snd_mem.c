@@ -22,13 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cl_local.h"
 #include "snd_local.h"
 
-typedef struct {
-    int     rate;
-    int     width;
-    int     loopstart;
-    int     samples;
-    byte    *data;
-} wavinfo_t;
+wavinfo_t s_info;
 
 
 /*
@@ -36,7 +30,7 @@ typedef struct {
 ResampleSfx
 ================
 */
-static sfxcache_t *ResampleSfx( sfx_t *sfx, wavinfo_t *info ) {
+static sfxcache_t *ResampleSfx( sfx_t *sfx ) {
     int         outcount;
     int         srcsample;
     float       stepscale;
@@ -44,31 +38,32 @@ static sfxcache_t *ResampleSfx( sfx_t *sfx, wavinfo_t *info ) {
     int         samplefrac, fracstep;
     sfxcache_t  *sc;
 
-    stepscale = ( float )info->rate / dma.speed;    // this is usually 0.5, 1, or 2
+    stepscale = ( float )s_info.rate / dma.speed;    // this is usually 0.5, 1, or 2
 
-    outcount = info->samples / stepscale;
+    outcount = s_info.samples / stepscale;
     if( !outcount ) {
+        Com_DPrintf( "%s resampled to zero length\n", s_info.name );
         return NULL;
     }
 
-    sc = sfx->cache = S_Malloc( outcount * info->width + sizeof( sfxcache_t ) - 1 );
+    sc = sfx->cache = S_Malloc( outcount * s_info.width + sizeof( sfxcache_t ) - 1 );
     
     sc->length = outcount;
-    sc->loopstart = info->loopstart == -1 ? -1 : info->loopstart / stepscale;
-    sc->width = info->width;
+    sc->loopstart = s_info.loopstart == -1 ? -1 : s_info.loopstart / stepscale;
+    sc->width = s_info.width;
 
 // resample / decimate to the current source rate
 //Com_Printf("%s: %f, %d\n",sfx->name,stepscale,sc->width);
     if (stepscale == 1) {
 // fast special case
         if( sc->width == 1 ) {
-            memcpy( sc->data, info->data, outcount );
+            memcpy( sc->data, s_info.data, outcount );
         } else {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-            memcpy( sc->data, info->data, outcount << 1 );
+            memcpy( sc->data, s_info.data, outcount << 1 );
 #else
             for(i = 0; i < outcount; i++) {
-                ((uint16_t *)sc->data)[i] = LittleShort( (( uint16_t * )info->data)[i] );
+                ((uint16_t *)sc->data)[i] = LittleShort( (( uint16_t * )s_info.data)[i] );
             }
 #endif
         }
@@ -80,13 +75,13 @@ static sfxcache_t *ResampleSfx( sfx_t *sfx, wavinfo_t *info ) {
             for (i = 0; i < outcount; i++) {
                 srcsample = samplefrac >> 8;
                 samplefrac += fracstep;
-                sc->data[i] = info->data[srcsample];
+                sc->data[i] = s_info.data[srcsample];
             }
         } else {
             for (i = 0; i < outcount; i++) {
                 srcsample = samplefrac >> 8;
                 samplefrac += fracstep;
-                ((uint16_t *)sc->data)[i] = LittleShort( (( uint16_t * )info->data)[srcsample] );
+                ((uint16_t *)sc->data)[i] = LittleShort( (( uint16_t * )s_info.data)[srcsample] );
             }
         }
     }
@@ -135,7 +130,7 @@ static int GetLittleLong( void ) {
     return val;
 }
 
-static void FindNextChunk( const char *name, uint32_t search ) {
+static void FindNextChunk( uint32_t search ) {
     uint32_t chunk, length;
     int i;
 
@@ -149,7 +144,7 @@ static void FindNextChunk( const char *name, uint32_t search ) {
         iff_chunk_len = GetLittleLong();
         if( iff_chunk_len > iff_end - data_p ) {
             Com_DPrintf( "%s: oversize chunk %#x in %s\n",
-                __func__, chunk, name );
+                __func__, chunk, s_info.name );
             data_p = NULL;
             return;
         }
@@ -161,12 +156,12 @@ static void FindNextChunk( const char *name, uint32_t search ) {
     }
 
     Com_WPrintf( "%s: too many iterations for chunk %#x in %s\n",
-        __func__, search, name );
+        __func__, search, s_info.name );
 }
 
-static void FindChunk( const char *name, uint32_t search ) {
+static void FindChunk( uint32_t search ) {
     data_p = iff_data;
-    FindNextChunk( name, search );
+    FindNextChunk( search );
 }
 
 #define TAG_RIFF    MakeLong( 'R', 'I', 'F', 'F' )
@@ -182,48 +177,46 @@ static void FindChunk( const char *name, uint32_t search ) {
 GetWavinfo
 ============
 */
-static qboolean GetWavinfo( const char *name, wavinfo_t *info ) {
+static qboolean GetWavinfo( void ) {
     int format;
     int samples, width;
     uint32_t chunk;
 
-    memset( info, 0, sizeof( *info ) );
-
 // find "RIFF" chunk
-    FindChunk( name, TAG_RIFF );
+    FindChunk( TAG_RIFF );
     if( !data_p ) {
-        Com_DPrintf( "%s has missing/invalid RIFF chunk\n", name );
+        Com_DPrintf( "%s has missing/invalid RIFF chunk\n", s_info.name );
         return qfalse;
     }
     chunk = GetLittleLong();
     if( chunk != TAG_WAVE ) {
-        Com_DPrintf( "%s has missing/invalid WAVE chunk\n", name );
+        Com_DPrintf( "%s has missing/invalid WAVE chunk\n", s_info.name );
         return qfalse;
     }
 
     iff_data = data_p;
 
 // get "fmt " chunk
-    FindChunk( name, TAG_fmt );
+    FindChunk( TAG_fmt );
     if( !data_p ) {
-        Com_DPrintf("%s has missing/invalid fmt chunk\n", name );
+        Com_DPrintf("%s has missing/invalid fmt chunk\n", s_info.name );
         return qfalse;
     }
     format = GetLittleShort();
     if( format != 1 ) {
-        Com_DPrintf( "%s has non-Microsoft PCM format\n", name );
+        Com_DPrintf( "%s has non-Microsoft PCM format\n", s_info.name );
         return qfalse;
     }
 
     format = GetLittleShort();
     if( format != 1 ) {
-        Com_DPrintf( "%s has bad number of channels\n", name );
+        Com_DPrintf( "%s has bad number of channels\n", s_info.name );
         return qfalse;
     }
 
-    info->rate = GetLittleLong();
-    if( info->rate <= 0 ) {
-        Com_DPrintf( "%s has bad rate\n", name );
+    s_info.rate = GetLittleLong();
+    if( s_info.rate <= 0 ) {
+        Com_DPrintf( "%s has bad rate\n", s_info.name );
         return qfalse;
     }
 
@@ -232,23 +225,23 @@ static qboolean GetWavinfo( const char *name, wavinfo_t *info ) {
     width = GetLittleShort();
     switch( width ) {
     case 8:
-        info->width = 1;
+        s_info.width = 1;
         break;
     case 16:
-        info->width = 2;
+        s_info.width = 2;
         break;
     default:
-        Com_DPrintf( "%s has bad width\n", name );
+        Com_DPrintf( "%s has bad width\n", s_info.name );
         return qfalse;
     }
 
 // get cue chunk
-    FindChunk( name, TAG_cue );
+    FindChunk( TAG_cue );
     if( data_p ) {
         data_p += 24;
-        info->loopstart = GetLittleLong();
+        s_info.loopstart = GetLittleLong();
 
-        FindNextChunk( name, TAG_LIST );
+        FindNextChunk( TAG_LIST );
         if( data_p ) {
             data_p += 20;
             chunk = GetLittleLong();
@@ -256,36 +249,36 @@ static qboolean GetWavinfo( const char *name, wavinfo_t *info ) {
             // this is not a proper parse, but it works with cooledit...
                 data_p += 16;
                 samples = GetLittleLong();    // samples in loop
-                info->samples = info->loopstart + samples;
+                s_info.samples = s_info.loopstart + samples;
             }
         }
     } else {
-        info->loopstart = -1;
+        s_info.loopstart = -1;
     }
 
 // find data chunk
-    FindChunk( name, TAG_data );
+    FindChunk( TAG_data );
     if( !data_p ) {
-        Com_DPrintf( "%s has missing/invalid data chunk\n", name );
+        Com_DPrintf( "%s has missing/invalid data chunk\n", s_info.name );
         return qfalse;
     }
 
-    samples = iff_chunk_len / info->width;
+    samples = iff_chunk_len / s_info.width;
     if( !samples ) {
-        Com_DPrintf( "%s has zero length\n", name );
+        Com_DPrintf( "%s has zero length\n", s_info.name );
         return qfalse;
     }
 
-    if( info->samples ) {
-        if( samples < info->samples ) {
-            Com_DPrintf( "%s has bad loop length\n", name );
+    if( s_info.samples ) {
+        if( samples < s_info.samples ) {
+            Com_DPrintf( "%s has bad loop length\n", s_info.name );
             return qfalse;
         }
     } else {
-        info->samples = samples;
+        s_info.samples = samples;
     }
 
-    info->data = data_p;
+    s_info.data = data_p;
 
     return qtrue;
 }
@@ -298,7 +291,6 @@ S_LoadSound
 sfxcache_t *S_LoadSound (sfx_t *s) {
     char    namebuffer[MAX_QPATH];
     byte    *data;
-    wavinfo_t   info;
     sfxcache_t  *sc;
     size_t      size;
     char    *name;
@@ -328,12 +320,18 @@ sfxcache_t *S_LoadSound (sfx_t *s) {
         return NULL;
     }
 
+    memset( &s_info, 0, sizeof( s_info ) );
+    s_info.name = namebuffer;
+
     iff_data = data;
     iff_end = data + size;
-    if( GetWavinfo( name, &info ) ) {
-        if( !( sc = ResampleSfx( s, &info ) ) ) {
-            Com_DPrintf( "%s resampled to zero length\n", name );
-        }
+    if( GetWavinfo() ) {
+#if USE_OPENAL
+        if( s_started == SS_OAL )
+            sc = AL_UploadSfx( s );
+        else
+#endif
+            sc = ResampleSfx( s );
     }
 
     FS_FreeFile( data );
