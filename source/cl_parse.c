@@ -391,6 +391,7 @@ static void CL_SetActiveState( void ) {
     }
     
     SCR_EndLoadingPlaque ();    // get rid of loading plaque
+    SCR_LagClear();
 
     if( !cls.demo.playback ) {
         EXEC_TRIGGER( cl_beginmapcmd );

@@ -62,6 +62,7 @@ static cvar_t   *scr_draw2d;
 static cvar_t   *scr_lag_x;
 static cvar_t   *scr_lag_y;
 static cvar_t   *scr_lag_draw;
+static cvar_t   *scr_lag_max;
 static cvar_t   *scr_alpha;
 
 static cvar_t   *scr_demobar;
@@ -464,8 +465,6 @@ LAGOMETER
 #define LAG_WIDTH     48
 #define LAG_HEIGHT    48
 
-#define LAG_MAX     200
-
 #define LAG_CRIT_BIT    ( 1 << 31 )
 #define LAG_WARN_BIT    ( 1 << 30 )
 
@@ -506,7 +505,7 @@ void SCR_LagSample( void ) {
 }
 
 static void draw_ping_graph( int x, int y ) {
-    int i, j, v, c;
+    int i, j, v, c, max = Cvar_ClampInteger( scr_lag_max, 16, 480 );
 
     for( i = 0; i < LAG_WIDTH; i++ ) {
         j = lag.head - i - 1;
@@ -525,7 +524,7 @@ static void draw_ping_graph( int x, int y ) {
         }
 
         v &= ~(LAG_WARN_BIT|LAG_CRIT_BIT);
-        v = v * LAG_HEIGHT / LAG_MAX;
+        v = v * LAG_HEIGHT / max;
         if( v > LAG_HEIGHT ) {
             v = LAG_HEIGHT;
         }
@@ -1063,6 +1062,7 @@ void SCR_Init( void ) {
     scr_lag_x = Cvar_Get( "scr_lag_x", "-1", 0 );
     scr_lag_y = Cvar_Get( "scr_lag_y", "-1", 0 );
     scr_lag_draw = Cvar_Get( "scr_lag_draw", "0", 0 );
+    scr_lag_max = Cvar_Get( "scr_lag_max", "200", 0 );
     scr_alpha = Cvar_Get( "scr_alpha", "1", 0 );
 #ifdef _DEBUG
     scr_showstats = Cvar_Get( "scr_showstats", "0", 0 );
@@ -1117,7 +1117,6 @@ SCR_EndLoadingPlaque
 void SCR_EndLoadingPlaque( void ) {
     cls.disable_screen = 0;
     Con_ClearNotify_f();
-    SCR_LagClear();
 #if USE_CHATHUD
     SCR_ClearChatHUD_f();
 #endif
