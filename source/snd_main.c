@@ -283,7 +283,14 @@ void S_Shutdown( void ) {
 }
 
 void S_Activate( void ) {
-    if( s_started == SS_DMA && snddma.Activate ) {
+    if( !s_started )
+        return;
+#if USE_OPENAL
+    if( s_started == SS_OAL )
+        S_StopAllSounds();
+    else
+#endif
+    if( snddma.Activate ) {
         S_StopAllSounds();
         snddma.Activate( cls.active == ACT_ACTIVATED ? qtrue : qfalse );
     }
