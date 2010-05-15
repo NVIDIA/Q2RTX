@@ -81,7 +81,7 @@ sfxcache_t *AL_UploadSfx( sfx_t *s ) {
 
     // allocate placeholder sfxcache
     sc = s->cache = S_Malloc( sizeof( *sc ) );
-    sc->length = s_info.samples / s_info.rate; // in seconds
+    sc->length = s_info.samples * 1000 / s_info.rate; // in msec
     sc->loopstart = s_info.loopstart;
     sc->width = s_info.width;
     sc->size = size;
@@ -107,7 +107,8 @@ static void AL_Spatialize( channel_t *ch ) {
     vec3_t      origin;
 
     // anything coming from the view entity will always be full volume
-    if( ch->entnum == -1 || ch->entnum == listener_entnum ) {
+    // no attenuation = no spatialization
+    if( ch->entnum == -1 || ch->entnum == listener_entnum || !ch->dist_mult ) {
         VectorCopy( listener_origin, origin );
     } else if( ch->fixed_origin ) {
         VectorCopy( ch->origin, origin );
@@ -119,6 +120,11 @@ static void AL_Spatialize( channel_t *ch ) {
 }
 
 void AL_StopChannel( channel_t *ch ) {
+#ifdef _DEBUG
+    if (s_show->integer > 1)
+        Com_Printf("%s: %s\n", __func__, ch->sfx->name );
+#endif
+
     // stop it
     qalSourceStop( ch->srcnum );
     qalSourcei( ch->srcnum, AL_BUFFER, AL_NONE );
@@ -129,19 +135,16 @@ void AL_StopChannel( channel_t *ch ) {
 void AL_PlayChannel( channel_t *ch ) {
     sfxcache_t *sc = ch->sfx->cache;
 
+#ifdef _DEBUG
+    if (s_show->integer > 1)
+        Com_Printf("%s: %s\n", __func__, ch->sfx->name );
+#endif
+
     ch->srcnum = s_srcnums[ch - channels];
     qalSourcei( ch->srcnum, AL_BUFFER, sc->bufnum );
     //qalSourcei( ch->srcnum, AL_LOOPING, sc->loopstart == -1 ? AL_FALSE : AL_TRUE );
     qalSourcei( ch->srcnum, AL_LOOPING, ch->autosound ? AL_TRUE : AL_FALSE );
     qalSourcef( ch->srcnum, AL_GAIN, ch->master_vol );
-#if 1
-    // anything coming from the view entity will always be full volume
-    if( ch->entnum == -1 || ch->entnum == listener_entnum ) {
-        qalSourcef( ch->srcnum, AL_MIN_GAIN, 1 );
-    } else {
-        qalSourcef( ch->srcnum, AL_MIN_GAIN, 0 );
-    }
-#endif
     qalSourcef( ch->srcnum, AL_REFERENCE_DISTANCE, SOUND_FULLVOLUME );
     qalSourcef( ch->srcnum, AL_MAX_DISTANCE, 8192 );
     qalSourcef( ch->srcnum, AL_ROLLOFF_FACTOR, ch->dist_mult * ( 8192 - SOUND_FULLVOLUME ) );
@@ -230,6 +233,7 @@ static void AL_AddLoopSounds( void ) {
         ch = AL_FindLoopingSound( ent->number, sfx );
         if( ch ) {
             ch->autoframe = s_framecount;
+            ch->end = paintedtime + sc->length;
             continue;
         }
 
@@ -254,6 +258,10 @@ void AL_Update( void ) {
     int         i;
     channel_t   *ch;
     vec_t       orientation[6];
+
+    if( cls.active != ACT_ACTIVATED ) {
+        return;
+    }
 
     paintedtime = cl.time;
 
