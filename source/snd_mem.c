@@ -24,7 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 wavinfo_t s_info;
 
-
+#if USE_SNDDMA
 /*
 ================
 ResampleSfx
@@ -88,6 +88,7 @@ static sfxcache_t *ResampleSfx( sfx_t *sfx ) {
 
     return sc;
 }
+#endif
 
 /*
 ===============================================================================
@@ -331,7 +332,10 @@ sfxcache_t *S_LoadSound (sfx_t *s) {
             sc = AL_UploadSfx( s );
         else
 #endif
-            sc = ResampleSfx( s );
+#if USE_SNDDMA
+            sc = ResampleSfx( s )
+#endif
+            ;
     }
 
     FS_FreeFile( data );

@@ -63,11 +63,9 @@ cvar_t      *s_show;
 
 static cvar_t       *s_enable;
 
-/*
-==========================================================================
-console functions
-==========================================================================
-*/
+// =======================================================================
+// Console functions
+// =======================================================================
 
 static void S_SoundInfo_f( void ) {
     if( !s_started ) {
@@ -80,9 +78,11 @@ static void S_SoundInfo_f( void ) {
         AL_SoundInfo();
     else
 #endif
-        DMA_SoundInfo();
+#if USE_SNDDMA
+        DMA_SoundInfo()
+#endif
+        ;
 }
-
 
 static void S_SoundList_f( void ) {
     int     i;
@@ -126,6 +126,10 @@ static const cmdreg_t c_sound[] = {
     { NULL }
 };
 
+// =======================================================================
+// Init sound engine
+// =======================================================================
+
 /*
 ================
 S_Init
@@ -147,6 +151,7 @@ void S_Init( void ) {
 #endif
 
 #if USE_OPENAL
+#if USE_SNDDMA
     if( s_enable->integer > 1 ) {
         if( !AL_Init() )
             Cvar_Set( "s_enable", "1" );
@@ -155,13 +160,22 @@ void S_Init( void ) {
 
     }
     if( !s_started )
+#else
+    if( !AL_Init() ) {
+        Cvar_Set( "s_enable", "0" );
+        return;
+    }
+    s_started = SS_OAL;
+#endif
 #endif
     {
+#if USE_SNDDMA
         if( !DMA_Init() ) {
             Cvar_Set( "s_enable", "0" );
             return;
         }
         s_started = SS_DMA;
+#endif
     }
 
     Cmd_Register( c_sound );
@@ -222,7 +236,10 @@ void S_Shutdown( void ) {
         AL_Shutdown();
     else
 #endif
-        DMA_Shutdown();
+#if USE_SNDDMA
+        DMA_Shutdown()
+#endif
+        ;
 
     s_started = SS_NOT;
 
@@ -239,7 +256,10 @@ void S_Activate( void ) {
         S_StopAllSounds();
     else
 #endif
-        DMA_Activate();
+#if USE_SNDDMA
+        DMA_Activate()
+#endif
+        ;
 }
 
 
@@ -351,6 +371,45 @@ qhandle_t S_RegisterSound( const char *name ) {
     return ( sfx - known_sfx ) + 1;
 }
 
+/*
+====================
+S_RegisterSexedSound
+====================
+*/
+static sfx_t *S_RegisterSexedSound( int entnum, const char *base ) {
+    sfx_t           *sfx;
+    char            *model;
+    char            buffer[MAX_QPATH];
+    clientinfo_t    *ci;
+
+    // determine what model the client is using
+    if( entnum > 0 && entnum <= MAX_CLIENTS ) {
+        ci = &cl.clientinfo[ entnum - 1 ];
+    } else {
+        ci = &cl.baseclientinfo;
+    }
+    model = ci->model_name;
+
+    // if we can't figure it out, they're male
+    if( !model[0] ) {
+        model = "male";
+    }
+
+    // see if we already know of the model specific sound
+    Q_concat( buffer, sizeof( buffer ),
+        "#players/", model, "/", base + 1, NULL );
+    sfx = S_FindName( buffer );
+
+    // see if it exists
+    if( !sfx->truename && !S_LoadSound( sfx ) ) {
+        // no, revert to the male sound in the pak0.pak
+        Q_concat( buffer, sizeof( buffer ),
+            "player/male/", base + 1, NULL );
+        sfx->truename = S_CopyString( buffer );
+    }
+
+    return sfx;
+}
 
 /*
 =====================
@@ -361,8 +420,10 @@ S_EndRegistration
 void S_EndRegistration( void ) {
     int     i;
     sfx_t   *sfx;
+#if USE_SNDDMA
     sfxcache_t *sc;
     int     size;
+#endif
 
     // clear playsound list, so we don't free sfx still present there
     S_StopAllSounds();
@@ -380,12 +441,14 @@ void S_EndRegistration( void ) {
         if( s_started == SS_OAL )
             continue;
 #endif
+#if USE_SNDDMA
         // make sure it is paged in
         sc = sfx->cache;
         if( sc ) {
             size = sc->length * sc->width;
             Com_PageInMemory( sc, size );
         }
+#endif
     }
 
     // load everything in
@@ -454,6 +517,86 @@ channel_t *S_PickChannel( int entnum, int entchannel ) {
 
     return ch;
 }       
+
+#if USE_SNDDMA
+
+/*
+=================
+S_SpatializeOrigin
+
+Used for spatializing channels and autosounds
+=================
+*/
+static void S_SpatializeOrigin( const vec3_t origin, float master_vol, float dist_mult, int *left_vol, int *right_vol ) {
+    vec_t       dot;
+    vec_t       dist;
+    vec_t       lscale, rscale, scale;
+    vec3_t      source_vec;
+
+    if( cls.state != ca_active ) {
+        *left_vol = *right_vol = 255;
+        return;
+    }
+
+// calculate stereo seperation and distance attenuation
+    VectorSubtract( origin, listener_origin, source_vec );
+
+    dist = VectorNormalize( source_vec );
+    dist -= SOUND_FULLVOLUME;
+    if( dist < 0 )
+        dist = 0;           // close enough to be at full volume
+    dist *= dist_mult;      // different attenuation levels
+    
+    dot = DotProduct( listener_right, source_vec );
+
+    if( dma.channels == 1 || !dist_mult ) { 
+        // no attenuation = no spatialization
+        rscale = 1.0;
+        lscale = 1.0;
+    } else {
+        rscale = 0.5 * ( 1.0 + dot );
+        lscale = 0.5 * ( 1.0 - dot );
+    }
+
+    master_vol *= 255.0;
+
+    // add in distance effect
+    scale = ( 1.0 - dist ) * rscale;
+    *right_vol = (int)( master_vol * scale );
+    if( *right_vol < 0 )
+        *right_vol = 0;
+
+    scale = ( 1.0 - dist ) * lscale;
+    *left_vol = (int)( master_vol * scale );
+    if (*left_vol < 0)
+        *left_vol = 0;
+}
+
+/*
+=================
+S_Spatialize
+=================
+*/
+static void S_Spatialize( channel_t *ch ) {
+    vec3_t      origin;
+
+    // anything coming from the view entity will always be full volume
+    if( ch->entnum == -1 || ch->entnum == listener_entnum ) {
+        ch->leftvol = ch->master_vol * 255;
+        ch->rightvol = ch->master_vol * 255;
+        return;
+    }
+
+    if( ch->fixed_origin ) {
+        VectorCopy( ch->origin, origin );
+    } else {
+        CL_GetEntitySoundOrigin( ch->entnum, origin );
+    }
+
+    S_SpatializeOrigin( origin, ch->master_vol, ch->dist_mult, &ch->leftvol, &ch->rightvol );
+}
+
+#endif
 
 /*
 =================
@@ -540,7 +683,10 @@ void S_IssuePlaysound( playsound_t *ps ) {
         AL_PlayChannel( ch );
     else
 #endif
-        S_Spatialize( ch );
+#if USE_SNDDMA
+        S_Spatialize( ch )
+#endif
+        ;
 
     ch->pos = 0;
     ch->end = paintedtime + sc->length;
@@ -548,47 +694,6 @@ void S_IssuePlaysound( playsound_t *ps ) {
     // free the playsound
     S_FreePlaysound( ps );
 }
-
-/*
-====================
-S_RegisterSexedSound
-====================
-*/
-static sfx_t *S_RegisterSexedSound( int entnum, const char *base ) {
-    sfx_t           *sfx;
-    char            *model;
-    char            buffer[MAX_QPATH];
-    clientinfo_t    *ci;
-
-    // determine what model the client is using
-    if( entnum > 0 && entnum <= MAX_CLIENTS ) {
-        ci = &cl.clientinfo[ entnum - 1 ];
-    } else {
-        ci = &cl.baseclientinfo;
-    }
-    model = ci->model_name;
-
-    // if we can't figure it out, they're male
-    if( !model[0] ) {
-        model = "male";
-    }
-
-    // see if we already know of the model specific sound
-    Q_concat( buffer, sizeof( buffer ),
-        "#players/", model, "/", base + 1, NULL );
-    sfx = S_FindName( buffer );
-
-    // see if it exists
-    if( !sfx->truename && !S_LoadSound( sfx ) ) {
-        // no, revert to the male sound in the pak0.pak
-        Q_concat( buffer, sizeof( buffer ),
-            "player/male/", base + 1, NULL );
-        sfx->truename = S_CopyString( buffer );
-    }
-
-    return sfx;
-}
-
 
 // =======================================================================
 // Start a sound effect
@@ -647,7 +752,10 @@ void S_StartSound( const vec3_t origin, int entnum, int entchannel, qhandle_t hS
         ps->begin = paintedtime + timeofs * 1000;
     else
 #endif
-        ps->begin = DMA_DriftBeginofs( timeofs );
+#if USE_SNDDMA
+        ps->begin = DMA_DriftBeginofs( timeofs )
+#endif
+        ;
 
     // sort into the pending sound list
     for( sort = s_pendingplays.next ; sort != &s_pendingplays && sort->begin < ps->begin ; sort = sort->next )
@@ -710,11 +818,18 @@ void S_StopAllSounds(void)
         AL_StopAllChannels();
     else
 #endif
-        DMA_ClearBuffer();
+#if USE_SNDDMA
+        DMA_ClearBuffer()
+#endif
+        ;
 
     // clear all the channels
     memset(channels, 0, sizeof(channels));
 }
+
+// =======================================================================
+// Update sound buffer
+// =======================================================================
 
 void S_BuildSoundList( int *sounds ) {
     int         i;
@@ -734,10 +849,91 @@ void S_BuildSoundList( int *sounds ) {
     }
 }
 
-// =======================================================================
-// Update sound buffer
-// =======================================================================
+#if USE_SNDDMA
 
+/*
+==================
+S_AddLoopSounds
+
+Entities with a ->sound field will generated looped sounds
+that are automatically started, stopped, and merged together
+as the entities are sent to the client
+==================
+*/
+static void S_AddLoopSounds (void)
+{
+    int         i, j;
+    int         sounds[MAX_PACKET_ENTITIES];
+    int         left, right, left_total, right_total;
+    channel_t   *ch;
+    sfx_t       *sfx;
+    sfxcache_t  *sc;
+    int         num;
+    entity_state_t  *ent;
+    centity_t *cent;
+
+    if( cls.state != ca_active || sv_paused->integer || !s_ambient->integer ) {
+        return;
+    }
+
+    S_BuildSoundList( sounds );
+
+    for( i = 0; i < cl.frame.numEntities; i++ ) {
+        if (!sounds[i])
+            continue;
+
+        sfx = S_SfxForHandle( cl.sound_precache[sounds[i]] );
+        if (!sfx)
+            continue;       // bad sound effect
+        sc = sfx->cache;
+        if (!sc)
+            continue;
+
+        num = ( cl.frame.firstEntity + i ) & PARSE_ENTITIES_MASK;
+        ent = &cl.entityStates[num];
+        cent = &cl_entities[ent->number];
+
+        // find the total contribution of all sounds of this type
+        S_SpatializeOrigin (cent->lerp_origin, 1.0, SOUND_LOOPATTENUATE,
+            &left_total, &right_total);
+        for (j=i+1 ; j<cl.frame.numEntities ; j++)
+        {
+            if (sounds[j] != sounds[i])
+                continue;
+            sounds[j] = 0;  // don't check this again later
+
+            num = ( cl.frame.firstEntity + j ) & PARSE_ENTITIES_MASK;
+            ent = &cl.entityStates[num];
+            cent = &cl_entities[ent->number];
+
+            S_SpatializeOrigin (cent->lerp_origin, 1.0, SOUND_LOOPATTENUATE, 
+                &left, &right);
+            left_total += left;
+            right_total += right;
+        }
+
+        if (left_total == 0 && right_total == 0)
+            continue;       // not audible
+
+        // allocate a channel
+        ch = S_PickChannel(0, 0);
+        if (!ch)
+            return;
+
+        if (left_total > 255)
+            left_total = 255;
+        if (right_total > 255)
+            right_total = 255;
+        ch->leftvol = left_total;
+        ch->rightvol = right_total;
+        ch->autosound = qtrue;  // remove next frame
+        ch->sfx = sfx;
+        ch->pos = paintedtime % sc->length;
+        ch->end = paintedtime + sc->length - ch->pos;
+    }
+}
+
+#endif
 
 /*
 ============
@@ -747,6 +943,11 @@ Called once each time through the main loop
 ============
 */
 void S_Update( void ) {
+#if USE_SNDDMA
+    int         i;
+    channel_t   *ch;
+#endif
+
     if( cvar_modified & CVAR_SOUND ) {
         Cbuf_AddText( &cmd_buffer, "snd_restart\n" );
         cvar_modified &= ~CVAR_SOUND;
@@ -773,11 +974,63 @@ void S_Update( void ) {
     }
 
 #if USE_OPENAL
-    if( s_started == SS_OAL ) 
+    if( s_started == SS_OAL ) { 
         AL_Update();
-    else
+        return;
+    }
 #endif
-        DMA_Update();
+
+#if USE_SNDDMA
+    // rebuild scale tables if volume is modified
+    if (s_volume->modified)
+        S_InitScaletable ();
+
+    // update spatialization for dynamic sounds 
+    ch = channels;
+    for (i=0 ; i<MAX_CHANNELS; i++, ch++)
+    {
+        if (!ch->sfx)
+            continue;
+        if (ch->autosound)
+        {   // autosounds are regenerated fresh each frame
+            memset (ch, 0, sizeof(*ch));
+            continue;
+        }
+        S_Spatialize(ch);         // respatialize channel
+        if (!ch->leftvol && !ch->rightvol)
+        {
+            memset (ch, 0, sizeof(*ch));
+            continue;
+        }
+    }
+
+    // add loopsounds
+    S_AddLoopSounds ();
+
+#ifdef _DEBUG
+    //
+    // debugging output
+    //
+    if (s_show->integer)
+    {
+        int total = 0;
+        ch = channels;
+        for (i=0 ; i<MAX_CHANNELS; i++, ch++)
+            if (ch->sfx && (ch->leftvol || ch->rightvol) )
+            {
+                Com_Printf ("%3i %3i %s\n", ch->leftvol, ch->rightvol, ch->sfx->name);
+                total++;
+            }
+    
+        if( s_show->integer > 1 || total ) {
+            Com_Printf ("----(%i)---- painted: %i\n", total, paintedtime);
+        }
+    }
+#endif
+
+// mix some sound
+    DMA_Update();
+#endif
 }
 
 

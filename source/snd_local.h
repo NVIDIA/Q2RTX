@@ -112,6 +112,7 @@ typedef struct {
 ====================================================================
 */
 
+#if USE_SNDDMA
 typedef enum { SIS_SUCCESS, SIS_FAILURE, SIS_NOTAVAIL } sndinitstat_t;
 
 typedef struct snddmaAPI_s {
@@ -137,6 +138,7 @@ void DMA_Activate( void );
 int DMA_DriftBeginofs( float timeofs );
 void DMA_ClearBuffer( void );
 void DMA_Update( void );
+#endif
 
 #if USE_OPENAL
 void AL_SoundInfo( void );
@@ -176,8 +178,10 @@ extern  int         listener_entnum;
 extern  wavinfo_t   s_info;
 
 extern cvar_t   *s_volume;
+#if USE_SNDDMA
 extern cvar_t   *s_khz;
 extern cvar_t   *s_testsound;
+#endif
 extern cvar_t   *s_ambient;
 extern cvar_t   *s_show;
 
@@ -185,11 +189,12 @@ extern cvar_t   *s_show;
 #define S_CopyString( x )   Z_TagCopyString( x, TAG_SOUND )
 
 sfx_t *S_SfxForHandle( qhandle_t hSfx );
-void S_InitScaletable (void);
 sfxcache_t *S_LoadSound (sfx_t *s);
 channel_t *S_PickChannel( int entnum, int entchannel );
 void S_IssuePlaysound (playsound_t *ps);
-void S_PaintChannels(int endtime);
-void S_Spatialize( channel_t *ch );
 void S_BuildSoundList( int *sounds );
+#if USE_SNDDMA
+void S_InitScaletable (void);
+void S_PaintChannels(int endtime);
+#endif
 

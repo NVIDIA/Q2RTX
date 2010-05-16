@@ -42,9 +42,11 @@ SRCFILES+=m_flash.c \
 	cl_keys.c \
 	cl_aastat.c \
 	snd_main.c \
-	snd_mem.c \
-	snd_mix.c \
-	snd_dma.c
+	snd_mem.c 
+
+ifdef USE_SNDDMA
+SRCFILES+=snd_mix.c snd_dma.c
+endif
 
 ifdef USE_OPENAL
 SRCFILES+=snd_al.c qal_api.c
@@ -73,10 +75,14 @@ SRCFILES+=sv_save.c
 
 ifdef MINGW
 
-SRCFILES+=sys_win.c snd_wave.c
+SRCFILES+=sys_win.c
 
 ifdef USE_REF
 SRCFILES+=vid_win.c
+endif
+
+ifdef USE_SNDDMA
+SRCFILES+=snd_wave.c
 endif
 
 ifdef USE_DSOUND
@@ -119,7 +125,10 @@ LDFLAGS+=-ldl
 endif
 
 ifdef USE_SDL
-SRCFILES+=vid_sdl.c snd_sdl.c
+SRCFILES+=vid_sdl.c
+ifdef USE_SNDDMA
+SRCFILES+=snd_sdl.c
+endif
 CFLAGS+=$(SDL_CFLAGS)
 LDFLAGS+=$(SDL_LDFLAGS)
 ifdef USE_X11

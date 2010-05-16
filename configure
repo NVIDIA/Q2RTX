@@ -81,6 +81,7 @@ homedir="~/.q2pro"
 sitecfg="/etc/default/q2pro"
 
 # use flags
+use_snddma="yes"
 use_openal="no"
 use_dsound="no"
 use_dinput="no"
@@ -151,6 +152,8 @@ for opt do
     ;;
     --enable-baseq2) use_baseq2="yes"
     ;;
+    --disable-snddma) use_snddma="no"
+    ;;
     --enable-openal) use_openal="yes"
     ;;
     --enable-dsound) use_dsound="yes"
@@ -217,7 +220,8 @@ echo "  --disable-client       do not build graphical client"
 echo "  --enable-server        build dedicated server"
 echo "  --enable-baseq2        build baseq2 game module"
 echo "  --enable-mingw         enable Windows build"
-echo "  --enable-openal        enable OpenAL sound interface"
+echo "  --disable-snddma       disable DMA sound engine"
+echo "  --enable-openal        enable OpenAL sound engine"
 echo "  --enable-dsound        enable direct sound driver"
 echo "  --enable-dinput        enable direct input driver"
 echo "  --enable-lirc          enable LIRC input interface"
@@ -369,6 +373,11 @@ if [ "$use_ref" = "soft" ]; then
     use_md3="no"
 fi
 
+if [ "$use_snddma" = "no" ]; then
+    use_dsound="no"
+    use_openal="yes" # FIXME
+fi
+
 gamelib="game$cpu$libsuffix"
 
 vpath="\$(SRCDIR)/source"
@@ -405,7 +414,8 @@ if [ "$use_client" = "yes" ]; then
     echo "Refresh type       $use_ref"
     echo "Direct input       $use_dinput"
     echo "Direct sound       $use_dsound"
-    echo "OpenAL support     $use_openal"
+    echo "DMA sound engine   $use_snddma"
+    echo "OAL sound engine   $use_openal"
     if [ "$mingw" = "no" ]; then
         echo "LIRC support       $use_lirc"
     fi
@@ -428,6 +438,7 @@ if [ "$use_client" = "yes" ]; then
     targets="$targets q2pro"
     executables="$executables q2pro$exesuffix"
 else
+    use_snddma="no"
     use_openal="no"
     use_dsound="no"
     use_dinput="no"
@@ -599,6 +610,11 @@ if [ "$use_sdl" = "yes" ]; then
         echo "X11_CFLAGS=" >> $config_mk
         echo "#define USE_X11 1" >> $config_h
     fi
+fi
+
+if [ "$use_snddma" = "yes" ]; then
+    echo "USE_SNDDMA=yes" >> $config_mk
+    echo "#define USE_SNDDMA 1" >> $config_h
 fi
 
 if [ "$use_openal" = "yes" ]; then
