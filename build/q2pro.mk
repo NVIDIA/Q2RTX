@@ -43,7 +43,8 @@ SRCFILES+=m_flash.c \
 	cl_aastat.c \
 	snd_main.c \
 	snd_mem.c \
-	snd_mix.c
+	snd_mix.c \
+	snd_dma.c
 
 ifdef USE_OPENAL
 SRCFILES+=snd_al.c qal_api.c

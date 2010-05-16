@@ -43,7 +43,7 @@ static void Filler( void *userdata, Uint8 *stream, int len ) {
 }
 
 static void Shutdown( void ) {
-    Com_Printf( "Shutting down SDL audio\n" );
+    Com_Printf( "Shutting down SDL audio.\n" );
 
     SDL_CloseAudio();
     if( SDL_WasInit( SDL_INIT_EVERYTHING ) == SDL_INIT_AUDIO ) {
@@ -100,7 +100,7 @@ static sndinitstat_t Init( void ) {
     }
 
     if( obtained.format != AUDIO_S16LSB ) {
-        Com_EPrintf( "SDL audio format %d unsupported\n", obtained.format );
+        Com_EPrintf( "SDL audio format %d unsupported.\n", obtained.format );
         Shutdown();
         return SIS_FAILURE;
     }
@@ -110,7 +110,7 @@ static sndinitstat_t Init( void ) {
     dma.samples = 2048 * obtained.channels;
     dma.submission_chunk = 1;
     dma.samplebits = 16;
-    dma.buffer = Z_Malloc( dma.samples * 2 );
+    dma.buffer = Z_Mallocz( dma.samples * 2 );
     dma.samplepos = 0;
 
     Com_Printf( "Using SDL audio driver: %s\n",

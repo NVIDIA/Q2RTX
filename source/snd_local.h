@@ -126,7 +126,17 @@ typedef struct snddmaAPI_s {
     void    (*Activate)( qboolean active );
 } snddmaAPI_t;
 
-extern snddmaAPI_t  snddma;
+//extern snddmaAPI_t  snddma;
+
+extern  dma_t   dma;
+
+void DMA_SoundInfo( void );
+qboolean DMA_Init( void );
+void DMA_Shutdown( void );
+void DMA_Activate( void );
+int DMA_DriftBeginofs( float timeofs );
+void DMA_ClearBuffer( void );
+void DMA_Update( void );
 
 #if USE_OPENAL
 void AL_SoundInfo( void );
@@ -155,7 +165,6 @@ extern sndstarted_t s_started;
 extern  channel_t   channels[MAX_CHANNELS];
 
 extern  int     paintedtime;
-extern  dma_t   dma;
 extern  playsound_t s_pendingplays;
 
 extern  vec3_t      listener_origin;
@@ -181,5 +190,6 @@ sfxcache_t *S_LoadSound (sfx_t *s);
 channel_t *S_PickChannel( int entnum, int entchannel );
 void S_IssuePlaysound (playsound_t *ps);
 void S_PaintChannels(int endtime);
+void S_Spatialize( channel_t *ch );
 void S_BuildSoundList( int *sounds );
 

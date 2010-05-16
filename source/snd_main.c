@@ -17,7 +17,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
-// snd_dma.c -- main control for any streaming sound output device
+// snd_main.c -- common sound functions
 
 #include "cl_local.h"
 #include "snd_local.h"
@@ -31,8 +31,6 @@ int         s_registration_sequence;
 channel_t   channels[MAX_CHANNELS];
 
 sndstarted_t s_started;
-
-dma_t       dma;
 
 vec3_t      listener_origin;
 vec3_t      listener_forward;
@@ -57,31 +55,13 @@ playsound_t s_playsounds[MAX_PLAYSOUNDS];
 playsound_t s_freeplays;
 playsound_t s_pendingplays;
 
-static int          s_beginofs;
-
-cvar_t      *s_khz;
 cvar_t      *s_volume;
-cvar_t      *s_testsound;
 cvar_t      *s_ambient;
+#ifdef _DEBUG
 cvar_t      *s_show;
+#endif
 
 static cvar_t       *s_enable;
-#if USE_DSOUND
-static cvar_t       *s_direct;
-#endif
-#ifdef _DEBUG
-#endif
-static cvar_t       *s_mixahead;
-
-void WAVE_FillAPI( snddmaAPI_t *api );
-
-#if USE_DSOUND
-void DS_FillAPI( snddmaAPI_t *api );
-#endif
-
-static void S_ClearBuffer (void);
-
-snddmaAPI_t snddma;
 
 /*
 ==========================================================================
@@ -96,19 +76,11 @@ static void S_SoundInfo_f( void ) {
     }
 
 #if USE_OPENAL
-    if( s_started == SS_OAL ) {
+    if( s_started == SS_OAL ) 
         AL_SoundInfo();
-        return;
-    }
+    else
 #endif
-    
-    Com_Printf( "%5d channels\n", dma.channels );
-    Com_Printf( "%5d samples\n", dma.samples );
-    Com_Printf( "%5d samplepos\n", dma.samplepos );
-    Com_Printf( "%5d samplebits\n", dma.samplebits );
-    Com_Printf( "%5d submission_chunk\n", dma.submission_chunk );
-    Com_Printf( "%5d speed\n", dma.speed );
-    Com_Printf( "%p dma buffer\n", dma.buffer );
+        DMA_SoundInfo();
 }
 
 
@@ -160,8 +132,6 @@ S_Init
 ================
 */
 void S_Init( void ) {
-    sndinitstat_t ret = SIS_FAILURE;
-
     s_enable = Cvar_Get( "s_enable", "1", CVAR_SOUND );
     if( !s_enable->integer ) {
         Com_Printf( "Sound initialization disabled.\n" );
@@ -170,56 +140,35 @@ void S_Init( void ) {
 
     Com_Printf( "------- S_Init -------\n" );
 
+    s_volume = Cvar_Get( "s_volume", "0.7", CVAR_ARCHIVE );
+    s_ambient = Cvar_Get( "s_ambient", "1", 0 );
+#ifdef _DEBUG
+    s_show = Cvar_Get( "s_show", "0", 0 );
+#endif
+
 #if USE_OPENAL
     if( s_enable->integer > 1 ) {
-        if( !AL_Init() ) {
+        if( !AL_Init() )
             Cvar_Set( "s_enable", "1" );
-        } else 
+        else 
             s_started = SS_OAL;
 
     }
     if( !s_started )
 #endif
     {
-        s_khz = Cvar_Get( "s_khz", "22", CVAR_ARCHIVE|CVAR_SOUND );
-        s_mixahead = Cvar_Get( "s_mixahead", "0.2", CVAR_ARCHIVE );
-        s_testsound = Cvar_Get( "s_testsound", "0", 0 );
-
-#if USE_DSOUND
-        s_direct = Cvar_Get( "s_direct", "1", CVAR_ARCHIVE|CVAR_SOUND );
-        if( s_direct->integer ) {
-            DS_FillAPI( &snddma );
-            ret = snddma.Init();
-            if( ret != SIS_SUCCESS ) {
-                Cvar_Set( "s_direct", "0" );
-            }
+        if( !DMA_Init() ) {
+            Cvar_Set( "s_enable", "0" );
+            return;
         }
-#endif
-        if( ret != SIS_SUCCESS ) {
-            WAVE_FillAPI( &snddma );
-            ret = snddma.Init();
-            if( ret != SIS_SUCCESS ) {
-                Cvar_Set( "s_enable", "0" );
-                return;
-            }
-        }
-
-        Com_Printf( "sound sampling rate: %i\n", dma.speed );
         s_started = SS_DMA;
     }
 
-    s_volume = Cvar_Get( "s_volume", "0.7", CVAR_ARCHIVE );
-#ifdef _DEBUG
-    s_show = Cvar_Get( "s_show", "0", 0 );
-#endif
-    s_ambient = Cvar_Get( "s_ambient", "1", 0 );
-    
     Cmd_Register( c_sound );
 
     // init playsound list
+    // clear DMA buffer
     S_StopAllSounds();
-
-    S_InitScaletable();
 
     num_sfx = 0;
 
@@ -273,7 +222,7 @@ void S_Shutdown( void ) {
         AL_Shutdown();
     else
 #endif
-        snddma.Shutdown();
+        DMA_Shutdown();
 
     s_started = SS_NOT;
 
@@ -290,10 +239,7 @@ void S_Activate( void ) {
         S_StopAllSounds();
     else
 #endif
-    if( snddma.Activate ) {
-        S_StopAllSounds();
-        snddma.Activate( cls.active == ACT_ACTIVATED ? qtrue : qfalse );
-    }
+        DMA_Activate();
 }
 
 
@@ -511,83 +457,6 @@ channel_t *S_PickChannel( int entnum, int entchannel ) {
 
 /*
 =================
-S_SpatializeOrigin
-
-Used for spatializing channels and autosounds
-=================
-*/
-static void S_SpatializeOrigin( const vec3_t origin, float master_vol, float dist_mult, int *left_vol, int *right_vol ) {
-    vec_t       dot;
-    vec_t       dist;
-    vec_t       lscale, rscale, scale;
-    vec3_t      source_vec;
-
-    if( cls.state != ca_active ) {
-        *left_vol = *right_vol = 255;
-        return;
-    }
-
-// calculate stereo seperation and distance attenuation
-    VectorSubtract( origin, listener_origin, source_vec );
-
-    dist = VectorNormalize( source_vec );
-    dist -= SOUND_FULLVOLUME;
-    if( dist < 0 )
-        dist = 0;           // close enough to be at full volume
-    dist *= dist_mult;      // different attenuation levels
-    
-    dot = DotProduct( listener_right, source_vec );
-
-    if( dma.channels == 1 || !dist_mult ) { 
-        // no attenuation = no spatialization
-        rscale = 1.0;
-        lscale = 1.0;
-    } else {
-        rscale = 0.5 * ( 1.0 + dot );
-        lscale = 0.5 * ( 1.0 - dot );
-    }
-
-    master_vol *= 255.0;
-
-    // add in distance effect
-    scale = ( 1.0 - dist ) * rscale;
-    *right_vol = (int)( master_vol * scale );
-    if( *right_vol < 0 )
-        *right_vol = 0;
-
-    scale = ( 1.0 - dist ) * lscale;
-    *left_vol = (int)( master_vol * scale );
-    if (*left_vol < 0)
-        *left_vol = 0;
-}
-
-/*
-=================
-S_Spatialize
-=================
-*/
-static void S_Spatialize( channel_t *ch ) {
-    vec3_t      origin;
-
-    // anything coming from the view entity will always be full volume
-    if( ch->entnum == -1 || ch->entnum == listener_entnum ) {
-        ch->leftvol = ch->master_vol * 255;
-        ch->rightvol = ch->master_vol * 255;
-        return;
-    }
-
-    if( ch->fixed_origin ) {
-        VectorCopy( ch->origin, origin );
-    } else {
-        CL_GetEntitySoundOrigin( ch->entnum, origin );
-    }
-
-    S_SpatializeOrigin( origin, ch->master_vol, ch->dist_mult, &ch->leftvol, &ch->rightvol );
-}           
-
-
-/*
-=================
 S_AllocPlaysound
 =================
 */
@@ -622,8 +491,6 @@ void S_FreePlaysound( playsound_t *ps ) {
     ps->prev = &s_freeplays;
     s_freeplays.next = ps;
 }
-
-
 
 /*
 ===============
@@ -727,24 +594,6 @@ static sfx_t *S_RegisterSexedSound( int entnum, const char *base ) {
 // Start a sound effect
 // =======================================================================
 
-static int S_DriftBeginofs( float timeofs ) {
-    int         start;
-
-    // drift s_beginofs
-    start = cl.servertime * 0.001 * dma.speed + s_beginofs;
-    if( start < paintedtime ) {
-        start = paintedtime;
-        s_beginofs = start - ( cl.servertime * 0.001 * dma.speed );
-    } else if ( start > paintedtime + 0.3 * dma.speed ) {
-        start = paintedtime + 0.1 * dma.speed;
-        s_beginofs = start - ( cl.servertime * 0.001 * dma.speed );
-    } else {
-        s_beginofs -= 10;
-    }
-
-    return timeofs ? start + timeofs * dma.speed : paintedtime;
-}
-
 /*
 ====================
 S_StartSound
@@ -798,7 +647,7 @@ void S_StartSound( const vec3_t origin, int entnum, int entchannel, qhandle_t hS
         ps->begin = paintedtime + timeofs * 1000;
     else
 #endif
-        ps->begin = S_DriftBeginofs( timeofs );
+        ps->begin = DMA_DriftBeginofs( timeofs );
 
     // sort into the pending sound list
     for( sort = s_pendingplays.next ; sort != &s_pendingplays && sort->begin < ps->begin ; sort = sort->next )
@@ -831,30 +680,6 @@ void S_StartLocalSound_( const char *sound ) {
     }
 }
 
-
-/*
-==================
-S_ClearBuffer
-==================
-*/
-static void S_ClearBuffer (void)
-{
-    int     clear;
- 
-    if (s_started != SS_DMA)
-        return;
-
-    if (dma.samplebits == 8)
-        clear = 0x80;
-    else
-        clear = 0;
-
-    snddma.BeginPainting ();
-    if (dma.buffer)
-        memset(dma.buffer, clear, dma.samples * dma.samplebits/8);
-    snddma.Submit ();
-}
-
 /*
 ==================
 S_StopAllSounds
@@ -883,12 +708,12 @@ void S_StopAllSounds(void)
 #if USE_OPENAL
     if( s_started == SS_OAL )
         AL_StopAllChannels();
+    else
 #endif
+        DMA_ClearBuffer();
 
     // clear all the channels
     memset(channels, 0, sizeof(channels));
-
-    S_ClearBuffer ();
 }
 
 void S_BuildSoundList( int *sounds ) {
@@ -909,146 +734,9 @@ void S_BuildSoundList( int *sounds ) {
     }
 }
 
-/*
-==================
-S_AddLoopSounds
-
-Entities with a ->sound field will generated looped sounds
-that are automatically started, stopped, and merged together
-as the entities are sent to the client
-==================
-*/
-static void S_AddLoopSounds (void)
-{
-    int         i, j;
-    int         sounds[MAX_PACKET_ENTITIES];
-    int         left, right, left_total, right_total;
-    channel_t   *ch;
-    sfx_t       *sfx;
-    sfxcache_t  *sc;
-    int         num;
-    entity_state_t  *ent;
-    centity_t *cent;
-
-    if( cls.state != ca_active || sv_paused->integer || !s_ambient->integer ) {
-        return;
-    }
-
-    S_BuildSoundList( sounds );
-
-    for( i = 0; i < cl.frame.numEntities; i++ ) {
-        if (!sounds[i])
-            continue;
-
-        sfx = S_SfxForHandle( cl.sound_precache[sounds[i]] );
-        if (!sfx)
-            continue;       // bad sound effect
-        sc = sfx->cache;
-        if (!sc)
-            continue;
-
-        num = ( cl.frame.firstEntity + i ) & PARSE_ENTITIES_MASK;
-        ent = &cl.entityStates[num];
-        cent = &cl_entities[ent->number];
-
-        // find the total contribution of all sounds of this type
-        S_SpatializeOrigin (cent->lerp_origin, 1.0, SOUND_LOOPATTENUATE,
-            &left_total, &right_total);
-        for (j=i+1 ; j<cl.frame.numEntities ; j++)
-        {
-            if (sounds[j] != sounds[i])
-                continue;
-            sounds[j] = 0;  // don't check this again later
-
-            num = ( cl.frame.firstEntity + j ) & PARSE_ENTITIES_MASK;
-            ent = &cl.entityStates[num];
-            cent = &cl_entities[ent->number];
-
-            S_SpatializeOrigin (cent->lerp_origin, 1.0, SOUND_LOOPATTENUATE, 
-                &left, &right);
-            left_total += left;
-            right_total += right;
-        }
-
-        if (left_total == 0 && right_total == 0)
-            continue;       // not audible
-
-        // allocate a channel
-        ch = S_PickChannel(0, 0);
-        if (!ch)
-            return;
-
-        if (left_total > 255)
-            left_total = 255;
-        if (right_total > 255)
-            right_total = 255;
-        ch->leftvol = left_total;
-        ch->rightvol = right_total;
-        ch->autosound = qtrue;  // remove next frame
-        ch->sfx = sfx;
-        ch->pos = paintedtime % sc->length;
-        ch->end = paintedtime + sc->length - ch->pos;
-    }
-}
-
 // =======================================================================
 // Update sound buffer
 // =======================================================================
-
-static int S_GetTime(void) {
-    static  int     buffers;
-    static  int     oldsamplepos;
-    int fullsamples = dma.samples / dma.channels;
-
-// it is possible to miscount buffers if it has wrapped twice between
-// calls to S_Update.  Oh well.
-    if (dma.samplepos < oldsamplepos) {
-        buffers++;                  // buffer wrapped
-        if (paintedtime > 0x40000000) {
-            // time to chop things off to avoid 32 bit limits
-            buffers = 0;
-            paintedtime = fullsamples;
-            S_StopAllSounds();
-        }
-    }
-    oldsamplepos = dma.samplepos;
-
-    return buffers*fullsamples + dma.samplepos/dma.channels;
-}
-
-static void S_Update_(void) {
-    int soundtime, endtime;
-    int samps;
-
-    snddma.BeginPainting ();
-
-    if (!dma.buffer)
-        return;
-
-// Updates DMA time
-    soundtime = S_GetTime();
-
-// check to make sure that we haven't overshot
-    if (paintedtime < soundtime) {
-        Com_DPrintf ("S_Update_ : overflow\n");
-        paintedtime = soundtime;
-    }
-
-// mix ahead of current position
-    endtime = soundtime + s_mixahead->value * dma.speed;
-//endtime = (soundtime + 4096) & ~4095;
-
-    // mix to an even submission block size
-    endtime = (endtime + dma.submission_chunk - 1)
-        & ~(dma.submission_chunk - 1);
-    samps = dma.samples >> (dma.channels-1);
-    if (endtime - soundtime > samps)
-        endtime = soundtime + samps;
-
-    S_PaintChannels (endtime);
-
-    snddma.Submit ();
-}
 
 
 /*
@@ -1059,9 +747,6 @@ Called once each time through the main loop
 ============
 */
 void S_Update( void ) {
-    int         i;
-    channel_t   *ch;
-
     if( cvar_modified & CVAR_SOUND ) {
         Cbuf_AddText( &cmd_buffer, "snd_restart\n" );
         cvar_modified &= ~CVAR_SOUND;
@@ -1088,61 +773,11 @@ void S_Update( void ) {
     }
 
 #if USE_OPENAL
-    if( s_started == SS_OAL ) {
+    if( s_started == SS_OAL ) 
         AL_Update();
-        return;
-    }
+    else
 #endif
-
-    // rebuild scale tables if volume is modified
-    if (s_volume->modified)
-        S_InitScaletable ();
-
-    // update spatialization for dynamic sounds 
-    ch = channels;
-    for (i=0 ; i<MAX_CHANNELS; i++, ch++)
-    {
-        if (!ch->sfx)
-            continue;
-        if (ch->autosound)
-        {   // autosounds are regenerated fresh each frame
-            memset (ch, 0, sizeof(*ch));
-            continue;
-        }
-        S_Spatialize(ch);         // respatialize channel
-        if (!ch->leftvol && !ch->rightvol)
-        {
-            memset (ch, 0, sizeof(*ch));
-            continue;
-        }
-    }
-
-    // add loopsounds
-    S_AddLoopSounds ();
-
-#ifdef _DEBUG
-    //
-    // debugging output
-    //
-    if (s_show->integer)
-    {
-        int total = 0;
-        ch = channels;
-        for (i=0 ; i<MAX_CHANNELS; i++, ch++)
-            if (ch->sfx && (ch->leftvol || ch->rightvol) )
-            {
-                Com_Printf ("%3i %3i %s\n", ch->leftvol, ch->rightvol, ch->sfx->name);
-                total++;
-            }
-    
-        if( s_show->integer > 1 || total ) {
-            Com_Printf ("----(%i)---- painted: %i\n", total, paintedtime);
-        }
-    }
-#endif
-
-// mix some sound
-    S_Update_();
+        DMA_Update();
 }
 
 
