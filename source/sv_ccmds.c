@@ -517,6 +517,22 @@ static void dump_lag( void ) {
     }
 }
 
+static void dump_protocols( void ) {
+    client_t    *cl;
+
+    Com_Printf(
+"num name            major minor msglen zlib chan\n"
+"--- --------------- ----- ----- ------ ---- ----\n" );
+
+    FOR_EACH_CLIENT( cl ) {
+        Com_Printf( "%3i %-15.15s %5d %5d %6"PRIz"  %s  %s\n",
+            cl->number, cl->name, cl->protocol, cl->version,
+            cl->netchan->maxpacketlen,
+            ( cl->flags & CF_DEFLATE ) ? "yes" : "no",
+            cl->netchan->type ? "new" : "old" );
+    }
+}
+
 /*
 ================
 SV_Status_f
@@ -541,6 +557,7 @@ static void SV_Status_f( void ) {
                 case 't': dump_time(); break;
                 case 'd': dump_downloads(); break;
                 case 'l': dump_lag(); break;
+                case 'p': dump_protocols(); break;
                 default: dump_versions(); break;
             }
         } else {
@@ -644,8 +661,11 @@ static void SV_DumpUser_f( void ) {
     Com_Printf( "--------\n" );
     Com_Printf( "version              %s\n",
         sv_client->versionString ? sv_client->versionString : "-" );
-    Com_Printf( "protocol (min/maj)   %d/%d\n",
+    Com_Printf( "protocol (maj/min)   %d/%d\n",
         sv_client->protocol, sv_client->version );
+    Com_Printf( "maxmsglen            %"PRIz"\n", sv_client->netchan->maxpacketlen );
+    Com_Printf( "zlib support         %s\n", ( sv_client->flags & CF_DEFLATE ) ? "yes" : "no" );
+    Com_Printf( "netchan type         %s\n", sv_client->netchan->type ? "new" : "old" );
     Com_Printf( "ping                 %d\n", sv_client->ping );
     Com_Printf( "fps                  %d\n", sv_client->fps );
     Com_Printf( "RTT (min/avg/max)    %d/%d/%d ms\n",
