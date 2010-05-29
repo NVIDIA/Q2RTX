@@ -21,7 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "com_local.h"
 #include "q_list.h"
-#include "files.h"
 #include "sys_public.h"
 #include "bsp.h"
 #include "cmodel.h"
