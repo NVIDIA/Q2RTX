@@ -26,6 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define PORT_SERVER         27910
 #define PORT_SERVER_STRING  "27910"
 
+#define MIN_PACKETLEN   512         // don't allow smaller packets
 #define MAX_PACKETLEN   4096        // max length of a single packet
 #define PACKET_HEADER   10          // two ints and a short (worst case)
 #define MAX_PACKETLEN_DEFAULT   1400        // default quake2 limit

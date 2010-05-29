@@ -616,12 +616,14 @@ static void SVC_DirectConnect( void ) {
         if( *s ) {
             maxlength = atoi( s );
             if( maxlength < 0 || maxlength > MAX_PACKETLEN_WRITABLE ) {
-                SV_OobPrintf( "Invalid maximum packet length.\n" );
-                Com_DPrintf( "    rejected - bad maxpacketlen.\n" );
+                SV_OobPrintf( "Invalid maximum message length.\n" );
+                Com_DPrintf( "    rejected - bad maxmsglen.\n" );
                 return;
             }
             if( !maxlength ) {
                 maxlength = MAX_PACKETLEN_WRITABLE;
+            } else if( maxlength < MIN_PACKETLEN ) {
+                maxlength = MIN_PACKETLEN;
             }
         }
     }

@@ -23,7 +23,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "q_msg.h"
 #include "net_sock.h"
 #include "net_chan.h"
-#include "files.h"
 #include "sys_public.h"
 
 /*
@@ -100,8 +99,11 @@ cvar_t      *net_chantype;
 
 netadr_t    net_from;
 
+// allow either 0 (no hard limit), or an integer between 512 and 4086
 static void net_maxmsglen_changed( cvar_t *self ) {
-    Cvar_ClampInteger( self, 0, MAX_PACKETLEN_WRITABLE );
+    if( self->integer ) {
+        Cvar_ClampInteger( self, MIN_PACKETLEN, MAX_PACKETLEN_WRITABLE );
+    }
 }
 
 /*
