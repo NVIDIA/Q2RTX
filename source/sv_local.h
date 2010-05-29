@@ -170,17 +170,20 @@ typedef struct {
 } message_packet_t;
 
 
-#define    LATENCY_COUNTS    16
+#define LATENCY_COUNTS  16
 #define LATENCY_MASK    ( LATENCY_COUNTS - 1 )
 
-#define    RATE_MESSAGES    10
+#define RATE_MESSAGES   10
 
 #define FOR_EACH_CLIENT( client ) \
     LIST_FOR_EACH( client_t, client, &svs.udp_client_list, entry )
 
-#define PL_S2C(cl)  ((1.0f-(float)cl->frames_acked/cl->frames_sent)*100.0f)
-#define PL_C2S(cl)  (((float)cl->netchan->total_dropped/cl->netchan->total_received)*100.0f)
-#define AVG_PING(cl)    (cl->avg_ping_count?cl->avg_ping_time/cl->avg_ping_count:cl->ping)
+#define PL_S2C(cl) (cl->frames_sent ? \
+    (1.0f-(float)cl->frames_acked/cl->frames_sent)*100.0f : 0.0f)
+#define PL_C2S(cl) (cl->netchan->total_received ? \
+    ((float)cl->netchan->total_dropped/cl->netchan->total_received)*100.0f : 0.0f)
+#define AVG_PING(cl) (cl->avg_ping_count ? \
+    cl->avg_ping_time/cl->avg_ping_count : cl->ping)
 
 typedef enum {
     CF_RECONNECTED  = ( 1 << 0 ),
