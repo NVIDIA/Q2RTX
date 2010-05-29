@@ -23,7 +23,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 
 #include "com_local.h"
-#include "files.h"
 #include "protocol.h"
 #include "q_msg.h"
 #include "q_fifo.h"
@@ -544,16 +543,11 @@ retry:
         return tries;
     }
 
-    /*
-    off = ( struct sockaddr_in * )SO_EE_OFFENDER( err );
-    if( off->sin_family == AF_INET ) {
-    }
-    */
-
     NET_SockadrToNetadr( &from, &net_from );
 
     // handle ICMP errors
     net_error = ee->ee_errno;
+    //net_info = ee->ee_info; // for EMSGSIZE this should be discovered MTU
     icmp_error_event( sock );
 
     if( ++tries < MAX_ERROR_RETRIES ) {
@@ -865,13 +859,15 @@ static SOCKET create_socket( int type, int proto ) {
     return ret;
 }
 
-static int enable_option( SOCKET s, int level, int optname ) {
-    SETSOCKOPT_PARAM _true = 1;
-    int ret = setsockopt( s, level, optname, ( char * )&_true, sizeof( _true ) );
+static int set_option( SOCKET s, int level, int optname, int value ) {
+    SETSOCKOPT_PARAM _value = value;
+    int ret = setsockopt( s, level, optname, ( char * )&_value, sizeof( _value ) );
 
     NET_GET_ERROR();
     return ret;
 }
+
+#define enable_option(s,level,optname)  set_option(s,level,optname,1)
 
 static int make_nonblock( SOCKET s ) {
     IOCTLSOCKET_PARAM _true = 1;
@@ -914,7 +910,9 @@ static SOCKET UDP_OpenSocket( const char *iface, int port ) {
             __func__, iface, port, NET_ErrorString() );
     }
 
-#if USE_ICMP && ( defined __linux__ )
+#ifdef __linux__
+
+#if USE_ICMP
     // enable ICMP error queue
     if( !net_ignore_icmp->integer ) {
         if( enable_option( s, IPPROTO_IP, IP_RECVERR ) == -1 ) {
@@ -924,6 +922,14 @@ static SOCKET UDP_OpenSocket( const char *iface, int port ) {
         }
     }
 #endif
+
+    // disable path MTU discovery
+    if( set_option( s, IPPROTO_IP, IP_MTU_DISCOVER, IP_PMTUDISC_DONT ) == -1 ) {
+        Com_WPrintf( "%s: %s:%d: can't disable path MTU discovery: %s\n",
+            __func__, iface, port, NET_ErrorString() );
+    }
+
+#endif // __linux__
 
     // resolve iface sadr
     if( !get_bind_addr( iface, port, &sadr ) ) {
