@@ -217,10 +217,6 @@ static size_t NetchanOld_Transmit( netchan_t *netchan, size_t length, const void
     w2 = ( netchan->incoming_sequence & ~( 1 << 31 ) ) |
         ( chan->incoming_reliable_sequence << 31 );
 
-    netchan->outgoing_sequence++;
-    netchan->reliable_ack_pending = qfalse;
-    netchan->last_sent = com_localTime;
-
     SZ_TagInit( &send, send_buf, sizeof( send_buf ), SZ_NC_SEND_OLD );
 
     SZ_WriteLong( &send, w1 );
@@ -242,7 +238,7 @@ static size_t NetchanOld_Transmit( netchan_t *netchan, size_t length, const void
         SZ_Write( &send, chan->reliable_buf, netchan->reliable_length );
         chan->last_reliable_sequence = netchan->outgoing_sequence;
     }
-    
+
 // add the unreliable part if space is available
     if( send.maxsize - send.cursize >= length )
         SZ_Write( &send, data, length );
@@ -252,7 +248,7 @@ static size_t NetchanOld_Transmit( netchan_t *netchan, size_t length, const void
 
     SHOWPACKET( "send %4"PRIz" : s=%d ack=%d rack=%d",
         send.cursize,
-        netchan->outgoing_sequence - 1,
+        netchan->outgoing_sequence,
         netchan->incoming_sequence,
         chan->incoming_reliable_sequence );
     if( send_reliable ) {
@@ -265,6 +261,10 @@ static size_t NetchanOld_Transmit( netchan_t *netchan, size_t length, const void
         NET_SendPacket( netchan->sock, &netchan->remote_address,
             send.cursize, send.data );
     }
+
+    netchan->outgoing_sequence++;
+    netchan->reliable_ack_pending = qfalse;
+    netchan->last_sent = com_localTime;
 
     return send.cursize * numpackets;
 }
@@ -574,10 +574,6 @@ static size_t NetchanNew_Transmit( netchan_t *netchan, size_t length, const void
     w2 = ( netchan->incoming_sequence & 0x3FFFFFFF ) |
         ( chan->incoming_reliable_sequence << 31 );
 
-    netchan->outgoing_sequence++;
-    netchan->reliable_ack_pending = qfalse;
-    netchan->last_sent = com_localTime;
-
     SZ_TagInit( &send, send_buf, sizeof( send_buf ), SZ_NC_SEND_NEW );
 
     SZ_WriteLong( &send, w1 );
@@ -601,7 +597,7 @@ static size_t NetchanNew_Transmit( netchan_t *netchan, size_t length, const void
 
     SHOWPACKET( "send %4"PRIz" : s=%d ack=%d rack=%d",
         send.cursize,
-        netchan->outgoing_sequence - 1,
+        netchan->outgoing_sequence,
         netchan->incoming_sequence,
         chan->incoming_reliable_sequence );
     if( send_reliable ) {
@@ -614,6 +610,10 @@ static size_t NetchanNew_Transmit( netchan_t *netchan, size_t length, const void
         NET_SendPacket( netchan->sock, &netchan->remote_address,
             send.cursize, send.data );
     }
+
+    netchan->outgoing_sequence++;
+    netchan->reliable_ack_pending = qfalse;
+    netchan->last_sent = com_localTime;
 
     return send.cursize * numpackets;
 }
