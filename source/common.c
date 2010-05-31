@@ -1880,6 +1880,10 @@ void Qcommon_Frame( void ) {
         frac -= msec;
     }
 
+    // run local time
+    com_localTime += msec;
+    com_framenum++;
+
 #if USE_CLIENT
     if( host_speeds->integer )
         time_event = Sys_Milliseconds();
@@ -1920,9 +1924,6 @@ void Qcommon_Frame( void ) {
 
     // this is the only place where console commands are processed.
     Cbuf_Execute( &cmd_buffer );
-
-    com_localTime += msec;
-    com_framenum++;
 }
 
 /*
