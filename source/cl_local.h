@@ -268,9 +268,21 @@ typedef struct client_static_s {
     unsigned    realtime;            // always increasing, no clamping, etc
     float       frametime;            // seconds since last frame
 
-    unsigned    measureFramecount;
-    unsigned    measureTime;
-    int         fps, ping;
+// preformance measurement
+#define C_FPS   cls.measure.fps[0]
+#define R_FPS   cls.measure.fps[1]
+#define C_MPS   cls.measure.fps[2]
+#define C_PPS   cls.measure.fps[3]
+#define C_FRAMES    cls.measure.frames[0]
+#define R_FRAMES    cls.measure.frames[1]
+#define M_FRAMES    cls.measure.frames[2]
+#define P_FRAMES    cls.measure.frames[3]
+    struct {
+        unsigned    time;
+        int         frames[4];
+        int         fps[4];
+        int         ping;
+    } measure;
 
 // connection information
     netadr_t    serverAddress;

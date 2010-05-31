@@ -895,6 +895,8 @@ static void CL_SendDefaultCmd( void ) {
             cls.netchan->outgoing_sequence );
     }
 
+    P_FRAMES++;
+
     //
     // deliver the message
     //
@@ -986,6 +988,8 @@ static void CL_SendBatchedCmd( void ) {
             oldcmd = cmd;
         }
     }
+
+    P_FRAMES++;
 
     //
     // deliver the message

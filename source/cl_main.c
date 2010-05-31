@@ -2237,10 +2237,19 @@ static size_t CL_Timer_m( char *buffer, size_t size ) {
 }
 
 static size_t CL_Fps_m( char *buffer, size_t size ) {
-    return Q_scnprintf( buffer, size, "%i", cls.fps );
+    return Q_scnprintf( buffer, size, "%i", C_FPS );
+}
+static size_t R_Fps_m( char *buffer, size_t size ) {
+    return Q_scnprintf( buffer, size, "%i", R_FPS );
+}
+static size_t CL_Mps_m( char *buffer, size_t size ) {
+    return Q_scnprintf( buffer, size, "%i", C_MPS );
+}
+static size_t CL_Pps_m( char *buffer, size_t size ) {
+    return Q_scnprintf( buffer, size, "%i", C_PPS );
 }
 static size_t CL_Ping_m( char *buffer, size_t size ) {
-    return Q_scnprintf( buffer, size, "%i", cls.ping );
+    return Q_scnprintf( buffer, size, "%i", cls.measure.ping );
 }
 static size_t CL_Lag_m( char *buffer, size_t size ) {
     return Q_scnprintf( buffer, size, "%.2f%%", cls.netchan ?
@@ -2605,6 +2614,9 @@ static void CL_InitLocal ( void ) {
     Cmd_AddMacro( "cl_timer", CL_Timer_m );
     Cmd_AddMacro( "cl_ups", CL_Ups_m );
     Cmd_AddMacro( "cl_fps", CL_Fps_m );
+    Cmd_AddMacro( "r_fps", R_Fps_m );
+    Cmd_AddMacro( "cl_mps", CL_Mps_m ); // moves per second
+    Cmd_AddMacro( "cl_pps", CL_Pps_m ); // packets per second
     Cmd_AddMacro( "cl_ping", CL_Ping_m );
     Cmd_AddMacro( "cl_lag", CL_Lag_m );
     Cmd_AddMacro( "cl_health", CL_Health_m );
@@ -2687,16 +2699,17 @@ static void CL_SetClientTime( void ) {
 }
 
 static void CL_MeasureStats( void ) {
-    cls.measureFramecount++;
+    int i;
 
-    if( com_localTime - cls.measureTime < 1000 ) {
+    if( com_localTime - cls.measure.time < 1000 ) {
         return;
     }
 
+    // measure average ping
     if( cls.netchan ) {
         int ack = cls.netchan->incoming_acknowledged;
         int ping = 0;
-        int i, j, k = 0;
+        int j, k = 0;
 
         i = ack - 16 + 1;
         if( i < cl.initialSeq ) {
@@ -2710,12 +2723,16 @@ static void CL_MeasureStats( void ) {
             }
         }
 
-        cls.ping = k ? ping / k : 0;
+        cls.measure.ping = k ? ping / k : 0;
     }
 
-    cls.measureTime = com_localTime;
-    cls.fps = cls.measureFramecount;
-    cls.measureFramecount = 0;
+    // measure main/refresh frame counts
+    for( i = 0; i < 4; i++ ) {
+        cls.measure.fps[i] = cls.measure.frames[i];
+        cls.measure.frames[i] = 0;
+    }
+
+    cls.measure.time = com_localTime;
 }
 
 #if USE_AUTOREPLY
@@ -2912,6 +2929,7 @@ void CL_Frame( unsigned msec ) {
     if( phys_frame ) {
         CL_FinalizeCmd();
         phys_extra = 0;
+        M_FRAMES++;
     }
 
     // send pending cmds
@@ -2933,6 +2951,7 @@ void CL_Frame( unsigned msec ) {
             time_after_ref = Sys_Milliseconds();
 
         ref_extra = 0;
+        R_FRAMES++;
 
         // update audio after the 3D view was drawn
         S_Update();
@@ -2950,6 +2969,8 @@ void CL_Frame( unsigned msec ) {
     if( cls.netchan ) {
         CL_CheckTimeout();
     }
+
+    C_FRAMES++;
 
     CL_MeasureStats();
 
