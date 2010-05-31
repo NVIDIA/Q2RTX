@@ -155,4 +155,3 @@ extern cvar_t       *net_port;
 
 extern netadr_t     net_from;
 
-

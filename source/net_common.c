@@ -100,6 +100,8 @@ static loopback_t   loopbacks[NS_COUNT];
 cvar_t          *net_ip;
 cvar_t          *net_port;
 
+netadr_t        net_from;
+
 #if USE_CLIENT
 static cvar_t   *net_clientport;
 static cvar_t   *net_dropsim;
@@ -463,8 +465,8 @@ qboolean NET_GetLoopPacket( netsrc_t sock ) {
 // prevents infinite retry loops caused by broken TCP/IP stacks
 #define MAX_ERROR_RETRIES   64
 
-static void icmp_error_event( netsrc_t sock ) {
-    if( net_ignore_icmp->integer ) {
+static void icmp_error_event( netsrc_t sock, int info ) {
+    if( net_ignore_icmp->integer > 0 ) {
         return;
     }
 
@@ -474,7 +476,7 @@ static void icmp_error_event( netsrc_t sock ) {
 
     switch( sock ) {
     case NS_SERVER:
-        SV_ErrorEvent();
+        SV_ErrorEvent( info );
         break;
 #if USE_CLIENT
     case NS_CLIENT:
@@ -490,16 +492,20 @@ static void icmp_error_event( netsrc_t sock ) {
 
 // Linux at least supports receiving ICMP errors on unconnected UDP sockets
 // via IP_RECVERR cruft below... What about BSD?
-static int process_error_queue( netsrc_t sock ) {
+//
+// Returns true if failed socket operation should be retried, extremely hacky :/
+static qboolean process_error_queue( netsrc_t sock, struct sockaddr_in *to ) {
     byte buffer[1024];
     struct sockaddr_in from;
     struct msghdr msg;
     struct cmsghdr *cmsg;
     struct sock_extended_err *ee;
-    //struct sockaddr_in *off;
+    int info;
     int tries;
+    qboolean found;
 
     tries = 0;
+    found = qfalse;
 
 retry:
     memset( &from, 0, sizeof( from ) );
@@ -513,15 +519,15 @@ retry:
     if( recvmsg( udp_sockets[sock], &msg, MSG_ERRQUEUE ) == -1 ) {
         if( NET_WOULD_BLOCK() ) {
             // wouldblock is silent
-            return tries;
+            goto finish;
         }
         Com_EPrintf( "%s: %s\n", __func__, NET_ErrorString() );
-        return tries;
+        goto finish;
     }
 
     if( !( msg.msg_flags & MSG_ERRQUEUE ) ) {
         Com_DPrintf( "%s: no extended error received\n", __func__ );
-        return tries;
+        goto finish;
     }
 
     // find an ICMP error message
@@ -543,21 +549,38 @@ retry:
 
     if( !cmsg ) {
         Com_DPrintf( "%s: no ICMP error found\n", __func__ );
-        return tries;
+        goto finish;
     }
 
     NET_SockadrToNetadr( &from, &net_from );
 
+    // check if this error was caused by a packet sent to the given address
+    // if so, do not retry send operation to prevent infinite loop
+    if( to != NULL && from.sin_addr.s_addr == to->sin_addr.s_addr &&
+        ( !from.sin_port || from.sin_port == to->sin_port ) )
+    {
+        Com_DPrintf( "%s: found offending address %s:%d\n",
+            __func__, inet_ntoa( from.sin_addr ), BigShort( from.sin_port ) );
+        found = qtrue;
+    }
+
     // handle ICMP errors
     net_error = ee->ee_errno;
-    //net_info = ee->ee_info; // for EMSGSIZE this should be discovered MTU
-    icmp_error_event( sock );
+    info = 0;
+#if USE_PMTUDISC
+    // for EMSGSIZE ee_info should hold discovered MTU
+    if( net_error == EMSGSIZE && ee->ee_info >= 576 && ee->ee_info < 4096 ) {
+        info = ee->ee_info;
+    }
+#endif
+    icmp_error_event( sock, info );
 
     if( ++tries < MAX_ERROR_RETRIES ) {
         goto retry;
     }
 
-    return tries;
+finish:
+    return !!tries && !found;
 }
 
 #endif // __linux__
@@ -578,6 +601,7 @@ qboolean NET_GetPacket( netsrc_t sock ) {
     int ret;
 #if USE_ICMP
     int tries;
+    int saved_error;
 #endif
     ioentry_t *e;
 
@@ -623,7 +647,7 @@ retry:
         case WSAENETRESET:
             // winsock has already provided us with
             // a valid address from ICMP error packet
-            icmp_error_event( sock );
+            icmp_error_event( sock, 0 );
             if( ++tries < MAX_ERROR_RETRIES ) {
                 goto retry;
             }
@@ -643,14 +667,16 @@ retry:
             break;
         default:
 #if USE_ICMP
+            saved_error = net_error;
             // recvfrom() fails on Linux if there's an ICMP originated
             // pending error on socket. suck up error queue and retry...
-            if( process_error_queue( sock ) ) {
+            if( process_error_queue( sock, NULL ) ) {
                 if( ++tries < MAX_ERROR_RETRIES ) {
                     goto retry;
                 }
             }
 #endif
+            net_error = saved_error;
             Com_DPrintf( "%s: %s from %s\n", __func__,
                 NET_ErrorString(), NET_AdrToString( &net_from ) );
             net_recv_errors++;
@@ -694,6 +720,7 @@ qboolean NET_SendPacket( netsrc_t sock, const netadr_t *to, size_t length, const
     int ret;
 #if USE_ICMP && ( defined __linux__ )
     int tries;
+    int saved_error;
 #endif
 
     if( !length ) {
@@ -786,14 +813,30 @@ retry:
             break;
         default:
 #if USE_ICMP
+            saved_error = net_error;
             // sendto() fails on Linux if there's an ICMP originated
             // pending error on socket. suck up error queue and retry...
-            if( process_error_queue( sock ) ) {
+            //
+            // this one is especially lame - how do I distingiush between
+            // a failure caused by completely unrelated ICMP error sitting
+            // in the queue and an error explicit to this sendto() call?
+            // 
+            // on one hand, I don't want to drop packets to legitimate
+            // clients because of this, and have to retry sendto() after
+            // processing error queue, on another hand, infinite loop should be
+            // avoided if this sendto() regenerates a message in error queue
+            //
+            // this mess is worked around by passing destination address
+            // to process_error_queue() and checking if this address/port
+            // pair is found in the queue. if it is found, or the queue
+            // is empty, do not retry
+            if( process_error_queue( sock, &addr ) ) {
                 if( ++tries < MAX_ERROR_RETRIES ) {
                     goto retry;
                 }
             }
 #endif
+            net_error = saved_error;
             Com_DPrintf( "%s: %s to %s\n", __func__,
                 NET_ErrorString(), NET_AdrToString( to ) );
             net_send_errors++;
@@ -890,6 +933,9 @@ static int bind_socket( SOCKET s, struct sockaddr_in *sadr ) {
 static SOCKET UDP_OpenSocket( const char *iface, int port ) {
     SOCKET              s;
     struct sockaddr_in  sadr;
+#ifdef __linux__
+    int                 pmtudisc;
+#endif
 
     Com_DPrintf( "Opening UDP socket: %s:%i\n", iface, port );
 
@@ -914,22 +960,33 @@ static SOCKET UDP_OpenSocket( const char *iface, int port ) {
     }
 
 #ifdef __linux__
+    pmtudisc = IP_PMTUDISC_DONT;
 
 #if USE_ICMP
     // enable ICMP error queue
-    if( !net_ignore_icmp->integer ) {
+    if( net_ignore_icmp->integer <= 0 ) {
         if( enable_option( s, IPPROTO_IP, IP_RECVERR ) == -1 ) {
             Com_WPrintf( "%s: %s:%d: can't enable ICMP error queue: %s\n",
                 __func__, iface, port, NET_ErrorString() );
             Cvar_Set( "net_ignore_icmp", "1" );
         }
-    }
-#endif
 
-    // disable path MTU discovery
-    if( set_option( s, IPPROTO_IP, IP_MTU_DISCOVER, IP_PMTUDISC_DONT ) == -1 ) {
-        Com_WPrintf( "%s: %s:%d: can't disable path MTU discovery: %s\n",
-            __func__, iface, port, NET_ErrorString() );
+#if USE_PMTUDISC
+        // overload negative values to enable path MTU discovery
+        switch( net_ignore_icmp->integer ) {
+            case -1: pmtudisc = IP_PMTUDISC_WANT; break;
+            case -2: pmtudisc = IP_PMTUDISC_DO; break;
+            case -3: pmtudisc = IP_PMTUDISC_PROBE; break;
+        }
+#endif // USE_PMTUDISC
+    }
+#endif // USE_ICMP
+
+    // disable or enable path MTU discovery
+    if( set_option( s, IPPROTO_IP, IP_MTU_DISCOVER, pmtudisc ) == -1 ) {
+        Com_WPrintf( "%s: %s:%d: can't %sable path MTU discovery: %s\n",
+            __func__, iface, port, pmtudisc == IP_PMTUDISC_DONT ? "dis" : "en",
+            NET_ErrorString() );
     }
 
 #endif // __linux__

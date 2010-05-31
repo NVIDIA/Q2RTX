@@ -1258,7 +1258,7 @@ static void SV_PacketEvent( void ) {
 SV_ErrorEvent
 =================
 */
-void SV_ErrorEvent( void ) {
+void SV_ErrorEvent( int info ) {
     client_t    *client;
     netchan_t   *netchan;
 
@@ -1278,6 +1278,20 @@ void SV_ErrorEvent( void ) {
         if( net_from.port && netchan->remote_address.port != net_from.port ) {
             continue;
         }
+#if USE_PMTUDISC
+        if( info ) {
+            // we are doing path MTU discovery and got ICMP fragmentation-needed
+            // update MTU only for connecting clients to minimize spoofed ICMP interference
+            // MTU info has already been sanity checked for us by network code
+            // assume total 64 bytes of headers
+            if( client->state == cs_primed && info < netchan->maxpacketlen + 64 ) {
+                Com_Printf( "Fixing up maxmsglen for %s: %d --> %d\n",
+                    client->name, (int)netchan->maxpacketlen, info - 64 );
+                netchan->maxpacketlen = info - 64;
+            }
+            continue;
+        }
+#endif
         client->flags |= CF_ERROR; // drop them soon
         break;
     }

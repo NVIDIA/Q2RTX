@@ -97,8 +97,6 @@ cvar_t      *net_qport;
 cvar_t      *net_maxmsglen;
 cvar_t      *net_chantype;
 
-netadr_t    net_from;
-
 // allow either 0 (no hard limit), or an integer between 512 and 4086
 static void net_maxmsglen_changed( cvar_t *self ) {
     if( self->integer ) {

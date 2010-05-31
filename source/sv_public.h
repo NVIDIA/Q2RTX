@@ -28,7 +28,7 @@ typedef enum {
 } server_state_t;
 
 #if USE_ICMP
-void SV_ErrorEvent( void );
+void SV_ErrorEvent( int info );
 #endif
 void SV_Init (void);
 void SV_Shutdown( const char *finalmsg, killtype_t type );
