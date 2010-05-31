@@ -402,6 +402,7 @@ static netchan_t *NetchanOld_Setup( netsrc_t sock, const netadr_t *adr,
     netchan->qport = qport;
     netchan->maxpacketlen = maxpacketlen;
     netchan->last_received = com_localTime;
+    netchan->last_sent = com_localTime;
     netchan->incoming_sequence = 0;
     netchan->outgoing_sequence = 1;
 
@@ -799,6 +800,7 @@ static netchan_t *NetchanNew_Setup( netsrc_t sock, const netadr_t *adr,
     netchan->qport = qport;
     netchan->maxpacketlen = maxpacketlen;
     netchan->last_received = com_localTime;
+    netchan->last_sent = com_localTime;
     netchan->incoming_sequence = 0;
     netchan->outgoing_sequence = 1;
 
