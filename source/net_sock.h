@@ -33,33 +33,33 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MAX_PACKETLEN_WRITABLE    ( MAX_PACKETLEN - PACKET_HEADER )
 #define MAX_PACKETLEN_WRITABLE_DEFAULT    ( MAX_PACKETLEN_DEFAULT - PACKET_HEADER )
 
-typedef enum netadrtype_e {
+typedef enum {
     NA_BAD,
     NA_LOOPBACK,
     NA_BROADCAST,
     NA_IP
 } netadrtype_t;
 
-typedef enum netsrc_e {
+typedef enum {
     NS_CLIENT,
     NS_SERVER,
     NS_COUNT
 } netsrc_t;
 
-typedef enum netflag_e {
+typedef enum {
     NET_NONE    = 0,
     NET_CLIENT  = ( 1 << 0 ),
     NET_SERVER  = ( 1 << 1 )
 } netflag_t;
 
-typedef enum netstat_e {
+typedef enum {
     NET_OK,
     NET_AGAIN,
     NET_CLOSED,
     NET_ERROR,
 } neterr_t;
 
-typedef struct netadr_s {
+typedef struct {
     netadrtype_t    type;
     uint8_t     ip[4];
     uint16_t    port;
@@ -78,7 +78,7 @@ static inline qboolean NET_IsEqualAdr( const netadr_t *a, const netadr_t *b ) {
         if( *( uint32_t * )a->ip == *( uint32_t * )b->ip && a->port == b->port ) {
             return qtrue;
         }
-        return qfalse;
+        // fall through
     default:
         break;
     }
@@ -99,7 +99,7 @@ static inline qboolean NET_IsEqualBaseAdr( const netadr_t *a, const netadr_t *b 
         if( *( uint32_t * )a->ip == *( uint32_t * )b->ip ) {
             return qtrue;
         }
-        return qfalse;
+        // fall through
     default:
         break;
     }
@@ -121,7 +121,7 @@ static inline qboolean NET_IsLanAddress( const netadr_t *adr ) {
         {
             return qtrue;
         }
-        return qfalse;
+        // fall through
     default:
         break;
     }
@@ -139,7 +139,7 @@ qboolean    NET_GetPacket( netsrc_t sock );
 qboolean    NET_SendPacket( netsrc_t sock, const netadr_t *to, size_t length, const void *data );
 qboolean    NET_GetLoopPacket( netsrc_t sock );
 
-char *      NET_AdrToString( const netadr_t *a );
+char        *NET_AdrToString( const netadr_t *a );
 qboolean    NET_StringToAdr( const char *s, netadr_t *a, int port );
 
 #if USE_CLIENT && USE_SERVER
