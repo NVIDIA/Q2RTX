@@ -246,9 +246,7 @@ static void MVD_ParseMulticast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
         }
 
         // do not send unreliables to connecting clients
-        if( !reliable && ( cl->state != cs_spawned ||
-            cl->download || ( cl->flags & CF_NODATA ) ) )
-        {
+        if( !reliable && ( cl->state != cs_spawned || cl->download || cl->nodata ) ) {
             continue;
         }
 
@@ -536,7 +534,7 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
         cl = client->cl;
 
         // do not send unreliables to connecting clients
-        if( cl->state != cs_spawned || cl->download || ( cl->flags & CF_NODATA ) ) {
+        if( cl->state != cs_spawned || cl->download || cl->nodata ) {
             continue;
         }
 

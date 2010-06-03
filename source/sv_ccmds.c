@@ -415,10 +415,16 @@ static void dump_clients( void ) {
             Com_Printf( "ASGN " );
             break;
         case cs_connected:
-            Com_Printf( "CNCT " );
-            break;
         case cs_primed:
-            Com_Printf( "PRIM " );
+            if( client->download ) {
+                Com_Printf( "DNLD " );
+            } else if( client->http_download ) {
+                Com_Printf( "HTTP " );
+            } else if( client->state == cs_connected ) {
+                Com_Printf( "CNCT " );
+            } else {
+                Com_Printf( "PRIM " );
+            }
             break;
         default:
             Com_Printf( "%4i ", client->ping < 9999 ? client->ping : 9999 );
@@ -453,22 +459,27 @@ static void dump_versions( void ) {
 static void dump_downloads( void ) {
     client_t    *client;
     int         size, percent;
+    char        *name;
 
     Com_Printf(
 "num name            download                                 size    done\n"
 "--- --------------- ---------------------------------------- ------- ----\n" );
 
     FOR_EACH_CLIENT( client ) {
-        if( !client->download ) {
+        if( client->download ) {
+            name = client->downloadname;
+            size = client->downloadsize;
+            if( !size )
+                size = 1;
+            percent = client->downloadcount*100/size;
+        } else if( client->http_download ) {
+            name = "<HTTP download>";
+            size = percent = 0;
+        } else {
             continue;
         }
-        size = client->downloadsize;
-        if( !size )
-            size = 1;
-        percent = client->downloadcount*100/size;
         Com_Printf( "%3i %-15.15s %-40.40s %-7d %3d%%\n",
-            client->number, client->name,
-            client->downloadname, client->downloadsize, percent );
+            client->number, client->name, name, size, percent );
     }
 }
 
@@ -528,7 +539,7 @@ static void dump_protocols( void ) {
         Com_Printf( "%3i %-15.15s %5d %5d %6"PRIz"  %s  %s\n",
             cl->number, cl->name, cl->protocol, cl->version,
             cl->netchan->maxpacketlen,
-            ( cl->flags & CF_DEFLATE ) ? "yes" : "no",
+            cl->has_zlib ? "yes" : "no",
             cl->netchan->type ? "new" : "old" );
     }
 }
@@ -664,7 +675,7 @@ static void SV_DumpUser_f( void ) {
     Com_Printf( "protocol (maj/min)   %d/%d\n",
         sv_client->protocol, sv_client->version );
     Com_Printf( "maxmsglen            %"PRIz"\n", sv_client->netchan->maxpacketlen );
-    Com_Printf( "zlib support         %s\n", ( sv_client->flags & CF_DEFLATE ) ? "yes" : "no" );
+    Com_Printf( "zlib support         %s\n", sv_client->has_zlib ? "yes" : "no" );
     Com_Printf( "netchan type         %s\n", sv_client->netchan->type ? "new" : "old" );
     Com_Printf( "ping                 %d\n", sv_client->ping );
     Com_Printf( "fps                  %d\n", sv_client->fps );

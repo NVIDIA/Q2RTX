@@ -185,22 +185,20 @@ typedef struct {
 #define AVG_PING(cl) (cl->avg_ping_count ? \
     cl->avg_ping_time/cl->avg_ping_count : cl->ping)
 
-typedef enum {
-    CF_RECONNECTED  = ( 1 << 0 ),
-    CF_NODATA       = ( 1 << 1 ),
-    CF_DEFLATE      = ( 1 << 2 ),
-    CF_DROP         = ( 1 << 3 ),
-#if USE_ICMP
-    CF_ERROR        = ( 1 << 4 ),
-#endif
-} client_flags_t;
-
 typedef struct client_s {
     list_t          entry;
 
     clstate_t       state;
 
-    client_flags_t  flags;
+    // client flags
+    qboolean        reconnected: 1;
+    qboolean        nodata: 1;
+    qboolean        has_zlib: 1;
+    qboolean        drop_hack: 1;
+#if USE_ICMP
+    qboolean        unreachable: 1;
+#endif
+    qboolean        http_download: 1;
 
     char            userinfo[MAX_INFO_STRING];        // name, etc
     char            *versionString;
@@ -280,7 +278,7 @@ typedef struct client_s {
     void            (*WriteFrame)( struct client_s * );
     void            (*WriteDatagram)( struct client_s * );
 
-    netchan_t        *netchan;
+    netchan_t       *netchan;
     int             numpackets; // for that nasty packetdup hack
 
 #if USE_AC_SERVER

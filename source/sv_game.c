@@ -100,7 +100,7 @@ static void PF_Unicast( edict_t *ent, qboolean reliable ) {
 
     if( msg_write.data[0] == svc_disconnect ) {
         // fix anti-kicking exploit for broken mods
-        client->flags |= CF_DROP;
+        client->drop_hack = qtrue;
         goto clear;
     }
 
@@ -527,7 +527,7 @@ static void PF_StartSound( edict_t *edict, int channel,
 
     FOR_EACH_CLIENT( client ) {
         // do not send sounds to connecting clients
-        if( client->state != cs_spawned || client->download || ( client->flags & CF_NODATA ) ) {
+        if( client->state != cs_spawned || client->download || client->nodata ) {
             continue; 
         }
 

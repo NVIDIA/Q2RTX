@@ -527,7 +527,7 @@ static void SVC_DirectConnect( void ) {
     char        *ncstring, *acstring;
     char        dlstring[MAX_INFO_STRING];
     int         reserved;
-    int         zlib;
+    qboolean    has_zlib;
 
     protocol = atoi( Cmd_Argv( 1 ) );
     qport = atoi( Cmd_Argv( 2 ) ) ;
@@ -609,9 +609,9 @@ static void SVC_DirectConnect( void ) {
 
     // set maximum message length
     maxlength = MAX_PACKETLEN_WRITABLE_DEFAULT;
-    zlib = 0;
+    has_zlib = qfalse;
     if( protocol >= PROTOCOL_VERSION_R1Q2 ) {
-        zlib = CF_DEFLATE;
+        has_zlib = qtrue;
         s = Cmd_Argv( 5 );
         if( *s ) {
             maxlength = atoi( s );
@@ -669,7 +669,7 @@ static void SVC_DirectConnect( void ) {
         // set zlib
         s = Cmd_Argv( 7 );
         if( *s && !atoi( s ) ) {
-            zlib = 0;
+            has_zlib = qfalse;
         }
 
         // set minor protocol version
@@ -829,7 +829,7 @@ static void SVC_DirectConnect( void ) {
     newcl->challenge = challenge; // save challenge for checksumming
     newcl->protocol = protocol;
     newcl->version = version;
-    newcl->flags = zlib;
+    newcl->has_zlib = has_zlib;
     newcl->edict = EDICT_NUM( number + 1 );
     newcl->gamedir = fs_game->string;
     newcl->mapname = sv.name;
@@ -937,7 +937,7 @@ static void SVC_DirectConnect( void ) {
 
     // loopback client doesn't need to reconnect
     if( NET_IsLocalAddress( &net_from ) ) {
-        newcl->flags |= CF_RECONNECTED;
+        newcl->reconnected = qtrue;
     }
 
     // add them to the linked list of connected clients
@@ -1242,7 +1242,7 @@ static void SV_PacketEvent( void ) {
                     client->lastmessage = svs.realtime;    // don't timeout
                 //}
 #if USE_ICMP
-                client->flags &= ~CF_ERROR; // don't drop
+                client->unreachable = qfalse; // don't drop
 #endif
                 SV_ExecuteClientMessage( client );
             }
@@ -1292,7 +1292,7 @@ void SV_ErrorEvent( int info ) {
             continue;
         }
 #endif
-        client->flags |= CF_ERROR; // drop them soon
+        client->unreachable = qtrue; // drop them soon
         break;
     }
 }
@@ -1348,12 +1348,12 @@ static void SV_CheckTimeouts( void ) {
             }
             continue;
         }
-        if( client->flags & CF_DROP ) {
+        if( client->drop_hack ) {
             SV_DropClient( client, NULL );
             continue;
         }
 #if USE_ICMP
-        if( client->flags & CF_ERROR ) {
+        if( client->unreachable ) {
             if( delta > ghost_time ) {
                 SV_DropClient( client, "connection reset by peer" );
                 SV_RemoveClient( client );    // don't bother with zombie state

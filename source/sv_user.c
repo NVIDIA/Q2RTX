@@ -420,7 +420,7 @@ void SV_New_f( void ) {
     }
 
     // send reconnect var request
-    if( sv_force_reconnect->string[0] && !( sv_client->flags & CF_RECONNECTED ) ) {
+    if( sv_force_reconnect->string[0] && !sv_client->reconnected ) {
         SV_ClientCommand( sv_client, "cmd \177c connect $%s\n",
             sv_client->reconnect_var );
     }
@@ -432,7 +432,7 @@ void SV_New_f( void ) {
     memset( &sv_client->lastcmd, 0, sizeof( sv_client->lastcmd ) );
 
 #if USE_ZLIB
-    if( sv_client->flags & CF_DEFLATE ) {
+    if( sv_client->has_zlib ) {
         if( sv_client->netchan->type == NETCHAN_NEW ) {
             write_compressed_gamestate();
         } else {
@@ -470,7 +470,7 @@ void SV_Begin_f( void ) {
         return;
     }
 
-    if( sv_force_reconnect->string[0] && !( sv_client->flags & CF_RECONNECTED ) ) {
+    if( sv_force_reconnect->string[0] && !sv_client->reconnected ) {
         if( Com_IsDedicated() ) {
             Com_Printf( "%s[%s]: failed to reconnect\n", sv_client->name,
                 NET_AdrToString( &sv_client->netchan->remote_address ) );
@@ -491,6 +491,7 @@ void SV_Begin_f( void ) {
     sv_client->send_delta = 0;
     sv_client->commandMsec = 1800;
     sv_client->surpressCount = 0;
+    sv_client->http_download = qfalse;
 
     stuff_cmds( &sv_cmdlist_begin );
     
@@ -579,6 +580,12 @@ static void SV_BeginDownload_f( void ) {
 
     if( Cmd_Argc() > 2 )
         offset = atoi( Cmd_Argv( 2 ) ); // downloaded offset
+
+    // hack for 'status' command
+    if( !strcmp( name, "http" ) ) {
+        sv_client->http_download = qtrue;
+        return;
+    }
 
     // hacked by zoid to allow more conrol over download
     // first off, no .. or global allow check
@@ -740,7 +747,7 @@ static void SV_ShowServerinfo_f( void ) {
 }
 
 static void SV_NoGameData_f( void ) {
-    sv_client->flags ^= CF_NODATA;
+    sv_client->nodata ^= 1;
 }
 
 static void SV_Lag_f( void ) {
@@ -807,7 +814,7 @@ static void SV_CvarResult_f( void ) {
         if( sv_client->reconnect_var[0] ) {
             v = Cmd_Argv( 2 );
             if( !strcmp( v, sv_client->reconnect_val ) ) {
-                sv_client->flags |= CF_RECONNECTED;
+                sv_client->reconnected = qtrue;
             }
         }
     }
