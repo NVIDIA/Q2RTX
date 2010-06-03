@@ -976,7 +976,9 @@ static SOCKET UDP_OpenSocket( const char *iface, int port ) {
         switch( net_ignore_icmp->integer ) {
             case -1: pmtudisc = IP_PMTUDISC_WANT; break;
             case -2: pmtudisc = IP_PMTUDISC_DO; break;
+#ifdef IP_PMTUDISC_PROBE
             case -3: pmtudisc = IP_PMTUDISC_PROBE; break;
+#endif
         }
 #endif // USE_PMTUDISC
     }
