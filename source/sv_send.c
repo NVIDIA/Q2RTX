@@ -441,6 +441,7 @@ overflowed:
     }
 }
 
+// sounds reliative to entities are handled specially
 static void emit_snd( client_t *client, message_packet_t *msg ) {
     entity_state_t *state;
     client_frame_t *frame;
@@ -505,7 +506,7 @@ static inline void write_msg( client_t *client, message_packet_t *msg, size_t ma
     free_msg_packet( client, msg );
 }
 
-static inline void emit_messages( client_t *client, size_t maxsize ) {
+static inline void write_unreliables( client_t *client, size_t maxsize ) {
     message_packet_t    *msg, *next;
 
     FOR_EACH_MSG_SAFE( &client->msg_unreliable_list ) {
@@ -540,15 +541,8 @@ static void add_message_old( client_t *client, byte *data,
     add_msg_packet( client, data, len, reliable );
 }
 
-/*
-=======================
-write_reliable_messages_old
-
-This should be the only place data is
-ever written to client->netchan.message
-=======================
-*/
-static void write_reliable_messages_old( client_t *client, size_t maxsize ) {
+// this should be the only place data is ever written to netchan message for old clients
+static void write_reliables_old( client_t *client, size_t maxsize ) {
     message_packet_t *msg, *next;
     int count;
 
@@ -579,7 +573,8 @@ static void write_reliable_messages_old( client_t *client, size_t maxsize ) {
     }
 }
 
-static void repack_messages( client_t *client, size_t maxsize ) {
+// unreliable portion doesn't fit, then throw out low priority effects
+static void repack_unreliables( client_t *client, size_t maxsize ) {
     message_packet_t *msg, *next;
 
     if( msg_write.cursize + 4 > maxsize ) {
@@ -639,6 +634,7 @@ static void write_datagram_old( client_t *client ) {
     message_packet_t *msg;
     size_t maxsize, cursize;
 
+    // determine how much space is left for unreliable data
     maxsize = client->netchan->maxpacketlen;
     if( client->netchan->reliable_length ) {
         // there is still unacked reliable message pending
@@ -666,15 +662,14 @@ static void write_datagram_old( client_t *client ) {
     // so that entity references will be current
     if( msg_write.cursize + client->msg_unreliable_bytes > maxsize ) {
         // throw out some low priority effects
-        repack_messages( client, maxsize );
+        repack_unreliables( client, maxsize );
     } else {
         // all messages fit, write them in order
-        emit_messages( client, maxsize );
+        write_unreliables( client, maxsize );
     }
 
     // write at least one reliable message
-    write_reliable_messages_old( client,
-        client->netchan->maxpacketlen - msg_write.cursize );
+    write_reliables_old( client, client->netchan->maxpacketlen - msg_write.cursize );
 
     // send the datagram
     cursize = client->netchan->Transmit( client->netchan,
@@ -698,8 +693,10 @@ static void add_message_new( client_t *client, byte *data,
                               size_t len, qboolean reliable )
 {
     if( reliable ) {
+        // don't packetize, netchan level will do fragmentation as needed
         SZ_Write( &client->netchan->message, data, len );
     } else {
+        // still have to packetize, relative sounds need special processing
         add_msg_packet( client, data, len, qfalse );
     }
 }
@@ -724,7 +721,7 @@ static void write_datagram_new( client_t *client ) {
     if( msg_write.cursize + client->msg_unreliable_bytes > msg_write.maxsize ) {
         Com_WPrintf( "Dumping datagram for %s\n", client->name );
     } else {
-        emit_messages( client, msg_write.maxsize );
+        write_unreliables( client, msg_write.maxsize );
     }
 
 #ifdef _DEBUG
@@ -864,7 +861,7 @@ void SV_SendAsyncPackets( void ) {
 
         // just update reliable if needed
         if( netchan->type == NETCHAN_OLD ) {
-            write_reliable_messages_old( client, netchan->maxpacketlen );
+            write_reliables_old( client, netchan->maxpacketlen );
         }
         if( netchan->message.cursize || netchan->reliable_ack_pending ||
             netchan->reliable_length || retransmit )
