@@ -301,8 +301,40 @@ static void stuff_cmds( list_t *list ) {
     }
 }
 
-static const char junkchars[] =
-    "!~#``&'()*`+,-./~01~2`3`4~5`67`89:~<=`>?@~ab~cd`ef~j~k~lm`no~pq`rst`uv`w``x`yz[`\\]^_`|~";
+static void stuff_junk( void ) {
+    static const char junkchars[] =
+        "!~#``&'()*`+,-./~01~2`3`4~5`67`89:~<=`>?@~ab~c"
+        "d`ef~j~k~lm`no~pq`rst`uv`w``x`yz[`\\]^_`|~";
+    char junk[8][16];
+    int i, j, k;
+
+    for( i = 0; i < 8; i++ ) {
+        for( j = 0; j < 15; j++ ) {
+            k = rand_byte() % ( sizeof( junkchars ) - 1 );
+            junk[i][j] = junkchars[k];
+        }
+        junk[i][15] = 0;
+    }
+
+    strcpy( sv_client->reconnect_var, junk[2] );
+    strcpy( sv_client->reconnect_val, junk[3] );
+
+    SV_ClientCommand( sv_client, "set %s set\n", junk[0] );
+    SV_ClientCommand( sv_client, "$%s %s connect\n", junk[0], junk[1] );
+    if( rand_byte() & 1 ) {
+        SV_ClientCommand( sv_client, "$%s %s %s\n", junk[0], junk[2], junk[3] );
+        SV_ClientCommand( sv_client, "$%s %s %s\n", junk[0], junk[4],
+            sv_force_reconnect->string );
+        SV_ClientCommand( sv_client, "$%s %s %s\n", junk[0], junk[5], junk[6] );
+    } else {
+        SV_ClientCommand( sv_client, "$%s %s %s\n", junk[0], junk[4],
+            sv_force_reconnect->string );
+        SV_ClientCommand( sv_client, "$%s %s %s\n", junk[0], junk[5], junk[6] );
+        SV_ClientCommand( sv_client, "$%s %s %s\n", junk[0], junk[2], junk[3] );
+    }
+    SV_ClientCommand( sv_client, "$%s %s \"\"\n", junk[0], junk[0] );
+    SV_ClientCommand( sv_client, "$%s $%s\n", junk[1], junk[4] );
+}
 
 /*
 ================
@@ -313,8 +345,6 @@ This will be sent on the initial connection and upon each server load.
 ================
 */
 void SV_New_f( void ) {
-    char junk[8][16];
-    int i, j, c;
     clstate_t oldstate;
 
     Com_DPrintf( "New() from %s\n", sv_client->name );
@@ -331,36 +361,11 @@ void SV_New_f( void ) {
         return;
     }
 
+    // stuff some junk, drop them and expect them to be back soon
     if( sv_force_reconnect->string[0] && !sv_client->reconnect_var[0] &&
         !NET_IsLocalAddress( &sv_client->netchan->remote_address ) )
     {
-        for( i = 0; i < 8; i++ ) {
-            for( j = 0; j < 15; j++ ) {
-                c = rand() | ( rand() >> 8 );
-                c %= sizeof( junkchars ) - 1;
-                junk[i][j] = junkchars[c];
-            }
-            junk[i][15] = 0;
-        }
-
-        strcpy( sv_client->reconnect_var, junk[2] );
-        strcpy( sv_client->reconnect_val, junk[3] );
-
-        SV_ClientCommand( sv_client, "set %s set\n", junk[0] );
-        SV_ClientCommand( sv_client, "$%s %s connect\n", junk[0], junk[1] );
-        if( rand() & 1 ) {
-            SV_ClientCommand( sv_client, "$%s %s %s\n", junk[0], junk[2], junk[3] );
-            SV_ClientCommand( sv_client, "$%s %s %s\n", junk[0], junk[4],
-                sv_force_reconnect->string );
-            SV_ClientCommand( sv_client, "$%s %s %s\n", junk[0], junk[5], junk[6] );
-        } else {
-            SV_ClientCommand( sv_client, "$%s %s %s\n", junk[0], junk[4],
-                sv_force_reconnect->string );
-            SV_ClientCommand( sv_client, "$%s %s %s\n", junk[0], junk[5], junk[6] );
-            SV_ClientCommand( sv_client, "$%s %s %s\n", junk[0], junk[2], junk[3] );
-        }
-        SV_ClientCommand( sv_client, "$%s %s \"\"\n", junk[0], junk[0] );
-        SV_ClientCommand( sv_client, "$%s $%s\n", junk[1], junk[4] );
+        stuff_junk();
         SV_DropClient( sv_client, NULL );
         return;
     }
