@@ -539,7 +539,7 @@ static void dump_protocols( void ) {
         Com_Printf( "%3i %-15.15s %5d %5d %6"PRIz"  %s  %s\n",
             cl->number, cl->name, cl->protocol, cl->version,
             cl->netchan->maxpacketlen,
-            cl->has_zlib ? "yes" : "no",
+            cl->has_zlib ? "yes" : "no ",
             cl->netchan->type ? "new" : "old" );
     }
 }
