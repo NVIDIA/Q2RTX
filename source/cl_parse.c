@@ -1339,9 +1339,7 @@ static void CL_ParsePrint( void ) {
         string[len] = '\n';
     }
 
-    Com_SetColor( COLOR_ALT );
-    Com_Printf( "%s", string );
-    Com_SetColor( COLOR_NONE );
+    Com_LPrintf( PRINT_TALK, "%s", string );
 
     Con_SkipNotify( qfalse );
 

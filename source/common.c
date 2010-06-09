@@ -238,7 +238,7 @@ static size_t format_local_time( char *buffer, size_t size, const char *fmt ) {
     return strftime( buffer, size, fmt, tm );
 }
 
-static void logfile_write( const char *string ) {
+static void logfile_write( print_type_t type, const char *string ) {
     char text[MAXPRINTMSG];
     char buf[MAX_QPATH];
     char *p, *maxp;
@@ -246,7 +246,21 @@ static void logfile_write( const char *string ) {
     int c;
 
     if( logfile_prefix->string[0] ) {
+        p = strchr( logfile_prefix->string, '@' );
+        if( p ) {
+            // expand it in place, hacky
+            switch( type ) {
+                case PRINT_TALK:      *p = 'T'; break;
+                case PRINT_DEVELOPER: *p = 'D'; break;
+                case PRINT_WARNING:   *p = 'W'; break;
+                case PRINT_ERROR:     *p = 'E'; break;
+                default:              *p = 'A'; break;
+            }
+        }
         len = format_local_time( buf, sizeof( buf ), logfile_prefix->string );
+        if( p ) {
+            *p = '@';
+        }
     } else {
         len = 0;
     }
@@ -339,6 +353,12 @@ void Com_LPrintf( print_type_t type, const char *fmt, ... ) {
         Com_Redirect( msg, len );
     } else {
         switch( type ) {
+        case PRINT_TALK:
+            Com_SetColor( COLOR_ALT );
+            break;
+        case PRINT_DEVELOPER:
+            Com_SetColor( COLOR_BLUE );
+            break;
         case PRINT_WARNING:
             Com_SetColor( COLOR_YELLOW );
             break;
@@ -364,16 +384,11 @@ void Com_LPrintf( print_type_t type, const char *fmt, ... ) {
 
         // logfile
         if( com_logFile ) {
-            logfile_write( msg );
+            logfile_write( type, msg );
         }
 
-        switch( type ) {
-        case PRINT_WARNING:
-        case PRINT_ERROR:
+        if( type ) {
             Com_SetColor( COLOR_NONE );
-            break;
-        default:
-            break;
         }
     }
 

@@ -121,6 +121,7 @@ typedef enum {
 
 typedef enum {
     PRINT_ALL,          // general messages
+    PRINT_TALK,         // print in green color 
     PRINT_DEVELOPER,    // only print when "developer 1"
     PRINT_WARNING,      // print in yellow color
     PRINT_ERROR         // print in red color

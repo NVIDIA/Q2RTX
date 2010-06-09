@@ -208,7 +208,7 @@ static void PF_cprintf( edict_t *ent, int level, const char *fmt, ... ) {
     }
 
     if( !ent ) {
-        Com_Printf( "%s", msg );
+        Com_LPrintf( level == PRINT_CHAT ? PRINT_TALK : PRINT_ALL, "%s", msg );
         return;
     }
 
