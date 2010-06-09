@@ -1284,7 +1284,14 @@ void SV_ErrorEvent( int info ) {
             // update MTU only for connecting clients to minimize spoofed ICMP interference
             // MTU info has already been sanity checked for us by network code
             // assume total 64 bytes of headers
-            if( client->state == cs_primed && info < netchan->maxpacketlen + 64 ) {
+            if( client->state == cs_primed &&
+                netchan->reliable_length &&
+                info < netchan->maxpacketlen + 64 )
+            {
+                if( netchan->type == NETCHAN_OLD ) {
+                    // TODO: old clients require entire queue flush :(
+                    continue;
+                }
                 Com_Printf( "Fixing up maxmsglen for %s: %d --> %d\n",
                     client->name, (int)netchan->maxpacketlen, info - 64 );
                 netchan->maxpacketlen = info - 64;
