@@ -545,7 +545,7 @@ qboolean VID_Init( void ) {
         return qfalse;
     }
 
-    gl_driver = Cvar_Get( "gl_driver", DEFAULT_OPENGL_DRIVER, CVAR_LATCH );
+    gl_driver = Cvar_Get( "gl_driver", DEFAULT_OPENGL_DRIVER, CVAR_REFRESH );
 //  gl_swapinterval = Cvar_Get( "gl_swapinterval", "1", CVAR_ARCHIVE );
 
     if( SDL_GL_LoadLibrary( gl_driver->string ) == -1 ) {
