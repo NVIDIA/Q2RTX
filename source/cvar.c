@@ -23,9 +23,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cl_public.h"
 #include "files.h"
 
-cvar_t    *cvar_vars;
+cvar_t  *cvar_vars;
 
-int        cvar_modified;
+int     cvar_modified;
 
 #define Cvar_Malloc( size )        Z_TagMalloc( size, TAG_CVAR )
 
@@ -33,15 +33,13 @@ int        cvar_modified;
 
 static cvar_t *cvarHash[CVARHASH_SIZE];
 
-static cvar_t    *cvar_silent;
-
 /*
 ============
 Cvar_FindVar
 ============
 */
 cvar_t *Cvar_FindVar( const char *var_name ) {
-    cvar_t    *var;
+    cvar_t *var;
     unsigned hash;
 
     hash = Com_HashString( var_name, CVARHASH_SIZE );
@@ -94,7 +92,7 @@ Cvar_VariableInteger
 ============
 */
 int Cvar_VariableInteger( const char *var_name ) {
-    cvar_t    *var;
+    cvar_t *var;
     
     var = Cvar_FindVar( var_name );
     if( !var )
@@ -140,7 +138,8 @@ void Cvar_Default_g( genctx_t *ctx ) {
     }
 }
 
-static void Cvar_ParseString( cvar_t *var ) {
+// parse integer and float values
+static void parse_string_value( cvar_t *var ) {
     char *s = var->string;
     
     if( s[0] == '0' && s[1] == 'x' ) {
@@ -152,20 +151,19 @@ static void Cvar_ParseString( cvar_t *var ) {
     }
 }
 
-static void Cvar_ChangeString( cvar_t *var, const char *value, from_t from ) {
+// string value has been changed, do some things
+static void change_string_value( cvar_t *var, const char *value, from_t from ) {
     // free the old value string
     Z_Free( var->string );
 
     var->string = Cvar_CopyString( value );
-    Cvar_ParseString( var );
+    parse_string_value( var );
 
-    if( var->flags & CVAR_INFOMASK ) {
 #if USE_CLIENT
-        if( var->flags & CVAR_USERINFO ) {
-            CL_UpdateUserinfo( var, from );
-        }
-#endif
+    if( var->flags & CVAR_USERINFO ) {
+        CL_UpdateUserinfo( var, from );
     }
+#endif
 
     var->modified = qtrue;
     if( from != FROM_CODE ) {
@@ -177,14 +175,8 @@ static void Cvar_ChangeString( cvar_t *var, const char *value, from_t from ) {
     }
 }
 
-/*
-============
-Cvar_EngineGet
-
-Cvar_Get has been called from subsystem initialization routine.
-============
-*/
-static void Cvar_EngineGet( cvar_t *var, const char *var_value, int flags ) {
+// Cvar_Get has been called from subsystem initialization routine.
+static void get_engine_cvar( cvar_t *var, const char *var_value, int flags ) {
     if( var->flags & (CVAR_CUSTOM|CVAR_VOLATILE) ) {
         // update default string if cvar was set from command line
         Z_Free( var->default_string );
@@ -197,7 +189,7 @@ static void Cvar_EngineGet( cvar_t *var, const char *var_value, int flags ) {
               ( var->flags & CVAR_VOLATILE ) ) &&
             strcmp( var_value, var->string ) )
         {
-            Cvar_ChangeString( var, var_value, FROM_CODE );
+            change_string_value( var, var_value, FROM_CODE );
         }
     } else {
         flags &= ~CVAR_GAME;
@@ -212,12 +204,12 @@ static qboolean validate_info_cvar( const char *s ) {
     size_t len = Info_SubValidate( s );
 
     if( len == SIZE_MAX ) {
-        Com_WPrintf( "Info cvars should not contain '\\', ';' or '\"' characters.\n" );
+        Com_Printf( "Info cvars should not contain '\\', ';' or '\"' characters.\n" );
         return qfalse;
     }
 
     if( len >= MAX_QPATH ) {
-        Com_WPrintf( "Info cvars should be less than 64 characters long.\n" );
+        Com_Printf( "Info cvars should be less than 64 characters long.\n" );
         return qfalse;
     }
 
@@ -256,7 +248,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
     var = Cvar_FindVar( var_name );
     if( var ) {
         if( !( flags & (CVAR_VOLATILE|CVAR_CUSTOM) ) ) {
-            Cvar_EngineGet( var, var_value, flags );
+            get_engine_cvar( var, var_value, flags );
         }
         return var;
     }
@@ -270,7 +262,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
     var->string = Cvar_CopyString( var_value );
     var->latched_string = NULL;
     var->default_string = Cvar_CopyString( var_value );
-    Cvar_ParseString( var );
+    parse_string_value( var );
     var->flags = flags;
     var->changed = NULL;
     var->generator = Cvar_Default_g;
@@ -352,6 +344,8 @@ void Cvar_SetByVar( cvar_t *var, const char *value, from_t from ) {
                 }
                 return;
             }
+
+            // free latched value
             if( var->latched_string ) {
                 if( !strcmp( var->latched_string, value ) ) {
                     return; // latched string not changed
@@ -360,58 +354,12 @@ void Cvar_SetByVar( cvar_t *var, const char *value, from_t from ) {
                 var->latched_string = NULL;
             }
 
-            if( var->flags & CVAR_LATCH ) {
-                if( sv_running->integer ) {
-                    if( !cvar_silent->integer ) {
-                        Com_Printf( "%s will be changed for next game.\n",
-                            var->name );
-                    }
-                    var->latched_string = Cvar_CopyString( value );
-                    return;
-                }
-                // server is down, it's ok to update this cvar now
-            } else {
-                //char *subsystem;
-
+            if( sv_running->integer ) {
+                Com_Printf( "%s will be changed for next game.\n", var->name );
                 var->latched_string = Cvar_CopyString( value );
-                //cvar_latchedModified |= 1 << var->subsystem;
-                if( cvar_silent->integer ) {
-                    return;
-                }
-
-#if 0
-                switch( var->subsystem ) {
-                case CVAR_SYSTEM_GENERIC:
-                    subsystem = "desired subsystem";
-                    break;
-                case CVAR_SYSTEM_VIDEO:
-                    subsystem = "video subsystem";
-                    break;
-                case CVAR_SYSTEM_SOUND:
-                    subsystem = "sound subsystem";
-                    break;
-                case CVAR_SYSTEM_INPUT:
-                    subsystem = "input subsystem";
-                    break;
-                case CVAR_SYSTEM_NET:
-                    subsystem = "network subsystem";
-                    break;
-                case CVAR_SYSTEM_FILES:
-                    subsystem = "filesystem";
-                    break;
-                default:
-                    Com_Error( ERR_FATAL, "Cvar_SetByVar: invalid subsystem %u",
-                            var->subsystem );
-                    subsystem = NULL;
-                    break;
-                }
-                Com_Printf( "%s will be changed upon restarting the %s.\n",
-                    var->name, subsystem );
-#else
-                Com_Printf( "%s will be changed upon restarting.\n", var->name );
-#endif
                 return;
             }
+            // server is down, it's ok to update this cvar now
         }
 
     }
@@ -422,7 +370,7 @@ void Cvar_SetByVar( cvar_t *var, const char *value, from_t from ) {
         var->latched_string = NULL;
     }
 
-    Cvar_ChangeString( var, value, from );
+    change_string_value( var, value, from );
 }
 
 /*
@@ -610,7 +558,6 @@ void Cvar_FixCheats( void ) {
 Cvar_GetLatchedVars
 
 Any variables with latched values will now be updated
-Only used for game latched cvars now
 ============
 */
 void Cvar_GetLatchedVars( void ) {
@@ -626,7 +573,7 @@ void Cvar_GetLatchedVars( void ) {
         Z_Free( var->string );
         var->string = var->latched_string;
         var->latched_string = NULL;
-        Cvar_ParseString( var );
+        parse_string_value( var );
         var->modified = qtrue;
         cvar_modified |= var->flags & CVAR_MODIFYMASK;
     }
@@ -1119,8 +1066,6 @@ Cvar_Init
 ============
 */
 void Cvar_Init( void ) {
-    cvar_silent = Cvar_Get( "cvar_silent", "0", 0 );
-    
     Cmd_Register( c_cvar );
 }
 
