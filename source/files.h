@@ -77,13 +77,13 @@ typedef struct file_info_s {
 
 void    FS_Init( void );
 void    FS_Shutdown( void );
-qboolean    FS_NeedRestart( void );
 void        FS_Restart( qboolean total );
-qboolean    FS_SafeToRestart( void );
 
 #if USE_CLIENT
 qboolean FS_RenameFile( const char *from, const char *to );
 #endif
+
+void    FS_CreatePath( char *path );
 
 char    *FS_CopyExtraInfo( const char *name, const file_info_t *info );
 

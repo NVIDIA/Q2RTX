@@ -188,15 +188,6 @@ void SV_InitGame( qboolean ismvd ) {
     Cvar_Reset( sv_recycle );
 #endif
 
-    // restart filesystem now
-    if( FS_NeedRestart() ) {
-#if USE_CLIENT
-        CL_RestartFilesystem( qfalse );
-#else
-        FS_Restart( qfalse );
-#endif
-    }
-
     if( ismvd ) {
         Cvar_Set( "deathmatch", "1" );
         Cvar_Set( "coop", "0" );

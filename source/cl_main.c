@@ -591,6 +591,9 @@ void CL_ClearState( void ) {
     if( cls.state > ca_connected ) {
         cls.state = ca_connected;
     }
+
+    // unprotect game cvar
+    fs_game->flags &= ~CVAR_ROM;
 }
 
 /*

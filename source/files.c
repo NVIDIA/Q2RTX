@@ -433,7 +433,7 @@ Creates any directories needed to store the given filename.
 Expects a fully qualified quake path (i.e. with / separators).
 ============
 */
-static void FS_CreatePath( char *path ) {
+void FS_CreatePath( char *path ) {
     char *ofs;
 
     if( !*path ) {
@@ -1540,7 +1540,7 @@ then loads and adds pak*.pak, then anything else in alphabethical order.
 */
 static void q_printf( 2, 3 ) FS_AddGameDirectory( int mode, const char *fmt, ... ) {
     va_list argptr;
-    searchpath_t    *search;
+    searchpath_t *search;
     size_t len;
 
     va_start( argptr, fmt );
@@ -1585,8 +1585,8 @@ FS_CopyInfo
 =================
 */
 file_info_t *FS_CopyInfo( const char *name, size_t size, time_t ctime, time_t mtime ) {
-    file_info_t    *out;
-    size_t            len;
+    file_info_t *out;
+    size_t len;
 
     if( !name ) {
         return NULL;
@@ -2385,45 +2385,9 @@ static void setup_basedir( void ) {
     fs_base_searchpaths = fs_searchpaths;
 }
 
-// returns true if 'game' value is set and valid
-static qboolean check_gamedir( void ) {
-    size_t len;
-
-    if( !fs_game->string[0] ) {
-        return qfalse; // not set
-    }
-
-    if( !FS_strcmp( fs_game->string, BASEGAME ) ) {
-        goto reset; // normalize it
-    }
-
-    if( strchr( fs_game->string, '/' ) ) {
-        Com_WPrintf( "'%s' should be a single directory name, not a path.\n", fs_game->name );
-        goto reset;
-    }
-
-    // since gamedir is exported to server info, validate it
-    len = Info_SubValidate( fs_game->string );
-    if( len == SIZE_MAX ) {
-        Com_WPrintf( "'%s' should not contain '\\', ';' or '\"' characters.\n", fs_game->name );
-        goto reset;
-    }
-
-    if( len >= MAX_QPATH ) {
-        Com_WPrintf( "'%s' should be less than 64 characters long.\n", fs_game->name );
-        goto reset;
-    }
-
-    return qtrue;
-
-reset:
-    Cvar_Reset( fs_game );
-    return qfalse;
-}
-
 // Sets the gamedir and path to a different directory.
 static void setup_gamedir( void ) {
-    if( check_gamedir() ) {
+    if( fs_game->string[0] ) {
         // add system path first
         FS_AddGameDirectory( FS_PATH_GAME, "%s/%s", sys_basedir->string, fs_game->string );
 
@@ -2448,7 +2412,7 @@ static void setup_gamedir( void ) {
     Cvar_FullSet( "fs_gamedir", fs_gamedir, CVAR_ROM, FROM_CODE );
 }
 
-qboolean FS_SafeToRestart( void ) {
+static qboolean safe_to_restart( void ) {
     file_t   *file;
     int         i;
     
@@ -2463,18 +2427,6 @@ qboolean FS_SafeToRestart( void ) {
     }
 
     return qtrue;
-}
-
-/*
-================
-FS_NeedRestart
-================
-*/
-qboolean FS_NeedRestart( void ) {
-    if( fs_game->latched_string ) {
-        return qtrue;
-    }
-    return qfalse;
 }
 
 /*
@@ -2536,7 +2488,7 @@ Console command to fully re-start the file system.
 ============
 */
 static void FS_Restart_f( void ) {
-    if( !FS_SafeToRestart() ) {
+    if( !safe_to_restart() ) {
         Com_Printf( "Can't \"%s\", there are some open file handles.\n", Cmd_Argv( 0 ) );
         return;
     }
@@ -2593,6 +2545,42 @@ void FS_Shutdown( void ) {
     Cmd_Deregister( c_fs );
 }
 
+// this is called when local server starts up and gets it's latched variables,
+// client receives a serverdata packet, or user changes the game by hand while
+// disconnected
+static void fs_game_changed( cvar_t *self ) {
+    char *s = self->string;
+
+    // validate it
+    if( *s ) {
+        if( !FS_strcmp( s, BASEGAME ) ) {
+            Cvar_Reset( self );
+        } else if( strchr( s, '/' ) ) {
+            Com_Printf( "'%s' should be a single directory name, not a path.\n", self->name );
+            Cvar_Reset( self );
+        }
+    }
+
+    // check for the first time startup
+    if( !fs_base_searchpaths ) {
+        // start up with baseq2 by default
+        setup_basedir();
+
+        // check for game override
+        setup_gamedir();
+
+        FS_Path_f();
+        return;
+    }
+
+    // otherwise, restart the filesystem
+#if USE_CLIENT
+    CL_RestartFilesystem( qfalse );
+#else
+    FS_Restart( qfalse );
+#endif
+}
+
 /*
 ================
 FS_Init
@@ -2607,15 +2595,10 @@ void FS_Init( void ) {
     fs_debug = Cvar_Get( "fs_debug", "0", 0 );
 #endif
 
+    // get the game cvar and start the filesystem
     fs_game = Cvar_Get( "game", "", CVAR_LATCH|CVAR_SERVERINFO );
-
-    // start up with baseq2 by default
-    setup_basedir();
-
-    // check for game override
-    setup_gamedir();
-
-    FS_Path_f();
+    fs_game->changed = fs_game_changed;
+    fs_game_changed( fs_game );
 
     Com_Printf( "-----------------------------\n" );
 }

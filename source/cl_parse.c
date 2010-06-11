@@ -766,13 +766,16 @@ static void CL_ParseServerData( void ) {
     }
 
     // never allow demos to change gamedir
-    // do not set gamedir if connected to local sever,
-    // since it was already done by SV_InitGame
+    // do not change gamedir if connected to local sever either,
+    // as it was already done by SV_InitGame, and changing it
+    // here will not work since server is now running
     if( !cls.demo.playback && !sv_running->integer ) {
+        // pretend it has been set by user, so that 'changed' hook
+        // gets called and filesystem is restarted
         Cvar_UserSet( "game", cl.gamedir );
-        if( FS_NeedRestart() ) {
-            CL_RestartFilesystem( qfalse );
-        }
+
+        // protect it from modifications while we are connected
+        fs_game->flags |= CVAR_ROM;
     }
 
     // parse player entity number

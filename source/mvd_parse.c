@@ -1007,9 +1007,6 @@ static void MVD_ParseServerData( mvd_t *mvd, int extrabits ) {
 #if 0
     // change gamedir unless playing a demo
     Cvar_UserSet( "game", mvd->gamedir );
-    if( FS_NeedRestart() ) {
-        FS_Restart();
-    }
 #endif
 
     // parse configstrings
