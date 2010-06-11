@@ -1408,11 +1408,13 @@ static pack_t *FS_LoadZipFile( const char *packfile ) {
             goto fail;
         }
 
-        namesLength += strlen( name ) + 1;
+        // skip directories and empty files
+        if( zInfo.uncompressed_size ) {
+            namesLength += strlen( name ) + 1;
+        }
 
         if( i != numFiles - 1 && unzGoToNextFile( zFile ) != UNZ_OK ) {
             Com_WPrintf( "unzGoToNextFile() failed on %s\n", packfile );
-
         }
     }
 
@@ -1443,18 +1445,20 @@ static pack_t *FS_LoadZipFile( const char *packfile ) {
     for( i = 0, file = pack->files; i < numFiles; i++, file++ ) {
         unzGetCurrentFileInfo( zFile, &zInfo, name, sizeof( name ), NULL, 0, NULL, 0 );
 
-        len = strlen( name ) + 1;
-        file->name = names;
+        if( zInfo.uncompressed_size ) {
+            len = strlen( name ) + 1;
+            file->name = names;
 
-        strcpy( file->name, name );
-        file->filepos = unzGetCurrentFileInfoPosition( zFile );
-        file->filelen = zInfo.uncompressed_size;
+            strcpy( file->name, name );
+            file->filepos = unzGetCurrentFileInfoPosition( zFile );
+            file->filelen = zInfo.uncompressed_size;
 
-        hash = Com_HashPath( file->name, hashSize );
-        file->hashNext = pack->fileHash[hash];
-        pack->fileHash[hash] = file;
+            hash = Com_HashPath( file->name, hashSize );
+            file->hashNext = pack->fileHash[hash];
+            pack->fileHash[hash] = file;
 
-        names += len;
+            names += len;
+        }
         
         if( i != numFiles - 1 ) {
             unzGoToNextFile( zFile );
