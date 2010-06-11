@@ -39,7 +39,7 @@ static cvar_t   *lirc_config;
 static struct {
     qboolean initialized;
     struct lirc_config *config;
-    int      fd;
+    int fd;
     ioentry_t *io;
 } lirc;
 
@@ -56,10 +56,15 @@ void Lirc_GetEvents( void ) {
         time = Sys_Milliseconds();
         Com_DPrintf( "%s: %u %s\n", __func__, time, code );
         while( ( ret = lirc_code2char( lirc.config, code, &str ) ) == 0 && str ) {
-            key = Key_StringToKeynum( str );
-            if( key > 0 ) {
-               Key_Event( key, qtrue, time );
-               Key_Event( key, qfalse, time );
+            if( *str == '@' ) {
+                key = Key_StringToKeynum( str + 1 );
+                if( key > 0 ) {
+                   Key_Event( key, qtrue, time );
+                   Key_Event( key, qfalse, time );
+                }
+            } else {
+                Cbuf_AddText( &cmd_buffer, str );
+                Cbuf_AddText( &cmd_buffer, "\n" );
             }
         }
         free( code );
