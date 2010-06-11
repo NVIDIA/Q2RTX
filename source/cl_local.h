@@ -421,12 +421,12 @@ void CL_Init (void);
 void CL_Quit_f (void);
 void CL_Disconnect( error_type_t type, const char *text );
 void CL_RequestNextDownload (void);
+void CL_ResetPrecacheCheck( void );
 void CL_CheckForResend( void );
 void CL_ClearState (void);
 void CL_RestartFilesystem( qboolean total );
 void CL_RestartRefresh( qboolean total );
 void CL_ClientCommand( const char *string );
-void CL_UpdateLocalFovSetting( void );
 void CL_LoadState( load_state_t state );
 void CL_SendRcon( const netadr_t *adr, const char *pass, const char *cmd );
 const char *CL_Server_g( const char *partial, int argnum, int state );
@@ -757,4 +757,17 @@ void    Key_WriteBindings( fileHandle_t f );
 // cl_aastat.c
 //
 void CL_InitAscii( void ); 
+
+#if USE_CURL
+//
+// cl_http.c
+//
+void HTTP_CancelDownloads (void);
+void HTTP_Init (void);
+void HTTP_Shutdown (void);
+qboolean HTTP_QueueDownload (const char *path);
+void HTTP_RunDownloads (void);
+qboolean HTTP_DownloadsPending (void);
+void HTTP_SetServer (const char *url);
+#endif
 

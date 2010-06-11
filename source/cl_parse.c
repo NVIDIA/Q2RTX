@@ -53,6 +53,15 @@ qboolean CL_CheckOrDownloadFile( const char *path ) {
         return qtrue;
     }
 
+#if USE_CURL
+    if( HTTP_QueueDownload( path ) ) {
+        //we return true so that the precache check keeps feeding us more files.
+        //since we have multiple HTTP connections we want to minimize latency
+        //and be constantly sending requests, not one at a time.
+        return qtrue;
+    }
+#endif
+
     memcpy( cls.download.name, path, len + 1 );
 
     // download to a temp name, and only rename

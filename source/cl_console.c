@@ -776,7 +776,7 @@ void Con_DrawSolidConsole( void ) {
 //ZOID
     // draw the download bar
     // figure out width
-    if( cls.download.file ) {
+    if( cls.download.name[0] ) {
         int n, j;
 
         if( ( text = strrchr( cls.download.name, '/') ) != NULL )

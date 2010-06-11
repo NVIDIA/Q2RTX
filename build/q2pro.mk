@@ -40,9 +40,14 @@ SRCFILES+=m_flash.c \
 	cl_view.c \
 	cl_console.c \
 	cl_keys.c \
-	cl_aastat.c \
-	snd_main.c \
-	snd_mem.c 
+	cl_aastat.c
+
+ifdef USE_CURL
+SRCFILES+=cl_http.c
+LDFLAGS+=-lcurl
+endif
+	
+SRCFILES+=snd_main.c snd_mem.c 
 
 ifdef USE_SNDDMA
 SRCFILES+=snd_mix.c snd_dma.c

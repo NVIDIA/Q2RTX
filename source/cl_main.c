@@ -656,6 +656,10 @@ void CL_Disconnect( error_type_t type, const char *text ) {
         cls.netchan = NULL;
     }
 
+#if USE_CURL
+    HTTP_CancelDownloads();
+#endif
+
     // stop download
     if( cls.download.file ) {
         FS_FCloseFile( cls.download.file );
@@ -1341,6 +1345,11 @@ static void CL_ConnectionlessPacket( void ) {
             } else if( !strncmp( s, "map=", 4 ) ) {
                 Q_strlcpy( mapname, s + 4, sizeof( mapname ) );
             }
+#if USE_CURL
+            else if( !strncmp( s, "dlserver=", 9 ) ) {
+                HTTP_SetServer( s + 9 );
+            }
+#endif
         }
 
         Com_Printf( "Connected to %s (protocol %d).\n",
@@ -1643,6 +1652,7 @@ static void CL_RegisterModels( void ) {
 }
 
 void CL_LoadState( load_state_t state ) {
+#if 0
     char *s;
 
     switch( state ) {
@@ -1667,7 +1677,8 @@ void CL_LoadState( load_state_t state ) {
     default:
         return;
     }
-    Con_Printf( "\rLoading %s...", s ); 
+    Con_Printf( "\rLoading %s...", s );
+#endif
 
     // Com_ProcessEvents(); 
     SCR_UpdateScreen();
@@ -1708,6 +1719,32 @@ void CL_RequestNextDownload ( void ) {
     }
     if ( precache_check >= CS_MODELS && precache_check < CS_MODELS + MAX_MODELS ) {
         if ( allow_download_models->integer ) {
+            if ( precache_model_skin == -1 ) {
+                // checking for models
+                while ( precache_check < CS_MODELS + MAX_MODELS &&
+                        cl.configstrings[ precache_check ][ 0 ] ) {
+
+                    if ( cl.configstrings[ precache_check ][ 0 ] == '*' ||
+                            cl.configstrings[ precache_check ][ 0 ] == '#' ) {
+                        precache_check++;
+                        continue;
+                    }
+                    if ( !CL_CheckOrDownloadFile( cl.configstrings[ precache_check ] ) ) {
+                        precache_check++;
+                        return; // started a download
+                    }
+                    precache_check++;
+                }
+                precache_model_skin = 0;
+                precache_check = CS_MODELS + 2; // 0 isn't used
+#if USE_CURL
+                if( HTTP_DownloadsPending() ) {
+                    //pending downloads (models), let's wait here before we can check skins.
+                    return;
+                }
+#endif
+            }
+            // checking for skins
             while ( precache_check < CS_MODELS + MAX_MODELS &&
                     cl.configstrings[ precache_check ][ 0 ] ) {
                 size_t num_skins, ofs_skins, end_skins;
@@ -1717,15 +1754,6 @@ void CL_RequestNextDownload ( void ) {
                     precache_check++;
                     continue;
                 }
-                if ( precache_model_skin == 0 ) {
-                    if ( !CL_CheckOrDownloadFile( cl.configstrings[ precache_check ] ) ) {
-                        precache_model_skin = 1;
-                        return; // started a download
-                    }
-                    precache_model_skin = 1;
-                }
-
-                // checking for skins in the model
                 if ( !precache_model ) {
                     length = FS_LoadFile ( cl.configstrings[ precache_check ], ( void ** ) & precache_model );
                     if ( !precache_model ) {
@@ -1762,9 +1790,9 @@ void CL_RequestNextDownload ( void ) {
                 num_skins = LittleLong( pheader->num_skins );
                 ofs_skins = LittleLong( pheader->ofs_skins );
 
-                while ( precache_model_skin - 1 < num_skins ) {
+                while ( precache_model_skin < num_skins ) {
                     Q_strlcpy( fn, ( char * )precache_model + ofs_skins +
-                        ( precache_model_skin - 1 ) * MD2_MAX_SKINNAME, sizeof( fn ) );
+                        precache_model_skin * MD2_MAX_SKINNAME, sizeof( fn ) );
                     if ( !CL_CheckOrDownloadFile( fn ) ) {
                         precache_model_skin++;
                         return; // started a download
@@ -1892,6 +1920,13 @@ void CL_RequestNextDownload ( void ) {
         precache_check = ENV_CNT;
     }
 
+#if USE_CURL
+    if( HTTP_DownloadsPending() ) {
+        //map might still be downloading?
+        return;
+    }
+#endif
+
     if ( precache_check == ENV_CNT ) {
         precache_check = ENV_CNT + 1;
 
@@ -1979,6 +2014,15 @@ void CL_RequestNextDownload ( void ) {
     cls.state = ca_precached;
 }
 
+void CL_ResetPrecacheCheck( void ) {
+    precache_check = CS_MODELS;
+    if( precache_model ) {
+        FS_FreeFile( precache_model );
+        precache_model = NULL;
+    }
+    precache_model_skin = -1;
+}
+
 /*
 =================
 CL_Precache_f
@@ -2013,13 +2057,8 @@ static void CL_Precache_f( void ) {
         return;
     }
 
-    precache_check = CS_MODELS;
     precache_spawncount = atoi( Cmd_Argv( 1 ) );
-    if( precache_model ) {
-        FS_FreeFile( precache_model );
-        precache_model = NULL;
-    }
-    precache_model_skin = 0;
+    CL_ResetPrecacheCheck();
 
     CL_RequestNextDownload();
 
@@ -2283,6 +2322,8 @@ void CL_RestartFilesystem( qboolean total ) {
         FS_Restart( total );
         return;
     }
+
+    Com_DPrintf( "%s(%d)\n", __func__, total );
 
     // temporary switch to loading state
     cls_state = cls.state;
@@ -3008,6 +3049,10 @@ void CL_ProcessEvents( void ) {
     while( NET_GetPacket( NS_CLIENT ) ) {
         CL_PacketEvent();
     }
+
+#if USE_CURL
+    HTTP_RunDownloads();
+#endif
 }
 
 //============================================================================
@@ -3046,6 +3091,10 @@ void CL_Init( void ) {
     if( inflateInit2( &cls.z, -15 ) != Z_OK ) {
         Com_Error( ERR_FATAL, "inflateInit2() failed" );
     }
+#endif
+
+#if USE_CURL
+    HTTP_Init();
 #endif
 
 #if USE_UI
@@ -3112,6 +3161,10 @@ void CL_Shutdown( void ) {
 
 #if USE_ZLIB
     inflateEnd( &cls.z );
+#endif
+
+#if USE_CURL
+    HTTP_Shutdown();
 #endif
 
     S_Shutdown();
