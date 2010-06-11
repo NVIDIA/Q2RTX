@@ -175,31 +175,6 @@ static void change_string_value( cvar_t *var, const char *value, from_t from ) {
     }
 }
 
-// Cvar_Get has been called from subsystem initialization routine.
-static void get_engine_cvar( cvar_t *var, const char *var_value, int flags ) {
-    if( var->flags & (CVAR_CUSTOM|CVAR_VOLATILE) ) {
-        // update default string if cvar was set from command line
-        Z_Free( var->default_string );
-        var->default_string = Cvar_CopyString( var_value );
-
-        // optionally reset cvar back to default value
-        if( ( ( flags & CVAR_ROM ) ||
-              ( ( flags & CVAR_NOSET ) && com_initialized ) ||
-              ( ( flags & CVAR_CHEAT ) && !CL_CheatsOK() ) ||
-              ( var->flags & CVAR_VOLATILE ) ) &&
-            strcmp( var_value, var->string ) )
-        {
-            change_string_value( var, var_value, FROM_CODE );
-        }
-    } else {
-        flags &= ~CVAR_GAME;
-    }
-
-    // some flags are not saved
-    var->flags &= ~(CVAR_GAME|CVAR_CUSTOM|CVAR_VOLATILE);
-    var->flags |= flags;
-}
-
 static qboolean validate_info_cvar( const char *s ) {
     size_t len = Info_SubValidate( s );
 
@@ -214,6 +189,35 @@ static qboolean validate_info_cvar( const char *s ) {
     }
 
     return qtrue;
+}
+
+
+// Cvar_Get has been called from subsystem initialization routine.
+// check if the first instance of this cvar has been created by user,
+// and if so, enforce any restrictions on the cvar value as defined by flags
+static void get_engine_cvar( cvar_t *var, const char *var_value, int flags ) {
+    if( var->flags & (CVAR_CUSTOM|CVAR_VOLATILE) ) {
+        // update default string if cvar was set from command line
+        Z_Free( var->default_string );
+        var->default_string = Cvar_CopyString( var_value );
+
+        // optionally reset cvar back to default value
+        if( ( ( flags & CVAR_ROM ) ||
+              ( ( flags & CVAR_NOSET ) && com_initialized ) ||
+              ( ( flags & CVAR_CHEAT ) && !CL_CheatsOK() ) ||
+              ( ( flags & CVAR_INFOMASK ) && !validate_info_cvar( var->string ) ) ||
+              ( var->flags & CVAR_VOLATILE ) ) &&
+            strcmp( var_value, var->string ) )
+        {
+            change_string_value( var, var_value, FROM_CODE );
+        }
+    } else {
+        flags &= ~CVAR_GAME;
+    }
+
+    // some flags are not saved
+    var->flags &= ~(CVAR_GAME|CVAR_CUSTOM|CVAR_VOLATILE);
+    var->flags |= flags;
 }
 
 /*
@@ -576,6 +580,9 @@ void Cvar_GetLatchedVars( void ) {
         parse_string_value( var );
         var->modified = qtrue;
         cvar_modified |= var->flags & CVAR_MODIFYMASK;
+        if( var->changed ) {
+            var->changed( var );
+        }
     }
 }
 
