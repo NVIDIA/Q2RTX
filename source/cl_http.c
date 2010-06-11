@@ -29,10 +29,10 @@ static cvar_t  *cl_http_proxy;
 static cvar_t  *cl_http_debug;
 #endif
 
-#define FOR_EACH_DLQ( q ) \
-    LIST_FOR_EACH( dlqueue_t, q, &download_queue, entry )
-#define FOR_EACH_DLQ_SAFE( q, n ) \
-    LIST_FOR_EACH_SAFE( dlqueue_t, q, n, &download_queue, entry )
+#define FOR_EACH_DLQ(q) \
+    LIST_FOR_EACH (dlqueue_t, q, &download_queue, entry)
+#define FOR_EACH_DLQ_SAFE(q, n) \
+    LIST_FOR_EACH_SAFE (dlqueue_t, q, n, &download_queue, entry)
 
 // size limits for filelists
 #define MAX_DLSIZE  0x100000    // 1 MiB
@@ -252,14 +252,14 @@ static void start_download (dlqueue_t *entry, dlhandle_t *dl) {
         len = Q_snprintf (dl->path, sizeof(dl->path), "%s/%s.tmp", fs_gamedir, entry->path);
         if (len >= sizeof(dl->path)) {
             Com_EPrintf ("[HTTP] Refusing oversize temporary file path.\n");
-            return;
+            goto fail;
         }
 
         // FIXME: should use baseq2 instead of empty gamedir?
         len = Q_snprintf (temp, sizeof(temp), "%s/%s", fs_game->string, entry->path);
         if (len >= sizeof(temp)) {
             Com_EPrintf ("[HTTP] Refusing oversize server file path.\n");
-            return;
+            goto fail;
         }
         escape_path (temp, escaped);
 
@@ -269,15 +269,14 @@ static void start_download (dlqueue_t *entry, dlhandle_t *dl) {
         dl->file = fopen (dl->path, "wb");
         if (!dl->file) {
             Com_EPrintf ("[HTTP] Couldn't open '%s' for writing.\n", dl->path);
-            entry->state = DL_DONE;
-            return;
+            goto fail;
         }
     }
 
     len = Q_snprintf (dl->url, sizeof(dl->url), "%s%s", download_server, escaped);
     if (len >= sizeof(dl->url)) {
         Com_EPrintf ("[HTTP] Refusing oversize download URL.\n");
-        return;
+        goto fail;
     }
 
     dl->buffer = NULL;
@@ -320,6 +319,7 @@ static void start_download (dlqueue_t *entry, dlhandle_t *dl) {
     if (ret != CURLM_OK) {
         Com_EPrintf ("[HTTP] Failed to add download handle: %s\n",
             curl_multi_strerror (ret));
+fail:
         entry->state = DL_DONE;
         return;
     }
@@ -335,8 +335,8 @@ static void cleanup_downloads (void) {
     dlhandle_t  *dl;
     int         i;
 
-    FOR_EACH_DLQ_SAFE( q, n ) {
-        Z_Free( q );
+    FOR_EACH_DLQ_SAFE (q, n) {
+        Z_Free (q);
     }
  
     List_Init (&download_queue);
@@ -432,7 +432,7 @@ void HTTP_SetServer (const char *url) {
 
     Q_strlcpy (download_server, url, sizeof(download_server));
     Q_snprintf (download_referer, sizeof(download_referer),
-        "quake2://%s", NET_AdrToString(&cls.serverAddress));
+        "quake2://%s", NET_AdrToString (&cls.serverAddress));
 
     Com_Printf ("[HTTP] Download server at %s\n", download_server);
 }
@@ -453,7 +453,7 @@ void HTTP_CancelDownloads (void) {
     CL_ResetPrecacheCheck ();
     abort_downloads = qtrue;
 
-    FOR_EACH_DLQ( q ) {
+    FOR_EACH_DLQ (q) {
         if (q->state == DL_PENDING)
             q->state = DL_DONE;
     }
@@ -468,20 +468,20 @@ static void queue_download(const char *path, dltype_t type) {
     dlqueue_t *q;
     size_t len;
 
-    FOR_EACH_DLQ( q ) {
+    FOR_EACH_DLQ (q) {
         //avoid sending duplicate requests
         if (!FS_pathcmp (path, q->path))
             return;
     }
 
-    len = strlen(path);
+    len = strlen (path);
     if (len >= MAX_QPATH) {
         Com_EPrintf ("[HTTP] Refusing to queue oversize quake path.\n");
         return;
     }
 
     q = Z_Malloc (sizeof(*q) + len);
-    memcpy(q->path, path, len + 1);
+    memcpy (q->path, path, len + 1);
     q->type = type;
     q->state = DL_PENDING;
 
@@ -639,7 +639,7 @@ static void check_and_queue_download (char *path) {
         return;
     }
 
-    if( FS_LoadFileEx( path, NULL, flags, TAG_FREE ) == INVALID_LENGTH ) {
+    if (FS_LoadFileEx (path, NULL, flags, TAG_FREE) == INVALID_LENGTH) {
         queue_download (path, type);
     }
 }
@@ -682,7 +682,7 @@ static void rescan_queue (void) {
     if (abort_downloads)
         return;
 
-    FOR_EACH_DLQ( q ) {
+    FOR_EACH_DLQ (q) {
         if (q->state == DL_PENDING) {
             if (q->type == DL_OTHER && FS_LoadFile (q->path, NULL) != INVALID_LENGTH)
                 q->state = DL_DONE;
@@ -876,7 +876,7 @@ static void start_next_download (void) {
     }
 
     //not enough downloads running, queue some more!
-    FOR_EACH_DLQ( q ) {
+    FOR_EACH_DLQ (q) {
         if (q->state == DL_RUNNING) {
             if (q->type == DL_PAK)
                 break; // hack for pak file single downloading
