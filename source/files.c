@@ -25,7 +25,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "d_pak.h"
 #if USE_ZLIB
 #include <zlib.h>
-#include "unzip.h"
 #endif
 
 /*
@@ -42,7 +41,6 @@ QUAKE FILESYSTEM
 =============================================================================
 */
 
-#define MAX_FILES_IN_PK2    0x4000
 #define MAX_FILE_HANDLES    8
 
 // macros for dealing portably with files at OS level
@@ -54,8 +52,22 @@ QUAKE FILESYSTEM
 #define FS_strncmp  strncmp
 #endif
 
-#define MAX_READ    0x40000        // read in blocks of 256k
-#define MAX_WRITE   0x40000        // write in blocks of 256k
+#define MAX_READ    0x40000     // read in blocks of 256k
+#define MAX_WRITE   0x40000     // write in blocks of 256k
+
+#if USE_ZLIB
+#define ZIP_MAXFILES    0x4000  // 16k files, rather arbitrary
+#define ZIP_BUFSIZE     0x10000 // inflate in blocks of 64k
+
+#define ZIP_BUFREADCOMMENT      1024
+#define ZIP_SIZELOCALHEADER     30
+#define ZIP_SIZECENTRALHEADER   20
+#define ZIP_SIZECENTRALDIRITEM  46
+
+#define ZIP_LOCALHEADERMAGIC    0x04034b50
+#define ZIP_CENTRALHEADERMAGIC  0x02014b50
+#define ZIP_ENDHEADERMAGIC      0x06054b50
+#endif
 
 #ifdef _DEBUG
 #define FS_DPrintf(...) \
@@ -69,76 +81,89 @@ QUAKE FILESYSTEM
 // in memory
 //
 
-typedef struct packfile_s {
-    char    *name;
-    size_t  filepos;
-    size_t  filelen;
+typedef enum {
+    FS_FREE,
+    FS_REAL,
+    FS_PAK,
+#if USE_ZLIB
+    FS_ZIP,
+    FS_GZ,
+#endif
+    FS_BAD
+} filetype_t;
 
-    struct packfile_s *hashNext;
+#if USE_ZLIB
+typedef struct {
+    z_stream    stream;
+    size_t      rest_in;
+    size_t      rest_out;
+    byte        buffer[ZIP_BUFSIZE];
+} zipstream_t;
+#endif
+
+typedef struct packfile_s {
+    char        *name;
+    size_t      filepos;
+    size_t      filelen;
+#if USE_ZLIB
+    size_t      complen;
+    unsigned    compmtd;    // compression method, 0 (stored) or Z_DEFLATED
+    qboolean    coherent;   // true if local file header has been checked
+#endif
+
+    struct packfile_s *hash_next;
 } packfile_t;
 
 typedef struct {
-#if USE_ZLIB
-    unzFile zFile;
-#endif
-    FILE    *fp;
-    int     numfiles;
+    filetype_t  type;       // FS_PAK or FS_ZIP
+    unsigned    refcount;   // for tracking pack users
+    FILE        *fp;
+    unsigned    numfiles;
     packfile_t  *files;
-    packfile_t  **fileHash;
-    int         hashSize;
-    char    filename[1];
+    packfile_t  **file_hash;
+    unsigned    hash_size;
+    char        *names;
+    char        filename[1];
 } pack_t;
 
 typedef struct searchpath_s {
     struct searchpath_s *next;
-    int mode;
-    pack_t *pack;        // only one of filename / pack will be used
-    char filename[1];
+    unsigned    mode;
+    pack_t      *pack;        // only one of filename / pack will be used
+    char        filename[1];
 } searchpath_t;
 
 typedef struct {
-    enum {
-        FS_FREE,
-        FS_REAL,
-        FS_PAK,
+    filetype_t  type;
+    unsigned    mode;
+    FILE        *fp;
 #if USE_ZLIB
-        FS_PK2,
-        FS_GZIP,
+    void        *zfp;       // gzFile for FS_GZ or zipstream_t for FS_ZIP
 #endif
-        FS_BAD
-    } type;
-    unsigned mode;
-    FILE *fp;
-#if USE_ZLIB
-    void *zfp;
-#endif
-    packfile_t *pak;
-    qboolean unique;
-    size_t length;
+    packfile_t  *entry;     // pack entry this handle is tied to
+    pack_t      *pack;      // points to the pack entry is from
+    qboolean    unique;
+    size_t      length;
 } file_t;
 
 typedef struct symlink_s {
     struct symlink_s *next;
-    size_t targlen;
-    size_t namelen;
-    char *target;
-    char name[1];
+    size_t  targlen;
+    size_t  namelen;
+    char    *target;
+    char    name[1];
 } symlink_t;
 
 // these point to user home directory
-char        fs_gamedir[MAX_OSPATH];
-//static char        fs_basedir[MAX_OSPATH];
+char                fs_gamedir[MAX_OSPATH];
+//static char       fs_basedir[MAX_OSPATH];
 
-#ifdef _DEBUG
-static cvar_t    *fs_debug;
-#endif
+static searchpath_t *fs_searchpaths;
+static searchpath_t *fs_base_searchpaths;
 
-static searchpath_t    *fs_searchpaths;
-static searchpath_t    *fs_base_searchpaths;
+static symlink_t    *fs_links;
 
-static symlink_t     *fs_links;
-
-static file_t     fs_files[MAX_FILE_HANDLES];
+static file_t       fs_files[MAX_FILE_HANDLES];
 
 static qboolean     fs_fileFromPak;
 
@@ -146,7 +171,26 @@ static qboolean     fs_fileFromPak;
 static int          fs_count_read, fs_count_strcmp, fs_count_open;
 #endif
 
-cvar_t      *fs_game;
+#ifdef _DEBUG
+static cvar_t       *fs_debug;
+#endif
+
+cvar_t              *fs_game;
+
+#if USE_ZLIB
+// local stream used for all file loads
+static zipstream_t  fs_zipstream;
+
+static void open_zip_file( file_t *file );
+static void close_zip_file( file_t *file );
+static size_t tell_zip_file( file_t *file );
+static size_t read_zip_file( file_t *file, void *buf, size_t len );
+#endif
+
+// for tracking users of pack_t instance
+// allows FS to be restarted while reading something from pack
+static pack_t *pack_get( pack_t *pack );
+static void pack_put( pack_t *pack );
 
 /*
 
@@ -227,16 +271,12 @@ static file_t *FS_AllocHandle( fileHandle_t *f ) {
 
     for( i = 0, file = fs_files; i < MAX_FILE_HANDLES; i++, file++ ) {
         if( file->type == FS_FREE ) {
-            break;
+            *f = i + 1;
+            return file;
         }
     }
 
-    if( i == MAX_FILE_HANDLES ) {
-        Com_Error( ERR_FATAL, "%s: none free", __func__ );
-    }
-
-    *f = i + 1;
-    return file;
+    return NULL;
 }
 
 /*
@@ -248,12 +288,12 @@ static file_t *FS_FileForHandle( fileHandle_t f ) {
     file_t *file;
 
     if( f <= 0 || f >= MAX_FILE_HANDLES + 1 ) {
-        Com_Error( ERR_FATAL, "%s: invalid handle: %i", __func__, f );
+        Com_Error( ERR_FATAL, "%s: bad handle", __func__ );
     }
 
     file = &fs_files[f - 1];
     if( file->type <= FS_FREE || file->type >= FS_BAD ) {
-        Com_Error( ERR_FATAL, "%s: invalid file type: %i", __func__, file->type );
+        Com_Error( ERR_FATAL, "%s: bad file type", __func__ );
     }
 
     return file;
@@ -348,11 +388,11 @@ size_t FS_GetFileLength( fileHandle_t f ) {
         return info.size;
     case FS_PAK:
 #if USE_ZLIB
-    case FS_PK2:
+    case FS_ZIP:
 #endif
         return file->length;
 #if USE_ZLIB
-    case FS_GZIP:
+    case FS_GZ:
         return INVALID_LENGTH;
 #endif
     default:
@@ -369,27 +409,35 @@ FS_Tell
 */
 size_t FS_Tell( fileHandle_t f ) {
     file_t *file = FS_FileForHandle( f );
-    int length;
+    size_t pos = INVALID_LENGTH;
+    long ret;
 
     switch( file->type ) {
     case FS_REAL:
-        length = ftell( file->fp );
+        ret = ftell( file->fp );
+        if( ret != -1 ) {
+            pos = (size_t)ret;
+        }
         break;
     case FS_PAK:
-        length = ftell( file->fp ) - file->pak->filepos;
+        ret = ftell( file->fp );
+        if( ret != -1 && ret >= file->entry->filepos ) {
+            pos = (size_t)ret;
+        }
         break;
 #if USE_ZLIB
-    case FS_PK2:
-        length = unztell( file->zfp );
+    case FS_ZIP:
+        pos = tell_zip_file( file );
         break;
-    case FS_GZIP:
-        return INVALID_LENGTH;
+    case FS_GZ:
+        pos = INVALID_LENGTH;
+        break;
 #endif
     default:
         Com_Error( ERR_FATAL, "%s: bad file type", __func__ );
     }
 
-    return length;
+    return pos;
 }
 
 /*
@@ -408,17 +456,16 @@ qboolean FS_Seek( fileHandle_t f, size_t offset ) {
         }
         break;
 #if USE_ZLIB
-    case FS_GZIP:
+    case FS_ZIP:
+        return qfalse;
+    case FS_GZ:
         if( gzseek( file->zfp, offset, SEEK_CUR ) == -1 ) {
             return qfalse;
         }
         break;
-    //case FS_PK2:
-    //    length = unztell( file->zfp );
-    //    break;
 #endif
     default:
-        return qfalse;
+        Com_Error( ERR_FATAL, "%s: bad file type", __func__ );
     }
 
     return qtrue;
@@ -458,7 +505,7 @@ qboolean FS_FilterFile( fileHandle_t f ) {
     void *zfp;
 
     switch( file->type ) {
-    case FS_GZIP:
+    case FS_GZ:
         return qtrue;
     case FS_REAL:
         break;
@@ -485,7 +532,7 @@ qboolean FS_FilterFile( fileHandle_t f ) {
     }
 
     file->zfp = zfp;
-    file->type = FS_GZIP;
+    file->type = FS_GZ;
     return qtrue;
 #else
     return qfalse;
@@ -510,16 +557,17 @@ void FS_FCloseFile( fileHandle_t f ) {
     case FS_PAK:
         if( file->unique ) {
             fclose( file->fp );
+            pack_put( file->pack );
         }
         break;
 #if USE_ZLIB
-    case FS_GZIP:
+    case FS_GZ:
         gzclose( file->zfp );
         break;
-    case FS_PK2:
-        unzCloseCurrentFile( file->zfp );
+    case FS_ZIP:
         if( file->unique ) {
-            unzClose( file->zfp );
+            close_zip_file( file );
+            pack_put( file->pack );
         }
         break;
 #endif
@@ -618,66 +666,245 @@ static size_t FS_FOpenFileWrite( file_t *file, const char *name ) {
     return ( size_t )ftell( fp );
 }
 
-static size_t FS_FOpenFromPak( file_t *file, pack_t *pak, packfile_t *entry, qboolean unique ) {
-    fs_fileFromPak = qtrue;
-
-    // open a new file on the pakfile
 #if USE_ZLIB
-    if( pak->zFile ) {
-        void *zfp;
 
-        if( unique ) {
-            zfp = unzReOpen( pak->filename, pak->zFile );
-            if( !zfp ) {
-                Com_Error( ERR_FATAL, "%s: couldn't reopen %s",
-                    __func__, pak->filename );
-            }
-        } else {
-            zfp = pak->zFile;
-        }
-        if( unzSetCurrentFileInfoPosition( zfp, entry->filepos ) == -1 ) {
-            Com_Error( ERR_FATAL, "%s: couldn't seek into %s",
-                __func__, pak->filename );
-        }
-        if( unzOpenCurrentFile( zfp ) != UNZ_OK ) {
-            Com_Error( ERR_FATAL, "%s: couldn't open curfile from %s",
-                __func__, pak->filename );
-        }
+static size_t check_header_coherency( FILE *fp, packfile_t *entry ) {
+    unsigned flags, comp_mtd;
+    size_t comp_len, file_len;
+    size_t name_size, xtra_size;
+    byte header[ZIP_SIZELOCALHEADER];
 
-        file->zfp = zfp;
-        file->type = FS_PK2;
-    } else
-#endif
-    {
-        FILE *fp;
+    if( fseek( fp, entry->filepos, SEEK_SET ) == -1 )
+        return 0;
+    if( fread( header, 1, sizeof( header ), fp ) != sizeof( header ) )
+        return 0;
 
-        if( unique ) {
-            fp = fopen( pak->filename, "rb" );
-            if( !fp ) {
-                Com_Error( ERR_FATAL, "%s: couldn't reopen %s",
-                    __func__, pak->filename );
-            }
-        } else {
-            fp = pak->fp;
-        }
+    // check the magic
+    if( LittleLongMem( &header[0] ) != ZIP_LOCALHEADERMAGIC )
+        return 0;
 
-        if( fseek( fp, entry->filepos, SEEK_SET ) == -1 ) {
-            Com_Error( ERR_FATAL, "%s: couldn't seek into %s",
-                __func__, pak->filename );
-        }
+    flags = LittleShortMem( &header[6] );
+    comp_mtd = LittleShortMem( &header[8] );
+    comp_len = LittleLongMem( &header[18] );
+    file_len = LittleLongMem( &header[22] );
+    name_size = LittleShortMem( &header[26] );
+    xtra_size = LittleShortMem( &header[28] );
 
-        file->fp = fp;
-        file->type = FS_PAK;
+    if( comp_mtd != entry->compmtd )
+        return 0;
+
+    // bit 3 tells that file lengths were not known
+    // at the time local header was written, so don't check them
+    if( ( flags & 8 ) == 0 ) {
+        if( comp_len != entry->complen )
+            return 0;
+        if( file_len != entry->filelen )
+            return 0;
     }
 
-    file->pak = entry;
+    return ZIP_SIZELOCALHEADER + name_size + xtra_size;
+}
+
+static voidpf FS_zalloc OF(( voidpf opaque, uInt items, uInt size )) {
+    return FS_Malloc( items * size );
+}
+
+static void FS_zfree OF(( voidpf opaque, voidpf address )) {
+    Z_Free( address );
+}
+
+static void open_zip_file( file_t *file ) {
+    packfile_t *entry = file->entry;
+    zipstream_t *s;
+
+    if( file->unique ) {
+        s = FS_Malloc( sizeof( *s ) );
+        memset( &s->stream, 0, sizeof( s->stream ) );
+    } else {
+        s = &fs_zipstream;
+    }
+
+    if( entry->compmtd ) {
+        z_streamp z = &s->stream;
+
+        if( z->state ) {
+            // already initialized, just reset
+            inflateReset( z );
+        } else {
+            z->zalloc = FS_zalloc;
+            z->zfree = FS_zfree;
+            if( inflateInit2( z, -MAX_WBITS ) != Z_OK ) {
+                Com_Error( ERR_FATAL, "%s: inflateInit2() failed", __func__ );
+            }
+        }
+
+        z->avail_in = z->avail_out = 0;
+        z->total_in = z->total_out = 0;
+        z->next_in = z->next_out = NULL;
+    }
+    
+    s->rest_in = entry->complen;
+    s->rest_out = entry->filelen;
+
+    file->zfp = s;
+}
+
+// only called for unique handles
+static void close_zip_file( file_t *file ) {
+    zipstream_t *s = file->zfp;
+
+    inflateEnd( &s->stream );
+    Z_Free( s );
+    
+    fclose( file->fp );
+}
+
+static size_t tell_zip_file( file_t *file ) {
+    zipstream_t *s = file->zfp;
+
+    if( !file->entry->compmtd ) {
+        return file->entry->filelen - s->rest_in;
+    }
+    return s->stream.total_out;
+}
+
+static size_t read_zip_file( file_t *file, void *buf, size_t len ) {
+    zipstream_t *s = file->zfp;
+    z_streamp z = &s->stream;
+    size_t block, result;
+    int ret;
+
+    if( len > s->rest_out ) {
+        len = s->rest_out;
+    }
+
+    if( !file->entry->compmtd ) {
+        if( len > s->rest_in ) {
+            len = s->rest_in;
+        }
+
+        result = fread( buf, 1, len, file->fp );
+        if( result != len ) {
+            Com_EPrintf( "%s: fread() failed\n", __func__ );
+        }
+
+        s->rest_in -= result;
+        s->rest_out -= result;
+        return len;
+    }
+
+    z->next_out = buf;
+    z->avail_out = (uInt)len;
+
+    while( z->avail_out ) {
+        if( !z->avail_in ) {
+            if( !s->rest_in ) {
+                break;
+            }
+
+            // fill in the temp buffer
+            block = ZIP_BUFSIZE;
+            if( block > s->rest_in ) {
+                block = s->rest_in;
+            }
+
+            result = fread( s->buffer, 1, block, file->fp );
+            if( result != block ) {
+                Com_EPrintf( "%s: fread() failed\n", __func__ );
+            }
+            if( !result ) {
+                break;
+            }
+
+            s->rest_in -= result;
+            z->next_in = s->buffer;
+            z->avail_in = result;
+        }
+
+        ret = inflate( z, Z_SYNC_FLUSH );
+        if( ret == Z_STREAM_END ) {
+            break;
+        }
+        if( ret != Z_OK ) {
+            Com_EPrintf( "%s: inflate() failed: %s\n", __func__, z->msg );
+            break;
+        }
+    }
+
+    len -= z->avail_out;
+    s->rest_out -= len;
+
+    return len;
+}
+
+#endif
+
+// open a new file on the pakfile
+static size_t FS_FOpenFromPak( file_t *file, pack_t *pack, packfile_t *entry, qboolean unique ) {
+    FILE *fp;
+
+    if( unique ) {
+        fp = fopen( pack->filename, "rb" );
+        if( !fp ) {
+            Com_EPrintf( "%s: couldn't reopen %s\n",
+                __func__, pack->filename );
+            return INVALID_LENGTH;
+        }
+    } else {
+        fp = pack->fp;
+    }
+
+#if USE_ZLIB
+    if( pack->type == FS_ZIP && !entry->coherent ) {
+        size_t ofs = check_header_coherency( fp, entry );
+
+        if( !ofs ) {
+            Com_EPrintf( "%s: coherency check failed on %s\n",
+                __func__, pack->filename );
+            goto fail;
+        }
+
+        entry->filepos += ofs;
+        entry->coherent = qtrue;
+    }
+#endif
+
+    if( fseek( fp, entry->filepos, SEEK_SET ) == -1 ) {
+        Com_EPrintf( "%s: couldn't seek into %s\n",
+            __func__, pack->filename );
+        goto fail;
+    }
+
+    file->fp = fp;
+    file->type = pack->type;
+    file->entry = entry;
+    file->pack = pack;
     file->length = entry->filelen;
     file->unique = unique;
 
+#if USE_ZLIB
+    if( pack->type == FS_ZIP ) {
+        open_zip_file( file );
+    }
+#endif
+
+    if( unique ) {
+        // reference source pak
+        pack_get( pack );
+    }
+
     FS_DPrintf( "%s: %s/%s: succeeded\n",
-        __func__, pak->filename, entry->name );
+        __func__, pack->filename, entry->name );
+
+    fs_fileFromPak = qtrue;
 
     return file->length;
+
+fail:
+    if( unique ) {
+        fclose( fp );
+    }
+    return INVALID_LENGTH;
 }
 
 /*
@@ -698,7 +925,7 @@ static size_t FS_FOpenFileRead( file_t *file, const char *name, qboolean unique 
     unsigned        hash;
     packfile_t      *entry;
     FILE            *fp;
-    file_info_t    info;
+    file_info_t     info;
     int             valid = -1;
     size_t          len;
 
@@ -726,14 +953,19 @@ static size_t FS_FOpenFileRead( file_t *file, const char *name, qboolean unique 
             }
         // look through all the pak file elements
             pak = search->pack;
-            entry = pak->fileHash[ hash & ( pak->hashSize - 1 ) ];
-            for( ; entry; entry = entry->hashNext ) {
+            entry = pak->file_hash[ hash & ( pak->hash_size - 1 ) ];
+            for( ; entry; entry = entry->hash_next ) {
 #ifdef _DEBUG
                 fs_count_strcmp++;
 #endif
                 if( !FS_pathcmp( entry->name, name ) ) {
                     // found it!
-                    return FS_FOpenFromPak( file, pak, entry, unique );
+                    len = FS_FOpenFromPak( file, pak, entry, unique );
+                    if( len == INVALID_LENGTH ) {
+                        // failed to open pak, continue to search
+                        break;
+                    }
+                    return len;
                 }
             }
         } else {
@@ -807,10 +1039,10 @@ FS_ReadFile
 Properly handles partial reads
 =================
 */
-size_t FS_Read( void *buffer, size_t len, fileHandle_t hFile ) {
-    size_t      block, remaining = len, read = 0;
-    byte        *buf = (byte *)buffer;
-    file_t   *file = FS_FileForHandle( hFile );
+size_t FS_Read( void *buffer, size_t len, fileHandle_t f ) {
+    size_t  block, remaining = len, read = 0;
+    byte    *buf = (byte *)buffer;
+    file_t  *file = FS_FileForHandle( f );
 
     // read in chunks for progress bar
     while( remaining ) {
@@ -823,11 +1055,11 @@ size_t FS_Read( void *buffer, size_t len, fileHandle_t hFile ) {
             read = fread( buf, 1, block, file->fp );
             break;
 #if USE_ZLIB
-        case FS_GZIP:
+        case FS_GZ:
             read = gzread( file->zfp, buf, block );
             break;
-        case FS_PK2:
-            read = unzReadCurrentFile( file->zfp, buf, block );
+        case FS_ZIP:
+            read = read_zip_file( file, buf, block );
             break;
 #endif
         default:
@@ -875,7 +1107,7 @@ void FS_Flush( fileHandle_t f ) {
         fflush( file->fp );
         break;
 #if USE_ZLIB
-    case FS_GZIP:
+    case FS_GZ:
         gzflush( file->zfp, Z_SYNC_FLUSH );
         break;
 #endif
@@ -891,10 +1123,10 @@ FS_Write
 Properly handles partial writes
 =================
 */
-size_t FS_Write( const void *buffer, size_t len, fileHandle_t hFile ) {
-    size_t      block, remaining = len, write = 0;
-    byte        *buf = (byte *)buffer;
-    file_t   *file = FS_FileForHandle( hFile );
+size_t FS_Write( const void *buffer, size_t len, fileHandle_t f ) {
+    size_t  block, remaining = len, write = 0;
+    byte    *buf = (byte *)buffer;
+    file_t  *file = FS_FileForHandle( f );
 
     // read in chunks for progress bar
     while( remaining ) {
@@ -906,12 +1138,12 @@ size_t FS_Write( const void *buffer, size_t len, fileHandle_t hFile ) {
             write = fwrite( buf, 1, block, file->fp );
             break;
 #if USE_ZLIB
-        case FS_GZIP:
+        case FS_GZ:
             write = gzwrite( file->zfp, buf, block );
             break;
 #endif
         default:
-            Com_Error( ERR_FATAL, "FS_Write: illegal file type" );
+            Com_Error( ERR_FATAL, "%s: bad file type", __func__ );
             break;
         }
         if( write == 0 ) {
@@ -931,7 +1163,7 @@ size_t FS_Write( const void *buffer, size_t len, fileHandle_t hFile ) {
             fflush( file->fp );
             break;
 #if USE_ZLIB
-        case FS_GZIP:
+        case FS_GZ:
             gzflush( file->zfp, Z_SYNC_FLUSH );
             break;
 #endif
@@ -975,9 +1207,9 @@ FS_FOpenFile
 ============
 */
 size_t FS_FOpenFile( const char *name, fileHandle_t *f, int mode ) {
-    file_t    *file;
-    fileHandle_t hFile;
-    size_t        ret = INVALID_LENGTH;
+    file_t *file;
+    fileHandle_t handle;
+    size_t ret = INVALID_LENGTH;
 
     if( !name || !f ) {
         Com_Error( ERR_FATAL, "%s: NULL", __func__ );
@@ -998,7 +1230,11 @@ size_t FS_FOpenFile( const char *name, fileHandle_t *f, int mode ) {
     }
 
     // allocate new file handle
-    file = FS_AllocHandle( &hFile );
+    file = FS_AllocHandle( &handle );
+    if( !file ) {
+        Com_EPrintf( "%s: no free file handles\n", __func__ );
+        return ret;
+    }
     file->mode = mode;
 
     mode &= FS_MODE_MASK;
@@ -1018,7 +1254,7 @@ size_t FS_FOpenFile( const char *name, fileHandle_t *f, int mode ) {
 
     // if succeeded, store file handle
     if( ret != -1 ) {
-        *f = hFile;
+        *f = handle;
     }
 
     return ret;
@@ -1053,8 +1289,8 @@ a null buffer will just return the file length without loading
 size_t FS_LoadFileEx( const char *path, void **buffer, int flags, memtag_t tag ) {
     file_t *file;
     fileHandle_t f;
-    byte    *buf;
-    size_t    len;
+    byte *buf;
+    size_t len;
 
     if( !path ) {
         Com_Error( ERR_FATAL, "%s: NULL", __func__ );
@@ -1076,6 +1312,10 @@ size_t FS_LoadFileEx( const char *path, void **buffer, int flags, memtag_t tag )
 
     // allocate new file handle
     file = FS_AllocHandle( &f );
+    if( !file ) {
+        Com_EPrintf( "%s: no free file handles\n", __func__ );
+        return INVALID_LENGTH;
+    }
     flags &= ~FS_MODE_MASK;
     file->mode = flags | FS_MODE_READ;
 
@@ -1087,7 +1327,7 @@ size_t FS_LoadFileEx( const char *path, void **buffer, int flags, memtag_t tag )
 
     if( buffer ) {
 #if USE_ZLIB
-        if( file->type == FS_GZIP ) {
+        if( file->type == FS_GZ ) {
             len = INVALID_LENGTH; // unknown length
         } else
 #endif
@@ -1237,6 +1477,60 @@ void FS_FPrintf( fileHandle_t f, const char *format, ... ) {
     FS_Write( string, len, f );
 }
 
+// references pack_t instance
+static pack_t *pack_get( pack_t *pack ) {
+    pack->refcount++;
+    return pack;
+}
+
+// dereferences pack_t instance
+static void pack_put( pack_t *pack ) {
+    if( !pack ) {
+        return;
+    }
+    if( !pack->refcount ) {
+        Com_Error( ERR_FATAL, "%s: refcount already zero", __func__ );
+    }
+    if( !--pack->refcount ) {
+        FS_DPrintf( "Freeing packfile %s\n", pack->filename );
+        fclose( pack->fp );
+        Z_Free( pack );
+    }
+}
+
+// allocates pack_t instance along with filenames and hashes in one chunk of memory
+static pack_t *pack_alloc( FILE *fp, filetype_t type, const char *name,
+    unsigned num_files, size_t names_len )
+{
+    pack_t *pack;
+    unsigned hash_size;
+    size_t len;
+
+    hash_size = Q_CeilPowerOfTwo( num_files );
+    if( hash_size > 32 ) {
+        hash_size >>= 1;
+    }
+
+    len = strlen( name );
+    len = ( len + 3 ) & ~3;
+    pack = FS_Malloc( sizeof( pack_t ) +
+        num_files * sizeof( packfile_t ) +
+        hash_size * sizeof( packfile_t * ) +
+        names_len + len );
+    strcpy( pack->filename, name );
+    pack->type = type;
+    pack->refcount = 0;
+    pack->fp = fp;
+    pack->numfiles = num_files;
+    pack->hash_size = hash_size;
+    pack->files = ( packfile_t * )( ( byte * )pack + sizeof( pack_t ) + len );
+    pack->file_hash = ( packfile_t ** )( pack->files + num_files );
+    pack->names = ( char * )( pack->file_hash + hash_size );
+    memset( pack->file_hash, 0, hash_size * sizeof( packfile_t * ) );
+
+    return pack;
+}
+
 /*
 =================
 FS_LoadPakFile
@@ -1252,109 +1546,89 @@ static pack_t *FS_LoadPakFile( const char *packfile ) {
     int             i;
     packfile_t      *file;
     dpackfile_t     *dfile;
-    int             numpackfiles;
-    char            *names;
-    size_t          namesLength;
+    unsigned        num_files;
+    char            *name;
+    size_t          names_len;
     pack_t          *pack;
-    FILE            *packhandle;
+    FILE            *fp;
     dpackfile_t     info[MAX_FILES_IN_PACK];
-    int             hashSize;
     unsigned        hash;
     size_t          len;
 
-    packhandle = fopen( packfile, "rb" );
-    if( !packhandle ) {
-        Com_WPrintf( "Couldn't open %s\n", packfile );
+    fp = fopen( packfile, "rb" );
+    if( !fp ) {
+        Com_Printf( "Couldn't open %s\n", packfile );
         return NULL;
     }
 
-    if( fread( &header, 1, sizeof( header ), packhandle ) != sizeof( header ) ) {
-        Com_WPrintf( "Reading header failed on %s\n", packfile );
+    if( fread( &header, 1, sizeof( header ), fp ) != sizeof( header ) ) {
+        Com_Printf( "Reading header failed on %s\n", packfile );
         goto fail;
     }
 
     if( LittleLong( header.ident ) != IDPAKHEADER ) {
-        Com_WPrintf( "%s is not a 'PACK' file\n", packfile );
+        Com_Printf( "%s is not a 'PACK' file\n", packfile );
         goto fail;
     }
 
     header.dirlen = LittleLong( header.dirlen );
     if( header.dirlen % sizeof( dpackfile_t ) ) {
-        Com_WPrintf( "%s has bad directory length\n", packfile );
+        Com_Printf( "%s has bad directory length\n", packfile );
         goto fail;
     }
 
-    numpackfiles = header.dirlen / sizeof( dpackfile_t );
-    if( numpackfiles < 1 ) {
-        Com_WPrintf( "%s has bad number of files: %i\n", packfile, numpackfiles );
+    num_files = header.dirlen / sizeof( dpackfile_t );
+    if( num_files < 1 ) {
+        Com_Printf( "%s has no files\n", packfile );
         goto fail;
     }
-    if( numpackfiles > MAX_FILES_IN_PACK ) {
-        Com_WPrintf( "%s has too many files: %i > %i\n", packfile, numpackfiles, MAX_FILES_IN_PACK );
+    if( num_files > MAX_FILES_IN_PACK ) {
+        Com_Printf( "%s has too many files: %u > %u\n", packfile, num_files, MAX_FILES_IN_PACK );
         goto fail;
     }
 
     header.dirofs = LittleLong( header.dirofs );
-    if( fseek( packhandle, header.dirofs, SEEK_SET ) ) {
-        Com_WPrintf( "Seeking to directory failed on %s\n", packfile );
+    if( fseek( fp, header.dirofs, SEEK_SET ) ) {
+        Com_Printf( "Seeking to directory failed on %s\n", packfile );
         goto fail;
     }
-    if( fread( info, 1, header.dirlen, packhandle ) != header.dirlen ) {
-        Com_WPrintf( "Reading directory failed on %s\n", packfile );
+    if( fread( info, 1, header.dirlen, fp ) != header.dirlen ) {
+        Com_Printf( "Reading directory failed on %s\n", packfile );
         goto fail;
     }
 
-    namesLength = 0;
-    for( i = 0, dfile = info; i < numpackfiles; i++, dfile++ ) {
+    names_len = 0;
+    for( i = 0, dfile = info; i < num_files; i++, dfile++ ) {
         dfile->name[sizeof( dfile->name ) - 1] = 0;
-        namesLength += strlen( dfile->name ) + 1;
+        names_len += strlen( dfile->name ) + 1;
     }
 
-    hashSize = Q_CeilPowerOfTwo( numpackfiles );
-    if( hashSize > 32 ) {
-        hashSize >>= 1;
-    }
-
-    len = strlen( packfile );
-    len = ( len + 3 ) & ~3;
-    pack = FS_Malloc( sizeof( pack_t ) +
-        numpackfiles * sizeof( packfile_t ) +
-        hashSize * sizeof( packfile_t * ) +
-        namesLength + len );
-    strcpy( pack->filename, packfile );
-    pack->fp = packhandle;
-#if USE_ZLIB
-    pack->zFile = NULL;
-#endif
-    pack->numfiles = numpackfiles;
-    pack->hashSize = hashSize;
-    pack->files = ( packfile_t * )( ( byte * )pack + sizeof( pack_t ) + len );
-    pack->fileHash = ( packfile_t ** )( pack->files + numpackfiles );
-    names = ( char * )( pack->fileHash + hashSize );
-    memset( pack->fileHash, 0, hashSize * sizeof( packfile_t * ) );
+// allocate the pack
+    pack = pack_alloc( fp, FS_PAK, packfile, num_files, names_len );
 
 // parse the directory
+    name = pack->names;
     for( i = 0, file = pack->files, dfile = info; i < pack->numfiles; i++, file++, dfile++ ) {
         len = strlen( dfile->name ) + 1;
 
-        file->name = memcpy( names, dfile->name, len );
-        names += len;
+        file->name = memcpy( name, dfile->name, len );
+        name += len;
 
         file->filepos = LittleLong( dfile->filepos );
         file->filelen = LittleLong( dfile->filelen );
 
-        hash = Com_HashPath( file->name, hashSize );
-        file->hashNext = pack->fileHash[hash];
-        pack->fileHash[hash] = file;
+        hash = Com_HashPath( file->name, pack->hash_size );
+        file->hash_next = pack->file_hash[hash];
+        pack->file_hash[hash] = file;
     }
 
-    FS_DPrintf( "%s: %d files, %d hash table entries\n",
-        packfile, numpackfiles, hashSize );
+    FS_DPrintf( "%s: %u files, %u hash\n",
+        packfile, num_files, pack->hash_size );
 
     return pack;
 
 fail:
-    fclose( packhandle );
+    fclose( fp );
     return NULL;
 }
 
@@ -1364,114 +1638,253 @@ fail:
 FS_LoadZipFile
 =================
 */
+
+// Locate the central directory of a zipfile (at the end, just before the global comment)
+static size_t search_central_header( FILE *fp ) {
+    size_t file_size, back_read;
+    size_t max_back = 0xffff; // maximum size of global comment
+    byte buf[ZIP_BUFREADCOMMENT + 4];
+    long ret;
+
+    if( fseek( fp, 0, SEEK_END ) == -1 )
+        return 0;
+
+    ret = ftell( fp );
+    if( ret == -1 )
+        return 0;
+    file_size = (size_t)ret;
+    if( max_back > file_size )
+        max_back = file_size;
+
+    back_read = 4;
+    while( back_read < max_back ) {
+        size_t i, read_size, read_pos;
+
+        if( back_read + ZIP_BUFREADCOMMENT > max_back )
+            back_read = max_back;
+        else
+            back_read += ZIP_BUFREADCOMMENT;
+
+        read_pos = file_size - back_read;
+
+        read_size = back_read;
+        if( read_size > ZIP_BUFREADCOMMENT + 4 )
+            read_size = ZIP_BUFREADCOMMENT + 4;
+
+        if( fseek( fp, read_pos, SEEK_SET ) == -1 )
+            break;
+        if( fread( buf, 1, read_size, fp ) != read_size )
+            break;
+
+        i = read_size - 4;
+        do {
+            // check the magic
+            if( LittleLongMem( buf + i ) == ZIP_ENDHEADERMAGIC )
+                return read_pos + i;
+        } while( i-- );
+    }
+
+    return 0;
+}
+
+// Get Info about the current file in the zipfile, with internal only info
+static size_t get_file_info( FILE *fp, size_t pos, packfile_t *file, size_t *len ) {
+    size_t name_size, xtra_size, comm_size;
+    size_t comp_len, file_len, file_pos;
+    unsigned comp_mtd;
+    byte header[ZIP_SIZECENTRALDIRITEM]; // we can't use a struct here because of packing
+
+    *len = 0;
+
+    if( fseek( fp, pos, SEEK_SET ) == -1 )
+        return 0;
+    if( fread( header, 1, sizeof( header ), fp ) != sizeof( header ) )
+        return 0;
+
+    // check the magic
+    if( LittleLongMem( &header[0] ) != ZIP_CENTRALHEADERMAGIC )
+        return 0;
+
+    comp_mtd = LittleShortMem( &header[10] );
+    //if( crc )
+    //    *crc = LittleLongMem( &header[16] );
+    comp_len = LittleLongMem( &header[20] );
+    file_len = LittleLongMem( &header[24] );
+    name_size = LittleShortMem( &header[28] );
+    xtra_size = LittleShortMem( &header[30] );
+    comm_size = LittleShortMem( &header[32] );
+    file_pos = LittleLongMem( &header[42] );
+
+    if( !file_len || !comp_len ) {
+        goto skip; // skip directories and empty files
+    }
+    if( !comp_mtd ) {
+        if( file_len != comp_len ) {
+            FS_DPrintf( "%s: skipping file stored with file_len != comp_len\n", __func__ );
+            goto skip;
+        }
+    } else if( comp_mtd != Z_DEFLATED ) {
+        FS_DPrintf( "%s: skipping file compressed with unknown method\n", __func__ );
+        goto skip;
+    }
+    if( !name_size ) {
+        FS_DPrintf( "%s: skipping file with empty name\n", __func__ );
+        goto skip;
+    }
+    if( name_size >= MAX_QPATH ) {
+        FS_DPrintf( "%s: skipping file with oversize name\n", __func__ );
+        goto skip;
+    }
+
+    // fill in the info
+    if( file ) {
+        file->compmtd = comp_mtd;
+        file->complen = comp_len;
+        file->filelen = file_len;
+        file->filepos = file_pos;
+        if( fread( file->name, 1, name_size, fp ) != name_size )
+            return 0;
+        file->name[name_size] = 0;
+    }
+
+    *len = name_size + 1;
+
+skip:
+    return ZIP_SIZECENTRALDIRITEM + name_size + xtra_size + comm_size;
+}
+
 static pack_t *FS_LoadZipFile( const char *packfile ) {
     int             i;
     packfile_t      *file;
-    char            *names;
-    int             numFiles;
+    char            *name;
+    size_t          names_len;
+    unsigned        num_disk, num_disk_cd, num_files, num_files_cd;
+    size_t          header_pos, central_ofs, central_size, central_end;
+    size_t          extra_bytes, ofs;
     pack_t          *pack;
-    unzFile         zFile;
-    unz_global_info zGlobalInfo;
-    unz_file_info   zInfo;
-    char            name[MAX_QPATH];
-    size_t          namesLength;
-    int             hashSize;
+    FILE            *fp;
+    byte            header[ZIP_SIZECENTRALHEADER];
     unsigned        hash;
     size_t          len;
 
-    zFile = unzOpen( packfile );
-    if( !zFile ) {
-        Com_WPrintf( "unzOpen() failed on %s\n", packfile );
+    fp = fopen( packfile, "rb" );
+    if( !fp ) {
+        Com_Printf( "Couldn't open %s\n", packfile );
         return NULL;
     }
 
-    if( unzGetGlobalInfo( zFile, &zGlobalInfo ) != UNZ_OK ) {
-        Com_WPrintf( "unzGetGlobalInfo() failed on %s\n", packfile );
-        goto fail;
+    header_pos = search_central_header( fp );
+    if( !header_pos ) {
+        Com_Printf( "No central header found in %s\n", packfile );
+        goto fail2;
+    }
+    if( fseek( fp, header_pos, SEEK_SET ) == -1 ) {
+        Com_Printf( "Couldn't seek to central header in %s\n", packfile );
+        goto fail2;
+    }
+    if( fread( header, 1, sizeof( header ), fp ) != sizeof( header ) ) {
+        Com_Printf( "Reading central header failed on %s\n", packfile );
+        goto fail2;
     }
 
-    numFiles = zGlobalInfo.number_entry;
-    if( numFiles > MAX_FILES_IN_PK2 ) {
-        Com_WPrintf( "%s has too many files, %i > %i\n", packfile, numFiles, MAX_FILES_IN_PK2 );
-        goto fail;
+    num_disk = LittleShortMem( &header[4] );
+    num_disk_cd = LittleShortMem( &header[6] );
+    num_files = LittleShortMem( &header[8] );
+    num_files_cd = LittleShortMem( &header[10] );
+    if( num_files_cd != num_files || num_disk_cd != 0 || num_disk != 0 ) {
+        Com_Printf( "%s is an unsupported multi-part archive\n", packfile );
+        goto fail2;
+    }
+    if( num_files < 1 ) {
+        Com_Printf( "%s has no files\n", packfile );
+        goto fail2;
+    }
+    if( num_files > ZIP_MAXFILES ) {
+        Com_Printf( "%s has too many files: %u > %u\n", packfile, num_files, ZIP_MAXFILES );
+        goto fail2;
     }
 
-    if( unzGoToFirstFile( zFile ) != UNZ_OK ) {
-        Com_WPrintf( "unzGoToFirstFile() failed on %s\n", packfile );
-        goto fail;
+    central_size = LittleLongMem( &header[12] );
+    central_ofs = LittleLongMem( &header[16] );
+    central_end = central_ofs + central_size;
+    if( central_end > header_pos || central_end < central_ofs ) {
+        Com_Printf( "%s has bad central directory offset\n", packfile );
+        goto fail2;
     }
 
-    namesLength = 0;
-    for( i = 0; i < numFiles; i++ ) {
-        if( unzGetCurrentFileInfo( zFile, &zInfo, name, sizeof( name ), NULL, 0, NULL, 0 ) != UNZ_OK ) {
-            Com_WPrintf( "unzGetCurrentFileInfo() failed on %s\n", packfile );
-            goto fail;
-        }
-
-        // skip directories and empty files
-        if( zInfo.uncompressed_size ) {
-            namesLength += strlen( name ) + 1;
-        }
-
-        if( i != numFiles - 1 && unzGoToNextFile( zFile ) != UNZ_OK ) {
-            Com_WPrintf( "unzGoToNextFile() failed on %s\n", packfile );
-        }
+// non-zero for sfx?
+    extra_bytes = header_pos - central_end;
+    if( extra_bytes ) {
+        Com_Printf( "%s has %"PRIz" extra bytes at the beginning, funny sfx archive?\n",
+            packfile, extra_bytes );
     }
-
-    hashSize = Q_CeilPowerOfTwo( numFiles );
-    if( hashSize > 32 ) {
-        hashSize >>= 1;
-    }
-
-    len = strlen( packfile );
-    len = ( len + 3 ) & ~3;
-    pack = FS_Malloc( sizeof( pack_t ) +
-        numFiles * sizeof( packfile_t ) +
-        hashSize * sizeof( packfile_t * ) +
-        namesLength + len );
-    strcpy( pack->filename, packfile );
-    pack->zFile = zFile;
-    pack->fp = NULL;
-    pack->numfiles = numFiles;
-    pack->hashSize = hashSize;
-    pack->files = ( packfile_t * )( ( byte * )pack + sizeof( pack_t ) + len );
-    pack->fileHash = ( packfile_t ** )( pack->files + numFiles );
-    names = ( char * )( pack->fileHash + hashSize );
-    memset( pack->fileHash, 0, hashSize * sizeof( packfile_t * ) );
 
 // parse the directory
-    unzGoToFirstFile( zFile );
-
-    for( i = 0, file = pack->files; i < numFiles; i++, file++ ) {
-        unzGetCurrentFileInfo( zFile, &zInfo, name, sizeof( name ), NULL, 0, NULL, 0 );
-
-        if( zInfo.uncompressed_size ) {
-            len = strlen( name ) + 1;
-            file->name = names;
-
-            strcpy( file->name, name );
-            file->filepos = unzGetCurrentFileInfoPosition( zFile );
-            file->filelen = zInfo.uncompressed_size;
-
-            hash = Com_HashPath( file->name, hashSize );
-            file->hashNext = pack->fileHash[hash];
-            pack->fileHash[hash] = file;
-
-            names += len;
+    num_files = 0;
+    names_len = 0;
+    header_pos = central_ofs + extra_bytes;
+    for( i = 0; i < num_files_cd; i++ ) {
+        ofs = get_file_info( fp, header_pos, NULL, &len );
+        if( !ofs ) {
+            Com_Printf( "%s has bad central directory structure\n", packfile );
+            goto fail2;
         }
-        
-        if( i != numFiles - 1 ) {
-            unzGoToNextFile( zFile );
+        header_pos += ofs;
+
+        if( len ) {
+            names_len += len;
+            num_files++;
         }
     }
 
-    FS_DPrintf( "%s: %d files, %d hash table entries\n",
-        packfile, numFiles, hashSize );
+    if( !num_files ) {
+        Com_Printf( "%s has no valid files\n", packfile );
+        goto fail2;
+    }
+
+// allocate the pack
+    pack = pack_alloc( fp, FS_ZIP, packfile, num_files, names_len );
+
+// parse the directory
+    name = pack->names;
+    file = pack->files;
+    num_files = 0;
+    header_pos = central_ofs + extra_bytes;
+    for( i = 0; i < num_files_cd; i++ ) {
+        file->name = name;
+        ofs = get_file_info( fp, header_pos, file, &len );
+        if( !ofs ) {
+            Com_EPrintf( "Error re-reading central directory in %s\n", packfile );
+            goto fail1;
+        }
+        header_pos += ofs;
+
+        if( len ) {
+            // fix absolute position
+            file->filepos += extra_bytes;
+            file->coherent = qfalse;
+
+            hash = Com_HashPath( file->name, pack->hash_size );
+            file->hash_next = pack->file_hash[hash];
+            pack->file_hash[hash] = file;
+
+            file++;
+            name += len;
+            if( ++num_files == pack->numfiles ) {
+                break;
+            }
+        }
+    }
+
+    FS_DPrintf( "%s: %u files, %u skipped, %u hash\n",
+        packfile, num_files, num_files_cd - num_files, pack->hash_size );
 
     return pack;
 
-fail:
-    unzClose( zFile );
+fail1:
+    Z_Free( pack );
+fail2:
+    fclose( fp );
     return NULL;
 }
 #endif
@@ -1508,7 +1921,7 @@ alphacmp:
 static void FS_LoadPackFiles( int mode, const char *extension, pack_t *(loadfunc)( const char * ) ) {
     int             i;
     searchpath_t    *search;
-    pack_t          *pak;
+    pack_t          *pack;
     void            **list;
     int             numFiles;
     char            path[MAX_OSPATH];
@@ -1520,13 +1933,13 @@ static void FS_LoadPackFiles( int mode, const char *extension, pack_t *(loadfunc
     qsort( list, numFiles, sizeof( list[0] ), pakcmp );
     for( i = 0; i < numFiles; i++ ) {
         Q_concat( path, sizeof( path ), fs_gamedir, "/", list[i], NULL );
-        pak = (*loadfunc)( path );
-        if( !pak )
+        pack = (*loadfunc)( path );
+        if( !pack )
             continue;
         search = FS_Malloc( sizeof( searchpath_t ) );
         search->mode = mode;
         search->filename[0] = 0;
-        search->pack = pak;
+        search->pack = pack_get( pack );
         search->next = fs_searchpaths;
         fs_searchpaths = search;    
     }
@@ -2090,8 +2503,8 @@ static void FS_WhereIs_f( void ) {
         if( search->pack ) {
             // look through all the pak file elements
             pak = search->pack;
-            entry = pak->fileHash[ hash & ( pak->hashSize - 1 ) ];
-            for( ; entry; entry = entry->hashNext ) {
+            entry = pak->file_hash[ hash & ( pak->hash_size - 1 ) ];
+            for( ; entry; entry = entry->hash_next ) {
                 if( !FS_pathcmp( entry->name, path ) ) {
                     Com_Printf( "%s/%s (%"PRIz" bytes)\n", pak->filename,
                         path, entry->filelen );
@@ -2135,15 +2548,15 @@ void FS_Path_f( void ) {
     searchpath_t *s;
     int numFilesInPAK = 0;
 #if USE_ZLIB
-    int numFilesInPK2 = 0;
+    int numFilesInZIP = 0;
 #endif
 
     Com_Printf( "Current search path:\n" );
     for( s = fs_searchpaths; s; s = s->next ) {
         if( s->pack ) {
 #if USE_ZLIB
-            if( s->pack->zFile )
-                numFilesInPK2 += s->pack->numfiles;
+            if( s->pack->type == FS_ZIP )
+                numFilesInZIP += s->pack->numfiles;
             else
 #endif
                 numFilesInPAK += s->pack->numfiles;
@@ -2158,8 +2571,8 @@ void FS_Path_f( void ) {
     }
 
 #if USE_ZLIB
-    if( numFilesInPK2 ) {
-        Com_Printf( "%i files in PKZ files\n", numFilesInPK2 );
+    if( numFilesInZIP ) {
+        Com_Printf( "%i files in PKZ files\n", numFilesInZIP );
     }
 #endif
 }
@@ -2182,23 +2595,23 @@ static void FS_Stats_f( void ) {
         if( !( pack = path->pack ) ) {
             continue;
         }
-        for( i = 0; i < pack->hashSize; i++ ) {
-            if( !( file = pack->fileHash[i] ) ) {
+        for( i = 0; i < pack->hash_size; i++ ) {
+            if( !( file = pack->file_hash[i] ) ) {
                 continue;
             }
             len = 0;
-            for( ; file ; file = file->hashNext ) {
+            for( ; file ; file = file->hash_next ) {
                 len++;
             }
             if( maxLen < len ) {
-                max = pack->fileHash[i];
+                max = pack->file_hash[i];
                 maxpack = pack;
                 maxLen = len;
             }
             totalLen += len;
             totalHashSize++;
         }
-        //totalHashSize += pack->hashSize;
+        //totalHashSize += pack->hash_size;
     }
 
 #ifdef _DEBUG
@@ -2218,7 +2631,7 @@ static void FS_Stats_f( void ) {
     Com_Printf( "Maximum hash bucket length is %d, average is %.2f\n", maxLen, ( float )totalLen / totalHashSize );
     if( max ) {
         Com_Printf( "Dumping longest bucket (%s):\n", maxpack->filename );
-        for( file = max; file ; file = file->hashNext ) {
+        for( file = max; file ; file = file->hash_next ) {
             Com_Printf( "%s\n", file->name );
         }
     }
@@ -2347,18 +2760,7 @@ update:
 }
 
 static void FS_FreeSearchPath( searchpath_t *path ) {
-    pack_t *pak;
-
-    if( ( pak = path->pack ) != NULL ) {
-#if USE_ZLIB
-        if( pak->zFile )
-            unzClose( pak->zFile );
-        else
-#endif
-            fclose( pak->fp );
-        Z_Free( pak );
-    }
-
+    pack_put( path->pack );
     Z_Free( path );
 }
 
@@ -2416,23 +2818,6 @@ static void setup_gamedir( void ) {
     Cvar_FullSet( "fs_gamedir", fs_gamedir, CVAR_ROM, FROM_CODE );
 }
 
-static qboolean safe_to_restart( void ) {
-    file_t   *file;
-    int         i;
-    
-    // make sure no files are opened for reading
-    for( i = 0, file = fs_files; i < MAX_FILE_HANDLES; i++, file++ ) {
-        if( file->type == FS_FREE ) {
-            continue;
-        }
-        if( file->mode == FS_MODE_READ ) {
-            return qfalse;
-        }
-    }
-
-    return qtrue;
-}
-
 /*
 ================
 FS_Restart
@@ -2441,29 +2826,7 @@ Unless total is true, reloads paks only up to base dir
 ================
 */
 void FS_Restart( qboolean total ) {
-    file_t  *file;
-    int     i;
-    fileHandle_t temp;
-
     Com_Printf( "---------- FS_Restart ----------\n" );
-    
-    // temporary disable logfile
-    temp = com_logFile;
-    com_logFile = 0;
-
-    // make sure no files from paks are opened
-    for( i = 0, file = fs_files; i < MAX_FILE_HANDLES; i++, file++ ) {
-        switch( file->type ) {
-        case FS_FREE:
-        case FS_REAL:
-#if USE_ZLIB
-        case FS_GZIP:
-#endif
-            break;
-        default:
-            Com_Error( ERR_FATAL, "%s: closing handle %d", __func__, i + 1 );
-        }
-    }
     
     if( total ) {
         // perform full reset
@@ -2478,9 +2841,6 @@ void FS_Restart( qboolean total ) {
 
     FS_Path_f();
 
-    // re-enable logfile
-    com_logFile = temp;
-    
     Com_Printf( "--------------------------------\n" );
 }
 
@@ -2492,11 +2852,6 @@ Console command to fully re-start the file system.
 ============
 */
 static void FS_Restart_f( void ) {
-    if( !safe_to_restart() ) {
-        Com_Printf( "Can't \"%s\", there are some open file handles.\n", Cmd_Argv( 0 ) );
-        return;
-    }
-    
 #if USE_CLIENT
     CL_RestartFilesystem( qtrue );
 #else
@@ -2543,6 +2898,10 @@ void FS_Shutdown( void ) {
 
     // free search paths
     free_all_paths();
+
+#if USE_ZLIB
+    inflateEnd( &fs_zipstream.stream );
+#endif
 
     Z_LeakTest( TAG_FILESYSTEM );
 

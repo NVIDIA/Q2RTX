@@ -33,7 +33,6 @@ SRCFILES+=cmd.c \
 	io_sleep.c
 
 ifdef USE_ZLIB
-SRCFILES+=ioapi.c unzip.c 
 LDFLAGS+=$(ZLIB_LDFLAGS)
 CFLAGS+=$(ZLIB_CFLAGS)
 endif
