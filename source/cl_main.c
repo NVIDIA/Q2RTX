@@ -3088,8 +3088,8 @@ void CL_Init( void ) {
     IN_Init();
 
 #if USE_ZLIB
-    if( inflateInit2( &cls.z, -15 ) != Z_OK ) {
-        Com_Error( ERR_FATAL, "inflateInit2() failed" );
+    if( inflateInit2( &cls.z, -MAX_WBITS ) != Z_OK ) {
+        Com_Error( ERR_FATAL, "%s: inflateInit2() failed", __func__ );
     }
 #endif
 
