@@ -110,8 +110,7 @@ static int GetLittleShort( void ) {
         return -1;
     }
 
-    val = data_p[0];
-    val |= data_p[1] << 8;
+    val = LittleShortMem( data_p );
     data_p += 2;
     return val;
 }
@@ -123,10 +122,19 @@ static int GetLittleLong( void ) {
         return -1;
     }
 
-    val = data_p[0];
-    val |= data_p[1] << 8;
-    val |= data_p[2] << 16;
-    val |= data_p[3] << 24;
+    val = LittleLongMem( data_p );
+    data_p += 4;
+    return val;
+}
+
+static int GetRawLong( void ) {
+    int val;
+
+    if( data_p + 4 > iff_end ) {
+        return -1;
+    }
+
+    val = RawLongMem( data_p );
     data_p += 4;
     return val;
 }
@@ -141,11 +149,11 @@ static void FindNextChunk( uint32_t search ) {
             return; // didn't find the chunk
         }
 
-        chunk = GetLittleLong();
+        chunk = GetRawLong();
         iff_chunk_len = GetLittleLong();
         if( iff_chunk_len > iff_end - data_p ) {
             Com_DPrintf( "%s: oversize chunk %#x in %s\n",
-                __func__, chunk, s_info.name );
+                __func__, LittleLong( chunk ), s_info.name );
             data_p = NULL;
             return;
         }
@@ -165,13 +173,13 @@ static void FindChunk( uint32_t search ) {
     FindNextChunk( search );
 }
 
-#define TAG_RIFF    MakeLong( 'R', 'I', 'F', 'F' )
-#define TAG_WAVE    MakeLong( 'W', 'A', 'V', 'E' )
-#define TAG_fmt     MakeLong( 'f', 'm', 't', ' ' )
-#define TAG_cue     MakeLong( 'c', 'u', 'e', ' ' )
-#define TAG_LIST    MakeLong( 'L', 'I', 'S', 'T' )
-#define TAG_MARK    MakeLong( 'M', 'A', 'R', 'K' )
-#define TAG_data    MakeLong( 'd', 'a', 't', 'a' )
+#define TAG_RIFF    MakeRawLong( 'R', 'I', 'F', 'F' )
+#define TAG_WAVE    MakeRawLong( 'W', 'A', 'V', 'E' )
+#define TAG_fmt     MakeRawLong( 'f', 'm', 't', ' ' )
+#define TAG_cue     MakeRawLong( 'c', 'u', 'e', ' ' )
+#define TAG_LIST    MakeRawLong( 'L', 'I', 'S', 'T' )
+#define TAG_MARK    MakeRawLong( 'M', 'A', 'R', 'K' )
+#define TAG_data    MakeRawLong( 'd', 'a', 't', 'a' )
 
 /*
 ============

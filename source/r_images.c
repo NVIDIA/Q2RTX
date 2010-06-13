@@ -472,8 +472,8 @@ void IMG_LoadTGA( const char *filename, byte **pic, int *width, int *height ) {
 
     id_length = buffer[0];
     image_type = buffer[2];
-    w = MakeShort( buffer[12], buffer[13] );
-    h = MakeShort( buffer[14], buffer[15] );
+    w = LittleShortMem( &buffer[12] );
+    h = LittleShortMem( &buffer[14] );
     pixel_size = buffer[16];
     attributes = buffer[17];
     
@@ -1310,7 +1310,7 @@ image_t *IMG_Find( const char *name, imagetype_t type ) {
 
     ext = buffer + length;
     Q_strlwr( ext + 1 );
-    extHash = MakeLong( '.', ext[1], ext[2], ext[3] );
+    extHash = MakeRawLong( '.', ext[1], ext[2], ext[3] );
 
     //
     // create the pic from disk

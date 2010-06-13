@@ -116,8 +116,8 @@ static inline qboolean NET_IsLanAddress( const netadr_t *adr ) {
         if( adr->ip[0] == 127 || adr->ip[0] == 10 ) {
             return qtrue;
         }
-        if( *( uint16_t * )adr->ip == MakeShort( 192, 168 ) ||
-            *( uint16_t * )adr->ip == MakeShort( 172,  16 ) )
+        if( *( uint16_t * )adr->ip == MakeRawShort( 192, 168 ) ||
+            *( uint16_t * )adr->ip == MakeRawShort( 172,  16 ) )
         {
             return qtrue;
         }

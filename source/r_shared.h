@@ -27,9 +27,9 @@ IMAGE MANAGER
 */
 
 #if USE_BGRA
-#define MakeColor( r, g, b, a )        MakeLong( b, g, r, a )
+#define MakeColor( r, g, b, a )        MakeRawLong( b, g, r, a )
 #else
-#define MakeColor( r, g, b, a )        MakeLong( r, g, b, a )
+#define MakeColor( r, g, b, a )        MakeRawLong( r, g, b, a )
 #endif
 
 #define R_Malloc( size )    Z_TagMalloc( size, TAG_RENDERER )
@@ -83,11 +83,11 @@ typedef enum {
     it_tmp
 } imagetype_t;
 
-#define EXTENSION_PNG    MakeLong( '.', 'p', 'n', 'g' )
-#define EXTENSION_TGA    MakeLong( '.', 't', 'g', 'a' )
-#define EXTENSION_JPG    MakeLong( '.', 'j', 'p', 'g' )
-#define EXTENSION_PCX    MakeLong( '.', 'p', 'c', 'x' )
-#define EXTENSION_WAL    MakeLong( '.', 'w', 'a', 'l' )
+#define EXTENSION_PNG    MakeRawLong( '.', 'p', 'n', 'g' )
+#define EXTENSION_TGA    MakeRawLong( '.', 't', 'g', 'a' )
+#define EXTENSION_JPG    MakeRawLong( '.', 'j', 'p', 'g' )
+#define EXTENSION_PCX    MakeRawLong( '.', 'p', 'c', 'x' )
+#define EXTENSION_WAL    MakeRawLong( '.', 'w', 'a', 'l' )
 
 typedef struct image_s {
     list_t          entry;

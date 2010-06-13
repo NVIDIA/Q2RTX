@@ -22,13 +22,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // q_msg.h
 //
 
-#define SZ_MSG_WRITE        MakeLong( 'w', 'r', 'i', 't' )
-#define SZ_MSG_READ         MakeLong( 'r', 'e', 'a', 'd' )
-#define SZ_NC_SEND_OLD      MakeLong( 'n', 'c', '1', 's' )
-#define SZ_NC_SEND_NEW      MakeLong( 'n', 'c', '2', 's' )
-#define SZ_NC_SEND_FRG      MakeLong( 'n', 'c', '2', 'f' )
-#define SZ_NC_FRG_IN        MakeLong( 'n', 'c', '2', 'i' )
-#define SZ_NC_FRG_OUT       MakeLong( 'n', 'c', '2', 'o' )
+#define SZ_MSG_WRITE        MakeRawLong( 'w', 'r', 'i', 't' )
+#define SZ_MSG_READ         MakeRawLong( 'r', 'e', 'a', 'd' )
+#define SZ_NC_SEND_OLD      MakeRawLong( 'n', 'c', '1', 's' )
+#define SZ_NC_SEND_NEW      MakeRawLong( 'n', 'c', '2', 's' )
+#define SZ_NC_SEND_FRG      MakeRawLong( 'n', 'c', '2', 'f' )
+#define SZ_NC_FRG_IN        MakeRawLong( 'n', 'c', '2', 'i' )
+#define SZ_NC_FRG_OUT       MakeRawLong( 'n', 'c', '2', 'o' )
 
 typedef struct sizebuf_s {
     uint32_t    tag;

@@ -1488,7 +1488,7 @@ int MSG_ReadShort( void ) {
     if (!buf) {
         c = -1;
     } else {
-        c = (signed short)(buf[0] | (buf[1]<<8));
+        c = (signed short)LittleShortMem(buf);
     }
     
     return c;
@@ -1501,7 +1501,7 @@ int MSG_ReadWord( void ) {
     if (!buf) {
         c = -1;
     } else {
-        c = (unsigned short)(buf[0] | (buf[1]<<8));
+        c = (unsigned short)LittleShortMem(buf);
     }
     
     return c;
@@ -1514,7 +1514,7 @@ int MSG_ReadLong( void ) {
     if (!buf) {
         c = -1;
     } else {
-        c = buf[0] | (buf[1]<<8) | (buf[2]<<16) | (buf[3]<<24);
+        c = LittleLongMem(buf);
     }
 
     return c;

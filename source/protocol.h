@@ -86,10 +86,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MAX_PACKET_STRINGCMDS   8
 #define MAX_PACKET_USERINFOS    8
 
-#define CS_BITMAP_BYTES        (MAX_CONFIGSTRINGS/8) // 260
-#define CS_BITMAP_LONGS        (CS_BITMAP_BYTES/4 )
+#define CS_BITMAP_BYTES         (MAX_CONFIGSTRINGS/8) // 260
+#define CS_BITMAP_LONGS         (CS_BITMAP_BYTES/4 )
 
-#define MVD_MAGIC               MakeLong('M','V','D','2')
+#define MVD_MAGIC               MakeRawLong('M','V','D','2')
 
 //
 // server to client
