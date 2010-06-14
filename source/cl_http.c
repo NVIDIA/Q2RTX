@@ -567,13 +567,13 @@ qboolean HTTP_DownloadsPending (void) {
 }
 
 static qboolean check_extension (const char *ext) {
-    static const char allowed[][4] = {
+    static const char allowed[14][4] = {
         "pcx", "wal", "wav", "md2", "sp2", "tga", "png",
-        "jpg", "bsp", "ent", "txt", "dm2", "loc", ""
+        "jpg", "bsp", "ent", "txt", "dm2", "loc", "md3"
     };
     int i;
 
-    for (i = 0; allowed[i][0]; i++)
+    for (i = 0; i < 14; i++)
         if (!strcmp (ext, allowed[i]))
             return qtrue;
     return qfalse;
@@ -600,8 +600,8 @@ static void check_and_queue_download (char *path) {
 
     Q_strlwr (ext);
 
-    if (!strcmp (ext, "pak")) {
-        Com_Printf ("[HTTP] Filelist is requesting a .pak file '%s'\n", path);
+    if (!strcmp (ext, "pak") || !strcmp (ext, "pkz")) {
+        Com_Printf ("[HTTP] Filelist is requesting a .%s file '%s'\n", ext, path);
         type = DL_PAK;
     } else {
         type = DL_OTHER;
