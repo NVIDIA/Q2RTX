@@ -58,7 +58,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <sys/param.h>
 #include <sys/ioctl.h>
 #include <sys/uio.h>
-#include <errno.h>
 #include <arpa/inet.h>
 #ifdef __linux__
 #include <linux/types.h>
@@ -128,7 +127,7 @@ static const char   socketNames[NS_COUNT][8] = { "Client", "Server" };
 static SOCKET       udp_sockets[NS_COUNT] = { INVALID_SOCKET, INVALID_SOCKET };
 static SOCKET       tcp_socket = INVALID_SOCKET;
 #ifdef _DEBUG
-static fileHandle_t net_logFile;
+static qhandle_t    net_logFile;
 #endif
 
 // current rate measurement
@@ -310,29 +309,22 @@ static void logfile_close( void ) {
 
 static void logfile_open( void ) {
     char buffer[MAX_OSPATH];
-    size_t len;
-    int mode;
-
-    len = Q_concat( buffer, sizeof( buffer ), "logs/",
-        net_log_name->string, ".log", NULL );
-    if( len >= sizeof( buffer ) ) {
-        Com_WPrintf( "Oversize logfile name specified\n" );
-        Cvar_Set( "net_log_enable", "0" );
-        return;
-    }
+    unsigned mode;
+    qhandle_t f;
 
     mode = net_log_enable->integer > 1 ? FS_MODE_APPEND : FS_MODE_WRITE;
     if( net_log_flush->integer ) {
         mode |= FS_FLUSH_SYNC;
     }
 
-    FS_FOpenFile( buffer, &net_logFile, mode );
-    if( !net_logFile ) {
-        Com_WPrintf( "Couldn't open %s\n", buffer );
+    f = FS_EasyOpenFile( buffer, sizeof( buffer ), mode,
+        "logs/", net_log_name->string, ".log" );
+    if( !f ) {
         Cvar_Set( "net_log_enable", "0" );
         return;
     }
 
+    net_logFile = f;
     Com_Printf( "Logging network packets to %s\n", buffer );
 }
 

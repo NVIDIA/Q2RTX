@@ -30,7 +30,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <unistd.h>
 #include <fcntl.h>
 #include <linux/input.h>
-#include <errno.h>
 
 #include <SDL.h>
 
@@ -47,12 +46,7 @@ static struct {
 #define MAX_EVENTS    64
 #define EVENT_SIZE    sizeof( struct input_event )
 
-/*
-===========
-Evdev_GetMouseEvents
-===========
-*/
-static void Evdev_GetMouseEvents( void ) {
+static void GetMouseEvents( void ) {
     struct input_event ev[MAX_EVENTS];
     int bytes, count;
     int dx, dy;
@@ -109,7 +103,7 @@ static void Evdev_GetMouseEvents( void ) {
     }
 }
 
-static qboolean Evdev_GetMouseMotion( int *dx, int *dy ) {
+static qboolean GetMouseMotion( int *dx, int *dy ) {
     if( !evdev.initialized || !evdev.grabbed ) {
         return qfalse;
     }
@@ -120,12 +114,7 @@ static qboolean Evdev_GetMouseMotion( int *dx, int *dy ) {
     return qtrue;
 }
 
-/*
-===========
-Evdev_ShutdownMouse
-===========
-*/
-static void Evdev_ShutdownMouse( void ) {
+static void ShutdownMouse( void ) {
     if( !evdev.initialized ) {
         return;
     }
@@ -134,15 +123,10 @@ static void Evdev_ShutdownMouse( void ) {
     memset( &evdev, 0, sizeof( evdev ) );
 }
 
-/*
-===========
-Evdev_StartupMouse
-===========
-*/
-static qboolean Evdev_InitMouse( void ) {
+static qboolean InitMouse( void ) {
     in_device = Cvar_Get( "in_device", "", 0 );
     if( !in_device->string[0] ) {
-        Com_EPrintf( "No input device specified\n" );
+        Com_WPrintf( "No evdev input device specified.\n" );
         return qfalse;
     }
  
@@ -156,18 +140,13 @@ static qboolean Evdev_InitMouse( void ) {
     fcntl( evdev.fd, F_SETFL, fcntl( evdev.fd, F_GETFL, 0 ) | FNDELAY );
     evdev.io = IO_Add( evdev.fd );
 
-    Com_Printf( "Event interface initialized.\n" );
+    Com_Printf( "Evdev interface initialized.\n" );
     evdev.initialized = qtrue;
 
     return qtrue;
 }
 
-/*
-===========
-Evdev_GrabMouse
-===========
-*/
-static void Evdev_GrabMouse( grab_t grab ) {
+static void GrabMouse( grab_t grab ) {
     if( !evdev.initialized ) {
         return;
     }
@@ -206,11 +185,11 @@ DI_FillAPI
 @@@@@@@@@@@@@@@@@@@
 */
 void DI_FillAPI( inputAPI_t *api ) {
-    api->Init = Evdev_InitMouse;
-    api->Shutdown = Evdev_ShutdownMouse;
-    api->Grab = Evdev_GrabMouse;
-    api->GetEvents = Evdev_GetMouseEvents;
-    api->GetMotion = Evdev_GetMouseMotion;
+    api->Init = InitMouse;
+    api->Shutdown = ShutdownMouse;
+    api->Grab = GrabMouse;
+    api->GetEvents = GetMouseEvents;
+    api->GetMotion = GetMouseMotion;
 }
 
 

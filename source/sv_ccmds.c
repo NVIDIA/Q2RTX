@@ -320,9 +320,9 @@ static void SV_Map_c( genctx_t *ctx, int argnum ) {
 
 static void SV_DumpEnts_f( void ) {
     bsp_t *c = sv.cm.cache;
-    fileHandle_t f;
     char buffer[MAX_OSPATH];
     size_t len;
+    qerror_t ret;
 
     if( !c || !c->entitystring ) {
         Com_Printf( "No map loaded.\n" );
@@ -341,14 +341,11 @@ static void SV_DumpEnts_f( void ) {
         return;
     }
 
-    FS_FOpenFile( buffer, &f, FS_MODE_WRITE );
-    if( !f ) {
-        Com_EPrintf( "Couldn't open %s for writing\n", buffer );
+    ret = FS_WriteFile( buffer, c->entitystring, c->numentitychars );
+    if( ret < 0 ) {
+        Com_EPrintf( "Couldn't write %s: %s\n", buffer, Q_ErrorString( ret ) );
         return;
     }
-
-    FS_Write( c->entitystring, c->numentitychars, f );
-    FS_FCloseFile( f );
 
     Com_Printf( "Dumped entity string to %s\n", buffer );
 }

@@ -58,11 +58,13 @@ CM_LoadMap
 Loads in the map and all submodels
 ==================
 */
-qboolean CM_LoadMap( cm_t *cm, const char *name ) {
+qerror_t CM_LoadMap( cm_t *cm, const char *name ) {
     bsp_t *cache;
+    qerror_t ret;
 
-    if( !( cache = BSP_Load( name ) ) ) {
-        return qfalse;
+    ret = BSP_Load( name, &cache );
+    if( !cache ) {
+        return ret;
     }
 
     cm->cache = cache;
@@ -71,7 +73,7 @@ qboolean CM_LoadMap( cm_t *cm, const char *name ) {
     cm->portalopen = ( qboolean * )( cm->floodnums + cm->cache->numareas );
     FloodAreaConnections( cm );
 
-    return qtrue;
+    return Q_ERR_SUCCESS;
 }
 
 mnode_t *CM_NodeNum( cm_t *cm, int number ) {

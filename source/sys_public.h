@@ -55,9 +55,9 @@ void    Sys_Quit( void ) q_noreturn;
 void    **Sys_ListFiles( const char *path, const char *extension,
                          int flags, size_t length, int *numFiles );
 
-struct file_info_s;
-qboolean Sys_GetPathInfo( const char *path, struct file_info_s *info );
-qboolean Sys_GetFileInfo( FILE *fp, struct file_info_s *info );
+struct  file_info_s;
+qerror_t Sys_GetPathInfo( const char *path, struct file_info_s *info );
+qerror_t Sys_GetFileInfo( FILE *fp, struct file_info_s *info );
 
 char    *Sys_GetCurrentDirectory( void );
 

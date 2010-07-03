@@ -141,7 +141,7 @@ void PlayerModel_Load( void ) {
 
         // verify the existence of tris.md2
         Q_concat( scratch, sizeof( scratch ), "players/", dirnames[i], "/tris.md2", NULL );
-        if( FS_LoadFile( scratch, NULL ) == INVALID_LENGTH ) {
+        if( !FS_FileExists( scratch ) ) {
             continue;
         }
 

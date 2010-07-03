@@ -392,9 +392,14 @@ static void AC_ParseToken( char *data, int linenum, const char *path ) {
 static qboolean AC_ParseFile( const char *path, ac_parse_t parse, int depth ) {
     char *raw, *data, *p;
     int linenum = 1;
+    qerror_t ret;
 
-    FS_LoadFile( path, ( void ** )&raw );
+    ret = FS_LoadFile( path, ( void ** )&raw );
     if( !raw ) {
+        if( ret != Q_ERR_NOENT || depth ) {
+            Com_WPrintf( "ANTICHEAT: Could not %s %s: %s\n",
+                depth ? "include" : "load", path, Q_ErrorString( ret ) );
+        }
         return qfalse;
     }
 
@@ -417,8 +422,8 @@ static qboolean AC_ParseFile( const char *path, ac_parse_t parse, int depth ) {
             if( !strncmp( data + 1, "include ", 8 ) ) {
                 if( depth == AC_MAX_INCLUDES ) {
                     Com_WPrintf( "ANTICHEAT: Includes too deeply nested.\n" );
-                } else if( !AC_ParseFile( data + 9, parse, depth + 1 ) ) {
-                    Com_WPrintf( "ANTICHEAT: Could not include %s\n", data + 9 );
+                } else {
+                    AC_ParseFile( data + 9, parse, depth + 1 );
                 }
             } else {
                 Com_WPrintf( "ANTICHEAT: Unknown directive %s on line %d in %s\n", data + 1, linenum, path );

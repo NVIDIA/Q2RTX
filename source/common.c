@@ -84,8 +84,8 @@ cvar_t  *allow_download_others;
 
 cvar_t  *rcon_password;
 
-fileHandle_t    com_logFile;
-qboolean        com_logNewline;
+qhandle_t   com_logFile;
+qboolean    com_logNewline;
 unsigned    com_framenum;
 unsigned    com_eventTime;
 unsigned    com_localTime;
@@ -178,29 +178,22 @@ static void logfile_close( void ) {
 
 static void logfile_open( void ) {
     char buffer[MAX_OSPATH];
-    size_t len;
-    int mode;
-
-    len = Q_concat( buffer, sizeof( buffer ), "logs/",
-        logfile_name->string, ".log", NULL );
-    if( len >= sizeof( buffer ) ) {
-        Com_WPrintf( "Oversize logfile name specified\n" );
-        Cvar_Set( "logfile", "0" );
-        return;
-    }
+    unsigned mode;
+    qhandle_t f;
 
     mode = logfile_enable->integer > 1 ? FS_MODE_APPEND : FS_MODE_WRITE;
     if( logfile_flush->integer ) {
         mode |= FS_FLUSH_SYNC;
     }
 
-    FS_FOpenFile( buffer, &com_logFile, mode );
-    if( !com_logFile ) {
-        Com_WPrintf( "Couldn't open %s for writing\n", buffer );
+    f = FS_EasyOpenFile( buffer, sizeof( buffer ), mode,
+        "logs/", logfile_name->string, ".log" );
+    if( !f ) {
         Cvar_Set( "logfile", "0" );
         return;
     }
 
+    com_logFile = f;
     com_logNewline = qtrue;
     Com_Printf( "Logging console to %s\n", buffer );
 }

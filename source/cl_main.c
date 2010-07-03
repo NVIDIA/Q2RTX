@@ -1928,20 +1928,19 @@ void CL_RequestNextDownload ( void ) {
 #endif
 
     if ( precache_check == ENV_CNT ) {
-        precache_check = ENV_CNT + 1;
-
-        if( ( cl.bsp = BSP_Load( cl.configstrings[ CS_MODELS + 1 ] ) ) == NULL ) {
+        qerror_t ret = BSP_Load( cl.configstrings[ CS_MODELS + 1 ], &cl.bsp );
+        if( cl.bsp == NULL ) {
             Com_Error( ERR_DROP, "Couldn't load %s: %s",
-                cl.configstrings[ CS_MODELS + 1 ], BSP_GetError() );
+                cl.configstrings[ CS_MODELS + 1 ], Q_ErrorString( ret ) );
         }
 
 #if USE_MAPCHECKSUM
         if ( cl.bsp->checksum != atoi( cl.configstrings[ CS_MAPCHECKSUM ] ) ) {
-            Com_Error ( ERR_DROP, "Local map version differs from server: %i != '%s'\n",
-                        cl.bsp->checksum, cl.configstrings[ CS_MAPCHECKSUM ] );
-            return;
+            Com_Error ( ERR_DROP, "Local map version differs from server: %i != %s",
+                cl.bsp->checksum, cl.configstrings[ CS_MAPCHECKSUM ] );
         }
 #endif
+        precache_check = ENV_CNT + 1;
         CL_RegisterModels();
     }
 
@@ -1976,9 +1975,9 @@ void CL_RequestNextDownload ( void ) {
 
                 // Also check if 32bit images are present
                 Q_concat( fn, sizeof( fn ), "textures/", texname, ".jpg", NULL );
-                if ( FS_LoadFile( fn, NULL ) == INVALID_LENGTH ) {
+                if ( !FS_FileExists( fn ) ) {
                     Q_concat( fn, sizeof( fn ), "textures/", texname, ".tga", NULL );
-                    if ( FS_LoadFile( fn, NULL ) == INVALID_LENGTH ) {
+                    if ( !FS_FileExists( fn ) ) {
                         Q_concat( fn, sizeof( fn ), "textures/", texname, ".wal", NULL );
                         if ( !CL_CheckOrDownloadFile( fn ) ) {
                             return; // started a download
@@ -2044,9 +2043,10 @@ static void CL_Precache_f( void ) {
     //Yet another hack to let old demos work
     //the old precache sequence
     if( cls.demo.playback ) {
-        if( ( cl.bsp = BSP_Load( cl.configstrings[ CS_MODELS + 1 ] ) ) == NULL ) {
+        qerror_t ret = BSP_Load( cl.configstrings[ CS_MODELS + 1 ], &cl.bsp );
+        if( cl.bsp == NULL ) {
             Com_Error( ERR_DROP, "Couldn't load %s: %s",
-                cl.configstrings[ CS_MODELS + 1 ], BSP_GetError() );
+                cl.configstrings[ CS_MODELS + 1 ], Q_ErrorString( ret ) );
         }
         CL_RegisterModels();
         CL_PrepRefresh();
@@ -2087,8 +2087,8 @@ static void CL_DumpClients_f( void ) {
 
 static void dump_program( const char *text, const char *name ) {
     char buffer[MAX_OSPATH];
-    fileHandle_t f;
     size_t len;
+    qerror_t ret;
 
     if( cls.state != ca_active ) {
         Com_Printf( "Must be in a level to dump.\n" );
@@ -2111,15 +2111,12 @@ static void dump_program( const char *text, const char *name ) {
         return;
     }
 
-    FS_FOpenFile( buffer, &f, FS_MODE_WRITE );
-    if( !f ) {
-        Com_EPrintf( "Couldn't open %s for writing.\n", buffer );
+    len = strlen( text );
+    ret = FS_WriteFile( buffer, text, len );
+    if( ret < 0 ) {
+        Com_EPrintf( "Couldn't write %s: %s\n", buffer, Q_ErrorString( ret ) );
         return;
     }
-
-    FS_FPrintf( f, "%s\n", text );
-
-    FS_FCloseFile( f );
 
     Com_Printf( "Dumped %s program to %s.\n", name, buffer );
 }
@@ -2154,8 +2151,7 @@ static void CL_WriteConfig_f( void ) {
     char buffer[MAX_OSPATH];
     qboolean aliases = qfalse, bindings = qfalse, modified = qfalse;
     int c, mask = 0;
-    fileHandle_t f;
-    size_t len;
+    qhandle_t f;
 
     while( ( c = Cmd_ParseOptions( o_writeconfig ) ) != -1 ) {
         switch( c ) {
@@ -2193,15 +2189,9 @@ static void CL_WriteConfig_f( void ) {
         mask = CVAR_ARCHIVE;
     }
 
-    len = Q_concat( buffer, sizeof( buffer ), "configs/", cmd_optarg, ".cfg", NULL );
-    if( len >= sizeof( buffer ) ) {
-        Com_EPrintf( "Oversize filename specified.\n" );
-        return;
-    }
-
-    FS_FOpenFile( buffer, &f, FS_MODE_WRITE );
+    f = FS_EasyOpenFile( buffer, sizeof( buffer ), FS_MODE_WRITE,
+        "configs/", cmd_optarg, ".cfg" );
     if( !f ) {
-        Com_Printf( "Couldn't open %s for writing\n", buffer );
         return;
     }
 
@@ -3120,10 +3110,13 @@ Writes key bindings and archived cvars to config.cfg
 ===============
 */
 static void CL_WriteConfig( void ) {
-    fileHandle_t f;
+    qhandle_t f;
+    qerror_t ret;
 
-    FS_FOpenFile( COM_CONFIG_NAME, &f, FS_MODE_WRITE );
+    ret = FS_FOpenFile( COM_CONFIG_NAME, &f, FS_MODE_WRITE );
     if( !f ) {
+        Com_EPrintf( "Couldn't open %s for writing: %s\n",
+            COM_CONFIG_NAME, Q_ErrorString( ret ) );
         return;
     }
 

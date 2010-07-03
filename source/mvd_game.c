@@ -1238,6 +1238,7 @@ static void MVD_GameInit( void ) {
     unsigned checksum;
     bsp_t *bsp;
     int i;
+    qerror_t ret;
 
     Com_Printf( "----- MVD_GameInit -----\n" );
 
@@ -1275,9 +1276,10 @@ static void MVD_GameInit( void ) {
     Q_snprintf( buffer, sizeof( buffer ),
         "maps/%s.bsp", mvd_default_map->string );
 
-    if( ( bsp = BSP_Load( buffer ) ) == NULL ) {
-        Com_WPrintf( "Couldn't load %s for the Waiting Room: %s\n",
-            buffer, BSP_GetError() );
+    ret = BSP_Load( buffer, &bsp );
+    if( !bsp ) {
+        Com_EPrintf( "Couldn't load %s for the Waiting Room: %s\n",
+            buffer, Q_ErrorString( ret ) );
         Cvar_Reset( mvd_default_map );
         strcpy( buffer, "maps/q2dm1.bsp" );
         checksum = 80717714;

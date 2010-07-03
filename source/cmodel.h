@@ -36,7 +36,7 @@ typedef struct {
 void        CM_Init( void );
 
 void        CM_FreeMap( cm_t *cm );
-qboolean    CM_LoadMap( cm_t *cm, const char *name );
+qerror_t    CM_LoadMap( cm_t *cm, const char *name );
 
 int         CM_NumClusters( cm_t *cm );
 int         CM_NumInlineModels( cm_t *cm );
@@ -85,6 +85,6 @@ int         CM_WritePortalBits( cm_t *cm, byte *buffer );
 void        CM_SetPortalStates( cm_t *cm, byte *buffer, int bytes );
 qboolean    CM_HeadnodeVisible( mnode_t *headnode, byte *visbits );
 
-void        CM_WritePortalState( cm_t *cm, fileHandle_t f );
-void        CM_ReadPortalState( cm_t *cm, fileHandle_t f );
+void        CM_WritePortalState( cm_t *cm, qhandle_t f );
+void        CM_ReadPortalState( cm_t *cm, qhandle_t f );
 

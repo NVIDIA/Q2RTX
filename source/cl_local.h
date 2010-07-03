@@ -257,7 +257,6 @@ typedef struct client_static_s {
 
     qboolean    ref_initialized;
     unsigned    disable_screen;
-    qboolean    _unused1;
 
     int         userinfo_modified;
     cvar_t      *userinfo_updates[MAX_PACKET_USERINFOS];
@@ -286,49 +285,46 @@ typedef struct client_static_s {
 
 // connection information
     netadr_t    serverAddress;
-    char        servername[MAX_OSPATH];    // name of server from original connect
-    unsigned    connect_time;        // for connection retransmits
+    char        servername[MAX_OSPATH]; // name of server from original connect
+    unsigned    connect_time;           // for connection retransmits
     int         connect_count;
-#if USE_AC_CLIENT
-    char        messageString[MAX_STRING_CHARS];
-#endif
     qboolean    passive;
 
 #if USE_ZLIB
     z_stream    z;
 #endif
 
-    int         quakePort;            // a 16 bit value that allows quake servers
+    int         quakePort;          // a 16 bit value that allows quake servers
                                     // to work around address translating routers
     netchan_t   *netchan;
-    int         serverProtocol;        // in case we are doing some kind of version hack
+    int         serverProtocol;     // in case we are doing some kind of version hack
     int         protocolVersion;    // minor version
 
-    int         challenge;            // from the server to use for connecting
+    int         challenge;          // from the server to use for connecting
+
+#if USE_ICMP
+    qboolean    errorReceived;  // got an ICMP error from server
+#endif
 
     struct {
-        fileHandle_t    file;            // file transfer from server
-        char            temp[MAX_QPATH+4]; // account 4 bytes for .tmp suffix
-        char            name[MAX_QPATH];
-        int             percent;
+        qhandle_t   file;               // file transfer from server
+        char        temp[MAX_QPATH+4];  // account 4 bytes for .tmp suffix
+        char        name[MAX_QPATH];
+        int         percent;
     } download;
 
 // demo recording info must be here, so it isn't cleared on level change
     struct {
-        fileHandle_t    playback;
-        fileHandle_t    recording;
-        unsigned        time_start;
-        unsigned        time_frames;
-        int             file_size;
-        int             file_offset;
-        int             file_percent;
-        sizebuf_t       buffer;
-        qboolean        paused;
+        qhandle_t   playback;
+        qhandle_t   recording;
+        unsigned    time_start;
+        unsigned    time_frames;
+        int         file_size;
+        int         file_offset;
+        int         file_percent;
+        sizebuf_t   buffer;
+        qboolean    paused;
     } demo;
-
-#if USE_ICMP
-    qboolean            errorReceived; // got an ICMP error from server
-#endif
 } client_static_t;
 
 extern client_static_t    cls;
@@ -750,7 +746,7 @@ void CL_AddNetgraph (void);
 void    Key_Init( void );
 void    Key_Event( unsigned key, qboolean down, unsigned time );
 void    Key_CharEvent( int key );
-void    Key_WriteBindings( fileHandle_t f );
+void    Key_WriteBindings( qhandle_t f );
 
 
 //

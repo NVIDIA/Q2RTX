@@ -561,13 +561,6 @@ static void SV_NextDownload_f( void ) {
 
 }
 
-static void SV_DownloadFailed( void ) {
-    MSG_WriteByte( svc_download );
-    MSG_WriteShort( -1 );
-    MSG_WriteByte( 0 );
-    SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
-}
-
 /*
 ==================
 SV_BeginDownload_f
@@ -575,10 +568,13 @@ SV_BeginDownload_f
 */
 static void SV_BeginDownload_f( void ) {
     char    name[MAX_QPATH];
-    int     downloadsize;
+    byte    *download;
+    ssize_t downloadsize, maxdownloadsize, result;
     int     offset = 0;
     cvar_t  *allow;
     int     length;
+    unsigned flags;
+    qhandle_t f;
 
     length = Q_ClearStr( name, Cmd_Argv( 1 ),  sizeof( name ) );
     Q_strlwr( name );
@@ -612,8 +608,7 @@ static void SV_BeginDownload_f( void ) {
         // MUST be in a subdirectory    
         || !strchr( name, '/' ) )    
     {    
-        SV_DownloadFailed();
-        return;
+        goto fail1;
     }
 
     if( strncmp( name, "players/", 8 ) == 0 ) {
@@ -638,8 +633,7 @@ static void SV_BeginDownload_f( void ) {
 
     if( !allow->integer ) {
         Com_DPrintf( "Refusing download of %s to %s\n", name, sv_client->name );
-        SV_DownloadFailed();
-        return;
+        goto fail1;
     }
 
     if( sv_client->download ) {
@@ -647,32 +641,42 @@ static void SV_BeginDownload_f( void ) {
         SV_CloseDownload( sv_client );
     }
 
-    downloadsize = FS_LoadFileEx( name, NULL, 0, TAG_SERVER );
-    
-    if( downloadsize == INVALID_LENGTH || downloadsize == 0
-        // special check for maps, if it came from a pak file, don't allow
-        // download  ZOID
-        || ( allow == allow_download_maps
-            && allow_download_maps->integer < 2
-            && FS_LastFileFromPak() ) )
-    {
+    flags = FS_MODE_READ;
+
+    // special check for maps, if it came from a pak file, don't allow
+    // download  ZOID
+    if( allow == allow_download_maps && allow->integer < 2 ) {
+        flags |= FS_TYPE_REAL;
+    }
+
+    downloadsize = FS_FOpenFile( name, &f, flags );
+    if( !f ) {
         Com_DPrintf( "Couldn't download %s to %s\n", name, sv_client->name );
-        SV_DownloadFailed();
-        return;
+        goto fail1;
+    }
+
+    maxdownloadsize = MAX_LOADFILE;
+//    if( sv_max_download_size->integer ) {
+//        maxdownloadsize = Cvar_ClampInteger( sv_max_download_size, 1, MAX_LOADFILE );
+//    }
+
+    if( downloadsize > maxdownloadsize ) {
+        Com_DPrintf( "Refusing oversize download of %s to %s\n", name, sv_client->name );
+        goto fail2;
     }
 
     if( offset > downloadsize ) {
         Com_DPrintf( "Refusing download, %s has wrong version of %s (%d > %d)\n",
-            sv_client->name, name, offset, downloadsize );
+            sv_client->name, name, offset, (int)downloadsize );
         SV_ClientPrintf( sv_client, PRINT_HIGH, "File size differs from server.\n"
             "Please delete the corresponding .tmp file from your system.\n" );
-        SV_DownloadFailed();
-        return;
+        goto fail2;
     }
 
     if( offset == downloadsize ) {
         Com_DPrintf( "Refusing download, %s already has %s (%d bytes)\n",
             sv_client->name, name, offset );
+        FS_FCloseFile( f );
         MSG_WriteByte( svc_download );
         MSG_WriteShort( 0 );
         MSG_WriteByte( 100 );
@@ -680,14 +684,32 @@ static void SV_BeginDownload_f( void ) {
         return;
     }
 
-    sv_client->downloadsize = FS_LoadFileEx( name,
-        ( void ** )&sv_client->download, 0, TAG_SERVER );
+    download = SV_Malloc( downloadsize );
+    result = FS_Read( download, downloadsize, f );
+    if( result != downloadsize ) {
+        Com_DPrintf( "Couldn't download %s to %s\n", name, sv_client->name );
+        goto fail3;
+    }
+
+    sv_client->download = download;
+    sv_client->downloadsize = downloadsize;
     sv_client->downloadcount = offset;
     sv_client->downloadname = SV_CopyString( name );
 
     Com_DPrintf( "Downloading %s to %s\n", name, sv_client->name );
 
     SV_NextDownload_f();
+    return;
+
+fail3:
+    Z_Free( download );
+fail2:
+    FS_FCloseFile( f );
+fail1:
+    MSG_WriteByte( svc_download );
+    MSG_WriteShort( -1 );
+    MSG_WriteByte( 0 );
+    SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
 }
 
 static void SV_StopDownload_f( void ) {

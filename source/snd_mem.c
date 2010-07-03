@@ -164,8 +164,9 @@ static void FindNextChunk( uint32_t search ) {
         data_p += length;
     }
 
-    Com_WPrintf( "%s: too many iterations for chunk %#x in %s\n",
+    Com_DPrintf( "%s: too many iterations for chunk %#x in %s\n",
         __func__, search, s_info.name );
+    data_p = NULL;
 }
 
 static void FindChunk( uint32_t search ) {
@@ -181,11 +182,6 @@ static void FindChunk( uint32_t search ) {
 #define TAG_MARK    MakeRawLong( 'M', 'A', 'R', 'K' )
 #define TAG_data    MakeRawLong( 'd', 'a', 't', 'a' )
 
-/*
-============
-GetWavinfo
-============
-*/
 static qboolean GetWavinfo( void ) {
     int format;
     int samples, width;
@@ -224,7 +220,7 @@ static qboolean GetWavinfo( void ) {
     }
 
     s_info.rate = GetLittleLong();
-    if( s_info.rate <= 0 ) {
+    if( s_info.rate < 8000 || s_info.rate > 48000 ) {
         Com_DPrintf( "%s has bad rate\n", s_info.name );
         return qfalse;
     }
@@ -249,15 +245,23 @@ static qboolean GetWavinfo( void ) {
     if( data_p ) {
         data_p += 24;
         s_info.loopstart = GetLittleLong();
+        if( s_info.loopstart < 0 || s_info.loopstart > INT_MAX ) {
+            Com_DPrintf( "%s has bad loop start\n", s_info.name );
+            return qfalse;
+        }
 
         FindNextChunk( TAG_LIST );
         if( data_p ) {
             data_p += 20;
             chunk = GetLittleLong();
-            if ( chunk == TAG_MARK ) {
+            if( chunk == TAG_MARK ) {
             // this is not a proper parse, but it works with cooledit...
                 data_p += 16;
                 samples = GetLittleLong();    // samples in loop
+                if( samples < 0 || samples > INT_MAX - s_info.loopstart ) {
+                    Com_DPrintf( "%s has bad loop length\n", s_info.name );
+                    return qfalse;
+                }
                 s_info.samples = s_info.loopstart + samples;
             }
         }
@@ -298,11 +302,12 @@ S_LoadSound
 ==============
 */
 sfxcache_t *S_LoadSound (sfx_t *s) {
-    char    namebuffer[MAX_QPATH];
-    byte    *data;
+    char        namebuffer[MAX_QPATH];
+    byte        *data;
     sfxcache_t  *sc;
-    size_t      size;
-    char    *name;
+    size_t      len;
+    char        *name;
+    qerror_t    ret;
 
     if (s->name[0] == '*')
         return NULL;
@@ -319,34 +324,47 @@ sfxcache_t *S_LoadSound (sfx_t *s) {
         name = s->name;
 
     if (name[0] == '#')
-        Q_strlcpy( namebuffer, name + 1, sizeof( namebuffer ) );
+        len = Q_strlcpy( namebuffer, name + 1, sizeof( namebuffer ) );
     else
-        Q_concat( namebuffer, sizeof( namebuffer ), "sound/", name, NULL );
+        len = Q_concat( namebuffer, sizeof( namebuffer ), "sound/", name, NULL );
+    if( len >= sizeof( namebuffer ) ) {
+        ret = Q_ERR_NAMETOOLONG;
+        goto fail1;
+    }
 
-    size = FS_LoadFile (namebuffer, (void **)&data);
+    len = FS_LoadFile (namebuffer, (void **)&data);
     if (!data) {
-        Com_DPrintf ("Couldn't load %s\n", namebuffer);
-        return NULL;
+        ret = len;
+        goto fail1;
     }
 
     memset( &s_info, 0, sizeof( s_info ) );
     s_info.name = namebuffer;
 
     iff_data = data;
-    iff_end = data + size;
-    if( GetWavinfo() ) {
-#if USE_OPENAL
-        if( s_started == SS_OAL )
-            sc = AL_UploadSfx( s );
-        else
-#endif
-#if USE_SNDDMA
-            sc = ResampleSfx( s )
-#endif
-            ;
+    iff_end = data + len;
+    if( !GetWavinfo() ) {
+        ret = Q_ERR_INVALID_FORMAT;
+        goto fail2;
     }
 
+#if USE_OPENAL
+    if( s_started == SS_OAL )
+        sc = AL_UploadSfx( s );
+    else
+#endif
+#if USE_SNDDMA
+        sc = ResampleSfx( s )
+#endif
+        ;
+    ret = Q_ERR_SUCCESS;
+
+fail2:
     FS_FreeFile( data );
+fail1:
+    if( ret && ret != Q_ERR_NOENT ) {
+        Com_EPrintf( "Couldn't load %s: %s\n", namebuffer, Q_ErrorString( ret ) );
+    }
     return sc;
 }
 

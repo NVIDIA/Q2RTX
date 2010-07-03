@@ -125,7 +125,7 @@ void IN_WarpMouse( int x, int y );
 void    Key_Init( void );
 void    Key_Event( unsigned key, qboolean down, unsigned time );
 void    Key_CharEvent( int key );
-void    Key_WriteBindings( fileHandle_t f );
+void    Key_WriteBindings( qhandle_t f );
 
 char    *VID_GetClipboardData( void );
 void    VID_SetClipboardData( const char *data );

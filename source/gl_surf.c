@@ -300,10 +300,12 @@ void GL_LoadWorld( const char *name ) {
     bsp_t *bsp;
     mtexinfo_t *info;
     image_t *image;
+    qerror_t ret;
 
-    if( !( bsp = BSP_Load( name ) ) ) {
+    ret = BSP_Load( name, &bsp );
+    if( !bsp ) {
         Com_Error( ERR_DROP, "%s: couldn't load %s: %s",
-            __func__, name, BSP_GetError() );
+            __func__, name, Q_ErrorString( ret ) );
     }
 
     // check if the required world model was already loaded

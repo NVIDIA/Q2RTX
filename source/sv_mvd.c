@@ -73,7 +73,7 @@ typedef struct {
     entity_state_t  *entities; // [MAX_EDICTS]
 
     // local recorder
-    fileHandle_t    recording; 
+    qhandle_t       recording; 
     int             numlevels; // stop after that many levels
     int             numframes; // stop after that many frames
 
@@ -119,7 +119,7 @@ static void     flush_stream( gtv_client_t *client, int flush );
 
 static void     rec_stop( void ); 
 static qboolean rec_allowed( void );
-static void     rec_start( fileHandle_t demofile );
+static void     rec_start( qhandle_t demofile );
 static void     rec_write( void );
 
 
@@ -163,8 +163,7 @@ static void dummy_forward_f( void ) {
 
 static void dummy_record_f( void ) {
     char buffer[MAX_OSPATH];
-    fileHandle_t demofile;
-    size_t len;
+    qhandle_t f;
 
     if( !sv_mvd_autorecord->integer ) {
         return;
@@ -179,24 +178,18 @@ static void dummy_record_f( void ) {
         return;
     }
 
-    len = Q_concat( buffer, sizeof( buffer ), "demos/", Cmd_Argv( 1 ), ".mvd2", NULL );
-    if( len >= sizeof( buffer ) ) {
-        Com_EPrintf( "Oversize filename specified.\n" );
-        return;
-    }
-
-    FS_FOpenFile( buffer, &demofile, FS_MODE_WRITE );
-    if( !demofile ) {
-        Com_EPrintf( "Couldn't open %s for writing\n", buffer );
+    f = FS_EasyOpenFile( buffer, sizeof( buffer ), FS_MODE_WRITE,
+        "demos/", Cmd_Argv( 1 ), ".mvd2" );
+    if( !f ) {
         return;
     }
 
     if( !mvd_enable() ) {
-        FS_FCloseFile( demofile );
+        FS_FCloseFile( f );
         return;
     }
 
-    rec_start( demofile );
+    rec_start( f );
 
     Com_Printf( "Auto-recording local MVD to %s\n", buffer );
 }
@@ -2023,7 +2016,7 @@ static qboolean rec_allowed( void ) {
     return qtrue;
 }
 
-static void rec_start( fileHandle_t demofile ) {
+static void rec_start( qhandle_t demofile ) {
     uint32_t magic;
 
     mvd.recording = demofile;
@@ -2061,10 +2054,9 @@ Every entity, every playerinfo and every message will be recorded.
 */
 static void SV_MvdRecord_f( void ) {
     char buffer[MAX_OSPATH];
-    fileHandle_t demofile;
-    qboolean gzip = qfalse;
+    qhandle_t f;
+    unsigned mode = FS_MODE_WRITE;
     int c;
-    size_t len;
 
     if( sv.state != ss_game ) {
 #if USE_MVD_CLIENT
@@ -2086,7 +2078,7 @@ static void SV_MvdRecord_f( void ) {
             Cmd_PrintHelp( o_record );
             return;
         case 'z':
-            gzip = qtrue;
+            mode |= FS_FLAG_GZIP;
             break;
         default:
             return;
@@ -2106,29 +2098,18 @@ static void SV_MvdRecord_f( void ) {
     //
     // open the demo file
     //
-    len = Q_concat( buffer, sizeof( buffer ), "demos/", cmd_optarg,
-        gzip ? ".mvd2.gz" : ".mvd2", NULL );
-    if( len >= sizeof( buffer ) ) {
-        Com_EPrintf( "Oversize filename specified.\n" );
-        return;
-    }
-
-    FS_FOpenFile( buffer, &demofile, FS_MODE_WRITE );
-    if( !demofile ) {
-        Com_EPrintf( "Couldn't open %s for writing\n", buffer );
+    f = FS_EasyOpenFile( buffer, sizeof( buffer ), mode,
+        "demos/", cmd_optarg, ".mvd2" );
+    if( !f ) {
         return;
     }
 
     if( !mvd_enable() ) {
-        FS_FCloseFile( demofile );
+        FS_FCloseFile( f );
         return;
     }
 
-    if( gzip ) {
-        FS_FilterFile( demofile );
-    }
-
-    rec_start( demofile );
+    rec_start( f );
 
     Com_Printf( "Recording local MVD to %s\n", buffer );
 }

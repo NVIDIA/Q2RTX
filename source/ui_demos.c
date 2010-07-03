@@ -145,7 +145,7 @@ fail:
 
 static void WriteCache( void ) {
     char buffer[MAX_OSPATH];
-    fileHandle_t f;
+    qhandle_t f;
     int i;
     char *map, *pov;
     demoEntry_t *e;

@@ -288,7 +288,7 @@ void R_BeginRegistration( const char *model ) {
     Q_concat( fullname, sizeof( fullname ), "maps/", model, ".bsp", NULL );
 
     D_FlushCaches ();
-    bsp = BSP_Load( fullname );
+    BSP_Load( fullname, &bsp );
     if( bsp == r_worldmodel ) {
         mtexinfo_t *tex = bsp->texinfo;
         int i;

@@ -292,9 +292,9 @@ static void TH_DrawLayoutString( char *dst, const char *s ) {
 static void SCR_ScoreShot_f( void ) {
     char buffer[( TH_WIDTH + 1 ) * TH_HEIGHT];
     char path[MAX_OSPATH];
-    fileHandle_t f;
-    size_t len;
+    qhandle_t f;
     int i;
+    qerror_t ret;
 
     if( cls.state != ca_active ) {
         Com_Printf( "Must be in a level.\n" );
@@ -302,29 +302,30 @@ static void SCR_ScoreShot_f( void ) {
     }
 
     if( Cmd_Argc() > 1 ) {
-        len = Q_concat( path, sizeof( path ), SCORESHOTS_DIRECTORY "/", Cmd_Argv( 1 ), ".txt", NULL );
-        if( len >= sizeof( path ) ) {
-            Com_EPrintf( "Oversize filename specified.\n" );
+        f = FS_EasyOpenFile( path, sizeof( path ), FS_MODE_WRITE,
+            SCORESHOTS_DIRECTORY "/", Cmd_Argv( 1 ), ".txt" );
+        if( !f ) {
             return;
         }
     } else {
+        // find a file name to save it to 
         for( i = 0; i < 1000; i++ ) {
             Q_snprintf( path, sizeof( path ), SCORESHOTS_DIRECTORY "/quake%03d.txt", i );
-            if( FS_LoadFileEx( path, NULL, FS_PATH_GAME, TAG_FREE ) == INVALID_LENGTH ) {
-                break;  // file doesn't exist
+            ret = FS_FOpenFile( path, &f, FS_MODE_WRITE|FS_FLAG_EXCL );
+            if( f ) {
+                break;
+            }
+            if( ret != Q_ERR_EXIST ) {
+                Com_EPrintf( "Couldn't exclusively open %s for writing: %s\n",
+                    path, Q_ErrorString( ret ) );
+                return;
             }
         }
 
         if( i == 1000 ) {
-            Com_Printf( "All scoreshot slots are full.\n" );
+            Com_EPrintf( "All scoreshot slots are full.\n" );
             return;
         }
-    }
-
-    FS_FOpenFile( path, &f, FS_MODE_WRITE );
-    if( !f ) {
-        Com_EPrintf( "Couldn't open %s for writing.\n", path );
-        return;
     }
 
     memset( buffer, ' ', sizeof( buffer ) );
@@ -346,15 +347,21 @@ static void SCR_ScoreDump_f( void ) {
     char buffer[( TH_WIDTH + 1 ) * TH_HEIGHT];
     int i;
 
+    if( cls.state != ca_active ) {
+        Com_Printf( "Must be in a level.\n" );
+        return;
+    }
+
     memset( buffer, ' ', sizeof( buffer ) );
-    for( i = 0; i < TH_HEIGHT; i++ ) {
+    for( i = 0; i < TH_HEIGHT - 1; i++ ) {
         buffer[ i * ( TH_WIDTH + 1 ) + TH_WIDTH ] = '\n';
     }
+    buffer[ i * ( TH_WIDTH + 1 ) + TH_WIDTH ] = 0;
 
     TH_DrawLayoutString( buffer, cl.configstrings[CS_STATUSBAR] );
     TH_DrawLayoutString( buffer, cl.layout );
 
-    Com_Printf( "%s", buffer );
+    Com_Printf( "%s\n", buffer );
 }
 
 void CL_InitAscii( void ) {

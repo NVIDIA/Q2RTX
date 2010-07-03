@@ -32,8 +32,9 @@ to start a download from the server.
 ===============
 */
 qboolean CL_CheckOrDownloadFile( const char *path ) {
-    fileHandle_t f;
+    qhandle_t f;
     size_t len;
+    ssize_t ret;
 
     len = strlen( path );
     if( len < 1 || len >= MAX_QPATH
@@ -48,7 +49,7 @@ qboolean CL_CheckOrDownloadFile( const char *path ) {
         return qtrue;
     }
 
-    if( FS_LoadFile( path, NULL ) != INVALID_LENGTH ) {    
+    if( FS_FileExists( path ) ) {
         // it exists, no need to download
         return qtrue;
     }
@@ -73,20 +74,19 @@ qboolean CL_CheckOrDownloadFile( const char *path ) {
 //ZOID
     // check to see if we already have a tmp for this file, if so, try to resume
     // open the file if not opened yet
-    len = FS_FOpenFile( cls.download.temp, &f, FS_MODE_RDWR );
-    if( len == INVALID_LENGTH && f ) {
-        Com_WPrintf( "Couldn't determine size of %s\n", cls.download.temp );
-        FS_FCloseFile( f );
-        f = 0;
-    }
-    if( f ) { // it exists
+    ret = FS_FOpenFile( cls.download.temp, &f, FS_MODE_RDWR );
+    if( ret >= 0 ) { // it exists
         cls.download.file = f;
         // give the server an offset to start the download
         Com_Printf( "Resuming %s\n", cls.download.name );
-        CL_ClientCommand( va( "download \"%s\" %"PRIz, cls.download.name, len ) );
-    } else {
+        CL_ClientCommand( va( "download \"%s\" %d", cls.download.name, (int)ret ) );
+    } else if( ret == Q_ERR_NOENT ) { // it doesn't exist
         Com_Printf( "Downloading %s\n", cls.download.name );
         CL_ClientCommand( va( "download \"%s\"", cls.download.name ) );
+    } else { // error happened
+        Com_EPrintf( "Couldn't open %s for appending: %s\n", cls.download.temp,
+            Q_ErrorString( ret ) );
+        return qtrue;
     }
 
     return qfalse;
@@ -126,8 +126,8 @@ void CL_Download_f( void ) {
 
     path = Cmd_Argv( 1 );
 
-    if( FS_LoadFile( path, NULL ) != INVALID_LENGTH ) {    
-        Com_Printf( "File '%s' already exists.\n", path );
+    if( FS_FileExists( path ) ) {
+        Com_Printf( "%s already exists.\n", path );
         return;
     }
 
@@ -143,7 +143,8 @@ A download message has been received from the server
 =====================
 */
 static void CL_ParseDownload( void ) {
-    int        size, percent;
+    int size, percent;
+    qerror_t ret;
 
     if( !cls.download.temp[0] ) {
         Com_Error( ERR_DROP, "%s: no download requested", __func__ );
@@ -175,11 +176,11 @@ static void CL_ParseDownload( void ) {
 
     // open the file if not opened yet
     if( !cls.download.file ) {
-        FS_FOpenFile( cls.download.temp, &cls.download.file, FS_MODE_WRITE );
+        ret = FS_FOpenFile( cls.download.temp, &cls.download.file, FS_MODE_WRITE );
         if( !cls.download.file ) {
             msg_read.readcount += size;
-            Com_WPrintf( "Failed to open '%s' for writing\n",
-                cls.download.temp );
+            Com_EPrintf( "Couldn't open %s for writing: %s\n",
+                cls.download.temp, Q_ErrorString( ret ) );
             goto another;
         }
     }
@@ -197,9 +198,10 @@ static void CL_ParseDownload( void ) {
         FS_FCloseFile( cls.download.file );
 
         // rename the temp file to it's final name
-        if( !FS_RenameFile( cls.download.temp, cls.download.name ) ) {
-            Com_WPrintf( "Failed to rename %s to %s\n",
-                cls.download.temp, cls.download.name );
+        ret = FS_RenameFile( cls.download.temp, cls.download.name );
+        if( ret ) {
+            Com_EPrintf( "Couldn't rename %s to %s: %s\n",
+                cls.download.temp, cls.download.name, Q_ErrorString( ret ) );
         }
 
         Com_Printf( "Downloaded successfully.\n" );

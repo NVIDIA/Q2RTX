@@ -22,6 +22,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <config.h>
 #include "q_shared.h"
+#include <errno.h>
+#include "error.h"
 
 #if USE_CLIENT
 #define APPLICATION     "q2pro"
@@ -207,7 +209,7 @@ void    Cmd_Shift( void );
 
 void Cmd_Alias_f( void );
 
-void Cmd_WriteAliases( fileHandle_t f );
+void Cmd_WriteAliases( qhandle_t f );
 
 #define EXEC_TRIGGER( var ) \
     do { \
@@ -301,7 +303,7 @@ void Cvar_Command( cvar_t *v );
 // command.  Returns qtrue if the command was a variable reference that
 // was handled. (print or change)
 
-void Cvar_WriteVariables( fileHandle_t f, int mask, qboolean modified );
+void Cvar_WriteVariables( qhandle_t f, int mask, qboolean modified );
 // appends lines containing "set variable value" for all variables
 // with matching flags
 
@@ -597,7 +599,7 @@ extern unsigned     com_framenum;
 extern qboolean     com_initialized;
 extern time_t       com_startTime;
 
-extern fileHandle_t    com_logFile;
+extern qhandle_t    com_logFile;
 
 #if USE_CLIENT || USE_MVD_CLIENT || USE_MVD_SERVER
 extern const cmd_option_t o_record[];

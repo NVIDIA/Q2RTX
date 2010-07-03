@@ -307,8 +307,15 @@ void Cvar_SetByVar( cvar_t *var, const char *value, from_t from ) {
     if( !value ) {
         value = "";
     }
-    if( !strcmp( value, var->string ) && !( var->flags & CVAR_LATCH ) ) {
-        return;        // not changed
+    if( !strcmp( value, var->string ) ) {
+        if( var->flags & CVAR_LATCH ) {
+            // set back to current value
+            if( var->latched_string ) {
+                Z_Free( var->latched_string );
+                var->latched_string = NULL;
+            }
+        }
+        return; // not changed
     }
 
     if( var->flags & CVAR_INFOMASK ) {
@@ -340,15 +347,6 @@ void Cvar_SetByVar( cvar_t *var, const char *value, from_t from ) {
         }
 
         if( var->flags & CVAR_LATCH ) {
-            if( !strcmp( var->string, value ) ) {
-                // set back to current value
-                if( var->latched_string ) {
-                    Z_Free( var->latched_string );
-                    var->latched_string = NULL;
-                }
-                return;
-            }
-
             // free latched value
             if( var->latched_string ) {
                 if( !strcmp( var->latched_string, value ) ) {
@@ -722,7 +720,7 @@ Appends lines containing "set variable value" for all variables
 with the archive flag set to true.
 ============
 */
-void Cvar_WriteVariables( fileHandle_t f, int mask, qboolean modified ) {
+void Cvar_WriteVariables( qhandle_t f, int mask, qboolean modified ) {
     cvar_t    *var;
     char *string;
 

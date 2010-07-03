@@ -979,6 +979,7 @@ static void MVD_ParseServerData( mvd_t *mvd, int extrabits ) {
     size_t len, maxlen;
     char *string;
     int i, index;
+    qerror_t ret;
 
     // clear the leftover from previous level
     MVD_ClearState( mvd );
@@ -1072,8 +1073,9 @@ static void MVD_ParseServerData( mvd_t *mvd, int extrabits ) {
 
     // load the world model (we are only interesed in visibility info)
     Com_Printf( "[%s] -=- Loading %s...\n", mvd->name, string );
-    if( !CM_LoadMap( &mvd->cm, string ) ) {
-        Com_EPrintf( "[%s] =!= Couldn't load %s: %s\n", mvd->name, string, BSP_GetError() );
+    ret = CM_LoadMap( &mvd->cm, string );
+    if( ret < 0 ) {
+        Com_EPrintf( "[%s] =!= Couldn't load %s: %s\n", mvd->name, string, Q_ErrorString( ret ) );
         // continue with null visibility
     }
 #if USE_MAPCHECKSUM

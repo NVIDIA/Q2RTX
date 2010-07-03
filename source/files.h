@@ -28,18 +28,18 @@ typedef struct file_info_s {
 } file_info_t;
 
 /* bits 0 - 1, enum */
-#define     FS_MODE_APPEND          0x00000000
-#define     FS_MODE_READ            0x00000001
-#define     FS_MODE_WRITE           0x00000002
-#define     FS_MODE_RDWR            0x00000003
-#define     FS_MODE_MASK            0x00000003
+#define FS_MODE_APPEND          0x00000000
+#define FS_MODE_READ            0x00000001
+#define FS_MODE_WRITE           0x00000002
+#define FS_MODE_RDWR            0x00000003
+#define FS_MODE_MASK            0x00000003
 
 /* bits 0 - 1, enum */
-#define     FS_SEARCHDIRS_NO            0x00000000
-#define     FS_SEARCHDIRS_YES           0x00000001
-#define     FS_SEARCHDIRS_ONLY          0x00000002
-#define     FS_SEARCHDIRS_RESERVED      0x00000003
-#define     FS_SEARCHDIRS_MASK          0x00000003
+#define FS_SEARCHDIRS_NO        0x00000000
+#define FS_SEARCHDIRS_YES       0x00000001
+#define FS_SEARCHDIRS_ONLY      0x00000002
+#define FS_SEARCHDIRS_RESERVED  0x00000003
+#define FS_SEARCHDIRS_MASK      0x00000003
 
 /* bit 2, enum */
 #define FS_FLUSH_NONE           0x00000000
@@ -47,17 +47,17 @@ typedef struct file_info_s {
 #define FS_FLUSH_MASK           0x00000004
 
 /* bits 3 - 4, enum */
-#define FS_TYPE_ANY         0x00000000
-#define FS_TYPE_REAL        0x00000008
-#define FS_TYPE_PAK         0x00000010
-#define FS_TYPE_RESERVED    0x00000018
-#define FS_TYPE_MASK        0x00000018
+#define FS_TYPE_ANY             0x00000000
+#define FS_TYPE_REAL            0x00000008
+#define FS_TYPE_PAK             0x00000010
+#define FS_TYPE_RESERVED        0x00000018
+#define FS_TYPE_MASK            0x00000018
 
 /* bits 5 - 6, flag */
-#define FS_PATH_ANY         0x00000000
-#define FS_PATH_BASE        0x00000020
-#define FS_PATH_GAME        0x00000040
-#define FS_PATH_MASK        0x00000060
+#define FS_PATH_ANY             0x00000000
+#define FS_PATH_BASE            0x00000020
+#define FS_PATH_GAME            0x00000040
+#define FS_PATH_MASK            0x00000060
 
 /* bits 7 - 10, flag */
 #define FS_SEARCH_BYFILTER      0x00000080
@@ -66,51 +66,63 @@ typedef struct file_info_s {
 #define FS_SEARCH_NOSORT        0x00000400
 
 /* bits 7 - 8, flag */
-#define FS_FLAG_RESERVED1       0x00000080
-#define FS_FLAG_RESERVED2       0x00000100
-
-#define INVALID_LENGTH      ((size_t)-1)
+#define FS_FLAG_GZIP            0x00000080
+#define FS_FLAG_EXCL            0x00000100
 
 #define FS_Malloc( size )       Z_TagMalloc( size, TAG_FILESYSTEM )
 #define FS_Mallocz( size )      Z_TagMallocz( size, TAG_FILESYSTEM )
-#define FS_CopyString( string )     Z_TagCopyString( string, TAG_FILESYSTEM )
+#define FS_CopyString( string ) Z_TagCopyString( string, TAG_FILESYSTEM )
+
+// protection from malicious paks causing memory exhaustion
+// no loadable Q2 resource should ever exceed this limit
+#define MAX_LOADFILE    0x400000 // 64 MiB
 
 void    FS_Init( void );
 void    FS_Shutdown( void );
-void        FS_Restart( qboolean total );
+void    FS_Restart( qboolean total );
 
 #if USE_CLIENT
-qboolean FS_RenameFile( const char *from, const char *to );
+qerror_t FS_RenameFile( const char *from, const char *to );
 #endif
 
-void    FS_CreatePath( char *path );
+qerror_t FS_CreatePath( char *path );
 
 char    *FS_CopyExtraInfo( const char *name, const file_info_t *info );
 
-size_t  FS_FOpenFile( const char *filename, fileHandle_t *f, int mode );
-void    FS_FCloseFile( fileHandle_t hFile );
-qboolean FS_FilterFile( fileHandle_t f );
+ssize_t FS_FOpenFile( const char *filename, qhandle_t *f, unsigned mode );
+void    FS_FCloseFile( qhandle_t f );
+qhandle_t FS_EasyOpenFile( char *buf, size_t size, unsigned mode,
+    const char *dir, const char *name, const char *ext );
 
-size_t  FS_LoadFile( const char *path, void  **buffer );
-size_t  FS_LoadFileEx( const char *path, void **buffer, int flags, memtag_t tag );
-void    *FS_AllocTempMem( size_t length );
-void    FS_FreeFile( void *buffer );
+qerror_t FS_FilterFile( qhandle_t f );
+
+#define FS_FileExistsEx( path, flags ) \
+    ( FS_LoadFileEx( path, NULL, flags ) != Q_ERR_NOENT )
+#define FS_FileExists( path ) \
+    FS_FileExistsEx( path, 0 )
+
+ssize_t FS_LoadFile( const char *path, void **buffer );
+ssize_t FS_LoadFileEx( const char *path, void **buffer, unsigned flags );
+void    *FS_AllocTempMem( size_t len );
+void    FS_FreeFile( void *buf );
 // a null buffer will just return the file length without loading
 // a -1 length is not present
 
-size_t  FS_Read( void *buffer, size_t len, fileHandle_t hFile );
-size_t  FS_Write( const void *buffer, size_t len, fileHandle_t hFile );
+qerror_t FS_WriteFile( const char *path, const void *data, size_t len );
+
+ssize_t FS_Read( void *buffer, size_t len, qhandle_t f );
+ssize_t FS_Write( const void *buffer, size_t len, qhandle_t f );
 // properly handles partial reads
 
-void    FS_FPrintf( fileHandle_t f, const char *format, ... ) q_printf( 2, 3 );
-size_t  FS_ReadLine( fileHandle_t f, char *buffer, int size );
+ssize_t FS_FPrintf( qhandle_t f, const char *format, ... ) q_printf( 2, 3 );
+ssize_t FS_ReadLine( qhandle_t f, char *buffer, size_t size );
 
-void    FS_Flush( fileHandle_t f );
+void    FS_Flush( qhandle_t f );
 
-size_t  FS_Tell( fileHandle_t f );
-qboolean FS_Seek( fileHandle_t f, size_t offset );
+ssize_t FS_Tell( qhandle_t f );
+qerror_t FS_Seek( qhandle_t f, size_t offset );
 
-size_t  FS_GetFileLength( fileHandle_t f );
+ssize_t  FS_GetFileLength( qhandle_t f );
 
 qboolean FS_WildCmp( const char *filter, const char *string );
 qboolean FS_ExtCmp( const char *extension, const char *string );
@@ -119,8 +131,6 @@ void    **FS_ListFiles( const char *path, const char *extension, int flags, int 
 void    **FS_CopyList( void **list, int count );
 file_info_t *FS_CopyInfo( const char *name, size_t size, time_t ctime, time_t mtime );
 void    FS_FreeList( void **list );
-
-qboolean    FS_LastFileFromPak( void );
 
 char    *FS_ReplaceSeparators( char *s, int separator );
 

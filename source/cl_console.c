@@ -202,24 +202,17 @@ Save the console contents out to a file
 static void Con_Dump_f( void ) {
     int     l;
     char    *line;
-    fileHandle_t    f;
+    qhandle_t f;
     char    name[MAX_OSPATH];
-    size_t  len;
 
     if( Cmd_Argc() != 2 ) {
         Com_Printf( "Usage: %s <filename>\n", Cmd_Argv( 0 ) );
         return;
     }
 
-    len = Q_concat( name, sizeof( name ), "condumps/", Cmd_Argv( 1 ), ".txt", NULL );
-    if( len >= sizeof( name ) ) {
-        Com_EPrintf( "Oversize filename specified.\n" );
-        return;
-    }
-
-    FS_FOpenFile( name, &f, FS_MODE_WRITE );
+    f = FS_EasyOpenFile( name, sizeof( name ), FS_MODE_WRITE,
+        "condumps/", Cmd_Argv( 1 ), ".txt" );
     if( !f ) {
-        Com_EPrintf( "Couldn't open %s for writing.\n", name );
         return;
     }
 
@@ -563,19 +556,30 @@ Con_RegisterMedia
 ================
 */
 void Con_RegisterMedia( void ) {
-    con.charsetImage = R_RegisterFont( con_font->string );
-    if( !con.charsetImage && strcmp( con_font->string, "conchars" ) ) {
-        Com_WPrintf( "Couldn't load console font: %s\n", con_font->string );
-        con.charsetImage = R_RegisterFont( "conchars" );
-    }
+    qerror_t ret;
+
+    ret = _R_RegisterFont( con_font->string, &con.charsetImage );
     if( !con.charsetImage ) {
-        Com_Error( ERR_FATAL, "Couldn't load pics/conchars.pcx" );
+        if( strcmp( con_font->string, "conchars" ) ) {
+            Com_WPrintf( "Couldn't load console font: %s\n", Q_ErrorString( ret ) );
+            Cvar_Reset( con_font );
+            ret = _R_RegisterFont( "conchars", &con.charsetImage );
+        }
+        if( !con.charsetImage ) {
+            Com_Error( ERR_FATAL, "Couldn't load pics/conchars.pcx: %s", Q_ErrorString( ret ) );
+        }
     }
 
-    con.backImage = R_RegisterPic( con_background->string );
-    if( !con.backImage && strcmp( con_background->string, "conback" ) ) {
-        Com_WPrintf( "Couldn't load console background: %s\n", con_background->string );
-        con.backImage = R_RegisterFont( "conback" );
+    ret = _R_RegisterPic( con_background->string, &con.backImage );
+    if( !con.backImage ) {
+        if( strcmp( con_background->string, "conback" ) ) {
+            Com_WPrintf( "Couldn't load console background: %s\n", Q_ErrorString( ret ) );
+            Cvar_Reset( con_background );
+            ret = _R_RegisterPic( "conback", &con.backImage );
+        }
+        if( !con.charsetImage ) {
+            Com_EPrintf( "Couldn't load pics/conback.pcx: %s\n", Q_ErrorString( ret ) );
+        }
     }
 }
 

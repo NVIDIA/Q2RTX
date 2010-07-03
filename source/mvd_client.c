@@ -77,7 +77,7 @@ typedef struct gtv_s {
     unsigned    retry_backoff;
 
     // demo related variables
-    fileHandle_t    demoplayback;
+    qhandle_t       demoplayback;
     int             demoloop, demoskip;
     string_entry_t  *demohead, *demoentry;
     size_t          demosize, demopos;
@@ -427,70 +427,98 @@ DEMO PLAYER
 
 static void demo_play_next( gtv_t *gtv, string_entry_t *entry );
 
-static size_t demo_read_msglen( fileHandle_t f ) {
-    uint16_t msglen;
+static ssize_t demo_load_message( qhandle_t f ) {
+    uint16_t us;
+    ssize_t msglen, read;
 
-    if( FS_Read( &msglen, 2, f ) != 2 ) {
+    read = FS_Read( &us, 2, f );
+    if( read != 2 ) {
+        return read < 0 ? read : Q_ERR_UNEXPECTED_EOF;
+    }
+
+    if( !us ) {
         return 0;
     }
-    if( !msglen ) {
-        return 0;
-    }
-    msglen = LittleShort( msglen );
+
+    msglen = LittleShort( us );
     if( msglen > MAX_MSGLEN ) {
-        return 0;
+        return Q_ERR_INVALID_FORMAT;
     }
-    return msglen;
+
+    read = FS_Read( msg_read_buffer, msglen, f );
+    if( read != msglen ) {
+        return read < 0 ? read : Q_ERR_UNEXPECTED_EOF;
+    }
+
+    return read;
 }
 
-static qboolean demo_skip_map( fileHandle_t f ) {
-    size_t msglen;
+static ssize_t demo_skip_map( qhandle_t f ) {
+    ssize_t msglen;
 
     while( 1 ) {
-        if( ( msglen = demo_read_msglen( f ) ) == 0 ) {
-            return qfalse;
-        }
-        if( FS_Read( msg_read_buffer, 1, f ) != 1 ) {
-            return qfalse;
+        if( ( msglen = demo_load_message( f ) ) <= 0 ) {
+            return msglen;
         }
         if( msg_read_buffer[0] == mvd_serverdata ) {
             break;
         } 
-        if( !FS_Seek( f, msglen - 1 ) ) {
-            return qfalse;
-        }
-    }
-
-    if( FS_Read( msg_read_buffer + 1, msglen - 1, f ) != msglen - 1 ) {
-        return qfalse;
     }
 
     SZ_Init( &msg_read, msg_read_buffer, sizeof( msg_read_buffer ) );
     msg_read.cursize = msglen;
 
-    return qtrue;
+    return msglen;
 }
 
-static qboolean demo_read_message( fileHandle_t f ) {
-    size_t msglen;
+static ssize_t demo_read_message( qhandle_t f ) {
+    ssize_t msglen;
 
-    if( ( msglen = demo_read_msglen( f ) ) == 0 ) {
-        return qfalse;
-    }
-
-    if( FS_Read( msg_read_buffer, msglen, f ) != msglen ) {
-        return qfalse;
+    if( ( msglen = demo_load_message( f ) ) <= 0 ) {
+        return msglen;
     }
 
     SZ_Init( &msg_read, msg_read_buffer, sizeof( msg_read_buffer ) );
     msg_read.cursize = msglen;
 
-    return qtrue;
+    return msglen;
+}
+
+static ssize_t demo_read_first( qhandle_t f ) {
+    uint32_t magic;
+    ssize_t read;
+    qerror_t ret;
+
+    // read magic
+    read = FS_Read( &magic, 4, f );
+    if( read != 4 ) {
+        return read < 0 ? read : Q_ERR_UNEXPECTED_EOF;
+    }
+
+    // check for gzip header
+    if( ( ( LittleLong( magic ) & 0xe0ffffff ) == 0x00088b1f ) ) {
+        ret = FS_FilterFile( f );
+        if( ret ) {
+            return ret;
+        }
+        read = FS_Read( &magic, 4, f );
+        if( read != 4 ) {
+            return read < 0 ? read : Q_ERR_UNEXPECTED_EOF;
+        }
+    }
+    if( magic != MVD_MAGIC ) {
+        return Q_ERR_UNKNOWN_FORMAT;
+    }
+
+    // read the first message
+    read = demo_read_message( f );
+    return read ? read : Q_ERR_UNEXPECTED_EOF;
 }
 
 static qboolean demo_read_frame( mvd_t *mvd ) {
     gtv_t *gtv = mvd->gtv;
     int count;
+    ssize_t ret;
 
     if( mvd->state == MVD_WAITING ) {
         return qfalse; // paused by user
@@ -503,13 +531,16 @@ static qboolean demo_read_frame( mvd_t *mvd ) {
     gtv->demoskip = 0;
 
     if( count ) {
+        Com_Printf( "[%s] -=- Skipping map%s...\n", gtv->name, count == 1 ? "" : "s" );
         do {
-            if( !demo_skip_map( gtv->demoplayback ) ) {
+            ret = demo_skip_map( gtv->demoplayback );
+            if( ret <= 0 ) {
                 goto next;
             }
         } while( --count );
     } else {
-        if( !demo_read_message( gtv->demoplayback ) ) {
+        ret = demo_read_message( gtv->demoplayback );
+        if( ret <= 0 ) {
             goto next;
         }
     }
@@ -522,12 +553,15 @@ static qboolean demo_read_frame( mvd_t *mvd ) {
     return qtrue;
 
 next:
+    if( ret < 0 ) {
+        gtv_destroyf( gtv, "Couldn't read %s: %s", gtv->demoentry->string, Q_ErrorString( ret ) );
+    }
     demo_play_next( gtv, gtv->demoentry->next );
     return qtrue;
 }
 
 static void demo_play_next( gtv_t *gtv, string_entry_t *entry ) {
-    uint32_t magic = 0;
+    ssize_t len, ret;
 
     if( !entry ) {
         if( gtv->demoloop ) {
@@ -545,30 +579,15 @@ static void demo_play_next( gtv_t *gtv, string_entry_t *entry ) {
     }
 
     // open new file
-    FS_FOpenFile( entry->string, &gtv->demoplayback, FS_MODE_READ );
+    len = FS_FOpenFile( entry->string, &gtv->demoplayback, FS_MODE_READ );
     if( !gtv->demoplayback ) {
-        gtv_destroyf( gtv, "Couldn't reopen %s", entry->string );
-    }
-
-    // figure out if file is compressed and check magic
-    if( FS_Read( &magic, 4, gtv->demoplayback ) != 4 ) {
-        gtv_destroyf( gtv, "Couldn't read magic from %s", entry->string );
-    }
-    if( ( ( LittleLong( magic ) & 0xe0ffffff ) == 0x00088b1f ) ) {
-        if( !FS_FilterFile( gtv->demoplayback ) ) {
-            gtv_destroyf( gtv, "Couldn't install gzip filter on %s", entry->string );
-        }
-        if( FS_Read( &magic, 4, gtv->demoplayback ) != 4 ) {
-            gtv_destroyf( gtv, "Couldn't read magic from %s", entry->string );
-        }
-    }
-    if( magic != MVD_MAGIC ) {
-        gtv_destroyf( gtv, "%s is not a MVD2 file", entry->string );
+        gtv_destroyf( gtv, "Couldn't open %s: %s", entry->string, Q_ErrorString( len ) );
     }
 
     // read the first message
-    if( !demo_read_message( gtv->demoplayback ) ) {
-        gtv_destroyf( gtv, "Couldn't read first message from %s", entry->string );
+    ret = demo_read_first( gtv->demoplayback );
+    if( ret < 0 ) {
+        gtv_destroyf( gtv, "Couldn't read %s: %s", entry->string, Q_ErrorString( ret ) );
     }
 
     // create MVD channel
@@ -593,11 +612,13 @@ static void demo_play_next( gtv_t *gtv, string_entry_t *entry ) {
     // set channel address
     Q_strlcpy( gtv->address, COM_SkipPath( entry->string ), sizeof( gtv->address ) );
 
-    gtv->demosize = FS_GetFileLength( gtv->demoplayback );
-    if( gtv->demosize == INVALID_LENGTH ) {
-        gtv->demosize = 0;
+    ret = FS_Tell( gtv->demoplayback );
+    if( ret > 0 ) {
+        gtv->demosize = len;
+        gtv->demopos = ret;
+    } else {
+        gtv->demosize = gtv->demopos = 0;
     }
-    gtv->demopos = FS_Tell( gtv->demoplayback );
 }
 
 static void demo_free_playlist( gtv_t *gtv ) {
@@ -1473,7 +1494,7 @@ static void list_generic( void ) {
 static void list_recordings( void ) {
     mvd_t *mvd;
     char buffer[8];
-    size_t bytes;
+    ssize_t pos;
 
     Com_Printf(
         "id name         map      size name\n"
@@ -1481,11 +1502,11 @@ static void list_recordings( void ) {
 
     FOR_EACH_MVD( mvd ) {
         if( mvd->demorecording ) {
-            bytes = FS_Tell( mvd->demorecording );
-            if( bytes == INVALID_LENGTH ) {
+            pos = FS_Tell( mvd->demorecording );
+            if( pos < 0 ) {
                 strcpy( buffer, "???" );
             } else {
-                Q_FormatFileSize( buffer, bytes, sizeof( buffer ) );
+                Q_FormatFileSize( buffer, pos, sizeof( buffer ) );
             }
         } else {
             strcpy( buffer, "-" );
@@ -1642,13 +1663,12 @@ static void MVD_EmitGamestate( mvd_t *mvd ) {
 
 void MVD_StreamedRecord_f( void ) {
     char buffer[MAX_OSPATH];
-    fileHandle_t f;
+    qhandle_t f;
     mvd_t *mvd;
     uint32_t magic;
     uint16_t msglen;
-    qboolean gzip = qfalse;
+    unsigned mode = FS_MODE_WRITE;
     int c;
-    size_t len;
 
     while( ( c = Cmd_ParseOptions( o_record ) ) != -1 ) {
         switch( c ) {
@@ -1658,7 +1678,7 @@ void MVD_StreamedRecord_f( void ) {
             Cmd_PrintHelp( o_record );
             return;
         case 'z':
-            gzip = qtrue;
+            mode |= FS_FLAG_GZIP;
             break;
         default:
             return;
@@ -1685,24 +1705,13 @@ void MVD_StreamedRecord_f( void ) {
     //
     // open the demo file
     //
-    len = Q_concat( buffer, sizeof( buffer ), "demos/", cmd_optarg,
-        gzip ? ".mvd2.gz" : ".mvd2", NULL );
-    if( len >= sizeof( buffer ) ) {
-        Com_EPrintf( "Oversize filename specified.\n" );
-        return;
-    }
-
-    FS_FOpenFile( buffer, &f, FS_MODE_WRITE );
+    f = FS_EasyOpenFile( buffer, sizeof( buffer ), mode,
+        "demos/", cmd_optarg, ".mvd2" );
     if( !f ) {
-        Com_EPrintf( "Couldn't open %s for writing.\n", buffer );
         return;
     }
-    
-    Com_Printf( "[%s] Recording into %s\n", mvd->name, buffer );
 
-    if( gzip ) {
-        FS_FilterFile( f );
-    }
+    Com_Printf( "[%s] Recording into %s\n", mvd->name, buffer );
 
     mvd->demorecording = f;
     mvd->demoname = MVD_CopyString( buffer );
@@ -2032,11 +2041,11 @@ static void MVD_Play_f( void ) {
             Q_strlcpy( buffer, s + 1, sizeof( buffer ) );
         } else {
             Q_concat( buffer, sizeof( buffer ), "demos/", s, NULL );
-            if( FS_LoadFile( buffer, NULL ) == INVALID_LENGTH ) {
+            if( !FS_FileExists( buffer ) ) {
                 COM_DefaultExtension( buffer, ".mvd2", sizeof( buffer ) );
             }
         }
-        if( FS_LoadFile( buffer, NULL ) == INVALID_LENGTH ) {
+        if( !FS_FileExists( buffer ) ) {
             Com_Printf( "Ignoring non-existent entry: %s\n", buffer );
             continue;
         }
@@ -2078,6 +2087,10 @@ static void MVD_Play_f( void ) {
 
     // set new playlist
     gtv->demohead = head;
+
+    if( setjmp( mvd_jmpbuf ) ) {
+        return;
+    }
 
     demo_play_next( gtv, head );
 }

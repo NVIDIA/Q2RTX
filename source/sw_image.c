@@ -74,28 +74,32 @@ image_t *IMG_LoadWAL( const char *name ) {
     miptex_t    *mt;
     image_t     *image;
     size_t      width, height, offset, endpos, filelen, size;
+    qerror_t    ret;
 
     filelen = FS_LoadFile( name, ( void ** )&mt );
     if( !mt ) {
-        return NULL;
+        // don't spam about missing images
+        if( filelen == Q_ERR_NOENT ) {
+            return NULL;
+        }
+        ret = filelen;
+        goto fail1;
     }
-
-    image = NULL;
 
     width = LittleLong( mt->width );
     height = LittleLong( mt->height );
     offset = LittleLong( mt->offsets[0] );
 
     if( width < 1 || height < 1 || width > MAX_TEXTURE_SIZE || height > MAX_TEXTURE_SIZE ) {
-        Com_WPrintf( "LoadWAL: %s: bad dimensions\n", name );
-        goto fail;
+        ret = Q_ERR_INVALID_FORMAT;
+        goto fail2;
     }
 
     size = width * height * ( 256 + 64 + 16 + 4 ) / 256;
     endpos = offset + size;
     if( endpos < offset || endpos > filelen ) {
-        Com_WPrintf( "LoadWAL: %s: bad offset\n", name );
-        goto fail;
+        ret = Q_ERR_BAD_EXTENT;
+        goto fail2;
     }
 
     image = IMG_Alloc( name );
@@ -112,10 +116,15 @@ image_t *IMG_LoadWAL( const char *name ) {
 
     memcpy( image->pixels[0], ( byte * )mt + offset, size );
 
-fail:
     FS_FreeFile( mt );
 
     return image;
+
+fail2:
+    FS_FreeFile( mt );
+fail1:
+    Com_EPrintf( "Couldn't load %s: %s\n", name, Q_ErrorString( ret ) );
+    return NULL;
 }
 
 static void R_BuildGammaTable( void ) {
@@ -178,19 +187,27 @@ int R_IndexForColor( const color_t color ) {
 }
 
 static void R_Get16to8( void ) {
-    fileHandle_t f;
-    size_t r;
+    qhandle_t f;
+    ssize_t ret;
 
-    FS_FOpenFile( "pics/16to8.dat", &f, FS_MODE_READ );
+    ret = FS_FOpenFile( "pics/16to8.dat", &f, FS_MODE_READ );
     if( !f ) {
-        Com_Error( ERR_FATAL, "Couldn't load pics/16to8.dat" );
+        goto fail;
     }
-    r = FS_Read( d_16to8table, sizeof( d_16to8table ), f );
-    if( r != sizeof( d_16to8table ) ) {
-        Com_Error( ERR_FATAL, "Malformed pics/16to8.dat" );
+
+    ret = FS_Read( d_16to8table, sizeof( d_16to8table ), f );
+    if( ret != sizeof( d_16to8table ) ) {
+        if( ret >= 0 ) {
+            ret = Q_ERR_UNEXPECTED_EOF;
+        }
+        goto fail;
     }
 
     FS_FCloseFile( f );
+    return;
+
+fail:
+    Com_Error( ERR_FATAL, "Couldn't load pics/16to8.dat: %s", Q_ErrorString( ret ) );
 }
 
 /*

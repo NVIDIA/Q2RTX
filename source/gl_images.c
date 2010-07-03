@@ -762,7 +762,7 @@ static void GL_GetDimensions( image_t *image, imageflags_t flags ) {
     size_t length;
     miptex_t    mt;
     dpcx_t pcx;
-    fileHandle_t f;
+    qhandle_t f;
 
     length = strlen( image->name );
     if( length > 4 && image->name[ length - 4 ] == '.' ) {
@@ -902,12 +902,18 @@ IMG_LoadWAL
 */
 image_t *IMG_LoadWAL( const char *name ) {
     miptex_t    *mt;
-    size_t      width, height, offset, length, endpos;
+    size_t      width, height, offset, len, endpos;
     image_t     *image;
+    qerror_t    ret;
 
-    length = FS_LoadFile( name, ( void ** )&mt );
+    len = FS_LoadFile( name, ( void ** )&mt );
     if( !mt ) {
-        return NULL;
+        // don't spam about missing images
+        if( len == Q_ERR_NOENT ) {
+            return NULL;
+        }
+        ret = len;
+        goto fail1;
     }
 
     width = LittleLong( mt->width );
@@ -915,13 +921,14 @@ image_t *IMG_LoadWAL( const char *name ) {
     offset = LittleLong( mt->offsets[0] );
 
     if( width < 1 || height < 1 || width > MAX_TEXTURE_SIZE || height > MAX_TEXTURE_SIZE ) {
-        Com_WPrintf( "LoadWAL: %s: bad dimensions\n", name );
-        goto fail;
+        ret = Q_ERR_INVALID_FORMAT;
+        goto fail2;
     }
+
     endpos = offset + width * height;
-    if( endpos < offset || endpos > length ) {
-        Com_WPrintf( "LoadWAL: %s: bad offset\n", name );
-        goto fail;
+    if( endpos < offset || endpos > len ) {
+        ret = Q_ERR_BAD_EXTENT;
+        goto fail2;
     }
 
     image = IMG_Create( name, ( byte * )mt + offset, width, height, it_wall, if_paletted );
@@ -929,8 +936,10 @@ image_t *IMG_LoadWAL( const char *name ) {
     FS_FreeFile( mt );
     return image;
 
-fail:
+fail2:
     FS_FreeFile( mt );
+fail1:
+    Com_EPrintf( "Couldn't load %s: %s\n", name, Q_ErrorString( ret ) );
     return NULL;
 }
 

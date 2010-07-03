@@ -297,10 +297,11 @@ static qboolean Parse_File( const char *path, int depth ) {
     char *raw, *data, *p, *cmd;
     int argc;
     menuFrameWork_t *menu = NULL;
+    qerror_t ret;
 
-    FS_LoadFile( path, ( void ** )&raw );
+    ret = FS_LoadFile( path, ( void ** )&raw );
     if( !raw ) {
-        Com_Printf( "Couldn't load %s\n", path );
+        Com_Printf( "Couldn't load %s: %s\n", path, Q_ErrorString( ret ) );
         return qfalse;
     }
 

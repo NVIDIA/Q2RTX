@@ -123,8 +123,8 @@ typedef struct mvd_s {
     qboolean        (*forward_cmd)( mvd_client_t * );
 
     // demo related variables
-    fileHandle_t    demorecording;
-    char            *demoname;
+    qhandle_t   demorecording;
+    char        *demoname;
 
     // delay buffer
     fifo_t      delay;

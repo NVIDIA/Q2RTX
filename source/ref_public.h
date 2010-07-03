@@ -201,6 +201,8 @@ qhandle_t R_RegisterModel( const char *name );
 qhandle_t R_RegisterSkin( const char *name );
 qhandle_t R_RegisterPic( const char *name );
 qhandle_t R_RegisterFont( const char *name );
+qerror_t _R_RegisterPic( const char *name, qhandle_t *handle );
+qerror_t _R_RegisterFont( const char *name, qhandle_t *handle );
 void    R_SetSky( const char *name, float rotate, vec3_t axis );
 void    R_EndRegistration( void );
 

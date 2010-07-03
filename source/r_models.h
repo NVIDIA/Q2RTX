@@ -73,12 +73,14 @@ void MOD_Shutdown( void );
 model_t *MOD_ForHandle( qhandle_t h );
 qhandle_t R_RegisterModel( const char *name );
 
-// these are implemented in [gl,sw]_models.c
 struct dmd2header_s;
-qboolean MOD_ValidateMD2( model_t *model, struct dmd2header_s *header, size_t length );
-qboolean MOD_LoadMD2( model_t *model, const void *rawdata, size_t length );
+qerror_t MOD_ValidateMD2( model_t *model, struct dmd2header_s *header, size_t length );
+
+// these are implemented in [gl,sw]_models.c
+typedef qerror_t (*mod_load_t)( model_t *, const void *, size_t );
+qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length );
 #if USE_MD3
-qboolean MOD_LoadMD3( model_t *model, const void *rawdata, size_t length );
+qerror_t MOD_LoadMD3( model_t *model, const void *rawdata, size_t length );
 #endif
 void MOD_Reference( model_t *model );
 

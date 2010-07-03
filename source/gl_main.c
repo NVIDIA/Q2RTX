@@ -534,33 +534,58 @@ void R_EndFrame( void ) {
 */
 
 #if USE_TGA || USE_JPG || USE_PNG
-static char *screenshot_path( char *buffer, const char *ext ) {
-    int i;
-    size_t len;
+static void make_screenshot( const char *ext, img_save_t func, GLenum format, int param ) {
+    char        buffer[MAX_OSPATH]; 
+    byte        *pixels;
+    qerror_t    ret;
+    qhandle_t   f;
+    int         i;
 
     if( Cmd_Argc() > 1 ) {
-        len = Q_concat( buffer, MAX_OSPATH, SCREENSHOTS_DIRECTORY "/", Cmd_Argv( 1 ), ext, NULL );
-        if( len >= MAX_OSPATH ) {
-            Com_EPrintf( "Oversize filename specified.\n" );
-            return NULL;
+        f = FS_EasyOpenFile( buffer, sizeof( buffer ), FS_MODE_WRITE,
+            SCREENSHOTS_DIRECTORY "/", Cmd_Argv( 1 ), ext );
+        if( !f ) {
+            return;
         }
-        return buffer;
-    }
-// 
-// find a file name to save it to 
-// 
-    for( i = 0; i < 1000; i++ ) {
-        Q_snprintf( buffer, MAX_OSPATH, SCREENSHOTS_DIRECTORY"/quake%03d%s", i, ext );
-        if( FS_LoadFileEx( buffer, NULL, FS_PATH_GAME, TAG_FREE ) == INVALID_LENGTH ) {
-            return buffer;  // file doesn't exist
+    } else {
+        // find a file name to save it to 
+        for( i = 0; i < 1000; i++ ) {
+            Q_snprintf( buffer, sizeof( buffer ), SCREENSHOTS_DIRECTORY "/quake%03d%s", i, ext );
+            ret = FS_FOpenFile( buffer, &f, FS_MODE_WRITE|FS_FLAG_EXCL );
+            if( f ) {
+                break;
+            }
+            if( ret != Q_ERR_EXIST ) {
+                Com_EPrintf( "Couldn't exclusively open %s for writing: %s\n",
+                    buffer, Q_ErrorString( ret ) );
+                return;
+            }
+        }
+
+        if( i == 1000 ) {
+            Com_EPrintf( "All screenshot slots are full.\n" );
+            return;
         }
     }
 
-    Com_Printf( "All screenshot slots are full.\n" );
-    return NULL;
+    pixels = FS_AllocTempMem( gl_config.vidWidth * gl_config.vidHeight * 3 );
+
+    qglReadPixels( 0, 0, gl_config.vidWidth, gl_config.vidHeight, format,
+        GL_UNSIGNED_BYTE, pixels );
+
+    ret = func( f, buffer, pixels, gl_config.vidWidth, gl_config.vidHeight, param );
+
+    FS_FreeFile( pixels );
+
+    FS_FCloseFile( f );
+
+    if( ret < 0 ) {
+        Com_EPrintf( "Couldn't write %s: %s\n", buffer, Q_ErrorString( ret ) );
+    } else {
+        Com_Printf( "Wrote %s\n", buffer );
+    }
 }
 #endif
-
 
 /* 
 ================== 
@@ -569,31 +594,11 @@ GL_ScreenShot_f
 */
 static void GL_ScreenShot_f( void )  {
 #if USE_TGA
-    char        buffer[MAX_OSPATH]; 
-    byte        *bgr;
-    qboolean    ret;
-
     if( Cmd_Argc() > 2 ) {
         Com_Printf( "Usage: %s [name]\n", Cmd_Argv( 0 ) );
         return;
     }
-
-    if( !screenshot_path( buffer, ".tga" ) ) {
-        return;
-    }
-
-    bgr = FS_AllocTempMem( gl_config.vidWidth * gl_config.vidHeight * 3 );
-
-    qglReadPixels( 0, 0, gl_config.vidWidth, gl_config.vidHeight, GL_BGR,
-        GL_UNSIGNED_BYTE, bgr );
-
-    ret = IMG_WriteTGA( buffer, bgr, gl_config.vidWidth, gl_config.vidHeight );
-
-    FS_FreeFile( bgr );
-
-    if( ret ) {
-        Com_Printf( "Wrote %s\n", buffer );
-    }
+    make_screenshot( ".tga", IMG_SaveTGA, GL_BGR, 0 );
 #else
     Com_Printf( "Couldn't create screenshot due to no TGA support linked in.\n" );
 #endif
@@ -601,24 +606,12 @@ static void GL_ScreenShot_f( void )  {
 
 #if USE_JPG
 static void GL_ScreenShotJPG_f( void )  {
-    char        buffer[MAX_OSPATH]; 
-    byte        *rgb;
-    int         quality;
-    qboolean    ret;
+    int quality;
 
     if( Cmd_Argc() > 3 ) {
         Com_Printf( "Usage: %s [name] [quality]\n", Cmd_Argv( 0 ) );
         return;
     }
-
-    if( !screenshot_path( buffer, ".jpg" ) ) {
-        return;
-    }
-
-    rgb = FS_AllocTempMem( gl_config.vidWidth * gl_config.vidHeight * 3 );
-
-    qglReadPixels( 0, 0, gl_config.vidWidth, gl_config.vidHeight, GL_RGB,
-        GL_UNSIGNED_BYTE, rgb );
 
     if( Cmd_Argc() > 2 ) {
         quality = atoi( Cmd_Argv( 2 ) );
@@ -626,36 +619,18 @@ static void GL_ScreenShotJPG_f( void )  {
         quality = gl_screenshot_quality->integer;
     }
 
-    ret = IMG_WriteJPG( buffer, rgb, gl_config.vidWidth, gl_config.vidHeight, quality );
-
-    FS_FreeFile( rgb );
-
-    if( ret ) {
-        Com_Printf( "Wrote %s\n", buffer );
-    }
+    make_screenshot( ".jpg", IMG_SaveJPG, GL_RGB, quality );
 }
 #endif
 
 #if USE_PNG
 static void GL_ScreenShotPNG_f( void )  {
-    char        buffer[MAX_OSPATH]; 
-    byte        *rgb;
-    int         compression;
-    qboolean    ret;
+    int compression;
 
     if( Cmd_Argc() > 3 ) {
         Com_Printf( "Usage: %s [name] [compression]\n", Cmd_Argv( 0 ) );
         return;
     }
-
-    if( !screenshot_path( buffer, ".png" ) ) {
-        return;
-    }
-
-    rgb = FS_AllocTempMem( gl_config.vidWidth * gl_config.vidHeight * 3 );
-
-    qglReadPixels( 0, 0, gl_config.vidWidth, gl_config.vidHeight, GL_RGB,
-        GL_UNSIGNED_BYTE, rgb );
 
     if( Cmd_Argc() > 2 ) {
         compression = atoi( Cmd_Argv( 2 ) );
@@ -663,13 +638,7 @@ static void GL_ScreenShotPNG_f( void )  {
         compression = gl_screenshot_compression->integer;
     }
 
-    ret = IMG_WritePNG( buffer, rgb, gl_config.vidWidth, gl_config.vidHeight, compression );
-
-    FS_FreeFile( rgb );
-
-    if( ret ) {
-        Com_Printf( "Wrote %s\n", buffer );
-    }
+    make_screenshot( ".png", IMG_SavePNG, GL_RGB, compression );
 }
 #endif
 

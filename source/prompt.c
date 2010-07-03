@@ -510,7 +510,7 @@ void Prompt_Clear( commandPrompt_t *prompt ) {
 }
 
 void Prompt_SaveHistory( commandPrompt_t *prompt, const char *filename, int lines ) {
-    fileHandle_t f;
+    qhandle_t f;
     char *s;
     int i;
 
@@ -539,9 +539,9 @@ void Prompt_SaveHistory( commandPrompt_t *prompt, const char *filename, int line
 
 void Prompt_LoadHistory( commandPrompt_t *prompt, const char *filename ) {
     char buffer[MAX_FIELD_TEXT];
-    fileHandle_t f;
+    qhandle_t f;
     int i;
-    size_t len;
+    ssize_t len;
 
     FS_FOpenFile( filename, &f, FS_MODE_READ|FS_TYPE_REAL|FS_PATH_BASE );
     if( !f ) {

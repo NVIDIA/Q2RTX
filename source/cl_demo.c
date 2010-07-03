@@ -215,6 +215,7 @@ stop recording a demo
 */
 void CL_Stop_f( void ) {
     uint32_t msglen;
+    ssize_t pos;
 
     if( !cls.demo.recording ) {
         Com_Printf( "Not recording a demo.\n" );
@@ -234,17 +235,17 @@ void CL_Stop_f( void ) {
     FS_Write( &msglen, 4, cls.demo.recording );
 
     FS_Flush( cls.demo.recording );
-    msglen = FS_Tell( cls.demo.recording );
+    pos = FS_Tell( cls.demo.recording );
 
 // close demofile
     FS_FCloseFile( cls.demo.recording );
     cls.demo.recording = 0;
     cls.demo.paused = qfalse;
 
-    if( msglen == INVALID_LENGTH ) {
+    if( pos < 0 ) {
         Com_Printf( "Stopped demo.\n" );
     } else {
-        Com_Printf( "Stopped demo (%u bytes written).\n", msglen );
+        Com_Printf( "Stopped demo (%d bytes written).\n", (int)pos );
     }
 }
 
@@ -263,8 +264,8 @@ static void CL_Record_f( void ) {
     size_t  len;
     entity_state_t  *ent;
     char            *string;
-    fileHandle_t    demofile;
-    qboolean        gzip = qfalse;
+    qhandle_t       f;
+    unsigned        mode = FS_MODE_WRITE;
 
     if( cls.demo.recording ) {
         Com_Printf( "Already recording.\n" );
@@ -284,7 +285,7 @@ static void CL_Record_f( void ) {
             Cmd_PrintHelp( o_record );
             return;
         case 'z':
-            gzip = qtrue;
+            mode |= FS_FLAG_GZIP;
             break;
         default:
             return;
@@ -300,26 +301,15 @@ static void CL_Record_f( void ) {
     //
     // open the demo file
     //
-    len = Q_concat( name, sizeof( name ), "demos/", cmd_optarg,
-        gzip ? ".dm2.gz" : ".dm2", NULL );
-    if( len >= sizeof( name ) ) {
-        Com_EPrintf( "Oversize filename specified.\n" );
-        return;
-    }
-
-    FS_FOpenFile( name, &demofile, FS_MODE_WRITE );
-    if( !demofile ) {
-        Com_EPrintf( "Couldn't open %s for writing.\n", name );
+    f = FS_EasyOpenFile( name, sizeof( name ), mode,
+        "demos/", cmd_optarg, ".dm2" );
+    if( !f ) {
         return;
     }
 
     Com_Printf( "Recording client demo to %s.\n", name );
 
-    if( gzip ) {
-        FS_FilterFile( demofile );
-    }
-
-    cls.demo.recording = demofile;
+    cls.demo.recording = f;
     cls.demo.paused = qfalse;
 
     SZ_Init( &cls.demo.buffer, demo_buffer, sizeof( demo_buffer ) );
@@ -446,118 +436,117 @@ static void CL_Suspend_f( void ) {
     memset( cl.dcs, 0, sizeof( cl.dcs ) );
 }
 
-static int CL_ReadFirstDemoMessage( fileHandle_t f ) {
+static int read_first_message( qhandle_t f ) {
     uint32_t    ul;
     uint16_t    us;
     size_t      msglen;
+    ssize_t     read;
+    qerror_t    ret;
     int         type;
 
     // read magic/msglen
-    if( FS_Read( &ul, 4, f ) != 4 ) {
-        Com_DPrintf( "%s: short read of msglen\n", __func__ );
-        return -1;
+    read = FS_Read( &ul, 4, f );
+    if( read != 4 ) {
+        return read < 0 ? read : Q_ERR_UNEXPECTED_EOF;
     }
 
+    // check for gzip header
     if( ( ( LittleLong( ul ) & 0xe0ffffff ) == 0x00088b1f ) ) {
-        Com_DPrintf( "%s: looks like gzip file\n", __func__ );
-        if( !FS_FilterFile( f ) ) {
-            Com_DPrintf( "%s: couldn't install gzip filter\n", __func__ );
-            return -1;
+        ret = FS_FilterFile( f );
+        if( ret ) {
+            return ret;
         }
-        if( FS_Read( &ul, 4, f ) != 4 ) {
-            Com_DPrintf( "%s: short read of msglen\n", __func__ );
-            return -1;
+        read = FS_Read( &ul, 4, f );
+        if( read != 4 ) {
+            return read < 0 ? read : Q_ERR_UNEXPECTED_EOF;
         }
     }
 
+    // determine demo type
     if( ul == MVD_MAGIC ) {
-        if( FS_Read( &us, 2, f ) != 2 ) {
-            Com_DPrintf( "%s: short read of msglen\n", __func__ );
-            return -1;
+        read = FS_Read( &us, 2, f );
+        if( read != 2 ) {
+            return read < 0 ? read : Q_ERR_UNEXPECTED_EOF;
         }
-        if( us == ( uint16_t )-1 ) {
-            Com_DPrintf( "%s: end of demo\n", __func__ );
-            return -1;
+        if( !us ) {
+            return Q_ERR_UNEXPECTED_EOF;
         }
         msglen = LittleShort( us );
         type = 1;
     } else {
         if( ul == ( uint32_t )-1 ) {
-            Com_DPrintf( "%s: end of demo\n", __func__ );
-            return -1;
+            return Q_ERR_UNEXPECTED_EOF;
         }
         msglen = LittleLong( ul );
         type = 0;
     }
 
-    if( msglen >= sizeof( msg_read_buffer ) ) {
-        Com_DPrintf( "%s: bad msglen\n", __func__ );
-        return -1;
+    if( msglen < 64 || msglen > sizeof( msg_read_buffer ) ) {
+        return Q_ERR_INVALID_FORMAT;
     }
 
     SZ_Init( &msg_read, msg_read_buffer, sizeof( msg_read_buffer ) );
     msg_read.cursize = msglen;
 
     // read packet data
-    if( FS_Read( msg_read.data, msglen, f ) != msglen ) {
-        Com_DPrintf( "%s: short read of data\n", __func__ );
-        return -1;
+    read = FS_Read( msg_read.data, msglen, f );
+    if( read != msglen ) {
+        return read < 0 ? read : Q_ERR_UNEXPECTED_EOF;
     }
 
     return type;
 }
 
-/*
-====================
-CL_ReadNextDemoMessage
-====================
-*/
-static qboolean CL_ReadNextDemoMessage( fileHandle_t f ) {
-    uint32_t        msglen;
+static int read_next_message( qhandle_t f ) {
+    uint32_t msglen;
+    ssize_t read;
 
     // read msglen
-    if( FS_Read( &msglen, 4, f ) != 4 ) {
-        Com_DPrintf( "%s: short read of msglen\n", __func__ );
-        return qfalse;
+    read = FS_Read( &msglen, 4, f );
+    if( read != 4 ) {
+        return read < 0 ? read : Q_ERR_UNEXPECTED_EOF;
     }
 
+    // check for EOF packet
     if( msglen == ( uint32_t )-1 ) {
-        Com_DPrintf( "%s: end of demo\n", __func__ );
-        return qfalse;
+        return 0;
     }
 
     msglen = LittleLong( msglen );
-    if( msglen >= sizeof( msg_read_buffer ) ) {
-        Com_DPrintf( "%s: bad msglen\n", __func__ );
-        return qfalse;
+    if( msglen > sizeof( msg_read_buffer ) ) {
+        return Q_ERR_INVALID_FORMAT;
     }
 
     SZ_Init( &msg_read, msg_read_buffer, sizeof( msg_read_buffer ) );
     msg_read.cursize = msglen;
 
     // read packet data
-    if( FS_Read( msg_read.data, msglen, f ) != msglen ) {
-        Com_DPrintf( "%s: short read of data\n", __func__ );
-        return qfalse;
+    read = FS_Read( msg_read.data, msglen, f );
+    if( read != msglen ) {
+        return read < 0 ? read : Q_ERR_UNEXPECTED_EOF;
     }
 
-    return qtrue;
+    return 1;
 }
 
-/*
-====================
-CL_ParseNextDemoMessage
-====================
-*/
-static void CL_ParseNextDemoMessage( void ) {
-    int pos;
-    char *s;
+static void parse_next_message( void ) {
+    int ret;
 
-    if( !CL_ReadNextDemoMessage( cls.demo.playback ) ) {
-        s = Cvar_VariableString( "nextserver" );
+    ret = read_next_message( cls.demo.playback );
+    if( ret <= 0 ) {
+        char *s = Cvar_VariableString( "nextserver" );
+
         if( !s[0] ) {
-            Com_Error( ERR_SILENT, "Demo finished" );
+            if( ret == 0 ) {
+                Com_Error( ERR_SILENT, "Demo finished" );
+            } else {
+                Com_Error( ERR_DROP, "Couldn't read demo: %s", Q_ErrorString( ret ) );
+            }
         }
+
+        FS_FCloseFile( cls.demo.playback );
+        memset( &cls.demo, 0, sizeof( cls.demo ) );
+
         Cbuf_AddText( &cmd_buffer, s );
         Cbuf_AddText( &cmd_buffer, "\n" );
         Cvar_Set( "nextserver", "" );
@@ -568,11 +557,11 @@ static void CL_ParseNextDemoMessage( void ) {
     CL_ParseServerMessage();
 
     if( cls.demo.file_size ) {
-        pos = FS_Tell( cls.demo.playback ) - cls.demo.file_offset;
-        if( pos < 0 ) {
-            pos = 0;
+        ssize_t pos = FS_Tell( cls.demo.playback );
+
+        if( pos > cls.demo.file_offset ) {
+            cls.demo.file_percent = ( pos - cls.demo.file_offset ) * 100 / cls.demo.file_size;
         }
-        cls.demo.file_percent = pos * 100 / cls.demo.file_size;
     }
 }
 
@@ -583,9 +572,9 @@ CL_PlayDemo_f
 */
 static void CL_PlayDemo_f( void ) {
     char name[MAX_OSPATH];
-    fileHandle_t demofile;
+    qhandle_t demofile;
     char *arg;
-    size_t length;
+    ssize_t len, ofs;
     int type, argc = Cmd_Argc();
 
     if( argc < 2 ) {
@@ -596,20 +585,33 @@ static void CL_PlayDemo_f( void ) {
     arg = Cmd_Argv( 1 );
     if( arg[0] == '/' ) {
         // Assume full path is given
-        Q_strlcpy( name, arg + 1, sizeof( name ) );
-        FS_FOpenFile( name, &demofile, FS_MODE_READ );
+        len = Q_strlcpy( name, arg + 1, sizeof( name ) );
+        if( len >= sizeof( name ) ) {
+            len = Q_ERR_NAMETOOLONG;
+            goto fail;
+        }
+        len = FS_FOpenFile( name, &demofile, FS_MODE_READ );
     } else {
         // Search for matching extensions
-        Q_concat( name, sizeof( name ), "demos/", arg, NULL );
-        FS_FOpenFile( name, &demofile, FS_MODE_READ );    
+        len = Q_concat( name, sizeof( name ), "demos/", arg, NULL );
+        if( len >= sizeof( name ) ) {
+            len = Q_ERR_NAMETOOLONG;
+            goto fail;
+        }
+        len = FS_FOpenFile( name, &demofile, FS_MODE_READ );    
         if( !demofile ) {
-            COM_DefaultExtension( name, ".dm2", sizeof( name ) );
-            FS_FOpenFile( name, &demofile, FS_MODE_READ );
+            len = COM_DefaultExtension( name, ".dm2", sizeof( name ) );
+            if( len >= sizeof( name ) ) {
+                len = Q_ERR_NAMETOOLONG;
+                goto fail;
+            }
+            len = FS_FOpenFile( name, &demofile, FS_MODE_READ );
         }
     }
 
     if( !demofile ) {
-        Com_Printf( "Couldn't open %s\n", name );
+fail:
+        Com_Printf( "Couldn't open %s: %s\n", name, Q_ErrorString( len ) );
         return;
     }
 
@@ -623,15 +625,14 @@ static void CL_PlayDemo_f( void ) {
     }
 #endif
 
-    type = CL_ReadFirstDemoMessage( demofile );
-    if( type == -1 ) {
-        Com_Printf( "%s is not a demo file\n", name );
+    type = read_first_message( demofile );
+    if( type < 0 ) {
+        Com_Printf( "Couldn't read %s: %s\n", name, Q_ErrorString( type ) );
         FS_FCloseFile( demofile );
         return;
     }
 
     if( type == 1 ) {
-        Com_DPrintf( "%s is a MVD file\n", name );
         Cbuf_InsertText( &cmd_buffer, va( "mvdplay --replace @@ /%s\n", name ) );
         FS_FCloseFile( demofile );
         return;
@@ -656,16 +657,13 @@ static void CL_PlayDemo_f( void ) {
     CL_ParseServerMessage();
     while( cls.state == ca_connected ) {
         Cbuf_Execute( &cl_cmdbuf );
-        CL_ParseNextDemoMessage();
+        parse_next_message();
     }
 
-    length = FS_GetFileLength( demofile );
-    if( length == INVALID_LENGTH ) {
-        cls.demo.file_offset = 0;
-        cls.demo.file_size = 0;
-    } else {
-        cls.demo.file_offset = FS_Tell( demofile );
-        cls.demo.file_size = length - cls.demo.file_offset;
+    ofs = FS_Tell( demofile );
+    if( ofs > 0 ) {
+        cls.demo.file_offset = ofs;
+        cls.demo.file_size = len - ofs;
     }
 
     if( com_timedemo->integer ) {
@@ -680,7 +678,7 @@ static void CL_Demo_c( genctx_t *ctx, int argnum ) {
     }
 }
 
-static void CL_ParseInfoString( demoInfo_t *info, int clientNum, int index, const char *string ) {
+static void parse_info_string( demoInfo_t *info, int clientNum, int index, const char *string ) {
     size_t len;
     char *p;
 
@@ -707,7 +705,7 @@ CL_GetDemoInfo
 ====================
 */
 demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info ) {
-    fileHandle_t f;
+    qhandle_t f;
     int c, index;
     char string[MAX_QPATH];
     int clientNum, type;
@@ -717,8 +715,8 @@ demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info ) {
         return NULL;
     }
 
-    type = CL_ReadFirstDemoMessage( f );
-    if( type == -1 ) {
+    type = read_first_message( f );
+    if( type < 0 ) {
         goto fail;
     }
 
@@ -738,7 +736,7 @@ demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info ) {
         while( 1 ) {
             c = MSG_ReadByte();
             if( c == -1 ) {
-                if( !CL_ReadNextDemoMessage( f ) ) {
+                if( read_next_message( f ) <= 0 ) {
                     break;
                 }
                 continue; // parse new message
@@ -751,7 +749,7 @@ demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info ) {
                 goto fail;
             }
             MSG_ReadString( string, sizeof( string ) );
-            CL_ParseInfoString( info, clientNum, index, string );
+            parse_info_string( info, clientNum, index, string );
         }
     } else {
         if( MSG_ReadByte() != mvd_serverdata ) {
@@ -774,7 +772,7 @@ demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info ) {
                 goto fail;
             }
             MSG_ReadString( string, sizeof( string ) );
-            CL_ParseInfoString( info, clientNum, index, string );
+            parse_info_string( info, clientNum, index, string );
         }
     }
 
@@ -800,19 +798,19 @@ void CL_DemoFrame( void ) {
         return;
     }
     if( cls.state != ca_active ) {
-        CL_ParseNextDemoMessage();
+        parse_next_message();
         return;
     }
 
     if( com_timedemo->integer ) {
-        CL_ParseNextDemoMessage();
+        parse_next_message();
         cl.time = cl.servertime;
         cls.demo.time_frames++;
         return;
     }
 
     while( cl.servertime < cl.time ) {
-        CL_ParseNextDemoMessage();
+        parse_next_message();
         if( cls.state != ca_active ) {
             break;
         }

@@ -492,7 +492,7 @@ Key_WriteBindings
 Writes lines containing "bind key value"
 ============
 */
-void Key_WriteBindings( fileHandle_t f ) {
+void Key_WriteBindings( qhandle_t f ) {
     int     i;
 
     for( i = 0; i < 256; i++ ) {

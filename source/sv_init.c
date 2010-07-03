@@ -308,6 +308,7 @@ void SV_Map (const char *levelstring, qboolean restart) {
     char    expanded[MAX_QPATH];
     char    *ch;
     cm_t    cm;
+    qerror_t ret;
 
     // skip the end-of-unit flag if necessary
     if( *levelstring == '*' ) {
@@ -336,8 +337,9 @@ void SV_Map (const char *levelstring, qboolean restart) {
     }
 
     Q_concat( expanded, sizeof( expanded ), "maps/", level, ".bsp", NULL );
-    if( !CM_LoadMap( &cm, expanded ) ) {
-        Com_Printf( "Couldn't load %s: %s\n", expanded, BSP_GetError() );
+    ret = CM_LoadMap( &cm, expanded );
+    if( ret < 0 ) {
+        Com_Printf( "Couldn't load %s: %s\n", expanded, Q_ErrorString( ret ) );
         return;
     }
 

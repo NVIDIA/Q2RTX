@@ -67,13 +67,16 @@ void LOC_LoadLocations( void ) {
     int line, count;
     location_t *loc;
     int argc;
+    qerror_t ret;
 
     // load from main directory
     Q_concat( path, sizeof( path ), "locs/", cl.mapname, ".loc", NULL );
 
-    FS_LoadFile( path, (void **)&buffer );
+    ret = FS_LoadFile( path, (void **)&buffer );
     if( !buffer ) {
-        Com_DPrintf( "Couldn't load %s\n", path );
+        if( ret != Q_ERR_NOENT ) {
+            Com_EPrintf( "Couldn't load %s: %s\n", path, Q_ErrorString( ret ) );
+        }
         return;
     }
 
@@ -109,7 +112,6 @@ void LOC_LoadLocations( void ) {
     Com_Printf( "Loaded %i locations from %s\n", count, path );
 
     FS_FreeFile( buffer );
-
 }
 
 /*

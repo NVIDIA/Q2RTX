@@ -79,8 +79,7 @@ typedef enum {
     it_wall,
     it_pic,
     it_sky,
-    it_charset,
-    it_tmp
+    it_charset
 } imagetype_t;
 
 #define EXTENSION_PNG    MakeRawLong( '.', 'p', 'n', 'g' )
@@ -133,24 +132,31 @@ qhandle_t R_RegisterSkin( const char *name );
 qhandle_t R_RegisterPic( const char *name );
 qhandle_t R_RegisterFont( const char *name );
 
-qboolean IMG_LoadPCX( const char *filename, byte **pic, byte *palette,
+qerror_t IMG_LoadPCX( const char *filename, byte **pic, byte *palette,
                     int *width, int *height );
+qerror_t IMG_WritePCX( qhandle_t f, const char *filename, const byte *data, int width,
+                    int height, int rowbytes, byte *palette ); 
+
+#if USE_TGA || USE_JPG || USE_PNG
+typedef qerror_t (img_load_t)( const char *, byte **, int *, int * );
+typedef qerror_t (img_save_t)( qhandle_t, const char *, const byte *, int, int, int );
+#endif
 
 #if USE_TGA
-void IMG_LoadTGA( const char *filename, byte **pic, int *width, int *height );
-qboolean IMG_WriteTGA( const char *filename, const byte *rgb,
-                        int width, int height );
+qerror_t IMG_LoadTGA( const char *filename, byte **pic, int *width, int *height );
+qerror_t IMG_SaveTGA( qhandle_t f, const char *filename, const byte *bgr,
+                        int width, int height, int unused );
 #endif
 
 #if USE_JPG
-void IMG_LoadJPG( const char *filename, byte **pic, int *width, int *height );
-qboolean IMG_WriteJPG( const char *filename, const byte *rgb,
+qerror_t IMG_LoadJPG( const char *filename, byte **pic, int *width, int *height );
+qerror_t IMG_SaveJPG( qhandle_t f, const char *filename, const byte *rgb,
                         int width, int height, int quality );
 #endif
 
 #if USE_PNG
-void IMG_LoadPNG( const char *filename, byte **pic, int *width, int *height );
-qboolean IMG_WritePNG( const char *filename, const byte *rgb,
+qerror_t IMG_LoadPNG( const char *filename, byte **pic, int *width, int *height );
+qerror_t IMG_SavePNG( qhandle_t f, const char *filename, const byte *rgb,
                         int width, int height, int compression ); 
 #endif
 

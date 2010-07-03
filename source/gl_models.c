@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "d_md3.h"
 #include "d_sp2.h"
 
-qboolean MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
+qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
     dmd2header_t header;
     dmd2frame_t *src_frame;
     dmd2trivertx_t *src_vert;
@@ -45,25 +45,27 @@ qboolean MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
     vec_t scaleS, scaleT;
     int val;
     vec3_t mins, maxs;
+    qerror_t ret;
 
     if( length < sizeof( header ) ) {
-        Com_WPrintf( "%s is too short\n", model->name );
-        return qfalse;
+        return Q_ERR_FILE_TOO_SMALL;
     }
 
-    /* byte swap the header */
+    // byte swap the header
     header = *( dmd2header_t * )rawdata;
     for( i = 0; i < sizeof( header )/4; i++ ) {
         (( uint32_t * )&header)[i] = LittleLong( (( uint32_t * )&header)[i] );
     }
 
-    if( !MOD_ValidateMD2( model, &header, length ) ) {
-        return qfalse;
+    // validate the header
+    ret = MOD_ValidateMD2( model, &header, length );
+    if( ret ) {
+        return ret;
     }
 
     Hunk_Begin( &model->pool, 0x400000 );
 
-    /* load all triangle indices */
+    // load all triangle indices
     src_tri = ( dmd2triangle_t * )( ( byte * )rawdata + header.ofs_tris );
     for( i = 0; i < header.num_tris; i++ ) {
         for( j = 0; j < 3; j++ ) {
@@ -71,7 +73,7 @@ qboolean MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
             uint16_t idx_st = LittleShort( src_tri->index_st[j] );
 
             if( idx_xyz >= header.num_xyz || idx_st >= header.num_st ) {
-                Com_WPrintf( "%s has bad triangle indices\n", model->name );
+                ret = Q_ERR_BAD_INDEX;
                 goto fail;
             }
 
@@ -100,7 +102,7 @@ qboolean MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
     finalIndices = dst_mesh->indices;
     for( i = 0; i < numindices; i++ ) {
         if( remap[i] != 0xFFFF ) {
-            continue; /* already remapped */
+            continue; // already remapped
         }
 
         for( j = i + 1; j < numindices; j++ ) {
@@ -108,13 +110,13 @@ qboolean MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
                 ( src_tc[tcIndices[i]].s == src_tc[tcIndices[j]].s &&
                     src_tc[tcIndices[i]].t == src_tc[tcIndices[j]].t ) )
             {
-                /* duplicate vertex */
+                // duplicate vertex
                 remap[j] = i;
                 finalIndices[j] = numverts;
             } 
         }
 
-        /* new vertex */
+        // new vertex
         remap[i] = i;
         finalIndices[i] = numverts++;
     }
@@ -123,7 +125,7 @@ qboolean MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
     dst_mesh->tcoords = Model_Malloc( numverts * sizeof( maliastc_t ) );
     dst_mesh->numverts = numverts;
 
-    /* load all skins */
+    // load all skins
     src_skin = ( char * )rawdata + header.ofs_skins;
     for( i = 0; i < header.num_skins; i++ ) {
         Q_strlcpy( skinname, src_skin, sizeof( skinname ) );
@@ -136,7 +138,7 @@ qboolean MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
     }
     dst_mesh->numskins = header.num_skins;
 
-    /* load all tcoords */
+    // load all tcoords
     src_tc = ( dmd2stvert_t * )( ( byte * )rawdata + header.ofs_st );
     dst_tc = dst_mesh->tcoords;
     skin = dst_mesh->skins[0];
@@ -152,7 +154,7 @@ qboolean MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
         }
     }
 
-    /* load all frames */
+    // load all frames
     model->frames = Model_Malloc( header.num_frames * sizeof( maliasframe_t ) );
     model->numframes = header.num_frames;
 
@@ -162,7 +164,7 @@ qboolean MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
         LittleVector( src_frame->scale, dst_frame->scale );
         LittleVector( src_frame->translate, dst_frame->translate );
 
-        /* load frame vertices */
+        // load frame vertices
         ClearBounds( mins, maxs );
         for( i = 0; i < numindices; i++ ) {
             if( remap[i] == i ) {
@@ -174,7 +176,7 @@ qboolean MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
                 dst_vert->pos[2] = src_vert->v[2];
                 k = src_vert->lightnormalindex;
                 if( k >= NUMVERTEXNORMALS ) {
-                    Com_WPrintf( "%s has bad normal indices\n", model->name );
+                    ret = Q_ERR_BAD_INDEX;
                     goto fail;
                 }
                 dst_vert->normalindex = k;
@@ -202,11 +204,11 @@ qboolean MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
     }
 
     Hunk_End( &model->pool );
-    return qtrue;
+    return Q_ERR_SUCCESS;
 
 fail:
     Hunk_Free( &model->pool );
-    return qfalse;
+    return ret;
 }
 
 #if USE_MD3
@@ -232,7 +234,7 @@ static void ll2byte_init( void ) {
     }
 }
 
-qboolean MOD_LoadMD3( model_t *model, const void *rawdata, size_t length ) {
+qerror_t MOD_LoadMD3( model_t *model, const void *rawdata, size_t length ) {
     dmd3header_t header;
     uint32_t offset;
     dmd3frame_t *src_frame;
@@ -252,35 +254,30 @@ qboolean MOD_LoadMD3( model_t *model, const void *rawdata, size_t length ) {
     image_t *skin;
     const byte *rawend;
     int i, j;
+    qerror_t ret;
 
     if( length < sizeof( header ) ) {
-        Com_WPrintf( "%s is too small to hold MD3 header\n", model->name );
-        return qfalse;
+        return Q_ERR_FILE_TOO_SMALL;
     }
 
-    /* byte swap the header */
+    // byte swap the header
     header = *( dmd3header_t * )rawdata;
     for( i = 0; i < sizeof( header )/4; i++ ) {
         (( uint32_t * )&header)[i] = LittleLong( (( uint32_t * )&header)[i] );
     }
 
-    if( header.ident != MD3_IDENT ) {
-        Com_WPrintf( "%s is not an MD3 file\n", model->name );
-        return qfalse;
-    }
-    if( header.version != MD3_VERSION ) {
-        Com_WPrintf( "%s has bad version: %d instead of %d\n",
-            model->name, header.version, MD3_VERSION );
-        return qfalse;
-    }
-    if( header.num_frames < 1 || header.num_frames > MD3_MAX_FRAMES ) {
-        Com_WPrintf( "%s has bad number of frames\n", model->name );
-        return qfalse;
-    }
-    if( header.num_meshes < 1 || header.num_meshes > MD3_MAX_MESHES ) {
-        Com_WPrintf( "%s has bad number of meshes\n", model->name );
-        return qfalse;
-    }
+    if( header.ident != MD3_IDENT )
+        return Q_ERR_UNKNOWN_FORMAT;
+    if( header.version != MD3_VERSION )
+        return Q_ERR_UNKNOWN_FORMAT;
+    if( header.num_frames < 1 )
+        return Q_ERR_TOO_FEW;
+    if( header.num_frames > MD3_MAX_FRAMES )
+        return Q_ERR_TOO_MANY;
+    if( header.num_meshes < 1 )
+        return Q_ERR_TOO_FEW;
+    if( header.num_meshes > MD3_MAX_MESHES )
+        return Q_ERR_TOO_MANY;
     
     Hunk_Begin( &model->pool, 0x400000 );
     model->numframes = header.num_frames;
@@ -290,10 +287,10 @@ qboolean MOD_LoadMD3( model_t *model, const void *rawdata, size_t length ) {
 
     rawend = ( byte * )rawdata + length;
     
-    /* load all frames */
+    // load all frames
     src_frame = ( dmd3frame_t * )( ( byte * )rawdata + header.ofs_frames );
     if( ( byte * )( src_frame + header.num_frames ) > rawend ) {
-        Com_WPrintf( "%s has bad frames offset\n", model->name );
+        ret = Q_ERR_BAD_EXTENT;
         goto fail;
     }
     dst_frame = model->frames;
@@ -307,25 +304,38 @@ qboolean MOD_LoadMD3( model_t *model, const void *rawdata, size_t length ) {
 
         src_frame++; dst_frame++;
     }
+
+    if( !ll2byte_inited ) {
+        ll2byte_init();
+        ll2byte_inited = qtrue;
+    }
     
-    /* load all meshes */
+    // load all meshes
     src_mesh = ( dmd3mesh_t * )( ( byte * )rawdata + header.ofs_meshes );
     dst_mesh = model->meshes;
     for( i = 0; i < header.num_meshes; i++ ) {
         if( ( byte * )( src_mesh + 1 ) > rawend ) {
-            Com_WPrintf( "%s has bad offset for mesh %d\n", model->name, i );
+            ret = Q_ERR_BAD_EXTENT;
             goto fail;
         }
 
         numverts = LittleLong( src_mesh->num_verts );
-        numtris = LittleLong( src_mesh->num_tris );
-
-        if( numverts < 3 || numverts > TESS_MAX_VERTICES ) {
-            Com_WPrintf( "%s has bad number of vertices for mesh %d\n", model->name, i );
+        if( numverts < 3 ) {
+            ret = Q_ERR_TOO_FEW;
             goto fail;
         }
-        if( numtris < 1 || numtris > TESS_MAX_INDICES / 3 ) {
-            Com_WPrintf( "%s has bad number of faces for mesh %d\n", model->name, i );
+        if( numverts > TESS_MAX_VERTICES ) {
+            ret = Q_ERR_TOO_MANY;
+            goto fail;
+        }
+
+        numtris = LittleLong( src_mesh->num_tris );
+        if( numtris < 1 ) {
+            ret = Q_ERR_TOO_FEW;
+            goto fail;
+        }
+        if( numtris > TESS_MAX_INDICES / 3 ) {
+            ret = Q_ERR_TOO_MANY;
             goto fail;
         }
         
@@ -336,16 +346,16 @@ qboolean MOD_LoadMD3( model_t *model, const void *rawdata, size_t length ) {
         dst_mesh->tcoords = Model_Malloc( sizeof( maliastc_t ) * numverts );
         dst_mesh->indices = Model_Malloc( sizeof( uint32_t ) * numtris * 3 );
 
-        /* load all skins */
+        // load all skins
         numskins = LittleLong( src_mesh->num_skins );
         if( numskins > MAX_ALIAS_SKINS ) {
-            Com_WPrintf( "%s has bad number of skins for mesh %d\n", model->name, i );
+            ret = Q_ERR_TOO_MANY;
             goto fail;
         }
         offset = LittleLong( src_mesh->ofs_skins );
         src_skin = ( dmd3skin_t * )( ( byte * )src_mesh + offset );
         if( ( byte * )( src_skin + numskins ) > rawend ) {
-            Com_WPrintf( "%s has bad skins offset for mesh %d\n", model->name, i );
+            ret = Q_ERR_BAD_EXTENT;
             goto fail;
         }
         for( j = 0; j < numskins; j++ ) {
@@ -358,12 +368,12 @@ qboolean MOD_LoadMD3( model_t *model, const void *rawdata, size_t length ) {
         }
         dst_mesh->numskins = numskins;
         
-        /* load all vertices */
+        // load all vertices
         totalVerts = numverts * header.num_frames;
         offset = LittleLong( src_mesh->ofs_verts );
         src_vert = ( dmd3vertex_t * )( ( byte * )src_mesh + offset );
         if( ( byte * )( src_vert + totalVerts ) > rawend ) {
-            Com_WPrintf( "%s has bad vertices offset for mesh %d\n", model->name, i );
+            ret = Q_ERR_BAD_EXTENT;
             goto fail;
         }
         dst_vert = dst_mesh->verts;
@@ -372,21 +382,16 @@ qboolean MOD_LoadMD3( model_t *model, const void *rawdata, size_t length ) {
             dst_vert->pos[1] = ( signed short )LittleShort( src_vert->point[1] );
             dst_vert->pos[2] = ( signed short )LittleShort( src_vert->point[2] );
 
-            if( !ll2byte_inited ) {
-                ll2byte_init();
-                ll2byte_inited = qtrue;
-            }
-            dst_vert->normalindex = ll2byte[src_vert->norm[0]]
-                [src_vert->norm[1]];
+            dst_vert->normalindex = ll2byte[src_vert->norm[0]][src_vert->norm[1]];
 
             src_vert++; dst_vert++;
         }
         
-        /* load all texture coords */
+        // load all texture coords
         offset = LittleLong( src_mesh->ofs_tcs );
         src_tc = ( dmd3coord_t * )( ( byte * )src_mesh + offset );
         if( ( byte * )( src_tc + numverts ) > rawend ) {
-            Com_WPrintf( "%s has bad tcoords offset for mesh %d\n", model->name, i );
+            ret = Q_ERR_BAD_EXTENT;
             goto fail;
         }
         dst_tc = dst_mesh->tcoords;
@@ -396,11 +401,11 @@ qboolean MOD_LoadMD3( model_t *model, const void *rawdata, size_t length ) {
             src_tc++; dst_tc++;
         }
 
-        /* load all triangle indices */
+        // load all triangle indices
         offset = LittleLong( src_mesh->ofs_indexes );
         src_idx = ( uint32_t * )( ( byte * )src_mesh + offset );
         if( ( byte * )( src_idx + numtris * 3 ) > rawend ) {
-            Com_WPrintf( "%s has bad indices offset for mesh %d\n", model->name, i );
+            ret = Q_ERR_BAD_EXTENT;
             goto fail;
         }
         dst_idx = dst_mesh->indices;
@@ -409,7 +414,7 @@ qboolean MOD_LoadMD3( model_t *model, const void *rawdata, size_t length ) {
             dst_idx[1] = LittleLong( src_idx[1] );
             dst_idx[2] = LittleLong( src_idx[2] );
             if( dst_idx[0] >= numverts || dst_idx[1] >= numverts || dst_idx[2] >= numverts ) {
-                Com_WPrintf( "%s has bad indices for triangle %d in mesh %d\n", model->name, j, i );
+                ret = Q_ERR_BAD_INDEX;
                 goto fail;
             }
             src_idx += 3; dst_idx += 3;
@@ -421,11 +426,11 @@ qboolean MOD_LoadMD3( model_t *model, const void *rawdata, size_t length ) {
     }
 
     Hunk_End( &model->pool );
-    return qtrue;
+    return Q_ERR_SUCCESS;
 
 fail:
     Hunk_Free( &model->pool );
-    return qfalse;
+    return ret;
 }
 #endif
 

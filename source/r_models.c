@@ -132,86 +132,72 @@ void MOD_FreeAll( void ) {
     r_numModels = 0;
 }
 
-qboolean MOD_ValidateMD2( model_t *model, dmd2header_t *header, size_t length ) {
+qerror_t MOD_ValidateMD2( model_t *model, dmd2header_t *header, size_t length ) {
     size_t end;
 
     // check ident and version
-    if( header->ident != MD2_IDENT ) {
-        Com_WPrintf( "%s is not an MD2 file\n", model->name );
-        return qfalse;
-    }
-    if( header->version != MD2_VERSION ) {
-        Com_WPrintf( "%s has bad version: %d instead of %d\n",
-            model->name, header->version, MD2_VERSION );
-        return qfalse;
-    }
+    if( header->ident != MD2_IDENT )
+        return Q_ERR_UNKNOWN_FORMAT;
+    if( header->version != MD2_VERSION )
+        return Q_ERR_UNKNOWN_FORMAT;
 
     // check triangles
-    if( header->num_tris < 1 || header->num_tris > MD2_MAX_TRIANGLES ) {
-        Com_WPrintf( "%s has bad number of triangles\n", model->name );
-        return qfalse;
-    }
+    if( header->num_tris < 1 )
+        return Q_ERR_TOO_FEW;
+    if( header->num_tris > MD2_MAX_TRIANGLES )
+        return Q_ERR_TOO_MANY;
+    
     end = header->ofs_tris + sizeof( dmd2triangle_t ) * header->num_tris;
-    if( header->ofs_tris < sizeof( header ) || end < header->ofs_tris || end > length ) {
-        Com_WPrintf( "%s has bad triangles offset\n", model->name );
-        return qfalse;
-    }
+    if( header->ofs_tris < sizeof( header ) || end < header->ofs_tris || end > length )
+        return Q_ERR_BAD_EXTENT;
 
     // check st
-    if( header->num_st < 3 || header->num_st > MD2_MAX_VERTS ) {
-        Com_WPrintf( "%s has bad number of st\n", model->name );
-        return qfalse;
-    }
+    if( header->num_st < 3 )
+        return Q_ERR_TOO_FEW;
+    if( header->num_st > MD2_MAX_VERTS )
+        return Q_ERR_TOO_MANY;
+
     end = header->ofs_st + sizeof( dmd2stvert_t ) * header->num_st;
-    if( header->ofs_st < sizeof( header ) || end < header->ofs_st || end > length ) {
-        Com_WPrintf( "%s has bad st offset\n", model->name );
-        return qfalse;
-    }
+    if( header->ofs_st < sizeof( header ) || end < header->ofs_st || end > length )
+        return Q_ERR_BAD_EXTENT;
 
     // check xyz and frames
-    if( header->num_xyz < 3 || header->num_xyz > MD2_MAX_VERTS ) {
-        Com_WPrintf( "%s has bad number of xyz\n", model->name );
-        return qfalse;
-    }
-    if( header->num_frames < 1 || header->num_frames > MD2_MAX_FRAMES ) {
-        Com_WPrintf( "%s has bad number of frames\n", model->name );
-        return qfalse;
-    }
+    if( header->num_xyz < 3 )
+        return Q_ERR_TOO_FEW;
+    if( header->num_xyz > MD2_MAX_VERTS )
+        return Q_ERR_TOO_MANY;
+    if( header->num_frames < 1 )
+        return Q_ERR_TOO_FEW;
+    if( header->num_frames > MD2_MAX_FRAMES )
+        return Q_ERR_TOO_MANY;
+
     end = sizeof( dmd2frame_t ) + ( header->num_xyz - 1 ) * sizeof( dmd2trivertx_t );
-    if( header->framesize < end || header->framesize > MD2_MAX_FRAMESIZE ) {
-        Com_WPrintf( "%s has bad frame size\n", model->name );
-        return qfalse;
-    }
-    end = header->ofs_frames + header->framesize * header->num_frames;
-    if( header->ofs_frames < sizeof( header ) || end < header->ofs_frames || end > length ) {
-        Com_WPrintf( "%s has bad frames offset\n", model->name );
-        return qfalse;
-    }
+    if( header->framesize < end || header->framesize > MD2_MAX_FRAMESIZE )
+        return Q_ERR_BAD_EXTENT;
+
+    end = header->ofs_frames + ( size_t )header->framesize * header->num_frames;
+    if( header->ofs_frames < sizeof( header ) || end < header->ofs_frames || end > length )
+        return Q_ERR_BAD_EXTENT;
 
     // check skins
-    if( header->num_skins > MAX_ALIAS_SKINS ) {
-        Com_WPrintf( "%s has bad number of skins\n", model->name );
-        return qfalse;
-    }
     if( header->num_skins ) {
-        end = header->ofs_skins + MD2_MAX_SKINNAME * header->num_skins;
-        if( header->ofs_skins < sizeof( header ) || end < header->ofs_skins || end > length ) {
-            Com_WPrintf( "%s has bad skins offset\n", model->name );
-            return qfalse;
-        }
+        if( header->num_skins > MAX_ALIAS_SKINS )
+            return Q_ERR_TOO_MANY;
+
+        end = header->ofs_skins + ( size_t )MD2_MAX_SKINNAME * header->num_skins;
+        if( header->ofs_skins < sizeof( header ) || end < header->ofs_skins || end > length )
+            return Q_ERR_BAD_EXTENT;
     }
-    if( header->skinwidth < 1 || header->skinwidth > MD2_MAX_SKINWIDTH ) {
-        Com_WPrintf( "%s has bad skin width\n", model->name );
-        return qfalse;
-    }
-    if( header->skinheight < 1 || header->skinheight > MD2_MAX_SKINHEIGHT ) {
-        Com_WPrintf( "%s has bad skin height\n", model->name );
-        return qfalse;
-    }
-    return qtrue;
+
+    if( header->skinwidth < 1 || header->skinwidth > MD2_MAX_SKINWIDTH )
+        return Q_ERR_INVALID_FORMAT;
+    if( header->skinheight < 1 || header->skinheight > MD2_MAX_SKINHEIGHT )
+        return Q_ERR_INVALID_FORMAT;
+
+    return Q_ERR_SUCCESS;
 }
 
-static qboolean MOD_LoadSP2( model_t *model, const void *rawdata, size_t length ) {
+static qerror_t MOD_LoadSP2( model_t *model, const void *rawdata, size_t length ) {
     dsp2header_t header;
     dsp2frame_t *src_frame;
     mspriteframe_t *dst_frame;
@@ -220,10 +206,8 @@ static qboolean MOD_LoadSP2( model_t *model, const void *rawdata, size_t length 
     image_t *image;
     int i;
 
-    if( length < sizeof( header ) ) {
-        Com_EPrintf( "%s is too small\n", model->name );
-        return qfalse;
-    }
+    if( length < sizeof( header ) )
+        return Q_ERR_FILE_TOO_SMALL;
 
     // byte swap the header
     header = *( dsp2header_t * )rawdata;
@@ -231,24 +215,16 @@ static qboolean MOD_LoadSP2( model_t *model, const void *rawdata, size_t length 
         (( uint32_t * )&header)[i] = LittleLong( (( uint32_t * )&header)[i] );
     }
 
-    if( header.ident != SP2_IDENT ) {
-        Com_EPrintf( "%s is not an SP2 file\n", model->name );
-        return qfalse;
-    }
-    if( header.version != SP2_VERSION ) {
-        Com_EPrintf( "%s has bad version: %d instead of %d\n",
-            model->name, header.version, SP2_VERSION );
-        return qfalse;
-    }
-    if( header.numframes < 1 || header.numframes > SP2_MAX_FRAMES ) {
-        Com_EPrintf( "%s has bad number of frames: %d\n",
-            model->name, header.numframes );
-        return qfalse;
-    }
-    if( sizeof( dsp2header_t ) + sizeof( dsp2frame_t ) * header.numframes > length ) {
-        Com_EPrintf( "%s has frames out of bounds\n", model->name );
-        return qfalse;
-    }
+    if( header.ident != SP2_IDENT )
+        return Q_ERR_UNKNOWN_FORMAT;
+    if( header.version != SP2_VERSION )
+        return Q_ERR_UNKNOWN_FORMAT;
+    if( header.numframes < 1 )
+        return Q_ERR_TOO_FEW;
+    if( header.numframes > SP2_MAX_FRAMES )
+        return Q_ERR_TOO_MANY;
+    if( sizeof( dsp2header_t ) + sizeof( dsp2frame_t ) * header.numframes > length )
+        return Q_ERR_BAD_EXTENT;
 
     Hunk_Begin( &model->pool, 0x10000 );
 
@@ -292,9 +268,8 @@ static qboolean MOD_LoadSP2( model_t *model, const void *rawdata, size_t length 
 
     Hunk_End( &model->pool );
 
-    return qtrue;
+    return Q_ERR_SUCCESS;
 }
-
 
 qhandle_t R_RegisterModel( const char *name ) {
     int index;
@@ -302,7 +277,9 @@ qhandle_t R_RegisterModel( const char *name ) {
     model_t *model;
     byte *rawdata;
     uint32_t ident;
-    qboolean success;
+    mod_load_t load;
+    const char *truename;
+    qerror_t ret;
 
     if( name[0] == '*' ) {
         // inline bsp model
@@ -318,11 +295,8 @@ qhandle_t R_RegisterModel( const char *name ) {
     model = MOD_Find( name );
     if( model ) {
         MOD_Reference( model );
-        goto finish;
+        goto success;
     }
-
-    filelen = 0;
-    rawdata = NULL;
 
 #if USE_MD3
     if( r_override_models->integer ) {
@@ -331,55 +305,79 @@ qhandle_t R_RegisterModel( const char *name ) {
         if( namelen > 4 && !Q_stricmp( name + namelen - 4, ".md2" ) ) {
             memcpy( buffer, name, namelen + 1 );
             buffer[namelen - 1] = '3';
-            filelen = FS_LoadFile( buffer, ( void ** )&rawdata );
+            truename = buffer;
+
+            filelen = FS_LoadFile( truename, ( void ** )&rawdata );
+            if( rawdata ) {
+                goto found;
+            }
+            if( filelen != Q_ERR_NOENT ) {
+                ret = filelen;
+                goto fail1;
+            }
         }
     }
-    if( !rawdata )
 #endif
-    {
-        filelen = FS_LoadFile( name, ( void ** )&rawdata );
-        if( !rawdata ) {
-            Com_DPrintf( "Couldn't load %s\n", name );
-            return 0;
-        }
+
+    truename = name;
+
+    filelen = FS_LoadFile( truename, ( void ** )&rawdata );
+    if( rawdata ) {
+        goto found;
+    }
+    if( filelen != Q_ERR_NOENT ) {
+        ret = filelen;
+        goto fail1;
     }
 
+    // don't spam about missing models
+    return 0;
+
+found:
     if( filelen < 4 ) {
-        Com_WPrintf( "%s: %s: file too short\n", __func__, name );
-        return 0;
+        ret = Q_ERR_FILE_TOO_SMALL;
+        goto fail2;
+    }
+
+    // check ident
+    ident = LittleLong( *( uint32_t * )rawdata );
+    switch( ident ) {
+    case MD2_IDENT:
+        load = MOD_LoadMD2;
+        break;
+#if USE_MD3
+    case MD3_IDENT:
+        load = MOD_LoadMD3;
+        break;
+#endif
+    case SP2_IDENT:
+        load = MOD_LoadSP2;
+        break;
+    default:
+        ret = Q_ERR_UNKNOWN_FORMAT;
+        goto fail2;
     }
 
     model = MOD_Alloc( name );
 
-    ident = LittleLong( *( uint32_t * )rawdata );
-    switch( ident ) {
-    case MD2_IDENT:
-        success = MOD_LoadMD2( model, rawdata, filelen );
-        break;
-#if USE_MD3
-    case MD3_IDENT:
-        success = MOD_LoadMD3( model, rawdata, filelen );
-        break;
-#endif
-    case SP2_IDENT:
-        success = MOD_LoadSP2( model, rawdata, filelen );
-        break;
-    default:
-        Com_WPrintf( "%s: %s: unknown ident: %x\n", __func__, name, ident );
-        success = qfalse;
-        break;
-    }
+    ret = load( model, rawdata, filelen );
 
     FS_FreeFile( rawdata );
 
-    if( !success ) {
+    if( ret ) {
         memset( model, 0, sizeof( *model ) );
-        return 0;
+        goto fail1;
     }
 
-finish:
+success:
     index = ( model - r_models ) + 1;
     return index;
+
+fail2:
+    FS_FreeFile( rawdata );
+fail1:
+    Com_EPrintf( "Couldn't load %s: %s\n", truename, Q_ErrorString( ret ) );
+    return 0;
 }
 
 model_t *MOD_ForHandle( qhandle_t h ) {

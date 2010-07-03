@@ -35,7 +35,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <ctype.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
-#include <errno.h>
 #include <dirent.h>
 #include <dlfcn.h>
 #include <termios.h>
@@ -486,15 +485,15 @@ unsigned Sys_Milliseconds( void ) {
 Sys_GetPathInfo
 ================
 */
-qboolean Sys_GetPathInfo( const char *path, file_info_t *info ) {
+qerror_t Sys_GetPathInfo( const char *path, file_info_t *info ) {
     struct stat st;
 
     if( stat( path, &st ) == -1 ) {
-        return qfalse;
+        return Q_ERR(errno);
     }
 
     if( !S_ISREG( st.st_mode ) ) {
-        return qfalse;
+        return Q_ERR_ISDIR;
     }
 
     if( info ) {
@@ -503,18 +502,18 @@ qboolean Sys_GetPathInfo( const char *path, file_info_t *info ) {
         info->mtime = st.st_mtime;
     }
 
-    return qtrue;
+    return Q_ERR_SUCCESS;
 }
 
-qboolean Sys_GetFileInfo( FILE *fp, file_info_t *info ) {
+qerror_t Sys_GetFileInfo( FILE *fp, file_info_t *info ) {
     struct stat st;
 
     if( fstat( fileno( fp ), &st ) == -1 ) {
-        return qfalse;
+        return Q_ERR(errno);
     }
 
     if( !S_ISREG( st.st_mode ) ) {
-        return qfalse;
+        return Q_ERR_ISDIR;
     }
 
     if( info ) {
@@ -523,7 +522,7 @@ qboolean Sys_GetFileInfo( FILE *fp, file_info_t *info ) {
         info->mtime = st.st_mtime;
     }
 
-    return qtrue;
+    return Q_ERR_SUCCESS;
 }
 
 /*

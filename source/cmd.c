@@ -378,7 +378,7 @@ static void Cmd_UnAlias_f( void ) {
 }
 
 #if USE_CLIENT
-void Cmd_WriteAliases( fileHandle_t f ) {
+void Cmd_WriteAliases( qhandle_t f ) {
     cmdalias_t *a;
 
     LIST_FOR_EACH( cmdalias_t, a, &cmd_alias, listEntry ) {
@@ -1346,7 +1346,7 @@ Cmd_Exec_f
 static void Cmd_Exec_f( void ) {
     char    buffer[MAX_QPATH];
     char    *f;
-    size_t  len;
+    ssize_t len;
     int     i;
 
     if( Cmd_Argc() != 2 ) {
@@ -1362,7 +1362,7 @@ static void Cmd_Exec_f( void ) {
         COM_DefaultExtension( buffer, ".cfg", sizeof( buffer ) );
         len = FS_LoadFile( buffer, ( void ** )&f );
         if( !f ) {
-            Com_Printf( "Couldn't exec %s\n", buffer );
+            Com_Printf( "Couldn't exec %s: %s\n", buffer, Q_ErrorString( len ) );
             return;
         }
     }

@@ -241,6 +241,7 @@ static void start_download (dlqueue_t *entry, dlhandle_t *dl) {
     char    temp[MAX_QPATH];
     char    escaped[MAX_QPATH*4];
     CURLMcode ret;
+    qerror_t err;
  
     //yet another hack to accomodate filelists, how i wish i could push :(
     //NULL file handle indicates filelist.
@@ -263,12 +264,16 @@ static void start_download (dlqueue_t *entry, dlhandle_t *dl) {
         }
         escape_path (temp, escaped);
 
-        FS_CreatePath (dl->path);
+        err = FS_CreatePath (dl->path);
+        if (err < 0) {
+            Com_EPrintf ("[HTTP] Couldn't create path to '%s': %s\n", dl->path, Q_ErrorString (err));
+            goto fail;
+        }
 
         //don't bother with http resume... too annoying if server doesn't support it.
         dl->file = fopen (dl->path, "wb");
         if (!dl->file) {
-            Com_EPrintf ("[HTTP] Couldn't open '%s' for writing.\n", dl->path);
+            Com_EPrintf ("[HTTP] Couldn't open '%s' for writing: %s\n", dl->path, strerror (errno));
             goto fail;
         }
     }
@@ -639,7 +644,7 @@ static void check_and_queue_download (char *path) {
         return;
     }
 
-    if (FS_LoadFileEx (path, NULL, flags, TAG_FREE) == INVALID_LENGTH) {
+    if (!FS_FileExistsEx (path, flags)) {
         queue_download (path, type);
     }
 }
@@ -684,7 +689,7 @@ static void rescan_queue (void) {
 
     FOR_EACH_DLQ (q) {
         if (q->state == DL_PENDING) {
-            if (q->type == DL_OTHER && FS_LoadFile (q->path, NULL) != INVALID_LENGTH)
+            if (q->type == DL_OTHER && FS_FileExists (q->path))
                 q->state = DL_DONE;
             else
                 pending_count++;
@@ -831,8 +836,8 @@ fatal2:
             Q_snprintf (temp, sizeof(temp), "%s/%s", fs_gamedir, dl->queue->path);
 
             if (rename (dl->path, temp))
-                Com_EPrintf ("[HTTP] Failed to rename '%s' to '%s'\n",
-                    dl->path, dl->queue->path);
+                Com_EPrintf ("[HTTP] Failed to rename '%s' to '%s': %s\n",
+                    dl->path, dl->queue->path, strerror (errno));
             dl->path[0] = 0;
 
             //a pak file is very special...

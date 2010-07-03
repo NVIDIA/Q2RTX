@@ -30,17 +30,12 @@ SAVEGAME FILES
 */
 
 static void write_binary_file( const char *name ) {
-    fileHandle_t f;
+    qerror_t ret;
 
-    FS_FOpenFile( name, &f, FS_MODE_WRITE );
-    if( !f ) {
-        Com_EPrintf( "%s: couldn't open %s\n", __func__, name );
-        return;
+    ret = FS_WriteFile( name, msg_write.data, msg_write.cursize );
+    if( ret < 0 ) {
+        Com_EPrintf( "%s: couldn't write %s: %s\n", __func__, name, Q_ErrorString( ret ) );
     }
-
-    FS_Write( msg_write.data, msg_write.cursize, f );
-
-    FS_FCloseFile( f );
 }
 
 static void write_server_file( qboolean autosave ) {
@@ -116,12 +111,12 @@ static void write_level_file( void ) {
 
 
 static void read_binary_file( const char *name ) {
-    fileHandle_t f;
-    size_t len;
+    qhandle_t f;
+    ssize_t len;
 
     len = FS_FOpenFile( name, &f, FS_MODE_READ|FS_TYPE_REAL|FS_PATH_GAME );
     if( !f ) {
-        Com_Error( ERR_DROP, "%s: couldn't open %s\n", __func__, name );
+        Com_Error( ERR_DROP, "%s: couldn't open %s: %s\n", __func__, name, Q_ErrorString( len ) );
     }
 
     if( len > MAX_MSGLEN ) {
@@ -248,7 +243,7 @@ void SV_Loadgame_f (void) {
 
     // make sure the server.ssv file exists
     Q_snprintf (name, sizeof(name), "save/%s/server.state", Cmd_Argv(1));
-    if (FS_LoadFile( name, NULL ) == INVALID_LENGTH ) {
+    if (!FS_FileExists( name ) ) {
         Com_Printf ("No such savegame: %s\n", name);
         return;
     }
