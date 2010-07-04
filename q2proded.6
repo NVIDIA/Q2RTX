@@ -1,31 +1,25 @@
 .TH "Q2PRO" "6" 
 .SH "NAME" 
-Q2PRO \(em enhanced Quake 2 client 
+Q2PRO \(em enhanced Quake 2 dedicated server
 .SH "SYNOPSIS" 
 .PP 
-\fBq2pro\fR [\fB+command \fIarguments\fR\fP]  
+\fBq2proded\fR [\fB+command \fIarguments\fR\fP]  
 .SH "DESCRIPTION" 
 .PP 
-This manual page documents briefly the \fBq2pro\fR program.
+This manual page documents briefly the \fBq2proded\fR program.
 .PP 
-Q2PRO is an enhanced Quake 2 client focused on online play,
-fully compatible with original Quake 2 servers.
+Q2PRO is an enhanced Quake 2 dedicated server, fully compatible
+with original Quake 2 clients.
 .PP
-Q2PRO features enhanced graphical console, support for JPEG/PNG textures
-and MD3 models, network protocol optimizations, freely resizable main window,
-increased security and stability, improved performance, basic built-in demo editing
-capabilities, built-in server and demo browsers.
-.PP
-This version of Q2PRO requires a 3D graphics accelerator to play.
-Q2PRO uses SDL/OpenGL for video output and SDL/OSS/OpenAL for sound output.
+Q2PRO features network protocol optimizations, increased security and
+stability, improved performance, multiview demo recording and live game
+broadcasting capabilities.
 .SH "OPTIONS" 
 .PP 
 Commands given on the command line start with a `+', and continue until
 another `+' or end of line. Variables given on command line override those
 given in normal configuration files. If the variable does not exist,
 it will be created for future use. Some examples of possible commands follow.
-.IP "\fB+set dedicated 1\fP" 7
-Start in dedicated server mode with no graphical output. 
 .IP "\fB+set deathmatch 1\fP" 7
 Enable deathmatch mode (no monsters, etc). 
 .IP "\fB+exec config.cfg\fP" 7
@@ -45,15 +39,13 @@ here, either as individual files, or in form of (possibly compressed) packfiles.
 Quake 2 game mod shared libraries are installed here.
 .IP "\fB~/.q2pro/\fP" 7
 User's local data hierarchy. Overrides system hierarchy. Any dynamic
-data Q2PRO produces (savegames, screenshots, demos, downloads, etc) is written here.
+data Q2PRO produces (savegames, demos, etc) is written here.
 Game mod libraries are \fBnever\fP loaded from here for security reasons.
 
 .SH "BUGS" 
 .PP 
 There are a lot more commands and variables, registered dynamically as
 various subsystems are loaded. They are not yet documented here.
-.PP 
-Q2PRO graphical menu subsystem is incomplete.
 .SH "AUTHOR" 
 .PP 
 Quake 2 engine is Copyright (C) 1997-2001 Id Software, Inc. 
