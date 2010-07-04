@@ -148,7 +148,7 @@ begin game
     action "Servers" pushmenu servers
     action "Demos" pushmenu demos
     action "Options" pushmenu options
-    action "Disconnet" disconnect
+    action "Disconnect" disconnect
     action "Quit" quit
 end
 

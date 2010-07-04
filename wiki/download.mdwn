@@ -1,55 +1,51 @@
-Debian GNU/Linux
-----------------
-Prebuilt Q2PRO packages are available for the stable Debian distribution
-for i386 and amd64 architectures.
+Stable releases
+---------------
 
-In order to get Q2PRO repository contents automatically managed by APT,
-add the following lines into your `/etc/apt/sources.list` file:
+Current stable version of Q2PRO client for Win32 is **r364**
+([q2pro-client_r364_win32_x86_anticheat.zip][1], 1.2 M).
+This version is supported by r1ch.net anticheat.
+Thanks, R1CH, for building this version!
 
-    deb http://skuller.ath.cx/debian/ lenny q2pro
-    deb-src http://skuller.ath.cx/debian/ lenny q2pro
+Current stable version of Q2PRO server is **r396**.
+GNU/Linux and Win32 builds are found in the [stable/][2] directory,
+along with source snapshots. If you are running older Q2PRO server
+version, you are highly recommended to upgrade.
 
-Users of Secure APT also need to import the repository signing key:
+[1]: http://antiche.at/files/q2pro-client_r364_win32_x86_anticheat.zip
+[2]: /q2pro/download/stable/
 
-    wget -q -O - http://skuller.ath.cx/debian/archive.key | apt-key add -
+Users of Debian GNU/Linux and compatible distributions can
+conveniently install prebuilt Q2PRO client and server packages
+from the [[APT repository|apt]].
 
-Finally, run the following commands to install or upgrade Q2PRO:
+Unstable builds
+---------------
 
-    aptitude update
-    aptitude install q2pro-client   # install the graphical client
-    aptitude install q2pro-server   # install the dedicated server
+Latest GNU/Linux server builds and Win32 client and server
+builds from SVN trunk are available in the [unstable/][3] directory,
+along with source snapshots. You might also find development
+[timeline page][4] useful for tracking latest changes.
 
-It is also possible to download the individual [.deb][debs] packages
-and install them manually using `dpkg -i` command.
+[3]: /q2pro/download/unstable/
+[4]: /q2pro/cvstrac/timeline
 
-Note that Q2PRO packages above are not providing any game media files
-for Quake 2 like textures and maps. You need to install them yourself,
-otherwise graphical client won't run.
+SVN access
+----------
 
-[debs]: http://skuller.ath.cx/debian/pool/q2pro/
-
-Nightly builds
-----------------
-Generic GNU/Linux and Win32 binary builds from SVN trunk are
-[available][nightly], along with source snapshots. You might also
-find SVN [changelog][svnlog] useful.
-
-[nightly]: http://skuller.ath.cx/q2pro/nightly/
-[svnlog]: http://q2pro.svn.sourceforge.net/viewvc/q2pro?view=log
-
-Source code
-----------------
-To get the latest Q2PRO source code, you will need to install Subversion
-client. Use the following command to checkout fresh working copy into
+To get the latest Q2PRO source code, you need to install Subversion
+client. Use the following command to checkout a fresh working copy into
 the `q2pro` directory:
 
-    svn co https://q2pro.svn.sourceforge.net/svnroot/q2pro/trunk q2pro
+    svn co svn://skuller.net/q2pro/trunk q2pro
 
-If you are looking for the source code snapshot corresponding to
-a stable binary release, try the following command, replacing XXX
-with release number:
+You can also [browse][5] Q2PRO source tree online.
 
-    svn co https://q2pro.svn.sourceforge.net/svnroot/q2pro/tags/rXXX q2pro-rXXX
+[5]: /q2pro/cvstrac/dir?d=trunk
 
-You can also [browse](http://q2pro.svn.sourceforge.net/viewvc/q2pro/)
-Q2PRO source tree online.
+Archived builds
+---------------
+
+Previous Q2PRO versions of historic interest are available
+in the [attic/][6] directory.
+
+[6]: /q2pro/download/attic/

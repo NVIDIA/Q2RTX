@@ -1,0 +1,49 @@
+APT repository
+----------------
+Prebuilt Q2PRO packages are available for the stable Debian distribution
+for i386 and amd64 architectures. Built in Debian 5.0 ‘Lenny’ environment,
+these packages are expected to install in testing/unstable branches as well,
+even Ubuntu users may give them a try.
+
+In order to get Q2PRO repository contents automatically managed by APT,
+add the following lines into your `/etc/apt/sources.list` file (you need
+root privileges for this):
+
+    deb http://skuller.net/debian/ lenny q2pro
+    deb-src http://skuller.net/debian/ lenny q2pro
+
+Users of Secure APT also need to import the repository signing key:
+
+    wget -q -O - http://skuller.net/debian/archive.key | apt-key add -
+
+Finally, run the following commands to install or upgrade Q2PRO:
+
+    aptitude update
+    aptitude install q2pro-client   # install the graphical client
+    aptitude install q2pro-server   # install the dedicated server
+
+Of course, it is also possible to download the individual [packages][1]
+manually and install them using `dpkg -i` command.
+
+Please note that Q2PRO packages above are not providing any game media
+files for Quake 2 like textures and maps. You have to install them yourself,
+otherwise graphical client won't run.
+
+By default only base Quake 2 game library is installed, which provides
+the single player campaign (not quite useful for Q2PRO) and a very
+limited deathmatch mode. Thus, you will probably want to install some
+additional game mods.
+
+Right now, two open source multiplayer mods configured for use with Q2PRO
+server are also packaged: [OpenTDM][2] and [OpenFFA][3]. Run the following
+commands to install them:
+
+    aptitude install q2pro-opentdm   # install OpenTDM
+    aptitude install q2pro-openffa   # install OpenFFA
+
+Then, run `q2pro` or `q2proded` with `+set game opentdm` or `+set game openffa` options.
+
+[1]: /debian/pool/q2pro/
+[2]: http://opentdm.net/
+[3]: /openffa/
+

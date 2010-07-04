@@ -72,7 +72,7 @@ See above. If empty, no one is allowed to occupy reserved slot(s), except of
 dummy MVD observer. Clients set their passwords via `password` userinfo variable.
 
 - `set sv_lan_force_rate 0` (boolean)  
-When enabled, do not enforce any rate limits for clients whose IP is from
+When enabled, do not enforce any rate limits on clients whose IP is from
 private address space (127.x.x.x, 10.x.x.x, 192.168.x.x, 172.16.x.x).
 
 - `set sv_ghostime 6` (float)  
@@ -84,7 +84,7 @@ Helps to avoid attacks flooding server with zombie clients, combined
 with `sv_iplimit` variable.
 
 - `set sv_force_reconnect ""` (string)  
-When set to address string, forces new clients to quickly reconnect to
+When set to an address string, forces new clients to quickly reconnect to
 this address as an additional proxy protection measure.
 
 - `set sv_show_name_changes 0` (boolean)  
@@ -92,7 +92,7 @@ Broadcast player name changes to everyone. You should probably enable this
 unless game mod already shows name changes.
 
 - `set sv_uptime 0` (boolean)  
-Display uptime string in server info.
+Include ‘uptime’ key/value pair in server info.
 
 
 MVD/GTV server
@@ -109,7 +109,7 @@ Total number of MVD/GTV client slots on the server.
 
 - `set sv_mvd_password ""` (string)  
 Password used to authenticate MVD/GTV clients. If password is not set, only those clients
-can connect, whose IP address is added to the list of trusted MVD/GTV hosts using ‘addgtvhos
+can connect, whose IP address is added to the list of trusted MVD/GTV hosts using ‘addgtvhost’
 command.
 
 - `set sv_mvd_nogun 1` (boolean)  

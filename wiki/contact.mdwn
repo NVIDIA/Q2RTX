@@ -1,14 +1,13 @@
-There are mailing lists set up:
+For reporting bugs and proposing enhancements to Q2PRO,
+please use the [bug tracker][1]. No registration is required to
+view and create new tickets (although it is trivial to register)!
 
-* [q2pro-user](https://lists.sourceforge.net/lists/listinfo/q2pro-user)
-  at lists.sourceforge.net (general discussion and support)
-* [q2pro-devel](https://lists.sourceforge.net/lists/listinfo/q2pro-devel)
-  at lists.sourceforge.net (patches, etc)
+There is also Q2PRO [forum][2] available (in Russian language),
+hosted by the [Russian Quake 2 Portal][3].
 
-There is also Q2PRO [forum](http://forum.quake2.com.ru/viewforum.php?f=6)
-available (in Russian), hosted by the [Russian Quake2 Portal](http://quake2.com.ru/).
+You can also drop a e-mail to Q2PRO [author][4] directly.
 
-IRC channel for Q2PRO is #q2pro at irc.quakenet.org.
-
-See [this](http://skuller.ath.cx/) page if you wish to contact
-Q2PRO author directly.
+[1]: http://skuller.net/q2pro/cvstrac/index
+[2]: http://forum.quake2.com.ru/viewforum.php?f=6
+[3]: http://quake2.com.ru/
+[4]: http://skuller.net/

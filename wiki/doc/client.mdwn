@@ -105,6 +105,13 @@ Specifies command to be executed each time client disconnects from the server.
 Effects
 ----------
 
+Colors can be specified in one of the following formats:
+
+- \#RRGGBBAA, where R, G, B and A are hex digits
+- \#RRGGBB, which implies alpha value of FF
+- \#RGB, which is expanded to \#RRGGBB by duplicating digits
+- one of the predefined color names (black, red, etc)
+
 Alternative beam based rail trail effect is available only when using OpenGL
 refresh library. In software mode original particle based effect is
 used unconditionally.
@@ -149,6 +156,11 @@ Specifies if ambient sounds are played:
   - 2 - only ambient sounds from visible entities are enabled (rocket flyby, etc)
   - 3 - only ambient sounds from player entity are enabled (railgun hum, hand grenade ticks, etc)
 
+- `set s_enable 1` (integer)  
+Specifies what sound engine to use:
+  - 0 - sound is disabled
+  - 1 - use default DMA sound engine
+  - 2 - use OpenAL sound engine
 
 Console
 ----------
@@ -308,9 +320,23 @@ Default value means to try \*.png first, then \*.jpg, then \*.tga.
 Misc
 ----------
 
-- `set in_direct 1`  (boolean)  
-Enables direct mouse input if supported on your platform. Otherwise,
-standard input facilities provided by the window system are used.
+- `set in_direct 1` (boolean)  
+Enables direct mouse input if supported on your platform (DirectInput on Windows
+and Evdev interface on Linux). Otherwise, standard input facilities provided
+by the window system are used.
+
+- `set in_device ""` (string)  
+On Linux, specifies device file to use for direct mouse input. Normally, it should
+be one of `/dev/input/eventX` files (reading permissions are required).
+
+- `set lirc_enable 0` (boolean)  
+On Linux, enables input from the LIRC daemon, which allows menu navigation and
+command execution from your infrared remote control device.
+
+- `set lirc_config ""` (string)  
+On Linux, specifies LIRC configuration file to use. Empty string means to use
+the default `~/.lircrc` file. This variable may only be set from command line.
+See README.lirc file in Q2PRO distribution for command syntax description.
 
 - `set cl_chat_notify 1` (boolean)  
 Specifies whether to display chat lines in the notify area.
