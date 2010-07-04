@@ -99,8 +99,8 @@ static void lirc_param_changed( cvar_t *self ) {
 qboolean Lirc_Init( void ) {
     lirc_enable = Cvar_Get( "lirc_enable", "0", 0 );
     lirc_enable->changed = lirc_param_changed;
-    lirc_config = Cvar_Get( "lirc_config", "", 0 );
-    lirc_config->changed = lirc_param_changed;
+    lirc_config = Cvar_Get( "lirc_config", "", CVAR_NOSET );
+    //lirc_config->changed = lirc_param_changed;
 
     if( !lirc_enable->integer ) {
         return qfalse;
