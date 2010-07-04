@@ -1,9 +1,9 @@
 Prerequisities
 ------------------
-Q2PRO client currently uses OSS for sound output and libSDL for video output.
+On Linux, Q2PRO client currently depends on libSDL for video output.
 Both client and dedicated server require zlib support for full network
-protocol compatibility. OpenGL refresh library recommends libjpeg and
-libpng+zlib for 32 bit textures support.
+protocol compatibility. Evdev mouse input is recommended, since the way SDL
+works around non-existent X11 relative mouse input support is horrible.
 
 
 Installation
@@ -27,6 +27,10 @@ Generic configuration
   Prepend PREFIX to compile tools names. Use for cross-compiling,
   for example: `./configure --cross-prefix=i586-mingw32-msvc'.
 
+--enable-mingw
+  Force MinGW build environment (use for cross-compiling) instead of
+  autodetecting host environment.
+
 --disable-client
   Do not build graphical client.
 
@@ -39,56 +43,65 @@ Generic configuration
 --disable-asm
   Do not use optimized i386 assembly code.
 
+
+Server configuration
+------------------
+
 --enable-anticheat
   Enable r1ch.net anticheat server interface.
 
+--disable-mvd-server
+  Disable local MVD recording and accepting remote GTV connections from relay nodes.
 
-MinGW specific
+--disable-mvd-client
+  Disable GTV relay node functionality.
+
+
+Client configuration
 ------------------
-
---enable-mingw
-  Force MinGW build environment (use for cross-compiling) instead of
-  autodetecting host environment.
 
 --enable-dsound
-  Enable DirectSound driver (need dsound.h from DirectX SDK).
+  Enable `direct' sound driver (DirectSound on Win32, OSS on Linux).
 
 --enable-dinput
-  Enable DirectInput driver (need dinput.h from DirectX SDK).
+  Enable `direct' input driver (DirectInput on Win32, Evdev on Linux).
 
---disable-wave
-  Disable WAVE sound driver.
+--enable-openal
+  Enable OpenAL sound engine (OpenAL driver will be dynamically loaded
+  at run time, just like OpenGL driver).
 
-
-Linux specific
-------------------
---disable-oss
-  Disable OSS sound driver.
-
---disable-evdev
-  Disable Evdev input driver.
+--disable-snddma
+  Disable DMA sound engine. Can't be used without `--enable-openal'.
 
 
-External libraries
+External libraries (mostly client)
 ------------------
 
 --disable-zlib
   Do not link against zlib. Not recommended for client builds, as
-  this will break network protocol compatibility with some servers,
+  this will break network protocol compatibility with some servers.
 
 --enable-png
-  Link against PNG library.
+  Enable PNG textures by linking against libpng.
 
---enable-jpeg
-  Link against JPEG library.
+--enable-jpg
+  Enable JPEG textures by linking against libjpeg.
+
+--enable-curl
+  Enable HTTP downloads by linking against libcurl.
+
+--enable-lirc
+  Enable LIRC input by linking against liblirc_client.
 
 
 Paths configuration
 ------------------
 
 --single-user
-  Build single user executables meant to be manually installed into user
-  home directory, just like the original Quake 2 release did.
+  Build single user executables meant to be manually installed into the user
+  home directory, just like the original Quake 2 release did. Useful for running
+  Quake 2 server under the limited user account, and not recommended for anything
+  else.
 
 --prefix=PREFIX [/usr/local]
   Prepend PREFIX to the all paths specified below (except of --homedir).

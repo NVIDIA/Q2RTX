@@ -1,15 +1,17 @@
 Source: q2pro
 Section: contrib/games
 Priority: optional
-Maintainer: Andrey Nazarov <skuller@skuller.ath.cx>
-Build-Depends: cdbs, debhelper (>= 7), libx11-dev, libsdl1.2-dev,
- libpng12-dev, libjpeg62-dev, zlib1g-dev, mesa-common-dev
+Maintainer: Andrey Nazarov <skuller@skuller.net>
+Build-Depends: cdbs, debhelper (>= 7), libx11-dev, libsdl1.2-dev, libopenal-dev,
+ libpng12-dev, libjpeg62-dev, zlib1g-dev, mesa-common-dev, liblircclient-dev,
+ libcurl4-gnutls-dev | libcurl4-openssl-dev
 Standards-Version: 3.8.1
-Homepage: http://skuller.ath.cx/q2pro/
+Homepage: http://skuller.net/q2pro/
 
 Package: q2pro-client
 Architecture: any
 Depends: ${shlibs:Depends}, q2pro-common (= ${binary:Version})
+Recommends: libopenal1, libgl1-mesa-glx | nvidia-glx
 Description: Enhanced Quake 2 engine (graphical client)
  Q2PRO is a Quake 2 engine modification designed for online play,
  fully compatible with original Quake 2 clients and servers.

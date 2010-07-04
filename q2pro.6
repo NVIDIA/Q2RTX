@@ -17,7 +17,7 @@ increased security and overall performance, basic built-in demo editing
 capabilities, built-in server and demo browsers.
 .PP
 This version of Q2PRO requires a 3D graphics accelerator to play.
-Q2PRO uses SDL for video output and SDL/OSS for sound output.
+Q2PRO uses SDL/OpenGL for video output and SDL/OSS/OpenAL for sound output.
 .SH "OPTIONS" 
 .PP 
 Commands given on the command line start with a `+', and continue until
@@ -38,14 +38,15 @@ Show version and exit.
 .PP
 .IP "\fB/etc/default/q2pro\fP" 7
 System wide configuration file. The first one to be executed.
-.IP "\fB/usr/share/games/quake2\fP" 7
-Root of the static Quake 2 game data hierarchy.
-.IP "\fB/usr/lib/games/quake2\fP" 7
-Quake 2 game mod shared libraries.
-.IP "\fB~/.q2pro\fP" 7
-User's local data hierarchy. Overrides system hierarchy.
-Any dynamic data Q2PRO produces (savegames, screenshots, demos, etc)
-is written here.
+.IP "\fB/usr/share/games/q2pro/\fP" 7
+Root of the static Quake 2 game data hierarchy. Various game media is installed
+here, either as individual files, or in form of (possibly compressed) packfiles.
+.IP "\fB/usr/lib/games/q2pro/\fP" 7
+Quake 2 game mod shared libraries are installed here.
+.IP "\fB~/.q2pro/\fP" 7
+User's local data hierarchy. Overrides system hierarchy. Any dynamic
+data Q2PRO produces (savegames, screenshots, demos, downloads, etc) is written here.
+Game mod libraries are \fBnever\fP loaded from here for security reasons.
 
 .SH "BUGS" 
 .PP 
@@ -55,10 +56,10 @@ various subsystems are loaded. They are not yet documented here.
 Q2PRO graphical menu subsystem is incomplete.
 .SH "AUTHOR" 
 .PP 
-Quake 2 engine was written by ID Software, Inc. 
-Q2PRO was written by Andrey Nazarov <skuller@skuller.ath.cx>. 
+Quake 2 engine is Copyright (C) 1997-2001 Id Software, Inc. 
+Q2PRO is Copyright (C) 2003-2010 Andrey Nazarov <skuller@skuller.net>. 
 .PP 
-This manual page was written by Andrey Nazarov <skuller@skuller.ath.cx> for 
+This manual page was written by Andrey Nazarov <skuller@skuller.net> for 
 the \fBDebian\fP system (but may be used by others).  Permission is 
 granted to copy, distribute and/or modify this document under 
 the terms of the GNU General Public License, Version 2 any  
