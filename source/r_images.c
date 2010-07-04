@@ -1816,12 +1816,12 @@ the colormap for software renderer.
 ===============
 */
 void IMG_GetPalette( byte **pic ) {
-    int i, ret;
+    int i;
+    qerror_t ret;
     byte pal[768], *src;
-    int w, h;
 
     // get the palette
-    ret = IMG_LoadPCX( "pics/colormap.pcx", pic, pal, &w, &h );
+    ret = IMG_LoadPCX( "pics/colormap.pcx", pic, pal, NULL, NULL );
     if( ret < 0 ) {
         Com_Error( ERR_FATAL, "Couldn't load pics/colormap.pcx: %s", Q_ErrorString( ret ) );
     }
