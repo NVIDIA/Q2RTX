@@ -277,10 +277,12 @@ static qboolean GetWavinfo( void ) {
     }
 
     samples = iff_chunk_len / s_info.width;
+#if 0
     if( !samples ) {
         Com_DPrintf( "%s has zero length\n", s_info.name );
         return qfalse;
     }
+#endif
 
     if( s_info.samples ) {
         if( samples < s_info.samples ) {
