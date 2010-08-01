@@ -409,6 +409,160 @@ static void Cmd_UnAlias_c( genctx_t *ctx, int argnum ) {
 /*
 =============================================================================
 
+MESSAGE TRIGGERS
+
+=============================================================================
+*/
+
+#define FOR_EACH_TRIGGER( trig ) \
+    LIST_FOR_EACH( cmd_trigger_t, trig, &cmd_triggers, entry )
+#define FOR_EACH_TRIGGER_SAFE( trig, next ) \
+    LIST_FOR_EACH_SAFE( cmd_trigger_t, trig, next, &cmd_triggers, entry )
+
+typedef struct {
+    list_t  entry;
+    char    *match;
+    char    *command;
+} cmd_trigger_t;
+
+static list_t    cmd_triggers;
+
+static cmd_trigger_t *find_trigger( const char *command, const char *match ) {
+    cmd_trigger_t *trigger;
+
+    FOR_EACH_TRIGGER( trigger ) {
+        if( !strcmp( trigger->command, command ) && !strcmp( trigger->match, match ) ) {
+            return trigger;
+        }
+    }
+
+    return NULL;
+}
+
+static void list_triggers( void ) {
+    cmd_trigger_t *trigger;
+
+    if( LIST_EMPTY( &cmd_triggers ) ) {
+        Com_Printf( "No current message triggers\n" );
+        return;
+    }
+
+    Com_Printf( "Current message triggers:\n" );
+    FOR_EACH_TRIGGER( trigger ) {
+        Com_Printf( "\"%s\" = \"%s\"\n", trigger->command, trigger->match );
+    }
+}
+
+/*
+============
+Cmd_Trigger_f
+============
+*/
+static void Cmd_Trigger_f( void ) {
+    cmd_trigger_t *trigger;
+    const char *command, *match;
+    size_t cmdlen, matchlen;
+
+    if( Cmd_Argc() == 1 ) {
+        list_triggers();
+        return;
+    }
+
+    if( Cmd_Argc() < 3 ) {
+        Com_Printf( "Usage: %s <command> <match>\n", Cmd_Argv(0) );
+        return;
+    }
+
+    command = Cmd_Argv( 1 );
+    match = Cmd_ArgsFrom( 2 );
+
+    // don't create the same trigger twice
+    if( find_trigger( command, match ) ) {
+        return;
+    }
+
+    cmdlen = strlen( command ) + 1;
+    matchlen = strlen( match ) + 1;
+    if( matchlen < 4 ) {
+        Com_Printf( "Match string is too short\n" );
+        return;
+    }
+
+    trigger = Z_Malloc( sizeof( *trigger ) + cmdlen + matchlen );
+    trigger->command = (char *)(trigger + 1);
+    trigger->match = trigger->command + cmdlen;
+    memcpy( trigger->command, command, cmdlen );
+    memcpy( trigger->match, match, matchlen );
+    List_Append( &cmd_triggers, &trigger->entry );
+}
+
+static void Cmd_UnTrigger_f( void ) {
+    cmd_trigger_t *trigger, *next;
+    const char *command, *match;
+
+    if( Cmd_Argc() == 1 ) {
+        list_triggers();
+        return;
+    }
+
+    if( LIST_EMPTY( &cmd_triggers ) ) {
+        Com_Printf( "No current message triggers\n" );
+        return;
+    }
+
+    if( Cmd_Argc() == 2 ) {
+        if( !Q_stricmp( Cmd_Argv( 1 ), "all" ) ) {
+            int count = 0;
+
+            FOR_EACH_TRIGGER_SAFE( trigger, next ) {
+                Z_Free( trigger );
+                count++;
+            }
+
+            Com_Printf( "Removed %d trigger%s\n", count, count == 1 ? "" : "s" );
+            List_Init( &cmd_triggers );
+            return;
+        }
+
+        Com_Printf( "Usage: %s <command> <match>\n", Cmd_Argv(0) );
+        return;
+    }
+
+    command = Cmd_Argv( 1 );
+    match = Cmd_ArgsFrom( 2 );
+
+    trigger = find_trigger( command, match );
+    if( !trigger ) {
+        Com_Printf( "Can't find trigger \"%s\" = \"%s\"\n", command, match );
+        return;
+    }
+
+    List_Remove( &trigger->entry );
+    Z_Free( trigger );
+}
+
+/*
+============
+Cmd_ExecTrigger
+============
+*/
+void Cmd_ExecTrigger( const char *string ) {
+    cmd_trigger_t *trigger;
+    char *match;
+
+    // execute matching triggers
+    FOR_EACH_TRIGGER( trigger ) {
+        match = Cmd_MacroExpandString( trigger->match, qfalse );
+        if( match && Com_WildCmp( match, string, qfalse ) ) {
+            Cbuf_AddText( cmd_current, trigger->command );
+            Cbuf_AddText( cmd_current, "\n" );
+        }
+    }
+}
+
+/*
+=============================================================================
+
                     MACRO EXECUTION
 
 =============================================================================
@@ -940,6 +1094,10 @@ char *Cmd_MacroExpandString( const char *text, qboolean aliasHack ) {
         } else {
             // parse single word
             while( *start > 32 ) {
+                if( *start == '$' ) { // allow $var$ syntax
+                    start++;
+                    break;
+                }
                 *token++ = *start++;
             }
         }
@@ -1617,6 +1775,8 @@ static const cmdreg_t c_cmd[] = {
     { "wait", Cmd_Wait_f },
     { "text", Cmd_Text_f },
     { "complete", Cmd_Complete_f },
+    { "trigger", Cmd_Trigger_f },
+    { "untrigger", Cmd_UnTrigger_f },
 
     { NULL }
 };
@@ -1638,6 +1798,8 @@ void Cmd_Init( void ) {
     for( i = 0; i < ALIAS_HASH_SIZE; i++ ) {
         List_Init( &cmd_aliasHash[i] );
     }
+
+    List_Init( &cmd_triggers );
 
     Cmd_Register( c_cmd );
 }

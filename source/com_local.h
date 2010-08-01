@@ -150,6 +150,8 @@ void Cmd_Init( void );
 qboolean Cmd_Exists( const char *cmd_name );
 // used by the cvar code to check for cvar / command name overlap
 
+void Cmd_ExecTrigger( const char *string );
+
 xcommand_t Cmd_FindFunction( const char *name );
 cmd_macro_t *Cmd_FindMacro( const char *name );
 xcompleter_t Cmd_FindCompleter( const char *name );

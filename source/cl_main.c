@@ -984,6 +984,7 @@ static void CL_Changing_f( void ) {
 
     if( !cls.demo.playback ) {
         EXEC_TRIGGER( cl_changemapcmd );
+        Cmd_ExecTrigger( "#cl_changelevel" );
     }
 
     SCR_BeginLoadingPlaque();

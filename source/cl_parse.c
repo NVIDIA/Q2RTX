@@ -406,6 +406,7 @@ static void CL_SetActiveState( void ) {
 
     if( !cls.demo.playback ) {
         EXEC_TRIGGER( cl_beginmapcmd );
+        Cmd_ExecTrigger( "#cl_enterlevel" );
     }
 
     Cvar_Set( "cl_paused", "0" );
@@ -1333,6 +1334,9 @@ static void CL_ParsePrint( void ) {
 
     if( level != PRINT_CHAT ) {
         Com_Printf( "%s", string );
+        if( !cls.demo.playback ) {
+            Cmd_ExecTrigger( string );
+        }
         return;
     }
 
@@ -1379,6 +1383,10 @@ static void CL_ParseCenterPrint( void ) {
     MSG_ReadString( string, sizeof( string ) );
     SHOWNET( 2, "    \"%s\"\n", string );
     SCR_CenterPrint( string );
+
+    if( !cls.demo.playback ) {
+        Cmd_ExecTrigger( string );
+    }
 }
 
 /*
