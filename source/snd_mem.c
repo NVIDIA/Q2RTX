@@ -277,12 +277,10 @@ static qboolean GetWavinfo( void ) {
     }
 
     samples = iff_chunk_len / s_info.width;
-#if 0
     if( !samples ) {
         Com_DPrintf( "%s has zero length\n", s_info.name );
         return qfalse;
     }
-#endif
 
     if( s_info.samples ) {
         if( samples < s_info.samples ) {
@@ -318,6 +316,10 @@ sfxcache_t *S_LoadSound (sfx_t *s) {
     sc = s->cache;
     if (sc)
         return sc;
+
+// don't retry after error
+    if (s->error)
+        return NULL;
 
 // load it in
     if (s->truename)
@@ -364,9 +366,11 @@ sfxcache_t *S_LoadSound (sfx_t *s) {
 fail2:
     FS_FreeFile( data );
 fail1:
-    if( ret && ret != Q_ERR_NOENT ) {
+    // don't spam about missing or invalid sounds (action mod hack)
+    if( ret && ret != Q_ERR_NOENT && ret != Q_ERR_INVALID_FORMAT ) {
         Com_EPrintf( "Couldn't load %s: %s\n", namebuffer, Q_ErrorString( ret ) );
     }
+    s->error = ret;
     return sc;
 }
 

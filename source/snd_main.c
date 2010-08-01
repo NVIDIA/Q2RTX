@@ -112,7 +112,8 @@ static void S_SoundList_f( void ) {
             if( sfx->name[0] == '*' )
                 Com_Printf( "  placeholder : %s\n", sfx->name );
             else
-                Com_Printf( "  not loaded  : %s\n", sfx->name );
+                Com_Printf( "  not loaded  : %s (%s)\n",
+                    sfx->name, Q_ErrorString( sfx->error ) );
         }
     }
     Com_Printf( "Total resident: %i\n", total );
@@ -363,9 +364,7 @@ qhandle_t S_RegisterSound( const char *name ) {
     sfx = S_FindName( name );
 
     if( !s_registering ) {
-        if( !S_LoadSound( sfx ) ) {
-            /*return 0;*/
-        }
+        S_LoadSound( sfx );
     }
 
     return ( sfx - known_sfx ) + 1;
@@ -405,6 +404,7 @@ static sfx_t *S_RegisterSexedSound( int entnum, const char *base ) {
         // no, revert to the male sound in the pak0.pak
         Q_concat( buffer, sizeof( buffer ),
             "player/male/", base + 1, NULL );
+        sfx->error = Q_ERR_SUCCESS;
         sfx->truename = S_CopyString( buffer );
     }
 
