@@ -29,6 +29,7 @@ static struct {
 
     qhandle_t   crosshair_pic;
     int         crosshair_width, crosshair_height;
+    color_t     crosshair_color;
 
     qhandle_t   pause_pic;
     int         pause_width, pause_height;
@@ -70,6 +71,11 @@ static cvar_t   *scr_font;
 static cvar_t   *scr_scale;
 
 static cvar_t   *scr_crosshair;
+
+static cvar_t   *ch_red;
+static cvar_t   *ch_green;
+static cvar_t   *ch_blue;
+static cvar_t   *ch_alpha;
 
 #ifdef _DEBUG
 cvar_t      *scr_netgraph;
@@ -971,10 +977,15 @@ static void SCR_TimeRefresh_f (void) {
 static void scr_crosshair_changed( cvar_t *self ) {
     char buffer[16];
 
-    if( self->integer > 0 ) {
+    if( scr_crosshair->integer > 0 ) {
         Q_snprintf( buffer, sizeof( buffer ), "ch%i", scr_crosshair->integer );
         scr.crosshair_pic = R_RegisterPic( buffer );
         R_GetPicSize( &scr.crosshair_width, &scr.crosshair_height, scr.crosshair_pic );
+
+        scr.crosshair_color[0] = (byte)(ch_red->value * 255);
+        scr.crosshair_color[1] = (byte)(ch_green->value * 255);
+        scr.crosshair_color[2] = (byte)(ch_blue->value * 255);
+        scr.crosshair_color[3] = (byte)(ch_alpha->value * 255);
     } else {
         scr.crosshair_pic = 0;
     }
@@ -1056,6 +1067,15 @@ void SCR_Init( void ) {
     scr_scale = Cvar_Get( "scr_scale", "1", CVAR_ARCHIVE );
     scr_crosshair = Cvar_Get ("crosshair", "0", CVAR_ARCHIVE);
     scr_crosshair->changed = scr_crosshair_changed;
+
+    ch_red = Cvar_Get ("ch_red", "1", 0);
+    ch_red->changed = scr_crosshair_changed;
+    ch_green = Cvar_Get ("ch_green", "1", 0);
+    ch_green->changed = scr_crosshair_changed;
+    ch_blue = Cvar_Get ("ch_blue", "1", 0);
+    ch_blue->changed = scr_crosshair_changed;
+    ch_alpha = Cvar_Get ("ch_alpha", "1", 0);
+    ch_alpha->changed = scr_crosshair_changed;
 
     scr_draw2d = Cvar_Get( "scr_draw2d", "2", 0 );
     scr_showturtle = Cvar_Get( "scr_showturtle", "1", 0 );
@@ -1599,7 +1619,9 @@ static void draw_crosshair( void ) {
     int x = ( scr.hud_width - scr.crosshair_width ) / 2;
     int y = ( scr.hud_height - scr.crosshair_height ) / 2;
 
+    R_SetColor( DRAW_COLOR_RGBA, scr.crosshair_color );
     R_DrawPic( x, y, scr.crosshair_pic );
+    R_SetColor( DRAW_COLOR_CLEAR, NULL );
 }
 
 static void draw_2d( void ) {
