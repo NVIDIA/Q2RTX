@@ -197,14 +197,19 @@ void Cbuf_Execute( cmdbuf_t *buf ) {
 ==============================================================================
 */
 
+#define ALIAS_HASH_SIZE    64
+
+#define FOR_EACH_ALIAS_HASH( alias, hash ) \
+    LIST_FOR_EACH( cmdalias_t, alias, &cmd_aliasHash[hash], hashEntry )
+#define FOR_EACH_ALIAS( alias ) \
+    LIST_FOR_EACH( cmdalias_t, alias, &cmd_alias, listEntry )
+
 typedef struct cmdalias_s {
     list_t  hashEntry;
     list_t  listEntry;
     char    *value;
     char    name[1];
 } cmdalias_t;
-
-#define ALIAS_HASH_SIZE    64
 
 static list_t   cmd_alias;
 static list_t   cmd_aliasHash[ALIAS_HASH_SIZE];
@@ -219,7 +224,7 @@ cmdalias_t *Cmd_AliasFind( const char *name ) {
     cmdalias_t *alias;
 
     hash = Com_HashString( name, ALIAS_HASH_SIZE );
-    LIST_FOR_EACH( cmdalias_t, alias, &cmd_aliasHash[hash], hashEntry ) {
+    FOR_EACH_ALIAS_HASH( alias, hash ) {
         if( !strcmp( name, alias->name ) ) {
             return alias;
         }
@@ -266,7 +271,7 @@ void Cmd_AliasSet( const char *name, const char *cmd ) {
 void Cmd_Alias_g( genctx_t *ctx ) {
     cmdalias_t *a;
 
-    LIST_FOR_EACH( cmdalias_t, a, &cmd_alias, listEntry ) {
+    FOR_EACH_ALIAS( a ) {
         if( !Prompt_AddMatch( ctx, a->name ) ) {
             break;
         }
@@ -291,7 +296,7 @@ void Cmd_Alias_f( void ) {
             return;
         }
         Com_Printf( "Registered alias commands:\n" );
-        LIST_FOR_EACH( cmdalias_t, a, &cmd_alias, listEntry ) {
+        FOR_EACH_ALIAS( a ) {
             Com_Printf( "\"%s\" = \"%s\"\n", a->name, a->value );
         }
         return;
@@ -381,7 +386,7 @@ static void Cmd_UnAlias_f( void ) {
 void Cmd_WriteAliases( qhandle_t f ) {
     cmdalias_t *a;
 
-    LIST_FOR_EACH( cmdalias_t, a, &cmd_alias, listEntry ) {
+    FOR_EACH_ALIAS( a ) {
         FS_FPrintf( f, "alias \"%s\" \"%s\"\n", a->name, a->value );
     }
 }
@@ -486,6 +491,11 @@ void Cmd_AddMacro( const char *name, xmacro_t function ) {
 */
 
 #define CMD_HASH_SIZE    128
+
+#define FOR_EACH_CMD_HASH( cmd, hash ) \
+    LIST_FOR_EACH( cmd_function_t, cmd, &cmd_hash[hash], hashEntry )
+#define FOR_EACH_CMD( cmd ) \
+    LIST_FOR_EACH( cmd_function_t, cmd, &cmd_functions, listEntry )
 
 typedef struct cmd_function_s {
     list_t          hashEntry;
@@ -1143,7 +1153,7 @@ cmd_function_t *Cmd_Find( const char *name ) {
     unsigned hash;
 
     hash = Com_HashString( name, CMD_HASH_SIZE );
-    LIST_FOR_EACH( cmd_function_t, cmd, &cmd_hash[hash], hashEntry ) {
+    FOR_EACH_CMD_HASH( cmd, hash ) {
         if( !strcmp( cmd->name, name ) ) {
             return cmd;
         }
@@ -1261,7 +1271,7 @@ xcompleter_t Cmd_FindCompleter( const char *name ) {
 void Cmd_Command_g( genctx_t *ctx ) {
     cmd_function_t *cmd;
 
-    LIST_FOR_EACH( cmd_function_t, cmd, &cmd_functions, listEntry ) {
+    FOR_EACH_CMD( cmd ) {
         if( !Prompt_AddMatch( ctx, cmd->name ) ) {
             break;
         }
@@ -1511,7 +1521,7 @@ static void Cmd_List_f( void ) {
     }
 
     i = total = 0;
-    LIST_FOR_EACH( cmd_function_t, cmd, &cmd_functions, listEntry ) {
+    FOR_EACH_CMD( cmd ) {
         total++;
         if( filter && !Com_WildCmp( filter, cmd->name, qfalse ) ) {
             continue;
