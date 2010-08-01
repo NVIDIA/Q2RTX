@@ -161,16 +161,26 @@ static void GrabMouse( grab_t grab ) {
     }
 #endif // EVIOCGRAB
 
-    if( grab ) {
+    if( grab == IN_GRAB ) {
         struct input_event ev;
         
+        SDL_WM_GrabInput( SDL_GRAB_ON );
+        SDL_WM_SetCaption( "[" APPLICATION "]", APPLICATION );
         SDL_ShowCursor( SDL_DISABLE );
         
         evdev.io->wantread = qtrue;
         while( read( evdev.fd, &ev, EVENT_SIZE ) == EVENT_SIZE )
             ;
     } else {
-        SDL_ShowCursor( SDL_ENABLE );
+        if( evdev.grabbed == IN_GRAB ) {
+            SDL_WM_GrabInput( SDL_GRAB_OFF );
+            SDL_WM_SetCaption( APPLICATION, APPLICATION );
+        }
+        if( grab == IN_HIDE ) {
+            SDL_ShowCursor( SDL_DISABLE );
+        } else {
+            SDL_ShowCursor( SDL_ENABLE );
+        }
         evdev.io->wantread = qfalse;
     }
 
