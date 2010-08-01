@@ -1677,7 +1677,12 @@ static qerror_t _register_image( const char *name, imagetype_t type, qhandle_t *
     if( name[0] == '/' || name[0] == '\\' ) {
         ret = _IMG_Find( name + 1, type, &image );
     } else {
-        len = Q_concat( fullname, sizeof( fullname ), "pics/", name, NULL );
+        if( !strncmp( name, "../", 3 ) ) {
+            // action mod icon path hack
+            len = Q_strlcpy( fullname, name + 3, sizeof( fullname ) );
+        } else {
+            len = Q_concat( fullname, sizeof( fullname ), "pics/", name, NULL );
+        }
         if( len >= sizeof( fullname ) ) {
             return Q_ERR_NAMETOOLONG;
         }
