@@ -38,6 +38,7 @@ static cvar_t    *cl_instantpacket;
 
 static cvar_t    *m_filter;
 static cvar_t    *m_accel;
+static cvar_t    *m_autosens;
 
 static cvar_t    *cl_upspeed;
 static cvar_t    *cl_forwardspeed;
@@ -509,6 +510,11 @@ static void CL_MouseMove( void ) {
     mx *= speed;
     my *= speed;
 
+    if( m_autosens->integer ) {
+        mx *= cl.refdef.fov_x / 90.0f;
+        my *= cl.refdef.fov_y / V_CalcFov( 90.0f, cl.refdef.width, cl.refdef.height );
+    }
+
 // add mouse X/Y movement to cmd
     if( ( in_strafe.state & 1 ) || ( lookstrafe->integer && !in_mlooking ) ) {
         cl.cmd.sidemove += m_side->value * mx;
@@ -712,6 +718,7 @@ void CL_RegisterInput( void ) {
     m_side = Cvar_Get ( "m_side", "1", 0 );
     m_filter = Cvar_Get( "m_filter", "0", 0 );
     m_accel = Cvar_Get( "m_accel", "0", 0 );
+    m_autosens = Cvar_Get( "m_autosens", "0", 0 );
 }
 
 void CL_FinalizeCmd( void ) {
