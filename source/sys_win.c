@@ -1062,14 +1062,13 @@ static int Sys_Main( int argc, char **argv ) {
     // main program loop
     while( 1 ) {
         Qcommon_Frame();
-#if USE_WINSVC
         if( shouldExit ) {
-            if( shouldExit == SE_FULL ) {
+#if USE_WINSVC
+            if( shouldExit == SE_FULL )
+#endif
                 Com_Quit( NULL, KILL_DROP );
-            }
             break;
         }
-#endif
     }
 
 #if USE_DBGHELP
