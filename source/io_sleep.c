@@ -35,13 +35,30 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 static ioentry_t    entries[FD_SETSIZE];
 static int          numfds;
 
-#define CHECK_FD \
-    if( fd < 0 || fd >= FD_SETSIZE ) { \
-        Com_Error( ERR_FATAL, "%s: fd out of range", __func__ ); \
-    }
-
 ioentry_t *IO_Add( int fd ) {
     ioentry_t *e;
+#ifdef _WIN32
+    int i;
+
+    for( i = 0, e = entries; i < numfds; i++, e++ ) {
+        if( !e->inuse ) {
+            break;
+        }
+    }
+
+    if( i == numfds ) {
+        if( ++numfds > FD_SETSIZE ) {
+            Com_Error( ERR_FATAL, "%s: no more space for fd: %d", __func__, fd );
+        }
+    }
+
+    e->fd = fd;
+#else
+
+#define CHECK_FD \
+    if( fd < 0 || fd >= FD_SETSIZE ) { \
+        Com_Error( ERR_FATAL, "%s: fd out of range: %d", __func__, fd ); \
+    }
 
     CHECK_FD
 
@@ -50,6 +67,7 @@ ioentry_t *IO_Add( int fd ) {
     }
 
     e = &entries[fd];
+#endif
     e->inuse = qtrue;
     return e;
 }
@@ -58,29 +76,40 @@ void IO_Remove( int fd ) {
     ioentry_t *e;
     int i;
 
-    CHECK_FD
+    e = IO_Get( fd );
+    memset( e, 0, sizeof( *e ) );
 
-    if( fd == numfds - 1 ) {
-        for( i = fd - 1; i >= 0; i-- ) {
-            e = &entries[i];
-            if( e->inuse ) {
-                break;
-            }
+    for( i = numfds - 1; i >= 0; i-- ) {
+        e = &entries[i];
+        if( e->inuse ) {
+            break;
         }
-        numfds = i + 1;
     }
 
-    e = &entries[fd];
-    memset( e, 0, sizeof( *e ) );
+    numfds = i + 1;
 }
 
 ioentry_t *IO_Get( int fd ) {
     ioentry_t *e;
+#ifdef _WIN32
+    int i;
 
+    for( i = 0, e = entries; i < numfds; i++, e++ ) {
+        if( !e->inuse ) {
+            continue;
+        }
+        if( e->fd == fd ) {
+            return e;
+        }
+    }
+    
+    Com_Error( ERR_FATAL, "%s: fd not found: %d", __func__, fd ); 
+#else
     CHECK_FD
 
     e = &entries[fd];
     return e;
+#endif
 }
 
 //void IO_Mask( int fd ) {
@@ -114,23 +143,28 @@ int IO_Sleep( int msec ) {
     FD_ZERO( &efd );
 #endif
 
-    for( i = 0; i < numfds; i++ ) {
-        e = &entries[i];
+#ifdef _WIN32
+#define FD e->fd
+#else
+#define FD i
+#endif
+
+    for( i = 0, e = entries; i < numfds; i++, e++ ) {
         if( !e->inuse ) {
             continue;
         }
         e->canread = qfalse;
         if( e->wantread ) {
-            FD_SET( i, &rfd );
+            FD_SET( FD, &rfd );
         }
         e->canwrite = qfalse;
         if( e->wantwrite ) {
-            FD_SET( i, &wfd );
+            FD_SET( FD, &wfd );
         }
 #ifdef _WIN32
         e->canexcept = qfalse;
         if( e->wantexcept ) {
-            FD_SET( i, &efd );
+            FD_SET( FD, &efd );
         }
 #endif
     }
@@ -159,14 +193,14 @@ int IO_Sleep( int msec ) {
         if( !e->inuse ) {
             continue;
         }
-        if( e->wantread && FD_ISSET( i, &rfd ) ) {
+        if( e->wantread && FD_ISSET( FD, &rfd ) ) {
             e->canread = qtrue;
         }
-        if( e->wantwrite && FD_ISSET( i, &wfd ) ) {
+        if( e->wantwrite && FD_ISSET( FD, &wfd ) ) {
             e->canwrite = qtrue;
         }
 #ifdef _WIN32
-        if( e->wantexcept && FD_ISSET( i, &efd ) ) {
+        if( e->wantexcept && FD_ISSET( FD, &efd ) ) {
             e->canexcept = qtrue;
         }
 #endif
@@ -218,16 +252,16 @@ int IO_Sleepv( int msec, ... ) {
         }
         e->canread = qfalse;
         if( e->wantread ) {
-            FD_SET( i, &rfd );
+            FD_SET( FD, &rfd );
         }
         e->canwrite = qfalse;
         if( e->wantwrite ) {
-            FD_SET( i, &wfd );
+            FD_SET( FD, &wfd );
         }
 #ifdef _WIN32
         e->canexcept = qfalse;
         if( e->wantexcept ) {
-            FD_SET( i, &efd );
+            FD_SET( FD, &efd );
         }
 #endif
     }
@@ -262,14 +296,14 @@ int IO_Sleepv( int msec, ... ) {
         if( !e->inuse ) {
             continue;
         }
-        if( e->wantread && FD_ISSET( i, &rfd ) ) {
+        if( e->wantread && FD_ISSET( FD, &rfd ) ) {
             e->canread = qtrue;
         }
-        if( e->wantwrite && FD_ISSET( i, &wfd ) ) {
+        if( e->wantwrite && FD_ISSET( FD, &wfd ) ) {
             e->canwrite = qtrue;
         }
 #ifdef _WIN32
-        if( e->wantexcept && FD_ISSET( i, &efd ) ) {
+        if( e->wantexcept && FD_ISSET( FD, &efd ) ) {
             e->canexcept = qtrue;
         }
 #endif

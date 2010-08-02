@@ -19,6 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 typedef struct {
+#ifdef _WIN32
+    int fd;
+#endif
     qboolean inuse: 1;
     qboolean canread: 1;
     qboolean canwrite: 1;
