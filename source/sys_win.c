@@ -808,11 +808,11 @@ static inline time_t file_time_to_unix( FILETIME *f ) {
 Sys_GetPathInfo
 ================
 */
-qboolean Sys_GetPathInfo( const char *path, file_info_t *info ) {
-    WIN32_FILE_ATTRIBUTE_DATA    data;
+qerror_t Sys_GetPathInfo( const char *path, file_info_t *info ) {
+    WIN32_FILE_ATTRIBUTE_DATA data;
 
     if( !GetFileAttributesExA( path, GetFileExInfoStandard, &data ) ) {
-        return qfalse;
+        return Q_ERR_NOENT; // TODO: return proper error code
     }
 
     if( info ) {
@@ -821,20 +821,23 @@ qboolean Sys_GetPathInfo( const char *path, file_info_t *info ) {
         info->mtime = file_time_to_unix( &data.ftLastWriteTime );
     }
 
-    return qtrue;
+    return Q_ERR_SUCCESS;
 }
 
-qboolean Sys_GetFileInfo( FILE *fp, file_info_t *info ) {
-    int pos;
+qerror_t Sys_GetFileInfo( FILE *fp, file_info_t *info ) {
+    int pos, end;
 
+    // TODO: check for errors
     pos = ftell( fp );
     fseek( fp, 0, SEEK_END );
-    info->size = ftell( fp );
-    info->ctime = 0;
-    info->mtime = 0;
+    end = ftell( fp );
     fseek( fp, pos, SEEK_SET );
 
-    return qtrue;
+    info->size = end;
+    info->ctime = 0;
+    info->mtime = 0;
+
+    return Q_ERR_SUCCESS;
 }
 
 

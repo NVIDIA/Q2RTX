@@ -22,7 +22,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "sys_public.h"
 #include "io_sleep.h"
 #ifdef _WIN32
-#error not yet implemented
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <winsock2.h>
 #else
 #include <sys/select.h>
 #include <sys/time.h>

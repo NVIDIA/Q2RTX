@@ -138,15 +138,15 @@ static size_t       net_rate_dn;
 static size_t       net_rate_up;
 
 // lifetime statistics
-static unsigned long long    net_recv_errors;
-static unsigned long long    net_send_errors;
+static uint64_t     net_recv_errors;
+static uint64_t     net_send_errors;
 #if USE_ICMP
-static unsigned long long    net_icmp_errors;
+static uint64_t     net_icmp_errors;
 #endif
-static unsigned long long    net_bytes_rcvd;
-static unsigned long long    net_bytes_sent;
-static unsigned long long    net_packets_rcvd;
-static unsigned long long    net_packets_sent;
+static uint64_t     net_bytes_rcvd;
+static uint64_t     net_bytes_sent;
+static uint64_t     net_packets_rcvd;
+static uint64_t     net_packets_sent;
 
 //=============================================================================
 
@@ -593,7 +593,9 @@ qboolean NET_GetPacket( netsrc_t sock ) {
     int ret;
 #if USE_ICMP
     int tries;
+#ifndef _WIN32
     int saved_error;
+#endif
 #endif
     ioentry_t *e;
 
@@ -1443,19 +1445,19 @@ static void NET_Stats_f( void ) {
 
     Com_FormatTime( buffer, sizeof( buffer ), diff );
     Com_Printf( "Network uptime: %s\n", buffer );
-    Com_Printf( "Bytes sent: %llu (%llu bytes/sec)\n",
+    Com_Printf( "Bytes sent: %"PRIu64" (%"PRIu64" bytes/sec)\n",
         net_bytes_sent, net_bytes_sent / diff );
-    Com_Printf( "Bytes rcvd: %llu (%llu bytes/sec)\n",
+    Com_Printf( "Bytes rcvd: %"PRIu64" (%"PRIu64" bytes/sec)\n",
         net_bytes_rcvd, net_bytes_rcvd / diff );
-    Com_Printf( "Packets sent: %llu (%llu packets/sec)\n",
+    Com_Printf( "Packets sent: %"PRIu64" (%"PRIu64" packets/sec)\n",
         net_packets_sent, net_packets_sent / diff );
-    Com_Printf( "Packets rcvd: %llu (%llu packets/sec)\n",
+    Com_Printf( "Packets rcvd: %"PRIu64" (%"PRIu64" packets/sec)\n",
         net_packets_rcvd, net_packets_rcvd / diff );
 #if USE_ICMP
-    Com_Printf( "Total errors: %llu/%llu/%llu (send/recv/icmp)\n",
+    Com_Printf( "Total errors: %"PRIu64"/%"PRIu64"/%"PRIu64" (send/recv/icmp)\n",
         net_send_errors, net_recv_errors, net_icmp_errors );
 #else
-    Com_Printf( "Total errors: %llu/%llu (send/recv)\n",
+    Com_Printf( "Total errors: %"PRIu64"/%"PRIu64" (send/recv)\n",
         net_send_errors, net_recv_errors );
 #endif
     Com_Printf( "Current upload rate: %"PRIz" bytes/sec\n", net_rate_up );

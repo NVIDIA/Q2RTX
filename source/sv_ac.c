@@ -1158,7 +1158,11 @@ STARTUP STUFF
 
 static void AC_Spin( void ) {
     // sleep on stdin and AC server socket
-    IO_Sleepv( 100, 0, ac.stream.socket, -1 );
+    IO_Sleepv( 100,
+#ifdef __unix__
+        0,
+#endif
+        ac.stream.socket, -1 );
 #if USE_SYSCON
     Sys_RunConsole();
 #endif
