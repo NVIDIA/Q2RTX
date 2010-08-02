@@ -554,8 +554,8 @@ void Cmd_ExecTrigger( const char *string ) {
     FOR_EACH_TRIGGER( trigger ) {
         match = Cmd_MacroExpandString( trigger->match, qfalse );
         if( match && Com_WildCmp( match, string, qfalse ) ) {
-            Cbuf_AddText( cmd_current, trigger->command );
-            Cbuf_AddText( cmd_current, "\n" );
+            Cbuf_AddText( &cmd_buffer, trigger->command );
+            Cbuf_AddText( &cmd_buffer, "\n" );
         }
     }
 }
