@@ -20,14 +20,14 @@ BEGIN
     BEGIN
         BLOCK "040004b0"
         BEGIN
-            VALUE "Comments", "http://q2pro.sf.net/"
-            VALUE "CompanyName", "skuller"
-            VALUE "FileDescription", "q2pro client executable"
-			VALUE "OriginalFilename", "q2pro.exe"
+            VALUE "Comments", "http://skuller.net/q2pro/"
+            VALUE "CompanyName", "skuller.net"
+            VALUE "FileDescription", "Q2PRO graphical client"
+            VALUE "OriginalFilename", "q2pro.exe"
             VALUE "FileVersion", VERSION
             VALUE "InternalName", "q2pro"
-            VALUE "LegalCopyright", "Copyright (C) 2008 skuller"
-            VALUE "ProductName", "q2pro"
+            VALUE "LegalCopyright", "Copyright (C) 2010 skuller.net"
+            VALUE "ProductName", "Q2PRO"
             VALUE "ProductVersion", VERSION
         END
     END
