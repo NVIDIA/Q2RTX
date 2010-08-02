@@ -1506,7 +1506,7 @@ static void list_recordings( void ) {
             if( pos < 0 ) {
                 strcpy( buffer, "???" );
             } else {
-                Q_FormatFileSize( buffer, pos, sizeof( buffer ) );
+                COM_FormatFileSize( buffer, pos, sizeof( buffer ) );
             }
         } else {
             strcpy( buffer, "-" );

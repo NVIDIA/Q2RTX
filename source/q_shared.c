@@ -381,62 +381,34 @@ int QDECL SortStricmp( const void *p1, const void *p2 ) {
 
 /*
 ================
-Q_ClearStr
+COM_strclr
 
-Removes high-bit and unprintable characters.
-Return number of characters written, not including the NULL character.
+Operates inplace, normalizing high-bit and removing unprintable characters.
+Returns final number of characters, not including the NUL character.
 ================
 */
-int Q_ClearStr( char *out, const char *in, int bufsize ) {
-    char *p, *m;
+size_t COM_strclr( char *s ) {
+    char *p;
     int c;
+    size_t len;
 
-    if( bufsize < 1 ) {
-        Com_Error( ERR_FATAL, "%s: bad bufsize: %d", __func__, bufsize );
-    }
-
-    p = out;
-    m = out + bufsize - 1;
-    while( *in && p < m ) {
-        c = *in++;
+    p = s;
+    len = 0;
+    while( *s ) {
+        c = *s++;
         c &= 127;
         if( Q_isprint( c ) ) {
             *p++ = c;
+            len++;
         }
     }
 
     *p = 0;
 
-    return p - out;
+    return len;
 }
 
-int Q_HighlightStr( char *out, const char *in, int bufsize ) {
-    char *p, *m;
-    int c;
-
-    if( bufsize < 1 ) {
-        Com_Error( ERR_FATAL, "%s: bad bufsize: %d", __func__, bufsize );
-    }
-
-    p = out;
-    m = out + bufsize - 1;
-    while( *in && p < m ) {
-        c = *in++;
-        c |= 128;
-        *p++ = c;
-    }
-
-    *p = 0;
-
-    return p - out;
-}
-
-/*
-================
-Q_IsWhiteSpace
-================
-*/
-qboolean Q_IsWhiteSpace( const char *s ) {
+qboolean COM_iswhite( const char *s ) {
     int c;
 
     while( *s ) {
@@ -450,7 +422,7 @@ qboolean Q_IsWhiteSpace( const char *s ) {
     return qtrue;
 }
 
-size_t Q_FormatFileSize( char *dest, size_t bytes, size_t size ) {
+size_t COM_FormatFileSize( char *dest, size_t bytes, size_t size ) {
     if( bytes >= 1000000 ) {
         return Q_snprintf( dest, size, "%2.1fM", ( float )bytes / 1000000 );
     }

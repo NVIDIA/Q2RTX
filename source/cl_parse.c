@@ -1326,6 +1326,7 @@ CL_ParsePrint
 static void CL_ParsePrint( void ) {
     int level;
     char string[MAX_STRING_CHARS];
+    const char *fmt;
 
     level = MSG_ReadByte();
     MSG_ReadString( string, sizeof( string ) );
@@ -1335,6 +1336,7 @@ static void CL_ParsePrint( void ) {
     if( level != PRINT_CHAT ) {
         Com_Printf( "%s", string );
         if( !cls.demo.playback ) {
+            COM_strclr( string );
             Cmd_ExecTrigger( string );
         }
         return;
@@ -1353,11 +1355,13 @@ static void CL_ParsePrint( void ) {
 
     // filter text
     if( cl_chat_filter->integer ) {
-        int len = Q_ClearStr( string, string, MAX_STRING_CHARS - 1 );
-        string[len] = '\n';
+        COM_strclr( string );
+        fmt = "%s\n";
+    } else {
+        fmt = "%s";
     }
 
-    Com_LPrintf( PRINT_TALK, "%s", string );
+    Com_LPrintf( PRINT_TALK, fmt, string );
 
     Con_SkipNotify( qfalse );
 
@@ -1385,6 +1389,7 @@ static void CL_ParseCenterPrint( void ) {
     SCR_CenterPrint( string );
 
     if( !cls.demo.playback ) {
+        COM_strclr( string );
         Cmd_ExecTrigger( string );
     }
 }

@@ -331,11 +331,6 @@ static inline int rand_byte( void ) {
 #define Q_SetBit( data, bit )       ( (data)[(bit) >> 3] |= ( 1 << ( (bit) & 7 ) ) )
 #define Q_ClearBit( data, bit )     ( (data)[(bit) >> 3] &= ~( 1 << ( (bit) & 7 ) ) )
 
-qboolean Q_IsWhiteSpace( const char *string );
-size_t Q_FormatFileSize( char *dest, size_t bytes, size_t size );
-int Q_ClearStr( char *out, const char *in, int bufsize ); 
-int Q_HighlightStr( char *out, const char *in, int bufsize ); 
-
 //=============================================
 
 // fast "C" macros
@@ -449,12 +444,19 @@ qboolean COM_IsFloat( const char *s );
 qboolean COM_IsUint( const char *s );
 qboolean COM_HasSpaces( const char *s );
 
+unsigned COM_ParseHex( const char *s );
+
 char *COM_Parse( const char **data_p );
 // data is an in/out parm, returns a parsed out token
 int COM_Compress( char *data );
 
 int QDECL SortStrcmp( const void *p1, const void *p2 );
 int QDECL SortStricmp( const void *p1, const void *p2 );
+
+size_t COM_strclr( char *s ); 
+qboolean COM_iswhite( const char *s );
+
+size_t COM_FormatFileSize( char *dest, size_t bytes, size_t size );
 
 // buffer safe operations
 size_t Q_strlcpy( char *dst, const char *src, size_t size );
@@ -466,8 +468,6 @@ size_t Q_vsnprintf( char *dest, size_t size, const char *fmt, va_list argptr );
 size_t Q_vscnprintf( char *dest, size_t size, const char *fmt, va_list argptr );
 size_t Q_snprintf( char *dest, size_t size, const char *fmt, ... ) q_printf( 3, 4 );
 size_t Q_scnprintf( char *dest, size_t size, const char *fmt, ... ) q_printf( 3, 4 );
-
-unsigned COM_ParseHex( const char *string );
 
 char    *va( const char *format, ... ) q_printf( 1, 2 );
 

@@ -572,15 +572,14 @@ static void SV_BeginDownload_f( void ) {
     ssize_t downloadsize, maxdownloadsize, result;
     int     offset = 0;
     cvar_t  *allow;
-    int     length;
+    size_t  len;
     unsigned flags;
     qhandle_t f;
 
-    length = Q_ClearStr( name, Cmd_Argv( 1 ),  sizeof( name ) );
-    Q_strlwr( name );
-
-    if( Cmd_Argc() > 2 )
-        offset = atoi( Cmd_Argv( 2 ) ); // downloaded offset
+    len = Cmd_ArgvBuffer( 1, name, sizeof( name ) );
+    if( len >= MAX_QPATH ) {
+        goto fail1;
+    }
 
     // hack for 'status' command
     if( !strcmp( name, "http" ) ) {
@@ -588,11 +587,17 @@ static void SV_BeginDownload_f( void ) {
         return;
     }
 
+    len = COM_strclr( name );
+    Q_strlwr( name );
+
+    if( Cmd_Argc() > 2 )
+        offset = atoi( Cmd_Argv( 2 ) ); // downloaded offset
+
     // hacked by zoid to allow more conrol over download
     // first off, no .. or global allow check
     if( !allow_download->integer
         // check for empty paths
-        || !length
+        || !len
         // check for illegal negative offsets
         || offset < 0
         // don't allow anything with .. path
@@ -600,7 +605,7 @@ static void SV_BeginDownload_f( void ) {
         // leading dots, slashes, etc are no good
         || !Q_ispath( name[0] )
         // trailing dots, slashes, etc are no good
-        || !Q_ispath( name[ length - 1 ] )
+        || !Q_ispath( name[ len - 1 ] )
         // back slashes should be never sent
         || strchr( name, '\\' )
         // colons are bad also

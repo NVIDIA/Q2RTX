@@ -44,13 +44,13 @@ LOC_Alloc
 static location_t *LOC_Alloc( const char *name ) {
     location_t *loc;
     char buffer[MAX_QPATH];
-    size_t length;
+    size_t len;
 
-    Q_ClearStr( buffer, name, sizeof( buffer ) );
+    Q_strlcpy( buffer, name, sizeof( buffer ) );
+    len = COM_strclr( buffer );
 
-    length = strlen( buffer );
-    loc = Z_Malloc( sizeof( *loc ) + length );
-    memcpy( loc->name, buffer, length + 1 );
+    loc = Z_Malloc( sizeof( *loc ) + len );
+    memcpy( loc->name, buffer, len + 1 );
     List_Append( &cl_locations, &loc->entry );
 
     return loc;

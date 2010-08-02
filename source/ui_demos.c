@@ -85,7 +85,7 @@ static void BuildName( file_info_t *info, char **cache ) {
         CL_GetDemoInfo( buffer, &demo );
     }
 
-    Q_FormatFileSize( buffer, info->size, sizeof( buffer ) );
+    COM_FormatFileSize( buffer, info->size, sizeof( buffer ) );
 
     e = UI_FormatColumns( DEMO_EXTRASIZE,
         info->name, buffer, demo.map, demo.pov, NULL );
