@@ -41,6 +41,7 @@ static cvar_t *gl_round_down;
 static cvar_t *gl_picmip;
 static cvar_t *gl_gamma_scale_pics;
 static cvar_t *gl_bilerp_chars;
+static cvar_t *gl_bilerp_pics;
 static cvar_t *gl_texturemode;
 static cvar_t *gl_texturesolidmode;
 static cvar_t *gl_texturealphamode;
@@ -169,6 +170,21 @@ static void gl_bilerp_chars_changed( cvar_t *self ) {
     // change all the existing charset texture objects
     for( i = 0, image = r_images; i < r_numImages; i++, image++ ) {
         if( image->type == it_charset ) {
+            GL_BindTexture( image->texnum );
+            qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, param );
+            qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, param );
+        }
+    }
+}
+
+static void gl_bilerp_pics_changed( cvar_t *self ) {
+    int     i;
+    image_t *image;
+    GLfloat param = self->integer ? GL_LINEAR : GL_NEAREST;
+
+    // change all the existing charset texture objects
+    for( i = 0, image = r_images; i < r_numImages; i++, image++ ) {
+        if( image->type == it_pic ) {
             GL_BindTexture( image->texnum );
             qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, param );
             qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, param );
@@ -552,7 +568,25 @@ static void GL_MipMap( byte *in, int width, int height ) {
     }
 }
 
-static inline qboolean is_a_wall( void ) {
+// returns true if image should not be bilinear filtered
+// (useful for small images in scarp, charsets, etc)
+static inline qboolean is_nearest( void ) {
+    if( gls.texnum[gls.tmu] == TEXNUM_SCRAP ) {
+        return qtrue; // hack for scrap texture
+    }
+    if( !upload_image ) {
+        return qfalse;
+    }
+    if( upload_image->type == it_charset ) {
+        return !gl_bilerp_chars->integer;
+    }
+    if( upload_image->type == it_pic ) {
+        return !gl_bilerp_pics->integer;
+    }
+    return qfalse;
+}
+
+static inline qboolean is_wall( void ) {
     if( !upload_image ) {
         return qfalse;
     }
@@ -630,7 +664,7 @@ static qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap 
 
     // set saturation and lightscale before mipmap
     comp = gl_tex_solid_format;
-    if( is_a_wall() && gl_saturation->value != 1 ) {   
+    if( is_wall() && gl_saturation->value != 1 ) {   
         GL_Saturation( data, width, height );
         if( gl_saturation->value == 0 ) {
             comp = GL_LUMINANCE;
@@ -643,7 +677,7 @@ static qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap 
         GL_LightScaleTexture( data, width, height, mipmap );
     }
 
-    if( is_a_wall() && gl_invert->integer ) {
+    if( is_wall() && gl_invert->integer ) {
         GL_InvertTexture( data, width, height );
     }
 
@@ -690,7 +724,7 @@ static qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap 
             qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT,
                     gl_filter_anisotropy );
         }
-    } else if( upload_image && upload_image->type == it_charset && !gl_bilerp_chars->integer ) {
+    } else if( is_nearest() ) {
         qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
         qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
     } else {
@@ -1080,6 +1114,8 @@ void GL_InitImages( void ) {
 
     gl_bilerp_chars = Cvar_Get( "gl_bilerp_chars", "0", 0 );
     gl_bilerp_chars->changed = gl_bilerp_chars_changed;
+    gl_bilerp_pics = Cvar_Get( "gl_bilerp_pics", "1", 0 );
+    gl_bilerp_pics->changed = gl_bilerp_pics_changed;
     gl_texturemode = Cvar_Get( "gl_texturemode",
         "GL_LINEAR_MIPMAP_LINEAR", CVAR_ARCHIVE );
     gl_texturemode->changed = gl_texturemode_changed;
@@ -1132,6 +1168,7 @@ void GL_InitImages( void ) {
     gl_texturemode_changed( gl_texturemode );
     gl_anisotropy_changed( gl_anisotropy );
     gl_bilerp_chars_changed( gl_bilerp_chars );
+    gl_bilerp_pics_changed( gl_bilerp_pics );
 
     upload_image = NULL;
     upload_texinfo = NULL;
@@ -1153,6 +1190,7 @@ void GL_ShutdownImages( void ) {
     int i, j;
 
     gl_bilerp_chars->changed = NULL;
+    gl_bilerp_pics->changed = NULL;
     gl_texturemode->changed = NULL;
     gl_texturemode->generator = NULL;
     gl_texturealphamode->generator = NULL;
