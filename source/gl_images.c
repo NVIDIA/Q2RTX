@@ -182,13 +182,21 @@ static void gl_bilerp_pics_changed( cvar_t *self ) {
     image_t *image;
     GLfloat param = self->integer ? GL_LINEAR : GL_NEAREST;
 
-    // change all the existing charset texture objects
+    // change all the existing pic texture objects
     for( i = 0, image = r_images; i < r_numImages; i++, image++ ) {
         if( image->type == it_pic ) {
             GL_BindTexture( image->texnum );
             qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, param );
             qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, param );
         }
+    }
+
+    // change scrap texture object
+    if( !gl_noscrap->integer ) {
+        param = self->integer > 1 ? GL_LINEAR : GL_NEAREST;
+        GL_BindTexture( TEXNUM_SCRAP );
+        qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, param );
+        qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, param );
     }
 }
 
@@ -571,7 +579,7 @@ static void GL_MipMap( byte *in, int width, int height ) {
 // returns true if image should not be bilinear filtered
 // (useful for small images in scarp, charsets, etc)
 static inline qboolean is_nearest( void ) {
-    if( gls.texnum[gls.tmu] == TEXNUM_SCRAP ) {
+    if( gls.texnum[gls.tmu] == TEXNUM_SCRAP && gl_bilerp_pics->integer <= 1 ) {
         return qtrue; // hack for scrap texture
     }
     if( !upload_image ) {
