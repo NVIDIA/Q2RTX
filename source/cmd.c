@@ -1515,7 +1515,6 @@ static void Cmd_Exec_f( void ) {
     char    buffer[MAX_QPATH];
     char    *f;
     ssize_t len;
-    int     i;
 
     if( Cmd_Argc() != 2 ) {
         Com_Printf( "%s <filename> : execute a script file\n", Cmd_Argv( 0 ) );
@@ -1535,11 +1534,9 @@ static void Cmd_Exec_f( void ) {
         }
     }
 
-    for( i = 0; i < len; i++ ) {
-        if( f[i] == 0 ) {
-            Com_Printf( "Refusing to exec binary file\n" );
-            goto finish;
-        }
+    if( memchr( f, 0, len ) ) {
+        Com_Printf( "Refusing to exec binary file %s\n", buffer );
+        goto finish;
     }
 
     Com_Printf( "Execing %s\n", buffer );
