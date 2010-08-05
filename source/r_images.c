@@ -697,7 +697,7 @@ qerror_t IMG_LoadJPG( const char *filename, byte **pic, int *width, int *height 
     my_mem_src( &cinfo, rawdata, rawlength );
     jpeg_read_header( &cinfo, TRUE );
 
-    if( cinfo.jpeg_color_space != JCS_RGB && cinfo.jpeg_color_space != JCS_GRAYSCALE ) {
+    if( cinfo.out_color_space != JCS_RGB && cinfo.out_color_space != JCS_GRAYSCALE ) {
         Com_DPrintf( "%s: %s: invalid image color space\n", __func__, filename );
         ret = Q_ERR_INVALID_FORMAT;
         goto fail;
