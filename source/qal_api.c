@@ -46,6 +46,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
     QAL( LPALCCAPTURESAMPLES, alcCaptureSamples );
 
 static cvar_t   *al_driver;
+static cvar_t   *al_device;
 
 static void *handle;
 static ALCdevice *device;
@@ -81,6 +82,7 @@ QAL_IMP
 
 qboolean QAL_Init( void ) {
     al_driver = Cvar_Get( "al_driver", DEFAULT_OPENAL_DRIVER, 0 );
+    al_device = Cvar_Get( "al_device", "", 0 );
 
     Sys_LoadLibrary( al_driver->string, NULL, &handle );
     if( !handle ) {
@@ -93,7 +95,7 @@ QAL_IMP
 #undef QAL
 
     Com_DPrintf( "...opening OpenAL device: " );
-    device = qalcOpenDevice( NULL );
+    device = qalcOpenDevice( al_device->string[0] ? al_device->string : NULL );
     if( !device ) {
         goto fail;
     }

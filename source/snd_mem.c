@@ -43,6 +43,7 @@ static sfxcache_t *ResampleSfx( sfx_t *sfx ) {
     outcount = s_info.samples / stepscale;
     if( !outcount ) {
         Com_DPrintf( "%s resampled to zero length\n", s_info.name );
+        sfx->error = Q_ERR_TOO_FEW;
         return NULL;
     }
 
@@ -307,7 +308,6 @@ sfxcache_t *S_LoadSound (sfx_t *s) {
     sfxcache_t  *sc;
     size_t      len;
     char        *name;
-    qerror_t    ret;
 
     if (s->name[0] == '*')
         return NULL;
@@ -332,14 +332,14 @@ sfxcache_t *S_LoadSound (sfx_t *s) {
     else
         len = Q_concat( namebuffer, sizeof( namebuffer ), "sound/", name, NULL );
     if( len >= sizeof( namebuffer ) ) {
-        ret = Q_ERR_NAMETOOLONG;
-        goto fail1;
+        s->error = Q_ERR_NAMETOOLONG;
+        return NULL;
     }
 
     len = FS_LoadFile (namebuffer, (void **)&data);
     if (!data) {
-        ret = len;
-        goto fail1;
+        s->error = len;
+        return NULL;
     }
 
     memset( &s_info, 0, sizeof( s_info ) );
@@ -348,29 +348,22 @@ sfxcache_t *S_LoadSound (sfx_t *s) {
     iff_data = data;
     iff_end = data + len;
     if( !GetWavinfo() ) {
-        ret = Q_ERR_INVALID_FORMAT;
-        goto fail2;
+        s->error = Q_ERR_INVALID_FORMAT;
+        goto fail;
     }
 
 #if USE_OPENAL
-    if( s_started == SS_OAL )
+    if( s_started == SS_OAL ) {
         sc = AL_UploadSfx( s );
-    else
+    } else
 #endif
 #if USE_SNDDMA
         sc = ResampleSfx( s )
 #endif
         ;
-    ret = Q_ERR_SUCCESS;
 
-fail2:
+fail:
     FS_FreeFile( data );
-fail1:
-    // don't spam about missing or invalid sounds (action mod hack)
-    if( ret && ret != Q_ERR_NOENT && ret != Q_ERR_INVALID_FORMAT ) {
-        Com_EPrintf( "Couldn't load %s: %s\n", namebuffer, Q_ErrorString( ret ) );
-    }
-    s->error = ret;
     return sc;
 }
 

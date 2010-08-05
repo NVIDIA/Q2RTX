@@ -205,7 +205,7 @@ void S_PaintChannels(int endtime) {
 
         // paint in the channels.
         ch = channels;
-        for (i=0; i<MAX_CHANNELS ; i++, ch++) {
+        for (i=0; i<s_numchannels ; i++, ch++) {
             ltime = paintedtime;
         
             while (ltime < end) {

@@ -23,7 +23,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "qal_api.h"
 
 // translates from AL coordinate system to quake
-#define OAL_POS3f(v)  -v[1], v[2], -v[0]
+#define AL_UnpackVector(v)  -v[1],v[2],-v[0]
+#define AL_CopyVector(a,b)  ((b)[0]=-(a)[1],(b)[1]=(a)[2],(b)[2]=-(a)[0])
+
+// OpenAL implementation should support at least this number of sources
+#define MIN_CHANNELS 16
 
 static ALuint s_srcnums[MAX_CHANNELS];
 static int s_framecount;
@@ -33,37 +37,55 @@ void AL_SoundInfo( void ) {
     Com_Printf( "AL_RENDERER: %s\n", qalGetString( AL_RENDERER ) );
     Com_Printf( "AL_VERSION: %s\n", qalGetString( AL_VERSION ) );
     Com_Printf( "AL_EXTENSIONS: %s\n", qalGetString( AL_EXTENSIONS ) );
-}
-
-static void AL_ShowError( const char *func ) {
-    ALenum err;
-
-    if( ( err = qalGetError() ) != AL_NO_ERROR ) {
-        Com_EPrintf( "%s: %s\n", func, qalGetString( err ) );
-    }
+    Com_Printf( "Number of sources: %d\n", s_numchannels );
 }
 
 qboolean AL_Init( void ) {
+    int i;
+
     if( !QAL_Init() ) {
         Com_EPrintf( "OpenAL failed to initialize.\n" );
         return qfalse;
     }
 
+    // check for linear distance extension
+    if( !qalIsExtensionPresent( "AL_EXT_LINEAR_DISTANCE" ) ) {
+        Com_EPrintf( "Required AL_EXT_LINEAR_DISTANCE extension is missing.\n" );
+        goto fail;
+    }
+
     // generate source names
-    qalGenSources( MAX_CHANNELS, s_srcnums );
-    AL_ShowError( __func__ );
+    qalGetError();
+    for( i = 0; i < MAX_CHANNELS; i++ ) {
+        qalGenSources( 1, &s_srcnums[i] );
+        if( qalGetError() != AL_NO_ERROR ) {
+            break;
+        }
+    }
+
+    if( i < MIN_CHANNELS ) {
+        Com_EPrintf( "Required at least %d sources, but got %d.\n", MIN_CHANNELS, i );
+        goto fail;
+    }
+
+    s_numchannels = i;
 
     Com_Printf( "OpenAL initialized.\n" );
     return qtrue;
+
+fail:
+    QAL_Shutdown();
+    return qfalse;
 }
 
 void AL_Shutdown( void ) {
     Com_Printf( "Shutting down OpenAL.\n" );
 
-    if( s_srcnums[0] ) {
+    if( s_numchannels ) {
         // delete source names
-        qalDeleteSources( MAX_CHANNELS, s_srcnums );
+        qalDeleteSources( s_numchannels, s_srcnums );
         memset( s_srcnums, 0, sizeof( s_srcnums ) );
+        s_numchannels = 0;
     }
 
     QAL_Shutdown();
@@ -76,12 +98,17 @@ sfxcache_t *AL_UploadSfx( sfx_t *s ) {
     ALuint name;
 
     if( !size ) {
+        s->error = Q_ERR_TOO_FEW;
         return NULL;
     }
 
+    qalGetError();
     qalGenBuffers( 1, &name );
     qalBufferData( name, format, s_info.data, size, s_info.rate ); 
-    AL_ShowError( __func__ );
+    if( qalGetError() != AL_NO_ERROR ) {
+        s->error = Q_ERR_LIBRARY_ERROR;
+        return NULL;
+    }
 
     // allocate placeholder sfxcache
     sc = s->cache = S_Malloc( sizeof( *sc ) );
@@ -120,7 +147,7 @@ static void AL_Spatialize( channel_t *ch ) {
         CL_GetEntitySoundOrigin( ch->entnum, origin );
     }
 
-    qalSource3f( ch->srcnum, AL_POSITION, OAL_POS3f( origin ) );
+    qalSource3f( ch->srcnum, AL_POSITION, AL_UnpackVector( origin ) );
 }
 
 void AL_StopChannel( channel_t *ch ) {
@@ -132,7 +159,6 @@ void AL_StopChannel( channel_t *ch ) {
     // stop it
     qalSourceStop( ch->srcnum );
     qalSourcei( ch->srcnum, AL_BUFFER, AL_NONE );
-    AL_ShowError( __func__ );
     memset (ch, 0, sizeof(*ch));
 }
 
@@ -145,6 +171,7 @@ void AL_PlayChannel( channel_t *ch ) {
 #endif
 
     ch->srcnum = s_srcnums[ch - channels];
+    qalGetError();
     qalSourcei( ch->srcnum, AL_BUFFER, sc->bufnum );
     //qalSourcei( ch->srcnum, AL_LOOPING, sc->loopstart == -1 ? AL_FALSE : AL_TRUE );
     qalSourcei( ch->srcnum, AL_LOOPING, ch->autosound ? AL_TRUE : AL_FALSE );
@@ -157,7 +184,9 @@ void AL_PlayChannel( channel_t *ch ) {
 
     // play it
     qalSourcePlay( ch->srcnum );
-    AL_ShowError( __func__ );
+    if( qalGetError() != AL_NO_ERROR ) {
+        AL_StopChannel( ch );
+    }
 }
 
 static void AL_IssuePlaysounds( void ) {
@@ -179,7 +208,7 @@ void AL_StopAllChannels( void ) {
     channel_t   *ch;
 
     ch = channels;
-    for( i = 0; i < MAX_CHANNELS; i++, ch++ ) {
+    for( i = 0; i < s_numchannels; i++, ch++ ) {
         if (!ch->sfx)
             continue;
         AL_StopChannel( ch );
@@ -191,7 +220,7 @@ static channel_t *AL_FindLoopingSound( int entnum, sfx_t *sfx ) {
     channel_t   *ch;
 
     ch = channels;
-    for( i = 0; i < MAX_CHANNELS; i++, ch++ ) {
+    for( i = 0; i < s_numchannels; i++, ch++ ) {
         if( !ch->sfx )
             continue;
         if( !ch->autosound )
@@ -202,6 +231,7 @@ static channel_t *AL_FindLoopingSound( int entnum, sfx_t *sfx ) {
             continue;
         return ch;
     }
+
     return NULL;
 }
 
@@ -269,20 +299,17 @@ void AL_Update( void ) {
 
     paintedtime = cl.time;
 
-    qalListener3f( AL_POSITION, OAL_POS3f( listener_origin ) );
-    orientation[0] = -listener_forward[1];
-    orientation[1] = listener_forward[2];
-    orientation[2] = -listener_forward[0];
-    orientation[3] = -listener_up[1];
-    orientation[4] = listener_up[2];
-    orientation[5] = -listener_up[0];
+    // set listener parameters
+    qalListener3f( AL_POSITION, AL_UnpackVector( listener_origin ) );
+    AL_CopyVector( listener_forward, orientation );
+    AL_CopyVector( listener_up, orientation + 3 );
     qalListenerfv( AL_ORIENTATION, orientation );
     qalListenerf( AL_GAIN, s_volume->value );
     qalDistanceModel( AL_LINEAR_DISTANCE_CLAMPED );
 
     // update spatialization for dynamic sounds 
     ch = channels;
-    for( i = 0; i < MAX_CHANNELS; i++, ch++ ) {
+    for( i = 0; i < s_numchannels; i++, ch++ ) {
         if( !ch->sfx )
             continue;
 
@@ -295,9 +322,9 @@ void AL_Update( void ) {
         } else {
             ALenum state;
 
+            qalGetError();
             qalGetSourcei( ch->srcnum, AL_SOURCE_STATE, &state );
-            AL_ShowError( __func__ );
-            if( state == AL_STOPPED ) {
+            if( qalGetError() != AL_NO_ERROR || state == AL_STOPPED ) {
                 AL_StopChannel( ch );
                 continue;
             }

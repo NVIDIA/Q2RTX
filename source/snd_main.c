@@ -29,6 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 int         s_registration_sequence;
 
 channel_t   channels[MAX_CHANNELS];
+int         s_numchannels;
 
 sndstarted_t s_started;
 
@@ -483,7 +484,7 @@ channel_t *S_PickChannel( int entnum, int entchannel ) {
 // Check for replacement sound, or find the best one to replace
     first_to_die = -1;
     life_left = 0x7fffffff;
-    for( ch_idx = 0; ch_idx < MAX_CHANNELS; ch_idx++ ) {
+    for( ch_idx = 0; ch_idx < s_numchannels; ch_idx++ ) {
         ch = &channels[ch_idx];
         // channel 0 never overrides unless out of channels
         if( ch->entnum == entnum && ch->entchannel == entchannel && entchannel != 0 ) {
@@ -987,7 +988,7 @@ void S_Update( void ) {
 
     // update spatialization for dynamic sounds 
     ch = channels;
-    for (i=0 ; i<MAX_CHANNELS; i++, ch++)
+    for (i=0 ; i<s_numchannels; i++, ch++)
     {
         if (!ch->sfx)
             continue;
@@ -1015,7 +1016,7 @@ void S_Update( void ) {
     {
         int total = 0;
         ch = channels;
-        for (i=0 ; i<MAX_CHANNELS; i++, ch++)
+        for (i=0 ; i<s_numchannels; i++, ch++)
             if (ch->sfx && (ch->leftvol || ch->rightvol) )
             {
                 Com_Printf ("%3i %3i %s\n", ch->leftvol, ch->rightvol, ch->sfx->name);

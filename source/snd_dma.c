@@ -76,6 +76,8 @@ qboolean DMA_Init( void ) {
 
     S_InitScaletable();
 
+    s_numchannels = MAX_CHANNELS;
+
     Com_Printf( "sound sampling rate: %i\n", dma.speed );
 
     return qtrue;
@@ -83,6 +85,7 @@ qboolean DMA_Init( void ) {
 
 void DMA_Shutdown( void ) {
     snddma.Shutdown();
+    s_numchannels = 0;
 }
 
 void DMA_Activate( void ) {

@@ -166,6 +166,7 @@ extern sndstarted_t s_started;
 
 #define MAX_CHANNELS            32
 extern  channel_t   channels[MAX_CHANNELS];
+extern  int         s_numchannels;
 
 extern  int     paintedtime;
 extern  playsound_t s_pendingplays;
