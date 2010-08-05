@@ -59,6 +59,7 @@ if [ -z "$CFLAGS" ]; then
     CFLAGS="-O2 -g -Wall -Wstrict-prototypes"
 fi
 have_endian_h="no"
+curl_cflags=""
 
 # build tools
 cross_prefix=""
@@ -324,6 +325,7 @@ if [ "$mingw" = "yes" ]; then
     if [ -z "$LDFLAGS" ]; then
         LDFLAGS="-static"
     fi
+    curl_cflags="-DCURL_STATICLIB"
 
     if [ "$wince" = "yes" ]; then
         vid_modelist="240x320"
@@ -650,6 +652,8 @@ fi
 
 if [ "$use_curl" = "yes" ]; then
     echo "USE_CURL=yes" >> $config_mk
+    echo "CURL_LDFLAGS=-lcurl" >> $config_mk
+    echo "CURL_CFLAGS=$curl_cflags" >> $config_mk
     echo "#define USE_CURL 1" >> $config_h
 fi
 

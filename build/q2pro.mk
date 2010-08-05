@@ -44,7 +44,8 @@ SRCFILES+=m_flash.c \
 
 ifdef USE_CURL
 SRCFILES+=cl_http.c
-LDFLAGS+=-lcurl
+CFLAGS+=$(CURL_CFLAGS)
+LDFLAGS+=$(CURL_LDFLAGS)
 endif
 	
 SRCFILES+=snd_main.c snd_mem.c 
