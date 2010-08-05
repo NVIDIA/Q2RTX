@@ -26,6 +26,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #if USE_ZLIB
 #include <zlib.h>
 #endif
+#ifdef _WIN32
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#endif
 
 /*
 =============================================================================
@@ -575,6 +580,29 @@ void FS_FCloseFile( qhandle_t f ) {
     memset( file, 0, sizeof( *file ) );
 }
 
+static inline FILE *fopen_hack( const char *path, const char *mode ) {
+#ifndef _GNU_SOURCE
+    if( !strcmp( mode, "wxb" ) ) {
+#ifdef _WIN32
+         int fd = _open( path, _O_WRONLY | _O_CREAT | _O_EXCL | _O_BINARY,
+             _S_IREAD | _S_IWRITE );
+         if( fd == -1 ) {
+             return NULL;
+         }
+         return _fdopen( fd, "wb" );
+#else
+         int fd = open( path, O_WRONLY | O_CREAT | O_EXCL );
+         if( fd == -1 ) {
+             return NULL;
+         }
+         return fdopen( fd, "wb" );
+#endif
+    }
+#endif // _GNU_SOURCE
+
+    return fopen( path, mode );
+}
+
 static ssize_t open_file_write( file_t *file, const char *name ) {
     char fullpath[MAX_OSPATH];
     FILE *fp;
@@ -612,11 +640,7 @@ static ssize_t open_file_write( file_t *file, const char *name ) {
         break;
     case FS_MODE_WRITE:
         if( file->mode & FS_FLAG_EXCL ) {
-#ifdef _GNU_SOURCE
             modeStr = "wxb";
-#else
-            return Q_ERR_INVAL; // TODO
-#endif
         } else {
             modeStr = "wb";
         }
@@ -636,7 +660,7 @@ static ssize_t open_file_write( file_t *file, const char *name ) {
         return ret;
     }
 
-    fp = fopen( fullpath, modeStr );
+    fp = fopen_hack( fullpath, modeStr );
     if( !fp ) {
         return Q_ERR(errno);
     }
