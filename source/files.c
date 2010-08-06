@@ -591,7 +591,8 @@ static inline FILE *fopen_hack( const char *path, const char *mode ) {
          }
          return _fdopen( fd, "wb" );
 #else
-         int fd = open( path, O_WRONLY | O_CREAT | O_EXCL );
+         int fd = open( path, O_WRONLY | O_CREAT | O_EXCL,
+             S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH );
          if( fd == -1 ) {
              return NULL;
          }
