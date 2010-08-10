@@ -129,7 +129,7 @@ typedef struct {
     packfile_t  **file_hash;
     unsigned    hash_size;
     char        *names;
-    char        filename[1];
+    char        *filename;
 } pack_t;
 
 typedef struct searchpath_s {
@@ -1567,21 +1567,21 @@ static pack_t *pack_alloc( FILE *fp, filetype_t type, const char *name,
 
     hash_size = Q_CeilPowerOfTwo( num_files / 3 );
 
-    len = strlen( name );
-    len = ( len + 3 ) & ~3;
-    pack = FS_Malloc( sizeof( pack_t ) + len +
+    len = strlen( name ) + 1;
+    pack = FS_Malloc( sizeof( pack_t ) +
         num_files * sizeof( packfile_t ) +
         hash_size * sizeof( packfile_t * ) +
-        names_len );
-    strcpy( pack->filename, name );
+        len + names_len );
     pack->type = type;
     pack->refcount = 0;
     pack->fp = fp;
     pack->num_files = num_files;
     pack->hash_size = hash_size;
-    pack->files = ( packfile_t * )( ( byte * )pack + sizeof( pack_t ) + len );
+    pack->files = ( packfile_t * )( pack + 1 );
     pack->file_hash = ( packfile_t ** )( pack->files + num_files );
-    pack->names = ( char * )( pack->file_hash + hash_size );
+    pack->filename = ( char * )( pack->file_hash + hash_size );
+    pack->names = pack->filename + len;
+    memcpy( pack->filename, name, len );
     memset( pack->file_hash, 0, hash_size * sizeof( packfile_t * ) );
 
     return pack;
