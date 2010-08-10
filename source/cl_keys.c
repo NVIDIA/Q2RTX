@@ -25,24 +25,21 @@ key up events are sent even if in console mode
 
 */
 
-#define MAXCMDLINE 256
-
 static int  anykeydown;
 
 static int      key_waiting;
 static char     *keybindings[256];
 
-// if qtrue, can't be rebound while in console
+// if true, can't be rebound while in console
 static qboolean consolekeys[256];
 
-// if qtrue, can't be rebound while in menu
+// if true, can't be rebound while in menu
 static qboolean menubound[256];
 
-#ifndef USE_CHAR_EVENTS
+#if !USE_CHAR_EVENTS
 // key to map to if shift held down in console
-// used unless char events are provided by OS
 static int      keyshift[256];
-#endif /* !USE_CHAR_EVENTS */
+#endif
 
 static int      key_repeats[256];   // if > 1, it is autorepeating
 static qboolean keydown[256];
@@ -587,8 +584,7 @@ void Key_Init( void ) {
     consolekeys['`'] = qtrue;
     consolekeys['~'] = qtrue;
 
-#ifndef USE_CHAR_EVENTS
-
+#if !USE_CHAR_EVENTS
     for( i = 0; i < 256; i++ )
         keyshift[i] = i;
     for( i = 'a'; i <= 'z'; i++ )
@@ -614,8 +610,7 @@ void Key_Init( void ) {
     keyshift[']'] = '}';
     keyshift['`'] = '~';
     keyshift['\\'] = '|';
-    
-#endif /* !USE_CHAR_EVENTS */
+#endif
 
     menubound[K_ESCAPE] = qtrue;
     for( i = 0; i < 12; i++ )
@@ -782,7 +777,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
                     kb + 1, key, time );
                 Cbuf_InsertText( &cmd_buffer, cmd );
             }
-#ifndef USE_CHAR_EVENTS
+#if !USE_CHAR_EVENTS
             if( keyshift[key] != key ) {
                 kb = keybindings[keyshift[key]];
                 if( kb && kb[0] == '+' ) {
@@ -791,7 +786,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
                     Cbuf_InsertText( &cmd_buffer, cmd );
                 }
             }
-#endif // USE_CHAR_EVENTS
+#endif
             return;
         }
 
@@ -799,11 +794,11 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
             return;
         }
 
-#ifndef USE_CHAR_EVENTS
+#if !USE_CHAR_EVENTS
         if( keydown[K_SHIFT] && keyshift[key] != key && keybindings[keyshift[key]] ) {
             key = keyshift[key];
         }
-#endif // USE_CHAR_EVENTS
+#endif
 
         kb = keybindings[key];
         if( kb ) {
@@ -834,7 +829,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
         Key_Message( key );
     }
 
-#ifndef USE_CHAR_EVENTS
+#if !USE_CHAR_EVENTS
 
     if( keydown[K_CTRL] || keydown[K_ALT] ) {
         return;
@@ -913,7 +908,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
 
 }
 
-#ifdef USE_CHAR_EVENTS
+#if USE_CHAR_EVENTS
 
 /*
 ===================
@@ -938,7 +933,7 @@ void Key_CharEvent( int key ) {
     }
 }
 
-#endif // USE_CHAR_EVENTS
+#endif
 
 /*
 ===================
