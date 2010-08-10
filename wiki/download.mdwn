@@ -6,46 +6,61 @@ Current stable version of Q2PRO client for Win32 is **r364**
 This version is supported by r1ch.net anticheat.
 Thanks, R1CH, for building this version!
 
-Current stable version of Q2PRO server is **r396**.
-GNU/Linux and Win32 builds are found in the [stable/][2] directory,
-along with source snapshots. If you are running older Q2PRO server
-version, you are highly recommended to upgrade.
+Current stable version of single-user Q2PRO server for GNU/Linux is **r496**.
+Latest stable version of Q2PRO server for Win32 is **r396**.
+These builds are found in the [stable/][2] directory, along with
+source snapshots.
 
 [1]: http://antiche.at/files/q2pro-client_r364_win32_x86_anticheat.zip
 [2]: /q2pro/download/stable/
 
-Users of Debian GNU/Linux and compatible distributions can
-conveniently install prebuilt Q2PRO client and server packages
-from the [[APT repository|apt]].
+Linux packages
+---------------
+
+In addition to the manual installation method above, it is also possible to
+install Q2PRO pre-packaged for your Linux distribution. Advantages of this
+approach are automatic updates, system-wide installation that makes Q2PRO
+runnable by multiple users, and increased security due to the separation of
+static, writable and executable content and access rights.
+
+Users of Debian GNU/Linux can conveniently install Q2PRO client and server
+packages from skuller.net APT [[repository|apt]]. Ubuntu users can install
+Q2PRO from a [PPA][3] at launchpad.net.
+
+[3]: https://launchpad.net/~skuller/+archive/q2pro
 
 Unstable builds
 ---------------
 
-Latest GNU/Linux server builds and Win32 client and server
-builds from SVN trunk are available in the [unstable/][3] directory,
-along with source snapshots. You might also find development
-[timeline page][4] useful for tracking latest changes.
+Latest GNU/Linux single-user server builds and Win32 client and server
+builds from SVN trunk are available in the [unstable/][4] directory,
+along with source snapshots. You might find development
+[timeline page][5] useful for tracking latest changes. There is also
+a periodically updated summary of important [changes][6] available.
 
-[3]: /q2pro/download/unstable/
-[4]: /q2pro/cvstrac/timeline
+[4]: /q2pro/download/unstable/
+[5]: /q2pro/cvstrac/timeline
+[6]: /q2pro/cvstrac/fileview?f=trunk/CHANGES
 
 SVN access
 ----------
 
 To get the latest Q2PRO source code, you need to install Subversion
 client. Use the following command to checkout a fresh working copy into
-the `q2pro` directory:
+the `q2pro` directory and prepare it for building:
 
-    svn co svn://skuller.net/q2pro/trunk q2pro
+    $ svn co svn://skuller.net/q2pro/trunk q2pro
+    $ cd q2pro
+    $ svnversion > REVISION
 
-You can also [browse][5] Q2PRO source tree online.
+You can also [browse][7] Q2PRO source tree online.
 
-[5]: /q2pro/cvstrac/dir?d=trunk
+[7]: /q2pro/cvstrac/dir?d=trunk
 
 Archived builds
 ---------------
 
 Previous Q2PRO versions of historic interest are available
-in the [attic/][6] directory.
+in the [attic/][8] directory.
 
-[6]: /q2pro/download/attic/
+[8]: /q2pro/download/attic/

@@ -226,6 +226,9 @@ value aligns graph to the right side of the screen.
 Specifies vertical placement of the ping graph. Setting this to negative
 value aligns graph to the bottom side of the screen.
 
+- `set scr_lag_max 200` (integer)  
+Specifies ping graph scale by defining the maximum value displayed.
+
 Video
 ----------
 
@@ -257,14 +260,22 @@ OpenGL renderer
 ----------
 
 - `set gl_gamma_scale_pics 0` (boolean)  
-Apply gamma scaling not only to textures and skins, but to HUD pics too.
+Apply gamma scaling not only to textures and skins, but to HUD pictures too.
 
 - `set gl_noscrap 0` (boolean)  
-By default, OpenGL renderer combines small HUD pics into single large
-texture called scrap. This cvar disables this optimization.
+By default, OpenGL renderer combines small HUD pictures into the single
+texture called scrap. This usually speeds up rendering a bit, and allows
+pixel precise rendering of non power of two sized images. If you don't like
+this optimization for some reason, this cvar can be used to disable it.
 
 - `set gl_bilerp_chars 0` (boolean)  
 Enable bilinear interpolation of charset images.
+
+- `set gl_bilerp_pics 1` (integer)  
+Enable bilinear interpolation of HUD pictures:
+  - 0 - disabled for all pictures
+  - 1 - enabled for large pictures that don't fit into the scrap
+  - 2 - enabled for all pictures, including the scrap texture itself
 
 - `set gl_drawsky 1` (boolean)  
 When disabled, sky box is drawn in solid black color.
@@ -329,6 +340,10 @@ by the window system are used.
 On Linux, specifies device file to use for direct mouse input. Normally, it should
 be one of `/dev/input/eventX` files (reading permissions are required).
 
+- `set m_autosens 0` (boolean)  
+When enabled, mouse sensitivity is scaled depending on current player's FOV,
+assuming default value of 90.
+
 - `set lirc_enable 0` (boolean)  
 On Linux, enables input from the LIRC daemon, which allows menu navigation and
 command execution from your infrared remote control device.
@@ -372,8 +387,8 @@ Macros
 
 Macros behave like automated console variables. When macro expansion is
 performed, macros are searched first, then console variables.
-Each of the following examples are valid: `$loc_here`, `${loc_here}`
-and `${$loc_here}`.
+Each of the following examples are valid: `$loc_here`, `$loc_here$`,
+`${loc_here}` and `${$loc_here}`.
 
 - `$cl_armor`
 - `$cl_ammo`
@@ -384,8 +399,11 @@ and `${$loc_here}`.
 - `$loc_there` Name of the location you are looking at.
 - `$loc_here` Name of the location you are standing at.
 - `$cl_ping` Average RTT to the server and back.
-- `$cl_fps` Input polling rate (that is, main loop frame rate).
+- `$cl_fps` Input polling rate (equals the main loop frame rate).
+- `$cl_mps` Movement commands generation rate.
+- `$cl_pps` Movement packets transmission rate.
 - `$cl_ups` Player velocity in units/sec.
+- `$r_fps` Rendering frame rate.
 - `$com_time` Current time, formatted according to `com_time_format`.
 - `$com_date` Current date, formatted according to `com_date_format`.
 - `$com_uptime` Engine uptime in format `[DD+][HH:]MM.SS`.
@@ -454,4 +472,14 @@ Toggle passive connection mode. When enabled, client awaits for the first
 sequence once this packet is received. This command is useful for connecting
 to servers behind NATs or firewalls. See `pick` [[server#index3h1]] command for more details.
 
+- `trigger [<command> <match>]`  
+Adds new message trigger. When a message is received from server, a list of message triggers
+is examined. For each trigger, _match_ is macro expanded and wildcard compared with the message,
+ignoring any unprintable characters. If the message matches, _command_ is stuffed into
+the command buffer and executed. When called without arguments, prints a list
+of the registered triggers.
+
+- `untrigger [all] | [<command> <match>]`  
+Removes the specified trigger or all triggers. When called without arguments, prints a list
+of the registered triggers.
 
