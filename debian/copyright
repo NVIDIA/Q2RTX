@@ -1,19 +1,19 @@
 This package was debianized by:
 
-    Andrey Nazarov <skuller@skuller.ath.cx> on Mon, 11 Jun 2007 21:27:56 +0400
+    Andrey Nazarov <skuller@skuller.net> on Mon, 11 Jun 2007 21:27:56 +0400
 
 It was downloaded from:
 
-    http://skuller.ath.cx/q2pro/
+    http://skuller.net/q2pro/
 
 Upstream Author:
 
-    Andrey Nazarov <skuller@skuller.ath.cx>
+    Andrey Nazarov <skuller@skuller.net>
 
 Copyright:
 
     Copyright (C) 1997-2001 Id Software, Inc.
-    Copyright (C) 2003-2009 Andrey Nazarov
+    Copyright (C) 2003-2010 Andrey Nazarov
 
 License:
 
@@ -36,7 +36,7 @@ Public License version 2 can be found in `/usr/share/common-licenses/GPL-2'.
 
 The Debian packaging is:
 
-    Copyright (C) 2007-2009 Andrey Nazarov <skuller@skuller.ath.cx>
+    Copyright (C) 2007-2010 Andrey Nazarov <skuller@skuller.net>
 
 and is licensed under the GPL version 2, 
 see `/usr/share/common-licenses/GPL-2'.
