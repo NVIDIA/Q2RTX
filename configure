@@ -21,27 +21,27 @@
 # Q2PRO configuration script
 # -----------------------------
 
+die() {
+    echo "ERROR: $1"
+    exit 1
+}
+
 # build directories
 sources=`dirname $0`
-if [ "$sources" = "." ]; then
-    sources=`pwd`
-fi
-if [ ! -f $sources/source/common.c ] ; then
-    echo "$sources does not look like Q2PRO source tree!"
-    exit 1
-fi
+[ "$sources" != "." ] || sources=`pwd`
+[ -f $sources/source/common.c ] || die "this does not look like Q2PRO source tree"
 if [ ! -f $sources/REVISION ] ; then
     echo "REVISION does not exist. Did you check Q2PRO out of SVN repository?"
     echo "You can create it by running 'svnversion > REVISION' at the root of source tree."
-    exit 1
+    die "Unknown revision"
 fi
-version=`< $sources/REVISION`
+version=`cat $sources/REVISION`
 revision=`tr -d -c [:digit:] < $sources/REVISION`
+echo "$revision" | grep -q -E "^[[:digit:]]+$" || die "invalid revision"
 outdir=`pwd`
-tmpc="/tmp/q2pro-${RANDOM}.c"
-tmpo="/tmp/q2pro-${RANDOM}.o"
 config_mk="config.mk"
 config_h="config.h"
+
 
 # defaults
 help="no"
@@ -55,9 +55,7 @@ singleuser="no"
 asmflags=""
 mingw="no"
 wince="no"
-if [ -z "$CFLAGS" ]; then
-    CFLAGS="-O2 -g -Wall -Wstrict-prototypes"
-fi
+[ ! -z "$CFLAGS" ] || CFLAGS="-O2 -g -Wall -Wstrict-prototypes"
 have_endian_h="no"
 curl_cflags=""
 
@@ -208,7 +206,7 @@ for opt do
     ;;
     --homedir=*) homedir=`echo $opt | cut -d '=' -f 2`
     ;;
-    *) echo "Unknown option: $opt (try --help)" && exit 1
+    *) die "Unknown option: $opt (try --help)"
     ;;
     esac
 done
@@ -258,16 +256,11 @@ exit 1
 fi
 
 # detect host CPU
-if [ -z "$cpu" ] ; then
-    cpu=`uname -m`
-fi
-
+[ ! -z "$cpu" ] || cpu=`uname -m`
 case $cpu in
 i?86)
 cpu="i386"
-if [ "$use_asm" != "no" ] ; then
-    use_asm="yes"
-fi
+[ "$use_asm" = "no" ] || use_asm="yes"
 ;;
 amd64)
 cpu="x86_64"
@@ -299,9 +292,7 @@ make="gmake"
 Linux)
 use_dl="yes"
 have_endian_h="yes"
-if [ "$use_icmp" != "no" ] ; then
-    use_icmp="yes"
-fi
+[ "$use_icmp" = "no" ] || use_icmp="yes"
 ;;
 esac
 
@@ -322,9 +313,7 @@ if [ "$mingw" = "yes" ]; then
     homedir=""
     asmflags="-DUNDERSCORES"
     cfgfile="q2config.cfg"
-    if [ -z "$LDFLAGS" ]; then
-        LDFLAGS="-static"
-    fi
+    [ ! -z "$LDFLAGS" ] || LDFLAGS="-static"
     curl_cflags="-DCURL_STATICLIB"
 
     if [ "$wince" = "yes" ]; then
@@ -335,9 +324,7 @@ if [ "$mingw" = "yes" ]; then
         use_winsvc="no"
     else
         use_winsvc="yes"
-        if [ "$use_icmp" != "no" ] ; then
-            use_icmp="yes"
-        fi
+        [ "$use_icmp" = "no" ] || use_icmp="yes"
     fi
     have_endian_h="no"
 else
@@ -353,22 +340,23 @@ else
         appdir=""
         pixdir=""
         homedir=""
-    else
-        if [ ! -z "$prefix" ]; then
-            datadir="$prefix/$datadir"
-            libdir="$prefix/$libdir"
-            bindir="$prefix/$bindir"
-            mandir="$prefix/$mandir"
-            appdir="$prefix/$appdir"
-            pixdir="$prefix/$pixdir"
-        fi
+    elif [ ! -z "$prefix" ]; then
+        datadir="$prefix/$datadir"
+        libdir="$prefix/$libdir"
+        bindir="$prefix/$bindir"
+        mandir="$prefix/$mandir"
+        appdir="$prefix/$appdir"
+        pixdir="$prefix/$pixdir"
     fi
 
 # check if -fvisibility is supported
+    tmpc=`mktemp /tmp/q2pro-XXXXXXXXXX.c`
+    tmpo=`mktemp /tmp/q2pro-XXXXXXXXXX.o`
+    echo "$tmpc" | grep -q "^/tmp/q2pro-" || die "mktemp failed"
+    echo "$tmpo" | grep -q "^/tmp/q2pro-" || die "mktemp failed"
     echo "int main(){return 0;}" > $tmpc
-    if $cc -o $tmpo -fvisibility\=hidden $tmpc 2>/dev/null ; then
+    $cc -o $tmpo -fvisibility\=hidden $tmpc 2>/dev/null && \
         CFLAGS="-fvisibility=hidden $CFLAGS"
-    fi
     rm -f $tmpc $tmpo
 
     LDFLAGS="-Wl,--no-undefined $LDFLAGS"
@@ -389,9 +377,7 @@ fi
 gamelib="game$cpu$libsuffix"
 
 vpath="\$(SRCDIR)/source"
-if [ "$use_asm" = "yes" ]; then
-    vpath="$vpath \$(SRCDIR)/asm"
-fi
+[ "$use_asm" = "yes" ] && vpath="$vpath \$(SRCDIR)/asm"
 
 if [ ! -z "$cross_prefix" ]; then
     cc="$cross_prefix-$cc"
@@ -424,9 +410,7 @@ if [ "$use_client" = "yes" ]; then
     echo "Direct sound       $use_dsound"
     echo "DMA sound engine   $use_snddma"
     echo "OAL sound engine   $use_openal"
-    if [ "$mingw" = "no" ]; then
-        echo "LIRC support       $use_lirc"
-    fi
+    [ "$mingw" = "no" ] && echo "LIRC support       $use_lirc"
     echo "CURL support       $use_curl"
     if [ "$use_ref" = "gl" ]; then
         echo "TGA support        $use_tga"
@@ -436,11 +420,10 @@ if [ "$use_client" = "yes" ]; then
     fi
     echo "UI support         $use_ui"
 fi
-test "$cpu" = "i386" && echo "i386 assembly      $use_asm"
+[ "$cpu" = "i386" ] && echo "i386 assembly      $use_asm"
 
 CFLAGS="-I\$(OUTDIR) -MF \$*.d -MMD -pipe -ffloat-store $CFLAGS -Wno-strict-aliasing"
 #LDFLAGS="$LDFLAGS"
-
 
 # determine what needs to be built
 if [ "$use_client" = "yes" ]; then
@@ -472,13 +455,24 @@ if [ "$use_baseq2" = "yes" ]; then
     libraries="$libraries $gamelib"
 fi
 
+if [ "$use_png" = "yes" ]; then
+    [ -x `which $pngconfig` ] || die "$pngconfig not found"
+    png_ldflags=`$pngconfig --libs`
+    png_cflags=`$pngconfig --cflags`
+fi
+
+if [ "$use_sdl" = "yes" ]; then
+    [ -x `which $sdlconfig` ] || die "$sdlconfig not found"
+    sdl_ldflags=`$sdlconfig --libs`
+    sdl_cflags=`$sdlconfig --cflags`
+fi
 
 # build configuration files
 echo "# Generated by configure - do not modify" > $config_mk
 echo "// Generated by configure - do not modify" > $config_h
 
-test "$mingw" = "yes" && echo "MINGW=$mingw" >> $config_mk
-test "$wince" = "yes" && echo "WINCE=$wince" >> $config_mk
+[ "$mingw" = "yes" ] && echo "MINGW=$mingw" >> $config_mk
+[ "$wince" = "yes" ] && echo "WINCE=$wince" >> $config_mk
 echo "CC=$cc" >> $config_mk
 echo "WINDRES=$windres" >> $config_mk
 echo "STRIP=$strip" >> $config_mk
@@ -491,8 +485,8 @@ echo "#define LIBSUFFIX \"$libsuffix\"" >> $config_h
 echo "VPATH=$vpath" >> $config_mk
 echo "CFLAGS=$CFLAGS" >> $config_mk
 echo "LDFLAGS=$LDFLAGS" >> $config_mk
-test "$mingw" = "yes" && echo "RESFLAGS=-I\$(OUTDIR) -I\$(SRCDIR)/source" >> $config_mk
-test "$use_asm" = "yes" && echo "ASMFLAGS=$asmflags" >> $config_mk
+[ "$mingw" = "yes" ] && echo "RESFLAGS=-I\$(OUTDIR) -I\$(SRCDIR)/source" >> $config_mk
+[ "$use_asm" = "yes" ] && echo "ASMFLAGS=$asmflags" >> $config_mk
 
 echo "TARGETS=$targets" >> $config_mk
 echo "BINARIES=$executables $libraries" >> $config_mk
@@ -553,18 +547,14 @@ echo "#define BUILDSTRING \"$targetos\"" >> $config_h
 echo "#define PATH_SEP_CHAR '$pathsep'" >> $config_h
 echo "#define PATH_SEP_STRING \"$pathsep\"" >> $config_h
 
-if [ "$use_dl" = "yes" ]; then
-    echo "USE_DL=yes" >> $config_mk
-fi
+[ "$use_dl" = "yes" ] && echo "USE_DL=yes" >> $config_mk
 
 if [ "$use_zlib" = "yes" ]; then
     echo "USE_ZLIB=yes" >> $config_mk
     echo "ZLIB_LDFLAGS=-lz" >> $config_mk
     echo "ZLIB_CFLAGS=" >> $config_mk
     echo "#define USE_ZLIB 1" >> $config_h
-    if [ "$wince" = "yes" ]; then
-        echo "#define NO_ERRNO_H" >> $config_h
-    fi
+    [ "$wince" = "yes" ] && echo "#define NO_ERRNO_H" >> $config_h
 else
     echo "#define USE_ZLIB 0" >> $config_h
 fi
@@ -584,14 +574,12 @@ if [ "$use_ref" != "no" ]; then
     echo "#define VID_GEOMETRY \"$vid_geometry\"" >> $config_h
 fi
 
-if [ "$use_tga" = "yes" ]; then
-    echo "#define USE_TGA 1" >> $config_h
-fi
+[ "$use_tga" = "yes" ] && echo "#define USE_TGA 1" >> $config_h
 
 if [ "$use_png" = "yes" ]; then
     echo "USE_PNG=yes" >> $config_mk
-    echo "PNG_LDFLAGS=$($pngconfig --libs)" >> $config_mk
-    echo "PNG_CFLAGS=$($pngconfig --cflags)" >> $config_mk
+    echo "PNG_LDFLAGS=$png_ldflags" >> $config_mk
+    echo "PNG_CFLAGS=$png_cflags" >> $config_mk
     echo "#define USE_PNG 1" >> $config_h
 fi
 
@@ -602,9 +590,7 @@ if [ "$use_jpg" = "yes" ]; then
     echo "#define USE_JPG 1" >> $config_h
 fi
 
-if [ "$use_md3" = "yes" ]; then
-    echo "#define USE_MD3 1" >> $config_h
-fi
+[ "$use_md3" = "yes" ] && echo "#define USE_MD3 1" >> $config_h
 
 if [ "$use_ui" = "yes" ]; then
     echo "USE_UI=yes" >> $config_mk
@@ -613,8 +599,8 @@ fi
 
 if [ "$use_sdl" = "yes" ]; then
     echo "USE_SDL=yes" >> $config_mk
-    echo "SDL_LDFLAGS=$($sdlconfig --libs)" >> $config_mk
-    echo "SDL_CFLAGS=$($sdlconfig --cflags)" >> $config_mk
+    echo "SDL_LDFLAGS=$sdl_ldflags" >> $config_mk
+    echo "SDL_CFLAGS=$sdl_cflags" >> $config_mk
     echo "#define USE_SDL 1" >> $config_h
     if [ "$use_x11" = "yes" ]; then
         echo "USE_X11=yes" >> $config_mk
@@ -677,24 +663,12 @@ if [ "$use_mvd_client" = "yes" ]; then
     echo "#define USE_MVD_CLIENT 1" >> $config_h
 fi
 
-if [ "$use_syscon" = "yes" ]; then
-    echo "#define USE_SYSCON 1" >> $config_h
-fi
-
-if [ "$use_winsvc" = "yes" ]; then
-    echo "#define USE_WINSVC !USE_CLIENT" >> $config_h
-fi
-
-if [ "$use_icmp" = "yes" ]; then
-    echo "#define USE_ICMP 1" >> $config_h
-fi
-
+[ "$use_syscon" = "yes" ] && echo "#define USE_SYSCON 1" >> $config_h
+[ "$use_winsvc" = "yes" ] && echo "#define USE_WINSVC !USE_CLIENT" >> $config_h
+[ "$use_icmp" = "yes" ] && echo "#define USE_ICMP 1" >> $config_h
 echo "#define USE_MAPCHECKSUM 1" >> $config_h
 echo "#define USE_AUTOREPLY 1" >> $config_h
-
-if [ "$have_endian_h" = "yes" ]; then
-    echo "#define HAVE_ENDIAN_H 1" >> $config_h
-fi
+[ "$have_endian_h" = "yes" ] && echo "#define HAVE_ENDIAN_H 1" >> $config_h
 
 for t in $targets ; do
     mkdir -p .$t ;
