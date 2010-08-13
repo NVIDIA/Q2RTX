@@ -429,7 +429,7 @@ CL_Connect_f
 ================
 */
 static void CL_Connect_f( void ) {
-    char    *server;
+    char    *server, *p;
     netadr_t    address;
     int protocol;
     int argc = Cmd_Argc();
@@ -455,6 +455,15 @@ usage:
     }
 
     server = Cmd_Argv( 1 );
+
+    // support quake2://<address>[/] scheme
+    if( !Q_strncasecmp( server, "quake2://", 9 ) ) {
+        server += 9;
+        if( ( p = strchr( server, '/' ) ) != NULL ) {
+            *p = 0;
+        }
+    }
+
     if ( !NET_StringToAdr( server, &address, PORT_SERVER ) ) {
         Com_Printf( "Bad server address\n" );
         return;
