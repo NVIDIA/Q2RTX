@@ -1,3 +1,36 @@
+Changes since r496
+==================
+
+Features:
+---------
+
+* Added support for quake2://<address>[/] scheme.
+
+* Added ‘gl_bilerp_pics’ cvar for controlling bilinear filtering of HUD
+  pictures.
+
+* Small HUD pictures stored in the scrap are no longer filtered by default,
+  they should look better when ‘scr_scale’ is used.
+
+* Added ‘m_autosens’ cvar.
+
+* Added support for crosshair coloring, added ‘ch_red/ch_green/ch_blue’
+  cvars.
+
+* Re-introduced support for message triggers, added ‘trigger’ and ‘untrigger’
+  commands.
+
+* When macro expansion is performed, ‘$var$’ syntax in allowed now 
+  for compatibility with other clients.
+
+Bugfixes:
+---------
+
+* Fixed loading of JPEG files with non-RGB colorspaces.
+
+* Missing or invalid sounds are now silently ignored to avoid console spam.
+
+
 Changes since r396
 ==================
 
