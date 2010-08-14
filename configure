@@ -350,12 +350,12 @@ else
     fi
 
 # check if -fvisibility is supported
-    tmpc=`mktemp /tmp/q2pro-XXXXXXXXXX.c`
-    tmpo=`mktemp /tmp/q2pro-XXXXXXXXXX.o`
+    tmpc=`mktemp /tmp/q2pro-XXXXXXXXXX`
+    tmpo=`mktemp /tmp/q2pro-XXXXXXXXXX`
     echo "$tmpc" | grep -q "^/tmp/q2pro-" || die "mktemp failed"
     echo "$tmpo" | grep -q "^/tmp/q2pro-" || die "mktemp failed"
     echo "int main(){return 0;}" > $tmpc
-    $cc -o $tmpo -fvisibility\=hidden $tmpc 2>/dev/null && \
+    $cc -o $tmpo -x c -fvisibility\=hidden $tmpc 2>/dev/null && \
         CFLAGS="-fvisibility=hidden $CFLAGS"
     rm -f $tmpc $tmpo
 
