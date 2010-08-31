@@ -1074,7 +1074,7 @@ static void MVD_ParseServerData( mvd_t *mvd, int extrabits ) {
     // load the world model (we are only interesed in visibility info)
     Com_Printf( "[%s] -=- Loading %s...\n", mvd->name, string );
     ret = CM_LoadMap( &mvd->cm, string );
-    if( ret < 0 ) {
+    if( ret ) {
         Com_EPrintf( "[%s] =!= Couldn't load %s: %s\n", mvd->name, string, Q_ErrorString( ret ) );
         // continue with null visibility
     }

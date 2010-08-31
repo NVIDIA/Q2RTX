@@ -338,7 +338,7 @@ void SV_Map (const char *levelstring, qboolean restart) {
 
     Q_concat( expanded, sizeof( expanded ), "maps/", level, ".bsp", NULL );
     ret = CM_LoadMap( &cm, expanded );
-    if( ret < 0 ) {
+    if( ret ) {
         Com_Printf( "Couldn't load %s: %s\n", expanded, Q_ErrorString( ret ) );
         return;
     }

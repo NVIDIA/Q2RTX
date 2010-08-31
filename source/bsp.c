@@ -701,21 +701,24 @@ LOAD( EntityString ) {
     if( *path ) {
         char buffer[MAX_QPATH], *str;
         char base[MAX_QPATH];
-        size_t len;
+        ssize_t len;
 
         str = COM_SkipPath( bsp->name );
         COM_StripExtension( str, base, sizeof( base ) );
         Q_concat( buffer, sizeof( buffer ), path, base, ".ent", NULL );
         len = FS_LoadFile( buffer, ( void ** )&str );
         if( str ) {
-            Com_DPrintf( "Loaded entity string from %s\n", buffer );
+            Com_Printf( "Loaded entity string from %s\n", buffer );
             bsp->entitystring = ALLOC( len + 1 );
             memcpy( bsp->entitystring, str, len + 1 );
             bsp->numentitychars = len;
             FS_FreeFile( str );
-            return qtrue;
+            return Q_ERR_SUCCESS;
         }
-        Com_DPrintf( "Couldn't load entity string from %s: %s\n", buffer, Q_ErrorString( len ) );
+        if( len != Q_ERR_NOENT ) {
+            Com_EPrintf( "Couldn't load entity string from %s: %s\n",
+                buffer, Q_ErrorString( len ) );
+        }
     }
 
     bsp->numentitychars = count;
