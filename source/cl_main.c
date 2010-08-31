@@ -1999,6 +1999,13 @@ void CL_RequestNextDownload ( void ) {
         precache_check = TEXTURE_CNT + 999;
     }
 
+#if USE_CURL
+    if( HTTP_DownloadsPending() ) {
+        //pending downloads (possibly textures), let's wait here.
+        return;
+    }
+#endif
+
     CL_PrepRefresh ();
 
     CL_LoadState( LOAD_SOUNDS );
