@@ -424,6 +424,7 @@ extern cvar_t       *sv_allow_map;
 #if !USE_CLIENT
 extern cvar_t       *sv_recycle;
 #endif
+extern cvar_t       *sv_enhanced_setplayer;
 
 extern cvar_t       *sv_status_limit;
 extern cvar_t       *sv_status_show;
@@ -561,7 +562,7 @@ void SV_CloseDownload( client_t *client );
 void SV_AddMatch_f( list_t *list );
 void SV_DelMatch_f( list_t *list );
 void SV_ListMatches_f( list_t *list );
-client_t *SV_EnhancedSetPlayer( char *s );
+client_t *SV_GetPlayer( const char *s, qboolean partial );
 
 //
 // sv_ents.c

@@ -787,7 +787,7 @@ static void SV_Lag_f( void ) {
 
     if( Cmd_Argc() > 1 ) {
         SV_BeginRedirect( RD_CLIENT );
-        cl = SV_EnhancedSetPlayer( Cmd_Argv( 1 ) );
+        cl = SV_GetPlayer( Cmd_Argv( 1 ), qtrue );
         Com_EndRedirect();
         if( !cl ) {
             return;

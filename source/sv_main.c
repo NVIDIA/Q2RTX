@@ -81,6 +81,7 @@ cvar_t  *sv_allow_map;
 #if !USE_CLIENT
 cvar_t  *sv_recycle;
 #endif
+cvar_t  *sv_enhanced_setplayer;
 
 cvar_t  *sv_iplimit;
 cvar_t  *sv_status_limit;
@@ -1889,6 +1890,8 @@ void SV_Init( void ) {
 #if !USE_CLIENT
     sv_recycle = Cvar_Get( "sv_recycle", "0", 0 );
 #endif
+
+    sv_enhanced_setplayer = Cvar_Get( "sv_enhanced_setplayer", "0", 0 );
 
     sv_iplimit = Cvar_Get( "sv_iplimit", "3", 0 );
 

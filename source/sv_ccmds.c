@@ -60,14 +60,14 @@ static void SV_SetMaster_f( void ) {
 
         s = Cmd_Argv( i );
         if( !NET_StringToAdr( s, &adr, PORT_MASTER ) ) {
-            Com_Printf( "Bad address: %s\n", s );
+            Com_Printf( "Bad master address: %s\n", s );
             continue;
         }
 
         s = NET_AdrToString( &adr );
         for( j = 0; j < slot; j++ ) {
             if( NET_IsEqualBaseAdr( &master_adr[j], &adr ) ) {
-                Com_Printf( "Ignoring duplicate at %s.\n", s );
+                Com_Printf( "Ignoring duplicate master at %s.\n", s );
                 break;
             }
         }
@@ -86,9 +86,13 @@ static void SV_SetMaster_f( void ) {
     }
 }
 
-client_t *SV_EnhancedSetPlayer( char *s ) {
+client_t *SV_GetPlayer( const char *s, qboolean partial ) {
     client_t    *other, *match;
     int         i, count;
+
+    if( !s[0] ) {
+        return NULL;
+    }
 
     // numeric values are just slot numbers
     if( COM_IsUint( s ) ) {
@@ -100,17 +104,31 @@ client_t *SV_EnhancedSetPlayer( char *s ) {
 
         other = &svs.udp_client_pool[i];
         if( other->state <= cs_zombie ) {
-            Com_Printf( "Client %d is not active.\n", i );
+            Com_Printf( "Client slot %d is not active.\n", i );
             return NULL;
         }
         return other;
     }
 
-    // check for a name match
+    // check for exact name match
+    FOR_EACH_CLIENT( other ) {
+        if( other->state <= cs_zombie ) {
+            continue;
+        }
+        if( !strcmp( other->name, s ) ) {
+            return other;
+        }
+    }
+
+    if( !partial ) {
+        Com_Printf( "Userid '%s' is not on the server.\n", s );
+        return NULL;
+    }
+
+    // check for partial, case insensitive name match
     match = NULL;
     count = 0;
-    for( i = 0; i < sv_maxclients->integer; i++ ) {
-        other = &svs.udp_client_pool[i];
+    FOR_EACH_CLIENT( other ) {
         if( other->state <= cs_zombie ) {
             continue;
         }
@@ -137,19 +155,17 @@ client_t *SV_EnhancedSetPlayer( char *s ) {
 }
 
 static void SV_Player_g( genctx_t *ctx ) {
-    int i;
-    client_t *c;
+    client_t *cl;
 
     if( !svs.initialized ) {
         return;
     }
     
-    for( i = 0; i < sv_maxclients->integer; i++ ) {
-        c = &svs.udp_client_pool[i];
-        if( !c->state || c->protocol == -1 ) {
+    FOR_EACH_CLIENT( cl ) {
+        if( cl->state <= cs_zombie ) {
             continue;
         }
-        if( !Prompt_AddMatch( ctx, c->name ) ) {
+        if( !Prompt_AddMatch( ctx, cl->name ) ) {
             break;
         }
     }
@@ -161,7 +177,6 @@ static void SV_SetPlayer_c( genctx_t *ctx, int argnum ) {
     }
 }
 
-
 /*
 ==================
 SV_SetPlayer
@@ -171,42 +186,15 @@ Sets sv_client and sv_player to the player with idnum Cmd_Argv(1)
 */
 static qboolean SV_SetPlayer( void ) {
     client_t    *cl;
-    int         idnum;
-    char        *s;
 
-    s = Cmd_Argv( 1 );
-    if( !s[0] ) {
+    cl = SV_GetPlayer( Cmd_Argv( 1 ), !!sv_enhanced_setplayer->integer );
+    if( !cl ) {
         return qfalse;
     }
 
-    // numeric values are just slot numbers
-    if( COM_IsUint( s ) ) {
-        idnum = atoi( s );
-        if( idnum < 0 || idnum >= sv_maxclients->integer ) {
-            Com_Printf( "Bad client slot number: %d\n", idnum );
-            return qfalse;
-        }
-
-        sv_client = &svs.udp_client_pool[idnum];
-        sv_player = sv_client->edict;
-        if( sv_client->state <= cs_zombie ) {
-            Com_Printf( "Client %d is not active.\n", idnum );
-            return qfalse;
-        }
-        return qtrue;
-    }
-
-    // check for a name match
-    FOR_EACH_CLIENT( cl ) {
-        if( !strcmp( cl->name, s ) ) {
-            sv_client = cl;
-            sv_player = sv_client->edict;
-            return qtrue;
-        }
-    }
-
-    Com_Printf( "Userid %s is not on the server.\n", s );
-    return qfalse;
+    sv_client = cl;
+    sv_player = sv_client->edict;
+    return qtrue;
 }
 
 //=========================================================
