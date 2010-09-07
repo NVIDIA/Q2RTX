@@ -727,9 +727,6 @@ void MVD_TrySwitchChannel( mvd_client_t *client, mvd_t *mvd ) {
         return; // nothing to do
     }
     if( client->begin_time ) {
-        if( client->begin_time > svs.realtime ) {
-            client->begin_time = svs.realtime;
-        }
         if( svs.realtime - client->begin_time < 2000 ) {
             SV_ClientPrintf( client->cl, PRINT_HIGH,
                 "[MVD] You may not switch channels too soon.\n" );
