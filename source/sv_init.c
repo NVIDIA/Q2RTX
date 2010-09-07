@@ -294,11 +294,6 @@ void SV_InitGame( qboolean ismvd ) {
 #endif
         SV_InitGameProgs();
 
-    // init rate limits
-    SV_RateInit( &svs.ratelimit_status, sv_status_limit->integer, 1000 );
-    SV_RateInit( &svs.ratelimit_badpass, 1, sv_badauth_time->value * 1000 );
-    SV_RateInit( &svs.ratelimit_badrcon, 1, sv_badauth_time->value * 1000 );
-
     // send heartbeat very soon
     svs.last_heartbeat = -(HEARTBEAT_SECONDS-5)*1000;
 

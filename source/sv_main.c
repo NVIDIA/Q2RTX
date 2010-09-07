@@ -87,7 +87,8 @@ cvar_t  *sv_iplimit;
 cvar_t  *sv_status_limit;
 cvar_t  *sv_status_show;
 cvar_t  *sv_uptime;
-cvar_t  *sv_badauth_time;
+cvar_t  *sv_auth_limit;
+cvar_t  *sv_rcon_limit;
 
 cvar_t  *g_features;
 
@@ -225,7 +226,7 @@ CONNECTIONLESS COMMANDS
 ==============================================================================
 */
 
-qboolean SV_RateLimited( ratelimit_t *r ) {
+static qboolean SV_RateLimited( ratelimit_t *r ) {
     if( !r->limit ) {
         return qfalse;
     }
@@ -242,13 +243,38 @@ qboolean SV_RateLimited( ratelimit_t *r ) {
     return qtrue;
 }
 
-void SV_RateInit( ratelimit_t *r, int limit, int period ) {
-    if( limit < 0 ) {
-        limit = 0;
+// <limit>[/<period>[sec|min|hour]]
+static void SV_RateInit( ratelimit_t *r, const char *s ) {
+    unsigned limit;
+    unsigned period, scale;
+    char *p;
+
+    limit = strtoul( s, &p, 10 );
+    if( *p == '/' ) {
+        period = strtoul( p + 1, &p, 10 );
+        if( *p == 0 || *p == 's' || *p == 'S' ) {
+            scale = 1000;
+        } else if( *p == 'm' || *p == 'M' ) {
+            scale = 60*1000;
+        } else if( *p == 'h' || *p == 'H' ) {
+            scale = 60*60*1000;
+        } else {
+            // everything else is milliseconds
+            scale = 1;
+        }
+        if( period > UINT_MAX / scale ) {
+            period = UINT_MAX;
+        } else {
+            if( !period ) {
+                period = 1;
+            }
+            period *= scale;
+        }
+    } else {
+        // default is one second
+        period = 1000;
     }
-    if( period < 100 ) {
-        period = 100;
-    }
+
     r->count = 0;
     r->time = svs.realtime;
     r->limit = limit;
@@ -266,6 +292,7 @@ addrmatch_t *SV_MatchAddress( list_t *list, netadr_t *address ) {
             return match;
         }
     }
+
     return NULL;
 }
 
@@ -732,17 +759,18 @@ static void SVC_DirectConnect( void ) {
     s = Info_ValueForKey( info, "password" );
     reserved = 0;
     if( sv_password->string[0] ) {
-        if( SV_RateLimited( &svs.ratelimit_badpass ) ) {
-            Com_DPrintf( "    rejected - auth attempt limit exceeded.\n" );
-            return;
-        }
         if( !s[0] ) {
             SV_OobPrintf( "Please set your password before connecting.\n" );
             Com_DPrintf( "    rejected - empty password.\n" );
             return;
         }
+        if( SV_RateLimited( &svs.ratelimit_auth ) ) {
+            SV_OobPrintf( "Invalid password.\n" );
+            Com_DPrintf( "    rejected - auth attempt limit exceeded.\n" );
+            return;
+        }
         if( strcmp( sv_password->string, s ) ) {
-            svs.ratelimit_badpass.count++;
+            svs.ratelimit_auth.count++;
             SV_OobPrintf( "Invalid password.\n" );
             Com_DPrintf( "    rejected - invalid password.\n" );
             return;
@@ -975,7 +1003,7 @@ static void SVC_RemoteCommand( void ) {
     int i;
     char *string;
 
-    if( SV_RateLimited( &svs.ratelimit_badrcon ) ) {
+    if( SV_RateLimited( &svs.ratelimit_rcon ) ) {
         Com_DPrintf( "Dropping rcon from %s\n",
             NET_AdrToString( &net_from ) );
         return;
@@ -987,7 +1015,7 @@ static void SVC_RemoteCommand( void ) {
         Com_Printf( "Invalid rcon from %s:\n%s\n",
             NET_AdrToString( &net_from ), string );
         SV_OobPrintf( "Bad rcon_password.\n" );
-        svs.ratelimit_badrcon.count++;
+        svs.ratelimit_rcon.count++;
         return;
     }
 
@@ -1789,12 +1817,18 @@ void SV_SetConsoleTitle( void ) {
 #endif
 
 static void sv_status_limit_changed( cvar_t *self ) {
-    SV_RateInit( &svs.ratelimit_status, self->integer, 1000 );
+    SV_RateInit( &svs.ratelimit_status, self->string );
 }
-
-static void sv_badauth_time_changed( cvar_t *self ) {
-    SV_RateInit( &svs.ratelimit_badpass, 1, self->value * 1000 );
-    SV_RateInit( &svs.ratelimit_badrcon, 1, self->value * 1000 );
+static void sv_auth_limit_changed( cvar_t *self ) {
+    SV_RateInit( &svs.ratelimit_auth, self->string );
+}
+static void sv_rcon_limit_changed( cvar_t *self ) {
+    SV_RateInit( &svs.ratelimit_rcon, self->string );
+}
+static void init_rate_limits( void ) {
+    SV_RateInit( &svs.ratelimit_status, sv_status_limit->string );
+    SV_RateInit( &svs.ratelimit_auth, sv_auth_limit->string );
+    SV_RateInit( &svs.ratelimit_rcon, sv_rcon_limit->string );
 }
 
 #if USE_SYSCON
@@ -1908,11 +1942,16 @@ void SV_Init( void ) {
 
     sv_uptime = Cvar_Get( "sv_uptime", "0", 0 );
 
-    sv_badauth_time = Cvar_Get( "sv_badauth_time", "1", 0 );
-    sv_badauth_time->changed = sv_badauth_time_changed;
+    sv_auth_limit = Cvar_Get( "sv_auth_limit", "1", 0 );
+    sv_auth_limit->changed = sv_auth_limit_changed;
+
+    sv_rcon_limit = Cvar_Get( "sv_rcon_limit", "1", 0 );
+    sv_rcon_limit->changed = sv_rcon_limit_changed;
 
     Cvar_Get( "sv_features", va( "%d", SV_FEATURES ), CVAR_ROM );
     g_features = Cvar_Get( "g_features", "0", CVAR_ROM );
+
+    init_rate_limits();
 
     // set up default pmove parameters
     PmoveInit( &sv_pmp );
@@ -2016,6 +2055,9 @@ void SV_Shutdown( const char *finalmsg, killtype_t type ) {
     deflateEnd( &svs.z );
 #endif
     memset( &svs, 0, sizeof( svs ) );
+
+    // reset rate limits
+    init_rate_limits();
 
     sv_client = NULL;
     sv_player = NULL;

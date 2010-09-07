@@ -381,10 +381,10 @@ typedef struct server_static_s {
     unsigned        last_heartbeat;
 
     ratelimit_t     ratelimit_status;
-    ratelimit_t     ratelimit_badpass;
-    ratelimit_t     ratelimit_badrcon;
+    ratelimit_t     ratelimit_auth;
+    ratelimit_t     ratelimit_rcon;
 
-    challenge_t    challenges[MAX_CHALLENGES];    // to prevent invalid IPs from connecting
+    challenge_t     challenges[MAX_CHALLENGES];     // to prevent invalid IPs from connecting
 } server_static_t;
 
 //=============================================================================
@@ -438,7 +438,8 @@ extern cvar_t       *sv_enhanced_setplayer;
 
 extern cvar_t       *sv_status_limit;
 extern cvar_t       *sv_status_show;
-extern cvar_t       *sv_badauth_time;
+extern cvar_t       *sv_auth_limit;
+extern cvar_t       *sv_rcon_limit;
 extern cvar_t       *sv_uptime;
 
 extern cvar_t       *g_features;
@@ -465,8 +466,8 @@ void SV_InitOperatorCommands (void);
 void SV_UserinfoChanged (client_t *cl);
 void SV_UpdateUserinfo( char *userinfo );
 
-qboolean SV_RateLimited( ratelimit_t *r );
-void SV_RateInit( ratelimit_t *r, int limit, int period );
+//qboolean SV_RateLimited( ratelimit_t *r );
+//void SV_RateInit( ratelimit_t *r, const char *s );
 
 addrmatch_t *SV_MatchAddress( list_t *list, netadr_t *address );
 
