@@ -38,8 +38,10 @@ Specify a list of master servers
 */
 static void SV_SetMaster_f( void ) {
     netadr_t adr;
-    int     i, j, slot;
+    int     i, total;
     char    *s;
+    master_t *m, *n;
+    size_t len;
 
 #if USE_CLIENT
     // only dedicated servers send heartbeats
@@ -49,11 +51,16 @@ static void SV_SetMaster_f( void ) {
     }
 #endif
 
-    memset( &master_adr, 0, sizeof( master_adr ) );
+    // free old masters
+    FOR_EACH_MASTER_SAFE( m, n ) {
+        Z_Free( m );
+    }
 
-    slot = 0;
+    List_Init( &sv_masterlist );
+
+    total = 0;
     for( i = 1; i < Cmd_Argc(); i++ ) {
-        if( slot == MAX_MASTERS ) {
+        if( total == MAX_MASTERS ) {
             Com_Printf( "Too many masters.\n" );
             break;
         }
@@ -64,25 +71,56 @@ static void SV_SetMaster_f( void ) {
             continue;
         }
 
-        s = NET_AdrToString( &adr );
-        for( j = 0; j < slot; j++ ) {
-            if( NET_IsEqualBaseAdr( &master_adr[j], &adr ) ) {
-                Com_Printf( "Ignoring duplicate master at %s.\n", s );
-                break;
+        FOR_EACH_MASTER( m ) {
+            if( NET_IsEqualBaseAdr( &m->adr, &adr ) ) {
+                Com_Printf( "Ignoring duplicate master at %s.\n", NET_AdrToString( &adr ) );
+                goto out;
             }
         }
 
-        if( j == slot ) {
-            Com_Printf( "Master server at %s.\n", s );
-            master_adr[slot++] = adr;
-        }
+        Com_Printf( "Master server at %s.\n", NET_AdrToString( &adr ) );
+        len = strlen( s );
+        m = Z_Malloc( sizeof( *m ) + len );
+        memcpy( m->name, s, len + 1 );
+        m->adr = adr;
+        m->last_ack = 0;
+        m->last_resolved = time( NULL );
+        List_Append( &sv_masterlist, &m->entry );
+        total++;
+out:;
     }
 
-    if( slot ) {
+    if( total ) {
         // make sure the server is listed public
         Cvar_Set( "public", "1" );
 
         svs.last_heartbeat = svs.realtime - HEARTBEAT_SECONDS*1000;
+    }
+}
+
+static void SV_ListMasters_f( void ) {
+    master_t *m;
+    char buf[16], *adr;
+    unsigned acked;
+
+    if( LIST_EMPTY( &sv_masterlist ) ) {
+        Com_Printf( "There are no masters.\n" );
+        return;
+    }
+
+    Com_Printf( "hostname              last ack address\n"
+                "--------------------- -------- ---------------------\n" );
+    FOR_EACH_MASTER( m ) {
+        if( !svs.initialized ) {
+            strcpy( buf, "down" );
+        } else if( !m->last_ack ) {
+            strcpy( buf, "never" );
+        } else {
+            acked = ( svs.realtime - m->last_ack ) / 1000;
+            Com_FormatTime( buf, sizeof( buf ), acked );
+        }
+        adr = m->adr.port ? NET_AdrToString( &m->adr ) : "<unknown>";
+        Com_Printf( "%-21.21s %-8s %-21s\n", m->name, buf, adr );
     }
 }
 
@@ -1257,6 +1295,7 @@ static const cmdreg_t c_server[] = {
     { "gamemap", SV_GameMap_f, SV_Map_c },
     { "dumpents", SV_DumpEnts_f },
     { "setmaster", SV_SetMaster_f },
+    { "listmasters", SV_ListMasters_f },
     { "killserver", SV_KillServer_f },
     { "sv", SV_ServerCommand_f },
     { "pickclient", SV_PickClient_f },

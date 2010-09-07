@@ -46,9 +46,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 //=============================================================================
 
-#define MAX_MASTERS         8       // max recipients for heartbeat packets
-#define HEARTBEAT_SECONDS   300
-
 #define SV_Malloc( size )       Z_TagMalloc( size, TAG_SERVER )
 #define SV_Mallocz( size )      Z_TagMallocz( size, TAG_SERVER )
 #define SV_CopyString( s )      Z_TagCopyString( s, TAG_SERVER )
@@ -350,6 +347,22 @@ typedef struct {
     char            string[1];
 } filtercmd_t;
 
+#define MAX_MASTERS         8       // max recipients for heartbeat packets
+#define HEARTBEAT_SECONDS   300
+
+typedef struct {
+    list_t entry;
+    netadr_t adr;
+    unsigned last_ack;
+    time_t last_resolved;
+    char name[1];
+} master_t;
+
+#define FOR_EACH_MASTER( m ) \
+    LIST_FOR_EACH( master_t, m, &sv_masterlist, entry )
+#define FOR_EACH_MASTER_SAFE( m, n ) \
+    LIST_FOR_EACH_SAFE( master_t, m, n, &sv_masterlist, entry )
+
 typedef struct server_static_s {
     qboolean    initialized;        // sv_init has completed
     unsigned    realtime;            // always increasing, no clamping, etc
@@ -376,14 +389,10 @@ typedef struct server_static_s {
 
 //=============================================================================
 
-extern netadr_t    master_adr[MAX_MASTERS];    // address of the master server
-
+extern list_t      sv_masterlist; // address of the master server
 extern list_t      sv_banlist;
-extern list_t      sv_blacklist;
-
 extern list_t      sv_cmdlist_connect;
 extern list_t      sv_cmdlist_begin;
-
 extern list_t      sv_filterlist;
 
 extern server_static_t     svs;        // persistant server info

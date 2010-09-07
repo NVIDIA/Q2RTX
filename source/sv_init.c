@@ -38,7 +38,7 @@ void SV_ClientReset( client_t *client ) {
 }
 
 #if USE_FPS
-static void SV_SetFrameTime( void ) {
+static void set_frame_time( void ) {
     int i = sv_fps->integer / 10;
 
     clamp( i, 1, 6 );
@@ -47,6 +47,34 @@ static void SV_SetFrameTime( void ) {
     sv.framemult = i;
 
     Cvar_SetInteger( sv_fps, i * 10, CVAR_SET_DIRECT );
+}
+#endif
+
+#if !USE_CLIENT
+static void resolve_masters( void ) {
+    master_t *m;
+    time_t now, delta;
+
+    now = time( NULL );
+    FOR_EACH_MASTER( m ) {
+        // re-resolve valid address after one day,
+        // resolve invalid address after three hours
+        delta = m->adr.port ? 24*60*60 : 3*60*60;
+        if( now < m->last_resolved ) {
+            m->last_resolved = now;
+            continue;
+        }
+        if( now - m->last_resolved < delta ) {
+            continue;
+        }
+        if( NET_StringToAdr( m->name, &m->adr, PORT_MASTER ) ) {
+            Com_DPrintf( "Master server at %s.\n", NET_AdrToString( &m->adr ) );
+        } else {
+            Com_WPrintf( "Couldn't resolve master: %s\n", m->name );
+            m->adr.port = 0;
+        }
+        m->last_resolved = now = time( NULL );
+    }
 }
 #endif
 
@@ -93,6 +121,10 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
         client->spawncount = sv.spawncount;
     }
 
+#if !USE_CLIENT
+    resolve_masters();
+#endif
+
     Q_concat( string, sizeof( string ), "maps/", server, ".bsp", NULL );
     sv.cm = *cm;
     strcpy( sv.configstrings[CS_MODELS + 1], string );
@@ -112,7 +144,7 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
     // spawn the rest of the entities on the map
     //  
 #if USE_FPS
-    SV_SetFrameTime();
+    set_frame_time();
 #endif
 
     // precache and static commands can be issued during
@@ -266,6 +298,9 @@ void SV_InitGame( qboolean ismvd ) {
     SV_RateInit( &svs.ratelimit_status, sv_status_limit->integer, 1000 );
     SV_RateInit( &svs.ratelimit_badpass, 1, sv_badauth_time->value * 1000 );
     SV_RateInit( &svs.ratelimit_badrcon, 1, sv_badauth_time->value * 1000 );
+
+    // send heartbeat very soon
+    svs.last_heartbeat = -(HEARTBEAT_SECONDS-5)*1000;
 
     List_Init( &svs.udp_client_list );
 

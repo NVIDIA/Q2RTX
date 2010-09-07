@@ -20,10 +20,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "sv_local.h"
 
-netadr_t    master_adr[MAX_MASTERS];    // address of group servers
-
 pmoveParams_t   sv_pmp;
 
+LIST_DECL( sv_masterlist ); // address of group servers
 LIST_DECL( sv_banlist );
 LIST_DECL( sv_cmdlist_connect );
 LIST_DECL( sv_cmdlist_begin );
@@ -377,15 +376,16 @@ SVC_Ack
 ================
 */
 static void SVC_Ack( void ) {
-    int i;
+    master_t *m;
 
-    for( i = 0; i < MAX_MASTERS; i++ ) {
-        if( !master_adr[i].port ) {
+    FOR_EACH_MASTER( m ) {
+        if( !m->adr.port ) {
             continue;
         }
-        if( NET_IsEqualBaseAdr( &master_adr[i], &net_from ) ) {
-            Com_Printf( "Ping acknowledge from %s\n",
+        if( NET_IsEqualBaseAdr( &m->adr, &net_from ) ) {
+            Com_DPrintf( "Ping acknowledge from %s\n",
                 NET_AdrToString( &net_from ) );
+            m->last_ack = svs.realtime;
             break;
         }
     }
@@ -1493,7 +1493,7 @@ let it know we are alive, and log information
 static void SV_MasterHeartbeat( void ) {
     char    buffer[MAX_PACKETLEN_DEFAULT];
     size_t  len;
-    int     i;
+    master_t *m;
 
     if( !Com_IsDedicated() )
         return;        // only dedicated servers send heartbeats
@@ -1514,11 +1514,11 @@ static void SV_MasterHeartbeat( void ) {
     len += SV_StatusString( buffer + len );
 
     // send to group master
-    for( i = 0; i < MAX_MASTERS; i++ ) {
-        if( master_adr[i].port ) {
+    FOR_EACH_MASTER( m ) {
+        if( m->adr.port ) {
             Com_DPrintf( "Sending heartbeat to %s\n",
-                NET_AdrToString( &master_adr[i] ) );
-            NET_SendPacket( NS_SERVER, &master_adr[i], len, buffer );
+                NET_AdrToString( &m->adr ) );
+            NET_SendPacket( NS_SERVER, &m->adr, len, buffer );
         }
     }
 }
@@ -1531,7 +1531,7 @@ Informs all masters that this server is going down
 =================
 */
 static void SV_MasterShutdown( void ) {
-    int     i;
+    master_t *m;
 
     if( !Com_IsDedicated() )
         return;        // only dedicated servers send heartbeats
@@ -1540,11 +1540,11 @@ static void SV_MasterShutdown( void ) {
         return;        // a private dedicated game
 
     // send to group master
-    for( i = 0; i < MAX_MASTERS; i++ ) {
-        if( master_adr[i].port ) {
+    FOR_EACH_MASTER( m ) {
+        if( m->adr.port ) {
             Com_DPrintf( "Sending shutdown to %s\n",
-                NET_AdrToString( &master_adr[i] ) );
-            OOB_PRINT( NS_SERVER, &master_adr[i], "shutdown" );
+                NET_AdrToString( &m->adr ) );
+            OOB_PRINT( NS_SERVER, &m->adr, "shutdown" );
         }
     }
 }
