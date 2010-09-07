@@ -391,6 +391,7 @@ typedef struct server_static_s {
 
 extern list_t      sv_masterlist; // address of the master server
 extern list_t      sv_banlist;
+extern list_t      sv_blacklist;
 extern list_t      sv_cmdlist_connect;
 extern list_t      sv_cmdlist_begin;
 extern list_t      sv_filterlist;

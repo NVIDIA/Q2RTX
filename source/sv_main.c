@@ -24,6 +24,7 @@ pmoveParams_t   sv_pmp;
 
 LIST_DECL( sv_masterlist ); // address of group servers
 LIST_DECL( sv_banlist );
+LIST_DECL( sv_blacklist );
 LIST_DECL( sv_cmdlist_connect );
 LIST_DECL( sv_cmdlist_begin );
 LIST_DECL( sv_filterlist );
@@ -1026,6 +1027,11 @@ static void SV_ConnectionlessPacket( void ) {
     int     i;
     size_t  len;
 
+    if( SV_MatchAddress( &sv_blacklist, &net_from ) ) {
+        Com_DPrintf( "ignored blackholed connectionless packet\n" );
+        return;
+    }
+
     MSG_BeginReading();
     MSG_ReadLong();        // skip the -1 marker
 
@@ -1193,7 +1199,7 @@ static void SV_PacketEvent( void ) {
     client_t    *client;
     netchan_t   *netchan;
     int         qport;
-
+        
     // check for connectionless packet (0xffffffff) first
     // connectionless packets are processed even if the server is down
     if( *( int * )msg_read.data == -1 ) {

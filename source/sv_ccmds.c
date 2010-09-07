@@ -1019,6 +1019,16 @@ static void SV_ListBans_f( void ) {
     SV_ListMatches_f( &sv_banlist );
 }
 
+static void SV_AddBlackHole_f( void ) {
+    SV_AddMatch_f( &sv_blacklist );
+}
+static void SV_DelBlackHole_f( void ) {
+    SV_DelMatch_f( &sv_blacklist );
+}
+static void SV_ListBlackHoles_f( void ) {
+    SV_ListMatches_f( &sv_blacklist );
+}
+
 static list_t *SV_FindStuffList( void ) {
     char *s = Cmd_Argv( 1 );
 
@@ -1302,6 +1312,9 @@ static const cmdreg_t c_server[] = {
     { "addban", SV_AddBan_f },
     { "delban", SV_DelBan_f },
     { "listbans", SV_ListBans_f },
+    { "addblackhole", SV_AddBlackHole_f },
+    { "delblackhole", SV_DelBlackHole_f },
+    { "listblackholes", SV_ListBlackHoles_f },
     { "addstuffcmd", SV_AddStuffCmd_f, SV_StuffCmd_c },
     { "delstuffcmd", SV_DelStuffCmd_f, SV_StuffCmd_c },
     { "liststuffcmds", SV_ListStuffCmds_f, SV_StuffCmd_c },
