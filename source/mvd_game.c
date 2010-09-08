@@ -1377,7 +1377,7 @@ static void MVD_GameClientBegin( edict_t *ent ) {
     if( !client->begin_time ) {
         MVD_BroadcastPrintf( mvd, PRINT_MEDIUM, UF_MUTE_MISC,
             "[MVD] %s entered the channel\n", client->cl->name );
-        if( Com_IsDedicated() ) {
+        if( Com_IsDedicated() && mvd != &mvd_waitingRoom ) {
             // notify them if channel is in waiting state
             if( mvd->state == MVD_WAITING ) {
                 SV_ClientPrintf( client->cl, PRINT_HIGH,
