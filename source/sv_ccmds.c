@@ -872,21 +872,24 @@ static qboolean parse_mask( const char *s, uint32_t *addr, uint32_t *mask ) {
         return qfalse;
     }
 
-    *addr = BigLong( *( uint32_t * )address.ip );
-    *mask = ~( ( 1 << ( 32 - bits ) ) - 1 );
+    *addr = *( uint32_t * )address.ip;
+    *mask = BigLong( ~( ( 1 << ( 32 - bits ) ) - 1 ) );
     return qtrue;
 }
 
 static size_t format_mask( addrmatch_t *match, char *buf, size_t size ) {
     byte ip[4];
+    uint32_t mask;
     int i;
 
-    *( uint32_t * )ip = BigLong( match->addr );
+    *( uint32_t * )ip = match->addr;
+    mask = BigLong( match->mask );
     for( i = 0; i < 32; i++ ) {
-        if( match->mask & ( 1 << i ) ) {
+        if( mask & ( 1 << i ) ) {
             break;
         }
     }
+
     return Q_snprintf( buf, size, "%d.%d.%d.%d/%d",
         ip[0], ip[1], ip[2], ip[3], 32 - i );
 }

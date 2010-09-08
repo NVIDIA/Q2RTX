@@ -282,7 +282,7 @@ static void SV_RateInit( ratelimit_t *r, const char *s ) {
 }
 
 addrmatch_t *SV_MatchAddress( list_t *list, netadr_t *address ) {
-    uint32_t addr = BigLong( *( uint32_t * )address->ip );
+    uint32_t addr = *( uint32_t * )address->ip;
     addrmatch_t *match;
 
     LIST_FOR_EACH( addrmatch_t, match, list, entry ) {
