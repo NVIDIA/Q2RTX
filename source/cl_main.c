@@ -892,7 +892,7 @@ static void CL_ParsePrintMessage( void ) {
 #endif
         case REQ_RCON:
             Com_Printf( "%s", string );
-            continue; // rcon may come in multiple packets
+            return; // rcon may come in multiple packets
         default:
             break;
         }
