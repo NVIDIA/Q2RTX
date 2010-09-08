@@ -508,17 +508,25 @@ REPLY PARSING
 ==============================================================================
 */
 
-static void AC_Drop( void ) {
+static void AC_Retry( void ) {
+    char buf[MAX_QPATH];
     time_t clock;
+
+    Com_FormatTimeLong( buf, sizeof( buf ), acs.retry_backoff );
+    Com_Printf( "ANTICHEAT: Re%s in %s.\n",
+        ac.connected ? "connecting" : "trying", buf );
+    clock = time( NULL );
+    acs.retry_time = clock + acs.retry_backoff;
+}
+
+static void AC_Drop( void ) {
     client_t *cl;
 
     NET_Close( &ac.stream );
 
     if( !ac.connected ) {
-        Com_Printf( "ANTICHEAT: Server connection failed. "
-            "Retrying in %d seconds.\n", acs.retry_backoff );
-        clock = time( NULL );
-        acs.retry_time = clock + acs.retry_backoff;
+        Com_Printf( "ANTICHEAT: Server connection failed.\n" );
+        AC_Retry();
         acs.retry_backoff += 5;
         return;
     }
@@ -544,12 +552,8 @@ static void AC_Drop( void ) {
         acs.retry_backoff += 30; // this generally indicates a server problem
     }
 
-    Com_WPrintf(
-        "ANTICHEAT: Lost connection to anticheat server! "
-        "Will attempt to reconnect in %d seconds.\n", acs.retry_backoff );
-
-    clock = time( NULL );
-    acs.retry_time = clock + acs.retry_backoff;
+    Com_WPrintf( "ANTICHEAT: Lost connection to anticheat server!\n" );
+    AC_Retry();
 
     memset( &ac, 0, sizeof( ac ) );
 }
@@ -558,7 +562,6 @@ static void AC_Disable( void ) {
     AC_Disconnect();
     Cvar_SetByVar( ac_required, "0", FROM_CODE );
 }
-
 
 static void AC_Announce( client_t *client, const char *fmt, ... ) {
     va_list     argptr;
@@ -1326,7 +1329,6 @@ static void AC_CheckTimeouts( void ) {
 
 static qboolean AC_Reconnect( void ) {
     netadr_t address;
-    time_t clock;
 
     if( !NET_StringToAdr( ac_server_address->string, &address, PORT_SERVER ) ) {
         Com_WPrintf( "ANTICHEAT: Unable to lookup %s.\n",
@@ -1349,9 +1351,7 @@ static qboolean AC_Reconnect( void ) {
 
 fail:
     acs.retry_backoff += 60;
-    Com_Printf( "ANTICHEAT: Retrying in %d seconds.\n", acs.retry_backoff );
-    clock = time( NULL );
-    acs.retry_time = clock + acs.retry_backoff;
+    AC_Retry();
     return qfalse;
 }
 
