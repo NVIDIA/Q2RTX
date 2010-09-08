@@ -88,7 +88,6 @@ clients along with it.
 */
 static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint ) {
     int         i;
-    char        string[MAX_QPATH];
     client_t    *client;
 
     Com_Printf( "------- Server Initialization -------\n" );
@@ -125,13 +124,12 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
     resolve_masters();
 #endif
 
-    Q_concat( string, sizeof( string ), "maps/", server, ".bsp", NULL );
     sv.cm = *cm;
-    strcpy( sv.configstrings[CS_MODELS + 1], string );
-
     sprintf( sv.configstrings[CS_MAPCHECKSUM], "%d", ( int )cm->cache->checksum );
-    
-    for( i = 1; i < sv.cm.cache->nummodels; i++ ) {
+
+    // set inline model names
+    Q_concat( sv.configstrings[CS_MODELS + 1], MAX_QPATH, "maps/", server, ".bsp", NULL );
+    for( i = 1; i < cm->cache->nummodels; i++ ) {
         sprintf( sv.configstrings[ CS_MODELS + 1 + i ], "*%d", i );
     }
 
@@ -339,6 +337,7 @@ void SV_Map (const char *levelstring, qboolean restart) {
     char    *ch;
     cm_t    cm;
     qerror_t ret;
+    size_t  len;
 
     // skip the end-of-unit flag if necessary
     if( *levelstring == '*' ) {
@@ -346,7 +345,11 @@ void SV_Map (const char *levelstring, qboolean restart) {
     }
 
     // save levelstring as it typically points to cmd_argv
-    Q_strlcpy( level, levelstring, sizeof( level ) );
+    len = Q_strlcpy( level, levelstring, sizeof( level ) );
+    if( len >= sizeof( level ) ) {
+        Com_Printf( "Refusing to process oversize level string.\n" );
+        return;
+    }
 
     // if there is a + in the map, set nextserver to the remainder
     ch = strchr(level, '+');
@@ -366,8 +369,12 @@ void SV_Map (const char *levelstring, qboolean restart) {
         spawnpoint[0] = 0;
     }
 
-    Q_concat( expanded, sizeof( expanded ), "maps/", level, ".bsp", NULL );
-    ret = CM_LoadMap( &cm, expanded );
+    len = Q_concat( expanded, sizeof( expanded ), "maps/", level, ".bsp", NULL );
+    if( len >= sizeof( expanded ) ) {
+        ret = Q_ERR_NAMETOOLONG;
+    } else {
+        ret = CM_LoadMap( &cm, expanded );
+    }
     if( ret ) {
         Com_Printf( "Couldn't load %s: %s\n", expanded, Q_ErrorString( ret ) );
         return;
