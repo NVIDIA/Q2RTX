@@ -550,6 +550,9 @@ typedef struct zhead_s {
     struct zhead_s  *prev, *next;
 } zhead_t;
 
+// number of overhead bytes
+#define Z_EXTRA ( sizeof( zhead_t ) + sizeof( uint16_t ) )
+
 static zhead_t      z_chain;
 
 static cvar_t       *z_perturb;
@@ -671,6 +674,7 @@ void Z_Free( void *ptr ) {
     }
 }
 
+#if 0
 /*
 ========================
 Z_Realloc
@@ -694,18 +698,20 @@ void *Z_Realloc( void *ptr, size_t size ) {
     Z_Validate( z, __func__ );
 
     if( z->tag == TAG_STATIC ) {
-        Com_Error( ERR_FATAL, "Z_Realloc: couldn't realloc static memory" );
+        Com_Error( ERR_FATAL, "%s: couldn't realloc static memory", __func__ );
     }
 
     s = &z_stats[z->tag < TAG_MAX ? z->tag : TAG_FREE];
     s->bytes -= z->size;
 
-    size += sizeof( zhead_t ) + sizeof( uint16_t );
-    size = ( size + 3 ) & ~3;
-    
+    if( size > SIZE_MAX - Z_EXTRA - 3 ) {
+        Com_Error( ERR_FATAL, "%s: bad size", __func__ );
+    }
+
+    size = ( size + Z_EXTRA + 3 ) & ~3;
     z = realloc( z, size );
     if( !z ) {
-        Com_Error( ERR_FATAL, "Z_Realloc: couldn't realloc %"PRIz" bytes", size );
+        Com_Error( ERR_FATAL, "%s: couldn't realloc %"PRIz" bytes", __func__, size );
     }
 
     z->size = size;
@@ -718,6 +724,7 @@ void *Z_Realloc( void *ptr, size_t size ) {
 
     return z + 1;
 }
+#endif
 
 /*
 ========================
@@ -776,14 +783,18 @@ void *Z_TagMalloc( size_t size, memtag_t tag ) {
         return NULL;
     }
 
-    if( tag == TAG_FREE )
-        Com_Error( ERR_FATAL, "Z_TagMalloc: bad tag" );
+    if( tag == TAG_FREE ) {
+        Com_Error( ERR_FATAL, "%s: bad tag", __func__ );
+    }
     
-    size += sizeof( zhead_t ) + sizeof( uint16_t );
-    size = ( size + 3 ) & ~3;
+    if( size > SIZE_MAX - Z_EXTRA - 3 ) {
+        Com_Error( ERR_FATAL, "%s: bad size", __func__ );
+    }
+
+    size = ( size + Z_EXTRA + 3 ) & ~3;
     z = malloc( size );
     if( !z ) {
-        Com_Error( ERR_FATAL, "Z_TagMalloc: couldn't allocate %"PRIz" bytes", size );
+        Com_Error( ERR_FATAL, "%s: couldn't allocate %"PRIz" bytes", __func__, size );
     }
     z->magic = Z_MAGIC;
     z->tag = tag;
@@ -825,25 +836,29 @@ void *Z_TagMallocz( size_t size, memtag_t tag ) {
     return memset( Z_TagMalloc( size, tag ), 0, size );
 }
 
-static byte     *z_reserved;
-static size_t   z_reservedUnuse;
-static size_t   z_reservedTotal;
+static byte     *z_reserved_data;
+static size_t   z_reserved_inuse;
+static size_t   z_reserved_total;
 
 void Z_TagReserve( size_t size, memtag_t tag ) {
-    z_reserved = Z_TagMalloc( size, tag );
-    z_reservedTotal = size;
-    z_reservedUnuse = 0;
+    z_reserved_data = Z_TagMalloc( size, tag );
+    z_reserved_total = size;
+    z_reserved_inuse = 0;
 }
 
 void *Z_ReservedAlloc( size_t size ) {
     void *ptr;
 
-    if( z_reservedUnuse + size > z_reservedTotal ) {
-        Com_Error( ERR_FATAL, "Z_ReservedAlloc: out of space" );
+    if( !size ) {
+        return NULL;
     }
 
-    ptr = z_reserved + z_reservedUnuse;
-    z_reservedUnuse += size;
+    if( size > z_reserved_total - z_reserved_inuse ) {
+        Com_Error( ERR_FATAL, "%s: couldn't allocate %"PRIz" bytes", __func__, size );
+    }
+
+    ptr = z_reserved_data + z_reserved_inuse;
+    z_reserved_inuse += size;
 
     return ptr;
 }
