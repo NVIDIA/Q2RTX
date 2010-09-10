@@ -681,12 +681,27 @@ static void write_message( gtv_t *gtv, gtv_clientop_t op ) {
     write_stream( gtv, msg_write.data, msg_write.cursize );
 }
 
+static void q_noreturn gtv_oob_kill( mvd_t *mvd ) {
+    gtv_t *gtv = mvd->gtv;
+
+    if( gtv ) {
+        // don't kill connection!
+        gtv->mvd = NULL;
+        mvd->gtv = NULL;
+    }
+
+    MVD_Destroyf( mvd, "Ran out of buffers" );
+}
+
 static qboolean gtv_wait_stop( mvd_t *mvd ) {
     gtv_t *gtv = mvd->gtv;
     int min_packets = mvd->min_packets, usage;
 
     // if not connected, flush any data left
     if( !gtv || gtv->state != GTV_READING ) {
+        if( !mvd->num_packets ) {
+            gtv_oob_kill( mvd );
+        }
         min_packets = 1;
     }
 
@@ -728,9 +743,7 @@ static void gtv_wait_start( mvd_t *mvd ) {
 
     // FIXME: if connection is suspended, kill the channel
     if( gtv->state != GTV_READING ) {
-        gtv->mvd = NULL;
-        mvd->gtv = NULL; // but don't kill connection!
-        MVD_Destroyf( mvd, "Ran out of buffers" );
+        gtv_oob_kill( mvd );
     }
 
     Com_Printf( "[%s] -=- Buffering data...\n", mvd->name );
