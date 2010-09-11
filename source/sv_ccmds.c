@@ -100,27 +100,27 @@ out:;
 
 static void SV_ListMasters_f( void ) {
     master_t *m;
-    char buf[16], *adr;
-    unsigned acked;
+    char buf[8], *adr;
+    int i;
 
     if( LIST_EMPTY( &sv_masterlist ) ) {
         Com_Printf( "There are no masters.\n" );
         return;
     }
 
-    Com_Printf( "hostname              last ack address\n"
-                "--------------------- -------- ---------------------\n" );
+    Com_Printf( "num hostname              lastmsg address\n"
+                "--- --------------------- ------- ---------------------\n" );
+    i = 0;
     FOR_EACH_MASTER( m ) {
         if( !svs.initialized ) {
             strcpy( buf, "down" );
         } else if( !m->last_ack ) {
             strcpy( buf, "never" );
         } else {
-            acked = ( svs.realtime - m->last_ack ) / 1000;
-            Com_FormatTime( buf, sizeof( buf ), acked );
+            Q_snprintf( buf, sizeof( buf ), "%u", svs.realtime - m->last_ack );
         }
-        adr = m->adr.port ? NET_AdrToString( &m->adr ) : "<unknown>";
-        Com_Printf( "%-21.21s %-8s %-21s\n", m->name, buf, adr );
+        adr = m->adr.port ? NET_AdrToString( &m->adr ) : "error";
+        Com_Printf( "%3d %-21.21s %7s %-21s\n", ++i, m->name, buf, adr );
     }
 }
 

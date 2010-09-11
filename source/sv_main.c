@@ -2016,6 +2016,8 @@ Called when each game quits, from Com_Quit or Com_Error
 ================
 */
 void SV_Shutdown( const char *finalmsg, killtype_t type ) {
+    master_t *m;
+
     Cvar_Set( "sv_running", "0" );
     Cvar_Set( "sv_paused", "0" );
 
@@ -2055,6 +2057,11 @@ void SV_Shutdown( const char *finalmsg, killtype_t type ) {
     deflateEnd( &svs.z );
 #endif
     memset( &svs, 0, sizeof( svs ) );
+
+    // reset masters
+    FOR_EACH_MASTER( m ) {
+        m->last_ack = 0;
+    }
 
     // reset rate limits
     init_rate_limits();
