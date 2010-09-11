@@ -407,7 +407,7 @@ void SV_Kick_f( void ) {
         netadr_t *addr = &sv_client->netchan->remote_address;
         if( addr->type == NA_IP ) {
             addrmatch_t *match = Z_Malloc( sizeof( *match ) );
-            match->addr = BigLong( *( uint32_t * )addr->ip );
+            match->addr = *( uint32_t * )addr->ip;
             match->mask = 0xffffffffU;
             match->hits = 0;
             match->time = 0;
