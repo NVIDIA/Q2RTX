@@ -1289,7 +1289,7 @@ ssize_t FS_FOpenFile( const char *name, qhandle_t *f, unsigned mode ) {
     // allocate new file handle
     file = alloc_handle( &handle );
     if( !file ) {
-        return Q_ERR_NFILE;
+        return Q_ERR_MFILE;
     }
 
     file->mode = mode;
@@ -1392,7 +1392,7 @@ ssize_t FS_LoadFileEx( const char *path, void **buffer, unsigned flags ) {
     // allocate new file handle
     file = alloc_handle( &f );
     if( !file ) {
-        return Q_ERR_NOENT;
+        return Q_ERR_MFILE;
     }
 
     file->mode = ( flags & ~FS_MODE_MASK ) | FS_MODE_READ;

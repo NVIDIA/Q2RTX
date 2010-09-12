@@ -59,7 +59,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define Q_ERR_FBIG              Q_ERR(EFBIG)
 #define Q_ERR_ISDIR             Q_ERR(EISDIR)
 #define Q_ERR_AGAIN             Q_ERR(EAGAIN)
-#define Q_ERR_NFILE             Q_ERR(ENFILE)
+#define Q_ERR_MFILE             Q_ERR(EMFILE)
 #define Q_ERR_EXIST             Q_ERR(EEXIST)
 
 const char *Q_ErrorString( qerror_t error );
