@@ -1,3 +1,43 @@
+Changes since r529
+==================
+
+Features:
+---------
+
+* Master servers are now automatically re-resolved after one day to
+  accomodate changing IP addresses. Added ‘listmasters’ command.
+
+* Finer grain control of rate limiting: ‘<limit>[/<period>[sec|min|hour]]’
+  syntax is now allowed for ‘sv_status_limit’ and newly added ‘sv_auth_limit’
+  and ‘sv_rcon_limit’ cvars, replacing ‘sv_badauth_time’.
+
+* Added ‘(add|del|list)blackhole(s)’ commands for ignoring connectionless
+  packets from IP blocks and preventing logfile flood.
+
+* Added ‘sv_enhanced_setplayer’ cvar to enable partial client name matching
+  for regular server console commands like ‘kick’, etc.
+
+Bugfixes:
+---------
+
+* Fixed file handle leak in ‘download’ client command handler
+  preventing server from opening new files with spurious ‘No such
+  file or directory’ message.
+
+* Fixed rcon rate limiting not working properly when server is down.
+
+* Fixed a server crash when ‘map_override_path’ feature is in use.
+
+* Prevent spurious ‘No visibility data’ notification in the waiting
+  room MVD/GTV channel.
+
+* Fixed a bug causing rcon responses from server to be listed in client
+  console multiple times.
+
+* Client now waits for HTTP downloads to finish before attempting to load
+  the map, so that textures, etc are properly downloaded.
+
+
 Changes since r496
 ==================
 
