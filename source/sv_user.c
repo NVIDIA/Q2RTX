@@ -696,6 +696,8 @@ static void SV_BeginDownload_f( void ) {
         goto fail3;
     }
 
+    FS_FCloseFile( f );
+
     sv_client->download = download;
     sv_client->downloadsize = downloadsize;
     sv_client->downloadcount = offset;
