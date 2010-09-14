@@ -23,8 +23,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 
 typedef struct list_s {
-    struct list_s   *prev; // head
-    struct list_s   *next; // tail
+    struct list_s   *next; // head
+    struct list_s   *prev; // tail
 } list_t;
 
 static inline void List_Link( list_t *prev,
@@ -54,19 +54,20 @@ static inline void List_Insert( list_t *head, list_t *elem ) {
     List_Link( head, head->next, elem );
 }
 
-// add element to the list of elements allocated from the same memory pool
-// used to mimimize cache misses when interating through the list
-static inline void List_SeqAdd( list_t *list, list_t *elem ) {
-    list_t *cursor, *prev = NULL;
+#define LIST_FOR_EACH_ELEM( cursor, list ) \
+    for( cursor = (list)->next; cursor != list; cursor = (cursor)->next )
 
-    for( cursor = list->next; cursor != list; cursor = cursor->next ) {
-        if( elem < cursor && elem > prev ) {
-            List_Link( cursor->prev, cursor, elem );
-            return;
+// insert element into the sorted list of array elements
+static inline void List_SeqAdd( list_t *list, list_t *elem ) {
+    list_t *cursor;
+
+    LIST_FOR_EACH_ELEM( cursor, list ) {
+        if( elem < cursor ) {
+            break;
         }
     }
 
-    List_Append( list, elem );
+    List_Append( cursor, elem );
 }
 
 static inline void List_Delete( list_t *elem ) {
@@ -84,6 +85,9 @@ static inline void List_Remove( list_t *elem ) {
 #define LIST_EMPTY( list ) \
     ( (list)->next == list ) \
 
+#define LIST_SINGLE( list ) \
+    ( !LIST_EMPTY( list ) && (list)->next == (list)->prev )
+
 #define LIST_TERM( cursor, list, member ) \
     ( &(cursor)->member == list ) \
 
@@ -99,30 +103,15 @@ static inline void List_Remove( list_t *elem ) {
 #define LIST_PREV( type, entry, member ) \
     LIST_ENTRY( type, (entry)->member.prev, member )
 
-#define LIST_NEXT_CYCLE( type, entry, list, member ) \
-  ( (entry)->member.next == list ? \
-    LIST_FIRST( type, list, member ) : \
-    LIST_NEXT( type, entry, member ) )
-
-#define LIST_PREV_CYCLE( type, entry, list, member ) \
-  ( (entry)->member.prev == list ? \
-    LIST_LAST( type, list, member ) : \
-    LIST_PREV( type, entry, member ) )
-
 #define LIST_FOR_EACH( type, cursor, list, member ) \
     for( cursor = LIST_FIRST( type, list, member ); \
-        &(cursor)->member != list; \
+        !LIST_TERM( cursor, list, member ); \
         cursor = LIST_NEXT( type, cursor, member ) )
-
-#define LIST_FOR_EACH_REVERSED( type, cursor, list, member ) \
-    for( cursor = LIST_LAST( type, list, member ); \
-        &(cursor)->member != list; \
-        cursor = LIST_PREV( type, cursor, member ) )
 
 #define LIST_FOR_EACH_SAFE( type, cursor, next, list, member ) \
     for( cursor = LIST_FIRST( type, list, member ); \
         next = LIST_NEXT( type, cursor, member ), \
-        &(cursor)->member != list; \
+        !LIST_TERM( cursor, list, member ); \
         cursor = next )
 
 #define LIST_DECL( list ) list_t list = { &list, &list }
@@ -131,18 +120,18 @@ static inline int List_Count( list_t *list ) {
     int count = 0;
     list_t *cursor;
 
-    for( cursor = list->next; cursor != list; cursor = cursor->next ) {
+    LIST_FOR_EACH_ELEM( cursor, list ) {
         count++;
     }
 
     return count;
 }
 
-static inline void *List_Index( list_t *list, int offset, int index ) {
+static inline void *List_Index( list_t *list, size_t offset, int index ) {
     int count = 0;
     list_t *cursor;
 
-    for( cursor = list->next; cursor != list; cursor = cursor->next ) {
+    LIST_FOR_EACH_ELEM( cursor, list ) {
         if( count == index ) {
             return ( unsigned char * )cursor - offset;
         }
