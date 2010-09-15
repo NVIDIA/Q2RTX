@@ -43,13 +43,13 @@ install:
 		$(DESTDIR)$(MANDIR)/q2pro.6
 	install -m 644 -D $(SRCDIR)/man/q2proded.6 \
 		$(DESTDIR)$(MANDIR)/q2proded.6
-	install -m 644 -D $(SRCDIR)/source/q2pro.menu \
+	install -m 644 -D $(SRCDIR)/src/q2pro.menu \
 		$(DESTDIR)$(DATADIR)/baseq2/q2pro.menu
-	install -m 644 -D $(SRCDIR)/source/q2pro.desktop \
+	install -m 644 -D $(SRCDIR)/src/q2pro.desktop \
 		$(DESTDIR)$(APPDIR)/q2pro.desktop
-	install -m 644 -D $(SRCDIR)/source/q2pro.xpm \
+	install -m 644 -D $(SRCDIR)/src/q2pro.xpm \
 		$(DESTDIR)$(PIXDIR)/q2pro.xpm
-	install -m 644 -D $(SRCDIR)/source/q2pro.default \
+	install -m 644 -D $(SRCDIR)/src/q2pro.default \
 		$(DESTDIR)$(SITECFG)
 
 uninstall:
@@ -77,5 +77,5 @@ docs:
 	$(MAKE) -C doc/wiki
 
 tags:
-	ctags $(SRCDIR)/source/*.[ch] $(SRCDIR)/source/baseq2/*.[ch]
+	ctags $(SRCDIR)/src/*.[ch] $(SRCDIR)/src/baseq2/*.[ch]
 

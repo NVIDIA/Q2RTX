@@ -19,9 +19,9 @@ include ../config.mk
 
 TARGET=../$(GAMELIB)
 
-VPATH+=$(SRCDIR)/source/baseq2
+VPATH+=$(SRCDIR)/src/baseq2
 
-CFLAGS+=-I$(SRCDIR)/source
+CFLAGS+=-I$(SRCDIR)/src
 LDFLAGS+=-lm -shared
 
 ifdef MINGW

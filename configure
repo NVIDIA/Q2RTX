@@ -29,7 +29,7 @@ die() {
 # build directories
 sources=`dirname $0`
 [ "$sources" != "." ] || sources=`pwd`
-[ -f $sources/source/common.c ] || die "this does not look like Q2PRO source tree"
+[ -f $sources/src/common.c ] || die "this does not look like Q2PRO source tree"
 if [ ! -f $sources/REVISION ] ; then
     echo "REVISION does not exist. Did you check Q2PRO out of SVN repository?"
     echo "You can create it by running 'svnversion > REVISION' at the root of source tree."
@@ -376,8 +376,8 @@ fi
 
 gamelib="game$cpu$libsuffix"
 
-vpath="\$(SRCDIR)/source"
-[ "$use_asm" = "yes" ] && vpath="$vpath \$(SRCDIR)/asm"
+vpath="\$(SRCDIR)/src"
+[ "$use_asm" = "yes" ] && vpath="$vpath \$(SRCDIR)/src/i386"
 
 if [ ! -z "$cross_prefix" ]; then
     cc="$cross_prefix-$cc"
@@ -485,7 +485,7 @@ echo "#define LIBSUFFIX \"$libsuffix\"" >> $config_h
 echo "VPATH=$vpath" >> $config_mk
 echo "CFLAGS=$CFLAGS" >> $config_mk
 echo "LDFLAGS=$LDFLAGS" >> $config_mk
-[ "$mingw" = "yes" ] && echo "RESFLAGS=-I\$(OUTDIR) -I\$(SRCDIR)/source" >> $config_mk
+[ "$mingw" = "yes" ] && echo "RESFLAGS=-I\$(OUTDIR) -I\$(SRCDIR)/src" >> $config_mk
 [ "$use_asm" = "yes" ] && echo "ASMFLAGS=$asmflags" >> $config_mk
 
 echo "TARGETS=$targets" >> $config_mk
