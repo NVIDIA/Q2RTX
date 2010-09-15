@@ -1447,7 +1447,7 @@ static void SV_PrepWorldFrame( void ) {
 #if USE_CLIENT
 static inline qboolean check_paused( void ) {
     if( !dedicated->integer && cl_paused->integer &&
-        List_Count( &svs.udp_client_list ) == 1  )
+        LIST_SINGLE( &svs.udp_client_list ) )
     {
         if( !sv_paused->integer ) {
             Cvar_Set( "sv_paused", "1" );

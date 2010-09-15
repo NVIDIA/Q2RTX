@@ -1341,12 +1341,10 @@ static void MVD_GameReadLevel( const char *filename ) {
 static qboolean MVD_GameClientConnect( edict_t *ent, char *userinfo ) {
     mvd_client_t *client = EDICT_MVDCL( ent );
     mvd_t *mvd;
-    int count;
 
     // if there is exactly one active channel, assign them to it,
     // otherwise, assign to Waiting Room
-    count = List_Count( &mvd_channel_list );
-    if( count == 1 ) {
+    if( LIST_SINGLE( &mvd_channel_list ) ) {
         mvd = LIST_FIRST( mvd_t, &mvd_channel_list, entry );
     } else {
         mvd = &mvd_waitingRoom;

@@ -222,7 +222,7 @@ mvd_t *MVD_SetChannel( int arg ) {
     }
 
     if( !*s ) {
-        if( List_Count( &mvd_channel_list ) == 1 ) {
+        if( LIST_SINGLE( &mvd_channel_list ) ) {
             return LIST_FIRST( mvd_t, &mvd_channel_list, entry );
         }
         Com_Printf( "Please specify an exact channel ID.\n" );
@@ -325,7 +325,7 @@ static gtv_t *gtv_set_conn( int arg ) {
     }
 
     if( !*s ) {
-        if( List_Count( &mvd_gtv_list ) == 1 ) {
+        if( LIST_SINGLE( &mvd_gtv_list ) ) {
             return LIST_FIRST( gtv_t, &mvd_gtv_list, entry );
         }
         Com_Printf( "Please specify an exact connection ID.\n" );
