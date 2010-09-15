@@ -43,7 +43,7 @@ install:
 		$(DESTDIR)$(MANDIR)/q2pro.6
 	install -m 644 -D $(SRCDIR)/q2proded.6 \
 		$(DESTDIR)$(MANDIR)/q2proded.6
-	install -m 644 -D $(SRCDIR)/wiki/doc/q2pro.menu \
+	install -m 644 -D $(SRCDIR)/source/q2pro.menu \
 		$(DESTDIR)$(DATADIR)/baseq2/q2pro.menu
 	install -m 644 -D $(SRCDIR)/source/q2pro.desktop \
 		$(DESTDIR)$(APPDIR)/q2pro.desktop
