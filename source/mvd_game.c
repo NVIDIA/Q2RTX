@@ -705,7 +705,7 @@ void MVD_SwitchChannel( mvd_client_t *client, mvd_t *mvd ) {
     client_t *cl = client->cl;
 
     List_Remove( &client->entry );
-    List_Append( &mvd->clients, &client->entry );
+    List_SeqAdd( &mvd->clients, &client->entry );
     client->mvd = mvd;
     client->begin_time = 0;
     client->target = client->oldtarget = NULL;
@@ -1351,7 +1351,7 @@ static qboolean MVD_GameClientConnect( edict_t *ent, char *userinfo ) {
     } else {
         mvd = &mvd_waitingRoom;
     }
-    List_Append( &mvd->clients, &client->entry );
+    List_SeqAdd( &mvd->clients, &client->entry );
     client->mvd = mvd;
     
     // override server state
