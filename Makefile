@@ -39,9 +39,9 @@ install:
 	for t in $(LIBRARIES) ; do \
 		install -m 755 -D $$t $(DESTDIR)$(LIBDIR)/baseq2/$$t ; \
 	done
-	install -m 644 -D $(SRCDIR)/q2pro.6 \
+	install -m 644 -D $(SRCDIR)/man/q2pro.6 \
 		$(DESTDIR)$(MANDIR)/q2pro.6
-	install -m 644 -D $(SRCDIR)/q2proded.6 \
+	install -m 644 -D $(SRCDIR)/man/q2proded.6 \
 		$(DESTDIR)$(MANDIR)/q2proded.6
 	install -m 644 -D $(SRCDIR)/source/q2pro.menu \
 		$(DESTDIR)$(DATADIR)/baseq2/q2pro.menu
