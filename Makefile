@@ -74,7 +74,7 @@ strip:
 	done
 
 docs:
-	$(MAKE) -C wiki
+	$(MAKE) -C doc/wiki
 
 tags:
 	ctags $(SRCDIR)/source/*.[ch] $(SRCDIR)/source/baseq2/*.[ch]
