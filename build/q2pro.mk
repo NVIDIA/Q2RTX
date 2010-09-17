@@ -147,3 +147,26 @@ endif # !MINGW
 
 include $(SRCDIR)/build/target.mk
 
+ifndef SINGLEUSER
+.PHONY: install uninstall
+
+install: $(TARGET)
+	install -m 755 -D $(TARGET) \
+		$(DESTDIR)$(BINDIR)/q2pro$(EXESUFFIX)
+	install -m 644 -D $(SRCDIR)/man/q2pro.6 \
+		$(DESTDIR)$(MANDIR)/q2pro.6
+	install -m 644 -D $(SRCDIR)/src/q2pro.menu \
+		$(DESTDIR)$(DATADIR)/baseq2/q2pro.menu
+	install -m 644 -D $(SRCDIR)/src/q2pro.desktop \
+		$(DESTDIR)$(APPDIR)/q2pro.desktop
+	install -m 644 -D $(SRCDIR)/src/q2pro.xpm \
+		$(DESTDIR)$(PIXDIR)/q2pro.xpm
+
+uninstall:
+	-rm $(DESTDIR)$(BINDIR)/q2pro$(EXESUFFIX)
+	-rm $(DESTDIR)$(MANDIR)/q2pro.6
+	-rm $(DESTDIR)$(DATADIR)/baseq2/q2pro.menu
+	-rm $(DESTDIR)$(APPDIR)/q2pro.desktop
+	-rm $(DESTDIR)$(PIXDIR)/q2pro.xpm
+endif #!SINGLEUSER
+

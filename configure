@@ -48,8 +48,6 @@ help="no"
 exesuffix=""
 libsuffix=".so"
 targets=""
-executables=""
-libraries=""
 cpu=""
 singleuser="no"
 asmflags=""
@@ -428,7 +426,6 @@ CFLAGS="-I\$(OUTDIR) -MF \$*.d -MMD -pipe -ffloat-store $CFLAGS -Wno-strict-alia
 # determine what needs to be built
 if [ "$use_client" = "yes" ]; then
     targets="$targets q2pro"
-    executables="$executables q2pro$exesuffix"
 else
     use_snddma="no"
     use_openal="no"
@@ -447,12 +444,10 @@ fi
 
 if [ "$use_server" = "yes" ]; then
     targets="$targets q2proded"
-    executables="$executables q2proded$exesuffix"
 fi
 
 if [ "$use_baseq2" = "yes" ]; then
     targets="$targets baseq2"
-    libraries="$libraries $gamelib"
 fi
 
 if [ "$use_png" = "yes" ]; then
@@ -489,9 +484,6 @@ echo "LDFLAGS=$LDFLAGS" >> $config_mk
 [ "$use_asm" = "yes" ] && echo "ASMFLAGS=$asmflags" >> $config_mk
 
 echo "TARGETS=$targets" >> $config_mk
-echo "BINARIES=$executables $libraries" >> $config_mk
-echo "EXECUTABLES=$executables" >> $config_mk
-echo "LIBRARIES=$libraries" >> $config_mk
 
 echo "REVISION=$revision" >> $config_mk
 echo "#define REVISION $revision" >> $config_h

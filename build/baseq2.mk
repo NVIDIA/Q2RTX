@@ -44,3 +44,13 @@ g_ptrs.c
 
 include $(SRCDIR)/build/target.mk
 
+ifndef SINGLEUSER
+.PHONY: install uninstall
+
+install: $(TARGET)
+	install -m 755 -D $(TARGET) \
+		$(DESTDIR)$(LIBDIR)/baseq2/$(GAMELIB)
+
+uninstall:
+	-rm $(DESTDIR)$(LIBDIR)/baseq2/$(GAMELIB)
+endif

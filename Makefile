@@ -1,81 +1,47 @@
 include config.mk
 
-.PHONY: default all binaries clean distclean install strip tags
+.PHONY: default all binary strip tags clean distclean
 
 default: all
-all: binaries
+all: binary
 
-binaries:
-	for t in $(TARGETS) ; do \
-		$(MAKE) -C .$$t -f $(SRCDIR)/build/$$t.mk all || exit 1 ; \
-	done
+%-binary:
+	$(MAKE) -C .$* -f $(SRCDIR)/build/$*.mk binary
 
-clean:
-	for t in $(TARGETS) ; do \
-		$(MAKE) -C .$$t -f $(SRCDIR)/build/$$t.mk clean ; \
-	done
+%-strip:
+	$(MAKE) -C .$* -f $(SRCDIR)/build/$*.mk strip
 
-distclean: clean
-	for t in $(TARGETS) ; do \
-		rm -r .$$t ; \
-	done
-	rm -f config.mk config.h
-	rm -f tags
+%-clean:
+	$(MAKE) -C .$* -f $(SRCDIR)/build/$*.mk clean
 
-ifdef SINGLEUSER
+binary: $(patsubst %,%-binary,$(TARGETS))
 
-install:
-	echo "Single user mode configured, can't install" && exit 1
-
-uninstall:
-	echo "Single user mode configured, can't uninstall" && exit 1
-
-else # SINGLEUSER
-
-install:
-	for t in $(EXECUTABLES) ; do \
-		install -m 755 -D $$t $(DESTDIR)$(BINDIR)/$$t ; \
-	done
-	for t in $(LIBRARIES) ; do \
-		install -m 755 -D $$t $(DESTDIR)$(LIBDIR)/baseq2/$$t ; \
-	done
-	install -m 644 -D $(SRCDIR)/man/q2pro.6 \
-		$(DESTDIR)$(MANDIR)/q2pro.6
-	install -m 644 -D $(SRCDIR)/man/q2proded.6 \
-		$(DESTDIR)$(MANDIR)/q2proded.6
-	install -m 644 -D $(SRCDIR)/src/q2pro.menu \
-		$(DESTDIR)$(DATADIR)/baseq2/q2pro.menu
-	install -m 644 -D $(SRCDIR)/src/q2pro.desktop \
-		$(DESTDIR)$(APPDIR)/q2pro.desktop
-	install -m 644 -D $(SRCDIR)/src/q2pro.xpm \
-		$(DESTDIR)$(PIXDIR)/q2pro.xpm
-	install -m 644 -D $(SRCDIR)/src/q2pro.default \
-		$(DESTDIR)$(SITECFG)
-
-uninstall:
-	for t in $(EXECUTABLES) ; do \
-		rm -f $(DESTDIR)$(BINDIR)/$$t ; \
-	done
-	for t in $(LIBRARIES) ; do \
-		rm -f $(DESTDIR)$(LIBDIR)/baseq2/$$t ; \
-	done
-	rm -f $(DESTDIR)$(MANDIR)/q2pro.6
-	rm -f $(DESTDIR)$(MANDIR)/q2proded.6
-	rm -f $(DESTDIR)$(DATADIR)/baseq2/q2pro.menu
-	rm -f $(DESTDIR)$(APPDIR)/q2pro.desktop
-	rm -f $(DESTDIR)$(PIXDIR)/q2pro.xpm
-	rm -f $(DESTDIR)$(SITECFG)
-
-endif # !SINGLEUSER
-
-strip:
-	for t in $(BINARIES) ; do \
-		$(STRIP) $$t ; \
-	done
-
-docs:
-	$(MAKE) -C doc/wiki
+strip: $(patsubst %,%-strip,$(TARGETS))
 
 tags:
 	ctags $(SRCDIR)/src/*.[ch] $(SRCDIR)/src/baseq2/*.[ch]
+
+clean: $(patsubst %,%-clean,$(TARGETS))
+
+distclean: clean
+	rm -rf .q2pro .q2proded .baseq2
+	rm -f config.mk config.h
+	rm -f tags
+
+ifndef SINGLEUSER
+.PHONY: install uninstall
+
+%-install:
+	$(MAKE) -C .$* -f $(SRCDIR)/build/$*.mk install
+
+%-uninstall:
+	$(MAKE) -C .$* -f $(SRCDIR)/build/$*.mk uninstall
+
+install: $(patsubst %,%-install,$(TARGETS))
+	install -m 644 -D $(SRCDIR)/src/q2pro.default \
+		$(DESTDIR)$(SITECFG)
+
+uninstall: $(patsubst %,%-uninstall,$(TARGETS))
+	-rm $(DESTDIR)$(SITECFG)
+endif
 

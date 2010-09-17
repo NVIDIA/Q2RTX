@@ -21,11 +21,11 @@ default: $(TARGET)
 
 all: $(TARGET)
 
+binary: $(TARGET)
+
 clean:
-	@rm -f *.d
-	@rm -f *.o
-	@rm -f $(TARGET)
-	
+	@rm -f *.d *.o $(TARGET)
+
 .PHONY: clean
 
 %.o: %.c
@@ -43,6 +43,10 @@ clean:
 $(TARGET): $(OBJFILES)
 	@echo [LD] $@
 	@$(CC) -o $@ $^ $(LDFLAGS)
+
+strip: $(TARGET)
+	@echo [ST] $<
+	@$(STRIP) $<
 
 -include *.d
 
