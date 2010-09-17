@@ -59,10 +59,16 @@ typedef enum {
     NET_ERROR,
 } neterr_t;
 
+typedef union {
+    uint8_t u8[4];
+    uint16_t u16[2];
+    uint32_t u32;
+} netadrip_t;
+
 typedef struct {
-    netadrtype_t    type;
-    uint8_t     ip[4];
-    uint16_t    port;
+    netadrtype_t type;
+    netadrip_t ip;
+    uint16_t port;
 } netadr_t;
 
 static inline qboolean NET_IsEqualAdr( const netadr_t *a, const netadr_t *b ) {
@@ -75,7 +81,7 @@ static inline qboolean NET_IsEqualAdr( const netadr_t *a, const netadr_t *b ) {
         return qtrue;
     case NA_IP:
     case NA_BROADCAST:
-        if( *( uint32_t * )a->ip == *( uint32_t * )b->ip && a->port == b->port ) {
+        if( a->ip.u32 == b->ip.u32 && a->port == b->port ) {
             return qtrue;
         }
         // fall through
@@ -96,7 +102,7 @@ static inline qboolean NET_IsEqualBaseAdr( const netadr_t *a, const netadr_t *b 
         return qtrue;
     case NA_IP:
     case NA_BROADCAST:
-        if( *( uint32_t * )a->ip == *( uint32_t * )b->ip ) {
+        if( a->ip.u32 == b->ip.u32 ) {
             return qtrue;
         }
         // fall through
@@ -113,11 +119,11 @@ static inline qboolean NET_IsLanAddress( const netadr_t *adr ) {
         return qtrue;
     case NA_IP:
     case NA_BROADCAST:
-        if( adr->ip[0] == 127 || adr->ip[0] == 10 ) {
+        if( adr->ip.u8[0] == 127 || adr->ip.u8[0] == 10 ) {
             return qtrue;
         }
-        if( *( uint16_t * )adr->ip == MakeRawShort( 192, 168 ) ||
-            *( uint16_t * )adr->ip == MakeRawShort( 172,  16 ) )
+        if( adr->ip.u16[0] == MakeRawShort( 192, 168 ) ||
+            adr->ip.u16[0] == MakeRawShort( 172,  16 ) )
         {
             return qtrue;
         }

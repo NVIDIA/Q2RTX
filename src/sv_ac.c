@@ -1095,7 +1095,7 @@ char *AC_ClientConnect( client_t *cl ) {
     if( ac.ready ) {
         MSG_WriteShort( 15 );
         MSG_WriteByte( ACC_REQUESTCHALLENGE );
-        MSG_WriteData( net_from.ip, 4 );
+        MSG_WriteData( net_from.ip.u8, 4 );
         MSG_WriteData( &net_from.port, 2 );
         MSG_WriteLong( cl->number );
         MSG_WriteLong( cl->challenge );

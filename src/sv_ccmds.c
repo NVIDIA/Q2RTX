@@ -407,7 +407,7 @@ void SV_Kick_f( void ) {
         netadr_t *addr = &sv_client->netchan->remote_address;
         if( addr->type == NA_IP ) {
             addrmatch_t *match = Z_Malloc( sizeof( *match ) );
-            match->addr = *( uint32_t * )addr->ip;
+            match->addr.u32 = addr->ip.u32;
             match->mask = 0xffffffffU;
             match->hits = 0;
             match->time = 0;
@@ -872,18 +872,16 @@ static qboolean parse_mask( const char *s, uint32_t *addr, uint32_t *mask ) {
         return qfalse;
     }
 
-    *addr = *( uint32_t * )address.ip;
+    *addr = address.ip.u32;
     *mask = BigLong( ~( ( 1 << ( 32 - bits ) ) - 1 ) );
     return qtrue;
 }
 
 static size_t format_mask( addrmatch_t *match, char *buf, size_t size ) {
-    byte ip[4];
-    uint32_t mask;
+    uint8_t *ip = match->addr.u8;
+    uint32_t mask = BigLong( match->mask );
     int i;
 
-    *( uint32_t * )ip = match->addr;
-    mask = BigLong( match->mask );
     for( i = 0; i < 32; i++ ) {
         if( mask & ( 1 << i ) ) {
             break;
@@ -911,7 +909,7 @@ void SV_AddMatch_f( list_t *list ) {
     }
 
     LIST_FOR_EACH( addrmatch_t, match, list, entry ) {
-        if( match->addr == addr && match->mask == mask ) {
+        if( match->addr.u32 == addr && match->mask == mask ) {
             format_mask( match, buf, sizeof( buf ) );
             Com_Printf( "Entry %s already exists.\n", buf );
             return;
@@ -921,7 +919,7 @@ void SV_AddMatch_f( list_t *list ) {
     s = Cmd_ArgsFrom( 2 );
     len = strlen( s );
     match = Z_Malloc( sizeof( *match ) + len );
-    match->addr = addr;
+    match->addr.u32 = addr;
     match->mask = mask;
     match->hits = 0;
     match->time = 0;
@@ -974,7 +972,7 @@ void SV_DelMatch_f( list_t *list ) {
     }
 
     LIST_FOR_EACH( addrmatch_t, match, list, entry ) {
-        if( match->addr == addr && match->mask == mask ) {
+        if( match->addr.u32 == addr && match->mask == mask ) {
 remove:
             List_Remove( &match->entry );
             Z_Free( match );

@@ -281,12 +281,11 @@ static void SV_RateInit( ratelimit_t *r, const char *s ) {
     r->period = period;
 }
 
-addrmatch_t *SV_MatchAddress( list_t *list, netadr_t *address ) {
-    uint32_t addr = *( uint32_t * )address->ip;
+addrmatch_t *SV_MatchAddress( list_t *list, netadr_t *addr ) {
     addrmatch_t *match;
 
     LIST_FOR_EACH( addrmatch_t, match, list, entry ) {
-        if( ( addr & match->mask ) == ( match->addr & match->mask ) ) {
+        if( ( addr->ip.u32 & match->mask ) == ( match->addr.u32 & match->mask ) ) {
             match->hits++;
             match->time = time( NULL );
             return match;
@@ -1073,13 +1072,6 @@ static void SV_ConnectionlessPacket( void ) {
 
     c = Cmd_Argv( 0 );
     Com_DPrintf( "ServerPacket[%s]: %s\n", NET_AdrToString( &net_from ), c );
-
-    if( !NET_IsLocalAddress( &net_from ) && net_from.ip[0] == 127 &&
-        net_from.port == Cvar_VariableInteger( "net_port" ) )
-    {
-        Com_DPrintf( "dropped connectionless packet from self\n" );
-        return;
-    }
 
     if( !strcmp( c, "rcon" ) ) {
         SVC_RemoteCommand();

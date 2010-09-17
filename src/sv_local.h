@@ -318,7 +318,7 @@ typedef struct {
 
 typedef struct {
     list_t      entry;
-    uint32_t    addr;
+    netadrip_t  addr;
     uint32_t    mask;
     unsigned    hits;
     time_t      time;   // time of the last hit

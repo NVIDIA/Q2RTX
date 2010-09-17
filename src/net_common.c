@@ -166,7 +166,7 @@ static void NET_NetadrToSockadr( const netadr_t *a, struct sockaddr_in *s ) {
         break;
     case NA_IP:
         s->sin_family = AF_INET;
-        s->sin_addr.s_addr = *( uint32_t * )&a->ip;
+        s->sin_addr.s_addr = a->ip.u32;
         s->sin_port = a->port;
         break;
     default:
@@ -184,7 +184,7 @@ static void NET_SockadrToNetadr( const struct sockaddr_in *s, netadr_t *a ) {
     memset( a, 0, sizeof( *a ) );
 
     a->type = NA_IP;
-    *( uint32_t * )&a->ip = s->sin_addr.s_addr;
+    a->ip.u32 = s->sin_addr.s_addr;
     a->port = s->sin_port;
 }
 
@@ -247,6 +247,7 @@ NET_AdrToString
 */
 char *NET_AdrToString( const netadr_t *a ) {
     static char s[MAX_QPATH];
+    const uint8_t *ip;
 
     switch( a->type ) {
     case NA_LOOPBACK:
@@ -254,8 +255,9 @@ char *NET_AdrToString( const netadr_t *a ) {
         return s;
     case NA_IP:
     case NA_BROADCAST:
+        ip = a->ip.u8;
         Q_snprintf( s, sizeof( s ), "%u.%u.%u.%u:%u",
-            a->ip[0], a->ip[1], a->ip[2], a->ip[3], ntohs( a->port ) );
+            ip[0], ip[1], ip[2], ip[3], ntohs( a->port ) );
         return s;
     default:
         Com_Error( ERR_FATAL, "%s: bad address type", __func__ );
