@@ -375,7 +375,7 @@ static qboolean Parse_File( const char *path, int depth ) {
                     menu->pop = Menu_Pop;
                     menu->free = Menu_Free;
                     menu->image = uis.backgroundHandle;
-                    *( uint32_t * )menu->color = *( uint32_t * )uis.color.background;
+                    FastColorCopy( uis.color.background, menu->color );
                 } else if( !strcmp( cmd, "include" ) ) {
                     char *s = Cmd_Argv( 1 );
                     if( !*s ) {

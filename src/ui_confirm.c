@@ -59,7 +59,7 @@ void M_Menu_Confirm( const char *text, confirmAction_t action ) {
 
     m_confirm.menu.keydown = ConfirmKeydown;
     m_confirm.menu.image = uis.backgroundHandle;
-    *( uint32_t * )m_confirm.menu.color = *( uint32_t * )colorBlack;
+    FastColorCopy( colorBlack, m_confirm.menu.color );
 
     m_confirm.text.generic.type = MTYPE_STATIC;
     m_confirm.text.generic.name = ( char * )text;
@@ -103,10 +103,10 @@ void M_Menu_Error( error_type_t type, const char *text ) {
     case ERR_SILENT:
         return;
     case ERR_DROP:
-        *( uint32_t * )color = *( uint32_t * )colorRed;
+        FastColorCopy( colorRed, color );
         break;
     default:
-        *( uint32_t * )color = *( uint32_t * )colorYellow;
+        FastColorCopy( colorYellow, color );
         break;
     }
 
@@ -114,13 +114,13 @@ void M_Menu_Error( error_type_t type, const char *text ) {
 
     m_error.menu.keydown = ErrorKeydown;
     m_error.menu.image = uis.backgroundHandle;
-    *( uint32_t * )m_error.menu.color = *( uint32_t * )colorBlack;
+    FastColorCopy( colorBlack, m_error.menu.color );
 
     m_error.text.generic.type = MTYPE_STATIC;
     m_error.text.generic.flags = QMF_CUSTOM_COLOR;
     m_error.text.generic.name = ( char * )text;
     m_error.text.generic.uiFlags = UI_CENTER|UI_MULTILINE;
-    *( uint32_t * )m_error.text.generic.color = *( uint32_t * )color;
+    FastColorCopy( color, m_error.text.generic.color );
     
     Menu_AddItem( &m_error.menu, ( void * )&m_error.text );
 

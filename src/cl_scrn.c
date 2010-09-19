@@ -664,7 +664,7 @@ static void SCR_Draw_f( void ) {
     obj->x = x;
     obj->y = y;
     obj->flags = flags;
-    *( uint32_t * )obj->color = *( uint32_t * )color;
+    FastColorCopy( color, obj->color );
 
     macro = Cmd_FindMacro( s );
     if( macro ) {

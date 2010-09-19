@@ -109,7 +109,7 @@ void GL_DrawParticles( void ) {
         }
 
         if( p->color == 255 ) {
-            *( uint32_t * )color = *( uint32_t * )p->rgb;
+            FastColorCopy( p->rgb, color );
         } else {
             *( uint32_t * )color = d_8to24table[p->color & 255];
         }

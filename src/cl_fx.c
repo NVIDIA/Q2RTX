@@ -1874,7 +1874,7 @@ void CL_AddParticles (void)
         part->origin[2] = p->org[2] + p->vel[2]*time + p->accel[2]*time2;
 
         if( color == 255 ) {
-            *( uint32_t * )part->rgb = *( uint32_t * )p->rgb;
+            FastColorCopy( p->rgb, part->rgb );
         }
 
         part->color = color;

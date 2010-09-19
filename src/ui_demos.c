@@ -431,7 +431,7 @@ void M_Menu_Demos( void ) {
     m_demos.menu.keydown    = Keydown;
     m_demos.menu.free       = Free;
     m_demos.menu.image = uis.backgroundHandle;
-    *( uint32_t * )m_demos.menu.color = *( uint32_t * )uis.color.background;
+    FastColorCopy( uis.color.background, m_demos.menu.color );
 
     m_demos.list.generic.type   = MTYPE_LIST;
     m_demos.list.generic.flags  = QMF_HASFOCUS;

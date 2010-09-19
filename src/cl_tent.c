@@ -422,7 +422,7 @@ static void CL_AddLasers( void ) {
                 ent.skinnum = *(int *)color;
             }*/
         } /*else*/ {
-            ent.skinnum = *(int *)l->color;
+            ent.skinnum = *(uint32_t *)l->color;
         }
 
         ent.flags = RF_TRANSLUCENT|RF_BEAM;
@@ -1030,14 +1030,14 @@ static cvar_t *cl_railspiral_radius;
 static void cl_railcore_color_changed( cvar_t *self ) {
     if( !SCR_ParseColor( self->string, railcore_color ) ) {
         Com_WPrintf( "Invalid value '%s' for '%s'\n", self->string, self->name );
-        *( uint32_t *)railcore_color = *( uint32_t * )colorRed;
+        FastColorCopy( colorRed, railcore_color );
     }
 }
 
 static void cl_railspiral_color_changed( cvar_t *self ) {
     if( !SCR_ParseColor( self->string, railspiral_color ) ) {
         Com_WPrintf( "Invalid value '%s' for '%s'\n", self->string, self->name );
-        *( uint32_t *)railspiral_color = *( uint32_t * )colorBlue;
+        FastColorCopy( colorBlue, railspiral_color );
     }
 }
 
@@ -1054,7 +1054,7 @@ static void CL_RailCore( void ) {
     l->lifeTime = 1000 * cl_railtrail_time->value;
     l->indexed = qfalse;
     l->width = cl_railcore_width->value;
-    *( uint32_t * )l->color = *( uint32_t * )railcore_color;
+    FastColorCopy( railcore_color, l->color );
 }
 
 static void CL_RailSpiral( void ) {
@@ -1093,7 +1093,7 @@ static void CL_RailSpiral( void ) {
         p->alpha = railspiral_color[3] / 255.0f;
         p->alphavel = -1.0 / ( cl_railtrail_time->value + frand() * 0.2 );
         p->color = 0xff;
-        *( uint32_t * )p->rgb = *( uint32_t * )railspiral_color;
+        FastColorCopy( railspiral_color, p->rgb );
         for( j=0 ; j<3 ; j++ ) {
             p->org[j] = move[j] + dir[j] * cl_railspiral_radius->value;
             p->vel[j] = dir[j] * 6;
