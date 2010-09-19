@@ -1235,7 +1235,7 @@ CL_FlagTrail
 
 ===============
 */
-void CL_FlagTrail (vec3_t start, vec3_t end, float color)
+void CL_FlagTrail (vec3_t start, vec3_t end, int color)
 {
     vec3_t      move;
     vec3_t      vec;
@@ -1630,7 +1630,6 @@ void CL_FlyParticles (vec3_t origin, int count)
         VectorClear (p->accel);
 
         p->color = 0;
-        p->colorvel = 0;
 
         p->alpha = 1;
         p->alphavel = -100;
@@ -1721,7 +1720,6 @@ void CL_BfgParticles (entity_t *ent)
         VectorSubtract (p->org, ent->origin, v);
         dist = VectorLength(v) / 90.0;
         p->color = floor (0xd0 + dist * 7);
-        p->colorvel = 0;
 
         p->alpha = 1.0 - dist;
         p->alphavel = -100;

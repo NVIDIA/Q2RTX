@@ -828,7 +828,7 @@ CL_TagTrail
 
 ===============
 */
-void CL_TagTrail (vec3_t start, vec3_t end, float color)
+void CL_TagTrail (vec3_t start, vec3_t end, int color)
 {
     vec3_t      move;
     vec3_t      vec;
