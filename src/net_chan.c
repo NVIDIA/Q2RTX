@@ -137,24 +137,26 @@ void Netchan_OutOfBand( netsrc_t sock, const netadr_t *address,
                         const char *format, ... )
 {
     va_list     argptr;
-    char        buffer[MAX_PACKETLEN_DEFAULT];
+    struct {
+        uint32_t    header;
+        char        data[MAX_PACKETLEN_DEFAULT-4];
+    } packet;
     size_t      len;
 
     // write the packet header
-    *( uint32_t * )buffer = 0xffffffff;
-    len = 4;
+    packet.header = 0xffffffff;
     
     va_start( argptr, format );
-    len += Q_vsnprintf( buffer + len, sizeof( buffer ) - len, format, argptr );
+    len = Q_vsnprintf( packet.data, sizeof( packet.data ), format, argptr );
     va_end( argptr );
 
-    if( len >= sizeof( buffer ) ) {
+    if( len >= sizeof( packet.data ) ) {
         Com_WPrintf( "%s: overflow\n", __func__ );
         return;
     }
 
     // send the datagram
-    NET_SendPacket( sock, address, len, buffer );
+    NET_SendPacket( sock, address, len + 4, &packet );
 }
 
 // ============================================================================
