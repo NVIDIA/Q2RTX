@@ -719,7 +719,7 @@ void MVD_SwitchChannel( mvd_client_t *client, mvd_t *mvd ) {
     SV_ClientAddMessage( cl, MSG_RELIABLE|MSG_CLEAR );
 }
 
-void MVD_TrySwitchChannel( mvd_client_t *client, mvd_t *mvd ) {
+static void MVD_TrySwitchChannel( mvd_client_t *client, mvd_t *mvd ) {
     if( mvd == client->mvd ) {
         SV_ClientPrintf( client->cl, PRINT_HIGH,
             "[MVD] You are already %s.\n", mvd == &mvd_waitingRoom ?

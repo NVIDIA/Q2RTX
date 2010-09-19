@@ -804,7 +804,7 @@ static qboolean CL_ServerStatusResponse( const char *status, size_t len, serverS
     return qtrue;
 }
 
-void CL_DumpServerInfo( const serverStatus_t *status ) {
+static void CL_DumpServerInfo( const serverStatus_t *status ) {
     char    key[MAX_STRING_CHARS];
     char    value[MAX_STRING_CHARS];
     const   playerStatus_t *player;
@@ -1197,7 +1197,7 @@ static void cl_noskins_changed( cvar_t *self ) {
     }
 }
 
-void CL_Name_g( genctx_t *ctx ) {
+static void CL_Name_g( genctx_t *ctx ) {
     int i;
     clientinfo_t *ci;
 

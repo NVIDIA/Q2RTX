@@ -385,7 +385,7 @@ SV_Kick_f
 Kick a user off of the server
 ==================
 */
-void SV_Kick_f( void ) {
+static void SV_Kick_f( void ) {
     if( !svs.initialized ) {
         Com_Printf( "No server running.\n" );
         return;
@@ -610,7 +610,7 @@ static void SV_Status_f( void ) {
 SV_ConSay_f
 ==================
 */
-void SV_ConSay_f( void ) {
+static void SV_ConSay_f( void ) {
     client_t *client;
     char *s;
 
@@ -724,7 +724,7 @@ SV_Stuff_f
 Stuff raw command string to the client.
 ==================
 */
-void SV_Stuff_f( void ) {
+static void SV_Stuff_f( void ) {
     if( !svs.initialized ) {
         Com_Printf( "No server running.\n" );
         return;
@@ -753,7 +753,7 @@ SV_Stuff_f
 Stuff raw command string to all clients.
 ==================
 */
-void SV_Stuffall_f( void ) {
+static void SV_Stuffall_f( void ) {
     client_t *client;
 
     if( !svs.initialized ) {
@@ -817,7 +817,7 @@ Kick everyone off, possibly in preparation for a new game
 
 ===============
 */
-void SV_KillServer_f( void ) {
+static void SV_KillServer_f( void ) {
     if( !svs.initialized ) {
         Com_Printf( "No server running.\n" );
         return;

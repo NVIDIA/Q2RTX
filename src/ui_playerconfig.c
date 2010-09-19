@@ -144,8 +144,6 @@ static void Size( menuFrameWork_t *self ) {
 }
 
 static menuSound_t Change( menuCommon_t *self ) {
-    extern void SpinControl_Init( menuSpinControl_t *s );
-
     switch( self->id ) {
     case ID_MODEL:
         m_player.skin.itemnames =

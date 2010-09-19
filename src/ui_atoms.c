@@ -90,7 +90,7 @@ void UI_PushMenu( menuFrameWork_t *menu ) {
     }
 }
 
-void UI_Resize( void ) {
+static void UI_Resize( void ) {
     int i;
 
 #if USE_REF == REF_SOFT

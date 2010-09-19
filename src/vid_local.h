@@ -29,7 +29,6 @@ extern cvar_t       *_vid_fullscreen;
 //
 void VID_PumpEvents( void );
 void VID_SetMode( void );
-void VID_FillInputAPI( inputAPI_t *api );
 
 //
 // cl_ref.c

@@ -731,7 +731,7 @@ void *Z_Realloc( void *ptr, size_t size ) {
 Z_Stats_f
 ========================
 */
-void Z_Stats_f( void ) {
+static void Z_Stats_f( void ) {
     size_t bytes = 0, count = 0;
     zstats_t *s;
     int i;
@@ -1394,7 +1394,7 @@ size_t Com_UptimeLong_m( char *buffer, size_t size ) {
     return Com_TimeDiffLong( buffer, size, com_startTime, time( NULL ) );
 }
 
-size_t Com_Random_m( char *buffer, size_t size ) {
+static size_t Com_Random_m( char *buffer, size_t size ) {
     return Q_scnprintf( buffer, size, "%d", rand_byte() % 10 );
 }
 

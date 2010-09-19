@@ -2631,7 +2631,7 @@ fail:
 FS_Path_f
 ============
 */
-void FS_Path_f( void ) {
+static void FS_Path_f( void ) {
     searchpath_t *s;
     int numFilesInPAK = 0;
 #if USE_ZLIB

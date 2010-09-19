@@ -21,7 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "cl_local.h"
 
-extern void MakeNormalVectors (vec3_t forward, vec3_t right, vec3_t up);
 
 
 /*
@@ -29,7 +28,7 @@ extern void MakeNormalVectors (vec3_t forward, vec3_t right, vec3_t up);
 vectoangles2 - this is duplicated in the game DLL, but I need it heref.
 ======
 */
-void vectoangles2 (vec3_t value1, vec3_t angles)
+static void vectoangles2 (vec3_t value1, vec3_t angles)
 {
     float   forward;
     float   yaw, pitch;

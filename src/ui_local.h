@@ -314,6 +314,7 @@ void        MenuList_Init( menuList_t *l );
 void        MenuList_SetValue( menuList_t *l, int value );
 void        MenuList_Sort( menuList_t *l, int offset,
                 int (*cmpfunc)( const void *, const void * ) );
+void SpinControl_Init( menuSpinControl_t *s );
 qboolean    Menu_Push( menuFrameWork_t *menu );
 void        Menu_Pop( menuFrameWork_t *menu );
 void        Menu_Free( menuFrameWork_t *menu );

@@ -81,10 +81,6 @@ static cvar_t    *in_enable;
 static cvar_t    *in_direct;
 #endif
 
-#if USE_DINPUT
-void DI_FillAPI( inputAPI_t *api );
-#endif
-
 /*
 ============
 IN_Activate

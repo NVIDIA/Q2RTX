@@ -609,6 +609,7 @@ void CL_SetLightStyle( int index, const char *string, size_t length );
 void CL_RunLightStyles (void);
 void CL_AddLightStyles (void);
 #endif
+void MakeNormalVectors (vec3_t forward, vec3_t right, vec3_t up);
 
 //
 // cl_newfx.c

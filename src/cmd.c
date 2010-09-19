@@ -219,7 +219,7 @@ static list_t   cmd_aliasHash[ALIAS_HASH_SIZE];
 Cmd_AliasFind
 ===============
 */
-cmdalias_t *Cmd_AliasFind( const char *name ) {
+static cmdalias_t *Cmd_AliasFind( const char *name ) {
     unsigned hash;
     cmdalias_t *alias;
 
@@ -817,7 +817,7 @@ char *Cmd_ArgsFrom( int from ) {
     return cmd_args;
 }
 
-char *Cmd_ArgsRange( int from, int to ) {
+static char *Cmd_ArgsRange( int from, int to ) {
     int i;
 
     if( from < 0 || from >= cmd_argc ) {
@@ -1306,7 +1306,7 @@ void Cmd_TokenizeString( const char *text, qboolean macroExpand ) {
 Cmd_Find
 ============
 */
-cmd_function_t *Cmd_Find( const char *name ) {
+static cmd_function_t *Cmd_Find( const char *name ) {
     cmd_function_t *cmd;
     unsigned hash;
 
@@ -1756,9 +1756,6 @@ static void Cmd_Complete_f( void ) {
 
     hash = Com_HashString( name, CMD_HASH_SIZE );
     List_Append( &cmd_hash[hash], &cmd->hashEntry );
-}
-
-void Com_Mixed_c( genctx_t *ctx, int argnum ) {
 }
 
 static const cmdreg_t c_cmd[] = {

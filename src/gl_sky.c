@@ -369,7 +369,7 @@ void R_DrawSkyBox( void ) {
     qglPopMatrix ();
 }
 
-void R_UnsetSky( void ) {
+static void R_UnsetSky( void ) {
     int i;
 
     skyrotate = 0;

@@ -31,12 +31,6 @@ static cvar_t       *s_direct;
 #endif
 static cvar_t       *s_mixahead;
 
-void WAVE_FillAPI( snddmaAPI_t *api );
-
-#if USE_DSOUND
-void DS_FillAPI( snddmaAPI_t *api );
-#endif
-
 static snddmaAPI_t snddma;
 
 void DMA_SoundInfo( void ) {

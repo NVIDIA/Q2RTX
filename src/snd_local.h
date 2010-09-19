@@ -128,6 +128,12 @@ typedef struct snddmaAPI_s {
     void    (*Activate)( qboolean active );
 } snddmaAPI_t;
 
+void WAVE_FillAPI( snddmaAPI_t *api );
+
+#if USE_DSOUND
+void DS_FillAPI( snddmaAPI_t *api );
+#endif
+
 //extern snddmaAPI_t  snddma;
 
 extern  dma_t   dma;

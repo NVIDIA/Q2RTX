@@ -1126,7 +1126,7 @@ static void Slider_Push( menuSlider_t *s ) {
     cclamp( s->curvalue, s->minvalue, s->maxvalue );
 }
 
-void Slider_Pop( menuSlider_t *s ) {
+static void Slider_Pop( menuSlider_t *s ) {
     Cvar_SetValue( s->cvar, s->curvalue, FROM_CONSOLE );
 }
 
@@ -1655,7 +1655,7 @@ menuSound_t Menu_MouseMove( menuCommon_t *item ) {
     return QMS_NOTHANDLED;
 }
 
-menuSound_t Menu_DefaultKey( menuFrameWork_t *m, int key ) {
+static menuSound_t Menu_DefaultKey( menuFrameWork_t *m, int key ) {
     menuCommon_t *item;
     
     switch( key ) {

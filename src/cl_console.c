@@ -624,7 +624,7 @@ Con_DrawNotify
 Draws the last few lines of output transparently over the game top
 ================
 */
-void Con_DrawNotify( void ) {
+static void Con_DrawNotify( void ) {
     int     v;
     char    *text;
     int     i, j;
@@ -694,7 +694,7 @@ Con_DrawSolidConsole
 Draws the console with the solid background
 ================
 */
-void Con_DrawSolidConsole( void ) {
+static void Con_DrawSolidConsole( void ) {
     int             i, x, y;
     int             rows;
     char            *text;

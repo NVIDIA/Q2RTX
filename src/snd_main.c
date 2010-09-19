@@ -604,7 +604,7 @@ static void S_Spatialize( channel_t *ch ) {
 S_AllocPlaysound
 =================
 */
-playsound_t *S_AllocPlaysound( void ) {
+static playsound_t *S_AllocPlaysound( void ) {
     playsound_t *ps;
 
     ps = s_freeplays.next;
@@ -624,7 +624,7 @@ playsound_t *S_AllocPlaysound( void ) {
 S_FreePlaysound
 =================
 */
-void S_FreePlaysound( playsound_t *ps ) {
+static void S_FreePlaysound( playsound_t *ps ) {
     // unlink from channel
     ps->prev->next = ps->next;
     ps->next->prev = ps->prev;

@@ -233,9 +233,6 @@ void R_DrawFillEx( int x, int y, int w, int h, const color_t color ) {
     _GL_StretchPic( x, y, w, h, 0, 0, 1, 1, color, TEXNUM_WHITE, 0 );
 }
 
-void R_FadeScreen( void ) {
-}
-
 static inline void draw_char( int x, int y, int c, qboolean alt, image_t *image ) {
     float s, t;
         

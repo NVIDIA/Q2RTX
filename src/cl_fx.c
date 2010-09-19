@@ -1584,7 +1584,7 @@ CL_FlyParticles
 */
 
 #define BEAMLENGTH          16
-void CL_FlyParticles (vec3_t origin, int count)
+static void CL_FlyParticles (vec3_t origin, int count)
 {
     int         i;
     cparticle_t *p;

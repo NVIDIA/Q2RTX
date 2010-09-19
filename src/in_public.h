@@ -38,3 +38,8 @@ typedef struct inputAPI_s {
     qboolean    (*GetMotion)( int *dx, int *dy );
 } inputAPI_t;
 
+void VID_FillInputAPI( inputAPI_t *api );
+
+#if USE_DINPUT
+void DI_FillAPI( inputAPI_t *api );
+#endif

@@ -25,8 +25,7 @@
         Boston, MA  02111-1307, USA
 */
 
-#include <config.h>
-#include "q_shared.h"
+#include "com_local.h"
 #include "mdfour.h"
 
 #if SIZEOF_INT > 4
