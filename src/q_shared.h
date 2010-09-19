@@ -270,7 +270,7 @@ static inline float Q_fabs( float f ) {
 #define Vector4Negate(a,b)      ((b)[0]=-(a)[0],(b)[1]=-(a)[1],(b)[2]=-(a)[2],(b)[3]=-(a)[3])
 #define Vector4Set(v, a, b, c, d)   ((v)[0]=(a),(v)[1]=(b),(v)[2]=(c),(v)[3]=(d))
 
-#define FastColorCopy(a,b)      (*(uint32_t*)(b)=*(uint32_t*)(a))
+#define FastColorCopy(a,b)      memcpy(b,a,4)
 
 void AngleVectors (vec3_t angles, vec3_t forward, vec3_t right, vec3_t up);
 vec_t VectorNormalize (vec3_t v);       // returns vector length
