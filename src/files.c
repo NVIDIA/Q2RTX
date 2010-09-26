@@ -1565,7 +1565,7 @@ static pack_t *pack_alloc( FILE *fp, filetype_t type, const char *name,
     unsigned hash_size;
     size_t len;
 
-    hash_size = Q_CeilPowerOfTwo( num_files / 3 );
+    hash_size = npot32( num_files / 3 );
 
     len = strlen( name ) + 1;
     pack = FS_Malloc( sizeof( pack_t ) +

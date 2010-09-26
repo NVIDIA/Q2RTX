@@ -636,8 +636,8 @@ static qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap 
     int         comp;
     qboolean    isalpha;
 
-    scaled_width = Q_CeilPowerOfTwo( width );
-    scaled_height = Q_CeilPowerOfTwo( height );
+    scaled_width = npot32( width );
+    scaled_height = npot32( height );
 
     if( mipmap ) {
         if( gl_round_down->integer ) {

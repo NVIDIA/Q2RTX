@@ -280,12 +280,18 @@ void AddPointToBounds (const vec3_t v, vec3_t mins, vec3_t maxs);
 vec_t RadiusFromBounds (const vec3_t mins, const vec3_t maxs);
 void UnionBounds( vec3_t a[2], vec3_t b[2], vec3_t c[2] );
 
-static inline int Q_CeilPowerOfTwo( int value ) {
-    int i;
+static inline unsigned npot32( unsigned k ) {
+    if( k == 0 )
+        return 1;
 
-    for( i = 1; i < value; i <<= 1 )
-        ;
-    return i;
+    k--;
+    k = k | ( k >> 1 );
+    k = k | ( k >> 2 );
+    k = k | ( k >> 4 );
+    k = k | ( k >> 8 );
+    k = k | ( k >> 16 );
+
+    return k + 1;
 }
 
 static inline float LerpAngle( float a2, float a1, float frac ) {
