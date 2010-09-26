@@ -1741,7 +1741,7 @@ static size_t search_central_header( FILE *fp ) {
 }
 
 // Get Info about the current file in the zipfile, with internal only info
-static size_t get_file_info( FILE *fp, size_t pos, packfile_t *file, size_t *len ) {
+static size_t get_file_info( FILE *fp, size_t pos, packfile_t *file, size_t *len, size_t remaining ) {
     size_t name_size, xtra_size, comm_size;
     size_t comp_len, file_len, file_pos;
     unsigned comp_mtd;
@@ -1761,8 +1761,6 @@ static size_t get_file_info( FILE *fp, size_t pos, packfile_t *file, size_t *len
         return 0;
 
     comp_mtd = LittleShortMem( &header[10] );
-    //if( crc )
-    //    *crc = LittleLongMem( &header[16] );
     comp_len = LittleLongMem( &header[20] );
     file_len = LittleLongMem( &header[24] );
     name_size = LittleShortMem( &header[28] );
@@ -1798,6 +1796,8 @@ static size_t get_file_info( FILE *fp, size_t pos, packfile_t *file, size_t *len
 
     // fill in the info
     if( file ) {
+        if( name_size >= remaining )
+            return 0; // directory changed on disk?
         file->compmtd = comp_mtd;
         file->complen = comp_len;
         file->filelen = file_len;
@@ -1884,7 +1884,7 @@ static pack_t *load_zip_file( const char *packfile ) {
     names_len = 0;
     header_pos = central_ofs + extra_bytes;
     for( i = 0; i < num_files_cd; i++ ) {
-        ofs = get_file_info( fp, header_pos, NULL, &len );
+        ofs = get_file_info( fp, header_pos, NULL, &len, 0 );
         if( !ofs ) {
             Com_Printf( "%s has bad central directory structure\n", packfile );
             goto fail2;
@@ -1906,17 +1906,16 @@ static pack_t *load_zip_file( const char *packfile ) {
     pack = pack_alloc( fp, FS_ZIP, packfile, num_files, names_len );
 
 // parse the directory
-    name = pack->names;
     file = pack->files;
-    num_files = 0;
+    name = pack->names;
     header_pos = central_ofs + extra_bytes;
     for( i = 0; i < num_files_cd; i++ ) {
+        if( !num_files )
+            goto fail1; // directory changed on disk?
         file->name = name;
-        ofs = get_file_info( fp, header_pos, file, &len );
-        if( !ofs ) {
-            Com_EPrintf( "Error re-reading central directory in %s\n", packfile );
-            goto fail1;
-        }
+        ofs = get_file_info( fp, header_pos, file, &len, names_len );
+        if( !ofs )
+            goto fail1; // directory changed on disk?
         header_pos += ofs;
 
         if( len ) {
@@ -1928,11 +1927,12 @@ static pack_t *load_zip_file( const char *packfile ) {
             file->hash_next = pack->file_hash[hash];
             pack->file_hash[hash] = file;
 
+            // advance pointers, decrement counters
             file++;
+            num_files--;
+
             name += len;
-            if( ++num_files == pack->num_files ) {
-                break;
-            }
+            names_len -= len;
         }
     }
 
@@ -1942,6 +1942,7 @@ static pack_t *load_zip_file( const char *packfile ) {
     return pack;
 
 fail1:
+    Com_EPrintf( "Central directory changed in %s\n", packfile );
     Z_Free( pack );
 fail2:
     fclose( fp );
