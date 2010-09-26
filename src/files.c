@@ -1587,21 +1587,25 @@ static pack_t *pack_alloc( FILE *fp, filetype_t type, const char *name,
     return pack;
 }
 
+static void pack_hash_file( pack_t *pack, packfile_t *file ) {
+    unsigned hash = Com_HashPath( file->name, pack->hash_size );
+
+    file->hash_next = pack->file_hash[hash];
+    pack->file_hash[hash] = file;
+}
+
 // Loads the header and directory, adding the files at the beginning
 // of the list so they override previous pack files.
 static pack_t *load_pak_file( const char *packfile ) {
     dpackheader_t   header;
-    int             i;
     packfile_t      *file;
     dpackfile_t     *dfile;
-    unsigned        num_files;
+    unsigned        i, num_files;
     char            *name;
-    size_t          names_len;
+    size_t          len, names_len;
     pack_t          *pack;
     FILE            *fp;
     dpackfile_t     info[MAX_FILES_IN_PACK];
-    unsigned        hash;
-    size_t          len;
 
     fp = fopen( packfile, "rb" );
     if( !fp ) {
@@ -1665,8 +1669,9 @@ static pack_t *load_pak_file( const char *packfile ) {
     pack = pack_alloc( fp, FS_PAK, packfile, num_files, names_len );
 
 // parse the directory
+    file = pack->files;
     name = pack->names;
-    for( i = 0, file = pack->files, dfile = info; i < pack->num_files; i++, file++, dfile++ ) {
+    for( i = 0, dfile = info; i < num_files; i++, dfile++ ) {
         len = strlen( dfile->name ) + 1;
 
         file->name = memcpy( name, dfile->name, len );
@@ -1675,9 +1680,8 @@ static pack_t *load_pak_file( const char *packfile ) {
         file->filepos = dfile->filepos;
         file->filelen = dfile->filelen;
 
-        hash = Com_HashPath( file->name, pack->hash_size );
-        file->hash_next = pack->file_hash[hash];
-        pack->file_hash[hash] = file;
+        pack_hash_file( pack, file );
+        file++;
     }
 
     FS_DPrintf( "%s: %u files, %u hash\n",
@@ -1814,18 +1818,15 @@ skip:
 }
 
 static pack_t *load_zip_file( const char *packfile ) {
-    int             i;
     packfile_t      *file;
     char            *name;
-    size_t          names_len;
-    unsigned        num_disk, num_disk_cd, num_files, num_files_cd;
+    size_t          len, names_len;
+    unsigned        i, num_disk, num_disk_cd, num_files, num_files_cd;
     size_t          header_pos, central_ofs, central_size, central_end;
     size_t          extra_bytes, ofs;
     pack_t          *pack;
     FILE            *fp;
     byte            header[ZIP_SIZECENTRALHEADER];
-    unsigned        hash;
-    size_t          len;
 
     fp = fopen( packfile, "rb" );
     if( !fp ) {
@@ -1923,9 +1924,7 @@ static pack_t *load_zip_file( const char *packfile ) {
             file->filepos += extra_bytes;
             file->coherent = qfalse;
 
-            hash = Com_HashPath( file->name, pack->hash_size );
-            file->hash_next = pack->file_hash[hash];
-            pack->file_hash[hash] = file;
+            pack_hash_file( pack, file );
 
             // advance pointers, decrement counters
             file++;
