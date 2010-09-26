@@ -98,8 +98,7 @@ static const char *const mvd_states[MVD_NUM_STATES] = {
     "DEAD", "WAIT", "READ"
 };
 
-static LIST_DECL( mvd_gtv_list );
-
+LIST_DECL( mvd_gtv_list );
 LIST_DECL( mvd_channel_list );
 
 mvd_t       mvd_waitingRoom;

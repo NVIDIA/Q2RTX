@@ -20,6 +20,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 extern game_export_t    mvd_ge;
 
+extern list_t mvd_gtv_list;
+
 struct client_s;
 
 void MVD_Register( void );

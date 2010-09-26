@@ -1439,12 +1439,16 @@ static void SV_PrepWorldFrame( void ) {
 #if USE_CLIENT
 static inline qboolean check_paused( void ) {
     if( !dedicated->integer && cl_paused->integer &&
+#if USE_MVD_CLIENT
+        LIST_EMPTY( &mvd_gtv_list ) &&
+#endif
         LIST_SINGLE( &svs.udp_client_list ) )
     {
         if( !sv_paused->integer ) {
             Cvar_Set( "sv_paused", "1" );
             IN_Activate();
         }
+
         return qtrue; // don't run if paused
     }
 
@@ -1452,8 +1456,8 @@ static inline qboolean check_paused( void ) {
         Cvar_Set( "sv_paused", "0" );
         IN_Activate();
     }
-    return qfalse;
 
+    return qfalse;
 }
 #endif
 
