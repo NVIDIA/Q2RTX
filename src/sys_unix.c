@@ -195,7 +195,13 @@ void Sys_SetConsoleColor( color_index_t color ) {
         break;
     }
 
+    if( color != COLOR_NONE ) {
+        tty_hide_input();
+    }
     write( 1, buf, len );
+    if( color == COLOR_NONE ) {
+        tty_show_input();
+    }
 }
 
 static void tty_write_output( const char *text ) {
