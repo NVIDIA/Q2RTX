@@ -1518,7 +1518,7 @@ static void list_recordings( void ) {
             if( pos < 0 ) {
                 strcpy( buffer, "???" );
             } else {
-                COM_FormatFileSize( buffer, pos, sizeof( buffer ) );
+                Com_FormatSize( buffer, pos, sizeof( buffer ) );
             }
         } else {
             strcpy( buffer, "-" );

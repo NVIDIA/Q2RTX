@@ -422,16 +422,6 @@ qboolean COM_iswhite( const char *s ) {
     return qtrue;
 }
 
-size_t COM_FormatFileSize( char *dest, size_t bytes, size_t size ) {
-    if( bytes >= 1000000 ) {
-        return Q_snprintf( dest, size, "%2.1fM", ( float )bytes / 1000000 );
-    }
-    if( bytes >= 1000 ) {
-        return Q_snprintf( dest, size, "%3"PRIz"K", bytes / 1000 );
-    }
-    return Q_snprintf( dest, size, "%3"PRIz, bytes );
-}
-
 /*
 ============
 va

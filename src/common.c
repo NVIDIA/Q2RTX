@@ -1336,6 +1336,26 @@ size_t Com_TimeDiffLong( char *buffer, size_t size, time_t *p, time_t now ) {
     return Com_FormatTimeLong( buffer, size, diff );
 }
 
+size_t Com_FormatSize( char *dest, size_t bytes, size_t size ) {
+    if( bytes >= 1000000 ) {
+        return Q_scnprintf( dest, size, "%2.1fM", ( float )bytes / 1000000 );
+    }
+    if( bytes >= 1000 ) {
+        return Q_scnprintf( dest, size, "%3"PRIz"K", bytes / 1000 );
+    }
+    return Q_scnprintf( dest, size, "%3"PRIz, bytes );
+}
+
+size_t Com_FormatSizeLong( char *dest, size_t bytes, size_t size ) {
+    if( bytes >= 1000000 ) {
+        return Q_scnprintf( dest, size, "%2.1f MB", ( float )bytes / 1000000 );
+    }
+    if( bytes >= 1000 ) {
+        return Q_scnprintf( dest, size, "%3"PRIz" KB", bytes / 1000 );
+    }
+    return Q_scnprintf( dest, size, "%3"PRIz" byte%s", bytes, bytes == 1 ? "" : "s"  );
+}
+
 /*
 ==============================================================================
 

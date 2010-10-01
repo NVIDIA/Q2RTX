@@ -463,8 +463,6 @@ int QDECL SortStricmp( const void *p1, const void *p2 );
 size_t COM_strclr( char *s ); 
 qboolean COM_iswhite( const char *s );
 
-size_t COM_FormatFileSize( char *dest, size_t bytes, size_t size );
-
 // buffer safe operations
 size_t Q_strlcpy( char *dst, const char *src, size_t size );
 size_t Q_strlcat( char *dst, const char *src, size_t size );
