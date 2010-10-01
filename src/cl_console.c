@@ -188,7 +188,7 @@ static void Con_Clear_f( void ) {
 
 static void Con_Dump_c( genctx_t *ctx, int argnum ) {
     if( argnum == 1 ) {
-        FS_File_g( "condumps", ".txt", 0x80000000, ctx );
+        FS_File_g( "condumps", ".txt", FS_SEARCH_STRIPEXT, ctx );
     }
 }
 

@@ -840,171 +840,154 @@ qerror_t Sys_GetFileInfo( FILE *fp, file_info_t *info ) {
     return Q_ERR_SUCCESS;
 }
 
+static void *copy_info( const char *name, const LPWIN32_FIND_DATAA data ) {
+    time_t ctime = file_time_to_unix( &data->ftCreationTime );
+    time_t mtime = file_time_to_unix( &data->ftLastWriteTime );
 
-/*
-=================
-Sys_ListFilteredFiles
-=================
-*/
-static void Sys_ListFilteredFiles(  void        **listedFiles,
-                                    int         *count,
-                                    const char  *path,
-                                    const char  *filter,
-                                    int         flags,
-                                    size_t      length )
-{
-    WIN32_FIND_DATAA    findInfo;
-    HANDLE  findHandle;
-    char    findPath[MAX_OSPATH];
-    char    dirPath[MAX_OSPATH];
-    char    *name;
-
-    if( *count >= MAX_LISTED_FILES ) {
-        return;
-    }
-
-    Q_concat( findPath, sizeof( findPath ), path, "\\*", NULL );
-
-    findHandle = FindFirstFileA( findPath, &findInfo );
-    if( findHandle == INVALID_HANDLE_VALUE ) {
-        return;
-    }
-
-    do {
-        if( !strcmp( findInfo.cFileName, "." ) || !strcmp( findInfo.cFileName, ".." ) ) {
-            continue;
-        }
-
-        if( findInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ) {
-            Q_concat( dirPath, sizeof( dirPath ), path, "\\", findInfo.cFileName, NULL );
-            Sys_ListFilteredFiles( listedFiles, count, dirPath, filter, flags, length );
-        }
-
-        if( ( flags & FS_SEARCHDIRS_MASK ) == FS_SEARCHDIRS_ONLY ) {
-            if( !( findInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ) ) {
-                continue;
-            }
-        } else if( ( flags & FS_SEARCHDIRS_MASK ) == FS_SEARCHDIRS_NO ) {
-            if( findInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ) {
-                continue;
-            }
-        }
-
-        Q_concat( dirPath, sizeof( dirPath ), path, "\\", findInfo.cFileName, NULL );
-        if( !FS_WildCmp( filter, dirPath + length ) ) {
-            continue;
-        }
-
-        name = ( flags & FS_SEARCH_SAVEPATH ) ? dirPath + length : findInfo.cFileName;
-
-        // reformat it back to quake filesystem style
-        FS_ReplaceSeparators( name, '/' );
-
-        if( flags & FS_SEARCH_EXTRAINFO ) {
-            time_t ctime = file_time_to_unix( &findInfo.ftCreationTime );
-            time_t mtime = file_time_to_unix( &findInfo.ftLastWriteTime );
-            listedFiles[( *count )++] = FS_CopyInfo( name, findInfo.nFileSizeLow, ctime, mtime );
-        } else {
-            listedFiles[( *count )++] = FS_CopyString( name );
-        }
-    } while( *count < MAX_LISTED_FILES && FindNextFileA( findHandle, &findInfo ) != FALSE );
-
-    FindClose( findHandle );
+    return FS_CopyInfo( name, data->nFileSizeLow, ctime, mtime );
 }
 
 /*
 =================
-Sys_ListFiles
+Sys_ListFiles_r
+
+Internal function to filesystem. Conventions apply:
+    - files should hold at least MAX_LISTED_FILES
+    - *count_p must be initialized in range [0, MAX_LISTED_FILES - 1]
+    - depth must be 0 on the first call
 =================
 */
-void **Sys_ListFiles(   const char  *rawPath,
-                        const char  *extension,
-                        int         flags,
-                        size_t      length,
-                        int         *numFiles )
+void Sys_ListFiles_r(   const char  *path,
+                        const char  *filter,
+                        unsigned    flags,
+                        size_t      baselen,
+                        int         *count_p,
+                        void        **files,
+                        int         depth )
 {
-    WIN32_FIND_DATAA    findInfo;
-    HANDLE  findHandle;
-    char    path[MAX_OSPATH];
-    char    findPath[MAX_OSPATH];
-    void    *listedFiles[MAX_LISTED_FILES];
-    int     count;
-    char    *name;
+    WIN32_FIND_DATAA    data;
+    HANDLE      handle;
+    char        fullpath[MAX_OSPATH], *name;
+    size_t      pathlen, len;
+    unsigned    mask;
+    void        *info;
 
-    count = 0;
-
-    if( numFiles ) {
-        *numFiles = 0;
-    }
-
-    Q_strlcpy( path, rawPath, sizeof( path ) );
-    FS_ReplaceSeparators( path, '\\' );
-
-    if( flags & FS_SEARCH_BYFILTER ) {
-        Q_strlcpy( findPath, extension, sizeof( findPath ) );
-        FS_ReplaceSeparators( findPath, '\\' );
-        Sys_ListFilteredFiles( listedFiles, &count, path, findPath, flags, length );
+    // optimize single extension search
+    if( !( flags & FS_SEARCH_BYFILTER ) &&
+        filter && !strchr( filter, ';' ) )
+    {
+        if( *filter == '.' ) {
+            filter++;
+        }
+        len = Q_concat( fullpath, sizeof( fullpath ),
+            path, "\\*.", filter, NULL );
+        filter = NULL; // do not check it later
     } else {
-        if( !extension || strchr( extension, ';' ) ) {
-            Q_concat( findPath, sizeof( findPath ), path, "\\*", NULL );
+        len = Q_concat( fullpath, sizeof( fullpath ),
+            path, "\\*", NULL );
+    }
+
+    if( len >= sizeof( fullpath ) ) {
+        return;
+    }
+
+    // format path to windows style
+    // done on the first run only
+    if( !depth ) {
+        FS_ReplaceSeparators( fullpath, '\\' );
+    }
+
+    handle = FindFirstFileA( fullpath, &data );
+    if( handle == INVALID_HANDLE_VALUE ) {
+        return;
+    }
+
+    // make it point right after the slash
+    pathlen = strlen( path ) + 1;
+
+    do {
+        if( !strcmp( data.cFileName, "." ) ||
+            !strcmp( data.cFileName, ".." ) )
+        {
+            continue; // ignore special entries
+        }
+
+        // construct full path
+        len = strlen( data.cFileName );
+        if( pathlen + len >= sizeof( fullpath ) ) {
+            continue;
+        }
+
+        memcpy( fullpath + pathlen, data.cFileName, len + 1 );
+
+        if( data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ) {
+            mask = FS_SEARCH_DIRSONLY;
         } else {
-            if( *extension == '.' ) {
-                extension++;
-            }
-            Q_concat( findPath, sizeof( findPath ), path, "\\*.", extension, NULL );
-            extension = NULL; // do not check later
-        }
-        
-        findHandle = FindFirstFileA( findPath, &findInfo );
-        if( findHandle == INVALID_HANDLE_VALUE ) {
-            return NULL;
+            mask = 0;
         }
 
-        do {
-            if( !strcmp( findInfo.cFileName, "." ) || !strcmp( findInfo.cFileName, ".." ) ) {
-                continue;
-            }
+        // pattern search implies recursive search
+        if( ( flags & FS_SEARCH_BYFILTER ) && mask &&
+            depth < MAX_LISTED_DEPTH )
+        {
+            Sys_ListFiles_r( fullpath, filter, flags, baselen,
+                count_p, files, depth + 1 );
 
-            if( ( flags & FS_SEARCHDIRS_MASK ) == FS_SEARCHDIRS_ONLY ) {
-                if( !( findInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ) ) {
+            // re-check count
+            if( *count_p >= MAX_LISTED_FILES ) {
+                break;
+            }
+        }
+
+        // check type
+        if( ( flags & FS_SEARCH_DIRSONLY ) != mask ) {
+            continue;
+        }
+
+        // check filter
+        if( filter ) {
+            if( flags & FS_SEARCH_BYFILTER ) {
+                if( !FS_WildCmp( filter, fullpath + baselen ) ) {
                     continue;
                 }
-            } else if( ( flags & FS_SEARCHDIRS_MASK ) == FS_SEARCHDIRS_NO ) {
-                if( findInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ) {
-                    continue;
-                }
-            }
-
-            if( extension && !FS_ExtCmp( extension, findInfo.cFileName ) ) {
-                continue;
-            }
-
-            name = ( flags & FS_SEARCH_SAVEPATH ) ? va( "%s\\%s", path, findInfo.cFileName ) : findInfo.cFileName;
-            
-            // reformat it back to quake filesystem style
-            FS_ReplaceSeparators( name, '/' );
-
-            if( flags & FS_SEARCH_EXTRAINFO ) {
-                time_t ctime = file_time_to_unix( &findInfo.ftCreationTime );
-                time_t mtime = file_time_to_unix( &findInfo.ftLastWriteTime );
-                listedFiles[count++] = FS_CopyInfo( name, findInfo.nFileSizeLow, ctime, mtime );
             } else {
-                listedFiles[count++] = FS_CopyString( name );
+                if( !FS_ExtCmp( filter, data.cFileName ) ) {
+                    continue;
+                }
             }
-        } while( count < MAX_LISTED_FILES && FindNextFileA( findHandle, &findInfo ) != FALSE );
+        }
 
-        FindClose( findHandle );
-    }
+        // strip path
+        if( flags & FS_SEARCH_SAVEPATH ) {
+            name = fullpath + baselen;
+        } else {
+            name = data.cFileName;
+        }
 
-    if( !count ) {
-        return NULL;
-    }
+        // reformat it back to quake filesystem style
+        FS_ReplaceSeparators( name, '/' );
 
-    if( numFiles ) {
-        *numFiles = count;
-    }
+        // strip extension
+        if( flags & FS_SEARCH_STRIPEXT ) {
+            *COM_FileExtension( name ) = 0;
 
-    return FS_CopyList( listedFiles, count );
+            if( !*name ) {
+                continue;
+            }
+        }
+
+        // copy info off
+        if( flags & FS_SEARCH_EXTRAINFO ) {
+            info = copy_info( name, &data );
+        } else {
+            info = FS_CopyString( name );
+        }
+
+        files[(*count_p)++] = info;
+    } while( *count_p < MAX_LISTED_FILES &&
+        FindNextFileA( handle, &data ) != FALSE );
+
+    FindClose( handle );
 }
 
 /*

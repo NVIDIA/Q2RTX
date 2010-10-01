@@ -340,7 +340,7 @@ static void SV_Map_f( void ) {
 
 static void SV_Map_c( genctx_t *ctx, int argnum ) {
     if( argnum == 1 ) {
-        FS_File_g( "maps", ".bsp", 0x80000000, ctx );
+        FS_File_g( "maps", ".bsp", FS_SEARCH_STRIPEXT, ctx );
     }
 }
 

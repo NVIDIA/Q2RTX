@@ -835,187 +835,123 @@ MISC
 ===============================================================================
 */
 
-/*
-=================
-Sys_ListFilteredFiles
-=================
-*/
-static void Sys_ListFilteredFiles(  void        **listedFiles,
-                                    int         *count,
-                                    const char  *path,
-                                    const char  *filter,
-                                    int         flags,
-                                    size_t      baselen,
-                                    int         depth )
-{
-    struct dirent *findInfo;
-    DIR        *findHandle;
-    struct  stat st;
-    char    findPath[MAX_OSPATH];
-    char    *name;
-    size_t  len;
-
-    if( depth >= 32 ) {
-        return;
-    }
-
-    if( *count >= MAX_LISTED_FILES ) {
-        return;
-    }
-
-    if( ( findHandle = opendir( path ) ) == NULL ) {
-        return;
-    }
-
-    while( ( findInfo = readdir( findHandle ) ) != NULL ) {
-        if( !strcmp( findInfo->d_name, "." ) ) {
-            continue;
-        }
-        if( !strcmp( findInfo->d_name, ".." ) ) {
-            continue;
-        }
-        len = Q_concat( findPath, sizeof( findPath ),
-            path, "/", findInfo->d_name, NULL );
-        if( len >= sizeof( findPath ) ) {
-            continue;
-        }
-
-        if( stat( findPath, &st ) == -1 ) {
-            continue;
-        }
-
-        if( st.st_mode & S_IFDIR ) {
-            Sys_ListFilteredFiles( listedFiles, count, findPath,
-                filter, flags, baselen, depth + 1 );
-        }
-
-        if( ( flags & FS_SEARCHDIRS_MASK ) == FS_SEARCHDIRS_ONLY ) {
-            if( !( st.st_mode & S_IFDIR ) ) {
-                continue;
-            }
-        } else if( ( flags & FS_SEARCHDIRS_MASK ) == FS_SEARCHDIRS_NO ) {
-            if( st.st_mode & S_IFDIR ) {
-                continue;
-            }
-        }
-
-        if( !FS_WildCmp( filter, findPath + baselen ) ) {
-            continue;
-        }
-        if( flags & FS_SEARCH_SAVEPATH ) {
-            name = findPath + baselen;
-        } else {
-            name = findInfo->d_name;
-        }
-
-        if( flags & FS_SEARCH_EXTRAINFO ) {
-            listedFiles[( *count )++] = FS_CopyInfo( name,
-                st.st_size, st.st_ctime, st.st_mtime );
-        } else {
-            listedFiles[( *count )++] = FS_CopyString( name );
-        }
-        if( *count >= MAX_LISTED_FILES ) {
-            break;
-        }
-
-    }
-
-    closedir( findHandle );
+static void *copy_info( const char *name, const struct stat *st ) {
+    return FS_CopyInfo( name, st->st_size, st->st_ctime, st->st_mtime );
 }
 
-
 /*
 =================
-Sys_ListFiles
+Sys_ListFiles_r
+
+Internal function to filesystem. Conventions apply:
+    - files should hold at least MAX_LISTED_FILES
+    - *count_p must be initialized in range [0, MAX_LISTED_FILES - 1]
+    - depth must be 0 on the first call
 =================
 */
-void **Sys_ListFiles(   const char  *path,
-                        const char  *extension,
-                        int         flags,
+void Sys_ListFiles_r(   const char  *path,
+                        const char  *filter,
+                        unsigned    flags,
                         size_t      baselen,
-                        int         *numFiles )
+                        int         *count_p,
+                        void        **files,
+                        int         depth )
 {
-    struct dirent *findInfo;
-    DIR     *findHandle;
+    struct dirent *ent;
+    DIR *dir;
     struct stat st;
-    char    findPath[MAX_OSPATH];
-    void    *listedFiles[MAX_LISTED_FILES];
-    int     count = 0;
-    char    *s;
-    size_t  len;
+    char fullpath[MAX_OSPATH];
+    char *name;
+    size_t len;
+    void *info;
 
-    if( numFiles ) {
-        *numFiles = 0;
+    if( ( dir = opendir( path ) ) == NULL ) {
+        return;
     }
 
-    if( flags & FS_SEARCH_BYFILTER ) {
-        Sys_ListFilteredFiles( listedFiles, &count, path,
-            extension, flags, baselen, 0 );
-    } else {
-        if( ( findHandle = opendir( path ) ) == NULL ) {
-            return NULL;
+    while( ( ent = readdir( dir ) ) != NULL ) {
+        if( ent->d_name[0] == '.' ) {
+            continue; // ignore dotfiles
         }
 
-        while( ( findInfo = readdir( findHandle ) ) != NULL ) {
-            if( !strcmp( findInfo->d_name, "." ) ) {
-                continue;
-            }
-            if( !strcmp( findInfo->d_name, ".." ) ) {
-                continue;
-            }
+        len = Q_concat( fullpath, sizeof( fullpath ),
+            path, "/", ent->d_name, NULL );
+        if( len >= sizeof( fullpath ) ) {
+            continue;
+        }
 
-            len = Q_concat( findPath, sizeof( findPath ),
-                path, "/", findInfo->d_name, NULL );
-            if( len >= sizeof( findPath ) ) {
-                continue;
-            }
+        if( stat( fullpath, &st ) == -1 ) {
+            continue;
+        }
 
-            if( stat( findPath, &st ) == -1 ) {
-                continue;
-            }
-            if( ( flags & FS_SEARCHDIRS_MASK ) == FS_SEARCHDIRS_ONLY ) {
-                if( !( st.st_mode & S_IFDIR ) ) {
-                    continue;
-                }
-            } else if( ( flags & FS_SEARCHDIRS_MASK ) == FS_SEARCHDIRS_NO ) {
-                if( st.st_mode & S_IFDIR ) {
-                    continue;
-                }
-            }
+        // pattern search implies recursive search
+        if( ( flags & FS_SEARCH_BYFILTER ) &&
+            S_ISDIR( st.st_mode ) && depth < MAX_LISTED_DEPTH )
+        {
+            Sys_ListFiles_r( fullpath, filter, flags, baselen,
+                count_p, files, depth + 1 );
 
-            if( extension && !FS_ExtCmp( extension, findInfo->d_name ) ) {
-                continue;
-            }
-            
-            if( flags & FS_SEARCH_SAVEPATH ) {
-                s = findPath + baselen;
-            } else {
-                s = findInfo->d_name;
-            }
-            if( flags & FS_SEARCH_EXTRAINFO ) {
-                listedFiles[count++] = FS_CopyInfo( s, st.st_size,
-                    st.st_ctime, st.st_mtime );
-            } else {
-                listedFiles[count++] = FS_CopyString( s );
-            }
-
-            if( count >= MAX_LISTED_FILES ) {
+            // re-check count
+            if( *count_p >= MAX_LISTED_FILES ) {
                 break;
             }
         }
 
-        closedir( findHandle );
+        // check type
+        if( flags & FS_SEARCH_DIRSONLY ) {
+            if( !S_ISDIR( st.st_mode ) ) {
+                continue;
+            }
+        } else {
+            if( !S_ISREG( st.st_mode ) ) {
+                continue;
+            }
+        }
+
+        // check filter
+        if( filter ) {
+            if( flags & FS_SEARCH_BYFILTER ) {
+                if( !FS_WildCmp( filter, fullpath + baselen ) ) {
+                    continue;
+                }
+            } else {
+                if( !FS_ExtCmp( filter, ent->d_name ) ) {
+                    continue;
+                }
+            }
+        }
+
+        // strip path
+        if( flags & FS_SEARCH_SAVEPATH ) {
+            name = fullpath + baselen;
+        } else {
+            name = ent->d_name;
+        }
+
+        // strip extension
+        if( flags & FS_SEARCH_STRIPEXT ) {
+            *COM_FileExtension( name ) = 0;
+
+            if( !*name ) {
+                continue;
+            }
+        }
+
+        // copy info off
+        if( flags & FS_SEARCH_EXTRAINFO ) {
+            info = copy_info( name, &st );
+        } else {
+            info = FS_CopyString( name );
+        }
+
+        files[(*count_p)++] = info;
+
+        if( *count_p >= MAX_LISTED_FILES ) {
+            break;
+        }
     }
 
-    if( !count ) {
-        return NULL;
-    }
-
-    if( numFiles ) {
-        *numFiles = count;
-    }
-
-    return FS_CopyList( listedFiles, count );
+    closedir( dir );
 }
 
 /*

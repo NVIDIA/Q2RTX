@@ -52,8 +52,8 @@ void    Sys_Printf( const char *fmt, ... ) q_printf( 1, 2 );
 void    Sys_Error( const char *error, ... ) q_noreturn q_printf( 1, 2 );
 void    Sys_Quit( void ) q_noreturn;
 
-void    **Sys_ListFiles( const char *path, const char *extension,
-                         int flags, size_t length, int *numFiles );
+void    Sys_ListFiles_r( const char *path, const char *filter,
+            unsigned flags, size_t baselen, int *count_p, void **files, int depth );
 
 struct  file_info_s;
 qerror_t Sys_GetPathInfo( const char *path, struct file_info_s *info );

@@ -18,7 +18,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#define MAX_LISTED_FILES    4096
+#define MAX_LISTED_FILES    2048
+#define MAX_LISTED_DEPTH    8
 
 typedef struct file_info_s {
     size_t  size;
@@ -33,13 +34,6 @@ typedef struct file_info_s {
 #define FS_MODE_WRITE           0x00000002
 #define FS_MODE_RDWR            0x00000003
 #define FS_MODE_MASK            0x00000003
-
-/* bits 0 - 1, enum */
-#define FS_SEARCHDIRS_NO        0x00000000
-#define FS_SEARCHDIRS_YES       0x00000001
-#define FS_SEARCHDIRS_ONLY      0x00000002
-#define FS_SEARCHDIRS_RESERVED  0x00000003
-#define FS_SEARCHDIRS_MASK      0x00000003
 
 /* bit 2, enum */
 #define FS_FLUSH_NONE           0x00000000
@@ -59,11 +53,12 @@ typedef struct file_info_s {
 #define FS_PATH_GAME            0x00000040
 #define FS_PATH_MASK            0x00000060
 
-/* bits 7 - 10, flag */
+/* bits 7 - 11, flag */
 #define FS_SEARCH_BYFILTER      0x00000080
 #define FS_SEARCH_SAVEPATH      0x00000100
 #define FS_SEARCH_EXTRAINFO     0x00000200
-#define FS_SEARCH_NOSORT        0x00000400
+#define FS_SEARCH_STRIPEXT      0x00000400
+#define FS_SEARCH_DIRSONLY      0x00000800
 
 /* bits 7 - 8, flag */
 #define FS_FLAG_GZIP            0x00000080
@@ -127,7 +122,7 @@ ssize_t  FS_GetFileLength( qhandle_t f );
 qboolean FS_WildCmp( const char *filter, const char *string );
 qboolean FS_ExtCmp( const char *extension, const char *string );
 
-void    **FS_ListFiles( const char *path, const char *extension, int flags, int *numFiles );
+void    **FS_ListFiles( const char *path, const char *filter, unsigned flags, int *count_p );
 void    **FS_CopyList( void **list, int count );
 file_info_t *FS_CopyInfo( const char *name, size_t size, time_t ctime, time_t mtime );
 void    FS_FreeList( void **list );
@@ -137,7 +132,7 @@ char    *FS_ReplaceSeparators( char *s, int separator );
 int FS_pathcmp( const char *s1, const char *s2 );
 int FS_pathcmpn( const char *s1, const char *s2, size_t n );
 
-void FS_File_g( const char *path, const char *ext, int flags, genctx_t *ctx );
+void FS_File_g( const char *path, const char *ext, unsigned flags, genctx_t *ctx );
 
 extern cvar_t   *fs_game;
 

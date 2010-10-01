@@ -218,7 +218,7 @@ static void BuildList( void ) {
     
     // alloc entries
     dirlist = FS_ListFiles( m_demos.browse, NULL, FS_PATH_GAME |
-        FS_SEARCHDIRS_ONLY, &numDirs );
+        FS_SEARCH_DIRSONLY, &numDirs );
     demolist = FS_ListFiles( m_demos.browse, DEMO_EXTENSIONS, FS_PATH_GAME |
         FS_SEARCH_EXTRAINFO, &numDemos );
 

@@ -1625,7 +1625,7 @@ Moved here from sound code so that command is always registered.
 =================
 */
 static void CL_PlaySound_c( genctx_t *ctx, int state ) {
-    FS_File_g( "sound", "*.wav", FS_SEARCH_SAVEPATH | FS_SEARCH_BYFILTER | 0x80000000, ctx );
+    FS_File_g( "sound", "*.wav", FS_SEARCH_SAVEPATH | FS_SEARCH_BYFILTER | FS_SEARCH_STRIPEXT, ctx );
 }
 
 static void CL_PlaySound_f( void ) {
