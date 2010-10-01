@@ -1295,7 +1295,7 @@ static qerror_t _IMG_Find( const char *name, imagetype_t type, image_t **image_p
     strcpy( buffer, name );
     buffer[len] = 0;
 
-    hash = Com_HashPath( buffer, RIMAGES_HASH );
+    hash = FS_HashPath( buffer, RIMAGES_HASH );
 
     if( ( image = IMG_Lookup( buffer, type, hash, len ) ) != NULL ) {
         image->registration_sequence = registration_sequence;

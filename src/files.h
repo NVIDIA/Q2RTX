@@ -127,7 +127,11 @@ void    **FS_CopyList( void **list, int count );
 file_info_t *FS_CopyInfo( const char *name, size_t size, time_t ctime, time_t mtime );
 void    FS_FreeList( void **list );
 
-char    *FS_ReplaceSeparators( char *s, int separator );
+unsigned FS_HashPath( const char *s, unsigned size );
+
+#ifdef _WIN32
+char *FS_ReplaceSeparators( char *s, int separator );
+#endif
 
 int FS_pathcmp( const char *s1, const char *s2 );
 int FS_pathcmpn( const char *s1, const char *s2, size_t n );

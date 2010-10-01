@@ -1237,40 +1237,17 @@ int Com_WildCmp( const char *filter, const char *string, qboolean ignoreCase ) {
 Com_HashString
 ================
 */
-unsigned Com_HashString( const char *string, int hashSize ) {
+unsigned Com_HashString( const char *s, unsigned size ) {
     unsigned hash, c;
 
     hash = 0;
-    while( *string ) {
-        c = *string++;
+    while( *s ) {
+        c = *s++;
         hash = 127 * hash + c;
     }
 
     hash = ( hash >> 20 ) ^ ( hash >> 10 ) ^ hash;
-    return hash & ( hashSize - 1 );
-}
-
-/*
-================
-Com_HashPath
-================
-*/
-unsigned Com_HashPath( const char *string, int hashSize ) {
-    unsigned hash, c;
-
-    hash = 0;
-    while( *string ) {
-        c = *string++;
-        if( c == '\\' ) {
-            c = '/';
-        } else {
-            c = Q_tolower( c );
-        }
-        hash = 127 * hash + c;
-    }
-
-    hash = ( hash >> 20 ) ^ ( hash >> 10 ) ^ hash;
-    return hash & ( hashSize - 1 );
+    return hash & ( size - 1 );
 }
 
 

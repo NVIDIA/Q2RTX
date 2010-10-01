@@ -260,11 +260,6 @@ int FS_pathcmpn( const char *s1, const char *s2, size_t n ) {
 }
 
 #ifdef _WIN32
-/*
-================
-FS_ReplaceSeparators
-================
-*/
 char *FS_ReplaceSeparators( char *s, int separator ) {
     char *p;
 
@@ -279,6 +274,21 @@ char *FS_ReplaceSeparators( char *s, int separator ) {
     return s;
 }
 #endif
+
+unsigned FS_HashPath( const char *s, unsigned size ) {
+    unsigned hash, c;
+
+    hash = 0;
+    while( *s ) {
+        c = *s++;
+        c = c == '\\' ? '/' : Q_tolower( c );
+        hash = 127 * hash + c;
+    }
+
+    hash = ( hash >> 20 ) ^ ( hash >> 10 ) ^ hash;
+    return hash & ( size - 1 );
+}
+
 
 // =============================================================================
 
@@ -992,7 +1002,7 @@ static ssize_t open_file_read( file_t *file, const char *name, qboolean unique )
 //
 // search through the path, one element at a time
 //
-    hash = Com_HashPath( name, 0 );
+    hash = FS_HashPath( name, 0 );
 
     for( search = fs_searchpaths; search; search = search->next ) {
         if( file->mode & FS_PATH_MASK ) {
@@ -1588,7 +1598,7 @@ static pack_t *pack_alloc( FILE *fp, filetype_t type, const char *name,
 }
 
 static void pack_hash_file( pack_t *pack, packfile_t *file ) {
-    unsigned hash = Com_HashPath( file->name, pack->hash_size );
+    unsigned hash = FS_HashPath( file->name, pack->hash_size );
 
     file->hash_next = pack->file_hash[hash];
     pack->file_hash[hash] = file;
@@ -2552,7 +2562,7 @@ static void FS_WhereIs_f( void ) {
         Com_Printf( "%s is linked to %s\n", filename, path );
     }
 
-    hash = Com_HashPath( path, 0 );
+    hash = FS_HashPath( path, 0 );
     
     total = 0;
     valid = -1;
