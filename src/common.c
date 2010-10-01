@@ -1339,26 +1339,25 @@ size_t Com_FormatTimeLong( char *buffer, size_t size, time_t t ) {
     return len;
 }
 
-size_t Com_TimeDiff( char *buffer, size_t size, time_t start, time_t end ) {
+size_t Com_TimeDiff( char *buffer, size_t size, time_t *p, time_t now ) {
     time_t diff;
 
-    if( start > end ) {
-        start = end;
+    if( *p > now ) {
+        *p = now;
     }
-    diff = end - start;
+    diff = now - *p;
     return Com_FormatTime( buffer, size, diff );
 }
 
-size_t Com_TimeDiffLong( char *buffer, size_t size, time_t start, time_t end ) {
+size_t Com_TimeDiffLong( char *buffer, size_t size, time_t *p, time_t now ) {
     time_t diff;
 
-    if( start > end ) {
-        start = end;
+    if( *p > now ) {
+        *p = now;
     }
-    diff = end - start;
+    diff = now - *p;
     return Com_FormatTimeLong( buffer, size, diff );
 }
-
 
 /*
 ==============================================================================
@@ -1368,30 +1367,20 @@ size_t Com_TimeDiffLong( char *buffer, size_t size, time_t start, time_t end ) {
 ==============================================================================
 */
 
-/*
-=============
-Com_Time_m
-=============
-*/
 size_t Com_Time_m( char *buffer, size_t size ) {
     return format_local_time( buffer, size, com_time_format->string );
 }
 
-/*
-=============
-Com_Date_m
-=============
-*/
 static size_t Com_Date_m( char *buffer, size_t size ) {
     return format_local_time( buffer, size, com_date_format->string );
 }
 
 size_t Com_Uptime_m( char *buffer, size_t size ) {
-    return Com_TimeDiff( buffer, size, com_startTime, time( NULL ) );
+    return Com_TimeDiff( buffer, size, &com_startTime, time( NULL ) );
 }
 
 size_t Com_UptimeLong_m( char *buffer, size_t size ) {
-    return Com_TimeDiffLong( buffer, size, com_startTime, time( NULL ) );
+    return Com_TimeDiffLong( buffer, size, &com_startTime, time( NULL ) );
 }
 
 static size_t Com_Random_m( char *buffer, size_t size ) {

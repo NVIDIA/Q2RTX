@@ -517,7 +517,7 @@ static void dump_time( void ) {
 
     FOR_EACH_CLIENT( client ) {
         Com_TimeDiff( buffer, sizeof( buffer ),
-            client->connect_time, clock );
+            &client->connect_time, clock );
         Com_Printf( "%3i %-15.15s %s\n",
             client->number, client->name, buffer );
     }
@@ -710,7 +710,7 @@ static void SV_DumpUser_f( void ) {
     Com_Printf( "packetdup            %d\n", sv_client->numpackets - 1 );
 #endif
     Com_TimeDiff( buffer, sizeof( buffer ),
-        sv_client->connect_time, time( NULL ) );
+        &sv_client->connect_time, time( NULL ) );
     Com_Printf( "connection time      %s\n", buffer );
 
     sv_client = NULL;

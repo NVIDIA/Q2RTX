@@ -524,9 +524,9 @@ qboolean    Prompt_AddMatch( genctx_t *ctx, const char *s );
 size_t      Com_FormatTime( char *buffer, size_t size, time_t t );
 size_t      Com_FormatTimeLong( char *buffer, size_t size, time_t t );
 size_t      Com_TimeDiff( char *buffer, size_t size,
-                time_t start, time_t end );
+                time_t *p, time_t now );
 size_t      Com_TimeDiffLong( char *buffer, size_t size,
-                time_t start, time_t end );
+                time_t *p, time_t now );
 
 size_t      Com_Time_m( char *buffer, size_t size );
 size_t      Com_Uptime_m( char *buffer, size_t size );
