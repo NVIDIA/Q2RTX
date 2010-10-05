@@ -531,8 +531,8 @@ size_t      Com_Time_m( char *buffer, size_t size );
 size_t      Com_Uptime_m( char *buffer, size_t size );
 size_t      Com_UptimeLong_m( char *buffer, size_t size );
 
-size_t      Com_FormatSize( char *dest, size_t bytes, size_t size );
-size_t      Com_FormatSizeLong( char *dest, size_t bytes, size_t size );
+size_t      Com_FormatSize( char *dest, size_t destsize, off_t bytes );
+size_t      Com_FormatSizeLong( char *dest, size_t destsize, off_t bytes );
 
 uint32_t    Com_BlockChecksum( void *buffer, size_t len );
 

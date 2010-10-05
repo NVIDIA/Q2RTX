@@ -1506,7 +1506,7 @@ static void list_generic( void ) {
 static void list_recordings( void ) {
     mvd_t *mvd;
     char buffer[8];
-    ssize_t pos;
+    off_t pos;
 
     Com_Printf(
         "id name         map      size name\n"
@@ -1515,11 +1515,7 @@ static void list_recordings( void ) {
     FOR_EACH_MVD( mvd ) {
         if( mvd->demorecording ) {
             pos = FS_Tell( mvd->demorecording );
-            if( pos < 0 ) {
-                strcpy( buffer, "???" );
-            } else {
-                Com_FormatSize( buffer, pos, sizeof( buffer ) );
-            }
+            Com_FormatSize( buffer, sizeof( buffer ), pos );
         } else {
             strcpy( buffer, "-" );
         }

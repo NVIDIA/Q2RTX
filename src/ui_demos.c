@@ -85,7 +85,7 @@ static void BuildName( file_info_t *info, char **cache ) {
         CL_GetDemoInfo( buffer, &demo );
     }
 
-    Com_FormatSize( buffer, info->size, sizeof( buffer ) );
+    Com_FormatSize( buffer, sizeof( buffer ), info->size );
 
     e = UI_FormatColumns( DEMO_EXTRASIZE,
         info->name, buffer, demo.map, demo.pov, NULL );
@@ -97,7 +97,7 @@ static void BuildName( file_info_t *info, char **cache ) {
 }
 
 static void BuildDir( const char *name, int type ) {
-    demoEntry_t *e = UI_FormatColumns( DEMO_EXTRASIZE, name, "-", NULL );
+    demoEntry_t *e = UI_FormatColumns( DEMO_EXTRASIZE, name, NULL );
 
     e->type = type;
     e->size = 0;
@@ -445,7 +445,7 @@ void M_Menu_Demos( void ) {
     m_demos.list.columns[0].name    = m_demos.browse;
     m_demos.list.columns[0].uiFlags = UI_LEFT;
     m_demos.list.columns[1].name    = "Size";
-    m_demos.list.columns[1].uiFlags = UI_CENTER;
+    m_demos.list.columns[1].uiFlags = UI_RIGHT;
     m_demos.list.columns[2].name    = "Map";
     m_demos.list.columns[2].uiFlags = UI_CENTER;
     m_demos.list.columns[3].name    = "POV";
