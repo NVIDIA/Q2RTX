@@ -425,10 +425,16 @@ ssize_t FS_Tell( qhandle_t f ) {
         {
             return Q_ERR_SPIPE;
         }
-        return ret;
+        return ret - file->entry->filepos;
 #if USE_ZLIB
     case FS_ZIP:
         return tell_zip_file( file );
+    case FS_GZ:
+        ret = gztell( file->zfp );
+        if( ret == -1 ) {
+            return Q_ERR_LIBRARY_ERROR;
+        }
+        return ret;
 #endif
     default:
         return Q_ERR_NOSYS;
@@ -531,7 +537,7 @@ qerror_t FS_FilterFile( qhandle_t f ) {
         modeStr = "wb";
         break;
     default:
-        return qfalse;
+        return Q_ERR_NOSYS;
     }
 
     if( fseek( file->fp, 0, SEEK_SET ) == -1 ) {
@@ -575,6 +581,7 @@ void FS_FCloseFile( qhandle_t f ) {
 #if USE_ZLIB
     case FS_GZ:
         gzclose( file->zfp );
+        fclose( file->fp );
         break;
     case FS_ZIP:
         if( file->unique ) {
