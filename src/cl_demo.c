@@ -24,7 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "cl_local.h"
 
-static byte     demo_buffer[MAX_PACKETLEN_WRITABLE_DEFAULT];
+static byte     demo_buffer[MAX_PACKETLEN_WRITABLE];
 
 // =========================================================================
 
@@ -129,9 +129,9 @@ Writes delta from the last frame we got to the current frame.
 ====================
 */
 void CL_EmitDemoFrame( void ) {
-    server_frame_t        *oldframe;
-    player_state_t        *oldstate;
-    int                    lastframe;
+    server_frame_t  *oldframe;
+    player_state_t  *oldstate;
+    int             lastframe;
 
     if( cls.demo.paused ) {
         return;
@@ -173,9 +173,11 @@ void CL_EmitDemoFrame( void ) {
 
     if( cls.demo.buffer.cursize + msg_write.cursize > cls.demo.buffer.maxsize ) {
         Com_DPrintf( "Demo frame overflowed\n" );
+        cls.demo.frames_dropped++;
     } else {
         SZ_Write( &cls.demo.buffer, msg_write.data, msg_write.cursize );
         cl.demoframe = cl.frame.number;
+        cls.demo.frames_written++;
     }
 
     SZ_Clear( &msg_write );
@@ -202,9 +204,25 @@ void CL_EmitZeroFrame( void ) {
 
     CL_WriteDemoMessage( &msg_write );
 
+    cls.demo.frames_written++;
+
     SZ_Clear( &msg_write );
 }
 
+static size_t format_demo_status( char *buffer, size_t size ) {
+    off_t pos = FS_Tell( cls.demo.recording );
+    size_t len = Com_FormatSizeLong( buffer, size, pos );
+
+    len += Q_scnprintf( buffer + len, size - len, ", %u frames",
+        cls.demo.frames_written );
+
+    if( cls.demo.frames_dropped || cls.demo.messages_dropped ) {
+        len += Q_scnprintf( buffer + len, size - len, ", %u/%u dropped",
+            cls.demo.frames_dropped, cls.demo.messages_dropped );
+    }
+
+    return len;
+}
 
 /*
 ====================
@@ -215,7 +233,7 @@ stop recording a demo
 */
 void CL_Stop_f( void ) {
     uint32_t msglen;
-    ssize_t pos;
+    char buffer[MAX_QPATH];
 
     if( !cls.demo.recording ) {
         Com_Printf( "Not recording a demo.\n" );
@@ -235,19 +253,28 @@ void CL_Stop_f( void ) {
     FS_Write( &msglen, 4, cls.demo.recording );
 
     FS_Flush( cls.demo.recording );
-    pos = FS_Tell( cls.demo.recording );
+
+    format_demo_status( buffer, sizeof( buffer ) );
 
 // close demofile
     FS_FCloseFile( cls.demo.recording );
     cls.demo.recording = 0;
     cls.demo.paused = qfalse;
+    cls.demo.frames_written = 0;
+    cls.demo.frames_dropped = 0;
+    cls.demo.messages_dropped = 0;
 
-    if( pos < 0 ) {
-        Com_Printf( "Stopped demo.\n" );
-    } else {
-        Com_Printf( "Stopped demo (%d bytes written).\n", (int)pos );
-    }
+// print some statistics
+    Com_Printf( "Stopped demo (%s).\n", buffer );
 }
+
+static const cmd_option_t o_record[] = {
+    { "h", "help", "display this message" },
+    { "z", "compress", "compress demo with gzip" },
+    { "e", "extended", "use extended packet size" },
+    { "s", "standard", "use standard packet size" },
+    { NULL }
+};
 
 /*
 ====================
@@ -259,37 +286,39 @@ Begins recording a demo from the current position
 ====================
 */
 static void CL_Record_f( void ) {
-    char    name[MAX_OSPATH];
+    char    buffer[MAX_OSPATH];
     int     i, c;
     size_t  len;
     entity_state_t  *ent;
-    char            *string;
+    char            *s;
     qhandle_t       f;
     unsigned        mode = FS_MODE_WRITE;
-
-    if( cls.demo.recording ) {
-        Com_Printf( "Already recording.\n" );
-        return;
-    }
-
-    if( cls.state != ca_active ) {
-        Com_Printf( "You must be in a level to record.\n" );
-        return;
-    }
+    size_t          size = MAX_PACKETLEN_WRITABLE_DEFAULT;
 
     while( ( c = Cmd_ParseOptions( o_record ) ) != -1 ) {
         switch( c ) {
         case 'h':
-            Cmd_PrintUsage( o_record, "[/]<filename>" );
+            Cmd_PrintUsage( o_record, "<filename>" );
             Com_Printf( "Begin client demo recording.\n" );
             Cmd_PrintHelp( o_record );
             return;
         case 'z':
             mode |= FS_FLAG_GZIP;
+        case 'e':
+            size = MAX_PACKETLEN_WRITABLE;
+            break;
+        case 's':
+            size = MAX_PACKETLEN_WRITABLE_DEFAULT;
             break;
         default:
             return;
         }
+    }
+
+    if( cls.demo.recording ) {
+        format_demo_status( buffer, sizeof( buffer ) );
+        Com_Printf( "Already recording (%s).\n", buffer );
+        return;
     }
 
     if( !cmd_optarg[0] ) {
@@ -298,21 +327,26 @@ static void CL_Record_f( void ) {
         return;
     }
 
+    if( cls.state != ca_active ) {
+        Com_Printf( "You must be in a level to record.\n" );
+        return;
+    }
+
     //
     // open the demo file
     //
-    f = FS_EasyOpenFile( name, sizeof( name ), mode,
+    f = FS_EasyOpenFile( buffer, sizeof( buffer ), mode,
         "demos/", cmd_optarg, ".dm2" );
     if( !f ) {
         return;
     }
 
-    Com_Printf( "Recording client demo to %s.\n", name );
+    Com_Printf( "Recording client demo to %s.\n", buffer );
 
     cls.demo.recording = f;
     cls.demo.paused = qfalse;
 
-    SZ_Init( &cls.demo.buffer, demo_buffer, sizeof( demo_buffer ) );
+    SZ_Init( &cls.demo.buffer, demo_buffer, size );
 
     // the first frame will be delta uncompressed
     cl.demoframe = -1;
@@ -341,12 +375,12 @@ static void CL_Record_f( void ) {
 
     // configstrings
     for( i = 0; i < MAX_CONFIGSTRINGS; i++ ) {
-        string = cl.configstrings[i];
-        if( !string[0] ) {
+        s = cl.configstrings[i];
+        if( !s[0] ) {
             continue;
         }
 
-        len = strlen( string );
+        len = strlen( s );
         if( len > MAX_QPATH ) {
             len = MAX_QPATH;
         }
@@ -357,7 +391,7 @@ static void CL_Record_f( void ) {
 
         MSG_WriteByte( svc_configstring );
         MSG_WriteShort( i );
-        MSG_WriteData( string, len );
+        MSG_WriteData( s, len );
         MSG_WriteByte( 0 );
     }
 
@@ -557,7 +591,7 @@ static void parse_next_message( void ) {
     CL_ParseServerMessage();
 
     if( cls.demo.file_size ) {
-        ssize_t pos = FS_Tell( cls.demo.playback );
+        off_t pos = FS_Tell( cls.demo.playback );
 
         if( pos > cls.demo.file_offset ) {
             cls.demo.file_percent = ( pos - cls.demo.file_offset ) * 100 / cls.demo.file_size;
@@ -752,7 +786,7 @@ demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info ) {
             parse_info_string( info, clientNum, index, string );
         }
     } else {
-        if( MSG_ReadByte() != mvd_serverdata ) {
+        if( ( MSG_ReadByte() & SVCMD_MASK ) != mvd_serverdata ) {
             goto fail;
         }
         if( MSG_ReadLong() != PROTOCOL_VERSION_MVD ) {

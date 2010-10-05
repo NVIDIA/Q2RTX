@@ -319,6 +319,9 @@ typedef struct client_static_s {
         qhandle_t   recording;
         unsigned    time_start;
         unsigned    time_frames;
+        unsigned    frames_written;
+        unsigned    frames_dropped;
+        unsigned    messages_dropped;
         int         file_size;
         int         file_offset;
         int         file_percent;

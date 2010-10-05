@@ -1638,15 +1638,19 @@ void CL_ParseServerMessage( void ) {
             continue;
         }
 
-        // copy protocol invariant stuff
+        //
+        // if recording demos, copy off protocol invariant stuff
+        //
         if( cls.demo.recording && !cls.demo.paused ) {
             size_t len = msg_read.readcount - readcount;
 
-            // with modern servers, it is easily possible to overflow
-            // the small protocol 34 demo frame... attempt to preserve
-            // reliable messages at least, which should come first
+            // it is very easy to overflow standard 1390 bytes
+            // demo frame with modern servers... attempt to preserve
+            // reliable messages at least, assuming they come first
             if( cls.demo.buffer.cursize + len < cls.demo.buffer.maxsize ) {
                 SZ_Write( &cls.demo.buffer, msg_read.data + readcount, len );
+            } else {
+                cls.demo.messages_dropped++;
             }
         }
     }
