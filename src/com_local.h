@@ -603,10 +603,6 @@ extern time_t       com_startTime;
 
 extern qhandle_t    com_logFile;
 
-#if USE_CLIENT || USE_MVD_CLIENT || USE_MVD_SERVER
-extern const cmd_option_t o_record[];
-#endif
-
 extern const char   colorNames[10][8];
 
 void Qcommon_Init( int argc, char **argv );

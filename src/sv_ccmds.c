@@ -1290,6 +1290,49 @@ static void SV_ListFilterCmds_f( void ) {
     }
 }
 
+#if USE_MVD_CLIENT || USE_MVD_SERVER
+
+const cmd_option_t o_record[] = {
+    { "h", "help", "display this message" },
+    { "z", "compress", "compress file with gzip" },
+    { NULL }
+};
+
+static void SV_Record_c( genctx_t *ctx, int argnum ) {
+#if USE_MVD_CLIENT
+    // TODO
+    if( argnum == 1 ) {
+        MVD_File_g( ctx );
+    }
+#endif
+}
+
+static void SV_Record_f( void ) {
+#if USE_MVD_CLIENT
+    if( sv.state == ss_broadcast ) {
+        MVD_StreamedRecord_f();
+        return;
+    }
+#endif
+#if USE_MVD_SERVER
+    SV_MvdRecord_f();
+#endif
+}
+
+static void SV_Stop_f( void ) {
+#if USE_MVD_CLIENT
+    if( sv.state == ss_broadcast ) {
+        MVD_StreamedStop_f();
+        return;
+    }
+#endif
+#if USE_MVD_SERVER
+    SV_MvdStop_f();
+#endif
+}
+
+#endif
+
 //===========================================================
 
 static const cmdreg_t c_server[] = {
@@ -1325,6 +1368,10 @@ static const cmdreg_t c_server[] = {
 #if USE_CLIENT
     { "savegame", SV_Savegame_f },
     { "loadgame", SV_Loadgame_f },
+#endif
+#if USE_MVD_CLIENT || USE_MVD_SERVER
+    { "mvdrecord", SV_Record_f, SV_Record_c },
+    { "mvdstop", SV_Stop_f },
 #endif
 
     { NULL }

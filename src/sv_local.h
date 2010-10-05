@@ -535,6 +535,9 @@ void SV_MvdBroadcastPrint( int level, const char *string );
 void SV_MvdStartSound( int entnum, int channel, int flags,
                         int soundindex, int volume,
                         int attenuation, int timeofs );
+
+void SV_MvdRecord_f( void );
+void SV_MvdStop_f( void );
 #endif // USE_MVD_SERVER
 
 #if USE_AC_SERVER
@@ -570,6 +573,10 @@ void SV_CloseDownload( client_t *client );
 //
 // sv_ccmds.c
 //
+#if USE_MVD_CLIENT || USE_MVD_SERVER
+extern const cmd_option_t o_record[];
+#endif
+
 void SV_AddMatch_f( list_t *list );
 void SV_DelMatch_f( list_t *list );
 void SV_ListMatches_f( list_t *list );

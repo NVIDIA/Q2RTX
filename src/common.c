@@ -1149,14 +1149,6 @@ int BoxOnPlaneSide( vec3_t emins, vec3_t emaxs, cplane_t *p ) {
 ==============================================================================
 */
 
-#if USE_CLIENT || USE_MVD_CLIENT || USE_MVD_SERVER
-const cmd_option_t o_record[] = {
-    { "h", "help", "display this message" },
-    { "z", "gzip", "compress file with gzip" },
-    { NULL }
-};
-#endif
-
 const char colorNames[10][8] = {
     "black", "red", "green", "yellow",
     "blue", "cyan", "magenta", "white",

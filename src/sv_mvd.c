@@ -2034,39 +2034,22 @@ static void rec_start( qhandle_t demofile ) {
     }
 }
 
-
-static void SV_MvdRecord_c( genctx_t *ctx, int argnum ) {
-#if USE_MVD_CLIENT
-    // TODO
-    if( argnum == 1 ) {
-        MVD_File_g( ctx );
-    }
-#endif
-}
-
 /*
 ==============
-MVD_Record_f
+SV_MvdRecord_f
 
 Begins server MVD recording.
 Every entity, every playerinfo and every message will be recorded.
 ==============
 */
-static void SV_MvdRecord_f( void ) {
+void SV_MvdRecord_f( void ) {
     char buffer[MAX_OSPATH];
     qhandle_t f;
     unsigned mode = FS_MODE_WRITE;
     int c;
 
     if( sv.state != ss_game ) {
-#if USE_MVD_CLIENT
-        if( sv.state == ss_broadcast ) {
-            MVD_StreamedRecord_f();
-        } else
-#endif
-        {
-            Com_Printf( "No server running.\n" );
-        }
+        Com_Printf( "No server running.\n" );
         return;
     }
 
@@ -2117,18 +2100,12 @@ static void SV_MvdRecord_f( void ) {
 
 /*
 ==============
-MVD_Stop_f
+SV_MvdStop_f
 
 Ends server MVD recording
 ==============
 */
-static void SV_MvdStop_f( void ) {
-#if USE_MVD_CLIENT
-    if( sv.state == ss_broadcast ) {
-        MVD_StreamedStop_f();
-        return;
-    }
-#endif
+void SV_MvdStop_f( void ) {
     if( !mvd.recording ) {
         Com_Printf( "Not recording a local MVD.\n" );
         return;
@@ -2158,8 +2135,6 @@ static void SV_ListGtvHosts_f( void ) {
 }
 
 static const cmdreg_t c_svmvd[] = {
-    { "mvdrecord", SV_MvdRecord_f, SV_MvdRecord_c },
-    { "mvdstop", SV_MvdStop_f },
     { "mvdstuff", SV_MvdStuff_f },
     { "addgtvhost", SV_AddGtvHost_f },
     { "delgtvhost", SV_DelGtvHost_f },
