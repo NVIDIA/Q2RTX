@@ -135,11 +135,6 @@ static request_t *CL_AddRequest( const netadr_t *adr, requestType_t type ) {
     return r;
 }
 
-/*
-===================
-CL_UpdateGunSetting
-===================
-*/
 static void CL_UpdateGunSetting( void ) {
     int nogun;
 
@@ -164,11 +159,6 @@ static void CL_UpdateGunSetting( void ) {
     MSG_FlushTo( &cls.netchan->message );
 }
 
-/*
-===================
-CL_UpdateGibSetting
-===================
-*/
 static void CL_UpdateGibSetting( void ) {
     if( cls.state < ca_connected ) {
         return;
@@ -184,11 +174,6 @@ static void CL_UpdateGibSetting( void ) {
     MSG_FlushTo( &cls.netchan->message );
 }
 
-/*
-===================
-CL_UpdateFootstepsSetting
-===================
-*/
 static void CL_UpdateFootstepsSetting( void ) {
     if( cls.state < ca_connected ) {
         return;
@@ -203,11 +188,6 @@ static void CL_UpdateFootstepsSetting( void ) {
     MSG_FlushTo( &cls.netchan->message );
 }
 
-/*
-===================
-CL_UpdatePredictSetting
-===================
-*/
 static void CL_UpdatePredictSetting( void ) {
     if( cls.state < ca_connected ) {
         return;
@@ -2020,6 +2000,7 @@ void CL_RequestNextDownload ( void ) {
     Cvar_FixCheats();
 
     CL_UpdateGunSetting();
+    CL_UpdateBlendSetting();
     CL_UpdateGibSetting();
     CL_UpdateFootstepsSetting();
     CL_UpdatePredictSetting();

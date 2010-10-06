@@ -351,6 +351,19 @@ void CL_PrepRefresh (void) {
     SCR_UpdateScreen ();
 }
 
+void CL_UpdateBlendSetting( void ) {
+    if( cls.state < ca_connected ) {
+        return;
+    }
+    if( cls.serverProtocol < PROTOCOL_VERSION_R1Q2 ) {
+        return;
+    }
+
+    MSG_WriteByte( clc_setting );
+    MSG_WriteShort( CLS_NOBLEND );
+    MSG_WriteShort( !cl_add_blend->integer );
+    MSG_FlushTo( &cls.netchan->message );
+}
 
 //============================================================================
 
@@ -557,6 +570,10 @@ static const cmdreg_t v_cmds[] = {
     { NULL }
 };
 
+static void cl_add_blend_changed( cvar_t *self ) {
+    CL_UpdateBlendSetting();
+}
+
 /*
 =============
 V_Init
@@ -582,6 +599,7 @@ void V_Init( void ) {
     cl_add_particles = Cvar_Get ( "cl_particles", "1", 0 );
     cl_add_entities = Cvar_Get ( "cl_entities", "1", 0 );
     cl_add_blend = Cvar_Get ( "cl_blend", "1", CVAR_ARCHIVE );
+    cl_add_blend->changed = cl_add_blend_changed;
 }
 
 void V_Shutdown( void ) {
