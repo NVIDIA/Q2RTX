@@ -567,6 +567,29 @@ static void dump_protocols( void ) {
     }
 }
 
+static void dump_settings( void ) {
+    client_t    *cl;
+    char        opt[8];
+
+    Com_Printf(
+"num name            proto options upd fps\n"
+"--- --------------- ----- ------- --- ---\n" );
+
+    opt[6] = ' ';
+    opt[7] = 0;
+    FOR_EACH_CLIENT( cl ) {
+        opt[0] = cl->settings[CLS_NOGUN]          ? 'G' : ' ';
+        opt[1] = cl->settings[CLS_NOBLEND]        ? 'B' : ' ';
+        opt[2] = cl->settings[CLS_RECORDING]      ? 'R' : ' ';
+        opt[3] = cl->settings[CLS_NOGIBS]         ? 'I' : ' ';
+        opt[4] = cl->settings[CLS_NOFOOTSTEPS]    ? 'F' : ' ';
+        opt[5] = cl->settings[CLS_NOPREDICT]      ? 'P' : ' ';
+        Com_Printf( "%3i %-15.15s %5d %s %3d %3d\n",
+            cl->number, cl->name, cl->protocol, opt,
+            cl->settings[CLS_PLAYERUPDATES], cl->settings[CLS_FPS] );
+    }
+}
+
 /*
 ================
 SV_Status_f
@@ -592,6 +615,7 @@ static void SV_Status_f( void ) {
                 case 'd': dump_downloads(); break;
                 case 'l': dump_lag(); break;
                 case 'p': dump_protocols(); break;
+                case 's': dump_settings(); break;
                 default: dump_versions(); break;
             }
         } else {
