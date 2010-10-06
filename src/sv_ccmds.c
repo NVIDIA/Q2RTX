@@ -639,7 +639,7 @@ static void SV_ConSay_f( void ) {
     char *s;
 
     if( !svs.initialized ) {
-        Com_Printf( "No server running\n" );
+        Com_Printf( "No server running.\n" );
         return;
     }
 
@@ -656,7 +656,7 @@ static void SV_ConSay_f( void ) {
     }
 
     if( Com_IsDedicated() ) {
-        Com_Printf( "console: %s\n", s );
+        Com_LPrintf( PRINT_TALK, "console: %s\n", s );
     }
 }
 
@@ -699,7 +699,7 @@ static void SV_DumpUser_f( void ) {
     char buffer[MAX_QPATH];
 
     if( !svs.initialized ) {
-        Com_Printf( "No server running\n" );
+        Com_Printf( "No server running.\n" );
         return;
     }
 
