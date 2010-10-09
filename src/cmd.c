@@ -553,7 +553,7 @@ void Cmd_ExecTrigger( const char *string ) {
     // execute matching triggers
     FOR_EACH_TRIGGER( trigger ) {
         match = Cmd_MacroExpandString( trigger->match, qfalse );
-        if( match && Com_WildCmp( match, string, qfalse ) ) {
+        if( match && Com_WildCmp( match, string ) ) {
             Cbuf_AddText( &cmd_buffer, trigger->command );
             Cbuf_AddText( &cmd_buffer, "\n" );
         }
@@ -1678,7 +1678,7 @@ static void Cmd_List_f( void ) {
     i = total = 0;
     FOR_EACH_CMD( cmd ) {
         total++;
-        if( filter && !Com_WildCmp( filter, cmd->name, qfalse ) ) {
+        if( filter && !Com_WildCmp( filter, cmd->name ) ) {
             continue;
         }
         Com_Printf( "%s\n", cmd->name );
@@ -1704,7 +1704,7 @@ static void Cmd_MacroList_f( void ) {
 
     i = 0;
     for( macro = cmd_macros, total = 0; macro; macro = macro->next, total++ ) {
-        if( filter && !Com_WildCmp( filter, macro->name, qfalse ) ) {
+        if( filter && !Com_WildCmp( filter, macro->name ) ) {
             continue;
         }
         macro->function( buffer, sizeof( buffer ) );

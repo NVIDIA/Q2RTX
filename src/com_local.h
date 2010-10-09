@@ -515,7 +515,9 @@ void        Com_Color_g( genctx_t *ctx );
 #endif
 void        Com_PlayerToEntityState( const player_state_t *ps, entity_state_t *es );
 
-int         Com_WildCmp( const char *filter, const char *string, qboolean ignoreCase );
+qboolean    Com_WildCmpEx( const char *filter, const char *string, int term, qboolean ignorecase );
+#define Com_WildCmp( filter, string )  Com_WildCmpEx( filter, string, 0, qfalse )
+
 unsigned    Com_HashString( const char *s, unsigned size );
 
 qboolean    Prompt_AddMatch( genctx_t *ctx, const char *s );

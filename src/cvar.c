@@ -843,7 +843,7 @@ static void Cvar_List_f( void ) {
         if( mask && !( var->flags & mask ) ) {
             continue;
         }
-        if( wildcard && !Com_WildCmp( wildcard, var->name, qtrue ) ) {
+        if( wildcard && !Com_WildCmp( wildcard, var->name ) ) {
             continue;
         }
         if( modified && ( !strcmp( var->latched_string ? var->latched_string :

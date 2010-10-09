@@ -2118,52 +2118,9 @@ void **FS_CopyList( void **list, int count ) {
     return out;
 }
 
-#if 0
-// foo*bar
-// foobar
-// fooblahbar
-static qboolean FS_WildCmp_r( const char *filter, const char *string ) {
-    while( *filter && *filter != ';' ) {
-        if( *filter == '*' ) {
-            return FS_WildCmp_r( filter + 1, string ) ||
-                ( *string && FS_WildCmp_r( filter, string + 1 ) );
-        }
-        if( *filter == '[' ) {
-            filter++;
-            
-            continue;
-        }
-        if( *filter != '?' && Q_toupper( *filter ) != Q_toupper( *string ) ) {
-            return qfalse;
-        }
-            filter++;
-            string++;
-    }
-
-    return !*string;
-}
-#endif
-
-static int FS_WildCmp_r( const char *filter, const char *string ) {
-    switch( *filter ) {
-    case '\0':
-    case ';':
-        return !*string;
-
-    case '*':
-        return FS_WildCmp_r( filter + 1, string ) || (*string && FS_WildCmp_r( filter, string + 1 ));
-
-    case '?':
-        return *string && FS_WildCmp_r( filter + 1, string + 1 );
-
-    default:
-        return ((*filter == *string) || (Q_toupper( *filter ) == Q_toupper( *string ))) && FS_WildCmp_r( filter + 1, string + 1 );
-    }
-}
-
 qboolean FS_WildCmp( const char *filter, const char *string ) {
     do {
-        if( FS_WildCmp_r( filter, string ) ) {
+        if( Com_WildCmpEx( filter, string, ';', qtrue ) ) {
             return qtrue;
         }
         filter = strchr( filter, ';' );

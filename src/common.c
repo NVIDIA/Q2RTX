@@ -1140,6 +1140,119 @@ int BoxOnPlaneSide( vec3_t emins, vec3_t emaxs, cplane_t *p ) {
 }
 #endif // USE_ASM
 
+/*
+==============================================================================
+
+                        WILDCARD COMPARE
+
+==============================================================================
+*/
+
+static qboolean match_char( int c1, int c2, qboolean ignorecase ) {
+    if( c1 == '?' ) {
+        return !!c2; // match any char except NUL
+    }
+
+    if( c1 != c2 ) {
+        if( !ignorecase ) {
+            return qfalse;
+        }
+#ifdef _WIN32
+        // ugly hack for file listing
+        c1 = c1 == '\\' ? '/' : Q_tolower( c1 );
+        c2 = c2 == '\\' ? '/' : Q_tolower( c2 );
+#else
+        c1 = Q_tolower( c1 );
+        c2 = Q_tolower( c2 );
+#endif
+        if( c1 != c2 ) {
+            return qfalse;
+        }
+    }
+
+    return qtrue;
+}
+
+static qboolean match_part( const char *filter, const char *string, size_t len, qboolean ignorecase ) {
+    do {
+        int c1 = *filter++;
+        int c2 = *string++;
+
+        if( !match_char( c1, c2, ignorecase ) ) {
+            return qfalse;
+        }
+    } while( --len );
+
+    return qtrue;
+}
+
+// match the longest possible part
+static const char *match_filter( const char *filter, const char *string, size_t len, qboolean ignorecase ) {
+    const char *ret = NULL;
+    size_t remaining = strlen( string );
+
+    while( remaining >= len ) {
+        if( match_part( filter, string, len, ignorecase ) ) {
+            string += len;
+            remaining -= len;
+            ret = string;
+            continue;
+        }
+        string++;
+        remaining--;
+    }
+
+    return ret;
+}
+
+/*
+=================
+Com_WildCmpEx
+
+Wildcard compare.
+Returns non-zero if matches, zero otherwise.
+=================
+*/
+qboolean Com_WildCmpEx( const char *filter, const char *string, int term, qboolean ignorecase ) {
+    const char *sub;
+    size_t len;
+
+    while( *filter && *filter != term ) {
+        if( *filter == '*' ) {
+            // skip consecutive wildcards
+            do {
+                filter++;
+            } while( *filter == '*' );
+
+            // wildcard at the end matches everything
+            if( !*filter || *filter == term ) {
+                return qtrue;
+            }
+
+            // scan out filter part to match
+            sub = filter; len = 0;
+            do {
+                filter++; len++;
+            } while( *filter && *filter != term && *filter != '*' );
+
+            string = match_filter( sub, string, len, ignorecase );
+            if( !string ) {
+                return qfalse;
+            }
+        } else {
+            int c1 = *filter++;
+            int c2 = *string++;
+
+            // match single character
+            if( !match_char( c1, c2, ignorecase ) ) {
+                return qfalse;
+            }
+        }
+    }
+
+    // match NUL at the end
+    return !*string;
+}
 
 /*
 ==============================================================================
@@ -1198,30 +1311,6 @@ void Com_PlayerToEntityState( const player_state_t *ps, entity_state_t *es ) {
     es->angles[PITCH] = pitch / 3;
     es->angles[YAW] = ps->viewangles[YAW];
     es->angles[ROLL] = 0;
-}
-
-/*
-=================
-Com_WildCmp
-
-Wildcard compare.
-Returns non-zero if matches, zero otherwise.
-=================
-*/
-int Com_WildCmp( const char *filter, const char *string, qboolean ignoreCase ) {
-    switch( *filter ) {
-    case '\0':
-        return !*string;
-
-    case '*':
-        return Com_WildCmp( filter + 1, string, ignoreCase ) || (*string && Com_WildCmp( filter, string + 1, ignoreCase ));
-
-    case '?':
-        return *string && Com_WildCmp( filter + 1, string + 1, ignoreCase );
-
-    default:
-        return ((*filter == *string) || (ignoreCase && (Q_toupper( *filter ) == Q_toupper( *string )))) && Com_WildCmp( filter + 1, string + 1, ignoreCase );
-    }
 }
 
 /*
