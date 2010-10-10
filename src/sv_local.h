@@ -71,8 +71,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
                      GMF_WANT_ALL_DISCONNECTS|GMF_ENHANCED_SAVEGAMES)
 
 typedef struct {
-    unsigned    numEntities;
-    unsigned    firstEntity;
+    unsigned    num_entities;
+    unsigned    first_entity;
     player_state_t ps;
     int         areabytes;
     byte        areabits[MAX_MAP_AREA_BYTES];  // portalarea visibility bits
@@ -173,7 +173,7 @@ typedef struct {
 #define RATE_MESSAGES   10
 
 #define FOR_EACH_CLIENT( client ) \
-    LIST_FOR_EACH( client_t, client, &svs.udp_client_list, entry )
+    LIST_FOR_EACH( client_t, client, &svs.client_list, entry )
 
 #define PL_S2C(cl) (cl->frames_sent ? \
     (1.0f-(float)cl->frames_acked/cl->frames_sent)*100.0f : 0.0f)
@@ -365,17 +365,17 @@ typedef struct {
 
 typedef struct server_static_s {
     qboolean    initialized;        // sv_init has completed
-    unsigned    realtime;            // always increasing, no clamping, etc
+    unsigned    realtime;           // always increasing, no clamping, etc
 
-    client_t    *udp_client_pool;     // [maxclients]
-    list_t      udp_client_list;         // linked list of non-free clients
+    client_t    *client_pool;   // [maxclients]
+    list_t      client_list;    // linked list of non-free clients
 
-    unsigned        numEntityStates; // maxclients*UPDATE_BACKUP*MAX_PACKET_ENTITIES
-    unsigned        nextEntityStates;    // next entityState to use
-    entity_state_t  *entityStates;        // [numEntityStates]
+    unsigned        num_entities;   // maxclients*UPDATE_BACKUP*MAX_PACKET_ENTITIES
+    unsigned        next_entity;    // next state to use
+    entity_state_t  *entities;      // [num_entities]
 
 #if USE_ZLIB
-    z_stream        z; // for compressing messages at once
+    z_stream        z;  // for compressing messages at once
 #endif
 
     unsigned        last_heartbeat;
@@ -384,7 +384,7 @@ typedef struct server_static_s {
     ratelimit_t     ratelimit_auth;
     ratelimit_t     ratelimit_rcon;
 
-    challenge_t     challenges[MAX_CHALLENGES];     // to prevent invalid IPs from connecting
+    challenge_t     challenges[MAX_CHALLENGES]; // to prevent invalid IPs from connecting
 } server_static_t;
 
 //=============================================================================

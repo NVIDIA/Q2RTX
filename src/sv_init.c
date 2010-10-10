@@ -101,7 +101,7 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
     sv.spawncount &= 0x7FFFFFFF;
 
     // reset entity counter
-    svs.nextEntityStates = 0;
+    svs.next_entity = 0;
 
     // save name for levels that don't set message
     Q_strlcpy( sv.configstrings[CS_NAME], server, MAX_QPATH );
@@ -256,10 +256,10 @@ void SV_InitGame( qboolean ismvd ) {
         NET_Config( NET_SERVER );
     }
 
-    svs.udp_client_pool = SV_Mallocz( sizeof( client_t ) * sv_maxclients->integer );
+    svs.client_pool = SV_Mallocz( sizeof( client_t ) * sv_maxclients->integer );
 
-    svs.numEntityStates = sv_maxclients->integer * UPDATE_BACKUP * MAX_PACKET_ENTITIES;
-    svs.entityStates = SV_Mallocz( sizeof( entity_state_t ) * svs.numEntityStates );
+    svs.num_entities = sv_maxclients->integer * UPDATE_BACKUP * MAX_PACKET_ENTITIES;
+    svs.entities = SV_Mallocz( sizeof( entity_state_t ) * svs.num_entities );
 
 #if USE_MVD_SERVER
     // initialize MVD server
@@ -295,10 +295,10 @@ void SV_InitGame( qboolean ismvd ) {
     // send heartbeat very soon
     svs.last_heartbeat = -(HEARTBEAT_SECONDS-5)*1000;
 
-    List_Init( &svs.udp_client_list );
+    List_Init( &svs.client_list );
 
     for( i = 0; i < sv_maxclients->integer; i++ ) {
-        client = svs.udp_client_pool + i;
+        client = svs.client_pool + i;
         entnum = i + 1;
         ent = EDICT_NUM( entnum );
         ent->s.number = entnum;

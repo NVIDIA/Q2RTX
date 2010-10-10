@@ -613,7 +613,7 @@ static client_t *AC_ParseClient( void ) {
         return NULL;
     }
 
-    cl = &svs.udp_client_pool[clientID];
+    cl = &svs.client_pool[clientID];
 
     // we check challenge to ensure we don't get
     // a race condition if a client reconnects.
@@ -1549,7 +1549,7 @@ void AC_Info_f( void ) {
                 Com_Printf( "Invalid client ID.\n" );
                 return;
             }
-            cl = &svs.udp_client_pool[clientID];
+            cl = &svs.client_pool[clientID];
             if( cl->state < cs_spawned ) {
                 Com_Printf( "Player is not active.\n" );
                 return;

@@ -306,7 +306,7 @@ static client_t *dummy_find_slot( void ) {
     // first check if there is a free reserved slot
     j = sv_maxclients->integer - sv_reserved_slots->integer;
     for( i = j; i < sv_maxclients->integer; i++ ) {
-        c = &svs.udp_client_pool[i];
+        c = &svs.client_pool[i];
         if( !c->state ) {
             return c;
         }
@@ -314,7 +314,7 @@ static client_t *dummy_find_slot( void ) {
 
     // then check regular slots
     for( i = 0; i < j; i++ ) {
-        c = &svs.udp_client_pool[i];
+        c = &svs.client_pool[i];
         if( !c->state ) {
             return c;
         }
@@ -338,7 +338,7 @@ static qboolean dummy_create( void ) {
     }
 
     memset( newcl, 0, sizeof( *newcl ) );
-    number = newcl - svs.udp_client_pool;
+    number = newcl - svs.client_pool;
     newcl->number = newcl->slot = number;
     newcl->protocol = -1;
     newcl->state = cs_connected;
@@ -458,7 +458,7 @@ static qboolean player_is_active( const edict_t *ent ) {
     // by default, check if client is actually connected
     // it may not be the case for bots!
     if( sv_mvd_capture_flags->integer & 1 ) {
-        if( svs.udp_client_pool[num].state != cs_spawned ) {
+        if( svs.client_pool[num].state != cs_spawned ) {
             return qfalse;
         }
     }

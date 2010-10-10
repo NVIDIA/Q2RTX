@@ -441,32 +441,36 @@ overflowed:
     }
 }
 
+// check if this entity is present in current client frame
+static qboolean check_entity( client_t *client, int entnum ) {
+    client_frame_t *frame;
+    unsigned i, j;
+
+    frame = &client->frames[sv.framenum & UPDATE_MASK];
+
+    for( i = 0; i < frame->num_entities; i++ ) {
+        j = ( frame->first_entity + i ) % svs.num_entities;
+        if( svs.entities[j].number == entnum ) {
+            return qtrue;
+        }
+    }
+
+    return qfalse;
+}
+
 // sounds reliative to entities are handled specially
 static void emit_snd( client_t *client, message_packet_t *msg ) {
-    entity_state_t *state;
-    client_frame_t *frame;
     int flags, entnum;
-    int i, j;
+    int i;
 
     entnum = msg->sendchan >> 3;
     flags = msg->flags;
 
     // check if position needs to be explicitly sent
-    if( !( flags & SND_POS ) ) {
-        frame = &client->frames[sv.framenum & UPDATE_MASK];
-
-        for( i = 0; i < frame->numEntities; i++ ) {
-            j = ( frame->firstEntity + i ) % svs.numEntityStates;
-            state = &svs.entityStates[j];
-            if( state->number == entnum ) {
-                break;
-            }
-        }
-        if( i == frame->numEntities ) {
-            SV_DPrintf( 0, "Forcing position on entity %d for %s\n",
-                entnum, client->name );
-            flags |= SND_POS;   // entity is not present in frame
-        }
+    if( !( flags & SND_POS ) && !check_entity( client, entnum ) ) {
+        SV_DPrintf( 0, "Forcing position on entity %d for %s\n",
+            entnum, client->name );
+        flags |= SND_POS;   // entity is not present in frame
     }
 
     MSG_WriteByte( svc_sound );

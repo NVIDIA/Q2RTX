@@ -826,8 +826,8 @@ static void SVC_DirectConnect( void ) {
 
     // find a client slot
     if( !newcl ) {
-        lastcl = svs.udp_client_pool + sv_maxclients->integer - reserved;
-        for( newcl = svs.udp_client_pool; newcl < lastcl; newcl++ ) {
+        lastcl = svs.client_pool + sv_maxclients->integer - reserved;
+        for( newcl = svs.client_pool; newcl < lastcl; newcl++ ) {
             if( !newcl->state ) {
                 break;
             }
@@ -853,7 +853,7 @@ static void SVC_DirectConnect( void ) {
     // accept the new client
     // this is the only place a client_t is ever initialized
     memset( newcl, 0, sizeof( *newcl ) );
-    number = newcl - svs.udp_client_pool;
+    number = newcl - svs.client_pool;
     newcl->number = newcl->slot = number;
     newcl->challenge = challenge; // save challenge for checksumming
     newcl->protocol = protocol;
@@ -970,7 +970,7 @@ static void SVC_DirectConnect( void ) {
     }
 
     // add them to the linked list of connected clients
-    List_SeqAdd( &svs.udp_client_list, &newcl->entry );
+    List_SeqAdd( &svs.client_list, &newcl->entry );
 
     Com_DPrintf( "Going from cs_free to cs_assigned for %s\n", newcl->name );
     newcl->state = cs_assigned;
@@ -1442,7 +1442,7 @@ static inline qboolean check_paused( void ) {
 #if USE_MVD_CLIENT
         LIST_EMPTY( &mvd_gtv_list ) &&
 #endif
-        LIST_SINGLE( &svs.udp_client_list ) )
+        LIST_SINGLE( &svs.client_list ) )
     {
         if( !sv_paused->integer ) {
             Cvar_Set( "sv_paused", "1" );
@@ -2047,8 +2047,8 @@ void SV_Shutdown( const char *finalmsg, killtype_t type ) {
     memset( &sv, 0, sizeof( sv ) );
 
     // free server static data
-    Z_Free( svs.udp_client_pool );
-    Z_Free( svs.entityStates );
+    Z_Free( svs.client_pool );
+    Z_Free( svs.entities );
 #if USE_ZLIB
     deflateEnd( &svs.z );
 #endif

@@ -90,7 +90,7 @@ static void PF_Unicast( edict_t *ent, qboolean reliable ) {
         goto clear;
     }
 
-    client = svs.udp_client_pool + clientNum;
+    client = svs.client_pool + clientNum;
     if( client->state <= cs_zombie ) {
         Com_WPrintf( "%s to a free/zombie client %d\n", __func__, clientNum );
         goto clear;
@@ -217,7 +217,7 @@ static void PF_cprintf( edict_t *ent, int level, const char *fmt, ... ) {
         Com_Error( ERR_DROP, "%s to a non-client %d", __func__, clientNum );
     }
 
-    client = svs.udp_client_pool + clientNum;
+    client = svs.client_pool + clientNum;
     if( client->state <= cs_zombie ) {
         Com_WPrintf( "%s to a free/zombie client %d\n", __func__, clientNum );
         return;

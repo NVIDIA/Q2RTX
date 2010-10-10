@@ -1218,7 +1218,7 @@ MISC GAME FUNCTIONS
 */
 
 void MVD_RemoveClient( client_t *client ) {
-    int index = client - svs.udp_client_pool;
+    int index = client - svs.client_pool;
     mvd_client_t *cl = &mvd_clients[index];
 
     List_Remove( &cl->entry );
@@ -1261,7 +1261,7 @@ static void MVD_GameInit( void ) {
         ( sv_maxclients->integer + 1 ) );
 
     for( i = 0; i < sv_maxclients->integer; i++ ) {
-        mvd_clients[i].cl = &svs.udp_client_pool[i];
+        mvd_clients[i].cl = &svs.client_pool[i];
         edicts[i + 1].client = ( gclient_t * )&mvd_clients[i];
     }
 

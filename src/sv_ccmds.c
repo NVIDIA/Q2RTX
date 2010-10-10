@@ -140,7 +140,7 @@ client_t *SV_GetPlayer( const char *s, qboolean partial ) {
             return NULL;
         }
 
-        other = &svs.udp_client_pool[i];
+        other = &svs.client_pool[i];
         if( other->state <= cs_zombie ) {
             Com_Printf( "Client slot %d is not active.\n", i );
             return NULL;
@@ -605,7 +605,7 @@ static void SV_Status_f( void ) {
         Com_Printf( "Current map: %s\n\n", sv.name );
     }
 
-    if( LIST_EMPTY( &svs.udp_client_list ) ) {
+    if( LIST_EMPTY( &svs.client_list ) ) {
         Com_Printf( "No UDP clients.\n" );
     } else {
         if( Cmd_Argc() > 1 ) {

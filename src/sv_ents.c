@@ -40,36 +40,34 @@ static void SV_EmitPacketEntities( client_t         *client,
                                    client_frame_t   *to,
                                    int              clientEntityNum )
 {
-    entity_state_t    *oldent, *newent;
-    const entity_state_t  *base;
-    unsigned oldindex, newindex;
+    entity_state_t *newent;
+    const entity_state_t *oldent, *base;
+    unsigned i, oldindex, newindex, from_num_entities;
     int oldnum, newnum;
-    unsigned from_num_entities;
     msgEsFlags_t flags;
-    unsigned    i;
 
     if( !from )
         from_num_entities = 0;
     else
-        from_num_entities = from->numEntities;
+        from_num_entities = from->num_entities;
 
     newindex = 0;
     oldindex = 0;
     oldent = newent = NULL;
-    while( newindex < to->numEntities || oldindex < from_num_entities ) {
-        if( newindex >= to->numEntities ) {
+    while( newindex < to->num_entities || oldindex < from_num_entities ) {
+        if( newindex >= to->num_entities ) {
             newnum = 9999;
         } else {
-            i = ( to->firstEntity + newindex ) % svs.numEntityStates;
-            newent = &svs.entityStates[i];
+            i = ( to->first_entity + newindex ) % svs.num_entities;
+            newent = &svs.entities[i];
             newnum = newent->number;
         }
 
         if( oldindex >= from_num_entities ) {
             oldnum = 9999;
         } else {
-            i = ( from->firstEntity + oldindex ) % svs.numEntityStates;
-            oldent = &svs.entityStates[i];
+            i = ( from->first_entity + oldindex ) % svs.num_entities;
+            oldent = &svs.entities[i];
             oldnum = oldent->number;
         }
 
@@ -136,6 +134,7 @@ static client_frame_t *get_last_frame( client_t *client ) {
         client->frames_nodelta++;
         return NULL;
     }
+
     client->frames_nodelta = 0;
 
     if( sv.framenum - client->lastframe > UPDATE_BACKUP - 1 ) {
@@ -146,7 +145,7 @@ static client_frame_t *get_last_frame( client_t *client ) {
 
     // we have a valid message to delta from
     frame = &client->frames[client->lastframe & UPDATE_MASK];
-    if( svs.nextEntityStates - frame->firstEntity > svs.numEntityStates ) {
+    if( svs.next_entity - frame->first_entity > svs.num_entities ) {
         // but entities are too old
         Com_DPrintf( "%s: delta request from out-of-date entities.\n", client->name );
         return NULL;
@@ -330,6 +329,7 @@ qboolean SV_EdictPV( cm_t *cm, edict_t *ent, byte *mask ) {
             return qtrue;
         }
     }
+
     return qfalse;        // not visible
 }
 
@@ -395,8 +395,8 @@ void SV_BuildClientFrame( client_t *client ) {
     BSP_ClusterVis( client->cm->cache, clientphs, clientcluster, DVIS_PHS );
 
     // build up the list of visible entities
-    frame->numEntities = 0;
-    frame->firstEntity = svs.nextEntityStates;
+    frame->num_entities = 0;
+    frame->first_entity = svs.next_entity;
 
     for( e = 1; e < client->pool->num_edicts; e++ ) {
         ent = EDICT_POOL( client, e );
@@ -465,7 +465,7 @@ void SV_BuildClientFrame( client_t *client ) {
         }
 
         // add it to the circular client_entities array
-        state = &svs.entityStates[svs.nextEntityStates % svs.numEntityStates];
+        state = &svs.entities[svs.next_entity % svs.num_entities];
         *state = ent->s;
 
         // clear footsteps
@@ -489,9 +489,9 @@ void SV_BuildClientFrame( client_t *client ) {
             state->solid = sv.entities[e].solid32;
         }
 
-        svs.nextEntityStates++;
+        svs.next_entity++;
 
-        if( ++frame->numEntities == MAX_PACKET_ENTITIES ) {
+        if( ++frame->num_entities == MAX_PACKET_ENTITIES ) {
             break;
         }
     }
