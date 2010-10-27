@@ -49,6 +49,7 @@ cvar_t *gl_drawentities;
 cvar_t *gl_drawsky;
 cvar_t *gl_showtris;
 cvar_t *gl_showorigins;
+cvar_t *gl_showtearing;
 cvar_t *gl_cull_nodes;
 cvar_t *gl_cull_models;
 #ifdef _DEBUG
@@ -408,6 +409,27 @@ static void GL_DrawEntities( int mask ) {
     }
 }
 
+static void GL_DrawTearing( void ) {
+    static int i;
+
+    /* alternate colors to make tearing obvious */
+    i++;
+    if (i & 1) {
+        qglClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
+        qglColor3f( 1.0f, 1.0f, 1.0f );
+    } else {
+        qglClearColor( 1.0f, 0.0f, 0.0f, 0.0f );
+        qglColor3f( 1.0f, 0.0f, 0.0f );
+    }
+
+    qglClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+    qglDisable( GL_TEXTURE_2D );
+    qglRectf( 0, 0, gl_config.vidWidth, gl_config.vidHeight );
+    qglEnable( GL_TEXTURE_2D );
+
+    qglClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
+}
+
 static char *GL_ErrorString( GLenum err ) {
     char *str;
 
@@ -512,6 +534,10 @@ void R_EndFrame( void ) {
     }
 #endif
     GL_Flush2D();
+
+    if( gl_showtearing->integer ) {
+        GL_DrawTearing();
+    }
 
     if( gl_log->modified ) {
         QGL_EnableLogging( gl_log->integer );
@@ -673,6 +699,7 @@ static void GL_Register( void ) {
     gl_drawsky = Cvar_Get( "gl_drawsky", "1", 0 );
     gl_showtris = Cvar_Get( "gl_showtris", "0", CVAR_CHEAT );
     gl_showorigins = Cvar_Get( "gl_showorigins", "0", CVAR_CHEAT );
+    gl_showtearing = Cvar_Get( "gl_showtearing", "0", 0 );
 #ifdef _DEBUG
     gl_showstats = Cvar_Get( "gl_showstats", "0", 0 );
 #endif
