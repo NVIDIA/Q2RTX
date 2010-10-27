@@ -430,23 +430,21 @@ static void GL_DrawTearing( void ) {
     qglClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
 }
 
-static char *GL_ErrorString( GLenum err ) {
-    char *str;
-
-#define MapError( x )   case x: str = #x; break;
+static const char *GL_ErrorString( GLenum err ) {
+    const char *str;
 
     switch( err ) {
-        MapError( GL_NO_ERROR )
-        MapError( GL_INVALID_ENUM )
-        MapError( GL_INVALID_VALUE )
-        MapError( GL_INVALID_OPERATION )
-        MapError( GL_STACK_OVERFLOW )
-        MapError( GL_STACK_UNDERFLOW )
-        MapError( GL_OUT_OF_MEMORY )
+#define E(x) case GL_##x: str = "GL_"#x; break;
+        E( NO_ERROR )
+        E( INVALID_ENUM )
+        E( INVALID_VALUE )
+        E( INVALID_OPERATION )
+        E( STACK_OVERFLOW )
+        E( STACK_UNDERFLOW )
+        E( OUT_OF_MEMORY )
         default: str = "UNKNOWN ERROR";
+#undef E
     }
-
-#undef MapError
 
     return str;
 }
