@@ -245,7 +245,7 @@ static inline void CL_ParseDeltaEntity( server_frame_t  *frame,
 #ifdef _DEBUG
     if( cl_shownet->integer > 2 && bits ) {
         MSG_ShowDeltaEntityBits( bits );
-        Com_Printf( "\n" );
+        Com_LPrintf( PRINT_DEVELOPER, "\n" );
     }
 #endif
 
@@ -300,7 +300,7 @@ static void CL_ParsePacketEntities( server_frame_t *oldframe,
 
         while( oldnum < newnum ) {
             // one or more entities from the old packet are unchanged
-            SHOWNET( 2, "   unchanged: %i\n", oldnum );
+            SHOWNET( 3, "   unchanged: %i\n", oldnum );
             CL_ParseDeltaEntity( frame, oldnum, oldstate, 0 );
             
             oldindex++;
@@ -340,6 +340,7 @@ static void CL_ParsePacketEntities( server_frame_t *oldframe,
             // delta from previous state
             SHOWNET( 2, "   delta: %i ", newnum );
             CL_ParseDeltaEntity( frame, newnum, oldstate, bits );
+            if( !bits ) SHOWNET( 2, "\n" );
 
             oldindex++;
 
@@ -357,6 +358,7 @@ static void CL_ParsePacketEntities( server_frame_t *oldframe,
             // delta from baseline
             SHOWNET( 2, "   baseline: %i ", newnum );
             CL_ParseDeltaEntity( frame, newnum, &cl.baselines[newnum], bits );
+            if( !bits ) SHOWNET( 2, "\n" );
             continue;
         }
 
@@ -547,7 +549,7 @@ static void CL_ParseFrame( int extrabits ) {
 #ifdef _DEBUG
         if( cl_shownet->integer > 2 ) {
             MSG_ShowDeltaPlayerstateBits_Enhanced( bits );
-            Com_Printf( "\n" );
+            Com_LPrintf( PRINT_DEVELOPER, "\n" );
         }
 #endif
         if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO ) {
@@ -565,7 +567,7 @@ static void CL_ParseFrame( int extrabits ) {
 #ifdef _DEBUG
         if( cl_shownet->integer > 2 ) {
             MSG_ShowDeltaPlayerstateBits_Default( bits );
-            Com_Printf( "\n" );
+            Com_LPrintf( PRINT_DEVELOPER, "\n" );
         }
 #endif
         frame.clientNum = cl.clientNum;
@@ -596,7 +598,7 @@ static void CL_ParseFrame( int extrabits ) {
             int seq = cls.netchan->incoming_acknowledged & CMD_MASK;
             rtt = cls.realtime - cl.history[seq].sent;
         }
-        Com_Printf( "%3"PRIz":frame:%d  delta:%d  rtt:%d\n",
+        Com_LPrintf( PRINT_DEVELOPER, "%3"PRIz":frame:%d  delta:%d  rtt:%d\n",
             msg_read.readcount - 1, frame.number, frame.delta, rtt );
     }
 #endif
@@ -700,7 +702,7 @@ static void CL_ParseBaseline( int index, int bits ) {
 #ifdef _DEBUG
     if( cl_shownet->integer > 2 ) {
         MSG_ShowDeltaEntityBits( bits );
-        Com_Printf( "\n" );
+        Com_LPrintf( PRINT_DEVELOPER, "\n" );
     }
 #endif
     MSG_ParseDeltaEntity( NULL, &cl.baselines[index], index, bits, cl.esFlags );
@@ -1510,9 +1512,9 @@ void CL_ParseServerMessage( void ) {
 
 #ifdef _DEBUG
     if( cl_shownet->integer == 1 ) {
-        Com_Printf( "%"PRIz" ", msg_read.cursize );
+        Com_LPrintf( PRINT_DEVELOPER, "%"PRIz" ", msg_read.cursize );
     } else if( cl_shownet->integer > 1 ) {
-        Com_Printf( "------------------\n" );
+        Com_LPrintf( PRINT_DEVELOPER, "------------------\n" );
     }
 #endif
 

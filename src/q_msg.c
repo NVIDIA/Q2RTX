@@ -2341,71 +2341,28 @@ void MSG_ParseDeltaPlayerstate_Packet( const player_state_t *from,
 
 #ifdef _DEBUG
 
-#define SHOWBITS( data ) \
-    do { Com_Printf( "%s ", data ); } while( 0 )
+#define SHOWBITS(x) Com_LPrintf( PRINT_DEVELOPER, x " " )
 
 #if USE_CLIENT
 
 void MSG_ShowDeltaPlayerstateBits_Default( int flags ) {
-    if( flags & PS_M_TYPE ) {
-        SHOWBITS( "pmove.pm_type" );
-    }
-
-    if( flags & PS_M_ORIGIN ) {
-        SHOWBITS( "pmove.origin" );
-    }
-
-    if( flags & PS_M_VELOCITY ) {
-        SHOWBITS( "pmove.velocity" );
-    }
-
-    if( flags & PS_M_TIME ) {
-        SHOWBITS( "pmove.pm_time" );
-    }
-
-    if( flags & PS_M_FLAGS ) {
-        SHOWBITS( "pmove.pm_flags" );
-    }
-
-    if( flags & PS_M_GRAVITY ) {
-        SHOWBITS( "pmove.gravity" );
-    }
-
-    if( flags & PS_M_DELTA_ANGLES ) {
-        SHOWBITS( "pmove.delta_angles" );
-    }
-
-    if( flags & PS_VIEWOFFSET ) {
-        SHOWBITS( "viewoffset" );
-    }
-
-    if( flags & PS_VIEWANGLES ) {
-        SHOWBITS( "viewangles" );
-    }
-
-    if( flags & PS_KICKANGLES ) {
-        SHOWBITS( "kick_angles" );
-    }
-
-    if( flags & PS_WEAPONINDEX ) {
-        SHOWBITS( "gunindex" );
-    }
-
-    if( flags & PS_WEAPONFRAME ) {
-        SHOWBITS( "gunframe" );
-    }
-
-    if( flags & PS_BLEND ) {
-        SHOWBITS( "blend" );
-    }
-
-    if( flags & PS_FOV ) {
-        SHOWBITS( "fov" );
-    }
-
-    if( flags & PS_RDFLAGS ) {
-        SHOWBITS( "rdflags" );
-    }
+#define S(b,s) if(flags&PS_##b) SHOWBITS(s)
+    S(M_TYPE,           "pmove.pm_type");
+    S(M_ORIGIN,         "pmove.origin");
+    S(M_VELOCITY,       "pmove.velocity");
+    S(M_TIME,           "pmove.pm_time");
+    S(M_FLAGS,          "pmove.pm_flags");
+    S(M_GRAVITY,        "pmove.gravity");
+    S(M_DELTA_ANGLES,   "pmove.delta_angles");
+    S(VIEWOFFSET,       "viewoffset");
+    S(VIEWANGLES,       "viewangles");
+    S(KICKANGLES,       "kick_angles");
+    S(WEAPONINDEX,      "gunindex");
+    S(WEAPONFRAME,      "gunframe");
+    S(BLEND,            "blend");
+    S(FOV,              "fov");
+    S(RDFLAGS,          "rdflags");
+#undef S
 }
 
 void MSG_ShowDeltaPlayerstateBits_Enhanced( int flags ) {
@@ -2414,89 +2371,31 @@ void MSG_ShowDeltaPlayerstateBits_Enhanced( int flags ) {
     extraflags = flags >> PS_BITS;
     flags &= PS_MASK;
 
-    if( flags & PS_M_TYPE ) {
-        SHOWBITS( "pmove.pm_type" );
-    }
-
-    if( flags & PS_M_ORIGIN ) {
-        SHOWBITS( "pmove.origin[0,1]" );
-    }
-
-    if( extraflags & EPS_M_ORIGIN2 ) {
-        SHOWBITS( "pmove.origin[2]" );
-    }
-
-    if( flags & PS_M_VELOCITY ) {
-        SHOWBITS( "pmove.velocity[0,1]" );
-    }
-
-    if( extraflags & EPS_M_VELOCITY2 ) {
-        SHOWBITS( "pmove.velocity[2]" );
-    }
-
-    if( flags & PS_M_TIME ) {
-        SHOWBITS( "pmove.pm_time" );
-    }
-
-    if( flags & PS_M_FLAGS ) {
-        SHOWBITS( "pmove.pm_flags" );
-    }
-
-    if( flags & PS_M_GRAVITY ) {
-        SHOWBITS( "pmove.gravity" );
-    }
-
-    if( flags & PS_M_DELTA_ANGLES ) {
-        SHOWBITS( "pmove.delta_angles" );
-    }
-
-    if( flags & PS_VIEWOFFSET ) {
-        SHOWBITS( "viewoffset" );
-    }
-
-    if( flags & PS_VIEWANGLES ) {
-        SHOWBITS( "viewangles[0,1]" );
-    }
-
-    if( extraflags & EPS_VIEWANGLE2 ) {
-        SHOWBITS( "viewangles[2]" );
-    }
-
-    if( flags & PS_KICKANGLES ) {
-        SHOWBITS( "kick_angles" );
-    }
-
-    if( flags & PS_WEAPONINDEX ) {
-        SHOWBITS( "gunindex" );
-    }
-
-    if( flags & PS_WEAPONFRAME ) {
-        SHOWBITS( "gunframe" );
-    }
-
-    if( extraflags & EPS_GUNOFFSET ) {
-        SHOWBITS( "gunoffset" );
-    }
-
-    if( extraflags & EPS_GUNANGLES ) {
-        SHOWBITS( "gunangles" );
-    }
-
-    if( flags & PS_BLEND ) {
-        SHOWBITS( "blend" );
-    }
-
-    if( flags & PS_FOV ) {
-        SHOWBITS( "fov" );
-    }
-
-    if( flags & PS_RDFLAGS ) {
-        SHOWBITS( "rdflags" );
-    }
-
-    if( extraflags & EPS_STATS ) {
-        SHOWBITS( "stats" );
-    }
+#define SP(b,s) if(flags&PS_##b) SHOWBITS(s)
+#define SE(b,s) if(extraflags&EPS_##b) SHOWBITS(s)
+    SP(M_TYPE,          "pmove.pm_type");
+    SP(M_ORIGIN,        "pmove.origin[0,1]");
+    SE(M_ORIGIN2,       "pmove.origin[2]");
+    SP(M_VELOCITY,      "pmove.velocity[0,1]");
+    SE(M_VELOCITY2,     "pmove.velocity[2]");
+    SP(M_TIME,          "pmove.pm_time");
+    SP(M_FLAGS,         "pmove.pm_flags");
+    SP(M_GRAVITY,       "pmove.gravity");
+    SP(M_DELTA_ANGLES,  "pmove.delta_angles");
+    SP(VIEWOFFSET,      "viewoffset");
+    SP(VIEWANGLES,      "viewangles[0,1]");
+    SE(VIEWANGLE2,      "viewangles[2]");
+    SP(KICKANGLES,      "kick_angles");
+    SP(WEAPONINDEX,     "gunindex");
+    SP(WEAPONFRAME,     "gunframe");
+    SE(GUNOFFSET,       "gunoffset");
+    SE(GUNANGLES,       "gunangles");
+    SP(BLEND,           "blend");
+    SP(FOV,             "fov");
+    SP(RDFLAGS,         "rdflags");
+    SE(STATS,           "stats");
+#undef SP
+#undef SE
 }
 
 
@@ -2505,24 +2404,17 @@ void MSG_ShowDeltaUsercmdBits_Enhanced( int bits ) {
         SHOWBITS( "<none>" );
         return;
     }
-    if( bits & CM_ANGLE1 )
-        SHOWBITS( "angle1" );
-    if( bits & CM_ANGLE2 )
-        SHOWBITS( "angle2" );
-    if( bits & CM_ANGLE3 )
-        SHOWBITS( "angle3" );
-    
-    if( bits & CM_FORWARD )
-        SHOWBITS( "forward" );
-    if( bits & CM_SIDE )
-        SHOWBITS( "side" );
-    if( bits & CM_UP )
-        SHOWBITS( "up" );
 
-    if( bits & CM_BUTTONS )
-        SHOWBITS( "buttons" );
-    if( bits & CM_IMPULSE )
-        SHOWBITS( "msec" );
+#define S(b,s) if(bits&CM_##b) SHOWBITS(s)
+    S(ANGLE1,   "angle1");
+    S(ANGLE2,   "angle2");
+    S(ANGLE3,   "angle3");
+    S(FORWARD,  "forward");
+    S(SIDE,     "side");
+    S(UP,       "up");
+    S(BUTTONS,  "buttons");
+    S(IMPULSE,  "msec");
+#undef S
 }
 
 #endif // USE_CLIENT
@@ -2530,18 +2422,11 @@ void MSG_ShowDeltaUsercmdBits_Enhanced( int bits ) {
 #if USE_CLIENT || USE_MVD_CLIENT
 
 void MSG_ShowDeltaEntityBits( int bits ) {
-    if( bits & U_MODEL ) {
-        SHOWBITS( "modelindex" );
-    }
-    if( bits & U_MODEL2 ) {
-        SHOWBITS( "modelindex2" );
-    }
-    if( bits & U_MODEL3 ) {
-        SHOWBITS( "modelindex3" );
-    }
-    if( bits & U_MODEL4 ) {
-        SHOWBITS( "modelindex4" );
-    }
+#define S(b,s) if(bits&U_##b) SHOWBITS(s)
+    S(MODEL, "modelindex");
+    S(MODEL2, "modelindex2");
+    S(MODEL3, "modelindex3");
+    S(MODEL4, "modelindex4");
 
     if( bits & U_FRAME8 )
         SHOWBITS( "frame8" );
@@ -2569,111 +2454,44 @@ void MSG_ShowDeltaEntityBits( int bits ) {
     else if( bits & U_RENDERFX16 )
         SHOWBITS( "renderfx16" );
 
-    if( bits & U_ORIGIN1 ) {
-        SHOWBITS( "origin[0]" );
-    }
-    if( bits & U_ORIGIN2 ) {
-        SHOWBITS( "origin[1]" );
-    }
-    if( bits & U_ORIGIN3 ) {
-        SHOWBITS( "origin[2]" );
-    }
-        
-    if( bits & U_ANGLE1 ) {
-        SHOWBITS( "angles[0]" );
-    }
-    if( bits & U_ANGLE2 ) {
-        SHOWBITS( "angles[2]" );
-    }
-    if( bits & U_ANGLE3 ) {
-        SHOWBITS( "angles[3]" );
-    }
-
-    if( bits & U_OLDORIGIN ) {
-        SHOWBITS( "old_origin" );
-    }
-
-    if( bits & U_SOUND ) {
-        SHOWBITS( "sound" );
-    }
-
-    if( bits & U_EVENT ) {
-        SHOWBITS( "event" );
-    }
-
-    if( bits & U_SOLID ) {
-        SHOWBITS( "solid" );
-    }
+    S(ORIGIN1, "origin[0]");
+    S(ORIGIN2, "origin[1]");
+    S(ORIGIN3, "origin[2]");
+    S(ANGLE1, "angles[0]");
+    S(ANGLE2, "angles[1]");
+    S(ANGLE3, "angles[2]");
+    S(OLDORIGIN,"old_origin");
+    S(SOUND, "sound");
+    S(EVENT, "event");
+    S(SOLID, "solid");
+#undef S
 }
 
 void MSG_ShowDeltaPlayerstateBits_Packet( int flags ) {
-    if( flags & PPS_M_TYPE ) {
-        SHOWBITS( "pmove.pm_type" );
-    }
-
-    if( flags & PPS_M_ORIGIN ) {
-        SHOWBITS( "pmove.origin[0,1]" );
-    }
-
-    if( flags & PPS_M_ORIGIN2 ) {
-        SHOWBITS( "pmove.origin[2]" );
-    }
-
-    if( flags & PPS_VIEWOFFSET ) {
-        SHOWBITS( "viewoffset" );
-    }
-
-    if( flags & PPS_VIEWANGLES ) {
-        SHOWBITS( "viewangles[0,1]" );
-    }
-
-    if( flags & PPS_VIEWANGLE2 ) {
-        SHOWBITS( "viewangles[2]" );
-    }
-
-    if( flags & PPS_KICKANGLES ) {
-        SHOWBITS( "kick_angles" );
-    }
-
-    if( flags & PPS_WEAPONINDEX ) {
-        SHOWBITS( "gunindex" );
-    }
-
-    if( flags & PPS_WEAPONFRAME ) {
-        SHOWBITS( "gunframe" );
-    }
-
-    if( flags & PPS_GUNOFFSET ) {
-        SHOWBITS( "gunoffset" );
-    }
-
-    if( flags & PPS_GUNANGLES ) {
-        SHOWBITS( "gunangles" );
-    }
-
-    if( flags & PPS_BLEND ) {
-        SHOWBITS( "blend" );
-    }
-
-    if( flags & PPS_FOV ) {
-        SHOWBITS( "fov" );
-    }
-
-    if( flags & PPS_RDFLAGS ) {
-        SHOWBITS( "rdflags" );
-    }
-
-    if( flags & PPS_STATS ) {
-        SHOWBITS( "stats" );
-    }
+#define S(b,s) if(flags&PPS_##b) SHOWBITS(s)
+    S(M_TYPE,       "pmove.pm_type");
+    S(M_ORIGIN,     "pmove.origin[0,1]");
+    S(M_ORIGIN2,    "pmove.origin[2]");
+    S(VIEWOFFSET,   "viewoffset");
+    S(VIEWANGLES,   "viewangles[0,1]");
+    S(VIEWANGLE2,   "viewangles[2]");
+    S(KICKANGLES,   "kick_angles");
+    S(WEAPONINDEX,  "gunindex");
+    S(WEAPONFRAME,  "gunframe");
+    S(GUNOFFSET,    "gunoffset");
+    S(GUNANGLES,    "gunangles");
+    S(BLEND,        "blend");
+    S(FOV,          "fov");
+    S(RDFLAGS,      "rdflags");
+    S(STATS,        "stats");
+#undef S
 }
 
 const char *MSG_ServerCommandString( int cmd ) {
     switch( cmd ) {
         case -1: return "END OF MESSAGE";
         default: return "UNKNOWN COMMAND";
-#define S(x) \
-        case svc_##x: return "svc_" #x;
+#define S(x) case svc_##x: return "svc_" #x;
         S(bad)
         S(muzzleflash)
         S(muzzleflash2)
@@ -2698,6 +2516,7 @@ const char *MSG_ServerCommandString( int cmd ) {
         S(zpacket)
         S(zdownload)
         S(gamestate)
+#undef S
     }
 }
 
