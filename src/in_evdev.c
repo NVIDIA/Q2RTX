@@ -70,11 +70,7 @@ static void GetMouseEvents( void ) {
         case EV_KEY:
             if( ev[i].code >= BTN_MOUSE && ev[i].code < BTN_MOUSE + 8 ) {
                 button = K_MOUSE1 + ev[i].code - BTN_MOUSE;
-                if( ev[i].value ) {
-                    Key_Event( button, qtrue, time );
-                } else {
-                    Key_Event( button, qfalse, time );
-                }
+                Key_Event( button, !!ev[i].value, time );
             }
             break;
         case EV_REL: 
@@ -162,15 +158,10 @@ static void GrabMouse( grab_t grab ) {
 #endif // EVIOCGRAB
 
     if( grab == IN_GRAB ) {
-        struct input_event ev;
-        
         SDL_WM_GrabInput( SDL_GRAB_ON );
         SDL_WM_SetCaption( "[" APPLICATION "]", APPLICATION );
         SDL_ShowCursor( SDL_DISABLE );
-        
         evdev.io->wantread = qtrue;
-        while( read( evdev.fd, &ev, EVENT_SIZE ) == EVENT_SIZE )
-            ;
     } else {
         if( evdev.grabbed == IN_GRAB ) {
             SDL_WM_GrabInput( SDL_GRAB_OFF );
@@ -181,7 +172,15 @@ static void GrabMouse( grab_t grab ) {
         } else {
             SDL_ShowCursor( SDL_ENABLE );
         }
-        evdev.io->wantread = qfalse;
+        evdev.io->wantread = !!grab;
+    }
+
+    // pump pending events
+    if( grab ) {
+        struct input_event ev;
+
+        while( read( evdev.fd, &ev, EVENT_SIZE ) == EVENT_SIZE )
+            ;
     }
 
     evdev.dx = 0;
