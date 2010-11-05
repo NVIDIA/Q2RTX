@@ -256,6 +256,7 @@ static void logfile_write( print_type_t type, const char *string ) {
                 case PRINT_DEVELOPER: *p = 'D'; break;
                 case PRINT_WARNING:   *p = 'W'; break;
                 case PRINT_ERROR:     *p = 'E'; break;
+                case PRINT_NOTICE:    *p = 'N'; break;
                 default:              *p = 'A'; break;
             }
         }
@@ -366,6 +367,9 @@ void Com_LPrintf( print_type_t type, const char *fmt, ... ) {
             break;
         case PRINT_ERROR:
             Com_SetColor( COLOR_RED );
+            break;
+        case PRINT_NOTICE:
+            Com_SetColor( COLOR_CYAN );
             break;
         default:
             break;
@@ -1830,9 +1834,7 @@ void Qcommon_Init( int argc, char **argv ) {
 #endif
 
     // print version
-    Com_SetColor( COLOR_CYAN );
-    Com_Printf( "%s\n", version );
-    Com_SetColor( COLOR_NONE );
+    Com_LPrintf( PRINT_NOTICE, "%s\n", version );
 
     FS_Init();
 
@@ -1916,9 +1918,7 @@ void Qcommon_Init( int argc, char **argv ) {
     }
 
     Com_Printf( "====== " APPLICATION " initialized ======\n\n" );
-    Com_SetColor( COLOR_CYAN );
-    Com_Printf( APPLICATION " " VERSION ", " __DATE__ "\n" );
-    Com_SetColor( COLOR_NONE );
+    Com_LPrintf( PRINT_NOTICE, APPLICATION " " VERSION ", " __DATE__ "\n" );
     Com_Printf( "http://skuller.net/q2pro/\n\n" );
 
     time( &com_startTime );

@@ -125,7 +125,8 @@ typedef enum {
     PRINT_TALK,         // print in green color 
     PRINT_DEVELOPER,    // only print when "developer 1"
     PRINT_WARNING,      // print in yellow color
-    PRINT_ERROR         // print in red color
+    PRINT_ERROR,        // print in red color
+    PRINT_NOTICE        // print in cyan color
 } print_type_t;
 
 void    Com_LPrintf( print_type_t type, const char *fmt, ... )

@@ -37,7 +37,7 @@ qboolean Sys_GetAntiCheatAPI( void ) {
     if( anticheatInit ) {
         anticheatApi = anticheatInit();
         if( !anticheatApi ) {
-            Com_Printf( S_COLOR_RED "Anticheat failed to reinitialize!\n" );
+            Com_LPrintf( PRINT_ERROR, "Anticheat failed to reinitialize!\n" );
             FreeLibrary( anticheatHandle );
             anticheatHandle = NULL;
             anticheatInit = NULL;
@@ -48,7 +48,7 @@ qboolean Sys_GetAntiCheatAPI( void ) {
 
     //windows version check
     if( !iswinnt ) {
-        Com_Printf( S_COLOR_YELLOW
+        Com_LPrintf( PRINT_WARNING,
             "Anticheat requires Windows 2000/XP/2003.\n" );
         return qfalse;
     }
@@ -56,7 +56,7 @@ qboolean Sys_GetAntiCheatAPI( void ) {
 reInit:
     anticheatHandle = LoadLibrary( "anticheat" );
     if( !anticheatHandle ) {
-        Com_Printf( S_COLOR_RED "Anticheat failed to load.\n" );
+        Com_LPrintf( PRINT_ERROR, "Anticheat failed to load.\n" );
         return qfalse;
     }
 
@@ -64,7 +64,8 @@ reInit:
     anticheatInit = ( FNINIT )GetProcAddress(
         anticheatHandle, "Initialize" );
     if( !anticheatInit ) {
-        Com_Printf( S_COLOR_RED "Couldn't get API of anticheat.dll!\n"
+        Com_LPrintf( PRINT_ERROR,
+                    "Couldn't get API of anticheat.dll!\n"
                     "Please check you are using a valid "
                     "anticheat.dll from http://antiche.at/" );
         FreeLibrary( anticheatHandle );
@@ -85,7 +86,7 @@ reInit:
         goto reInit;
     }
 
-    Com_Printf( S_COLOR_RED "Anticheat failed to initialize.\n" );
+    Com_LPrintf( PRINT_ERROR, "Anticheat failed to initialize.\n" );
 
     return qfalse;
 }
