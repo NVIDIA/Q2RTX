@@ -213,7 +213,9 @@ static void logfile_param_changed( cvar_t *self ) {
 }
 
 static size_t format_local_time( char *buffer, size_t size, const char *fmt ) {
-    time_t t;
+    static struct tm cached_tm;
+    static time_t cached_time;
+    time_t now;
     struct tm *tm;
 
     if( !size ) {
@@ -222,10 +224,17 @@ static size_t format_local_time( char *buffer, size_t size, const char *fmt ) {
 
     buffer[0] = 0;
 
-    t = time( NULL );
-    tm = localtime( &t );
-    if( !tm ) {
-        return 0;
+    now = time( NULL );
+    if( now == cached_time ) {
+        // avoid calling localtime() too often since it is not that cheap
+        tm = &cached_tm;
+    } else {
+        tm = localtime( &now );
+        if( !tm ) {
+            return 0;
+        }
+        cached_time = now;
+        cached_tm = *tm;
     }
 
     return strftime( buffer, size, fmt, tm );
