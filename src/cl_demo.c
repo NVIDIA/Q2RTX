@@ -25,6 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cl_local.h"
 
 static byte     demo_buffer[MAX_PACKETLEN_WRITABLE];
+static int      demo_extra;
 
 // =========================================================================
 
@@ -183,7 +184,7 @@ void CL_EmitDemoFrame( void ) {
     SZ_Clear( &msg_write );
 }
 
-void CL_EmitZeroFrame( void ) {
+static void CL_EmitZeroFrame( void ) {
     cl.demodelta++; // insert new zero frame
 
     MSG_WriteByte( svc_frame );
@@ -347,6 +348,8 @@ static void CL_Record_f( void ) {
     cls.demo.paused = qfalse;
 
     SZ_Init( &cls.demo.buffer, demo_buffer, size );
+
+    demo_extra = 0;
 
     // the first frame will be delta uncompressed
     cl.demoframe = -1;
@@ -827,13 +830,24 @@ fail:
 CL_DemoFrame
 ====================
 */
-void CL_DemoFrame( void ) {
+void CL_DemoFrame( int msec ) {
     if( cls.state < ca_connected ) {
         return;
     }
+
     if( cls.state != ca_active ) {
         parse_next_message();
         return;
+    }
+
+    if( cls.demo.recording && cl_paused->integer == 2 && !cls.demo.paused ) {
+        // XXX: record zero frames when manually paused
+        // for syncing with audio comments, etc
+        demo_extra += msec;
+        if( demo_extra > 100 ) {
+            CL_EmitZeroFrame();
+            demo_extra = 0;
+        }
     }
 
     if( com_timedemo->integer ) {
@@ -843,6 +857,8 @@ void CL_DemoFrame( void ) {
         return;
     }
 
+    // cl.time has already been advanced for this client frame
+    // read the next frame to start lerp cycle again
     while( cl.servertime < cl.time ) {
         parse_next_message();
         if( cls.state != ca_active ) {

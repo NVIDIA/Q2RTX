@@ -2924,21 +2924,8 @@ void CL_Frame( unsigned msec ) {
     }
 
     // read next demo frame
-    if( cls.demo.playback ) {
-        if( cls.demo.recording && cl_paused->integer == 2 && !cls.demo.paused ) {
-            static int demo_extra;
-            
-            // XXX: record zero frames when manually paused
-            // for syncing with audio comments, etc
-            demo_extra += main_extra;
-            if( demo_extra > 100 ) {
-                CL_EmitZeroFrame();
-                demo_extra = 0;
-            }
-        }
-
-        CL_DemoFrame();
-    }
+    if( cls.demo.playback )
+        CL_DemoFrame( main_extra );
 
     // calculate local time
     if( cls.state == ca_active && !sv_paused->integer ) {
