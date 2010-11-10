@@ -298,7 +298,7 @@ typedef struct
 } graphsamp_t;
 
 static  int         current;
-static  graphsamp_t values[1024];
+static  graphsamp_t values[2048];
 
 /*
 ==============
@@ -307,8 +307,8 @@ SCR_DebugGraph
 */
 void SCR_DebugGraph (float value, int color)
 {
-    values[current&1023].value = value;
-    values[current&1023].color = color;
+    values[current&2047].value = value;
+    values[current&2047].color = color;
     current++;
 }
 
@@ -335,7 +335,7 @@ void SCR_DrawDebugGraph (void)
 
     for (a=0 ; a<w ; a++)
     {
-        i = (current-1-a+1024) & 1023;
+        i = (current-1-a+2048) & 2047;
         v = values[i].value;
         color = values[i].color;
         v = v*scr_graphscale->value + scr_graphshift->value;
