@@ -30,18 +30,19 @@ die() {
 sources=`dirname $0`
 [ "$sources" != "." ] || sources=`pwd`
 [ -f $sources/src/common.c ] || die "this does not look like Q2PRO source tree"
-if [ ! -f $sources/REVISION ] ; then
-    echo "REVISION does not exist. Did you check Q2PRO out of SVN repository?"
-    echo "You can create it by running 'svnversion > REVISION' at the root of source tree."
-    die "Unknown revision"
+if [ -f $sources/VERSION ] ; then
+    version=`cat $sources/VERSION`
+    revision=`tr -d -c [:digit:] < $sources/VERSION`
+else
+    [ -x `which git` ] || die "VERSION is missing and git suite is not installed"
+    [ -d "$sources/.git" ] || die "VERSION is missing and this is not a git working tree"
+    version=`git --git-dir "$sources/.git" describe --match "r[0-9]*" --abbrev=4 HEAD`
+    revision=`git --git-dir "$sources/.git" describe --match "r[0-9]*" --abbrev=0 HEAD | tr -d -c [:digit:]`
 fi
-version=`cat $sources/REVISION`
-revision=`tr -d -c [:digit:] < $sources/REVISION`
 echo "$revision" | grep -q -E "^[[:digit:]]+$" || die "invalid revision"
 outdir=`pwd`
 config_mk="config.mk"
 config_h="config.h"
-
 
 # defaults
 help="no"
@@ -487,7 +488,7 @@ echo "TARGETS=$targets" >> $config_mk
 
 echo "REVISION=$revision" >> $config_mk
 echo "#define REVISION $revision" >> $config_h
-echo "#define VERSION \"r$version\"" >> $config_h
+echo "#define VERSION \"$version\"" >> $config_h
 
 if [ "$mingw" = "no" ]; then
     echo "#define PRIz \"zu\"" >> $config_h
