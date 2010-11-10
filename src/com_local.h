@@ -554,10 +554,18 @@ void        Com_FlushLogs( void );
 
 #ifdef _DEBUG
 #define Com_DPrintf(...) \
-    if( developer && developer->integer ) \
+    if( developer && developer->integer > 0 ) \
+        Com_LPrintf( PRINT_DEVELOPER, __VA_ARGS__ )
+#define Com_DDPrintf(...) \
+    if( developer && developer->integer > 1 ) \
+        Com_LPrintf( PRINT_DEVELOPER, __VA_ARGS__ )
+#define Com_DDDPrintf(...) \
+    if( developer && developer->integer > 2 ) \
         Com_LPrintf( PRINT_DEVELOPER, __VA_ARGS__ )
 #else
 #define Com_DPrintf(...)
+#define Com_DDPrintf(...)
+#define Com_DDDPrintf(...)
 #endif
 
 #ifdef _DEBUG
