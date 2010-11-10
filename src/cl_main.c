@@ -22,16 +22,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cl_local.h"
 #include "d_md2.h"
 
-cvar_t  *adr0;
-cvar_t  *adr1;
-cvar_t  *adr2;
-cvar_t  *adr3;
-cvar_t  *adr4;
-cvar_t  *adr5;
-cvar_t  *adr6;
-cvar_t  *adr7;
-cvar_t  *adr8;
-
 cvar_t  *rcon_address;
 
 cvar_t  *cl_noskins;
