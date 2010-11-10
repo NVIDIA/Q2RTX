@@ -1634,7 +1634,7 @@ static void MVD_EmitGamestate( mvd_t *mvd ) {
     MSG_WriteShort( MAX_CONFIGSTRINGS );
 
     // send baseline frame
-    portalbytes = CM_WritePortalBits( &sv.cm, portalbits );
+    portalbytes = CM_WritePortalBits( &mvd->cm, portalbits );
     MSG_WriteByte( portalbytes );
     MSG_WriteData( portalbits, portalbytes );
  
