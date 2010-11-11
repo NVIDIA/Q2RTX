@@ -997,6 +997,8 @@ void SCR_ModeChanged( void ) {
 #if USE_UI
     UI_ModeChanged();
 #endif
+    // video sync flag may have changed
+    CL_UpdateFrameTimes();
 }
 
 /*

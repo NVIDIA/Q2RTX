@@ -38,6 +38,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "ui_public.h"
 #include "sv_public.h"
 #include "io_sleep.h"
+#include "vid_public.h"
 #if USE_ZLIB
 #include <zlib.h>
 #endif
@@ -429,6 +430,7 @@ void CL_ClientCommand( const char *string );
 void CL_LoadState( load_state_t state );
 void CL_SendRcon( const netadr_t *adr, const char *pass, const char *cmd );
 const char *CL_Server_g( const char *partial, int argnum, int state );
+void CL_UpdateFrameTimes( void );
 
 //
 // cl_input

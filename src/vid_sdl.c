@@ -537,6 +537,13 @@ void VID_UpdatePalette( const byte *palette ) {
     SDL_SetPalette( sdl.surface, SDL_LOGPAL, colors, 0, 256 );
 }
 
+void VID_VideoWait( void ) {
+}
+
+qboolean VID_VideoSync( void ) {
+    return qtrue;
+}
+
 void VID_BeginFrame( void ) {
      SDL_LockSurface( sdl.surface );
 }
@@ -549,7 +556,42 @@ void VID_EndFrame( void ) {
 #else // USE_REF == REF_SOFT
 
 #if USE_X11
+
+// for debugging
+#define SHOW_SYNC() \
+    Com_DDDPrintf( "%s: %u\n", __func__, sdl.sync_count )
+
 static void init_glx( void ) {
+    const char *extensions;
+    cvar_t *gl_video_sync;
+
+    if( !sdl.dpy ) {
+        return;
+    }
+
+    sdl.glXQueryExtensionsString = SDL_GL_GetProcAddress( "glXQueryExtensionsString" );
+    if( !sdl.glXQueryExtensionsString ) {
+        return;
+    }
+
+    gl_video_sync = Cvar_Get( "gl_video_sync", "1", 0 );
+
+    extensions = sdl.glXQueryExtensionsString( sdl.dpy, DefaultScreen( sdl.dpy ) );
+    if( extensions && *extensions ) {
+        if( Q_stristr( extensions, "GLX_SGI_video_sync" ) ) {
+            if( gl_video_sync->integer ) {
+                Com_Printf( "...enabling GLX_SGI_video_sync\n" );
+                sdl.glXGetVideoSyncSGI = SDL_GL_GetProcAddress( "glXGetVideoSyncSGI" );
+                sdl.glXWaitVideoSyncSGI = SDL_GL_GetProcAddress( "glXWaitVideoSyncSGI" );
+                sdl.glXGetVideoSyncSGI( &sdl.sync_count );
+                sdl.flags |= QVF_VIDEOSYNC;
+            } else {
+                Com_Printf( "...ignoring GLX_SGI_video_sync\n" );
+            }
+        } else {
+            Com_Printf( "GLX_SGI_video_sync not found\n" );
+        }
+    }
 }
 #endif
 
@@ -599,11 +641,50 @@ fail:
     return qfalse;
 }
 
+void VID_VideoWait( void ) {
+#if USE_X11
+    if( !sdl.glXWaitVideoSyncSGI ) {
+        return;
+    }
+
+    sdl.glXWaitVideoSyncSGI( 2, 1, &sdl.sync_count );
+    SHOW_SYNC();
+#endif
+}
+
+qboolean VID_VideoSync( void ) {
+#if USE_X11
+    GLuint count;
+
+    if( !sdl.glXGetVideoSyncSGI ) {
+        return qtrue;
+    }
+
+    sdl.glXGetVideoSyncSGI( &count );
+
+    if( count != sdl.sync_count ) {
+        sdl.sync_count = count;
+        SHOW_SYNC();
+        return qtrue;
+    }
+
+    return qfalse;
+#else
+    return qtrue;
+#endif
+}
+
 void VID_BeginFrame( void ) {
 }
 
 void VID_EndFrame( void ) {
     SDL_GL_SwapBuffers();
+#if USE_X11
+    if( sdl.glXGetVideoSyncSGI ) {
+        sdl.glXGetVideoSyncSGI( &sdl.sync_count );
+        SHOW_SYNC();
+    }
+#endif
 }
 
 void *VID_GetProcAddr( const char *sym ) {

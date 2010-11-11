@@ -655,6 +655,8 @@ void CL_Disconnect( error_type_t type, const char *text ) {
 #if USE_UI
     UI_ErrorMenu( type, text );
 #endif
+
+    CL_UpdateFrameTimes();
 }
 
 /*
@@ -971,6 +973,8 @@ static void CL_Changing_f( void ) {
     cls.state = ca_connected;   // not active anymore, but not disconnected
     cl.mapname[0] = 0;
     cl.configstrings[CS_NAME][0] = 0;
+
+    CL_UpdateFrameTimes();
 
     // parse additional parameters
     j = Cmd_Argc();
@@ -2487,6 +2491,10 @@ static void cl_updaterate_changed( cvar_t *self ) {
 }
 #endif
 
+static void cl_sync_changed( cvar_t *self ) {
+    CL_UpdateFrameTimes();
+}
+
 static const cmdreg_t c_client[] = {
     { "cmd", CL_ForwardToServer_f },
     { "pause", CL_Pause_f },
@@ -2568,9 +2576,17 @@ static void CL_InitLocal ( void ) {
     cl_predict->changed = cl_predict_changed;
     cl_kickangles = Cvar_Get( "cl_kickangles", "1", CVAR_CHEAT );
     cl_maxfps = Cvar_Get( "cl_maxfps", "60", CVAR_ARCHIVE );
+    cl_maxfps->changed = cl_sync_changed;
     cl_async = Cvar_Get( "cl_async", "1", CVAR_ARCHIVE );
+    cl_async->changed = cl_sync_changed;
     r_maxfps = Cvar_Get( "r_maxfps", "0", CVAR_ARCHIVE );
+    r_maxfps->changed = cl_sync_changed;
     cl_rollhack = Cvar_Get( "cl_rollhack", "1", 0 );
+
+    // hack for timedemo
+    com_timedemo->changed = cl_sync_changed;
+
+    CL_UpdateFrameTimes();
 
 #ifdef _DEBUG
     cl_shownet = Cvar_Get( "cl_shownet", "0", 0 );
@@ -2682,19 +2698,15 @@ CL_Activate
 */
 void CL_Activate( active_t active ) {
     if( cls.active != active ) {
-        Com_DPrintf( "%s: %u\n", __func__, active );
+        Com_DDPrintf( "%s: %u\n", __func__, active );
         cls.active = active;
         Key_ClearStates();
         IN_Activate();
         S_Activate();
+        CL_UpdateFrameTimes();
     }
 }
 
-/*
-==================
-CL_SetClientTime
-==================
-*/
 static void CL_SetClientTime( void ) {
     int prevtime;
 
@@ -2758,11 +2770,6 @@ static void CL_MeasureStats( void ) {
 }
 
 #if USE_AUTOREPLY
-/*
-====================
-CL_CheckForReply
-====================
-*/
 static void CL_CheckForReply( void ) {
     if( !cl.reply_delta ) {
         return;
@@ -2805,6 +2812,105 @@ static void CL_CheckTimeout( void ) {
     }
 }
 
+typedef enum {
+    SYNC_FULL,
+    SYNC_MAXFPS,
+    SYNC_SLEEP_10,
+    SYNC_SLEEP_60,
+    SYNC_SLEEP_VIDEO,
+    ASYNC_VIDEO,
+    ASYNC_MAXFPS,
+    ASYNC_FULL
+} sync_mode_t;
+
+#ifdef _DEBUG
+static const char *const sync_names[] = {
+    "SYNC_FULL",
+    "SYNC_MAXFPS",
+    "SYNC_SLEEP_10",
+    "SYNC_SLEEP_60",
+    "SYNC_SLEEP_VIDEO",
+    "ASYNC_VIDEO",
+    "ASYNC_MAXFPS",
+    "ASYNC_FULL"
+};
+#endif
+
+static int ref_msec, phys_msec, main_msec;
+static int ref_extra, phys_extra, main_extra;
+static sync_mode_t sync_mode;
+
+static inline int fps_to_msec( int fps ) {
+    return ( 1000 + fps / 2 ) / fps;
+}
+
+/*
+==================
+CL_UpdateFrameTimes
+
+Called whenever async/fps cvars change, but not every frame
+==================
+*/
+void CL_UpdateFrameTimes( void ) {
+    if( !cls.state ) {
+        return; // not yet fully initialized
+    }
+
+    // check if video driver supports syncing to vertical retrace
+    if( cl_async->integer > 1 && !( scr_glconfig.flags & QVF_VIDEOSYNC ) ) {
+        Cvar_Reset( cl_async );
+    }
+
+    if( com_timedemo->integer ) {
+        // timedemo just runs at full speed
+        ref_msec = phys_msec = main_msec = 0;
+        sync_mode = SYNC_FULL;
+    } else if( cls.active == ACT_MINIMIZED ) {
+        // run at 10 fps if minimized
+        ref_msec = phys_msec = 0;
+        main_msec = fps_to_msec( 10 );
+        sync_mode = SYNC_SLEEP_10;
+    } else if( cls.active == ACT_RESTORED || cls.state < ca_active ) {
+        // run at 60 fps if not active
+        ref_msec = phys_msec = 0;
+        if( cl_async->integer > 1 ) {
+            main_msec = 0;
+            sync_mode = SYNC_SLEEP_VIDEO;
+        } else {
+            main_msec = fps_to_msec( 60 );
+            sync_mode = SYNC_SLEEP_60;
+        }
+    } else if( cl_async->integer > 0 ) {
+        // run physics and refresh separately
+        phys_msec = fps_to_msec( Cvar_ClampInteger( cl_maxfps, 10, 120 ) );
+        if( cl_async->integer > 1 ) {
+            ref_msec = 0;
+            sync_mode = ASYNC_VIDEO;
+        } else if( r_maxfps->integer ) {
+            ref_msec = fps_to_msec( Cvar_ClampInteger( r_maxfps, 10, 1000 ) );
+            sync_mode = ASYNC_MAXFPS;
+        } else {
+            ref_msec = 1;
+            sync_mode = ASYNC_FULL;
+        }
+        main_msec = 0;
+    } else {
+        // everything ticks in sync with refresh
+        phys_msec = ref_msec = 0;
+        if( cl_maxfps->integer ) {
+            main_msec = fps_to_msec( Cvar_ClampInteger( cl_maxfps, 10, 1000 ) );
+            sync_mode = SYNC_MAXFPS;
+        } else {
+            main_msec = 1;
+            sync_mode = SYNC_FULL;
+        }
+    }
+
+    Com_DDPrintf( "%s: mode=%s main_msec=%d ref_msec=%d, phys_msec=%d\n",
+        __func__, sync_names[sync_mode], main_msec, ref_msec, phys_msec );
+
+    ref_extra = phys_extra = main_extra = 0;
+}
 
 /*
 ==================
@@ -2812,84 +2918,81 @@ CL_Frame
  
 ==================
 */
-void CL_Frame( unsigned msec ) {
-    static unsigned ref_extra, phys_extra, main_extra;
-    unsigned ref_msec, phys_msec;
+unsigned CL_Frame( unsigned msec ) {
     qboolean phys_frame, ref_frame;
 
     time_after_ref = time_before_ref = 0;
 
     if( !cl_running->integer ) {
-        return;
+        return UINT_MAX;
     }
 
     CL_ProcessEvents();
 
     Cbuf_Execute( &cl_cmdbuf );
 
-    ref_extra += msec;
     main_extra += msec;
     cls.realtime += msec;
 
-    ref_msec = 1;
-    if( cl_async->integer ) {
-        phys_extra += msec;
-        phys_frame = qtrue;
-
-        Cvar_ClampInteger( cl_maxfps, 10, 120 );
-        phys_msec = 1000 / cl_maxfps->integer;
+    ref_frame = phys_frame = qtrue;
+    switch( sync_mode ) {
+    case SYNC_FULL:
+        // timedemo just runs at full speed
+        break;
+    case SYNC_SLEEP_10:
+        // don't run refresh at all
+        ref_frame = qfalse;
+        // fall through
+    case SYNC_SLEEP_60:
+        // run at limited fps if not active
+        if( main_extra < main_msec ) {
+            return main_msec - main_extra;
+        }
+        break;
+    case SYNC_SLEEP_VIDEO:
+        // wait for vertical retrace if not active
+        VID_VideoWait();
+        break;
+    case ASYNC_VIDEO:
+    case ASYNC_MAXFPS:
+    case ASYNC_FULL:
+        // run physics and refresh separately
+        phys_extra += main_extra;
         if( phys_extra < phys_msec ) {
             phys_frame = qfalse;
+        } else if( phys_extra > phys_msec * 4 ) {
+            phys_extra = phys_msec;
         }
 
-        if( r_maxfps->integer ) {
-            if( r_maxfps->integer < 10 ) {
-                Cvar_Set( "r_maxfps", "10" );
-            }
-            ref_msec = 1000 / r_maxfps->integer;
-        }
-    } else {
-        phys_frame = qtrue;
-        if( cl_maxfps->integer ) {
-            if( cl_maxfps->integer < 10 ) {
-                Cvar_Set( "cl_maxfps", "10" );
-            }
-            ref_msec = 1000 / cl_maxfps->integer;
-        }
-    }
-
-    ref_frame = qtrue;
-    if( !com_timedemo->integer ) {
-        if( !sv_running->integer ) {
-            if( cls.active == ACT_MINIMIZED ) {
-                // run at 10 fps if minimized
-                if( main_extra < 100 ) {
-                    IO_Sleep( 100 - main_extra );
-                    return;
-                }
+        if( sync_mode == ASYNC_VIDEO ) {
+            // sync refresh to vertical retrace
+            ref_frame = VID_VideoSync();
+        } else {
+            ref_extra += main_extra;
+            if( ref_extra < ref_msec ) {
                 ref_frame = qfalse;
-            } else if( cls.active == ACT_RESTORED || cls.state < ca_active ) {
-                // run at 60 fps if not active
-                if( main_extra < 16 ) {
-                    IO_Sleep( 16 - main_extra );
-                    return;
-                }
+            } else if( ref_extra > ref_msec * 4 ) {
+                ref_extra = ref_msec;
             }
         }
-        if( ref_extra < ref_msec ) {
-            if( !cl_async->integer && !cl.sendPacketNow ) {
-#if 0
-                if( cls.demo.playback || cl.frame.ps.pmove.pm_type == PM_FREEZE ) {
-                    IO_Sleep( ref_msec - ref_extra );
-                }
-#endif
-                return; // everything ticks in sync with refresh
+        break;
+    case SYNC_MAXFPS:
+        // everything ticks in sync with refresh
+        if( main_extra < main_msec ) {
+            if( !cl.sendPacketNow ) {
+                return 0;
             }
             ref_frame = qfalse;
         }
+        break;
     }
 
-    if ( cls.demo.playback ) { // FIXME: HACK
+    Com_DDDPrintf( "main_extra=%d ref_frame=%d ref_extra=%d "
+        "phys_frame=%d phys_extra=%d\n",
+        main_extra, ref_frame, ref_extra,
+        phys_frame, phys_extra );
+
+    if( cls.demo.playback ) { // FIXME: HACK
         if( cl_paused->integer ) {
             if( !sv_paused->integer ) {
                 Cvar_Set( "sv_paused", "1" );
@@ -2909,18 +3012,16 @@ void CL_Frame( unsigned msec ) {
     if( cls.frametime > 1.0 / 5 )
         cls.frametime = 1.0 / 5;
 
-    if( !sv_paused->integer ) {
+    if( !sv_paused->integer )
         cl.time += main_extra;
-    }
 
     // read next demo frame
     if( cls.demo.playback )
         CL_DemoFrame( main_extra );
 
     // calculate local time
-    if( cls.state == ca_active && !sv_paused->integer ) {
+    if( cls.state == ca_active && !sv_paused->integer )
         CL_SetClientTime();
-    }
 
 #if USE_AUTOREPLY
     // check for version reply
@@ -2937,8 +3038,14 @@ void CL_Frame( unsigned msec ) {
     phys_frame |= cl.sendPacketNow;
     if( phys_frame ) {
         CL_FinalizeCmd();
-        phys_extra = 0;
+        phys_extra -= phys_msec;
         M_FRAMES++;
+
+        // don't let the time go too far off
+        // this can happen due to cl.sendPacketNow
+        if( phys_extra < -phys_msec * 4 ) {
+            phys_extra = 0;
+        }
     }
 
     // send pending cmds
@@ -2959,7 +3066,7 @@ void CL_Frame( unsigned msec ) {
         if ( host_speeds->integer )
             time_after_ref = Sys_Milliseconds();
 
-        ref_extra = 0;
+        ref_extra -= ref_msec;
         R_FRAMES++;
 
         // update audio after the 3D view was drawn
@@ -2970,14 +3077,14 @@ void CL_Frame( unsigned msec ) {
 #if USE_DLIGHTS
     CL_RunDLights();
 #endif
+
 #if USE_LIGHTSTYLES
     CL_RunLightStyles();
 #endif
 
     // check connection timeout
-    if( cls.netchan ) {
+    if( cls.netchan )
         CL_CheckTimeout();
-    }
 
     C_FRAMES++;
 
@@ -2986,6 +3093,7 @@ void CL_Frame( unsigned msec ) {
     cls.framecount++;
 
     main_extra = 0;
+    return 0;
 }
 
 /*

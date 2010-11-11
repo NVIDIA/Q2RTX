@@ -1935,7 +1935,7 @@ void Qcommon_Frame( void ) {
 #if USE_CLIENT
     unsigned time_before, time_event, time_between, time_after;
 #endif
-    unsigned oldtime, msec;
+    unsigned oldtime, msec, clientrem;
     static unsigned remaining;
     static float frac;
 
@@ -1952,11 +1952,7 @@ void Qcommon_Frame( void ) {
 
     // sleep on network sockets when running a dedicated server
     // still do a select(), but don't sleep when running a client!
-    if( Com_IsDedicated() ) {
-        IO_Sleep( remaining );
-    } else {
-        IO_Sleep( 0 );
-    }
+    IO_Sleep( remaining );
 
     // calculate time spent running last frame and sleeping
     oldtime = com_eventTime;
@@ -2012,7 +2008,10 @@ void Qcommon_Frame( void ) {
     if( host_speeds->integer )
         time_between = Sys_Milliseconds();
 
-    CL_Frame( msec );
+    clientrem = CL_Frame( msec );
+    if( remaining > clientrem ) {
+        remaining = clientrem;
+    }
 
     if( host_speeds->integer )
         time_after = Sys_Milliseconds();

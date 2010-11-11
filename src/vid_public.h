@@ -28,6 +28,9 @@ void    VID_UpdateGamma( const byte *table );
 void    VID_UpdatePalette( const byte *palette );
 void    *VID_GetProcAddr( const char *symbol );
 
+qboolean VID_VideoSync( void );
+void    VID_VideoWait( void );
+
 void    VID_BeginFrame( void );
 void    VID_EndFrame( void );
 
