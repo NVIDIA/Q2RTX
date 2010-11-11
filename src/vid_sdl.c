@@ -33,10 +33,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <SDL.h>
 #if USE_X11
 #include <SDL_syswm.h>
-#endif
-#ifdef __unix__
+#if USE_REF == REF_GL
 #include <GL/glx.h>
 #include <GL/glxext.h>
+typedef const char *(*PFNGLXQUERYEXTENSIONSSTRING)( Display *, int );
+#endif
 #endif
 
 typedef struct {
@@ -48,9 +49,15 @@ typedef struct {
         qboolean    initialized;
         grab_t      grabbed;
     } mouse;
-#if 0 // def __unix__
-    PFNGLXGETVIDEOSYNCSGIPROC glXGetVideoSyncSGI;
-    PFNGLXSWAPINTERVALSGIPROC glXSwapIntervalSGI;
+#if USE_X11
+    Display         *dpy;
+    Window          win;
+#if USE_REF == REF_GL
+    PFNGLXQUERYEXTENSIONSSTRING glXQueryExtensionsString;
+    PFNGLXGETVIDEOSYNCSGIPROC   glXGetVideoSyncSGI;
+    PFNGLXWAITVIDEOSYNCSGIPROC  glXWaitVideoSyncSGI;
+    GLuint          sync_count;
+#endif
 #endif
 } sdl_state_t;
 
@@ -64,23 +71,33 @@ COMMON SDL VIDEO RELATED ROUTINES
 ===============================================================================
 */
 
-static void SetHints( void ) {
+#if USE_REF == REF_GL
+static void init_opengl( void );
+#endif
+
 #if USE_X11
+static void init_x11( void ) {
     SDL_SysWMinfo   info;
-    Display *dpy;
-    Window win;
-    XSizeHints hints;
 
     SDL_VERSION( &info.version );
     if( !SDL_GetWMInfo( &info ) ) {
         return;
     }
+
     if( info.subsystem != SDL_SYSWM_X11 ) {
         return;
     }
 
-    dpy = info.info.x11.display;
-    win = info.info.x11.window;
+    sdl.dpy = info.info.x11.display;
+    sdl.win = info.info.x11.window;
+}
+
+static void set_wm_hints( void ) {
+    XSizeHints hints;
+
+    if( !sdl.dpy ) {
+        return;
+    }
 
     memset( &hints, 0, sizeof( hints ) );
     hints.flags = PMinSize|PResizeInc;
@@ -89,9 +106,9 @@ static void SetHints( void ) {
     hints.width_inc = 8;
     hints.height_inc = 2;
 
-    XSetWMSizeHints( dpy, win, &hints, XA_WM_SIZE_HINTS );
-#endif
+    XSetWMSizeHints( sdl.dpy, sdl.win, &hints, XA_WM_SIZE_HINTS );
 }
+#endif
 
 /*
 =================
@@ -100,41 +117,29 @@ VID_GetClipboardData
 */
 char *VID_GetClipboardData( void ) {
 #if USE_X11
-    SDL_SysWMinfo   info;
-    Display *dpy;
-    Window sowner, win;
+    Window sowner;
     Atom type, property;
     unsigned long len, bytes_left;
     unsigned char *data;
     int format, result;
     char *ret;
 
-    if( SDL_WasInit( SDL_INIT_VIDEO ) != SDL_INIT_VIDEO ) {
-        return NULL;
-    }
-    SDL_VERSION( &info.version );
-    if( !SDL_GetWMInfo( &info ) ) {
-        return NULL;
-    }
-    if( info.subsystem != SDL_SYSWM_X11 ) {
+    if( !sdl.dpy ) {
         return NULL;
     }
 
-    dpy = info.info.x11.display;
-    win = info.info.x11.window;
-    
-    sowner = XGetSelectionOwner( dpy, XA_PRIMARY );
+    sowner = XGetSelectionOwner( sdl.dpy, XA_PRIMARY );
     if( sowner == None ) {
         return NULL;
     }
 
-    property = XInternAtom( dpy, "GETCLIPBOARDDATA_PROP", False );
+    property = XInternAtom( sdl.dpy, "GETCLIPBOARDDATA_PROP", False );
                                
-    XConvertSelection( dpy, XA_PRIMARY, XA_STRING, property, win, CurrentTime );
+    XConvertSelection( sdl.dpy, XA_PRIMARY, XA_STRING, property, sdl.win, CurrentTime );
         
-    XSync( dpy, False );
+    XSync( sdl.dpy, False );
         
-    result = XGetWindowProperty( dpy, win, property, 0, 0, False,
+    result = XGetWindowProperty( sdl.dpy, sdl.win, property, 0, 0, False,
         AnyPropertyType, &type, &format, &len, &bytes_left, &data );
                                    
     if( result != Success ) {
@@ -143,7 +148,7 @@ char *VID_GetClipboardData( void ) {
 
     ret = NULL;
     if( bytes_left ) {
-        result = XGetWindowProperty( dpy, win, property, 0, bytes_left, True,
+        result = XGetWindowProperty( sdl.dpy, sdl.win, property, 0, bytes_left, True,
             AnyPropertyType, &type, &format, &len, &bytes_left, &data );
         if( result == Success ) {
             ret = Z_CopyString( ( char * )data );
@@ -166,7 +171,7 @@ VID_SetClipboardData
 void VID_SetClipboardData( const char *data ) {
 }
 
-static qboolean SetMode( int flags, int forcedepth ) {
+static qboolean set_video_mode( int flags, int forcedepth ) {
     SDL_Surface *surf;
     vrect_t rc;
     int depth;
@@ -198,10 +203,19 @@ static qboolean SetMode( int flags, int forcedepth ) {
     if( !surf ) {
         return qfalse;
     }
-    
+
 success:
-    SetHints();
-    sdl.surface = surf;
+    // init some stuff for the first time
+    if( sdl.surface != surf ) {
+        sdl.surface = surf;
+#if USE_X11
+        init_x11();
+        set_wm_hints();
+#endif
+#if USE_REF == REF_GL
+        init_opengl();
+#endif
+    }
     R_ModeChanged( rc.width, rc.height, sdl.flags, surf->pitch, surf->pixels );
     SCR_ModeChanged();
     return qtrue;
@@ -213,7 +227,7 @@ VID_SetMode
 ============
 */
 void VID_SetMode( void ) {
-    if( !SetMode( sdl.surface->flags, sdl.surface->format->BitsPerPixel ) ) {
+    if( !set_video_mode( sdl.surface->flags, sdl.surface->format->BitsPerPixel ) ) {
         Com_Error( ERR_FATAL, "Couldn't change video mode: %s", SDL_GetError() );
     }
 }
@@ -224,7 +238,7 @@ void VID_FatalShutdown( void ) {
     SDL_Quit();
 }
 
-static qboolean InitVideo( void ) {
+static qboolean init_video( void ) {
     SDL_Color    color;
     byte *dst;
     char buffer[MAX_QPATH];
@@ -307,7 +321,7 @@ void VID_UpdateGamma( const byte *table ) {
     }
 }
 
-static void Activate( void ) {
+static void activate_event( void ) {
     int state = SDL_GetAppState();
     active_t active;
 
@@ -324,7 +338,7 @@ static void Activate( void ) {
     CL_Activate( active );
 }
 
-static void KeyEvent( SDL_keysym *keysym, qboolean down ) {
+static void key_event( SDL_keysym *keysym, qboolean down ) {
     unsigned key1, key2 = 0;
 
     if( keysym->sym <= 127 ) {
@@ -405,7 +419,7 @@ static void KeyEvent( SDL_keysym *keysym, qboolean down ) {
     }
 }
 
-static void ButtonEvent( int button, qboolean down ) {
+static void button_event( int button, qboolean down ) {
     unsigned key;
 
     if( !sdl.mouse.initialized ) {
@@ -431,6 +445,18 @@ static void ButtonEvent( int button, qboolean down ) {
     Key_Event( key, down, com_eventTime );
 }
 
+static void resize_event( int w, int h ) {
+    if( !sdl.surface ) {
+        return;
+    }
+    if( !( sdl.surface->flags & SDL_RESIZABLE ) ) {
+        return;
+    }
+
+    Cvar_Set( "vid_geometry", va( "%dx%d", w, h ) );
+    VID_SetMode();
+}
+
 /*
 ============
 VID_PumpEvents
@@ -442,33 +468,28 @@ void VID_PumpEvents( void ) {
     while( SDL_PollEvent( &event ) ) {
         switch( event.type ) {
         case SDL_ACTIVEEVENT:
-            Activate();
+            activate_event();
             break;
         case SDL_QUIT:
             Com_Quit( NULL, KILL_DROP );
             break;
         case SDL_VIDEORESIZE:
-            if( sdl.surface->flags & SDL_RESIZABLE ) {
-                Cvar_Set( "vid_geometry", va( "%dx%d",
-                    event.resize.w, event.resize.h ) );
-                VID_SetMode();
-                return;
-            }
-            break;
+            resize_event( event.resize.w, event.resize.h );
+            return; // process only one resize event per frame
         case SDL_VIDEOEXPOSE:
             SCR_UpdateScreen();
             break;
         case SDL_KEYDOWN:
-            KeyEvent( &event.key.keysym, qtrue );
+            key_event( &event.key.keysym, qtrue );
             break;
         case SDL_KEYUP:
-            KeyEvent( &event.key.keysym, qfalse );
+            key_event( &event.key.keysym, qfalse );
             break;
         case SDL_MOUSEBUTTONDOWN:
-            ButtonEvent( event.button.button, qtrue );
+            button_event( event.button.button, qtrue );
             break;
         case SDL_MOUSEBUTTONUP:
-            ButtonEvent( event.button.button, qfalse );
+            button_event( event.button.button, qfalse );
             break;
         case SDL_MOUSEMOTION:
             IN_MouseEvent( event.motion.x, event.motion.y );
@@ -476,7 +497,6 @@ void VID_PumpEvents( void ) {
         }
     }
 }
-
 
 /*
 ===============================================================================
@@ -489,17 +509,17 @@ RENDERER SPECIFIC
 #if USE_REF == REF_SOFT
 
 qboolean VID_Init( void ) {
-    if( !InitVideo() ) {
+    if( !init_video() ) {
         return qfalse;
     }
 
-    if( !SetMode( SDL_SWSURFACE|SDL_HWPALETTE|SDL_RESIZABLE, 8 ) ) {
+    if( !set_video_mode( SDL_SWSURFACE|SDL_HWPALETTE|SDL_RESIZABLE, 8 ) ) {
         Com_EPrintf( "Couldn't set video mode: %s\n", SDL_GetError() );
         VID_Shutdown();
         return qfalse;
     }
 
-    Activate();
+    activate_event();
     return qtrue;
 }
 
@@ -528,25 +548,32 @@ void VID_EndFrame( void ) {
 
 #else // USE_REF == REF_SOFT
 
-/*
-static cvar_t *gl_swapinterval;
-
-static void gl_swapinterval_changed( cvar_t *self ) {
-    if( sdl.glXSwapIntervalSGI ) {
-        sdl.glXSwapIntervalSGI( self->integer );
-    }
+#if USE_X11
+static void init_glx( void ) {
 }
-*/
+#endif
+
+static void init_opengl( void ) {
+    int accel;
+
+    SDL_GL_GetAttribute( SDL_GL_ACCELERATED_VISUAL, &accel );
+    if( accel ) {
+        sdl.flags |= QVF_ACCELERATED;
+    }
+
+#if USE_X11
+    init_glx();
+#endif
+}
 
 qboolean VID_Init( void ) {
     cvar_t *gl_driver;
 
-    if( !InitVideo() ) {
+    if( !init_video() ) {
         return qfalse;
     }
 
     gl_driver = Cvar_Get( "gl_driver", DEFAULT_OPENGL_DRIVER, CVAR_REFRESH );
-//  gl_swapinterval = Cvar_Get( "gl_swapinterval", "1", CVAR_ARCHIVE );
 
     if( SDL_GL_LoadLibrary( gl_driver->string ) == -1 ) {
         Com_EPrintf( "Couldn't load OpenGL library: %s\n", SDL_GetError() );
@@ -559,44 +586,18 @@ qboolean VID_Init( void ) {
     SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 16 );
     SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 
-    sdl.flags |= QVF_ACCELERATED;
-
-    if( !SetMode( SDL_OPENGL|SDL_RESIZABLE, 0 ) ) {
+    if( !set_video_mode( SDL_OPENGL|SDL_RESIZABLE, 0 ) ) {
         Com_EPrintf( "Couldn't set video mode: %s\n", SDL_GetError() );
         goto fail;
     }
-/*
-    sdl.glXGetVideoSyncSGI = SDL_GL_GetProcAddress( "glXGetVideoSyncSGI" );
-    sdl.glXSwapIntervalSGI = SDL_GL_GetProcAddress( "glXSwapIntervalSGI" );
 
-    gl_swapinterval->changed = gl_swapinterval_changed;
-    gl_swapinterval_changed( gl_swapinterval );
-*/
-
-    Activate();
+    activate_event();
     return qtrue;
 
 fail:
     VID_Shutdown();
     return qfalse;
 }
-
-#if 0
-qboolean VideoSync( void ) {
-    GLuint count;
-    static GLuint oldcount;
-
-    sdl.glXGetVideoSyncSGI( &count );
-
-    if( count != oldcount ) {
-        oldcount = count;
-        SDL_GL_SwapBuffers();
-    //    Com_Printf( "%u ", count );
-        return qtrue;
-    }
-    return qfalse;
-}
-#endif
 
 void VID_BeginFrame( void ) {
 }
