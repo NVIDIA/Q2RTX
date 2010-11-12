@@ -520,7 +520,7 @@ static void send_redirect_hack( const char *addr ) {
     MSG_WriteLong( 0 );
     MSG_WriteByte( svc_print );
     MSG_WriteByte( PRINT_HIGH );
-    MSG_WriteString( va( "Server is full.\nRedirecting you to %s...\n", addr ) );
+    MSG_WriteString( va( "Server is full. Redirecting you to %s...\n", addr ) );
     MSG_WriteByte( svc_stufftext );
     MSG_WriteString( va( "connect %s\n", addr ) );
 
@@ -826,6 +826,14 @@ static void SVC_DirectConnect( void ) {
 
     // find a client slot
     if( !newcl ) {
+        // check for forced redirect to a different address
+        if( sv_redirect_address->string[0] == '!' &&
+            ( !sv_reserved_slots->integer || reserved ) )
+        {
+            send_redirect_hack( sv_redirect_address->string + 1 );
+            Com_DPrintf( "    rejected - forced redirect.\n" );
+            return;
+        }
         lastcl = svs.client_pool + sv_maxclients->integer - reserved;
         for( newcl = svs.client_pool; newcl < lastcl; newcl++ ) {
             if( !newcl->state ) {
@@ -837,13 +845,13 @@ static void SVC_DirectConnect( void ) {
                 SV_OobPrintf( "Server and reserved slots are full.\n" );
                 Com_DPrintf( "    rejected - reserved slots are full.\n" );
             } else {
-                SV_OobPrintf( "Server is full.\n" );
-                Com_DPrintf( "    rejected - server is full.\n" );
-
                 // optionally redirect them to a different address
                 if( sv_redirect_address->string[0] ) {
                     send_redirect_hack( sv_redirect_address->string );
+                } else {
+                    SV_OobPrintf( "Server is full.\n" );
                 }
+                Com_DPrintf( "    rejected - server is full.\n" );
             }
             return;
         }
