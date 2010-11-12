@@ -237,7 +237,11 @@ of server connections
 ==================================================================
 */
 
-#define CONNECT_DELAY    3000
+// resend delay for challenge/connect packets
+#define CONNECT_DELAY       3000u
+
+#define CONNECT_INSTANT     CONNECT_DELAY
+#define CONNECT_FAST        (CONNECT_DELAY - 1000u)
 
 typedef enum {
     ca_uninitialized,

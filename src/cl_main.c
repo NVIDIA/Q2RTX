@@ -314,7 +314,8 @@ void CL_CheckForResend( void ) {
     
         // we don't need a challenge on the localhost
         cls.state = ca_connecting;
-        cls.connect_time = cls.realtime - CONNECT_DELAY;
+        cls.connect_time -= CONNECT_FAST;
+        cls.connect_count = 0;
 
         cls.passive = qfalse;
 
@@ -456,8 +457,8 @@ usage:
     cls.protocolVersion = 0;
     cls.passive = qfalse;
     cls.state = ca_challenging;
+    cls.connect_time -= CONNECT_FAST;
     cls.connect_count = 0;
-    cls.connect_time = cls.realtime - CONNECT_DELAY;    // CL_CheckForResend() will fire immediately
 
     CL_CheckForResend();
 
@@ -600,8 +601,8 @@ void CL_Disconnect( error_type_t type, const char *text ) {
     }
 #endif
 
-    cls.connect_time = 0;
-    cls.connect_count = 0;
+    //cls.connect_time = 0;
+    //cls.connect_count = 0;
     cls.passive = qfalse;
 #if USE_ICMP
     cls.errorReceived = qfalse;
@@ -883,7 +884,7 @@ static void CL_ParsePrintMessage( void ) {
     {
         Com_Printf( "%s", string );
         cls.state = ca_challenging;
-        //cls.connectCount = 0;
+        //cls.connect_count = 0;
         return;
     }
 
@@ -1031,8 +1032,9 @@ static void CL_Reconnect_f( void ) {
 
     Com_Printf( "Reconnecting...\n" );
 
-    cls.connect_time = cls.realtime - CONNECT_DELAY;
     cls.state = ca_challenging;
+    cls.connect_time -= CONNECT_FAST;
+    cls.connect_count = 0;
 
     SCR_UpdateScreen();
 }
@@ -1238,8 +1240,8 @@ static void CL_ConnectionlessPacket( void ) {
 
         cls.challenge = atoi( Cmd_Argv( 1 ) );
         cls.state = ca_connecting;
-        cls.connect_time = cls.realtime - CONNECT_DELAY;
-        //cls.connectCount = 0;
+        cls.connect_time -= CONNECT_INSTANT; // fire immediately
+        //cls.connect_count = 0;
 
         // parse additional parameters
         j = Cmd_Argc();
@@ -1399,7 +1401,7 @@ static void CL_ConnectionlessPacket( void ) {
         cls.passive = qfalse;
 
         cls.state = ca_challenging;
-        cls.connect_time = cls.realtime - CONNECT_DELAY;
+        cls.connect_time -= CONNECT_FAST;
         cls.connect_count = 0;
 
         CL_CheckForResend();
@@ -2551,6 +2553,7 @@ static void CL_InitLocal ( void ) {
     int i;
 
     cls.state = ca_disconnected;
+    cls.connect_time -= CONNECT_INSTANT;
 
     CL_RegisterInput();
     CL_InitDemos();
