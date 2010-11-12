@@ -3252,6 +3252,8 @@ void CL_Shutdown( void ) {
     CL_ShutdownRefresh();
     CL_WriteConfig();
 
+    memset( &cls, 0, sizeof( cls ) );
+
     Cvar_Set( "cl_running", "0" );
 
     isdown = qfalse;
