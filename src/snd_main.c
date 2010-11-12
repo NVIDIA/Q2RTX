@@ -871,7 +871,7 @@ static void S_AddLoopSounds (void)
     sfxcache_t  *sc;
     int         num;
     entity_state_t  *ent;
-    centity_t *cent;
+    vec3_t      origin;
 
     if( cls.state != ca_active || sv_paused->integer || !s_ambient->integer ) {
         return;
@@ -892,10 +892,10 @@ static void S_AddLoopSounds (void)
 
         num = ( cl.frame.firstEntity + i ) & PARSE_ENTITIES_MASK;
         ent = &cl.entityStates[num];
-        cent = &cl_entities[ent->number];
 
         // find the total contribution of all sounds of this type
-        S_SpatializeOrigin (cent->lerp_origin, 1.0, SOUND_LOOPATTENUATE,
+        CL_GetEntitySoundOrigin( ent->number, origin );
+        S_SpatializeOrigin (origin, 1.0, SOUND_LOOPATTENUATE,
             &left_total, &right_total);
         for (j=i+1 ; j<cl.frame.numEntities ; j++)
         {
@@ -905,9 +905,9 @@ static void S_AddLoopSounds (void)
 
             num = ( cl.frame.firstEntity + j ) & PARSE_ENTITIES_MASK;
             ent = &cl.entityStates[num];
-            cent = &cl_entities[ent->number];
 
-            S_SpatializeOrigin (cent->lerp_origin, 1.0, SOUND_LOOPATTENUATE, 
+            CL_GetEntitySoundOrigin( ent->number, origin );
+            S_SpatializeOrigin (origin, 1.0, SOUND_LOOPATTENUATE,
                 &left, &right);
             left_total += left;
             right_total += right;
