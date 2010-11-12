@@ -57,6 +57,8 @@ LAYOUTS
 // clients per screen page
 #define PAGE_CLIENTS    16
 
+#define VER_OFS ( 272 - ( int )( sizeof( VERSION ) - 1 ) * CHAR_WIDTH )
+
 static void MVD_LayoutClients( mvd_client_t *client ) {
     static const char header[] = 
         "xv 16 yv 0 string2 \"    Name            RTT Status\"";
@@ -147,7 +149,7 @@ static int MVD_CountClients( mvd_t *mvd ) {
 static void MVD_LayoutChannels( mvd_client_t *client ) {
     static const char header[] =
         "xv 32 yv 8 picn inventory "
-        "xv 240 yv 172 string2 " VERSION " "
+        "xv %d yv 172 string2 " VERSION " "
         "xv 0 yv 32 cstring \"\020Channel Chooser\021\""
         "xv 64 yv 48 string2 \"Name         Map     S/P\""
         "yv 56 string \"------------ ------- ---\" xv 56 ";
@@ -162,8 +164,8 @@ static void MVD_LayoutChannels( mvd_client_t *client ) {
     size_t len, total;
     int cursor, y;
 
-    memcpy( layout, header, sizeof( header ) - 1 );
-    total = sizeof( header ) - 1;
+    total = Q_scnprintf( layout, sizeof( layout ),
+        header, VER_OFS );
 
     // FIXME: improve this
     cursor = List_Count( &mvd_channel_list );
@@ -242,7 +244,7 @@ static void MVD_LayoutMenu( mvd_client_t *client ) {
         "yv 120 string \"%cIgnore player FOV:     %s\""
         "yv 128 string \" (use 'set uf %d u' in cfg)\""
         "yv 144 string2 \"%cExit menu\""
-        "%s xv 240 yv 172 string2 " VERSION;
+        "%s xv %d yv 172 string2 " VERSION;
     char layout[MAX_STRING_CHARS];
     char cur[MENU_ITEMS];
     size_t total;
@@ -260,7 +262,8 @@ static void MVD_LayoutMenu( mvd_client_t *client ) {
         cur[8], ( client->uf & UF_LOCALFOV ) ? YES : NO,
         client->uf,
         cur[9], client->mvd->state == MVD_WAITING ?
-        "xv 0 yv 160 cstring [BUFFERING]" : "" );
+        "xv 0 yv 160 cstring [BUFFERING]" : "",
+        VER_OFS );
 
     // send the layout
     MSG_WriteByte( svc_layout );

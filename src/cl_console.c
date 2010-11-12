@@ -848,9 +848,13 @@ static void Con_DrawSolidConsole( void ) {
             UI_DRAWCURSOR, con.charsetImage );
     }
 
+#define APP_VERSION APPLICATION " " VERSION
+#define VER_WIDTH ( ( int )( sizeof( APP_VERSION ) + 1 ) * CHAR_WIDTH )
+
     y = vislines - CON_PRESTEP + CHAR_HEIGHT;
     row = 0;
-    if( x > con.vidWidth - 12 * CHAR_WIDTH ) {
+    // shift version upwards to prevent overdraw
+    if( x > con.vidWidth - VER_WIDTH ) {
         y -= CHAR_HEIGHT;
         row++;
     }
@@ -867,8 +871,10 @@ static void Con_DrawSolidConsole( void ) {
     }
 
 // draw version
-    SCR_DrawStringEx( con.vidWidth - CHAR_WIDTH, y, UI_RIGHT,
-        MAX_STRING_CHARS, APPLICATION " " VERSION, con.charsetImage );
+    if( !row || widths[0] + VER_WIDTH <= con.vidWidth ) {
+        SCR_DrawStringEx( con.vidWidth - CHAR_WIDTH, y, UI_RIGHT,
+            MAX_STRING_CHARS, APP_VERSION, con.charsetImage );
+    }
 
     // restore rendering parameters
     R_SetColor( DRAW_COLOR_CLEAR, NULL );
