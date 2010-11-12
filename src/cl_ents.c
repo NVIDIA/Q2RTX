@@ -246,10 +246,6 @@ static void CL_AddPacketEntities( void ) {
         effects = s1->effects;
         renderfx = s1->renderfx;
 
-        if( ( effects & EF_GIB ) && !cl_gibs->integer ) {
-            continue;
-        }
-
         // set frame
         if (effects & EF_ANIM01)
             ent.frame = autoanim & 1;
@@ -311,6 +307,10 @@ static void CL_AddPacketEntities( void ) {
             LerpVector( cent->prev.origin, cent->current.origin,
                 cl.lerpfrac, ent.origin );
             VectorCopy( ent.origin, ent.oldorigin );
+        }
+
+        if( ( effects & EF_GIB ) && !cl_gibs->integer ) {
+            goto skip;
         }
 
         // create a new entity
