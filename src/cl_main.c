@@ -585,6 +585,9 @@ This is also called on Com_Error, so it shouldn't cause any errors
 =====================
 */
 void CL_Disconnect( error_type_t type, const char *text ) {
+    if( !cls.state ) {
+        return;
+    }
     SCR_EndLoadingPlaque();    // get rid of loading plaque
 
     if( cls.state > ca_disconnected && !cls.demo.playback ) {

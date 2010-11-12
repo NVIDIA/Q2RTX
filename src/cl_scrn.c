@@ -1112,6 +1112,9 @@ SCR_BeginLoadingPlaque
 ================
 */
 void SCR_BeginLoadingPlaque( void ) {
+    if( !cls.state ) {
+        return;
+    }
     if( cls.disable_screen ) {
         return;
     }
@@ -1137,6 +1140,9 @@ SCR_EndLoadingPlaque
 ================
 */
 void SCR_EndLoadingPlaque( void ) {
+    if( !cls.state ) {
+        return;
+    }
     cls.disable_screen = 0;
     Con_ClearNotify_f();
 #if USE_CHATHUD
