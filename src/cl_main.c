@@ -3077,6 +3077,10 @@ unsigned CL_Frame( unsigned msec ) {
 
         // update audio after the 3D view was drawn
         S_Update();
+    } else if( sync_mode == SYNC_SLEEP_10 ) {
+        // force audio update if not rendering
+        CL_CalcViewValues();
+        S_Update();
     }
 
     // advance local effects for next frame

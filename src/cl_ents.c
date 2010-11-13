@@ -743,8 +743,8 @@ static void CL_AddViewWeapon( const player_state_t *ps, const player_state_t *op
     }
 
     // adjust for high fov
-    if( cl.frame.ps.fov > 90 ) {
-        vec_t ofs = ( 90 - cl.frame.ps.fov ) * 0.2f;
+    if( ps->fov > 90 ) {
+        vec_t ofs = ( 90 - ps->fov ) * 0.2f;
         VectorMA( gun.origin, ofs, cl.v_forward, gun.origin );
     }
 
@@ -824,13 +824,15 @@ static inline float LerpShort( int a2, int a1, float frac ) {
 ===============
 CL_CalcViewValues
 
-Sets cl.refdef view values and sound spatalization params
+Sets cl.refdef view values and sound spatialization params.
+Usually called from CL_AddEntities, but may be directly called from the main
+loop if rendering is disabled but sound is running.
+Returns the player state to lerp from, used by CL_AddViewWeapon.
 ===============
 */
-static void CL_CalcViewValues( void ) {
-    player_state_t  *ps, *ops;
+player_state_t *CL_CalcViewValues( void ) {
+    player_state_t *ps, *ops;
     vec3_t viewoffset;
-    vec3_t kickangles;
     float fov, lerp;
     centity_t *ent;
 
@@ -954,6 +956,13 @@ static void CL_CalcViewValues( void ) {
     VectorCopy( cl.v_right, listener_right );
     VectorCopy( cl.v_up, listener_up );
 
+    return ops;
+}
+
+static void CL_FinishViewValues( player_state_t *ops ) {
+    player_state_t *ps = &cl.frame.ps;
+    vec3_t kickangles;
+
     if( cl_thirdperson->integer && cl.frame.clientNum != CLIENTNUM_NONE ) {
         // if dead, set a nice view angle
         if( ps->stats[STAT_HEALTH] <= 0 ) {
@@ -964,7 +973,7 @@ static void CL_CalcViewValues( void ) {
     } else {
         // add kick angles
         if( cl_kickangles->integer ) {
-            LerpAngles( ops->kick_angles, ps->kick_angles, lerp, kickangles );
+            LerpAngles( ops->kick_angles, ps->kick_angles, cl.lerpfrac, kickangles );
             VectorAdd( cl.refdef.viewangles, kickangles, cl.refdef.viewangles );
         }
 
@@ -975,7 +984,6 @@ static void CL_CalcViewValues( void ) {
     }
 }
 
-
 /*
 ===============
 CL_AddEntities
@@ -984,7 +992,10 @@ Emits all entities, particles, and lights to the refresh
 ===============
 */
 void CL_AddEntities( void ) {
-    CL_CalcViewValues();
+    player_state_t *ops;
+
+    ops = CL_CalcViewValues();
+    CL_FinishViewValues( ops );
     CL_AddPacketEntities();
     CL_AddTEnts();
     CL_AddParticles();
@@ -1012,14 +1023,19 @@ void CL_GetEntitySoundOrigin( int entnum, vec3_t org ) {
     if( entnum < 0 || entnum >= MAX_EDICTS ) {
         Com_Error( ERR_DROP, "%s: bad entnum: %d", __func__, entnum );
     }
-    if( !entnum ) {
+
+    if( !entnum || entnum == listener_entnum ) {
         // should this ever happen?
         VectorCopy( listener_origin, org );
         return;
     }
-    ent = &cl_entities[entnum];
-    VectorCopy( ent->lerp_origin, org );
 
+    // interpolate origin
+    // FIXME: what should be the sound origin point for RF_BEAM entities?
+    ent = &cl_entities[entnum];
+    LerpVector( ent->prev.origin, ent->current.origin, cl.lerpfrac, org );
+
+    // offset the origin for BSP models
     if( ent->current.solid == 31 ) {
         cm = cl.model_clip[ent->current.modelindex];
         if( cm ) {

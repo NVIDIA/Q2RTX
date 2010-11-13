@@ -485,6 +485,7 @@ void CL_Download_f (void);
 //
 void CL_DeltaFrame( void );
 void CL_AddEntities (void);
+player_state_t *CL_CalcViewValues( void );
 
 // the sound code makes callbacks to the client for entitiy position
 // information, so entities can be dynamically re-spatialized

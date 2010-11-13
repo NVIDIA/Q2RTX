@@ -85,7 +85,7 @@ void DMA_Shutdown( void ) {
 void DMA_Activate( void ) {
     if( snddma.Activate ) {
         S_StopAllSounds();
-        snddma.Activate( cls.active == ACT_ACTIVATED ? qtrue : qfalse );
+        snddma.Activate( s_active );
     }
 }
 

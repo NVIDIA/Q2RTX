@@ -169,6 +169,7 @@ void AL_Update( void );
 typedef enum { SS_NOT, SS_DMA, SS_OAL } sndstarted_t;
 
 extern sndstarted_t s_started;
+extern qboolean s_active;
 
 #define MAX_CHANNELS            32
 extern  channel_t   channels[MAX_CHANNELS];

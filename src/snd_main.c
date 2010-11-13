@@ -32,6 +32,7 @@ channel_t   channels[MAX_CHANNELS];
 int         s_numchannels;
 
 sndstarted_t s_started;
+qboolean    s_active;
 
 vec3_t      listener_origin;
 vec3_t      listener_forward;
@@ -62,7 +63,8 @@ cvar_t      *s_ambient;
 cvar_t      *s_show;
 #endif
 
-static cvar_t       *s_enable;
+static cvar_t   *s_enable;
+static cvar_t   *s_auto_focus;
 
 // =======================================================================
 // Console functions
@@ -132,6 +134,10 @@ static const cmdreg_t c_sound[] = {
 // Init sound engine
 // =======================================================================
 
+static void s_auto_focus_changed( cvar_t *self ) {
+    S_Activate();
+}
+
 /*
 ================
 S_Init
@@ -151,6 +157,7 @@ void S_Init( void ) {
 #ifdef _DEBUG
     s_show = Cvar_Get( "s_show", "0", 0 );
 #endif
+    s_auto_focus = Cvar_Get( "s_auto_focus", "0", 0 );
 
 #if USE_OPENAL
 #if USE_SNDDMA
@@ -185,6 +192,9 @@ void S_Init( void ) {
     // init playsound list
     // clear DMA buffer
     S_StopAllSounds();
+
+    s_auto_focus->changed = s_auto_focus_changed;
+    s_auto_focus_changed( s_auto_focus );
 
     num_sfx = 0;
 
@@ -244,6 +254,9 @@ void S_Shutdown( void ) {
         ;
 
     s_started = SS_NOT;
+    s_active = qfalse;
+
+    s_auto_focus->changed = NULL;
 
     Cmd_Deregister( c_sound );
 
@@ -251,8 +264,23 @@ void S_Shutdown( void ) {
 }
 
 void S_Activate( void ) {
+    qboolean active;
+    active_t level;
+
     if( !s_started )
         return;
+
+    level = Cvar_ClampInteger( s_auto_focus, ACT_MINIMIZED, ACT_ACTIVATED );
+
+    active = cls.active >= level;
+
+    if( active == s_active )
+        return;
+
+    s_active = active;
+
+    Com_DDPrintf( "%s: %d\n", __func__, s_active );
+
 #if USE_OPENAL
     if( s_started == SS_OAL )
         S_StopAllSounds();
@@ -716,6 +744,8 @@ void S_StartSound( const vec3_t origin, int entnum, int entchannel, qhandle_t hS
 
     if( !s_started )
         return;
+    if( !s_active )
+        return;
 
     if( !( sfx = S_SfxForHandle( hSfx ) ) ) {
         return;
@@ -873,7 +903,7 @@ static void S_AddLoopSounds (void)
     entity_state_t  *ent;
     vec3_t      origin;
 
-    if( cls.state != ca_active || sv_paused->integer || !s_ambient->integer ) {
+    if( cls.state != ca_active || !s_active || sv_paused->integer || !s_ambient->integer ) {
         return;
     }
 

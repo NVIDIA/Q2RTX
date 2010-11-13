@@ -293,7 +293,7 @@ void AL_Update( void ) {
     channel_t   *ch;
     vec_t       orientation[6];
 
-    if( cls.active != ACT_ACTIVATED ) {
+    if( !s_active ) {
         return;
     }
 
