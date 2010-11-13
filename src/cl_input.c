@@ -80,6 +80,42 @@ static cvar_t    *in_enable;
 #if USE_DINPUT
 static cvar_t    *in_direct;
 #endif
+static cvar_t    *in_smart_grab;
+
+static inline grab_t get_grab_mode( void ) {
+    // never grab if main window doesn't have focus
+    if( cls.active != ACT_ACTIVATED )
+        return IN_FREE;
+
+    // always grab in full screen
+    if( scr_glconfig.flags & QVF_FULLSCREEN )
+        return IN_GRAB;
+
+    // show cursor if menu is up
+    if( cls.key_dest & KEY_MENU )
+        return IN_SHOW;
+
+    // hide cursor, but don't grab if console is up
+    if( cls.key_dest & KEY_CONSOLE )
+        return IN_HIDE;
+    if( sv_paused->integer )
+        return IN_HIDE;
+    if( cls.state < ca_active )
+        return IN_HIDE;
+
+    // don't grab if mouse input is not needed
+    if( in_smart_grab->integer ) {
+        // playing a demo (and not using freelook)
+        if( cls.demo.playback && !Key_IsDown( K_SHIFT ) )
+            return IN_HIDE;
+        // spectator mode
+        if( cl.frame.ps.pmove.pm_type == PM_FREEZE )
+            return IN_HIDE;
+    }
+
+    // regular playing mode, grab
+    return IN_GRAB;
+}
 
 /*
 ============
@@ -93,24 +129,13 @@ void IN_Activate( void ) {
         return;
     }
 
-    input.hideCursor = 0;
-    if( cls.active != ACT_ACTIVATED ) {
-        grab = IN_FREE;
-    } else if( scr_glconfig.flags & QVF_FULLSCREEN ) {
-        grab = IN_GRAB;
-    } else if( cls.key_dest & KEY_MENU ) {
-        grab = IN_SHOW;
-    } else if( ( cls.key_dest & KEY_CONSOLE ) || sv_paused->integer ||
-        /*cls.demo.playback || cl.frame.ps.pmove.pm_type == PM_FREEZE ||*/
-        cls.state < ca_connected )
-    {
-        grab = IN_HIDE;
-        if( !input.hideCursor ) {
-            input.hideCursor = 1;
-            input.lastMotion = com_localTime - 1000;
-        }
+    grab = get_grab_mode();
+
+    if( grab == IN_HIDE ) {
+        input.hideCursor = 1;
+        input.lastMotion = com_localTime - 1000;
     } else {
-        grab = IN_GRAB;
+        input.hideCursor = 0;
     }
 
     input.api.Grab( grab );
@@ -166,7 +191,6 @@ void IN_WarpMouse( int x, int y ) {
     }
 }
 
-
 /*
 ============
 IN_Restart_f
@@ -197,6 +221,10 @@ void IN_Shutdown( void ) {
 
 static void in_param_changed( cvar_t *self ) {
     input.modified = qtrue;
+}
+
+static void in_smart_grab_changed( cvar_t *self ) {
+    IN_Activate();
 }
 
 /*
@@ -240,6 +268,9 @@ void IN_Init( void ) {
 #if USE_DINPUT
     in_direct->changed = in_param_changed;
 #endif
+
+    in_smart_grab = Cvar_Get( "in_smart_grab", "0", 0 );
+    in_smart_grab->changed = in_smart_grab_changed;
 
     input.initialized = qtrue;
 

@@ -764,6 +764,10 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
         ( ( cls.key_dest & KEY_MENU ) && menubound[key] ) )
     {
 
+        // hack for demo freelook in windowed mode
+        if( cls.demo.playback && key == K_SHIFT ) {
+            IN_Activate();
+        }
 //
 // Key up events only generate commands if the game key binding is
 // a button command (leading + sign).
