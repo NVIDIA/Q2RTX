@@ -1934,8 +1934,9 @@ Qcommon_Frame
 void Qcommon_Frame( void ) {
 #if USE_CLIENT
     unsigned time_before, time_event, time_between, time_after;
+    unsigned clientrem;
 #endif
-    unsigned oldtime, msec, clientrem;
+    unsigned oldtime, msec;
     static unsigned remaining;
     static float frac;
 
