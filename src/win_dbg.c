@@ -56,7 +56,7 @@ PRIVATE FILE *crashReport;
 PRIVATE CHAR moduleName[MAX_PATH];
 
 PRIVATE BOOL CALLBACK EnumModulesCallback(
-    PTSTR ModuleName,
+    PCTSTR ModuleName,
     DWORD64 ModuleBase,
     ULONG ModuleSize,
     PVOID UserContext )
