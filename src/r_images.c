@@ -1857,9 +1857,9 @@ void IMG_Init( void ) {
         "j"
 #endif
 #if USE_TGA
-        "t",
+        "t"
 #endif
-        0 );
+        , 0 );
 #endif
     Cmd_AddCommand( "imagelist", IMG_List_f );
 
