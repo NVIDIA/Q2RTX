@@ -662,6 +662,8 @@ fi
 echo "#define USE_MAPCHECKSUM 1" >> $config_h
 echo "#define USE_AUTOREPLY 1" >> $config_h
 [ "$have_endian_h" = "yes" ] && echo "#define HAVE_ENDIAN_H 1" >> $config_h
+echo "#define HAVE_STDINT_H 1" >> $config_h
+echo "#define HAVE_INTTYPES_H 1" >> $config_h
 
 for t in $targets ; do
     mkdir -p .$t ;
