@@ -332,7 +332,7 @@ static void Sys_ConsoleInit( void ) {
         Com_EPrintf( "Couldn't create system console.\n" );
         return;
     }
-#else
+#elif USE_WINSVC
     if( statusHandle ) {
         return;
     }
