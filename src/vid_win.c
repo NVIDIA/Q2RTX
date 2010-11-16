@@ -42,7 +42,7 @@ COMMON WIN32 VIDEO RELATED ROUTINES
 ===============================================================================
 */
 
-static void Win_Show( const vrect_t *rc, qboolean fullscreen ) {
+static void Win_Show( const vrect_t *rc ) {
     RECT            r;
     int             stylebits;
     int             x, y, w, h;
@@ -53,7 +53,7 @@ static void Win_Show( const vrect_t *rc, qboolean fullscreen ) {
     r.right = rc->width;
     r.bottom = rc->height;
 
-    if( fullscreen ) {
+    if( win.flags & QVF_FULLSCREEN ) {
         after = HWND_TOPMOST;
         stylebits = WS_POPUP;
     } else {
@@ -66,7 +66,7 @@ static void Win_Show( const vrect_t *rc, qboolean fullscreen ) {
     w = r.right - r.left;
     h = r.bottom - r.top;
 
-    if( fullscreen ) {
+    if( win.flags & QVF_FULLSCREEN ) {
         // postion on primary monitor
         x = 0;
         y = 0;
@@ -179,12 +179,13 @@ void Win_SetMode( void ) {
             DISP_CHANGE_SUCCESSFUL )
         {
             Com_DPrintf( "ok\n" );
-            Win_Show( &rc, qtrue );
-            win.flags |= QVF_FULLSCREEN;
             win.dm = dm;
+            win.flags |= QVF_FULLSCREEN;
+            Win_Show( &rc );
             return;
         }
         Com_DPrintf( "failed\n" );
+        Cvar_Reset( vid_fullscreen );
     }
 
     VID_GetGeometry( &rc );
@@ -192,9 +193,10 @@ void Win_SetMode( void ) {
     Com_DPrintf( "...setting windowed mode: %dx%d+%d+%d\n",
         rc.width, rc.height, rc.x, rc.y );
 
-    Win_Show( &rc, qfalse );
-    ChangeDisplaySettings( NULL, 0 );
+    memset( &win.dm, 0, sizeof( win.dm ) );
     win.flags &= ~QVF_FULLSCREEN;
+    Win_Show( &rc );
+    ChangeDisplaySettings( NULL, 0 );
 }
 
 void VID_UpdateGamma( const byte *table ) {
@@ -642,17 +644,19 @@ PRIVATE LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
         break;
 
     case WM_SIZE:
-        if( wParam == SIZE_RESTORED && !vid_fullscreen->integer ) {
+        if( wParam == SIZE_RESTORED && !( win.flags & QVF_FULLSCREEN ) ) {
             int w = ( short )LOWORD( lParam );
             int h = ( short )HIWORD( lParam );
+
             win.rc.width = w;
             win.rc.height = h;
+
             win.mode_changed |= 1;
         }
         break;
 
     case WM_MOVE: 
-        if( !vid_fullscreen->integer ) {
+        if( !( win.flags & QVF_FULLSCREEN ) ) {
             int x = ( short )LOWORD( lParam );
             int y = ( short )HIWORD( lParam );
             RECT    r;
