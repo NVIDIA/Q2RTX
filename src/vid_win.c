@@ -63,53 +63,10 @@ static void Win_Show( const vrect_t *rc ) {
 
     AdjustWindowRect( &r, stylebits, FALSE );
 
+    x = rc->x;
+    y = rc->y;
     w = r.right - r.left;
     h = r.bottom - r.top;
-
-    if( win.flags & QVF_FULLSCREEN ) {
-        // postion on primary monitor
-        x = 0;
-        y = 0;
-    } else {
-#if 0
-        RECT screen;
-
-        // get virtual screen dimensions
-        if( GetSystemMetrics( SM_CMONITORS ) > 1 ) {
-            screen.left = GetSystemMetrics( SM_XVIRTUALSCREEN );
-            screen.top = GetSystemMetrics( SM_YVIRTUALSCREEN );
-            screen.right = screen.left + GetSystemMetrics( SM_CXVIRTUALSCREEN );
-            screen.bottom = screen.top + GetSystemMetrics( SM_CYVIRTUALSCREEN );
-        } else {
-            screen.left = 0;
-            screen.top = 0;
-            screen.right = GetSystemMetrics( SM_CXSCREEN );
-            screen.bottom = GetSystemMetrics( SM_CYSCREEN );
-        }
-        Com_Printf("screen:%dx%dx%dx%d\n",screen.left,screen.top,screen.right,screen.bottom);
-
-        x = rc->x;
-        y = rc->y;
-
-        // clip to virtual screen
-        if( x + w > screen.right ) {
-            x = screen.right - w;
-        }
-        if( y + h > screen.bottom ) {
-            y = screen.bottom - h;
-        }
-        if( x < screen.left ) {
-            x = screen.left;
-        }
-        if( y < screen.top ) {
-            y = screen.top;
-        }
-        Com_Printf("clip:%dx%d+%d+%d\n",w,h,x,y);
-#else
-        x = rc->x;
-        y = rc->y;
-#endif
-    }
 
     win.rc.x = x;
     win.rc.y = y;
@@ -190,6 +147,12 @@ void Win_SetMode( void ) {
 
     VID_GetGeometry( &rc );
 
+    rc.width &= ~7;
+    rc.height &= ~1;
+
+    if( rc.width < 320 ) rc.width = 320;
+    if( rc.height < 240 ) rc.height = 240;
+
     Com_DPrintf( "...setting windowed mode: %dx%d+%d+%d\n",
         rc.width, rc.height, rc.x, rc.y );
 
@@ -197,6 +160,7 @@ void Win_SetMode( void ) {
     win.flags &= ~QVF_FULLSCREEN;
     Win_Show( &rc );
     ChangeDisplaySettings( NULL, 0 );
+    VID_SetGeometry( &win.rc );
 }
 
 void VID_UpdateGamma( const byte *table ) {
@@ -494,6 +458,17 @@ static void Win_KeyEvent( WPARAM wParam, LPARAM lParam, qboolean down ) {
     Key_Event( result, down, win.lastMsgTime );
 }
 
+static inline void get_nc_area_size( HWND w, RECT *r ) {
+    int style = GetWindowLong( w, GWL_STYLE );
+
+    r->left = 0;
+    r->top = 0;
+    r->right = 1;
+    r->bottom = 1;
+
+    AdjustWindowRect( r, style, FALSE );
+}
+
 /*
 ====================
 Win_MainWndProc
@@ -590,9 +565,11 @@ PRIVATE LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
     case WM_HOTKEY:
         return FALSE;
 
+#if 0
     case WM_PAINT:
         SCR_UpdateScreen();
         break;
+#endif
 
     case WM_CLOSE:
         PostQuitMessage( 0 );
@@ -602,44 +579,30 @@ PRIVATE LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
         Win_Activate( wParam );
         break;
 
-    case WM_SIZING:
-        if( !vid_fullscreen->integer ) {
-            RECT *rc = ( RECT * )lParam;
-            int w = rc->right - rc->left;
-            int h = rc->bottom - rc->top;
-            if( w < 64 ) w = 64; else w &= ~7;
-            if( h < 64 ) h = 64; else h &= ~1;
-            switch( wParam ) {
-            case WMSZ_BOTTOM:
-                rc->bottom = rc->top + h;
-                break;
-            case WMSZ_BOTTOMLEFT:
-                rc->bottom = rc->top + h;
-                rc->left = rc->right - w;
-                break;
-            case WMSZ_BOTTOMRIGHT:
-                rc->right = rc->left + w;
-                rc->bottom = rc->top + h;
-                break;
-            case WMSZ_LEFT:
-                rc->left = rc->right - w;
-                break;
-            case WMSZ_RIGHT:
-                rc->right = rc->left + w;
-                break;
-            case WMSZ_TOP:
-                rc->top = rc->bottom - h;
-                break;
-            case WMSZ_TOPLEFT:
-                rc->top = rc->bottom - h;
-                rc->left = rc->right - w;
-                break;
-            case WMSZ_TOPRIGHT:
-                rc->top = rc->bottom - h;
-                rc->right = rc->left + w;
-                break;
+    case WM_WINDOWPOSCHANGING:
+        if( !( win.flags & QVF_FULLSCREEN ) ) {
+            WINDOWPOS *pos = ( WINDOWPOS * )lParam;
+            if( !( pos->flags & SWP_NOSIZE ) ) {
+                int w, h, nc_w, nc_h;
+                RECT r;
+
+                // calculate size of non-client area
+                get_nc_area_size( hWnd, &r );
+                nc_w = r.right - r.left - 1;
+                nc_h = r.bottom - r.top - 1;
+
+                // align client area
+                w = ( pos->cx - nc_w ) & ~7;
+                h = ( pos->cy - nc_h ) & ~1;
+
+                // don't allow too small size
+                if( w < 320 ) w = 320;
+                if( h < 240 ) h = 240;
+
+                // convert back to window size
+                pos->cx = w + nc_w;
+                pos->cy = h + nc_h;
             }
-            return TRUE;
         }
         break;
 
@@ -659,17 +622,10 @@ PRIVATE LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
         if( !( win.flags & QVF_FULLSCREEN ) ) {
             int x = ( short )LOWORD( lParam );
             int y = ( short )HIWORD( lParam );
-            RECT    r;
-            int     style;
+            RECT r;
 
-            r.left   = 0;
-            r.top    = 0;
-            r.right  = 1;
-            r.bottom = 1;
-
-            style = GetWindowLong( hWnd, GWL_STYLE );
-            AdjustWindowRect( &r, style, FALSE );
-
+            // adjust for non-client area
+            get_nc_area_size( hWnd, &r );
             win.rc.x = x + r.left;
             win.rc.y = y + r.top;
 
