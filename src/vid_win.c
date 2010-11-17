@@ -97,8 +97,6 @@ static void Win_Show( const vrect_t *rc ) {
     ShowWindow( win.wnd, SW_SHOWNORMAL );    
     SetForegroundWindow( win.wnd );
     SetFocus( win.wnd );
-
-    win.mode_changed = 0;
 }
 
 void Win_ModeChanged( void ) {
@@ -158,6 +156,7 @@ void Win_SetMode( void ) {
             win.dm = dm;
             win.flags |= QVF_FULLSCREEN;
             Win_Show( &rc );
+            win.mode_changed = 0;
             return;
         }
         Com_DPrintf( "failed\n" );
@@ -180,6 +179,7 @@ void Win_SetMode( void ) {
     Win_Show( &rc );
     ChangeDisplaySettings( NULL, 0 );
     VID_SetGeometry( &win.rc );
+    win.mode_changed = 0;
 }
 
 void VID_UpdateGamma( const byte *table ) {
