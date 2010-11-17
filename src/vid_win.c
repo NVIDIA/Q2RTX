@@ -58,14 +58,14 @@ static void Win_Show( const vrect_t *rc ) {
 
     if( win.flags & QVF_FULLSCREEN ) {
         after = HWND_TOPMOST;
-        stylebits = WS_POPUP;
+        stylebits = WS_POPUP | WS_VISIBLE;
     } else {
         if( win_alwaysontop->integer ) {
             after = HWND_TOPMOST;
         } else {
             after = HWND_NOTOPMOST;
         }
-        stylebits = WS_OVERLAPPED;
+        stylebits = WS_OVERLAPPED | WS_VISIBLE;
         if( win_notitle->integer ) {
             if( win_noresize->integer ) {
                 stylebits |= WS_DLGFRAME;
