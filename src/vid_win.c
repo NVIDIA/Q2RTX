@@ -33,6 +33,9 @@ static cvar_t    *vid_flip_on_switch;
 static cvar_t    *vid_hwgamma;
 static cvar_t    *win_noalttab;
 static cvar_t    *win_disablewinkey;
+static cvar_t    *win_noresize;
+static cvar_t    *win_notitle;
+static cvar_t    *win_alwaysontop;
 
 /*
 ===============================================================================
@@ -57,8 +60,24 @@ static void Win_Show( const vrect_t *rc ) {
         after = HWND_TOPMOST;
         stylebits = WS_POPUP;
     } else {
-        after = HWND_NOTOPMOST;
-        stylebits = WS_OVERLAPPEDWINDOW;
+        if( win_alwaysontop->integer ) {
+            after = HWND_TOPMOST;
+        } else {
+            after = HWND_NOTOPMOST;
+        }
+        stylebits = WS_OVERLAPPED;
+        if( win_notitle->integer ) {
+            if( win_noresize->integer ) {
+                stylebits |= WS_DLGFRAME;
+            } else {
+                stylebits |= WS_THICKFRAME;
+            }
+        } else {
+            stylebits |= WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
+            if( !win_noresize->integer ) {
+                stylebits |= WS_THICKFRAME;
+            }
+        }
     }
 
     AdjustWindowRect( &r, stylebits, FALSE );
@@ -694,7 +713,12 @@ void VID_PumpEvents( void ) {
     }
 
     if( win.mode_changed ) {
-        VID_SetGeometry( &win.rc );
+        if( win.mode_changed & 3 ) {
+            VID_SetGeometry( &win.rc );
+        }
+        if( win.mode_changed & 4 ) {
+            Win_Show( &win.rc );
+        }
         if( win.mode_changed & 1 ) {
             Win_ModeChanged();
         }
@@ -709,6 +733,12 @@ void VID_PumpEvents( void ) {
 #define _WNDCLASSEX WNDCLASSEX
 #define _RegisterClassEx RegisterClassEx
 #endif
+
+static void win_style_changed( cvar_t *self ) {
+    if( win.wnd && !( win.flags & QVF_FULLSCREEN ) ) {
+        win.mode_changed |= 4;
+    }
+}
 
 /*
 ============
@@ -725,6 +755,12 @@ void Win_Init( void ) {
     win_noalttab->changed = win_noalttab_changed;
     win_disablewinkey = Cvar_Get( "win_disablewinkey", "0", CVAR_ARCHIVE );
     win_disablewinkey->changed = win_disablewinkey_changed;
+    win_noresize = Cvar_Get( "win_noresize", "0", 0 );
+    win_noresize->changed = win_style_changed;
+    win_notitle = Cvar_Get( "win_notitle", "0", 0 );
+    win_notitle->changed = win_style_changed;
+    win_alwaysontop = Cvar_Get( "win_alwaysontop", "0", 0 );
+    win_alwaysontop->changed = win_style_changed;
 
     win_disablewinkey_changed( win_disablewinkey );
 
