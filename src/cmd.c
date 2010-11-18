@@ -29,6 +29,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define Cmd_Malloc( size )          Z_TagMalloc( size, TAG_CMD )
 #define Cmd_CopyString( string )    Z_TagCopyString( string, TAG_CMD )
 
+static char *Cmd_ArgsRange( int from, int to );
+
 /*
 =============================================================================
 
@@ -556,6 +558,102 @@ void Cmd_ExecTrigger( const char *string ) {
         if( match && Com_WildCmp( match, string ) ) {
             Cbuf_AddText( &cmd_buffer, trigger->command );
             Cbuf_AddText( &cmd_buffer, "\n" );
+        }
+    }
+}
+
+/*
+=============================================================================
+
+                    BRANCHING
+
+=============================================================================
+*/
+
+/*
+============
+Cmd_If_f
+============
+*/
+static void Cmd_If_f( void ) {
+    char *a, *b, *op;
+    qboolean numeric;
+    qboolean matched;
+    int i, j;
+
+    if( Cmd_Argc() < 5 ) {
+        Com_Printf( "Usage: if <expr> <op> <expr> [then] <command> [else <command>]\n" );
+        return;
+    }
+
+    a = Cmd_Argv( 1 );
+    op = Cmd_Argv( 2 );
+    b = Cmd_Argv( 3 );
+
+    numeric = COM_IsFloat( a ) && COM_IsFloat( b );
+    if( !strcmp( op, "==" ) ) {
+        matched = numeric ? atof( a ) == atof( b ) : !strcmp( a, b );
+    } else if( !strcmp( op, "!=" ) || !strcmp( op, "<>" ) ) {
+        matched = numeric ? atof( a ) != atof( b ) : strcmp( a, b );
+    } else if( !strcmp( op, "<" ) ) {
+        if( !numeric ) {
+error:
+            Com_Printf( "Can't use '%s' with non-numeric expression(s)\n", op );
+            return;
+        }
+        matched = atof( a ) < atof( b );
+    } else if( !strcmp( op, "<=" ) ) {
+        if( !numeric )
+            goto error;
+        matched = atof( a ) <= atof( b );
+    } else if( !strcmp( op, ">" ) ) {
+        if( !numeric )
+            goto error;
+        matched = atof( a ) > atof( b );
+    } else if( !strcmp( op, ">=" ) ) {
+        if( !numeric )
+            goto error;
+        matched = atof( a ) >= atof( b );
+    } else if( !Q_stricmp( op, "isin" ) ) {
+        matched = strstr( b, a ) != NULL;
+    } else if( !Q_stricmp( op, "!isin" ) ) {
+        matched = strstr( b, a ) == NULL;
+    } else if( !Q_stricmp( op, "isini" ) ) {
+        matched = Q_stristr( b, a ) != NULL;
+    } else if( !Q_stricmp( op, "!isini" ) ) {
+        matched = Q_stristr( b, a ) == NULL;
+    } else if( !Q_stricmp( op, "eq" ) ) {
+        matched = !Q_stricmp( a, b );
+    } else if( !Q_stricmp( op, "ne" ) ) {
+        matched = Q_stricmp( a, b );
+    } else {
+        Com_Printf( "Unknown operator '%s'\n", op );
+        Com_Printf( "Valid are: ==, != or <>, <, <=, >, >=, [!]isin[i], eq, ne\n" );
+        return;
+    }
+
+    // skip over optional 'then'
+    i = 4;
+    if( !Q_stricmp( Cmd_Argv( i ), "then" ) ) {
+        i++;
+    }
+
+    // scan out branch 1 argument range
+    for( j = i; i < Cmd_Argc(); i++ ) {
+        if( !Q_stricmp( Cmd_Argv( i ), "else" ) ) {
+            break;
+        }
+    }
+
+    if( matched ) {
+        // execute branch 1
+        if( i > j ) {
+            Cbuf_InsertText( cmd_current, Cmd_ArgsRange( j, i - 1 ) );
+        }
+    } else {
+        // execute branch 2
+        if( ++i < Cmd_Argc() ) {
+            Cbuf_InsertText( cmd_current, Cmd_ArgsFrom( i ) );
         }
     }
 }
@@ -1771,6 +1869,7 @@ static const cmdreg_t c_cmd[] = {
     { "complete", Cmd_Complete_f },
     { "trigger", Cmd_Trigger_f },
     { "untrigger", Cmd_UnTrigger_f },
+    { "if", Cmd_If_f },
 
     { NULL }
 };
