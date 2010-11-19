@@ -789,7 +789,7 @@ static void MVD_Say_f( mvd_client_t *client, int argnum ) {
     unsigned delta, delay = mvd_flood_waitdelay->value * 1000;
     unsigned treshold = mvd_flood_persecond->value * 1000;
     char text[150], *p;
-    int i;
+    unsigned i, j;
 
     if( mvd_flood_mute->integer && !client->admin ) {
         SV_ClientPrintf( client->cl, PRINT_HIGH,
@@ -812,10 +812,10 @@ static void MVD_Say_f( mvd_client_t *client, int argnum ) {
         }
     }
 
-    Cvar_ClampInteger( mvd_flood_msgs, 0, FLOOD_SAMPLES - 1 );
-    i = client->floodHead - mvd_flood_msgs->integer - 1;
-    if( i >= 0 ) {
-        delta = svs.realtime - client->floodSamples[i & FLOOD_MASK];
+    j = Cvar_ClampInteger( mvd_flood_msgs, 0, FLOOD_SAMPLES - 1 ) + 1;
+    if( client->floodHead >= j ) {
+        i = ( client->floodHead - j ) & FLOOD_MASK;
+        delta = svs.realtime - client->floodSamples[i];
         if( delta < treshold ) {
             SV_ClientPrintf( client->cl, PRINT_HIGH,
                 "[MVD] You can't talk for %u seconds.\n", delay / 1000 );
