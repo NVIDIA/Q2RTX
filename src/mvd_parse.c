@@ -955,11 +955,11 @@ static void MVD_ChangeLevel( mvd_t *mvd ) {
     MSG_WriteString( va( "changing map=%s; reconnect\n", mvd->mapname ) );
 
     FOR_EACH_MVDCL( client, mvd ) {
-        if( mvd->intermission && client->cl->state == cs_spawned ) {
+        if( client->target != mvd->dummy ) {
             // make them switch to previous target instead of MVD dummy
-            client->target = client->oldtarget;
-            client->oldtarget = NULL;
+            client->oldtarget = client->target;
         }
+        client->target = NULL;
         SV_ClientReset( client->cl );
         client->cl->spawncount = mvd->servercount;
         SV_ClientAddMessage( client->cl, MSG_RELIABLE );

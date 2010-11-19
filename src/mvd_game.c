@@ -1391,9 +1391,10 @@ static void MVD_GameClientBegin( edict_t *ent ) {
         }
         target = MVD_MostFollowed( mvd );
     } else {
-        target = client->target;
+        target = client->oldtarget;
     }
-    client->oldtarget = NULL;
+
+    client->target = NULL;
     client->begin_time = svs.realtime;
 
     MVD_SetDefaultLayout( client );
