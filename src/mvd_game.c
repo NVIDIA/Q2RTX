@@ -26,6 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <setjmp.h>
 
 static cvar_t   *mvd_admin_password;
+static cvar_t   *mvd_part_filter;
 static cvar_t   *mvd_flood_msgs;
 static cvar_t   *mvd_flood_persecond;
 static cvar_t   *mvd_flood_waitdelay;
@@ -722,6 +723,31 @@ void MVD_SwitchChannel( mvd_client_t *client, mvd_t *mvd ) {
     SV_ClientAddMessage( cl, MSG_RELIABLE|MSG_CLEAR );
 }
 
+static qboolean MVD_PartFilter( mvd_client_t *client ) {
+    unsigned i, delta, treshold;
+    float f = mvd_part_filter->value;
+
+    if( !f ) {
+        return qtrue; // show everyone
+    }
+    if( f < 0 ) {
+        return qfalse; // hide everyone
+    }
+    if( client->admin ) {
+        return qtrue; // show admins
+    }
+    if( !client->floodHead ) {
+        return qfalse; // not talked yet
+    }
+
+    // take the most recent sample
+    i = ( client->floodHead - 1 ) & FLOOD_MASK;
+    delta = svs.realtime - client->floodSamples[i];
+    treshold = f * 1000;
+
+    return delta < treshold;
+}
+
 static void MVD_TrySwitchChannel( mvd_client_t *client, mvd_t *mvd ) {
     if( mvd == client->mvd ) {
         SV_ClientPrintf( client->cl, PRINT_HIGH,
@@ -735,8 +761,10 @@ static void MVD_TrySwitchChannel( mvd_client_t *client, mvd_t *mvd ) {
                 "[MVD] You may not switch channels too soon.\n" );
             return;
         }
-        MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM, UF_MUTE_MISC,
-            "[MVD] %s left the channel\n", client->cl->name );
+        if( MVD_PartFilter( client ) ) {
+            MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM, UF_MUTE_MISC,
+                "[MVD] %s left the channel\n", client->cl->name );
+        }
     }
 
     MVD_SwitchChannel( client, mvd );
@@ -1248,6 +1276,7 @@ static void MVD_GameInit( void ) {
     Com_Printf( "----- MVD_GameInit -----\n" );
 
     mvd_admin_password = Cvar_Get( "mvd_admin_password", "", CVAR_PRIVATE );
+    mvd_part_filter = Cvar_Get( "mvd_part_filter", "0", 0 );
     mvd_flood_msgs = Cvar_Get( "flood_msgs", "4", 0 );
     mvd_flood_persecond = Cvar_Get( "flood_persecond", "4", 0 ); // FIXME: rename this
     mvd_flood_waitdelay = Cvar_Get( "flood_waitdelay", "10", 0 );
@@ -1381,8 +1410,10 @@ static void MVD_GameClientBegin( edict_t *ent ) {
     client->layout_cursor = 0;
  
     if( !client->begin_time ) {
-        MVD_BroadcastPrintf( mvd, PRINT_MEDIUM, UF_MUTE_MISC,
-            "[MVD] %s entered the channel\n", client->cl->name );
+        if( MVD_PartFilter( client ) ) {
+            MVD_BroadcastPrintf( mvd, PRINT_MEDIUM, UF_MUTE_MISC,
+                "[MVD] %s entered the channel\n", client->cl->name );
+        }
         if( Com_IsDedicated() && mvd != &mvd_waitingRoom ) {
             // notify them if channel is in waiting state
             if( mvd->state == MVD_WAITING ) {
@@ -1447,7 +1478,7 @@ void MVD_GameClientNameChanged( edict_t *ent, const char *name ) {
     mvd_client_t *client = EDICT_MVDCL( ent );
     client_t *cl = client->cl;
 
-    if( client->begin_time ) {
+    if( client->begin_time && MVD_PartFilter( client ) ) {
         MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM, UF_MUTE_MISC,
             "[MVD] %s changed name to %s\n", cl->name, name );
     }
@@ -1458,22 +1489,24 @@ void MVD_GameClientDrop( edict_t *ent, const char *reason ) {
     mvd_client_t *client = EDICT_MVDCL( ent );
     client_t *cl = client->cl;
 
-    if( client->begin_time ) {
+    if( client->begin_time && MVD_PartFilter( client ) ) {
         MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM, UF_MUTE_MISC,
             "[MVD] %s was dropped: %s\n", cl->name, reason );
-        client->begin_time = 0;
     }
+
+    client->begin_time = 0;
 }
 
 static void MVD_GameClientDisconnect( edict_t *ent ) {
     mvd_client_t *client = EDICT_MVDCL( ent );
     client_t *cl = client->cl;
 
-    if( client->begin_time ) {
+    if( client->begin_time && MVD_PartFilter( client ) ) {
         MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM, UF_MUTE_MISC,
             "[MVD] %s disconnected\n", cl->name );
-        client->begin_time = 0;
     }
+
+    client->begin_time = 0;
 }
 
 
