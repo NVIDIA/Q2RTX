@@ -951,16 +951,21 @@ static void MVD_Follow_f( mvd_client_t *client ) {
         case '!':
             goto match;
         case 'p':
-            if( client->oldtarget && client->oldtarget->inuse ) {
-                MVD_FollowStart( client, client->oldtarget );
+            if( client->oldtarget ) {
+                if( client->oldtarget->inuse ) {
+                    MVD_FollowStart( client, client->oldtarget );
+                } else {
+                    SV_ClientPrintf( client->cl, PRINT_HIGH,
+                        "[MVD] Previous chase target is not active.\n" );
+                }
             } else {
                 SV_ClientPrintf( client->cl, PRINT_HIGH,
-                    "[MVD] Previous target is not active.\n" );
+                    "[MVD] You have no previous chase target.\n" );
             }
             return;
         default:
             SV_ClientPrintf( client->cl, PRINT_HIGH,
-                "[MVD] Unknown target '%s'. Valid targets are: "
+                "[MVD] Unknown chase target '%s'. Valid targets are: "
                 "q[uad]/i[nvulner]/r[ed_flag]/b[lue_flag]/p[revious_target].\n", s );
             return;
         }
