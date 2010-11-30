@@ -33,6 +33,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <SDL.h>
 #if USE_X11
 #include <SDL_syswm.h>
+#include <X11/Xutil.h>
 #if USE_REF == REF_GL
 #include <GL/glx.h>
 #include <GL/glxext.h>

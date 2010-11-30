@@ -598,7 +598,7 @@ void CL_ExplosionParticles (vec3_t org);
 void CL_BFGExplosionParticles (vec3_t org);
 void CL_BlasterTrail (vec3_t start, vec3_t end);
 void CL_QuadTrail (vec3_t start, vec3_t end);
-void CL_OldRailTrail (vec3_t start, vec3_t end);
+void CL_OldRailTrail (void);
 void CL_BubbleTrail (vec3_t start, vec3_t end);
 void CL_FlagTrail (vec3_t start, vec3_t end, int color);
 void CL_ParseMuzzleFlash (void);

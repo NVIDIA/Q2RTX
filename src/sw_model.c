@@ -149,7 +149,7 @@ ALIAS MODELS
 Mod_LoadAliasModel
 =================
 */
-qboolean MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
+qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
     dmd2header_t header;
     dmd2frame_t *src_frame;
     //dmd2trivertx_t *src_vert;
@@ -163,10 +163,10 @@ qboolean MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
     char *src_skin;
     image_t *skin;
     int i, j;
+    qerror_t ret;
 
     if( length < sizeof( header ) ) {
-        Com_WPrintf( "%s is too short\n", model->name );
-        return qfalse;
+        return Q_ERR_FILE_TOO_SMALL;
     }
 
     /* byte swap the header */
@@ -175,8 +175,9 @@ qboolean MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
         (( uint32_t * )&header)[i] = LittleLong( (( uint32_t * )&header)[i] );
     }
 
-    if( !MOD_ValidateMD2( model, &header, length ) ) {
-        return qfalse;
+    ret = MOD_ValidateMD2( model, &header, length );
+    if( ret ) {
+        return ret;
     }
 
     Hunk_Begin( &model->pool, 0x400000 );
@@ -193,7 +194,7 @@ qboolean MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
             unsigned idx_st = LittleShort( src_tri->index_st[j] );
 
             if( idx_xyz >= header.num_xyz || idx_st >= header.num_st ) {
-                Com_WPrintf( "%s has bad triangle indices\n", model->name );
+                ret = Q_ERR_BAD_INDEX;
                 goto fail;
             }
 
@@ -248,11 +249,11 @@ qboolean MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
     model->numskins = header.num_skins;
 
     Hunk_End( &model->pool );
-    return qtrue;
+    return Q_ERR_SUCCESS;
 
 fail:
     Hunk_Free( &model->pool );
-    return qfalse;
+    return ret;
 }
 
 void MOD_Reference( model_t *model ) {

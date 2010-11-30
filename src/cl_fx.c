@@ -247,7 +247,7 @@ void CL_ParseMuzzleFlash (void)
     AngleVectors (pl->current.angles, fv, rv, NULL);
     VectorMA (dl->origin, 18, fv, dl->origin);
     VectorMA (dl->origin, 16, rv, dl->origin);
-    if (silenced)
+    if (mz.silenced)
         dl->radius = 100 + (rand()&31);
     else
         dl->radius = 200 + (rand()&31);
@@ -1452,7 +1452,7 @@ CL_RailTrail
 
 ===============
 */
-void CL_OldRailTrail (vec3_t start, vec3_t end)
+void CL_OldRailTrail (void)
 {
     vec3_t      move;
     vec3_t      vec;
@@ -1466,8 +1466,8 @@ void CL_OldRailTrail (vec3_t start, vec3_t end)
     vec3_t      dir;
     byte        clr = 0x74;
 
-    VectorCopy (start, move);
-    VectorSubtract (end, start, vec);
+    VectorCopy (te.pos1, move);
+    VectorSubtract (te.pos2, te.pos1, vec);
     len = VectorNormalize (vec);
 
     MakeNormalVectors (vec, right, up);
@@ -1502,7 +1502,7 @@ void CL_OldRailTrail (vec3_t start, vec3_t end)
 
     dec = 0.75;
     VectorScale (vec, dec, vec);
-    VectorCopy (start, move);
+    VectorCopy (te.pos1, move);
 
     while (len > 0)
     {

@@ -1105,7 +1105,7 @@ static void CL_RailSpiral( void ) {
 
 static void CL_RailTrail( void ) {
     if( !cl_railtrail_type->integer ) {
-        CL_OldRailTrail( te.pos1, te.pos2 );
+        CL_OldRailTrail();
     } else {
         CL_RailCore();
         if( cl_railtrail_type->integer > 1 ) {
