@@ -38,8 +38,9 @@ CL_SetEntityState
 cl.frame should be set to current frame before calling this function.
 ==================
 */
-static void CL_SetEntityState( entity_state_t *state ) {
+static void CL_SetEntityState( const entity_state_t *state ) {
     centity_t *ent = &cl_entities[state->number];
+    vec3_t origin;
 
     // if entity is solid, decode mins/maxs and add to the list
     if( state->solid && state->number != cl.frame.clientNum + 1 ) {
@@ -65,6 +66,16 @@ static void CL_SetEntityState( entity_state_t *state ) {
         }
     }
 
+    // work around Q2PRO server bandwidth optimization
+    if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO &&
+        state->number == cl.frame.clientNum + 1 &&
+        cl.frame.ps.pmove.pm_type < PM_DEAD )
+    {
+        VectorScale( cl.frame.ps.pmove.origin, 0.125f, origin );
+    } else {
+        VectorCopy( state->origin, origin );
+    }
+
     if( ent->serverframe != cl.oldframe.number ) {
         // wasn't in last update, so initialize some things
         ent->trailcount = 1024;     // for diminishing rocket / grenade trails
@@ -74,7 +85,7 @@ static void CL_SetEntityState( entity_state_t *state ) {
 
         if( state->event == EV_PLAYER_TELEPORT || state->event == EV_OTHER_TELEPORT ) {
             // no lerping if teleported
-            VectorCopy( state->origin, ent->lerp_origin );
+            VectorCopy( origin, ent->lerp_origin );
         } else {
             // old_origin is valid for new entities,
             // so use it as starting point for interpolating between
@@ -87,9 +98,9 @@ static void CL_SetEntityState( entity_state_t *state ) {
         || state->modelindex4 != ent->current.modelindex4
         || state->event == EV_PLAYER_TELEPORT
         || state->event == EV_OTHER_TELEPORT
-        || abs(state->origin[0] - ent->current.origin[0]) > 512
-        || abs(state->origin[1] - ent->current.origin[1]) > 512
-        || abs(state->origin[2] - ent->current.origin[2]) > 512 )
+        || abs(origin[0] - ent->current.origin[0]) > 512
+        || abs(origin[1] - ent->current.origin[1]) > 512
+        || abs(origin[2] - ent->current.origin[2]) > 512 )
     {
         // some data changes will force no lerping
         ent->trailcount = 1024;     // for diminishing rocket / grenade trails
@@ -98,7 +109,7 @@ static void CL_SetEntityState( entity_state_t *state ) {
         ent->prev = *state;
         
         // no lerping if teleported or morphed
-        VectorCopy( state->origin, ent->lerp_origin );
+        VectorCopy( origin, ent->lerp_origin );
     } else {    // shuffle the last state to previous
         ent->prev = ent->current;
     }
@@ -106,11 +117,10 @@ static void CL_SetEntityState( entity_state_t *state ) {
     ent->serverframe = cl.frame.number;
     ent->current = *state;
 
-    // override position of the player's own entity from playerstate
-    // needed since the Q2PRO server skips any origin/angles updates
-    // on it as an additional optimization
+    // work around Q2PRO server bandwidth optimization
     if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO &&
-        state->number == cl.frame.clientNum + 1 )
+        state->number == cl.frame.clientNum + 1 &&
+        cl.frame.ps.pmove.pm_type < PM_DEAD )
     {
         Com_PlayerToEntityState( &cl.frame.ps, &ent->current );
     }
@@ -173,8 +183,8 @@ void CL_DeltaFrame( void ) {
     cl.servertime = ( cl.frame.number - cl.serverdelta ) * cl.frametime;
     cl.numSolidEntities = 0;
 
-    // update position of the player's own entity from playerstate
-    // useful in situations when player entity is invisible, but 
+    // initialize position of the player's own entity from playerstate.
+    // this is needed in situations when player entity is invisible, but 
     // server sends an effect referencing it's origin (such as MZ_LOGIN, etc)
     ent = &cl_entities[ cl.frame.clientNum + 1 ];
     Com_PlayerToEntityState( &cl.frame.ps, &ent->current );
