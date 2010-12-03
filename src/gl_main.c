@@ -39,7 +39,12 @@ cvar_t *gl_screenshot_quality;
 #if USE_PNG
 cvar_t *gl_screenshot_compression;
 #endif
+#if USE_CELSHADING
 cvar_t *gl_celshading;
+#endif
+#if USE_DOTSHADING
+cvar_t *gl_dotshading;
+#endif
 cvar_t *gl_znear;
 cvar_t *gl_zfar;
 cvar_t *gl_modulate;
@@ -684,7 +689,12 @@ static void GL_Register( void ) {
 #if USE_PNG
     gl_screenshot_compression = Cvar_Get( "gl_screenshot_compression", "6", 0 );
 #endif
+#if USE_CELSHADING
     gl_celshading = Cvar_Get( "gl_celshading", "0", 0 );
+#endif
+#if USE_DOTSHADING
+    gl_dotshading = Cvar_Get( "gl_dotshading", "1", 0 );
+#endif
     gl_modulate = Cvar_Get( "gl_modulate", "1", CVAR_ARCHIVE );
     gl_hwgamma = Cvar_Get( "vid_hwgamma", "0", CVAR_ARCHIVE|CVAR_REFRESH );
 

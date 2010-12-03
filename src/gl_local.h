@@ -32,6 +32,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "qgl_local.h"
 #include "qgl_api.h"
 
+#define USE_DOTSHADING  1
+#define USE_CELSHADING  1
+
 /*
  * gl_main.c
  * 
@@ -87,7 +90,12 @@ typedef struct {
 
 extern statCounters_t c;
 
+#if USE_CELSHADING
 extern cvar_t *gl_celshading;
+#endif
+#if USE_DOTSHADING
+extern cvar_t *gl_dotshading;
+#endif
 extern cvar_t *gl_partscale;
 extern cvar_t *gl_znear;
 extern cvar_t *gl_zfar;
@@ -100,7 +108,9 @@ extern cvar_t *gl_novis;
 extern cvar_t *gl_lockpvs;
 extern cvar_t *gl_lightmap;
 extern cvar_t *gl_drawsky;
+#if USE_DLIGHTS
 extern cvar_t *gl_dynamic;
+#endif
 extern cvar_t *gl_fullbright;
 extern cvar_t *gl_mode;
 extern cvar_t *gl_hwgamma;
