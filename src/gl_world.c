@@ -22,15 +22,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 vec3_t modelViewOrigin; // viewer origin in model space
 
-qboolean GL_LightPoint( vec3_t origin, vec3_t color ) {
+static qboolean GL_LightPoint( vec3_t origin, vec3_t color ) {
     bsp_t *bsp = gl_static.world.cache;
     mface_t *surf;
-    int s, t;
+    int s, t, i;
+    byte *lightmap;
     byte *b1, *b2, *b3, *b4;
     int fracu, fracv;
     int w1, w2, w3, w4;
     byte temp[3];
-    int pitch;
+    int smax, tmax, size;
+    lightstyle_t *style;
     vec3_t point;
 
     if( !bsp || !bsp->lightmap ) {
@@ -49,53 +51,67 @@ qboolean GL_LightPoint( vec3_t origin, vec3_t color ) {
     fracu = s & 15;
     fracv = t & 15;
 
-    s >>= 4;
-    t >>= 4;
-
-    pitch = ( surf->extents[0] >> 4 ) + 1;
-    b1 = &surf->lightmap[3 * ( ( t + 0 ) * pitch + ( s + 0 ) )];
-    b2 = &surf->lightmap[3 * ( ( t + 0 ) * pitch + ( s + 1 ) )];
-    b3 = &surf->lightmap[3 * ( ( t + 1 ) * pitch + ( s + 1 ) )];
-    b4 = &surf->lightmap[3 * ( ( t + 1 ) * pitch + ( s + 0 ) )];
-    
     w1 = ( 16 - fracu ) * ( 16 - fracv );
     w2 = fracu * ( 16 - fracv );
     w3 = fracu * fracv;
     w4 = ( 16 - fracu ) * fracv;
 
-    temp[0] = ( w1 * b1[0] + w2 * b2[0] + w3 * b3[0] + w4 * b4[0] ) >> 8;
-    temp[1] = ( w1 * b1[1] + w2 * b2[1] + w3 * b3[1] + w4 * b4[1] ) >> 8;
-    temp[2] = ( w1 * b1[2] + w2 * b2[2] + w3 * b3[2] + w4 * b4[2] ) >> 8;
+    s >>= 4;
+    t >>= 4;
 
-    GL_AdjustColor( temp, temp, 2 );
+    smax = S_MAX( surf );
+    tmax = T_MAX( surf );
+    size = smax * tmax * 3;
 
-    VectorScale( temp, 1.0f / 255, color );
+    VectorClear( color );
+
+    lightmap = surf->lightmap;
+    for( i = 0; i < surf->numstyles; i++ ) {
+        b1 = &lightmap[3 * ( ( t + 0 ) * smax + ( s + 0 ) )];
+        b2 = &lightmap[3 * ( ( t + 0 ) * smax + ( s + 1 ) )];
+        b3 = &lightmap[3 * ( ( t + 1 ) * smax + ( s + 1 ) )];
+        b4 = &lightmap[3 * ( ( t + 1 ) * smax + ( s + 0 ) )];
+
+        temp[0] = ( w1 * b1[0] + w2 * b2[0] + w3 * b3[0] + w4 * b4[0] ) >> 8;
+        temp[1] = ( w1 * b1[1] + w2 * b2[1] + w3 * b3[1] + w4 * b4[1] ) >> 8;
+        temp[2] = ( w1 * b1[2] + w2 * b2[2] + w3 * b3[2] + w4 * b4[2] ) >> 8;
+
+        style = LIGHT_STYLE( surf, i );
+
+        color[0] += temp[0] * style->rgb[0];
+        color[1] += temp[1] * style->rgb[1];
+        color[2] += temp[2] * style->rgb[2];
+
+        lightmap += size;
+    }
+
+    GL_AdjustColor( color, 2 );
+    VectorScale( color, (1.0f/255), color );
 
     return qtrue;
 }
 
 #if USE_DLIGHTS
-static void GL_MarkLights_r( mnode_t *node, dlight_t *light ) {
+static void GL_MarkLights_r( mnode_t *node, dlight_t *light, int lightbit ) {
     vec_t dot;
     int count;
     mface_t *face;
-    int lightbit = 1 << light->index;
     
     while( node->plane ) {
         dot = PlaneDiffFast( light->transformed, node->plane );
-        if( dot > light->intensity ) {
+        if( dot > light->intensity - DLIGHT_CUTOFF ) {
             node = node->children[0];
             continue;
         }
-        if( dot < -light->intensity ) {
+        if( dot < -light->intensity + DLIGHT_CUTOFF ) {
             node = node->children[1];
             continue;
         }
 
-        face = node->firstFace;
-        count = node->numFaces;
+        face = node->firstface;
+        count = node->numfaces;
         while( count-- ) {
-            if( !( face->texinfo->flags & NOLIGHT_MASK ) ) {
+            if( !( face->texinfo->c.flags & SURF_NOLM_MASK ) ) {
                 if( face->dlightframe != glr.drawframe ) {
                     face->dlightframe = glr.drawframe;
                     face->dlightbits = 0;
@@ -103,23 +119,23 @@ static void GL_MarkLights_r( mnode_t *node, dlight_t *light ) {
             
                 face->dlightbits |= lightbit;
             }
+
             face++;
         }
-        
-        GL_MarkLights_r( node->children[0], light );
+
+        GL_MarkLights_r( node->children[0], light, lightbit );
 
         node = node->children[1];
     }
 }
 
-void GL_MarkLights( void ) {
+static void GL_MarkLights( void ) {
     int i;
     dlight_t *light;
 
     for( i = 0, light = glr.fd.dlights; i < glr.fd.num_dlights; i++, light++ ) {
-        light->index = i;
         VectorCopy( light->origin, light->transformed );
-        GL_MarkLights_r( gl_static.world.cache->nodes, light );
+        GL_MarkLights_r( gl_static.world.cache->nodes, light, 1 << i );
     }
 }
 
@@ -133,30 +149,27 @@ static void GL_TransformLights( mmodel_t *model ) {
     }
     
     for( i = 0, light = glr.fd.dlights; i < glr.fd.num_dlights; i++, light++ ) {
-        light->index = i;
         VectorSubtract( light->origin, glr.ent->origin, temp );
         light->transformed[0] = DotProduct( temp, glr.entaxis[0] );
         light->transformed[1] = DotProduct( temp, glr.entaxis[1] );
         light->transformed[2] = DotProduct( temp, glr.entaxis[2] );
-
-        GL_MarkLights_r( model->headnode, light );
+        GL_MarkLights_r( model->headnode, light, 1 << i );
     }
 }
 
-void GL_AddLights( vec3_t origin, vec3_t color ) {
+static void GL_AddLights( vec3_t origin, vec3_t color ) {
     dlight_t *light;
     vec3_t dir;
-    vec_t dist, f;
+    vec_t f;
     int i;
 
     for( i = 0, light = glr.fd.dlights; i < glr.fd.num_dlights; i++, light++ ) {
         VectorSubtract( light->origin, origin, dir );
-        dist = VectorLength( dir );
-        if( dist > light->intensity ) {
-            continue;
+        f = light->intensity - VectorLength( dir );
+        if( f > 0 ) {
+            f *= (1.0f/255);
+            VectorMA( color, f, light->color, color );
         }
-        f = 1.0f - dist / light->intensity;
-        VectorMA( color, f, light->color, color );
     }
 }
 #endif
@@ -173,7 +186,7 @@ void _R_LightPoint( vec3_t origin, vec3_t color ) {
     }
 
 #if USE_DLIGHTS
-    if( gl_dynamic->integer ) {
+    if( gl_dynamic->integer == 1 ) {
         // add dynamic lights
         GL_AddLights( origin, color );
     }
@@ -195,7 +208,7 @@ void R_LightPoint( vec3_t origin, vec3_t color ) {
     }
 }
 
-void GL_MarkLeaves( void ) {
+static void GL_MarkLeaves( void ) {
     static int lastNodesVisible;
     byte vis1[MAX_MAP_VIS];
     byte vis2[MAX_MAP_VIS];
@@ -281,8 +294,6 @@ finish:
 
 }
 
-
-
 #define BACKFACE_EPSILON    0.001f
 
 #define BSP_CullFace( face, dot ) \
@@ -331,10 +342,14 @@ void GL_DrawBspModel( mmodel_t *model ) {
     glr.drawframe++;
 
 #if USE_DLIGHTS
-    if( gl_dynamic->integer ) {
+    if( gl_dynamic->integer == 1 ) {
         GL_TransformLights( model );
     }
 #endif
+
+    if( gl_dynamic->integer ) {
+        GL_BeginLights();
+    }
 
     qglPushMatrix();
     qglTranslatef( ent->origin[0], ent->origin[1], ent->origin[2] );
@@ -344,8 +359,8 @@ void GL_DrawBspModel( mmodel_t *model ) {
         qglRotatef( ent->angles[ROLL],  1, 0, 0 );
     }
 
-    /* draw visible faces */
-    /* FIXME: go by headnode instead? */
+    // draw visible faces
+    // FIXME: go by headnode instead?
     face = model->firstface;
     count = model->numfaces;
     while( count-- ) {
@@ -353,10 +368,14 @@ void GL_DrawBspModel( mmodel_t *model ) {
         if( BSP_CullFace( face, dot ) ) {
             c.facesCulled++;
         } else {
-            /* FIXME: trans surfaces are not supported on inline models */
+            // FIXME: trans surfaces are not supported on inline models
             GL_AddSolidFace( face );  
         }
         face++;
+    }
+
+    if( gl_dynamic->integer ) {
+        GL_EndLights();
     }
 
     GL_DrawSolidFaces();
@@ -402,6 +421,7 @@ static inline void GL_DrawLeaf( mleaf_t *leaf ) {
     if( glr.fd.areabits && !Q_IsBitSet( glr.fd.areabits, leaf->area ) ) {
         return; // door blocks sight
     }
+
     last = leaf->firstleafface + leaf->numleaffaces;
     for( face = leaf->firstleafface; face < last; face++ ) {
         (*face)->drawframe = glr.drawframe;
@@ -468,8 +488,16 @@ void GL_DrawWorld( void ) {
 
     VectorCopy( glr.fd.vieworg, modelViewOrigin );
 
+    if( gl_dynamic->integer ) {
+        GL_BeginLights();
+    }
+
     GL_WorldNode_r( gl_static.world.cache->nodes,
         gl_cull_nodes->integer ? NODE_CLIPPED : NODE_UNCLIPPED );
+
+    if( gl_dynamic->integer ) {
+        GL_EndLights();
+    }
 
     GL_DrawSolidFaces();
 

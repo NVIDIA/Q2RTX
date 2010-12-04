@@ -65,6 +65,10 @@ typedef struct {
 
 #define DSURF_PLANEBACK     1
 
+// for lightmap block calculation
+#define S_MAX(surf) (((surf)->extents[0]>>4)+1)
+#define T_MAX(surf) (((surf)->extents[1]>>4)+1)
+
 typedef struct mface_s {
     msurfedge_t     *firstsurfedge;
     int             numsurfedges;
@@ -73,9 +77,8 @@ typedef struct mface_s {
     int             drawflags; // DSURF_PLANEBACK, etc
 
     byte            *lightmap;
-#if USE_REF == REF_SOFT
     byte            styles[MAX_LIGHTMAPS];
-#endif
+    int             numstyles;
 
     mtexinfo_t      *texinfo;
     int             texturemins[2];
@@ -84,13 +87,15 @@ typedef struct mface_s {
 #if USE_REF == REF_GL
     int             texnum[2];
     int             firstvert;
+    int             light_s, light_t;
+    float           stylecache[MAX_LIGHTMAPS];
 #else
     struct surfcache_s    *cachespots[MIPLEVELS]; // surface generation data
 #endif
 
     int             drawframe;
 
-#if USE_REF == REF_SOFT // && USE_DYNAMIC
+#if USE_DLIGHTS
     int             dlightframe;
     int             dlightbits;
 #endif

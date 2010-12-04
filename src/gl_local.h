@@ -56,6 +56,7 @@ typedef struct {
 #define TAB_SIN(x) gl_static.sintab[(x)&255]
 #define TAB_COS(x) gl_static.sintab[((x)+64)&255]
     byte latlngtab[NUMVERTEXNORMALS][2];
+    byte lightstylemap[MAX_LIGHTSTYLES];
 } glStatic_t;
 
 typedef struct {
@@ -82,6 +83,7 @@ typedef struct {
     int facesMarked;
     int facesDrawn;
     int texSwitches;
+    int texUploads;
     int trisDrawn;
     int batchesDrawn;
     int nodesCulled;
@@ -112,8 +114,9 @@ extern cvar_t *gl_novis;
 extern cvar_t *gl_lockpvs;
 extern cvar_t *gl_lightmap;
 extern cvar_t *gl_drawsky;
-#if USE_DLIGHTS
 extern cvar_t *gl_dynamic;
+#if USE_DLIGHTS
+extern cvar_t *gl_dlight_falloff;
 #endif
 extern cvar_t *gl_doublelight_entities;
 extern cvar_t *gl_fullbright;
@@ -179,6 +182,11 @@ typedef struct maliasmesh_s {
  * gl_surf.c
  * 
  */
+#define DLIGHT_CUTOFF       64
+
+#define LIGHT_STYLE(surf,i) \
+    &glr.fd.lightstyles[gl_static.lightstylemap[(surf)->styles[i]]]
+
 #define LM_MAX_LIGHTMAPS    32
 #define LM_BLOCK_WIDTH      256
 #define LM_BLOCK_HEIGHT     256
@@ -186,13 +194,19 @@ typedef struct maliasmesh_s {
 typedef struct {
     int inuse[LM_BLOCK_WIDTH];
     byte buffer[LM_BLOCK_WIDTH * LM_BLOCK_HEIGHT * 4];
-    int numMaps;
-    int highWater;
-} lightmapBuilder_t;
+    qboolean dirty;
+    int nummaps;
+    int highwater;
+} lightmap_builder_t;
 
-extern lightmapBuilder_t lm;
+extern lightmap_builder_t lm;
 
-void GL_AdjustColor( byte *dst, const byte *src, int what );
+void GL_AdjustColor( vec_t *color, int what );
+void GL_BeginLights( void );
+void GL_EndLights( void );
+void GL_PushLights( mface_t *surf );
+
+void LM_RebuildSurfaces( void );
 
 void GL_LoadWorld( const char *name );
 void GL_FreeWorld( void );
@@ -338,11 +352,8 @@ void GL_DrawSolidFaces( void );
  */
 extern vec3_t modelViewOrigin;
 
-void GL_MarkLeaves( void );
-void GL_MarkLights( void );
 void GL_DrawBspModel( mmodel_t *model );
 void GL_DrawWorld( void );
-qboolean GL_LightPoint( vec3_t origin, vec3_t color );
 void _R_LightPoint( vec3_t origin, vec3_t color );
 
 /*

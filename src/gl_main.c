@@ -66,8 +66,9 @@ cvar_t *gl_clear;
 cvar_t *gl_novis;
 cvar_t *gl_lockpvs;
 cvar_t *gl_lightmap;
-#if USE_DLIGHTS
 cvar_t *gl_dynamic;
+#if USE_DLIGHTS
+cvar_t *gl_dlight_falloff;
 #endif
 cvar_t *gl_doublelight_entities;
 cvar_t *gl_polyblend;
@@ -523,7 +524,7 @@ void R_RenderFrame( refdef_t *fd ) {
     GL_Flush2D();
 
     if( !gl_static.world.cache && !( fd->rdflags & RDF_NOWORLDMODEL ) ) {
-        Com_Error( ERR_FATAL, "GL_RenderView: NULL worldmodel" );
+        Com_Error( ERR_FATAL, "%s: NULL worldmodel", __func__ );
     }
 
     glr.drawframe++;
@@ -532,17 +533,22 @@ void R_RenderFrame( refdef_t *fd ) {
     glr.num_beams = 0;
 
 #if USE_DLIGHTS
-    if( !gl_dynamic->integer ) {
+    if( gl_dynamic->integer != 1 ) {
         glr.fd.num_dlights = 0;
     }
 #endif
+
+    if( lm.dirty ) {
+        LM_RebuildSurfaces();
+        lm.dirty = qfalse;
+    }
 
     GL_Setup3D();
     
     if( gl_cull_nodes->integer ) {
         GL_SetupFrustum();
     }
-    
+
     if( !( glr.fd.rdflags & RDF_NOWORLDMODEL ) && gl_drawworld->integer ) {
         GL_DrawWorld();
     }
@@ -558,8 +564,8 @@ void R_RenderFrame( refdef_t *fd ) {
     if( !( glr.fd.rdflags & RDF_NOWORLDMODEL ) && gl_drawworld->integer ) {
         GL_DrawAlphaFaces();
     }
-    
-    /* go back into 2D mode */
+
+    // go back into 2D mode
     GL_Setup2D();
 
     if( gl_polyblend->integer && glr.fd.blend[3] != 0 ) {
@@ -749,7 +755,6 @@ static void GL_Strings_f( void ) {
 // ============================================================================== 
 
 static void GL_Register( void ) {
-    /* misc */
     gl_partscale = Cvar_Get( "gl_partscale", "2", 0 );
 #if USE_JPG
     gl_screenshot_quality = Cvar_Get( "gl_screenshot_quality", "100", 0 );
@@ -765,8 +770,6 @@ static void GL_Register( void ) {
 #endif
     gl_modulate = Cvar_Get( "gl_modulate", "1", CVAR_ARCHIVE );
     gl_hwgamma = Cvar_Get( "vid_hwgamma", "0", CVAR_ARCHIVE|CVAR_REFRESH );
-
-    /* development variables */
     gl_znear = Cvar_Get( "gl_znear", "2", CVAR_CHEAT );
     gl_zfar = Cvar_Get( "gl_zfar", "16384", 0 );
     gl_log = Cvar_Get( "gl_log", "0", 0 );
@@ -787,8 +790,9 @@ static void GL_Register( void ) {
     gl_novis = Cvar_Get( "gl_novis", "0", 0 );
     gl_lockpvs = Cvar_Get( "gl_lockpvs", "0", CVAR_CHEAT );
     gl_lightmap = Cvar_Get( "gl_lightmap", "0", CVAR_CHEAT );
+    gl_dynamic = Cvar_Get( "gl_dynamic", "2", 0 );
 #if USE_DLIGHTS
-    gl_dynamic = Cvar_Get( "gl_dynamic", "2", CVAR_ARCHIVE );
+    gl_dlight_falloff = Cvar_Get( "gl_dlight_falloff", "1", 0 );
 #endif
     gl_doublelight_entities = Cvar_Get( "gl_doublelight_entities", "1", 0 );
     gl_polyblend = Cvar_Get( "gl_polyblend", "1", 0 );

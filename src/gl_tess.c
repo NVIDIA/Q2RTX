@@ -470,13 +470,19 @@ void GL_DrawAlphaFaces( void ) {
 }
 
 void GL_AddSolidFace( mface_t *face ) {
-    if( ( face->texinfo->c.flags & SURF_WARP ) && gl_static.prognum_warp ) {
+    int flags = face->texinfo->c.flags;
+
+    if( ( flags & SURF_WARP ) && gl_static.prognum_warp ) {
         face->next = faces_warp;
         faces_warp = face;
     } else {
         unsigned i = FACE_HASH( face->texnum[0], face->texnum[1] );
         face->next = faces_hash[i];
         faces_hash[i] = face;
+
+        if( face->lightmap && !( flags & SURF_NOLM_MASK ) && gl_dynamic->integer ) {
+            GL_PushLights( face );
+        }
     }
 
     c.facesDrawn++;

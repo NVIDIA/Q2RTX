@@ -82,6 +82,9 @@ typedef struct entity_s {
 
 typedef struct dlight_s {
     vec3_t  origin;
+#if USE_REF == REF_GL
+    vec3_t  transformed;
+#endif
     vec3_t  color;
     float   intensity;
 } dlight_t;

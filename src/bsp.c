@@ -362,10 +362,7 @@ LOAD( SurfEdges ) {
 LOAD( Faces ) {
     dface_t *in;
     mface_t *out;
-    int i;
-#if USE_REF == REF_SOFT
-    int j;
-#endif
+    int i, j;
     unsigned texinfo, lightofs;
     unsigned firstedge, numedges, lastedge;
     unsigned planenum, side;
@@ -404,12 +401,14 @@ LOAD( Faces ) {
         }
         out->texinfo = bsp->texinfo + texinfo;
 
-#if USE_REF == REF_SOFT
-        for( j = 0; j < MAX_LIGHTMAPS; j++ ) {
+        for( j = 0; j < MAX_LIGHTMAPS && in->styles[j] != 255; j++ ) {
             out->styles[j] = in->styles[j];
         }
-#endif
-        
+        out->numstyles = j;
+        for( ; j < MAX_LIGHTMAPS; j++ ) {
+            out->styles[j] = 255;
+        }
+
         lightofs = LittleLong( in->lightofs );
         if( lightofs == ( uint32_t )-1 || bsp->numlightmapbytes == 0 ) {
             out->lightmap = NULL;
@@ -1025,11 +1024,11 @@ mface_t *BSP_LightPoint( mnode_t *node, vec3_t start, vec3_t end, int *ps, int *
         }
 
         for( i = 0, surf = node->firstface; i < node->numfaces; i++, surf++ ) {
-            texinfo = surf->texinfo;
-            if( texinfo->c.flags & SURF_NOLM_MASK ) {
+            if( !surf->lightmap ) {
                 continue;
             }
-            if( !surf->lightmap ) {
+            texinfo = surf->texinfo;
+            if( texinfo->c.flags & SURF_NOLM_MASK ) {
                 continue;
             }
             s = DotProduct( texinfo->axis[0], mid ) + texinfo->offset[0];

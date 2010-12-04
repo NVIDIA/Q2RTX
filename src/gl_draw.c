@@ -319,6 +319,9 @@ void Draw_Stats( void ) {
     }
     Draw_Stringf( x, y, "Tris drawn   : %i", c.trisDrawn ); y += 10;
     Draw_Stringf( x, y, "Tex switches : %i", c.texSwitches ); y += 10;
+    if( c.texUploads ) {
+        Draw_Stringf( x, y, "Tex uploads  : %i", c.texUploads ); y += 10;
+    }
     if( c.batchesDrawn ) {
         Draw_Stringf( x, y, "Batches drawn: %i", c.batchesDrawn ); y += 10;
         Draw_Stringf( x, y, "Faces / batch: %i", c.facesDrawn / c.batchesDrawn );

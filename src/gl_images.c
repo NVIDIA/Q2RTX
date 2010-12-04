@@ -697,6 +697,8 @@ static qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap 
     qglTexImage2D( GL_TEXTURE_2D, 0, comp, scaled_width, scaled_height, 0,
             GL_RGBA, GL_UNSIGNED_BYTE, scaled );
 
+    c.texUploads++;
+
     if( mipmap ) {
         int miplevel = 0;
 
@@ -1219,13 +1221,13 @@ void GL_ShutdownImages( void ) {
     gls.tmu = 0;
 
     // delete auto textures
-    j = TEXNUM_LIGHTMAP + lm.highWater - TEXNUM_SCRAP;
+    j = TEXNUM_LIGHTMAP + lm.highwater - TEXNUM_SCRAP;
     for( i = 0; i < j; i++ ) {
         texnums[i] = TEXNUM_SCRAP + i;
     }
     qglDeleteTextures( j, texnums );
 
-    lm.highWater = 0;
+    lm.highwater = 0;
 
     r_notexture = NULL;
 #ifdef _DEBUG
