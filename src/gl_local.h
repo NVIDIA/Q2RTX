@@ -65,7 +65,6 @@ typedef struct {
     entity_t    *ent;
     vec3_t      entaxis[3];
     qboolean    entrotated;
-    float   scroll;
     int     num_beams;
 } glRefdef_t;
 

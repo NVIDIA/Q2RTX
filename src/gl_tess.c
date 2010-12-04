@@ -270,6 +270,22 @@ static void GL_Flush3D( void ) {
 
     GL_BindTexture( tess.texnum[0] );
 
+    if( tess.flags & SURF_FLOWING ) {
+        float scaled, scroll;
+
+        if( tess.flags & SURF_WARP ) {
+            scaled = glr.fd.time * 0.5f;
+            scroll = -1 * ( scaled - (int)scaled );
+        } else {
+            scaled = glr.fd.time / 40;
+            scroll = -64 * ( scaled - (int)scaled );
+        }
+
+        qglMatrixMode( GL_TEXTURE );
+        qglPushMatrix();
+        qglTranslatef( scroll, 0, 0 );
+    }
+
     if( tess.texnum[1] ) {
         GL_SelectTMU( 1 );
         qglEnable( GL_TEXTURE_2D );
@@ -296,6 +312,11 @@ static void GL_Flush3D( void ) {
 
     if( gl_static.world.vertices && qglUnlockArraysEXT ) {
         qglUnlockArraysEXT();
+    }
+
+    if( tess.flags & SURF_FLOWING ) {
+        qglPopMatrix();
+        qglMatrixMode( GL_MODELVIEW );
     }
 
     c.batchesDrawn++;
@@ -345,7 +366,7 @@ static void GL_DrawFace( mface_t *surf ) {
 
     if( tess.texnum[0] != texnum ||
         tess.texnum[1] != surf->texnum[1] ||
-        ( diff & (SURF_TRANS33|SURF_TRANS66) ) ||
+        ( diff & (SURF_TRANS33|SURF_TRANS66|SURF_FLOWING) ) ||
         tess.numindices + numindices > TESS_MAX_INDICES )
     {
         GL_Flush3D();
@@ -439,7 +460,7 @@ void GL_AddSolidFace( mface_t *face ) {
         face->next = faces_hash[i];
         faces_hash[i] = face;
     }
-    // TODO: SURF_FLOWING support
+
     c.facesDrawn++;
 }
 
@@ -459,7 +480,7 @@ void GL_AddFace( mface_t *face ) {
             face->next = faces_alpha;
             faces_alpha = face;
         }
-        // TODO: SURF_FLOWING support
+
         c.facesDrawn++;
         return;
     }

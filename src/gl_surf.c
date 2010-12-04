@@ -269,6 +269,11 @@ static void GL_BuildSurfacePoly( bsp_t *bsp, mface_t *surf, vec_t *vbo ) {
 
     surf->extents[0] = ( bmaxs[0] - bmins[0] ) << 4;
     surf->extents[1] = ( bmaxs[1] - bmins[1] ) << 4;
+
+    if( ( texinfo->c.flags & SURF_WARP ) && qglBindProgramARB ) {
+        // TODO: support SURF_FLOWING in the fragment program
+        texinfo->c.flags &= ~SURF_FLOWING;
+    }
 }
 
 void GL_FreeWorld( void ) {

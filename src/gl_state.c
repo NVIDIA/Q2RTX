@@ -208,10 +208,6 @@ void GL_Setup3D( void ) {
         glr.viewaxis[0], glr.viewaxis[1], glr.viewaxis[2] );
     VectorInverse( glr.viewaxis[1] );
 
-    glr.scroll = -64 * ( ( glr.fd.time / 40.0f ) - ( int )( glr.fd.time / 40.0f ) );
-    if( glr.scroll == 0 )
-        glr.scroll = -64.0f;
-
 #if 0
     {
         vec4_t ambient = {0,0,0,0}, material={1,1,1,1};
