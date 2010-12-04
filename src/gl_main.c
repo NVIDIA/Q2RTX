@@ -84,7 +84,7 @@ static void GL_SetupFrustum( void ) {
     angle = DEG2RAD( glr.fd.fov_x / 2 );
     fovSin = sin( angle );
     fovCos = cos( angle );
-    
+
     VectorScale( glr.viewaxis[0], fovSin, forward );
     VectorScale( glr.viewaxis[1], fovCos, left );
 
@@ -92,36 +92,36 @@ static void GL_SetupFrustum( void ) {
     f = &glr.frustumPlanes[0];
     VectorAdd( forward, left, f->normal );
     f->dist = DotProduct( glr.fd.vieworg, f->normal );
+    f->type = PLANE_NON_AXIAL;
     SetPlaneSignbits( f );
-    SetPlaneType( f );
-    
+
     /* left side */
     f = &glr.frustumPlanes[1];
     VectorSubtract( forward, left, f->normal );
     f->dist = DotProduct( glr.fd.vieworg, f->normal );
+    f->type = PLANE_NON_AXIAL;
     SetPlaneSignbits( f );
-    SetPlaneType( f );
-    
+
     angle = DEG2RAD( glr.fd.fov_y / 2 );
     fovSin = sin( angle );
     fovCos = cos( angle );
 
     VectorScale( glr.viewaxis[0], fovSin, forward );
     VectorScale( glr.viewaxis[2], fovCos, up );
-    
+
     /* up side */
     f = &glr.frustumPlanes[2];
     VectorAdd( forward, up, f->normal );
     f->dist = DotProduct( glr.fd.vieworg, f->normal );
+    f->type = PLANE_NON_AXIAL;
     SetPlaneSignbits( f );
-    SetPlaneType( f );
-    
+
     /* down side */
     f = &glr.frustumPlanes[3];
     VectorSubtract( forward, up, f->normal );
     f->dist = DotProduct( glr.fd.vieworg, f->normal );
+    f->type = PLANE_NON_AXIAL;
     SetPlaneSignbits( f );
-    SetPlaneType( f );
 }
 
 glCullResult_t GL_CullBox( vec3_t bounds[2] ) {
