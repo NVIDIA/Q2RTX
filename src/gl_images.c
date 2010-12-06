@@ -1188,6 +1188,10 @@ void GL_InitImages( void ) {
     GL_InitBeamTexture();
 }
 
+#ifdef _DEBUG
+extern image_t *r_charset;
+#endif
+
 /*
 ===============
 GL_ShutdownImages
@@ -1215,6 +1219,9 @@ void GL_ShutdownImages( void ) {
     lm.highWater = 0;
 
     r_notexture = NULL;
+#ifdef _DEBUG
+    r_charset = NULL;
+#endif
 
     IMG_FreeAll();
     IMG_Shutdown();

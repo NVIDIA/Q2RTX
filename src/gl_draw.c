@@ -279,13 +279,6 @@ void Draw_Stringf( int x, int y, const char *fmt, ... ) {
     Q_vsnprintf( buffer, sizeof( buffer ), fmt, argptr );
     va_end( argptr );
 
-    if( !r_charset ) {
-        qhandle_t tmp;
-        tmp = R_RegisterFont( "conchars" );
-        if(!tmp) return;
-        r_charset = IMG_ForHandle( tmp );
-    }
-    
     string = buffer;
     while( *string ) {
         c = *string++;
@@ -299,10 +292,16 @@ void Draw_Stringf( int x, int y, const char *fmt, ... ) {
     }
 }
 
-
 void Draw_Stats( void ) {
     int x = 10, y = 10;
-        
+
+    if( !r_charset ) {
+        qhandle_t tmp;
+        tmp = R_RegisterFont( "conchars" );
+        if( !tmp ) return;
+        r_charset = IMG_ForHandle( tmp );
+    }
+
     Draw_Stringf( x, y, "Nodes visible  : %i", c.nodesVisible ); y += 10;
     Draw_Stringf( x, y, "Nodes culled   : %i", c.nodesCulled ); y += 10;
     Draw_Stringf( x, y, "Faces drawn    : %i", c.facesDrawn ); y += 10;
