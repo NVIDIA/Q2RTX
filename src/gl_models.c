@@ -179,7 +179,8 @@ qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
                     ret = Q_ERR_BAD_INDEX;
                     goto fail;
                 }
-                dst_vert->normalindex = k;
+                dst_vert->norm[0] = gl_static.latlngtab[k][0];
+                dst_vert->norm[1] = gl_static.latlngtab[k][1];
 
                 for ( k = 0; k < 3; k++ ) {
                     val = dst_vert->pos[k];
@@ -212,28 +213,6 @@ fail:
 }
 
 #if USE_MD3
-static byte         ll2byte[256][256];
-static qboolean     ll2byte_inited;        
-
-static void ll2byte_init( void ) {
-    float s[2], c[2];
-    vec3_t normal;
-    int i, j;
-
-    for( i = 0; i < 256; i++ ) {
-        for( j = 0; j < 256; j++ ) {
-            s[0] = sin( i / 255.0f );
-            c[0] = cos( i / 255.0f );
-            
-            s[1] = sin( j / 255.0f );
-            c[1] = cos( j / 255.0f );
-
-            VectorSet( normal, s[0] * c[1], s[0] * s[1], c[0] );
-            ll2byte[i][j] = DirToByte( normal );
-        }
-    }
-}
-
 qerror_t MOD_LoadMD3( model_t *model, const void *rawdata, size_t length ) {
     dmd3header_t header;
     uint32_t offset;
@@ -305,11 +284,6 @@ qerror_t MOD_LoadMD3( model_t *model, const void *rawdata, size_t length ) {
         src_frame++; dst_frame++;
     }
 
-    if( !ll2byte_inited ) {
-        ll2byte_init();
-        ll2byte_inited = qtrue;
-    }
-    
     // load all meshes
     src_mesh = ( dmd3mesh_t * )( ( byte * )rawdata + header.ofs_meshes );
     dst_mesh = model->meshes;
@@ -382,7 +356,8 @@ qerror_t MOD_LoadMD3( model_t *model, const void *rawdata, size_t length ) {
             dst_vert->pos[1] = ( signed short )LittleShort( src_vert->point[1] );
             dst_vert->pos[2] = ( signed short )LittleShort( src_vert->point[2] );
 
-            dst_vert->normalindex = ll2byte[src_vert->norm[0]][src_vert->norm[1]];
+            dst_vert->norm[0] = src_vert->norm[0];
+            dst_vert->norm[1] = src_vert->norm[1];
 
             src_vert++; dst_vert++;
         }

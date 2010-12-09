@@ -52,6 +52,10 @@ typedef struct {
         vec_t *vertices;
     } world;
     float inverse_intensity;
+    float sintab[256];
+#define TAB_SIN(x) gl_static.sintab[(x)&255]
+#define TAB_COS(x) gl_static.sintab[((x)+64)&255]
+    byte latlngtab[NUMVERTEXNORMALS][2];
 } glStatic_t;
 
 typedef struct {
@@ -142,8 +146,7 @@ typedef struct maliastc_s {
 
 typedef struct maliasvert_s {
     short pos[3];
-    byte normalindex;
-    byte pad;
+    byte norm[2]; // lat, lng
 } maliasvert_t;
 
 typedef struct maliasframe_s {
@@ -300,7 +303,7 @@ qhandle_t R_RegisterPic( const char *name );
 typedef struct {
     vec_t vertices[VERTEX_SIZE*TESS_MAX_VERTICES];
     int indices[TESS_MAX_INDICES];
-    byte colors[4*TESS_MAX_VERTICES];
+    byte colors[16*TESS_MAX_VERTICES]; // may hold floats, hence 16
     int texnum[MAX_TMUS];
     int numverts;
     int numindices;

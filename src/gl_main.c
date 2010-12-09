@@ -880,6 +880,24 @@ static void GL_IdentifyRenderer( void ) {
     }
 }
 
+static void GL_InitTables( void ) {
+    vec_t lat, lng;
+    const vec_t *v;
+    int i;
+
+    for( i = 0; i < NUMVERTEXNORMALS; i++ ) {
+        v = bytedirs[i];
+        lat = acos( v[2] );
+        lng = atan2( v[1], v[0] );
+        gl_static.latlngtab[i][0] = lat * (255.0f/(2*M_PI));
+        gl_static.latlngtab[i][1] = lng * (255.0f/(2*M_PI));
+    }
+
+    for( i = 0; i < 256; i++ ) {
+        gl_static.sintab[i] = sin( i * (2*M_PI/255.0f) );
+    }
+}
+
 static void GL_PostInit( void ) {
     registration_sequence = 1;
 
@@ -946,6 +964,8 @@ qboolean R_Init( qboolean total ) {
     GL_PostInit();
 
     GL_InitPrograms();
+
+    GL_InitTables();
 
     if( (( size_t )tess.vertices) & 15 ) {
         Com_WPrintf( "tess.vertices not 16 byte aligned\n" );

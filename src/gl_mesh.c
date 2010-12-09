@@ -27,33 +27,46 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 static vec3_t oldscale;
 static vec3_t newscale;
 static vec3_t translate;
+static float frontlerp;
+static float backlerp;
 
-typedef void (*meshTessFunc_t)( maliasmesh_t *, int, int );
+typedef void (*tessfunc_t)( const maliasmesh_t *, int, int );
 
 #if USE_DOTSHADING
-
-// precalculated dot products for quantized angles
-#define SHADEDOT_QUANT      16
-#define SHADEDOT_INDEX(x)   (((int)((x)*(SHADEDOT_QUANT/360.0f)))&(SHADEDOT_QUANT-1))
-#define SHADEDOT_DOTS(x)    r_avertexnormal_dots[SHADEDOT_INDEX(x)]
-
-static const float r_avertexnormal_dots[SHADEDOT_QUANT][NUMVERTEXNORMALS] =
-#include "anormtab.h"
-;
-
 static const vec_t *shadelight;
-static const vec_t *shadedots;
+static vec3_t shadedir;
+
+// matches the anormtab.h precalculations
+static inline vec_t shadedot( const vec_t *normal ) {
+    vec_t d = DotProduct( normal, shadedir );
+
+    if( d < 0 ) {
+        d *= 0.3f;
+    }
+
+    return d + 1;
+}
 
 #endif // USE_DOTSHADING
 
-static void tess_static_mesh( maliasmesh_t *mesh, int oldframe, int newframe ) {
+static inline void get_static_normal( vec_t *normal, const maliasvert_t *vert ) {
+    unsigned lat = vert->norm[0];
+    unsigned lng = vert->norm[1];
+
+    normal[0] = TAB_SIN( lat ) * TAB_COS( lng );
+    normal[1] = TAB_SIN( lat ) * TAB_SIN( lng );
+    normal[2] = TAB_COS( lat );
+}
+
+static void tess_static_mesh( const maliasmesh_t *mesh, int oldframe, int newframe ) {
     maliasvert_t *src_vert = &mesh->verts[newframe * mesh->numverts];
     vec_t *dst_vert = tess.vertices;
     int i, count = mesh->numverts;
+    vec3_t normal;
 
     if( glr.ent->flags & RF_SHELL_MASK ) {
         for( i = 0; i < count; i++ ) {
-            const vec_t *normal = bytedirs[src_vert->normalindex];
+            get_static_normal( normal, src_vert );
 
             dst_vert[0] = normal[0] * POWERSUIT_SCALE +
                 src_vert->pos[0] * newscale[0] + translate[0];
@@ -66,7 +79,7 @@ static void tess_static_mesh( maliasmesh_t *mesh, int oldframe, int newframe ) {
             src_vert++;
         }
 #if USE_DOTSHADING
-    } else if( shadedots ) {
+    } else if( shadelight ) {
         vec_t d, *dst_color = ( vec_t * )tess.colors;
 
         for( i = 0; i < count; i++ ) {
@@ -75,7 +88,9 @@ static void tess_static_mesh( maliasmesh_t *mesh, int oldframe, int newframe ) {
             dst_vert[2] = src_vert->pos[2] * newscale[2] + translate[2];
             dst_vert += 4;
 
-            d = shadedots[src_vert->normalindex];
+            get_static_normal( normal, src_vert );
+
+            d = shadedot( normal );
             VectorScale( shadelight, d, dst_color );
             dst_color[3] = shadelight[3];
             dst_color += 4;
@@ -97,15 +112,32 @@ static void tess_static_mesh( maliasmesh_t *mesh, int oldframe, int newframe ) {
     c.trisDrawn += count;
 }
 
-static void tess_lerped_mesh( maliasmesh_t *mesh, int oldframe, int newframe ) {
+static inline void get_lerped_normal( vec_t *normal,
+    const maliasvert_t *oldvert, const maliasvert_t *newvert )
+{
+    vec3_t oldnorm, newnorm, tmp;
+    vec_t len;
+
+    get_static_normal( oldnorm, oldvert );
+    get_static_normal( newnorm, newvert );
+
+    LerpVector2( oldnorm, newnorm, backlerp, frontlerp, tmp );
+
+    // normalize result
+    len = 1 / VectorLength( tmp );
+    VectorScale( tmp, len, normal );
+}
+
+static void tess_lerped_mesh( const maliasmesh_t *mesh, int oldframe, int newframe ) {
     maliasvert_t *src_oldvert = &mesh->verts[oldframe * mesh->numverts];
     maliasvert_t *src_newvert = &mesh->verts[newframe * mesh->numverts];
     vec_t *dst_vert = tess.vertices;
     int i, count = mesh->numverts;
+    vec3_t normal;
 
     if( glr.ent->flags & RF_SHELL_MASK ) {
         for( i = 0; i < count; i++ ) {
-            const vec_t *normal = bytedirs[src_newvert->normalindex];
+            get_lerped_normal( normal, src_oldvert, src_newvert );
 
             dst_vert[0] = normal[0] * POWERSUIT_SCALE +
                 src_oldvert->pos[0] * oldscale[0] +
@@ -122,7 +154,7 @@ static void tess_lerped_mesh( maliasmesh_t *mesh, int oldframe, int newframe ) {
             src_newvert++;
         }
 #if USE_DOTSHADING
-    } else if( shadedots ) {
+    } else if( shadelight ) {
         vec_t d, *dst_color = ( vec_t * )tess.colors;
 
         for( i = 0; i < count; i++ ) {
@@ -137,7 +169,9 @@ static void tess_lerped_mesh( maliasmesh_t *mesh, int oldframe, int newframe ) {
                 src_newvert->pos[2] * newscale[2] + translate[2];
             dst_vert += 4;
 
-            d = shadedots[src_newvert->normalindex];
+            get_lerped_normal( normal, src_oldvert, src_newvert );
+
+            d = shadedot( normal );
             VectorScale( shadelight, d, dst_color );
             dst_color[3] = shadelight[3];
             dst_color += 4;
@@ -235,8 +269,7 @@ void GL_DrawAliasModel( model_t *model ) {
     int oldframeIdx, newframeIdx;
     maliasframe_t *newframe, *oldframe;
     maliasmesh_t *mesh, *last;
-    meshTessFunc_t tessFunc;
-    float frontlerp, backlerp;
+    tessfunc_t tessfunc;
     vec3_t origin;
     vec3_t bounds[2];
     vec_t radius;
@@ -266,7 +299,7 @@ void GL_DrawAliasModel( model_t *model ) {
     backlerp = ent->backlerp;
     frontlerp = 1.0f - backlerp;
 
-    /* interpolate origin, if necessarry */
+    // interpolate origin, if necessarry
     if( ent->flags & RF_FRAMELERP ) {
         LerpVector( ent->oldorigin, ent->origin, frontlerp, origin );
     } else {
@@ -300,7 +333,7 @@ void GL_DrawAliasModel( model_t *model ) {
 
         VectorCopy( newframe->scale, newscale );
         VectorCopy( newframe->translate, translate );
-        tessFunc = tess_static_mesh;
+        tessfunc = tess_static_mesh;
     } else {
         oldframe = model->frames + oldframeIdx;
 
@@ -333,10 +366,10 @@ void GL_DrawAliasModel( model_t *model ) {
         VectorScale( oldframe->scale, backlerp, oldscale );
         VectorScale( newframe->scale, frontlerp, newscale );
 
-        LerpVector( oldframe->translate, newframe->translate,
-            frontlerp, translate );
+        LerpVector2( oldframe->translate, newframe->translate,
+            backlerp, frontlerp, translate );
 
-        tessFunc = tess_lerped_mesh;
+        tessfunc = tess_lerped_mesh;
     }
 
 #if USE_CELSHADING
@@ -351,10 +384,10 @@ void GL_DrawAliasModel( model_t *model ) {
     }
 #endif
 
-    /* setup color */
+    // setup color
     GL_SetAliasColor( origin, color );
 
-    /* setup transparency */
+    // setup transparency
     bits = GLS_DEFAULT;
     color[3] = 1;
     if( ent->flags & RF_TRANSLUCENT ) {
@@ -390,10 +423,22 @@ void GL_DrawAliasModel( model_t *model ) {
     qglVertexPointer( 3, GL_FLOAT, 16, tess.vertices );
     
 #if USE_DOTSHADING
-    shadedots = NULL;
+    shadelight = NULL;
     if( gl_dotshading->integer && ( ent->flags & RF_SHELL_MASK ) == 0 ) {
+        float cp, cy, sp, sy;
+        vec_t yaw;
+
         shadelight = color;
-        shadedots = SHADEDOT_DOTS( ent->angles[YAW] );
+
+        // matches the anormtab.h precalculations
+        yaw = -DEG2RAD( ent->angles[YAW] );
+        cy = cos( yaw );
+        sy = sin( yaw );
+        cp = cos( -M_PI/4 );
+        sp = sin( -M_PI/4 );
+        shadedir[0] = cp*cy;
+        shadedir[1] = cp*sy;
+        shadedir[2] = -sp;
 
         qglColorPointer( 4, GL_FLOAT, 0, tess.colors );
         qglEnableClientState( GL_COLOR_ARRAY );
@@ -433,7 +478,7 @@ void GL_DrawAliasModel( model_t *model ) {
             GL_BindTexture( image->texnum );
         }
 
-        tessFunc( mesh, oldframeIdx, newframeIdx );
+        (*tessfunc)( mesh, oldframeIdx, newframeIdx );
 
         qglTexCoordPointer( 2, GL_FLOAT, 0, mesh->tcoords );
         if( qglLockArraysEXT ) {
@@ -471,7 +516,7 @@ void GL_DrawAliasModel( model_t *model ) {
     }
 
 #if USE_DOTSHADING
-    if( shadedots ) {
+    if( shadelight ) {
         qglDisableClientState( GL_COLOR_ARRAY );
     }
 #endif

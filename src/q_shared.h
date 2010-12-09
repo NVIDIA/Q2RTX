@@ -266,6 +266,10 @@ static inline float Q_fabs( float f ) {
     ((d)[0]=(a)[0]+(c)*((b)[0]-(a)[0]), \
      (d)[1]=(a)[1]+(c)*((b)[1]-(a)[1]), \
      (d)[2]=(a)[2]+(c)*((b)[2]-(a)[2]))
+#define LerpVector2(a,b,c,d,e) \
+    ((e)[0]=(a)[0]*(c)+(b)[0]*(d), \
+     (e)[1]=(a)[1]*(c)+(b)[1]*(d), \
+     (e)[2]=(a)[2]*(c)+(b)[2]*(d))
 #define PlaneDiff(v,p)   (DotProduct(v,(p)->normal)-(p)->dist)
 
 #define Vector4Subtract(a,b,c)  ((c)[0]=(a)[0]-(b)[0],(c)[1]=(a)[1]-(b)[1],(c)[2]=(a)[2]-(b)[2],(c)[3]=(a)[3]-(b)[3])
