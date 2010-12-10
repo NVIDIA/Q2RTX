@@ -258,14 +258,20 @@ static void GL_Flush3D( void ) {
         return;
     }
 
-    if( tess.flags & (SURF_TRANS33|SURF_TRANS66) ) {
+    if( tess.flags & (SURF_TRANS33|SURF_TRANS66|SURF_WARP) ) {
         float f = gl_static.inverse_intensity;
 
         if( tess.flags & SURF_TRANS33 ) {
             qglColor4f( f, f, f, 0.33f );
-        } else {
+        } else if( tess.flags & SURF_TRANS66 ) {
             qglColor4f( f, f, f, 0.66f );
+        } else {
+            qglColor4f( f, f, f, 1.0f );
         }
+
+        GL_TexEnv( GL_MODULATE );
+    } else {
+        GL_TexEnv( GL_REPLACE );
     }
 
     GL_BindTexture( tess.texnum[0] );
@@ -357,6 +363,9 @@ static int GL_TextureAnimation( mtexinfo_t *tex ) {
     return tex->image->texnum;
 }
 
+#define SURF_FLUSH_MASK \
+    (SURF_TRANS33|SURF_TRANS66|SURF_WARP|SURF_FLOWING)
+
 static void GL_DrawFace( mface_t *surf ) {
     int numindices = ( surf->numsurfedges - 2 ) * 3;
     int diff = surf->texinfo->c.flags ^ tess.flags;
@@ -366,7 +375,7 @@ static void GL_DrawFace( mface_t *surf ) {
 
     if( tess.texnum[0] != texnum ||
         tess.texnum[1] != surf->texnum[1] ||
-        ( diff & (SURF_TRANS33|SURF_TRANS66|SURF_FLOWING) ) ||
+        ( diff & SURF_FLUSH_MASK ) ||
         tess.numindices + numindices > TESS_MAX_INDICES )
     {
         GL_Flush3D();
@@ -413,8 +422,6 @@ void GL_DrawSolidFaces( void ) {
     GL_BindArrays();
 
     GL_Bits( GLS_DEFAULT );
-    GL_TexEnv( GL_REPLACE );
-    qglColor4f( 1, 1, 1, 1 );
 
     if( faces_warp ) {
         GL_EnableWarp();
@@ -431,12 +438,10 @@ void GL_DrawSolidFaces( void ) {
     GL_UnbindArrays();
 }
 
-
 void GL_DrawAlphaFaces( void ) {
     GL_BindArrays();
 
     GL_Bits( GLS_BLEND_BLEND | GLS_DEPTHMASK_FALSE );
-    GL_TexEnv( GL_MODULATE );
 
     if( faces_alpha_warp ) {
         GL_EnableWarp();
