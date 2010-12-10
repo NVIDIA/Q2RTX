@@ -1702,7 +1702,7 @@ static pack_t *load_pak_file( const char *packfile ) {
     }
 
     FS_DPrintf( "%s: %u files, %u hash\n",
-        packfile, num_files, pack->hash_size );
+        packfile, pack->num_files, pack->hash_size );
 
     return pack;
 
@@ -1904,7 +1904,7 @@ static pack_t *load_zip_file( const char *packfile ) {
     for( i = 0; i < num_files_cd; i++ ) {
         ofs = get_file_info( fp, header_pos, NULL, &len, 0 );
         if( !ofs ) {
-            Com_Printf( "%s has bad central directory structure\n", packfile );
+            Com_Printf( "%s has bad central directory structure (pass %d)\n", packfile, 1 );
             goto fail2;
         }
         header_pos += ofs;
@@ -1929,11 +1929,13 @@ static pack_t *load_zip_file( const char *packfile ) {
     header_pos = central_ofs + extra_bytes;
     for( i = 0; i < num_files_cd; i++ ) {
         if( !num_files )
-            goto fail1; // directory changed on disk?
+            break;
         file->name = name;
         ofs = get_file_info( fp, header_pos, file, &len, names_len );
-        if( !ofs )
+        if( !ofs ) {
+            Com_Printf( "%s has bad central directory structure (pass %d)\n", packfile, 2 );
             goto fail1; // directory changed on disk?
+        }
         header_pos += ofs;
 
         if( len ) {
@@ -1953,12 +1955,11 @@ static pack_t *load_zip_file( const char *packfile ) {
     }
 
     FS_DPrintf( "%s: %u files, %u skipped, %u hash\n",
-        packfile, num_files, num_files_cd - num_files, pack->hash_size );
+        packfile, pack->num_files, num_files_cd - pack->num_files, pack->hash_size );
 
     return pack;
 
 fail1:
-    Com_EPrintf( "Central directory changed in %s\n", packfile );
     Z_Free( pack );
 fail2:
     fclose( fp );
