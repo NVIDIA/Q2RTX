@@ -423,38 +423,32 @@ static void R_FloodFillSkin( byte *skin, int skinwidth, int skinheight ) {
 static byte gammatable[256];
 static byte intensitytable[256];
 static byte gammaintensitytable[256];
+static float colorscale;
 
 /*
 ================
-GL_Saturation
+GL_GrayScaleTexture
 
-atu 20061129
+Transform to grayscale by replacing color components with
+overall pixel luminance computed from wighted color sum
 ================
 */
-static void GL_Saturation( byte *in, int inwidth, int inheight ) {
+static void GL_GrayScaleTexture( byte *in, int inwidth, int inheight ) {
     int     i, c;
     byte    *p;
-    float   r, g, b, y, sat;
+    float   r, g, b, y;
 
     p = in;
     c = inwidth * inheight;
-
-    sat = gl_saturation->value;
-    if( sat >= 1 ) {
-        return;
-    }
-    if( sat < 0 ) {
-        sat = 0;
-    }
 
     for( i = 0; i < c; i++, p += 4 ) {
         r = p[0];
         g = p[1];
         b = p[2];
-        y = r * 0.2126f + g * 0.7152f + b * 0.0722f;
-        p[0] = y + ( r - y ) * sat;
-        p[1] = y + ( g - y ) * sat;
-        p[2] = y + ( b - y ) * sat;
+        y = LUMINANCE( r, g, b );
+        p[0] = y + ( r - y ) * colorscale;
+        p[1] = y + ( g - y ) * colorscale;
+        p[2] = y + ( b - y ) * colorscale;
     }
 }
 
@@ -488,7 +482,7 @@ static void GL_LightScaleTexture( byte *in, int inwidth, int inheight, qboolean 
     }
 }
 
-static void GL_InvertTexture( byte *in, int inwidth, int inheight ) {
+static void GL_ColorInvertTexture( byte *in, int inwidth, int inheight ) {
     int     i, c;
     byte    *p;
 
@@ -605,7 +599,7 @@ static inline qboolean is_wall( void ) {
         return qtrue; // don't know what type of surface it is
     }  
     if( upload_texinfo->c.flags & (SURF_SKY|SURF_WARP) ) {
-        return qfalse; // don't desaturate or invert sky and liquid surfaces
+        return qfalse; // don't grayscale or invert sky and liquid surfaces
     }
     return qtrue;
 }
@@ -670,11 +664,11 @@ static qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap 
     upload_width = scaled_width;
     upload_height = scaled_height;
 
-    // set saturation and lightscale before mipmap
+    // set colorscale and lightscale before mipmap
     comp = gl_tex_solid_format;
-    if( is_wall() && gl_saturation->value != 1 ) {   
-        GL_Saturation( data, width, height );
-        if( gl_saturation->value == 0 ) {
+    if( is_wall() && colorscale != 1 ) {
+        GL_GrayScaleTexture( data, width, height );
+        if( colorscale == 0 ) {
             comp = GL_LUMINANCE;
         }
     }
@@ -686,7 +680,7 @@ static qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap 
     }
 
     if( is_wall() && gl_invert->integer ) {
-        GL_InvertTexture( data, width, height );
+        GL_ColorInvertTexture( data, width, height );
     }
 
     // scan the texture for any non-255 alpha
@@ -1169,6 +1163,9 @@ void GL_InitImages( void ) {
     } else {
         GL_BuildGammaTables();
     }
+
+    // FIXME: the name 'saturation' is misleading in this context
+    colorscale = Cvar_ClampValue( gl_saturation, 0, 1 );
 
     GL_TextureAlphaMode();
     GL_TextureSolidMode();

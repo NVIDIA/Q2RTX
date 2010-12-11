@@ -30,7 +30,7 @@ static cvar_t   *gl_coloredlightmaps;
 static cvar_t   *gl_brightness;
 static cvar_t   *gl_modulate_mask;
 
-static float colorScale, colorAdj;
+static float colorscale, coloradj;
 
 /*
 =============================================================================
@@ -47,19 +47,27 @@ void GL_AdjustColor( byte *dst, const byte *src, int what ) {
     g = src[1];
     b = src[2];
 
-    if( colorScale != 1.0f ) {
-        y = r * 0.2126f + g * 0.7152f + b * 0.0722f;
-        r = y + ( r - y ) * colorScale;
-        g = y + ( g - y ) * colorScale;
-        b = y + ( b - y ) * colorScale;
-    }
+    // adjust
+    r += coloradj;
+    g += coloradj;
+    b += coloradj;
 
+    // modulate
     if( gl_modulate_mask->integer & what ) {
         r *= gl_modulate->value;
         g *= gl_modulate->value;
         b *= gl_modulate->value;
     } 
 
+    // catch negative lights
+    if( r < 0 )
+        r = 0;
+    if( g < 0 )
+        g = 0;
+    if( b < 0 )
+        b = 0;
+
+    // determine the brightest of the three color components
     max = g;
     if( r > max ) {
         max = r;
@@ -68,20 +76,26 @@ void GL_AdjustColor( byte *dst, const byte *src, int what ) {
         max = b;
     }
 
+    // rescale all the color components if the intensity of the greatest
+    // channel exceeds 1.0
     if( max > 255 ) {
         r *= 255.0f / max;
         g *= 255.0f / max;
         b *= 255.0f / max;
     }
 
-    // atu brightness adjustments
-    r += colorAdj;
-    g += colorAdj;
-    b += colorAdj;
+    // transform to grayscale by replacing color components with
+    // overall pixel luminance computed from wighted color sum
+    if( colorscale != 1.0f ) {
+        y = LUMINANCE( r, g, b );
+        r = y + ( r - y ) * colorscale;
+        g = y + ( g - y ) * colorscale;
+        b = y + ( b - y ) * colorscale;
+    }
 
-    dst[0] = clamp( r, 0, 255 );
-    dst[1] = clamp( g, 0, 255 );
-    dst[2] = clamp( b, 0, 255 );
+    dst[0] = r;
+    dst[1] = g;
+    dst[2] = b;
 }
 
 /*
@@ -136,7 +150,7 @@ static void LM_InitBlock( void ) {
 }
 
 static void LM_UploadBlock( void ) {
-    int comp = colorScale ? GL_RGB : GL_LUMINANCE;
+    int comp = colorscale ? GL_RGB : GL_LUMINANCE;
 
     qglActiveTextureARB( GL_TEXTURE1_ARB );
     qglBindTexture( GL_TEXTURE_2D, TEXNUM_LIGHTMAP + lm.numMaps );
@@ -333,8 +347,10 @@ void GL_LoadWorld( const char *name ) {
     gl_brightness = Cvar_Get( "gl_brightness", "0", CVAR_ARCHIVE|CVAR_FILES );
     gl_modulate_mask = Cvar_Get( "gl_modulate_mask", "3", CVAR_FILES );
 
-    colorScale = Cvar_ClampValue( gl_coloredlightmaps, 0, 1 );
-    colorAdj = 255 * Cvar_ClampValue( gl_brightness, -1, 1 );
+    colorscale = Cvar_ClampValue( gl_coloredlightmaps, 0, 1 );
+
+    // FIXME: the name 'brightness' is misleading in this context
+    coloradj = 255 * Cvar_ClampValue( gl_brightness, -1, 1 );
 
     // free previous model, if any
     GL_FreeWorld();

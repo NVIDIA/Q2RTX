@@ -265,6 +265,9 @@ void GL_Blend( void );
  * gl_images.c
  *
  */
+
+#define LUMINANCE(r,g,b) ((r)*0.2126f + (g)*0.7152f + (b)*0.0722f)
+
 enum {
     TEXNUM_SCRAP = MAX_RIMAGES + 1,
     TEXNUM_PARTICLE,
