@@ -202,36 +202,38 @@ static void tess_lerped_mesh( const maliasmesh_t *mesh, int oldframe, int newfra
 }
 
 static void GL_SetAliasColor( vec3_t origin, vec_t *color ) {
-    entity_t *ent = glr.ent;
+    int flags = glr.ent->flags;
     float f, m;
     int i;
 
-    if( ent->flags & RF_SHELL_MASK ) {
+    if( flags & RF_SHELL_MASK ) {
         VectorClear( color );
-        if( ent->flags & RF_SHELL_HALF_DAM ) {
+        if( flags & RF_SHELL_HALF_DAM ) {
             color[0] = 0.56f;
             color[1] = 0.59f;
             color[2] = 0.45f;
         }
-        if( ent->flags & RF_SHELL_DOUBLE ) {
+        if( flags & RF_SHELL_DOUBLE ) {
             color[0] = 0.9f;
             color[1] = 0.7f;
         }
-        if( ent->flags & RF_SHELL_RED ) {
+        if( flags & RF_SHELL_RED ) {
             color[0] = 1;
         }
-        if( ent->flags & RF_SHELL_GREEN ) {
+        if( flags & RF_SHELL_GREEN ) {
             color[1] = 1;
         }
-        if( ent->flags & RF_SHELL_BLUE ) {
+        if( flags & RF_SHELL_BLUE ) {
             color[2] = 1;
         }
-    } else if( ent->flags & RF_FULLBRIGHT ) {
+    } else if( flags & RF_FULLBRIGHT ) {
         VectorSet( color, 1, 1, 1 );
+    } else if( ( flags & RF_IR_VISIBLE ) && ( glr.fd.rdflags & RDF_IRGOGGLES ) ) {
+        VectorSet( color, 1, 0, 0 );
     } else {
         _R_LightPoint( origin, color );
 
-        if( ent->flags & RF_MINLIGHT ) {
+        if( flags & RF_MINLIGHT ) {
             for( i = 0; i < 3; i++ ) {
                 if( color[i] > 0.1f ) {
                     break;
@@ -242,7 +244,7 @@ static void GL_SetAliasColor( vec3_t origin, vec_t *color ) {
             }
         }
 
-        if( ent->flags & RF_GLOW ) {
+        if( flags & RF_GLOW ) {
             f = 0.1f * sin( glr.fd.time * 7 );
             for( i = 0; i < 3; i++ ) {
                 m = color[i] * 0.8f;
@@ -255,11 +257,6 @@ static void GL_SetAliasColor( vec3_t origin, vec_t *color ) {
         for( i = 0; i < 3; i++ ) {
             clamp( color[i], 0, 1 );
         }
-        
-    }
-
-    if( glr.fd.rdflags & RDF_IRGOGGLES && ent->flags & RF_IR_VISIBLE ) {
-        VectorSet( color, 1, 0, 0 );
     }
 }
 
