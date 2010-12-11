@@ -179,8 +179,10 @@ void _R_LightPoint( vec3_t origin, vec3_t color ) {
     }
 #endif
 
-    // apply modulate twice to mimic original ref_gl behavior
-    VectorScale( color, gl_modulate->value, color );
+    if( gl_doublelight_entities->integer ) {
+        // apply modulate twice to mimic original ref_gl behavior
+        VectorScale( color, gl_modulate->value, color );
+    }
 }
 
 void R_LightPoint( vec3_t origin, vec3_t color ) {

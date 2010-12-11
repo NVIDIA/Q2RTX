@@ -114,6 +114,7 @@ extern cvar_t *gl_drawsky;
 #if USE_DLIGHTS
 extern cvar_t *gl_dynamic;
 #endif
+extern cvar_t *gl_doublelight_entities;
 extern cvar_t *gl_fullbright;
 extern cvar_t *gl_mode;
 extern cvar_t *gl_hwgamma;

@@ -68,6 +68,7 @@ cvar_t *gl_lightmap;
 #if USE_DLIGHTS
 cvar_t *gl_dynamic;
 #endif
+cvar_t *gl_doublelight_entities;
 cvar_t *gl_polyblend;
 cvar_t *gl_fullbright;
 cvar_t *gl_hwgamma;
@@ -721,6 +722,7 @@ static void GL_Register( void ) {
 #if USE_DLIGHTS
     gl_dynamic = Cvar_Get( "gl_dynamic", "2", CVAR_ARCHIVE );
 #endif
+    gl_doublelight_entities = Cvar_Get( "gl_doublelight_entities", "1", 0 );
     gl_polyblend = Cvar_Get( "gl_polyblend", "1", 0 );
     gl_fullbright = Cvar_Get( "r_fullbright", "0", CVAR_CHEAT );
     gl_showerrors = Cvar_Get( "gl_showerrors", "1", 0 );
