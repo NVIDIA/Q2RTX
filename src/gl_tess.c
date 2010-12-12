@@ -281,7 +281,7 @@ static void GL_Flush3D( void ) {
 
         if( tess.flags & SURF_WARP ) {
             scaled = glr.fd.time * 0.5f;
-            scroll = -1 * ( scaled - (int)scaled );
+            scroll = -scaled;
         } else {
             scaled = glr.fd.time / 40;
             scroll = -64 * ( scaled - (int)scaled );
