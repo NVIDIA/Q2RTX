@@ -225,6 +225,7 @@ glCullResult_t GL_CullLocalBox( const vec3_t origin, vec3_t bounds[2] ) {
     return cull;
 }
 
+#if 0
 void GL_DrawBox( const vec3_t origin, vec3_t bounds[2] ) {
     static const int indices[2][4] = {
         { 0, 1, 3, 2 },
@@ -258,6 +259,7 @@ void GL_DrawBox( const vec3_t origin, vec3_t bounds[2] ) {
     qglEnable( GL_DEPTH_TEST );
     qglEnable( GL_TEXTURE_2D );
 }
+#endif
 
 static void GL_DrawSpriteModel( model_t *model ) {
     vec3_t point;

@@ -208,32 +208,6 @@ void GL_Setup3D( void ) {
         glr.viewaxis[0], glr.viewaxis[1], glr.viewaxis[2] );
     VectorInverse( glr.viewaxis[1] );
 
-#if 0
-    {
-        vec4_t ambient = {0,0,0,0}, material={1,1,1,1};
-
-        qglLightModelfv( GL_LIGHT_MODEL_AMBIENT, ambient );
-        qglLightModelf( GL_LIGHT_MODEL_TWO_SIDE, 1 );
-        qglMaterialfv( GL_BACK, GL_AMBIENT_AND_DIFFUSE, material );
-
-    }
-
-    if( glr.fd.num_dlights > 8 ) {
-        glr.fd.num_dlights = 8;
-    }
-    for( i = 0; i < glr.fd.num_dlights; i++ ) {
-        dlight_t *l = &glr.fd.dlights[i];
-        qglLightfv( GL_LIGHT0 + i, GL_POSITION, l->origin );
-        qglLightfv( GL_LIGHT0 + i, GL_DIFFUSE, l->color );
-        qglLightf( GL_LIGHT0 + i, GL_QUADRATIC_ATTENUATION,  0.00001f );
-        qglLightf( GL_LIGHT0 + i, GL_LINEAR_ATTENUATION,  0.005f );
-        qglEnable( GL_LIGHT0 + i );
-    }
-    for( ; i < 8; i++ ) {
-        qglDisable( GL_LIGHT0 + i );
-    }
-#endif
-
     GL_Bits( GLS_DEFAULT );
     GL_CullFace( GLS_CULL_FRONT );
 
@@ -302,12 +276,6 @@ void GL_InitPrograms( void ) {
     qglProgramStringARB( GL_FRAGMENT_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB,
         sizeof( gl_prog_warp ) - 1, gl_prog_warp );
 
-#if 0
-    qglGenProgramsARB( 1, &gl_static.prog_light );
-    qglBindProgramARB( GL_FRAGMENT_PROGRAM_ARB, gl_static.prog_light );
-    qglProgramStringARB( GL_FRAGMENT_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB,
-        sizeof( gl_prog_light ) - 1, gl_prog_light );
-#endif
 
     GL_ShowErrors( __func__ );
 }
