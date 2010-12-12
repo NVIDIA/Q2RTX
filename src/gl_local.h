@@ -132,7 +132,8 @@ glCullResult_t GL_CullLocalBox( const vec3_t origin, vec3_t bounds[2] );
 
 //void GL_DrawBox( const vec3_t origin, vec3_t bounds[2] );
 
-void GL_ShowErrors( const char *func );
+void GL_ClearErrors( void );
+qboolean GL_ShowErrors( const char *func );
 
 /*
  * gl_model.c

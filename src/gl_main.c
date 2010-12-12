@@ -457,14 +457,27 @@ static const char *GL_ErrorString( GLenum err ) {
     return str;
 }
 
-void GL_ShowErrors( const char *func ) {
+void GL_ClearErrors( void ) {
     GLenum err;
 
-    if( gl_showerrors->integer ) {
-        while( ( err = qglGetError() ) != GL_NO_ERROR ) {
+    while( ( err = qglGetError() ) != GL_NO_ERROR )
+        ;
+}
+
+qboolean GL_ShowErrors( const char *func ) {
+    GLenum err = qglGetError();
+
+    if( err == GL_NO_ERROR ) {
+        return qfalse;
+    }
+
+    do {
+        if( gl_showerrors->integer ) {
             Com_EPrintf( "%s: %s\n", func, GL_ErrorString( err ) );
         }
-    }
+    } while( ( err = qglGetError() ) != GL_NO_ERROR );
+
+    return qtrue;
 }
 
 void R_RenderFrame( refdef_t *fd ) {
