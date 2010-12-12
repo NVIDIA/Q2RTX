@@ -231,7 +231,7 @@ static void GL_BindArrays( void ) {
         ptr = tess.vertices;
     } else {
         ptr = NULL;
-        qglBindBufferARB( GL_ARRAY_BUFFER_ARB, 1 );
+        qglBindBufferARB( GL_ARRAY_BUFFER_ARB, gl_static.world.bufnum );
     }
 
     qglVertexPointer( 3, GL_FLOAT, 4*VERTEX_SIZE, ptr + 0 );
@@ -457,7 +457,7 @@ void GL_DrawAlphaFaces( void ) {
 }
 
 void GL_AddSolidFace( mface_t *face ) {
-    if( ( face->texinfo->c.flags & SURF_WARP ) && qglBindProgramARB ) {
+    if( ( face->texinfo->c.flags & SURF_WARP ) && gl_static.prognum_warp ) {
         face->next = faces_warp;
         faces_warp = face;
     } else {
@@ -478,7 +478,7 @@ void GL_AddFace( mface_t *face ) {
     }
 
     if( flags & (SURF_TRANS33|SURF_TRANS66) ) {
-        if( ( flags & SURF_WARP ) && qglBindProgramARB ) {
+        if( ( flags & SURF_WARP ) && gl_static.prognum_warp ) {
             face->next = faces_alpha_warp;
             faces_alpha_warp = face;
         } else {

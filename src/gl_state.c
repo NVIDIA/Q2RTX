@@ -251,13 +251,11 @@ void GL_DisableOutlines( void ) {
    qglEnable( GL_TEXTURE_2D );
 }
 
-#define PROGNUM_WARP 1
-
 void GL_EnableWarp( void ) {
     vec4_t param;
 
     qglEnable( GL_FRAGMENT_PROGRAM_ARB );
-    qglBindProgramARB( GL_FRAGMENT_PROGRAM_ARB, PROGNUM_WARP );
+    qglBindProgramARB( GL_FRAGMENT_PROGRAM_ARB, gl_static.prognum_warp );
     param[0] = glr.fd.time;
     param[1] = glr.fd.time;
     param[2] = param[3] = 0;
@@ -265,29 +263,41 @@ void GL_EnableWarp( void ) {
 }
 
 void GL_DisableWarp( void ) {
+    qglBindProgramARB( GL_FRAGMENT_PROGRAM_ARB, 0 );
     qglDisable( GL_FRAGMENT_PROGRAM_ARB );
 }
 
 void GL_InitPrograms( void ) {
+    GLuint prog;
+
     if( !qglProgramStringARB ) {
         return;
     }
-    qglBindProgramARB( GL_FRAGMENT_PROGRAM_ARB, PROGNUM_WARP );
+
+    GL_ClearErrors();
+    qglGenProgramsARB( 1, &prog );
+    qglBindProgramARB( GL_FRAGMENT_PROGRAM_ARB, prog );
     qglProgramStringARB( GL_FRAGMENT_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB,
         sizeof( gl_prog_warp ) - 1, gl_prog_warp );
 
+    if( GL_ShowErrors( "Failed to initialize fragment program" ) ) {
+        qglBindProgramARB( GL_FRAGMENT_PROGRAM_ARB, 0 );
+        qglDeleteProgramsARB( 1, &prog );
+        return;
+    }
 
-    GL_ShowErrors( __func__ );
+    qglBindProgramARB( GL_FRAGMENT_PROGRAM_ARB, 0 );
+    gl_static.prognum_warp = prog;
 }
 
 void GL_ShutdownPrograms( void ) {
-    GLuint i;
-
-    if( !qglProgramStringARB ) {
+    if( !qglDeleteProgramsARB ) {
         return;
     }
-    i = PROGNUM_WARP;
-    qglDeleteProgramsARB( 1, &i );
-}
 
+    if( gl_static.prognum_warp ) {
+        qglDeleteProgramsARB( 1, &gl_static.prognum_warp );
+        gl_static.prognum_warp = 0;
+    }
+}
 

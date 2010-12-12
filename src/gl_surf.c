@@ -295,15 +295,43 @@ void GL_FreeWorld( void ) {
     if( gl_static.world.vertices ) {
         Hunk_Free( &gl_static.world.pool );
     } else if( qglDeleteBuffersARB ) {
-        GLuint buf = 1;
-
-        qglDeleteBuffersARB( 1, &buf );
+        qglDeleteBuffersARB( 1, &gl_static.world.bufnum );
     }
 
     lm.numMaps = 0;
     LM_InitBlock();
     
     memset( &gl_static.world, 0, sizeof( gl_static.world ) );
+}
+
+static vec_t *create_vbo( int size ) {
+    GLuint buf;
+    vec_t *vbo;
+
+    GL_ClearErrors();
+    qglGenBuffersARB( 1, &buf );
+    qglBindBufferARB( GL_ARRAY_BUFFER_ARB, buf );
+    qglBufferDataARB( GL_ARRAY_BUFFER_ARB, size, NULL, GL_STATIC_DRAW_ARB );
+    if( GL_ShowErrors( "Failed to create world model VBO" ) ) {
+        goto fail;
+    }
+
+    vbo = qglMapBufferARB( GL_ARRAY_BUFFER_ARB, GL_READ_WRITE_ARB );
+    GL_ShowErrors( "Failed to map world model VBO data" );
+    if( !vbo ) {
+        goto fail;
+    }
+
+    qglBindBufferARB( GL_ARRAY_BUFFER_ARB, 0 );
+
+    gl_static.world.vertices = NULL;
+    gl_static.world.bufnum = buf;
+    return vbo;
+
+fail:
+    qglBindBufferARB( GL_ARRAY_BUFFER_ARB, 0 );
+    qglDeleteBuffersARB( 1, &buf );
+    return NULL;
 }
     
 void GL_LoadWorld( const char *name ) {
@@ -368,24 +396,16 @@ void GL_LoadWorld( const char *name ) {
     }
     size = count * VERTEX_SIZE * 4;
 
+    // try to map our VBO
     vbo = NULL;
     if( qglBindBufferARB ) {
-        qglBindBufferARB( GL_ARRAY_BUFFER_ARB, 1 );
-        
-        qglBufferDataARB( GL_ARRAY_BUFFER_ARB, size, NULL, GL_STATIC_DRAW_ARB );
-
-        GL_ShowErrors( __func__ );
-
-        vbo = qglMapBufferARB( GL_ARRAY_BUFFER_ARB, GL_READ_WRITE_ARB );
+        vbo = create_vbo( size );
         if( vbo ) {
-            gl_static.world.vertices = NULL;
             Com_DPrintf( "%s: %d bytes of vertex data as VBO\n", __func__, size );
-        } else {
-            Com_EPrintf( "Failed to map VBO data in client memory\n" );
         }
-        qglBindBufferARB( GL_ARRAY_BUFFER_ARB, 0 );
     }
-    
+
+    // no VBO, allocate on hunk
     if( !vbo ) {
         Hunk_Begin( &gl_static.world.pool, size );
         vbo = Hunk_Alloc( &gl_static.world.pool, size );
@@ -413,9 +433,10 @@ void GL_LoadWorld( const char *name ) {
         count += surf->numsurfedges;
         vbo += surf->numsurfedges * VERTEX_SIZE;
     }
-    
+
+    // unmap our VBO
     if( qglBindBufferARB && !gl_static.world.vertices ) {
-        qglBindBufferARB( GL_ARRAY_BUFFER_ARB, 1 );
+        qglBindBufferARB( GL_ARRAY_BUFFER_ARB, gl_static.world.bufnum );
         if( !qglUnmapBufferARB( GL_ARRAY_BUFFER_ARB ) ) {
             Com_Error( ERR_DROP, "Failed to unmap VBO data" );
         }

@@ -50,7 +50,9 @@ typedef struct {
         bsp_t *cache;
         mempool_t pool;
         vec_t *vertices;
+        GLuint bufnum;
     } world;
+    GLuint prognum_warp;
     float inverse_intensity;
     float sintab[256];
 #define TAB_SIN(x) gl_static.sintab[(x)&255]
