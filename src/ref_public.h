@@ -123,18 +123,10 @@ typedef struct refdef_s {
     particle_t  *particles;
 } refdef_t;
 
-typedef enum glHardware_e {
-    GL_RENDERER_OTHER,
+typedef enum {
     GL_RENDERER_SOFTWARE,
-    GL_RENDERER_MCD,
-    GL_RENDERER_VOODOO,
-    GL_RENDERER_VOODOO_RUSH,
-    GL_RENDERER_POWERVR,
-    GL_RENDERER_GLINT,
-    GL_RENDERER_PERMEDIA2,
-    GL_RENDERER_INTERGRAPH,
-    GL_RENDERER_RENDITION,
-    GL_RENDERER_MESADRI
+    GL_RENDERER_MESADRI,
+    GL_RENDERER_OTHER
 } glHardware_t;
 
 typedef enum {

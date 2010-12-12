@@ -866,31 +866,7 @@ static qboolean GL_SetupExtensions( void ) {
 #undef GPA
 
 static void GL_IdentifyRenderer( void ) {
-    char renderer_buffer[MAX_STRING_CHARS];
-
-    Q_strlcpy( renderer_buffer, gl_config.rendererString,
-        sizeof( renderer_buffer ) );
-    Q_strlwr( renderer_buffer );
-
-    if( strstr( renderer_buffer, "voodoo" ) ) {
-        if( !strstr( renderer_buffer, "rush" ) ) {
-            gl_config.renderer = GL_RENDERER_VOODOO;
-        } else {
-            gl_config.renderer = GL_RENDERER_VOODOO_RUSH;
-        }
-    } else if( strstr( renderer_buffer, "permedia" ) ) {
-        gl_config.renderer = GL_RENDERER_PERMEDIA2;
-    } else if ( strstr( renderer_buffer, "glint" ) ) {
-        gl_config.renderer = GL_RENDERER_GLINT;
-    } else if( strstr( renderer_buffer, "gdi" ) ) {
-        gl_config.renderer = GL_RENDERER_MCD;
-    } else if( strstr( renderer_buffer, "glzicd" ) ) {
-        gl_config.renderer = GL_RENDERER_INTERGRAPH;
-    } else if( strstr( renderer_buffer, "pcx2" ) ) {
-        gl_config.renderer = GL_RENDERER_POWERVR;
-    } else if( strstr( renderer_buffer, "verite" ) ) {
-        gl_config.renderer = GL_RENDERER_RENDITION;
-    } else if( strstr( renderer_buffer, "mesa dri" ) ) {
+    if( Q_stristr( gl_config.rendererString, "mesa dri" ) ) {
         gl_config.renderer = GL_RENDERER_MESADRI;
     } else {
         gl_config.renderer = GL_RENDERER_OTHER;

@@ -983,7 +983,7 @@ static void GL_BuildGammaTables( void ) {
     int i;
     float inf, g = gl_gamma->value;
 
-    if( gl_config.renderer == GL_RENDERER_VOODOO || g == 1.0f ) {
+    if( g == 1.0f ) {
         for( i = 0; i < 256; i++ ) {
             gammatable[i] = i;
             gammaintensitytable[i] = intensitytable[i];
