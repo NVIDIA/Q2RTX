@@ -1642,8 +1642,8 @@ static void CL_RegisterModels( void ) {
 }
 
 void CL_LoadState( load_state_t state ) {
-#if 0
-    char *s;
+    extern void VID_PumpEvents( void );
+    const char *s;
 
     switch( state ) {
     case LOAD_MAP:
@@ -1662,16 +1662,20 @@ void CL_LoadState( load_state_t state ) {
         s = "sounds";
         break;
     case LOAD_FINISH:
-        Con_Printf( "\r" ); 
-        return;
+        s = NULL;
+        break;
     default:
         return;
     }
-    Con_Printf( "\rLoading %s...", s );
-#endif
 
-    // Com_ProcessEvents(); 
+    if( s ) {
+        Con_Printf( "Loading %s...\r", s );
+    } else {
+        Con_Print( "\r" );
+    }
+
     SCR_UpdateScreen();
+    VID_PumpEvents();
 }
 
 static int precache_check; // for autodownload of precache items
