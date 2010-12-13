@@ -224,7 +224,7 @@ POLYGONS BUILDING
 =============================================================================
 */
 
-static void GL_BuildSurfacePoly( bsp_t *bsp, mface_t *surf, vec_t *vbo ) {
+static void build_surface_poly( mface_t *surf, vec_t *vbo ) {
     msurfedge_t *src_surfedge;
     mvertex_t *src_vert;
     medge_t *src_edge;
@@ -283,6 +283,19 @@ static void GL_BuildSurfacePoly( bsp_t *bsp, mface_t *surf, vec_t *vbo ) {
 
     surf->extents[0] = ( bmaxs[0] - bmins[0] ) << 4;
     surf->extents[1] = ( bmaxs[1] - bmins[1] ) << 4;
+}
+
+// duplicates normalized texture0 coordinates for non-lit surfaces in texture1
+// to make them render properly when gl_lightmap hack is used
+static void duplicate_surface_lmtc( mface_t *surf, vec_t *vbo ) {
+    int i;
+
+    for( i = 0; i < surf->numsurfedges; i++ ) {
+        vbo[5] = vbo[3];
+        vbo[6] = vbo[4];
+
+        vbo += VERTEX_SIZE;
+    }
 }
 
 void GL_FreeWorld( void ) {
@@ -421,13 +434,16 @@ void GL_LoadWorld( const char *name ) {
         if( surf->texinfo->c.flags & SURF_SKY ) {
             continue;
         }
+
         surf->firstvert = count;
-        GL_BuildSurfacePoly( bsp, surf, vbo );
+        build_surface_poly( surf, vbo );
 
         if( surf->lightmap && !gl_fullbright->integer &&
             !( surf->texinfo->c.flags & SURF_NOLM_MASK ) )
         {
             LM_BuildSurfaceLightmap( surf, vbo );
+        } else {
+            duplicate_surface_lmtc( surf, vbo );
         }
 
         count += surf->numsurfedges;
