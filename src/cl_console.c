@@ -50,7 +50,7 @@ typedef struct console_s {
     int     x;              // offset in current line for next print
     int     display;        // bottom of console displays this line
     int     color;
-    qboolean newline;
+    int     newline;
 
     int     linewidth;      // characters across screen
     int     vidWidth, vidHeight;
@@ -446,11 +446,6 @@ static void Con_CarriageRet( void ) {
     p[con.x++] = con.color;
 }
 
-/*
-===============
-Con_Linefeed
-===============
-*/
 static void Con_Linefeed( void ) {
     if( con.display == con.current )
         con.display++;
@@ -490,8 +485,12 @@ void Con_Print( const char *txt ) {
 
     while( *txt ) {
         if( con.newline ) {
-            Con_Linefeed();
-            con.newline = qfalse;
+            if( con.newline == '\n' ) {
+                Con_Linefeed();
+            } else {
+                Con_CarriageRet();
+            }
+            con.newline = 0;
         }
 
     // count word length
@@ -506,10 +505,8 @@ void Con_Print( const char *txt ) {
 
         switch( *txt ) {
         case '\r':
-            Con_CarriageRet();
-            break;
         case '\n':
-            con.newline = qtrue;
+            con.newline = *txt;
             break;
         default:    // display character and advance
             if( con.x == con.linewidth ) {
