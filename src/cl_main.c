@@ -570,6 +570,7 @@ void CL_ClearState( void ) {
 
     if( cls.state > ca_connected ) {
         cls.state = ca_connected;
+        CL_UpdateFrameTimes();
     }
 
     // unprotect game cvar
@@ -2358,6 +2359,8 @@ void CL_RestartFilesystem( qboolean total ) {
     // switch back to original state
     cls.state = cls_state;
 
+    CL_UpdateFrameTimes();
+
     cvar_modified &= ~CVAR_FILES;
 }
 
@@ -2407,6 +2410,8 @@ void CL_RestartRefresh( qboolean total ) {
 
     // switch back to original state
     cls.state = cls_state;
+
+    CL_UpdateFrameTimes();
 
     cvar_modified &= ~CVAR_FILES;
 }
