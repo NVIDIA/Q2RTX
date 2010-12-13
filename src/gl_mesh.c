@@ -298,7 +298,8 @@ void GL_DrawAliasModel( model_t *model ) {
 
     // interpolate origin, if necessarry
     if( ent->flags & RF_FRAMELERP ) {
-        LerpVector( ent->oldorigin, ent->origin, frontlerp, origin );
+        LerpVector2( ent->oldorigin, ent->origin,
+            backlerp, frontlerp, origin );
     } else {
         VectorCopy( ent->origin, origin );
     }
