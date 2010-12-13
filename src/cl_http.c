@@ -326,6 +326,11 @@ static void start_download (dlqueue_t *entry, dlhandle_t *dl) {
             curl_multi_strerror (ret));
 fail:
         entry->state = DL_DONE;
+        pending_count--;
+
+        // done current batch, see if we have more to dl
+        if (!HTTP_DownloadsPending())
+            CL_RequestNextDownload ();
         return;
     }
 
