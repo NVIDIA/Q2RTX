@@ -22,7 +22,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 tesselator_t tess;
 
-#define FACE_HASH_SIZE  32
+#define FACE_HASH_BITS  5
+#define FACE_HASH_SIZE  ( 1 << FACE_HASH_BITS )
 #define FACE_HASH_MASK  ( FACE_HASH_SIZE - 1 )
 
 static mface_t *faces_alpha, *faces_warp, *faces_alpha_warp;
@@ -461,7 +462,8 @@ void GL_AddSolidFace( mface_t *face ) {
         face->next = faces_warp;
         faces_warp = face;
     } else {
-        int i = ( face->texnum[0] ^ face->texnum[1] ) & FACE_HASH_MASK;
+        unsigned i = face->texnum[0] ^ face->texnum[1];
+        i = ( i ^ ( i >> FACE_HASH_BITS ) ) & FACE_HASH_MASK;
         face->next = faces_hash[i];
         faces_hash[i] = face;
     }
