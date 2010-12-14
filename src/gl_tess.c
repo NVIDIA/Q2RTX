@@ -338,8 +338,9 @@ static void GL_Flush3D( void ) {
     tess.flags = 0;
 }
 
-static void GL_CopyVerts( mface_t *surf ) {
+static int GL_CopyVerts( mface_t *surf ) {
     void *src, *dst;
+    int firstvert;
 
     if( tess.numverts + surf->numsurfedges > TESS_MAX_VERTICES ) {
         GL_Flush3D();
@@ -349,7 +350,9 @@ static void GL_CopyVerts( mface_t *surf ) {
     dst = tess.vertices + tess.numverts * VERTEX_SIZE;
     memcpy( dst, src, surf->numsurfedges * VERTEX_SIZE * sizeof( vec_t ) );
 
+    firstvert = tess.numverts;
     tess.numverts += surf->numsurfedges;
+    return firstvert;
 }
 
 static int GL_TextureAnimation( mtexinfo_t *tex ) {
@@ -372,7 +375,8 @@ static int GL_TextureAnimation( mtexinfo_t *tex ) {
     (SURF_TRANS33|SURF_TRANS66|SURF_WARP|SURF_FLOWING)
 
 static void GL_DrawFace( mface_t *surf ) {
-    int numindices = ( surf->numsurfedges - 2 ) * 3;
+    int numtris = surf->numsurfedges - 2;
+    int numindices = numtris * 3;
     int diff = surf->texinfo->c.flags ^ tess.flags;
     int texnum = GL_TextureAnimation( surf->texinfo );
     int *dst_indices;
@@ -387,8 +391,7 @@ static void GL_DrawFace( mface_t *surf ) {
     }
 
     if( gl_static.world.vertices ) {
-        j = tess.numverts;
-        GL_CopyVerts( surf );
+        j = GL_CopyVerts( surf );
     } else {
         j = surf->firstvert;
     }
@@ -400,16 +403,19 @@ static void GL_DrawFace( mface_t *surf ) {
         tess.texnum[0] = texnum;
         tess.texnum[1] = surf->texnum[1];
     }
+
     tess.flags = surf->texinfo->c.flags;
+
     dst_indices = tess.indices + tess.numindices;
-    for( i = 0; i < surf->numsurfedges - 2; i++ ) {
+    for( i = 0; i < numtris; i++ ) {
         dst_indices[0] = j;
         dst_indices[1] = j + ( i + 1 );
         dst_indices[2] = j + ( i + 2 );
         dst_indices += 3;
     }
     tess.numindices += numindices;
-    c.trisDrawn += surf->numsurfedges - 2;
+
+    c.trisDrawn += numtris;
 }
 
 static inline void GL_DrawChain( mface_t **head ) {
