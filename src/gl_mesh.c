@@ -80,20 +80,21 @@ static void tess_static_mesh( const maliasmesh_t *mesh, int oldframe, int newfra
         }
 #if USE_DOTSHADING
     } else if( shadelight ) {
-        vec_t d, *dst_color = ( vec_t * )tess.colors;
+        vec_t d;
 
         for( i = 0; i < count; i++ ) {
             dst_vert[0] = src_vert->pos[0] * newscale[0] + translate[0];
             dst_vert[1] = src_vert->pos[1] * newscale[1] + translate[1];
             dst_vert[2] = src_vert->pos[2] * newscale[2] + translate[2];
-            dst_vert += 4;
 
             get_static_normal( normal, src_vert );
 
             d = shadedot( normal );
-            VectorScale( shadelight, d, dst_color );
-            dst_color[3] = shadelight[3];
-            dst_color += 4;
+            dst_vert[3] = shadelight[0] * d;
+            dst_vert[4] = shadelight[1] * d;
+            dst_vert[5] = shadelight[2] * d;
+            dst_vert[6] = shadelight[3];
+            dst_vert += VERTEX_SIZE;
             
             src_vert++;
         }
@@ -155,7 +156,7 @@ static void tess_lerped_mesh( const maliasmesh_t *mesh, int oldframe, int newfra
         }
 #if USE_DOTSHADING
     } else if( shadelight ) {
-        vec_t d, *dst_color = ( vec_t * )tess.colors;
+        vec_t d;
 
         for( i = 0; i < count; i++ ) {
             dst_vert[0] =
@@ -167,14 +168,15 @@ static void tess_lerped_mesh( const maliasmesh_t *mesh, int oldframe, int newfra
             dst_vert[2] =
                 src_oldvert->pos[2] * oldscale[2] +
                 src_newvert->pos[2] * newscale[2] + translate[2];
-            dst_vert += 4;
 
             get_lerped_normal( normal, src_oldvert, src_newvert );
 
             d = shadedot( normal );
-            VectorScale( shadelight, d, dst_color );
-            dst_color[3] = shadelight[3];
-            dst_color += 4;
+            dst_vert[3] = shadelight[0] * d;
+            dst_vert[4] = shadelight[1] * d;
+            dst_vert[5] = shadelight[2] * d;
+            dst_vert[6] = shadelight[3];
+            dst_vert += VERTEX_SIZE;
 
             src_oldvert++;
             src_newvert++;
@@ -418,8 +420,6 @@ void GL_DrawAliasModel( model_t *model ) {
         front = GL_BACK;
     }
 
-    qglVertexPointer( 3, GL_FLOAT, 16, tess.vertices );
-    
 #if USE_DOTSHADING
     shadelight = NULL;
     if( gl_dotshading->integer && ( ent->flags & RF_SHELL_MASK ) == 0 ) {
@@ -438,11 +438,15 @@ void GL_DrawAliasModel( model_t *model ) {
         shadedir[1] = cp*sy;
         shadedir[2] = -sp;
 
-        qglColorPointer( 4, GL_FLOAT, 0, tess.colors );
+        qglVertexPointer( 3, GL_FLOAT, 4*VERTEX_SIZE, tess.vertices );
+        qglColorPointer( 4, GL_FLOAT, 4*VERTEX_SIZE, tess.vertices + 3 );
         qglEnableClientState( GL_COLOR_ARRAY );
     } else
 #endif
+    {
+        qglVertexPointer( 3, GL_FLOAT, 4*4, tess.vertices );
         qglColor4fv( color );
+    }
 
     last = model->meshes + model->nummeshes;
     for( mesh = model->meshes; mesh < last; mesh++ ) {
@@ -473,15 +477,18 @@ void GL_DrawAliasModel( model_t *model ) {
             } else {
                 GL_Bits( bits );
             }
+
             GL_BindTexture( image->texnum );
         }
 
         (*tessfunc)( mesh, oldframeIdx, newframeIdx );
 
         qglTexCoordPointer( 2, GL_FLOAT, 0, mesh->tcoords );
+
         if( qglLockArraysEXT ) {
             qglLockArraysEXT( 0, mesh->numverts );
         }
+
         qglDrawElements( GL_TRIANGLES, mesh->numindices, GL_UNSIGNED_INT,
             mesh->indices );
 
@@ -508,6 +515,7 @@ void GL_DrawAliasModel( model_t *model ) {
                 mesh->indices );
             GL_DisableOutlines();
         }
+
         if( qglUnlockArraysEXT ) {
             qglUnlockArraysEXT();
         }

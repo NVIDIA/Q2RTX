@@ -169,7 +169,8 @@ typedef struct maliasmesh_s {
     int numskins;
 } maliasmesh_t;
 
-/* xyz[3] + st[2] + lmst[2] */
+// xyz[3] + st[2] + lmst[2]
+// xyz[3] + color[4]
 #define VERTEX_SIZE 7
 
 /*
@@ -308,7 +309,7 @@ qhandle_t R_RegisterPic( const char *name );
 typedef struct {
     vec_t vertices[VERTEX_SIZE*TESS_MAX_VERTICES];
     int indices[TESS_MAX_INDICES];
-    byte colors[16*TESS_MAX_VERTICES]; // may hold floats, hence 16
+    byte colors[4*TESS_MAX_VERTICES];
     int texnum[MAX_TMUS];
     int numverts;
     int numindices;
