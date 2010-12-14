@@ -152,6 +152,7 @@ static void LM_InitBlock( void ) {
 static void LM_UploadBlock( void ) {
     int comp = colorscale ? GL_RGB : GL_LUMINANCE;
 
+    // bypassing our state tracker here, be careful to reset TMU1 afterwards!
     qglActiveTextureARB( GL_TEXTURE1_ARB );
     qglBindTexture( GL_TEXTURE_2D, TEXNUM_LIGHTMAP + lm.numMaps );
     qglTexImage2D( GL_TEXTURE_2D, 0, comp, LM_BLOCK_WIDTH, LM_BLOCK_HEIGHT, 0,
@@ -466,6 +467,10 @@ void GL_LoadWorld( const char *name ) {
             break;
         }
     }
+
+    // because LM_UploadBlock doesn't use our state tracker functions,
+    // their idea of what is bound to TMU1 needs to be reset
+    gls.texnum[1] = 0;
 
     Com_DPrintf( "%s: %d lightmaps built\n", __func__, lm.numMaps );
 }
