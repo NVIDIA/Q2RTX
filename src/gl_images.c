@@ -1207,12 +1207,24 @@ void GL_ShutdownImages( void ) {
     gl_anisotropy->changed = NULL;
     gl_gamma->changed = NULL;
 
+    // unbind everything
+    qglActiveTextureARB( GL_TEXTURE1_ARB );
+    qglBindTexture( GL_TEXTURE_2D, 0 );
+    qglActiveTextureARB( GL_TEXTURE0_ARB );
+    qglBindTexture( GL_TEXTURE_2D, 0 );
+    for( i = 0; i < MAX_TMUS; i++ ) {
+        gls.texnum[i] = 0;
+        gls.texenv[i] = 0;
+    }
+    gls.tmu = 0;
+
     // delete auto textures
     j = TEXNUM_LIGHTMAP + lm.highWater - TEXNUM_SCRAP;
     for( i = 0; i < j; i++ ) {
         texnums[i] = TEXNUM_SCRAP + i;
     }
     qglDeleteTextures( j, texnums );
+
     lm.highWater = 0;
 
     r_notexture = NULL;
