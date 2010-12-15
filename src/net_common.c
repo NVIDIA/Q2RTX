@@ -671,8 +671,8 @@ retry:
                     goto retry;
                 }
             }
-#endif
             net_error = saved_error;
+#endif
             Com_DPrintf( "%s: %s from %s\n", __func__,
                 NET_ErrorString(), NET_AdrToString( &net_from ) );
             net_recv_errors++;
@@ -831,8 +831,8 @@ retry:
                     goto retry;
                 }
             }
-#endif
             net_error = saved_error;
+#endif
             Com_DPrintf( "%s: %s to %s\n", __func__,
                 NET_ErrorString(), NET_AdrToString( to ) );
             net_send_errors++;
