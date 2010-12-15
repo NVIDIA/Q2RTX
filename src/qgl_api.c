@@ -3384,22 +3384,25 @@ void QGL_EnableLogging( qboolean enable )
     {
         if ( !log_fp )
         {
+            extern char fs_gamedir[];
             struct tm *newtime;
             time_t aclock;
-            char buffer[1024];
+            char buffer[MAX_OSPATH];
+            size_t len;
 
             time( &aclock );
-            newtime = localtime( &aclock );
 
-            asctime( newtime );
+            len = Q_snprintf( buffer, sizeof( buffer ), "%s/qgl.log", fs_gamedir );
+            if( len >= sizeof( buffer ) ) {
+                return;
+            }
 
-            Q_snprintf( buffer, sizeof( buffer ), "%s/qgl.log",
-                    Cvar_VariableString( "basedir" ) );
             log_fp = fopen( buffer, "w" );
             if( !log_fp ) {
                 return;
             }
 
+            newtime = localtime( &aclock );
             fprintf( log_fp, "%s\n", asctime( newtime ) );
         }
 
