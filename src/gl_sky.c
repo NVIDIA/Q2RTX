@@ -349,7 +349,7 @@ void R_DrawSkyBox( void ) {
         qglRotatef (glr.fd.time * skyrotate, skyaxis[0], skyaxis[1], skyaxis[2]);
     }
 
-    qglColor3f( 1, 1, 1 );
+    GL_TexEnv( GL_REPLACE );
     GL_Bits( GLS_DEFAULT );
 
     for( i = 0; i < 6; i++ ) {
