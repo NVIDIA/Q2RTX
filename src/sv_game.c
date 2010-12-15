@@ -776,37 +776,25 @@ void SV_InitGameProgs ( void ) {
     // unload anything we have now
     SV_ShutdownGameProgs ();
 
-#ifdef _WIN32
-    // FIXME: check current debug directory first for
-    // e.g. running legacy stuff like Q2Admin
-    Q_concat( path, sizeof( path ), Sys_GetCurrentDirectory(),
-        PATH_SEP_STRING "release" PATH_SEP_STRING GAMELIB, NULL );
-    entry = Sys_LoadLibrary( path, "GetGameAPI", &game_library );
-    if( !entry )
-#endif
-    {
-        // try ./game first
+    // for debugging or `proxy' mods
+    if( sys_forcegamelib->string[0] ) {
+        entry = Sys_LoadLibrary( sys_forcegamelib->string,
+            "GetGameAPI", &game_library );
+    }
+    if( !entry ) {
+        // try game first
         if( fs_game->string[0] ) {
             Q_concat( path, sizeof( path ), sys_libdir->string,
                 PATH_SEP_STRING, fs_game->string, PATH_SEP_STRING GAMELIB, NULL );
             entry = Sys_LoadLibrary( path, "GetGameAPI", &game_library );
         }
         if( !entry ) {
-            // then try ./baseq2
+            // then try baseq2
             Q_concat( path, sizeof( path ), sys_libdir->string,
                 PATH_SEP_STRING BASEGAME PATH_SEP_STRING GAMELIB, NULL );
             entry = Sys_LoadLibrary( path, "GetGameAPI", &game_library );
             if( !entry ) {
-#ifdef __unix__
-                // then try ./
-                Q_concat( path, sizeof( path ), sys_libdir->string,
-                    PATH_SEP_STRING GAMELIB, NULL );
-                entry = Sys_LoadLibrary( path, "GetGameAPI", &game_library );
-                if( !entry )
-#endif
-                {
-                    Com_Error( ERR_DROP, "Failed to load game DLL" );
-                }
+                Com_Error( ERR_DROP, "Failed to load game library" );
             }
         }
     }

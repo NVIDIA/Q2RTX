@@ -71,8 +71,8 @@ qboolean Sys_GetAntiCheatAPI( void );
 
 extern cvar_t   *sys_basedir;
 extern cvar_t   *sys_libdir;
-extern cvar_t   *sys_refdir;
 extern cvar_t   *sys_homedir;
+extern cvar_t   *sys_forcegamelib;
 #if USE_SYSCON && ( defined __unix__ )
 extern cvar_t   *sys_console;
 #endif

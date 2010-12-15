@@ -57,8 +57,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 cvar_t  *sys_basedir;
 cvar_t  *sys_libdir;
 cvar_t  *sys_homedir;
-cvar_t  *sys_parachute;
+cvar_t  *sys_forcegamelib;
 
+cvar_t  *sys_parachute;
 
 /*
 ===============================================================================
@@ -684,6 +685,7 @@ void Sys_Init( void ) {
     }
     sys_homedir = Cvar_Get( "homedir", homedir, CVAR_NOSET );
     sys_libdir = Cvar_Get( "libdir", LIBDIR, CVAR_NOSET );
+    sys_forcegamelib = Cvar_Get( "sys_forcegamelib", "", CVAR_NOSET );
 
 #if USE_SYSCON
     // we want TTY support enabled if started from terminal,
