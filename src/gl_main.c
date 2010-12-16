@@ -836,14 +836,9 @@ static qboolean GL_SetupExtensions( void ) {
             GPA( glBindBufferARB );
             GPA( glDeleteBuffersARB );
             GPA( glGenBuffersARB );
-            GPA( glIsBufferARB );
             GPA( glBufferDataARB );
-            GPA( glBufferSubDataARB );
-            GPA( glGetBufferSubDataARB );
             GPA( glMapBufferARB );
             GPA( glUnmapBufferARB );
-            GPA( glGetBufferParameterivARB );
-            GPA( glGetBufferPointervARB );
         } else {
             Com_Printf( "...ignoring GL_ARB_vertex_buffer_object\n" );
         }
