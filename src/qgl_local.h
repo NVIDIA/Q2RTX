@@ -3,10 +3,8 @@
 #include <windows.h>
 #include <GL/gl.h>
 #include <GL/glext.h>
-#elif (defined __unix__)
-#include <GL/gl.h>
 #else
-#error Unknown Target OS
+#include <GL/gl.h>
 #endif
 
 #ifndef APIENTRY

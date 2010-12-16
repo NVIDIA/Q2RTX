@@ -298,7 +298,7 @@ static void logfile_write( print_type_t type, const char *string ) {
     FS_Write( text, len, com_logFile );
 }
 
-#ifdef __unix__
+#ifndef _WIN32
 /*
 =============
 Com_FlushLogs

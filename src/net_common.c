@@ -36,7 +36,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cl_public.h"
 #include "io_sleep.h"
 
-#if( defined _WIN32 )
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <winsock2.h>
@@ -49,7 +49,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define NET_GET_ERROR()     ( net_error = WSAGetLastError() )
 #define NET_WOULD_BLOCK()   ( NET_GET_ERROR() == WSAEWOULDBLOCK )
 #endif
-#elif( defined __unix__ )
+#else // _WIN32
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -64,7 +64,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #if USE_ICMP
 #include <linux/errqueue.h>
 #endif
-#endif
+#endif // __linux__
 #define SOCKET int
 #define INVALID_SOCKET -1
 #define closesocket close
@@ -73,9 +73,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define SETSOCKOPT_PARAM int
 #define NET_GET_ERROR()     ( net_error = errno )
 #define NET_WOULD_BLOCK()   ( NET_GET_ERROR() == EWOULDBLOCK )
-#else
-#error Unknown target OS
-#endif
+#endif // !_WIN32
 
 #if USE_CLIENT
 

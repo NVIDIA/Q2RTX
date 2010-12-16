@@ -683,7 +683,7 @@ static ssize_t open_file_write( file_t *file, const char *name ) {
         return Q_ERR(errno);
     }
 
-#ifdef __unix__
+#ifndef _WIN32
     // check if this is a regular file
     ret = Sys_GetFileInfo( fp, NULL );
     if( ret ) {
@@ -715,7 +715,7 @@ static ssize_t open_file_write( file_t *file, const char *name ) {
 
 fail1:
     ret = Q_ERR(errno);
-#ifdef __unix__
+#ifndef _WIN32
 fail2:
 #endif
     fclose( fp );

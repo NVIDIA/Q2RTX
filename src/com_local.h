@@ -542,7 +542,7 @@ void        Com_PageInMemory( void *buffer, size_t size );
 
 color_index_t Com_ParseColor( const char *s, color_index_t last );
 
-#ifdef __unix__
+#ifndef _WIN32
 void        Com_FlushLogs( void );
 #endif
 

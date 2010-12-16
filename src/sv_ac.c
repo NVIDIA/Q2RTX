@@ -1162,7 +1162,7 @@ STARTUP STUFF
 static void AC_Spin( void ) {
     // sleep on stdin and AC server socket
     IO_Sleepv( 100,
-#ifdef __unix__
+#ifndef _WIN32
         0,
 #endif
         ac.stream.socket, -1 );
