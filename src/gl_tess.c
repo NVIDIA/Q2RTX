@@ -74,7 +74,9 @@ void GL_Flush2D( void ) {
     }
 
     qglDisableClientState( GL_COLOR_ARRAY );
-    
+
+    c.batchesDrawn2D++;
+
     tess.numverts = 0;
     tess.texnum[0] = 0;
     tess.flags = 0;

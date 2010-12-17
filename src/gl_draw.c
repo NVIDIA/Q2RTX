@@ -326,6 +326,7 @@ void Draw_Stats( void ) {
         Draw_Stringf( x, y, "Tris / batch : %i", c.trisDrawn / c.batchesDrawn );
         y += 10;
     }
+    Draw_Stringf( x, y, "2D batches   : %i", c.batchesDrawn2D ); y += 10;
 }
 
 #endif

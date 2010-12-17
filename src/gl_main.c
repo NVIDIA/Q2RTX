@@ -549,6 +549,7 @@ void R_BeginFrame( void ) {
 void R_EndFrame( void ) {
 #ifdef _DEBUG
     if( gl_showstats->integer ) {
+        GL_Flush2D();
         Draw_Stats();
     }
 #endif
