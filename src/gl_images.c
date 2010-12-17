@@ -628,15 +628,20 @@ static qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap 
     byte        *scaled;
     int         scaled_width, scaled_height;
     int         comp;
-    qboolean    isalpha;
+    qboolean    isalpha, picmip;
     int         maxsize;
 
+    // find the next-highest power of two
     scaled_width = npot32( width );
     scaled_height = npot32( height );
+
+    // save the flag indicating if costly resampling can be avoided
+    picmip = scaled_width == width && scaled_height == height;
 
     maxsize = gl_static.maxTextureSize;
 
     if( mipmap ) {
+        // round world textures down, if requested
         if( gl_round_down->integer ) {
             if( scaled_width > width )
                 scaled_width >>= 1;
@@ -689,19 +694,27 @@ static qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap 
         GL_ColorInvertTexture( data, width, height );
     }
 
-    // scan the texture for any non-255 alpha
-    isalpha = is_alpha( data, width, height );
-    if( isalpha ) {
-        comp = gl_tex_alpha_format;
-    }
-
     if( scaled_width == width && scaled_height == height ) {
-        // optimized case, do not reallocate
+        // optimized case, do nothing
         scaled = data;
+    } else if( picmip ) {
+        // optimized case, use faster mipmap operation
+        scaled = data;
+        while( width > scaled_width || height > scaled_height ) {
+            GL_MipMap( scaled, width, height );
+            width >>= 1;
+            height >>= 1;
+        }
     } else {
         scaled = FS_AllocTempMem( scaled_width * scaled_height * 4 );
         GL_ResampleTexture( data, width, height, scaled,
                 scaled_width, scaled_height );
+    }
+
+    // scan the texture for any non-255 alpha
+    isalpha = is_alpha( scaled, scaled_width, scaled_height );
+    if( isalpha ) {
+        comp = gl_tex_alpha_format;
     }
 
     qglTexImage2D( GL_TEXTURE_2D, 0, comp, scaled_width, scaled_height, 0,
