@@ -693,6 +693,9 @@ static void GL_Strings_f( void ) {
     Com_Printf( "GL_RENDERER: %s\n", gl_config.rendererString );
     Com_Printf( "GL_VERSION: %s\n", gl_config.versionString );
     Com_Printf( "GL_EXTENSIONS: %s\n", gl_config.extensionsString );
+    Com_Printf( "GL_MAX_TEXTURE_SIZE: %d\n", gl_config.maxTextureSize );
+    Com_Printf( "GL_MAX_TEXTURE_UNITS: %d\n", gl_config.numTextureUnits );
+    Com_Printf( "GL_MAX_TEXTURE_MAX_ANISOTROPY: %d\n", (int)gl_config.maxAnisotropy );
 }
 
 // ============================================================================== 
@@ -782,7 +785,7 @@ static qboolean GL_SetupExtensions( void ) {
         Com_Printf( "GL_EXT_compiled_vertex_array not found\n" );
     }
     
-    gl_static.numTextureUnits = 1;
+    gl_config.numTextureUnits = 1;
     if( strstr( extensions, "GL_ARB_multitexture" ) ) {
         qglGetIntegerv( GL_MAX_TEXTURE_UNITS_ARB, &integer );
         if( integer >= 2 ) {
@@ -792,7 +795,7 @@ static qboolean GL_SetupExtensions( void ) {
             if( integer > MAX_TMUS ) {
                 integer = MAX_TMUS;
             }
-            gl_static.numTextureUnits = integer;
+            gl_config.numTextureUnits = integer;
         } else {
             Com_Printf( "...ignoring GL_ARB_multitexture,\n"
                 "%d TMU is not enough\n", integer );
@@ -850,11 +853,22 @@ static qboolean GL_SetupExtensions( void ) {
     if( !qglActiveTextureARB ) {
         return qfalse;
     }
-    
-    qglGetIntegerv( GL_MAX_TEXTURE_SIZE, &gl_static.maxTextureSize );
-    if( gl_static.maxTextureSize > MAX_TEXTURE_SIZE ) {
-        gl_static.maxTextureSize = MAX_TEXTURE_SIZE;
+
+    qglGetIntegerv( GL_MAX_TEXTURE_SIZE, &integer );
+    if( integer < 256 ) {
+        Com_EPrintf( "OpenGL reports invalid maximum texture size\n" );
+        return qfalse;
     }
+
+    if( integer & ( integer - 1 ) ) {
+        integer = npot32( integer ) >> 1;
+    }
+
+    if( integer > MAX_TEXTURE_SIZE ) {
+        integer = MAX_TEXTURE_SIZE;
+    }
+
+    gl_config.maxTextureSize = integer;
 
     return qtrue;
 }
@@ -862,10 +876,19 @@ static qboolean GL_SetupExtensions( void ) {
 #undef GPA
 
 static void GL_IdentifyRenderer( void ) {
+    char *p;
+
+    // parse renderer
     if( Q_stristr( gl_config.rendererString, "mesa dri" ) ) {
         gl_config.renderer = GL_RENDERER_MESADRI;
     } else {
         gl_config.renderer = GL_RENDERER_OTHER;
+    }
+
+    // parse version
+    gl_config.version_major = strtoul( gl_config.versionString, &p, 10 );
+    if( *p == '.' ) {
+        gl_config.version_minor = strtoul( p + 1, NULL, 10 );
     }
 }
 

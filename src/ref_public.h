@@ -80,8 +80,6 @@ typedef struct entity_s {
     int         flags;
 } entity_t;
 
-#define ENTITY_FLAGS  68
-
 typedef struct dlight_s {
     vec3_t  origin;
     vec3_t  color;
@@ -139,6 +137,9 @@ typedef enum {
 
 typedef struct glconfig_s {
     glHardware_t    renderer;
+    int     version_major;
+    int     version_minor;
+
     const char *rendererString;
     const char *vendorString;
     const char *versionString;
@@ -146,8 +147,10 @@ typedef struct glconfig_s {
 
     int     vidWidth;
     int     vidHeight;
+    int     flags;
 
-    int         flags;
+    int         maxTextureSize;
+    int         numTextureUnits;
     float       maxAnisotropy;
 } glconfig_t;
 

@@ -638,7 +638,7 @@ static qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap 
     // save the flag indicating if costly resampling can be avoided
     picmip = scaled_width == width && scaled_height == height;
 
-    maxsize = gl_static.maxTextureSize;
+    maxsize = gl_config.maxTextureSize;
 
     if( mipmap ) {
         // round world textures down, if requested
@@ -655,8 +655,8 @@ static qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap 
 
         if( gl_maxmip->integer > 0 ) {
             maxsize = 1 << Cvar_ClampInteger( gl_maxmip, 1, 12 );
-            if( maxsize > gl_static.maxTextureSize ) {
-                maxsize = gl_static.maxTextureSize;
+            if( maxsize > gl_config.maxTextureSize ) {
+                maxsize = gl_config.maxTextureSize;
             }
         }
     }

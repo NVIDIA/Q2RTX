@@ -43,8 +43,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MAX_TMUS        2
 
 typedef struct {
-    int numTextureUnits;
-    int maxTextureSize;
     qboolean registering;
     struct {
         bsp_t *cache;

@@ -41,7 +41,7 @@ void GL_SelectTMU( int tmu ) {
         return;
     }
 
-    if( tmu < 0 || tmu >= gl_static.numTextureUnits ) {
+    if( tmu < 0 || tmu >= gl_config.numTextureUnits ) {
         Com_Error( ERR_FATAL, "GL_SelectTMU: bad tmu %d", tmu );
     }
     
