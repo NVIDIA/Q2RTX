@@ -206,7 +206,10 @@ void CL_RunRefresh( void ) {
         mode_changed = 0;
     }
 
-    if( cvar_modified & CVAR_FILES ) {
+    if( cvar_modified & CVAR_REFRESH ) {
+        CL_RestartRefresh( qtrue );
+        cvar_modified &= ~CVAR_REFRESH;
+    } else if( cvar_modified & CVAR_FILES ) {
         CL_RestartRefresh( qfalse );
         cvar_modified &= ~CVAR_FILES;
     }
@@ -269,7 +272,7 @@ void CL_InitRefresh( void ) {
     SCR_RegisterMedia();
     Con_RegisterMedia();
     
-    cvar_modified &= ~CVAR_FILES;
+    cvar_modified &= ~(CVAR_FILES|CVAR_REFRESH);
 }
 
 /*
