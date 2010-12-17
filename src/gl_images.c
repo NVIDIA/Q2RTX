@@ -39,6 +39,7 @@ mtexinfo_t    *upload_texinfo;
 static cvar_t *gl_noscrap;
 static cvar_t *gl_round_down;
 static cvar_t *gl_picmip;
+static cvar_t *gl_maxmip;
 static cvar_t *gl_gamma_scale_pics;
 static cvar_t *gl_bilerp_chars;
 static cvar_t *gl_bilerp_pics;
@@ -545,7 +546,6 @@ static void GL_ResampleTexture( const byte *in, int inwidth, int inheight, byte 
     }
 }
 
-
 /*
 ================
 GL_MipMap
@@ -629,9 +629,12 @@ static qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap 
     int         scaled_width, scaled_height;
     int         comp;
     qboolean    isalpha;
+    int         maxsize;
 
     scaled_width = npot32( width );
     scaled_height = npot32( height );
+
+    maxsize = gl_static.maxTextureSize;
 
     if( mipmap ) {
         if( gl_round_down->integer ) {
@@ -644,22 +647,25 @@ static qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap 
         // let people sample down the world textures for speed
         scaled_width >>= gl_picmip->integer;
         scaled_height >>= gl_picmip->integer;
+
+        if( gl_maxmip->integer > 0 ) {
+            maxsize = 1 << Cvar_ClampInteger( gl_maxmip, 1, 12 );
+            if( maxsize > gl_static.maxTextureSize ) {
+                maxsize = gl_static.maxTextureSize;
+            }
+        }
     }
 
     // don't ever bother with >256 textures
-    while( scaled_width > gl_static.maxTextureSize ||
-           scaled_height > gl_static.maxTextureSize )
-    {
+    while( scaled_width > maxsize || scaled_height > maxsize ) {
         scaled_width >>= 1;
         scaled_height >>= 1;
     }
-    
-    if( scaled_width < 1 ) {
+
+    if( scaled_width < 1 )
         scaled_width = 1;
-    }
-    if( scaled_height < 1 ) {
+    if( scaled_height < 1 )
         scaled_height = 1;
-    }
 
     upload_width = scaled_width;
     upload_height = scaled_height;
@@ -1127,6 +1133,7 @@ void GL_InitImages( void ) {
     gl_noscrap = Cvar_Get( "gl_noscrap", "0", CVAR_FILES );
     gl_round_down = Cvar_Get( "gl_round_down", "0", CVAR_FILES );
     gl_picmip = Cvar_Get( "gl_picmip", "0", CVAR_FILES );
+    gl_maxmip = Cvar_Get( "gl_maxmip", "0", CVAR_FILES );
     gl_gamma_scale_pics = Cvar_Get( "gl_gamma_scale_pics", "0", CVAR_FILES );
     gl_texturealphamode = Cvar_Get( "gl_texturealphamode",
         "default", CVAR_ARCHIVE|CVAR_FILES );
