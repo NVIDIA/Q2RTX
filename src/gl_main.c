@@ -745,8 +745,6 @@ static void GL_Register( void ) {
     gl_polyblend = Cvar_Get( "gl_polyblend", "1", 0 );
     gl_fullbright = Cvar_Get( "r_fullbright", "0", CVAR_CHEAT );
     gl_showerrors = Cvar_Get( "gl_showerrors", "1", 0 );
-    gl_fragment_program = Cvar_Get( "gl_fragment_program", "0", CVAR_REFRESH );
-    gl_vertex_buffer_object = Cvar_Get( "gl_vertex_buffer_object", "0", CVAR_REFRESH );
     
     Cmd_AddCommand( "screenshot", GL_ScreenShot_f );
 #if USE_JPG
@@ -775,6 +773,14 @@ static qboolean GL_SetupExtensions( void ) {
     const char *extensions;
     int integer;
     float value;
+
+    if( !gl_config.extensionsString || !gl_config.extensionsString[0] ) {
+        Com_EPrintf( "No OpenGL extensions found, check your drivers\n" );
+        return qfalse;
+    }
+
+    gl_fragment_program = Cvar_Get( "gl_fragment_program", "1", CVAR_REFRESH );
+    gl_vertex_buffer_object = Cvar_Get( "gl_vertex_buffer_object", "1", CVAR_REFRESH );
 
     extensions = gl_config.extensionsString;
     if( strstr( extensions, "GL_EXT_compiled_vertex_array" ) ) {
@@ -851,6 +857,7 @@ static qboolean GL_SetupExtensions( void ) {
     }
 
     if( !qglActiveTextureARB ) {
+        Com_EPrintf( "Required OpenGL extensions are missing\n" );
         return qfalse;
     }
 
@@ -941,34 +948,31 @@ qboolean R_Init( qboolean total ) {
         return qfalse;
     }
 
-    GL_Register();
-
     // initialize our QGL dynamic bindings
     QGL_Init();
 
+    // get verious static strings from OpenGL
 #define GET_STRING( x )  ( const char * )qglGetString( x )
-
     gl_config.vendorString = GET_STRING( GL_VENDOR );
     gl_config.rendererString = GET_STRING( GL_RENDERER );
     gl_config.versionString = GET_STRING( GL_VERSION );
     gl_config.extensionsString = GET_STRING( GL_EXTENSIONS );
-    
-    if( !gl_config.extensionsString || !gl_config.extensionsString[0] ) {
-        Com_EPrintf( "No OpenGL extensions found, check your drivers\n" );
+
+    // parse renderer/version strings
+    GL_IdentifyRenderer();
+
+    // parse extension string
+    if( !GL_SetupExtensions() ) {
         goto fail;
     }
 
-    if( !GL_SetupExtensions() ) {
-        Com_EPrintf( "Required OpenGL extensions are missing\n" );
-        goto fail;
-    }
+    // register our variables
+    GL_Register();
 
     if( gl_hwgamma->integer && !( gl_config.flags & QVF_GAMMARAMP ) ) {
         Cvar_Set( "vid_hwgamma", "0" );
         Com_Printf( "Hardware gamma is not supported by this video driver\n" );
     }
-
-    GL_IdentifyRenderer();
 
     QGL_EnableLogging( gl_log->integer );
     gl_log->modified = qfalse;
@@ -988,8 +992,8 @@ qboolean R_Init( qboolean total ) {
     return qtrue;
 
 fail:
+    memset( &gl_config, 0, sizeof( gl_config ) );
     QGL_Shutdown();
-    GL_Unregister();
     VID_Shutdown();
     return qfalse;
 }
