@@ -992,6 +992,37 @@ static void Con_Action( void ) {
     }
 }
 
+static void Con_Paste( void ) {
+    char *cbd, *s;
+
+    if( ( cbd = VID_GetClipboardData() ) == NULL ) {
+        return;
+    }
+
+    s = cbd;
+    while( *s ) {
+        int c = *s++;
+        switch( c ) {
+        case '\n':
+            if( *s ) {
+                Con_Action();
+            }
+            break;
+        case '\r':
+        case '\t':
+            IF_CharEvent( &con.prompt.inputLine, ' ' );
+            break;
+        default:
+            if( Q_isprint( c ) ) {
+                IF_CharEvent( &con.prompt.inputLine, c );
+            }
+            break;
+        }
+    }
+
+    Z_Free( cbd );
+}
+
 /*
 ====================
 Key_Console
@@ -1018,31 +1049,7 @@ void Key_Console( int key ) {
     if( ( key == 'v' && Key_IsDown( K_CTRL ) ) ||
         ( key == K_INS && Key_IsDown( K_SHIFT ) ) || key == K_MOUSE3 )
     {
-        char *cbd, *s;
-        
-        if( ( cbd = VID_GetClipboardData() ) != NULL ) {
-            s = cbd;
-            while( *s ) {
-                int c = *s++;
-                switch( c ) {
-                case '\n':
-                    if( *s ) {
-                        Con_Action();
-                    }
-                    break;
-                case '\r':
-                case '\t':
-                    IF_CharEvent( &con.prompt.inputLine, ' ' );
-                    break;
-                default:
-                    if( c >= 32 && c < 127 ) {
-                        IF_CharEvent( &con.prompt.inputLine, c );
-                    }
-                    break;
-                }
-            }
-            Z_Free( cbd );
-        }
+        Con_Paste();
         goto scroll;
     }
 
