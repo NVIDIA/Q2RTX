@@ -443,10 +443,8 @@ usage:
     // copy early to avoid potential cmd_argv[1] clobbering
     Q_strlcpy( cls.servername, server, sizeof( cls.servername ) );
 
-    if ( sv_running->integer ) {
-        // if running a local server, kill it and reissue
-        SV_Shutdown( "Server was killed\n", KILL_DROP );
-    }
+    // if running a local server, kill it and reissue
+    SV_Shutdown( "Server was killed.\n", KILL_DROP );
 
     NET_Config( NET_CLIENT );
 
@@ -480,10 +478,9 @@ static void CL_PassiveConnect_f( void ) {
         Com_Printf( "No longer listening for passive connections.\n" );
         return;
     }
-    if ( sv_running->integer ) {
-        // if running a local server, kill it and reissue
-        SV_Shutdown( "Server was killed\n", KILL_DROP );
-    }
+
+    // if running a local server, kill it and reissue
+    SV_Shutdown( "Server was killed.\n", KILL_DROP );
 
     NET_Config( NET_CLIENT );
 

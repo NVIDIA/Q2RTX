@@ -675,10 +675,8 @@ fail:
         return;
     }
 
-    if( sv_running->integer ) {
-        // if running a local server, kill it and reissue
-        SV_Shutdown( "Server was killed\n", KILL_DROP );
-    }
+    // if running a local server, kill it and reissue
+    SV_Shutdown( "Server was killed.\n", KILL_DROP );
 
     CL_Disconnect( ERR_DISCONNECT, NULL );
     
