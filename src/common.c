@@ -1077,6 +1077,7 @@ int DirToByte( const vec3_t dir ) {
     return best;
 }
 
+#if 0
 void ByteToDir( int index, vec3_t dir ) {
     if( index < 0 || index >= NUMVERTEXNORMALS ) {
         Com_Error( ERR_FATAL, "ByteToDir: illegal index" );
@@ -1084,6 +1085,7 @@ void ByteToDir( int index, vec3_t dir ) {
 
     VectorCopy( bytedirs[index], dir );
 }
+#endif
 
 void SetPlaneType( cplane_t *plane ) {
     vec_t *normal = plane->normal;
