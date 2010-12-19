@@ -40,6 +40,7 @@ static cvar_t *gl_noscrap;
 static cvar_t *gl_round_down;
 static cvar_t *gl_picmip;
 static cvar_t *gl_maxmip;
+static cvar_t *gl_downsample_skins;
 static cvar_t *gl_gamma_scale_pics;
 static cvar_t *gl_bilerp_chars;
 static cvar_t *gl_bilerp_pics;
@@ -604,6 +605,16 @@ static inline qboolean is_wall( void ) {
     return qtrue;
 }
 
+static inline qboolean is_downsample( void ) {
+    if( !upload_image ) {
+        return qtrue;
+    }
+    if( upload_image->type != it_skin ) {
+        return qtrue; // not a skin
+    }
+    return !!gl_downsample_skins->integer;
+}
+
 static inline qboolean is_alpha( byte *data, int width, int height ) {
     int         i, c;
     byte        *scan;
@@ -640,7 +651,7 @@ static qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap 
 
     maxsize = gl_config.maxTextureSize;
 
-    if( mipmap ) {
+    if( mipmap && is_downsample() ) {
         // round world textures down, if requested
         if( gl_round_down->integer ) {
             if( scaled_width > width )
@@ -1147,6 +1158,7 @@ void GL_InitImages( void ) {
     gl_round_down = Cvar_Get( "gl_round_down", "0", CVAR_FILES );
     gl_picmip = Cvar_Get( "gl_picmip", "0", CVAR_FILES );
     gl_maxmip = Cvar_Get( "gl_maxmip", "0", CVAR_FILES );
+    gl_downsample_skins = Cvar_Get( "gl_downsample_skins", "1", CVAR_FILES );
     gl_gamma_scale_pics = Cvar_Get( "gl_gamma_scale_pics", "0", CVAR_FILES );
     gl_texturealphamode = Cvar_Get( "gl_texturealphamode",
         "default", CVAR_ARCHIVE|CVAR_FILES );
