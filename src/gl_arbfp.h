@@ -1,5 +1,6 @@
 static const char gl_prog_warp[] =
     "!!ARBfp1.0\n"
+    "OPTION ARB_precision_hint_fastest;\n"
 
     "TEMP ofs, coord, diffuse;\n"
     "PARAM amp = { 0.0625, 0.0625 };\n"
