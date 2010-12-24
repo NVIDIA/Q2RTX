@@ -239,16 +239,24 @@ void GL_SetDefaultState( void ) {
 }
 
 void GL_EnableOutlines( void ) {
+    if( gls.fp_enabled ) {
+        qglDisable( GL_FRAGMENT_PROGRAM_ARB );
+    }
     qglDisable( GL_TEXTURE_2D );
+    qglDisableClientState( GL_TEXTURE_COORD_ARRAY );
     qglPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-    qglDisable( GL_DEPTH_TEST );
+    qglDepthRange( 0, 0 );
     qglColor4f( 1, 1, 1, 1 );
 }
 
 void GL_DisableOutlines( void ) {
-   qglEnable( GL_DEPTH_TEST );
-   qglPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-   qglEnable( GL_TEXTURE_2D );
+    qglDepthRange( 0, 1 );
+    qglPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+    qglEnableClientState( GL_TEXTURE_COORD_ARRAY );
+    qglEnable( GL_TEXTURE_2D );
+    if( gls.fp_enabled ) {
+        qglEnable( GL_FRAGMENT_PROGRAM_ARB );
+    }
 }
 
 void GL_EnableWarp( void ) {
@@ -260,11 +268,13 @@ void GL_EnableWarp( void ) {
     param[1] = glr.fd.time;
     param[2] = param[3] = 0;
     qglProgramLocalParameter4fvARB( GL_FRAGMENT_PROGRAM_ARB, 0, param );
+    gls.fp_enabled = qtrue;
 }
 
 void GL_DisableWarp( void ) {
     qglBindProgramARB( GL_FRAGMENT_PROGRAM_ARB, 0 );
     qglDisable( GL_FRAGMENT_PROGRAM_ARB );
+    gls.fp_enabled = qfalse;
 }
 
 void GL_InitPrograms( void ) {

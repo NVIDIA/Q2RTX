@@ -222,6 +222,7 @@ typedef struct {
     GLenum texenv[MAX_TMUS];
     glStateBits_t bits;
     glCullFace_t cull;
+    qboolean fp_enabled;
 } glState_t;
 
 extern glState_t gls;
