@@ -193,9 +193,11 @@ void CL_RunDLights (void)
             dl->radius = 0;
             return;
         }
+#if 0
         dl->radius -= cls.frametime*dl->decay;
         if (dl->radius < 0)
             dl->radius = 0;
+#endif
     }
 }
 
@@ -251,7 +253,7 @@ void CL_ParseMuzzleFlash (void)
         dl->radius = 100 + (rand()&31);
     else
         dl->radius = 200 + (rand()&31);
-    dl->minlight = 32;
+    //dl->minlight = 32;
     dl->die = cl.time; // + 0.1;
 #define DL_COLOR(r,g,b) VectorSet(dl->color,r,g,b)
 #define DL_RADIUS(r)    (dl->radius=r)
@@ -444,7 +446,7 @@ void CL_ParseMuzzleFlash2 (void)
     dl = CL_AllocDlight (mz.entity);
     VectorCopy (origin,  dl->origin);
     dl->radius = 200 + (rand()&31);
-    dl->minlight = 32;
+    //dl->minlight = 32;
     dl->die = cl.time;  // + 0.1;
 #endif
 
