@@ -329,4 +329,20 @@ void Draw_Stats( void ) {
     Draw_Stringf( x, y, "2D batches   : %i", c.batchesDrawn2D ); y += 10;
 }
 
+void Draw_Lightmaps( void ) {
+    int i, x, y;
+
+    for( i = 0; i < lm.nummaps; i++ ) {
+        x = i & 1;
+        y = i >> 1;
+        _GL_StretchPic( 256*x, 256*y, 256, 256,
+            0, 0, 1, 1, colorWhite, TEXNUM_LIGHTMAP+i, 0 );
+    }
+}
+
+void Draw_Scrap( void ) {
+    _GL_StretchPic( 0, 0, 256, 256,
+        0, 0, 1, 1, colorWhite, TEXNUM_SCRAP, if_paletted|if_transparent );
+}
+
 #endif

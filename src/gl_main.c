@@ -59,6 +59,7 @@ cvar_t *gl_cull_nodes;
 cvar_t *gl_cull_models;
 #ifdef _DEBUG
 cvar_t *gl_showstats;
+cvar_t *gl_showscrap;
 #endif
 cvar_t *gl_bind;
 cvar_t *gl_clear;
@@ -527,6 +528,12 @@ void R_RenderFrame( refdef_t *fd ) {
         GL_Blend();
     }
 
+#ifdef _DEBUG
+    if( gl_lightmap->integer > 1 ) {
+        Draw_Lightmaps();
+    }
+#endif
+
     GL_ShowErrors( __func__ );
 }
 
@@ -551,6 +558,9 @@ void R_EndFrame( void ) {
     if( gl_showstats->integer ) {
         GL_Flush2D();
         Draw_Stats();
+    }
+    if( gl_showscrap->integer ) {
+        Draw_Scrap();
     }
 #endif
     GL_Flush2D();
@@ -730,6 +740,7 @@ static void GL_Register( void ) {
     gl_showtearing = Cvar_Get( "gl_showtearing", "0", 0 );
 #ifdef _DEBUG
     gl_showstats = Cvar_Get( "gl_showstats", "0", 0 );
+    gl_showscrap = Cvar_Get( "gl_showscrap", "0", 0 );
 #endif
     gl_cull_nodes = Cvar_Get( "gl_cull_nodes", "1", 0 );
     gl_cull_models = Cvar_Get( "gl_cull_models", "1", 0 );

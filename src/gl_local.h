@@ -259,6 +259,8 @@ extern drawStatic_t draw;
 #ifdef _DEBUG
 void Draw_Stringf( int x, int y, const char *fmt, ... );
 void Draw_Stats( void );
+void Draw_Lightmaps( void );
+void Draw_Scrap( void );
 #endif
 
 void GL_Blend( void );
