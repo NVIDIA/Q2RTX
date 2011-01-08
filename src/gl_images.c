@@ -277,57 +277,25 @@ static void gl_texturesolidmode_g( genctx_t *ctx ) {
 #define SCRAP_BLOCK_WIDTH       256
 #define SCRAP_BLOCK_HEIGHT      256
 
-#define SCRAP_TEXNUM            ( MAX_RIMAGES + 1 )
-
-static int  scrap_inuse[SCRAP_BLOCK_WIDTH];
+static int scrap_inuse[SCRAP_BLOCK_WIDTH];
 static byte scrap_data[SCRAP_BLOCK_WIDTH * SCRAP_BLOCK_HEIGHT];
 static qboolean scrap_dirty;
 
-static qboolean Scrap_AllocBlock( int w, int h, int *s, int *t ) {
-    int i, j;
-    int x, y, maxInuse, minInuse;
+#define Scrap_AllocBlock( w, h, s, t ) \
+    GL_AllocBlock( SCRAP_BLOCK_WIDTH, SCRAP_BLOCK_HEIGHT, scrap_inuse, w, h, s, t )
 
-    x = 0; y = SCRAP_BLOCK_HEIGHT;
-    minInuse = SCRAP_BLOCK_HEIGHT;
-    for( i = 0; i < SCRAP_BLOCK_WIDTH - w; i++ ) {
-        maxInuse = 0;
-        for( j = 0; j < w; j++ ) {
-            if( scrap_inuse[ i + j ] >= minInuse ) {
-                break;
-            }
-            if( maxInuse < scrap_inuse[ i + j ] ) {
-                maxInuse = scrap_inuse[ i + j ];
-            }
-        }
-        if( j == w ) {
-            x = i;
-            y = minInuse = maxInuse;
-        }
-    }
-
-    if( y + h > SCRAP_BLOCK_HEIGHT ) {
-        return qfalse;
-    }
-    
-    for( i = 0; i < w; i++ ) {
-        scrap_inuse[ x + i ] = y + h;
-    }
-
-    *s = x;
-    *t = y;
-    return qtrue;
+static void Scrap_Init( void ) {
+    // make scrap texture initially transparent
+    memset( scrap_data, 255, sizeof( scrap_data ) );
 }
 
 static void Scrap_Shutdown( void ) {
-    GLuint num = SCRAP_TEXNUM;
     int i;
 
     for( i = 0; i < SCRAP_BLOCK_WIDTH; i++ ) {
         scrap_inuse[i] = 0;
     }
     scrap_dirty = qfalse;
-
-    qglDeleteTextures( 1, &num );
 }
 
 void Scrap_Upload( void ) {
@@ -339,7 +307,6 @@ void Scrap_Upload( void ) {
     scrap_dirty = qfalse;
 }
 
-
 /*
 ====================================================================
 
@@ -347,7 +314,6 @@ IMAGE FLOOD FILLING
 
 ====================================================================
 */
-
 
 typedef struct {
     short       x, y;
@@ -898,7 +864,7 @@ void IMG_Load( image_t *image, byte *pic, int width, int height,
 
             flags |= if_scrap | if_transparent;
 
-            image->texnum = SCRAP_TEXNUM;
+            image->texnum = TEXNUM_SCRAP;
             image->upload_width = width;
             image->upload_height = height;
             image->flags = flags;
@@ -1209,6 +1175,8 @@ void GL_InitImages( void ) {
 
     upload_image = NULL;
     upload_texinfo = NULL;
+
+    Scrap_Init();
 
     // make sure r_notexture == &r_images[0]
     GL_InitDefaultTexture();

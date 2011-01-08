@@ -262,6 +262,44 @@ void GL_DrawBox( const vec3_t origin, vec3_t bounds[2] ) {
 }
 #endif
 
+// shared between lightmap and scrap allocators
+qboolean GL_AllocBlock( int width, int height, int *inuse,
+    int w, int h, int *s, int *t )
+{
+    int i, j, k, x, y, max_inuse, min_inuse;
+
+    x = 0; y = height;
+    min_inuse = height;
+    for( i = 0; i < width - w; i++ ) {
+        max_inuse = 0;
+        for( j = 0; j < w; j++ ) {
+            k = inuse[ i + j ];
+            if( k >= min_inuse ) {
+                break;
+            }
+            if( max_inuse < k ) {
+                max_inuse = k;
+            }
+        }
+        if( j == w ) {
+            x = i;
+            y = min_inuse = max_inuse;
+        }
+    }
+
+    if( y + h > height ) {
+        return qfalse;
+    }
+
+    for( i = 0; i < w; i++ ) {
+        inuse[ x + i ] = y + h;
+    }
+
+    *s = x;
+    *t = y;
+    return qtrue;
+}
+
 static void GL_DrawSpriteModel( model_t *model ) {
     vec3_t point;
     entity_t *e = glr.ent;
