@@ -44,10 +44,10 @@ void GL_SelectTMU( int tmu ) {
     if( tmu < 0 || tmu >= gl_config.numTextureUnits ) {
         Com_Error( ERR_FATAL, "GL_SelectTMU: bad tmu %d", tmu );
     }
-    
+
     qglActiveTextureARB( GL_TEXTURE0_ARB + tmu );
     qglClientActiveTextureARB( GL_TEXTURE0_ARB + tmu );
-    
+
     gls.tmu = tmu;
 }
 
@@ -55,19 +55,13 @@ void GL_TexEnv( GLenum texenv ) {
     if( gls.texenv[gls.tmu] == texenv ) {
         return;
     }
-    
+
     switch( texenv ) {
     case GL_REPLACE:
-        qglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
-        break;
     case GL_MODULATE:
-        qglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-        break;
     case GL_BLEND:
-        qglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_BLEND );
-        break;
     case GL_ADD:
-        qglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_ADD );
+        qglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, texenv );
         break;
     default:
         Com_Error( ERR_FATAL, "GL_TexEnv: bad texenv" );
