@@ -1336,6 +1336,7 @@ static void MVD_GameInit( void ) {
     strcpy( mvd->configstrings[CS_MAXCLIENTS], "8" );
     sprintf( mvd->configstrings[CS_MAPCHECKSUM], "%d", checksum );
     strcpy( mvd->configstrings[CS_MODELS + 1], buffer );
+    strcpy( mvd->configstrings[CS_LIGHTS], "m" );
 
     mvd->dummy = &mvd_dummy;
     mvd->pm_type = PM_FREEZE;
