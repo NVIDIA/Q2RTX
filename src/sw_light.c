@@ -134,14 +134,14 @@ static qboolean RecursiveLightPoint (vec3_t p, vec3_t color) {
     dt >>= 4;
 
     lightmap = surf->lightmap;
-    lightmap += dt * ((surf->extents[0]>>4)+1) + ds;
+    lightmap += dt * S_MAX(surf) + ds;
 
-    for (maps = 0 ; maps < MAX_LIGHTMAPS && surf->styles[maps] != 255 ; maps++)
+    for (maps = 0 ; maps < surf->numstyles ; maps++)
     {
         samp = *lightmap * (1.0/255);   // adjust for gl scale
         scales = r_newrefdef.lightstyles[surf->styles[maps]].rgb;
         VectorMA (color, samp, scales, color);
-        lightmap += ((surf->extents[0]>>4)+1) * ((surf->extents[1]>>4)+1);
+        lightmap += S_MAX(surf) * T_MAX(surf);
     }
     return qtrue;
 }
@@ -211,8 +211,8 @@ static void R_AddDynamicLights( void ) {
     int         negativeLight;  //PGM
 
     surf = r_drawsurf.surf;
-    smax = (surf->extents[0]>>4)+1;
-    tmax = (surf->extents[1]>>4)+1;
+    smax = S_MAX(surf);
+    tmax = T_MAX(surf);
     tex = surf->texinfo;
 
     for ( lnum = 0; lnum < r_newrefdef.num_dlights; lnum++ ) {
@@ -292,8 +292,8 @@ void R_BuildLightMap( void ) {
 
     surf = r_drawsurf.surf;
 
-    smax = ( surf->extents[0] >> 4 ) + 1;
-    tmax = ( surf->extents[1] >> 4 ) + 1;
+    smax = S_MAX( surf );
+    tmax = T_MAX( surf );
     size = smax * tmax;
     if( size > MAX_BLOCKLIGHTS ) {
         Com_Error( ERR_DROP, "R_BuildLightMap: surface blocklights size %i > %i", size, MAX_BLOCKLIGHTS );
@@ -312,7 +312,7 @@ void R_BuildLightMap( void ) {
 // add all the lightmaps
     lightmap = surf->lightmap;
     if( lightmap ) {
-        for( maps = 0; maps < MAX_LIGHTMAPS && surf->styles[maps] != 255; maps++ ) {
+        for( maps = 0; maps < surf->numstyles; maps++ ) {
             fixed8_t        scale;
             
             dst = blocklights;

@@ -112,7 +112,7 @@ void R_DrawSurface( void ) {
     blockdivshift = 4 - r_drawsurf.surfmip;
     blockdivmask = (1 << blockdivshift) - 1;
     
-    r_lightwidth = ((r_drawsurf.surf->extents[0]>>4)+1)*LIGHTMAP_BYTES;
+    r_lightwidth = S_MAX(r_drawsurf.surf)*LIGHTMAP_BYTES;
 
     r_numhblocks = r_drawsurf.surfwidth >> blockdivshift;
     r_numvblocks = r_drawsurf.surfheight >> blockdivshift;
