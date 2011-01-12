@@ -40,6 +40,7 @@ glwstate_t glw;
 static cvar_t   *gl_driver;
 static cvar_t   *gl_drawbuffer;
 static cvar_t   *gl_swapinterval;
+static cvar_t   *gl_allow_software;
 
 /*
 GLimp_Shutdown
@@ -94,7 +95,7 @@ static qboolean InitGL( void ) {
     const char *renderer;
 
     // figure out if we're running on a minidriver or not
-    if( !strstr( gl_driver->string, "opengl32" ) ) {
+    if( !Q_stristr( gl_driver->string, "opengl32" ) ) {
         Com_Printf( "...running a minidriver: %s\n", gl_driver->string );
         glw.minidriver = qtrue;
     }
@@ -144,8 +145,10 @@ static qboolean InitGL( void ) {
     if( pfd.dwFlags & PFD_GENERIC_ACCELERATED ) {
         win.flags |= QVF_ACCELERATED;
     } else if( !renderer || !renderer[0] || !Q_stricmp( renderer, "gdi generic" ) ) {
-        Com_Printf( "No hardware OpenGL acceleration detected.\n" );
-        goto fail2;
+        Com_EPrintf( "No hardware OpenGL acceleration detected.\n" );
+        if( !gl_allow_software->integer ) {
+            goto fail2;
+        }
     }
 
     // print out PFD specifics
@@ -189,6 +192,7 @@ qboolean VID_Init( void ) {
     gl_driver = Cvar_Get( "gl_driver", "opengl32", CVAR_ARCHIVE|CVAR_REFRESH );
     gl_drawbuffer = Cvar_Get( "gl_drawbuffer", "GL_BACK", 0 );
     gl_swapinterval = Cvar_Get( "gl_swapinterval", "1", CVAR_ARCHIVE );
+    gl_allow_software = Cvar_Get( "gl_allow_software", "0", 0 );
 
     // create the window
     Win_Init();
