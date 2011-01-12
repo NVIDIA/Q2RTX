@@ -60,8 +60,8 @@ cvar_t *gl_cull_models;
 #ifdef _DEBUG
 cvar_t *gl_showstats;
 cvar_t *gl_showscrap;
+cvar_t *gl_nobind;
 #endif
-cvar_t *gl_bind;
 cvar_t *gl_clear;
 cvar_t *gl_novis;
 cvar_t *gl_lockpvs;
@@ -782,10 +782,10 @@ static void GL_Register( void ) {
 #ifdef _DEBUG
     gl_showstats = Cvar_Get( "gl_showstats", "0", 0 );
     gl_showscrap = Cvar_Get( "gl_showscrap", "0", 0 );
+    gl_nobind = Cvar_Get( "gl_nobind", "0", CVAR_CHEAT );
 #endif
     gl_cull_nodes = Cvar_Get( "gl_cull_nodes", "1", 0 );
     gl_cull_models = Cvar_Get( "gl_cull_models", "1", 0 );
-    gl_bind = Cvar_Get( "gl_bind", "1", CVAR_CHEAT );
     gl_clear = Cvar_Get( "gl_clear", "0", 0 );
     gl_novis = Cvar_Get( "gl_novis", "0", 0 );
     gl_lockpvs = Cvar_Get( "gl_lockpvs", "0", CVAR_CHEAT );

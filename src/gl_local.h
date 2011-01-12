@@ -108,7 +108,9 @@ extern cvar_t *gl_zfar;
 extern cvar_t *gl_modulate;
 extern cvar_t *gl_showtris;
 extern cvar_t *gl_cull_nodes;
-extern cvar_t *gl_bind;
+#ifdef _DEBUG
+extern cvar_t *gl_nobind;
+#endif
 extern cvar_t *gl_clear;
 extern cvar_t *gl_novis;
 extern cvar_t *gl_lockpvs;
@@ -291,6 +293,7 @@ void GL_Blend( void );
 #define LUMINANCE(r,g,b) ((r)*0.2126f + (g)*0.7152f + (b)*0.0722f)
 
 enum {
+    TEXNUM_DEFAULT = 1,
     TEXNUM_SCRAP = MAX_RIMAGES + 1,
     TEXNUM_PARTICLE,
     TEXNUM_BEAM,

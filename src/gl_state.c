@@ -24,16 +24,20 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 glState_t gls;
 
 void GL_BindTexture( int texnum ) {
+#ifdef _DEBUG
+    if( gl_nobind->integer && !gls.tmu ) {
+        texnum = TEXNUM_DEFAULT;
+    }
+#endif
+
     if( gls.texnum[gls.tmu] == texnum ) {
         return;
     }
-    if( !gl_bind->integer ) {
-        return;
-    }
-    
+
     qglBindTexture( GL_TEXTURE_2D, texnum );
-    c.texSwitches++;
     gls.texnum[gls.tmu] = texnum;
+
+    c.texSwitches++;
 }
 
 void GL_SelectTMU( int tmu ) {
