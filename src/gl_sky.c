@@ -252,7 +252,7 @@ void R_AddSkySurface( mface_t *fa ) {
     for( i = 0; i < fa->numsurfedges; i++, surfedge++ ) {
         edge = surfedge->edge;
         vert = edge->v[surfedge->vert];
-        VectorSubtract (vert->point, modelViewOrigin, verts[i]);
+        VectorSubtract (vert->point, glr.fd.vieworg, verts[i]);
     }
     ClipSkyPolygon (fa->numsurfedges, verts[0], 0);
 }
@@ -344,7 +344,7 @@ void R_DrawSkyBox( void ) {
     }
 
     qglPushMatrix ();
-    qglTranslatef (modelViewOrigin[0], modelViewOrigin[1], modelViewOrigin[2]);
+    qglTranslatef (glr.fd.vieworg[0], glr.fd.vieworg[1], glr.fd.vieworg[2]);
     if( skyrotate ) {
         qglRotatef (glr.fd.time * skyrotate, skyaxis[0], skyaxis[1], skyaxis[2]);
     }

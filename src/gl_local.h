@@ -353,8 +353,6 @@ void GL_DrawSolidFaces( void );
  * gl_world.c
  *
  */
-extern vec3_t modelViewOrigin;
-
 void GL_DrawBspModel( mmodel_t *model );
 void GL_DrawWorld( void );
 void _R_LightPoint( vec3_t origin, vec3_t color );

@@ -20,8 +20,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "gl_local.h"
 
-vec3_t modelViewOrigin; // viewer origin in model space
-
 static qboolean GL_LightPoint( vec3_t origin, vec3_t color ) {
     bsp_t *bsp = gl_static.world.cache;
     mface_t *surf;
@@ -305,7 +303,7 @@ void GL_DrawBspModel( mmodel_t *model ) {
     int count;
     vec3_t bounds[2];
     vec_t dot;
-    vec3_t temp;
+    vec3_t transformed, temp;
     entity_t *ent = glr.ent;
     glCullResult_t cull;
     
@@ -325,9 +323,9 @@ void GL_DrawBspModel( mmodel_t *model ) {
             }
         }
         VectorSubtract( glr.fd.vieworg, ent->origin, temp );
-        modelViewOrigin[0] = DotProduct( temp, glr.entaxis[0] );
-        modelViewOrigin[1] = DotProduct( temp, glr.entaxis[1] );
-        modelViewOrigin[2] = DotProduct( temp, glr.entaxis[2] );
+        transformed[0] = DotProduct( temp, glr.entaxis[0] );
+        transformed[1] = DotProduct( temp, glr.entaxis[1] );
+        transformed[2] = DotProduct( temp, glr.entaxis[2] );
     } else {
         VectorAdd( model->mins, ent->origin, bounds[0] );
         VectorAdd( model->maxs, ent->origin, bounds[1] );
@@ -336,7 +334,7 @@ void GL_DrawBspModel( mmodel_t *model ) {
             c.boxesCulled++;
             return;
         }
-        VectorSubtract( glr.fd.vieworg, ent->origin, modelViewOrigin );
+        VectorSubtract( glr.fd.vieworg, ent->origin, transformed );
     }
 
     glr.drawframe++;
@@ -364,7 +362,7 @@ void GL_DrawBspModel( mmodel_t *model ) {
     face = model->firstface;
     count = model->numfaces;
     while( count-- ) {
-        dot = PlaneDiffFast( modelViewOrigin, face->plane );
+        dot = PlaneDiffFast( transformed, face->plane );
         if( BSP_CullFace( face, dot ) ) {
             c.facesCulled++;
         } else {
@@ -460,12 +458,8 @@ static void GL_WorldNode_r( mnode_t *node, int clipflags ) {
             break;
         }
 
-        dot = PlaneDiffFast( modelViewOrigin, node->plane );
-        if( dot < 0 ) {
-            side = 1;
-        } else {
-            side = 0;
-        }
+        dot = PlaneDiffFast( glr.fd.vieworg, node->plane );
+        side = dot < 0;
 
         GL_WorldNode_r( node->children[side], clipflags );
 
@@ -485,8 +479,6 @@ void GL_DrawWorld( void ) {
 #endif
     
     R_ClearSkyBox();
-
-    VectorCopy( glr.fd.vieworg, modelViewOrigin );
 
     if( gl_dynamic->integer ) {
         GL_BeginLights();
