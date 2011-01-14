@@ -47,7 +47,7 @@ COMMON WIN32 VIDEO RELATED ROUTINES
 
 static void Win_Show( const vrect_t *rc ) {
     RECT            r;
-    int             stylebits;
+    LONG            style;
     int             x, y, w, h;
     HWND            after;
 
@@ -56,31 +56,34 @@ static void Win_Show( const vrect_t *rc ) {
     r.right = rc->width;
     r.bottom = rc->height;
 
+    style = GetWindowLong( win.wnd, GWL_STYLE );
+    style &= ~( WS_OVERLAPPEDWINDOW | WS_POPUP | WS_DLGFRAME );
+
     if( win.flags & QVF_FULLSCREEN ) {
         after = HWND_TOPMOST;
-        stylebits = WS_POPUP | WS_VISIBLE;
+        style |= WS_POPUP;
     } else {
         if( win_alwaysontop->integer ) {
             after = HWND_TOPMOST;
         } else {
             after = HWND_NOTOPMOST;
         }
-        stylebits = WS_OVERLAPPED | WS_VISIBLE;
+        style |= WS_OVERLAPPED;
         if( win_notitle->integer ) {
             if( win_noresize->integer ) {
-                stylebits |= WS_DLGFRAME;
+                style |= WS_DLGFRAME;
             } else {
-                stylebits |= WS_THICKFRAME;
+                style |= WS_THICKFRAME;
             }
         } else {
-            stylebits |= WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
+            style |= WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
             if( !win_noresize->integer ) {
-                stylebits |= WS_THICKFRAME;
+                style |= WS_THICKFRAME;
             }
         }
     }
 
-    AdjustWindowRect( &r, stylebits, FALSE );
+    AdjustWindowRect( &r, style, FALSE );
 
     x = rc->x;
     y = rc->y;
@@ -92,9 +95,9 @@ static void Win_Show( const vrect_t *rc ) {
     win.rc.width = rc->width;
     win.rc.height = rc->height;
 
-    SetWindowLong( win.wnd, GWL_STYLE, stylebits );
+    SetWindowLong( win.wnd, GWL_STYLE, style );
     SetWindowPos( win.wnd, after, x, y, w, h, SWP_FRAMECHANGED );
-    ShowWindow( win.wnd, SW_SHOWNORMAL );    
+    ShowWindow( win.wnd, SW_SHOW );
     SetForegroundWindow( win.wnd );
     SetFocus( win.wnd );
 }
@@ -174,10 +177,11 @@ void Win_SetMode( void ) {
     Com_DPrintf( "...setting windowed mode: %dx%d+%d+%d\n",
         rc.width, rc.height, rc.x, rc.y );
 
+    ChangeDisplaySettings( NULL, 0 );
+
     memset( &win.dm, 0, sizeof( win.dm ) );
     win.flags &= ~QVF_FULLSCREEN;
     Win_Show( &rc );
-    ChangeDisplaySettings( NULL, 0 );
     VID_SetGeometry( &win.rc );
     win.mode_changed = 0;
 }
@@ -478,7 +482,7 @@ static void Win_KeyEvent( WPARAM wParam, LPARAM lParam, qboolean down ) {
 }
 
 static inline void get_nc_area_size( HWND w, RECT *r ) {
-    int style = GetWindowLong( w, GWL_STYLE );
+    LONG style = GetWindowLong( w, GWL_STYLE );
 
     r->left = 0;
     r->top = 0;
