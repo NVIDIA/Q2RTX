@@ -110,6 +110,7 @@ extern cvar_t *gl_showtris;
 extern cvar_t *gl_cull_nodes;
 #ifdef _DEBUG
 extern cvar_t *gl_nobind;
+extern cvar_t *gl_test;
 #endif
 extern cvar_t *gl_clear;
 extern cvar_t *gl_novis;

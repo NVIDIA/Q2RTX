@@ -61,6 +61,7 @@ cvar_t *gl_cull_models;
 cvar_t *gl_showstats;
 cvar_t *gl_showscrap;
 cvar_t *gl_nobind;
+cvar_t *gl_test;
 #endif
 cvar_t *gl_clear;
 cvar_t *gl_novis;
@@ -783,6 +784,7 @@ static void GL_Register( void ) {
     gl_showstats = Cvar_Get( "gl_showstats", "0", 0 );
     gl_showscrap = Cvar_Get( "gl_showscrap", "0", 0 );
     gl_nobind = Cvar_Get( "gl_nobind", "0", CVAR_CHEAT );
+    gl_test = Cvar_Get( "gl_test", "0", 0 );
 #endif
     gl_cull_nodes = Cvar_Get( "gl_cull_nodes", "1", 0 );
     gl_cull_models = Cvar_Get( "gl_cull_models", "1", 0 );
