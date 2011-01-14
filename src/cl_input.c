@@ -132,8 +132,9 @@ void IN_Activate( void ) {
     grab = get_grab_mode();
 
     if( grab == IN_HIDE ) {
-        input.hideCursor = 1;
-        input.lastMotion = com_localTime - 1000;
+        input.hideCursor = 2;
+        input.lastMotion = com_localTime;
+        grab = IN_SHOW;
     } else {
         input.hideCursor = 0;
     }
