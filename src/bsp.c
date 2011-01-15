@@ -609,6 +609,11 @@ LOAD( Submodels ) {
     unsigned    firstface, numfaces, lastface;
 #endif
 
+    if( !count ) {
+        DEBUG( "map with no models" );
+        return Q_ERR_TOO_FEW;
+    }
+
     bsp->models = ALLOC( sizeof( *out ) * count );
     bsp->nummodels = count;
 
@@ -623,13 +628,16 @@ LOAD( Submodels ) {
         }
         headnode = LittleLong (in->headnode);
         if( headnode >= bsp->numnodes ) {
-            // FIXME: headnode may be garbage for some models
+            // FIXME: headnode may be garbage for some models (a leaf perhaps)
             Com_DPrintf( "%s: bad headnode\n", __func__ );
             out->headnode = NULL;
         } else {
             out->headnode = bsp->nodes + headnode;
         }
 #if USE_REF
+        if( i == 0 ) {
+            continue;
+        }
         firstface = LittleLong( in->firstface );
         numfaces = LittleLong( in->numfaces );
         lastface = firstface + numfaces;
@@ -805,18 +813,33 @@ static bsp_t *BSP_Find( const char *name ) {
     return NULL;
 }
 
-static qerror_t BSP_SetParent( mnode_t *node ) {
+static qerror_t BSP_SetParent( mnode_t *node, int key ) {
     mnode_t *child;
-    
+#if USE_REF
+    mface_t *face;
+    int i;
+#endif
+
     while( node->plane ) {
+#if USE_REF
+        // a face may never belong to more than one node
+        for( i = 0, face = node->firstface; i < node->numfaces; i++, face++ ) {
+            if( face->drawframe ) {
+                DEBUG( "duplicate face" );
+                return Q_ERR_DEADLOCK;
+            }
+            face->drawframe = key;
+        }
+#endif
+
         child = node->children[0];
         if( child->parent ) {
             DEBUG( "cycle encountered" );
             return Q_ERR_DEADLOCK;
         }
         child->parent = node;
-        BSP_SetParent( child );
-        
+        BSP_SetParent( child, key );
+
         child = node->children[1];
         if( child->parent ) {
             DEBUG( "cycle encountered" );
@@ -824,6 +847,43 @@ static qerror_t BSP_SetParent( mnode_t *node ) {
         }
         child->parent = node;
         node = child;
+    }
+
+    return Q_ERR_SUCCESS;
+}
+
+static qerror_t BSP_ValidateTree( bsp_t *bsp ) {
+    mmodel_t *mod;
+    qerror_t ret;
+    int i;
+#if USE_REF
+    mface_t *face;
+    int j;
+#endif
+
+    for( i = 0, mod = bsp->models; i < bsp->nummodels; i++, mod++ ) {
+        if( i == 0 && mod->headnode != bsp->nodes ) {
+            DEBUG( "map model 0 headnode is not the first node" );
+            return Q_ERR_INVALID_FORMAT;
+        }
+
+        if( mod->headnode ) {
+            ret = BSP_SetParent( mod->headnode, ~i );
+            if( ret ) {
+                return ret;
+            }
+        }
+
+#if USE_REF
+        // a face may never belong to more than one model
+        for( j = 0, face = mod->firstface; j < mod->numfaces; j++, face++ ) {
+            if( face->drawframe && face->drawframe != ~i ) {
+                DEBUG( "duplicate face" );
+                return Q_ERR_DEADLOCK;
+            }
+            face->drawframe = ~i;
+        }
+#endif
     }
 
     return Q_ERR_SUCCESS;
@@ -959,7 +1019,7 @@ qerror_t BSP_Load( const char *name, bsp_t **bsp_p ) {
         goto fail1;
     }
 
-    ret = BSP_SetParent( bsp->nodes );
+    ret = BSP_ValidateTree( bsp );
     if( ret ) {
         goto fail1;
     }
