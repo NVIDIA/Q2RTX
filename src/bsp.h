@@ -192,6 +192,10 @@ typedef struct mmodel_s {
     
     int             numfaces;
     mface_t         *firstface;
+
+#if USE_REF == REF_GL
+    int             drawframe;
+#endif
 #endif
 } mmodel_t;
 

@@ -64,6 +64,9 @@ typedef struct {
     vec3_t viewaxis[3];
     int visframe;
     int drawframe;
+#if USE_DLIGHTS
+    int dlightframe;
+#endif
     int viewcluster1;
     int viewcluster2;
     cplane_t frustumPlanes[4];
@@ -345,7 +348,7 @@ void GL_Flush2D( void );
 void GL_DrawParticles( void );
 void GL_DrawBeams( void );
 
-void GL_AddFace( mface_t *face );
+void GL_AddAlphaFace( mface_t *face );
 void GL_AddSolidFace( mface_t *face );
 void GL_DrawAlphaFaces( void );
 void GL_DrawSolidFaces( void );

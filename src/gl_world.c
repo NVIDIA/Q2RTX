@@ -110,8 +110,8 @@ static void GL_MarkLights_r( mnode_t *node, dlight_t *light, int lightbit ) {
         count = node->numfaces;
         while( count-- ) {
             if( !( face->texinfo->c.flags & SURF_NOLM_MASK ) ) {
-                if( face->dlightframe != glr.drawframe ) {
-                    face->dlightframe = glr.drawframe;
+                if( face->dlightframe != glr.dlightframe ) {
+                    face->dlightframe = glr.dlightframe;
                     face->dlightbits = 0;
                 }
             
@@ -300,13 +300,13 @@ finish:
 
 void GL_DrawBspModel( mmodel_t *model ) {
     mface_t *face;
-    int count;
+    int count, mask = 0;
     vec3_t bounds[2];
     vec_t dot;
     vec3_t transformed, temp;
     entity_t *ent = glr.ent;
     glCullResult_t cull;
-    
+
     if( glr.entrotated ) {
         cull = GL_CullSphere( ent->origin, model->radius );
         if( cull == CULL_OUT ) {
@@ -335,11 +335,17 @@ void GL_DrawBspModel( mmodel_t *model ) {
             return;
         }
         VectorSubtract( glr.fd.vieworg, ent->origin, transformed );
+        if( VectorEmpty( ent->origin ) && model->drawframe != glr.drawframe ) {
+            mask = SURF_TRANS33|SURF_TRANS66;
+        }
     }
 
-    glr.drawframe++;
+    // protect against infinite loop if the same inline model
+    // with alpha faces is referenced by multiple entities
+    model->drawframe = glr.drawframe;
 
 #if USE_DLIGHTS
+    glr.dlightframe++;
     if( gl_dynamic->integer == 1 ) {
         GL_TransformLights( model );
     }
@@ -365,9 +371,12 @@ void GL_DrawBspModel( mmodel_t *model ) {
         dot = PlaneDiffFast( transformed, face->plane );
         if( BSP_CullFace( face, dot ) ) {
             c.facesCulled++;
+        } else if( face->texinfo->c.flags & mask ) {
+            // FIXME: alpha faces are not supported
+            // on rotated or translated inline models
+            GL_AddAlphaFace( face );
         } else {
-            // FIXME: trans surfaces are not supported on inline models
-            GL_AddSolidFace( face );  
+            GL_AddSolidFace( face );
         }
         face++;
     }
@@ -426,6 +435,22 @@ static inline void GL_DrawLeaf( mleaf_t *leaf ) {
     }
 }
 
+static inline void GL_AddGenericFace( mface_t *face ) {
+    int flags = face->texinfo->c.flags;
+
+    if( flags & SURF_SKY ) {
+        R_AddSkySurface( face );
+        return;
+    }
+
+    if( flags & (SURF_TRANS33|SURF_TRANS66) ) {
+        GL_AddAlphaFace( face );
+        return;
+    }
+
+    GL_AddSolidFace( face );
+}
+
 static inline void GL_DrawNode( mnode_t *node, vec_t dot ) {
     mface_t *face, *last = node->firstface + node->numfaces;
 
@@ -436,7 +461,7 @@ static inline void GL_DrawNode( mnode_t *node, vec_t dot ) {
         if( BSP_CullFace( face, dot ) ) {
             c.facesCulled++;
         } else {
-            GL_AddFace( face );
+            GL_AddGenericFace( face );
         }
     }
 
@@ -473,7 +498,8 @@ void GL_DrawWorld( void ) {
     GL_MarkLeaves();
 
 #if USE_DLIGHTS
-    if( gl_dynamic->integer ) {
+    glr.dlightframe++;
+    if( gl_dynamic->integer == 1 ) {
         GL_MarkLights();
     }
 #endif

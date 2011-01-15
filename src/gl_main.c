@@ -407,7 +407,7 @@ static void GL_DrawEntities( int mask ) {
         }
 
         glr.ent = ent;
-        if( ent->angles[0] || ent->angles[1] || ent->angles[2] ) {
+        if( !VectorEmpty( ent->angles ) ) {
             glr.entrotated = qtrue;
             AngleVectors( ent->angles, glr.entaxis[0], glr.entaxis[1], glr.entaxis[2] );
             VectorInverse( glr.entaxis[1] );
@@ -562,9 +562,7 @@ void R_RenderFrame( refdef_t *fd ) {
 
     GL_DrawEntities( RF_TRANSLUCENT );
 
-    if( !( glr.fd.rdflags & RDF_NOWORLDMODEL ) && gl_drawworld->integer ) {
-        GL_DrawAlphaFaces();
-    }
+    GL_DrawAlphaFaces();
 
     // go back into 2D mode
     GL_Setup2D();

@@ -488,27 +488,17 @@ void GL_AddSolidFace( mface_t *face ) {
     c.facesDrawn++;
 }
 
-void GL_AddFace( mface_t *face ) {
+void GL_AddAlphaFace( mface_t *face ) {
     int flags = face->texinfo->c.flags;
 
-    if( flags & SURF_SKY ) {
-        R_AddSkySurface( face );
-        return;
+    if( ( flags & SURF_WARP ) && gl_static.prognum_warp ) {
+        face->next = faces_alpha_warp;
+        faces_alpha_warp = face;
+    } else {
+        face->next = faces_alpha;
+        faces_alpha = face;
     }
 
-    if( flags & (SURF_TRANS33|SURF_TRANS66) ) {
-        if( ( flags & SURF_WARP ) && gl_static.prognum_warp ) {
-            face->next = faces_alpha_warp;
-            faces_alpha_warp = face;
-        } else {
-            face->next = faces_alpha;
-            faces_alpha = face;
-        }
-
-        c.facesDrawn++;
-        return;
-    }
-
-    GL_AddSolidFace( face );
+    c.facesDrawn++;
 }
 
