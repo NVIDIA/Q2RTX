@@ -330,7 +330,7 @@ cvar_t *Cvar_SetEx( const char *var_name, const char *value, from_t from );
 
 void Cvar_SetValue( cvar_t *var, float value, from_t from );
 void Cvar_SetInteger( cvar_t *var, int value, from_t from );
-void Cvar_SetHex( cvar_t *var, int value, from_t from );
+//void Cvar_SetHex( cvar_t *var, int value, from_t from );
 // expands value to a string and calls Cvar_Set
 
 float Cvar_VariableValue( const char *var_name );

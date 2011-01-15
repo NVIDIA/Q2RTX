@@ -298,6 +298,16 @@ cvar_t *Cvar_Ref( const char *var_name ) {
     return Cvar_Get( var_name, "", CVAR_VOLATILE );
 }
 
+static void set_back_cvar( cvar_t *var ) {
+    if( var->flags & CVAR_LATCH ) {
+        // set back to current value
+        if( var->latched_string ) {
+            Z_Free( var->latched_string );
+            var->latched_string = NULL;
+        }
+    }
+}
+
 /*
 ============
 Cvar_SetByVar
@@ -308,13 +318,7 @@ void Cvar_SetByVar( cvar_t *var, const char *value, from_t from ) {
         value = "";
     }
     if( !strcmp( value, var->string ) ) {
-        if( var->flags & CVAR_LATCH ) {
-            // set back to current value
-            if( var->latched_string ) {
-                Z_Free( var->latched_string );
-                var->latched_string = NULL;
-            }
-        }
+        set_back_cvar( var );
         return; // not changed
     }
 
@@ -451,6 +455,11 @@ Cvar_SetValue
 void Cvar_SetValue( cvar_t *var, float value, from_t from ) {
     char    val[32];
 
+    if( var->value == value ) {
+        set_back_cvar( var );
+        return; // not changed
+    }
+
     if( value == (int)value )
         Q_snprintf( val, sizeof( val ), "%i", (int)value );
     else
@@ -467,11 +476,17 @@ Cvar_SetInteger
 void Cvar_SetInteger( cvar_t *var, int value, from_t from ) {
     char    val[32];
 
+    if( var->integer == value ) {
+        set_back_cvar( var );
+        return; // not changed
+    }
+
     Q_snprintf( val, sizeof( val ), "%i", value );
 
     Cvar_SetByVar( var, val, from );
 }
 
+#if 0
 /*
 ============
 Cvar_SetHex
@@ -480,10 +495,16 @@ Cvar_SetHex
 void Cvar_SetHex( cvar_t *var, int value, from_t from ) {
     char    val[32];
 
+    if( var->integer == value ) {
+        set_back_cvar( var );
+        return; // not changed
+    }
+
     Q_snprintf( val, sizeof( val ), "0x%X", value );
 
     Cvar_SetByVar( var, val, from );
 }
+#endif
 
 /*
 ============
