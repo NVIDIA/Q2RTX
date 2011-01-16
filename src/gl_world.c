@@ -109,7 +109,7 @@ static void GL_MarkLights_r( mnode_t *node, dlight_t *light, int lightbit ) {
         face = node->firstface;
         count = node->numfaces;
         while( count-- ) {
-            if( !( face->texinfo->c.flags & SURF_NOLM_MASK ) ) {
+            if( !( face->drawflags & SURF_NOLM_MASK ) ) {
                 if( face->dlightframe != glr.dlightframe ) {
                     face->dlightframe = glr.dlightframe;
                     face->dlightbits = 0;
@@ -371,7 +371,7 @@ void GL_DrawBspModel( mmodel_t *model ) {
         dot = PlaneDiffFast( transformed, face->plane );
         if( BSP_CullFace( face, dot ) ) {
             c.facesCulled++;
-        } else if( face->texinfo->c.flags & mask ) {
+        } else if( face->drawflags & mask ) {
             // FIXME: alpha faces are not supported
             // on rotated or translated inline models
             GL_AddAlphaFace( face );
@@ -436,14 +436,12 @@ static inline void GL_DrawLeaf( mleaf_t *leaf ) {
 }
 
 static inline void GL_AddGenericFace( mface_t *face ) {
-    int flags = face->texinfo->c.flags;
-
-    if( flags & SURF_SKY ) {
+    if( face->drawflags & SURF_SKY ) {
         R_AddSkySurface( face );
         return;
     }
 
-    if( flags & (SURF_TRANS33|SURF_TRANS66) ) {
+    if( face->drawflags & (SURF_TRANS33|SURF_TRANS66) ) {
         GL_AddAlphaFace( face );
         return;
     }

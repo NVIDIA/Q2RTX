@@ -379,7 +379,7 @@ static int GL_TextureAnimation( mtexinfo_t *tex ) {
 static void GL_DrawFace( mface_t *surf ) {
     int numtris = surf->numsurfedges - 2;
     int numindices = numtris * 3;
-    int diff = surf->texinfo->c.flags ^ tess.flags;
+    int diff = surf->drawflags ^ tess.flags;
     int texnum = GL_TextureAnimation( surf->texinfo );
     int *dst_indices;
     int i, j;
@@ -406,7 +406,7 @@ static void GL_DrawFace( mface_t *surf ) {
         tess.texnum[1] = surf->texnum[1];
     }
 
-    tess.flags = surf->texinfo->c.flags;
+    tess.flags = surf->drawflags;
 
     dst_indices = tess.indices + tess.numindices;
     for( i = 0; i < numtris; i++ ) {
@@ -470,9 +470,7 @@ void GL_DrawAlphaFaces( void ) {
 }
 
 void GL_AddSolidFace( mface_t *face ) {
-    int flags = face->texinfo->c.flags;
-
-    if( ( flags & SURF_WARP ) && gl_static.prognum_warp ) {
+    if( ( face->drawflags & SURF_WARP ) && gl_static.prognum_warp ) {
         face->next = faces_warp;
         faces_warp = face;
     } else {
@@ -480,7 +478,7 @@ void GL_AddSolidFace( mface_t *face ) {
         face->next = faces_hash[i];
         faces_hash[i] = face;
 
-        if( face->lightmap && !( flags & SURF_NOLM_MASK ) && gl_dynamic->integer ) {
+        if( face->lightmap && !( face->drawflags & SURF_NOLM_MASK ) && gl_dynamic->integer ) {
             GL_PushLights( face );
         }
     }
@@ -489,9 +487,7 @@ void GL_AddSolidFace( mface_t *face ) {
 }
 
 void GL_AddAlphaFace( mface_t *face ) {
-    int flags = face->texinfo->c.flags;
-
-    if( ( flags & SURF_WARP ) && gl_static.prognum_warp ) {
+    if( ( face->drawflags & SURF_WARP ) && gl_static.prognum_warp ) {
         face->next = faces_alpha_warp;
         faces_alpha_warp = face;
     } else {

@@ -530,7 +530,7 @@ void LM_RebuildSurfaces( void ) {
         if( !surf->lightmap ) {
             continue;
         }
-        if( surf->texinfo->c.flags & SURF_NOLM_MASK ) {
+        if( surf->drawflags & SURF_NOLM_MASK ) {
             continue;
         }
         if( !surf->texnum[1] ) {
@@ -798,14 +798,17 @@ void GL_LoadWorld( const char *name ) {
     // post process all surfaces
     count = 0;
     for( i = 0, surf = bsp->faces; i < bsp->numfaces; i++, surf++ ) {
-        if( surf->texinfo->c.flags & SURF_SKY ) {
+        // hack surface flags into drawflags for faster access
+        surf->drawflags |= surf->texinfo->c.flags & ~DSURF_PLANEBACK;
+
+        if( surf->drawflags & SURF_SKY ) {
             continue;
         }
 
         surf->firstvert = count;
         build_surface_poly( surf, vbo );
 
-        if( gl_fullbright->integer || ( surf->texinfo->c.flags & SURF_NOLM_MASK ) ) {
+        if( gl_fullbright->integer || ( surf->drawflags & SURF_NOLM_MASK ) ) {
             surf->lightmap = NULL;
         } else if( surf->lightmap && !LM_BuildSurface( surf, vbo ) ) {
             surf->lightmap = NULL;
