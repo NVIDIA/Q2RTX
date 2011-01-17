@@ -661,7 +661,7 @@ static qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap 
         }
     }
 
-    if( !gl_hwgamma->integer &&
+    if( !( gl_config.flags & QVF_GAMMARAMP ) &&
         ( mipmap || gl_gamma_scale_pics->integer ) )
     {
         GL_LightScaleTexture( data, width, height, mipmap );
@@ -977,6 +977,21 @@ fail1:
     return NULL;
 }
 
+static void GL_BuildIntensityTable( void ) {
+    int i, j;
+    float f;
+
+    f = Cvar_ClampValue( gl_intensity, 1, 5 );
+    gl_static.inverse_intensity = 1 / f;
+    for( i = 0; i < 256; i++ ) {
+        j = i * f;
+        if( j > 255 ) {
+            j = 255;
+        }
+        intensitytable[i] = j;
+    }
+}
+
 static void GL_BuildGammaTables( void ) {
     int i;
     float inf, g = gl_gamma->value;
@@ -1107,9 +1122,6 @@ GL_InitImages
 ===============
 */
 void GL_InitImages( void ) {
-    int i, j;
-    float f;
-
     gl_bilerp_chars = Cvar_Get( "gl_bilerp_chars", "0", 0 );
     gl_bilerp_chars->changed = gl_bilerp_chars_changed;
     gl_bilerp_pics = Cvar_Get( "gl_bilerp_pics", "1", 0 );
@@ -1135,9 +1147,10 @@ void GL_InitImages( void ) {
     gl_saturation = Cvar_Get( "gl_saturation", "1", CVAR_ARCHIVE|CVAR_FILES );
     gl_intensity = Cvar_Get( "intensity", "1", CVAR_ARCHIVE|CVAR_FILES );
     gl_invert = Cvar_Get( "gl_invert", "0", CVAR_ARCHIVE|CVAR_FILES );
-    if( gl_hwgamma->integer ) {
+    if( gl_config.flags & QVF_GAMMARAMP ) {
         gl_gamma = Cvar_Get( "vid_gamma", "1", CVAR_ARCHIVE );
         gl_gamma->changed = gl_gamma_changed;
+        gl_gamma->flags &= ~CVAR_FILES;
     } else {
         gl_gamma = Cvar_Get( "vid_gamma", "1", CVAR_ARCHIVE|CVAR_FILES );
     }
@@ -1146,17 +1159,9 @@ void GL_InitImages( void ) {
 
     IMG_GetPalette( NULL );
 
-    f = Cvar_ClampValue( gl_intensity, 1, 5 );
-    gl_static.inverse_intensity = 1 / f;
-    for( i = 0; i < 256; i++ ) {
-        j = i * f;
-        if( j > 255 ) {
-            j = 255;
-        }
-        intensitytable[i] = j;
-    }
+    GL_BuildIntensityTable();
 
-    if( gl_hwgamma->integer ) {
+    if( gl_config.flags & QVF_GAMMARAMP ) {
         gl_gamma_changed( gl_gamma );
     } else {
         GL_BuildGammaTables();

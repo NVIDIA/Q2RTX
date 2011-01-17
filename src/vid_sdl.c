@@ -244,6 +244,7 @@ static qboolean init_video( void ) {
     byte *dst;
     char buffer[MAX_QPATH];
     int i, ret;
+    cvar_t *vid_hwgamma;
 
     if( SDL_WasInit( SDL_INIT_EVERYTHING ) == 0 ) {
         ret = SDL_Init( SDL_INIT_VIDEO|SDL_INIT_NOPARACHUTE );
@@ -282,9 +283,18 @@ static qboolean init_video( void ) {
         SDL_WM_SetIcon( sdl.icon, NULL );
     }
 
-    if( SDL_GetGammaRamp( sdl.gamma[0], sdl.gamma[1], sdl.gamma[2] ) != -1 ) {
-        Com_DPrintf( "...enabling gamma control\n" );
-        sdl.flags |= QVF_GAMMARAMP;
+    vid_hwgamma = Cvar_Get( "vid_hwgamma", "0", CVAR_ARCHIVE|CVAR_REFRESH );
+
+    if( vid_hwgamma->integer ) {
+        if( SDL_GetGammaRamp( sdl.gamma[0], sdl.gamma[1], sdl.gamma[2] ) != -1 &&
+            SDL_SetGammaRamp( sdl.gamma[0], sdl.gamma[1], sdl.gamma[2] ) != -1 )
+        {
+            Com_Printf( "...enabling hardware gamma\n" );
+            sdl.flags |= QVF_GAMMARAMP;
+        } else {
+            Com_Printf( "...hardware gamma not supported\n" );
+            Cvar_Reset( vid_hwgamma );
+        }
     }
 
     SDL_WM_SetCaption( APPLICATION, APPLICATION );

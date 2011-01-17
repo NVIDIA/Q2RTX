@@ -74,7 +74,6 @@ cvar_t *gl_dlight_falloff;
 cvar_t *gl_doublelight_entities;
 cvar_t *gl_polyblend;
 cvar_t *gl_fullbright;
-cvar_t *gl_hwgamma;
 cvar_t *gl_fullscreen;
 cvar_t *gl_showerrors;
 cvar_t *gl_fragment_program;
@@ -768,7 +767,6 @@ static void GL_Register( void ) {
     gl_dotshading = Cvar_Get( "gl_dotshading", "1", 0 );
 #endif
     gl_modulate = Cvar_Get( "gl_modulate", "1", CVAR_ARCHIVE );
-    gl_hwgamma = Cvar_Get( "vid_hwgamma", "0", CVAR_ARCHIVE|CVAR_REFRESH );
     gl_znear = Cvar_Get( "gl_znear", "2", CVAR_CHEAT );
     gl_zfar = Cvar_Get( "gl_zfar", "16384", 0 );
     gl_log = Cvar_Get( "gl_log", "0", 0 );
@@ -1021,11 +1019,6 @@ qboolean R_Init( qboolean total ) {
 
     // register our variables
     GL_Register();
-
-    if( gl_hwgamma->integer && !( gl_config.flags & QVF_GAMMARAMP ) ) {
-        Cvar_Set( "vid_hwgamma", "0" );
-        Com_Printf( "Hardware gamma is not supported by this video driver\n" );
-    }
 
     QGL_EnableLogging( gl_log->integer );
     gl_log->modified = qfalse;
