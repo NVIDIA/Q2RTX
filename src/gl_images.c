@@ -1033,21 +1033,19 @@ static void GL_InitDefaultTexture( void ) {
     r_notexture = IMG_Create( "*notexture", pixels, 8, 8, it_wall, if_auto );
 }
 
-#define DLIGHT_TEXTURE_SIZE     16
-
 static void GL_InitParticleTexture( void ) {
-    byte pixels[DLIGHT_TEXTURE_SIZE*DLIGHT_TEXTURE_SIZE*4];
+    byte pixels[16*16*4];
     byte *dst;
     float x, y, f;
     int i, j;
 
     dst = pixels;
-    for( i = 0; i < DLIGHT_TEXTURE_SIZE; i++ ) {
-        for( j = 0; j < DLIGHT_TEXTURE_SIZE; j++ ) {
-            x = j - DLIGHT_TEXTURE_SIZE/2 + 0.5f;
-            y = i - DLIGHT_TEXTURE_SIZE/2 + 0.5f;
+    for( i = 0; i < 16; i++ ) {
+        for( j = 0; j < 16; j++ ) {
+            x = j - 16/2 + 0.5f;
+            y = i - 16/2 + 0.5f;
             f = sqrt( x * x + y * y );
-            f = 1.0f - f / ( DLIGHT_TEXTURE_SIZE/2 - 1.5f );
+            f = 1.0f - f / ( 16/2 - 0.5f );
             dst[0] = 255;
             dst[1] = 255;
             dst[2] = 255;
@@ -1057,7 +1055,7 @@ static void GL_InitParticleTexture( void ) {
     }
 
     GL_BindTexture( TEXNUM_PARTICLE );
-    GL_Upload32( pixels, DLIGHT_TEXTURE_SIZE, DLIGHT_TEXTURE_SIZE, qfalse );
+    GL_Upload32( pixels, 16, 16, qfalse );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
 }

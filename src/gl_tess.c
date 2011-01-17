@@ -105,6 +105,9 @@ void GL_DrawParticles( void ) {
     qglTexCoordPointer( 2, GL_FLOAT, 20, tess.vertices + 3 );
     qglVertexPointer( 3, GL_FLOAT, 20, tess.vertices );
 
+#define PARTICLE_SIZE   (1+M_SQRT1_2)
+#define PARTICLE_SCALE  (1/(2*PARTICLE_SIZE))
+
     numverts = 0;
     for( i = 0, p = glr.fd.particles; i < glr.fd.num_particles; i++, p++ ) {
         VectorSubtract( p->origin, glr.fd.vieworg, transformed );
@@ -124,18 +127,25 @@ void GL_DrawParticles( void ) {
 
         if( numverts + 3 > TESS_MAX_VERTICES ) {
             qglDrawArrays( GL_TRIANGLES, 0, numverts );
+            if( gl_showtris->integer ) {
+                qglDisableClientState( GL_COLOR_ARRAY );
+                GL_EnableOutlines();
+                qglDrawArrays( GL_TRIANGLES, 0, numverts );
+                GL_DisableOutlines();
+                qglEnableClientState( GL_COLOR_ARRAY );
+            }
             numverts = 0;
         }
-        
+
         dst_vert = tess.vertices + numverts * 5;
-        VectorMA( p->origin, scale*0.25f, glr.viewaxis[1], dst_vert );
-        VectorMA( dst_vert, -scale*0.25f, glr.viewaxis[2], dst_vert );
+        VectorMA( p->origin, scale*PARTICLE_SCALE, glr.viewaxis[1], dst_vert );
+        VectorMA( dst_vert, -scale*PARTICLE_SCALE, glr.viewaxis[2], dst_vert );
         VectorMA( dst_vert, scale, glr.viewaxis[2], dst_vert + 5 );
         VectorMA( dst_vert, -scale, glr.viewaxis[1], dst_vert + 10 );
 
-        dst_vert[ 3] = 0;     dst_vert[ 4] = 0;
-        dst_vert[ 8] = 1.75f; dst_vert[ 9] = 0;
-        dst_vert[13] = 0;     dst_vert[14] = 1.75f;
+        dst_vert[ 3] = 0;               dst_vert[ 4] = 0;
+        dst_vert[ 8] = 0;               dst_vert[ 9] = PARTICLE_SIZE;
+        dst_vert[13] = PARTICLE_SIZE;   dst_vert[14] = 0;
 
         dst_color = ( uint32_t * )tess.colors + numverts;
         dst_color[0] = *( uint32_t * )color;
