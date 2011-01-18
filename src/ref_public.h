@@ -152,6 +152,9 @@ typedef struct glconfig_s {
     int     vidHeight;
     int     flags;
 
+    unsigned    ext_supported;
+    unsigned    ext_enabled;
+
     int         maxTextureSize;
     int         numTextureUnits;
     float       maxAnisotropy;

@@ -616,6 +616,13 @@ void R_EndFrame( void ) {
         gl_log->modified = qfalse;
     }
 
+    // enable/disable fragment programs on the fly
+    if( gl_fragment_program->modified ) {
+        GL_ShutdownPrograms();
+        GL_InitPrograms();
+        gl_fragment_program->modified = qfalse;
+    }
+
     GL_ShowErrors( __func__ );
     
     VID_EndFrame();
@@ -796,6 +803,8 @@ static void GL_Register( void ) {
     gl_polyblend = Cvar_Get( "gl_polyblend", "1", 0 );
     gl_fullbright = Cvar_Get( "r_fullbright", "0", CVAR_CHEAT );
     gl_showerrors = Cvar_Get( "gl_showerrors", "1", 0 );
+    gl_fragment_program = Cvar_Get( "gl_fragment_program", "1", 0 );
+    gl_vertex_buffer_object = Cvar_Get( "gl_vertex_buffer_object", "1", CVAR_FILES );
     
     Cmd_AddCommand( "screenshot", GL_ScreenShot_f );
 #if USE_JPG
@@ -818,10 +827,7 @@ static void GL_Unregister( void ) {
     Cmd_RemoveCommand( "strings" );
 }
 
-#define GPA( x )    do { q ## x = ( void * )qglGetProcAddress( #x ); } while( 0 )
-
 static qboolean GL_SetupExtensions( void ) {
-    const char *extensions;
     int integer;
     float value;
 
@@ -830,25 +836,24 @@ static qboolean GL_SetupExtensions( void ) {
         return qfalse;
     }
 
-    gl_fragment_program = Cvar_Get( "gl_fragment_program", "1", CVAR_REFRESH );
-    gl_vertex_buffer_object = Cvar_Get( "gl_vertex_buffer_object", "1", CVAR_REFRESH );
+    // parse extension string
+    gl_config.ext_supported = QGL_ParseExtensionString( gl_config.extensionsString );
+    gl_config.ext_enabled = 0;
 
-    extensions = gl_config.extensionsString;
-    if( strstr( extensions, "GL_EXT_compiled_vertex_array" ) ) {
+    // initialize our 'always on' extensions
+    if( gl_config.ext_supported & QGL_EXT_compiled_vertex_array ) {
         Com_Printf( "...enabling GL_EXT_compiled_vertex_array\n" );
-        GPA( glLockArraysEXT );
-        GPA( glUnlockArraysEXT );
+        gl_config.ext_enabled |= QGL_EXT_compiled_vertex_array;
     } else {
         Com_Printf( "GL_EXT_compiled_vertex_array not found\n" );
     }
     
     gl_config.numTextureUnits = 1;
-    if( strstr( extensions, "GL_ARB_multitexture" ) ) {
+    if( gl_config.ext_supported & QGL_ARB_multitexture ) {
         qglGetIntegerv( GL_MAX_TEXTURE_UNITS_ARB, &integer );
         if( integer >= 2 ) {
             Com_Printf( "...enabling GL_ARB_multitexture (%d TMUs)\n", integer );
-            GPA( glActiveTextureARB );
-            GPA( glClientActiveTextureARB );
+            gl_config.ext_enabled |= QGL_ARB_multitexture;
             if( integer > MAX_TMUS ) {
                 integer = MAX_TMUS;
             }
@@ -862,10 +867,11 @@ static qboolean GL_SetupExtensions( void ) {
     }
 
     gl_config.maxAnisotropy = 1;
-    if( strstr( extensions, "GL_EXT_texture_filter_anisotropic" ) ) {
+    if( gl_config.ext_supported & QGL_EXT_texture_filter_anisotropic ) {
         qglGetFloatv( GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &value );
         if( value >= 2 ) {
             Com_Printf( "...enabling GL_EXT_texture_filter_anisotropic (%d max)\n", ( int )value );
+            gl_config.ext_enabled |= QGL_EXT_texture_filter_anisotropic;
             gl_config.maxAnisotropy = value;
         } else {
             Com_Printf( "...ignoring GL_EXT_texture_filter_anisotropic,\n"
@@ -875,38 +881,9 @@ static qboolean GL_SetupExtensions( void ) {
         Com_Printf( "GL_EXT_texture_filter_anisotropic not found\n" );
     }
 
-    if( strstr( extensions, "GL_ARB_fragment_program" ) ) {
-        if( gl_fragment_program->integer ) {
-            Com_Printf( "...enabling GL_ARB_fragment_program\n" );
-            GPA( glProgramStringARB );
-            GPA( glBindProgramARB );
-            GPA( glDeleteProgramsARB ); 
-            GPA( glGenProgramsARB );
-            GPA( glProgramEnvParameter4fvARB );
-            GPA( glProgramLocalParameter4fvARB );
-        } else {
-            Com_Printf( "...ignoring GL_ARB_fragment_program\n" );
-        }
-    } else {
-        Com_Printf( "GL_ARB_fragment_program not found\n" );
-    }
+    QGL_InitExtensions( gl_config.ext_enabled );
 
-    if( strstr( extensions, "GL_ARB_vertex_buffer_object" ) ) {
-        if( gl_vertex_buffer_object->integer ) {
-            Com_Printf( "...enabling GL_ARB_vertex_buffer_object\n" );
-            GPA( glBindBufferARB );
-            GPA( glDeleteBuffersARB );
-            GPA( glGenBuffersARB );
-            GPA( glBufferDataARB );
-            GPA( glMapBufferARB );
-            GPA( glUnmapBufferARB );
-        } else {
-            Com_Printf( "...ignoring GL_ARB_vertex_buffer_object\n" );
-        }
-    } else {
-        Com_Printf( "GL_ARB_vertex_buffer_object not found\n" );
-    }
-
+    // lack of multitexture support is a show stopper
     if( !qglActiveTextureARB ) {
         Com_EPrintf( "Required OpenGL extensions are missing\n" );
         return qfalse;
@@ -930,8 +907,6 @@ static qboolean GL_SetupExtensions( void ) {
 
     return qtrue;
 }
-
-#undef GPA
 
 static void GL_IdentifyRenderer( void ) {
     char *p;
@@ -970,6 +945,20 @@ static void GL_InitTables( void ) {
 
 static void GL_PostInit( void ) {
     registration_sequence = 1;
+
+    // enable buffer objects before map is loaded
+    if( gl_config.ext_supported & QGL_ARB_vertex_buffer_object ) {
+        if( gl_vertex_buffer_object->integer ) {
+            Com_Printf( "...enabling GL_ARB_vertex_buffer_object\n" );
+            QGL_InitExtensions( QGL_ARB_vertex_buffer_object );
+            gl_config.ext_enabled |= QGL_ARB_vertex_buffer_object;
+        } else {
+            Com_Printf( "...ignoring GL_ARB_vertex_buffer_object\n" );
+        }
+    } else if( gl_vertex_buffer_object->integer ) {
+        Com_Printf( "GL_ARB_vertex_buffer_object not found\n" );
+        Cvar_Set( "gl_vertex_buffer_object", "0" );
+    }
 
     GL_InitImages();
     MOD_Init();
@@ -1026,6 +1015,7 @@ qboolean R_Init( qboolean total ) {
     GL_PostInit();
 
     GL_InitPrograms();
+    gl_fragment_program->modified = qfalse;
 
     GL_InitTables();
 
@@ -1055,6 +1045,9 @@ void R_Shutdown( qboolean total ) {
     GL_FreeWorld();
     GL_ShutdownImages();
     MOD_Shutdown();
+
+    // disable buffer objects after map is freed
+    QGL_ShutdownExtensions( QGL_ARB_vertex_buffer_object );
 
     if( !total ) {
         return;

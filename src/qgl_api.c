@@ -375,6 +375,14 @@ void ( APIENTRY * qglVertexPointer )(GLint size, GLenum type, GLsizei stride, co
 void ( APIENTRY * qglViewport )(GLint x, GLint y, GLsizei width, GLsizei height);
 
 //
+// OS-specific
+//
+
+#ifdef _WIN32
+static PROC ( WINAPI * qwglGetProcAddress )( LPCSTR );
+#endif
+
+//
 // extensions
 //
 
@@ -393,24 +401,24 @@ void ( APIENTRY * qglDeleteProgramsARB )(GLsizei n, const GLuint *programs);
 void ( APIENTRY * qglGenProgramsARB )(GLsizei n, GLuint *programs);
 void ( APIENTRY * qglProgramEnvParameter4fvARB )(GLenum target, GLuint index, const GLfloat *params);
 void ( APIENTRY * qglProgramLocalParameter4fvARB )(GLenum target, GLuint index, const GLfloat *params);
+void ( APIENTRY * qglGetProgramEnvParameterfvARB )(GLenum, GLuint, GLfloat *);
+void ( APIENTRY * qglGetProgramLocalParameterfvARB )(GLenum, GLuint, GLfloat *);
+void ( APIENTRY * qglGetProgramivARB )(GLenum, GLenum, GLint *);
+void ( APIENTRY * qglGetProgramStringARB )(GLenum, GLenum, GLvoid *);
+GLboolean ( APIENTRY * qglIsProgramARB )(GLuint);
 
 // GL_ARB_vertex_buffer_object
 void ( APIENTRY * qglBindBufferARB )(GLenum target, GLuint buffer);
 void ( APIENTRY * qglDeleteBuffersARB )(GLsizei n, const GLuint *buffers);
 void ( APIENTRY * qglGenBuffersARB )(GLsizei n, GLuint *buffers);
+GLboolean ( APIENTRY * qglIsBufferARB )(GLuint);
 void ( APIENTRY * qglBufferDataARB )(GLenum target, GLsizeiptr size, const GLvoid *data, GLenum usage);
+void ( APIENTRY * qglBufferSubDataARB )(GLenum, GLintptrARB, GLsizeiptrARB, const GLvoid *);
+void ( APIENTRY * qglGetBufferSubDataARB )(GLenum, GLintptrARB, GLsizeiptrARB, GLvoid *);
 GLvoid * ( APIENTRY * qglMapBufferARB )(GLenum target, GLenum access);
 GLboolean ( APIENTRY * qglUnmapBufferARB )(GLenum target);
-
-//
-// OS-specific
-//
-
-#ifdef _WIN32
-PROC ( WINAPI * qglGetProcAddress )( LPCSTR );
-#else
-void *qglGetProcAddress( const char *symbol ) { return VID_GetProcAddr( symbol ); }
-#endif
+void ( APIENTRY * qglGetBufferParameterivARB )(GLenum, GLenum, GLint *);
+void ( APIENTRY * qglGetBufferPointervARB )(GLenum, GLenum, GLvoid* *);
 
 // ==========================================================
 
@@ -2982,31 +2990,51 @@ void QGL_Shutdown( void ) {
     qglVertexPointer             = NULL;
     qglViewport                  = NULL;
 
-
-    qglLockArraysEXT             = NULL;
-    qglUnlockArraysEXT           = NULL;
-
-    qglActiveTextureARB          = NULL;
-    qglClientActiveTextureARB    = NULL;
-
-    qglProgramStringARB             = NULL;
-    qglBindProgramARB               = NULL;
-    qglDeleteProgramsARB            = NULL;
-    qglGenProgramsARB               = NULL;
-    qglProgramEnvParameter4fvARB    = NULL;
-    qglProgramLocalParameter4fvARB  = NULL;
-
-    qglBindBufferARB            = NULL;
-    qglDeleteBuffersARB         = NULL;
-    qglGenBuffersARB            = NULL;
-    qglBufferDataARB            = NULL;
-    qglMapBufferARB             = NULL;
-    qglUnmapBufferARB           = NULL;
-
-
 #ifdef _WIN32
-    qglGetProcAddress            = NULL;
+    qwglGetProcAddress           = NULL;
 #endif
+
+    QGL_ShutdownExtensions( ~0 );
+}
+
+void QGL_ShutdownExtensions( unsigned mask ) {
+    if( mask & QGL_EXT_compiled_vertex_array ) {
+        qglLockArraysEXT             = NULL;
+        qglUnlockArraysEXT           = NULL;
+    }
+
+    if( mask & QGL_ARB_multitexture ) {
+        qglActiveTextureARB          = NULL;
+        qglClientActiveTextureARB    = NULL;
+    }
+
+    if( mask & QGL_ARB_fragment_program ) {
+        qglProgramStringARB                 = NULL;
+        qglBindProgramARB                   = NULL;
+        qglDeleteProgramsARB                = NULL;
+        qglGenProgramsARB                   = NULL;
+        qglProgramEnvParameter4fvARB        = NULL;
+        qglProgramLocalParameter4fvARB      = NULL;
+        qglGetProgramEnvParameterfvARB      = NULL;
+        qglGetProgramLocalParameterfvARB    = NULL;
+        qglGetProgramivARB                  = NULL;
+        qglGetProgramStringARB              = NULL;
+        qglIsProgramARB                     = NULL;
+    }
+
+    if( mask & QGL_ARB_vertex_buffer_object ) {
+        qglBindBufferARB            = NULL;
+        qglDeleteBuffersARB         = NULL;
+        qglGenBuffersARB            = NULL;
+        qglIsBufferARB              = NULL;
+        qglBufferDataARB            = NULL;
+        qglBufferSubDataARB         = NULL;
+        qglGetBufferSubDataARB      = NULL;
+        qglMapBufferARB             = NULL;
+        qglUnmapBufferARB           = NULL;
+        qglGetBufferParameterivARB  = NULL;
+        qglGetBufferPointervARB     = NULL;
+    }
 }
 
 #define GPA( a )    VID_GetProcAddr( a )
@@ -3360,13 +3388,93 @@ void QGL_Init( void ) {
     qglVertexPointer             =  dllVertexPointer             = GPA( "glVertexPointer" );
     qglViewport                  =  dllViewport                  = GPA( "glViewport" );
 
-
 #ifdef _WIN32
-    qglGetProcAddress                                           = GPA( "wglGetProcAddress" );
+    qwglGetProcAddress                                           = GPA( "wglGetProcAddress" );
 #endif
 }
 
+#ifdef _WIN32
 #undef GPA
+#define GPA ( void * )qwglGetProcAddress
+#endif
+
+void QGL_InitExtensions( unsigned mask ) {
+    if( mask & QGL_EXT_compiled_vertex_array ) {
+        qglLockArraysEXT                        = GPA( "glLockArraysEXT" );
+        qglUnlockArraysEXT                      = GPA( "glUnlockArraysEXT" );
+    }
+
+    if( mask & QGL_ARB_multitexture ) {
+        qglActiveTextureARB                     = GPA( "glActiveTextureARB" );
+        qglClientActiveTextureARB               = GPA( "glClientActiveTextureARB" );
+    }
+
+    if( mask & QGL_ARB_fragment_program ) {
+        qglProgramStringARB                     = GPA( "glProgramStringARB" );
+        qglBindProgramARB                       = GPA( "glBindProgramARB" );
+        qglDeleteProgramsARB                    = GPA( "glDeleteProgramsARB" );
+        qglGenProgramsARB                       = GPA( "glGenProgramsARB" );
+        qglProgramEnvParameter4fvARB            = GPA( "glProgramEnvParameter4fvARB" );
+        qglProgramLocalParameter4fvARB          = GPA( "glProgramLocalParameter4fvARB" );
+        qglGetProgramEnvParameterfvARB          = GPA( "glGetProgramEnvParameterfvARB" );
+        qglGetProgramLocalParameterfvARB        = GPA( "glGetProgramLocalParameterfvARB" );
+        qglGetProgramivARB                      = GPA( "glGetProgramivARB" );
+        qglGetProgramStringARB                  = GPA( "glGetProgramStringARB" );
+        qglIsProgramARB                         = GPA( "glIsProgramARB" );
+    }
+
+    if( mask & QGL_ARB_vertex_buffer_object ) {
+        qglBindBufferARB                        = GPA( "glBindBufferARB" );
+        qglDeleteBuffersARB                     = GPA( "glDeleteBuffersARB" );
+        qglGenBuffersARB                        = GPA( "glGenBuffersARB" );
+        qglIsBufferARB                          = GPA( "glIsBufferARB" );
+        qglBufferDataARB                        = GPA( "glBufferDataARB" );
+        qglBufferSubDataARB                     = GPA( "glBufferSubDataARB" );
+        qglGetBufferSubDataARB                  = GPA( "glGetBufferSubDataARB" );
+        qglMapBufferARB                         = GPA( "glMapBufferARB" );
+        qglUnmapBufferARB                       = GPA( "glUnmapBufferARB" );
+        qglGetBufferParameterivARB              = GPA( "glGetBufferParameterivARB" );
+        qglGetBufferPointervARB                 = GPA( "glGetBufferPointervARB" );
+    }
+}
+
+#undef GPA
+
+// must match defines in qgl_api.h!
+static const char *const extnames[] = {
+    "GL_EXT_compiled_vertex_array",
+    "GL_ARB_multitexture",
+    "GL_EXT_texture_filter_anisotropic",
+    "GL_ARB_fragment_program",
+    "GL_ARB_vertex_buffer_object"
+};
+
+static const int numextnames = sizeof( extnames ) / sizeof( extnames[0] );
+
+unsigned QGL_ParseExtensionString( const char *s ) {
+    unsigned mask = 0;
+    const char *p;
+    size_t l1, l2;
+    int i;
+
+    while( *s ) {
+        p = Q_strchrnul( s, ' ' );
+        l1 = p - s;
+        for( i = 0; i < numextnames; i++ ) {
+            l2 = strlen( extnames[i] );
+            if( l1 == l2 && !memcmp( s, extnames[i], l1 ) ) {
+                mask |= 1 << i;
+                break;
+            }
+        }
+        if( !*p ) {
+            break;
+        }
+        s = p + 1;
+    }
+
+    return mask;
+}
 
 void QGL_EnableLogging( qboolean enable )
 {

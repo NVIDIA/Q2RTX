@@ -126,9 +126,7 @@ extern cvar_t *gl_dlight_falloff;
 #endif
 extern cvar_t *gl_doublelight_entities;
 extern cvar_t *gl_fullbright;
-extern cvar_t *gl_mode;
-extern cvar_t *gl_hwgamma;
-extern cvar_t *gl_fullscreen;
+extern cvar_t *gl_fragment_program;
 
 typedef enum {
     CULL_OUT,

@@ -278,6 +278,19 @@ void GL_DisableWarp( void ) {
 void GL_InitPrograms( void ) {
     GLuint prog;
 
+    if( gl_config.ext_supported & QGL_ARB_fragment_program ) {
+        if( gl_fragment_program->integer ) {
+            Com_Printf( "...enabling GL_ARB_fragment_program\n" );
+            QGL_InitExtensions( QGL_ARB_fragment_program );
+            gl_config.ext_enabled |= QGL_ARB_fragment_program;
+        } else {
+            Com_Printf( "...ignoring GL_ARB_fragment_program\n" );
+        }
+    } else if( gl_fragment_program->integer ) {
+        Com_Printf( "GL_ARB_fragment_program not found\n" );
+        Cvar_Set( "gl_fragment_program", "0" );
+    }
+
     if( !qglProgramStringARB ) {
         return;
     }
@@ -307,5 +320,7 @@ void GL_ShutdownPrograms( void ) {
         qglDeleteProgramsARB( 1, &gl_static.prognum_warp );
         gl_static.prognum_warp = 0;
     }
+
+    QGL_ShutdownExtensions( QGL_ARB_fragment_program );
 }
 

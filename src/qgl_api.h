@@ -24,8 +24,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef __QGL_H__
 #define __QGL_H__
 
+#define QGL_EXT_compiled_vertex_array       (1<<0)
+#define QGL_ARB_multitexture                (1<<1)
+#define QGL_EXT_texture_filter_anisotropic  (1<<2)
+#define QGL_ARB_fragment_program            (1<<3)
+#define QGL_ARB_vertex_buffer_object        (1<<4)
+
 void    QGL_Init( void );
 void    QGL_Shutdown( void );
+void    QGL_InitExtensions( unsigned mask );
+void    QGL_ShutdownExtensions( unsigned mask );
+unsigned QGL_ParseExtensionString( const char *s );
 void    QGL_EnableLogging( qboolean enable );
 void    QGL_LogNewFrame( void );
 
@@ -385,25 +394,24 @@ extern  void ( APIENTRY * qglDeleteProgramsARB )(GLsizei n, const GLuint *progra
 extern  void ( APIENTRY * qglGenProgramsARB )(GLsizei n, GLuint *programs);
 extern  void ( APIENTRY * qglProgramEnvParameter4fvARB )(GLenum target, GLuint index, const GLfloat *params);
 extern  void ( APIENTRY * qglProgramLocalParameter4fvARB )(GLenum target, GLuint index, const GLfloat *params);
+extern  void ( APIENTRY * qglGetProgramEnvParameterfvARB )(GLenum, GLuint, GLfloat *);
+extern  void ( APIENTRY * qglGetProgramLocalParameterfvARB )(GLenum, GLuint, GLfloat *);
+extern  void ( APIENTRY * qglGetProgramivARB )(GLenum, GLenum, GLint *);
+extern  void ( APIENTRY * qglGetProgramStringARB )(GLenum, GLenum, GLvoid *);
+extern  GLboolean ( APIENTRY * qglIsProgramARB )(GLuint);
 
 // GL_ARB_vertex_buffer_object
 extern  void ( APIENTRY * qglBindBufferARB )(GLenum target, GLuint buffer);
 extern  void ( APIENTRY * qglDeleteBuffersARB )(GLsizei n, const GLuint *buffers);
 extern  void ( APIENTRY * qglGenBuffersARB )(GLsizei n, GLuint *buffers);
+extern  GLboolean ( APIENTRY * qglIsBufferARB )(GLuint);
 extern  void ( APIENTRY * qglBufferDataARB )(GLenum target, GLsizeiptr size, const GLvoid *data, GLenum usage);
+extern  void ( APIENTRY * qglBufferSubDataARB )(GLenum, GLintptrARB, GLsizeiptrARB, const GLvoid *);
+extern  void ( APIENTRY * qglGetBufferSubDataARB )(GLenum, GLintptrARB, GLsizeiptrARB, GLvoid *);
 extern  GLvoid * ( APIENTRY * qglMapBufferARB )(GLenum target, GLenum access);
 extern  GLboolean ( APIENTRY * qglUnmapBufferARB )(GLenum target);
-
-//
-// OS-specific
-//
-
-#ifdef _WIN32
-extern PROC ( WINAPI * qglGetProcAddress )( LPCSTR );
-#else
-// local function in dll
-extern void *qglGetProcAddress( const char *symbol );
-#endif
+extern  void ( APIENTRY * qglGetBufferParameterivARB )(GLenum, GLenum, GLint *);
+extern  void ( APIENTRY * qglGetBufferPointervARB )(GLenum, GLenum, GLvoid* *);
 
 #endif
 
