@@ -759,6 +759,10 @@ static void GL_Strings_f( void ) {
 
 // ============================================================================== 
 
+static void gl_novis_changed( cvar_t *self ) {
+    glr.viewcluster1 = glr.viewcluster2 = -2;
+}
+
 static void GL_Register( void ) {
     gl_partscale = Cvar_Get( "gl_partscale", "2", 0 );
 #if USE_JPG
@@ -793,6 +797,7 @@ static void GL_Register( void ) {
     gl_cull_models = Cvar_Get( "gl_cull_models", "1", 0 );
     gl_clear = Cvar_Get( "gl_clear", "0", 0 );
     gl_novis = Cvar_Get( "gl_novis", "0", 0 );
+    gl_novis->changed = gl_novis_changed;
     gl_lockpvs = Cvar_Get( "gl_lockpvs", "0", CVAR_CHEAT );
     gl_lightmap = Cvar_Get( "gl_lightmap", "0", CVAR_CHEAT );
     gl_dynamic = Cvar_Get( "gl_dynamic", "2", 0 );
