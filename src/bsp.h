@@ -27,6 +27,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define MAX_MAP_VIS   ( MAX_MAP_LEAFS / 8 )
 
+// take advantage of 64-bit systems
+#define VIS_FAST_LONGS(bsp) \
+    (((bsp)->visrowsize + sizeof(uint_fast32_t) - 1) / sizeof(uint_fast32_t))
+
 typedef struct mtexinfo_s {  // used internally due to name len probs //ZOID
     csurface_t          c;
     char                name[MAX_TEXNAME];

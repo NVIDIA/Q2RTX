@@ -212,7 +212,7 @@ static void GL_MarkLeaves( void ) {
     byte vis2[MAX_MAP_VIS];
     mleaf_t *leaf;
     mnode_t *node;
-    uint32_t *src1, *src2;
+    uint_fast32_t *src1, *src2;
     int cluster1, cluster2, longs;
     vec3_t tmp;
     int i;
@@ -258,9 +258,9 @@ static void GL_MarkLeaves( void ) {
     BSP_ClusterVis( bsp, vis1, cluster1, DVIS_PVS );
     if( cluster1 != cluster2 ) {
         BSP_ClusterVis( bsp, vis2, cluster2, DVIS_PVS );
-        longs = ( bsp->visrowsize + 3 ) / 4;
-        src1 = ( uint32_t * )vis1;
-        src2 = ( uint32_t * )vis2;
+        longs = VIS_FAST_LONGS( bsp );
+        src1 = ( uint_fast32_t * )vis1;
+        src2 = ( uint_fast32_t * )vis2;
         while( longs-- ) {
             *src1++ |= *src2++;
         }
