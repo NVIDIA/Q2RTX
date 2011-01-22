@@ -402,6 +402,11 @@ requiring clients to download anything. Entity string can be dumped from the cur
 map using ‘dumpents’ server command and later changed with a text editor.
 *****************
 
+map_visibility_patch::
+    Attempt to patch miscalculated visibility data for some well-known maps
+    (q2dm1, q2dm3 and q2dm8 are patched so far), fixing disappearing walls and
+    entities. Default value is 1 (enabled).
+
 com_fatal_error::
     Turns all non-fatal errors into fatal errors that cause server process exit.
     Default value is 0 (disabled).

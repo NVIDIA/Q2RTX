@@ -29,6 +29,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 extern mtexinfo_t nulltexinfo;
 
+static cvar_t *map_visibility_patch;
+
 /*
 ===============================================================================
 
@@ -1165,6 +1167,41 @@ overrun:
         }
     } while( out < out_end );
 
+    // apply our ugly PVS patches
+    if( map_visibility_patch->integer ) {
+        if( bsp->checksum == 0x1e5b50c5 ) {
+            // q2dm3, pent bridge
+            if( cluster == 345 || cluster == 384 ) {
+                Q_SetBit( mask, 466 );
+                Q_SetBit( mask, 484 );
+                Q_SetBit( mask, 692 );
+            }
+        } else if( bsp->checksum == 0x04cfa792 ) {
+            // q2dm1, above lower RL
+            if( cluster == 395 ) {
+                Q_SetBit( mask, 176 );
+                Q_SetBit( mask, 183 );
+            }
+        } else if( bsp->checksum == 0x2c3ab9b0 ) {
+            // q2dm8, CG/RG area
+            if( cluster == 629 || cluster == 631 ||
+                cluster == 633 || cluster == 639 )
+            {
+                Q_SetBit( mask, 908 );
+                Q_SetBit( mask, 909 );
+                Q_SetBit( mask, 910 );
+                Q_SetBit( mask, 915 );
+                Q_SetBit( mask, 923 );
+                Q_SetBit( mask, 924 );
+                Q_SetBit( mask, 927 );
+                Q_SetBit( mask, 930 );
+                Q_SetBit( mask, 938 );
+                Q_SetBit( mask, 939 );
+                Q_SetBit( mask, 947 );
+            }
+        }
+    }
+
     return mask;
 }
 
@@ -1247,6 +1284,8 @@ static void BSP_Test_f( void ) {
 #endif
 
 void BSP_Init( void ) {
+    map_visibility_patch = Cvar_Get( "map_visibility_patch", "1", 0 );
+
     Cmd_AddCommand( "bsplist", BSP_List_f );
 #ifdef BSP_TEST
     Cmd_AddCommand( "bsptest", BSP_Test_f );
