@@ -757,6 +757,10 @@ static void GL_Strings_f( void ) {
     Com_Printf( "GL_MAX_TEXTURE_MAX_ANISOTROPY: %d\n", (int)gl_config.maxAnisotropy );
 }
 
+static size_t GL_ViewCluster_m( char *buffer, size_t size ) {
+    return Q_scnprintf( buffer, size, "%d", glr.viewcluster1 );
+}
+
 // ============================================================================== 
 
 static void gl_novis_changed( cvar_t *self ) {
@@ -823,6 +827,8 @@ static void GL_Register( void ) {
     Cmd_AddCommand( "screenshotpng", GL_ScreenShot_f );
 #endif
     Cmd_AddCommand( "strings", GL_Strings_f );
+
+    Cmd_AddMacro( "gl_viewcluster", GL_ViewCluster_m );
 }
 
 static void GL_Unregister( void ) {
