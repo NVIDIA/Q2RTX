@@ -1123,6 +1123,7 @@ void R_Shutdown( qboolean total ) {
 
     // disable buffer objects after map is freed
     QGL_ShutdownExtensions( QGL_ARB_vertex_buffer_object );
+    gl_config.ext_enabled &= ~QGL_ARB_vertex_buffer_object;
 
     if( !total ) {
         return;

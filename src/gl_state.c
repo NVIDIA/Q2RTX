@@ -322,5 +322,6 @@ void GL_ShutdownPrograms( void ) {
     }
 
     QGL_ShutdownExtensions( QGL_ARB_fragment_program );
+    gl_config.ext_enabled &= ~QGL_ARB_fragment_program;
 }
 
