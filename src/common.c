@@ -1526,7 +1526,7 @@ static void Com_LastError_f( void ) {
     }
 }
 
-#ifndef __COREDLL__
+#if 0
 static void Com_Setenv_f( void ) {
     int argc = Cmd_Argc();
 
@@ -1808,9 +1808,7 @@ void Qcommon_Init( int argc, char **argv ) {
 
     Cmd_AddCommand ("z_stats", Z_Stats_f);
 
-#ifndef __COREDLL__
-    Cmd_AddCommand( "setenv", Com_Setenv_f );
-#endif
+    //Cmd_AddCommand( "setenv", Com_Setenv_f );
 
     Cmd_AddMacro( "com_date", Com_Date_m );
     Cmd_AddMacro( "com_time", Com_Time_m );
