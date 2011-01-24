@@ -33,6 +33,9 @@ statCounters_t  c;
 int registration_sequence;
 
 cvar_t *gl_partscale;
+#if USE_JPG || USE_PNG
+cvar_t *gl_screenshot_format;
+#endif
 #if USE_JPG
 cvar_t *gl_screenshot_quality;
 #endif
@@ -639,16 +642,19 @@ void R_EndFrame( void ) {
 */
 
 #if USE_TGA || USE_JPG || USE_PNG
-static void make_screenshot( const char *ext, img_save_t func, GLenum format, int param ) {
+static void make_screenshot( const char *name, const char *ext,
+    img_save_t func, GLenum format, int param )
+{
     char        buffer[MAX_OSPATH]; 
     byte        *pixels;
     qerror_t    ret;
     qhandle_t   f;
     int         i;
 
-    if( Cmd_Argc() > 1 ) {
+    if( name && *name ) {
+        // save to user supplied name
         f = FS_EasyOpenFile( buffer, sizeof( buffer ), FS_MODE_WRITE,
-            SCREENSHOTS_DIRECTORY "/", Cmd_Argv( 1 ), ext );
+            SCREENSHOTS_DIRECTORY "/", name, ext );
         if( !f ) {
             return;
         }
@@ -695,19 +701,70 @@ static void make_screenshot( const char *ext, img_save_t func, GLenum format, in
 /* 
 ================== 
 GL_ScreenShot_f
+
+Standard function to take a screenshot. Saves in default format unless user
+overrides format with a second argument. Screenshot name can't be
+specified. This function is always compiled in to give a meaningful warning
+if no formats are available.
 ================== 
 */
-static void GL_ScreenShot_f( void )  {
+static void GL_ScreenShot_f( void ) {
+#if USE_JPG || USE_PNG
+    const char *s;
+
+    if( Cmd_Argc() > 2 ) {
+        Com_Printf( "Usage: %s [format]\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    if( Cmd_Argc() > 1 ) {
+        s = Cmd_Argv( 1 );
+    } else {
+        s = gl_screenshot_format->string;
+    }
+
+#if USE_JPG
+    if( *s == 'j' ) {
+        make_screenshot( NULL, ".jpg", IMG_SaveJPG, GL_RGB,
+            gl_screenshot_quality->integer );
+        return;
+    }
+#endif
+
+#if USE_PNG
+    if( *s == 'p' ) {
+        make_screenshot( NULL, ".png", IMG_SavePNG, GL_RGB,
+            gl_screenshot_compression->integer );
+        return;
+    }
+#endif
+#endif
+
 #if USE_TGA
+    make_screenshot( NULL, ".tga", IMG_SaveTGA, GL_BGR, 0 );
+#else
+    Com_Printf( "Can't take screenshot, TGA format not available.\n" );
+#endif
+}
+
+/*
+==================
+GL_ScreenShotXXX_f
+
+Specialized function to take a screenshot in specified format. Screenshot name
+can be also specified, as well as quality and compression options.
+==================
+*/
+#if USE_TGA
+static void GL_ScreenShotTGA_f( void )  {
     if( Cmd_Argc() > 2 ) {
         Com_Printf( "Usage: %s [name]\n", Cmd_Argv( 0 ) );
         return;
     }
-    make_screenshot( ".tga", IMG_SaveTGA, GL_BGR, 0 );
-#else
-    Com_Printf( "Couldn't create screenshot due to no TGA support linked in.\n" );
-#endif
+
+    make_screenshot( Cmd_Argv( 1 ), ".tga", IMG_SaveTGA, GL_BGR, 0 );
 }
+#endif
 
 #if USE_JPG
 static void GL_ScreenShotJPG_f( void )  {
@@ -724,7 +781,7 @@ static void GL_ScreenShotJPG_f( void )  {
         quality = gl_screenshot_quality->integer;
     }
 
-    make_screenshot( ".jpg", IMG_SaveJPG, GL_RGB, quality );
+    make_screenshot( Cmd_Argv( 1 ), ".jpg", IMG_SaveJPG, GL_RGB, quality );
 }
 #endif
 
@@ -743,7 +800,7 @@ static void GL_ScreenShotPNG_f( void )  {
         compression = gl_screenshot_compression->integer;
     }
 
-    make_screenshot( ".png", IMG_SavePNG, GL_RGB, compression );
+    make_screenshot( Cmd_Argv( 1 ), ".png", IMG_SavePNG, GL_RGB, compression );
 }
 #endif
 
@@ -763,12 +820,33 @@ static size_t GL_ViewCluster_m( char *buffer, size_t size ) {
 
 // ============================================================================== 
 
+static const cmdreg_t gl_cmd[] = {
+    { "screenshot", GL_ScreenShot_f },
+#if USE_TGA
+    { "screenshottga", GL_ScreenShotTGA_f },
+#endif
+#if USE_JPG
+    { "screenshotjpg", GL_ScreenShotJPG_f },
+#endif
+#if USE_PNG
+    { "screenshotpng", GL_ScreenShotPNG_f },
+#endif
+    { "strings", GL_Strings_f },
+
+    { NULL }
+};
+
 static void gl_novis_changed( cvar_t *self ) {
     glr.viewcluster1 = glr.viewcluster2 = -2;
 }
 
 static void GL_Register( void ) {
     gl_partscale = Cvar_Get( "gl_partscale", "2", 0 );
+#if USE_JPG
+    gl_screenshot_format = Cvar_Get( "gl_screenshot_format", "jpg", 0 );
+#elif USE_PNG
+    gl_screenshot_format = Cvar_Get( "gl_screenshot_format", "png", 0 );
+#endif
 #if USE_JPG
     gl_screenshot_quality = Cvar_Get( "gl_screenshot_quality", "100", 0 );
 #endif
@@ -815,27 +893,13 @@ static void GL_Register( void ) {
     gl_fragment_program = Cvar_Get( "gl_fragment_program", "1", 0 );
     gl_vertex_buffer_object = Cvar_Get( "gl_vertex_buffer_object", "1", CVAR_FILES );
     
-    Cmd_AddCommand( "screenshot", GL_ScreenShot_f );
-#if USE_JPG
-    Cmd_AddCommand( "screenshotjpg", GL_ScreenShotJPG_f );
-#else
-    Cmd_AddCommand( "screenshotjpg", GL_ScreenShot_f );
-#endif
-#if USE_PNG
-    Cmd_AddCommand( "screenshotpng", GL_ScreenShotPNG_f );
-#else
-    Cmd_AddCommand( "screenshotpng", GL_ScreenShot_f );
-#endif
-    Cmd_AddCommand( "strings", GL_Strings_f );
+    Cmd_Register( gl_cmd );
 
     Cmd_AddMacro( "gl_viewcluster", GL_ViewCluster_m );
 }
 
 static void GL_Unregister( void ) {
-    Cmd_RemoveCommand( "screenshot" );
-    Cmd_RemoveCommand( "screenshotjpg" );
-    Cmd_RemoveCommand( "screenshotpng" );
-    Cmd_RemoveCommand( "strings" );
+    Cmd_Deregister( gl_cmd );
 }
 
 static qboolean GL_SetupExtensions( void ) {
