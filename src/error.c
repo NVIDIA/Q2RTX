@@ -37,7 +37,9 @@ static const char *const error_table[] = {
     "Unexpected end of file",
     "File too small",
     "Bad run length packet",
-    "String truncated",
+    "String truncation avoided",
+    "Runaway loop avoided",
+    "Infinite loop avoided",
     "Library error",
 #if USE_ZLIB
     "Inflate failed",

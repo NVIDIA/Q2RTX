@@ -826,7 +826,7 @@ static qerror_t BSP_SetParent( mnode_t *node, int key ) {
         for( i = 0, face = node->firstface; i < node->numfaces; i++, face++ ) {
             if( face->drawframe ) {
                 DEBUG( "duplicate face" );
-                return Q_ERR_DEADLOCK;
+                return Q_ERR_INFINITE_LOOP;
             }
             face->drawframe = key;
         }
@@ -835,7 +835,7 @@ static qerror_t BSP_SetParent( mnode_t *node, int key ) {
         child = node->children[0];
         if( child->parent ) {
             DEBUG( "cycle encountered" );
-            return Q_ERR_DEADLOCK;
+            return Q_ERR_INFINITE_LOOP;
         }
         child->parent = node;
         BSP_SetParent( child, key );
@@ -843,7 +843,7 @@ static qerror_t BSP_SetParent( mnode_t *node, int key ) {
         child = node->children[1];
         if( child->parent ) {
             DEBUG( "cycle encountered" );
-            return Q_ERR_DEADLOCK;
+            return Q_ERR_INFINITE_LOOP;
         }
         child->parent = node;
         node = child;
@@ -879,7 +879,7 @@ static qerror_t BSP_ValidateTree( bsp_t *bsp ) {
         for( j = 0, face = mod->firstface; j < mod->numfaces; j++, face++ ) {
             if( face->drawframe && face->drawframe != ~i ) {
                 DEBUG( "duplicate face" );
-                return Q_ERR_DEADLOCK;
+                return Q_ERR_INFINITE_LOOP;
             }
             face->drawframe = ~i;
         }

@@ -42,18 +42,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define Q_ERR_UNEXPECTED_EOF    _Q_ERR(10)  // Unexpected end of file
 #define Q_ERR_FILE_TOO_SMALL    _Q_ERR(11)  // File too small
 #define Q_ERR_BAD_RLE_PACKET    _Q_ERR(12)  // Bad run length packet
-#define Q_ERR_STRING_TRUNCATED  _Q_ERR(13)  // String truncated
-#define Q_ERR_LIBRARY_ERROR     _Q_ERR(14)  // Library error
+#define Q_ERR_STRING_TRUNCATED  _Q_ERR(13)  // String truncation avoided
+#define Q_ERR_RUNAWAY_LOOP      _Q_ERR(14)  // Runaway loop avoided
+#define Q_ERR_INFINITE_LOOP     _Q_ERR(15)  // Infinite loop avoided
+#define Q_ERR_LIBRARY_ERROR     _Q_ERR(16)  // Library error
 #if USE_ZLIB
-#define Q_ERR_INFLATE_FAILED    _Q_ERR(15)   // Inflate failed
-#define Q_ERR_DEFLATE_FAILED    _Q_ERR(16)   // Deflate failed
-#define Q_ERR_NOT_COHERENT      _Q_ERR(17)   // Coherency check failed
+#define Q_ERR_INFLATE_FAILED    _Q_ERR(17)   // Inflate failed
+#define Q_ERR_DEFLATE_FAILED    _Q_ERR(18)   // Deflate failed
+#define Q_ERR_NOT_COHERENT      _Q_ERR(19)   // Coherency check failed
 #endif
 
 #define Q_ERR_NOENT             Q_ERR(ENOENT)
 #define Q_ERR_NAMETOOLONG       Q_ERR(ENAMETOOLONG)
 #define Q_ERR_INVAL             Q_ERR(EINVAL)
-#define Q_ERR_DEADLOCK          Q_ERR(EDEADLK)
 #define Q_ERR_NOSYS             Q_ERR(ENOSYS)
 #define Q_ERR_SPIPE             Q_ERR(ESPIPE)
 #define Q_ERR_FBIG              Q_ERR(EFBIG)
