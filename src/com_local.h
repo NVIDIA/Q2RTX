@@ -176,6 +176,9 @@ void Cmd_ExecuteString( cmdbuf_t *buf, const char *text );
 // Parses a single line of text into arguments and tries to execute it
 // as if it was typed at the console
 
+qerror_t Cmd_ExecuteFile( const char *path, unsigned flags );
+// execute a config file
+
 char *Cmd_MacroExpandString( const char *text, qboolean aliasHack );
 
 void Cmd_Register( const cmdreg_t *reg );

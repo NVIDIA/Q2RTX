@@ -570,8 +570,6 @@ void Sys_AddDefaultConfig( void ) {
     }
 
     if( fstat( fileno( fp ), &st ) == 0 ) {
-        Com_Printf( "Execing " SYS_SITECFG_NAME "\n" );
-
         len = st.st_size;
         if( len >= cmd_buffer.maxsize ) {
             len = cmd_buffer.maxsize - 1;
@@ -584,6 +582,11 @@ void Sys_AddDefaultConfig( void ) {
     }
 
     fclose( fp );
+
+    if( cmd_buffer.cursize ) {
+        Com_Printf( "Execing %s\n", SYS_SITECFG_NAME );
+        Cbuf_Execute( &cmd_buffer );
+    }
 }
 
 void Sys_Sleep( int msec ) {

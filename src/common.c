@@ -1729,6 +1729,16 @@ static qboolean Com_AddLateCommands( void ) {
     return ret;
 }
 
+static void Com_AddConfigFile( const char *name, unsigned flags ) {
+    qerror_t ret;
+
+    ret = Cmd_ExecuteFile( name, flags );
+    if( ret == Q_ERR_SUCCESS ) {
+        Cbuf_Execute( &cmd_buffer );
+    } else if( ret != Q_ERR_NOENT ) {
+        Com_WPrintf( "Couldn't exec %s: %s\n", name, Q_ErrorString( ret ) );
+    }
+}
 
 /*
 =================
@@ -1819,8 +1829,7 @@ void Qcommon_Init( int argc, char **argv ) {
 
     // add any system-wide configuration files
     Sys_AddDefaultConfig();
-    Cbuf_Execute( &cmd_buffer );
-    
+
     // we need to add the early commands twice, because
     // a basedir or cddir needs to be set before execing
     // config files, but we want other parms to override
@@ -1851,14 +1860,11 @@ void Qcommon_Init( int argc, char **argv ) {
     logfile_name->changed = logfile_param_changed;
     logfile_enable_changed( logfile_enable );
 
-    Cbuf_AddText( &cmd_buffer, "exec "COM_DEFAULTCFG_NAME"\n" );
-    Cbuf_Execute( &cmd_buffer );
-    
-    Cbuf_AddText( &cmd_buffer, "exec "COM_CONFIG_NAME"\n" );
-    Cbuf_Execute( &cmd_buffer );
-
-    Cbuf_AddText( &cmd_buffer, "exec "COM_AUTOEXECCFG_NAME"\n" );
-    Cbuf_Execute( &cmd_buffer );
+    // execute configs: default.cfg may come from the packfile, but config.cfg
+    // and autoexec.cfg must be real files within the game directory
+    Com_AddConfigFile( COM_DEFAULTCFG_NAME, 0 );
+    Com_AddConfigFile( COM_CONFIG_NAME, FS_TYPE_REAL|FS_PATH_GAME );
+    Com_AddConfigFile( COM_AUTOEXECCFG_NAME, FS_TYPE_REAL|FS_PATH_GAME );
 
     Com_AddEarlyCommands( qtrue );
 

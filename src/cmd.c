@@ -1558,7 +1558,7 @@ void Cmd_ExecuteCommand( cmdbuf_t *buf ) {
     // check aliases
     a = Cmd_AliasFind( cmd_argv[0] );
     if( a ) {
-        if( buf->aliasCount == ALIAS_LOOP_COUNT ) {
+        if( buf->aliasCount >= ALIAS_LOOP_COUNT ) {
             Com_WPrintf( "Runaway alias loop\n" );
             return;
         }
@@ -1604,6 +1604,56 @@ void Cmd_ExecuteString( cmdbuf_t *buf, const char *text ) {
     Cmd_ExecuteCommand( buf );
 }
 
+qerror_t Cmd_ExecuteFile( const char *path, unsigned flags ) {
+    char    *f;
+    ssize_t len;
+    qerror_t ret;
+    cmdbuf_t *buf;
+
+    len = FS_LoadFileEx( path, ( void ** )&f, flags );
+    if( !f ) {
+        return len;
+    }
+
+    // check for binary file
+    if( memchr( f, 0, len ) ) {
+        ret = Q_ERR_INVALID_FORMAT;
+        goto finish;
+    }
+
+    // sanity check file size after stripping off comments
+    len = COM_Compress( f );
+    if( len > CMD_BUFFER_SIZE ) {
+        ret = Q_ERR_FBIG;
+        goto finish;
+    }
+
+    // FIXME: always insert into main command buffer,
+    // no matter where command came from?
+    buf = &cmd_buffer;
+
+    // check for exec loop
+    if( ++buf->aliasCount > ALIAS_LOOP_COUNT ) {
+        ret = Q_ERR_RUNAWAY_LOOP;
+        goto finish;
+    }
+
+    // check for overflow
+    if( buf->cursize + len + 1 > buf->maxsize ) {
+        ret = Q_ERR_STRING_TRUNCATED;
+        goto finish;
+    }
+
+    // everything ok, execute it
+    Com_Printf( "Execing %s\n", path );
+    Cbuf_InsertText( buf, f );
+    ret = Q_ERR_SUCCESS;
+
+finish:
+    FS_FreeFile( f );
+    return ret;
+}
+
 /*
 ===============
 Cmd_Exec_f
@@ -1611,42 +1661,33 @@ Cmd_Exec_f
 */
 static void Cmd_Exec_f( void ) {
     char    buffer[MAX_QPATH];
-    char    *f;
-    ssize_t len;
+    size_t  len;
+    qerror_t ret;
 
     if( Cmd_Argc() != 2 ) {
         Com_Printf( "%s <filename> : execute a script file\n", Cmd_Argv( 0 ) );
         return;
     }
 
-    Cmd_ArgvBuffer( 1, buffer, sizeof( buffer ) );
+    len = Cmd_ArgvBuffer( 1, buffer, sizeof( buffer ) );
+    if( len >= sizeof( buffer ) ) {
+        ret = Q_ERR_NAMETOOLONG;
+        goto fail;
+    }
 
-    len = FS_LoadFile( buffer, ( void ** )&f );
-    if( !f ) {
-        // try with *.cfg extension
-        COM_DefaultExtension( buffer, ".cfg", sizeof( buffer ) );
-        len = FS_LoadFile( buffer, ( void ** )&f );
-        if( !f ) {
-            Com_Printf( "Couldn't exec %s: %s\n", buffer, Q_ErrorString( len ) );
-            return;
+    ret = Cmd_ExecuteFile( buffer, 0 );
+    if( ret == Q_ERR_NOENT && FS_strcmp( COM_FileExtension( buffer ), ".cfg" ) ) {
+        // try with .cfg extension
+        len = COM_DefaultExtension( buffer, ".cfg", sizeof( buffer ) );
+        if( len < sizeof( buffer ) ) {
+            ret = Cmd_ExecuteFile( buffer, 0 );
         }
     }
 
-    if( memchr( f, 0, len ) ) {
-        Com_Printf( "Refusing to exec binary file %s\n", buffer );
-        goto finish;
+    if( ret ) {
+fail:
+        Com_Printf( "Couldn't exec %s: %s\n", buffer, Q_ErrorString( ret ) );
     }
-
-    Com_Printf( "Execing %s\n", buffer );
-    
-    // FIXME: bad thing to do in place
-    COM_Compress( f );
-
-    // FIXME: always insert into generic command buffer
-    Cbuf_InsertText( &cmd_buffer, f );
-
-finish:
-    FS_FreeFile( f );
 }
 
 void Cmd_Config_g( genctx_t *ctx ) {
