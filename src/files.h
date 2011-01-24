@@ -64,13 +64,22 @@ typedef struct file_info_s {
 #define FS_FLAG_GZIP            0x00000080
 #define FS_FLAG_EXCL            0x00000100
 
-#define FS_Malloc( size )       Z_TagMalloc( size, TAG_FILESYSTEM )
-#define FS_Mallocz( size )      Z_TagMallocz( size, TAG_FILESYSTEM )
-#define FS_CopyString( string ) Z_TagCopyString( string, TAG_FILESYSTEM )
-
 // protection from malicious paks causing memory exhaustion
 // no loadable Q2 resource should ever exceed this limit
 #define MAX_LOADFILE    0x400000 // 64 MiB
+
+// macros for dealing portably with files at OS level
+#ifdef _WIN32
+#define FS_strcmp   Q_strcasecmp
+#define FS_strncmp  Q_strncasecmp
+#else
+#define FS_strcmp   strcmp
+#define FS_strncmp  strncmp
+#endif
+
+#define FS_Malloc( size )       Z_TagMalloc( size, TAG_FILESYSTEM )
+#define FS_Mallocz( size )      Z_TagMallocz( size, TAG_FILESYSTEM )
+#define FS_CopyString( string ) Z_TagCopyString( string, TAG_FILESYSTEM )
 
 void    FS_Init( void );
 void    FS_Shutdown( void );
