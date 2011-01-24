@@ -1066,7 +1066,7 @@ qboolean R_Init( qboolean total ) {
     // initialize our QGL dynamic bindings
     QGL_Init();
 
-    // get verious static strings from OpenGL
+    // get various static strings from OpenGL
 #define GET_STRING( x )  ( const char * )qglGetString( x )
     gl_config.vendorString = GET_STRING( GL_VENDOR );
     gl_config.rendererString = GET_STRING( GL_RENDERER );

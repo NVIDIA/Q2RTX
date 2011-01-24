@@ -398,7 +398,7 @@ static float colorscale;
 GL_GrayScaleTexture
 
 Transform to grayscale by replacing color components with
-overall pixel luminance computed from wighted color sum
+overall pixel luminance computed from weighted color sum
 ================
 */
 static void GL_GrayScaleTexture( byte *in, int inwidth, int inheight ) {
