@@ -140,15 +140,17 @@ void Win_SetMode( void ) {
             dm.dmBitsPerPel = depth;
             dm.dmFields |= DM_BITSPERPEL;
             Com_DPrintf( "...using bitdepth of %d\n", depth );
-        } else {
+#ifdef _DEBUG
+        } else if( developer->integer ) {
             HDC hdc;
             int bitspixel;
-            
+
             hdc = GetDC( NULL );
             bitspixel = GetDeviceCaps( hdc, BITSPIXEL );
             ReleaseDC( NULL, hdc );
 
-            Com_DPrintf( "...using desktop bitdepth of %d\n", bitspixel );      
+            Com_DPrintf( "...using desktop bitdepth of %d\n", bitspixel );
+#endif
         }
 
         Com_DPrintf( "...calling CDS: " );
