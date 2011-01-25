@@ -77,6 +77,9 @@ static cvar_t   *ch_green;
 static cvar_t   *ch_blue;
 static cvar_t   *ch_alpha;
 
+static cvar_t   *ch_x;
+static cvar_t   *ch_y;
+
 #ifdef _DEBUG
 cvar_t      *scr_netgraph;
 cvar_t      *scr_timegraph;
@@ -1079,6 +1082,9 @@ void SCR_Init( void ) {
     ch_alpha = Cvar_Get ("ch_alpha", "1", 0);
     ch_alpha->changed = scr_crosshair_changed;
 
+    ch_x = Cvar_Get ("ch_x", "0", 0);
+    ch_y = Cvar_Get ("ch_y", "0", 0);
+
     scr_draw2d = Cvar_Get( "scr_draw2d", "2", 0 );
     scr_showturtle = Cvar_Get( "scr_showturtle", "1", 0 );
     scr_lag_x = Cvar_Get( "scr_lag_x", "-1", 0 );
@@ -1626,6 +1632,9 @@ static void draw_loading( void ) {
 static void draw_crosshair( void ) {
     int x = ( scr.hud_width - scr.crosshair_width ) / 2;
     int y = ( scr.hud_height - scr.crosshair_height ) / 2;
+
+    x += ch_x->integer;
+    y += ch_y->integer;
 
     R_SetColor( DRAW_COLOR_RGBA, scr.crosshair_color );
     R_DrawPic( x, y, scr.crosshair_pic );
