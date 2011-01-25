@@ -360,6 +360,7 @@ extern cvar_t    *cl_footsteps;
 extern cvar_t    *cl_noskins;
 extern cvar_t    *cl_kickangles;
 extern cvar_t    *cl_rollhack;
+extern cvar_t    *cl_noglow;
 
 #ifdef _DEBUG
 #define SHOWNET(level,...) \

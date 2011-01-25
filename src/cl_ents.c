@@ -295,6 +295,12 @@ static void CL_AddPacketEntities( void ) {
         }
 // pmm
 //======
+
+        // optionally remove the glowing effect
+        if( cl_noglow->integer ) {
+            renderfx &= ~RF_GLOW;
+        }
+
         ent.oldframe = cent->prev.frame;
         ent.backlerp = 1.0 - cl.lerpfrac;
 
