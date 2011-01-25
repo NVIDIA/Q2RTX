@@ -1900,13 +1900,11 @@ void Qcommon_Init( int argc, char **argv ) {
     // add + commands from command line
     if( !Com_AddLateCommands() ) {
         // if the user didn't give any commands, run default action
-        if( Com_IsDedicated() ) {
-            Cbuf_AddText( &cmd_buffer, "dedicated_start\n" );
-        } else {
-            // TODO
-            //Cbuf_AddText( "d1\n" );
+        char *cmd = Com_IsDedicated() ? "dedicated_start" : "client_start";
+        if( ( cmd = Cmd_AliasCommand( cmd ) ) != NULL ) {
+            Cbuf_AddText( &cmd_buffer, cmd );
+            Cbuf_Execute( &cmd_buffer );
         }
-        Cbuf_Execute( &cmd_buffer );
     }
 #if USE_CLIENT
     else {
