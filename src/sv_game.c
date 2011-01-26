@@ -413,12 +413,12 @@ static qboolean PF_inVIS( vec3_t p1, vec3_t p2, int vis ) {
     BSP_ClusterVis( bsp, mask, leaf1->cluster, vis );
 
     leaf2 = BSP_PointLeaf( bsp->nodes, p2 );
-    if( !Q_IsBitSet( mask, leaf2->cluster ) ) {
+    if( leaf2->cluster == -1 )
         return qfalse;
-    }
-    if( !CM_AreasConnected( &sv.cm, leaf1->area, leaf2->area ) ) {
+    if( !Q_IsBitSet( mask, leaf2->cluster ) )
+        return qfalse;
+    if( !CM_AreasConnected( &sv.cm, leaf1->area, leaf2->area ) )
         return qfalse;        // a door blocks it
-    }
     return qtrue;
 }
 

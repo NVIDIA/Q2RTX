@@ -263,9 +263,10 @@ static void MVD_ParseMulticast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
             leaf2 = CM_PointLeaf( &mvd->cm, org );
             if( !CM_AreasConnected( &mvd->cm, leaf1->area, leaf2->area ) )
                 continue;
-            if( !Q_IsBitSet( mask, leaf2->cluster ) ) {
+            if( leaf2->cluster == -1 )
                 continue;
-            }
+            if( !Q_IsBitSet( mask, leaf2->cluster ) )
+                continue;
         }
 
         cl->AddMessage( cl, data, length, reliable );

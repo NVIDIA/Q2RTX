@@ -301,12 +301,12 @@ void SV_Multicast( vec3_t origin, multicast_t to ) {
             VectorCopy( client->edict->s.origin, org );
 #endif
             leaf2 = CM_PointLeaf( &sv.cm, org );
-            if( !CM_AreasConnected( &sv.cm, leaf1->area, leaf2->area ) ) {
+            if( !CM_AreasConnected( &sv.cm, leaf1->area, leaf2->area ) )
                 continue;
-            }
-            if( !Q_IsBitSet( mask, leaf2->cluster ) ) {
+            if( leaf2->cluster == -1 )
                 continue;
-            }
+            if( !Q_IsBitSet( mask, leaf2->cluster ) )
+                continue;
         }
 
         SV_ClientAddMessage( client, flags );
