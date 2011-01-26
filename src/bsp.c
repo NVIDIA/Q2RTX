@@ -1131,7 +1131,7 @@ mface_t *BSP_LightPoint( mnode_t *node, vec3_t start, vec3_t end, int *ps, int *
 #endif
 
 byte *BSP_ClusterVis( bsp_t *bsp, byte *mask, int cluster, int vis ) {
-    byte    *in, *out;
+    byte    *in, *out, *in_end, *out_end;
     int     c;
 
     if( !bsp || !bsp->vis ) {
@@ -1145,26 +1145,33 @@ byte *BSP_ClusterVis( bsp_t *bsp, byte *mask, int cluster, int vis ) {
     }
 
     // decompress vis
+    in_end = ( byte * )bsp->vis + bsp->numvisibility;
     in = ( byte * )bsp->vis + bsp->vis->bitofs[cluster][vis];
+    out_end = mask + bsp->visrowsize;
     out = mask;
     do {
+        if( in >= in_end ) {
+            goto overrun;
+        }
         if( *in ) {
             *out++ = *in++;
             continue;
         }
-    
+
+        if( in + 1 >= in_end ) {
+            goto overrun;
+        }
         c = in[1];
         in += 2;
-        if( ( out - mask ) + c > bsp->visrowsize ) {
-            c = bsp->visrowsize - ( out - mask );
-            Com_WPrintf( "%s: overrun\n", __func__ );
+        if( out + c > out_end ) {
+overrun:
+            c = out_end - out;
         }
-        while( c ) {
+        while( c-- ) {
             *out++ = 0;
-            c--;
         }
-    } while( out - mask < bsp->visrowsize );
-    
+    } while( out < out_end );
+
     return mask;
 }
 
