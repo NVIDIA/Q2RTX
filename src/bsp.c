@@ -61,9 +61,13 @@ LOAD( Visibility ) {
     memcpy( bsp->vis, base, count );
 
     numclusters = LittleLong( bsp->vis->numclusters );
-    if( numclusters > ( count - 4 ) / 8 ) {
+    if( numclusters > MAX_MAP_LEAFS ) {
         DEBUG( "bad numclusters" );
         return Q_ERR_TOO_MANY;
+    }
+    if( numclusters > ( count - 4 ) / 8 ) {
+        DEBUG( "bad numclusters" );
+        return Q_ERR_TOO_FEW;
     }
     bsp->vis->numclusters = numclusters;
     bsp->visrowsize = ( numclusters + 7 ) >> 3;
