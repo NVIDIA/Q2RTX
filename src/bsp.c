@@ -483,13 +483,20 @@ LOAD( Leafs ) {
         out->plane = NULL;
         out->contents = LittleLong (in->contents);
         cluster = ( signed short )LittleShort (in->cluster);
-        if( bsp->vis && cluster != -1 ) {
+        if( cluster == -1 ) {
+            // solid leafs use special -1 cluster
+            out->cluster = -1;
+        } else if( bsp->vis == NULL ) {
+            // map has no vis, let's use 0 as a default cluster
+            out->cluster = 0;
+        } else {
+            // validate cluster
             if( cluster < 0 || cluster >= bsp->vis->numclusters ) {
                 DEBUG( "bad cluster" );
                 return Q_ERR_BAD_INDEX;
             }
+            out->cluster = cluster;
         }
-        out->cluster = cluster;
 
         area = LittleShort( in->area );
         if( area >= bsp->numareas ) {
