@@ -352,8 +352,8 @@ void SV_BuildClientFrame( client_t *client ) {
     int         l;
     int         clientarea, clientcluster;
     mleaf_t     *leaf;
-    byte        clientphs[MAX_MAP_VIS];
-    byte        clientpvs[MAX_MAP_VIS];
+    byte        clientphs[VIS_MAX_BYTES];
+    byte        clientpvs[VIS_MAX_BYTES];
 
     clent = client->edict;
     if( !clent->client )

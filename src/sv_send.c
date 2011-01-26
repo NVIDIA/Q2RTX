@@ -242,7 +242,7 @@ MULTICAST_PHS    send to clients potentially hearable from org
 */
 void SV_Multicast( vec3_t origin, multicast_t to ) {
     client_t    *client;
-    byte        mask[MAX_MAP_VIS];
+    byte        mask[VIS_MAX_BYTES];
     mleaf_t     *leaf1, *leaf2;
     int         leafnum;
     int         flags;

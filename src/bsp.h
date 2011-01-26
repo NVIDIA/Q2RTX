@@ -25,7 +25,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MIPLEVELS 4
 #endif
 
-#define MAX_MAP_VIS   ( MAX_MAP_LEAFS / 8 )
+// maximum size of a PVS row, in bytes
+#define VIS_MAX_BYTES   (MAX_MAP_LEAFS >> 3)
 
 // take advantage of 64-bit systems
 #define VIS_FAST_LONGS(bsp) \

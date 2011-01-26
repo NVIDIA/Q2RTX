@@ -427,7 +427,7 @@ cluster
 */
 void R_MarkLeaves (void)
 {
-    byte    vis[MAX_MAP_VIS];
+    byte    vis[VIS_MAX_BYTES];
     mnode_t *node;
     int     i;
     mleaf_t *leaf;

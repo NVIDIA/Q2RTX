@@ -1084,7 +1084,7 @@ so we can't use a single PVS point
 ===========
 */
 byte *CM_FatPVS( cm_t *cm, byte *mask, const vec3_t org ) {
-    byte    temp[MAX_MAP_VIS];
+    byte    temp[VIS_MAX_BYTES];
     mleaf_t *leafs[64];
     int     clusters[64];
     int     i, j, count, longs;
@@ -1092,10 +1092,10 @@ byte *CM_FatPVS( cm_t *cm, byte *mask, const vec3_t org ) {
     vec3_t  mins, maxs;
 
     if( !cm->cache ) {  // map not loaded
-        return memset( mask, 0, MAX_MAP_VIS );
+        return memset( mask, 0, VIS_MAX_BYTES );
     }
     if( !cm->cache->vis ) {
-        return memset( mask, 0xff, MAX_MAP_VIS );
+        return memset( mask, 0xff, VIS_MAX_BYTES );
     }
 
     for( i = 0; i < 3; i++ ) {

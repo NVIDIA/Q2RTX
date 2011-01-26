@@ -1135,7 +1135,7 @@ byte *BSP_ClusterVis( bsp_t *bsp, byte *mask, int cluster, int vis ) {
     int     c;
 
     if( !bsp || !bsp->vis ) {
-        return memset( mask, 0xff, MAX_MAP_VIS );
+        return memset( mask, 0xff, VIS_MAX_BYTES );
     }
     if( cluster == -1 ) {
         return memset( mask, 0, bsp->visrowsize );

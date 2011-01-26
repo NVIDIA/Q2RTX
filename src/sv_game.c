@@ -402,7 +402,7 @@ static void PF_WriteFloat( float f ) {
 
 static qboolean PF_inVIS( vec3_t p1, vec3_t p2, int vis ) {
     mleaf_t *leaf1, *leaf2;
-    byte mask[MAX_MAP_VIS];
+    byte mask[VIS_MAX_BYTES];
     bsp_t *bsp = sv.cm.cache;
     
     if( !bsp ) {
@@ -489,7 +489,7 @@ static void PF_StartSound( edict_t *edict, int channel,
     int         ent;
     vec3_t      origin;
     client_t    *client;
-    byte        mask[MAX_MAP_VIS];
+    byte        mask[VIS_MAX_BYTES];
     mleaf_t     *leaf;
     int         area;
     player_state_t      *ps;

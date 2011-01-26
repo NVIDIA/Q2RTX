@@ -208,8 +208,8 @@ void R_LightPoint( vec3_t origin, vec3_t color ) {
 
 static void GL_MarkLeaves( void ) {
     static int lastNodesVisible;
-    byte vis1[MAX_MAP_VIS];
-    byte vis2[MAX_MAP_VIS];
+    byte vis1[VIS_MAX_BYTES];
+    byte vis2[VIS_MAX_BYTES];
     mleaf_t *leaf;
     mnode_t *node;
     uint_fast32_t *src1, *src2;
