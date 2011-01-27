@@ -77,6 +77,7 @@ static cvar_t   *ch_green;
 static cvar_t   *ch_blue;
 static cvar_t   *ch_alpha;
 
+static cvar_t   *ch_scale;
 static cvar_t   *ch_x;
 static cvar_t   *ch_y;
 
@@ -979,11 +980,22 @@ static void SCR_TimeRefresh_f (void) {
 
 static void scr_crosshair_changed( cvar_t *self ) {
     char buffer[16];
+    int w, h;
+    float scale;
 
     if( scr_crosshair->integer > 0 ) {
         Q_snprintf( buffer, sizeof( buffer ), "ch%i", scr_crosshair->integer );
         scr.crosshair_pic = R_RegisterPic( buffer );
-        R_GetPicSize( &scr.crosshair_width, &scr.crosshair_height, scr.crosshair_pic );
+        R_GetPicSize( &w, &h, scr.crosshair_pic );
+
+        // prescale
+        scale = Cvar_ClampValue( ch_scale, 0.1f, 9.0f );
+        scr.crosshair_width = w * scale;
+        scr.crosshair_height = h * scale;
+        if( scr.crosshair_width < 1 )
+            scr.crosshair_width = 1;
+        if( scr.crosshair_height < 1 )
+            scr.crosshair_height = 1;
 
         scr.crosshair_color[0] = (byte)(ch_red->value * 255);
         scr.crosshair_color[1] = (byte)(ch_green->value * 255);
@@ -1082,6 +1094,8 @@ void SCR_Init( void ) {
     ch_alpha = Cvar_Get ("ch_alpha", "1", 0);
     ch_alpha->changed = scr_crosshair_changed;
 
+    ch_scale = Cvar_Get ("ch_scale", "1", 0);
+    ch_scale->changed = scr_crosshair_changed;
     ch_x = Cvar_Get ("ch_x", "0", 0);
     ch_y = Cvar_Get ("ch_y", "0", 0);
 
@@ -1637,7 +1651,8 @@ static void draw_crosshair( void ) {
     y += ch_y->integer;
 
     R_SetColor( DRAW_COLOR_RGBA, scr.crosshair_color );
-    R_DrawPic( x, y, scr.crosshair_pic );
+    R_DrawStretchPic( x, y, scr.crosshair_width, scr.crosshair_height,
+        scr.crosshair_pic );
     R_SetColor( DRAW_COLOR_CLEAR, NULL );
 }
 
