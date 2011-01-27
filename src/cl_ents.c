@@ -211,6 +211,8 @@ void CL_DeltaFrame( void ) {
     if( cl.oldframe.ps.pmove.pm_type != cl.frame.ps.pmove.pm_type ) {
         IN_Activate();
     }
+
+    SCR_SetCrosshairColor();
 }
 
 

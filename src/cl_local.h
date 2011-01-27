@@ -742,6 +742,7 @@ void    SCR_RegisterMedia( void );
 void    SCR_ModeChanged( void );
 void    SCR_LagSample( void );
 void    SCR_LagClear( void );
+void    SCR_SetCrosshairColor( void );
 
 float   SCR_FadeAlpha( unsigned startTime, unsigned visTime, unsigned fadeTime );
 int     SCR_DrawStringEx( int x, int y, int flags, size_t maxlen, const char *s, qhandle_t font );

@@ -72,6 +72,7 @@ static cvar_t   *scr_scale;
 
 static cvar_t   *scr_crosshair;
 
+static cvar_t   *ch_health;
 static cvar_t   *ch_red;
 static cvar_t   *ch_green;
 static cvar_t   *ch_blue;
@@ -997,12 +998,51 @@ static void scr_crosshair_changed( cvar_t *self ) {
         if( scr.crosshair_height < 1 )
             scr.crosshair_height = 1;
 
-        scr.crosshair_color[0] = (byte)(ch_red->value * 255);
-        scr.crosshair_color[1] = (byte)(ch_green->value * 255);
-        scr.crosshair_color[2] = (byte)(ch_blue->value * 255);
+        if( ch_health->integer ) {
+            SCR_SetCrosshairColor();
+        } else {
+            scr.crosshair_color[0] = (byte)(ch_red->value * 255);
+            scr.crosshair_color[1] = (byte)(ch_green->value * 255);
+            scr.crosshair_color[2] = (byte)(ch_blue->value * 255);
+        }
         scr.crosshair_color[3] = (byte)(ch_alpha->value * 255);
     } else {
         scr.crosshair_pic = 0;
+    }
+}
+
+void SCR_SetCrosshairColor( void ) {
+    int health;
+
+    if( !ch_health->integer ) {
+        return;
+    }
+
+    health = cl.frame.ps.stats[STAT_HEALTH];
+    if( health <= 0 ) {
+        VectorSet( scr.crosshair_color, 0, 0, 0 );
+        return;
+    }
+
+    // red
+    scr.crosshair_color[0] = 255;
+
+    // green
+    if( health >= 66 ) {
+        scr.crosshair_color[1] = 255;
+    } else if( health < 33 ) {
+        scr.crosshair_color[1] = 0;
+    } else {
+        scr.crosshair_color[1] = ( 255 * ( health - 33 ) ) / 33;
+    }
+
+    // blue
+    if( health >= 99 ) {
+        scr.crosshair_color[2] = 255;
+    } else if( health < 66 ) {
+        scr.crosshair_color[2] = 0;
+    } else {
+        scr.crosshair_color[2] = ( 255 * ( health - 66 ) ) / 33;
     }
 }
 
@@ -1085,6 +1125,8 @@ void SCR_Init( void ) {
     scr_crosshair = Cvar_Get ("crosshair", "0", CVAR_ARCHIVE);
     scr_crosshair->changed = scr_crosshair_changed;
 
+    ch_health = Cvar_Get ("ch_health", "0", 0);
+    ch_health->changed = scr_crosshair_changed;
     ch_red = Cvar_Get ("ch_red", "1", 0);
     ch_red->changed = scr_crosshair_changed;
     ch_green = Cvar_Get ("ch_green", "1", 0);
