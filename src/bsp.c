@@ -116,7 +116,7 @@ LOAD( Texinfo ) {
             out->offset[j] = LittleFloat( in->vecs[j][k] );
         }
 
-        next = LittleLong( in->nexttexinfo );
+        next = ( int32_t )LittleLong( in->nexttexinfo );
         if( next > 0 ) {
             if( next >= count ) {
                 DEBUG( "bad anim chain" );
@@ -343,7 +343,7 @@ LOAD( SurfEdges ) {
     in = base;
     out = bsp->surfedges;
     for( i = 0; i < count; i++, out++, in++ ) {
-        index = ( signed int )LittleLong( *in );
+        index = ( int32_t )LittleLong( *in );
 
         vert = 0;
         if( index < 0 ) {
@@ -482,7 +482,7 @@ LOAD( Leafs ) {
     for( i = 0; i < count; i++, in++, out++ ) {
         out->plane = NULL;
         out->contents = LittleLong (in->contents);
-        cluster = ( signed short )LittleShort (in->cluster);
+        cluster = ( int16_t )LittleShort (in->cluster);
         if( cluster == -1 ) {
             // solid leafs use special -1 cluster
             out->cluster = -1;
@@ -525,8 +525,8 @@ LOAD( Leafs ) {
         out->numleaffaces = numleaffaces;
 
         for( j = 0; j < 3; j++ ) {
-            out->mins[j] = ( signed short )LittleShort( in->mins[j] );
-            out->maxs[j] = ( signed short )LittleShort( in->maxs[j] );
+            out->mins[j] = ( int16_t )LittleShort( in->mins[j] );
+            out->maxs[j] = ( int16_t )LittleShort( in->maxs[j] );
         }
 
         out->parent = NULL;
@@ -599,8 +599,8 @@ LOAD( Nodes ) {
         out->numfaces = numfaces;
 
         for( j = 0; j < 3; j++ ) {
-            out->mins[j] = ( signed short )LittleShort( in->mins[j] );
-            out->maxs[j] = ( signed short )LittleShort( in->maxs[j] );
+            out->mins[j] = ( int16_t )LittleShort( in->mins[j] );
+            out->maxs[j] = ( int16_t )LittleShort( in->maxs[j] );
         }
 
         out->parent = NULL;

@@ -210,8 +210,8 @@ qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
     src_st = ( dmd2stvert_t * )( ( byte * )rawdata + header.ofs_st );
     dst_st = model->sts;
     for( i = 0; i < header.num_st; i++, src_st++, dst_st++ ) {
-        dst_st->s = ( signed short )LittleShort( src_st->s );
-        dst_st->t = ( signed short )LittleShort( src_st->t );
+        dst_st->s = ( int16_t )LittleShort( src_st->s );
+        dst_st->t = ( int16_t )LittleShort( src_st->t );
     }
 
     // load the frames

@@ -146,8 +146,8 @@ qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
     scaleT = 1.0f / header.skinheight;
     for( i = 0; i < numindices; i++ ) {
         if( remap[i] == i ) {
-            float s = ( signed short )LittleShort( src_tc[ tcIndices[i] ].s );
-            float t = ( signed short )LittleShort( src_tc[ tcIndices[i] ].t );
+            float s = ( int16_t )LittleShort( src_tc[ tcIndices[i] ].s );
+            float t = ( int16_t )LittleShort( src_tc[ tcIndices[i] ].t );
 
             dst_tc[ finalIndices[i] ].st[0] = s * scaleS;
             dst_tc[ finalIndices[i] ].st[1] = t * scaleT;
@@ -352,9 +352,9 @@ qerror_t MOD_LoadMD3( model_t *model, const void *rawdata, size_t length ) {
         }
         dst_vert = dst_mesh->verts;
         for( j = 0; j < totalVerts; j++ ) {
-            dst_vert->pos[0] = ( signed short )LittleShort( src_vert->point[0] );
-            dst_vert->pos[1] = ( signed short )LittleShort( src_vert->point[1] );
-            dst_vert->pos[2] = ( signed short )LittleShort( src_vert->point[2] );
+            dst_vert->pos[0] = ( int16_t )LittleShort( src_vert->point[0] );
+            dst_vert->pos[1] = ( int16_t )LittleShort( src_vert->point[1] );
+            dst_vert->pos[2] = ( int16_t )LittleShort( src_vert->point[2] );
 
             dst_vert->norm[0] = src_vert->norm[0];
             dst_vert->norm[1] = src_vert->norm[1];
