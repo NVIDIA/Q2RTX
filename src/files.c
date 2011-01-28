@@ -1030,6 +1030,9 @@ static ssize_t open_file_read( file_t *file, const char *name, qboolean unique )
             if( ( file->mode & FS_TYPE_MASK ) == FS_TYPE_PAK ) {
                 continue;
             }
+    // don't error out immediately if the path is found to be invalid,
+    // just stop looking for it in directory tree but continue to search
+    // for it in packs, to give broken maps or mods a chance to work
             if( valid == -1 ) {
                 ret = validate_path( name );
                 if( ret ) {
