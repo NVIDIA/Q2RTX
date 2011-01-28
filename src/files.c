@@ -2596,7 +2596,6 @@ static void FS_Path_f( void ) {
 #if USE_ZLIB
     int numFilesInZIP = 0;
 #endif
-
     Com_Printf( "Current search path:\n" );
     for( s = fs_searchpaths; s; s = s->next ) {
         if( s->pack ) {
@@ -2829,12 +2828,17 @@ static void free_game_paths( void ) {
 }
 
 static void setup_base_paths( void ) {
+    // base paths have both BASE and GAME bits set by default
+    // the GAME bit will be removed once gamedir is set,
+    // and will be put back once gamedir is reset to basegame
     add_game_dir( FS_PATH_BASE|FS_PATH_GAME, "%s/"BASEGAME, sys_basedir->string );
     fs_base_searchpaths = fs_searchpaths;
 }
 
 // Sets the gamedir and path to a different directory.
 static void setup_game_paths( void ) {
+    searchpath_t *path;
+
     if( fs_game->string[0] ) {
         // add system path first
         add_game_dir( FS_PATH_GAME, "%s/%s", sys_basedir->string, fs_game->string );
@@ -2845,12 +2849,23 @@ static void setup_game_paths( void ) {
             add_game_dir( FS_PATH_GAME, "%s/%s", sys_homedir->string, fs_game->string );
         }
 
+        // remove the game bit from base paths
+        for( path = fs_base_searchpaths; path; path = path->next ) {
+            path->mode &= ~FS_PATH_GAME;
+        }
+
         // this var is set for compatibility with server browsers, etc
         Cvar_FullSet( "gamedir", fs_game->string, CVAR_ROM|CVAR_SERVERINFO, FROM_CODE );
+
     } else {
         if( sys_homedir->string[0] ) {
             add_game_dir( FS_PATH_BASE|FS_PATH_GAME,
                 "%s/"BASEGAME, sys_homedir->string );
+        }
+
+        // add the game bit to base paths
+        for( path = fs_base_searchpaths; path; path = path->next ) {
+            path->mode |= FS_PATH_GAME;
         }
 
         Cvar_FullSet( "gamedir", "", CVAR_ROM, FROM_CODE );
