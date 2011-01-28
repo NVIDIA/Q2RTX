@@ -1660,21 +1660,9 @@ static void draw_layout_string( const char *s ) {
 }
 
 static void draw_pause( void ) {
-    int     x, y;
+    int x = ( scr.hud_width - scr.pause_width ) / 2;
+    int y = ( scr.hud_height - scr.pause_height ) / 2;
 
-    if( !sv_paused->integer ) {
-        return;
-    }
-    if( !cl_paused->integer ) {
-        return;
-    }
-
-    if( !scr_showpause->integer ) {     // turn off for screenshots
-        return;
-    }
-
-    x = ( scr.hud_width - scr.pause_width ) / 2;
-    y = ( scr.hud_height - scr.pause_height ) / 2;
     R_DrawPic( x, y, scr.pause_pic );
 }
 
@@ -1709,6 +1697,16 @@ static void draw_2d( void ) {
     rc.bottom = scr.hud_height;
 
     R_SetClipRect( DRAW_CLIP_MASK, &rc );
+#else
+    float scale;
+
+    if( scr_scale->value != 1 ) {
+        scale = 1.0f / Cvar_ClampValue( scr_scale, 1, 9 );
+        R_SetScale( &scale );
+
+        scr.hud_height *= scale;
+        scr.hud_width *= scale;
+    }
 #endif
 
     R_SetColor( DRAW_COLOR_CLEAR, NULL );
@@ -1742,7 +1740,7 @@ static void draw_2d( void ) {
 
     R_SetColor( DRAW_COLOR_CLEAR, NULL );
 
-    if( scr_showturtle->integer && cl.frameflags ) {
+    if( cl.frameflags && scr_showturtle->integer ) {
         draw_turtle();
     }
 
@@ -1755,16 +1753,18 @@ static void draw_2d( void ) {
     }
 #endif
 
-    draw_pause();
+    if( sv_paused->integer && scr_showpause->integer ) {
+        draw_pause();
+    }
 
 #if USE_REF == REF_SOFT
     R_SetClipRect( DRAW_CLIP_DISABLED, NULL );
+#else
+    R_SetScale( NULL );
 #endif
 }
 
 static void draw_active_frame( void ) {
-    float scale;
-
     if( cls.state < ca_active ) {
         // draw black background if not active
         R_DrawFill( 0, 0, scr_glconfig.vidWidth,
@@ -1785,20 +1785,10 @@ static void draw_active_frame( void ) {
     // draw 3D game view
     V_RenderView();
 
-    if( scr_scale->value != 1 ) {
-        scale = 1.0f / Cvar_ClampValue( scr_scale, 1, 9 );
-        R_SetScale( &scale );
-
-        scr.hud_height *= scale;
-        scr.hud_width *= scale;
-    }
-
     // draw all 2D elements
     if( scr_draw2d->integer && !( cls.key_dest & KEY_MENU ) ) {
         draw_2d();
     }
-
-    R_SetScale( NULL );
 }
 
 //=======================================================
