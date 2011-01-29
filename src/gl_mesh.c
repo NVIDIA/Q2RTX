@@ -471,7 +471,7 @@ void GL_DrawAliasModel( model_t *model ) {
                 }
             }
             if( !image ) {
-                image = r_notexture;
+                image = R_NOTEXTURE;
             }
 
             if( ( image->flags & ( if_transparent|if_paletted ) ) == if_transparent ) {

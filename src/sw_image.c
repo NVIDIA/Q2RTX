@@ -21,8 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "sw_local.h"
 #include "d_wal.h"
 
-image_t     *r_notexture;
-
 byte d_16to8table[65536];
 
 /*
@@ -31,9 +29,6 @@ IMG_Unload
 ================
 */
 void IMG_Unload( image_t *image ) {
-    if( image->flags & if_auto ) {
-        return;
-    }
     Z_Free( image->pixels[0] );
     image->pixels[0] = NULL;
 }
@@ -149,20 +144,21 @@ static void R_CreateNotexture( void ) {
     static byte buffer[NTX * NTX * ( 256 + 64 + 16 + 4 ) / 256];
     int     x, y, m;
     byte    *p;
-    
+    image_t *ntx;
+
 // create a simple checkerboard texture for the default
-    r_notexture = IMG_Alloc( "*notexture" );
-    r_notexture->type = it_wall;    
-    r_notexture->flags = if_auto;   
-    r_notexture->width = r_notexture->height = NTX;
-    r_notexture->upload_width = r_notexture->upload_height = NTX;
-    r_notexture->pixels[0] = buffer;
-    r_notexture->pixels[1] = r_notexture->pixels[0] + NTX * NTX;
-    r_notexture->pixels[2] = r_notexture->pixels[1] + NTX * NTX / 4;
-    r_notexture->pixels[3] = r_notexture->pixels[2] + NTX * NTX / 16;
-    
+    ntx = R_NOTEXTURE;
+    ntx->type = it_wall;
+    ntx->flags = 0;
+    ntx->width = ntx->height = NTX;
+    ntx->upload_width = ntx->upload_height = NTX;
+    ntx->pixels[0] = buffer;
+    ntx->pixels[1] = ntx->pixels[0] + NTX * NTX;
+    ntx->pixels[2] = ntx->pixels[1] + NTX * NTX / 4;
+    ntx->pixels[3] = ntx->pixels[2] + NTX * NTX / 16;
+
     for( m = 0; m < 4; m++ ) {
-        p = r_notexture->pixels[m];
+        p = ntx->pixels[m];
         for ( y = 0; y < ( 16 >> m ); y++ ) {
             for( x = 0; x < ( 16 >> m ); x++ ) {
                 if( ( y < ( 8 >> m ) ) ^ ( x < ( 8 >> m ) ) )

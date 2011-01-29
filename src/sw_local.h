@@ -648,7 +648,6 @@ extern  int         r_viewcluster, r_oldviewcluster;
 extern int              r_clipflags;
 extern int              r_dlightframecount;
 
-extern  image_t         *r_notexture;
 extern  bsp_t           *r_worldmodel;
 
 void R_PrintAliasStats (void);

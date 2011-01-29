@@ -294,9 +294,10 @@ void GL_Blend( void );
 
 #define LUMINANCE(r,g,b) ((r)*0.2126f + (g)*0.7152f + (b)*0.0722f)
 
+// auto textures
 enum {
-    TEXNUM_DEFAULT = 1,
-    TEXNUM_SCRAP = MAX_RIMAGES + 1,
+    TEXNUM_DEFAULT = MAX_RIMAGES,
+    TEXNUM_SCRAP,
     TEXNUM_PARTICLE,
     TEXNUM_BEAM,
     TEXNUM_WHITE,
@@ -304,9 +305,7 @@ enum {
     TEXNUM_LIGHTMAP // must be the last one
 };
 
-#define NUM_TEXNUMS (TEXNUM_LIGHTMAP+LM_MAX_LIGHTMAPS-TEXNUM_SCRAP)
-
-extern image_t *r_notexture;
+#define NUM_TEXNUMS (TEXNUM_LIGHTMAP+LM_MAX_LIGHTMAPS-TEXNUM_DEFAULT)
 
 extern mtexinfo_t *upload_texinfo;
 

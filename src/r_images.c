@@ -1166,7 +1166,7 @@ static void IMG_List_f( void ) {
     Com_Printf( "------------------\n");
     texels = count = 0;
 
-    for( i = 0, image = r_images; i < r_numImages; i++, image++ ) {
+    for( i = 1, image = r_images + 1; i < r_numImages; i++, image++ ) {
         if( !image->registration_sequence )
             continue;
 
@@ -1189,7 +1189,7 @@ image_t *IMG_Alloc( const char *name ) {
     image_t *image;
 
     // find a free image_t slot
-    for( i = 0, image = r_images; i < r_numImages; i++, image++ ) {
+    for( i = 1, image = r_images + 1; i < r_numImages; i++, image++ ) {
         if( !image->registration_sequence )
             break;
     }
@@ -1627,7 +1627,7 @@ image_t *IMG_Find( const char *name, imagetype_t type ) {
         Com_EPrintf( "Couldn't load %s: %s\n", name, Q_ErrorString( ret ) );
     }
 
-    return r_notexture;
+    return R_NOTEXTURE;
 }
 
 /*
@@ -1745,11 +1745,10 @@ will be freed.
 ================
 */
 void IMG_FreeUnused( void ) {
-    image_t *image, *last;
-    int count = 0;
+    image_t *image;
+    int i, count = 0;
 
-    last = r_images + r_numImages;
-    for( image = r_images; image < last; image++ ) {
+    for( i = 1, image = r_images + 1; i < r_numImages; i++, image++ ) {
         if( image->registration_sequence == registration_sequence ) {
 #if USE_REF == REF_SOFT
             Com_PageInMemory( image->pixels[0], image->width * image->height );
@@ -1760,9 +1759,6 @@ void IMG_FreeUnused( void ) {
             continue;        // free image_t slot
         if( image->type == it_pic || image->type == it_charset )
             continue;        // don't free pics
-        if( image->flags & if_auto ) {
-            continue;        // don't free auto textures
-        }
 
         // delete it from hash table
         List_Remove( &image->entry );
@@ -1780,11 +1776,10 @@ void IMG_FreeUnused( void ) {
 }
 
 void IMG_FreeAll( void ) {
-    image_t *image, *last;
+    image_t *image;
     int i, count = 0;
-    
-    last = r_images + r_numImages;
-    for( image = r_images; image < last; image++ ) {
+
+    for( i = 1, image = r_images + 1; i < r_numImages; i++, image++ ) {
         if( !image->registration_sequence )
             continue;        // free image_t slot
         // free it
@@ -1858,6 +1853,9 @@ void IMG_Init( void ) {
     for( i = 0; i < RIMAGES_HASH; i++ ) {
         List_Init( &r_imageHash[i] );
     }
+
+    // &r_images[0] == R_NOTEXTURE
+    r_numImages = 1;
 }
 
 void IMG_Shutdown( void ) {

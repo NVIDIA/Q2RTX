@@ -69,8 +69,7 @@ typedef enum {
     if_paletted     = ( 1 << 1 ),
     if_scrap        = ( 1 << 2 ),
     if_replace_wal  = ( 1 << 3 ),
-    if_replace_pcx  = ( 1 << 4 ),
-    if_auto         = ( 1 << 5 )
+    if_replace_pcx  = ( 1 << 4 )
 } imageflags_t;
 
 typedef enum {
@@ -107,14 +106,14 @@ typedef struct image_s {
 
 #define MAX_RIMAGES     1024
 
-extern image_t     r_images[MAX_RIMAGES];
-extern int         r_numImages;
+extern image_t  r_images[MAX_RIMAGES];
+extern int      r_numImages;
 
 extern int registration_sequence;
 
-extern image_t *r_notexture;
+#define R_NOTEXTURE &r_images[0]
 
-extern uint32_t        d_8to24table[256];
+extern uint32_t d_8to24table[256];
 
 // these are implemented in r_images.c
 image_t *IMG_Alloc( const char *name );
