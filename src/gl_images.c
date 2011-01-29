@@ -917,8 +917,9 @@ void IMG_Load( image_t *image, byte *pic, int width, int height,
 }
 
 void IMG_Unload( image_t *image ) {
-    if( !( image->flags & if_scrap ) ) {
+    if( image->texnum > 0 && image->texnum < MAX_RIMAGES ) {
         qglDeleteTextures( 1, &image->texnum );
+        image->texnum = 0;
     }
 }
 
