@@ -717,7 +717,6 @@ void GL_LoadWorld( const char *name ) {
     vec_t *vbo;
     bsp_t *bsp;
     mtexinfo_t *info;
-    image_t *image;
     qerror_t ret;
 
     ret = BSP_Load( name, &bsp );
@@ -761,9 +760,8 @@ void GL_LoadWorld( const char *name ) {
     for( i = 0, info = bsp->texinfo; i < bsp->numtexinfo; i++, info++ ) {
         Q_concat( buffer, sizeof( buffer ), "textures/", info->name, ".wal", NULL );
         upload_texinfo = info;
-        image = IMG_Find( buffer, it_wall );
+        info->image = IMG_Find( buffer, it_wall );
         upload_texinfo = NULL;
-        info->image = image ? image : r_notexture;
     }
 
     // calculate vertex buffer size in bytes

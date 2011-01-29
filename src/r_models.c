@@ -203,7 +203,6 @@ static qerror_t MOD_LoadSP2( model_t *model, const void *rawdata, size_t length 
     mspriteframe_t *dst_frame;
     unsigned w, h, x, y;
     char buffer[SP2_MAX_FRAMENAME];
-    image_t *image;
     int i;
 
     if( length < sizeof( header ) )
@@ -256,11 +255,7 @@ static qerror_t MOD_LoadSP2( model_t *model, const void *rawdata, size_t length 
 
         memcpy( buffer, src_frame->name, sizeof( buffer ) );
         buffer[sizeof( buffer ) - 1] = 0;
-        image = IMG_Find( buffer, it_sprite );
-        if( !image ) {
-            image = r_notexture;
-        }
-        dst_frame->image = image;
+        dst_frame->image = IMG_Find( buffer, it_sprite );
 
         src_frame++;
         dst_frame++;

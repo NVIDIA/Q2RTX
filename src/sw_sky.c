@@ -160,7 +160,6 @@ R_SetSky
 void R_SetSky( const char *name, float rotate, vec3_t axis ) {
     int     i;
     char    path[MAX_QPATH];
-    image_t *image;
 
 //    sky_rotate = rotate;
 //    VectorCopy( axis, sky_axis );
@@ -168,11 +167,7 @@ void R_SetSky( const char *name, float rotate, vec3_t axis ) {
     for( i = 0; i < 6; i++ ) {
         Q_concat( path, sizeof( path ), "env/", name,
             r_skysidenames[r_skysideimage[i]], ".pcx", NULL );
-        image = IMG_Find( path, it_sky );
-        if( !image ) {
-            image = r_notexture;
-        }
-        r_skytexinfo[i].image = image;
+        r_skytexinfo[i].image = IMG_Find( path, it_sky );
     }
 }
 

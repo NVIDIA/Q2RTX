@@ -53,10 +53,6 @@ static void ProcessTexinfo( bsp_t *bsp ) {
 
         Q_concat( name, sizeof( name ), "textures/", tex->name, ".wal", NULL );
         tex->image = IMG_Find( name, it_wall );
-        if( !tex->image ) {
-            tex->image = r_notexture; // texture not found
-            //tex->flags = 0;
-        }
     }
 }
 
@@ -161,7 +157,6 @@ qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
     maliasst_t *dst_st;
     char skinname[MAX_QPATH];
     char *src_skin;
-    image_t *skin;
     int i, j;
     qerror_t ret;
 
@@ -240,11 +235,7 @@ qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
     for( i = 0; i < header.num_skins; i++ ) {
         memcpy( skinname, src_skin, sizeof( skinname ) );
         skinname[sizeof( skinname ) - 1] = 0;
-        skin = IMG_Find( skinname, it_skin );
-        if( !skin ) {
-            skin = r_notexture;
-        }
-        model->skins[i] = skin;
+        model->skins[i] = IMG_Find( skinname, it_skin );
         src_skin += MD2_MAX_SKINNAME;
     }
     model->numskins = header.num_skins;

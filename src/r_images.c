@@ -1627,7 +1627,7 @@ image_t *IMG_Find( const char *name, imagetype_t type ) {
         Com_EPrintf( "Couldn't load %s: %s\n", name, Q_ErrorString( ret ) );
     }
 
-    return NULL;
+    return r_notexture;
 }
 
 /*
@@ -1643,25 +1643,6 @@ image_t *IMG_ForHandle( qhandle_t h ) {
     return &r_images[h];
 }
 
-/*
-===============
-R_RegisterSkin
-===============
-*/
-qhandle_t R_RegisterSkin( const char *name ) {
-    image_t *image;
-
-    if( !r_numImages ) {
-        return 0;
-    }
-    image = IMG_Find( name, it_skin );
-    if( !image ) {
-        return 0;
-    }
-
-    return ( image - r_images );
-}
-
 static qerror_t _register_image( const char *name, imagetype_t type, qhandle_t *handle ) {
     image_t *image;
     char    fullname[MAX_QPATH];
@@ -1674,7 +1655,9 @@ static qerror_t _register_image( const char *name, imagetype_t type, qhandle_t *
         return Q_ERR_AGAIN;
     }
 
-    if( name[0] == '/' || name[0] == '\\' ) {
+    if( type == it_skin ) {
+        ret = _IMG_Find( name, type, &image );
+    } else if( name[0] == '/' || name[0] == '\\' ) {
         ret = _IMG_Find( name + 1, type, &image );
     } else {
         if( !strncmp( name, "../", 3 ) ) {
@@ -1716,6 +1699,15 @@ static qhandle_t register_image( const char *name, imagetype_t type ) {
     }
 
     return 0;
+}
+
+/*
+===============
+R_RegisterSkin
+===============
+*/
+qhandle_t R_RegisterSkin( const char *name ) {
+    return register_image( name, it_skin );
 }
 
 /*

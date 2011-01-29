@@ -41,7 +41,6 @@ qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
     int numverts, numindices;
     char skinname[MAX_QPATH];
     char *src_skin;
-    image_t *skin;
     vec_t scaleS, scaleT;
     int val;
     vec3_t mins, maxs;
@@ -130,11 +129,7 @@ qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
     for( i = 0; i < header.num_skins; i++ ) {
         memcpy( skinname, src_skin, sizeof( skinname ) );
         skinname[sizeof( skinname ) - 1] = 0;
-        skin = IMG_Find( skinname, it_skin );
-        if( !skin ) {
-            skin = r_notexture;
-        }
-        dst_mesh->skins[i] = skin;
+        dst_mesh->skins[i] = IMG_Find( skinname, it_skin );
         src_skin += MD2_MAX_SKINNAME;
     }
     dst_mesh->numskins = header.num_skins;
@@ -142,7 +137,6 @@ qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
     // load all tcoords
     src_tc = ( dmd2stvert_t * )( ( byte * )rawdata + header.ofs_st );
     dst_tc = dst_mesh->tcoords;
-    skin = dst_mesh->skins[0];
     scaleS = 1.0f / header.skinwidth;
     scaleT = 1.0f / header.skinheight;
     for( i = 0; i < numindices; i++ ) {
@@ -231,7 +225,6 @@ qerror_t MOD_LoadMD3( model_t *model, const void *rawdata, size_t length ) {
     uint32_t numverts, numtris, numskins;
     uint32_t totalVerts;
     char skinname[MAX_QPATH];
-    image_t *skin;
     const byte *rawend;
     int i, j;
     qerror_t ret;
@@ -336,11 +329,7 @@ qerror_t MOD_LoadMD3( model_t *model, const void *rawdata, size_t length ) {
         for( j = 0; j < numskins; j++ ) {
             memcpy( skinname, src_skin->name, sizeof( skinname ) );
             skinname[sizeof( skinname ) - 1] = 0;
-            skin = IMG_Find( skinname, it_skin );
-            if( !skin ) {
-                skin = r_notexture;
-            }
-            dst_mesh->skins[j] = skin;
+            dst_mesh->skins[j] = IMG_Find( skinname, it_skin );
         }
         dst_mesh->numskins = numskins;
         

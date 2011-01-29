@@ -407,7 +407,7 @@ void R_SetSky( const char *name, float rotate, vec3_t axis ) {
             return;
         }
         image = IMG_Find( pathname, it_sky );
-        if( !image ) {
+        if( image == r_notexture ) {
             R_UnsetSky();
             return;
         }
