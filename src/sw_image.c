@@ -19,7 +19,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "sw_local.h"
-#include "d_wal.h"
 
 byte d_16to8table[65536];
 
@@ -38,7 +37,9 @@ void IMG_Unload( image_t *image ) {
 IMG_Load
 ================
 */
-void IMG_Load( image_t *image, byte *pic, int width, int height, imagetype_t type, imageflags_t flags ) {
+void IMG_Load( image_t *image, byte *pic, int width, int height,
+    imagetype_t type, imageflags_t flags )
+{
     int         i, c, b;
 
     image->registration_sequence = registration_sequence;
@@ -48,78 +49,27 @@ void IMG_Load( image_t *image, byte *pic, int width, int height, imagetype_t typ
     image->type = type;
 
     c = width * height;
-    image->pixels[0] = pic;
+    if( type == it_wall ) {
+        size_t size = MIPSIZE( c );
 
-    for( i = 0; i < c; i++ ) {
-        b = pic[i];
-        if( b == 255 ) {
-            flags |= if_transparent;
+        image->pixels[0] = R_Malloc( size );
+        image->pixels[1] = image->pixels[0] + c;
+        image->pixels[2] = image->pixels[1] + c / 4;
+        image->pixels[3] = image->pixels[2] + c / 16;
+
+        memcpy( image->pixels[0], pic, size );
+    } else {
+        image->pixels[0] = pic;
+
+        for( i = 0; i < c; i++ ) {
+            b = pic[i];
+            if( b == 255 ) {
+                flags |= if_transparent;
+            }
         }
     }
 
     image->flags = flags;
-}
-
-/*
-================
-IMG_LoadWAL
-================
-*/
-image_t *IMG_LoadWAL( const char *name ) {
-    miptex_t    *mt;
-    image_t     *image;
-    size_t      width, height, offset, endpos, filelen, size;
-    qerror_t    ret;
-
-    filelen = FS_LoadFile( name, ( void ** )&mt );
-    if( !mt ) {
-        // don't spam about missing images
-        if( filelen == Q_ERR_NOENT ) {
-            return NULL;
-        }
-        ret = filelen;
-        goto fail1;
-    }
-
-    width = LittleLong( mt->width );
-    height = LittleLong( mt->height );
-    offset = LittleLong( mt->offsets[0] );
-
-    if( width < 1 || height < 1 || width > MAX_TEXTURE_SIZE || height > MAX_TEXTURE_SIZE ) {
-        ret = Q_ERR_INVALID_FORMAT;
-        goto fail2;
-    }
-
-    size = width * height * ( 256 + 64 + 16 + 4 ) / 256;
-    endpos = offset + size;
-    if( endpos < offset || endpos > filelen ) {
-        ret = Q_ERR_BAD_EXTENT;
-        goto fail2;
-    }
-
-    image = IMG_Alloc( name );
-    image->width = image->upload_width = width;
-    image->height = image->upload_height = height;
-    image->type = it_wall;
-    image->flags = if_paletted;
-    image->registration_sequence = registration_sequence;
-
-    image->pixels[0] = R_Malloc( size );
-    image->pixels[1] = image->pixels[0] + width * height;
-    image->pixels[2] = image->pixels[1] + width * height / 4;
-    image->pixels[3] = image->pixels[2] + width * height / 16;
-
-    memcpy( image->pixels[0], ( byte * )mt + offset, size );
-
-    FS_FreeFile( mt );
-
-    return image;
-
-fail2:
-    FS_FreeFile( mt );
-fail1:
-    Com_EPrintf( "Couldn't load %s: %s\n", name, Q_ErrorString( ret ) );
-    return NULL;
 }
 
 static void R_BuildGammaTable( void ) {
@@ -141,7 +91,7 @@ static void R_BuildGammaTable( void ) {
 #define NTX     16
 
 static void R_CreateNotexture( void ) {
-    static byte buffer[NTX * NTX * ( 256 + 64 + 16 + 4 ) / 256];
+    static byte buffer[MIPSIZE( NTX * NTX )];
     int     x, y, m;
     byte    *p;
     image_t *ntx;

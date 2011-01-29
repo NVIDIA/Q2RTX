@@ -24,6 +24,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 
 #include "com_local.h"
+#include "d_pcx.h"
+#include "d_wal.h"
 
 #if USE_PNG
 #include <png.h>
@@ -48,8 +50,6 @@ PCX LOADING
 
 =================================================================
 */
-
-#include "d_pcx.h"
 
 /*
 ==============
@@ -222,6 +222,60 @@ qerror_t IMG_SavePCX( const char *filename, const byte *data, int width,
     return ret;
 }
 #endif
+
+/*
+=================================================================
+
+WAL LOADING
+
+=================================================================
+*/
+
+/*
+================
+IMG_LoadWAL
+================
+*/
+qerror_t IMG_LoadWAL( const char *filename, byte **pic, byte **tmp, int *width, int *height ) {
+    miptex_t    *mt;
+    size_t      w, h, offset, endpos, filelen, size;
+    qerror_t    ret;
+
+    filelen = FS_LoadFile( filename, ( void ** )&mt );
+    if( !mt ) {
+        ret = filelen;
+        goto fail1;
+    }
+
+    w = LittleLong( mt->width );
+    h = LittleLong( mt->height );
+    offset = LittleLong( mt->offsets[0] );
+
+    if( w < 1 || h < 1 || w > MAX_TEXTURE_SIZE || h > MAX_TEXTURE_SIZE ) {
+        ret = Q_ERR_INVALID_FORMAT;
+        goto fail2;
+    }
+
+    size = w * h;
+    size = MIPSIZE( size );
+    endpos = offset + size;
+    if( endpos < offset || endpos > filelen ) {
+        ret = Q_ERR_BAD_EXTENT;
+        goto fail2;
+    }
+
+    *width = w;
+    *height = h;
+    *pic = ( byte * )mt + offset;
+    *tmp = ( byte * )mt;
+
+    return Q_ERR_SUCCESS;
+
+fail2:
+    FS_FreeFile( mt );
+fail1:
+    return ret;
+}
 
 #if USE_TGA
 
@@ -1184,7 +1238,7 @@ static void IMG_List_f( void ) {
     Com_Printf( "Total texels: %d (not counting mipmaps)\n", texels );
 }
 
-image_t *IMG_Alloc( const char *name ) {
+static image_t *IMG_Alloc( const char *name ) {
     int i;
     image_t *image;
 
@@ -1236,23 +1290,6 @@ static image_t *IMG_Lookup( const char *name, imagetype_t type,
 
 /*
 ===============
-IMG_Create
-
-Allocates and loads image from supplied data.
-===============
-*/
-image_t *IMG_Create( const char *name, byte *pic, int width, int height,
-                        imagetype_t type, imageflags_t flags )
-{
-    image_t *image;
-
-    image = IMG_Alloc( name );
-    IMG_Load( image, pic, width, height, type, flags );
-    return image;
-}
-
-/*
-===============
 IMG_Find
 
 Finds or loads the given image, adding it to the hash table.
@@ -1260,7 +1297,7 @@ Finds or loads the given image, adding it to the hash table.
 */
 static qerror_t _IMG_Find( const char *name, imagetype_t type, image_t **image_p ) {
     image_t *image;
-    byte *pic;
+    byte *pic, *tmp;
     int width, height;
     char buffer[MAX_QPATH];
     char *ext;
@@ -1310,7 +1347,7 @@ static qerror_t _IMG_Find( const char *name, imagetype_t type, image_t **image_p
     //
     // create the pic from disk
     //
-    pic = NULL;
+    pic = tmp = NULL;
     flags = 0;
 
 #if USE_PNG || USE_JPG || USE_TGA
@@ -1354,10 +1391,11 @@ static qerror_t _IMG_Find( const char *name, imagetype_t type, image_t **image_p
 
         if( extHash == EXTENSION_WAL ) {
             strcpy( ext, ".wal" );
-            if( ( image = IMG_LoadWAL( buffer ) ) != NULL ) {
-                goto append;
+            err = IMG_LoadWAL( buffer, &pic, &tmp, &width, &height );
+            if( pic ) {
+                flags |= if_paletted;
+                goto create;
             }
-            err = Q_ERR_NOENT;
         } else {
             strcpy( ext, ".pcx" );
             err = IMG_LoadPCX( buffer, &pic, NULL, &width, &height );
@@ -1562,8 +1600,13 @@ static qerror_t _IMG_Find( const char *name, imagetype_t type, image_t **image_p
 
     case EXTENSION_WAL:
         strcpy( ext, ".wal" );
-        if( ( image = IMG_LoadWAL( buffer ) ) != NULL ) {
-            goto append;
+        err = IMG_LoadWAL( buffer, &pic, &tmp, &width, &height );
+        if( pic ) {
+            flags |= if_paletted;
+            goto create;
+        }
+        if( err != Q_ERR_NOENT ) {
+            return err;
         }
 
 #if USE_PNG || USE_JPG || USE_TGA
@@ -1606,8 +1649,15 @@ static qerror_t _IMG_Find( const char *name, imagetype_t type, image_t **image_p
     }
 
 create:
-    image = IMG_Create( buffer, pic, width, height, type, flags );
-append:
+#if USE_REF == REF_GL
+    // don't need pics in memory after GL upload
+    if( !tmp ) {
+        tmp = pic;
+    }
+#endif
+    image = IMG_Alloc( buffer );
+    IMG_Load( image, pic, width, height, type, flags );
+    FS_FreeFile( tmp );
     List_Append( &r_imageHash[hash], &image->entry );
     *image_p = image;
     return Q_ERR_SUCCESS;

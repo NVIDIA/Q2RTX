@@ -879,7 +879,6 @@ void IMG_Load( image_t *image, byte *pic, int width, int height,
             }
 
             upload_image = NULL;
-            FS_FreeFile( pic );
             return;
         }
     }
@@ -907,13 +906,6 @@ void IMG_Load( image_t *image, byte *pic, int width, int height,
     image->th = 1;
 
     upload_image = NULL;
-
-    // don't free *.wal textures
-    if( type == it_wall && ( flags & if_paletted ) ) {
-        return;
-    }
-
-    FS_FreeFile( pic );
 }
 
 void IMG_Unload( image_t *image ) {
@@ -921,54 +913,6 @@ void IMG_Unload( image_t *image ) {
         qglDeleteTextures( 1, &image->texnum );
         image->texnum = 0;
     }
-}
-
-/*
-================
-IMG_LoadWAL
-================
-*/
-image_t *IMG_LoadWAL( const char *name ) {
-    miptex_t    *mt;
-    size_t      width, height, offset, len, endpos;
-    image_t     *image;
-    qerror_t    ret;
-
-    len = FS_LoadFile( name, ( void ** )&mt );
-    if( !mt ) {
-        // don't spam about missing images
-        if( len == Q_ERR_NOENT ) {
-            return NULL;
-        }
-        ret = len;
-        goto fail1;
-    }
-
-    width = LittleLong( mt->width );
-    height = LittleLong( mt->height );
-    offset = LittleLong( mt->offsets[0] );
-
-    if( width < 1 || height < 1 || width > MAX_TEXTURE_SIZE || height > MAX_TEXTURE_SIZE ) {
-        ret = Q_ERR_INVALID_FORMAT;
-        goto fail2;
-    }
-
-    endpos = offset + width * height;
-    if( endpos < offset || endpos > len ) {
-        ret = Q_ERR_BAD_EXTENT;
-        goto fail2;
-    }
-
-    image = IMG_Create( name, ( byte * )mt + offset, width, height, it_wall, if_paletted );
-
-    FS_FreeFile( mt );
-    return image;
-
-fail2:
-    FS_FreeFile( mt );
-fail1:
-    Com_EPrintf( "Couldn't load %s: %s\n", name, Q_ErrorString( ret ) );
-    return NULL;
 }
 
 static void GL_BuildIntensityTable( void ) {

@@ -43,6 +43,11 @@ IMAGE MANAGER
 #define IMG_FreePixels( x ) Z_Free( x )
 #endif
 
+#if USE_REF == REF_SOFT
+#define MIPSIZE(c) ((c)*(256+64+16+4)/256)
+#else
+#define MIPSIZE(c) (c)
+#endif
 
 // absolute limit for OpenGL renderer
 #if USE_REF == REF_GL
@@ -116,10 +121,7 @@ extern int registration_sequence;
 extern uint32_t d_8to24table[256];
 
 // these are implemented in r_images.c
-image_t *IMG_Alloc( const char *name );
 image_t *IMG_Find( const char *name, imagetype_t type );
-image_t *IMG_Create( const char *name, byte *pic, int width, int height,
-                       imagetype_t type, imageflags_t flags );
 void IMG_FreeUnused( void );
 void IMG_FreeAll( void );
 void IMG_Init( void );
@@ -135,6 +137,9 @@ qerror_t IMG_LoadPCX( const char *filename, byte **pic, byte *palette,
                     int *width, int *height );
 qerror_t IMG_WritePCX( qhandle_t f, const char *filename, const byte *data, int width,
                     int height, int rowbytes, byte *palette ); 
+
+qerror_t IMG_LoadWAL( const char *filename, byte **pic, byte **tmp,
+                    int *width, int *height );
 
 #if USE_TGA || USE_JPG || USE_PNG
 typedef qerror_t (img_load_t)( const char *, byte **, int *, int * );
@@ -163,7 +168,6 @@ qerror_t IMG_SavePNG( qhandle_t f, const char *filename, const byte *rgb,
 void IMG_Unload( image_t *image );
 void IMG_Load( image_t *image, byte *pic, int width, int height,
                 imagetype_t type, imageflags_t flags );
-image_t *IMG_LoadWAL( const char *name );
 
 
 
