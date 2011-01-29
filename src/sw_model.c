@@ -238,7 +238,8 @@ qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
     // register all skins
     src_skin = ( char * )rawdata + header.ofs_skins;
     for( i = 0; i < header.num_skins; i++ ) {
-        Q_strlcpy( skinname, src_skin, sizeof( skinname ) );
+        memcpy( skinname, src_skin, sizeof( skinname ) );
+        skinname[sizeof( skinname ) - 1] = 0;
         skin = IMG_Find( skinname, it_skin );
         if( !skin ) {
             skin = r_notexture;
