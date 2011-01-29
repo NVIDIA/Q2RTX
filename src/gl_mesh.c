@@ -458,19 +458,18 @@ void GL_DrawAliasModel( model_t *model ) {
         } else {
             if( ent->skin ) {
                 image = IMG_ForHandle( ent->skin );
-            } else {
-                if( ( unsigned )ent->skinnum >= MAX_ALIAS_SKINS ) {
+            } else if( mesh->numskins ) {
+                if( ent->skinnum < 0 || ent->skinnum >= mesh->numskins ) {
                     Com_DPrintf( "%s: no such skin: %d\n",
                         __func__, ent->skinnum );
                     image = mesh->skins[0];
                 } else {
                     image = mesh->skins[ent->skinnum];
-                    if( !image ) {
+                    if( image->texnum == TEXNUM_DEFAULT ) {
                         image = mesh->skins[0];
                     }
                 }
-            }
-            if( !image ) {
+            } else {
                 image = R_NOTEXTURE;
             }
 
