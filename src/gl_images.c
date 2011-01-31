@@ -1062,7 +1062,7 @@ void GL_InitImages( void ) {
 
     IMG_Init();
 
-    IMG_GetPalette( NULL );
+    IMG_GetPalette();
 
     GL_BuildIntensityTable();
 

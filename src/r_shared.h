@@ -132,7 +132,7 @@ void IMG_FreeUnused( void );
 void IMG_FreeAll( void );
 void IMG_Init( void );
 void IMG_Shutdown( void );
-void IMG_GetPalette( byte **dest );
+byte *IMG_GetPalette( void );
 
 image_t *IMG_ForHandle( qhandle_t h );
 qhandle_t R_RegisterSkin( const char *name );

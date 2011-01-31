@@ -126,27 +126,31 @@ int R_IndexForColor( const color_t color ) {
 }
 
 static void R_Get16to8( void ) {
+    static const char colormap[] = "pics/16to8.dat";
     qhandle_t f;
     ssize_t ret;
 
-    ret = FS_FOpenFile( "pics/16to8.dat", &f, FS_MODE_READ );
+    ret = FS_FOpenFile( colormap, &f, FS_MODE_READ );
     if( !f ) {
         goto fail;
     }
 
     ret = FS_Read( d_16to8table, sizeof( d_16to8table ), f );
-    if( ret != sizeof( d_16to8table ) ) {
-        if( ret >= 0 ) {
-            ret = Q_ERR_UNEXPECTED_EOF;
-        }
+
+    FS_FCloseFile( f );
+
+    if( ret < 0 ) {
         goto fail;
     }
 
-    FS_FCloseFile( f );
-    return;
+    if( ret == sizeof( d_16to8table ) ) {
+        return; // success
+    }
 
+    ret = Q_ERR_FILE_TOO_SMALL;
 fail:
-    Com_Error( ERR_FATAL, "Couldn't load pics/16to8.dat: %s", Q_ErrorString( ret ) );
+    Com_Error( ERR_FATAL, "Couldn't load %s: %s",
+        colormap, Q_ErrorString( ret ) );
 }
 
 /*
@@ -157,7 +161,7 @@ R_InitImages
 void R_InitImages( void ) {
     registration_sequence = 1;
 
-    IMG_GetPalette( &vid.colormap );
+    vid.colormap = IMG_GetPalette();
     vid.alphamap = vid.colormap + 64 * 256;
 
 #if USE_ASM

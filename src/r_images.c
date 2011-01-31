@@ -1686,12 +1686,15 @@ Reads the palette and (optionally) loads
 the colormap for software renderer.
 ===============
 */
-void IMG_GetPalette( byte **pic ) {
+byte *IMG_GetPalette( void ) {
     static const char colormap[] = "pics/colormap.pcx";
-    byte pal[768], *src, *data;
+    byte pal[768], *src, *data, *pic;
     qerror_t ret;
     ssize_t len;
     int i;
+#if USE_REF == REF_SOFT
+    int w, h;
+#endif
 
     // get the palette
     len = FS_LoadFile( colormap, ( void ** )&data );
@@ -1700,11 +1703,26 @@ void IMG_GetPalette( byte **pic ) {
         goto fail;
     }
 
-    ret = _IMG_LoadPCX( data, len, pic, pal, NULL, NULL );
+#if USE_REF == REF_SOFT
+    ret = _IMG_LoadPCX( data, len, &pic, pal, &w, &h );
+#else
+    ret = _IMG_LoadPCX( data, len, NULL, pal, NULL, NULL );
+    pic = NULL;
+#endif
+
     FS_FreeFile( data );
+
     if( ret < 0 ) {
         goto fail;
     }
+
+#if USE_REF == REF_SOFT
+    // check colormap size
+    if( w != 256 || h != 320 ) {
+        ret = Q_ERR_INVALID_FORMAT;
+        goto fail;
+    }
+#endif
 
     for( i = 0, src = pal; i < 255; i++, src += 3 ) {
         d_8to24table[i] = MakeColor( src[0], src[1], src[2], 255 );
@@ -1712,7 +1730,7 @@ void IMG_GetPalette( byte **pic ) {
 
     // 255 is transparent
     d_8to24table[i] = MakeColor( src[0], src[1], src[2], 0 );
-    return;
+    return pic;
 
 fail:
     Com_Error( ERR_FATAL, "Couldn't load %s: %s", colormap, Q_ErrorString( ret ) );
