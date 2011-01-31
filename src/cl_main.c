@@ -594,7 +594,7 @@ void CL_Disconnect( error_type_t type, const char *text ) {
         EXEC_TRIGGER( cl_disconnectcmd );
     }
 
-#if USE_REF == REF_SOFT
+#if 0
     if( cls.ref_initialized ) {
         R_CinematicSetPalette( NULL );
     }

@@ -213,12 +213,10 @@ void R_Register (void)
     r_lerpmodels = Cvar_Get( "r_lerpmodels", "1", 0 );
     r_novis = Cvar_Get( "r_novis", "0", 0 );
 
-    vid_gamma = Cvar_Get( "vid_gamma", "1.0", CVAR_ARCHIVE|CVAR_FILES );
+    vid_gamma = Cvar_Get( "vid_gamma", "1.0", CVAR_ARCHIVE );
 
     Cmd_AddCommand( "screenshot", R_ScreenShot_f );
     Cmd_AddCommand( "scdump", D_SCDump_f );
-
-    vid_gamma->modified = qtrue; // force us to rebuild the gamma table later
 
 //PGM
     sw_lockpvs = Cvar_Get ("sw_lockpvs", "0", 0);
@@ -315,6 +313,7 @@ qboolean R_Init( qboolean total ) {
     R_InitTurb();
 
     R_GammaCorrectAndSetPalette( ( const byte * ) d_8to24table );
+    vid_gamma->modified = qfalse;
 
     return qtrue;
 }
@@ -996,7 +995,13 @@ void R_BeginFrame( void ) {
 }
 
 void R_EndFrame( void ) {
-     VID_EndFrame();
+    if( vid_gamma->modified ) {
+        R_BuildGammaTable();
+        R_GammaCorrectAndSetPalette( ( const byte * ) d_8to24table );
+        vid_gamma->modified = qfalse;
+    }
+
+    VID_EndFrame();
 }
 
 /*
@@ -1017,6 +1022,7 @@ void R_GammaCorrectAndSetPalette( const byte *palette ) {
     VID_UpdatePalette( sw_state.currentpalette );
 }
 
+#if 0
 /*
 ** R_CinematicSetPalette
 */
@@ -1054,7 +1060,7 @@ void R_CinematicSetPalette( const byte *palette )
         R_GammaCorrectAndSetPalette( ( const byte * ) d_8to24table );
     }
 }
-
+#endif
 
 /*
 ** R_DrawBeam

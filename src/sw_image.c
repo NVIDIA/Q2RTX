@@ -72,7 +72,7 @@ void IMG_Load( image_t *image, byte *pic, int width, int height,
     image->flags = flags;
 }
 
-static void R_BuildGammaTable( void ) {
+void R_BuildGammaTable( void ) {
     int     i, inf;
     float   g = vid_gamma->value;
 

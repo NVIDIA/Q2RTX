@@ -692,7 +692,7 @@ void    R_RenderFrame (refdef_t *fd);
 
 void     R_BeginFrame( void );
 
-void    R_CinematicSetPalette( const unsigned char *palette );
+//void    R_CinematicSetPalette( const unsigned char *palette );
 
 void    Sys_MakeCodeWriteable (unsigned long startaddr, unsigned long length);
 void    Sys_SetFPCW (void);
@@ -700,6 +700,7 @@ void    Sys_SetFPCW (void);
 void    R_InitImages (void);
 void    R_ShutdownImages (void);
 
+void    R_BuildGammaTable( void );
 void    R_GammaCorrectAndSetPalette( const byte *pal );
 
 void    R_InitSkyBox( void );
