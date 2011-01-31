@@ -137,6 +137,9 @@ file_info_t *FS_CopyInfo( const char *name, size_t size, time_t ctime, time_t mt
 void    FS_FreeList( void **list );
 
 unsigned FS_HashPath( const char *s, unsigned size );
+#if USE_REF
+unsigned FS_HashPathLen( const char *s, size_t len, unsigned size );
+#endif
 
 #ifdef _WIN32
 char *FS_ReplaceSeparators( char *s, int separator );

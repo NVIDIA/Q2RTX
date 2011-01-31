@@ -43,6 +43,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "sys_public.h"
 #include "r_shared.h"
 
+#define IMG_LOAD( x ) \
+    static qerror_t IMG_Load##x( byte *rawdata, size_t rawlen, \
+        const char *filename, byte **pic, int *width, int *height )
+
+#define IMG_SAVE( x ) \
+    qerror_t IMG_Save##x( qhandle_t f, const char *filename, \
+        const byte *pic, int width, int height, int param )
+
 /*
 =================================================================
 
@@ -51,63 +59,47 @@ PCX LOADING
 =================================================================
 */
 
-/*
-==============
-IMG_LoadPCX
-==============
-*/
-qerror_t IMG_LoadPCX( const char *filename, byte **pic, byte *palette, int *width, int *height ) {
+static qerror_t _IMG_LoadPCX( byte *rawdata, size_t rawlen,
+    byte **pic, byte *palette, int *width, int *height )
+{
     byte    *raw, *end;
     dpcx_t  *pcx;
-    size_t  len, x, y, w, h;
+    size_t  x, y, w, h;
     int     dataByte, runLength;
     byte    *out, *pix;
     qerror_t ret;
 
-    if( !filename ) {
-        Com_Error( ERR_FATAL, "LoadPCX: NULL" );
-    }
     if( pic ) {
         *pic = NULL;
     }
 
     //
-    // load the file
-    //
-    len = FS_LoadFile( filename, (void **)&pcx );
-    if( !pcx ) {
-        return len;
-    }
-
-    //
     // parse the PCX file
     //
-    if( len < sizeof( *pcx ) ) {
-        ret = Q_ERR_FILE_TOO_SMALL;
-        goto fail2;
+    if( rawlen < sizeof( dpcx_t ) ) {
+        return Q_ERR_FILE_TOO_SMALL;
     }
 
+    pcx = ( dpcx_t * )rawdata;
+
     if( pcx->manufacturer != 0x0a || pcx->version != 5 ) {
-        ret = Q_ERR_UNKNOWN_FORMAT;
-        goto fail2;
+        return Q_ERR_UNKNOWN_FORMAT;
     }
 
     w = LittleShort( pcx->xmax ) + 1;
     h = LittleShort( pcx->ymax ) + 1;
     if( pcx->encoding != 1 || pcx->bits_per_pixel != 8 || w > 640 || h > 480 ) {
-        ret = Q_ERR_INVALID_FORMAT;
-        goto fail2;
+        return Q_ERR_INVALID_FORMAT;
     }
 
     //
     // get palette
     //
     if( palette ) {
-        if( len < 768 ) {
-            ret = Q_ERR_FILE_TOO_SMALL;
-            goto fail2;
+        if( rawlen < 768 ) {
+            return Q_ERR_FILE_TOO_SMALL;
         }
-        memcpy( palette, ( byte * )pcx + len - 768, 768 );
+        memcpy( palette, ( byte * )pcx + rawlen - 768, 768 );
     }
 
     //
@@ -117,13 +109,13 @@ qerror_t IMG_LoadPCX( const char *filename, byte **pic, byte *palette, int *widt
         pix = out = IMG_AllocPixels( w * h );
 
         raw = pcx->data;
-        end = ( byte * )pcx + len;
+        end = ( byte * )pcx + rawlen;
 
         for( y = 0; y < h; y++, pix += w ) {
             for( x = 0; x < w; ) {
                 if( raw >= end ) {
                     ret = Q_ERR_BAD_EXTENT;
-                    goto fail1;
+                    goto fail;
                 }
                 dataByte = *raw++;
 
@@ -131,11 +123,11 @@ qerror_t IMG_LoadPCX( const char *filename, byte **pic, byte *palette, int *widt
                     runLength = dataByte & 0x3F;
                     if( x + runLength > w ) {
                         ret = Q_ERR_BAD_RLE_PACKET;
-                        goto fail1;
+                        goto fail;
                     }
                     if( raw >= end ) {
                         ret = Q_ERR_BAD_RLE_PACKET;
-                        goto fail1;
+                        goto fail;
                     }
                     dataByte = *raw++;
                     while( runLength-- ) {
@@ -155,14 +147,15 @@ qerror_t IMG_LoadPCX( const char *filename, byte **pic, byte *palette, int *widt
     if( height )
         *height = h;
 
-    FS_FreeFile( pcx );
     return Q_ERR_SUCCESS;
 
-fail1:
+fail:
     IMG_FreePixels( out );
-fail2:
-    FS_FreeFile( pcx );
     return ret;
+}
+
+IMG_LOAD( PCX ) {
+    return _IMG_LoadPCX( rawdata, rawlen, pic, NULL, width, height );
 }
 
 #if 0
@@ -231,53 +224,39 @@ WAL LOADING
 =================================================================
 */
 
-/*
-================
-IMG_LoadWAL
-================
-*/
-qerror_t IMG_LoadWAL( const char *filename, byte **pic, byte **tmp, int *width, int *height ) {
+IMG_LOAD( WAL ) {
     miptex_t    *mt;
-    size_t      w, h, offset, endpos, filelen, size;
-    qerror_t    ret;
+    size_t      w, h, offset, size, endpos;
 
-    filelen = FS_LoadFile( filename, ( void ** )&mt );
-    if( !mt ) {
-        ret = filelen;
-        goto fail1;
+    if( rawlen < sizeof( miptex_t ) ) {
+        return Q_ERR_FILE_TOO_SMALL;
     }
+
+    mt = ( miptex_t * )rawdata;
 
     w = LittleLong( mt->width );
     h = LittleLong( mt->height );
     offset = LittleLong( mt->offsets[0] );
 
     if( w < 1 || h < 1 || w > MAX_TEXTURE_SIZE || h > MAX_TEXTURE_SIZE ) {
-        ret = Q_ERR_INVALID_FORMAT;
-        goto fail2;
+        return Q_ERR_INVALID_FORMAT;
     }
 
     size = w * h;
     size = MIPSIZE( size );
     endpos = offset + size;
-    if( endpos < offset || endpos > filelen ) {
-        ret = Q_ERR_BAD_EXTENT;
-        goto fail2;
+    if( endpos < offset || endpos > rawlen ) {
+        return Q_ERR_BAD_EXTENT;
     }
 
+    // WAL is special, pixels are not reallocated but are
+    // taken from the file directly as an optimization
     *width = w;
     *height = h;
     *pic = ( byte * )mt + offset;
-    *tmp = ( byte * )mt;
 
     return Q_ERR_SUCCESS;
-
-fail2:
-    FS_FreeFile( mt );
-fail1:
-    return ret;
 }
-
-#if USE_TGA
 
 /*
 =========================================================
@@ -286,6 +265,8 @@ TARGA IMAGES
 
 =========================================================
 */
+
+#if USE_TGA
 
 #define TARGA_HEADER_SIZE  18
 
@@ -486,50 +467,30 @@ break_out:
     return Q_ERR_SUCCESS;
 }
 
-/*
-=============
-IMG_LoadTGA
-=============
-*/
-qerror_t IMG_LoadTGA( const char *filename, byte **pic, int *width, int *height ) {
-    byte *buffer;
-    size_t length, offset;
+IMG_LOAD( TGA ) {
+    size_t offset;
     byte *pixels;
     unsigned w, h, id_length, image_type, pixel_size, attributes, bpp;
     tga_decode_t decode;
     qerror_t ret;
 
-    if( !filename || !pic ) {
-        Com_Error( ERR_FATAL, "LoadTGA: NULL" );
-    }
-
     *pic = NULL;
 
-    //
-    // load the file
-    //
-    length = FS_LoadFile( filename, ( void ** )&buffer );
-    if( !buffer ) {
-        return length;
+    if( rawlen < TARGA_HEADER_SIZE ) {
+        return Q_ERR_FILE_TOO_SMALL;
     }
 
-    if( length < TARGA_HEADER_SIZE ) {
-        ret = Q_ERR_FILE_TOO_SMALL;
-        goto finish;
-    }
+    id_length = rawdata[0];
+    image_type = rawdata[2];
+    w = LittleShortMem( &rawdata[12] );
+    h = LittleShortMem( &rawdata[14] );
+    pixel_size = rawdata[16];
+    attributes = rawdata[17];
 
-    id_length = buffer[0];
-    image_type = buffer[2];
-    w = LittleShortMem( &buffer[12] );
-    h = LittleShortMem( &buffer[14] );
-    pixel_size = buffer[16];
-    attributes = buffer[17];
-    
     // skip TARGA image comment
     offset = TARGA_HEADER_SIZE + id_length;
-    if( offset + 4 > length ) {
-        ret = Q_ERR_BAD_EXTENT;
-        goto finish;
+    if( offset + 4 > rawlen ) {
+        return Q_ERR_BAD_EXTENT;
     }
 
     if( pixel_size == 32 ) {
@@ -538,20 +499,17 @@ qerror_t IMG_LoadTGA( const char *filename, byte **pic, int *width, int *height 
         bpp = 3;
     } else {
         Com_DPrintf( "%s: %s: only 32 and 24 bit targa RGB images supported\n", __func__, filename );
-        ret = Q_ERR_INVALID_FORMAT;
-        goto finish;
+        return Q_ERR_INVALID_FORMAT;
     }
 
     if( w < 1 || h < 1 || w > MAX_TEXTURE_SIZE || h > MAX_TEXTURE_SIZE ) {
         Com_DPrintf( "%s: %s: invalid image dimensions\n", __func__, filename );
-        ret = Q_ERR_INVALID_FORMAT;
-        goto finish;
+        return Q_ERR_INVALID_FORMAT;
     }
 
     if( image_type == 2 ) {
-        if( offset + w * h * bpp > length ) {
-            ret = Q_ERR_BAD_EXTENT;
-            goto finish;
+        if( offset + w * h * bpp > rawlen ) {
+            return Q_ERR_BAD_EXTENT;
         }
         if( attributes & 32 ) {
             if( pixel_size == 32 ) {
@@ -569,8 +527,7 @@ qerror_t IMG_LoadTGA( const char *filename, byte **pic, int *width, int *height 
     } else if( image_type == 10 ) {
         if( attributes & 32 ) {
             Com_DPrintf( "%s: %s: vertically flipped, RLE encoded images are not supported\n", __func__, filename );
-            ret = Q_ERR_INVALID_FORMAT;
-            goto finish;
+            return Q_ERR_INVALID_FORMAT;
         }
         if( pixel_size == 32 ) {
             decode = tga_decode_bgra_rle;
@@ -579,32 +536,24 @@ qerror_t IMG_LoadTGA( const char *filename, byte **pic, int *width, int *height 
         }
     } else {
         Com_DPrintf( "%s: %s: only type 2 and 10 targa RGB images supported\n", __func__, filename );
-        ret = Q_ERR_INVALID_FORMAT;
-        goto finish;
+        return Q_ERR_INVALID_FORMAT;
     }
 
     pixels = IMG_AllocPixels( w * h * 4 );
-    ret = decode( buffer + offset, pixels, w, h, buffer + length );
+    ret = decode( rawdata + offset, pixels, w, h, rawdata + rawlen );
     if( ret < 0 ) {
         IMG_FreePixels( pixels );
-        goto finish;
+        return ret;
     }
 
     *pic = pixels;
     *width = w;
     *height = h;
 
-finish:
-    FS_FreeFile( buffer );
-    return ret;
+    return Q_ERR_SUCCESS;
 }
 
-/*
-=================
-IMG_SaveTGA
-=================
-*/
-qerror_t IMG_SaveTGA( qhandle_t f, const char *filename, const byte *bgr, int width, int height, int unused ) {
+IMG_SAVE( TGA ) {
     size_t len;
     byte header[TARGA_HEADER_SIZE];
     ssize_t ret;
@@ -623,7 +572,7 @@ qerror_t IMG_SaveTGA( qhandle_t f, const char *filename, const byte *bgr, int wi
     }
 
     len = width * height * 3;
-    ret = FS_Write( bgr, len, f );
+    ret = FS_Write( pic, len, f );
     if( ret < 0 ) {
         return ret;
     }
@@ -706,33 +655,17 @@ METHODDEF( void )my_mem_src( j_decompress_ptr cinfo, byte *data, size_t size ) {
     cinfo->src->next_input_byte = data;
 }
 
-/*
-=================
-IMG_LoadJPG
-=================
-*/
-qerror_t IMG_LoadJPG( const char *filename, byte **pic, int *width, int *height ) {
+IMG_LOAD( JPG ) {
     struct jpeg_decompress_struct cinfo;
     struct my_error_mgr jerr;
     JSAMPROW row_pointer;
     byte buffer[MAX_TEXTURE_SIZE*3];
-    byte *rawdata;
-    size_t rawlength;
-    byte *volatile pixels;
+    byte *pixels;
     byte *in, *out;
     int i;
     qerror_t ret;
 
-    if( !filename || !pic ) {
-        Com_Error( ERR_FATAL, "LoadJPG: NULL" );
-    }
-
-    *pic = pixels = NULL;
-
-    rawlength = FS_LoadFile( filename, ( void ** )&rawdata );
-    if( !rawdata ) {
-        return rawlength;
-    }
+    *pic = NULL;
 
     cinfo.err = jpeg_std_error( &jerr.pub );
     jerr.pub.error_exit = my_error_exit;
@@ -740,15 +673,14 @@ qerror_t IMG_LoadJPG( const char *filename, byte **pic, int *width, int *height 
     jerr.filename = filename;
     jerr.error = Q_ERR_FAILURE;
 
-    jpeg_create_decompress( &cinfo );
-
     if( setjmp( jerr.setjmp_buffer ) ) {
-        IMG_FreePixels( pixels );
         ret = jerr.error;
         goto fail;
     }
- 
-    my_mem_src( &cinfo, rawdata, rawlength );
+
+    jpeg_create_decompress( &cinfo );
+
+    my_mem_src( &cinfo, rawdata, rawlen );
     jpeg_read_header( &cinfo, TRUE );
 
     if( cinfo.out_color_space != JCS_RGB && cinfo.out_color_space != JCS_GRAYSCALE ) {
@@ -773,6 +705,12 @@ qerror_t IMG_LoadJPG( const char *filename, byte **pic, int *width, int *height 
 
     pixels = out = IMG_AllocPixels( cinfo.output_height * cinfo.output_width * 4 );
     row_pointer = ( JSAMPROW )buffer;
+
+    if( setjmp( jerr.setjmp_buffer ) ) {
+        IMG_FreePixels( pixels );
+        ret = jerr.error;
+        goto fail;
+    }
 
     if( cinfo.output_components == 3 ) {
         while( cinfo.output_scanline < cinfo.output_height ) {
@@ -808,7 +746,6 @@ qerror_t IMG_LoadJPG( const char *filename, byte **pic, int *width, int *height 
 
 fail:
     jpeg_destroy_decompress( &cinfo );
-    FS_FreeFile( rawdata );
     return ret;
 }
 
@@ -878,15 +815,10 @@ METHODDEF( void ) my_vfs_dst( j_compress_ptr cinfo, qhandle_t f ) {
     dest->f = f;
 }
 
-/*
-=================
-IMG_SaveJPG
-=================
-*/
-qerror_t IMG_SaveJPG( qhandle_t f, const char *filename, const byte *rgb, int width, int height, int quality ) {
+IMG_SAVE( JPG ) {
     struct jpeg_compress_struct cinfo;
     struct my_error_mgr jerr;
-    volatile JSAMPARRAY row_pointers;
+    JSAMPARRAY row_pointers;
     int row_stride;
     qerror_t ret;
     int i;
@@ -896,11 +828,9 @@ qerror_t IMG_SaveJPG( qhandle_t f, const char *filename, const byte *rgb, int wi
     jerr.filename = filename;
     jerr.error = Q_ERR_FAILURE;
 
-    row_pointers = NULL;
-
     if( setjmp( jerr.setjmp_buffer ) ) {
         ret = jerr.error;
-        goto fail;
+        goto fail1;
     }
 
     jpeg_create_compress( &cinfo );
@@ -913,7 +843,7 @@ qerror_t IMG_SaveJPG( qhandle_t f, const char *filename, const byte *rgb, int wi
     cinfo.in_color_space = JCS_RGB; // colorspace of input image
 
     jpeg_set_defaults( &cinfo );
-    jpeg_set_quality( &cinfo, clamp( quality, 0, 100 ), TRUE );
+    jpeg_set_quality( &cinfo, clamp( param, 0, 100 ), TRUE );
 
     jpeg_start_compress( &cinfo, TRUE );
 
@@ -921,7 +851,12 @@ qerror_t IMG_SaveJPG( qhandle_t f, const char *filename, const byte *rgb, int wi
     row_stride = width * 3;    // JSAMPLEs per row in image_buffer
 
     for( i = 0; i < height; i++ ) {
-        row_pointers[i] = ( JSAMPROW )( rgb + ( height - i - 1 ) * row_stride );
+        row_pointers[i] = ( JSAMPROW )( pic + ( height - i - 1 ) * row_stride );
+    }
+
+    if( setjmp( jerr.setjmp_buffer ) ) {
+        ret = jerr.error;
+        goto fail2;
     }
 
     jpeg_write_scanlines( &cinfo, row_pointers, height );
@@ -930,8 +865,9 @@ qerror_t IMG_SaveJPG( qhandle_t f, const char *filename, const byte *rgb, int wi
 
     ret = Q_ERR_SUCCESS;
 
-fail:
+fail2:
     FS_FreeFile( row_pointers );
+fail1:
     jpeg_destroy_compress( &cinfo );
     return ret;
 }
@@ -988,15 +924,8 @@ static void my_png_warning_fn( png_structp png_ptr, png_const_charp warning_msg 
     Com_WPrintf( "libpng: %s: %s\n", err->filename, warning_msg );
 }
 
-/*
-=================
-IMG_LoadPNG
-=================
-*/
-qerror_t IMG_LoadPNG( const char *filename, byte **pic, int *width, int *height ) {
-    byte *rawdata;
-    size_t rawlength;
-    byte *volatile pixels;
+IMG_LOAD( PNG ) {
+    byte *pixels;
     png_bytep row_pointers[MAX_TEXTURE_SIZE];
     png_uint_32 w, h, rowbytes, row;
     int bitdepth, colortype;
@@ -1006,18 +935,7 @@ qerror_t IMG_LoadPNG( const char *filename, byte **pic, int *width, int *height 
     my_png_error my_err;
     qerror_t ret;
 
-    if( !filename || !pic ) {
-        Com_Error( ERR_FATAL, "LoadPNG: NULL" );
-    }
-
-    *pic = pixels = NULL;
-
-    rawlength = FS_LoadFile( filename, ( void ** )&rawdata );
-    if( !rawdata ) {
-        return rawlength;
-    }
-
-    ret = Q_ERR_LIBRARY_ERROR;
+    *pic = NULL;
 
     my_err.filename = filename;
     my_err.error = Q_ERR_LIBRARY_ERROR;
@@ -1025,34 +943,35 @@ qerror_t IMG_LoadPNG( const char *filename, byte **pic, int *width, int *height 
     png_ptr = png_create_read_struct( PNG_LIBPNG_VER_STRING,
         ( png_voidp )&my_err, my_png_error_fn, my_png_warning_fn );
     if( !png_ptr ) {
-        goto fail1;
+        return Q_ERR_LIBRARY_ERROR;
     }
 
     info_ptr = png_create_info_struct( png_ptr );
     if( !info_ptr ) {
-        goto fail2;
+        ret = Q_ERR_LIBRARY_ERROR;
+        goto fail;
     }
 
     if( setjmp( png_jmpbuf( png_ptr ) ) ) {
-        IMG_FreePixels( pixels );
         ret = my_err.error;
-        goto fail2;
+        goto fail;
     }
 
     my_io.next_in = rawdata;
-    my_io.avail_in = rawlength;
+    my_io.avail_in = rawlen;
     png_set_read_fn( png_ptr, ( png_voidp )&my_io, my_png_read_fn );
 
     png_read_info( png_ptr, info_ptr );
 
     if( !png_get_IHDR( png_ptr, info_ptr, &w, &h, &bitdepth, &colortype, NULL, NULL, NULL ) ) {
-        goto fail2;
+        ret = Q_ERR_LIBRARY_ERROR;
+        goto fail;
     }
 
     if( w > MAX_TEXTURE_SIZE || h > MAX_TEXTURE_SIZE ) {
         Com_DPrintf( "%s: %s: invalid image dimensions\n", __func__, filename );
         ret = Q_ERR_INVALID_FORMAT;
-        goto fail2;
+        goto fail;
     }
 
     switch( colortype ) {
@@ -1090,6 +1009,12 @@ qerror_t IMG_LoadPNG( const char *filename, byte **pic, int *width, int *height 
         row_pointers[row] = pixels + row * rowbytes;
     }
 
+    if( setjmp( png_jmpbuf( png_ptr ) ) ) {
+        IMG_FreePixels( pixels );
+        ret = my_err.error;
+        goto fail;
+    }
+
     png_read_image( png_ptr, row_pointers );
 
     png_read_end( png_ptr, info_ptr );
@@ -1099,10 +1024,8 @@ qerror_t IMG_LoadPNG( const char *filename, byte **pic, int *width, int *height 
     *height = h;
     ret = Q_ERR_SUCCESS;
 
-fail2:
+fail:
     png_destroy_read_struct( &png_ptr, &info_ptr, NULL );
-fail1:
-    FS_FreeFile( rawdata );
     return ret;
 }
 
@@ -1119,21 +1042,13 @@ static void my_png_write_fn( png_structp png_ptr, png_bytep buf, png_size_t size
 
 static void my_png_flush_fn( png_structp png_ptr ) { }
 
-/*
-=================
-IMG_SavePNG
-=================
-*/
-qerror_t IMG_SavePNG( qhandle_t f, const char *filename, const byte *rgb, int width, int height, int compression ) {
+IMG_SAVE( PNG ) {
     png_structp png_ptr;
     png_infop info_ptr;
-    volatile png_bytepp row_pointers;
+    png_bytepp row_pointers;
     int i, row_stride;
     my_png_error my_err;
     qerror_t ret;
-
-    row_pointers = NULL;
-    ret = Q_ERR_LIBRARY_ERROR;
 
     my_err.filename = filename;
     my_err.error = Q_ERR_LIBRARY_ERROR;
@@ -1141,17 +1056,18 @@ qerror_t IMG_SavePNG( qhandle_t f, const char *filename, const byte *rgb, int wi
     png_ptr = png_create_write_struct( PNG_LIBPNG_VER_STRING,
         ( png_voidp )&my_err, my_png_error_fn, my_png_warning_fn );
     if( !png_ptr ) {
-        goto fail1;
+        return Q_ERR_LIBRARY_ERROR;
     }
 
     info_ptr = png_create_info_struct( png_ptr );
     if( !info_ptr ) {
-        goto fail2;
+        ret = Q_ERR_LIBRARY_ERROR;
+        goto fail1;
     }
 
     if( setjmp( png_jmpbuf( png_ptr ) ) ) {
         ret = my_err.error;
-        goto fail3;
+        goto fail1;
     }
 
     png_set_write_fn( png_ptr, ( png_voidp )&f,
@@ -1161,12 +1077,18 @@ qerror_t IMG_SavePNG( qhandle_t f, const char *filename, const byte *rgb, int wi
         PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT );
 
     png_set_compression_level( png_ptr,
-        clamp( compression, Z_NO_COMPRESSION, Z_BEST_COMPRESSION ) );
+        clamp( param, Z_NO_COMPRESSION, Z_BEST_COMPRESSION ) );
 
     row_pointers = FS_AllocTempMem( sizeof( png_bytep ) * height );
     row_stride = width * 3;
+
     for( i = 0; i < height; i++ ) {
-        row_pointers[i] = ( png_bytep )rgb + ( height - i - 1 ) * row_stride;
+        row_pointers[i] = ( png_bytep )pic + ( height - i - 1 ) * row_stride;
+    }
+
+    if( setjmp( png_jmpbuf( png_ptr ) ) ) {
+        ret = my_err.error;
+        goto fail2;
     }
 
     png_set_rows( png_ptr, info_ptr, row_pointers );
@@ -1175,11 +1097,10 @@ qerror_t IMG_SavePNG( qhandle_t f, const char *filename, const byte *rgb, int wi
 
     ret = Q_ERR_SUCCESS;
 
-fail3:
-    FS_FreeFile( row_pointers );
 fail2:
-    png_destroy_write_struct( &png_ptr, &info_ptr );
+    FS_FreeFile( row_pointers );
 fail1:
+    png_destroy_write_struct( &png_ptr, &info_ptr );
     return ret;
 }
 
@@ -1195,13 +1116,35 @@ IMAGE MANAGER
 
 #define RIMAGES_HASH    256
 
+typedef struct {
+    char ext[4];
+    qerror_t (*load)( byte *, size_t, const char *, byte **, int *, int * );
+} imageloader_t;
+
 image_t     r_images[MAX_RIMAGES];
 list_t      r_imageHash[RIMAGES_HASH];
 int         r_numImages;
 
 uint32_t    d_8to24table[256];
 
+static const imageloader_t img_loaders[im_unknown] = {
+    { "pcx", IMG_LoadPCX },
+    { "wal", IMG_LoadWAL },
+#if USE_TGA
+    { "tga", IMG_LoadTGA },
+#endif
+#if USE_JPG
+    { "jpg", IMG_LoadJPG },
+#endif
+#if USE_PNG
+    { "png", IMG_LoadPNG }
+#endif
+};
+
 #if USE_PNG || USE_JPG || USE_TGA
+static imageformat_t    img_search[im_unknown];
+static int              img_total;
+
 static cvar_t   *r_override_textures;
 static cvar_t   *r_texture_formats;
 #endif
@@ -1238,7 +1181,7 @@ static void IMG_List_f( void ) {
     Com_Printf( "Total texels: %d (not counting mipmaps)\n", texels );
 }
 
-static image_t *IMG_Alloc( const char *name ) {
+static image_t *alloc_image( void ) {
     int i;
     image_t *image;
 
@@ -1254,23 +1197,13 @@ static image_t *IMG_Alloc( const char *name ) {
         r_numImages++;
     }
 
-    strcpy( image->name, name );
-
-    image->registration_sequence = registration_sequence;
-
     return image;
 }
 
-/*
-===============
-IMG_Lookup
-
-Finds the given image of the given type.
-Case and extension insensitive.
-===============
-*/
-static image_t *IMG_Lookup( const char *name, imagetype_t type,
-                       unsigned hash, size_t baselength )
+// finds the given image of the given type.
+// case and extension insensitive.
+static image_t *lookup_image( const char *name,
+    imagetype_t type, unsigned hash, size_t baselen )
 {
     image_t *image;
 
@@ -1280,7 +1213,7 @@ static image_t *IMG_Lookup( const char *name, imagetype_t type,
             continue;
         }
         // FIXME
-        if( !FS_pathcmpn( image->name, name, baselength ) ) {
+        if( !FS_pathcmpn( image->name, name, baselen ) ) {
             return image;
         }
     }
@@ -1288,26 +1221,159 @@ static image_t *IMG_Lookup( const char *name, imagetype_t type,
     return NULL;
 }
 
-/*
-===============
-IMG_Find
+static imageformat_t try_image_format( const imageloader_t *ldr,
+   const char *filename, byte **pic, byte **tmp, int *width, int *height )
+{
+    byte *data;
+    ssize_t len;
+    qerror_t ret;
 
-Finds or loads the given image, adding it to the hash table.
-===============
-*/
-static qerror_t _IMG_Find( const char *name, imagetype_t type, image_t **image_p ) {
+    // load the file
+    len = FS_LoadFile( filename, ( void ** )&data );
+    if( !data ) {
+        return len;
+    }
+
+    // decompress the image
+    ret = ldr->load( data, len, filename, pic, width, height );
+    if( ret < 0 ) {
+        FS_FreeFile( data );
+        return ret;
+    }
+
+    // TODO: guess real image format on file contents
+    ret = ldr - img_loaders;
+
+    // unless this is a WAL texture, raw image data is
+    // no longer needed, free it now
+    if( ret != im_wal ) {
+        FS_FreeFile( data );
+        *tmp = NULL;
+    } else {
+        *tmp = data;
+    }
+
+    return ret;
+}
+
+#if USE_PNG || USE_JPG || USE_TGA
+
+// tries to load the image with a different extension
+static qerror_t try_other_formats( imageformat_t orig, imagetype_t type,
+    char *buffer, char *ext, byte **pic, byte **tmp, int *width, int *height )
+{
+    const imageloader_t *ldr;
+    imageformat_t fmt;
+    qerror_t ret;
+    int i;
+
+    // search through all the 32-bit formats
+    for( i = 0; i < img_total; i++ ) {
+        fmt = img_search[i];
+        if( fmt == orig ) {
+            // don't retry twice
+            continue;
+        }
+
+        // replace the extension
+        ldr = &img_loaders[fmt];
+        memcpy( ext, ldr->ext, 4 );
+
+        ret = try_image_format( ldr, buffer, pic, tmp, width, height );
+        if( ret != Q_ERR_NOENT ) {
+            // found something
+            return ret;
+        }
+    }
+
+    // fall back to 8-bit formats
+    fmt = type == it_wall ? im_wal : im_pcx;
+    if( fmt == orig ) {
+        // don't retry twice
+        return Q_ERR_NOENT;
+    }
+
+    ldr = &img_loaders[fmt];
+    memcpy( ext, ldr->ext, 4 );
+
+    return try_image_format( ldr, buffer, pic, tmp, width, height );
+}
+
+static void get_image_dimensions( image_t *image,
+    imageformat_t fmt, char *buffer, char *ext )
+{
+    ssize_t len;
+    miptex_t mt;
+    dpcx_t pcx;
+    qhandle_t f;
+
+    if( fmt == im_wal ) {
+        memcpy( ext, "wal", 4 );
+        FS_FOpenFile( buffer, &f, FS_MODE_READ );
+        if( f ) {
+            len = FS_Read( &mt, sizeof( mt ), f );
+            if( len == sizeof( mt ) ) {
+                image->width = LittleLong( mt.width );
+                image->height = LittleLong( mt.height );
+            }
+            FS_FCloseFile( f );
+        }
+    } else {
+        memcpy( ext, "pcx", 4 );
+        FS_FOpenFile( buffer, &f, FS_MODE_READ );
+        if( f ) {
+            len = FS_Read( &pcx, sizeof( pcx ), f );
+            if( len == sizeof( pcx ) ) {
+                image->width = LittleShort( pcx.xmax ) + 1;
+                image->height = LittleShort( pcx.ymax ) + 1;
+            }
+            FS_FCloseFile( f );
+        }
+    }
+}
+
+static void r_texture_formats_changed( cvar_t *self ) {
+    char *s;
+    int i;
+
+    // reset the search order
+    img_total = 0;
+
+    // parse the string
+    for( s = self->string; *s; s++ ) {
+        switch( *s ) {
+#if USE_TGA
+            case 't': case 'T': i = im_tga; break;
+#endif
+#if USE_JPG
+            case 'j': case 'J': i = im_jpg; break;
+#endif
+#if USE_PNG
+            case 'p': case 'P': i = im_png; break;
+#endif
+            default: continue;
+        }
+
+        img_search[img_total++] = i;
+        if( img_total == im_unknown ) {
+            break;
+        }
+    }
+}
+
+#endif // USE_PNG || USE_JPG || USE_TGA
+
+// finds or loads the given image, adding it to the hash table.
+static qerror_t find_or_load_image( const char *name, imagetype_t type, image_t **image_p ) {
     image_t *image;
     byte *pic, *tmp;
     int width, height;
-    char buffer[MAX_QPATH];
-    char *ext;
+    char buffer[MAX_QPATH], *ext;
     size_t len;
-    unsigned hash, extHash;
-    imageflags_t flags;
-#if USE_PNG || USE_JPG || USE_TGA
-    char *s;
-#endif
-    qerror_t err;
+    unsigned hash;
+    const imageloader_t *ldr;
+    imageformat_t fmt;
+    qerror_t ret;
 
     *image_p = NULL;
 
@@ -1320,346 +1386,107 @@ static qerror_t _IMG_Find( const char *name, imagetype_t type, image_t **image_p
         Com_Error( ERR_FATAL, "%s: oversize name", __func__ );
     }
 
-    if( len <= 4 ) {
-        return Q_ERR_INVALID_PATH; // must have at least 1 char of base name 
-    }
-
-    len -= 4;
-    if( name[len] != '.' ) {
+    // must have an extension and at least 1 char of base name 
+    if( len <= 4 || name[len - 4] != '.' ) {
         return Q_ERR_INVALID_PATH;
     }
-    
-    strcpy( buffer, name );
-    buffer[len] = 0;
 
-    hash = FS_HashPath( buffer, RIMAGES_HASH );
+    hash = FS_HashPathLen( name, len - 4, RIMAGES_HASH );
 
-    if( ( image = IMG_Lookup( buffer, type, hash, len ) ) != NULL ) {
+    // look for it
+    if( ( image = lookup_image( name, type, hash, len - 4 ) ) != NULL ) {
         image->registration_sequence = registration_sequence;
         *image_p = image;
         return Q_ERR_SUCCESS;
     }
 
-    ext = buffer + len;
-    Q_strlwr( ext + 1 );
-    extHash = MakeRawLong( '.', ext[1], ext[2], ext[3] );
+    // copy filename off
+    memcpy( buffer, name, len + 1 );
+    ext = buffer + len - 3;
 
-    //
-    // create the pic from disk
-    //
-    pic = tmp = NULL;
-    flags = 0;
-
-#if USE_PNG || USE_JPG || USE_TGA
-    if( r_override_textures->integer ) {
-        for( s = r_texture_formats->string; *s; s++ ) {
-            switch( *s ) {
-#if USE_PNG
-            case 'p': // try *.png
-                strcpy( ext, ".png" );
-                err = IMG_LoadPNG( buffer, &pic, &width, &height );
-                break;
-#endif
-#if USE_JPG
-            case 'j': // try *.jpg
-                strcpy( ext, ".jpg" );
-                err = IMG_LoadJPG( buffer, &pic, &width, &height );
-                break;
-#endif
-#if USE_TGA
-            case 't': // try *.tga
-                strcpy( ext, ".tga" );
-                err = IMG_LoadTGA( buffer, &pic, &width, &height );
-                break;
-#endif
-            default:
-                continue;
-            }
-            if( pic ) {
-                // replacing 8 bit texture with 32 bit texture
-                if( extHash == EXTENSION_WAL ) {
-                    flags |= if_replace_wal;
-                } else if( extHash == EXTENSION_PCX ) {
-                    flags |= if_replace_pcx;
-                }
-                goto create;
-            }
-            if( err != Q_ERR_NOENT ) {
-                return err;
-            }
+    // find out original extension
+    for( fmt = 0; fmt < im_unknown; fmt++ ) {
+        ldr = &img_loaders[fmt];
+        if( !Q_stricmp( ext, ldr->ext ) ) {
+            break;
         }
-
-        if( extHash == EXTENSION_WAL ) {
-            strcpy( ext, ".wal" );
-            err = IMG_LoadWAL( buffer, &pic, &tmp, &width, &height );
-            if( pic ) {
-                flags |= if_paletted;
-                goto create;
-            }
-        } else {
-            strcpy( ext, ".pcx" );
-            err = IMG_LoadPCX( buffer, &pic, NULL, &width, &height );
-            if( pic ) {
-                flags |= if_paletted;
-                goto create;
-            }
-        }
-
-        return err;
     }
-#endif
 
-    switch( extHash ) {
-    case EXTENSION_PNG:
-#if USE_PNG
-        // try *.png
-        strcpy( ext, ".png" );
-        err = IMG_LoadPNG( buffer, &pic, &width, &height );
-        if( pic ) {
-            goto create;
-        }
-        if( err != Q_ERR_NOENT ) {
-            return err;
-        }
-#endif
-#if USE_JPG || USE_TGA
-        for( s = r_texture_formats->string; *s; s++ ) {
-            switch( *s ) {
-#if USE_JPG
-            case 'j': // try *.jpg
-                strcpy( ext, ".jpg" );
-                err = IMG_LoadJPG( buffer, &pic, &width, &height );
-                break;
-#endif
-#if USE_TGA
-            case 't': // try *.tga
-                strcpy( ext, ".tga" );
-                err = IMG_LoadTGA( buffer, &pic, &width, &height );
-                break;
-#endif
-            default:
-                continue;
-            }
-            if( pic ) {
-                goto create;
-            }
-            if( err != Q_ERR_NOENT ) {
-                return err;
-            }
-        }
-#endif
-        // try *.pcx
-        strcpy( ext, ".pcx" );
-        err = IMG_LoadPCX( buffer, &pic, NULL, &width, &height );
-        if( pic ) {
-            flags |= if_paletted;
-            goto create;
-        }
-        return err;
-
-    case EXTENSION_TGA:
-#if USE_TGA
-        strcpy( ext, ".tga" );
-        err = IMG_LoadTGA( buffer, &pic, &width, &height );
-        if( pic ) {
-            goto create;
-        }
-        if( err != Q_ERR_NOENT ) {
-            return err;
-        }
-#endif
-
-#if USE_PNG || USE_JPG
-        for( s = r_texture_formats->string; *s; s++ ) {
-            switch( *s ) {
-#if USE_PNG
-            case 'p': // try *.png
-                strcpy( ext, ".png" );
-                err = IMG_LoadPNG( buffer, &pic, &width, &height );
-                break;
-#endif
-#if USE_JPG
-            case 'j': // try *.jpg
-                strcpy( ext, ".jpg" );
-                err = IMG_LoadJPG( buffer, &pic, &width, &height );
-                break;
-#endif
-            default:
-                continue;
-            }
-            if( pic ) {
-                goto create;
-            }
-            if( err != Q_ERR_NOENT ) {
-                return err;
-            }
-        }
-#endif
-        // try *.pcx
-        strcpy( ext, ".pcx" );
-        err = IMG_LoadPCX( buffer, &pic, NULL, &width, &height );
-        if( pic ) {
-            flags |= if_paletted;
-            goto create;
-        }
-        return err;
-
-    case EXTENSION_JPG:
-#if USE_JPG
-        strcpy( ext, ".jpg" );
-        err = IMG_LoadJPG( buffer, &pic, &width, &height );
-        if( pic ) {
-            goto create;
-        }
-        if( err != Q_ERR_NOENT ) {
-            return err;
-        }
-#endif
-
-#if USE_PNG || USE_TGA
-        for( s = r_texture_formats->string; *s; s++ ) {
-            switch( *s ) {
-#if USE_PNG
-            case 'p': // try *.png
-                strcpy( ext, ".png" );
-                err = IMG_LoadPNG( buffer, &pic, &width, &height );
-                break;
-#endif
-#if USE_TGA
-            case 't': // try *.tga
-                strcpy( ext, ".tga" );
-                err = IMG_LoadTGA( buffer, &pic, &width, &height );
-                break;
-#endif
-            default:
-                continue;
-            }
-            if( pic ) {
-                goto create;
-            }
-            if( err != Q_ERR_NOENT ) {
-                return err;
-            }
-        }
-#endif
-
-        // try *.pcx
-        strcpy( ext, ".pcx" );
-        err = IMG_LoadPCX( buffer, &pic, NULL, &width, &height );
-        if( pic ) {
-            flags |= if_paletted;
-            goto create;
-        }
-        return err;
-
-
-    case EXTENSION_PCX:
-        strcpy( ext, ".pcx" );
-        err = IMG_LoadPCX( buffer, &pic, NULL, &width, &height );
-        if( pic ) {
-            flags |= if_paletted;
-            goto create;
-        }
-        if( err != Q_ERR_NOENT ) {
-            return err;
-        }
-
+    // load the pic from disk
+    pic = tmp = NULL;
 #if USE_PNG || USE_JPG || USE_TGA
-        for( s = r_texture_formats->string; *s; s++ ) {
-            switch( *s ) {
-#if USE_PNG
-            case 'p': // try *.png
-                strcpy( ext, ".png" );
-                err = IMG_LoadPNG( buffer, &pic, &width, &height );
-                break;
-#endif
-#if USE_JPG
-            case 'j': // try *.jpg
-                strcpy( ext, ".jpg" );
-                err = IMG_LoadJPG( buffer, &pic, &width, &height );
-                break;
-#endif
-#if USE_TGA
-            case 't': // try *.tga
-                strcpy( ext, ".tga" );
-                err = IMG_LoadTGA( buffer, &pic, &width, &height );
-                break;
-#endif
-            default:
-                continue;
-            }
-            if( pic ) {
-                goto create;
-            }
-            if( err != Q_ERR_NOENT ) {
-                return err;
-            }
+    if( fmt == im_unknown ) {
+        // unknown extension, but give it a chance to load anyway
+        ret = try_other_formats( im_unknown, type,
+            buffer, ext, &pic, &tmp, &width, &height );
+        if( ret == Q_ERR_NOENT ) {
+            // not found, change error to invalid path
+            ret = Q_ERR_INVALID_PATH;
         }
-#endif
-        return Q_ERR_NOENT;
-
-    case EXTENSION_WAL:
-        strcpy( ext, ".wal" );
-        err = IMG_LoadWAL( buffer, &pic, &tmp, &width, &height );
-        if( pic ) {
-            flags |= if_paletted;
-            goto create;
+    } else if( r_override_textures->integer ) {
+        // forcibly replace the extension
+        ret = try_other_formats( im_unknown, type,
+            buffer, ext, &pic, &tmp, &width, &height );
+    } else {
+        // first try with original extension
+        ret = try_image_format( ldr, buffer, &pic, &tmp, &width, &height );
+        if( ret == Q_ERR_NOENT ) {
+            // retry with remaining extensions
+            ret = try_other_formats( fmt, type,
+                buffer, ext, &pic, &tmp, &width, &height );
         }
-        if( err != Q_ERR_NOENT ) {
-            return err;
-        }
-
-#if USE_PNG || USE_JPG || USE_TGA
-        // FIXME: no way to figure correct texture dimensions here
-        for( s = r_texture_formats->string; *s; s++ ) {
-            switch( *s ) {
-#if USE_PNG
-            case 'p': // try *.png
-                strcpy( ext, ".png" );
-                err = IMG_LoadPNG( buffer, &pic, &width, &height );
-                break;
-#endif
-#if USE_JPG
-            case 'j': // try *.jpg
-                strcpy( ext, ".jpg" );
-                err = IMG_LoadJPG( buffer, &pic, &width, &height );
-                break;
-#endif
-#if USE_TGA
-            case 't': // try *.tga
-                strcpy( ext, ".tga" );
-                err = IMG_LoadTGA( buffer, &pic, &width, &height );
-                break;
-#endif
-            default:
-                continue;
-            }
-            if( pic ) {
-                goto create;
-            }
-            if( err != Q_ERR_NOENT ) {
-                return err;
-            }
-        }
-#endif
-        return Q_ERR_NOENT;
-
-    default:
+    }
+#else
+    if( fmt == im_unknown ) {
         return Q_ERR_INVALID_PATH;
     }
+    ret = try_image_format( ldr, buffer, &pic, &tmp, &width, &height );
+#endif
 
-create:
+    if( ret < 0 ) {
+        return ret;
+    }
+
 #if USE_REF == REF_GL
     // don't need pics in memory after GL upload
     if( !tmp ) {
         tmp = pic;
     }
 #endif
-    image = IMG_Alloc( buffer );
-    IMG_Load( image, pic, width, height, type, flags );
-    FS_FreeFile( tmp );
+
+    // allocate image slot
+    image = alloc_image();
+    memcpy( image->name, buffer, len + 1 );
     List_Append( &r_imageHash[hash], &image->entry );
+
+    // fill in some basic info
+    image->registration_sequence = registration_sequence;
+    image->type = type;
+    image->flags = 0;
+    image->width = width;
+    image->height = height;
+
+    if( ret <= im_wal ) {
+        image->flags |= if_paletted;
+    }
+
+#if USE_PNG || USE_JPG || USE_TGA
+    // if we are replacing 8-bit texture with a higher resolution 32-bit
+    // texture, we need to recover original image dimensions for proper
+    // texture alignment
+    if( fmt <= im_wal && ret > im_wal ) {
+        get_image_dimensions( image, fmt, buffer, ext );
+    }
+#endif
+
+    // upload the image to card
+    IMG_Load( image, pic, width, height );
+
+    // free any temp memory still remaining
+    FS_FreeFile( tmp );
+
     *image_p = image;
+
     return Q_ERR_SUCCESS;
 }
 
@@ -1667,7 +1494,7 @@ image_t *IMG_Find( const char *name, imagetype_t type ) {
     image_t *image;
     qerror_t ret;
 
-    ret = _IMG_Find( name, type, &image );
+    ret = find_or_load_image( name, type, &image );
     if( image ) {
         return image;
     }
@@ -1706,9 +1533,9 @@ static qerror_t _register_image( const char *name, imagetype_t type, qhandle_t *
     }
 
     if( type == it_skin ) {
-        ret = _IMG_Find( name, type, &image );
+        ret = find_or_load_image( name, type, &image );
     } else if( name[0] == '/' || name[0] == '\\' ) {
-        ret = _IMG_Find( name + 1, type, &image );
+        ret = find_or_load_image( name + 1, type, &image );
     } else {
         if( !strncmp( name, "../", 3 ) ) {
             // action mod icon path hack
@@ -1723,7 +1550,7 @@ static qerror_t _register_image( const char *name, imagetype_t type, qhandle_t *
         if( len >= sizeof( fullname ) ) {
             return Q_ERR_NAMETOOLONG;
         }
-        ret = _IMG_Find( fullname, type, &image );
+        ret = find_or_load_image( fullname, type, &image );
     }
 
     if( !image ) {
@@ -1843,10 +1670,12 @@ void IMG_FreeAll( void ) {
         Com_DPrintf( "%s: %i images freed\n", __func__, count );
     }
     
-    r_numImages = 0;
     for( i = 0; i < RIMAGES_HASH; i++ ) {
         List_Init( &r_imageHash[i] );
     }
+
+    // &r_images[0] == R_NOTEXTURE
+    r_numImages = 1;
 }
 
 /*
@@ -1858,14 +1687,23 @@ the colormap for software renderer.
 ===============
 */
 void IMG_GetPalette( byte **pic ) {
-    int i;
+    static const char colormap[] = "pics/colormap.pcx";
+    byte pal[768], *src, *data;
     qerror_t ret;
-    byte pal[768], *src;
+    ssize_t len;
+    int i;
 
     // get the palette
-    ret = IMG_LoadPCX( "pics/colormap.pcx", pic, pal, NULL, NULL );
+    len = FS_LoadFile( colormap, ( void ** )&data );
+    if( !data ) {
+        ret = len;
+        goto fail;
+    }
+
+    ret = _IMG_LoadPCX( data, len, pic, pal, NULL, NULL );
+    FS_FreeFile( data );
     if( ret < 0 ) {
-        Com_Error( ERR_FATAL, "Couldn't load pics/colormap.pcx: %s", Q_ErrorString( ret ) );
+        goto fail;
     }
 
     for( i = 0, src = pal; i < 255; i++, src += 3 ) {
@@ -1874,6 +1712,10 @@ void IMG_GetPalette( byte **pic ) {
 
     // 255 is transparent
     d_8to24table[i] = MakeColor( src[0], src[1], src[2], 0 );
+    return;
+
+fail:
+    Com_Error( ERR_FATAL, "Couldn't load %s: %s", colormap, Q_ErrorString( ret ) );
 }
 
 void IMG_Init( void ) {
@@ -1897,7 +1739,10 @@ void IMG_Init( void ) {
         "t"
 #endif
         , 0 );
+    r_texture_formats->changed = r_texture_formats_changed;
+    r_texture_formats_changed( r_texture_formats );
 #endif
+
     Cmd_AddCommand( "imagelist", IMG_List_f );
 
     for( i = 0; i < RIMAGES_HASH; i++ ) {
@@ -1910,5 +1755,6 @@ void IMG_Init( void ) {
 
 void IMG_Shutdown( void ) {
     Cmd_RemoveCommand( "imagelist" );
+    r_numImages = 0;
 }
 

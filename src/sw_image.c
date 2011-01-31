@@ -37,19 +37,14 @@ void IMG_Unload( image_t *image ) {
 IMG_Load
 ================
 */
-void IMG_Load( image_t *image, byte *pic, int width, int height,
-    imagetype_t type, imageflags_t flags )
-{
+void IMG_Load( image_t *image, byte *pic, int width, int height ) {
     int         i, c, b;
 
-    image->registration_sequence = registration_sequence;
-
-    image->width = image->upload_width = width;
-    image->height = image->upload_height = height;
-    image->type = type;
+    image->upload_width = width;
+    image->upload_height = height;
 
     c = width * height;
-    if( type == it_wall ) {
+    if( image->type == it_wall ) {
         size_t size = MIPSIZE( c );
 
         image->pixels[0] = R_Malloc( size );
@@ -64,12 +59,10 @@ void IMG_Load( image_t *image, byte *pic, int width, int height,
         for( i = 0; i < c; i++ ) {
             b = pic[i];
             if( b == 255 ) {
-                flags |= if_transparent;
+                image->flags |= if_transparent;
             }
         }
     }
-
-    image->flags = flags;
 }
 
 void R_BuildGammaTable( void ) {

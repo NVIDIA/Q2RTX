@@ -20,8 +20,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "gl_local.h"
-#include "d_pcx.h"
-#include "d_wal.h"
 
 static int gl_filter_min;
 static int gl_filter_max;
@@ -789,66 +787,24 @@ static qboolean GL_Upload8( byte *data, int width, int height, qboolean mipmap )
 
 }
 
-static void GL_GetDimensions( image_t *image, imageflags_t flags ) {
-    char buffer[MAX_QPATH];
-    size_t length;
-    miptex_t    mt;
-    dpcx_t pcx;
-    qhandle_t f;
-
-    length = strlen( image->name );
-    if( length > 4 && image->name[ length - 4 ] == '.' ) {
-        strncpy( buffer, image->name, length - 4 );
-        if( flags & if_replace_wal ) {
-            strcpy( buffer + length - 4, ".wal" );
-            FS_FOpenFile( buffer, &f, FS_MODE_READ );
-            if( f ) {
-                length = FS_Read( &mt, sizeof( mt ), f );
-                if( length == sizeof( mt ) ) {
-                    image->width = LittleLong( mt.width );
-                    image->height = LittleLong( mt.height );
-                }
-                FS_FCloseFile( f );
-            }
-        } else {
-            strcpy( buffer + length - 4, ".pcx" );
-            FS_FOpenFile( buffer, &f, FS_MODE_READ );
-            if( f ) {
-                length = FS_Read( &pcx, sizeof( pcx ), f );
-                if( length == sizeof( pcx ) ) {
-                    image->width = LittleShort( pcx.xmax ) + 1;
-                    image->height = LittleShort( pcx.ymax ) + 1;
-                }
-                FS_FCloseFile( f );
-            }
-        }
-    }
-}
-
 /*
 ================
 IMG_Load
 ================
 */
-void IMG_Load( image_t *image, byte *pic, int width, int height,
-        imagetype_t type, imageflags_t flags )
-{
+void IMG_Load( image_t *image, byte *pic, int width, int height ) {
     qboolean mipmap, transparent;
     byte *src, *dst, *ptr;
     int i, j, s, t;
 
-    image->width = width;
-    image->height = height;
-    image->type = type;
-    upload_image = image;
-
-    // HACK: get dimensions from 8-bit texture
-    if( flags & (if_replace_wal|if_replace_pcx) ) {
-        GL_GetDimensions( image, flags );
+    if( !pic ) {
+        Com_Error( ERR_FATAL, "%s: NULL", __func__ );
     }
 
+    upload_image = image;
+
     // load small 8-bit pics onto the scrap
-    if( type == it_pic && ( flags & if_paletted ) &&
+    if( image->type == it_pic && ( image->flags & if_paletted ) &&
         width < 64 && height < 64 && !gl_noscrap->integer )
     {
         if( Scrap_AllocBlock( width, height, &s, &t ) ) {
@@ -862,12 +818,10 @@ void IMG_Load( image_t *image, byte *pic, int width, int height,
                 dst += SCRAP_BLOCK_WIDTH;
             }
 
-            flags |= if_scrap | if_transparent;
-
             image->texnum = TEXNUM_SCRAP;
             image->upload_width = width;
             image->upload_height = height;
-            image->flags = flags;
+            image->flags |= if_scrap | if_transparent;
             image->sl = ( s + 0.01f ) / ( float )SCRAP_BLOCK_WIDTH;
             image->sh = ( s + width - 0.01f ) / ( float )SCRAP_BLOCK_WIDTH;
             image->tl = ( t + 0.01f ) / ( float )SCRAP_BLOCK_HEIGHT;
@@ -883,23 +837,22 @@ void IMG_Load( image_t *image, byte *pic, int width, int height,
         }
     }
 
-    if( type == it_skin && ( flags & if_paletted ) )
+    if( image->type == it_skin && ( image->flags & if_paletted ) )
         R_FloodFillSkin( pic, width, height );
 
-    mipmap = ( type == it_wall || type == it_skin ) ? qtrue : qfalse;
+    mipmap = ( image->type == it_wall || image->type == it_skin );
     image->texnum = ( image - r_images );
     GL_BindTexture( image->texnum );
-    if( flags & if_paletted ) {
+    if( image->flags & if_paletted ) {
         transparent = GL_Upload8( pic, width, height, mipmap );
     } else {
         transparent = GL_Upload32( pic, width, height, mipmap );
     }
     if( transparent ) {
-        flags |= if_transparent;
+        image->flags |= if_transparent;
     }
     image->upload_width = upload_width;     // after power of 2 and scales
     image->upload_height = upload_height;
-    image->flags = flags;
     image->sl = 0;
     image->sh = 1;
     image->tl = 0;

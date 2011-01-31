@@ -72,9 +72,7 @@ IMAGE MANAGER
 typedef enum {
     if_transparent  = ( 1 << 0 ),
     if_paletted     = ( 1 << 1 ),
-    if_scrap        = ( 1 << 2 ),
-    if_replace_wal  = ( 1 << 3 ),
-    if_replace_pcx  = ( 1 << 4 )
+    if_scrap        = ( 1 << 2 )
 } imageflags_t;
 
 typedef enum {
@@ -86,17 +84,26 @@ typedef enum {
     it_charset
 } imagetype_t;
 
-#define EXTENSION_PNG    MakeRawLong( '.', 'p', 'n', 'g' )
-#define EXTENSION_TGA    MakeRawLong( '.', 't', 'g', 'a' )
-#define EXTENSION_JPG    MakeRawLong( '.', 'j', 'p', 'g' )
-#define EXTENSION_PCX    MakeRawLong( '.', 'p', 'c', 'x' )
-#define EXTENSION_WAL    MakeRawLong( '.', 'w', 'a', 'l' )
+typedef enum {
+    im_pcx,
+    im_wal,
+#if USE_TGA
+    im_tga,
+#endif
+#if USE_JPG
+    im_jpg,
+#endif
+#if USE_PNG
+    im_png,
+#endif
+    im_unknown
+} imageformat_t;
 
 typedef struct image_s {
     list_t          entry;
     char            name[MAX_QPATH]; // game path, without extension
-    //int             baselength; // length of the path without extension
     imagetype_t     type;
+    imageflags_t    flags;
     int             width, height; // source image
     int             upload_width, upload_height; // after power of two and picmip
     int             registration_sequence; // 0 = free
@@ -106,7 +113,6 @@ typedef struct image_s {
 #else
     byte            *pixels[4]; // mip levels
 #endif
-    imageflags_t    flags;
 } image_t;
 
 #define MAX_RIMAGES     1024
@@ -133,42 +139,26 @@ qhandle_t R_RegisterSkin( const char *name );
 qhandle_t R_RegisterPic( const char *name );
 qhandle_t R_RegisterFont( const char *name );
 
-qerror_t IMG_LoadPCX( const char *filename, byte **pic, byte *palette,
-                    int *width, int *height );
-qerror_t IMG_WritePCX( qhandle_t f, const char *filename, const byte *data, int width,
-                    int height, int rowbytes, byte *palette ); 
-
-qerror_t IMG_LoadWAL( const char *filename, byte **pic, byte **tmp,
-                    int *width, int *height );
-
 #if USE_TGA || USE_JPG || USE_PNG
-typedef qerror_t (img_load_t)( const char *, byte **, int *, int * );
 typedef qerror_t (img_save_t)( qhandle_t, const char *, const byte *, int, int, int );
 #endif
 
 #if USE_TGA
-qerror_t IMG_LoadTGA( const char *filename, byte **pic, int *width, int *height );
 qerror_t IMG_SaveTGA( qhandle_t f, const char *filename, const byte *bgr,
                         int width, int height, int unused );
 #endif
 
 #if USE_JPG
-qerror_t IMG_LoadJPG( const char *filename, byte **pic, int *width, int *height );
 qerror_t IMG_SaveJPG( qhandle_t f, const char *filename, const byte *rgb,
                         int width, int height, int quality );
 #endif
 
 #if USE_PNG
-qerror_t IMG_LoadPNG( const char *filename, byte **pic, int *width, int *height );
 qerror_t IMG_SavePNG( qhandle_t f, const char *filename, const byte *rgb,
                         int width, int height, int compression ); 
 #endif
 
 // these are implemented in [gl,sw]_images.c
 void IMG_Unload( image_t *image );
-void IMG_Load( image_t *image, byte *pic, int width, int height,
-                imagetype_t type, imageflags_t flags );
-
-
-
+void IMG_Load( image_t *image, byte *pic, int width, int height );
 

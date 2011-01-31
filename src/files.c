@@ -280,6 +280,21 @@ unsigned FS_HashPath( const char *s, unsigned size ) {
     return hash & ( size - 1 );
 }
 
+#if USE_REF
+unsigned FS_HashPathLen( const char *s, size_t len, unsigned size ) {
+    unsigned hash, c;
+
+    hash = 0;
+    while( *s && len-- ) {
+        c = *s++;
+        c = c == '\\' ? '/' : Q_tolower( c );
+        hash = 127 * hash + c;
+    }
+
+    hash = ( hash >> 20 ) ^ ( hash >> 10 ) ^ hash;
+    return hash & ( size - 1 );
+}
+#endif
 
 // =============================================================================
 
