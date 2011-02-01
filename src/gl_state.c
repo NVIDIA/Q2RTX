@@ -236,6 +236,21 @@ void GL_SetDefaultState( void ) {
     GL_Bits( GLS_DEFAULT );
 }
 
+// for screenshots
+byte *IMG_ReadPixels( qboolean reverse, int *width, int *height ) {
+    byte *pixels;
+
+    pixels = FS_AllocTempMem( gl_config.vidWidth * gl_config.vidHeight * 3 );
+
+    qglReadPixels( 0, 0, gl_config.vidWidth, gl_config.vidHeight,
+        reverse ? GL_BGR : GL_RGB, GL_UNSIGNED_BYTE, pixels );
+
+    *width = gl_config.vidWidth;
+    *height = gl_config.vidHeight;
+
+    return pixels;
+}
+
 void GL_EnableOutlines( void ) {
     if( gls.fp_enabled ) {
         qglDisable( GL_FRAGMENT_PROGRAM_ARB );

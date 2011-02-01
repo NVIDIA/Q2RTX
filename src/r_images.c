@@ -48,7 +48,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
         const char *filename, byte **pic, int *width, int *height )
 
 #define IMG_SAVE( x ) \
-    qerror_t IMG_Save##x( qhandle_t f, const char *filename, \
+    static qerror_t IMG_Save##x( qhandle_t f, const char *filename, \
         const byte *pic, int width, int height, int param )
 
 /*
@@ -1109,6 +1109,188 @@ fail1:
 /*
 =========================================================
 
+SCREEN SHOTS
+
+=========================================================
+*/
+
+#if USE_TGA || USE_JPG || USE_PNG
+
+#if USE_JPG || USE_PNG
+static cvar_t *r_screenshot_format;
+#endif
+#if USE_JPG
+static cvar_t *r_screenshot_quality;
+#endif
+#if USE_PNG
+static cvar_t *r_screenshot_compression;
+#endif
+
+static void make_screenshot( const char *name, const char *ext,
+    qerror_t (*save)( qhandle_t, const char *, const byte *, int, int, int ),
+    qboolean reverse, int param )
+{
+    char        buffer[MAX_OSPATH];
+    byte        *pixels;
+    qerror_t    ret;
+    qhandle_t   f;
+    int         i;
+    int         w, h;
+
+    if( name && *name ) {
+        // save to user supplied name
+        f = FS_EasyOpenFile( buffer, sizeof( buffer ), FS_MODE_WRITE,
+            SCREENSHOTS_DIRECTORY "/", name, ext );
+        if( !f ) {
+            return;
+        }
+    } else {
+        // find a file name to save it to
+        for( i = 0; i < 1000; i++ ) {
+            Q_snprintf( buffer, sizeof( buffer ), SCREENSHOTS_DIRECTORY "/quake%03d%s", i, ext );
+            ret = FS_FOpenFile( buffer, &f, FS_MODE_WRITE|FS_FLAG_EXCL );
+            if( f ) {
+                break;
+            }
+            if( ret != Q_ERR_EXIST ) {
+                Com_EPrintf( "Couldn't exclusively open %s for writing: %s\n",
+                    buffer, Q_ErrorString( ret ) );
+                return;
+            }
+        }
+
+        if( i == 1000 ) {
+            Com_EPrintf( "All screenshot slots are full.\n" );
+            return;
+        }
+    }
+
+    pixels = IMG_ReadPixels( reverse, &w, &h );
+
+    ret = save( f, buffer, pixels, w, h, param );
+
+    FS_FreeFile( pixels );
+
+    FS_FCloseFile( f );
+
+    if( ret < 0 ) {
+        Com_EPrintf( "Couldn't write %s: %s\n", buffer, Q_ErrorString( ret ) );
+    } else {
+        Com_Printf( "Wrote %s\n", buffer );
+    }
+}
+
+#endif // USE_TGA || USE_JPG || USE_PNG
+
+/*
+==================
+IMG_ScreenShot_f
+
+Standard function to take a screenshot. Saves in default format unless user
+overrides format with a second argument. Screenshot name can't be
+specified. This function is always compiled in to give a meaningful warning
+if no formats are available.
+==================
+*/
+static void IMG_ScreenShot_f( void ) {
+#if USE_JPG || USE_PNG
+    const char *s;
+
+    if( Cmd_Argc() > 2 ) {
+        Com_Printf( "Usage: %s [format]\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    if( Cmd_Argc() > 1 ) {
+        s = Cmd_Argv( 1 );
+    } else {
+        s = r_screenshot_format->string;
+    }
+
+#if USE_JPG
+    if( *s == 'j' ) {
+        make_screenshot( NULL, ".jpg", IMG_SaveJPG, qfalse,
+            r_screenshot_quality->integer );
+        return;
+    }
+#endif
+
+#if USE_PNG
+    if( *s == 'p' ) {
+        make_screenshot( NULL, ".png", IMG_SavePNG, qfalse,
+            r_screenshot_compression->integer );
+        return;
+    }
+#endif
+#endif
+
+#if USE_TGA
+    make_screenshot( NULL, ".tga", IMG_SaveTGA, qtrue, 0 );
+#else
+    Com_Printf( "Can't take screenshot, TGA format not available.\n" );
+#endif
+}
+
+/*
+==================
+IMG_ScreenShotXXX_f
+
+Specialized function to take a screenshot in specified format. Screenshot name
+can be also specified, as well as quality and compression options.
+==================
+*/
+#if USE_TGA
+static void IMG_ScreenShotTGA_f( void )  {
+    if( Cmd_Argc() > 2 ) {
+        Com_Printf( "Usage: %s [name]\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    make_screenshot( Cmd_Argv( 1 ), ".tga", IMG_SaveTGA, qtrue, 0 );
+}
+#endif
+
+#if USE_JPG
+static void IMG_ScreenShotJPG_f( void )  {
+    int quality;
+
+    if( Cmd_Argc() > 3 ) {
+        Com_Printf( "Usage: %s [name] [quality]\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    if( Cmd_Argc() > 2 ) {
+        quality = atoi( Cmd_Argv( 2 ) );
+    } else {
+        quality = r_screenshot_quality->integer;
+    }
+
+    make_screenshot( Cmd_Argv( 1 ), ".jpg", IMG_SaveJPG, qfalse, quality );
+}
+#endif
+
+#if USE_PNG
+static void IMG_ScreenShotPNG_f( void )  {
+    int compression;
+
+    if( Cmd_Argc() > 3 ) {
+        Com_Printf( "Usage: %s [name] [compression]\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    if( Cmd_Argc() > 2 ) {
+        compression = atoi( Cmd_Argv( 2 ) );
+    } else {
+        compression = r_screenshot_compression->integer;
+    }
+
+    make_screenshot( Cmd_Argv( 1 ), ".png", IMG_SavePNG, qfalse, compression );
+}
+#endif
+
+/*
+=========================================================
+
 IMAGE MANAGER
 
 =========================================================
@@ -1736,6 +1918,22 @@ fail:
     Com_Error( ERR_FATAL, "Couldn't load %s: %s", colormap, Q_ErrorString( ret ) );
 }
 
+static const cmdreg_t img_cmd[] = {
+    { "imagelist", IMG_List_f },
+    { "screenshot", IMG_ScreenShot_f },
+#if USE_TGA
+    { "screenshottga", IMG_ScreenShotTGA_f },
+#endif
+#if USE_JPG
+    { "screenshotjpg", IMG_ScreenShotJPG_f },
+#endif
+#if USE_PNG
+    { "screenshotpng", IMG_ScreenShotPNG_f },
+#endif
+
+    { NULL }
+};
+
 void IMG_Init( void ) {
     int i;
 
@@ -1759,9 +1957,21 @@ void IMG_Init( void ) {
         , 0 );
     r_texture_formats->changed = r_texture_formats_changed;
     r_texture_formats_changed( r_texture_formats );
-#endif
 
-    Cmd_AddCommand( "imagelist", IMG_List_f );
+#if USE_JPG
+    r_screenshot_format = Cvar_Get( "gl_screenshot_format", "jpg", 0 );
+#elif USE_PNG
+    r_screenshot_format = Cvar_Get( "gl_screenshot_format", "png", 0 );
+#endif
+#if USE_JPG
+    r_screenshot_quality = Cvar_Get( "gl_screenshot_quality", "100", 0 );
+#endif
+#if USE_PNG
+    r_screenshot_compression = Cvar_Get( "gl_screenshot_compression", "6", 0 );
+#endif
+#endif // USE_PNG || USE_JPG || USE_TGA
+
+    Cmd_Register( img_cmd );
 
     for( i = 0; i < RIMAGES_HASH; i++ ) {
         List_Init( &r_imageHash[i] );
@@ -1772,7 +1982,7 @@ void IMG_Init( void ) {
 }
 
 void IMG_Shutdown( void ) {
-    Cmd_RemoveCommand( "imagelist" );
+    Cmd_Deregister( img_cmd );
     r_numImages = 0;
 }
 

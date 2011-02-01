@@ -139,26 +139,8 @@ qhandle_t R_RegisterSkin( const char *name );
 qhandle_t R_RegisterPic( const char *name );
 qhandle_t R_RegisterFont( const char *name );
 
-#if USE_TGA || USE_JPG || USE_PNG
-typedef qerror_t (img_save_t)( qhandle_t, const char *, const byte *, int, int, int );
-#endif
-
-#if USE_TGA
-qerror_t IMG_SaveTGA( qhandle_t f, const char *filename, const byte *bgr,
-                        int width, int height, int unused );
-#endif
-
-#if USE_JPG
-qerror_t IMG_SaveJPG( qhandle_t f, const char *filename, const byte *rgb,
-                        int width, int height, int quality );
-#endif
-
-#if USE_PNG
-qerror_t IMG_SavePNG( qhandle_t f, const char *filename, const byte *rgb,
-                        int width, int height, int compression ); 
-#endif
-
 // these are implemented in [gl,sw]_images.c
 void IMG_Unload( image_t *image );
 void IMG_Load( image_t *image, byte *pic, int width, int height );
+byte *IMG_ReadPixels( qboolean reverse, int *width, int *height );
 
