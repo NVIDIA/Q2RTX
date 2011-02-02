@@ -88,7 +88,10 @@ static qerror_t _IMG_LoadPCX( byte *rawdata, size_t rawlen,
 
     w = LittleShort( pcx->xmax ) + 1;
     h = LittleShort( pcx->ymax ) + 1;
-    if( pcx->encoding != 1 || pcx->bits_per_pixel != 8 || w > 640 || h > 480 ) {
+    if( pcx->encoding != 1 || pcx->bits_per_pixel != 8 ) {
+        return Q_ERR_INVALID_FORMAT;
+    }
+    if( w > 640 || h > 480 || w * h > MAX_PALETTED_PIXELS ) {
         return Q_ERR_INVALID_FORMAT;
     }
 
@@ -238,7 +241,7 @@ IMG_LOAD( WAL ) {
     h = LittleLong( mt->height );
     offset = LittleLong( mt->offsets[0] );
 
-    if( w < 1 || h < 1 || w > MAX_TEXTURE_SIZE || h > MAX_TEXTURE_SIZE ) {
+    if( w < 1 || h < 1 || w > 512 || h > 512 || w * h > MAX_PALETTED_PIXELS ) {
         return Q_ERR_INVALID_FORMAT;
     }
 

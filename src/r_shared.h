@@ -56,6 +56,9 @@ IMAGE MANAGER
 #define MAX_TEXTURE_SIZE            512
 #endif
 
+// size of GL_Upload8 internal buffer
+#define MAX_PALETTED_PIXELS         (512*256)
+
 /*
 
   skins will be outline flood filled and mip mapped

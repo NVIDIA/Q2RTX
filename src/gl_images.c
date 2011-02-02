@@ -744,15 +744,15 @@ Returns has_alpha
 ===============
 */
 static qboolean GL_Upload8( byte *data, int width, int height, qboolean mipmap ) {
-    byte    buffer[512*256*4];
+    byte    buffer[MAX_PALETTED_PIXELS*4];
     byte    *dest;
     int     i, s;
     int     p;
 
     s = width * height;
-    if( s > 512*256 ) {
-        Com_Error( ERR_FATAL, "GL_Upload8: %s is too large: %dx%d",
-            upload_image->name, width, height );
+    if( s > MAX_PALETTED_PIXELS ) {
+        // should never happen
+        Com_Error( ERR_FATAL, "GL_Upload8: too large" );
     }
 
     dest = buffer;
