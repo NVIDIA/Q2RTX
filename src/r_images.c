@@ -1352,8 +1352,10 @@ static void IMG_List_f( void ) {
         if( !image->registration_sequence )
             continue;
 
-        Com_Printf( "%c %4i %4i %s: %s\n",
+        Com_Printf( "%c%c%c %4i %4i %s: %s\n",
             types[image->type],
+            ( image->flags & if_transparent ) ? 'T' : ' ',
+            ( image->flags & if_scrap ) ? 'S' : ' ',
             image->upload_width,
             image->upload_height,
             ( image->flags & if_paletted ) ? "PAL" : "RGB",
