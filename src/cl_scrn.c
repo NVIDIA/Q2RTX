@@ -1443,7 +1443,7 @@ static void draw_layout_string( const char *s ) {
             }
             token = cl.configstrings[CS_IMAGES + value];
             if( token[0] ) {
-                R_DrawPic( x, y, R_RegisterPic( token ) );
+                R_DrawPic( x, y, cl.image_precache[value] );
             }
             continue;
         }
