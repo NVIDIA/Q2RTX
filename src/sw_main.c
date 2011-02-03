@@ -229,8 +229,8 @@ void R_UnRegister (void)
 }
 
 void R_ModeChanged( int width, int height, int flags, int rowbytes, void *pixels ) {
-    vid.width = width;
-    vid.height = height;
+    vid.width = width > MAXWIDTH ? MAXWIDTH : width;
+    vid.height = height > MAXHEIGHT ? MAXHEIGHT : height;
     vid.buffer = pixels;
     vid.rowbytes = rowbytes;
 
