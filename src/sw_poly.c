@@ -33,20 +33,20 @@ typedef struct
     unsigned  u, v;
 } spanletvars_t;
 
-spanletvars_t s_spanletvars;
+static spanletvars_t s_spanletvars;
 
 static int r_polyblendcolor;
 
 static espan_t  *s_polygon_spans;
 
-polydesc_t  r_polydesc;
+static polydesc_t  r_polydesc;
 
 mface_t *r_alpha_surfaces;
 
 extern int *r_turb_turb;
 
 static int      clip_current;
-vec5_t  r_clip_verts[2][MAXWORKINGVERTS+2];
+static vec5_t   r_clip_verts[2][MAXWORKINGVERTS+2];
 
 static int      s_minindex, s_maxindex;
 
@@ -55,7 +55,7 @@ static void R_DrawPoly( int iswater );
 /*
 ** R_DrawSpanletOpaque
 */
-void R_DrawSpanletOpaque( void )
+static void R_DrawSpanletOpaque( void )
 {
     unsigned btemp;
 
@@ -87,7 +87,7 @@ void R_DrawSpanletOpaque( void )
 /*
 ** R_DrawSpanletTurbulentStipple33
 */
-void R_DrawSpanletTurbulentStipple33( void )
+static void R_DrawSpanletTurbulentStipple33( void )
 {
     unsigned btemp;
     int      sturb, tturb;
@@ -144,7 +144,7 @@ void R_DrawSpanletTurbulentStipple33( void )
 /*
 ** R_DrawSpanletTurbulentStipple66
 */
-void R_DrawSpanletTurbulentStipple66( void )
+static void R_DrawSpanletTurbulentStipple66( void )
 {
     unsigned btemp;
     int      sturb, tturb;
@@ -231,7 +231,7 @@ void R_DrawSpanletTurbulentStipple66( void )
 /*
 ** R_DrawSpanletTurbulentBlended
 */
-void R_DrawSpanletTurbulentBlended66( void )
+static void R_DrawSpanletTurbulentBlended66( void )
 {
     unsigned btemp;
     int      sturb, tturb;
@@ -255,7 +255,7 @@ void R_DrawSpanletTurbulentBlended66( void )
     } while ( --s_spanletvars.spancount > 0 );
 }
 
-void R_DrawSpanletTurbulentBlended33( void )
+static void R_DrawSpanletTurbulentBlended33( void )
 {
     unsigned btemp;
     int      sturb, tturb;
@@ -282,7 +282,7 @@ void R_DrawSpanletTurbulentBlended33( void )
 /*
 ** R_DrawSpanlet33
 */
-void R_DrawSpanlet33( void )
+static void R_DrawSpanlet33( void )
 {
     unsigned btemp;
 
@@ -311,7 +311,7 @@ void R_DrawSpanlet33( void )
     } while (--s_spanletvars.spancount > 0);
 }
 
-void R_DrawSpanletConstant33( void )
+static void R_DrawSpanletConstant33( void )
 {
     do
     {
@@ -329,7 +329,7 @@ void R_DrawSpanletConstant33( void )
 /*
 ** R_DrawSpanlet66
 */
-void R_DrawSpanlet66( void )
+static void R_DrawSpanlet66( void )
 {
     unsigned btemp;
 
@@ -361,7 +361,7 @@ void R_DrawSpanlet66( void )
 /*
 ** R_DrawSpanlet33Stipple
 */
-void R_DrawSpanlet33Stipple( void )
+static void R_DrawSpanlet33Stipple( void )
 {
     unsigned btemp;
     byte    *pdest = s_spanletvars.pdest;
@@ -420,7 +420,7 @@ void R_DrawSpanlet33Stipple( void )
 /*
 ** R_DrawSpanlet66Stipple
 */
-void R_DrawSpanlet66Stipple( void )
+static void R_DrawSpanlet66Stipple( void )
 {
     unsigned btemp;
     byte    *pdest = s_spanletvars.pdest;
@@ -507,7 +507,7 @@ void R_DrawSpanlet66Stipple( void )
 ** Clips the winding at clip_verts[clip_current] and changes clip_current
 ** Throws out the back side
 */
-int R_ClipPolyFace (int nump, clipplane_t *pclipplane)
+static int R_ClipPolyFace (int nump, clipplane_t *pclipplane)
 {
     int     i, outcount;
     float   dists[MAXWORKINGVERTS+3];
@@ -583,7 +583,7 @@ int R_ClipPolyFace (int nump, clipplane_t *pclipplane)
 ** R_PolygonDrawSpans
 */
 // PGM - iswater was qboolean. changed to allow passing more flags
-void R_PolygonDrawSpans(espan_t *pspan, int iswater )
+static void R_PolygonDrawSpans(espan_t *pspan, int iswater )
 {
     int         count;
     fixed16_t   snext, tnext;
@@ -751,7 +751,7 @@ NextSpan:
 ** Goes through the polygon and scans the left edge, filling in 
 ** screen coordinate data for the spans
 */
-void R_PolygonScanLeftEdge (void)
+static void R_PolygonScanLeftEdge (void)
 {
     int         i, v, itop, ibottom, lmaxindex;
     emitpoint_t *pvert, *pnext;
@@ -814,7 +814,7 @@ void R_PolygonScanLeftEdge (void)
 ** Goes through the polygon and scans the right edge, filling in
 ** count values.
 */
-void R_PolygonScanRightEdge (void)
+static void R_PolygonScanRightEdge (void)
 {
     int         i, v, itop, ibottom;
     emitpoint_t *pvert, *pnext;
@@ -894,7 +894,7 @@ void R_PolygonScanRightEdge (void)
 ** R_ClipAndDrawPoly
 */
 // PGM - isturbulent was qboolean. changed to int to allow passing more flags
-void R_ClipAndDrawPoly ( float alpha, int isturbulent, qboolean textured )
+static void R_ClipAndDrawPoly ( float alpha, int isturbulent, qboolean textured )
 {
     emitpoint_t outverts[MAXWORKINGVERTS+3], *pout;
     float       *pv;
@@ -1006,7 +1006,7 @@ void R_ClipAndDrawPoly ( float alpha, int isturbulent, qboolean textured )
 /*
 ** R_BuildPolygonFromSurface
 */
-void R_BuildPolygonFromSurface(mface_t *fa)
+static void R_BuildPolygonFromSurface(mface_t *fa)
 {
     int         i, lnumverts;
     medge_t     *pedges;
@@ -1081,7 +1081,7 @@ void R_BuildPolygonFromSurface(mface_t *fa)
 /*
 ** R_PolygonCalculateGradients
 */
-void R_PolygonCalculateGradients (void)
+static void R_PolygonCalculateGradients (void)
 {
     vec3_t      p_normal, p_saxis, p_taxis;
     float       distinv;
@@ -1248,5 +1248,82 @@ void R_IMFlatShadedQuad( vec3_t a, vec3_t b, vec3_t c, vec3_t d, int color, floa
     r_polyblendcolor = color;
 
     R_ClipAndDrawPoly( alpha, qfalse, qfalse );
+}
+
+/*
+** R_DrawSprite
+**
+** Draw currententity / currentmodel as a single texture
+** mapped polygon
+*/
+void R_DrawSprite (void)
+{
+    vec5_t      *pverts;
+    vec3_t      left, up, right, down;
+    mspriteframe_t  *frame;
+
+    frame = &currentmodel->spriteframes[
+        currententity->frame % currentmodel->numframes];
+
+    r_polydesc.pixels       = frame->image->pixels[0];
+    r_polydesc.pixel_width  = frame->width;
+    r_polydesc.pixel_height = frame->height;
+    r_polydesc.dist         = 0;
+
+    // generate the sprite's axes, completely parallel to the viewplane.
+    VectorCopy (vup, r_polydesc.vup);
+    VectorCopy (vright, r_polydesc.vright);
+    VectorCopy (vpn, r_polydesc.vpn);
+
+// build the sprite poster in worldspace
+    VectorScale (r_polydesc.vright,
+        frame->width - frame->origin_x, right);
+    VectorScale (r_polydesc.vup,
+        frame->height - frame->origin_y, up);
+    VectorScale (r_polydesc.vright,
+        -frame->origin_x, left);
+    VectorScale (r_polydesc.vup,
+        -frame->origin_y, down);
+
+    // invert UP vector for sprites
+    VectorNegate( r_polydesc.vup, r_polydesc.vup );
+
+    pverts = r_clip_verts[0];
+
+    pverts[0][0] = r_entorigin[0] + up[0] + left[0];
+    pverts[0][1] = r_entorigin[1] + up[1] + left[1];
+    pverts[0][2] = r_entorigin[2] + up[2] + left[2];
+    pverts[0][3] = 0;
+    pverts[0][4] = 0;
+
+    pverts[1][0] = r_entorigin[0] + up[0] + right[0];
+    pverts[1][1] = r_entorigin[1] + up[1] + right[1];
+    pverts[1][2] = r_entorigin[2] + up[2] + right[2];
+    pverts[1][3] = frame->width;
+    pverts[1][4] = 0;
+
+    pverts[2][0] = r_entorigin[0] + down[0] + right[0];
+    pverts[2][1] = r_entorigin[1] + down[1] + right[1];
+    pverts[2][2] = r_entorigin[2] + down[2] + right[2];
+    pverts[2][3] = frame->width;
+    pverts[2][4] = frame->height;
+
+    pverts[3][0] = r_entorigin[0] + down[0] + left[0];
+    pverts[3][1] = r_entorigin[1] + down[1] + left[1];
+    pverts[3][2] = r_entorigin[2] + down[2] + left[2];
+    pverts[3][3] = 0;
+    pverts[3][4] = frame->height;
+
+    r_polydesc.nump = 4;
+    r_polydesc.s_offset = ( r_polydesc.pixel_width  >> 1);
+    r_polydesc.t_offset = ( r_polydesc.pixel_height >> 1);
+    VectorCopy( modelorg, r_polydesc.viewer_position );
+
+    r_polydesc.stipple_parity = 1;
+    if ( currententity->flags & RF_TRANSLUCENT )
+        R_ClipAndDrawPoly ( currententity->alpha, qfalse, qtrue );
+    else
+        R_ClipAndDrawPoly ( 1.0F, qfalse, qtrue );
+    r_polydesc.stipple_parity = 0;
 }
 

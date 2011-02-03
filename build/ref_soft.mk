@@ -32,7 +32,6 @@ SRCFILES+=sw_aclip.c  \
 	   sw_polyse.c \
 	   sw_rast.c   \
 	   sw_scan.c   \
-	   sw_sprite.c \
 	   sw_surf.c   \
 	   sw_sird.c   \
 	   sw_sky.c
