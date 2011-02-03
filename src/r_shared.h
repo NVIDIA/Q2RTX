@@ -145,5 +145,9 @@ qhandle_t R_RegisterFont( const char *name );
 // these are implemented in [gl,sw]_images.c
 void IMG_Unload( image_t *image );
 void IMG_Load( image_t *image, byte *pic, int width, int height );
+#if USE_REF == REF_SOFT
+byte *IMG_ReadPixels( byte **palette, int *width, int *height, int *rowbytes );
+#else
 byte *IMG_ReadPixels( qboolean reverse, int *width, int *height );
+#endif
 

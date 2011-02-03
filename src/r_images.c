@@ -161,20 +161,15 @@ IMG_LOAD( PCX ) {
     return _IMG_LoadPCX( rawdata, rawlen, pic, NULL, width, height );
 }
 
-#if 0
-/*
-==============
-IMG_SavePCX
-==============
-*/
-qerror_t IMG_SavePCX( const char *filename, const byte *data, int width,
-    int height, int rowbytes, byte *palette ) 
+#if USE_REF == REF_SOFT
+static qerror_t _IMG_SavePCX( qhandle_t f, const byte *data, \
+    const byte *palette, int width, int height, int rowbytes )
 {
     int         i, j;
     size_t      len;
     dpcx_t      *pcx;
     byte        *pack;
-    qerror_t    ret;
+    ssize_t     ret;
 
     pcx = FS_AllocTempMem( width * height * 2 + 1000 );
     pcx->manufacturer = 0x0a;   // PCX id
@@ -204,18 +199,27 @@ qerror_t IMG_SavePCX( const char *filename, const byte *data, int width,
         }
         data += rowbytes - width;
     }
-            
+
 // write the palette
     *pack++ = 0x0c;     // palette ID byte
-    for( i = 0; i < 768; i++ )
-        *pack++ = *palette++;
+    for( i = 0; i < 256; i++ ) {
+        pack[0] = palette[0];
+        pack[1] = palette[1];
+        pack[2] = palette[2];
+        pack += 3;
+        palette += 4;
+    }
  
 // write output file 
     len = pack - ( byte * )pcx;
-    ret = FS_WriteFile( filename, pcx, len );
+    ret = FS_Write( pcx, len, f );
     FS_FreeFile( pcx );
 
-    return ret;
+    if( ret < 0 ) {
+        return ret;
+    }
+
+    return Q_ERR_SUCCESS;
 }
 #endif
 
@@ -1117,8 +1121,6 @@ SCREEN SHOTS
 =========================================================
 */
 
-#if USE_TGA || USE_JPG || USE_PNG
-
 #if USE_JPG || USE_PNG
 static cvar_t *r_screenshot_format;
 #endif
@@ -1129,50 +1131,68 @@ static cvar_t *r_screenshot_quality;
 static cvar_t *r_screenshot_compression;
 #endif
 
-static void make_screenshot( const char *name, const char *ext,
-    qerror_t (*save)( qhandle_t, const char *, const byte *, int, int, int ),
-    qboolean reverse, int param )
+#if USE_TGA || USE_JPG || USE_PNG || USE_REF == REF_SOFT
+static qhandle_t create_screenshot( char *buffer, size_t size,
+    const char *name, const char *ext )
+{
+    qhandle_t f;
+    qerror_t ret;
+    int i;
+
+    if( name && *name ) {
+        // save to user supplied name
+        return FS_EasyOpenFile( buffer, size, FS_MODE_WRITE,
+            SCREENSHOTS_DIRECTORY "/", name, ext );
+    }
+
+    // find a file name to save it to
+    for( i = 0; i < 1000; i++ ) {
+        Q_snprintf( buffer, size, SCREENSHOTS_DIRECTORY "/quake%03d%s", i, ext );
+        ret = FS_FOpenFile( buffer, &f, FS_MODE_WRITE|FS_FLAG_EXCL );
+        if( f ) {
+            return f;
+        }
+        if( ret != Q_ERR_EXIST ) {
+            Com_EPrintf( "Couldn't exclusively open %s for writing: %s\n",
+                buffer, Q_ErrorString( ret ) );
+            return 0;
+        }
+    }
+
+    Com_EPrintf( "All screenshot slots are full.\n" );
+    return 0;
+}
+
+static void make_screenshot( const char *name, const char *ext
+#if USE_REF == REF_GL
+    , qerror_t (*save)( qhandle_t, const char *, const byte *, int, int, int ),
+    qboolean reverse, int param
+#endif
+    )
 {
     char        buffer[MAX_OSPATH];
     byte        *pixels;
     qerror_t    ret;
     qhandle_t   f;
-    int         i;
     int         w, h;
+#if USE_REF == REF_SOFT
+    int         rowbytes;
+    byte        *palette;
+#endif
 
-    if( name && *name ) {
-        // save to user supplied name
-        f = FS_EasyOpenFile( buffer, sizeof( buffer ), FS_MODE_WRITE,
-            SCREENSHOTS_DIRECTORY "/", name, ext );
-        if( !f ) {
-            return;
-        }
-    } else {
-        // find a file name to save it to
-        for( i = 0; i < 1000; i++ ) {
-            Q_snprintf( buffer, sizeof( buffer ), SCREENSHOTS_DIRECTORY "/quake%03d%s", i, ext );
-            ret = FS_FOpenFile( buffer, &f, FS_MODE_WRITE|FS_FLAG_EXCL );
-            if( f ) {
-                break;
-            }
-            if( ret != Q_ERR_EXIST ) {
-                Com_EPrintf( "Couldn't exclusively open %s for writing: %s\n",
-                    buffer, Q_ErrorString( ret ) );
-                return;
-            }
-        }
-
-        if( i == 1000 ) {
-            Com_EPrintf( "All screenshot slots are full.\n" );
-            return;
-        }
+    f = create_screenshot( buffer, sizeof( buffer ), name, ext );
+    if( !f ) {
+        return;
     }
 
+#if USE_REF == REF_GL
     pixels = IMG_ReadPixels( reverse, &w, &h );
-
     ret = save( f, buffer, pixels, w, h, param );
-
     FS_FreeFile( pixels );
+#else
+    pixels = IMG_ReadPixels( &palette, &w, &h, &rowbytes );
+    ret = _IMG_SavePCX( f, pixels, palette, w, h, rowbytes );
+#endif
 
     FS_FCloseFile( f );
 
@@ -1182,8 +1202,7 @@ static void make_screenshot( const char *name, const char *ext,
         Com_Printf( "Wrote %s\n", buffer );
     }
 }
-
-#endif // USE_TGA || USE_JPG || USE_PNG
+#endif // USE_TGA || USE_JPG || USE_PNG || USE_REF == REF_SOFT
 
 /*
 ==================
@@ -1225,9 +1244,11 @@ static void IMG_ScreenShot_f( void ) {
         return;
     }
 #endif
-#endif
+#endif // USE_JPG || USE_PNG
 
-#if USE_TGA
+#if USE_REF == REF_SOFT
+    make_screenshot( NULL, ".pcx" );
+#elif USE_TGA
     make_screenshot( NULL, ".tga", IMG_SaveTGA, qtrue, 0 );
 #else
     Com_Printf( "Can't take screenshot, TGA format not available.\n" );
@@ -1242,6 +1263,17 @@ Specialized function to take a screenshot in specified format. Screenshot name
 can be also specified, as well as quality and compression options.
 ==================
 */
+#if USE_REF == REF_SOFT
+static void IMG_ScreenShotPCX_f( void )  {
+    if( Cmd_Argc() > 2 ) {
+        Com_Printf( "Usage: %s [name]\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    make_screenshot( Cmd_Argv( 1 ), ".pcx" );
+}
+#endif
+
 #if USE_TGA
 static void IMG_ScreenShotTGA_f( void )  {
     if( Cmd_Argc() > 2 ) {
@@ -1926,6 +1958,9 @@ fail:
 static const cmdreg_t img_cmd[] = {
     { "imagelist", IMG_List_f },
     { "screenshot", IMG_ScreenShot_f },
+#if USE_REF == REF_SOFT
+    { "screenshotpcx", IMG_ScreenShotPCX_f },
+#endif
 #if USE_TGA
     { "screenshottga", IMG_ScreenShotTGA_f },
 #endif

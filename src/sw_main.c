@@ -213,7 +213,6 @@ void R_Register (void)
 
     vid_gamma = Cvar_Get( "vid_gamma", "1.0", CVAR_ARCHIVE );
 
-    Cmd_AddCommand( "screenshot", R_ScreenShot_f );
     Cmd_AddCommand( "scdump", D_SCDump_f );
 
 //PGM
@@ -895,6 +894,14 @@ void R_CalcPalette (void)
     }
 
     R_GammaCorrectAndSetPalette( palette );
+}
+
+byte *IMG_ReadPixels( byte **palette, int *width, int *height, int *rowbytes ) {
+    *palette = sw_state.currentpalette;
+    *width = vid.width;
+    *height = vid.height;
+    *rowbytes = vid.rowbytes;
+    return vid.buffer;
 }
 
 //=======================================================================
