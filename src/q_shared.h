@@ -225,6 +225,10 @@ static inline float Q_fabs( float f ) {
         ((c)[0]=(a)[0]+(b)[0], \
          (c)[1]=(a)[1]+(b)[1], \
          (c)[2]=(a)[2]+(b)[2])
+#define VectorAdd3(a,b,c,d) \
+        ((d)[0]=(a)[0]+(b)[0]+(c)[0], \
+         (d)[1]=(a)[1]+(b)[1]+(c)[1], \
+         (d)[2]=(a)[2]+(b)[2]+(c)[2])
 #define VectorCopy(a,b)     ((b)[0]=(a)[0],(b)[1]=(a)[1],(b)[2]=(a)[2])
 #define VectorClear(a)      ((a)[0]=(a)[1]=(a)[2]=0)
 #define VectorNegate(a,b)   ((b)[0]=-(a)[0],(b)[1]=-(a)[1],(b)[2]=-(a)[2])

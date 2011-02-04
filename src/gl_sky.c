@@ -274,9 +274,9 @@ void R_ClearSkyBox( void ) {
 }
 
 
-static void MakeSkyVec (float s, float t, int axis)
+static void MakeSkyVec (float s, float t, int axis, vec_t *v)
 {
-    vec3_t  v, b;
+    vec3_t  b;
     int     j, k;
 
     b[0] = s*4800;//2300;
@@ -305,9 +305,8 @@ static void MakeSkyVec (float s, float t, int axis)
     else if (t > sky_max)
         t = sky_max;
 
-    t = 1.0 - t;
-    qglTexCoord2f (s, t);
-    qglVertex3fv (v);
+    v[3] = s;
+    v[4] = 1.0 - t;
 }
 
 #define SKY_VISIBLE( side ) \
@@ -320,8 +319,9 @@ R_DrawSkyBox
 ==============
 */
 void R_DrawSkyBox( void ) {
-    int        i;
     static const int skytexorder[6] = {0,2,1,3,4,5};
+    vec5_t verts[4];
+    int i;
 
     if( skyrotate ) {
         // hack, forces full sky to draw when rotating
@@ -352,6 +352,9 @@ void R_DrawSkyBox( void ) {
     GL_TexEnv( GL_REPLACE );
     GL_Bits( GLS_DEFAULT );
 
+    qglVertexPointer( 3, GL_FLOAT, 5*4, &verts[0][0] );
+    qglTexCoordPointer( 2, GL_FLOAT, 5*4, &verts[0][3] );
+
     for( i = 0; i < 6; i++ ) {
         if( !SKY_VISIBLE( i ) ) {
             continue;
@@ -359,13 +362,13 @@ void R_DrawSkyBox( void ) {
 
         GL_BindTexture (sky_images[skytexorder[i]]);
 
-        qglBegin (GL_QUADS);
-        MakeSkyVec (skymins[0][i], skymins[1][i], i);
-        MakeSkyVec (skymins[0][i], skymaxs[1][i], i);
-        MakeSkyVec (skymaxs[0][i], skymaxs[1][i], i);
-        MakeSkyVec (skymaxs[0][i], skymins[1][i], i);
-        qglEnd ();
+        MakeSkyVec (skymaxs[0][i], skymins[1][i], i, verts[0]);
+        MakeSkyVec (skymins[0][i], skymins[1][i], i, verts[1]);
+        MakeSkyVec (skymaxs[0][i], skymaxs[1][i], i, verts[2]);
+        MakeSkyVec (skymins[0][i], skymaxs[1][i], i, verts[3]);
+        qglDrawArrays( GL_TRIANGLE_STRIP, 0, 4 );
     }
+
     qglPopMatrix ();
 }
 

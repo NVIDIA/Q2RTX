@@ -60,12 +60,12 @@ void GL_Flush2D( void ) {
     if( qglLockArraysEXT ) {
         qglLockArraysEXT( 0, tess.numverts );
     }
-   
-    qglDrawArrays( GL_QUADS, 0, tess.numverts );
+
+    qglDrawElements( GL_TRIANGLES, tess.numindices, GL_UNSIGNED_INT, tess.indices );
 
     if( gl_showtris->integer ) {
         GL_EnableOutlines();
-        qglDrawArrays( GL_QUADS, 0, tess.numverts );
+        qglDrawElements( GL_TRIANGLES, tess.numindices, GL_UNSIGNED_INT, tess.indices );
         GL_DisableOutlines();
     }
 
@@ -77,6 +77,7 @@ void GL_Flush2D( void ) {
 
     c.batchesDrawn2D++;
 
+    tess.numindices = 0;
     tess.numverts = 0;
     tess.texnum[0] = 0;
     tess.flags = 0;
@@ -172,8 +173,10 @@ void GL_DrawBeams( void ) {
     color_t color;
     vec_t *dst_vert;
     uint32_t *dst_color;
+    int *dst_indices;
     vec_t length;
     int numverts;
+    int numindices;
     entity_t *ent;
     int i;
 
@@ -184,12 +187,13 @@ void GL_DrawBeams( void ) {
     GL_BindTexture( TEXNUM_BEAM );
     GL_TexEnv( GL_MODULATE );
     GL_Bits( GLS_BLEND_BLEND | GLS_DEPTHMASK_FALSE );
+
     qglEnableClientState( GL_COLOR_ARRAY );
     qglColorPointer( 4, GL_UNSIGNED_BYTE, 0, tess.colors );
     qglTexCoordPointer( 2, GL_FLOAT, 20, tess.vertices + 3 );
     qglVertexPointer( 3, GL_FLOAT, 20, tess.vertices );
 
-    numverts = 0;
+    numverts = numindices = 0;
     for( i = 0, ent = glr.fd.entities; i < glr.fd.num_entities; i++, ent++ ) {
         if( !( ent->flags & RF_BEAM ) ) {
             continue;
@@ -200,8 +204,9 @@ void GL_DrawBeams( void ) {
         VectorSubtract( end, start, d1 );
         VectorSubtract( glr.fd.vieworg, start, d2 );
         CrossProduct( d1, d2, d3 );
-        VectorNormalize( d3 );
-        VectorScale( d3, ent->frame*1.2f, d3 );
+        length = VectorLength( d3 );
+        length = ent->frame * 1.2f / length;
+        VectorScale( d3, length, d3 );
 
         length = VectorLength( d1 );
 
@@ -212,9 +217,12 @@ void GL_DrawBeams( void ) {
         }
         color[3] = 255 * ent->alpha;
 
-        if( numverts + 4 > TESS_MAX_VERTICES ) {
-            qglDrawArrays( GL_QUADS, 0, numverts );
-            numverts = 0;
+        if( numverts + 4 > TESS_MAX_VERTICES ||
+            numindices + 6 > TESS_MAX_INDICES )
+        {
+            qglDrawElements( GL_TRIANGLES, numindices,
+                GL_UNSIGNED_INT, tess.indices );
+            numverts = numindices = 0;
         }
 
         dst_vert = tess.vertices + numverts * 5;
@@ -234,10 +242,20 @@ void GL_DrawBeams( void ) {
         dst_color[2] = *( uint32_t * )color;
         dst_color[3] = *( uint32_t * )color;
 
+        dst_indices = tess.indices + numindices;
+        dst_indices[0] = numverts + 0;
+        dst_indices[1] = numverts + 2;
+        dst_indices[2] = numverts + 3;
+        dst_indices[3] = numverts + 0;
+        dst_indices[4] = numverts + 1;
+        dst_indices[5] = numverts + 2;
+
         numverts += 4;
+        numindices += 6;
     }
-   
-    qglDrawArrays( GL_QUADS, 0, numverts );
+
+    qglDrawElements( GL_TRIANGLES, numindices,
+        GL_UNSIGNED_INT, tess.indices );
     qglDisableClientState( GL_COLOR_ARRAY );
 }
 

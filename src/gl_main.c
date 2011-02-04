@@ -223,35 +223,24 @@ glCullResult_t GL_CullLocalBox( const vec3_t origin, vec3_t bounds[2] ) {
 
 #if 0
 void GL_DrawBox( const vec3_t origin, vec3_t bounds[2] ) {
-    static const int indices[2][4] = {
-        { 0, 1, 3, 2 },
-        { 4, 5, 7, 6 }
-    };
+    static const int indices1[4] = { 0, 1, 3, 2 };
+    static const int indices2[4] = { 4, 5, 7, 6 };
+    static const int indices3[8] = { 0, 4, 1, 5, 2, 6, 3, 7 };
     vec3_t points[8];
-    int i, j;
 
     qglDisable( GL_TEXTURE_2D );
-    GL_TexEnv( GL_REPLACE );
     qglDisable( GL_DEPTH_TEST );
+    qglDisableClientState( GL_TEXTURE_COORD_ARRAY );
     qglColor4f( 1, 1, 1, 1 );
 
     make_box_points( origin, bounds, points );
 
-    for( i = 0; i < 2; i++ ) {
-        qglBegin( GL_LINE_LOOP );
-        for( j = 0; j < 4; j++ ) {
-            qglVertex3fv( points[ indices[i][j] ] );
-        }
-        qglEnd();
-    }
+    qglVertexPointer( 3, GL_FLOAT, 0, points );
+    qglDrawElements( GL_LINE_LOOP, 4, GL_UNSIGNED_INT, indices1 );
+    qglDrawElements( GL_LINE_LOOP, 4, GL_UNSIGNED_INT, indices2 );
+    qglDrawElements( GL_LINES, 8, GL_UNSIGNED_INT, indices3 );
 
-    qglBegin( GL_LINES );
-    for( i = 0; i < 4; i++ ) {
-        qglVertex3fv( points[ i     ] );
-        qglVertex3fv( points[ i + 4 ] );
-    }
-    qglEnd();
-    
+    qglEnableClientState( GL_TEXTURE_COORD_ARRAY );
     qglEnable( GL_DEPTH_TEST );
     qglEnable( GL_TEXTURE_2D );
 }
@@ -296,22 +285,16 @@ qboolean GL_AllocBlock( int width, int height, int *inuse,
 }
 
 static void GL_DrawSpriteModel( model_t *model ) {
-    vec3_t point;
+    static const vec_t tcoords[8] = { 0, 1, 0, 0, 1, 1, 1, 0 };
     entity_t *e = glr.ent;
-    mspriteframe_t *frame;
-    image_t *image;
-    int bits;
-    float alpha;
+    mspriteframe_t *frame = &model->spriteframes[e->frame % model->numframes];
+    image_t *image = frame->image;
+    float alpha = ( e->flags & RF_TRANSLUCENT ) ? e->alpha : 1;
+    int bits = GLS_DEPTHMASK_FALSE;
+    vec3_t up, down, left, right;
+    vec3_t points[4];
 
-    frame = &model->spriteframes[e->frame % model->numframes];
-    image = frame->image;
-
-    GL_TexEnv( GL_MODULATE );
-
-    alpha = ( e->flags & RF_TRANSLUCENT ) ? e->alpha : 1.0f;
-
-    bits = GLS_DEPTHMASK_FALSE;
-    if( alpha == 1.0f ) {
+    if( alpha == 1 ) {
         if( image->flags & if_transparent ) {
             if( image->flags & if_paletted ) {
                 bits |= GLS_ALPHATEST_ENABLE;
@@ -322,60 +305,58 @@ static void GL_DrawSpriteModel( model_t *model ) {
     } else {
         bits |= GLS_BLEND_BLEND;
     }
-    GL_Bits( bits );
 
+    GL_TexEnv( GL_MODULATE );
+    GL_Bits( bits );
+    GL_BindTexture( image->texnum );
     qglColor4f( 1, 1, 1, alpha );
 
-    GL_BindTexture( image->texnum );
+    VectorScale( glr.viewaxis[1], frame->origin_x, left );
+    VectorScale( glr.viewaxis[1], frame->origin_x - frame->width, right );
+    VectorScale( glr.viewaxis[2], -frame->origin_y, down );
+    VectorScale( glr.viewaxis[2], frame->height - frame->origin_y, up );
 
-    qglBegin( GL_QUADS );
+    VectorAdd3( e->origin, down, left, points[0] );
+    VectorAdd3( e->origin, up, left, points[1] );
+    VectorAdd3( e->origin, down, right, points[2] );
+    VectorAdd3( e->origin, up, right, points[3] );
 
-    qglTexCoord2f( 0, 1 );
-    VectorMA( e->origin, -frame->origin_y, glr.viewaxis[2], point );
-    VectorMA( point, frame->origin_x, glr.viewaxis[1], point );
-    qglVertex3fv( point );
-
-    qglTexCoord2f( 0, 0 );
-    VectorMA( e->origin, frame->height - frame->origin_y, glr.viewaxis[2], point );
-    VectorMA( point, frame->origin_x, glr.viewaxis[1], point );
-    qglVertex3fv( point );
-
-    qglTexCoord2f( 1, 0 );
-    VectorMA( e->origin, frame->height - frame->origin_y, glr.viewaxis[2], point );
-    VectorMA( point, frame->origin_x - frame->width, glr.viewaxis[1], point );
-    qglVertex3fv( point );
-
-    qglTexCoord2f( 1, 1 );
-    VectorMA( e->origin, -frame->origin_y, glr.viewaxis[2], point );
-    VectorMA( point, frame->origin_x - frame->width, glr.viewaxis[1], point );
-    qglVertex3fv( point );
-
-    qglEnd();
+    qglTexCoordPointer( 2, GL_FLOAT, 0, tcoords );
+    qglVertexPointer( 3, GL_FLOAT, 0, points );
+    qglDrawArrays( GL_TRIANGLE_STRIP, 0, 4 );
 }
 
 static void GL_DrawNullModel( void ) {
-    vec3_t point;
+    static const color_t colors[6] = {
+        { 255,   0,   0, 255 },
+        { 255,   0,   0, 255 },
+        {   0, 255,   0, 255 },
+        {   0, 255,   0, 255 },
+        {   0,   0, 255, 255 },
+        {   0,   0, 255, 255 }
+    };
+    entity_t *e = glr.ent;
+    vec3_t points[6];
+
+    VectorCopy( e->origin, points[0] );
+    VectorCopy( e->origin, points[2] );
+    VectorCopy( e->origin, points[4] );
+
+    VectorMA( e->origin, 16, glr.entaxis[0], points[1] );
+    VectorMA( e->origin, 16, glr.entaxis[1], points[3] );
+    VectorMA( e->origin, 16, glr.entaxis[2], points[5] );
 
     qglDisable( GL_TEXTURE_2D );
     //qglDisable( GL_DEPTH_TEST );
-    qglBegin( GL_LINES );
+    qglDisableClientState( GL_TEXTURE_COORD_ARRAY );
+    qglEnableClientState( GL_COLOR_ARRAY );
 
-    qglColor3f( 1, 0, 0 );
-    qglVertex3fv( glr.ent->origin );
-    VectorMA( glr.ent->origin, 16, glr.entaxis[0], point );
-    qglVertex3fv( point );
+    qglColorPointer( 4, GL_UNSIGNED_BYTE, 0, colors );
+    qglVertexPointer( 3, GL_FLOAT, 0, points );
+    qglDrawArrays( GL_LINES, 0, 6 );
 
-    qglColor3f( 0, 1, 0 );
-    qglVertex3fv( glr.ent->origin );
-    VectorMA( glr.ent->origin, 16, glr.entaxis[1], point );
-    qglVertex3fv( point );
-
-    qglColor3f( 0, 0, 1 );
-    qglVertex3fv( glr.ent->origin );
-    VectorMA( glr.ent->origin, 16, glr.entaxis[2], point );
-    qglVertex3fv( point );
-
-    qglEnd();
+    qglDisableClientState( GL_COLOR_ARRAY );
+    qglEnableClientState( GL_TEXTURE_COORD_ARRAY );
     //qglEnable( GL_DEPTH_TEST );
     qglEnable( GL_TEXTURE_2D );
 }
@@ -452,24 +433,40 @@ static void GL_DrawEntities( int mask ) {
 }
 
 static void GL_DrawTearing( void ) {
+    vec2_t points[4];
     static int i;
 
-    /* alternate colors to make tearing obvious */
+    // alternate colors to make tearing obvious
     i++;
-    if (i & 1) {
-        qglClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
-        qglColor3f( 1.0f, 1.0f, 1.0f );
+    if( i & 1 ) {
+        qglClearColor( 1, 1, 1, 1 );
+        qglColor4f( 1, 1, 1, 1 );
     } else {
-        qglClearColor( 1.0f, 0.0f, 0.0f, 0.0f );
-        qglColor3f( 1.0f, 0.0f, 0.0f );
+        qglClearColor( 1, 0, 0, 0 );
+        qglColor4f( 1, 0, 0, 1 );
     }
 
+    points[0][0] = 0;
+    points[0][1] = gl_config.vidHeight;
+    points[1][0] = 0;
+    points[1][1] = 0;
+    points[2][0] = gl_config.vidWidth;
+    points[2][1] = gl_config.vidHeight;
+    points[3][0] = gl_config.vidWidth;
+    points[3][1] = 0;
+
     qglClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
     qglDisable( GL_TEXTURE_2D );
-    qglRectf( 0, 0, gl_config.vidWidth, gl_config.vidHeight );
+    qglDisableClientState( GL_TEXTURE_COORD_ARRAY );
+
+    qglVertexPointer( 2, GL_FLOAT, 0, points );
+    qglDrawArrays( GL_TRIANGLE_STRIP, 0, 4 );
+
+    qglEnableClientState( GL_TEXTURE_COORD_ARRAY );
     qglEnable( GL_TEXTURE_2D );
 
-    qglClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
+    qglClearColor( 0, 0, 0, 1 );
 }
 
 static const char *GL_ErrorString( GLenum err ) {

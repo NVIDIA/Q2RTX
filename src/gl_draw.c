@@ -29,8 +29,10 @@ static inline void _GL_StretchPic(
 {
     vec_t *dst_vert;
     uint32_t *dst_color;
-    
+    int *dst_indices;
+
     if( tess.numverts + 4 > TESS_MAX_VERTICES ||
+        tess.numindices + 6 > TESS_MAX_INDICES ||
         ( tess.numverts && tess.texnum[0] != texnum ) )
     {
         GL_Flush2D();
@@ -49,7 +51,15 @@ static inline void _GL_StretchPic(
     dst_color[1] = *( const uint32_t * )color;
     dst_color[2] = *( const uint32_t * )color;
     dst_color[3] = *( const uint32_t * )color;
-    
+
+    dst_indices = tess.indices + tess.numindices;
+    dst_indices[0] = tess.numverts + 0;
+    dst_indices[1] = tess.numverts + 2;
+    dst_indices[2] = tess.numverts + 3;
+    dst_indices[3] = tess.numverts + 0;
+    dst_indices[4] = tess.numverts + 1;
+    dst_indices[5] = tess.numverts + 2;
+
     if( flags & if_transparent ) {
         if( ( flags & if_paletted ) && draw.scale == 1 ) {
             tess.flags |= 1;
@@ -57,11 +67,13 @@ static inline void _GL_StretchPic(
             tess.flags |= 2;
         }
     }
+
     if( color[3] != 255 ) {
         tess.flags |= 2;
     }
 
     tess.numverts += 4;
+    tess.numindices += 6;
 }
 
 #define GL_StretchPic(x,y,w,h,s1,t1,s2,t2,color,image) \
