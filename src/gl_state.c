@@ -213,7 +213,6 @@ void GL_Setup3D( void ) {
 }
 
 void GL_SetDefaultState( void ) {
-    qglDrawBuffer( GL_BACK );
     qglClearColor( 0, 0, 0, 1 );
     qglClearDepth( 1 );
     qglClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
