@@ -24,24 +24,20 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 
 #include "common.h"
+#include "q_list.h"
+#include "files.h"
+#include "r_shared.h"
 #include "d_pcx.h"
 #include "d_wal.h"
-
 #if USE_PNG
 #include <png.h>
 #endif
-
 #if USE_JPG
-#if !USE_PNG
-#include <setjmp.h>
-#endif
 #include <jpeglib.h>
 #endif
-
-#include "q_list.h"
-#include "files.h"
-#include "sys_public.h"
-#include "r_shared.h"
+#if USE_PNG || USE_JPG
+#include <setjmp.h>
+#endif
 
 #define IMG_LOAD( x ) \
     static qerror_t IMG_Load##x( byte *rawdata, size_t rawlen, \
