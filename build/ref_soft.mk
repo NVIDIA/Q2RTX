@@ -43,7 +43,6 @@ ASMFILES+=r_aclipa.s \
 		 r_drawa.s  \
 		 r_edgea.s  \
 		 r_scana.s  \
-		 r_spr8.s   \
 		 r_surf8.s  \
 		 r_varsa.s  \
 		 d_polysa.s \

@@ -129,49 +129,10 @@ reciprocal_table_16:	.long	0x40000000, 0x2aaaaaaa, 0x20000000
 						.long	0x10000000, 0xe38e38e, 0xccccccc, 0xba2e8ba
 						.long	0xaaaaaaa, 0x9d89d89, 0x9249249, 0x8888888
 
-#ifndef NeXT
-	.extern Entry2_16
-	.extern Entry3_16
-	.extern Entry4_16
-	.extern Entry5_16
-	.extern Entry6_16
-	.extern Entry7_16
-	.extern Entry8_16
-	.extern Entry9_16
-	.extern Entry10_16
-	.extern Entry11_16
-	.extern Entry12_16
-	.extern Entry13_16
-	.extern Entry14_16
-	.extern Entry15_16
-	.extern Entry16_16
-#endif
-
 entryvec_table_16:	.long	0, Entry2_16, Entry3_16, Entry4_16
 					.long	Entry5_16, Entry6_16, Entry7_16, Entry8_16
 					.long	Entry9_16, Entry10_16, Entry11_16, Entry12_16
 					.long	Entry13_16, Entry14_16, Entry15_16, Entry16_16
-
-//-------------------------------------------------------
-// local variables for d_parta.s
-//-------------------------------------------------------
-.globl	DP_Count, DP_u, DP_v, DP_32768, DP_Color, DP_Pix, DP_EntryTable
-DP_Count:		.long	0
-DP_u:			.long	0
-DP_v:			.long	0
-DP_32768:		.single	32768.0
-DP_Color:		.long	0
-DP_Pix:			.long	0
-
-
-#if 0
-	.extern DP_1x1
-	.extern DP_2x2
-	.extern DP_3x3
-	.extern DP_4x4
-
-DP_EntryTable:	.long	DP_1x1, DP_2x2, DP_3x3, DP_4x4
-#endif
 
 //
 // advancetable is 8 bytes, but points to the middle of that range so negative
@@ -190,33 +151,6 @@ jumptemp:		.long	0
 .globl	reciprocal_table, entryvec_table
 reciprocal_table:	.long	0x40000000, 0x2aaaaaaa, 0x20000000
 					.long	0x19999999, 0x15555555, 0x12492492
-
-#if 0
-	.extern Entry2_8
-	.extern Entry3_8
-	.extern Entry4_8
-	.extern Entry5_8
-	.extern Entry6_8
-	.extern Entry7_8
-	.extern Entry8_8
-
-entryvec_table:	.long	0, Entry2_8, Entry3_8, Entry4_8
-				.long	Entry5_8, Entry6_8, Entry7_8, Entry8_8
-#endif
-
-#ifndef NeXT
-	.extern Spr8Entry2_8
-	.extern Spr8Entry3_8
-	.extern Spr8Entry4_8
-	.extern Spr8Entry5_8
-	.extern Spr8Entry6_8
-	.extern Spr8Entry7_8
-	.extern Spr8Entry8_8
-#endif
-	
-.globl spr8entryvec_table
-spr8entryvec_table:	.long	0, Spr8Entry2_8, Spr8Entry3_8, Spr8Entry4_8
-					.long	Spr8Entry5_8, Spr8Entry6_8, Spr8Entry7_8, Spr8Entry8_8
 
 #endif	// USE_ASM
 
