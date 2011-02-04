@@ -17,8 +17,12 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
+
+//
 // common.c -- misc functions used in client and server
-#include "com_local.h"
+//
+
+#include "common.h"
 #include "files.h"
 #include "protocol.h"
 #include "q_msg.h"

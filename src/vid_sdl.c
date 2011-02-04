@@ -22,7 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // vid_sdl.c
 //
 
-#include "com_local.h"
+#include "common.h"
 #include "in_public.h"
 #include "vid_public.h"
 #include "vid_local.h"

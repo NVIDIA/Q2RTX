@@ -28,8 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 ** QGL_Shutdown() - unloads libraries, NULLs function pointers
 */
 
-#include "com_local.h"
-#include "in_public.h"
+#include "common.h"
 #include "vid_public.h"
 #include "qgl_local.h"
 #include "qgl_api.h"

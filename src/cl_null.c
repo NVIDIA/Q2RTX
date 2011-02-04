@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // cl_null.c -- this file can stub out the entire client system
 // for pure dedicated servers
 
-#include "com_local.h"
+#include "common.h"
 #include "files.h"
 
 qboolean CL_CheatsOK( void ) {

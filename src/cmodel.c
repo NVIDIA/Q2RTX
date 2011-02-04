@@ -19,7 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // cmodel.c -- model loading
 
-#include "com_local.h"
+#include "common.h"
 #include "q_list.h"
 #include "sys_public.h"
 #include "bsp.h"

@@ -22,7 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // win_local.h
 //
 
-#include "com_local.h"
+#include "common.h"
 #if USE_CLIENT
 #include "key_public.h"
 #include "in_public.h"

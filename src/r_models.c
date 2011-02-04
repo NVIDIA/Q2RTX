@@ -19,7 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#include "com_local.h"
+#include "common.h"
 #include "files.h"
 #include "sys_public.h"
 #include "q_list.h"

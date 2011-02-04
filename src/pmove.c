@@ -18,7 +18,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#include "com_local.h"
+#include <config.h>
+#include "q_shared.h"
 #include "pmove.h"
 
 #define STEPSIZE    18

@@ -43,7 +43,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <machine/param.h>
 #endif
 
-#include "com_local.h"
+#include "common.h"
 #include "q_list.h"
 #include "q_field.h"
 #include "prompt.h"

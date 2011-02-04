@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // images.c -- image reading and writing functions
 //
 
-#include "com_local.h"
+#include "common.h"
 #include "d_pcx.h"
 #include "d_wal.h"
 
