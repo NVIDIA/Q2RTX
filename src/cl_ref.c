@@ -250,8 +250,10 @@ void CL_InitRefresh( void ) {
         Cvar_Set( "_vid_fullscreen", "1" );
     }
 
+    Com_SetLastError( NULL );
+
     if( !R_Init( qtrue ) ) {
-        Com_Error( ERR_FATAL, "Couldn't initialize refresh" );
+        Com_Error( ERR_FATAL, "Couldn't initialize refresh: %s", Com_GetLastError() );
     }
 
     cls.ref_initialized = qtrue;
