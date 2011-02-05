@@ -850,7 +850,8 @@ qboolean R_Init( qboolean total ) {
         return qtrue;
     }
 
-    Com_Printf( "ref_gl " VERSION ", " __DATE__ "\n" );
+    Com_Printf( "------- R_Init -------\n" );
+    Com_DPrintf( "ref_gl " VERSION ", " __DATE__ "\n" );
 
     // initialize OS-specific parts of OpenGL
     // create the window and set up the context
@@ -893,7 +894,7 @@ qboolean R_Init( qboolean total ) {
         Com_WPrintf( "tess.vertices not 16 byte aligned\n" );
     }
 
-    Com_DPrintf( "Finished GL_Init\n" );
+    Com_Printf( "----------------------\n" );
 
     return qtrue;
 

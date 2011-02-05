@@ -2898,7 +2898,7 @@ Unless total is true, reloads paks only up to base dir
 ================
 */
 void FS_Restart( qboolean total ) {
-    Com_Printf( "---------- FS_Restart ----------\n" );
+    Com_Printf( "----- FS_Restart -----\n" );
     
     if( total ) {
         // perform full reset
@@ -2913,7 +2913,7 @@ void FS_Restart( qboolean total ) {
 
     FS_Path_f();
 
-    Com_Printf( "--------------------------------\n" );
+    Com_Printf( "----------------------\n" );
 }
 
 /*
@@ -3029,7 +3029,7 @@ FS_Init
 ================
 */
 void FS_Init( void ) {
-    Com_Printf( "---------- FS_Init ----------\n" );
+    Com_Printf( "------- FS_Init -------\n" );
 
     Cmd_Register( c_fs );
 
@@ -3042,6 +3042,6 @@ void FS_Init( void ) {
     fs_game->changed = fs_game_changed;
     fs_game_changed( fs_game );
 
-    Com_Printf( "-----------------------------\n" );
+    Com_Printf( "-----------------------\n" );
 }
 
