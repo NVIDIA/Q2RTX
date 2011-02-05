@@ -682,6 +682,7 @@ static void GL_Register( void ) {
     gl_showerrors = Cvar_Get( "gl_showerrors", "1", 0 );
     gl_fragment_program = Cvar_Get( "gl_fragment_program", "1", 0 );
     gl_vertex_buffer_object = Cvar_Get( "gl_vertex_buffer_object", "1", CVAR_FILES );
+    gl_vertex_buffer_object->modified = qtrue;
 
     Cmd_AddCommand( "strings", GL_Strings_f );
     Cmd_AddMacro( "gl_viewcluster", GL_ViewCluster_m );
@@ -810,18 +811,23 @@ static void GL_InitTables( void ) {
 static void GL_PostInit( void ) {
     registration_sequence = 1;
 
-    // enable buffer objects before map is loaded
-    if( gl_config.ext_supported & QGL_ARB_vertex_buffer_object ) {
-        if( gl_vertex_buffer_object->integer ) {
-            Com_Printf( "...enabling GL_ARB_vertex_buffer_object\n" );
-            QGL_InitExtensions( QGL_ARB_vertex_buffer_object );
-            gl_config.ext_enabled |= QGL_ARB_vertex_buffer_object;
-        } else {
-            Com_Printf( "...ignoring GL_ARB_vertex_buffer_object\n" );
+    if( gl_vertex_buffer_object->modified ) {
+        // enable buffer objects before map is loaded
+        if( gl_config.ext_supported & QGL_ARB_vertex_buffer_object ) {
+            if( gl_vertex_buffer_object->integer ) {
+                Com_Printf( "...enabling GL_ARB_vertex_buffer_object\n" );
+                QGL_InitExtensions( QGL_ARB_vertex_buffer_object );
+                gl_config.ext_enabled |= QGL_ARB_vertex_buffer_object;
+            } else {
+                Com_Printf( "...ignoring GL_ARB_vertex_buffer_object\n" );
+            }
+        } else if( gl_vertex_buffer_object->integer ) {
+            Com_Printf( "GL_ARB_vertex_buffer_object not found\n" );
+            Cvar_Set( "gl_vertex_buffer_object", "0" );
         }
-    } else if( gl_vertex_buffer_object->integer ) {
-        Com_Printf( "GL_ARB_vertex_buffer_object not found\n" );
-        Cvar_Set( "gl_vertex_buffer_object", "0" );
+
+        // reset the modified flag
+        gl_vertex_buffer_object->modified = qfalse;
     }
 
     GL_InitImages();
@@ -910,9 +916,11 @@ void R_Shutdown( qboolean total ) {
     GL_ShutdownImages();
     MOD_Shutdown();
 
-    // disable buffer objects after map is freed
-    QGL_ShutdownExtensions( QGL_ARB_vertex_buffer_object );
-    gl_config.ext_enabled &= ~QGL_ARB_vertex_buffer_object;
+    if( gl_vertex_buffer_object->modified ) {
+        // disable buffer objects after map is freed
+        QGL_ShutdownExtensions( QGL_ARB_vertex_buffer_object );
+        gl_config.ext_enabled &= ~QGL_ARB_vertex_buffer_object;
+    }
 
     if( !total ) {
         return;
