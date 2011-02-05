@@ -710,15 +710,19 @@ void Cmd_AddMacro( const char *name, xmacro_t function ) {
     cvar_t *var;
     unsigned hash;
 
+// fail if the macro is a variable name
     var = Cvar_FindVar( name );
     if( var && !( var->flags & (CVAR_CUSTOM|CVAR_VOLATILE) ) ) {
-        Com_WPrintf( "Cmd_AddMacro: %s already defined as a cvar\n", name );
+        Com_WPrintf( "%s: %s already defined as a cvar\n", __func__, name );
         return;
     }
-    
+
 // fail if the macro already exists
-    if( Cmd_FindMacro( name ) ) {
-        Com_WPrintf( "Cmd_AddMacro: %s already defined\n", name );
+    macro = Cmd_FindMacro( name );
+    if( macro ) {
+        if( macro->function != function ) {
+            Com_WPrintf( "%s: %s already defined\n", __func__, name );
+        }
         return;
     }
 
@@ -1429,7 +1433,7 @@ static void Cmd_RegCommand( const cmdreg_t *reg ) {
         Com_WPrintf( "%s: %s already defined as a cvar\n", __func__, reg->name );
         return;
     }
-    
+
 // fail if the command already exists
     cmd = Cmd_Find( reg->name );
     if( cmd ) {
@@ -1498,7 +1502,6 @@ void Cmd_RemoveCommand( const char *name ) {
     List_Delete( &cmd->listEntry );
     List_Delete( &cmd->hashEntry );
     Z_Free( cmd );
-
 }
 
 /*
