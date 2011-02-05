@@ -134,7 +134,8 @@ void ( APIENTRY * qglViewport )(GLint x, GLint y, GLsizei width, GLsizei height)
 //
 
 #ifdef _WIN32
-static PROC ( WINAPI * qwglGetProcAddress )( LPCSTR );
+// this one is defined in win_wgl.c
+extern PROC ( WINAPI * qwglGetProcAddress )( LPCSTR );
 #endif
 
 //
@@ -931,10 +932,6 @@ void QGL_Shutdown( void ) {
     qglVertexPointer            = NULL;
     qglViewport                 = NULL;
 
-#ifdef _WIN32
-    qwglGetProcAddress          = NULL;
-#endif
-
     QGL_ShutdownExtensions( ~0 );
 }
 
@@ -1084,15 +1081,12 @@ void QGL_Init( void ) {
     qglTranslatef               = dllTranslatef             = GPA( "glTranslatef" );
     qglVertexPointer            = dllVertexPointer          = GPA( "glVertexPointer" );
     qglViewport                 = dllViewport               = GPA( "glViewport" );
-
-#ifdef _WIN32
-    qwglGetProcAddress                                      = GPA( "wglGetProcAddress" );
-#endif
 }
 
 #ifdef _WIN32
+// hack, use ICD function for obtaining extensions
 #undef GPA
-#define GPA ( void * )qwglGetProcAddress
+#define GPA( a ) ( void * )qwglGetProcAddress( a )
 #endif
 
 void QGL_InitExtensions( unsigned mask ) {
