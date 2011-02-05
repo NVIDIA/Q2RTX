@@ -658,7 +658,7 @@ qboolean UI_Init( void ) {
     M_Menu_Servers();
     M_Menu_Demos();
 
-    Com_Printf( "Registered %d menus.\n", List_Count( &ui_menus ) );
+    Com_DPrintf( "Registered %d menus.\n", List_Count( &ui_menus ) );
 
     uis.initialized = qtrue;
 
