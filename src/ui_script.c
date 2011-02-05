@@ -301,7 +301,10 @@ static qboolean Parse_File( const char *path, int depth ) {
 
     ret = FS_LoadFile( path, ( void ** )&raw );
     if( !raw ) {
-        Com_Printf( "Couldn't load %s: %s\n", path, Q_ErrorString( ret ) );
+        if( ret != Q_ERR_NOENT || depth ) {
+            Com_WPrintf( "Couldn't %s %s: %s\n", depth ? "include" : "load",
+                path, Q_ErrorString( ret ) );
+        }
         return qfalse;
     }
 
