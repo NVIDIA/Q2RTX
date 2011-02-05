@@ -794,7 +794,7 @@ void Win_Init( void ) {
     // create the window
     win.wnd = CreateWindow(
         _T( WINDOW_CLASS_NAME ),
-        _T( APPLICATION ),
+        _T( PRODUCT ),
         0, //style
         0, 0, 0, 0,
         NULL,
@@ -909,7 +909,7 @@ static void Win_AcquireMouse( void ) {
     ClipCursor( &rc );
 
 #ifndef __COREDLL__
-    SetWindowText( win.wnd, "[" APPLICATION "]" );
+    SetWindowText( win.wnd, "[" PRODUCT "]" );
 #endif
 }
 
@@ -929,7 +929,7 @@ static void Win_DeAcquireMouse( void ) {
     ReleaseCapture();
 
 #ifndef __COREDLL__
-    SetWindowText( win.wnd, APPLICATION );
+    SetWindowText( win.wnd, PRODUCT );
 #endif
 }
 

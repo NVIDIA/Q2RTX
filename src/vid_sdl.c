@@ -297,7 +297,7 @@ static qboolean init_video( void ) {
         }
     }
 
-    SDL_WM_SetCaption( APPLICATION, APPLICATION );
+    SDL_WM_SetCaption( PRODUCT, APPLICATION );
 
     SDL_EnableKeyRepeat( SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL );
 
@@ -769,7 +769,7 @@ static void ShutdownMouse( void ) {
     // release the mouse
     SDL_ShowCursor( SDL_ENABLE );
     SDL_WM_GrabInput( SDL_GRAB_OFF );
-    SDL_WM_SetCaption( APPLICATION, APPLICATION );
+    SDL_WM_SetCaption( PRODUCT, APPLICATION );
     memset( &sdl.mouse, 0, sizeof( sdl.mouse ) );
 }
 
@@ -796,11 +796,11 @@ static void GrabMouse( grab_t grab ) {
 
     if( grab == IN_GRAB ) {
         AcquireMouse();
-        SDL_WM_SetCaption( "[" APPLICATION "]", APPLICATION );
+        SDL_WM_SetCaption( "[" PRODUCT "]", APPLICATION );
     } else {
         if( sdl.mouse.grabbed == IN_GRAB ) {
             SDL_WM_GrabInput( SDL_GRAB_OFF );
-            SDL_WM_SetCaption( APPLICATION, APPLICATION );
+            SDL_WM_SetCaption( PRODUCT, APPLICATION );
         }
         if( grab == IN_HIDE ) {
             SDL_ShowCursor( SDL_DISABLE );

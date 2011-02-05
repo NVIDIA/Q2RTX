@@ -129,7 +129,7 @@ DWORD Sys_ExceptionHandler( DWORD exceptionCode, LPEXCEPTION_POINTERS exceptionI
     Win_Shutdown();
 #endif
 
-    ret = MessageBox( NULL, APPLICATION " has encountered an unhandled "
+    ret = MessageBox( NULL, PRODUCT " has encountered an unhandled "
         "exception and needs to be terminated.\n"
         "Would you like to generate a crash report?",
         "Unhandled Exception",

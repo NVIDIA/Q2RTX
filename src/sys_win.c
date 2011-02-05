@@ -356,7 +356,7 @@ static void Sys_ConsoleInit( void ) {
     sys_con.printf = Sys_Printf;
     gotConsole = qtrue;
 
-    SetConsoleTitle( APPLICATION " console" );
+    SetConsoleTitle( PRODUCT " console" );
     SetConsoleCtrlHandler( Sys_ConsoleCtrlHandler, TRUE );
     GetConsoleMode( hinput, &mode );
     mode |= ENABLE_WINDOW_INPUT;
@@ -631,7 +631,7 @@ void Sys_Error( const char *error, ... ) {
             Sleep( INFINITE );
         }
 #endif
-        MessageBoxA( NULL, text, APPLICATION " Fatal Error", MB_ICONERROR | MB_OK );
+        MessageBoxA( NULL, text, PRODUCT " Fatal Error", MB_ICONERROR | MB_OK );
     }
 
     exit( 1 );
@@ -702,13 +702,13 @@ void Sys_Init( void ) {
 
     iswinnt = qtrue;
     if( vinfo.dwMajorVersion < 4 ) {
-        Sys_Error( APPLICATION " requires windows version 4 or greater" );
+        Sys_Error( PRODUCT " requires windows version 4 or greater" );
     }
     if( vinfo.dwPlatformId == VER_PLATFORM_WIN32s ) {
-        Sys_Error( APPLICATION " doesn't run on Win32s" );
+        Sys_Error( PRODUCT " doesn't run on Win32s" );
     } else if( vinfo.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS ) {
         if( vinfo.dwMinorVersion == 0 ) {
-            Sys_Error( APPLICATION " doesn't run on Win95" );
+            Sys_Error( PRODUCT " doesn't run on Win95" );
         }
         iswinnt = qfalse;
     }
