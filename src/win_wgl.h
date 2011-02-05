@@ -22,31 +22,26 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // win_wgl.h
 //
 
+#define QWGL_EXT_swap_control    (1<<0)
+
 qboolean    WGL_Init( const char *dllname );
 void        WGL_Shutdown( void );
-void        *WGL_GetProcAddress( const char *symbol );
+void        WGL_InitExtensions( unsigned mask );
+void        WGL_ShutdownExtensions( unsigned mask );
+unsigned    WGL_ParseExtensionString( const char *s );
 
-//extern  void ( APIENTRY * qglDrawBuffer )(GLenum mode);
-extern  const GLubyte * ( APIENTRY * qglGetString )(GLenum name);
+extern void ( APIENTRY * qwglDrawBuffer )(GLenum mode);
+extern const GLubyte * ( APIENTRY * qwglGetString )(GLenum name);
 
-extern  int   ( WINAPI * qwglChoosePixelFormat )(HDC, CONST PIXELFORMATDESCRIPTOR *);
-extern  int   ( WINAPI * qwglDescribePixelFormat) (HDC, int, UINT, LPPIXELFORMATDESCRIPTOR);
-//extern  int   ( WINAPI * qwglGetPixelFormat)(HDC);
-extern  BOOL  ( WINAPI * qwglSetPixelFormat)(HDC, int, CONST PIXELFORMATDESCRIPTOR *);
-extern  BOOL  ( WINAPI * qwglSwapBuffers)(HDC);
+extern int   ( WINAPI * qwglChoosePixelFormat )(HDC, CONST PIXELFORMATDESCRIPTOR *);
+extern int   ( WINAPI * qwglDescribePixelFormat ) (HDC, int, UINT, LPPIXELFORMATDESCRIPTOR);
+extern BOOL  ( WINAPI * qwglSetPixelFormat )(HDC, int, CONST PIXELFORMATDESCRIPTOR *);
+extern BOOL  ( WINAPI * qwglSwapBuffers )(HDC);
 
-//extern BOOL  ( WINAPI * qwglCopyContext)(HGLRC, HGLRC, UINT);
-extern HGLRC ( WINAPI * qwglCreateContext)(HDC);
-extern BOOL  ( WINAPI * qwglDeleteContext)(HGLRC);
-//extern HGLRC ( WINAPI * qwglGetCurrentContext)(VOID);
-//extern HDC   ( WINAPI * qwglGetCurrentDC)(VOID);
-extern PROC  ( WINAPI * qwglGetProcAddress)(LPCSTR);
-extern BOOL  ( WINAPI * qwglMakeCurrent)(HDC, HGLRC);
+extern HGLRC ( WINAPI * qwglCreateContext )(HDC);
+extern BOOL  ( WINAPI * qwglDeleteContext )(HGLRC);
+extern PROC  ( WINAPI * qwglGetProcAddress )(LPCSTR);
+extern BOOL  ( WINAPI * qwglMakeCurrent )(HDC, HGLRC);
 
-typedef BOOL ( WINAPI * PFNWGLSWAPINTERWALEXTPROC )( int );
-extern BOOL ( WINAPI * qwglSwapIntervalEXT)( int interval );
-
-//extern BOOL ( WINAPI * qwglGetDeviceGammaRampEXT ) ( unsigned char *pRed, unsigned char *pGreen, unsigned char *pBlue );
-//extern BOOL ( WINAPI * qwglSetDeviceGammaRampEXT ) ( const unsigned char *pRed, const unsigned char *pGreen, const unsigned char *pBlue );
-
+extern BOOL  ( WINAPI * qwglSwapIntervalEXT )(int interval);
 
