@@ -572,9 +572,19 @@ void VID_EndFrame( void ) {
 #define SHOW_SYNC() \
     Com_DDDPrintf( "%s: %u\n", __func__, sdl.sync_count )
 
+static unsigned glx_parse_extension_string( const char *s ) {
+    static const char *const extnames[] = {
+        "GLX_SGI_video_sync",
+        NULL
+    };
+
+    return Com_ParseExtensionString( s, extnames );
+}
+
 static void init_glx( void ) {
     const char *extensions;
     cvar_t *gl_video_sync;
+    unsigned mask;
 
     if( !sdl.dpy ) {
         return;
@@ -588,20 +598,20 @@ static void init_glx( void ) {
     gl_video_sync = Cvar_Get( "gl_video_sync", "1", 0 );
 
     extensions = sdl.glXQueryExtensionsString( sdl.dpy, DefaultScreen( sdl.dpy ) );
-    if( extensions && *extensions ) {
-        if( Q_stristr( extensions, "GLX_SGI_video_sync" ) ) {
-            if( gl_video_sync->integer ) {
-                Com_Printf( "...enabling GLX_SGI_video_sync\n" );
-                sdl.glXGetVideoSyncSGI = SDL_GL_GetProcAddress( "glXGetVideoSyncSGI" );
-                sdl.glXWaitVideoSyncSGI = SDL_GL_GetProcAddress( "glXWaitVideoSyncSGI" );
-                sdl.glXGetVideoSyncSGI( &sdl.sync_count );
-                sdl.flags |= QVF_VIDEOSYNC;
-            } else {
-                Com_Printf( "...ignoring GLX_SGI_video_sync\n" );
-            }
+    mask = glx_parse_extension_string( extensions );
+    if( mask & 1 ) {
+        if( gl_video_sync->integer ) {
+            Com_Printf( "...enabling GLX_SGI_video_sync\n" );
+            sdl.glXGetVideoSyncSGI = SDL_GL_GetProcAddress( "glXGetVideoSyncSGI" );
+            sdl.glXWaitVideoSyncSGI = SDL_GL_GetProcAddress( "glXWaitVideoSyncSGI" );
+            sdl.glXGetVideoSyncSGI( &sdl.sync_count );
+            sdl.flags |= QVF_VIDEOSYNC;
         } else {
-            Com_Printf( "GLX_SGI_video_sync not found\n" );
+            Com_Printf( "...ignoring GLX_SGI_video_sync\n" );
         }
+    } else if( gl_video_sync->integer ) {
+        Com_Printf( "GLX_SGI_video_sync not found\n" );
+        Cvar_Set( "gl_video_sync", "0" );
     }
 }
 #endif

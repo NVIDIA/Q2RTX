@@ -1137,40 +1137,18 @@ void QGL_InitExtensions( unsigned mask ) {
 
 #undef GPA
 
-// must match defines in qgl_api.h!
-static const char *const extnames[] = {
-    "GL_EXT_compiled_vertex_array",
-    "GL_ARB_multitexture",
-    "GL_EXT_texture_filter_anisotropic",
-    "GL_ARB_fragment_program",
-    "GL_ARB_vertex_buffer_object"
-};
-
-static const int numextnames = sizeof( extnames ) / sizeof( extnames[0] );
-
 unsigned QGL_ParseExtensionString( const char *s ) {
-    unsigned mask = 0;
-    const char *p;
-    size_t l1, l2;
-    int i;
+    // must match defines in qgl_api.h!
+    static const char *const extnames[] = {
+        "GL_EXT_compiled_vertex_array",
+        "GL_ARB_multitexture",
+        "GL_EXT_texture_filter_anisotropic",
+        "GL_ARB_fragment_program",
+        "GL_ARB_vertex_buffer_object",
+        NULL
+    };
 
-    while( *s ) {
-        p = Q_strchrnul( s, ' ' );
-        l1 = p - s;
-        for( i = 0; i < numextnames; i++ ) {
-            l2 = strlen( extnames[i] );
-            if( l1 == l2 && !memcmp( s, extnames[i], l1 ) ) {
-                mask |= 1 << i;
-                break;
-            }
-        }
-        if( !*p ) {
-            break;
-        }
-        s = p + 1;
-    }
-
-    return mask;
+    return Com_ParseExtensionString( s, extnames );
 }
 
 void QGL_EnableLogging( qboolean enable )
