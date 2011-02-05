@@ -287,7 +287,7 @@ Abort the server with a game error
 ===============
 */
 static q_noreturn void PF_error (const char *fmt, ...) {
-    char        msg[MAXPRINTMSG];
+    char        msg[MAXERRORMSG];
     va_list     argptr;
     
     va_start (argptr,fmt);

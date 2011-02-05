@@ -175,7 +175,7 @@ static void MVD_Destroy( mvd_t *mvd ) {
 
 void MVD_Destroyf( mvd_t *mvd, const char *fmt, ... ) {
     va_list     argptr;
-    char        text[MAXPRINTMSG];
+    char        text[MAXERRORMSG];
 
     va_start( argptr, fmt );
     Q_vsnprintf( text, sizeof( text ), fmt, argptr );
@@ -266,7 +266,7 @@ COMMON GTV STUFF
 static void q_noreturn q_printf( 2, 3 )
 gtv_dropf( gtv_t *gtv, const char *fmt, ... ) {
     va_list     argptr;
-    char        text[MAXPRINTMSG];
+    char        text[MAXERRORMSG];
 
     va_start( argptr, fmt );
     Q_vsnprintf( text, sizeof( text ), fmt, argptr );
@@ -282,7 +282,7 @@ gtv_dropf( gtv_t *gtv, const char *fmt, ... ) {
 static void q_noreturn q_printf( 2, 3 )
 gtv_destroyf( gtv_t *gtv, const char *fmt, ... ) {
     va_list     argptr;
-    char        text[MAXPRINTMSG];
+    char        text[MAXERRORMSG];
 
     va_start( argptr, fmt );
     Q_vsnprintf( text, sizeof( text ), fmt, argptr );

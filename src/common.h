@@ -456,6 +456,7 @@ MISC
 */
 
 #define MAXPRINTMSG     4096
+#define MAXERRORMSG     1024
 
 typedef enum {
     COLOR_BLACK,
@@ -504,6 +505,9 @@ void        Com_EndRedirect (void);
 #ifdef _WIN32
 void        Com_AbortFrame( void );
 #endif
+
+char        *Com_GetLastError( void );
+void        Com_SetLastError( const char *msg );
 
 void        Com_Quit( const char *reason, killtype_t type ) q_noreturn;
 

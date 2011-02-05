@@ -606,7 +606,7 @@ Sys_Error
 */
 void Sys_Error( const char *error, ... ) {
     va_list     argptr;
-    char        text[MAXPRINTMSG];
+    char        text[MAXERRORMSG];
 
     va_start( argptr, error );
     Q_vsnprintf( text, sizeof( text ), error, argptr );

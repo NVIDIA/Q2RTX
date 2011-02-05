@@ -755,7 +755,7 @@ Sys_Error
 */
 void Sys_Error( const char *error, ... ) {
     va_list     argptr;
-    char        text[MAXPRINTMSG];
+    char        text[MAXERRORMSG];
 
 #if USE_SYSCON
     tty_shutdown_input();

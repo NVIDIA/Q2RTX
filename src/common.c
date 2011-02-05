@@ -45,7 +45,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 static jmp_buf  abortframe;     // an ERR_DROP occured, exit the entire frame
 
-static char     com_errorMsg[MAXPRINTMSG];
+static qboolean com_errorEntered;
+static char     com_errorMsg[MAXERRORMSG]; // from Com_Printf/Com_Error
 
 static char     **com_argv;
 static int      com_argc;
@@ -332,6 +333,18 @@ void Com_SetColor( color_index_t color ) {
 #endif
 }
 
+void Com_SetLastError( const char *msg ) {
+    if( msg ) {
+        Q_strlcpy( com_errorMsg, msg, sizeof( com_errorMsg ) );
+    } else {
+        strcpy( com_errorMsg, "No error" );
+    }
+}
+
+char *Com_GetLastError( void ) {
+    return com_errorMsg;
+}
+
 /*
 =============
 Com_Printf
@@ -341,9 +354,9 @@ to the apropriate place.
 =============
 */
 void Com_LPrintf( print_type_t type, const char *fmt, ... ) {
+    static int  recursive;
     va_list     argptr;
     char        msg[MAXPRINTMSG];
-    static int  recursive;
     size_t      len;
 
     if( recursive == 2 ) {
@@ -355,6 +368,23 @@ void Com_LPrintf( print_type_t type, const char *fmt, ... ) {
     va_start( argptr, fmt );
     len = Q_vscnprintf( msg, sizeof( msg ), fmt, argptr );
     va_end( argptr );
+
+    if( type == PRINT_ERROR && !com_errorEntered && len ) {
+        size_t errlen = len;
+
+        if( errlen >= sizeof( com_errorMsg ) ) {
+            errlen = sizeof( com_errorMsg ) - 1;
+        }
+
+        // save error msg
+        memcpy( com_errorMsg, msg, errlen );
+        com_errorMsg[errlen] = 0;
+
+        // strip trailing '\n'
+        if( com_errorMsg[errlen - 1] == '\n' ) {
+            com_errorMsg[errlen - 1] = 0;
+        }
+    }
 
     if( rd_target ) {
         Com_Redirect( msg, len );
@@ -415,20 +445,27 @@ do the apropriate things.
 =============
 */
 void Com_Error( error_type_t code, const char *fmt, ... ) {
-    va_list argptr;
-    static qboolean recursive;
+    char            msg[MAXERRORMSG];
+    va_list         argptr;
+    size_t          len;
 
-    if( recursive ) {
+    if( com_errorEntered ) {
 #ifdef _DEBUG
         Sys_DebugBreak();
 #endif
         Sys_Error( "recursive error after: %s", com_errorMsg );
     }
-    recursive = qtrue;
+
+    com_errorEntered = qtrue;
 
     va_start( argptr, fmt );
-    Q_vsnprintf( com_errorMsg, sizeof( com_errorMsg ), fmt, argptr );
+    len = Q_vscnprintf( msg, sizeof( msg ), fmt, argptr );
     va_end( argptr );
+
+    // save error msg
+    // can't print into it directly since it may
+    // overlap with one of the arguments!
+    memcpy( com_errorMsg, msg, len + 1 );
 
     // fix up drity message buffers
     MSG_Init();
@@ -485,7 +522,7 @@ abort:
     if( com_logFile ) {
         FS_Flush( com_logFile );
     }
-    recursive = qfalse;
+    com_errorEntered = qfalse;
     longjmp( abortframe, -1 );
 }
 
@@ -1562,11 +1599,7 @@ static size_t Com_MapList_m( char *buffer, size_t size ) {
 }
 
 static void Com_LastError_f( void ) {
-    if( com_errorMsg[0] ) {
-        Com_Printf( "%s\n", com_errorMsg );
-    } else {
-        Com_Printf( "No error.\n" );
-    }
+    Com_Printf( "%s\n", com_errorMsg );
 }
 
 #if 0
@@ -1796,6 +1829,8 @@ void Qcommon_Init( int argc, char **argv ) {
 
     com_argc = argc;
     com_argv = argv;
+
+    Com_SetLastError( NULL );
 
     // prepare enough of the subsystems to handle
     // cvar and command buffer management
