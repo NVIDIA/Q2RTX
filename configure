@@ -421,7 +421,7 @@ if [ "$use_client" = "yes" ]; then
 fi
 [ "$cpu" = "i386" ] && echo "i386 assembly      $use_asm"
 
-CFLAGS="-I\$(OUTDIR) -MF \$*.d -MMD -pipe -ffloat-store $CFLAGS -Wno-strict-aliasing"
+CFLAGS="-I\$(OUTDIR) -MF \$*.d -MMD -pipe $CFLAGS -Wno-strict-aliasing"
 #LDFLAGS="$LDFLAGS"
 
 # determine what needs to be built
