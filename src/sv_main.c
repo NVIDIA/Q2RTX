@@ -1499,7 +1499,12 @@ static void SV_RunGameFrame( void ) {
         time_before_game = Sys_Milliseconds();
 #endif
 
+    X86_PUSH_FPCW;
+    X86_SINGLE_FPCW;
+
     ge->RunFrame();
+
+    X86_POP_FPCW;
 
 #if USE_CLIENT
     if( host_speeds->integer )
@@ -1517,7 +1522,6 @@ static void SV_RunGameFrame( void ) {
     // save the entire world state if recording a serverdemo
     SV_MvdEndFrame();
 #endif
-
 }
 
 /*

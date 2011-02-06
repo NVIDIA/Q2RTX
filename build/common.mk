@@ -31,7 +31,8 @@ SRCFILES+=cmd.c \
 	q_shared.c \
 	q_field.c \
 	io_sleep.c \
-	error.c
+	error.c \
+	fpu.c
 
 ifdef USE_ZLIB
 LDFLAGS+=$(ZLIB_LDFLAGS)

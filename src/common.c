@@ -38,6 +38,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "q_field.h"
 #include "prompt.h"
 #include "io_sleep.h"
+#include "fpu.h"
 #include <setjmp.h>
 #if USE_ZLIB
 #include <zlib.h>
@@ -472,6 +473,8 @@ void Com_Error( error_type_t code, const char *fmt, ... ) {
 
     // abort any console redirects
     Com_AbortRedirect();
+
+    X86_POP_FPCW;
     
     if( code == ERR_DISCONNECT || code == ERR_SILENT ) {
         Com_WPrintf( "%s\n", com_errorMsg );
@@ -1831,6 +1834,8 @@ void Qcommon_Init( int argc, char **argv ) {
     com_argv = argv;
 
     Com_SetLastError( NULL );
+
+    X86_SetFPCW();
 
     // prepare enough of the subsystems to handle
     // cvar and command buffer management

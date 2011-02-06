@@ -26,7 +26,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #if USE_WINSVC
 #include <winsvc.h>
 #endif
-#include <float.h>
 
 HINSTANCE   hGlobalInstance;
 
@@ -672,12 +671,6 @@ unsigned Sys_Milliseconds( void ) {
 }
 
 void Sys_AddDefaultConfig( void ) {
-}
-
-void Sys_FixFPCW( void ) {
-#ifdef __i386__ // FIXME: MSVC?
-    _controlfp( _PC_24|_RC_NEAR, _MCW_PC|_MCW_RC );
-#endif
 }
 
 void Sys_Sleep( int msec ) {

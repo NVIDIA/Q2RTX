@@ -63,8 +63,6 @@ char    *Sys_GetCurrentDirectory( void );
 
 void    Sys_DebugBreak( void );
 
-void    Sys_FixFPCW( void );
-
 #if USE_AC_CLIENT
 qboolean Sys_GetAntiCheatAPI( void );
 #endif

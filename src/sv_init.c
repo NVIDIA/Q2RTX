@@ -149,12 +149,17 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
     // map initialization
     sv.state = ss_loading;
 
+    X86_PUSH_FPCW;
+    X86_SINGLE_FPCW;
+
     // load and spawn all other entities
     ge->SpawnEntities ( sv.name, cm->cache->entitystring, spawnpoint );
 
     // run two frames to allow everything to settle
     ge->RunFrame ();
     ge->RunFrame ();
+
+    X86_POP_FPCW;
 
     // make sure maxclients string is correct
     sprintf( sv.configstrings[CS_MAXCLIENTS], "%d", sv_maxclients->integer );

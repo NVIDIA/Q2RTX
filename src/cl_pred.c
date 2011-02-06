@@ -19,7 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "cl_local.h"
-
+#include "fpu.h"
 
 /*
 ===================
@@ -213,6 +213,9 @@ void CL_PredictMovement( void ) {
         return;
     }
 
+    X86_PUSH_FPCW;
+    X86_SINGLE_FPCW;
+
     // copy current state to pmove
     memset( &pm, 0, sizeof( pm ) );
     pm.trace = CL_Trace;
@@ -246,6 +249,8 @@ void CL_PredictMovement( void ) {
     } else {
         frame = current - 1;
     }
+
+    X86_POP_FPCW;
     
     oldz = cl.predicted_origins[cl.predicted_step_frame & CMD_MASK][2];
     step = pm.s.origin[2] - oldz;

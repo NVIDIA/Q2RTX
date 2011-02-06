@@ -273,7 +273,7 @@ void CL_InitRefresh( void ) {
 
     SCR_RegisterMedia();
     Con_RegisterMedia();
-    
+
     cvar_modified &= ~(CVAR_FILES|CVAR_REFRESH);
 }
 

@@ -604,27 +604,6 @@ qboolean Sys_GetAntiCheatAPI( void ) {
 }
 #endif
 
-void Sys_FixFPCW( void ) {
-#ifdef __i386__
-    uint16_t cw;
-
-    __asm__ __volatile__( "fnstcw %0" : "=m" (cw) );
-
-    Com_DPrintf( "FPU control word: %x\n", cw );
-
-    if( cw & 0x300 ) {
-        Com_DPrintf( "Setting FPU to single precision mode\n" );
-        cw &= ~0x300;
-    }
-    if( cw & 0xC00 ) {
-        Com_DPrintf( "Setting FPU to round to nearest mode\n" );
-        cw &= ~0xC00;
-    }
-
-    __asm__ __volatile__( "fldcw %0" : : "m" (cw) );
-#endif
-}
-
 static void hup_handler( int signum ) {
     Com_FlushLogs();
 }
@@ -726,8 +705,6 @@ void Sys_Init( void ) {
         signal( SIGFPE, kill_handler );
         signal( SIGTRAP, kill_handler );
     }
-
-    Sys_FixFPCW();
 }
 
 #if USE_SYSCON
