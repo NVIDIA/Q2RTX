@@ -56,6 +56,11 @@ LOAD( Visibility ) {
         return Q_ERR_SUCCESS;
     }
 
+    if( count < 4 ) {
+        DEBUG( "too small header" );
+        return Q_ERR_TOO_FEW;
+    }
+
     bsp->numvisibility = count;
     bsp->vis = ALLOC( count );
     memcpy( bsp->vis, base, count );
@@ -65,12 +70,15 @@ LOAD( Visibility ) {
         DEBUG( "bad numclusters" );
         return Q_ERR_TOO_MANY;
     }
+
     if( numclusters > ( count - 4 ) / 8 ) {
-        DEBUG( "bad numclusters" );
+        DEBUG( "too small header" );
         return Q_ERR_TOO_FEW;
     }
+
     bsp->vis->numclusters = numclusters;
     bsp->visrowsize = ( numclusters + 7 ) >> 3;
+
     for( i = 0; i < numclusters; i++ ) {
         for( j = 0; j < 2; j++ ) {
             bitofs = LittleLong( bsp->vis->bitofs[i][j] );
