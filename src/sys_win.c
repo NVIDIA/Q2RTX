@@ -270,7 +270,13 @@ void Sys_SetConsoleColor( color_index_t color ) {
         break;
     }
 
+    if( color != COLOR_NONE ) {
+        hide_console_input();
+    }
     SetConsoleTextAttribute( houtput, w );
+    if( color == COLOR_NONE ) {
+        show_console_input();
+    }
 }
 
 static void write_console_output( const char *text ) {
