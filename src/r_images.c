@@ -620,6 +620,8 @@ METHODDEF( void )my_error_exit( j_common_ptr cinfo ) {
     longjmp( jerr->setjmp_buffer, 1 );
 }
 
+#if JPEG_LIB_VERSION < 80
+
 METHODDEF( void )mem_init_source( j_decompress_ptr cinfo ) { }
 
 METHODDEF( boolean )mem_fill_input_buffer( j_decompress_ptr cinfo ) {
@@ -633,6 +635,10 @@ METHODDEF( boolean )mem_fill_input_buffer( j_decompress_ptr cinfo ) {
 METHODDEF( void )mem_skip_input_data( j_decompress_ptr cinfo, long num_bytes ) {
     struct jpeg_source_mgr *src = cinfo->src;
     my_error_ptr jerr = ( my_error_ptr )cinfo->err;
+
+    if( num_bytes < 1 ) {
+        return;
+    }
     
     if( src->bytes_in_buffer < num_bytes ) {
         jerr->error = Q_ERR_FILE_TOO_SMALL;
@@ -657,6 +663,10 @@ METHODDEF( void )my_mem_src( j_decompress_ptr cinfo, byte *data, size_t size ) {
     cinfo->src->bytes_in_buffer = size;
     cinfo->src->next_input_byte = data;
 }
+
+#define jpeg_mem_src my_mem_src
+
+#endif
 
 IMG_LOAD( JPG ) {
     struct jpeg_decompress_struct cinfo;
@@ -683,7 +693,7 @@ IMG_LOAD( JPG ) {
 
     jpeg_create_decompress( &cinfo );
 
-    my_mem_src( &cinfo, rawdata, rawlen );
+    jpeg_mem_src( &cinfo, rawdata, rawlen );
     jpeg_read_header( &cinfo, TRUE );
 
     if( cinfo.out_color_space != JCS_RGB && cinfo.out_color_space != JCS_GRAYSCALE ) {
