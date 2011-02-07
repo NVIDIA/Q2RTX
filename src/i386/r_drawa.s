@@ -188,7 +188,7 @@ LCalcSecond:
 //	r_ceilv1 = (int)(r_v1 - 2000) + 2000; // ceil(r_v1);
 	fistl	C(r_ceilv1)
 
-	fldcw	single_cw				// put back normal floating-point state
+	fldcw	chop_cw				// put back normal floating-point state
 
 	fsts	C(r_v1)
 	fxch	%st(4)					// lzi0 | lzi1 | u1 | v0 | v1 | u0

@@ -275,7 +275,6 @@ qboolean R_Init( qboolean total ) {
 // TODO: collect 386-specific code in one place
 #if USE_ASM
     Sys_MakeCodeWriteable( ( long )R_EdgeCodeStart, ( long )R_EdgeCodeEnd - ( long )R_EdgeCodeStart );
-    Sys_SetFPCW ();     // get bit masks for FPCW   (FIXME: is this USE_ASM?)
 #endif  // USE_ASM
 
     r_aliasuvscale = 1.0;

@@ -180,7 +180,7 @@ C(R_PolysetCalcGradients):
 							//  p00_minus_p20 | p11_minus_p21
 	fistpl	C(r_lstepx)		// ystepdenominv | xstepdenominv | p00_minus_p20 |
 							//  p11_minus_p21
-	fldcw	single_cw
+	fldcw	chop_cw
 
 //	t0 = r_p0[2] - r_p2[2];
 //	t1 = r_p1[2] - r_p2[2];
