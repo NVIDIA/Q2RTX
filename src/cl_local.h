@@ -104,6 +104,13 @@ typedef enum {
     LOAD_FINISH
 } load_state_t;
 
+// locally calculated frame flags for debug display
+#define FF_SERVERDROP   (1<<4)
+#define FF_BADFRAME     (1<<5)
+#define FF_OLDFRAME     (1<<6)
+#define FF_OLDENT       (1<<7)
+#define FF_NODELTA      (1<<8)
+
 //
 // the client_state_t structure is wiped completely at every
 // server map change
@@ -148,7 +155,7 @@ typedef struct client_state_s {
     server_frame_t  oldframe;
     int             servertime;
     int             serverdelta;
-    frameflags_t    frameflags;
+    unsigned        frameflags;
 
     int             lastframe;
 

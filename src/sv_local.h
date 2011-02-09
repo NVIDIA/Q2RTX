@@ -220,7 +220,7 @@ typedef struct client_s {
     size_t          rate;
     int             surpressCount;        // number of messages rate supressed
     unsigned        send_time, send_delta;    // used to rate drop async packets
-    frameflags_t    frameflags;
+    unsigned        frameflags;
 
     edict_t         *edict;                 // EDICT_NUM(clientnum+1)
     char            name[MAX_CLIENT_NAME];  // extracted from userinfo,

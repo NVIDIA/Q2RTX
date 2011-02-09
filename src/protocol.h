@@ -352,17 +352,10 @@ typedef enum {
     SVS_MAX
 } serverSetting_t;
 
-typedef enum {
-    // these are sent by the server
-    FF_SURPRESSED   = ( 1 << 0 ),
-    FF_CLIENTDROP   = ( 1 << 1 ),
-    FF_CLIENTPRED   = ( 1 << 2 ),
-
-    // these are calculated by the client
-    FF_SERVERDROP   = ( 1 << 4 ),
-    FF_BADFRAME     = ( 1 << 5 ),
-    FF_OLDFRAME     = ( 1 << 6 ),
-    FF_OLDENT       = ( 1 << 7 ),
-    FF_NODELTA      = ( 1 << 8 )
-} frameflags_t;
+// q2pro frame flags sent by the server
+// only SURPRESSCOUNT_BITS can be used
+#define FF_SURPRESSED   (1<<0)
+#define FF_CLIENTDROP   (1<<1)
+#define FF_CLIENTPRED   (1<<2)
+#define FF_RESERVED     (1<<3)
 
