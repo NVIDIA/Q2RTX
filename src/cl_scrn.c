@@ -793,16 +793,20 @@ static void draw_turtle( void ) {
     int x = CHAR_WIDTH;
     int y = scr.hud_height - 11*CHAR_HEIGHT;
 
-#define DF( f ) if( cl.frameflags & FF_ ## f ) { \
-                    SCR_DrawString( x, y, UI_ALTCOLOR, #f ); \
-                    y += CHAR_HEIGHT; \
-                }
+#define DF( f ) \
+    if( cl.frameflags & FF_ ## f ) { \
+        SCR_DrawString( x, y, UI_ALTCOLOR, #f ); \
+        y += CHAR_HEIGHT; \
+    }
 
-    DF( SURPRESSED )
+    if( scr_showturtle->integer > 1 ) {
+        DF( SURPRESSED )
+    }
     DF( CLIENTPRED )
-    else
-    DF( CLIENTDROP )
-    DF( SERVERDROP )
+    if( scr_showturtle->integer > 1 ) {
+        DF( CLIENTDROP )
+        DF( SERVERDROP )
+    }
     DF( BADFRAME )
     DF( OLDFRAME )
     DF( OLDENT )
@@ -1740,7 +1744,7 @@ static void draw_2d( void ) {
 
     R_SetColor( DRAW_COLOR_CLEAR, NULL );
 
-    if( cl.frameflags && scr_showturtle->integer ) {
+    if( cl.frameflags && scr_showturtle->integer > 0 ) {
         draw_turtle();
     }
 

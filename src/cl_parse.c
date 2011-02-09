@@ -451,6 +451,10 @@ static void CL_ParseFrame( int extrabits ) {
 
         surpressed = bits & SURPRESSCOUNT_MASK;
         if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO ) {
+            if( surpressed & FF_CLIENTPRED ) {
+                // CLIENTDROP is implied, don't draw both
+                surpressed &= ~FF_CLIENTDROP;
+            }
             cl.frameflags |= surpressed;
         } else if( surpressed ) {
             cl.frameflags |= FF_SURPRESSED;
