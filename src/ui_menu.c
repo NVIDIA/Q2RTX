@@ -1564,8 +1564,8 @@ void Menu_Draw( menuFrameWork_t *menu ) {
 // draw status bar
 //
     if( menu->status ) {
-        R_DrawFill( 0, menu->y2 - 8, uis.width, 8, 4 );
-        UI_DrawString( uis.width / 2, menu->y2 - 8, NULL,
+        R_DrawFill( 0, menu->y2 - CHAR_HEIGHT, uis.width, CHAR_HEIGHT, 4 );
+        UI_DrawString( uis.width / 2, menu->y2 - CHAR_HEIGHT, NULL,
             UI_CENTER, menu->status );
     }
 }

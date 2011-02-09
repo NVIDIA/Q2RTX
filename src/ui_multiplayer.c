@@ -315,19 +315,19 @@ static void Size( menuFrameWork_t *self ) {
 //
 // server list
 //
-    m_join.list.generic.x = 0;
-    m_join.list.generic.y = 8;
-    m_join.list.generic.height      = uis.height / 2 - 8;
+    m_join.list.generic.x           = 0;
+    m_join.list.generic.y           = CHAR_HEIGHT;
+    m_join.list.generic.height      = uis.height / 2 - CHAR_HEIGHT;
 
-    m_join.list.columns[0].width    = w1 - 144;
-    m_join.list.columns[1].width    = 80;
-    m_join.list.columns[2].width    = 64;
+    m_join.list.columns[0].width    = w1 - 18*CHAR_WIDTH;
+    m_join.list.columns[1].width    = 10*CHAR_WIDTH;
+    m_join.list.columns[2].width    = 8*CHAR_WIDTH;
 
 //
 // server info
 //
     m_join.info.generic.y           = uis.height / 2 + 1;
-    m_join.info.generic.height      = uis.height / 2 - 8 - 2;
+    m_join.info.generic.height      = uis.height / 2 - CHAR_HEIGHT - 2;
 
     m_join.info.columns[0].width    = w1 / 2;
     m_join.info.columns[1].width    = w1 - w1 / 2;
@@ -335,13 +335,13 @@ static void Size( menuFrameWork_t *self ) {
 //
 // player list
 //
-    m_join.players.generic.x        = w1 + 10;
-    m_join.players.generic.y        = 8;
-    m_join.players.generic.height   = uis.height - 16 - 1;
+    m_join.players.generic.x        = w1 + MLIST_SCROLLBAR_WIDTH;
+    m_join.players.generic.y        = CHAR_HEIGHT;
+    m_join.players.generic.height   = uis.height - CHAR_HEIGHT*2 - 1;
 
-    m_join.players.columns[0].width = 32;
-    m_join.players.columns[1].width = 32;
-    m_join.players.columns[2].width = w2 - 64;
+    m_join.players.columns[0].width = 4*CHAR_WIDTH;
+    m_join.players.columns[1].width = 4*CHAR_WIDTH;
+    m_join.players.columns[2].width = w2 - MLIST_SCROLLBAR_WIDTH - 8*CHAR_WIDTH;
 }
 
 

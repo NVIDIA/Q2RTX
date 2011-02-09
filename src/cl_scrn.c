@@ -790,12 +790,12 @@ DEBUG STUFF
 */
 
 static void draw_turtle( void ) {
-    int x = 8;
-    int y = scr.hud_height - 88;
+    int x = CHAR_WIDTH;
+    int y = scr.hud_height - 11*CHAR_HEIGHT;
 
 #define DF( f ) if( cl.frameflags & FF_ ## f ) { \
                     SCR_DrawString( x, y, UI_ALTCOLOR, #f ); \
-                    y += 8; \
+                    y += CHAR_HEIGHT; \
                 }
 
     DF( SURPRESSED )

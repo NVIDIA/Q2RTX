@@ -255,7 +255,8 @@ static inline void draw_char( int x, int y, int c, qboolean alt, image_t *image 
     c |= alt << 7;
     s = ( c & 15 ) * 0.0625f;
     t = ( c >> 4 ) * 0.0625f;
-    GL_StretchPic( x, y, 8, 8, s, t, s + 0.0625f, t + 0.0625f, draw.colors[alt], image );
+    GL_StretchPic( x, y, CHAR_WIDTH, CHAR_HEIGHT, s, t,
+        s + 0.0625f, t + 0.0625f, draw.colors[alt], image );
 }
 
 void R_DrawChar( int x, int y, int flags, int c, qhandle_t font ) {
@@ -270,7 +271,7 @@ int R_DrawString( int x, int y, int flags, size_t maxlen, const char *s, qhandle
     while( maxlen-- && *s ) {
         byte c = *s++;
         draw_char( x, y, c, alt, image );
-        x += 8;
+        x += CHAR_WIDTH;
     }
 
     return x;
@@ -298,9 +299,9 @@ void Draw_Stringf( int x, int y, const char *fmt, ... ) {
         s = ( c & 15 ) * 0.0625f;
         t = ( c >> 4 ) * 0.0625f;
 
-        GL_StretchPic( x, y, 8, 8, s, t, s + 0.0625f, t + 0.0625f,
-            colorWhite, r_charset );
-        x += 8;
+        GL_StretchPic( x, y, CHAR_WIDTH, CHAR_HEIGHT, s, t,
+            s + 0.0625f, t + 0.0625f, colorWhite, r_charset );
+        x += CHAR_WIDTH;
     }
 }
 

@@ -378,21 +378,21 @@ static menuSound_t Sort( menuList_t *self, int column ) {
 }
 
 static void Size( menuFrameWork_t *self ) {
-    int w = uis.width * 96 / 640;
+    int w = uis.width * 8 / 640;
 
-    if( w > 8*15 ) {
-        w = 8*15;
+    if( w > 15 ) {
+        w = 15;
     }
 
     m_demos.list.generic.x      = 0;
-    m_demos.list.generic.y      = 8;
+    m_demos.list.generic.y      = CHAR_HEIGHT;
     m_demos.list.generic.width  = 0;
-    m_demos.list.generic.height = uis.height - 17;
-    
-    m_demos.list.columns[0].width = uis.width - 100 - w;
-    m_demos.list.columns[1].width = 40;
-    m_demos.list.columns[2].width = 60;
-    m_demos.list.columns[3].width = w;
+    m_demos.list.generic.height = uis.height - CHAR_HEIGHT*2 - 1;
+
+    m_demos.list.columns[0].width = uis.width - ( 13 + w ) * CHAR_WIDTH;
+    m_demos.list.columns[1].width = 5*CHAR_WIDTH;
+    m_demos.list.columns[2].width = 8*CHAR_WIDTH;
+    m_demos.list.columns[3].width = w*CHAR_WIDTH;
 }
 
 static menuSound_t Keydown( menuFrameWork_t *self, int key ) {
