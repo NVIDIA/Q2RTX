@@ -782,6 +782,10 @@ static void CL_AddViewWeapon( const player_state_t *ps, const player_state_t *op
     if( info_hand->integer == 1 ) {
         gun.flags |= RF_LEFTHAND;
     }
+    if( cl_gunalpha->value != 1 ) {
+        gun.alpha = Cvar_ClampValue( cl_gunalpha, 0.1f, 1.0f );
+        gun.flags |= RF_TRANSLUCENT;
+    }
     gun.backlerp = 1.0 - cl.lerpfrac;
     VectorCopy( gun.origin, gun.oldorigin );    // don't lerp at all
     V_AddEntity( &gun );
