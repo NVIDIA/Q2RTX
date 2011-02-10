@@ -947,10 +947,10 @@ player_state_t *CL_CalcViewValues( void ) {
         } else if( fov > 160 ) {
             fov = 160;
         }
-        cl.refdef.fov_x = fov;
+        cl.fov_x = fov;
     } else {
         // interpolate field of view
-        cl.refdef.fov_x = ops->fov + lerp * ( ps->fov - ops->fov );
+        cl.fov_x = ops->fov + lerp * ( ps->fov - ops->fov );
     }
 
     // don't interpolate blend color

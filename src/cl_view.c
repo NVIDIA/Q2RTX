@@ -48,6 +48,8 @@ static cvar_t   *cl_testblend;
 static cvar_t   *cl_stats;
 #endif
 
+static cvar_t   *cl_adjustfov;
+
 #if USE_DLIGHTS
 int         r_numdlights;
 dlight_t    r_dlights[MAX_DLIGHTS];
@@ -499,7 +501,15 @@ void V_RenderView( void ) {
         cl.refdef.width = scr_vrect.width;
         cl.refdef.height = scr_vrect.height;
 
-        cl.refdef.fov_y = V_CalcFov (cl.refdef.fov_x, cl.refdef.width, cl.refdef.height);
+        // adjust for non-4/3 screens
+        if( cl_adjustfov->integer ) {
+            cl.refdef.fov_y = V_CalcFov (cl.fov_x, 4, 3);
+            cl.refdef.fov_x = V_CalcFov (cl.refdef.fov_y, cl.refdef.height, cl.refdef.width);
+        } else {
+            cl.refdef.fov_x = cl.fov_x;
+            cl.refdef.fov_y = V_CalcFov (cl.refdef.fov_x, cl.refdef.width, cl.refdef.height);
+        }
+
         cl.refdef.time = cl.time*0.001;
 
         if( cl.frame.areabytes ) {
@@ -600,6 +610,8 @@ void V_Init( void ) {
     cl_add_entities = Cvar_Get ( "cl_entities", "1", 0 );
     cl_add_blend = Cvar_Get ( "cl_blend", "1", CVAR_ARCHIVE );
     cl_add_blend->changed = cl_add_blend_changed;
+
+    cl_adjustfov = Cvar_Get ("cl_adjustfov", "0", 0);
 }
 
 void V_Shutdown( void ) {

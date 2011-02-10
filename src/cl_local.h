@@ -181,6 +181,7 @@ typedef struct client_state_s {
     float       framefrac;
 
     refdef_t    refdef;
+    float       fov_x;      // interpolated
     int         lightlevel;
 
     vec3_t      v_forward, v_right, v_up;    // set when refdef.angles is set
