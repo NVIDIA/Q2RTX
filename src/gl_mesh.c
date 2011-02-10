@@ -375,8 +375,8 @@ void GL_DrawAliasModel( model_t *model ) {
 #if USE_CELSHADING
     scale = 0;
     if( gl_celshading->value > 0 && ( ent->flags & RF_SHELL_MASK ) == 0 ) {
-        if( gl_celshading->value > 5 ) {
-            Cvar_Set( "gl_celshading", "5" );
+        if( gl_celshading->value > 10 ) {
+            Cvar_Set( "gl_celshading", "10" );
         }
         VectorSubtract( origin, glr.fd.vieworg, dir );
         scale = VectorLength( dir );
@@ -500,12 +500,23 @@ void GL_DrawAliasModel( model_t *model ) {
             qglDisable( GL_TEXTURE_2D );
             qglLineWidth( gl_celshading->value*scale );
             GL_Bits( bits | GLS_BLEND_BLEND );
+#if USE_DOTSHADING
+            if( shadelight ) {
+                qglDisableClientState( GL_COLOR_ARRAY );
+            }
+#endif
             qglColor4f( 0, 0, 0, scale );
             qglDrawElements( GL_TRIANGLES, mesh->numindices, GL_UNSIGNED_INT,
                 mesh->indices );
             qglCullFace( back );
             qglPolygonMode( back, GL_FILL );
-            qglColor4fv( color );
+#if USE_DOTSHADING
+            if( shadelight ) {
+                qglEnableClientState( GL_COLOR_ARRAY );
+            } else
+#endif
+                qglColor4fv( color );
+            qglLineWidth( 1 );
             qglEnable( GL_TEXTURE_2D );
         }
 #endif
