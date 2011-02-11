@@ -174,7 +174,7 @@ void GL_Setup2D( void ) {
 }
 
 void GL_Setup3D( void ) {
-    GLdouble xmin, xmax, ymin, ymax, aspect;
+    GLdouble xmin, xmax, ymin, ymax;
     int yb = glr.fd.y + glr.fd.height;
 
     qglViewport( glr.fd.x, gl_config.vidHeight - yb,
@@ -186,9 +186,8 @@ void GL_Setup3D( void ) {
     ymax = gl_znear->value * tan( glr.fd.fov_y * M_PI / 360.0 );
     ymin = -ymax;
 
-    aspect = ( GLdouble )glr.fd.width / glr.fd.height;
-    xmin = ymin * aspect;
-    xmax = ymax * aspect;
+    xmax = gl_znear->value * tan( glr.fd.fov_x * M_PI / 360.0 );
+    xmin = -xmax;
 
     qglFrustum( xmin, xmax, ymin, ymax, gl_znear->value, gl_zfar->value );
     
