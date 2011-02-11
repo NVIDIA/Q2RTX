@@ -26,10 +26,6 @@ SRCFILES+=sv_ccmds.c \
 	sv_user.c \
 	sv_world.c
 
-ifdef USE_AC_SERVER
-SRCFILES+=sv_ac.c
-endif
-
 ifdef USE_MVD_SERVER
 SRCFILES+=sv_mvd.c
 endif

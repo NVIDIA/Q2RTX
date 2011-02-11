@@ -28,6 +28,10 @@ SRCFILES+=cl_null.c
 
 include $(SRCDIR)/build/server.mk
 
+ifdef USE_AC_SERVER
+SRCFILES+=sv_ac.c
+endif
+
 ifdef MINGW
 SRCFILES+=sys_win.c
 LDFLAGS+=-mconsole

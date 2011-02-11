@@ -445,6 +445,8 @@ fi
 
 if [ "$use_server" = "yes" ]; then
     targets="$targets q2proded"
+else
+    use_anticheat="no"
 fi
 
 if [ "$use_baseq2" = "yes" ]; then
@@ -525,9 +527,12 @@ echo "#define COM_CONFIG_NAME \"$cfgfile\"" >> $config_h
 echo "#define COM_DEFAULTCFG_NAME \"$defcfg\"" >> $config_h
 echo "#define COM_AUTOEXECCFG_NAME \"$autocfg\"" >> $config_h
 echo "#define COM_HISTORYFILE_NAME \"$histfile\"" >> $config_h
-echo "#define COM_DEMOCACHE_NAME \"$democache\"" >> $config_h
-echo "#define SCREENSHOTS_DIRECTORY \"$screenshots\"" >> $config_h
-echo "#define SCORESHOTS_DIRECTORY \"$scoreshots\"" >> $config_h
+
+if [ "$use_client" = "yes" ]; then
+    echo "#define COM_DEMOCACHE_NAME \"$democache\"" >> $config_h
+    echo "#define SCREENSHOTS_DIRECTORY \"$screenshots\"" >> $config_h
+    echo "#define SCORESHOTS_DIRECTORY \"$scoreshots\"" >> $config_h
+fi
 
 if [ "$mingw" = "no" ]; then
     echo "#define SYS_SITECFG_NAME \"$sitecfg\"" >> $config_h
@@ -642,7 +647,7 @@ fi
 
 if [ "$use_anticheat" = "yes" ]; then
     echo "USE_AC_SERVER=yes" >> $config_mk
-    echo "#define USE_AC_SERVER 1" >> $config_h
+    echo "#define USE_AC_SERVER !USE_CLIENT" >> $config_h
 fi
 
 if [ "$use_mvd_server" = "yes" ]; then
