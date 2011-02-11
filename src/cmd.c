@@ -1310,12 +1310,14 @@ void Cmd_TokenizeString( const char *text, qboolean macroExpand ) {
         cmd_argv[i] = NULL;
         cmd_offsets[i] = 0;
     }
-        
+
     cmd_argc = 0;
     cmd_string[0] = 0;
+    cmd_string_len = 0;
+    cmd_string_tail = 0;
     cmd_optind = 1;
     cmd_optarg = cmd_optopt = cmd_null_string;
-    
+
     if( !text[0] ) {
         return;
     }
@@ -1335,7 +1337,6 @@ void Cmd_TokenizeString( const char *text, qboolean macroExpand ) {
     }
 
 // strip off any trailing whitespace
-    cmd_string_tail = 0;
     while( cmd_string_len ) {
         if( cmd_string[ cmd_string_len - 1 ] > ' ' ) {
             break;
