@@ -159,8 +159,7 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
     char *first, *last;
     genctx_t ctx;
     char *matches[MAX_MATCHES], *sortedMatches[MAX_MATCHES];
-    int numCommands = 0, numCvars = 0, numAliases = 0;
-    extern size_t cmd_string_tail;
+    int numCommands, numCvars, numAliases;
 
     text = inputLine->text;
     size = inputLine->maxChars + 1;
@@ -176,31 +175,34 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
         size--;
         pos--;
     }
-    
+
+    // parse the input line into tokens
     Cmd_TokenizeString( text, qfalse );
 
     argc = Cmd_Argc();
 
-    // determine argument number to be completed
+    // determine absolute argument number to be completed
     currentArg = Cmd_FindArgForOffset( pos );
-    if( currentArg == argc - 1 && cmd_string_tail ) {
+    if( currentArg == argc - 1 && Cmd_WhiteSpaceTail() ) {
         // start completing new argument if command line has trailing whitespace
         currentArg++;
     }
 
+    // determine relative argument number to be completed
     argnum = 0;
-    s = Cmd_Argv( 0 );
     for( i = 0; i < currentArg; i++ ) {
-        partial = Cmd_Argv( i );
+        s = Cmd_Argv( i );
         argnum++;
-        if( *partial == ';' ) {
-            s = Cmd_Argv( i + 1 );
+        if( *s == ';' ) {
+            // semicolon starts a new command
             argnum = 0;
         }
     }
 
+    // get the partial argument string to be completed
     partial = Cmd_Argv( currentArg );
     if( *partial == ';' ) {
+        // semicolon starts a new command
         currentArg++;
         partial = Cmd_Argv( currentArg );
         argnum = 0;
@@ -215,8 +217,11 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
     ctx.size = MAX_MATCHES;
 
     if( argnum ) {
+        // complete a command/cvar argument
         Com_Generic_c( &ctx, argnum );
+        numCommands = numCvars = numAliases = 0;
     } else {
+        // complete a command/cvar/alias name
         Cmd_Command_g( &ctx );
         numCommands = ctx.count;
 
@@ -238,7 +243,7 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
     size -= pos;
 
     // append whitespace since Cmd_TokenizeString eats it
-    if( currentArg == argc && cmd_string_tail ) {
+    if( currentArg == argc && Cmd_WhiteSpaceTail() ) {
         *text++ = ' ';
         pos++;
         size--;

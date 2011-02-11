@@ -772,7 +772,7 @@ static  char    *cmd_null_string = "";
 // complete command string, left untouched
 static  char    cmd_string[MAX_STRING_CHARS];
 static  size_t  cmd_string_len;
-size_t  cmd_string_tail;
+static  size_t  cmd_string_tail;
 
 // offsets of individual tokens into cmd_string
 static  size_t  cmd_offsets[MAX_STRING_TOKENS];
@@ -810,6 +810,10 @@ int Cmd_FindArgForOffset( size_t offset ) {
         }
     }
     return i - 1; 
+}
+
+size_t Cmd_WhiteSpaceTail( void ) {
+    return cmd_string_tail;
 }
 
 /*
