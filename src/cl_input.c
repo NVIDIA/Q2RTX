@@ -539,8 +539,8 @@ static void CL_MouseMove( void ) {
     my *= speed;
 
     if( m_autosens->integer ) {
-        mx *= cl.refdef.fov_x / 90.0f;
-        my *= cl.refdef.fov_y / V_CalcFov( 90.0f, cl.refdef.width, cl.refdef.height );
+        mx *= cl.fov_x / 90.0f;
+        my *= V_CalcFov( cl.fov_x, 4, 3 ) / 73.739795291688f;
     }
 
 // add mouse X/Y movement to cmd
