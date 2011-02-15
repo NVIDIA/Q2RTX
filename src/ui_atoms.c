@@ -227,6 +227,9 @@ void UI_OpenMenu( uiMenu_t type ) {
         break;
     case UIMENU_INGAME:
         menu = UI_FindMenu( "game" );
+        if( !menu ) {
+            menu = UI_FindMenu( "main" );
+        }
         break;
     case UIMENU_NONE:
         break;
