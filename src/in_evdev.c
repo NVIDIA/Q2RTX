@@ -188,6 +188,10 @@ static void GrabMouse( grab_t grab ) {
     evdev.grabbed = grab;
 }
 
+static void WarpMouse( int x, int y ) {
+    SDL_WarpMouse( x, y );
+}
+
 /*
 @@@@@@@@@@@@@@@@@@@
 DI_FillAPI
@@ -197,6 +201,7 @@ void DI_FillAPI( inputAPI_t *api ) {
     api->Init = InitMouse;
     api->Shutdown = ShutdownMouse;
     api->Grab = GrabMouse;
+    api->Warp = WarpMouse;
     api->GetEvents = GetMouseEvents;
     api->GetMotion = GetMouseMotion;
 }
