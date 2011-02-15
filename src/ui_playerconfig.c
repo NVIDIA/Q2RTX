@@ -214,7 +214,7 @@ static qboolean Push( menuFrameWork_t *self ) {
         }
     }
 
-    IF_Init( &m_player.name.field, 16, 16 );
+    IF_Init( &m_player.name.field, 15, 15 );
     IF_Replace( &m_player.name.field, Cvar_VariableString( "name" ) );
 
     m_player.model.curvalue = currentdirectoryindex;
