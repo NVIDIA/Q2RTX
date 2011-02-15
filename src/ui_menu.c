@@ -70,6 +70,9 @@ static void Action_Draw( menuAction_t *a ) {
             }
         } else {
             flags |= UI_ALTCOLOR;
+            if( ( uis.realtime >> 8 ) & 1 ) {
+                UI_DrawChar( a->generic.x - strlen( a->generic.name ) * CHAR_WIDTH / 2 - CHAR_WIDTH, a->generic.y, flags, 13 );
+            }
         }
     }
 
