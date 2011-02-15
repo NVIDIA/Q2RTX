@@ -1306,8 +1306,7 @@ Menu_AddItem
 */
 void Menu_AddItem( menuFrameWork_t *menu, void *item ) {
     if( menu->nitems >= MAXMENUITEMS ) {
-        Com_WPrintf( "Menu_AddItem: %s: too many items\n", menu->name );
-        return;
+        Com_Error( ERR_FATAL, "Menu_AddItem: too many items" );
     }
 
     menu->items[menu->nitems++] = item;
