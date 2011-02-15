@@ -22,8 +22,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "files.h"
 
 static menuSound_t Activate( menuCommon_t *self ) {
-    menuAction_t *action = ( menuAction_t * )self;
-    Cbuf_AddText( &cmd_buffer, action->cmd );
+    if( self->type == MTYPE_ACTION ) {
+        Cbuf_AddText( &cmd_buffer, (( menuAction_t * )self)->cmd );
+    } else if( self->type == MTYPE_BITMAP ) {
+        Cbuf_AddText( &cmd_buffer, (( menuBitmap_t * )self)->cmd );
+    }
+
     return QMS_NOTHANDLED;
 }
 
@@ -139,6 +143,32 @@ static void Parse_Action( menuFrameWork_t *menu ) {
     a->cmd = UI_CopyString( Cmd_ArgsFrom( cmd_optind + 1 ) );
 
     Menu_AddItem( menu, a );
+}
+
+static void Parse_Bitmap( menuFrameWork_t *menu ) {
+    char buffer[MAX_QPATH];
+    menuBitmap_t *b;
+    char *name;
+
+    if( Cmd_Argc() < 3 ) {
+        Com_Printf( "Usage: %s <name> <command>\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    b = UI_Mallocz( sizeof( *b ) );
+    b->generic.type = MTYPE_BITMAP;
+    b->generic.activate = Activate;
+    b->cmd = UI_CopyString( Cmd_ArgsFrom( 2 ) );
+
+    name = Cmd_Argv( 1 );
+    b->pics[0] = R_RegisterPic( name );
+
+    Q_snprintf( buffer, sizeof( buffer ), "%s_sel", name );
+    b->pics[1] = R_RegisterPic( buffer );
+
+    R_GetPicSize( &b->generic.width, &b->generic.height, b->pics[0] );
+
+    Menu_AddItem( menu, b );
 }
 
 static void Parse_Bind( menuFrameWork_t *menu ) {
@@ -293,6 +323,40 @@ static void Parse_Color( void ) {
     }
 }
 
+static void Parse_Plaque( menuFrameWork_t *menu ) {
+    if( Cmd_Argc() < 2 ) {
+        Com_Printf( "Usage: %s <plaque> [logo]\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    menu->plaque = R_RegisterPic( Cmd_Argv( 1 ) );
+    if( menu->plaque ) {
+        R_GetPicSize( &menu->plaque_rc.width,
+            &menu->plaque_rc.height, menu->plaque );
+    }
+
+    if( Cmd_Argc() > 2 ) {
+        menu->logo = R_RegisterPic( Cmd_Argv( 2 ) );
+        if( menu->logo ) {
+            R_GetPicSize( &menu->logo_rc.width,
+                &menu->logo_rc.height, menu->logo );
+        }
+    }
+}
+
+static void Parse_Banner( menuFrameWork_t *menu ) {
+    if( Cmd_Argc() < 2 ) {
+        Com_Printf( "Usage: %s <banner>\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    menu->banner = R_RegisterPic( Cmd_Argv( 1 ) );
+    if( menu->banner ) {
+        R_GetPicSize( &menu->banner_rc.width,
+            &menu->banner_rc.height, menu->banner );
+    }
+}
+
 static qboolean Parse_File( const char *path, int depth ) {
     char *raw, *data, *p, *cmd;
     int argc;
@@ -335,6 +399,10 @@ static qboolean Parse_File( const char *path, int depth ) {
                         Z_Free( menu->title );
                     }
                     menu->title = UI_CopyString( Cmd_Argv( 1 ) );
+                } else if( !strcmp( cmd, "plaque" ) ) {
+                    Parse_Plaque( menu );
+                } else if( !strcmp( cmd, "banner" ) ) {
+                    Parse_Banner( menu );
                 } else if( !strcmp( cmd, "background" ) ) {
                     Parse_Background( menu );
                 } else if( !strcmp( cmd, "values" ) ) {
@@ -347,6 +415,8 @@ static qboolean Parse_File( const char *path, int depth ) {
                     Parse_Range( menu );
                 } else if( !strcmp( cmd, "action" ) ) {
                     Parse_Action( menu );
+                } else if( !strcmp( cmd, "bitmap" ) ) {
+                    Parse_Bitmap( menu );
                 } else if( !strcmp( cmd, "bind" ) ) {
                     Parse_Bind( menu );
                 } else if( !strcmp( cmd, "toggle" ) ) {

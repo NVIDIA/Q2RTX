@@ -123,6 +123,36 @@ static void Static_Draw( menuStatic_t *s ) {
 /*
 ===================================================================
 
+BITMAP CONTROL
+
+===================================================================
+*/
+
+static void Bitmap_Free( menuBitmap_t *b ) {
+    Z_Free( b->cmd );
+    Z_Free( b );
+}
+
+static void Bitmap_Init( menuBitmap_t *b ) {
+    b->generic.rect.x = b->generic.x;
+    b->generic.rect.y = b->generic.y;
+    b->generic.rect.width = b->generic.width;
+    b->generic.rect.height = b->generic.height;
+}
+
+static void Bitmap_Draw( menuBitmap_t *b ) {
+    if( b->generic.flags & QMF_HASFOCUS ) {
+        unsigned frame = ( uis.realtime / 100 ) % NUM_CURSOR_FRAMES;
+        R_DrawPic( b->generic.x - CURSOR_OFFSET, b->generic.y, uis.bitmapCursors[frame] );
+        R_DrawPic( b->generic.x, b->generic.y, b->pics[1] );
+    } else {
+        R_DrawPic( b->generic.x, b->generic.y, b->pics[0] );
+    }
+}
+
+/*
+===================================================================
+
 KEYBIND CONTROL
 
 ===================================================================
@@ -1351,6 +1381,9 @@ void Menu_Init( menuFrameWork_t *menu ) {
         case MTYPE_KEYBIND:
             Keybind_Init( item );
             break;
+        case MTYPE_BITMAP:
+            Bitmap_Init( item );
+            break;
         default:
             Com_Error( ERR_FATAL, "Menu_Init: unknown item type" );
             break;
@@ -1382,29 +1415,61 @@ void Menu_Init( menuFrameWork_t *menu ) {
 
 void Menu_Size( menuFrameWork_t *menu ) {
     menuCommon_t *item;
-    int x, y;
-    int i, count;
+    int x, y, h;
+    int i, height;
 
     // count visible items
-    for( i = 0, count = 0; i < menu->nitems; i++ ) {
+    for( i = 0, height = 0; i < menu->nitems; i++ ) {
         item = menu->items[i];
         if( item->flags & QMF_HIDDEN ) {
             continue;
         }
-        count++;
+        if( item->type == MTYPE_BITMAP ) {
+            height += GENERIC_SPACING( item->height );
+        } else {
+            height += MENU_SPACING;
+        }
+    }
+
+    if( menu->banner ) {
+        height += GENERIC_SPACING( menu->banner_rc.height );
     }
 
     // set menu top/bottom
     if( menu->transparent ) {
-        menu->y1 = ( uis.height - MENU_SPACING * count ) / 2 - MENU_SPACING;
-        menu->y2 = ( uis.height + MENU_SPACING * count ) / 2 + MENU_SPACING;
+        menu->y1 = ( uis.height - height ) / 2 - MENU_SPACING;
+        menu->y2 = ( uis.height + height ) / 2 + MENU_SPACING;
     } else {
         menu->y1 = 0;
         menu->y2 = uis.height;
     }
 
     x = uis.width / 2;
-    y = ( uis.height - MENU_SPACING * count ) / 2;
+    y = ( uis.height - height ) / 2;
+
+    if( menu->banner ) {
+        menu->banner_rc.x = ( uis.width - menu->banner_rc.width ) / 2;
+        menu->banner_rc.y = y;
+        y += GENERIC_SPACING( menu->banner_rc.height );
+    }
+
+    h = 0;
+    if( menu->plaque ) {
+        h += menu->plaque_rc.height;
+    }
+    if( menu->logo ) {
+        h += menu->logo_rc.height + 5;
+    }
+
+    if( menu->plaque ) {
+        menu->plaque_rc.x = x - CURSOR_WIDTH - menu->plaque_rc.width;
+        menu->plaque_rc.y = ( uis.height - h ) / 2;
+    }
+
+    if( menu->logo ) {
+        menu->logo_rc.x = x - CURSOR_WIDTH - menu->logo_rc.width;
+        menu->logo_rc.y = ( uis.height + h ) / 2 - menu->logo_rc.height;
+    }
 
     // align items
     for( i = 0; i < menu->nitems; i++ ) {
@@ -1414,7 +1479,11 @@ void Menu_Size( menuFrameWork_t *menu ) {
         }
         item->x = x;
         item->y = y;
-        y += MENU_SPACING;
+        if( item->type == MTYPE_BITMAP ) {
+            y += GENERIC_SPACING( item->height );
+        } else {
+            y += MENU_SPACING;
+        }
     }
 
 }
@@ -1551,6 +1620,19 @@ void Menu_Draw( menuFrameWork_t *menu ) {
     }
 
 //
+// draw banner, plaque and logo
+//
+    if( menu->banner ) {
+        R_DrawPic( menu->banner_rc.x, menu->banner_rc.y, menu->banner );
+    }
+    if( menu->plaque ) {
+        R_DrawPic( menu->plaque_rc.x, menu->plaque_rc.y, menu->plaque );
+    }
+    if( menu->logo ) {
+        R_DrawPic( menu->logo_rc.x, menu->logo_rc.y, menu->logo );
+    }
+
+//
 // draw contents
 //
     for( i = 0; i < menu->nitems; i++ ) {
@@ -1588,6 +1670,9 @@ void Menu_Draw( menuFrameWork_t *menu ) {
             break;
         case MTYPE_KEYBIND:
             Keybind_Draw( item );
+            break;
+        case MTYPE_BITMAP:
+            Bitmap_Draw( item );
             break;
         default:
             Com_Error( ERR_FATAL, "Menu_Draw: unknown item type" );
@@ -1631,6 +1716,7 @@ menuSound_t Menu_SelectItem( menuFrameWork_t *s ) {
     case MTYPE_FIELD:
     case MTYPE_ACTION:
     case MTYPE_LIST:
+    case MTYPE_BITMAP:
         return Common_DoEnter( item );
     default:
         return QMS_NOTHANDLED;
@@ -1937,6 +2023,9 @@ void Menu_Free( menuFrameWork_t *menu ) {
             break;
         case MTYPE_SEPARATOR:
             Z_Free( item );
+            break;
+        case MTYPE_BITMAP:
+            Bitmap_Free( item );
             break;
         default:
             break;

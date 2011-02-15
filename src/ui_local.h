@@ -47,7 +47,8 @@ typedef enum {
     MTYPE_VALUES,
     MTYPE_TOGGLE,
     MTYPE_STATIC,
-    MTYPE_KEYBIND
+    MTYPE_KEYBIND,
+    MTYPE_BITMAP
 } menuType_t;
 
 #define QMF_LEFT_JUSTIFY    0x00000001
@@ -100,6 +101,15 @@ typedef struct menuFrameWork_s {
 
     int mins[2];
     int maxs[2];
+
+    qhandle_t banner;
+    vrect_t banner_rc;
+
+    qhandle_t plaque;
+    vrect_t plaque_rc;
+
+    qhandle_t logo;
+    vrect_t logo_rc;
 
     qboolean (*push)( struct menuFrameWork_s * );
     void (*pop)( struct menuFrameWork_s * );
@@ -218,6 +228,12 @@ typedef struct menuStatic_s {
     menuCommon_t    generic;
     int             maxChars;
 } menuStatic_t;
+
+typedef struct menuBitmap_s {
+    menuCommon_t generic;
+    qhandle_t pics[2];
+    char *cmd;
+} menuBitmap_t;
 
 typedef struct menuKeybind_s {
     menuCommon_t    generic;
