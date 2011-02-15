@@ -157,13 +157,10 @@ typedef struct menuSlider_s {
 #define MLIST_SCROLLBAR_WIDTH   GENERIC_SPACING(CHAR_WIDTH)
 #define MLIST_PRESTEP           3
 
-typedef enum {
-    MLF_NOSELECT                = ( 1 << 0 ),
-    MLF_HIDE_SCROLLBAR          = ( 1 << 1 ),
-    MLF_HIDE_SCROLLBAR_EMPTY    = ( 1 << 2 ),
-    MLF_HIDE_BACKGROUND         = ( 1 << 3 ),
-    MLF_HIDE_HEADER             = ( 1 << 4 )
-} menuListFlags_t;
+#define MLF_HIDE_SCROLLBAR          (1<<0)
+#define MLF_HIDE_SCROLLBAR_EMPTY    (1<<1)
+#define MLF_HIDE_BACKGROUND         (1<<2)
+#define MLF_HIDE_HEADER             (1<<3)
 
 typedef struct menuListColumn_s {
     char *name;
@@ -177,7 +174,7 @@ typedef struct menuList_s {
     void        **items;
     int         numItems;
     int         maxItems;
-    menuListFlags_t mlFlags;
+    int         mlFlags;
     int         extrasize;
 
     int        prestep;
