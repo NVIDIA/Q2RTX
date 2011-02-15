@@ -1,51 +1,56 @@
-/* * * * * * * * * * * * * * * * * * * * * * * *
-*
-* This is example menu definition file for Q2PRO.
-*
-* File format is line based, whitespace is ignored. Lines are macro
-* expanded at script load time just as usual console commands.
-*
-* Long lines can be broken into multiple ones by escaping LF character
-* with '\'. Escaping CRLF-style line endings will _not_ work.
-*
-* C and C++ style comments are supported.
-*
-* Empty menu entries are ignored. Duplicate menu entries override previous ones.
-* Built-in menus (`demos', `servers' and `players') can not be overridden.
-*
-* include <filename>
-*
-* background <color|image>
-* font <image>
-* cursor <image>
-*
-* color <state> <color>
-*
-* begin <menuname>
-*    title <menutitle>
-*    background <color|image>
-*
-*    range <name> <cvar> <min> <max> [step]
-*
-*    pairs <name> <cvar> <string1> <value1> [...]
-*    values <name> <cvar> <string1> [...]
-*    strings <name> <cvar> <value1> [...]
-*    toggle <name> <cvar> [~][bit]
-*
-*    bind <name> <command>
-*    action <name> <command>
-*    blank
-*
-*    field [options] <name> <cvar>
-* end
-*
-* * * * * * * * * * * * * * * * * * * * * * * */
+/*
+This is example menu definition file for Q2PRO.
 
-// include test.menu
+File format is line based, whitespace is ignored.  C and C++ style comments are
+supported.  Long lines can be broken into multiple ones by escaping linefeed
+characters with backslashes.  It possible to escape only UNIX-style line
+endings.
+
+Lines are macro expanded at script load time just as usual console commands.
+Any cvars and macros can be referenced.
+
+Duplicate menu entries override previous ones.  Built-in menus (‘demos’,
+‘servers’ and ‘players’) can not be overridden.  When user presses ESC while
+disconnected, ‘main’ menu is pushed.  When user presses ESC while spawned in
+game, ‘game’ menu is pushed if it is found, otherwise ‘main’ menu is pushed.
+
+Supported keywords and their syntax:
+
+include <filename>
+
+background <color|image>
+font <image>
+cursor <image>
+weapon <model>
+
+color <state> <color>
+
+begin <menuname>
+   title <menutitle>
+   banner <image>
+   background <color|image>
+   plaque <plaque> [logo]
+
+   range <name> <cvar> <min> <max> [step]
+
+   pairs <name> <cvar> <string1> <value1> [...]
+   values <name> <cvar> <string1> [...]
+   strings <name> <cvar> <value1> [...]
+   toggle <name> <cvar> [~][bit]
+
+   bind <name> <command>
+   action <name> <command>
+   bitmap <image> <command>
+   blank
+
+   field [options] <name> <cvar>
+end
+*/
 
 background conback
 font conchars
 cursor ch1
+weapon w_railgun.md2
 
 color normal #0f90eb64
 color active #0f90ff64
@@ -53,7 +58,8 @@ color selection #0f90eb64
 color disabled #7f7f7f
 
 begin video
-    title "Video Setup"
+    //title "Video Setup"
+    banner m_banner_video
     range "screen size" viewsize 40 100 10
     range "gamma" vid_gamma 1.3 0.3
     toggle "hardware gamma" vid_hwgamma
@@ -65,6 +71,8 @@ begin video
         bilinear GL_LINEAR_MIPMAP_NEAREST \
         trilinear GL_LINEAR_MIPMAP_LINEAR
     toggle "vertical sync" gl_swapinterval
+    values "dynamic lighting" gl_dynamic "no" "yes" "only switchable"
+    toggle "smooth lights falloff" gl_dlight_falloff
     range "texture saturation" gl_saturation 0 1
     range "lightmap saturation" gl_coloredlightmaps 0 1
     toggle "override textures" r_override_textures
@@ -72,18 +80,21 @@ begin video
 end
 
 begin options
-    title "Options"
-    action "Player" pushmenu players
-    action "Keys" pushmenu keys
-    action "Weapons" pushmenu weapons
-    action "Video" pushmenu video
-    action "Sound" pushmenu sound
-    action "Downloads" pushmenu downloads
-    action "Address Book" pushmenu addressbook
+    //title "Options"
+    banner m_banner_options
+    action "player setup" pushmenu players
+    action "input setup" pushmenu input
+    action "key bindings" pushmenu keys
+    action "weapon bindings" pushmenu weapons
+    action "video setup" pushmenu video
+    action "sound setup" pushmenu sound
+    action "download options" pushmenu downloads
+    action "address book" pushmenu addressbook
 end
 
 begin sound
     title "Sound Setup"
+    values "sound engine" s_enable "no sound" "software" "OpenAL"
     values "hardware access" s_direct "max compatibility" "max performance"
     range "effects volume" s_volume 0 1
     values "ambient sounds" s_ambient "no" "yes" "only player's own"
@@ -121,7 +132,8 @@ begin gameflags
 end
 
 begin startserver
-    title "Start Server"
+    //title "Start Server"
+    banner m_banner_start_server
     strings "initial map" nextserver $com_maplist
     field --integer --status "0 - no time limit" --width 3 "time limit" timelimit
     field --integer --status "0 - no frag limit" --width 3 "frag limit" fraglimit
@@ -129,31 +141,38 @@ begin startserver
     field --width 16 "host name" hostname
     blank
     action --align "deathmatch flags" pushmenu gameflags
-    action --align "begin game" "forcemenuoff; map $nextserver"
+    action --align "begin game" "forcemenuoff; map $nextserver force"
+end
+
+begin multiplayer
+    banner m_banner_multiplayer
+    action "server browser" pushmenu servers
+    action "demo browser" pushmenu demos
+    action "start server" pushmenu startserver
 end
 
 begin main
-    title "Main Menu"
-    action "Servers" pushmenu servers
-    action "Demos" pushmenu demos
-    action "Options" pushmenu options
-    action "Game" pushmenu startserver
-    action "Quit" quit
+    //title "Main Menu"
+    plaque m_main_plaque m_main_logo
+    bitmap m_main_game pushmenu startserver
+    bitmap m_main_multiplayer pushmenu multiplayer
+    bitmap m_main_options pushmenu options
+    bitmap m_main_video pushmenu video
+    bitmap m_main_quit quit
 end
 
 begin game
     background #0000ff20
-    //background inventory
-    //background blue
-    action "Servers" pushmenu servers
-    action "Demos" pushmenu demos
-    action "Options" pushmenu options
-    action "Disconnect" disconnect
-    action "Quit" quit
+    action "servers" pushmenu servers
+    action "demos" pushmenu demos
+    action "options" pushmenu options
+    action "disconnect" disconnect
+    action "quit" quit
 end
 
 begin addressbook
-    title "Address Book"
+    //title "Address Book"
+    banner m_banner_addressbook
     field --width 32 --center adr0
     field --width 32 --center adr1
     field --width 32 --center adr2
@@ -170,6 +189,16 @@ begin addressbook
     field --width 32 --center adr13
     field --width 32 --center adr14
     field --width 32 --center adr15
+end
+
+begin input
+    title "Input Setup"
+    toggle "direct input" in_direct
+    field --integer --width 2 "mouse speed" sensitivity
+    toggle "auto sens" m_autosens
+    toggle "mouse filter" m_filter
+    toggle "always run" cl_run
+    toggle "free look" freelook
 end
 
 begin keys
