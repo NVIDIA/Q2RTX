@@ -501,6 +501,8 @@ static qboolean Parse_File( const char *path, int depth ) {
                     uis.cursorHandle = R_RegisterPic( Cmd_Argv( 1 ) );
                     R_GetPicSize( &uis.cursorWidth,
                         &uis.cursorHeight, uis.cursorHandle );
+                } else if( !strcmp( cmd, "weapon" ) ) {
+                    Cmd_ArgvBuffer( 1, uis.weaponModel, sizeof( uis.weaponModel ) );
                 } else {
                     Com_WPrintf( "Unknown keyword '%s'\n", cmd );
                     break;

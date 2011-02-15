@@ -279,6 +279,7 @@ typedef struct uiStatic_s {
     qboolean transparent;
     int numPlayerModels;
     playerModelInfo_t pmi[MAX_PLAYERMODELS];
+    char weaponModel[32];
 
     qhandle_t backgroundHandle;
     qhandle_t fontHandle;

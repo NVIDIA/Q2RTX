@@ -666,6 +666,8 @@ qboolean UI_Init( void ) {
     Vector4Set( uis.color.selection, 15, 128, 235, 100 );
     Vector4Set( uis.color.disabled, 127, 127, 127, 255 );
 
+    strcpy( uis.weaponModel, "w_railgun.md2" );
+
     // load custom menus
     UI_LoadStript();
 

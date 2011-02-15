@@ -29,7 +29,7 @@ PLAYER MODELS
 =============================================================================
 */
 
-static const char baseWeaponNames[][32] = {
+static const char *const baseWeaponNames[] = {
     "w_bfg.md2",
     "w_blaster.md2",
     "w_chaingun.md2",

@@ -68,12 +68,15 @@ static void ReloadMedia( void ) {
     Q_concat( scratch, sizeof( scratch ), "players/", model, "/", skin, ".pcx", NULL );
     m_player.entities[0].skin = R_RegisterSkin( scratch );
 
-    Q_concat( scratch, sizeof( scratch ), "players/", model, "/w_railgun.md2", NULL );
-    m_player.entities[1].model = R_RegisterModel( scratch );
+    if( uis.weaponModel[0] ) {
+        Q_concat( scratch, sizeof( scratch ), "players/", model, "/", uis.weaponModel, NULL );
+        m_player.entities[1].model = R_RegisterModel( scratch );
+    }
 }
 
 static void RunFrame( void ) {
     int frame;
+    int i;
 
     if( m_player.time < uis.realtime ) {
         m_player.oldTime = m_player.time;
@@ -85,15 +88,16 @@ static void RunFrame( void ) {
 
         frame = ( m_player.time / 120 ) % 40;
 
-        m_player.entities[0].oldframe = m_player.entities[0].frame;
-        m_player.entities[1].oldframe = m_player.entities[1].frame;
-        m_player.entities[0].frame = frame;
-        m_player.entities[1].frame = frame;
+        for( i = 0; i < m_player.refdef.num_entities; i++ ) {
+            m_player.entities[i].oldframe = m_player.entities[i].frame;
+            m_player.entities[i].frame = frame;
+        }
     }
 }
 
 static void Draw( menuFrameWork_t *self ) {
     float backlerp;
+    int i;
 
     m_player.refdef.time = uis.realtime * 0.001f;
 
@@ -106,8 +110,9 @@ static void Draw( menuFrameWork_t *self ) {
             ( float )( m_player.time - m_player.oldTime );
     }
 
-    m_player.entities[0].backlerp = backlerp;
-    m_player.entities[1].backlerp = backlerp;
+    for( i = 0; i < m_player.refdef.num_entities; i++ ) {
+        m_player.entities[i].backlerp = backlerp;
+    }
 
     Menu_Draw( self );    
 
@@ -264,7 +269,10 @@ void M_Menu_PlayerConfig( void ) {
     VectorCopy( origin, m_player.entities[1].origin );
     VectorCopy( origin, m_player.entities[1].oldorigin );
 
-    m_player.refdef.num_entities = 2;
+    m_player.refdef.num_entities = 1;
+    if( uis.weaponModel[0] ) {
+        m_player.refdef.num_entities++;
+    }
 
     m_player.refdef.entities = m_player.entities;
     m_player.refdef.rdflags = RDF_NOWORLDMODEL;
