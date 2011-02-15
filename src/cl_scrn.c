@@ -1758,7 +1758,7 @@ static void draw_2d( void ) {
     }
 #endif
 
-    if( sv_paused->integer && scr_showpause->integer ) {
+    if( sv_paused->integer && cl_paused->integer && scr_showpause->integer ) {
         draw_pause();
     }
 
