@@ -76,8 +76,13 @@ void UI_PushMenu( menuFrameWork_t *menu ) {
     Key_SetDest( ( Key_GetDest() & ~KEY_CONSOLE ) | KEY_MENU );
 
     if( !uis.activeMenu ) {
+        // opening menu moves cursor to the nice location
+        IN_WarpMouse( menu->mins[0] / uis.scale, menu->mins[1] / uis.scale );
+
+        uis.mouseCoords[0] = menu->mins[0];
+        uis.mouseCoords[1] = menu->mins[1];
+
         uis.entersound = qtrue;
-        IN_WarpMouse( 0, menu->y1 );
     }
 
     uis.transparent |= menu->transparent;

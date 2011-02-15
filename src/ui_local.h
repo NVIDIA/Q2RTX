@@ -96,6 +96,9 @@ typedef struct menuFrameWork_s {
     color_t color;
     int y1, y2;
 
+    int mins[2];
+    int maxs[2];
+
     qboolean (*push)( struct menuFrameWork_s * );
     void (*pop)( struct menuFrameWork_s * );
     void (*expose)( struct menuFrameWork_s * );

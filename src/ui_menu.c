@@ -1281,10 +1281,30 @@ void Menu_AddItem( menuFrameWork_t *menu, void *item ) {
     ((menuCommon_t *)item)->parent = menu;
 }
 
+void UI_ClearBounds( int mins[2], int maxs[2] ) {
+    mins[0] = mins[1] = 9999;
+    maxs[0] = maxs[1] = -9999;
+}
+
+void UI_AddRectToBounds( const vrect_t *rc, int mins[2], int maxs[2] ) {
+    if( mins[0] > rc->x ) {
+        mins[0] = rc->x;
+    } else if( maxs[0] < rc->x + rc->width ) {
+        maxs[0] = rc->x + rc->width;
+    }
+
+    if( mins[1] > rc->y ) {
+        mins[1] = rc->y;
+    } else if( maxs[1] < rc->y + rc->height ) {
+        maxs[1] = rc->y + rc->height;
+    }
+}
+
 void Menu_Init( menuFrameWork_t *menu ) {
     void *item;
     int i;
     int focus = 0;
+    vrect_t *rc;
 
     menu->y1 = 0;
     menu->y2 = uis.height;
@@ -1339,6 +1359,22 @@ void Menu_Init( menuFrameWork_t *menu ) {
         item = menu->items[0];
         ((menuCommon_t *)item)->flags |= QMF_HASFOCUS;
     }
+
+    // calc menu bounding box
+    UI_ClearBounds( menu->mins, menu->maxs );
+
+    for( i = 0; i < menu->nitems; i++ ) {
+        item = menu->items[i];
+        rc = &((menuCommon_t *)item)->rect;
+
+        UI_AddRectToBounds( rc, menu->mins, menu->maxs );
+    }
+
+    // expand
+    menu->mins[0] -= MENU_SPACING;
+    menu->mins[1] -= MENU_SPACING;
+    menu->maxs[0] += MENU_SPACING;
+    menu->maxs[1] += MENU_SPACING;
 }
 
 void Menu_Size( menuFrameWork_t *menu ) {
