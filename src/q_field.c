@@ -37,7 +37,7 @@ IF_Init
 void IF_Init( inputField_t *field, size_t visibleChars, size_t maxChars ) {
     memset( field, 0, sizeof( *field ) );
 
-    if( maxChars > sizeof( field->text ) - 1 ) {
+    if( maxChars >= sizeof( field->text ) ) {
         maxChars = sizeof( field->text ) - 1;
     }
     if( visibleChars > maxChars ) {
@@ -152,7 +152,7 @@ qboolean IF_KeyEvent( inputField_t *field, int key ) {
         if( field->text[field->cursorPos] ) {
             field->cursorPos++;
         }
-        return qtrue;
+        goto check;
     }
 
     if( key == 'b' && Key_IsDown( K_ALT ) ) {
@@ -175,7 +175,7 @@ qboolean IF_KeyEvent( inputField_t *field, int key ) {
         while( field->text[field->cursorPos] > 32 ) {
             field->cursorPos++;
         }
-        return qtrue;
+        goto check;
     }
 
     if( key == K_HOME || ( key == 'a' && Key_IsDown( K_CTRL ) ) ) {
@@ -185,7 +185,7 @@ qboolean IF_KeyEvent( inputField_t *field, int key ) {
 
     if( key == K_END || ( key == 'e' && Key_IsDown( K_CTRL ) ) ) {
         field->cursorPos = strlen( field->text );
-        return qtrue;
+        goto check;
     }
 
     if( key == K_INS ) {
@@ -194,6 +194,13 @@ qboolean IF_KeyEvent( inputField_t *field, int key ) {
     }
 
     return qfalse;
+
+check:
+    if( field->cursorPos >= field->maxChars ) {
+        field->cursorPos = field->maxChars - 1;
+    }
+
+    return qtrue;
 }
 
 /*
@@ -205,12 +212,12 @@ qboolean IF_CharEvent( inputField_t *field, int key ) {
     if( !field->maxChars ) {
         return qfalse;
     }
-    if( key < 32 || key > 127 ) {
-        return qfalse;    // non printable
-    }
-
     if( field->cursorPos >= field->maxChars ) {
         Com_Error( ERR_FATAL, "%s: bad cursorPos", __func__ );
+    }
+
+    if( key < 32 || key > 127 ) {
+        return qfalse;    // non printable
     }
 
     if( field->cursorPos == field->maxChars - 1 ) {
@@ -248,7 +255,7 @@ int IF_Draw( inputField_t *field, int x, int y, int flags, qhandle_t font ) {
     size_t offset = 0;
     int ret;
 
-    if( !field->visibleChars ) {
+    if( !field->maxChars || !field->visibleChars ) {
         return 0;
     }
 
