@@ -70,7 +70,9 @@ typedef enum {
 #define RCOLUMN_OFFSET  (CHAR_WIDTH*2)
 #define LCOLUMN_OFFSET -RCOLUMN_OFFSET
 
-#define MENU_SPACING    (CHAR_HEIGHT+CHAR_HEIGHT/2)
+#define GENERIC_SPACING(x)   ((x)+(x)/4)
+
+#define MENU_SPACING    GENERIC_SPACING(CHAR_HEIGHT)
 
 #define DOUBLE_CLICK_DELAY    300
 
@@ -150,9 +152,9 @@ typedef struct menuSlider_s {
 
 #define MAX_COLUMNS     8
 
-#define MLIST_SPACING           (CHAR_HEIGHT+CHAR_HEIGHT/4)
+#define MLIST_SPACING           GENERIC_SPACING(CHAR_HEIGHT)
 #define MLIST_BORDER_WIDTH      1
-#define MLIST_SCROLLBAR_WIDTH   (CHAR_WIDTH+CHAR_WIDTH/4)
+#define MLIST_SCROLLBAR_WIDTH   GENERIC_SPACING(CHAR_WIDTH)
 #define MLIST_PRESTEP           3
 
 typedef enum {
