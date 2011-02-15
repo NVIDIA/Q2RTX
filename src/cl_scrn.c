@@ -1058,6 +1058,7 @@ void SCR_ModeChanged( void ) {
 #endif
     // video sync flag may have changed
     CL_UpdateFrameTimes();
+    cls.disable_screen = 0;
 }
 
 /*
