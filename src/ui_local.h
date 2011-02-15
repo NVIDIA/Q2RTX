@@ -239,7 +239,13 @@ typedef struct playerModelInfo_s {
 void PlayerModel_Load( void );
 void PlayerModel_Free( void );
 
-#define    MAX_MENU_DEPTH    8
+#define MAX_MENU_DEPTH    8
+
+// animated menu cursor
+#define CURSOR_WIDTH    32
+#define CURSOR_OFFSET   25
+
+#define NUM_CURSOR_FRAMES 15
 
 typedef struct uiStatic_s {
     qboolean initialized;
@@ -262,6 +268,8 @@ typedef struct uiStatic_s {
     qhandle_t fontHandle;
     qhandle_t cursorHandle;
     int cursorWidth, cursorHeight;
+
+    qhandle_t bitmapCursors[NUM_CURSOR_FRAMES];
 
     struct {
         color_t background;
