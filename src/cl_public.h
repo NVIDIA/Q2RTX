@@ -39,6 +39,7 @@ typedef struct {
 typedef struct {
     char map[MAX_QPATH];
     char pov[MAX_CLIENT_NAME];
+    qboolean mvd;
 } demoInfo_t;
 
 typedef enum {

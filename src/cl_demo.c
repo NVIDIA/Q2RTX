@@ -786,6 +786,8 @@ demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info ) {
             MSG_ReadString( string, sizeof( string ) );
             parse_info_string( info, clientNum, index, string );
         }
+
+        info->mvd = qfalse;
     } else {
         if( ( MSG_ReadByte() & SVCMD_MASK ) != mvd_serverdata ) {
             goto fail;
@@ -809,6 +811,8 @@ demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info ) {
             MSG_ReadString( string, sizeof( string ) );
             parse_info_string( info, clientNum, index, string );
         }
+
+        info->mvd = qtrue;
     }
 
     FS_FCloseFile( f );

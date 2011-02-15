@@ -34,6 +34,8 @@ DEMOS MENU
 
 #define DEMO_EXTRASIZE  q_offsetof( demoEntry_t, name )
 
+#define DEMO_MVD_POV "\x90\xcd\xd6\xc4\x91"
+
 #define ENTRY_UP        1
 #define ENTRY_DN        2
 #define ENTRY_DEMO      3
@@ -83,6 +85,9 @@ static void BuildName( file_info_t *info, char **cache ) {
     } else {
         Q_concat( buffer, sizeof( buffer ), m_demos.browse, "/", info->name, NULL );
         CL_GetDemoInfo( buffer, &demo );
+        if( demo.mvd ) {
+            strcpy( demo.pov, DEMO_MVD_POV );
+        }
     }
 
     Com_FormatSize( buffer, sizeof( buffer ), info->size );
