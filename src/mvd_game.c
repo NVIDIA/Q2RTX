@@ -1460,7 +1460,11 @@ static void MVD_GameClientUserinfoChanged( edict_t *ent, char *userinfo ) {
     float fov;
 
     s = Info_ValueForKey( userinfo, "uf" );
-    client->uf = atoi( s );
+    if( *s ) {
+        client->uf = atoi( s );
+    } else {
+        client->uf = UF_LOCALFOV;
+    }
 
     s = Info_ValueForKey( userinfo, "fov" );
     fov = atof( s );
