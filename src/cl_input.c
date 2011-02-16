@@ -471,8 +471,8 @@ Returns the fraction of the frame that the key was down
 ===============
 */
 static float CL_KeyState( kbutton_t *key ) {
-    float val;
     unsigned msec = key->msec;
+    float val;
 
     if( key->state & 1 ) {
         // still down
@@ -484,15 +484,13 @@ static float CL_KeyState( kbutton_t *key ) {
     if( !cl.cmd.msec ) {
         return 0;
     }
+
     val = ( float )msec / cl.cmd.msec;
 
-    clamp( val, 0, 1 );
-    
-    return val;
+    return clamp( val, 0, 1 );
 }
 
 //==========================================================================
-
 
 /*
 ================
@@ -543,9 +541,9 @@ static void CL_MouseMove( void ) {
         my *= V_CalcFov( cl.fov_x, 4, 3 ) / 73.739795291688f;
     }
 
-// add mouse X/Y movement to cmd
+// add mouse X/Y movement
     if( ( in_strafe.state & 1 ) || ( lookstrafe->integer && !in_mlooking ) ) {
-        cl.cmd.sidemove += m_side->value * mx;
+        cl.mousemove[1] += m_side->value * mx;
     } else {
         cl.viewangles[YAW] -= m_yaw->value * mx;
     }
@@ -553,7 +551,7 @@ static void CL_MouseMove( void ) {
     if( ( in_mlooking || freelook->integer ) && !( in_strafe.state & 1 ) ) {
         cl.viewangles[PITCH] += m_pitch->value * my;
     } else {
-        cl.cmd.forwardmove -= m_forward->value * my;
+        cl.mousemove[0] -= m_forward->value * my;
     }
 }
 
@@ -594,8 +592,6 @@ Build the intended movement vector
 ================
 */
 static void CL_BaseMove( vec3_t move ) {
-    float speed;
-
     if( in_strafe.state & 1 ) {
         move[1] += cl_sidespeed->value * CL_KeyState( &in_right );
         move[1] -= cl_sidespeed->value * CL_KeyState( &in_left );
@@ -616,9 +612,11 @@ static void CL_BaseMove( vec3_t move ) {
     if( ( in_speed.state & 1 ) ^ cl_run->integer ) {
         VectorScale( move, 2, move );
     }
+}
 
-// clamp to server defined max speed
-    speed = cl.pmp.maxspeed;
+static void CL_ClampSpeed( vec3_t move ) {
+    float speed = cl.pmp.maxspeed;
+
     clamp( move[0], -speed, speed );
     clamp( move[1], -speed, speed );
     clamp( move[2], -speed, speed );
@@ -645,10 +643,13 @@ static void CL_ClampPitch( void ) {
 /*
 =================
 CL_UpdateCmd
+
+Updates msec, angles and builds interpolated movement vector for local prediction.
+Doesn't touch command forward/side/upmove, these are filled by CL_FinalizeCmd.
 =================
 */
 void CL_UpdateCmd( int msec ) {
-    VectorClear( cl.move );
+    VectorClear( cl.localmove );
 
     if( sv_paused->integer ) {
         return;
@@ -659,12 +660,19 @@ void CL_UpdateCmd( int msec ) {
 
     // adjust viewangles
     CL_AdjustAngles( msec );
-    
-    // get basic movement from keyboard
-    CL_BaseMove( cl.move );
 
-    // allow mice or other external controllers to add to the move
+    // get basic movement from keyboard
+    CL_BaseMove( cl.localmove );
+
+    // allow mice to add to the move
     CL_MouseMove();
+
+    // add accumulated mouse forward/side movement
+    cl.localmove[0] += cl.mousemove[0];
+    cl.localmove[1] += cl.mousemove[1];
+
+    // clamp to server defined max speed
+    CL_ClampSpeed( cl.localmove );
 
     CL_ClampPitch();
     
@@ -749,6 +757,14 @@ void CL_RegisterInput( void ) {
     m_autosens = Cvar_Get( "m_autosens", "0", 0 );
 }
 
+/*
+=================
+CL_FinalizeCmd
+
+Builds the actual movement vector for sending to server. Assumes that msec
+and angles are already set for this frame by CL_UpdateCmd.
+=================
+*/
 void CL_FinalizeCmd( void ) {
     vec3_t move;
 
@@ -787,15 +803,27 @@ void CL_FinalizeCmd( void ) {
         cl.cmd.msec = 100;        // time was unreasonable
     }
 
-    move[0] = cl.cmd.forwardmove;
-    move[1] = cl.cmd.sidemove;
-    move[2] = cl.cmd.upmove;
+    // rebuild the movement vector
+    VectorClear( move );
 
+    // get basic movement from keyboard
     CL_BaseMove( move );
 
+    // add mouse forward/side movement
+    move[0] += cl.mousemove[0];
+    move[1] += cl.mousemove[1];
+
+    // clamp to server defined max speed
+    CL_ClampSpeed( move );
+
+    // store the movement vector
     cl.cmd.forwardmove = move[0];
     cl.cmd.sidemove = move[1];
     cl.cmd.upmove = move[2];
+
+    // clear all states
+    cl.mousemove[0] = 0;
+    cl.mousemove[1] = 0;
 
     KeyClear( &in_right );
     KeyClear( &in_left );

@@ -238,9 +238,9 @@ void CL_PredictMovement( void ) {
     // run pending cmd
     if( cl.cmd.msec ) {
         pm.cmd = cl.cmd;
-        pm.cmd.forwardmove = cl.move[0];
-        pm.cmd.sidemove = cl.move[1];
-        pm.cmd.upmove = cl.move[2];
+        pm.cmd.forwardmove = cl.localmove[0];
+        pm.cmd.sidemove = cl.localmove[1];
+        pm.cmd.upmove = cl.localmove[2];
         Pmove( &pm, &cl.pmp );
         frame = current;
 
