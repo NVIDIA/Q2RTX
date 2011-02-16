@@ -484,7 +484,7 @@ Win_MainWndProc
 main window procedure
 ====================
 */
-PRIVATE LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam ) {
+STATIC LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam ) {
     switch( uMsg ) {
     case WM_MOUSEWHEEL: {
             extern keydest_t Key_GetDest( void );

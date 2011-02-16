@@ -26,9 +26,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 typedef PVOID (*FNINIT)( VOID );
 
-PRIVATE PVOID anticheatApi;
-PRIVATE FNINIT anticheatInit;
-PRIVATE HMODULE anticheatHandle;
+STATIC PVOID anticheatApi;
+STATIC FNINIT anticheatInit;
+STATIC HMODULE anticheatHandle;
 
 qboolean Sys_GetAntiCheatAPI( void ) {
     qboolean updated = qfalse;
