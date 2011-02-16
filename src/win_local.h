@@ -129,7 +129,6 @@ void Win_UpdateGamma( const byte *table );
 #endif // USE_CLIENT
 
 extern HINSTANCE        hGlobalInstance;
-extern qboolean         iswinnt;
 
 #if USE_DBGHELP
 DWORD Sys_ExceptionHandler( DWORD                   exceptionCode,

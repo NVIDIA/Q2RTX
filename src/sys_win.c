@@ -29,8 +29,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 HINSTANCE   hGlobalInstance;
 
-qboolean    iswinnt;
-
 cvar_t  *sys_basedir;
 cvar_t  *sys_libdir;
 cvar_t  *sys_homedir;
@@ -689,27 +687,20 @@ Sys_Init
 ================
 */
 void Sys_Init( void ) {
-    OSVERSIONINFO    vinfo;
+    OSVERSIONINFO vinfo;
 
     timeBeginPeriod( 1 );
 
+    // check windows version
     vinfo.dwOSVersionInfoSize = sizeof( vinfo );
-
     if( !GetVersionEx( &vinfo ) ) {
         Sys_Error( "Couldn't get OS info" );
     }
-
-    iswinnt = qtrue;
-    if( vinfo.dwMajorVersion < 4 ) {
-        Sys_Error( PRODUCT " requires windows version 4 or greater" );
+    if( vinfo.dwPlatformId != VER_PLATFORM_WIN32_NT ) {
+        Sys_Error( PRODUCT " requires Windows NT" );
     }
-    if( vinfo.dwPlatformId == VER_PLATFORM_WIN32s ) {
-        Sys_Error( PRODUCT " doesn't run on Win32s" );
-    } else if( vinfo.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS ) {
-        if( vinfo.dwMinorVersion == 0 ) {
-            Sys_Error( PRODUCT " doesn't run on Win95" );
-        }
-        iswinnt = qfalse;
+    if( vinfo.dwMajorVersion < 5 ) {
+        Sys_Error( PRODUCT " requires Windows 2000 or greater" );
     }
 
     // basedir <path>

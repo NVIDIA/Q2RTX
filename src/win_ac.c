@@ -46,13 +46,6 @@ qboolean Sys_GetAntiCheatAPI( void ) {
         return qtrue;
     }
 
-    //windows version check
-    if( !iswinnt ) {
-        Com_LPrintf( PRINT_WARNING,
-            "Anticheat requires Windows 2000/XP/2003.\n" );
-        return qfalse;
-    }
-
 reInit:
     anticheatHandle = LoadLibrary( "anticheat" );
     if( !anticheatHandle ) {

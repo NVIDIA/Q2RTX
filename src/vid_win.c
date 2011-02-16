@@ -213,14 +213,8 @@ Win_DisableAltTab
 */
 static void Win_DisableAltTab( void ) {
     if( !win.alttab_disabled ) {
-        if( !iswinnt ) {
-            BOOL old;
-
-            SystemParametersInfo( SPI_SETSCREENSAVERRUNNING, 1, &old, 0 );
-        } else {
-            RegisterHotKey( 0, 0, MOD_ALT, VK_TAB );
-            RegisterHotKey( 0, 1, MOD_ALT, VK_RETURN );
-        }
+        RegisterHotKey( 0, 0, MOD_ALT, VK_TAB );
+        RegisterHotKey( 0, 1, MOD_ALT, VK_RETURN );
         win.alttab_disabled = qtrue;
     }
 }
@@ -232,14 +226,8 @@ Win_EnableAltTab
 */
 static void Win_EnableAltTab( void ) {
     if( win.alttab_disabled ) {
-        if( !iswinnt ) {
-            BOOL old;
-
-            SystemParametersInfo( SPI_SETSCREENSAVERRUNNING, 0, &old, 0 );
-        } else {
-            UnregisterHotKey( 0, 0 );
-            UnregisterHotKey( 0, 1 );
-        }
+        UnregisterHotKey( 0, 0 );
+        UnregisterHotKey( 0, 1 );
         win.alttab_disabled = qfalse;
     }
 }
@@ -348,11 +336,6 @@ ignore:
 
 static void win_disablewinkey_changed( cvar_t *self ) {
     if( self->integer ) {
-        if( !iswinnt ) {
-            Com_Printf( "Low-level keyboard hook requires Windows NT\n" );
-            Cvar_Set( "win_disablewinkey", "0" );
-            return;
-        }
         win.kbdHook = SetWindowsHookEx( WH_KEYBOARD_LL, LowLevelKeyboardProc, hGlobalInstance, 0 );
         if( !win.kbdHook ) {
             Com_EPrintf( "Couldn't set low-level keyboard hook, error %#lX\n", GetLastError() );
