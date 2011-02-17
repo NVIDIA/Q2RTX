@@ -111,12 +111,17 @@ typedef struct {
     int         mode_changed;
 
     struct {
-        qboolean    initialized;
+        enum {
+            WIN_MOUSE_DISABLED,
+            WIN_MOUSE_LEGACY,
+            WIN_MOUSE_RAW
+        } initialized;
         grab_t      grabbed;
         int         state;
         qboolean    parmsvalid;
         qboolean    restoreparms;
         int         originalparms[3];
+        int         mx, my;
     } mouse;
 } win_state_t;
 

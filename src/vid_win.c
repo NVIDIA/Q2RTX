@@ -29,13 +29,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 win_state_t     win;
 
-static cvar_t    *vid_flip_on_switch;
-static cvar_t    *vid_hwgamma;
-static cvar_t    *win_noalttab;
-static cvar_t    *win_disablewinkey;
-static cvar_t    *win_noresize;
-static cvar_t    *win_notitle;
-static cvar_t    *win_alwaysontop;
+static cvar_t   *vid_flip_on_switch;
+static cvar_t   *vid_hwgamma;
+static cvar_t   *win_noalttab;
+static cvar_t   *win_disablewinkey;
+static cvar_t   *win_noresize;
+static cvar_t   *win_notitle;
+static cvar_t   *win_alwaysontop;
+static cvar_t   *win_xpfix;
+static cvar_t   *win_rawmouse;
 
 /*
 ===============================================================================
@@ -466,8 +468,111 @@ static void Win_KeyEvent( WPARAM wParam, LPARAM lParam, qboolean down ) {
     Key_Event( result, down, win.lastMsgTime );
 }
 
-static inline void get_nc_area_size( HWND w, RECT *r ) {
-    LONG style = GetWindowLong( w, GWL_STYLE );
+static void mouse_wheel_event( int delta ) {
+    UINT lines, key;
+
+    // FIXME: handle WHEEL_DELTA and partial scrolls...
+    if( delta > 0 ) {
+        key = K_MWHEELUP;
+    } else if( delta < 0 ) {
+        key = K_MWHEELDOWN;
+    } else {
+        return;
+    }
+
+    if( Key_GetDest() & KEY_CONSOLE ) {
+        SystemParametersInfo( SPI_GETWHEELSCROLLLINES, 0, &lines, 0 );
+        clamp( lines, 1, 9 );
+    } else {
+        lines = 1;
+    }
+
+    do {
+        Key_Event( key, qtrue, win.lastMsgTime );
+        Key_Event( key, qfalse, win.lastMsgTime );
+    } while( --lines );
+}
+
+// this is complicated because Win32 seems to pack multiple mouse events into
+// one update sometimes, so we always check all states and look for events
+static void legacy_mouse_event( WPARAM wParam ) {
+    int i, mask, temp = 0;
+
+    if( wParam & MK_LBUTTON )
+        temp |= 1;
+
+    if( wParam & MK_RBUTTON )
+        temp |= 2;
+
+    if( wParam & MK_MBUTTON )
+        temp |= 4;
+
+    if( wParam & MK_XBUTTON1 )
+        temp |= 8;
+
+    if( wParam & MK_XBUTTON2 )
+        temp |= 16;
+
+    if( temp == win.mouse.state )
+        return;
+
+    // perform button actions
+    for( i = 0, mask = 1; i < MOUSE_BUTTONS; i++, mask <<= 1 ) {
+        if( ( temp & mask ) && !( win.mouse.state & mask ) ) {
+            Key_Event( K_MOUSE1 + i, qtrue, win.lastMsgTime );
+        }
+        if( !( temp & mask ) && ( win.mouse.state & mask ) ) {
+            Key_Event( K_MOUSE1 + i, qfalse, win.lastMsgTime );
+        }
+    }
+
+    win.mouse.state = temp;
+}
+
+static void raw_mouse_event( PRAWMOUSE rm ) {
+    int i;
+
+    if( rm->usButtonFlags ) {
+        for( i = 0; i < MOUSE_BUTTONS; i++ ) {
+            if( rm->usButtonFlags & ( 1 << ( i * 2 ) ) ) {
+                Key_Event( K_MOUSE1 + i, qtrue, win.lastMsgTime );
+            }
+            if( rm->usButtonFlags & ( 1 << ( i * 2 + 1 ) ) ) {
+                Key_Event( K_MOUSE1 + i, qfalse, win.lastMsgTime );
+            }
+        }
+
+        if( rm->usButtonFlags & RI_MOUSE_WHEEL ) {
+            mouse_wheel_event( ( short )rm->usButtonData );
+        }
+    }
+
+    if( ( rm->usFlags & (MOUSE_MOVE_RELATIVE|MOUSE_MOVE_ABSOLUTE) ) == MOUSE_MOVE_RELATIVE ) {
+        win.mouse.mx += rm->lLastX;
+        win.mouse.my += rm->lLastY;
+    }
+}
+
+static void raw_input_event( HANDLE handle ) {
+    BYTE buffer[64];
+    UINT len, ret;
+    PRAWINPUT ri;
+
+    len = sizeof( buffer );
+    ret = GetRawInputData( handle, RID_INPUT, buffer, &len, sizeof( RAWINPUTHEADER ) );
+    if( ret == ( UINT )-1 ) {
+        Com_EPrintf( "GetRawInputData failed with error %#lx\n", GetLastError() );
+        return;
+    }
+
+    ri = ( PRAWINPUT )buffer;
+    if( ri->header.dwType == RIM_TYPEMOUSE ) {
+        raw_mouse_event( &ri->data.mouse );
+    }
+}
+
+static inline void get_nc_area_size( HWND wnd, RECT *r ) {
+    LONG style = GetWindowLong( wnd, GWL_STYLE );
 
     r->left = 0;
     r->top = 0;
@@ -475,6 +580,28 @@ static inline void get_nc_area_size( HWND w, RECT *r ) {
     r->bottom = 1;
 
     AdjustWindowRect( r, style, FALSE );
+}
+
+static void resizing_event( HWND wnd, WINDOWPOS *pos ) {
+    int w, h, nc_w, nc_h;
+    RECT r;
+
+    // calculate size of non-client area
+    get_nc_area_size( wnd, &r );
+    nc_w = r.right - r.left - 1;
+    nc_h = r.bottom - r.top - 1;
+
+    // align client area
+    w = ( pos->cx - nc_w ) & ~7;
+    h = ( pos->cy - nc_h ) & ~1;
+
+    // don't allow too small size
+    if( w < 320 ) w = 320;
+    if( h < 240 ) h = 240;
+
+    // convert back to window size
+    pos->cx = w + nc_w;
+    pos->cy = h + nc_h;
 }
 
 /*
@@ -486,37 +613,13 @@ main window procedure
 */
 STATIC LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam ) {
     switch( uMsg ) {
-    case WM_MOUSEWHEEL: {
-            extern keydest_t Key_GetDest( void );
-            UINT lines;
-            int key;
-
-            if( ( short )HIWORD( wParam ) > 0 ) {
-                key = K_MWHEELUP;
-            } else {
-                key = K_MWHEELDOWN;
-            }
-
-            if( Key_GetDest() & KEY_CONSOLE ) {
-                SystemParametersInfo( SPI_GETWHEELSCROLLLINES, 0, &lines, 0 );
-                if( !lines ) {
-                    lines = 1;
-                } else if( lines > 6 ) {
-                    lines = 6;
-                }
-            } else {
-                lines = 1;
-            }
-
-            do {
-                Key_Event( key, qtrue, win.lastMsgTime );
-                Key_Event( key, qfalse, win.lastMsgTime );
-            } while( --lines );
+    case WM_MOUSEWHEEL:
+        if( win.mouse.initialized == WIN_MOUSE_LEGACY ) {
+            mouse_wheel_event( ( short )HIWORD( wParam ) );
         }
         break;
 
-    case WM_MOUSEMOVE:
-        if( win.mouse.initialized ) {
+    case WM_MOUSEMOVE: {
             int x = ( short )LOWORD( lParam );
             int y = ( short )HIWORD( lParam );
 
@@ -524,8 +627,6 @@ STATIC LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
         }
         // fall through
 
-// this is complicated because Win32 seems to pack multiple mouse events into
-// one update sometimes, so we always check all states and look for events
     case WM_LBUTTONDOWN:
     case WM_LBUTTONUP:
     case WM_RBUTTONDOWN:
@@ -534,44 +635,19 @@ STATIC LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
     case WM_MBUTTONUP:
     case WM_XBUTTONDOWN:
     case WM_XBUTTONUP:
-        if( win.mouse.initialized ) {
-            int i, mask, temp = 0;
-
-            if( wParam & MK_LBUTTON )
-                temp |= 1;
-
-            if( wParam & MK_RBUTTON )
-                temp |= 2;
-
-            if( wParam & MK_MBUTTON )
-                temp |= 4;
-
-            if( wParam & MK_XBUTTON1 )
-                temp |= 8;
-
-            if( wParam & MK_XBUTTON2 )
-                temp |= 16;
-
-            if( temp == win.mouse.state ) {
-                break;
-            }
-
-            // perform button actions
-            for( i = 0, mask = 1; i < MOUSE_BUTTONS; i++, mask <<= 1 ) {
-                if( ( temp & mask ) && !( win.mouse.state & mask ) ) {
-                    Key_Event( K_MOUSE1 + i, qtrue, win.lastMsgTime );
-                }
-                if( !( temp & mask ) && ( win.mouse.state & mask ) ) {
-                    Key_Event( K_MOUSE1 + i, qfalse, win.lastMsgTime );
-                }
-            }    
-                
-            win.mouse.state = temp;
+        if( win.mouse.initialized == WIN_MOUSE_LEGACY ) {
+            legacy_mouse_event( wParam );
         }
         break;
 
     case WM_HOTKEY:
         return FALSE;
+
+    case WM_INPUT:
+        if( wParam == RIM_INPUT && win.mouse.initialized == WIN_MOUSE_RAW ) {
+            raw_input_event( ( HANDLE )lParam );
+        }
+        break;
 
 #if 0
     case WM_PAINT:
@@ -591,25 +667,7 @@ STATIC LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
         if( !( win.flags & QVF_FULLSCREEN ) ) {
             WINDOWPOS *pos = ( WINDOWPOS * )lParam;
             if( !( pos->flags & SWP_NOSIZE ) ) {
-                int w, h, nc_w, nc_h;
-                RECT r;
-
-                // calculate size of non-client area
-                get_nc_area_size( hWnd, &r );
-                nc_w = r.right - r.left - 1;
-                nc_h = r.bottom - r.top - 1;
-
-                // align client area
-                w = ( pos->cx - nc_w ) & ~7;
-                h = ( pos->cy - nc_h ) & ~1;
-
-                // don't allow too small size
-                if( w < 320 ) w = 320;
-                if( h < 240 ) h = 240;
-
-                // convert back to window size
-                pos->cx = w + nc_w;
-                pos->cy = h + nc_h;
+                resizing_event( hWnd, pos );
             }
         }
         break;
@@ -750,6 +808,8 @@ void Win_Init( void ) {
     win_notitle->changed = win_style_changed;
     win_alwaysontop = Cvar_Get( "win_alwaysontop", "0", 0 );
     win_alwaysontop->changed = win_style_changed;
+    win_xpfix = Cvar_Get( "win_xpfix", "0", 0 );
+    win_rawmouse = Cvar_Get( "win_rawmouse", "0", 0 );
 
     win_disablewinkey_changed( win_disablewinkey );
 
@@ -846,8 +906,7 @@ MOUSE
 ===============================================================================
 */
 
-// mouse variables
-static cvar_t    *win_xpfix;
+static qboolean Win_InitMouse( void );
 
 static void Win_HideCursor( void ) {
     while( ShowCursor( FALSE ) >= 0 )
@@ -859,13 +918,7 @@ static void Win_ShowCursor( void ) {
         ;
 }
 
-/*
-===========
-Win_AcquireMouse
-
-Called when the window gains focus or changes in some way
-===========
-*/
+// Called when the window gains focus or changes in some way
 static void Win_AcquireMouse( void ) {
     RECT rc;
     int parms[3];
@@ -896,17 +949,12 @@ static void Win_AcquireMouse( void ) {
 #endif
 }
 
-
-/*
-===========
-Win_DeAcquireMouse
-
-Called when the window loses focus
-===========
-*/
+// Called when the window loses focus
 static void Win_DeAcquireMouse( void ) {
     if( win.mouse.restoreparms )
         SystemParametersInfo( SPI_SETMOUSE, 0, win.mouse.originalparms, 0 );
+
+    SetCursorPos( win.center_x, win.center_y );
 
     ClipCursor( NULL );
     ReleaseCapture();
@@ -916,22 +964,23 @@ static void Win_DeAcquireMouse( void ) {
 #endif
 }
 
-static void win_xpfix_changed( cvar_t *self ) {
-    if( win.mouse.grabbed == IN_GRAB ) {
-        Win_AcquireMouse();
-    }
-}
-
-/*
-===========
-Win_GetMouseMotion
-===========
-*/
 static qboolean Win_GetMouseMotion( int *dx, int *dy ) {
-    POINT    pt;
+    POINT pt;
+
+    if( !win.mouse.initialized ) {
+        return qfalse;
+    }
 
     if( win.mouse.grabbed != IN_GRAB ) {
         return qfalse;
+    }
+
+    if( win.mouse.initialized == WIN_MOUSE_RAW ) {
+        *dx = win.mouse.mx;
+        *dy = win.mouse.my;
+        win.mouse.mx = 0;
+        win.mouse.my = 0;
+        return qtrue;
     }
 
     // find mouse movement
@@ -947,50 +996,83 @@ static qboolean Win_GetMouseMotion( int *dx, int *dy ) {
     return qtrue;
 }
 
-/*
-===========
-Win_ShutdownMouse
-===========
-*/
+static BOOL register_raw_mouse( DWORD flags ) {
+    RAWINPUTDEVICE rid;
+
+    memset( &rid, 0, sizeof( rid ) );
+    rid.usUsagePage = 0x01;
+    rid.usUsage = 0x02;
+    rid.dwFlags = flags;
+    rid.hwndTarget = win.wnd;
+
+    return RegisterRawInputDevices( &rid, 1, sizeof( rid ) );
+}
+
 static void Win_ShutdownMouse( void ) {
+    if( !win.mouse.initialized ) {
+        return;
+    }
+
     Win_DeAcquireMouse();
     Win_ShowCursor();
+
+    if( win.mouse.initialized == WIN_MOUSE_RAW ) {
+        register_raw_mouse( RIDEV_REMOVE );
+    }
+
+    win_xpfix->changed = NULL;
+    win_rawmouse->changed = NULL;
+
     memset( &win.mouse, 0, sizeof( win.mouse ) );
 }
 
-/*
-===========
-Win_StartupMouse
-===========
-*/
+static void win_xpfix_changed( cvar_t *self ) {
+    if( win.mouse.grabbed == IN_GRAB ) {
+        Win_AcquireMouse();
+    }
+}
+
+static void win_rawmouse_changed( cvar_t *self ) {
+    if( win.mouse.initialized ) {
+        Win_ShutdownMouse();
+        Win_InitMouse();
+    }
+}
+
 static qboolean Win_InitMouse( void ) {
     if( !win.wnd ) {
         return qfalse;
     }
 
-    win_xpfix = Cvar_Get( "win_xpfix", "0", 0 );
-    win_xpfix->changed = win_xpfix_changed;
+    win.mouse.initialized = WIN_MOUSE_LEGACY;
 
-    win.mouse.initialized = qtrue;
-    win.mouse.parmsvalid = SystemParametersInfo( SPI_GETMOUSE, 0,
-        win.mouse.originalparms, 0 );
+    if( win_rawmouse->integer ) {
+        if( !register_raw_mouse( /*RIDEV_NOLEGACY*/ 0 ) ) {
+            Com_EPrintf( "RegisterRawInputDevices failed with error %#lx\n", GetLastError() );
+            Cvar_Reset( win_rawmouse );
+        } else {
+            Com_Printf( "Raw mouse initialized\n" );
+            win.mouse.initialized = WIN_MOUSE_RAW;
+        }
+    }
+
+    if( win.mouse.initialized == WIN_MOUSE_LEGACY ) {
+        win.mouse.parmsvalid = SystemParametersInfo( SPI_GETMOUSE, 0,
+            win.mouse.originalparms, 0 );
+        win_xpfix->changed = win_xpfix_changed;
+    }
+
+    win_rawmouse->changed = win_rawmouse_changed;
 
     return qtrue;
 }
 
-/*
-===========
-Win_GrabMouse
-
-Called when the main window gains or loses focus.
-The window may have been destroyed and recreated
-between a deactivate and an activate.
-===========
-*/
+// Called when the main window gains or loses focus.
 static void Win_GrabMouse( grab_t grab ) {
     if( !win.mouse.initialized ) {
         return;
     }
+
     if( win.mouse.grabbed == grab ) {
         return;
     }
@@ -1011,6 +1093,15 @@ static void Win_GrabMouse( grab_t grab ) {
 
     win.mouse.state = 0;
     win.mouse.grabbed = grab;
+    win.mouse.mx = 0;
+    win.mouse.my = 0;
+}
+
+static void Win_WarpMouse( int x, int y ) {
+    RECT rc;
+
+    GetWindowRect( win.wnd, &rc );
+    SetCursorPos( rc.left + x, rc.top + y );
 }
 
 /*
@@ -1081,6 +1172,7 @@ void VID_FillInputAPI( inputAPI_t *api ) {
     api->Init = Win_InitMouse;
     api->Shutdown = Win_ShutdownMouse;
     api->Grab = Win_GrabMouse;
+    api->Warp = Win_WarpMouse;
     api->GetEvents = NULL;
     api->GetMotion = Win_GetMouseMotion;
 }
