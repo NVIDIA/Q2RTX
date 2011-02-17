@@ -638,7 +638,8 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
         Com_Error( ERR_FATAL, "%s: bad key", __func__ );
     }
 
-    //Com_Printf("%s: %d\n",Key_KeynumToString(key),down);
+    Com_DDPrintf( "%u: %c%s\n", time,
+        down ? '+' : '-', Key_KeynumToString( key ) );
 
     // hack for modal presses
     if( key_waiting == -1 ) {
@@ -779,7 +780,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
             if( kb && kb[0] == '+' ) {
                 Q_snprintf( cmd, sizeof( cmd ), "-%s %i %i\n",
                     kb + 1, key, time );
-                Cbuf_InsertText( &cmd_buffer, cmd );
+                Cbuf_AddText( &cmd_buffer, cmd );
             }
 #if !USE_CHAR_EVENTS
             if( keyshift[key] != key ) {
@@ -787,7 +788,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
                 if( kb && kb[0] == '+' ) {
                     Q_snprintf( cmd, sizeof( cmd ), "-%s %i %i\n",
                         kb + 1, key, time );
-                    Cbuf_InsertText( &cmd_buffer, cmd );
+                    Cbuf_AddText( &cmd_buffer, cmd );
                 }
             }
 #endif
@@ -809,10 +810,10 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
             if( kb[0] == '+' ) {    
                 // button commands add keynum and time as a parm
                 Q_snprintf( cmd, sizeof( cmd ), "%s %i %i\n", kb, key, time );
-                Cbuf_InsertText( &cmd_buffer, cmd );
+                Cbuf_AddText( &cmd_buffer, cmd );
             } else {
-                Cbuf_InsertText( &cmd_buffer, kb );
-                Cbuf_InsertText( &cmd_buffer, "\n" );
+                Cbuf_AddText( &cmd_buffer, kb );
+                Cbuf_AddText( &cmd_buffer, "\n" );
             }
         }
         return;
