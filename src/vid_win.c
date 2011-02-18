@@ -619,7 +619,8 @@ STATIC LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
         }
         break;
 
-    case WM_MOUSEMOVE: {
+    case WM_MOUSEMOVE:
+        if( win.mouse.initialized ) {
             int x = ( short )LOWORD( lParam );
             int y = ( short )HIWORD( lParam );
 
