@@ -201,15 +201,20 @@ static void get_engine_cvar( cvar_t *var, const char *var_value, int flags ) {
         Z_Free( var->default_string );
         var->default_string = Cvar_CopyString( var_value );
 
-        // optionally reset cvar back to default value
-        if( ( ( flags & CVAR_ROM ) ||
-              ( ( flags & CVAR_NOSET ) && com_initialized ) ||
-              ( ( flags & CVAR_CHEAT ) && !CL_CheatsOK() ) ||
-              ( ( flags & CVAR_INFOMASK ) && !validate_info_cvar( var->string ) ) ||
-              ( var->flags & CVAR_VOLATILE ) ) &&
-            strcmp( var_value, var->string ) )
-        {
-            change_string_value( var, var_value, FROM_CODE );
+        // see if it was changed from it's default value
+        if( strcmp( var_value, var->string ) ) {
+            if( ( ( flags & CVAR_ROM ) ||
+                  ( ( flags & CVAR_NOSET ) && com_initialized ) ||
+                  ( ( flags & CVAR_CHEAT ) && !CL_CheatsOK() ) ||
+                  ( ( flags & CVAR_INFOMASK ) && !validate_info_cvar( var->string ) ) ||
+                  ( var->flags & CVAR_VOLATILE ) ) )
+            {
+                // restricted cvars are reset back to default value
+                change_string_value( var, var_value, FROM_CODE );
+            } else {
+                // normal cvars are just flagged as modified by user
+                flags |= CVAR_MODIFIED;
+            }
         }
     } else {
         flags &= ~CVAR_GAME;
