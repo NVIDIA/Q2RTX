@@ -49,8 +49,10 @@ typedef struct {
         mempool_t pool;
         vec_t *vertices;
         GLuint bufnum;
+        float add, modulate, scale;
     } world;
     GLuint prognum_warp;
+    float entity_modulate;
     float inverse_intensity;
     float sintab[256];
 #define TAB_SIN(x) gl_static.sintab[(x)&255]
@@ -99,6 +101,7 @@ typedef struct {
 
 extern statCounters_t c;
 
+// regular variables
 #if USE_CELSHADING
 extern cvar_t *gl_celshading;
 #endif
@@ -106,27 +109,34 @@ extern cvar_t *gl_celshading;
 extern cvar_t *gl_dotshading;
 #endif
 extern cvar_t *gl_partscale;
-extern cvar_t *gl_znear;
-extern cvar_t *gl_zfar;
 extern cvar_t *gl_modulate;
-extern cvar_t *gl_showtris;
-extern cvar_t *gl_cull_nodes;
-#ifdef _DEBUG
-extern cvar_t *gl_nobind;
-extern cvar_t *gl_test;
-#endif
-extern cvar_t *gl_clear;
-extern cvar_t *gl_novis;
-extern cvar_t *gl_lockpvs;
-extern cvar_t *gl_lightmap;
-extern cvar_t *gl_drawsky;
+extern cvar_t *gl_modulate_mask;
+extern cvar_t *gl_modulate_world;
+extern cvar_t *gl_coloredlightmaps;
+extern cvar_t *gl_brightness;
 extern cvar_t *gl_dynamic;
 #if USE_DLIGHTS
 extern cvar_t *gl_dlight_falloff;
 #endif
+extern cvar_t *gl_modulate_entities;
 extern cvar_t *gl_doublelight_entities;
-extern cvar_t *gl_fullbright;
 extern cvar_t *gl_fragment_program;
+
+// development variables
+extern cvar_t *gl_znear;
+extern cvar_t *gl_zfar;
+extern cvar_t *gl_drawsky;
+extern cvar_t *gl_showtris;
+#ifdef _DEBUG
+extern cvar_t *gl_nobind;
+extern cvar_t *gl_test;
+#endif
+extern cvar_t *gl_cull_nodes;
+extern cvar_t *gl_clear;
+extern cvar_t *gl_novis;
+extern cvar_t *gl_lockpvs;
+extern cvar_t *gl_lightmap;
+extern cvar_t *gl_fullbright;
 
 typedef enum {
     CULL_OUT,
@@ -199,13 +209,14 @@ typedef struct {
     int inuse[LM_BLOCK_WIDTH];
     byte buffer[LM_BLOCK_WIDTH * LM_BLOCK_HEIGHT * 4];
     qboolean dirty;
+    int comp;
     int nummaps;
     int highwater;
 } lightmap_builder_t;
 
 extern lightmap_builder_t lm;
 
-void GL_AdjustColor( vec_t *color, int what );
+void GL_AdjustColor( vec3_t color );
 void GL_BeginLights( void );
 void GL_EndLights( void );
 void GL_PushLights( mface_t *surf );

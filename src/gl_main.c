@@ -32,6 +32,7 @@ statCounters_t  c;
 
 int registration_sequence;
 
+// regular variables
 cvar_t *gl_partscale;
 #if USE_CELSHADING
 cvar_t *gl_celshading;
@@ -39,9 +40,23 @@ cvar_t *gl_celshading;
 #if USE_DOTSHADING
 cvar_t *gl_dotshading;
 #endif
+cvar_t *gl_modulate;
+cvar_t *gl_modulate_mask;
+cvar_t *gl_modulate_world;
+cvar_t *gl_coloredlightmaps;
+cvar_t *gl_brightness;
+cvar_t *gl_dynamic;
+#if USE_DLIGHTS
+cvar_t *gl_dlight_falloff;
+#endif
+cvar_t *gl_modulate_entities;
+cvar_t *gl_doublelight_entities;
+cvar_t *gl_fragment_program;
+cvar_t *gl_vertex_buffer_object;
+
+// development variables
 cvar_t *gl_znear;
 cvar_t *gl_zfar;
-cvar_t *gl_modulate;
 cvar_t *gl_log;
 cvar_t *gl_drawworld;
 cvar_t *gl_drawentities;
@@ -49,29 +64,23 @@ cvar_t *gl_drawsky;
 cvar_t *gl_showtris;
 cvar_t *gl_showorigins;
 cvar_t *gl_showtearing;
-cvar_t *gl_cull_nodes;
-cvar_t *gl_cull_models;
 #ifdef _DEBUG
 cvar_t *gl_showstats;
 cvar_t *gl_showscrap;
 cvar_t *gl_nobind;
 cvar_t *gl_test;
 #endif
+cvar_t *gl_cull_nodes;
+cvar_t *gl_cull_models;
 cvar_t *gl_clear;
 cvar_t *gl_novis;
 cvar_t *gl_lockpvs;
 cvar_t *gl_lightmap;
-cvar_t *gl_dynamic;
-#if USE_DLIGHTS
-cvar_t *gl_dlight_falloff;
-#endif
-cvar_t *gl_doublelight_entities;
-cvar_t *gl_polyblend;
 cvar_t *gl_fullbright;
-cvar_t *gl_fullscreen;
+cvar_t *gl_polyblend;
 cvar_t *gl_showerrors;
-cvar_t *gl_fragment_program;
-cvar_t *gl_vertex_buffer_object;
+
+// ==============================================================================
 
 static void GL_SetupFrustum( void ) {
     cplane_t *f;
@@ -637,11 +646,31 @@ static size_t GL_ViewCluster_m( char *buffer, size_t size ) {
     return Q_scnprintf( buffer, size, "%d", glr.viewcluster1 );
 }
 
+static void gl_modulate_entities_changed( cvar_t *self ) {
+    gl_static.entity_modulate = gl_modulate_entities->value;
+    if( gl_modulate_mask->integer & 2 ) {
+        gl_static.entity_modulate *= gl_modulate->value;
+    }
+}
+
+// this one is defined in gl_surf.c
+extern void gl_lightmap_changed( cvar_t *self );
+
+static void gl_modulate_changed( cvar_t *self ) {
+    if( gl_modulate_mask->integer & 1 ) {
+        gl_lightmap_changed( self );
+    }
+    if( gl_modulate_mask->integer & 2 ) {
+        gl_modulate_entities_changed( self );
+    }
+}
+
 static void gl_novis_changed( cvar_t *self ) {
     glr.viewcluster1 = glr.viewcluster2 = -2;
 }
 
 static void GL_Register( void ) {
+    // regular variables
     gl_partscale = Cvar_Get( "gl_partscale", "2", 0 );
 #if USE_CELSHADING
     gl_celshading = Cvar_Get( "gl_celshading", "0", 0 );
@@ -650,6 +679,27 @@ static void GL_Register( void ) {
     gl_dotshading = Cvar_Get( "gl_dotshading", "1", 0 );
 #endif
     gl_modulate = Cvar_Get( "gl_modulate", "1", CVAR_ARCHIVE );
+    gl_modulate->changed = gl_modulate_changed;
+    gl_modulate_mask = Cvar_Get( "gl_modulate_mask", "3", CVAR_FILES );
+    gl_modulate_world = Cvar_Get( "gl_modulate_world", "1", 0 );
+    gl_modulate_world->changed = gl_lightmap_changed;
+    gl_coloredlightmaps = Cvar_Get( "gl_coloredlightmaps", "1", CVAR_ARCHIVE );
+    gl_coloredlightmaps->changed = gl_lightmap_changed;
+    gl_brightness = Cvar_Get( "gl_brightness", "0", CVAR_ARCHIVE );
+    gl_brightness->changed = gl_lightmap_changed;
+    gl_dynamic = Cvar_Get( "gl_dynamic", "2", 0 );
+    gl_dynamic->changed = gl_lightmap_changed;
+#if USE_DLIGHTS
+    gl_dlight_falloff = Cvar_Get( "gl_dlight_falloff", "1", 0 );
+#endif
+    gl_modulate_entities = Cvar_Get( "gl_modulate_entities", "1", 0 );
+    gl_modulate_entities->changed = gl_modulate_entities_changed;
+    gl_doublelight_entities = Cvar_Get( "gl_doublelight_entities", "1", 0 );
+    gl_fragment_program = Cvar_Get( "gl_fragment_program", "1", 0 );
+    gl_vertex_buffer_object = Cvar_Get( "gl_vertex_buffer_object", "1", CVAR_FILES );
+    gl_vertex_buffer_object->modified = qtrue;
+
+    // development variables
     gl_znear = Cvar_Get( "gl_znear", "2", CVAR_CHEAT );
     gl_zfar = Cvar_Get( "gl_zfar", "16384", 0 );
     gl_log = Cvar_Get( "gl_log", "0", 0 );
@@ -672,17 +722,11 @@ static void GL_Register( void ) {
     gl_novis->changed = gl_novis_changed;
     gl_lockpvs = Cvar_Get( "gl_lockpvs", "0", CVAR_CHEAT );
     gl_lightmap = Cvar_Get( "gl_lightmap", "0", CVAR_CHEAT );
-    gl_dynamic = Cvar_Get( "gl_dynamic", "2", 0 );
-#if USE_DLIGHTS
-    gl_dlight_falloff = Cvar_Get( "gl_dlight_falloff", "1", 0 );
-#endif
-    gl_doublelight_entities = Cvar_Get( "gl_doublelight_entities", "1", 0 );
-    gl_polyblend = Cvar_Get( "gl_polyblend", "1", 0 );
     gl_fullbright = Cvar_Get( "r_fullbright", "0", CVAR_CHEAT );
+    gl_polyblend = Cvar_Get( "gl_polyblend", "1", 0 );
     gl_showerrors = Cvar_Get( "gl_showerrors", "1", 0 );
-    gl_fragment_program = Cvar_Get( "gl_fragment_program", "1", 0 );
-    gl_vertex_buffer_object = Cvar_Get( "gl_vertex_buffer_object", "1", CVAR_FILES );
-    gl_vertex_buffer_object->modified = qtrue;
+
+    gl_modulate_entities_changed( gl_modulate_entities );
 
     Cmd_AddCommand( "strings", GL_Strings_f );
     Cmd_AddMacro( "gl_viewcluster", GL_ViewCluster_m );

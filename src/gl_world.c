@@ -83,8 +83,7 @@ static qboolean GL_LightPoint( vec3_t origin, vec3_t color ) {
         lightmap += size;
     }
 
-    GL_AdjustColor( color, 2 );
-    VectorScale( color, (1.0f/255), color );
+    GL_AdjustColor( color );
 
     return qtrue;
 }
@@ -192,7 +191,7 @@ void _R_LightPoint( vec3_t origin, vec3_t color ) {
 
     if( gl_doublelight_entities->integer ) {
         // apply modulate twice to mimic original ref_gl behavior
-        VectorScale( color, gl_modulate->value, color );
+        VectorScale( color, gl_static.entity_modulate, color );
     }
 }
 

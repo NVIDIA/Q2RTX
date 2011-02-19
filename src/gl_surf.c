@@ -26,13 +26,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 lightmap_builder_t lm;
 
-static cvar_t   *gl_coloredlightmaps;
-static cvar_t   *gl_brightness;
-static cvar_t   *gl_modulate_mask;
-
-static float colorscale, coloradj;
-static int lightcomp;
-
 /*
 =============================================================================
 
@@ -41,63 +34,66 @@ LIGHTMAP COLOR ADJUSTING
 =============================================================================
 */
 
-void GL_AdjustColor( vec_t *color, int what ) {
-    float y, max;
+static inline void
+adjust_color_f( vec_t *out, const vec_t *in, float modulate ) {
+    float r, g, b, y, max;
 
-#define R color[0]
-#define G color[1]
-#define B color[2]
-
-    // adjust
-    R += coloradj;
-    G += coloradj;
-    B += coloradj;
-
-    // modulate
-    if( gl_modulate_mask->integer & what ) {
-        R *= gl_modulate->value;
-        G *= gl_modulate->value;
-        B *= gl_modulate->value;
-    } 
+    // add & modulate
+    r = ( in[0] + gl_static.world.add ) * modulate;
+    g = ( in[1] + gl_static.world.add ) * modulate;
+    b = ( in[2] + gl_static.world.add ) * modulate;
 
     // catch negative lights
-    if( R < 0 )
-        R = 0;
-    if( G < 0 )
-        G = 0;
-    if( B < 0 )
-        B = 0;
+    if( r < 0 ) r = 0;
+    if( g < 0 ) g = 0;
+    if( b < 0 ) b = 0;
 
     // determine the brightest of the three color components
-    max = G;
-    if( R > max ) {
-        max = R;
+    max = g;
+    if( r > max ) {
+        max = r;
     }
-    if( B > max ) {
-        max = B;
+    if( b > max ) {
+        max = b;
     }
 
     // rescale all the color components if the intensity of the greatest
     // channel exceeds 1.0
     if( max > 255 ) {
         y = 255.0f / max;
-        R *= y;
-        G *= y;
-        B *= y;
+        r *= y;
+        g *= y;
+        b *= y;
     }
 
     // transform to grayscale by replacing color components with
     // overall pixel luminance computed from weighted color sum
-    if( colorscale != 1.0f ) {
-        y = LUMINANCE( R, G, B );
-        R = y + ( R - y ) * colorscale;
-        G = y + ( G - y ) * colorscale;
-        B = y + ( B - y ) * colorscale;
+    if( gl_static.world.scale != 1 ) {
+        y = LUMINANCE( r, g, b );
+        r = y + ( r - y ) * gl_static.world.scale;
+        g = y + ( g - y ) * gl_static.world.scale;
+        b = y + ( b - y ) * gl_static.world.scale;
     }
 
-#undef R
-#undef G
-#undef B
+    out[0] = r;
+    out[1] = g;
+    out[2] = b;
+}
+
+static inline void
+adjust_color_ub( byte *out, const vec_t *in ) {
+    vec3_t tmp;
+
+    adjust_color_f( tmp, in, gl_static.world.modulate );
+    out[0] = ( byte )tmp[0];
+    out[1] = ( byte )tmp[1];
+    out[2] = ( byte )tmp[2];
+    out[3] = 255;
+}
+
+void GL_AdjustColor( vec3_t color ) {
+    adjust_color_f( color, color, gl_static.entity_modulate );
+    VectorScale( color, (1.0f/255), color );
 }
 
 /*
@@ -257,10 +253,7 @@ static void update_dynamic_lightmap( mface_t *surf ) {
     bl = blocklights;
     dst = temp;
     for( i = 0; i < size; i++ ) {
-        GL_AdjustColor( bl, 1 );
-        VectorCopy( bl, dst );
-        dst[3] = 255;
-
+        adjust_color_ub( dst, bl );
         bl += 3; dst += 4;
     }
 
@@ -333,7 +326,7 @@ static void LM_UploadBlock( void ) {
 
     // bypassing our state tracker here, be careful to reset TMU1 afterwards!
     qglBindTexture( GL_TEXTURE_2D, TEXNUM_LIGHTMAP + lm.nummaps );
-    qglTexImage2D( GL_TEXTURE_2D, 0, lightcomp, LM_BLOCK_WIDTH, LM_BLOCK_HEIGHT, 0,
+    qglTexImage2D( GL_TEXTURE_2D, 0, lm.comp, LM_BLOCK_WIDTH, LM_BLOCK_HEIGHT, 0,
         GL_RGBA, GL_UNSIGNED_BYTE, lm.buffer );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
@@ -422,10 +415,7 @@ static void build_primary_lightmap( mface_t *surf ) {
     for( i = 0; i < tmax; i++ ) {
         ptr = dst;
         for( j = 0; j < smax; j++ ) {
-            GL_AdjustColor( bl, 1 );
-            VectorCopy( bl, ptr );
-            ptr[3] = 255;
-
+            adjust_color_ub( ptr, bl );
             bl += 3; ptr += 4;
         }
 
@@ -539,7 +529,7 @@ void LM_RebuildSurfaces( void ) {
 
         if( surf->texnum[1] != texnum ) {
             // done with previous lightmap
-            qglTexImage2D( GL_TEXTURE_2D, 0, lightcomp,
+            qglTexImage2D( GL_TEXTURE_2D, 0, lm.comp,
                 LM_BLOCK_WIDTH, LM_BLOCK_HEIGHT, 0,
                 GL_RGBA, GL_UNSIGNED_BYTE, lm.buffer );
             qglBindTexture( GL_TEXTURE_2D, surf->texnum[1] );
@@ -552,7 +542,7 @@ void LM_RebuildSurfaces( void ) {
     }
 
     // upload the last lightmap
-    qglTexImage2D( GL_TEXTURE_2D, 0, lightcomp,
+    qglTexImage2D( GL_TEXTURE_2D, 0, lm.comp,
         LM_BLOCK_WIDTH, LM_BLOCK_HEIGHT, 0,
         GL_RGBA, GL_UNSIGNED_BYTE, lm.buffer );
 
@@ -693,17 +683,16 @@ fail:
     return NULL;
 }
 
-static void gl_lightmap_changed( cvar_t *self ) {
-    colorscale = Cvar_ClampValue( gl_coloredlightmaps, 0, 1 );
-    lightcomp = colorscale ? GL_RGB : GL_LUMINANCE;
+void gl_lightmap_changed( cvar_t *self ) {
+    gl_static.world.scale = Cvar_ClampValue( gl_coloredlightmaps, 0, 1 );
+    lm.comp = gl_static.world.scale ? GL_RGB : GL_LUMINANCE;
 
     // FIXME: the name 'brightness' is misleading in this context
-    coloradj = 255 * Cvar_ClampValue( gl_brightness, -1, 1 );
+    gl_static.world.add = 255 * Cvar_ClampValue( gl_brightness, -1, 1 );
 
+    gl_static.world.modulate = gl_modulate_world->value;
     if( gl_modulate_mask->integer & 1 ) {
-        gl_modulate->changed = gl_lightmap_changed;
-    } else {
-        gl_modulate->changed = NULL;
+        gl_static.world.modulate *= gl_modulate->value;
     }
 
     // rebuild all lightmaps next frame
@@ -740,14 +729,6 @@ void GL_LoadWorld( const char *name ) {
         bsp->refcount--;
         return;
     }
-
-    gl_dynamic->changed = gl_lightmap_changed;
-    gl_coloredlightmaps = Cvar_Get( "gl_coloredlightmaps", "1", CVAR_ARCHIVE );
-    gl_coloredlightmaps->changed = gl_lightmap_changed;
-    gl_brightness = Cvar_Get( "gl_brightness", "0", CVAR_ARCHIVE );
-    gl_brightness->changed = gl_lightmap_changed;
-    gl_modulate_mask = Cvar_Get( "gl_modulate_mask", "3", 0 );
-    gl_modulate_mask->changed = gl_lightmap_changed;
 
     // free previous model, if any
     GL_FreeWorld();
