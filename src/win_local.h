@@ -101,10 +101,15 @@ typedef struct {
     SHORT   gamma_cust[3][256];
     SHORT   gamma_orig[3][256];
 #endif
+
+    // x and y specify position of non-client area on the screen
+    // width and height specify size of client area
     vrect_t rc;
+
     byte    *buffer;
     int     pitch;
 
+    // center of client area in screen coordinates
     int     center_x, center_y;
 
     qboolean    alttab_disabled;

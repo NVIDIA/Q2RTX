@@ -27,6 +27,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define    WINDOW_CLASS_NAME "Quake2"
 
+// mode_changed flags
+#define MODE_SIZE   (1<<0)
+#define MODE_POS    (1<<1)
+#define MODE_STYLE  (1<<2)
+
 win_state_t     win;
 
 static cvar_t   *vid_flip_on_switch;
@@ -39,6 +44,9 @@ static cvar_t   *win_alwaysontop;
 static cvar_t   *win_xpfix;
 static cvar_t   *win_rawmouse;
 
+static qboolean Win_InitMouse( void );
+static void Win_ClipCursor( void );
+
 /*
 ===============================================================================
 
@@ -47,20 +55,17 @@ COMMON WIN32 VIDEO RELATED ROUTINES
 ===============================================================================
 */
 
-static void Win_Show( const vrect_t *rc ) {
+static void Win_SetPosition( void ) {
     RECT            r;
     LONG            style;
     int             x, y, w, h;
     HWND            after;
 
-    r.left = 0;
-    r.top = 0;
-    r.right = rc->width;
-    r.bottom = rc->height;
-
+    // get previous window style
     style = GetWindowLong( win.wnd, GWL_STYLE );
     style &= ~( WS_OVERLAPPEDWINDOW | WS_POPUP | WS_DLGFRAME );
 
+    // set new style bits
     if( win.flags & QVF_FULLSCREEN ) {
         after = HWND_TOPMOST;
         style |= WS_POPUP;
@@ -85,25 +90,37 @@ static void Win_Show( const vrect_t *rc ) {
         }
     }
 
+    // adjust for non-client area
+    r.left = 0;
+    r.top = 0;
+    r.right = win.rc.width;
+    r.bottom = win.rc.height;
+
     AdjustWindowRect( &r, style, FALSE );
 
-    x = rc->x;
-    y = rc->y;
+    // figure out position
+    x = win.rc.x;
+    y = win.rc.y;
     w = r.right - r.left;
     h = r.bottom - r.top;
 
-    win.rc.x = x;
-    win.rc.y = y;
-    win.rc.width = rc->width;
-    win.rc.height = rc->height;
-
+    // set new window style and position
     SetWindowLong( win.wnd, GWL_STYLE, style );
     SetWindowPos( win.wnd, after, x, y, w, h, SWP_FRAMECHANGED );
     ShowWindow( win.wnd, SW_SHOW );
     SetForegroundWindow( win.wnd );
     SetFocus( win.wnd );
+
+    if( win.mouse.grabbed == IN_GRAB ) {
+        Win_ClipCursor();
+    }
 }
 
+/*
+============
+Win_ModeChanged
+============
+*/
 void Win_ModeChanged( void ) {
 #if USE_REF == REF_SOFT
     SWimp_ModeChanged();
@@ -113,23 +130,26 @@ void Win_ModeChanged( void ) {
     SCR_ModeChanged();
 }
 
+/*
+============
+Win_SetMode
+============
+*/
 void Win_SetMode( void ) {
     DEVMODE dm;
-    vrect_t rc;
     int freq, depth;
 
-//    ShowWindow( win.wnd, SW_HIDE );
-
     if( vid_fullscreen->integer > 0 ) {
-        VID_GetModeFS( &rc, &freq, &depth );
+        // parse vid_modelist specification
+        VID_GetModeFS( &win.rc, &freq, &depth );
 
         Com_DPrintf( "...setting fullscreen mode: %dx%d\n",
-            rc.width, rc.height );
+            win.rc.width, win.rc.height );
 
         memset( &dm, 0, sizeof( dm ) );
         dm.dmSize       = sizeof( dm );
-        dm.dmPelsWidth  = rc.width;
-        dm.dmPelsHeight = rc.height;
+        dm.dmPelsWidth  = win.rc.width;
+        dm.dmPelsHeight = win.rc.height;
         dm.dmFields     = DM_PELSWIDTH | DM_PELSHEIGHT;
 
         if( freq ) {
@@ -162,7 +182,7 @@ void Win_SetMode( void ) {
             Com_DPrintf( "ok\n" );
             win.dm = dm;
             win.flags |= QVF_FULLSCREEN;
-            Win_Show( &rc );
+            Win_SetPosition();
             win.mode_changed = 0;
             return;
         }
@@ -170,26 +190,36 @@ void Win_SetMode( void ) {
         Cvar_Reset( vid_fullscreen );
     }
 
-    VID_GetGeometry( &rc );
+    // parse vid_geometry specification
+    VID_GetGeometry( &win.rc );
 
-    rc.width &= ~7;
-    rc.height &= ~1;
+    // align client area
+    win.rc.width &= ~7;
+    win.rc.height &= ~1;
 
-    if( rc.width < 320 ) rc.width = 320;
-    if( rc.height < 240 ) rc.height = 240;
+    // don't allow too small size
+    if( win.rc.width < 320 ) win.rc.width = 320;
+    if( win.rc.height < 240 ) win.rc.height = 240;
 
     Com_DPrintf( "...setting windowed mode: %dx%d+%d+%d\n",
-        rc.width, rc.height, rc.x, rc.y );
+        win.rc.width, win.rc.height, win.rc.x, win.rc.y );
 
     ChangeDisplaySettings( NULL, 0 );
 
     memset( &win.dm, 0, sizeof( win.dm ) );
     win.flags &= ~QVF_FULLSCREEN;
-    Win_Show( &rc );
-    VID_SetGeometry( &win.rc );
+    Win_SetPosition();
     win.mode_changed = 0;
+
+    // set vid_geometry back
+    VID_SetGeometry( &win.rc );
 }
 
+/*
+============
+VID_UpdateGamma
+============
+*/
 void VID_UpdateGamma( const byte *table ) {
 #ifndef __COREDLL__
     WORD v;
@@ -208,11 +238,6 @@ void VID_UpdateGamma( const byte *table ) {
 #endif
 }
 
-/*
-=================
-Win_DisableAltTab
-=================
-*/
 static void Win_DisableAltTab( void ) {
     if( !win.alttab_disabled ) {
         RegisterHotKey( 0, 0, MOD_ALT, VK_TAB );
@@ -221,11 +246,6 @@ static void Win_DisableAltTab( void ) {
     }
 }
 
-/*
-=================
-Win_EnableAltTab
-=================
-*/
 static void Win_EnableAltTab( void ) {
     if( win.alttab_disabled ) {
         UnregisterHotKey( 0, 0 );
@@ -242,11 +262,6 @@ static void win_noalttab_changed( cvar_t *self ) {
     }
 }
 
-/*
-=================
-Win_Activate
-=================
-*/
 static void Win_Activate( WPARAM wParam ) {
     active_t active;
 
@@ -565,15 +580,30 @@ static void raw_input_event( HANDLE handle ) {
     }
 }
 
-static inline void get_nc_area_size( HWND wnd, RECT *r ) {
+static void get_nc_area_size( HWND wnd, RECT *rc ) {
     LONG style = GetWindowLong( wnd, GWL_STYLE );
 
-    r->left = 0;
-    r->top = 0;
-    r->right = 1;
-    r->bottom = 1;
+    rc->left = 0;
+    rc->top = 0;
+    rc->right = 1;
+    rc->bottom = 1;
 
-    AdjustWindowRect( r, style, FALSE );
+    AdjustWindowRect( rc, style, FALSE );
+}
+
+// retrieves screen coordinates of client area
+// GetClientRect is not enough...
+static void get_client_rect( HWND wnd, RECT *rc ) {
+    RECT nc;
+
+    GetWindowRect( wnd, rc );
+
+    // adjust for non-client area
+    get_nc_area_size( wnd, &nc );
+    rc->left -= nc.left;
+    rc->top -= nc.top;
+    rc->right -= nc.right - 1;
+    rc->bottom -= nc.bottom - 1;
 }
 
 static void resizing_event( HWND wnd, WINDOWPOS *pos ) {
@@ -598,13 +628,7 @@ static void resizing_event( HWND wnd, WINDOWPOS *pos ) {
     pos->cy = h + nc_h;
 }
 
-/*
-====================
-Win_MainWndProc
-
-main window procedure
-====================
-*/
+// main window procedure
 STATIC LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam ) {
     switch( uMsg ) {
     case WM_MOUSEWHEEL:
@@ -644,12 +668,6 @@ STATIC LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
         }
         break;
 
-#if 0
-    case WM_PAINT:
-        SCR_UpdateScreen();
-        break;
-#endif
-
     case WM_CLOSE:
         PostQuitMessage( 0 );
         return FALSE;
@@ -675,7 +693,7 @@ STATIC LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
             win.rc.width = w;
             win.rc.height = h;
 
-            win.mode_changed |= 1;
+            win.mode_changed |= MODE_SIZE;
         }
         break;
 
@@ -690,7 +708,7 @@ STATIC LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
             win.rc.x = x + r.left;
             win.rc.y = y + r.top;
 
-            win.mode_changed |= 2;
+            win.mode_changed |= MODE_POS;
         }
         break;
 
@@ -731,6 +749,11 @@ STATIC LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
     return DefWindowProc( hWnd, uMsg, wParam, lParam );
 }
 
+/*
+============
+VID_SetMode
+============
+*/
 void VID_SetMode( void ) {
     Win_SetMode();
     Win_ModeChanged();
@@ -755,13 +778,16 @@ void VID_PumpEvents( void ) {
     }
 
     if( win.mode_changed ) {
-        if( win.mode_changed & 3 ) {
+        if( win.mode_changed & (MODE_SIZE|MODE_POS) ) {
             VID_SetGeometry( &win.rc );
+            if( win.mouse.grabbed == IN_GRAB ) {
+                Win_ClipCursor();
+            }
         }
-        if( win.mode_changed & 4 ) {
-            Win_Show( &win.rc );
+        if( win.mode_changed & MODE_STYLE ) {
+            Win_SetPosition();
         }
-        if( win.mode_changed & 1 ) {
+        if( win.mode_changed & MODE_SIZE ) {
             Win_ModeChanged();
         }
         win.mode_changed = 0;
@@ -778,7 +804,7 @@ void VID_PumpEvents( void ) {
 
 static void win_style_changed( cvar_t *self ) {
     if( win.wnd && !( win.flags & QVF_FULLSCREEN ) ) {
-        win.mode_changed |= 4;
+        win.mode_changed |= MODE_STYLE;
     }
 }
 
@@ -901,8 +927,6 @@ MOUSE
 ===============================================================================
 */
 
-static qboolean Win_InitMouse( void );
-
 static void Win_HideCursor( void ) {
     while( ShowCursor( FALSE ) >= 0 )
         ;
@@ -914,8 +938,21 @@ static void Win_ShowCursor( void ) {
 }
 
 // Called when the window gains focus or changes in some way
-static void Win_AcquireMouse( void ) {
+static void Win_ClipCursor( void ) {
     RECT rc;
+
+    get_client_rect( win.wnd, &rc );
+
+    win.center_x = ( rc.right + rc.left ) / 2;
+    win.center_y = ( rc.top + rc.bottom ) / 2;
+
+    SetCursorPos( win.center_x, win.center_y );
+
+    ClipCursor( &rc );
+}
+
+// Called when the window gains focus
+static void Win_AcquireMouse( void ) {
     int parms[3];
 
     if( win.mouse.parmsvalid ) {
@@ -929,15 +966,8 @@ static void Win_AcquireMouse( void ) {
             SPI_SETMOUSE, 0, parms, 0 );
     }
 
-    GetWindowRect( win.wnd, &rc );
-    
-    win.center_x = ( rc.right + rc.left ) / 2;
-    win.center_y = ( rc.top + rc.bottom ) / 2;
-
-    SetCursorPos( win.center_x, win.center_y );
-
+    Win_ClipCursor();
     SetCapture( win.wnd );
-    ClipCursor( &rc );
 
 #ifndef __COREDLL__
     SetWindowText( win.wnd, "[" PRODUCT "]" );
@@ -1100,7 +1130,7 @@ static void Win_GrabMouse( grab_t grab ) {
 static void Win_WarpMouse( int x, int y ) {
     RECT rc;
 
-    GetWindowRect( win.wnd, &rc );
+    get_client_rect( win.wnd, &rc );
     SetCursorPos( rc.left + x, rc.top + y );
 }
 
