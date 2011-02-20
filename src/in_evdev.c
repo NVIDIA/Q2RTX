@@ -148,6 +148,8 @@ static void GrabMouse( grab_t grab ) {
     }
 
     if( evdev.grabbed == grab ) {
+        evdev.dx = 0;
+        evdev.dy = 0;
         return;
     }
     

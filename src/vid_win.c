@@ -1075,6 +1075,11 @@ static void Win_GrabMouse( grab_t grab ) {
     }
 
     if( win.mouse.grabbed == grab ) {
+        if( win.mouse.initialized == WIN_MOUSE_LEGACY ) {
+            SetCursorPos( win.center_x, win.center_y );
+        }
+        win.mouse.mx = 0;
+        win.mouse.my = 0;
         return;
     }
 
@@ -1092,8 +1097,8 @@ static void Win_GrabMouse( grab_t grab ) {
         }
     }
 
-    win.mouse.state = 0;
     win.mouse.grabbed = grab;
+    win.mouse.state = 0;
     win.mouse.mx = 0;
     win.mouse.my = 0;
 }
