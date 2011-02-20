@@ -825,7 +825,7 @@ void Win_Init( void ) {
     win_alwaysontop = Cvar_Get( "win_alwaysontop", "0", 0 );
     win_alwaysontop->changed = win_style_changed;
     win_xpfix = Cvar_Get( "win_xpfix", "0", 0 );
-    win_rawmouse = Cvar_Get( "win_rawmouse", "0", 0 );
+    win_rawmouse = Cvar_Get( "win_rawmouse", "1", 0 );
 
     win_disablewinkey_changed( win_disablewinkey );
 
@@ -1057,9 +1057,9 @@ static qboolean Win_InitMouse( void ) {
     if( win_rawmouse->integer ) {
         if( !register_raw_mouse( /*RIDEV_NOLEGACY*/ 0 ) ) {
             Com_EPrintf( "RegisterRawInputDevices failed with error %#lx\n", GetLastError() );
-            Cvar_Reset( win_rawmouse );
+            Cvar_Set( "win_rawmouse", "0" );
         } else {
-            Com_Printf( "Raw mouse initialized\n" );
+            Com_Printf( "Raw mouse initialized.\n" );
             win.mouse.initialized = WIN_MOUSE_RAW;
         }
     }
@@ -1068,6 +1068,7 @@ static qboolean Win_InitMouse( void ) {
         win.mouse.parmsvalid = SystemParametersInfo( SPI_GETMOUSE, 0,
             win.mouse.originalparms, 0 );
         win_xpfix->changed = win_xpfix_changed;
+        Com_Printf( "Legacy mouse initialized.\n" );
     }
 
     win_rawmouse->changed = win_rawmouse_changed;
