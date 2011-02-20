@@ -96,9 +96,7 @@ Destroys DIB surfaces as appropriate.
 */
 void VID_Shutdown( void ) {
     if ( sww.palettized ) {
-#ifndef __COREDLL__
         SetSystemPaletteUse( win.dc, SYSPAL_STATIC );
-#endif
         SetSysColors( NUM_SYS_COLORS, s_syspalindices, sww.oldsyscolors );
     }
 
@@ -293,11 +291,9 @@ void VID_UpdatePalette( const byte *_pal ) {
         identitypalette_t ipal;
         LOGPALETTE      *pLogPal = ( LOGPALETTE * )&ipal;
 
-#ifndef __COREDLL__
         if ( SetSystemPaletteUse( win.dc, SYSPAL_NOSTATIC ) == SYSPAL_ERROR ) {
             Com_Error( ERR_FATAL, "DIB_SetPalette: SetSystemPaletteUse() failed\n" );
         }
-#endif
 
         // destroy our old palette
         if ( sww.pal ) {

@@ -221,7 +221,6 @@ VID_UpdateGamma
 ============
 */
 void VID_UpdateGamma( const byte *table ) {
-#ifndef __COREDLL__
     WORD v;
     int i;
 
@@ -235,7 +234,6 @@ void VID_UpdateGamma( const byte *table ) {
 
         SetDeviceGammaRamp( win.dc, win.gamma_cust );
     }
-#endif
 }
 
 static void Win_DisableAltTab( void ) {
@@ -286,7 +284,6 @@ static void Win_Activate( WPARAM wParam ) {
         }
     }
 
-#ifndef __COREDLL__
     if( win.flags & QVF_GAMMARAMP ) {
         if( active == ACT_ACTIVATED ) {
             SetDeviceGammaRamp( win.dc, win.gamma_cust );
@@ -294,7 +291,6 @@ static void Win_Activate( WPARAM wParam ) {
             SetDeviceGammaRamp( win.dc, win.gamma_orig );
         }
     }
-#endif
 
     if( win.flags & QVF_FULLSCREEN ) {
         if( active == ACT_ACTIVATED ) {
@@ -794,14 +790,6 @@ void VID_PumpEvents( void ) {
     }
 }
 
-#ifdef __COREDLL__
-#define _WNDCLASSEX WNDCLASS
-#define _RegisterClassEx RegisterClass
-#else
-#define _WNDCLASSEX WNDCLASSEX
-#define _RegisterClassEx RegisterClassEx
-#endif
-
 static void win_style_changed( cvar_t *self ) {
     if( win.wnd && !( win.flags & QVF_FULLSCREEN ) ) {
         win.mode_changed |= MODE_STYLE;
@@ -814,7 +802,7 @@ Win_Init
 ============
 */
 void Win_Init( void ) {
-    _WNDCLASSEX     wc;
+    WNDCLASSEX wc;
 
     // register variables
     vid_flip_on_switch = Cvar_Get( "vid_flip_on_switch", "0", 0 );
@@ -836,22 +824,18 @@ void Win_Init( void ) {
 
     // register the frame class
     memset( &wc, 0, sizeof( wc ) );
-#ifndef __COREDLL__
     wc.cbSize = sizeof( wc );
-#endif
     wc.lpfnWndProc = ( WNDPROC )Win_MainWndProc;
     wc.hInstance = hGlobalInstance;
     wc.hIcon = LoadImage( hGlobalInstance, MAKEINTRESOURCE( IDI_APP ),
         IMAGE_ICON, 32, 32, LR_CREATEDIBSECTION );
-#ifndef __COREDLL__
     wc.hIconSm = LoadImage( hGlobalInstance, MAKEINTRESOURCE( IDI_APP ),
         IMAGE_ICON, 16, 16, LR_CREATEDIBSECTION );
-#endif
     wc.hCursor = LoadCursor ( NULL, IDC_ARROW );
     wc.hbrBackground = GetStockObject( BLACK_BRUSH );
     wc.lpszClassName = _T( WINDOW_CLASS_NAME );
 
-    if( !_RegisterClassEx( &wc ) ) {
+    if( !RegisterClassEx( &wc ) ) {
         Com_Error( ERR_FATAL, "Couldn't register main window class" );
     }
 
@@ -875,7 +859,6 @@ void Win_Init( void ) {
         Com_Error( ERR_FATAL, "Couldn't get DC of the main window" );
     }
 
-#ifndef __COREDLL__
     // init gamma ramp
     if( vid_hwgamma->integer ) {
         if( GetDeviceGammaRamp( win.dc, win.gamma_orig ) ) {
@@ -887,7 +870,6 @@ void Win_Init( void ) {
             Cvar_Set( "vid_hwgamma", "0" );
         }
     }
-#endif
 }
 
 /*
@@ -896,11 +878,9 @@ Win_Shutdown
 ============
 */
 void Win_Shutdown( void ) {
-#ifndef __COREDLL__
     if( win.flags & QVF_GAMMARAMP ) {
         SetDeviceGammaRamp( win.dc, win.gamma_orig );
     }
-#endif
 
     // prevents leaving empty slots in the taskbar
     ShowWindow( win.wnd, SW_SHOWNORMAL );    
@@ -969,9 +949,7 @@ static void Win_AcquireMouse( void ) {
     Win_ClipCursor();
     SetCapture( win.wnd );
 
-#ifndef __COREDLL__
     SetWindowText( win.wnd, "[" PRODUCT "]" );
-#endif
 }
 
 // Called when the window loses focus
@@ -984,9 +962,7 @@ static void Win_DeAcquireMouse( void ) {
     ClipCursor( NULL );
     ReleaseCapture();
 
-#ifndef __COREDLL__
     SetWindowText( win.wnd, PRODUCT );
-#endif
 }
 
 static qboolean Win_GetMouseMotion( int *dx, int *dy ) {

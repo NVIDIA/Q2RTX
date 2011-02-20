@@ -876,7 +876,6 @@ char *Q_strchrnul( const char *s, int c ) {
 
 void Q_setenv( const char *name, const char *value ) {
 #ifdef _WIN32
-#ifndef __COREDLL__
     if( !value ) {
         value = "";
     }
@@ -884,7 +883,6 @@ void Q_setenv( const char *name, const char *value ) {
     _putenv_s( name, value );
 #else
     _putenv( va( "%s=%s", name, value ) );
-#endif
 #endif
 #else // _WIN32
     if( value ) {

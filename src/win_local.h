@@ -40,13 +40,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define STATIC static
 #endif
 
-#ifdef __COREDLL__
-#ifdef GetProcAddress
-#undef GetProcAddress
-#endif
-#define GetProcAddress GetProcAddressA
-#endif
-
 #if USE_CLIENT
 
 #include <tchar.h>
@@ -60,13 +53,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 typedef const GUID *LPCGUID;
 #endif
 
-#ifdef __COREDLL__
-#define ChangeDisplaySettings( mode, flags ) \
-    ChangeDisplaySettingsEx( NULL, mode, NULL, flags, NULL )
-#define AdjustWindowRect( rect, style, menu ) \
-    AdjustWindowRectEx( rect, style, menu, 0 )
-#endif
-
 typedef struct {
     HWND    wnd;
     HDC     dc;
@@ -77,10 +63,8 @@ typedef struct {
     HHOOK   kbdHook;
 
     vidFlags_t flags;
-#ifndef __COREDLL__
     SHORT   gamma_cust[3][256];
     SHORT   gamma_orig[3][256];
-#endif
 
     // x and y specify position of non-client area on the screen
     // width and height specify size of client area
