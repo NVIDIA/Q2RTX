@@ -176,8 +176,11 @@ void IN_MouseEvent( int x, int y ) {
         input.api.Grab( IN_SHOW );
         input.hideCursor = 2;
     }
+
 #if USE_UI
-    UI_MouseEvent( x, y );
+    if( x >= 0 && y >= 0 ) {
+        UI_MouseEvent( x, y );
+    }
 #endif
 }
 

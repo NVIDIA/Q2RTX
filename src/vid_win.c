@@ -633,6 +633,13 @@ STATIC LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
         }
         break;
 
+    case WM_NCMOUSEMOVE:
+        if( win.mouse.initialized ) {
+            // don't hide cursor
+            IN_MouseEvent( -1, -1 );
+        }
+        break;
+
     case WM_MOUSEMOVE:
         if( win.mouse.initialized ) {
             int x = ( short )LOWORD( lParam );
