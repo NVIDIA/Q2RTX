@@ -53,24 +53,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define IDI_APP 100
 
-#ifndef WM_MOUSEWHEEL
-#define WM_MOUSEWHEEL ( WM_MOUSELAST + 1 )  // message that will be supported by the OS 
-#endif
-
-#ifndef SPI_GETWHEELSCROLLLINES
-#define SPI_GETWHEELSCROLLLINES 104
-#endif
-
-#ifndef WM_XBUTTONDOWN
-#define WM_XBUTTONDOWN                  0x020B
-#define WM_XBUTTONUP                    0x020C
-#endif
-
-#ifndef MK_XBUTTON1
-#define MK_XBUTTON1         0x0020
-#define MK_XBUTTON2         0x0040
-#endif
-
 #define MOUSE_BUTTONS   5
 
 #ifndef __LPCGUID_DEFINED__
@@ -84,8 +66,6 @@ typedef const GUID *LPCGUID;
 #define AdjustWindowRect( rect, style, menu ) \
     AdjustWindowRectEx( rect, style, menu, 0 )
 #endif
-
-#define MAX_VIDEO_MODES   128
 
 typedef struct {
     HWND    wnd;
@@ -136,7 +116,6 @@ void Win_Init( void );
 void Win_Shutdown( void );
 void Win_SetMode( void ); 
 void Win_ModeChanged( void );
-void Win_UpdateGamma( const byte *table );
 
 #endif // USE_CLIENT
 
