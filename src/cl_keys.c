@@ -567,6 +567,7 @@ void Key_Init( void ) {
     consolekeys[K_KP_INS] = qtrue;
     consolekeys[K_KP_DEL] = qtrue;
     consolekeys[K_KP_SLASH] = qtrue;
+    consolekeys[K_KP_MULTIPLY] = qtrue;
     consolekeys[K_KP_PLUS] = qtrue;
     consolekeys[K_KP_MINUS] = qtrue;
     consolekeys[K_KP_5] = qtrue;
