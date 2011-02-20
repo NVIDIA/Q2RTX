@@ -302,7 +302,7 @@ static void Win_Activate( WPARAM wParam ) {
     }
 }
 
-static LRESULT CALLBACK LowLevelKeyboardProc( int nCode, WPARAM wParam, LPARAM lParam ) {
+STATIC LRESULT CALLBACK LowLevelKeyboardProc( int nCode, WPARAM wParam, LPARAM lParam ) {
     PKBDLLHOOKSTRUCT kb = ( PKBDLLHOOKSTRUCT )lParam;
     unsigned key;
 
@@ -351,38 +351,32 @@ static void win_disablewinkey_changed( cvar_t *self ) {
     }
 }
 
-static const byte   scantokey[128] = { 
-//  0           1           2           3               4           5               6           7 
-//  8           9           A           B               C           D               E           F 
-    0,          K_ESCAPE,   '1',        '2',            '3',        '4',            '5',         '6', 
-    '7',        '8',        '9',        '0',            '-',        '=',            K_BACKSPACE,  K_TAB,    // 0 
-    'q',        'w',        'e',        'r',            't',        'y',            'u',         'i', 
-    'o',        'p',        '[',        ']',            K_ENTER,    K_CTRL,         'a',         's',       // 1 
-    'd',        'f',        'g',        'h',            'j',        'k',            'l',         ';', 
-    '\'' ,      '`',        K_LSHIFT,   '\\',           'z',        'x',            'c',         'v',       // 2 
-    'b',        'n',        'm',        ',',            '.',        '/',            K_RSHIFT,    '*', 
-    K_ALT,      K_SPACE,    K_CAPSLOCK, K_F1,           K_F2,       K_F3,           K_F4,        K_F5,      // 3 
-    K_F6,       K_F7,       K_F8,       K_F9,           K_F10,      K_PAUSE,        K_SCROLLOCK, K_HOME, 
-    K_UPARROW,  K_PGUP,     K_KP_MINUS, K_LEFTARROW,    K_KP_5,     K_RIGHTARROW,   K_KP_PLUS,   K_END,     // 4 
-    K_DOWNARROW,K_PGDN,     K_INS,      K_DEL,          0,          0,              0,           K_F11, 
+static const byte scantokey[128] = {
+//  0           1           2           3               4           5               6           7
+//  8           9           A           B               C           D               E           F
+    0,          K_ESCAPE,   '1',        '2',            '3',        '4',            '5',         '6',
+    '7',        '8',        '9',        '0',            '-',        '=',            K_BACKSPACE,  K_TAB,    // 0
+    'q',        'w',        'e',        'r',            't',        'y',            'u',         'i',
+    'o',        'p',        '[',        ']',            K_ENTER,    K_CTRL,         'a',         's',       // 1
+    'd',        'f',        'g',        'h',            'j',        'k',            'l',         ';',
+    '\'' ,      '`',        K_LSHIFT,   '\\',           'z',        'x',            'c',         'v',       // 2
+    'b',        'n',        'm',        ',',            '.',        '/',            K_RSHIFT,    K_KP_MULTIPLY,
+    K_ALT,      K_SPACE,    K_CAPSLOCK, K_F1,           K_F2,       K_F3,           K_F4,        K_F5,      // 3
+    K_F6,       K_F7,       K_F8,       K_F9,           K_F10,      K_PAUSE,        K_SCROLLOCK, K_HOME,
+    K_UPARROW,  K_PGUP,     K_KP_MINUS, K_LEFTARROW,    K_KP_5,     K_RIGHTARROW,   K_KP_PLUS,   K_END,     // 4
+    K_DOWNARROW,K_PGDN,     K_INS,      K_DEL,          0,          0,              0,           K_F11,
     K_F12,      0,          0,          K_LWINKEY,      K_RWINKEY,  K_MENU,         0,           0,         // 5
-    0,          0,          0,          0,              0,          0,              0,           0, 
-    0,          0,          0,          0,              0,          0,              0,           0,         // 6 
-    0,          0,          0,          0,              0,          0,              0,           0, 
-    0,          0,          0,          0,              0,          0,              0,           0          // 7 
+    0,          0,          0,          0,              0,          0,              0,           0,
+    0,          0,          0,          0,              0,          0,              0,           0,         // 6
+    0,          0,          0,          0,              0,          0,              0,           0,
+    0,          0,          0,          0,              0,          0,              0,           0          // 7
 };
 
-/*
-=======
-Win_KeyEvent
-
-Map from windows to quake keynums
-=======
-*/
-static void Win_KeyEvent( WPARAM wParam, LPARAM lParam, qboolean down ) {
-    unsigned result;
+// Map from windows to quake keynums
+static void legacy_key_event( WPARAM wParam, LPARAM lParam, qboolean down ) {
     unsigned scancode = ( lParam >> 16 ) & 255;
-    unsigned is_extended = ( lParam >> 24 ) & 1;
+    unsigned extended = ( lParam >> 24 ) & 1;
+    unsigned result;
 
     if( scancode > 127 ) {
         return;
@@ -394,7 +388,7 @@ static void Win_KeyEvent( WPARAM wParam, LPARAM lParam, qboolean down ) {
         return;
     }
 
-    if( !is_extended ) {
+    if( !extended ) {
         switch( result ) {
         case K_HOME:
             result = K_KP_HOME;
@@ -445,14 +439,14 @@ static void Win_KeyEvent( WPARAM wParam, LPARAM lParam, qboolean down ) {
         }
     } else {
         switch( result ) {
-        case 0x0D:
+        case K_ENTER:
             result = K_KP_ENTER;
             break;
-        case 0x2F:
+        case '/':
             result = K_KP_SLASH;
             break;
-        case 0xAF:
-            result = K_KP_PLUS;
+        case K_PAUSE:
+            result = K_NUMLOCK;
             break;
         case K_ALT:
             Key_Event( K_ALT, down, win.lastMsgTime );
@@ -714,7 +708,12 @@ STATIC LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
 
     case WM_KEYDOWN:
     case WM_SYSKEYDOWN:
-        Win_KeyEvent( wParam, lParam, qtrue );
+        legacy_key_event( wParam, lParam, qtrue );
+        return FALSE;
+
+    case WM_KEYUP:
+    case WM_SYSKEYUP:
+        legacy_key_event( wParam, lParam, qfalse );
         return FALSE;
 
     case WM_SYSCHAR:
@@ -722,11 +721,6 @@ STATIC LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
 #if USE_CHAR_EVENTS
         Key_CharEvent( wParam );
 #endif
-        return FALSE;
-
-    case WM_SYSKEYUP:
-    case WM_KEYUP:
-        Win_KeyEvent( wParam, lParam, qfalse );
         return FALSE;
 
     default:    
