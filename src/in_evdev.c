@@ -51,7 +51,7 @@ static void GetMouseEvents( void ) {
     ssize_t i, bytes, count;
     unsigned button, time;
 
-    if( !evdev.initialized || !evdev.grabbed || !evdev.io->canread ) {
+    if( !evdev.initialized || !evdev.grabbed /*|| !evdev.io->canread*/ ) {
         return;
     }
 
