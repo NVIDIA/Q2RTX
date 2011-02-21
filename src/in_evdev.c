@@ -36,19 +36,22 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 static cvar_t   *in_device;
 
 static struct {
-    qboolean initialized;
-    qboolean grabbed;
-    int      fd;
-    int      dx, dy;
-    ioentry_t *io;
+    qboolean    initialized;
+    grab_t      grabbed;
+    int         fd;
+    int         dx, dy;
+    ioentry_t   *io;
 } evdev;
 
 #define MAX_EVENTS    64
 #define EVENT_SIZE    sizeof( struct input_event )
 
+static void ShutdownMouse( void );
+
 static void GetMouseEvents( void ) {
     struct input_event ev[MAX_EVENTS];
-    ssize_t i, bytes, count;
+    ssize_t bytes;
+    size_t i, count;
     unsigned button, time;
 
     if( !evdev.initialized || !evdev.grabbed /*|| !evdev.io->canread*/ ) {
@@ -56,8 +59,17 @@ static void GetMouseEvents( void ) {
     }
 
     bytes = read( evdev.fd, ev, EVENT_SIZE * MAX_EVENTS );
-    if( bytes < ( ssize_t )EVENT_SIZE ) {
+    if( bytes == -1 ) {
+        if( errno == EAGAIN || errno == EINTR ) {
+            return;
+        }
+        Com_EPrintf( "Couldn't read event: %s\n", strerror( errno ) );
+        ShutdownMouse();
         return;
+    }
+
+    if( bytes < EVENT_SIZE ) {
+        return; // should not happen
     }
 
     count = bytes / EVENT_SIZE;
@@ -123,6 +135,9 @@ static void ShutdownMouse( void ) {
     }
     IO_Remove( evdev.fd );
     close( evdev.fd );
+    SDL_ShowCursor( SDL_ENABLE );
+    SDL_WM_GrabInput( SDL_GRAB_OFF );
+    SDL_WM_SetCaption( PRODUCT, APPLICATION );
     memset( &evdev, 0, sizeof( evdev ) );
 }
 
@@ -159,12 +174,6 @@ static void GrabMouse( grab_t grab ) {
         evdev.dy = 0;
         return;
     }
-    
-#if 0//def EVIOCGRAB
-    if( ioctl( evdev.fd, EVIOCGRAB, active ) == -1 ) {
-        Com_EPrintf( "Grab/Release failed: %s\n", strerror( errno ) );
-    }
-#endif // EVIOCGRAB
 
     if( grab == IN_GRAB ) {
         SDL_WM_GrabInput( SDL_GRAB_ON );
