@@ -35,6 +35,7 @@ DEMOS MENU
 #define DEMO_EXTRASIZE  q_offsetof( demoEntry_t, name )
 
 #define DEMO_MVD_POV "\x90\xcd\xd6\xc4\x91"
+#define DEMO_DIR_SIZE "\x90\xc4\xc9\xd2\x91"
 
 #define ENTRY_UP        1
 #define ENTRY_DN        2
@@ -102,7 +103,7 @@ static void BuildName( file_info_t *info, char **cache ) {
 }
 
 static void BuildDir( const char *name, int type ) {
-    demoEntry_t *e = UI_FormatColumns( DEMO_EXTRASIZE, name, NULL );
+    demoEntry_t *e = UI_FormatColumns( DEMO_EXTRASIZE, name, DEMO_DIR_SIZE, "-", "-", NULL );
 
     e->type = type;
     e->size = 0;
@@ -385,17 +386,15 @@ static menuSound_t Sort( menuList_t *self, int column ) {
 static void Size( menuFrameWork_t *self ) {
     int w = uis.width * 8 / 640;
 
-    if( w > 15 ) {
-        w = 15;
-    }
+    clamp( w, 8, 15 );
 
     m_demos.list.generic.x      = 0;
     m_demos.list.generic.y      = CHAR_HEIGHT;
     m_demos.list.generic.width  = 0;
     m_demos.list.generic.height = uis.height - CHAR_HEIGHT*2 - 1;
 
-    m_demos.list.columns[0].width = uis.width - ( 13 + w ) * CHAR_WIDTH;
-    m_demos.list.columns[1].width = 5*CHAR_WIDTH;
+    m_demos.list.columns[0].width = uis.width - ( 14 + w ) * CHAR_WIDTH - MLIST_SCROLLBAR_WIDTH;
+    m_demos.list.columns[1].width = 6*CHAR_WIDTH;
     m_demos.list.columns[2].width = 8*CHAR_WIDTH;
     m_demos.list.columns[3].width = w*CHAR_WIDTH;
 }
