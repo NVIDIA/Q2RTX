@@ -48,6 +48,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define MOUSE_BUTTONS   5
 
+// supported in Vista or greater
+#ifndef WM_MOUSEHWHEEL
+#define WM_MOUSEHWHEEL  0x020E
+#endif
+
 #ifndef __LPCGUID_DEFINED__
 #define __LPCGUID_DEFINED__
 typedef const GUID *LPCGUID;

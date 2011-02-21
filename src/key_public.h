@@ -149,6 +149,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define K_MOUSE7        247
 #define K_MOUSE8        248
 
+#define K_MWHEELRIGHT   249
+#define K_MWHEELLEFT    250
+
 typedef enum keydest_e {
     KEY_GAME    = 0,
     KEY_CONSOLE = ( 1 << 0 ),

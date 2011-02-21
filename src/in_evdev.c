@@ -48,21 +48,18 @@ static struct {
 
 static void GetMouseEvents( void ) {
     struct input_event ev[MAX_EVENTS];
-    int bytes, count;
-    int dx, dy;
-    int i, button;
-    unsigned time;
+    ssize_t i, bytes, count;
+    unsigned button, time;
 
     if( !evdev.initialized || !evdev.grabbed || !evdev.io->canread ) {
         return;
     }
 
     bytes = read( evdev.fd, ev, EVENT_SIZE * MAX_EVENTS );
-    if( bytes < EVENT_SIZE ) {
+    if( bytes < ( ssize_t )EVENT_SIZE ) {
         return;
     }
 
-    dx = dy = 0;
     count = bytes / EVENT_SIZE;
     for( i = 0 ; i < count; i++ ) {
         time = ev[i].time.tv_sec * 1000 + ev[i].time.tv_usec / 1000;
@@ -90,9 +87,19 @@ static void GetMouseEvents( void ) {
                     Key_Event( K_MWHEELDOWN, qfalse, time );
                 }
                 break;
+            case REL_HWHEEL:
+                if( ( int )ev[i].value == 1 ) {
+                    Key_Event( K_MWHEELRIGHT, qtrue, time );
+                    Key_Event( K_MWHEELRIGHT, qfalse, time );
+                } else if( ( int )ev[i].value == -1 ) {
+                    Key_Event( K_MWHEELLEFT, qtrue, time );
+                    Key_Event( K_MWHEELLEFT, qfalse, time );
+                }
+                break;
             default:
                 break;
             }
+            break;
         default:
             break;
         }

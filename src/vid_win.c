@@ -498,6 +498,22 @@ static void mouse_wheel_event( int delta ) {
     } while( --lines );
 }
 
+static void mouse_hwheel_event( int delta ) {
+    UINT key;
+
+    // FIXME: handle WHEEL_DELTA and partial scrolls...
+    if( delta > 0 ) {
+        key = K_MWHEELRIGHT;
+    } else if( delta < 0 ) {
+        key = K_MWHEELLEFT;
+    } else {
+        return;
+    }
+
+    Key_Event( key, qtrue, win.lastMsgTime );
+    Key_Event( key, qfalse, win.lastMsgTime );
+}
+
 // this is complicated because Win32 seems to pack multiple mouse events into
 // one update sometimes, so we always check all states and look for events
 static void legacy_mouse_event( WPARAM wParam ) {
@@ -549,6 +565,11 @@ static void raw_mouse_event( PRAWMOUSE rm ) {
 
         if( rm->usButtonFlags & RI_MOUSE_WHEEL ) {
             mouse_wheel_event( ( short )rm->usButtonData );
+        }
+
+        // this flag is undocumented, but confirmed to work on Win7
+        if( rm->usButtonFlags & 0x0800 ) {
+            mouse_hwheel_event( ( short )rm->usButtonData );
         }
     }
 
@@ -630,6 +651,11 @@ STATIC LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
     case WM_MOUSEWHEEL:
         if( win.mouse.initialized == WIN_MOUSE_LEGACY ) {
             mouse_wheel_event( ( short )HIWORD( wParam ) );
+        }
+        break;
+    case WM_MOUSEHWHEEL:
+        if( win.mouse.initialized == WIN_MOUSE_LEGACY ) {
+            mouse_hwheel_event( ( short )HIWORD( wParam ) );
         }
         break;
 

@@ -165,6 +165,8 @@ static const keyname_t keynames[] = {
 
     {"MWHEELUP", K_MWHEELUP },
     {"MWHEELDOWN", K_MWHEELDOWN },
+    {"MWHEELRIGHT", K_MWHEELRIGHT },
+    {"MWHEELLEFT", K_MWHEELLEFT },
 
     {"PAUSE", K_PAUSE},
 
