@@ -413,11 +413,11 @@ UI_MouseEvent
 =================
 */
 void UI_MouseEvent( int x, int y ) {
-    clamp( x, 0, uis.glconfig.vidWidth );
-    clamp( y, 0, uis.glconfig.vidHeight );
+    clamp( x, 0, uis.glconfig.vidWidth - 1 );
+    clamp( y, 0, uis.glconfig.vidHeight - 1 );
 
-    uis.mouseCoords[0] = x * uis.scale;
-    uis.mouseCoords[1] = y * uis.scale;
+    uis.mouseCoords[0] = Q_rint( x * uis.scale );
+    uis.mouseCoords[1] = Q_rint( y * uis.scale );
 
     UI_DoHitTest();
 }
