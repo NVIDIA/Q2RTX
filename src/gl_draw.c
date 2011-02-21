@@ -191,7 +191,8 @@ void R_SetScale( float *scale ) {
     qglMatrixMode( GL_PROJECTION );
     qglLoadIdentity();
 
-    qglOrtho( 0, gl_config.vidWidth * f, gl_config.vidHeight * f, 0, -1, 1 );
+    qglOrtho( 0, Q_rint( gl_config.vidWidth * f ),
+        Q_rint( gl_config.vidHeight * f ), 0, -1, 1 );
 
     draw.scale = f;
 }
