@@ -681,7 +681,9 @@ qboolean VID_VideoSync( void ) {
         return qtrue;
     }
 
-    sdl.glXGetVideoSyncSGI( &count );
+    if( sdl.glXGetVideoSyncSGI( &count ) ) {
+        return qtrue;
+    }
 
     if( count != sdl.sync_count ) {
         sdl.sync_count = count;

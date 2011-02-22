@@ -757,6 +757,7 @@ static void Con_DrawSolidConsole( void ) {
 // draw from the bottom up
     R_SetColor( DRAW_COLOR_CLEAR, NULL );
     row = con.display;
+    widths[0] = widths[1] = 0;
     for( i = 0; i < rows; i++ ) {
         if( row < 0 )
             break;
