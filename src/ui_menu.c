@@ -1821,45 +1821,8 @@ static menuSound_t Menu_DefaultKey( menuFrameWork_t *m, int key ) {
         if( !( item->flags & QMF_HASFOCUS ) ) {
             return QMS_NOTHANDLED;
         }
-
         // fall through
 
-    case K_JOY1:
-    case K_JOY2:
-    case K_JOY3:
-    case K_JOY4:
-    case K_AUX1:
-    case K_AUX2:
-    case K_AUX3:
-    case K_AUX4:
-    case K_AUX5:
-    case K_AUX6:
-    case K_AUX7:
-    case K_AUX8:
-    case K_AUX9:
-    case K_AUX10:
-    case K_AUX11:
-    case K_AUX12:
-    case K_AUX13:
-    case K_AUX14:
-    case K_AUX15:
-    case K_AUX16:
-    case K_AUX17:
-    case K_AUX18:
-    case K_AUX19:
-    case K_AUX20:
-    case K_AUX21:
-    case K_AUX22:
-    case K_AUX23:
-    case K_AUX24:
-    case K_AUX25:
-    case K_AUX26:
-    case K_AUX27:
-    case K_AUX28:
-    case K_AUX29:
-    case K_AUX30:
-    case K_AUX31:
-    case K_AUX32:
     case K_KP_ENTER:
     case K_ENTER:
         return Menu_SelectItem( m );
