@@ -656,7 +656,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
     }
 
     // console key is hardcoded, so the user can never unbind it
-    if( !keydown[K_SHIFT] && ( key == '`' || key == '~' ) ) {
+    if( !Key_IsDown( K_SHIFT ) && ( key == '`' || key == '~' ) ) {
         if( down ) {
             Con_ToggleConsole_f();
         }
@@ -664,7 +664,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
     }
 
     // Alt+Enter is hardcoded for all systems
-    if( keydown[K_ALT] && key == K_ENTER ) {
+    if( Key_IsDown( K_ALT ) && key == K_ENTER ) {
         if( down ) {
             extern void VID_ToggleFullscreen( void );
 
@@ -784,7 +784,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
         }
 
 #if !USE_CHAR_EVENTS
-        if( keydown[K_SHIFT] && keyshift[key] != key && keybindings[keyshift[key]] ) {
+        if( Key_IsDown( K_SHIFT ) && keyshift[key] != key && keybindings[keyshift[key]] ) {
             key = keyshift[key];
         }
 #endif
@@ -820,7 +820,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
 
 #if !USE_CHAR_EVENTS
 
-    if( keydown[K_CTRL] || keydown[K_ALT] ) {
+    if( Key_IsDown( K_CTRL ) || Key_IsDown( K_ALT ) ) {
         return;
     }
 
@@ -877,7 +877,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
         return;
     }
     
-    if( keydown[K_SHIFT] ) {
+    if( Key_IsDown( K_SHIFT ) ) {
         key = keyshift[key];
     }
 
