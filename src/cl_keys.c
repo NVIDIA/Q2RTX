@@ -27,7 +27,7 @@ key up events are sent even if in console mode
 
 static int  anykeydown;
 
-static int      key_waiting;
+//static int      key_waiting;
 static char     *keybindings[256];
 
 // if true, can't be rebound while in console
@@ -51,91 +51,95 @@ typedef struct keyname_s {
     int     keynum;
 } keyname_t;
 
+#define K(x) { #x, K_##x }
+
 static const keyname_t keynames[] = {
-    {"TAB", K_TAB},
-    {"ENTER", K_ENTER},
-    {"ESCAPE", K_ESCAPE},
-    {"SPACE", K_SPACE},
-    {"BACKSPACE", K_BACKSPACE},
-    {"UPARROW", K_UPARROW},
-    {"DOWNARROW", K_DOWNARROW},
-    {"LEFTARROW", K_LEFTARROW},
-    {"RIGHTARROW", K_RIGHTARROW},
+    K(BACKSPACE),
+    K(TAB),
+    K(ENTER),
+    K(PAUSE),
+    K(ESCAPE),
+    K(SPACE),
 
-    {"ALT", K_ALT},
-    {"LALT", K_LALT},
-    {"RALT", K_RALT},
-    {"CTRL", K_CTRL},
-    {"LCTRL", K_LCTRL},
-    {"RCTRL", K_RCTRL},
-    {"SHIFT", K_SHIFT},
-    {"LSHIFT", K_LSHIFT},
-    {"RSHIFT", K_RSHIFT},
-    
-    {"F1", K_F1},
-    {"F2", K_F2},
-    {"F3", K_F3},
-    {"F4", K_F4},
-    {"F5", K_F5},
-    {"F6", K_F6},
-    {"F7", K_F7},
-    {"F8", K_F8},
-    {"F9", K_F9},
-    {"F10", K_F10},
-    {"F11", K_F11},
-    {"F12", K_F12},
+    K(UPARROW),
+    K(DOWNARROW),
+    K(LEFTARROW),
+    K(RIGHTARROW),
 
-    {"INS", K_INS},
-    {"DEL", K_DEL},
-    {"PGDN", K_PGDN},
-    {"PGUP", K_PGUP},
-    {"HOME", K_HOME},
-    {"END", K_END},
+    K(ALT),
+    K(LALT),
+    K(RALT),
+    K(CTRL),
+    K(LCTRL),
+    K(RCTRL),
+    K(SHIFT),
+    K(LSHIFT),
+    K(RSHIFT),
 
-    {"NUMLOCK", K_NUMLOCK},
-    {"CAPSLOCK", K_CAPSLOCK},
-    {"SCROLLOCK", K_SCROLLOCK},
-    {"LWINKEY", K_LWINKEY},
-    {"RWINKEY", K_RWINKEY},
-    {"MENU", K_MENU},
+    K(F1),
+    K(F2),
+    K(F3),
+    K(F4),
+    K(F5),
+    K(F6),
+    K(F7),
+    K(F8),
+    K(F9),
+    K(F10),
+    K(F11),
+    K(F12),
 
-    {"MOUSE1", K_MOUSE1},
-    {"MOUSE2", K_MOUSE2},
-    {"MOUSE3", K_MOUSE3},
-    {"MOUSE4", K_MOUSE4},
-    {"MOUSE5", K_MOUSE5},
-    {"MOUSE6", K_MOUSE6},
-    {"MOUSE7", K_MOUSE7},
-    {"MOUSE8", K_MOUSE8},
+    K(INS),
+    K(DEL),
+    K(PGDN),
+    K(PGUP),
+    K(HOME),
+    K(END),
 
-    {"KP_HOME",         K_KP_HOME },
-    {"KP_UPARROW",      K_KP_UPARROW },
-    {"KP_PGUP",         K_KP_PGUP },
-    {"KP_LEFTARROW",    K_KP_LEFTARROW },
-    {"KP_5",            K_KP_5 },
-    {"KP_RIGHTARROW",   K_KP_RIGHTARROW },
-    {"KP_END",          K_KP_END },
-    {"KP_DOWNARROW",    K_KP_DOWNARROW },
-    {"KP_PGDN",         K_KP_PGDN },
-    {"KP_ENTER",        K_KP_ENTER },
-    {"KP_INS",          K_KP_INS },
-    {"KP_DEL",          K_KP_DEL },
-    {"KP_SLASH",        K_KP_SLASH },
-    {"KP_MINUS",        K_KP_MINUS },
-    {"KP_PLUS",         K_KP_PLUS },
-    {"KP_MULTIPLY",     K_KP_MULTIPLY },
+    K(NUMLOCK),
+    K(CAPSLOCK),
+    K(SCROLLOCK),
+    K(LWINKEY),
+    K(RWINKEY),
+    K(MENU),
 
-    {"MWHEELUP", K_MWHEELUP },
-    {"MWHEELDOWN", K_MWHEELDOWN },
-    {"MWHEELRIGHT", K_MWHEELRIGHT },
-    {"MWHEELLEFT", K_MWHEELLEFT },
+    K(KP_HOME),
+    K(KP_UPARROW),
+    K(KP_PGUP),
+    K(KP_LEFTARROW),
+    K(KP_5),
+    K(KP_RIGHTARROW),
+    K(KP_END),
+    K(KP_DOWNARROW),
+    K(KP_PGDN),
+    K(KP_ENTER),
+    K(KP_INS),
+    K(KP_DEL),
+    K(KP_SLASH),
+    K(KP_MINUS),
+    K(KP_PLUS),
+    K(KP_MULTIPLY),
 
-    {"PAUSE", K_PAUSE},
+    K(MOUSE1),
+    K(MOUSE2),
+    K(MOUSE3),
+    K(MOUSE4),
+    K(MOUSE5),
+    K(MOUSE6),
+    K(MOUSE7),
+    K(MOUSE8),
+
+    K(MWHEELUP),
+    K(MWHEELDOWN),
+    K(MWHEELRIGHT),
+    K(MWHEELLEFT),
 
     {"SEMICOLON", ';'}, // because a raw semicolon seperates commands
 
-    {NULL,0}
+    {NULL, 0}
 };
+
+#undef K
 
 //============================================================================
 
@@ -502,58 +506,71 @@ void Key_Init( void ) {
 //
 // init ascii characters in console mode
 //
-    for( i = 32; i < 128; i++ )
+    for( i = K_ASCIIFIRST; i <= K_ASCIILAST; i++ )
         consolekeys[i] = qtrue;
-    consolekeys[K_ENTER] = qtrue;
-    consolekeys[K_KP_ENTER] = qtrue;
-    consolekeys[K_TAB] = qtrue;
-    consolekeys[K_LEFTARROW] = qtrue;
-    consolekeys[K_KP_LEFTARROW] = qtrue;
-    consolekeys[K_RIGHTARROW] = qtrue;
-    consolekeys[K_KP_RIGHTARROW] = qtrue;
-    consolekeys[K_UPARROW] = qtrue;
-    consolekeys[K_KP_UPARROW] = qtrue;
-    consolekeys[K_DOWNARROW] = qtrue;
-    consolekeys[K_KP_DOWNARROW] = qtrue;
-    consolekeys[K_BACKSPACE] = qtrue;
-    consolekeys[K_HOME] = qtrue;
-    consolekeys[K_KP_HOME] = qtrue;
-    consolekeys[K_END] = qtrue;
-    consolekeys[K_KP_END] = qtrue;
-    consolekeys[K_PGUP] = qtrue;
-    consolekeys[K_KP_PGUP] = qtrue;
-    consolekeys[K_PGDN] = qtrue;
-    consolekeys[K_KP_PGDN] = qtrue;
-    consolekeys[K_SHIFT] = qtrue;
-    consolekeys[K_LSHIFT] = qtrue;
-    consolekeys[K_RSHIFT] = qtrue;
-    consolekeys[K_INS] = qtrue;
-    consolekeys[K_KP_INS] = qtrue;
-    consolekeys[K_KP_DEL] = qtrue;
-    consolekeys[K_KP_SLASH] = qtrue;
-    consolekeys[K_KP_MULTIPLY] = qtrue;
-    consolekeys[K_KP_PLUS] = qtrue;
-    consolekeys[K_KP_MINUS] = qtrue;
-    consolekeys[K_KP_5] = qtrue;
-    consolekeys[K_DEL] = qtrue;
-    consolekeys[K_CTRL] = qtrue;
-    consolekeys[K_LCTRL] = qtrue;
-    consolekeys[K_RCTRL] = qtrue;
-    consolekeys[K_ALT] = qtrue;
-    consolekeys[K_LALT] = qtrue;
-    consolekeys[K_RALT] = qtrue;
-    consolekeys[K_MWHEELUP] = qtrue;
-    consolekeys[K_MWHEELDOWN] = qtrue;
-    consolekeys[K_MOUSE3] = qtrue;
 
-    consolekeys['`'] = qtrue;
-    consolekeys['~'] = qtrue;
+#define K(x) \
+    consolekeys[K_##x] = qtrue
+
+    K(BACKSPACE);
+    K(TAB);
+    K(ENTER);
+
+    K(UPARROW);
+    K(DOWNARROW);
+    K(LEFTARROW);
+    K(RIGHTARROW);
+
+    K(ALT);
+    K(LALT);
+    K(RALT);
+    K(CTRL);
+    K(LCTRL);
+    K(RCTRL);
+    K(SHIFT);
+    K(LSHIFT);
+    K(RSHIFT);
+
+    K(INS);
+    K(DEL);
+    K(PGDN);
+    K(PGUP);
+    K(HOME);
+    K(END);
+
+    K(KP_HOME);
+    K(KP_UPARROW);
+    K(KP_PGUP);
+    K(KP_LEFTARROW);
+    K(KP_5);
+    K(KP_RIGHTARROW);
+    K(KP_END);
+    K(KP_DOWNARROW);
+    K(KP_PGDN);
+    K(KP_ENTER);
+    K(KP_INS);
+    K(KP_DEL);
+    K(KP_SLASH);
+    K(KP_MINUS);
+    K(KP_PLUS);
+    K(KP_MULTIPLY);
+
+    K(MOUSE3);
+
+    K(MWHEELUP);
+    K(MWHEELDOWN);
+
+#undef K
 
 #if !USE_CHAR_EVENTS
+//
+// init ascii keyshift characters
+//
     for( i = 0; i < 256; i++ )
         keyshift[i] = i;
     for( i = 'a'; i <= 'z'; i++ )
         keyshift[i] = i - 'a' + 'A';
+
     keyshift['1'] = '!';
     keyshift['2'] = '@';
     keyshift['3'] = '#';
@@ -606,12 +623,14 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
     Com_DDPrintf( "%u: %c%s\n", time,
         down ? '+' : '-', Key_KeynumToString( key ) );
 
+#if 0
     // hack for modal presses
     if( key_waiting == -1 ) {
         if( down )
             key_waiting = key;
         return;
     }
+#endif
 
     // update auto-repeat status
     if( down ) {
@@ -627,8 +646,8 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
         {
             return; // ignore most autorepeats
         }
-            
-        if( key >= 200 && !keybindings[key] && !consolekeys[key] ) {
+
+        if( key >= K_MOUSEFIRST && !keybindings[key] && !consolekeys[key] ) {
             Com_Printf( "%s is unbound, hit F4 to set.\n",
                 Key_KeynumToString( key ) );
         }

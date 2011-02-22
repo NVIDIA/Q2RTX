@@ -27,10 +27,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define K_PAUSE         19
 #define K_ESCAPE        27
 #define K_SPACE         32
+#define K_DEL           127
 
 // normal keys should be passed as lowercased ascii
+#define K_ASCIIFIRST    32
+#define K_ASCIILAST     127
 
-#define K_DEL           127
 #define K_UPARROW       128
 #define K_DOWNARROW     129
 #define K_LEFTARROW     130
@@ -81,6 +83,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define K_KP_PLUS       174
 #define K_KP_MULTIPLY   175
 
+// these come paired with legacy K_ALT/K_CTRL/K_SHIFT events
 #define K_LALT          180
 #define K_RALT          181
 #define K_LCTRL         182
@@ -88,23 +91,23 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define K_LSHIFT        184
 #define K_RSHIFT        185
 
-#define K_MWHEELDOWN    239
-#define K_MWHEELUP      240
-
-//
 // mouse buttons generate virtual keys
-//
-#define K_MOUSE1        241
-#define K_MOUSE2        242
-#define K_MOUSE3        243
-#define K_MOUSE4        244
-#define K_MOUSE5        245
-#define K_MOUSE6        246
-#define K_MOUSE7        247
-#define K_MOUSE8        248
+#define K_MOUSEFIRST    200
+#define K_MOUSE1        200
+#define K_MOUSE2        201
+#define K_MOUSE3        202
+#define K_MOUSE4        203
+#define K_MOUSE5        204
+#define K_MOUSE6        205
+#define K_MOUSE7        206
+#define K_MOUSE8        207
 
-#define K_MWHEELRIGHT   249
-#define K_MWHEELLEFT    250
+// mouse wheel generates virtual keys
+#define K_MWHEELDOWN    210
+#define K_MWHEELUP      211
+#define K_MWHEELRIGHT   212
+#define K_MWHEELLEFT    213
+#define K_MOUSELAST     213
 
 typedef enum keydest_e {
     KEY_GAME    = 0,
