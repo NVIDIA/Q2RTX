@@ -1438,44 +1438,67 @@ void Menu_Init( menuFrameWork_t *menu ) {
 
 void Menu_Size( menuFrameWork_t *menu ) {
     menuCommon_t *item;
-    int x, y, h;
-    int i, height;
+    int x, y, w, h;
+    int i, widest = -1;
 
     // count visible items
-    for( i = 0, height = 0; i < menu->nitems; i++ ) {
+    for( i = 0, h = 0; i < menu->nitems; i++ ) {
         item = menu->items[i];
         if( item->flags & QMF_HIDDEN ) {
             continue;
         }
         if( item->type == MTYPE_BITMAP ) {
-            height += GENERIC_SPACING( item->height );
+            h += GENERIC_SPACING( item->height );
+            if( widest < item->width ) {
+                widest = item->width;
+            }
         } else {
-            height += MENU_SPACING;
+            h += MENU_SPACING;
         }
     }
 
+    // account for banner
     if( menu->banner ) {
-        height += GENERIC_SPACING( menu->banner_rc.height );
+        h += GENERIC_SPACING( menu->banner_rc.height );
     }
 
     // set menu top/bottom
     if( menu->transparent ) {
-        menu->y1 = ( uis.height - height ) / 2 - MENU_SPACING;
-        menu->y2 = ( uis.height + height ) / 2 + MENU_SPACING;
+        menu->y1 = ( uis.height - h ) / 2 - MENU_SPACING;
+        menu->y2 = ( uis.height + h ) / 2 + MENU_SPACING;
     } else {
         menu->y1 = 0;
         menu->y2 = uis.height;
     }
 
-    x = uis.width / 2;
-    y = ( uis.height - height ) / 2;
+    // set menu horizontal base
+    if( widest == -1 ) {
+        x = uis.width / 2;
+    } else {
+        // if menu has bitmaps, it is expected to have plaque and logo
+        // align them horizontally to avoid going off screen on small resolution
+        w = widest + CURSOR_WIDTH; 
+        if( menu->plaque_rc.width > menu->logo_rc.width ) {
+            w += menu->plaque_rc.width;
+        } else {
+            w += menu->logo_rc.width;
+        }
+        x = ( uis.width + w ) / 2 - widest;
+    }
 
+    // set menu vertical base
+    y = ( uis.height - h ) / 2;
+
+    // banner is horizontally centered and
+    // positioned on top of all menu items
     if( menu->banner ) {
         menu->banner_rc.x = ( uis.width - menu->banner_rc.width ) / 2;
         menu->banner_rc.y = y;
         y += GENERIC_SPACING( menu->banner_rc.height );
     }
 
+    // plaque and logo are vertically centered and
+    // positioned to the left of bitmaps and cursor
     h = 0;
     if( menu->plaque ) {
         h += menu->plaque_rc.height;
