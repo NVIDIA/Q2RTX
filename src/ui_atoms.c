@@ -655,7 +655,7 @@ qboolean UI_Init( void ) {
     strcpy( uis.weaponModel, "w_railgun.md2" );
 
     // load custom menus
-    UI_LoadStript();
+    UI_LoadScript();
 
     // load built-in menus
     M_Menu_PlayerConfig();

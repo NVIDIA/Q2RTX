@@ -527,7 +527,7 @@ static qboolean Parse_File( const char *path, int depth ) {
     return qtrue;
 }
 
-void UI_LoadStript( void ) {
+void UI_LoadScript( void ) {
     Parse_File( "q2pro.menu", 0 );
 }
 

@@ -320,8 +320,7 @@ void        UI_DrawRect( const vrect_t *rect, int border, int color );
 void        UI_DrawRectEx( const vrect_t *rect, int border, const color_t color );
 void        UI_StringDimensions( vrect_t *rc, int flags, const char *string );
 
-void        UI_LoadStript( void );
-void        UI_FreeStript( void );
+void        UI_LoadScript( void );
 menuFrameWork_t *UI_FindMenu( const char *name );
 
 void        Menu_Init( menuFrameWork_t *menu );
