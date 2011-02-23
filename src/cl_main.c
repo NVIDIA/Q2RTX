@@ -589,6 +589,7 @@ void CL_Disconnect( error_type_t type, const char *text ) {
     if( !cls.state ) {
         return;
     }
+
     SCR_EndLoadingPlaque();    // get rid of loading plaque
 
     if( cls.state > ca_disconnected && !cls.demo.playback ) {
@@ -612,6 +613,7 @@ void CL_Disconnect( error_type_t type, const char *text ) {
     if( cls.demo.recording ) {
         CL_Stop_f();
     }
+
     if( cls.demo.playback ) {
         FS_FCloseFile( cls.demo.playback );
 
@@ -624,6 +626,7 @@ void CL_Disconnect( error_type_t type, const char *text ) {
                 cls.demo.time_frames, sec, fps );
         }
     }
+
     memset( &cls.demo, 0, sizeof( cls.demo ) );
     
     if( cls.netchan ) {
@@ -647,6 +650,7 @@ void CL_Disconnect( error_type_t type, const char *text ) {
     if( cls.download.file ) {
         FS_FCloseFile( cls.download.file );
     }
+
     memset( &cls.download, 0, sizeof( cls.download ) );
 
     CL_ClearState ();
@@ -657,7 +661,7 @@ void CL_Disconnect( error_type_t type, const char *text ) {
     cls.userinfo_modified = 0;
 
 #if USE_UI
-    UI_ErrorMenu( type, text );
+    UI_OpenMenu( UIMENU_MAIN );
 #endif
 
     CL_UpdateFrameTimes();

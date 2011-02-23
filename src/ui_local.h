@@ -346,8 +346,6 @@ qboolean    Menu_Push( menuFrameWork_t *menu );
 void        Menu_Pop( menuFrameWork_t *menu );
 void        Menu_Free( menuFrameWork_t *menu );
 
-void M_Menu_Error( error_type_t type, const char *text );
-void M_Menu_Confirm( const char *text, confirmAction_t action );
 void M_Menu_PlayerConfig( void );
 void M_Menu_Demos( void );
 void M_Menu_Servers( void );

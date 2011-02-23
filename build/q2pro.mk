@@ -60,7 +60,6 @@ endif
 
 ifdef USE_UI
 SRCFILES+=ui_atoms.c \
-	ui_confirm.c \
 	ui_demos.c \
 	ui_menu.c \
 	ui_multiplayer.c \

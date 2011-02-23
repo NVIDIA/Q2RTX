@@ -246,20 +246,6 @@ void UI_OpenMenu( uiMenu_t type ) {
     UI_PushMenu( menu );
 }
 
-void UI_ErrorMenu( error_type_t type, const char *text ) {
-    if( !uis.initialized ) {
-        return;
-    }
-    // close any existing menus
-    UI_ForceMenuOff();
-
-    if( ui_open->integer ) {
-        UI_PushMenu( UI_FindMenu( "main" ) );
-        M_Menu_Error( type, text );
-    }
-}
-
-
 //=============================================================================
 
 /*
