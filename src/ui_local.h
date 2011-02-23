@@ -306,6 +306,7 @@ extern cvar_t       *ui_debug;
 void        UI_PushMenu( menuFrameWork_t *menu );
 void        UI_ForceMenuOff( void );
 void        UI_PopMenu( void );
+void        UI_StartSound( menuSound_t sound );
 qboolean    UI_DoHitTest( void );
 qboolean    UI_CursorInRect( vrect_t *rect );
 void        *UI_FormatColumns( int extrasize, ... ) q_sentinel;

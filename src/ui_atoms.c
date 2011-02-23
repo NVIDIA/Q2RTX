@@ -492,20 +492,7 @@ void UI_Draw( int realtime ) {
     R_SetColor( DRAW_COLOR_CLEAR, NULL );
 }
 
-/*
-=================
-UI_Keydown
-=================
-*/
-void UI_Keydown( int key ) {
-    menuSound_t sound;
-
-    if( !uis.activeMenu ) {
-        return;
-    }
-
-    sound = Menu_Keydown( uis.activeMenu, key );
-
+void UI_StartSound( menuSound_t sound ) {
     switch( sound ) {
     case QMS_IN:
         S_StartLocalSound( "misc/menu1.wav" );
@@ -522,7 +509,23 @@ void UI_Keydown( int key ) {
     default:
         break;
     }
+}
 
+/*
+=================
+UI_Keydown
+=================
+*/
+void UI_Keydown( int key ) {
+    menuSound_t sound;
+
+    if( !uis.activeMenu ) {
+        return;
+    }
+
+    sound = Menu_Keydown( uis.activeMenu, key );
+
+    UI_StartSound( sound );
 }
 
 /*
@@ -544,24 +547,7 @@ void UI_CharEvent( int key ) {
         return;
     }
 
-    switch( sound ) {
-    case QMS_IN:
-        S_StartLocalSound( "misc/menu1.wav" );
-        break;
-    case QMS_MOVE:
-        S_StartLocalSound( "misc/menu2.wav" );
-        break;
-    case QMS_OUT:
-        S_StartLocalSound( "misc/menu3.wav" );
-        break;
-    case QMS_BEEP:
-        S_StartLocalSound( "misc/talk1.wav" );
-        break;
-    case QMS_NOTHANDLED:
-    default:
-        break;
-    }
-
+    UI_StartSound( sound );
 }
 
 static void UI_Menu_g( genctx_t *ctx ) {

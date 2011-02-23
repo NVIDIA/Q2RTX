@@ -116,6 +116,8 @@ typedef enum keydest_e {
     KEY_MENU    = ( 1 << 2 )
 } keydest_t;
 
+typedef qboolean (*keywaitcb_t)( void *arg, int key );
+
 qboolean    Key_GetOverstrikeMode( void );
 void        Key_SetOverstrikeMode( qboolean overstrike );
 keydest_t   Key_GetDest( void );
@@ -130,4 +132,6 @@ int     Key_StringToKeynum( const char *str );
 void    Key_SetBinding( int keynum, const char *binding );
 char    *Key_GetBinding( const char *binding );
 int     Key_EnumBindings( int key, const char *binding );
+
+void    Key_WaitKey( keywaitcb_t wait, void *arg );
 

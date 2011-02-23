@@ -226,14 +226,6 @@ static void Keybind_Draw( menuKeybind_t *k ) {
         k->generic.uiFlags | UI_LEFT, string );
 }
 
-static menuSound_t Keybind_DoEnter( menuKeybind_t *k ) {
-    menuFrameWork_t *menu = k->generic.parent;
-
-    menu->keywait = qtrue;
-    menu->status = "Press the desired key, Escape to cancel";
-    return QMS_IN;
-}
-
 static void Keybind_Push( menuKeybind_t *k ) {
     int key = Key_EnumBindings( 0, k->cmd );
     k->altbinding[0] = 0;
@@ -246,6 +238,10 @@ static void Keybind_Push( menuKeybind_t *k ) {
             strcpy( k->altbinding, Key_KeynumToString( key ) );
         }
     }
+}
+
+static void Keybind_Pop( menuKeybind_t *k ) {
+    Key_WaitKey( NULL, NULL );
 }
 
 static void Keybind_Update( menuFrameWork_t *menu ) {
@@ -272,20 +268,48 @@ static void Keybind_Remove( const char *cmd ) {
     }
 }
 
+static qboolean keybind_cb( void *arg, int key ) {
+    menuKeybind_t *k = arg;
+    menuFrameWork_t *menu = k->generic.parent;
+
+    // console key is hardcoded
+    if( key == '`' ) {
+        UI_StartSound( QMS_BEEP );
+        return qfalse;
+    }
+
+    // menu key is hardcoded
+    if( key != K_ESCAPE ) {
+        if( k->altbinding[0] ) {
+            Keybind_Remove( k->cmd );
+        }
+        Key_SetBinding( key, k->cmd );
+    }
+
+    Keybind_Update( menu );
+
+    menu->keywait = qfalse;
+    menu->status = "Press Enter to change, Backspace to clear";
+    Key_WaitKey( NULL, NULL );
+
+    UI_StartSound( QMS_OUT );
+    return qfalse;
+}
+
+static menuSound_t Keybind_DoEnter( menuKeybind_t *k ) {
+    menuFrameWork_t *menu = k->generic.parent;
+
+    menu->keywait = qtrue;
+    menu->status = "Press the desired key, Escape to cancel";
+    Key_WaitKey( keybind_cb, k );
+    return QMS_IN;
+}
+
 static menuSound_t Keybind_Key( menuKeybind_t *k, int key ) {
     menuFrameWork_t *menu = k->generic.parent;
 
     if( menu->keywait ) {
-        if( key != K_ESCAPE ) {
-            if( k->altbinding[0] ) {
-                Keybind_Remove( k->cmd );
-            }
-            Key_SetBinding( key, k->cmd );
-        }
-        Keybind_Update( menu );
-        menu->keywait = qfalse;
-        menu->status = "Press Enter to change, Backspace to clear";
-        return QMS_OUT;
+        return QMS_OUT; // never gets there
     }
     
     if( key == K_BACKSPACE || key == K_DEL ) {
@@ -1942,6 +1966,9 @@ void Menu_Pop( menuFrameWork_t *menu ) {
         case MTYPE_SPINCONTROL:
         case MTYPE_TOGGLE:
             SpinControl_Pop( item );
+            break;
+        case MTYPE_KEYBIND:
+            Keybind_Pop( item );
             break;
         case MTYPE_FIELD:
             Field_Pop( item );

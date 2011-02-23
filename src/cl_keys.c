@@ -27,13 +27,15 @@ key up events are sent even if in console mode
 
 static int  anykeydown;
 
-//static int      key_waiting;
+static keywaitcb_t  key_wait_cb;
+static void         *key_wait_arg;
+
 static char     *keybindings[256];
 
-// if true, can't be rebound while in console
+// if false, passed to interpreter while in console
 static qboolean consolekeys[256];
 
-// if true, can't be rebound while in menu
+// if true, passed to interpreter while in menu
 static qboolean menubound[256];
 
 #if !USE_CHAR_EVENTS
@@ -623,14 +625,10 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
     Com_DDPrintf( "%u: %c%s\n", time,
         down ? '+' : '-', Key_KeynumToString( key ) );
 
-#if 0
-    // hack for modal presses
-    if( key_waiting == -1 ) {
-        if( down )
-            key_waiting = key;
+    // hack for menu key binding
+    if( key_wait_cb && down && !key_wait_cb( key_wait_arg, key ) ) {
         return;
     }
-#endif
 
     // update auto-repeat status
     if( down ) {
@@ -740,6 +738,11 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
         if( anykeydown < 0 )
             anykeydown = 0;
     }
+
+    // hack for demo freelook in windowed mode
+    if( cls.key_dest == KEY_GAME && cls.demo.playback && key == K_SHIFT ) {
+        IN_Activate();
+    }
     
 //
 // if not a consolekey, send to the interpreter no matter what mode is
@@ -748,11 +751,6 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
         ( ( cls.key_dest & KEY_CONSOLE ) && !consolekeys[key] ) ||
         ( ( cls.key_dest & KEY_MENU ) && menubound[key] ) )
     {
-
-        // hack for demo freelook in windowed mode
-        if( cls.demo.playback && key == K_SHIFT ) {
-            IN_Activate();
-        }
 //
 // Key up events only generate commands if the game key binding is
 // a button command (leading + sign).
@@ -942,7 +940,13 @@ void Key_ClearStates( void ) {
     anykeydown = 0;
 }
 
-
-
-
+/*
+===================
+Key_WaitKey
+===================
+*/
+void Key_WaitKey( keywaitcb_t wait, void *arg ) {
+    key_wait_cb = wait;
+    key_wait_arg = arg;
+}
 
