@@ -208,7 +208,7 @@ void SV_InitGame( qboolean ismvd ) {
     } else {
 #if USE_CLIENT
         // make sure the client is down
-        CL_Disconnect( ERR_DISCONNECT, NULL );
+        CL_Disconnect( ERR_DISCONNECT );
         SCR_BeginLoadingPlaque();
 #endif
 

@@ -440,7 +440,7 @@ extern cvar_t    *info_uf;
 
 void CL_Init (void);
 void CL_Quit_f (void);
-void CL_Disconnect( error_type_t type, const char *text );
+void CL_Disconnect( error_type_t type );
 void CL_RequestNextDownload (void);
 void CL_ResetPrecacheCheck( void );
 void CL_CheckForResend( void );

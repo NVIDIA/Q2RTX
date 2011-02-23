@@ -53,7 +53,7 @@ void CL_ProcessEvents( void );
 void CL_ErrorEvent( void );
 #endif
 void CL_Init (void);
-void CL_Disconnect( error_type_t type, const char *text );
+void CL_Disconnect( error_type_t type );
 void CL_Shutdown (void);
 unsigned CL_Frame (unsigned msec);
 void CL_RestartFilesystem( qboolean total );

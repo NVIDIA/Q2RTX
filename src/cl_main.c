@@ -450,7 +450,7 @@ usage:
 
     NET_Config( NET_CLIENT );
 
-    CL_Disconnect( ERR_DISCONNECT, NULL );
+    CL_Disconnect( ERR_DISCONNECT );
 
     cls.serverAddress = address;
     cls.serverProtocol = protocol;
@@ -486,7 +486,7 @@ static void CL_PassiveConnect_f( void ) {
 
     NET_Config( NET_CLIENT );
 
-    CL_Disconnect( ERR_DISCONNECT, NULL );
+    CL_Disconnect( ERR_DISCONNECT );
 
     if( !NET_GetAddress( NS_CLIENT, &address ) ) {
         return;
@@ -585,7 +585,7 @@ Sends a disconnect message to the server
 This is also called on Com_Error, so it shouldn't cause any errors
 =====================
 */
-void CL_Disconnect( error_type_t type, const char *text ) {
+void CL_Disconnect( error_type_t type ) {
     if( !cls.state ) {
         return;
     }
@@ -1006,7 +1006,7 @@ The server is changing levels
 */
 static void CL_Reconnect_f( void ) {
     if( cls.state >= ca_precached ) {
-        CL_Disconnect( ERR_DISCONNECT, NULL );
+        CL_Disconnect( ERR_DISCONNECT );
     }
 
     if( cls.state >= ca_connected ) {
@@ -3260,7 +3260,7 @@ void CL_Shutdown( void ) {
         return;
     }
 
-    CL_Disconnect( ERR_DISCONNECT, NULL );
+    CL_Disconnect( ERR_DISCONNECT );
 
 #if USE_ZLIB
     inflateEnd( &cls.z );

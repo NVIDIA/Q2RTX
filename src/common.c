@@ -480,7 +480,7 @@ void Com_Error( error_type_t code, const char *fmt, ... ) {
         Com_WPrintf( "%s\n", com_errorMsg );
         SV_Shutdown( va( "Server was killed: %s", com_errorMsg ), code );
 #if USE_CLIENT
-        CL_Disconnect( code, com_errorMsg );
+        CL_Disconnect( code );
 #endif
         goto abort;
     }
@@ -502,7 +502,7 @@ void Com_Error( error_type_t code, const char *fmt, ... ) {
                      "********************\n", com_errorMsg );
         SV_Shutdown( va( "Server crashed: %s\n", com_errorMsg ), ERR_DROP );
 #if USE_CLIENT
-        CL_Disconnect( ERR_DROP, com_errorMsg );
+        CL_Disconnect( ERR_DROP );
 #endif
         goto abort;
     }

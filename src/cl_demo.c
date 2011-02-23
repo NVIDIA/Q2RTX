@@ -678,7 +678,7 @@ fail:
     // if running a local server, kill it and reissue
     SV_Shutdown( "Server was killed.\n", ERR_DISCONNECT );
 
-    CL_Disconnect( ERR_DISCONNECT, NULL );
+    CL_Disconnect( ERR_DISCONNECT );
 
     cls.demo.playback = demofile;
     cls.state = ca_connected;
