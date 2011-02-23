@@ -71,9 +71,9 @@ void UI_PushMenu( menuFrameWork_t *menu ) {
 
     Menu_Init( menu );
 
-    Con_Close();
-
     Key_SetDest( ( Key_GetDest() & ~KEY_CONSOLE ) | KEY_MENU );
+
+    Con_Close( qtrue );
 
     if( !uis.activeMenu ) {
         // opening menu moves cursor to the nice location

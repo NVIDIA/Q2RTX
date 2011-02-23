@@ -37,6 +37,7 @@ typedef enum {
 } chatMode_t;
 
 typedef enum {
+    CON_POPUP,
     CON_DEFAULT,
     CON_CHAT,
     CON_REMOTE
@@ -114,9 +115,16 @@ void Con_ClearTyping( void ) {
 /*
 ================
 Con_Close
+
+Instantly removes the console. Unless `force' is true, does not remove the console
+if user has typed something into it since the last call to Con_Popup.
 ================
 */
-void Con_Close( void ) {
+void Con_Close( qboolean force ) {
+    if( con.mode && !force ) {
+        return;
+    }
+
     Con_ClearTyping();
     Con_ClearNotify_f();
 
@@ -129,7 +137,32 @@ void Con_Close( void ) {
 
 /*
 ================
+Con_Popup
+
+Drop to connection screen.
+================
+*/
+void Con_Popup( void ) {
+    if( con.mode == CON_DEFAULT ) {
+        con.mode = CON_POPUP;
+    }
+
+    Key_SetDest( cls.key_dest | KEY_CONSOLE );
+    Con_RunConsole();
+}
+
+// don't close console after connecting
+static void Con_InteractiveMode( void ) {
+    if( !con.mode ) {
+        con.mode = CON_DEFAULT;
+    }
+}
+
+/*
+================
 Con_ToggleConsole_f
+
+Toggles console up/down animation.
 ================
 */
 void Con_ToggleConsole_f( void ) {
@@ -143,9 +176,9 @@ void Con_ToggleConsole_f( void ) {
         return;
     }
 
-    // FIXME: use old q2 style
+    // toggling console discards chat message
     Key_SetDest( ( cls.key_dest | KEY_CONSOLE ) & ~KEY_MESSAGE );
-    //con.mode = CON_DEFAULT;
+    Con_InteractiveMode();
 }
 
 /*
@@ -247,33 +280,37 @@ void Con_ClearNotify_f( void ) {
         con.times[i] = 0;
 }
 
-                        
 /*
 ================
 Con_MessageMode_f
 ================
 */
-static void Con_MessageMode_f( void ) {
-    Con_Close();
+static void start_message_mode( chatMode_t mode ) {
+    if( cls.state != ca_active || cls.demo.playback ) {
+        Com_Printf( "You must be in a level to chat.\n" );
+        return;
+    }
 
-    con.chat = CHAT_DEFAULT;
+    Con_Close( qtrue );
+
+    con.chat = mode;
     IF_Replace( &con.chatPrompt.inputLine, Cmd_RawArgs() );
     Key_SetDest( cls.key_dest | KEY_MESSAGE );
+}
+
+static void Con_MessageMode_f( void ) {
+    start_message_mode( CHAT_DEFAULT );
+}
+
+static void Con_MessageMode2_f( void ) {
+    start_message_mode( CHAT_TEAM );
 }
 
 /*
 ================
-Con_MessageMode2_f
+Con_RemoteMode_f
 ================
 */
-static void Con_MessageMode2_f( void ) {
-    Con_Close();
-
-    con.chat = CHAT_TEAM;
-    IF_Replace( &con.chatPrompt.inputLine, Cmd_RawArgs() );
-    Key_SetDest( cls.key_dest | KEY_MESSAGE );
-}
-
 static void Con_RemoteMode_f( void ) {
     netadr_t adr;
     char *s;
@@ -960,6 +997,8 @@ static void Con_Say( char *msg ) {
 
 static void Con_Action( void ) {
     char *cmd = Prompt_Action( &con.prompt );
+
+    Con_InteractiveMode();
     
     if( !cmd ) {
         Con_Printf( "]\n" );
@@ -995,6 +1034,8 @@ static void Con_Action( void ) {
 
 static void Con_Paste( void ) {
     char *cbd, *s;
+
+    Con_InteractiveMode();
 
     if( ( cbd = VID_GetClipboardData() ) == NULL ) {
         return;
@@ -1114,6 +1155,7 @@ void Key_Console( int key ) {
 
     if( IF_KeyEvent( &con.prompt.inputLine, key ) ) {
         Prompt_ClearState( &con.prompt );
+        Con_InteractiveMode();
     }
 
 scroll: 
@@ -1123,7 +1165,9 @@ scroll:
 }
 
 void Char_Console( int key ) {
-    IF_CharEvent( &con.prompt.inputLine, key );
+    if( IF_CharEvent( &con.prompt.inputLine, key ) ) {
+        Con_InteractiveMode();
+    }
 }
 
 /*
@@ -1181,6 +1225,5 @@ void Key_Message( int key ) {
 void Char_Message( int key ) {
     IF_CharEvent( &con.chatPrompt.inputLine, key );
 }
-
 
 

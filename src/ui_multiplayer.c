@@ -299,8 +299,7 @@ static menuSound_t Connect( menuCommon_t *self ) {
     serverSlot_t *s = &m_join.servers[m_join.list.curvalue];
 
     Cbuf_AddText( &cmd_buffer, va( "connect \"%s\"\n", s->realAddress ) );
-    UI_PopMenu();
-    return QMS_IN;
+    return QMS_SILENT;
 }
 
 static menuSound_t Change( menuCommon_t *self ) {

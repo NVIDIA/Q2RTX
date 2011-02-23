@@ -71,7 +71,7 @@ void Con_Init( void );
 void Con_SetColor( color_index_t color );
 void Con_Print( const char *text );
 void Con_Printf( const char *fmt, ... );
-void Con_Close( void );
+void Con_Close( qboolean force );
 
 // this is in the client code, but can be used for debugging from server
 void SCR_DebugGraph (float value, int color);

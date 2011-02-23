@@ -321,7 +321,7 @@ void CL_CheckForResend( void ) {
 
         cls.passive = qfalse;
 
-        Con_Close();
+        Con_Popup();
 #if USE_UI
         UI_OpenMenu( UIMENU_NONE );
 #endif
@@ -450,7 +450,7 @@ usage:
 
     NET_Config( NET_CLIENT );
 
-    CL_Disconnect( ERR_DISCONNECT );
+    CL_Disconnect( ERR_RECONNECT );
 
     cls.serverAddress = address;
     cls.serverProtocol = protocol;
@@ -460,16 +460,13 @@ usage:
     cls.connect_time -= CONNECT_FAST;
     cls.connect_count = 0;
 
+    Con_Popup();
+
     CL_CheckForResend();
 
     Cvar_Set( "cl_paused", "0" );
     Cvar_Set( "sv_paused", "0" );
     Cvar_Set( "timedemo", "0" );
-
-    Con_Close();
-#if USE_UI
-    UI_OpenMenu( UIMENU_NONE );
-#endif
 }
 
 static void CL_PassiveConnect_f( void ) {
@@ -486,7 +483,7 @@ static void CL_PassiveConnect_f( void ) {
 
     NET_Config( NET_CLIENT );
 
-    CL_Disconnect( ERR_DISCONNECT );
+    CL_Disconnect( ERR_RECONNECT );
 
     if( !NET_GetAddress( NS_CLIENT, &address ) ) {
         return;
@@ -661,7 +658,11 @@ void CL_Disconnect( error_type_t type ) {
     cls.userinfo_modified = 0;
 
 #if USE_UI
-    UI_OpenMenu( UIMENU_MAIN );
+    if( type == ERR_DISCONNECT ) {
+        UI_OpenMenu( UIMENU_MAIN );
+    } else {
+        UI_OpenMenu( UIMENU_NONE );
+    }
 #endif
 
     CL_UpdateFrameTimes();
@@ -1006,7 +1007,7 @@ The server is changing levels
 */
 static void CL_Reconnect_f( void ) {
     if( cls.state >= ca_precached ) {
-        CL_Disconnect( ERR_DISCONNECT );
+        CL_Disconnect( ERR_RECONNECT );
     }
 
     if( cls.state >= ca_connected ) {
@@ -3260,7 +3261,7 @@ void CL_Shutdown( void ) {
         return;
     }
 
-    CL_Disconnect( ERR_DISCONNECT );
+    CL_Disconnect( ERR_FATAL );
 
 #if USE_ZLIB
     inflateEnd( &cls.z );

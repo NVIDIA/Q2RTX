@@ -180,8 +180,8 @@ Key_SetDest
 void Key_SetDest( keydest_t dest ) {
     int diff;
 
-// make sure at least fullscreen console or main menu is up
-    if( cls.state == ca_disconnected && !( dest & (KEY_MENU|KEY_CONSOLE) ) ) {
+// if not connected, console or menu should be up
+    if( cls.state < ca_active && !( dest & (KEY_MENU|KEY_CONSOLE) ) ) {
         dest |= KEY_CONSOLE;
     }
 
@@ -692,22 +692,13 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
             return;
         }
 
-        if( cls.state > ca_disconnected && cls.state < ca_active ) {
-            if( cls.key_dest & KEY_CONSOLE ) {
-                Con_Close();
-            } else {
-                CL_Disconnect( ERR_DISCONNECT );
-            }
-            return;
-        }
-
         if( cls.key_dest & KEY_CONSOLE ) {
-            if( cls.state == ca_disconnected && !( cls.key_dest & KEY_MENU ) ) {
+            if( cls.state < ca_active && !( cls.key_dest & KEY_MENU ) ) {
 #if USE_UI
                 UI_OpenMenu( UIMENU_MAIN_FORCE );
 #endif
             } else {
-                Con_Close();
+                Con_Close( qtrue );
             }
         }
 #if USE_UI

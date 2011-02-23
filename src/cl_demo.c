@@ -678,15 +678,14 @@ fail:
     // if running a local server, kill it and reissue
     SV_Shutdown( "Server was killed.\n", ERR_DISCONNECT );
 
-    CL_Disconnect( ERR_DISCONNECT );
+    CL_Disconnect( ERR_RECONNECT );
 
     cls.demo.playback = demofile;
     cls.state = ca_connected;
     Q_strlcpy( cls.servername, COM_SkipPath( name ), sizeof( cls.servername ) );
     cls.serverAddress.type = NA_LOOPBACK;
 
-    Con_Close();
-    Con_RunConsole();
+    Con_Popup();
     SCR_UpdateScreen();
 
     CL_ParseServerMessage();

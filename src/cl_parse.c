@@ -405,6 +405,7 @@ static void CL_SetActiveState( void ) {
     
     SCR_EndLoadingPlaque ();    // get rid of loading plaque
     SCR_LagClear();
+    Con_Close( qfalse );        // get rid of connection screen
 
     CL_UpdateFrameTimes();
 
