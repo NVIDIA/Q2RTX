@@ -283,7 +283,7 @@ static void SV_GameMap_f( void ) {
     // admin option to reload the game DLL or entire server
     if( sv_recycle->integer > 0 ) {
         if( sv_recycle->integer > 1 ) {
-            Com_Quit( NULL, KILL_RESTART );
+            Com_Quit( NULL, ERR_RECONNECT );
         }
         SV_Map( Cmd_Argv( 1 ), qtrue );
         return;
@@ -847,7 +847,7 @@ static void SV_KillServer_f( void ) {
         return;
     }
 
-    SV_Shutdown( "Server was killed.\n", KILL_DROP );
+    SV_Shutdown( "Server was killed.\n", ERR_DISCONNECT );
 }
 
 /*

@@ -482,7 +482,7 @@ void VID_PumpEvents( void ) {
             activate_event();
             break;
         case SDL_QUIT:
-            Com_Quit( NULL, KILL_DROP );
+            Com_Quit( NULL, ERR_DISCONNECT );
             break;
         case SDL_VIDEORESIZE:
             resize_event( event.resize.w, event.resize.h );

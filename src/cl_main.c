@@ -446,7 +446,7 @@ usage:
     Q_strlcpy( cls.servername, server, sizeof( cls.servername ) );
 
     // if running a local server, kill it and reissue
-    SV_Shutdown( "Server was killed.\n", KILL_DROP );
+    SV_Shutdown( "Server was killed.\n", ERR_DISCONNECT );
 
     NET_Config( NET_CLIENT );
 
@@ -482,7 +482,7 @@ static void CL_PassiveConnect_f( void ) {
     }
 
     // if running a local server, kill it and reissue
-    SV_Shutdown( "Server was killed.\n", KILL_DROP );
+    SV_Shutdown( "Server was killed.\n", ERR_DISCONNECT );
 
     NET_Config( NET_CLIENT );
 

@@ -475,12 +475,6 @@ typedef enum {
     COLOR_NONE
 } color_index_t;
 
-typedef enum {
-    KILL_RESTART,
-    KILL_DISCONNECT,
-    KILL_DROP
-} killtype_t;
-
 typedef struct {
     const char *name;
     void (* const func)( void );
@@ -512,7 +506,7 @@ void        Com_AbortFrame( void );
 char        *Com_GetLastError( void );
 void        Com_SetLastError( const char *msg );
 
-void        Com_Quit( const char *reason, killtype_t type ) q_noreturn;
+void        Com_Quit( const char *reason, error_type_t type ) q_noreturn;
 
 void        Com_SetColor( color_index_t color );
 

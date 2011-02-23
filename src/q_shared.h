@@ -120,7 +120,8 @@ typedef int qerror_t;
 typedef enum {
     ERR_FATAL,          // exit the entire game with a popup window
     ERR_DROP,           // print to console and disconnect from game
-    ERR_DISCONNECT,     // don't kill server
+    ERR_DISCONNECT,     // like drop, but not an error
+    ERR_RECONNECT       // make server broadcast 'reconnect' message
 } error_type_t;
 
 typedef enum {

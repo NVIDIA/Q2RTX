@@ -1949,9 +1949,9 @@ SV_MvdShutdown
 Server is shutting down, clean everything up.
 ==================
 */
-void SV_MvdShutdown( killtype_t type ) {
+void SV_MvdShutdown( error_type_t type ) {
     // drop all clients
-    mvd_drop( type == KILL_RESTART ? GTS_RECONNECT : GTS_DISCONNECT );
+    mvd_drop( type == ERR_RECONNECT ? GTS_RECONNECT : GTS_DISCONNECT );
 
     // free static data
     Z_Free( mvd.message.data );

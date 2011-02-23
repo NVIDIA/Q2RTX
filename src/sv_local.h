@@ -521,7 +521,7 @@ void SV_InitClientSend( client_t *newcl );
 //
 void SV_MvdRegister( void );
 void SV_MvdInit( void );
-void SV_MvdShutdown( killtype_t type );
+void SV_MvdShutdown( error_type_t type );
 void SV_MvdBeginFrame( void );
 void SV_MvdEndFrame( void );
 void SV_MvdRunClients( void );

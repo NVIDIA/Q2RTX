@@ -204,7 +204,7 @@ void SV_InitGame( qboolean ismvd ) {
 
     if( svs.initialized ) {
         // cause any connected clients to reconnect
-        SV_Shutdown( "Server restarted\n", KILL_RESTART );
+        SV_Shutdown( "Server restarted\n", ERR_RECONNECT );
     } else {
 #if USE_CLIENT
         // make sure the client is down

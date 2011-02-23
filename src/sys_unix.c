@@ -614,7 +614,7 @@ static void term_handler( int signum ) {
 #else
     Com_Printf( "Received signal %d, exiting\n", signum );
 #endif
-    Com_Quit( NULL, KILL_DROP );
+    Com_Quit( NULL, ERR_DISCONNECT );
 }
 
 static void kill_handler( int signum ) {

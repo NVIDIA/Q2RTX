@@ -31,7 +31,7 @@ typedef enum {
 void SV_ErrorEvent( int info );
 #endif
 void SV_Init (void);
-void SV_Shutdown( const char *finalmsg, killtype_t type );
+void SV_Shutdown( const char *finalmsg, error_type_t type );
 unsigned SV_Frame (unsigned msec);
 #if USE_SYSCON
 void SV_SetConsoleTitle( void );

@@ -1042,7 +1042,7 @@ static int Sys_Main( int argc, char **argv ) {
 #if USE_WINSVC
             if( shouldExit == SE_FULL )
 #endif
-                Com_Quit( NULL, KILL_DROP );
+                Com_Quit( NULL, ERR_DISCONNECT );
             break;
         }
     }

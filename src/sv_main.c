@@ -1984,9 +1984,12 @@ static void SV_FinalMessage( const char *message, int cmd ) {
     netchan_t   *netchan;
     int         i;
 
-    MSG_WriteByte( svc_print );
-    MSG_WriteByte( PRINT_HIGH );
-    MSG_WriteString( message );
+    if( message ) {
+        MSG_WriteByte( svc_print );
+        MSG_WriteByte( PRINT_HIGH );
+        MSG_WriteString( message );
+    }
+
     MSG_WriteByte( cmd );
 
     // send it twice
@@ -2023,7 +2026,7 @@ SV_Shutdown
 Called when each game quits, from Com_Quit or Com_Error
 ================
 */
-void SV_Shutdown( const char *finalmsg, killtype_t type ) {
+void SV_Shutdown( const char *finalmsg, error_type_t type ) {
     master_t *m;
 
     Cvar_Set( "sv_running", "0" );
@@ -2045,7 +2048,7 @@ void SV_Shutdown( const char *finalmsg, killtype_t type ) {
     SV_MvdShutdown( type );
 #endif
 
-    if( type == KILL_RESTART ) {
+    if( type == ERR_RECONNECT ) {
         SV_FinalMessage( finalmsg, svc_reconnect );
     } else {
         SV_FinalMessage( finalmsg, svc_disconnect );

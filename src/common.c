@@ -475,11 +475,10 @@ void Com_Error( error_type_t code, const char *fmt, ... ) {
     Com_AbortRedirect();
 
     X86_POP_FPCW;
-    
-    if( code == ERR_DISCONNECT ) {
+
+    if( code == ERR_DISCONNECT || code == ERR_RECONNECT ) {
         Com_WPrintf( "%s\n", com_errorMsg );
-        SV_Shutdown( va( "Server was killed: %s", com_errorMsg ),
-            KILL_DISCONNECT );
+        SV_Shutdown( va( "Server was killed: %s", com_errorMsg ), code );
 #if USE_CLIENT
         CL_Disconnect( code, com_errorMsg );
 #endif
@@ -501,7 +500,7 @@ void Com_Error( error_type_t code, const char *fmt, ... ) {
         Com_EPrintf( "********************\n"
                      "ERROR: %s\n"
                      "********************\n", com_errorMsg );
-        SV_Shutdown( va( "Server crashed: %s\n", com_errorMsg ), KILL_DROP );
+        SV_Shutdown( va( "Server crashed: %s\n", com_errorMsg ), ERR_DROP );
 #if USE_CLIENT
         CL_Disconnect( ERR_DROP, com_errorMsg );
 #endif
@@ -512,7 +511,7 @@ void Com_Error( error_type_t code, const char *fmt, ... ) {
         FS_FPrintf( com_logFile, "FATAL: %s\n", com_errorMsg );
     }
 
-    SV_Shutdown( va( "Server fatal crashed: %s\n", com_errorMsg ), KILL_DROP );
+    SV_Shutdown( va( "Server fatal crashed: %s\n", com_errorMsg ), ERR_FATAL );
 #if USE_CLIENT
     CL_Shutdown();
 #endif
@@ -543,9 +542,9 @@ Both client and server can use this, and it will
 do the apropriate things. This function never returns.
 =============
 */
-void Com_Quit( const char *reason, killtype_t type ) {
+void Com_Quit( const char *reason, error_type_t type ) {
     char buffer[MAX_STRING_CHARS];
-    char *what = type == KILL_RESTART ? "restarted" : "quit";
+    char *what = type == ERR_RECONNECT ? "restarted" : "quit";
 
     if( reason && *reason ) {
         Q_snprintf( buffer, sizeof( buffer ),
@@ -554,6 +553,7 @@ void Com_Quit( const char *reason, killtype_t type ) {
         Q_snprintf( buffer, sizeof( buffer ),
             "Server %s\n", what );
     }
+
     SV_Shutdown( buffer, type );
 
 #if USE_CLIENT
@@ -565,12 +565,12 @@ void Com_Quit( const char *reason, killtype_t type ) {
 }
 
 static void Com_Quit_f( void ) {
-    Com_Quit( Cmd_Args(), KILL_DROP );
+    Com_Quit( Cmd_Args(), ERR_DISCONNECT );
 }
 
 #if !USE_CLIENT
 static void Com_Recycle_f( void ) {
-    Com_Quit( Cmd_Args(), KILL_RESTART );
+    Com_Quit( Cmd_Args(), ERR_RECONNECT );
 }
 #endif
 
