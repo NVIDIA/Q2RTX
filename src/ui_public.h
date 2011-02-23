@@ -20,9 +20,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 typedef enum {
     UIMENU_NONE,
+    UIMENU_DEFAULT,
     UIMENU_MAIN,
-    UIMENU_MAIN_FORCE,
-    UIMENU_INGAME
+    UIMENU_GAME
 } uiMenu_t;
 
 qboolean    UI_Init( void );

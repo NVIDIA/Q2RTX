@@ -659,7 +659,7 @@ void CL_Disconnect( error_type_t type ) {
 
 #if USE_UI
     if( type == ERR_DISCONNECT ) {
-        UI_OpenMenu( UIMENU_MAIN );
+        UI_OpenMenu( UIMENU_DEFAULT );
     } else {
         UI_OpenMenu( UIMENU_NONE );
     }
@@ -2353,7 +2353,7 @@ void CL_RestartFilesystem( qboolean total ) {
 
 #if USE_UI
     if( cls_state == ca_disconnected ) {
-        UI_OpenMenu( UIMENU_MAIN );
+        UI_OpenMenu( UIMENU_DEFAULT );
     } else
 #endif
     if( cls_state >= ca_loading ) {
@@ -2408,7 +2408,7 @@ void CL_RestartRefresh( qboolean total ) {
 
 #if USE_UI
     if( cls_state == ca_disconnected ) {
-        UI_OpenMenu( UIMENU_MAIN );
+        UI_OpenMenu( UIMENU_DEFAULT );
     } else
 #endif
     if( cls_state >= ca_loading ) {
@@ -3199,7 +3199,7 @@ void CL_Init( void ) {
 #endif
 
 #if USE_UI
-    UI_OpenMenu( UIMENU_MAIN );
+    UI_OpenMenu( UIMENU_DEFAULT );
 #endif
 
     Con_PostInit();

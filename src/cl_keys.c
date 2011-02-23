@@ -695,7 +695,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
         if( cls.key_dest & KEY_CONSOLE ) {
             if( cls.state < ca_active && !( cls.key_dest & KEY_MENU ) ) {
 #if USE_UI
-                UI_OpenMenu( UIMENU_MAIN_FORCE );
+                UI_OpenMenu( UIMENU_MAIN );
 #endif
             } else {
                 Con_Close( qtrue );
@@ -711,9 +711,9 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
         }
 #if USE_UI
         else if( cls.state == ca_active ) {
-            UI_OpenMenu( UIMENU_INGAME );
+            UI_OpenMenu( UIMENU_GAME );
         } else {
-            UI_OpenMenu( UIMENU_MAIN_FORCE );
+            UI_OpenMenu( UIMENU_MAIN );
         }
 #endif
         return;

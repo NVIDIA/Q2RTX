@@ -222,15 +222,15 @@ void UI_OpenMenu( uiMenu_t type ) {
     UI_ForceMenuOff();
 
     switch( type ) {
-    case UIMENU_MAIN:
+    case UIMENU_DEFAULT:
         if( ui_open->integer ) {
             menu = UI_FindMenu( "main" );
         }
         break;
-    case UIMENU_MAIN_FORCE:
+    case UIMENU_MAIN:
         menu = UI_FindMenu( "main" );
         break;
-    case UIMENU_INGAME:
+    case UIMENU_GAME:
         menu = UI_FindMenu( "game" );
         if( !menu ) {
             menu = UI_FindMenu( "main" );
