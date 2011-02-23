@@ -674,7 +674,7 @@ CL_Disconnect_f
 */
 static void CL_Disconnect_f( void ) {
     if( cls.state > ca_disconnected ) {
-        Com_Error( ERR_SILENT, "Disconnected from server" );
+        Com_Error( ERR_DISCONNECT, "Disconnected from server" );
     }
 }
 
@@ -1006,8 +1006,9 @@ The server is changing levels
 */
 static void CL_Reconnect_f( void ) {
     if( cls.state >= ca_precached ) {
-        CL_Disconnect( ERR_SILENT, NULL );
+        CL_Disconnect( ERR_DISCONNECT, NULL );
     }
+
     if( cls.state >= ca_connected ) {
         cls.state = ca_connected;
 
@@ -3259,7 +3260,7 @@ void CL_Shutdown( void ) {
         return;
     }
 
-    CL_Disconnect( ERR_SILENT, NULL );
+    CL_Disconnect( ERR_DISCONNECT, NULL );
 
 #if USE_ZLIB
     inflateEnd( &cls.z );

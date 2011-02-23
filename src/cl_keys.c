@@ -696,7 +696,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
             if( cls.key_dest & KEY_CONSOLE ) {
                 Con_Close();
             } else {
-                CL_Disconnect( ERR_SILENT, NULL );
+                CL_Disconnect( ERR_DISCONNECT, NULL );
             }
             return;
         }

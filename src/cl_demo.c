@@ -575,7 +575,7 @@ static void parse_next_message( void ) {
 
         if( !s[0] ) {
             if( ret == 0 ) {
-                Com_Error( ERR_SILENT, "Demo finished" );
+                Com_Error( ERR_DISCONNECT, "Demo finished" );
             } else {
                 Com_Error( ERR_DROP, "Couldn't read demo: %s", Q_ErrorString( ret ) );
             }

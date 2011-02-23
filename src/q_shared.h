@@ -121,7 +121,6 @@ typedef enum {
     ERR_FATAL,          // exit the entire game with a popup window
     ERR_DROP,           // print to console and disconnect from game
     ERR_DISCONNECT,     // don't kill server
-    ERR_SILENT
 } error_type_t;
 
 typedef enum {

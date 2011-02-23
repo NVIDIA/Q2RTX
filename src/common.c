@@ -476,7 +476,7 @@ void Com_Error( error_type_t code, const char *fmt, ... ) {
 
     X86_POP_FPCW;
     
-    if( code == ERR_DISCONNECT || code == ERR_SILENT ) {
+    if( code == ERR_DISCONNECT ) {
         Com_WPrintf( "%s\n", com_errorMsg );
         SV_Shutdown( va( "Server was killed: %s", com_errorMsg ),
             KILL_DISCONNECT );
