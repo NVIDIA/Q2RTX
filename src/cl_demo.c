@@ -679,14 +679,14 @@ fail:
     SV_Shutdown( "Server was killed.\n", KILL_DROP );
 
     CL_Disconnect( ERR_DISCONNECT, NULL );
-    
-    Con_Close();
 
     cls.demo.playback = demofile;
     cls.state = ca_connected;
     Q_strlcpy( cls.servername, COM_SkipPath( name ), sizeof( cls.servername ) );
     cls.serverAddress.type = NA_LOOPBACK;
 
+    Con_Close();
+    Con_RunConsole();
     SCR_UpdateScreen();
 
     CL_ParseServerMessage();
