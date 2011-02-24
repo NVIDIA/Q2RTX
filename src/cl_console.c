@@ -631,7 +631,9 @@ static int Con_DrawLine( int v, int line, float alpha ) {
         flags = UI_ALTCOLOR;
         // fall through
     case COLOR_NONE:
-        R_SetColor( DRAW_COLOR_CLEAR, NULL );
+        VectorSet( color, 255, 255, 255 );
+        color[3] = alpha * 255;
+        R_SetColor( DRAW_COLOR_RGBA, color );
         break;
     default:
         VectorCopy( colorTable[c & 7], color );
