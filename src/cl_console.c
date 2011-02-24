@@ -132,7 +132,7 @@ void Con_Close( qboolean force ) {
 
     con.destHeight = con.currentHeight = 0;
     con.mode = CON_DEFAULT;
-    con.chat = CHAT_DEFAULT;
+    con.chat = CHAT_NONE;
 }
 
 /*
@@ -151,13 +151,6 @@ void Con_Popup( void ) {
     Con_RunConsole();
 }
 
-// don't close console after connecting
-static void Con_InteractiveMode( void ) {
-    if( !con.mode ) {
-        con.mode = CON_DEFAULT;
-    }
-}
-
 /*
 ================
 Con_ToggleConsole_f
@@ -165,7 +158,7 @@ Con_ToggleConsole_f
 Toggles console up/down animation.
 ================
 */
-void Con_ToggleConsole_f( void ) {
+static void toggle_console( consoleMode_t mode, chatMode_t chat ) {
     SCR_EndLoadingPlaque();    // get rid of loading plaque
 
     Con_ClearTyping();
@@ -173,40 +166,32 @@ void Con_ToggleConsole_f( void ) {
 
     if( cls.key_dest & KEY_CONSOLE ) {
         Key_SetDest( cls.key_dest & ~KEY_CONSOLE );
+        con.mode = CON_DEFAULT;
+        con.chat = CHAT_NONE;
+        return;
+    }
+
+    if( mode == CON_CHAT && ( cls.state != ca_active || cls.demo.playback ) ) {
+        Com_Printf( "You must be in a level to chat.\n" );
         return;
     }
 
     // toggling console discards chat message
     Key_SetDest( ( cls.key_dest | KEY_CONSOLE ) & ~KEY_MESSAGE );
-    Con_InteractiveMode();
+    con.mode = mode;
+    con.chat = chat;
 }
 
-/*
-================
-Con_ToggleChat_f
-================
-*/
+void Con_ToggleConsole_f( void ) {
+    toggle_console( CON_DEFAULT, CHAT_NONE );
+}
+
 static void Con_ToggleChat_f( void ) {
-    Con_ToggleConsole_f();
-
-    if( ( cls.key_dest & KEY_CONSOLE ) && cls.state == ca_active ) {
-        con.mode = CON_CHAT;
-        con.chat = CHAT_DEFAULT;
-    }
+    toggle_console( CON_CHAT, CHAT_DEFAULT );
 }
 
-/*
-================
-Con_ToggleChat2_f
-================
-*/
 static void Con_ToggleChat2_f( void ) {
-    Con_ToggleConsole_f();
-
-    if( ( cls.key_dest & KEY_CONSOLE ) && cls.state == ca_active ) {
-        con.mode = CON_CHAT;
-        con.chat = CHAT_TEAM;
-    }
+    toggle_console( CON_CHAT, CHAT_TEAM );
 }
 
 /*
@@ -329,10 +314,12 @@ static void Con_RemoteMode_f( void ) {
     s = Cmd_Argv( 2 );
 
     if( !( cls.key_dest & KEY_CONSOLE ) ) {
-        Con_ToggleConsole_f();
+        toggle_console( CON_REMOTE, CHAT_NONE );
+    } else {
+        con.mode = CON_REMOTE;
+        con.chat = CHAT_NONE;
     }
 
-    con.mode = CON_REMOTE;
     con.remoteAddress = adr;
     if( con.remotePassword ) {
         Z_Free( con.remotePassword );
@@ -990,6 +977,13 @@ void Con_DrawConsole( void ) {
 
 static void Con_Say( char *msg ) {
     CL_ClientCommand( va( "say%s \"%s\"", con.chat == CHAT_TEAM ? "_team" : "", msg ) );
+}
+
+// don't close console after connecting
+static void Con_InteractiveMode( void ) {
+    if( !con.mode ) {
+        con.mode = CON_DEFAULT;
+    }
 }
 
 static void Con_Action( void ) {
