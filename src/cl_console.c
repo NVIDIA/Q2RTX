@@ -998,12 +998,8 @@ static void Con_Action( void ) {
     
     // backslash text are commands, else chat
     if( cmd[0] == '\\' || cmd[0] == '/' ) {
-        if( con.mode == CON_REMOTE ) {
-            CL_SendRcon( &con.remoteAddress, con.remotePassword, cmd + 1 );
-        } else {
-            Cbuf_AddText( &cmd_buffer, cmd + 1 );    // skip slash
-            Cbuf_AddText( &cmd_buffer, "\n" );
-        }
+        Cbuf_AddText( &cmd_buffer, cmd + 1 );    // skip slash
+        Cbuf_AddText( &cmd_buffer, "\n" );
     } else {
         if( con.mode == CON_REMOTE ) {
             CL_SendRcon( &con.remoteAddress, con.remotePassword, cmd );
