@@ -481,6 +481,11 @@ static void Con_CarriageRet( void ) {
     // add color from last line
     con.x = 0;
     p[con.x++] = con.color;
+
+    // update time for transparent overlay
+    if( !con.skipNotify ) {
+        con.times[con.current & CON_TIMES_MASK] = cls.realtime;
+    }
 }
 
 static void Con_Linefeed( void ) {
@@ -511,14 +516,11 @@ If no console is visible, the text will appear at the top of the game window
 ================
 */
 void Con_Print( const char *txt ) {
-    int prevline;
     char *p;
     int l;
 
     if( !con.initialized )
         return;
-
-    prevline = con.current;
 
     while( *txt ) {
         if( con.newline ) {
@@ -555,13 +557,6 @@ void Con_Print( const char *txt ) {
         }
 
         txt++;
-    }
-
-    // update time for transparent overlay
-    if( !con.skipNotify ) {
-        for( l = prevline + 1; l <= con.current; l++ ) {
-            con.times[l & CON_TIMES_MASK] = cls.realtime;
-        }
     }
 }
 
