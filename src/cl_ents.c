@@ -203,6 +203,12 @@ void CL_DeltaFrame( void ) {
     if( cls.demo.recording ) {
         CL_EmitDemoFrame();
     }
+
+    if( cls.demo.playback ) {
+        // this delta has nothing to do with local viewangles,
+        // clear it to avoid interfering with demo freelook hack
+        VectorClear( cl.frame.ps.pmove.delta_angles );
+    }
     
     if( !cl.oldframe.ps.stats[STAT_LAYOUTS] && cl.frame.ps.stats[STAT_LAYOUTS] ) {
         cl.putaway = qfalse;
