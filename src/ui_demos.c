@@ -34,16 +34,23 @@ DEMOS MENU
 
 #define DEMO_EXTRASIZE  q_offsetof( demoEntry_t, name )
 
-#define DEMO_MVD_POV "\x90\xcd\xd6\xc4\x91"
-#define DEMO_DIR_SIZE "\x90\xc4\xc9\xd2\x91"
+#define DEMO_MVD_POV    "\x90\xcd\xd6\xc4\x91" // [MVD]
+#define DEMO_DIR_SIZE   "\x90\xc4\xc9\xd2\x91" // [DIR]
 
-#define ENTRY_UP        1
-#define ENTRY_DN        2
-#define ENTRY_DEMO      3
+#define ENTRY_UP    1
+#define ENTRY_DN    2
+#define ENTRY_DEMO  3
+
+#define COL_NAME    0
+#define COL_DATE    1
+#define COL_SIZE    2
+#define COL_MAP     3
+#define COL_POV     4
+#define COL_MAX     5
 
 typedef struct {
-    int type;
-    int size;
+    unsigned type;
+    size_t size;
     time_t mtime;
     char name[1];
 } demoEntry_t;
@@ -55,14 +62,24 @@ typedef struct m_demos_s {
     uint8_t         hash[16];
     char    browse[MAX_OSPATH];
     int     selection;
+    int     year;
+    int     widest_map, widest_pov;
+    size_t  total_bytes;
+    char    status[32];
 } m_demos_t;
 
 static m_demos_t    m_demos;
 
-static void BuildName( file_info_t *info, char **cache ) {
+static cvar_t       *ui_sortdemos;
+static cvar_t       *ui_listalldemos;
+
+static void BuildName( const file_info_t *info, char **cache ) {
     char buffer[MAX_OSPATH];
+    char date[MAX_QPATH];
     demoInfo_t demo;
     demoEntry_t *e;
+    struct tm *tm;
+    size_t len;
 
     memset( &demo, 0, sizeof( demo ) );
     strcpy( demo.map, "???" );
@@ -91,19 +108,46 @@ static void BuildName( file_info_t *info, char **cache ) {
         }
     }
 
+    // resize columns
+    len = strlen( demo.map );
+    if( len > 8 ) {
+        len = 8;
+    }
+    if( len > m_demos.widest_map ) {
+        m_demos.widest_map = len;
+    }
+
+    len = strlen( demo.pov );
+    if( len > m_demos.widest_pov ) {
+        m_demos.widest_pov = len;
+    }
+
+    // format date
+    if( ( tm = localtime( &info->mtime ) ) != NULL ) {
+        if( tm->tm_year == m_demos.year ) {
+            strftime( date, sizeof( date ), "%b %d %H:%M", tm );
+        } else {
+            strftime( date, sizeof( date ), "%b %d  %Y", tm );
+        }
+    } else {
+        strcpy( date, "???" );
+    }
+
     Com_FormatSize( buffer, sizeof( buffer ), info->size );
 
     e = UI_FormatColumns( DEMO_EXTRASIZE,
-        info->name, buffer, demo.map, demo.pov, NULL );
+        info->name, date, buffer, demo.map, demo.pov, NULL );
     e->type = ENTRY_DEMO;
     e->size = info->size;
     e->mtime = info->mtime;
+
+    m_demos.total_bytes += info->size;
 
     m_demos.list.items[m_demos.list.numItems++] = e;
 }
 
 static void BuildDir( const char *name, int type ) {
-    demoEntry_t *e = UI_FormatColumns( DEMO_EXTRASIZE, name, DEMO_DIR_SIZE, "-", "-", NULL );
+    demoEntry_t *e = UI_FormatColumns( DEMO_EXTRASIZE, name, "-", DEMO_DIR_SIZE, "-", "-", NULL );
 
     e->type = type;
     e->size = 0;
@@ -119,7 +163,7 @@ static char *LoadCache( void **list ) {
     uint8_t hash[16];
 
     Q_concat( buffer, sizeof( buffer ), m_demos.browse, "/" COM_DEMOCACHE_NAME, NULL );
-    len = FS_LoadFile( buffer, ( void ** )&cache );
+    len = FS_LoadFileEx( buffer, ( void ** )&cache, FS_TYPE_REAL | FS_PATH_GAME );
     if( !cache ) {
         return NULL;
     }
@@ -177,8 +221,8 @@ static void WriteCache( void ) {
 
     for( i = m_demos.numDirs; i < m_demos.list.numItems; i++ ) {
         e = m_demos.list.items[i];
-        map = UI_GetColumn( e->name, 2 );
-        pov = UI_GetColumn( e->name, 3 );
+        map = UI_GetColumn( e->name, COL_MAP );
+        pov = UI_GetColumn( e->name, COL_POV );
         FS_FPrintf( f, "%s\\%s\\", map, pov );
     }
     FS_FCloseFile( f );
@@ -216,22 +260,34 @@ static void BuildList( void ) {
     int numDirs, numDemos;
     void **dirlist, **demolist;
     char *cache, *p;
+    unsigned flags;
+    size_t len;
     int i;
 
+    // this can be a lengthy process
     S_StopAllSounds();
     m_demos.menu.status = "Building list...";
     SCR_UpdateScreen();
-    
-    // alloc entries
-    dirlist = FS_ListFiles( m_demos.browse, NULL, FS_PATH_GAME |
+
+    // list files
+    flags = ui_listalldemos->integer ? 0 : FS_TYPE_REAL | FS_PATH_GAME;
+    dirlist = FS_ListFiles( m_demos.browse, NULL, flags |
         FS_SEARCH_DIRSONLY, &numDirs );
-    demolist = FS_ListFiles( m_demos.browse, DEMO_EXTENSIONS, FS_PATH_GAME |
+    demolist = FS_ListFiles( m_demos.browse, DEMO_EXTENSIONS, flags |
         FS_SEARCH_EXTRAINFO, &numDemos );
 
+    // alloc entries
     m_demos.list.items = UI_Malloc( sizeof( demoEntry_t * ) * ( numDirs + numDemos + 1 ) );
     m_demos.list.numItems = 0;
     m_demos.list.curvalue = 0;
     m_demos.list.prestep = 0;
+
+    m_demos.widest_map = 3;
+    m_demos.widest_pov = 3;
+    m_demos.total_bytes = 0;
+
+    // start with minimum size
+    m_demos.menu.size( &m_demos.menu );
 
     if( m_demos.browse[0] ) {
         BuildDir( "..", ENTRY_UP );
@@ -260,6 +316,7 @@ static void BuildList( void ) {
             for( i = 0; i < numDemos; i++ ) {
                 BuildName( demolist[i], NULL );
                 if( ( i & 7 ) == 0 ) {
+                    m_demos.menu.size( &m_demos.menu );
                     SCR_UpdateScreen();
                 }
             }
@@ -268,9 +325,23 @@ static void BuildList( void ) {
         FS_FreeList( demolist );
     }
 
+    // update status line and sort
     if( m_demos.list.numItems ) {
         Change( &m_demos.list.generic );
+        if( m_demos.list.sortdir ) {
+            m_demos.list.sort( &m_demos.list, m_demos.list.sortcol );
+        }
     }
+
+    // resize columns
+    m_demos.menu.size( &m_demos.menu );
+
+    // format our extra status line
+    i = m_demos.list.numItems - m_demos.numDirs;
+    len = Q_scnprintf( m_demos.status, sizeof( m_demos.status ),
+        "%d demo%s, ", i, i == 1 ? "" : "s" );
+    Com_FormatSizeLong( m_demos.status + len, sizeof( m_demos.status ) - len,
+        m_demos.total_bytes );
         
     SCR_UpdateScreen();
 }
@@ -357,7 +428,26 @@ static int sizecmp( const void *p1, const void *p2 ) {
     demoEntry_t *e1 = *( demoEntry_t ** )p1;
     demoEntry_t *e2 = *( demoEntry_t ** )p2;
 
-    return ( e1->size - e2->size ) * m_demos.list.sortdir;
+    if( e1->size > e2->size ) {
+        return m_demos.list.sortdir;
+    }
+    if( e1->size < e2->size ) {
+        return -m_demos.list.sortdir;
+    }
+    return 0;
+}
+
+static int timecmp( const void *p1, const void *p2 ) {
+    demoEntry_t *e1 = *( demoEntry_t ** )p1;
+    demoEntry_t *e2 = *( demoEntry_t ** )p2;
+
+    if( e1->mtime > e2->mtime ) {
+        return m_demos.list.sortdir;
+    }
+    if( e1->mtime < e2->mtime ) {
+        return -m_demos.list.sortdir;
+    }
+    return 0;
 }
 
 static int namecmp( const void *p1, const void *p2 ) {
@@ -371,32 +461,50 @@ static int namecmp( const void *p1, const void *p2 ) {
 
 static menuSound_t Sort( menuList_t *self, int column ) {
     switch( column ) {
-    case 0:
-    case 2:
-    case 3:
+    case COL_NAME:
+    case COL_MAP:
+    case COL_POV:
         MenuList_Sort( &m_demos.list, m_demos.numDirs, namecmp );
         break;
-    case 1:
+    case COL_DATE:
+        MenuList_Sort( &m_demos.list, m_demos.numDirs, timecmp );
+        break;
+    case COL_SIZE:
         MenuList_Sort( &m_demos.list, m_demos.numDirs, sizecmp );
         break;
     }
+
     return QMS_SILENT;
 }
 
 static void Size( menuFrameWork_t *self ) {
-    int w = uis.width * 8 / 640;
-
-    clamp( w, 8, 15 );
+    int w1, w2;
 
     m_demos.list.generic.x      = 0;
     m_demos.list.generic.y      = CHAR_HEIGHT;
     m_demos.list.generic.width  = 0;
     m_demos.list.generic.height = uis.height - CHAR_HEIGHT*2 - 1;
 
-    m_demos.list.columns[0].width = uis.width - ( 14 + w ) * CHAR_WIDTH - MLIST_SCROLLBAR_WIDTH;
-    m_demos.list.columns[1].width = 6*CHAR_WIDTH;
-    m_demos.list.columns[2].width = 8*CHAR_WIDTH;
-    m_demos.list.columns[3].width = w*CHAR_WIDTH;
+    w1 = 17 + m_demos.widest_map + m_demos.widest_pov;
+    w2 = uis.width - ( w1 + 2 ) * CHAR_WIDTH - MLIST_SCROLLBAR_WIDTH;
+    if( w2 > 8 * CHAR_WIDTH ) {
+        // everything fits
+        m_demos.list.columns[0].width = w2;
+        m_demos.list.columns[1].width = 12*CHAR_WIDTH+CHAR_WIDTH/2;
+        m_demos.list.columns[2].width = 5*CHAR_WIDTH+CHAR_WIDTH/2;
+        m_demos.list.columns[3].width = m_demos.widest_map*CHAR_WIDTH+CHAR_WIDTH/2;
+        m_demos.list.columns[4].width = m_demos.widest_pov*CHAR_WIDTH+CHAR_WIDTH/2;
+        m_demos.list.numcolumns = COL_MAX;
+    } else {
+        // map and pov don't fit
+        w2 = uis.width - ( 17 + 1 ) * CHAR_WIDTH - MLIST_SCROLLBAR_WIDTH;
+        m_demos.list.columns[0].width = w2;
+        m_demos.list.columns[1].width = 12*CHAR_WIDTH+CHAR_WIDTH/2;
+        m_demos.list.columns[2].width = 5*CHAR_WIDTH+CHAR_WIDTH/2;
+        m_demos.list.columns[3].width = 0;
+        m_demos.list.columns[4].width = 0;
+        m_demos.list.numcolumns = COL_MAX - 2;
+    }
 }
 
 static menuSound_t Keydown( menuFrameWork_t *self, int key ) {
@@ -407,6 +515,14 @@ static menuSound_t Keydown( menuFrameWork_t *self, int key ) {
     return QMS_NOTHANDLED;
 }
 
+static void Draw( menuFrameWork_t *self ) {
+    Menu_Draw( self );
+    if( uis.width >= 640 ) {
+        UI_DrawString( uis.width, uis.height - CHAR_HEIGHT,
+            NULL, UI_RIGHT, m_demos.status );
+    }
+}
+
 static void Pop( menuFrameWork_t *self ) {
     // save previous position
     m_demos.selection = m_demos.list.curvalue;
@@ -414,6 +530,13 @@ static void Pop( menuFrameWork_t *self ) {
 }
 
 static void Expose( menuFrameWork_t *self ) {
+    time_t now = time( NULL );
+    struct tm *tm = localtime( &now );
+
+    if( tm ) {
+        m_demos.year = tm->tm_year;
+    }
+
     BuildList();
     // move cursor to previous position
     MenuList_SetValue( &m_demos.list, m_demos.selection );
@@ -423,37 +546,70 @@ static void Free( menuFrameWork_t *self ) {
     memset( &m_demos, 0, sizeof( m_demos ) );
 }
 
+static void ui_sortdemos_changed( cvar_t *self ) {
+    int i = Cvar_ClampInteger( self, -COL_MAX, COL_MAX );
+
+    if( i > 0 ) {
+        // ascending
+        m_demos.list.sortdir = 1;
+        m_demos.list.sortcol = i - 1;
+    } else if( i < 0 ) {
+        // descending
+        m_demos.list.sortdir = -1;
+        m_demos.list.sortcol = -i - 1;
+    } else {
+        // don't sort
+        m_demos.list.sortdir = 0;
+        m_demos.list.sortcol = 0;
+    }
+
+    if( m_demos.list.items && m_demos.list.sortdir ) {
+        m_demos.list.sort( &m_demos.list, m_demos.list.sortcol );
+    }
+}
+
 void M_Menu_Demos( void ) {
+    ui_sortdemos = Cvar_Get( "ui_sortdemos", "1", 0 );
+    ui_sortdemos->changed = ui_sortdemos_changed;
+
+    ui_listalldemos = Cvar_Get( "ui_listalldemos", "0", 0 );
+
     m_demos.menu.name = "demos";
     m_demos.menu.title = "Demo Browser";
 
     strcpy( m_demos.browse, "/demos" );
 
+    m_demos.menu.draw       = Draw;
     m_demos.menu.expose     = Expose;
     m_demos.menu.pop        = Pop;
     m_demos.menu.size       = Size;
     m_demos.menu.keydown    = Keydown;
     m_demos.menu.free       = Free;
-    m_demos.menu.image = uis.backgroundHandle;
+    m_demos.menu.image      = uis.backgroundHandle;
     FastColorCopy( uis.color.background, m_demos.menu.color );
 
     m_demos.list.generic.type   = MTYPE_LIST;
     m_demos.list.generic.flags  = QMF_HASFOCUS;
     m_demos.list.generic.activate = Activate;
     m_demos.list.generic.change = Change;
-    m_demos.list.numcolumns     = 4;
+    m_demos.list.numcolumns     = COL_MAX;
     m_demos.list.sortdir        = 1;
+    m_demos.list.sortcol        = COL_NAME;
     m_demos.list.extrasize      = DEMO_EXTRASIZE;
     m_demos.list.sort           = Sort;
 
     m_demos.list.columns[0].name    = m_demos.browse;
     m_demos.list.columns[0].uiFlags = UI_LEFT;
-    m_demos.list.columns[1].name    = "Size";
-    m_demos.list.columns[1].uiFlags = UI_RIGHT;
-    m_demos.list.columns[2].name    = "Map";
-    m_demos.list.columns[2].uiFlags = UI_CENTER;
-    m_demos.list.columns[3].name    = "POV";
+    m_demos.list.columns[1].name    = "Date";
+    m_demos.list.columns[1].uiFlags = UI_CENTER;
+    m_demos.list.columns[2].name    = "Size";
+    m_demos.list.columns[2].uiFlags = UI_RIGHT;
+    m_demos.list.columns[3].name    = "Map";
     m_demos.list.columns[3].uiFlags = UI_CENTER;
+    m_demos.list.columns[4].name    = "POV";
+    m_demos.list.columns[4].uiFlags = UI_CENTER;
+
+    ui_sortdemos_changed( ui_sortdemos );
 
     Menu_AddItem( &m_demos.menu, &m_demos.list );
 
