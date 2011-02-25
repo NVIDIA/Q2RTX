@@ -1,0 +1,90 @@
+Q2PRO(6)
+========
+:doctype: manpage
+
+
+NAME
+----
+q2proded - enhanced Quake 2 dedicated server
+
+
+SYNOPSIS
+--------
+*q2proded* [*+command* 'arguments']
+
+
+DESCRIPTION
+-----------
+This manual page documents briefly the *q2proded* program.
+
+Q2PRO is an enhanced Quake 2 dedicated server, fully compatible with original
+Quake 2 clients.
+
+Q2PRO dedicated server features multiview demo recording capabilities, game
+television support, network protocol optimizations, improved security and
+overall performance.
+
+
+OPTIONS
+-------
+Commands given on the command line start with a ‘+’, and continue until another
+‘+’ or end of line. After command is parsed, it is merely passed to the
+internal Q2PRO interpreter, just like if typed directly at the console or read
+from config file.
+
+Console variables set on the command line override those given in normal
+configuration files. If the variable does not exist as the time it is set, it
+is created for future use. User defined variables are permitted.
+
+Some examples of possible commands follow. Complete description of available
+internal commands and console variables is given in supplimentary Q2PRO
+documentation, and is out of scope of this manual page.
+
+*+set deathmatch 1*::
+    Enable deathmatch mode (no monsters, etc).
+
+*+exec config.cfg*::
+    Execute the specified configuration file. May be specified more than once.
+
+*+map q2dm1*::
+    Spawn the server on the given map.
+
+*--version*::
+    Show version and exit.
+
+
+FILES
+-----
+*/etc/default/q2pro*::
+    System wide configuration file. The first one to be executed.
+
+*/usr/share/games/q2pro/*::
+    Root of the static Quake 2 game data hierarchy. Non-executable game media
+    like textures, models and maps are installed here, either as individual
+    files, or in form of uncompressed *.pak* or ZIP compressed *.pkz*
+    packfiles.
+
+*/usr/lib/games/q2pro/*::
+    Quake 2 game mod shared libraries are installed here.
+
+*~/.q2pro/*::
+    User's local data hierarchy. Files placed there take precedence over files
+    in the system hierarchy. This directory should be writable by Q2PRO user.
+    Any dynamic data Q2PRO produces (savegames, demos) are written here.  Game
+    mod libraries are *never* loaded from here for security reasons.
+
+
+AUTHOR
+------
+Quake 2 is Copyright (C) 1997-2001 Id Software, Inc.  Q2PRO is Copyright (C)
+2003-2011 Andrey Nazarov <skuller@skuller.net>.
+
+This manual page was written by Andrey Nazarov <skuller@skuller.net> for the
+*Debian* system (but may be used by others).  Permission is granted to
+copy, distribute and/or modify this document under the terms of the GNU General
+Public License, Version 2 any  later version published by the Free Software
+Foundation.
+
+On Debian systems, the complete text of the GNU General Public License can be
+found in /usr/share/common-licenses/GPL.
+
