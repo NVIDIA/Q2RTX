@@ -1,0 +1,672 @@
+Q2PRO Server Manual
+===================
+Andrey Nazarov <skuller@skuller.net>
+
+About
+-----
+Q2PRO is an enhanced, multiplayer oriented Quake 2 server, compatible
+with existing Quake 2 ports and licensed under GPLv2. This document provides
+descriptions of console variables and commands added to or modified by Q2PRO
+since the original Quake 2 release. Cvars and commands inherited from original
+Quake 2 are not described here (yet).
+
+Variables
+---------
+
+Network
+~~~~~~~
+
+net_ip::
+    Specifies network interface address server should listen on for UDP
+    connections. The same interface is also used for outgoing TCP connections
+    (these include MVD/GTV and anticheat connections).  Default value is empty,
+    which means listening on all interfaces.
+
+NOTE: There is a limitation preventing anticheat to work correctly on servers
+accessible from multiple IP addresses. If you are running the server on multi-ip
+system and plan to use anticheat, you need to explicitly bind the server to
+one of your network interfaces using the ‘net_ip’ cvar, otherwise expect any
+kinds of problems.
+
+net_port::
+    Specifies port number server should listen on for UDP connections. Default
+    value is 27910.
+
+net_tcp_ip::
+    Specifies network interface address server should listen on for TCP
+    connections (these include MVD/GTV connections, enabled only when
+    ‘sv_mvd_enable’ is set, see below).  Empty string means listening on all
+    interfaces.  Value of this cvar mirrors ‘net_ip’ unless modified by user.
+
+net_tcp_port::
+    Specifies port number server should listen on for TCP connections.  Value
+    of this cvar mirrors ‘net_port’ unless modified by user.
+
+net_ignore_icmp::
+    On Win32 and Linux, server is able to receive ICMP
+    ‘destination-unreachable’ packets from clients. This enables intelligent
+    detection of crashed clients, allowing the server to quickly re-use their
+    slots. If this behavior is not wanted for some reason, then this variable
+    can be used to turn it off. Default value is 0 (don't ignore ICMP packets).
+
+net_maxmsglen::
+    Specifies maximum server to client packet size clients may request from
+    server. 0 means no hard limit. Default value is conservative 1390 bytes. It
+    is nice to have this variable as close to your network link MTU as possible
+    (accounting for headers). Thus for normal Ethernet MTU of 1500 bytes 1462
+    can be specified (10 bytes quake header, 8 bytes UDP header, 20 bytes IP
+    header). Higher values may cause IP fragmentation for misconfigured clients
+    which is better to avoid. Please don't change this variable unless you know
+    exactly what you are doing.
+
+Generic
+~~~~~~~
+
+sv_iplimit::
+    Maximum number of simultaneous connections allowed from single IP address
+    (per connection type, TCP and UDP client lists are separate).  Setting this
+    variable to 0 disables the limit. Default value is 3.
+
+sv_status_show::
+    Specifies how the server should respond to status queries. Default value is
+    2.
+       - 0 — do not respond at all
+       - 1 — respond with server info only
+       - 2 — respond with server info and player list
+
+sv_status_limit::
+    Maximum number of status queries server should respond to per sampling
+    period. Default value is 15.
+
+.Rate limits specification
+**************************
+Full syntax for specifying rate limits is: '<limit>[/<period>[sec|min|hour]]'.
+Only _limit_ value is mandatory. Default sampling period is one second. Custom
+_period_ can be specified after a slash, with optional _sec_, _min_, or _hour_
+suffix (default units are seconds).
+**************************
+
+sv_auth_limit::
+    Maximum number of invalid authentication attempts allowed per sampling
+    period. Default value is 1.
+
+sv_rcon_limit::
+    Maximum number of invalid rcon commands allowed per sampling period.
+    Default value is 1.
+
+sv_password::
+    If not empty, allows only authenticated clients to connect.  Authenticated
+    clients are allowed to occupy reserved slots, see below.  Clients set their
+    passwords via ‘password’ userinfo variable. Default value is empty (no
+    password).
+
+TIP: If password protection is needed for a server, it is preferable to use
+‘sv_password’ instead of going the game mod way and using ‘password’ variable.
+The latter will prevent MVD/GTV features from working.
+
+NOTE: If ‘sv_password’ is set, then game mod's ‘password’ variable must be empty.
+Otherwise clients will be unable to connect.
+
+sv_reserved_slots::
+    Number of client slots reserved for clients who know ‘sv_reserved_password’
+    or ‘sv_password’. Must be less than ‘maxclients’ value. Default value is 0
+    (don't reserve slots).
+
+NOTE: If ‘sv_mvd_enable’ is non-zero and ‘sv_reserved_slots’ is zero,
+‘sv_reserved_slots’ is automatically set to one to reserve a slot for dummy MVD
+observer.
+
+NOTE: Value of ‘sv_reserved_slots’ cvar is subtracted from ‘maxclients’ value
+visible in the server info.
+
+sv_reserved_password::
+    The password to use for reserved slots. Default value is empty, which means
+    no one is allowed to occupy reserved slot(s), except of dummy MVD observer.
+    Clients set their passwords via ‘password’ userinfo variable.
+
+sv_locked::
+    Locks the server, preventing new clients from connecting. Default value is
+    0 (server unlocked).
+
+sv_lan_force_rate::
+    When enabled, do not enforce any rate limits on clients whose IP is from
+    private address space (127.x.x.x, 10.x.x.x, 192.168.x.x, 172.16.x.x).
+    Default value is 0 (disabled).
+
+sv_calcpings_method::
+    Specifies the way client pings are calculated. Default ping calculation
+    algorithm is very client frame and packet rate dependent, and may give
+    vastly inaccurate results, depending on client settings. Using improved
+    algorithm is in fact recommended, it should always give stable results
+    similar to ones obtained by the ‘ping’ command line utility. Default value
+    is 1 for compatibility reasons.
+       - 0 — disable ping calculation entirely
+       - 1 — use default ping calculation algorithm based on averaging
+       - 2 — use improved algorithm based on minimum round trip times
+
+sv_ghostime::
+    Maximum time, in seconds, before dropping clients which have passed initial
+    challenge-response connection stage but have not yet sent any data over
+    newly established connection.  This also applies to MVD/GTV clients in
+    request processing stage.  Helps to avoid attacks flooding server with
+    zombie clients, combined with ‘sv_iplimit’ variable. Default value is 6.
+
+sv_force_reconnect::
+    When set to an address string, forces new clients to quickly reconnect to
+    this address as an additional proxy protection measure. Default value is
+    empty (do not enforce reconnection).
+
+sv_redirect_address::
+    When server becomes full, redirects new clients to the specified address.
+    Default value is empty (don't redirect).
+
+sv_downloadserver::
+    Specifies the URL clients should use for HTTP downloading. URL must begin
+    with a ‘http://’ prefix and end with a trailing slash. Default value is
+    empty (no download URL).
+
+sv_show_name_changes::
+    Broadcast player name changes to everyone. You should probably enable this
+    unless game mod already shows name changes. Default value is 0 (don't
+    show).
+
+sv_allow_nodelta::
+    Enables automatic removal of clients that abuse the server with requests
+    for too many ‘nodelta’ (uncompressed) frames, hogging network resources.
+    Default value is 1 (don't remove clients), since this may sometimes
+    legitimately happen on very poor client connections.
+
+sv_uptime::
+    Include ‘uptime’ key/value pair in server info. Default value is 0.
+       - 0 — do not display uptime at all
+       - 1 — display uptime in compact format
+       - 2 — display uptime in verbose format
+
+sv_enhanced_setplayer::
+    Enable partial client name matching for certain console commands like
+    ‘kick’ and ‘stuff’. Default value is 0 (use original matching algorithm).
+
+sv_recycle::
+    Temporary variable useful for automatically upgrading the server at the
+    next map change.  Default value is 0.
+       - 0 — handle ‘gamemap’ command normally
+       - 1 — turn the next ‘gamemap’ into ‘map’ and reload the game module
+       - 2 — turn the next ‘gamemap’ into ‘recycle’ and reload entire server
+
+WARNING: Be sure to read ‘recycle’ command description below before enabling ‘sv_recycle’.
+
+sv_changemapcmd::
+    Specifies command to be executed each time server finishes loading a new map.
+    Default value is empty.
+
+MVD/GTV server
+~~~~~~~~~~~~~~
+
+.Server modes
+*************
+Q2PRO server can run in either MVD/GTV ‘server’ or ‘client’ mode. ‘Server’ mode
+is just a regular game server mode. In this mode, server functions as a primary
+source of MVD data, which can be either locally recorded to disk in form of a
+demo file, or sent to GTV clients over the network.  ‘Client’ mode is more
+special. In this mode, game mod is not run and server acts as a GTV ‘relay’ node,
+reading MVD data from local demo files, receiving live data from remote GTV
+servers, or both at the same time. MVD data is then served to regular Quake 2
+clients (spectators).
+
+As a convention, cvars related to server mode have ‘sv_mvd_’ prefix. Cvars related
+to client mode have ‘mvd_’ prefix (see the next section).
+*************
+
+sv_mvd_enable::
+    Enables MVD/GTV server functionality. Default value is 0.
+       - 0 — MVD server is disabled
+       - 1 — local MVD recording is allowed
+       - 2 — local MVD recording and remote GTV connections are allowed
+
+sv_mvd_maxclients::
+    Total number of MVD/GTV client slots on the server. Default value is 8.
+
+sv_mvd_password::
+    Password used to authenticate MVD/GTV clients. Default value is empty,
+    which means only those clients can connect, whose IP address is added to
+    the list of trusted MVD/GTV hosts using ‘addgtvhost’ command.
+
+sv_mvd_nogun::
+    Reduce bandwidth usage by filtering on-screen gun updates out of MVD
+    stream.  Default value is 1 (filtering enabled).
+
+sv_mvd_noblend::
+    Reduce bandwidth usage by filtering on-screen blend effects out of MVD
+    stream.  Default value is 0 (filtering disabled).
+
+sv_mvd_nomsgs::
+    When enabled, MVD/GTV spectators in chasecam mode will not receive any text
+    messages routed to their chase targets (which are normally on a team), but
+    will receive messages routed to the dummy MVD observer. Default value is 1
+    (enabled).
+
+sv_mvd_maxtime::
+    Maximum duration, in minutes, of the locally recorded MVD.  Default value
+    is 0 (unlimited).
+
+sv_mvd_maxsize::
+    Maximum size, in kB, of the locally recorded MVD. Default value is 0
+    (unlimited).
+
+sv_mvd_maxmaps::
+    Specifies number of map changes local MVD recording is stopped after.
+    Default value is 1. Setting this to 0 disables the limit.
+
+sv_mvd_begincmd::
+    This command is issued on behalf of dummy MVD observer as soon as it enters
+    the game. Do whatever preparations are needed here to make sure MVD
+    observer enters an appropriate observing mode, opens the scoreboard, etc.
+    MVD observer has it's own command buffer and each ‘wait’ cycle lasts 100 ms
+    there. Default value is "wait 50; putaway; wait 10; help;".
+
+sv_mvd_scorecmd::
+    This command is issued on behalf of dummy MVD observer each time no layout
+    updates are detected for more than 9 seconds. Useful for reopening the
+    scoreboard if the game mod closes it for some reason.  MVD observer has
+    it's own command buffer and each ‘wait’ cycle lasts 100 ms there. Default
+    value is "putaway; wait 10; help;".
+
+sv_mvd_suspend_time::
+    GTV connections are suspended after this period of time, in minutes,
+    counted from the moment last active player disconnects or becomes inactive.
+    Setting this to zero disables server side suspending entirely. Default
+    value is 5.
+
+MVD/GTV client
+~~~~~~~~~~~~~~
+
+mvd_username::
+    Default username to use for outgoing GTV connections. Default value is
+    "unnamed".
+
+mvd_password::
+    Default password to use for outgoing GTV connections. Default value is
+    empty.
+
+mvd_timeout::
+    Specifies MVD connection timeout value, in seconds. Default value is 90.
+
+mvd_suspend_time::
+    GTV connections are suspended after this period of time, in minutes,
+    counted from the moment last MVD spectator disconnects.  Setting this to
+    zero disables client side suspending entirely. Default value is 5.
+
+mvd_wait_delay::
+    Time, in seconds, for MVD channel to buffer data initially.  This
+    effectively specifies MVD stream delay seen by observers. Default value is
+    20.
+
+mvd_wait_percent::
+    Maximum inuse percentage of the delay buffer when MVD channel stops
+    buffering data to prevent overrun, ignoring ‘mvd_wait_delay’ value.
+    Default value is 50.
+
+mvd_default_map::
+    Specifies default map used for the Waiting Room channel. Default value is
+    "q2dm1".
+
+mvd_chase_prefix::
+    Specifies POV info string position on the screen. This should be a valid
+    fragment of the Quake 2 layout script. Default value is "xv 0 yb -64".
+
+mvd_stats_score::
+    Specifies what ‘score’ stats field should contain for MVD observers.
+    This field is externally visible to server browsers. Default value is 0.
+       - 0 — always zero
+       - 1 — MVD channel ID spectator is on
+       - 2 — score of the chase target
+
+
+Hacks
+~~~~~
+
+sv_oldgame_hack::
+    On UNIX-like systems, enables ABI compatibility mode which allows loading
+    of game libraries built using ancient GCC versions. If you happen to run a
+    binary-only game mod you cannot recompile and your server crashes while
+    loading a map, try enabling this variable. Default value is 0 (ABI hack
+    disabled).
+
+sv_strafejump_hack::
+    Enables FPS-independent strafe jumping mode for clients using R1Q2 and
+    Q2PRO protocols. Values higher than 1 will force this mode for all clients,
+    regardless of their protocol version. Default value is 1 (enable strafe
+    jumping hack only for compatible clients).
+
+sv_waterjump_hack::
+    Makes underwater movement speed equal in all directions for clients using
+    Q2PRO protocol. Values higher than 1 will force this mode for all clients,
+    regardless of their protocol version.  Default value is 0 (disabled).
+
+.Water jump bug
+***************
+Quake 2 player movement code contains a bug that causes surfacing velocity
+produced by holding the jump button underwater to be severely limited,
+comparing to movement in other directions. Even worse, resulting velocity is
+calculated differently on client and server sides and that causes prediction
+errors and jerky movement.  Q2PRO is able to work around this bug and make
+player movement speed equal in all directions underwater. However, this fix is
+disabled by default as it is yet unknown if this can be considered an unfair
+advantage over non-Q2PRO clients.
+***************
+
+System
+~~~~~~
+
+sys_console::
+    On UNIX-like systems, specifies the way system console is used, as well as
+    ‘daemonization’ level of the process. Default value is 2 if both stdin and
+    stdout descriptors refer to a TTY, and 0 otherwise.
+      - 0 — run daemonized, don't output anything on stdout and don't read
+        anything from stdin, handle SIGHUP to reopen log files
+      - 1 — enable ‘dumb’ system console mode: print to stdout and read
+        commands from stdin, but don't assume it is a terminal, don't handle
+        SIGHUP
+      - 2 — enable ‘smart’ system console mode: handle it as a terminal, enable
+        command completion and colored text output, don't handle SIGHUP
+
+sys_parachute::
+    On UNIX-like systems, specifies if a fatal termination handler is
+    installed. Default value is 1, which means Q2PRO will do some cleanup when
+    it crashes, like restoring terminal settings.  However, this will prevent
+    core dump from being generated. To enable core dumps, set this variable to
+    0.
+
+sys_forcegamelib::
+    Specifies the full path to the game library server should attempt to load
+    first, before normal search paths are tried. Useful mainly for debugging or
+    mod development.  Default value is empty (use normal search paths).
+
+
+Miscellaneous
+~~~~~~~~~~~~~
+
+map_override_path::
+    Specifies the prefix used to construct path to the entity string override
+    file. Override file will be loaded from ‘$\{map_override_path}$\{mapname}.ent’.
+    Usually this variable is set to ‘maps/’ (notice the trailing slash), and
+    ‘.ent’ files are placed together with ‘.bsp’ files. Default value is empty
+    (don't try to override entity strings).
+
+.Entity overrides
+*****************
+Override files allow the entity string of a map being loaded to be replaced by
+a custom data supplied by server operator. This makes it possible to change the
+layout of entities on the map (thus creating a new version of the map) without
+requiring clients to download anything. Entity string can be dumped from the current
+map using ‘dumpents’ server command and later changed with a text editor.
+*****************
+
+com_fatal_error::
+    Turns all non-fatal errors into fatal errors that cause server process exit.
+    Default value is 0 (disabled).
+
+com_debug_break::
+    Development variable that turns all errors into debug breakpoints. Default
+    value is 0 (disabled).
+
+Commands
+--------
+
+Generic
+~~~~~~~
+
+status [mode]::
+    Show information about connected clients. Optional _mode_ argument may be
+    provided to show different kind of information.
+       t(ime)::: show connection times
+       d(ownload)::: show current downloads
+       l(ag)::: show connection quality statistics
+       p(rotocol)::: show network protocol information
+       v(ersion)::: show client executable versions
+
+stuff <userid> <text ...>::
+    Stuff the given raw _text_ into command buffer of the client identified by
+    _userid_.
+
+stuffall <text ...>::
+    Stuff the given raw _text_ into command buffers of all connected clients.
+
+dumpents [filename]::
+    Dumps the entity string of current map into ‘maps/_filename_.ent’ file. See
+    also ‘map_override_path’ variable description.
+
+pickclient <address:port>::
+    Send ‘passive_connect’ packet to the client at specified _address_ and
+    _port_.  This is useful if the server is behind NAT or firewall and can not
+    accept remote connections. Remote client must support passive connections
+    (R1Q2 and Q2PRO clients do), must be in passive connection mode and the
+    specified _port_ must be reachable. See ‘passive’ [[client]] command for
+    more details.
+
+addban <address[/mask]> [comment ...]::
+    Adds specified _address_ to the ban list. Specify _mask_ to ban entire
+    subnetwork.  If specified, _comment_ will be printed to banned user(s) when
+    they attempt to connect.
+
+delban <address[/mask]|id|all>::
+    Deletes exactly matching _address_/_mask_ pair from the ban list. You can
+    also specify numeric _id_ of the address/mask pair to delete, or use
+    special keyword _all_ to clear the entire list.
+
+listbans::
+    Displays all address/mask pairs added to the ban list along with their IDs,
+    last access times and comments.
+
+kickban <userid>::
+    Kick the client identified by _userid_ and add his IP address to the ban
+    list (with a default mask of 32).
+
+addblackhole <address[/mask]> [comment ...]::
+    Adds specified _address_ to the blackhole list. Specify _mask_ to blackhole
+    entire subnetwork.  All connectionless packets from blackholed hosts will
+    be silently ignored.
+
+delblackhole <address[/mask]|id|all>::
+    Deletes exactly matching _address_/_mask_ pair from the blackhole list. You
+    can also specify numeric _id_ of the address/mask pair to delete, or use
+    special keyword _all_ to clear the entire list.
+
+listblackholes::
+    Displays all address/mask pairs added to the blackhole list along with
+    their IDs, last access times and comments.
+
+addstuffcmd <connect|begin> <command> [...]::
+    Adds _command_ to be automatically stuffed to every client as they initially
+    _connect_ or each time they _begin_ on a new map.
+
+delstuffcmd <connect|begin> <id|all>::
+    Deletes command identified by the numeric _id_ from the specified list.
+    You can also specify _all_ to clear the whole stuffcmd list.
+
+liststuffcmds <connect|begin>::
+    Enumerates all registered commands in the specified stuffcmd list.
+
+addfiltercmd <command> [ignore|print|stuff|kick] [comment ...]::
+    Prevents client _command_ otherwise unknown to the server from being
+    interpreted by the game mod, and takes the specified action instead.
+    For _print_ and _stuff_ actions _comment_ argument is mandatory, and should
+    contain data to print and stuff, respectively. Default action is _ignore_.
+    Commands are matched in a case-insensitive way.
+
+delfiltercmd <id|name|all>::
+    Deletes command identified by numeric _id_ or by _name_ from the list of
+    filtered commands. You can also specify _all_ to clear the whole filtercmd
+    list.
+
+listfiltercmds::
+    Enumerates all filtered commands along with appropriate actions and comments.
+
+listmasters::
+    List master server hostnames, resolved IP addresses and last acknowledge times.
+
+quit [reason ...]::
+    Exit the server, sending ‘disconnect’ message to clients. Optional _reason_
+    string may be provided instead of the default ‘Server quit’ message.
+
+recycle [reason ...]::
+    This command is equivalent to ‘quit’, with an exception that ‘reconnect’
+    message is sent to clients instead of ‘disconnect’. Useful for quickly
+    upgrading the server binary without losing clients, assuming the server
+    process will be automatically restarted by an external shell script right
+    after it exits.
+
+MVD/GTV server
+~~~~~~~~~~~~~~
+
+mvdrecord [-hz] <filename>::
+    Start local MVD recording into ‘demos/_filename_.mvd2’.
+        -h | --help::: display help message
+        -z | --compress::: compress file with gzip
+
+mvdstop::
+    Stop local MVD recording.
+
+mvdstuff <text>::
+    Execute the given _text_ on behalf of dummy MVD observer.
+
+addgtvhost <address[/mask]>::
+    Adds specified _address_ to the list of trusted MVD/GTV hosts allowed to
+    connect to this server without password. Specify _mask_ to allow entire
+    subnetwork.
+
+delgtvhost <address[/mask]|id|all>::
+    Deletes exactly matching _address_/_mask_ pair from the list of trusted
+    MVD/GTV hosts.  You can also specify numeric _id_ of the address/mask pair
+    to delete, or use special keyword _all_ to clear the entire list.
+
+listgtvhosts::
+    Displays all address/mask pairs added to the list of trusted MVD/GTV hosts
+    along with their IDs.
+
+MVD/GTV client
+~~~~~~~~~~~~~~
+
+.Channels and connections
+*************************
+MVD/GTV client command interface operates with ‘channel’ and ‘connection’
+objects. Typically, there is one-to-one correspondence between them, but this
+is not always the case.  Connection is a persistent handle to the remote GTV
+server, while MVD channel, which represents a world state seen by the
+observers, has a shorter lifetime. Channels are automatically created
+once there is some data available on the connection and destroyed once
+connection is suspended by server and all buffered data have been read. A demo
+playback channel is special in a way that is does not have a parent connection.
+
+Both _connections_ and _channels_ can be identified by their name or by unique
+ID number seen in the output of ‘mvdservers’ and ‘mvdchannels’ commands.
+Channels inherit names and IDs from their parent connections.
+*************************
+
+mvdconnect [-hn:u:p:] <address[:port]>::
+    Create connection to the GTV server at the given _address_. If _port_ is
+    omitted, default server port 27910 is used.
+        -h | --help::: display help message
+        -n | --name=<string>::: specify channel name as _string_,
+        default is ‘netX’
+        -u | --user=<string>::: specify username as _string_,
+        default is to use value of ‘mvd_username’ cvar
+        -p | --pass=<string>::: specify password as _string_,
+        default is to use value of ‘mvd_password’ cvar
+
+mvdisconnect [connection]::
+    Destroy the specified GTV server _connection_ (if there is an associated
+    MVD channel, any buffered data is replayed to spectators, then MVD channel
+    is destroyed). There is no need to specify _connection_ if there is only
+    one active connection.
+
+mvdkill [channel]::
+    Destroy the specified MVD _channel_ (any parent GTV connection is also
+    destroyed).  There is no need to specify _channel_ if there is only one
+    active channel.
+
+mvdplay [-hl:n:r:] <[/]filename> [...]::
+    Begins MVD playback from the file identified by _filename_ by creating a
+    new MVD channel.  This command does not require file extension to be
+    specified and supports filename autocompletion on TAB. Loads file from
+    ‘demos/’ unless slash is prepended to _filename_, otherwise loads from the
+    root of quake file system. Multiple _filenames_ can be specified to create
+    a playlist.
+        -h | --help::: display help message
+        -l | --loop=<number>::: replay _number_ of times (0 means forever,
+        replays once by default)
+        -n | --name=<string>::: specify channel name as _string_,
+        default is ‘demX’
+        -r | --replace=<channel>::: replace existing _channel_ playlist with
+        new entries, don't create a new channel
+
+mvdrecord [-hz] <filename> [channel]::
+    Start MVD recording on the specified _channel_ into ‘demos/_filename_.mvd2’.
+    There is no need to specify _channel_ if there is only one active channel.
+        -h | --help::: display help message
+        -z | --compress::: compress file with gzip
+
+TIP: With Q2PRO it is possible to record a demo while playing back another one.
+
+mvdstop [channel]::
+    Stop MVD recording on the specified channel. There is no need to specify
+    _channel_ if there is only one active channel.
+
+.Record commands
+****************
+As you have probably noticed, the same ‘mvdrecord’ and ‘mvdstop’ commands
+introduced in the previous section are used here. This is possible since Q2PRO
+server may be either in the MVD/GTV server or client mode, but not both at the
+same time.
+****************
+
+mvdspawn::
+    Put the server into MVD/GTV mode, creating the Waiting Room channel.  This
+    command performs a full server restart. Done automatically as soon as the
+    first GTV connection is established or local MVD file is replayed.
+
+mvdchannels [mode]::
+    List all MVD channels (there may be none, if all GTV connections are
+    suspended). Optional _mode_ argument may be provided to show different
+    kind of information.
+        r(ecordings)::: show MVD recording status
+
+mvdservers::
+    List all GTV connections.
+
+
+Incompatibilities
+-----------------
+
+Q2PRO server tries to be compatible with other Quake 2 ports, including
+original Quake 2 release. Compatibility, however, is defined in terms of full
+file format and network protocol compatibility. Q2PRO is not meant to be a
+direct replacement of your regular Quake 2 server. Some features are
+implemented differently in Q2PRO, some may be not implemented at all. You may
+need to review your config and adapt it for Q2PRO. This section tries to
+document most of these incompatibilities so that when something doesn't work as
+it used to be you know where to look. The following list may be incomplete.
+
+- ‘ip’ variable has been renamed to ‘net_ip’.
+
+- ‘port’ variable has been renamed to ‘net_port’, and
+  ‘ip_hostport’ and ‘hostport’ aliases are no longer supported.
+
+- ‘serverrecord’ and ‘demomap’ commands has been removed in favor of
+  ‘mvdrecord’ and ‘mvdplay’.
+
+- On Windows, ‘./release/gamex86.dll’ path will not be tried by default when
+  loading the game DLL.  If you need this for loading some sort of a game mod
+  proxy, use ‘sys_forcegamelib’ variable.
+
+- Q2PRO works only with virtual paths constrained to the quake file system.
+  Backed-up paths are not allowed. This means a command like this will no
+  longer work: ‘exec ../some-global-config.cfg’. Config files that need to be
+  globally accessible should be placed in ‘baseq2/’ directory.
+
+- ‘link’ command syntax has been changed: only paths relative to the root of
+  quake file system are accepted. Absolute paths will not work.
+
+- Cinematics are not supported.
+
+- Savegames are not supported.
