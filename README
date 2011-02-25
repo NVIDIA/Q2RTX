@@ -1,8 +1,8 @@
-For building Q2PRO, consult the INSTALL file.
+Welcome to Q2PRO, an enhanced, multiplayer oriented Quake 2 client and server.
 
-For information on using and configuring Q2PRO, please see the Q2PRO wiki.
+For building Q2PRO, please consult the INSTALL file.
 
-Wiki is availabe in the plain text format in the wiki/ subdirectory
-of Q2PRO source distribution, or in the HTML format at the following URL:
+For information on using and configuring Q2PRO, please refer to client and
+server manuals available in doc/ subdirectory.
 
-http://skuller.net/q2pro/
+Project homepage: http://skuller.net/q2pro/
