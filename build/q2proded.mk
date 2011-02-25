@@ -57,10 +57,7 @@ ifndef SINGLEUSER
 install: $(TARGET)
 	install -m 755 -D $(TARGET) \
 		$(DESTDIR)$(BINDIR)/q2proded$(EXESUFFIX)
-	install -m 644 -D $(SRCDIR)/man/q2proded.6 \
-		$(DESTDIR)$(MANDIR)/q2proded.6
 
 uninstall:
 	-rm $(DESTDIR)$(BINDIR)/q2proded$(EXESUFFIX)
-	-rm $(DESTDIR)$(MANDIR)/q2proded.6
 endif
