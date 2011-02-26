@@ -79,13 +79,18 @@ static commandPrompt_t  tty_prompt;
 static int              tty_hidden;
 static ioentry_t        *tty_io;
 
+static void stdout_write( const void *buf, size_t nbyte ) {
+    if( write( STDOUT_FILENO, buf, nbyte ) == -1 ) {
+        exit( EXIT_FAILURE );
+    }
+}
 
 static void tty_hide_input( void ) {
     int i;
 
     if( !tty_hidden ) {
         for( i = 0; i <= tty_prompt.inputLine.cursorPos; i++ ) {
-            write( STDOUT_FILENO, "\b \b", 3 );
+            stdout_write( "\b \b", 3 );
         }
     }
     tty_hidden++;
@@ -98,8 +103,8 @@ static void tty_show_input( void ) {
 
     tty_hidden--;
     if( !tty_hidden ) {
-        write( STDOUT_FILENO, "]", 1 );
-        write( STDOUT_FILENO, tty_prompt.inputLine.text,
+        stdout_write( "]", 1 );
+        stdout_write( tty_prompt.inputLine.text,
             tty_prompt.inputLine.cursorPos );
     }
 }
@@ -145,7 +150,7 @@ static void tty_init_input( void ) {
     IF_Init( &tty_prompt.inputLine, width, width );
 
     // display command prompt
-    write( STDOUT_FILENO, "]", 1 );
+    stdout_write( "]", 1 );
 }
 
 static void tty_shutdown_input( void ) {
@@ -199,7 +204,7 @@ void Sys_SetConsoleColor( color_index_t color ) {
     if( color != COLOR_NONE ) {
         tty_hide_input();
     }
-    write( STDOUT_FILENO, buf, len );
+    stdout_write( buf, len );
     if( color == COLOR_NONE ) {
         tty_show_input();
     }
@@ -217,7 +222,7 @@ static void tty_write_output( const char *text ) {
         buf[len] = Q_charascii( c );
     }
 
-    write( STDOUT_FILENO, buf, len );
+    stdout_write( buf, len );
 }
 
 /*
@@ -253,7 +258,7 @@ void Sys_SetConsoleTitle( const char *title ) {
 
     len = Q_snprintf( buffer, sizeof( buffer ), "\033]0;%s\007", title );
     if( len < sizeof( buffer ) ) {
-        write( STDOUT_FILENO, buffer, len );
+        stdout_write( buffer, len );
     }
 }
 
@@ -269,14 +274,14 @@ static void tty_parse_input( const char *text ) {
         if( key == tty_orig.c_cc[VERASE] || key == 127 || key == 8 ) {
             if( f->cursorPos ) {
                 f->text[--f->cursorPos] = 0;
-                write( STDOUT_FILENO, "\b \b", 3 );
+                stdout_write( "\b \b", 3 );
             }
             continue;
         }
 
         if( key == tty_orig.c_cc[VKILL] ) {
             for( i = 0; i < f->cursorPos; i++ ) {
-                write( STDOUT_FILENO, "\b \b", 3 );
+                stdout_write( "\b \b", 3 );
             }
             f->cursorPos = 0;
             continue;
@@ -284,11 +289,11 @@ static void tty_parse_input( const char *text ) {
 
         if( key >= 32 ) {
             if( f->cursorPos == f->maxChars - 1 ) {
-                write( STDOUT_FILENO, va( "\b \b%c", key ), 4 );
+                stdout_write( va( "\b \b%c", key ), 4 );
                 f->text[f->cursorPos+0] = key;
                 f->text[f->cursorPos+1] = 0;
             } else {
-                write( STDOUT_FILENO, va( "%c", key ), 1 );
+                stdout_write( va( "%c", key ), 1 );
                 f->text[f->cursorPos+0] = key;
                 f->text[f->cursorPos+1] = 0;
                 f->cursorPos++;
@@ -306,7 +311,7 @@ static void tty_parse_input( const char *text ) {
                 Sys_Printf( "]%s\n", s );
                 Cbuf_AddText( &cmd_buffer, s );
             } else {
-                write( STDOUT_FILENO, "]\n", 2 );
+                stdout_write( "]\n", 2 );
             }
             tty_show_input();
             continue;
