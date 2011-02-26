@@ -718,7 +718,7 @@ LOAD( Areas ) {
     return Q_ERR_SUCCESS;
 }
 
-LOAD( EntityString ) {
+LOAD( EntString ) {
     bsp->numentitychars = count;
     bsp->entitystring = ALLOC( count + 1 );
     memcpy( bsp->entitystring, base, count );
@@ -737,37 +737,41 @@ LOAD( EntityString ) {
 
 typedef struct {
     qerror_t (*load)( bsp_t *, void *, size_t );
-    int lump;
-    size_t size;
+    unsigned lump;
+    size_t disksize;
+    size_t memsize;
     size_t maxcount;
 } lump_info_t;
 
-#define LUMP( Func, Lump, Type ) \
-    { BSP_Load##Func, LUMP_##Lump, sizeof( Type ), MAX_MAP_##Lump }
+#define L( Func, Lump, TypeDisk, TypeMem ) \
+    { BSP_Load##Func, LUMP_##Lump, sizeof( TypeDisk ), \
+        sizeof( TypeMem ), MAX_MAP_##Lump }
 
 static const lump_info_t bsp_lumps[] = {
-    LUMP( Visibility,   VISIBILITY,     byte            ),
-    LUMP( Texinfo,      TEXINFO,        dtexinfo_t      ),
-    LUMP( Planes,       PLANES,         dplane_t        ),
-    LUMP( BrushSides,   BRUSHSIDES,     dbrushside_t    ),
-    LUMP( Brushes,      BRUSHES,        dbrush_t        ),
-    LUMP( LeafBrushes,  LEAFBRUSHES,    uint16_t        ),
-    LUMP( AreaPortals,  AREAPORTALS,    dareaportal_t   ),
-    LUMP( Areas,        AREAS,          darea_t         ),
+    L( Visibility,  VISIBILITY,     byte,           byte            ),
+    L( Texinfo,     TEXINFO,        dtexinfo_t,     mtexinfo_t      ),
+    L( Planes,      PLANES,         dplane_t,       cplane_t        ),
+    L( BrushSides,  BRUSHSIDES,     dbrushside_t,   mbrushside_t    ),
+    L( Brushes,     BRUSHES,        dbrush_t,       mbrush_t        ),
+    L( LeafBrushes, LEAFBRUSHES,    uint16_t,       mbrush_t *      ),
+    L( AreaPortals, AREAPORTALS,    dareaportal_t,  mareaportal_t   ),
+    L( Areas,       AREAS,          darea_t,        marea_t         ),
 #if USE_REF
-    LUMP( Lightmap,     LIGHTING,       byte            ),
-    LUMP( Vertices,     VERTEXES,       dvertex_t       ),
-    LUMP( Edges,        EDGES,          dedge_t         ),
-    LUMP( SurfEdges,    SURFEDGES,      uint32_t        ),
-    LUMP( Faces,        FACES,          dface_t         ),
-    LUMP( LeafFaces,    LEAFFACES,      uint16_t        ),
+    L( Lightmap,    LIGHTING,       byte,           byte            ),
+    L( Vertices,    VERTEXES,       dvertex_t,      mvertex_t       ),
+    L( Edges,       EDGES,          dedge_t,        medge_t         ),
+    L( SurfEdges,   SURFEDGES,      uint32_t,       msurfedge_t     ),
+    L( Faces,       FACES,          dface_t,        mface_t         ),
+    L( LeafFaces,   LEAFFACES,      uint16_t,       mface_t *       ),
 #endif
-    LUMP( Leafs,        LEAFS,          dleaf_t         ),
-    LUMP( Nodes,        NODES,          dnode_t         ),
-    LUMP( Submodels,    MODELS,         dmodel_t        ),
-    LUMP( EntityString, ENTSTRING,      char            ),
+    L( Leafs,       LEAFS,          dleaf_t,        mleaf_t         ),
+    L( Nodes,       NODES,          dnode_t,        mnode_t         ),
+    L( Submodels,   MODELS,         dmodel_t,       mmodel_t        ),
+    L( EntString,   ENTSTRING,      char,           char            ),
     { NULL }
 };
+
+#undef L
 
 static list_t   bsp_cache;
 
@@ -932,6 +936,9 @@ qerror_t BSP_Load( const char *name, bsp_t **bsp_p ) {
     const lump_info_t *info;
     size_t          filelen, ofs, len, end, count;
     qerror_t        ret;
+    byte            *lumpdata[HEADER_LUMPS];
+    size_t          lumpcount[HEADER_LUMPS];
+    size_t          memsize;
 
     if( !name || !name[0] ) {
         Com_Error( ERR_FATAL, "%s: NULL", __func__ );
@@ -954,11 +961,6 @@ qerror_t BSP_Load( const char *name, bsp_t **bsp_p ) {
         return filelen;
     }
 
-    len = strlen( name );
-    bsp = Z_Mallocz( sizeof( *bsp ) + len );
-    memcpy( bsp->name, name, len + 1 );
-    bsp->refcount = 1;
-
     // byte swap and validate the header
     header = ( dheader_t * )buf;
     if( LittleLong( header->ident ) != IDBSPHEADER ) {
@@ -969,36 +971,48 @@ qerror_t BSP_Load( const char *name, bsp_t **bsp_p ) {
         ret = Q_ERR_UNKNOWN_FORMAT;
         goto fail2;
     }
-    
-    // load into hunk
-#if USE_REF
-    Hunk_Begin( &bsp->pool, 0x1000000 );
-#else
-    Hunk_Begin( &bsp->pool, 0x556000 );
-#endif
 
-    // calculate the checksum
-    bsp->checksum = LittleLong( Com_BlockChecksum( buf, filelen ) );
-
-    // byte swap, validate and load all lumps
+    // byte swap and validate all lumps
+    memsize = 0;
     for( info = bsp_lumps; info->load; info++ ) {
         ofs = LittleLong( header->lumps[info->lump].fileofs );
         len = LittleLong( header->lumps[info->lump].filelen );
         end = ofs + len;
         if( end < ofs || end > filelen ) {
             ret = Q_ERR_BAD_EXTENT;
-            goto fail1;
+            goto fail2;
         }
-        if( len % info->size ) {
+        if( len % info->disksize ) {
             ret = Q_ERR_ODD_SIZE;
-            goto fail1;
+            goto fail2;
         }
-        count = len / info->size;
+        count = len / info->disksize;
         if( count > info->maxcount ) {
             ret = Q_ERR_TOO_MANY;
-            goto fail1;
+            goto fail2;
         }
-        ret = info->load( bsp, buf + ofs, count );
+
+        lumpdata[info->lump] = buf + ofs;
+        lumpcount[info->lump] = count;
+
+        memsize += count * info->memsize;
+    }
+
+    // load into hunk
+    len = strlen( name );
+    bsp = Z_Mallocz( sizeof( *bsp ) + len );
+    memcpy( bsp->name, name, len + 1 );
+    bsp->refcount = 1;
+
+    // add an extra page for cacheline alignment overhead
+    Hunk_Begin( &bsp->pool, memsize + 4096 );
+
+    // calculate the checksum
+    bsp->checksum = LittleLong( Com_BlockChecksum( buf, filelen ) );
+
+    // load all lumps
+    for( info = bsp_lumps; info->load; info++ ) {
+        ret = info->load( bsp, lumpdata[info->lump], lumpcount[info->lump] );
         if( ret ) {
             goto fail1;
         }
@@ -1025,9 +1039,9 @@ qerror_t BSP_Load( const char *name, bsp_t **bsp_p ) {
 
 fail1:
     Hunk_Free( &bsp->pool );
+    Z_Free( bsp );
 fail2:
     FS_FreeFile( buf );
-    Z_Free( bsp );
     return ret;
 }
 
