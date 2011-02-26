@@ -50,6 +50,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define SV_Malloc( size )       Z_TagMalloc( size, TAG_SERVER )
 #define SV_Mallocz( size )      Z_TagMallocz( size, TAG_SERVER )
 #define SV_CopyString( s )      Z_TagCopyString( s, TAG_SERVER )
+#define SV_LoadFile( path, buf ) FS_LoadFileEx( path, buf, 0, TAG_SERVER )
+#define SV_FreeFile( buf )      Z_Free( buf )
 
 #ifdef _DEBUG
 #define SV_DPrintf(level,...) \
@@ -101,6 +103,7 @@ typedef struct {
 
     char        name[MAX_QPATH];            // map name, or cinematic name
     cm_t        cm;
+    char        *entitystring;
 
     char        configstrings[MAX_CONFIGSTRINGS][MAX_QPATH];
 
@@ -444,6 +447,8 @@ extern cvar_t       *sv_rcon_limit;
 extern cvar_t       *sv_uptime;
 
 extern cvar_t       *g_features;
+
+extern cvar_t       *map_override_path;
 
 extern cvar_t       *sv_timeout;
 extern cvar_t       *sv_zombietime;

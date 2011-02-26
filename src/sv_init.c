@@ -78,6 +78,47 @@ static void resolve_masters( void ) {
 }
 #endif
 
+// optionally load the entity string from external source
+static void override_entity_string( const char *server ) {
+    char *path = map_override_path->string;
+    char buffer[MAX_QPATH], *str;
+    ssize_t len;
+
+    if( !*path ) {
+        return;
+    }
+
+    len = Q_concat( buffer, sizeof( buffer ), path, server, ".ent", NULL );
+    if( len >= sizeof( buffer ) ) {
+        len = Q_ERR_NAMETOOLONG;
+        goto fail1;
+    }
+
+    len = SV_LoadFile( buffer, ( void ** )&str );
+    if( !str ) {
+        if( len == Q_ERR_NOENT ) {
+            return;
+        }
+        goto fail1;
+    }
+
+    if( len > MAX_MAP_ENTSTRING ) {
+        len = Q_ERR_FBIG;
+        goto fail2;
+    }
+
+    Com_Printf( "Loaded entity string from %s\n", buffer );
+    sv.entitystring = str;
+    return;
+
+fail2:
+    SV_FreeFile( str );
+fail1:
+    Com_EPrintf( "Couldn't load entity string from %s: %s\n",
+        buffer, Q_ErrorString( len ) );
+}
+
+
 /*
 ================
 SV_SpawnServer
@@ -93,7 +134,9 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
     Com_Printf( "------- Server Initialization -------\n" );
     Com_Printf( "SpawnServer: %s\n", server );
 
+    // free current level
     CM_FreeMap( &sv.cm );
+    SV_FreeFile( sv.entitystring );
     
     // wipe the entire per-level structure
     memset( &sv, 0, sizeof( sv ) );
@@ -124,6 +167,8 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
     resolve_masters();
 #endif
 
+    override_entity_string( server );
+
     sv.cm = *cm;
     sprintf( sv.configstrings[CS_MAPCHECKSUM], "%d", ( int )cm->cache->checksum );
 
@@ -153,7 +198,8 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
     X86_SINGLE_FPCW;
 
     // load and spawn all other entities
-    ge->SpawnEntities ( sv.name, cm->cache->entitystring, spawnpoint );
+    ge->SpawnEntities ( sv.name, sv.entitystring ?
+        sv.entitystring : cm->cache->entitystring, spawnpoint );
 
     // run two frames to allow everything to settle
     ge->RunFrame ();

@@ -29,8 +29,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 extern mtexinfo_t nulltexinfo;
 
-static cvar_t *map_override_path;
-
 /*
 ===============================================================================
 
@@ -721,32 +719,6 @@ LOAD( Areas ) {
 }
 
 LOAD( EntityString ) {
-    char *path = map_override_path->string;
-
-    // optionally load the entity string from external source
-    if( *path ) {
-        char buffer[MAX_QPATH], *str;
-        char base[MAX_QPATH];
-        ssize_t len;
-
-        str = COM_SkipPath( bsp->name );
-        COM_StripExtension( str, base, sizeof( base ) );
-        Q_concat( buffer, sizeof( buffer ), path, base, ".ent", NULL );
-        len = FS_LoadFile( buffer, ( void ** )&str );
-        if( str ) {
-            Com_Printf( "Loaded entity string from %s\n", buffer );
-            bsp->entitystring = ALLOC( len + 1 );
-            memcpy( bsp->entitystring, str, len + 1 );
-            bsp->numentitychars = len;
-            FS_FreeFile( str );
-            return Q_ERR_SUCCESS;
-        }
-        if( len != Q_ERR_NOENT ) {
-            Com_EPrintf( "Couldn't load entity string from %s: %s\n",
-                buffer, Q_ErrorString( len ) );
-        }
-    }
-
     bsp->numentitychars = count;
     bsp->entitystring = ALLOC( count + 1 );
     memcpy( bsp->entitystring, base, count );
@@ -754,7 +726,6 @@ LOAD( EntityString ) {
 
     return Q_ERR_SUCCESS;
 }
-
 
 /*
 ===============================================================================
@@ -1220,7 +1191,6 @@ mmodel_t *BSP_InlineModel( bsp_t *bsp, const char *name ) {
 }
 
 void BSP_Init( void ) {
-    map_override_path = Cvar_Get( "map_override_path", "", 0 );
 
     Cmd_AddCommand( "bsplist", BSP_List_f );
 
