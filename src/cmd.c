@@ -1618,7 +1618,7 @@ qerror_t Cmd_ExecuteFile( const char *path, unsigned flags ) {
     qerror_t ret;
     cmdbuf_t *buf;
 
-    len = FS_LoadFileEx( path, ( void ** )&f, flags );
+    len = FS_LoadFileEx( path, ( void ** )&f, flags, TAG_FILESYSTEM );
     if( !f ) {
         return len;
     }

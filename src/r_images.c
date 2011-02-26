@@ -209,7 +209,7 @@ static qerror_t _IMG_SavePCX( qhandle_t f, const byte *data, \
 // write output file 
     len = pack - ( byte * )pcx;
     ret = FS_Write( pcx, len, f );
-    FS_FreeFile( pcx );
+    FS_FreeTempMem( pcx );
 
     if( ret < 0 ) {
         return ret;
@@ -879,7 +879,7 @@ IMG_SAVE( JPG ) {
     ret = Q_ERR_SUCCESS;
 
 fail2:
-    FS_FreeFile( row_pointers );
+    FS_FreeTempMem( row_pointers );
 fail1:
     jpeg_destroy_compress( &cinfo );
     return ret;
@@ -1111,7 +1111,7 @@ IMG_SAVE( PNG ) {
     ret = Q_ERR_SUCCESS;
 
 fail2:
-    FS_FreeFile( row_pointers );
+    FS_FreeTempMem( row_pointers );
 fail1:
     png_destroy_write_struct( &png_ptr, &info_ptr );
     return ret;
@@ -1194,7 +1194,7 @@ static void make_screenshot( const char *name, const char *ext
 #if USE_REF == REF_GL
     pixels = IMG_ReadPixels( reverse, &w, &h );
     ret = save( f, buffer, pixels, w, h, param );
-    FS_FreeFile( pixels );
+    FS_FreeTempMem( pixels );
 #else
     pixels = IMG_ReadPixels( &palette, &w, &h, &rowbytes );
     ret = _IMG_SavePCX( f, pixels, palette, w, h, rowbytes );

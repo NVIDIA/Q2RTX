@@ -1391,7 +1391,7 @@ opens non-unique file handle as an optimization
 a NULL buffer will just return the file length without loading
 ============
 */
-ssize_t FS_LoadFileEx( const char *path, void **buffer, unsigned flags ) {
+ssize_t FS_LoadFileEx( const char *path, void **buffer, unsigned flags, memtag_t tag ) {
     file_t *file;
     qhandle_t f;
     byte *buf;
@@ -1441,7 +1441,7 @@ ssize_t FS_LoadFileEx( const char *path, void **buffer, unsigned flags ) {
     }
 
     // allocate chunk of memory, +1 for NUL
-    buf = FS_Malloc( len + 1 );
+    buf = Z_TagMalloc( len + 1, tag );
 
     // read entire file
     read = FS_Read( buf, len, f );
@@ -1457,18 +1457,6 @@ ssize_t FS_LoadFileEx( const char *path, void **buffer, unsigned flags ) {
 done:
     FS_FCloseFile( f );
     return len;
-}
-
-ssize_t FS_LoadFile( const char *path, void **buffer ) {
-    return FS_LoadFileEx( path, buffer, 0 );
-}
-
-void *FS_AllocTempMem( size_t len ) {
-    return FS_Malloc( len );
-}
-
-void FS_FreeFile( void *buf ) {
-    Z_Free( buf );
 }
 
 /*

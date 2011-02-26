@@ -37,7 +37,7 @@ IMAGE MANAGER
 
 #if USE_REF == REF_GL
 #define IMG_AllocPixels( x )  FS_AllocTempMem( x )
-#define IMG_FreePixels( x ) FS_FreeFile( x )
+#define IMG_FreePixels( x ) FS_FreeTempMem( x )
 #else
 #define IMG_AllocPixels( x )  R_Malloc( x )
 #define IMG_FreePixels( x ) Z_Free( x )

@@ -728,9 +728,8 @@ static qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap 
         qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
     }
     
-
     if( scaled != data ) {
-        FS_FreeFile( scaled );
+        FS_FreeTempMem( scaled );
     }
 
     return isalpha;

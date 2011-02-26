@@ -163,7 +163,7 @@ static char *LoadCache( void **list ) {
     uint8_t hash[16];
 
     Q_concat( buffer, sizeof( buffer ), m_demos.browse, "/" COM_DEMOCACHE_NAME, NULL );
-    len = FS_LoadFileEx( buffer, ( void ** )&cache, FS_TYPE_REAL | FS_PATH_GAME );
+    len = FS_LoadFileEx( buffer, ( void ** )&cache, FS_TYPE_REAL | FS_PATH_GAME, TAG_FILESYSTEM );
     if( !cache ) {
         return NULL;
     }

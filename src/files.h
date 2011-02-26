@@ -86,6 +86,12 @@ typedef struct file_info_s {
 #define FS_Malloc( size )       Z_TagMalloc( size, TAG_FILESYSTEM )
 #define FS_Mallocz( size )      Z_TagMallocz( size, TAG_FILESYSTEM )
 #define FS_CopyString( string ) Z_TagCopyString( string, TAG_FILESYSTEM )
+#define FS_LoadFile( path, buf ) FS_LoadFileEx( path, buf, 0, TAG_FILESYSTEM )
+#define FS_FreeFile( buf )      Z_Free( buf )
+
+// just regular malloc for now
+#define FS_AllocTempMem( size ) FS_Malloc( size )
+#define FS_FreeTempMem( buf )   Z_Free( buf )
 
 void    FS_Init( void );
 void    FS_Shutdown( void );
@@ -107,16 +113,13 @@ qhandle_t FS_EasyOpenFile( char *buf, size_t size, unsigned mode,
 qerror_t FS_FilterFile( qhandle_t f );
 
 #define FS_FileExistsEx( path, flags ) \
-    ( FS_LoadFileEx( path, NULL, flags ) != Q_ERR_NOENT )
+    ( FS_LoadFileEx( path, NULL, flags, TAG_FREE ) != Q_ERR_NOENT )
 #define FS_FileExists( path ) \
     FS_FileExistsEx( path, 0 )
 
-ssize_t FS_LoadFile( const char *path, void **buffer );
-ssize_t FS_LoadFileEx( const char *path, void **buffer, unsigned flags );
-void    *FS_AllocTempMem( size_t len );
-void    FS_FreeFile( void *buf );
-// a null buffer will just return the file length without loading
-// a -1 length is not present
+ssize_t FS_LoadFileEx( const char *path, void **buffer, unsigned flags, memtag_t tag );
+// a NULL buffer will just return the file length without loading
+// length < 0 indicates error
 
 qerror_t FS_WriteFile( const char *path, const void *data, size_t len );
 
