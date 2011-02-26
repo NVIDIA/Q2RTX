@@ -64,9 +64,15 @@ typedef struct file_info_s {
 #define FS_FLAG_GZIP            0x00000080
 #define FS_FLAG_EXCL            0x00000100
 
-// protection from malicious paks causing memory exhaustion
-// no loadable Q2 resource should ever exceed this limit
-#define MAX_LOADFILE    0x400000 // 64 MiB
+//
+// Limit the maximum file size FS_LoadFile can handle, as a protection from
+// malicious paks causing memory exhaustion.
+//
+// Maximum size of legitimate BSP file on disk is ~12.7 MiB, let's round this
+// up to 16 MiB. Assume that no loadable Q2 resource should ever exceed this
+// limit.
+//
+#define MAX_LOADFILE            0x1000000
 
 // macros for dealing portably with files at OS level
 #ifdef _WIN32
