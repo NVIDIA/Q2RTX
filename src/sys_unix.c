@@ -546,19 +546,6 @@ void Sys_Quit( void ) {
     exit( EXIT_SUCCESS );
 }
 
-/*
-=================
-Sys_GetCurrentDirectory
-=================
-*/
-char *Sys_GetCurrentDirectory( void ) {
-    static char curpath[MAX_OSPATH];
-
-    getcwd( curpath, sizeof( curpath ) );
-
-    return curpath;
-}
-
 void Sys_AddDefaultConfig( void ) {
     FILE *fp;
     struct stat st;

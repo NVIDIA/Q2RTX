@@ -59,8 +59,6 @@ struct  file_info_s;
 qerror_t Sys_GetPathInfo( const char *path, struct file_info_s *info );
 qerror_t Sys_GetFileInfo( FILE *fp, struct file_info_s *info );
 
-char    *Sys_GetCurrentDirectory( void );
-
 void    Sys_DebugBreak( void );
 
 #if USE_AC_CLIENT

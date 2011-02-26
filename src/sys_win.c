@@ -984,15 +984,6 @@ void Sys_ListFiles_r(   const char  *path,
 }
 
 /*
-=================
-Sys_GetCurrentDirectory
-=================
-*/
-char *Sys_GetCurrentDirectory( void ) {
-    return currentDirectory;
-}
-
-/*
 ========================================================================
 
 MAIN
