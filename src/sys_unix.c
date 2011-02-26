@@ -116,23 +116,23 @@ static void tty_init_input( void ) {
 #endif
     int width;
 
-    if( !isatty( 0 ) || !isatty( 1 ) ) {
+    if( !isatty( STDIN_FILENO ) || !isatty( STDOUT_FILENO ) ) {
         Com_Printf( "stdin/stdout don't both refer to a TTY\n" );
         Cvar_Set( "sys_console", "1" );
         return;
     }
 
-    tcgetattr( 0, &tty_orig );
+    tcgetattr( STDIN_FILENO, &tty_orig );
     tty = tty_orig;
     tty.c_lflag &= ~( ECHO | ICANON | INPCK | ISTRIP );
     tty.c_cc[VMIN] = 1;
     tty.c_cc[VTIME] = 0;
-    tcsetattr( 0, TCSADRAIN, &tty );
+    tcsetattr( STDIN_FILENO, TCSADRAIN, &tty );
 
     // determine terminal width
     width = 80;
 #ifdef TIOCGWINSZ
-    if( ioctl( 0, TIOCGWINSZ, &ws ) == 0 ) {
+    if( ioctl( STDIN_FILENO, TIOCGWINSZ, &ws ) == 0 ) {
         if( ws.ws_col ) {
             width = ws.ws_col;
         }
@@ -155,12 +155,12 @@ static void tty_init_input( void ) {
 
 static void tty_shutdown_input( void ) {
     if( tty_io ) {
-        IO_Remove( 0 );
+        IO_Remove( STDIN_FILENO );
         tty_io = NULL;
     }
     if( tty_enabled ) {
         tty_hide_input();
-        tcsetattr( 0, TCSADRAIN, &tty_orig );
+        tcsetattr( STDIN_FILENO, TCSADRAIN, &tty_orig );
         tty_enabled = qfalse;
     }
 }
@@ -374,7 +374,7 @@ void Sys_RunConsole( void ) {
         return;
     }
 
-    ret = read( 0, text, sizeof( text ) - 1 );
+    ret = read( STDIN_FILENO, text, sizeof( text ) - 1 );
     if( !ret ) {
         Com_DPrintf( "Read EOF from stdin.\n" );
         tty_shutdown_input();
@@ -667,16 +667,18 @@ void Sys_Init( void ) {
     // we want TTY support enabled if started from terminal,
     // but don't want any output by default if launched without one
     // (from X session for example)
-    sys_console = Cvar_Get( "sys_console", isatty( 0 ) &&
-        isatty( 1 ) ? "2" : "0", CVAR_NOSET );
+    sys_console = Cvar_Get( "sys_console", isatty( STDIN_FILENO ) &&
+        isatty( STDOUT_FILENO ) ? "2" : "0", CVAR_NOSET );
 
     if( sys_console->integer > 0 ) {
         // change stdin to non-blocking and stdout to blocking
-        fcntl( 0, F_SETFL, fcntl( 0, F_GETFL, 0 ) | FNDELAY );
-        fcntl( 1, F_SETFL, fcntl( 1, F_GETFL, 0 ) & ~FNDELAY );
+        fcntl( STDIN_FILENO, F_SETFL,
+            fcntl( STDIN_FILENO, F_GETFL, 0 ) | FNDELAY );
+        fcntl( STDOUT_FILENO, F_SETFL,
+            fcntl( STDOUT_FILENO, F_GETFL, 0 ) & ~FNDELAY );
 
         // add stdin to the list of descriptors to wait on
-        tty_io = IO_Add( 0 );
+        tty_io = IO_Add( STDIN_FILENO );
         tty_io->wantread = qtrue;
 
         // init optional TTY support
