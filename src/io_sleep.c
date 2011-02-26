@@ -180,7 +180,13 @@ int IO_Sleep( int msec ) {
 #endif
         &timeout );
     if( ret == -1 ) {
-        Com_EPrintf( "%s: %s\n", __func__, strerror( errno ) );
+#ifdef _WIN32
+        // TODO: report WSA error
+#else
+        if( errno != EINTR ) {
+            Com_EPrintf( "%s: %s\n", __func__, strerror( errno ) );
+        }
+#endif
         return ret;
     }
 
@@ -278,7 +284,13 @@ int IO_Sleepv( int msec, ... ) {
 #endif
         &timeout );
     if( ret == -1 ) {
-        Com_EPrintf( "%s: %s\n", __func__, strerror( errno ) );
+#ifdef _WIN32
+        // TODO: report WSA error
+#else
+        if( errno != EINTR ) {
+            Com_EPrintf( "%s: %s\n", __func__, strerror( errno ) );
+        }
+#endif
         return ret;
     }
 
