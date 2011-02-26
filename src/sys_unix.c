@@ -85,7 +85,7 @@ static void tty_hide_input( void ) {
 
     if( !tty_hidden ) {
         for( i = 0; i <= tty_prompt.inputLine.cursorPos; i++ ) {
-            write( 1, "\b \b", 3 );
+            write( STDOUT_FILENO, "\b \b", 3 );
         }
     }
     tty_hidden++;
@@ -98,8 +98,8 @@ static void tty_show_input( void ) {
 
     tty_hidden--;
     if( !tty_hidden ) {
-        write( 1, "]", 1 );    
-        write( 1, tty_prompt.inputLine.text,
+        write( STDOUT_FILENO, "]", 1 );
+        write( STDOUT_FILENO, tty_prompt.inputLine.text,
             tty_prompt.inputLine.cursorPos );
     }
 }
@@ -116,7 +116,7 @@ static void tty_init_input( void ) {
         Cvar_Set( "sys_console", "1" );
         return;
     }
-    
+
     tcgetattr( 0, &tty_orig );
     tty = tty_orig;
     tty.c_lflag &= ~( ECHO | ICANON | INPCK | ISTRIP );
@@ -145,7 +145,7 @@ static void tty_init_input( void ) {
     IF_Init( &tty_prompt.inputLine, width, width );
 
     // display command prompt
-    write( 1, "]", 1 );    
+    write( STDOUT_FILENO, "]", 1 );
 }
 
 static void tty_shutdown_input( void ) {
@@ -199,7 +199,7 @@ void Sys_SetConsoleColor( color_index_t color ) {
     if( color != COLOR_NONE ) {
         tty_hide_input();
     }
-    write( 1, buf, len );
+    write( STDOUT_FILENO, buf, len );
     if( color == COLOR_NONE ) {
         tty_show_input();
     }
@@ -217,7 +217,7 @@ static void tty_write_output( const char *text ) {
         buf[len] = Q_charascii( c );
     }
 
-    write( 1, buf, len );
+    write( STDOUT_FILENO, buf, len );
 }
 
 /*
@@ -253,7 +253,7 @@ void Sys_SetConsoleTitle( const char *title ) {
 
     len = Q_snprintf( buffer, sizeof( buffer ), "\033]0;%s\007", title );
     if( len < sizeof( buffer ) ) {
-        write( 1, buffer, len );    
+        write( STDOUT_FILENO, buffer, len );
     }
 }
 
@@ -269,14 +269,14 @@ static void tty_parse_input( const char *text ) {
         if( key == tty_orig.c_cc[VERASE] || key == 127 || key == 8 ) {
             if( f->cursorPos ) {
                 f->text[--f->cursorPos] = 0;
-                write( 1, "\b \b", 3 );    
+                write( STDOUT_FILENO, "\b \b", 3 );
             }
             continue;
         }
 
         if( key == tty_orig.c_cc[VKILL] ) {
             for( i = 0; i < f->cursorPos; i++ ) {
-                write( 1, "\b \b", 3 );    
+                write( STDOUT_FILENO, "\b \b", 3 );
             }
             f->cursorPos = 0;
             continue;
@@ -284,18 +284,18 @@ static void tty_parse_input( const char *text ) {
 
         if( key >= 32 ) {
             if( f->cursorPos == f->maxChars - 1 ) {
-                write( 1, va( "\b \b%c", key ), 4 );    
+                write( STDOUT_FILENO, va( "\b \b%c", key ), 4 );
                 f->text[f->cursorPos+0] = key;
                 f->text[f->cursorPos+1] = 0;
             } else {
-                write( 1, va( "%c", key ), 1 );    
+                write( STDOUT_FILENO, va( "%c", key ), 1 );
                 f->text[f->cursorPos+0] = key;
                 f->text[f->cursorPos+1] = 0;
                 f->cursorPos++;
             }
             continue;
         }
-    
+
         if( key == '\n' ) {
             tty_hide_input();
             s = Prompt_Action( &tty_prompt );
@@ -306,7 +306,7 @@ static void tty_parse_input( const char *text ) {
                 Sys_Printf( "]%s\n", s );
                 Cbuf_AddText( &cmd_buffer, s );
             } else {
-                write( 1, "]\n", 2 );    
+                write( STDOUT_FILENO, "]\n", 2 );
             }
             tty_show_input();
             continue;
@@ -385,7 +385,7 @@ void Sys_RunConsole( void ) {
     }
     text[ret] = 0;
 
-    if( !tty_enabled ) {    
+    if( !tty_enabled ) {
         Cbuf_AddText( &cmd_buffer, text );
         return;
     }
@@ -481,7 +481,7 @@ void Sys_DebugBreak( void ) {
 unsigned Sys_Milliseconds( void ) {
     struct timeval tp;
     unsigned time;
-    
+
     gettimeofday( &tp, NULL );
     time = tp.tv_sec * 1000 + tp.tv_usec / 1000;
     return time;
@@ -543,7 +543,7 @@ void Sys_Quit( void ) {
 #if USE_SYSCON
     tty_shutdown_input();
 #endif
-    exit( 0 );
+    exit( EXIT_SUCCESS );
 }
 
 /*
@@ -632,7 +632,7 @@ static void kill_handler( int signum ) {
     fprintf( stderr, "Received signal %d, aborting\n", signum );
 #endif
 
-    exit( 1 );
+    exit( EXIT_FAILURE );
 }
 
 /*
@@ -652,7 +652,7 @@ void Sys_Init( void ) {
     // basedir <path>
     // allows the game to run from outside the data tree
     sys_basedir = Cvar_Get( "basedir", DATADIR, CVAR_NOSET );
-    
+
     // homedir <path>
     // specifies per-user writable directory for demos, screenshots, etc
     if( HOMEDIR[0] == '~' ) {
@@ -687,7 +687,7 @@ void Sys_Init( void ) {
 
         // init optional TTY support
         if( sys_console->integer > 1 ) {
-            tty_init_input(); 
+            tty_init_input();
         }
         signal( SIGHUP, term_handler );
     } else
@@ -745,11 +745,11 @@ void Sys_Error( const char *error, ... ) {
     va_start( argptr, error );
     Q_vsnprintf( text, sizeof( text ), error, argptr );
     va_end( argptr );
-    
+
     fprintf( stderr, "********************\n"
                      "FATAL: %s\n"
                      "********************\n", text );
-    exit( 1 );
+    exit( EXIT_FAILURE );
 }
 
 /*
@@ -965,6 +965,6 @@ int main( int argc, char **argv ) {
         Qcommon_Frame();
     }
 
-    return 1; // never gets here
+    return EXIT_FAILURE; // never gets here
 }
 
