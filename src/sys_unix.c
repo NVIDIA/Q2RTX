@@ -364,7 +364,7 @@ static void tty_parse_input( const char *text ) {
 
 void Sys_RunConsole( void ) {
     char text[MAX_STRING_CHARS];
-    int ret;
+    ssize_t ret;
 
     if( !sys_console || !sys_console->integer ) {
         return;
@@ -381,13 +381,15 @@ void Sys_RunConsole( void ) {
         Cvar_Set( "sys_console", "0" );
         return;
     }
+
     if( ret < 0 ) {
-        if( errno == EINTR ) {
+        if( errno == EAGAIN || errno == EINTR ) {
             return;
         }
         Com_Error( ERR_FATAL, "%s: read() failed: %s",
             __func__, strerror( errno ) );
     }
+
     text[ret] = 0;
 
     if( !tty_enabled ) {
