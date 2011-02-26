@@ -1204,9 +1204,53 @@ mmodel_t *BSP_InlineModel( bsp_t *bsp, const char *name ) {
     return &bsp->models[num];
 }
 
-void BSP_Init( void ) {
+//#define BSP_TEST
 
+#ifdef BSP_TEST
+static void BSP_Test_f( void ) {
+    void **list;
+    char *name;
+    int i, count, errors;
+    bsp_t *bsp;
+    qerror_t ret;
+    unsigned start, end;
+
+    list = FS_ListFiles( "maps", ".bsp", FS_SEARCH_SAVEPATH, &count );
+    if( !list ) {
+        Com_Printf( "No maps found\n" );
+        return;
+    }
+
+    start = Sys_Milliseconds();
+
+    errors = 0;
+    for( i = 0; i < count; i++ ) {
+        name = list[i];
+        ret = BSP_Load( name, &bsp );
+        if( !bsp ) {
+            Com_EPrintf( "%s: %s\n", name, Q_ErrorString( ret ) );
+            errors++;
+            continue;
+        }
+
+        Com_DPrintf( "%s: success\n", name );
+        BSP_Free( bsp );
+    }
+
+    end = Sys_Milliseconds();
+
+    Com_Printf( "%d msec, %d failures, %d maps tested\n",
+        end - start, errors, count );
+
+    FS_FreeList( list );
+}
+#endif
+
+void BSP_Init( void ) {
     Cmd_AddCommand( "bsplist", BSP_List_f );
+#ifdef BSP_TEST
+    Cmd_AddCommand( "bsptest", BSP_Test_f );
+#endif
 
     List_Init( &bsp_cache );
 }
