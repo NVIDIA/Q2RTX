@@ -532,7 +532,7 @@ void SV_MvdEndFrame( void );
 void SV_MvdRunClients( void );
 void SV_MvdStatus_f( void );
 void SV_MvdMapChanged( void );
-void SV_MvdClientDropped( client_t *client, const char *reason );
+void SV_MvdClientDropped( client_t *client );
 
 void SV_MvdUnicast( edict_t *ent, int clientNum, qboolean reliable );
 void SV_MvdMulticast( int leafnum, multicast_t to );

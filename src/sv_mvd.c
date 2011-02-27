@@ -1893,7 +1893,7 @@ SV_MvdClientDropped
 Server has just dropped a client, check if that was our MVD dummy client.
 ==================
 */
-void SV_MvdClientDropped( client_t *client, const char *reason ) {
+void SV_MvdClientDropped( client_t *client ) {
     if( client == mvd.dummy ) {
         mvd_drop( GTS_ERROR );
     }

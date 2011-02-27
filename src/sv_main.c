@@ -215,7 +215,7 @@ void SV_DropClient( client_t *client, const char *reason ) {
 
 #if USE_MVD_SERVER
     // give MVD server a chance to detect if it's dummy client was dropped
-    SV_MvdClientDropped( client, reason );
+    SV_MvdClientDropped( client );
 #endif
 }
 
