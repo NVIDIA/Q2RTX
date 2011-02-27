@@ -74,7 +74,7 @@ model_t *MOD_ForHandle( qhandle_t h );
 qhandle_t R_RegisterModel( const char *name );
 
 struct dmd2header_s;
-qerror_t MOD_ValidateMD2( model_t *model, struct dmd2header_s *header, size_t length );
+qerror_t MOD_ValidateMD2( struct dmd2header_s *header, size_t length );
 
 // these are implemented in [gl,sw]_models.c
 typedef qerror_t (*mod_load_t)( model_t *, const void *, size_t );

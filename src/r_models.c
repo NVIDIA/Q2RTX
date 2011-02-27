@@ -132,7 +132,7 @@ void MOD_FreeAll( void ) {
     r_numModels = 0;
 }
 
-qerror_t MOD_ValidateMD2( model_t *model, dmd2header_t *header, size_t length ) {
+qerror_t MOD_ValidateMD2( dmd2header_t *header, size_t length ) {
     size_t end;
 
     // check ident and version

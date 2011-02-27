@@ -170,7 +170,7 @@ qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
         (( uint32_t * )&header)[i] = LittleLong( (( uint32_t * )&header)[i] );
     }
 
-    ret = MOD_ValidateMD2( model, &header, length );
+    ret = MOD_ValidateMD2( &header, length );
     if( ret ) {
         return ret;
     }
