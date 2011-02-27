@@ -562,6 +562,7 @@ void CL_InitTEnts( void );
 //
 // cl_pred.c
 //
+void CL_PredictAngles( void );
 void CL_PredictMovement (void);
 void CL_CheckPredictionError (void);
 

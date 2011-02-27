@@ -31,7 +31,6 @@ void CL_CheckPredictionError( void ) {
     int         delta[3];
     unsigned    cmd;
     int         len;
-    player_state_t *ps;
 
     if( !cls.netchan ) {
         return;
@@ -42,9 +41,7 @@ void CL_CheckPredictionError( void ) {
         return;
     }
 
-    ps = &cl.frame.ps;
-
-    if( !cl_predict->integer || ( ps->pmove.pm_flags & PMF_NO_PREDICTION ) )
+    if( !cl_predict->integer || ( cl.frame.ps.pmove.pm_flags & PMF_NO_PREDICTION ) )
         return;
 
     // calculate the last usercmd_t we sent that the server has processed
@@ -59,7 +56,7 @@ void CL_CheckPredictionError( void ) {
     cmd &= CMD_MASK;
 
     // compare what the server returned with what we had predicted it to be
-    VectorSubtract( ps->pmove.origin, cl.predicted_origins[cmd], delta );
+    VectorSubtract( cl.frame.ps.pmove.origin, cl.predicted_origins[cmd], delta );
 
     // save the prediction error for interpolation
     len = abs( delta[0] ) + abs( delta[1] ) + abs( delta[2] );
@@ -72,7 +69,7 @@ void CL_CheckPredictionError( void ) {
                 cl.frame.number, len, delta[0], delta[1], delta[2]);
         }
 
-        VectorCopy( ps->pmove.origin, cl.predicted_origins[cmd] );
+        VectorCopy( cl.frame.ps.pmove.origin, cl.predicted_origins[cmd] );
 
         // save for error interpolation
         VectorScale( delta, 0.125f, cl.prediction_error );
@@ -163,7 +160,6 @@ static int CL_PointContents (vec3_t point) {
     return contents;
 }
 
-
 /*
 =================
 CL_PredictMovement
@@ -171,11 +167,16 @@ CL_PredictMovement
 Sets cl.predicted_origin and cl.predicted_angles
 =================
 */
+void CL_PredictAngles( void ) {
+    cl.predicted_angles[0] = cl.viewangles[0] + SHORT2ANGLE( cl.frame.ps.pmove.delta_angles[0] );
+    cl.predicted_angles[1] = cl.viewangles[1] + SHORT2ANGLE( cl.frame.ps.pmove.delta_angles[1] );
+    cl.predicted_angles[2] = cl.viewangles[2] + SHORT2ANGLE( cl.frame.ps.pmove.delta_angles[2] );
+}
+
 void CL_PredictMovement( void ) {
     unsigned    ack, current, frame;
     pmove_t     pm;
     int         step, oldz;
-    player_state_t *ps;
 
     if( cls.state != ca_active ) {
         return;
@@ -189,13 +190,9 @@ void CL_PredictMovement( void ) {
         return;
     }
 
-    ps = &cl.frame.ps;
-
-    if( !cl_predict->integer || ( ps->pmove.pm_flags & PMF_NO_PREDICTION ) ) {
+    if( !cl_predict->integer || ( cl.frame.ps.pmove.pm_flags & PMF_NO_PREDICTION ) ) {
         // just set angles
-        cl.predicted_angles[0] = cl.viewangles[0] + SHORT2ANGLE( ps->pmove.delta_angles[0] );
-        cl.predicted_angles[1] = cl.viewangles[1] + SHORT2ANGLE( ps->pmove.delta_angles[1] );
-        cl.predicted_angles[2] = cl.viewangles[2] + SHORT2ANGLE( ps->pmove.delta_angles[2] );
+        CL_PredictAngles();
         return;
     }
 
@@ -221,7 +218,7 @@ void CL_PredictMovement( void ) {
     pm.trace = CL_Trace;
     pm.pointcontents = CL_PointContents;
 
-    pm.s = ps->pmove;
+    pm.s = cl.frame.ps.pmove;
 #if USE_SMOOTH_DELTA_ANGLES
     VectorCopy( cl.delta_angles, pm.s.delta_angles );
 #endif

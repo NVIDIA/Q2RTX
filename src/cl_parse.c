@@ -398,11 +398,21 @@ static void CL_SetActiveState( void ) {
         cl.initialSeq = cls.netchan->outgoing_sequence;
     }
 
+    // set initial cl.predicted_origin and cl.predicted_angles
     if( !cls.demo.playback ) {
         VectorScale( cl.frame.ps.pmove.origin, 0.125f, cl.predicted_origin );
-        VectorCopy( cl.frame.ps.viewangles, cl.predicted_angles );
+        VectorScale( cl.frame.ps.pmove.velocity, 0.125f, cl.predicted_velocity );
+        if( cl.frame.ps.pmove.pm_type < PM_DEAD &&
+            cls.serverProtocol > PROTOCOL_VERSION_DEFAULT )
+        {
+            // enhanced servers don't send viewangles
+            CL_PredictAngles();
+        } else {
+            // just use what server provided
+            VectorCopy( cl.frame.ps.viewangles, cl.predicted_angles );
+        }
     }
-    
+
     SCR_EndLoadingPlaque ();    // get rid of loading plaque
     SCR_LagClear();
     Con_Close( qfalse );        // get rid of connection screen
