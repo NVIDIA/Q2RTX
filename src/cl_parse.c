@@ -1040,6 +1040,32 @@ ACTION MESSAGES
 tent_params_t   te;
 mz_params_t     mz;
 
+#ifdef _DEBUG
+// for debugging problems when out-of-date entity origin is referenced
+static void CL_CheckEntityPresent( int entnum, const char *what ) {
+    centity_t *e = &cl_entities[entnum];
+
+    if( entnum == cl.frame.clientNum + 1 ) {
+        return; // player entity = current
+    }
+
+    e = &cl_entities[entnum];
+    if( e->serverframe == cl.frame.number ) {
+        return; // current
+    }
+
+    if( e->serverframe ) {
+        Com_LPrintf( PRINT_DEVELOPER,
+            "SERVER BUG: %s on entity %d last seen %d frames ago\n",
+            what, entnum, cl.frame.number - e->serverframe );
+    } else {
+        Com_LPrintf( PRINT_DEVELOPER,
+            "SERVER BUG: %s on entity %d never seen before\n",
+            what, entnum );
+    }
+}
+#endif
+
 static void CL_ParseTEntParams( void ) {
     te.type = MSG_ReadByte();
 
@@ -1175,6 +1201,12 @@ static void CL_ParseMuzzleFlashParams( void ) {
     mz.weapon = weapon & ~MZ_SILENCED;
     mz.entity = entity;
 
+#ifdef _DEBUG
+    if( developer->integer ) {
+        CL_CheckEntityPresent( entity, "muzzleflash" );
+    }
+#endif
+
     CL_ParseMuzzleFlash();
 }
 
@@ -1247,14 +1279,11 @@ static void CL_ParseStartSoundPacket( void ) {
         if( !( flags & SND_ENT ) ) {
             Com_Error( ERR_DROP, "%s: neither SND_ENT nor SND_POS set", __func__ );
         }
-        if( cl_entities[ent].serverframe != cl.frame.number ) {
-            if( cl_entities[ent].serverframe ) { 
-                Com_DPrintf( "SERVER BUG: sound on entity %d last seen %d frames ago\n",
-                    ent, cl.frame.number - cl_entities[ent].serverframe );
-            } else {
-                Com_DPrintf( "SERVER BUG: sound on entity %d never seen before\n", ent );
-            }
+#ifdef _DEBUG
+        if( developer->integer ) {
+            CL_CheckEntityPresent( ent, "sound" );
         }
+#endif
         // use entity number
         pos = NULL;
     }
