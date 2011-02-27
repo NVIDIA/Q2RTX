@@ -291,7 +291,7 @@ static void MVD_UnicastSend( mvd_t *mvd, qboolean reliable, byte *data, size_t l
     }
 }
 
-static void MVD_UnicastLayout( mvd_t *mvd, qboolean reliable, mvd_player_t *player ) {
+static void MVD_UnicastLayout( mvd_t *mvd, mvd_player_t *player ) {
     mvd_client_t *client;
 
     if( player != mvd->dummy ) {
@@ -454,7 +454,7 @@ static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
 #endif
         switch( cmd ) {
         case svc_layout:
-            MVD_UnicastLayout( mvd, reliable, player );
+            MVD_UnicastLayout( mvd, player );
             break;
         case svc_configstring:
             MVD_UnicastString( mvd, reliable, player );
