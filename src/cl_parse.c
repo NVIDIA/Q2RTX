@@ -340,7 +340,9 @@ static void CL_ParsePacketEntities( server_frame_t *oldframe,
             // delta from previous state
             SHOWNET( 2, "   delta: %i ", newnum );
             CL_ParseDeltaEntity( frame, newnum, oldstate, bits );
-            if( !bits ) SHOWNET( 2, "\n" );
+            if( !bits ) {
+                SHOWNET( 2, "\n" );
+            }
 
             oldindex++;
 
@@ -358,7 +360,9 @@ static void CL_ParsePacketEntities( server_frame_t *oldframe,
             // delta from baseline
             SHOWNET( 2, "   baseline: %i ", newnum );
             CL_ParseDeltaEntity( frame, newnum, &cl.baselines[newnum], bits );
-            if( !bits ) SHOWNET( 2, "\n" );
+            if( !bits ) {
+                SHOWNET( 2, "\n" );
+            }
             continue;
         }
 
