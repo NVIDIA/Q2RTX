@@ -3015,8 +3015,10 @@ unsigned CL_Frame( unsigned msec ) {
         main_extra, ref_frame, ref_extra,
         phys_frame, phys_extra );
 
-    if( cls.demo.playback ) { // FIXME: HACK
-        if( cl_paused->integer ) {
+    // hack for demo playback pause/unpause
+    if( cls.demo.playback ) {
+        // don't pause when running timedemo!
+        if( cl_paused->integer && !com_timedemo->integer ) {
             if( !sv_paused->integer ) {
                 Cvar_Set( "sv_paused", "1" );
                 IN_Activate();
