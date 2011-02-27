@@ -210,4 +210,5 @@ void MVD_BroadcastPrintf( mvd_t *mvd, int level,
 void MVD_PrepWorldFrame( void );
 void MVD_GameClientNameChanged( edict_t *ent, const char *name );
 void MVD_GameClientDrop( edict_t *ent, const char *reason );
+void MVD_UpdateClients( mvd_t *mvd );
 

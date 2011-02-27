@@ -908,6 +908,12 @@ static void MVD_ParseFrame( mvd_t *mvd ) {
     SHOWNET( 1, "%3"PRIz":frame:%u\n", msg_read.readcount - 1, mvd->framenum );
     MVD_PlayerToEntityStates( mvd );
 
+    // update clients now so that effects datagram that
+    // follows can reference current view positions
+    if( mvd->state ) {
+        MVD_UpdateClients( mvd );
+    }
+
     mvd->framenum++;
 }
 

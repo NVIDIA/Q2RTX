@@ -1628,9 +1628,33 @@ static void MVD_IntermissionStop( mvd_t *mvd ) {
     }
 }
 
+// called just after new frame is parsed
+void MVD_UpdateClients( mvd_t *mvd ) {
+    mvd_client_t *client;
+
+    // check for intermission
+    if( mvd_freeze_hack->integer ) {
+        if( !mvd->intermission ) {
+            if( mvd->dummy->ps.pmove.pm_type == PM_FREEZE ) {
+                MVD_IntermissionStart( mvd );
+            }
+        } else if( mvd->dummy->ps.pmove.pm_type != PM_FREEZE ) {
+            MVD_IntermissionStop( mvd );
+        }
+    } else if( mvd->intermission ) {
+        MVD_IntermissionStop( mvd );
+    }
+
+    // update UDP clients
+    FOR_EACH_MVDCL( client, mvd ) {
+        if( client->cl->state == cs_spawned ) {
+            MVD_UpdateClient( client );
+        }
+    }
+}
+
 static void MVD_GameRunFrame( void ) {
     mvd_t *mvd, *next;
-    mvd_client_t *client;
     int numplayers = 0;
 
     LIST_FOR_EACH_SAFE( mvd_t, mvd, next, &mvd_channel_list, entry ) {
@@ -1641,26 +1665,6 @@ static void MVD_GameRunFrame( void ) {
         // parse stream
         if( !mvd->read_frame( mvd ) ) {
             goto update;
-        }
-
-        // check for intermission
-        if( mvd_freeze_hack->integer ) {
-            if( !mvd->intermission ) {
-                if( mvd->dummy->ps.pmove.pm_type == PM_FREEZE ) {
-                    MVD_IntermissionStart( mvd );
-                }
-            } else if( mvd->dummy->ps.pmove.pm_type != PM_FREEZE ) {
-                MVD_IntermissionStop( mvd );
-            }
-        } else if( mvd->intermission ) {
-            MVD_IntermissionStop( mvd );
-        }
-
-        // update UDP clients
-        FOR_EACH_MVDCL( client, mvd ) {
-            if( client->cl->state == cs_spawned ) {
-                MVD_UpdateClient( client );
-            }
         }
 
         // write this message to demofile
