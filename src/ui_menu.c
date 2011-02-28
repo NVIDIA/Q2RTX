@@ -1337,12 +1337,12 @@ void Menu_AddItem( menuFrameWork_t *menu, void *item ) {
     ((menuCommon_t *)item)->parent = menu;
 }
 
-void UI_ClearBounds( int mins[2], int maxs[2] ) {
+static void UI_ClearBounds( int mins[2], int maxs[2] ) {
     mins[0] = mins[1] = 9999;
     maxs[0] = maxs[1] = -9999;
 }
 
-void UI_AddRectToBounds( const vrect_t *rc, int mins[2], int maxs[2] ) {
+static void UI_AddRectToBounds( const vrect_t *rc, int mins[2], int maxs[2] ) {
     if( mins[0] > rc->x ) {
         mins[0] = rc->x;
     } else if( maxs[0] < rc->x + rc->width ) {

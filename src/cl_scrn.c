@@ -322,7 +322,7 @@ void SCR_DebugGraph (float value, int color)
 SCR_DrawDebugGraph
 ==============
 */
-void SCR_DrawDebugGraph (void)
+static void SCR_DrawDebugGraph (void)
 {
     int     a, x, y, w, i, h;
     float   v;

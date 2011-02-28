@@ -683,6 +683,9 @@ fail:
     return NULL;
 }
 
+// silence GCC warning
+extern void gl_lightmap_changed( cvar_t *self );
+
 void gl_lightmap_changed( cvar_t *self ) {
     gl_static.world.scale = Cvar_ClampValue( gl_coloredlightmaps, 0, 1 );
     lm.comp = gl_static.world.scale ? GL_RGB : GL_LUMINANCE;

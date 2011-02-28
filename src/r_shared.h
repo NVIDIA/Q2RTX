@@ -141,6 +141,8 @@ image_t *IMG_ForHandle( qhandle_t h );
 qhandle_t R_RegisterSkin( const char *name );
 qhandle_t R_RegisterPic( const char *name );
 qhandle_t R_RegisterFont( const char *name );
+qerror_t _R_RegisterPic( const char *name, qhandle_t *handle );
+qerror_t _R_RegisterFont( const char *name, qhandle_t *handle );
 
 // these are implemented in [gl,sw]_images.c
 void IMG_Unload( image_t *image );
