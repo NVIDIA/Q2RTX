@@ -987,6 +987,7 @@ static void MVD_ParseServerData( mvd_t *mvd, int extrabits ) {
     char *string;
     int i, index;
     qerror_t ret;
+    edict_t *ent;
 
     // clear the leftover from previous level
     MVD_ClearState( mvd );
@@ -1096,6 +1097,11 @@ static void MVD_ParseServerData( mvd_t *mvd, int extrabits ) {
     for( i = 0; i < mvd->maxclients; i++ ) {
         set_player_name( mvd, i );
     }
+
+    // init world entity
+    ent = &mvd->edicts[0];
+    ent->solid = SOLID_BSP;
+    ent->inuse = qtrue;
 
     if( mvd->cm.cache ) {
         // get the spawn point for spectators
