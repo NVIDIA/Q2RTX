@@ -383,8 +383,25 @@ void CL_CheckForResend( void ) {
         cls.challenge, userinfo, tail );
 }
 
+static void CL_RecentIP_g( genctx_t *ctx ) {
+    netadr_t *a;
+    int i, j;
+
+    j = cls.recent_head - RECENT_ADDR;
+    if( j < 0 ) {
+        j = 0;
+    }
+    for( i = cls.recent_head - 1; i >= j; i-- ) {
+        a = &cls.recent_addr[i & RECENT_MASK];
+        if( a->type ) {
+            Prompt_AddMatch( ctx, NET_AdrToString( a ) );
+        }
+    }
+}
+
 static void CL_Connect_c( genctx_t *ctx, int argnum ) {
     if( argnum == 1 ) {
+        CL_RecentIP_g( ctx );
         Com_Address_g( ctx );
     } else if( argnum == 2 ) {
         if( !ctx->partial[0] || ( ctx->partial[0] == '3' && !ctx->partial[1] ) ) {
@@ -467,6 +484,32 @@ usage:
     Cvar_Set( "cl_paused", "0" );
     Cvar_Set( "sv_paused", "0" );
     Cvar_Set( "timedemo", "0" );
+}
+
+static void CL_FollowIP_f( void ) {
+    netadr_t *a;
+    int i, j;
+
+    if( Cmd_Argc() > 1 ) {
+        // optional second argument references less recent address
+        j = atoi( Cmd_Argv( 1 ) ) + 1;
+        clamp( j, 1, RECENT_ADDR );
+    } else {
+        j = 1;
+    }
+
+    i = cls.recent_head - j;
+    if( i < 0 ) {
+        Com_Printf( "No IP address to follow.\n" );
+        return;
+    }
+
+    a = &cls.recent_addr[i & RECENT_MASK];
+    if( a->type ) {
+        char *s = NET_AdrToString( a );
+        Com_Printf( "Following %s...\n", s );
+        Cbuf_InsertText( cmd_current, va( "connect %s\n", s ) );
+    }
 }
 
 static void CL_PassiveConnect_f( void ) {
@@ -681,6 +724,7 @@ static void CL_Disconnect_f( void ) {
 
 static void CL_ServerStatus_c( genctx_t *ctx, int argnum ) {
     if( argnum == 1 ) {
+        CL_RecentIP_g( ctx );
         Com_Address_g( ctx );
     }
 }
@@ -2525,6 +2569,7 @@ static const cmdreg_t c_client[] = {
     //{ "changing", CL_Changing_f },
     { "disconnect", CL_Disconnect_f },
     { "connect", CL_Connect_f, CL_Connect_c },
+    { "followip", CL_FollowIP_f },
     { "passive", CL_PassiveConnect_f },
     { "reconnect", CL_Reconnect_f },
     { "rcon", CL_Rcon_f, CL_Rcon_c },

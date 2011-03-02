@@ -1067,6 +1067,12 @@ serverstatus [address]::
     to the server, _address_ may be omitted, in this case current server is
     queried.
 
+followip [count]::
+    Attempts to connect to the IP address recently seen in chat messages.
+    Optional _count_ argument specifies how far to go back in message history
+    (it should be positive integer).  If _count_ is omitted, then the most
+    recent IP address is used.
+
 
 Incompatibilities
 -----------------

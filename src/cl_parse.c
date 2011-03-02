@@ -1369,6 +1369,40 @@ static void CL_CheckForVersion( const char *string ) {
 }
 #endif
 
+// attempt to scan out an IP address in dotted-quad notation and
+// add it into circular array of recent addresses
+static void CL_CheckForIP( const char *s ) {
+    unsigned b1, b2, b3, b4, port;
+    netadr_t *a;
+    char *p;
+
+    while( *s ) {
+        if( sscanf( s, "%3u.%3u.%3u.%3u", &b1, &b2, &b3, &b4 ) == 4 &&
+            b1 < 256 && b2 < 256 && b3 < 256 && b4 < 256 )
+        {
+            p = strchr( s, ':' );
+            if( p ) {
+                port = strtoul( p + 1, NULL, 10 );
+                if( port < 1024 || port > 65535 ) {
+                    break; // privileged or invalid port
+                }
+            } else {
+                port = PORT_SERVER;
+            }
+
+            a = &cls.recent_addr[cls.recent_head++ & RECENT_MASK];
+            a->type = NA_IP;
+            a->ip.u8[0] = b1;
+            a->ip.u8[1] = b2;
+            a->ip.u8[2] = b3;
+            a->ip.u8[3] = b4;
+            a->port = BigShort( port );
+            break;
+        }
+
+        s++;
+    }
+}
 
 /*
 =====================
@@ -1399,6 +1433,8 @@ static void CL_ParsePrint( void ) {
         CL_CheckForVersion( string );
     }
 #endif
+
+    CL_CheckForIP( string );
 
     // disable notify
     if( !cl_chat_notify->integer ) {

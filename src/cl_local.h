@@ -326,6 +326,12 @@ typedef struct client_static_s {
     qboolean    errorReceived;  // got an ICMP error from server
 #endif
 
+#define RECENT_ADDR 4
+#define RECENT_MASK (RECENT_ADDR-1)
+
+    netadr_t    recent_addr[RECENT_ADDR];
+    int         recent_head;
+
     struct {
         qhandle_t   file;               // file transfer from server
         char        temp[MAX_QPATH+4];  // account 4 bytes for .tmp suffix
