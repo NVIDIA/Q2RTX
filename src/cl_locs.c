@@ -109,7 +109,7 @@ void LOC_LoadLocations( void ) {
         s = p + 1;
     }
 
-    Com_Printf( "Loaded %i locations from %s\n", count, path );
+    Com_DPrintf( "Loaded %i locations from %s\n", count, path );
 
     FS_FreeFile( buffer );
 }
