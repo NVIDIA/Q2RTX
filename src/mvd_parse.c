@@ -65,13 +65,12 @@ static const char *MVD_ServerCommandString( int cmd ) {
 static void MVD_LinkEdict( mvd_t *mvd, edict_t *ent ) {
     int         index;
     mmodel_t    *cm;
-    int         x, zd, zu;
     bsp_t       *cache = mvd->cm.cache;
-    
+
     if( !cache ) {
         return;
     }
-    
+
     if( ent->s.solid == PACKED_BSP ) {
         index = ent->s.modelindex;
         if( index < 1 || index > cache->nummodels ) {
@@ -84,14 +83,7 @@ static void MVD_LinkEdict( mvd_t *mvd, edict_t *ent ) {
         VectorCopy( cm->maxs, ent->maxs );
         ent->solid = SOLID_BSP;
     } else if( ent->s.solid ) {
-        x = 8 * ( ent->s.solid & 31 );
-        zd = 8 * ( ( ent->s.solid >> 5 ) & 31 );
-        zu = 8 * ( ( ent->s.solid >> 10 ) & 63 ) - 32;
-
-        ent->mins[0] = ent->mins[1] = -x;
-        ent->maxs[0] = ent->maxs[1] = x;
-        ent->mins[2] = -zd;
-        ent->maxs[2] = zu;
+        MSG_UnpackSolid16( ent->s.solid, ent->mins, ent->maxs );
         ent->solid = SOLID_BBOX;
     } else {
         VectorClear( ent->mins );

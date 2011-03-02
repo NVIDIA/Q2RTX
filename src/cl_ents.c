@@ -46,23 +46,12 @@ static void CL_SetEntityState( const entity_state_t *state ) {
     if( state->solid && state->number != cl.frame.clientNum + 1 ) {
         cl.solidEntities[cl.numSolidEntities++] = ent;
         if( state->solid != PACKED_BSP ) {
-            int x, zd, zu;
-            
             // encoded bbox
             if( cl.esFlags & MSG_ES_LONGSOLID ) {
-                x = (state->solid & 255);
-                zd = ((state->solid>>8) & 255);
-                zu = ((state->solid>>16) & 65535) - 32768;
+                MSG_UnpackSolid32( state->solid, ent->mins, ent->maxs );
             } else {
-                x = 8*(state->solid & 31);
-                zd = 8*((state->solid>>5) & 31);
-                zu = 8*((state->solid>>10) & 63) - 32;
+                MSG_UnpackSolid16( state->solid, ent->mins, ent->maxs );
             }
-
-            ent->mins[0] = ent->mins[1] = -x;
-            ent->maxs[0] = ent->maxs[1] = x;
-            ent->mins[2] = -zd;
-            ent->maxs[2] = zu;
         }
     }
 

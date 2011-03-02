@@ -245,42 +245,6 @@ void PF_UnlinkEdict (edict_t *ent) {
     ent->area.prev = ent->area.next = NULL;
 }
 
-static int SV_CalcSolid( vec3_t mins, vec3_t maxs ) {
-    int    i, j, k;
-
-    // assume that x/y are equal and symetric
-    i = maxs[0] / 8;
-    clamp( i, 1, 31 );
-
-    // z is not symetric
-    j = ( -mins[2] ) / 8;
-    clamp( j, 1, 31 );
-
-    // and z maxs can be negative...
-    k = ( maxs[2] + 32 ) / 8;
-    clamp( k, 1, 63 );
-
-    return ( k << 10 ) | ( j << 5 ) | i;
-}
-
-static int SV_CalcSolid32( vec3_t mins, vec3_t maxs ) {
-    int    i, j, k;
-
-    // assume that x/y are equal and symetric
-    i = maxs[0];
-    clamp( i, 1, 255 );
-
-    // z is not symetric
-    j = -mins[2];
-    clamp( j, 1, 255 );
-
-    // and z maxs can be negative...
-    k = maxs[2] + 32768;
-    clamp( k, 1, 65535 );
-
-    return ( k << 16 ) | ( j << 8 ) | i;
-}
-
 void PF_LinkEdict (edict_t *ent) {
     areanode_t *node;
     server_entity_t *sent;
@@ -311,8 +275,8 @@ void PF_LinkEdict (edict_t *ent) {
             ent->s.solid = 0;
             sent->solid32 = 0;
         } else {
-            ent->s.solid = SV_CalcSolid( ent->mins, ent->maxs );
-            sent->solid32 = SV_CalcSolid32( ent->mins, ent->maxs );
+            ent->s.solid = MSG_PackSolid16( ent->mins, ent->maxs );
+            sent->solid32 = MSG_PackSolid32( ent->mins, ent->maxs );
         }
         break;
     case SOLID_BSP:
