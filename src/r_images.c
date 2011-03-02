@@ -1531,15 +1531,17 @@ static void get_image_dimensions( image_t *image,
     miptex_t mt;
     dpcx_t pcx;
     qhandle_t f;
+    unsigned w, h;
 
+    w = h = 0;
     if( fmt == im_wal ) {
         memcpy( ext, "wal", 4 );
         FS_FOpenFile( buffer, &f, FS_MODE_READ );
         if( f ) {
             len = FS_Read( &mt, sizeof( mt ), f );
             if( len == sizeof( mt ) ) {
-                image->width = LittleLong( mt.width );
-                image->height = LittleLong( mt.height );
+                w = LittleLong( mt.width );
+                h = LittleLong( mt.height );
             }
             FS_FCloseFile( f );
         }
@@ -1549,12 +1551,19 @@ static void get_image_dimensions( image_t *image,
         if( f ) {
             len = FS_Read( &pcx, sizeof( pcx ), f );
             if( len == sizeof( pcx ) ) {
-                image->width = LittleShort( pcx.xmax ) + 1;
-                image->height = LittleShort( pcx.ymax ) + 1;
+                w = LittleShort( pcx.xmax ) + 1;
+                h = LittleShort( pcx.ymax ) + 1;
             }
             FS_FCloseFile( f );
         }
     }
+
+    if( w < 1 || h < 1 || w > 512 || h > 512 || w * h > MAX_PALETTED_PIXELS ) {
+        return;
+    }
+
+    image->width = w;
+    image->height = h;
 }
 
 static void r_texture_formats_changed( cvar_t *self ) {
