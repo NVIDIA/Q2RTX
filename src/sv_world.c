@@ -316,8 +316,8 @@ void PF_LinkEdict (edict_t *ent) {
         }
         break;
     case SOLID_BSP:
-        ent->s.solid = 31;        // a solid_bbox will never create this value
-        sent->solid32 = 31;     // FIXME: use 255?
+        ent->s.solid = PACKED_BSP;      // a SOLID_BBOX will never create this value
+        sent->solid32 = PACKED_BSP;     // FIXME: use 255?
         break;
     default:
         ent->s.solid = 0;

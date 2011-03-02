@@ -72,7 +72,7 @@ static void MVD_LinkEdict( mvd_t *mvd, edict_t *ent ) {
         return;
     }
     
-    if( ent->s.solid == 31 ) {
+    if( ent->s.solid == PACKED_BSP ) {
         index = ent->s.modelindex;
         if( index < 1 || index > cache->nummodels ) {
             Com_WPrintf( "%s: entity %d: bad inline model index: %d\n",

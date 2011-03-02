@@ -45,7 +45,7 @@ static void CL_SetEntityState( const entity_state_t *state ) {
     // if entity is solid, decode mins/maxs and add to the list
     if( state->solid && state->number != cl.frame.clientNum + 1 ) {
         cl.solidEntities[cl.numSolidEntities++] = ent;
-        if( state->solid != 31 ) {
+        if( state->solid != PACKED_BSP ) {
             int x, zd, zu;
             
             // encoded bbox
@@ -1064,7 +1064,7 @@ void CL_GetEntitySoundOrigin( int entnum, vec3_t org ) {
     LerpVector( ent->prev.origin, ent->current.origin, cl.lerpfrac, org );
 
     // offset the origin for BSP models
-    if( ent->current.solid == 31 ) {
+    if( ent->current.solid == PACKED_BSP ) {
         cm = cl.model_clip[ent->current.modelindex];
         if( cm ) {
             VectorAvg( cm->mins, cm->maxs, mid );

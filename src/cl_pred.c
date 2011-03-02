@@ -92,7 +92,7 @@ static void CL_ClipMoveToEntities( vec3_t start, vec3_t mins, vec3_t maxs, vec3_
     for( i = 0; i < cl.numSolidEntities; i++ ) {
         ent = cl.solidEntities[i];
 
-        if( ent->current.solid == 31 ) {    
+        if( ent->current.solid == PACKED_BSP ) {
             // special value for bmodel
             cmodel = cl.model_clip[ent->current.modelindex];
             if( !cmodel )
@@ -144,7 +144,7 @@ static int CL_PointContents (vec3_t point) {
     for (i=0 ; i<cl.numSolidEntities ; i++) {
         ent = cl.solidEntities[i];
 
-        if (ent->current.solid != 31) // special value for bmodel
+        if (ent->current.solid != PACKED_BSP) // special value for bmodel
             continue;
 
         cmodel = cl.model_clip[ent->current.modelindex];
