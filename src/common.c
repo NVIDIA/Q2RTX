@@ -1207,11 +1207,7 @@ int BoxOnPlaneSide( vec3_t emins, vec3_t emaxs, cplane_t *p ) {
 ==============================================================================
 */
 
-static qboolean match_char( int c1, int c2, qboolean ignorecase ) {
-    if( c1 == '?' ) {
-        return !!c2; // match any char except NUL
-    }
-
+static qboolean match_raw( int c1, int c2, qboolean ignorecase ) {
     if( c1 != c2 ) {
         if( !ignorecase ) {
             return qfalse;
@@ -1232,14 +1228,32 @@ static qboolean match_char( int c1, int c2, qboolean ignorecase ) {
     return qtrue;
 }
 
-static qboolean match_part( const char *filter, const char *string, size_t len, qboolean ignorecase ) {
-    do {
-        int c1 = *filter++;
-        int c2 = *string++;
+static qboolean match_char( int c1, int c2, qboolean ignorecase ) {
+    if( c1 == '?' ) {
+        return !!c2; // match any char except NUL
+    }
 
-        if( !match_char( c1, c2, ignorecase ) ) {
+    return match_raw( c1, c2, ignorecase );
+}
+
+static qboolean match_part( const char *filter, const char *string, size_t len, qboolean ignorecase ) {
+    qboolean match;
+
+    do {
+        // skip over escape character
+        if( *filter == '\\' ) {
+            filter++;
+            match = match_raw( *filter, *string, ignorecase );
+        } else {
+            match = match_char( *filter, *string, ignorecase );
+        }
+
+        if( !match ) {
             return qfalse;
         }
+
+        filter++;
+        string++;
     } while( --len );
 
     return qtrue;
@@ -1268,13 +1282,21 @@ static const char *match_filter( const char *filter, const char *string, size_t 
 =================
 Com_WildCmpEx
 
-Wildcard compare.
-Returns non-zero if matches, zero otherwise.
+Wildcard compare. Returns true if string matches the pattern, false otherwise.
+
+- 'term' is handled as an additional filter terminator (besides NUL).
+- '*' matches any substring, including the empty string, but prefers longest
+possible substrings.
+- '?' matches any single character except NUL.
+- '\\' can be used to escape any character, including itself. any special
+characters lose their meaning in this case.
+
 =================
 */
 qboolean Com_WildCmpEx( const char *filter, const char *string, int term, qboolean ignorecase ) {
     const char *sub;
     size_t len;
+    qboolean match;
 
     while( *filter && *filter != term ) {
         if( *filter == '*' ) {
@@ -1283,29 +1305,45 @@ qboolean Com_WildCmpEx( const char *filter, const char *string, int term, qboole
                 filter++;
             } while( *filter == '*' );
 
-            // wildcard at the end matches everything
-            if( !*filter || *filter == term ) {
-                return qtrue;
+            // scan out filter part to match
+            for( sub = filter, len = 0; *filter && *filter != term && *filter != '*'; filter++, len++ ) {
+                // skip over escape character
+                if( *filter == '\\' ) {
+                    filter++;
+                    if( !*filter ) {
+                        break;
+                    }
+                }
             }
 
-            // scan out filter part to match
-            sub = filter; len = 0;
-            do {
-                filter++; len++;
-            } while( *filter && *filter != term && *filter != '*' );
+            // wildcard at the end matches everything
+            if( !len ) {
+                return qtrue;
+            }
 
             string = match_filter( sub, string, len, ignorecase );
             if( !string ) {
                 return qfalse;
             }
         } else {
-            int c1 = *filter++;
-            int c2 = *string++;
+            // skip over escape character
+            if( *filter == '\\' ) {
+                filter++;
+                if( !*filter ) {
+                    break;
+                }
+                match = match_raw( *filter, *string, ignorecase );
+            } else {
+                match = match_char( *filter, *string, ignorecase );
+            }
 
             // match single character
-            if( !match_char( c1, c2, ignorecase ) ) {
+            if( !match ) {
                 return qfalse;
             }
+
+            filter++;
+            string++;
         }
     }
 
