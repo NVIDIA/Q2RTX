@@ -980,6 +980,35 @@ untrigger [all] | [<command> <match>]::
     Removes the specified trigger. Specify _all_ to remove all triggers. When
     called without arguments, prints a list of registered triggers.
 
+
+Chat Filters
+~~~~~~~~~~~~
+
+Chat filters allow messages from annoying players to be ignored.  Each chat
+filter is composed from a _match_ string.  When a chat message is received from
+server, a list of chat filters is examined.  For each filter, _match_ is
+wildcard compared with the message, ignoring any unprintable characters.  If
+the message matches, it is silently dropped.
+
+ignoretext [match ...]::
+    Adds new chat filter. When called without arguments, prints a list of
+    registered filters.
+
+unignoretext [all] | [match ...]::
+    Removes the specified chat filter. Specify _all_ to remove all filters.
+    When called without arguments, prints a list of registered filters.
+
+ignorenick [nickname]::
+    Automatically composes and adds two chat filters: ‘_nickname_: *’ and
+    ‘(_nickname_): *’. This command supports nickname completion.  When called
+    without arguments, prints a list of registered filters.
+
+unignorenick [nickname]::
+    Automatically composes and removes two chat filters: ‘_nickname_: *’ and
+    ‘(_nickname_): *’. This command supports nickname completion. When called
+    without arguments, prints a list of registered filters.
+
+
 Draw Objects
 ~~~~~~~~~~~~
 

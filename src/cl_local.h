@@ -458,6 +458,7 @@ void CL_LoadState( load_state_t state );
 void CL_SendRcon( const netadr_t *adr, const char *pass, const char *cmd );
 const char *CL_Server_g( const char *partial, int argnum, int state );
 void CL_UpdateFrameTimes( void );
+qboolean CL_CheckForIgnore( const char *s );
 
 //
 // cl_input

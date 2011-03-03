@@ -1428,6 +1428,10 @@ static void CL_ParsePrint( void ) {
         return;
     }
 
+    if( CL_CheckForIgnore( string ) ) {
+        return;
+    }
+
 #if USE_AUTOREPLY
     if( !cls.demo.playback ) {
         CL_CheckForVersion( string );
