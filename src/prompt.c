@@ -146,6 +146,19 @@ qboolean Prompt_AddMatch( genctx_t *ctx, const char *s ) {
     return qtrue;
 }
 
+static qboolean needs_quotes( const char *s ) {
+    int c;
+
+    while( *s ) {
+        c = *s++;
+        if( c == '$' || c == ';' || !Q_isgraph( c ) ) {
+            return qtrue;
+        }
+    }
+
+    return qfalse;
+}
+
 /*
 ====================
 Prompt_CompleteCommand
@@ -252,7 +265,7 @@ void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash ) {
     if( ctx.count == 1 ) {
         // we have finished completion!
         s = Cmd_RawArgsFrom( currentArg + 1 ); 
-        if( COM_HasSpaces( matches[0] ) ) {
+        if( needs_quotes( matches[0] ) ) {
             pos += Q_concat( text, size, "\"", matches[0], "\" ", s, NULL );
         } else {
             pos += Q_concat( text, size, matches[0], " ", s, NULL );
