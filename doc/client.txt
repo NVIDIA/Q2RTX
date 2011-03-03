@@ -245,13 +245,25 @@ s_auto_focus::
       when it loses it
 
 al_driver::
-    Specifies the name of OpenAL driver to use. Default value is "openal32.dll"
-    on Win32, and "libopenal.so.1" on Linux.
+    Specifies the name of OpenAL driver to use. Default value is ‘openal32’
+    on Windows, and ‘libopenal.so.1’ on Linux.
 
 al_device::
     Specifies the name of OpenAL device to use. Format of this value depends on
-    OpenAL implementation. Default value is empty, which means default sound
-    output device is used.
+    your OpenAL implementation. Default value is empty, which means default
+    sound output device is used.
+
+TIP: On Windows, there are two well-known OpenAL implementations available:
+http://connect.creativelabs.com/openal/[OpenAL32] from Creative, with
+support for harware acceleration on certain audio cards, and an open source
+software implementation named http://kcat.strangesoft.net/openal.html[OpenAL Soft].
+Both should work with Q2PRO, but to get the results most perceptually close to
+original Quake 2 sound, I recommend using OpenAL Soft. Creative's
+implementation seems to perform some default effects processing even when not
+requested, and that makes it sound somewhat differently. With OpenAL Soft in
+stereo configuration I can't really tell if I'm using OpenAL or default Quake 2
+sound engine. Of course you can install both implementations and switch between
+them by changing ‘al_driver’ variable between ‘openal32’ and ‘soft_oal’.
 
 
 Graphical Console
