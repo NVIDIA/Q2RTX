@@ -78,11 +78,14 @@ QAL_IMP
 
     Sys_FreeLibrary( handle );
     handle = NULL;
+
+    al_driver->flags &= ~CVAR_SOUND;
+    al_device->flags &= ~CVAR_SOUND;
 }
 
 qboolean QAL_Init( void ) {
-    al_driver = Cvar_Get( "al_driver", DEFAULT_OPENAL_DRIVER, 0 );
-    al_device = Cvar_Get( "al_device", "", 0 );
+    al_driver = Cvar_Get( "al_driver", DEFAULT_OPENAL_DRIVER, CVAR_SOUND );
+    al_device = Cvar_Get( "al_device", "", CVAR_SOUND );
 
     Sys_LoadLibrary( al_driver->string, NULL, &handle );
     if( !handle ) {
@@ -113,6 +116,9 @@ QAL_IMP
         goto fail;
     }
     Com_DPrintf( "ok\n" );
+
+    al_driver->flags |= CVAR_SOUND;
+    al_device->flags |= CVAR_SOUND;
 
     return qtrue;
 
