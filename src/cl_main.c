@@ -1229,6 +1229,7 @@ static void cl_noskins_changed( cvar_t *self ) {
 static void CL_Name_g( genctx_t *ctx ) {
     int i;
     clientinfo_t *ci;
+    char buffer[MAX_CLIENT_NAME];
 
     if( cls.state < ca_loading ) {
         return;
@@ -1236,7 +1237,11 @@ static void CL_Name_g( genctx_t *ctx ) {
 
     for( i = 0; i < MAX_CLIENTS; i++ ) {
         ci = &cl.clientinfo[i];
-        if( ci->name[0] && !Prompt_AddMatch( ctx, ci->name ) ) {
+        if( !ci->name[0] ) {
+            continue;
+        }
+        Q_strlcpy( buffer, ci->name, sizeof( buffer ) );
+        if( COM_strclr( buffer ) && !Prompt_AddMatch( ctx, buffer ) ) {
             break;
         }
     }
