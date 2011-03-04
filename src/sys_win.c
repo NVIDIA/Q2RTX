@@ -29,6 +29,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 HINSTANCE   hGlobalInstance;
 
+#if USE_DBGHELP
+HANDLE      mainProcessThread;
+#endif
+
 cvar_t  *sys_basedir;
 cvar_t  *sys_libdir;
 cvar_t  *sys_homedir;
@@ -688,6 +692,9 @@ Sys_Init
 */
 void Sys_Init( void ) {
     OSVERSIONINFO vinfo;
+#if USE_DBGHELP
+    cvar_t *var;
+#endif
 
     timeBeginPeriod( 1 );
 
@@ -727,7 +734,18 @@ void Sys_Init( void ) {
     if( dedicated->integer || sys_viewlog->integer )
 #endif
         Sys_ConsoleInit();
+#endif // USE_SYSCON
+
+#if USE_DBGHELP
+    var = Cvar_Get( "sys_disablecrashdump", "0", CVAR_NOSET );
+
+    // install our exception filter
+    if( !var->integer ) {
+        mainProcessThread = GetCurrentThread();
+        SetUnhandledExceptionFilter( Sys_ExceptionFilter );
+    }
 #endif
+
 }
 
 /*
@@ -991,6 +1009,26 @@ MAIN
 ========================================================================
 */
 
+static BOOL fix_current_directory( void ) {
+    char *p;
+
+    if( !GetModuleFileNameA( NULL, currentDirectory, sizeof( currentDirectory ) - 1 ) ) {
+        return FALSE;
+    }
+
+    if( ( p = strrchr( currentDirectory, '\\' ) ) != NULL ) {
+        *p = 0;
+    }
+
+#ifndef UNDER_CE
+    if( !SetCurrentDirectoryA( currentDirectory ) ) {
+        return FALSE;
+    }
+#endif
+
+    return TRUE;
+}
+
 #if ( _MSC_VER >= 1400 )
 static void msvcrt_sucks( const wchar_t *expr, const wchar_t *func,
     const wchar_t *file, unsigned int line, uintptr_t unused ) {
@@ -998,25 +1036,10 @@ static void msvcrt_sucks( const wchar_t *expr, const wchar_t *func,
 #endif
 
 static int Sys_Main( int argc, char **argv ) {
-    char *p;
-
     // fix current directory to point to the basedir
-    if( !GetModuleFileNameA( NULL, currentDirectory, sizeof( currentDirectory ) - 1 ) ) {
+    if( !fix_current_directory() ) {
         return 1;
     }
-    if( ( p = strrchr( currentDirectory, '\\' ) ) != NULL ) {
-        *p = 0;
-    }
-#ifndef UNDER_CE
-    if( !SetCurrentDirectoryA( currentDirectory ) ) {
-        return 1;
-    }
-#endif
-
-#if USE_DBGHELP
-    // install our exception handler
-    __try {
-#endif
 
 #if ( _MSC_VER >= 1400 )
     // work around strftime given invalid format string
@@ -1037,12 +1060,6 @@ static int Sys_Main( int argc, char **argv ) {
             break;
         }
     }
-
-#if USE_DBGHELP
-    } __except( Sys_ExceptionHandler( GetExceptionCode(), GetExceptionInformation() ) ) {
-        return 1;
-    }
-#endif
 
     // may get here when our service stops
     return 0;

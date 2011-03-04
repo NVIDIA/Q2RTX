@@ -108,10 +108,10 @@ void Win_ModeChanged( void );
 
 #endif // USE_CLIENT
 
-extern HINSTANCE        hGlobalInstance;
+extern HINSTANCE hGlobalInstance;
 
 #if USE_DBGHELP
-DWORD Sys_ExceptionHandler( DWORD                   exceptionCode,
-                            LPEXCEPTION_POINTERS    exceptionInfo );
+extern HANDLE mainProcessThread;
+LONG WINAPI Sys_ExceptionFilter( LPEXCEPTION_POINTERS );
 #endif
 
