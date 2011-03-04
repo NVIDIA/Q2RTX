@@ -422,8 +422,12 @@ static inline int Q_charhex( int c ) {
 
 // converts quake char to ASCII equivalent
 static inline int Q_charascii( int c ) {
+    if( Q_isspace( c ) ) {
+        // white-space chars are output as-is
+        return c;
+    }
     c &= 127; // strip high bits
-    if( Q_isgraph( c ) || Q_isspace( c ) ) {
+    if( Q_isprint( c ) ) {
         return c;
     }
     switch( c ) {
