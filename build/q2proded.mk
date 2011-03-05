@@ -33,21 +33,33 @@ SRCFILES+=sv_ac.c
 endif
 
 ifdef MINGW
+
 SRCFILES+=sys_win.c
+
+ifdef USE_DBGHELP
+SRCFILES+=win_dbg.c
+endif
+
 LDFLAGS+=-mconsole
+
 ifdef WINCE
 SRCFILES+=win_ascii.c
 LDFLAGS+=-lwinsock -lmmtimer
 else
 LDFLAGS+=-lws2_32 -lwinmm -ladvapi32
 endif
+
 RESFILES+=q2proded.rc
-else
+
+else # MINGW
+
 SRCFILES+=sys_unix.c
+
 ifdef USE_DL
 LDFLAGS+=-ldl
 endif
-endif
+
+endif # !MINGW
 
 include $(SRCDIR)/build/target.mk
 

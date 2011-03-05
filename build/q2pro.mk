@@ -82,6 +82,10 @@ ifdef MINGW
 
 SRCFILES+=sys_win.c
 
+ifdef USE_DBGHELP
+SRCFILES+=win_dbg.c
+endif
+
 ifdef USE_REF
 SRCFILES+=vid_win.c
 endif
@@ -99,6 +103,7 @@ SRCFILES+=in_dx.c
 endif
 
 LDFLAGS+=-mwindows
+
 ifdef WINCE
 SRCFILES+=win_ascii.c
 LDFLAGS+=-lwinsock -lmmtimer

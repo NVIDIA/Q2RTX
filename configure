@@ -104,6 +104,7 @@ use_asm="???"
 use_baseq2="no"
 use_syscon="yes"
 use_winsvc="no"
+use_dbghelp="no"
 use_icmp="???"
 
 # constants
@@ -152,6 +153,8 @@ for opt do
     --enable-server) use_server="yes"
     ;;
     --enable-baseq2) use_baseq2="yes"
+    ;;
+    --enable-dbghelp) use_dbghelp="yes"
     ;;
     --disable-snddma) use_snddma="no"
     ;;
@@ -223,6 +226,7 @@ echo "  --disable-client       do not build graphical client"
 echo "  --enable-server        build dedicated server"
 echo "  --enable-baseq2        build baseq2 game module"
 echo "  --enable-mingw         enable Windows build"
+echo "  --enable-dbghelp       enable Windows crash dumps"
 echo "  --disable-snddma       disable DMA sound engine"
 echo "  --enable-openal        enable OpenAL sound engine"
 echo "  --enable-dsound        enable direct sound driver"
@@ -321,6 +325,7 @@ if [ "$mingw" = "yes" ]; then
         targetos="WinCE"
         use_syscon="no"
         use_winsvc="no"
+        use_dbghelp="no"
     else
         use_winsvc="yes"
         [ "$use_icmp" = "no" ] || use_icmp="yes"
@@ -658,6 +663,11 @@ fi
 if [ "$use_mvd_client" = "yes" ]; then
     echo "USE_MVD_CLIENT=yes" >> $config_mk
     echo "#define USE_MVD_CLIENT 1" >> $config_h
+fi
+
+if [ "$use_dbghelp" = "yes" ]; then
+    echo "USE_DBGHELP=yes" >> $config_mk
+    echo "#define USE_DBGHELP 1" >> $config_h
 fi
 
 [ "$use_syscon" = "yes" ] && echo "#define USE_SYSCON 1" >> $config_h
