@@ -834,7 +834,9 @@ static qerror_t BSP_SetParent( mnode_t *node, int key ) {
             return Q_ERR_INFINITE_LOOP;
         }
         child->parent = node;
-        BSP_SetParent( child, key );
+        if( BSP_SetParent( child, key ) ) {
+            return Q_ERR_INFINITE_LOOP;
+        }
 
         child = node->children[1];
         if( child->parent ) {
