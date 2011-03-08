@@ -34,6 +34,10 @@ SRCFILES+=cmd.c \
 	error.c \
 	fpu.c
 
+ifdef USE_TESTS
+SRCFILES+=tests.c
+endif
+
 ifdef USE_ZLIB
 LDFLAGS+=$(ZLIB_LDFLAGS)
 CFLAGS+=$(ZLIB_CFLAGS)

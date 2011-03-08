@@ -576,6 +576,10 @@ void        Com_FlushLogs( void );
 #define Com_DDDPrintf(...)
 #endif
 
+#if USE_TESTS
+void    Com_InitTests( void );
+#endif
+
 #ifdef _DEBUG
 extern cvar_t   *developer;
 #endif

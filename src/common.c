@@ -40,9 +40,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "io_sleep.h"
 #include "fpu.h"
 #include <setjmp.h>
-#if USE_ZLIB
-#include <zlib.h>
-#endif
 
 static jmp_buf  abortframe;     // an ERR_DROP occured, exit the entire frame
 
@@ -1663,50 +1660,6 @@ static void Com_Setenv_f( void ) {
 }
 #endif
 
-#ifdef _DEBUG
-
-/*
-=============
-Com_Error_f
-
-Just throw a fatal error to
-test error shutdown procedures
-=============
-*/
-static void Com_Error_f( void ) {
-    Com_Error( ERR_FATAL, "%s", Cmd_Argv( 1 ) );
-}
-
-static void Com_ErrorDrop_f( void ) {
-    Com_Error( ERR_DROP, "%s", Cmd_Argv( 1 ) );
-}
-
-static void Com_Freeze_f( void ) {
-    unsigned time, msec;
-    float seconds;
-
-    if( Cmd_Argc() < 2 ) {
-        Com_Printf( "Usage: %s <seconds>\n", Cmd_Argv( 0 ) );
-        return;
-    }
-
-    seconds = atof( Cmd_Argv( 1 ) );
-    if( seconds < 0 ) {
-        return;
-    }
-
-    time = Sys_Milliseconds();
-    msec = seconds * 1000;
-    while( Sys_Milliseconds() - time < msec )
-        ;
-}
-
-static void Com_Crash_f( void ) {
-    *( uint32_t * )0 = 0x123456;
-}
-
-#endif
-
 void Com_Address_g( genctx_t *ctx ) {
     int i;
     cvar_t *var;
@@ -1989,13 +1942,6 @@ void Qcommon_Init( int argc, char **argv ) {
 
     Com_AddEarlyCommands( qtrue );
 
-#ifdef _DEBUG
-    Cmd_AddCommand( "error", Com_Error_f );
-    Cmd_AddCommand( "errordrop", Com_ErrorDrop_f );
-    Cmd_AddCommand( "freeze", Com_Freeze_f );
-    Cmd_AddCommand( "crash", Com_Crash_f );
-#endif
-
     Cmd_AddCommand( "lasterror", Com_LastError_f );
 
     Cmd_AddCommand( "quit", Com_Quit_f );
@@ -2012,6 +1958,9 @@ void Qcommon_Init( int argc, char **argv ) {
     SV_Init();
 #if USE_CLIENT
     CL_Init();
+#endif
+#if USE_TESTS
+    Com_InitTests();
 #endif
 
 #if USE_SYSCON
