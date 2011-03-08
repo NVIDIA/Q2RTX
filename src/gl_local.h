@@ -85,6 +85,7 @@ extern glRefdef_t glr;
 typedef struct {
     int nodesVisible;
     int nodesDrawn;
+    int leavesDrawn;
     int facesMarked;
     int facesDrawn;
     int texSwitches;

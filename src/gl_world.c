@@ -432,6 +432,8 @@ static inline void GL_DrawLeaf( mleaf_t *leaf ) {
     for( face = leaf->firstleafface; face < last; face++ ) {
         (*face)->drawframe = glr.drawframe;
     }
+
+    c.leavesDrawn++;
 }
 
 static inline void GL_AddGenericFace( mface_t *face ) {

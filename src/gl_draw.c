@@ -318,6 +318,8 @@ void Draw_Stats( void ) {
 
     Draw_Stringf( x, y, "Nodes visible  : %i", c.nodesVisible ); y += 10;
     Draw_Stringf( x, y, "Nodes culled   : %i", c.nodesCulled ); y += 10;
+    Draw_Stringf( x, y, "Nodes drawn    : %i", c.nodesDrawn ); y += 10;
+    Draw_Stringf( x, y, "Leaves drawn   : %i", c.leavesDrawn ); y += 10;
     Draw_Stringf( x, y, "Faces drawn    : %i", c.facesDrawn ); y += 10;
     if( c.facesCulled ) {
         Draw_Stringf( x, y, "Faces culled   : %i", c.facesCulled ); y += 10;
