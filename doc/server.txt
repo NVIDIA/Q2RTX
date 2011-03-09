@@ -383,6 +383,36 @@ sys_forcegamelib::
     mod development.  Default value is empty (use normal search paths).
 
 
+Console Logging
+~~~~~~~~~~~~~~~
+
+logfile::
+    Specifies if console logging to file is enabled. Default value is 0.
+      - 0 — logging disabled
+      - 1 — logging enabled, overwrite previous file
+      - 2 — logging enabled, append to previous file
+
+NOTE: Log file is not automatically reopened when game directory is changed.
+
+logfile_flush::
+    Specifies if log file data is buffered in memory or flushed to disk
+    immediately. Default value is 0.
+      - 0 — buffered mode
+      - 1 — unbuffered mode
+
+logfile_name::
+    Specifies base name of the log file. Should not include any extension part
+    or path components. ‘logs/’ prefix and ‘.log’ suffix are automatically
+    appended.  Default value is ‘console’.
+
+logfile_prefix::
+    Specifies the time/date template each line of log file is prefixed with.
+    Default value is ‘[%Y-%m-%d %H:%M] ’. See strftime(3) manual page for
+    syntax description. In addition, the first ‘@’ character in the template,
+    if found, is replaced with a single character representing message type
+    (T — talk, D — developer, W — warning, E — error, N — notice, A — default).
+
+
 Miscellaneous
 ~~~~~~~~~~~~~
 
