@@ -227,7 +227,7 @@ static qerror_t MOD_LoadSP2( model_t *model, const void *rawdata, size_t length 
 
     Hunk_Begin( &model->pool, 0x10000 );
 
-    model->spriteframes = Model_Malloc( sizeof( mspriteframe_t ) * header.numframes );
+    model->spriteframes = MOD_Malloc( sizeof( mspriteframe_t ) * header.numframes );
     model->numframes = header.numframes;
 
     src_frame = ( dsp2frame_t * )( ( byte * )rawdata + sizeof( dsp2header_t ) );

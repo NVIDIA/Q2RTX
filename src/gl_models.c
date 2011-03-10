@@ -84,11 +84,11 @@ qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
 
     numindices = header.num_tris * 3;
 
-    model->meshes = Model_Malloc( sizeof( maliasmesh_t ) );
+    model->meshes = MOD_Malloc( sizeof( maliasmesh_t ) );
     model->nummeshes = 1;
 
     dst_mesh = model->meshes;
-    dst_mesh->indices = Model_Malloc( numindices * sizeof( uint32_t ) );
+    dst_mesh->indices = MOD_Malloc( numindices * sizeof( uint32_t ) );
     dst_mesh->numtris = header.num_tris;
     dst_mesh->numindices = numindices;
 
@@ -120,8 +120,8 @@ qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
         finalIndices[i] = numverts++;
     }
 
-    dst_mesh->verts = Model_Malloc( numverts * header.num_frames * sizeof( maliasvert_t ) );
-    dst_mesh->tcoords = Model_Malloc( numverts * sizeof( maliastc_t ) );
+    dst_mesh->verts = MOD_Malloc( numverts * header.num_frames * sizeof( maliasvert_t ) );
+    dst_mesh->tcoords = MOD_Malloc( numverts * sizeof( maliastc_t ) );
     dst_mesh->numverts = numverts;
 
     // load all skins
@@ -152,7 +152,7 @@ qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
     }
 
     // load all frames
-    model->frames = Model_Malloc( header.num_frames * sizeof( maliasframe_t ) );
+    model->frames = MOD_Malloc( header.num_frames * sizeof( maliasframe_t ) );
     model->numframes = header.num_frames;
 
     src_frame = ( dmd2frame_t * )( ( byte * )rawdata + header.ofs_frames );
@@ -257,8 +257,8 @@ qerror_t MOD_LoadMD3( model_t *model, const void *rawdata, size_t length ) {
     Hunk_Begin( &model->pool, 0x400000 );
     model->numframes = header.num_frames;
     model->nummeshes = header.num_meshes;
-    model->meshes = Model_Malloc( sizeof( maliasmesh_t ) * header.num_meshes );
-    model->frames = Model_Malloc( sizeof( maliasframe_t ) * header.num_frames );
+    model->meshes = MOD_Malloc( sizeof( maliasmesh_t ) * header.num_meshes );
+    model->frames = MOD_Malloc( sizeof( maliasframe_t ) * header.num_frames );
 
     rawend = ( byte * )rawdata + length;
     
@@ -312,9 +312,9 @@ qerror_t MOD_LoadMD3( model_t *model, const void *rawdata, size_t length ) {
         dst_mesh->numtris = numtris;
         dst_mesh->numindices = numtris * 3;
         dst_mesh->numverts = numverts;
-        dst_mesh->verts = Model_Malloc( sizeof( maliasvert_t ) * numverts * header.num_frames );
-        dst_mesh->tcoords = Model_Malloc( sizeof( maliastc_t ) * numverts );
-        dst_mesh->indices = Model_Malloc( sizeof( uint32_t ) * numtris * 3 );
+        dst_mesh->verts = MOD_Malloc( sizeof( maliasvert_t ) * numverts * header.num_frames );
+        dst_mesh->tcoords = MOD_Malloc( sizeof( maliastc_t ) * numverts );
+        dst_mesh->indices = MOD_Malloc( sizeof( uint32_t ) * numtris * 3 );
 
         // load all skins
         numskins = LittleLong( src_mesh->num_skins );

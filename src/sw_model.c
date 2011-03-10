@@ -178,7 +178,7 @@ qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
     Hunk_Begin( &model->pool, 0x400000 );
 
     // load triangle indices
-    model->tris = Model_Malloc( header.num_tris * sizeof( maliastri_t ) );
+    model->tris = MOD_Malloc( header.num_tris * sizeof( maliastri_t ) );
     model->numtris = header.num_tris; 
 
     src_tri = ( dmd2triangle_t * )( ( byte * )rawdata + header.ofs_tris );
@@ -199,7 +199,7 @@ qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
     }
 
     // load base s and t vertices
-    model->sts = Model_Malloc( header.num_st * sizeof( maliasst_t ) );
+    model->sts = MOD_Malloc( header.num_st * sizeof( maliasst_t ) );
     model->numsts = header.num_st;
 
     src_st = ( dmd2stvert_t * )( ( byte * )rawdata + header.ofs_st );
@@ -210,7 +210,7 @@ qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
     }
 
     // load the frames
-    model->frames = Model_Malloc( header.num_frames * sizeof( maliasframe_t ) );
+    model->frames = MOD_Malloc( header.num_frames * sizeof( maliasframe_t ) );
     model->numframes = header.num_frames;
     model->numverts = header.num_xyz;
 
@@ -222,7 +222,7 @@ qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
             dst_frame->translate[j] = LittleFloat( src_frame->translate[j] );
         }
         // verts are all 8 bit, so no swapping needed
-        dst_frame->verts = Model_Malloc( header.num_xyz * sizeof( maliasvert_t ) );
+        dst_frame->verts = MOD_Malloc( header.num_xyz * sizeof( maliasvert_t ) );
         
         // TODO: check normal indices
         memcpy( dst_frame->verts, src_frame->verts, header.num_xyz * sizeof( maliasvert_t ) );

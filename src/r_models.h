@@ -26,7 +26,7 @@ MODEL MANAGER
 =============================================================================
 */
 
-#define Model_Malloc( size )    Hunk_Alloc( &model->pool, size )
+#define MOD_Malloc( size )  Hunk_Alloc( &model->pool, size )
 
 // FIXME: MD3 has 256 limit
 #define MAX_ALIAS_SKINS     32
