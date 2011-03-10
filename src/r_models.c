@@ -253,9 +253,12 @@ static qerror_t MOD_LoadSP2( model_t *model, const void *rawdata, size_t length 
         dst_frame->origin_x = x;
         dst_frame->origin_y = y;
 
-        memcpy( buffer, src_frame->name, sizeof( buffer ) );
-        buffer[sizeof( buffer ) - 1] = 0;
-        dst_frame->image = IMG_Find( buffer, it_sprite );
+        if( !Q_memccpy( buffer, src_frame->name, 0, sizeof( buffer ) ) ) {
+            Com_WPrintf( "%s has bad frame name\n", model->name );
+            dst_frame->image = R_NOTEXTURE;
+        } else {
+            dst_frame->image = IMG_Find( buffer, it_sprite );
+        }
 
         src_frame++;
         dst_frame++;

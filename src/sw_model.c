@@ -233,8 +233,10 @@ qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
     // register all skins
     src_skin = ( char * )rawdata + header.ofs_skins;
     for( i = 0; i < header.num_skins; i++ ) {
-        memcpy( skinname, src_skin, sizeof( skinname ) );
-        skinname[sizeof( skinname ) - 1] = 0;
+        if( !Q_memccpy( skinname, src_skin, 0, sizeof( skinname ) ) ) {
+            ret = Q_ERR_STRING_TRUNCATED;
+            goto fail;
+        }
         model->skins[i] = IMG_Find( skinname, it_skin );
         src_skin += MD2_MAX_SKINNAME;
     }

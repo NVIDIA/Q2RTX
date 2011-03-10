@@ -1839,8 +1839,12 @@ void CL_RequestNextDownload ( void ) {
                 ofs_skins = LittleLong( pheader->ofs_skins );
 
                 while ( precache_model_skin < num_skins ) {
-                    Q_strlcpy( fn, ( char * )precache_model + ofs_skins +
-                        precache_model_skin * MD2_MAX_SKINNAME, sizeof( fn ) );
+                    if( !Q_memccpy( fn, ( char * )precache_model + ofs_skins +
+                        precache_model_skin * MD2_MAX_SKINNAME, 0, sizeof( fn ) ) )
+                    {
+                        // bad skin
+                        break;
+                    }
                     if ( !CL_CheckOrDownloadFile( fn ) ) {
                         precache_model_skin++;
                         return; // started a download
