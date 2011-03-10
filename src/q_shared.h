@@ -456,6 +456,7 @@ char *Q_strcasestr( const char *s1, const char *s2 );
 #endif
 
 char *Q_strchrnul( const char *s, int c );
+void *Q_memccpy( void *dst, const void *src, int c, size_t size );
 void Q_setenv( const char *name, const char *value );
 
 char *COM_SkipPath( const char *pathname );

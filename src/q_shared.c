@@ -874,6 +874,27 @@ char *Q_strchrnul( const char *s, int c ) {
     return ( char * )s;
 }
 
+/*
+===============
+Q_memccpy
+
+Copies no more than 'size' bytes stopping when 'c' character is found.
+Returns pointer to next byte after 'c' in 'dst', or NULL if 'c' was not found.
+===============
+*/
+void *Q_memccpy( void *dst, const void *src, int c, size_t size ) {
+    byte *d = dst;
+    const byte *s = src;
+
+    while( size-- ) {
+        if( ( *d++ = *s++ ) == c ) {
+            return d;
+        }
+    }
+
+    return NULL;
+}
+
 void Q_setenv( const char *name, const char *value ) {
 #ifdef _WIN32
     if( !value ) {
