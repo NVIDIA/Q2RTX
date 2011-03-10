@@ -761,6 +761,20 @@ void SV_ShutdownGameProgs (void) {
     Cvar_Set( "g_features", "0" );
 }
 
+static void *SV_LoadLibrary( const char *game ) {
+    char path[MAX_OSPATH];
+    size_t len;
+
+    len = Q_concat( path, sizeof( path ), sys_libdir->string,
+        PATH_SEP_STRING, game, PATH_SEP_STRING GAMELIB, NULL );
+    if( len >= sizeof( path ) ) {
+        Com_WPrintf( "Game library path length exceeded\n" );
+        return NULL;
+    }
+
+    return Sys_LoadLibrary( path, "GetGameAPI", &game_library );
+}
+
 /*
 ===============
 SV_InitGameProgs
@@ -770,7 +784,6 @@ Init the game subsystem for a new map
 */
 void SV_InitGameProgs ( void ) {
     game_import_t   import;
-    char            path[MAX_OSPATH];
     game_export_t   *(*entry)( game_import_t * ) = NULL;
 
     // unload anything we have now
@@ -784,15 +797,11 @@ void SV_InitGameProgs ( void ) {
     if( !entry ) {
         // try game first
         if( fs_game->string[0] ) {
-            Q_concat( path, sizeof( path ), sys_libdir->string,
-                PATH_SEP_STRING, fs_game->string, PATH_SEP_STRING GAMELIB, NULL );
-            entry = Sys_LoadLibrary( path, "GetGameAPI", &game_library );
+            entry = SV_LoadLibrary( fs_game->string );
         }
         if( !entry ) {
             // then try baseq2
-            Q_concat( path, sizeof( path ), sys_libdir->string,
-                PATH_SEP_STRING BASEGAME PATH_SEP_STRING GAMELIB, NULL );
-            entry = Sys_LoadLibrary( path, "GetGameAPI", &game_library );
+            entry = SV_LoadLibrary( BASEGAME );
             if( !entry ) {
                 Com_Error( ERR_DROP, "Failed to load game library" );
             }
