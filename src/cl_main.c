@@ -1678,10 +1678,35 @@ static void CL_PlaySound_f( void ) {
     }
 }
 
+/*
+=================
+CL_RegisterModels
 
+Registers main BSP file and collision models
+=================
+*/
 static void CL_RegisterModels( void ) {
-    int i;
+    qerror_t ret;
     char *name;
+    int i;
+
+    ret = BSP_Load( cl.configstrings[ CS_MODELS + 1 ], &cl.bsp );
+    if( cl.bsp == NULL ) {
+        Com_Error( ERR_DROP, "Couldn't load %s: %s",
+            cl.configstrings[ CS_MODELS + 1 ], Q_ErrorString( ret ) );
+    }
+
+#if USE_MAPCHECKSUM
+    if( cl.bsp->checksum != atoi( cl.configstrings[ CS_MAPCHECKSUM ] ) ) {
+        if( cls.demo.playback ) {
+            Com_WPrintf( "Local map version differs from demo: %i != %s\n",
+                cl.bsp->checksum, cl.configstrings[ CS_MAPCHECKSUM ] );
+        } else {
+            Com_Error( ERR_DROP, "Local map version differs from server: %i != %s",
+                cl.bsp->checksum, cl.configstrings[ CS_MAPCHECKSUM ] );
+        }
+    }
+#endif
 
     for ( i = 1; i < MAX_MODELS; i++ ) {
         name = cl.configstrings[CS_MODELS+i];
@@ -1980,20 +2005,8 @@ void CL_RequestNextDownload ( void ) {
 #endif
 
     if ( precache_check == ENV_CNT ) {
-        qerror_t ret = BSP_Load( cl.configstrings[ CS_MODELS + 1 ], &cl.bsp );
-        if( cl.bsp == NULL ) {
-            Com_Error( ERR_DROP, "Couldn't load %s: %s",
-                cl.configstrings[ CS_MODELS + 1 ], Q_ErrorString( ret ) );
-        }
-
-#if USE_MAPCHECKSUM
-        if ( cl.bsp->checksum != atoi( cl.configstrings[ CS_MAPCHECKSUM ] ) ) {
-            Com_Error ( ERR_DROP, "Local map version differs from server: %i != %s",
-                cl.bsp->checksum, cl.configstrings[ CS_MAPCHECKSUM ] );
-        }
-#endif
-        precache_check = ENV_CNT + 1;
         CL_RegisterModels();
+        precache_check = ENV_CNT + 1;
     }
 
     if ( precache_check > ENV_CNT && precache_check < TEXTURE_CNT ) {
@@ -2103,11 +2116,6 @@ static void CL_Precache_f( void ) {
     //Yet another hack to let old demos work
     //the old precache sequence
     if( cls.demo.playback ) {
-        qerror_t ret = BSP_Load( cl.configstrings[ CS_MODELS + 1 ], &cl.bsp );
-        if( cl.bsp == NULL ) {
-            Com_Error( ERR_DROP, "Couldn't load %s: %s",
-                cl.configstrings[ CS_MODELS + 1 ], Q_ErrorString( ret ) );
-        }
         CL_RegisterModels();
         CL_PrepRefresh();
         CL_LoadState( LOAD_SOUNDS );
@@ -2630,7 +2638,6 @@ void CL_RestartFilesystem( qboolean total ) {
 #endif
     if( cls_state >= ca_loading ) {
         CL_LoadState( LOAD_MAP );
-        CL_RegisterModels();
         CL_PrepRefresh();
         CL_LoadState( LOAD_SOUNDS );
         CL_RegisterSounds();
