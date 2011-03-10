@@ -447,8 +447,7 @@ extern cvar_t    *info_uf;
 void CL_Init (void);
 void CL_Quit_f (void);
 void CL_Disconnect( error_type_t type );
-void CL_RequestNextDownload (void);
-void CL_ResetPrecacheCheck( void );
+void CL_RegisterModels( void );
 void CL_Begin( void );
 void CL_CheckForResend( void );
 void CL_ClearState (void);
@@ -460,6 +459,14 @@ void CL_SendRcon( const netadr_t *adr, const char *pass, const char *cmd );
 const char *CL_Server_g( const char *partial, int argnum, int state );
 void CL_UpdateFrameTimes( void );
 qboolean CL_CheckForIgnore( const char *s );
+
+//
+// cl_download
+//
+void CL_Download_f( void );
+void CL_HandleDownload( const byte *data, int size, int percent );
+void CL_RequestNextDownload( void );
+void CL_ResetPrecacheCheck( void );
 
 //
 // cl_input
@@ -500,10 +507,8 @@ typedef struct {
 extern tent_params_t    te;
 extern mz_params_t      mz;
 
-qboolean CL_CheckOrDownloadFile( const char *filename );
 void CL_ParseServerMessage (void);
 void CL_LoadClientinfo (clientinfo_t *ci, const char *s);
-void CL_Download_f (void);
 
 //
 // cl_ents.c

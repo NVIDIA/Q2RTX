@@ -21,120 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "cl_local.h"
 
-//=============================================================================
-
-/*
-===============
-CL_CheckOrDownloadFile
-
-Returns qtrue if the file exists, otherwise it attempts
-to start a download from the server.
-===============
-*/
-qboolean CL_CheckOrDownloadFile( const char *path ) {
-    qhandle_t f;
-    size_t len;
-    ssize_t ret;
-
-    len = strlen( path );
-    if( len < 1 || len >= MAX_QPATH
-        || !Q_ispath( path[0] )
-        || !Q_ispath( path[ len - 1 ] )
-        || strchr( path, '\\' )
-        || strchr( path, ':' )
-        || !strchr( path, '/' )
-        || strstr( path, ".." ) )
-    {
-        Com_Printf( "Refusing to download file with invalid path.\n" );
-        return qtrue;
-    }
-
-    if( FS_FileExists( path ) ) {
-        // it exists, no need to download
-        return qtrue;
-    }
-
-#if USE_CURL
-    if( HTTP_QueueDownload( path ) ) {
-        //we return true so that the precache check keeps feeding us more files.
-        //since we have multiple HTTP connections we want to minimize latency
-        //and be constantly sending requests, not one at a time.
-        return qtrue;
-    }
-#endif
-
-    memcpy( cls.download.name, path, len + 1 );
-
-    // download to a temp name, and only rename
-    // to the real name when done, so if interrupted
-    // a runt file wont be left
-    memcpy( cls.download.temp, path, len );
-    memcpy( cls.download.temp + len, ".tmp", 5 );
-
-//ZOID
-    // check to see if we already have a tmp for this file, if so, try to resume
-    // open the file if not opened yet
-    ret = FS_FOpenFile( cls.download.temp, &f, FS_MODE_RDWR );
-    if( ret >= 0 ) { // it exists
-        cls.download.file = f;
-        // give the server an offset to start the download
-        Com_Printf( "Resuming %s\n", cls.download.name );
-        CL_ClientCommand( va( "download \"%s\" %d", cls.download.name, (int)ret ) );
-    } else if( ret == Q_ERR_NOENT ) { // it doesn't exist
-        Com_Printf( "Downloading %s\n", cls.download.name );
-        CL_ClientCommand( va( "download \"%s\"", cls.download.name ) );
-    } else { // error happened
-        Com_EPrintf( "Couldn't open %s for appending: %s\n", cls.download.temp,
-            Q_ErrorString( ret ) );
-        return qtrue;
-    }
-
-    return qfalse;
-}
-
-/*
-===============
-CL_Download_f
-
-Request a download from the server
-===============
-*/
-void CL_Download_f( void ) {
-    char *path;
-
-    if( cls.state < ca_connected ) {
-        Com_Printf( "Must be connected to a server.\n" );
-        return;
-    }
-    if( !allow_download->integer ) {
-        Com_Printf( "Downloading is disabled.\n" );
-        return;
-    }
-
-    if( Cmd_Argc() != 2 ) {
-        Com_Printf( "Usage: download <filename>\n" );
-        return;
-    }
-
-    if( cls.download.temp[0] ) {
-        Com_Printf( "Already downloading.\n" );
-        if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO ) {
-            Com_Printf( "Try using 'stopdl' command to abort the download.\n" );
-        }
-        return;
-    }
-
-    path = Cmd_Argv( 1 );
-
-    if( FS_FileExists( path ) ) {
-        Com_Printf( "%s already exists.\n", path );
-        return;
-    }
-
-    CL_CheckOrDownloadFile( path );
-}
-
-
 /*
 =====================
 CL_ParseDownload
@@ -144,7 +30,7 @@ A download message has been received from the server
 */
 static void CL_ParseDownload( void ) {
     int size, percent;
-    qerror_t ret;
+    byte *data;
 
     if( !cls.download.temp[0] ) {
         Com_Error( ERR_DROP, "%s: no download requested", __func__ );
@@ -154,16 +40,8 @@ static void CL_ParseDownload( void ) {
     size = MSG_ReadShort();
     percent = MSG_ReadByte();
     if( size == -1 ) {
-        if( !percent ) {
-            Com_Printf( "Server was unable to send this file.\n" );
-        } else {
-            Com_Printf( "Server stopped the download.\n" );
-        }
-        if( cls.download.file ) {
-            // if here, we tried to resume a file but the server said no
-            FS_FCloseFile( cls.download.file );
-        }
-        goto another;
+        CL_HandleDownload( NULL, size, percent );
+        return;
     }
 
     if( size < 0 ) {
@@ -174,43 +52,10 @@ static void CL_ParseDownload( void ) {
         Com_Error( ERR_DROP, "%s: read past end of message", __func__ );
     }
 
-    // open the file if not opened yet
-    if( !cls.download.file ) {
-        ret = FS_FOpenFile( cls.download.temp, &cls.download.file, FS_MODE_WRITE );
-        if( !cls.download.file ) {
-            msg_read.readcount += size;
-            Com_EPrintf( "Couldn't open %s for writing: %s\n",
-                cls.download.temp, Q_ErrorString( ret ) );
-            goto another;
-        }
-    }
-
-    FS_Write( msg_read.data + msg_read.readcount, size, cls.download.file );
+    data = msg_read.data + msg_read.readcount;
     msg_read.readcount += size;
-    
-    if( percent != 100 ) {
-        // request next block
-        // change display routines by zoid
-        cls.download.percent = percent;
 
-        CL_ClientCommand( "nextdl" );
-    } else {
-        FS_FCloseFile( cls.download.file );
-
-        // rename the temp file to it's final name
-        ret = FS_RenameFile( cls.download.temp, cls.download.name );
-        if( ret ) {
-            Com_EPrintf( "Couldn't rename %s to %s: %s\n",
-                cls.download.temp, cls.download.name, Q_ErrorString( ret ) );
-        }
-
-        Com_Printf( "Downloaded successfully.\n" );
-
-another:
-        // get another file if needed
-        memset( &cls.download, 0, sizeof( cls.download ) );
-        CL_RequestNextDownload();
-    }
+    CL_HandleDownload( data, size, percent );
 }
 
 /*
