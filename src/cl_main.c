@@ -2061,29 +2061,7 @@ void CL_RequestNextDownload ( void ) {
     }
 #endif
 
-    CL_PrepRefresh ();
-
-    CL_LoadState( LOAD_SOUNDS );
-    CL_RegisterSounds ();
-
-    LOC_LoadLocations();
-    
-    CL_LoadState( LOAD_FINISH );
-
-    CL_ClientCommand( va( "begin %i\n", precache_spawncount ) );
-
-    Cvar_FixCheats();
-
-    CL_UpdateGunSetting();
-    CL_UpdateBlendSetting();
-    CL_UpdateGibSetting();
-    CL_UpdateFootstepsSetting();
-    CL_UpdatePredictSetting();
-#if USE_FPS
-    CL_UpdateRateSetting();
-#endif
-
-    cls.state = ca_precached;
+    CL_Begin();
 }
 
 void CL_ResetPrecacheCheck( void ) {
@@ -2093,6 +2071,35 @@ void CL_ResetPrecacheCheck( void ) {
         precache_model = NULL;
     }
     precache_model_skin = -1;
+}
+
+/*
+=================
+CL_Begin
+
+Called after all downloads are done. Not used for demos.
+=================
+*/
+void CL_Begin( void ) {
+    Cvar_FixCheats();
+
+    CL_PrepRefresh ();
+    CL_LoadState( LOAD_SOUNDS );
+    CL_RegisterSounds ();
+    LOC_LoadLocations();
+    CL_LoadState( LOAD_FINISH );
+    cls.state = ca_precached;
+
+    CL_ClientCommand( va( "begin %i\n", precache_spawncount ) );
+
+    CL_UpdateGunSetting();
+    CL_UpdateBlendSetting();
+    CL_UpdateGibSetting();
+    CL_UpdateFootstepsSetting();
+    CL_UpdatePredictSetting();
+#if USE_FPS
+    CL_UpdateRateSetting();
+#endif
 }
 
 /*
@@ -2113,8 +2120,7 @@ static void CL_Precache_f( void ) {
 
     S_StopAllSounds();
 
-    //Yet another hack to let old demos work
-    //the old precache sequence
+    // demos use different precache sequence
     if( cls.demo.playback ) {
         CL_RegisterModels();
         CL_PrepRefresh();
