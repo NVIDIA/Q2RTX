@@ -557,19 +557,9 @@ done:
             while( precache_tex < cl.bsp->numtexinfo ) {
                 char *texname = cl.bsp->texinfo[ precache_tex++ ].name;
 
-                // check if 32-bit replacements are present
-                Q_concat( fn, sizeof( fn ), "textures/", texname, ".png", NULL );
-                if( !FS_FileExists( fn ) ) {
-                    Q_concat( fn, sizeof( fn ), "textures/", texname, ".jpg", NULL );
-                    if( !FS_FileExists( fn ) ) {
-                        Q_concat( fn, sizeof( fn ), "textures/", texname, ".tga", NULL );
-                        if( !FS_FileExists( fn ) ) {
-                            Q_concat( fn, sizeof( fn ), "textures/", texname, ".wal", NULL );
-                            if( !CL_CheckOrDownloadFile( fn ) ) {
-                                return; // started a download
-                            }
-                        }
-                    }
+                Q_concat( fn, sizeof( fn ), "textures/", texname, ".wal", NULL );
+                if( !CL_CheckOrDownloadFile( fn ) ) {
+                    return; // started a download
                 }
             }
         }
