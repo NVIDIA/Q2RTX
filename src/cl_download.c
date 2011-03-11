@@ -207,7 +207,7 @@ static int precache_model_skin;
 static void *precache_model; // used for skin checking in alias models
 static int precache_sexed_sounds[MAX_SOUNDS];
 static int precache_sexed_total;
-static int precache_sexed_index;
+static int precache_player_index;
 
 #define PLAYER_MULT 6
 
@@ -491,16 +491,19 @@ done:
                         precache_check = CS_PLAYERSKINS + i * PLAYER_MULT + 1;
                         return; // started a download
                     }
-                    n++;
                     /*FALL THROUGH*/
 
-                case 1: // weapon model
-                    Q_concat( fn, sizeof( fn ), "players/", model, "/weapon.md2", NULL );
-                    if( !CL_CheckOrDownloadFile( fn ) ) {
-                        precache_check = CS_PLAYERSKINS + i * PLAYER_MULT + 2;
-                        return; // started a download
+                case 1: // weapon models
+                    while( precache_player_index < cl.numWeaponModels ) {
+                        p = cl.weaponModels[ precache_player_index++ ];
+
+                        Q_concat( fn, sizeof( fn ), "players/", model, "/", p, NULL );
+                        if( !CL_CheckOrDownloadFile( fn ) ) {
+                            precache_check = CS_PLAYERSKINS + i * PLAYER_MULT + 1;
+                            return; // started a download
+                        }
                     }
-                    n++;
+                    precache_player_index = 0;
                     /*FALL THROUGH*/
 
                 case 2: // weapon skin
@@ -509,7 +512,6 @@ done:
                         precache_check = CS_PLAYERSKINS + i * PLAYER_MULT + 3;
                         return; // started a download
                     }
-                    n++;
                     /*FALL THROUGH*/
 
                 case 3: // skin
@@ -518,7 +520,6 @@ done:
                         precache_check = CS_PLAYERSKINS + i * PLAYER_MULT + 4;
                         return; // started a download
                     }
-                    n++;
                     /*FALL THROUGH*/
 
                 case 4: // skin_i
@@ -527,12 +528,11 @@ done:
                         precache_check = CS_PLAYERSKINS + i * PLAYER_MULT + 5;
                         return; // started a download
                     }
-                    n++;
                     /*FALL THROUGH*/
 
                 case 5: // sexed sounds
-                    while( precache_sexed_index < precache_sexed_total ) {
-                        n = precache_sexed_sounds[ precache_sexed_index++ ];
+                    while( precache_player_index < precache_sexed_total ) {
+                        n = precache_sexed_sounds[ precache_player_index++ ];
                         p = cl.configstrings[ CS_SOUNDS + n ];
 
                         if( *p == '*' ) {
@@ -542,12 +542,12 @@ done:
                             }
                         }
                     }
+                    precache_player_index = 0;
                     break;
                 }
 
                 // move on to next model
                 precache_check = CS_PLAYERSKINS + ( i + 1 ) * PLAYER_MULT;
-                precache_sexed_index = 0;
             }
         }
         // precache phase completed
@@ -623,6 +623,6 @@ void CL_ResetPrecacheCheck( void ) {
     }
     precache_model_skin = -1;
     precache_sexed_total = 0;
-    precache_sexed_index = 0;
+    precache_player_index = 0;
 }
 
