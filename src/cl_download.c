@@ -415,11 +415,16 @@ done:
             while( precache_check < CS_SOUNDS + MAX_SOUNDS &&
                 cl.configstrings[ precache_check ][ 0 ] )
             {
-                if( cl.configstrings[ precache_check ][ 0 ] == '*' ) {
-                    precache_check++;
+                char *sndname = cl.configstrings[ precache_check++ ];
+
+                if( *sndname == '*' ) {
                     continue;
                 }
-                Q_concat( fn, sizeof( fn ), "sound/", cl.configstrings[ precache_check++ ], NULL );
+                if( *sndname == '#' ) {
+                    Q_strlcpy( fn, sndname + 1, sizeof( fn ) );
+                } else {
+                    Q_concat( fn, sizeof( fn ), "sound/", sndname, NULL );
+                }
                 if( !CL_CheckOrDownloadFile( fn ) )
                     return; // started a download
             }
