@@ -1805,6 +1805,8 @@ static void CL_Precache_f( void ) {
 
     S_StopAllSounds();
 
+    CL_RegisterVWepModels();
+
     // demos use different precache sequence
     if( cls.demo.playback ) {
         CL_RegisterModels();

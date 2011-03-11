@@ -270,6 +270,36 @@ static void V_TestLights (void) {
 
 //===================================================================
 
+void CL_RegisterVWepModels( void ) {
+    int         i;
+    char        *name;
+
+    cl.numWeaponModels = 1;
+    strcpy( cl.weaponModels[0], "weapon.md2" );
+
+    // only default model when vwep is off
+    if( !cl_vwep->integer ) {
+        return;
+    }
+
+    for( i = 2; i < MAX_MODELS; i++ ) {
+        name = cl.configstrings[ CS_MODELS + i ];
+        if( !name[0] ) {
+            break;
+        }
+        if( name[0] != '#' ) {
+            continue;
+        }
+
+        // special player weapon model
+        strcpy( cl.weaponModels[cl.numWeaponModels++], name + 1 );
+
+        if( cl.numWeaponModels == MAX_CLIENTWEAPONMODELS ) {
+            break;
+        }
+    }
+}
+
 /*
 =================
 CL_PrepRefresh
@@ -296,22 +326,15 @@ void CL_PrepRefresh (void) {
 
     CL_RegisterTEntModels ();
 
-    cl.numWeaponModels = 1;
-    strcpy(cl.weaponModels[0], "weapon.md2");
-
     for (i=2 ; i<MAX_MODELS ; i++) {
         name = cl.configstrings[CS_MODELS+i];
         if( !name[0] ) {
             break;
         }
-        if (name[0] == '#') {
-            // special player weapon model
-            if (cl.numWeaponModels < MAX_CLIENTWEAPONMODELS && cl_vwep->integer) {
-                strcpy( cl.weaponModels[cl.numWeaponModels++], name + 1 );
-            }
-        }  else {
-            cl.model_draw[i] = R_RegisterModel( name );
+        if( name[0] == '#' ) {
+            continue;
         }
+        cl.model_draw[i] = R_RegisterModel( name );
     }
 
     CL_LoadState( LOAD_IMAGES );

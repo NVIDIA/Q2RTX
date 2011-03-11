@@ -540,6 +540,7 @@ void V_AddLight (vec3_t org, float intensity, float r, float g, float b);
 #if USE_LIGHTSTYLES
 void V_AddLightStyle (int style, vec4_t value);
 #endif
+void CL_RegisterVWepModels( void );
 void CL_PrepRefresh (void);
 void CL_UpdateBlendSetting( void );
 
