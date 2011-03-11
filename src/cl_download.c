@@ -273,6 +273,7 @@ void CL_RequestNextDownload ( void ) {
                     precache_check++;
                     continue;
                 }
+
                 if( !precache_model ) {
                     length = FS_LoadFile( cl.configstrings[ precache_check ], ( void ** )&precache_model );
                     if( !precache_model ) {
@@ -280,28 +281,22 @@ void CL_RequestNextDownload ( void ) {
                         precache_check++;
                         continue; // couldn't load it
                     }
+
                     pheader = ( dmd2header_t * )precache_model;
                     if( length < sizeof( *pheader ) ||
                         LittleLong( pheader->ident ) != MD2_IDENT ||
                         LittleLong( pheader->version ) != MD2_VERSION )
                     {
                         // not an alias model
-                        FS_FreeFile( precache_model );
-                        precache_model = NULL;
-                        precache_model_skin = 0;
-                        precache_check++;
-                        continue;
+                        goto done;
                     }
+
                     num_skins = LittleLong( pheader->num_skins );
                     ofs_skins = LittleLong( pheader->ofs_skins );
                     end_skins = ofs_skins + num_skins * MD2_MAX_SKINNAME;
                     if( num_skins > MD2_MAX_SKINS || end_skins < ofs_skins || end_skins > length ) {
                         // bad alias model
-                        FS_FreeFile( precache_model );
-                        precache_model = NULL;
-                        precache_model_skin = 0;
-                        precache_check++;
-                        continue;
+                        goto done;
                     }
                 }
 
@@ -313,8 +308,8 @@ void CL_RequestNextDownload ( void ) {
                     if( !Q_memccpy( fn, ( char * )precache_model + ofs_skins +
                         precache_model_skin * MD2_MAX_SKINNAME, 0, sizeof( fn ) ) )
                     {
-                        // bad skin
-                        break;
+                        // bad alias model
+                        goto done;
                     }
                     if( !CL_CheckOrDownloadFile( fn ) ) {
                         precache_model_skin++;
@@ -322,6 +317,8 @@ void CL_RequestNextDownload ( void ) {
                     }
                     precache_model_skin++;
                 }
+
+done:
                 FS_FreeFile( precache_model );
                 precache_model = NULL;
                 precache_model_skin = 0;
