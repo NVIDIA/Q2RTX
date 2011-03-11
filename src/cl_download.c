@@ -205,8 +205,11 @@ static int precache_check; // for autodownload of precache items
 static int precache_tex;
 static int precache_model_skin;
 static void *precache_model; // used for skin checking in alias models
+static int precache_sexed_sounds[MAX_SOUNDS];
+static int precache_sexed_total;
+static int precache_sexed_index;
 
-#define PLAYER_MULT 5
+#define PLAYER_MULT 6
 
 // ENV_CNT is map load, ENV_CNT+1 is first env map
 #define ENV_CNT (CS_PLAYERSKINS + MAX_CLIENTS * PLAYER_MULT)
@@ -394,6 +397,18 @@ done:
     }
 
     if( precache_check >= CS_SOUNDS && precache_check < CS_SOUNDS + MAX_SOUNDS ) {
+        if( precache_check == CS_SOUNDS ) {
+            int i;
+
+            // find sexed sounds
+            precache_sexed_total = 0;
+            for( i = 1; i < MAX_SOUNDS; i++ ) {
+                if( cl.configstrings[ CS_SOUNDS + i ][ 0 ] == '*' ) {
+                    precache_sexed_sounds[precache_sexed_total++] = i;
+                }
+            }
+        }
+
         if( allow_download_sounds->integer ) {
             if( precache_check == CS_SOUNDS )
                 precache_check++; // zero is blank
@@ -465,7 +480,7 @@ done:
                     *skin = 0;
 
                 switch( n ) {
-                case 0:   // model
+                case 0: // model
                     Q_concat( fn, sizeof( fn ), "players/", model, "/tris.md2", NULL );
                     if( !CL_CheckOrDownloadFile( fn ) ) {
                         precache_check = CS_PLAYERSKINS + i * PLAYER_MULT + 1;
@@ -474,7 +489,7 @@ done:
                     n++;
                     /*FALL THROUGH*/
 
-                case 1:   // weapon model
+                case 1: // weapon model
                     Q_concat( fn, sizeof( fn ), "players/", model, "/weapon.md2", NULL );
                     if( !CL_CheckOrDownloadFile( fn ) ) {
                         precache_check = CS_PLAYERSKINS + i * PLAYER_MULT + 2;
@@ -483,7 +498,7 @@ done:
                     n++;
                     /*FALL THROUGH*/
 
-                case 2:   // weapon skin
+                case 2: // weapon skin
                     Q_concat( fn, sizeof( fn ), "players/", model, "/weapon.pcx", NULL );
                     if( !CL_CheckOrDownloadFile( fn ) ) {
                         precache_check = CS_PLAYERSKINS + i * PLAYER_MULT + 3;
@@ -492,7 +507,7 @@ done:
                     n++;
                     /*FALL THROUGH*/
 
-                case 3:   // skin
+                case 3: // skin
                     Q_concat( fn, sizeof( fn ), "players/", model, "/", skin, ".pcx", NULL );
                     if( !CL_CheckOrDownloadFile( fn ) ) {
                         precache_check = CS_PLAYERSKINS + i * PLAYER_MULT + 4;
@@ -501,15 +516,33 @@ done:
                     n++;
                     /*FALL THROUGH*/
 
-                case 4:   // skin_i
+                case 4: // skin_i
                     Q_concat( fn, sizeof( fn ), "players/", model, "/", skin, "_i.pcx", NULL );
                     if( !CL_CheckOrDownloadFile( fn ) ) {
                         precache_check = CS_PLAYERSKINS + i * PLAYER_MULT + 5;
                         return; // started a download
                     }
-                    // move on to next model
-                    precache_check = CS_PLAYERSKINS + ( i + 1 ) * PLAYER_MULT;
+                    n++;
+                    /*FALL THROUGH*/
+
+                case 5: // sexed sounds
+                    while( precache_sexed_index < precache_sexed_total ) {
+                        n = precache_sexed_sounds[ precache_sexed_index++ ];
+                        p = cl.configstrings[ CS_SOUNDS + n ];
+
+                        if( *p == '*' ) {
+                            Q_concat( fn, sizeof( fn ), "players/", model, "/", p + 1, NULL );
+                            if( !CL_CheckOrDownloadFile( fn ) ) {
+                                return; // started a download
+                            }
+                        }
+                    }
+                    break;
                 }
+
+                // move on to next model
+                precache_check = CS_PLAYERSKINS + ( i + 1 ) * PLAYER_MULT;
+                precache_sexed_index = 0;
             }
         }
         // precache phase completed
@@ -584,5 +617,7 @@ void CL_ResetPrecacheCheck( void ) {
         precache_model = NULL;
     }
     precache_model_skin = -1;
+    precache_sexed_total = 0;
+    precache_sexed_index = 0;
 }
 
