@@ -1199,6 +1199,13 @@ static void CL_Skins_f( void ) {
     char *s;
     clientinfo_t *ci;
 
+    if( cls.state < ca_loading ) {
+        Com_Printf( "Must be in a level to load skins.\n" );
+        return;
+    }
+
+    CL_RegisterVWepModels();
+
     for( i = 0 ; i < MAX_CLIENTS; i++ ) {
         s = cl.configstrings[ CS_PLAYERSKINS + i ];
         if( !s[0] )
@@ -1216,6 +1223,10 @@ static void cl_noskins_changed( cvar_t *self ) {
     char *s;
     clientinfo_t *ci;
 
+    if( cls.state < ca_loading ) {
+        return;
+    }
+
     for( i = 0 ; i < MAX_CLIENTS; i++ ) {
         s = cl.configstrings[ CS_PLAYERSKINS + i ];
         if( !s[0] )
@@ -1223,6 +1234,15 @@ static void cl_noskins_changed( cvar_t *self ) {
         ci = &cl.clientinfo[i];
         CL_LoadClientinfo( ci, s );
     }
+}
+
+static void cl_vwep_changed( cvar_t *self ) {
+    if( cls.state < ca_loading ) {
+        return;
+    }
+
+    CL_RegisterVWepModels();
+    cl_noskins_changed( self );
 }
 
 static void CL_Name_g( genctx_t *ctx ) {
@@ -2627,6 +2647,7 @@ static void CL_InitLocal ( void ) {
     gender_auto = Cvar_Get ( "gender_auto", "1", CVAR_ARCHIVE );
 
     cl_vwep = Cvar_Get ( "cl_vwep", "1", CVAR_ARCHIVE );
+    cl_vwep->changed = cl_vwep_changed;
 
     //
     // userinfo
