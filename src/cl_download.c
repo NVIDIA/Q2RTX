@@ -202,12 +202,10 @@ Runs precache check and dispatches downloads.
 */
 
 static int precache_check; // for autodownload of precache items
-static int precache_tex;
-static int precache_model_skin;
+static int precache_index; // generic index for sub-checks
 static void *precache_model; // used for skin checking in alias models
 static int precache_sexed_sounds[MAX_SOUNDS];
 static int precache_sexed_total;
-static int precache_player_index;
 
 #define PLAYER_MULT 6
 
@@ -229,6 +227,7 @@ void CL_RequestNextDownload ( void ) {
     //ZOID
     if( precache_check == CS_MODELS ) { // confirm map
         precache_check = CS_MODELS + 2; // 0 isn't used
+        precache_index = -1; // check for models
         if( allow_download_maps->integer )
             if( !CL_CheckOrDownloadFile( cl.configstrings[ CS_MODELS + 1 ] ) )
                 return; // started a download
@@ -236,7 +235,7 @@ void CL_RequestNextDownload ( void ) {
 
     if( precache_check >= CS_MODELS && precache_check < CS_MODELS + MAX_MODELS ) {
         if( allow_download_models->integer ) {
-            if( precache_model_skin == -1 ) {
+            if( precache_index == -1 ) {
                 // checking for models
                 while( precache_check < CS_MODELS + MAX_MODELS &&
                     cl.configstrings[ precache_check ][ 0 ] )
@@ -253,7 +252,7 @@ void CL_RequestNextDownload ( void ) {
                     }
                     precache_check++;
                 }
-                precache_model_skin = 0;
+                precache_index = 0; // check for skins
                 precache_check = CS_MODELS + 2; // 0 isn't used
 #if USE_CURL
                 if( HTTP_DownloadsPending() ) {
@@ -284,7 +283,7 @@ void CL_RequestNextDownload ( void ) {
                 if( !precache_model ) {
                     length = FS_LoadFile( cl.configstrings[ precache_check ], ( void ** )&precache_model );
                     if( !precache_model ) {
-                        precache_model_skin = 0;
+                        precache_index = 0;
                         precache_check++;
                         continue; // couldn't load it
                     }
@@ -348,18 +347,18 @@ void CL_RequestNextDownload ( void ) {
                     num_skins = LittleLong( md2header->num_skins );
                     ofs_skins = LittleLong( md2header->ofs_skins );
 
-                    while( precache_model_skin < num_skins ) {
+                    while( precache_index < num_skins ) {
                         if( !Q_memccpy( fn, ( char * )precache_model + ofs_skins +
-                            precache_model_skin * MD2_MAX_SKINNAME, 0, sizeof( fn ) ) )
+                            precache_index * MD2_MAX_SKINNAME, 0, sizeof( fn ) ) )
                         {
                             // bad alias model
                             goto done;
                         }
                         if( !CL_CheckOrDownloadFile( fn ) ) {
-                            precache_model_skin++;
+                            precache_index++;
                             return; // started a download
                         }
-                        precache_model_skin++;
+                        precache_index++;
                     }
                     break;
                 case SP2_IDENT:
@@ -368,17 +367,17 @@ void CL_RequestNextDownload ( void ) {
                     num_skins = LittleLong( sp2header->numframes );
                     ofs_skins = sizeof( *sp2header );
 
-                    while( precache_model_skin < num_skins ) {
-                        sp2frame = ( dsp2frame_t * )( ( byte * )precache_model + ofs_skins ) + precache_model_skin;
+                    while( precache_index < num_skins ) {
+                        sp2frame = ( dsp2frame_t * )( ( byte * )precache_model + ofs_skins ) + precache_index;
                         if( !Q_memccpy( fn, sp2frame->name, 0, sizeof( fn ) ) ) {
                             // bad sprite model
                             goto done;
                         }
                         if( !CL_CheckOrDownloadFile( fn ) ) {
-                            precache_model_skin++;
+                            precache_index++;
                             return; // started a download
                         }
-                        precache_model_skin++;
+                        precache_index++;
                     }
                     break;
                 default:
@@ -389,7 +388,7 @@ void CL_RequestNextDownload ( void ) {
 done:
                 FS_FreeFile( precache_model );
                 precache_model = NULL;
-                precache_model_skin = 0;
+                precache_index = 0;
                 precache_check++;
             }
         }
@@ -458,6 +457,8 @@ done:
     // so precache_check is now *3
     if( precache_check >= CS_PLAYERSKINS && precache_check < CS_PLAYERSKINS + MAX_CLIENTS * PLAYER_MULT ) {
         if( allow_download_players->integer ) {
+            if( precache_check == CS_PLAYERSKINS )
+                precache_index = 0; // reset index
             while( precache_check < CS_PLAYERSKINS + MAX_CLIENTS * PLAYER_MULT ) {
                 int i, n;
                 char model[ MAX_QPATH ], skin[ MAX_QPATH ], *p;
@@ -494,8 +495,8 @@ done:
                     /*FALL THROUGH*/
 
                 case 1: // weapon models
-                    while( precache_player_index < cl.numWeaponModels ) {
-                        p = cl.weaponModels[ precache_player_index++ ];
+                    while( precache_index < cl.numWeaponModels ) {
+                        p = cl.weaponModels[ precache_index++ ];
 
                         Q_concat( fn, sizeof( fn ), "players/", model, "/", p, NULL );
                         if( !CL_CheckOrDownloadFile( fn ) ) {
@@ -503,7 +504,7 @@ done:
                             return; // started a download
                         }
                     }
-                    precache_player_index = 0;
+                    precache_index = 0;
                     /*FALL THROUGH*/
 
                 case 2: // weapon skin
@@ -531,8 +532,8 @@ done:
                     /*FALL THROUGH*/
 
                 case 5: // sexed sounds
-                    while( precache_player_index < precache_sexed_total ) {
-                        n = precache_sexed_sounds[ precache_player_index++ ];
+                    while( precache_index < precache_sexed_total ) {
+                        n = precache_sexed_sounds[ precache_index++ ];
                         p = cl.configstrings[ CS_SOUNDS + n ];
 
                         if( *p == '*' ) {
@@ -542,7 +543,7 @@ done:
                             }
                         }
                     }
-                    precache_player_index = 0;
+                    precache_index = 0;
                     break;
                 }
 
@@ -586,14 +587,14 @@ done:
 
     if( precache_check == TEXTURE_CNT ) {
         precache_check = TEXTURE_CNT + 1;
-        precache_tex = 0;
+        precache_index = 0;
     }
 
     // confirm existance of textures, download any that don't exist
     if( precache_check == TEXTURE_CNT + 1 ) {
         if( allow_download->integer && allow_download_textures->integer ) {
-            while( precache_tex < cl.bsp->numtexinfo ) {
-                char *texname = cl.bsp->texinfo[ precache_tex++ ].name;
+            while( precache_index < cl.bsp->numtexinfo ) {
+                char *texname = cl.bsp->texinfo[ precache_index++ ].name;
 
                 Q_concat( fn, sizeof( fn ), "textures/", texname, ".wal", NULL );
                 if( !CL_CheckOrDownloadFile( fn ) ) {
@@ -621,8 +622,6 @@ void CL_ResetPrecacheCheck( void ) {
         FS_FreeFile( precache_model );
         precache_model = NULL;
     }
-    precache_model_skin = -1;
     precache_sexed_total = 0;
-    precache_player_index = 0;
 }
 
