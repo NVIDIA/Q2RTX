@@ -419,7 +419,13 @@ done:
             while( precache_check < CS_IMAGES + MAX_IMAGES &&
                 cl.configstrings[ precache_check ][ 0 ] )
             {
-                Q_concat( fn, sizeof( fn ), "pics/", cl.configstrings[ precache_check++ ], ".pcx", NULL );
+                char *picname = cl.configstrings[ precache_check++ ];
+
+                if( *picname == '/' || *picname == '\\' ) {
+                    Q_strlcpy( fn, picname + 1, sizeof( fn ) );
+                } else {
+                    Q_concat( fn, sizeof( fn ), "pics/", picname, ".pcx", NULL );
+                }
                 if( !CL_CheckOrDownloadFile( fn ) )
                     return; // started a download
             }
