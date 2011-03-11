@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "cl_local.h"
 #include "d_md2.h"
+#include "d_sp2.h"
 
 /*
 ===============
@@ -215,8 +216,6 @@ static const char env_suf[6][3] = { "rt", "bk", "lf", "ft", "up", "dn" };
 
 void CL_RequestNextDownload ( void ) {
     char fn[ MAX_QPATH ];
-    dmd2header_t *pheader;
-    size_t length;
 
     if( cls.state != ca_connected && cls.state != ca_loading )
         return;
@@ -266,6 +265,11 @@ void CL_RequestNextDownload ( void ) {
                 cl.configstrings[ precache_check ][ 0 ] )
             {
                 size_t num_skins, ofs_skins, end_skins;
+                dmd2header_t *md2header;
+                dsp2header_t *sp2header;
+                dsp2frame_t *sp2frame;
+                uint32_t ident;
+                size_t length;
 
                 if( cl.configstrings[ precache_check ][ 0 ] == '*' ||
                     cl.configstrings[ precache_check ][ 0 ] == '#' )
@@ -281,41 +285,102 @@ void CL_RequestNextDownload ( void ) {
                         precache_check++;
                         continue; // couldn't load it
                     }
-
-                    pheader = ( dmd2header_t * )precache_model;
-                    if( length < sizeof( *pheader ) ||
-                        LittleLong( pheader->ident ) != MD2_IDENT ||
-                        LittleLong( pheader->version ) != MD2_VERSION )
-                    {
-                        // not an alias model
+                    if( length < sizeof( ident ) ) {
+                        // file too small
                         goto done;
                     }
 
-                    num_skins = LittleLong( pheader->num_skins );
-                    ofs_skins = LittleLong( pheader->ofs_skins );
-                    end_skins = ofs_skins + num_skins * MD2_MAX_SKINNAME;
-                    if( num_skins > MD2_MAX_SKINS || end_skins < ofs_skins || end_skins > length ) {
-                        // bad alias model
+                    // check ident
+                    ident = LittleLong( *( uint32_t * )precache_model );
+                    switch( ident ) {
+                    case MD2_IDENT:
+                        // alias model
+                        md2header = ( dmd2header_t * )precache_model;
+                        if( length < sizeof( *md2header ) ||
+                            LittleLong( md2header->ident ) != MD2_IDENT ||
+                            LittleLong( md2header->version ) != MD2_VERSION )
+                        {
+                            // not an alias model
+                            goto done;
+                        }
+
+                        num_skins = LittleLong( md2header->num_skins );
+                        ofs_skins = LittleLong( md2header->ofs_skins );
+                        end_skins = ofs_skins + num_skins * MD2_MAX_SKINNAME;
+                        if( num_skins > MD2_MAX_SKINS || end_skins < ofs_skins || end_skins > length ) {
+                            // bad alias model
+                            goto done;
+                        }
+                        break;
+                    case SP2_IDENT:
+                        // sprite model
+                        sp2header = ( dsp2header_t * )precache_model;
+                        if( length < sizeof( *sp2header ) ||
+                            LittleLong( sp2header->ident ) != SP2_IDENT ||
+                            LittleLong( sp2header->version ) != SP2_VERSION )
+                        {
+                            // not a sprite model
+                            goto done;
+                        }
+                        num_skins = LittleLong( sp2header->numframes );
+                        ofs_skins = sizeof( *sp2header );
+                        end_skins = ofs_skins + num_skins * sizeof( dsp2frame_t );
+                        if( num_skins > SP2_MAX_FRAMES || end_skins < ofs_skins || end_skins > length ) {
+                            // bad sprite model
+                            goto done;
+                        }
+                        break;
+                    default:
+                        // unknown file format
                         goto done;
                     }
                 }
 
-                pheader = ( dmd2header_t * )precache_model;
-                num_skins = LittleLong( pheader->num_skins );
-                ofs_skins = LittleLong( pheader->ofs_skins );
+                // check ident
+                ident = LittleLong( *( uint32_t * )precache_model );
+                switch( ident ) {
+                case MD2_IDENT:
+                    // alias model
+                    md2header = ( dmd2header_t * )precache_model;
+                    num_skins = LittleLong( md2header->num_skins );
+                    ofs_skins = LittleLong( md2header->ofs_skins );
 
-                while( precache_model_skin < num_skins ) {
-                    if( !Q_memccpy( fn, ( char * )precache_model + ofs_skins +
-                        precache_model_skin * MD2_MAX_SKINNAME, 0, sizeof( fn ) ) )
-                    {
-                        // bad alias model
-                        goto done;
-                    }
-                    if( !CL_CheckOrDownloadFile( fn ) ) {
+                    while( precache_model_skin < num_skins ) {
+                        if( !Q_memccpy( fn, ( char * )precache_model + ofs_skins +
+                            precache_model_skin * MD2_MAX_SKINNAME, 0, sizeof( fn ) ) )
+                        {
+                            // bad alias model
+                            goto done;
+                        }
+                        if( !CL_CheckOrDownloadFile( fn ) ) {
+                            precache_model_skin++;
+                            return; // started a download
+                        }
                         precache_model_skin++;
-                        return; // started a download
                     }
-                    precache_model_skin++;
+                    break;
+                case SP2_IDENT:
+                    // sprite model
+                    sp2header = ( dsp2header_t * )precache_model;
+                    num_skins = LittleLong( sp2header->numframes );
+                    ofs_skins = sizeof( *sp2header );
+
+                    while( precache_model_skin < num_skins ) {
+                        sp2frame = ( dsp2frame_t * )( ( byte * )precache_model + ofs_skins ) + precache_model_skin;
+                        if( !Q_memccpy( fn, sp2frame->name, 0, sizeof( fn ) ) ) {
+                            // bad sprite model
+                            goto done;
+                        }
+                        if( !CL_CheckOrDownloadFile( fn ) ) {
+                            precache_model_skin++;
+                            return; // started a download
+                        }
+                        precache_model_skin++;
+                    }
+                    break;
+                default:
+                    // unknown file format
+                    break;
                 }
 
 done:
