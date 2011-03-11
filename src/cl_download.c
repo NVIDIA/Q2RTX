@@ -24,6 +24,30 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 /*
 ===============
+CL_CheckDownloadExtension
+
+Only predefined set of filename extensions is allowed,
+to prevent the server from uploading arbitrary files.
+===============
+*/
+qboolean CL_CheckDownloadExtension( const char *ext ) {
+    static const char allowed[][4] = {
+        "pcx", "wal", "wav", "md2", "sp2", "tga", "png",
+        "jpg", "bsp", "ent", "txt", "dm2", "loc", "md3"
+    };
+    static const int total = sizeof( allowed ) / sizeof( allowed[0] );
+    int i;
+
+    for( i = 0; i < total; i++ )
+        if( !Q_stricmp( ext, allowed[i] ) )
+            return qtrue;
+
+    return qfalse;
+}
+
+
+/*
+===============
 CL_CheckOrDownloadFile
 
 Returns qtrue if the file exists, otherwise it attempts
@@ -34,6 +58,7 @@ static qboolean CL_CheckOrDownloadFile( const char *path ) {
     qhandle_t f;
     size_t len;
     ssize_t ret;
+    char *ext;
 
     len = strlen( path );
     if( len < 1 || len >= MAX_QPATH
@@ -45,6 +70,12 @@ static qboolean CL_CheckOrDownloadFile( const char *path ) {
         || strstr( path, ".." ) )
     {
         Com_Printf( "Refusing to download file with invalid path.\n" );
+        return qtrue;
+    }
+
+    ext = COM_FileExtension( path );
+    if( *ext != '.' || !CL_CheckDownloadExtension( ext + 1 ) ) {
+        Com_Printf( "Refusing to download file with invalid extension.\n" );
         return qtrue;
     }
 

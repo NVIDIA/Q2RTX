@@ -576,19 +576,6 @@ qboolean HTTP_DownloadsPending (void) {
     return pending_count || handle_count;
 }
 
-static qboolean check_extension (const char *ext) {
-    static const char allowed[14][4] = {
-        "pcx", "wal", "wav", "md2", "sp2", "tga", "png",
-        "jpg", "bsp", "ent", "txt", "dm2", "loc", "md3"
-    };
-    int i;
-
-    for (i = 0; i < 14; i++)
-        if (!strcmp (ext, allowed[i]))
-            return qtrue;
-    return qfalse;
-}
-
 // Validate a path supplied by a filelist.
 static void check_and_queue_download (char *path) {
     size_t      len;
@@ -615,7 +602,7 @@ static void check_and_queue_download (char *path) {
         type = DL_PAK;
     } else {
         type = DL_OTHER;
-        if (!check_extension(ext)) {
+        if (!CL_CheckDownloadExtension(ext)) {
             Com_WPrintf ("[HTTP] Illegal file type '%s' in filelist.\n", path);
             return;
         }

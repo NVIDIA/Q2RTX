@@ -463,6 +463,7 @@ qboolean CL_CheckForIgnore( const char *s );
 //
 // cl_download
 //
+qboolean CL_CheckDownloadExtension( const char *ext );
 void CL_Download_f( void );
 void CL_HandleDownload( const byte *data, int size, int percent );
 void CL_RequestNextDownload( void );
