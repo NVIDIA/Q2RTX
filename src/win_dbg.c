@@ -195,6 +195,15 @@ LONG WINAPI Sys_ExceptionFilter( LPEXCEPTION_POINTERS exceptionInfo ) {
     SYSTEMTIME systemTime;
     OSVERSIONINFO vinfo;
     DWORD len;
+    LONG action;
+
+    // give previous filter a chance to handle this exception
+    if( prevExceptionFilter ) {
+        action = prevExceptionFilter( exceptionInfo );
+        if( action != EXCEPTION_CONTINUE_SEARCH ) {
+            return action;
+        }
+    }
 
     // debugger present? not our business
     if( IsDebuggerPresent() ) {

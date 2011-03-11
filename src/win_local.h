@@ -116,10 +116,12 @@ void Win_ModeChanged( void );
 
 #endif // USE_CLIENT
 
-extern HINSTANCE hGlobalInstance;
+extern HINSTANCE                    hGlobalInstance;
 
 #if USE_DBGHELP
-extern HANDLE mainProcessThread;
+extern HANDLE                       mainProcessThread;
+extern LPTOP_LEVEL_EXCEPTION_FILTER prevExceptionFilter;
+
 LONG WINAPI Sys_ExceptionFilter( LPEXCEPTION_POINTERS );
 #endif
 

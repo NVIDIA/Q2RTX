@@ -27,18 +27,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <winsvc.h>
 #endif
 
-HINSTANCE   hGlobalInstance;
+HINSTANCE                       hGlobalInstance;
 
 #if USE_DBGHELP
-HANDLE      mainProcessThread;
+HANDLE                          mainProcessThread;
+LPTOP_LEVEL_EXCEPTION_FILTER    prevExceptionFilter;
 #endif
 
-cvar_t  *sys_basedir;
-cvar_t  *sys_libdir;
-cvar_t  *sys_homedir;
-cvar_t  *sys_forcegamelib;
-
-static char currentDirectory[MAX_OSPATH];
+static char                     currentDirectory[MAX_OSPATH];
 
 #if USE_WINSVC
 static SERVICE_STATUS_HANDLE    statusHandle;
@@ -52,6 +48,11 @@ typedef enum {
 
 static volatile should_exit_t   shouldExit;
 static volatile qboolean        errorEntered;
+
+cvar_t  *sys_basedir;
+cvar_t  *sys_libdir;
+cvar_t  *sys_homedir;
+cvar_t  *sys_forcegamelib;
 
 /*
 ===============================================================================
@@ -744,7 +745,8 @@ void Sys_Init( void ) {
     // install our exception filter
     if( !var->integer ) {
         mainProcessThread = GetCurrentThread();
-        SetUnhandledExceptionFilter( Sys_ExceptionFilter );
+        prevExceptionFilter = SetUnhandledExceptionFilter(
+            Sys_ExceptionFilter );
     }
 #endif
 
