@@ -344,6 +344,23 @@ qboolean COM_IsUint( const char *s ) {
     return qtrue;
 }
 
+qboolean COM_IsPath( const char *s ) {
+    int c;
+
+    if( !*s ) {
+        return qfalse;
+    }
+
+    do {
+        c = *s++;
+        if( !Q_ispath( c ) ) {
+            return qfalse;
+        }
+    } while( *s );
+
+    return qtrue;
+}
+
 qboolean COM_HasSpaces( const char *s ) {
     while( *s ) {
         if( *s <= 32 ) {
