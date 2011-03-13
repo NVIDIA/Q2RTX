@@ -545,7 +545,8 @@ extern tent_params_t    te;
 extern mz_params_t      mz;
 
 void CL_ParseServerMessage (void);
-void CL_LoadClientinfo (clientinfo_t *ci, const char *s);
+void CL_ParsePlayerSkin( char *name, char *model, char *skin, const char *s );
+void CL_LoadClientinfo( clientinfo_t *ci, const char *s );
 
 //
 // cl_ents.c

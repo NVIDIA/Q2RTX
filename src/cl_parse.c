@@ -761,13 +761,79 @@ static void CL_ParseServerData( void ) {
 
 /*
 ================
+CL_ParsePlayerSkin
+
+Breaks up playerskin into name (optional), model and skin components.
+If model or skin are found to be invalid, replaces them with sane defaults.
+================
+*/
+void CL_ParsePlayerSkin( char *name, char *model, char *skin, const char *s ) {
+    size_t len;
+    char *t;
+
+    // configstring parsing guarantees that playerskins can never
+    // overflow, but still check the length to be entirely fool-proof
+    len = strlen( s );
+    if( len >= MAX_QPATH ) {
+        Com_Error( ERR_DROP, "%s: oversize playerskin", __func__ );
+    }
+
+    // isolate the player's name
+    t = strchr( s, '\\' );
+    if( t ) {
+        len = t - s;
+        strcpy( model, t + 1 );
+    } else {
+        len = 0;
+        strcpy( model, s );
+    }
+
+    // copy the player's name
+    if( name ) {
+        memcpy( name, s, len );
+        name[len] = 0;
+    }
+
+    // isolate the model name
+    t = strchr( model, '/' );
+    if( !t )
+        t = strchr( model, '\\' );
+    if( !t )
+        t = model;
+    if( t == model )
+        goto default_model;
+    *t++ = 0;
+
+    // apply restrictions on skins
+    if( cl_noskins->integer == 2 || !COM_IsPath( t ) )
+        goto default_skin;
+
+    if( cl_noskins->integer || !COM_IsPath( model ) )
+        goto default_model;
+
+    // isolate the skin name
+    strcpy( skin, t );
+    return;
+
+default_skin:
+    if( !Q_stricmp( model, "female" ) ) {
+        strcpy( model, "female" );
+        strcpy( skin, "athena" );
+    } else {
+default_model:
+        strcpy( model, "male" );
+        strcpy( skin, "grunt" );
+    }
+}
+
+/*
+================
 CL_LoadClientinfo
 
 ================
 */
 void CL_LoadClientinfo( clientinfo_t *ci, const char *s ) {
     int         i;
-    char        *t;
     char        model_name[MAX_QPATH];
     char        skin_name[MAX_QPATH];
     char        model_filename[MAX_QPATH];
@@ -775,40 +841,7 @@ void CL_LoadClientinfo( clientinfo_t *ci, const char *s ) {
     char        weapon_filename[MAX_QPATH];
     char        icon_filename[MAX_QPATH];
 
-    // isolate the player's name
-    strcpy( ci->name, s );
-    t = strchr( s, '\\' );
-    if( t ) {
-        ci->name[ t - s ] = 0;
-        s = t + 1;
-    }
-
-    strcpy( model_name, s );
-
-    // isolate the model name
-    t = strchr( model_name, '/' );
-    if( !t )
-        t = strchr( model_name, '\\' );
-    if( !t )
-        t = model_name;
-    if( t == model_name ) {
-        strcpy( model_name, "male" );
-        strcpy( skin_name, "grunt" );
-    } else {
-        *t = 0;
-
-        // apply restictions on skins
-        if( cl_noskins->integer == 2 && !Q_stricmp( model_name, "female" ) ) {
-            strcpy( model_name, "female" );
-            strcpy( skin_name, "athena" );
-        } else if( cl_noskins->integer ) {
-            strcpy( model_name, "male" );
-            strcpy( skin_name, "grunt" );
-        } else {
-            // isolate the skin name
-            strcpy( skin_name, t + 1 );
-        }
-    }
+    CL_ParsePlayerSkin( ci->name, model_name, skin_name, s );
 
     // model file
     Q_concat( model_filename, sizeof( model_filename ),

@@ -441,20 +441,7 @@ static void check_player( const char *name ) {
     size_t len;
     int i, j;
 
-    if( ( p = strchr( name, '\\' ) ) != NULL )
-        p++;
-    else
-        p = ( char * )name;
-
-    Q_strlcpy( model, p, sizeof( model ) );
-    p = strchr( model, '/' );
-    if( !p )
-        p = strchr( model, '\\' );
-    if( p ) {
-        *p++ = 0;
-        strcpy( skin, p );
-    } else
-        *skin = 0;
+    CL_ParsePlayerSkin( NULL, model, skin, name );
 
     // model
     len = Q_concat( fn, sizeof( fn ), "players/", model, "/tris.md2", NULL );
