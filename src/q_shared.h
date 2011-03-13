@@ -470,7 +470,6 @@ qboolean COM_IsFloat( const char *s );
 qboolean COM_IsUint( const char *s );
 qboolean COM_IsPath( const char *s );
 qboolean COM_IsWhite( const char *s );
-qboolean COM_HasSpaces( const char *s );
 
 unsigned COM_ParseHex( const char *s );
 

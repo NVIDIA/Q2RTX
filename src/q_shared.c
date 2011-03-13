@@ -374,16 +374,6 @@ qboolean COM_IsWhite( const char *s ) {
     return qtrue;
 }
 
-qboolean COM_HasSpaces( const char *s ) {
-    while( *s ) {
-        if( *s <= 32 ) {
-            return qtrue;
-        }
-        s++;
-    }
-    return qfalse;
-}
-
 unsigned COM_ParseHex( const char *s ) {
     int c;
     unsigned result;
