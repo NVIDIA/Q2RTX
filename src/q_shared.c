@@ -361,6 +361,19 @@ qboolean COM_IsPath( const char *s ) {
     return qtrue;
 }
 
+qboolean COM_IsWhite( const char *s ) {
+    int c;
+
+    while( *s ) {
+        c = *s++;
+        if( Q_isgraph( c ) ) {
+            return qfalse;
+        }
+    }
+
+    return qtrue;
+}
+
 qboolean COM_HasSpaces( const char *s ) {
     while( *s ) {
         if( *s <= 32 ) {
@@ -423,20 +436,6 @@ size_t COM_strclr( char *s ) {
     *p = 0;
 
     return len;
-}
-
-qboolean COM_iswhite( const char *s ) {
-    int c;
-
-    while( *s ) {
-        c = *s++;
-        c &= 127;
-        if( Q_isgraph( c ) ) {
-            return qfalse;
-        }
-    }
-
-    return qtrue;
 }
 
 /*

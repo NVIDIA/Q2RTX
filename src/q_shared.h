@@ -469,6 +469,7 @@ char *COM_FileExtension( const char *in );
 qboolean COM_IsFloat( const char *s );
 qboolean COM_IsUint( const char *s );
 qboolean COM_IsPath( const char *s );
+qboolean COM_IsWhite( const char *s );
 qboolean COM_HasSpaces( const char *s );
 
 unsigned COM_ParseHex( const char *s );
@@ -481,7 +482,6 @@ int QDECL SortStrcmp( const void *p1, const void *p2 );
 int QDECL SortStricmp( const void *p1, const void *p2 );
 
 size_t COM_strclr( char *s ); 
-qboolean COM_iswhite( const char *s );
 
 // buffer safe operations
 size_t Q_strlcpy( char *dst, const char *src, size_t size );

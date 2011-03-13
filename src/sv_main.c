@@ -735,7 +735,7 @@ static void SVC_DirectConnect( void ) {
     }
 
     s = Info_ValueForKey( info, "name" );
-    if( COM_iswhite( s ) ) {
+    if( COM_IsWhite( s ) ) {
         SV_OobPrintf( "Please set your name before connecting.\n" );
         Com_DPrintf( "    rejected - empty name.\n" );
         return;
@@ -1710,7 +1710,7 @@ void SV_UpdateUserinfo( char *userinfo ) {
     }
 
     s = Info_ValueForKey( userinfo, "name" );
-    if( COM_iswhite( s ) ) {
+    if( COM_IsWhite( s ) ) {
         if( sv_client->name[0] ) {
             SV_ClientCommand( sv_client, "set name \"%s\"\n", sv_client->name );
         } else {
