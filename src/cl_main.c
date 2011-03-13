@@ -681,16 +681,8 @@ void CL_Disconnect( error_type_t type ) {
         cls.netchan = NULL;
     }
 
-#if USE_CURL
-    HTTP_CancelDownloads();
-#endif
-
     // stop download
-    if( cls.download.file ) {
-        FS_FCloseFile( cls.download.file );
-    }
-
-    memset( &cls.download, 0, sizeof( cls.download ) );
+    CL_CleanupDownloads();
 
     CL_ClearState ();
 
@@ -2072,7 +2064,7 @@ static void CL_DumpClients_f( void ) {
     int i;
 
     if ( cls.state != ca_active ) {
-        Com_Printf( "Must be in a level to dump\n" );
+        Com_Printf( "Must be in a level to dump.\n" );
         return;
     }
 
@@ -2522,7 +2514,6 @@ static const cmdreg_t c_client[] = {
     { "reconnect", CL_Reconnect_f },
     { "rcon", CL_Rcon_f, CL_Rcon_c },
     //{ "precache", CL_Precache_f },
-    { "download", CL_Download_f },
     { "serverstatus", CL_ServerStatus_f, CL_ServerStatus_c },
     { "ignoretext", CL_IgnoreText_f },
     { "unignoretext", CL_UnIgnoreText_f },
@@ -2572,6 +2563,7 @@ static void CL_InitLocal ( void ) {
     CL_InitAscii();
     CL_InitEffects();
     CL_InitTEnts();
+    CL_InitDownloads();
 
     List_Init( &cl_ignores );
 

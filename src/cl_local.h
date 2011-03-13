@@ -269,6 +269,36 @@ typedef enum {
     ca_active           // game views should be displayed
 } connstate_t;
 
+#define FOR_EACH_DLQ(q) \
+    LIST_FOR_EACH (dlqueue_t, q, &cls.download.queue, entry)
+#define FOR_EACH_DLQ_SAFE(q, n) \
+    LIST_FOR_EACH_SAFE (dlqueue_t, q, n, &cls.download.queue, entry)
+
+typedef enum {
+    // generic types
+    DL_OTHER,
+    DL_MAP,
+    DL_MODEL,
+#if USE_CURL
+    // special types
+    DL_LIST,
+    DL_PAK
+#endif
+} dltype_t;
+
+typedef enum {
+    DL_PENDING,
+    DL_RUNNING,
+    DL_DONE
+} dlstate_t;
+
+typedef struct {
+    list_t      entry;
+    dltype_t    type;
+    dlstate_t   state;
+    char        path[1];
+} dlqueue_t;
+
 typedef struct client_static_s {
     connstate_t state;
     keydest_t   key_dest;
@@ -333,10 +363,12 @@ typedef struct client_static_s {
     int         recent_head;
 
     struct {
-        qhandle_t   file;               // file transfer from server
+        list_t      queue;              // queue of paths we need
+        int         pending;            // number of non-finished entries in queue
+        dlqueue_t   *current;           // path being downloaded
+        int         percent;            // how much downloaded
+        qhandle_t   file;               // UDP file transfer from server
         char        temp[MAX_QPATH+4];  // account 4 bytes for .tmp suffix
-        char        name[MAX_QPATH];
-        int         percent;
     } download;
 
 // demo recording info must be here, so it isn't cleared on level change
@@ -463,11 +495,15 @@ qboolean CL_CheckForIgnore( const char *s );
 //
 // cl_download
 //
-qboolean CL_CheckDownloadExtension( const char *ext );
-void CL_Download_f( void );
+void CL_QueueDownload( const char *path, dltype_t type );
+void CL_FinishDownload( dlqueue_t *q );
+void CL_CleanupDownloads( void );
 void CL_HandleDownload( const byte *data, int size, int percent );
+qboolean CL_CheckDownloadExtension( const char *ext );
+void CL_StartNextDownload( void );
 void CL_RequestNextDownload( void );
 void CL_ResetPrecacheCheck( void );
+void CL_InitDownloads( void );
 
 //
 // cl_input
@@ -802,12 +838,11 @@ void CL_InitAscii( void );
 //
 // cl_http.c
 //
-void HTTP_CancelDownloads (void);
+void HTTP_CleanupDownloads (void);
 void HTTP_Init (void);
 void HTTP_Shutdown (void);
-qboolean HTTP_QueueDownload (const char *path);
+qboolean HTTP_QueueDownload (const char *path, dltype_t type);
 void HTTP_RunDownloads (void);
-qboolean HTTP_DownloadsPending (void);
 void HTTP_SetServer (const char *url);
 #endif
 

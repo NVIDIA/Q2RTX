@@ -29,33 +29,9 @@ static cvar_t  *cl_http_proxy;
 static cvar_t  *cl_http_debug;
 #endif
 
-#define FOR_EACH_DLQ(q) \
-    LIST_FOR_EACH (dlqueue_t, q, &download_queue, entry)
-#define FOR_EACH_DLQ_SAFE(q, n) \
-    LIST_FOR_EACH_SAFE (dlqueue_t, q, n, &download_queue, entry)
-
 // size limits for filelists
 #define MAX_DLSIZE  0x100000    // 1 MiB
 #define MIN_DLSIZE  0x020000    // 128 KiB
-
-typedef enum {
-    DL_OTHER,
-    DL_LIST,
-    DL_PAK
-} dltype_t;
-
-typedef enum {
-    DL_PENDING,
-    DL_RUNNING,
-    DL_DONE
-} dlstate_t;
-
-typedef struct {
-    list_t      entry;
-    dltype_t    type;
-    dlstate_t   state;
-    char        path[1];
-} dlqueue_t;
 
 typedef struct {
     CURL        *curl;
@@ -69,17 +45,13 @@ typedef struct {
     char        *buffer;
 } dlhandle_t;
 
-static list_t   download_queue;      //queue of paths we need
-static dlhandle_t download_handles[4]; //actual download handles, don't raise this!
-
+static dlhandle_t   download_handles[4]; //actual download handles, don't raise this!
 static char     download_server[512];    //base url prefix to download from
 static char     download_referer[32];    //libcurl requires a static string :(
 
 static qboolean curl_initialized;
-static CURLM    *multi;
-static int      handle_count;
-static int      pending_count;
-static qboolean abort_downloads;
+static CURLM    *curl_multi;
+static int      curl_handles;
 
 
 /*
@@ -105,17 +77,15 @@ static int progress_func (void *clientp, double dltotal, double dlnow, double ul
     dl->position = (unsigned)dlnow;
 
     //don't care which download shows as long as something does :)
-    if (!abort_downloads) {
-        strcpy (cls.download.name, dl->queue->path);
-        //cls.download.position = dl->position;
+    cls.download.current = dl->queue;
+    //cls.download.position = dl->position;
 
-        if (dltotal)
-            cls.download.percent = (int)((dlnow / dltotal) * 100.0f);
-        else
-            cls.download.percent = 0;
-    }
+    if (dltotal)
+        cls.download.percent = (int)((dlnow / dltotal) * 100.0f);
+    else
+        cls.download.percent = 0;
 
-    return abort_downloads;
+    return 0;
 }
 
 // libcurl callback for filelists.
@@ -320,41 +290,37 @@ static void start_download (dlqueue_t *entry, dlhandle_t *dl) {
     curl_easy_setopt (dl->curl, CURLOPT_REFERER, download_referer);
     curl_easy_setopt (dl->curl, CURLOPT_URL, dl->url);
 
-    ret = curl_multi_add_handle (multi, dl->curl);
+    ret = curl_multi_add_handle (curl_multi, dl->curl);
     if (ret != CURLM_OK) {
         Com_EPrintf ("[HTTP] Failed to add download handle: %s\n",
             curl_multi_strerror (ret));
 fail:
-        entry->state = DL_DONE;
-        pending_count--;
+        CL_FinishDownload( entry );
 
-        // done current batch, see if we have more to dl
-        if (!HTTP_DownloadsPending())
-            CL_RequestNextDownload ();
+        // see if we have more to dl
+        CL_RequestNextDownload ();
         return;
     }
 
-    handle_count++;
     Com_DPrintf ("[HTTP] Fetching %s...\n", dl->url);
     entry->state = DL_RUNNING;
+    curl_handles++;
 }
 
-// Quake 2 is exiting or we're changing servers. Clean up.
-static void cleanup_downloads (void) {
-    dlqueue_t   *q, *n;
+/*
+===============
+HTTP_CleanupDownloads
+
+Disconnected from server, or fatal HTTP error occured. Clean up.
+===============
+*/
+void HTTP_CleanupDownloads (void) {
     dlhandle_t  *dl;
     int         i;
 
-    FOR_EACH_DLQ_SAFE (q, n) {
-        Z_Free (q);
-    }
- 
-    List_Init (&download_queue);
-
     download_server[0] = 0;
     download_referer[0] = 0;
-    abort_downloads = qfalse;
-    handle_count = pending_count = 0;
+    curl_handles = 0;
 
     for (i = 0; i < 4; i++) {
         dl = &download_handles[i];
@@ -371,8 +337,8 @@ static void cleanup_downloads (void) {
         }
 
         if (dl->curl) {
-            if (multi)
-                curl_multi_remove_handle (multi, dl->curl);
+            if (curl_multi)
+                curl_multi_remove_handle (curl_multi, dl->curl);
             curl_easy_cleanup (dl->curl);
             dl->curl = NULL;
         }
@@ -380,9 +346,9 @@ static void cleanup_downloads (void) {
         dl->queue = NULL;
     }
 
-    if (multi) {
-        curl_multi_cleanup (multi);
-        multi = NULL;
+    if (curl_multi) {
+        curl_multi_cleanup (curl_multi);
+        curl_multi = NULL;
     }
 }
 
@@ -405,7 +371,6 @@ void HTTP_Init (void) {
 #endif
 
     curl_global_init (CURL_GLOBAL_NOTHING);
-    List_Init( &download_queue );
     curl_initialized = qtrue;
     Com_DPrintf ("%s initialized.\n", curl_version());
 }
@@ -414,7 +379,7 @@ void HTTP_Shutdown (void) {
     if (!curl_initialized)
         return;
 
-    cleanup_downloads();
+    HTTP_CleanupDownloads();
 
     curl_global_cleanup ();
     curl_initialized = qfalse;
@@ -429,16 +394,20 @@ A new server is specified, so we nuke all our state.
 ===============
 */
 void HTTP_SetServer (const char *url) {
-    cleanup_downloads ();
+    if (curl_multi) {
+        Com_EPrintf ("[HTTP] Set server without cleanup?\n");
+        return;
+    }
 
     if (!*url)
         return;
+
     if (strncmp (url, "http://", 7)) {
         Com_Printf ("[HTTP] Ignoring download server URL with non-HTTP schema.\n");
         return;
     }
 
-    multi = curl_multi_init ();
+    curl_multi = curl_multi_init ();
 
     Q_strlcpy (download_server, url, sizeof(download_server));
     Q_snprintf (download_referer, sizeof(download_referer),
@@ -449,86 +418,25 @@ void HTTP_SetServer (const char *url) {
 
 /*
 ===============
-HTTP_CancelDownloads
-
-Cancel all downloads and nuke the queue.
-===============
-*/
-void HTTP_CancelDownloads (void) {
-    dlqueue_t   *q;
-
-    if (!download_server[0])
-        return;
-
-    CL_ResetPrecacheCheck ();
-    abort_downloads = qtrue;
-
-    FOR_EACH_DLQ (q) {
-        if (q->state == DL_PENDING)
-            q->state = DL_DONE;
-    }
-
-    if (!pending_count && !handle_count)
-        download_server[0] = 0;
-
-    pending_count = 0;
-}
-
-static void queue_download(const char *path, dltype_t type) {
-    dlqueue_t *q;
-    size_t len;
-
-    FOR_EACH_DLQ (q) {
-        //avoid sending duplicate requests
-        if (!FS_pathcmp (path, q->path))
-            return;
-    }
-
-    len = strlen (path);
-    if (len >= MAX_QPATH) {
-        Com_EPrintf ("[HTTP] Refusing to queue oversize quake path.\n");
-        return;
-    }
-
-    q = Z_Malloc (sizeof(*q) + len);
-    memcpy (q->path, path, len + 1);
-    q->type = type;
-    q->state = DL_PENDING;
-
-    //paks get bumped to the top and HTTP switches to single downloading.
-    //this prevents someone on 28k dialup trying to do both the main .pak
-    //and referenced configstrings data at once.
-    if (type == DL_PAK)
-        List_Insert (&download_queue, &q->entry);
-    else
-        List_Append (&download_queue, &q->entry);
-
-    //if a download entry has made it this far, finish_download is guaranteed to be called.
-    Com_DPrintf ("[HTTP] Queued %s...\n", path);
-    pending_count++;
-}
-
-/*
-===============
 HTTP_QueueDownload
 
 Called from the precache check to queue a download. Return value of
 false will cause standard UDP downloading to be used instead.
 ===============
 */
-qboolean HTTP_QueueDownload (const char *path) {
+qboolean HTTP_QueueDownload (const char *path, dltype_t type) {
     size_t      len;
     qboolean    need_list;
     char        temp[MAX_QPATH];
 
     // no http server (or we got booted)
-    if (!download_server[0] || abort_downloads || !cl_http_downloads->integer)
+    if (!download_server[0] || !cl_http_downloads->integer)
         return qfalse;
 
     // first download queued, so we want the mod filelist
-    need_list = LIST_EMPTY (&download_queue);
+    need_list = LIST_EMPTY (&cls.download.queue);
 
-    queue_download (path, DL_OTHER);
+    CL_QueueDownload (path, type);
 
     if (!cl_http_filelists->integer)
         return qtrue;
@@ -537,7 +445,7 @@ qboolean HTTP_QueueDownload (const char *path) {
         //grab the filelist
         len = Q_snprintf (temp, sizeof(temp), "%s.filelist", fs_game->string);
         if (len < sizeof(temp))
-            queue_download (temp, DL_LIST);
+            CL_QueueDownload (temp, DL_LIST);
 
         //this is a nasty hack to let the server know what we're doing so admins don't
         //get confused by a ton of people stuck in CNCT state. it's assumed the server
@@ -552,28 +460,11 @@ qboolean HTTP_QueueDownload (const char *path) {
         len = Q_snprintf (temp, sizeof(temp), "%s/%s", fs_game->string, path);
         if (len + 5 < sizeof(temp)) {
             memcpy (temp + len - 4, ".filelist", 10);
-            queue_download (temp, DL_LIST);
+            CL_QueueDownload (temp, DL_LIST);
         }
     }
 
     return qtrue;
-}
-
-/*
-===============
-HTTP_DownloadsPending
-
-See if we're still busy with some downloads. Called by precacher just
-before it loads the map since we could be downloading the map. If we're
-busy still, it'll wait and finish_download will pick up from where
-it left.
-===============
-*/
-qboolean HTTP_DownloadsPending (void) {
-    if (!download_server[0])
-        return qfalse;
-
-    return pending_count || handle_count;
 }
 
 // Validate a path supplied by a filelist.
@@ -581,7 +472,7 @@ static void check_and_queue_download (char *path) {
     size_t      len;
     char        *ext;
     dltype_t    type;
-    int         flags;
+    unsigned    flags;
 
     len = strlen(path);
     if (len >= MAX_QPATH)
@@ -637,7 +528,7 @@ static void check_and_queue_download (char *path) {
     }
 
     if (!FS_FileExistsEx (path, flags)) {
-        queue_download (path, type);
+        CL_QueueDownload (path, type);
     }
 }
 
@@ -646,7 +537,7 @@ static void parse_file_list (dlhandle_t *dl) {
     char    *list;
     char    *p;
 
-    if (cl_http_filelists->integer && !abort_downloads) {
+    if (cl_http_filelists->integer) {
         list = dl->buffer;
         while (1) {
             p = strchr (list, '\n');
@@ -674,19 +565,31 @@ static void parse_file_list (dlhandle_t *dl) {
 static void rescan_queue (void) {
     dlqueue_t   *q;
 
-    pending_count = 0;
-    
-    if (abort_downloads)
-        return;
+    FOR_EACH_DLQ (q) {
+        if (q->state == DL_PENDING && q->type < DL_LIST && FS_FileExists (q->path))
+            CL_FinishDownload (q);
+    }
+}
+
+// Fatal HTTP error occured, remove any special entries from
+// queue and fall back to UDP downloading.
+static void abort_downloads (void) {
+    dlqueue_t   *q;
+
+    HTTP_CleanupDownloads();
+
+    cls.download.current = NULL;
+    cls.download.percent = 0;
 
     FOR_EACH_DLQ (q) {
-        if (q->state == DL_PENDING) {
-            if (q->type == DL_OTHER && FS_FileExists (q->path))
-                q->state = DL_DONE;
-            else
-                pending_count++;
-        }
+        if (q->state != DL_DONE && q->type >= DL_LIST)
+            CL_FinishDownload (q);
+        else if (q->state == DL_RUNNING)
+            q->state = DL_PENDING;
     }
+
+    CL_RequestNextDownload ();
+    CL_StartNextDownload ();
 }
 
 // curl doesn't provide reverse-lookup of the void * ptr, so search for it
@@ -716,11 +619,12 @@ static void finish_download (void) {
     double      time;
     double      size;
     char        temp[MAX_OSPATH];
+    qboolean    fatal_error = qfalse;
 
     do {
-        msg = curl_multi_info_read (multi, &msgs_in_queue);
+        msg = curl_multi_info_read (curl_multi, &msgs_in_queue);
         if (!msg)
-            return;
+            break;
 
         if (msg->msg != CURLMSG_DONE)
             continue;
@@ -730,7 +634,10 @@ static void finish_download (void) {
 
         //we mark everything as done even if it errored to prevent multiple
         //attempts.
-        dl->queue->state = DL_DONE;
+        CL_FinishDownload( dl->queue );
+        cls.download.current = NULL;
+        //cls.download.position = 0;
+        cls.download.percent = 0;
 
         //filelist processing is done on read
         if (dl->file) {
@@ -738,13 +645,7 @@ static void finish_download (void) {
             dl->file = NULL;
         }
 
-        //might be aborted
-        if (pending_count)
-            pending_count--;
-        handle_count--;
-        cls.download.name[0] = 0;
-        //cls.download.position = 0;
-        cls.download.percent = 0;
+        curl_handles--;
 
         result = msg->data.result;
 
@@ -754,8 +655,8 @@ static void finish_download (void) {
         case CURLE_OK:
             curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &response);
             if (response == 404) {
-                Com_Printf ("[HTTP] %s: 404 Not Found [%d remaining file%s]\n",
-                    dl->queue->path, pending_count, pending_count == 1 ? "" : "s");
+                Com_Printf ("[HTTP] %s [404 Not Found] [%d remaining file%s]\n",
+                    dl->queue->path, cls.download.pending, cls.download.pending == 1 ? "" : "s");
                 if (dl->path[0]) {
                     remove (dl->path);
                     dl->path[0] = 0;
@@ -766,7 +667,7 @@ static void finish_download (void) {
                     Com_EPrintf ("[HTTP] Oversized 404 body received (%d bytes).\n", (int)size);
                     goto fatal2;
                 }
-                curl_multi_remove_handle (multi, curl);
+                curl_multi_remove_handle (curl_multi, curl);
                 continue;
             } else if (response == 200) {
                 break;
@@ -788,23 +689,18 @@ fatal1:
                 dl->path[0] = 0;
             }
 fatal2:
-            curl_multi_remove_handle (multi, curl);
-            if (!abort_downloads)
-                HTTP_CancelDownloads ();
+            curl_multi_remove_handle (curl_multi, curl);
+            fatal_error = qtrue;
             continue;
         default:
             if (dl->path[0]) {
                 remove (dl->path);
                 dl->path[0] = 0;
             }
-            if (abort_downloads && result == CURLE_ABORTED_BY_CALLBACK) {
-                Com_DPrintf ("[HTTP] Download '%s' aborted by callback\n", dl->queue->path);
-            } else {
-                Com_WPrintf ("[HTTP] %s: %s [%d remaining file%s]\n",
-                    dl->queue->path, curl_easy_strerror (result),
-                    pending_count, pending_count == 1 ? "" : "s");
-            }
-            curl_multi_remove_handle (multi, curl);
+            Com_WPrintf ("[HTTP] %s [%s] [%d remaining file%s]\n",
+                dl->queue->path, curl_easy_strerror (result),
+                cls.download.pending, cls.download.pending == 1 ? "" : "s");
+            curl_multi_remove_handle (curl_multi, curl);
             continue;
         }
 
@@ -814,14 +710,14 @@ fatal2:
 
         //FIXME:
         //technically i shouldn't need to do this as curl will auto reuse the
-        //existing handle when you change the url. however, the handle_count goes
+        //existing handle when you change the url. however, the curl_handles goes
         //all weird when reusing a download slot in this way. if you can figure
         //out why, please let me know.
-        curl_multi_remove_handle (multi, curl);
+        curl_multi_remove_handle (curl_multi, curl);
 
-        Com_Printf ("[HTTP] %s: %.f bytes, %.2fkB/sec [%d remaining file%s]\n",
-            dl->queue->path, size, (size / 1024.0) / time, pending_count, 
-            pending_count == 1 ? "" : "s");
+        Com_Printf ("[HTTP] %s [%.f bytes, %.2fkB/sec] [%d remaining file%s]\n",
+            dl->queue->path, size, (size / 1024.0) / time, cls.download.pending, 
+            cls.download.pending == 1 ? "" : "s");
 
         if (dl->path[0]) {
             //rename the temp file
@@ -837,17 +733,19 @@ fatal2:
                 CL_RestartFilesystem (qfalse);
                 rescan_queue ();
             }
-        } else {
+        } else if (!fatal_error) {
             parse_file_list (dl);
         }
     } while (msgs_in_queue > 0);
 
-    if (!handle_count && abort_downloads)
-        download_server[0] = 0;
+    //fatal error occured, disable HTTP
+    if (fatal_error) {
+        abort_downloads();
+        return;
+    }
 
-    // done current batch, see if we have more to dl - maybe a .bsp needs downloaded
-    if ((cls.state == ca_connected || cls.state == ca_loading) && !HTTP_DownloadsPending())
-        CL_RequestNextDownload ();
+    // see if we have more to dl
+    CL_RequestNextDownload ();
 }
 
 // Find a free download handle to start another queue entry on.
@@ -868,7 +766,7 @@ static dlhandle_t *get_free_handle (void) {
 static void start_next_download (void) {
     dlqueue_t   *q;
 
-    if (!pending_count || abort_downloads || handle_count >= cl_http_max_connections->integer) {
+    if (!cls.download.pending || curl_handles >= cl_http_max_connections->integer) {
         return;
     }
 
@@ -905,19 +803,24 @@ void HTTP_RunDownloads (void) {
     start_next_download ();
 
     do {
-        ret = curl_multi_perform (multi, &new_count);
-        if (new_count < handle_count) {
+        ret = curl_multi_perform (curl_multi, &new_count);
+        if (new_count < curl_handles) {
             //hmm, something either finished or errored out.
             finish_download ();
-            handle_count = new_count;
+            curl_handles = new_count;
         }
     } while (ret == CURLM_CALL_MULTI_PERFORM);
 
     if (ret != CURLM_OK) {
         Com_EPrintf ("[HTTP] Error running downloads: %s.\n",
             curl_multi_strerror(ret));
-        HTTP_CancelDownloads ();
+        abort_downloads();
+        return;
     }
+
+    //may have aborted
+    if (!download_server[0])
+        return;
 
     start_next_download ();
 }

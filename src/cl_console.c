@@ -799,13 +799,13 @@ static void Con_DrawSolidConsole( void ) {
 //ZOID
     // draw the download bar
     // figure out width
-    if( cls.download.name[0] ) {
+    if( cls.download.current ) {
         int n, j;
 
-        if( ( text = strrchr( cls.download.name, '/') ) != NULL )
+        if( ( text = strrchr( cls.download.current->path, '/' ) ) != NULL )
             text++;
         else
-            text = cls.download.name;
+            text = cls.download.current->path;
 
         x = con.linewidth - ( ( con.linewidth * 7 ) / 40 );
         y = x - strlen( text ) - 8;
