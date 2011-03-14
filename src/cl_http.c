@@ -607,6 +607,46 @@ static dlhandle_t *find_handle (CURL *curl) {
     Com_Error (ERR_FATAL, "CURL handle not found for CURLMSG_DONE");
 }
 
+static const char *http_strerror (int response) {
+    static char buffer[32];
+
+    //common codes
+    switch (response) {
+    case 200:
+        return "200 OK";
+    case 401:
+        return "401 Unauthorized";
+    case 403:
+        return "403 Forbidden";
+    case 404:
+        return "404 Not Found";
+    case 500:
+        return "500 Internal Server Error";
+    case 503:
+        return "503 Service Unavailable";
+    }
+
+    if (response < 100 || response >= 600) {
+        Q_snprintf (buffer, sizeof (buffer), "%d <bad code>", response);
+        return buffer;
+    }
+
+    //generic classes
+    if (response < 200) {
+        Q_snprintf (buffer, sizeof (buffer), "%d Informational", response);
+    } else if (response < 300) {
+        Q_snprintf (buffer, sizeof (buffer), "%d Success", response);
+    } else if (response < 400) {
+        Q_snprintf (buffer, sizeof (buffer), "%d Redirection", response);
+    } else if (response < 500) {
+        Q_snprintf (buffer, sizeof (buffer), "%d Client Error", response);
+    } else {
+        Q_snprintf (buffer, sizeof (buffer), "%d Server Error", response);
+    }
+
+    return buffer;
+}
+
 // A download finished, find out what it was, whether there were any errors and
 // if so, how severe. If none, rename file and other such stuff.
 static void finish_download (void) {
@@ -620,6 +660,8 @@ static void finish_download (void) {
     double      size;
     char        temp[MAX_OSPATH];
     qboolean    fatal_error = qfalse;
+    const char  *err;
+    print_type_t level;
 
     do {
         msg = curl_multi_info_read (curl_multi, &msgs_in_queue);
@@ -632,11 +674,7 @@ static void finish_download (void) {
         curl = msg->easy_handle;
         dl = find_handle (curl);
 
-        //we mark everything as done even if it errored to prevent multiple
-        //attempts.
-        CL_FinishDownload( dl->queue );
         cls.download.current = NULL;
-        //cls.download.position = 0;
         cls.download.percent = 0;
 
         //filelist processing is done on read
@@ -654,55 +692,61 @@ static void finish_download (void) {
         case CURLE_HTTP_RETURNED_ERROR:
         case CURLE_OK:
             curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &response);
-            if (response == 404) {
-                Com_Printf ("[HTTP] %s [404 Not Found] [%d remaining file%s]\n",
-                    dl->queue->path, cls.download.pending, cls.download.pending == 1 ? "" : "s");
-                if (dl->path[0]) {
-                    remove (dl->path);
-                    dl->path[0] = 0;
-                }
-                curl_easy_getinfo (curl, CURLINFO_SIZE_DOWNLOAD, &size);
-                if (size > 512) {
-                    //ick
-                    Com_EPrintf ("[HTTP] Oversized 404 body received (%d bytes).\n", (int)size);
-                    goto fatal2;
-                }
-                curl_multi_remove_handle (curl_multi, curl);
-                continue;
-            } else if (response == 200) {
+            if (result == CURLE_OK && response == 200) {
+                //success
                 break;
-            } else {
-                //every other code is treated as fatal
-                Com_EPrintf ("[HTTP] Unexpected response code received (%d).\n", (int)response);
-                goto fatal1;
             }
-            break;
 
-        //fatal error, disable http
+            err = http_strerror (response);
+
+            //404 is non-fatal
+            if (response == 404) {
+                level = PRINT_ALL;
+                goto fail1;
+            }
+
+            //every other code is treated as fatal
+            //not marking download as done since
+            //we are falling back to UDP
+            level = PRINT_ERROR;
+            fatal_error = qtrue;
+            goto fail2;
+
         case CURLE_COULDNT_RESOLVE_HOST:
         case CURLE_COULDNT_CONNECT:
         case CURLE_COULDNT_RESOLVE_PROXY:
-            Com_EPrintf ("[HTTP] Fatal error: %s.\n", curl_easy_strerror (result));
-fatal1:
-            if (dl->path[0]) {
-                remove (dl->path);
-                dl->path[0] = 0;
-            }
-fatal2:
-            curl_multi_remove_handle (curl_multi, curl);
+            //connection problems are fatal
+            err = curl_easy_strerror (result);
+            level = PRINT_ERROR;
             fatal_error = qtrue;
-            continue;
+            goto fail2;
+
         default:
+            err = curl_easy_strerror (result);
+            level = PRINT_WARNING;
+fail1:
+            //we mark download as done even if it errored
+            //to prevent multiple attempts.
+            CL_FinishDownload (dl->queue);
+fail2:
+            Com_LPrintf (level,
+                "[HTTP] %s [%s] [%d remaining file%s]\n",
+                dl->queue->path, err, cls.download.pending,
+                cls.download.pending == 1 ? "" : "s");
             if (dl->path[0]) {
                 remove (dl->path);
                 dl->path[0] = 0;
             }
-            Com_WPrintf ("[HTTP] %s [%s] [%d remaining file%s]\n",
-                dl->queue->path, curl_easy_strerror (result),
-                cls.download.pending, cls.download.pending == 1 ? "" : "s");
+            if (dl->buffer) {
+                Z_Free (dl->buffer);
+                dl->buffer = NULL;
+            }
             curl_multi_remove_handle (curl_multi, curl);
             continue;
         }
+
+        //mark as done
+        CL_FinishDownload (dl->queue);
 
         //show some stats
         curl_easy_getinfo (curl, CURLINFO_TOTAL_TIME, &time);
