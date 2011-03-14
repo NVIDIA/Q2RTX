@@ -421,25 +421,29 @@ void HTTP_SetServer (const char *url) {
 HTTP_QueueDownload
 
 Called from the precache check to queue a download. Return value of
-false will cause standard UDP downloading to be used instead.
+Q_ERR_NOSYS will cause standard UDP downloading to be used instead.
 ===============
 */
-qboolean HTTP_QueueDownload (const char *path, dltype_t type) {
+qerror_t HTTP_QueueDownload (const char *path, dltype_t type) {
     size_t      len;
     qboolean    need_list;
     char        temp[MAX_QPATH];
+    qerror_t    ret;
 
     // no http server (or we got booted)
     if (!download_server[0] || !cl_http_downloads->integer)
-        return qfalse;
+        return Q_ERR_NOSYS;
 
     // first download queued, so we want the mod filelist
     need_list = LIST_EMPTY (&cls.download.queue);
 
-    CL_QueueDownload (path, type);
+    ret = CL_QueueDownload (path, type);
+    if (ret) {
+        return ret;
+    }
 
     if (!cl_http_filelists->integer)
-        return qtrue;
+        return Q_ERR_SUCCESS;
 
     if (need_list) {
         //grab the filelist
@@ -464,7 +468,7 @@ qboolean HTTP_QueueDownload (const char *path, dltype_t type) {
         }
     }
 
-    return qtrue;
+    return Q_ERR_SUCCESS;
 }
 
 // Validate a path supplied by a filelist.

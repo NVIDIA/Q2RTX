@@ -495,7 +495,7 @@ qboolean CL_CheckForIgnore( const char *s );
 //
 // cl_download
 //
-void CL_QueueDownload( const char *path, dltype_t type );
+qerror_t CL_QueueDownload( const char *path, dltype_t type );
 void CL_FinishDownload( dlqueue_t *q );
 void CL_CleanupDownloads( void );
 void CL_HandleDownload( const byte *data, int size, int percent );
@@ -842,7 +842,7 @@ void CL_InitAscii( void );
 void HTTP_CleanupDownloads (void);
 void HTTP_Init (void);
 void HTTP_Shutdown (void);
-qboolean HTTP_QueueDownload (const char *path, dltype_t type);
+qerror_t HTTP_QueueDownload (const char *path, dltype_t type);
 void HTTP_RunDownloads (void);
 void HTTP_SetServer (const char *url);
 #endif

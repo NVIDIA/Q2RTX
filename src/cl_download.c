@@ -46,7 +46,7 @@ Entry will stay in queue for entire lifetime of server connection,
 to make sure each path is tried exactly once.
 ===============
 */
-void CL_QueueDownload( const char *path, dltype_t type ) {
+qerror_t CL_QueueDownload( const char *path, dltype_t type ) {
     dlqueue_t *q;
     size_t len;
 
@@ -54,7 +54,7 @@ void CL_QueueDownload( const char *path, dltype_t type ) {
         // avoid sending duplicate requests
         if( !FS_pathcmp( path, q->path ) ) {
             Com_DPrintf( "%s: %s [DUP]\n", __func__, path );
-            return;
+            return Q_ERR_EXIST;
         }
     }
 
@@ -80,6 +80,7 @@ void CL_QueueDownload( const char *path, dltype_t type ) {
 
     cls.download.pending++;
     Com_DPrintf( "%s: %s [%d]\n", __func__, path, cls.download.pending );
+    return Q_ERR_SUCCESS;
 }
 
 /*
@@ -303,6 +304,7 @@ qboolean CL_CheckDownloadExtension( const char *ext ) {
 // attempts to start a download from the server if file doesn't exist.
 static qerror_t check_file_len( const char *path, size_t len, dltype_t type ) {
     char *ext;
+    qerror_t ret;
 
     // check path
     if( len < 1 || len >= MAX_QPATH
@@ -328,15 +330,19 @@ static qerror_t check_file_len( const char *path, size_t len, dltype_t type ) {
     }
 
 #if USE_CURL
-    if( HTTP_QueueDownload( path, type ) ) {
-        return Q_ERR_SUCCESS;
+    ret = HTTP_QueueDownload( path, type );
+    if( ret != Q_ERR_NOSYS ) {
+        return ret;
     }
 #endif
 
     // queue and start legacy UDP download
-    CL_QueueDownload( path, type );
-    CL_StartNextDownload();
-    return Q_ERR_SUCCESS;
+    ret = CL_QueueDownload( path, type );
+    if( ret == Q_ERR_SUCCESS ) {
+        CL_StartNextDownload();
+    }
+
+    return ret;
 }
 
 #define check_file( path, type ) \
