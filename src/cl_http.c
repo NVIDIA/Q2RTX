@@ -74,11 +74,10 @@ bandwidth.
 static int progress_func (void *clientp, double dltotal, double dlnow, double ultotal, double ulnow) {
     dlhandle_t *dl = (dlhandle_t *)clientp;
 
-    dl->position = (unsigned)dlnow;
+    //dl->position = (unsigned)dlnow;
 
     //don't care which download shows as long as something does :)
     cls.download.current = dl->queue;
-    //cls.download.position = dl->position;
 
     if (dltotal)
         cls.download.percent = (int)((dlnow / dltotal) * 100.0f);
