@@ -280,6 +280,7 @@ static void start_download (dlqueue_t *entry, dlhandle_t *dl) {
         curl_easy_setopt (dl->curl, CURLOPT_WRITEHEADER, dl);
         curl_easy_setopt (dl->curl, CURLOPT_HEADERFUNCTION, header_func);
     }
+    curl_easy_setopt (dl->curl, CURLOPT_FAILONERROR, 1);
     curl_easy_setopt (dl->curl, CURLOPT_PROXY, cl_http_proxy->string);
     curl_easy_setopt (dl->curl, CURLOPT_FOLLOWLOCATION, 1);
     curl_easy_setopt (dl->curl, CURLOPT_MAXREDIRS, 5);
