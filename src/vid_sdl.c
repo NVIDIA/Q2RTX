@@ -631,6 +631,7 @@ static void init_opengl( void ) {
 
 qboolean VID_Init( void ) {
     cvar_t *gl_driver;
+    char *s;
 
     if( !init_video() ) {
         return qfalse;
@@ -638,9 +639,28 @@ qboolean VID_Init( void ) {
 
     gl_driver = Cvar_Get( "gl_driver", DEFAULT_OPENGL_DRIVER, CVAR_REFRESH );
 
-    if( SDL_GL_LoadLibrary( gl_driver->string ) == -1 ) {
+    while( 1 ) {
+        // ugly hack to work around brain-dead servers that actively
+        // check and enforce `gl_driver' cvar to `opengl32', unaware
+        // of other systems than Windows
+        s = gl_driver->string;
+        if( !Q_stricmp( s, "opengl32" ) || !Q_stricmp( s, "opengl32.dll" ) ) {
+            Com_Printf( "...attempting to load %s instead of %s\n", DEFAULT_OPENGL_DRIVER, s );
+            s = DEFAULT_OPENGL_DRIVER;
+        }
+
+        if( SDL_GL_LoadLibrary( s ) == 0 ) {
+            break;
+        }
+
         Com_EPrintf( "Couldn't load OpenGL library: %s\n", SDL_GetError() );
-        goto fail;
+        if( !strcmp( s, DEFAULT_OPENGL_DRIVER ) ) {
+            goto fail;
+        }
+
+        // attempt to recover
+        Com_Printf( "...falling back to %s\n", DEFAULT_OPENGL_DRIVER );
+        Cvar_SetByVar( gl_driver, DEFAULT_OPENGL_DRIVER, FROM_CODE );
     }
 
     SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 5 );
