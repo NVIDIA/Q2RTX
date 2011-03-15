@@ -1268,7 +1268,7 @@ void SV_ExecuteClientMessage( client_t *client ) {
                     break;
                 }
                 
-                Com_DPrintf( "ClientCommand( %s ): %s\n",
+                Com_DDPrintf( "ClientCommand( %s ): %s\n",
                     client->name, buffer );
 
                 if( !NET_IsLocalAddress( &client->netchan->remote_address ) ) {
