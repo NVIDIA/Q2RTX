@@ -660,8 +660,8 @@ static void finish_download (void) {
     dlhandle_t  *dl;
     CURL        *curl;
     long        response;
-    double      time;
-    double      size;
+    double      sec, bytes;
+    char        size[16], speed[16];
     char        temp[MAX_OSPATH];
     qboolean    fatal_error = qfalse;
     const char  *err;
@@ -753,8 +753,12 @@ fail2:
         CL_FinishDownload (dl->queue);
 
         //show some stats
-        curl_easy_getinfo (curl, CURLINFO_TOTAL_TIME, &time);
-        curl_easy_getinfo (curl, CURLINFO_SIZE_DOWNLOAD, &size);
+        curl_easy_getinfo (curl, CURLINFO_TOTAL_TIME, &sec);
+        curl_easy_getinfo (curl, CURLINFO_SIZE_DOWNLOAD, &bytes);
+        if (sec < 0.001)
+            sec = 0.001;
+        Com_FormatSizeLong (size, sizeof (size), bytes);
+        Com_FormatSizeLong (speed, sizeof (speed), bytes / sec);
 
         //FIXME:
         //technically i shouldn't need to do this as curl will auto reuse the
@@ -763,8 +767,8 @@ fail2:
         //out why, please let me know.
         curl_multi_remove_handle (curl_multi, curl);
 
-        Com_Printf ("[HTTP] %s [%.f bytes, %.2fkB/sec] [%d remaining file%s]\n",
-            dl->queue->path, size, (size / 1024.0) / time, cls.download.pending, 
+        Com_Printf ("[HTTP] %s [%s, %s/sec] [%d remaining file%s]\n",
+            dl->queue->path, size, speed, cls.download.pending,
             cls.download.pending == 1 ? "" : "s");
 
         if (dl->path[0]) {
