@@ -19,7 +19,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #define MAX_LOCAL_SERVERS 16
-#define MAX_DEMOINFO_CLIENTS    20
 #define MAX_STATUS_PLAYERS  64
 
 typedef struct {
