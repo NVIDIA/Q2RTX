@@ -651,7 +651,7 @@ static const char *http_strerror (int response) {
 
 // A download finished, find out what it was, whether there were any errors and
 // if so, how severe. If none, rename file and other such stuff.
-static void finish_download (void) {
+static qboolean finish_download (void) {
     int         msgs_in_queue;
     CURLMsg     *msg;
     CURLcode    result;
@@ -791,11 +791,12 @@ fail2:
     //fatal error occured, disable HTTP
     if (fatal_error) {
         abort_downloads();
-        return;
+        return qfalse;
     }
 
     // see if we have more to dl
     CL_RequestNextDownload ();
+    return qtrue;
 }
 
 // Find a free download handle to start another queue entry on.
@@ -856,7 +857,8 @@ void HTTP_RunDownloads (void) {
         ret = curl_multi_perform (curl_multi, &new_count);
         if (new_count < curl_handles) {
             //hmm, something either finished or errored out.
-            finish_download ();
+            if (!finish_download ())
+                return; //aborted
             curl_handles = new_count;
         }
     } while (ret == CURLM_CALL_MULTI_PERFORM);
@@ -867,10 +869,6 @@ void HTTP_RunDownloads (void) {
         abort_downloads();
         return;
     }
-
-    //may have aborted
-    if (!download_server[0])
-        return;
 
     start_next_download ();
 }
