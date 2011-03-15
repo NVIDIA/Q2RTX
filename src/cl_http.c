@@ -429,7 +429,7 @@ qerror_t HTTP_QueueDownload (const char *path, dltype_t type) {
     qerror_t    ret;
 
     // no http server (or we got booted)
-    if (!download_server[0] || !cl_http_downloads->integer)
+    if (!curl_multi || !cl_http_downloads->integer)
         return Q_ERR_NOSYS;
 
     // first download queued, so we want the mod filelist
@@ -848,7 +848,7 @@ void HTTP_RunDownloads (void) {
     int         new_count;
     CURLMcode   ret;
 
-    if (!download_server[0])
+    if (!curl_multi)
         return;
 
     start_next_download ();
