@@ -162,7 +162,10 @@ static char *LoadCache( void **list ) {
     size_t len;
     uint8_t hash[16];
 
-    Q_concat( buffer, sizeof( buffer ), m_demos.browse, "/" COM_DEMOCACHE_NAME, NULL );
+    len = Q_concat( buffer, sizeof( buffer ), m_demos.browse, "/" COM_DEMOCACHE_NAME, NULL );
+    if( len >= sizeof( buffer ) ) {
+        return NULL;
+    }
     len = FS_LoadFileEx( buffer, ( void ** )&cache, FS_TYPE_REAL | FS_PATH_GAME, TAG_FILESYSTEM );
     if( !cache ) {
         return NULL;
