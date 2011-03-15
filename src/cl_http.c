@@ -40,7 +40,6 @@ typedef struct {
     dlqueue_t   *queue;
     size_t      size;
     size_t      position;
-    double      speed;
     char        url[576];
     char        *buffer;
 } dlhandle_t;
@@ -254,7 +253,6 @@ static void start_download (dlqueue_t *entry, dlhandle_t *dl) {
     }
 
     dl->buffer = NULL;
-    dl->speed = 0;
     dl->size = 0;
     dl->position = 0;
     dl->queue = entry;
