@@ -1434,6 +1434,12 @@ void Menu_Init( menuFrameWork_t *menu ) {
     menu->mins[1] -= MENU_SPACING;
     menu->maxs[0] += MENU_SPACING;
     menu->maxs[1] += MENU_SPACING;
+
+    // clamp
+    if( menu->mins[0] < 0 ) menu->mins[0] = 0;
+    if( menu->mins[1] < 0 ) menu->mins[1] = 0;
+    if( menu->maxs[0] > uis.width ) menu->maxs[0] = uis.width;
+    if( menu->maxs[1] > uis.height ) menu->maxs[1] = uis.height;
 }
 
 void Menu_Size( menuFrameWork_t *menu ) {
