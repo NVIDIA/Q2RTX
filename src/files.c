@@ -430,6 +430,7 @@ ssize_t FS_Tell( qhandle_t f ) {
     }
 }
 
+#if 0
 /*
 ============
 FS_Seek
@@ -460,7 +461,7 @@ qerror_t FS_Seek( qhandle_t f, size_t offset ) {
         return Q_ERR_NOSYS;
     }
 }
-
+#endif
 
 /*
 ============

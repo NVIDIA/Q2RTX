@@ -140,7 +140,7 @@ ssize_t FS_ReadLine( qhandle_t f, char *buffer, size_t size );
 void    FS_Flush( qhandle_t f );
 
 ssize_t FS_Tell( qhandle_t f );
-qerror_t FS_Seek( qhandle_t f, size_t offset );
+//qerror_t FS_Seek( qhandle_t f, size_t offset );
 
 ssize_t  FS_Length( qhandle_t f );
 
