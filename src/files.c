@@ -507,6 +507,8 @@ qerror_t FS_FilterFile( qhandle_t f ) {
     unsigned mode;
     char *modeStr;
     void *zfp;
+    uint32_t magic;
+    size_t length;
 
     switch( file->type ) {
     case FS_GZ:
@@ -520,15 +522,50 @@ qerror_t FS_FilterFile( qhandle_t f ) {
     mode = file->mode & FS_MODE_MASK;
     switch( mode ) {
     case FS_MODE_READ:
+        // should have at least 10 bytes of header and 8 bytes of trailer
+        if( file->length < 18 ) {
+            return Q_ERR_FILE_TOO_SMALL;
+        }
+
+        // seek to the header
+        if( fseek( file->fp, 0, SEEK_SET ) == -1 ) {
+            return Q_ERR(errno);
+        }
+
+        // read magic
+        if( fread( &magic, 1, 4, file->fp ) != 4 ) {
+            return ferror( file->fp ) ? Q_ERR(errno) : Q_ERR_UNEXPECTED_EOF;
+        }
+
+        // check for gzip header
+        if( !CHECK_GZIP_HEADER( magic ) ) {
+            return Q_ERR_INVALID_FORMAT;
+        }
+
+        // seek to the trailer
+        if( fseek( file->fp, file->length - 4, SEEK_SET ) == -1 ) {
+            return Q_ERR(errno);
+        }
+
+        // read uncompressed length
+        if( fread( &magic, 1, 4, file->fp ) != 4 ) {
+            return ferror( file->fp ) ? Q_ERR(errno) : Q_ERR_UNEXPECTED_EOF;
+        }
+
+        length = LittleLong( magic );
         modeStr = "rb";
         break;
+
     case FS_MODE_WRITE:
+        length = 0;
         modeStr = "wb";
         break;
+
     default:
         return Q_ERR_NOSYS;
     }
 
+    // rewind back to beginning
     if( fseek( file->fp, 0, SEEK_SET ) == -1 ) {
         return Q_ERR(errno);
     }
@@ -538,6 +575,7 @@ qerror_t FS_FilterFile( qhandle_t f ) {
         return Q_ERR_FAILURE;
     }
 
+    file->length = length;
     file->zfp = zfp;
     file->type = FS_GZ;
     return Q_ERR_SUCCESS;
