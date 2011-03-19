@@ -495,7 +495,7 @@ static ssize_t demo_read_first( qhandle_t f ) {
     }
 
     // check for gzip header
-    if( ( ( LittleLong( magic ) & 0xe0ffffff ) == 0x00088b1f ) ) {
+    if( CHECK_GZIP_HEADER( magic ) ) {
         ret = FS_FilterFile( f );
         if( ret ) {
             return ret;

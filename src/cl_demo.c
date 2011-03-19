@@ -488,7 +488,7 @@ static int read_first_message( qhandle_t f ) {
     }
 
     // check for gzip header
-    if( ( ( LittleLong( ul ) & 0xe0ffffff ) == 0x00088b1f ) ) {
+    if( CHECK_GZIP_HEADER( ul ) ) {
         ret = FS_FilterFile( f );
         if( ret ) {
             return ret;
