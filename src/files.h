@@ -142,7 +142,7 @@ void    FS_Flush( qhandle_t f );
 ssize_t FS_Tell( qhandle_t f );
 qerror_t FS_Seek( qhandle_t f, size_t offset );
 
-ssize_t  FS_GetFileLength( qhandle_t f );
+ssize_t  FS_Length( qhandle_t f );
 
 qboolean FS_WildCmp( const char *filter, const char *string );
 qboolean FS_ExtCmp( const char *extension, const char *string );

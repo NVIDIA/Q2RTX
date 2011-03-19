@@ -374,34 +374,17 @@ static qerror_t validate_path( const char *s ) {
 
 /*
 ================
-FS_GetFileLength
-
-Returns:
-- current length for files opened for writing.
-- cached length for files opened for reading.
-- error for gzip-compressed files.
+FS_Length
 ================
 */
-ssize_t FS_GetFileLength( qhandle_t f ) {
+ssize_t FS_Length( qhandle_t f ) {
     file_t *file = file_for_handle( f );
-    file_info_t info;
-    qerror_t ret;
 
-    switch( file->type ) {
-    case FS_REAL:
-        ret = Sys_GetFileInfo( file->fp, &info );
-        if( ret ) {
-            return ret;
-        }
-        return info.size;
-    case FS_PAK:
-#if USE_ZLIB
-    case FS_ZIP:
-#endif
+    if( ( file->mode & FS_MODE_MASK ) == FS_MODE_READ ) {
         return file->length;
-    default:
-        return Q_ERR_NOSYS;
     }
+
+    return Q_ERR_NOSYS;
 }
 
 /*
