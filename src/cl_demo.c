@@ -694,8 +694,9 @@ fail:
         parse_next_message();
     }
 
+    len = FS_Length( demofile );
     ofs = FS_Tell( demofile );
-    if( ofs > 0 ) {
+    if( len > 0 && ofs > 0 ) {
         cls.demo.file_offset = ofs;
         cls.demo.file_size = len - ofs;
     }
