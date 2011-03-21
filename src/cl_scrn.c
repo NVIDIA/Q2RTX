@@ -369,6 +369,10 @@ static void draw_percent_bar( int percent ) {
     len = Q_scnprintf( buffer, sizeof( buffer ), "%d%%", percent );
     x = ( scr.hud_width - len * CHAR_WIDTH ) / 2;
     R_DrawString( x, scr.hud_height, 0, MAX_STRING_CHARS, buffer, scr.font_pic );
+
+    if( sv_paused->integer && cl_paused->integer && scr_showpause->integer == 2 ) {
+        SCR_DrawString( scr.hud_width, scr.hud_height, UI_RIGHT, "[PAUSED]" );
+    }
 }
 
 static void draw_demo_bar( void ) {
@@ -1758,7 +1762,7 @@ static void draw_2d( void ) {
     }
 #endif
 
-    if( sv_paused->integer && cl_paused->integer && scr_showpause->integer ) {
+    if( sv_paused->integer && cl_paused->integer && scr_showpause->integer == 1 ) {
         draw_pause();
     }
 

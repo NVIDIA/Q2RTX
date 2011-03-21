@@ -340,6 +340,12 @@ scr_demobar::
     Toggles drawing of progress bar at the bottom of the screen during demo
     playback. Default value is 1.
 
+scr_showpause::
+    Toggles drawing of pause indicator on the screen. Default value is 1.
+      - 0 — do not draw pause indicator
+      - 1 — draw pic in center of the screen
+      - 2 — draw text in demo bar (visible only during demo playback)
+
 scr_scale::
     Scaling factor of the HUD elements. Takes effect in OpenGL mode only.
     Default value is 1.
