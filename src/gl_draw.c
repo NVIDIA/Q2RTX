@@ -151,18 +151,18 @@ void R_SetClipRect( int flags, const clipRect_t *clip ) {
         }
     }
 
-    rc.right = gl_config.vidWidth;
-    rc.bottom = gl_config.vidHeight;
+    rc.right = r_config.width;
+    rc.bottom = r_config.height;
     if( flags & DRAW_CLIP_RIGHT ) {
         rc.right = clip->right * scale;
-        if( rc.right > gl_config.vidWidth ) {
-            rc.right = gl_config.vidWidth;
+        if( rc.right > r_config.width ) {
+            rc.right = r_config.width;
         }
     }
     if( flags & DRAW_CLIP_BOTTOM ) {
         rc.bottom = clip->bottom * scale;
-        if( rc.bottom > gl_config.vidHeight ) {
-            rc.bottom = gl_config.vidHeight;
+        if( rc.bottom > r_config.height ) {
+            rc.bottom = r_config.height;
         }
     }
 
@@ -174,7 +174,7 @@ void R_SetClipRect( int flags, const clipRect_t *clip ) {
     }
 
     qglEnable( GL_SCISSOR_TEST );
-    qglScissor( rc.left, gl_config.vidHeight - rc.bottom,
+    qglScissor( rc.left, r_config.height - rc.bottom,
         rc.right - rc.left, rc.bottom - rc.top );
     draw.flags = ( draw.flags & ~DRAW_CLIP_MASK ) | flags;
 }
@@ -191,8 +191,8 @@ void R_SetScale( float *scale ) {
     qglMatrixMode( GL_PROJECTION );
     qglLoadIdentity();
 
-    qglOrtho( 0, Q_rint( gl_config.vidWidth * f ),
-        Q_rint( gl_config.vidHeight * f ), 0, -1, 1 );
+    qglOrtho( 0, Q_rint( r_config.width * f ),
+        Q_rint( r_config.height * f ), 0, -1, 1 );
 
     draw.scale = f;
 }

@@ -88,7 +88,7 @@ static inline grab_t get_grab_mode( void ) {
         return IN_FREE;
 
     // always grab in full screen
-    if( scr_glconfig.flags & QVF_FULLSCREEN )
+    if( r_config.flags & QVF_FULLSCREEN )
         return IN_GRAB;
 
     // show cursor if menu is up

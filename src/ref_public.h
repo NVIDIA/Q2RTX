@@ -125,40 +125,19 @@ typedef struct refdef_s {
 } refdef_t;
 
 typedef enum {
-    GL_RENDERER_SOFTWARE,
-    GL_RENDERER_MESADRI,
-    GL_RENDERER_OTHER
-} glHardware_t;
-
-typedef enum {
-    QVF_MINIDRIVER      = ( 1 << 0 ),
-    QVF_ACCELERATED     = ( 1 << 1 ),
-    QVF_GAMMARAMP       = ( 1 << 2 ),
-    QVF_FULLSCREEN      = ( 1 << 3 ),
-    QVF_VIDEOSYNC       = ( 1 << 4 )
+    QVF_ACCELERATED     = ( 1 << 0 ),
+    QVF_GAMMARAMP       = ( 1 << 1 ),
+    QVF_FULLSCREEN      = ( 1 << 2 ),
+    QVF_VIDEOSYNC       = ( 1 << 3 )
 } vidFlags_t;
 
-typedef struct glconfig_s {
-    glHardware_t    renderer;
-    int     version_major;
-    int     version_minor;
+typedef struct {
+    int         width;
+    int         height;
+    vidFlags_t  flags;
+} refcfg_t;
 
-    const char *rendererString;
-    const char *vendorString;
-    const char *versionString;
-    const char *extensionsString;
-
-    int     vidWidth;
-    int     vidHeight;
-    int     flags;
-
-    unsigned    ext_supported;
-    unsigned    ext_enabled;
-
-    int         maxTextureSize;
-    int         numTextureUnits;
-    float       maxAnisotropy;
-} glconfig_t;
+extern refcfg_t r_config;
 
 #define DRAW_COLOR_CLEAR    0
 #define DRAW_COLOR_RGB      0x00000001
@@ -230,7 +209,6 @@ void    R_DrawFillEx( int x, int y, int w, int h, const color_t color );
 void    R_BeginFrame( void );
 void    R_EndFrame( void );
 void    R_ModeChanged( int width, int height, int flags, int rowbytes, void *pixels );
-void    R_GetConfig( glconfig_t *dest );
 #if 0
 void    R_CinematicSetPalette( const byte *palette );
 #endif

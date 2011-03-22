@@ -343,8 +343,8 @@ If the line width has changed, reformat the buffer.
 static void Con_CheckResize( void ) {
     int     width;
 
-    con.vidWidth = scr_glconfig.vidWidth * con.scale;
-    con.vidHeight = scr_glconfig.vidHeight * con.scale;
+    con.vidWidth = r_config.width * con.scale;
+    con.vidHeight = r_config.height * con.scale;
 
     width = ( con.vidWidth / CHAR_WIDTH ) - 2;
 
@@ -427,9 +427,9 @@ void Con_Init( void ) {
 
     con.prompt.printf = Con_Printf;
 
-    // use default width if no video initialized yet
-    scr_glconfig.vidWidth = 640;
-    scr_glconfig.vidHeight = 480;
+    // use default width since no video is initialized yet
+    r_config.width = 640;
+    r_config.height = 480;
     con.linewidth = -1;
     con.scale = 1;
     con.color = COLOR_NONE;

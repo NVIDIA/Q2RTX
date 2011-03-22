@@ -101,16 +101,16 @@ static void UI_Resize( void ) {
 #if USE_REF == REF_SOFT
     uis.clipRect.left = 0;
     uis.clipRect.top = 0;
-    uis.clipRect.right = uis.glconfig.vidWidth;
-    uis.clipRect.bottom = uis.glconfig.vidHeight;
+    uis.clipRect.right = r_config.width;
+    uis.clipRect.bottom = r_config.height;
     uis.scale = 1;
-    uis.width = uis.glconfig.vidWidth;
-    uis.height = uis.glconfig.vidHeight;
+    uis.width = r_config.width;
+    uis.height = r_config.height;
 #else
     Cvar_ClampValue( ui_scale, 1, 9 );
     uis.scale = 1 / ui_scale->value;
-    uis.width = uis.glconfig.vidWidth * uis.scale;
-    uis.height = uis.glconfig.vidHeight * uis.scale;
+    uis.width = r_config.width * uis.scale;
+    uis.height = r_config.height * uis.scale;
 #endif
 
     for( i = 0; i < uis.menuDepth; i++ ) {
@@ -399,8 +399,8 @@ UI_MouseEvent
 =================
 */
 void UI_MouseEvent( int x, int y ) {
-    clamp( x, 0, uis.glconfig.vidWidth - 1 );
-    clamp( y, 0, uis.glconfig.vidHeight - 1 );
+    clamp( x, 0, r_config.width - 1 );
+    clamp( y, 0, r_config.height - 1 );
 
     uis.mouseCoords[0] = Q_rint( x * uis.scale );
     uis.mouseCoords[1] = Q_rint( y * uis.scale );
@@ -452,7 +452,7 @@ void UI_Draw( int realtime ) {
     }
 
     // draw custom cursor in fullscreen mode
-    if( uis.glconfig.flags & QVF_FULLSCREEN ) {
+    if( r_config.flags & QVF_FULLSCREEN ) {
         R_DrawPic( uis.mouseCoords[0] - uis.cursorWidth / 2,
             uis.mouseCoords[1] - uis.cursorHeight / 2, uis.cursorHandle );
     }
@@ -591,7 +591,6 @@ static void ui_scale_changed( cvar_t *self ) {
 void UI_ModeChanged( void ) {
     ui_scale = Cvar_Get( "ui_scale", "1", 0 );
     ui_scale->changed = ui_scale_changed;
-    R_GetConfig( &uis.glconfig );
     UI_Resize();
 }
 

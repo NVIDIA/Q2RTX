@@ -794,7 +794,6 @@ void        CL_ShutdownUI( void );
 //
 // cl_scrn.c
 //
-extern glconfig_t   scr_glconfig;
 extern vrect_t      scr_vrect;        // position of render window
 
 void    SCR_Init (void);

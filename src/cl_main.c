@@ -2872,7 +2872,7 @@ void CL_UpdateFrameTimes( void ) {
     }
 
     // check if video driver supports syncing to vertical retrace
-    if( cl_async->integer > 1 && !( scr_glconfig.flags & QVF_VIDEOSYNC ) ) {
+    if( cl_async->integer > 1 && !( r_config.flags & QVF_VIDEOSYNC ) ) {
         Cvar_Reset( cl_async );
     }
 

@@ -149,12 +149,12 @@ void GL_Bits( glStateBits_t bits ) {
 }
 
 void GL_Setup2D( void ) {
-    qglViewport( 0, 0, gl_config.vidWidth, gl_config.vidHeight );
+    qglViewport( 0, 0, r_config.width, r_config.height );
 
     qglMatrixMode( GL_PROJECTION );
     qglLoadIdentity();
 
-    qglOrtho( 0, gl_config.vidWidth, gl_config.vidHeight, 0, -1, 1 );
+    qglOrtho( 0, r_config.width, r_config.height, 0, -1, 1 );
     draw.scale = 1;
 
     FastColorCopy( colorWhite, draw.colors[0] );
@@ -177,7 +177,7 @@ void GL_Setup3D( void ) {
     GLdouble xmin, xmax, ymin, ymax;
     int yb = glr.fd.y + glr.fd.height;
 
-    qglViewport( glr.fd.x, gl_config.vidHeight - yb,
+    qglViewport( glr.fd.x, r_config.height - yb,
         glr.fd.width, glr.fd.height );
 
     qglMatrixMode( GL_PROJECTION );
@@ -238,13 +238,13 @@ void GL_SetDefaultState( void ) {
 byte *IMG_ReadPixels( qboolean reverse, int *width, int *height ) {
     byte *pixels;
 
-    pixels = FS_AllocTempMem( gl_config.vidWidth * gl_config.vidHeight * 3 );
+    pixels = FS_AllocTempMem( r_config.width * r_config.height * 3 );
 
-    qglReadPixels( 0, 0, gl_config.vidWidth, gl_config.vidHeight,
+    qglReadPixels( 0, 0, r_config.width, r_config.height,
         reverse ? GL_BGR : GL_RGB, GL_UNSIGNED_BYTE, pixels );
 
-    *width = gl_config.vidWidth;
-    *height = gl_config.vidHeight;
+    *width = r_config.width;
+    *height = r_config.height;
 
     return pixels;
 }

@@ -23,6 +23,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 viddef_t    vid;
 
+refcfg_t    r_config;
+
 entity_t    r_worldentity;
 
 refdef_t    r_newrefdef;
@@ -232,6 +234,10 @@ void R_ModeChanged( int width, int height, int flags, int rowbytes, void *pixels
     vid.height = height > MAXHEIGHT ? MAXHEIGHT : height;
     vid.buffer = pixels;
     vid.rowbytes = rowbytes;
+
+    r_config.width = vid.width;
+    r_config.height = vid.height;
+    r_config.flags = flags;
 
     sw_surfcacheoverride = Cvar_Get ("sw_surfcacheoverride", "0", 0);
 
@@ -1115,17 +1121,5 @@ void R_DrawBeam( entity_t *e )
                             e->skinnum & 0xFF,
                             e->alpha );
     }
-}
-
-
-
-//===================================================================
-
-void R_GetConfig( glconfig_t *dest ) {
-    memset( dest, 0, sizeof( *dest ) );
-
-    dest->renderer = GL_RENDERER_SOFTWARE;
-    dest->vidWidth = vid.width;
-    dest->vidHeight = vid.height;
 }
 

@@ -657,7 +657,7 @@ static qboolean GL_Upload32( byte *data, int width, int height, qboolean mipmap 
         }
     }
 
-    if( !( gl_config.flags & QVF_GAMMARAMP ) &&
+    if( !( r_config.flags & QVF_GAMMARAMP ) &&
         ( mipmap || gl_gamma_scale_pics->integer ) )
     {
         GL_LightScaleTexture( data, width, height, mipmap );
@@ -1051,7 +1051,7 @@ void GL_InitImages( void ) {
     gl_saturation = Cvar_Get( "gl_saturation", "1", CVAR_ARCHIVE|CVAR_FILES );
     gl_intensity = Cvar_Get( "intensity", "1", CVAR_ARCHIVE|CVAR_FILES );
     gl_invert = Cvar_Get( "gl_invert", "0", CVAR_ARCHIVE|CVAR_FILES );
-    if( gl_config.flags & QVF_GAMMARAMP ) {
+    if( r_config.flags & QVF_GAMMARAMP ) {
         gl_gamma = Cvar_Get( "vid_gamma", "1", CVAR_ARCHIVE );
         gl_gamma->changed = gl_gamma_changed;
         gl_gamma->flags &= ~CVAR_FILES;
@@ -1065,7 +1065,7 @@ void GL_InitImages( void ) {
 
     GL_BuildIntensityTable();
 
-    if( gl_config.flags & QVF_GAMMARAMP ) {
+    if( r_config.flags & QVF_GAMMARAMP ) {
         gl_gamma_changed( gl_gamma );
     } else {
         GL_BuildGammaTables();

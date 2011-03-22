@@ -93,7 +93,6 @@ static cvar_t   *scr_graphshift;
 #endif
 
 vrect_t     scr_vrect;      // position of render window on screen
-glconfig_t  scr_glconfig;
 
 static const char *const sb_nums[2][STAT_PICS] = {
     { "num_0", "num_1", "num_2", "num_3", "num_4", "num_5",
@@ -331,10 +330,10 @@ static void SCR_DrawDebugGraph (void)
     //
     // draw the graph
     //
-    w = scr_glconfig.vidWidth;
+    w = r_config.width;
 
     x = w-1;
-    y = scr_glconfig.vidHeight;
+    y = r_config.height;
     R_DrawFill (x, y-scr_graphheight->value,
         w, scr_graphheight->value, 8);
 
@@ -1055,7 +1054,6 @@ void SCR_SetCrosshairColor( void ) {
 }
 
 void SCR_ModeChanged( void ) {
-    R_GetConfig( &scr_glconfig );
     IN_Activate();
 #if USE_UI
     UI_ModeChanged();
@@ -1072,8 +1070,6 @@ SCR_RegisterMedia
 */
 void SCR_RegisterMedia( void ) {
     int     i, j;
-
-    R_GetConfig( &scr_glconfig );
 
     for( i = 0; i < 2; i++ )
         for( j = 0; j < STAT_PICS; j++ )
@@ -1164,9 +1160,6 @@ void SCR_Init( void ) {
 
     Cmd_Register( scr_cmds );
 
-    scr_glconfig.vidWidth = 640;
-    scr_glconfig.vidHeight = 480;
-
     scr.initialized = qtrue;
 }
 
@@ -1237,17 +1230,17 @@ static void tile_clear( void ) {
     right = left + scr_vrect.width - 1;
     
     // clear above view screen
-    R_TileClear( 0, 0, scr_glconfig.vidWidth, top, scr.backtile_pic );
+    R_TileClear( 0, 0, r_config.width, top, scr.backtile_pic );
 
     // clear below view screen
-    R_TileClear( 0, bottom, scr_glconfig.vidWidth,
-        scr_glconfig.vidHeight - bottom, scr.backtile_pic );
+    R_TileClear( 0, bottom, r_config.width,
+        r_config.height - bottom, scr.backtile_pic );
 
     // clear left of view screen
     R_TileClear( 0, top, left, scr_vrect.height, scr.backtile_pic );
     
     // clear right of view screen
-    R_TileClear( right, top, scr_glconfig.vidWidth - right,
+    R_TileClear( right, top, r_config.width - right,
         scr_vrect.height, scr.backtile_pic );
 }
 
@@ -1676,8 +1669,8 @@ static void draw_pause( void ) {
 }
 
 static void draw_loading( void ) {
-    int x = ( scr_glconfig.vidWidth - scr.loading_width ) / 2;
-    int y = ( scr_glconfig.vidHeight - scr.loading_height ) / 2;
+    int x = ( r_config.width - scr.loading_width ) / 2;
+    int y = ( r_config.height - scr.loading_height ) / 2;
 
     R_DrawPic( x, y, scr.loading_pic );
 }
@@ -1776,13 +1769,13 @@ static void draw_2d( void ) {
 static void draw_active_frame( void ) {
     if( cls.state < ca_active ) {
         // draw black background if not active
-        R_DrawFill( 0, 0, scr_glconfig.vidWidth,
-            scr_glconfig.vidHeight, 0 );
+        R_DrawFill( 0, 0, r_config.width,
+            r_config.height, 0 );
         return;
     }
 
-    scr.hud_height = scr_glconfig.vidHeight;
-    scr.hud_width = scr_glconfig.vidWidth;
+    scr.hud_height = r_config.height;
+    scr.hud_width = r_config.width;
 
     draw_demo_bar();
 

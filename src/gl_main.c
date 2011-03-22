@@ -27,8 +27,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 glRefdef_t glr;
 glStatic_t gl_static;
-glconfig_t gl_config;
+glConfig_t gl_config;
 statCounters_t  c;
+
+refcfg_t r_config;
 
 int registration_sequence;
 
@@ -456,12 +458,12 @@ static void GL_DrawTearing( void ) {
     }
 
     points[0][0] = 0;
-    points[0][1] = gl_config.vidHeight;
+    points[0][1] = r_config.height;
     points[1][0] = 0;
     points[1][1] = 0;
-    points[2][0] = gl_config.vidWidth;
-    points[2][1] = gl_config.vidHeight;
-    points[3][0] = gl_config.vidWidth;
+    points[2][0] = r_config.width;
+    points[2][1] = r_config.height;
+    points[3][0] = r_config.width;
     points[3][1] = 0;
 
     qglClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
@@ -1021,17 +1023,8 @@ R_ModeChanged
 ===============
 */
 void R_ModeChanged( int width, int height, int flags, int rowbytes, void *pixels ) {
-    gl_config.vidWidth = width & ~7;
-    gl_config.vidHeight = height & ~1;
-    gl_config.flags = flags;
-}
-
-/*
-===============
-R_GetConfig
-===============
-*/
-void R_GetConfig( glconfig_t *config ) {
-    *config = gl_config;
+    r_config.width = width & ~7;
+    r_config.height = height & ~1;
+    r_config.flags = flags;
 }
 

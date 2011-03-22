@@ -78,8 +78,32 @@ typedef struct {
     int     num_beams;
 } glRefdef_t;
 
+typedef enum {
+    GL_RENDERER_SOFTWARE,
+    GL_RENDERER_MESADRI,
+    GL_RENDERER_OTHER
+} glHardware_t;
+
+typedef struct {
+    glHardware_t    renderer;
+    int     version_major;
+    int     version_minor;
+
+    const char  *rendererString;
+    const char  *vendorString;
+    const char  *versionString;
+    const char  *extensionsString;
+
+    unsigned    ext_supported;
+    unsigned    ext_enabled;
+
+    int         maxTextureSize;
+    int         numTextureUnits;
+    float       maxAnisotropy;
+} glConfig_t;
+
 extern glStatic_t gl_static;
-extern glconfig_t gl_config;
+extern glConfig_t gl_config;
 extern glRefdef_t glr;
 
 typedef struct {
