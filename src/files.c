@@ -1973,8 +1973,8 @@ static int QDECL pakcmp( const void *p1, const void *p2 ) {
 
     if( !FS_strncmp( s1, "pak", 3 ) ) {
         if( !FS_strncmp( s2, "pak", 3 ) ) {
-            int n1 = strtoul( s1 + 3, &s1, 10 );
-            int n2 = strtoul( s2 + 3, &s2, 10 );
+            unsigned long n1 = strtoul( s1 + 3, &s1, 10 );
+            unsigned long n2 = strtoul( s2 + 3, &s2, 10 );
             if( n1 > n2 ) {
                 return 1;
             }
@@ -1993,7 +1993,10 @@ alphacmp:
     return FS_strcmp( s1, s2 );
 }
 
-static void load_pack_files( unsigned mode, const char *ext, pack_t *(loadfunc)( const char * ) ) {
+// sets fs_gamedir, adds the directory to the head of the path,
+// then loads and adds pak*.pak, then anything else in alphabethical order.
+static void q_printf( 2, 3 ) add_game_dir( unsigned mode, const char *fmt, ... ) {
+    va_list         argptr;
     searchpath_t    *search;
     pack_t          *pack;
     void            *files[MAX_LISTED_FILES];
@@ -2001,8 +2004,36 @@ static void load_pack_files( unsigned mode, const char *ext, pack_t *(loadfunc)(
     char            path[MAX_OSPATH];
     size_t          len;
 
+    va_start( argptr, fmt );
+    len = Q_vsnprintf( fs_gamedir, sizeof( fs_gamedir ), fmt, argptr );
+    va_end( argptr );
+
+    if( len >= sizeof( fs_gamedir ) ) {
+        Com_EPrintf( "%s: refusing oversize path\n", __func__ );
+        return;
+    }
+
+#ifdef _WIN32
+    FS_ReplaceSeparators( fs_gamedir, '/' );
+#endif
+
+    // add the directory to the search path
+    search = FS_Malloc( sizeof( searchpath_t ) + len );
+    search->mode = mode;
+    search->pack = NULL;
+    memcpy( search->filename, fs_gamedir, len + 1 );
+    search->next = fs_searchpaths;
+    fs_searchpaths = search;
+
+#if USE_ZLIB
+#define PAK_EXT  ".pak;.pkz"
+#else
+#define PAK_EXT  ".pak"
+#endif
+
+    // add any pack files
     count = 0;
-    Sys_ListFiles_r( fs_gamedir, ext, 0, 0, &count, files, 0 );
+    Sys_ListFiles_r( fs_gamedir, PAK_EXT, 0, 0, &count, files, 0 );
     if( !count ) {
         return;
     }
@@ -2015,7 +2046,13 @@ static void load_pack_files( unsigned mode, const char *ext, pack_t *(loadfunc)(
             Com_EPrintf( "%s: refusing oversize path\n", __func__ );
             continue;
         }
-        pack = (*loadfunc)( path );
+#if USE_ZLIB
+        // FIXME: guess packfile type by contents instead?
+        if( len > 4 && !Q_stricmp( path + len - 4, ".pkz" ) )
+            pack = load_zip_file( path );
+        else
+#endif
+            pack = load_pak_file( path );
         if( !pack )
             continue;
         search = FS_Malloc( sizeof( searchpath_t ) );
@@ -2029,51 +2066,6 @@ static void load_pack_files( unsigned mode, const char *ext, pack_t *(loadfunc)(
     for( i = 0; i < count; i++ ) {
         Z_Free( files[i] );
     }
-}
-
-// Sets fs_gamedir, adds the directory to the head of the path,
-// then loads and adds pak*.pak, then anything else in alphabethical order.
-static void q_printf( 2, 3 ) add_game_dir( unsigned mode, const char *fmt, ... ) {
-    va_list argptr;
-    searchpath_t *search;
-    size_t len;
-    //qerror_t ret;
-
-    va_start( argptr, fmt );
-    len = Q_vsnprintf( fs_gamedir, sizeof( fs_gamedir ), fmt, argptr );
-    va_end( argptr );
-
-    if( len >= sizeof( fs_gamedir ) ) {
-        Com_EPrintf( "%s: refusing oversize path\n", __func__ );
-        return;
-    }
-
-#ifdef _WIN32
-    FS_ReplaceSeparators( fs_gamedir, '/' );
-#elif 0
-    // check if this path exists and IS a directory
-    ret = Sys_GetPathInfo( fs_gamedir, NULL );
-    if( Q_ERRNO(ret) != EISDIR ) {
-        Com_DPrintf( "Not adding %s: %s\n", fs_gamedir, Q_ErrorString( ret ) );
-        return;
-    }
-#endif
-
-    // add the directory to the search path
-    search = FS_Malloc( sizeof( searchpath_t ) + len );
-    search->mode = mode;
-    search->pack = NULL;
-    memcpy( search->filename, fs_gamedir, len + 1 );
-    search->next = fs_searchpaths;
-    fs_searchpaths = search;
-
-    // add any pak files in the format *.pak
-    load_pack_files( mode, ".pak", load_pak_file );
-
-#if USE_ZLIB
-    // add any zip files in the format *.pkz
-    load_pack_files( mode, ".pkz", load_zip_file );
-#endif
 }
 
 /*
