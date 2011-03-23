@@ -48,9 +48,6 @@ QUAKE FILESYSTEM
 
 #define MAX_FILE_HANDLES    8
 
-#define MAX_READ    0x40000     // read in blocks of 256k
-#define MAX_WRITE   0x40000     // write in blocks of 256k
-
 #if USE_ZLIB
 #define ZIP_MAXFILES    0x4000  // 16k files, rather arbitrary
 #define ZIP_BUFSIZE     0x10000 // inflate in blocks of 64k
@@ -92,8 +89,6 @@ typedef enum {
 typedef struct {
     z_stream    stream;
     size_t      rest_in;
-    size_t      rest_out;
-    qerror_t    error;
     byte        buffer[ZIP_BUFSIZE];
 } zipstream_t;
 #endif
@@ -139,8 +134,10 @@ typedef struct {
 #endif
     packfile_t  *entry;     // pack entry this handle is tied to
     pack_t      *pack;      // points to the pack entry is from
-    qboolean    unique;
-    size_t      length;
+    qboolean    unique;     // if true, then pack must be freed on close
+    qerror_t    error;      // stream error indicator from read/write operation
+    size_t      rest_out;   // remaining unread length for FS_PAK/FS_ZIP
+    size_t      length;     // total cached file length
 } file_t;
 
 typedef struct symlink_s {
@@ -404,17 +401,7 @@ ssize_t FS_Tell( qhandle_t f ) {
         }
         return ret;
     case FS_PAK:
-        ret = ftell( file->fp );
-        if( ret == -1 ) {
-            return Q_ERR(errno);
-        }
-        if( ret < file->entry->filepos || 
-            ret > file->entry->filepos +
-            file->entry->filelen )
-        {
-            return Q_ERR_SPIPE;
-        }
-        return ret - file->entry->filepos;
+        return file->length - file->rest_out;
 #if USE_ZLIB
     case FS_ZIP:
         return tell_zip_file( file );
@@ -434,6 +421,8 @@ ssize_t FS_Tell( qhandle_t f ) {
 /*
 ============
 FS_Seek
+
+THIS IS MASSIVELY BROKEN, DON'T USE!
 ============
 */
 qerror_t FS_Seek( qhandle_t f, size_t offset ) {
@@ -494,6 +483,11 @@ qerror_t FS_CreatePath( char *path ) {
     return Q_ERR_SUCCESS;
 }
 
+#define FS_ERR_READ(fp) \
+    (ferror(fp) ? Q_ERR(errno) : Q_ERR_UNEXPECTED_EOF)
+#define FS_ERR_WRITE(fp) \
+    (ferror(fp) ? Q_ERR(errno) : Q_ERR_FAILURE)
+
 /*
 ============
 FS_FilterFile
@@ -535,7 +529,7 @@ qerror_t FS_FilterFile( qhandle_t f ) {
 
         // read magic
         if( fread( &magic, 1, 4, file->fp ) != 4 ) {
-            return ferror( file->fp ) ? Q_ERR(errno) : Q_ERR_UNEXPECTED_EOF;
+            return FS_ERR_READ( file->fp );
         }
 
         // check for gzip header
@@ -550,7 +544,7 @@ qerror_t FS_FilterFile( qhandle_t f ) {
 
         // read uncompressed length
         if( fread( &magic, 1, 4, file->fp ) != 4 ) {
-            return ferror( file->fp ) ? Q_ERR(errno) : Q_ERR_UNEXPECTED_EOF;
+            return FS_ERR_READ( file->fp );
         }
 
         length = LittleLong( magic );
@@ -719,6 +713,11 @@ static ssize_t open_file_write( file_t *file, const char *name ) {
     }
 #endif
 
+    if( ( file->mode & FS_FLUSH_MASK ) == FS_FLUSH_SYNC ) {
+        // make it unbuffered
+        setvbuf( fp, NULL, _IONBF, BUFSIZ );
+    }
+
     if( mode == FS_MODE_RDWR ) {
         // seek to the end of file for appending
         if( fseek( fp, 0, SEEK_END ) == -1 ) {
@@ -734,10 +733,11 @@ static ssize_t open_file_write( file_t *file, const char *name ) {
 
     FS_DPrintf( "%s: %s: succeeded\n", __func__, fullpath );
 
-    file->fp = fp;
     file->type = FS_REAL;
-    file->length = 0;
+    file->fp = fp;
     file->unique = qtrue;
+    file->error = Q_ERR_SUCCESS;
+    file->length = 0;
 
     return pos;
 
@@ -748,17 +748,6 @@ fail2:
 #endif
     fclose( fp );
     return ret;
-}
-
-// functions that report errors for partial reads/writes
-static inline ssize_t read_block( void *buf, size_t size, FILE *fp ) {
-    size_t result = fread( buf, 1, size, fp );
-    return result == size ? result : ferror(fp) ? Q_ERR(errno) : result;
-}
-
-static inline ssize_t write_block( void *buf, size_t size, FILE *fp ) {
-    size_t result = fwrite( buf, 1, size, fp );
-    return result == size ? result : ferror(fp) ? Q_ERR(errno) : result;
 }
 
 #if USE_ZLIB
@@ -773,7 +762,7 @@ static qerror_t check_header_coherency( FILE *fp, packfile_t *entry ) {
     if( fseek( fp, (long)entry->filepos, SEEK_SET ) == -1 )
         return Q_ERR(errno);
     if( fread( header, 1, sizeof( header ), fp ) != sizeof( header ) )
-        return ferror( fp ) ? Q_ERR(errno) : Q_ERR_UNEXPECTED_EOF;
+        return FS_ERR_READ( fp );
 
     // check the magic
     if( LittleLongMem( &header[0] ) != ZIP_LOCALHEADERMAGIC )
@@ -817,8 +806,8 @@ static void FS_zfree OF(( voidpf opaque, voidpf address )) {
 }
 
 static void open_zip_file( file_t *file ) {
-    packfile_t *entry = file->entry;
     zipstream_t *s;
+    z_streamp z;
 
     if( file->unique ) {
         s = FS_Malloc( sizeof( *s ) );
@@ -827,29 +816,23 @@ static void open_zip_file( file_t *file ) {
         s = &fs_zipstream;
     }
 
-    if( entry->compmtd ) {
-        z_streamp z = &s->stream;
-
-        if( z->state ) {
-            // already initialized, just reset
-            inflateReset( z );
-        } else {
-            z->zalloc = FS_zalloc;
-            z->zfree = FS_zfree;
-            if( inflateInit2( z, -MAX_WBITS ) != Z_OK ) {
-                Com_Error( ERR_FATAL, "%s: inflateInit2() failed", __func__ );
-            }
+    z = &s->stream;
+    if( z->state ) {
+        // already initialized, just reset
+        inflateReset( z );
+    } else {
+        z->zalloc = FS_zalloc;
+        z->zfree = FS_zfree;
+        if( inflateInit2( z, -MAX_WBITS ) != Z_OK ) {
+            Com_Error( ERR_FATAL, "%s: inflateInit2() failed", __func__ );
         }
-
-        z->avail_in = z->avail_out = 0;
-        z->total_in = z->total_out = 0;
-        z->next_in = z->next_out = NULL;
     }
-    
-    s->rest_in = entry->complen;
-    s->rest_out = entry->filelen;
-    s->error = Q_ERR_SUCCESS;
 
+    z->avail_in = z->avail_out = 0;
+    z->total_in = z->total_out = 0;
+    z->next_in = z->next_out = NULL;
+
+    s->rest_in = file->entry->complen;
     file->zfp = s;
 }
 
@@ -866,51 +849,26 @@ static void close_zip_file( file_t *file ) {
 static ssize_t tell_zip_file( file_t *file ) {
     zipstream_t *s = file->zfp;
 
-    if( !file->entry->compmtd ) {
-        return file->entry->filelen - s->rest_in;
-    }
     return s->stream.total_out;
 }
 
 static ssize_t read_zip_file( file_t *file, void *buf, size_t len ) {
     zipstream_t *s = file->zfp;
     z_streamp z = &s->stream;
-    size_t block;
-    ssize_t result;
+    size_t block, result;
     int ret;
 
-    // can't continue after error
-    if( s->error ) {
-        return s->error;
+    if( len > file->rest_out ) {
+        len = file->rest_out;
     }
-
-    if( len > s->rest_out ) {
-        len = s->rest_out;
-    }
-
-    if( !file->entry->compmtd ) {
-        if( len > s->rest_in ) {
-            len = s->rest_in;
-        }
-        if( !len ) {
-            return 0;
-        }
-
-        result = read_block( buf, len, file->fp );
-        if( result <= 0 ) {
-            s->error = result ? result : Q_ERR_UNEXPECTED_EOF;
-            return s->error;
-        }
-
-        s->rest_in -= result;
-        s->rest_out -= result;
-        return result;
+    if( !len ) {
+        return 0;
     }
 
     z->next_out = buf;
     z->avail_out = (uInt)len;
 
-    while( z->avail_out ) {
+    do {
         if( !z->avail_in ) {
             if( !s->rest_in ) {
                 break;
@@ -922,34 +880,37 @@ static ssize_t read_zip_file( file_t *file, void *buf, size_t len ) {
                 block = s->rest_in;
             }
 
-            result = read_block( s->buffer, block, file->fp );
-            if( result <= 0 ) {
-                s->error = result ? result : Q_ERR_UNEXPECTED_EOF;
-                return s->error;
+            result = fread( s->buffer, 1, block, file->fp );
+            if( result != block ) {
+                file->error = FS_ERR_READ( file->fp );
+                if( !result ) {
+                    break;
+                }
             }
 
             s->rest_in -= result;
             z->next_in = s->buffer;
             z->avail_in = result;
         }
-        //if(z->total_out>1024*128)return Q_ERR(EIO);
 
         ret = inflate( z, Z_SYNC_FLUSH );
         if( ret == Z_STREAM_END ) {
             break;
         }
         if( ret != Z_OK ) {
-            s->error = Q_ERR_INFLATE_FAILED;
-            //Com_Printf("%s\n",z->msg );
+            file->error = Q_ERR_INFLATE_FAILED;
             break;
         }
-    }
+        if( file->error ) {
+            break;
+        }
+    } while( z->avail_out );
 
     len -= z->avail_out;
-    s->rest_out -= len;
+    file->rest_out -= len;
 
-    if( s->error && len == 0 ) {
-        return s->error;
+    if( file->error && len == 0 ) {
+        return file->error;
     }
 
     return len;
@@ -986,16 +947,23 @@ static ssize_t open_from_pak( file_t *file, pack_t *pack, packfile_t *entry, qbo
         goto fail;
     }
 
-    file->fp = fp;
     file->type = pack->type;
+    file->fp = fp;
     file->entry = entry;
     file->pack = pack;
-    file->length = entry->filelen;
     file->unique = unique;
+    file->error = Q_ERR_SUCCESS;
+    file->rest_out = entry->filelen;
+    file->length = entry->filelen;
 
 #if USE_ZLIB
     if( pack->type == FS_ZIP ) {
-        open_zip_file( file );
+        if( entry->compmtd ) {
+            open_zip_file( file );
+        } else {
+            // stored, just pretend it's a packfile
+            file->type = FS_PAK;
+        }
     }
 #endif
 
@@ -1103,9 +1071,10 @@ static ssize_t open_file_read( file_t *file, const char *name, qboolean unique )
                 return ret;
             }
 
-            file->fp = fp;
             file->type = FS_REAL;
+            file->fp = fp;
             file->unique = qtrue;
+            file->error = Q_ERR_SUCCESS;
             file->length = info.size;
 
             FS_DPrintf( "%s: %s: succeeded\n", __func__, fullpath );
@@ -1119,62 +1088,86 @@ static ssize_t open_file_read( file_t *file, const char *name, qboolean unique )
     return ret == Q_ERR_SUCCESS ? Q_ERR_NOENT : ret;
 }
 
+static ssize_t read_pak_file( file_t *file, void *buf, size_t len ) {
+    size_t result;
+
+    if( len > file->rest_out ) {
+        len = file->rest_out;
+    }
+    if( !len ) {
+        return 0;
+    }
+
+    result = fread( buf, 1, len, file->fp );
+    if( result != len ) {
+        file->error = FS_ERR_READ( file->fp );
+        if( !result ) {
+            return file->error;
+        }
+    }
+
+    file->rest_out -= result;
+    return result;
+}
+
+static ssize_t read_phys_file( file_t *file, void *buf, size_t len ) {
+    size_t result;
+
+    result = fread( buf, 1, len, file->fp );
+    if( result != len && ferror( file->fp ) ) {
+        file->error = Q_ERR(errno);
+        if( !result ) {
+            return file->error;
+        }
+    }
+
+    return result;
+}
+
 /*
 =================
-FS_ReadFile
-
-Properly handles partial reads
+FS_Read
 =================
 */
-ssize_t FS_Read( void *buffer, size_t len, qhandle_t f ) {
-    size_t  block, remaining = len;
-    ssize_t read = 0;
-    byte    *buf = (byte *)buffer;
-    file_t  *file = file_for_handle( f );
+ssize_t FS_Read( void *buf, size_t len, qhandle_t f ) {
+    file_t *file = file_for_handle( f );
+#if USE_ZLIB
+    int ret;
+#endif
 
+    if( ( file->mode & FS_MODE_MASK ) != FS_MODE_READ ) {
+        return Q_ERR_INVAL;
+    }
     if( len > SSIZE_MAX ) {
         return Q_ERR_INVAL;
     }
-
-    // read in chunks for progress bar
-    while( remaining ) {
-        block = remaining;
-        if( block > MAX_READ )
-            block = MAX_READ;
-        switch( file->type ) {
-        case FS_REAL:
-        case FS_PAK:
-            read = read_block( buf, block, file->fp );
-            if( read < 0 ) {
-                return read;
-            }
-            break;
-#if USE_ZLIB
-        case FS_GZ:
-            read = gzread( file->zfp, buf, block );
-            if( read < 0 ) {
-                return Q_ERR_INFLATE_FAILED;
-            }
-            break;
-        case FS_ZIP:
-            read = read_zip_file( file, buf, block );
-            if( read < 0 ) {
-                return read;
-            }
-            break;
-#endif
-        default:
-            break;
-        }
-        if( read == 0 ) {
-            return len - remaining;
-        }
-
-        remaining -= read;
-        buf += read;
+    if( len == 0 ) {
+        return 0;
     }
 
-    return len;
+    // can't continue after error
+    if( file->error ) {
+        return file->error;
+    }
+
+    switch( file->type ) {
+    case FS_REAL:
+        return read_phys_file( file, buf, len );
+    case FS_PAK:
+        return read_pak_file( file, buf, len );
+#if USE_ZLIB
+    case FS_GZ:
+        ret = gzread( file->zfp, buf, len );
+        if( ret < 0 ) {
+            return Q_ERR_LIBRARY_ERROR;
+        }
+        return ret;
+    case FS_ZIP:
+        return read_zip_file( file, buf, len );
+#endif
+    default:
+        return Q_ERR_NOSYS;
+    }
 }
 
 ssize_t FS_ReadLine( qhandle_t f, char *buffer, size_t size ) {
@@ -1182,9 +1175,13 @@ ssize_t FS_ReadLine( qhandle_t f, char *buffer, size_t size ) {
     char *s;
     size_t len;
 
+    if( ( file->mode & FS_MODE_MASK ) != FS_MODE_READ ) {
+        return Q_ERR_INVAL;
+    }
     if( file->type != FS_REAL ) {
         return Q_ERR_NOSYS;
     }
+
     do {
         s = fgets( buffer, size, file->fp );
         if( !s ) {
@@ -1217,64 +1214,45 @@ void FS_Flush( qhandle_t f ) {
 /*
 =================
 FS_Write
-
-Properly handles partial writes
 =================
 */
-ssize_t FS_Write( const void *buffer, size_t len, qhandle_t f ) {
-    size_t  block, remaining = len;
-    ssize_t write = 0;
-    byte    *buf = (byte *)buffer;
+ssize_t FS_Write( const void *buf, size_t len, qhandle_t f ) {
     file_t  *file = file_for_handle( f );
+    size_t  result;
 
+    if( ( file->mode & FS_MODE_MASK ) == FS_MODE_READ ) {
+        return Q_ERR_INVAL;
+    }
     if( len > SSIZE_MAX ) {
         return Q_ERR_INVAL;
     }
-
-    // read in chunks for progress bar
-    while( remaining ) {
-        block = remaining;
-        if( block > MAX_WRITE )
-            block = MAX_WRITE;
-        switch( file->type ) {
-        case FS_REAL:
-            write = write_block( buf, block, file->fp );
-            if( write < 0 ) {
-                return write;
-            }
-            break;
-#if USE_ZLIB
-        case FS_GZ:
-            write = gzwrite( file->zfp, buf, block );
-            if( write < 0 ) {
-                return Q_ERR_DEFLATE_FAILED;
-            }
-            break;
-#endif
-        default:
-            Com_Error( ERR_FATAL, "%s: bad file type", __func__ );
-        }
-        if( write == 0 ) {
-            return len - remaining;
-        }
-
-        remaining -= write;
-        buf += write;
+    if( len == 0 ) {
+        return 0;
     }
 
-    if( ( file->mode & FS_FLUSH_MASK ) == FS_FLUSH_SYNC ) {
-        switch( file->type ) {
-        case FS_REAL:
-            fflush( file->fp );
-            break;
-#if USE_ZLIB
-        case FS_GZ:
-            gzflush( file->zfp, Z_SYNC_FLUSH );
-            break;
-#endif
-        default:
-            break;
+    // can't continue after error
+    if( file->error ) {
+        return file->error;
+    }
+
+    switch( file->type ) {
+    case FS_REAL:
+        result = fwrite( buf, 1, len, file->fp );
+        if( result != len ) {
+            file->error = FS_ERR_WRITE( file->fp );
+            return file->error;
         }
+        break;
+#if USE_ZLIB
+    case FS_GZ:
+        if( gzwrite( file->zfp, buf, len ) == 0 ) {
+            file->error = Q_ERR_LIBRARY_ERROR;
+            return file->error;
+        }
+        break;
+#endif
+    default:
+        Com_Error( ERR_FATAL, "%s: bad file type", __func__ );
     }
 
     return len;
