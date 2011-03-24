@@ -28,41 +28,43 @@ typedef struct file_info_s {
     char    name[1];
 } file_info_t;
 
-/* bits 0 - 1, enum */
+// bits 0 - 1, enum
 #define FS_MODE_APPEND          0x00000000
 #define FS_MODE_READ            0x00000001
 #define FS_MODE_WRITE           0x00000002
 #define FS_MODE_RDWR            0x00000003
 #define FS_MODE_MASK            0x00000003
 
-/* bit 2, enum */
-#define FS_FLUSH_NONE           0x00000000
-#define FS_FLUSH_SYNC           0x00000004
-#define FS_FLUSH_MASK           0x00000004
+// bits 2 - 3, enum
+#define FS_BUF_DEFAULT          0x00000000
+#define FS_BUF_FULL             0x00000004
+#define FS_BUF_LINE             0x00000008
+#define FS_BUF_NONE             0x0000000c
+#define FS_BUF_MASK             0x0000000c
 
-/* bits 3 - 4, enum */
+// bits 4 - 5, enum
 #define FS_TYPE_ANY             0x00000000
-#define FS_TYPE_REAL            0x00000008
-#define FS_TYPE_PAK             0x00000010
-#define FS_TYPE_RESERVED        0x00000018
-#define FS_TYPE_MASK            0x00000018
+#define FS_TYPE_REAL            0x00000010
+#define FS_TYPE_PAK             0x00000020
+#define FS_TYPE_RESERVED        0x00000030
+#define FS_TYPE_MASK            0x00000030
 
-/* bits 5 - 6, flag */
+// bits 6 - 7, flag
 #define FS_PATH_ANY             0x00000000
-#define FS_PATH_BASE            0x00000020
-#define FS_PATH_GAME            0x00000040
-#define FS_PATH_MASK            0x00000060
+#define FS_PATH_BASE            0x00000040
+#define FS_PATH_GAME            0x00000080
+#define FS_PATH_MASK            0x000000c0
 
-/* bits 7 - 11, flag */
-#define FS_SEARCH_BYFILTER      0x00000080
-#define FS_SEARCH_SAVEPATH      0x00000100
-#define FS_SEARCH_EXTRAINFO     0x00000200
-#define FS_SEARCH_STRIPEXT      0x00000400
-#define FS_SEARCH_DIRSONLY      0x00000800
+// bits 8 - 12, flag
+#define FS_SEARCH_BYFILTER      0x00000100
+#define FS_SEARCH_SAVEPATH      0x00000200
+#define FS_SEARCH_EXTRAINFO     0x00000400
+#define FS_SEARCH_STRIPEXT      0x00000800
+#define FS_SEARCH_DIRSONLY      0x00001000
 
-/* bits 7 - 8, flag */
-#define FS_FLAG_GZIP            0x00000080
-#define FS_FLAG_EXCL            0x00000100
+// bits 8 - 9, flag
+#define FS_FLAG_GZIP            0x00000100
+#define FS_FLAG_EXCL            0x00000200
 
 //
 // Limit the maximum file size FS_LoadFile can handle, as a protection from

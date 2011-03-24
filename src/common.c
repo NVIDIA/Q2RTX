@@ -185,8 +185,12 @@ static void logfile_open( void ) {
     qhandle_t f;
 
     mode = logfile_enable->integer > 1 ? FS_MODE_APPEND : FS_MODE_WRITE;
-    if( logfile_flush->integer ) {
-        mode |= FS_FLUSH_SYNC;
+    if( logfile_flush->integer > 0 ) {
+        if( logfile_flush->integer > 1 ) {
+            mode |= FS_BUF_NONE;
+        } else {
+            mode |= FS_BUF_LINE;
+        }
     }
 
     f = FS_EasyOpenFile( buffer, sizeof( buffer ), mode,

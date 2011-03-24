@@ -396,9 +396,11 @@ NOTE: Log file is not automatically reopened when game directory is changed.
 
 logfile_flush::
     Specifies if log file data is buffered in memory or flushed to disk
-    immediately. Default value is 0.
-      - 0 — buffered mode
-      - 1 — unbuffered mode
+    immediately. Default value is 0. See setvbuf(3) manual page for more
+    details.
+      - 0 — system default mode (block buffered)
+      - 1 — line buffered mode
+      - 2 — unbuffered mode
 
 logfile_name::
     Specifies base name of the log file. Should not include any extension part

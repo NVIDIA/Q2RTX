@@ -713,9 +713,22 @@ static ssize_t open_file_write( file_t *file, const char *name ) {
     }
 #endif
 
-    if( ( file->mode & FS_FLUSH_MASK ) == FS_FLUSH_SYNC ) {
+    switch( file->mode & FS_BUF_MASK ) {
+    case FS_BUF_NONE:
         // make it unbuffered
         setvbuf( fp, NULL, _IONBF, BUFSIZ );
+        break;
+    case FS_BUF_LINE:
+        // make it line buffered
+        setvbuf( fp, NULL, _IOLBF, BUFSIZ );
+        break;
+    case FS_BUF_FULL:
+        // make it fully buffered
+        setvbuf( fp, NULL, _IOFBF, BUFSIZ );
+        break;
+    default:
+        // use default mode (normally fully buffered)
+        break;
     }
 
     if( mode == FS_MODE_RDWR ) {
