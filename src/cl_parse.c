@@ -1195,24 +1195,20 @@ CL_ParseReconnect
 */
 static void CL_ParseReconnect( void ) {
     if( cls.demo.playback ) {
-        return;
+        Com_Error( ERR_DISCONNECT, "Server disconnected" );
     }
-
-    S_StopAllSounds();
-
-    if( cls.demo.recording )
-        CL_Stop_f();
 
     Com_Printf( "Server disconnected, reconnecting\n" );
 
-    if( cls.download.file ) {
-        FS_FCloseFile( cls.download.file );
+    // free netchan now to prevent `disconnect'
+    // message from being sent to server
+    if( cls.netchan ) {
+        Netchan_Close( cls.netchan );
+        cls.netchan = NULL;
     }
-    memset( &cls.download, 0, sizeof( cls.download ) );
 
-    EXEC_TRIGGER( cl_changemapcmd );
+    CL_Disconnect( ERR_RECONNECT );
 
-    CL_ClearState();
     cls.state = ca_challenging;
     cls.connect_time -= CONNECT_FAST;
     cls.connect_count = 0;

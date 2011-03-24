@@ -1529,6 +1529,9 @@ static void CL_PacketEvent( void ) {
 
     CL_ParseServerMessage();
 
+    if( !cls.netchan )
+        return;     // might have disconnected
+
 #ifdef _DEBUG
     CL_AddNetgraph();
 #endif
