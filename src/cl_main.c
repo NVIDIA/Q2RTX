@@ -648,6 +648,19 @@ void CL_Disconnect( error_type_t type ) {
     cls.errorReceived = qfalse;
 #endif
 
+    if( cls.netchan ) {
+        // send a disconnect message to the server
+        MSG_WriteByte( clc_stringcmd );
+        MSG_WriteData( "disconnect", 11 );
+
+        cls.netchan->Transmit( cls.netchan, msg_write.cursize, msg_write.data, 3 );
+
+        SZ_Clear( &msg_write );
+
+        Netchan_Close( cls.netchan );
+        cls.netchan = NULL;
+    }
+
     // stop demo
     if( cls.demo.recording ) {
         CL_Stop_f();
@@ -668,19 +681,6 @@ void CL_Disconnect( error_type_t type ) {
 
     memset( &cls.demo, 0, sizeof( cls.demo ) );
     
-    if( cls.netchan ) {
-        // send a disconnect message to the server
-        MSG_WriteByte( clc_stringcmd );
-        MSG_WriteData( "disconnect", 11 );
-
-        cls.netchan->Transmit( cls.netchan, msg_write.cursize, msg_write.data, 3 );
-
-        SZ_Clear( &msg_write );
-            
-        Netchan_Close( cls.netchan );
-        cls.netchan = NULL;
-    }
-
     // stop download
     CL_CleanupDownloads();
 
