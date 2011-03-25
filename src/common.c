@@ -1360,7 +1360,7 @@ qboolean Com_WildCmpEx( const char *filter, const char *string, int term, qboole
 ==============================================================================
 */
 
-const char colorNames[10][8] = {
+const char *const colorNames[10] = {
     "black", "red", "green", "yellow",
     "blue", "cyan", "magenta", "white",
     "alt", "none"
@@ -1387,6 +1387,7 @@ color_index_t Com_ParseColor( const char *s, color_index_t last ) {
             return i;
         }
     }
+
     return COLOR_NONE;
 }
 

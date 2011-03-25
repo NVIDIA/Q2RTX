@@ -157,8 +157,8 @@ void GL_Setup2D( void ) {
     qglOrtho( 0, r_config.width, r_config.height, 0, -1, 1 );
     draw.scale = 1;
 
-    FastColorCopy( colorWhite, draw.colors[0] );
-    FastColorCopy( colorWhite, draw.colors[1] );
+    draw.colors[0].u32 = U32_WHITE;
+    draw.colors[1].u32 = U32_WHITE;
 
     if( draw.flags & DRAW_CLIP_MASK ) {
         qglDisable( GL_SCISSOR_TEST );

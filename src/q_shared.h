@@ -174,7 +174,10 @@ typedef vec_t vec5_t[5];
 
 typedef float mat4_t[16];
 
-typedef unsigned char color_t[4];
+typedef union {
+    uint32_t u32;
+    uint8_t u8[4];
+} color_t;
 
 typedef int fixed4_t;
 typedef int fixed8_t;
@@ -283,8 +286,6 @@ static inline float Q_fabs( float f ) {
 #define Vector4Clear(a)         ((a)[0]=(a)[1]=(a)[2]=(a)[3]=0)
 #define Vector4Negate(a,b)      ((b)[0]=-(a)[0],(b)[1]=-(a)[1],(b)[2]=-(a)[2],(b)[3]=-(a)[3])
 #define Vector4Set(v, a, b, c, d)   ((v)[0]=(a),(v)[1]=(b),(v)[2]=(c),(v)[3]=(d))
-
-#define FastColorCopy(a,b)      memcpy(b,a,4)
 
 void AngleVectors (vec3_t angles, vec3_t forward, vec3_t right, vec3_t up);
 vec_t VectorNormalize (vec3_t v);       // returns vector length
@@ -551,6 +552,12 @@ static inline float FloatSwap( float f ) {
     ((b)[0]=LittleFloat((a)[0]),\
      (b)[1]=LittleFloat((a)[1]),\
      (b)[2]=LittleFloat((a)[2]))
+
+#if USE_BGRA
+#define MakeColor( r, g, b, a )        MakeRawLong( b, g, r, a )
+#else
+#define MakeColor( r, g, b, a )        MakeRawLong( r, g, b, a )
+#endif
 
 //=============================================
 

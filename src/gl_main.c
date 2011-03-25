@@ -338,13 +338,10 @@ static void GL_DrawSpriteModel( model_t *model ) {
 }
 
 static void GL_DrawNullModel( void ) {
-    static const color_t colors[6] = {
-        { 255,   0,   0, 255 },
-        { 255,   0,   0, 255 },
-        {   0, 255,   0, 255 },
-        {   0, 255,   0, 255 },
-        {   0,   0, 255, 255 },
-        {   0,   0, 255, 255 }
+    static const uint32_t colors[6] = {
+        U32_RED, U32_RED,
+        U32_GREEN, U32_GREEN,
+        U32_BLUE, U32_BLUE
     };
     entity_t *e = glr.ent;
     vec3_t points[6];

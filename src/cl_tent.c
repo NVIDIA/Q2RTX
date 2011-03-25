@@ -353,20 +353,15 @@ LASER MANAGEMENT
 ==============================================================
 */
 
-#define LASER_FADE_NOT      1
-#define LASER_FADE_ALPHA    2
-#define LASER_FADE_RGBA     3
-
 typedef struct {
-    entity_t    ent;
     vec3_t      start;
     vec3_t      end;
-    int         fadeType;
-    qboolean    indexed;
-    color_t     color;
-    float       width;
-    int         lifeTime;
-    int         startTime;
+    int         color;
+#if USE_REF == REF_GL
+    color_t     rgba;
+#endif
+    int         width;
+    int         lifetime, starttime;
 } laser_t;
 
 #define MAX_LASERS  32
@@ -381,10 +376,10 @@ static laser_t *alloc_laser( void ) {
     laser_t *l;
     int i;
 
-    for( i=0, l=cl_lasers ; i<MAX_LASERS ; i++, l++ ) {
-        if( cl.time - l->startTime >= l->lifeTime ) {
+    for( i = 0, l = cl_lasers; i < MAX_LASERS; i++, l++ ) {
+        if( cl.time - l->starttime >= l->lifetime ) {
             memset( l, 0, sizeof( *l ) );
-            l->startTime = cl.time;
+            l->starttime = cl.time;
             return l;
         }
     }
@@ -396,40 +391,32 @@ static void CL_AddLasers( void ) {
     laser_t     *l;
     entity_t    ent;
     int         i;
-    //color_t       color;
-    int time;
-    float f;
+    int         time;
 
     memset( &ent, 0, sizeof( ent ) );
 
     for( i = 0, l = cl_lasers; i < MAX_LASERS; i++, l++ ) {
-        time = l->lifeTime - ( cl.time - l->startTime );
+        time = l->lifetime - ( cl.time - l->starttime );
         if( time < 0 ) {
             continue;
         }
 
-        ent.alpha = l->color[3] / 255.0f;
-
-        if( l->fadeType != LASER_FADE_NOT ) {
-            f = (float)time / (float)l->lifeTime;
-
-            ent.alpha *= f;
-            /*if( l->fadeType == LASER_FADE_RGBA ) {
-                *(int *)color = *(int *)l->color;
-                color[0] *= f;
-                color[1] *= f;
-                color[2] *= f;
-                ent.skinnum = *(int *)color;
-            }*/
-        } /*else*/ {
-            ent.skinnum = *(uint32_t *)l->color;
+#if USE_REF == REF_GL
+        if( l->color == -1 ) {
+            float f = (float)time / (float)l->lifetime;
+            ent.rgba.u8[0] = l->rgba.u8[0];
+            ent.rgba.u8[1] = l->rgba.u8[1];
+            ent.rgba.u8[2] = l->rgba.u8[2];
+            ent.rgba.u8[3] = l->rgba.u8[3] * f;
         }
+#endif
 
+        ent.alpha = 0.30f;
+        ent.skinnum = l->color;
         ent.flags = RF_TRANSLUCENT|RF_BEAM;
         VectorCopy( l->start, ent.origin );
         VectorCopy( l->end, ent.oldorigin );
         ent.frame = l->width;
-        ent.lightstyle = !l->indexed;
 
         V_AddEntity( &ent );
     }
@@ -449,13 +436,8 @@ static void CL_ParseLaser( int colors ) {
 
     VectorCopy( te.pos1, l->start );
     VectorCopy( te.pos2, l->end );
-    l->fadeType = LASER_FADE_NOT;
-    l->lifeTime = 100;
-    l->indexed = qtrue;
-    l->color[0] = ( colors >> ( ( rand() % 4 ) * 8 ) ) & 0xff;
-    l->color[1] = 0;
-    l->color[2] = 0;
-    l->color[3] = 77;
+    l->lifetime = 100;
+    l->color = ( colors >> ( ( rand() % 4 ) * 8 ) ) & 0xff;
     l->width = 4;
 }
 
@@ -1028,16 +1010,18 @@ static cvar_t *cl_railspiral_color;
 static cvar_t *cl_railspiral_radius;
 
 static void cl_railcore_color_changed( cvar_t *self ) {
-    if( !SCR_ParseColor( self->string, railcore_color ) ) {
+    if( !SCR_ParseColor( self->string, &railcore_color ) ) {
         Com_WPrintf( "Invalid value '%s' for '%s'\n", self->string, self->name );
-        FastColorCopy( colorRed, railcore_color );
+        Cvar_Reset( self );
+        railcore_color.u32 = U32_RED;
     }
 }
 
 static void cl_railspiral_color_changed( cvar_t *self ) {
-    if( !SCR_ParseColor( self->string, railspiral_color ) ) {
+    if( !SCR_ParseColor( self->string, &railspiral_color ) ) {
         Com_WPrintf( "Invalid value '%s' for '%s'\n", self->string, self->name );
-        FastColorCopy( colorBlue, railspiral_color );
+        Cvar_Reset( self );
+        railspiral_color.u32 = U32_BLUE;
     }
 }
 
@@ -1050,11 +1034,10 @@ static void CL_RailCore( void ) {
 
     VectorCopy( te.pos1, l->start );
     VectorCopy( te.pos2, l->end );
-    l->fadeType = LASER_FADE_RGBA;
-    l->lifeTime = 1000 * cl_railtrail_time->value;
-    l->indexed = qfalse;
-    l->width = cl_railcore_width->value;
-    FastColorCopy( railcore_color, l->color );
+    l->color = -1;
+    l->lifetime = 1000 * cl_railtrail_time->value;
+    l->width = cl_railcore_width->integer;
+    l->rgba.u32 = railcore_color.u32;
 }
 
 static void CL_RailSpiral( void ) {
@@ -1090,10 +1073,10 @@ static void CL_RailSpiral( void ) {
         VectorScale( right, c, dir );
         VectorMA( dir, s, up, dir );
 
-        p->alpha = railspiral_color[3] / 255.0f;
+        p->alpha = 1.0;
         p->alphavel = -1.0 / ( cl_railtrail_time->value + frand() * 0.2 );
-        p->color = 0xff;
-        FastColorCopy( railspiral_color, p->rgb );
+        p->color = -1;
+        p->rgba.u32 = railspiral_color.u32;
         for( j=0 ; j<3 ; j++ ) {
             p->org[j] = move[j] + dir[j] * cl_railspiral_radius->value;
             p->vel[j] = dir[j] * 6;

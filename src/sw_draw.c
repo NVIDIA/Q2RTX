@@ -141,30 +141,15 @@ void R_InitDraw( void ) {
     }
 }
 
-void R_SetColor( int flags, const color_t color ) {
-    draw.flags &= ~DRAW_COLOR_MASK;
+void R_ClearColor( void ) {
+    draw.colorIndex = -1;
+}
 
-    if( flags == DRAW_COLOR_CLEAR ) {
-        draw.colorIndex = -1;
-        return;
-    }
+void R_SetAlpha( float alpha ) {
+}
 
-    if( flags == DRAW_COLOR_ALPHA ) {
-        return;
-    }
-
-    if( flags == DRAW_COLOR_INDEXED ) {
-        draw.colorIndex = *( uint32_t * )color & 255;
-        return;
-    }
-
-    if( flags & DRAW_COLOR_RGB ) {
-        draw.colorIndex = R_IndexForColor( color );
-    }
-    if( flags & DRAW_COLOR_ALPHA ) {
-    }
-
-    draw.flags |= flags;
+void R_SetColor( uint32_t color ) {
+    draw.colorIndex = R_IndexForColor( color );
 }
 
 void R_SetClipRect( int flags, const clipRect_t *clip ) {
@@ -658,7 +643,7 @@ R_DrawFill
 Fills a box of pixels with a single color
 =============
 */
-void R_DrawFill( int x, int y, int w, int h, int c ) {
+void R_DrawFill8( int x, int y, int w, int h, int c ) {
     byte            *dest;
     int             u, v;
 
@@ -683,10 +668,11 @@ void R_DrawFill( int x, int y, int w, int h, int c ) {
             dest[u] = c;
 }
 
-void R_DrawFillEx( int x, int y, int w, int h, const color_t color ) {
+void R_DrawFill32( int x, int y, int w, int h, uint32_t color ) {
     int             c;
     byte            *dest;
     int             u, v;
+    int             alpha;
 
     if( x + w > vid.width )
         w = vid.width - x;
@@ -703,11 +689,12 @@ void R_DrawFillEx( int x, int y, int w, int h, const color_t color ) {
     if( w < 0 || h < 0 )
         return;
 
-    c = color ? R_IndexForColor( color ) : 0xD7;
+    c = R_IndexForColor( color );
+    alpha = ( LittleLong( color ) >> 24 ) & 0xff;
 
     dest = vid.buffer + y * vid.rowbytes + x;
-    if( color[3] < 172 ) {
-        if( color[3] > 84 ) {
+    if( alpha < 172 ) {
+        if( alpha > 84 ) {
             for( v = 0; v < h; v++, dest += vid.rowbytes ) {
                 for( u = 0 ; u < w; u++ ) {
                     dest[u] = vid.alphamap[c * 256 + dest[u]];

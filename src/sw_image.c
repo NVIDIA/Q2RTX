@@ -113,12 +113,13 @@ static void R_CreateNotexture( void ) {
     }   
 }
 
-int R_IndexForColor( const color_t color ) {
+int R_IndexForColor( uint32_t color ) {
     unsigned int r, g, b, c;
+    color_t tmp = { color };
 
-    r = ( color[0] >> 3 ) & 31;
-    g = ( color[1] >> 2 ) & 63;
-    b = ( color[2] >> 3 ) & 31;
+    r = ( tmp.u8[0] >> 3 ) & 31;
+    g = ( tmp.u8[1] >> 2 ) & 63;
+    b = ( tmp.u8[2] >> 3 ) & 31;
 
     c = r | ( g << 5 ) | ( b << 11 );
 

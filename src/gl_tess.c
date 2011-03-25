@@ -119,12 +119,12 @@ void GL_DrawParticles( void ) {
             scale += dist * 0.01f;
         }
 
-        if( p->color == 255 ) {
-            FastColorCopy( p->rgb, color );
+        if( p->color == -1 ) {
+            color.u32 = p->rgba.u32;
         } else {
-            *( uint32_t * )color = d_8to24table[p->color & 255];
+            color.u32 = d_8to24table[p->color & 0xff];
+            color.u8[3] = 255 * p->alpha;
         }
-        color[3] = p->alpha * 255;
 
         if( numverts + 3 > TESS_MAX_VERTICES ) {
             qglDrawArrays( GL_TRIANGLES, 0, numverts );
@@ -149,9 +149,9 @@ void GL_DrawParticles( void ) {
         dst_vert[13] = PARTICLE_SIZE;   dst_vert[14] = 0;
 
         dst_color = ( uint32_t * )tess.colors + numverts;
-        dst_color[0] = *( uint32_t * )color;
-        dst_color[1] = *( uint32_t * )color;
-        dst_color[2] = *( uint32_t * )color;
+        dst_color[0] = color.u32;
+        dst_color[1] = color.u32;
+        dst_color[2] = color.u32;
 
         numverts += 3;
     }
@@ -210,12 +210,12 @@ void GL_DrawBeams( void ) {
 
         length = VectorLength( d1 );
 
-        if( ent->lightstyle ) {
-            *( uint32_t * )color = *( uint32_t * )&ent->skinnum;
+        if( ent->skinnum == -1 ) {
+            color.u32 = ent->rgba.u32;
         } else {
-            *( uint32_t * )color = d_8to24table[ent->skinnum & 0xFF];
+            color.u32 = d_8to24table[ent->skinnum & 0xff];
+            color.u8[3] = 255 * ent->alpha;
         }
-        color[3] = 255 * ent->alpha;
 
         if( numverts + 4 > TESS_MAX_VERTICES ||
             numindices + 6 > TESS_MAX_INDICES )
@@ -237,10 +237,10 @@ void GL_DrawBeams( void ) {
         dst_vert[18] = 0; dst_vert[19] = length;
         
         dst_color = ( uint32_t * )tess.colors + numverts;
-        dst_color[0] = *( uint32_t * )color;
-        dst_color[1] = *( uint32_t * )color;
-        dst_color[2] = *( uint32_t * )color;
-        dst_color[3] = *( uint32_t * )color;
+        dst_color[0] = color.u32;
+        dst_color[1] = color.u32;
+        dst_color[2] = color.u32;
+        dst_color[3] = color.u32;
 
         dst_indices = tess.indices + numindices;
         dst_indices[0] = numverts + 0;

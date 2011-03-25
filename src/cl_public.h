@@ -79,17 +79,14 @@ void SCR_EndLoadingPlaque( void );
 void SCR_ModeChanged( void );
 void SCR_UpdateScreen( void );
 
-#define colorBlack      colorTable[COLOR_BLACK]
-#define colorRed        colorTable[COLOR_RED]
-#define colorGreen      colorTable[COLOR_GREEN]
-#define colorYellow     colorTable[COLOR_YELLOW]
-#define colorBlue       colorTable[COLOR_BLUE]
-#define colorCyan       colorTable[COLOR_CYAN]
-#define colorMagenta    colorTable[COLOR_MAGENTA]
-#define colorWhite      colorTable[COLOR_WHITE]
-
-#define MAKERGB(v,r,g,b)    ((v)[0]=(r),(v)[1]=(g),(v)[2]=(b))
-#define MAKERGBA(v,r,g,b,a) ((v)[0]=(r),(v)[1]=(g),(v)[2]=(b),(v)[3]=(a))
+#define U32_BLACK   MakeColor(   0,   0,   0, 255 )
+#define U32_RED     MakeColor( 255,   0,   0, 255 )
+#define U32_GREEN   MakeColor(   0, 255,   0, 255 )
+#define U32_YELLOW  MakeColor( 255, 255,   0, 255 )
+#define U32_BLUE    MakeColor(   0,   0, 255, 255 )
+#define U32_CYAN    MakeColor(   0, 255, 255, 255 )
+#define U32_MAGENTA MakeColor( 255,   0, 255, 255 )
+#define U32_WHITE   MakeColor( 255, 255, 255, 255 )
 
 #define CHAR_WIDTH  8
 #define CHAR_HEIGHT 8
@@ -108,9 +105,9 @@ void SCR_UpdateScreen( void );
 #define UI_MULTILINE        0x00000200
 #define UI_DRAWCURSOR       0x00000400
 
-extern const color_t    colorTable[8];
+extern const uint32_t   colorTable[8];
 
-qboolean SCR_ParseColor( const char *s, color_t color );
+qboolean SCR_ParseColor( const char *s, color_t *color );
 
 float V_CalcFov( float fov_x, float width, float height );
 

@@ -625,7 +625,7 @@ extern time_t       com_startTime;
 
 extern qhandle_t    com_logFile;
 
-extern const char   colorNames[10][8];
+extern const char *const colorNames[10];
 
 void Qcommon_Init( int argc, char **argv );
 void Qcommon_Frame( void );

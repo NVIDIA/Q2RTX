@@ -637,10 +637,10 @@ typedef struct cparticle_s {
     vec3_t  org;
     vec3_t  vel;
     vec3_t  accel;
-    int     color;      // 255 -> use rgb
+    int     color;      // -1 => use rgba
     float   alpha;
     float   alphavel;
-    color_t rgb;
+    color_t rgba;
 } cparticle_t;
 
 #if USE_DLIGHTS

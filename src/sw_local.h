@@ -717,7 +717,7 @@ typedef struct swstate_s {
 
 void R_IMFlatShadedQuad( vec3_t a, vec3_t b, vec3_t c, vec3_t d, int color, float alpha );
 
-int R_IndexForColor( const color_t color );
+int R_IndexForColor( uint32_t color );
 
 void R_InitDraw( void );
 

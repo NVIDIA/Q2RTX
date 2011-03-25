@@ -618,14 +618,17 @@ static int Con_DrawLine( int v, int line, float alpha ) {
         flags = UI_ALTCOLOR;
         // fall through
     case COLOR_NONE:
-        VectorSet( color, 255, 255, 255 );
-        color[3] = alpha * 255;
-        R_SetColor( DRAW_COLOR_RGBA, color );
+        R_ClearColor();
+        if( alpha != 1 ) {
+            R_SetAlpha( alpha );
+        }
         break;
     default:
-        VectorCopy( colorTable[c & 7], color );
-        color[3] = alpha * 255;
-        R_SetColor( DRAW_COLOR_RGBA, color );
+        color.u32 = colorTable[c & 7];
+        if( alpha != 1 ) {
+            color.u8[3] = alpha * 255;
+        }
+        R_SetColor( color.u32 );
         break;
     }
 
@@ -685,8 +688,8 @@ static void Con_DrawNotify( void ) {
 
         v += CHAR_HEIGHT;
     }
-    
-    R_SetColor( DRAW_COLOR_CLEAR, NULL );
+
+    R_ClearColor();
 
     if( cls.key_dest & KEY_MESSAGE ) {
         if( con.chat == CHAT_TEAM ) {
@@ -736,11 +739,7 @@ static void Con_DrawSolidConsole( void ) {
         ( cls.key_dest & KEY_MENU ) == 0 )
     {
         alpha = 0.5f + 0.5f * ( con.currentHeight / con_height->value );
-
-        Cvar_ClampValue( con_alpha, 0, 1 );
-        alpha *= con_alpha->value;
-
-        R_SetColor( DRAW_COLOR_ALPHA, ( byte * )&alpha );
+        R_SetAlpha( alpha * Cvar_ClampValue( con_alpha, 0, 1 ) );
     }
 
     clip.left = 0;
@@ -766,7 +765,7 @@ static void Con_DrawSolidConsole( void ) {
 
 // draw arrows to show the buffer is backscrolled
     if( con.display != con.current ) {
-        R_SetColor( DRAW_COLOR_RGBA, colorRed );
+        R_SetColor( U32_RED );
         for( i = 1; i < con.linewidth / 2; i += 4 ) {
             R_DrawChar( i * CHAR_WIDTH, y, 0, '^', con.charsetImage );
         }
@@ -774,9 +773,9 @@ static void Con_DrawSolidConsole( void ) {
         y -= CHAR_HEIGHT;
         rows--;
     }
-    
+
 // draw from the bottom up
-    R_SetColor( DRAW_COLOR_CLEAR, NULL );
+    R_ClearColor();
     row = con.display;
     widths[0] = widths[1] = 0;
     for( i = 0; i < rows; i++ ) {
@@ -794,7 +793,7 @@ static void Con_DrawSolidConsole( void ) {
         row--;
     }
     
-    R_SetColor( DRAW_COLOR_CLEAR, NULL );
+    R_ClearColor();
 
 //ZOID
     // draw the download bar
@@ -858,9 +857,9 @@ static void Con_DrawSolidConsole( void ) {
             i = 17;
             break;
         }
-        R_SetColor( DRAW_COLOR_RGBA, colorYellow );
+        R_SetColor( U32_YELLOW );
         R_DrawChar( CHAR_WIDTH, y, 0, i, con.charsetImage );
-        R_SetColor( DRAW_COLOR_CLEAR, NULL );
+        R_ClearColor();
 
         // draw input line
         x = IF_Draw( &con.prompt.inputLine, 2 * CHAR_WIDTH, y,
@@ -878,7 +877,7 @@ static void Con_DrawSolidConsole( void ) {
         row++;
     }
 
-    R_SetColor( DRAW_COLOR_RGBA, colorCyan );
+    R_SetColor( U32_CYAN );
 
 // draw clock
     if( con_clock->integer ) {
@@ -896,7 +895,7 @@ static void Con_DrawSolidConsole( void ) {
     }
 
     // restore rendering parameters
-    R_SetColor( DRAW_COLOR_CLEAR, NULL );
+    R_ClearColor();
     R_SetClipRect( DRAW_CLIP_DISABLED, NULL );
 }
 

@@ -311,12 +311,10 @@ qboolean    UI_CursorInRect( vrect_t *rect );
 void        *UI_FormatColumns( int extrasize, ... ) q_sentinel;
 char        *UI_GetColumn( char *s, int n );
 void        UI_AddToServerList( const serverStatus_t *status );
-void        UI_DrawLoading( int realtime );
-void        UI_SetupDefaultBanner( menuStatic_t *banner, const char *name );
-void        UI_DrawString( int x, int y, const color_t color, int flags, const char *string );
+void        UI_DrawString( int x, int y, int flags, const char *string );
 void        UI_DrawChar( int x, int y, int flags, int ch );
-void        UI_DrawRect( const vrect_t *rect, int border, int color );
-void        UI_DrawRectEx( const vrect_t *rect, int border, const color_t color );
+void        UI_DrawRect8( const vrect_t *rect, int border, int c );
+//void        UI_DrawRect32( const vrect_t *rect, int border, uint32_t color );
 void        UI_StringDimensions( vrect_t *rc, int flags, const char *string );
 
 void        UI_LoadScript( void );

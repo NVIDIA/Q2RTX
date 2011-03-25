@@ -25,7 +25,7 @@ drawStatic_t draw;
 static inline void _GL_StretchPic(
     float x, float y, float w, float h,
     float s1, float t1, float s2, float t2,
-    const byte *color, int texnum, int flags )
+    uint32_t color, int texnum, int flags )
 {
     vec_t *dst_vert;
     uint32_t *dst_color;
@@ -47,10 +47,10 @@ static inline void _GL_StretchPic(
     Vector4Set( dst_vert + 12, x,     y + h, s1, t2 );
 
     dst_color = ( uint32_t * )tess.colors + tess.numverts;
-    dst_color[0] = *( const uint32_t * )color;
-    dst_color[1] = *( const uint32_t * )color;
-    dst_color[2] = *( const uint32_t * )color;
-    dst_color[3] = *( const uint32_t * )color;
+    dst_color[0] = color;
+    dst_color[1] = color;
+    dst_color[2] = color;
+    dst_color[3] = color;
 
     dst_indices = tess.indices + tess.numindices;
     dst_indices[0] = tess.numverts + 0;
@@ -68,7 +68,9 @@ static inline void _GL_StretchPic(
         }
     }
 
-    if( color[3] != 255 ) {
+#define U32_ALPHA   MakeColor( 0, 0, 0, 255 )
+
+    if( ( color & U32_ALPHA ) != U32_ALPHA ) {
         tess.flags |= 2;
     }
 
@@ -80,42 +82,30 @@ static inline void _GL_StretchPic(
     _GL_StretchPic(x,y,w,h,s1,t1,s2,t2,color,(image)->texnum,(image)->flags)
 
 void GL_Blend( void ) {
-    color_t color = {
-        glr.fd.blend[0] * 255,
-        glr.fd.blend[1] * 255,
-        glr.fd.blend[2] * 255,
-        glr.fd.blend[3] * 255
-    };
+    color_t color;
+
+    color.u8[0] = glr.fd.blend[0] * 255;
+    color.u8[1] = glr.fd.blend[1] * 255;
+    color.u8[2] = glr.fd.blend[2] * 255;
+    color.u8[3] = glr.fd.blend[3] * 255;
 
     _GL_StretchPic( glr.fd.x, glr.fd.y, glr.fd.width, glr.fd.height, 0, 0, 1, 1,
-        color, TEXNUM_WHITE, 0 );
+        color.u32, TEXNUM_WHITE, 0 );
 }
 
-void R_SetColor( int flags, const color_t color ) {
-    draw.flags &= ~DRAW_COLOR_MASK;
+void R_ClearColor( void ) {
+    draw.colors[0].u32 = U32_WHITE;
+    draw.colors[1].u32 = U32_WHITE;
+}
 
-    if( flags == DRAW_COLOR_CLEAR ) {
-        FastColorCopy( colorWhite, draw.colors[0] );
-        FastColorCopy( colorWhite, draw.colors[1] );
-        return;
-    }
-    if( flags == DRAW_COLOR_ALPHA ) {
-        draw.colors[0][3] = *( float * )color * 255;
-        draw.colors[1][3] = *( float * )color * 255;
-    } else if( flags == DRAW_COLOR_INDEXED ) {
-        *( uint32_t * )draw.colors[0] = d_8to24table[ *( uint32_t * )color & 255 ];
-    } else {
-        if( flags & DRAW_COLOR_RGB ) {
-            VectorCopy( color, draw.colors[0] );
-            VectorCopy( colorWhite, draw.colors[1] );
-        }
-        if( flags & DRAW_COLOR_ALPHA ) {
-            draw.colors[0][3] = color[3];
-            draw.colors[1][3] = color[3];
-        }
-    }
+void R_SetAlpha( float alpha ) {
+    draw.colors[0].u8[3] =
+    draw.colors[1].u8[3] = alpha * 255;
+}
 
-    draw.flags |= flags;
+void R_SetColor( uint32_t color ) {
+    draw.colors[0].u32 = color;
+    draw.colors[1].u8[3] = draw.colors[0].u8[3];
 }
 
 void R_SetClipRect( int flags, const clipRect_t *clip ) {
@@ -213,36 +203,36 @@ void R_DrawStretchPicST( int x, int y, int w, int h, float s1, float t1,
         float s2, float t2, qhandle_t pic )
 {
     /* TODO: scrap support */
-    GL_StretchPic( x, y, w, h, s1, t1, s2, t2, draw.colors[0], IMG_ForHandle( pic ) );
+    GL_StretchPic( x, y, w, h, s1, t1, s2, t2,
+        draw.colors[0].u32, IMG_ForHandle( pic ) );
 }
 
 void R_DrawStretchPic( int x, int y, int w, int h, qhandle_t pic ) {
     image_t *image = IMG_ForHandle( pic );
 
     GL_StretchPic( x, y, w, h, image->sl, image->tl, image->sh, image->th,
-        draw.colors[0], image );
+        draw.colors[0].u32, image );
 }
 
 void R_DrawPic( int x, int y, qhandle_t pic ) {
     image_t *image = IMG_ForHandle( pic );
 
     GL_StretchPic( x, y, image->width, image->height,
-        image->sl, image->tl, image->sh, image->th, draw.colors[0], image );
+        image->sl, image->tl, image->sh, image->th, draw.colors[0].u32, image );
 }
 
 #define DIV64 ( 1.0f / 64.0f )
 
 void R_TileClear( int x, int y, int w, int h, qhandle_t pic ) {
     GL_StretchPic( x, y, w, h, x * DIV64, y * DIV64,
-        ( x + w ) * DIV64, ( y + h ) * DIV64, colorWhite, IMG_ForHandle( pic ) );
+        ( x + w ) * DIV64, ( y + h ) * DIV64, U32_WHITE, IMG_ForHandle( pic ) );
 }
 
-void R_DrawFill( int x, int y, int w, int h, int c ) {
-    _GL_StretchPic( x, y, w, h, 0, 0, 1, 1, ( byte * )&d_8to24table[c & 255],
-        TEXNUM_WHITE, 0 );
+void R_DrawFill8( int x, int y, int w, int h, int c ) {
+    _GL_StretchPic( x, y, w, h, 0, 0, 1, 1, d_8to24table[c & 0xff], TEXNUM_WHITE, 0 );
 }
 
-void R_DrawFillEx( int x, int y, int w, int h, const color_t color ) {
+void R_DrawFill32( int x, int y, int w, int h, uint32_t color ) {
     _GL_StretchPic( x, y, w, h, 0, 0, 1, 1, color, TEXNUM_WHITE, 0 );
 }
 
@@ -257,7 +247,7 @@ static inline void draw_char( int x, int y, int c, qboolean alt, image_t *image 
     s = ( c & 15 ) * 0.0625f;
     t = ( c >> 4 ) * 0.0625f;
     GL_StretchPic( x, y, CHAR_WIDTH, CHAR_HEIGHT, s, t,
-        s + 0.0625f, t + 0.0625f, draw.colors[alt], image );
+        s + 0.0625f, t + 0.0625f, draw.colors[alt].u32, image );
 }
 
 void R_DrawChar( int x, int y, int flags, int c, qhandle_t font ) {
@@ -301,7 +291,7 @@ void Draw_Stringf( int x, int y, const char *fmt, ... ) {
         t = ( c >> 4 ) * 0.0625f;
 
         GL_StretchPic( x, y, CHAR_WIDTH, CHAR_HEIGHT, s, t,
-            s + 0.0625f, t + 0.0625f, colorWhite, r_charset );
+            s + 0.0625f, t + 0.0625f, U32_WHITE, r_charset );
         x += CHAR_WIDTH;
     }
 }
@@ -355,13 +345,13 @@ void Draw_Lightmaps( void ) {
         x = i & 1;
         y = i >> 1;
         _GL_StretchPic( 256*x, 256*y, 256, 256,
-            0, 0, 1, 1, colorWhite, TEXNUM_LIGHTMAP+i, 0 );
+            0, 0, 1, 1, U32_WHITE, TEXNUM_LIGHTMAP+i, 0 );
     }
 }
 
 void Draw_Scrap( void ) {
     _GL_StretchPic( 0, 0, 256, 256,
-        0, 0, 1, 1, colorWhite, TEXNUM_SCRAP, if_paletted|if_transparent );
+        0, 0, 1, 1, U32_WHITE, TEXNUM_SCRAP, if_paletted|if_transparent );
 }
 
 #endif

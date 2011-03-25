@@ -71,10 +71,15 @@ typedef struct entity_s {
     ** misc
     */
     float   backlerp;               // 0.0 = current, 1.0 = old
-    int     skinnum;                // also used as RF_BEAM's palette index
+    int     skinnum;                // also used as RF_BEAM's palette index,
+                                    // -1 => use rgba
 
     int     lightstyle;             // for flashing entities
     float   alpha;                  // ignore if RF_TRANSLUCENT isn't set
+
+#if USE_REF == REF_GL
+    color_t rgba;
+#endif
 
     qhandle_t   skin;           // NULL for inline skin
     int         flags;
@@ -91,9 +96,11 @@ typedef struct dlight_s {
 
 typedef struct particle_s {
     vec3_t  origin;
-    int     color;
+    int     color;              // -1 => use rgba
     float   alpha;
-    color_t     rgb;
+#if USE_REF == REF_GL
+    color_t rgba;
+#endif
 } particle_t;
 
 typedef struct lightstyle_s {
@@ -139,14 +146,6 @@ typedef struct {
 
 extern refcfg_t r_config;
 
-#define DRAW_COLOR_CLEAR    0
-#define DRAW_COLOR_RGB      0x00000001
-#define DRAW_COLOR_ALPHA    0x00000002
-#define DRAW_COLOR_RGBA     0x00000003
-#define DRAW_COLOR_INDEXED  0x00000004
-#define DRAW_COLOR_MASK     0x00000007
-
-
 #define DRAW_CLIP_DISABLED  0
 #define DRAW_CLIP_LEFT      0x00000004
 #define DRAW_CLIP_RIGHT     0x00000008
@@ -190,7 +189,9 @@ void    R_EndRegistration( void );
 void    R_RenderFrame( refdef_t *fd );
 void    R_LightPoint( vec3_t origin, vec3_t light );
 
-void    R_SetColor( int flags, const color_t color );
+void    R_ClearColor( void );
+void    R_SetAlpha( float clpha );
+void    R_SetColor( uint32_t color );
 void    R_SetClipRect( int flags, const clipRect_t *clip );
 void    R_SetScale( float *scale );
 void    R_DrawChar( int x, int y, int flags, int ch, qhandle_t font );
@@ -202,8 +203,8 @@ void    R_DrawStretchPic( int x, int y, int w, int h, qhandle_t pic );
 void    R_DrawStretchPicST( int x, int y, int w, int h,
         float s1, float t1, float s2, float t2, qhandle_t pic );
 void    R_TileClear( int x, int y, int w, int h, qhandle_t pic );
-void    R_DrawFill( int x, int y, int w, int h, int c );
-void    R_DrawFillEx( int x, int y, int w, int h, const color_t color );
+void    R_DrawFill8( int x, int y, int w, int h, int c );
+void    R_DrawFill32( int x, int y, int w, int h, uint32_t color );
 
 // video mode and refresh state management entry points
 void    R_BeginFrame( void );

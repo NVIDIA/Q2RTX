@@ -257,7 +257,7 @@ void M_Menu_PlayerConfig( void ) {
     m_player.menu.draw = Draw;
     m_player.menu.free = Free;
     m_player.menu.image = uis.backgroundHandle;
-    FastColorCopy( uis.color.background, m_player.menu.color );
+    m_player.menu.color.u32 = uis.color.background.u32;
 
     m_player.entities[0].flags = RF_FULLBRIGHT;
     VectorCopy( angles, m_player.entities[0].angles );

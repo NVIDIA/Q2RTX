@@ -313,21 +313,14 @@ qboolean UI_CursorInRect( vrect_t *rect ) {
     return qtrue;
 }
 
-void UI_DrawString( int x, int y, const color_t color, int flags, const char *string ) {
-    if( color ) {
-        R_SetColor( DRAW_COLOR_RGBA, color );
-    }
-    
+void UI_DrawString( int x, int y, int flags, const char *string ) {
     if( ( flags & UI_CENTER ) == UI_CENTER ) {
         x -= strlen( string ) * CHAR_WIDTH / 2;
     } else if( flags & UI_RIGHT ) {
         x -= strlen( string ) * CHAR_WIDTH;
     }
-    
+
     R_DrawString( x, y, flags, MAX_STRING_CHARS, string, uis.fontHandle );
-    if( color ) {
-        R_SetColor( DRAW_COLOR_CLEAR, NULL );
-    }
 }
 
 void UI_DrawChar( int x, int y, int flags, int ch ) {
@@ -345,20 +338,21 @@ void UI_StringDimensions( vrect_t *rc, int flags, const char *string ) {
     }    
 }
 
-void UI_DrawRect( const vrect_t *rc, int border, int color ) {
-    R_DrawFill( rc->x, rc->y, border, rc->height, color ); // left
-    R_DrawFill( rc->x + rc->width - border, rc->y, border, rc->height, color ); // right
-    R_DrawFill( rc->x + border, rc->y, rc->width - border * 2, border, color ); // top
-    R_DrawFill( rc->x + border, rc->y + rc->height - border, rc->width - border * 2, border, color ); // bottom
+void UI_DrawRect8( const vrect_t *rc, int border, int c ) {
+    R_DrawFill8( rc->x, rc->y, border, rc->height, c ); // left
+    R_DrawFill8( rc->x + rc->width - border, rc->y, border, rc->height, c ); // right
+    R_DrawFill8( rc->x + border, rc->y, rc->width - border * 2, border, c ); // top
+    R_DrawFill8( rc->x + border, rc->y + rc->height - border, rc->width - border * 2, border, c ); // bottom
 }
 
-void UI_DrawRectEx( const vrect_t *rc, int border, const color_t color ) {
-    R_DrawFillEx( rc->x, rc->y, border, rc->height, color ); // left
-    R_DrawFillEx( rc->x + rc->width - border, rc->y, border, rc->height, color ); // right
-    R_DrawFillEx( rc->x + border, rc->y, rc->width - border * 2, border, color ); // top
-    R_DrawFillEx( rc->x + border, rc->y + rc->height - border, rc->width - border * 2, border, color ); // bottom
+#if 0
+void UI_DrawRect32( const vrect_t *rc, int border, uint32_t color ) {
+    R_DrawFill32( rc->x, rc->y, border, rc->height, color ); // left
+    R_DrawFill32( rc->x + rc->width - border, rc->y, border, rc->height, color ); // right
+    R_DrawFill32( rc->x + border, rc->y, rc->width - border * 2, border, color ); // top
+    R_DrawFill32( rc->x + border, rc->y + rc->height - border, rc->width - border * 2, border, color ); // bottom
 }
-
+#endif
 
 //=============================================================================
 /* Menu Subsystem */
@@ -426,7 +420,7 @@ void UI_Draw( int realtime ) {
         return;
     }
 
-    R_SetColor( DRAW_COLOR_CLEAR, NULL );
+    R_ClearColor();
 #if USE_REF == REF_SOFT
     R_SetClipRect( DRAW_CLIP_MASK, &uis.clipRect );
 #else
@@ -458,7 +452,7 @@ void UI_Draw( int realtime ) {
     }
 
     if( ui_debug->integer ) {
-        UI_DrawString( uis.width - 4, 4, NULL, UI_RIGHT,
+        UI_DrawString( uis.width - 4, 4, UI_RIGHT,
             va( "%3i %3i", uis.mouseCoords[0], uis.mouseCoords[1] ) );
     }
 
@@ -475,7 +469,7 @@ void UI_Draw( int realtime ) {
 #else
     R_SetScale( NULL );
 #endif
-    R_SetColor( DRAW_COLOR_CLEAR, NULL );
+    R_ClearColor();
 }
 
 void UI_StartSound( menuSound_t sound ) {
@@ -631,11 +625,11 @@ qboolean UI_Init( void ) {
         uis.bitmapCursors[i] = R_RegisterPic( buffer );
     }
 
-    Vector4Set( uis.color.background, 0, 0, 0, 255 );
-    Vector4Set( uis.color.normal, 15, 128, 235, 100 );
-    Vector4Set( uis.color.active, 15, 128, 235, 100 );
-    Vector4Set( uis.color.selection, 15, 128, 235, 100 );
-    Vector4Set( uis.color.disabled, 127, 127, 127, 255 );
+    uis.color.background.u32    = MakeColor(   0,   0,   0, 255 );
+    uis.color.normal.u32        = MakeColor(  15, 128, 235, 100 );
+    uis.color.active.u32        = MakeColor(  15, 128, 235, 100 );
+    uis.color.selection.u32     = MakeColor(  15, 128, 235, 100 );
+    uis.color.disabled.u32      = MakeColor( 127, 127, 127, 255 );
 
     strcpy( uis.weaponModel, "w_railgun.md2" );
 

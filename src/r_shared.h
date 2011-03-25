@@ -26,12 +26,6 @@ IMAGE MANAGER
 =============================================================================
 */
 
-#if USE_BGRA
-#define MakeColor( r, g, b, a )        MakeRawLong( b, g, r, a )
-#else
-#define MakeColor( r, g, b, a )        MakeRawLong( r, g, b, a )
-#endif
-
 #define R_Malloc( size )    Z_TagMalloc( size, TAG_RENDERER )
 #define R_Mallocz( size )    Z_TagMallocz( size, TAG_RENDERER )
 

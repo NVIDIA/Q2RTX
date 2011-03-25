@@ -110,7 +110,7 @@ void D_ViewChanged (void)
     if ( r_newrefdef.rdflags & RDF_NOWORLDMODEL )
     {
         memset( d_pzbuffer, 0xff, vid.width * vid.height * sizeof( d_pzbuffer[0] ) );
-        R_DrawFill( r_newrefdef.x, r_newrefdef.y, r_newrefdef.width, r_newrefdef.height, /*( int ) sw_clearcolor->value & 0xff*/0 );
+        R_DrawFill8( r_newrefdef.x, r_newrefdef.y, r_newrefdef.width, r_newrefdef.height, /*( int ) sw_clearcolor->value & 0xff*/0 );
     }
 
     D_Patch ();

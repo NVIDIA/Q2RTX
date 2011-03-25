@@ -522,7 +522,7 @@ static void Draw( menuFrameWork_t *self ) {
     Menu_Draw( self );
     if( uis.width >= 640 ) {
         UI_DrawString( uis.width, uis.height - CHAR_HEIGHT,
-            NULL, UI_RIGHT, m_demos.status );
+            UI_RIGHT, m_demos.status );
     }
 }
 
@@ -589,7 +589,7 @@ void M_Menu_Demos( void ) {
     m_demos.menu.keydown    = Keydown;
     m_demos.menu.free       = Free;
     m_demos.menu.image      = uis.backgroundHandle;
-    FastColorCopy( uis.color.background, m_demos.menu.color );
+    m_demos.menu.color.u32  = uis.color.background.u32;
 
     m_demos.list.generic.type   = MTYPE_LIST;
     m_demos.list.generic.flags  = QMF_HASFOCUS;

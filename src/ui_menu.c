@@ -76,8 +76,7 @@ static void Action_Draw( menuAction_t *a ) {
         }
     }
 
-    UI_DrawString( a->generic.x, a->generic.y, NULL,
-        flags, a->generic.name );
+    UI_DrawString( a->generic.x, a->generic.y, flags, a->generic.name );
 }
 
 /*
@@ -115,9 +114,13 @@ Static_Draw
 =================
 */
 static void Static_Draw( menuStatic_t *s ) {
-    UI_DrawString( s->generic.x, s->generic.y,
-        ( s->generic.flags & QMF_CUSTOM_COLOR ) ? s->generic.color : NULL,
-        s->generic.uiFlags, s->generic.name );
+    if( s->generic.flags & QMF_CUSTOM_COLOR ) {
+        R_SetColor( s->generic.color.u32 );
+    }
+    UI_DrawString( s->generic.x, s->generic.y, s->generic.uiFlags, s->generic.name );
+    if( s->generic.flags & QMF_CUSTOM_COLOR ) {
+        R_ClearColor();
+    }
 }
 
 /*
@@ -193,10 +196,8 @@ Keybind_Draw
 */
 static void Keybind_Draw( menuKeybind_t *k ) {
     char string[MAX_STRING_CHARS];
-    byte *color;
     int flags;
 
-    color = NULL;
     flags = UI_ALTCOLOR;
     if( k->generic.flags & QMF_HASFOCUS ) {
         /*if( k->generic.parent->keywait ) {
@@ -206,12 +207,12 @@ static void Keybind_Draw( menuKeybind_t *k ) {
         }
     } else {
         if( k->generic.parent->keywait ) {
-            color = uis.color.disabled;
+            R_SetColor( uis.color.disabled.u32 );
             flags = 0;
         }
     }
 
-    UI_DrawString( k->generic.x + LCOLUMN_OFFSET, k->generic.y, color,
+    UI_DrawString( k->generic.x + LCOLUMN_OFFSET, k->generic.y,
         k->generic.uiFlags | UI_RIGHT | flags, k->generic.name );
 
     if( k->altbinding[0] ) {
@@ -222,8 +223,10 @@ static void Keybind_Draw( menuKeybind_t *k ) {
         strcpy( string, "???" );
     }
 
-    UI_DrawString( k->generic.x + RCOLUMN_OFFSET, k->generic.y, color,
+    UI_DrawString( k->generic.x + RCOLUMN_OFFSET, k->generic.y,
         k->generic.uiFlags | UI_LEFT, string );
+
+    R_ClearColor();
 }
 
 static void Keybind_Push( menuKeybind_t *k ) {
@@ -377,24 +380,24 @@ Field_Draw
 */
 static void Field_Draw( menuField_t *f ) {
     int flags = f->generic.uiFlags;
-    byte *color = uis.color.normal;
+    uint32_t color = uis.color.normal.u32;
 
     if( f->generic.flags & QMF_HASFOCUS ) {
         flags |= UI_DRAWCURSOR;
-        color = uis.color.active;
+        color = uis.color.active.u32;
     }
 
     if( f->generic.name ) {
-        UI_DrawString( f->generic.x + LCOLUMN_OFFSET, f->generic.y, NULL,
+        UI_DrawString( f->generic.x + LCOLUMN_OFFSET, f->generic.y,
             f->generic.uiFlags | UI_RIGHT | UI_ALTCOLOR, f->generic.name );
 
-        R_DrawFillEx( f->generic.x + RCOLUMN_OFFSET, f->generic.y - 1,
+        R_DrawFill32( f->generic.x + RCOLUMN_OFFSET, f->generic.y - 1,
             f->field.visibleChars * CHAR_WIDTH, CHAR_HEIGHT + 2, color );
 
         IF_Draw( &f->field, f->generic.x + RCOLUMN_OFFSET, f->generic.y,
             flags, uis.fontHandle );
     } else {
-        R_DrawFillEx( f->generic.rect.x, f->generic.rect.y - 1,
+        R_DrawFill32( f->generic.rect.x, f->generic.rect.y - 1,
             f->generic.rect.width, CHAR_HEIGHT + 2, color );
 
         IF_Draw( &f->field, f->generic.rect.x, f->generic.rect.y,
@@ -557,7 +560,7 @@ SpinControl_Draw
 =================
 */
 static void SpinControl_Draw( menuSpinControl_t *s ) {
-    UI_DrawString( s->generic.x + LCOLUMN_OFFSET, s->generic.y, NULL,
+    UI_DrawString( s->generic.x + LCOLUMN_OFFSET, s->generic.y,
         s->generic.uiFlags | UI_RIGHT | UI_ALTCOLOR, s->generic.name );
 
     if( s->generic.flags & QMF_HASFOCUS ) {
@@ -567,7 +570,7 @@ static void SpinControl_Draw( menuSpinControl_t *s ) {
         }
     }
 
-    UI_DrawString( s->generic.x + RCOLUMN_OFFSET, s->generic.y, NULL,
+    UI_DrawString( s->generic.x + RCOLUMN_OFFSET, s->generic.y,
         s->generic.uiFlags, s->itemnames[s->curvalue] );
 }
 
@@ -1022,7 +1025,7 @@ static void MenuList_DrawString( int x, int y, int flags,
     }
 
     R_SetClipRect( DRAW_CLIP_RIGHT|DRAW_CLIP_LEFT, &rc );
-    UI_DrawString( x, y + 1, NULL, column->uiFlags | flags, string );
+    UI_DrawString( x, y + 1, column->uiFlags | flags, string );
 #if USE_REF == REF_SOFT
     R_SetClipRect( DRAW_CLIP_MASK, &uis.clipRect );
 #else
@@ -1053,15 +1056,15 @@ static void MenuList_Draw( menuList_t *l ) {
         xx = x;
         for( j = 0; j < l->numcolumns; j++ ) {
             int flags = UI_ALTCOLOR;
-            byte *color = uis.color.normal;
+            uint32_t color = uis.color.normal.u32;
 
             if( l->sortcol == j && l->sortdir ) {
                 flags = 0;
                 if( l->generic.flags & QMF_HASFOCUS ) {
-                    color = uis.color.active;
+                    color = uis.color.active.u32;
                 }
             }
-            R_DrawFillEx( xx, y, l->columns[j].width - 1,
+            R_DrawFill32( xx, y, l->columns[j].width - 1,
                 MLIST_SPACING - 1, color );
 
             if( l->columns[j].name ) {
@@ -1082,8 +1085,8 @@ static void MenuList_Draw( menuList_t *l ) {
 
         // draw scrollbar background
         if( !( l->mlFlags & MLF_HIDE_BACKGROUND ) ) {
-            R_DrawFillEx( x + width, yy, MLIST_SCROLLBAR_WIDTH - 1,
-                barHeight, uis.color.normal );
+            R_DrawFill32( x + width, yy, MLIST_SCROLLBAR_WIDTH - 1,
+                barHeight, uis.color.normal.u32 );
         }
 
         if( l->numItems > l->maxItems ) {
@@ -1095,25 +1098,25 @@ static void MenuList_Draw( menuList_t *l ) {
         }
 
         // draw scrollbar thumb
-        R_DrawFillEx( x + width,
+        R_DrawFill32( x + width,
             yy + Q_rint( barHeight * prestepFrac ),
             MLIST_SCROLLBAR_WIDTH - 1,
             Q_rint( barHeight * pageFrac ),
-            uis.color.selection );
+            uis.color.selection.u32 );
     }
 
     xx = x;
     for( j = 0; j < l->numcolumns; j++ ) {
-        byte *color = uis.color.normal;
+        uint32_t color = uis.color.normal.u32;
 
         if( l->sortcol == j && l->sortdir ) {
             if( l->generic.flags & QMF_HASFOCUS ) {
-                color = uis.color.active;
+                color = uis.color.active.u32;
             }
         }
-        R_DrawFillEx( xx, y, l->columns[j].width - 1,
+        R_DrawFill32( xx, y, l->columns[j].width - 1,
             height, color );
-        
+
         xx += l->columns[j].width;
     }
 
@@ -1124,8 +1127,8 @@ static void MenuList_Draw( menuList_t *l ) {
         if( !( l->generic.flags & QMF_DISABLED ) && i == l->curvalue ) {
             xx = x;
             for( j = 0; j < l->numcolumns; j++ ) {
-                R_DrawFillEx( xx, yy, l->columns[j].width - 1,
-                    MLIST_SPACING, uis.color.selection );   
+                R_DrawFill32( xx, yy, l->columns[j].width - 1,
+                    MLIST_SPACING, uis.color.selection.u32 );
                 xx += l->columns[j].width;
             }
         }
@@ -1254,7 +1257,7 @@ static void Slider_Draw( menuSlider_t *s ) {
         }
     }
 
-    UI_DrawString( s->generic.x + LCOLUMN_OFFSET, s->generic.y, NULL,
+    UI_DrawString( s->generic.x + LCOLUMN_OFFSET, s->generic.y,
         flags | UI_RIGHT | UI_ALTCOLOR, s->generic.name );
 
     UI_DrawChar( s->generic.x + RCOLUMN_OFFSET, s->generic.y, flags | UI_LEFT, 128 );
@@ -1295,7 +1298,7 @@ Separator_Draw
 */
 static void Separator_Draw( menuSeparator_t *s ) {
     if( s->generic.name )
-        UI_DrawString( s->generic.x, s->generic.y, NULL, UI_RIGHT, s->generic.name );
+        UI_DrawString( s->generic.x, s->generic.y, UI_RIGHT, s->generic.name );
 }
 
 /*
@@ -1659,15 +1662,15 @@ void Menu_Draw( menuFrameWork_t *menu ) {
         R_DrawStretchPic( 0, menu->y1, uis.width,
             menu->y2 - menu->y1, menu->image );
     } else {
-        R_DrawFillEx( 0, menu->y1, uis.width,
-            menu->y2 - menu->y1, menu->color );
+        R_DrawFill32( 0, menu->y1, uis.width,
+            menu->y2 - menu->y1, menu->color.u32 );
     }
 
 //
 // draw title bar
 //
     if( menu->title ) {
-        UI_DrawString( uis.width / 2, menu->y1, NULL,
+        UI_DrawString( uis.width / 2, menu->y1,
             UI_CENTER|UI_ALTCOLOR, menu->title );
     }
 
@@ -1732,7 +1735,7 @@ void Menu_Draw( menuFrameWork_t *menu ) {
         }
 
         if( ui_debug->integer ) {
-            UI_DrawRect( &(( menuCommon_t * )item)->rect, 1, 223 );
+            UI_DrawRect8( &(( menuCommon_t * )item)->rect, 1, 223 );
         }
     }
 
@@ -1740,8 +1743,8 @@ void Menu_Draw( menuFrameWork_t *menu ) {
 // draw status bar
 //
     if( menu->status ) {
-        R_DrawFill( 0, menu->y2 - CHAR_HEIGHT, uis.width, CHAR_HEIGHT, 4 );
-        UI_DrawString( uis.width / 2, menu->y2 - CHAR_HEIGHT, NULL,
+        R_DrawFill8( 0, menu->y2 - CHAR_HEIGHT, uis.width, CHAR_HEIGHT, 4 );
+        UI_DrawString( uis.width / 2, menu->y2 - CHAR_HEIGHT,
             UI_CENTER, menu->status );
     }
 }

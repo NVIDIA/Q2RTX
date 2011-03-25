@@ -384,8 +384,8 @@ void M_Menu_Servers( void ) {
     m_join.menu.size    = Size;
     m_join.menu.keydown = Keydown;
     m_join.menu.free    = Free;
-    m_join.menu.image = uis.backgroundHandle;
-    FastColorCopy( uis.color.background, m_join.menu.color );
+    m_join.menu.image   = uis.backgroundHandle;
+    m_join.menu.color.u32 = uis.color.background.u32;
 
 //
 // server list

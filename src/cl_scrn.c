@@ -101,15 +101,9 @@ static const char *const sb_nums[2][STAT_PICS] = {
     "anum_6", "anum_7", "anum_8", "anum_9", "anum_minus" }
 };
 
-const color_t colorTable[8] = {
-    {   0,   0,   0, 255 },
-    { 255,   0,   0, 255 },
-    {   0, 255,   0, 255 },
-    { 255, 255,   0, 255 },
-    {   0,   0, 255, 255 },
-    {   0, 255, 255, 255 },
-    { 255,   0, 255, 255 },
-    { 255, 255, 255, 255 }
+const uint32_t colorTable[8] = {
+    U32_BLACK, U32_RED, U32_GREEN, U32_YELLOW,
+    U32_BLUE, U32_CYAN, U32_MAGENTA, U32_WHITE
 };
 
 /*
@@ -203,50 +197,57 @@ float SCR_FadeAlpha( unsigned startTime, unsigned visTime, unsigned fadeTime ) {
     return alpha;
 }
 
-qboolean SCR_ParseColor( const char *s, color_t color ) {
+qboolean SCR_ParseColor( const char *s, color_t *color ) {
     int i;
     int c[8];
 
+    // parse generic color
     if( *s == '#' ) {
         s++;
         for( i = 0; s[i]; i++ ) {
+            if( i == 8 ) {
+                return qfalse;
+            }
             c[i] = Q_charhex( s[i] );
             if( c[i] == -1 ) {
                 return qfalse;
             }
         }
+
         switch( i ) {
         case 3:
-            color[0] = c[0] | ( c[0] << 4 );
-            color[1] = c[1] | ( c[1] << 4 );
-            color[2] = c[2] | ( c[2] << 4 );
-            color[3] = 255;
+            color->u8[0] = c[0] | ( c[0] << 4 );
+            color->u8[1] = c[1] | ( c[1] << 4 );
+            color->u8[2] = c[2] | ( c[2] << 4 );
+            color->u8[3] = 255;
             break;
         case 6:
-            color[0] = c[1] | ( c[0] << 4 );
-            color[1] = c[3] | ( c[2] << 4 );
-            color[2] = c[5] | ( c[4] << 4 );
-            color[3] = 255;
+            color->u8[0] = c[1] | ( c[0] << 4 );
+            color->u8[1] = c[3] | ( c[2] << 4 );
+            color->u8[2] = c[5] | ( c[4] << 4 );
+            color->u8[3] = 255;
             break;
         case 8:
-            color[0] = c[1] | ( c[0] << 4 );
-            color[1] = c[3] | ( c[2] << 4 );
-            color[2] = c[5] | ( c[4] << 4 );
-            color[3] = c[7] | ( c[6] << 4 );
+            color->u8[0] = c[1] | ( c[0] << 4 );
+            color->u8[1] = c[3] | ( c[2] << 4 );
+            color->u8[2] = c[5] | ( c[4] << 4 );
+            color->u8[3] = c[7] | ( c[6] << 4 );
             break;
         default:
             return qfalse;
         }
-        return qtrue;
-    } else {
-        i = Com_ParseColor( s, COLOR_WHITE );
-        if( i == COLOR_NONE ) {
-            return qfalse;
-        }
 
-        FastColorCopy( colorTable[i], color );
         return qtrue;
     }
+
+    // parse name or index
+    i = Com_ParseColor( s, COLOR_WHITE );
+    if( i == COLOR_NONE ) {
+        return qfalse;
+    }
+
+    color->u32 = colorTable[i];
+    return qtrue;
 }
 
 /*
@@ -334,7 +335,7 @@ static void SCR_DrawDebugGraph (void)
 
     x = w-1;
     y = r_config.height;
-    R_DrawFill (x, y-scr_graphheight->value,
+    R_DrawFill8 (x, y-scr_graphheight->value,
         w, scr_graphheight->value, 8);
 
     for (a=0 ; a<w ; a++)
@@ -347,7 +348,7 @@ static void SCR_DrawDebugGraph (void)
         if (v < 0)
             v += scr_graphheight->value * (1+(int)(-v/scr_graphheight->value));
         h = (int)v % (int)scr_graphheight->value;
-        R_DrawFill (x, y - h, 1,    h, color);
+        R_DrawFill8 (x, y - h, 1,    h, color);
         x--;
     }
 }
@@ -362,8 +363,8 @@ static void draw_percent_bar( int percent ) {
 
     w = scr.hud_width * percent / 100;
 
-    R_DrawFill( 0, scr.hud_height, w, CHAR_HEIGHT, 4 );
-    R_DrawFill( w, scr.hud_height, scr.hud_width - w, CHAR_HEIGHT, 0 );
+    R_DrawFill8( 0, scr.hud_height, w, CHAR_HEIGHT, 4 );
+    R_DrawFill8( w, scr.hud_height, scr.hud_width - w, CHAR_HEIGHT, 0 );
 
     len = Q_scnprintf( buffer, sizeof( buffer ), "%d%%", percent );
     x = ( scr.hud_width - len * CHAR_WIDTH ) / 2;
@@ -458,14 +459,14 @@ static void draw_center_string( void ) {
         return;
     }
 
-    R_SetColor( DRAW_COLOR_ALPHA, ( byte * )&alpha );
+    R_SetAlpha( alpha );
 
     y = scr.hud_height / 4 - scr_center_lines * 8 / 2;
 
     SCR_DrawStringMulti( scr.hud_width / 2, y, UI_CENTER,
         MAX_STRING_CHARS, scr_centerstring, scr.font_pic );
 
-    R_SetColor( DRAW_COLOR_CLEAR, NULL );
+    R_ClearColor();
 }
 
 /*
@@ -543,7 +544,7 @@ static void draw_ping_graph( int x, int y ) {
             v = LAG_HEIGHT;
         }
 
-        R_DrawFill( x + LAG_WIDTH - i - 1, y + LAG_HEIGHT - v, 1, v, c );
+        R_DrawFill8( x + LAG_WIDTH - i - 1, y + LAG_HEIGHT - v, 1, v, c );
     }
 }
 
@@ -561,7 +562,7 @@ static void draw_lagometer( void ) {
     // draw ping graph
     if( scr_lag_draw->integer ) {
         if( scr_lag_draw->integer > 1 ) {
-            R_DrawFill( x, y, LAG_WIDTH, LAG_HEIGHT, 4 );
+            R_DrawFill8( x, y, LAG_WIDTH, LAG_HEIGHT, 4 );
         }
         draw_ping_graph( x, y );
     }
@@ -624,9 +625,8 @@ static void SCR_Draw_f( void ) {
     const char *s, *c;
     drawobj_t *obj;
     cmd_macro_t *macro;
-   // int stat;
-    color_t color = { 0, 0, 0, 0 };
-    int flags = UI_IGNORECOLOR;
+    color_t color;
+    int flags;
     int argc = Cmd_Argc();
 
     if( argc == 1 ) {
@@ -648,6 +648,9 @@ static void SCR_Draw_f( void ) {
         return;
     }
 
+    color.u32 = U32_BLACK;
+    flags = UI_IGNORECOLOR;
+
     s = Cmd_Argv( 1 );
     x = atoi( Cmd_Argv( 2 ) );
     if( x < 0 ) {
@@ -660,7 +663,7 @@ static void SCR_Draw_f( void ) {
         if( !strcmp( c, "alt" ) ) {
             flags |= UI_ALTCOLOR;
         } else {
-            if( !SCR_ParseColor( c, color ) ) {
+            if( !SCR_ParseColor( c, &color ) ) {
                 Com_Printf( "Unknown color '%s'\n", c );
                 return;
             }
@@ -672,7 +675,7 @@ static void SCR_Draw_f( void ) {
     obj->x = x;
     obj->y = y;
     obj->flags = flags;
-    FastColorCopy( color, obj->color );
+    obj->color.u32 = color.u32;
 
     macro = Cmd_FindMacro( s );
     if( macro ) {
@@ -772,7 +775,7 @@ static void draw_objects( void ) {
             y += scr.hud_height - CHAR_HEIGHT + 1;
         }
         if( !( obj->flags & UI_IGNORECOLOR ) ) {
-            R_SetColor( DRAW_COLOR_RGBA, obj->color );
+            R_SetColor( obj->color.u32 );
         }
         if( obj->macro ) {
             obj->macro->function( buffer, sizeof( buffer ) );
@@ -780,7 +783,7 @@ static void draw_objects( void ) {
         } else {
             SCR_DrawString( x, y, obj->flags, obj->cvar->string );
         }
-        R_SetColor( DRAW_COLOR_CLEAR, NULL );
+        R_ClearColor();
     }
 }
 
@@ -834,10 +837,10 @@ static void draw_stats( void ) {
     for( i = 0; i < j; i++ ) {
         Q_snprintf( buffer, sizeof( buffer ), "%2d: %d", i, cl.frame.ps.stats[i] );
         if( cl.oldframe.ps.stats[i] != cl.frame.ps.stats[i] ) {
-            R_SetColor( DRAW_COLOR_RGBA, colorRed );
+            R_SetColor( U32_RED );
         }
         R_DrawString( x, y, 0, MAX_STRING_CHARS, buffer, scr.font_pic );
-        R_SetColor( DRAW_COLOR_CLEAR, NULL );
+        R_ClearColor();
         y += CHAR_HEIGHT;
     }
 }
@@ -1008,11 +1011,11 @@ static void scr_crosshair_changed( cvar_t *self ) {
         if( ch_health->integer ) {
             SCR_SetCrosshairColor();
         } else {
-            scr.crosshair_color[0] = (byte)(ch_red->value * 255);
-            scr.crosshair_color[1] = (byte)(ch_green->value * 255);
-            scr.crosshair_color[2] = (byte)(ch_blue->value * 255);
+            scr.crosshair_color.u8[0] = (byte)(ch_red->value * 255);
+            scr.crosshair_color.u8[1] = (byte)(ch_green->value * 255);
+            scr.crosshair_color.u8[2] = (byte)(ch_blue->value * 255);
         }
-        scr.crosshair_color[3] = (byte)(ch_alpha->value * 255);
+        scr.crosshair_color.u8[3] = (byte)(ch_alpha->value * 255);
     } else {
         scr.crosshair_pic = 0;
     }
@@ -1027,29 +1030,29 @@ void SCR_SetCrosshairColor( void ) {
 
     health = cl.frame.ps.stats[STAT_HEALTH];
     if( health <= 0 ) {
-        VectorSet( scr.crosshair_color, 0, 0, 0 );
+        VectorSet( scr.crosshair_color.u8, 0, 0, 0 );
         return;
     }
 
     // red
-    scr.crosshair_color[0] = 255;
+    scr.crosshair_color.u8[0] = 255;
 
     // green
     if( health >= 66 ) {
-        scr.crosshair_color[1] = 255;
+        scr.crosshair_color.u8[1] = 255;
     } else if( health < 33 ) {
-        scr.crosshair_color[1] = 0;
+        scr.crosshair_color.u8[1] = 0;
     } else {
-        scr.crosshair_color[1] = ( 255 * ( health - 33 ) ) / 33;
+        scr.crosshair_color.u8[1] = ( 255 * ( health - 33 ) ) / 33;
     }
 
     // blue
     if( health >= 99 ) {
-        scr.crosshair_color[2] = 255;
+        scr.crosshair_color.u8[2] = 255;
     } else if( health < 66 ) {
-        scr.crosshair_color[2] = 0;
+        scr.crosshair_color.u8[2] = 0;
     } else {
-        scr.crosshair_color[2] = ( 255 * ( health - 66 ) ) / 33;
+        scr.crosshair_color.u8[2] = ( 255 * ( health - 66 ) ) / 33;
     }
 }
 
@@ -1682,10 +1685,10 @@ static void draw_crosshair( void ) {
     x += ch_x->integer;
     y += ch_y->integer;
 
-    R_SetColor( DRAW_COLOR_RGBA, scr.crosshair_color );
+    R_SetColor( scr.crosshair_color.u32 );
     R_DrawStretchPic( x, y, scr.crosshair_width, scr.crosshair_height,
         scr.crosshair_pic );
-    R_SetColor( DRAW_COLOR_CLEAR, NULL );
+    R_ClearColor();
 }
 
 static void draw_2d( void ) {
@@ -1711,14 +1714,13 @@ static void draw_2d( void ) {
     }
 #endif
 
-    R_SetColor( DRAW_COLOR_CLEAR, NULL );
+    R_ClearColor();
 
     if( scr_crosshair->integer ) {
         draw_crosshair();
     }
 
-    Cvar_ClampValue( scr_alpha, 0, 1 );
-    R_SetColor( DRAW_COLOR_ALPHA, ( byte * )&scr_alpha->value );
+    R_SetAlpha( Cvar_ClampValue( scr_alpha, 0, 1 ) );
 
     if( scr_draw2d->integer > 1 ) {
         draw_layout_string( cl.configstrings[CS_STATUSBAR] );
@@ -1740,7 +1742,7 @@ static void draw_2d( void ) {
 
     draw_lagometer();
 
-    R_SetColor( DRAW_COLOR_CLEAR, NULL );
+    R_ClearColor();
 
     if( cl.frameflags && scr_showturtle->integer > 0 ) {
         draw_turtle();
@@ -1769,8 +1771,7 @@ static void draw_2d( void ) {
 static void draw_active_frame( void ) {
     if( cls.state < ca_active ) {
         // draw black background if not active
-        R_DrawFill( 0, 0, r_config.width,
-            r_config.height, 0 );
+        R_DrawFill8( 0, 0, r_config.width, r_config.height, 0 );
         return;
     }
 

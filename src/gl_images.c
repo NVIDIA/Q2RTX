@@ -982,13 +982,13 @@ static void GL_InitParticleTexture( void ) {
 static void GL_InitWhiteImage( void ) {
     uint32_t pixel;
 
-    pixel = MakeColor( 0xff, 0xff, 0xff, 0xff );
+    pixel = U32_WHITE;
     GL_BindTexture( TEXNUM_WHITE );
     GL_Upload32( ( byte * )&pixel, 1, 1, qfalse );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 
-    pixel = MakeColor( 0, 0, 0, 0xff );
+    pixel = U32_BLACK;
     GL_BindTexture( TEXNUM_BLACK );
     GL_Upload32( ( byte * )&pixel, 1, 1, qfalse );
     qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
