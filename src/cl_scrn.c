@@ -459,14 +459,14 @@ static void draw_center_string( void ) {
         return;
     }
 
-    R_SetAlpha( alpha );
+    R_SetAlpha( alpha * scr_alpha->value );
 
     y = scr.hud_height / 4 - scr_center_lines * 8 / 2;
 
     SCR_DrawStringMulti( scr.hud_width / 2, y, UI_CENTER,
         MAX_STRING_CHARS, scr_centerstring, scr.font_pic );
 
-    R_ClearColor();
+    R_SetAlpha( scr_alpha->value );
 }
 
 /*
@@ -783,7 +783,10 @@ static void draw_objects( void ) {
         } else {
             SCR_DrawString( x, y, obj->flags, obj->cvar->string );
         }
-        R_ClearColor();
+        if( !( obj->flags & UI_IGNORECOLOR ) ) {
+            R_ClearColor();
+            R_SetAlpha( scr_alpha->value );
+        }
     }
 }
 
@@ -1688,7 +1691,6 @@ static void draw_crosshair( void ) {
     R_SetColor( scr.crosshair_color.u32 );
     R_DrawStretchPic( x, y, scr.crosshair_width, scr.crosshair_height,
         scr.crosshair_pic );
-    R_ClearColor();
 }
 
 static void draw_2d( void ) {
@@ -1714,12 +1716,13 @@ static void draw_2d( void ) {
     }
 #endif
 
-    R_ClearColor();
-
+    // crosshair has it's own color and alpha
     if( scr_crosshair->integer ) {
         draw_crosshair();
     }
 
+    // the rest of 2D elements share common alpha
+    R_ClearColor();
     R_SetAlpha( Cvar_ClampValue( scr_alpha, 0, 1 ) );
 
     if( scr_draw2d->integer > 1 ) {
@@ -1738,15 +1741,20 @@ static void draw_2d( void ) {
 
     draw_center_string();
 
-    draw_objects();
-
     draw_lagometer();
 
-    R_ClearColor();
+    draw_objects();
 
     if( cl.frameflags && scr_showturtle->integer > 0 ) {
         draw_turtle();
     }
+
+    if( sv_paused->integer && cl_paused->integer && scr_showpause->integer == 1 ) {
+        draw_pause();
+    }
+
+    // debug stats have no alpha
+    R_ClearColor();
 
 #ifdef _DEBUG
     if( scr_showstats->integer ) {
@@ -1756,10 +1764,6 @@ static void draw_2d( void ) {
         draw_pmove();
     }
 #endif
-
-    if( sv_paused->integer && cl_paused->integer && scr_showpause->integer == 1 ) {
-        draw_pause();
-    }
 
 #if USE_REF == REF_SOFT
     R_SetClipRect( DRAW_CLIP_DISABLED, NULL );
