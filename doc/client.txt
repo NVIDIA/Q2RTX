@@ -310,7 +310,10 @@ Game Screen
 ~~~~~~~~~~~
 
 scr_draw2d::
-    Toggles drawing of all 2D elements on the screen. Default value is 1.
+    Toggles drawing of 2D elements on the screen. Default value is 2.
+      - 0 — do not draw anything
+      - 1 — do not draw stats program
+      - 2 — draw everything
 
 scr_showturtle::
     Toggles drawing of various network error conditions at the lower left
