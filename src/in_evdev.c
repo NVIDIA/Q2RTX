@@ -31,7 +31,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <fcntl.h>
 #include <linux/input.h>
 
+#if USE_SDL
 #include <SDL.h>
+#endif
 
 static cvar_t   *in_device;
 
@@ -133,11 +135,16 @@ static void ShutdownMouse( void ) {
     if( !evdev.initialized ) {
         return;
     }
+
     IO_Remove( evdev.fd );
     close( evdev.fd );
+
+#if USE_SDL
     SDL_ShowCursor( SDL_ENABLE );
     SDL_WM_GrabInput( SDL_GRAB_OFF );
     SDL_WM_SetCaption( PRODUCT, APPLICATION );
+#endif
+
     memset( &evdev, 0, sizeof( evdev ) );
 }
 
@@ -176,11 +183,14 @@ static void GrabMouse( grab_t grab ) {
     }
 
     if( grab == IN_GRAB ) {
+#if USE_SDL
         SDL_WM_GrabInput( SDL_GRAB_ON );
         SDL_WM_SetCaption( "[" PRODUCT "]", APPLICATION );
         SDL_ShowCursor( SDL_DISABLE );
+#endif
         evdev.io->wantread = qtrue;
     } else {
+#if USE_SDL
         if( evdev.grabbed == IN_GRAB ) {
             SDL_WM_GrabInput( SDL_GRAB_OFF );
             SDL_WM_SetCaption( PRODUCT, APPLICATION );
@@ -190,6 +200,7 @@ static void GrabMouse( grab_t grab ) {
         } else {
             SDL_ShowCursor( SDL_ENABLE );
         }
+#endif
         evdev.io->wantread = !!grab;
     }
 
@@ -207,7 +218,9 @@ static void GrabMouse( grab_t grab ) {
 }
 
 static void WarpMouse( int x, int y ) {
+#if USE_SDL
     SDL_WarpMouse( x, y );
+#endif
 }
 
 /*
