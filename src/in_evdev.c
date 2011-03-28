@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "in_public.h"
 #include "cl_public.h"
 #include "io_sleep.h"
+#include "q_list.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -35,38 +36,57 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <SDL.h>
 #endif
 
-static cvar_t   *in_device;
+#if USE_UDEV
+#include <libudev.h>
+#endif
+
+#define FOR_EACH_EVDEV( dev ) \
+    LIST_FOR_EACH( evdev_t, dev, &evdev.devices, entry )
+#define FOR_EACH_EVDEV_SAFE( dev, next ) \
+    LIST_FOR_EACH_SAFE( evdev_t, dev, next, &evdev.devices, entry )
+
+typedef struct {
+    list_t      entry;
+    int         fd;
+    ioentry_t   *io;
+} evdev_t;
 
 static struct {
     qboolean    initialized;
     grab_t      grabbed;
-    int         fd;
+    list_t      devices;
     int         dx, dy;
-    ioentry_t   *io;
 } evdev;
 
 #define MAX_EVENTS    64
 #define EVENT_SIZE    sizeof( struct input_event )
 
-static void ShutdownMouse( void );
+static void evdev_remove( evdev_t *dev ) {
+    IO_Remove( dev->fd );
+    close( dev->fd );
+    List_Remove( &dev->entry );
+    Z_Free( dev );
+}
 
-static void GetMouseEvents( void ) {
+static void evdev_read( evdev_t *dev ) {
     struct input_event ev[MAX_EVENTS];
     ssize_t bytes;
     size_t i, count;
     unsigned button, time;
 
-    if( !evdev.initialized || !evdev.grabbed /*|| !evdev.io->canread*/ ) {
+#if 0
+    if( !dev->io->canread ) {
         return;
     }
+#endif
 
-    bytes = read( evdev.fd, ev, EVENT_SIZE * MAX_EVENTS );
+    bytes = read( dev->fd, ev, EVENT_SIZE * MAX_EVENTS );
     if( bytes == -1 ) {
         if( errno == EAGAIN || errno == EINTR ) {
             return;
         }
         Com_EPrintf( "Couldn't read event: %s\n", strerror( errno ) );
-        ShutdownMouse();
+        evdev_remove( dev );
         return;
     }
 
@@ -120,10 +140,23 @@ static void GetMouseEvents( void ) {
     }
 }
 
+static void GetMouseEvents( void ) {
+    evdev_t *dev, *next;
+
+    if( !evdev.initialized || !evdev.grabbed ) {
+        return;
+    }
+
+    FOR_EACH_EVDEV_SAFE( dev, next ) {
+        evdev_read( dev );
+    }
+}
+
 static qboolean GetMouseMotion( int *dx, int *dy ) {
     if( !evdev.initialized || !evdev.grabbed ) {
         return qfalse;
     }
+
     *dx = evdev.dx;
     *dy = evdev.dy;
     evdev.dx = 0;
@@ -132,12 +165,15 @@ static qboolean GetMouseMotion( int *dx, int *dy ) {
 }
 
 static void ShutdownMouse( void ) {
+    evdev_t *dev, *next;
+
     if( !evdev.initialized ) {
         return;
     }
 
-    IO_Remove( evdev.fd );
-    close( evdev.fd );
+    FOR_EACH_EVDEV_SAFE( dev, next ) {
+        evdev_remove( dev );
+    }
 
 #if USE_SDL
     SDL_ShowCursor( SDL_ENABLE );
@@ -148,30 +184,109 @@ static void ShutdownMouse( void ) {
     memset( &evdev, 0, sizeof( evdev ) );
 }
 
-static qboolean InitMouse( void ) {
-    in_device = Cvar_Get( "in_device", "", 0 );
-    if( !in_device->string[0] ) {
-        Com_WPrintf( "No evdev input device specified.\n" );
-        return qfalse;
-    }
- 
-    evdev.fd = open( in_device->string, O_RDONLY );
-    if( evdev.fd == -1 ) {
-        Com_EPrintf( "Couldn't open %s: %s\n", in_device->string,
-            strerror( errno ) );
-        return qfalse;
-    }
- 
-    fcntl( evdev.fd, F_SETFL, fcntl( evdev.fd, F_GETFL, 0 ) | FNDELAY );
-    evdev.io = IO_Add( evdev.fd );
+static evdev_t *evdev_add( const char *path ) {
+    evdev_t *dev;
+    int fd;
 
-    Com_Printf( "Evdev interface initialized.\n" );
+    fd = open( path, O_RDONLY );
+    if( fd == -1 ) {
+        Com_EPrintf( "Couldn't open %s: %s\n", path, strerror( errno ) );
+        return NULL;
+    }
+
+    Com_DPrintf( "Adding device %s\n", path );
+
+    fcntl( fd, F_SETFL, fcntl( fd, F_GETFL, 0 ) | FNDELAY );
+
+    dev = Z_Malloc( sizeof( *dev ) );
+    dev->fd = fd;
+    dev->io = IO_Add( fd );
+    List_Append( &evdev.devices, &dev->entry );
+
+    return dev;
+}
+
+#if USE_UDEV
+static void auto_add_devices( void ) {
+    struct udev *udev;
+    struct udev_enumerate *enumerate;
+    struct udev_list_entry *list, *entry;
+    struct udev_device *dev;
+    const char *path;
+
+    udev = udev_new();
+    if( !udev ) {
+        Com_EPrintf( "Couldn't create udev handle\n" );
+        return;
+    }
+
+    enumerate = udev_enumerate_new( udev );
+    udev_enumerate_add_match_subsystem( enumerate, "input" );
+    udev_enumerate_add_match_sysname( enumerate, "event[0-9]*" );
+    udev_enumerate_add_match_property( enumerate, "ID_INPUT_MOUSE", "1" );
+    udev_enumerate_scan_devices( enumerate );
+    list = udev_enumerate_get_list_entry( enumerate );
+    udev_list_entry_foreach( entry, list ) {
+        path = udev_list_entry_get_name( entry );
+        dev = udev_device_new_from_syspath( udev, path );
+        if( dev ) {
+            path = udev_device_get_devnode( dev );
+            if( path ) {
+                evdev_add( path );
+            }
+            udev_device_unref( dev );
+        }
+    }
+
+    udev_enumerate_unref( enumerate );
+    udev_unref( udev );
+}
+#endif
+
+static qboolean InitMouse( void ) {
+    cvar_t *var;
+
+    List_Init( &evdev.devices );
+
+    var = Cvar_Get( "in_device", "", 0 );
+ 
+    if( var->string[0] ) {
+        // add user specified device
+        if( !evdev_add( var->string ) ) {
+            return qfalse;
+        }
+    } else {
+#if USE_UDEV
+        // find devices automatically
+        auto_add_devices();
+
+        if( LIST_EMPTY( &evdev.devices ) ) {
+            Com_EPrintf(
+                "Automatic libudev scan was unable to find any "
+                "usable mouse device. You may need to set the "
+                "'in_device' variable manually before direct "
+                "mouse input can be used.\n" );
+            return qfalse;
+        }
+#else
+        Com_EPrintf(
+            "No input device specified, and libudev support "
+            "is not compiled in. Please set the 'in_device' variable "
+            "manually before direct mouse input can be used.\n" );
+        return qfalse;
+#endif
+    }
+
+    Com_Printf( "Evdev mouse initialized.\n" );
     evdev.initialized = qtrue;
 
     return qtrue;
 }
 
 static void GrabMouse( grab_t grab ) {
+    struct input_event ev;
+    evdev_t *dev;
+
     if( !evdev.initialized ) {
         return;
     }
@@ -188,7 +303,6 @@ static void GrabMouse( grab_t grab ) {
         SDL_WM_SetCaption( "[" PRODUCT "]", APPLICATION );
         SDL_ShowCursor( SDL_DISABLE );
 #endif
-        evdev.io->wantread = qtrue;
     } else {
 #if USE_SDL
         if( evdev.grabbed == IN_GRAB ) {
@@ -201,14 +315,17 @@ static void GrabMouse( grab_t grab ) {
             SDL_ShowCursor( SDL_ENABLE );
         }
 #endif
-        evdev.io->wantread = !!grab;
     }
 
-    // pump pending events
-    if( grab ) {
-        struct input_event ev;
+    FOR_EACH_EVDEV( dev ) {
+        if( !grab ) {
+            dev->io->wantread = qfalse;
+            continue;
+        }
 
-        while( read( evdev.fd, &ev, EVENT_SIZE ) == EVENT_SIZE )
+        // pump pending events
+        dev->io->wantread = qtrue;
+        while( read( dev->fd, &ev, EVENT_SIZE ) == EVENT_SIZE )
             ;
     }
 

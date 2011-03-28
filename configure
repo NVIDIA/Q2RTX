@@ -83,6 +83,7 @@ use_snddma="yes"
 use_openal="no"
 use_dsound="no"
 use_dinput="no"
+use_udev="no"
 use_lirc="no"
 use_zlib="yes"
 use_curl="no"
@@ -296,6 +297,7 @@ Linux)
 use_dl="yes"
 have_endian_h="yes"
 [ "$use_icmp" = "no" ] || use_icmp="yes"
+[ "$use_dinput" = "yes" ] && use_udev="yes"
 ;;
 esac
 
@@ -437,6 +439,7 @@ else
     use_openal="no"
     use_dsound="no"
     use_dinput="no"
+    use_udev="no"
     use_lirc="no"
     use_curl="no"
     use_tga="no"
@@ -631,6 +634,11 @@ fi
 if [ "$use_dinput" = "yes" ]; then
     echo "USE_DINPUT=yes" >> $config_mk
     echo "#define USE_DINPUT 1" >> $config_h
+fi
+
+if [ "$use_udev" = "yes" ]; then
+    echo "USE_UDEV=yes" >> $config_mk
+    echo "#define USE_UDEV 1" >> $config_h
 fi
 
 if [ "$use_lirc" = "yes" ]; then

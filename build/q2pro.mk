@@ -126,6 +126,10 @@ ifdef USE_DINPUT
 SRCFILES+=in_evdev.c
 endif
 
+ifdef USE_UDEV
+LDFLAGS+=-ludev
+endif
+
 ifdef USE_LIRC
 SRCFILES+=in_lirc.c
 LDFLAGS+=-llirc_client
