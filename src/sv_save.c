@@ -20,6 +20,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "sv_local.h"
 
+#define SAVE_MAGIC1 (('1'<<24)|('V'<<16)|('A'<<8)|'S')
+#define SAVE_MAGIC2 (('2'<<24)|('V'<<16)|('A'<<8)|'S')
+#define SAVE_VERSION 1
+
+// save to temporary dir and rename only when done
+#define SAVE_CURRENT ".current"
 
 /*
 ===============================================================================
@@ -29,22 +35,18 @@ SAVEGAME FILES
 ===============================================================================
 */
 
-static void write_binary_file( const char *name ) {
-    qerror_t ret;
-
-    ret = FS_WriteFile( name, msg_write.data, msg_write.cursize );
-    if( ret < 0 ) {
-        Com_EPrintf( "%s: couldn't write %s: %s\n", __func__, name, Q_ErrorString( ret ) );
-    }
-}
-
-static void write_server_file( qboolean autosave ) {
+static qerror_t write_server_file( qboolean autosave ) {
     char name[MAX_OSPATH];
     cvar_t *var;
+    size_t len;
+    qerror_t ret;
+
+    // write magic
+    MSG_WriteLong( SAVE_MAGIC1 );
+    MSG_WriteLong( SAVE_VERSION );
 
     // write the comment field
     MSG_WriteByte( autosave );
-    MSG_WriteLong( time( NULL ) );
     MSG_WriteString( sv.configstrings[CS_NAME] );
 
     // write the mapcmd
@@ -60,24 +62,38 @@ static void write_server_file( qboolean autosave ) {
     }
     MSG_WriteString( NULL );
 
-    Q_snprintf (name, sizeof(name), "save/current/server.state");
-    write_binary_file( name );
+    // write server state
+    ret = FS_WriteFile( "save/" SAVE_CURRENT "/server.state",
+        msg_write.data, msg_write.cursize );
 
     SZ_Clear( &msg_write );
 
+    if( ret < 0 ) {
+        return ret;
+    }
+
     // write game state
-    Q_snprintf (name, sizeof(name), "%s/save/current/game.state", fs_gamedir);
+    len = Q_snprintf( name, sizeof( name ),
+        "%s/save/" SAVE_CURRENT "/game.state", fs_gamedir );
+    if( len >= sizeof( name ) ) {
+        return Q_ERR_NAMETOOLONG;
+    }
+
     ge->WriteGame (name, autosave);
+    return Q_ERR_SUCCESS;
 }
 
-static void write_level_file( void ) {
+static qerror_t write_level_file( void ) {
     char    name[MAX_OSPATH];
     int     i;
     char    *s;
     size_t  len;
     byte    portalbits[MAX_MAP_PORTAL_BYTES];
+    qerror_t ret;
 
-    Com_DPrintf( "%s()\n", __func__ );
+    // write magic
+    MSG_WriteLong( SAVE_MAGIC2 );
+    MSG_WriteLong( SAVE_VERSION );
 
     // write configstrings
     for( i = 0; i < MAX_CONFIGSTRINGS; i++ ) {
@@ -100,64 +116,165 @@ static void write_level_file( void ) {
     MSG_WriteByte( len );
     MSG_WriteData( portalbits, len );
 
-    Q_snprintf (name, sizeof(name), "save/current/server.level");
-    write_binary_file( name );
+    ret = FS_WriteFile( "save/" SAVE_CURRENT "/server.level",
+        msg_write.data, msg_write.cursize );
 
     SZ_Clear( &msg_write );
 
-    Q_snprintf( name, sizeof( name ), "%s/save/current/game.level", fs_gamedir );
+    if( ret < 0 ) {
+        return ret;
+    }
+
+    // write game level
+    len = Q_snprintf( name, sizeof( name ),
+        "%s/save/" SAVE_CURRENT "/game.level", fs_gamedir );
+    if( len >= sizeof( name ) ) {
+        return Q_ERR_NAMETOOLONG;
+    }
+
     ge->WriteLevel( name );
+    return Q_ERR_SUCCESS;
 }
 
+static qerror_t rename_file( const char *dir, const char *base, const char *suf ) {
+    char from[MAX_QPATH];
+    char to[MAX_QPATH];
+    size_t len;
 
-static void read_binary_file( const char *name ) {
+    len = Q_snprintf( from, sizeof( from ), "save/%s/%s%s", SAVE_CURRENT, base, suf );
+    if( len >= sizeof( from ) )
+        return Q_ERR_NAMETOOLONG;
+
+    len = Q_snprintf( to, sizeof( to ), "save/%s/%s%s", dir, base, suf );
+    if( len >= sizeof( to ) )
+        return Q_ERR_NAMETOOLONG;
+
+    return FS_RenameFile( from, to );
+}
+
+static qerror_t move_files( const char *dir ) {
+    char name[MAX_OSPATH];
+    size_t len;
+    qerror_t ret;
+
+    len = Q_snprintf( name, sizeof( name ), "%s/save/%s/", fs_gamedir, dir );
+    if( len >= sizeof( name ) )
+        return Q_ERR_NAMETOOLONG;
+
+    ret = FS_CreatePath( name );
+    if( ret )
+        return ret;
+
+    ret = rename_file( dir, "game", ".level" );
+    if( ret )
+        return ret;
+
+    ret = rename_file( dir, "server", ".level" );
+    if( ret )
+        return ret;
+
+    ret = rename_file( dir, "game", ".state" );
+    if( ret )
+        return ret;
+
+    ret = rename_file( dir, "server", ".state" );
+    if( ret )
+        return ret;
+
+    return Q_ERR_SUCCESS;
+}
+
+static qerror_t read_binary_file( const char *name ) {
     qhandle_t f;
-    ssize_t len;
+    ssize_t len, read;
+    qerror_t ret;
 
-    len = FS_FOpenFile( name, &f, FS_MODE_READ|FS_TYPE_REAL|FS_PATH_GAME );
+    len = FS_FOpenFile( name, &f,
+        FS_MODE_READ | FS_TYPE_REAL | FS_PATH_GAME );
     if( !f ) {
-        Com_Error( ERR_DROP, "%s: couldn't open %s: %s\n", __func__, name, Q_ErrorString( len ) );
+        return len;
     }
 
     if( len > MAX_MSGLEN ) {
-        FS_FCloseFile( f );
-        Com_Error( ERR_DROP, "%s: %s is too large\n", __func__, name );
+        ret = Q_ERR_FBIG;
+        goto fail;
     }
 
-    FS_Read( msg_read_buffer, len, f );
+    read = FS_Read( msg_read_buffer, len, f );
+    if( read != len ) {
+        ret = read < 0 ? read : Q_ERR_UNEXPECTED_EOF;
+        goto fail;
+    }
 
     SZ_Init( &msg_read, msg_read_buffer, len );
     msg_read.cursize = len;
-    msg_read.allowunderflow = qfalse;
+    ret = Q_ERR_SUCCESS;
 
+fail:
     FS_FCloseFile( f );
+    return ret;
 }
 
-static void read_server_file( void ) {
+static qerror_t read_server_file( const char *dir ) {
     char    name[MAX_OSPATH], string[MAX_STRING_CHARS];
-    char    mapcmd[MAX_TOKEN_CHARS];
+    char    mapcmd[MAX_QPATH];
+    size_t  len;
+    qerror_t ret;
 
-    Com_DPrintf( "%s()\n", __func__ );
+    // errors like missing file, bad version, etc are
+    // non-fatal and just return to the command handler
+    len = Q_snprintf( name, MAX_QPATH, "save/%s/server.state", dir );
+    if( len >= MAX_QPATH ) {
+        return Q_ERR_NAMETOOLONG;
+    }
 
-    Q_snprintf (name, sizeof(name), "save/current/server.state");
-    read_binary_file( name );
+    ret = read_binary_file( name );
+    if( ret ) {
+        return ret;
+    }
+
+    if( MSG_ReadLong() != SAVE_MAGIC1 ) {
+        return Q_ERR_UNKNOWN_FORMAT;
+    }
+    if( MSG_ReadLong() != SAVE_VERSION ) {
+        return Q_ERR_INVALID_FORMAT;
+    }
+
+    // any error is fatal from this point
+    SV_Shutdown( "Server restarted\n", ERR_RECONNECT );
+
+    // the rest can't underflow
+    msg_read.allowunderflow = qfalse;
 
     // read the comment field
     MSG_ReadByte();
-    MSG_ReadLong();
     MSG_ReadString( NULL, 0 );
 
     // read the mapcmd
-    MSG_ReadString( mapcmd, sizeof( mapcmd ) );
+    len = MSG_ReadString( mapcmd, sizeof( mapcmd ) );
+    if( len >= sizeof( mapcmd ) ) {
+        ret = Q_ERR_STRING_TRUNCATED;
+        goto fail;
+    }
 
     // read all CVAR_LATCH cvars
     // these will be things like coop, skill, deathmatch, etc
     while( 1 ) {
-        MSG_ReadString( name, MAX_QPATH );
-        if( !name[0] )
+        len = MSG_ReadString( name, MAX_QPATH );
+        if( !len )
             break;
-        MSG_ReadString( string, sizeof( string ) );
-        Cvar_Set( name, string );
+        if( len >= MAX_QPATH ) {
+            ret = Q_ERR_STRING_TRUNCATED;
+            goto fail;
+        }
+
+        len = MSG_ReadString( string, sizeof( string ) );
+        if( len >= sizeof( string ) ) {
+            ret = Q_ERR_STRING_TRUNCATED;
+            goto fail;
+        }
+
+        Cvar_UserSet( name, string );
     }
 
     // start a new game fresh with new cvars
@@ -169,23 +286,51 @@ static void read_server_file( void ) {
     }
 
     // read game state
-    Q_snprintf (name, sizeof(name), "%s/save/current/game.state", fs_gamedir);
+    len = Q_snprintf( name, sizeof( name ), "%s/save/%s/game.state", fs_gamedir, dir );
+    if( len >= sizeof( name ) ) {
+        ret = Q_ERR_NAMETOOLONG;
+        goto fail;
+    }
+
     ge->ReadGame (name);
 
     // go to the map
     sv.state = ss_game;        // don't save current level when changing
     SV_Map( mapcmd, qfalse );
+    return Q_ERR_SUCCESS;
+
+fail:
+    Com_Error( ERR_DROP, "Couldn't load %s: %s", dir, Q_ErrorString( ret ) );
 }
 
-static void read_level_file( void ) {
+static void read_level_file( const char *dir ) {
     char name[MAX_OSPATH];
-    size_t len;
+    size_t len, maxlen;
+    qerror_t ret;
     int index;
 
-    Com_DPrintf( "%s\n", __func__ );
+    len = Q_snprintf( name, MAX_QPATH, "save/%s/server.level", dir );
+    if( len >= MAX_QPATH ) {
+        ret = Q_ERR_NAMETOOLONG;
+        goto fail;
+    }
 
-    Q_snprintf (name, sizeof(name), "save/current/server.level");
-    read_binary_file( name );
+    ret = read_binary_file( name );
+    if( ret ) {
+        goto fail;
+    }
+
+    if( MSG_ReadLong() != SAVE_MAGIC2 ) {
+        ret = Q_ERR_UNKNOWN_FORMAT;
+        goto fail;
+    }
+    if( MSG_ReadLong() != SAVE_VERSION ) {
+        ret = Q_ERR_INVALID_FORMAT;
+        goto fail;
+    }
+
+    // the rest can't underflow
+    msg_read.allowunderflow = qfalse;
 
     while( 1 ) {
         index = MSG_ReadShort();
@@ -193,25 +338,43 @@ static void read_level_file( void ) {
             break;
         }
         if( index < 0 || index >= MAX_CONFIGSTRINGS ) {
-            Com_Error( ERR_DROP, "%s: bad configstring index", __func__ );
+            ret = Q_ERR_BAD_INDEX;
+            goto fail;
         }
-        MSG_ReadString( sv.configstrings[index], MAX_QPATH );
+
+        maxlen = CS_SIZE( index );
+        len = MSG_ReadString( sv.configstrings[index], maxlen );
+        if( len >= maxlen ) {
+            ret = Q_ERR_STRING_TRUNCATED;
+            goto fail;
+        }
     }
 
     len = MSG_ReadByte();
     if( len > MAX_MAP_PORTAL_BYTES ) {
-        Com_Error( ERR_DROP, "%s: bad portalbits length", __func__ );
+        ret = Q_ERR_INVALID_FORMAT;
+        goto fail;
     }
 
     SV_ClearWorld();
 
     CM_SetPortalStates( &sv.cm, MSG_ReadData( len ), len );
 
-    Q_snprintf( name, sizeof( name ), "%s/save/current/game.level", fs_gamedir );
+    // read game level
+    len = Q_snprintf( name, sizeof( name ), "%s/save/%s/game.level", fs_gamedir, dir );
+    if( len >= sizeof( name ) ) {
+        ret = Q_ERR_NAMETOOLONG;
+        goto fail;
+    }
+
     ge->ReadLevel( name );
 
     ge->RunFrame();
     ge->RunFrame();
+    return;
+
+fail:
+    Com_Error( ERR_DROP, "Couldn't load %s: %s", dir, Q_ErrorString( ret ) );
 }
 
 
@@ -222,8 +385,8 @@ SV_Loadgame_f
 ==============
 */
 void SV_Loadgame_f (void) {
-    char    name[MAX_OSPATH];
-    char    *dir;
+    char *dir;
+    qerror_t ret;
 
     if (Cmd_Argc() != 2) {
         Com_Printf ("Usage: %s <directory>\n", Cmd_Argv(0));
@@ -236,25 +399,18 @@ void SV_Loadgame_f (void) {
     }
 
     dir = Cmd_Argv(1);
-    if (strstr (dir, "..") || strchr (dir, '/') || strchr (dir, '\\') ) {
+    if (!COM_IsPath(dir) ) {
         Com_Printf ("Bad savedir.\n");
         return;
     }
 
-    // make sure the server.ssv file exists
-    Q_snprintf (name, sizeof(name), "save/%s/server.state", Cmd_Argv(1));
-    if (!FS_FileExists( name ) ) {
-        Com_Printf ("No such savegame: %s\n", name);
+    ret = read_server_file( dir );
+    if( ret ) {
+        Com_Printf( "Couldn't load %s: %s\n", dir, Q_ErrorString( ret ) );
         return;
     }
 
-    Com_Printf ("Loading game...\n");
-
-    //SV_CopySaveGame (Cmd_Argv(1), "current");
-
-    read_server_file();
-
-    read_level_file();
+    read_level_file( dir );
 }
 
 
@@ -266,14 +422,10 @@ SV_Savegame_f
 */
 void SV_Savegame_f( void ) {
     char *dir;
+    qerror_t ret;
 
     if (sv.state != ss_game) {
         Com_Printf ("You must be in a game to save.\n");
-        return;
-    }
-
-    if (Cmd_Argc() != 2) {
-        Com_Printf ("Usage: %s <directory>\n", Cmd_Argv(0));
         return;
     }
 
@@ -298,30 +450,38 @@ void SV_Savegame_f( void ) {
         return;
     }
 
+    if (Cmd_Argc() != 2) {
+        Com_Printf ("Usage: %s <directory>\n", Cmd_Argv(0));
+        return;
+    }
+
     dir = Cmd_Argv(1);
-    if (strstr (dir, "..") || strchr (dir, '/') || strchr (dir, '\\') ) {
+    if (!COM_IsPath(dir) ) {
         Com_Printf ("Bad savedir.\n");
         return;
     }
 
-    if (!strcmp (dir, "current")) {
-        Com_Printf ("Can't save to 'current'\n");
-        return;
-    }
-
-    Com_Printf ("Saving game...\n");
-
     // archive current level, including all client edicts.
     // when the level is reloaded, they will be shells awaiting
     // a connecting client
-    write_level_file();
+    ret = write_level_file();
+    if( ret )
+        goto fail;
 
     // save server state
-    write_server_file( qfalse );
+    ret = write_server_file( qfalse );
+    if( ret )
+        goto fail;
 
-    // copy it off
-    //SV_CopySaveGame ("current", dir);
+    // rename all stuff
+    ret = move_files( dir );
+    if( ret )
+        goto fail;
 
-    Com_Printf ("Done.\n");
+    Com_Printf ("Game saved.\n");
+    return;
+
+fail:
+    Com_EPrintf( "Couldn't write %s: %s\n", dir, Q_ErrorString( ret ) );
 }
 
