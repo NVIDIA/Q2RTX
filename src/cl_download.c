@@ -517,7 +517,7 @@ void CL_RequestNextDownload( void ) {
     if( cls.state != ca_connected && cls.state != ca_loading )
         return;
 
-    if( !allow_download->integer || NET_IsLocalAddress( &cls.serverAddress ) ) {
+    if( allow_download->integer <= 0 || NET_IsLocalAddress( &cls.serverAddress ) ) {
         if( precache_check <= PRECACHE_MAP ) {
             CL_RegisterModels();
         }
@@ -694,6 +694,11 @@ static void CL_Download_f( void ) {
 
     if( cls.state < ca_connected ) {
         Com_Printf( "Must be connected to a server.\n" );
+        return;
+    }
+
+    if( allow_download->integer == -1 ) {
+        Com_Printf( "Downloads are permanently disabled.\n" );
         return;
     }
 

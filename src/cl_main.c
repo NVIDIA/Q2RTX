@@ -2501,6 +2501,15 @@ static void cl_sync_changed( cvar_t *self ) {
     CL_UpdateFrameTimes();
 }
 
+// allow downloads to be permanently disabled as a
+// protection measure from malicious (or just stupid) servers
+// that force downloads by stuffing commands
+static void cl_allow_download_changed( cvar_t *self ) {
+    if( self->integer == -1 ) {
+        self->flags |= CVAR_ROM;
+    }
+}
+
 static const cmdreg_t c_client[] = {
     { "cmd", CL_ForwardToServer_f },
     { "pause", CL_Pause_f },
@@ -2643,6 +2652,9 @@ static void CL_InitLocal ( void ) {
 
     cl_vwep = Cvar_Get ( "cl_vwep", "1", CVAR_ARCHIVE );
     cl_vwep->changed = cl_vwep_changed;
+
+    allow_download->changed = cl_allow_download_changed;
+    cl_allow_download_changed( allow_download );
 
     //
     // userinfo

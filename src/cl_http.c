@@ -400,6 +400,10 @@ void HTTP_SetServer (const char *url) {
     if (!*url)
         return;
 
+    // ignore if downloads are permanently disabled
+    if (allow_download->integer == -1)
+        return;
+
     if (strncmp (url, "http://", 7)) {
         Com_Printf ("[HTTP] Ignoring download server URL with non-HTTP schema.\n");
         return;
