@@ -1884,7 +1884,7 @@ void Qcommon_Init( int argc, char **argv ) {
     com_fatal_error = Cvar_Get( "com_fatal_error", "0", 0 );
     com_version = Cvar_Get( "version", version, CVAR_SERVERINFO|CVAR_ROM );
 
-    allow_download = Cvar_Get( "allow_download", "0", CVAR_ARCHIVE );
+    allow_download = Cvar_Get( "allow_download", Com_IsDedicated() ? "0" : "1", CVAR_ARCHIVE );
     allow_download_players = Cvar_Get( "allow_download_players", "1", CVAR_ARCHIVE );
     allow_download_models = Cvar_Get( "allow_download_models", "1", CVAR_ARCHIVE );
     allow_download_sounds = Cvar_Get( "allow_download_sounds", "1", CVAR_ARCHIVE );
