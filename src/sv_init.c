@@ -127,12 +127,25 @@ Change the server to a new map, taking all connected
 clients along with it.
 ================
 */
-static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint ) {
+void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint ) {
     int         i;
     client_t    *client;
 
+#if USE_CLIENT
+    SCR_BeginLoadingPlaque();           // for local system
+#endif
+
     Com_Printf( "------- Server Initialization -------\n" );
     Com_Printf( "SpawnServer: %s\n", server );
+
+    // everyone needs to reconnect
+    FOR_EACH_CLIENT( client ) {
+        SV_ClientReset( client );
+    }
+
+    SV_BroadcastCommand( "changing map=%s\n", server );
+    SV_SendClientMessages();
+    SV_SendAsyncPackets();
 
     // free current level
     CM_FreeMap( &sv.cm );
@@ -142,6 +155,11 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
     memset( &sv, 0, sizeof( sv ) );
     sv.spawncount = ( rand() | ( rand() << 16 ) ) ^ Sys_Milliseconds();
     sv.spawncount &= 0x7FFFFFFF;
+
+    // set legacy spawncounts
+    FOR_EACH_CLIENT( client ) {
+        client->spawncount = sv.spawncount;
+    }
 
     // reset entity counter
     svs.next_entity = 0;
@@ -155,12 +173,6 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
             "%d", sv_airaccelerate->integer );
     } else {
         strcpy( sv.configstrings[CS_AIRACCEL], "0" );
-    }
-
-    FOR_EACH_CLIENT( client ) {
-        // needs to reconnect
-        SV_ClientReset( client );
-        client->spawncount = sv.spawncount;
     }
 
 #if !USE_CLIENT
@@ -231,6 +243,8 @@ static void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint
 #if USE_SYSCON
     SV_SetConsoleTitle();
 #endif
+
+    SV_BroadcastCommand( "reconnect\n" );
 
     Com_Printf ("-------------------------------------\n");
 }
@@ -362,92 +376,5 @@ void SV_InitGame( qboolean ismvd ) {
 #endif
 
     svs.initialized = qtrue;
-}
-
-
-/*
-======================
-SV_Map
-
-  the full syntax is:
-
-  map [*]<map>$<startspot>+<nextserver>
-
-command from the console or progs.
-Map can also be a.cin, .pcx, or .dm2 file
-Nextserver is used to allow a cinematic to play, then proceed to
-another level:
-
-    map tram.cin+jail_e3
-======================
-*/
-void SV_Map (const char *levelstring, qboolean restart) {
-    char    level[MAX_QPATH];
-    char    spawnpoint[MAX_QPATH];
-    char    expanded[MAX_QPATH];
-    char    *ch;
-    cm_t    cm;
-    qerror_t ret;
-    size_t  len;
-
-    // skip the end-of-unit flag if necessary
-    if( *levelstring == '*' ) {
-        levelstring++;
-    }
-
-    // save levelstring as it typically points to cmd_argv
-    len = Q_strlcpy( level, levelstring, sizeof( level ) );
-    if( len >= sizeof( level ) ) {
-        Com_Printf( "Refusing to process oversize level string.\n" );
-        return;
-    }
-
-    // if there is a + in the map, set nextserver to the remainder
-    ch = strchr(level, '+');
-    if (ch) {
-        *ch = 0;
-        Cvar_Set ("nextserver", va("gamemap \"%s\"", ch+1));
-    } else {
-        Cvar_Set ("nextserver", "");
-    }
-
-    // if there is a $, use the remainder as a spawnpoint
-    ch = strchr( level, '$' );
-    if( ch ) {
-        *ch = 0;
-        strcpy( spawnpoint, ch + 1 );
-    } else {
-        spawnpoint[0] = 0;
-    }
-
-    len = Q_concat( expanded, sizeof( expanded ), "maps/", level, ".bsp", NULL );
-    if( len >= sizeof( expanded ) ) {
-        ret = Q_ERR_NAMETOOLONG;
-    } else {
-        ret = CM_LoadMap( &cm, expanded );
-    }
-    if( ret ) {
-        Com_Printf( "Couldn't load %s: %s\n", expanded, Q_ErrorString( ret ) );
-        return;
-    }
-
-    if( sv.state != ss_game || restart ) {
-        SV_InitGame( qfalse );  // the game is just starting
-    }
-
-    // change state to loading
-    if( sv.state > ss_loading ) {
-        sv.state = ss_loading;
-    }
-    
-#if USE_CLIENT
-    SCR_BeginLoadingPlaque();           // for local system
-#endif
-    SV_BroadcastCommand( "changing map=%s\n", level );
-    SV_SendClientMessages();
-    SV_SendAsyncPackets();
-    SV_SpawnServer( &cm, level, spawnpoint );
-
-    SV_BroadcastCommand( "reconnect\n" );
 }
 

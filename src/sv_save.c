@@ -218,8 +218,10 @@ fail:
 static qerror_t read_server_file( const char *dir ) {
     char    name[MAX_OSPATH], string[MAX_STRING_CHARS];
     char    mapcmd[MAX_QPATH];
+    char    *s, *ch, *spawnpoint;
     size_t  len;
     qerror_t ret;
+    cm_t    cm;
 
     // errors like missing file, bad version, etc are
     // non-fatal and just return to the command handler
@@ -240,12 +242,6 @@ static qerror_t read_server_file( const char *dir ) {
         return Q_ERR_INVALID_FORMAT;
     }
 
-    // any error is fatal from this point
-    SV_Shutdown( "Server restarted\n", ERR_RECONNECT );
-
-    // the rest can't underflow
-    msg_read.allowunderflow = qfalse;
-
     // read the comment field
     MSG_ReadByte();
     MSG_ReadString( NULL, 0 );
@@ -253,9 +249,48 @@ static qerror_t read_server_file( const char *dir ) {
     // read the mapcmd
     len = MSG_ReadString( mapcmd, sizeof( mapcmd ) );
     if( len >= sizeof( mapcmd ) ) {
-        ret = Q_ERR_STRING_TRUNCATED;
-        goto fail;
+        return Q_ERR_STRING_TRUNCATED;
     }
+
+    s = mapcmd;
+
+    // if there is a + in the map, set nextserver to the remainder
+    // we go directly to nextserver as we don't support cinematics
+    ch = strchr( s, '+' );
+    if( ch ) {
+        s = ch + 1;
+    }
+
+    // skip the end-of-unit flag if necessary
+    if( *s == '*' ) {
+        s++;
+    }
+
+    // if there is a $, use the remainder as a spawnpoint
+    ch = strchr( s, '$' );
+    if( ch ) {
+        *ch = 0;
+        spawnpoint = ch + 1;
+    } else {
+        spawnpoint = mapcmd + len;
+    }
+
+    // now expand and try to load the map
+    len = Q_concat( name, MAX_QPATH, "maps/", s, ".bsp", NULL );
+    if( len >= MAX_QPATH ) {
+        return Q_ERR_NAMETOOLONG;
+    }
+
+    ret = CM_LoadMap( &cm, name );
+    if( ret ) {
+        return ret;
+    }
+
+    // any error will drop from this point
+    SV_Shutdown( "Server restarted\n", ERR_RECONNECT );
+
+    // the rest can't underflow
+    msg_read.allowunderflow = qfalse;
 
     // read all CVAR_LATCH cvars
     // these will be things like coop, skill, deathmatch, etc
@@ -295,8 +330,7 @@ static qerror_t read_server_file( const char *dir ) {
     ge->ReadGame (name);
 
     // go to the map
-    sv.state = ss_game;        // don't save current level when changing
-    SV_Map( mapcmd, qfalse );
+    SV_SpawnServer( &cm, s, spawnpoint );
     return Q_ERR_SUCCESS;
 
 fail:

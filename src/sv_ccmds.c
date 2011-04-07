@@ -237,6 +237,80 @@ static qboolean SV_SetPlayer( void ) {
 
 //=========================================================
 
+/*
+======================
+SV_Map
+
+  the full syntax is:
+
+  map [*]<map>$<startspot>+<nextserver>
+
+command from the console or progs.
+Map can also be a.cin, .pcx, or .dm2 file
+Nextserver is used to allow a cinematic to play, then proceed to
+another level:
+
+    map tram.cin+jail_e3
+======================
+*/
+static void SV_Map( int argnum, qboolean restart ) {
+    char    mapcmd[MAX_QPATH];
+    char    expanded[MAX_QPATH];
+    char    *s, *ch, *spawnpoint;
+    cm_t    cm;
+    qerror_t ret;
+    size_t  len;
+
+    // save the mapcmd
+    len = Cmd_ArgvBuffer( argnum, mapcmd, sizeof( mapcmd ) );
+    if( len >= sizeof( mapcmd ) ) {
+        Com_Printf( "Refusing to process oversize level string.\n" );
+        return;
+    }
+
+    s = mapcmd;
+
+    // if there is a + in the map, set nextserver to the remainder
+    // we go directly to nextserver as we don't support cinematics
+    ch = strchr( s, '+' );
+    if( ch ) {
+        s = ch + 1;
+    }
+
+    // skip the end-of-unit flag if necessary
+    if( *s == '*' ) {
+        s++;
+    }
+
+    // if there is a $, use the remainder as a spawnpoint
+    ch = strchr( s, '$' );
+    if( ch ) {
+        *ch = 0;
+        spawnpoint = ch + 1;
+    } else {
+        spawnpoint = mapcmd + len;
+    }
+
+    // now expand and try to load the map
+    len = Q_concat( expanded, sizeof( expanded ), "maps/", s, ".bsp", NULL );
+    if( len >= sizeof( expanded ) ) {
+        ret = Q_ERR_NAMETOOLONG;
+    } else {
+        ret = CM_LoadMap( &cm, expanded );
+    }
+
+    if( ret ) {
+        Com_Printf( "Couldn't load %s: %s\n", expanded, Q_ErrorString( ret ) );
+        return;
+    }
+
+    // any error will drop from this point
+    if( sv.state != ss_game || restart ) {
+        SV_InitGame( qfalse );  // the game is just starting
+    }
+
+    SV_SpawnServer( &cm, s, spawnpoint );
+}
 
 /*
 ==================
@@ -285,12 +359,12 @@ static void SV_GameMap_f( void ) {
         if( sv_recycle->integer > 1 ) {
             Com_Quit( NULL, ERR_RECONNECT );
         }
-        SV_Map( Cmd_Argv( 1 ), qtrue );
+        SV_Map( 1, qtrue );
         return;
     }
 #endif
     
-    SV_Map( Cmd_Argv( 1 ), qfalse );
+    SV_Map( 1, qfalse );
 }
 
 /*
@@ -331,11 +405,11 @@ static void SV_Map_f( void ) {
             return;
         }
 
-        SV_Map( Cmd_Argv( 1 ), qfalse );
+        SV_Map( 1, qfalse );
         return;
     }
 
-    SV_Map( Cmd_Argv( 1 ), qtrue );
+    SV_Map( 1, qtrue );
 }
 
 static void SV_Map_c( genctx_t *ctx, int argnum ) {

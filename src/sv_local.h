@@ -490,9 +490,9 @@ void Master_Packet (void);
 //
 // sv_init.c
 //
-void SV_InitGame( qboolean ismvd );
-void SV_Map (const char *levelstring, qboolean restart);
 void SV_ClientReset( client_t *client );
+void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint );
+void SV_InitGame( qboolean ismvd );
 
 //
 // sv_send.c
