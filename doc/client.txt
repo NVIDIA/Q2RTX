@@ -664,6 +664,42 @@ r_texture_formats::
     ‘.jpg’, then ‘.tga’.
 
 
+Downloads
+~~~~~~~~~
+
+These variables control automatic client downloads (both legacy UDP and HTTP
+downloads).
+
+allow_downloads::
+    Globally allows or disallows client downloads. Remaining variables listed
+    below are effective only when downloads are globally enabled. Default value
+    is 1.
+     - -1 — downloads are permanently disabled (once this value is set, it
+       can't be modified)
+     - 0 — downloads are disabled
+     - 1 — downloads are enabled
+
+allow_download_maps::
+    Enables automatic downloading of maps. Default value is 1.
+
+allow_download_models::
+    Enables automatic downloading of non-player models, sprites and skins.
+    Default value is 1.
+
+allow_download_sounds::
+    Enables automatic downloading of non-player sounds. Default value is 1.
+
+allow_download_pics::
+    Enables automatic downloading of HUD pictures. Default value is 1.
+
+allow_download_players::
+    Enables automatic downloading of player models, skins, sounds and icons.
+    Default value is 1.
+
+allow_download_textures::
+    Enables automatic downloading of map textures. Default value is 1.
+
+
 HTTP Downloads
 ~~~~~~~~~~~~~~
 

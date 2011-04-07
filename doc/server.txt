@@ -199,6 +199,49 @@ sv_changemapcmd::
     Specifies command to be executed each time server finishes loading a new map.
     Default value is empty.
 
+
+Downloads
+~~~~~~~~~
+
+These variables control legacy server UDP downloads.
+
+allow_downloads::
+    Globally allows or disallows server UDP downloads. Remaining variables listed
+    below are effective only when downloads are globally enabled. Default value
+    is 0.
+     - 0 — downloads are disabled
+     - 1 — downloads are enabled
+
+allow_download_maps::
+    Enables downloading of files from ‘maps/’ subdirectory. Default value is 1.
+     - 0 — map downloads are disabled
+     - 1 — map downloads are enabled for physical files and disabled for files
+     from packs
+     - 2 — map downloads are enabled for all files
+
+allow_download_models::
+    Enables downloading of files from ‘models/’ and ‘sprites/’ subdirectories.
+    Default value is 1.
+
+allow_download_sounds::
+    Enables downloading of files from ‘sound/’ subdirectory. Default value is 1.
+
+allow_download_pics::
+    Enables downloading of files from ‘pics/’ subdirectory. Default value is 1.
+
+allow_download_players::
+    Enables downloading of files from ‘players/’ subdirectory. Default value is
+    1.
+
+allow_download_textures::
+    Enables downloading of files from ‘textures/’ and ‘env/’ subdirectories.
+    Default value is 1.
+
+allow_download_others::
+    Enables downloading of files from any subdirectory other than those listed
+    above. Default value is 0.
+
+
 MVD/GTV server
 ~~~~~~~~~~~~~~
 
