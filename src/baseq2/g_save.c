@@ -52,7 +52,7 @@ typedef struct {
 #define E(name) _F(F_EDICT,name)
 #define P(name,type) _FA(F_POINTER,name,type)
 
-static save_field_t entityfields[] = {
+static const save_field_t entityfields[] = {
 #define _OFS FOFS
     V(s.origin),
     V(s.angles),
