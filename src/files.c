@@ -49,7 +49,7 @@ QUAKE FILESYSTEM
 #define MAX_FILE_HANDLES    32
 
 #if USE_ZLIB
-#define ZIP_MAXFILES    0x4000  // 16k files, rather arbitrary
+#define ZIP_MAXFILES    0x8000  // 32k files
 #define ZIP_BUFSIZE     0x10000 // inflate in blocks of 64k
 
 #define ZIP_BUFREADCOMMENT      1024
