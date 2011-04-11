@@ -802,7 +802,7 @@ static void Cvar_List_f( void ) {
     qboolean verbose = qfalse, modified = qfalse, latched = qfalse;
     int mask = 0;
     char *wildcard = NULL;
-    char buffer[6];
+    char buffer[5];
     int c;
 
     while( ( c = Cmd_ParseOptions( o_cvarlist ) ) != -1 ) {
@@ -879,28 +879,27 @@ static void Cvar_List_f( void ) {
         }
 
         if( verbose ) {
-            memset( buffer, ' ', sizeof( buffer ) - 1 );
+            memset( buffer, '-', sizeof( buffer ) - 1 );
 
             if( var->flags & CVAR_CHEAT )
                 buffer[0] = 'C';
-
-            if( var->flags & CVAR_ARCHIVE )
-                buffer[1] = 'A';
+            else if( var->flags & CVAR_ARCHIVE )
+                buffer[0] = 'A';
 
             if( var->flags & CVAR_USERINFO )
-                buffer[2] = 'U';
+                buffer[1] = 'U';
 
             if( var->flags & CVAR_SERVERINFO )
-                buffer[3] = 'S';
+                buffer[2] = 'S';
 
             if( var->flags & CVAR_ROM )
-                buffer[4] = 'R';
+                buffer[3] = 'R';
             else if( var->flags & CVAR_NOSET )
-                buffer[4] = 'N';
+                buffer[3] = 'N';
             else if( var->flags & CVAR_LATCH )
-                buffer[4] = 'L';
+                buffer[3] = 'L';
             else if( var->flags & CVAR_CUSTOM )
-                buffer[4] = '?';
+                buffer[3] = '?';
 
             Com_Printf( "%s ", buffer );
         }
