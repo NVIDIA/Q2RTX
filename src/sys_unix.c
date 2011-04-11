@@ -245,7 +245,7 @@ void Sys_ConsoleOutput( const char *text ) {
 }
 
 void Sys_SetConsoleTitle( const char *title ) {
-    char buffer[MAX_STRING_CHARS];
+    char buf[MAX_STRING_CHARS];
     size_t len;
 
     if( !sys_console || !sys_console->integer ) {
@@ -256,10 +256,22 @@ void Sys_SetConsoleTitle( const char *title ) {
         return;
     }
 
-    len = Q_snprintf( buffer, sizeof( buffer ), "\033]0;%s\007", title );
-    if( len < sizeof( buffer ) ) {
-        stdout_write( buffer, len );
+    buf[0] = '\033';
+    buf[1] = ']';
+    buf[2] = '0';
+    buf[3] = ';';
+
+    for( len = 4; len < MAX_STRING_CHARS - 1; len++ ) {
+        int c = *title++;
+        if( !c ) {
+            break;
+        }
+        buf[len] = Q_charascii( c );
     }
+
+    buf[len++] = '\007';
+
+    stdout_write( buf, len );
 }
 
 static void tty_parse_input( const char *text ) {
