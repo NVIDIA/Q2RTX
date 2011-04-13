@@ -1684,11 +1684,13 @@ static void Cmd_Exec_f( void ) {
     }
 
     ret = Cmd_ExecuteFile( buffer, 0 );
-    if( ret == Q_ERR_NOENT && FS_strcmp( COM_FileExtension( buffer ), ".cfg" ) ) {
+    if( ret == Q_ERR_NOENT && COM_CompareExtension( buffer, ".cfg" ) ) {
         // try with .cfg extension
-        len = COM_DefaultExtension( buffer, ".cfg", sizeof( buffer ) );
+        len = Q_strlcat( buffer, ".cfg", sizeof( buffer ) );
         if( len < sizeof( buffer ) ) {
             ret = Cmd_ExecuteFile( buffer, 0 );
+        } else {
+            ret = Q_ERR_NAMETOOLONG;
         }
     }
 
