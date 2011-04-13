@@ -2982,10 +2982,10 @@ static void fs_game_changed( cvar_t *self ) {
 
     // validate it
     if( *s ) {
-        if( !FS_strcmp( s, BASEGAME ) ) {
+        if( !Q_stricmp( s, BASEGAME ) ) {
             Cvar_Reset( self );
-        } else if( strchr( s, '/' ) ) {
-            Com_Printf( "'%s' should be a single directory name, not a path.\n", self->name );
+        } else if( !COM_IsPath( s ) ) {
+            Com_Printf( "'%s' should contain characters [A-Za-z0-9_-] only.\n", self->name );
             Cvar_Reset( self );
         }
     }
