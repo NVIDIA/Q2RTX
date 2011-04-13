@@ -76,15 +76,6 @@ typedef struct file_info_s {
 //
 #define MAX_LOADFILE            0x1000000
 
-// macros for dealing portably with files at OS level
-#ifdef _WIN32
-#define FS_strcmp   Q_strcasecmp
-#define FS_strncmp  Q_strncasecmp
-#else
-#define FS_strcmp   strcmp
-#define FS_strncmp  strncmp
-#endif
-
 #define FS_Malloc( size )       Z_TagMalloc( size, TAG_FILESYSTEM )
 #define FS_Mallocz( size )      Z_TagMallocz( size, TAG_FILESYSTEM )
 #define FS_CopyString( string ) Z_TagCopyString( string, TAG_FILESYSTEM )
