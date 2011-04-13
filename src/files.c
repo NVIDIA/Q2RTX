@@ -1984,8 +1984,8 @@ static int QDECL pakcmp( const void *p1, const void *p2 ) {
     char *s1 = *( char ** )p1;
     char *s2 = *( char ** )p2;
 
-    if( !FS_strncmp( s1, "pak", 3 ) ) {
-        if( !FS_strncmp( s2, "pak", 3 ) ) {
+    if( !Q_stricmpn( s1, "pak", 3 ) ) {
+        if( !Q_stricmpn( s2, "pak", 3 ) ) {
             unsigned long n1 = strtoul( s1 + 3, &s1, 10 );
             unsigned long n2 = strtoul( s2 + 3, &s2, 10 );
             if( n1 > n2 ) {
@@ -1998,12 +1998,12 @@ static int QDECL pakcmp( const void *p1, const void *p2 ) {
         }
         return -1;
     }
-    if( !FS_strncmp( s2, "pak", 3 ) ) {
+    if( !Q_stricmpn( s2, "pak", 3 ) ) {
         return 1;
     }
 
 alphacmp:
-    return FS_strcmp( s1, s2 );
+    return Q_stricmp( s1, s2 );
 }
 
 // sets fs_gamedir, adds the directory to the head of the path,
