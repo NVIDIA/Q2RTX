@@ -1419,7 +1419,10 @@ qhandle_t FS_EasyOpenFile( char *buf, size_t size, unsigned mode,
         gz = ".gz";
     }
 
-    // TODO: don't append the extension if name already has it
+    // don't append the extension if name already has it
+    if( !COM_CompareExtension( name, ext ) ) {
+        ext = "";
+    }
 
     len = Q_concat( buf, size, dir, name, ext, gz, NULL );
     if( len >= size ) {
