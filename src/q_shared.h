@@ -475,8 +475,6 @@ qboolean COM_IsUint( const char *s );
 qboolean COM_IsPath( const char *s );
 qboolean COM_IsWhite( const char *s );
 
-unsigned COM_ParseHex( const char *s );
-
 char *COM_Parse( const char **data_p );
 // data is an in/out parm, returns a parsed out token
 int COM_Compress( char *data );

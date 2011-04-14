@@ -374,23 +374,6 @@ qboolean COM_IsWhite( const char *s ) {
     return qtrue;
 }
 
-unsigned COM_ParseHex( const char *s ) {
-    int c;
-    unsigned result;
-
-    for( result = 0; *s; s++ ) {
-        if( ( c = Q_charhex( *s ) ) == -1 ) {
-            break;
-        }
-        if( result & ~( UINT_MAX >> 4 ) ) {
-            return UINT_MAX;
-        }
-        result = c | ( result << 4 );
-    }
-
-    return result;
-}
-
 int QDECL SortStrcmp( const void *p1, const void *p2 ) {
     return strcmp( *( const char ** )p1, *( const char ** )p2 );
 }
