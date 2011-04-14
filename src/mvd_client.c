@@ -1991,9 +1991,10 @@ static void MVD_Play_c( genctx_t *ctx, int argnum ) {
 }
 
 static void MVD_Play_f( void ) {
-    char *name = NULL, *s;
+    char *name = NULL;
     char buffer[MAX_OSPATH];
     int loop = -1, chan_id = -1;
+    qhandle_t f;
     size_t len;
     gtv_t *gtv = NULL;
     int c, argc;
@@ -2045,19 +2046,14 @@ static void MVD_Play_f( void ) {
     // build the playlist
     head = NULL;
     for( i = argc - 1; i >= cmd_optind; i-- ) {
-        s = Cmd_Argv( i );
-        if( *s == '/' ) {
-            Q_strlcpy( buffer, s + 1, sizeof( buffer ) );
-        } else {
-            Q_concat( buffer, sizeof( buffer ), "demos/", s, NULL );
-            if( !FS_FileExists( buffer ) ) {
-                COM_DefaultExtension( buffer, ".mvd2", sizeof( buffer ) );
-            }
-        }
-        if( !FS_FileExists( buffer ) ) {
-            Com_Printf( "Ignoring non-existent entry: %s\n", buffer );
+        // try to open it
+        f = FS_EasyOpenFile( buffer, sizeof( buffer ), FS_MODE_READ,
+            "demos/", Cmd_Argv( i ), ".mvd2" );
+        if( !f ) {
             continue;
         }
+
+        FS_FCloseFile( f );
 
         len = strlen( buffer );
         entry = MVD_Malloc( sizeof( *entry ) + len );

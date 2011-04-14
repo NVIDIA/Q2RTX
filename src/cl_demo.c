@@ -609,69 +609,31 @@ CL_PlayDemo_f
 */
 static void CL_PlayDemo_f( void ) {
     char name[MAX_OSPATH];
-    qhandle_t demofile;
-    char *arg;
+    qhandle_t f;
     ssize_t len, ofs;
-    int type, argc = Cmd_Argc();
+    int type;
 
-    if( argc < 2 ) {
-        Com_Printf( "Usage: %s <filename> [...]\n", Cmd_Argv( 0 ) );
+    if( Cmd_Argc() < 2 ) {
+        Com_Printf( "Usage: %s <filename>\n", Cmd_Argv( 0 ) );
         return;
     }
 
-    arg = Cmd_Argv( 1 );
-    if( arg[0] == '/' ) {
-        // Assume full path is given
-        len = Q_strlcpy( name, arg + 1, sizeof( name ) );
-        if( len >= sizeof( name ) ) {
-            len = Q_ERR_NAMETOOLONG;
-            goto fail;
-        }
-        len = FS_FOpenFile( name, &demofile, FS_MODE_READ );
-    } else {
-        // Search for matching extensions
-        len = Q_concat( name, sizeof( name ), "demos/", arg, NULL );
-        if( len >= sizeof( name ) ) {
-            len = Q_ERR_NAMETOOLONG;
-            goto fail;
-        }
-        len = FS_FOpenFile( name, &demofile, FS_MODE_READ );    
-        if( !demofile ) {
-            len = COM_DefaultExtension( name, ".dm2", sizeof( name ) );
-            if( len >= sizeof( name ) ) {
-                len = Q_ERR_NAMETOOLONG;
-                goto fail;
-            }
-            len = FS_FOpenFile( name, &demofile, FS_MODE_READ );
-        }
-    }
-
-    if( !demofile ) {
-fail:
-        Com_Printf( "Couldn't open %s: %s\n", name, Q_ErrorString( len ) );
+    f = FS_EasyOpenFile( name, sizeof( name ), FS_MODE_READ,
+        "demos/", Cmd_Argv( 1 ), ".dm2" );
+    if( !f ) {
         return;
     }
 
-#if 0
-    // add trailing filenames to play list
-    for( i = 2; i < argc; i++ ) {
-        arg = Cmd_Argv( i );
-        length = strlen( arg );
-        entry = Z_Malloc( sizeof( *entry ) + length );
-        memcpy( entry->filename, arg, length + 1 );
-    }
-#endif
-
-    type = read_first_message( demofile );
+    type = read_first_message( f );
     if( type < 0 ) {
         Com_Printf( "Couldn't read %s: %s\n", name, Q_ErrorString( type ) );
-        FS_FCloseFile( demofile );
+        FS_FCloseFile( f );
         return;
     }
 
     if( type == 1 ) {
         Cbuf_InsertText( &cmd_buffer, va( "mvdplay --replace @@ /%s\n", name ) );
-        FS_FCloseFile( demofile );
+        FS_FCloseFile( f );
         return;
     }
 
@@ -680,7 +642,7 @@ fail:
 
     CL_Disconnect( ERR_RECONNECT );
 
-    cls.demo.playback = demofile;
+    cls.demo.playback = f;
     cls.state = ca_connected;
     Q_strlcpy( cls.servername, COM_SkipPath( name ), sizeof( cls.servername ) );
     cls.serverAddress.type = NA_LOOPBACK;
@@ -694,8 +656,8 @@ fail:
         parse_next_message();
     }
 
-    len = FS_Length( demofile );
-    ofs = FS_Tell( demofile );
+    len = FS_Length( f );
+    ofs = FS_Tell( f );
     if( len > 0 && ofs > 0 ) {
         cls.demo.file_offset = ofs;
         cls.demo.file_size = len - ofs;

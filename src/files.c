@@ -1346,6 +1346,53 @@ ssize_t FS_FOpenFile( const char *name, qhandle_t *f, unsigned mode ) {
     return ret;
 }
 
+static qhandle_t easy_open_read( char *buf, size_t size, unsigned mode,
+    const char *dir, const char *name, const char *ext )
+{
+    ssize_t len;
+    qhandle_t f;
+
+    if( *name == '/' ) {
+        // full path is given, ignore directory and extension
+        len = Q_strlcpy( buf, name + 1, size );
+    } else {
+        // first try without extension
+        len = Q_concat( buf, size, dir, name, NULL );
+        if( len >= size ) {
+            len = Q_ERR_NAMETOOLONG;
+            goto fail;
+        }
+
+        len = FS_FOpenFile( buf, &f, mode );
+        if( f ) {
+            return f; // succeeded
+        }
+        if( len != Q_ERR_NOENT ) {
+            goto fail; // fatal error
+        }
+        if( !COM_CompareExtension( buf, ext ) ) {
+            goto fail; // name already has the extension
+        }
+
+        // now try to append extension
+        len = Q_strlcat( buf, ext, size );
+    }
+
+    if( len >= size ) {
+        len = Q_ERR_NAMETOOLONG;
+        goto fail;
+    }
+
+    len = FS_FOpenFile( buf, &f, mode );
+    if( f ) {
+        return f;
+    }
+
+fail:
+    Com_Printf( "Couldn't open %s for reading: %s\n", buf, Q_ErrorString( len ) );
+    return 0;
+}
+
 /*
 ============
 FS_EasyOpenFile
@@ -1362,6 +1409,11 @@ qhandle_t FS_EasyOpenFile( char *buf, size_t size, unsigned mode,
     qhandle_t f;
     qerror_t ret;
     char *gz = NULL;
+
+    // filename handling for reading is VERY special
+    if( ( mode & FS_MODE_MASK ) == FS_MODE_READ ) {
+        return easy_open_read( buf, size, mode, dir, name, ext );
+    }
 
     if( mode & FS_FLAG_GZIP ) {
         gz = ".gz";
