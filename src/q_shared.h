@@ -467,6 +467,9 @@ void COM_FilePath( const char *in, char *out, size_t size );
 size_t COM_DefaultExtension( char *path, const char *ext, size_t size );
 char *COM_FileExtension( const char *in );
 
+#define COM_CompareExtension( in, ext ) \
+    Q_strcasecmp( COM_FileExtension( in ), ext )
+
 qboolean COM_IsFloat( const char *s );
 qboolean COM_IsUint( const char *s );
 qboolean COM_IsPath( const char *s );
