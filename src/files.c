@@ -2865,8 +2865,8 @@ static void FS_UnLink_f( void ) {
     while( ( c = Cmd_ParseOptions( options ) ) != -1 ) {
         switch( c ) {
         case 'h':
-            Com_Printf( "Usage: %s [-ah] <name> -- delete symbolic link\n",
-                Cmd_Argv( 0 ) );
+            Cmd_PrintUsage( options, "<name>" );
+            Com_Printf( "Deletes a symbolic link with the specified name." );
             Cmd_PrintHelp( options );
             return;
         case 'a':
@@ -2880,8 +2880,8 @@ static void FS_UnLink_f( void ) {
 
     name = cmd_optarg;
     if( !name[0] ) {
-        Com_Printf( "Missing name argument.\n"
-            "Try '%s --help' for more information.\n", Cmd_Argv( 0 ) );
+        Com_Printf( "Missing name argument.\n" );
+        Cmd_PrintHint();
         return;
     }
 
@@ -2892,7 +2892,7 @@ static void FS_UnLink_f( void ) {
         next_p = &link->next;
     }
     if( !link ) {
-        Com_Printf( "Symbolic link %s does not exist.\n", name );
+        Com_Printf( "Symbolic link '%s' does not exist.\n", name );
         return;
     }
 
@@ -2903,9 +2903,10 @@ static void FS_UnLink_f( void ) {
 
 static void FS_Link_f( void ) {
     int argc, count;
-    size_t len;
     symlink_t *link;
-    char *name, *target;
+    size_t namelen, targlen;
+    char name[MAX_OSPATH];
+    char target[MAX_OSPATH];
 
     argc = Cmd_Argc();
     if( argc == 1 ) {
@@ -2916,6 +2917,7 @@ static void FS_Link_f( void ) {
                 "%d symbolic links listed.\n", count );
         return;
     }
+
     if( argc != 3 ) {
         Com_Printf( "Usage: %s <name> <target>\n"
             "Creates symbolic link to target with the specified name.\n"
@@ -2925,7 +2927,19 @@ static void FS_Link_f( void ) {
         return;
     }
 
-    name = Cmd_Argv( 1 );
+    namelen = FS_NormalizePathBuffer( name, Cmd_Argv( 1 ), sizeof( name ) );
+    if( namelen == 0 || namelen >= sizeof( name ) ) {
+        Com_Printf( "Invalid symbolic link name.\n" );
+        return;
+    }
+
+    targlen = FS_NormalizePathBuffer( target, Cmd_Argv( 2 ), sizeof( target ) );
+    if( targlen == 0 || targlen >= sizeof( target ) ) {
+        Com_Printf( "Invalid symbolic link target.\n" );
+        return;
+    }
+
+    // search for existing link with this name
     for( link = fs_links; link; link = link->next ) {
         if( !FS_pathcmp( link->name, name ) ) {
             Z_Free( link->target );
@@ -2933,17 +2947,16 @@ static void FS_Link_f( void ) {
         }
     }
 
-    len = strlen( name );
-    link = FS_Malloc( sizeof( *link ) + len );
-    memcpy( link->name, name, len + 1 );
-    link->namelen = len;
+    // create new link
+    link = FS_Malloc( sizeof( *link ) + namelen );
+    memcpy( link->name, name, namelen + 1 );
+    link->namelen = namelen;
     link->next = fs_links;
     fs_links = link;
 
 update:
-    target = Cmd_Argv( 2 );
     link->target = FS_CopyString( target );
-    link->targlen = strlen( target );
+    link->targlen = targlen;
 }
 
 static void free_search_path( searchpath_t *path ) {
