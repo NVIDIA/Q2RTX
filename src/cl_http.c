@@ -178,7 +178,6 @@ static int debug_func (CURL *c, curl_infotype type, char *data, size_t size, voi
 static void escape_path (const char *path, char *escaped) {
     static const char allowed[] = ";/?:@&=+$,[]-_.!~*'()";
     int     c;
-    size_t  len;
     char    *p;
 
     p = escaped;
@@ -192,15 +191,6 @@ static void escape_path (const char *path, char *escaped) {
         }
     }
     *p = 0;
-
-    //using ./ in a url is legal, but all browsers condense the path and some IDS / request
-    //filtering systems act a bit funky if http requests come in with uncondensed paths.
-    len = strlen(escaped);
-    p = escaped;
-    while ((p = strstr (p, "./"))) {
-        memmove (p, p+2, len - (p - escaped) - 1);
-        len -= 2;
-    }
 }
 
 // Actually starts a download by adding it to the curl multi handle.
@@ -520,11 +510,11 @@ static void check_and_queue_download (char *path) {
         flags = 0;
     }
 
+    len = FS_NormalizePath (path, path);
+
     if (strstr (path, "..") ||
         !Q_ispath (path[0]) ||
         !Q_ispath (path[len-1]) ||
-        strstr(path, "//") ||
-        strchr (path, '\\') ||
         strchr (path, ':') ||
         (type == DL_OTHER && !strchr (path, '/')) ||
         (type == DL_PAK && strchr(path, '/')))

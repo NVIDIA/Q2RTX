@@ -303,41 +303,54 @@ qboolean CL_CheckDownloadExtension( const char *ext ) {
 
 // attempts to start a download from the server if file doesn't exist.
 static qerror_t check_file_len( const char *path, size_t len, dltype_t type ) {
-    char *ext;
+    char buffer[MAX_QPATH], *ext;
     qerror_t ret;
 
+    // check len
+    if( len == 0 )
+        return Q_ERR_INVALID_PATH;
+
+    if( len >= MAX_QPATH )
+        return Q_ERR_NAMETOOLONG;
+
+    // normalize path
+    len = FS_NormalizePath( buffer, path );
+
     // check path
-    if( len < 1 || len >= MAX_QPATH
-        || !Q_ispath( path[0] )
-        || !Q_ispath( path[ len - 1 ] )
-        || strchr( path, '\\' )
-        || strchr( path, ':' )
-        || !strchr( path, '/' )
-        || strstr( path, ".." ) )
+    if( len == 0
+        || !Q_ispath( buffer[0] )
+        || !Q_ispath( buffer[ len - 1 ] )
+        || strchr( buffer, ':' )
+        || !strchr( buffer, '/' )
+        || strstr( buffer, ".." ) )
     {
+        // some of these checks are too conservative or even redundant
+        // once we have normalized the path, however they have to stay for
+        // compatibility reasons with older servers (some would even ban us
+        // for sending .. for example)
         return Q_ERR_INVALID_PATH;
     }
 
     // check extension
-    ext = COM_FileExtension( path );
+    ext = COM_FileExtension( buffer );
     if( *ext != '.' || !CL_CheckDownloadExtension( ext + 1 ) ) {
         return Q_ERR_INVALID_PATH;
     }
 
-    if( FS_FileExists( path ) ) {
+    if( FS_FileExists( buffer ) ) {
         // it exists, no need to download
         return Q_ERR_EXIST;
     }
 
 #if USE_CURL
-    ret = HTTP_QueueDownload( path, type );
+    ret = HTTP_QueueDownload( buffer, type );
     if( ret != Q_ERR_NOSYS ) {
         return ret;
     }
 #endif
 
     // queue and start legacy UDP download
-    ret = CL_QueueDownload( path, type );
+    ret = CL_QueueDownload( buffer, type );
     if( ret == Q_ERR_SUCCESS ) {
         CL_StartNextDownload();
     }
