@@ -422,49 +422,32 @@ static file_t *file_for_handle( qhandle_t f ) {
     return file;
 }
 
-static qerror_t validate_path( const char *s ) {
-    const char *start;
+static inline qboolean validate_char( int c ) {
+    if( !Q_isprint( c ) )
+        return qfalse;
 
-    // check for leading slash
-    // check for empty path
-    if( *s == '/' || *s == '\\' /*|| *s == 0*/ ) {
-        return Q_ERR_INVALID_PATH;
-    }
-
-    start = s;
-    while( *s ) {
-        // check for high bit
-        if( *s & 128 ) {
-            return Q_ERR_UNCLEAN_PATH;
-        }
-        // check for ".."
-        if( *s == '.' && s[1] == '.' ) {
-            return Q_ERR_INVALID_PATH;
-        }
-        if( *s == '/' || *s == '\\' ) {
-            // check for two slashes in a row
-            // check for trailing slash
-            if( ( s[1] == '/' || s[1] == '\\' || s[1] == 0 ) ) {
-                return Q_ERR_INVALID_PATH;
-            }
-        }
 #ifdef _WIN32
-        if( *s == ':' ) {
-            // check for "X:\"
-            if( s[1] == '\\' || s[1] == '/' ) {
-                return Q_ERR_INVALID_PATH;
-            }
-        }
+    if( strchr( "<>:\"|?*", c ) )
+        return qfalse;
 #endif
-        s++;
+
+    return qtrue;
+}
+
+static qboolean validate_path( const char *s ) {
+    for( ; *s; s++ ) {
+        if( !validate_char( *s ) )
+            return qfalse;
     }
 
-    // check length
-    if( s - start > MAX_OSPATH ) {
-        return Q_ERR_NAMETOOLONG;
-    }
+    return qtrue;
+}
 
-    return Q_ERR_SUCCESS;
+static void cleanup_path( char *s ) {
+    for( ; *s; s++ ) {
+        if( !validate_char( *s ) )
+            *s = '_';
+    }
 }
 
 static char *expand_links( const char *filename, size_t namelen ) {
