@@ -467,6 +467,30 @@ static qerror_t validate_path( const char *s ) {
     return Q_ERR_SUCCESS;
 }
 
+static char *expand_links( const char *filename, size_t namelen ) {
+    static char buffer[MAX_OSPATH];
+    symlink_t   *link;
+
+    for( link = fs_links; link; link = link->next ) {
+        if( link->namelen > namelen ) {
+            continue;
+        }
+        if( !FS_pathcmpn( link->name, filename, link->namelen ) ) {
+            if( link->targlen + namelen - link->namelen >= MAX_OSPATH ) {
+                FS_DPrintf( "%s: %s: MAX_OSPATH exceeded\n", __func__, filename );
+                return ( char * )filename;
+            }
+            memcpy( buffer, link->target, link->targlen );
+            memcpy( buffer + link->targlen, filename + link->namelen,
+                namelen - link->namelen + 1 );
+            FS_DPrintf( "%s: %s --> %s\n", __func__, filename, buffer );
+            return buffer;
+        }
+    }
+
+    return ( char * )filename;
+}
+
 /*
 ================
 FS_Length
@@ -1367,32 +1391,6 @@ ssize_t FS_Write( const void *buf, size_t len, qhandle_t f ) {
     }
 
     return len;
-}
-
-static char *expand_links( const char *filename ) {
-    static char buffer[MAX_OSPATH];
-    symlink_t   *link;
-    size_t      len;
-
-    len = strlen( filename );
-    for( link = fs_links; link; link = link->next ) {
-        if( link->namelen > len ) {
-            continue;
-        }
-        if( !FS_pathcmpn( link->name, filename, link->namelen ) ) {
-            if( link->targlen + len - link->namelen >= MAX_OSPATH ) {
-                FS_DPrintf( "%s: %s: MAX_OSPATH exceeded\n", __func__, filename );
-                return ( char * )filename;
-            }
-            memcpy( buffer, link->target, link->targlen );
-            memcpy( buffer + link->targlen, filename + link->namelen,
-                len - link->namelen + 1 );
-            FS_DPrintf( "%s: %s --> %s\n", __func__, filename, buffer );
-            return buffer;
-        }
-    }
-
-    return ( char * )filename;
 }
 
 /*
