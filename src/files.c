@@ -1767,9 +1767,13 @@ static pack_t *pack_alloc( FILE *fp, filetype_t type, const char *name,
     return pack;
 }
 
+// normalizes and inserts the filename into hash table
 static void pack_hash_file( pack_t *pack, packfile_t *file ) {
-    unsigned hash = FS_HashPath( file->name, pack->hash_size );
+    unsigned hash;
 
+    FS_NormalizePath( file->name, file->name );
+
+    hash = FS_HashPath( file->name, pack->hash_size );
     file->hash_next = pack->file_hash[hash];
     pack->file_hash[hash] = file;
 }
