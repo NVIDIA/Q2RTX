@@ -461,6 +461,8 @@ MISC
 #define MAXPRINTMSG     4096
 #define MAXERRORMSG     1024
 
+#define CONST_STR_LEN( x ) x, x ? sizeof( x ) - 1 : 0
+
 typedef enum {
     COLOR_BLACK,
     COLOR_RED,
