@@ -523,6 +523,7 @@ qboolean    Com_WildCmpEx( const char *filter, const char *string, int term, qbo
 #define Com_WildCmp( filter, string )  Com_WildCmpEx( filter, string, 0, qfalse )
 
 unsigned    Com_HashString( const char *s, unsigned size );
+unsigned    Com_HashStringLen( const char *s, size_t len, unsigned size );
 
 qboolean    Prompt_AddMatch( genctx_t *ctx, const char *s );
 
