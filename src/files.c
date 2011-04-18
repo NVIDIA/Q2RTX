@@ -2659,10 +2659,15 @@ static void FS_WhereIs_f( void ) {
         return;
     }
 
-    Cmd_ArgvBuffer( 1, filename, sizeof( filename ) );
+    len = FS_NormalizePathBuffer( filename, Cmd_Argv( 1 ), sizeof( filename ) );
+    if( len >= sizeof( filename ) ) {
+        Com_Printf( "Oversize filename\n" );
+        return;
+    }
+
     report_all = Cmd_Argc() >= 3;
 
-    path = expand_links( filename );
+    path = expand_links( filename, len );
     if( path != filename ) {
         Com_Printf( "%s is linked to %s\n", filename, path );
     }
@@ -2689,11 +2694,11 @@ static void FS_WhereIs_f( void ) {
             }
         } else {
             if( valid == -1 ) {
-                ret = validate_path( path );
-                if( ret ) {
-                    Com_WPrintf( "Not searching for %s in real file system: %s\n",
-                        path, Q_ErrorString( ret ) );
-                    valid = 0;
+                valid = validate_path( path );
+                if( !valid ) {
+                    Com_WPrintf( "Not searching for '%s' in physical file "
+                        "system since it contains invalid characters.\n",
+                        path );
                 }
             }
             if( valid == 0 ) {
@@ -2705,7 +2710,6 @@ static void FS_WhereIs_f( void ) {
                 ret = Q_ERR_NAMETOOLONG;
                 goto fail;
             }
-            //FS_ConvertToSysPath( fullpath );
             ret = Sys_GetPathInfo( fullpath, &info );
             if( !ret ) {
                 Com_Printf( "%s (%"PRIz" bytes)\n", fullpath, info.size );
