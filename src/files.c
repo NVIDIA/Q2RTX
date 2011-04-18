@@ -293,6 +293,104 @@ unsigned FS_HashPathLen( const char *s, size_t len, unsigned size ) {
 }
 #endif
 
+/*
+================
+FS_NormalizePath
+
+Simplifies the path, converting backslashes to slashes and removing ./ and ../
+components, as well as duplicated slashes. Any leading slashes are also skipped.
+
+May operate in place if in == out.
+
+    ///foo       -> foo
+    foo\bar      -> foo/bar
+    foo/..       -> <empty>
+    foo/../bar   -> bar
+    foo/./bar    -> foo/bar
+    foo//bar     -> foo/bar
+    ./foo        -> foo
+================
+*/
+size_t FS_NormalizePath( char *out, const char *in ) {
+    char *start = out;
+    uint32_t pre = '/';
+
+    while( 1 ) {
+        int c = *in++;
+
+        if( c == '/' || c == '\\' || c == 0 ) {
+            if( ( pre & 0xffffff ) == ( ( '/' << 16 ) | ( '.' << 8 ) | '.' ) ) {
+                out -= 4;
+                if( out < start ) {
+                    // can't go past root
+                    out = start;
+                    if( c == 0 )
+                        break;
+                } else {
+                    while( out > start && *out != '/' )
+                        out--;
+                    if( c == 0 )
+                        break;
+                    if( out > start )
+                        // save the slash
+                        out++;
+                }
+                pre = '/';
+                continue;
+            }
+
+            if( ( pre & 0xffff ) == ( ( '/' << 8 ) | '.' ) ) {
+                // eat the dot
+                out--;
+                if( c == 0 ) {
+                    if( out > start )
+                        // eat the slash
+                        out--;
+                    break;
+                }
+                pre = '/';
+                continue;
+            }
+
+            if( ( pre & 0xff ) == '/' ) {
+                if( c == 0 )
+                    break;
+                continue;
+            }
+
+            if( c == 0 )
+                break;
+            c = '/';
+        }
+
+        pre = ( pre << 8 ) | c;
+        *out++ = c;
+    }
+
+    *out = 0;
+    return out - start;
+}
+
+/*
+================
+FS_NormalizePathBuffer
+
+Buffer safe version of FS_NormalizePath. Return value >= size signifies
+overflow, empty string is stored in output buffer in this case.
+================
+*/
+size_t FS_NormalizePathBuffer( char *out, const char *in, size_t size ) {
+    size_t len = strlen( in );
+
+    if( len >= size ) {
+        if( size )
+            *out = 0;
+        return len;
+    }
+
+    return FS_NormalizePath( out, in );
+}
+
 // =============================================================================
 
 static file_t *alloc_handle( qhandle_t *f ) {

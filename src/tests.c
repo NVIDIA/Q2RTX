@@ -172,6 +172,90 @@ static void Com_TestWild_f( void ) {
         errors, numwildtests );
 }
 
+typedef struct {
+    const char *in;
+    const char *out;
+} normtest_t;
+
+static const normtest_t normtests[] = {
+    { "",               "",         },
+    { "///",            "",         },
+    { "foo///",         "foo/",     },
+    { "\\/\\",          "",         },
+    { "///foo",         "foo"       },
+    { "\\/foo",         "foo"       },
+    { "foo\\bar",       "foo/bar"   },
+    { "foo/..",         ""          },
+    { "foo.bar.baz/..", ""          },
+    { "foo/../bar",     "bar"       },
+    { "foo/.././bar",   "bar"       },
+    { "foo/./../bar",   "bar"       },
+    { "foo/./bar",      "foo/bar"   },
+    { "foo//bar",       "foo/bar"   },
+    { "foo///.////bar", "foo/bar"   },
+    { "foo/./././bar",  "foo/bar"   },
+    { "./foo",          "foo"       },
+    { "../foo",         "foo"       },
+    { "../../../foo",   "foo"       },
+    { "./../../foo",    "foo"       },
+    { "../bar/../foo",  "foo"       },
+    { "foo/bar/..",     "foo"       },
+    { "foo/bar/../",    "foo/"      },
+    { "foo/bar/.",      "foo/bar"   },
+    { "foo/bar/./",     "foo/bar/"  },
+    { "..",             ""          },
+    { ".",              ""          },
+    { "/..",            ""          },
+    { "/.",             ""          },
+    { "../",            ""          },
+    { "./",             ""          },
+    { "/../",           ""          },
+    { "/./",            ""          },
+    { "../..",          ""          },
+    { "../../../../",   ""          },
+    { "../foo..bar/",   "foo..bar/" },
+    { "......./",       "......./"  },
+
+    { "foo/bar/baz/abc/../def",                             "foo/bar/baz/def"   },
+    { "foo/bar/baz/abc/../../def",                          "foo/bar/def"       },
+    { "foo/bar/../baz/abc/../def",                          "foo/baz/def"       },
+    { "foo/bar/../../baz/abc/../../def",                    "def"               },
+    { "foo/bar/../../../../baz/abc/../../zzz/../def/ghi",   "def/ghi"           },
+};
+
+static const int numnormtests = sizeof( normtests ) / sizeof( normtests[0] );
+
+static void Com_TestNorm_f( void ) {
+    const normtest_t *n;
+    char buffer[MAX_QPATH];
+    int i, errors, pass;
+
+    for( pass = 0; pass < 2; pass++ ) {
+        errors = 0;
+        for( i = 0; i < numnormtests; i++ ) {
+            n = &normtests[i];
+            if( pass == 0 ) {
+                FS_NormalizePath( buffer, n->in );
+            } else {
+                // test in place operation
+                strcpy( buffer, n->in );
+                FS_NormalizePath( buffer, buffer );
+            }
+            if( strcmp( n->out, buffer ) ) {
+                Com_EPrintf(
+                    "FS_NormalizePath( \"%s\" ) == \"%s\", expected \"%s\" (pass %d)\n",
+                    n->in, buffer, n->out, pass );
+                errors++;
+            }
+        }
+        if( errors )
+            break;
+    }
+
+    Com_Printf( "%d failures, %d paths tested (%d passes)\n",
+        errors, numnormtests, pass );
+}
+
 void Com_InitTests( void ) {
     Cmd_AddCommand( "error", Com_Error_f );
     Cmd_AddCommand( "errordrop", Com_ErrorDrop_f );
@@ -179,5 +263,6 @@ void Com_InitTests( void ) {
     Cmd_AddCommand( "crash", Com_Crash_f );
     Cmd_AddCommand( "bsptest", BSP_Test_f );
     Cmd_AddCommand( "wildtest", Com_TestWild_f );
+    Cmd_AddCommand( "normtest", Com_TestNorm_f );
 }
 

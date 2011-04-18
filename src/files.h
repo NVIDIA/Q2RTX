@@ -150,6 +150,9 @@ unsigned FS_HashPath( const char *s, unsigned size );
 unsigned FS_HashPathLen( const char *s, size_t len, unsigned size );
 #endif
 
+size_t FS_NormalizePath( char *out, const char *in );
+size_t FS_NormalizePathBuffer( char *out, const char *in, size_t size );
+
 #ifdef _WIN32
 char *FS_ReplaceSeparators( char *s, int separator );
 #endif
