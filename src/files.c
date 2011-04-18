@@ -749,7 +749,7 @@ static inline FILE *fopen_hack( const char *path, const char *mode ) {
 }
 
 static ssize_t open_file_write( file_t *file, const char *name ) {
-    char fullpath[MAX_OSPATH];
+    char normalized[MAX_OSPATH], fullpath[MAX_OSPATH];
     FILE *fp;
     char *modeStr;
     unsigned mode;
@@ -757,22 +757,29 @@ static ssize_t open_file_write( file_t *file, const char *name ) {
     long pos;
     qerror_t ret;
 
-    ret = validate_path( name );
-    if( ret ) {
-        return ret;
+    // normalize the path
+    len = FS_NormalizePathBuffer( normalized, name, sizeof( normalized ) );
+    if( len >= sizeof( normalized ) ) {
+        return Q_ERR_NAMETOOLONG;
     }
 
+    // check for bad characters
+    if( !validate_path( normalized ) ) {
+        return Q_ERR_INVALID_PATH;
+    }
+
+    // expand the path
     if( ( file->mode & FS_PATH_MASK ) == FS_PATH_BASE ) {
         if( sys_homedir->string[0] ) {
             len = Q_concat( fullpath, sizeof( fullpath ),
-                sys_homedir->string, "/" BASEGAME "/", name, NULL );
+                sys_homedir->string, "/" BASEGAME "/", normalized, NULL );
         } else {
             len = Q_concat( fullpath, sizeof( fullpath ),
-                sys_basedir->string, "/" BASEGAME "/", name, NULL );
+                sys_basedir->string, "/" BASEGAME "/", normalized, NULL );
         }
     } else {
         len = Q_concat( fullpath, sizeof( fullpath ),
-            fs_gamedir, "/", name, NULL );
+            fs_gamedir, "/", normalized, NULL );
     }
     if( len >= sizeof( fullpath ) ) {
         return Q_ERR_NAMETOOLONG;
@@ -1106,14 +1113,15 @@ fail:
 // Fills file_t and returns file length.
 // Used for streaming data out of either a pak file or a seperate file.
 static ssize_t open_file_read( file_t *file, const char *name, qboolean unique ) {
-    char            fullpath[MAX_OSPATH];
+    char            normalized[MAX_OSPATH], fullpath[MAX_OSPATH];
     searchpath_t    *search;
     pack_t          *pak;
     unsigned        hash;
     packfile_t      *entry;
     FILE            *fp;
     file_info_t     info;
-    int             ret = Q_ERR_SUCCESS, valid = -1;
+    qerror_t        ret;
+    int             valid;
     size_t          len;
 
 #ifdef _DEBUG
@@ -1121,10 +1129,22 @@ static ssize_t open_file_read( file_t *file, const char *name, qboolean unique )
 #endif
 
 //
-// search through the path, one element at a time
+// normalize path and expand symlinks
 //
+    len = FS_NormalizePathBuffer( normalized, name, sizeof( normalized ) );
+    if( len >= sizeof( normalized ) ) {
+        return Q_ERR_NAMETOOLONG;
+    }
+
+    name = expand_links( normalized, len );
+
     hash = FS_HashPath( name, 0 );
 
+    valid = -1; // not yet checked
+
+//
+// search through the path, one element at a time
+//
     for( search = fs_searchpaths; search; search = search->next ) {
         if( file->mode & FS_PATH_MASK ) {
             if( ( file->mode & search->mode & FS_PATH_MASK ) == 0 ) {
@@ -1157,10 +1177,7 @@ static ssize_t open_file_read( file_t *file, const char *name, qboolean unique )
     // just stop looking for it in directory tree but continue to search
     // for it in packs, to give broken maps or mods a chance to work
             if( valid == -1 ) {
-                ret = validate_path( name );
-                if( ret ) {
-                    valid = 0;
-                }
+                valid = validate_path( name );
             }
             if( valid == 0 ) {
                 continue;
@@ -1200,10 +1217,11 @@ static ssize_t open_file_read( file_t *file, const char *name, qboolean unique )
             return info.size;
         }
     }
-    
+
     FS_DPrintf( "%s: %s: failed\n", __func__, name );
-    
-    return ret == Q_ERR_SUCCESS ? Q_ERR_NOENT : ret;
+
+    // return error if path was checked and found to be invalid
+    return valid ? Q_ERR_NOENT : Q_ERR_INVALID_PATH;
 }
 
 static ssize_t read_pak_file( file_t *file, void *buf, size_t len ) {
@@ -1396,14 +1414,6 @@ ssize_t FS_FOpenFile( const char *name, qhandle_t *f, unsigned mode ) {
         return Q_ERR_AGAIN; // not yet initialized
     }
 
-    if( *name == '/' ) {
-        name++;
-    }
-
-    if( ( mode & FS_MODE_MASK ) == FS_MODE_READ ) {
-        name = expand_links( name );
-    }
-
     // allocate new file handle
     file = alloc_handle( &handle );
     if( !file ) {
@@ -1555,12 +1565,6 @@ ssize_t FS_LoadFileEx( const char *path, void **buffer, unsigned flags, memtag_t
     if( !fs_searchpaths ) {
         return Q_ERR_AGAIN; // not yet initialized
     }
-
-    if( *path == '/' ) {
-        path++;
-    }
-
-    path = expand_links( path );
 
     // allocate new file handle
     file = alloc_handle( &f );
