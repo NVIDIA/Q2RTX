@@ -52,6 +52,7 @@ static void ProcessTexinfo( bsp_t *bsp ) {
             tex->mipadjust = 1;
 
         Q_concat( name, sizeof( name ), "textures/", tex->name, ".wal", NULL );
+        FS_NormalizePath( name, name );
         tex->image = IMG_Find( name, it_wall );
     }
 }

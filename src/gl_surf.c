@@ -743,6 +743,7 @@ void GL_LoadWorld( const char *name ) {
     // register all texinfo
     for( i = 0, info = bsp->texinfo; i < bsp->numtexinfo; i++, info++ ) {
         Q_concat( buffer, sizeof( buffer ), "textures/", info->name, ".wal", NULL );
+        FS_NormalizePath( buffer, buffer );
         upload_texinfo = info;
         info->image = IMG_Find( buffer, it_wall );
         upload_texinfo = NULL;
