@@ -1642,38 +1642,38 @@ FS_RenameFile
 ================
 */
 qerror_t FS_RenameFile( const char *from, const char *to ) {
+    char normalized[MAX_OSPATH];
     char frompath[MAX_OSPATH];
     char topath[MAX_OSPATH];
     size_t len;
-    int ret;
 
-    if( *from == '/' ) {
-        from++;
-    }
-    ret = validate_path( from );
-    if( ret ) {
-        return ret;
-    }
-    len = Q_concat( frompath, sizeof( frompath ), fs_gamedir, "/", from, NULL );
-    if( len >= sizeof( frompath ) ) {
+    // check from
+    len = FS_NormalizePathBuffer( normalized, from, sizeof( normalized ) );
+    if( len >= sizeof( normalized ) )
         return Q_ERR_NAMETOOLONG;
-    }
 
-    if( *to == '/' ) {
-        to++;
-    }
-    ret = validate_path( to );
-    if( ret ) {
-        return ret;
-    }
-    len = Q_concat( topath, sizeof( topath ), fs_gamedir, "/", to, NULL );
-    if( len >= sizeof( topath ) ) {
+    if( !validate_path( normalized ) )
+        return Q_ERR_INVALID_PATH;
+
+    len = Q_concat( frompath, sizeof( frompath ), fs_gamedir, "/", normalized, NULL );
+    if( len >= sizeof( frompath ) )
         return Q_ERR_NAMETOOLONG;
-    }
 
-    if( rename( frompath, topath ) ) {
+    // check to
+    len = FS_NormalizePathBuffer( normalized, to, sizeof( normalized ) );
+    if( len >= sizeof( normalized ) )
+        return Q_ERR_NAMETOOLONG;
+
+    if( !validate_path( normalized ) )
+        return Q_ERR_INVALID_PATH;
+
+    len = Q_concat( topath, sizeof( topath ), fs_gamedir, "/", normalized, NULL );
+    if( len >= sizeof( topath ) )
+        return Q_ERR_NAMETOOLONG;
+
+    // rename it
+    if( rename( frompath, topath ) )
         return Q_ERR(errno);
-    }
 
     return Q_ERR_SUCCESS;
 }
