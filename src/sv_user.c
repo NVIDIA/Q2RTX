@@ -587,8 +587,7 @@ static void SV_BeginDownload_f( void ) {
         return;
     }
 
-    len = COM_strclr( name );
-    Q_strlwr( name );
+    len = FS_NormalizePath( name, name );
 
     if( Cmd_Argc() > 2 )
         offset = atoi( Cmd_Argv( 2 ) ); // downloaded offset
@@ -606,31 +605,30 @@ static void SV_BeginDownload_f( void ) {
         || !Q_ispath( name[0] )
         // trailing dots, slashes, etc are no good
         || !Q_ispath( name[ len - 1 ] )
-        // back slashes should be never sent
-        || strchr( name, '\\' )
         // colons are bad also
         || strchr( name, ':' )
         // MUST be in a subdirectory    
         || !strchr( name, '/' ) )    
     {    
+        Com_DPrintf( "Refusing download of %s to %s\n", name, sv_client->name );
         goto fail1;
     }
 
-    if( strncmp( name, "players/", 8 ) == 0 ) {
+    if( FS_pathcmpn( name, CONST_STR_LEN( "players/" ) ) == 0 ) {
         allow = allow_download_players;
-    } else if( strncmp( name, "models/", 7 ) == 0 ||
-        strncmp( name, "sprites/", 8 ) == 0 )
+    } else if( FS_pathcmpn( name, CONST_STR_LEN( "models/" ) ) == 0 ||
+        FS_pathcmpn( name, CONST_STR_LEN( "sprites/" ) ) == 0 )
     {
         allow = allow_download_models;
-    } else if( strncmp( name, "sound/", 6 ) == 0 ) {
+    } else if( FS_pathcmpn( name, CONST_STR_LEN( "sound/" ) ) == 0 ) {
         allow = allow_download_sounds;
-    } else if( strncmp( name, "maps/", 5 ) == 0 ) {
+    } else if( FS_pathcmpn( name, CONST_STR_LEN( "maps/" ) ) == 0 ) {
         allow = allow_download_maps;
-    } else if( strncmp( name, "textures/", 9 ) == 0 ||
-        strncmp( name, "env/", 4 ) == 0 )
+    } else if( FS_pathcmpn( name, CONST_STR_LEN( "textures/" ) ) == 0 ||
+        FS_pathcmpn( name, CONST_STR_LEN( "env/" ) ) == 0 )
     {
         allow = allow_download_textures;
-    } else if( strncmp( name, "pics/", 5 ) == 0 ) {
+    } else if( FS_pathcmpn( name, CONST_STR_LEN( "pics/" ) ) == 0 ) {
         allow = allow_download_pics;
     } else {
         allow = allow_download_others;
