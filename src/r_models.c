@@ -257,6 +257,7 @@ static qerror_t MOD_LoadSP2( model_t *model, const void *rawdata, size_t length 
             Com_WPrintf( "%s has bad frame name\n", model->name );
             dst_frame->image = R_NOTEXTURE;
         } else {
+            FS_NormalizePath( buffer, buffer );
             dst_frame->image = IMG_Find( buffer, it_sprite );
         }
 

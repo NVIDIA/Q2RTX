@@ -237,6 +237,7 @@ qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
             ret = Q_ERR_STRING_TRUNCATED;
             goto fail;
         }
+        FS_NormalizePath( skinname, skinname );
         model->skins[i] = IMG_Find( skinname, it_skin );
         src_skin += MD2_MAX_SKINNAME;
     }
