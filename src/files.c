@@ -1452,6 +1452,9 @@ static qhandle_t easy_open_read( char *buf, size_t size, unsigned mode,
             goto fail;
         }
 
+        // print normalized path in case of error
+        FS_NormalizePath( buf, buf );
+
         len = FS_FOpenFile( buf, &f, mode );
         if( f ) {
             return f; // succeeded
@@ -1494,6 +1497,7 @@ to open the file, printing an error message in case of failure.
 qhandle_t FS_EasyOpenFile( char *buf, size_t size, unsigned mode,
     const char *dir, const char *name, const char *ext )
 {
+    char normalized[MAX_OSPATH];
     size_t len;
     qhandle_t f;
     qerror_t ret;
@@ -1504,16 +1508,27 @@ qhandle_t FS_EasyOpenFile( char *buf, size_t size, unsigned mode,
         return easy_open_read( buf, size, mode, dir, name, ext );
     }
 
+    // make it impossible to escape the destination directory when writing files
+    len = FS_NormalizePathBuffer( normalized, name, sizeof( normalized ) );
+    if( len >= sizeof( normalized ) ) {
+        Q_strlcpy( buf, "<...>", size );
+        ret = Q_ERR_NAMETOOLONG;
+        goto fail1;
+    }
+
+    // replace any bad characters with underscores to make automatic commands happy
+    cleanup_path( normalized );
+
     if( mode & FS_FLAG_GZIP ) {
         gz = ".gz";
     }
 
     // don't append the extension if name already has it
-    if( !COM_CompareExtension( name, ext ) ) {
+    if( !COM_CompareExtension( normalized, ext ) ) {
         ext = "";
     }
 
-    len = Q_concat( buf, size, dir, name, ext, gz, NULL );
+    len = Q_concat( buf, size, dir, normalized, ext, gz, NULL );
     if( len >= size ) {
         ret = Q_ERR_NAMETOOLONG;
         goto fail1;
