@@ -2344,7 +2344,7 @@ void **FS_ListFiles( const char *path,
     packfile_t *file;
     void *files[MAX_LISTED_FILES], *info;
     int i, count, total;
-    char buffer[MAX_OSPATH];
+    char normalized[MAX_OSPATH], buffer[MAX_OSPATH];
     void **list;
     size_t len, pathlen;
     char *s, *p;
@@ -2357,10 +2357,13 @@ void **FS_ListFiles( const char *path,
         path = "";
         pathlen = 0;
     } else {
-        if( *path == '/' ) {
-            path++;
+        // normalize the path
+        pathlen = FS_NormalizePathBuffer( normalized, path, sizeof( normalized ) );
+        if( pathlen >= sizeof( normalized ) ) {
+            goto fail;
         }
-        pathlen = strlen( path );
+
+        path = normalized;
     }
 
     for( search = fs_searchpaths; search; search = search->next ) {
@@ -2453,11 +2456,7 @@ void **FS_ListFiles( const char *path,
                     continue;
                 }
                 if( valid == -1 ) {
-                    if( validate_path( path ) ) {
-                        FS_DPrintf( "%s: refusing invalid path: %s\n",
-                            __func__, path );
-                        valid = 0;
-                    }
+                    valid = validate_path( path );
                 }
                 if( valid == 0 ) {
                     continue;
@@ -2482,6 +2481,7 @@ void **FS_ListFiles( const char *path,
     }
 
     if( !count ) {
+fail:
         if( count_p ) {
             *count_p = 0;
         }
