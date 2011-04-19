@@ -1598,27 +1598,19 @@ static void r_texture_formats_changed( cvar_t *self ) {
 #endif // USE_PNG || USE_JPG || USE_TGA
 
 // finds or loads the given image, adding it to the hash table.
-static qerror_t find_or_load_image( const char *name, imagetype_t type, image_t **image_p ) {
+static qerror_t find_or_load_image( const char *name,
+    size_t len, imagetype_t type, image_t **image_p )
+{
     image_t *image;
     byte *pic, *tmp;
     int width, height;
     char buffer[MAX_QPATH], *ext;
-    size_t len;
     unsigned hash;
     const imageloader_t *ldr;
     imageformat_t fmt;
     qerror_t ret;
 
     *image_p = NULL;
-
-    if( !name ) {
-        Com_Error( ERR_FATAL, "%s: NULL", __func__ );
-    }
-
-    len = strlen( name );
-    if( len >= MAX_QPATH ) {
-        Com_Error( ERR_FATAL, "%s: oversize name", __func__ );
-    }
 
     // must have an extension and at least 1 char of base name 
     if( len <= 4 || name[len - 4] != '.' ) {
@@ -1726,9 +1718,20 @@ static qerror_t find_or_load_image( const char *name, imagetype_t type, image_t 
 
 image_t *IMG_Find( const char *name, imagetype_t type ) {
     image_t *image;
+    size_t len;
     qerror_t ret;
 
-    ret = find_or_load_image( name, type, &image );
+    if( !name ) {
+        Com_Error( ERR_FATAL, "%s: NULL", __func__ );
+    }
+
+    // this should never happen
+    len = strlen( name );
+    if( len >= MAX_QPATH ) {
+        Com_Error( ERR_FATAL, "%s: oversize name", __func__ );
+    }
+
+    ret = find_or_load_image( name, len, type, &image );
     if( image ) {
         return image;
     }
@@ -1767,25 +1770,23 @@ static qerror_t _register_image( const char *name, imagetype_t type, qhandle_t *
     }
 
     if( type == it_skin ) {
-        ret = find_or_load_image( name, type, &image );
+        len = FS_NormalizePathBuffer( fullname, name, sizeof( fullname ) );
     } else if( name[0] == '/' || name[0] == '\\' ) {
-        ret = find_or_load_image( name + 1, type, &image );
+        len = FS_NormalizePathBuffer( fullname, name + 1, sizeof( fullname ) );
     } else {
-        if( !strncmp( name, "../", 3 ) ) {
-            // action mod icon path hack
-            len = Q_strlcpy( fullname, name + 3, sizeof( fullname ) );
-        } else {
-            len = Q_concat( fullname, sizeof( fullname ), "pics/", name, NULL );
-        }
+        len = Q_concat( fullname, sizeof( fullname ), "pics/", name, NULL );
         if( len >= sizeof( fullname ) ) {
             return Q_ERR_NAMETOOLONG;
         }
+        FS_NormalizePath( fullname, fullname );
         len = COM_DefaultExtension( fullname, ".pcx", sizeof( fullname ) );
-        if( len >= sizeof( fullname ) ) {
-            return Q_ERR_NAMETOOLONG;
-        }
-        ret = find_or_load_image( fullname, type, &image );
     }
+
+    if( len >= sizeof( fullname ) ) {
+        return Q_ERR_NAMETOOLONG;
+    }
+
+    ret = find_or_load_image( fullname, len, type, &image );
 
     if( !image ) {
         return ret;
