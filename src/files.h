@@ -130,6 +130,10 @@ ssize_t FS_LoadFileEx( const char *path, void **buffer, unsigned flags, memtag_t
 
 qerror_t FS_WriteFile( const char *path, const void *data, size_t len );
 
+qboolean FS_EasyWriteFile( char *buf, size_t size, unsigned mode,
+    const char *dir, const char *name, const char *ext,
+    const void *data, size_t len );
+
 ssize_t FS_Read( void *buffer, size_t len, qhandle_t f );
 ssize_t FS_Write( const void *buffer, size_t len, qhandle_t f );
 // properly handles partial reads

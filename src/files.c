@@ -1562,18 +1562,53 @@ qerror_t FS_WriteFile( const char *path, const void *data, size_t len ) {
     ssize_t write;
     qerror_t ret;
 
-    ret = FS_FOpenFile( path, &f, FS_MODE_WRITE );
+    // TODO: write to temp file perhaps?
+    write = FS_FOpenFile( path, &f, FS_MODE_WRITE );
     if( !f ) {
-        return ret;
+        return write;
     }
 
     write = FS_Write( data, len, f );
-    if( write != len ) {
-        ret = write < 0 ? write : Q_ERR_FAILURE;
-    }
+    ret = write == len ? Q_ERR_SUCCESS : write < 0 ? write : Q_ERR_FAILURE;
     
     FS_FCloseFile( f );
     return ret;
+}
+
+/*
+============
+FS_EasyWriteFile
+
+Helper function for various console commands. Concatenates
+the arguments, checks for path buffer overflow, and attempts
+to write the file, printing an error message in case of failure.
+============
+*/
+qboolean FS_EasyWriteFile( char *buf, size_t size, unsigned mode,
+    const char *dir, const char *name, const char *ext,
+    const void *data, size_t len )
+{
+    qhandle_t f;
+    ssize_t write;
+    qerror_t ret;
+
+    // TODO: write to temp file perhaps?
+    f = easy_open_write( buf, size, mode, dir, name, ext );
+    if( !f ) {
+        return qfalse;
+    }
+
+    write = FS_Write( data, len, f );
+    ret = write == len ? Q_ERR_SUCCESS : write < 0 ? write : Q_ERR_FAILURE;
+
+    FS_FCloseFile( f );
+
+    if( ret ) {
+        Com_EPrintf( "Couldn't write %s: %s\n", buf, Q_ErrorString( ret ) );
+        return qfalse;
+    }
+
+    return qtrue;
 }
 
 #if USE_CLIENT
