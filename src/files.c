@@ -1355,6 +1355,7 @@ ssize_t FS_FOpenFile( const char *name, qhandle_t *f, unsigned mode ) {
     return ret;
 }
 
+// reading from outside of source directory is allowed, extension is optional
 static qhandle_t easy_open_read( char *buf, size_t size, unsigned mode,
     const char *dir, const char *name, const char *ext )
 {
@@ -1368,8 +1369,8 @@ static qhandle_t easy_open_read( char *buf, size_t size, unsigned mode,
         // first try without extension
         len = Q_concat( buf, size, dir, name, NULL );
         if( len >= size ) {
-            len = Q_ERR_NAMETOOLONG;
-            goto fail;
+            Q_PrintError( "open", Q_ERR_NAMETOOLONG );
+            return 0;
         }
 
         // print normalized path in case of error
@@ -1391,8 +1392,8 @@ static qhandle_t easy_open_read( char *buf, size_t size, unsigned mode,
     }
 
     if( len >= size ) {
-        len = Q_ERR_NAMETOOLONG;
-        goto fail;
+        Q_PrintError( "open", Q_ERR_NAMETOOLONG );
+        return 0;
     }
 
     len = FS_FOpenFile( buf, &f, mode );
@@ -1401,7 +1402,64 @@ static qhandle_t easy_open_read( char *buf, size_t size, unsigned mode,
     }
 
 fail:
-    Com_Printf( "Couldn't open %s for reading: %s\n", buf, Q_ErrorString( len ) );
+    Com_Printf( "Couldn't open %s: %s\n", buf, Q_ErrorString( len ) );
+    return 0;
+}
+
+// writing to outside of destination directory is disallowed, extension is forced
+static qhandle_t easy_open_write( char *buf, size_t size, unsigned mode,
+    const char *dir, const char *name, const char *ext )
+{
+    char normalized[MAX_OSPATH];
+    ssize_t len;
+    qhandle_t f;
+
+    // make it impossible to escape the destination directory when writing files
+    len = FS_NormalizePathBuffer( normalized, name, sizeof( normalized ) );
+    if( len >= sizeof( normalized ) ) {
+        Q_PrintError( "open", Q_ERR_NAMETOOLONG );
+        return 0;
+    }
+
+    // reject empty filenames
+    if( len == 0 ) {
+        Q_PrintError( "open", Q_ERR_NAMETOOSHORT );
+        return 0;
+    }
+
+    // replace any bad characters with underscores to make automatic commands happy
+    cleanup_path( normalized );
+
+    // don't append the extension if name already has it
+    if( !COM_CompareExtension( normalized, ext ) ) {
+        ext = ( mode & FS_FLAG_GZIP ) ? "" : NULL;
+    }
+
+    len = Q_concat( buf, size, dir, normalized, ext,
+        ( mode & FS_FLAG_GZIP ) ? ".gz" : NULL, NULL );
+    if( len >= size ) {
+        Q_PrintError( "open", Q_ERR_NAMETOOLONG );
+        return 0;
+    }
+
+    len = FS_FOpenFile( buf, &f, mode );
+    if( !f ) {
+        goto fail1;
+    }
+
+    if( mode & FS_FLAG_GZIP ) {
+        len = FS_FilterFile( f );
+        if( len ) {
+            goto fail2;
+        }
+    }
+
+    return f;
+
+fail2:
+    FS_FCloseFile( f );
+fail1:
+    Com_EPrintf( "Couldn't open %s: %s\n", buf, Q_ErrorString( len ) );
     return 0;
 }
 
@@ -1417,62 +1475,11 @@ to open the file, printing an error message in case of failure.
 qhandle_t FS_EasyOpenFile( char *buf, size_t size, unsigned mode,
     const char *dir, const char *name, const char *ext )
 {
-    char normalized[MAX_OSPATH];
-    size_t len;
-    qhandle_t f;
-    qerror_t ret;
-    char *gz = NULL;
-
-    // filename handling for reading is VERY special
     if( ( mode & FS_MODE_MASK ) == FS_MODE_READ ) {
         return easy_open_read( buf, size, mode, dir, name, ext );
     }
 
-    // make it impossible to escape the destination directory when writing files
-    len = FS_NormalizePathBuffer( normalized, name, sizeof( normalized ) );
-    if( len >= sizeof( normalized ) ) {
-        Q_strlcpy( buf, "<...>", size );
-        ret = Q_ERR_NAMETOOLONG;
-        goto fail1;
-    }
-
-    // replace any bad characters with underscores to make automatic commands happy
-    cleanup_path( normalized );
-
-    if( mode & FS_FLAG_GZIP ) {
-        gz = ".gz";
-    }
-
-    // don't append the extension if name already has it
-    if( !COM_CompareExtension( normalized, ext ) ) {
-        ext = "";
-    }
-
-    len = Q_concat( buf, size, dir, normalized, ext, gz, NULL );
-    if( len >= size ) {
-        ret = Q_ERR_NAMETOOLONG;
-        goto fail1;
-    }
-
-    ret = FS_FOpenFile( buf, &f, mode );
-    if( !f ) {
-        goto fail1;
-    }
-
-    if( mode & FS_FLAG_GZIP ) {
-        ret = FS_FilterFile( f );
-        if( ret ) {
-            goto fail2;
-        }
-    }
-
-    return f;
-
-fail2:
-    FS_FCloseFile( f );
-fail1:
-    Com_EPrintf( "Couldn't open %s for writing: %s\n", buf, Q_ErrorString( ret ) );
-    return 0;
+    return easy_open_write( buf, size, mode, dir, name, ext );
 }
 
 /*
