@@ -421,8 +421,6 @@ static void SV_Map_c( genctx_t *ctx, int argnum ) {
 static void SV_DumpEnts_f( void ) {
     bsp_t *c = sv.cm.cache;
     char buffer[MAX_OSPATH];
-    size_t len;
-    qerror_t ret;
 
     if( !c || !c->entitystring ) {
         Com_Printf( "No map loaded.\n" );
@@ -434,20 +432,11 @@ static void SV_DumpEnts_f( void ) {
         return;
     }
 
-    len = Q_concat( buffer, sizeof( buffer ),
-        "maps/", Cmd_Argv( 1 ), ".ent", NULL );
-    if( len >= sizeof( buffer ) ) {
-        Com_EPrintf( "Oversize filename specified.\n" );
-        return;
+    if( FS_EasyWriteFile( buffer, sizeof( buffer ), FS_MODE_WRITE,
+        "maps/", Cmd_Argv( 1 ), ".ent", c->entitystring, c->numentitychars ) )
+    {
+        Com_Printf( "Dumped entity string to %s\n", buffer );
     }
-
-    ret = FS_WriteFile( buffer, c->entitystring, c->numentitychars );
-    if( ret < 0 ) {
-        Com_EPrintf( "Couldn't write %s: %s\n", buffer, Q_ErrorString( ret ) );
-        return;
-    }
-
-    Com_Printf( "Dumped entity string to %s\n", buffer );
 }
 
 //===============================================================

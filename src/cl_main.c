@@ -2082,8 +2082,6 @@ static void CL_DumpClients_f( void ) {
 
 static void dump_program( const char *text, const char *name ) {
     char buffer[MAX_OSPATH];
-    size_t len;
-    qerror_t ret;
 
     if( cls.state != ca_active ) {
         Com_Printf( "Must be in a level to dump.\n" );
@@ -2100,20 +2098,11 @@ static void dump_program( const char *text, const char *name ) {
         return;
     }
 
-    len = Q_concat( buffer, sizeof( buffer ), "layouts/", Cmd_Argv( 1 ), ".txt", NULL );
-    if( len >= sizeof( buffer ) ) {
-        Com_EPrintf( "Oversize filename specified.\n" );
-        return;
+    if( FS_EasyWriteFile( buffer, sizeof( buffer ), FS_MODE_WRITE,
+        "layouts/", Cmd_Argv( 1 ), ".txt", text, strlen( text ) ) )
+    {
+        Com_Printf( "Dumped %s program to %s.\n", name, buffer );
     }
-
-    len = strlen( text );
-    ret = FS_WriteFile( buffer, text, len );
-    if( ret < 0 ) {
-        Com_EPrintf( "Couldn't write %s: %s\n", buffer, Q_ErrorString( ret ) );
-        return;
-    }
-
-    Com_Printf( "Dumped %s program to %s.\n", name, buffer );
 }
 
 static void CL_DumpStatusbar_f( void ) {
