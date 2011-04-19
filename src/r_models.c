@@ -264,6 +264,7 @@ static qerror_t MOD_LoadSP2( model_t *model, const void *rawdata, size_t length 
 }
 
 qhandle_t R_RegisterModel( const char *name ) {
+    char normalized[MAX_QPATH];
     qhandle_t index;
     size_t namelen;
     ssize_t filelen;
@@ -279,19 +280,20 @@ qhandle_t R_RegisterModel( const char *name ) {
         return ~index;
     }
 
-    namelen = strlen( name );
-    if( namelen >= MAX_QPATH ) {
+    // normalize the path
+    namelen = FS_NormalizePathBuffer( normalized, name, sizeof( normalized ) );
+    if( namelen >= sizeof( normalized ) ) {
         Com_Error( ERR_DROP, "%s: oversize name", __func__ );
     }
 
     // see if it's already loaded
-    model = MOD_Find( name );
+    model = MOD_Find( normalized );
     if( model ) {
         MOD_Reference( model );
         goto done;
     }
 
-    filelen = FS_LoadFile( name, ( void ** )&rawdata );
+    filelen = FS_LoadFile( normalized, ( void ** )&rawdata );
     if( !rawdata ) {
         // don't spam about missing models
         if( filelen == Q_ERR_NOENT ) {
@@ -327,7 +329,7 @@ qhandle_t R_RegisterModel( const char *name ) {
     }
 
     model = MOD_Alloc();
-    memcpy( model->name, name, namelen + 1 );
+    memcpy( model->name, normalized, namelen + 1 );
     model->registration_sequence = registration_sequence;
 
     ret = load( model, rawdata, filelen );
@@ -346,7 +348,7 @@ done:
 fail2:
     FS_FreeFile( rawdata );
 fail1:
-    Com_EPrintf( "Couldn't load %s: %s\n", name, Q_ErrorString( ret ) );
+    Com_EPrintf( "Couldn't load %s: %s\n", normalized, Q_ErrorString( ret ) );
     return 0;
 }
 
