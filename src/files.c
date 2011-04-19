@@ -197,56 +197,6 @@ all generated files (savegames, screenshots, demos, config files) will be saved 
 
 */
 
-/*
-================
-FS_pathcmp
-
-Portably compares quake paths
-================
-*/
-int FS_pathcmp( const char *s1, const char *s2 ) {
-    int        c1, c2;
-    
-    do {
-        c1 = *s1++;
-        c2 = *s2++;
-        
-        if( c1 != c2 ) {
-            c1 = c1 == '\\' ? '/' : Q_tolower( c1 );
-            c2 = c2 == '\\' ? '/' : Q_tolower( c2 );
-            if( c1 < c2 )
-                return -1;
-            if( c1 > c2 )
-                return 1;        /* strings not equal */
-        }
-    } while( c1 );
-    
-    return 0;        /* strings are equal */
-}
-
-int FS_pathcmpn( const char *s1, const char *s2, size_t n ) {
-    int        c1, c2;
-    
-    do {
-        c1 = *s1++;
-        c2 = *s2++;
-
-        if( !n-- )
-            return 0;       /* strings are equal until end point */
-        
-        if( c1 != c2 ) {
-            c1 = c1 == '\\' ? '/' : Q_tolower( c1 );
-            c2 = c2 == '\\' ? '/' : Q_tolower( c2 );
-            if( c1 < c2 )
-                return -1;
-            if( c1 > c2 )
-                return 1;        /* strings not equal */
-        }
-    } while( c1 );
-    
-    return 0;        /* strings are equal */
-}
-
 #ifdef _WIN32
 char *FS_ReplaceSeparators( char *s, int separator ) {
     char *p;
@@ -260,36 +210,6 @@ char *FS_ReplaceSeparators( char *s, int separator ) {
     }
 
     return s;
-}
-#endif
-
-unsigned FS_HashPath( const char *s, unsigned size ) {
-    unsigned hash, c;
-
-    hash = 0;
-    while( *s ) {
-        c = *s++;
-        c = c == '\\' ? '/' : Q_tolower( c );
-        hash = 127 * hash + c;
-    }
-
-    hash = ( hash >> 20 ) ^ ( hash >> 10 ) ^ hash;
-    return hash & ( size - 1 );
-}
-
-#if USE_REF
-unsigned FS_HashPathLen( const char *s, size_t len, unsigned size ) {
-    unsigned hash, c;
-
-    hash = 0;
-    while( *s && len-- ) {
-        c = *s++;
-        c = c == '\\' ? '/' : Q_tolower( c );
-        hash = 127 * hash + c;
-    }
-
-    hash = ( hash >> 20 ) ^ ( hash >> 10 ) ^ hash;
-    return hash & ( size - 1 );
 }
 #endif
 

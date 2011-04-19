@@ -86,6 +86,13 @@ typedef struct file_info_s {
 #define FS_AllocTempMem( size ) FS_Malloc( size )
 #define FS_FreeTempMem( buf )   Z_Free( buf )
 
+// just regular caseless string comparsion
+#define FS_pathcmp      Q_strcasecmp
+#define FS_pathcmpn     Q_strncasecmp
+
+#define FS_HashPath( s, size )          Com_HashStringLen( s, SIZE_MAX, size )
+#define FS_HashPathLen( s, len, size )  Com_HashStringLen( s, len, size )
+
 void    FS_Init( void );
 void    FS_Shutdown( void );
 void    FS_Restart( qboolean total );
@@ -145,20 +152,12 @@ void    **FS_CopyList( void **list, int count );
 file_info_t *FS_CopyInfo( const char *name, size_t size, time_t ctime, time_t mtime );
 void    FS_FreeList( void **list );
 
-unsigned FS_HashPath( const char *s, unsigned size );
-#if USE_REF
-unsigned FS_HashPathLen( const char *s, size_t len, unsigned size );
-#endif
-
 size_t FS_NormalizePath( char *out, const char *in );
 size_t FS_NormalizePathBuffer( char *out, const char *in, size_t size );
 
 #ifdef _WIN32
 char *FS_ReplaceSeparators( char *s, int separator );
 #endif
-
-int FS_pathcmp( const char *s1, const char *s2 );
-int FS_pathcmpn( const char *s1, const char *s2, size_t n );
 
 void FS_File_g( const char *path, const char *ext, unsigned flags, genctx_t *ctx );
 
