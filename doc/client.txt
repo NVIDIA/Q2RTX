@@ -648,20 +648,19 @@ r_override_textures::
     order specified by ‘r_texture_formats’ variable. Default value is 1
     (enabled).
 
-r_override_models::
-    Enables automatic overriding of MD2 models with MD3 replacements by
-    stripping off original file extension and searching for alternative
-    filename. Default value is 0 (disabled).
-
-TIP: Since actual model format is determined by file contents, rather than
-by filename extension, it is possible to override MD2 model with MD3 replacement
-by simply renaming the MD3 model to ‘tris.md2’ and placing it in appropriate packfile
-to make sure it gets loaded first.
-
 r_texture_formats::
     Specifies the order in which truecolor texture replacements are searched.
     Default value is "pjt", which means to try ‘.png’ extension first, then
     ‘.jpg’, then ‘.tga’.
+
+.MD2 model overrides
+********************
+When Q2PRO attempts to load an alias model from disk, it determines actual
+model format by file contents, rather than by filename extension. Therefore, if
+you wish to override MD2 model with MD3 replacement, simply rename the MD3
+model to ‘tris.md2’ and place it in appropriate packfile to make sure it gets
+loaded first.
+********************
 
 
 Downloads

@@ -34,11 +34,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 static model_t      r_models[MAX_MODELS];
 static int          r_numModels;
 
-#if USE_MD3
-static cvar_t       *r_override_models;
-#endif
-
-static model_t *MOD_Alloc( const char *name ) {
+static model_t *MOD_Alloc( void ) {
     model_t *model;
     int i;
 
@@ -54,9 +50,6 @@ static model_t *MOD_Alloc( const char *name ) {
         }
         r_numModels++;
     }
-
-    strcpy( model->name, name );
-    model->registration_sequence = registration_sequence;
 
     return model;
 }
@@ -271,13 +264,13 @@ static qerror_t MOD_LoadSP2( model_t *model, const void *rawdata, size_t length 
 }
 
 qhandle_t R_RegisterModel( const char *name ) {
-    int index;
-    size_t namelen, filelen;
+    qhandle_t index;
+    size_t namelen;
+    ssize_t filelen;
     model_t *model;
     byte *rawdata;
     uint32_t ident;
     mod_load_t load;
-    const char *truename;
     qerror_t ret;
 
     if( name[0] == '*' ) {
@@ -291,48 +284,24 @@ qhandle_t R_RegisterModel( const char *name ) {
         Com_Error( ERR_DROP, "%s: oversize name", __func__ );
     }
 
+    // see if it's already loaded
     model = MOD_Find( name );
     if( model ) {
         MOD_Reference( model );
-        goto success;
+        goto done;
     }
 
-#if USE_MD3
-    if( r_override_models->integer ) {
-        char buffer[MAX_QPATH];
-
-        if( namelen > 4 && !Q_stricmp( name + namelen - 4, ".md2" ) ) {
-            memcpy( buffer, name, namelen + 1 );
-            buffer[namelen - 1] = '3';
-            truename = buffer;
-
-            filelen = FS_LoadFile( truename, ( void ** )&rawdata );
-            if( rawdata ) {
-                goto found;
-            }
-            if( filelen != Q_ERR_NOENT ) {
-                ret = filelen;
-                goto fail1;
-            }
+    filelen = FS_LoadFile( name, ( void ** )&rawdata );
+    if( !rawdata ) {
+        // don't spam about missing models
+        if( filelen == Q_ERR_NOENT ) {
+            return 0;
         }
-    }
-#endif
 
-    truename = name;
-
-    filelen = FS_LoadFile( truename, ( void ** )&rawdata );
-    if( rawdata ) {
-        goto found;
-    }
-    if( filelen != Q_ERR_NOENT ) {
         ret = filelen;
         goto fail1;
     }
 
-    // don't spam about missing models
-    return 0;
-
-found:
     if( filelen < 4 ) {
         ret = Q_ERR_FILE_TOO_SMALL;
         goto fail2;
@@ -357,7 +326,9 @@ found:
         goto fail2;
     }
 
-    model = MOD_Alloc( name );
+    model = MOD_Alloc();
+    memcpy( model->name, name, namelen + 1 );
+    model->registration_sequence = registration_sequence;
 
     ret = load( model, rawdata, filelen );
 
@@ -368,14 +339,14 @@ found:
         goto fail1;
     }
 
-success:
+done:
     index = ( model - r_models ) + 1;
     return index;
 
 fail2:
     FS_FreeFile( rawdata );
 fail1:
-    Com_EPrintf( "Couldn't load %s: %s\n", truename, Q_ErrorString( ret ) );
+    Com_EPrintf( "Couldn't load %s: %s\n", name, Q_ErrorString( ret ) );
     return 0;
 }
 
@@ -385,13 +356,16 @@ model_t *MOD_ForHandle( qhandle_t h ) {
     if( !h ) {
         return NULL;
     }
+
     if( h < 0 || h > r_numModels ) {
         Com_Error( ERR_DROP, "%s: %d out of range", __func__, h );
     }
+
     model = &r_models[ h - 1 ];
     if( !model->name[0] ) {
         return NULL;
     }
+
     return model;
 }
 
@@ -399,11 +373,6 @@ void MOD_Init( void ) {
     if( r_numModels ) {
         Com_Error( ERR_FATAL, "%s: %d models not freed", __func__, r_numModels );
     }
-
-#if USE_MD3
-    r_override_models = Cvar_Get( "r_override_models", "0",
-        CVAR_ARCHIVE|CVAR_FILES );
-#endif
 
     Cmd_AddCommand( "modellist", MOD_List_f );
 }
