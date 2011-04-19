@@ -33,7 +33,7 @@ static const char *const error_table[] = {
     "Too few elements",
     "Index out of range",
     "Invalid quake path",
-    "Unclean quake path",
+    "File name too short",
     "Unexpected end of file",
     "File too small",
     "Bad run length packet",
