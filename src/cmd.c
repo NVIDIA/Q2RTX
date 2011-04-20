@@ -1677,25 +1677,30 @@ static void Cmd_Exec_f( void ) {
         return;
     }
 
-    len = Cmd_ArgvBuffer( 1, buffer, sizeof( buffer ) );
+    len = FS_NormalizePathBuffer( buffer, Cmd_Argv( 1 ), sizeof( buffer ) );
     if( len >= sizeof( buffer ) ) {
-        ret = Q_ERR_NAMETOOLONG;
-        goto fail;
+        Q_PrintError( "exec", Q_ERR_NAMETOOLONG );
+        return;
+    }
+
+    if( len == 0 ) {
+        Q_PrintError( "exec", Q_ERR_NAMETOOSHORT );
+        return;
     }
 
     ret = Cmd_ExecuteFile( buffer, 0 );
     if( ret == Q_ERR_NOENT && COM_CompareExtension( buffer, ".cfg" ) ) {
         // try with .cfg extension
         len = Q_strlcat( buffer, ".cfg", sizeof( buffer ) );
-        if( len < sizeof( buffer ) ) {
-            ret = Cmd_ExecuteFile( buffer, 0 );
-        } else {
-            ret = Q_ERR_NAMETOOLONG;
+        if( len >= sizeof( buffer ) ) {
+            Q_PrintError( "exec", Q_ERR_NAMETOOLONG );
+            return;
         }
+
+        ret = Cmd_ExecuteFile( buffer, 0 );
     }
 
     if( ret ) {
-fail:
         Com_Printf( "Couldn't exec %s: %s\n", buffer, Q_ErrorString( ret ) );
     }
 }
