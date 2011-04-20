@@ -2641,55 +2641,87 @@ static void FS_Dir_f( void ) {
 /*
 ============
 FS_WhereIs_f
+
+Verbosely looks up a filename with exactly the same logic as open_file_read.
 ============
 */
 static void FS_WhereIs_f( void ) {
-    searchpath_t *search;
-    pack_t *pak;
-    packfile_t *entry;
-    unsigned hash;
-    char filename[MAX_OSPATH];
-    char fullpath[MAX_OSPATH];
-    char *path;
-    file_info_t info;
-    int total;
-    int valid;
-    size_t len;
-    qerror_t ret;
-    qboolean report_all;
+    char            normalized[MAX_OSPATH], fullpath[MAX_OSPATH];
+    searchpath_t    *search;
+    pack_t          *pak;
+    packfile_t      *entry;
+    symlink_t       *link;
+    unsigned        hash;
+    file_info_t     info;
+    qerror_t        ret;
+    int             total, valid;
+    size_t          len, namelen;
+    qboolean        report_all;
 
     if( Cmd_Argc() < 2 ) {
         Com_Printf( "Usage: %s <path> [all]\n", Cmd_Argv( 0 ) );
         return;
     }
 
-    len = FS_NormalizePathBuffer( filename, Cmd_Argv( 1 ), sizeof( filename ) );
-    if( len >= sizeof( filename ) ) {
-        Com_Printf( "Oversize filename\n" );
+// normalize path
+    namelen = FS_NormalizePathBuffer( normalized, Cmd_Argv( 1 ), MAX_OSPATH );
+    if( namelen >= MAX_OSPATH ) {
+        Com_Printf( "Refusing to lookup oversize path.\n" );
         return;
     }
 
-    report_all = Cmd_Argc() >= 3;
+// expand symlinks
+    link = expand_links( normalized, &namelen );
+    if( link ) {
+        if( namelen >= MAX_OSPATH ) {
+            Com_Printf( "Oversize symbolic link ('%s --> '%s').\n",
+                link->name, link->target );
+            return;
+        }
 
-    path = expand_links( filename, len );
-    if( path != filename ) {
-        Com_Printf( "%s is linked to %s\n", filename, path );
+        Com_Printf( "Symbolic link ('%s' --> '%s') in effect.\n",
+            link->name, link->target );
     }
 
-    hash = FS_HashPath( path, 0 );
-    
+// reject empty paths
+    if( namelen == 0 ) {
+        Com_Printf( "Refusing to lookup empty path.\n" );
+        return;
+    }
+
+// warn about non-standard path length
+    if( namelen >= MAX_QPATH ) {
+        Com_Printf( "Not searching for '%s' in pack files "
+            "since path length exceedes %d characters.\n",
+            normalized, MAX_QPATH - 1 );
+    }
+
+    report_all = Cmd_Argc() >= 3;
     total = 0;
-    valid = -1;
+
+    hash = FS_HashPath( normalized, 0 );
+
+    valid = -1; // not yet checked
+
+// search through the path, one element at a time
     for( search = fs_searchpaths; search; search = search->next ) {
-        // is the element a pak file?
+    // is the element a pak file?
         if( search->pack ) {
-            // look through all the pak file elements
+        // don't bother searching in paks if length exceedes MAX_QPATH
+            if( namelen >= MAX_QPATH ) {
+                continue;
+            }
+        // look through all the pak file elements
             pak = search->pack;
             entry = pak->file_hash[ hash & ( pak->hash_size - 1 ) ];
             for( ; entry; entry = entry->hash_next ) {
-                if( !FS_pathcmp( entry->name, path ) ) {
+                if( entry->namelen != namelen ) {
+                    continue;
+                }
+                if( !FS_pathcmp( entry->name, normalized ) ) {
+                    // found it!
                     Com_Printf( "%s/%s (%"PRIz" bytes)\n", pak->filename,
-                        path, entry->filelen );
+                        normalized, entry->filelen );
                     if( !report_all ) {
                         return;
                     }
@@ -2698,22 +2730,30 @@ static void FS_WhereIs_f( void ) {
             }
         } else {
             if( valid == -1 ) {
-                valid = validate_path( path );
+                valid = validate_path( normalized );
                 if( !valid ) {
-                    Com_WPrintf( "Not searching for '%s' in physical file "
-                        "system since it contains invalid characters.\n",
-                        path );
+                // warn about invalid path
+                    Com_Printf( "Not searching for '%s' in physical file "
+                        "system since path contains invalid characters.\n",
+                        normalized );
                 }
             }
             if( valid == 0 ) {
                 continue;
             }
-            len = Q_concat( fullpath, sizeof( fullpath ),
-                search->filename, "/", path, NULL );
-            if( len >= sizeof( fullpath ) ) {
-                ret = Q_ERR_NAMETOOLONG;
-                goto fail;
+
+        // check a file in the directory tree
+            len = Q_concat( fullpath, MAX_OSPATH,
+                search->filename, "/", normalized, NULL );
+            if( len >= MAX_OSPATH ) {
+                Com_WPrintf( "Full path length '%s/%s' exceeded %d characters.\n",
+                    search->filename, normalized, MAX_OSPATH - 1 );
+                if( !report_all ) {
+                    return;
+                }
+                continue;
             }
+
             ret = Sys_GetPathInfo( fullpath, &info );
             if( !ret ) {
                 Com_Printf( "%s (%"PRIz" bytes)\n", fullpath, info.size );
@@ -2722,20 +2762,19 @@ static void FS_WhereIs_f( void ) {
                 }
                 total++;
             } else if( ret != Q_ERR_NOENT ) {
-fail:
-                Com_EPrintf( "Couldn't get info on %s: %s\n", fullpath, Q_ErrorString( ret ) );
+                Com_EPrintf( "Couldn't get info on '%s': %s\n",
+                    fullpath, Q_ErrorString( ret ) );
                 if( !report_all ) {
                     return;
                 }
             }
         }
-        
     }
 
     if( total ) {
-        Com_Printf( "%d instances of %s\n", total, path );
+        Com_Printf( "%d instances of %s\n", total, normalized );
     } else {
-        Com_Printf( "%s was not found\n", path );
+        Com_Printf( "%s was not found\n", normalized );
     }
 }
 
