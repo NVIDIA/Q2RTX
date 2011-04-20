@@ -95,6 +95,7 @@ typedef struct {
 
 typedef struct packfile_s {
     char        *name;
+    size_t      namelen;
     size_t      filepos;
     size_t      filelen;
 #if USE_ZLIB
@@ -1733,7 +1734,7 @@ static pack_t *pack_alloc( FILE *fp, filetype_t type, const char *name,
 static void pack_hash_file( pack_t *pack, packfile_t *file ) {
     unsigned hash;
 
-    FS_NormalizePath( file->name, file->name );
+    file->namelen = FS_NormalizePath( file->name, file->name );
 
     hash = FS_HashPath( file->name, pack->hash_size );
     file->hash_next = pack->file_hash[hash];
@@ -1825,6 +1826,7 @@ static pack_t *load_pak_file( const char *packfile ) {
 
         file->filepos = dfile->filepos;
         file->filelen = dfile->filelen;
+        file->coherent = qtrue;
 
         pack_hash_file( pack, file );
         file++;
