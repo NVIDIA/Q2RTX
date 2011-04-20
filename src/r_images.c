@@ -1613,7 +1613,10 @@ static qerror_t find_or_load_image( const char *name,
     *image_p = NULL;
 
     // must have an extension and at least 1 char of base name 
-    if( len <= 4 || name[len - 4] != '.' ) {
+    if( len <= 4 ) {
+        return Q_ERR_NAMETOOSHORT;
+    }
+    if( name[len - 4] != '.' ) {
         return Q_ERR_INVALID_PATH;
     }
 
