@@ -686,6 +686,11 @@ static ssize_t open_file_write( file_t *file, const char *name ) {
         return Q_ERR_NAMETOOLONG;
     }
 
+    // reject empty paths
+    if( len == 0 ) {
+        return Q_ERR_NAMETOOSHORT;
+    }
+
     // check for bad characters
     if( !validate_path( normalized ) ) {
         return Q_ERR_INVALID_PATH;
@@ -1045,49 +1050,60 @@ static ssize_t open_file_read( file_t *file, const char *name, qboolean unique )
     file_info_t     info;
     qerror_t        ret;
     int             valid;
-    size_t          len;
+    size_t          len, namelen;
 
 #ifdef _DEBUG
     fs_count_read++;
 #endif
 
-//
-// normalize path and expand symlinks
-//
-    len = FS_NormalizePathBuffer( normalized, name, sizeof( normalized ) );
-    if( len >= sizeof( normalized ) ) {
+// normalize path
+    namelen = FS_NormalizePathBuffer( normalized, name, MAX_OSPATH );
+    if( namelen >= MAX_OSPATH ) {
         return Q_ERR_NAMETOOLONG;
     }
 
-    name = expand_links( normalized, len );
+// expand symlinks
+    if( expand_links( normalized, &namelen ) && namelen >= MAX_OSPATH ) {
+        return Q_ERR_NAMETOOLONG;
+    }
 
-    hash = FS_HashPath( name, 0 );
+// reject empty paths
+    if( namelen == 0 ) {
+        return Q_ERR_NAMETOOSHORT;
+    }
+
+    hash = FS_HashPath( normalized, 0 );
 
     valid = -1; // not yet checked
 
-//
 // search through the path, one element at a time
-//
     for( search = fs_searchpaths; search; search = search->next ) {
         if( file->mode & FS_PATH_MASK ) {
             if( ( file->mode & search->mode & FS_PATH_MASK ) == 0 ) {
                 continue;
             }
         }
-    
+
     // is the element a pak file?
         if( search->pack ) {
             if( ( file->mode & FS_TYPE_MASK ) == FS_TYPE_REAL ) {
+                continue;
+            }
+        // don't bother searching in paks if length exceedes MAX_QPATH
+            if( namelen >= MAX_QPATH ) {
                 continue;
             }
         // look through all the pak file elements
             pak = search->pack;
             entry = pak->file_hash[ hash & ( pak->hash_size - 1 ) ];
             for( ; entry; entry = entry->hash_next ) {
+                if( entry->namelen != namelen ) {
+                    continue;
+                }
 #ifdef _DEBUG
                 fs_count_strcmp++;
 #endif
-                if( !FS_pathcmp( entry->name, name ) ) {
+                if( !FS_pathcmp( entry->name, normalized ) ) {
                     // found it!
                     return open_from_pak( file, pak, entry, unique );
                 }
@@ -1100,14 +1116,14 @@ static ssize_t open_file_read( file_t *file, const char *name, qboolean unique )
     // just stop looking for it in directory tree but continue to search
     // for it in packs, to give broken maps or mods a chance to work
             if( valid == -1 ) {
-                valid = validate_path( name );
+                valid = validate_path( normalized );
             }
             if( valid == 0 ) {
                 continue;
             }
     // check a file in the directory tree
             len = Q_concat( fullpath, sizeof( fullpath ),
-                search->filename, "/", name, NULL );
+                search->filename, "/", normalized, NULL );
             if( len >= sizeof( fullpath ) ) {
                 return Q_ERR_NAMETOOLONG;
             }
@@ -1141,7 +1157,7 @@ static ssize_t open_file_read( file_t *file, const char *name, qboolean unique )
         }
     }
 
-    FS_DPrintf( "%s: %s: failed\n", __func__, name );
+    FS_DPrintf( "%s: %s: failed\n", __func__, normalized );
 
     // return error if path was checked and found to be invalid
     return valid ? Q_ERR_NOENT : Q_ERR_INVALID_PATH;
@@ -2373,6 +2389,9 @@ void **FS_ListFiles( const char *path,
 
                 // check path
                 if( pathlen ) {
+                    if( file->namelen < pathlen ) {
+                        continue;
+                    }
                     if( FS_pathcmpn( s, path, pathlen ) ) {
                         continue;
                     }
