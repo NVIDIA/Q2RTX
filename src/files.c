@@ -371,28 +371,30 @@ static void cleanup_path( char *s ) {
     }
 }
 
-static char *expand_links( const char *filename, size_t namelen ) {
-    static char buffer[MAX_OSPATH];
+// expects a buffer of at least MAX_OSPATH bytes!
+static symlink_t *expand_links( char *buffer, size_t *len_p ) {
     symlink_t   *link;
+    size_t      namelen = *len_p;
 
     for( link = fs_links; link; link = link->next ) {
         if( link->namelen > namelen ) {
             continue;
         }
-        if( !FS_pathcmpn( link->name, filename, link->namelen ) ) {
-            if( link->targlen + namelen - link->namelen >= MAX_OSPATH ) {
-                FS_DPrintf( "%s: %s: MAX_OSPATH exceeded\n", __func__, filename );
-                return ( char * )filename;
+        if( !FS_pathcmpn( buffer, link->name, link->namelen ) ) {
+            size_t newlen = namelen - link->namelen + link->targlen;
+
+            if( newlen < MAX_OSPATH ) {
+                memmove( buffer + link->targlen, buffer + link->namelen,
+                    namelen - link->namelen + 1 );
+                memcpy( buffer, link->target, link->targlen );
             }
-            memcpy( buffer, link->target, link->targlen );
-            memcpy( buffer + link->targlen, filename + link->namelen,
-                namelen - link->namelen + 1 );
-            FS_DPrintf( "%s: %s --> %s\n", __func__, filename, buffer );
-            return buffer;
+
+            *len_p = newlen;
+            return link;
         }
     }
 
-    return ( char * )filename;
+    return NULL;
 }
 
 /*
