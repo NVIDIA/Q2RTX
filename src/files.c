@@ -2815,6 +2815,7 @@ static void FS_Path_f( void ) {
 #endif
 }
 
+#ifdef _DEBUG
 /*
 ================
 FS_Stats_f
@@ -2852,7 +2853,6 @@ static void FS_Stats_f( void ) {
         //totalHashSize += pack->hash_size;
     }
 
-#ifdef _DEBUG
     Com_Printf( "Total calls to OpenFileRead: %d\n", fs_count_read );
     Com_Printf( "Total path comparsions: %d\n", fs_count_strcmp );
     Com_Printf( "Total calls to fopen: %d\n", fs_count_open );
@@ -2869,8 +2869,8 @@ static void FS_Stats_f( void ) {
             Com_Printf( "%s\n", file->name );
         }
     }
-#endif // _DEBUG
 }
+#endif // _DEBUG
 
 static void FS_Link_g( genctx_t *ctx ) {
     symlink_t *link;
@@ -3126,7 +3126,9 @@ static const cmdreg_t c_fs[] = {
     { "path", FS_Path_f },
     { "fdir", FS_FDir_f },
     { "dir", FS_Dir_f },
+#ifdef _DEBUG
     { "fs_stats", FS_Stats_f },
+#endif
     { "whereis", FS_WhereIs_f },
     { "link", FS_Link_f, FS_Link_c },
     { "unlink", FS_UnLink_f, FS_Link_c },
