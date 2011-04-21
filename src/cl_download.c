@@ -306,19 +306,19 @@ static qerror_t check_file_len( const char *path, size_t len, dltype_t type ) {
     char buffer[MAX_QPATH], *ext;
     qerror_t ret;
 
-    // check len
-    if( len == 0 )
-        return Q_ERR_INVALID_PATH;
-
+    // check for oversize path
     if( len >= MAX_QPATH )
         return Q_ERR_NAMETOOLONG;
 
     // normalize path
     len = FS_NormalizePath( buffer, path );
 
+    // check for empty path
+    if( len == 0 )
+        return Q_ERR_NAMETOOSHORT;
+
     // check path
-    if( len == 0
-        || !Q_ispath( buffer[0] )
+    if( !Q_ispath( buffer[0] )
         || !Q_ispath( buffer[ len - 1 ] )
         || !FS_ValidatePath( buffer )
         || strstr( buffer, ".." )
@@ -333,27 +333,23 @@ static qerror_t check_file_len( const char *path, size_t len, dltype_t type ) {
 
     // check extension
     ext = COM_FileExtension( buffer );
-    if( *ext != '.' || !CL_CheckDownloadExtension( ext + 1 ) ) {
+    if( *ext != '.' || !CL_CheckDownloadExtension( ext + 1 ) )
         return Q_ERR_INVALID_PATH;
-    }
 
-    if( FS_FileExists( buffer ) ) {
+    if( FS_FileExists( buffer ) )
         // it exists, no need to download
         return Q_ERR_EXIST;
-    }
 
 #if USE_CURL
     ret = HTTP_QueueDownload( buffer, type );
-    if( ret != Q_ERR_NOSYS ) {
+    if( ret != Q_ERR_NOSYS )
         return ret;
-    }
 #endif
 
     // queue and start legacy UDP download
     ret = CL_QueueDownload( buffer, type );
-    if( ret == Q_ERR_SUCCESS ) {
+    if( ret == Q_ERR_SUCCESS )
         CL_StartNextDownload();
-    }
 
     return ret;
 }
