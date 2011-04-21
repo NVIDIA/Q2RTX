@@ -320,9 +320,9 @@ static qerror_t check_file_len( const char *path, size_t len, dltype_t type ) {
     if( len == 0
         || !Q_ispath( buffer[0] )
         || !Q_ispath( buffer[ len - 1 ] )
-        || strchr( buffer, ':' )
-        || !strchr( buffer, '/' )
-        || strstr( buffer, ".." ) )
+        || !FS_ValidatePath( buffer )
+        || strstr( buffer, ".." )
+        || !strchr( buffer, '/' ) )
     {
         // some of these checks are too conservative or even redundant
         // once we have normalized the path, however they have to stay for

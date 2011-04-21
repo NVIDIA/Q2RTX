@@ -512,10 +512,11 @@ static void check_and_queue_download (char *path) {
 
     len = FS_NormalizePath (path, path);
 
-    if (strstr (path, "..") ||
+    if (len == 0 ||
         !Q_ispath (path[0]) ||
         !Q_ispath (path[len-1]) ||
-        strchr (path, ':') ||
+        !FS_ValidatePath (path) ||
+        strstr (path, "..") ||
         (type == DL_OTHER && !strchr (path, '/')) ||
         (type == DL_PAK && strchr(path, '/')))
     {

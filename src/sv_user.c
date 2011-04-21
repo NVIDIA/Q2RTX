@@ -605,8 +605,6 @@ static void SV_BeginDownload_f( void ) {
         || !Q_ispath( name[0] )
         // trailing dots, slashes, etc are no good
         || !Q_ispath( name[ len - 1 ] )
-        // colons are bad also
-        || strchr( name, ':' )
         // MUST be in a subdirectory    
         || !strchr( name, '/' ) )    
     {    
