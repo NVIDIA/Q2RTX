@@ -214,6 +214,34 @@ char *FS_ReplaceSeparators( char *s, int separator ) {
 }
 #endif
 
+static inline qboolean validate_char( int c ) {
+    if( !Q_isprint( c ) )
+        return qfalse;
+
+#ifdef _WIN32
+    if( strchr( "<>:\"|?*", c ) )
+        return qfalse;
+#endif
+
+    return qtrue;
+}
+
+/*
+================
+FS_ValidatePath
+
+Checks for bad characters in path (OS specific).
+================
+*/
+qboolean FS_ValidatePath( const char *s ) {
+    for( ; *s; s++ ) {
+        if( !validate_char( *s ) )
+            return qfalse;
+    }
+
+    return qtrue;
+}
+
 /*
 ================
 FS_NormalizePath
@@ -341,27 +369,6 @@ static file_t *file_for_handle( qhandle_t f ) {
     }
 
     return file;
-}
-
-static inline qboolean validate_char( int c ) {
-    if( !Q_isprint( c ) )
-        return qfalse;
-
-#ifdef _WIN32
-    if( strchr( "<>:\"|?*", c ) )
-        return qfalse;
-#endif
-
-    return qtrue;
-}
-
-static qboolean validate_path( const char *s ) {
-    for( ; *s; s++ ) {
-        if( !validate_char( *s ) )
-            return qfalse;
-    }
-
-    return qtrue;
 }
 
 static void cleanup_path( char *s ) {
@@ -692,7 +699,7 @@ static ssize_t open_file_write( file_t *file, const char *name ) {
     }
 
     // check for bad characters
-    if( !validate_path( normalized ) ) {
+    if( !FS_ValidatePath( normalized ) ) {
         return Q_ERR_INVALID_PATH;
     }
 
@@ -1116,7 +1123,7 @@ static ssize_t open_file_read( file_t *file, const char *name, qboolean unique )
     // just stop looking for it in directory tree but continue to search
     // for it in packs, to give broken maps or mods a chance to work
             if( valid == -1 ) {
-                valid = validate_path( normalized );
+                valid = FS_ValidatePath( normalized );
             }
             if( valid == 0 ) {
                 continue;
@@ -1648,7 +1655,7 @@ qerror_t FS_RenameFile( const char *from, const char *to ) {
     if( len >= sizeof( normalized ) )
         return Q_ERR_NAMETOOLONG;
 
-    if( !validate_path( normalized ) )
+    if( !FS_ValidatePath( normalized ) )
         return Q_ERR_INVALID_PATH;
 
     len = Q_concat( frompath, sizeof( frompath ), fs_gamedir, "/", normalized, NULL );
@@ -1660,7 +1667,7 @@ qerror_t FS_RenameFile( const char *from, const char *to ) {
     if( len >= sizeof( normalized ) )
         return Q_ERR_NAMETOOLONG;
 
-    if( !validate_path( normalized ) )
+    if( !FS_ValidatePath( normalized ) )
         return Q_ERR_INVALID_PATH;
 
     len = Q_concat( topath, sizeof( topath ), fs_gamedir, "/", normalized, NULL );
@@ -2460,7 +2467,7 @@ void **FS_ListFiles( const char *path,
                     continue;
                 }
                 if( valid == -1 ) {
-                    valid = validate_path( path );
+                    valid = FS_ValidatePath( path );
                 }
                 if( valid == 0 ) {
                     continue;
@@ -2730,7 +2737,7 @@ static void FS_WhereIs_f( void ) {
             }
         } else {
             if( valid == -1 ) {
-                valid = validate_path( normalized );
+                valid = FS_ValidatePath( normalized );
                 if( !valid ) {
                 // warn about invalid path
                     Com_Printf( "Not searching for '%s' in physical file "

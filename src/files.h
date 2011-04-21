@@ -159,6 +159,8 @@ void    FS_FreeList( void **list );
 size_t FS_NormalizePath( char *out, const char *in );
 size_t FS_NormalizePathBuffer( char *out, const char *in, size_t size );
 
+qboolean FS_ValidatePath( const char *s );
+
 #ifdef _WIN32
 char *FS_ReplaceSeparators( char *s, int separator );
 #endif
