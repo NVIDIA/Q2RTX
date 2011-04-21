@@ -98,7 +98,8 @@ typedef enum {
 
 typedef struct image_s {
     list_t          entry;
-    char            name[MAX_QPATH]; // game path, without extension
+    char            name[MAX_QPATH]; // game path
+    int             baselen; // without extension
     imagetype_t     type;
     imageflags_t    flags;
     int             width, height; // source image

@@ -1437,7 +1437,9 @@ static image_t *lookup_image( const char *name,
         if( image->type != type ) {
             continue;
         }
-        // FIXME
+        if( image->baselen != baselen ) {
+            continue;
+        }
         if( !FS_pathcmpn( image->name, name, baselen ) ) {
             return image;
         }
@@ -1686,6 +1688,7 @@ static qerror_t find_or_load_image( const char *name,
     // allocate image slot
     image = alloc_image();
     memcpy( image->name, buffer, len + 1 );
+    image->baselen = len - 4;
     List_Append( &r_imageHash[hash], &image->entry );
 
     // fill in some basic info
