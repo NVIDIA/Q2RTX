@@ -247,11 +247,12 @@ static size_t format_local_time( char *buffer, size_t size, const char *fmt ) {
     return strftime( buffer, size, fmt, tm );
 }
 
-static void logfile_write( print_type_t type, const char *string ) {
+static void logfile_write( print_type_t type, const char *s ) {
     char text[MAXPRINTMSG];
     char buf[MAX_QPATH];
     char *p, *maxp;
     size_t len;
+    ssize_t ret;
     int c;
 
     if( logfile_prefix->string[0] ) {
@@ -277,7 +278,7 @@ static void logfile_write( print_type_t type, const char *string ) {
 
     p = text;
     maxp = text + sizeof( text ) - 1;
-    while( *string ) {
+    while( *s ) {
         if( com_logNewline ) {
             if( len > 0 && p + len < maxp ) {
                 memcpy( p, buf, len );
@@ -290,7 +291,7 @@ static void logfile_write( print_type_t type, const char *string ) {
             break;
         }
 
-        c = *string++;
+        c = *s++;
         if( c == '\n' ) {
             com_logNewline = qtrue;
         } else {
@@ -302,7 +303,15 @@ static void logfile_write( print_type_t type, const char *string ) {
     *p = 0;
 
     len = p - text;
-    FS_Write( text, len, com_logFile );
+    ret = FS_Write( text, len, com_logFile );
+    if( ret != len ) {
+        // zero handle BEFORE doing anything else to avoid recursion
+        qhandle_t tmp = com_logFile;
+        com_logFile = 0;
+        FS_FCloseFile( tmp );
+        Com_EPrintf( "Couldn't write console log: %s\n", Q_ErrorString( ret ) );
+        Cvar_Set( "logfile", "0" );
+    }
 }
 
 #ifndef _WIN32
