@@ -46,6 +46,8 @@ static jmp_buf  abortframe;     // an ERR_DROP occured, exit the entire frame
 static qboolean com_errorEntered;
 static char     com_errorMsg[MAXERRORMSG]; // from Com_Printf/Com_Error
 
+static int      com_printEntered;
+
 static char     **com_argv;
 static int      com_argc;
 
@@ -365,16 +367,16 @@ to the apropriate place.
 =============
 */
 void Com_LPrintf( print_type_t type, const char *fmt, ... ) {
-    static int  recursive;
     va_list     argptr;
     char        msg[MAXPRINTMSG];
     size_t      len;
 
-    if( recursive == 2 ) {
+    // may be entered recursively only once
+    if( com_printEntered >= 2 ) {
         return;
     }
 
-    recursive++;
+    com_printEntered++;
 
     va_start( argptr, fmt );
     len = Q_vscnprintf( msg, sizeof( msg ), fmt, argptr );
@@ -443,7 +445,7 @@ void Com_LPrintf( print_type_t type, const char *fmt, ... ) {
         }
     }
 
-    recursive--;
+    com_printEntered--;
 }
 
 
@@ -460,6 +462,7 @@ void Com_Error( error_type_t code, const char *fmt, ... ) {
     va_list         argptr;
     size_t          len;
 
+    // may not be entered recursively
     if( com_errorEntered ) {
 #ifdef _DEBUG
         Sys_DebugBreak();
@@ -483,6 +486,9 @@ void Com_Error( error_type_t code, const char *fmt, ... ) {
 
     // abort any console redirects
     Com_AbortRedirect();
+
+    // reset Com_Printf recursion level
+    com_printEntered = 0;
 
     X86_POP_FPCW;
 
