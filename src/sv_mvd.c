@@ -1831,7 +1831,11 @@ static qboolean mvd_enable( void ) {
         if( !dummy_create() ) {
             return qfalse;
         }
+
         dummy_spawn();
+
+        // don't drop it
+        mvd.clients_active = svs.realtime;
 
         // check for activation
         SV_MvdBeginFrame();
