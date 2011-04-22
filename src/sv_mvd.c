@@ -189,9 +189,9 @@ static void dummy_record_f( void ) {
         return;
     }
 
-    rec_start( f );
-
     Com_Printf( "Auto-recording local MVD to %s\n", buffer );
+
+    rec_start( f );
 }
 
 static void dummy_stop_f( void ) {
@@ -871,6 +871,50 @@ void SV_MvdBeginFrame( void ) {
     }
 }
 
+static void rec_frame( size_t total ) {
+    uint16_t msglen;
+    ssize_t ret;
+
+    if( !total )
+        return;
+
+    msglen = LittleShort( total );
+    ret = FS_Write( &msglen, 2, mvd.recording );
+    if( ret != 2 )
+        goto fail;
+    ret = FS_Write( mvd.message.data, mvd.message.cursize, mvd.recording );
+    if( ret != mvd.message.cursize )
+        goto fail;
+    ret = FS_Write( msg_write.data, msg_write.cursize, mvd.recording );
+    if( ret != msg_write.cursize )
+        goto fail;
+    ret = FS_Write( mvd.datagram.data, mvd.datagram.cursize, mvd.recording );
+    if( ret != mvd.datagram.cursize )
+        goto fail;
+
+    if( sv_mvd_maxsize->value > 0 &&
+        FS_Tell( mvd.recording ) > sv_mvd_maxsize->value * 1000 )
+    {
+        Com_Printf( "Stopping MVD recording, maximum size reached.\n" );
+        rec_stop();
+        return;
+    }
+
+    if( sv_mvd_maxtime->value > 0 &&
+        ++mvd.numframes > sv_mvd_maxtime->value * 600 )
+    {
+        Com_Printf( "Stopping MVD recording, maximum duration reached.\n" );
+        rec_stop();
+        return;
+    }
+
+    return;
+
+fail:
+    Com_EPrintf( "Couldn't write local MVD: %s\n", Q_ErrorString( ret ) );
+    rec_stop();
+}
+
 /*
 ==================
 SV_MvdEndFrame
@@ -944,27 +988,7 @@ void SV_MvdEndFrame( void ) {
 
     // write frame to demofile
     if( mvd.recording ) {
-        uint16_t msglen;
-
-        msglen = LittleShort( total - 1 );
-        FS_Write( &msglen, 2, mvd.recording );
-        FS_Write( mvd.message.data, mvd.message.cursize, mvd.recording );
-        FS_Write( msg_write.data, msg_write.cursize, mvd.recording );
-        FS_Write( mvd.datagram.data, mvd.datagram.cursize, mvd.recording );
-
-        if( sv_mvd_maxsize->value > 0 ) {
-            int numbytes = FS_Tell( mvd.recording );
-
-            if( numbytes > sv_mvd_maxsize->value * 1000 ) {
-                Com_Printf( "Stopping MVD recording, maximum size reached.\n" );
-                rec_stop();
-            }
-        } else if( sv_mvd_maxtime->value > 0 &&
-            ++mvd.numframes > sv_mvd_maxtime->value * 600 )
-        {
-            Com_Printf( "Stopping MVD recording, maximum duration reached.\n" );
-            rec_stop();
-        }
+        rec_frame( total - 1 );
     }
 
     // clear frame
@@ -1976,10 +2000,22 @@ LOCAL MVD RECORDER
 
 static void rec_write( void ) {
     uint16_t msglen;
+    ssize_t ret;
+
+    if( !msg_write.cursize )
+        return;
 
     msglen = LittleShort( msg_write.cursize );
-    FS_Write( &msglen, 2, mvd.recording );
-    FS_Write( msg_write.data, msg_write.cursize, mvd.recording );
+    ret = FS_Write( &msglen, 2, mvd.recording );
+    if( ret != 2 )
+        goto fail;
+    ret = FS_Write( msg_write.data, msg_write.cursize, mvd.recording );
+    if( ret == msg_write.cursize )
+        return;
+
+fail:
+    Com_EPrintf( "Couldn't write local MVD: %s\n", Q_ErrorString( ret ) );
+    rec_stop();
 }
 
 /*
@@ -2092,9 +2128,9 @@ void SV_MvdRecord_f( void ) {
         return;
     }
 
-    rec_start( f );
-
     Com_Printf( "Recording local MVD to %s\n", buffer );
+
+    rec_start( f );
 }
 
 
