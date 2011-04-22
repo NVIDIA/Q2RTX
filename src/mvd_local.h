@@ -182,6 +182,8 @@ void MVD_File_g( genctx_t *ctx );
 
 void MVD_Spawn_f( void ); 
 
+void MVD_StopRecord( mvd_t *mvd );
+
 void MVD_StreamedStop_f( void );
 void MVD_StreamedRecord_f( void );
 

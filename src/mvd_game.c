@@ -1653,6 +1653,23 @@ void MVD_UpdateClients( mvd_t *mvd ) {
     }
 }
 
+static void MVD_WriteDemoMessage( mvd_t *mvd ) {
+    uint16_t msglen;
+    ssize_t ret;
+
+    msglen = LittleShort( msg_read.cursize );
+    ret = FS_Write( &msglen, 2, mvd->demorecording );
+    if( ret != 2 )
+        goto fail;
+    ret = FS_Write( msg_read.data, msg_read.cursize, mvd->demorecording );
+    if( ret == msg_read.cursize )
+        return;
+
+fail:
+    Com_EPrintf( "[%s] Couldn't write demo: %s\n", mvd->name, Q_ErrorString( ret ) );
+    MVD_StopRecord( mvd );
+}
+
 static void MVD_GameRunFrame( void ) {
     mvd_t *mvd, *next;
     int numplayers = 0;
@@ -1669,9 +1686,7 @@ static void MVD_GameRunFrame( void ) {
 
         // write this message to demofile
         if( mvd->demorecording ) {
-            uint16_t length = LittleShort( msg_read.cursize );
-            FS_Write( &length, 2, mvd->demorecording );
-            FS_Write( msg_read.data, msg_read.cursize, mvd->demorecording );
+            MVD_WriteDemoMessage( mvd );
         }
 
 update:

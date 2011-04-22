@@ -123,18 +123,25 @@ static cvar_t  *mvd_password;
 
 // ====================================================================
 
+void MVD_StopRecord( mvd_t *mvd ) {
+    uint16_t msglen;
+
+    msglen = 0;
+    FS_Write( &msglen, 2, mvd->demorecording );
+
+    FS_FCloseFile( mvd->demorecording );
+    mvd->demorecording = 0;
+
+    Z_Free( mvd->demoname );
+    mvd->demoname = NULL;
+}
 
 static void MVD_Free( mvd_t *mvd ) {
     int i;
 
     // stop demo recording
     if( mvd->demorecording ) {
-        uint16_t msglen = 0;
-        FS_Write( &msglen, 2, mvd->demorecording );
-        FS_FCloseFile( mvd->demorecording );
-        mvd->demorecording = 0;
-        Z_Free( mvd->demoname );
-        mvd->demoname = NULL;
+        MVD_StopRecord( mvd );
     }
 
     for( i = 0; i < mvd->maxclients; i++ ) {
@@ -1572,7 +1579,6 @@ static void MVD_ListServers_f( void ) {
 
 void MVD_StreamedStop_f( void ) {
     mvd_t *mvd;
-    uint16_t msglen;
 
     mvd = MVD_SetChannel( 1 );
     if( !mvd ) {
@@ -1585,14 +1591,7 @@ void MVD_StreamedStop_f( void ) {
         return;
     }
 
-    msglen = 0;
-    FS_Write( &msglen, 2, mvd->demorecording );
-
-    FS_FCloseFile( mvd->demorecording );
-    mvd->demorecording = 0;
-
-    Z_Free( mvd->demoname );
-    mvd->demoname = NULL;
+    MVD_StopRecord( mvd );
 
     Com_Printf( "[%s] Stopped recording.\n", mvd->name );
 }
@@ -1677,6 +1676,7 @@ void MVD_StreamedRecord_f( void ) {
     uint32_t magic;
     uint16_t msglen;
     unsigned mode = FS_MODE_WRITE;
+    ssize_t ret;
     int c;
 
     while( ( c = Cmd_ParseOptions( o_record ) ) != -1 ) {
@@ -1729,14 +1729,26 @@ void MVD_StreamedRecord_f( void ) {
 
     // write magic
     magic = MVD_MAGIC;
-    FS_Write( &magic, 4, f );
+    ret = FS_Write( &magic, 4, f );
+    if( ret != 4 )
+        goto fail;
 
     // write gamestate
     msglen = LittleShort( msg_write.cursize );
-    FS_Write( &msglen, 2, f );
-    FS_Write( msg_write.data, msg_write.cursize, f );
+    ret = FS_Write( &msglen, 2, f );
+    if( ret != 2 )
+        goto fail;
+    ret = FS_Write( msg_write.data, msg_write.cursize, f );
+    if( ret != msg_write.cursize )
+        goto fail;
 
     SZ_Clear( &msg_write );
+    return;
+
+fail:
+    SZ_Clear( &msg_write );
+    Com_EPrintf( "[%s] Couldn't write demo: %s\n", mvd->name, Q_ErrorString( ret ) );
+    MVD_StopRecord( mvd );
 }
 
 static const cmd_option_t o_mvdconnect[] = {
