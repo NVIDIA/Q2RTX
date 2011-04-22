@@ -34,25 +34,38 @@ static int      demo_extra;
 CL_WriteDemoMessage
 
 Dumps the current demo message, prefixed by the length.
+Stops demo recording and returns false on write error.
 ====================
 */
-void CL_WriteDemoMessage( sizebuf_t *buf ) {
+qboolean CL_WriteDemoMessage( sizebuf_t *buf ) {
     uint32_t msglen;
+    ssize_t ret;
 
     if( buf->overflowed ) {
         SZ_Clear( buf );
         Com_WPrintf( "Demo message overflowed (should never happen).\n" );
-        return;
+        return qtrue;
     }
-    if( !buf->cursize ) {
-        return;
-    }
+
+    if( !buf->cursize )
+        return qtrue;
 
     msglen = LittleLong( buf->cursize );
-    FS_Write( &msglen, 4, cls.demo.recording );
-    FS_Write( buf->data, buf->cursize, cls.demo.recording );
+    ret = FS_Write( &msglen, 4, cls.demo.recording );
+    if( ret != 4 )
+        goto fail;
+    ret = FS_Write( buf->data, buf->cursize, cls.demo.recording );
+    if( ret != buf->cursize )
+        goto fail;
 
     SZ_Clear( buf );
+    return qtrue;
+
+fail:
+    SZ_Clear( buf );
+    Com_EPrintf( "Couldn't write demo: %s\n", Q_ErrorString( ret ) );
+    CL_Stop_f();
+    return qfalse;
 }
 
 /*
@@ -203,11 +216,10 @@ static void CL_EmitZeroFrame( void ) {
     MSG_WriteByte( svc_packetentities );
     MSG_WriteShort( 0 );
 
-    CL_WriteDemoMessage( &msg_write );
+    if( !CL_WriteDemoMessage( &msg_write ) )
+        return;
 
     cls.demo.frames_written++;
-
-    SZ_Clear( &msg_write );
 }
 
 static size_t format_demo_status( char *buffer, size_t size ) {
@@ -355,6 +367,9 @@ static void CL_Record_f( void ) {
     cl.demoframe = -1;
     cl.demodelta = 0;
 
+    // clear dirty configstrings
+    memset( cl.dcs, 0, sizeof( cl.dcs ) );
+
     if( cls.netchan && cls.serverProtocol >= PROTOCOL_VERSION_R1Q2 ) {
         // tell the server we are recording
         MSG_WriteByte( clc_setting );
@@ -389,7 +404,8 @@ static void CL_Record_f( void ) {
         }
         
         if( msg_write.cursize + len + 4 > MAX_PACKETLEN_WRITABLE_DEFAULT ) {
-            CL_WriteDemoMessage( &msg_write );
+            if( !CL_WriteDemoMessage( &msg_write ) )
+                return;
         }
 
         MSG_WriteByte( svc_configstring );
@@ -406,7 +422,8 @@ static void CL_Record_f( void ) {
         }
 
         if( msg_write.cursize + 64 > MAX_PACKETLEN_WRITABLE_DEFAULT ) {
-            CL_WriteDemoMessage( &msg_write );
+            if( !CL_WriteDemoMessage( &msg_write ) )
+                return;
         }
 
         MSG_WriteByte( svc_spawnbaseline );        
@@ -451,7 +468,8 @@ static void CL_Suspend_f( void ) {
                 length = MAX_QPATH;
             }
             if( msg_write.cursize + length + 4 > MAX_PACKETLEN_WRITABLE_DEFAULT ) {
-                CL_WriteDemoMessage( &msg_write );
+                if( !CL_WriteDemoMessage( &msg_write ) )
+                    return;
             }
             MSG_WriteByte( svc_configstring );
             MSG_WriteShort( index );
@@ -462,7 +480,8 @@ static void CL_Suspend_f( void ) {
     }
 
     // write it to the demo file
-    CL_WriteDemoMessage( &msg_write );
+    if( !CL_WriteDemoMessage( &msg_write ) )
+        return;
 
     Com_Printf( "Resumed demo (%"PRIz" bytes flushed).\n", total );
 

@@ -740,7 +740,7 @@ void CL_ParticleSteamEffect2(cl_sustain_t *self);
 //
 void CL_InitDemos( void );
 void CL_DemoFrame( int msec );
-void CL_WriteDemoMessage( sizebuf_t *buf );
+qboolean CL_WriteDemoMessage( sizebuf_t *buf );
 void CL_EmitDemoFrame( void ); 
 void CL_Stop_f( void );
 demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info );
