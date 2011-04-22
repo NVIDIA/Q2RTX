@@ -792,6 +792,7 @@ void SV_SendClientMessages( void ) {
         if( client->netchan->message.overflowed ) {
             SZ_Clear( &client->netchan->message );
             SV_DropClient( client, "reliable message overflowed" );
+            goto finish;
         }
 
         // don't overrun bandwidth
