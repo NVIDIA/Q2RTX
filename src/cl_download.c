@@ -238,7 +238,13 @@ void CL_HandleDownload( const byte *data, int size, int percent ) {
         }
     }
 
-    FS_Write( data, size, cls.download.file );
+    ret = FS_Write( data, size, cls.download.file );
+    if( ret != size ) {
+        Com_EPrintf( "[UDP] Couldn't write %s: %s\n",
+            cls.download.temp, Q_ErrorString( ret ) );
+        FS_FCloseFile( cls.download.file );
+        goto another;
+    }
 
     if( percent != 100 ) {
         // request next block
