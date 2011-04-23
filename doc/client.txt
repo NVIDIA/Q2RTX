@@ -1201,12 +1201,15 @@ it used to be you know where to look. The following list may be incomplete.
 - ‘demomap’ command has been removed in favor of ‘demo’ and ‘mvdplay’.
 
 - Q2PRO works only with virtual paths constrained to the quake file system.
-  Backed-up paths are not allowed. This means a command like this will no
-  longer work: ‘exec ../some-global-config.cfg’. Config files that need to be
-  globally accessible should be placed in ‘baseq2/’ directory.
+  All paths are normalized before use so that it is impossible to go past virtual
+  filesystem root using ‘../’ components.  This means commands like these are
+  equivalent and all reference the same file: ‘exec ../global.cfg’, ‘exec
+  /global.cfg’, ‘exec global.cfg’.  If you have any config files in your Quake 2
+  directory root, you should consider moving them into ‘baseq2/’ to make them
+  accessible.
 
-- ‘link’ command syntax has been changed: only paths relative to the root of
-  quake file system are accepted. Absolute and backed-up paths will not work.
+- Likewise, ‘link’ command syntax has been changed to work with virtual paths
+  constrained to the quake file system. All arguments to ‘link’ are normalized.
 
 - Cinematics are not supported.
 
