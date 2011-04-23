@@ -750,6 +750,3 @@ it used to be you know where to look. The following list may be incomplete.
 - Likewise, ‘link’ command syntax has been changed to work with virtual paths
   constrained to the quake file system. All arguments to ‘link’ are normalized.
 
-- Cinematics are not supported.
-
-- Savegames are not supported.

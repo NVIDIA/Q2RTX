@@ -1215,7 +1215,10 @@ it used to be you know where to look. The following list may be incomplete.
 
 - Joysticks are not supported.
 
-- Savegames are not supported.
+- Single player savegames are partially supported: only ‘savegame’ and
+  ‘loadgame’ console commands are available yet (no menu and autosave support),
+  and only the ‘baseq2’ game library included in Q2PRO distribution has been
+  converted to use the new improved savegame format.
 
 - CD music is not supported.
 
