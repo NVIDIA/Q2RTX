@@ -600,13 +600,13 @@ static void parse_next_message( void ) {
             }
         }
 
-        FS_FCloseFile( cls.demo.playback );
-        memset( &cls.demo, 0, sizeof( cls.demo ) );
+        CL_Disconnect( ERR_RECONNECT );
+
+        Cvar_Set( "nextserver", "" );
 
         Cbuf_AddText( &cmd_buffer, s );
         Cbuf_AddText( &cmd_buffer, "\n" );
-        Cvar_Set( "nextserver", "" );
-        cls.state = ca_connected;
+        Cbuf_Execute( &cmd_buffer );
         return;
     }
 
