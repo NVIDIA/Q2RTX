@@ -29,12 +29,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 =====================================================================
 */
 
-
-/*
-==================
-CL_ParseDeltaEntity
-==================
-*/
 static inline void CL_ParseDeltaEntity( server_frame_t  *frame,
                                         int             newnum,
                                         entity_state_t  *old,
@@ -60,11 +54,6 @@ static inline void CL_ParseDeltaEntity( server_frame_t  *frame,
     MSG_ParseDeltaEntity( old, state, newnum, bits, cl.esFlags );
 }
 
-/*
-==================
-CL_ParsePacketEntities
-==================
-*/
 static void CL_ParsePacketEntities( server_frame_t *oldframe,
                                     server_frame_t *frame )
 {
@@ -194,11 +183,6 @@ static void CL_ParsePacketEntities( server_frame_t *oldframe,
     }
 }
 
-/*
-================
-CL_ParseFrame
-================
-*/
 static void CL_ParseFrame( int extrabits ) {
     uint32_t bits, extraflags;
     int     currentframe, deltaframe,
@@ -258,19 +242,18 @@ static void CL_ParseFrame( int extrabits ) {
         cl.frameflags |= FF_SERVERDROP;
     }
 
-    /* If the frame is delta compressed from data that we
-     * no longer have available, we must suck up the rest of
-     * the frame, but not use it, then ask for a non-compressed
-     * message */
+    // if the frame is delta compressed from data that we no longer have
+    // available, we must suck up the rest of the frame, but not use it, then
+    // ask for a non-compressed message
     if( deltaframe > 0 ) {
         oldframe = &cl.frames[deltaframe & UPDATE_MASK];
         from = &oldframe->ps;
         if( deltaframe == currentframe ) {
-            // old buggy q2 servers still cause this on map change
+            // old servers may cause this on map change
             Com_DPrintf( "%s: delta from current frame\n", __func__ );
             cl.frameflags |= FF_BADFRAME;
         } else if( oldframe->number != deltaframe ) {
-            // The frame that the server did the delta from
+            // the frame that the server did the delta from
             // is too old, so we can't reconstruct it properly.
             Com_DPrintf( "%s: delta frame was never received or too old\n", __func__ );
             cl.frameflags |= FF_OLDFRAME;
@@ -284,7 +267,7 @@ static void CL_ParseFrame( int extrabits ) {
             Com_DPrintf( "%s: delta entities too old\n", __func__ );
             cl.frameflags |= FF_OLDENT;
         } else {
-            frame.valid = qtrue;    // valid delta parse
+            frame.valid = qtrue; // valid delta parse
         }
         if( !frame.valid && cl.frame.valid && cls.demo.playback ) {
             Com_DPrintf( "%s: recovering broken demo\n", __func__ );
@@ -295,11 +278,8 @@ static void CL_ParseFrame( int extrabits ) {
     } else {
         oldframe = NULL;
         from = NULL;
-        frame.valid = qtrue;        // uncompressed frame
-        //if( !cls.demowaiting ) {
-            cl.frameflags |= FF_NODELTA;
-        //}
-        //cls.demowaiting = qfalse;   // we can start recording now
+        frame.valid = qtrue; // uncompressed frame
+        cl.frameflags |= FF_NODELTA;
     }
 
     // read areabits
@@ -398,7 +378,6 @@ static void CL_ParseFrame( int extrabits ) {
     CL_DeltaFrame();
 }
 
-
 /*
 =====================================================================
 
@@ -409,17 +388,17 @@ static void CL_ParseFrame( int extrabits ) {
 
 static void CL_ParseConfigstring( int index ) {
     size_t  len, maxlen;
-    char    *string;
+    char    *s;
 
     if( index < 0 || index >= MAX_CONFIGSTRINGS ) {
         Com_Error( ERR_DROP, "%s: bad index: %d", __func__, index );
     }
 
-    string = cl.configstrings[index];
+    s = cl.configstrings[index];
     maxlen = CS_SIZE( index );
-    len = MSG_ReadString( string, maxlen );
+    len = MSG_ReadString( s, maxlen );
 
-    SHOWNET( 2, "    %d \"%s\"\n", index, string );
+    SHOWNET( 2, "    %d \"%s\"\n", index, s );
 
     if( len >= maxlen ) {
         Com_WPrintf(
@@ -449,14 +428,8 @@ static void CL_ParseBaseline( int index, int bits ) {
     MSG_ParseDeltaEntity( NULL, &cl.baselines[index], index, bits, cl.esFlags );
 }
 
-/*
-==================
-CL_ParseGamestate
-
-Instead of wasting space for svc_configstring and svc_spawnbaseline
-bytes, entire game state is compressed into a single stream.
-==================
-*/
+// instead of wasting space for svc_configstring and svc_spawnbaseline
+// bytes, entire game state is compressed into a single stream.
 static void CL_ParseGamestate( void ) {
     int        index, bits;
 
@@ -477,11 +450,6 @@ static void CL_ParseGamestate( void ) {
     }
 }
 
-/*
-==================
-CL_ParseServerData
-==================
-*/
 static void CL_ParseServerData( void ) {
     char    levelname[MAX_QPATH];
     int     i, protocol, attractloop;
@@ -631,7 +599,6 @@ static void CL_ParseServerData( void ) {
             cl.clientNum = CLIENTNUM_NONE;
         }
     }
-
 }
 
 /*
@@ -780,11 +747,6 @@ static void CL_ParseMuzzleFlashPacket( int mask ) {
     mz.entity = entity;
 }
 
-/*
-==================
-CL_ParseStartSoundPacket
-==================
-*/
 static void CL_ParseStartSoundPacket( void ) {
     int flags, channel, entity;
 
@@ -833,11 +795,6 @@ static void CL_ParseStartSoundPacket( void ) {
     SHOWNET( 2, "    %s\n", cl.configstrings[ CS_SOUNDS + snd.index ] );
 }
 
-/*
-=====================
-CL_ParseReconnect
-=====================
-*/
 static void CL_ParseReconnect( void ) {
     if( cls.demo.playback ) {
         Com_Error( ERR_DISCONNECT, "Server disconnected" );
@@ -862,15 +819,10 @@ static void CL_ParseReconnect( void ) {
 }
 
 #if USE_AUTOREPLY
-/*
-====================
-CL_CheckForVersion
-====================
-*/
-static void CL_CheckForVersion( const char *string ) {
+static void CL_CheckForVersion( const char *s ) {
     char *p;
 
-    p = strstr( string, ": " );
+    p = strstr( s, ": " );
     if( !p ) {
         return;
     }
@@ -923,41 +875,36 @@ static void CL_CheckForIP( const char *s ) {
     }
 }
 
-/*
-=====================
-CL_ParsePrint
-=====================
-*/
 static void CL_ParsePrint( void ) {
     int level;
-    char string[MAX_STRING_CHARS];
+    char s[MAX_STRING_CHARS];
     const char *fmt;
 
     level = MSG_ReadByte();
-    MSG_ReadString( string, sizeof( string ) );
+    MSG_ReadString( s, sizeof( s ) );
 
-    SHOWNET( 2, "    %i \"%s\"\n", level, string );
+    SHOWNET( 2, "    %i \"%s\"\n", level, s );
 
     if( level != PRINT_CHAT ) {
-        Com_Printf( "%s", string );
+        Com_Printf( "%s", s );
         if( !cls.demo.playback ) {
-            COM_strclr( string );
-            Cmd_ExecTrigger( string );
+            COM_strclr( s );
+            Cmd_ExecTrigger( s );
         }
         return;
     }
 
-    if( CL_CheckForIgnore( string ) ) {
+    if( CL_CheckForIgnore( s ) ) {
         return;
     }
 
 #if USE_AUTOREPLY
     if( !cls.demo.playback ) {
-        CL_CheckForVersion( string );
+        CL_CheckForVersion( s );
     }
 #endif
 
-    CL_CheckForIP( string );
+    CL_CheckForIP( s );
 
     // disable notify
     if( !cl_chat_notify->integer ) {
@@ -966,50 +913,39 @@ static void CL_ParsePrint( void ) {
 
     // filter text
     if( cl_chat_filter->integer ) {
-        COM_strclr( string );
+        COM_strclr( s );
         fmt = "%s\n";
     } else {
         fmt = "%s";
     }
 
-    Com_LPrintf( PRINT_TALK, fmt, string );
+    Com_LPrintf( PRINT_TALK, fmt, s );
 
     Con_SkipNotify( qfalse );
 
 #if USE_CHATHUD
-    SCR_AddToChatHUD( string );
+    SCR_AddToChatHUD( s );
 #endif
 
     // play sound
     if( cl_chat_sound->string[0] ) {
         S_StartLocalSound_( cl_chat_sound->string );
     }
-    
 }
 
-/*
-=====================
-CL_ParseCenterPrint
-=====================
-*/
 static void CL_ParseCenterPrint( void ) {
-    char string[MAX_STRING_CHARS];
+    char s[MAX_STRING_CHARS];
 
-    MSG_ReadString( string, sizeof( string ) );
-    SHOWNET( 2, "    \"%s\"\n", string );
-    SCR_CenterPrint( string );
+    MSG_ReadString( s, sizeof( s ) );
+    SHOWNET( 2, "    \"%s\"\n", s );
+    SCR_CenterPrint( s );
 
     if( !cls.demo.playback ) {
-        COM_strclr( string );
-        Cmd_ExecTrigger( string );
+        COM_strclr( s );
+        Cmd_ExecTrigger( s );
     }
 }
 
-/*
-=====================
-CL_ParseStuffText
-=====================
-*/
 static void CL_ParseStuffText( void ) {
     char s[MAX_STRING_CHARS];
 
@@ -1018,22 +954,12 @@ static void CL_ParseStuffText( void ) {
     Cbuf_AddText( &cl_cmdbuf, s );
 }
 
-/*
-=====================
-CL_ParseLayout
-=====================
-*/
 static void CL_ParseLayout( void ) {
     MSG_ReadString( cl.layout, sizeof( cl.layout ) );
     SHOWNET( 2, "    \"%s\"\n", cl.layout );
     cl.putaway = qfalse;
 }
 
-/*
-================
-CL_ParseInventory
-================
-*/
 static void CL_ParseInventory( void ) {
     int        i;
 
