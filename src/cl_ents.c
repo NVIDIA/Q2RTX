@@ -265,6 +265,32 @@ void CL_DeltaFrame( void ) {
     CL_CheckPredictionError();
 }
 
+#ifdef _DEBUG
+// for debugging problems when out-of-date entity origin is referenced
+void CL_CheckEntityPresent( int entnum, const char *what ) {
+    centity_t *e = &cl_entities[entnum];
+
+    if( entnum == cl.frame.clientNum + 1 ) {
+        return; // player entity = current
+    }
+
+    e = &cl_entities[entnum];
+    if( e->serverframe == cl.frame.number ) {
+        return; // current
+    }
+
+    if( e->serverframe ) {
+        Com_LPrintf( PRINT_DEVELOPER,
+            "SERVER BUG: %s on entity %d last seen %d frames ago\n",
+            what, entnum, cl.frame.number - e->serverframe );
+    } else {
+        Com_LPrintf( PRINT_DEVELOPER,
+            "SERVER BUG: %s on entity %d never seen before\n",
+            what, entnum );
+    }
+}
+#endif
+
 
 /*
 ==========================================================================

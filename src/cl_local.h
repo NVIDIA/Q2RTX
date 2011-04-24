@@ -564,6 +564,10 @@ void CL_DeltaFrame( void );
 void CL_AddEntities (void);
 player_state_t *CL_CalcViewValues( void );
 
+#ifdef _DEBUG
+void CL_CheckEntityPresent( int entnum, const char *what );
+#endif
+
 // the sound code makes callbacks to the client for entitiy position
 // information, so entities can be dynamically re-spatialized
 void CL_GetEntitySoundOrigin( int ent, vec3_t org );
