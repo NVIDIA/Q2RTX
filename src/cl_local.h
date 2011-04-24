@@ -501,6 +501,7 @@ void CL_RegisterSounds( void );
 void CL_RegisterBspModels( void );
 void CL_RegisterVWepModels( void );
 void CL_PrepRefresh( void );
+void CL_UpdateConfigstring( int index );
 
 //
 // cl_download
@@ -692,7 +693,7 @@ void CL_RunDLights (void);
 void CL_AddDLights (void);
 #endif
 #if USE_LIGHTSTYLES
-void CL_SetLightStyle( int index, const char *string, size_t length );
+void CL_SetLightStyle( int index, const char *s );
 void CL_RunLightStyles (void);
 void CL_AddLightStyles (void);
 #endif

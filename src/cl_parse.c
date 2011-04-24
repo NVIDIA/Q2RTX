@@ -470,43 +470,7 @@ static void CL_ParseConfigstring( int index ) {
     }
 
     // do something apropriate 
-    if( index == CS_MAXCLIENTS ) {
-        cl.maxclients = atoi( string );
-        return;
-    }
-    if( index == CS_MODELS + 1 ) {
-        if( len <= 9 ) {
-            Com_Error( ERR_DROP, "%s: bad world model: %s", __func__, string );
-        }
-        memcpy( cl.mapname, string + 5, len - 9 ); // skip "maps/"
-        cl.mapname[len - 9] = 0; // cut off ".bsp"
-        return;
-    }
-#if USE_LIGHTSTYLES
-    if (index >= CS_LIGHTS && index < CS_LIGHTS+MAX_LIGHTSTYLES) {
-        CL_SetLightStyle( index - CS_LIGHTS, string, len );
-        return;
-    }
-#endif
-
-    if( cls.state < ca_precached ) {
-        return;
-    }
-    if (index >= CS_MODELS+2 && index < CS_MODELS+MAX_MODELS) {
-        cl.model_draw[index-CS_MODELS] = R_RegisterModel (string);
-        if (*string == '*')
-            cl.model_clip[index-CS_MODELS] = BSP_InlineModel (cl.bsp, string);
-        else
-            cl.model_clip[index-CS_MODELS] = NULL;
-    } else if (index >= CS_SOUNDS && index < CS_SOUNDS+MAX_MODELS) {
-        cl.sound_precache[index-CS_SOUNDS] = S_RegisterSound (string);
-    } else if (index >= CS_IMAGES && index < CS_IMAGES+MAX_MODELS) {
-        cl.image_precache[index-CS_IMAGES] = R_RegisterPic (string);
-    } else if (index >= CS_PLAYERSKINS && index < CS_PLAYERSKINS+MAX_CLIENTS) {
-        CL_LoadClientinfo( &cl.clientinfo[index - CS_PLAYERSKINS], string );
-    } else if( index == CS_AIRACCEL && !cl.pmp.qwmode ) {
-        cl.pmp.airaccelerate = atoi( string ) ? qtrue : qfalse;
-    }
+    CL_UpdateConfigstring( index );
 }
 
 static void CL_ParseBaseline( int index, int bits ) {

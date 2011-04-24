@@ -402,3 +402,74 @@ void CL_PrepRefresh (void) {
     SCR_UpdateScreen();
 }
 
+/*
+=================
+CL_UpdateConfigstring
+
+A configstring update has been parsed.
+=================
+*/
+void CL_UpdateConfigstring( int index ) {
+    const char *s = cl.configstrings[index];
+
+    if( index == CS_MAXCLIENTS ) {
+        cl.maxclients = atoi( s );
+        return;
+    }
+
+    if( index == CS_AIRACCEL ) {
+        if( cl.pmp.qwmode )
+            cl.pmp.airaccelerate = qtrue;
+        else
+            cl.pmp.airaccelerate = atoi( s ) ? qtrue : qfalse;
+        return;
+    }
+
+    if( index == CS_MODELS + 1 ) {
+        size_t len = strlen( s );
+
+        if( len <= 9 ) {
+            Com_Error( ERR_DROP, "%s: bad world model: %s", __func__, s );
+        }
+        memcpy( cl.mapname, s + 5, len - 9 ); // skip "maps/"
+        cl.mapname[len - 9] = 0; // cut off ".bsp"
+        return;
+    }
+
+#if USE_LIGHTSTYLES
+    if( index >= CS_LIGHTS && index < CS_LIGHTS + MAX_LIGHTSTYLES ) {
+        CL_SetLightStyle( index - CS_LIGHTS, s );
+        return;
+    }
+#endif
+
+    if( cls.state < ca_precached ) {
+        return;
+    }
+
+    if( index >= CS_MODELS + 2 && index < CS_MODELS + MAX_MODELS ) {
+        int i = index - CS_MODELS;
+
+        cl.model_draw[i] = R_RegisterModel( s );
+        if( *s == '*' )
+            cl.model_clip[i] = BSP_InlineModel( cl.bsp, s );
+        else
+            cl.model_clip[i] = NULL;
+        return;
+    }
+
+    if( index >= CS_SOUNDS && index < CS_SOUNDS + MAX_MODELS ) {
+        cl.sound_precache[ index - CS_SOUNDS ] = S_RegisterSound( s );
+        return;
+    }
+
+    if( index >= CS_IMAGES && index < CS_IMAGES + MAX_MODELS ) {
+        cl.image_precache[ index - CS_IMAGES] = R_RegisterPic( s );
+        return;
+    }
+
+    if( index >= CS_PLAYERSKINS && index < CS_PLAYERSKINS + MAX_CLIENTS ) {
+        CL_LoadClientinfo( &cl.clientinfo[ index - CS_PLAYERSKINS ], s );
+        return;
+    }
+}

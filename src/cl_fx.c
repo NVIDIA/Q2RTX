@@ -73,22 +73,25 @@ void CL_RunLightStyles( void ) {
     }
 }
 
-void CL_SetLightStyle( int index, const char *string, size_t length ) {
+void CL_SetLightStyle( int index, const char *s ) {
     int     i;
     clightstyle_t   *dest;
 
     dest = &cl_lightstyles[index];
-    dest->length = length;
+    dest->length = strlen( s );
+    if( dest->length > MAX_QPATH ) {
+        Com_Error( ERR_DROP, "%s: oversize style", __func__ );
+    }
 
-    for( i = 0; i < length; i++ ) {
-        dest->map[i] = ( float )( string[i] - 'a' ) / ( float )( 'm' - 'a' );
+    for( i = 0; i < dest->length; i++ ) {
+        dest->map[i] = ( float )( s[i] - 'a' ) / ( float )( 'm' - 'a' );
     }
 
     if( dest->entry.prev ) {
         List_Delete( &dest->entry );
     }
 
-    if( length > 1 ) {
+    if( dest->length > 1 ) {
         List_Append( &cl_lightlist, &dest->entry );
         return;
     }
