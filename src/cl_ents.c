@@ -159,14 +159,67 @@ static void CL_EntityEvent (int number) {
 
 /*
 ==================
+CL_SetActiveState
+
+==================
+*/
+static void CL_SetActiveState( void ) {
+    cl.serverdelta = cl.frame.number;
+    cl.time = cl.servertime = 0; // set time, needed for demos
+    cls.state = ca_active;
+    cl.oldframe.valid = qfalse;
+    cl.frameflags = 0;
+    cl.putaway = qfalse;
+    if( cls.netchan ) {
+        cl.initialSeq = cls.netchan->outgoing_sequence;
+    }
+
+    // set initial cl.predicted_origin and cl.predicted_angles
+    if( !cls.demo.playback ) {
+        VectorScale( cl.frame.ps.pmove.origin, 0.125f, cl.predicted_origin );
+        VectorScale( cl.frame.ps.pmove.velocity, 0.125f, cl.predicted_velocity );
+        if( cl.frame.ps.pmove.pm_type < PM_DEAD &&
+            cls.serverProtocol > PROTOCOL_VERSION_DEFAULT )
+        {
+            // enhanced servers don't send viewangles
+            CL_PredictAngles();
+        } else {
+            // just use what server provided
+            VectorCopy( cl.frame.ps.viewangles, cl.predicted_angles );
+        }
+    }
+
+    SCR_EndLoadingPlaque ();    // get rid of loading plaque
+    SCR_LagClear();
+    Con_Close( qfalse );        // get rid of connection screen
+
+    CL_UpdateFrameTimes();
+
+    if( !cls.demo.playback ) {
+        EXEC_TRIGGER( cl_beginmapcmd );
+        Cmd_ExecTrigger( "#cl_enterlevel" );
+    }
+
+    Cvar_Set( "cl_paused", "0" );
+}
+
+
+/*
+==================
 CL_DeltaFrame
 
+A valid frame has been parsed.
 ==================
 */
 void CL_DeltaFrame( void ) {
     centity_t           *ent;
     entity_state_t      *state;
     int                 i, j;
+
+    // getting a valid frame message ends the connection process
+    if( cls.state == ca_precached ) {
+        CL_SetActiveState();
+    }
 
     // set server time
     cl.servertime = ( cl.frame.number - cl.serverdelta ) * cl.frametime;
@@ -208,6 +261,8 @@ void CL_DeltaFrame( void ) {
     }
 
     SCR_SetCrosshairColor();
+
+    CL_CheckPredictionError();
 }
 
 
