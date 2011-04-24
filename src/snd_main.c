@@ -314,7 +314,7 @@ sfx_t *S_SfxForHandle( qhandle_t hSfx ) {
     return &known_sfx[hSfx - 1];
 }
 
-static sfx_t *S_AllocSfx( const char *name ) {
+static sfx_t *S_AllocSfx( void ) {
     sfx_t   *sfx;
     int     i;
 
@@ -330,10 +330,6 @@ static sfx_t *S_AllocSfx( const char *name ) {
         num_sfx++;
     }
     
-    memset( sfx, 0, sizeof( *sfx ) );
-    Q_strlcpy( sfx->name, name, sizeof( sfx->name ) );
-    sfx->registration_sequence = s_registration_sequence;
-
     return sfx;
 }
 
@@ -343,26 +339,22 @@ S_FindName
 
 ==================
 */
-static sfx_t *S_FindName( const char *name ) {
+static sfx_t *S_FindName( const char *name, size_t namelen ) {
     int     i;
     sfx_t   *sfx;
 
-    if( !name )
-        Com_Error( ERR_FATAL, "S_FindName: NULL" );
-
-    if( !name[0] )
-        Com_Error( ERR_DROP, "S_FindName: empty name" );
-
     // see if already loaded
     for( i = 0, sfx = known_sfx; i < num_sfx; i++, sfx++ ) {
-        if( !Q_stricmp( sfx->name, name ) ) {
+        if( !FS_pathcmp( sfx->name, name ) ) {
             sfx->registration_sequence = s_registration_sequence;
             return sfx;
         }
     }
 
     // allocate new one
-    sfx = S_AllocSfx( name );
+    sfx = S_AllocSfx();
+    memcpy( sfx->name, name, namelen + 1 );
+    sfx->registration_sequence = s_registration_sequence;
     
     return sfx;
 }
@@ -385,12 +377,37 @@ S_RegisterSound
 ==================
 */
 qhandle_t S_RegisterSound( const char *name ) {
+    char    buffer[MAX_QPATH];
     sfx_t   *sfx;
+    size_t  len;
 
     if( !s_started )
         return 0;
 
-    sfx = S_FindName( name );
+    if( !name )
+        Com_Error( ERR_DROP, "%s: NULL", __func__ );
+
+    if( *name == '*' ) {
+        len = Q_strlcpy( buffer, name, MAX_QPATH );
+    } else if( *name == '#' ) {
+        len = FS_NormalizePathBuffer( buffer, name + 1, MAX_QPATH );
+    } else {
+        len = Q_concat( buffer, MAX_QPATH, "sound/", name, NULL );
+        if( len < MAX_QPATH )
+            len = FS_NormalizePath( buffer, buffer );
+    }
+
+    if( len >= MAX_QPATH ) {
+        Com_DPrintf( "%s: oversize name\n", __func__ );
+        return 0;
+    }
+
+    if( len == 0 ) {
+        Com_DPrintf( "%s: empty name\n", __func__ );
+        return 0;
+    }
+
+    sfx = S_FindName( buffer, len );
 
     if( !s_registering ) {
         S_LoadSound( sfx );
@@ -408,33 +425,41 @@ static sfx_t *S_RegisterSexedSound( int entnum, const char *base ) {
     sfx_t           *sfx;
     char            *model;
     char            buffer[MAX_QPATH];
-    clientinfo_t    *ci;
+    size_t          len;
 
     // determine what model the client is using
-    if( entnum > 0 && entnum <= MAX_CLIENTS ) {
-        ci = &cl.clientinfo[ entnum - 1 ];
-    } else {
-        ci = &cl.baseclientinfo;
-    }
-    model = ci->model_name;
+    if( entnum > 0 && entnum <= MAX_CLIENTS )
+        model = cl.clientinfo[ entnum - 1 ].model_name;
+    else
+        model = cl.baseclientinfo.model_name;
 
     // if we can't figure it out, they're male
-    if( !model[0] ) {
+    if( !*model )
         model = "male";
-    }
 
     // see if we already know of the model specific sound
-    Q_concat( buffer, sizeof( buffer ),
-        "#players/", model, "/", base + 1, NULL );
-    sfx = S_FindName( buffer );
+    len = Q_concat( buffer, MAX_QPATH,
+        "players/", model, "/", base + 1, NULL );
+    if( len >= MAX_QPATH ) {
+        len = Q_concat( buffer, MAX_QPATH,
+            "players/", "male", "/", base + 1, NULL );
+        if( len >= MAX_QPATH )
+            return NULL;
+    }
+
+    len = FS_NormalizePath( buffer, buffer );
+    sfx = S_FindName( buffer, len );
 
     // see if it exists
     if( !sfx->truename && !S_LoadSound( sfx ) ) {
         // no, revert to the male sound in the pak0.pak
-        Q_concat( buffer, sizeof( buffer ),
-            "player/male/", base + 1, NULL );
-        sfx->error = Q_ERR_SUCCESS;
-        sfx->truename = S_CopyString( buffer );
+        len = Q_concat( buffer, MAX_QPATH,
+            "sound/player/male/", base + 1, NULL );
+        if( len < MAX_QPATH ) {
+            FS_NormalizePath( buffer, buffer );
+            sfx->error = Q_ERR_SUCCESS;
+            sfx->truename = S_CopyString( buffer );
+        }
     }
 
     return sfx;
@@ -753,6 +778,8 @@ void S_StartSound( const vec3_t origin, int entnum, int entchannel, qhandle_t hS
 
     if( sfx->name[0] == '*' ) {
         sfx = S_RegisterSexedSound( entnum, sfx->name );
+        if( !sfx )
+            return;
     }
 
     // make sure the sound is loaded

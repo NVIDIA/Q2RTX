@@ -303,10 +303,9 @@ S_LoadSound
 ==============
 */
 sfxcache_t *S_LoadSound (sfx_t *s) {
-    char        namebuffer[MAX_QPATH];
     byte        *data;
     sfxcache_t  *sc;
-    size_t      len;
+    ssize_t     len;
     char        *name;
 
     if (s->name[0] == '*')
@@ -327,23 +326,14 @@ sfxcache_t *S_LoadSound (sfx_t *s) {
     else
         name = s->name;
 
-    if (name[0] == '#')
-        len = Q_strlcpy( namebuffer, name + 1, sizeof( namebuffer ) );
-    else
-        len = Q_concat( namebuffer, sizeof( namebuffer ), "sound/", name, NULL );
-    if( len >= sizeof( namebuffer ) ) {
-        s->error = Q_ERR_NAMETOOLONG;
-        return NULL;
-    }
-
-    len = FS_LoadFile (namebuffer, (void **)&data);
+    len = FS_LoadFile (name, (void **)&data);
     if (!data) {
         s->error = len;
         return NULL;
     }
 
     memset( &s_info, 0, sizeof( s_info ) );
-    s_info.name = namebuffer;
+    s_info.name = name;
 
     iff_data = data;
     iff_end = data + len;
