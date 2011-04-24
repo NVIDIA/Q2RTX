@@ -231,10 +231,10 @@ void CL_AddDLights (void)
 
 /*
 ==============
-CL_ParseMuzzleFlash
+CL_MuzzleFlash
 ==============
 */
-void CL_ParseMuzzleFlash (void)
+void CL_MuzzleFlash (void)
 {
 #if USE_DLIGHTS
     vec3_t      fv, rv;
@@ -243,6 +243,11 @@ void CL_ParseMuzzleFlash (void)
     centity_t   *pl;
     float       volume;
     char        soundname[MAX_QPATH];
+
+#ifdef _DEBUG
+    if( developer->integer )
+        CL_CheckEntityPresent( mz.entity, "muzzleflash" );
+#endif
 
     pl = &cl_entities[mz.entity];
 
@@ -423,10 +428,10 @@ void CL_ParseMuzzleFlash (void)
 
 /*
 ==============
-CL_ParseMuzzleFlash2
+CL_MuzzleFlash2
 ==============
 */
-void CL_ParseMuzzleFlash2 (void) 
+void CL_MuzzleFlash2 (void)
 {
     centity_t   *ent;
     vec3_t      origin;

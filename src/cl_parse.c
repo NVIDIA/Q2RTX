@@ -683,7 +683,7 @@ tent_params_t   te;
 mz_params_t     mz;
 snd_params_t    snd;
 
-static void CL_ParseTEntParams( void ) {
+static void CL_ParseTEntPacket( void ) {
     te.type = MSG_ReadByte();
 
     switch( te.type ) {
@@ -802,11 +802,9 @@ static void CL_ParseTEntParams( void ) {
     default:
         Com_Error( ERR_DROP, "%s: bad type", __func__ );
     }
-
-    CL_ParseTEnt();
 }
 
-static void CL_ParseMuzzleFlashParams( void ) {
+static void CL_ParseMuzzleFlashPacket( int mask ) {
     int entity, weapon;
 
     entity = MSG_ReadShort();
@@ -814,30 +812,9 @@ static void CL_ParseMuzzleFlashParams( void ) {
         Com_Error( ERR_DROP, "%s: bad entity", __func__ );
 
     weapon = MSG_ReadByte();
-    mz.silenced = weapon & MZ_SILENCED;
-    mz.weapon = weapon & ~MZ_SILENCED;
+    mz.silenced = weapon & mask;
+    mz.weapon = weapon & ~mask;
     mz.entity = entity;
-
-#ifdef _DEBUG
-    if( developer->integer ) {
-        CL_CheckEntityPresent( entity, "muzzleflash" );
-    }
-#endif
-
-    CL_ParseMuzzleFlash();
-}
-
-static void CL_ParseMuzzleFlashParams2( void ) {
-    int entity;
-
-    entity = MSG_ReadShort();
-    if( entity < 1 || entity >= MAX_EDICTS )
-        Com_Error( ERR_DROP, "%s: bad entity", __func__ );
-
-    mz.weapon = MSG_ReadByte();
-    mz.entity = entity;
-
-    CL_ParseMuzzleFlash2();
 }
 
 /*
@@ -1261,15 +1238,18 @@ void CL_ParseServerMessage( void ) {
             break;
 
         case svc_temp_entity:
-            CL_ParseTEntParams();
+            CL_ParseTEntPacket();
+            CL_ParseTEnt();
             break;
 
         case svc_muzzleflash:
-            CL_ParseMuzzleFlashParams();
+            CL_ParseMuzzleFlashPacket( MZ_SILENCED );
+            CL_MuzzleFlash();
             break;
 
         case svc_muzzleflash2:
-            CL_ParseMuzzleFlashParams2();
+            CL_ParseMuzzleFlashPacket( 0 );
+            CL_MuzzleFlash2();
             break;
 
         case svc_download:
