@@ -552,8 +552,20 @@ typedef struct {
     int silenced;
 } mz_params_t;
 
+typedef struct {
+    int     flags;
+    int     index;
+    int     entity;
+    int     channel;
+    vec3_t  pos;
+    float   volume;
+    float   attenuation;
+    float   timeofs;
+} snd_params_t;
+
 extern tent_params_t    te;
 extern mz_params_t      mz;
+extern snd_params_t     snd;
 
 void CL_ParseServerMessage (void);
 

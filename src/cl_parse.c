@@ -681,6 +681,7 @@ ACTION MESSAGES
 
 tent_params_t   te;
 mz_params_t     mz;
+snd_params_t    snd;
 
 static void CL_ParseTEntParams( void ) {
     te.type = MSG_ReadByte();
@@ -845,71 +846,51 @@ CL_ParseStartSoundPacket
 ==================
 */
 static void CL_ParseStartSoundPacket( void ) {
-    vec3_t  pos_v;
-    float   *pos;
-    int     channel, ent;
-    int     sound_num;
-    float   volume;
-    float   attenuation; 
-    int     flags;
-    float   ofs;
+    int flags, channel, entity;
 
     flags = MSG_ReadByte();
-    sound_num = MSG_ReadByte();
-    if( sound_num == -1 ) {
+    if( ( flags & (SND_ENT|SND_POS) ) == 0 )
+        Com_Error( ERR_DROP, "%s: neither SND_ENT nor SND_POS set", __func__ );
+
+    snd.index = MSG_ReadByte();
+    if( snd.index == -1 )
         Com_Error( ERR_DROP, "%s: read past end of message", __func__ );
-    }
 
     if( flags & SND_VOLUME )
-        volume = MSG_ReadByte() / 255.0;
+        snd.volume = MSG_ReadByte() / 255.0f;
     else
-        volume = DEFAULT_SOUND_PACKET_VOLUME;
+        snd.volume = DEFAULT_SOUND_PACKET_VOLUME;
     
     if( flags & SND_ATTENUATION )
-        attenuation = MSG_ReadByte() / 64.0;
+        snd.attenuation = MSG_ReadByte() / 64.0f;
     else
-        attenuation = DEFAULT_SOUND_PACKET_ATTENUATION;    
+        snd.attenuation = DEFAULT_SOUND_PACKET_ATTENUATION;
 
     if( flags & SND_OFFSET )
-        ofs = MSG_ReadByte() / 1000.0;
+        snd.timeofs = MSG_ReadByte() / 1000.0f;
     else
-        ofs = 0;
+        snd.timeofs = 0;
 
     if( flags & SND_ENT ) {    
         // entity relative
         channel = MSG_ReadShort(); 
-        ent = channel >> 3;
-        if( ent < 0 || ent >= MAX_EDICTS )
-            Com_Error( ERR_DROP, "%s: bad ent: %d", __func__, ent );
-        channel &= 7;
+        entity = channel >> 3;
+        if( entity < 0 || entity >= MAX_EDICTS )
+            Com_Error( ERR_DROP, "%s: bad entity: %d", __func__, entity );
+        snd.entity = entity;
+        snd.channel = channel & 7;
     } else {
-        ent = 0;
-        channel = 0;
+        snd.entity = 0;
+        snd.channel = 0;
     }
 
-    if( flags & SND_POS ) {
-        // positioned in space
-        MSG_ReadPos( pos_v );
-        pos = pos_v;
-    } else {
-        if( !( flags & SND_ENT ) ) {
-            Com_Error( ERR_DROP, "%s: neither SND_ENT nor SND_POS set", __func__ );
-        }
-#ifdef _DEBUG
-        if( developer->integer ) {
-            CL_CheckEntityPresent( ent, "sound" );
-        }
-#endif
-        // use entity number
-        pos = NULL;
-    }
+    // positioned in space
+    if( flags & SND_POS )
+        MSG_ReadPos( snd.pos );
 
-    SHOWNET( 2, "    %s\n", cl.configstrings[CS_SOUNDS+sound_num] );
+    snd.flags = flags;
 
-    if( cl.sound_precache[sound_num] ) {
-        S_StartSound( pos, ent, channel, cl.sound_precache[sound_num],
-            volume, attenuation, ofs );
-    }
+    SHOWNET( 2, "    %s\n", cl.configstrings[ CS_SOUNDS + snd.index ] );
 }
 
 /*
@@ -1271,6 +1252,7 @@ void CL_ParseServerMessage( void ) {
  
         case svc_sound:
             CL_ParseStartSoundPacket();
+            S_ParseStartSound();
             break;
             
         case svc_spawnbaseline:
