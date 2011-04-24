@@ -452,15 +452,12 @@ ssize_t FS_Tell( qhandle_t f ) {
     }
 }
 
-#if 0
 /*
 ============
 FS_Seek
-
-THIS IS MASSIVELY BROKEN, DON'T USE!
 ============
 */
-qerror_t FS_Seek( qhandle_t f, size_t offset ) {
+qerror_t FS_Seek( qhandle_t f, off_t offset ) {
     file_t *file = file_for_handle( f );
 
     if( offset > LONG_MAX ) {
@@ -469,14 +466,13 @@ qerror_t FS_Seek( qhandle_t f, size_t offset ) {
 
     switch( file->type ) {
     case FS_REAL:
-    //case FS_PAK:
-        if( fseek( file->fp, (long)offset, SEEK_CUR ) == -1 ) {
+        if( fseek( file->fp, (long)offset, SEEK_SET ) == -1 ) {
             return Q_ERR(errno);
         }
         return Q_ERR_SUCCESS;
 #if USE_ZLIB
     case FS_GZ:
-        if( gzseek( file->zfp, (long)offset, SEEK_CUR ) == -1 ) {
+        if( gzseek( file->zfp, (z_off_t)offset, SEEK_SET ) == -1 ) {
             return Q_ERR(errno);
         }
         return Q_ERR_SUCCESS;
@@ -485,7 +481,6 @@ qerror_t FS_Seek( qhandle_t f, size_t offset ) {
         return Q_ERR_NOSYS;
     }
 }
-#endif
 
 /*
 ============
