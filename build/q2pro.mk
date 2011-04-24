@@ -40,6 +40,7 @@ SRCFILES+=m_flash.c \
 	cl_view.c \
 	cl_console.c \
 	cl_download.c \
+	cl_precache.c \
 	cl_keys.c \
 	cl_aastat.c
 

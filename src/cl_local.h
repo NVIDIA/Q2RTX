@@ -95,15 +95,6 @@ typedef struct {
     int             firstEntity;
 } server_frame_t;
 
-typedef enum {
-    LOAD_MAP,
-    LOAD_MODELS,
-    LOAD_IMAGES,
-    LOAD_CLIENTS,
-    LOAD_SOUNDS,
-    LOAD_FINISH
-} load_state_t;
-
 // locally calculated frame flags for debug display
 #define FF_SERVERDROP   (1<<4)
 #define FF_BADFRAME     (1<<5)
@@ -479,18 +470,37 @@ extern cvar_t    *info_uf;
 void CL_Init (void);
 void CL_Quit_f (void);
 void CL_Disconnect( error_type_t type );
-void CL_RegisterModels( void );
 void CL_Begin( void );
 void CL_CheckForResend( void );
 void CL_ClearState (void);
 void CL_RestartFilesystem( qboolean total );
 void CL_RestartRefresh( qboolean total );
 void CL_ClientCommand( const char *string );
-void CL_LoadState( load_state_t state );
 void CL_SendRcon( const netadr_t *adr, const char *pass, const char *cmd );
 const char *CL_Server_g( const char *partial, int argnum, int state );
 void CL_UpdateFrameTimes( void );
 qboolean CL_CheckForIgnore( const char *s );
+
+//
+// cl_precache
+//
+
+typedef enum {
+    LOAD_MAP,
+    LOAD_MODELS,
+    LOAD_IMAGES,
+    LOAD_CLIENTS,
+    LOAD_SOUNDS,
+    LOAD_FINISH
+} load_state_t;
+
+void CL_ParsePlayerSkin( char *name, char *model, char *skin, const char *s );
+void CL_LoadClientinfo( clientinfo_t *ci, const char *s );
+void CL_LoadState( load_state_t state );
+void CL_RegisterSounds( void );
+void CL_RegisterBspModels( void );
+void CL_RegisterVWepModels( void );
+void CL_PrepRefresh( void );
 
 //
 // cl_download
@@ -545,8 +555,6 @@ extern tent_params_t    te;
 extern mz_params_t      mz;
 
 void CL_ParseServerMessage (void);
-void CL_ParsePlayerSkin( char *name, char *model, char *skin, const char *s );
-void CL_LoadClientinfo( clientinfo_t *ci, const char *s );
 
 //
 // cl_ents.c
@@ -578,8 +586,6 @@ void V_AddLight (vec3_t org, float intensity, float r, float g, float b);
 #if USE_LIGHTSTYLES
 void V_AddLightStyle (int style, vec4_t value);
 #endif
-void CL_RegisterVWepModels( void );
-void CL_PrepRefresh (void);
 void CL_UpdateBlendSetting( void );
 
 //

@@ -1632,26 +1632,6 @@ static void CL_Userinfo_f ( void ) {
 }
 
 /*
-======================
-CL_RegisterSounds
-======================
-*/
-static void CL_RegisterSounds( void ) {
-    int i;
-    char    *s;
-
-    S_BeginRegistration ();
-    CL_RegisterTEntSounds ();
-    for ( i = 1; i < MAX_SOUNDS; i++ ) {
-        s = cl.configstrings[ CS_SOUNDS + i ];
-        if ( !s[ 0 ] )
-            break;
-        cl.sound_precache[ i ] = S_RegisterSound( s );
-    }
-    S_EndRegistration ();
-}
-
-/*
 =================
 CL_RestartSound_f
  
@@ -1690,85 +1670,6 @@ static void CL_PlaySound_f( void ) {
         COM_DefaultExtension( name, ".wav", sizeof( name ) );
         S_StartLocalSound( name );
     }
-}
-
-/*
-=================
-CL_RegisterModels
-
-Registers main BSP file and collision models
-=================
-*/
-void CL_RegisterModels( void ) {
-    qerror_t ret;
-    char *name;
-    int i;
-
-    ret = BSP_Load( cl.configstrings[ CS_MODELS + 1 ], &cl.bsp );
-    if( cl.bsp == NULL ) {
-        Com_Error( ERR_DROP, "Couldn't load %s: %s",
-            cl.configstrings[ CS_MODELS + 1 ], Q_ErrorString( ret ) );
-    }
-
-#if USE_MAPCHECKSUM
-    if( cl.bsp->checksum != atoi( cl.configstrings[ CS_MAPCHECKSUM ] ) ) {
-        if( cls.demo.playback ) {
-            Com_WPrintf( "Local map version differs from demo: %i != %s\n",
-                cl.bsp->checksum, cl.configstrings[ CS_MAPCHECKSUM ] );
-        } else {
-            Com_Error( ERR_DROP, "Local map version differs from server: %i != %s",
-                cl.bsp->checksum, cl.configstrings[ CS_MAPCHECKSUM ] );
-        }
-    }
-#endif
-
-    for ( i = 1; i < MAX_MODELS; i++ ) {
-        name = cl.configstrings[CS_MODELS+i];
-        if( !name[0] ) {
-            break;
-        }
-        if( name[0] == '*' )
-            cl.model_clip[i] = BSP_InlineModel( cl.bsp, name );
-        else
-            cl.model_clip[i] = NULL;
-    }
-}
-
-void CL_LoadState( load_state_t state ) {
-    extern void VID_PumpEvents( void );
-    const char *s;
-
-    switch( state ) {
-    case LOAD_MAP:
-        s = cl.configstrings[ CS_MODELS + 1 ];
-        break;
-    case LOAD_MODELS:
-        s = "models";
-        break;
-    case LOAD_IMAGES:
-        s = "images";
-        break;
-    case LOAD_CLIENTS:
-        s = "clients";
-        break;
-    case LOAD_SOUNDS:
-        s = "sounds";
-        break;
-    case LOAD_FINISH:
-        s = NULL;
-        break;
-    default:
-        return;
-    }
-
-    if( s ) {
-        Con_Printf( "Loading %s...\r", s );
-    } else {
-        Con_Print( "\r" );
-    }
-
-    SCR_UpdateScreen();
-    VID_PumpEvents();
 }
 
 static int precache_spawncount;
@@ -1824,7 +1725,7 @@ static void CL_Precache_f( void ) {
 
     // demos use different precache sequence
     if( cls.demo.playback ) {
-        CL_RegisterModels();
+        CL_RegisterBspModels();
         CL_PrepRefresh();
         CL_LoadState( LOAD_SOUNDS );
         CL_RegisterSounds();

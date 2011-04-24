@@ -534,7 +534,7 @@ void CL_RequestNextDownload( void ) {
 
     if( allow_download->integer <= 0 || NET_IsLocalAddress( &cls.serverAddress ) ) {
         if( precache_check <= PRECACHE_MAP ) {
-            CL_RegisterModels();
+            CL_RegisterBspModels();
         }
 
         CL_Begin();
@@ -662,7 +662,7 @@ void CL_RequestNextDownload( void ) {
         }
 
         // load the map file before checking textures
-        CL_RegisterModels();
+        CL_RegisterBspModels();
 
         if( allow_download_textures->integer ) {
             for( i = 0; i < cl.bsp->numtexinfo; i++ ) {
