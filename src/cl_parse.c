@@ -22,43 +22,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cl_local.h"
 
 /*
-=====================
-CL_ParseDownload
-
-A download message has been received from the server
-=====================
-*/
-static void CL_ParseDownload( void ) {
-    int size, percent;
-    byte *data;
-
-    if( !cls.download.temp[0] ) {
-        Com_Error( ERR_DROP, "%s: no download requested", __func__ );
-    }
-
-    // read the data
-    size = MSG_ReadShort();
-    percent = MSG_ReadByte();
-    if( size == -1 ) {
-        CL_HandleDownload( NULL, size, percent );
-        return;
-    }
-
-    if( size < 0 ) {
-        Com_Error( ERR_DROP, "%s: bad size: %d", __func__, size );
-    }
-
-    if( msg_read.readcount + size > msg_read.cursize ) {
-        Com_Error( ERR_DROP, "%s: read past end of message", __func__ );
-    }
-
-    data = msg_read.data + msg_read.readcount;
-    msg_read.readcount += size;
-
-    CL_HandleDownload( data, size, percent );
-}
-
-/*
 =====================================================================
 
   DELTA FRAME PARSING
@@ -1078,6 +1041,36 @@ static void CL_ParseInventory( void ) {
         cl.inventory[i] = MSG_ReadShort();
     }
     cl.putaway = qfalse;
+}
+
+static void CL_ParseDownload( void ) {
+    int size, percent;
+    byte *data;
+
+    if( !cls.download.temp[0] ) {
+        Com_Error( ERR_DROP, "%s: no download requested", __func__ );
+    }
+
+    // read the data
+    size = MSG_ReadShort();
+    percent = MSG_ReadByte();
+    if( size == -1 ) {
+        CL_HandleDownload( NULL, size, percent );
+        return;
+    }
+
+    if( size < 0 ) {
+        Com_Error( ERR_DROP, "%s: bad size: %d", __func__, size );
+    }
+
+    if( msg_read.readcount + size > msg_read.cursize ) {
+        Com_Error( ERR_DROP, "%s: read past end of message", __func__ );
+    }
+
+    data = msg_read.data + msg_read.readcount;
+    msg_read.readcount += size;
+
+    CL_HandleDownload( data, size, percent );
 }
 
 static void CL_ParseZPacket( void ) {
