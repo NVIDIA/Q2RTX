@@ -465,7 +465,9 @@ void Com_Error( error_type_t code, const char *fmt, ... ) {
     // may not be entered recursively
     if( com_errorEntered ) {
 #ifdef _DEBUG
-        Sys_DebugBreak();
+        if( com_debug_break && com_debug_break->integer ) {
+            Sys_DebugBreak();
+        }
 #endif
         Sys_Error( "recursive error after: %s", com_errorMsg );
     }
