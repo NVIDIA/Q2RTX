@@ -62,38 +62,6 @@ static const char *MVD_ServerCommandString( int cmd ) {
 #define SHOWNET(...)
 #endif
 
-static void MVD_LinkEdict( mvd_t *mvd, edict_t *ent ) {
-    int         index;
-    mmodel_t    *cm;
-    bsp_t       *cache = mvd->cm.cache;
-
-    if( !cache ) {
-        return;
-    }
-
-    if( ent->s.solid == PACKED_BSP ) {
-        index = ent->s.modelindex;
-        if( index < 1 || index > cache->nummodels ) {
-            Com_WPrintf( "%s: entity %d: bad inline model index: %d\n",
-                __func__, ent->s.number, index );
-            return;
-        }
-        cm = &cache->models[ index - 1 ];
-        VectorCopy( cm->mins, ent->mins );
-        VectorCopy( cm->maxs, ent->maxs );
-        ent->solid = SOLID_BSP;
-    } else if( ent->s.solid ) {
-        MSG_UnpackSolid16( ent->s.solid, ent->mins, ent->maxs );
-        ent->solid = SOLID_BBOX;
-    } else {
-        VectorClear( ent->mins );
-        VectorClear( ent->maxs );
-        ent->solid = SOLID_NOT;
-    }
-
-    SV_LinkEdict( &mvd->cm, ent );
-}
-
 void MVD_ParseEntityString( mvd_t *mvd, const char *data ) {
     const char *p;
     char key[MAX_STRING_CHARS];
@@ -612,108 +580,26 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
     }
 }
 
-void MVD_FreePlayer( mvd_player_t *player ) {
-    mvd_cs_t *cs, *next;
-
-    for( cs = player->configstrings; cs; cs = next ) {
-        next = cs->next;
-        Z_Free( cs );
-    }
-    player->configstrings = NULL;
-}
-
-static void reset_unicast_strings( mvd_t *mvd, int index ) {
-    mvd_cs_t *cs, **next_p;
-    mvd_player_t *player;
-    int i;
-
-    for( i = 0; i < mvd->maxclients; i++ ) {
-        player = &mvd->players[i];
-        next_p = &player->configstrings;
-        for( cs = player->configstrings; cs; cs = cs->next ) {
-            if( cs->index == index ) {
-                Com_DPrintf( "%s: reset %d on %d\n", __func__, index, i );
-                *next_p = cs->next;
-                Z_Free( cs );
-                break;
-            }
-            next_p = &cs->next;
-        }
-    }
-}
-
-static void set_player_name( mvd_t *mvd, int index ) {
-    mvd_player_t *player;
-    char *string, *p;
-
-    string = mvd->configstrings[ CS_PLAYERSKINS + index ];
-    player = &mvd->players[index];
-    Q_strlcpy( player->name, string, sizeof( player->name ) );
-    p = strchr( player->name, '\\' );
-    if( p ) {
-        *p = 0;
-    }
-}
-
-static void update_player_name( mvd_t *mvd, int index ) {
-    mvd_client_t *client;
-
-    // parse player name
-    set_player_name( mvd, index );
-
-    // update layouts
-    FOR_EACH_MVDCL( client, mvd ) {
-        if( client->cl->state < cs_spawned ) {
-            continue;
-        }
-        if( client->layout_type != LAYOUT_FOLLOW ) {
-            continue;
-        }
-        if( client->target == mvd->players + index ) {
-            client->layout_time = 0;
-        }
-    }
-}
-
 static void MVD_ParseConfigstring( mvd_t *mvd ) {
     int index;
     size_t len, maxlen;
-    char *string;
-    mvd_client_t *client;
+    char *s;
 
     index = MSG_ReadShort();
     if( index < 0 || index >= MAX_CONFIGSTRINGS ) {
         MVD_Destroyf( mvd, "%s: bad index: %d", __func__, index );
     }
 
-    string = mvd->configstrings[index];
+    s = mvd->configstrings[index];
     maxlen = CS_SIZE( index );
-    len = MSG_ReadString( string, maxlen );
+    len = MSG_ReadString( s, maxlen );
     if( len >= maxlen ) {
         MVD_Destroyf( mvd, "%s: index %d overflowed", __func__, index );
     }
 
-    if( index >= CS_PLAYERSKINS && index < CS_PLAYERSKINS + mvd->maxclients ) {
-        // update player name
-        update_player_name( mvd, index - CS_PLAYERSKINS );
-    } else if( index >= CS_GENERAL ) {
-        // reset unicast versions of this string
-        reset_unicast_strings( mvd, index );
     }
 
-    MSG_WriteByte( svc_configstring );
-    MSG_WriteShort( index );
-    MSG_WriteData( string, len + 1 );
-    
-    // broadcast configstring change
-    FOR_EACH_MVDCL( client, mvd ) {
-        if( client->cl->state < cs_primed ) {
-            continue;
-        }
-        SV_ClientAddMessage( client->cl, MSG_RELIABLE );
-    }
-
-    SZ_Clear( &msg_write );
+    MVD_UpdateConfigstring( mvd, index );
 }
 
 static void MVD_ParsePrint( mvd_t *mvd ) {
@@ -977,7 +863,7 @@ static void MVD_ParseServerData( mvd_t *mvd, int extrabits ) {
     int protocol;
     size_t len, maxlen;
     char *string;
-    int i, index;
+    int index;
     qerror_t ret;
     edict_t *ent;
 
@@ -1086,9 +972,7 @@ static void MVD_ParseServerData( mvd_t *mvd, int extrabits ) {
 #endif
 
     // set player names
-    for( i = 0; i < mvd->maxclients; i++ ) {
-        set_player_name( mvd, i );
-    }
+    MVD_SetPlayerNames( mvd );
 
     // init world entity
     ent = &mvd->edicts[0];

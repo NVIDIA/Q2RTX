@@ -196,8 +196,6 @@ int MVD_Frame( void );
 
 void MVD_ParseMessage( mvd_t *mvd );
 void MVD_ParseEntityString( mvd_t *mvd, const char *data );
-void MVD_FreePlayer( mvd_player_t *player );
-
 
 //
 // mvd_game.c
@@ -213,4 +211,8 @@ void MVD_PrepWorldFrame( void );
 void MVD_GameClientNameChanged( edict_t *ent, const char *name );
 void MVD_GameClientDrop( edict_t *ent, const char *reason );
 void MVD_UpdateClients( mvd_t *mvd );
+void MVD_FreePlayer( mvd_player_t *player );
+void MVD_UpdateConfigstring( mvd_t *mvd, int index );
+void MVD_SetPlayerNames( mvd_t *mvd );
+void MVD_LinkEdict( mvd_t *mvd, edict_t *ent );
 
