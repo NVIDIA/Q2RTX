@@ -829,6 +829,12 @@ cl_adjustfov::
     Specifies if horizontal field of view is automatically adjusted for screens
     with aspect ratio different from 4/3. Default value is 0 (don't adjust FOV).
 
+cl_demosnaps::
+    Specifies time interval, in seconds, between saving ‘snapshots’ in memory
+    during demo playback.  Snapshots enable backward seeking in demo (see ‘seek’
+    command description), and speed up repeated forward seeks. Setting this
+    variable to 0 disables snapshotting entirely. Default value is 10.
+
 ui_open::
     Specifies if menu is automatically opened on startup, instead of full
     screen console. Default value is 1 (open menu).
@@ -927,7 +933,12 @@ demo [/]<filename[.ext]>::
     ‘demos/’ unless slash is prepended to _filename_, otherwise loads from the
     root of quake file system. Can be used to launch MVD playback as well, if
     MVD file type is detected, it will be automatically passed to the server
-    subsystem.
+    subsystem. To stop demo playback, type ‘disconnect’.
+
+seek [+-]<seconds>::
+    During demo playback, seeks the given number of _seconds_ from current
+    position in demo file. Prepend with ‘+’ to seek forward, prepend with
+    ‘-’ to seek backward. Initial forward seek may be slow, so be patient.
 
 record [-hzes] <filename>::
     Begins demo recording into ‘demos/_filename_.dm2’, or prints some

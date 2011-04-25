@@ -375,7 +375,11 @@ static void CL_ParseFrame( int extrabits ) {
     cl.oldframe = cl.frame;
     cl.frame = frame;
 
-    CL_DeltaFrame();
+    if( cls.demo.playback )
+        CL_EmitDemoSnapshot();
+
+    if( !cls.demo.seeking )
+        CL_DeltaFrame();
 }
 
 /*
@@ -405,6 +409,11 @@ static void CL_ParseConfigstring( int index ) {
             "%s: index %d overflowed: %"PRIz" > %"PRIz"\n",
             __func__, index, len, maxlen - 1 );
         len = maxlen - 1; 
+    }
+
+    if( cls.demo.seeking ) {
+        Q_SetBit( cl.dcs, index );
+        return;
     }
 
     if( cls.demo.recording && cls.demo.paused ) {
@@ -1234,3 +1243,101 @@ void CL_ParseServerMessage( void ) {
     }
 }
 
+/*
+=====================
+CL_SeekDemoMessage
+
+A variant of ParseServerMessage that skips over non-important action messages,
+used for seeking in demos.
+=====================
+*/
+void CL_SeekDemoMessage( void ) {
+    int         cmd, extrabits;
+    int         index;
+
+#ifdef _DEBUG
+    if( cl_shownet->integer == 1 ) {
+        Com_LPrintf( PRINT_DEVELOPER, "%"PRIz" ", msg_read.cursize );
+    } else if( cl_shownet->integer > 1 ) {
+        Com_LPrintf( PRINT_DEVELOPER, "------------------\n" );
+    }
+#endif
+
+//
+// parse the message
+//
+    while( 1 ) {
+        if( msg_read.readcount > msg_read.cursize ) {
+            Com_Error( ERR_DROP, "%s: read past end of server message", __func__ );
+        }
+
+        if( ( cmd = MSG_ReadByte() ) == -1 ) {
+            SHOWNET( 1, "%3"PRIz":END OF MESSAGE\n", msg_read.readcount - 1 );
+            break;
+        }
+
+        extrabits = cmd >> SVCMD_BITS;
+        cmd &= SVCMD_MASK;
+
+#ifdef _DEBUG
+        if( cl_shownet->integer > 1 ) {
+            MSG_ShowSVC( cmd );
+        }
+#endif
+
+    // other commands
+        switch( cmd ) {
+        default:
+            Com_Error( ERR_DROP, "%s: illegible server message: %d", __func__, cmd );
+            break;
+
+        case svc_nop:
+            break;
+
+        case svc_disconnect:
+        case svc_reconnect:
+            Com_Error( ERR_DISCONNECT, "Server disconnected" );
+            break;
+
+        case svc_print:
+            MSG_ReadByte();
+            // fall thorugh
+
+        case svc_centerprint:
+        case svc_stufftext:
+            MSG_ReadString( NULL, 0 );
+            break;
+
+        case svc_configstring:
+            index = MSG_ReadShort();
+            CL_ParseConfigstring( index );
+            break;
+
+        case svc_sound:
+            CL_ParseStartSoundPacket();
+            break;
+
+        case svc_temp_entity:
+            CL_ParseTEntPacket();
+            break;
+
+        case svc_muzzleflash:
+        case svc_muzzleflash2:
+            CL_ParseMuzzleFlashPacket( 0 );
+            break;
+
+        case svc_frame:
+            CL_ParseFrame( extrabits );
+            continue;
+
+        case svc_inventory:
+            CL_ParseInventory();
+            break;
+
+        case svc_layout:
+            CL_ParseLayout();
+            break;
+
+        }
+    }
+}

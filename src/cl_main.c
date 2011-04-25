@@ -661,26 +661,9 @@ void CL_Disconnect( error_type_t type ) {
         cls.netchan = NULL;
     }
 
-    // stop demo
-    if( cls.demo.recording ) {
-        CL_Stop_f();
-    }
+    // stop playback and/or recording
+    CL_CleanupDemos();
 
-    if( cls.demo.playback ) {
-        FS_FCloseFile( cls.demo.playback );
-
-        if( com_timedemo->integer ) {
-            unsigned msec = Sys_Milliseconds();
-            float sec = ( msec - cls.demo.time_start ) * 0.001f;
-            float fps = cls.demo.time_frames / sec;
-
-            Com_Printf( "%u frames, %3.1f seconds: %3.1f fps\n",
-                cls.demo.time_frames, sec, fps );
-        }
-    }
-
-    memset( &cls.demo, 0, sizeof( cls.demo ) );
-    
     // stop download
     CL_CleanupDownloads();
 

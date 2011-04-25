@@ -27,6 +27,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 static byte     demo_buffer[MAX_PACKETLEN_WRITABLE];
 static int      demo_extra;
 
+static cvar_t   *cl_demosnaps;
+
 // =========================================================================
 
 /*
@@ -68,14 +70,8 @@ fail:
     return qfalse;
 }
 
-/*
-=============
-CL_EmitPacketEntities
-
-Writes a delta update of an entity_state_t list to the message.
-=============
-*/
-static void CL_EmitPacketEntities( server_frame_t *from, server_frame_t *to ) {
+// writes a delta update of an entity_state_t list to the message.
+static void emit_packet_entities( server_frame_t *from, server_frame_t *to ) {
     entity_state_t    *oldent, *newent;
     int     oldindex, newindex;
     int     oldnum, newnum;
@@ -135,6 +131,27 @@ static void CL_EmitPacketEntities( server_frame_t *from, server_frame_t *to ) {
     MSG_WriteShort( 0 );    // end of packetentities
 }
 
+static void emit_delta_frame( server_frame_t *from, server_frame_t *to,
+    int fromnum, int tonum )
+{
+    MSG_WriteByte( svc_frame );
+    MSG_WriteLong( tonum );
+    MSG_WriteLong( fromnum ); // what we are delta'ing from
+    MSG_WriteByte( 0 ); // rate dropped packets
+
+    // send over the areabits
+    MSG_WriteByte( to->areabytes );
+    MSG_WriteData( to->areabits, to->areabytes );
+
+    // delta encode the playerstate
+    MSG_WriteByte( svc_playerinfo );
+    MSG_WriteDeltaPlayerstate_Default( from ? &from->ps : NULL, &to->ps );
+
+    // delta encode the entities
+    MSG_WriteByte( svc_packetentities );
+    emit_packet_entities( from, to );
+}
+
 /*
 ====================
 CL_EmitDemoFrame
@@ -147,19 +164,19 @@ void CL_EmitDemoFrame( void ) {
     player_state_t  *oldstate;
     int             lastframe;
 
-    if( cls.demo.paused ) {
+    if( cls.demo.paused )
         return;
-    }
 
-    if( cl.demoframe < 0 ) {
+    // the first frame is delta uncompressed
+    if( !cls.demo.frames_written ) {
         oldframe = NULL;
         oldstate = NULL;
         lastframe = -1;
     } else {
-        oldframe = &cl.frames[cl.demoframe & UPDATE_MASK];
+        oldframe = &cl.frames[cls.demo.last_frame & UPDATE_MASK];
         oldstate = &oldframe->ps;
-        lastframe = cl.demoframe + cl.demodelta;
-        if( oldframe->number != cl.demoframe || !oldframe->valid ||
+        lastframe = cls.demo.frames_written;
+        if( oldframe->number != cls.demo.last_frame || !oldframe->valid ||
             cl.numEntityStates - oldframe->firstEntity > MAX_PARSE_ENTITIES )
         {
             oldframe = NULL;
@@ -168,42 +185,34 @@ void CL_EmitDemoFrame( void ) {
         }
     }
 
-    MSG_WriteByte( svc_frame );
-    MSG_WriteLong( cl.frame.number + cl.demodelta );
-    MSG_WriteLong( lastframe );    // what we are delta'ing from
-    MSG_WriteByte( 0 );    // rate dropped packets
-
-    // send over the areabits
-    MSG_WriteByte( cl.frame.areabytes );
-    MSG_WriteData( cl.frame.areabits, cl.frame.areabytes );
-
-    // delta encode the playerstate
-    MSG_WriteByte( svc_playerinfo );
-    MSG_WriteDeltaPlayerstate_Default( oldstate, &cl.frame.ps );
-    
-    // delta encode the entities
-    MSG_WriteByte( svc_packetentities );
-    CL_EmitPacketEntities( oldframe, &cl.frame );
+    // we add 1 to frame number because frame 0 can't be used
+    emit_delta_frame( oldframe, &cl.frame, lastframe, cls.demo.frames_written + 1 );
 
     if( cls.demo.buffer.cursize + msg_write.cursize > cls.demo.buffer.maxsize ) {
         Com_DPrintf( "Demo frame overflowed\n" );
         cls.demo.frames_dropped++;
     } else {
         SZ_Write( &cls.demo.buffer, msg_write.data, msg_write.cursize );
-        cl.demoframe = cl.frame.number;
+        cls.demo.last_frame = cl.frame.number;
         cls.demo.frames_written++;
     }
 
     SZ_Clear( &msg_write );
 }
 
-static void CL_EmitZeroFrame( void ) {
-    cl.demodelta++; // insert new zero frame
+static void emit_zero_frame( void ) {
+    int             lastframe;
+
+    // the first frame is delta uncompressed
+    if( !cls.demo.frames_written )
+        lastframe = -1;
+    else
+        lastframe = cls.demo.frames_written;
 
     MSG_WriteByte( svc_frame );
-    MSG_WriteLong( cl.frame.number + cl.demodelta );
-    MSG_WriteLong( cl.frame.number + cl.demodelta - 1 );    // what we are delta'ing from
-    MSG_WriteByte( 0 );    // rate dropped packets
+    MSG_WriteLong( cls.demo.frames_written + 1 );
+    MSG_WriteLong( lastframe ); // what we are delta'ing from
+    MSG_WriteByte( 0 ); // rate dropped packets
 
     // send over the areabits
     MSG_WriteByte( cl.frame.areabytes );
@@ -363,10 +372,6 @@ static void CL_Record_f( void ) {
 
     demo_extra = 0;
 
-    // the first frame will be delta uncompressed
-    cl.demoframe = -1;
-    cl.demodelta = 0;
-
     // clear dirty configstrings
     memset( cl.dcs, 0, sizeof( cl.dcs ) );
 
@@ -439,53 +444,61 @@ static void CL_Record_f( void ) {
     // the rest of the demo file will be individual frames
 }
 
-static void CL_Suspend_f( void ) {
+static void flush_dirty_configstrings( void ) {
     int i, j, index;
-    size_t length, total = 0;
+    size_t len, total = 0;
 
+    for( i = 0; i < CS_BITMAP_LONGS; i++ ) {
+        if( ((uint32_t *)cl.dcs)[i] == 0 )
+            continue;
+
+        index = i << 5;
+        for( j = 0; j < 32; j++, index++ ) {
+            if( !Q_IsBitSet( cl.dcs, index ) )
+                continue;
+
+            len = strlen( cl.configstrings[index] );
+            if( len > MAX_QPATH )
+                len = MAX_QPATH;
+
+            if( msg_write.cursize + len + 4 > MAX_PACKETLEN_WRITABLE_DEFAULT ) {
+                if( !CL_WriteDemoMessage( &msg_write ) )
+                    return;
+            }
+
+            MSG_WriteByte( svc_configstring );
+            MSG_WriteShort( index );
+            MSG_WriteData( cl.configstrings[index], len );
+            MSG_WriteByte( 0 );
+            total += len + 4;
+        }
+    }
+
+    CL_WriteDemoMessage( &msg_write );
+
+    Com_DPrintf( "Flushed %"PRIz" bytes\n", total );
+}
+
+static void CL_Suspend_f( void ) {
     if( !cls.demo.recording ) {
         Com_Printf( "Not recording a demo.\n" );
         return;
     }
+
     if( !cls.demo.paused ) {
-        Com_Printf( "Suspended demo.\n" );
+        Com_Printf( "Suspended demo recording.\n" );
         cls.demo.paused = qtrue;
         return;
     }
 
     // XXX: embed these in frame instead?
-    for( i = 0; i < CS_BITMAP_LONGS; i++ ) {
-        if( (( uint32_t * )cl.dcs)[i] == 0 ) {
-            continue;
-        }
-        index = i << 5;
-        for( j = 0; j < 32; j++, index++ ) {
-            if( !Q_IsBitSet( cl.dcs, index ) ) {
-                continue;
-            }
-            length = strlen( cl.configstrings[index] );
-            if( length > MAX_QPATH ) {
-                length = MAX_QPATH;
-            }
-            if( msg_write.cursize + length + 4 > MAX_PACKETLEN_WRITABLE_DEFAULT ) {
-                if( !CL_WriteDemoMessage( &msg_write ) )
-                    return;
-            }
-            MSG_WriteByte( svc_configstring );
-            MSG_WriteShort( index );
-            MSG_WriteData( cl.configstrings[index], length );
-            MSG_WriteByte( 0 );
-            total += length + 4;
-        }
-    }
+    flush_dirty_configstrings();
 
-    // write it to the demo file
-    if( !CL_WriteDemoMessage( &msg_write ) )
+    if( !cls.demo.recording )
         return;
 
-    Com_Printf( "Resumed demo (%"PRIz" bytes flushed).\n", total );
+    Com_Printf( "Resumed demo recording.\n" );
 
-    cl.demodelta += cl.demoframe - cl.frame.number; // do not create holes
     cls.demo.paused = qfalse;
 
     // clear dirty configstrings
@@ -585,33 +598,27 @@ static int read_next_message( qhandle_t f ) {
     return 1;
 }
 
-static void parse_next_message( void ) {
-    int ret;
+static void finish_demo( int ret ) {
+    char *s = Cvar_VariableString( "nextserver" );
 
-    ret = read_next_message( cls.demo.playback );
-    if( ret <= 0 ) {
-        char *s = Cvar_VariableString( "nextserver" );
-
-        if( !s[0] ) {
-            if( ret == 0 ) {
-                Com_Error( ERR_DISCONNECT, "Demo finished" );
-            } else {
-                Com_Error( ERR_DROP, "Couldn't read demo: %s", Q_ErrorString( ret ) );
-            }
+    if( !s[0] ) {
+        if( ret == 0 ) {
+            Com_Error( ERR_DISCONNECT, "Demo finished" );
+        } else {
+            Com_Error( ERR_DROP, "Couldn't read demo: %s", Q_ErrorString( ret ) );
         }
-
-        CL_Disconnect( ERR_RECONNECT );
-
-        Cvar_Set( "nextserver", "" );
-
-        Cbuf_AddText( &cmd_buffer, s );
-        Cbuf_AddText( &cmd_buffer, "\n" );
-        Cbuf_Execute( &cmd_buffer );
-        return;
     }
 
-    CL_ParseServerMessage();
+    CL_Disconnect( ERR_RECONNECT );
 
+    Cvar_Set( "nextserver", "" );
+
+    Cbuf_AddText( &cmd_buffer, s );
+    Cbuf_AddText( &cmd_buffer, "\n" );
+    Cbuf_Execute( &cmd_buffer );
+}
+
+static void update_status( void ) {
     if( cls.demo.file_size ) {
         off_t pos = FS_Tell( cls.demo.playback );
 
@@ -619,6 +626,20 @@ static void parse_next_message( void ) {
             cls.demo.file_percent = ( pos - cls.demo.file_offset ) * 100 / cls.demo.file_size;
         }
     }
+}
+
+static void parse_next_message( void ) {
+    int ret;
+
+    ret = read_next_message( cls.demo.playback );
+    if( ret <= 0 ) {
+        finish_demo( ret );
+        return;
+    }
+
+    CL_ParseServerMessage();
+
+    update_status();
 }
 
 /*
@@ -675,6 +696,8 @@ static void CL_PlayDemo_f( void ) {
         parse_next_message();
     }
 
+    memcpy( cl.baseconfigstrings, cl.configstrings, sizeof( cl.baseconfigstrings ) );
+
     len = FS_Length( f );
     ofs = FS_Tell( f );
     if( len > 0 && ofs > 0 ) {
@@ -692,6 +715,223 @@ static void CL_Demo_c( genctx_t *ctx, int argnum ) {
     if( argnum == 1 ) {
         FS_File_g( "demos", "*.dm2;*.dm2.gz;*.mvd2;*.mvd2.gz", FS_SEARCH_SAVEPATH | FS_SEARCH_BYFILTER, ctx );
     }
+}
+
+#define DEMO_FPS    10
+
+typedef struct {
+    list_t entry;
+    int framenum;
+    off_t filepos;
+    size_t msglen;
+    byte data[1];
+} demosnap_t;
+
+/*
+====================
+CL_EmitDemoSnapshot
+
+Periodically builds a fake demo packet used to reconstruct delta compression
+state, configstrings and layouts at the given server frame.
+====================
+*/
+void CL_EmitDemoSnapshot( void ) {
+    demosnap_t *snap;
+    off_t pos;
+    char *from, *to;
+    size_t len;
+    server_frame_t *lastframe, *frame;
+    int i, j, lastnum;
+
+    if( cl_demosnaps->integer <= 0 )
+        return;
+
+    if( cl.frame.number < cls.demo.last_snapshot + cl_demosnaps->integer * DEMO_FPS )
+        return;
+
+    if( !cls.demo.file_size )
+        return;
+
+    pos = FS_Tell( cls.demo.playback );
+    if( pos < cls.demo.file_offset )
+        return;
+
+    // write all the backups, since we can't predict what frame the next
+    // delta will come from
+    lastframe = NULL;
+    lastnum = -1;
+    for( i = 0; i < UPDATE_BACKUP; i++ ) {
+        j = cl.frame.number - ( UPDATE_BACKUP - 1 ) + i;
+        frame = &cl.frames[j & UPDATE_MASK];
+        if( frame->number != j || !frame->valid ||
+            cl.numEntityStates - frame->firstEntity > MAX_PARSE_ENTITIES )
+        {
+            continue;
+        }
+
+        emit_delta_frame( lastframe, frame, lastnum, j );
+        lastframe = frame;
+        lastnum = frame->number;
+    }
+
+    // write configstrings
+    for( i = 0; i < MAX_CONFIGSTRINGS; i++ ) {
+        from = cl.baseconfigstrings[i];
+        to = cl.configstrings[i];
+
+        if( !strcmp( from, to ) )
+            continue;
+
+        len = strlen( to );
+        if( len > MAX_QPATH )
+            len = MAX_QPATH;
+
+        MSG_WriteByte( svc_configstring );
+        MSG_WriteShort( i );
+        MSG_WriteData( to, len );
+        MSG_WriteByte( 0 );
+    }
+
+    // write layout
+    MSG_WriteByte( svc_layout );
+    MSG_WriteString( cl.layout );
+
+    snap = Z_Malloc( sizeof( *snap ) + msg_write.cursize - 1 );
+    snap->framenum = cl.frame.number;
+    snap->filepos = pos;
+    snap->msglen = msg_write.cursize;
+    memcpy( snap->data, msg_write.data, msg_write.cursize );
+    List_Append( &cls.demo.snapshots, &snap->entry );
+
+    Com_DPrintf( "[%d] snaplen %"PRIz"\n", cl.frame.number, msg_write.cursize );
+
+    SZ_Clear( &msg_write );
+
+    cls.demo.last_snapshot = cl.frame.number;
+}
+
+static demosnap_t *find_snapshot( int framenum ) {
+    demosnap_t *snap, *prev;
+
+    if( LIST_EMPTY( &cls.demo.snapshots ) )
+        return NULL;
+
+    prev = LIST_FIRST( demosnap_t, &cls.demo.snapshots, entry );
+
+    LIST_FOR_EACH( demosnap_t, snap, &cls.demo.snapshots, entry ) {
+        if( snap->framenum > framenum )
+            break;
+        prev = snap;
+    }
+
+    return prev;
+}
+
+static void CL_Seek_f( void ) {
+    demosnap_t *snap;
+    int i, j, ret, index, frames, dest, prev;
+    char *from, *to;
+
+    if( Cmd_Argc() < 2 ) {
+        Com_Printf( "Usage: %s [+-]<seconds>\n", Cmd_Argv( 0 ) );
+        return;
+    }
+
+    if( !cls.demo.playback ) {
+        Com_Printf( "Not playing a demo.\n" );
+        return;
+    }
+
+    frames = atoi( Cmd_Argv( 1 ) ) * DEMO_FPS;
+    if( !frames )
+        return;
+
+    // disable effects processing
+    cls.demo.seeking = qtrue;
+
+    // clear dirty configstrings
+    memset( cl.dcs, 0, sizeof( cl.dcs ) );
+
+    dest = cl.frame.number + frames;
+    prev = cl.frame.number;
+
+    Com_DPrintf( "[%d] seeking to %d\n", cl.frame.number, dest );
+
+    // seek to the previous most recent snapshot
+    if( frames < 0 || cls.demo.last_snapshot > cl.frame.number ) {
+        snap = find_snapshot( dest );
+
+        if( snap ) {
+            Com_DPrintf( "found snap at %d\n", snap->framenum );
+            ret = FS_Seek( cls.demo.playback, snap->filepos );
+            if( ret < 0 ) {
+                Com_EPrintf( "Couldn't seek demo: %s\n", Q_ErrorString( ret ) );
+                goto done;
+            }
+
+            // reset configstrings
+            for( i = 0; i < MAX_CONFIGSTRINGS; i++ ) {
+                from = cl.baseconfigstrings[i];
+                to = cl.configstrings[i];
+
+                if( !strcmp( from, to ) )
+                    continue;
+
+                Q_SetBit( cl.dcs, i );
+                strcpy( to, from );
+            }
+
+            SZ_Init( &msg_read, snap->data, snap->msglen );
+            msg_read.cursize = snap->msglen;
+
+            CL_SeekDemoMessage();
+            Com_DPrintf( "[%d] after snap parse\n", cl.frame.number );
+        } else if( frames < 0 ) {
+            Com_Printf( "Couldn't seek backwards without snapshots!\n" );
+            goto done;
+        }
+    }
+
+    // skip forward to destination frame
+    while( cl.frame.number < dest ) {
+        ret = read_next_message( cls.demo.playback );
+        if( ret <= 0 ) {
+            finish_demo( ret );
+            return;
+        }
+
+        CL_SeekDemoMessage();
+    }
+
+    Com_DPrintf( "[%d] after skip\n", cl.frame.number );
+
+    // don't lerp to old
+    memset( &cl.oldframe, 0, sizeof( cl.oldframe ) );
+
+    // fix time delta
+    cl.serverdelta += cl.frame.number - prev;
+
+    CL_DeltaFrame();
+
+    // update dirty configstrings
+    for( i = 0; i < CS_BITMAP_LONGS; i++ ) {
+        if( ((uint32_t *)cl.dcs)[i] == 0 )
+            continue;
+
+        index = i << 5;
+        for( j = 0; j < 32; j++, index++ ) {
+            if( Q_IsBitSet( cl.dcs, index ) )
+                CL_UpdateConfigstring( index );
+        }
+    }
+
+    if( cls.demo.recording && !cls.demo.paused )
+        flush_dirty_configstrings();
+
+    update_status();
+
+done:
+    cls.demo.seeking = qfalse;
 }
 
 static void parse_info_string( demoInfo_t *info, int clientNum, int index, const char *string ) {
@@ -807,6 +1047,40 @@ fail:
 
 // =========================================================================
 
+void CL_CleanupDemos( void ) {
+    demosnap_t *snap, *next;
+    size_t total;
+
+    if( cls.demo.recording ) {
+        CL_Stop_f();
+    }
+
+    if( cls.demo.playback ) {
+        FS_FCloseFile( cls.demo.playback );
+
+        if( com_timedemo->integer ) {
+            unsigned msec = Sys_Milliseconds();
+            float sec = ( msec - cls.demo.time_start ) * 0.001f;
+            float fps = cls.demo.time_frames / sec;
+
+            Com_Printf( "%u frames, %3.1f seconds: %3.1f fps\n",
+                cls.demo.time_frames, sec, fps );
+        }
+    }
+
+    total = 0;
+    LIST_FOR_EACH_SAFE( demosnap_t, snap, next, &cls.demo.snapshots, entry ) {
+        total += snap->msglen;
+        Z_Free( snap );
+    }
+
+    if( total )
+        Com_DPrintf( "Freed %"PRIz" bytes of snaps\n", total );
+
+    memset( &cls.demo, 0, sizeof( cls.demo ) );
+
+    List_Init( &cls.demo.snapshots );
+}
 
 /*
 ====================
@@ -828,7 +1102,7 @@ void CL_DemoFrame( int msec ) {
         // for syncing with audio comments, etc
         demo_extra += msec;
         if( demo_extra > 100 ) {
-            CL_EmitZeroFrame();
+            emit_zero_frame();
             demo_extra = 0;
         }
     }
@@ -855,6 +1129,7 @@ static const cmdreg_t c_demo[] = {
     { "record", CL_Record_f, CL_Demo_c },
     { "stop", CL_Stop_f },
     { "suspend", CL_Suspend_f },
+    { "seek", CL_Seek_f },
 
     { NULL }
 };
@@ -865,7 +1140,10 @@ CL_InitDemos
 ====================
 */
 void CL_InitDemos( void ) {
+    cl_demosnaps = Cvar_Get( "cl_demosnaps", "10", 0 );
+
     Cmd_Register( c_demo );
+    List_Init( &cls.demo.snapshots );
 }
 
 

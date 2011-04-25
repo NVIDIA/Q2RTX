@@ -174,8 +174,12 @@ static void CL_SetActiveState( void ) {
         cl.initialSeq = cls.netchan->outgoing_sequence;
     }
 
-    // set initial cl.predicted_origin and cl.predicted_angles
-    if( !cls.demo.playback ) {
+    if( cls.demo.playback ) {
+        // force initial snapshot
+        cls.demo.last_snapshot = INT_MIN;
+        CL_EmitDemoSnapshot();
+    } else {
+        // set initial cl.predicted_origin and cl.predicted_angles
         VectorScale( cl.frame.ps.pmove.origin, 0.125f, cl.predicted_origin );
         VectorScale( cl.frame.ps.pmove.velocity, 0.125f, cl.predicted_velocity );
         if( cl.frame.ps.pmove.pm_type < PM_DEAD &&

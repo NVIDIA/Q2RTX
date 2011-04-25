@@ -149,8 +149,6 @@ typedef struct client_state_s {
 
     int             lastframe;
 
-    int             demoframe;
-    int             demodelta;
     byte            dcs[CS_BITMAP_BYTES];
 
     // the client maintains its own idea of view angles, which are
@@ -206,6 +204,7 @@ typedef struct client_state_s {
     int         maxclients;
     pmoveParams_t pmp;
 
+    char        baseconfigstrings[MAX_CONFIGSTRINGS][MAX_QPATH];
     char        configstrings[MAX_CONFIGSTRINGS][MAX_QPATH];
     char        mapname[MAX_QPATH]; // short format - q2dm1, etc
 
@@ -371,11 +370,15 @@ typedef struct client_static_s {
         unsigned    frames_written;
         unsigned    frames_dropped;
         unsigned    messages_dropped;
+        int         last_snapshot;
+        int         last_frame;
         int         file_size;
         int         file_offset;
         int         file_percent;
         sizebuf_t   buffer;
+        list_t      snapshots;
         qboolean    paused;
+        qboolean    seeking;
     } demo;
 } client_static_t;
 
@@ -568,6 +571,7 @@ extern mz_params_t      mz;
 extern snd_params_t     snd;
 
 void CL_ParseServerMessage (void);
+void CL_SeekDemoMessage( void );
 
 //
 // cl_ents.c
@@ -762,9 +766,11 @@ void CL_ParticleSteamEffect2(cl_sustain_t *self);
 // cl_demo.c
 //
 void CL_InitDemos( void );
+void CL_CleanupDemos( void );
 void CL_DemoFrame( int msec );
 qboolean CL_WriteDemoMessage( sizebuf_t *buf );
 void CL_EmitDemoFrame( void ); 
+void CL_EmitDemoSnapshot( void );
 void CL_Stop_f( void );
 demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info );
 
