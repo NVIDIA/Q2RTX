@@ -745,6 +745,8 @@ void Z_Free( void *ptr ) {
     if( z->tag != TAG_STATIC ) {
         z->prev->next = z->next;
         z->next->prev = z->prev;
+        z->magic = 0xdead;
+        z->tag = TAG_FREE;
         free( z );
     }
 }
