@@ -1596,14 +1596,62 @@ void MVD_StreamedStop_f( void ) {
     Com_Printf( "[%s] Stopped recording.\n", mvd->name );
 }
 
-static void MVD_EmitGamestate( mvd_t *mvd ) {
-    char        *string;
-    int         i;
-    edict_t     *ent;
-    mvd_player_t *player;
-    size_t      length;
-    int         flags, extra, portalbytes;
-    byte        portalbits[MAX_MAP_PORTAL_BYTES];
+static inline int player_flags( mvd_t *mvd, mvd_player_t *player ) {
+    int flags = 0;
+
+    if( !player->inuse )
+        flags |= MSG_PS_REMOVE;
+
+    return flags;
+}
+
+static inline int entity_flags( mvd_t *mvd, edict_t *ent ) {
+    int flags = MSG_ES_UMASK;
+
+    if( !ent->inuse ) {
+        flags |= MSG_ES_REMOVE;
+    } else if( ent->s.number <= mvd->maxclients ) {
+        mvd_player_t *player = &mvd->players[ ent->s.number - 1 ];
+        if( player->inuse && player->ps.pmove.pm_type == PM_NORMAL )
+            flags |= MSG_ES_FIRSTPERSON;
+    }
+
+    return flags;
+}
+
+static void emit_base_frame( mvd_t *mvd ) {
+    edict_t         *ent;
+    mvd_player_t    *player;
+    int             i, portalbytes;
+    byte            portalbits[MAX_MAP_PORTAL_BYTES];
+
+    portalbytes = CM_WritePortalBits( &mvd->cm, portalbits );
+    MSG_WriteByte( portalbytes );
+    MSG_WriteData( portalbits, portalbytes );
+
+    // send base player states
+    for( i = 0; i < mvd->maxclients; i++ ) {
+        player = &mvd->players[i];
+        MSG_WriteDeltaPlayerstate_Packet( NULL, &player->ps, i,
+            player_flags( mvd, player ) );
+    }
+
+    MSG_WriteByte( CLIENTNUM_NONE );
+
+    // send base entity states
+    for( i = 1; i < mvd->pool.num_edicts; i++ ) {
+        ent = &mvd->edicts[i];
+        ent->s.number = i;
+        MSG_WriteDeltaEntity( NULL, &ent->s, entity_flags( mvd, ent ) );
+    }
+
+    MSG_WriteShort( 0 );
+}
+
+static void emit_gamestate( mvd_t *mvd ) {
+    int         i, extra;
+    char        *s;
+    size_t      len;
 
     // pack MVD stream flags into extra bits
     extra = mvd->flags << SVCMD_BITS;
@@ -1618,53 +1666,23 @@ static void MVD_EmitGamestate( mvd_t *mvd ) {
 
     // send configstrings
     for( i = 0; i < MAX_CONFIGSTRINGS; i++ ) {
-        string = mvd->configstrings[i];
-        if( !string[0] ) {
+        s = mvd->configstrings[i];
+        if( !*s )
             continue;
-        }
-        length = strlen( string );
-        if( length > MAX_QPATH ) {
-            length = MAX_QPATH;
-        }
+
+        len = strlen( s );
+        if( len > MAX_QPATH )
+            len = MAX_QPATH;
 
         MSG_WriteShort( i );
-        MSG_WriteData( string, length );
+        MSG_WriteData( s, len );
         MSG_WriteByte( 0 );
     }
+
     MSG_WriteShort( MAX_CONFIGSTRINGS );
 
     // send baseline frame
-    portalbytes = CM_WritePortalBits( &mvd->cm, portalbits );
-    MSG_WriteByte( portalbytes );
-    MSG_WriteData( portalbits, portalbytes );
- 
-    // send base player states
-    for( i = 0, player = mvd->players; i < mvd->maxclients; i++, player++ ) {
-        flags = 0;
-        if( !player->inuse ) {
-            flags |= MSG_PS_REMOVE;
-        }
-        MSG_WriteDeltaPlayerstate_Packet( NULL, &player->ps, i, flags );
-    }
-    MSG_WriteByte( CLIENTNUM_NONE );
-
-    // send base entity states
-    for( i = 1, ent = mvd->edicts + 1; i < mvd->pool.num_edicts; i++, ent++ ) {
-        flags = MSG_ES_UMASK;
-        if( ent->inuse ) {
-            if( i <= mvd->maxclients ) {
-                player = &mvd->players[ i - 1 ];
-                if( player->inuse && player->ps.pmove.pm_type == PM_NORMAL ) {
-                    flags |= MSG_ES_FIRSTPERSON;
-                }
-            }
-        } else {
-            flags |= MSG_ES_REMOVE;
-        }
-        ent->s.number = i;
-        MSG_WriteDeltaEntity( NULL, &ent->s, flags );
-    }
-    MSG_WriteShort( 0 );
+    emit_base_frame( mvd );
 
     // TODO: write private layouts/configstrings
 }
@@ -1725,7 +1743,7 @@ void MVD_StreamedRecord_f( void ) {
     mvd->demorecording = f;
     mvd->demoname = MVD_CopyString( buffer );
 
-    MVD_EmitGamestate( mvd );
+    emit_gamestate( mvd );
 
     // write magic
     magic = MVD_MAGIC;
