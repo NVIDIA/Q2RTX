@@ -272,6 +272,13 @@ CL_Pause_f
 ==================
 */
 static void CL_Pause_f( void ) {
+#if USE_MVD_CLIENT
+    if( sv_running->integer == ss_broadcast ) {
+        Cbuf_InsertText( &cmd_buffer, "mvdpause @@\n" );
+        return;
+    }
+#endif
+
     if( cl_paused->integer == 2 ) {
         if( cls.key_dest & (KEY_CONSOLE|KEY_MENU) ) {
             // activate automatic pause

@@ -39,6 +39,6 @@ void SV_SetConsoleTitle( void );
 //void SV_ConsoleOutput( const char *msg );
 
 #if USE_MVD_CLIENT && USE_CLIENT
-int MVD_GetDemoPercent( void );
+int MVD_GetDemoPercent( qboolean *paused );
 #endif
 

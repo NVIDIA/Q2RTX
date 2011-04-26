@@ -354,7 +354,7 @@ static void SCR_DrawDebugGraph (void)
 }
 #endif
 
-static void draw_percent_bar( int percent ) {
+static void draw_percent_bar( int percent, qboolean paused ) {
     char buffer[16];
     int x, w;
     size_t len;
@@ -370,7 +370,7 @@ static void draw_percent_bar( int percent ) {
     x = ( scr.hud_width - len * CHAR_WIDTH ) / 2;
     R_DrawString( x, scr.hud_height, 0, MAX_STRING_CHARS, buffer, scr.font_pic );
 
-    if( sv_paused->integer && cl_paused->integer && scr_showpause->integer == 2 ) {
+    if( paused ) {
         SCR_DrawString( scr.hud_width, scr.hud_height, UI_RIGHT, "[PAUSED]" );
     }
 }
@@ -378,6 +378,7 @@ static void draw_percent_bar( int percent ) {
 static void draw_demo_bar( void ) {
 #if USE_MVD_CLIENT  
     int percent;
+    qboolean paused;
 #endif
 
     if( !scr_demobar->integer ) {
@@ -386,7 +387,11 @@ static void draw_demo_bar( void ) {
 
     if( cls.demo.playback ) {
         if( cls.demo.file_size ) {
-            draw_percent_bar( cls.demo.file_percent );
+            draw_percent_bar(
+                cls.demo.file_percent,
+                sv_paused->integer &&
+                cl_paused->integer &&
+                scr_showpause->integer == 2 );
         }
         return;
     }
@@ -396,11 +401,15 @@ static void draw_demo_bar( void ) {
         return;
     }
 
-    if( ( percent = MVD_GetDemoPercent() ) == -1 ) {
+    if( ( percent = MVD_GetDemoPercent( &paused ) ) == -1 ) {
         return;
     }
 
-    draw_percent_bar( percent );
+    if( sv_paused->integer && cl_paused->integer && scr_showpause->integer == 2 ) {
+        paused |= qtrue;
+    }
+
+    draw_percent_bar( percent, paused );
 #endif
 }
 

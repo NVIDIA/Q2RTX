@@ -411,23 +411,26 @@ int MVD_Frame( void ) {
 }
 
 #if USE_CLIENT
-int MVD_GetDemoPercent( void ) {
+int MVD_GetDemoPercent( qboolean *paused ) {
     mvd_t *mvd;
     gtv_t *gtv;
 
-    if( ( mvd = find_local_channel() ) == NULL ) {
-        return -1;
-    }
-    if( ( gtv = mvd->gtv ) == NULL ) {
-        return -1;
-    }
+    *paused = qfalse;
 
-    if( !gtv->demoplayback ) {
+    if( ( mvd = find_local_channel() ) == NULL )
         return -1;
-    }
-    if( !gtv->demosize ) {
+
+    if( ( gtv = mvd->gtv ) == NULL )
         return -1;
-    }
+
+    if( !gtv->demoplayback )
+        return -1;
+
+    *paused = mvd->state == MVD_WAITING ? qtrue : qfalse;
+
+    if( !gtv->demosize )
+        return -1;
+
     return gtv->demopos * 100 / gtv->demosize;
 }
 #endif
