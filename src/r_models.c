@@ -274,16 +274,27 @@ qhandle_t R_RegisterModel( const char *name ) {
     mod_load_t load;
     qerror_t ret;
 
-    if( name[0] == '*' ) {
+    // empty names are legal, silently ignore them
+    if( !*name )
+        return 0;
+
+    if( *name == '*' ) {
         // inline bsp model
         index = atoi( name + 1 );
         return ~index;
     }
 
     // normalize the path
-    namelen = FS_NormalizePathBuffer( normalized, name, sizeof( normalized ) );
-    if( namelen >= sizeof( normalized ) ) {
+    namelen = FS_NormalizePathBuffer( normalized, name, MAX_QPATH );
+
+    // this should never happen
+    if( namelen >= MAX_QPATH )
         Com_Error( ERR_DROP, "%s: oversize name", __func__ );
+
+    // normalized to empty name?
+    if( namelen == 0 ) {
+        Com_DPrintf( "%s: empty name\n", __func__ );
+        return 0;
     }
 
     // see if it's already loaded

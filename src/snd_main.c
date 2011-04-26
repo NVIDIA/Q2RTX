@@ -384,8 +384,9 @@ qhandle_t S_RegisterSound( const char *name ) {
     if( !s_started )
         return 0;
 
-    if( !name )
-        Com_Error( ERR_DROP, "%s: NULL", __func__ );
+    // empty names are legal, silently ignore them
+    if( !*name )
+        return 0;
 
     if( *name == '*' ) {
         len = Q_strlcpy( buffer, name, MAX_QPATH );
@@ -397,11 +398,13 @@ qhandle_t S_RegisterSound( const char *name ) {
             len = FS_NormalizePath( buffer, buffer );
     }
 
+    // this MAY happen after prepending "sound/"
     if( len >= MAX_QPATH ) {
         Com_DPrintf( "%s: oversize name\n", __func__ );
         return 0;
     }
 
+    // normalized to empty name?
     if( len == 0 ) {
         Com_DPrintf( "%s: empty name\n", __func__ );
         return 0;

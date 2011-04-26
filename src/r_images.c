@@ -1806,6 +1806,10 @@ static qhandle_t register_image( const char *name, imagetype_t type ) {
     qhandle_t handle;
     qerror_t ret;
 
+    // empty names are legal, silently ignore them
+    if( !*name )
+        return 0;
+
     ret = _register_image( name, type, &handle );
     if( handle ) {
         return handle;
