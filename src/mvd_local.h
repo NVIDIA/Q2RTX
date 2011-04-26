@@ -108,9 +108,19 @@ typedef enum {
     MVD_NUM_STATES
 } mvd_state_t;
 
+#define MVD_FPS 10
+
+typedef struct {
+    list_t entry;
+    int framenum;
+    off_t filepos;
+    size_t msglen;
+    byte data[1];
+} mvd_snap_t;
+
 struct gtv_s;
 
-// FIXME: entire struct is > 400 K in size!
+// FIXME: entire struct is > 500 kB in size!
 // need to eliminate those large static arrays below...
 typedef struct mvd_s {
     list_t      entry;
@@ -125,13 +135,16 @@ typedef struct mvd_s {
     // demo related variables
     qhandle_t   demorecording;
     char        *demoname;
+    qboolean    demoseeking;
+    int         last_snapshot;
+    list_t      snapshots;
 
     // delay buffer
     fifo_t      delay;
     size_t      msglen;
     unsigned    num_packets, min_packets;
     unsigned    underflows, overflows;
-    unsigned    framenum;
+    int         framenum;
 
     // game state
     char    gamedir[MAX_QPATH];
@@ -143,8 +156,10 @@ typedef struct mvd_s {
     vec3_t  spawnOrigin;
     vec3_t  spawnAngles;
     int     pm_type;
-    char            configstrings[MAX_CONFIGSTRINGS][MAX_QPATH]; // 133 K
-    edict_t         edicts[MAX_EDICTS]; // 266 K
+    byte            dcs[CS_BITMAP_BYTES];
+    char            baseconfigstrings[MAX_CONFIGSTRINGS][MAX_QPATH];
+    char            configstrings[MAX_CONFIGSTRINGS][MAX_QPATH];
+    edict_t         edicts[MAX_EDICTS];
     mvd_player_t    *players; // [maxclients]
     mvd_player_t    *dummy; // &players[clientNum]
     int             numplayers; // number of active players in frame
@@ -194,8 +209,9 @@ int MVD_Frame( void );
 // mvd_parse.c
 //
 
-void MVD_ParseMessage( mvd_t *mvd );
+qboolean MVD_ParseMessage( mvd_t *mvd );
 void MVD_ParseEntityString( mvd_t *mvd, const char *data );
+void MVD_ClearState( mvd_t *mvd, qboolean full );
 
 //
 // mvd_game.c

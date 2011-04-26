@@ -176,6 +176,10 @@ static void MVD_ParseMulticast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
         // intentional fallthrough
     case mvd_multicast_phs:
         leafnum = MSG_ReadShort();
+        if( mvd->demoseeking ) {
+            leaf1 = NULL;
+            break;
+        }
         leaf1 = CM_LeafNum( &mvd->cm, leafnum );
         BSP_ClusterVis( mvd->cm.cache, mask, leaf1->cluster, DVIS_PHS );
         break;
@@ -184,6 +188,10 @@ static void MVD_ParseMulticast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
         // intentional fallthrough
     case mvd_multicast_pvs:
         leafnum = MSG_ReadShort();
+        if( mvd->demoseeking ) {
+            leaf1 = NULL;
+            break;
+        }
         leaf1 = CM_LeafNum( &mvd->cm, leafnum );
         BSP_ClusterVis( mvd->cm.cache, mask, leaf1->cluster, DVIS_PVS );
         break;
@@ -197,6 +205,9 @@ static void MVD_ParseMulticast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
     if( msg_read.readcount > msg_read.cursize ) {
         MVD_Destroyf( mvd, "read past end of message" );
     }
+
+    if( mvd->demoseeking )
+        return;
 
     // send the data to all relevent clients
     FOR_EACH_MVDCL( client, mvd ) {
@@ -266,6 +277,9 @@ static void MVD_UnicastLayout( mvd_t *mvd, mvd_player_t *player ) {
         strcpy( mvd->oldscores, mvd->layout );
     }
 
+    if( mvd->demoseeking )
+        return;
+
     // force an update to all relevant clients
     FOR_EACH_MVDCL( client, mvd ) {
         if( client->cl->state < cs_spawned ) {
@@ -316,6 +330,9 @@ static void MVD_UnicastString( mvd_t *mvd, qboolean reliable, mvd_player_t *play
 
     memcpy( cs->string, string, length + 1 );
 
+    if( mvd->demoseeking )
+        return;
+
     length = msg_read.readcount - readcount;
     MVD_UnicastSend( mvd, reliable, data, length, player );
 }
@@ -333,6 +350,9 @@ static void MVD_UnicastPrint( mvd_t *mvd, qboolean reliable, mvd_player_t *playe
 
     level = MSG_ReadByte();
     MSG_ReadString( NULL, 0 );
+
+    if( mvd->demoseeking )
+        return;
 
     length = msg_read.readcount - readcount;
     
@@ -361,6 +381,11 @@ static void MVD_UnicastStuff( mvd_t *mvd, qboolean reliable, mvd_player_t *playe
     char string[8];
     byte *data;
     size_t readcount, length;
+
+    if( mvd->demoseeking ) {
+        MSG_ReadString( NULL, 0 );
+        return;
+    }
 
     data = msg_read.data + msg_read.readcount - 1;
     readcount = msg_read.readcount - 1;
@@ -430,7 +455,8 @@ static void MVD_ParseUnicast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
             // send remaining data and return
             data = msg_read.data + msg_read.readcount - 1;
             length = last - msg_read.readcount + 1;
-            MVD_UnicastSend( mvd, reliable, data, length, player );
+            if( !mvd->demoseeking )
+                MVD_UnicastSend( mvd, reliable, data, length, player );
             msg_read.readcount = last;
             return;
         }
@@ -490,6 +516,9 @@ static void MVD_ParseSound( mvd_t *mvd, int extrabits ) {
         Com_DPrintf( "%s: entnum not in use: %d\n", __func__, entnum );
         return;
     }
+
+    if( mvd->demoseeking )
+        return;
 
     FOR_EACH_MVDCL( client, mvd ) {
         cl = client->cl;
@@ -597,6 +626,9 @@ static void MVD_ParseConfigstring( mvd_t *mvd ) {
         MVD_Destroyf( mvd, "%s: index %d overflowed", __func__, index );
     }
 
+    if( mvd->demoseeking ) {
+        Q_SetBit( mvd->dcs, index );
+        return;
     }
 
     MVD_UpdateConfigstring( mvd, index );
@@ -612,6 +644,9 @@ static void MVD_ParsePrint( mvd_t *mvd ) {
     if( level == PRINT_HIGH && strstr( string, "Match ended." ) ) {
         match_ended_hack = qtrue;
     }
+
+    if( mvd->demoseeking )
+        return;
 
     MVD_BroadcastPrintf( mvd, level, level == PRINT_CHAT ?
         UF_MUTE_PLAYERS : 0, "%s", string );
@@ -689,7 +724,7 @@ static void MVD_ParsePacketEntities( mvd_t *mvd ) {
         MSG_ParseDeltaEntity( &ent->s, &ent->s, number, bits, 0 );
 
         // lazily relink even if removed
-        if( bits & RELINK_MASK ) {
+        if( ( bits & RELINK_MASK ) && !mvd->demoseeking ) {
             MVD_LinkEdict( mvd, ent );
         }
 
@@ -761,6 +796,7 @@ MVD_ParseFrame
 ================
 */
 static void MVD_ParseFrame( mvd_t *mvd ) {
+    byte *data;
     int length;
 
     // read portalbits
@@ -772,12 +808,14 @@ static void MVD_ParseFrame( mvd_t *mvd ) {
         if( length > MAX_MAP_PORTAL_BYTES ) {
             MVD_Destroyf( mvd, "%s: bad portalbits length: %d", __func__, length );
         }
-        CM_SetPortalStates( &mvd->cm, msg_read.data +
-            msg_read.readcount, length );
+        data = msg_read.data + msg_read.readcount;
         msg_read.readcount += length;
     } else {
-        CM_SetPortalStates( &mvd->cm, NULL, 0 );
+        data = NULL;
     }
+
+    if( !mvd->demoseeking )
+        CM_SetPortalStates( &mvd->cm, data, length );
 
     SHOWNET( 1, "%3"PRIz":playerinfo\n", msg_read.readcount - 1 );
     MVD_ParsePacketPlayers( mvd );
@@ -788,15 +826,16 @@ static void MVD_ParseFrame( mvd_t *mvd ) {
 
     // update clients now so that effects datagram that
     // follows can reference current view positions
-    if( mvd->state ) {
+    if( mvd->state && !mvd->demoseeking ) {
         MVD_UpdateClients( mvd );
     }
 
     mvd->framenum++;
 }
 
-static void MVD_ClearState( mvd_t *mvd ) {
+void MVD_ClearState( mvd_t *mvd, qboolean full ) {
     mvd_player_t *player;
+    mvd_snap_t *snap, *next;
     int i;
 
     // clear all entities, don't trust num_edicts as it is possible
@@ -810,7 +849,18 @@ static void MVD_ClearState( mvd_t *mvd ) {
         MVD_FreePlayer( player );
         memset( player, 0, sizeof( *player ) );
     }
+
     mvd->numplayers = 0;
+
+    if( !full )
+        return;
+
+    // free all snapshots
+    LIST_FOR_EACH_SAFE( mvd_snap_t, snap, next, &mvd->snapshots, entry ) {
+        Z_Free( snap );
+    }
+
+    List_Init( &mvd->snapshots );
 
     // free current map
     CM_FreeMap( &mvd->cm );
@@ -868,7 +918,7 @@ static void MVD_ParseServerData( mvd_t *mvd, int extrabits ) {
     edict_t *ent;
 
     // clear the leftover from previous level
-    MVD_ClearState( mvd );
+    MVD_ClearState( mvd, qtrue );
 
     // parse major protocol version
     protocol = MSG_ReadLong();
@@ -987,6 +1037,12 @@ static void MVD_ParseServerData( mvd_t *mvd, int extrabits ) {
     // parse baseline frame
     MVD_ParseFrame( mvd );
 
+    // save base configstrings
+    memcpy( mvd->baseconfigstrings, mvd->configstrings, sizeof( mvd->baseconfigstrings ) );
+
+    // force inital snapshot
+    mvd->last_snapshot = INT_MIN;
+
     // if the channel has been just created, init some things
     if( !mvd->state ) {
         mvd_t *cur;
@@ -1005,8 +1061,9 @@ static void MVD_ParseServerData( mvd_t *mvd, int extrabits ) {
     MVD_ChangeLevel( mvd );
 }
 
-void MVD_ParseMessage( mvd_t *mvd ) {
+qboolean MVD_ParseMessage( mvd_t *mvd ) {
     int     cmd, extrabits;
+    qboolean ret = qfalse;
 
 #ifdef _DEBUG
     if( mvd_shownet->integer == 1 ) {
@@ -1042,6 +1099,7 @@ void MVD_ParseMessage( mvd_t *mvd ) {
         switch( cmd ) {
         case mvd_serverdata:
             MVD_ParseServerData( mvd, extrabits );
+            ret |= qtrue;
             break;
         case mvd_multicast_all:
         case mvd_multicast_pvs:
@@ -1074,5 +1132,7 @@ void MVD_ParseMessage( mvd_t *mvd ) {
                 msg_read.readcount - 1, cmd );
         }
     }
+
+    return ret;
 }
 

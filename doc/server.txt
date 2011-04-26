@@ -364,6 +364,11 @@ mvd_stats_score::
        - 1 — MVD channel ID spectator is on
        - 2 — score of the chase target
 
+mvd_snaps::
+    Specifies time interval, in seconds, between saving ‘snapshots’ in memory
+    during MVD playback.  Snapshots enable backward seeking in demo (see ‘mvdseek’
+    command description), and speed up repeated forward seeks. Setting this
+    variable to 0 disables snapshotting entirely. Default value is 10.
 
 Hacks
 ~~~~~
@@ -679,6 +684,12 @@ mvdplay [-hl:n:r:] <[/]filename> [...]::
         default is ‘demX’
         -r | --replace=<channel>::: replace existing _channel_ playlist with
         new entries, don't create a new channel
+
+mvdseek [+-]<seconds> [channel]::
+    During MVD playback on the specified _channel_, seeks the given number of
+    _seconds_ from current position in demo file. Prepend with ‘+’ to seek
+    forward, prepend with ‘-’ to seek backward. Initial forward seek may be
+    slow, so be patient. Seeking during demo recording is not yet supported.
 
 mvdrecord [-hz] <filename> [channel]::
     Start MVD recording on the specified _channel_ into ‘demos/_filename_.mvd2’.
