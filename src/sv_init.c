@@ -273,6 +273,7 @@ void SV_InitGame( qboolean ismvd ) {
 #endif
 
         CM_FreeMap( &sv.cm );
+        SV_FreeFile( sv.entitystring );
         memset( &sv, 0, sizeof( sv ) );
     }
 
@@ -359,8 +360,6 @@ void SV_InitGame( qboolean ismvd ) {
 
     // send heartbeat very soon
     svs.last_heartbeat = -(HEARTBEAT_SECONDS-5)*1000;
-
-    List_Init( &svs.client_list );
 
     for( i = 0; i < sv_maxclients->integer; i++ ) {
         client = svs.client_pool + i;

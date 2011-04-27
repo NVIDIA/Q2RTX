@@ -28,6 +28,7 @@ LIST_DECL( sv_blacklist );
 LIST_DECL( sv_cmdlist_connect );
 LIST_DECL( sv_cmdlist_begin );
 LIST_DECL( sv_filterlist );
+LIST_DECL( sv_clientlist ); // linked list of non-free clients
 
 client_t    *sv_client;         // current client
 
@@ -106,7 +107,8 @@ void SV_RemoveClient( client_t *client ) {
         client->netchan = NULL;
     }
 
-    // unlink them from active client list
+    // unlink them from active client list, but don't clear the list entry
+    // itself to make code that traverses client list in a loop happy!
     List_Remove( &client->entry );
 
 #if USE_MVD_CLIENT
@@ -818,10 +820,8 @@ static void SVC_DirectConnect( void ) {
             }
 
             Com_DPrintf( "%s: reconnect\n", NET_AdrToString( &net_from ) );
-            newcl = cl;
-
-            // NOTE: it's safe to call SV_Remove since we exit the loop
             SV_RemoveClient( cl );
+            newcl = cl;
             break;
         }
     }
@@ -980,7 +980,7 @@ static void SVC_DirectConnect( void ) {
     }
 
     // add them to the linked list of connected clients
-    List_SeqAdd( &svs.client_list, &newcl->entry );
+    List_SeqAdd( &sv_clientlist, &newcl->entry );
 
     Com_DPrintf( "Going from cs_free to cs_assigned for %s\n", newcl->name );
     newcl->state = cs_assigned;
@@ -1452,7 +1452,7 @@ static inline qboolean check_paused( void ) {
 #if USE_MVD_CLIENT
         LIST_EMPTY( &mvd_gtv_list ) &&
 #endif
-        LIST_SINGLE( &svs.client_list ) )
+        LIST_SINGLE( &sv_clientlist ) )
     {
         if( !sv_paused->integer ) {
             Cvar_Set( "sv_paused", "1" );
@@ -1576,6 +1576,11 @@ Informs all masters that this server is going down
 */
 static void SV_MasterShutdown( void ) {
     master_t *m;
+
+    // reset ack times
+    FOR_EACH_MASTER( m ) {
+        m->last_ack = 0;
+    }
 
     if( !Com_IsDedicated() )
         return;        // only dedicated servers send heartbeats
@@ -1981,12 +1986,17 @@ Used by SV_Shutdown to send a final message to all
 connected clients before the server goes down. The messages are sent
 immediately, not just stuck on the outgoing message list, because the
 server is going to totally exit after returning from this function.
+
+Also resposible for freeing all clients.
 ==================
 */
-static void SV_FinalMessage( const char *message, int cmd ) {
+static void SV_FinalMessage( const char *message, error_type_t type ) {
     client_t    *client;
     netchan_t   *netchan;
     int         i;
+
+    if( LIST_EMPTY( &sv_clientlist ) )
+        return;
 
     if( message ) {
         MSG_WriteByte( svc_print );
@@ -1994,7 +2004,10 @@ static void SV_FinalMessage( const char *message, int cmd ) {
         MSG_WriteString( message );
     }
 
-    MSG_WriteByte( cmd );
+    if( type == ERR_RECONNECT )
+        MSG_WriteByte( svc_reconnect );
+    else
+        MSG_WriteByte( svc_disconnect );
 
     // send it twice
     // stagger the packets to crutch operating system limited buffers
@@ -2020,6 +2033,8 @@ static void SV_FinalMessage( const char *message, int cmd ) {
         }
         SV_RemoveClient( client );
     }
+
+    List_Init( &sv_clientlist );
 }
 
 
@@ -2027,37 +2042,28 @@ static void SV_FinalMessage( const char *message, int cmd ) {
 ================
 SV_Shutdown
 
-Called when each game quits, from Com_Quit or Com_Error
+Called when each game quits, from Com_Quit or Com_Error.
+Should be safe to call even if server is not fully initalized yet.
 ================
 */
 void SV_Shutdown( const char *finalmsg, error_type_t type ) {
-    master_t *m;
-
-    Cvar_Set( "sv_running", "0" );
-    Cvar_Set( "sv_paused", "0" );
-
-    if( !svs.initialized ) {
 #if USE_MVD_CLIENT
-        MVD_Shutdown(); // make sure MVD client is down
-#endif
-        return;
+    if( ge != &mvd_ge ) {
+        // shutdown MVD client now if not running the built-in MVD game module,
+        // otherwise SV_ShutdownGameProgs will take care of this
+        MVD_Shutdown();
     }
+#endif
 
 #if USE_AC_SERVER
     AC_Disconnect();
 #endif
 
 #if USE_MVD_SERVER
-    // shutdown MVD server
     SV_MvdShutdown( type );
 #endif
 
-    if( type == ERR_RECONNECT ) {
-        SV_FinalMessage( finalmsg, svc_reconnect );
-    } else {
-        SV_FinalMessage( finalmsg, svc_disconnect );
-    }
-
+    SV_FinalMessage( finalmsg, type );
     SV_MasterShutdown();
     SV_ShutdownGameProgs();
 
@@ -2074,16 +2080,14 @@ void SV_Shutdown( const char *finalmsg, error_type_t type ) {
 #endif
     memset( &svs, 0, sizeof( svs ) );
 
-    // reset masters
-    FOR_EACH_MASTER( m ) {
-        m->last_ack = 0;
-    }
-
     // reset rate limits
     init_rate_limits();
 
     sv_client = NULL;
     sv_player = NULL;
+
+    Cvar_Set( "sv_running", "0" );
+    Cvar_Set( "sv_paused", "0" );
 
 #if USE_SYSCON
     SV_SetConsoleTitle();

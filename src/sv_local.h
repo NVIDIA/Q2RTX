@@ -177,7 +177,7 @@ typedef struct {
 #define RATE_MESSAGES   10
 
 #define FOR_EACH_CLIENT( client ) \
-    LIST_FOR_EACH( client_t, client, &svs.client_list, entry )
+    LIST_FOR_EACH( client_t, client, &sv_clientlist, entry )
 
 #define PL_S2C(cl) (cl->frames_sent ? \
     (1.0f-(float)cl->frames_acked/cl->frames_sent)*100.0f : 0.0f)
@@ -372,7 +372,6 @@ typedef struct server_static_s {
     unsigned    realtime;           // always increasing, no clamping, etc
 
     client_t    *client_pool;   // [maxclients]
-    list_t      client_list;    // linked list of non-free clients
 
     unsigned        num_entities;   // maxclients*UPDATE_BACKUP*MAX_PACKET_ENTITIES
     unsigned        next_entity;    // next state to use
@@ -399,6 +398,7 @@ extern list_t      sv_blacklist;
 extern list_t      sv_cmdlist_connect;
 extern list_t      sv_cmdlist_begin;
 extern list_t      sv_filterlist;
+extern list_t      sv_clientlist; // linked list of non-free clients
 
 extern server_static_t     svs;        // persistant server info
 extern server_t            sv;         // local server

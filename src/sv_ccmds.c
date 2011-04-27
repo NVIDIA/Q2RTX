@@ -668,7 +668,7 @@ static void SV_Status_f( void ) {
         Com_Printf( "Current map: %s\n\n", sv.name );
     }
 
-    if( LIST_EMPTY( &svs.client_list ) ) {
+    if( LIST_EMPTY( &sv_clientlist ) ) {
         Com_Printf( "No UDP clients.\n" );
     } else {
         if( Cmd_Argc() > 1 ) {
@@ -901,7 +901,6 @@ static void SV_PickClient_f( void ) {
 SV_KillServer_f
 
 Kick everyone off, possibly in preparation for a new game
-
 ===============
 */
 static void SV_KillServer_f( void ) {

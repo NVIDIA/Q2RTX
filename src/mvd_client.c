@@ -381,7 +381,7 @@ int MVD_Frame( void ) {
     if( sv.state == ss_broadcast ) {
         unsigned delta = mvd_suspend_time->value * 60 * 1000;
 
-        if( !delta || !LIST_EMPTY( &svs.client_list ) ) {
+        if( !delta || !LIST_EMPTY( &sv_clientlist ) ) {
             prevtime = svs.realtime;
             if( !mvd_active ) {
                 Com_DPrintf( "Resuming MVD streams.\n" );
