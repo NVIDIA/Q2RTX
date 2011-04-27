@@ -31,6 +31,7 @@ LIST_DECL( sv_filterlist );
 LIST_DECL( sv_clientlist ); // linked list of non-free clients
 
 client_t    *sv_client;         // current client
+edict_t     *sv_player;         // current client edict
 
 cvar_t  *sv_enforcetime;
 cvar_t  *sv_allow_nodelta;
