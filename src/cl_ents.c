@@ -175,9 +175,8 @@ static void CL_SetActiveState( void ) {
     }
 
     if( cls.demo.playback ) {
-        // force initial snapshot
-        cls.demo.last_snapshot = INT_MIN;
-        CL_EmitDemoSnapshot();
+        // init some demo things
+        CL_FirstDemoFrame();
     } else {
         // set initial cl.predicted_origin and cl.predicted_angles
         VectorScale( cl.frame.ps.pmove.origin, 0.125f, cl.predicted_origin );

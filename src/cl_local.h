@@ -370,6 +370,7 @@ typedef struct client_static_s {
         unsigned    frames_written;
         unsigned    frames_dropped;
         unsigned    messages_dropped;
+        int         first_frame;
         int         last_snapshot;
         int         last_frame;
         int         file_size;
@@ -771,6 +772,7 @@ void CL_DemoFrame( int msec );
 qboolean CL_WriteDemoMessage( sizebuf_t *buf );
 void CL_EmitDemoFrame( void ); 
 void CL_EmitDemoSnapshot( void );
+void CL_FirstDemoFrame( void );
 void CL_Stop_f( void );
 demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info );
 

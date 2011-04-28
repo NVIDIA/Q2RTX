@@ -644,9 +644,10 @@ static void update_status( void ) {
     if( cls.demo.file_size ) {
         off_t pos = FS_Tell( cls.demo.playback );
 
-        if( pos > cls.demo.file_offset ) {
+        if( pos > cls.demo.file_offset )
             cls.demo.file_percent = ( pos - cls.demo.file_offset ) * 100 / cls.demo.file_size;
-        }
+        else
+            cls.demo.file_percent = 0;
     }
 }
 
@@ -672,7 +673,6 @@ CL_PlayDemo_f
 static void CL_PlayDemo_f( void ) {
     char name[MAX_OSPATH];
     qhandle_t f;
-    ssize_t len, ofs;
     int type;
 
     if( Cmd_Argc() < 2 ) {
@@ -720,20 +720,6 @@ static void CL_PlayDemo_f( void ) {
     while( cls.state == ca_connected ) {
         Cbuf_Execute( &cl_cmdbuf );
         parse_next_message();
-    }
-
-    memcpy( cl.baseconfigstrings, cl.configstrings, sizeof( cl.baseconfigstrings ) );
-
-    len = FS_Length( f );
-    ofs = FS_Tell( f );
-    if( len > 0 && ofs > 0 ) {
-        cls.demo.file_offset = ofs;
-        cls.demo.file_size = len - ofs;
-    }
-
-    if( com_timedemo->integer ) {
-        cls.demo.time_frames = 0;
-        cls.demo.time_start = Sys_Milliseconds();
     }
 }
 
@@ -851,6 +837,41 @@ static demosnap_t *find_snapshot( int framenum ) {
     }
 
     return prev;
+}
+
+/*
+====================
+CL_FirstDemoFrame
+
+Called after the first valid frame is parsed from the demo.
+====================
+*/
+void CL_FirstDemoFrame( void ) {
+    ssize_t len, ofs;
+
+    Com_DPrintf( "[%d] first frame\n", cl.frame.number );
+    cls.demo.first_frame = cl.frame.number;
+
+    // save base configstrings
+    memcpy( cl.baseconfigstrings, cl.configstrings, sizeof( cl.baseconfigstrings ) );
+
+    // obtain file length and offset of the first frame
+    len = FS_Length( cls.demo.playback );
+    ofs = FS_Tell( cls.demo.playback );
+    if( len > 0 && ofs > 0 ) {
+        cls.demo.file_offset = ofs;
+        cls.demo.file_size = len - ofs;
+    }
+
+    // begin timedemo
+    if( com_timedemo->integer ) {
+        cls.demo.time_frames = 0;
+        cls.demo.time_start = Sys_Milliseconds();
+    }
+
+    // force initial snapshot
+    cls.demo.last_snapshot = INT_MIN;
+    CL_EmitDemoSnapshot();
 }
 
 static void CL_Seek_f( void ) {
