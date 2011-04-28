@@ -60,6 +60,8 @@ qboolean CL_WriteDemoMessage( sizebuf_t *buf ) {
     if( ret != buf->cursize )
         goto fail;
 
+    Com_DDPrintf( "%s: wrote %"PRIz" bytes\n", __func__, buf->cursize );
+
     SZ_Clear( buf );
     return qtrue;
 
@@ -152,6 +154,25 @@ static void emit_delta_frame( server_frame_t *from, server_frame_t *to,
     emit_packet_entities( from, to );
 }
 
+// the only place where last_frame is updated
+static void flush_demo_frame( void ) {
+    if( cls.demo.buffer.cursize + msg_write.cursize > cls.demo.buffer.maxsize ) {
+        Com_DPrintf( "Demo frame overflowed\n" );
+        cls.demo.frames_dropped++;
+    } else {
+        SZ_Write( &cls.demo.buffer, msg_write.data, msg_write.cursize );
+        cls.demo.last_frame = cl.frame.number;
+        cls.demo.frames_written++;
+    }
+
+    SZ_Clear( &msg_write );
+}
+
+// frames_written counter starts at 0, but we add 1 to every frame number
+// because frame 0 can't be used due to protocol limitation (hack).
+#define FRAME_PRE   (cls.demo.frames_written)
+#define FRAME_CUR   (cls.demo.frames_written + 1)
+
 /*
 ====================
 CL_EmitDemoFrame
@@ -168,14 +189,14 @@ void CL_EmitDemoFrame( void ) {
         return;
 
     // the first frame is delta uncompressed
-    if( !cls.demo.frames_written ) {
+    if( FRAME_PRE == 0 ) {
         oldframe = NULL;
         oldstate = NULL;
         lastframe = -1;
     } else {
         oldframe = &cl.frames[cls.demo.last_frame & UPDATE_MASK];
         oldstate = &oldframe->ps;
-        lastframe = cls.demo.frames_written;
+        lastframe = FRAME_PRE;
         if( oldframe->number != cls.demo.last_frame || !oldframe->valid ||
             cl.numEntityStates - oldframe->firstEntity > MAX_PARSE_ENTITIES )
         {
@@ -185,32 +206,22 @@ void CL_EmitDemoFrame( void ) {
         }
     }
 
-    // we add 1 to frame number because frame 0 can't be used
-    emit_delta_frame( oldframe, &cl.frame, lastframe, cls.demo.frames_written + 1 );
-
-    if( cls.demo.buffer.cursize + msg_write.cursize > cls.demo.buffer.maxsize ) {
-        Com_DPrintf( "Demo frame overflowed\n" );
-        cls.demo.frames_dropped++;
-    } else {
-        SZ_Write( &cls.demo.buffer, msg_write.data, msg_write.cursize );
-        cls.demo.last_frame = cl.frame.number;
-        cls.demo.frames_written++;
-    }
-
-    SZ_Clear( &msg_write );
+    // emit and flush frame
+    emit_delta_frame( oldframe, &cl.frame, lastframe, FRAME_CUR );
+    flush_demo_frame();
 }
 
 static void emit_zero_frame( void ) {
     int             lastframe;
 
     // the first frame is delta uncompressed
-    if( !cls.demo.frames_written )
+    if( FRAME_PRE == 0 )
         lastframe = -1;
     else
-        lastframe = cls.demo.frames_written;
+        lastframe = FRAME_PRE;
 
     MSG_WriteByte( svc_frame );
-    MSG_WriteLong( cls.demo.frames_written + 1 );
+    MSG_WriteLong( FRAME_CUR );
     MSG_WriteLong( lastframe ); // what we are delta'ing from
     MSG_WriteByte( 0 ); // rate dropped packets
 
@@ -444,10 +455,14 @@ static void CL_Record_f( void ) {
     // the rest of the demo file will be individual frames
 }
 
-static void flush_dirty_configstrings( void ) {
+// resumes demo recording after pause or seek. tries to fit flushed
+// configstrings and frame into single packet for seamless 'stitch'
+static void resume_record( void ) {
     int i, j, index;
-    size_t len, total = 0;
+    size_t len;
+    char *s;
 
+    // write dirty configstrings
     for( i = 0; i < CS_BITMAP_LONGS; i++ ) {
         if( ((uint32_t *)cl.dcs)[i] == 0 )
             continue;
@@ -457,26 +472,33 @@ static void flush_dirty_configstrings( void ) {
             if( !Q_IsBitSet( cl.dcs, index ) )
                 continue;
 
-            len = strlen( cl.configstrings[index] );
+            s = cl.configstrings[index];
+
+            len = strlen( s );
             if( len > MAX_QPATH )
                 len = MAX_QPATH;
 
-            if( msg_write.cursize + len + 4 > MAX_PACKETLEN_WRITABLE_DEFAULT ) {
-                if( !CL_WriteDemoMessage( &msg_write ) )
+            if( cls.demo.buffer.cursize + len + 4 > cls.demo.buffer.maxsize ) {
+                if( !CL_WriteDemoMessage( &cls.demo.buffer ) )
                     return;
+                // multiple packets = not seamless
             }
 
-            MSG_WriteByte( svc_configstring );
-            MSG_WriteShort( index );
-            MSG_WriteData( cl.configstrings[index], len );
-            MSG_WriteByte( 0 );
-            total += len + 4;
+            SZ_WriteByte( &cls.demo.buffer, svc_configstring );
+            SZ_WriteShort( &cls.demo.buffer, index );
+            SZ_Write( &cls.demo.buffer, s, len );
+            SZ_WriteByte( &cls.demo.buffer, 0 );
         }
     }
 
-    CL_WriteDemoMessage( &msg_write );
+    // emit and flush delta uncompressed frame
+    emit_delta_frame( NULL, &cl.frame, -1, FRAME_CUR );
+    flush_demo_frame();
 
-    Com_DPrintf( "Flushed %"PRIz" bytes\n", total );
+    // FIXME: write layout if it fits? most likely it won't
+
+    // write it to the demo file
+    CL_WriteDemoMessage( &cls.demo.buffer );
 }
 
 static void CL_Suspend_f( void ) {
@@ -491,10 +513,10 @@ static void CL_Suspend_f( void ) {
         return;
     }
 
-    // XXX: embed these in frame instead?
-    flush_dirty_configstrings();
+    resume_record();
 
     if( !cls.demo.recording )
+        // write failed
         return;
 
     Com_Printf( "Resumed demo recording.\n" );
@@ -937,7 +959,7 @@ static void CL_Seek_f( void ) {
     }
 
     if( cls.demo.recording && !cls.demo.paused )
-        flush_dirty_configstrings();
+        resume_record();
 
     update_status();
 
