@@ -336,10 +336,6 @@ static void CL_ParseFrame( int extrabits ) {
 #endif
         frame.clientNum = cl.clientNum;
     }
-    if( !frame.ps.fov ) {
-        // fail out early to prevent spurious errors later
-        Com_Error( ERR_DROP, "%s: bad fov", __func__ );
-    }
 
     // parse packetentities
     if( cls.serverProtocol <= PROTOCOL_VERSION_DEFAULT ) {
@@ -370,6 +366,11 @@ static void CL_ParseFrame( int extrabits ) {
     if( !frame.valid ) {
         cl.frame.valid = qfalse;
         return; // do not change anything
+    }
+
+    if( !frame.ps.fov ) {
+        // fail out early to prevent spurious errors later
+        Com_Error( ERR_DROP, "%s: bad fov", __func__ );
     }
 
     cl.oldframe = cl.frame;
