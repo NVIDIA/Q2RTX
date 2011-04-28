@@ -2143,6 +2143,24 @@ static size_t CL_Timer_m( char *buffer, size_t size ) {
     return Q_scnprintf( buffer, size, "%i:%02i", min, sec );
 }
 
+static size_t CL_DemoPos_m( char *buffer, size_t size ) {
+    int sec, min, framenum;
+
+    if( cls.demo.playback )
+        framenum = cl.frame.number - cls.demo.first_frame;
+    else
+#if USE_MVD_CLIENT
+        if( MVD_GetDemoPercent( NULL, &framenum ) == -1 )
+#endif
+        framenum = 0;
+
+    sec = framenum / 10; framenum %= 10;
+    min = sec / 60; sec %= 60;
+
+    return Q_scnprintf( buffer, sizeof( buffer ),
+        "%d:%02d.%d", min, sec, framenum );
+}
+
 static size_t CL_Fps_m( char *buffer, size_t size ) {
     return Q_scnprintf( buffer, size, "%i", C_FPS );
 }
@@ -2559,6 +2577,7 @@ static void CL_InitLocal ( void ) {
     Cmd_AddMacro( "cl_mapname", CL_Mapname_m );
     Cmd_AddMacro( "cl_server", CL_Server_m );
     Cmd_AddMacro( "cl_timer", CL_Timer_m );
+    Cmd_AddMacro( "cl_demopos", CL_DemoPos_m );
     Cmd_AddMacro( "cl_ups", CL_Ups_m );
     Cmd_AddMacro( "cl_fps", CL_Fps_m );
     Cmd_AddMacro( "r_fps", R_Fps_m );

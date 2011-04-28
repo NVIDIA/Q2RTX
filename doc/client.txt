@@ -895,6 +895,7 @@ cl_armor:: armor statistic seen in the HUD
 cl_ammo:: ammo statistic seen in the HUD
 cl_health:: health statistic seen in the HUD
 cl_timer:: time since level load
+cl_demopos:: current position in demo, in _timespec_ syntax
 cl_server:: address of the server client is connected to
 cl_mapname:: name of the current map
 loc_there:: name of the location player is looking at
