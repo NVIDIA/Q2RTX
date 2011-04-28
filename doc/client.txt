@@ -342,6 +342,9 @@ OLDENT::     Server sent a delta compressed frame whose entities are too
 scr_demobar::
     Toggles drawing of progress bar at the bottom of the screen during demo
     playback. Default value is 1.
+      - 0 — do not draw demo bar
+      - 1 — draw demo bar and demo completion percentage
+      - 2 — draw demo bar, demo completion percentage and current demo time
 
 scr_showpause::
     Toggles drawing of pause indicator on the screen. Default value is 1.
