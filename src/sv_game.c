@@ -342,6 +342,11 @@ static void PF_configstring( int index, const char *val ) {
     if( index < 0 || index >= MAX_CONFIGSTRINGS )
         Com_Error( ERR_DROP, "%s: bad index: %d", __func__, index );
 
+    if( sv.state == ss_dead ) {
+        Com_WPrintf( "%s: not yet initialized\n", __func__ );
+        return;
+    }
+
     if( !val )
         val = "";
 
