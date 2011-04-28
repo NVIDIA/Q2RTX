@@ -685,11 +685,26 @@ mvdplay [-hl:n:r:] <[/]filename> [...]::
         -r | --replace=<channel>::: replace existing _channel_ playlist with
         new entries, don't create a new channel
 
-mvdseek [+-]<seconds> [channel]::
-    During MVD playback on the specified _channel_, seeks the given number of
-    _seconds_ from current position in demo file. Prepend with ‘+’ to seek
-    forward, prepend with ‘-’ to seek backward. Initial forward seek may be
-    slow, so be patient. Seeking during demo recording is not yet supported.
+mvdseek [+-]<timespec> [channel]::
+    Seeks the given amount of time during demo playback on the specified
+    _channel_.  Prepend with ‘+’ to seek forward counting from current
+    position, prepend with ‘-’ to seek backward counting from current position.
+    Without prefix, seeks to an absolute position within the demo file, counted
+    from the last map change. See below for _timespec_ syntax description.
+    Initial forward seek may be slow, so be patient. For multi-map recordings,
+    it is not possible to return to the previous map by seeking. Seeking during
+    demo recording is not yet supported.
+
+.MVD time specification
+***********************
+Absolute or relative MVD time can be specified in one of the following
+formats:
+
+* SS, where SS are seconds
+* SS.F, where SS are seconds, F are tenths of second
+* MM:SS, where MM are minutes, SS are seconds
+* MM:SS.F, where MM are minutes, SS are seconds, F are tenths of second
+***********************
 
 mvdrecord [-hz] <filename> [channel]::
     Start MVD recording on the specified _channel_ into ‘demos/_filename_.mvd2’.

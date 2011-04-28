@@ -1470,6 +1470,55 @@ void Com_PlayerToEntityState( const player_state_t *ps, entity_state_t *es ) {
     es->angles[ROLL] = 0;
 }
 
+#if USE_CLIENT || USE_MVD_CLIENT
+/*
+================
+Com_ParseTimespec
+
+Parses time/frame specification for seeking in demos.
+Does not check for integer overflow...
+================
+*/
+qboolean Com_ParseTimespec( const char *s, int *frames ) {
+    unsigned long c1, c2, c3;
+    char *p;
+
+    c1 = strtoul( s, &p, 10 );
+    if( !*p ) {
+        *frames = c1 * 10; // sec
+        return qtrue;
+    }
+
+    if( *p == '.' ) {
+        c2 = strtoul( p + 1, &p, 10 );
+        if( *p )
+            return qfalse;
+        *frames = c1 * 10 + c2; // sec.frac
+        return qtrue;
+    }
+
+    if( *p == ':' ) {
+        c2 = strtoul( p + 1, &p, 10 );
+        if( !*p ) {
+            *frames = c1 * 600 + c2 * 10; // min:sec
+            return qtrue;
+        }
+
+        if( *p == '.' ) {
+            c3 = strtoul( p + 1, &p, 10 );
+            if( *p )
+                return qfalse;
+            *frames = c1 * 600 + c2 * 10 + c3; // min:sec.frac
+            return qtrue;
+        }
+
+        return qfalse;
+    }
+
+    return qfalse;
+}
+#endif
+
 /*
 ================
 Com_HashString

@@ -729,8 +729,6 @@ static void CL_Demo_c( genctx_t *ctx, int argnum ) {
     }
 }
 
-#define DEMO_FPS    10
-
 typedef struct {
     list_t entry;
     int framenum;
@@ -758,7 +756,7 @@ void CL_EmitDemoSnapshot( void ) {
     if( cl_demosnaps->integer <= 0 )
         return;
 
-    if( cl.frame.number < cls.demo.last_snapshot + cl_demosnaps->integer * DEMO_FPS )
+    if( cl.frame.number < cls.demo.last_snapshot + cl_demosnaps->integer * 10 )
         return;
 
     if( !cls.demo.file_size )
@@ -880,7 +878,7 @@ static void CL_Seek_f( void ) {
     char *from, *to;
 
     if( Cmd_Argc() < 2 ) {
-        Com_Printf( "Usage: %s [+-]<seconds>\n", Cmd_Argv( 0 ) );
+        Com_Printf( "Usage: %s [+-]<timespec>\n", Cmd_Argv( 0 ) );
         return;
     }
 
@@ -896,8 +894,29 @@ static void CL_Seek_f( void ) {
         return;
     }
 
-    frames = atoi( Cmd_Argv( 1 ) ) * DEMO_FPS;
+    to = Cmd_Argv( 1 );
+
+    if( *to == '-' || *to == '+' ) {
+        // relative to current frame
+        if( !Com_ParseTimespec( to + 1, &frames ) ) {
+            Com_Printf( "Invalid relative timespec.\n" );
+            return;
+        }
+        if( *to == '-' )
+            frames = -frames;
+        dest = cl.frame.number + frames;
+    } else {
+        // relative to first frame
+        if( !Com_ParseTimespec( to, &frames ) ) {
+            Com_Printf( "Invalid absolute timespec.\n" );
+            return;
+        }
+        dest = cls.demo.first_frame + frames;
+        frames = dest - cl.frame.number;
+    }
+
     if( !frames )
+        // already there
         return;
 
     // disable effects processing
@@ -906,7 +925,7 @@ static void CL_Seek_f( void ) {
     // clear dirty configstrings
     memset( cl.dcs, 0, sizeof( cl.dcs ) );
 
-    dest = cl.frame.number + frames;
+    // save previous position
     prev = cl.frame.number;
 
     Com_DPrintf( "[%d] seeking to %d\n", cl.frame.number, dest );
@@ -983,6 +1002,8 @@ static void CL_Seek_f( void ) {
         resume_record();
 
     update_status();
+
+    cl.frameflags = 0;
 
 done:
     cls.demo.seeking = qfalse;

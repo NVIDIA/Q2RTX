@@ -108,8 +108,6 @@ typedef enum {
     MVD_NUM_STATES
 } mvd_state_t;
 
-#define MVD_FPS 10
-
 typedef struct {
     list_t entry;
     int framenum;

@@ -548,7 +548,7 @@ static void demo_emit_snapshot( mvd_t *mvd ) {
     if( mvd_snaps->integer <= 0 )
         return;
 
-    if( mvd->framenum < mvd->last_snapshot + mvd_snaps->integer * MVD_FPS )
+    if( mvd->framenum < mvd->last_snapshot + mvd_snaps->integer * 10 )
         return;
 
     gtv = mvd->gtv;
@@ -2062,13 +2062,13 @@ static void MVD_Seek_f( void ) {
     mvd_t *mvd;
     gtv_t *gtv;
     mvd_snap_t *snap;
-    int i, j, ret, index, frames, dest, prev;
+    int i, j, ret, index, frames, dest;
     char *from, *to;
     edict_t *ent;
     qboolean gamestate;
 
     if( Cmd_Argc() < 2 ) {
-        Com_Printf( "Usage: %s [+-]<seconds> [chanid]\n", Cmd_Argv( 0 ) );
+        Com_Printf( "Usage: %s [+-]<timespec> [chanid]\n", Cmd_Argv( 0 ) );
         return;
     }
 
@@ -2089,8 +2089,29 @@ static void MVD_Seek_f( void ) {
         return;
     }
 
-    frames = atoi( Cmd_Argv( 1 ) ) * MVD_FPS;
+    to = Cmd_Argv( 1 );
+
+    if( *to == '-' || *to == '+' ) {
+        // relative to current frame
+        if( !Com_ParseTimespec( to + 1, &frames ) ) {
+            Com_Printf( "Invalid relative timespec.\n" );
+            return;
+        }
+        if( *to == '-' )
+            frames = -frames;
+        dest = mvd->framenum + frames;
+    } else {
+        // relative to first frame
+        if( !Com_ParseTimespec( to, &frames ) ) {
+            Com_Printf( "Invalid absolute timespec.\n" );
+            return;
+        }
+        dest = frames;
+        frames = dest - mvd->framenum;
+    }
+
     if( !frames )
+        // already there
         return;
 
     if( setjmp( mvd_jmpbuf ) )
@@ -2101,9 +2122,6 @@ static void MVD_Seek_f( void ) {
 
     // clear dirty configstrings
     memset( mvd->dcs, 0, sizeof( mvd->dcs ) );
-
-    dest = mvd->framenum + frames;
-    prev = mvd->framenum;
 
     Com_DPrintf( "[%d] seeking to %d\n", mvd->framenum, dest );
 

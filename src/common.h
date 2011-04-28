@@ -521,6 +521,10 @@ void        Com_Color_g( genctx_t *ctx );
 #endif
 void        Com_PlayerToEntityState( const player_state_t *ps, entity_state_t *es );
 
+#if USE_CLIENT || USE_MVD_CLIENT
+qboolean    Com_ParseTimespec( const char *s, int *frames );
+#endif
+
 qboolean    Com_WildCmpEx( const char *filter, const char *string, int term, qboolean ignorecase );
 #define Com_WildCmp( filter, string )  Com_WildCmpEx( filter, string, 0, qfalse )
 
