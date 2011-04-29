@@ -242,9 +242,13 @@ static void emit_zero_frame( void ) {
 static size_t format_demo_status( char *buffer, size_t size ) {
     off_t pos = FS_Tell( cls.demo.recording );
     size_t len = Com_FormatSizeLong( buffer, size, pos );
+    int min, sec, frames = cls.demo.frames_written;
 
-    len += Q_scnprintf( buffer + len, size - len, ", %u frames",
-        cls.demo.frames_written );
+    sec = frames / 10; frames %= 10;
+    min = sec / 60; sec %= 60;
+
+    len += Q_scnprintf( buffer + len, size - len, ", %d:%02d.%d",
+        min, sec, frames );
 
     if( cls.demo.frames_dropped || cls.demo.messages_dropped ) {
         len += Q_scnprintf( buffer + len, size - len, ", %u/%u dropped",
