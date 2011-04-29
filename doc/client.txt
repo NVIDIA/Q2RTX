@@ -838,6 +838,11 @@ cl_demosnaps::
     command description), and speed up repeated forward seeks. Setting this
     variable to 0 disables snapshotting entirely. Default value is 10.
 
+cl_demomsglen::
+    Specifies default maximum message size used for demo recording. Default
+    value is 1390.  See ‘record’ command description for more information on
+    demo packet sizes.
+
 ui_open::
     Specifies if menu is automatically opened on startup, instead of full
     screen console. Default value is 1 (open menu).
@@ -959,12 +964,14 @@ formats:
 
 record [-hzes] <filename>::
     Begins demo recording into ‘demos/_filename_.dm2’, or prints some
-    statistics if already recording.
+    statistics if already recording. If neither ‘--extended’ nor ‘--standard’
+    options are specified, this command uses maximum demo message size defined
+    by ‘cl_demomsglen’ cvar.
 
         -h | --help::: display help message
         -z | --compress::: compress demo with gzip
-        -e | --extended::: use extended packet size
-        -s | --standard::: use standard packet size
+        -e | --extended::: use extended packet size (4086 bytes)
+        -s | --standard::: use standard packet size (1390 bytes)
 
 TIP: With Q2PRO it is possible to record a demo while playing back another one.
 
@@ -972,7 +979,7 @@ stop::
     Stops demo recording and prints some statistics about recorded demo.
 
 suspend::
-    Pauses or resumes demo recording (experimental).
+    Pauses and resumes demo recording.
 
 .Demo packet sizes
 ******************
@@ -984,7 +991,8 @@ to disk is automatically downgraded to protocol 34. This can result in dropping
 of large frames that don't fit into standard protocol 34 limit.  Demo packet
 size can be extended to overcome this, but the resulting demo will be playable
 only by Q2PRO and R1Q2 clients and will be incompatible with other Quake 2
-clients or demo editing tools. By default, ‘standard’ packet size is used.
+clients or demo editing tools. By default, ‘standard’ packet size is used. This
+default can be changed using ‘cl_demomsglen’ cvar.
 ******************
 
 

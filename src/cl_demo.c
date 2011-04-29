@@ -24,10 +24,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "cl_local.h"
 
-static byte     demo_buffer[MAX_PACKETLEN_WRITABLE];
+static byte     demo_buffer[MAX_PACKETLEN];
 static int      demo_extra;
 
 static cvar_t   *cl_demosnaps;
+static cvar_t   *cl_demomsglen;
 
 // =========================================================================
 
@@ -327,7 +328,10 @@ static void CL_Record_f( void ) {
     char            *s;
     qhandle_t       f;
     unsigned        mode = FS_MODE_WRITE;
-    size_t          size = MAX_PACKETLEN_WRITABLE_DEFAULT;
+    size_t          size = Cvar_ClampInteger(
+                        cl_demomsglen,
+                        MIN_PACKETLEN,
+                        MAX_PACKETLEN_WRITABLE );
 
     while( ( c = Cmd_ParseOptions( o_record ) ) != -1 ) {
         switch( c ) {
@@ -411,16 +415,14 @@ static void CL_Record_f( void ) {
     // configstrings
     for( i = 0; i < MAX_CONFIGSTRINGS; i++ ) {
         s = cl.configstrings[i];
-        if( !s[0] ) {
+        if( !*s )
             continue;
-        }
 
         len = strlen( s );
-        if( len > MAX_QPATH ) {
+        if( len > MAX_QPATH )
             len = MAX_QPATH;
-        }
-        
-        if( msg_write.cursize + len + 4 > MAX_PACKETLEN_WRITABLE_DEFAULT ) {
+
+        if( msg_write.cursize + len + 4 > size ) {
             if( !CL_WriteDemoMessage( &msg_write ) )
                 return;
         }
@@ -434,11 +436,10 @@ static void CL_Record_f( void ) {
     // baselines
     for( i = 1; i < MAX_EDICTS; i++ ) {
         ent = &cl.baselines[i];
-        if( !ent->number ) {
+        if( !ent->number )
             continue;
-        }
 
-        if( msg_write.cursize + 64 > MAX_PACKETLEN_WRITABLE_DEFAULT ) {
+        if( msg_write.cursize + 64 > size ) {
             if( !CL_WriteDemoMessage( &msg_write ) )
                 return;
         }
@@ -1225,6 +1226,7 @@ CL_InitDemos
 */
 void CL_InitDemos( void ) {
     cl_demosnaps = Cvar_Get( "cl_demosnaps", "10", 0 );
+    cl_demomsglen = Cvar_Get( "cl_demomsglen", va( "%d", MAX_PACKETLEN_WRITABLE_DEFAULT ), 0 );
 
     Cmd_Register( c_demo );
     List_Init( &cls.demo.snapshots );
