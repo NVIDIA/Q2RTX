@@ -605,6 +605,9 @@ CL_ClearState
 void CL_ClearState( void ) {
     S_StopAllSounds();
     CL_ClearEffects();
+#if USE_LIGHTSTYLES
+    CL_ClearLightStyles();
+#endif
     CL_ClearTEnts();
     LOC_FreeLocations();
 

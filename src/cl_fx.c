@@ -47,7 +47,7 @@ static clightstyle_t    cl_lightstyles[MAX_LIGHTSTYLES];
 static LIST_DECL( cl_lightlist );
 static int          cl_lastofs;
 
-static void clear_lightstyles( void ) {
+void CL_ClearLightStyles( void ) {
     memset( cl_lightstyles, 0, sizeof( cl_lightstyles ) );
     List_Init( &cl_lightlist );
     cl_lastofs = -1;
@@ -1919,9 +1919,6 @@ void CL_ClearEffects (void)
     clear_particles ();
 #if USE_DLIGHTS
     clear_dlights ();
-#endif
-#if USE_LIGHTSTYLES
-    clear_lightstyles ();
 #endif
 }
 

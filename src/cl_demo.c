@@ -922,6 +922,9 @@ static void CL_Seek_f( void ) {
     // clear dirty configstrings
     memset( cl.dcs, 0, sizeof( cl.dcs ) );
 
+    // stop sounds
+    S_StopAllSounds();
+
     // save previous position
     prev = cl.frame.number;
 
@@ -978,9 +981,14 @@ static void CL_Seek_f( void ) {
     // don't lerp to old
     memset( &cl.oldframe, 0, sizeof( cl.oldframe ) );
 
+    // clear old effects
+    CL_ClearEffects();
+    CL_ClearTEnts();
+
     // fix time delta
     cl.serverdelta += cl.frame.number - prev;
 
+    // fire up destination frame
     CL_DeltaFrame();
 
     // update dirty configstrings

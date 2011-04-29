@@ -714,6 +714,7 @@ void CL_RunDLights (void);
 void CL_AddDLights (void);
 #endif
 #if USE_LIGHTSTYLES
+void CL_ClearLightStyles( void );
 void CL_SetLightStyle( int index, const char *s );
 void CL_RunLightStyles (void);
 void CL_AddLightStyles (void);
