@@ -452,17 +452,40 @@ ssize_t FS_Tell( qhandle_t f ) {
     }
 }
 
+static qerror_t seek_pak_file( file_t *file, off_t offset ) {
+    packfile_t *entry = file->entry;
+    long filepos;
+
+    if( offset > entry->filelen )
+        offset = entry->filelen;
+
+    if( entry->filepos > LONG_MAX - offset )
+        return Q_ERR_INVAL;
+
+    filepos = entry->filepos + offset;
+    if( fseek( file->fp, filepos, SEEK_SET ) == -1 )
+        return Q_ERR(errno);
+
+    file->rest_out = entry->filelen - offset;
+
+    return Q_ERR_SUCCESS;
+}
+
 /*
 ============
 FS_Seek
+
+Seeks to an absolute position within the file.
 ============
 */
 qerror_t FS_Seek( qhandle_t f, off_t offset ) {
     file_t *file = file_for_handle( f );
 
-    if( offset > LONG_MAX ) {
+    if( offset > LONG_MAX )
         return Q_ERR_INVAL;
-    }
+
+    if( offset < 0 )
+        offset = 0;
 
     switch( file->type ) {
     case FS_REAL:
@@ -470,6 +493,8 @@ qerror_t FS_Seek( qhandle_t f, off_t offset ) {
             return Q_ERR(errno);
         }
         return Q_ERR_SUCCESS;
+    case FS_PAK:
+        return seek_pak_file( file, offset );
 #if USE_ZLIB
     case FS_GZ:
         if( gzseek( file->zfp, (z_off_t)offset, SEEK_SET ) == -1 ) {
