@@ -245,7 +245,7 @@ void CL_DeltaFrame( void ) {
         CL_EntityEvent( state->number );
     }
 
-    if( cls.demo.recording ) {
+    if( cls.demo.recording && !cls.demo.paused && !cls.demo.seeking ) {
         CL_EmitDemoFrame();
     }
 

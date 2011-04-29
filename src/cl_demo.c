@@ -185,9 +185,6 @@ void CL_EmitDemoFrame( void ) {
     player_state_t  *oldstate;
     int             lastframe;
 
-    if( cls.demo.paused )
-        return;
-
     // the first frame is delta uncompressed
     if( FRAME_PRE == 0 ) {
         oldframe = NULL;
