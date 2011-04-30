@@ -494,8 +494,10 @@ static void resume_record( void ) {
     }
 
     // emit and flush delta uncompressed frame
-    emit_delta_frame( NULL, &cl.frame, -1, FRAME_CUR );
-    flush_demo_frame();
+    if( cl.frame.valid ) {
+        emit_delta_frame( NULL, &cl.frame, -1, FRAME_CUR );
+        flush_demo_frame();
+    }
 
     // FIXME: write layout if it fits? most likely it won't
 
@@ -759,6 +761,9 @@ void CL_EmitDemoSnapshot( void ) {
         return;
 
     if( cls.demo.frames_read < cls.demo.last_snapshot + cl_demosnaps->integer * 10 )
+        return;
+
+    if( !cl.frame.valid )
         return;
 
     if( !cls.demo.file_size )
