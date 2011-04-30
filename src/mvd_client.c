@@ -2103,11 +2103,10 @@ static void MVD_Seek_f( void ) {
         dest = mvd->framenum + frames;
     } else {
         // relative to first frame
-        if( !Com_ParseTimespec( to, &frames ) ) {
+        if( !Com_ParseTimespec( to, &dest ) ) {
             Com_Printf( "Invalid absolute timespec.\n" );
             return;
         }
-        dest = frames;
         frames = dest - mvd->framenum;
     }
 
