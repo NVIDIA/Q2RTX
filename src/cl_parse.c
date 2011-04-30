@@ -376,8 +376,6 @@ static void CL_ParseFrame( int extrabits ) {
     cl.oldframe = cl.frame;
     cl.frame = frame;
 
-    if( cls.demo.playback )
-        CL_EmitDemoSnapshot();
 
     if( !cls.demo.seeking )
         CL_DeltaFrame();
@@ -1219,9 +1217,7 @@ void CL_ParseServerMessage( void ) {
             continue;
         }
 
-        //
         // if recording demos, copy off protocol invariant stuff
-        //
         if( cls.demo.recording && !cls.demo.paused ) {
             size_t len = msg_read.readcount - readcount;
 
@@ -1236,12 +1232,14 @@ void CL_ParseServerMessage( void ) {
         }
     }
 
-//
 // if recording demos, write the message out
-//
     if( cls.demo.recording && !cls.demo.paused ) {
         CL_WriteDemoMessage( &cls.demo.buffer );
     }
+
+// if playing demos, save a snapshot once the full packet is parsed
+    if( cls.demo.playback )
+        CL_EmitDemoSnapshot();
 }
 
 /*

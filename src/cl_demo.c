@@ -871,7 +871,6 @@ void CL_FirstDemoFrame( void ) {
 
     // force initial snapshot
     cls.demo.last_snapshot = INT_MIN;
-    CL_EmitDemoSnapshot();
 }
 
 static void CL_Seek_f( void ) {
@@ -979,6 +978,7 @@ static void CL_Seek_f( void ) {
         }
 
         CL_SeekDemoMessage();
+        CL_EmitDemoSnapshot();
     }
 
     Com_DPrintf( "[%d] after skip\n", cl.frame.number );
