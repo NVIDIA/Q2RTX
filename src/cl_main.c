@@ -2150,7 +2150,7 @@ static size_t CL_DemoPos_m( char *buffer, size_t size ) {
     int sec, min, framenum;
 
     if( cls.demo.playback )
-        framenum = cl.frame.number - cls.demo.first_frame;
+        framenum = cls.demo.frames_read;
     else
 #if USE_MVD_CLIENT
         if( MVD_GetDemoPercent( NULL, &framenum ) == -1 )

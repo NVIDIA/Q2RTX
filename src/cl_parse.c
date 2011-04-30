@@ -376,6 +376,7 @@ static void CL_ParseFrame( int extrabits ) {
     cl.oldframe = cl.frame;
     cl.frame = frame;
 
+    cls.demo.frames_read++;
 
     if( !cls.demo.seeking )
         CL_DeltaFrame();

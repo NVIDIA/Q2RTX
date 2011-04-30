@@ -401,7 +401,7 @@ static void draw_demo_bar( void ) {
                 sv_paused->integer &&
                 cl_paused->integer &&
                 scr_showpause->integer == 2,
-                cl.frame.number - cls.demo.first_frame );
+                cls.demo.frames_read );
         }
         return;
     }

@@ -946,20 +946,28 @@ demo [/]<filename[.ext]>::
 
 seek [+-]<timespec>::
     Seeks the given amount of time during demo playback.  Prepend with ‘+’ to
-    seek forward counting from current position, prepend with ‘-’ to seek
-    backward counting from current position. Without prefix, seeks to an
-    absolute position within the demo file. See below for _timespec_ syntax
-    description. Initial forward seek may be slow, so be patient.
+    seek forward relative to current position, prepend with ‘-’ to seek
+    backward relative to current position. Without prefix, seeks to an absolute
+    position within the demo file. See below for _timespec_ syntax description.
+    Initial forward seek may be slow, so be patient.
+
+NOTE: The ‘seek’ command actually operates on demo frame numbers, not pure
+server time.  Therefore, ‘seek +300’ does not exactly mean ‘skip 5 minutes of
+server time’, but just means ‘skip 3000 demo frames’, which may account for
+*more* than 5 minutes if there were dropped frames. For most demos, however,
+correspondence between frame numbers and server time should be reasonably
+close.
 
 .Demo time specification
 ************************
 Absolute or relative demo time can be specified in one of the following
 formats:
 
+* .FF, where FF are frames
 * SS, where SS are seconds
-* SS.F, where SS are seconds, F are tenths of second
+* SS.FF, where SS are seconds, FF are frames
 * MM:SS, where MM are minutes, SS are seconds
-* MM:SS.F, where MM are minutes, SS are seconds, F are tenths of second
+* MM:SS.FF, where MM are minutes, SS are seconds, FF are frames
 ************************
 
 record [-hzes] <filename>::

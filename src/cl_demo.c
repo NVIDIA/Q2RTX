@@ -252,7 +252,7 @@ static size_t format_demo_status( char *buffer, size_t size ) {
         min, sec, frames );
 
     if( cls.demo.frames_dropped || cls.demo.messages_dropped ) {
-        len += Q_scnprintf( buffer + len, size - len, ", %u/%u dropped",
+        len += Q_scnprintf( buffer + len, size - len, ", %d/%d dropped",
             cls.demo.frames_dropped, cls.demo.messages_dropped );
     }
 
@@ -758,7 +758,7 @@ void CL_EmitDemoSnapshot( void ) {
     if( cl_demosnaps->integer <= 0 )
         return;
 
-    if( cl.frame.number < cls.demo.last_snapshot + cl_demosnaps->integer * 10 )
+    if( cls.demo.frames_read < cls.demo.last_snapshot + cl_demosnaps->integer * 10 )
         return;
 
     if( !cls.demo.file_size )
@@ -809,17 +809,17 @@ void CL_EmitDemoSnapshot( void ) {
     MSG_WriteString( cl.layout );
 
     snap = Z_Malloc( sizeof( *snap ) + msg_write.cursize - 1 );
-    snap->framenum = cl.frame.number;
+    snap->framenum = cls.demo.frames_read;
     snap->filepos = pos;
     snap->msglen = msg_write.cursize;
     memcpy( snap->data, msg_write.data, msg_write.cursize );
     List_Append( &cls.demo.snapshots, &snap->entry );
 
-    Com_DPrintf( "[%d] snaplen %"PRIz"\n", cl.frame.number, msg_write.cursize );
+    Com_DPrintf( "[%d] snaplen %"PRIz"\n", cls.demo.frames_read, msg_write.cursize );
 
     SZ_Clear( &msg_write );
 
-    cls.demo.last_snapshot = cl.frame.number;
+    cls.demo.last_snapshot = cls.demo.frames_read;
 }
 
 static demosnap_t *find_snapshot( int framenum ) {
@@ -850,12 +850,11 @@ void CL_FirstDemoFrame( void ) {
     ssize_t len, ofs;
 
     Com_DPrintf( "[%d] first frame\n", cl.frame.number );
-    cls.demo.first_frame = cl.frame.number;
 
     // save base configstrings
     memcpy( cl.baseconfigstrings, cl.configstrings, sizeof( cl.baseconfigstrings ) );
 
-    // obtain file length and offset of the first frame
+    // obtain file length and offset of the second frame
     len = FS_Length( cls.demo.playback );
     ofs = FS_Tell( cls.demo.playback );
     if( len > 0 && ofs > 0 ) {
@@ -905,15 +904,14 @@ static void CL_Seek_f( void ) {
         }
         if( *to == '-' )
             frames = -frames;
-        dest = cl.frame.number + frames;
+        dest = cls.demo.frames_read + frames;
     } else {
         // relative to first frame
-        if( !Com_ParseTimespec( to, &frames ) ) {
+        if( !Com_ParseTimespec( to, &dest ) ) {
             Com_Printf( "Invalid absolute timespec.\n" );
             return;
         }
-        dest = cls.demo.first_frame + frames;
-        frames = dest - cl.frame.number;
+        frames = dest - cls.demo.frames_read;
     }
 
     if( !frames )
@@ -929,13 +927,13 @@ static void CL_Seek_f( void ) {
     // stop sounds
     S_StopAllSounds();
 
-    // save previous position
+    // save previous server frame number
     prev = cl.frame.number;
 
-    Com_DPrintf( "[%d] seeking to %d\n", cl.frame.number, dest );
+    Com_DPrintf( "[%d] seeking to %d\n", cls.demo.frames_read, dest );
 
     // seek to the previous most recent snapshot
-    if( frames < 0 || cls.demo.last_snapshot > cl.frame.number ) {
+    if( frames < 0 || cls.demo.last_snapshot > cls.demo.frames_read ) {
         snap = find_snapshot( dest );
 
         if( snap ) {
@@ -962,7 +960,8 @@ static void CL_Seek_f( void ) {
             msg_read.cursize = snap->msglen;
 
             CL_SeekDemoMessage();
-            Com_DPrintf( "[%d] after snap parse\n", cl.frame.number );
+            cls.demo.frames_read = snap->framenum;
+            Com_DPrintf( "[%d] after snap parse %d\n", cls.demo.frames_read, cl.frame.number );
         } else if( frames < 0 ) {
             Com_Printf( "Couldn't seek backwards without snapshots!\n" );
             goto done;
@@ -970,7 +969,7 @@ static void CL_Seek_f( void ) {
     }
 
     // skip forward to destination frame
-    while( cl.frame.number < dest ) {
+    while( cls.demo.frames_read < dest ) {
         ret = read_next_message( cls.demo.playback );
         if( ret <= 0 ) {
             finish_demo( ret );
@@ -981,7 +980,7 @@ static void CL_Seek_f( void ) {
         CL_EmitDemoSnapshot();
     }
 
-    Com_DPrintf( "[%d] after skip\n", cl.frame.number );
+    Com_DPrintf( "[%d] after skip %d\n", cls.demo.frames_read, cl.frame.number );
 
     // update dirty configstrings
     for( i = 0; i < CS_BITMAP_LONGS; i++ ) {
