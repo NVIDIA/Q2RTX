@@ -983,6 +983,18 @@ static void CL_Seek_f( void ) {
 
     Com_DPrintf( "[%d] after skip\n", cl.frame.number );
 
+    // update dirty configstrings
+    for( i = 0; i < CS_BITMAP_LONGS; i++ ) {
+        if( ((uint32_t *)cl.dcs)[i] == 0 )
+            continue;
+
+        index = i << 5;
+        for( j = 0; j < 32; j++, index++ ) {
+            if( Q_IsBitSet( cl.dcs, index ) )
+                CL_UpdateConfigstring( index );
+        }
+    }
+
     // don't lerp to old
     memset( &cl.oldframe, 0, sizeof( cl.oldframe ) );
 
@@ -995,18 +1007,6 @@ static void CL_Seek_f( void ) {
 
     // fire up destination frame
     CL_DeltaFrame();
-
-    // update dirty configstrings
-    for( i = 0; i < CS_BITMAP_LONGS; i++ ) {
-        if( ((uint32_t *)cl.dcs)[i] == 0 )
-            continue;
-
-        index = i << 5;
-        for( j = 0; j < 32; j++, index++ ) {
-            if( Q_IsBitSet( cl.dcs, index ) )
-                CL_UpdateConfigstring( index );
-        }
-    }
 
     if( cls.demo.recording && !cls.demo.paused )
         resume_record();
