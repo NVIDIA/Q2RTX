@@ -2202,6 +2202,11 @@ static void MVD_Seek_f( void ) {
     // ouch
     CM_SetPortalStates( &mvd->cm, NULL, 0 );
 
+    // init world entity
+    ent = &mvd->edicts[0];
+    ent->solid = SOLID_BSP;
+    ent->inuse = qtrue;
+
     // relink entities, reset origins and events
     for( i = 1; i < mvd->pool.num_edicts; i++ ) {
         ent = &mvd->edicts[i];
