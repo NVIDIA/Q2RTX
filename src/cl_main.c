@@ -2411,6 +2411,18 @@ static void cl_allow_download_changed( cvar_t *self ) {
     }
 }
 
+// ugly hack for compatibility
+static void cl_chat_sound_changed( cvar_t *self ) {
+    if( !*self->string )
+        self->integer = 0;
+    else if( !Q_stricmp( self->string, "misc/talk.wav" ) )
+        self->integer = 1;
+    else if( !Q_stricmp( self->string, "misc/talk1.wav" ) )
+        self->integer = 2;
+    else if( !self->integer && !COM_IsUint( self->string ) )
+        self->integer = 1;
+}
+
 static const cmdreg_t c_client[] = {
     { "cmd", CL_ForwardToServer_f },
     { "pause", CL_Pause_f },
@@ -2540,7 +2552,9 @@ static void CL_InitLocal ( void ) {
 #endif
 
     cl_chat_notify = Cvar_Get( "cl_chat_notify", "1", 0 );
-    cl_chat_sound = Cvar_Get( "cl_chat_sound", "misc/talk.wav", 0 );
+    cl_chat_sound = Cvar_Get( "cl_chat_sound", "1", 0 );
+    cl_chat_sound->changed = cl_chat_sound_changed;
+    cl_chat_sound_changed( cl_chat_sound );
     cl_chat_filter = Cvar_Get( "cl_chat_filter", "0", 0 );
 
     cl_disconnectcmd = Cvar_Get( "cl_disconnectcmd", "", 0 );
