@@ -425,18 +425,22 @@ static void GL_DrawEntities( int mask ) {
             continue;
         }
 
-        if( model->frames ) {
+        switch( model->type ) {
+        case MOD_ALIAS:
             GL_DrawAliasModel( model );
-        } else if( model->spriteframes ) {
+            break;
+        case MOD_SPRITE:
             GL_DrawSpriteModel( model );
-        } else {
+            break;
+        case MOD_EMPTY:
+            break;
+        default:
             Com_Error( ERR_FATAL, "%s: bad model type", __func__ );
         }
 
         if( gl_showorigins->integer ) {
             GL_DrawNullModel();
         }
-
     }
 }
 

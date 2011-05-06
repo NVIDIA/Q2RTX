@@ -519,11 +519,16 @@ static int R_DrawEntities( int translucent ) {
             VectorCopy (currententity->origin, r_entorigin);
             VectorSubtract (r_origin, r_entorigin, modelorg);
 
-            if( currentmodel->frames ) {
+            switch( currentmodel->type ) {
+            case MOD_ALIAS:
                 R_AliasDrawModel();
-            } else if( currentmodel->spriteframes ) {
+                break;
+            case MOD_SPRITE:
                 R_DrawSprite();
-            } else {
+                break;
+            case MOD_EMPTY:
+                break;
+            default:
                 Com_Error( ERR_FATAL, "%s: bad model type", __func__ );
             }
         }

@@ -38,6 +38,12 @@ typedef struct mspriteframe_s {
 } mspriteframe_t;
 
 typedef struct model_s {
+    enum {
+        MOD_FREE,
+        MOD_ALIAS,
+        MOD_SPRITE,
+        MOD_EMPTY
+    } type;
     char name[MAX_QPATH];
     int registration_sequence;
     mempool_t pool;

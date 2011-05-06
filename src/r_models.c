@@ -39,7 +39,7 @@ static model_t *MOD_Alloc( void ) {
     int i;
 
     for( i = 0, model = r_models; i < r_numModels; i++, model++ ) {
-        if( !model->name[0] ) {
+        if( !model->type ) {
             break;
         }
     }
@@ -59,7 +59,7 @@ static model_t *MOD_Find( const char *name ) {
     int i;
 
     for( i = 0, model = r_models; i < r_numModels; i++, model++ ) {
-        if( !model->name[0] ) {
+        if( !model->type ) {
             continue;
         }
         if( !FS_pathcmp( model->name, name ) ) {
@@ -71,6 +71,7 @@ static model_t *MOD_Find( const char *name ) {
 }
 
 static void MOD_List_f( void ) {
+    static const char types[4] = "FASE";
     int     i, count;
     model_t *model;
     size_t  bytes;
@@ -79,10 +80,11 @@ static void MOD_List_f( void ) {
     bytes = count = 0;
 
     for( i = 0, model = r_models; i < r_numModels; i++, model++ ) {
-        if( !model->name[0] ) {
+        if( !model->type ) {
             continue;
         }
-        Com_Printf( "%8"PRIz" : %s\n", model->pool.mapped, model->name );
+        Com_Printf( "%c %8"PRIz" : %s\n", types[model->type],
+            model->pool.mapped, model->name );
         bytes += model->pool.mapped;
         count++;
     }
@@ -95,7 +97,7 @@ void MOD_FreeUnused( void ) {
     int i;
 
     for( i = 0, model = r_models; i < r_numModels; i++, model++ ) {
-        if( !model->name[0] ) {
+        if( !model->type ) {
             continue;
         }
         if( model->registration_sequence == registration_sequence ) {
@@ -114,7 +116,7 @@ void MOD_FreeAll( void ) {
     int i;
 
     for( i = 0, model = r_models; i < r_numModels; i++, model++ ) {
-        if( !model->name[0] ) {
+        if( !model->type ) {
             continue;
         }
 
@@ -211,14 +213,18 @@ static qerror_t MOD_LoadSP2( model_t *model, const void *rawdata, size_t length 
         return Q_ERR_UNKNOWN_FORMAT;
     if( header.version != SP2_VERSION )
         return Q_ERR_UNKNOWN_FORMAT;
-    if( header.numframes < 1 )
-        return Q_ERR_TOO_FEW;
+    if( header.numframes < 1 ) {
+        // empty models draw nothing
+        model->type = MOD_EMPTY;
+        return Q_ERR_SUCCESS;
+    }
     if( header.numframes > SP2_MAX_FRAMES )
         return Q_ERR_TOO_MANY;
     if( sizeof( dsp2header_t ) + sizeof( dsp2frame_t ) * header.numframes > length )
         return Q_ERR_BAD_EXTENT;
 
     Hunk_Begin( &model->pool, 0x10000 );
+    model->type = MOD_SPRITE;
 
     model->spriteframes = MOD_Malloc( sizeof( mspriteframe_t ) * header.numframes );
     model->numframes = header.numframes;
@@ -375,7 +381,7 @@ model_t *MOD_ForHandle( qhandle_t h ) {
     }
 
     model = &r_models[ h - 1 ];
-    if( !model->name[0] ) {
+    if( !model->type ) {
         return NULL;
     }
 

@@ -165,18 +165,25 @@ qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
         return Q_ERR_FILE_TOO_SMALL;
     }
 
-    /* byte swap the header */
+    // byte swap the header
     header = *( dmd2header_t * )rawdata;
     for( i = 0; i < sizeof( header )/4; i++ ) {
         (( uint32_t * )&header)[i] = LittleLong( (( uint32_t * )&header)[i] );
     }
 
+    // validate the header
     ret = MOD_ValidateMD2( &header, length );
     if( ret ) {
+        if( ret == Q_ERR_TOO_FEW ) {
+            // empty models draw nothing
+            model->type = MOD_EMPTY;
+            return Q_ERR_SUCCESS;
+        }
         return ret;
     }
 
     Hunk_Begin( &model->pool, 0x400000 );
+    model->type = MOD_ALIAS;
 
     // load triangle indices
     model->tris = MOD_Malloc( header.num_tris * sizeof( maliastri_t ) );
@@ -255,18 +262,25 @@ fail:
 void MOD_Reference( model_t *model ) {
     int     i;
 
-    model->registration_sequence = registration_sequence;
-
     // register any images used by the models
-    if( model->frames ) {
+    switch( model->type ) {
+    case MOD_ALIAS:
         for( i = 0; i < model->numskins; i++ ) {
             model->skins[i]->registration_sequence = registration_sequence;
         }
-    } else if( model->spriteframes ) {
+        break;
+    case MOD_SPRITE:
         for( i = 0; i < model->numframes; i++ ) {
             model->spriteframes[i].image->registration_sequence = registration_sequence;
         }
+        break;
+    case MOD_EMPTY:
+        break;
+    default:
+        Com_Error( ERR_FATAL, "%s: bad model type", __func__ );
     }
+
+    model->registration_sequence = registration_sequence;
 }
 
 /*

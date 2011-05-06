@@ -59,10 +59,16 @@ qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
     // validate the header
     ret = MOD_ValidateMD2( &header, length );
     if( ret ) {
+        if( ret == Q_ERR_TOO_FEW ) {
+            // empty models draw nothing
+            model->type = MOD_EMPTY;
+            return Q_ERR_SUCCESS;
+        }
         return ret;
     }
 
     Hunk_Begin( &model->pool, 0x400000 );
+    model->type = MOD_ALIAS;
 
     // load all triangle indices
     src_tri = ( dmd2triangle_t * )( ( byte * )rawdata + header.ofs_tris );
@@ -256,6 +262,7 @@ qerror_t MOD_LoadMD3( model_t *model, const void *rawdata, size_t length ) {
         return Q_ERR_TOO_MANY;
     
     Hunk_Begin( &model->pool, 0x400000 );
+    model->type = MOD_ALIAS;
     model->numframes = header.num_frames;
     model->nummeshes = header.num_meshes;
     model->meshes = MOD_Malloc( sizeof( maliasmesh_t ) * header.num_meshes );
@@ -409,18 +416,24 @@ fail:
 void MOD_Reference( model_t *model ) {
     int i, j;
 
-    if( model->frames ) {
+    // register any images used by the models
+    switch( model->type ) {
+    case MOD_ALIAS:
         for( i = 0; i < model->nummeshes; i++ ) {
             maliasmesh_t *mesh = &model->meshes[i];
             for( j = 0; j < mesh->numskins; j++ ) {
                 mesh->skins[j]->registration_sequence = registration_sequence;
             }
         }
-    } else if( model->spriteframes ) {
+        break;
+    case MOD_SPRITE:
         for( i = 0; i < model->numframes; i++ ) {
             model->spriteframes[i].image->registration_sequence = registration_sequence;
         }
-    } else {
+        break;
+    case MOD_EMPTY:
+        break;
+    default:
         Com_Error( ERR_FATAL, "%s: bad model type", __func__ );
     }
 
