@@ -643,8 +643,6 @@ FS_FCloseFile
 void FS_FCloseFile( qhandle_t f ) {
     file_t *file = file_for_handle( f );
 
-    FS_DPrintf( "%s: %u\n", __func__, f );
-
     switch( file->type ) {
     case FS_REAL:
         fclose( file->fp );
@@ -720,7 +718,8 @@ static ssize_t open_file_write( file_t *file, const char *name ) {
 
     // check for bad characters
     if( !FS_ValidatePath( normalized ) ) {
-        return Q_ERR_INVALID_PATH;
+        ret = Q_ERR_INVALID_PATH;
+        goto fail1;
     }
 
     // expand the path
@@ -737,7 +736,8 @@ static ssize_t open_file_write( file_t *file, const char *name ) {
             fs_gamedir, "/", normalized, NULL );
     }
     if( len >= sizeof( fullpath ) ) {
-        return Q_ERR_NAMETOOLONG;
+        ret = Q_ERR_NAMETOOLONG;
+        goto fail1;
     }
 
     mode = file->mode & FS_MODE_MASK;
@@ -759,17 +759,19 @@ static ssize_t open_file_write( file_t *file, const char *name ) {
         modeStr = "r+b";
         break;
     default:
-        return Q_ERR_INVAL;
+        ret = Q_ERR_INVAL;
+        goto fail1;
     }
 
     ret = FS_CreatePath( fullpath );
     if( ret ) {
-        return ret;
+        goto fail1;
     }
 
     fp = fopen_hack( fullpath, modeStr );
     if( !fp ) {
-        return Q_ERR(errno);
+        ret = Q_ERR(errno);
+        goto fail1;
     }
 
 #ifndef _WIN32
@@ -801,17 +803,19 @@ static ssize_t open_file_write( file_t *file, const char *name ) {
     if( mode == FS_MODE_RDWR ) {
         // seek to the end of file for appending
         if( fseek( fp, 0, SEEK_END ) == -1 ) {
-            goto fail1;
+            ret = Q_ERR(errno);
+            goto fail2;
         }
     }
     
     // return current position (non-zero for appending modes)
     pos = ftell( fp );
     if( pos == -1 ) {
-        goto fail1;
+        ret = Q_ERR(errno);
+        goto fail2;
     }
 
-    FS_DPrintf( "%s: %s: succeeded\n", __func__, fullpath );
+    FS_DPrintf( "%s: %s: %lu bytes\n", __func__, fullpath, pos );
 
     file->type = FS_REAL;
     file->fp = fp;
@@ -821,12 +825,10 @@ static ssize_t open_file_write( file_t *file, const char *name ) {
 
     return pos;
 
-fail1:
-    ret = Q_ERR(errno);
-#ifndef _WIN32
 fail2:
-#endif
     fclose( fp );
+fail1:
+    FS_DPrintf( "%s: %s: %s\n", __func__, normalized, Q_ErrorString( ret ) );
     return ret;
 }
 
@@ -1001,12 +1003,13 @@ static ssize_t read_zip_file( file_t *file, void *buf, size_t len ) {
 // open a new file on the pakfile
 static ssize_t open_from_pak( file_t *file, pack_t *pack, packfile_t *entry, qboolean unique ) {
     FILE *fp;
-    int ret;
+    qerror_t ret;
 
     if( unique ) {
         fp = fopen( pack->filename, "rb" );
         if( !fp ) {
-            return Q_ERR(errno);
+            ret = Q_ERR(errno);
+            goto fail1;
         }
     } else {
         fp = pack->fp;
@@ -1017,14 +1020,14 @@ static ssize_t open_from_pak( file_t *file, pack_t *pack, packfile_t *entry, qbo
     if( pack->type == FS_ZIP && !entry->coherent ) {
         ret = check_header_coherency( fp, entry );
         if( ret ) {
-            goto fail;
+            goto fail2;
         }
     }
 #endif
 
     if( fseek( fp, (long)entry->filepos, SEEK_SET ) == -1 ) {
         ret = Q_ERR(errno);
-        goto fail;
+        goto fail2;
     }
 
     file->type = pack->type;
@@ -1052,15 +1055,17 @@ static ssize_t open_from_pak( file_t *file, pack_t *pack, packfile_t *entry, qbo
         pack_get( pack );
     }
 
-    FS_DPrintf( "%s: %s/%s: succeeded\n",
-        __func__, pack->filename, entry->name );
+    FS_DPrintf( "%s: %s/%s: %"PRIz" bytes\n",
+        __func__, pack->filename, entry->name, entry->filelen );
 
     return entry->filelen;
 
-fail:
+fail2:
     if( unique ) {
         fclose( fp );
     }
+fail1:
+    FS_DPrintf( "%s: %s: %s\n", __func__, entry->name, Q_ErrorString( ret ) );
     return ret;
 }
 
@@ -1152,7 +1157,8 @@ static ssize_t open_file_read( file_t *file, const char *name, qboolean unique )
             len = Q_concat( fullpath, sizeof( fullpath ),
                 search->filename, "/", normalized, NULL );
             if( len >= sizeof( fullpath ) ) {
-                return Q_ERR_NAMETOOLONG;
+                ret = Q_ERR_NAMETOOLONG;
+                goto fail;
             }
 
 #ifdef _DEBUG
@@ -1163,13 +1169,14 @@ static ssize_t open_file_read( file_t *file, const char *name, qboolean unique )
                 if( errno == ENOENT ) {
                     continue;
                 }
-                return Q_ERR(errno);
+                ret = Q_ERR(errno);
+                goto fail;
             }
 
             ret = Sys_GetFileInfo( fp, &info );
             if( ret ) {
                 fclose( fp );
-                return ret;
+                goto fail;
             }
 
             file->type = FS_REAL;
@@ -1178,16 +1185,17 @@ static ssize_t open_file_read( file_t *file, const char *name, qboolean unique )
             file->error = Q_ERR_SUCCESS;
             file->length = info.size;
 
-            FS_DPrintf( "%s: %s: succeeded\n", __func__, fullpath );
-
+            FS_DPrintf( "%s: %s: %"PRIz" bytes\n", __func__, fullpath, info.size );
             return info.size;
         }
     }
 
-    FS_DPrintf( "%s: %s: failed\n", __func__, normalized );
-
     // return error if path was checked and found to be invalid
-    return valid ? Q_ERR_NOENT : Q_ERR_INVALID_PATH;
+    ret = valid ? Q_ERR_NOENT : Q_ERR_INVALID_PATH;
+
+fail:
+    FS_DPrintf( "%s: %s: %s\n", __func__, normalized, Q_ErrorString( ret ) );
+    return ret;
 }
 
 static ssize_t read_pak_file( file_t *file, void *buf, size_t len ) {
