@@ -611,8 +611,16 @@ void MSG_WriteDeltaEntity( const entity_state_t *from,
     if( to->sound != from->sound )
         bits |= U_SOUND;
 
-    if( to->renderfx & (RF_FRAMELERP|RF_BEAM) )
+    if( to->renderfx & RF_FRAMELERP ) {
         bits |= U_OLDORIGIN;
+    } else if( to->renderfx & RF_BEAM ) {
+        if( flags & MSG_ES_BEAMORIGIN ) {
+            if( delta_pos_v( to->old_origin, from->old_origin ) )
+                bits |= U_OLDORIGIN;
+        } else {
+            bits |= U_OLDORIGIN;
+        }
+    }
 
     //
     // write the message

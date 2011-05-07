@@ -896,6 +896,7 @@ static void SVC_DirectConnect( void ) {
     newcl->pmp.strafehack = sv_strafejump_hack->integer >= i ? qtrue : qfalse;
 
     if( protocol == PROTOCOL_VERSION_R1Q2 ) {
+        newcl->esFlags |= MSG_ES_BEAMORIGIN;
         if( version >= PROTOCOL_VERSION_R1Q2_LONG_SOLID ) {
             newcl->esFlags |= MSG_ES_LONGSOLID;
         }
@@ -912,6 +913,9 @@ static void SVC_DirectConnect( void ) {
         newcl->esFlags |= MSG_ES_UMASK;
         if( version >= PROTOCOL_VERSION_Q2PRO_LONG_SOLID ) {
             newcl->esFlags |= MSG_ES_LONGSOLID;
+        }
+        if( version >= PROTOCOL_VERSION_Q2PRO_BEAM_ORIGIN ) {
+            newcl->esFlags |= MSG_ES_BEAMORIGIN;
         }
         if( version >= PROTOCOL_VERSION_Q2PRO_WATERJUMP_HACK ) {
             i = 1;
