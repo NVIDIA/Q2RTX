@@ -1071,7 +1071,9 @@ static void parse_hello( gtv_t *gtv ) {
     Com_Printf( "[%s] -=- Server hello done.\n", gtv->name );
 
     if( sv.state != ss_broadcast ) {
-        MVD_Spawn_f(); // the game is just starting
+        // the game is just starting
+        SV_InitGame( MVD_SPAWN_INTERNAL );
+        MVD_Spawn();
     } else {
         // notify spectators
         if( Com_IsDedicated() && gtv->mvd ) {
@@ -1592,9 +1594,7 @@ OPERATOR COMMANDS
 ====================================================================
 */
 
-void MVD_Spawn_f( void ) {
-    SV_InitGame( qtrue );
-
+void MVD_Spawn( void ) {
     Cvar_SetInteger( sv_running, ss_broadcast, FROM_CODE );
     Cvar_Set( "sv_paused", "0" );
     Cvar_Set( "timedemo", "0" );
@@ -1609,6 +1609,11 @@ void MVD_Spawn_f( void ) {
     sv.spawncount &= 0x7FFFFFFF;
 
     sv.state = ss_broadcast;
+}
+
+static void MVD_Spawn_f( void ) {
+    SV_InitGame( MVD_SPAWN_ENABLED );
+    MVD_Spawn();
 }
 
 static void list_generic( void ) {

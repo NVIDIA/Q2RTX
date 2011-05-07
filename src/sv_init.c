@@ -254,17 +254,17 @@ void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint ) {
 SV_InitGame
 
 A brand new game has been started.
-If ismvd is true, load the built-in MVD game module.
+If mvd_spawn is non-zero, load the built-in MVD game module.
 ==============
 */
-void SV_InitGame( qboolean ismvd ) {
+void SV_InitGame( unsigned mvd_spawn ) {
     int     i, entnum;
     edict_t *ent;
     client_t *client;
 
     if( svs.initialized ) {
         // cause any connected clients to reconnect
-        SV_Shutdown( "Server restarted\n", ERR_RECONNECT );
+        SV_Shutdown( "Server restarted\n", ERR_RECONNECT | mvd_spawn );
     } else {
 #if USE_CLIENT
         // make sure the client is down
@@ -284,7 +284,7 @@ void SV_InitGame( qboolean ismvd ) {
     Cvar_Reset( sv_recycle );
 #endif
 
-    if( ismvd ) {
+    if( mvd_spawn ) {
         Cvar_Set( "deathmatch", "1" );
         Cvar_Set( "coop", "0" );
     } else {
@@ -329,7 +329,7 @@ void SV_InitGame( qboolean ismvd ) {
 
 #if USE_MVD_SERVER
     // initialize MVD server
-    if( !ismvd ) {
+    if( !mvd_spawn ) {
         SV_MvdInit();
     }
 #endif
@@ -348,7 +348,7 @@ void SV_InitGame( qboolean ismvd ) {
 
     // init game
 #if USE_MVD_CLIENT
-    if( ismvd ) {
+    if( mvd_spawn ) {
         if( ge ) {
             SV_ShutdownGameProgs();
         }
@@ -371,7 +371,7 @@ void SV_InitGame( qboolean ismvd ) {
     }
 
 #if USE_AC_SERVER
-    AC_Connect( ismvd );
+    AC_Connect( mvd_spawn );
 #endif
 
     svs.initialized = qtrue;

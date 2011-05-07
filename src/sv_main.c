@@ -2038,7 +2038,6 @@ static void SV_FinalMessage( const char *message, error_type_t type ) {
     List_Init( &sv_clientlist );
 }
 
-
 /*
 ================
 SV_Shutdown
@@ -2049,11 +2048,12 @@ Should be safe to call even if server is not fully initalized yet.
 */
 void SV_Shutdown( const char *finalmsg, error_type_t type ) {
 #if USE_MVD_CLIENT
-    if( ge != &mvd_ge ) {
-        // shutdown MVD client now if not running the built-in MVD game module,
-        // otherwise SV_ShutdownGameProgs will take care of this
+    if( ge != &mvd_ge && !(type & MVD_SPAWN_INTERNAL) ) {
+        // shutdown MVD client now if not already running the built-in MVD game module
+        // don't shutdown if called from internal MVD spawn function (ugly hack)!
         MVD_Shutdown();
     }
+    type &= ~MVD_SPAWN_MASK;
 #endif
 
 #if USE_AC_SERVER

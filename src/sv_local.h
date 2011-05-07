@@ -73,6 +73,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define SV_FEATURES (GMF_CLIENTNUM|GMF_PROPERINUSE|GMF_MVDSPEC|\
                      GMF_WANT_ALL_DISCONNECTS|GMF_ENHANCED_SAVEGAMES)
 
+// ugly hack for SV_Shutdown
+#define MVD_SPAWN_DISABLED  0
+#define MVD_SPAWN_ENABLED   0x40000000
+#define MVD_SPAWN_INTERNAL  0x80000000
+#define MVD_SPAWN_MASK      0xc0000000
+
 typedef struct {
     unsigned    num_entities;
     unsigned    first_entity;
@@ -492,7 +498,7 @@ void Master_Packet (void);
 //
 void SV_ClientReset( client_t *client );
 void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint );
-void SV_InitGame( qboolean ismvd );
+void SV_InitGame( unsigned mvd_spawn );
 
 //
 // sv_send.c
@@ -559,7 +565,7 @@ void AC_ClientToken( client_t *cl, const char *token );
 
 void AC_Register( void );
 void AC_Disconnect( void );
-void AC_Connect( qboolean ismvd );
+void AC_Connect( unsigned mvd_spawn );
 void AC_Run( void );
 
 void AC_List_f( void );

@@ -881,7 +881,9 @@ static void MVD_ChangeLevel( mvd_t *mvd ) {
     mvd_client_t *client;
 
     if( sv.state != ss_broadcast ) {
-        MVD_Spawn_f(); // the game is just starting
+        // the game is just starting
+        SV_InitGame( MVD_SPAWN_INTERNAL );
+        MVD_Spawn();
         return;
     }
 

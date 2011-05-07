@@ -193,7 +193,7 @@ mvd_t *MVD_SetChannel( int arg );
 
 void MVD_File_g( genctx_t *ctx );
 
-void MVD_Spawn_f( void ); 
+void MVD_Spawn( void );
 
 void MVD_StopRecord( mvd_t *mvd );
 

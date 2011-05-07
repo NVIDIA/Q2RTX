@@ -306,7 +306,7 @@ static void SV_Map( int argnum, qboolean restart ) {
 
     // any error will drop from this point
     if( sv.state != ss_game || restart ) {
-        SV_InitGame( qfalse );  // the game is just starting
+        SV_InitGame( MVD_SPAWN_DISABLED );  // the game is just starting
     }
 
     SV_SpawnServer( &cm, s, spawnpoint );

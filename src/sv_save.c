@@ -313,7 +313,7 @@ static qerror_t read_server_file( const char *dir ) {
     }
 
     // start a new game fresh with new cvars
-    SV_InitGame( qfalse );
+    SV_InitGame( MVD_SPAWN_DISABLED );
 
     // error out immediately if game doesn't support safe savegames
     if( !( g_features->integer & GMF_ENHANCED_SAVEGAMES ) ) {

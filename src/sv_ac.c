@@ -1404,7 +1404,7 @@ void AC_Run( void ) {
     }
 }
 
-void AC_Connect( qboolean ismvd ) {
+void AC_Connect( unsigned mvd_spawn ) {
     int attempts;
 
     if( !ac_required->integer ) {
@@ -1418,7 +1418,7 @@ void AC_Connect( qboolean ismvd ) {
         return;
     }
 #endif
-    if( ismvd ) {
+    if( mvd_spawn ) {
         Com_Printf( "ANTICHEAT: Only supported on game servers, disabling.\n" );
         Cvar_SetByVar( ac_required, "0", FROM_CODE );
         return;
