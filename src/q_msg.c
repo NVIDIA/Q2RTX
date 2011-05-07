@@ -2004,10 +2004,10 @@ void MSG_ParseDeltaPlayerstate_Default( const player_state_t *from,
     }
 
     // clear to old value before delta parsing
-    if( from ) {
-        memcpy( to, from, sizeof( *to ) );
-    } else {
+    if( !from ) {
         memset( to, 0, sizeof( *to ) );
+    } else if( to != from ) {
+        memcpy( to, from, sizeof( *to ) );
     }
 
     //
@@ -2117,10 +2117,10 @@ void MSG_ParseDeltaPlayerstate_Enhanced(    const player_state_t    *from,
     }
 
     // clear to old value before delta parsing
-    if( from ) {
-        memcpy( to, from, sizeof( *to ) );
-    } else {
+    if( !from ) {
         memset( to, 0, sizeof( *to ) );
+    } else if( to != from ) {
+        memcpy( to, from, sizeof( *to ) );
     }
 
     //
@@ -2252,10 +2252,10 @@ void MSG_ParseDeltaPlayerstate_Packet( const player_state_t *from,
     }
 
     // clear to old value before delta parsing
-    if( from ) {
-        memcpy( to, from, sizeof( *to ) );
-    } else {
+    if( !from ) {
         memset( to, 0, sizeof( *to ) );
+    } else if( to != from ) {
+        memcpy( to, from, sizeof( *to ) );
     }
 
     //
