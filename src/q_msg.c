@@ -543,7 +543,7 @@ void MSG_WriteDeltaEntity( const entity_state_t *from,
             bits |= U_ANGLE3;
 
         if( flags & MSG_ES_NEWENTITY ) {
-            if( delta_pos_v( to->old_origin, from->old_origin ) ) {
+            if( delta_pos_v( to->old_origin, from->origin ) ) {
                 bits |= U_OLDORIGIN;
             }
         }
@@ -1882,14 +1882,10 @@ void MSG_ParseDeltaEntity( const entity_state_t *from,
     }
 
     // set everything to the state we are delta'ing from
-    if( from ) {
-        if( to != from ) {
-            memcpy( to, from, sizeof( *to ) );
-        }
-        VectorCopy( from->origin, to->old_origin );
-    } else {
+    if( !from ) {
         memset( to, 0, sizeof( *to ) );
-        from = &nullEntityState;
+    } else if( to != from ) {
+        memcpy( to, from, sizeof( *to ) );
     }
     
     to->number = number;

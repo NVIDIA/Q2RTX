@@ -72,7 +72,10 @@ static void CL_SetEntityState( const entity_state_t *state ) {
         // duplicate the current state so lerping doesn't hurt anything
         ent->prev = *state;
 
-        if( state->event == EV_PLAYER_TELEPORT || state->event == EV_OTHER_TELEPORT ) {
+        if( state->event == EV_PLAYER_TELEPORT ||
+            state->event == EV_OTHER_TELEPORT ||
+            ( state->renderfx & (RF_FRAMELERP|RF_BEAM) ) )
+        {
             // no lerping if teleported
             VectorCopy( origin, ent->lerp_origin );
         } else {
