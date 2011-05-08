@@ -1086,12 +1086,13 @@ static void CL_SendUserinfo( void ) {
 
     if( cls.userinfo_modified == MAX_PACKET_USERINFOS ) {
         size_t len = Cvar_BitInfo( userinfo, CVAR_USERINFO );
+        Com_DDPrintf( "%s: %u: full update\n", __func__, com_framenum );
         MSG_WriteByte( clc_userinfo );
         MSG_WriteData( userinfo, len + 1 );
         MSG_FlushTo( &cls.netchan->message );
     } else if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO ) {
-        Com_DPrintf( "Sending %d userinfo updates at frame %u\n",
-            cls.userinfo_modified, com_framenum );
+        Com_DDPrintf( "%s: %u: %d updates\n", __func__, com_framenum,
+            cls.userinfo_modified );
         for( i = 0; i < cls.userinfo_modified; i++ ) { 
             var = cls.userinfo_updates[i];
             MSG_WriteByte( clc_userinfo_delta );
@@ -1105,11 +1106,11 @@ static void CL_SendUserinfo( void ) {
         }
         MSG_FlushTo( &cls.netchan->message );
     } else {
-        Com_WPrintf( "Userinfo update count is %d, should not happen.\n",
-            cls.userinfo_modified );
+        Com_WPrintf( "%s: update count is %d, should never happen.\n",
+            __func__, cls.userinfo_modified );
     }
+
     cls.userinfo_modified = 0;
-    
 }
 
 void CL_SendCmd( void ) {

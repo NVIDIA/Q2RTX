@@ -218,11 +218,13 @@ void CL_ClientCommand( const char *string ) {
     if ( !cls.netchan ) {
         return;
     }
+
+    Com_DDPrintf( "%s: %s\n", __func__, string );
+
     MSG_WriteByte( clc_stringcmd );
     MSG_WriteString( string );
     MSG_FlushTo( &cls.netchan->message );
 }
-
 
 /*
 ===================
@@ -1584,30 +1586,36 @@ void CL_UpdateUserinfo( cvar_t *var, from_t from ) {
     if( var == info_skin && from > FROM_CONSOLE && gender_auto->integer ) {
          CL_FixUpGender();
     }
+
     if( !cls.netchan ) {
         return;
     }
+
     if( cls.serverProtocol != PROTOCOL_VERSION_Q2PRO ) {
         // transmit at next oportunity
         cls.userinfo_modified = MAX_PACKET_USERINFOS;   
-        return;
+        goto done;
     }
 
     if( cls.userinfo_modified == MAX_PACKET_USERINFOS ) {
-        return; // can't hold any more
+        // can't hold any more
+        goto done;
     }
 
     // check for the same variable being modified twice
     for( i = 0; i < cls.userinfo_modified; i++ ) {
         if( cls.userinfo_updates[i] == var ) {
-            Com_DPrintf( "Dup modified %s at frame %u\n", var->name, com_framenum );
+            Com_DDPrintf( "%s: %u: %s [DUP]\n",
+                __func__, com_framenum, var->name );
             return;
         }
     }
 
-    Com_DPrintf( "Modified %s at frame %u\n", var->name, com_framenum );
-
     cls.userinfo_updates[cls.userinfo_modified++] = var;    
+
+done:
+    Com_DDPrintf( "%s: %u: %s [%d]\n",
+        __func__, com_framenum, var->name, cls.userinfo_modified );
 }
 
 /*
@@ -2346,10 +2354,10 @@ static void exec_server_string( cmdbuf_t *buf, const char *text ) {
         return;        // no tokens
     }
 
+    Com_DPrintf( "stufftext: %s\n", text );
+
     s = Cmd_Argv( 0 );
 
-    Com_DPrintf( "stufftext: %s\n", s );
- 
     // handle private client commands
     if( !strcmp( s, "changing" ) ) {
         CL_Changing_f();
@@ -2370,7 +2378,6 @@ static void exec_server_string( cmdbuf_t *buf, const char *text ) {
     // execute regular commands
     Cmd_ExecuteCommand( buf );
 }
-
 
 static void cl_gun_changed( cvar_t *self ) {
     CL_UpdateGunSetting();
