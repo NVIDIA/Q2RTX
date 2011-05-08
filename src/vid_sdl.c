@@ -570,7 +570,7 @@ void VID_EndFrame( void ) {
 
 // for debugging
 #define SHOW_SYNC() \
-    Com_DDDPrintf( "%s: %u\n", __func__, sdl.sync_count )
+    Com_DDDDPrintf( "%s: %u\n", __func__, sdl.sync_count )
 
 static unsigned glx_parse_extension_string( const char *s ) {
     static const char *const extnames[] = {

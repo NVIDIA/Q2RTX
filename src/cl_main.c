@@ -2643,7 +2643,7 @@ CL_Activate
 */
 void CL_Activate( active_t active ) {
     if( cls.active != active ) {
-        Com_DDPrintf( "%s: %u\n", __func__, active );
+        Com_DDDPrintf( "%s: %u\n", __func__, active );
         cls.active = active;
         cls.disable_screen = 0;
         Key_ClearStates();
@@ -2852,7 +2852,7 @@ void CL_UpdateFrameTimes( void ) {
         }
     }
 
-    Com_DDPrintf( "%s: mode=%s main_msec=%d ref_msec=%d, phys_msec=%d\n",
+    Com_DDDPrintf( "%s: mode=%s main_msec=%d ref_msec=%d, phys_msec=%d\n",
         __func__, sync_names[sync_mode], main_msec, ref_msec, phys_msec );
 
     ref_extra = phys_extra = main_extra = 0;
@@ -2933,7 +2933,7 @@ unsigned CL_Frame( unsigned msec ) {
         break;
     }
 
-    Com_DDDPrintf( "main_extra=%d ref_frame=%d ref_extra=%d "
+    Com_DDDDPrintf( "main_extra=%d ref_frame=%d ref_extra=%d "
         "phys_frame=%d phys_extra=%d\n",
         main_extra, ref_frame, ref_extra,
         phys_frame, phys_extra );

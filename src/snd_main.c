@@ -279,7 +279,7 @@ void S_Activate( void ) {
 
     s_active = active;
 
-    Com_DDPrintf( "%s: %d\n", __func__, s_active );
+    Com_DDDPrintf( "%s: %d\n", __func__, s_active );
 
 #if USE_OPENAL
     if( s_started == SS_OAL )

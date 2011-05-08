@@ -577,10 +577,14 @@ void        Com_FlushLogs( void );
 #define Com_DDDPrintf(...) \
     if( developer && developer->integer > 2 ) \
         Com_LPrintf( PRINT_DEVELOPER, __VA_ARGS__ )
+#define Com_DDDDPrintf(...) \
+    if( developer && developer->integer > 3 ) \
+        Com_LPrintf( PRINT_DEVELOPER, __VA_ARGS__ )
 #else
 #define Com_DPrintf(...)
 #define Com_DDPrintf(...)
 #define Com_DDDPrintf(...)
+#define Com_DDDDPrintf(...)
 #endif
 
 #if USE_TESTS

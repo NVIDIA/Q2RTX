@@ -1688,7 +1688,7 @@ unsigned SV_Frame( unsigned msec ) {
 
     // don't accumulate bogus residual
     if( sv.frameresidual > 250 ) {
-        Com_DDPrintf( "Reset residual %u\n", sv.frameresidual );
+        Com_DDDPrintf( "Reset residual %u\n", sv.frameresidual );
         sv.frameresidual = 100;
     }
 

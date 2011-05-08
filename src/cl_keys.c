@@ -622,7 +622,7 @@ void Key_Event( unsigned key, qboolean down, unsigned time ) {
         Com_Error( ERR_FATAL, "%s: bad key", __func__ );
     }
 
-    Com_DDPrintf( "%u: %c%s\n", time,
+    Com_DDDPrintf( "%u: %c%s\n", time,
         down ? '+' : '-', Key_KeynumToString( key ) );
 
     // hack for menu key binding
