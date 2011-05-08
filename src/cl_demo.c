@@ -287,8 +287,6 @@ void CL_Stop_f( void ) {
     msglen = ( uint32_t )-1;
     FS_Write( &msglen, 4, cls.demo.recording );
 
-    FS_Flush( cls.demo.recording );
-
     format_demo_status( buffer, sizeof( buffer ) );
 
 // close demofile
