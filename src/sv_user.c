@@ -1318,29 +1318,54 @@ void SV_ExecuteClientMessage( client_t *client ) {
                     goto badbyte;
                 }
 
-                len = MSG_ReadString( key, sizeof( key ) );
-                if( len >= sizeof( key ) ) {
-                    SV_DropClient( client, "oversize delta key" );
-                    break;
-                }
-
-                len = MSG_ReadString( value, sizeof( value ) );
-                if( len >= sizeof( value ) ) {
-                    SV_DropClient( client, "oversize delta value" );
-                    break;
-                }
-
                 // malicious users may try sending too many userinfo updates
                 if( userinfoUpdateCount == MAX_PACKET_USERINFOS ) {
                     Com_DPrintf( "Too many userinfos from %s\n", client->name );
+                    MSG_ReadString( NULL, 0 );
+                    MSG_ReadString( NULL, 0 );
                     break;
                 }
-                userinfoUpdateCount++;
 
+                // save previous userinfo
                 strcpy( buffer, client->userinfo );
-                if( !Info_SetValueForKey( buffer, key, value ) ) {
-                    SV_DropClient( client, "malformed delta userinfo" );
-                    break;
+
+                // optimize by combining multiple delta updates into one (hack)
+                while( 1 ) {
+                    len = MSG_ReadString( key, sizeof( key ) );
+                    if( len >= sizeof( key ) ) {
+                        SV_DropClient( client, "oversize delta key" );
+                        goto finish;
+                    }
+
+                    len = MSG_ReadString( value, sizeof( value ) );
+                    if( len >= sizeof( value ) ) {
+                        SV_DropClient( client, "oversize delta value" );
+                        goto finish;
+                    }
+
+                    if( userinfoUpdateCount < MAX_PACKET_USERINFOS ) {
+                        if( !Info_SetValueForKey( buffer, key, value ) ) {
+                            SV_DropClient( client, "malformed delta userinfo" );
+                            goto finish;
+                        }
+
+                        Com_DDPrintf( "DeltaUserinfo( %s ): %s %s [%d]\n",
+                            client->name, key, value, userinfoUpdateCount );
+
+                        userinfoUpdateCount++;
+                    } else {
+                        Com_DPrintf( "Too many userinfos from %s\n", client->name );
+                    }
+
+                    if( msg_read.readcount >= msg_read.cursize ) {
+                        break; // end of message
+                    }
+
+                    if( msg_read.data[msg_read.readcount] != clc_userinfo_delta ) {
+                        break; // not delta userinfo
+                    }
+
+                    msg_read.readcount++;
                 }
 
                 SV_UpdateUserinfo( buffer );
@@ -1353,6 +1378,7 @@ void SV_ExecuteClientMessage( client_t *client ) {
         }
     }
 
+finish:
     sv_client = NULL;
     sv_player = NULL;
 
