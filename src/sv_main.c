@@ -1701,14 +1701,18 @@ void SV_UpdateUserinfo( char *userinfo ) {
         return;
     }
 
+    // validate name
     s = Info_ValueForKey( userinfo, "name" );
     if( COM_IsWhite( s ) ) {
-        if( sv_client->name[0] ) {
-            SV_ClientCommand( sv_client, "set name \"%s\"\n", sv_client->name );
-        } else {
+        if( !sv_client->name[0] ) {
             SV_DropClient( sv_client, "malformed name" );
+            return;
         }
-        return;
+        if( !Info_SetValueForKey( userinfo, "name", sv_client->name ) ) {
+            SV_DropClient( sv_client, "oversize userinfo" );
+            return;
+        }
+        SV_ClientCommand( sv_client, "set name \"%s\"\n", sv_client->name );
     }
 
     // force the IP key/value pair so the game can filter based on ip
