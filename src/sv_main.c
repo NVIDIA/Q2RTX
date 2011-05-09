@@ -548,7 +548,6 @@ static void SVC_DirectConnect( void ) {
     char        reconnect_var[16];
     char        reconnect_val[16];
     int         i, number, count;
-    size_t      length;
     client_t    *cl, *newcl, *lastcl;
     int         protocol, version;
     int         qport;
@@ -741,21 +740,6 @@ static void SVC_DirectConnect( void ) {
     if( COM_IsWhite( s ) ) {
         SV_OobPrintf( "Please set your name before connecting.\n" );
         Com_DPrintf( "    rejected - empty name.\n" );
-        return;
-    }
-
-    s = Info_ValueForKey( info, "skin" );
-    if( !s[0] ) {
-        SV_OobPrintf( "Please set your skin before connecting.\n" );
-        Com_DPrintf( "    rejected - empty skin.\n" );
-        return;
-    }
-    
-    length = strlen( s );
-    if( !Q_ispath( s[0] ) || !Q_ispath( s[ length - 1 ] ) || strchr( s, '.' ) ) 
-    {
-        SV_OobPrintf( "Malformed skin.\n" );
-        Com_DPrintf( "    rejected - malformed skin.\n" );
         return;
     }
 
@@ -1701,13 +1685,11 @@ unsigned SV_Frame( unsigned msec ) {
 =================
 SV_UpdateUserinfo
 
-Ensures that name, skin and ip are properly set.
-WARNING: may modify userinfo in place!
+Ensures that name and ip are properly set. Modifies userinfo in place!
 =================
 */
 void SV_UpdateUserinfo( char *userinfo ) {
     char *s;
-    size_t len;
 
     if( !userinfo[0] ) {
         SV_DropClient( sv_client, "empty userinfo" );
@@ -1726,13 +1708,6 @@ void SV_UpdateUserinfo( char *userinfo ) {
         } else {
             SV_DropClient( sv_client, "malformed name" );
         }
-        return;
-    }
-
-    s = Info_ValueForKey( userinfo, "skin" );
-    len = strlen( s );
-    if( !Q_ispath( s[0] ) || !Q_ispath( s[ len - 1 ] ) || strchr( s, '.' ) ) {
-        SV_ClientCommand( sv_client, "set skin \"male/grunt\"\n" );
         return;
     }
 
