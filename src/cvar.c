@@ -579,6 +579,8 @@ void Cvar_FixCheats( void ) {
     for( var = cvar_vars; var; var = var->next ) {
         if( var->flags & CVAR_CHEAT ) {
             Cvar_SetByVar( var, var->default_string, FROM_CODE );
+            if( var->changed )
+                var->changed( var );
         }
     }
 }
