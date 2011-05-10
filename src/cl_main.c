@@ -1212,6 +1212,8 @@ static void CL_Skins_f( void ) {
             continue;
         ci = &cl.clientinfo[i];
         CL_LoadClientinfo( ci, s );
+        if( !ci->model_name[0] || !ci->skin_name[0] )
+            ci = &cl.baseclientinfo;
         Com_Printf( "client %d: %s --> %s/%s\n", i, s,
             ci->model_name, ci->skin_name );
         SCR_UpdateScreen();

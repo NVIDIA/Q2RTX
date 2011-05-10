@@ -175,6 +175,10 @@ void CL_LoadClientinfo( clientinfo_t *ci, const char *s ) {
     strcpy( ci->model_name, model_name );
     strcpy( ci->skin_name, skin_name );
 
+    // base info should be at least partially valid
+    if( ci == &cl.baseclientinfo )
+        return;
+
     // must have loaded all data types to be valid
     if( !ci->skin || !ci->icon || !ci->model || !ci->weaponmodel[0] ) {
         ci->skin = 0;
