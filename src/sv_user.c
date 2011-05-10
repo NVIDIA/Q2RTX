@@ -990,10 +990,8 @@ static inline void SV_ClientThink( usercmd_t *cmd ) {
     sv_client->numMoves++;
 
     if( sv_client->commandMsec < 0 && sv_enforcetime->integer ) {
-#ifdef _DEBUG
         Com_DPrintf( "commandMsec underflow from %s: %d\n",
             sv_client->name, sv_client->commandMsec );
-#endif
         return;
     }
 
@@ -1077,8 +1075,6 @@ static void SV_OldClientExecuteMove( int net_drop ) {
     
     sv_client->lastcmd = newcmd;
 }
-
-
 
 /*
 ==================
@@ -1173,6 +1169,50 @@ static void SV_NewClientExecuteMove( int c, int net_drop ) {
 }
 
 /*
+=================
+SV_UpdateUserinfo
+
+Ensures that name and ip are properly set.
+=================
+*/
+static void SV_UpdateUserinfo( void ) {
+    char *s;
+
+    if( !sv_client->userinfo[0] ) {
+        SV_DropClient( sv_client, "empty userinfo" );
+        return;
+    }
+
+    if( !Info_Validate( sv_client->userinfo ) ) {
+        SV_DropClient( sv_client, "malformed userinfo" );
+        return;
+    }
+
+    // validate name
+    s = Info_ValueForKey( sv_client->userinfo, "name" );
+    if( COM_IsWhite( s ) ) {
+        if( !sv_client->name[0] ) {
+            SV_DropClient( sv_client, "malformed name" );
+            return;
+        }
+        if( !Info_SetValueForKey( sv_client->userinfo, "name", sv_client->name ) ) {
+            SV_DropClient( sv_client, "oversize userinfo" );
+            return;
+        }
+        SV_ClientCommand( sv_client, "set name \"%s\"\n", sv_client->name );
+    }
+
+    // force the IP key/value pair so the game can filter based on ip
+    s = NET_AdrToString( &sv_client->netchan->remote_address );
+    if( !Info_SetValueForKey( sv_client->userinfo, "ip", s ) ) {
+        SV_DropClient( sv_client, "oversize userinfo" );
+        return;
+    }
+
+    SV_UserinfoChanged( sv_client );
+}
+
+/*
 ===================
 SV_ExecuteClientMessage
 
@@ -1223,21 +1263,20 @@ void SV_ExecuteClientMessage( client_t *client ) {
             break;
 
         case clc_userinfo: {
-                char buffer[MAX_INFO_STRING];
+                // malicious users may try sending too many userinfo updates
+                if( userinfoUpdateCount == MAX_PACKET_USERINFOS ) {
+                    Com_DPrintf( "Too many userinfos from %s\n", client->name );
+                    MSG_ReadString( NULL, 0 );
+                    break;
+                }
 
-                len = MSG_ReadString( buffer, sizeof( buffer ) );
-                if( len >= sizeof( buffer ) ) {
+                len = MSG_ReadString( sv_client->userinfo, sizeof( sv_client->userinfo ) );
+                if( len >= sizeof( sv_client->userinfo ) ) {
                     SV_DropClient( client, "oversize userinfo" );
                     break;
                 }
 
-                // malicious users may try sending too many userinfo updates
-                if( userinfoUpdateCount == MAX_PACKET_USERINFOS ) {
-                    Com_DPrintf( "Too many userinfos from %s\n", client->name );
-                    break;
-                }
-
-                SV_UpdateUserinfo( buffer );
+                SV_UpdateUserinfo();
                 userinfoUpdateCount++;
             }
             break;
@@ -1312,8 +1351,7 @@ void SV_ExecuteClientMessage( client_t *client ) {
 
         case clc_userinfo_delta: {
                 char key[MAX_INFO_KEY], value[MAX_INFO_VALUE];
-                char buffer[MAX_INFO_STRING];
-                
+
                 if( client->protocol != PROTOCOL_VERSION_Q2PRO ) {
                     goto badbyte;
                 }
@@ -1325,9 +1363,6 @@ void SV_ExecuteClientMessage( client_t *client ) {
                     MSG_ReadString( NULL, 0 );
                     break;
                 }
-
-                // save previous userinfo
-                strcpy( buffer, client->userinfo );
 
                 // optimize by combining multiple delta updates into one (hack)
                 while( 1 ) {
@@ -1344,7 +1379,7 @@ void SV_ExecuteClientMessage( client_t *client ) {
                     }
 
                     if( userinfoUpdateCount < MAX_PACKET_USERINFOS ) {
-                        if( !Info_SetValueForKey( buffer, key, value ) ) {
+                        if( !Info_SetValueForKey( sv_client->userinfo, key, value ) ) {
                             SV_DropClient( client, "malformed delta userinfo" );
                             goto finish;
                         }
@@ -1368,7 +1403,7 @@ void SV_ExecuteClientMessage( client_t *client ) {
                     msg_read.readcount++;
                 }
 
-                SV_UpdateUserinfo( buffer );
+                SV_UpdateUserinfo();
             }
             break;
         }

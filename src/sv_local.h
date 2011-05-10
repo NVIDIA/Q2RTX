@@ -476,7 +476,6 @@ void SV_CleanClient( client_t *client );
 void SV_InitOperatorCommands (void);
 
 void SV_UserinfoChanged (client_t *cl);
-void SV_UpdateUserinfo( char *userinfo );
 
 //qboolean SV_RateLimited( ratelimit_t *r );
 //void SV_RateInit( ratelimit_t *r, const char *s );

@@ -1683,53 +1683,6 @@ unsigned SV_Frame( unsigned msec ) {
 
 /*
 =================
-SV_UpdateUserinfo
-
-Ensures that name and ip are properly set. Modifies userinfo in place!
-=================
-*/
-void SV_UpdateUserinfo( char *userinfo ) {
-    char *s;
-
-    if( !userinfo[0] ) {
-        SV_DropClient( sv_client, "empty userinfo" );
-        return;
-    }
-    
-    if( !Info_Validate( userinfo ) ) {
-        SV_DropClient( sv_client, "malformed userinfo" );
-        return;
-    }
-
-    // validate name
-    s = Info_ValueForKey( userinfo, "name" );
-    if( COM_IsWhite( s ) ) {
-        if( !sv_client->name[0] ) {
-            SV_DropClient( sv_client, "malformed name" );
-            return;
-        }
-        if( !Info_SetValueForKey( userinfo, "name", sv_client->name ) ) {
-            SV_DropClient( sv_client, "oversize userinfo" );
-            return;
-        }
-        SV_ClientCommand( sv_client, "set name \"%s\"\n", sv_client->name );
-    }
-
-    // force the IP key/value pair so the game can filter based on ip
-    s = NET_AdrToString( &sv_client->netchan->remote_address );
-    if( !Info_SetValueForKey( userinfo, "ip", s ) ) {
-        SV_DropClient( sv_client, "oversize userinfo" );
-        return;
-    }
-
-    strcpy( sv_client->userinfo, userinfo );
-
-    SV_UserinfoChanged( sv_client );
-}
-
-
-/*
-=================
 SV_UserinfoChanged
 
 Pull specific info from a newly changed userinfo string
