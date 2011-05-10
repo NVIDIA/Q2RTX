@@ -135,7 +135,6 @@ extern cvar_t *gl_dotshading;
 #endif
 extern cvar_t *gl_partscale;
 extern cvar_t *gl_modulate;
-extern cvar_t *gl_modulate_mask;
 extern cvar_t *gl_modulate_world;
 extern cvar_t *gl_coloredlightmaps;
 extern cvar_t *gl_brightness;

@@ -693,10 +693,7 @@ void gl_lightmap_changed( cvar_t *self ) {
     // FIXME: the name 'brightness' is misleading in this context
     gl_static.world.add = 255 * Cvar_ClampValue( gl_brightness, -1, 1 );
 
-    gl_static.world.modulate = gl_modulate_world->value;
-    if( gl_modulate_mask->integer & 1 ) {
-        gl_static.world.modulate *= gl_modulate->value;
-    }
+    gl_static.world.modulate = gl_modulate->value * gl_modulate_world->value;
 
     // rebuild all lightmaps next frame
     lm.dirty = qtrue;

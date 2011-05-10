@@ -43,7 +43,6 @@ cvar_t *gl_celshading;
 cvar_t *gl_dotshading;
 #endif
 cvar_t *gl_modulate;
-cvar_t *gl_modulate_mask;
 cvar_t *gl_modulate_world;
 cvar_t *gl_coloredlightmaps;
 cvar_t *gl_brightness;
@@ -650,22 +649,15 @@ static size_t GL_ViewCluster_m( char *buffer, size_t size ) {
 }
 
 static void gl_modulate_entities_changed( cvar_t *self ) {
-    gl_static.entity_modulate = gl_modulate_entities->value;
-    if( gl_modulate_mask->integer & 2 ) {
-        gl_static.entity_modulate *= gl_modulate->value;
-    }
+    gl_static.entity_modulate = gl_modulate->value * gl_modulate_entities->value;
 }
 
 // this one is defined in gl_surf.c
 extern void gl_lightmap_changed( cvar_t *self );
 
 static void gl_modulate_changed( cvar_t *self ) {
-    if( gl_modulate_mask->integer & 1 ) {
-        gl_lightmap_changed( self );
-    }
-    if( gl_modulate_mask->integer & 2 ) {
-        gl_modulate_entities_changed( self );
-    }
+    gl_lightmap_changed( self );
+    gl_modulate_entities_changed( self );
 }
 
 static void gl_novis_changed( cvar_t *self ) {
@@ -683,7 +675,6 @@ static void GL_Register( void ) {
 #endif
     gl_modulate = Cvar_Get( "gl_modulate", "1", CVAR_ARCHIVE );
     gl_modulate->changed = gl_modulate_changed;
-    gl_modulate_mask = Cvar_Get( "gl_modulate_mask", "3", CVAR_FILES );
     gl_modulate_world = Cvar_Get( "gl_modulate_world", "1", 0 );
     gl_modulate_world->changed = gl_lightmap_changed;
     gl_coloredlightmaps = Cvar_Get( "gl_coloredlightmaps", "1", CVAR_ARCHIVE );
