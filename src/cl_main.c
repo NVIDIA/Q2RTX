@@ -2620,23 +2620,27 @@ CL_CheatsOK
 ==================
 */
 qboolean CL_CheatsOK( void ) {
-    if( cls.state < ca_connected || cls.demo.playback ) {
+    // can cheat when disconnected or playing a demo
+    if( cls.state < ca_connected || cls.demo.playback )
         return qtrue;
-    }
 
-    if( !sv_running->integer ) {
+    // can't cheat on remote servers
+    if( !sv_running->integer )
         return qfalse;
-    }
 
     // developer option
-    if( Cvar_VariableInteger( "cheats" ) ) {
+    if( Cvar_VariableInteger( "cheats" ) )
         return qtrue;
-    }
 
     // single player can cheat
-    if( cls.state > ca_connected && cl.maxclients < 2 ) {
+    if( cls.state > ca_connected && cl.maxclients == 1 )
         return qtrue;
-    }
+
+#if USE_MVD_CLIENT
+    // can cheat when playing MVD
+    if( MVD_GetDemoPercent( NULL, NULL ) != -1 )
+        return qtrue;
+#endif
 
     return qfalse;
 }
