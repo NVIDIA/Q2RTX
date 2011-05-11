@@ -812,7 +812,7 @@ static void AC_ParseReady( void ) {
     acs.retry_backoff = AC_DEFAULT_BACKOFF;
     Com_Printf( "ANTICHEAT: Ready to serve anticheat clients.\n" );
     Cvar_FullSet( "anticheat", ac_required->string,
-        CVAR_SERVERINFO | CVAR_NOSET, FROM_CODE );
+        CVAR_SERVERINFO | CVAR_ROM, FROM_CODE );
 }
 
 static void AC_ParseQueryReply( void ) {
@@ -1454,7 +1454,7 @@ void AC_Disconnect( void ) {
 
     memset( &ac, 0, sizeof( ac ) );
     memset( &acs, 0, sizeof( acs ) );
-    Cvar_FullSet( "anticheat", "0", CVAR_NOSET, FROM_CODE );
+    Cvar_FullSet( "anticheat", "0", CVAR_ROM, FROM_CODE );
 }
 
 void AC_List_f( void ) {
