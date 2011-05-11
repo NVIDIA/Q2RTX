@@ -52,7 +52,7 @@ static void Parse_Spin( menuFrameWork_t *menu, menuType_t type ) {
     s = UI_Mallocz( sizeof( *s ) );
     s->generic.type = type;
     s->generic.name = UI_CopyString( Cmd_Argv( 1 ) );
-    s->cvar = Cvar_Ref( Cmd_Argv( 2 ) );
+    s->cvar = Cvar_WeakGet( Cmd_Argv( 2 ) );
     s->itemnames = UI_Mallocz( sizeof( char * ) * ( numItems + 1 ) );
     for( i = 0; i < numItems; i++ ) {
         s->itemnames[i] = UI_CopyString( Cmd_Argv( 3 + i ) );
@@ -77,7 +77,7 @@ static void Parse_Pairs( menuFrameWork_t *menu ) {
     s = UI_Mallocz( sizeof( *s ) );
     s->generic.type = MTYPE_PAIRS;
     s->generic.name = UI_CopyString( Cmd_Argv( 1 ) );
-    s->cvar = Cvar_Ref( Cmd_Argv( 2 ) );
+    s->cvar = Cvar_WeakGet( Cmd_Argv( 2 ) );
     numItems >>= 1;
     s->itemnames = UI_Mallocz( sizeof( char * ) * ( numItems + 1 ) );
     for( i = 0; i < numItems; i++ ) {
@@ -105,7 +105,7 @@ static void Parse_Range( menuFrameWork_t *menu ) {
     s = UI_Mallocz( sizeof( *s ) );
     s->generic.type = MTYPE_SLIDER;
     s->generic.name = UI_CopyString( Cmd_Argv( 1 ) );
-    s->cvar = Cvar_Ref( Cmd_Argv( 2 ) );
+    s->cvar = Cvar_WeakGet( Cmd_Argv( 2 ) );
     s->minvalue = atof( Cmd_Argv( 3 ) );
     s->maxvalue = atof( Cmd_Argv( 4 ) );
     if( Cmd_Argc() > 5 ) {
@@ -238,7 +238,7 @@ static void Parse_Toggle( menuFrameWork_t *menu ) {
     s = UI_Mallocz( sizeof( *s ) );
     s->generic.type = type;
     s->generic.name = UI_CopyString( Cmd_Argv( 1 ) );
-    s->cvar = Cvar_Ref( Cmd_Argv( 2 ) );
+    s->cvar = Cvar_WeakGet( Cmd_Argv( 2 ) );
     s->itemnames = ( char ** )yes_no_names;
     s->numItems = 2;
     s->negate = negate;
@@ -292,7 +292,7 @@ static void Parse_Field( menuFrameWork_t *menu ) {
     f->generic.name = center ? NULL : UI_CopyString( Cmd_Argv( cmd_optind ) );
     f->generic.status = UI_CopyString( status );
     f->generic.flags = flags;
-    f->cvar = Cvar_Ref( Cmd_Argv( center ? cmd_optind : cmd_optind + 1 ) );
+    f->cvar = Cvar_WeakGet( Cmd_Argv( center ? cmd_optind : cmd_optind + 1 ) );
     f->width = width;
 
     Menu_AddItem( menu, f );

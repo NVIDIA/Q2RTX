@@ -701,7 +701,7 @@ static void SCR_Draw_f( void ) {
         obj->cvar = NULL;
         obj->macro = macro;
     } else {
-        obj->cvar = Cvar_Ref( s );
+        obj->cvar = Cvar_WeakGet( s );
         obj->macro = NULL;
     }
 
@@ -762,7 +762,7 @@ static void SCR_UnDraw_f( void ) {
     cvar = NULL;
     macro = Cmd_FindMacro( s );
     if( !macro ) {
-        cvar = Cvar_Ref( s );
+        cvar = Cvar_WeakGet( s );
     }
 
     deleted = qfalse;

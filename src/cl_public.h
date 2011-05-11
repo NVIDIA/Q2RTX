@@ -60,6 +60,7 @@ void CL_Activate( active_t active );
 void CL_UpdateUserinfo( cvar_t *var, from_t from );
 qboolean CL_SendStatusRequest( char *buffer, size_t size );
 demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info );
+qboolean CL_CheatsOK( void );
 
 qboolean CL_ForwardToServer( void );
 // adds the current command line as a clc_stringcmd to the client message.

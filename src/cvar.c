@@ -64,11 +64,14 @@ xgenerator_t Cvar_FindGenerator( const char *var_name ) {
 Cvar_Exists
 ============
 */
-qboolean Cvar_Exists( const char *name ) {
-    if( Cvar_FindVar( name ) ) {
-        return qtrue;
-    }
-    return qfalse;
+qboolean Cvar_Exists( const char *var_name, qboolean weak ) {
+    cvar_t *var = Cvar_FindVar( var_name );
+
+    if( !var )
+        return qfalse;
+    if( !weak && (var->flags & (CVAR_CUSTOM|CVAR_WEAK)) )
+        return qfalse;
+    return qtrue;
 }
 
 /*
@@ -198,7 +201,7 @@ static qboolean validate_info_cvar( const char *s ) {
 // check if the first instance of this cvar has been created by user,
 // and if so, enforce any restrictions on the cvar value as defined by flags
 static void get_engine_cvar( cvar_t *var, const char *var_value, int flags ) {
-    if( var->flags & (CVAR_CUSTOM|CVAR_VOLATILE) ) {
+    if( var->flags & (CVAR_CUSTOM|CVAR_WEAK) ) {
         // update default string if cvar was set from command line
         Z_Free( var->default_string );
         var->default_string = Cvar_CopyString( var_value );
@@ -209,7 +212,7 @@ static void get_engine_cvar( cvar_t *var, const char *var_value, int flags ) {
                   ( ( flags & CVAR_NOSET ) && com_initialized ) ||
                   ( ( flags & CVAR_CHEAT ) && !CL_CheatsOK() ) ||
                   ( ( flags & CVAR_INFOMASK ) && !validate_info_cvar( var->string ) ) ||
-                  ( var->flags & CVAR_VOLATILE ) ) )
+                  ( var->flags & CVAR_WEAK ) ) )
             {
                 // restricted cvars are reset back to default value
                 change_string_value( var, var_value, FROM_CODE );
@@ -223,7 +226,7 @@ static void get_engine_cvar( cvar_t *var, const char *var_value, int flags ) {
     }
 
     // some flags are not saved
-    var->flags &= ~(CVAR_GAME|CVAR_CUSTOM|CVAR_VOLATILE);
+    var->flags &= ~(CVAR_GAME|CVAR_CUSTOM|CVAR_WEAK);
     var->flags |= flags;
 }
 
@@ -258,7 +261,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 
     var = Cvar_FindVar( var_name );
     if( var ) {
-        if( !( flags & (CVAR_VOLATILE|CVAR_CUSTOM) ) ) {
+        if( !( flags & (CVAR_WEAK|CVAR_CUSTOM) ) ) {
             get_engine_cvar( var, var_value, flags );
         }
         return var;
@@ -298,11 +301,11 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 
 /*
 ============
-Cvar_Ref
+Cvar_WeakGet
 ============
 */
-cvar_t *Cvar_Ref( const char *var_name ) {
-    return Cvar_Get( var_name, "", CVAR_VOLATILE );
+cvar_t *Cvar_WeakGet( const char *var_name ) {
+    return Cvar_Get( var_name, "", CVAR_WEAK );
 }
 
 static void set_back_cvar( cvar_t *var ) {

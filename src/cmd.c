@@ -310,7 +310,7 @@ void Cmd_Alias_f( void ) {
         return;
     }
 
-    if( Cvar_Exists( s ) ) {
+    if( Cvar_Exists( s, qtrue ) ) {
         Com_Printf( "\"%s\" already defined as a cvar\n", s );
         return;
     }
@@ -707,12 +707,10 @@ Cmd_AddMacro
 */
 void Cmd_AddMacro( const char *name, xmacro_t function ) {
     cmd_macro_t *macro;
-    cvar_t *var;
     unsigned hash;
 
 // fail if the macro is a variable name
-    var = Cvar_FindVar( name );
-    if( var && !( var->flags & (CVAR_CUSTOM|CVAR_VOLATILE) ) ) {
+    if( Cvar_Exists( name, qfalse ) ) {
         Com_WPrintf( "%s: %s already defined as a cvar\n", __func__, name );
         return;
     }
@@ -1429,12 +1427,10 @@ static cmd_function_t *Cmd_Find( const char *name ) {
 
 static void Cmd_RegCommand( const cmdreg_t *reg ) {
     cmd_function_t *cmd;
-    cvar_t *var;
     unsigned hash;
     
 // fail if the command is a variable name
-    var = Cvar_FindVar( reg->name );
-    if( var && !( var->flags & (CVAR_CUSTOM|CVAR_VOLATILE) ) ) {
+    if( Cvar_Exists( reg->name, qfalse ) ) {
         Com_WPrintf( "%s: %s already defined as a cvar\n", __func__, reg->name );
         return;
     }
@@ -1887,7 +1883,7 @@ static void Cmd_Complete_f( void ) {
     name = cmd_argv[1];
 
 // fail if the command is a variable name
-    if( Cvar_Exists( name ) ) {
+    if( Cvar_Exists( name, qtrue ) ) {
         Com_Printf( "%s is already defined as a cvar\n", name );
         return;
     }
