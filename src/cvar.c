@@ -683,7 +683,7 @@ Allows setting and defining of arbitrary cvars from console
 ============
 */
 void Cvar_Set_f( void ) {
-    int        c, flags;
+    int     c, flags;
     char    *f;
 
     c = Cmd_Argc();
@@ -730,12 +730,17 @@ static void Cvar_SetFlag_f( void ) {
         return;
     }
 
-    if( !Q_stricmp( s, "setu" ) ) {
+    if( !strcmp( s, "seta" ) ) {
+        cvar_t *var = Cvar_SetEx( Cmd_Argv( 1 ), Cmd_ArgsFrom( 2 ), Cmd_From() );
+        if( var && !(var->flags & CVAR_NOARCHIVEMASK) )
+            var->flags |= CVAR_ARCHIVE;
+        return;
+    }
+
+    if( !strcmp( s, "setu" ) ) {
         flags = CVAR_USERINFO;
-    } else if( !Q_stricmp( s, "sets" ) ) {
+    } else if( !strcmp( s, "sets" ) ) {
         flags = CVAR_SERVERINFO;
-    } else if( !Q_stricmp( s, "seta" ) ) {
-        flags = CVAR_ARCHIVE;
     } else {
         return;
     }
