@@ -51,7 +51,7 @@ Command text buffering and command execution
 typedef enum {
     FROM_STUFFTEXT,
     FROM_RCON,
-    //FROM_GAME,
+    FROM_MENU,
     FROM_CONSOLE,
     FROM_CMDLINE,
     FROM_CODE

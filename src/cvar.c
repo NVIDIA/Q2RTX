@@ -174,6 +174,9 @@ static void change_string_value( cvar_t *var, const char *value, from_t from ) {
     if( from != FROM_CODE ) {
         cvar_modified |= var->flags & CVAR_MODIFYMASK;
         var->flags |= CVAR_MODIFIED;
+        if( from == FROM_MENU && !(var->flags & CVAR_NOARCHIVEMASK) ) {
+            var->flags |= CVAR_ARCHIVE;
+        }
         if( var->changed ) {
             var->changed( var );
         }
