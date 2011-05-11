@@ -24,7 +24,8 @@ CFLAGS+=-DUSE_CLIENT=1
 
 include $(SRCDIR)/build/common.mk
 
-SRCFILES+=m_flash.c \
+SRCFILES+=crc.c \
+	m_flash.c \
 	cl_demo.c \
 	cl_ents.c \
 	cl_fx.c \

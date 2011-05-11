@@ -20,7 +20,6 @@ SRCFILES+=cmd.c \
 	cmodel.c \
 	common.c \
 	prompt.c \
-	crc.c \
 	cvar.c \
 	files.c \
 	mdfour.c \
