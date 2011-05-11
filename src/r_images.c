@@ -2009,7 +2009,7 @@ void IMG_Init( void ) {
 
 
 #if USE_PNG || USE_JPG || USE_TGA
-    r_override_textures = Cvar_Get( "r_override_textures", "1", CVAR_ARCHIVE|CVAR_FILES );
+    r_override_textures = Cvar_Get( "r_override_textures", "1", CVAR_FILES );
     r_texture_formats = Cvar_Get( "r_texture_formats",
 #if USE_PNG
         "p"

@@ -2543,11 +2543,11 @@ static void CL_InitLocal ( void ) {
     cl_predict = Cvar_Get ( "cl_predict", "1", 0 );
     cl_predict->changed = cl_predict_changed;
     cl_kickangles = Cvar_Get( "cl_kickangles", "1", CVAR_CHEAT );
-    cl_maxfps = Cvar_Get( "cl_maxfps", "60", CVAR_ARCHIVE );
+    cl_maxfps = Cvar_Get( "cl_maxfps", "60", 0 );
     cl_maxfps->changed = cl_sync_changed;
-    cl_async = Cvar_Get( "cl_async", "1", CVAR_ARCHIVE );
+    cl_async = Cvar_Get( "cl_async", "1", 0 );
     cl_async->changed = cl_sync_changed;
-    r_maxfps = Cvar_Get( "r_maxfps", "0", CVAR_ARCHIVE );
+    r_maxfps = Cvar_Get( "r_maxfps", "0", 0 );
     r_maxfps->changed = cl_sync_changed;
     cl_rollhack = Cvar_Get( "cl_rollhack", "1", 0 );
     cl_noglow = Cvar_Get( "cl_noglow", "0", 0 );

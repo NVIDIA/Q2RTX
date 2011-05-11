@@ -1148,10 +1148,10 @@ void SCR_Init( void ) {
     scr_graphscale = Cvar_Get ("graphscale", "1", 0);
     scr_graphshift = Cvar_Get ("graphshift", "0", 0);
 #endif
-    scr_demobar = Cvar_Get( "scr_demobar", "1", CVAR_ARCHIVE );
-    scr_font = Cvar_Get( "scr_font", "conchars", CVAR_ARCHIVE );
+    scr_demobar = Cvar_Get( "scr_demobar", "1", 0 );
+    scr_font = Cvar_Get( "scr_font", "conchars", 0 );
     scr_font->changed = scr_font_changed;
-    scr_scale = Cvar_Get( "scr_scale", "1", CVAR_ARCHIVE );
+    scr_scale = Cvar_Get( "scr_scale", "1", 0 );
     scr_crosshair = Cvar_Get ("crosshair", "0", CVAR_ARCHIVE);
     scr_crosshair->changed = scr_crosshair_changed;
 

@@ -677,9 +677,9 @@ static void GL_Register( void ) {
     gl_modulate->changed = gl_modulate_changed;
     gl_modulate_world = Cvar_Get( "gl_modulate_world", "1", 0 );
     gl_modulate_world->changed = gl_lightmap_changed;
-    gl_coloredlightmaps = Cvar_Get( "gl_coloredlightmaps", "1", CVAR_ARCHIVE );
+    gl_coloredlightmaps = Cvar_Get( "gl_coloredlightmaps", "1", 0 );
     gl_coloredlightmaps->changed = gl_lightmap_changed;
-    gl_brightness = Cvar_Get( "gl_brightness", "0", CVAR_ARCHIVE );
+    gl_brightness = Cvar_Get( "gl_brightness", "0", 0 );
     gl_brightness->changed = gl_lightmap_changed;
     gl_dynamic = Cvar_Get( "gl_dynamic", "2", 0 );
     gl_dynamic->changed = gl_lightmap_changed;

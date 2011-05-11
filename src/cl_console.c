@@ -410,16 +410,16 @@ void Con_Init( void ) {
 
     con_notifytime = Cvar_Get( "con_notifytime", "3", 0 );
     con_notifylines = Cvar_Get( "con_notifylines", "4", 0 );
-    con_clock = Cvar_Get( "con_clock", "0", CVAR_ARCHIVE );
-    con_height = Cvar_Get( "con_height", "0.5", CVAR_ARCHIVE );
+    con_clock = Cvar_Get( "con_clock", "0", 0 );
+    con_height = Cvar_Get( "con_height", "0.5", 0 );
     con_speed = Cvar_Get( "scr_conspeed", "3", 0 );
-    con_alpha = Cvar_Get( "con_alpha", "1", CVAR_ARCHIVE );
-    con_scale = Cvar_Get( "con_scale", "1", CVAR_ARCHIVE );
-    con_font = Cvar_Get( "con_font", "conchars", CVAR_ARCHIVE );
+    con_alpha = Cvar_Get( "con_alpha", "1", 0 );
+    con_scale = Cvar_Get( "con_scale", "1", 0 );
+    con_font = Cvar_Get( "con_font", "conchars", 0 );
     con_font->changed = con_param_changed;
-    con_background = Cvar_Get( "con_background", "conback", CVAR_ARCHIVE );
+    con_background = Cvar_Get( "con_background", "conback", 0 );
     con_background->changed = con_param_changed;
-    con_scroll = Cvar_Get( "con_scroll", "0", CVAR_ARCHIVE );
+    con_scroll = Cvar_Get( "con_scroll", "0", 0 );
     con_history = Cvar_Get( "con_history", "0", 0 );
 
     IF_Init( &con.prompt.inputLine, 0, MAX_FIELD_TEXT - 1 );

@@ -1034,7 +1034,7 @@ void GL_InitImages( void ) {
         "GL_LINEAR_MIPMAP_LINEAR", CVAR_ARCHIVE );
     gl_texturemode->changed = gl_texturemode_changed;
     gl_texturemode->generator = gl_texturemode_g;
-    gl_anisotropy = Cvar_Get( "gl_anisotropy", "1", CVAR_ARCHIVE );
+    gl_anisotropy = Cvar_Get( "gl_anisotropy", "1", 0 );
     gl_anisotropy->changed = gl_anisotropy_changed;
     gl_noscrap = Cvar_Get( "gl_noscrap", "0", CVAR_FILES );
     gl_round_down = Cvar_Get( "gl_round_down", "0", CVAR_FILES );
@@ -1048,9 +1048,9 @@ void GL_InitImages( void ) {
     gl_texturesolidmode = Cvar_Get( "gl_texturesolidmode",
         "default", CVAR_ARCHIVE|CVAR_FILES );
     gl_texturesolidmode->generator = gl_texturesolidmode_g;
-    gl_saturation = Cvar_Get( "gl_saturation", "1", CVAR_ARCHIVE|CVAR_FILES );
-    gl_intensity = Cvar_Get( "intensity", "1", CVAR_ARCHIVE|CVAR_FILES );
-    gl_invert = Cvar_Get( "gl_invert", "0", CVAR_ARCHIVE|CVAR_FILES );
+    gl_saturation = Cvar_Get( "gl_saturation", "1", CVAR_FILES );
+    gl_intensity = Cvar_Get( "intensity", "1", CVAR_FILES );
+    gl_invert = Cvar_Get( "gl_invert", "0", CVAR_FILES );
     if( r_config.flags & QVF_GAMMARAMP ) {
         gl_gamma = Cvar_Get( "vid_gamma", "1", CVAR_ARCHIVE );
         gl_gamma->changed = gl_gamma_changed;

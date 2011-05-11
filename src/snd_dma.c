@@ -51,7 +51,7 @@ qboolean DMA_Init( void ) {
     s_testsound = Cvar_Get( "s_testsound", "0", 0 );
 
 #if USE_DSOUND
-    s_direct = Cvar_Get( "s_direct", "1", CVAR_ARCHIVE|CVAR_SOUND );
+    s_direct = Cvar_Get( "s_direct", "1", CVAR_SOUND );
     if( s_direct->integer ) {
         DS_FillAPI( &snddma );
         ret = snddma.Init();

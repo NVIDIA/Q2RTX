@@ -283,7 +283,7 @@ static qboolean init_video( void ) {
         SDL_WM_SetIcon( sdl.icon, NULL );
     }
 
-    vid_hwgamma = Cvar_Get( "vid_hwgamma", "0", CVAR_ARCHIVE|CVAR_REFRESH );
+    vid_hwgamma = Cvar_Get( "vid_hwgamma", "0", CVAR_REFRESH );
 
     if( vid_hwgamma->integer ) {
         if( SDL_GetGammaRamp( sdl.gamma[0], sdl.gamma[1], sdl.gamma[2] ) != -1 &&

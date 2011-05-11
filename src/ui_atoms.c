@@ -612,7 +612,7 @@ qboolean UI_Init( void ) {
     Cmd_Register( c_ui );
 
     ui_debug = Cvar_Get( "ui_debug", "0", 0 );
-    ui_open = Cvar_Get( "ui_open", "0", CVAR_ARCHIVE );
+    ui_open = Cvar_Get( "ui_open", "0", 0 );
 
     UI_ModeChanged();
 

@@ -588,8 +588,7 @@ Prompt_Init
 ====================
 */
 void Prompt_Init( void ) {
-    com_completion_mode = Cvar_Get( "com_completion_mode", "1", CVAR_ARCHIVE );
-    com_completion_treshold = Cvar_Get( "com_completion_treshold", "50",
-        CVAR_ARCHIVE );
+    com_completion_mode = Cvar_Get( "com_completion_mode", "1", 0 );
+    com_completion_treshold = Cvar_Get( "com_completion_treshold", "50", 0 );
 }
 
