@@ -759,23 +759,21 @@ with the archive flag set to true.
 ============
 */
 void Cvar_WriteVariables( qhandle_t f, int mask, qboolean modified ) {
-    cvar_t    *var;
-    char *string;
+    cvar_t  *var;
+    char    *s, *a;
 
     for( var = cvar_vars; var; var = var->next ) {
-        if( var->flags & CVAR_PRIVATE ) {
+        if( var->flags & CVAR_NOARCHIVEMASK )
             continue;
-        }
-        if( var->flags & mask ) {
-            if( var->latched_string ) {
-                string = var->latched_string;
-            } else {
-                string = var->string;
-            }
-            if( !modified || strcmp( string, var->default_string ) ) {
-                FS_FPrintf( f, "set %s \"%s\"\n", var->name, string );
-            }
-        }
+        if( !( var->flags & mask ) )
+            continue;
+
+        s = var->latched_string ? var->latched_string : var->string;
+        if( modified && !strcmp( s, var->default_string ) )
+            continue;
+
+        a = !modified && ( var->flags & CVAR_ARCHIVE ) ? "a" : "";
+        FS_FPrintf( f, "set%s %s \"%s\"\n", a, var->name, s );
     }    
 }
 
