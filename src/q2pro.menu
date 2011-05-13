@@ -75,8 +75,6 @@ begin video
     toggle "smooth lights falloff" gl_dlight_falloff
     range "texture saturation" gl_saturation 0 1
     range "lightmap saturation" gl_coloredlightmaps 0 1
-    toggle "override textures" r_override_textures
-    toggle "override models" r_override_models
 end
 
 begin options
@@ -98,10 +96,7 @@ begin sound
     values "hardware access" s_direct "max compatibility" "max performance"
     range "effects volume" s_volume 0 1
     values "ambient sounds" s_ambient "no" "yes" "only player's own"
-    pairs "chat beep" cl_chat_sound \
-        disabled "" \
-        default misc/talk.wav \
-        alternative misc/talk1.wav
+    values "chat beep" cl_chat_sound "disabled" "default" "alternative"
 end
 
 begin downloads
@@ -193,12 +188,11 @@ end
 
 begin input
     title "Input Setup"
-    toggle "direct input" in_direct
-    field --integer --width 2 "mouse speed" sensitivity
+    field --integer --width 2 "mouse sens" sensitivity
     toggle "auto sens" m_autosens
     toggle "mouse filter" m_filter
-    toggle "always run" cl_run
     toggle "free look" freelook
+    toggle "always run" cl_run
 end
 
 begin keys
