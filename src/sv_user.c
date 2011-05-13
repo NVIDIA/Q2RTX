@@ -1002,8 +1002,8 @@ static inline void SV_SetLastFrame( int lastframe ) {
     unsigned sentTime;
 
     if( lastframe > 0 ) {
-        if( lastframe > sv.framenum ) {
-            return; // ignore bogus acks
+        if( lastframe > sv_client->framenum ) {
+            return; // ignore invalid acks
         }
         if( lastframe <= sv_client->lastframe ) {
             return; // ignore duplicate acks

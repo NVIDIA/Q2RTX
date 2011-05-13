@@ -72,7 +72,7 @@ static qboolean SV_RateDrop( client_t *client ) {
 
     if( total > client->rate ) {
         client->surpressCount++;
-        client->message_size[sv.framenum % RATE_MESSAGES] = 0;
+        client->message_size[client->framenum % RATE_MESSAGES] = 0;
         return qtrue;
     }
 
@@ -87,7 +87,7 @@ static void SV_CalcSendTime( client_t *client, size_t size ) {
         return;
     }
 
-    client->message_size[sv.framenum % RATE_MESSAGES] = size;
+    client->message_size[client->framenum % RATE_MESSAGES] = size;
 
     client->send_time = svs.realtime;
     client->send_delta = size * 1000 / client->rate;
@@ -446,7 +446,7 @@ static qboolean check_entity( client_t *client, int entnum ) {
     client_frame_t *frame;
     unsigned i, j;
 
-    frame = &client->frames[sv.framenum & UPDATE_MASK];
+    frame = &client->frames[client->framenum & UPDATE_MASK];
 
     for( i = 0; i < frame->num_entities; i++ ) {
         j = ( frame->first_entity + i ) % svs.num_entities;
@@ -657,7 +657,7 @@ static void write_datagram_old( client_t *client ) {
     client->WriteFrame( client );
     if( msg_write.cursize > maxsize ) {
         SV_DPrintf( 0, "Frame %d overflowed for %s: %"PRIz" > %"PRIz"\n",
-            sv.framenum, client->name, msg_write.cursize, maxsize );
+            client->framenum, client->name, msg_write.cursize, maxsize );
         SZ_Clear( &msg_write );
     }
 
@@ -787,6 +787,8 @@ void SV_SendClientMessages( void ) {
         if( client->state != cs_spawned || client->download || client->nodata )
             goto finish;
 
+        client->framenum++;
+
         // if the reliable message overflowed,
         // drop the client (should never happen)
         if( client->netchan->message.overflowed ) {
@@ -798,7 +800,7 @@ void SV_SendClientMessages( void ) {
         // don't overrun bandwidth
         if( SV_RateDrop( client ) ) {
             SV_DPrintf( 0, "Frame %d surpressed for %s\n",
-                sv.framenum, client->name );
+                client->framenum, client->name );
             client->surpressCount++;
         } else {
             // don't write any frame data until all fragments are sent

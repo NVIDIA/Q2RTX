@@ -80,6 +80,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MVD_SPAWN_MASK      0xc0000000
 
 typedef struct {
+    int         number;
     unsigned    num_entities;
     unsigned    first_entity;
     player_state_t ps;
@@ -243,6 +244,7 @@ typedef struct client_s {
 
     client_frame_t  frames[UPDATE_BACKUP];    // updates can be delta'd from here
     unsigned        frames_sent, frames_acked, frames_nodelta;
+    int             framenum;
 
     byte            *download; // file being downloaded
     int             downloadsize; // total bytes (can't use EOF because of paks)

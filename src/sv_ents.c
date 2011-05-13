@@ -137,7 +137,7 @@ static client_frame_t *get_last_frame( client_t *client ) {
 
     client->frames_nodelta = 0;
 
-    if( sv.framenum - client->lastframe > UPDATE_BACKUP - 1 ) {
+    if( client->framenum - client->lastframe > UPDATE_BACKUP - 1 ) {
         // client hasn't gotten a good message through in a long time
         Com_DPrintf( "%s: delta request from out-of-date packet.\n", client->name );
         return NULL;
@@ -145,6 +145,12 @@ static client_frame_t *get_last_frame( client_t *client ) {
 
     // we have a valid message to delta from
     frame = &client->frames[client->lastframe & UPDATE_MASK];
+    if( frame->number != client->lastframe ) {
+        // but it got never sent
+        Com_DPrintf( "%s: delta request from dropped frame.\n", client->name );
+        return NULL;
+    }
+
     if( svs.next_entity - frame->first_entity > svs.num_entities ) {
         // but entities are too old
         Com_DPrintf( "%s: delta request from out-of-date entities.\n", client->name );
@@ -165,7 +171,7 @@ void SV_WriteFrameToClient_Default( client_t *client ) {
     int                 lastframe;
 
     // this is the frame we are creating
-    frame = &client->frames[sv.framenum & UPDATE_MASK];
+    frame = &client->frames[client->framenum & UPDATE_MASK];
 
     // this is the frame we are delta'ing from
     oldframe = get_last_frame( client );
@@ -178,7 +184,7 @@ void SV_WriteFrameToClient_Default( client_t *client ) {
     }
 
     MSG_WriteByte( svc_frame );
-    MSG_WriteLong( sv.framenum );
+    MSG_WriteLong( client->framenum );
     MSG_WriteLong( lastframe );    // what we are delta'ing from
     MSG_WriteByte( client->surpressCount );    // rate dropped packets
     client->surpressCount = 0;
@@ -212,13 +218,13 @@ void SV_WriteFrameToClient_Enhanced( client_t *client ) {
     int             clientEntityNum;
 
     // this is the frame we are creating
-    frame = &client->frames[sv.framenum & UPDATE_MASK];
+    frame = &client->frames[client->framenum & UPDATE_MASK];
 
     // this is the frame we are delta'ing from
     oldframe = get_last_frame( client );
     if( oldframe ) {
         oldstate = &oldframe->ps;
-        delta = sv.framenum - client->lastframe;
+        delta = client->framenum - client->lastframe;
     } else {
         oldstate = NULL;
         delta = 31;
@@ -227,7 +233,7 @@ void SV_WriteFrameToClient_Enhanced( client_t *client ) {
     // first byte to be patched
     b1 = SZ_GetSpace( &msg_write, 1 );
 
-    MSG_WriteLong( ( sv.framenum & FRAMENUM_MASK ) | ( delta << FRAMENUM_BITS ) );
+    MSG_WriteLong( ( client->framenum & FRAMENUM_MASK ) | ( delta << FRAMENUM_BITS ) );
 
     // second byte to be patched
     b2 = SZ_GetSpace( &msg_write, 1 );
@@ -360,10 +366,11 @@ void SV_BuildClientFrame( client_t *client ) {
         return;        // not in game yet
 
     // this is the frame we are creating
-    frame = &client->frames[sv.framenum & UPDATE_MASK];
-    client->frame_latency[sv.framenum & LATENCY_MASK] = -1;
+    frame = &client->frames[client->framenum & UPDATE_MASK];
+    client->frame_latency[client->framenum & LATENCY_MASK] = -1;
     client->frames_sent++;
 
+    frame->number = client->framenum;
     frame->sentTime = com_eventTime; // save it for ping calc later
 
     // find the client's PVS
