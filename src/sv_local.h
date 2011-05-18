@@ -84,10 +84,11 @@ typedef struct {
     unsigned    num_entities;
     unsigned    first_entity;
     player_state_t ps;
+    int         clientNum;
     int         areabytes;
     byte        areabits[MAX_MAP_AREA_BYTES];  // portalarea visibility bits
     unsigned    sentTime;                   // for ping calculations
-    int         clientNum;
+    int         latency;
 } client_frame_t;
 
 typedef struct {
@@ -177,10 +178,6 @@ typedef struct {
     };
 } message_packet_t;
 
-
-#define LATENCY_COUNTS  16
-#define LATENCY_MASK    ( LATENCY_COUNTS - 1 )
-
 #define RATE_MESSAGES   10
 
 #define FOR_EACH_CLIENT( client ) \
@@ -222,7 +219,6 @@ typedef struct client_s {
     int             numMoves;
     int             fps;
 
-    int             frame_latency[LATENCY_COUNTS];
     int             ping, min_ping, max_ping;
     int             avg_ping_time, avg_ping_count;
 

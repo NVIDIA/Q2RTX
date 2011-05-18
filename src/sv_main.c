@@ -1104,6 +1104,7 @@ int SV_CountClients( void ) {
             count++;
         }
     }
+
     return count;
 }
 
@@ -1112,27 +1113,38 @@ static int ping_nop( client_t *cl ) {
 }
 
 static int ping_min( client_t *cl ) {
-    int j, count = 9999;
+    client_frame_t *frame;
+    int i, j, count = INT_MAX;
 
-    for( j = 0; j < LATENCY_COUNTS; j++ ) {
-        if( cl->frame_latency[j] > 0 ) {
-            if( count > cl->frame_latency[j] ) {
-                count = cl->frame_latency[j];
-            }
-        }
+    for( i = 0; i < UPDATE_BACKUP; i++ ) {
+        j = cl->framenum - i;
+        frame = &cl->frames[j & UPDATE_MASK];
+        if( frame->number != j )
+            continue;
+        if( frame->latency == -1 )
+            continue;
+        if( count > frame->latency )
+            count = frame->latency;
     }
-    return count == 9999 ? 0 : count;
+
+    return count == INT_MAX ? 0 : count;
 }
 
 static int ping_avg( client_t *cl ) {
-    int j, total = 0, count = 0;
+    client_frame_t *frame;
+    int i, j, total = 0, count = 0;
 
-    for( j = 0; j < LATENCY_COUNTS; j++ ) {
-        if( cl->frame_latency[j] > 0 ) {
-            count++;
-            total += cl->frame_latency[j];
-        }
+    for( i = 0; i < UPDATE_BACKUP; i++ ) {
+        j = cl->framenum - i;
+        frame = &cl->frames[j & UPDATE_MASK];
+        if( frame->number != j )
+            continue;
+        if( frame->latency == -1 )
+            continue;
+        count++;
+        total += frame->latency;
     }
+
     return count ? total / count : 0;
 }
 

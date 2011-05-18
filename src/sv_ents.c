@@ -367,11 +367,11 @@ void SV_BuildClientFrame( client_t *client ) {
 
     // this is the frame we are creating
     frame = &client->frames[client->framenum & UPDATE_MASK];
-    client->frame_latency[client->framenum & LATENCY_MASK] = -1;
-    client->frames_sent++;
-
     frame->number = client->framenum;
     frame->sentTime = com_eventTime; // save it for ping calc later
+    frame->latency = -1; // not yet acked
+
+    client->frames_sent++;
 
     // find the client's PVS
     ps = &clent->client->ps;

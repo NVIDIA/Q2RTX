@@ -998,25 +998,28 @@ static inline void SV_ClientThink( usercmd_t *cmd ) {
     ge->ClientThink( sv_player, cmd );
 }
 
-static inline void SV_SetLastFrame( int lastframe ) {
-    unsigned sentTime;
+static void SV_SetLastFrame( int lastframe ) {
+    client_frame_t *frame;
 
     if( lastframe > 0 ) {
-        if( lastframe > sv_client->framenum ) {
+        if( lastframe > sv_client->framenum )
             return; // ignore invalid acks
-        }
-        if( lastframe <= sv_client->lastframe ) {
+
+        if( lastframe <= sv_client->lastframe )
             return; // ignore duplicate acks
+
+        if( sv_client->framenum - lastframe < UPDATE_BACKUP ) {
+            frame = &sv_client->frames[lastframe & UPDATE_MASK];
+
+            if( frame->number == lastframe ) {
+                // save time for ping calc
+                if( frame->sentTime <= com_eventTime )
+                    frame->latency = com_eventTime - frame->sentTime;
+            }
         }
 
-        sentTime = sv_client->frames[lastframe & UPDATE_MASK].sentTime;
-        if( sentTime <= com_eventTime ) {
-            sv_client->frame_latency[lastframe & LATENCY_MASK] = com_eventTime - sentTime;
-        }
-
-        if( sv_client->state == cs_spawned ) {
-            sv_client->frames_acked++;
-        }
+        // count valid ack
+        sv_client->frames_acked++;
     }
 
     sv_client->lastframe = lastframe;
@@ -1036,7 +1039,6 @@ static void SV_OldClientExecuteMove( int net_drop ) {
     }
     
     lastframe = MSG_ReadLong();
-    SV_SetLastFrame( lastframe );
 
     if( sv_client->protocol == PROTOCOL_VERSION_R1Q2 &&
         sv_client->version >= PROTOCOL_VERSION_R1Q2_UCMD ) 
@@ -1051,9 +1053,11 @@ static void SV_OldClientExecuteMove( int net_drop ) {
     }
 
     if( sv_client->state != cs_spawned ) {
-        sv_client->lastframe = -1;
+        SV_SetLastFrame( -1 );
         return;
     }
+
+    SV_SetLastFrame( lastframe );
 
     if( net_drop > 2 ) {
         sv_client->frameflags |= FF_CLIENTPRED;
@@ -1102,8 +1106,6 @@ static void SV_NewClientExecuteMove( int c, int net_drop ) {
         lastframe = MSG_ReadLong();
     }
 
-    SV_SetLastFrame( lastframe );
-
     lightlevel = MSG_ReadByte();
 
     // read all cmds
@@ -1129,10 +1131,13 @@ static void SV_NewClientExecuteMove( int c, int net_drop ) {
             lastcmd = cmd;
         }
     }
+
     if( sv_client->state != cs_spawned ) {
-        sv_client->lastframe = -1;
+        SV_SetLastFrame( -1 );
         return;
     }
+
+    SV_SetLastFrame( lastframe );
 
     if( q_unlikely( !lastcmd ) ) {
         return; // should never happen
