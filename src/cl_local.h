@@ -483,6 +483,7 @@ void CL_RestartRefresh( qboolean total );
 void CL_ClientCommand( const char *string );
 void CL_SendRcon( const netadr_t *adr, const char *pass, const char *cmd );
 const char *CL_Server_g( const char *partial, int argnum, int state );
+void CL_CheckForPause( void );
 void CL_UpdateFrameTimes( void );
 qboolean CL_CheckForIgnore( const char *s );
 

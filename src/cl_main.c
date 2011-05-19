@@ -287,17 +287,14 @@ static void CL_Pause_f( void ) {
     }
 #endif
 
+    // activate manual pause
     if( cl_paused->integer == 2 ) {
-        if( cls.key_dest & (KEY_CONSOLE|KEY_MENU) ) {
-            // activate automatic pause
-            Cvar_Set( "cl_paused", "1" );
-        } else {
-            Cvar_Set( "cl_paused", "0" );
-        }
+        Cvar_Set( "cl_paused", "0" );
     } else {
-        // activate manual pause
         Cvar_Set( "cl_paused", "2" );
     }
+
+    CL_CheckForPause();
 }
 
 /*
@@ -495,8 +492,6 @@ usage:
 
     CL_CheckForResend();
 
-    Cvar_Set( "cl_paused", "0" );
-    Cvar_Set( "sv_paused", "0" );
     Cvar_Set( "timedemo", "0" );
 }
 
@@ -626,6 +621,7 @@ void CL_ClearState( void ) {
 
     if( cls.state > ca_connected ) {
         cls.state = ca_connected;
+        CL_CheckForPause();
         CL_UpdateFrameTimes();
     }
 
@@ -694,8 +690,6 @@ void CL_Disconnect( error_type_t type ) {
 
     CL_ClearState ();
 
-    Cvar_Set( "cl_paused", "0" );
-
     cls.state = ca_disconnected;
     cls.userinfo_modified = 0;
 
@@ -706,6 +700,8 @@ void CL_Disconnect( error_type_t type ) {
         UI_OpenMenu( UIMENU_NONE );
     }
 #endif
+
+    CL_CheckForPause();
 
     CL_UpdateFrameTimes();
 }
@@ -1025,6 +1021,8 @@ static void CL_Changing_f( void ) {
     cls.state = ca_connected;   // not active anymore, but not disconnected
     cl.mapname[0] = 0;
     cl.configstrings[CS_NAME][0] = 0;
+
+    CL_CheckForPause();
 
     CL_UpdateFrameTimes();
 
@@ -2793,6 +2791,47 @@ static void CL_CheckTimeout( void ) {
     }
 }
 
+/*
+=================
+CL_CheckForPause
+
+=================
+*/
+void CL_CheckForPause( void ) {
+    if( cls.state != ca_active ) {
+        // only pause when active
+        Cvar_Set( "cl_paused", "0" );
+        Cvar_Set( "sv_paused", "0" );
+        return;
+    }
+
+    if( cls.key_dest & (KEY_CONSOLE|KEY_MENU) ) {
+        // only pause in single player
+        if( cl_paused->integer == 0 ) {
+            Cvar_Set( "cl_paused", "1" );
+        }
+    } else if( cl_paused->integer == 1 ) {
+        // only resume after automatic pause
+        Cvar_Set( "cl_paused", "0" );
+    }
+
+    // hack for demo playback pause/unpause
+    if( cls.demo.playback ) {
+        // don't pause when running timedemo!
+        if( cl_paused->integer && !com_timedemo->integer ) {
+            if( !sv_paused->integer ) {
+                Cvar_Set( "sv_paused", "1" );
+                IN_Activate();
+            }
+        } else {
+            if( sv_paused->integer ) {
+                Cvar_Set( "sv_paused", "0" );
+                IN_Activate();
+            }
+        }
+    }
+}
+
 typedef enum {
     SYNC_FULL,
     SYNC_MAXFPS,
@@ -2972,22 +3011,6 @@ unsigned CL_Frame( unsigned msec ) {
         "phys_frame=%d phys_extra=%d\n",
         main_extra, ref_frame, ref_extra,
         phys_frame, phys_extra );
-
-    // hack for demo playback pause/unpause
-    if( cls.demo.playback ) {
-        // don't pause when running timedemo!
-        if( cl_paused->integer && !com_timedemo->integer ) {
-            if( !sv_paused->integer ) {
-                Cvar_Set( "sv_paused", "1" );
-                IN_Activate();
-            }
-        } else {
-            if( sv_paused->integer ) {
-                Cvar_Set( "sv_paused", "0" );
-                IN_Activate();
-            }
-        }
-    }
 
     // decide the simulation time
     cls.frametime = main_extra * 0.001f;

@@ -1449,20 +1449,31 @@ static void SV_PrepWorldFrame( void ) {
 
 #if USE_CLIENT
 static inline qboolean check_paused( void ) {
-    if( !dedicated->integer && cl_paused->integer &&
-#if USE_MVD_CLIENT
-        LIST_EMPTY( &mvd_gtv_list ) &&
-#endif
-        LIST_SINGLE( &sv_clientlist ) )
-    {
-        if( !sv_paused->integer ) {
-            Cvar_Set( "sv_paused", "1" );
-            IN_Activate();
-        }
+    if( dedicated->integer )
+        goto resume;
 
-        return qtrue; // don't run if paused
+    if( !cl_paused->integer )
+        goto resume;
+
+    if( com_timedemo->integer )
+        goto resume;
+
+    if( !LIST_SINGLE( &sv_clientlist ) )
+        goto resume;
+
+#if USE_MVD_CLIENT
+    if( !LIST_EMPTY( &mvd_gtv_list ) )
+        goto resume;
+#endif
+
+    if( !sv_paused->integer ) {
+        Cvar_Set( "sv_paused", "1" );
+        IN_Activate();
     }
 
+    return qtrue; // don't run if paused
+
+resume:
     if( sv_paused->integer ) {
         Cvar_Set( "sv_paused", "0" );
         IN_Activate();
@@ -1472,25 +1483,20 @@ static inline qboolean check_paused( void ) {
 }
 #endif
 
-
 /*
 =================
 SV_RunGameFrame
 =================
 */
 static void SV_RunGameFrame( void ) {
-    // we always need to bump framenum, even if we
-    // don't run the world, otherwise the delta
-    // compression can get confused when a client
-    // has the "current" frame
-    sv.framenum++;
-
 #if USE_CLIENT
     // pause if there is only local client on the server
-    if( check_paused() ) {
+    if( check_paused() )
         return;
-    }
 #endif
+
+    // bump framenum in sync with game
+    sv.framenum++;
 
 #if USE_MVD_SERVER
     // save the entire world state if recording a serverdemo

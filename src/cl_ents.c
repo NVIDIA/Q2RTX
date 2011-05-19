@@ -199,14 +199,14 @@ static void CL_SetActiveState( void ) {
     SCR_LagClear();
     Con_Close( qfalse );        // get rid of connection screen
 
+    CL_CheckForPause();
+
     CL_UpdateFrameTimes();
 
     if( !cls.demo.playback ) {
         EXEC_TRIGGER( cl_beginmapcmd );
         Cmd_ExecTrigger( "#cl_enterlevel" );
     }
-
-    Cvar_Set( "cl_paused", "0" );
 }
 
 

@@ -196,19 +196,10 @@ void Key_SetDest( keydest_t dest ) {
 
     cls.key_dest = dest;
 
-    if( dest & (KEY_CONSOLE|KEY_MENU) ) {
-        // only pause in single player
-        if( cl_paused->integer == 0 ) {
-            Cvar_Set( "cl_paused", "1" );
-        }
-    } else if( cl_paused->integer == 1 ) {
-        // only resume after automatic pause
-        Cvar_Set( "cl_paused", "0" );
-    }
-
 // activate or deactivate mouse
     if( diff & (KEY_CONSOLE|KEY_MENU) ) {
         IN_Activate();
+        CL_CheckForPause();
     }
 }
 

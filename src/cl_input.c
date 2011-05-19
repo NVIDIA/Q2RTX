@@ -1072,7 +1072,27 @@ static void CL_SendBatchedCmd( void ) {
 #endif
 
     SZ_Clear( &msg_write );
+}
 
+static void CL_SendKeepAlive( void ) {
+    client_history_t *history;
+    size_t cursize;
+
+    // archive this packet
+    history = &cl.history[cls.netchan->outgoing_sequence & CMD_MASK];
+    history->cmdNumber = cl.cmdNumber;
+    history->sent = cls.realtime;    // for ping calculation
+    history->rcvd = 0;
+
+    cl.lastTransmitTime = cls.realtime;
+    cl.lastTransmitCmdNumber = cl.cmdNumber;
+
+    cursize = cls.netchan->Transmit( cls.netchan, 0, NULL, 1 );
+#ifdef _DEBUG
+    if( cl_showpackets->integer ) {
+        Com_Printf( "%"PRIz" ", cursize );
+    }
+#endif
 }
 
 static void CL_SendUserinfo( void ) {
@@ -1124,25 +1144,20 @@ void CL_SendCmd( void ) {
         return;
     }
 
-    if( cls.state < ca_active ) {
+    if( cls.state < ca_active || sv_paused->integer ) {
+        // send a userinfo update if needed
         CL_SendUserinfo();
 
         // just keepalive or update reliable
         if( cls.netchan->ShouldUpdate( cls.netchan ) ) {
-            cls.netchan->Transmit( cls.netchan, 0, NULL, 1 );
+            CL_SendKeepAlive();
         }
-        cl.lastframe = -1;
-        cl.lastTransmitCmdNumber = cl.cmdNumber;
         return;
     }
 
     // are there any new usercmds to send after all?
     if( cl.lastTransmitCmdNumber == cl.cmdNumber ) {
-        // we still need to send an empty packet if server
-        // is paused to make delta compression code happy
-        if( !sv_paused->integer ) {
-            return; // nothing to send
-        }
+        return; // nothing to send
     }
 
     // send a userinfo update if needed

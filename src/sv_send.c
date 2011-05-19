@@ -787,6 +787,9 @@ void SV_SendClientMessages( void ) {
         if( client->state != cs_spawned || client->download || client->nodata )
             goto finish;
 
+        if( SV_PAUSED )
+            continue;
+
         client->framenum++;
 
         // if the reliable message overflowed,
@@ -854,7 +857,7 @@ void SV_SendAsyncPackets( void ) {
         }
 
         // spawned clients are handled elsewhere
-        if( client->state == cs_spawned && !client->download && !client->nodata ) {
+        if( client->state == cs_spawned && !client->download && !client->nodata && !SV_PAUSED ) {
             continue;
         }
 
