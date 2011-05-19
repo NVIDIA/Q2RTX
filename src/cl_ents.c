@@ -254,6 +254,65 @@ static void set_active_state( void ) {
     }
 }
 
+static void
+player_update( server_frame_t *oldframe, server_frame_t *frame, int framediv )
+{
+    player_state_t *ps, *ops;
+    centity_t *ent;
+    int oldnum;
+
+    // find states to interpolate between
+    ps = &frame->ps;
+    ops = &oldframe->ps;
+
+    // no lerping if previous frame was dropped or invalid
+    if( !oldframe->valid )
+        goto dup;
+
+    oldnum = frame->number - framediv;
+    if( oldframe->number != oldnum )
+        goto dup;
+
+    // no lerping if player entity was teleported (origin check)
+    if( abs( ops->pmove.origin[0] - ps->pmove.origin[0] ) > 256*8 ||
+        abs( ops->pmove.origin[1] - ps->pmove.origin[1] ) > 256*8 ||
+        abs( ops->pmove.origin[2] - ps->pmove.origin[2] ) > 256*8 )
+    {
+        goto dup;
+    }
+
+    // no lerping if player entity was teleported (event check)
+    ent = &cl_entities[frame->clientNum + 1];
+    if( ent->serverframe > oldnum &&
+        ent->serverframe <= frame->number &&
+#if USE_FPS
+        ent->event_frame > oldnum &&
+        ent->event_frame <= frame->number &&
+#endif
+        ( ent->current.event == EV_PLAYER_TELEPORT
+        || ent->current.event == EV_OTHER_TELEPORT ) )
+    {
+        goto dup;
+    }
+
+    // no lerping if teleport bit was flipped
+    if( ( ops->pmove.pm_flags ^ ps->pmove.pm_flags ) & PMF_TELEPORT_BIT )
+        goto dup;
+
+    // no lerping if POV number changed
+    if( oldframe->clientNum != frame->clientNum )
+        goto dup;
+
+    // developer option
+    if( cl_nolerp->integer )
+        goto dup;
+
+    return;
+
+dup:
+    // duplicate the current state so lerping doesn't hurt anything
+    *ops = *ps;
+}
 
 /*
 ==================
@@ -320,9 +379,16 @@ void CL_DeltaFrame( void ) {
         IN_Activate();
     }
 
-    SCR_SetCrosshairColor();
+    player_update( &cl.oldframe, &cl.frame, 1 );
+
+#if USE_FPS
+    if( CL_FRAMESYNC )
+        player_update( &cl.oldkeyframe, &cl.keyframe, cl.framediv );
+#endif
 
     CL_CheckPredictionError();
+
+    SCR_SetCrosshairColor();
 }
 
 #ifdef _DEBUG
@@ -888,7 +954,8 @@ skip:
 CL_AddViewWeapon
 ==============
 */
-static void CL_AddViewWeapon( const player_state_t *ps, const player_state_t *ops ) {
+static void CL_AddViewWeapon( void ) {
+    player_state_t *ps, *ops;
     entity_t    gun;        // view model
     int         i;
 
@@ -901,10 +968,9 @@ static void CL_AddViewWeapon( const player_state_t *ps, const player_state_t *op
         return;
     }
 
-    // never draw in third person mode
-    if( cl.thirdPersonView ) {
-        return;
-    }
+    // find states to interpolate between
+    ps = CL_KEYPS;
+    ops = CL_OLDKEYPS;
 
     memset( &gun, 0, sizeof( gun ) );
 
@@ -918,11 +984,11 @@ static void CL_AddViewWeapon( const player_state_t *ps, const player_state_t *op
     }
 
     // set up gun position
-    for( i=0 ; i<3 ; i++ ) {
+    for( i = 0; i < 3; i++ ) {
         gun.origin[i] = cl.refdef.vieworg[i] + ops->gunoffset[i]
-            + cl.lerpfrac * (ps->gunoffset[i] - ops->gunoffset[i]);
+            + CL_KEYLERPFRAC * (ps->gunoffset[i] - ops->gunoffset[i]);
         gun.angles[i] = cl.refdef.viewangles[i] + LerpAngle( ops->gunangles[i],
-            ps->gunangles[i], cl.lerpfrac );
+            ps->gunangles[i], CL_KEYLERPFRAC );
     }
 
     // adjust for high fov
@@ -930,6 +996,8 @@ static void CL_AddViewWeapon( const player_state_t *ps, const player_state_t *op
         vec_t ofs = ( 90 - ps->fov ) * 0.2f;
         VectorMA( gun.origin, ofs, cl.v_forward, gun.origin );
     }
+
+    VectorCopy( gun.origin, gun.oldorigin );    // don't lerp at all
 
     if( gun_frame ) {
         gun.frame = gun_frame;  // development tool
@@ -940,6 +1008,7 @@ static void CL_AddViewWeapon( const player_state_t *ps, const player_state_t *op
             gun.oldframe = 0;   // just changed weapons, don't lerp from old
         } else {
             gun.oldframe = ops->gunframe;
+            gun.backlerp = 1.0f - CL_KEYLERPFRAC;
         }
     }
 
@@ -947,13 +1016,35 @@ static void CL_AddViewWeapon( const player_state_t *ps, const player_state_t *op
     if( info_hand->integer == 1 ) {
         gun.flags |= RF_LEFTHAND;
     }
+
     if( cl_gunalpha->value != 1 ) {
         gun.alpha = Cvar_ClampValue( cl_gunalpha, 0.1f, 1.0f );
         gun.flags |= RF_TRANSLUCENT;
     }
-    gun.backlerp = 1.0 - cl.lerpfrac;
-    VectorCopy( gun.origin, gun.oldorigin );    // don't lerp at all
+
     V_AddEntity( &gun );
+}
+
+static void CL_SetupFirstPersonView( void ) {
+    player_state_t *ps, *ops;
+    vec3_t kickangles;
+    float lerp;
+
+    // add kick angles
+    if( cl_kickangles->integer ) {
+        ps = CL_KEYPS;
+        ops = CL_OLDKEYPS;
+
+        lerp = CL_KEYLERPFRAC;
+
+        LerpAngles( ops->kick_angles, ps->kick_angles, lerp, kickangles );
+        VectorAdd( cl.refdef.viewangles, kickangles, cl.refdef.viewangles );
+    }
+
+    // add the weapon
+    CL_AddViewWeapon();
+
+    cl.thirdPersonView = qfalse;
 }
 
 /*
@@ -967,6 +1058,12 @@ static void CL_SetupThirdPersionView( void ) {
     float dist, angle, range;
     trace_t trace;
     static vec3_t mins = { -4, -4, -4 }, maxs = { 4, 4, 4 };
+
+    // if dead, set a nice view angle
+    if( cl.frame.ps.stats[STAT_HEALTH] <= 0 ) {
+        cl.refdef.viewangles[ROLL] = 0;
+        cl.refdef.viewangles[PITCH] = 10;
+    }
 
     VectorMA( cl.refdef.vieworg, 512, cl.v_forward, focus );
 
@@ -997,6 +1094,29 @@ static void CL_SetupThirdPersionView( void ) {
     cl.thirdPersonView = qtrue;
 }
 
+static void CL_FinishViewValues( void ) {
+    centity_t *ent;
+
+    if( !cl_thirdperson->integer )
+        goto first;
+
+    if( cl.frame.clientNum == CLIENTNUM_NONE )
+        goto first;
+
+    ent = &cl_entities[cl.frame.clientNum + 1];
+    if( ent->serverframe != cl.frame.number )
+        goto first;
+
+    if( !ent->current.modelindex )
+        goto first;
+
+    CL_SetupThirdPersionView();
+    return;
+
+first:
+    CL_SetupFirstPersonView();
+}
+
 #if USE_SMOOTH_DELTA_ANGLES
 static inline float LerpShort( int a2, int a1, float frac ) {
     if (a1 - a2 > 32768)
@@ -1014,45 +1134,16 @@ CL_CalcViewValues
 Sets cl.refdef view values and sound spatialization params.
 Usually called from CL_AddEntities, but may be directly called from the main
 loop if rendering is disabled but sound is running.
-Returns the player state to lerp from, used by CL_AddViewWeapon.
 ===============
 */
-player_state_t *CL_CalcViewValues( void ) {
+void CL_CalcViewValues( void ) {
     player_state_t *ps, *ops;
     vec3_t viewoffset;
     float fov, lerp;
-    centity_t *ent;
 
     // find states to interpolate between
     ps = &cl.frame.ps;
     ops = &cl.oldframe.ps;
-    if( !cl.oldframe.valid || cl.oldframe.number != cl.frame.number - 1 ) {
-        ops = ps;
-    }
-
-    // HACK: see if the player entity was teleported this frame
-    if( abs( ops->pmove.origin[0] - ps->pmove.origin[0] ) > 256*8 ||
-        abs( ops->pmove.origin[1] - ps->pmove.origin[1] ) > 256*8 ||
-        abs( ops->pmove.origin[2] - ps->pmove.origin[2] ) > 256*8 )
-    {
-        ops = ps;       // don't interpolate
-    }
-
-    ent = &cl_entities[cl.frame.clientNum + 1];
-    if( ent->serverframe == cl.frame.number &&
-        ( ent->current.event == EV_PLAYER_TELEPORT
-        || ent->current.event == EV_OTHER_TELEPORT ) )
-    {
-        ops = ps;       // don't interpolate
-    }
-
-    if( ( ops->pmove.pm_flags ^ ps->pmove.pm_flags ) & PMF_TELEPORT_BIT ) {
-        ops = ps;       // don't interpolate
-    }
-
-    if( cl.oldframe.clientNum != cl.frame.clientNum ) {
-        ops = ps;       // don't interpolate
-    }
 
     lerp = cl.lerpfrac;
 
@@ -1101,8 +1192,6 @@ player_state_t *CL_CalcViewValues( void ) {
         LerpAngles( ops->viewangles, ps->viewangles, lerp, cl.refdef.viewangles );
     }
     
-    LerpVector( ops->viewoffset, ps->viewoffset, lerp, viewoffset );
-
 #if USE_SMOOTH_DELTA_ANGLES
     cl.delta_angles[0] = LerpShort( ops->pmove.delta_angles[0], ps->pmove.delta_angles[0], lerp );
     cl.delta_angles[1] = LerpShort( ops->pmove.delta_angles[1], ps->pmove.delta_angles[1], lerp );
@@ -1125,6 +1214,15 @@ player_state_t *CL_CalcViewValues( void ) {
     // don't interpolate blend color
     Vector4Copy( ps->blend, cl.refdef.blend );
 
+#if USE_FPS
+    ps = &cl.keyframe.ps;
+    ops = &cl.oldkeyframe.ps;
+
+    lerp = cl.keylerpfrac;
+#endif
+
+    LerpVector( ops->viewoffset, ps->viewoffset, lerp, viewoffset );
+
     AngleVectors( cl.refdef.viewangles, cl.v_forward, cl.v_right, cl.v_up );
 
     VectorCopy( cl.refdef.vieworg, cl.playerEntityOrigin );
@@ -1142,33 +1240,6 @@ player_state_t *CL_CalcViewValues( void ) {
     VectorCopy( cl.v_forward, listener_forward );
     VectorCopy( cl.v_right, listener_right );
     VectorCopy( cl.v_up, listener_up );
-
-    return ops;
-}
-
-static void CL_FinishViewValues( player_state_t *ops ) {
-    player_state_t *ps = &cl.frame.ps;
-    vec3_t kickangles;
-
-    if( cl_thirdperson->integer && cl.frame.clientNum != CLIENTNUM_NONE ) {
-        // if dead, set a nice view angle
-        if( ps->stats[STAT_HEALTH] <= 0 ) {
-            cl.refdef.viewangles[ROLL] = 0;
-            cl.refdef.viewangles[PITCH] = 10;
-        } 
-        CL_SetupThirdPersionView();
-    } else {
-        // add kick angles
-        if( cl_kickangles->integer ) {
-            LerpAngles( ops->kick_angles, ps->kick_angles, cl.lerpfrac, kickangles );
-            VectorAdd( cl.refdef.viewangles, kickangles, cl.refdef.viewangles );
-        }
-
-        // add the weapon
-        CL_AddViewWeapon( ps, ops );
-
-        cl.thirdPersonView = qfalse;
-    }
 }
 
 /*
@@ -1179,10 +1250,8 @@ Emits all entities, particles, and lights to the refresh
 ===============
 */
 void CL_AddEntities( void ) {
-    player_state_t *ops;
-
-    ops = CL_CalcViewValues();
-    CL_FinishViewValues( ops );
+    CL_CalcViewValues();
+    CL_FinishViewValues();
     CL_AddPacketEntities();
     CL_AddTEnts();
     CL_AddParticles();
