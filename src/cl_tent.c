@@ -208,7 +208,7 @@ static explosion_t *plain_explosion( void ) {
     VectorCopy (te.pos1, ex->ent.origin);
     ex->type = ex_poly;
     ex->ent.flags = RF_FULLBRIGHT;
-    ex->start = cl.servertime - cl.frametime;
+    ex->start = cl.servertime - CL_FRAMETIME;
     ex->light = 350;
     VectorSet( ex->lightcolor, 1.0, 0.5, 0.5 );
     ex->ent.angles[1] = rand() % 360;
@@ -234,7 +234,7 @@ void CL_SmokeAndFlash(vec3_t origin)
     ex->type = ex_misc;
     ex->frames = 4;
     ex->ent.flags = RF_TRANSLUCENT;
-    ex->start = cl.servertime - cl.frametime;
+    ex->start = cl.servertime - CL_FRAMETIME;
     ex->ent.model = cl_mod_smoke;
 
     ex = alloc_explosion ();
@@ -242,7 +242,7 @@ void CL_SmokeAndFlash(vec3_t origin)
     ex->type = ex_flash;
     ex->ent.flags = RF_FULLBRIGHT;
     ex->frames = 2;
-    ex->start = cl.servertime - cl.frametime;
+    ex->start = cl.servertime - CL_FRAMETIME;
     ex->ent.model = cl_mod_flash;
 }
 
@@ -265,7 +265,7 @@ static void CL_AddExplosions (void)
     {
         if (ex->type == ex_free)
             continue;
-        frac = (cl.time - ex->start)/100.0;
+        frac = (cl.time - ex->start)*BASE_1_FRAMETIME;
         f = floor(frac);
 
         ent = &ex->ent;
@@ -338,7 +338,7 @@ static void CL_AddExplosions (void)
                 f = 0;
             ent->frame = ex->baseframe + f + 1;
             ent->oldframe = ex->baseframe + f;
-            ent->backlerp = 1.0 - cl.lerpfrac;
+            ent->backlerp = 1.0 - (frac - f);
 
             V_AddEntity (ent);
         }
@@ -1227,7 +1227,7 @@ void CL_ParseTEnt (void)
             ex->lightcolor[2] = 0.75;
             break;
         }
-        ex->start = cl.servertime - cl.frametime;
+        ex->start = cl.servertime - CL_FRAMETIME;
         ex->light = 150;
         ex->ent.model = cl_mod_explode;
         ex->frames = 4;
@@ -1312,7 +1312,7 @@ void CL_ParseTEnt (void)
         VectorCopy (te.pos1, ex->ent.origin);
         ex->type = ex_poly;
         ex->ent.flags = RF_FULLBRIGHT;
-        ex->start = cl.servertime - cl.frametime;
+        ex->start = cl.servertime - CL_FRAMETIME;
         ex->light = 350;
         ex->lightcolor[0] = 0.0;
         ex->lightcolor[1] = 1.0;
@@ -1362,7 +1362,7 @@ void CL_ParseTEnt (void)
         // note to self
         // we need a better no draw flag
         ex->ent.flags = RF_BEAM;
-        ex->start = cl.servertime - cl.frametime;
+        ex->start = cl.servertime - CL_FRAMETIME;
         ex->light = 100 + (rand()%75);
         ex->lightcolor[0] = 1.0;
         ex->lightcolor[1] = 1.0;
