@@ -1579,7 +1579,7 @@ static void draw_layout_string( const char *s ) {
             if( value > 25 )
                 color = 0;  // green
             else if( value > 0 )
-                color = ( cl.frame.number >> 2 ) & 1;       // flash
+                color = ( ( cl.frame.number / CL_FRAMEDIV ) >> 2 ) & 1; // flash
             else
                 color = 1;
 
@@ -1599,7 +1599,7 @@ static void draw_layout_string( const char *s ) {
             if( value > 5 )
                 color = 0;  // green
             else if( value >= 0 )
-                color = ( cl.frame.number >> 2 ) & 1;       // flash
+                color = ( ( cl.frame.number / CL_FRAMEDIV ) >> 2 ) & 1; // flash
             else
                 continue;   // negative number = don't show
 
