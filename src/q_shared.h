@@ -333,6 +333,20 @@ static inline int rand_byte( void ) {
     return b1 ^ b2 ^ b3 ^ b4;
 }
 
+static inline int Q_align( int value, int align ) {
+    int mod = value % align;
+    return mod ? value + align - mod : value;
+}
+
+static inline int Q_gcd( int a, int b ) {
+    while( b != 0 ) {
+        int t = b;
+        b = a % b;
+        a = t;
+    }
+    return a;
+}
+
 #define clamp(a,b,c)    ((a)<(b)?(a)=(b):(a)>(c)?(a)=(c):(a))
 #define cclamp(a,b,c)   ((b)>(c)?clamp(a,c,b):clamp(a,b,c)) 
           
@@ -1385,6 +1399,15 @@ ROGUE - VERSIONS
 
 ==========================================================
 */
+
+// default server FPS
+#define BASE_FRAMERATE          10
+#define BASE_FRAMETIME          100
+#define BASE_1_FRAMETIME        0.01f   // 1/BASE_FRAMETIME
+#define BASE_FRAMETIME_1000     0.1f    // BASE_FRAMETIME/1000
+
+// maximum variable FPS factor
+#define MAX_FRAMEDIV    6
 
 #define ANGLE2SHORT(x)  ((int)((x)*65536/360) & 65535)
 #define SHORT2ANGLE(x)  ((x)*(360.0/65536))

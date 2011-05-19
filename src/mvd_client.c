@@ -1608,6 +1608,13 @@ void MVD_Spawn( void ) {
     sv.spawncount = ( rand() | ( rand() << 16 ) ) ^ Sys_Milliseconds();
     sv.spawncount &= 0x7FFFFFFF;
 
+#if USE_FPS
+    // just fixed base FPS
+    sv.framerate = BASE_FRAMERATE;
+    sv.frametime = BASE_FRAMETIME;
+    sv.framediv = 1;
+#endif
+
     sv.state = ss_broadcast;
 }
 

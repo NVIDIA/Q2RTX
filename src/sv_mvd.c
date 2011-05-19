@@ -387,7 +387,7 @@ static void dummy_run( void ) {
 
     // run ClientThink to prevent timeouts, etc
     memset( &cmd, 0, sizeof( cmd ) );
-    cmd.msec = 100;
+    cmd.msec = BASE_FRAMETIME;
     sv_client = mvd.dummy;
     sv_player = sv_client->edict;
     ge->ClientThink( sv_player, &cmd );
@@ -924,6 +924,9 @@ void SV_MvdEndFrame( void ) {
     gtv_client_t *client;
     size_t total;
     byte header[3];
+
+    if( !SV_FRAMESYNC )
+        return;
 
     // do nothing if not enabled
     if( !mvd.dummy ) {

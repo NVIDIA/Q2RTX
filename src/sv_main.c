@@ -864,6 +864,10 @@ static void SVC_DirectConnect( void ) {
     newcl->maxclients = sv_maxclients->integer;
     strcpy( newcl->reconnect_var, reconnect_var );
     strcpy( newcl->reconnect_val, reconnect_val );
+#if USE_FPS
+    newcl->framediv = sv.framediv;
+    newcl->settings[CLS_FPS] = BASE_FRAMERATE;
+#endif
 
     // copy default pmove parameters
     newcl->pmp = sv_pmp;
@@ -1152,7 +1156,7 @@ static int ping_avg( client_t *cl ) {
 ===================
 SV_CalcPings
 
-Updates the cl->ping variables
+Updates the cl->ping and cl->fps variables
 ===================
 */
 static void SV_CalcPings( void ) {
@@ -1166,8 +1170,8 @@ static void SV_CalcPings( void ) {
         default: calc = ping_avg; break;
     }
 
-    // update avg ping every 10 seconds
-    res = sv.framenum % 100;
+    // update avg ping and fps every 10 seconds
+    res = sv.framenum % ( 10 * SV_FRAMERATE );
 
     FOR_EACH_CLIENT( cl ) {
         if( cl->state == cs_spawned ) {
@@ -1183,8 +1187,14 @@ static void SV_CalcPings( void ) {
                     cl->avg_ping_count++;
                 }
             }
+            if( !res ) {
+                cl->fps = cl->numMoves / 10;
+                cl->numMoves = 0;
+            }
         } else {
             cl->ping = 0;
+            cl->fps = 0;
+            cl->numMoves = 0;
         }
 
         // let the game dll know about the ping
@@ -1204,19 +1214,11 @@ for their command moves.  If they exceed it, assume cheating.
 static void SV_GiveMsec( void ) {
     client_t    *cl;
 
-    if( sv.framenum & 15 )
+    if( sv.framenum % ( 16 * SV_FRAMEDIV ) )
         return;
 
     FOR_EACH_CLIENT( cl ) {
-        cl->commandMsec = 18 * SV_FRAMETIME;        // 1600 + some slop
-    }
-
-    if( sv.framenum & 63 )
-        return;
-
-    FOR_EACH_CLIENT( cl ) {
-        cl->fps = ( cl->numMoves * SV_FPS ) >> 6;
-        cl->numMoves = 0;
+        cl->commandMsec = 1800; // 1600 + some slop
     }
 }
 
@@ -1438,13 +1440,17 @@ static void SV_PrepWorldFrame( void ) {
     }
 #endif
 
-    for( i = 1; i < ge->num_edicts; i++, ent++ ) {
+    sv.tracecount = 0;
+
+    if( !SV_FRAMESYNC )
+        return;
+
+    for( i = 1; i < ge->num_edicts; i++ ) {
         ent = EDICT_NUM( i );
-        // events only last for a single message
+
+        // events only last for a single keyframe
         ent->s.event = 0;
     }    
-
-    sv.tracecount = 0;
 }
 
 #if USE_CLIENT
@@ -1521,7 +1527,7 @@ static void SV_RunGameFrame( void ) {
 #endif
 
     if( msg_write.cursize ) {
-        Com_WPrintf( "Game DLL left %"PRIz" bytes "
+        Com_WPrintf( "Game left %"PRIz" bytes "
             "in multicast buffer, cleared.\n",
             msg_write.cursize );
         SZ_Clear( &msg_write );

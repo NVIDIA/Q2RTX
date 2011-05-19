@@ -790,6 +790,9 @@ void SV_SendClientMessages( void ) {
         if( SV_PAUSED )
             continue;
 
+        if( !SV_CLIENTSYNC( client ) )
+            continue;
+
         client->framenum++;
 
         // if the reliable message overflowed,

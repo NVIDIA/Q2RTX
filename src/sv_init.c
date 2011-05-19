@@ -40,14 +40,20 @@ void SV_ClientReset( client_t *client ) {
 
 #if USE_FPS
 static void set_frame_time( void ) {
-    int i = sv_fps->integer / 10;
+    int framediv;
 
-    clamp( i, 1, 6 );
+    if( g_features->integer & GMF_VARIABLE_FPS )
+        framediv = sv_fps->integer / BASE_FRAMERATE;
+    else
+        framediv = 1;
 
-    sv.frametime = 100 / i;
-    sv.framemult = i;
+    clamp( framediv, 1, MAX_FRAMEDIV );
 
-    Cvar_SetInteger( sv_fps, i * 10, CVAR_SET_DIRECT );
+    sv.framerate = framediv * BASE_FRAMERATE;
+    sv.frametime = BASE_FRAMETIME / framediv;
+    sv.framediv = framediv;
+
+    Cvar_SetInteger( sv_fps, sv.framerate, FROM_CODE );
 }
 #endif
 
@@ -165,6 +171,11 @@ void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint ) {
     // reset entity counter
     svs.next_entity = 0;
 
+#if USE_FPS
+    // set framerate parameters
+    set_frame_time();
+#endif
+
     // save name for levels that don't set message
     Q_strlcpy( sv.configstrings[CS_NAME], server, MAX_QPATH );
     Q_strlcpy( sv.name, server, sizeof( sv.name ) );
@@ -199,9 +210,6 @@ void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint ) {
     //
     // spawn the rest of the entities on the map
     //  
-#if USE_FPS
-    set_frame_time();
-#endif
 
     // precache and static commands can be issued during
     // map initialization
@@ -215,8 +223,8 @@ void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint ) {
         sv.entitystring : cm->cache->entitystring, spawnpoint );
 
     // run two frames to allow everything to settle
-    ge->RunFrame ();
-    ge->RunFrame ();
+    sv.framenum++; ge->RunFrame ();
+    sv.framenum++; ge->RunFrame ();
 
     X86_POP_FPCW;
 

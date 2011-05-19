@@ -75,9 +75,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define SV_PAUSED 0
 #endif
 
+#if USE_FPS
+#define SV_GMF_VARIABLE_FPS GMF_VARIABLE_FPS
+#else
+#define SV_GMF_VARIABLE_FPS 0
+#endif
+
 // game features this server supports
 #define SV_FEATURES (GMF_CLIENTNUM|GMF_PROPERINUSE|GMF_MVDSPEC|\
-                     GMF_WANT_ALL_DISCONNECTS|GMF_ENHANCED_SAVEGAMES)
+                     GMF_WANT_ALL_DISCONNECTS|GMF_ENHANCED_SAVEGAMES|\
+                     SV_GMF_VARIABLE_FPS)
 
 // ugly hack for SV_Shutdown
 #define MVD_SPAWN_DISABLED  0
@@ -101,18 +108,32 @@ typedef struct {
     int solid32;
 } server_entity_t;
 
-#define SV_FPS          10
-#define SV_FRAMETIME    100
+// variable server FPS
+#if USE_FPS
+#define SV_FRAMERATE        sv.framerate
+#define SV_FRAMETIME        sv.frametime
+#define SV_FRAMEDIV         sv.framediv
+#define SV_FRAMESYNC        !(sv.framenum % sv.framediv)
+#define SV_CLIENTSYNC(cl)   !(sv.framenum % (cl)->framediv)
+#else
+#define SV_FRAMERATE        BASE_FRAMERATE
+#define SV_FRAMETIME        BASE_FRAMETIME
+#define SV_FRAMEDIV         1
+#define SV_FRAMESYNC        1
+#define SV_CLIENTSYNC(cl)   1
+#endif
 
 typedef struct {
     server_state_t  state;      // precache commands are only valid during load
     int             spawncount; // random number generated each server spawn
 
-    int         framenum;
-#if 0
-    int         framemult; // 0 or 1
-    unsigned    frametime; // 100 or 50
+#if USE_FPS
+    int         framerate;
+    int         frametime;
+    int         framediv;
 #endif
+
+    int         framenum;
     unsigned    frameresidual;
 
     char        name[MAX_QPATH];            // map name, or cinematic name
@@ -247,6 +268,9 @@ typedef struct client_s {
     client_frame_t  frames[UPDATE_BACKUP];    // updates can be delta'd from here
     unsigned        frames_sent, frames_acked, frames_nodelta;
     int             framenum;
+#if USE_FPS
+    int             framediv;
+#endif
 
     byte            *download; // file being downloaded
     int             downloadsize; // total bytes (can't use EOF because of paks)
