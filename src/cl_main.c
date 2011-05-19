@@ -36,6 +36,7 @@ cvar_t  *r_maxfps;
 cvar_t  *cl_kickangles;
 cvar_t  *cl_rollhack;
 cvar_t  *cl_noglow;
+cvar_t  *cl_nolerp;
 
 #ifdef _DEBUG
 cvar_t  *cl_shownet;
@@ -2550,6 +2551,7 @@ static void CL_InitLocal ( void ) {
     r_maxfps->changed = cl_sync_changed;
     cl_rollhack = Cvar_Get( "cl_rollhack", "1", 0 );
     cl_noglow = Cvar_Get( "cl_noglow", "0", 0 );
+    cl_nolerp = Cvar_Get( "cl_nolerp", "0", 0 );
 
     // hack for timedemo
     com_timedemo->changed = cl_sync_changed;

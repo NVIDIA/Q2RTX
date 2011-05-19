@@ -53,8 +53,15 @@ typedef struct centity_s {
 
     int             serverframe;        // if not current, this ent isn't in the frame
 
-    int             trailcount;            // for diminishing grenade trails
+    int             trailcount;         // for diminishing grenade trails
     vec3_t          lerp_origin;        // for trails (variable hz)
+
+#if USE_FPS
+    int             prev_frame;
+    int             anim_start;
+
+    int             event_frame;
+#endif
 
     int             fly_stoptime;
 } centity_t;
@@ -444,6 +451,7 @@ extern cvar_t    *cl_noskins;
 extern cvar_t    *cl_kickangles;
 extern cvar_t    *cl_rollhack;
 extern cvar_t    *cl_noglow;
+extern cvar_t    *cl_nolerp;
 
 #ifdef _DEBUG
 #define SHOWNET(level,...) \

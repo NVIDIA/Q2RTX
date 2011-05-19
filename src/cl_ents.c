@@ -21,7 +21,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "cl_local.h"
 
-extern  qhandle_t cl_mod_powerscreen;
+extern qhandle_t cl_mod_powerscreen;
+extern qhandle_t cl_sfx_footsteps[4];
 
 /*
 =========================================================================
@@ -31,16 +32,105 @@ FRAME PARSING
 =========================================================================
 */
 
-/*
-==================
-CL_SetEntityState
+static inline qboolean entity_optimized( const entity_state_t *state ) {
+    if( cls.serverProtocol != PROTOCOL_VERSION_Q2PRO )
+        return qfalse;
 
-cl.frame should be set to current frame before calling this function.
-==================
-*/
-static void CL_SetEntityState( const entity_state_t *state ) {
+    if( state->number != cl.frame.clientNum + 1 )
+        return qfalse;
+
+    if( cl.frame.ps.pmove.pm_type >= PM_DEAD )
+        return qfalse;
+
+    return qtrue;
+}
+
+static inline void
+entity_new( centity_t *ent, const entity_state_t *state, const vec_t *origin )
+{
+    ent->trailcount = 1024;     // for diminishing rocket / grenade trails
+
+    // duplicate the current state so lerping doesn't hurt anything
+    ent->prev = *state;
+#if USE_FPS
+    ent->prev_frame = state->frame;
+    ent->event_frame = cl.frame.number;
+#endif
+
+    if( state->event == EV_PLAYER_TELEPORT ||
+        state->event == EV_OTHER_TELEPORT ||
+        ( state->renderfx & (RF_FRAMELERP|RF_BEAM) ) )
+    {
+        // no lerping if teleported
+        VectorCopy( origin, ent->lerp_origin );
+        return;
+    }
+
+    // old_origin is valid for new entities,
+    // so use it as starting point for interpolating between
+    VectorCopy( state->old_origin, ent->prev.origin );
+    VectorCopy( state->old_origin, ent->lerp_origin );
+}
+
+static inline void
+entity_old( centity_t *ent, const entity_state_t *state, const vec_t *origin )
+{
+    int event = state->event;
+
+#if USE_FPS
+    // check for new event
+    if( state->event != ent->current.event )
+        ent->event_frame = cl.frame.number; // new
+    else if( cl.frame.number - ent->event_frame >= cl.framediv )
+        ent->event_frame = cl.frame.number; // refreshed
+    else
+        event = 0; // duplicated
+#endif
+
+    if( state->modelindex != ent->current.modelindex
+        || state->modelindex2 != ent->current.modelindex2
+        || state->modelindex3 != ent->current.modelindex3
+        || state->modelindex4 != ent->current.modelindex4
+        || event == EV_PLAYER_TELEPORT
+        || event == EV_OTHER_TELEPORT
+        || abs(origin[0] - ent->current.origin[0]) > 512
+        || abs(origin[1] - ent->current.origin[1]) > 512
+        || abs(origin[2] - ent->current.origin[2]) > 512
+        || cl_nolerp->integer )
+    {
+        // some data changes will force no lerping
+        ent->trailcount = 1024;     // for diminishing rocket / grenade trails
+
+        // duplicate the current state so lerping doesn't hurt anything
+        ent->prev = *state;
+#if USE_FPS
+        ent->prev_frame = state->frame;
+#endif
+        // no lerping if teleported or morphed
+        VectorCopy( origin, ent->lerp_origin );
+        return;
+    }
+
+#if USE_FPS
+    // start alias model animation
+    if( state->frame != ent->current.frame ) {
+        ent->prev_frame = ent->current.frame;
+        ent->anim_start = cl.servertime - cl.frametime;
+        Com_DDPrintf( "[%d] anim start %d: %d --> %d [%d]\n",
+            ent->anim_start, state->number,
+            ent->prev_frame, state->frame,
+            cl.frame.number );
+    }
+#endif
+
+    // shuffle the last state to previous
+    ent->prev = ent->current;
+}
+
+static void entity_update( const entity_state_t *state ) {
     centity_t *ent = &cl_entities[state->number];
-    vec3_t origin;
+    const vec_t *origin;
+    vec3_t origin_v;
 
     // if entity is solid, decode mins/maxs and add to the list
     if( state->solid && state->number != cl.frame.clientNum + 1 ) {
@@ -56,84 +146,42 @@ static void CL_SetEntityState( const entity_state_t *state ) {
     }
 
     // work around Q2PRO server bandwidth optimization
-    if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO &&
-        state->number == cl.frame.clientNum + 1 &&
-        cl.frame.ps.pmove.pm_type < PM_DEAD )
-    {
-        VectorScale( cl.frame.ps.pmove.origin, 0.125f, origin );
+    if( entity_optimized( state ) ) {
+        VectorScale( cl.frame.ps.pmove.origin, 0.125f, origin_v );
+        origin = origin_v;
     } else {
-        VectorCopy( state->origin, origin );
+        origin = state->origin;
     }
 
     if( ent->serverframe != cl.oldframe.number ) {
         // wasn't in last update, so initialize some things
-        ent->trailcount = 1024;     // for diminishing rocket / grenade trails
-
-        // duplicate the current state so lerping doesn't hurt anything
-        ent->prev = *state;
-
-        if( state->event == EV_PLAYER_TELEPORT ||
-            state->event == EV_OTHER_TELEPORT ||
-            ( state->renderfx & (RF_FRAMELERP|RF_BEAM) ) )
-        {
-            // no lerping if teleported
-            VectorCopy( origin, ent->lerp_origin );
-        } else {
-            // old_origin is valid for new entities,
-            // so use it as starting point for interpolating between
-            VectorCopy( state->old_origin, ent->prev.origin );
-            VectorCopy( state->old_origin, ent->lerp_origin );
-        }
-    } else if( state->modelindex != ent->current.modelindex
-        || state->modelindex2 != ent->current.modelindex2
-        || state->modelindex3 != ent->current.modelindex3
-        || state->modelindex4 != ent->current.modelindex4
-        || state->event == EV_PLAYER_TELEPORT
-        || state->event == EV_OTHER_TELEPORT
-        || abs(origin[0] - ent->current.origin[0]) > 512
-        || abs(origin[1] - ent->current.origin[1]) > 512
-        || abs(origin[2] - ent->current.origin[2]) > 512 )
-    {
-        // some data changes will force no lerping
-        ent->trailcount = 1024;     // for diminishing rocket / grenade trails
-
-        // duplicate the current state so lerping doesn't hurt anything
-        ent->prev = *state;
-        
-        // no lerping if teleported or morphed
-        VectorCopy( origin, ent->lerp_origin );
-    } else {    // shuffle the last state to previous
-        ent->prev = ent->current;
+        entity_new( ent, state, origin );
+    } else {
+        entity_old( ent, state, origin );
     }
 
     ent->serverframe = cl.frame.number;
     ent->current = *state;
 
     // work around Q2PRO server bandwidth optimization
-    if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO &&
-        state->number == cl.frame.clientNum + 1 &&
-        cl.frame.ps.pmove.pm_type < PM_DEAD )
-    {
+    if( entity_optimized( state ) ) {
         Com_PlayerToEntityState( &cl.frame.ps, &ent->current );
     }
 }
 
-/*
-==============
-CL_EntityEvent
-
-An entity has just been parsed that has an event value
-==============
-*/
-extern qhandle_t cl_sfx_footsteps[4];
-
-static void CL_EntityEvent (int number) {
+// an entity has just been parsed that has an event value
+static void entity_event (int number) {
     centity_t *cent = &cl_entities[number];
 
     // EF_TELEPORTER acts like an event, but is not cleared each frame
-    if( cent->current.effects & EF_TELEPORTER ) {
+    if( ( cent->current.effects & EF_TELEPORTER ) && CL_FRAMESYNC ) {
         CL_TeleporterParticles( cent->current.origin );
     }
+
+#if USE_FPS
+    if (cent->event_frame != cl.frame.number)
+        return;
+#endif
 
     switch (cent->current.event) {
     case EV_ITEM_RESPAWN:
@@ -160,13 +208,7 @@ static void CL_EntityEvent (int number) {
     }
 }
 
-/*
-==================
-CL_SetActiveState
-
-==================
-*/
-static void CL_SetActiveState( void ) {
+static void set_active_state( void ) {
     cl.serverdelta = Q_align( cl.frame.number, CL_FRAMEDIV );
     cl.time = cl.servertime = 0; // set time, needed for demos
 #if USE_FPS
@@ -230,9 +272,8 @@ void CL_DeltaFrame( void ) {
         return;
 
     // getting a valid frame message ends the connection process
-    if( cls.state == ca_precached ) {
-        CL_SetActiveState();
-    }
+    if( cls.state == ca_precached )
+        set_active_state();
 
     // set server time
     framenum = cl.frame.number - cl.serverdelta;
@@ -255,10 +296,10 @@ void CL_DeltaFrame( void ) {
         state = &cl.entityStates[j];
 
         // set current and prev
-        CL_SetEntityState( state );
+        entity_update( state );
 
         // fire events
-        CL_EntityEvent( state->number );
+        entity_event( state->number );
     }
 
     if( cls.demo.recording && !cls.demo.paused && !cls.demo.seeking && CL_FRAMESYNC ) {
@@ -394,9 +435,8 @@ static void CL_AddPacketEntities( void ) {
 //======
 
         // optionally remove the glowing effect
-        if( cl_noglow->integer ) {
+        if (cl_noglow->integer)
             renderfx &= ~RF_GLOW;
-        }
 
         ent.oldframe = cent->prev.frame;
         ent.backlerp = 1.0 - cl.lerpfrac;
@@ -412,14 +452,44 @@ static void CL_AddPacketEntities( void ) {
                 cl.lerpfrac, ent.origin );
             LerpVector( cent->prev.old_origin, cent->current.old_origin,
                 cl.lerpfrac, ent.oldorigin );
-        } else if( s1->number == cl.frame.clientNum + 1 ) {
-            // use predicted origin
-            VectorCopy( cl.playerEntityOrigin, ent.origin );
-            VectorCopy( cl.playerEntityOrigin, ent.oldorigin );
-        } else {    // interpolate origin
-            LerpVector( cent->prev.origin, cent->current.origin,
-                cl.lerpfrac, ent.origin );
-            VectorCopy( ent.origin, ent.oldorigin );
+        } else {
+            if( s1->number == cl.frame.clientNum + 1 ) {
+                // use predicted origin
+                VectorCopy( cl.playerEntityOrigin, ent.origin );
+                VectorCopy( cl.playerEntityOrigin, ent.oldorigin );
+            } else {
+                // interpolate origin
+                LerpVector( cent->prev.origin, cent->current.origin,
+                    cl.lerpfrac, ent.origin );
+                VectorCopy( ent.origin, ent.oldorigin );
+            }
+
+#if USE_FPS
+            // run alias model animation
+            if( cent->prev_frame != s1->frame ) {
+                int delta = cl.time - cent->anim_start;
+                float frac;
+
+                if( delta > BASE_FRAMETIME ) {
+                    Com_DDPrintf( "[%d] anim end %d: %d --> %d\n",
+                        cl.time, s1->number,
+                        cent->prev_frame, s1->frame );
+                    cent->prev_frame = s1->frame;
+                    frac = 1;
+                } else if( delta > 0 ) {
+                    frac = delta * BASE_1_FRAMETIME;
+                    Com_DDPrintf( "[%d] anim run %d: %d --> %d [%f]\n",
+                        cl.time, s1->number,
+                        cent->prev_frame, s1->frame,
+                        frac );
+                } else {
+                    frac = 0;
+                }
+
+                ent.oldframe = cent->prev_frame;
+                ent.backlerp = 1.0 - frac;
+            }
+#endif
         }
 
         if( ( effects & EF_GIB ) && !cl_gibs->integer ) {
