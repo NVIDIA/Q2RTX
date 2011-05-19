@@ -770,6 +770,20 @@ static void finish_frame( client_t *client ) {
     client->msg_unreliable_bytes = 0;
 }
 
+#if (defined _DEBUG) && USE_FPS
+static void check_key_sync( client_t *client ) {
+    int div = sv.framediv / client->framediv;
+    int key1 = !( sv.framenum % sv.framediv );
+    int key2 = !( client->framenum % div );
+
+    if( key1 != key2 ) {
+        Com_LPrintf( PRINT_DEVELOPER,
+            "[%d] frame %d for %s not synced (%d != %d)\n",
+            sv.framenum, client->framenum, client->name, key1, key2 );
+    }
+}
+#endif
+
 /*
 =======================
 SV_SendClientMessages
@@ -794,6 +808,11 @@ void SV_SendClientMessages( void ) {
             continue;
 
         client->framenum++;
+
+#if (defined _DEBUG) && USE_FPS
+        if( developer->integer )
+            check_key_sync( client );
+#endif
 
         // if the reliable message overflowed,
         // drop the client (should never happen)

@@ -21,6 +21,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "sv_local.h"
 
+#if USE_FPS
+static void align_key_frames( void );
+#endif
+
 /*
 ============================================================
 
@@ -495,6 +499,9 @@ void SV_Begin_f( void ) {
     sv_client->commandMsec = 1800;
     sv_client->surpressCount = 0;
     sv_client->http_download = qfalse;
+#if USE_FPS
+    align_key_frames();
+#endif
 
     stuff_cmds( &sv_cmdlist_begin );
     
@@ -553,10 +560,13 @@ static void SV_NextDownload_f( void ) {
 
     if( sv_client->downloadcount == sv_client->downloadsize ) {
         SV_CloseDownload( sv_client );
+#if USE_FPS
+        if( sv_client->state == cs_spawned )
+            align_key_frames();
+#endif
     }
-        
-    SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
 
+    SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
 }
 
 /*
@@ -735,6 +745,11 @@ static void SV_StopDownload_f( void ) {
     Com_DPrintf( "Download of %s to %s stopped by user request\n",
         sv_client->downloadname, sv_client->name );
     SV_CloseDownload( sv_client );
+
+#if USE_FPS
+    if( sv_client->state == cs_spawned )
+        align_key_frames();
+#endif
 }
 
 //============================================================================
@@ -776,6 +791,10 @@ static void SV_ShowServerinfo_f( void ) {
 
 static void SV_NoGameData_f( void ) {
     sv_client->nodata ^= 1;
+#if USE_FPS
+    if( sv_client->state == cs_spawned )
+        align_key_frames();
+#endif
 }
 
 static void SV_Lag_f( void ) {
@@ -819,9 +838,6 @@ static void SV_PacketdupHack_f( void ) {
     SV_ClientPrintf( sv_client, PRINT_HIGH,
         "Server is sending %d duplicate packet%s to you.\n",
         numdups, numdups == 1 ? "" : "s" );
-    if( numdups > 1 ) {
-        SV_ClientPrintf( sv_client, PRINT_MEDIUM, "Poor, poor server...\n" );
-    }
 }
 #endif
 
@@ -1217,6 +1233,50 @@ static void SV_UpdateUserinfo( void ) {
     SV_UserinfoChanged( sv_client );
 }
 
+#if USE_FPS
+static void align_key_frames( void ) {
+    int framediv = sv.framediv / sv_client->framediv;
+    int framenum = sv.framenum / sv_client->framediv;
+    int frameofs = framenum % framediv;
+    int newnum = frameofs + Q_align( sv_client->framenum, framediv );
+
+    Com_DPrintf( "[%d] align %d --> %d (num = %d, div = %d, ofs = %d)\n",
+        sv.framenum, sv_client->framenum, newnum, framenum, framediv, frameofs );
+    sv_client->framenum = newnum;
+}
+
+static void set_client_fps( int value ) {
+    int framediv, framerate;
+
+    // 0 means highest
+    if( !value )
+        value = sv.framerate;
+
+    framediv = value / BASE_FRAMERATE;
+
+    clamp( framediv, 1, MAX_FRAMEDIV );
+
+    framediv = sv.framediv / Q_gcd( sv.framediv, framediv );
+    framerate = sv.framerate / framediv;
+
+    Com_DPrintf( "[%d] client div=%d, server div=%d, rate=%d\n",
+        sv.framenum, framediv, sv.framediv, framerate );
+
+    sv_client->framediv = framediv;
+
+    if( sv_client->state == cs_spawned )
+        align_key_frames();
+
+    // save for status inspection
+    sv_client->settings[CLS_FPS] = framerate;
+
+    MSG_WriteByte( svc_setting );
+    MSG_WriteLong( SVS_FPS );
+    MSG_WriteLong( framerate );
+    SV_ClientAddMessage( sv_client, MSG_RELIABLE|MSG_CLEAR );
+}
+#endif
+
 /*
 ===================
 SV_ExecuteClientMessage
@@ -1333,6 +1393,10 @@ void SV_ExecuteClientMessage( client_t *client ) {
                 value = MSG_ReadShort();
                 if( idx < CLS_MAX ) {
                     client->settings[idx] = value;
+#if USE_FPS
+                    if( idx == CLS_FPS && client->protocol == PROTOCOL_VERSION_Q2PRO )
+                        set_client_fps( value );
+#endif
                 }
             }
             break;
