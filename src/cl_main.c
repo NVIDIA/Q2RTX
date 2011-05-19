@@ -204,7 +204,7 @@ static void CL_UpdateRateSetting( void ) {
     if( cls.state < ca_connected ) {
         return;
     }
-    if( cls.serverProtocol != PROTOCOL_VERSION_R1Q2 ) {
+    if( cls.serverProtocol != PROTOCOL_VERSION_Q2PRO ) {
         return;
     }
 
@@ -1714,6 +1714,10 @@ void CL_Begin( void ) {
     CL_LoadState( LOAD_FINISH );
     cls.state = ca_precached;
 
+#if USE_FPS
+    CL_UpdateRateSetting();
+#endif
+
     CL_ClientCommand( va( "begin %i\n", precache_spawncount ) );
 
     CL_UpdateGunSetting();
@@ -1721,9 +1725,6 @@ void CL_Begin( void ) {
     CL_UpdateGibSetting();
     CL_UpdateFootstepsSetting();
     CL_UpdatePredictSetting();
-#if USE_FPS
-    CL_UpdateRateSetting();
-#endif
 }
 
 /*
@@ -2692,10 +2693,14 @@ static void CL_SetClientTime( void ) {
     if( com_timedemo->integer ) {
         cl.time = cl.servertime;
         cl.lerpfrac = 1.0f;
+#if USE_FPS
+        cl.keytime = cl.keyservertime;
+        cl.keylerpfrac = 1.0f;
+#endif
         return;
     }
 
-    prevtime = cl.servertime - cl.frametime;
+    prevtime = cl.servertime - CL_FRAMETIME;
     if( cl.time > cl.servertime ) {
         SHOWCLAMP( 1, "high clamp %i\n", cl.time - cl.servertime );
         cl.time = cl.servertime;
@@ -2705,10 +2710,29 @@ static void CL_SetClientTime( void ) {
         cl.time = prevtime;
         cl.lerpfrac = 0;
     } else {
-        cl.lerpfrac = ( cl.time - prevtime ) * cl.framefrac;
+        cl.lerpfrac = ( cl.time - prevtime ) * CL_1_FRAMETIME;
     }
 
-    SHOWCLAMP( 2, "time %i, lerpfrac %.3f\n", cl.time, cl.lerpfrac );
+    SHOWCLAMP( 2, "time %d %d, lerpfrac %.3f\n",
+        cl.time, cl.servertime, cl.lerpfrac );
+
+#if USE_FPS
+    prevtime = cl.keyservertime - BASE_FRAMETIME;
+    if( cl.keytime > cl.keyservertime ) {
+        SHOWCLAMP( 1, "high keyclamp %i\n", cl.keytime - cl.keyservertime );
+        cl.keytime = cl.keyservertime;
+        cl.keylerpfrac = 1.0f;
+    } else if( cl.keytime < prevtime ) {
+        SHOWCLAMP( 1, "low keyclamp %i\n", prevtime - cl.keytime );
+        cl.keytime = prevtime;
+        cl.keylerpfrac = 0;
+    } else {
+        cl.keylerpfrac = ( cl.keytime - prevtime ) * BASE_1_FRAMETIME;
+    }
+
+    SHOWCLAMP( 2, "keytime %d %d keylerpfrac %.3f\n",
+        cl.keytime, cl.keyservertime, cl.keylerpfrac );
+#endif
 }
 
 static void CL_MeasureStats( void ) {
@@ -3018,8 +3042,12 @@ unsigned CL_Frame( unsigned msec ) {
     if( cls.frametime > 1.0 / 5 )
         cls.frametime = 1.0 / 5;
 
-    if( !sv_paused->integer )
+    if( !sv_paused->integer ) {
         cl.time += main_extra;
+#if USE_FPS
+        cl.keytime += main_extra;
+#endif
+    }
 
     // read next demo frame
     if( cls.demo.playback )

@@ -999,6 +999,9 @@ static void CL_Seek_f( void ) {
 
     // don't lerp to old
     memset( &cl.oldframe, 0, sizeof( cl.oldframe ) );
+#if USE_FPS
+    memset( &cl.oldkeyframe, 0, sizeof( cl.oldkeyframe ) );
+#endif
 
     // clear old effects
     CL_ClearEffects();

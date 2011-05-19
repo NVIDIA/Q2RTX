@@ -369,6 +369,9 @@ static void CL_ParseFrame( int extrabits ) {
 
     if( !frame.valid ) {
         cl.frame.valid = qfalse;
+#if USE_FPS
+        cl.keyframe.valid = qfalse;
+#endif
         return; // do not change anything
     }
 
@@ -379,6 +382,13 @@ static void CL_ParseFrame( int extrabits ) {
 
     cl.oldframe = cl.frame;
     cl.frame = frame;
+
+#if USE_FPS
+    if( CL_FRAMESYNC ) {
+        cl.oldkeyframe = cl.keyframe;
+        cl.keyframe = cl.frame;
+    }
+#endif
 
     cls.demo.frames_read++;
 
@@ -523,9 +533,12 @@ static void CL_ParseServerData( void ) {
     // setup default pmove parameters
     PmoveInit( &cl.pmp );
 
+#if USE_FPS
     // setup default frame times
-    cl.frametime = 100;
-    cl.framefrac = 0.01f;
+    cl.frametime = BASE_FRAMETIME;
+    cl.frametime_inv = BASE_1_FRAMETIME;
+    cl.framediv = 1;
+#endif
 
     if( cls.serverProtocol == PROTOCOL_VERSION_R1Q2 ) {
         i = MSG_ReadByte();
@@ -1062,6 +1075,27 @@ static void CL_ParseZPacket( void ) {
 #endif
 }
 
+#if USE_FPS
+static void set_server_fps( int value ) {
+    int framediv = value / BASE_FRAMERATE;
+
+    clamp( framediv, 1, MAX_FRAMEDIV );
+
+    cl.frametime = BASE_FRAMETIME / framediv;
+    cl.frametime_inv = framediv * BASE_1_FRAMETIME;
+    cl.framediv = framediv;
+
+    // fix time delta
+    if( cls.state == ca_active ) {
+        int delta = cl.frame.number - cl.servertime / cl.frametime;
+        cl.serverdelta = Q_align( delta, framediv );
+    }
+
+    Com_DPrintf( "client framediv=%d time=%d delta=%d\n",
+        framediv, cl.servertime, cl.serverdelta );
+}
+#endif
+
 static void CL_ParseSetting( void ) {
     uint32_t    index, value;
 
@@ -1071,11 +1105,7 @@ static void CL_ParseSetting( void ) {
     switch( index ) {
 #if USE_FPS
     case SVS_FPS:
-        if( !value ) {
-            value = 10;
-        }
-        cl.frametime = 1000 / value;
-        cl.framefrac = value * 0.001f;
+        set_server_fps( value );
         break;
 #endif
     default:
@@ -1243,7 +1273,7 @@ void CL_ParseServerMessage( void ) {
     }
 
 // if recording demos, write the message out
-    if( cls.demo.recording && !cls.demo.paused ) {
+    if( cls.demo.recording && !cls.demo.paused && CL_FRAMESYNC ) {
         CL_WriteDemoMessage( &cls.demo.buffer );
     }
 

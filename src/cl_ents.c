@@ -167,8 +167,11 @@ CL_SetActiveState
 ==================
 */
 static void CL_SetActiveState( void ) {
-    cl.serverdelta = cl.frame.number;
+    cl.serverdelta = Q_align( cl.frame.number, CL_FRAMEDIV );
     cl.time = cl.servertime = 0; // set time, needed for demos
+#if USE_FPS
+    cl.keytime = cl.keyservertime = 0;
+#endif
     cls.state = ca_active;
     cl.oldframe.valid = qfalse;
     cl.frameflags = 0;
@@ -221,6 +224,10 @@ void CL_DeltaFrame( void ) {
     centity_t           *ent;
     entity_state_t      *state;
     int                 i, j;
+    int                 framenum;
+
+    if( cls.state < ca_precached )
+        return;
 
     // getting a valid frame message ends the connection process
     if( cls.state == ca_precached ) {
@@ -228,7 +235,13 @@ void CL_DeltaFrame( void ) {
     }
 
     // set server time
-    cl.servertime = ( cl.frame.number - cl.serverdelta ) * cl.frametime;
+    framenum = cl.frame.number - cl.serverdelta;
+    cl.servertime = framenum * CL_FRAMETIME;
+#if USE_FPS
+    cl.keyservertime = ( framenum / cl.framediv ) * BASE_FRAMETIME;
+#endif
+
+    // rebuild the list of solid entities for this frame
     cl.numSolidEntities = 0;
 
     // initialize position of the player's own entity from playerstate.
@@ -248,7 +261,7 @@ void CL_DeltaFrame( void ) {
         CL_EntityEvent( state->number );
     }
 
-    if( cls.demo.recording && !cls.demo.paused && !cls.demo.seeking ) {
+    if( cls.demo.recording && !cls.demo.paused && !cls.demo.seeking && CL_FRAMESYNC ) {
         CL_EmitDemoFrame();
     }
 

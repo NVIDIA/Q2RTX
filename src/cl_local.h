@@ -102,6 +102,25 @@ typedef struct {
 #define FF_OLDENT       (1<<7)
 #define FF_NODELTA      (1<<8)
 
+// variable server FPS
+#if USE_FPS
+#define CL_FRAMETIME    cl.frametime
+#define CL_1_FRAMETIME  cl.frametime_inv
+#define CL_FRAMEDIV     cl.framediv
+#define CL_FRAMESYNC    !(cl.frame.number % cl.framediv)
+#define CL_KEYPS        &cl.keyframe.ps
+#define CL_OLDKEYPS     &cl.oldkeyframe.ps
+#define CL_KEYLERPFRAC  cl.keylerpfrac
+#else
+#define CL_FRAMETIME    BASE_FRAMETIME
+#define CL_1_FRAMETIME  BASE_1_FRAMETIME
+#define CL_FRAMEDIV     1
+#define CL_FRAMESYNC    1
+#define CL_KEYPS        &cl.frame.ps
+#define CL_OLDKEYPS     &cl.oldframe.ps
+#define CL_KEYLERPFRAC  cl.lerpfrac
+#endif
+
 //
 // the client_state_t structure is wiped completely at every
 // server map change
@@ -141,13 +160,18 @@ typedef struct client_state_s {
     msgEsFlags_t    esFlags;
 
     server_frame_t  frames[UPDATE_BACKUP];
+    unsigned        frameflags;
+
     server_frame_t  frame;                // received from server
     server_frame_t  oldframe;
     int             servertime;
     int             serverdelta;
-    unsigned        frameflags;
 
-    int             lastframe;
+#if USE_FPS
+    server_frame_t  keyframe;
+    server_frame_t  oldkeyframe;
+    int             keyservertime;
+#endif
 
     byte            dcs[CS_BITMAP_BYTES];
 
@@ -170,11 +194,14 @@ typedef struct client_state_s {
     short       delta_angles[3]; // interpolated
 #endif
 
-    int         time;            // this is the time value that the client
-                                // is rendering at.  always <= cls.realtime
-    float       lerpfrac;        // between oldframe and frame
-    int         frametime;      // fixed server frame time
-    float       framefrac;
+    int         time;           // this is the time value that the client
+                                // is rendering at.  always <= cl.servertime
+    float       lerpfrac;       // between oldframe and frame
+
+#if USE_FPS
+    int         keytime;
+    float       keylerpfrac;
+#endif
 
     refdef_t    refdef;
     float       fov_x;      // interpolated
@@ -203,6 +230,12 @@ typedef struct client_state_s {
     int         clientNum;            // never changed during gameplay, set by serverdata packet
     int         maxclients;
     pmoveParams_t pmp;
+
+#if USE_FPS
+    int         frametime;      // variable server frame time
+    float       frametime_inv;  // 1/frametime
+    int         framediv;       // BASE_FRAMETIME/frametime
+#endif
 
     char        baseconfigstrings[MAX_CONFIGSTRINGS][MAX_QPATH];
     char        configstrings[MAX_CONFIGSTRINGS][MAX_QPATH];
