@@ -105,7 +105,22 @@ typedef struct {
 } client_frame_t;
 
 typedef struct {
-    int solid32;
+    int         solid32;
+
+#if USE_FPS
+
+// must be > MAX_FRAMEDIV
+#define ENT_HISTORY_SIZE    8
+#define ENT_HISTORY_MASK    (ENT_HISTORY_SIZE-1)
+
+    struct {
+        vec3_t  origin;
+        int     framenum;
+    } history[ENT_HISTORY_SIZE];
+
+    vec3_t      create_origin;
+    int         create_framenum;
+#endif
 } server_entity_t;
 
 // variable server FPS

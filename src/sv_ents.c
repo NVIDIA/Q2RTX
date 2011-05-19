@@ -339,6 +339,40 @@ qboolean SV_EdictPV( cm_t *cm, edict_t *ent, byte *mask ) {
     return qfalse;        // not visible
 }
 
+#if USE_FPS
+static void
+fix_old_origin( client_t *client, entity_state_t *state, edict_t *ent, int e )
+{
+    server_entity_t *sent = &sv.entities[e];
+    int i, j, k;
+
+    if( ent->s.renderfx & RF_BEAM )
+        return;
+
+    if( !ent->linkcount )
+        return; // not linked in anywhere
+
+    if( sent->create_framenum >= sv.framenum )
+        return; // created this frame
+
+    if( sent->create_framenum >= sv.framenum - client->framediv ) {
+        // created between client frames
+        VectorCopy( sent->create_origin, state->old_origin );
+        return;
+    }
+
+    // find the oldest valid origin
+    for( i = 0; i < client->framediv; i++ ) {
+        j = sv.framenum - ( client->framediv - i );
+        k = j & ENT_HISTORY_MASK;
+        if( sent->history[k].framenum == j ) {
+            VectorCopy( sent->history[k].origin, state->old_origin );
+            return;
+        }
+    }
+}
+#endif
+
 /*
 =============
 SV_BuildClientFrame
@@ -475,8 +509,15 @@ void SV_BuildClientFrame( client_t *client ) {
         state = &svs.entities[svs.next_entity % svs.num_entities];
         *state = ent->s;
 
+#if USE_FPS
+        // fix old entity origins for clients not running at
+        // full server frame rate
+        if( client->framediv != 1 )
+            fix_old_origin( client, state, ent, e );
+#endif
+
         // clear footsteps
-        if( ent->s.event == EV_FOOTSTEP && client->settings[CLS_NOFOOTSTEPS] ) {
+        if( state->event == EV_FOOTSTEP && client->settings[CLS_NOFOOTSTEPS] ) {
             state->event = 0;
         }
 
