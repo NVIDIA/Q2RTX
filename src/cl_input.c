@@ -35,6 +35,7 @@ static cvar_t    *cl_fuzzhack;
 static cvar_t    *cl_showpackets;
 #endif
 static cvar_t    *cl_instantpacket;
+static cvar_t    *cl_batchcmds;
 
 static cvar_t    *m_filter;
 static cvar_t    *m_accel;
@@ -737,6 +738,7 @@ void CL_RegisterInput( void ) {
     cl_showpackets = Cvar_Get( "cl_showpackets", "0", 0 );
 #endif
     cl_instantpacket = Cvar_Get( "cl_instantpacket", "1", 0 );
+    cl_batchcmds = Cvar_Get( "cl_batchcmds", "1", 0 );
 
     cl_upspeed = Cvar_Get ( "cl_upspeed", "200", 0 );
     cl_forwardspeed = Cvar_Get ( "cl_forwardspeed", "200", 0 );
@@ -1163,7 +1165,7 @@ void CL_SendCmd( void ) {
     // send a userinfo update if needed
     CL_SendUserinfo();
 
-    if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO ) {
+    if( cls.serverProtocol == PROTOCOL_VERSION_Q2PRO && cl_batchcmds->integer ) {
         CL_SendBatchedCmd();
     } else {
         CL_SendDefaultCmd();
