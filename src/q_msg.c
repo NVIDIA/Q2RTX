@@ -535,12 +535,21 @@ void MSG_WriteDeltaEntity( const entity_state_t *from,
         if( delta_coord( to->origin[2], from->origin[2] ) )
             bits |= U_ORIGIN3;
 
-        if( delta_angle( to->angles[0], from->angles[0] ) )
-            bits |= U_ANGLE1;       
-        if( delta_angle( to->angles[1], from->angles[1] ) )
-            bits |= U_ANGLE2;
-        if( delta_angle( to->angles[2], from->angles[2] ) )
-            bits |= U_ANGLE3;
+        if( flags & MSG_ES_SHORTANGLES ) {
+            if( delta_angle16( to->angles[0], from->angles[0] ) )
+                bits |= U_ANGLE1|U_ANGLE16;
+            if( delta_angle16( to->angles[1], from->angles[1] ) )
+                bits |= U_ANGLE2|U_ANGLE16;
+            if( delta_angle16( to->angles[2], from->angles[2] ) )
+                bits |= U_ANGLE3|U_ANGLE16;
+        } else {
+            if( delta_angle( to->angles[0], from->angles[0] ) )
+                bits |= U_ANGLE1;
+            if( delta_angle( to->angles[1], from->angles[1] ) )
+                bits |= U_ANGLE2;
+            if( delta_angle( to->angles[2], from->angles[2] ) )
+                bits |= U_ANGLE3;
+        }
 
         if( flags & MSG_ES_NEWENTITY ) {
             if( delta_pos_v( to->old_origin, from->origin ) ) {
@@ -706,12 +715,21 @@ void MSG_WriteDeltaEntity( const entity_state_t *from,
     if (bits & U_ORIGIN3)
         MSG_WriteCoord (to->origin[2]);
 
-    if (bits & U_ANGLE1)
-        MSG_WriteAngle(to->angles[0]);
-    if (bits & U_ANGLE2)
-        MSG_WriteAngle(to->angles[1]);
-    if (bits & U_ANGLE3)
-        MSG_WriteAngle(to->angles[2]);
+    if ((flags & MSG_ES_SHORTANGLES) && (bits & U_ANGLE16)) {
+        if (bits & U_ANGLE1)
+            MSG_WriteAngle16(to->angles[0]);
+        if (bits & U_ANGLE2)
+            MSG_WriteAngle16(to->angles[1]);
+        if (bits & U_ANGLE3)
+            MSG_WriteAngle16(to->angles[2]);
+    } else {
+        if (bits & U_ANGLE1)
+            MSG_WriteAngle(to->angles[0]);
+        if (bits & U_ANGLE2)
+            MSG_WriteAngle(to->angles[1]);
+        if (bits & U_ANGLE3)
+            MSG_WriteAngle(to->angles[2]);
+    }
 
     if (bits & U_OLDORIGIN)
         MSG_WritePos (to->old_origin);
@@ -1951,15 +1969,21 @@ void MSG_ParseDeltaEntity( const entity_state_t *from,
     if( bits & U_ORIGIN3 ) {
         to->origin[2] = MSG_ReadCoord();
     }
-        
-    if( bits & U_ANGLE1 ) {
-        to->angles[0] = MSG_ReadAngle();
-    }
-    if( bits & U_ANGLE2 ) {
-        to->angles[1] = MSG_ReadAngle();
-    }
-    if( bits & U_ANGLE3 ) {
-        to->angles[2] = MSG_ReadAngle();
+
+    if( (flags & MSG_ES_SHORTANGLES) && (bits & U_ANGLE16) ) {
+        if( bits & U_ANGLE1 )
+            to->angles[0] = MSG_ReadAngle16();
+        if( bits & U_ANGLE2 )
+            to->angles[1] = MSG_ReadAngle16();
+        if( bits & U_ANGLE3 )
+            to->angles[2] = MSG_ReadAngle16();
+    } else {
+        if( bits & U_ANGLE1 )
+            to->angles[0] = MSG_ReadAngle();
+        if( bits & U_ANGLE2 )
+            to->angles[1] = MSG_ReadAngle();
+        if( bits & U_ANGLE3 )
+            to->angles[2] = MSG_ReadAngle();
     }
 
     if( bits & U_OLDORIGIN ) {

@@ -596,6 +596,9 @@ static void CL_ParseServerData( void ) {
         if( cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_BEAM_ORIGIN ) {
             cl.esFlags |= MSG_ES_BEAMORIGIN;
         }
+        if( cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_SHORT_ANGLES ) {
+            cl.esFlags |= MSG_ES_SHORTANGLES;
+        }
         if( cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_WATERJUMP_HACK ) {
             i = MSG_ReadByte();
             if( i ) {
