@@ -355,6 +355,12 @@ fix_old_origin( client_t *client, entity_state_t *state, edict_t *ent, int e )
     if( sent->create_framenum >= sv.framenum )
         return; // created this frame
 
+    if( state->event == EV_PLAYER_TELEPORT && !Q2PRO_OPTIMIZE( client ) ) {
+        // other clients will lerp from old_origin on EV_PLAYER_TELEPORT...
+        VectorCopy( state->origin, state->old_origin );
+        return;
+    }
+
     if( sent->create_framenum >= sv.framenum - client->framediv ) {
         // created between client frames
         VectorCopy( sent->create_origin, state->old_origin );
@@ -362,7 +368,7 @@ fix_old_origin( client_t *client, entity_state_t *state, edict_t *ent, int e )
     }
 
     // find the oldest valid origin
-    for( i = 0; i < client->framediv; i++ ) {
+    for( i = 0; i < client->framediv - 1; i++ ) {
         j = sv.framenum - ( client->framediv - i );
         k = j & ENT_HISTORY_MASK;
         if( sent->history[k].framenum == j ) {
@@ -370,6 +376,8 @@ fix_old_origin( client_t *client, entity_state_t *state, edict_t *ent, int e )
             return;
         }
     }
+
+    // no valid old_origin, just use what game provided
 }
 #endif
 
