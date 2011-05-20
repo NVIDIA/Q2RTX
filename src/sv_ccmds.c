@@ -750,6 +750,32 @@ static void SV_Serverinfo_f( void ) {
     Info_Print( serverinfo );
 }
 
+void SV_PrintMiscInfo( void ) {
+    char buffer[MAX_QPATH];
+
+    Com_Printf( "version              %s\n",
+        sv_client->versionString ? sv_client->versionString : "-" );
+    Com_Printf( "protocol (maj/min)   %d/%d\n",
+        sv_client->protocol, sv_client->version );
+    Com_Printf( "maxmsglen            %"PRIz"\n", sv_client->netchan->maxpacketlen );
+    Com_Printf( "zlib support         %s\n", sv_client->has_zlib ? "yes" : "no" );
+    Com_Printf( "netchan type         %s\n", sv_client->netchan->type ? "new" : "old" );
+    Com_Printf( "ping                 %d\n", sv_client->ping );
+    Com_Printf( "movement fps         %d\n", sv_client->fps );
+#if USE_FPS
+    Com_Printf( "update rate          %d\n", sv_client->settings[CLS_FPS] );
+#endif
+    Com_Printf( "RTT (min/avg/max)    %d/%d/%d ms\n",
+        sv_client->min_ping, AVG_PING( sv_client ), sv_client->max_ping );
+    Com_Printf( "PL server to client  %.2f%% (approx)\n", PL_S2C( sv_client ) );
+    Com_Printf( "PL client to server  %.2f%%\n", PL_C2S( sv_client ) );
+#ifdef USE_PACKETDUP
+    Com_Printf( "packetdup            %d\n", sv_client->numpackets - 1 );
+#endif
+    Com_TimeDiff( buffer, sizeof( buffer ),
+        &sv_client->connect_time, time( NULL ) );
+    Com_Printf( "connection time      %s\n", buffer );
+}
 
 /*
 ===========
@@ -759,8 +785,6 @@ Examine all a users info strings
 ===========
 */
 static void SV_DumpUser_f( void ) {
-    char buffer[MAX_QPATH];
-
     if( !svs.initialized ) {
         Com_Printf( "No server running.\n" );
         return;
@@ -780,25 +804,7 @@ static void SV_DumpUser_f( void ) {
 
     Com_Printf( "\nmiscinfo\n" );
     Com_Printf( "--------\n" );
-    Com_Printf( "version              %s\n",
-        sv_client->versionString ? sv_client->versionString : "-" );
-    Com_Printf( "protocol (maj/min)   %d/%d\n",
-        sv_client->protocol, sv_client->version );
-    Com_Printf( "maxmsglen            %"PRIz"\n", sv_client->netchan->maxpacketlen );
-    Com_Printf( "zlib support         %s\n", sv_client->has_zlib ? "yes" : "no" );
-    Com_Printf( "netchan type         %s\n", sv_client->netchan->type ? "new" : "old" );
-    Com_Printf( "ping                 %d\n", sv_client->ping );
-    Com_Printf( "fps                  %d\n", sv_client->fps );
-    Com_Printf( "RTT (min/avg/max)    %d/%d/%d ms\n",
-        sv_client->min_ping, AVG_PING( sv_client ), sv_client->max_ping );
-    Com_Printf( "PL server to client  %.2f%% (approx)\n", PL_S2C( sv_client ) );
-    Com_Printf( "PL client to server  %.2f%%\n", PL_C2S( sv_client ) );
-#ifdef USE_PACKETDUP
-    Com_Printf( "packetdup            %d\n", sv_client->numpackets - 1 );
-#endif
-    Com_TimeDiff( buffer, sizeof( buffer ),
-        &sv_client->connect_time, time( NULL ) );
-    Com_Printf( "connection time      %s\n", buffer );
+    SV_PrintMiscInfo();
 
     sv_client = NULL;
     sv_player = NULL;

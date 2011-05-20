@@ -754,14 +754,7 @@ static void SV_StopDownload_f( void ) {
 
 //============================================================================
 
-
-/*
-=================
-SV_Disconnect_f
-
-The client is going to disconnect, so remove the connection immediately
-=================
-*/
+// the client is going to disconnect, so remove the connection immediately
 static void SV_Disconnect_f( void ) {
     if( Com_IsDedicated() && sv_client->netchan ) {
         Com_Printf( "%s[%s] disconnected\n", sv_client->name,
@@ -771,21 +764,21 @@ static void SV_Disconnect_f( void ) {
     SV_RemoveClient( sv_client ); // don't bother with zombie state
 }
 
-
-/*
-==================
-SV_ShowServerinfo_f
-
-Dumps the serverinfo info string
-==================
-*/
-static void SV_ShowServerinfo_f( void ) {
+// dumps the serverinfo info string
+static void SV_ShowServerInfo_f( void ) {
     char serverinfo[MAX_INFO_STRING];
 
     Cvar_BitInfo( serverinfo, CVAR_SERVERINFO );
 
     SV_BeginRedirect( RD_CLIENT );
     Info_Print( serverinfo );
+    Com_EndRedirect();
+}
+
+// dumps misc protocol info
+static void SV_ShowMiscInfo_f( void ) {
+    SV_BeginRedirect( RD_CLIENT );
+    SV_PrintMiscInfo();
     Com_EndRedirect();
 }
 
@@ -902,7 +895,8 @@ static const ucmd_t ucmds[] = {
     { "disconnect", SV_Disconnect_f },
 
     // issued by hand at client consoles    
-    { "info", SV_ShowServerinfo_f },
+    { "info", SV_ShowServerInfo_f },
+    { "sinfo", SV_ShowMiscInfo_f },
 
     { "download", SV_BeginDownload_f },
     { "nextdl", SV_NextDownload_f },

@@ -635,6 +635,7 @@ void SV_AddMatch_f( list_t *list );
 void SV_DelMatch_f( list_t *list );
 void SV_ListMatches_f( list_t *list );
 client_t *SV_GetPlayer( const char *s, qboolean partial );
+void SV_PrintMiscInfo( void );
 
 //
 // sv_ents.c
