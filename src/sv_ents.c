@@ -28,6 +28,10 @@ Encode a client frame onto the network channel
 =============================================================================
 */
 
+// some protocol optimizations are disabled when recording a demo
+#define Q2PRO_OPTIMIZE(c) \
+    ((c)->protocol == PROTOCOL_VERSION_Q2PRO && !(c)->settings[CLS_RECORDING])
+
 /*
 =============
 SV_EmitPacketEntities
@@ -41,7 +45,7 @@ static void SV_EmitPacketEntities( client_t         *client,
                                    int              clientEntityNum )
 {
     entity_state_t *newent;
-    const entity_state_t *oldent, *base;
+    const entity_state_t *oldent;
     unsigned i, oldindex, newindex, from_num_entities;
     int oldnum, newnum;
     msgEsFlags_t flags;
@@ -75,16 +79,13 @@ static void SV_EmitPacketEntities( client_t         *client,
             // delta update from old position
             // because the force parm is false, this will not result
             // in any bytes being emited if the entity has not changed at all
-            // note that players are always 'newentities', this updates their
-            // oldorigin always and prevents warping
+            // note that players are always 'newentities' in compatibility mode,
+            // this updates their oldorigin always and prevents warping
             flags = client->esFlags;
-            if( client->protocol < PROTOCOL_VERSION_Q2PRO ) {
-                // don't waste bandwidth for Q2PRO clients
-                if( newent->number <= client->maxclients ) {
-                    flags |= MSG_ES_NEWENTITY;
-                }
+            if( newnum <= client->maxclients && !Q2PRO_OPTIMIZE( client ) ) {
+                flags |= MSG_ES_NEWENTITY;
             }
-            if( newent->number == clientEntityNum ) {
+            if( newnum == clientEntityNum ) {
                 flags |= MSG_ES_FIRSTPERSON;
                 VectorCopy( oldent->origin, newent->origin );
                 VectorCopy( oldent->angles, newent->angles );
@@ -98,19 +99,18 @@ static void SV_EmitPacketEntities( client_t         *client,
         if( newnum < oldnum ) {    
             // this is a new entity, send it from the baseline
             flags = client->esFlags|MSG_ES_FORCE|MSG_ES_NEWENTITY;
-            base = client->baselines[newnum >> SV_BASELINES_SHIFT];
-            if( base ) {
-                base += ( newnum & SV_BASELINES_MASK );
+            oldent = client->baselines[newnum >> SV_BASELINES_SHIFT];
+            if( oldent ) {
+                oldent += ( newnum & SV_BASELINES_MASK );
             } else {
-                base = &nullEntityState;
+                oldent = &nullEntityState;
             }
-            if( newent->number == clientEntityNum ) {
+            if( newnum == clientEntityNum ) {
                 flags |= MSG_ES_FIRSTPERSON;
-                VectorCopy( base->origin, newent->origin );
-                VectorCopy( base->angles, newent->angles );
-                VectorCopy( base->old_origin, newent->old_origin );
+                VectorCopy( oldent->origin, newent->origin );
+                VectorCopy( oldent->angles, newent->angles );
             }
-            MSG_WriteDeltaEntity( base, newent, flags );
+            MSG_WriteDeltaEntity( oldent, newent, flags );
             newindex++;
             continue;
         }
@@ -266,7 +266,7 @@ void SV_WriteFrameToClient_Enhanced( client_t *client ) {
 
     clientEntityNum = 0;
     if( client->protocol == PROTOCOL_VERSION_Q2PRO ) {
-        if( frame->ps.pmove.pm_type < PM_DEAD ) {
+        if( frame->ps.pmove.pm_type < PM_DEAD && !client->settings[CLS_RECORDING] ) {
             clientEntityNum = frame->clientNum + 1;
         }
         if( client->settings[CLS_NOPREDICT] ) {
@@ -443,7 +443,7 @@ void SV_BuildClientFrame( client_t *client ) {
         ent = EDICT_POOL( client, e );
 
         // ignore entities not in use
-        if( ( g_features->integer & GMF_PROPERINUSE ) && !ent->inuse ) {
+        if( !ent->inuse && ( g_features->integer & GMF_PROPERINUSE ) ) {
             continue;
         }
 
@@ -521,17 +521,15 @@ void SV_BuildClientFrame( client_t *client ) {
             state->event = 0;
         }
 
-        // XXX: hide this enitity from renderer
-        if( ( client->protocol != PROTOCOL_VERSION_Q2PRO ||
-              client->settings[CLS_RECORDING] ) &&
-            ( g_features->integer & GMF_CLIENTNUM ) &&
-            e == frame->clientNum + 1 && ent != clent )
+        // hide POV entity from renderer, unless this is player's own entity
+        if( e == frame->clientNum + 1 && ent != clent &&
+            ( g_features->integer & GMF_CLIENTNUM ) && !Q2PRO_OPTIMIZE( client ) )
         {
             state->modelindex = 0;
         }
 
         // don't mark players missiles as solid
-        if( ent->owner == client->edict ) {
+        if( ent->owner == clent ) {
             state->solid = 0;
         } else if( client->esFlags & MSG_ES_LONGSOLID ) {
             state->solid = sv.entities[e].solid32;

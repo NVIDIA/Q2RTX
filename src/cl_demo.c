@@ -109,7 +109,10 @@ static void emit_packet_entities( server_frame_t *from, server_frame_t *to ) {
             // delta update from old position
             // because the force parm is false, this will not result
             // in any bytes being emited if the entity has not changed at all
-            MSG_WriteDeltaEntity( oldent, newent, 0 );
+            // note that players are always 'newentities' in compatibility mode,
+            // this updates their oldorigin always and prevents warping
+            MSG_WriteDeltaEntity( oldent, newent,
+                newent->number <= cl.maxclients ? MSG_ES_NEWENTITY : 0 );
             oldindex++;
             newindex++;
             continue;
