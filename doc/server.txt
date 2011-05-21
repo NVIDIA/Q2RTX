@@ -205,7 +205,7 @@ Downloads
 
 These variables control legacy server UDP downloads.
 
-allow_downloads::
+allow_download::
     Globally allows or disallows server UDP downloads. Remaining variables listed
     below are effective only when downloads are globally enabled. Default value
     is 0.

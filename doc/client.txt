@@ -672,7 +672,7 @@ Downloads
 These variables control automatic client downloads (both legacy UDP and HTTP
 downloads).
 
-allow_downloads::
+allow_download::
     Globally allows or disallows client downloads. Remaining variables listed
     below are effective only when downloads are globally enabled. Default value
     is 1.
@@ -773,7 +773,7 @@ m_autosens::
     scale sensitivity higher, lower FOV values will scale sensitivity lower.
     Default value is 0 (scaling disabled).
 
-m_accell::
+m_accel::
     Specifies mouse acceleration factor. Default value is 0 (acceleration
     disabled).
 
