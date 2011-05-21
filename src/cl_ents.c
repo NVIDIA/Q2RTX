@@ -327,9 +327,6 @@ void CL_DeltaFrame( void ) {
     int                 i, j;
     int                 framenum;
 
-    if( cls.state < ca_precached )
-        return;
-
     // getting a valid frame message ends the connection process
     if( cls.state == ca_precached )
         set_active_state();

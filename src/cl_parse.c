@@ -380,6 +380,9 @@ static void CL_ParseFrame( int extrabits ) {
         Com_Error( ERR_DROP, "%s: bad fov", __func__ );
     }
 
+    if( cls.state < ca_precached )
+        return;
+
     cl.oldframe = cl.frame;
     cl.frame = frame;
 
