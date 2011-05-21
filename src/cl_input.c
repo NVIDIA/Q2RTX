@@ -856,22 +856,13 @@ void CL_FinalizeCmd( void ) {
     memset( &cl.cmd, 0, sizeof( cl.cmd ) );
 }
 
-/*
-=================
-CL_ReadyToSend
-=================
-*/
-static inline qboolean CL_ReadyToSend( void ) {
+static inline qboolean ready_to_send( void ) {
     unsigned msec;
-    
+
     if( cl.sendPacketNow ) {
         return qtrue;
     }
     if( cls.netchan->message.cursize || cls.netchan->reliable_ack_pending ) {
-        return qtrue;
-    }
-    if( cls.serverProtocol != PROTOCOL_VERSION_Q2PRO && !cl_fuzzhack->integer ) 
-    {
         return qtrue;
     }
     if( !cl_maxpackets->integer ) {
@@ -893,6 +884,18 @@ static inline qboolean CL_ReadyToSend( void ) {
     return qtrue;
 }
 
+static inline qboolean ready_to_send_hacked( void ) {
+    if( !cl_fuzzhack->integer ) {
+        return qtrue; // packet drop hack disabled
+    }
+
+    if( cl.cmdNumber - cl.lastTransmitCmdNumberReal > 2 ) {
+        return qtrue; // can't drop more than 2 cmds
+    }
+
+    return ready_to_send();
+}
+
 /*
 =================
 CL_SendDefaultCmd
@@ -912,14 +915,13 @@ static void CL_SendDefaultCmd( void ) {
     cl.lastTransmitCmdNumber = cl.cmdNumber;
 
     // see if we are ready to send this packet
-    if( !CL_ReadyToSend() ) {
-        if( cl.cmdNumber - cl.lastTransmitCmdNumber < 3 ) {
-            cls.netchan->outgoing_sequence++; // HACK: just drop the packet
-            return;
-        }
+    if( !ready_to_send_hacked() ) {
+        cls.netchan->outgoing_sequence++; // just drop the packet
+        return;
     }
 
     cl.lastTransmitTime = cls.realtime;
+    cl.lastTransmitCmdNumberReal = cl.cmdNumber;
 
     // begin a client move command
     MSG_WriteByte( clc_move );
@@ -993,7 +995,7 @@ static void CL_SendBatchedCmd( void ) {
     byte *patch;
 
     // see if we are ready to send this packet
-    if( !CL_ReadyToSend() ) {
+    if( !ready_to_send() ) {
         return;
     }
 
@@ -1006,6 +1008,7 @@ static void CL_SendBatchedCmd( void ) {
 
     cl.lastTransmitTime = cls.realtime;
     cl.lastTransmitCmdNumber = cl.cmdNumber;
+    cl.lastTransmitCmdNumberReal = cl.cmdNumber;
 
     // begin a client move command
     patch = SZ_GetSpace( &msg_write, 1 );
@@ -1088,6 +1091,7 @@ static void CL_SendKeepAlive( void ) {
 
     cl.lastTransmitTime = cls.realtime;
     cl.lastTransmitCmdNumber = cl.cmdNumber;
+    cl.lastTransmitCmdNumberReal = cl.cmdNumber;
 
     cursize = cls.netchan->Transmit( cls.netchan, 0, NULL, 1 );
 #ifdef _DEBUG

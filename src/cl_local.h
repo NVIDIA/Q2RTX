@@ -137,6 +137,7 @@ typedef struct client_state_s {
 
     unsigned    lastTransmitTime;
     unsigned    lastTransmitCmdNumber;
+    unsigned    lastTransmitCmdNumberReal;
     qboolean    sendPacketNow;
 
     usercmd_t    cmd;
