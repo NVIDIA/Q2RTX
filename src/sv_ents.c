@@ -358,8 +358,11 @@ fix_old_origin( client_t *client, entity_state_t *state, edict_t *ent, int e )
     if( !ent->linkcount )
         return; // not linked in anywhere
 
-    if( sent->create_framenum >= sv.framenum )
-        return; // created this frame
+    if( sent->create_framenum >= sv.framenum ) {
+        // created this frame. unfortunate for projectiles: they will move only
+        // with 1/client->framediv fraction of their normal speed on the client
+        return;
+    }
 
     if( state->event == EV_PLAYER_TELEPORT && !Q2PRO_OPTIMIZE( client ) ) {
         // other clients will lerp from old_origin on EV_PLAYER_TELEPORT...
@@ -367,7 +370,7 @@ fix_old_origin( client_t *client, entity_state_t *state, edict_t *ent, int e )
         return;
     }
 
-    if( sent->create_framenum >= sv.framenum - client->framediv ) {
+    if( sent->create_framenum > sv.framenum - client->framediv ) {
         // created between client frames
         VectorCopy( sent->create_origin, state->old_origin );
         return;
