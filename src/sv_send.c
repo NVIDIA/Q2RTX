@@ -70,7 +70,14 @@ static qboolean SV_RateDrop( client_t *client ) {
         total += client->message_size[i];
     }
 
+#if USE_FPS
+    total = total * sv.framediv / client->framediv;
+#endif
+
     if( total > client->rate ) {
+        SV_DPrintf( 0, "Frame %d surpressed for %s (total = %"PRIz")\n",
+            client->framenum, client->name, total );
+        client->frameflags |= FF_SURPRESSED;
         client->surpressCount++;
         client->message_size[client->framenum % RATE_MESSAGES] = 0;
         return qtrue;
@@ -87,7 +94,8 @@ static void SV_CalcSendTime( client_t *client, size_t size ) {
         return;
     }
 
-    client->message_size[client->framenum % RATE_MESSAGES] = size;
+    if( client->state == cs_spawned )
+        client->message_size[client->framenum % RATE_MESSAGES] = size;
 
     client->send_time = svs.realtime;
     client->send_delta = size * 1000 / client->rate;
@@ -818,22 +826,22 @@ void SV_SendClientMessages( void ) {
         }
 
         // don't overrun bandwidth
-        if( SV_RateDrop( client ) ) {
-            SV_DPrintf( 0, "Frame %d surpressed for %s\n",
-                client->framenum, client->name );
-            client->surpressCount++;
-        } else {
-            // don't write any frame data until all fragments are sent
-            if( client->netchan->fragment_pending ) {
-                cursize = client->netchan->TransmitNextFragment( client->netchan );
-                SV_CalcSendTime( client, cursize );
-            } else {
-                // build the new frame and write it
-                SV_BuildClientFrame( client );
-                client->WriteDatagram( client );
-            }
+        if( SV_RateDrop( client ) )
+            goto advance;
+
+        // don't write any frame data until all fragments are sent
+        if( client->netchan->fragment_pending ) {
+            client->frameflags |= FF_SURPRESSED;
+            cursize = client->netchan->TransmitNextFragment( client->netchan );
+            SV_CalcSendTime( client, cursize );
+            goto advance;
         }
 
+        // build the new frame and write it
+        SV_BuildClientFrame( client );
+        client->WriteDatagram( client );
+
+advance:
         // advance for next frame
         client->framenum++;
 
