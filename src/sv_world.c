@@ -250,7 +250,7 @@ void PF_LinkEdict (edict_t *ent) {
     server_entity_t *sent;
     int entnum;
 #if USE_FPS
-    int i, framenum;
+    int i;
 #endif
 
     if (ent->area.prev)
@@ -294,29 +294,21 @@ void PF_LinkEdict (edict_t *ent) {
 
     SV_LinkEdict( &sv.cm, ent );
 
-#if USE_FPS
-    // if sv_player is not NULL, we are called from ClientThink
-    // sv.framenum hasn't been advanced for next frame yet, so do it here
-    framenum = sv.framenum;
-    if( sv_player )
-        framenum++;
-#endif
-
     // if first time, make sure old_origin is valid
     if (!ent->linkcount) {
         VectorCopy (ent->s.origin, ent->s.old_origin);
 #if USE_FPS
         VectorCopy( ent->s.origin, sent->create_origin );
-        sent->create_framenum = framenum;
+        sent->create_framenum = sv.framenum;
 #endif
     }
     ent->linkcount++;
 
 #if USE_FPS
     // save origin for later recovery
-    i = framenum & ENT_HISTORY_MASK;
+    i = sv.framenum & ENT_HISTORY_MASK;
     VectorCopy( ent->s.origin, sent->history[i].origin );
-    sent->history[i].framenum = framenum;
+    sent->history[i].framenum = sv.framenum;
 #endif
 
     if (ent->solid == SOLID_NOT)

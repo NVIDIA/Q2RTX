@@ -977,6 +977,7 @@ static void SVC_DirectConnect( void ) {
 
     Com_DPrintf( "Going from cs_free to cs_assigned for %s\n", newcl->name );
     newcl->state = cs_assigned;
+    newcl->framenum = 1; // frame 0 can't be used
     newcl->lastframe = -1;
     newcl->lastmessage = svs.realtime;    // don't timeout
     newcl->min_ping = 9999;
@@ -1121,7 +1122,7 @@ static int ping_min( client_t *cl ) {
     int i, j, count = INT_MAX;
 
     for( i = 0; i < UPDATE_BACKUP; i++ ) {
-        j = cl->framenum - i;
+        j = cl->framenum - i - 1;
         frame = &cl->frames[j & UPDATE_MASK];
         if( frame->number != j )
             continue;
@@ -1139,7 +1140,7 @@ static int ping_avg( client_t *cl ) {
     int i, j, total = 0, count = 0;
 
     for( i = 0; i < UPDATE_BACKUP; i++ ) {
-        j = cl->framenum - i;
+        j = cl->framenum - i - 1;
         frame = &cl->frames[j & UPDATE_MASK];
         if( frame->number != j )
             continue;
@@ -1453,8 +1454,9 @@ static void SV_PrepWorldFrame( void ) {
     }    
 }
 
-#if USE_CLIENT
+// pause if there is only local client on the server
 static inline qboolean check_paused( void ) {
+#if USE_CLIENT
     if( dedicated->integer )
         goto resume;
 
@@ -1484,10 +1486,10 @@ resume:
         Cvar_Set( "sv_paused", "0" );
         IN_Activate();
     }
+#endif
 
     return qfalse;
 }
-#endif
 
 /*
 =================
@@ -1495,15 +1497,6 @@ SV_RunGameFrame
 =================
 */
 static void SV_RunGameFrame( void ) {
-#if USE_CLIENT
-    // pause if there is only local client on the server
-    if( check_paused() )
-        return;
-#endif
-
-    // bump framenum in sync with game
-    sv.framenum++;
-
 #if USE_MVD_SERVER
     // save the entire world state if recording a serverdemo
     SV_MvdBeginFrame();
@@ -1658,7 +1651,7 @@ unsigned SV_Frame( unsigned msec ) {
         return SV_FRAMETIME - sv.frameresidual;
     }
 
-    if( svs.initialized ) {
+    if( svs.initialized && !check_paused() ) {
         // check timeouts
         SV_CheckTimeouts();
 
@@ -1679,6 +1672,9 @@ unsigned SV_Frame( unsigned msec ) {
 
         // clear teleport flags, etc for next frame
         SV_PrepWorldFrame();
+
+        // advance for next frame
+        sv.framenum++;
     }
 
     if( Com_IsDedicated() ) {

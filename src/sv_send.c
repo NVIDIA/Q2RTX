@@ -801,13 +801,8 @@ void SV_SendClientMessages( void ) {
         if( client->state != cs_spawned || client->download || client->nodata )
             goto finish;
 
-        if( SV_PAUSED )
-            continue;
-
         if( !SV_CLIENTSYNC( client ) )
             continue;
-
-        client->framenum++;
 
 #if (defined _DEBUG) && USE_FPS
         if( developer->integer )
@@ -838,6 +833,9 @@ void SV_SendClientMessages( void ) {
                 client->WriteDatagram( client );
             }
         }
+
+        // advance for next frame
+        client->framenum++;
 
 finish:
         // clear all unreliable messages still left

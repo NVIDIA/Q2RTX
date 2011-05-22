@@ -143,7 +143,7 @@ static client_frame_t *get_last_frame( client_t *client ) {
 
     client->frames_nodelta = 0;
 
-    if( client->framenum - client->lastframe > UPDATE_BACKUP - 1 ) {
+    if( client->framenum - client->lastframe >= UPDATE_BACKUP ) {
         // client hasn't gotten a good message through in a long time
         Com_DPrintf( "%s: delta request from out-of-date packet.\n", client->name );
         return NULL;

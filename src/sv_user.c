@@ -1018,13 +1018,13 @@ static void SV_SetLastFrame( int lastframe ) {
     client_frame_t *frame;
 
     if( lastframe > 0 ) {
-        if( lastframe > sv_client->framenum )
+        if( lastframe >= sv_client->framenum )
             return; // ignore invalid acks
 
         if( lastframe <= sv_client->lastframe )
             return; // ignore duplicate acks
 
-        if( sv_client->framenum - lastframe < UPDATE_BACKUP ) {
+        if( sv_client->framenum - lastframe <= UPDATE_BACKUP ) {
             frame = &sv_client->frames[lastframe & UPDATE_MASK];
 
             if( frame->number == lastframe ) {

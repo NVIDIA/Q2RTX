@@ -30,7 +30,7 @@ void SV_ClientReset( client_t *client ) {
 
     // any partially connected client will be restarted
     client->state = cs_connected;
-    client->framenum = 0;
+    client->framenum = 1; // frame 0 can't be used
     client->lastframe = -1;
     client->frames_nodelta = 0;
     client->send_delta = 0;
@@ -223,8 +223,8 @@ void SV_SpawnServer( cm_t *cm, const char *server, const char *spawnpoint ) {
         sv.entitystring : cm->cache->entitystring, spawnpoint );
 
     // run two frames to allow everything to settle
-    sv.framenum++; ge->RunFrame ();
-    sv.framenum++; ge->RunFrame ();
+    ge->RunFrame (); sv.framenum++;
+    ge->RunFrame (); sv.framenum++;
 
     X86_POP_FPCW;
 
