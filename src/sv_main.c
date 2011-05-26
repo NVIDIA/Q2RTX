@@ -1927,6 +1927,11 @@ void SV_Init( void ) {
 
     init_rate_limits();
 
+#if USE_FPS
+    // set up default frametime for main loop
+    sv.frametime = BASE_FRAMETIME;
+#endif
+
     // set up default pmove parameters
     PmoveInit( &sv_pmp );
 
@@ -2039,6 +2044,11 @@ void SV_Shutdown( const char *finalmsg, error_type_t type ) {
 
     // reset rate limits
     init_rate_limits();
+
+#if USE_FPS
+    // set up default frametime for main loop
+    sv.frametime = BASE_FRAMETIME;
+#endif
 
     sv_client = NULL;
     sv_player = NULL;

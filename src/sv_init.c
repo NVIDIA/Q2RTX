@@ -284,6 +284,11 @@ void SV_InitGame( unsigned mvd_spawn ) {
         CM_FreeMap( &sv.cm );
         SV_FreeFile( sv.entitystring );
         memset( &sv, 0, sizeof( sv ) );
+
+#if USE_FPS
+        // set up default frametime for main loop
+        sv.frametime = BASE_FRAMETIME;
+#endif
     }
 
     // get any latched variable changes (maxclients, etc)
