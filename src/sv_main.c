@@ -1622,6 +1622,11 @@ unsigned SV_Frame( unsigned msec ) {
     // advance local server time
     svs.realtime += msec;
 
+    if( Com_IsDedicated() ) {
+        // process console commands if not running a client
+        Cbuf_Execute( &cmd_buffer );
+    }
+
 #if USE_MVD_CLIENT
     // run connections to MVD/GTV servers
     MVD_Frame();

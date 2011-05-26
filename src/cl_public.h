@@ -47,7 +47,7 @@ typedef enum {
     ACT_ACTIVATED
 } active_t;
 
-void CL_ProcessEvents( void );
+qboolean CL_ProcessEvents( void );
 #if USE_ICMP
 void CL_ErrorEvent( void );
 #endif

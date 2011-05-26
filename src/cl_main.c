@@ -2973,12 +2973,10 @@ unsigned CL_Frame( unsigned msec ) {
         return UINT_MAX;
     }
 
-    CL_ProcessEvents();
-
-    Cbuf_Execute( &cl_cmdbuf );
-
     main_extra += msec;
     cls.realtime += msec;
+
+    CL_ProcessEvents();
 
     ref_frame = phys_frame = qtrue;
     switch( sync_mode ) {
@@ -3142,9 +3140,9 @@ run_fx:
 CL_ProcessEvents
 ============
 */
-void CL_ProcessEvents( void ) {
+qboolean CL_ProcessEvents( void ) {
     if( !cl_running->integer ) {
-        return;
+        return qfalse;
     }
 
     CL_RunRefresh();
@@ -3164,9 +3162,15 @@ void CL_ProcessEvents( void ) {
         CL_PacketEvent();
     }
 
+    // process console and stuffed commands
+    Cbuf_Execute( &cmd_buffer );
+    Cbuf_Execute( &cl_cmdbuf );
+
 #if USE_CURL
     HTTP_RunDownloads();
 #endif
+
+    return cl.sendPacketNow;
 }
 
 //============================================================================

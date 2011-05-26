@@ -2134,9 +2134,11 @@ void Qcommon_Frame( void ) {
     // spin until msec is non-zero if running a client
     if( !dedicated->integer && !com_timedemo->integer ) {
         while( msec < 1 ) {
-            CL_ProcessEvents();
+            qboolean break_now = CL_ProcessEvents();
             com_eventTime = Sys_Milliseconds();
             msec = com_eventTime - oldtime;
+            if( break_now )
+                break;
         }
     }
 #endif
@@ -2200,9 +2202,6 @@ void Qcommon_Frame( void ) {
             all, ev, sv, gm, cl, rf );
     }
 #endif
-
-    // this is the only place where console commands are processed.
-    Cbuf_Execute( &cmd_buffer );
 }
 
 /*
