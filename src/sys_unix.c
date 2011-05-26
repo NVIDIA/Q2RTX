@@ -952,19 +952,18 @@ main
 int main( int argc, char **argv ) {
     if( argc > 1 ) {
         if( !strcmp( argv[1], "-v" ) || !strcmp( argv[1], "--version" ) ) {
-            printf( APPLICATION " " VERSION " " __DATE__ " " BUILDSTRING " "
-                    CPUSTRING "\n" );
+            fprintf( stderr, "%s\n", com_version_string );
             return 0;
         }
         if( !strcmp( argv[1], "-h" ) || !strcmp( argv[1], "--help" ) ) {
-            printf( "Usage: %s [+command arguments] [...]\n", argv[0] );
+            fprintf( stderr, "Usage: %s [+command arguments] [...]\n", argv[0] );
             return 0;
         }
     }
 
     if( !getuid() || !geteuid() ) {
-        printf(  "You can not run " APPLICATION " as superuser "
-                 "for security reasons!\n" );
+        fprintf( stderr,    "You can not run " PRODUCT " as superuser "
+                            "for security reasons!\n" );
         return 1;
     }
 

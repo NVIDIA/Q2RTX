@@ -89,6 +89,9 @@ cvar_t  *allow_download_others;
 
 cvar_t  *rcon_password;
 
+const char  com_version_string[] =
+    APPLICATION " " VERSION " " __DATE__ " " BUILDSTRING " " CPUSTRING;
+
 qhandle_t   com_logFile;
 qboolean    com_logNewline;
 unsigned    com_framenum;
@@ -1909,8 +1912,6 @@ Qcommon_Init
 =================
 */
 void Qcommon_Init( int argc, char **argv ) {
-    static const char version[] = APPLICATION " " VERSION " " __DATE__ " " BUILDSTRING " " CPUSTRING;
-
     if( setjmp( abortframe ) )
         Sys_Error( "Error during initialization: %s", com_errorMsg );
 
@@ -1970,7 +1971,7 @@ void Qcommon_Init( int argc, char **argv ) {
     com_debug_break = Cvar_Get( "com_debug_break", "0", 0 );
 #endif
     com_fatal_error = Cvar_Get( "com_fatal_error", "0", 0 );
-    com_version = Cvar_Get( "version", version, CVAR_SERVERINFO|CVAR_ROM );
+    com_version = Cvar_Get( "version", com_version_string, CVAR_SERVERINFO|CVAR_ROM );
 
     allow_download = Cvar_Get( "allow_download", Com_IsDedicated() ? "0" : "1", CVAR_ARCHIVE );
     allow_download_players = Cvar_Get( "allow_download_players", "1", CVAR_ARCHIVE );
@@ -2008,9 +2009,6 @@ void Qcommon_Init( int argc, char **argv ) {
 #if USE_SYSCON
     Sys_RunConsole();
 #endif
-
-    // print version
-    Com_LPrintf( PRINT_NOTICE, "%s\n", version );
 
     FS_Init();
 

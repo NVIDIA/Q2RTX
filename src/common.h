@@ -622,6 +622,8 @@ extern unsigned     time_before_ref;
 extern unsigned     time_after_ref;
 #endif
 
+extern const char   com_version_string[];
+
 extern unsigned     com_eventTime; // system time of the last event
 extern unsigned     com_localTime; // milliseconds since Q2 startup
 extern unsigned     com_framenum;
