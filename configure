@@ -107,6 +107,7 @@ use_syscon="yes"
 use_winsvc="no"
 use_dbghelp="no"
 use_icmp="???"
+use_fps="no"
 
 # constants
 basegame="baseq2"
@@ -193,6 +194,8 @@ for opt do
     ;;
     --disable-icmp) use_icmp="no"
     ;;
+    --enable-fps) use_fps="yes"
+    ;;
     --single-user) singleuser="yes"
     ;;
     --datadir=*) datadir=`echo $opt | cut -d '=' -f 2`
@@ -245,6 +248,7 @@ echo "  --enable-anticheat     enable r1ch.net anticheat server interface"
 echo "  --disable-mvd-server   disable MVD/GTV server"
 echo "  --disable-mvd-client   disable MVD/GTV client"
 echo "  --disable-icmp         disable ICMP error handling"
+echo "  --enable-fps           enable variable server FPS support"
 echo "  --single-user          assume to be installed in home dir"
 echo "  --prefix=PREFIX        install in PREFIX [$prefix]"
 echo "  --datadir=DIR          path to game data tree [$datadir]"
@@ -681,6 +685,7 @@ fi
 [ "$use_syscon" = "yes" ] && echo "#define USE_SYSCON 1" >> $config_h
 [ "$use_winsvc" = "yes" ] && echo "#define USE_WINSVC !USE_CLIENT" >> $config_h
 [ "$use_icmp" = "yes" ] && echo "#define USE_ICMP 1" >> $config_h
+[ "$use_fps" = "yes" ] && echo "#define USE_FPS 1" >> $config_h
 echo "#define USE_MAPCHECKSUM 1" >> $config_h
 echo "#define USE_AUTOREPLY 1" >> $config_h
 [ "$have_endian_h" = "yes" ] && echo "#define HAVE_ENDIAN_H 1" >> $config_h
