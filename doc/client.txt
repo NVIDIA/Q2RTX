@@ -103,6 +103,13 @@ cl_footsteps::
     some bandwidth since the server stops sending footstep events at all.
     Default value is 1 (enabled).
 
+cl_updaterate::
+    Specifies the perferred update rate requested from Q2PRO servers. Only used
+    when server is running in variable FPS mode, otherwise default rate of 10
+    packets per second is used. Specified rate should evenly divide native
+    server frame rate.  Default value is 0, which means to use the highest
+    update rate available (that is, native server frame rate).
+
 
 Network
 ~~~~~~~

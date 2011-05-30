@@ -199,6 +199,14 @@ sv_changemapcmd::
     Specifies command to be executed each time server finishes loading a new map.
     Default value is empty.
 
+sv_fps::
+    Specifies native server frame rate.  Only used when game mod advertises
+    support for variable server FPS. Specified rate should be a multiple of 10
+    (maximum rate is 60). Default value is 10 frames per second. Only clients
+    that support Q2PRO protocol will be able to take advantage of higher FPS.
+    Other clients will receive updates at default rate of 10 packets per
+    second.
+
 
 Downloads
 ~~~~~~~~~
