@@ -1190,7 +1190,9 @@ void CL_DemoFrame( int msec ) {
         return;
     }
 
-    if( cls.demo.recording && cl_paused->integer == 2 && !cls.demo.paused ) {
+    if( cls.demo.recording && cl_paused->integer == 2 &&
+        !cls.demo.paused && cls.demo.frames_written )
+    {
         // XXX: record zero frames when manually paused
         // for syncing with audio comments, etc
         demo_extra += msec;
