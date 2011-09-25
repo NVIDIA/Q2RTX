@@ -946,6 +946,32 @@ skip:
     }
 }
 
+static int shell_effect_hack( void ) {
+    centity_t   *ent;
+    int         flags = 0;
+
+    if( cl.frame.clientNum == CLIENTNUM_NONE )
+        return 0;
+
+    ent = &cl_entities[cl.frame.clientNum + 1];
+    if( ent->serverframe != cl.frame.number )
+        return 0;
+
+    if( !ent->current.modelindex )
+        return 0;
+
+    if (ent->current.effects & EF_PENT)
+        flags |= RF_SHELL_RED;
+    if (ent->current.effects & EF_QUAD)
+        flags |= RF_SHELL_BLUE;
+    if (ent->current.effects & EF_DOUBLE)
+        flags |= RF_SHELL_DOUBLE;
+    if (ent->current.effects & EF_HALF_DAMAGE)
+        flags |= RF_SHELL_HALF_DAM;
+
+    return flags;
+}
+
 /*
 ==============
 CL_AddViewWeapon
@@ -954,7 +980,7 @@ CL_AddViewWeapon
 static void CL_AddViewWeapon( void ) {
     player_state_t *ps, *ops;
     entity_t    gun;        // view model
-    int         i;
+    int         i, flags;
 
     // allow the gun to be completely removed
     if( cl_gun->integer < 1 ) {
@@ -1020,6 +1046,14 @@ static void CL_AddViewWeapon( void ) {
     }
 
     V_AddEntity( &gun );
+
+    // add shell effect from player entity
+    flags = shell_effect_hack();
+    if( flags ) {
+        gun.alpha = 0.30f * cl_gunalpha->value;
+        gun.flags |= flags | RF_TRANSLUCENT;
+        V_AddEntity( &gun );
+    }
 }
 
 static void CL_SetupFirstPersonView( void ) {

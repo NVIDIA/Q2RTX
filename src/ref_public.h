@@ -30,7 +30,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MAX_PARTICLES   4096
 #define MAX_LIGHTSTYLES 256
 
-#define POWERSUIT_SCALE     4.0F
+#define POWERSUIT_SCALE     4.0f
+#define WEAPONSHELL_SCALE   0.5f
 
 #define SHELL_RED_COLOR     0xF2
 #define SHELL_GREEN_COLOR   0xD0

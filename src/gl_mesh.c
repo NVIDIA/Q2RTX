@@ -65,14 +65,16 @@ static void tess_static_mesh( const maliasmesh_t *mesh, int oldframe, int newfra
     vec3_t normal;
 
     if( glr.ent->flags & RF_SHELL_MASK ) {
+        vec_t scale = (glr.ent->flags & RF_WEAPONMODEL) ? WEAPONSHELL_SCALE : POWERSUIT_SCALE;
+
         for( i = 0; i < count; i++ ) {
             get_static_normal( normal, src_vert );
 
-            dst_vert[0] = normal[0] * POWERSUIT_SCALE +
+            dst_vert[0] = normal[0] * scale +
                 src_vert->pos[0] * newscale[0] + translate[0];
-            dst_vert[1] = normal[1] * POWERSUIT_SCALE +
+            dst_vert[1] = normal[1] * scale +
                 src_vert->pos[1] * newscale[1] + translate[1];
-            dst_vert[2] = normal[2] * POWERSUIT_SCALE +
+            dst_vert[2] = normal[2] * scale +
                 src_vert->pos[2] * newscale[2] + translate[2];
             dst_vert += 4;
 
@@ -137,16 +139,18 @@ static void tess_lerped_mesh( const maliasmesh_t *mesh, int oldframe, int newfra
     vec3_t normal;
 
     if( glr.ent->flags & RF_SHELL_MASK ) {
+        vec_t scale = (glr.ent->flags & RF_WEAPONMODEL) ? WEAPONSHELL_SCALE : POWERSUIT_SCALE;
+
         for( i = 0; i < count; i++ ) {
             get_lerped_normal( normal, src_oldvert, src_newvert );
 
-            dst_vert[0] = normal[0] * POWERSUIT_SCALE +
+            dst_vert[0] = normal[0] * scale +
                 src_oldvert->pos[0] * oldscale[0] +
                 src_newvert->pos[0] * newscale[0] + translate[0];
-            dst_vert[1] = normal[1] * POWERSUIT_SCALE +
+            dst_vert[1] = normal[1] * scale +
                 src_oldvert->pos[1] * oldscale[1] +
                 src_newvert->pos[1] * newscale[1] + translate[1];
-            dst_vert[2] = normal[2] * POWERSUIT_SCALE +
+            dst_vert[2] = normal[2] * scale +
                 src_oldvert->pos[2] * oldscale[2] +
                 src_newvert->pos[2] * newscale[2] + translate[2];
             dst_vert += 4;
