@@ -85,7 +85,10 @@ static void UpdateSelection( void ) {
         m_join.players.items = NULL;
         m_join.players.numItems = 0;
 
-        m_join.menu.status = "Press Space to refresh; Hold ALT to refresh all";
+        if( m_join.list.numItems )
+            m_join.menu.status = "Press Space to refresh; Hold ALT to refresh all";
+        else
+            m_join.menu.status = "No servers found; Press Space to refresh";
     }
 }
 
@@ -352,7 +355,7 @@ static menuSound_t Keydown( menuFrameWork_t *self, int key ) {
         Cvar_Set( "rcon_address", s->realAddress );
         return QMS_SILENT;
     case ' ':
-        if( !Key_IsDown( K_ALT ) ) {
+        if( !Key_IsDown( K_ALT ) && m_join.list.numItems ) {
             PingSelected();
         } else {
             PingServers();
