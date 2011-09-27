@@ -103,7 +103,7 @@ static sndinitstat_t WAVE_Init (void) {
     int             i;
     HRESULT         hr;
 
-    Com_Printf( "Initializing wave sound\n" );
+    Com_DPrintf( "Initializing wave sound\n" );
     
     snd_sent = 0;
     snd_completed = 0;
@@ -230,6 +230,7 @@ static sndinitstat_t WAVE_Init (void) {
     dma.buffer = (byte *) lpData;
     sample16 = (dma.samplebits/8) - 1;
 
+    Com_Printf( "Wave sound initialized\n" );
     wav_init = qtrue;
 
     return SIS_SUCCESS;

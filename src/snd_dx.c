@@ -233,11 +233,10 @@ static sndinitstat_t DS_Init (void) {
         break;
     }
 
-    Com_Printf( "Initializing DirectSound\n");
+    Com_DPrintf( "Initializing DirectSound\n");
 
     if ( !hInstDS ) {
         Com_DPrintf( "...loading dsound.dll: " );
-
         hInstDS = LoadLibrary("dsound.dll");
         if (hInstDS == NULL) {
             Com_DPrintf ("failed\n");
@@ -291,7 +290,7 @@ static sndinitstat_t DS_Init (void) {
         return SIS_FAILURE;
     }
 
-    Com_DPrintf("...completed successfully\n" );
+    Com_Printf( "DirectSound initialized\n" );
 
     return SIS_SUCCESS;
 }

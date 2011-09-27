@@ -43,14 +43,15 @@ void AL_SoundInfo( void ) {
 qboolean AL_Init( void ) {
     int i;
 
+    Com_DPrintf( "Initializing OpenAL\n" );
+
     if( !QAL_Init() ) {
-        Com_EPrintf( "OpenAL failed to initialize.\n" );
         return qfalse;
     }
 
     // check for linear distance extension
     if( !qalIsExtensionPresent( "AL_EXT_LINEAR_DISTANCE" ) ) {
-        Com_EPrintf( "Required AL_EXT_LINEAR_DISTANCE extension is missing.\n" );
+        Com_DPrintf( "AL_EXT_LINEAR_DISTANCE extension is missing\n" );
         goto fail;
     }
 
@@ -63,8 +64,10 @@ qboolean AL_Init( void ) {
         }
     }
 
+    Com_DPrintf( "Got %d AL sources\n", i );
+
     if( i < MIN_CHANNELS ) {
-        Com_EPrintf( "Required at least %d sources, but got %d.\n", MIN_CHANNELS, i );
+        Com_DPrintf( "Insufficient number of sources\n" );
         goto fail;
     }
 

@@ -79,12 +79,12 @@ static void S_SoundInfo_f( void ) {
 #if USE_OPENAL
     if( s_started == SS_OAL ) 
         AL_SoundInfo();
-    else
 #endif
+
 #if USE_SNDDMA
-        DMA_SoundInfo()
+    if( s_started == SS_DMA )
+        DMA_SoundInfo();
 #endif
-        ;
 }
 
 static void S_SoundList_f( void ) {
@@ -145,7 +145,7 @@ S_Init
 */
 void S_Init( void ) {
     s_enable = Cvar_Get( "s_enable", "1", CVAR_SOUND );
-    if( !s_enable->integer ) {
+    if( s_enable->integer <= SS_NOT ) {
         Com_Printf( "Sound initialization disabled.\n" );
         return;
     }
@@ -159,32 +159,22 @@ void S_Init( void ) {
 #endif
     s_auto_focus = Cvar_Get( "s_auto_focus", "0", 0 );
 
-#if USE_OPENAL
-#if USE_SNDDMA
-    if( s_enable->integer > 1 ) {
-        if( !AL_Init() )
-            Cvar_Set( "s_enable", "1" );
-        else 
-            s_started = SS_OAL;
+    // start one of available sound engines
+    s_started = SS_NOT;
 
-    }
-    if( !s_started )
-#else
-    if( !AL_Init() ) {
-        Cvar_Set( "s_enable", "0" );
-        return;
-    }
-    s_started = SS_OAL;
+#if USE_OPENAL
+    if( s_started == SS_NOT && s_enable->integer >= SS_OAL && AL_Init() )
+        s_started = SS_OAL;
 #endif
-#endif
-    {
+
 #if USE_SNDDMA
-        if( !DMA_Init() ) {
-            Cvar_Set( "s_enable", "0" );
-            return;
-        }
+    if( s_started == SS_NOT && s_enable->integer >= SS_DMA && DMA_Init() )
         s_started = SS_DMA;
 #endif
+
+    if( s_started == SS_NOT ) {
+        Com_EPrintf( "Sound failed to initialize.\n" );
+        goto fail;
     }
 
     Cmd_Register( c_sound );
@@ -202,6 +192,8 @@ void S_Init( void ) {
 
     s_registration_sequence = 1;
 
+fail:
+    Cvar_SetInteger( s_enable, s_started, FROM_CODE );
     Com_Printf( "----------------------\n" );
 }
 
@@ -284,12 +276,12 @@ void S_Activate( void ) {
 #if USE_OPENAL
     if( s_started == SS_OAL )
         S_StopAllSounds();
-    else
 #endif
+
 #if USE_SNDDMA
-        DMA_Activate()
+    if( s_started == SS_DMA )
+        DMA_Activate();
 #endif
-        ;
 }
 
 
@@ -738,12 +730,12 @@ void S_IssuePlaysound( playsound_t *ps ) {
 #if USE_OPENAL
     if( s_started == SS_OAL )
         AL_PlayChannel( ch );
-    else
 #endif
+
 #if USE_SNDDMA
-        S_Spatialize( ch )
+    if( s_started == SS_DMA )
+        S_Spatialize( ch );
 #endif
-        ;
 
     ch->pos = 0;
     ch->end = paintedtime + sc->length;
@@ -811,12 +803,12 @@ void S_StartSound( const vec3_t origin, int entnum, int entchannel, qhandle_t hS
 #if USE_OPENAL
     if( s_started == SS_OAL )
         ps->begin = paintedtime + timeofs * 1000;
-    else
 #endif
+
 #if USE_SNDDMA
-        ps->begin = DMA_DriftBeginofs( timeofs )
+    if( s_started == SS_DMA )
+        ps->begin = DMA_DriftBeginofs( timeofs );
 #endif
-        ;
 
     // sort into the pending sound list
     for( sort = s_pendingplays.next ; sort != &s_pendingplays && sort->begin < ps->begin ; sort = sort->next )
@@ -892,12 +884,12 @@ void S_StopAllSounds(void)
 #if USE_OPENAL
     if( s_started == SS_OAL )
         AL_StopAllChannels();
-    else
 #endif
+
 #if USE_SNDDMA
-        DMA_ClearBuffer()
+    if( s_started == SS_DMA )
+        DMA_ClearBuffer();
 #endif
-        ;
 
     // clear all the channels
     memset(channels, 0, sizeof(channels));
