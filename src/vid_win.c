@@ -137,6 +137,7 @@ Win_SetMode
 */
 void Win_SetMode( void ) {
     DEVMODE dm;
+    LONG ret;
     int freq, depth;
 
     if( vid_fullscreen->integer > 0 ) {
@@ -176,9 +177,8 @@ void Win_SetMode( void ) {
         }
 
         Com_DPrintf( "...calling CDS: " );
-        if( ChangeDisplaySettings( &dm, CDS_FULLSCREEN ) ==
-            DISP_CHANGE_SUCCESSFUL )
-        {
+        ret = ChangeDisplaySettings( &dm, CDS_FULLSCREEN );
+        if( ret == DISP_CHANGE_SUCCESSFUL ) {
             Com_DPrintf( "ok\n" );
             win.dm = dm;
             win.flags |= QVF_FULLSCREEN;
@@ -186,8 +186,11 @@ void Win_SetMode( void ) {
             win.mode_changed = 0;
             return;
         }
-        Com_DPrintf( "failed\n" );
+        Com_DPrintf( "failed with error %ld\n", ret );
+
         Cvar_Reset( vid_fullscreen );
+        Com_Printf( "Full screen mode %dx%d failed.\n",
+            win.rc.width, win.rc.height );
     }
 
     // parse vid_geometry specification
