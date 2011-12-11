@@ -96,6 +96,8 @@ cvar_t  *g_features;
 
 cvar_t  *map_override_path;
 
+qboolean sv_registered;
+
 //============================================================================
 
 void SV_RemoveClient( client_t *client ) {
@@ -1591,7 +1593,7 @@ static void SV_MasterShutdown( void ) {
     if( !Com_IsDedicated() )
         return;        // only dedicated servers send heartbeats
 
-    if( !sv_public->integer )
+    if( !sv_public || !sv_public->integer )
         return;        // a private dedicated game
 
     // send to group master
@@ -1943,6 +1945,8 @@ void SV_Init( void ) {
 #if USE_SYSCON
     SV_SetConsoleTitle();
 #endif
+
+    sv_registered = qtrue;
 }
 
 /*
@@ -2013,6 +2017,9 @@ Should be safe to call even if server is not fully initalized yet.
 ================
 */
 void SV_Shutdown( const char *finalmsg, error_type_t type ) {
+    if( !sv_registered )
+        return;
+
 #if USE_MVD_CLIENT
     if( ge != &mvd_ge && !(type & MVD_SPAWN_INTERNAL) ) {
         // shutdown MVD client now if not already running the built-in MVD game module
