@@ -57,6 +57,8 @@ static qerror_t write_server_file( qboolean autosave ) {
     for( var = cvar_vars; var; var = var->next ) {
         if (!(var->flags & CVAR_LATCH))
             continue;
+        if (var->flags & CVAR_PRIVATE)
+            continue;
         MSG_WriteString( var->name );
         MSG_WriteString( var->string );
     }

@@ -1063,6 +1063,9 @@ size_t Cvar_BitInfo( char *info, int bit ) {
         if( !( var->flags & bit ) ) {
             continue;
         }
+        if( var->flags & CVAR_PRIVATE ) {
+            continue;
+        }
         if( !var->string[0] ) {
             continue;
         }
