@@ -143,6 +143,10 @@ LOAD( Texinfo ) {
     for( i = 0; i < count; i++, out++ ) {
         out->numframes = 1;
         for( step = out->next; step && step != out; step = step->next ) {
+            if( out->numframes == count ) {
+                DEBUG( "infinite anim chain" );
+                return Q_ERR_INFINITE_LOOP;
+            }
             out->numframes++;
         }
     }
