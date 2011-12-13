@@ -1040,18 +1040,19 @@ static void CL_ParseZPacket( void ) {
 #if USE_ZLIB
     sizebuf_t   temp;
     byte        buffer[MAX_MSGLEN];
-    size_t      inlen, outlen;
+    int         inlen, outlen;
 
     if( msg_read.data != msg_read_buffer ) {
         Com_Error( ERR_DROP, "%s: recursively entered", __func__ );
     }
 
-    inlen = MSG_ReadShort();
-    if( msg_read.readcount + inlen > msg_read.cursize ) {
+    inlen = MSG_ReadWord();
+    outlen = MSG_ReadWord();
+
+    if( inlen == -1 || outlen == -1 || msg_read.readcount + inlen > msg_read.cursize ) {
         Com_Error( ERR_DROP, "%s: read past end of message", __func__ );
     }
 
-    outlen = MSG_ReadShort();
     if( outlen > MAX_MSGLEN ) {
         Com_Error( ERR_DROP, "%s: invalid output length", __func__ );
     }
