@@ -112,45 +112,60 @@ malformed:
 // 640x480
 // 640x480+0
 // 640x480+0+0
-void VID_GetGeometry( vrect_t *rc ) {
-    char *s = vid_geometry->string;
-    int w = 640, h = 480, x = 0, y = 0;
+// 640x480-100-100
+qboolean VID_GetGeometry( vrect_t *rc ) {
+    unsigned long w, h;
+    long x, y;
+    char *s;
+
+    // fill in default parameters
+    rc->x = 0;
+    rc->y = 0;
+    rc->width = 640;
+    rc->height = 480;
+
+    if( !vid_geometry )
+        return qfalse;
+
+    s = vid_geometry->string;
+    if( !*s )
+        return qfalse;
 
     w = strtoul( s, &s, 10 );
-    if( *s != 'x' ) {
+    if( *s != 'x' && *s != 'X' ) {
         Com_DPrintf( "Geometry string is malformed\n" );
-        goto malformed;
+        return qfalse;
     }
     h = strtoul( s + 1, &s, 10 );
-    if( *s == '+' ) {
-        x = strtoul( s + 1, &s, 10 );
-        if( *s == '+' ) {
-            y = strtoul( s + 1, &s, 10 );
+    x = y = 0;
+    if( *s == '+' || *s == '-' ) {
+        x = strtol( s, &s, 10 );
+        if( *s == '+' || *s == '-' ) {
+            y = strtol( s, &s, 10 );
         }
     }
 
     // sanity check
-    if( x < 0 || x > 8192 || y < 0 || y > 8192 ) {
-        x = 0;
-        y = 0;
-    }
     if( w < 64 || w > 8192 || h < 64 || h > 8192 ) {
-malformed:
-        w = 640;
-        h = 480;
+        Com_DPrintf( "Geometry %lux%lu doesn't look sane\n", w, h );
+        return qfalse;
     }
 
     rc->x = x;
     rc->y = y;
     rc->width = w;
     rc->height = h;
-}
 
+    return qtrue;
+}
 
 void VID_SetGeometry( vrect_t *rc ) {
     char buffer[MAX_QPATH];
 
-    Q_snprintf( buffer, sizeof( buffer ), "%dx%d+%d+%d",
+    if( !vid_geometry )
+        return;
+
+    Q_snprintf( buffer, sizeof( buffer ), "%dx%d%+d%+d",
         rc->width, rc->height, rc->x, rc->y );
     Cvar_SetByVar( vid_geometry, buffer, FROM_CODE );
 }
