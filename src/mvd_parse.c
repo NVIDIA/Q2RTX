@@ -175,7 +175,7 @@ static void MVD_ParseMulticast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
         reliable = qtrue;
         // intentional fallthrough
     case mvd_multicast_phs:
-        leafnum = MSG_ReadShort();
+        leafnum = MSG_ReadWord();
         if( mvd->demoseeking ) {
             leaf1 = NULL;
             break;
@@ -187,7 +187,7 @@ static void MVD_ParseMulticast( mvd_t *mvd, mvd_ops_t op, int extrabits ) {
         reliable = qtrue;
         // intentional fallthrough
     case mvd_multicast_pvs:
-        leafnum = MSG_ReadShort();
+        leafnum = MSG_ReadWord();
         if( mvd->demoseeking ) {
             leaf1 = NULL;
             break;
