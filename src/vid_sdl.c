@@ -181,7 +181,7 @@ static qboolean set_video_mode( int flags, int forcedepth ) {
     sdl.flags &= ~QVF_FULLSCREEN;
 
     if( vid_fullscreen->integer > 0 ) {
-        VID_GetModeFS( &rc, NULL, &depth );
+        VID_GetFullscreen( &rc, NULL, &depth );
         if( forcedepth ) {
             depth = forcedepth;
         }

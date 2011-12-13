@@ -52,61 +52,76 @@ HELPER FUNCTIONS
 // 640x480@75
 // 640x480@75:32
 // 640x480:32@75
-void VID_GetModeFS( vrect_t *rc, int *freq, int *depth ) {
-    char *s = vid_modelist->string;
-    int mode = 1;
-    int w = 640, h = 480, hz = 0, bpp = 0;
+qboolean VID_GetFullscreen( vrect_t *rc, int *freq_p, int *depth_p ) {
+    unsigned long w, h, freq, depth;
+    char *s;
+    int mode;
 
-    while( *s ) {
+    // fill in default parameters
+    rc->x = 0;
+    rc->y = 0;
+    rc->width = 640;
+    rc->height = 480;
+
+    if( freq_p )
+        *freq_p = 0;
+    if( depth_p )
+        *depth_p = 0;
+
+    if( !vid_modelist || !vid_fullscreen )
+        return qfalse;
+
+    s = vid_modelist->string;
+    if( !*s )
+        return qfalse;
+
+    mode = 1;
+    while( 1 ) {
         w = strtoul( s, &s, 10 );
-        if( *s != 'x' ) {
+        if( *s != 'x' && *s != 'X' ) {
             Com_DPrintf( "Mode %d is malformed\n", mode );
-            goto malformed;
+            return qfalse;
         }
         h = strtoul( s + 1, &s, 10 );
+        freq = depth = 0;
         if( *s == '@' ) {
-            hz = strtoul( s + 1, &s, 10 );
+            freq = strtoul( s + 1, &s, 10 );
             if( *s == ':' ) {
-                bpp = strtoul( s + 1, &s, 10 );
+                depth = strtoul( s + 1, &s, 10 );
             }
         } else if( *s == ':' ) {
-            bpp = strtoul( s + 1, &s, 10 );
+            depth = strtoul( s + 1, &s, 10 );
             if( *s == '@' ) {
-                hz = strtoul( s + 1, &s, 10 );
+                freq = strtoul( s + 1, &s, 10 );
             }
         }
         if( mode == vid_fullscreen->integer ) {
             break;
         }
+        while( Q_isspace( *s ) )
+            s++;
         if( *s == 0 ) {
             Com_DPrintf( "Mode %d not found\n", vid_fullscreen->integer );
-            break;
+            return qfalse;
         }
-        s++;
         mode++;
     }
 
     // sanity check
-    if( w < 64 || w > 8192 || h < 64 || h > 8192 ) {
-        Com_DPrintf( "Mode %dx%d doesn't look sane\n", w, h );
-malformed:
-        w = 640;
-        h = 480;
-        hz = 0;
-        bpp = 0;
+    if( w < 64 || w > 8192 || h < 64 || h > 8192 || freq > 1000 || depth > 32 ) {
+        Com_DPrintf( "Mode %lux%lu@%lu:%lu doesn't look sane\n", w, h, freq, depth );
+        return qfalse;
     }
 
-    rc->x = 0;
-    rc->y = 0;
     rc->width = w;
     rc->height = h;
 
-    if( freq ) {
-        *freq = hz;
-    }
-    if( depth ) {
-        *depth = bpp;
-    }
+    if( freq_p )
+        *freq_p = freq;
+    if( depth_p )
+        *depth_p = depth;
+
+    return qtrue;
 }
 
 // 640x480
@@ -171,6 +186,9 @@ void VID_SetGeometry( vrect_t *rc ) {
 }
 
 void VID_ToggleFullscreen( void ) {
+    if( !vid_fullscreen || !_vid_fullscreen )
+        return;
+
     if( !vid_fullscreen->integer ) {
         if( !_vid_fullscreen->integer ) {
             Cvar_Set( "_vid_fullscreen", "1" );
@@ -203,10 +221,10 @@ void CL_RunRefresh( void ) {
 
     if( mode_changed ) {
         if( mode_changed & MODE_FULLSCREEN ) {
+            VID_SetMode();
             if( vid_fullscreen->integer ) {
                 Cvar_Set( "_vid_fullscreen", vid_fullscreen->string );
             }
-            VID_SetMode();
         } else {
             if( vid_fullscreen->integer ) {
                 if( mode_changed & MODE_MODELIST ) {

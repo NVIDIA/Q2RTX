@@ -33,7 +33,7 @@ void VID_SetMode( void );
 //
 // cl_ref.c
 //
-void VID_GetModeFS( vrect_t *rc, int *freq, int *depth );
-void VID_GetGeometry( vrect_t *rc ); 
-void VID_SetGeometry( vrect_t *rc ); 
+qboolean VID_GetFullscreen( vrect_t *rc, int *freq_p, int *depth_p );
+qboolean VID_GetGeometry( vrect_t *rc );
+void VID_SetGeometry( vrect_t *rc );
 void VID_ToggleFullscreen( void );
