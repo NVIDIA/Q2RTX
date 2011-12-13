@@ -79,9 +79,55 @@ static commandPrompt_t  tty_prompt;
 static int              tty_hidden;
 static ioentry_t        *tty_io;
 
-static void stdout_write( const void *buf, size_t nbyte ) {
-    if( write( STDOUT_FILENO, buf, nbyte ) == -1 ) {
-        exit( EXIT_FAILURE );
+static int stdout_sleep(void)
+{
+    struct timeval tv;
+    fd_set fd;
+
+    tv.tv_sec = 0;
+    tv.tv_usec = 10000;
+
+    FD_ZERO(&fd);
+    FD_SET(STDOUT_FILENO, &fd);
+
+    return select(STDOUT_FILENO + 1, NULL, &fd, NULL, &tv);
+}
+
+// handles partial writes correctly, but never spins too much
+// blocks for 100 ms before giving up and losing data
+static void stdout_write(const void *buf, size_t len)
+{
+    const char *what;
+    int ret, spins;
+
+    for (spins = 0; spins < 10; spins++) {
+        if (len == 0)
+            break;
+
+        ret = write(STDOUT_FILENO, buf, len);
+        if (q_unlikely(ret < 0)) {
+            if (errno == EINTR)
+                continue;
+
+            if (errno == EAGAIN) {
+                ret = stdout_sleep();
+                if (ret >= 0)
+                    continue;
+                what = "select";
+            } else {
+                what = "write";
+            }
+
+            // avoid recursive calls
+            sys_console = NULL;
+            tty_enabled = qfalse;
+
+            Com_Error(ERR_FATAL, "%s: %s() failed: %s",
+                __func__, what, strerror(errno));
+        }
+
+        buf += ret;
+        len -= ret;
     }
 }
 
@@ -394,6 +440,9 @@ void Sys_RunConsole( void ) {
         return;
     }
 
+    // make sure the next call will not block
+    tty_io->canread = qfalse;
+
     if( ret < 0 ) {
         if( errno == EAGAIN || errno == EINTR ) {
             return;
@@ -683,20 +732,26 @@ void Sys_Init( void ) {
         isatty( STDOUT_FILENO ) ? "2" : "0", CVAR_NOSET );
 
     if( sys_console->integer > 0 ) {
-        // change stdin to non-blocking and stdout to blocking
-        fcntl( STDIN_FILENO, F_SETFL,
-            fcntl( STDIN_FILENO, F_GETFL, 0 ) | FNDELAY );
-        fcntl( STDOUT_FILENO, F_SETFL,
-            fcntl( STDOUT_FILENO, F_GETFL, 0 ) & ~FNDELAY );
+        int ret;
+
+        // change stdin to non-blocking
+        ret = fcntl( STDIN_FILENO, F_GETFL, 0 );
+        if( !(ret & O_NONBLOCK) )
+            fcntl( STDIN_FILENO, F_SETFL, ret | O_NONBLOCK );
+
+        // change stdout to non-blocking
+        ret = fcntl( STDOUT_FILENO, F_GETFL, 0 );
+        if( !(ret & O_NONBLOCK) )
+            fcntl( STDOUT_FILENO, F_SETFL, ret | O_NONBLOCK );
 
         // add stdin to the list of descriptors to wait on
         tty_io = IO_Add( STDIN_FILENO );
         tty_io->wantread = qtrue;
 
         // init optional TTY support
-        if( sys_console->integer > 1 ) {
+        if( sys_console->integer > 1 )
             tty_init_input();
-        }
+
         signal( SIGHUP, term_handler );
     } else
 #endif
