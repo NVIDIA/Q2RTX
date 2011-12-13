@@ -512,18 +512,35 @@ qerror_t FS_Seek( qhandle_t f, off_t offset ) {
 FS_CreatePath
 
 Creates any directories needed to store the given filename.
-Expects a fully qualified quake path (i.e. with / separators).
+Expects a fully qualified, normalized system path (i.e. with / separators).
 ============
 */
 qerror_t FS_CreatePath( char *path ) {
     char *ofs;
     int ret;
 
-    if( !*path ) {
-        return Q_ERR_INVAL;
-    }
+    ofs = path;
 
-    for( ofs = path + 1; *ofs; ofs++ ) {
+#ifdef _WIN32
+    // check for UNC path and skip "//computer/share/" part
+    if( *path == '/' && path[1] == '/' ) {
+        char *p;
+
+        p = strchr( path + 2, '/' );
+        if( p ) {
+            p = strchr( p + 1, '/' );
+            if( p ) {
+                ofs = p + 1;
+            }
+        }
+    }
+#endif
+
+    // skip leading slash(es)
+    for( ; *ofs == '/'; ofs++ )
+        ;
+
+    for( ; *ofs; ofs++ ) {
         if( *ofs == '/' ) {    
             // create the directory
             *ofs = 0;
