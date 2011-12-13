@@ -122,6 +122,7 @@ typedef struct genctx_s {
     int count, size;
     void *data;
     qboolean ignorecase;
+    qboolean ignoredups;
 } genctx_t;
 
 typedef void ( *xcommand_t )( void );

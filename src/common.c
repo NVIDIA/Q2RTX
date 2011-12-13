@@ -1788,6 +1788,9 @@ void Com_Generic_c( genctx_t *ctx, int argnum ) {
         return;
     }
 
+    // protect against possible duplicates
+    ctx->ignoredups = qtrue;
+
     s = Cmd_Argv( ctx->argnum - argnum );
 
     // complete command argument or cvar value

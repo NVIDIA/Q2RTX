@@ -129,20 +129,40 @@ static void Prompt_ShowIndividualMatches(
     }
 }
 
+static qboolean find_dup( genctx_t *ctx, const char *s ) {
+    int i, r;
+
+    for( i = 0; i < ctx->count; i++ ) {
+        if( ctx->ignorecase )
+            r = Q_strcasecmp( ctx->matches[i], s );
+        else
+            r = strcmp( ctx->matches[i], s );
+
+        if( !r )
+            return qtrue;
+    }
+
+    return qfalse;
+}
+
 qboolean Prompt_AddMatch( genctx_t *ctx, const char *s ) {
     int r;
 
-    if( ctx->count >= ctx->size ) {
+    if( ctx->count >= ctx->size )
         return qfalse;
-    }
-    if( ctx->ignorecase ) {
+
+    if( ctx->ignorecase )
         r = Q_strncasecmp( ctx->partial, s, ctx->length );
-    } else {
+    else
         r = strncmp( ctx->partial, s, ctx->length );
-    }
-    if( !r ) {
-        ctx->matches[ctx->count++] = Z_CopyString( s );
-    }
+
+    if( r )
+        return qtrue;
+
+    if( ctx->ignoredups && find_dup( ctx, s ) )
+        return qtrue;
+
+    ctx->matches[ctx->count++] = Z_CopyString( s );
     return qtrue;
 }
 
