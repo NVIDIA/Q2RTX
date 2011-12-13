@@ -132,65 +132,247 @@ void Win_ModeChanged( void ) {
 
 /*
 ============
+VID_GetDefaultModeList
+============
+*/
+
+typedef struct {
+    int width, height;
+    int freq, depth;
+    qboolean desktop;
+} vidmode_t;
+
+#define MAX_MODES 256
+
+static int modecmp(const void *p1, const void *p2)
+{
+    const vidmode_t *m1 = (const vidmode_t *)p1;
+    const vidmode_t *m2 = (const vidmode_t *)p2;
+
+    // desktop resolution is always first
+    if (m1->desktop)
+        return -1;
+
+    return m2->width * m2->height - m1->width * m1->height;
+}
+
+// should have at least width and height
+#define DM_USABLE(dm) \
+    (((dm)->dmFields & (DM_PELSWIDTH | DM_PELSHEIGHT)) == (DM_PELSWIDTH | DM_PELSHEIGHT))
+
+static void process_mode(vidmode_t *modes, int *num_modes, const DEVMODE *dm, const DEVMODE *desktop)
+{
+    int freq = 0, depth = 0;
+    vidmode_t *m;
+    int i;
+
+    if (!DM_USABLE(dm))
+        return;
+
+    // sanity check width and height
+    if (dm->dmPelsWidth < 64 || dm->dmPelsHeight < 64)
+        return;
+    if (dm->dmPelsWidth > 8192 || dm->dmPelsHeight > 8192)
+        return;
+
+    if (dm->dmFields & DM_DISPLAYFLAGS) {
+        if (dm->dmDisplayFlags & (DM_GRAYSCALE | DM_INTERLACED))
+            return;
+    }
+
+    if (dm->dmFields & DM_DISPLAYFREQUENCY) {
+        if (dm->dmDisplayFrequency <= 1 || dm->dmDisplayFrequency > 1000)
+            return;
+        freq = dm->dmDisplayFrequency;
+    }
+
+    if (dm->dmFields & DM_BITSPERPEL) {
+        if (dm->dmBitsPerPel < 8 || dm->dmBitsPerPel > 32)
+            return;
+        // completely ignore non-desktop bit depths for now
+        if ((desktop->dmFields & DM_BITSPERPEL) && dm->dmBitsPerPel != desktop->dmBitsPerPel)
+            return;
+        depth = dm->dmBitsPerPel;
+    }
+
+    // see if we already have this resolution
+    for (i = 0; i < *num_modes; i++) {
+        m = &modes[i];
+        if (m->width == dm->dmPelsWidth && m->height == dm->dmPelsHeight) {
+            if (freq > m->freq)
+                m->freq = freq;
+            if (depth > m->depth)
+                m->depth = depth;
+            return;
+        }
+    }
+
+    // add new resolution
+    if (*num_modes >= MAX_MODES)
+        return;
+
+    m = &modes[(*num_modes)++];
+    m->width = dm->dmPelsWidth;
+    m->height = dm->dmPelsHeight;
+    m->freq = freq;
+    m->depth = depth;
+    m->desktop = qfalse;
+    if (dm->dmPelsWidth == desktop->dmPelsWidth && dm->dmPelsHeight == desktop->dmPelsHeight)
+        m->desktop = qtrue;
+}
+
+char *VID_GetDefaultModeList(void)
+{
+    DEVMODE desktop, dm;
+    vidmode_t modes[MAX_MODES], *m;
+    int i, num_modes;
+    size_t size, len;
+    char *buf;
+
+    memset(&desktop, 0, sizeof(desktop));
+    desktop.dmSize = sizeof(desktop);
+
+    if (!EnumDisplaySettings(NULL, ENUM_REGISTRY_SETTINGS, &desktop))
+        return Z_CopyString(VID_MODELIST);
+
+    num_modes = 0;
+    for (i = 0; i < MAX_MODES*4; i++) {
+        memset(&dm, 0, sizeof(dm));
+        dm.dmSize = sizeof(dm);
+
+        if (!EnumDisplaySettings(NULL, i, &dm))
+            break;
+
+        process_mode(modes, &num_modes, &dm, &desktop);
+    }
+
+    if (!num_modes)
+        return Z_CopyString(VID_MODELIST);
+
+    qsort(modes, num_modes, sizeof(modes[0]), modecmp);
+
+    size = num_modes * 20 + 1;
+    buf = Z_Malloc(size);
+
+    len = 0;
+    for (i = 0; i < num_modes; i++) {
+        m = &modes[i];
+
+        len += Q_scnprintf(buf + len, size - len, "%dx%d", m->width, m->height);
+
+        if (m->freq && (desktop.dmFields & DM_DISPLAYFREQUENCY) && m->freq != desktop.dmDisplayFrequency)
+            len += Q_scnprintf(buf + len, size - len, "@%d", m->freq);
+
+        if (m->depth && (desktop.dmFields & DM_BITSPERPEL) && m->depth != desktop.dmBitsPerPel)
+            len += Q_scnprintf(buf + len, size - len, ":%d", m->depth);
+
+        if (len < size - 1 && i < num_modes - 1)
+            buf[len++] = ' ';
+    }
+    buf[len] = 0;
+
+    return buf;
+}
+
+// use desktop frequency by default if using desktop resolution
+static int get_desktop_frequency( const DEVMODE *desktop ) {
+    const int mask = DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFREQUENCY;
+
+    if( (desktop->dmFields & mask) != mask )
+        return 0;
+    if( desktop->dmPelsWidth != win.rc.width )
+        return 0;
+    if( desktop->dmPelsHeight != win.rc.height )
+        return 0;
+
+    return desktop->dmDisplayFrequency;
+}
+
+static qboolean set_fullscreen_mode( void ) {
+    DEVMODE desktop, dm;
+    LONG ret;
+    int freq, depth;
+
+    memset( &desktop, 0, sizeof( desktop ) );
+    desktop.dmSize = sizeof( desktop );
+
+    EnumDisplaySettings( NULL, ENUM_REGISTRY_SETTINGS, &desktop );
+
+    // parse vid_modelist specification
+    if( VID_GetFullscreen( &win.rc, &freq, &depth ) ) {
+        Com_DPrintf( "...setting fullscreen mode: %dx%d\n",
+            win.rc.width, win.rc.height );
+    } else if( DM_USABLE( &desktop ) ) {
+        win.rc.width = desktop.dmPelsWidth;
+        win.rc.height = desktop.dmPelsHeight;
+        Com_DPrintf( "...falling back to desktop mode: %dx%d\n",
+            win.rc.width, win.rc.height );
+    } else {
+        Com_DPrintf( "...falling back to default mode: %dx%d\n",
+            win.rc.width, win.rc.height );
+    }
+
+    memset( &dm, 0, sizeof( dm ) );
+    dm.dmSize       = sizeof( dm );
+    dm.dmPelsWidth  = win.rc.width;
+    dm.dmPelsHeight = win.rc.height;
+    dm.dmFields     = DM_PELSWIDTH | DM_PELSHEIGHT;
+
+    if( freq ) {
+        dm.dmDisplayFrequency = freq;
+        dm.dmFields |= DM_DISPLAYFREQUENCY;
+        Com_DPrintf( "...using display frequency of %d\n", freq );
+    } else {
+        freq = get_desktop_frequency( &desktop );
+        if( freq > 1 ) {
+            dm.dmDisplayFrequency = freq;
+            dm.dmFields |= DM_DISPLAYFREQUENCY;
+            Com_DPrintf( "...using desktop display frequency of %d\n", freq );
+        }
+    }
+
+    if( depth ) {
+        dm.dmBitsPerPel = depth;
+        dm.dmFields |= DM_BITSPERPEL;
+        Com_DPrintf( "...using bitdepth of %d\n", depth );
+    } else if( desktop.dmFields & DM_BITSPERPEL ) {
+        dm.dmBitsPerPel = desktop.dmBitsPerPel;
+        dm.dmFields |= DM_BITSPERPEL;
+        Com_DPrintf( "...using desktop bitdepth of %lu\n", desktop.dmBitsPerPel );
+    }
+
+    Com_DPrintf( "...calling CDS: " );
+    ret = ChangeDisplaySettings( &dm, CDS_FULLSCREEN );
+    if( ret != DISP_CHANGE_SUCCESSFUL ) {
+        Com_DPrintf( "failed with error %ld\n", ret );
+        return qfalse;
+    }
+    Com_DPrintf( "ok\n" );
+
+    win.dm = dm;
+    win.flags |= QVF_FULLSCREEN;
+    Win_SetPosition();
+    win.mode_changed = 0;
+
+    return qtrue;
+}
+
+/*
+============
 Win_SetMode
 ============
 */
 void Win_SetMode( void ) {
-    DEVMODE dm;
-    LONG ret;
-    int freq, depth;
-
+    // set full screen mode if requested
     if( vid_fullscreen->integer > 0 ) {
-        // parse vid_modelist specification
-        VID_GetModeFS( &win.rc, &freq, &depth );
-
-        Com_DPrintf( "...setting fullscreen mode: %dx%d\n",
-            win.rc.width, win.rc.height );
-
-        memset( &dm, 0, sizeof( dm ) );
-        dm.dmSize       = sizeof( dm );
-        dm.dmPelsWidth  = win.rc.width;
-        dm.dmPelsHeight = win.rc.height;
-        dm.dmFields     = DM_PELSWIDTH | DM_PELSHEIGHT;
-
-        if( freq ) {
-            dm.dmDisplayFrequency = freq;
-            dm.dmFields |= DM_DISPLAYFREQUENCY;
-            Com_DPrintf( "...using display frequency of %d\n", freq );
-        }
-
-        if( depth ) {
-            dm.dmBitsPerPel = depth;
-            dm.dmFields |= DM_BITSPERPEL;
-            Com_DPrintf( "...using bitdepth of %d\n", depth );
-#ifdef _DEBUG
-        } else if( developer->integer ) {
-            HDC hdc;
-            int bitspixel;
-
-            hdc = GetDC( NULL );
-            bitspixel = GetDeviceCaps( hdc, BITSPIXEL );
-            ReleaseDC( NULL, hdc );
-
-            Com_DPrintf( "...using desktop bitdepth of %d\n", bitspixel );
-#endif
-        }
-
-        Com_DPrintf( "...calling CDS: " );
-        ret = ChangeDisplaySettings( &dm, CDS_FULLSCREEN );
-        if( ret == DISP_CHANGE_SUCCESSFUL ) {
-            Com_DPrintf( "ok\n" );
-            win.dm = dm;
-            win.flags |= QVF_FULLSCREEN;
-            Win_SetPosition();
-            win.mode_changed = 0;
+        if( set_fullscreen_mode() ) {
             return;
         }
-        Com_DPrintf( "failed with error %ld\n", ret );
 
         Cvar_Reset( vid_fullscreen );
         Com_Printf( "Full screen mode %dx%d failed.\n",
             win.rc.width, win.rc.height );
+        // fall back to windowed mode
     }
 
     // parse vid_geometry specification
@@ -204,7 +386,7 @@ void Win_SetMode( void ) {
     if( win.rc.width < 320 ) win.rc.width = 320;
     if( win.rc.height < 240 ) win.rc.height = 240;
 
-    Com_DPrintf( "...setting windowed mode: %dx%d+%d+%d\n",
+    Com_DPrintf( "...setting windowed mode: %dx%d%+d%+d\n",
         win.rc.width, win.rc.height, win.rc.x, win.rc.y );
 
     ChangeDisplaySettings( NULL, 0 );
@@ -929,7 +1111,7 @@ void Win_Shutdown( void ) {
     }
 
     if( win.flags & QVF_FULLSCREEN ) {
-        ChangeDisplaySettings( 0, 0 );
+        ChangeDisplaySettings( NULL, 0 );
     }
 
     memset( &win, 0, sizeof( win ) );

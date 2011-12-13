@@ -222,6 +222,10 @@ success:
     return qtrue;
 }
 
+char *VID_GetDefaultModeList( void ) {
+    return Z_CopyString(VID_MODELIST);
+}
+
 /*
 ============
 VID_SetMode

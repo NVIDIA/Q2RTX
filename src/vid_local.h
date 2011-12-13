@@ -29,6 +29,7 @@ extern cvar_t       *_vid_fullscreen;
 //
 void VID_PumpEvents( void );
 void VID_SetMode( void );
+char *VID_GetDefaultModeList( void );
 
 //
 // cl_ref.c

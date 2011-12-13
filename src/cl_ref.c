@@ -266,16 +266,22 @@ CL_InitRefresh
 ============
 */
 void CL_InitRefresh( void ) {
+    char *modelist;
+
     if( cls.ref_initialized ) {
         return;
     }
+
+    modelist = VID_GetDefaultModeList();
 
     // Create the video variables so we know how to start the graphics drivers
     vid_ref = Cvar_Get( "vid_ref", VID_REF, CVAR_ROM );
     vid_fullscreen = Cvar_Get( "vid_fullscreen", "0", CVAR_ARCHIVE );
     _vid_fullscreen = Cvar_Get( "_vid_fullscreen", "1", CVAR_ARCHIVE );
-    vid_modelist = Cvar_Get( "vid_modelist", VID_MODELIST, 0 );
+    vid_modelist = Cvar_Get( "vid_modelist", modelist, 0 );
     vid_geometry = Cvar_Get( "vid_geometry", VID_GEOMETRY, CVAR_ARCHIVE );
+
+    Z_Free( modelist );
 
     if( vid_fullscreen->integer ) {
         Cvar_Set( "_vid_fullscreen", vid_fullscreen->string );
