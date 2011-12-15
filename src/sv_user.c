@@ -483,6 +483,11 @@ void SV_Begin_f( void ) {
         return;
     }
 
+    if( !sv_client->versionString ) {
+        SV_DropClient( sv_client, "!failed version probe" );
+        return;
+    }
+
     if( sv_force_reconnect->string[0] && !sv_client->reconnected ) {
         SV_DropClient( sv_client, "!failed to reconnect" );
         return;
