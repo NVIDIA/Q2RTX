@@ -499,7 +499,7 @@ void Com_Error( error_type_t code, const char *fmt, ... ) {
 
     if( code == ERR_DISCONNECT || code == ERR_RECONNECT ) {
         Com_WPrintf( "%s\n", com_errorMsg );
-        SV_Shutdown( va( "Server was killed: %s", com_errorMsg ), code );
+        SV_Shutdown( va( "Server was killed: %s\n", com_errorMsg ), code );
 #if USE_CLIENT
         CL_Disconnect( code );
 #endif
