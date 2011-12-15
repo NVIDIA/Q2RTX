@@ -283,7 +283,7 @@ typedef struct client_s {
     int             messagelevel;       // for filtering printed messages
     int             number;             // client slot number
 
-    clientSetting_t settings[CLS_MAX];
+    int             settings[CLS_MAX];
 
     msgEsFlags_t    esFlags;
 
