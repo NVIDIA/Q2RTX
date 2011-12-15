@@ -996,6 +996,10 @@ USER CMD EXECUTION
 ===========================================================================
 */
 
+static qboolean    moveIssued;
+static int         stringCmdCount;
+static int         userinfoUpdateCount;
+
 /*
 ==================
 SV_ClientThink
@@ -1046,9 +1050,17 @@ static void SV_SetLastFrame( int lastframe ) {
 SV_OldClientExecuteMove
 ==================
 */
-static void SV_OldClientExecuteMove( int net_drop ) {
+static void SV_OldClientExecuteMove( void ) {
     usercmd_t   oldest, oldcmd, newcmd;
     int         lastframe;
+    int         net_drop;
+
+    if( moveIssued ) {
+        SV_DropClient( sv_client, "multiple clc_move commands in packet" );
+        return;     // someone is trying to cheat...
+    }
+
+    moveIssued = qtrue;
 
     if( sv_client->protocol == PROTOCOL_VERSION_DEFAULT ) {
         MSG_ReadByte();    // skip over checksum
@@ -1056,6 +1068,7 @@ static void SV_OldClientExecuteMove( int net_drop ) {
     
     lastframe = MSG_ReadLong();
 
+    // read all cmds
     if( sv_client->protocol == PROTOCOL_VERSION_R1Q2 &&
         sv_client->version >= PROTOCOL_VERSION_R1Q2_UCMD ) 
     {
@@ -1075,22 +1088,26 @@ static void SV_OldClientExecuteMove( int net_drop ) {
 
     SV_SetLastFrame( lastframe );
 
+    net_drop = sv_client->netchan->dropped;
     if( net_drop > 2 ) {
         sv_client->frameflags |= FF_CLIENTPRED;
     } 
 
     if( net_drop < 20 ) {
+        // run lastcmd multiple times if no backups available
         while( net_drop > 2 ) {
             SV_ClientThink( &sv_client->lastcmd );
             net_drop--;
         }
+
+        // run backup cmds
         if( net_drop > 1 )
             SV_ClientThink( &oldest );
-
         if( net_drop > 0 )
             SV_ClientThink( &oldcmd );
-
     }
+
+    // run new cmd
     SV_ClientThink( &newcmd );
     
     sv_client->lastcmd = newcmd;
@@ -1101,12 +1118,20 @@ static void SV_OldClientExecuteMove( int net_drop ) {
 SV_NewClientExecuteMove
 ==================
 */
-static void SV_NewClientExecuteMove( int c, int net_drop ) {
+static void SV_NewClientExecuteMove( int c ) {
     usercmd_t   cmds[MAX_PACKET_FRAMES][MAX_PACKET_USERCMDS];
     usercmd_t   *lastcmd, *cmd;
     int         lastframe;
     int         numCmds[MAX_PACKET_FRAMES], numDups;
     int         i, j, lightlevel;
+    int         net_drop;
+
+    if( moveIssued ) {
+        SV_DropClient( sv_client, "multiple clc_move commands in packet" );
+        return;     // someone is trying to cheat...
+    }
+
+    moveIssued = qtrue;
 
     numDups = c >> SVCMD_BITS;
     c &= SVCMD_MASK;
@@ -1159,6 +1184,7 @@ static void SV_NewClientExecuteMove( int c, int net_drop ) {
         return; // should never happen
     }
 
+    net_drop = sv_client->netchan->dropped;
     if( net_drop > numDups ) {
         sv_client->frameflags |= FF_CLIENTPRED;
     } 
@@ -1233,6 +1259,81 @@ static void SV_UpdateUserinfo( void ) {
     SV_UserinfoChanged( sv_client );
 }
 
+static void SV_ParseFullUserinfo( void ) {
+    size_t len;
+
+    // malicious users may try sending too many userinfo updates
+    if( userinfoUpdateCount >= MAX_PACKET_USERINFOS ) {
+        Com_DPrintf( "Too many userinfos from %s\n", sv_client->name );
+        MSG_ReadString( NULL, 0 );
+        return;
+    }
+
+    len = MSG_ReadString( sv_client->userinfo, sizeof( sv_client->userinfo ) );
+    if( len >= sizeof( sv_client->userinfo ) ) {
+        SV_DropClient( sv_client, "oversize userinfo" );
+        return;
+    }
+
+    Com_DDPrintf( "%s(%s): %s [%d]\n", __func__,
+        sv_client->name, sv_client->userinfo, userinfoUpdateCount );
+
+    SV_UpdateUserinfo();
+    userinfoUpdateCount++;
+}
+
+static void SV_ParseDeltaUserinfo( void ) {
+    char key[MAX_INFO_KEY], value[MAX_INFO_VALUE];
+    size_t len;
+
+    // malicious users may try sending too many userinfo updates
+    if( userinfoUpdateCount >= MAX_PACKET_USERINFOS ) {
+        Com_DPrintf( "Too many userinfos from %s\n", sv_client->name );
+        MSG_ReadString( NULL, 0 );
+        MSG_ReadString( NULL, 0 );
+        return;
+    }
+
+    // optimize by combining multiple delta updates into one (hack)
+    while( 1 ) {
+        len = MSG_ReadString( key, sizeof( key ) );
+        if( len >= sizeof( key ) ) {
+            SV_DropClient( sv_client, "oversize delta key" );
+            return;
+        }
+
+        len = MSG_ReadString( value, sizeof( value ) );
+        if( len >= sizeof( value ) ) {
+            SV_DropClient( sv_client, "oversize delta value" );
+            return;
+        }
+
+        if( userinfoUpdateCount < MAX_PACKET_USERINFOS ) {
+            if( !Info_SetValueForKey( sv_client->userinfo, key, value ) ) {
+                SV_DropClient( sv_client, "malformed userinfo" );
+                return;
+            }
+
+            Com_DDPrintf( "%s(%s): %s %s [%d]\n", __func__,
+                sv_client->name, key, value, userinfoUpdateCount );
+
+            userinfoUpdateCount++;
+        } else {
+            Com_DPrintf( "Too many userinfos from %s\n", sv_client->name );
+        }
+
+        if( msg_read.readcount >= msg_read.cursize )
+            break; // end of message
+
+        if( msg_read.data[msg_read.readcount] != clc_userinfo_delta )
+            break; // not delta userinfo
+
+        msg_read.readcount++;
+    }
+
+    SV_UpdateUserinfo();
+}
+
 #if USE_FPS
 static void align_key_frames( void ) {
     int framediv = sv.framediv / sv_client->framediv;
@@ -1277,6 +1378,47 @@ static void set_client_fps( int value ) {
 }
 #endif
 
+static void SV_ParseClientSetting( void ) {
+    int idx, value;
+
+    idx = MSG_ReadShort();
+    value = MSG_ReadShort();
+
+    Com_DDPrintf( "%s(%s): [%d] = %d\n", __func__, sv_client->name, idx, value );
+
+    if( idx < 0 || idx >= CLS_MAX )
+        return;
+
+    sv_client->settings[idx] = value;
+
+#if USE_FPS
+    if( idx == CLS_FPS && sv_client->protocol == PROTOCOL_VERSION_Q2PRO )
+        set_client_fps( value );
+#endif
+}
+
+static void SV_ParseClientCommand( void ) {
+    char buffer[MAX_STRING_CHARS];
+    size_t len;
+
+    len = MSG_ReadString( buffer, sizeof( buffer ) );
+    if( len >= sizeof( buffer ) ) {
+        SV_DropClient( sv_client, "oversize stringcmd" );
+        return;
+    }
+
+    // malicious users may try using too many string commands
+    if( stringCmdCount >= MAX_PACKET_STRINGCMDS ) {
+        Com_DPrintf( "Too many stringcmds from %s\n", sv_client->name );
+        return;
+    }
+
+    Com_DDPrintf( "%s(%s): %s\n", __func__, sv_client->name, buffer );
+
+    SV_ExecuteUserCommand( buffer );
+    stringCmdCount++;
+}
+
 /*
 ===================
 SV_ExecuteClientMessage
@@ -1285,12 +1427,7 @@ The current net_message is parsed for the given client
 ===================
 */
 void SV_ExecuteClientMessage( client_t *client ) {
-    int         c;
-    qboolean    move_issued;
-    int         stringCmdCount;
-    int         userinfoUpdateCount;
-    int         net_drop;
-    size_t      len;
+    int c;
 
     X86_PUSH_FPCW;
     X86_SINGLE_FPCW;
@@ -1299,14 +1436,9 @@ void SV_ExecuteClientMessage( client_t *client ) {
     sv_player = sv_client->edict;
 
     // only allow one move command
-    move_issued = qfalse;
+    moveIssued = qfalse;
     stringCmdCount = 0;
     userinfoUpdateCount = 0;
-
-    net_drop = client->netchan->dropped;
-    if( net_drop > 0 ) {
-        client->frameflags |= FF_CLIENTDROP;
-    }
 
     while( 1 ) {
         if( msg_read.readcount > msg_read.cursize ) {
@@ -1327,162 +1459,45 @@ void SV_ExecuteClientMessage( client_t *client ) {
         case clc_nop:
             break;
 
-        case clc_userinfo: {
-                // malicious users may try sending too many userinfo updates
-                if( userinfoUpdateCount == MAX_PACKET_USERINFOS ) {
-                    Com_DPrintf( "Too many userinfos from %s\n", client->name );
-                    MSG_ReadString( NULL, 0 );
-                    break;
-                }
-
-                len = MSG_ReadString( sv_client->userinfo, sizeof( sv_client->userinfo ) );
-                if( len >= sizeof( sv_client->userinfo ) ) {
-                    SV_DropClient( client, "oversize userinfo" );
-                    break;
-                }
-
-                SV_UpdateUserinfo();
-                userinfoUpdateCount++;
-            }
+        case clc_userinfo:
+            SV_ParseFullUserinfo();
             break;
 
         case clc_move:
-            if( move_issued ) {
-                SV_DropClient( client, "multiple clc_move commands in packet" );
-                break;        // someone is trying to cheat...
-            }
-
-            move_issued = qtrue;
-
-            SV_OldClientExecuteMove( net_drop );
+            SV_OldClientExecuteMove();
             break;
 
-        case clc_stringcmd: {
-                char buffer[MAX_STRING_CHARS];
-
-                len = MSG_ReadString( buffer, sizeof( buffer ) );
-                if( len >= sizeof( buffer ) ) {
-                    SV_DropClient( client, "oversize stringcmd" );
-                    break;
-                }
-                
-                Com_DDPrintf( "ClientCommand( %s ): %s\n",
-                    client->name, buffer );
-
-                if( !NET_IsLocalAddress( &client->netchan->remote_address ) ) {
-                    // malicious users may try using too many string commands
-                    if( stringCmdCount == MAX_PACKET_STRINGCMDS ) {
-                        Com_DPrintf( "Too many stringcmds from %s\n", client->name );
-                        break;
-                    }
-                }
-                SV_ExecuteUserCommand( buffer );
-                stringCmdCount++;
-            }
+        case clc_stringcmd:
+            SV_ParseClientCommand();
             break;
 
-        // r1q2 specific operations
-        case clc_setting: {
-                uint16_t idx, value;
+        case clc_setting:
+            if( client->protocol < PROTOCOL_VERSION_R1Q2 )
+                goto badbyte;
 
-                if( client->protocol < PROTOCOL_VERSION_R1Q2 ) {
-                    goto badbyte;
-                }
-
-                idx = MSG_ReadShort();
-                value = MSG_ReadShort();
-                if( idx < CLS_MAX ) {
-                    client->settings[idx] = value;
-#if USE_FPS
-                    if( idx == CLS_FPS && client->protocol == PROTOCOL_VERSION_Q2PRO )
-                        set_client_fps( value );
-#endif
-                }
-            }
+            SV_ParseClientSetting();
             break;
 
-
-        // q2pro specific operations
         case clc_move_nodelta:
         case clc_move_batched:
-            if( client->protocol != PROTOCOL_VERSION_Q2PRO ) {
+            if( client->protocol != PROTOCOL_VERSION_Q2PRO )
                 goto badbyte;
-            }
 
-            if( move_issued ) {
-                SV_DropClient( client, "multiple clc_move commands in packet" );
-                break; // someone is trying to cheat...
-            }
-
-            move_issued = qtrue;
-            SV_NewClientExecuteMove( c, net_drop );
+            SV_NewClientExecuteMove( c );
             break;
 
-        case clc_userinfo_delta: {
-                char key[MAX_INFO_KEY], value[MAX_INFO_VALUE];
+        case clc_userinfo_delta:
+            if( client->protocol != PROTOCOL_VERSION_Q2PRO )
+                goto badbyte;
 
-                if( client->protocol != PROTOCOL_VERSION_Q2PRO ) {
-                    goto badbyte;
-                }
-
-                // malicious users may try sending too many userinfo updates
-                if( userinfoUpdateCount == MAX_PACKET_USERINFOS ) {
-                    Com_DPrintf( "Too many userinfos from %s\n", client->name );
-                    MSG_ReadString( NULL, 0 );
-                    MSG_ReadString( NULL, 0 );
-                    break;
-                }
-
-                // optimize by combining multiple delta updates into one (hack)
-                while( 1 ) {
-                    len = MSG_ReadString( key, sizeof( key ) );
-                    if( len >= sizeof( key ) ) {
-                        SV_DropClient( client, "oversize delta key" );
-                        goto finish;
-                    }
-
-                    len = MSG_ReadString( value, sizeof( value ) );
-                    if( len >= sizeof( value ) ) {
-                        SV_DropClient( client, "oversize delta value" );
-                        goto finish;
-                    }
-
-                    if( userinfoUpdateCount < MAX_PACKET_USERINFOS ) {
-                        if( !Info_SetValueForKey( sv_client->userinfo, key, value ) ) {
-                            SV_DropClient( client, "malformed delta userinfo" );
-                            goto finish;
-                        }
-
-                        Com_DDPrintf( "DeltaUserinfo( %s ): %s %s [%d]\n",
-                            client->name, key, value, userinfoUpdateCount );
-
-                        userinfoUpdateCount++;
-                    } else {
-                        Com_DPrintf( "Too many userinfos from %s\n", client->name );
-                    }
-
-                    if( msg_read.readcount >= msg_read.cursize ) {
-                        break; // end of message
-                    }
-
-                    if( msg_read.data[msg_read.readcount] != clc_userinfo_delta ) {
-                        break; // not delta userinfo
-                    }
-
-                    msg_read.readcount++;
-                }
-
-                SV_UpdateUserinfo();
-            }
+            SV_ParseDeltaUserinfo();
             break;
         }
 
-        if( client->state < cs_assigned ) {
+        if( client->state <= cs_zombie )
             break;    // disconnect command
-        }
     }
 
-finish:
     sv_client = NULL;
     sv_player = NULL;
 

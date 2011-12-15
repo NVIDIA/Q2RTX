@@ -1278,19 +1278,21 @@ static void SV_PacketEvent( void ) {
             netchan->remote_address.port = net_from.port;
         }
 
-        if( netchan->Process( netchan ) ) {
-            // this is a valid, sequenced packet, so process it
-            if( client->state != cs_zombie ) {
-                //if( client->state != cs_assigned ) {
-                    client->lastmessage = svs.realtime;    // don't timeout
-                //}
-#if USE_ICMP
-                client->unreachable = qfalse; // don't drop
-#endif
-                SV_ExecuteClientMessage( client );
-            }
-        }
+        if( !netchan->Process( netchan ) )
+            break;
 
+        if( client->state == cs_zombie )
+            break;
+
+        // this is a valid, sequenced packet, so process it
+        client->lastmessage = svs.realtime;    // don't timeout
+#if USE_ICMP
+        client->unreachable = qfalse; // don't drop
+#endif
+        if( netchan->dropped > 0 )
+            client->frameflags |= FF_CLIENTDROP;
+
+        SV_ExecuteClientMessage( client );
         break;
     }
 }
