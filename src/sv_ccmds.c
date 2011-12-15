@@ -462,7 +462,7 @@ static void SV_Kick_f( void ) {
     if( !SV_SetPlayer() )
         return;
 
-    SV_DropClient( sv_client, "kicked" );
+    SV_DropClient( sv_client, "?was kicked" );
     sv_client->lastmessage = svs.realtime;    // min case there is a funny zombie
 
     // optionally ban their IP address

@@ -30,7 +30,7 @@ void MVD_RemoveClient( struct client_s *client );
 int MVD_Frame( void );
 void MVD_PrepWorldFrame( void );
 
-void MVD_GameClientDrop( edict_t *ent, const char *reason );
+void MVD_GameClientDrop( edict_t *ent, const char *prefix, const char *reason );
 void MVD_GameClientNameChanged( edict_t *ent, const char *name );
 
 void MVD_StreamedStop_f( void );

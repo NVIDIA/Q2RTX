@@ -176,28 +176,39 @@ void SV_DropClient( client_t *client, const char *reason ) {
     client->lastmessage = svs.realtime;
 
     if( reason ) {
-        if( oldstate == cs_spawned ) {
+        qboolean announce = oldstate == cs_spawned ? 2 : 1;
+        const char *prefix = " was dropped: ";
+
+        // parse flags
+        if( *reason == '!' ) {
+            reason++;
+            announce = 0;
+        }
+        if( *reason == '?' ) {
+            reason++;
+            prefix = " ";
+        }
+
+        if( announce == 2 ) {
             // announce to others
 #if USE_MVD_CLIENT
-            if( sv.state == ss_broadcast ) {
-                MVD_GameClientDrop( client->edict, reason );
-            } else
+            if( sv.state == ss_broadcast )
+                MVD_GameClientDrop( client->edict, prefix, reason );
+            else
 #endif
-            {
-                SV_BroadcastPrintf( PRINT_HIGH, "%s was dropped: %s\n",
-                    client->name, reason );
-            }
+                SV_BroadcastPrintf( PRINT_HIGH, "%s%s%s\n",
+                    client->name, prefix, reason );
         }
 
-        // print this to client as they will not receive broadcast
-        SV_ClientPrintf( client, PRINT_HIGH, "%s was dropped: %s\n",
-            client->name, reason );
+        if( announce )
+            // print this to client as they will not receive broadcast
+            SV_ClientPrintf( client, PRINT_HIGH, "%s%s%s\n",
+                client->name, prefix, reason );
 
         // print to server console
-        if( Com_IsDedicated() ) {
-            Com_Printf( "%s[%s] was dropped: %s\n", client->name,
-                NET_AdrToString( &client->netchan->remote_address ), reason );
-        }
+        if( Com_IsDedicated() && client->netchan )
+            Com_Printf( "%s[%s]%s%s\n", client->name,
+                NET_AdrToString( &client->netchan->remote_address ), prefix, reason );
     }
 
     // add the disconnect
@@ -1414,7 +1425,7 @@ static void SV_CheckTimeouts( void ) {
         }
 #endif
         if( delta > drop_time || ( client->state == cs_assigned && delta > ghost_time ) ) {
-            SV_DropClient( client, "connection timed out" );
+            SV_DropClient( client, "?timed out" );
             SV_RemoveClient( client );    // don't bother with zombie state
             continue;
         }

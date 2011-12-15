@@ -223,7 +223,7 @@ void MVD_BroadcastPrintf( mvd_t *mvd, int level,
     int mask, const char *fmt, ... ) q_printf( 4, 5 );
 void MVD_PrepWorldFrame( void );
 void MVD_GameClientNameChanged( edict_t *ent, const char *name );
-void MVD_GameClientDrop( edict_t *ent, const char *reason );
+void MVD_GameClientDrop( edict_t *ent, const char *prefix, const char *reason );
 void MVD_UpdateClients( mvd_t *mvd );
 void MVD_FreePlayer( mvd_player_t *player );
 void MVD_UpdateConfigstring( mvd_t *mvd, int index );

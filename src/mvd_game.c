@@ -1627,14 +1627,14 @@ void MVD_GameClientNameChanged( edict_t *ent, const char *name ) {
     }
 }
 
-// called early from SV_Drop to prevent multiple disconnect messages
-void MVD_GameClientDrop( edict_t *ent, const char *reason ) {
+// called early from SV_DropClient to prevent multiple disconnect messages
+void MVD_GameClientDrop( edict_t *ent, const char *prefix, const char *reason ) {
     mvd_client_t *client = EDICT_MVDCL( ent );
     client_t *cl = client->cl;
 
     if( client->begin_time && MVD_PartFilter( client ) ) {
         MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM, UF_MUTE_MISC,
-            "[MVD] %s was dropped: %s\n", cl->name, reason );
+            "[MVD] %s%s%s\n", cl->name, prefix, reason );
     }
 
     client->begin_time = 0;

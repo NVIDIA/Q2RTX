@@ -484,11 +484,7 @@ void SV_Begin_f( void ) {
     }
 
     if( sv_force_reconnect->string[0] && !sv_client->reconnected ) {
-        if( Com_IsDedicated() ) {
-            Com_Printf( "%s[%s]: failed to reconnect\n", sv_client->name,
-                NET_AdrToString( &sv_client->netchan->remote_address ) );
-        }
-        SV_DropClient( sv_client, NULL );
+        SV_DropClient( sv_client, "!failed to reconnect" );
         return;
     }
 
@@ -762,11 +758,7 @@ static void SV_StopDownload_f( void ) {
 
 // the client is going to disconnect, so remove the connection immediately
 static void SV_Disconnect_f( void ) {
-    if( Com_IsDedicated() && sv_client->netchan ) {
-        Com_Printf( "%s[%s] disconnected\n", sv_client->name,
-            NET_AdrToString( &sv_client->netchan->remote_address ) );
-    }
-    SV_DropClient( sv_client, NULL );
+    SV_DropClient( sv_client, "!?disconnected" );
     SV_RemoveClient( sv_client ); // don't bother with zombie state
 }
 
