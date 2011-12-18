@@ -736,15 +736,43 @@ static void legacy_mouse_event( WPARAM wParam ) {
     win.mouse.state = temp;
 }
 
+// returns TRUE if mouse cursor inside client area
+static BOOL check_cursor_pos( void ) {
+    POINT pt;
+
+    if (win.mouse.grabbed == IN_GRAB)
+        return TRUE;
+
+    if (!GetCursorPos(&pt))
+        return FALSE;
+
+    return PtInRect(&win.screen_rc, pt);
+}
+
+#define BTN_DN(i) (1<<(i*2+0))
+#define BTN_UP(i) (1<<(i*2+1))
+
 static void raw_mouse_event( PRAWMOUSE rm ) {
     int i;
 
-    if( rm->usButtonFlags ) {
+    if( !check_cursor_pos() ) {
+        // cursor is over non-client area
+        // perform just button up actions
         for( i = 0; i < MOUSE_BUTTONS; i++ ) {
-            if( rm->usButtonFlags & ( 1 << ( i * 2 ) ) ) {
+            if( rm->usButtonFlags & BTN_UP(i) ) {
+                Key_Event( K_MOUSE1 + i, qfalse, win.lastMsgTime );
+            }
+        }
+        return;
+    }
+
+    if( rm->usButtonFlags ) {
+        // perform button actions
+        for( i = 0; i < MOUSE_BUTTONS; i++ ) {
+            if( rm->usButtonFlags & BTN_DN(i) ) {
                 Key_Event( K_MOUSE1 + i, qtrue, win.lastMsgTime );
             }
-            if( rm->usButtonFlags & ( 1 << ( i * 2 + 1 ) ) ) {
+            if( rm->usButtonFlags & BTN_UP(i) ) {
                 Key_Event( K_MOUSE1 + i, qfalse, win.lastMsgTime );
             }
         }
