@@ -228,7 +228,7 @@ static void Con_Dump_f( void ) {
         return;
     }
 
-    f = FS_EasyOpenFile( name, sizeof( name ), FS_MODE_WRITE,
+    f = FS_EasyOpenFile( name, sizeof( name ), FS_MODE_WRITE | FS_FLAG_TEXT,
         "condumps/", Cmd_Argv( 1 ), ".txt" );
     if( !f ) {
         return;

@@ -2024,7 +2024,7 @@ static void dump_program( const char *text, const char *name ) {
         return;
     }
 
-    if( FS_EasyWriteFile( buffer, sizeof( buffer ), FS_MODE_WRITE,
+    if( FS_EasyWriteFile( buffer, sizeof( buffer ), FS_MODE_WRITE | FS_FLAG_TEXT,
         "layouts/", Cmd_Argv( 1 ), ".txt", text, strlen( text ) ) )
     {
         Com_Printf( "Dumped %s program to %s.\n", name, buffer );
@@ -2099,7 +2099,7 @@ static void CL_WriteConfig_f( void ) {
         mask = CVAR_ARCHIVE;
     }
 
-    f = FS_EasyOpenFile( buffer, sizeof( buffer ), FS_MODE_WRITE,
+    f = FS_EasyOpenFile( buffer, sizeof( buffer ), FS_MODE_WRITE | FS_FLAG_TEXT,
         "configs/", cmd_optarg, ".cfg" );
     if( !f ) {
         return;
@@ -3241,7 +3241,7 @@ static void CL_WriteConfig( void ) {
     qhandle_t f;
     qerror_t ret;
 
-    ret = FS_FOpenFile( COM_CONFIG_NAME, &f, FS_MODE_WRITE );
+    ret = FS_FOpenFile( COM_CONFIG_NAME, &f, FS_MODE_WRITE | FS_FLAG_TEXT );
     if( !f ) {
         Com_EPrintf( "Couldn't open %s for writing: %s\n",
             COM_CONFIG_NAME, Q_ErrorString( ret ) );

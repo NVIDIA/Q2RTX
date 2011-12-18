@@ -321,7 +321,7 @@ static void logfile_open( void ) {
         }
     }
 
-    f = FS_EasyOpenFile( buffer, sizeof( buffer ), mode,
+    f = FS_EasyOpenFile( buffer, sizeof( buffer ), mode | FS_FLAG_TEXT,
         "logs/", net_log_name->string, ".log" );
     if( !f ) {
         Cvar_Set( "net_log_enable", "0" );

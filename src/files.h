@@ -62,9 +62,10 @@ typedef struct file_info_s {
 #define FS_SEARCH_STRIPEXT      0x00000800
 #define FS_SEARCH_DIRSONLY      0x00001000
 
-// bits 8 - 9, flag
+// bits 8 - 10, flag
 #define FS_FLAG_GZIP            0x00000100
 #define FS_FLAG_EXCL            0x00000200
+#define FS_FLAG_TEXT            0x00000400
 
 //
 // Limit the maximum file size FS_LoadFile can handle, as a protection from

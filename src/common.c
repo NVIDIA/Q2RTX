@@ -198,7 +198,7 @@ static void logfile_open( void ) {
         }
     }
 
-    f = FS_EasyOpenFile( buffer, sizeof( buffer ), mode,
+    f = FS_EasyOpenFile( buffer, sizeof( buffer ), mode | FS_FLAG_TEXT,
         "logs/", logfile_name->string, ".log" );
     if( !f ) {
         Cvar_Set( "logfile", "0" );

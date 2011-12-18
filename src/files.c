@@ -691,21 +691,39 @@ void FS_FCloseFile( qhandle_t f ) {
 
 static inline FILE *fopen_hack( const char *path, const char *mode ) {
 #ifndef _GNU_SOURCE
-    if( !strcmp( mode, "wxb" ) ) {
+    if (mode[0] == 'w' && mode[1] == 'x') {
 #ifdef _WIN32
-         int fd = _open( path, _O_WRONLY | _O_CREAT | _O_EXCL | _O_BINARY,
-             _S_IREAD | _S_IWRITE );
-         if( fd == -1 ) {
-             return NULL;
-         }
-         return _fdopen( fd, "wb" );
+        int flags = _O_WRONLY | _O_CREAT | _O_EXCL | _S_IREAD | _S_IWRITE;
+        int fd;
+        FILE *fp;
+
+        if (mode[2] == 'b')
+            flags |= _O_BINARY;
+
+        fd = _open(path, flags);
+        if (fd == -1)
+            return NULL;
+
+        fp = _fdopen(fd, (flags & _O_BINARY) ? "wb" : "w");
+        if (fp == NULL)
+            _close(fd);
+
+        return fp;
 #else
-         int fd = open( path, O_WRONLY | O_CREAT | O_EXCL,
-             S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH );
-         if( fd == -1 ) {
-             return NULL;
-         }
-         return fdopen( fd, "wb" );
+        int flags = O_WRONLY | O_CREAT | O_EXCL;
+        int perm = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
+        int fd;
+        FILE *fp;
+
+        fd = open(path, flags, perm);
+        if (fd == -1)
+            return NULL;
+
+        fp = fdopen(fd, "wb");
+        if (fp == NULL)
+            close(fd);
+
+        return fp;
 #endif
     }
 #endif // _GNU_SOURCE
@@ -716,7 +734,7 @@ static inline FILE *fopen_hack( const char *path, const char *mode ) {
 static ssize_t open_file_write( file_t *file, const char *name ) {
     char normalized[MAX_OSPATH], fullpath[MAX_OSPATH];
     FILE *fp;
-    char *modeStr;
+    char mode_str[8];
     unsigned mode;
     size_t len;
     long pos;
@@ -760,32 +778,34 @@ static ssize_t open_file_write( file_t *file, const char *name ) {
     mode = file->mode & FS_MODE_MASK;
     switch( mode ) {
     case FS_MODE_APPEND:
-        modeStr = "ab";
+        strcpy(mode_str, "a");
         break;
     case FS_MODE_WRITE:
-        if( file->mode & FS_FLAG_EXCL ) {
-            modeStr = "wxb";
-        } else {
-            modeStr = "wb";
-        }
+        strcpy(mode_str, "w");
+        if (file->mode & FS_FLAG_EXCL)
+            strcat(mode_str, "x");
         break;
     case FS_MODE_RDWR:
         // this mode is only used by client downloading code
         // similar to FS_MODE_APPEND, but does not create
         // the file if it does not exist
-        modeStr = "r+b";
+        strcpy(mode_str, "r+");
         break;
     default:
         ret = Q_ERR_INVAL;
         goto fail1;
     }
 
+    // open in binary mode by default
+    if (!(file->mode & FS_FLAG_TEXT))
+        strcat(mode_str, "b");
+
     ret = FS_CreatePath( fullpath );
     if( ret ) {
         goto fail1;
     }
 
-    fp = fopen_hack( fullpath, modeStr );
+    fp = fopen_hack( fullpath, mode_str );
     if( !fp ) {
         ret = Q_ERR(errno);
         goto fail1;
