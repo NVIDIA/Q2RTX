@@ -76,6 +76,9 @@ typedef struct {
     HHOOK   kbdHook;
 
     vidFlags_t flags;
+    byte    *buffer;
+    int     pitch;
+
     SHORT   gamma_cust[3][256];
     SHORT   gamma_orig[3][256];
 
@@ -83,8 +86,8 @@ typedef struct {
     // width and height specify size of client area
     vrect_t rc;
 
-    byte    *buffer;
-    int     pitch;
+    // rectangle of client area in screen coordinates
+    RECT    screen_rc;
 
     // center of client area in screen coordinates
     int     center_x, center_y;

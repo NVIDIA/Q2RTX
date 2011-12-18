@@ -28,9 +28,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define    WINDOW_CLASS_NAME "Quake2"
 
 // mode_changed flags
-#define MODE_SIZE   (1<<0)
-#define MODE_POS    (1<<1)
-#define MODE_STYLE  (1<<2)
+#define MODE_SIZE       (1<<0)
+#define MODE_POS        (1<<1)
+#define MODE_STYLE      (1<<2)
+#define MODE_REPOSITION (1<<3)
 
 win_state_t     win;
 
@@ -782,40 +783,29 @@ static void raw_input_event( HANDLE handle ) {
     }
 }
 
-static void get_nc_area_size( HWND wnd, RECT *rc ) {
-    LONG style = GetWindowLong( wnd, GWL_STYLE );
-
-    rc->left = 0;
-    rc->top = 0;
-    rc->right = 1;
-    rc->bottom = 1;
-
-    AdjustWindowRect( rc, style, FALSE );
-}
-
-// retrieves screen coordinates of client area
-// GetClientRect is not enough...
-static void get_client_rect( HWND wnd, RECT *rc ) {
-    RECT nc;
-
-    GetWindowRect( wnd, rc );
-
-    // adjust for non-client area
-    get_nc_area_size( wnd, &nc );
-    rc->left -= nc.left;
-    rc->top -= nc.top;
-    rc->right -= nc.right - 1;
-    rc->bottom -= nc.bottom - 1;
-}
-
-static void resizing_event( HWND wnd, WINDOWPOS *pos ) {
+static void pos_changing_event( HWND wnd, WINDOWPOS *pos ) {
     int w, h, nc_w, nc_h;
-    RECT r;
+    LONG style;
+    RECT rc;
+
+    if( win.flags & QVF_FULLSCREEN )
+        return;
+
+    if( pos->flags & SWP_NOSIZE )
+        return;
+
+    style = GetWindowLong( wnd, GWL_STYLE );
 
     // calculate size of non-client area
-    get_nc_area_size( wnd, &r );
-    nc_w = r.right - r.left - 1;
-    nc_h = r.bottom - r.top - 1;
+    rc.left = 0;
+    rc.top = 0;
+    rc.right = 1;
+    rc.bottom = 1;
+
+    AdjustWindowRect( &rc, style, FALSE );
+
+    nc_w = rc.right - rc.left - 1;
+    nc_h = rc.bottom - rc.top - 1;
 
     // align client area
     w = ( pos->cx - nc_w ) & ~7;
@@ -828,6 +818,41 @@ static void resizing_event( HWND wnd, WINDOWPOS *pos ) {
     // convert back to window size
     pos->cx = w + nc_w;
     pos->cy = h + nc_h;
+}
+
+static void pos_changed_event( HWND wnd, WINDOWPOS *pos ) {
+    RECT rc;
+
+    // get window position
+    GetWindowRect(wnd, &rc);
+    win.rc.x = rc.left;
+    win.rc.y = rc.top;
+
+    // get size of client area
+    GetClientRect(wnd, &rc);
+    win.rc.width = rc.right - rc.left;
+    win.rc.height = rc.bottom - rc.top;
+
+    // get rectangle of client area in screen coordinates
+    MapWindowPoints(wnd, NULL, (POINT *)&rc, 2);
+    win.screen_rc = rc;
+    win.center_x = (rc.right + rc.left) / 2;
+    win.center_y = (rc.top + rc.bottom) / 2;
+
+    // set mode_changed flags unless in full screen
+    if (win.flags & QVF_FULLSCREEN)
+        return;
+
+    if (!pos) {
+        win.mode_changed |= MODE_STYLE;
+        return;
+    }
+
+    if (!(pos->flags & SWP_NOSIZE))
+        win.mode_changed |= MODE_SIZE;
+
+    if (!(pos->flags & SWP_NOMOVE))
+        win.mode_changed |= MODE_POS;
 }
 
 // main window procedure
@@ -891,39 +916,16 @@ STATIC LONG WINAPI Win_MainWndProc ( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
         break;
 
     case WM_WINDOWPOSCHANGING:
-        if( !( win.flags & QVF_FULLSCREEN ) ) {
-            WINDOWPOS *pos = ( WINDOWPOS * )lParam;
-            if( !( pos->flags & SWP_NOSIZE ) ) {
-                resizing_event( hWnd, pos );
-            }
-        }
+        pos_changing_event(hWnd, (WINDOWPOS *)lParam);
         break;
 
-    case WM_SIZE:
-        if( wParam == SIZE_RESTORED && !( win.flags & QVF_FULLSCREEN ) ) {
-            int w = ( short )LOWORD( lParam );
-            int h = ( short )HIWORD( lParam );
+    case WM_WINDOWPOSCHANGED:
+        pos_changed_event(hWnd, (WINDOWPOS *)lParam);
+        return FALSE;
 
-            win.rc.width = w;
-            win.rc.height = h;
-
-            win.mode_changed |= MODE_SIZE;
-        }
-        break;
-
-    case WM_MOVE: 
-        if( !( win.flags & QVF_FULLSCREEN ) ) {
-            int x = ( short )LOWORD( lParam );
-            int y = ( short )HIWORD( lParam );
-            RECT r;
-
-            // adjust for non-client area
-            get_nc_area_size( hWnd, &r );
-            win.rc.x = x + r.left;
-            win.rc.y = y + r.top;
-
-            win.mode_changed |= MODE_POS;
-        }
+    case WM_STYLECHANGED:
+    case WM_THEMECHANGED:
+        pos_changed_event(hWnd, NULL);
         break;
 
     case WM_SYSCOMMAND:
@@ -992,14 +994,14 @@ void VID_PumpEvents( void ) {
     }
 
     if( win.mode_changed ) {
-        if( win.mode_changed & (MODE_SIZE|MODE_POS) ) {
+        if( win.mode_changed & MODE_REPOSITION ) {
+            Win_SetPosition();
+        }
+        if( win.mode_changed & (MODE_SIZE | MODE_POS | MODE_STYLE) ) {
             VID_SetGeometry( &win.rc );
             if( win.mouse.grabbed == IN_GRAB ) {
                 Win_ClipCursor();
             }
-        }
-        if( win.mode_changed & MODE_STYLE ) {
-            Win_SetPosition();
         }
         if( win.mode_changed & MODE_SIZE ) {
             Win_ModeChanged();
@@ -1010,7 +1012,7 @@ void VID_PumpEvents( void ) {
 
 static void win_style_changed( cvar_t *self ) {
     if( win.wnd && !( win.flags & QVF_FULLSCREEN ) ) {
-        win.mode_changed |= MODE_STYLE;
+        win.mode_changed |= MODE_REPOSITION;
     }
 }
 
@@ -1137,16 +1139,8 @@ static void Win_ShowCursor( void ) {
 
 // Called when the window gains focus or changes in some way
 static void Win_ClipCursor( void ) {
-    RECT rc;
-
-    get_client_rect( win.wnd, &rc );
-
-    win.center_x = ( rc.right + rc.left ) / 2;
-    win.center_y = ( rc.top + rc.bottom ) / 2;
-
     SetCursorPos( win.center_x, win.center_y );
-
-    ClipCursor( &rc );
+    ClipCursor( &win.screen_rc );
 }
 
 // Called when the window gains focus
@@ -1323,10 +1317,7 @@ static void Win_GrabMouse( grab_t grab ) {
 }
 
 static void Win_WarpMouse( int x, int y ) {
-    RECT rc;
-
-    get_client_rect( win.wnd, &rc );
-    SetCursorPos( rc.left + x, rc.top + y );
+    SetCursorPos( win.screen_rc.left + x, win.screen_rc.top + y );
 }
 
 /*
