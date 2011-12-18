@@ -67,12 +67,20 @@ INPUT SUBSYSTEM
 ===============================================================================
 */
 
+typedef enum {
+    HIDE_NOT,
+    HIDE_HIDE,
+    HIDE_SHOW,
+    HIDE_SHOW_NC
+} hide_t;
+
 typedef struct {
     qboolean    initialized;
     inputAPI_t  api;
     qboolean    modified;
-    unsigned    lastMotion;
-    int         hideCursor;
+    hide_t      hide_cursor;
+    unsigned    last_motion;
+    unsigned    hide_delay;
 } in_state_t;
 
 static in_state_t   input;
@@ -82,6 +90,7 @@ static cvar_t    *in_enable;
 static cvar_t    *in_direct;
 #endif
 static cvar_t    *in_smart_grab;
+static cvar_t    *in_hide_delay;
 
 static inline grab_t get_grab_mode( void ) {
     // never grab if main window doesn't have focus
@@ -132,15 +141,31 @@ void IN_Activate( void ) {
 
     grab = get_grab_mode();
 
-    if( grab == IN_HIDE ) {
-        input.hideCursor = 2;
-        input.lastMotion = com_localTime;
+    // set up cursor hiding policy
+    if( grab == IN_HIDE && in_hide_delay->value > 0.1f ) {
+        input.hide_cursor = HIDE_SHOW;
+        input.last_motion = com_localTime;
+        input.hide_delay = in_hide_delay->value * 1000;
         grab = IN_SHOW;
     } else {
-        input.hideCursor = 0;
+        input.hide_cursor = HIDE_NOT;
+        input.last_motion = com_localTime;
+        input.hide_delay = 0;
+        if( grab == IN_HIDE )
+            grab = IN_SHOW;
     }
 
     input.api.Grab( grab );
+}
+
+/*
+============
+IN_Restart_f
+============
+*/
+static void IN_Restart_f( void ) {
+    IN_Shutdown();
+    IN_Init();
 }
 
 /*
@@ -150,17 +175,23 @@ IN_Frame
 */
 void IN_Frame( void ) {
     if( input.modified ) {
-        Cbuf_AddText( &cmd_buffer, "in_restart\n" );
+        IN_Restart_f();
         input.modified = qfalse;
-    } else if( input.initialized ) {
+        return;
+    }
+
+    if( input.initialized ) {
         if( input.api.GetEvents ) {
             input.api.GetEvents();
         }
-        if( input.hideCursor == 2 && com_localTime - input.lastMotion >= 1000 ) {
+        if( input.hide_cursor == HIDE_SHOW &&
+            com_localTime - input.last_motion > input.hide_delay )
+        {
             input.api.Grab( IN_HIDE );
-            input.hideCursor = 1;
+            input.hide_cursor = HIDE_HIDE;
         }
     }
+
 #if USE_LIRC
     Lirc_GetEvents();
 #endif
@@ -172,16 +203,25 @@ IN_MouseEvent
 ================
 */
 void IN_MouseEvent( int x, int y ) {
-    input.lastMotion = com_localTime;
-    if( input.hideCursor == 1 ) {
+    input.last_motion = com_localTime;
+    if( input.hide_cursor == HIDE_HIDE ) {
         input.api.Grab( IN_SHOW );
-        input.hideCursor = 2;
+        input.hide_cursor = HIDE_SHOW;
     }
 
-#if USE_UI
-    if( x >= 0 && y >= 0 ) {
-        UI_MouseEvent( x, y );
+    if( x < 0 && y < 0 ) {
+        // cursor is over non-client area
+        if( input.hide_cursor == HIDE_SHOW )
+            input.hide_cursor = HIDE_SHOW_NC;
+        return;
     }
+
+    // cursor is over client area
+    if( input.hide_cursor == HIDE_SHOW_NC )
+        input.hide_cursor = HIDE_SHOW;
+
+#if USE_UI
+    UI_MouseEvent( x, y );
 #endif
 }
 
@@ -194,16 +234,6 @@ void IN_WarpMouse( int x, int y ) {
     if( input.initialized && input.api.Warp ) {
         input.api.Warp( x, y );
     }
-}
-
-/*
-============
-IN_Restart_f
-============
-*/
-static void IN_Restart_f( void ) {
-    IN_Shutdown();
-    IN_Init();
 }
 
 /*
@@ -224,11 +254,11 @@ void IN_Shutdown( void ) {
 #endif
 }
 
-static void in_param_changed( cvar_t *self ) {
+static void in_changed_hard( cvar_t *self ) {
     input.modified = qtrue;
 }
 
-static void in_smart_grab_changed( cvar_t *self ) {
+static void in_changed_soft( cvar_t *self ) {
     IN_Activate();
 }
 
@@ -245,7 +275,7 @@ void IN_Init( void ) {
 #endif
 
     in_enable = Cvar_Get( "in_enable", "1", 0 );
-    in_enable->changed = in_param_changed;
+    in_enable->changed = in_changed_hard;
     if( !in_enable->integer ) {
         Com_Printf( "Mouse input disabled.\n" );
         return;
@@ -261,6 +291,7 @@ void IN_Init( void ) {
         }
     }
 #endif
+
     if( !ret ) {
         VID_FillInputAPI( &input.api );
         ret = input.api.Init();
@@ -271,11 +302,14 @@ void IN_Init( void ) {
     }
 
 #if USE_DINPUT
-    in_direct->changed = in_param_changed;
+    in_direct->changed = in_changed_hard;
 #endif
 
     in_smart_grab = Cvar_Get( "in_smart_grab", "0", 0 );
-    in_smart_grab->changed = in_smart_grab_changed;
+    in_smart_grab->changed = in_changed_soft;
+
+    in_hide_delay = Cvar_Get( "in_hide_delay", "0", 0 );
+    in_hide_delay->changed = in_changed_soft;
 
     input.initialized = qtrue;
 
