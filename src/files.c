@@ -359,14 +359,15 @@ static file_t *alloc_handle( qhandle_t *f ) {
 static file_t *file_for_handle( qhandle_t f ) {
     file_t *file;
 
-    if( f <= 0 || f >= MAX_FILE_HANDLES + 1 ) {
-        Com_Error( ERR_FATAL, "%s: bad handle", __func__ );
-    }
+    if( f < 1 || f > MAX_FILE_HANDLES )
+        return NULL;
 
     file = &fs_files[f - 1];
-    if( file->type <= FS_FREE || file->type >= FS_BAD ) {
+    if( file->type == FS_FREE )
+        return NULL;
+
+    if( file->type < FS_FREE || file->type >= FS_BAD )
         Com_Error( ERR_FATAL, "%s: bad file type", __func__ );
-    }
 
     return file;
 }
@@ -412,9 +413,11 @@ FS_Length
 ssize_t FS_Length( qhandle_t f ) {
     file_t *file = file_for_handle( f );
 
-    if( ( file->mode & FS_MODE_MASK ) == FS_MODE_READ ) {
+    if( !file )
+        return Q_ERR_BADF;
+
+    if( ( file->mode & FS_MODE_MASK ) == FS_MODE_READ )
         return file->length;
-    }
 
     return Q_ERR_NOSYS;
 }
@@ -427,6 +430,9 @@ FS_Tell
 ssize_t FS_Tell( qhandle_t f ) {
     file_t *file = file_for_handle( f );
     long ret;
+
+    if( !file )
+        return Q_ERR_BADF;
 
     switch( file->type ) {
     case FS_REAL:
@@ -480,6 +486,9 @@ Seeks to an absolute position within the file.
 */
 qerror_t FS_Seek( qhandle_t f, off_t offset ) {
     file_t *file = file_for_handle( f );
+
+    if( !file )
+        return Q_ERR_BADF;
 
     if( offset > LONG_MAX )
         return Q_ERR_INVAL;
@@ -577,6 +586,9 @@ qerror_t FS_FilterFile( qhandle_t f ) {
     uint32_t magic;
     size_t length;
 
+    if( !file )
+        return Q_ERR_BADF;
+
     switch( file->type ) {
     case FS_GZ:
         return Q_ERR_SUCCESS;
@@ -659,6 +671,9 @@ FS_FCloseFile
 */
 void FS_FCloseFile( qhandle_t f ) {
     file_t *file = file_for_handle( f );
+
+    if( !file )
+        return;
 
     switch( file->type ) {
     case FS_REAL:
@@ -1282,20 +1297,21 @@ ssize_t FS_Read( void *buf, size_t len, qhandle_t f ) {
     int ret;
 #endif
 
-    if( ( file->mode & FS_MODE_MASK ) != FS_MODE_READ ) {
+    if( !file )
+        return Q_ERR_BADF;
+
+    if( ( file->mode & FS_MODE_MASK ) != FS_MODE_READ )
         return Q_ERR_INVAL;
-    }
-    if( len > SSIZE_MAX ) {
-        return Q_ERR_INVAL;
-    }
-    if( len == 0 ) {
-        return 0;
-    }
 
     // can't continue after error
-    if( file->error ) {
+    if( file->error )
         return file->error;
-    }
+
+    if( len > SSIZE_MAX )
+        return Q_ERR_INVAL;
+
+    if( len == 0 )
+        return 0;
 
     switch( file->type ) {
     case FS_REAL:
@@ -1322,12 +1338,14 @@ ssize_t FS_ReadLine( qhandle_t f, char *buffer, size_t size ) {
     char *s;
     size_t len;
 
-    if( ( file->mode & FS_MODE_MASK ) != FS_MODE_READ ) {
+    if( !file )
+        return Q_ERR_BADF;
+
+    if( ( file->mode & FS_MODE_MASK ) != FS_MODE_READ )
         return Q_ERR_INVAL;
-    }
-    if( file->type != FS_REAL ) {
+
+    if( file->type != FS_REAL )
         return Q_ERR_NOSYS;
-    }
 
     do {
         s = fgets( buffer, size, file->fp );
@@ -1343,6 +1361,9 @@ ssize_t FS_ReadLine( qhandle_t f, char *buffer, size_t size ) {
 
 void FS_Flush( qhandle_t f ) {
     file_t *file = file_for_handle( f );
+
+    if( !file )
+        return;
 
     switch( file->type ) {
     case FS_REAL:
@@ -1367,20 +1388,21 @@ ssize_t FS_Write( const void *buf, size_t len, qhandle_t f ) {
     file_t  *file = file_for_handle( f );
     size_t  result;
 
-    if( ( file->mode & FS_MODE_MASK ) == FS_MODE_READ ) {
+    if( !file )
+        return Q_ERR_BADF;
+
+    if( ( file->mode & FS_MODE_MASK ) == FS_MODE_READ )
         return Q_ERR_INVAL;
-    }
-    if( len > SSIZE_MAX ) {
-        return Q_ERR_INVAL;
-    }
-    if( len == 0 ) {
-        return 0;
-    }
 
     // can't continue after error
-    if( file->error ) {
+    if( file->error )
         return file->error;
-    }
+
+    if( len > SSIZE_MAX )
+        return Q_ERR_INVAL;
+
+    if( len == 0 )
+        return 0;
 
     switch( file->type ) {
     case FS_REAL:

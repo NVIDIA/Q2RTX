@@ -62,6 +62,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define Q_ERR_AGAIN             Q_ERR(EAGAIN)
 #define Q_ERR_MFILE             Q_ERR(EMFILE)
 #define Q_ERR_EXIST             Q_ERR(EEXIST)
+#define Q_ERR_BADF              Q_ERR(EBADF)
 
 #define Q_PrintError( what, code ) \
     Com_Printf( "Couldn't %s: %s\n", what, Q_ErrorString( code ) )
