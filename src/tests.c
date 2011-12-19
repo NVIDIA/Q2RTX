@@ -86,6 +86,30 @@ static void Com_Crash_f( void ) {
     }
 }
 
+// use twice normal print buffer size to test for overflows, etc
+static void Com_PrintJunk_f( void ) {
+    char buf[MAXPRINTMSG*2];
+    int i, count;
+
+    // generate some junk
+    for (i = 0; i < sizeof(buf) - 1; i++)
+        buf[i] = 'a' + i % ('z' - 'a' + 1);
+    buf[i] = 0;
+
+    // randomly break into words
+    for (i = 0; i < 64; i++)
+        buf[rand() % (sizeof(buf) - 1)] = ' ';
+
+    if (Cmd_Argc() > 1)
+        count = atoi(Cmd_Argv(1));
+    else
+        count = 1;
+
+    for (i = 0; i < count; i++)
+        Com_Printf("%s", buf);
+    Com_Printf("\n");
+}
+
 static void BSP_Test_f( void ) {
     void **list;
     char *name;
@@ -261,6 +285,7 @@ void Com_InitTests( void ) {
     Cmd_AddCommand( "errordrop", Com_ErrorDrop_f );
     Cmd_AddCommand( "freeze", Com_Freeze_f );
     Cmd_AddCommand( "crash", Com_Crash_f );
+    Cmd_AddCommand( "printjunk", Com_PrintJunk_f );
     Cmd_AddCommand( "bsptest", BSP_Test_f );
     Cmd_AddCommand( "wildtest", Com_TestWild_f );
     Cmd_AddCommand( "normtest", Com_TestNorm_f );
