@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <dsound.h>
 #include "snd_local.h"
 
-typedef HRESULT (WINAPI *LPDIRECTSOUNDCREATE)( LPCGUID, LPDIRECTSOUND *, LPUNKNOWN );
+typedef HRESULT(WINAPI *LPDIRECTSOUNDCREATE)(LPCGUID, LPDIRECTSOUND *, LPUNKNOWN);
 
 // 64K is > 1 second at 16-bit, 22050 Hz
 #define WAV_BUFFERS             64
@@ -45,8 +45,9 @@ static HINSTANCE hInstDS;
 
 static DWORD        gSndBufSize;
 
-static const char *DSoundError( int error ) {
-    switch ( error ) {
+static const char *DSoundError(int error)
+{
+    switch (error) {
     case DSERR_BUFFERLOST:
         return "DSERR_BUFFERLOST";
     case DSERR_INVALIDCALL:
@@ -63,23 +64,24 @@ static const char *DSoundError( int error ) {
 /*
 ** DS_DestroyBuffers
 */
-static void DS_DestroyBuffers( void ) {
-    Com_DPrintf( "Destroying DS buffers\n" );
-    if( pDS ) {
-        Com_DPrintf( "...setting NORMAL coop level\n" );
-        IDirectSound_SetCooperativeLevel( pDS, win.wnd, DSSCL_NORMAL );
+static void DS_DestroyBuffers(void)
+{
+    Com_DPrintf("Destroying DS buffers\n");
+    if (pDS) {
+        Com_DPrintf("...setting NORMAL coop level\n");
+        IDirectSound_SetCooperativeLevel(pDS, win.wnd, DSSCL_NORMAL);
     }
 
-    if( pDSBuf ) {
-        Com_DPrintf( "...stopping and releasing sound buffer\n" );
-        IDirectSoundBuffer_Stop( pDSBuf );
-        IDirectSoundBuffer_Release( pDSBuf );
+    if (pDSBuf) {
+        Com_DPrintf("...stopping and releasing sound buffer\n");
+        IDirectSoundBuffer_Stop(pDSBuf);
+        IDirectSoundBuffer_Release(pDSBuf);
     }
 
     // only release primary buffer if it's not also the mixing buffer we just released
-    if( pDSPBuf && ( pDSBuf != pDSPBuf ) ) {
-        Com_DPrintf( "...releasing primary buffer\n" );
-        IDirectSoundBuffer_Release( pDSPBuf );
+    if (pDSPBuf && (pDSBuf != pDSPBuf)) {
+        Com_DPrintf("...releasing primary buffer\n");
+        IDirectSoundBuffer_Release(pDSPBuf);
     }
     pDSBuf = NULL;
     pDSPBuf = NULL;
@@ -94,19 +96,20 @@ DS_Shutdown
 Reset the sound device for exiting
 ===============
 */
-static void DS_Shutdown(void) {
-    Com_Printf( "Shutting down DirectSound\n" );
+static void DS_Shutdown(void)
+{
+    Com_Printf("Shutting down DirectSound\n");
 
-    if( pDS ) {
+    if (pDS) {
         DS_DestroyBuffers();
 
-        Com_DPrintf( "...releasing DS object\n" );
-        IDirectSound_Release( pDS );
+        Com_DPrintf("...releasing DS object\n");
+        IDirectSound_Release(pDS);
     }
 
-    if ( hInstDS ) {
-        Com_DPrintf( "...freeing DSOUND.DLL\n" );
-        FreeLibrary( hInstDS );
+    if (hInstDS) {
+        Com_DPrintf("...freeing DSOUND.DLL\n");
+        FreeLibrary(hInstDS);
         hInstDS = NULL;
     }
 
@@ -118,32 +121,33 @@ static void DS_Shutdown(void) {
 /*
 ** DS_CreateBuffers
 */
-static qboolean DS_CreateBuffers( void ) {
+static qboolean DS_CreateBuffers(void)
+{
     DSBUFFERDESC    dsbuf;
     DSBCAPS         dsbcaps;
     WAVEFORMATEX    format;
     DWORD           dwWrite;
 
-    memset (&format, 0, sizeof(format));
+    memset(&format, 0, sizeof(format));
     format.wFormatTag = WAVE_FORMAT_PCM;
     format.nChannels = dma.channels;
     format.wBitsPerSample = dma.samplebits;
     format.nSamplesPerSec = dma.speed;
     format.nBlockAlign = format.nChannels * format.wBitsPerSample / 8;
-    format.cbSize = sizeof( format );
-    format.nAvgBytesPerSec = format.nSamplesPerSec*format.nBlockAlign; 
+    format.cbSize = sizeof(format);
+    format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
 
-    Com_DPrintf( "Creating DS buffer\n" );
+    Com_DPrintf("Creating DS buffer\n");
 
-    Com_DPrintf("...setting PRIORITY coop level: " );
-    if ( DS_OK != IDirectSound_SetCooperativeLevel( pDS, win.wnd, DSSCL_PRIORITY ) ) {
-        Com_DPrintf ("failed\n");
+    Com_DPrintf("...setting PRIORITY coop level: ");
+    if (DS_OK != IDirectSound_SetCooperativeLevel(pDS, win.wnd, DSSCL_PRIORITY)) {
+        Com_DPrintf("failed\n");
         return qfalse;
     }
-    Com_DPrintf("ok\n" );
+    Com_DPrintf("ok\n");
 
 // create the secondary buffer we'll actually work with
-    memset (&dsbuf, 0, sizeof(dsbuf));
+    memset(&dsbuf, 0, sizeof(dsbuf));
     dsbuf.dwSize = sizeof(DSBUFFERDESC);
     dsbuf.dwFlags = DSBCAPS_CTRLFREQUENCY | DSBCAPS_LOCHARDWARE;
     dsbuf.dwBufferBytes = SECONDARY_BUFFER_SIZE;
@@ -152,50 +156,50 @@ static qboolean DS_CreateBuffers( void ) {
     memset(&dsbcaps, 0, sizeof(dsbcaps));
     dsbcaps.dwSize = sizeof(dsbcaps);
 
-    Com_DPrintf( "...creating secondary buffer: " );
+    Com_DPrintf("...creating secondary buffer: ");
     if (DS_OK != IDirectSound_CreateSoundBuffer(pDS, &dsbuf, &pDSBuf, NULL)) {
         dsbuf.dwFlags = DSBCAPS_CTRLFREQUENCY | DSBCAPS_LOCSOFTWARE;
         if (DS_OK != IDirectSound_CreateSoundBuffer(pDS, &dsbuf, &pDSBuf, NULL)) {
-            Com_DPrintf( "failed\n" );
+            Com_DPrintf("failed\n");
             return qfalse;
         }
 
-        Com_DPrintf( "ok\n...forced to software\n" );
+        Com_DPrintf("ok\n...forced to software\n");
     } else  {
-        Com_DPrintf( "ok\n...locked hardware\n" );
+        Com_DPrintf("ok\n...locked hardware\n");
     }
 
     dma.channels = format.nChannels;
     dma.samplebits = format.wBitsPerSample;
     dma.speed = format.nSamplesPerSec;
 
-    if (DS_OK != IDirectSoundBuffer_GetCaps (pDSBuf, &dsbcaps)) {
-        Com_DPrintf ("*** GetCaps failed ***\n");
+    if (DS_OK != IDirectSoundBuffer_GetCaps(pDSBuf, &dsbcaps)) {
+        Com_DPrintf("*** GetCaps failed ***\n");
         return qfalse;
     }
 
     // Make sure mixer is active
-    if (DS_OK != IDirectSoundBuffer_Play (pDSBuf, 0, 0, DSBPLAY_LOOPING)) {
-        Com_DPrintf ("*** Play failed ***\n");
+    if (DS_OK != IDirectSoundBuffer_Play(pDSBuf, 0, 0, DSBPLAY_LOOPING)) {
+        Com_DPrintf("*** Play failed ***\n");
         return qfalse;
     }
 
-    Com_DPrintf(    "   %d channel(s)\n"
-                    "   %d bits/sample\n"
-                    "   %d bytes/sec\n",
-                    dma.channels, dma.samplebits, dma.speed);
-    
+    Com_DPrintf("   %d channel(s)\n"
+                "   %d bits/sample\n"
+                "   %d bytes/sec\n",
+                dma.channels, dma.samplebits, dma.speed);
+
     gSndBufSize = dsbcaps.dwBufferBytes;
 
     IDirectSoundBuffer_Stop(pDSBuf);
     IDirectSoundBuffer_GetCurrentPosition(pDSBuf, &mmstarttime.u.sample, &dwWrite);
     IDirectSoundBuffer_Play(pDSBuf, 0, 0, DSBPLAY_LOOPING);
 
-    dma.samples = gSndBufSize/(dma.samplebits/8);
+    dma.samples = gSndBufSize / (dma.samplebits / 8);
     dma.samplepos = 0;
     dma.submission_chunk = 1;
     dma.buffer = NULL;
-    sample16 = (dma.samplebits/8) - 1;
+    sample16 = (dma.samplebits / 8) - 1;
 
     return qtrue;
 }
@@ -209,16 +213,17 @@ DS_Init
 Direct-Sound support
 ==================
 */
-static sndinitstat_t DS_Init (void) {
+static sndinitstat_t DS_Init(void)
+{
     DSCAPS          dscaps;
     HRESULT         hresult;
     LPDIRECTSOUNDCREATE pDirectSoundCreate;
 
-    memset (&dma, 0, sizeof (dma));
+    memset(&dma, 0, sizeof(dma));
     dma.channels = 2;
     dma.samplebits = 16;
 
-    switch( s_khz->integer ) {
+    switch (s_khz->integer) {
     case 48:
         dma.speed = 48000;
         break;
@@ -233,64 +238,63 @@ static sndinitstat_t DS_Init (void) {
         break;
     }
 
-    Com_DPrintf( "Initializing DirectSound\n");
+    Com_DPrintf("Initializing DirectSound\n");
 
-    if ( !hInstDS ) {
-        Com_DPrintf( "...loading dsound.dll: " );
+    if (!hInstDS) {
+        Com_DPrintf("...loading dsound.dll: ");
         hInstDS = LoadLibrary("dsound.dll");
         if (hInstDS == NULL) {
-            Com_DPrintf ("failed\n");
+            Com_DPrintf("failed\n");
             return SIS_FAILURE;
         }
-        Com_DPrintf ("ok\n");
+        Com_DPrintf("ok\n");
     }
 
-    pDirectSoundCreate = ( LPDIRECTSOUNDCREATE )
-        GetProcAddress(hInstDS,"DirectSoundCreate");
+    pDirectSoundCreate = (LPDIRECTSOUNDCREATE)
+                         GetProcAddress(hInstDS, "DirectSoundCreate");
     if (!pDirectSoundCreate) {
-        Com_DPrintf ("...couldn't get DS proc addr\n");
+        Com_DPrintf("...couldn't get DS proc addr\n");
         return SIS_FAILURE;
     }
 
-    Com_DPrintf( "...creating DS object: " );
-    while ( ( hresult = pDirectSoundCreate( NULL, &pDS, NULL ) ) != DS_OK ) {
+    Com_DPrintf("...creating DS object: ");
+    while ((hresult = pDirectSoundCreate(NULL, &pDS, NULL)) != DS_OK) {
         if (hresult != DSERR_ALLOCATED) {
-            Com_DPrintf( "failed\n" );
+            Com_DPrintf("failed\n");
             return SIS_FAILURE;
         }
 
-        if (MessageBox (NULL,
-                        "The sound hardware is in use by another app.\n\n"
-                        "Select Retry to try to start sound again or Cancel to run " PRODUCT " with no sound.",
-                        "Sound not available",
-                        MB_RETRYCANCEL | MB_SETFOREGROUND | MB_ICONEXCLAMATION) != IDRETRY)
-        {
-            Com_DPrintf ("failed, hardware already in use\n" );
+        if (MessageBox(NULL,
+                       "The sound hardware is in use by another app.\n\n"
+                       "Select Retry to try to start sound again or Cancel to run " PRODUCT " with no sound.",
+                       "Sound not available",
+                       MB_RETRYCANCEL | MB_SETFOREGROUND | MB_ICONEXCLAMATION) != IDRETRY) {
+            Com_DPrintf("failed, hardware already in use\n");
             return SIS_NOTAVAIL;
         }
     }
-    Com_DPrintf( "ok\n" );
+    Com_DPrintf("ok\n");
 
     dscaps.dwSize = sizeof(dscaps);
 
-    if( DS_OK != IDirectSound_GetCaps( pDS, &dscaps ) ) {
-        Com_DPrintf ("...couldn't get DS caps\n");
+    if (DS_OK != IDirectSound_GetCaps(pDS, &dscaps)) {
+        Com_DPrintf("...couldn't get DS caps\n");
         DS_Shutdown();
         return SIS_FAILURE;
     }
 
-    if( dscaps.dwFlags & DSCAPS_EMULDRIVER ) {
-        Com_DPrintf ("...no DSound driver found\n" );
+    if (dscaps.dwFlags & DSCAPS_EMULDRIVER) {
+        Com_DPrintf("...no DSound driver found\n");
         DS_Shutdown();
         return SIS_FAILURE;
     }
 
-    if( !DS_CreateBuffers() ) {
-        DS_Shutdown ();
+    if (!DS_CreateBuffers()) {
+        DS_Shutdown();
         return SIS_FAILURE;
     }
 
-    Com_Printf( "DirectSound initialized\n" );
+    Com_Printf("DirectSound initialized\n");
 
     return SIS_SUCCESS;
 }
@@ -306,7 +310,8 @@ inside the recirculating dma buffer, so the mixing code will know
 how many sample are required to fill it up.
 ===============
 */
-static void DS_BeginPainting (void) {
+static void DS_BeginPainting(void)
+{
     int     reps, s;
     DWORD   dwSize2;
     DWORD   *pbuf, *pbuf2;
@@ -320,19 +325,19 @@ static void DS_BeginPainting (void) {
     // get sample pos
     mmtime.wType = TIME_SAMPLES;
     IDirectSoundBuffer_GetCurrentPosition(pDSBuf, &mmtime.u.sample, &dwWrite);
-    s = ( mmtime.u.sample - mmstarttime.u.sample ) >> sample16;
-    dma.samplepos = s & ( dma.samples - 1 );
+    s = (mmtime.u.sample - mmstarttime.u.sample) >> sample16;
+    dma.samplepos = s & (dma.samples - 1);
 
     // if the buffer was lost or stopped, restore it and/or restart it
-    if (IDirectSoundBuffer_GetStatus (pDSBuf, &dwStatus) != DS_OK) {
-        Com_EPrintf ("DS_BeginPainting: Couldn't get sound buffer status\n");
-        DS_Shutdown ();
+    if (IDirectSoundBuffer_GetStatus(pDSBuf, &dwStatus) != DS_OK) {
+        Com_EPrintf("DS_BeginPainting: Couldn't get sound buffer status\n");
+        DS_Shutdown();
         return;
     }
-    
+
     if (dwStatus & DSBSTATUS_BUFFERLOST)
-        IDirectSoundBuffer_Restore (pDSBuf);
-    
+        IDirectSoundBuffer_Restore(pDSBuf);
+
     if (!(dwStatus & DSBSTATUS_PLAYING))
         IDirectSoundBuffer_Play(pDSBuf, 0, 0, DSBPLAY_LOOPING);
 
@@ -341,16 +346,15 @@ static void DS_BeginPainting (void) {
     reps = 0;
     dma.buffer = NULL;
 
-    while ((hresult = IDirectSoundBuffer_Lock(pDSBuf, 0, gSndBufSize, ( void ** )&pbuf, &locksize, 
-                                   ( void ** )&pbuf2, &dwSize2, 0)) != DS_OK)
-    {
+    while ((hresult = IDirectSoundBuffer_Lock(pDSBuf, 0, gSndBufSize, (void **)&pbuf, &locksize,
+                      (void **)&pbuf2, &dwSize2, 0)) != DS_OK) {
         if (hresult != DSERR_BUFFERLOST) {
-            Com_EPrintf( "DS_BeginPainting: Lock failed with error '%s'\n", DSoundError( hresult ) );
-            DS_Shutdown ();
+            Com_EPrintf("DS_BeginPainting: Lock failed with error '%s'\n", DSoundError(hresult));
+            DS_Shutdown();
             return;
         }
-    
-        IDirectSoundBuffer_Restore( pDSBuf );
+
+        IDirectSoundBuffer_Restore(pDSBuf);
 
         if (++reps > 2)
             return;
@@ -366,7 +370,8 @@ Send sound to device if buffer isn't really the dma buffer
 Also unlocks the dsound buffer
 ===============
 */
-static void DS_Submit(void) {
+static void DS_Submit(void)
+{
     if (!pDSBuf)
         return;
 
@@ -383,13 +388,14 @@ The window have been destroyed and recreated
 between a deactivate and an activate.
 ===========
 */
-static void DS_Activate (qboolean active) {
-    if( !pDS ) {
+static void DS_Activate(qboolean active)
+{
+    if (!pDS) {
         return;
     }
-    if( active ) {
-        if( !DS_CreateBuffers() ) {
-            Com_EPrintf( "DS_Activate: DS_CreateBuffers failed\n" );
+    if (active) {
+        if (!DS_CreateBuffers()) {
+            Com_EPrintf("DS_Activate: DS_CreateBuffers failed\n");
             DS_Shutdown();
         }
     } else {
@@ -397,7 +403,8 @@ static void DS_Activate (qboolean active) {
     }
 }
 
-void DS_FillAPI( snddmaAPI_t *api ) {
+void DS_FillAPI(snddmaAPI_t *api)
+{
     api->Init = DS_Init;
     api->Shutdown = DS_Shutdown;
     api->BeginPainting = DS_BeginPainting;

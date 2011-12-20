@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -25,14 +25,14 @@ typedef enum {
     UIMENU_GAME
 } uiMenu_t;
 
-qboolean    UI_Init( void );
-void        UI_Shutdown( void );
-void        UI_ModeChanged( void );
-void        UI_Keydown( int key );
-void        UI_CharEvent( int key );
-void        UI_Draw( int realtime );
-void        UI_OpenMenu( uiMenu_t menu );
-void        UI_AddToServerList( const serverStatus_t *status );
-void        UI_MouseEvent( int x, int y );
-qboolean    UI_IsTransparent( void );
+qboolean    UI_Init(void);
+void        UI_Shutdown(void);
+void        UI_ModeChanged(void);
+void        UI_Keydown(int key);
+void        UI_CharEvent(int key);
+void        UI_Draw(int realtime);
+void        UI_OpenMenu(uiMenu_t menu);
+void        UI_AddToServerList(const serverStatus_t *status);
+void        UI_MouseEvent(int x, int y);
+qboolean    UI_IsTransparent(void);
 

@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -50,32 +50,34 @@ subsystem.  Under OpenGL this means NULLing out the current DC and
 HGLRC, deleting the rendering context, and releasing the DC acquired
 for the window.  The state structure is also nulled out.
 */
-void VID_Shutdown( void ) {
-    if( qwglMakeCurrent ) {
-        qwglMakeCurrent( NULL, NULL );
+void VID_Shutdown(void)
+{
+    if (qwglMakeCurrent) {
+        qwglMakeCurrent(NULL, NULL);
     }
 
-    if( glw.hGLRC && qwglDeleteContext ) {
-        qwglDeleteContext( glw.hGLRC );
+    if (glw.hGLRC && qwglDeleteContext) {
+        qwglDeleteContext(glw.hGLRC);
         glw.hGLRC = NULL;
     }
 
     WGL_Shutdown();
     Win_Shutdown();
 
-    if( gl_swapinterval ) {
+    if (gl_swapinterval) {
         gl_swapinterval->changed = NULL;
     }
-    if( gl_drawbuffer ) {
+    if (gl_drawbuffer) {
         gl_drawbuffer->changed = NULL;
     }
 
-    memset( &glw, 0, sizeof( glw ) );
+    memset(&glw, 0, sizeof(glw));
 }
 
-static qboolean InitGL( void ) {
+static qboolean InitGL(void)
+{
     PIXELFORMATDESCRIPTOR pfd = {
-        sizeof( PIXELFORMATDESCRIPTOR ),    // size of this pfd
+        sizeof(PIXELFORMATDESCRIPTOR),      // size of this pfd
         1,                              // version number
         PFD_DRAW_TO_WINDOW |            // support window
         PFD_SUPPORT_OPENGL |            // support OpenGL
@@ -87,7 +89,7 @@ static qboolean InitGL( void ) {
         0,                              // shift bit ignored
         0,                              // no accumulation buffer
         0, 0, 0, 0,                     // accum bits ignored
-        32,                             // 32-bit z-buffer  
+        32,                             // 32-bit z-buffer
         0,                              // no stencil buffer
         0,                              // no auxiliary buffer
         PFD_MAIN_PLANE,                 // main layer
@@ -98,93 +100,92 @@ static qboolean InitGL( void ) {
     const char *what;
 
     // figure out if we're running on a minidriver or not
-    if( !Q_stristr( gl_driver->string, "opengl32" ) ) {
-        Com_Printf( "...running a minidriver: %s\n", gl_driver->string );
+    if (!Q_stristr(gl_driver->string, "opengl32")) {
+        Com_Printf("...running a minidriver: %s\n", gl_driver->string);
         glw.minidriver = qtrue;
     } else {
         glw.minidriver = qfalse;
     }
 
     // load OpenGL library
-    if( !WGL_Init( gl_driver->string ) ) {
+    if (!WGL_Init(gl_driver->string)) {
         what = "WGL_Init";
         goto fail1;
     }
 
     // set pixel format
-    if( glw.minidriver ) {
+    if (glw.minidriver) {
         // check if certain entry points are present if using a minidriver
-        if( !qwglChoosePixelFormat || !qwglSetPixelFormat ||
-            !qwglDescribePixelFormat || !qwglSwapBuffers )
-        {
-            Com_EPrintf( "Required MCD entry points are missing\n" );
+        if (!qwglChoosePixelFormat || !qwglSetPixelFormat ||
+            !qwglDescribePixelFormat || !qwglSwapBuffers) {
+            Com_EPrintf("Required MCD entry points are missing\n");
             goto fail2;
         }
 
-        if ( ( pixelformat = qwglChoosePixelFormat( win.dc, &pfd ) ) == 0 ) {
+        if ((pixelformat = qwglChoosePixelFormat(win.dc, &pfd)) == 0) {
             what = "wglChoosePixelFormat";
             goto fail1;
         }
 
-        if( qwglSetPixelFormat( win.dc, pixelformat, &pfd ) == FALSE ) {
+        if (qwglSetPixelFormat(win.dc, pixelformat, &pfd) == FALSE) {
             what = "wglSetPixelFormat";
             goto fail1;
         }
 
-        qwglDescribePixelFormat( win.dc, pixelformat, sizeof( pfd ), &pfd );
+        qwglDescribePixelFormat(win.dc, pixelformat, sizeof(pfd), &pfd);
     } else {
-        if( ( pixelformat = ChoosePixelFormat( win.dc, &pfd ) ) == 0 ) {
+        if ((pixelformat = ChoosePixelFormat(win.dc, &pfd)) == 0) {
             what = "ChoosePixelFormat";
             goto fail1;
         }
 
-        if( SetPixelFormat( win.dc, pixelformat, &pfd ) == FALSE ) {
+        if (SetPixelFormat(win.dc, pixelformat, &pfd) == FALSE) {
             what = "SetPixelFormat";
             goto fail1;
         }
 
-        DescribePixelFormat( win.dc, pixelformat, sizeof( pfd ), &pfd );
+        DescribePixelFormat(win.dc, pixelformat, sizeof(pfd), &pfd);
     }
 
     // check for software emulation
-    if( pfd.dwFlags & PFD_GENERIC_FORMAT ) {
-        if( !gl_allow_software->integer ) {
-            Com_EPrintf( "No hardware OpenGL acceleration detected\n" );
+    if (pfd.dwFlags & PFD_GENERIC_FORMAT) {
+        if (!gl_allow_software->integer) {
+            Com_EPrintf("No hardware OpenGL acceleration detected\n");
             goto fail2;
         }
-        Com_WPrintf( "...using software emulation\n" );
-    } else if( pfd.dwFlags & PFD_GENERIC_ACCELERATED ) {
-        Com_DPrintf( "...MCD acceleration found\n" );
+        Com_WPrintf("...using software emulation\n");
+    } else if (pfd.dwFlags & PFD_GENERIC_ACCELERATED) {
+        Com_DPrintf("...MCD acceleration found\n");
         win.flags |= QVF_ACCELERATED;
     } else {
-        Com_DPrintf( "...ICD acceleration found\n" );
+        Com_DPrintf("...ICD acceleration found\n");
         win.flags |= QVF_ACCELERATED;
     }
 
     // startup the OpenGL subsystem by creating a context and making it current
-    if( ( glw.hGLRC = qwglCreateContext( win.dc ) ) == NULL ) {
+    if ((glw.hGLRC = qwglCreateContext(win.dc)) == NULL) {
         what = "wglCreateContext";
         goto fail1;
     }
 
-    if( !qwglMakeCurrent( win.dc, glw.hGLRC ) ) {
+    if (!qwglMakeCurrent(win.dc, glw.hGLRC)) {
         what = "wglMakeCurrent";
         goto fail1;
     }
 
     // print out PFD specifics
-    Com_DPrintf( "GL_VENDOR: %s\n", qwglGetString( GL_VENDOR ) );
-    Com_DPrintf( "GL_RENDERER: %s\n", qwglGetString( GL_RENDERER ) );
-    Com_DPrintf( "GL_PFD: color(%d-bits: %d,%d,%d,%d) Z(%d-bit) stencil(%d-bit)\n",
-        pfd.cColorBits, pfd.cRedBits, pfd.cGreenBits, pfd.cBlueBits,
-        pfd.cAlphaBits, pfd.cDepthBits, pfd.cStencilBits );
+    Com_DPrintf("GL_VENDOR: %s\n", qwglGetString(GL_VENDOR));
+    Com_DPrintf("GL_RENDERER: %s\n", qwglGetString(GL_RENDERER));
+    Com_DPrintf("GL_PFD: color(%d-bits: %d,%d,%d,%d) Z(%d-bit) stencil(%d-bit)\n",
+                pfd.cColorBits, pfd.cRedBits, pfd.cGreenBits, pfd.cBlueBits,
+                pfd.cAlphaBits, pfd.cDepthBits, pfd.cStencilBits);
 
     return qtrue;
 
 fail1:
-    Com_EPrintf( "%s failed with error %#lx\n", what, GetLastError() );
-    if( glw.hGLRC && qwglDeleteContext ) {
-        qwglDeleteContext( glw.hGLRC );
+    Com_EPrintf("%s failed with error %#lx\n", what, GetLastError());
+    if (glw.hGLRC && qwglDeleteContext) {
+        qwglDeleteContext(glw.hGLRC);
         glw.hGLRC = NULL;
     }
 
@@ -193,23 +194,25 @@ fail2:
     return qfalse;
 }
 
-static void gl_swapinterval_changed( cvar_t *self ) {
-    if( qwglSwapIntervalEXT ) {
-        qwglSwapIntervalEXT( self->integer );
+static void gl_swapinterval_changed(cvar_t *self)
+{
+    if (qwglSwapIntervalEXT) {
+        qwglSwapIntervalEXT(self->integer);
     }
 }
 
-static void gl_drawbuffer_changed( cvar_t *self ) {
-    if( !Q_stricmp( self->string, "GL_FRONT" ) ) {
+static void gl_drawbuffer_changed(cvar_t *self)
+{
+    if (!Q_stricmp(self->string, "GL_FRONT")) {
         glw.drawbuffer = GL_FRONT;
-    } else if( !Q_stricmp( self->string, "GL_BACK" ) ) {
+    } else if (!Q_stricmp(self->string, "GL_BACK")) {
         glw.drawbuffer = GL_BACK;
     } else {
-        Cvar_Reset( self );
+        Cvar_Reset(self);
         glw.drawbuffer = GL_BACK;
     }
 
-    qwglDrawBuffer( glw.drawbuffer );
+    qwglDrawBuffer(glw.drawbuffer);
 }
 
 /*
@@ -219,21 +222,22 @@ This routine is responsible for initializing the OS specific portions
 of OpenGL.  Under Win32 this means dealing with the pixelformats and
 doing the wgl interface stuff.
 */
-qboolean VID_Init( void ) {
+qboolean VID_Init(void)
+{
     const char *extensions;
     unsigned mask;
 
-    gl_driver = Cvar_Get( "gl_driver", DEFAULT_OPENGL_DRIVER, CVAR_ARCHIVE|CVAR_REFRESH );
-    gl_drawbuffer = Cvar_Get( "gl_drawbuffer", "GL_BACK", 0 );
-    gl_swapinterval = Cvar_Get( "gl_swapinterval", "1", CVAR_ARCHIVE );
-    gl_allow_software = Cvar_Get( "gl_allow_software", "0", 0 );
+    gl_driver = Cvar_Get("gl_driver", DEFAULT_OPENGL_DRIVER, CVAR_ARCHIVE | CVAR_REFRESH);
+    gl_drawbuffer = Cvar_Get("gl_drawbuffer", "GL_BACK", 0);
+    gl_swapinterval = Cvar_Get("gl_swapinterval", "1", CVAR_ARCHIVE);
+    gl_allow_software = Cvar_Get("gl_allow_software", "0", 0);
 
-    while( 1 ) {
+    while (1) {
         // create the window
         Win_Init();
 
         // initialize OpenGL context
-        if( InitGL() ) {
+        if (InitGL()) {
             break;
         }
 
@@ -241,44 +245,47 @@ qboolean VID_Init( void ) {
         Win_Shutdown();
 
         // see if this was a minidriver
-        if( !glw.minidriver ) {
+        if (!glw.minidriver) {
             return qfalse;
         }
 
         // attempt to recover
-        Com_Printf( "...attempting to load opengl32\n" );
-        Cvar_Set( "gl_driver", "opengl32" );
+        Com_Printf("...attempting to load opengl32\n");
+        Cvar_Set("gl_driver", "opengl32");
     }
 
     // initialize WGL extensions
-    extensions = ( const char * )qwglGetString( GL_EXTENSIONS );
-    mask = WGL_ParseExtensionString( extensions );
+    extensions = (const char *)qwglGetString(GL_EXTENSIONS);
+    mask = WGL_ParseExtensionString(extensions);
 
-    if( mask & QWGL_EXT_swap_control ) {
-        Com_Printf( "...enabling WGL_EXT_swap_control\n" );
-        WGL_InitExtensions( QWGL_EXT_swap_control );
+    if (mask & QWGL_EXT_swap_control) {
+        Com_Printf("...enabling WGL_EXT_swap_control\n");
+        WGL_InitExtensions(QWGL_EXT_swap_control);
         gl_swapinterval->changed = gl_swapinterval_changed;
-        gl_swapinterval_changed( gl_swapinterval );
+        gl_swapinterval_changed(gl_swapinterval);
     } else {
-        Com_Printf( "WGL_EXT_swap_control not found\n" );
+        Com_Printf("WGL_EXT_swap_control not found\n");
     }
 
     gl_drawbuffer->changed = gl_drawbuffer_changed;
-    gl_drawbuffer_changed( gl_drawbuffer );
+    gl_drawbuffer_changed(gl_drawbuffer);
 
     VID_SetMode();
 
     return qtrue;
 }
 
-void VID_VideoWait( void ) {
+void VID_VideoWait(void)
+{
 }
 
-qboolean VID_VideoSync( void ) {
+qboolean VID_VideoSync(void)
+{
     return qtrue;
 }
 
-void VID_BeginFrame( void ) {
+void VID_BeginFrame(void)
+{
 }
 
 /*
@@ -288,32 +295,34 @@ Responsible for doing a swapbuffers and possibly for other stuff
 as yet to be determined.  Probably better not to make this a GLimp
 function and instead do a call to GLimp_SwapBuffers.
 */
-void VID_EndFrame( void ) {
+void VID_EndFrame(void)
+{
     BOOL ret;
 
     // don't flip if drawing to front buffer
-    if( glw.drawbuffer == GL_FRONT ) {
+    if (glw.drawbuffer == GL_FRONT) {
         return;
     }
 
-    if( glw.minidriver ) {
-        ret = qwglSwapBuffers( win.dc );
+    if (glw.minidriver) {
+        ret = qwglSwapBuffers(win.dc);
     } else {
-        ret = SwapBuffers( win.dc );
+        ret = SwapBuffers(win.dc);
     }
 
-    if( !ret ) {
+    if (!ret) {
         DWORD error = GetLastError();
 
         // this happens sometimes when the window is iconified
-        if( !IsIconic( win.wnd ) ) {
-            Com_Error( ERR_FATAL, "%s failed with error %#lx",
-                glw.minidriver ? "wglSwapBuffers" : "SwapBuffers", error );
+        if (!IsIconic(win.wnd)) {
+            Com_Error(ERR_FATAL, "%s failed with error %#lx",
+                      glw.minidriver ? "wglSwapBuffers" : "SwapBuffers", error);
         }
     }
 }
 
-void *VID_GetProcAddr( const char *symbol ) {
-    return ( void * )GetProcAddress( glw.hinstOpenGL, symbol );
+void *VID_GetProcAddr(const char *symbol)
+{
+    return (void *)GetProcAddress(glw.hinstOpenGL, symbol);
 }
 

@@ -25,7 +25,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 uint16_t pushed_cw, single_cw, full_cw, chop_cw, ceil_cw;
 
-void X86_SetFPCW( void ) {
+void X86_SetFPCW(void)
+{
     uint16_t cw;
 
     // save the control word into pushed_cw

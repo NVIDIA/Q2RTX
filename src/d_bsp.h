@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -93,7 +93,7 @@ typedef struct {
 
 typedef struct {
     uint32_t    ident;
-    uint32_t    version;    
+    uint32_t    version;
     lump_t      lumps[HEADER_LUMPS];
 } dheader_t;
 
@@ -145,7 +145,7 @@ typedef struct {
     uint16_t    side;
 
     uint32_t    firstedge;      // we must support > 64k edges
-    uint16_t    numedges;    
+    uint16_t    numedges;
     uint16_t    texinfo;
 
 // lighting info

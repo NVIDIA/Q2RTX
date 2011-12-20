@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -24,24 +24,24 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define QWGL_EXT_swap_control    (1<<0)
 
-qboolean    WGL_Init( const char *dllname );
-void        WGL_Shutdown( void );
-void        WGL_InitExtensions( unsigned mask );
-void        WGL_ShutdownExtensions( unsigned mask );
-unsigned    WGL_ParseExtensionString( const char *s );
+qboolean    WGL_Init(const char *dllname);
+void        WGL_Shutdown(void);
+void        WGL_InitExtensions(unsigned mask);
+void        WGL_ShutdownExtensions(unsigned mask);
+unsigned    WGL_ParseExtensionString(const char *s);
 
-extern void ( APIENTRY * qwglDrawBuffer )(GLenum mode);
-extern const GLubyte * ( APIENTRY * qwglGetString )(GLenum name);
+extern void (APIENTRY * qwglDrawBuffer)(GLenum mode);
+extern const GLubyte * (APIENTRY * qwglGetString)(GLenum name);
 
-extern int   ( WINAPI * qwglChoosePixelFormat )(HDC, CONST PIXELFORMATDESCRIPTOR *);
-extern int   ( WINAPI * qwglDescribePixelFormat ) (HDC, int, UINT, LPPIXELFORMATDESCRIPTOR);
-extern BOOL  ( WINAPI * qwglSetPixelFormat )(HDC, int, CONST PIXELFORMATDESCRIPTOR *);
-extern BOOL  ( WINAPI * qwglSwapBuffers )(HDC);
+extern int (WINAPI * qwglChoosePixelFormat)(HDC, CONST PIXELFORMATDESCRIPTOR *);
+extern int (WINAPI * qwglDescribePixelFormat)(HDC, int, UINT, LPPIXELFORMATDESCRIPTOR);
+extern BOOL (WINAPI * qwglSetPixelFormat)(HDC, int, CONST PIXELFORMATDESCRIPTOR *);
+extern BOOL (WINAPI * qwglSwapBuffers)(HDC);
 
-extern HGLRC ( WINAPI * qwglCreateContext )(HDC);
-extern BOOL  ( WINAPI * qwglDeleteContext )(HGLRC);
-extern PROC  ( WINAPI * qwglGetProcAddress )(LPCSTR);
-extern BOOL  ( WINAPI * qwglMakeCurrent )(HDC, HGLRC);
+extern HGLRC (WINAPI * qwglCreateContext)(HDC);
+extern BOOL (WINAPI * qwglDeleteContext)(HGLRC);
+extern PROC (WINAPI * qwglGetProcAddress)(LPCSTR);
+extern BOOL (WINAPI * qwglMakeCurrent)(HDC, HGLRC);
 
-extern BOOL  ( WINAPI * qwglSwapIntervalEXT )(int interval);
+extern BOOL (WINAPI * qwglSwapIntervalEXT)(int interval);
 

@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -35,11 +35,11 @@ typedef struct {
 #endif
 } ioentry_t;
 
-ioentry_t *IO_Add( int fd );
-void IO_Remove( int fd );
-ioentry_t *IO_Get( int fd );
-int IO_Sleep( int msec );
+ioentry_t *IO_Add(int fd);
+void IO_Remove(int fd);
+ioentry_t *IO_Get(int fd);
+int IO_Sleep(int msec);
 #if USE_AC_SERVER
-int IO_Sleepv( int msec, ... );
+int IO_Sleepv(int msec, ...);
 #endif
 

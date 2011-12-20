@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -24,16 +24,16 @@ extern list_t mvd_gtv_list;
 
 struct client_s;
 
-void MVD_Register( void );
-void MVD_Shutdown( void );
-void MVD_RemoveClient( struct client_s *client );
-int MVD_Frame( void );
-void MVD_PrepWorldFrame( void );
+void MVD_Register(void);
+void MVD_Shutdown(void);
+void MVD_RemoveClient(struct client_s *client);
+int MVD_Frame(void);
+void MVD_PrepWorldFrame(void);
 
-void MVD_GameClientDrop( edict_t *ent, const char *prefix, const char *reason );
-void MVD_GameClientNameChanged( edict_t *ent, const char *name );
+void MVD_GameClientDrop(edict_t *ent, const char *prefix, const char *reason);
+void MVD_GameClientNameChanged(edict_t *ent, const char *name);
 
-void MVD_StreamedStop_f( void );
-void MVD_StreamedRecord_f( void );
-void MVD_File_g( genctx_t *ctx );
+void MVD_StreamedStop_f(void);
+void MVD_StreamedRecord_f(void);
+void MVD_File_g(genctx_t *ctx);
 

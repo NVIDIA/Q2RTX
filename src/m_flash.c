@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful },
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -25,8 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // this file is included in both the game dll and quake2 },
 // the game needs it to source shot locations, the client
 // needs it to position muzzle flashes
-const vec3_t monster_flash_offset[256] =
-{
+const vec3_t monster_flash_offset[256] = {
 // flash 0 is not used
     { 0.0, 0.0, 0.0 },
 
@@ -257,13 +256,13 @@ const vec3_t monster_flash_offset[256] =
 // MZ2_MAKRON_BLASTER_2             103
     { -1.6, -19.3,  59.5 },
 // MZ2_MAKRON_BLASTER_3             104
-    { -0.1, -14.4,  59.5 },     
+    { -0.1, -14.4,  59.5 },
 // MZ2_MAKRON_BLASTER_4             105
-    { 2.0,  -7.6,   59.5 }, 
+    { 2.0,  -7.6,   59.5 },
 // MZ2_MAKRON_BLASTER_5             106
     { 3.4,  1.3,    59.5 },
 // MZ2_MAKRON_BLASTER_6             107
-    { 3.7,  11.1,   59.5 }, 
+    { 3.7,  11.1,   59.5 },
 // MZ2_MAKRON_BLASTER_7             108
     { -0.3, 22.3,   59.5 },
 // MZ2_MAKRON_BLASTER_8             109
@@ -281,7 +280,7 @@ const vec3_t monster_flash_offset[256] =
 // MZ2_MAKRON_BLASTER_14            115
     { 5.9,  -4.4,   59.5 },
 // MZ2_MAKRON_BLASTER_15            116
-    { 4.2,  -14.1,  59.5 },     
+    { 4.2,  -14.1,  59.5 },
 // MZ2_MAKRON_BLASTER_16            117
     { 2.4,  -18.8,  59.5 },
 // MZ2_MAKRON_BLASTER_17            118
@@ -290,29 +289,29 @@ const vec3_t monster_flash_offset[256] =
     { -17.3,    7.8,    72.4 },
 
 // MZ2_JORG_MACHINEGUN_L1           120
-    { 78.5, -47.1,  96 },           
+    { 78.5, -47.1,  96 },
 // MZ2_JORG_MACHINEGUN_L2           121
-    { 78.5, -47.1,  96 },           
+    { 78.5, -47.1,  96 },
 // MZ2_JORG_MACHINEGUN_L3           122
-    { 78.5, -47.1,  96 },           
+    { 78.5, -47.1,  96 },
 // MZ2_JORG_MACHINEGUN_L4           123
-    { 78.5, -47.1,  96 },           
+    { 78.5, -47.1,  96 },
 // MZ2_JORG_MACHINEGUN_L5           124
-    { 78.5, -47.1,  96 },           
+    { 78.5, -47.1,  96 },
 // MZ2_JORG_MACHINEGUN_L6           125
-    { 78.5, -47.1,  96 },           
+    { 78.5, -47.1,  96 },
 // MZ2_JORG_MACHINEGUN_R1           126
-    { 78.5, 46.7,  96 },            
+    { 78.5, 46.7,  96 },
 // MZ2_JORG_MACHINEGUN_R2           127
-    { 78.5, 46.7,   96 },           
+    { 78.5, 46.7,   96 },
 // MZ2_JORG_MACHINEGUN_R3           128
-    { 78.5, 46.7,   96 },           
+    { 78.5, 46.7,   96 },
 // MZ2_JORG_MACHINEGUN_R4           129
-    { 78.5, 46.7,   96 },           
+    { 78.5, 46.7,   96 },
 // MZ2_JORG_MACHINEGUN_R5           130
-    { 78.5, 46.7,   96 },           
+    { 78.5, 46.7,   96 },
 // MZ2_JORG_MACHINEGUN_R6           131
-    { 78.5, 46.7,   96 },           
+    { 78.5, 46.7,   96 },
 // MZ2_JORG_BFG_1                   132
     { 6.3,  -9,     111.2 },
 
@@ -351,23 +350,23 @@ const vec3_t monster_flash_offset[256] =
 // MZ2_MEDIC_BLASTER_2              146
     { 12.1, 5.4, 16.5 },
 // MZ2_CARRIER_RAILGUN              147
-    { 32, 0, 6 }, 
+    { 32, 0, 6 },
 // MZ2_WIDOW_DISRUPTOR              148
     { 57.72, 14.50, 88.81 },
 // MZ2_WIDOW_BLASTER                149
     { 56,   32, 32 },
 // MZ2_WIDOW_RAIL                   150
-    { 62, -20, 84 }, 
+    { 62, -20, 84 },
 // MZ2_WIDOW_PLASMABEAM             151     // PMM - not used!
-    { 32, 0, 6 }, 
+    { 32, 0, 6 },
 // MZ2_CARRIER_MACHINEGUN_L2        152
     { 61,   -32, 12 },
 // MZ2_CARRIER_MACHINEGUN_R2        153
     { 61,   32, 12 },
 // MZ2_WIDOW_RAIL_LEFT              154
-    { 17, -62, 91 }, 
+    { 17, -62, 91 },
 // MZ2_WIDOW_RAIL_RIGHT             155
-    { 68, 12, 86 }, 
+    { 68, 12, 86 },
 // MZ2_WIDOW_BLASTER_SWEEP1         156         pmm - the sweeps need to be in sequential order
     { 47.5, 56, 89 },
 // MZ2_WIDOW_BLASTER_SWEEP2         157

@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -20,19 +20,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // vid_public.h -- interface to the host window system
 
-qboolean    VID_Init( void );
-void        VID_Shutdown( void );
-void        VID_FatalShutdown( void );
+qboolean    VID_Init(void);
+void        VID_Shutdown(void);
+void        VID_FatalShutdown(void);
 
-void    VID_UpdateGamma( const byte *table );
-void    VID_UpdatePalette( const byte *palette );
-void    *VID_GetProcAddr( const char *symbol );
+void    VID_UpdateGamma(const byte *table);
+void    VID_UpdatePalette(const byte *palette);
+void    *VID_GetProcAddr(const char *symbol);
 
-qboolean VID_VideoSync( void );
-void    VID_VideoWait( void );
+qboolean VID_VideoSync(void);
+void    VID_VideoWait(void);
 
-void    VID_BeginFrame( void );
-void    VID_EndFrame( void );
+void    VID_BeginFrame(void);
+void    VID_EndFrame(void);
 
-char    *VID_GetClipboardData( void );
-void    VID_SetClipboardData( const char *data );
+char    *VID_GetClipboardData(void);
+void    VID_SetClipboardData(const char *data);

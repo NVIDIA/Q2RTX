@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -33,37 +33,39 @@ static cvar_t       *s_mixahead;
 
 static snddmaAPI_t snddma;
 
-void DMA_SoundInfo( void ) {
-    Com_Printf( "%5d channels\n", dma.channels );
-    Com_Printf( "%5d samples\n", dma.samples );
-    Com_Printf( "%5d samplepos\n", dma.samplepos );
-    Com_Printf( "%5d samplebits\n", dma.samplebits );
-    Com_Printf( "%5d submission_chunk\n", dma.submission_chunk );
-    Com_Printf( "%5d speed\n", dma.speed );
-    Com_Printf( "%p dma buffer\n", dma.buffer );
+void DMA_SoundInfo(void)
+{
+    Com_Printf("%5d channels\n", dma.channels);
+    Com_Printf("%5d samples\n", dma.samples);
+    Com_Printf("%5d samplepos\n", dma.samplepos);
+    Com_Printf("%5d samplebits\n", dma.samplebits);
+    Com_Printf("%5d submission_chunk\n", dma.submission_chunk);
+    Com_Printf("%5d speed\n", dma.speed);
+    Com_Printf("%p dma buffer\n", dma.buffer);
 }
 
-qboolean DMA_Init( void ) {
+qboolean DMA_Init(void)
+{
     sndinitstat_t ret = SIS_FAILURE;
 
-    s_khz = Cvar_Get( "s_khz", "22", CVAR_ARCHIVE|CVAR_SOUND );
-    s_mixahead = Cvar_Get( "s_mixahead", "0.2", CVAR_ARCHIVE );
-    s_testsound = Cvar_Get( "s_testsound", "0", 0 );
+    s_khz = Cvar_Get("s_khz", "22", CVAR_ARCHIVE | CVAR_SOUND);
+    s_mixahead = Cvar_Get("s_mixahead", "0.2", CVAR_ARCHIVE);
+    s_testsound = Cvar_Get("s_testsound", "0", 0);
 
 #if USE_DSOUND
-    s_direct = Cvar_Get( "s_direct", "1", CVAR_SOUND );
-    if( s_direct->integer ) {
-        DS_FillAPI( &snddma );
+    s_direct = Cvar_Get("s_direct", "1", CVAR_SOUND);
+    if (s_direct->integer) {
+        DS_FillAPI(&snddma);
         ret = snddma.Init();
-        if( ret != SIS_SUCCESS ) {
-            Cvar_Set( "s_direct", "0" );
+        if (ret != SIS_SUCCESS) {
+            Cvar_Set("s_direct", "0");
         }
     }
 #endif
-    if( ret != SIS_SUCCESS ) {
-        WAVE_FillAPI( &snddma );
+    if (ret != SIS_SUCCESS) {
+        WAVE_FillAPI(&snddma);
         ret = snddma.Init();
-        if( ret != SIS_SUCCESS ) {
+        if (ret != SIS_SUCCESS) {
             return qfalse;
         }
     }
@@ -72,35 +74,38 @@ qboolean DMA_Init( void ) {
 
     s_numchannels = MAX_CHANNELS;
 
-    Com_Printf( "sound sampling rate: %i\n", dma.speed );
+    Com_Printf("sound sampling rate: %i\n", dma.speed);
 
     return qtrue;
 }
 
-void DMA_Shutdown( void ) {
+void DMA_Shutdown(void)
+{
     snddma.Shutdown();
     s_numchannels = 0;
 }
 
-void DMA_Activate( void ) {
-    if( snddma.Activate ) {
+void DMA_Activate(void)
+{
+    if (snddma.Activate) {
         S_StopAllSounds();
-        snddma.Activate( s_active );
+        snddma.Activate(s_active);
     }
 }
 
-int DMA_DriftBeginofs( float timeofs ) {
+int DMA_DriftBeginofs(float timeofs)
+{
     static int  s_beginofs;
     int         start;
 
     // drift s_beginofs
     start = cl.servertime * 0.001 * dma.speed + s_beginofs;
-    if( start < paintedtime ) {
+    if (start < paintedtime) {
         start = paintedtime;
-        s_beginofs = start - ( cl.servertime * 0.001 * dma.speed );
-    } else if ( start > paintedtime + 0.3 * dma.speed ) {
+        s_beginofs = start - (cl.servertime * 0.001 * dma.speed);
+    } else if (start > paintedtime + 0.3 * dma.speed) {
         start = paintedtime + 0.1 * dma.speed;
-        s_beginofs = start - ( cl.servertime * 0.001 * dma.speed );
+        s_beginofs = start - (cl.servertime * 0.001 * dma.speed);
     } else {
         s_beginofs -= 10;
     }
@@ -108,21 +113,23 @@ int DMA_DriftBeginofs( float timeofs ) {
     return timeofs ? start + timeofs * dma.speed : paintedtime;
 }
 
-void DMA_ClearBuffer( void ) {
+void DMA_ClearBuffer(void)
+{
     int     clear;
- 
+
     if (dma.samplebits == 8)
         clear = 0x80;
     else
         clear = 0;
 
-    snddma.BeginPainting ();
+    snddma.BeginPainting();
     if (dma.buffer)
-        memset(dma.buffer, clear, dma.samples * dma.samplebits/8);
-    snddma.Submit ();
+        memset(dma.buffer, clear, dma.samples * dma.samplebits / 8);
+    snddma.Submit();
 }
 
-static int DMA_GetTime(void) {
+static int DMA_GetTime(void)
+{
     static  int     buffers;
     static  int     oldsamplepos;
     int fullsamples = dma.samples / dma.channels;
@@ -140,14 +147,15 @@ static int DMA_GetTime(void) {
     }
     oldsamplepos = dma.samplepos;
 
-    return buffers*fullsamples + dma.samplepos/dma.channels;
+    return buffers * fullsamples + dma.samplepos / dma.channels;
 }
 
-void DMA_Update(void) {
+void DMA_Update(void)
+{
     int soundtime, endtime;
     int samps;
 
-    snddma.BeginPainting ();
+    snddma.BeginPainting();
 
     if (!dma.buffer)
         return;
@@ -157,7 +165,7 @@ void DMA_Update(void) {
 
 // check to make sure that we haven't overshot
     if (paintedtime < soundtime) {
-        Com_DPrintf ("S_Update_ : overflow\n");
+        Com_DPrintf("S_Update_ : overflow\n");
         paintedtime = soundtime;
     }
 
@@ -167,14 +175,14 @@ void DMA_Update(void) {
 
     // mix to an even submission block size
     endtime = (endtime + dma.submission_chunk - 1)
-        & ~(dma.submission_chunk - 1);
-    samps = dma.samples >> (dma.channels-1);
+              & ~(dma.submission_chunk - 1);
+    samps = dma.samples >> (dma.channels - 1);
     if (endtime - soundtime > samps)
         endtime = soundtime + samps;
 
-    S_PaintChannels (endtime);
+    S_PaintChannels(endtime);
 
-    snddma.Submit ();
+    snddma.Submit();
 }
 
 

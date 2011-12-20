@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -18,24 +18,24 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-void S_Init (void);
-void S_Shutdown (void);
+void S_Init(void);
+void S_Shutdown(void);
 
 // if origin is NULL, the sound will be dynamically sourced from the entity
-void S_StartSound (const vec3_t origin, int entnum, int entchannel, qhandle_t sfx, float fvol,  float attenuation, float timeofs);
-void S_ParseStartSound( void );
-void S_StartLocalSound( const char *s );
-void S_StartLocalSound_( const char *s );
+void S_StartSound(const vec3_t origin, int entnum, int entchannel, qhandle_t sfx, float fvol,  float attenuation, float timeofs);
+void S_ParseStartSound(void);
+void S_StartLocalSound(const char *s);
+void S_StartLocalSound_(const char *s);
 
-void S_FreeAllSounds( void );
+void S_FreeAllSounds(void);
 void S_StopAllSounds(void);
-void S_Update (void);
+void S_Update(void);
 
-void S_Activate (void);
+void S_Activate(void);
 
-void S_BeginRegistration (void);
-qhandle_t S_RegisterSound (const char *sample);
-void S_EndRegistration (void);
+void S_BeginRegistration(void);
+qhandle_t S_RegisterSound(const char *sample);
+void S_EndRegistration(void);
 
 extern  vec3_t  listener_origin;
 extern  vec3_t  listener_forward;

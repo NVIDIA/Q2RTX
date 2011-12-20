@@ -14,7 +14,8 @@
 Sys_MakeCodeWriteable
 ================
 */
-void Sys_MakeCodeWriteable (unsigned long startaddr, unsigned long length) {
+void Sys_MakeCodeWriteable(unsigned long startaddr, unsigned long length)
+{
 #ifdef _WIN32
     DWORD  flOldProtect;
 
@@ -25,11 +26,11 @@ void Sys_MakeCodeWriteable (unsigned long startaddr, unsigned long length) {
     unsigned long addr;
     int psize = getpagesize();
 
-    addr = (startaddr & ~(psize-1)) - psize;
+    addr = (startaddr & ~(psize - 1)) - psize;
 
     r = mprotect((char*)addr, length + startaddr - addr + psize, 7);
     if (r < 0)
-            Com_Error( ERR_FATAL, "Protection change failed\n");
+        Com_Error(ERR_FATAL, "Protection change failed\n");
 #endif
 }
 

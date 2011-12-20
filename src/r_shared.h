@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -26,19 +26,19 @@ IMAGE MANAGER
 =============================================================================
 */
 
-#define R_Malloc( size )    Z_TagMalloc( size, TAG_RENDERER )
-#define R_Mallocz( size )    Z_TagMallocz( size, TAG_RENDERER )
+#define R_Malloc(size)      Z_TagMalloc(size, TAG_RENDERER)
+#define R_Mallocz(size)     Z_TagMallocz(size, TAG_RENDERER)
 
 #if USE_REF == REF_GL
-#define IMG_AllocPixels( x )  FS_AllocTempMem( x )
-#define IMG_FreePixels( x ) FS_FreeTempMem( x )
+#define IMG_AllocPixels(x)  FS_AllocTempMem(x)
+#define IMG_FreePixels(x)   FS_FreeTempMem(x)
 #else
-#define IMG_AllocPixels( x )  R_Malloc( x )
-#define IMG_FreePixels( x ) Z_Free( x )
+#define IMG_AllocPixels(x)  R_Malloc(x)
+#define IMG_FreePixels(x)   Z_Free(x)
 #endif
 
 #if USE_REF == REF_SOFT
-#define MIPSIZE(c) ((c)*(256+64+16+4)/256)
+#define MIPSIZE(c) ((c) * (256 + 64 + 16 + 4) / 256)
 #else
 #define MIPSIZE(c) (c)
 #endif
@@ -51,7 +51,7 @@ IMAGE MANAGER
 #endif
 
 // size of GL_Upload8 internal buffer
-#define MAX_PALETTED_PIXELS         (512*256)
+#define MAX_PALETTED_PIXELS         (512 * 256)
 
 /*
 
@@ -67,9 +67,9 @@ IMAGE MANAGER
 */
 
 typedef enum {
-    if_transparent  = ( 1 << 0 ),
-    if_paletted     = ( 1 << 1 ),
-    if_scrap        = ( 1 << 2 )
+    if_transparent  = (1 << 0),
+    if_paletted     = (1 << 1),
+    if_scrap        = (1 << 2)
 } imageflags_t;
 
 typedef enum {
@@ -125,26 +125,26 @@ extern int registration_sequence;
 extern uint32_t d_8to24table[256];
 
 // these are implemented in r_images.c
-image_t *IMG_Find( const char *name, imagetype_t type );
-void IMG_FreeUnused( void );
-void IMG_FreeAll( void );
-void IMG_Init( void );
-void IMG_Shutdown( void );
-byte *IMG_GetPalette( void );
+image_t *IMG_Find(const char *name, imagetype_t type);
+void IMG_FreeUnused(void);
+void IMG_FreeAll(void);
+void IMG_Init(void);
+void IMG_Shutdown(void);
+byte *IMG_GetPalette(void);
 
-image_t *IMG_ForHandle( qhandle_t h );
-qhandle_t R_RegisterSkin( const char *name );
-qhandle_t R_RegisterPic( const char *name );
-qhandle_t R_RegisterFont( const char *name );
-qerror_t _R_RegisterPic( const char *name, qhandle_t *handle );
-qerror_t _R_RegisterFont( const char *name, qhandle_t *handle );
+image_t *IMG_ForHandle(qhandle_t h);
+qhandle_t R_RegisterSkin(const char *name);
+qhandle_t R_RegisterPic(const char *name);
+qhandle_t R_RegisterFont(const char *name);
+qerror_t _R_RegisterPic(const char *name, qhandle_t *handle);
+qerror_t _R_RegisterFont(const char *name, qhandle_t *handle);
 
 // these are implemented in [gl,sw]_images.c
-void IMG_Unload( image_t *image );
-void IMG_Load( image_t *image, byte *pic, int width, int height );
+void IMG_Unload(image_t *image);
+void IMG_Load(image_t *image, byte *pic, int width, int height);
 #if USE_REF == REF_SOFT
-byte *IMG_ReadPixels( byte **palette, int *width, int *height, int *rowbytes );
+byte *IMG_ReadPixels(byte **palette, int *width, int *height, int *rowbytes);
 #else
-byte *IMG_ReadPixels( qboolean reverse, int *width, int *height );
+byte *IMG_ReadPixels(qboolean reverse, int *width, int *height);
 #endif
 

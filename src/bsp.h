@@ -9,7 +9,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -66,13 +66,13 @@ typedef struct {
 } msurfedge_t;
 
 #define SURF_NOLM_MASK \
-    (SURF_SKY|SURF_WARP|SURF_FLOWING|SURF_TRANS33|SURF_TRANS66)
+    (SURF_SKY | SURF_WARP | SURF_FLOWING | SURF_TRANS33 | SURF_TRANS66)
 
 #define DSURF_PLANEBACK     1
 
 // for lightmap block calculation
-#define S_MAX(surf) (((surf)->extents[0]>>4)+1)
-#define T_MAX(surf) (((surf)->extents[1]>>4)+1)
+#define S_MAX(surf) (((surf)->extents[0] >> 4) + 1)
+#define T_MAX(surf) (((surf)->extents[1] >> 4) + 1)
 
 typedef struct mface_s {
     msurfedge_t     *firstsurfedge;
@@ -109,7 +109,7 @@ typedef struct mface_s {
 #endif
 
 typedef struct mnode_s {
-/* ======> */
+    /* ======> */
     cplane_t            *plane;     // never NULL to differentiate from leafs
 #if USE_REF
     union {
@@ -123,7 +123,7 @@ typedef struct mnode_s {
     int                 visframe;
 #endif
     struct mnode_s      *parent;
-/* <====== */
+    /* <====== */
 
     struct mnode_s      *children[2];
 
@@ -146,7 +146,7 @@ typedef struct {
 } mbrush_t;
 
 typedef struct {
-/* ======> */
+    /* ======> */
     cplane_t            *plane;     // always NULL to differentiate from nodes
 #if USE_REF
     vec3_t              mins;
@@ -155,7 +155,7 @@ typedef struct {
     int                 visframe;
 #endif
     struct mnode_s      *parent;
-/* <====== */
+    /* <====== */
 
     int             contents;
     int             cluster;
@@ -184,9 +184,9 @@ typedef struct {
 
 typedef struct mmodel_s {
 #if USE_REF
-/* ======> */
+    /* ======> */
     int             type;
-/* <====== */
+    /* <====== */
 #endif
     vec3_t          mins, maxs;
     vec3_t          origin;        // for sounds or lights
@@ -194,7 +194,7 @@ typedef struct mmodel_s {
 
 #if USE_REF
     float           radius;
-    
+
     int             numfaces;
     mface_t         *firstface;
 
@@ -222,7 +222,7 @@ typedef struct bsp_s {
     cplane_t        *planes;
 
     int             numnodes;
-    mnode_t         *nodes;    
+    mnode_t         *nodes;
 
     int             numleafs;
     mleaf_t         *leafs;
@@ -273,17 +273,17 @@ typedef struct bsp_s {
     char            name[1];
 } bsp_t;
 
-qerror_t BSP_Load( const char *name, bsp_t **bsp_p );
-void BSP_Free( bsp_t *bsp );
-const char *BSP_GetError( void );
+qerror_t BSP_Load(const char *name, bsp_t **bsp_p);
+void BSP_Free(bsp_t *bsp);
+const char *BSP_GetError(void);
 
 #if USE_REF
-mface_t *BSP_LightPoint( mnode_t *node, vec3_t start, vec3_t end, int *ps, int *pt );
+mface_t *BSP_LightPoint(mnode_t *node, vec3_t start, vec3_t end, int *ps, int *pt);
 #endif
-byte *BSP_ClusterVis( bsp_t *bsp, byte *mask, int cluster, int vis );
-mleaf_t *BSP_PointLeaf( mnode_t *node, vec3_t p );
-mmodel_t *BSP_InlineModel( bsp_t *bsp, const char *name );
+byte *BSP_ClusterVis(bsp_t *bsp, byte *mask, int cluster, int vis);
+mleaf_t *BSP_PointLeaf(mnode_t *node, vec3_t p);
+mmodel_t *BSP_InlineModel(bsp_t *bsp, const char *name);
 
-void BSP_Init( void );
+void BSP_Init(void);
 
 

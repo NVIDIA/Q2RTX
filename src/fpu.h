@@ -24,8 +24,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define X86_STORE_FPCW(x)   __asm fnstcw x
 #define X86_LOAD_FPCW(x)    __asm fldcw x
 #else
-#define X86_STORE_FPCW(x)   __asm__ __volatile__( "fnstcw %0" : "=m" (x) )
-#define X86_LOAD_FPCW(x)    __asm__ __volatile__( "fldcw %0" : : "m" (x) )
+#define X86_STORE_FPCW(x)   __asm__ __volatile__("fnstcw %0" : "=m" (x))
+#define X86_LOAD_FPCW(x)    __asm__ __volatile__("fldcw %0" : : "m" (x))
 #endif
 
 #define X86_PUSH_FPCW   X86_STORE_FPCW(pushed_cw)
@@ -38,7 +38,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 extern uint16_t pushed_cw, single_cw, full_cw, chop_cw, ceil_cw;
 
-void X86_SetFPCW( void );
+void X86_SetFPCW(void);
 
 #else
 

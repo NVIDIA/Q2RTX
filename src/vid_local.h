@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -27,14 +27,14 @@ extern cvar_t       *_vid_fullscreen;
 //
 // vid_*.c
 //
-void VID_PumpEvents( void );
-void VID_SetMode( void );
-char *VID_GetDefaultModeList( void );
+void VID_PumpEvents(void);
+void VID_SetMode(void);
+char *VID_GetDefaultModeList(void);
 
 //
 // cl_ref.c
 //
-qboolean VID_GetFullscreen( vrect_t *rc, int *freq_p, int *depth_p );
-qboolean VID_GetGeometry( vrect_t *rc );
-void VID_SetGeometry( vrect_t *rc );
-void VID_ToggleFullscreen( void );
+qboolean VID_GetFullscreen(vrect_t *rc, int *freq_p, int *depth_p);
+qboolean VID_GetGeometry(vrect_t *rc);
+void VID_SetGeometry(vrect_t *rc);
+void VID_ToggleFullscreen(void);

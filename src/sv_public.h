@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -28,17 +28,17 @@ typedef enum {
 } server_state_t;
 
 #if USE_ICMP
-void SV_ErrorEvent( int info );
+void SV_ErrorEvent(int info);
 #endif
-void SV_Init (void);
-void SV_Shutdown( const char *finalmsg, error_type_t type );
-unsigned SV_Frame (unsigned msec);
+void SV_Init(void);
+void SV_Shutdown(const char *finalmsg, error_type_t type);
+unsigned SV_Frame(unsigned msec);
 #if USE_SYSCON
-void SV_SetConsoleTitle( void );
+void SV_SetConsoleTitle(void);
 #endif
-//void SV_ConsoleOutput( const char *msg );
+//void SV_ConsoleOutput(const char *msg);
 
 #if USE_MVD_CLIENT && USE_CLIENT
-int MVD_GetDemoPercent( qboolean *paused, int *framenum );
+int MVD_GetDemoPercent(qboolean *paused, int *framenum);
 #endif
 

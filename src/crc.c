@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -63,7 +63,8 @@ static const uint16_t crctable[256] = {
     0x6e17, 0x7e36, 0x4e55, 0x5e74, 0x2e93, 0x3eb2, 0x0ed1, 0x1ef0
 };
 
-static uint16_t CRC_Block (byte *start, size_t count) {
+static uint16_t CRC_Block(byte *start, size_t count)
+{
     uint16_t    crc = CRC_INIT_VALUE;
 
     while (count--)
@@ -146,7 +147,8 @@ COM_BlockSequenceCRCByte
 For proxy protecting
 ====================
 */
-byte COM_BlockSequenceCRCByte (byte *base, size_t length, int sequence) {
+byte COM_BlockSequenceCRCByte(byte *base, size_t length, int sequence)
+{
     int     n;
     const byte  *p;
     int     x;
@@ -160,18 +162,18 @@ byte COM_BlockSequenceCRCByte (byte *base, size_t length, int sequence) {
 
     if (length > 60)
         length = 60;
-    memcpy (chkb, base, length);
+    memcpy(chkb, base, length);
 
     chkb[length] = p[0];
-    chkb[length+1] = p[1];
-    chkb[length+2] = p[2];
-    chkb[length+3] = p[3];
+    chkb[length + 1] = p[1];
+    chkb[length + 2] = p[2];
+    chkb[length + 3] = p[3];
 
     length += 4;
 
     crc = CRC_Block(chkb, length);
 
-    for (x=0, n=0; n<length; n++)
+    for (x = 0, n = 0; n < length; n++)
         x += chkb[n];
 
     crc = (crc ^ x) & 0xff;

@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -52,7 +52,8 @@ HELPER FUNCTIONS
 // 640x480@75
 // 640x480@75:32
 // 640x480:32@75
-qboolean VID_GetFullscreen( vrect_t *rc, int *freq_p, int *depth_p ) {
+qboolean VID_GetFullscreen(vrect_t *rc, int *freq_p, int *depth_p)
+{
     unsigned long w, h, freq, depth;
     char *s;
     int mode;
@@ -63,62 +64,62 @@ qboolean VID_GetFullscreen( vrect_t *rc, int *freq_p, int *depth_p ) {
     rc->width = 640;
     rc->height = 480;
 
-    if( freq_p )
+    if (freq_p)
         *freq_p = 0;
-    if( depth_p )
+    if (depth_p)
         *depth_p = 0;
 
-    if( !vid_modelist || !vid_fullscreen )
+    if (!vid_modelist || !vid_fullscreen)
         return qfalse;
 
     s = vid_modelist->string;
-    if( !*s )
+    if (!*s)
         return qfalse;
 
     mode = 1;
-    while( 1 ) {
-        w = strtoul( s, &s, 10 );
-        if( *s != 'x' && *s != 'X' ) {
-            Com_DPrintf( "Mode %d is malformed\n", mode );
+    while (1) {
+        w = strtoul(s, &s, 10);
+        if (*s != 'x' && *s != 'X') {
+            Com_DPrintf("Mode %d is malformed\n", mode);
             return qfalse;
         }
-        h = strtoul( s + 1, &s, 10 );
+        h = strtoul(s + 1, &s, 10);
         freq = depth = 0;
-        if( *s == '@' ) {
-            freq = strtoul( s + 1, &s, 10 );
-            if( *s == ':' ) {
-                depth = strtoul( s + 1, &s, 10 );
+        if (*s == '@') {
+            freq = strtoul(s + 1, &s, 10);
+            if (*s == ':') {
+                depth = strtoul(s + 1, &s, 10);
             }
-        } else if( *s == ':' ) {
-            depth = strtoul( s + 1, &s, 10 );
-            if( *s == '@' ) {
-                freq = strtoul( s + 1, &s, 10 );
+        } else if (*s == ':') {
+            depth = strtoul(s + 1, &s, 10);
+            if (*s == '@') {
+                freq = strtoul(s + 1, &s, 10);
             }
         }
-        if( mode == vid_fullscreen->integer ) {
+        if (mode == vid_fullscreen->integer) {
             break;
         }
-        while( Q_isspace( *s ) )
+        while (Q_isspace(*s))
             s++;
-        if( *s == 0 ) {
-            Com_DPrintf( "Mode %d not found\n", vid_fullscreen->integer );
+        if (*s == 0) {
+            Com_DPrintf("Mode %d not found\n", vid_fullscreen->integer);
             return qfalse;
         }
         mode++;
     }
 
     // sanity check
-    if( w < 64 || w > 8192 || h < 64 || h > 8192 || freq > 1000 || depth > 32 ) {
-        Com_DPrintf( "Mode %lux%lu@%lu:%lu doesn't look sane\n", w, h, freq, depth );
+    if (w < 64 || w > 8192 || h < 64 || h > 8192 || freq > 1000 || depth > 32) {
+        Com_DPrintf("Mode %lux%lu@%lu:%lu doesn't look sane\n", w, h, freq, depth);
         return qfalse;
     }
 
     rc->width = w;
     rc->height = h;
 
-    if( freq_p )
+    if (freq_p)
         *freq_p = freq;
-    if( depth_p )
+    if (depth_p)
         *depth_p = depth;
 
     return qtrue;
@@ -128,7 +129,8 @@ qboolean VID_GetFullscreen( vrect_t *rc, int *freq_p, int *depth_p ) {
 // 640x480+0
 // 640x480+0+0
 // 640x480-100-100
-qboolean VID_GetGeometry( vrect_t *rc ) {
+qboolean VID_GetGeometry(vrect_t *rc)
+{
     unsigned long w, h;
     long x, y;
     char *s;
@@ -139,30 +141,30 @@ qboolean VID_GetGeometry( vrect_t *rc ) {
     rc->width = 640;
     rc->height = 480;
 
-    if( !vid_geometry )
+    if (!vid_geometry)
         return qfalse;
 
     s = vid_geometry->string;
-    if( !*s )
+    if (!*s)
         return qfalse;
 
-    w = strtoul( s, &s, 10 );
-    if( *s != 'x' && *s != 'X' ) {
-        Com_DPrintf( "Geometry string is malformed\n" );
+    w = strtoul(s, &s, 10);
+    if (*s != 'x' && *s != 'X') {
+        Com_DPrintf("Geometry string is malformed\n");
         return qfalse;
     }
-    h = strtoul( s + 1, &s, 10 );
+    h = strtoul(s + 1, &s, 10);
     x = y = 0;
-    if( *s == '+' || *s == '-' ) {
-        x = strtol( s, &s, 10 );
-        if( *s == '+' || *s == '-' ) {
-            y = strtol( s, &s, 10 );
+    if (*s == '+' || *s == '-') {
+        x = strtol(s, &s, 10);
+        if (*s == '+' || *s == '-') {
+            y = strtol(s, &s, 10);
         }
     }
 
     // sanity check
-    if( w < 64 || w > 8192 || h < 64 || h > 8192 ) {
-        Com_DPrintf( "Geometry %lux%lu doesn't look sane\n", w, h );
+    if (w < 64 || w > 8192 || h < 64 || h > 8192) {
+        Com_DPrintf("Geometry %lux%lu doesn't look sane\n", w, h);
         return qfalse;
     }
 
@@ -174,28 +176,30 @@ qboolean VID_GetGeometry( vrect_t *rc ) {
     return qtrue;
 }
 
-void VID_SetGeometry( vrect_t *rc ) {
+void VID_SetGeometry(vrect_t *rc)
+{
     char buffer[MAX_QPATH];
 
-    if( !vid_geometry )
+    if (!vid_geometry)
         return;
 
-    Q_snprintf( buffer, sizeof( buffer ), "%dx%d%+d%+d",
-        rc->width, rc->height, rc->x, rc->y );
-    Cvar_SetByVar( vid_geometry, buffer, FROM_CODE );
+    Q_snprintf(buffer, sizeof(buffer), "%dx%d%+d%+d",
+               rc->width, rc->height, rc->x, rc->y);
+    Cvar_SetByVar(vid_geometry, buffer, FROM_CODE);
 }
 
-void VID_ToggleFullscreen( void ) {
-    if( !vid_fullscreen || !_vid_fullscreen )
+void VID_ToggleFullscreen(void)
+{
+    if (!vid_fullscreen || !_vid_fullscreen)
         return;
 
-    if( !vid_fullscreen->integer ) {
-        if( !_vid_fullscreen->integer ) {
-            Cvar_Set( "_vid_fullscreen", "1" );
+    if (!vid_fullscreen->integer) {
+        if (!_vid_fullscreen->integer) {
+            Cvar_Set("_vid_fullscreen", "1");
         }
-        Cbuf_AddText( &cmd_buffer, "set vid_fullscreen $_vid_fullscreen\n" );
+        Cbuf_AddText(&cmd_buffer, "set vid_fullscreen $_vid_fullscreen\n");
     } else {
-        Cbuf_AddText( &cmd_buffer, "set vid_fullscreen 0\n" );
+        Cbuf_AddText(&cmd_buffer, "set vid_fullscreen 0\n");
     }
 }
 
@@ -212,26 +216,27 @@ LOADING / SHUTDOWN
 CL_RunResfresh
 ============
 */
-void CL_RunRefresh( void ) {
-    if( !cls.ref_initialized ) {
+void CL_RunRefresh(void)
+{
+    if (!cls.ref_initialized) {
         return;
     }
-    
+
     VID_PumpEvents();
 
-    if( mode_changed ) {
-        if( mode_changed & MODE_FULLSCREEN ) {
+    if (mode_changed) {
+        if (mode_changed & MODE_FULLSCREEN) {
             VID_SetMode();
-            if( vid_fullscreen->integer ) {
-                Cvar_Set( "_vid_fullscreen", vid_fullscreen->string );
+            if (vid_fullscreen->integer) {
+                Cvar_Set("_vid_fullscreen", vid_fullscreen->string);
             }
         } else {
-            if( vid_fullscreen->integer ) {
-                if( mode_changed & MODE_MODELIST ) {
+            if (vid_fullscreen->integer) {
+                if (mode_changed & MODE_MODELIST) {
                     VID_SetMode();
                 }
             } else {
-                if( mode_changed & MODE_GEOMETRY ) {
+                if (mode_changed & MODE_GEOMETRY) {
                     VID_SetMode();
                 }
             }
@@ -239,24 +244,27 @@ void CL_RunRefresh( void ) {
         mode_changed = 0;
     }
 
-    if( cvar_modified & CVAR_REFRESH ) {
-        CL_RestartRefresh( qtrue );
+    if (cvar_modified & CVAR_REFRESH) {
+        CL_RestartRefresh(qtrue);
         cvar_modified &= ~CVAR_REFRESH;
-    } else if( cvar_modified & CVAR_FILES ) {
-        CL_RestartRefresh( qfalse );
+    } else if (cvar_modified & CVAR_FILES) {
+        CL_RestartRefresh(qfalse);
         cvar_modified &= ~CVAR_FILES;
     }
 }
 
-static void vid_geometry_changed( cvar_t *self ) {
+static void vid_geometry_changed(cvar_t *self)
+{
     mode_changed |= MODE_GEOMETRY;
 }
 
-static void vid_fullscreen_changed( cvar_t *self ) {
+static void vid_fullscreen_changed(cvar_t *self)
+{
     mode_changed |= MODE_FULLSCREEN;
 }
 
-static void vid_modelist_changed( cvar_t *self ) {
+static void vid_modelist_changed(cvar_t *self)
+{
     mode_changed |= MODE_MODELIST;
 }
 
@@ -265,38 +273,39 @@ static void vid_modelist_changed( cvar_t *self ) {
 CL_InitRefresh
 ============
 */
-void CL_InitRefresh( void ) {
+void CL_InitRefresh(void)
+{
     char *modelist;
 
-    if( cls.ref_initialized ) {
+    if (cls.ref_initialized) {
         return;
     }
 
     modelist = VID_GetDefaultModeList();
 
     // Create the video variables so we know how to start the graphics drivers
-    vid_ref = Cvar_Get( "vid_ref", VID_REF, CVAR_ROM );
-    vid_fullscreen = Cvar_Get( "vid_fullscreen", "0", CVAR_ARCHIVE );
-    _vid_fullscreen = Cvar_Get( "_vid_fullscreen", "1", CVAR_ARCHIVE );
-    vid_modelist = Cvar_Get( "vid_modelist", modelist, 0 );
-    vid_geometry = Cvar_Get( "vid_geometry", VID_GEOMETRY, CVAR_ARCHIVE );
+    vid_ref = Cvar_Get("vid_ref", VID_REF, CVAR_ROM);
+    vid_fullscreen = Cvar_Get("vid_fullscreen", "0", CVAR_ARCHIVE);
+    _vid_fullscreen = Cvar_Get("_vid_fullscreen", "1", CVAR_ARCHIVE);
+    vid_modelist = Cvar_Get("vid_modelist", modelist, 0);
+    vid_geometry = Cvar_Get("vid_geometry", VID_GEOMETRY, CVAR_ARCHIVE);
 
-    Z_Free( modelist );
+    Z_Free(modelist);
 
-    if( vid_fullscreen->integer ) {
-        Cvar_Set( "_vid_fullscreen", vid_fullscreen->string );
-    } else if( !_vid_fullscreen->integer ) {
-        Cvar_Set( "_vid_fullscreen", "1" );
+    if (vid_fullscreen->integer) {
+        Cvar_Set("_vid_fullscreen", vid_fullscreen->string);
+    } else if (!_vid_fullscreen->integer) {
+        Cvar_Set("_vid_fullscreen", "1");
     }
 
-    Com_SetLastError( NULL );
+    Com_SetLastError(NULL);
 
-    if( !R_Init( qtrue ) ) {
-        Com_Error( ERR_FATAL, "Couldn't initialize refresh: %s", Com_GetLastError() );
+    if (!R_Init(qtrue)) {
+        Com_Error(ERR_FATAL, "Couldn't initialize refresh: %s", Com_GetLastError());
     }
 
     cls.ref_initialized = qtrue;
-    
+
     vid_geometry->changed = vid_geometry_changed;
     vid_fullscreen->changed = vid_fullscreen_changed;
     vid_modelist->changed = vid_modelist_changed;
@@ -313,7 +322,7 @@ void CL_InitRefresh( void ) {
     SCR_RegisterMedia();
     Con_RegisterMedia();
 
-    cvar_modified &= ~(CVAR_FILES|CVAR_REFRESH);
+    cvar_modified &= ~(CVAR_FILES | CVAR_REFRESH);
 }
 
 /*
@@ -321,8 +330,9 @@ void CL_InitRefresh( void ) {
 CL_ShutdownRefresh
 ============
 */
-void CL_ShutdownRefresh( void ) {
-    if( !cls.ref_initialized ) {
+void CL_ShutdownRefresh(void)
+{
+    if (!cls.ref_initialized) {
         return;
     }
 
@@ -337,10 +347,10 @@ void CL_ShutdownRefresh( void ) {
     vid_fullscreen->changed = NULL;
     vid_modelist->changed = NULL;
 
-    R_Shutdown( qtrue );
+    R_Shutdown(qtrue);
 
     cls.ref_initialized = qfalse;
 
-    Z_LeakTest( TAG_RENDERER );
+    Z_LeakTest(TAG_RENDERER);
 }
 

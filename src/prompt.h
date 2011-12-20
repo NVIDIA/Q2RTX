@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 
 #define HISTORY_SIZE    128
-#define HISTORY_MASK    ( HISTORY_SIZE - 1 )
+#define HISTORY_MASK    (HISTORY_SIZE - 1)
 
 #define MAX_MATCHES     1024
 #define MAX_PARTIAL     32
@@ -39,17 +39,17 @@ typedef struct commandPrompt_s {
     int         widthInChars;
     qboolean    tooMany;
 
-    void        (* q_printf( 1, 2 ) printf)( const char *fmt, ... );
+    void        (* q_printf(1, 2) printf)(const char *fmt, ...);
 } commandPrompt_t;
 
 
-void Prompt_Init( void );
-void Prompt_CompleteCommand( commandPrompt_t *prompt, qboolean backslash );
-void Prompt_CompleteHistory( commandPrompt_t *prompt, qboolean forward );
-void Prompt_ClearState( commandPrompt_t *prompt );
-char *Prompt_Action( commandPrompt_t *prompt );
-void Prompt_HistoryUp( commandPrompt_t *prompt );
-void Prompt_HistoryDown( commandPrompt_t *prompt );
-void Prompt_Clear( commandPrompt_t *prompt );
-void Prompt_SaveHistory( commandPrompt_t *prompt, const char *filename, int lines );
-void Prompt_LoadHistory( commandPrompt_t *prompt, const char *filename );
+void Prompt_Init(void);
+void Prompt_CompleteCommand(commandPrompt_t *prompt, qboolean backslash);
+void Prompt_CompleteHistory(commandPrompt_t *prompt, qboolean forward);
+void Prompt_ClearState(commandPrompt_t *prompt);
+char *Prompt_Action(commandPrompt_t *prompt);
+void Prompt_HistoryUp(commandPrompt_t *prompt);
+void Prompt_HistoryDown(commandPrompt_t *prompt);
+void Prompt_Clear(commandPrompt_t *prompt);
+void Prompt_SaveHistory(commandPrompt_t *prompt, const char *filename, int lines);
+void Prompt_LoadHistory(commandPrompt_t *prompt, const char *filename);

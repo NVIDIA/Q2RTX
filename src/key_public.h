@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -111,27 +111,27 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 typedef enum keydest_e {
     KEY_GAME    = 0,
-    KEY_CONSOLE = ( 1 << 0 ),
-    KEY_MESSAGE = ( 1 << 1 ),
-    KEY_MENU    = ( 1 << 2 )
+    KEY_CONSOLE = (1 << 0),
+    KEY_MESSAGE = (1 << 1),
+    KEY_MENU    = (1 << 2)
 } keydest_t;
 
-typedef qboolean (*keywaitcb_t)( void *arg, int key );
+typedef qboolean(*keywaitcb_t)(void *arg, int key);
 
-qboolean    Key_GetOverstrikeMode( void );
-void        Key_SetOverstrikeMode( qboolean overstrike );
-keydest_t   Key_GetDest( void );
-void        Key_SetDest( keydest_t dest );
+qboolean    Key_GetOverstrikeMode(void);
+void        Key_SetOverstrikeMode(qboolean overstrike);
+keydest_t   Key_GetDest(void);
+void        Key_SetDest(keydest_t dest);
 
-qboolean    Key_IsDown( int key );
-qboolean    Key_AnyKeyDown( void );
-void        Key_ClearStates( void );
+qboolean    Key_IsDown(int key);
+qboolean    Key_AnyKeyDown(void);
+void        Key_ClearStates(void);
 
-char    *Key_KeynumToString ( int keynum );
-int     Key_StringToKeynum( const char *str );
-void    Key_SetBinding( int keynum, const char *binding );
-char    *Key_GetBinding( const char *binding );
-int     Key_EnumBindings( int key, const char *binding );
+char    *Key_KeynumToString(int keynum);
+int     Key_StringToKeynum(const char *str);
+void    Key_SetBinding(int keynum, const char *binding);
+char    *Key_GetBinding(const char *binding);
+int     Key_EnumBindings(int key, const char *binding);
 
-void    Key_WaitKey( keywaitcb_t wait, void *arg );
+void    Key_WaitKey(keywaitcb_t wait, void *arg);
 

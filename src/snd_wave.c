@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -24,7 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // 64K is > 1 second at 16-bit, 22050 Hz
 #define WAV_BUFFERS             64
-#define WAV_MASK                ( WAV_BUFFERS - 1 )
+#define WAV_MASK                (WAV_BUFFERS - 1)
 #define WAV_BUFFER_SIZE         0x0400
 
 static qboolean wav_init;
@@ -39,7 +39,7 @@ static HPSTR        lpData;
 static HGLOBAL      hWaveHdr;
 static LPWAVEHDR    lpWaveHdr;
 
-static HWAVEOUT    hWaveOut; 
+static HWAVEOUT    hWaveOut;
 
 static DWORD        gSndBufSize;
 
@@ -50,32 +50,33 @@ WAVE_Shutdown
 Reset the sound device for exiting
 ===============
 */
-static void WAVE_Shutdown( void ) {
+static void WAVE_Shutdown(void)
+{
     int     i;
 
-    Com_Printf( "Shutting down wave sound\n" );
+    Com_Printf("Shutting down wave sound\n");
 
-    if( hWaveOut ) {
-        Com_DPrintf( "...resetting waveOut\n" );
-        waveOutReset (hWaveOut);
+    if (hWaveOut) {
+        Com_DPrintf("...resetting waveOut\n");
+        waveOutReset(hWaveOut);
 
         if (lpWaveHdr) {
-            Com_DPrintf( "...unpreparing headers\n" );
-            for (i=0 ; i< WAV_BUFFERS ; i++)
-                waveOutUnprepareHeader (hWaveOut, lpWaveHdr+i, sizeof(WAVEHDR));
+            Com_DPrintf("...unpreparing headers\n");
+            for (i = 0; i < WAV_BUFFERS; i++)
+                waveOutUnprepareHeader(hWaveOut, lpWaveHdr + i, sizeof(WAVEHDR));
         }
 
-        Com_DPrintf( "...closing waveOut\n" );
-        waveOutClose (hWaveOut);
+        Com_DPrintf("...closing waveOut\n");
+        waveOutClose(hWaveOut);
 
         if (hWaveHdr) {
-            Com_DPrintf( "...freeing WAV header\n" );
+            Com_DPrintf("...freeing WAV header\n");
             GlobalUnlock(hWaveHdr);
             GlobalFree(hWaveHdr);
         }
 
         if (hData) {
-            Com_DPrintf( "...freeing WAV buffer\n" );
+            Com_DPrintf("...freeing WAV buffer\n");
             GlobalUnlock(hData);
             GlobalFree(hData);
         }
@@ -98,17 +99,18 @@ WAVE_Init
 Crappy windows multimedia base
 ==================
 */
-static sndinitstat_t WAVE_Init (void) {
-    WAVEFORMATEX  format; 
+static sndinitstat_t WAVE_Init(void)
+{
+    WAVEFORMATEX  format;
     int             i;
     HRESULT         hr;
 
-    Com_DPrintf( "Initializing wave sound\n" );
-    
+    Com_DPrintf("Initializing wave sound\n");
+
     snd_sent = 0;
     snd_completed = 0;
 
-    memset (&dma, 0, sizeof (dma));
+    memset(&dma, 0, sizeof(dma));
     dma.channels = 2;
     dma.samplebits = 16;
 
@@ -119,118 +121,109 @@ static sndinitstat_t WAVE_Init (void) {
     else
         dma.speed = 11025;
 
-    memset (&format, 0, sizeof(format));
+    memset(&format, 0, sizeof(format));
     format.wFormatTag = WAVE_FORMAT_PCM;
     format.nChannels = dma.channels;
     format.wBitsPerSample = dma.samplebits;
     format.nSamplesPerSec = dma.speed;
-    format.nBlockAlign = format.nChannels*format.wBitsPerSample / 8;
+    format.nBlockAlign = format.nChannels * format.wBitsPerSample / 8;
     format.cbSize = 0;
-    format.nAvgBytesPerSec = format.nSamplesPerSec*format.nBlockAlign; 
-    
-    /* Open a waveform device for output using window callback. */ 
-    Com_DPrintf ("...opening waveform device: ");
-    while ((hr = waveOutOpen((LPHWAVEOUT)&hWaveOut, WAVE_MAPPER, 
-                    &format, 
-                    0, 0L, CALLBACK_NULL)) != MMSYSERR_NOERROR)
-    {
-        if (hr != MMSYSERR_ALLOCATED)
-        {
-            Com_DPrintf ("failed\n");
+    format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
+
+    /* Open a waveform device for output using window callback. */
+    Com_DPrintf("...opening waveform device: ");
+    while ((hr = waveOutOpen((LPHWAVEOUT)&hWaveOut, WAVE_MAPPER,
+                             &format,
+                             0, 0L, CALLBACK_NULL)) != MMSYSERR_NOERROR) {
+        if (hr != MMSYSERR_ALLOCATED) {
+            Com_DPrintf("failed\n");
             return SIS_FAILURE;
         }
 
-        if (MessageBox (NULL,
-                        _T("The sound hardware is in use by another app.\n\n")
-                        _T("Select Retry to try to start sound again or Cancel to run ") _T("q2pro") _T(" with no sound."),
-                        _T("Sound not available"),
-                        MB_RETRYCANCEL | MB_SETFOREGROUND | MB_ICONEXCLAMATION) != IDRETRY)
-        {
-            Com_DPrintf ("hw in use\n" );
+        if (MessageBox(NULL,
+                       _T("The sound hardware is in use by another app.\n\n")
+                       _T("Select Retry to try to start sound again or Cancel to run ") _T("q2pro") _T(" with no sound."),
+                       _T("Sound not available"),
+                       MB_RETRYCANCEL | MB_SETFOREGROUND | MB_ICONEXCLAMATION) != IDRETRY) {
+            Com_DPrintf("hw in use\n");
             return SIS_NOTAVAIL;
         }
-    } 
-    Com_DPrintf( "ok\n" );
+    }
+    Com_DPrintf("ok\n");
 
-    /* 
-     * Allocate and lock memory for the waveform data. The memory 
-     * for waveform data must be globally allocated with 
-     * GMEM_MOVEABLE and GMEM_SHARE flags. 
+    /*
+     * Allocate and lock memory for the waveform data. The memory
+     * for waveform data must be globally allocated with
+     * GMEM_MOVEABLE and GMEM_SHARE flags.
 
-    */ 
-    Com_DPrintf ("...allocating waveform buffer: ");
-    gSndBufSize = WAV_BUFFERS*WAV_BUFFER_SIZE;
-    hData = GlobalAlloc(GMEM_MOVEABLE /*| GMEM_SHARE*/, gSndBufSize); 
-    if (!hData) 
-    { 
-        Com_DPrintf( " failed with error %#lx\n", GetLastError() );
+    */
+    Com_DPrintf("...allocating waveform buffer: ");
+    gSndBufSize = WAV_BUFFERS * WAV_BUFFER_SIZE;
+    hData = GlobalAlloc(GMEM_MOVEABLE /*| GMEM_SHARE*/, gSndBufSize);
+    if (!hData) {
+        Com_DPrintf(" failed with error %#lx\n", GetLastError());
         WAVE_Shutdown();
         return SIS_FAILURE;
     }
-    Com_DPrintf( "ok\n" );
+    Com_DPrintf("ok\n");
 
-    Com_DPrintf ("...locking waveform buffer: ");
+    Com_DPrintf("...locking waveform buffer: ");
     lpData = GlobalLock(hData);
-    if (!lpData)
-    { 
-        Com_DPrintf( " failed with error %#lx\n", GetLastError() );
-        WAVE_Shutdown();
-        return SIS_FAILURE;
-    } 
-    memset (lpData, 0, gSndBufSize);
-    Com_DPrintf( "ok\n" );
-
-    /* 
-     * Allocate and lock memory for the header. This memory must 
-     * also be globally allocated with GMEM_MOVEABLE and 
-     * GMEM_SHARE flags. 
-     */ 
-    Com_DPrintf ("...allocating waveform header: ");
-    hWaveHdr = GlobalAlloc(GMEM_MOVEABLE /*| GMEM_SHARE*/, 
-        (DWORD) sizeof(WAVEHDR) * WAV_BUFFERS); 
-    if (hWaveHdr == NULL)
-    { 
-        Com_DPrintf( "failed with error %#lx\n", GetLastError() );
-        WAVE_Shutdown();
-        return SIS_FAILURE;
-    } 
-    Com_DPrintf( "ok\n" );
-
-    Com_DPrintf ("...locking waveform header: ");
-    lpWaveHdr = (LPWAVEHDR) GlobalLock(hWaveHdr); 
-    if (lpWaveHdr == NULL)
-    { 
-        Com_DPrintf( "failed with error %#lx\n", GetLastError() );
+    if (!lpData) {
+        Com_DPrintf(" failed with error %#lx\n", GetLastError());
         WAVE_Shutdown();
         return SIS_FAILURE;
     }
-    memset (lpWaveHdr, 0, sizeof(WAVEHDR) * WAV_BUFFERS);
-    Com_DPrintf( "ok\n" );
+    memset(lpData, 0, gSndBufSize);
+    Com_DPrintf("ok\n");
 
-    /* After allocation, set up and prepare headers. */ 
-    Com_DPrintf ("...preparing headers: ");
-    for (i=0 ; i<WAV_BUFFERS ; i++)
-    {
-        lpWaveHdr[i].dwBufferLength = WAV_BUFFER_SIZE; 
-        lpWaveHdr[i].lpData = lpData + i*WAV_BUFFER_SIZE;
+    /*
+     * Allocate and lock memory for the header. This memory must
+     * also be globally allocated with GMEM_MOVEABLE and
+     * GMEM_SHARE flags.
+     */
+    Com_DPrintf("...allocating waveform header: ");
+    hWaveHdr = GlobalAlloc(GMEM_MOVEABLE /*| GMEM_SHARE*/,
+                           (DWORD) sizeof(WAVEHDR) * WAV_BUFFERS);
+    if (hWaveHdr == NULL) {
+        Com_DPrintf("failed with error %#lx\n", GetLastError());
+        WAVE_Shutdown();
+        return SIS_FAILURE;
+    }
+    Com_DPrintf("ok\n");
 
-        if (waveOutPrepareHeader(hWaveOut, lpWaveHdr+i, sizeof(WAVEHDR)) !=
-                MMSYSERR_NOERROR)
-        {
-            Com_DPrintf ("failed\n");
+    Com_DPrintf("...locking waveform header: ");
+    lpWaveHdr = (LPWAVEHDR) GlobalLock(hWaveHdr);
+    if (lpWaveHdr == NULL) {
+        Com_DPrintf("failed with error %#lx\n", GetLastError());
+        WAVE_Shutdown();
+        return SIS_FAILURE;
+    }
+    memset(lpWaveHdr, 0, sizeof(WAVEHDR) * WAV_BUFFERS);
+    Com_DPrintf("ok\n");
+
+    /* After allocation, set up and prepare headers. */
+    Com_DPrintf("...preparing headers: ");
+    for (i = 0; i < WAV_BUFFERS; i++) {
+        lpWaveHdr[i].dwBufferLength = WAV_BUFFER_SIZE;
+        lpWaveHdr[i].lpData = lpData + i * WAV_BUFFER_SIZE;
+
+        if (waveOutPrepareHeader(hWaveOut, lpWaveHdr + i, sizeof(WAVEHDR)) !=
+            MMSYSERR_NOERROR) {
+            Com_DPrintf("failed\n");
             WAVE_Shutdown();
             return SIS_FAILURE;
         }
     }
-    Com_DPrintf ("ok\n");
+    Com_DPrintf("ok\n");
 
-    dma.samples = gSndBufSize/(dma.samplebits/8);
+    dma.samples = gSndBufSize / (dma.samplebits / 8);
     dma.samplepos = 0;
     dma.submission_chunk = 512;
     dma.buffer = (byte *) lpData;
-    sample16 = (dma.samplebits/8) - 1;
+    sample16 = (dma.samplebits / 8) - 1;
 
-    Com_Printf( "Wave sound initialized\n" );
+    Com_Printf("Wave sound initialized\n");
     wav_init = qtrue;
 
     return SIS_SUCCESS;
@@ -247,15 +240,16 @@ inside the recirculating dma buffer, so the mixing code will know
 how many sample are required to fill it up.
 ===============
 */
-static void WAVE_BeginPainting (void) {
+static void WAVE_BeginPainting(void)
+{
     int     s;
 
-    if( !wav_init ) {
+    if (!wav_init) {
         return;
     }
 
-    s = ( snd_sent * WAV_BUFFER_SIZE ) >> sample16;
-    dma.samplepos = s & ( dma.samples - 1 );
+    s = (snd_sent * WAV_BUFFER_SIZE) >> sample16;
+    dma.samplepos = s & (dma.samples - 1);
 }
 
 /*
@@ -266,7 +260,8 @@ Send sound to device if buffer isn't really the dma buffer
 Also unlocks the dsound buffer
 ===============
 */
-static void WAVE_Submit(void) {
+static void WAVE_Submit(void)
+{
     LPWAVEHDR   h;
     int         wResult;
 
@@ -280,12 +275,12 @@ static void WAVE_Submit(void) {
     // find which sound blocks have completed
     //
     while (1) {
-        if ( snd_completed == snd_sent ) {
-            Com_DPrintf ("WAVE_Submit: Sound overrun\n");
+        if (snd_completed == snd_sent) {
+            Com_DPrintf("WAVE_Submit: Sound overrun\n");
             break;
         }
 
-        if ( !(lpWaveHdr[snd_completed & WAV_MASK].dwFlags & WHDR_DONE) ) {
+        if (!(lpWaveHdr[snd_completed & WAV_MASK].dwFlags & WHDR_DONE)) {
             break;
         }
 
@@ -296,22 +291,22 @@ static void WAVE_Submit(void) {
     // submit a few new sound blocks
     //
     while (((snd_sent - snd_completed) >> sample16) < 8) {
-        h = lpWaveHdr + ( snd_sent & WAV_MASK );
-        if (paintedtime/256 <= snd_sent)
+        h = lpWaveHdr + (snd_sent & WAV_MASK);
+        if (paintedtime / 256 <= snd_sent)
             break;
         snd_sent++;
-        /* 
-         * Now the data block can be sent to the output device. The 
-         * waveOutWrite function returns immediately and waveform 
-         * data is sent to the output device in the background. 
-         */ 
-        wResult = waveOutWrite(hWaveOut, h, sizeof(WAVEHDR)); 
+        /*
+         * Now the data block can be sent to the output device. The
+         * waveOutWrite function returns immediately and waveform
+         * data is sent to the output device in the background.
+         */
+        wResult = waveOutWrite(hWaveOut, h, sizeof(WAVEHDR));
 
-        if (wResult != MMSYSERR_NOERROR) { 
-            Com_EPrintf ("WAVE_Submit: Failed to write block to device\n");
-            WAVE_Shutdown ();
-            return; 
-        } 
+        if (wResult != MMSYSERR_NOERROR) {
+            Com_EPrintf("WAVE_Submit: Failed to write block to device\n");
+            WAVE_Shutdown();
+            return;
+        }
     }
 }
 
@@ -325,10 +320,12 @@ The window have been destroyed and recreated
 between a deactivate and an activate.
 ===========
 */
-static void WAVE_Activate (qboolean active) {
+static void WAVE_Activate(qboolean active)
+{
 }
 
-void WAVE_FillAPI( snddmaAPI_t *api ) {
+void WAVE_FillAPI(snddmaAPI_t *api)
+{
     api->Init = WAVE_Init;
     api->Shutdown = WAVE_Shutdown;
     api->BeginPainting = WAVE_BeginPainting;

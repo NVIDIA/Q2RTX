@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -112,10 +112,10 @@ typedef struct {
 
 extern win_state_t      win;
 
-void Win_Init( void );
-void Win_Shutdown( void );
-void Win_SetMode( void ); 
-void Win_ModeChanged( void );
+void Win_Init(void);
+void Win_Shutdown(void);
+void Win_SetMode(void);
+void Win_ModeChanged(void);
 
 #endif // USE_CLIENT
 
@@ -125,6 +125,6 @@ extern HINSTANCE                    hGlobalInstance;
 extern HANDLE                       mainProcessThread;
 extern LPTOP_LEVEL_EXCEPTION_FILTER prevExceptionFilter;
 
-LONG WINAPI Sys_ExceptionFilter( LPEXCEPTION_POINTERS );
+LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS);
 #endif
 

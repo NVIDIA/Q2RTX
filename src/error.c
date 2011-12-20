@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -49,25 +49,26 @@ static const char *const error_table[] = {
 };
 
 static const int num_errors =
-    sizeof( error_table ) / sizeof( error_table[0] );
+    sizeof(error_table) / sizeof(error_table[0]);
 
-const char *Q_ErrorString( qerror_t error ) {
+const char *Q_ErrorString(qerror_t error)
+{
     int e;
 
-    if( error >= 0 ) {
+    if (error >= 0) {
         return "Success";
     }
 
-    if( error > -ERRNO_MAX ) {
+    if (error > -ERRNO_MAX) {
 #if EINVAL > 0
         e = -error;
 #else
         e = error;
 #endif
-        return strerror( e );
+        return strerror(e);
     }
 
-    e = _Q_ERR( error );
+    e = _Q_ERR(error);
 
     return error_table[e >= num_errors ? 0 : e];
 }

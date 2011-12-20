@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -26,7 +26,7 @@ MODEL MANAGER
 =============================================================================
 */
 
-#define MOD_Malloc( size )  Hunk_Alloc( &model->pool, size )
+#define MOD_Malloc(size)    Hunk_Alloc(&model->pool, size)
 
 // FIXME: MD3 has 256 limit
 #define MAX_ALIAS_SKINS     32
@@ -71,22 +71,22 @@ typedef struct model_s {
 extern int registration_sequence;
 
 // these are implemented in r_models.c
-void MOD_FreeUnused( void );
-void MOD_FreeAll( void );
-void MOD_Init( void );
-void MOD_Shutdown( void );
+void MOD_FreeUnused(void);
+void MOD_FreeAll(void);
+void MOD_Init(void);
+void MOD_Shutdown(void);
 
-model_t *MOD_ForHandle( qhandle_t h );
-qhandle_t R_RegisterModel( const char *name );
+model_t *MOD_ForHandle(qhandle_t h);
+qhandle_t R_RegisterModel(const char *name);
 
 struct dmd2header_s;
-qerror_t MOD_ValidateMD2( struct dmd2header_s *header, size_t length );
+qerror_t MOD_ValidateMD2(struct dmd2header_s *header, size_t length);
 
 // these are implemented in [gl,sw]_models.c
-typedef qerror_t (*mod_load_t)( model_t *, const void *, size_t );
-qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length );
+typedef qerror_t (*mod_load_t)(model_t *, const void *, size_t);
+qerror_t MOD_LoadMD2(model_t *model, const void *rawdata, size_t length);
 #if USE_MD3
-qerror_t MOD_LoadMD3( model_t *model, const void *rawdata, size_t length );
+qerror_t MOD_LoadMD3(model_t *model, const void *rawdata, size_t length);
 #endif
-void MOD_Reference( model_t *model );
+void MOD_Reference(model_t *model);
 

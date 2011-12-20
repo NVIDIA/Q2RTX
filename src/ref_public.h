@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -133,10 +133,10 @@ typedef struct refdef_s {
 } refdef_t;
 
 typedef enum {
-    QVF_ACCELERATED     = ( 1 << 0 ),
-    QVF_GAMMARAMP       = ( 1 << 1 ),
-    QVF_FULLSCREEN      = ( 1 << 2 ),
-    QVF_VIDEOSYNC       = ( 1 << 3 )
+    QVF_ACCELERATED     = (1 << 0),
+    QVF_GAMMARAMP       = (1 << 1),
+    QVF_FULLSCREEN      = (1 << 2),
+    QVF_VIDEOSYNC       = (1 << 3)
 } vidFlags_t;
 
 typedef struct {
@@ -159,10 +159,10 @@ typedef struct {
 } clipRect_t;
 
 // called when the library is loaded
-qboolean    R_Init( qboolean total );
+qboolean    R_Init(qboolean total);
 
 // called before the library is unloaded
-void        R_Shutdown( qboolean total );
+void        R_Shutdown(qboolean total);
 
 // All data that will be used in a level should be
 // registered before rendering any frames to prevent disk hits,
@@ -177,42 +177,42 @@ void        R_Shutdown( qboolean total );
 // are flood filled to eliminate mip map edge errors, and pics have
 // an implicit "pics/" prepended to the name. (a pic name that starts with a
 // slash will not use the "pics/" prefix or the ".pcx" postfix)
-void    R_BeginRegistration( const char *map );
-qhandle_t R_RegisterModel( const char *name );
-qhandle_t R_RegisterSkin( const char *name );
-qhandle_t R_RegisterPic( const char *name );
-qhandle_t R_RegisterFont( const char *name );
-qerror_t _R_RegisterPic( const char *name, qhandle_t *handle );
-qerror_t _R_RegisterFont( const char *name, qhandle_t *handle );
-void    R_SetSky( const char *name, float rotate, vec3_t axis );
-void    R_EndRegistration( void );
+void    R_BeginRegistration(const char *map);
+qhandle_t R_RegisterModel(const char *name);
+qhandle_t R_RegisterSkin(const char *name);
+qhandle_t R_RegisterPic(const char *name);
+qhandle_t R_RegisterFont(const char *name);
+qerror_t _R_RegisterPic(const char *name, qhandle_t *handle);
+qerror_t _R_RegisterFont(const char *name, qhandle_t *handle);
+void    R_SetSky(const char *name, float rotate, vec3_t axis);
+void    R_EndRegistration(void);
 
-void    R_RenderFrame( refdef_t *fd );
-void    R_LightPoint( vec3_t origin, vec3_t light );
+void    R_RenderFrame(refdef_t *fd);
+void    R_LightPoint(vec3_t origin, vec3_t light);
 
-void    R_ClearColor( void );
-void    R_SetAlpha( float clpha );
-void    R_SetColor( uint32_t color );
-void    R_SetClipRect( int flags, const clipRect_t *clip );
-void    R_SetScale( float *scale );
-void    R_DrawChar( int x, int y, int flags, int ch, qhandle_t font );
-int     R_DrawString( int x, int y, int flags, size_t maxChars,
-                      const char *string, qhandle_t font ); // returns advanced x coord
-qboolean R_GetPicSize( int *w, int *h, qhandle_t pic ); // returns transparency bit
-void    R_DrawPic( int x, int y, qhandle_t pic );
-void    R_DrawStretchPic( int x, int y, int w, int h, qhandle_t pic );
-void    R_DrawStretchPicST( int x, int y, int w, int h,
-        float s1, float t1, float s2, float t2, qhandle_t pic );
-void    R_TileClear( int x, int y, int w, int h, qhandle_t pic );
-void    R_DrawFill8( int x, int y, int w, int h, int c );
-void    R_DrawFill32( int x, int y, int w, int h, uint32_t color );
+void    R_ClearColor(void);
+void    R_SetAlpha(float clpha);
+void    R_SetColor(uint32_t color);
+void    R_SetClipRect(int flags, const clipRect_t *clip);
+void    R_SetScale(float *scale);
+void    R_DrawChar(int x, int y, int flags, int ch, qhandle_t font);
+int     R_DrawString(int x, int y, int flags, size_t maxChars,
+                     const char *string, qhandle_t font);  // returns advanced x coord
+qboolean R_GetPicSize(int *w, int *h, qhandle_t pic);   // returns transparency bit
+void    R_DrawPic(int x, int y, qhandle_t pic);
+void    R_DrawStretchPic(int x, int y, int w, int h, qhandle_t pic);
+void    R_DrawStretchPicST(int x, int y, int w, int h,
+                           float s1, float t1, float s2, float t2, qhandle_t pic);
+void    R_TileClear(int x, int y, int w, int h, qhandle_t pic);
+void    R_DrawFill8(int x, int y, int w, int h, int c);
+void    R_DrawFill32(int x, int y, int w, int h, uint32_t color);
 
 // video mode and refresh state management entry points
-void    R_BeginFrame( void );
-void    R_EndFrame( void );
-void    R_ModeChanged( int width, int height, int flags, int rowbytes, void *pixels );
+void    R_BeginFrame(void);
+void    R_EndFrame(void);
+void    R_ModeChanged(int width, int height, int flags, int rowbytes, void *pixels);
 #if 0
-void    R_CinematicSetPalette( const byte *palette );
+void    R_CinematicSetPalette(const byte *palette);
 #endif
 
 #endif // __REF_H

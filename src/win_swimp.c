@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -49,29 +49,29 @@ typedef struct {
 } identitypalette_t;
 
 static const int s_syspalindices[] =  {
-  COLOR_ACTIVEBORDER,
-  COLOR_ACTIVECAPTION,
-  COLOR_APPWORKSPACE,
-  COLOR_BACKGROUND,
-  COLOR_BTNFACE,
-  COLOR_BTNSHADOW,
-  COLOR_BTNTEXT,
-  COLOR_CAPTIONTEXT,
-  COLOR_GRAYTEXT,
-  COLOR_HIGHLIGHT,
-  COLOR_HIGHLIGHTTEXT,
-  COLOR_INACTIVEBORDER,
+    COLOR_ACTIVEBORDER,
+    COLOR_ACTIVECAPTION,
+    COLOR_APPWORKSPACE,
+    COLOR_BACKGROUND,
+    COLOR_BTNFACE,
+    COLOR_BTNSHADOW,
+    COLOR_BTNTEXT,
+    COLOR_CAPTIONTEXT,
+    COLOR_GRAYTEXT,
+    COLOR_HIGHLIGHT,
+    COLOR_HIGHLIGHTTEXT,
+    COLOR_INACTIVEBORDER,
 
-  COLOR_INACTIVECAPTION,
-  COLOR_MENU,
-  COLOR_MENUTEXT,
-  COLOR_SCROLLBAR,
-  COLOR_WINDOW,
-  COLOR_WINDOWFRAME,
-  COLOR_WINDOWTEXT
+    COLOR_INACTIVECAPTION,
+    COLOR_MENU,
+    COLOR_MENUTEXT,
+    COLOR_SCROLLBAR,
+    COLOR_WINDOW,
+    COLOR_WINDOWFRAME,
+    COLOR_WINDOWTEXT
 };
 
-#define NUM_SYS_COLORS ( sizeof( s_syspalindices ) / sizeof( int ) )
+#define NUM_SYS_COLORS (sizeof(s_syspalindices) / sizeof(s_syspalindices[0]))
 
 typedef struct {
     HDC         dibdc;      // DC compatible with DIB section
@@ -94,53 +94,55 @@ SWimp_Shutdown
 System specific graphics subsystem shutdown routine.
 Destroys DIB surfaces as appropriate.
 */
-void VID_Shutdown( void ) {
-    if ( sww.palettized ) {
-        SetSystemPaletteUse( win.dc, SYSPAL_STATIC );
-        SetSysColors( NUM_SYS_COLORS, s_syspalindices, sww.oldsyscolors );
+void VID_Shutdown(void)
+{
+    if (sww.palettized) {
+        SetSystemPaletteUse(win.dc, SYSPAL_STATIC);
+        SetSysColors(NUM_SYS_COLORS, s_syspalindices, sww.oldsyscolors);
     }
 
-    if( sww.pal ) {
-        DeleteObject( sww.pal );
+    if (sww.pal) {
+        DeleteObject(sww.pal);
     }
 
-    if( sww.oldpal ) {
-        SelectPalette( win.dc, sww.oldpal, FALSE );
-        RealizePalette( win.dc );
+    if (sww.oldpal) {
+        SelectPalette(win.dc, sww.oldpal, FALSE);
+        RealizePalette(win.dc);
     }
 
-    if( sww.dibdc ) {
-        SelectObject( sww.dibdc, sww.prevobj );
-        DeleteDC( sww.dibdc );
+    if (sww.dibdc) {
+        SelectObject(sww.dibdc, sww.prevobj);
+        DeleteDC(sww.dibdc);
     }
 
-    if( sww.dibsect ) {
-        DeleteObject( sww.dibsect );
+    if (sww.dibsect) {
+        DeleteObject(sww.dibsect);
     }
 
-    memset( &sww, 0, sizeof( sww ) );
+    memset(&sww, 0, sizeof(sww));
 
     Win_Shutdown();
 }
 
-void SWimp_ModeChanged( void ) {
+void SWimp_ModeChanged(void)
+{
     dibinfo_t   info;
-    BITMAPINFO *pbmiDIB = ( BITMAPINFO * )&info;
+    BITMAPINFO *pbmiDIB = (BITMAPINFO *)&info;
 
-    if( !sww.dibdc ) {
+    if (!sww.dibdc) {
         return;
     }
 
     // destroy previous DIB section
-    if( sww.dibsect ) {
-        SelectObject( sww.dibdc, sww.prevobj );
-        DeleteObject( sww.dibsect );
+    if (sww.dibsect) {
+        SelectObject(sww.dibdc, sww.prevobj);
+        DeleteObject(sww.dibsect);
     }
 
     // fill in the BITMAPINFO struct
-    memset( pbmiDIB, 0, sizeof( dibinfo_t ) );
+    memset(pbmiDIB, 0, sizeof(dibinfo_t));
 
-    pbmiDIB->bmiHeader.biSize          = sizeof( BITMAPINFOHEADER );
+    pbmiDIB->bmiHeader.biSize          = sizeof(BITMAPINFOHEADER);
     pbmiDIB->bmiHeader.biWidth         = win.rc.width;
     pbmiDIB->bmiHeader.biHeight        = win.rc.height;
     pbmiDIB->bmiHeader.biPlanes        = 1;
@@ -150,20 +152,20 @@ void SWimp_ModeChanged( void ) {
     pbmiDIB->bmiHeader.biClrImportant  = 256;
 
     // create the DIB section
-    sww.dibsect = CreateDIBSection( win.dc,
-                                    pbmiDIB,
-                                    DIB_RGB_COLORS,
-                                    ( void ** )&sww.pixels,
-                                    NULL,
-                                    0 );
+    sww.dibsect = CreateDIBSection(win.dc,
+                                   pbmiDIB,
+                                   DIB_RGB_COLORS,
+                                   (void **)&sww.pixels,
+                                   NULL,
+                                   0);
 
-    if ( !sww.dibsect ) {
-        Com_Error( ERR_FATAL, "DIB_Init: CreateDIBSection failed" );
+    if (!sww.dibsect) {
+        Com_Error(ERR_FATAL, "DIB_Init: CreateDIBSection failed");
     }
 
-    if ( pbmiDIB->bmiHeader.biHeight > 0 ) {
+    if (pbmiDIB->bmiHeader.biHeight > 0) {
         // bottom up
-        win.buffer  = sww.pixels + ( win.rc.height - 1 ) * win.rc.width;
+        win.buffer  = sww.pixels + (win.rc.height - 1) * win.rc.width;
         win.pitch   = -win.rc.width;
     } else {
         // top down
@@ -172,11 +174,11 @@ void SWimp_ModeChanged( void ) {
     }
 
     // clear the DIB memory buffer
-    memset( sww.pixels, 0xff, win.rc.width * win.rc.height );
+    memset(sww.pixels, 0xff, win.rc.width * win.rc.height);
 
-    sww.prevobj = SelectObject( sww.dibdc, sww.dibsect );
-    if( !sww.prevobj ) {
-        Com_Error( ERR_FATAL, "DIB_Init: SelectObject failed\n" );
+    sww.prevobj = SelectObject(sww.dibdc, sww.dibsect);
+    if (!sww.prevobj) {
+        Com_Error(ERR_FATAL, "DIB_Init: SelectObject failed\n");
     }
 }
 
@@ -187,7 +189,8 @@ SWimp_Init
 This routine is responsible for initializing the implementation
 specific stuff in a software rendering subsystem.
 */
-qboolean VID_Init( void ) {
+qboolean VID_Init(void)
+{
     int i;
 
     // create the window
@@ -197,18 +200,18 @@ qboolean VID_Init( void ) {
     Win_SetMode();
 
     // figure out if we're running in an 8-bit display mode
-    if ( GetDeviceCaps( win.dc, RASTERCAPS ) & RC_PALETTE ) {
+    if (GetDeviceCaps(win.dc, RASTERCAPS) & RC_PALETTE) {
         sww.palettized = qtrue;
-        for ( i = 0; i < NUM_SYS_COLORS; i++ )
-            sww.oldsyscolors[i] = GetSysColor( s_syspalindices[i] );
+        for (i = 0; i < NUM_SYS_COLORS; i++)
+            sww.oldsyscolors[i] = GetSysColor(s_syspalindices[i]);
     } else {
         sww.palettized = qfalse;
     }
 
     // create logical DC
-    sww.dibdc = CreateCompatibleDC( win.dc );
-    if( !sww.dibdc ) {
-        Com_EPrintf( "DIB_Init: CreateCompatibleDC failed\n" );
+    sww.dibdc = CreateCompatibleDC(win.dc);
+    if (!sww.dibdc) {
+        Com_EPrintf("DIB_Init: CreateCompatibleDC failed\n");
         goto fail;
     }
 
@@ -218,19 +221,22 @@ qboolean VID_Init( void ) {
     return qtrue;
 
 fail:
-    Com_Printf( "GetLastError() = %#lx", GetLastError() );
+    Com_Printf("GetLastError() = %#lx", GetLastError());
     VID_Shutdown();
     return qfalse;
 }
 
-void VID_VideoWait( void ) {
+void VID_VideoWait(void)
+{
 }
 
-qboolean VID_VideoSync( void ) {
+qboolean VID_VideoSync(void)
+{
     return qtrue;
 }
 
-void VID_BeginFrame( void ) {
+void VID_BeginFrame(void)
+{
 }
 
 /*
@@ -239,8 +245,9 @@ SWimp_EndFrame
 This does an implementation specific copy from the backbuffer to the
 front buffer.  In the Win32 case it uses BitBlt if we're using DIB sections/GDI.
 */
-void VID_EndFrame( void ) {
-    BitBlt( win.dc, 0, 0, win.rc.width, win.rc.height, sww.dibdc, 0, 0, SRCCOPY );
+void VID_EndFrame(void)
+{
+    BitBlt(win.dc, 0, 0, win.rc.width, win.rc.height, sww.dibdc, 0, 0, SRCCOPY);
 }
 
 /*
@@ -256,14 +263,15 @@ G = offset 1
 B = offset 2
 A = offset 3
 */
-void VID_UpdatePalette( const byte *_pal ) {
+void VID_UpdatePalette(const byte *_pal)
+{
     const byte *pal = _pal;
     RGBQUAD         colors[256];
     int             i;
 
     // set the DIB color table
-    if ( sww.dibdc ) {
-        for ( i = 0; i < 256; i++, pal += 4 ) {
+    if (sww.dibdc) {
+        for (i = 0; i < 256; i++, pal += 4) {
             colors[i].rgbRed   = pal[0];
             colors[i].rgbGreen = pal[1];
             colors[i].rgbBlue  = pal[2];
@@ -278,26 +286,26 @@ void VID_UpdatePalette( const byte *_pal ) {
         colors[255].rgbGreen = 0xff;
         colors[255].rgbBlue = 0xff;
 
-        if ( SetDIBColorTable( sww.dibdc, 0, 256, colors ) == 0 ) {
-            Com_EPrintf( "DIB_SetPalette: SetDIBColorTable failed\n" );
+        if (SetDIBColorTable(sww.dibdc, 0, 256, colors) == 0) {
+            Com_EPrintf("DIB_SetPalette: SetDIBColorTable failed\n");
         }
     }
 
     // for 8-bit color desktop modes we set up the palette for maximum
     // speed by going into an identity palette mode.
-    if ( sww.palettized ) {
+    if (sww.palettized) {
         int ret;
         HPALETTE hpalOld;
         identitypalette_t ipal;
-        LOGPALETTE      *pLogPal = ( LOGPALETTE * )&ipal;
+        LOGPALETTE      *pLogPal = (LOGPALETTE *)&ipal;
 
-        if ( SetSystemPaletteUse( win.dc, SYSPAL_NOSTATIC ) == SYSPAL_ERROR ) {
-            Com_Error( ERR_FATAL, "DIB_SetPalette: SetSystemPaletteUse() failed\n" );
+        if (SetSystemPaletteUse(win.dc, SYSPAL_NOSTATIC) == SYSPAL_ERROR) {
+            Com_Error(ERR_FATAL, "DIB_SetPalette: SetSystemPaletteUse() failed\n");
         }
 
         // destroy our old palette
-        if ( sww.pal ) {
-            DeleteObject( sww.pal );
+        if (sww.pal) {
+            DeleteObject(sww.pal);
             sww.pal = 0;
         }
 
@@ -306,7 +314,7 @@ void VID_UpdatePalette( const byte *_pal ) {
         pLogPal->palVersion     = 0x300;
         pLogPal->palNumEntries  = 256;
 
-        for ( i = 0, pal = _pal; i < 256; i++, pal += 4 ) {
+        for (i = 0, pal = _pal; i < 256; i++, pal += 4) {
             pLogPal->palPalEntry[i].peRed   = pal[0];
             pLogPal->palPalEntry[i].peGreen = pal[1];
             pLogPal->palPalEntry[i].peBlue  = pal[2];
@@ -321,19 +329,19 @@ void VID_UpdatePalette( const byte *_pal ) {
         pLogPal->palPalEntry[255].peBlue    = 0xff;
         pLogPal->palPalEntry[255].peFlags   = 0;
 
-        if ( ( sww.pal = CreatePalette( pLogPal ) ) == NULL ) {
-            Com_Error( ERR_FATAL, "DIB_SetPalette: CreatePalette failed(%lx)\n", GetLastError() );
+        if ((sww.pal = CreatePalette(pLogPal)) == NULL) {
+            Com_Error(ERR_FATAL, "DIB_SetPalette: CreatePalette failed(%lx)\n", GetLastError());
         }
 
-        if ( ( hpalOld = SelectPalette( win.dc, sww.pal, FALSE ) ) == NULL ) {
-            Com_Error( ERR_FATAL, "DIB_SetPalette: SelectPalette failed(%lx)\n", GetLastError() );
+        if ((hpalOld = SelectPalette(win.dc, sww.pal, FALSE)) == NULL) {
+            Com_Error(ERR_FATAL, "DIB_SetPalette: SelectPalette failed(%lx)\n", GetLastError());
         }
 
-        if ( sww.oldpal == NULL )
+        if (sww.oldpal == NULL)
             sww.oldpal = hpalOld;
 
-        if ( ( ret = RealizePalette( win.dc ) ) != pLogPal->palNumEntries )  {
-            Com_Error( ERR_FATAL, "DIB_SetPalette: RealizePalette set %d entries\n", ret );
+        if ((ret = RealizePalette(win.dc)) != pLogPal->palNumEntries)  {
+            Com_Error(ERR_FATAL, "DIB_SetPalette: RealizePalette set %d entries\n", ret);
         }
     }
 }

@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -57,7 +57,7 @@ qboolean        r_lastvertvalid;
 R_EmitEdge
 ================
 */
-void R_EmitEdge (mvertex_t *pv0, mvertex_t *pv1)
+void R_EmitEdge(mvertex_t *pv0, mvertex_t *pv1)
 {
     edge_t  *edge, *pcheck;
     int     u_check;
@@ -68,49 +68,46 @@ void R_EmitEdge (mvertex_t *pv0, mvertex_t *pv1)
     float   scale, lzi0, u0, v0;
     int     side;
 
-    if (r_lastvertvalid)
-    {
+    if (r_lastvertvalid) {
         u0 = r_u1;
         v0 = r_v1;
         lzi0 = r_lzi1;
         ceilv0 = r_ceilv1;
-    }
-    else
-    {
+    } else {
         world = &pv0->point[0];
-    
-    // transform and project
-        VectorSubtract (world, modelorg, local);
-        TransformVector (local, transformed);
-    
+
+        // transform and project
+        VectorSubtract(world, modelorg, local);
+        TransformVector(local, transformed);
+
         if (transformed[2] < NEAR_CLIP)
             transformed[2] = NEAR_CLIP;
-    
+
         lzi0 = 1.0 / transformed[2];
-    
-    // FIXME: build x/yscale into transform?
+
+        // FIXME: build x/yscale into transform?
         scale = xscale * lzi0;
-        u0 = (xcenter + scale*transformed[0]);
+        u0 = (xcenter + scale * transformed[0]);
         if (u0 < r_refdef.fvrectx_adj)
             u0 = r_refdef.fvrectx_adj;
         if (u0 > r_refdef.fvrectright_adj)
             u0 = r_refdef.fvrectright_adj;
-    
+
         scale = yscale * lzi0;
-        v0 = (ycenter - scale*transformed[1]);
+        v0 = (ycenter - scale * transformed[1]);
         if (v0 < r_refdef.fvrecty_adj)
             v0 = r_refdef.fvrecty_adj;
         if (v0 > r_refdef.fvrectbottom_adj)
             v0 = r_refdef.fvrectbottom_adj;
-    
+
         ceilv0 = (int) ceil(v0);
     }
 
     world = &pv1->point[0];
 
 // transform and project
-    VectorSubtract (world, modelorg, local);
-    TransformVector (local, transformed);
+    VectorSubtract(world, modelorg, local);
+    TransformVector(local, transformed);
 
     if (transformed[2] < NEAR_CLIP)
         transformed[2] = NEAR_CLIP;
@@ -118,14 +115,14 @@ void R_EmitEdge (mvertex_t *pv0, mvertex_t *pv1)
     r_lzi1 = 1.0 / transformed[2];
 
     scale = xscale * r_lzi1;
-    r_u1 = (xcenter + scale*transformed[0]);
+    r_u1 = (xcenter + scale * transformed[0]);
     if (r_u1 < r_refdef.fvrectx_adj)
         r_u1 = r_refdef.fvrectx_adj;
     if (r_u1 > r_refdef.fvrectright_adj)
         r_u1 = r_refdef.fvrectright_adj;
 
     scale = yscale * r_lzi1;
-    r_v1 = (ycenter - scale*transformed[1]);
+    r_v1 = (ycenter - scale * transformed[1]);
     if (r_v1 < r_refdef.fvrecty_adj)
         r_v1 = r_refdef.fvrecty_adj;
     if (r_v1 > r_refdef.fvrectbottom_adj)
@@ -147,13 +144,11 @@ void R_EmitEdge (mvertex_t *pv0, mvertex_t *pv1)
 
 
 // create the edge
-    if (ceilv0 == r_ceilv1)
-    {
-    // we cache unclipped horizontal edges as fully clipped
-        if (cacheoffset != 0x7FFFFFFF)
-        {
+    if (ceilv0 == r_ceilv1) {
+        // we cache unclipped horizontal edges as fully clipped
+        if (cacheoffset != 0x7FFFFFFF) {
             cacheoffset = FULLY_CLIPPED_CACHED |
-                    (r_framecount & FRAMECOUNT_MASK);
+                          (r_framecount & FRAMECOUNT_MASK);
         }
 
         return;     // horizontal edge
@@ -167,9 +162,8 @@ void R_EmitEdge (mvertex_t *pv0, mvertex_t *pv1)
 
     edge->nearzi = lzi0;
 
-    if (side == 0)
-    {
-    // trailing edge (go from p1 to p2)
+    if (side == 0) {
+        // trailing edge (go from p1 to p2)
         v = ceilv0;
         v2 = r_ceilv1 - 1;
 
@@ -178,10 +172,8 @@ void R_EmitEdge (mvertex_t *pv0, mvertex_t *pv1)
 
         u_step = ((r_u1 - u0) / (r_v1 - v0));
         u = u0 + ((float)v - v0) * u_step;
-    }
-    else
-    {
-    // leading edge (go from p2 to p1)
+    } else {
+        // leading edge (go from p2 to p1)
         v2 = ceilv0 - 1;
         v = r_ceilv1;
 
@@ -192,8 +184,8 @@ void R_EmitEdge (mvertex_t *pv0, mvertex_t *pv1)
         u = r_u1 + ((float)v - r_v1) * u_step;
     }
 
-    edge->u_step = u_step*0x100000;
-    edge->u = u*0x100000 + 0xFFFFF;
+    edge->u_step = u_step * 0x100000;
+    edge->u = u * 0x100000 + 0xFFFFF;
 
 // we need to do this to avoid stepping off the edges if a very nearly
 // horizontal edge is less than epsilon above a scan, and numeric error causes
@@ -212,13 +204,10 @@ void R_EmitEdge (mvertex_t *pv0, mvertex_t *pv1)
     if (edge->surfs[0])
         u_check++;  // sort trailers after leaders
 
-    if (!newedges[v] || newedges[v]->u >= u_check)
-    {
+    if (!newedges[v] || newedges[v]->u >= u_check) {
         edge->next = newedges[v];
         newedges[v] = edge;
-    }
-    else
-    {
+    } else {
         pcheck = newedges[v];
         while (pcheck->next && pcheck->next->u < u_check)
             pcheck = pcheck->next;
@@ -236,96 +225,85 @@ void R_EmitEdge (mvertex_t *pv0, mvertex_t *pv1)
 R_ClipEdge
 ================
 */
-void R_ClipEdge (mvertex_t *pv0, mvertex_t *pv1, clipplane_t *clip)
+void R_ClipEdge(mvertex_t *pv0, mvertex_t *pv1, clipplane_t *clip)
 {
     float       d0, d1, f;
     mvertex_t   clipvert;
 
-    for( ; clip; clip = clip->next ) {
-        d0 = DotProduct (pv0->point, clip->normal) - clip->dist;
-        d1 = DotProduct (pv1->point, clip->normal) - clip->dist;
+    for (; clip; clip = clip->next) {
+        d0 = DotProduct(pv0->point, clip->normal) - clip->dist;
+        d1 = DotProduct(pv1->point, clip->normal) - clip->dist;
 
-        if (d0 >= 0)
-        {
-        // point 0 is unclipped
-            if (d1 >= 0)
-            {
-            // both points are unclipped
+        if (d0 >= 0) {
+            // point 0 is unclipped
+            if (d1 >= 0) {
+                // both points are unclipped
                 continue;
             }
 
-        // only point 1 is clipped
+            // only point 1 is clipped
 
-        // we don't cache clipped edges
+            // we don't cache clipped edges
             cacheoffset = 0x7FFFFFFF;
 
             f = d0 / (d0 - d1);
             clipvert.point[0] = pv0->point[0] +
-                    f * (pv1->point[0] - pv0->point[0]);
+                                f * (pv1->point[0] - pv0->point[0]);
             clipvert.point[1] = pv0->point[1] +
-                    f * (pv1->point[1] - pv0->point[1]);
+                                f * (pv1->point[1] - pv0->point[1]);
             clipvert.point[2] = pv0->point[2] +
-                    f * (pv1->point[2] - pv0->point[2]);
+                                f * (pv1->point[2] - pv0->point[2]);
 
-            if (clip->leftedge)
-            {
+            if (clip->leftedge) {
                 r_leftclipped = qtrue;
                 r_leftexit = clipvert;
-            }
-            else if (clip->rightedge)
-            {
+            } else if (clip->rightedge) {
                 r_rightclipped = qtrue;
                 r_rightexit = clipvert;
             }
 
-            R_ClipEdge (pv0, &clipvert, clip->next);
+            R_ClipEdge(pv0, &clipvert, clip->next);
             return;
-        }
-        else
-        {
-        // point 0 is clipped
-            if (d1 < 0)
-            {
-            // both points are clipped
-            // we do cache fully clipped edges
+        } else {
+            // point 0 is clipped
+            if (d1 < 0) {
+                // both points are clipped
+                // we do cache fully clipped edges
                 if (!r_leftclipped)
                     cacheoffset = FULLY_CLIPPED_CACHED |
-                            (r_framecount & FRAMECOUNT_MASK);
+                                  (r_framecount & FRAMECOUNT_MASK);
                 return;
             }
 
-        // only point 0 is clipped
+            // only point 0 is clipped
             r_lastvertvalid = qfalse;
 
-        // we don't cache partially clipped edges
+            // we don't cache partially clipped edges
             cacheoffset = 0x7FFFFFFF;
 
             f = d0 / (d0 - d1);
             clipvert.point[0] = pv0->point[0] +
-                    f * (pv1->point[0] - pv0->point[0]);
+                                f * (pv1->point[0] - pv0->point[0]);
             clipvert.point[1] = pv0->point[1] +
-                    f * (pv1->point[1] - pv0->point[1]);
+                                f * (pv1->point[1] - pv0->point[1]);
             clipvert.point[2] = pv0->point[2] +
-                    f * (pv1->point[2] - pv0->point[2]);
+                                f * (pv1->point[2] - pv0->point[2]);
 
-            if (clip->leftedge)
-            {
+            if (clip->leftedge) {
                 r_leftclipped = qtrue;
                 r_leftenter = clipvert;
-            }
-            else if (clip->rightedge)
-            {
+            } else if (clip->rightedge) {
                 r_rightclipped = qtrue;
                 r_rightenter = clipvert;
             }
 
-            R_ClipEdge (&clipvert, pv1, clip->next);
+            R_ClipEdge(&clipvert, pv1, clip->next);
             return;
         }
     }
 
 // add the edge
-    R_EmitEdge (pv0, pv1);
+    R_EmitEdge(pv0, pv1);
 }
 
 #endif  // !USE_ASM
@@ -336,7 +314,7 @@ void R_ClipEdge (mvertex_t *pv0, mvertex_t *pv1, clipplane_t *clip)
 R_EmitCachedEdge
 ================
 */
-void R_EmitCachedEdge (void)
+void R_EmitCachedEdge(void)
 {
     edge_t      *pedge_t;
 
@@ -359,7 +337,7 @@ void R_EmitCachedEdge (void)
 R_RenderFace
 ================
 */
-void R_RenderFace (mface_t *fa, int clipflags)
+void R_RenderFace(mface_t *fa, int clipflags)
 {
     int         i;
     unsigned    mask;
@@ -372,8 +350,7 @@ void R_RenderFace (mface_t *fa, int clipflags)
     qboolean    makeleftedge, makerightedge;
 
     // translucent surfaces are not drawn by the edge renderer
-    if (fa->texinfo->c.flags & (SURF_TRANS33|SURF_TRANS66))
-    {
+    if (fa->texinfo->c.flags & (SURF_TRANS33 | SURF_TRANS66)) {
         fa->next = r_alpha_surfaces;
         r_alpha_surfaces = fa;
         return;
@@ -381,22 +358,19 @@ void R_RenderFace (mface_t *fa, int clipflags)
 
     // sky surfaces encountered in the world will cause the
     // environment box surfaces to be emited
-    if ( fa->texinfo->c.flags & SURF_SKY )
-    {
-        R_EmitSkyBox ();    
+    if (fa->texinfo->c.flags & SURF_SKY) {
+        R_EmitSkyBox();
         return;
     }
 
 // skip out if no more surfs
-    if ((surface_p) >= surf_max)
-    {
+    if ((surface_p) >= surf_max) {
         r_outofsurfaces++;
         return;
     }
 
 // ditto if not enough edges left, or switch to auxedges if possible
-    if ((edge_p + fa->numsurfedges + 4) >= edge_max)
-    {
+    if ((edge_p + fa->numsurfedges + 4) >= edge_max) {
         r_outofedges += fa->numsurfedges;
         return;
     }
@@ -406,10 +380,8 @@ void R_RenderFace (mface_t *fa, int clipflags)
 // set up clip planes
     pclip = NULL;
 
-    for (i=3, mask = 0x08 ; i>=0 ; i--, mask >>= 1)
-    {
-        if (clipflags & mask)
-        {
+    for (i = 3, mask = 0x08; i >= 0; i--, mask >>= 1) {
+        if (clipflags & mask) {
             view_clipplanes[i].next = pclip;
             pclip = &view_clipplanes[i];
         }
@@ -423,42 +395,35 @@ void R_RenderFace (mface_t *fa, int clipflags)
     r_lastvertvalid = qfalse;
 
     surfedge = fa->firstsurfedge;
-    for (i=0 ; i<fa->numsurfedges ; i++, surfedge++)
-    {
+    for (i = 0; i < fa->numsurfedges; i++, surfedge++) {
         r_pedge = surfedge->edge;
 
-    // if the edge is cached, we can just reuse the edge
-        if (!insubmodel)
-        {
-            if (r_pedge->cachededgeoffset & FULLY_CLIPPED_CACHED)
-            {
+        // if the edge is cached, we can just reuse the edge
+        if (!insubmodel) {
+            if (r_pedge->cachededgeoffset & FULLY_CLIPPED_CACHED) {
                 if ((r_pedge->cachededgeoffset & FRAMECOUNT_MASK) ==
-                    r_framecount)
-                {
+                    r_framecount) {
                     r_lastvertvalid = qfalse;
                     continue;
                 }
-            }
-            else
-            {
+            } else {
                 if ((((unsigned long)edge_p - (unsigned long)r_edges) >
                      r_pedge->cachededgeoffset) &&
                     (((edge_t *)((unsigned long)r_edges +
-                     r_pedge->cachededgeoffset))->owner == r_pedge))
-                {
-                    R_EmitCachedEdge ();
+                                 r_pedge->cachededgeoffset))->owner == r_pedge)) {
+                    R_EmitCachedEdge();
                     r_lastvertvalid = qfalse;
                     continue;
                 }
             }
         }
 
-    // assume it's cacheable
+        // assume it's cacheable
         cacheoffset = (byte *)edge_p - (byte *)r_edges;
         r_leftclipped = r_rightclipped = qfalse;
-        R_ClipEdge (r_pedge->v[surfedge->vert    ],
-                    r_pedge->v[surfedge->vert ^ 1],
-                    pclip);
+        R_ClipEdge(r_pedge->v[surfedge->vert    ],
+                   r_pedge->v[surfedge->vert ^ 1],
+                   pclip);
         r_pedge->cachededgeoffset = cacheoffset;
 
         if (r_leftclipped)
@@ -471,20 +436,18 @@ void R_RenderFace (mface_t *fa, int clipflags)
 // if there was a clip off the left edge, add that edge too
 // FIXME: faster to do in screen space?
 // FIXME: share clipped edges?
-    if (makeleftedge)
-    {
+    if (makeleftedge) {
         r_pedge = &tedge;
         r_lastvertvalid = qfalse;
-        R_ClipEdge (&r_leftexit, &r_leftenter, pclip->next);
+        R_ClipEdge(&r_leftexit, &r_leftenter, pclip->next);
     }
 
 // if there was a clip off the right edge, get the right r_nearzi
-    if (makerightedge)
-    {
+    if (makerightedge) {
         r_pedge = &tedge;
         r_lastvertvalid = qfalse;
         r_nearzionly = qtrue;
-        R_ClipEdge (&r_rightexit, &r_rightenter, view_clipplanes[1].next);
+        R_ClipEdge(&r_rightexit, &r_rightenter, view_clipplanes[1].next);
     }
 
 // if no edges made it out, return without posting the surface
@@ -504,15 +467,15 @@ void R_RenderFace (mface_t *fa, int clipflags)
 
     pplane = fa->plane;
 // FIXME: cache this?
-    TransformVector (pplane->normal, p_normal);
+    TransformVector(pplane->normal, p_normal);
 // FIXME: cache this?
-    distinv = 1.0 / (pplane->dist - DotProduct (modelorg, pplane->normal));
+    distinv = 1.0 / (pplane->dist - DotProduct(modelorg, pplane->normal));
 
     surface_p->d_zistepu = p_normal[0] * xscaleinv * distinv;
     surface_p->d_zistepv = -p_normal[1] * yscaleinv * distinv;
     surface_p->d_ziorigin = p_normal[2] * distinv -
-            xcenter * surface_p->d_zistepu -
-            ycenter * surface_p->d_zistepv;
+                            xcenter * surface_p->d_zistepu -
+                            ycenter * surface_p->d_zistepv;
 
     surface_p++;
 }
@@ -523,7 +486,7 @@ void R_RenderFace (mface_t *fa, int clipflags)
 R_RenderBmodelFace
 ================
 */
-void R_RenderBmodelFace (bedge_t *pedges, mface_t *psurf)
+void R_RenderBmodelFace(bedge_t *pedges, mface_t *psurf)
 {
     int         i;
     unsigned    mask;
@@ -534,23 +497,20 @@ void R_RenderBmodelFace (bedge_t *pedges, mface_t *psurf)
     clipplane_t *pclip;
     qboolean    makeleftedge, makerightedge;
 
-    if (psurf->texinfo->c.flags & (SURF_TRANS33|SURF_TRANS66))
-    {
+    if (psurf->texinfo->c.flags & (SURF_TRANS33 | SURF_TRANS66)) {
         psurf->next = r_alpha_surfaces;
         r_alpha_surfaces = psurf;
         return;
     }
 
 // skip out if no more surfs
-    if (surface_p >= surf_max)
-    {
+    if (surface_p >= surf_max) {
         r_outofsurfaces++;
         return;
     }
 
 // ditto if not enough edges left, or switch to auxedges if possible
-    if ((edge_p + psurf->numsurfedges + 4) >= edge_max)
-    {
+    if ((edge_p + psurf->numsurfedges + 4) >= edge_max) {
         r_outofedges += psurf->numsurfedges;
         return;
     }
@@ -563,10 +523,8 @@ void R_RenderBmodelFace (bedge_t *pedges, mface_t *psurf)
 // set up clip planes
     pclip = NULL;
 
-    for (i=3, mask = 0x08 ; i>=0 ; i--, mask >>= 1)
-    {
-        if (r_clipflags & mask)
-        {
+    for (i = 3, mask = 0x08; i >= 0; i--, mask >>= 1) {
+        if (r_clipflags & mask) {
             view_clipplanes[i].next = pclip;
             pclip = &view_clipplanes[i];
         }
@@ -581,10 +539,9 @@ void R_RenderBmodelFace (bedge_t *pedges, mface_t *psurf)
 // can be used?
     r_lastvertvalid = qfalse;
 
-    for ( ; pedges ; pedges = pedges->pnext)
-    {
+    for (; pedges; pedges = pedges->pnext) {
         r_leftclipped = r_rightclipped = qfalse;
-        R_ClipEdge (pedges->v[0], pedges->v[1], pclip);
+        R_ClipEdge(pedges->v[0], pedges->v[1], pclip);
 
         if (r_leftclipped)
             makeleftedge = qtrue;
@@ -595,18 +552,16 @@ void R_RenderBmodelFace (bedge_t *pedges, mface_t *psurf)
 // if there was a clip off the left edge, add that edge too
 // FIXME: faster to do in screen space?
 // FIXME: share clipped edges?
-    if (makeleftedge)
-    {
+    if (makeleftedge) {
         r_pedge = &tedge;
-        R_ClipEdge (&r_leftexit, &r_leftenter, pclip->next);
+        R_ClipEdge(&r_leftexit, &r_leftenter, pclip->next);
     }
 
 // if there was a clip off the right edge, get the right r_nearzi
-    if (makerightedge)
-    {
+    if (makerightedge) {
         r_pedge = &tedge;
         r_nearzionly = qtrue;
-        R_ClipEdge (&r_rightexit, &r_rightenter, view_clipplanes[1].next);
+        R_ClipEdge(&r_rightexit, &r_rightenter, view_clipplanes[1].next);
     }
 
 // if no edges made it out, return without posting the surface
@@ -626,15 +581,15 @@ void R_RenderBmodelFace (bedge_t *pedges, mface_t *psurf)
 
     pplane = psurf->plane;
 // FIXME: cache this?
-    TransformVector (pplane->normal, p_normal);
+    TransformVector(pplane->normal, p_normal);
 // FIXME: cache this?
-    distinv = 1.0 / (pplane->dist - DotProduct (modelorg, pplane->normal));
+    distinv = 1.0 / (pplane->dist - DotProduct(modelorg, pplane->normal));
 
     surface_p->d_zistepu = p_normal[0] * xscaleinv * distinv;
     surface_p->d_zistepv = -p_normal[1] * yscaleinv * distinv;
     surface_p->d_ziorigin = p_normal[2] * distinv -
-            xcenter * surface_p->d_zistepu -
-            ycenter * surface_p->d_zistepv;
+                            xcenter * surface_p->d_zistepu -
+                            ycenter * surface_p->d_zistepv;
 
     surface_p++;
 }

@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -79,22 +79,18 @@ byte r_SIRDrandValues[] = {
 // search to find the index of the highest set bit.
 //You could also expand the loop 4 times to remove
 // the 'while'
-#if !id386 || !( defined _MSC_VER )
+#if !id386 || !(defined _MSC_VER)
 int UShortLog(int val)
 {
     int mask = 0xff00;
     int p = 0;
     int b = 8;
-    while (b)
-    {
-        if (val & mask)
-        {
+    while (b) {
+        if (val & mask) {
             p += b;
             b >>= 1;
             mask &= (mask << b);
-        }
-        else
-        {
+        } else {
             mask &= (mask << (b >> 1));
             mask >>= b;
             b >>= 1;
@@ -112,15 +108,13 @@ int R_SIRDZFunc(int sub)
     if (sub ==  R_SIRD_ZofSky)
         return 0;
 
-#if id386 && ( defined _MSC_VER )
+#if id386 && (defined _MSC_VER)
     e = sub;
     //calculate the log (base 2) of the number. In other
     //words the index of the highest set bit. bsr is undefined
     //if it's input is 0, so special case that.
-    if (e!=0)
-    {
-        __asm 
-        {
+    if (e != 0) {
+        __asm {
             mov ebx, e
             bsr eax, ebx
             mov e, eax
@@ -137,15 +131,11 @@ int R_SIRDZFunc(int sub)
     // based on the power, shift the z so that
     // it's as high as it can get while still staying
     // under 0x100
-    if (e > 8)
-    {
-        sub >>= (e-8);
-    }
-    else
-    {
-        if (e < 8)
-        {
-            sub <<= (8-e);
+    if (e > 8) {
+        sub >>= (e - 8);
+    } else {
+        if (e < 8) {
+            sub <<= (8 - e);
         }
     }
 
@@ -161,10 +151,10 @@ int R_SIRDZFunc(int sub)
     e += ((sub * R_SIRDstepsPerExponent) >> 8);
 
     //make sure we stay under maximum height.
-    return ((e<=R_SIRDmaxDiff)? e : R_SIRDmaxDiff );
+    return ((e <= R_SIRDmaxDiff) ? e : R_SIRDmaxDiff);
 }
 
-void R_ApplySIRDAlgorithum( void )
+void R_ApplySIRDAlgorithum(void)
 {
     short* curz, *oldz;
     short cz = 0, lastz = 0;
@@ -182,20 +172,17 @@ void R_ApplySIRDAlgorithum( void )
     //basically done by shifting the values around
     //each time and xoring them with a randomly
     //selected pixel
-    for (i=0; i<R_SIRDw * R_SIRDh; i++)
-    {
-        if ((i%R_SIRDnumRand)==0)
-        {
-            ji++; 
+    for (i = 0; i < R_SIRDw * R_SIRDh; i++) {
+        if ((i % R_SIRDnumRand) == 0) {
+            ji++;
             ji %= R_SIRDnumRand;
             j = r_SIRDrandValues[r_SIRDrandValues[ji] % R_SIRDnumRand];
         }
-        r_SIRDBackground[i] = r_SIRDrandValues[ (i%R_SIRDnumRand) ] ^ j;
+        r_SIRDBackground[i] = r_SIRDrandValues[(i % R_SIRDnumRand) ] ^ j;
     }
 
     //if we are under water:
-    if ((r_dowarp) && (vid.width != WARP_WIDTH))
-    {
+    if ((r_dowarp) && (vid.width != WARP_WIDTH)) {
         //the rendering is only in the top left
         //WARP_WIDTH by WARP_HEIGHT area, so scale the z-values
         //to span over the whole screen
@@ -205,14 +192,12 @@ void R_ApplySIRDAlgorithum( void )
         //values before we read from them
 
         zinc = ((WARP_WIDTH * 0x10000) / vid.width);
-        for (y=vid.height-1; y>=0; y--)
-        {
+        for (y = vid.height - 1; y >= 0; y--) {
             curz = (d_pzbuffer + (vid.width * y));
-            oldz = (d_pzbuffer + (vid.width * ((y*WARP_HEIGHT)/vid.height) ));
-            k = (zinc * (vid.width-1));
+            oldz = (d_pzbuffer + (vid.width * ((y * WARP_HEIGHT) / vid.height)));
+            k = (zinc * (vid.width - 1));
 
-            for (x=vid.width-1; x>=0; x--)
-            {
+            for (x = vid.width - 1; x >= 0; x--) {
                 curz[x] = oldz[k >> 16];
                 k -= zinc;
             }
@@ -221,22 +206,19 @@ void R_ApplySIRDAlgorithum( void )
 
 
     //SIRDify each line
-    for (y=0; y<vid.height; y++)
-    {
+    for (y = 0; y < vid.height; y++) {
         curp = (vid.buffer + (vid.rowbytes * y));
-        curz = (d_pzbuffer + (vid.width * y ));
+        curz = (d_pzbuffer + (vid.width * y));
 
-        if (mode != 3)
-        {
+        if (mode != 3) {
             // draw the SIRD
 
             // copy the background into the left most column
             curbp = &(r_SIRDBackground[ R_SIRDw * (y % R_SIRDh) ]);
-            for (x=0; x<R_SIRDw; x++)
-            {
+            for (x = 0; x < R_SIRDw; x++) {
                 *curp = *curbp;
                 curp++;
-                curbp++; 
+                curbp++;
             }
 
             lastz = 0;
@@ -245,20 +227,18 @@ void R_ApplySIRDAlgorithum( void )
             curbp = curp - R_SIRDw;
 
             // now calculate the SIRD
-            for (x=R_SIRDw; x<vid.width; x++)
-            {
+            for (x = R_SIRDw; x < vid.width; x++) {
                 //only call the z-function with a new
                 //value, it is slow so this saves quite
                 //some time.
-                if (lastz != *curz)
-                {
+                if (lastz != *curz) {
                     lastz = *curz;
 
                     //convert from z to height offset
-                    cz = ( mode == 2 ) ? R_SIRDmaxDiff - R_SIRDZFunc(lastz) : R_SIRDZFunc(lastz);
+                    cz = (mode == 2) ? R_SIRDmaxDiff - R_SIRDZFunc(lastz) : R_SIRDZFunc(lastz);
 
                     //the "height offset" used in making SIRDS
-                    //can be considered an adjustment of the 
+                    //can be considered an adjustment of the
                     //frequency of repetition in the pattern.
                     //so here we are copying from bp to p, and so
                     //it simply increases or decreases the distance
@@ -272,9 +252,7 @@ void R_ApplySIRDAlgorithum( void )
                 curbp++;
                 curz++;
             }
-        }
-        else
-        {
+        } else {
             //if we are just drawing the height map
             //this lets you see which layers are used to
             //create the SIRD
@@ -284,10 +262,8 @@ void R_ApplySIRDAlgorithum( void )
             //coincidence because of how the colours are
             //organized in the pallette.
 
-            for (x=0; x<vid.width; x++)
-            {
-                if (lastz != *curz)
-                {
+            for (x = 0; x < vid.width; x++) {
+                if (lastz != *curz) {
                     lastz = *curz;
                     cz = R_SIRDZFunc(*curz);
                 }

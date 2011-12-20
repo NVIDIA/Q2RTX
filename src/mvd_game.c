@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -45,7 +45,7 @@ extern jmp_buf  mvd_jmpbuf;
 
 static int      mvd_numplayers;
 
-static void MVD_UpdateClient( mvd_client_t *client );
+static void MVD_UpdateClient(mvd_client_t *client);
 
 /*
 ==============================================================================
@@ -58,10 +58,11 @@ LAYOUTS
 // clients per screen page
 #define PAGE_CLIENTS    16
 
-#define VER_OFS ( 272 - ( int )( sizeof( VERSION ) - 1 ) * CHAR_WIDTH )
+#define VER_OFS (272 - (int)(sizeof(VERSION) - 1) * CHAR_WIDTH)
 
-static void MVD_LayoutClients( mvd_client_t *client ) {
-    static const char header[] = 
+static void MVD_LayoutClients(mvd_client_t *client)
+{
+    static const char header[] =
         "xv 16 yv 0 string2 \"    Name            RTT Status\"";
     char layout[MAX_STRING_CHARS];
     char buffer[MAX_QPATH];
@@ -72,48 +73,48 @@ static void MVD_LayoutClients( mvd_client_t *client ) {
     int y, i, prestep, flags;
 
     // calculate prestep
-    if( client->layout_cursor < 0 ) {
+    if (client->layout_cursor < 0) {
         client->layout_cursor = 0;
-    } else if( client->layout_cursor ) {
-        total = List_Count( &mvd->clients );
-        if( client->layout_cursor > total / PAGE_CLIENTS ) {
+    } else if (client->layout_cursor) {
+        total = List_Count(&mvd->clients);
+        if (client->layout_cursor > total / PAGE_CLIENTS) {
             client->layout_cursor = total / PAGE_CLIENTS;
         }
     }
 
     prestep = client->layout_cursor * PAGE_CLIENTS;
 
-    memcpy( layout, header, sizeof( header ) - 1 );
-    total = sizeof( header ) - 1;
+    memcpy(layout, header, sizeof(header) - 1);
+    total = sizeof(header) - 1;
 
     y = 8;
     i = 0;
-    FOR_EACH_MVDCL( cl, mvd ) {
-        if( ++i < prestep ) {
+    FOR_EACH_MVDCL(cl, mvd) {
+        if (++i < prestep) {
             continue;
         }
-        if( cl->cl->state < cs_spawned ) {
+        if (cl->cl->state < cs_spawned) {
             continue;
         }
-        if( cl->target ) {
-            strcpy( status, "-> " );
-            strcpy( status + 3, cl->target->name );
+        if (cl->target) {
+            strcpy(status, "-> ");
+            strcpy(status + 3, cl->target->name);
         } else {
-            strcpy( status, "observing" );
+            strcpy(status, "observing");
         }
-        len = Q_snprintf( buffer, sizeof( buffer ),
-            "yv %d string \"%3d %-15.15s %3d %s\"",
-            y, i, cl->cl->name, cl->ping, status );
-        if( len >= sizeof( buffer ) ) {
+        len = Q_snprintf(buffer, sizeof(buffer),
+                         "yv %d string \"%3d %-15.15s %3d %s\"",
+                         y, i, cl->cl->name, cl->ping, status);
+        if (len >= sizeof(buffer)) {
             continue;
         }
-        if( total + len >= sizeof( layout ) ) {
+        if (total + len >= sizeof(layout)) {
             break;
         }
-        memcpy( layout + total, buffer, len );
+        memcpy(layout + total, buffer, len);
         total += len;
 
-        if( y > 8 * PAGE_CLIENTS ) {
+        if (y > 8 * PAGE_CLIENTS) {
             break;
         }
         y += 8;
@@ -123,31 +124,33 @@ static void MVD_LayoutClients( mvd_client_t *client ) {
 
     // the very first layout update is reliably delivered
     flags = MSG_CLEAR;
-    if( !client->layout_time ) {
+    if (!client->layout_time) {
         flags |= MSG_RELIABLE;
     }
 
     // send the layout
-    MSG_WriteByte( svc_layout );
-    MSG_WriteData( layout, total + 1 );
-    SV_ClientAddMessage( client->cl, flags );
+    MSG_WriteByte(svc_layout);
+    MSG_WriteData(layout, total + 1);
+    SV_ClientAddMessage(client->cl, flags);
 
     client->layout_time = svs.realtime;
 }
 
-static int MVD_CountClients( mvd_t *mvd ) {
+static int MVD_CountClients(mvd_t *mvd)
+{
     mvd_client_t *c;
     int count = 0;
 
-    FOR_EACH_MVDCL( c, mvd ) {
-        if( c->cl->state == cs_spawned ) {
+    FOR_EACH_MVDCL(c, mvd) {
+        if (c->cl->state == cs_spawned) {
             count++;
         }
     }
     return count;
 }
 
-static void MVD_LayoutChannels( mvd_client_t *client ) {
+static void MVD_LayoutChannels(mvd_client_t *client)
+{
     static const char header[] =
         "xv 32 yv 8 picn inventory "
         "xv %d yv 172 string2 " VERSION " "
@@ -165,37 +168,37 @@ static void MVD_LayoutChannels( mvd_client_t *client ) {
     size_t len, total;
     int cursor, y;
 
-    total = Q_scnprintf( layout, sizeof( layout ),
-        header, VER_OFS );
+    total = Q_scnprintf(layout, sizeof(layout),
+                        header, VER_OFS);
 
     // FIXME: improve this
-    cursor = List_Count( &mvd_channel_list );
-    if( cursor ) {
-        if( client->layout_cursor < 0 ) {
+    cursor = List_Count(&mvd_channel_list);
+    if (cursor) {
+        if (client->layout_cursor < 0) {
             client->layout_cursor = cursor - 1;
-        } else if( client->layout_cursor > cursor - 1 ) {
+        } else if (client->layout_cursor > cursor - 1) {
             client->layout_cursor = 0;
         }
 
         y = 64;
         cursor = 0;
-        FOR_EACH_MVD( mvd ) {
-            len = Q_snprintf( buffer, sizeof( buffer ),
-                "yv %d string%s \"%c%-12.12s %-7.7s %d/%d\" ", y,
-                mvd == client->mvd ? "2" : "",
-                cursor == client->layout_cursor ? 0x8d : 0x20,
-                mvd->name, mvd->mapname,
-                MVD_CountClients( mvd ), mvd->numplayers );
-            if( len >= sizeof( buffer ) ) {
+        FOR_EACH_MVD(mvd) {
+            len = Q_snprintf(buffer, sizeof(buffer),
+                             "yv %d string%s \"%c%-12.12s %-7.7s %d/%d\" ", y,
+                             mvd == client->mvd ? "2" : "",
+                             cursor == client->layout_cursor ? 0x8d : 0x20,
+                             mvd->name, mvd->mapname,
+                             MVD_CountClients(mvd), mvd->numplayers);
+            if (len >= sizeof(buffer)) {
                 continue;
             }
-            if( total + len >= sizeof( layout ) ) {
+            if (total + len >= sizeof(layout)) {
                 break;
             }
-            memcpy( layout + total, buffer, len );
+            memcpy(layout + total, buffer, len);
             total += len;
             y += 8;
-            if( y > 164 ) {
+            if (y > 164) {
                 break;
             }
 
@@ -203,16 +206,16 @@ static void MVD_LayoutChannels( mvd_client_t *client ) {
         }
     } else {
         client->layout_cursor = 0;
-        memcpy( layout + total, nochans, sizeof( nochans ) - 1 );
-        total += sizeof( nochans ) - 1;
+        memcpy(layout + total, nochans, sizeof(nochans) - 1);
+        total += sizeof(nochans) - 1;
     }
 
     layout[total] = 0;
 
     // send the layout
-    MSG_WriteByte( svc_layout );
-    MSG_WriteData( layout, total + 1 );                
-    SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
+    MSG_WriteByte(svc_layout);
+    MSG_WriteData(layout, total + 1);
+    SV_ClientAddMessage(client->cl, MSG_RELIABLE | MSG_CLEAR);
 
     client->layout_time = svs.realtime;
 }
@@ -221,16 +224,18 @@ static void MVD_LayoutChannels( mvd_client_t *client ) {
 #define YES "\xD9\xE5\xF3"
 #define NO "\xCE\xEF"
 
-static int clamp_menu_cursor( mvd_client_t *client ) {
-    if( client->layout_cursor < 0 ) {
+static int clamp_menu_cursor(mvd_client_t *client)
+{
+    if (client->layout_cursor < 0) {
         client->layout_cursor = MENU_ITEMS - 1;
-    } else if( client->layout_cursor > MENU_ITEMS - 1 ) {
+    } else if (client->layout_cursor > MENU_ITEMS - 1) {
         client->layout_cursor = 0;
     }
     return client->layout_cursor;
 }
 
-static void MVD_LayoutMenu( mvd_client_t *client ) {
+static void MVD_LayoutMenu(mvd_client_t *client)
+{
     static const char format[] =
         "xv 32 yv 8 picn inventory "
         "xv 0 yv 32 cstring \"\020Main Menu\021\" xv 56 "
@@ -250,149 +255,156 @@ static void MVD_LayoutMenu( mvd_client_t *client ) {
     char cur[MENU_ITEMS];
     size_t total;
 
-    memset( cur, 0x20, sizeof( cur ) );
-    cur[ clamp_menu_cursor( client ) ] = 0x8d;
+    memset(cur, 0x20, sizeof(cur));
+    cur[clamp_menu_cursor(client)] = 0x8d;
 
-    total = Q_scnprintf( layout, sizeof( layout ), format,
-        cur[0], client->target ? "Leave" : "Enter", cur[1],
-        cur[2], MVD_CountClients( client->mvd ),
-        cur[3], List_Count( &mvd_channel_list ), cur[4],
-        cur[5], ( client->uf & UF_MUTE_OBSERVERS ) ? YES : NO,
-        cur[6], ( client->uf & UF_MUTE_MISC ) ? YES : NO,
-        cur[7], ( client->uf & UF_MUTE_PLAYERS ) ? YES: NO,
-        cur[8], ( client->uf & UF_LOCALFOV ) ? YES : NO,
-        client->uf,
-        cur[9], client->mvd->state == MVD_WAITING ?
-        "xv 0 yv 160 cstring [BUFFERING]" : "",
-        VER_OFS );
+    total = Q_scnprintf(layout, sizeof(layout), format,
+                        cur[0], client->target ? "Leave" : "Enter", cur[1],
+                        cur[2], MVD_CountClients(client->mvd),
+                        cur[3], List_Count(&mvd_channel_list), cur[4],
+                        cur[5], (client->uf & UF_MUTE_OBSERVERS) ? YES : NO,
+                        cur[6], (client->uf & UF_MUTE_MISC) ? YES : NO,
+                        cur[7], (client->uf & UF_MUTE_PLAYERS) ? YES : NO,
+                        cur[8], (client->uf & UF_LOCALFOV) ? YES : NO,
+                        client->uf,
+                        cur[9], client->mvd->state == MVD_WAITING ?
+                        "xv 0 yv 160 cstring [BUFFERING]" : "",
+                        VER_OFS);
 
     // send the layout
-    MSG_WriteByte( svc_layout );
-    MSG_WriteData( layout, total + 1 );                
-    SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
+    MSG_WriteByte(svc_layout);
+    MSG_WriteData(layout, total + 1);
+    SV_ClientAddMessage(client->cl, MSG_RELIABLE | MSG_CLEAR);
 
     client->layout_time = svs.realtime;
 }
 
-static void MVD_LayoutScores( mvd_client_t *client ) {
+static void MVD_LayoutScores(mvd_client_t *client)
+{
     mvd_t *mvd = client->mvd;
     int flags = MSG_CLEAR;
     char *layout;
 
-    if( client->layout_type == LAYOUT_OLDSCORES ) {
+    if (client->layout_type == LAYOUT_OLDSCORES) {
         layout = mvd->oldscores;
     } else {
         layout = mvd->layout;
     }
-    if( !layout || !layout[0] ) {
+    if (!layout || !layout[0]) {
         layout = "xv 100 yv 60 string \"<no scoreboard>\"";
     }
 
     // end-of-match scoreboard is reliably delivered
-    if( !client->layout_time || mvd->intermission ) {
+    if (!client->layout_time || mvd->intermission) {
         flags |= MSG_RELIABLE;
     }
 
     // send the layout
-    MSG_WriteByte( svc_layout );
-    MSG_WriteString( layout );
-    SV_ClientAddMessage( client->cl, flags );
+    MSG_WriteByte(svc_layout);
+    MSG_WriteString(layout);
+    SV_ClientAddMessage(client->cl, flags);
 
     client->layout_time = svs.realtime;
 }
 
-static void MVD_LayoutFollow( mvd_client_t *client ) {
+static void MVD_LayoutFollow(mvd_client_t *client)
+{
     mvd_t *mvd = client->mvd;
     char *name = client->target ? client->target->name : "<no target>";
     char layout[MAX_STRING_CHARS];
     size_t total;
 
-    total = Q_scnprintf( layout, sizeof( layout ),
-        "%s string \"[%s] Chasing %s\"",
-        mvd_chase_prefix->string, mvd->name, name );
+    total = Q_scnprintf(layout, sizeof(layout),
+                        "%s string \"[%s] Chasing %s\"",
+                        mvd_chase_prefix->string, mvd->name, name);
 
     // send the layout
-    MSG_WriteByte( svc_layout );
-    MSG_WriteData( layout, total + 1 );
-    SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
+    MSG_WriteByte(svc_layout);
+    MSG_WriteData(layout, total + 1);
+    SV_ClientAddMessage(client->cl, MSG_RELIABLE | MSG_CLEAR);
 
     client->layout_time = svs.realtime;
 }
 
-static void MVD_SetNewLayout( mvd_client_t *client, mvd_layout_t type ) {
+static void MVD_SetNewLayout(mvd_client_t *client, mvd_layout_t type)
+{
     // force an update
     client->layout_type = type;
     client->layout_time = 0;
     client->layout_cursor = 0;
 }
 
-static void MVD_SetDefaultLayout( mvd_client_t *client ) {
+static void MVD_SetDefaultLayout(mvd_client_t *client)
+{
     mvd_t *mvd = client->mvd;
     mvd_layout_t type;
 
-    if( mvd == &mvd_waitingRoom ) {
+    if (mvd == &mvd_waitingRoom) {
         type = LAYOUT_CHANNELS;
-    } else if( mvd->intermission ) {
+    } else if (mvd->intermission) {
         type = LAYOUT_SCORES;
-    } else if( client->target ) {
+    } else if (client->target) {
         type = LAYOUT_FOLLOW;
     } else {
         type = LAYOUT_NONE;
     }
 
-    MVD_SetNewLayout( client, type );
+    MVD_SetNewLayout(client, type);
 }
 
-static void MVD_ToggleLayout( mvd_client_t *client, mvd_layout_t type ) {
-    if( client->layout_type == type ) {
-        MVD_SetDefaultLayout( client );
+static void MVD_ToggleLayout(mvd_client_t *client, mvd_layout_t type)
+{
+    if (client->layout_type == type) {
+        MVD_SetDefaultLayout(client);
     } else {
-        MVD_SetNewLayout( client, type );
+        MVD_SetNewLayout(client, type);
     }
 }
 
-static void MVD_SetFollowLayout( mvd_client_t *client ) {
-    if( !client->layout_type ) {
-        MVD_SetDefaultLayout( client );
-    } else if( client->layout_type == LAYOUT_FOLLOW ) {
+static void MVD_SetFollowLayout(mvd_client_t *client)
+{
+    if (!client->layout_type) {
+        MVD_SetDefaultLayout(client);
+    } else if (client->layout_type == LAYOUT_FOLLOW) {
         client->layout_time = 0; // force an update
     }
 }
 
 // this is the only function that actually writes layouts
-static void MVD_UpdateLayouts( mvd_t *mvd ) {
+static void MVD_UpdateLayouts(mvd_t *mvd)
+{
     mvd_client_t *client;
 
-    FOR_EACH_MVDCL( client, mvd ) {
-        if( client->cl->state != cs_spawned ) {
+    FOR_EACH_MVDCL(client, mvd) {
+        if (client->cl->state != cs_spawned) {
             continue;
         }
         client->ps.stats[STAT_LAYOUTS] = client->layout_type ? 1 : 0;
-        switch( client->layout_type ) {
+        switch (client->layout_type) {
         case LAYOUT_FOLLOW:
-            if( !client->layout_time ) {
-                MVD_LayoutFollow( client );
+            if (!client->layout_time) {
+                MVD_LayoutFollow(client);
             }
             break;
         case LAYOUT_OLDSCORES:
         case LAYOUT_SCORES:
-            if( !client->layout_time ) {
-                MVD_LayoutScores( client );
+            if (!client->layout_time) {
+                MVD_LayoutScores(client);
             }
             break;
         case LAYOUT_MENU:
-            if( mvd->dirty || !client->layout_time ) {
-                MVD_LayoutMenu( client );
+            if (mvd->dirty || !client->layout_time) {
+                MVD_LayoutMenu(client);
             }
             break;
         case LAYOUT_CLIENTS:
-            if( svs.realtime - client->layout_time > LAYOUT_MSEC ) {
-                MVD_LayoutClients( client );
+            if (svs.realtime - client->layout_time > LAYOUT_MSEC) {
+                MVD_LayoutClients(client);
             }
             break;
         case LAYOUT_CHANNELS:
-            if( mvd_dirty || !client->layout_time ) {
-                MVD_LayoutChannels( client );
+            if (mvd_dirty || !client->layout_time) {
+                MVD_LayoutChannels(client);
             }
             break;
         default:
@@ -412,28 +424,30 @@ CHASE CAMERA
 ==============================================================================
 */
 
-static void write_cs_list( mvd_client_t *client, mvd_cs_t *cs ) {
-    for( ; cs; cs = cs->next ) {
-        MSG_WriteByte( svc_configstring );
-        MSG_WriteShort( cs->index );
-        MSG_WriteString( cs->string );
-        SV_ClientAddMessage( client->cl, MSG_RELIABLE|MSG_CLEAR );
+static void write_cs_list(mvd_client_t *client, mvd_cs_t *cs)
+{
+    for (; cs; cs = cs->next) {
+        MSG_WriteByte(svc_configstring);
+        MSG_WriteShort(cs->index);
+        MSG_WriteString(cs->string);
+        SV_ClientAddMessage(client->cl, MSG_RELIABLE | MSG_CLEAR);
     }
 }
 
-static void MVD_FollowStop( mvd_client_t *client ) {
+static void MVD_FollowStop(mvd_client_t *client)
+{
     mvd_t *mvd = client->mvd;
     int i;
 
     client->ps.viewangles[ROLL] = 0;
 
-    for( i = 0; i < 3; i++ ) {
+    for (i = 0; i < 3; i++) {
         client->ps.pmove.delta_angles[i] = ANGLE2SHORT(
-            client->ps.viewangles[i] ) - client->lastcmd.angles[i];
+                                               client->ps.viewangles[i]) - client->lastcmd.angles[i];
     }
 
-    VectorClear( client->ps.kick_angles );
-    Vector4Clear( client->ps.blend );
+    VectorClear(client->ps.kick_angles);
+    Vector4Clear(client->ps.blend);
     client->ps.pmove.pm_flags = 0;
     client->ps.pmove.pm_type = mvd->pm_type;
     client->ps.rdflags = 0;
@@ -441,22 +455,23 @@ static void MVD_FollowStop( mvd_client_t *client ) {
     client->ps.fov = client->fov;
 
     // send delta configstrings
-    write_cs_list( client, mvd->dummy->configstrings );
+    write_cs_list(client, mvd->dummy->configstrings);
 
     client->clientNum = mvd->clientNum;
     client->oldtarget = client->target;
     client->target = NULL;
     client->chase_mask = 0;
 
-    if( client->layout_type == LAYOUT_FOLLOW ) {
-        MVD_SetDefaultLayout( client );
+    if (client->layout_type == LAYOUT_FOLLOW) {
+        MVD_SetDefaultLayout(client);
     }
 
-    MVD_UpdateClient( client );
+    MVD_UpdateClient(client);
 }
 
-static void MVD_FollowStart( mvd_client_t *client, mvd_player_t *target ) {
-    if( client->target == target ) {
+static void MVD_FollowStart(mvd_client_t *client, mvd_player_t *target)
+{
+    if (client->target == target) {
         return;
     }
 
@@ -465,109 +480,114 @@ static void MVD_FollowStart( mvd_client_t *client, mvd_player_t *target ) {
     client->chase_mask = 0;
 
     // send delta configstrings
-    write_cs_list( client, target->configstrings );
+    write_cs_list(client, target->configstrings);
 
-    SV_ClientPrintf( client->cl, PRINT_LOW, "[MVD] Chasing %s.\n", target->name );
+    SV_ClientPrintf(client->cl, PRINT_LOW, "[MVD] Chasing %s.\n", target->name);
 
-    MVD_SetFollowLayout( client );
-    MVD_UpdateClient( client );
+    MVD_SetFollowLayout(client);
+    MVD_UpdateClient(client);
 }
 
-static void MVD_FollowFirst( mvd_client_t *client ) {
+static void MVD_FollowFirst(mvd_client_t *client)
+{
     mvd_t *mvd = client->mvd;
     mvd_player_t *target;
     int i;
 
     // pick up the first active player
-    for( i = 0; i < mvd->maxclients; i++ ) {
+    for (i = 0; i < mvd->maxclients; i++) {
         target = &mvd->players[i];
-        if( target->inuse && target != mvd->dummy ) {
-            MVD_FollowStart( client, target );
+        if (target->inuse && target != mvd->dummy) {
+            MVD_FollowStart(client, target);
             return;
         }
     }
 
-    SV_ClientPrintf( client->cl, PRINT_MEDIUM, "[MVD] No players to chase.\n" );
+    SV_ClientPrintf(client->cl, PRINT_MEDIUM, "[MVD] No players to chase.\n");
 }
 
-static void MVD_FollowLast( mvd_client_t *client ) {
+static void MVD_FollowLast(mvd_client_t *client)
+{
     mvd_t *mvd = client->mvd;
     mvd_player_t *target;
     int i;
 
     // pick up the last active player
-    for( i = 0; i < mvd->maxclients; i++ ) {
-        target = &mvd->players[ mvd->maxclients - i - 1 ];
-        if( target->inuse && target != mvd->dummy ) {
-            MVD_FollowStart( client, target );
+    for (i = 0; i < mvd->maxclients; i++) {
+        target = &mvd->players[mvd->maxclients - i - 1];
+        if (target->inuse && target != mvd->dummy) {
+            MVD_FollowStart(client, target);
             return;
         }
     }
 
-    SV_ClientPrintf( client->cl, PRINT_MEDIUM, "[MVD] No players to chase.\n" );
+    SV_ClientPrintf(client->cl, PRINT_MEDIUM, "[MVD] No players to chase.\n");
 }
 
-static void MVD_FollowNext( mvd_client_t *client ) {
+static void MVD_FollowNext(mvd_client_t *client)
+{
     mvd_t *mvd = client->mvd;
     mvd_player_t *target = client->target;
 
-    if( !target ) {
-        MVD_FollowFirst( client );
+    if (!target) {
+        MVD_FollowFirst(client);
         return;
     }
 
     do {
-        if( target == mvd->players + mvd->maxclients - 1 ) {
+        if (target == mvd->players + mvd->maxclients - 1) {
             target = mvd->players;
         } else {
             target++;
         }
-        if( target == client->target ) {
+        if (target == client->target) {
             return;
         }
-    } while( !target->inuse || target == mvd->dummy );
+    } while (!target->inuse || target == mvd->dummy);
 
-    MVD_FollowStart( client, target );
+    MVD_FollowStart(client, target);
 }
 
-static void MVD_FollowPrev( mvd_client_t *client ) {
+static void MVD_FollowPrev(mvd_client_t *client)
+{
     mvd_t *mvd = client->mvd;
     mvd_player_t *target = client->target;
 
-    if( !target ) {
-        MVD_FollowLast( client );
+    if (!target) {
+        MVD_FollowLast(client);
         return;
     }
 
     do {
-        if( target == mvd->players ) {
+        if (target == mvd->players) {
             target = mvd->players + mvd->maxclients - 1;
         } else {
             target--;
         }
-        if( target == client->target ) {
+        if (target == client->target) {
             return;
         }
-    } while( !target->inuse || target == mvd->dummy );
+    } while (!target->inuse || target == mvd->dummy);
 
-    MVD_FollowStart( client, target );
+    MVD_FollowStart(client, target);
 }
 
-static mvd_player_t *MVD_MostFollowed( mvd_t *mvd ) {
+static mvd_player_t *MVD_MostFollowed(mvd_t *mvd)
+{
     int count[MAX_CLIENTS];
     mvd_client_t *other;
     mvd_player_t *player, *target = NULL;
     int i, maxcount = -1;
 
-    memset( count, 0, sizeof( count ) );
+    memset(count, 0, sizeof(count));
 
-    FOR_EACH_MVDCL( other, mvd ) {
-        if( other->cl->state == cs_spawned && other->target ) {
-            count[ other->target - mvd->players ]++;
+    FOR_EACH_MVDCL(other, mvd) {
+        if (other->cl->state == cs_spawned && other->target) {
+            count[other->target - mvd->players]++;
         }
     }
-    for( i = 0, player = mvd->players; i < mvd->maxclients; i++, player++ ) {
-        if( player->inuse && player != mvd->dummy && maxcount < count[i] ) {
+    for (i = 0, player = mvd->players; i < mvd->maxclients; i++, player++) {
+        if (player->inuse && player != mvd->dummy && maxcount < count[i]) {
             maxcount = count[i];
             target = player;
         }
@@ -575,21 +595,22 @@ static mvd_player_t *MVD_MostFollowed( mvd_t *mvd ) {
     return target;
 }
 
-static void MVD_UpdateClient( mvd_client_t *client ) {
+static void MVD_UpdateClient(mvd_client_t *client)
+{
     mvd_t *mvd = client->mvd;
     mvd_player_t *target;
     int i, mask = client->chase_mask;
     entity_state_t *ent;
 
-    if( mask ) {
+    if (mask) {
         // find new target for auto chasecam
-        for( i = 0, target = mvd->players; i < mvd->maxclients; i++, target++ ) {
-            if( !target->inuse || target == mvd->dummy ) {
+        for (i = 0, target = mvd->players; i < mvd->maxclients; i++, target++) {
+            if (!target->inuse || target == mvd->dummy) {
                 continue;
             }
-            ent = &mvd->edicts[ i + 1 ].s;
-            if( ent->effects & mask ) {
-                MVD_FollowStart( client, target );
+            ent = &mvd->edicts[i + 1].s;
+            if (ent->effects & mask) {
+                MVD_FollowStart(client, target);
                 client->chase_mask = mask;
                 goto copy;
             }
@@ -597,33 +618,33 @@ static void MVD_UpdateClient( mvd_client_t *client ) {
     }
 
     target = client->target;
-    if( !target ) {
+    if (!target) {
         // copy stats of the dummy MVD observer
         target = mvd->dummy;
-        for( i = 0; i < MAX_STATS; i++ ) {
+        for (i = 0; i < MAX_STATS; i++) {
             client->ps.stats[i] = target->ps.stats[i];
         }
     } else {
-        if( !target->inuse ) {
+        if (!target->inuse) {
             // player is no longer active
-            MVD_FollowStop( client );
+            MVD_FollowStop(client);
             return;
         }
 copy:
         // copy entire player state
         client->ps = target->ps;
-        if( client->uf & UF_LOCALFOV ) {
+        if (client->uf & UF_LOCALFOV) {
             client->ps.fov = client->fov;
         }
         client->ps.pmove.pm_flags |= PMF_NO_PREDICTION;
         client->ps.pmove.pm_type = PM_FREEZE;
         client->clientNum = target - mvd->players;
 
-        if( mvd_stats_hack->integer && target != mvd->dummy ) {
+        if (mvd_stats_hack->integer && target != mvd->dummy) {
             // copy stats of the dummy MVD observer
             target = mvd->dummy;
-            for( i = 0; i < MAX_STATS; i++ ) {
-                if( mvd_stats_hack->integer & ( 1 << i ) ) {
+            for (i = 0; i < MAX_STATS; i++) {
+                if (mvd_stats_hack->integer & (1 << i)) {
                     client->ps.stats[i] = target->ps.stats[i];
                 }
             }
@@ -631,7 +652,7 @@ copy:
     }
 
     // override score
-    switch( mvd_stats_score->integer ) {
+    switch (mvd_stats_score->integer) {
     case 0:
         client->ps.stats[STAT_FRAGS] = 0;
         break;
@@ -649,55 +670,57 @@ SPECTATOR COMMANDS
 ==============================================================================
 */
 
-void MVD_BroadcastPrintf( mvd_t *mvd, int level, int mask, const char *fmt, ... ) {
+void MVD_BroadcastPrintf(mvd_t *mvd, int level, int mask, const char *fmt, ...)
+{
     va_list     argptr;
     char        text[MAX_STRING_CHARS];
     size_t      len;
     mvd_client_t *other;
     client_t    *cl;
 
-    va_start( argptr, fmt );
-    len = Q_vsnprintf( text, sizeof( text ), fmt, argptr );
-    va_end( argptr );
+    va_start(argptr, fmt);
+    len = Q_vsnprintf(text, sizeof(text), fmt, argptr);
+    va_end(argptr);
 
-    if( len >= sizeof( text ) ) {
-        Com_WPrintf( "%s: overflow\n", __func__ );
+    if (len >= sizeof(text)) {
+        Com_WPrintf("%s: overflow\n", __func__);
         return;
     }
 
-    if( level == PRINT_CHAT && mvd_filter_version->integer ) {
+    if (level == PRINT_CHAT && mvd_filter_version->integer) {
         char *s;
 
-        while( ( s = strstr( text, "!version" ) ) != NULL ) {
+        while ((s = strstr(text, "!version")) != NULL) {
             s[6] = '0';
         }
     }
 
-    MSG_WriteByte( svc_print );
-    MSG_WriteByte( level );
-    MSG_WriteData( text, len + 1 );
+    MSG_WriteByte(svc_print);
+    MSG_WriteByte(level);
+    MSG_WriteData(text, len + 1);
 
-    FOR_EACH_MVDCL( other, mvd ) {
+    FOR_EACH_MVDCL(other, mvd) {
         cl = other->cl;
-        if( cl->state < cs_spawned ) {
+        if (cl->state < cs_spawned) {
             continue;
         }
-        if( level < cl->messagelevel ) {
+        if (level < cl->messagelevel) {
             continue;
         }
-        if( other->uf & mask ) {
+        if (other->uf & mask) {
             continue;
         }
-        SV_ClientAddMessage( cl, MSG_RELIABLE );
+        SV_ClientAddMessage(cl, MSG_RELIABLE);
     }
 
-    SZ_Clear( &msg_write );
+    SZ_Clear(&msg_write);
 }
 
-static void MVD_SetServerState( client_t *cl, mvd_t *mvd ) {
+static void MVD_SetServerState(client_t *cl, mvd_t *mvd)
+{
     cl->gamedir = mvd->gamedir;
     cl->mapname = mvd->mapname;
-    cl->configstrings = ( char * )mvd->configstrings;
+    cl->configstrings = (char *)mvd->configstrings;
     cl->slot = mvd->clientNum;
     cl->cm = &mvd->cm;
     cl->pool = &mvd->pool;
@@ -705,148 +728,154 @@ static void MVD_SetServerState( client_t *cl, mvd_t *mvd ) {
     cl->maxclients = mvd->maxclients;
 }
 
-void MVD_SwitchChannel( mvd_client_t *client, mvd_t *mvd ) {
+void MVD_SwitchChannel(mvd_client_t *client, mvd_t *mvd)
+{
     client_t *cl = client->cl;
 
-    List_Remove( &client->entry );
-    List_SeqAdd( &mvd->clients, &client->entry );
+    List_Remove(&client->entry);
+    List_SeqAdd(&mvd->clients, &client->entry);
     client->mvd = mvd;
     client->begin_time = 0;
     client->target = client->oldtarget = NULL;
     client->chase_mask = 0;
-    MVD_SetServerState( cl, mvd );
+    MVD_SetServerState(cl, mvd);
 
     // needs to reconnect
-    MSG_WriteByte( svc_stufftext );
-    MSG_WriteString( va( "changing map=%s; reconnect\n", mvd->mapname ) );
-    SV_ClientReset( cl );
-    SV_ClientAddMessage( cl, MSG_RELIABLE|MSG_CLEAR );
+    MSG_WriteByte(svc_stufftext);
+    MSG_WriteString(va("changing map=%s; reconnect\n", mvd->mapname));
+    SV_ClientReset(cl);
+    SV_ClientAddMessage(cl, MSG_RELIABLE | MSG_CLEAR);
 }
 
-static qboolean MVD_PartFilter( mvd_client_t *client ) {
+static qboolean MVD_PartFilter(mvd_client_t *client)
+{
     unsigned i, delta, treshold;
     float f = mvd_part_filter->value;
 
-    if( !f ) {
+    if (!f) {
         return qtrue; // show everyone
     }
-    if( f < 0 ) {
+    if (f < 0) {
         return qfalse; // hide everyone
     }
-    if( client->admin ) {
+    if (client->admin) {
         return qtrue; // show admins
     }
-    if( !client->floodHead ) {
+    if (!client->floodHead) {
         return qfalse; // not talked yet
     }
 
     // take the most recent sample
-    i = ( client->floodHead - 1 ) & FLOOD_MASK;
+    i = (client->floodHead - 1) & FLOOD_MASK;
     delta = svs.realtime - client->floodSamples[i];
     treshold = f * 1000;
 
     return delta < treshold;
 }
 
-static void MVD_TrySwitchChannel( mvd_client_t *client, mvd_t *mvd ) {
-    if( mvd == client->mvd ) {
-        SV_ClientPrintf( client->cl, PRINT_HIGH,
-            "[MVD] You are already %s.\n", mvd == &mvd_waitingRoom ?
-            "in the Waiting Room" : "on this channel" );
+static void MVD_TrySwitchChannel(mvd_client_t *client, mvd_t *mvd)
+{
+    if (mvd == client->mvd) {
+        SV_ClientPrintf(client->cl, PRINT_HIGH,
+                        "[MVD] You are already %s.\n", mvd == &mvd_waitingRoom ?
+                        "in the Waiting Room" : "on this channel");
         return; // nothing to do
     }
-    if( client->begin_time ) {
-        if( svs.realtime - client->begin_time < 2000 ) {
-            SV_ClientPrintf( client->cl, PRINT_HIGH,
-                "[MVD] You may not switch channels too soon.\n" );
+    if (client->begin_time) {
+        if (svs.realtime - client->begin_time < 2000) {
+            SV_ClientPrintf(client->cl, PRINT_HIGH,
+                            "[MVD] You may not switch channels too soon.\n");
             return;
         }
-        if( MVD_PartFilter( client ) ) {
-            MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM, UF_MUTE_MISC,
-                "[MVD] %s left the channel\n", client->cl->name );
+        if (MVD_PartFilter(client)) {
+            MVD_BroadcastPrintf(client->mvd, PRINT_MEDIUM, UF_MUTE_MISC,
+                                "[MVD] %s left the channel\n", client->cl->name);
         }
     }
 
-    MVD_SwitchChannel( client, mvd );
+    MVD_SwitchChannel(client, mvd);
 }
 
-static void MVD_Admin_f( mvd_client_t *client ) {
+static void MVD_Admin_f(mvd_client_t *client)
+{
     char *s = mvd_admin_password->string;
 
-    if( client->admin ) {
+    if (client->admin) {
         client->admin = qfalse;
-        SV_ClientPrintf( client->cl, PRINT_HIGH, "[MVD] Lost admin status.\n" );
+        SV_ClientPrintf(client->cl, PRINT_HIGH, "[MVD] Lost admin status.\n");
         return;
     }
 
-    if( !NET_IsLocalAddress( &client->cl->netchan->remote_address ) ) {
-        if( Cmd_Argc() < 2 ) {
-            SV_ClientPrintf( client->cl, PRINT_HIGH, "Usage: %s <password>\n", Cmd_Argv( 0 ) );
+    if (!NET_IsLocalAddress(&client->cl->netchan->remote_address)) {
+        if (Cmd_Argc() < 2) {
+            SV_ClientPrintf(client->cl, PRINT_HIGH, "Usage: %s <password>\n", Cmd_Argv(0));
             return;
         }
-        if( !s[0] || strcmp( s, Cmd_Argv( 1 ) ) ) {
-            SV_ClientPrintf( client->cl, PRINT_HIGH, "[MVD] Invalid password.\n" );
+        if (!s[0] || strcmp(s, Cmd_Argv(1))) {
+            SV_ClientPrintf(client->cl, PRINT_HIGH, "[MVD] Invalid password.\n");
             return;
         }
     }
 
     client->admin = qtrue;
-    SV_ClientPrintf( client->cl, PRINT_HIGH, "[MVD] Granted admin status.\n" );
+    SV_ClientPrintf(client->cl, PRINT_HIGH, "[MVD] Granted admin status.\n");
 }
 
-static void MVD_Forward_f( mvd_client_t *client ) {
+static void MVD_Forward_f(mvd_client_t *client)
+{
     mvd_t *mvd = client->mvd;
 
-    if( !client->admin ) {
-        SV_ClientPrintf( client->cl, PRINT_HIGH,
-            "[MVD] You don't have admin status.\n" );
+    if (!client->admin) {
+        SV_ClientPrintf(client->cl, PRINT_HIGH,
+                        "[MVD] You don't have admin status.\n");
         return;
     }
 
-    if( !mvd->forward_cmd ) {
-        SV_ClientPrintf( client->cl, PRINT_HIGH,
-            "[MVD] This channel does not support command forwarding.\n" );
+    if (!mvd->forward_cmd) {
+        SV_ClientPrintf(client->cl, PRINT_HIGH,
+                        "[MVD] This channel does not support command forwarding.\n");
         return;
     }
 
-    mvd->forward_cmd( client );
+    mvd->forward_cmd(client);
 }
 
-static void MVD_Say_f( mvd_client_t *client, int argnum ) {
+static void MVD_Say_f(mvd_client_t *client, int argnum)
+{
     mvd_t *mvd = client->mvd;
     unsigned delta, delay = mvd_flood_waitdelay->value * 1000;
     unsigned treshold = mvd_flood_persecond->value * 1000;
     char text[150], *p;
     unsigned i, j;
 
-    if( mvd_flood_mute->integer && !client->admin ) {
-        SV_ClientPrintf( client->cl, PRINT_HIGH,
-            "[MVD] Spectators may not talk on this server.\n" );
+    if (mvd_flood_mute->integer && !client->admin) {
+        SV_ClientPrintf(client->cl, PRINT_HIGH,
+                        "[MVD] Spectators may not talk on this server.\n");
         return;
     }
-    if( client->uf & UF_MUTE_OBSERVERS ) {
-        SV_ClientPrintf( client->cl, PRINT_HIGH,
-            "[MVD] Please turn off ignore mode first.\n" );
+    if (client->uf & UF_MUTE_OBSERVERS) {
+        SV_ClientPrintf(client->cl, PRINT_HIGH,
+                        "[MVD] Please turn off ignore mode first.\n");
         return;
     }
 
-    if( client->floodTime ) {
+    if (client->floodTime) {
         delta = svs.realtime - client->floodTime;
-        if( delta < delay ) {
-            SV_ClientPrintf( client->cl, PRINT_HIGH,
-                "[MVD] You can't talk for %u more seconds.\n",
-                ( delay - delta ) / 1000 );
+        if (delta < delay) {
+            SV_ClientPrintf(client->cl, PRINT_HIGH,
+                            "[MVD] You can't talk for %u more seconds.\n",
+                            (delay - delta) / 1000);
             return;
         }
     }
 
-    j = Cvar_ClampInteger( mvd_flood_msgs, 0, FLOOD_SAMPLES - 1 ) + 1;
-    if( client->floodHead >= j ) {
-        i = ( client->floodHead - j ) & FLOOD_MASK;
+    j = Cvar_ClampInteger(mvd_flood_msgs, 0, FLOOD_SAMPLES - 1) + 1;
+    if (client->floodHead >= j) {
+        i = (client->floodHead - j) & FLOOD_MASK;
         delta = svs.realtime - client->floodSamples[i];
-        if( delta < treshold ) {
-            SV_ClientPrintf( client->cl, PRINT_HIGH,
-                "[MVD] You can't talk for %u seconds.\n", delay / 1000 );
+        if (delta < treshold) {
+            SV_ClientPrintf(client->cl, PRINT_HIGH,
+                            "[MVD] You can't talk for %u seconds.\n", delay / 1000);
             client->floodTime = svs.realtime;
             return;
         }
@@ -855,53 +884,55 @@ static void MVD_Say_f( mvd_client_t *client, int argnum ) {
     client->floodSamples[client->floodHead & FLOOD_MASK] = svs.realtime;
     client->floodHead++;
 
-    Q_snprintf( text, sizeof( text ), "[MVD] %s: %s",
-        client->cl->name, Cmd_ArgsFrom( argnum ) );
-    for( p = text; *p; p++ ) {
+    Q_snprintf(text, sizeof(text), "[MVD] %s: %s",
+               client->cl->name, Cmd_ArgsFrom(argnum));
+    for (p = text; *p; p++) {
         *p |= 128;
     }
 
-    MVD_BroadcastPrintf( mvd, PRINT_HIGH, client->admin ?
-        0 : UF_MUTE_OBSERVERS, "%s\n", text );
+    MVD_BroadcastPrintf(mvd, PRINT_HIGH, client->admin ?
+                        0 : UF_MUTE_OBSERVERS, "%s\n", text);
 }
 
-static void MVD_Observe_f( mvd_client_t *client ) {
-    if( client->mvd == &mvd_waitingRoom ) {
-        SV_ClientPrintf( client->cl, PRINT_HIGH,
-            "[MVD] Please enter a channel first.\n" );
+static void MVD_Observe_f(mvd_client_t *client)
+{
+    if (client->mvd == &mvd_waitingRoom) {
+        SV_ClientPrintf(client->cl, PRINT_HIGH,
+                        "[MVD] Please enter a channel first.\n");
         return;
     }
     client->chase_mask = 0;
-    if( client->mvd->intermission ) {
+    if (client->mvd->intermission) {
         return;
     }
-    if( client->target ) {
-        MVD_FollowStop( client );
-    } else if( client->oldtarget && client->oldtarget->inuse ) {
-        MVD_FollowStart( client, client->oldtarget );
+    if (client->target) {
+        MVD_FollowStop(client);
+    } else if (client->oldtarget && client->oldtarget->inuse) {
+        MVD_FollowStart(client, client->oldtarget);
     } else {
-        MVD_FollowFirst( client );
+        MVD_FollowFirst(client);
     }
 }
 
-static mvd_player_t *MVD_SetPlayer( mvd_client_t *client, const char *s ) {
+static mvd_player_t *MVD_SetPlayer(mvd_client_t *client, const char *s)
+{
     mvd_t *mvd = client->mvd;
     mvd_player_t *player, *match;
     int i, count;
 
     // numeric values are just slot numbers
-    if( COM_IsUint( s ) ) {
-        i = atoi( s );
-        if( i < 0 || i >= mvd->maxclients ) {
-            SV_ClientPrintf( client->cl, PRINT_HIGH,
-                "[MVD] Player number %d is invalid.\n", i );
+    if (COM_IsUint(s)) {
+        i = atoi(s);
+        if (i < 0 || i >= mvd->maxclients) {
+            SV_ClientPrintf(client->cl, PRINT_HIGH,
+                            "[MVD] Player number %d is invalid.\n", i);
             return NULL;
         }
 
         player = &mvd->players[i];
-        if( !player->inuse || player == mvd->dummy ) {
-            SV_ClientPrintf( client->cl, PRINT_HIGH,
-                "[MVD] Player %d is not active.\n", i );
+        if (!player->inuse || player == mvd->dummy) {
+            SV_ClientPrintf(client->cl, PRINT_HIGH,
+                            "[MVD] Player %d is not active.\n", i);
             return NULL;
         }
 
@@ -911,59 +942,60 @@ static mvd_player_t *MVD_SetPlayer( mvd_client_t *client, const char *s ) {
     // check for a name match
     match = NULL;
     count = 0;
-    for( i = 0, player = mvd->players; i < mvd->maxclients; i++, player++ ) {
-        if( !player->inuse || player == mvd->dummy ) {
+    for (i = 0, player = mvd->players; i < mvd->maxclients; i++, player++) {
+        if (!player->inuse || player == mvd->dummy) {
             continue;
         }
-        if( !Q_stricmp( player->name, s ) ) {
+        if (!Q_stricmp(player->name, s)) {
             return player; // exact match
         }
-        if( Q_stristr( player->name, s ) ) {
+        if (Q_stristr(player->name, s)) {
             match = player; // partial match
             count++;
         }
     }
 
-    if( !match ) {
-        SV_ClientPrintf( client->cl, PRINT_HIGH,
-            "[MVD] No players matching '%s' found.\n", s );
+    if (!match) {
+        SV_ClientPrintf(client->cl, PRINT_HIGH,
+                        "[MVD] No players matching '%s' found.\n", s);
         return NULL;
     }
 
-    if( count > 1 ) {
-        SV_ClientPrintf( client->cl, PRINT_HIGH,
-            "[MVD] '%s' matches multiple players.\n", s );
+    if (count > 1) {
+        SV_ClientPrintf(client->cl, PRINT_HIGH,
+                        "[MVD] '%s' matches multiple players.\n", s);
         return NULL;
     }
 
     return match;
 }
 
-static void MVD_Follow_f( mvd_client_t *client ) {
+static void MVD_Follow_f(mvd_client_t *client)
+{
     mvd_t *mvd = client->mvd;
     mvd_player_t *player;
     char *s;
     int mask;
 
-    if( mvd == &mvd_waitingRoom ) {
-        SV_ClientPrintf( client->cl, PRINT_HIGH,
-            "[MVD] Please enter a channel first.\n" );
+    if (mvd == &mvd_waitingRoom) {
+        SV_ClientPrintf(client->cl, PRINT_HIGH,
+                        "[MVD] Please enter a channel first.\n");
         return;
     }
 
-    if( mvd->intermission ) {
+    if (mvd->intermission) {
         return;
     }
 
-    if( Cmd_Argc() < 2 ) {
-        MVD_Observe_f( client );
+    if (Cmd_Argc() < 2) {
+        MVD_Observe_f(client);
         return;
     }
 
-    s = Cmd_Argv( 1 );
-    if( *s == '!' ) {
+    s = Cmd_Argv(1);
+    if (*s == '!') {
         s++;
-        switch( *s ) {
+        switch (*s) {
         case 'q':
             mask = EF_QUAD;
             break;
@@ -979,58 +1011,59 @@ static void MVD_Follow_f( mvd_client_t *client ) {
         case '!':
             goto match;
         case 'p':
-            if( client->oldtarget ) {
-                if( client->oldtarget->inuse ) {
-                    MVD_FollowStart( client, client->oldtarget );
+            if (client->oldtarget) {
+                if (client->oldtarget->inuse) {
+                    MVD_FollowStart(client, client->oldtarget);
                 } else {
-                    SV_ClientPrintf( client->cl, PRINT_HIGH,
-                        "[MVD] Previous chase target is not active.\n" );
+                    SV_ClientPrintf(client->cl, PRINT_HIGH,
+                                    "[MVD] Previous chase target is not active.\n");
                 }
             } else {
-                SV_ClientPrintf( client->cl, PRINT_HIGH,
-                    "[MVD] You have no previous chase target.\n" );
+                SV_ClientPrintf(client->cl, PRINT_HIGH,
+                                "[MVD] You have no previous chase target.\n");
             }
             return;
         default:
-            SV_ClientPrintf( client->cl, PRINT_HIGH,
-                "[MVD] Unknown chase target '%s'. Valid targets are: "
-                "q[uad]/i[nvulner]/r[ed_flag]/b[lue_flag]/p[revious_target].\n", s );
+            SV_ClientPrintf(client->cl, PRINT_HIGH,
+                            "[MVD] Unknown chase target '%s'. Valid targets are: "
+                            "q[uad]/i[nvulner]/r[ed_flag]/b[lue_flag]/p[revious_target].\n", s);
             return;
         }
-        SV_ClientPrintf( client->cl, PRINT_MEDIUM,
-            "[MVD] Chasing players with '%s' powerup.\n", s );
+        SV_ClientPrintf(client->cl, PRINT_MEDIUM,
+                        "[MVD] Chasing players with '%s' powerup.\n", s);
         client->chase_mask = mask;
         return;
     }
 
 match:
-    player = MVD_SetPlayer( client, s );
-    if( player ) {
-        MVD_FollowStart( client, player );
+    player = MVD_SetPlayer(client, s);
+    if (player) {
+        MVD_FollowStart(client, player);
     }
 }
 
-static void MVD_Invuse_f( mvd_client_t *client ) {
+static void MVD_Invuse_f(mvd_client_t *client)
+{
     mvd_t *mvd;
     int uf = client->uf;
 
-    if( client->layout_type == LAYOUT_MENU ) {
-        switch( clamp_menu_cursor( client ) ) {
+    if (client->layout_type == LAYOUT_MENU) {
+        switch (clamp_menu_cursor(client)) {
         case 0:
-            MVD_SetDefaultLayout( client );
-            MVD_Observe_f( client );
+            MVD_SetDefaultLayout(client);
+            MVD_Observe_f(client);
             return;
         case 1:
-            MVD_SetNewLayout( client, LAYOUT_SCORES );
+            MVD_SetNewLayout(client, LAYOUT_SCORES);
             break;
         case 2:
-            MVD_SetNewLayout( client, LAYOUT_CLIENTS );
+            MVD_SetNewLayout(client, LAYOUT_CLIENTS);
             break;
         case 3:
-            MVD_SetNewLayout( client, LAYOUT_CHANNELS );
+            MVD_SetNewLayout(client, LAYOUT_CHANNELS);
             break;
         case 4:
-            MVD_TrySwitchChannel( client, &mvd_waitingRoom );
+            MVD_TrySwitchChannel(client, &mvd_waitingRoom);
             return;
         case 5:
             client->uf ^= UF_MUTE_OBSERVERS;
@@ -1045,204 +1078,208 @@ static void MVD_Invuse_f( mvd_client_t *client ) {
             client->uf ^= UF_LOCALFOV;
             break;
         case 9:
-            MVD_SetDefaultLayout( client );
+            MVD_SetDefaultLayout(client);
             break;
         }
-        if( uf != client->uf ) {
-            SV_ClientCommand( client->cl, "set uf %d u\n", client->uf );
+        if (uf != client->uf) {
+            SV_ClientCommand(client->cl, "set uf %d u\n", client->uf);
             client->layout_time = 0; // force an update
         }
         return;
     }
 
-    if( client->layout_type == LAYOUT_CHANNELS ) {
-        mvd = LIST_INDEX( mvd_t, client->layout_cursor, &mvd_channel_list, entry );
-        if( mvd ) {
-            MVD_TrySwitchChannel( client, mvd );
+    if (client->layout_type == LAYOUT_CHANNELS) {
+        mvd = LIST_INDEX(mvd_t, client->layout_cursor, &mvd_channel_list, entry);
+        if (mvd) {
+            MVD_TrySwitchChannel(client, mvd);
         }
         return;
     }
 }
 
-static void MVD_Join_f( mvd_client_t *client ) {
+static void MVD_Join_f(mvd_client_t *client)
+{
     mvd_t *mvd;
-        
-    SV_BeginRedirect( RD_CLIENT );
-    mvd = MVD_SetChannel( 1 );
+
+    SV_BeginRedirect(RD_CLIENT);
+    mvd = MVD_SetChannel(1);
     Com_EndRedirect();
 
-    if( !mvd ) {
+    if (!mvd) {
         return;
     }
-    if( mvd->state < MVD_WAITING ) {
-        SV_ClientPrintf( client->cl, PRINT_HIGH,
-            "[MVD] This channel is not ready yet.\n" );
+    if (mvd->state < MVD_WAITING) {
+        SV_ClientPrintf(client->cl, PRINT_HIGH,
+                        "[MVD] This channel is not ready yet.\n");
         return;
     }
 
-    MVD_TrySwitchChannel( client, mvd );
+    MVD_TrySwitchChannel(client, mvd);
 }
 
-static void print_channel( client_t *cl, mvd_t *mvd ) {
+static void print_channel(client_t *cl, mvd_t *mvd)
+{
     mvd_player_t *player;
     char buffer[MAX_QPATH];
     size_t len, total;
     int i;
 
     total = 0;
-    for( i = 0; i < mvd->maxclients; i++ ) {
+    for (i = 0; i < mvd->maxclients; i++) {
         player = &mvd->players[i];
-        if( !player->inuse || player == mvd->dummy ) {
+        if (!player->inuse || player == mvd->dummy) {
             continue;
         }
-        len = strlen( player->name );
-        if( total + len + 2 >= sizeof( buffer ) ) {
+        len = strlen(player->name);
+        if (total + len + 2 >= sizeof(buffer)) {
             break;
         }
-        if( total ) {
-            buffer[total+0] = ',';
-            buffer[total+1] = ' ';
+        if (total) {
+            buffer[total + 0] = ',';
+            buffer[total + 1] = ' ';
             total += 2;
         }
-        memcpy( buffer + total, player->name, len );
+        memcpy(buffer + total, player->name, len);
         total += len;
     }
     buffer[total] = 0;
 
-    SV_ClientPrintf( cl, PRINT_HIGH,
-        "%2d %-12.12s %-8.8s %3d %3d %s\n", mvd->id,
-        mvd->name, mvd->mapname,
-        List_Count( &mvd->clients ),
-        mvd->numplayers, buffer );
+    SV_ClientPrintf(cl, PRINT_HIGH,
+                    "%2d %-12.12s %-8.8s %3d %3d %s\n", mvd->id,
+                    mvd->name, mvd->mapname,
+                    List_Count(&mvd->clients),
+                    mvd->numplayers, buffer);
 }
 
-static void mvd_channel_list_f( mvd_client_t *client ) {
+static void mvd_channel_list_f(mvd_client_t *client)
+{
     mvd_t *mvd;
 
-    SV_ClientPrintf( client->cl, PRINT_HIGH,
-        "id name         map      spc plr who is playing\n"
-        "-- ------------ -------- --- --- --------------\n" );
+    SV_ClientPrintf(client->cl, PRINT_HIGH,
+                    "id name         map      spc plr who is playing\n"
+                    "-- ------------ -------- --- --- --------------\n");
 
-    FOR_EACH_MVD( mvd ) {
-        print_channel( client->cl, mvd );
+    FOR_EACH_MVD(mvd) {
+        print_channel(client->cl, mvd);
     }
 }
 
-static void MVD_Clients_f( mvd_client_t *client ) {
+static void MVD_Clients_f(mvd_client_t *client)
+{
     // TODO: dump them in console
     client->layout_type = LAYOUT_CLIENTS;
     client->layout_time = 0;
     client->layout_cursor = 0;
 }
 
-static void MVD_Commands_f( mvd_client_t *client ) {
-    SV_ClientPrintf( client->cl, PRINT_HIGH,
-        "chase [player_id]      toggle chasecam mode\n"
-        "observe                toggle observer mode\n"
-        "menu                   show main menu\n"
-        "score                  show scoreboard\n"
-        "oldscore               show previous scoreboard\n"
-        "channels               list active channels\n"
-        "join [channel_id]      join specified channel\n"
-        "leave                  go to the Waiting Room\n"
-    );
+static void MVD_Commands_f(mvd_client_t *client)
+{
+    SV_ClientPrintf(client->cl, PRINT_HIGH,
+                    "chase [player_id]      toggle chasecam mode\n"
+                    "observe                toggle observer mode\n"
+                    "menu                   show main menu\n"
+                    "score                  show scoreboard\n"
+                    "oldscore               show previous scoreboard\n"
+                    "channels               list active channels\n"
+                    "join [channel_id]      join specified channel\n"
+                    "leave                  go to the Waiting Room\n"
+                   );
 }
 
-static void MVD_GameClientCommand( edict_t *ent ) {
-    mvd_client_t *client = EDICT_MVDCL( ent );
+static void MVD_GameClientCommand(edict_t *ent)
+{
+    mvd_client_t *client = EDICT_MVDCL(ent);
     char *cmd;
 
-    if( client->cl->state < cs_spawned ) {
+    if (client->cl->state < cs_spawned) {
         return;
     }
 
-    cmd = Cmd_Argv( 0 );
+    cmd = Cmd_Argv(0);
 
-    if( !strcmp( cmd, "!mvdadmin" ) ) {
-        MVD_Admin_f( client );
+    if (!strcmp(cmd, "!mvdadmin")) {
+        MVD_Admin_f(client);
         return;
     }
-    if( !strcmp( cmd, "fwd" ) ) {
-        MVD_Forward_f( client );
+    if (!strcmp(cmd, "fwd")) {
+        MVD_Forward_f(client);
         return;
     }
-    if( !strcmp( cmd, "say" ) || !strcmp( cmd, "say_team" ) ) {
-        MVD_Say_f( client, 1 );
+    if (!strcmp(cmd, "say") || !strcmp(cmd, "say_team")) {
+        MVD_Say_f(client, 1);
         return;
     }
-    if( !strcmp( cmd, "follow" ) || !strcmp( cmd, "chase" ) ) {
-        MVD_Follow_f( client );
+    if (!strcmp(cmd, "follow") || !strcmp(cmd, "chase")) {
+        MVD_Follow_f(client);
         return;
     }
-    if( !strcmp( cmd, "observe" ) || !strcmp( cmd, "spectate" ) ||
-        !strcmp( cmd, "observer" ) || !strcmp( cmd, "spectator" ) ||
-        !strcmp( cmd, "obs" ) || !strcmp( cmd, "spec" ) )
-    {
-        MVD_Observe_f( client );
+    if (!strcmp(cmd, "observe") || !strcmp(cmd, "spectate") ||
+        !strcmp(cmd, "observer") || !strcmp(cmd, "spectator") ||
+        !strcmp(cmd, "obs") || !strcmp(cmd, "spec")) {
+        MVD_Observe_f(client);
         return;
     }
-    if( !strcmp( cmd, "inven" ) || !strcmp( cmd, "menu" ) ) {
-        MVD_ToggleLayout( client, LAYOUT_MENU );
+    if (!strcmp(cmd, "inven") || !strcmp(cmd, "menu")) {
+        MVD_ToggleLayout(client, LAYOUT_MENU);
         return;
     }
-    if( !strcmp( cmd, "invnext" ) ) {
-        if( client->layout_type >= LAYOUT_MENU ) {
+    if (!strcmp(cmd, "invnext")) {
+        if (client->layout_type >= LAYOUT_MENU) {
             client->layout_cursor++;
             client->layout_time = 0;
-        } else if( !client->mvd->intermission ) {
-            MVD_FollowNext( client );
+        } else if (!client->mvd->intermission) {
+            MVD_FollowNext(client);
         }
         return;
     }
-    if( !strcmp( cmd, "invprev" ) ) {
-        if( client->layout_type >= LAYOUT_MENU ) {
+    if (!strcmp(cmd, "invprev")) {
+        if (client->layout_type >= LAYOUT_MENU) {
             client->layout_cursor--;
             client->layout_time = 0;
-        } else if( !client->mvd->intermission ) {
-            MVD_FollowPrev( client );
+        } else if (!client->mvd->intermission) {
+            MVD_FollowPrev(client);
         }
         return;
     }
-    if( !strcmp( cmd, "invuse" ) ) {
-        MVD_Invuse_f( client );
+    if (!strcmp(cmd, "invuse")) {
+        MVD_Invuse_f(client);
         return;
     }
-    if( !strcmp( cmd, "help" ) || !strcmp( cmd, "score" ) ) {
-        MVD_ToggleLayout( client, LAYOUT_SCORES );
+    if (!strcmp(cmd, "help") || !strcmp(cmd, "score")) {
+        MVD_ToggleLayout(client, LAYOUT_SCORES);
         return;
     }
-    if( !strcmp( cmd, "oldscore" ) || !strcmp( cmd, "oldscores" ) ||
-        !strcmp( cmd, "lastscore" ) || !strcmp( cmd, "lastscores" ) )
-    {
-        MVD_ToggleLayout( client, LAYOUT_OLDSCORES );
+    if (!strcmp(cmd, "oldscore") || !strcmp(cmd, "oldscores") ||
+        !strcmp(cmd, "lastscore") || !strcmp(cmd, "lastscores")) {
+        MVD_ToggleLayout(client, LAYOUT_OLDSCORES);
         return;
     }
-    if( !strcmp( cmd, "putaway" ) ) {
-        MVD_SetDefaultLayout( client );
+    if (!strcmp(cmd, "putaway")) {
+        MVD_SetDefaultLayout(client);
         return;
     }
-    if( !strcmp( cmd, "channels" ) ) {
-        mvd_channel_list_f( client );
+    if (!strcmp(cmd, "channels")) {
+        mvd_channel_list_f(client);
         return;
     }
-    if( !strcmp( cmd, "clients" ) || !strcmp( cmd, "players" ) ) {
-        MVD_Clients_f( client );
+    if (!strcmp(cmd, "clients") || !strcmp(cmd, "players")) {
+        MVD_Clients_f(client);
         return;
     }
-    if( !strcmp( cmd, "join" ) ) {
-        MVD_Join_f( client );
+    if (!strcmp(cmd, "join")) {
+        MVD_Join_f(client);
         return;
     }
-    if( !strcmp( cmd, "leave" ) ) {
-        MVD_TrySwitchChannel( client, &mvd_waitingRoom );
+    if (!strcmp(cmd, "leave")) {
+        MVD_TrySwitchChannel(client, &mvd_waitingRoom);
         return;
     }
-    if( !strcmp( cmd, "commands" ) ) {
-        MVD_Commands_f( client );
+    if (!strcmp(cmd, "commands")) {
+        MVD_Commands_f(client);
         return;
     }
 
-    MVD_Say_f( client, 0 );
+    MVD_Say_f(client, 0);
 }
 
 /*
@@ -1253,29 +1290,31 @@ CONFIGSTRING MANAGEMENT
 ==============================================================================
 */
 
-void MVD_FreePlayer( mvd_player_t *player ) {
+void MVD_FreePlayer(mvd_player_t *player)
+{
     mvd_cs_t *cs, *next;
 
-    for( cs = player->configstrings; cs; cs = next ) {
+    for (cs = player->configstrings; cs; cs = next) {
         next = cs->next;
-        Z_Free( cs );
+        Z_Free(cs);
     }
     player->configstrings = NULL;
 }
 
-static void reset_unicast_strings( mvd_t *mvd, int index ) {
+static void reset_unicast_strings(mvd_t *mvd, int index)
+{
     mvd_cs_t *cs, **next_p;
     mvd_player_t *player;
     int i;
 
-    for( i = 0; i < mvd->maxclients; i++ ) {
+    for (i = 0; i < mvd->maxclients; i++) {
         player = &mvd->players[i];
         next_p = &player->configstrings;
-        for( cs = player->configstrings; cs; cs = cs->next ) {
-            if( cs->index == index ) {
-                Com_DPrintf( "%s: reset %d on %d\n", __func__, index, i );
+        for (cs = player->configstrings; cs; cs = cs->next) {
+            if (cs->index == index) {
+                Com_DPrintf("%s: reset %d on %d\n", __func__, index, i);
                 *next_p = cs->next;
-                Z_Free( cs );
+                Z_Free(cs);
                 break;
             }
             next_p = &cs->next;
@@ -1283,72 +1322,76 @@ static void reset_unicast_strings( mvd_t *mvd, int index ) {
     }
 }
 
-static void set_player_name( mvd_t *mvd, int index ) {
+static void set_player_name(mvd_t *mvd, int index)
+{
     mvd_player_t *player;
     char *string, *p;
 
-    string = mvd->configstrings[ CS_PLAYERSKINS + index ];
+    string = mvd->configstrings[CS_PLAYERSKINS + index];
     player = &mvd->players[index];
-    Q_strlcpy( player->name, string, sizeof( player->name ) );
-    p = strchr( player->name, '\\' );
-    if( p ) {
+    Q_strlcpy(player->name, string, sizeof(player->name));
+    p = strchr(player->name, '\\');
+    if (p) {
         *p = 0;
     }
 }
 
-static void update_player_name( mvd_t *mvd, int index ) {
+static void update_player_name(mvd_t *mvd, int index)
+{
     mvd_client_t *client;
 
     // parse player name
-    set_player_name( mvd, index );
+    set_player_name(mvd, index);
 
     // update layouts
-    FOR_EACH_MVDCL( client, mvd ) {
-        if( client->cl->state < cs_spawned ) {
+    FOR_EACH_MVDCL(client, mvd) {
+        if (client->cl->state < cs_spawned) {
             continue;
         }
-        if( client->layout_type != LAYOUT_FOLLOW ) {
+        if (client->layout_type != LAYOUT_FOLLOW) {
             continue;
         }
-        if( client->target == mvd->players + index ) {
+        if (client->target == mvd->players + index) {
             client->layout_time = 0;
         }
     }
 }
 
-void MVD_SetPlayerNames( mvd_t *mvd ) {
+void MVD_SetPlayerNames(mvd_t *mvd)
+{
     int i;
 
-    for( i = 0; i < mvd->maxclients; i++ ) {
-        set_player_name( mvd, i );
+    for (i = 0; i < mvd->maxclients; i++) {
+        set_player_name(mvd, i);
     }
 }
 
-void MVD_UpdateConfigstring( mvd_t *mvd, int index ) {
+void MVD_UpdateConfigstring(mvd_t *mvd, int index)
+{
     char *s = mvd->configstrings[index];
     mvd_client_t *client;
 
-    if( index >= CS_PLAYERSKINS && index < CS_PLAYERSKINS + mvd->maxclients ) {
+    if (index >= CS_PLAYERSKINS && index < CS_PLAYERSKINS + mvd->maxclients) {
         // update player name
-        update_player_name( mvd, index - CS_PLAYERSKINS );
-    } else if( index >= CS_GENERAL ) {
+        update_player_name(mvd, index - CS_PLAYERSKINS);
+    } else if (index >= CS_GENERAL) {
         // reset unicast versions of this string
-        reset_unicast_strings( mvd, index );
+        reset_unicast_strings(mvd, index);
     }
 
-    MSG_WriteByte( svc_configstring );
-    MSG_WriteShort( index );
-    MSG_WriteString( s );
+    MSG_WriteByte(svc_configstring);
+    MSG_WriteShort(index);
+    MSG_WriteString(s);
 
     // broadcast configstring change
-    FOR_EACH_MVDCL( client, mvd ) {
-        if( client->cl->state < cs_primed ) {
+    FOR_EACH_MVDCL(client, mvd) {
+        if (client->cl->state < cs_primed) {
             continue;
         }
-        SV_ClientAddMessage( client->cl, MSG_RELIABLE );
+        SV_ClientAddMessage(client->cl, MSG_RELIABLE);
     }
 
-    SZ_Clear( &msg_write );
+    SZ_Clear(&msg_write);
 }
 
 /*
@@ -1359,49 +1402,52 @@ MISC GAME FUNCTIONS
 ==============================================================================
 */
 
-void MVD_LinkEdict( mvd_t *mvd, edict_t *ent ) {
+void MVD_LinkEdict(mvd_t *mvd, edict_t *ent)
+{
     int         index;
     mmodel_t    *cm;
     bsp_t       *cache = mvd->cm.cache;
 
-    if( !cache ) {
+    if (!cache) {
         return;
     }
 
-    if( ent->s.solid == PACKED_BSP ) {
+    if (ent->s.solid == PACKED_BSP) {
         index = ent->s.modelindex;
-        if( index < 1 || index > cache->nummodels ) {
-            Com_WPrintf( "%s: entity %d: bad inline model index: %d\n",
-                __func__, ent->s.number, index );
+        if (index < 1 || index > cache->nummodels) {
+            Com_WPrintf("%s: entity %d: bad inline model index: %d\n",
+                        __func__, ent->s.number, index);
             return;
         }
-        cm = &cache->models[ index - 1 ];
-        VectorCopy( cm->mins, ent->mins );
-        VectorCopy( cm->maxs, ent->maxs );
+        cm = &cache->models[index - 1];
+        VectorCopy(cm->mins, ent->mins);
+        VectorCopy(cm->maxs, ent->maxs);
         ent->solid = SOLID_BSP;
-    } else if( ent->s.solid ) {
-        MSG_UnpackSolid16( ent->s.solid, ent->mins, ent->maxs );
+    } else if (ent->s.solid) {
+        MSG_UnpackSolid16(ent->s.solid, ent->mins, ent->maxs);
         ent->solid = SOLID_BBOX;
     } else {
-        VectorClear( ent->mins );
-        VectorClear( ent->maxs );
+        VectorClear(ent->mins);
+        VectorClear(ent->maxs);
         ent->solid = SOLID_NOT;
     }
 
-    SV_LinkEdict( &mvd->cm, ent );
+    SV_LinkEdict(&mvd->cm, ent);
 }
 
-void MVD_RemoveClient( client_t *client ) {
+void MVD_RemoveClient(client_t *client)
+{
     int index = client - svs.client_pool;
     mvd_client_t *cl = &mvd_clients[index];
 
-    List_Remove( &cl->entry );
+    List_Remove(&cl->entry);
 
-    memset( cl, 0, sizeof( *cl ) );
+    memset(cl, 0, sizeof(*cl));
     cl->cl = client;
 }
 
-static void MVD_GameInit( void ) {
+static void MVD_GameInit(void)
+{
     mvd_t *mvd = &mvd_waitingRoom;
     edict_t *edicts;
     cvar_t *mvd_default_map;
@@ -1411,87 +1457,88 @@ static void MVD_GameInit( void ) {
     int i;
     qerror_t ret;
 
-    Com_Printf( "----- MVD_GameInit -----\n" );
+    Com_Printf("----- MVD_GameInit -----\n");
 
-    mvd_admin_password = Cvar_Get( "mvd_admin_password", "", CVAR_PRIVATE );
-    mvd_part_filter = Cvar_Get( "mvd_part_filter", "0", 0 );
-    mvd_flood_msgs = Cvar_Get( "flood_msgs", "4", 0 );
-    mvd_flood_persecond = Cvar_Get( "flood_persecond", "4", 0 ); // FIXME: rename this
-    mvd_flood_waitdelay = Cvar_Get( "flood_waitdelay", "10", 0 );
-    mvd_flood_mute = Cvar_Get( "flood_mute", "0", 0 );
-    mvd_filter_version = Cvar_Get( "mvd_filter_version", "0", 0 );
-    mvd_default_map = Cvar_Get( "mvd_default_map", "q2dm1", CVAR_LATCH );
-    mvd_stats_score = Cvar_Get( "mvd_stats_score", "0", 0 );
-    mvd_stats_hack = Cvar_Get( "mvd_stats_hack", "0", 0 );
-    mvd_freeze_hack = Cvar_Get( "mvd_freeze_hack", "1", 0 );
-    mvd_chase_prefix = Cvar_Get( "mvd_chase_prefix", "xv 0 yb -64", 0 );
-    Cvar_Set( "g_features", va( "%d", MVD_FEATURES ) );
+    mvd_admin_password = Cvar_Get("mvd_admin_password", "", CVAR_PRIVATE);
+    mvd_part_filter = Cvar_Get("mvd_part_filter", "0", 0);
+    mvd_flood_msgs = Cvar_Get("flood_msgs", "4", 0);
+    mvd_flood_persecond = Cvar_Get("flood_persecond", "4", 0);   // FIXME: rename this
+    mvd_flood_waitdelay = Cvar_Get("flood_waitdelay", "10", 0);
+    mvd_flood_mute = Cvar_Get("flood_mute", "0", 0);
+    mvd_filter_version = Cvar_Get("mvd_filter_version", "0", 0);
+    mvd_default_map = Cvar_Get("mvd_default_map", "q2dm1", CVAR_LATCH);
+    mvd_stats_score = Cvar_Get("mvd_stats_score", "0", 0);
+    mvd_stats_hack = Cvar_Get("mvd_stats_hack", "0", 0);
+    mvd_freeze_hack = Cvar_Get("mvd_freeze_hack", "1", 0);
+    mvd_chase_prefix = Cvar_Get("mvd_chase_prefix", "xv 0 yb -64", 0);
+    Cvar_Set("g_features", va("%d", MVD_FEATURES));
 
-    Z_TagReserve( ( sizeof( edict_t ) +
-        sizeof( mvd_client_t ) ) * sv_maxclients->integer +
-        sizeof( edict_t ), TAG_MVD );
-    mvd_clients = Z_ReservedAllocz( sizeof( mvd_client_t ) *
-        sv_maxclients->integer );
-    edicts = Z_ReservedAllocz( sizeof( edict_t ) *
-        ( sv_maxclients->integer + 1 ) );
+    Z_TagReserve((sizeof(edict_t) +
+                  sizeof(mvd_client_t)) * sv_maxclients->integer +
+                 sizeof(edict_t), TAG_MVD);
+    mvd_clients = Z_ReservedAllocz(sizeof(mvd_client_t) *
+                                   sv_maxclients->integer);
+    edicts = Z_ReservedAllocz(sizeof(edict_t) *
+                              (sv_maxclients->integer + 1));
 
-    for( i = 0; i < sv_maxclients->integer; i++ ) {
+    for (i = 0; i < sv_maxclients->integer; i++) {
         mvd_clients[i].cl = &svs.client_pool[i];
-        edicts[i + 1].client = ( gclient_t * )&mvd_clients[i];
+        edicts[i + 1].client = (gclient_t *)&mvd_clients[i];
     }
 
     mvd_ge.edicts = edicts;
-    mvd_ge.edict_size = sizeof( edict_t );
+    mvd_ge.edict_size = sizeof(edict_t);
     mvd_ge.num_edicts = sv_maxclients->integer + 1;
     mvd_ge.max_edicts = sv_maxclients->integer + 1;
 
-    Q_snprintf( buffer, sizeof( buffer ),
-        "maps/%s.bsp", mvd_default_map->string );
+    Q_snprintf(buffer, sizeof(buffer),
+               "maps/%s.bsp", mvd_default_map->string);
 
-    ret = BSP_Load( buffer, &bsp );
-    if( !bsp ) {
-        Com_EPrintf( "Couldn't load %s for the Waiting Room: %s\n",
-            buffer, Q_ErrorString( ret ) );
-        Cvar_Reset( mvd_default_map );
-        strcpy( buffer, "maps/q2dm1.bsp" );
+    ret = BSP_Load(buffer, &bsp);
+    if (!bsp) {
+        Com_EPrintf("Couldn't load %s for the Waiting Room: %s\n",
+                    buffer, Q_ErrorString(ret));
+        Cvar_Reset(mvd_default_map);
+        strcpy(buffer, "maps/q2dm1.bsp");
         checksum = 80717714;
-        VectorSet( mvd->spawnOrigin, 984, 192, 784 );
-        VectorSet( mvd->spawnAngles, 25, 72, 0 );
+        VectorSet(mvd->spawnOrigin, 984, 192, 784);
+        VectorSet(mvd->spawnAngles, 25, 72, 0);
     } else {
         // get the spectator spawn point
-        MVD_ParseEntityString( mvd, bsp->entitystring );
+        MVD_ParseEntityString(mvd, bsp->entitystring);
         checksum = bsp->checksum;
-        BSP_Free( bsp );
+        BSP_Free(bsp);
     }
 
-    strcpy( mvd->name, "Waiting Room" );
-    Cvar_VariableStringBuffer( "game", mvd->gamedir, sizeof( mvd->gamedir ) );
-    Q_strlcpy( mvd->mapname, mvd_default_map->string, sizeof( mvd->mapname ) );
-    List_Init( &mvd->clients );
+    strcpy(mvd->name, "Waiting Room");
+    Cvar_VariableStringBuffer("game", mvd->gamedir, sizeof(mvd->gamedir));
+    Q_strlcpy(mvd->mapname, mvd_default_map->string, sizeof(mvd->mapname));
+    List_Init(&mvd->clients);
 
-    strcpy( mvd->configstrings[CS_NAME], "Waiting Room" );
-    strcpy( mvd->configstrings[CS_SKY], "unit1_" );
-    strcpy( mvd->configstrings[CS_MAXCLIENTS], "8" );
-    sprintf( mvd->configstrings[CS_MAPCHECKSUM], "%d", checksum );
-    strcpy( mvd->configstrings[CS_MODELS + 1], buffer );
-    strcpy( mvd->configstrings[CS_LIGHTS], "m" );
+    strcpy(mvd->configstrings[CS_NAME], "Waiting Room");
+    strcpy(mvd->configstrings[CS_SKY], "unit1_");
+    strcpy(mvd->configstrings[CS_MAXCLIENTS], "8");
+    sprintf(mvd->configstrings[CS_MAPCHECKSUM], "%d", checksum);
+    strcpy(mvd->configstrings[CS_MODELS + 1], buffer);
+    strcpy(mvd->configstrings[CS_LIGHTS], "m");
 
     mvd->dummy = &mvd_dummy;
     mvd->pm_type = PM_FREEZE;
     mvd->servercount = sv.spawncount;
 
     // set serverinfo variables
-    SV_InfoSet( "mapname", mvd->mapname );
-//    SV_InfoSet( "gamedir", "gtv" );
-    SV_InfoSet( "gamename", "gtv" );
-    SV_InfoSet( "gamedate", __DATE__ );
-    MVD_InfoSet( "mvd_channels", "0" );
-    MVD_InfoSet( "mvd_players", "0" );
+    SV_InfoSet("mapname", mvd->mapname);
+    //SV_InfoSet("gamedir", "gtv");
+    SV_InfoSet("gamename", "gtv");
+    SV_InfoSet("gamedate", __DATE__);
+    MVD_InfoSet("mvd_channels", "0");
+    MVD_InfoSet("mvd_players", "0");
     mvd_numplayers = 0;
 }
 
-static void MVD_GameShutdown( void ) {
-    Com_Printf( "----- MVD_GameShutdown -----\n" );
+static void MVD_GameShutdown(void)
+{
+    Com_Printf("----- MVD_GameShutdown -----\n");
 
     MVD_Shutdown();
 
@@ -1500,71 +1547,78 @@ static void MVD_GameShutdown( void ) {
     mvd_ge.num_edicts = 0;
     mvd_ge.max_edicts = 0;
 
-    Cvar_Set( "g_features", "0" );
+    Cvar_Set("g_features", "0");
 }
 
-static void MVD_GameSpawnEntities( const char *mapname, const char *entstring, const char *spawnpoint ) {
+static void MVD_GameSpawnEntities(const char *mapname, const char *entstring, const char *spawnpoint)
+{
 }
-static void MVD_GameWriteGame( const char *filename, qboolean autosave ) {
+static void MVD_GameWriteGame(const char *filename, qboolean autosave)
+{
 }
-static void MVD_GameReadGame( const char *filename ) {
+static void MVD_GameReadGame(const char *filename)
+{
 }
-static void MVD_GameWriteLevel( const char *filename ) {
+static void MVD_GameWriteLevel(const char *filename)
+{
 }
-static void MVD_GameReadLevel( const char *filename ) {
+static void MVD_GameReadLevel(const char *filename)
+{
 }
 
-static qboolean MVD_GameClientConnect( edict_t *ent, char *userinfo ) {
-    mvd_client_t *client = EDICT_MVDCL( ent );
+static qboolean MVD_GameClientConnect(edict_t *ent, char *userinfo)
+{
+    mvd_client_t *client = EDICT_MVDCL(ent);
     mvd_t *mvd;
 
     // if there is exactly one active channel, assign them to it,
     // otherwise, assign to Waiting Room
-    if( LIST_SINGLE( &mvd_channel_list ) ) {
-        mvd = LIST_FIRST( mvd_t, &mvd_channel_list, entry );
+    if (LIST_SINGLE(&mvd_channel_list)) {
+        mvd = LIST_FIRST(mvd_t, &mvd_channel_list, entry);
     } else {
         mvd = &mvd_waitingRoom;
     }
-    List_SeqAdd( &mvd->clients, &client->entry );
+    List_SeqAdd(&mvd->clients, &client->entry);
     client->mvd = mvd;
-    
+
     // override server state
-    MVD_SetServerState( client->cl, mvd );
+    MVD_SetServerState(client->cl, mvd);
 
     return qtrue;
 }
 
-static void MVD_GameClientBegin( edict_t *ent ) {
-    mvd_client_t *client = EDICT_MVDCL( ent );
+static void MVD_GameClientBegin(edict_t *ent)
+{
+    mvd_client_t *client = EDICT_MVDCL(ent);
     mvd_t *mvd = client->mvd;
     mvd_player_t *target;
 
     client->floodTime = 0;
     client->floodHead = 0;
-    memset( &client->lastcmd, 0, sizeof( client->lastcmd ) );
-    memset( &client->ps, 0, sizeof( client->ps ) );
+    memset(&client->lastcmd, 0, sizeof(client->lastcmd));
+    memset(&client->ps, 0, sizeof(client->ps));
     client->jump_held = 0;
     client->layout_type = LAYOUT_NONE;
     client->layout_time = 0;
     client->layout_cursor = 0;
- 
-    if( !client->begin_time ) {
-        if( MVD_PartFilter( client ) ) {
-            MVD_BroadcastPrintf( mvd, PRINT_MEDIUM, UF_MUTE_MISC,
-                "[MVD] %s entered the channel\n", client->cl->name );
+
+    if (!client->begin_time) {
+        if (MVD_PartFilter(client)) {
+            MVD_BroadcastPrintf(mvd, PRINT_MEDIUM, UF_MUTE_MISC,
+                                "[MVD] %s entered the channel\n", client->cl->name);
         }
-        if( Com_IsDedicated() && mvd != &mvd_waitingRoom ) {
+        if (Com_IsDedicated() && mvd != &mvd_waitingRoom) {
             // notify them if channel is in waiting state
-            if( mvd->state == MVD_WAITING ) {
-                SV_ClientPrintf( client->cl, PRINT_HIGH,
-                    "[MVD] Buffering data, please wait...\n" );
+            if (mvd->state == MVD_WAITING) {
+                SV_ClientPrintf(client->cl, PRINT_HIGH,
+                                "[MVD] Buffering data, please wait...\n");
             }
-            if( !mvd->cm.cache ) {
-                SV_ClientPrintf( client->cl, PRINT_HIGH,
-                    "[MVD] Visibility data is missing for this map!\n" );
+            if (!mvd->cm.cache) {
+                SV_ClientPrintf(client->cl, PRINT_HIGH,
+                                "[MVD] Visibility data is missing for this map!\n");
             }
         }
-        target = MVD_MostFollowed( mvd );
+        target = MVD_MostFollowed(mvd);
     } else {
         target = client->oldtarget;
     }
@@ -1572,122 +1626,129 @@ static void MVD_GameClientBegin( edict_t *ent ) {
     client->target = NULL;
     client->begin_time = svs.realtime;
 
-    MVD_SetDefaultLayout( client );
+    MVD_SetDefaultLayout(client);
 
-    if( mvd->intermission ) {
+    if (mvd->intermission) {
         // force them to chase dummy MVD client
         client->target = mvd->dummy;
-        MVD_SetFollowLayout( client );
-        MVD_UpdateClient( client );
-    } else if( target && target->inuse ) {
+        MVD_SetFollowLayout(client);
+        MVD_UpdateClient(client);
+    } else if (target && target->inuse) {
         // start normal chase cam mode
-        MVD_FollowStart( client, target );
+        MVD_FollowStart(client, target);
     } else {
         // spawn the spectator
-        VectorScale( mvd->spawnOrigin, 8, client->ps.pmove.origin );
-        VectorCopy( mvd->spawnAngles, client->ps.viewangles );
-        MVD_FollowStop( client );
+        VectorScale(mvd->spawnOrigin, 8, client->ps.pmove.origin);
+        VectorCopy(mvd->spawnAngles, client->ps.viewangles);
+        MVD_FollowStop(client);
     }
 
     mvd_dirty = qtrue;
 }
 
-static void MVD_GameClientUserinfoChanged( edict_t *ent, char *userinfo ) {
-    mvd_client_t *client = EDICT_MVDCL( ent );
+static void MVD_GameClientUserinfoChanged(edict_t *ent, char *userinfo)
+{
+    mvd_client_t *client = EDICT_MVDCL(ent);
     char *s;
     float fov;
 
-    s = Info_ValueForKey( userinfo, "uf" );
-    if( *s ) {
-        client->uf = atoi( s );
+    s = Info_ValueForKey(userinfo, "uf");
+    if (*s) {
+        client->uf = atoi(s);
     } else {
         client->uf = UF_LOCALFOV;
     }
 
-    s = Info_ValueForKey( userinfo, "fov" );
-    fov = atof( s );
-    if( fov < 1 ) {
+    s = Info_ValueForKey(userinfo, "fov");
+    fov = atof(s);
+    if (fov < 1) {
         fov = 90;
-    } else if( fov > 160 ) {
+    } else if (fov > 160) {
         fov = 160;
     }
     client->fov = fov;
-    if( client->uf & UF_LOCALFOV ) {
+    if (client->uf & UF_LOCALFOV) {
         client->ps.fov = fov;
     }
 }
 
-void MVD_GameClientNameChanged( edict_t *ent, const char *name ) {
-    mvd_client_t *client = EDICT_MVDCL( ent );
+void MVD_GameClientNameChanged(edict_t *ent, const char *name)
+{
+    mvd_client_t *client = EDICT_MVDCL(ent);
     client_t *cl = client->cl;
 
-    if( client->begin_time && MVD_PartFilter( client ) ) {
-        MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM, UF_MUTE_MISC,
-            "[MVD] %s changed name to %s\n", cl->name, name );
+    if (client->begin_time && MVD_PartFilter(client)) {
+        MVD_BroadcastPrintf(client->mvd, PRINT_MEDIUM, UF_MUTE_MISC,
+                            "[MVD] %s changed name to %s\n", cl->name, name);
     }
 }
 
 // called early from SV_DropClient to prevent multiple disconnect messages
-void MVD_GameClientDrop( edict_t *ent, const char *prefix, const char *reason ) {
-    mvd_client_t *client = EDICT_MVDCL( ent );
+void MVD_GameClientDrop(edict_t *ent, const char *prefix, const char *reason)
+{
+    mvd_client_t *client = EDICT_MVDCL(ent);
     client_t *cl = client->cl;
 
-    if( client->begin_time && MVD_PartFilter( client ) ) {
-        MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM, UF_MUTE_MISC,
-            "[MVD] %s%s%s\n", cl->name, prefix, reason );
+    if (client->begin_time && MVD_PartFilter(client)) {
+        MVD_BroadcastPrintf(client->mvd, PRINT_MEDIUM, UF_MUTE_MISC,
+                            "[MVD] %s%s%s\n", cl->name, prefix, reason);
     }
 
     client->begin_time = 0;
 }
 
-static void MVD_GameClientDisconnect( edict_t *ent ) {
-    mvd_client_t *client = EDICT_MVDCL( ent );
+static void MVD_GameClientDisconnect(edict_t *ent)
+{
+    mvd_client_t *client = EDICT_MVDCL(ent);
     client_t *cl = client->cl;
 
-    if( client->begin_time && MVD_PartFilter( client ) ) {
-        MVD_BroadcastPrintf( client->mvd, PRINT_MEDIUM, UF_MUTE_MISC,
-            "[MVD] %s disconnected\n", cl->name );
+    if (client->begin_time && MVD_PartFilter(client)) {
+        MVD_BroadcastPrintf(client->mvd, PRINT_MEDIUM, UF_MUTE_MISC,
+                            "[MVD] %s disconnected\n", cl->name);
     }
 
     client->begin_time = 0;
 }
 
 
-static trace_t MVD_Trace( vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end ) {
+static trace_t MVD_Trace(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end)
+{
     trace_t trace;
 
-    memset( &trace, 0, sizeof( trace ) );
-    VectorCopy( end, trace.endpos );
+    memset(&trace, 0, sizeof(trace));
+    VectorCopy(end, trace.endpos);
     trace.fraction = 1;
 
     return trace;
 }
 
-static int MVD_PointContents( vec3_t p ) {
+static int MVD_PointContents(vec3_t p)
+{
     return 0;
 }
 
-static void MVD_GameClientThink( edict_t *ent, usercmd_t *cmd ) {
-    mvd_client_t *client = EDICT_MVDCL( ent );
+static void MVD_GameClientThink(edict_t *ent, usercmd_t *cmd)
+{
+    mvd_client_t *client = EDICT_MVDCL(ent);
     usercmd_t *old = &client->lastcmd;
     pmove_t pm;
 
-    if( ( cmd->buttons & ~old->buttons ) & BUTTON_ATTACK ) {
-        MVD_Observe_f( client );
+    if ((cmd->buttons & ~old->buttons) & BUTTON_ATTACK) {
+        MVD_Observe_f(client);
     }
 
-    if( client->target ) {
-        if( cmd->upmove >= 10 ) {
-            if( client->jump_held < 1 ) {
-                if( !client->mvd->intermission ) {
-                    MVD_FollowNext( client );
+    if (client->target) {
+        if (cmd->upmove >= 10) {
+            if (client->jump_held < 1) {
+                if (!client->mvd->intermission) {
+                    MVD_FollowNext(client);
                 }
                 client->jump_held = 1;
             }
-        } else if( cmd->upmove <= -10 ) {
-            if( client->jump_held > -1 ) {
-                if( !client->mvd->intermission ) {
-                    MVD_FollowPrev( client );
+        } else if (cmd->upmove <= -10) {
+            if (client->jump_held > -1) {
+                if (!client->mvd->intermission) {
+                    MVD_FollowPrev(client);
                 }
                 client->jump_held = -1;
             }
@@ -1695,24 +1756,25 @@ static void MVD_GameClientThink( edict_t *ent, usercmd_t *cmd ) {
             client->jump_held = 0;
         }
     } else {
-        memset( &pm, 0, sizeof( pm ) );
+        memset(&pm, 0, sizeof(pm));
         pm.trace = MVD_Trace;
         pm.pointcontents = MVD_PointContents;
         pm.s = client->ps.pmove;
         pm.cmd = *cmd;
 
-        PF_Pmove( &pm );
+        PF_Pmove(&pm);
 
         client->ps.pmove = pm.s;
-        if( pm.s.pm_type != PM_FREEZE ) {
-            VectorCopy( pm.viewangles, client->ps.viewangles );
+        if (pm.s.pm_type != PM_FREEZE) {
+            VectorCopy(pm.viewangles, client->ps.viewangles);
         }
     }
 
     *old = *cmd;
 }
 
-static void MVD_IntermissionStart( mvd_t *mvd ) {
+static void MVD_IntermissionStart(mvd_t *mvd)
+{
     mvd_client_t *client;
 
     // set this early so MVD_SetDefaultLayout works
@@ -1722,24 +1784,25 @@ static void MVD_IntermissionStart( mvd_t *mvd ) {
     // save oldscores
     // FIXME: unfortunately this will also reset oldscores during
     // match timeout with certain mods (OpenTDM should work fine though)
-    strcpy( mvd->oldscores, mvd->layout );
+    strcpy(mvd->oldscores, mvd->layout);
 #endif
 
     // force all clients to switch to the MVD dummy
     // and open the scoreboard, unless they had some special layout up
-    FOR_EACH_MVDCL( client, mvd ) {
-        if( client->cl->state != cs_spawned ) {
+    FOR_EACH_MVDCL(client, mvd) {
+        if (client->cl->state != cs_spawned) {
             continue;
         }
         client->oldtarget = client->target;
         client->target = mvd->dummy;
-        if( client->layout_type < LAYOUT_SCORES ) {
-            MVD_SetDefaultLayout( client );
+        if (client->layout_type < LAYOUT_SCORES) {
+            MVD_SetDefaultLayout(client);
         }
     }
 }
 
-static void MVD_IntermissionStop( mvd_t *mvd ) {
+static void MVD_IntermissionStop(mvd_t *mvd)
+{
     mvd_client_t *client;
     mvd_player_t *target;
 
@@ -1748,120 +1811,125 @@ static void MVD_IntermissionStop( mvd_t *mvd ) {
 
     // force all clients to switch to previous mode
     // and close the scoreboard
-    FOR_EACH_MVDCL( client, mvd ) {
-        if( client->cl->state != cs_spawned ) {
+    FOR_EACH_MVDCL(client, mvd) {
+        if (client->cl->state != cs_spawned) {
             continue;
         }
-        if( client->layout_type == LAYOUT_SCORES ) {
+        if (client->layout_type == LAYOUT_SCORES) {
             client->layout_type = 0;
         }
         target = client->oldtarget;
-        if( target && target->inuse ) {
+        if (target && target->inuse) {
             // start normal chase cam mode
-            MVD_FollowStart( client, target );
+            MVD_FollowStart(client, target);
         } else {
-            MVD_FollowStop( client );
+            MVD_FollowStop(client);
         }
         client->oldtarget = NULL;
     }
 }
 
 // called just after new frame is parsed
-void MVD_UpdateClients( mvd_t *mvd ) {
+void MVD_UpdateClients(mvd_t *mvd)
+{
     mvd_client_t *client;
 
     // check for intermission
-    if( mvd_freeze_hack->integer ) {
-        if( !mvd->intermission ) {
-            if( mvd->dummy->ps.pmove.pm_type == PM_FREEZE ) {
-                MVD_IntermissionStart( mvd );
+    if (mvd_freeze_hack->integer) {
+        if (!mvd->intermission) {
+            if (mvd->dummy->ps.pmove.pm_type == PM_FREEZE) {
+                MVD_IntermissionStart(mvd);
             }
-        } else if( mvd->dummy->ps.pmove.pm_type != PM_FREEZE ) {
-            MVD_IntermissionStop( mvd );
+        } else if (mvd->dummy->ps.pmove.pm_type != PM_FREEZE) {
+            MVD_IntermissionStop(mvd);
         }
-    } else if( mvd->intermission ) {
-        MVD_IntermissionStop( mvd );
+    } else if (mvd->intermission) {
+        MVD_IntermissionStop(mvd);
     }
 
     // update UDP clients
-    FOR_EACH_MVDCL( client, mvd ) {
-        if( client->cl->state == cs_spawned ) {
-            MVD_UpdateClient( client );
+    FOR_EACH_MVDCL(client, mvd) {
+        if (client->cl->state == cs_spawned) {
+            MVD_UpdateClient(client);
         }
     }
 }
 
-static void MVD_WriteDemoMessage( mvd_t *mvd ) {
+static void MVD_WriteDemoMessage(mvd_t *mvd)
+{
     uint16_t msglen;
     ssize_t ret;
 
-    msglen = LittleShort( msg_read.cursize );
-    ret = FS_Write( &msglen, 2, mvd->demorecording );
-    if( ret != 2 )
+    msglen = LittleShort(msg_read.cursize);
+    ret = FS_Write(&msglen, 2, mvd->demorecording);
+    if (ret != 2)
         goto fail;
-    ret = FS_Write( msg_read.data, msg_read.cursize, mvd->demorecording );
-    if( ret == msg_read.cursize )
+    ret = FS_Write(msg_read.data, msg_read.cursize, mvd->demorecording);
+    if (ret == msg_read.cursize)
         return;
 
 fail:
-    Com_EPrintf( "[%s] Couldn't write demo: %s\n", mvd->name, Q_ErrorString( ret ) );
-    MVD_StopRecord( mvd );
+    Com_EPrintf("[%s] Couldn't write demo: %s\n", mvd->name, Q_ErrorString(ret));
+    MVD_StopRecord(mvd);
 }
 
-static void MVD_GameRunFrame( void ) {
+static void MVD_GameRunFrame(void)
+{
     mvd_t *mvd, *next;
     int numplayers = 0;
 
-    LIST_FOR_EACH_SAFE( mvd_t, mvd, next, &mvd_channel_list, entry ) {
-        if( setjmp( mvd_jmpbuf ) ) {
+    LIST_FOR_EACH_SAFE(mvd_t, mvd, next, &mvd_channel_list, entry) {
+        if (setjmp(mvd_jmpbuf)) {
             continue;
         }
 
         // parse stream
-        if( !mvd->read_frame( mvd ) ) {
+        if (!mvd->read_frame(mvd)) {
             goto update;
         }
 
         // write this message to demofile
-        if( mvd->demorecording ) {
-            MVD_WriteDemoMessage( mvd );
+        if (mvd->demorecording) {
+            MVD_WriteDemoMessage(mvd);
         }
 
 update:
-        MVD_UpdateLayouts( mvd );
+        MVD_UpdateLayouts(mvd);
         numplayers += mvd->numplayers;
     }
 
-    MVD_UpdateLayouts( &mvd_waitingRoom );
-   
-    if( mvd_dirty ) {
-        MVD_InfoSet( "mvd_channels", va( "%d", List_Count( &mvd_channel_list ) ) );
+    MVD_UpdateLayouts(&mvd_waitingRoom);
+
+    if (mvd_dirty) {
+        MVD_InfoSet("mvd_channels", va("%d", List_Count(&mvd_channel_list)));
         mvd_dirty = qfalse;
     }
 
-    if( numplayers != mvd_numplayers ) {
-        MVD_InfoSet( "mvd_players", va( "%d", numplayers ) );
+    if (numplayers != mvd_numplayers) {
+        MVD_InfoSet("mvd_players", va("%d", numplayers));
         mvd_numplayers = numplayers;
         mvd_dirty = qtrue; // update layouts next frame
     }
 }
 
-static void MVD_GameServerCommand( void ) {
+static void MVD_GameServerCommand(void)
+{
 }
 
-void MVD_PrepWorldFrame( void ) {
+void MVD_PrepWorldFrame(void)
+{
     mvd_t *mvd;
     edict_t *ent;
     int i;
 
     // reset events and old origins
-    FOR_EACH_MVD( mvd ) {
-        for( i = 1, ent = &mvd->edicts[1]; i < mvd->pool.num_edicts; i++, ent++ ) {
-            if( !ent->inuse ) {
+    FOR_EACH_MVD(mvd) {
+        for (i = 1, ent = &mvd->edicts[1]; i < mvd->pool.num_edicts; i++, ent++) {
+            if (!ent->inuse) {
                 continue;
             }
-            if( !( ent->s.renderfx & RF_BEAM ) ) {
-                VectorCopy( ent->s.origin, ent->s.old_origin );
+            if (!(ent->s.renderfx & RF_BEAM)) {
+                VectorCopy(ent->s.origin, ent->s.old_origin);
             }
             ent->s.event = 0;
         }

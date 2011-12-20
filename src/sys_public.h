@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -26,43 +26,43 @@ typedef struct {
 } mempool_t;
 
 // loads the dll and returns entry pointer
-void    *Sys_LoadLibrary( const char *path, const char *sym, void **handle );
-void    Sys_FreeLibrary( void *handle );
-void    *Sys_GetProcAddress( void *handle, const char *sym );
+void    *Sys_LoadLibrary(const char *path, const char *sym, void **handle);
+void    Sys_FreeLibrary(void *handle);
+void    *Sys_GetProcAddress(void *handle, const char *sym);
 
-unsigned    Sys_Milliseconds( void );
-void    Sys_Sleep( int msec );
+unsigned    Sys_Milliseconds(void);
+void    Sys_Sleep(int msec);
 
-void    Hunk_Begin( mempool_t *pool, size_t maxsize );
-void    *Hunk_Alloc( mempool_t *pool, size_t size );
-void    Hunk_End( mempool_t *pool );
-void    Hunk_Free( mempool_t *pool );
+void    Hunk_Begin(mempool_t *pool, size_t maxsize);
+void    *Hunk_Alloc(mempool_t *pool, size_t size);
+void    Hunk_End(mempool_t *pool);
+void    Hunk_Free(mempool_t *pool);
 
-void    Sys_Init( void );
-void    Sys_AddDefaultConfig( void );
+void    Sys_Init(void);
+void    Sys_AddDefaultConfig(void);
 
 #if USE_SYSCON
-void    Sys_RunConsole( void );
-void    Sys_ConsoleOutput( const char *string );
-void    Sys_SetConsoleTitle( const char *title );
-void    Sys_SetConsoleColor( color_index_t color );
-void    Sys_Printf( const char *fmt, ... ) q_printf( 1, 2 );
+void    Sys_RunConsole(void);
+void    Sys_ConsoleOutput(const char *string);
+void    Sys_SetConsoleTitle(const char *title);
+void    Sys_SetConsoleColor(color_index_t color);
+void    Sys_Printf(const char *fmt, ...) q_printf(1, 2);
 #endif
 
-void    Sys_Error( const char *error, ... ) q_noreturn q_printf( 1, 2 );
-void    Sys_Quit( void ) q_noreturn;
+void    Sys_Error(const char *error, ...) q_noreturn q_printf(1, 2);
+void    Sys_Quit(void) q_noreturn;
 
-void    Sys_ListFiles_r( const char *path, const char *filter,
-            unsigned flags, size_t baselen, int *count_p, void **files, int depth );
+void    Sys_ListFiles_r(const char *path, const char *filter,
+                        unsigned flags, size_t baselen, int *count_p, void **files, int depth);
 
 struct  file_info_s;
-qerror_t Sys_GetPathInfo( const char *path, struct file_info_s *info );
-qerror_t Sys_GetFileInfo( FILE *fp, struct file_info_s *info );
+qerror_t Sys_GetPathInfo(const char *path, struct file_info_s *info);
+qerror_t Sys_GetFileInfo(FILE *fp, struct file_info_s *info);
 
-void    Sys_DebugBreak( void );
+void    Sys_DebugBreak(void);
 
 #if USE_AC_CLIENT
-qboolean Sys_GetAntiCheatAPI( void );
+qboolean Sys_GetAntiCheatAPI(void);
 #endif
 
 extern cvar_t   *sys_basedir;

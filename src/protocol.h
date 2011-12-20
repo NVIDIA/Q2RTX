@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -49,40 +49,40 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define PROTOCOL_VERSION_MVD_CURRENT            2010    // r177
 
 #define R1Q2_SUPPORTED(x) \
-    ((x)>=PROTOCOL_VERSION_R1Q2_MINIMUM && \
-     (x)<=PROTOCOL_VERSION_R1Q2_CURRENT)
+    ((x) >= PROTOCOL_VERSION_R1Q2_MINIMUM && \
+     (x) <= PROTOCOL_VERSION_R1Q2_CURRENT)
 
 #define Q2PRO_SUPPORTED(x) \
-    ((x)>=PROTOCOL_VERSION_Q2PRO_MINIMUM && \
-     (x)<=PROTOCOL_VERSION_Q2PRO_CURRENT)
+    ((x) >= PROTOCOL_VERSION_Q2PRO_MINIMUM && \
+     (x) <= PROTOCOL_VERSION_Q2PRO_CURRENT)
 
 #define MVD_SUPPORTED(x) \
-    ((x)>=PROTOCOL_VERSION_MVD_MINIMUM && \
-     (x)<=PROTOCOL_VERSION_MVD_CURRENT)
+    ((x) >= PROTOCOL_VERSION_MVD_MINIMUM && \
+     (x) <= PROTOCOL_VERSION_MVD_CURRENT)
 
 //=========================================
 
 #define UPDATE_BACKUP   16  // copies of entity_state_t to keep buffered
                             // must be power of two
-#define UPDATE_MASK     (UPDATE_BACKUP-1)
+#define UPDATE_MASK     (UPDATE_BACKUP - 1)
 
 #define CMD_BACKUP      128 // allow a lot of command backups for very fast systems
                             // increased from 64
-#define CMD_MASK        (CMD_BACKUP-1)
+#define CMD_MASK        (CMD_BACKUP - 1)
 
 
 #define SVCMD_BITS              5
-#define SVCMD_MASK              ((1<<SVCMD_BITS)-1)
+#define SVCMD_MASK              ((1 << SVCMD_BITS) - 1)
 
 #define FRAMENUM_BITS           27
-#define FRAMENUM_MASK           ((1<<FRAMENUM_BITS)-1)
+#define FRAMENUM_MASK           ((1 << FRAMENUM_BITS) - 1)
 
 #define SURPRESSCOUNT_BITS      4
-#define SURPRESSCOUNT_MASK      ((1<<SURPRESSCOUNT_BITS)-1)
+#define SURPRESSCOUNT_MASK      ((1 << SURPRESSCOUNT_BITS) - 1)
 
 #define MAX_PACKET_ENTITIES     128
 #define MAX_PARSE_ENTITIES      2048    // should be MAX_PACKET_ENTITIES * UPDATE_BACKUP
-#define PARSE_ENTITIES_MASK     (MAX_PARSE_ENTITIES-1)
+#define PARSE_ENTITIES_MASK     (MAX_PARSE_ENTITIES - 1)
 
 #define MAX_PACKET_USERCMDS     32
 #define MAX_PACKET_FRAMES       4
@@ -90,8 +90,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MAX_PACKET_STRINGCMDS   8
 #define MAX_PACKET_USERINFOS    8
 
-#define CS_BITMAP_BYTES         (MAX_CONFIGSTRINGS/8) // 260
-#define CS_BITMAP_LONGS         (CS_BITMAP_BYTES/4 )
+#define CS_BITMAP_BYTES         (MAX_CONFIGSTRINGS / 8) // 260
+#define CS_BITMAP_LONGS         (CS_BITMAP_BYTES / 4)
 
 #define MVD_MAGIC               MakeRawLong('M','V','D','2')
 
@@ -118,7 +118,7 @@ typedef enum {
                                 // should be \n terminated
     svc_serverdata,             // [long] protocol ...
     svc_configstring,           // [short] [string]
-    svc_spawnbaseline,        
+    svc_spawnbaseline,
     svc_centerprint,            // [string] to put in center of the screen
     svc_download,               // [short] size [size bytes]
     svc_playerinfo,             // variable
@@ -177,7 +177,7 @@ typedef enum {
 //
 typedef enum {
     clc_bad,
-    clc_nop,         
+    clc_nop,
     clc_move,               // [usercmd_t]
     clc_userinfo,           // [userinfo string]
     clc_stringcmd,          // [string] message
@@ -332,8 +332,8 @@ typedef enum {
 
 // ==============================================================
 
-#define CLIENTNUM_NONE        (MAX_CLIENTS-1)
-#define CLIENTNUM_RESERVED    (MAX_CLIENTS-1)
+#define CLIENTNUM_NONE        (MAX_CLIENTS - 1)
+#define CLIENTNUM_RESERVED    (MAX_CLIENTS - 1)
 
 // a SOLID_BBOX will never create this value
 #define PACKED_BSP      31

@@ -59,40 +59,40 @@ static void mdfour64(uint32_t *M)
     int j;
     uint32_t AA, BB, CC, DD;
     uint32_t X[16];
-    uint32_t A,B,C,D;
+    uint32_t A, B, C, D;
 
-    for (j=0;j<16;j++)
+    for (j = 0; j < 16; j++)
         X[j] = M[j];
 
     A = m->A; B = m->B; C = m->C; D = m->D;
     AA = A; BB = B; CC = C; DD = D;
 
-        ROUND1(A,B,C,D,  0,  3);  ROUND1(D,A,B,C,  1,  7);
-    ROUND1(C,D,A,B,  2, 11);  ROUND1(B,C,D,A,  3, 19);
-        ROUND1(A,B,C,D,  4,  3);  ROUND1(D,A,B,C,  5,  7);
-    ROUND1(C,D,A,B,  6, 11);  ROUND1(B,C,D,A,  7, 19);
-        ROUND1(A,B,C,D,  8,  3);  ROUND1(D,A,B,C,  9,  7);
-    ROUND1(C,D,A,B, 10, 11);  ROUND1(B,C,D,A, 11, 19);
-        ROUND1(A,B,C,D, 12,  3);  ROUND1(D,A,B,C, 13,  7);
-    ROUND1(C,D,A,B, 14, 11);  ROUND1(B,C,D,A, 15, 19);
+    ROUND1(A, B, C, D,  0,  3);  ROUND1(D, A, B, C,  1,  7);
+    ROUND1(C, D, A, B,  2, 11);  ROUND1(B, C, D, A,  3, 19);
+    ROUND1(A, B, C, D,  4,  3);  ROUND1(D, A, B, C,  5,  7);
+    ROUND1(C, D, A, B,  6, 11);  ROUND1(B, C, D, A,  7, 19);
+    ROUND1(A, B, C, D,  8,  3);  ROUND1(D, A, B, C,  9,  7);
+    ROUND1(C, D, A, B, 10, 11);  ROUND1(B, C, D, A, 11, 19);
+    ROUND1(A, B, C, D, 12,  3);  ROUND1(D, A, B, C, 13,  7);
+    ROUND1(C, D, A, B, 14, 11);  ROUND1(B, C, D, A, 15, 19);
 
-        ROUND2(A,B,C,D,  0,  3);  ROUND2(D,A,B,C,  4,  5);
-    ROUND2(C,D,A,B,  8,  9);  ROUND2(B,C,D,A, 12, 13);
-        ROUND2(A,B,C,D,  1,  3);  ROUND2(D,A,B,C,  5,  5);
-    ROUND2(C,D,A,B,  9,  9);  ROUND2(B,C,D,A, 13, 13);
-        ROUND2(A,B,C,D,  2,  3);  ROUND2(D,A,B,C,  6,  5);
-    ROUND2(C,D,A,B, 10,  9);  ROUND2(B,C,D,A, 14, 13);
-        ROUND2(A,B,C,D,  3,  3);  ROUND2(D,A,B,C,  7,  5);
-    ROUND2(C,D,A,B, 11,  9);  ROUND2(B,C,D,A, 15, 13);
+    ROUND2(A, B, C, D,  0,  3);  ROUND2(D, A, B, C,  4,  5);
+    ROUND2(C, D, A, B,  8,  9);  ROUND2(B, C, D, A, 12, 13);
+    ROUND2(A, B, C, D,  1,  3);  ROUND2(D, A, B, C,  5,  5);
+    ROUND2(C, D, A, B,  9,  9);  ROUND2(B, C, D, A, 13, 13);
+    ROUND2(A, B, C, D,  2,  3);  ROUND2(D, A, B, C,  6,  5);
+    ROUND2(C, D, A, B, 10,  9);  ROUND2(B, C, D, A, 14, 13);
+    ROUND2(A, B, C, D,  3,  3);  ROUND2(D, A, B, C,  7,  5);
+    ROUND2(C, D, A, B, 11,  9);  ROUND2(B, C, D, A, 15, 13);
 
-    ROUND3(A,B,C,D,  0,  3);  ROUND3(D,A,B,C,  8,  9);
-    ROUND3(C,D,A,B,  4, 11);  ROUND3(B,C,D,A, 12, 15);
-        ROUND3(A,B,C,D,  2,  3);  ROUND3(D,A,B,C, 10,  9);
-    ROUND3(C,D,A,B,  6, 11);  ROUND3(B,C,D,A, 14, 15);
-        ROUND3(A,B,C,D,  1,  3);  ROUND3(D,A,B,C,  9,  9);
-    ROUND3(C,D,A,B,  5, 11);  ROUND3(B,C,D,A, 13, 15);
-        ROUND3(A,B,C,D,  3,  3);  ROUND3(D,A,B,C, 11,  9);
-    ROUND3(C,D,A,B,  7, 11);  ROUND3(B,C,D,A, 15, 15);
+    ROUND3(A, B, C, D,  0,  3);  ROUND3(D, A, B, C,  8,  9);
+    ROUND3(C, D, A, B,  4, 11);  ROUND3(B, C, D, A, 12, 15);
+    ROUND3(A, B, C, D,  2,  3);  ROUND3(D, A, B, C, 10,  9);
+    ROUND3(C, D, A, B,  6, 11);  ROUND3(B, C, D, A, 14, 15);
+    ROUND3(A, B, C, D,  1,  3);  ROUND3(D, A, B, C,  9,  9);
+    ROUND3(C, D, A, B,  5, 11);  ROUND3(B, C, D, A, 13, 15);
+    ROUND3(A, B, C, D,  3,  3);  ROUND3(D, A, B, C, 11,  9);
+    ROUND3(C, D, A, B,  7, 11);  ROUND3(B, C, D, A, 15, 15);
 
     A += AA; B += BB; C += CC; D += DD;
 
@@ -101,7 +101,7 @@ static void mdfour64(uint32_t *M)
     C &= 0xFFFFFFFF; D &= 0xFFFFFFFF;
 #endif
 
-    for (j=0;j<16;j++)
+    for (j = 0; j < 16; j++)
         X[j] = 0;
 
     m->A = A; m->B = B; m->C = C; m->D = D;
@@ -111,17 +111,17 @@ static void copy64(uint32_t *M, uint8_t *in)
 {
     int i;
 
-    for (i=0;i<16;i++)
-        M[i] = (in[i*4+3]<<24) | (in[i*4+2]<<16) |
-            (in[i*4+1]<<8) | (in[i*4+0]<<0);
+    for (i = 0; i < 16; i++)
+        M[i] = (in[i * 4 + 3] << 24) | (in[i * 4 + 2] << 16) |
+               (in[i * 4 + 1] << 8) | (in[i * 4 + 0] << 0);
 }
 
-static void copy4(uint8_t *out,uint32_t x)
+static void copy4(uint8_t *out, uint32_t x)
 {
-    out[0] = x&0xFF;
-    out[1] = (x>>8)&0xFF;
-    out[2] = (x>>16)&0xFF;
-    out[3] = (x>>24)&0xFF;
+    out[0] = x & 0xFF;
+    out[1] = (x >> 8) & 0xFF;
+    out[2] = (x >> 16) & 0xFF;
+    out[3] = (x >> 24) & 0xFF;
 }
 
 void mdfour_begin(struct mdfour *md)
@@ -149,14 +149,14 @@ static void mdfour_tail(uint8_t *in, size_t n)
     buf[n] = 0x80;
 
     if (n <= 55) {
-        copy4(buf+56, b);
+        copy4(buf + 56, b);
         copy64(M, buf);
         mdfour64(M);
     } else {
-        copy4(buf+120, b);
+        copy4(buf + 120, b);
         copy64(M, buf);
         mdfour64(M);
-        copy64(M, buf+64);
+        copy64(M, buf + 64);
         mdfour64(M);
     }
 }
@@ -186,22 +186,23 @@ void mdfour_result(struct mdfour *md, uint8_t *out)
     m = md;
 
     copy4(out, m->A);
-    copy4(out+4, m->B);
-    copy4(out+8, m->C);
-    copy4(out+12, m->D);
+    copy4(out + 4, m->B);
+    copy4(out + 8, m->C);
+    copy4(out + 12, m->D);
 }
 
 //===================================================================
 
-uint32_t Com_BlockChecksum( void *buffer, size_t len ) {
+uint32_t Com_BlockChecksum(void *buffer, size_t len)
+{
     uint32_t digest[4];
     uint32_t val;
     struct mdfour md;
 
-    mdfour_begin( &md );
-    mdfour_update( &md, ( uint8_t * )buffer, len );
-    mdfour_result( &md, ( uint8_t * )digest );
-    
+    mdfour_begin(&md);
+    mdfour_update(&md, (uint8_t *)buffer, len);
+    mdfour_result(&md, (uint8_t *)digest);
+
     val = digest[0] ^ digest[1] ^ digest[2] ^ digest[3];
 
     return val;

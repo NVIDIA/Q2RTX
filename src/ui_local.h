@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -27,9 +27,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cl_public.h"
 #include "ui_public.h"
 
-#define UI_Malloc( s )      Z_TagMalloc( s, TAG_UI )
-#define UI_Mallocz( s )     Z_TagMallocz( s, TAG_UI )
-#define UI_CopyString( s )  Z_TagCopyString( s, TAG_UI )
+#define UI_Malloc(s)        Z_TagMalloc(s, TAG_UI)
+#define UI_Mallocz(s)       Z_TagMallocz(s, TAG_UI)
+#define UI_CopyString(s)    Z_TagCopyString(s, TAG_UI)
 
 #define MAXMENUITEMS    64
 
@@ -68,21 +68,21 @@ typedef enum {
     QMS_BEEP
 } menuSound_t;
 
-#define RCOLUMN_OFFSET  (CHAR_WIDTH*2)
+#define RCOLUMN_OFFSET  (CHAR_WIDTH * 2)
 #define LCOLUMN_OFFSET -RCOLUMN_OFFSET
 
-#define GENERIC_SPACING(x)   ((x)+(x)/4)
+#define GENERIC_SPACING(x)   ((x) + (x) / 4)
 
 #define MENU_SPACING    GENERIC_SPACING(CHAR_HEIGHT)
 
 #define DOUBLE_CLICK_DELAY    300
 
-#define UI_IsItemSelectable( item ) \
-    ( (item)->type != MTYPE_SEPARATOR && \
-    (item)->type != MTYPE_STATIC && \
-    !( (item)->flags & (QMF_GRAYED|QMF_HIDDEN|QMF_DISABLED) ) )
+#define UI_IsItemSelectable(item) \
+    ((item)->type != MTYPE_SEPARATOR && \
+     (item)->type != MTYPE_STATIC && \
+     !((item)->flags & (QMF_GRAYED | QMF_HIDDEN | QMF_DISABLED)))
 
-typedef void (*confirmAction_t)( qboolean );
+typedef void (*confirmAction_t)(qboolean);
 
 typedef struct menuFrameWork_s {
     list_t  entry;
@@ -111,13 +111,13 @@ typedef struct menuFrameWork_s {
     qhandle_t logo;
     vrect_t logo_rc;
 
-    qboolean (*push)( struct menuFrameWork_s * );
-    void (*pop)( struct menuFrameWork_s * );
-    void (*expose)( struct menuFrameWork_s * );
-    void (*draw)( struct menuFrameWork_s * );
-    void (*size)( struct menuFrameWork_s * );
-    void (*free)( struct menuFrameWork_s * );
-    menuSound_t (*keydown)( struct menuFrameWork_s *, int );
+    qboolean (*push)(struct menuFrameWork_s *);
+    void (*pop)(struct menuFrameWork_s *);
+    void (*expose)(struct menuFrameWork_s *);
+    void (*draw)(struct menuFrameWork_s *);
+    void (*size)(struct menuFrameWork_s *);
+    void (*free)(struct menuFrameWork_s *);
+    menuSound_t (*keydown)(struct menuFrameWork_s *, int);
 } menuFrameWork_t;
 
 typedef struct menuCommon_s {
@@ -135,10 +135,10 @@ typedef struct menuCommon_s {
     int flags;
     int uiFlags;
 
-    menuSound_t (*activate)( struct menuCommon_s * );
-    menuSound_t (*change)( struct menuCommon_s * );
-    menuSound_t (*keydown)( struct menuCommon_s *, int key );
-    menuSound_t (*focus)( struct menuCommon_s *, qboolean gain );
+    menuSound_t (*activate)(struct menuCommon_s *);
+    menuSound_t (*change)(struct menuCommon_s *);
+    menuSound_t (*keydown)(struct menuCommon_s *, int key);
+    menuSound_t (*focus)(struct menuCommon_s *, qboolean gain);
 } menuCommon_t;
 
 typedef struct menuField_s {
@@ -199,7 +199,7 @@ typedef struct menuList_s {
     int                 numcolumns;
     int                 sortdir, sortcol;
 
-    menuSound_t (*sort)( struct menuList_s *, int column );
+    menuSound_t (*sort)(struct menuList_s *, int column);
 } menuList_t;
 
 typedef struct menuSpinControl_s {
@@ -252,8 +252,8 @@ typedef struct playerModelInfo_s {
     char directory[MAX_QPATH];
 } playerModelInfo_t;
 
-void PlayerModel_Load( void );
-void PlayerModel_Free( void );
+void PlayerModel_Load(void);
+void PlayerModel_Free(void);
 
 #define MAX_MENU_DEPTH    8
 
@@ -274,7 +274,7 @@ typedef struct uiStatic_s {
     menuFrameWork_t *activeMenu;
     int mouseCoords[2];
     qboolean entersound;        // play after drawing a frame, so caching
-                                // won't disrupt the sound
+    // won't disrupt the sound
     qboolean transparent;
     int numPlayerModels;
     playerModelInfo_t pmi[MAX_PLAYERMODELS];
@@ -302,48 +302,48 @@ extern list_t       ui_menus;
 
 extern cvar_t       *ui_debug;
 
-void        UI_PushMenu( menuFrameWork_t *menu );
-void        UI_ForceMenuOff( void );
-void        UI_PopMenu( void );
-void        UI_StartSound( menuSound_t sound );
-qboolean    UI_DoHitTest( void );
-qboolean    UI_CursorInRect( vrect_t *rect );
-void        *UI_FormatColumns( int extrasize, ... ) q_sentinel;
-char        *UI_GetColumn( char *s, int n );
-void        UI_AddToServerList( const serverStatus_t *status );
-void        UI_DrawString( int x, int y, int flags, const char *string );
-void        UI_DrawChar( int x, int y, int flags, int ch );
-void        UI_DrawRect8( const vrect_t *rect, int border, int c );
-//void        UI_DrawRect32( const vrect_t *rect, int border, uint32_t color );
-void        UI_StringDimensions( vrect_t *rc, int flags, const char *string );
+void        UI_PushMenu(menuFrameWork_t *menu);
+void        UI_ForceMenuOff(void);
+void        UI_PopMenu(void);
+void        UI_StartSound(menuSound_t sound);
+qboolean    UI_DoHitTest(void);
+qboolean    UI_CursorInRect(vrect_t *rect);
+void        *UI_FormatColumns(int extrasize, ...) q_sentinel;
+char        *UI_GetColumn(char *s, int n);
+void        UI_AddToServerList(const serverStatus_t *status);
+void        UI_DrawString(int x, int y, int flags, const char *string);
+void        UI_DrawChar(int x, int y, int flags, int ch);
+void        UI_DrawRect8(const vrect_t *rect, int border, int c);
+//void        UI_DrawRect32(const vrect_t *rect, int border, uint32_t color);
+void        UI_StringDimensions(vrect_t *rc, int flags, const char *string);
 
-void        UI_LoadScript( void );
-menuFrameWork_t *UI_FindMenu( const char *name );
+void        UI_LoadScript(void);
+menuFrameWork_t *UI_FindMenu(const char *name);
 
-void        Menu_Init( menuFrameWork_t *menu );
-void        Menu_Size( menuFrameWork_t *menu );
-void        Menu_Draw( menuFrameWork_t *menu );
-void        Menu_AddItem( menuFrameWork_t *menu, void *item );
-menuSound_t Menu_SelectItem( menuFrameWork_t *menu );
-menuSound_t Menu_SlideItem( menuFrameWork_t *menu, int dir );
-menuSound_t Menu_KeyEvent( menuCommon_t *item, int key );
-menuSound_t Menu_CharEvent( menuCommon_t *item, int key );
-menuSound_t Menu_MouseMove( menuCommon_t *item );
-menuSound_t Menu_Keydown( menuFrameWork_t *menu, int key );
-void        Menu_SetFocus( menuCommon_t *item );
-menuSound_t     Menu_AdjustCursor( menuFrameWork_t *menu, int dir );
-menuCommon_t    *Menu_ItemAtCursor( menuFrameWork_t *menu );
-menuCommon_t    *Menu_HitTest( menuFrameWork_t *menu );
-void        MenuList_Init( menuList_t *l );
-void        MenuList_SetValue( menuList_t *l, int value );
-void        MenuList_Sort( menuList_t *l, int offset,
-                int (*cmpfunc)( const void *, const void * ) );
-void SpinControl_Init( menuSpinControl_t *s );
-qboolean    Menu_Push( menuFrameWork_t *menu );
-void        Menu_Pop( menuFrameWork_t *menu );
-void        Menu_Free( menuFrameWork_t *menu );
+void        Menu_Init(menuFrameWork_t *menu);
+void        Menu_Size(menuFrameWork_t *menu);
+void        Menu_Draw(menuFrameWork_t *menu);
+void        Menu_AddItem(menuFrameWork_t *menu, void *item);
+menuSound_t Menu_SelectItem(menuFrameWork_t *menu);
+menuSound_t Menu_SlideItem(menuFrameWork_t *menu, int dir);
+menuSound_t Menu_KeyEvent(menuCommon_t *item, int key);
+menuSound_t Menu_CharEvent(menuCommon_t *item, int key);
+menuSound_t Menu_MouseMove(menuCommon_t *item);
+menuSound_t Menu_Keydown(menuFrameWork_t *menu, int key);
+void        Menu_SetFocus(menuCommon_t *item);
+menuSound_t     Menu_AdjustCursor(menuFrameWork_t *menu, int dir);
+menuCommon_t    *Menu_ItemAtCursor(menuFrameWork_t *menu);
+menuCommon_t    *Menu_HitTest(menuFrameWork_t *menu);
+void        MenuList_Init(menuList_t *l);
+void        MenuList_SetValue(menuList_t *l, int value);
+void        MenuList_Sort(menuList_t *l, int offset,
+                          int (*cmpfunc)(const void *, const void *));
+void SpinControl_Init(menuSpinControl_t *s);
+qboolean    Menu_Push(menuFrameWork_t *menu);
+void        Menu_Pop(menuFrameWork_t *menu);
+void        Menu_Free(menuFrameWork_t *menu);
 
-void M_Menu_PlayerConfig( void );
-void M_Menu_Demos( void );
-void M_Menu_Servers( void );
+void M_Menu_PlayerConfig(void);
+void M_Menu_Demos(void);
+void M_Menu_Servers(void);
 

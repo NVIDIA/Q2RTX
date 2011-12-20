@@ -24,20 +24,23 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "common.h"
 #include "files.h"
 
-qboolean CL_CheatsOK( void ) {
+qboolean CL_CheatsOK(void)
+{
     // developer option
-    if( Cvar_VariableInteger( "cheats" ) ) {
+    if (Cvar_VariableInteger("cheats")) {
         return qtrue;
     }
     return qfalse;
 }
 
-static void Key_Bind_Null_f( void ) {
+static void Key_Bind_Null_f(void)
+{
 }
 
-void Key_Init( void ) {
-    Cmd_AddCommand( "bind", Key_Bind_Null_f );
-    Cmd_AddCommand( "unbind", Key_Bind_Null_f );
-    Cmd_AddCommand( "unbindall", Key_Bind_Null_f );
+void Key_Init(void)
+{
+    Cmd_AddCommand("bind", Key_Bind_Null_f);
+    Cmd_AddCommand("unbind", Key_Bind_Null_f);
+    Cmd_AddCommand("unbindall", Key_Bind_Null_f);
 }
 

@@ -267,353 +267,353 @@ extern int tank_move_run;
 extern int tank_move_stand;
 extern int tank_move_start_run;
 extern int tank_move_walk;
-extern void door_blocked( void );
-extern void door_secret_blocked( void );
-extern void plat_blocked( void );
-extern void rotating_blocked( void );
-extern void train_blocked( void );
-extern void turret_blocked( void );
-extern void actor_die( void );
-extern void barrel_delay( void );
-extern void berserk_die( void );
-extern void body_die( void );
-extern void boss2_die( void );
-extern void brain_die( void );
-extern void button_killed( void );
-extern void chick_die( void );
-extern void debris_die( void );
-extern void door_killed( void );
-extern void door_secret_die( void );
-extern void flipper_die( void );
-extern void floater_die( void );
-extern void flyer_die( void );
-extern void func_explosive_explode( void );
-extern void gib_die( void );
-extern void gladiator_die( void );
-extern void gunner_die( void );
-extern void hover_die( void );
-extern void infantry_die( void );
-extern void insane_die( void );
-extern void jorg_die( void );
-extern void makron_die( void );
-extern void medic_die( void );
-extern void misc_deadsoldier_die( void );
-extern void mutant_die( void );
-extern void parasite_die( void );
-extern void player_die( void );
-extern void soldier_die( void );
-extern void supertank_die( void );
-extern void tank_die( void );
-extern void turret_driver_die( void );
-extern void actor_attack( void );
-extern void boss2_attack( void );
-extern void chick_attack( void );
-extern void floater_attack( void );
-extern void flyer_attack( void );
-extern void gladiator_attack( void );
-extern void gunner_attack( void );
-extern void hover_start_attack( void );
-extern void infantry_attack( void );
-extern void jorg_attack( void );
-extern void makron_attack( void );
-extern void medic_attack( void );
-extern void mutant_jump( void );
-extern void parasite_attack( void );
-extern void soldier_attack( void );
-extern void supertank_attack( void );
-extern void tank_attack( void );
-extern void Boss2_CheckAttack( void );
-extern void Jorg_CheckAttack( void );
-extern void Makron_CheckAttack( void );
-extern void M_CheckAttack( void );
-extern void medic_checkattack( void );
-extern void mutant_checkattack( void );
-extern void brain_dodge( void );
-extern void chick_dodge( void );
-extern void gunner_dodge( void );
-extern void infantry_dodge( void );
-extern void medic_dodge( void );
-extern void soldier_dodge( void );
-extern void brain_idle( void );
-extern void floater_idle( void );
-extern void flyer_idle( void );
-extern void gladiator_idle( void );
-extern void infantry_fidget( void );
-extern void medic_idle( void );
-extern void mutant_idle( void );
-extern void parasite_idle( void );
-extern void tank_idle( void );
-extern void berserk_melee( void );
-extern void brain_melee( void );
-extern void chick_melee( void );
-extern void flipper_melee( void );
-extern void floater_melee( void );
-extern void flyer_melee( void );
-extern void gladiator_melee( void );
-extern void mutant_melee( void );
-extern void actor_run( void );
-extern void berserk_run( void );
-extern void boss2_run( void );
-extern void brain_run( void );
-extern void chick_run( void );
-extern void flipper_start_run( void );
-extern void floater_run( void );
-extern void flyer_run( void );
-extern void gladiator_run( void );
-extern void gunner_run( void );
-extern void hover_run( void );
-extern void infantry_run( void );
-extern void insane_run( void );
-extern void jorg_run( void );
-extern void makron_run( void );
-extern void medic_run( void );
-extern void mutant_run( void );
-extern void parasite_start_run( void );
-extern void soldier_run( void );
-extern void supertank_run( void );
-extern void tank_run( void );
-extern void berserk_search( void );
-extern void boss2_search( void );
-extern void brain_search( void );
-extern void gladiator_search( void );
-extern void gunner_search( void );
-extern void hover_search( void );
-extern void jorg_search( void );
-extern void medic_search( void );
-extern void mutant_search( void );
-extern void supertank_search( void );
-extern void berserk_sight( void );
-extern void brain_sight( void );
-extern void chick_sight( void );
-extern void flipper_sight( void );
-extern void floater_sight( void );
-extern void flyer_sight( void );
-extern void gladiator_sight( void );
-extern void gunner_sight( void );
-extern void hover_sight( void );
-extern void infantry_sight( void );
-extern void makron_sight( void );
-extern void medic_sight( void );
-extern void mutant_sight( void );
-extern void parasite_sight( void );
-extern void soldier_sight( void );
-extern void tank_sight( void );
-extern void actor_stand( void );
-extern void berserk_stand( void );
-extern void boss2_stand( void );
-extern void brain_stand( void );
-extern void chick_stand( void );
-extern void flipper_stand( void );
-extern void floater_stand( void );
-extern void flyer_stand( void );
-extern void gladiator_stand( void );
-extern void gunner_stand( void );
-extern void hover_stand( void );
-extern void infantry_stand( void );
-extern void insane_stand( void );
-extern void jorg_stand( void );
-extern void makron_stand( void );
-extern void medic_stand( void );
-extern void mutant_stand( void );
-extern void parasite_stand( void );
-extern void soldier_stand( void );
-extern void supertank_stand( void );
-extern void tank_stand( void );
-extern void actor_walk( void );
-extern void berserk_walk( void );
-extern void boss2_walk( void );
-extern void brain_walk( void );
-extern void chick_walk( void );
-extern void flipper_walk( void );
-extern void floater_walk( void );
-extern void flyer_walk( void );
-extern void gladiator_walk( void );
-extern void gunner_walk( void );
-extern void hover_walk( void );
-extern void infantry_walk( void );
-extern void insane_walk( void );
-extern void jorg_walk( void );
-extern void makron_walk( void );
-extern void medic_walk( void );
-extern void mutant_walk( void );
-extern void parasite_start_walk( void );
-extern void soldier_walk( void );
-extern void supertank_walk( void );
-extern void tank_walk( void );
-extern void actor_pain( void );
-extern void berserk_pain( void );
-extern void boss2_pain( void );
-extern void brain_pain( void );
-extern void chick_pain( void );
-extern void flipper_pain( void );
-extern void floater_pain( void );
-extern void flyer_pain( void );
-extern void gladiator_pain( void );
-extern void gunner_pain( void );
-extern void hover_pain( void );
-extern void infantry_pain( void );
-extern void insane_pain( void );
-extern void jorg_pain( void );
-extern void makron_pain( void );
-extern void medic_pain( void );
-extern void mutant_pain( void );
-extern void parasite_pain( void );
-extern void player_pain( void );
-extern void soldier_pain( void );
-extern void supertank_pain( void );
-extern void tank_pain( void );
-extern void AngleMove_Begin( void );
-extern void AngleMove_Done( void );
-extern void AngleMove_Final( void );
-extern void barrel_explode( void );
-extern void bfg_explode( void );
-extern void bfg_think( void );
-extern void BossExplode( void );
-extern void button_return( void );
-extern void commander_body_drop( void );
-extern void commander_body_think( void );
-extern void door_go_down( void );
-extern void door_secret_move2( void );
-extern void door_secret_move4( void );
-extern void door_secret_move6( void );
-extern void DoRespawn( void );
-extern void drop_make_touchable( void );
-extern void droptofloor( void );
-extern void flymonster_start_go( void );
-extern void func_clock_think( void );
-extern void func_object_release( void );
-extern void func_timer_think( void );
-extern void func_train_find( void );
-extern void G_FreeEdict( void );
-extern void gib_think( void );
-extern void Grenade_Explode( void );
-extern void hover_deadthink( void );
-extern void MakronSpawn( void );
-extern void makron_torso_think( void );
-extern void M_droptofloor( void );
-extern void MegaHealth_think( void );
-extern void M_FliesOff( void );
-extern void M_FliesOn( void );
-extern void misc_banner_think( void );
-extern void misc_blackhole_think( void );
-extern void misc_easterchick2_think( void );
-extern void misc_easterchick_think( void );
-extern void misc_eastertank_think( void );
-extern void misc_satellite_dish_think( void );
-extern void monster_think( void );
-extern void monster_triggered_spawn( void );
-extern void Move_Begin( void );
-extern void Move_Done( void );
-extern void Move_Final( void );
-extern void multi_wait( void );
-extern void plat_go_down( void );
-extern void SP_CreateCoopSpots( void );
-extern void SP_FixCoopSpots( void );
-extern void swimmonster_start_go( void );
-extern void target_crosslevel_target_think( void );
-extern void target_earthquake_think( void );
-extern void target_explosion_explode( void );
-extern void target_laser_start( void );
-extern void target_laser_think( void );
-extern void target_lightramp_think( void );
-extern void Think_AccelMove( void );
-extern void Think_Boss3Stand( void );
-extern void Think_CalcMoveSpeed( void );
-extern void Think_Delay( void );
-extern void Think_SpawnDoorTrigger( void );
-extern void TH_viewthing( void );
-extern void train_next( void );
-extern void trigger_elevator_init( void );
-extern void turret_breach_finish_init( void );
-extern void turret_breach_think( void );
-extern void turret_driver_link( void );
-extern void turret_driver_think( void );
-extern void walkmonster_start_go( void );
-extern void barrel_touch( void );
-extern void bfg_touch( void );
-extern void blaster_touch( void );
-extern void button_touch( void );
-extern void door_touch( void );
-extern void drop_temp_touch( void );
-extern void func_object_touch( void );
-extern void gib_touch( void );
-extern void Grenade_Touch( void );
-extern void hurt_touch( void );
-extern void misc_viper_bomb_touch( void );
-extern void mutant_jump_touch( void );
-extern void path_corner_touch( void );
-extern void point_combat_touch( void );
-extern void rocket_touch( void );
-extern void rotating_touch( void );
-extern void target_actor_touch( void );
-extern void teleporter_touch( void );
-extern void Touch_DoorTrigger( void );
-extern void Touch_Item( void );
-extern void Touch_Multi( void );
-extern void Touch_Plat_Center( void );
-extern void trigger_gravity_touch( void );
-extern void trigger_monsterjump_touch( void );
-extern void trigger_push_touch( void );
-extern void actor_use( void );
-extern void button_use( void );
-extern void commander_body_use( void );
-extern void door_secret_use( void );
-extern void door_use( void );
-extern void func_clock_use( void );
-extern void func_conveyor_use( void );
-extern void func_explosive_spawn( void );
-extern void func_explosive_use( void );
-extern void func_object_use( void );
-extern void func_timer_use( void );
-extern void func_wall_use( void );
-extern void hurt_use( void );
-extern void light_use( void );
-extern void misc_blackhole_use( void );
-extern void misc_satellite_dish_use( void );
-extern void misc_strogg_ship_use( void );
-extern void misc_viper_bomb_use( void );
-extern void misc_viper_use( void );
-extern void monster_triggered_spawn_use( void );
-extern void monster_use( void );
-extern void rotating_use( void );
-extern void target_earthquake_use( void );
-extern void target_laser_use( void );
-extern void target_lightramp_use( void );
-extern void target_string_use( void );
-extern void train_use( void );
-extern void trigger_counter_use( void );
-extern void trigger_crosslevel_trigger_use( void );
-extern void trigger_elevator_use( void );
-extern void trigger_enable( void );
-extern void trigger_key_use( void );
-extern void trigger_relay_use( void );
-extern void Use_Areaportal( void );
-extern void Use_Boss3( void );
-extern void Use_Item( void );
-extern void use_killbox( void );
-extern void Use_Multi( void );
-extern void Use_Plat( void );
-extern void use_target_blaster( void );
-extern void use_target_changelevel( void );
-extern void use_target_explosion( void );
-extern void use_target_goal( void );
-extern void Use_Target_Help( void );
-extern void use_target_secret( void );
-extern void use_target_spawner( void );
-extern void Use_Target_Speaker( void );
-extern void use_target_splash( void );
-extern void Use_Target_Tent( void );
-extern void plat_hit_bottom( void );
-extern void plat_hit_top( void );
-extern void button_done( void );
-extern void button_wait( void );
-extern void door_hit_bottom( void );
-extern void door_hit_top( void );
-extern void train_wait( void );
-extern void door_secret_move1( void );
-extern void door_secret_move3( void );
-extern void door_secret_move5( void );
-extern void door_secret_done( void );
+extern void door_blocked(void);
+extern void door_secret_blocked(void);
+extern void plat_blocked(void);
+extern void rotating_blocked(void);
+extern void train_blocked(void);
+extern void turret_blocked(void);
+extern void actor_die(void);
+extern void barrel_delay(void);
+extern void berserk_die(void);
+extern void body_die(void);
+extern void boss2_die(void);
+extern void brain_die(void);
+extern void button_killed(void);
+extern void chick_die(void);
+extern void debris_die(void);
+extern void door_killed(void);
+extern void door_secret_die(void);
+extern void flipper_die(void);
+extern void floater_die(void);
+extern void flyer_die(void);
+extern void func_explosive_explode(void);
+extern void gib_die(void);
+extern void gladiator_die(void);
+extern void gunner_die(void);
+extern void hover_die(void);
+extern void infantry_die(void);
+extern void insane_die(void);
+extern void jorg_die(void);
+extern void makron_die(void);
+extern void medic_die(void);
+extern void misc_deadsoldier_die(void);
+extern void mutant_die(void);
+extern void parasite_die(void);
+extern void player_die(void);
+extern void soldier_die(void);
+extern void supertank_die(void);
+extern void tank_die(void);
+extern void turret_driver_die(void);
+extern void actor_attack(void);
+extern void boss2_attack(void);
+extern void chick_attack(void);
+extern void floater_attack(void);
+extern void flyer_attack(void);
+extern void gladiator_attack(void);
+extern void gunner_attack(void);
+extern void hover_start_attack(void);
+extern void infantry_attack(void);
+extern void jorg_attack(void);
+extern void makron_attack(void);
+extern void medic_attack(void);
+extern void mutant_jump(void);
+extern void parasite_attack(void);
+extern void soldier_attack(void);
+extern void supertank_attack(void);
+extern void tank_attack(void);
+extern void Boss2_CheckAttack(void);
+extern void Jorg_CheckAttack(void);
+extern void Makron_CheckAttack(void);
+extern void M_CheckAttack(void);
+extern void medic_checkattack(void);
+extern void mutant_checkattack(void);
+extern void brain_dodge(void);
+extern void chick_dodge(void);
+extern void gunner_dodge(void);
+extern void infantry_dodge(void);
+extern void medic_dodge(void);
+extern void soldier_dodge(void);
+extern void brain_idle(void);
+extern void floater_idle(void);
+extern void flyer_idle(void);
+extern void gladiator_idle(void);
+extern void infantry_fidget(void);
+extern void medic_idle(void);
+extern void mutant_idle(void);
+extern void parasite_idle(void);
+extern void tank_idle(void);
+extern void berserk_melee(void);
+extern void brain_melee(void);
+extern void chick_melee(void);
+extern void flipper_melee(void);
+extern void floater_melee(void);
+extern void flyer_melee(void);
+extern void gladiator_melee(void);
+extern void mutant_melee(void);
+extern void actor_run(void);
+extern void berserk_run(void);
+extern void boss2_run(void);
+extern void brain_run(void);
+extern void chick_run(void);
+extern void flipper_start_run(void);
+extern void floater_run(void);
+extern void flyer_run(void);
+extern void gladiator_run(void);
+extern void gunner_run(void);
+extern void hover_run(void);
+extern void infantry_run(void);
+extern void insane_run(void);
+extern void jorg_run(void);
+extern void makron_run(void);
+extern void medic_run(void);
+extern void mutant_run(void);
+extern void parasite_start_run(void);
+extern void soldier_run(void);
+extern void supertank_run(void);
+extern void tank_run(void);
+extern void berserk_search(void);
+extern void boss2_search(void);
+extern void brain_search(void);
+extern void gladiator_search(void);
+extern void gunner_search(void);
+extern void hover_search(void);
+extern void jorg_search(void);
+extern void medic_search(void);
+extern void mutant_search(void);
+extern void supertank_search(void);
+extern void berserk_sight(void);
+extern void brain_sight(void);
+extern void chick_sight(void);
+extern void flipper_sight(void);
+extern void floater_sight(void);
+extern void flyer_sight(void);
+extern void gladiator_sight(void);
+extern void gunner_sight(void);
+extern void hover_sight(void);
+extern void infantry_sight(void);
+extern void makron_sight(void);
+extern void medic_sight(void);
+extern void mutant_sight(void);
+extern void parasite_sight(void);
+extern void soldier_sight(void);
+extern void tank_sight(void);
+extern void actor_stand(void);
+extern void berserk_stand(void);
+extern void boss2_stand(void);
+extern void brain_stand(void);
+extern void chick_stand(void);
+extern void flipper_stand(void);
+extern void floater_stand(void);
+extern void flyer_stand(void);
+extern void gladiator_stand(void);
+extern void gunner_stand(void);
+extern void hover_stand(void);
+extern void infantry_stand(void);
+extern void insane_stand(void);
+extern void jorg_stand(void);
+extern void makron_stand(void);
+extern void medic_stand(void);
+extern void mutant_stand(void);
+extern void parasite_stand(void);
+extern void soldier_stand(void);
+extern void supertank_stand(void);
+extern void tank_stand(void);
+extern void actor_walk(void);
+extern void berserk_walk(void);
+extern void boss2_walk(void);
+extern void brain_walk(void);
+extern void chick_walk(void);
+extern void flipper_walk(void);
+extern void floater_walk(void);
+extern void flyer_walk(void);
+extern void gladiator_walk(void);
+extern void gunner_walk(void);
+extern void hover_walk(void);
+extern void infantry_walk(void);
+extern void insane_walk(void);
+extern void jorg_walk(void);
+extern void makron_walk(void);
+extern void medic_walk(void);
+extern void mutant_walk(void);
+extern void parasite_start_walk(void);
+extern void soldier_walk(void);
+extern void supertank_walk(void);
+extern void tank_walk(void);
+extern void actor_pain(void);
+extern void berserk_pain(void);
+extern void boss2_pain(void);
+extern void brain_pain(void);
+extern void chick_pain(void);
+extern void flipper_pain(void);
+extern void floater_pain(void);
+extern void flyer_pain(void);
+extern void gladiator_pain(void);
+extern void gunner_pain(void);
+extern void hover_pain(void);
+extern void infantry_pain(void);
+extern void insane_pain(void);
+extern void jorg_pain(void);
+extern void makron_pain(void);
+extern void medic_pain(void);
+extern void mutant_pain(void);
+extern void parasite_pain(void);
+extern void player_pain(void);
+extern void soldier_pain(void);
+extern void supertank_pain(void);
+extern void tank_pain(void);
+extern void AngleMove_Begin(void);
+extern void AngleMove_Done(void);
+extern void AngleMove_Final(void);
+extern void barrel_explode(void);
+extern void bfg_explode(void);
+extern void bfg_think(void);
+extern void BossExplode(void);
+extern void button_return(void);
+extern void commander_body_drop(void);
+extern void commander_body_think(void);
+extern void door_go_down(void);
+extern void door_secret_move2(void);
+extern void door_secret_move4(void);
+extern void door_secret_move6(void);
+extern void DoRespawn(void);
+extern void drop_make_touchable(void);
+extern void droptofloor(void);
+extern void flymonster_start_go(void);
+extern void func_clock_think(void);
+extern void func_object_release(void);
+extern void func_timer_think(void);
+extern void func_train_find(void);
+extern void G_FreeEdict(void);
+extern void gib_think(void);
+extern void Grenade_Explode(void);
+extern void hover_deadthink(void);
+extern void MakronSpawn(void);
+extern void makron_torso_think(void);
+extern void M_droptofloor(void);
+extern void MegaHealth_think(void);
+extern void M_FliesOff(void);
+extern void M_FliesOn(void);
+extern void misc_banner_think(void);
+extern void misc_blackhole_think(void);
+extern void misc_easterchick2_think(void);
+extern void misc_easterchick_think(void);
+extern void misc_eastertank_think(void);
+extern void misc_satellite_dish_think(void);
+extern void monster_think(void);
+extern void monster_triggered_spawn(void);
+extern void Move_Begin(void);
+extern void Move_Done(void);
+extern void Move_Final(void);
+extern void multi_wait(void);
+extern void plat_go_down(void);
+extern void SP_CreateCoopSpots(void);
+extern void SP_FixCoopSpots(void);
+extern void swimmonster_start_go(void);
+extern void target_crosslevel_target_think(void);
+extern void target_earthquake_think(void);
+extern void target_explosion_explode(void);
+extern void target_laser_start(void);
+extern void target_laser_think(void);
+extern void target_lightramp_think(void);
+extern void Think_AccelMove(void);
+extern void Think_Boss3Stand(void);
+extern void Think_CalcMoveSpeed(void);
+extern void Think_Delay(void);
+extern void Think_SpawnDoorTrigger(void);
+extern void TH_viewthing(void);
+extern void train_next(void);
+extern void trigger_elevator_init(void);
+extern void turret_breach_finish_init(void);
+extern void turret_breach_think(void);
+extern void turret_driver_link(void);
+extern void turret_driver_think(void);
+extern void walkmonster_start_go(void);
+extern void barrel_touch(void);
+extern void bfg_touch(void);
+extern void blaster_touch(void);
+extern void button_touch(void);
+extern void door_touch(void);
+extern void drop_temp_touch(void);
+extern void func_object_touch(void);
+extern void gib_touch(void);
+extern void Grenade_Touch(void);
+extern void hurt_touch(void);
+extern void misc_viper_bomb_touch(void);
+extern void mutant_jump_touch(void);
+extern void path_corner_touch(void);
+extern void point_combat_touch(void);
+extern void rocket_touch(void);
+extern void rotating_touch(void);
+extern void target_actor_touch(void);
+extern void teleporter_touch(void);
+extern void Touch_DoorTrigger(void);
+extern void Touch_Item(void);
+extern void Touch_Multi(void);
+extern void Touch_Plat_Center(void);
+extern void trigger_gravity_touch(void);
+extern void trigger_monsterjump_touch(void);
+extern void trigger_push_touch(void);
+extern void actor_use(void);
+extern void button_use(void);
+extern void commander_body_use(void);
+extern void door_secret_use(void);
+extern void door_use(void);
+extern void func_clock_use(void);
+extern void func_conveyor_use(void);
+extern void func_explosive_spawn(void);
+extern void func_explosive_use(void);
+extern void func_object_use(void);
+extern void func_timer_use(void);
+extern void func_wall_use(void);
+extern void hurt_use(void);
+extern void light_use(void);
+extern void misc_blackhole_use(void);
+extern void misc_satellite_dish_use(void);
+extern void misc_strogg_ship_use(void);
+extern void misc_viper_bomb_use(void);
+extern void misc_viper_use(void);
+extern void monster_triggered_spawn_use(void);
+extern void monster_use(void);
+extern void rotating_use(void);
+extern void target_earthquake_use(void);
+extern void target_laser_use(void);
+extern void target_lightramp_use(void);
+extern void target_string_use(void);
+extern void train_use(void);
+extern void trigger_counter_use(void);
+extern void trigger_crosslevel_trigger_use(void);
+extern void trigger_elevator_use(void);
+extern void trigger_enable(void);
+extern void trigger_key_use(void);
+extern void trigger_relay_use(void);
+extern void Use_Areaportal(void);
+extern void Use_Boss3(void);
+extern void Use_Item(void);
+extern void use_killbox(void);
+extern void Use_Multi(void);
+extern void Use_Plat(void);
+extern void use_target_blaster(void);
+extern void use_target_changelevel(void);
+extern void use_target_explosion(void);
+extern void use_target_goal(void);
+extern void Use_Target_Help(void);
+extern void use_target_secret(void);
+extern void use_target_spawner(void);
+extern void Use_Target_Speaker(void);
+extern void use_target_splash(void);
+extern void Use_Target_Tent(void);
+extern void plat_hit_bottom(void);
+extern void plat_hit_top(void);
+extern void button_done(void);
+extern void button_wait(void);
+extern void door_hit_bottom(void);
+extern void door_hit_top(void);
+extern void train_wait(void);
+extern void door_secret_move1(void);
+extern void door_secret_move3(void);
+extern void door_secret_move5(void);
+extern void door_secret_done(void);
 const save_ptr_t save_ptrs[] = {
 { P_blocked, door_blocked },
 { P_blocked, door_secret_blocked },
@@ -706,7 +706,7 @@ const save_ptr_t save_ptrs[] = {
 { P_monsterinfo_currentmove, &boss2_move_pain_light },
 { P_monsterinfo_currentmove, &boss2_move_run },
 { P_monsterinfo_currentmove, &boss2_move_stand },
-{ P_monsterinfo_currentmove, &boss2_move_stand },  
+{ P_monsterinfo_currentmove, &boss2_move_stand },
 { P_monsterinfo_currentmove, &boss2_move_walk },
 { P_monsterinfo_currentmove, &brain_move_attack1 },
 { P_monsterinfo_currentmove, &brain_move_attack2 },
@@ -719,7 +719,7 @@ const save_ptr_t save_ptrs[] = {
 { P_monsterinfo_currentmove, &brain_move_pain3 },
 { P_monsterinfo_currentmove, &brain_move_run },
 { P_monsterinfo_currentmove, &brain_move_stand },
-{ P_monsterinfo_currentmove, &brain_move_stand },  
+{ P_monsterinfo_currentmove, &brain_move_stand },
 { P_monsterinfo_currentmove, &brain_move_walk1 },
 { P_monsterinfo_currentmove, &chick_move_attack1 },
 { P_monsterinfo_currentmove, &chick_move_death1 },
@@ -745,7 +745,7 @@ const save_ptr_t save_ptrs[] = {
 { P_monsterinfo_currentmove, &flipper_move_run_loop },
 { P_monsterinfo_currentmove, &flipper_move_run_start },
 { P_monsterinfo_currentmove, &flipper_move_stand },
-{ P_monsterinfo_currentmove, &flipper_move_stand },    
+{ P_monsterinfo_currentmove, &flipper_move_stand },
 { P_monsterinfo_currentmove, &flipper_move_start_run },
 { P_monsterinfo_currentmove, &flipper_move_walk },
 { P_monsterinfo_currentmove, &floater_move_attack1 },
@@ -755,9 +755,9 @@ const save_ptr_t save_ptrs[] = {
 { P_monsterinfo_currentmove, &floater_move_pain2 },
 { P_monsterinfo_currentmove, &floater_move_run },
 { P_monsterinfo_currentmove, &floater_move_stand1 },
-{ P_monsterinfo_currentmove, &floater_move_stand1 },   
+{ P_monsterinfo_currentmove, &floater_move_stand1 },
 { P_monsterinfo_currentmove, &floater_move_stand2 },
-{ P_monsterinfo_currentmove, &floater_move_stand2 },   
+{ P_monsterinfo_currentmove, &floater_move_stand2 },
 { P_monsterinfo_currentmove, &floater_move_walk },
 { P_monsterinfo_currentmove, &flyer_move_attack2 },
 { P_monsterinfo_currentmove, &flyer_move_end_melee },
@@ -767,7 +767,7 @@ const save_ptr_t save_ptrs[] = {
 { P_monsterinfo_currentmove, &flyer_move_pain3 },
 { P_monsterinfo_currentmove, &flyer_move_run },
 { P_monsterinfo_currentmove, &flyer_move_stand },
-{ P_monsterinfo_currentmove, &flyer_move_stand },  
+{ P_monsterinfo_currentmove, &flyer_move_stand },
 { P_monsterinfo_currentmove, &flyer_move_start },
 { P_monsterinfo_currentmove, &flyer_move_start_melee },
 { P_monsterinfo_currentmove, &flyer_move_stop },
@@ -793,7 +793,7 @@ const save_ptr_t save_ptrs[] = {
 { P_monsterinfo_currentmove, &gunner_move_run },
 { P_monsterinfo_currentmove, &gunner_move_runandshoot },
 { P_monsterinfo_currentmove, &gunner_move_stand },
-{ P_monsterinfo_currentmove, &gunner_move_stand }, 
+{ P_monsterinfo_currentmove, &gunner_move_stand },
 { P_monsterinfo_currentmove, &gunner_move_walk },
 { P_monsterinfo_currentmove, &hover_move_attack1 },
 { P_monsterinfo_currentmove, &hover_move_death1 },
@@ -803,7 +803,7 @@ const save_ptr_t save_ptrs[] = {
 { P_monsterinfo_currentmove, &hover_move_pain3 },
 { P_monsterinfo_currentmove, &hover_move_run },
 { P_monsterinfo_currentmove, &hover_move_stand },
-{ P_monsterinfo_currentmove, &hover_move_stand },  
+{ P_monsterinfo_currentmove, &hover_move_stand },
 { P_monsterinfo_currentmove, &hover_move_start_attack },
 { P_monsterinfo_currentmove, &hover_move_walk },
 { P_monsterinfo_currentmove, &infantry_move_attack1 },
@@ -823,8 +823,8 @@ const save_ptr_t save_ptrs[] = {
 { P_monsterinfo_currentmove, &insane_move_crawl_pain },
 { P_monsterinfo_currentmove, &insane_move_cross },
 { P_monsterinfo_currentmove, &insane_move_down },
-{ P_monsterinfo_currentmove, &insane_move_downtoup },              
-{ P_monsterinfo_currentmove, &insane_move_jumpdown }, 
+{ P_monsterinfo_currentmove, &insane_move_downtoup },
+{ P_monsterinfo_currentmove, &insane_move_jumpdown },
 { P_monsterinfo_currentmove, &insane_move_runcrawl },
 { P_monsterinfo_currentmove, &insane_move_run_insane },
 { P_monsterinfo_currentmove, &insane_move_run_normal },
@@ -833,14 +833,14 @@ const save_ptr_t save_ptrs[] = {
 { P_monsterinfo_currentmove, &insane_move_stand_normal },
 { P_monsterinfo_currentmove, &insane_move_stand_pain },
 { P_monsterinfo_currentmove, &insane_move_struggle_cross },
-{ P_monsterinfo_currentmove, &insane_move_struggle_cross },            
+{ P_monsterinfo_currentmove, &insane_move_struggle_cross },
 { P_monsterinfo_currentmove, &insane_move_uptodown },
 { P_monsterinfo_currentmove, &insane_move_walk_insane },
 { P_monsterinfo_currentmove, &insane_move_walk_normal },
 { P_monsterinfo_currentmove, &jorg_move_attack1 },
 { P_monsterinfo_currentmove, &jorg_move_attack2 },
 { P_monsterinfo_currentmove, &jorg_move_death },
-{ P_monsterinfo_currentmove, &jorg_move_end_attack1 }, 
+{ P_monsterinfo_currentmove, &jorg_move_end_attack1 },
 { P_monsterinfo_currentmove, &jorg_move_pain1 },
 { P_monsterinfo_currentmove, &jorg_move_pain2 },
 { P_monsterinfo_currentmove, &jorg_move_pain3 },
@@ -889,7 +889,7 @@ const save_ptr_t save_ptrs[] = {
 { P_monsterinfo_currentmove, &parasite_move_pain1 },
 { P_monsterinfo_currentmove, &parasite_move_run },
 { P_monsterinfo_currentmove, &parasite_move_stand },
-{ P_monsterinfo_currentmove, &parasite_move_stand },   
+{ P_monsterinfo_currentmove, &parasite_move_stand },
 { P_monsterinfo_currentmove, &parasite_move_start_fidget },
 { P_monsterinfo_currentmove, &parasite_move_start_run },
 { P_monsterinfo_currentmove, &parasite_move_start_walk },
@@ -920,7 +920,7 @@ const save_ptr_t save_ptrs[] = {
 { P_monsterinfo_currentmove, &supertank_move_attack2 },
 { P_monsterinfo_currentmove, &supertank_move_death },
 { P_monsterinfo_currentmove, &supertank_move_end_attack1 },
-{ P_monsterinfo_currentmove, &supertank_move_end_attack1 },    
+{ P_monsterinfo_currentmove, &supertank_move_end_attack1 },
 { P_monsterinfo_currentmove, &supertank_move_forward },
 { P_monsterinfo_currentmove, &supertank_move_pain1 },
 { P_monsterinfo_currentmove, &supertank_move_pain2 },
@@ -1230,4 +1230,4 @@ const save_ptr_t save_ptrs[] = {
 { P_moveinfo_endfunc, door_secret_move5 },
 { P_moveinfo_endfunc, door_secret_done },
 };
-const int num_save_ptrs = sizeof( save_ptrs ) / sizeof( save_ptrs[0] );
+const int num_save_ptrs = sizeof(save_ptrs) / sizeof(save_ptrs[0]);

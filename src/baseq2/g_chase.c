@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -51,7 +51,7 @@ void UpdateChaseCam(edict_t *ent)
     VectorCopy(targ->client->v_angle, angles);
     if (angles[PITCH] > 56)
         angles[PITCH] = 56;
-    AngleVectors (angles, forward, right, NULL);
+    AngleVectors(angles, forward, right, NULL);
     VectorNormalize(forward);
     VectorMA(ownerv, -30, forward, o);
 
@@ -91,7 +91,7 @@ void UpdateChaseCam(edict_t *ent)
         ent->client->ps.pmove.pm_type = PM_FREEZE;
 
     VectorCopy(goal, ent->s.origin);
-    for (i=0 ; i<3 ; i++)
+    for (i = 0 ; i < 3 ; i++)
         ent->client->ps.pmove.delta_angles[i] = ANGLE2SHORT(targ->client->v_angle[i] - ent->client->resp.cmd_angles[i]);
 
     if (targ->deadflag) {

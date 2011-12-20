@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -30,16 +30,16 @@ typedef enum {
 } grab_t;
 
 typedef struct inputAPI_s {
-    qboolean    (*Init)( void );
-    void        (*Shutdown)( void );
-    void        (*Grab)( grab_t grab );
-    void        (*Warp)( int x, int y );
-    void        (*GetEvents)( void );
-    qboolean    (*GetMotion)( int *dx, int *dy );
+    qboolean (*Init)(void);
+    void (*Shutdown)(void);
+    void (*Grab)(grab_t grab);
+    void (*Warp)(int x, int y);
+    void (*GetEvents)(void);
+    qboolean(*GetMotion)(int *dx, int *dy);
 } inputAPI_t;
 
-void VID_FillInputAPI( inputAPI_t *api );
+void VID_FillInputAPI(inputAPI_t *api);
 
 #if USE_DINPUT
-void DI_FillAPI( inputAPI_t *api );
+void DI_FillAPI(inputAPI_t *api);
 #endif

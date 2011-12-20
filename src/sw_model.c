@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -31,29 +31,30 @@ int     registration_sequence;
 ProcessTexinfo
 =================
 */
-static void ProcessTexinfo( bsp_t *bsp ) {
+static void ProcessTexinfo(bsp_t *bsp)
+{
     mtexinfo_t *tex;
     int i;
     vec_t len1, len2;
     char name[MAX_QPATH];
 
     tex = bsp->texinfo;
-    for( i = 0; i < bsp->numtexinfo; i++, tex++ ) {
-        len1 = VectorLength( tex->axis[0] );
-        len2 = VectorLength( tex->axis[1] );
-        len1 = ( len1 + len2 ) / 2;
-        if( len1 < 0.32 )
+    for (i = 0; i < bsp->numtexinfo; i++, tex++) {
+        len1 = VectorLength(tex->axis[0]);
+        len2 = VectorLength(tex->axis[1]);
+        len1 = (len1 + len2) / 2;
+        if (len1 < 0.32)
             tex->mipadjust = 4;
-        else if( len1 < 0.49 )
+        else if (len1 < 0.49)
             tex->mipadjust = 3;
-        else if( len1 < 0.99 )
+        else if (len1 < 0.99)
             tex->mipadjust = 2;
         else
             tex->mipadjust = 1;
 
-        Q_concat( name, sizeof( name ), "textures/", tex->name, ".wal", NULL );
-        FS_NormalizePath( name, name );
-        tex->image = IMG_Find( name, it_wall );
+        Q_concat(name, sizeof(name), "textures/", tex->name, ".wal", NULL);
+        FS_NormalizePath(name, name);
+        tex->image = IMG_Find(name, it_wall);
     }
 }
 
@@ -64,7 +65,8 @@ CalcSurfaceExtents
 Fills in s->texturemins[] and s->extents[]
 ================
 */
-static void CalcSurfaceExtents( mface_t *s ) {
+static void CalcSurfaceExtents(mface_t *s)
+{
     vec_t   mins[2], maxs[2], val;
     int     i, j;
     msurfedge_t *e;
@@ -77,27 +79,27 @@ static void CalcSurfaceExtents( mface_t *s ) {
 
     tex = s->texinfo;
     e = s->firstsurfedge;
-    for( i = 0; i < s->numsurfedges; i++, e++ ) {
-        v = e->edge->v[e->vert];    
-        for( j = 0; j < 2; j++ ) {
-            val = DotProduct( v->point, tex->axis[j] ) + tex->offset[j];
-            if( val < mins[j] )
+    for (i = 0; i < s->numsurfedges; i++, e++) {
+        v = e->edge->v[e->vert];
+        for (j = 0; j < 2; j++) {
+            val = DotProduct(v->point, tex->axis[j]) + tex->offset[j];
+            if (val < mins[j])
                 mins[j] = val;
-            if( val > maxs[j] )
+            if (val > maxs[j])
                 maxs[j] = val;
         }
     }
 
-    for( i = 0; i < 2; i++ ) {
-        bmins[i] = floor( mins[i] / 16 );
-        bmaxs[i] = ceil( maxs[i] / 16 );
+    for (i = 0; i < 2; i++) {
+        bmins[i] = floor(mins[i] / 16);
+        bmaxs[i] = ceil(maxs[i] / 16);
 
         s->texturemins[i] = bmins[i] << 4;
-        s->extents[i] = ( bmaxs[i] - bmins[i] ) << 4;
-        if( s->extents[i] < 16 ) {
+        s->extents[i] = (bmaxs[i] - bmins[i]) << 4;
+        if (s->extents[i] < 16) {
             s->extents[i] = 16; // take at least one cache block
-        } else if( s->extents[i] > 256 ) {
-            Com_Error( ERR_DROP, "Bad surface extents" );
+        } else if (s->extents[i] > 256) {
+            Com_Error(ERR_DROP, "Bad surface extents");
         }
     }
 }
@@ -108,25 +110,26 @@ static void CalcSurfaceExtents( mface_t *s ) {
 ProcessFaces
 =================
 */
-static void ProcessFaces( bsp_t *bsp ) {
+static void ProcessFaces(bsp_t *bsp)
+{
     mface_t     *s;
     int         i, j;
 
     s = bsp->faces;
-    for( i = 0; i < bsp->numfaces; i++, s++ ) {
-    // set the drawing flags
-        if( s->texinfo->c.flags & SURF_SKY ) {
+    for (i = 0; i < bsp->numfaces; i++, s++) {
+        // set the drawing flags
+        if (s->texinfo->c.flags & SURF_SKY) {
             continue;
         }
-        if( s->texinfo->c.flags & (SURF_WARP|SURF_FLOWING) ) {
+        if (s->texinfo->c.flags & (SURF_WARP | SURF_FLOWING)) {
             s->drawflags |= DSURF_TURB;
-            for( j = 0; j < 2; j++ ) {
+            for (j = 0; j < 2; j++) {
                 s->extents[j] = 16384;
                 s->texturemins[j] = -8192;
             }
             continue;
         }
-        CalcSurfaceExtents( s );
+        CalcSurfaceExtents(s);
     }
 }
 
@@ -146,7 +149,8 @@ ALIAS MODELS
 Mod_LoadAliasModel
 =================
 */
-qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
+qerror_t MOD_LoadMD2(model_t *model, const void *rawdata, size_t length)
+{
     dmd2header_t header;
     dmd2frame_t *src_frame;
     //dmd2trivertx_t *src_vert;
@@ -161,20 +165,20 @@ qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
     int i, j;
     qerror_t ret;
 
-    if( length < sizeof( header ) ) {
+    if (length < sizeof(header)) {
         return Q_ERR_FILE_TOO_SMALL;
     }
 
     // byte swap the header
-    header = *( dmd2header_t * )rawdata;
-    for( i = 0; i < sizeof( header )/4; i++ ) {
-        (( uint32_t * )&header)[i] = LittleLong( (( uint32_t * )&header)[i] );
+    header = *(dmd2header_t *)rawdata;
+    for (i = 0; i < sizeof(header) / 4; i++) {
+        ((uint32_t *)&header)[i] = LittleLong(((uint32_t *)&header)[i]);
     }
 
     // validate the header
-    ret = MOD_ValidateMD2( &header, length );
-    if( ret ) {
-        if( ret == Q_ERR_TOO_FEW ) {
+    ret = MOD_ValidateMD2(&header, length);
+    if (ret) {
+        if (ret == Q_ERR_TOO_FEW) {
             // empty models draw nothing
             model->type = MOD_EMPTY;
             return Q_ERR_SUCCESS;
@@ -182,102 +186,103 @@ qerror_t MOD_LoadMD2( model_t *model, const void *rawdata, size_t length ) {
         return ret;
     }
 
-    Hunk_Begin( &model->pool, 0x400000 );
+    Hunk_Begin(&model->pool, 0x400000);
     model->type = MOD_ALIAS;
 
     // load triangle indices
-    model->tris = MOD_Malloc( header.num_tris * sizeof( maliastri_t ) );
-    model->numtris = header.num_tris; 
+    model->tris = MOD_Malloc(header.num_tris * sizeof(maliastri_t));
+    model->numtris = header.num_tris;
 
-    src_tri = ( dmd2triangle_t * )( ( byte * )rawdata + header.ofs_tris );
+    src_tri = (dmd2triangle_t *)((byte *)rawdata + header.ofs_tris);
     dst_tri = model->tris;
-    for( i = 0; i < header.num_tris; i++, src_tri++, dst_tri++ ) {
-        for( j = 0; j < 3; j++ ) {
-            unsigned idx_xyz = LittleShort( src_tri->index_xyz[j] );
-            unsigned idx_st = LittleShort( src_tri->index_st[j] );
+    for (i = 0; i < header.num_tris; i++, src_tri++, dst_tri++) {
+        for (j = 0; j < 3; j++) {
+            unsigned idx_xyz = LittleShort(src_tri->index_xyz[j]);
+            unsigned idx_st = LittleShort(src_tri->index_st[j]);
 
-            if( idx_xyz >= header.num_xyz || idx_st >= header.num_st ) {
+            if (idx_xyz >= header.num_xyz || idx_st >= header.num_st) {
                 ret = Q_ERR_BAD_INDEX;
                 goto fail;
             }
 
-            dst_tri->index_xyz[j] = idx_xyz; 
+            dst_tri->index_xyz[j] = idx_xyz;
             dst_tri->index_st[j] = idx_st;
         }
     }
 
     // load base s and t vertices
-    model->sts = MOD_Malloc( header.num_st * sizeof( maliasst_t ) );
+    model->sts = MOD_Malloc(header.num_st * sizeof(maliasst_t));
     model->numsts = header.num_st;
 
-    src_st = ( dmd2stvert_t * )( ( byte * )rawdata + header.ofs_st );
+    src_st = (dmd2stvert_t *)((byte *)rawdata + header.ofs_st);
     dst_st = model->sts;
-    for( i = 0; i < header.num_st; i++, src_st++, dst_st++ ) {
-        dst_st->s = ( int16_t )LittleShort( src_st->s );
-        dst_st->t = ( int16_t )LittleShort( src_st->t );
+    for (i = 0; i < header.num_st; i++, src_st++, dst_st++) {
+        dst_st->s = (int16_t)LittleShort(src_st->s);
+        dst_st->t = (int16_t)LittleShort(src_st->t);
     }
 
     // load the frames
-    model->frames = MOD_Malloc( header.num_frames * sizeof( maliasframe_t ) );
+    model->frames = MOD_Malloc(header.num_frames * sizeof(maliasframe_t));
     model->numframes = header.num_frames;
     model->numverts = header.num_xyz;
 
-    src_frame = ( dmd2frame_t * )( ( byte * )rawdata + header.ofs_frames );
+    src_frame = (dmd2frame_t *)((byte *)rawdata + header.ofs_frames);
     dst_frame = model->frames;
-    for( i = 0; i < header.num_frames; i++, dst_frame++ ) {
-        for( j = 0; j < 3; j++ ) {
-            dst_frame->scale[j] = LittleFloat( src_frame->scale[j] );
-            dst_frame->translate[j] = LittleFloat( src_frame->translate[j] );
+    for (i = 0; i < header.num_frames; i++, dst_frame++) {
+        for (j = 0; j < 3; j++) {
+            dst_frame->scale[j] = LittleFloat(src_frame->scale[j]);
+            dst_frame->translate[j] = LittleFloat(src_frame->translate[j]);
         }
         // verts are all 8 bit, so no swapping needed
-        dst_frame->verts = MOD_Malloc( header.num_xyz * sizeof( maliasvert_t ) );
-        
-        // TODO: check normal indices
-        memcpy( dst_frame->verts, src_frame->verts, header.num_xyz * sizeof( maliasvert_t ) );
+        dst_frame->verts = MOD_Malloc(header.num_xyz * sizeof(maliasvert_t));
 
-        src_frame = ( dmd2frame_t * )( ( byte * )src_frame + header.framesize );
+        // TODO: check normal indices
+        memcpy(dst_frame->verts, src_frame->verts, header.num_xyz * sizeof(maliasvert_t));
+
+        src_frame = (dmd2frame_t *)((byte *)src_frame + header.framesize);
     }
 
     // register all skins
-    src_skin = ( char * )rawdata + header.ofs_skins;
-    for( i = 0; i < header.num_skins; i++ ) {
-        if( !Q_memccpy( skinname, src_skin, 0, sizeof( skinname ) ) ) {
+    src_skin = (char *)rawdata + header.ofs_skins;
+    for (i = 0; i < header.num_skins; i++) {
+        if (!Q_memccpy(skinname, src_skin, 0, sizeof(skinname))) {
             ret = Q_ERR_STRING_TRUNCATED;
             goto fail;
         }
-        FS_NormalizePath( skinname, skinname );
-        model->skins[i] = IMG_Find( skinname, it_skin );
+        FS_NormalizePath(skinname, skinname);
+        model->skins[i] = IMG_Find(skinname, it_skin);
         src_skin += MD2_MAX_SKINNAME;
     }
     model->numskins = header.num_skins;
 
-    Hunk_End( &model->pool );
+    Hunk_End(&model->pool);
     return Q_ERR_SUCCESS;
 
 fail:
-    Hunk_Free( &model->pool );
+    Hunk_Free(&model->pool);
     return ret;
 }
 
-void MOD_Reference( model_t *model ) {
+void MOD_Reference(model_t *model)
+{
     int     i;
 
     // register any images used by the models
-    switch( model->type ) {
+    switch (model->type) {
     case MOD_ALIAS:
-        for( i = 0; i < model->numskins; i++ ) {
+        for (i = 0; i < model->numskins; i++) {
             model->skins[i]->registration_sequence = registration_sequence;
         }
         break;
     case MOD_SPRITE:
-        for( i = 0; i < model->numframes; i++ ) {
+        for (i = 0; i < model->numframes; i++) {
             model->spriteframes[i].image->registration_sequence = registration_sequence;
         }
         break;
     case MOD_EMPTY:
         break;
     default:
-        Com_Error( ERR_FATAL, "%s: bad model type", __func__ );
+        Com_Error(ERR_FATAL, "%s: bad model type", __func__);
     }
 
     model->registration_sequence = registration_sequence;
@@ -290,34 +295,35 @@ R_BeginRegistration
 Specifies the model that will be used as the world
 @@@@@@@@@@@@@@@@@@@@@
 */
-void R_BeginRegistration( const char *model ) {
+void R_BeginRegistration(const char *model)
+{
     char    fullname[MAX_QPATH];
     bsp_t   *bsp;
 
     registration_sequence++;
     r_oldviewcluster = -1;      // force markleafs
-    Q_concat( fullname, sizeof( fullname ), "maps/", model, ".bsp", NULL );
+    Q_concat(fullname, sizeof(fullname), "maps/", model, ".bsp", NULL);
 
-    D_FlushCaches ();
-    BSP_Load( fullname, &bsp );
-    if( bsp == r_worldmodel ) {
+    D_FlushCaches();
+    BSP_Load(fullname, &bsp);
+    if (bsp == r_worldmodel) {
         mtexinfo_t *tex = bsp->texinfo;
         int i;
 
-        for( i = 0; i < bsp->numtexinfo; i++, tex++ ) {
+        for (i = 0; i < bsp->numtexinfo; i++, tex++) {
             tex->image->registration_sequence = registration_sequence;
         }
         bsp->refcount--;
         return;
     }
-    BSP_Free( r_worldmodel );
+    BSP_Free(r_worldmodel);
     r_worldmodel = bsp;
 
-    ProcessTexinfo( bsp );
-    ProcessFaces( bsp );
+    ProcessTexinfo(bsp);
+    ProcessFaces(bsp);
 
     // TODO
-    R_NewMap ();
+    R_NewMap();
 }
 
 /*
@@ -326,7 +332,8 @@ R_EndRegistration
 
 @@@@@@@@@@@@@@@@@@@@@
 */
-void R_EndRegistration (void) {
+void R_EndRegistration(void)
+{
     MOD_FreeUnused();
     IMG_FreeUnused();
 }

@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -29,28 +29,28 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define DOSTEP do {             \
             tbyte = *src++;     \
-            if( tbyte != 255 )  \
+            if (tbyte != 255)   \
                 *dst = tbyte;   \
             dst++;              \
-        } while( 0 )
+        } while (0)
 
 #define DOMSTEP do {            \
-            if( *src++ != 255 )  \
+            if (*src++ != 255)  \
                 *dst = tbyte;   \
             dst++;              \
-        } while( 0 )
+        } while (0)
 
 #define DOSTRETCH do {              \
             tbyte = src[u >> 16];   \
-            if( tbyte != 255 )      \
+            if (tbyte != 255)       \
                 *dst = tbyte;       \
             dst++;                  \
             u += ustep;             \
-        } while( 0 )
+        } while (0)
 
 #define ROW1 do {   \
         DOSTEP;     \
-    } while( --count );
+    } while (--count);
 
 #define ROW4 do {   \
         DOSTEP;     \
@@ -59,7 +59,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
         DOSTEP;     \
                     \
         count -= 4; \
-    } while( count );
+    } while (count);
 
 #define ROW8 do {   \
         DOSTEP;     \
@@ -72,7 +72,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
         DOSTEP;     \
                     \
         count -= 8; \
-    } while( count );
+    } while (count);
 
 #define MROW8 do {  \
         DOMSTEP;        \
@@ -85,11 +85,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
         DOMSTEP;        \
                     \
         count -= 8; \
-    } while( count );
+    } while (count);
 
 #define STRETCH1 do {   \
         DOSTRETCH;      \
-    } while( --count );
+    } while (--count);
 
 #define STRETCH4 do {   \
         DOSTRETCH;      \
@@ -98,7 +98,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
         DOSTRETCH;      \
                         \
         count -= 4;     \
-    } while( count );
+    } while (count);
 
 #define STRETCH8 do {   \
         DOSTRETCH;      \
@@ -111,7 +111,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
         DOSTRETCH;      \
                         \
         count -= 8;     \
-    } while( count );
+    } while (count);
 
 typedef struct {
     int colorIndex;
@@ -124,38 +124,44 @@ static drawStatic_t draw;
 
 static int  colorIndices[8];
 
-void R_SetScale( float *scale ) {
-    if( scale ) {
+void R_SetScale(float *scale)
+{
+    if (scale) {
         *scale = 1;
     }
 }
 
-void R_InitDraw( void ) {
+void R_InitDraw(void)
+{
     int i;
 
-    memset( &draw, 0, sizeof( draw ) );
+    memset(&draw, 0, sizeof(draw));
     draw.colorIndex = -1;
 
-    for( i = 0; i < 8; i++ ) {
-        colorIndices[i] = R_IndexForColor( colorTable[i] );
+    for (i = 0; i < 8; i++) {
+        colorIndices[i] = R_IndexForColor(colorTable[i]);
     }
 }
 
-void R_ClearColor( void ) {
+void R_ClearColor(void)
+{
     draw.colorIndex = -1;
 }
 
-void R_SetAlpha( float alpha ) {
+void R_SetAlpha(float alpha)
+{
 }
 
-void R_SetColor( uint32_t color ) {
-    draw.colorIndex = R_IndexForColor( color );
+void R_SetColor(uint32_t color)
+{
+    draw.colorIndex = R_IndexForColor(color);
 }
 
-void R_SetClipRect( int flags, const clipRect_t *clip ) {
+void R_SetClipRect(int flags, const clipRect_t *clip)
+{
     draw.flags &= ~DRAW_CLIP_MASK;
 
-    if( flags == DRAW_CLIP_DISABLED ) {
+    if (flags == DRAW_CLIP_DISABLED) {
         return;
     }
     draw.flags |= flags;
@@ -167,13 +173,14 @@ void R_SetClipRect( int flags, const clipRect_t *clip ) {
 R_GetPicSize
 =============
 */
-qboolean R_GetPicSize( int *w, int *h, qhandle_t pic ) {
-    image_t *image = IMG_ForHandle( pic );
+qboolean R_GetPicSize(int *w, int *h, qhandle_t pic)
+{
+    image_t *image = IMG_ForHandle(pic);
 
-    if( w ) {
+    if (w) {
         *w = image->width;
     }
-    if( h ) {
+    if (h) {
         *h = image->height;
     }
     return image->flags & if_transparent;
@@ -184,8 +191,8 @@ qboolean R_GetPicSize( int *w, int *h, qhandle_t pic ) {
 R_DrawStretchData
 =============
 */
-static void R_DrawStretchData( int x, int y, int w, int h, int xx, int yy,
-        int ww, int hh, int pitch, byte *data )
+static void R_DrawStretchData(int x, int y, int w, int h, int xx, int yy,
+                              int ww, int hh, int pitch, byte *data)
 {
     byte            *srcpixels, *dstpixels, *dst, *src;
     int             v, u;
@@ -199,13 +206,13 @@ static void R_DrawStretchData( int x, int y, int w, int h, int xx, int yy,
     width = w;
     height = h;
 
-    if( draw.flags & DRAW_CLIP_MASK ) {
+    if (draw.flags & DRAW_CLIP_MASK) {
         clipRect_t *clip = &draw.clipRect;
 
-        if( draw.flags & DRAW_CLIP_LEFT ) {
-            if( x < clip->left ) {
+        if (draw.flags & DRAW_CLIP_LEFT) {
+            if (x < clip->left) {
                 skipu = clip->left - x;
-                if( w <= skipu ) {
+                if (w <= skipu) {
                     return;
                 }
                 w -= skipu;
@@ -213,19 +220,19 @@ static void R_DrawStretchData( int x, int y, int w, int h, int xx, int yy,
             }
         }
 
-        if( draw.flags & DRAW_CLIP_RIGHT ) {
-            if( x >= clip->right ) {
+        if (draw.flags & DRAW_CLIP_RIGHT) {
+            if (x >= clip->right) {
                 return;
             }
-            if( x + w > clip->right ) {
+            if (x + w > clip->right) {
                 w = clip->right - x;
             }
         }
 
-        if( draw.flags & DRAW_CLIP_TOP ) {
-            if( y < clip->top ) {
+        if (draw.flags & DRAW_CLIP_TOP) {
+            if (y < clip->top) {
                 skipv = clip->top - y;
-                if( h <= skipv ) {
+                if (h <= skipv) {
                     return;
                 }
                 h -= skipv;
@@ -233,11 +240,11 @@ static void R_DrawStretchData( int x, int y, int w, int h, int xx, int yy,
             }
         }
 
-        if( draw.flags & DRAW_CLIP_BOTTOM ) {
-            if( y >= clip->bottom ) {
+        if (draw.flags & DRAW_CLIP_BOTTOM) {
+            if (y >= clip->bottom) {
                 return;
             }
-            if( y + h > clip->bottom ) {
+            if (y + h > clip->bottom) {
                 h = clip->bottom - y;
             }
         }
@@ -247,46 +254,46 @@ static void R_DrawStretchData( int x, int y, int w, int h, int xx, int yy,
     dstpixels = vid.buffer + y * vid.rowbytes + x;
 
     vstep = hh * 0x10000 / height;
-    
+
     v = skipv * vstep;
-    if( width == ww ) {
+    if (width == ww) {
         dstpixels += skipu;
         do {
-            src = &srcpixels[( v >> 16 ) * pitch];
+            src = &srcpixels[(v >> 16) * pitch];
             dst = dstpixels;
             count = w;
-            
-            if( !( w & 7 ) ) {
+
+            if (!(w & 7)) {
                 ROW8;
-            } else if( !( w & 3 ) ) {
+            } else if (!(w & 3)) {
                 ROW4;
             } else {
                 ROW1;
             }
-            
+
             v += vstep;
             dstpixels += vid.rowbytes;
-        } while( --h );
+        } while (--h);
     } else {
         ustep = ww * 0x10000 / width;
         skipu = skipu * ustep;
         do {
-            src = &srcpixels[( v >> 16 ) * pitch];
+            src = &srcpixels[(v >> 16) * pitch];
             dst = dstpixels;
             count = w;
 
             u = skipu;
-            if( !( w & 7 ) ) {
+            if (!(w & 7)) {
                 STRETCH8;
-            } else if( !( w & 3 ) ) {
+            } else if (!(w & 3)) {
                 STRETCH4;
             } else {
                 STRETCH1;
             }
-            
+
             v += vstep;
             dstpixels += vid.rowbytes;
-        } while( --h );
+        } while (--h);
     }
 
 }
@@ -296,8 +303,8 @@ static void R_DrawStretchData( int x, int y, int w, int h, int xx, int yy,
 R_DrawFixedData
 =============
 */
-static void R_DrawFixedData( int x, int y, int w, int h,
-        int pitch, byte *data )
+static void R_DrawFixedData(int x, int y, int w, int h,
+                            int pitch, byte *data)
 {
     byte *srcpixels, *dstpixels;
     byte            *dst, *src;
@@ -307,13 +314,13 @@ static void R_DrawFixedData( int x, int y, int w, int h,
 
     skipv = skipu = 0;
 
-    if( draw.flags & DRAW_CLIP_MASK ) {
+    if (draw.flags & DRAW_CLIP_MASK) {
         clipRect_t *clip = &draw.clipRect;
 
-        if( draw.flags & DRAW_CLIP_LEFT ) {
-            if( x < clip->left ) {
+        if (draw.flags & DRAW_CLIP_LEFT) {
+            if (x < clip->left) {
                 skipu = clip->left - x;
-                if( w <= skipu ) {
+                if (w <= skipu) {
                     return;
                 }
                 w -= skipu;
@@ -321,19 +328,19 @@ static void R_DrawFixedData( int x, int y, int w, int h,
             }
         }
 
-        if( draw.flags & DRAW_CLIP_RIGHT ) {
-            if( x >= clip->right ) {
+        if (draw.flags & DRAW_CLIP_RIGHT) {
+            if (x >= clip->right) {
                 return;
             }
-            if( x + w > clip->right ) {
+            if (x + w > clip->right) {
                 w = clip->right - x;
             }
         }
 
-        if( draw.flags & DRAW_CLIP_TOP ) {
-            if( y < clip->top ) {
+        if (draw.flags & DRAW_CLIP_TOP) {
+            if (y < clip->top) {
                 skipv = clip->top - y;
-                if( h <= skipv ) {
+                if (h <= skipv) {
                     return;
                 }
                 h -= skipv;
@@ -341,11 +348,11 @@ static void R_DrawFixedData( int x, int y, int w, int h,
             }
         }
 
-        if( draw.flags & DRAW_CLIP_BOTTOM ) {
-            if( y >= clip->bottom ) {
+        if (draw.flags & DRAW_CLIP_BOTTOM) {
+            if (y >= clip->bottom) {
                 return;
             }
-            if( y + h > clip->bottom ) {
+            if (y + h > clip->bottom) {
                 h = clip->bottom - y;
             }
         }
@@ -354,22 +361,22 @@ static void R_DrawFixedData( int x, int y, int w, int h,
     srcpixels = data + skipv * pitch + skipu;
     dstpixels = vid.buffer + y * vid.rowbytes + x;
 
-    if( !( w & 7 ) ) {
+    if (!(w & 7)) {
         do {
             src = srcpixels;
             dst = dstpixels;
             count = w; ROW8;
             srcpixels += pitch;
             dstpixels += vid.rowbytes;
-        } while( --h );
-    } else if( !( w & 3 ) ) {
+        } while (--h);
+    } else if (!(w & 3)) {
         do {
             src = srcpixels;
             dst = dstpixels;
             count = w; ROW4;
             srcpixels += pitch;
             dstpixels += vid.rowbytes;
-        } while( --h );
+        } while (--h);
     } else {
         do {
             src = srcpixels;
@@ -377,13 +384,13 @@ static void R_DrawFixedData( int x, int y, int w, int h,
             count = w; ROW1;
             srcpixels += pitch;
             dstpixels += vid.rowbytes;
-        } while( --h );
+        } while (--h);
     }
 
 }
 
-static void R_DrawFixedDataAsMask( int x, int y, int w, int h,
-        int pitch, byte *data, byte tbyte )
+static void R_DrawFixedDataAsMask(int x, int y, int w, int h,
+                                  int pitch, byte *data, byte tbyte)
 {
     byte *srcpixels, *dstpixels;
     byte            *dst, *src;
@@ -392,13 +399,13 @@ static void R_DrawFixedDataAsMask( int x, int y, int w, int h,
 
     skipv = skipu = 0;
 
-    if( draw.flags & DRAW_CLIP_MASK ) {
+    if (draw.flags & DRAW_CLIP_MASK) {
         clipRect_t *clip = &draw.clipRect;
 
-        if( draw.flags & DRAW_CLIP_LEFT ) {
-            if( x < clip->left ) {
+        if (draw.flags & DRAW_CLIP_LEFT) {
+            if (x < clip->left) {
                 skipu = clip->left - x;
-                if( w <= skipu ) {
+                if (w <= skipu) {
                     return;
                 }
                 w -= skipu;
@@ -406,19 +413,19 @@ static void R_DrawFixedDataAsMask( int x, int y, int w, int h,
             }
         }
 
-        if( draw.flags & DRAW_CLIP_RIGHT ) {
-            if( x >= clip->right ) {
+        if (draw.flags & DRAW_CLIP_RIGHT) {
+            if (x >= clip->right) {
                 return;
             }
-            if( x + w > clip->right ) {
+            if (x + w > clip->right) {
                 w = clip->right - x;
             }
         }
 
-        if( draw.flags & DRAW_CLIP_TOP ) {
-            if( y < clip->top ) {
+        if (draw.flags & DRAW_CLIP_TOP) {
+            if (y < clip->top) {
                 skipv = clip->top - y;
-                if( h <= skipv ) {
+                if (h <= skipv) {
                     return;
                 }
                 h -= skipv;
@@ -426,11 +433,11 @@ static void R_DrawFixedDataAsMask( int x, int y, int w, int h,
             }
         }
 
-        if( draw.flags & DRAW_CLIP_BOTTOM ) {
-            if( y <= clip->bottom ) {
+        if (draw.flags & DRAW_CLIP_BOTTOM) {
+            if (y <= clip->bottom) {
                 return;
             }
-            if( y + h > clip->bottom ) {
+            if (y + h > clip->bottom) {
                 h = clip->bottom - y;
             }
         }
@@ -439,22 +446,22 @@ static void R_DrawFixedDataAsMask( int x, int y, int w, int h,
     srcpixels = data + skipv * pitch + skipu;
     dstpixels = vid.buffer + y * vid.rowbytes + x;
 
-    if( !( w & 7 ) ) {
+    if (!(w & 7)) {
         do {
             src = srcpixels;
             dst = dstpixels;
             count = w; MROW8;
             srcpixels += pitch;
             dstpixels += vid.rowbytes;
-        } while( --h );
-    } else if( !( w & 3 ) ) {
+        } while (--h);
+    } else if (!(w & 3)) {
         do {
             src = srcpixels;
             dst = dstpixels;
             count = w; ROW4;
             srcpixels += pitch;
             dstpixels += vid.rowbytes;
-        } while( --h );
+        } while (--h);
     } else {
         do {
             src = srcpixels;
@@ -462,7 +469,7 @@ static void R_DrawFixedDataAsMask( int x, int y, int w, int h,
             count = w; ROW1;
             srcpixels += pitch;
             dstpixels += vid.rowbytes;
-        } while( --h );
+        } while (--h);
     }
 
 }
@@ -472,19 +479,19 @@ static void R_DrawFixedDataAsMask( int x, int y, int w, int h,
 R_DrawStretcpic
 =============
 */
-void R_DrawStretcPicST( int x, int y, int w, int h, float s1, float t1,
-        float s2, float t2, qhandle_t pic )
+void R_DrawStretcPicST(int x, int y, int w, int h, float s1, float t1,
+                       float s2, float t2, qhandle_t pic)
 {
-    image_t *image = IMG_ForHandle( pic );
+    image_t *image = IMG_ForHandle(pic);
     int xx, yy, ww, hh;
 
     xx = image->width * s1;
     yy = image->height * t1;
-    ww = image->width * ( s2 - s1 );
-    hh = image->height * ( t2 - t1 );
+    ww = image->width * (s2 - s1);
+    hh = image->height * (t2 - t1);
 
-    R_DrawStretchData( x, y, w, h, xx, yy, ww, hh,
-        image->width, image->pixels[0] );
+    R_DrawStretchData(x, y, w, h, xx, yy, ww, hh,
+                      image->width, image->pixels[0]);
 }
 
 /*
@@ -492,17 +499,18 @@ void R_DrawStretcPicST( int x, int y, int w, int h, float s1, float t1,
 R_DrawStretchPic
 =============
 */
-void R_DrawStretchPic( int x, int y, int w, int h, qhandle_t pic ) {
-    image_t *image = IMG_ForHandle( pic );
+void R_DrawStretchPic(int x, int y, int w, int h, qhandle_t pic)
+{
+    image_t *image = IMG_ForHandle(pic);
 
-    if( w == image->width && h == image->height ) {
-        R_DrawFixedData( x, y, image->width, image->height,
-            image->width, image->pixels[0] );
+    if (w == image->width && h == image->height) {
+        R_DrawFixedData(x, y, image->width, image->height,
+                        image->width, image->pixels[0]);
         return;
     }
 
-    R_DrawStretchData( x, y, w, h, 0, 0, image->width, image->height,
-        image->width, image->pixels[0] );
+    R_DrawStretchData(x, y, w, h, 0, 0, image->width, image->height,
+                      image->width, image->pixels[0]);
 }
 
 /*
@@ -510,33 +518,35 @@ void R_DrawStretchPic( int x, int y, int w, int h, qhandle_t pic ) {
 R_DrawStretcpic
 =============
 */
-void R_DrawPic( int x, int y, qhandle_t pic ) {
-    image_t *image = IMG_ForHandle( pic );
+void R_DrawPic(int x, int y, qhandle_t pic)
+{
+    image_t *image = IMG_ForHandle(pic);
 
-    R_DrawFixedData( x, y, image->width, image->height,
-        image->width, image->pixels[0] );
+    R_DrawFixedData(x, y, image->width, image->height,
+                    image->width, image->pixels[0]);
 }
 
-void R_DrawChar( int x, int y, int flags, int ch, qhandle_t font ) {
+void R_DrawChar(int x, int y, int flags, int ch, qhandle_t font)
+{
     image_t *image;
     int xx, yy;
     byte *data;
 
-    if( !font ) {
+    if (!font) {
         return;
     }
-    image = IMG_ForHandle( font );
-    if( image->width != 128 || image->height != 128 ) {
+    image = IMG_ForHandle(font);
+    if (image->width != 128 || image->height != 128) {
         return;
     }
 
-    xx = ( ch & 15 ) << 3;
-    yy = ( ( ch >> 4 ) & 15 ) << 3;
+    xx = (ch & 15) << 3;
+    yy = ((ch >> 4) & 15) << 3;
     data = image->pixels[0] + yy * image->width + xx;
-    if( draw.colorIndex != -1 && !( ch & 128 ) ) {
-        R_DrawFixedDataAsMask( x, y, 8, 8, image->width, data, draw.colorIndex );
+    if (draw.colorIndex != -1 && !(ch & 128)) {
+        R_DrawFixedDataAsMask(x, y, 8, 8, image->width, data, draw.colorIndex);
     } else {
-        R_DrawFixedData( x, y, 8, 8, image->width, data );
+        R_DrawFixedData(x, y, 8, 8, image->width, data);
     }
 }
 
@@ -545,8 +555,8 @@ void R_DrawChar( int x, int y, int flags, int ch, qhandle_t font ) {
 R_DrawString
 ===============
 */
-int R_DrawString( int x, int y, int flags, size_t maxChars,
-        const char *string, qhandle_t font )
+int R_DrawString(int x, int y, int flags, size_t maxChars,
+                 const char *string, qhandle_t font)
 {
     image_t *image;
     byte c, *data;
@@ -554,33 +564,33 @@ int R_DrawString( int x, int y, int flags, size_t maxChars,
     int color;
     qboolean alt;
 
-    if( !font ) {
+    if (!font) {
         return x;
     }
-    image = IMG_ForHandle( font );
-    if( image->width != 128 || image->height != 128 ) {
+    image = IMG_ForHandle(font);
+    if (image->width != 128 || image->height != 128) {
         return x;
     }
 
-    alt = ( flags & UI_ALTCOLOR ) ? qtrue : qfalse;
+    alt = (flags & UI_ALTCOLOR) ? qtrue : qfalse;
     color = draw.colorIndex;
 
-    while( maxChars-- && *string ) {
+    while (maxChars-- && *string) {
         c = *string++;
-        if( ( c & 127 ) == 32 ) {
+        if ((c & 127) == 32) {
             x += 8;
             continue;
         }
 
         c |= alt << 7;
-        xx = ( c & 15 ) << 3;
-        yy = ( c >> 4 ) << 3;
+        xx = (c & 15) << 3;
+        yy = (c >> 4) << 3;
 
         data = image->pixels[0] + yy * image->width + xx;
-        if( color != -1 && !( c & 128 ) ) {
-            R_DrawFixedDataAsMask( x, y, 8, 8, image->width, data, color );
+        if (color != -1 && !(c & 128)) {
+            R_DrawFixedDataAsMask(x, y, 8, 8, image->width, data, color);
         } else {
-            R_DrawFixedData( x, y, 8, 8, image->width, data );
+            R_DrawFixedData(x, y, 8, 8, image->width, data);
         }
 
         x += 8;
@@ -596,14 +606,15 @@ This repeats a 64*64 tile graphic to fill the screen around a sized down
 refresh window.
 =============
 */
-void R_TileClear( int x, int y, int w, int h, qhandle_t pic ) {
+void R_TileClear(int x, int y, int w, int h, qhandle_t pic)
+{
     int         i, j;
     byte        *psrc;
     byte        *pdest;
     image_t     *image;
     int         x2;
 
-    if( !pic ) {
+    if (!pic) {
         return;
     }
 
@@ -622,16 +633,16 @@ void R_TileClear( int x, int y, int w, int h, qhandle_t pic ) {
     if (w <= 0 || h <= 0)
         return;
 
-    image = IMG_ForHandle( pic );
-    if( image->width != 64 || image->height != 64 ) {
+    image = IMG_ForHandle(pic);
+    if (image->width != 64 || image->height != 64) {
         return;
     }
     x2 = x + w;
-    pdest = vid.buffer + y*vid.rowbytes;
-    for (i=0 ; i<h ; i++, pdest += vid.rowbytes) {
-        psrc = image->pixels[0] + image->width * ((i+y)&63);
-        for (j=x ; j<x2 ; j++)
-            pdest[j] = psrc[j&63];
+    pdest = vid.buffer + y * vid.rowbytes;
+    for (i = 0; i < h; i++, pdest += vid.rowbytes) {
+        psrc = image->pixels[0] + image->width * ((i + y) & 63);
+        for (j = x; j < x2; j++)
+            pdest[j] = psrc[j & 63];
     }
 }
 
@@ -643,73 +654,75 @@ R_DrawFill
 Fills a box of pixels with a single color
 =============
 */
-void R_DrawFill8( int x, int y, int w, int h, int c ) {
+void R_DrawFill8(int x, int y, int w, int h, int c)
+{
     byte            *dest;
     int             u, v;
 
-    if( x + w > vid.width )
+    if (x + w > vid.width)
         w = vid.width - x;
-    if( y + h > vid.height )
+    if (y + h > vid.height)
         h = vid.height - y;
-    if( x < 0 ) {
+    if (x < 0) {
         w += x;
         x = 0;
     }
-    if( y < 0 ) {
+    if (y < 0) {
         h += y;
         y = 0;
     }
-    if( w < 0 || h < 0 )
+    if (w < 0 || h < 0)
         return;
 
     dest = vid.buffer + y * vid.rowbytes + x;
-    for( v = 0; v < h; v++, dest += vid.rowbytes )
-        for( u = 0; u < w; u++ )
+    for (v = 0; v < h; v++, dest += vid.rowbytes)
+        for (u = 0; u < w; u++)
             dest[u] = c;
 }
 
-void R_DrawFill32( int x, int y, int w, int h, uint32_t color ) {
+void R_DrawFill32(int x, int y, int w, int h, uint32_t color)
+{
     int             c;
     byte            *dest;
     int             u, v;
     int             alpha;
 
-    if( x + w > vid.width )
+    if (x + w > vid.width)
         w = vid.width - x;
-    if( y + h > vid.height )
+    if (y + h > vid.height)
         h = vid.height - y;
-    if( x < 0 ) {
+    if (x < 0) {
         w += x;
         x = 0;
     }
-    if( y < 0 ) {
+    if (y < 0) {
         h += y;
         y = 0;
     }
-    if( w < 0 || h < 0 )
+    if (w < 0 || h < 0)
         return;
 
-    c = R_IndexForColor( color );
-    alpha = ( LittleLong( color ) >> 24 ) & 0xff;
+    c = R_IndexForColor(color);
+    alpha = (LittleLong(color) >> 24) & 0xff;
 
     dest = vid.buffer + y * vid.rowbytes + x;
-    if( alpha < 172 ) {
-        if( alpha > 84 ) {
-            for( v = 0; v < h; v++, dest += vid.rowbytes ) {
-                for( u = 0 ; u < w; u++ ) {
+    if (alpha < 172) {
+        if (alpha > 84) {
+            for (v = 0; v < h; v++, dest += vid.rowbytes) {
+                for (u = 0; u < w; u++) {
                     dest[u] = vid.alphamap[c * 256 + dest[u]];
                 }
             }
         } else {
-            for( v = 0; v < h; v++, dest += vid.rowbytes ) {
-                for( u = 0 ; u < w; u++ ) {
+            for (v = 0; v < h; v++, dest += vid.rowbytes) {
+                for (u = 0; u < w; u++) {
                     dest[u] = vid.alphamap[c + dest[u] * 256];
                 }
             }
         }
     } else {
-        for( v = 0; v < h; v++, dest += vid.rowbytes ) {
-            for( u = 0 ; u < w; u++ ) {
+        for (v = 0; v < h; v++, dest += vid.rowbytes) {
+            for (u = 0; u < w; u++) {
                 dest[u] = c;
             }
         }
@@ -725,19 +738,17 @@ R_DrawFadeScreen
 
 ================
 */
-void R_DrawFadeScreen (void)
+void R_DrawFadeScreen(void)
 {
-    int         x,y;
+    int         x, y;
     byte        *pbuf;
     int t;
 
-    for (y=0 ; y<vid.height ; y++)
-    {
-        pbuf = (byte *)(vid.buffer + vid.rowbytes*y);
+    for (y = 0; y < vid.height; y++) {
+        pbuf = (byte *)(vid.buffer + vid.rowbytes * y);
         t = (y & 1) << 1;
 
-        for (x=0 ; x<vid.width ; x++)
-        {
+        for (x = 0; x < vid.width; x++) {
             if ((x & 3) != t)
                 pbuf[x] = 0;
         }

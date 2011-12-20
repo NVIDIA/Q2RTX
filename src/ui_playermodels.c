@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -42,44 +42,47 @@ static const char *const baseWeaponNames[] = {
     "w_sshotgun.md2"
 };
 
-static const int numBaseWeaponNames = sizeof( baseWeaponNames ) / sizeof( baseWeaponNames[0] );
+static const int numBaseWeaponNames = sizeof(baseWeaponNames) / sizeof(baseWeaponNames[0]);
 
-static qboolean IconOfSkinExists( char *skin, char **pcxfiles, int npcxfiles ) {
+static qboolean IconOfSkinExists(char *skin, char **pcxfiles, int npcxfiles)
+{
     int i;
     char scratch[MAX_OSPATH];
 
-    COM_StripExtension( skin, scratch, sizeof( scratch ) );
-    Q_strlcat( scratch, "_i.pcx", sizeof( scratch ) );
+    COM_StripExtension(skin, scratch, sizeof(scratch));
+    Q_strlcat(scratch, "_i.pcx", sizeof(scratch));
 
-    for( i = 0 ; i < npcxfiles ; i++ ) {
-        if( strcmp( pcxfiles[i], scratch ) == 0 )
+    for (i = 0; i < npcxfiles; i++) {
+        if (strcmp(pcxfiles[i], scratch) == 0)
             return qtrue;
     }
 
     return qfalse;
 }
 
-static int QDECL pmicmpfnc( const void *_a, const void *_b ) {
+static int QDECL pmicmpfnc(const void *_a, const void *_b)
+{
     const playerModelInfo_t *a = (const playerModelInfo_t *)_a;
     const playerModelInfo_t *b = (const playerModelInfo_t *)_b;
 
     /*
     ** sort by male, female, then alphabetical
     */
-    if( strcmp( a->directory, "male" ) == 0 )
+    if (strcmp(a->directory, "male") == 0)
         return -1;
-    else if( strcmp( b->directory, "male" ) == 0 )
+    else if (strcmp(b->directory, "male") == 0)
         return 1;
 
-    if( strcmp( a->directory, "female" ) == 0 )
+    if (strcmp(a->directory, "female") == 0)
         return -1;
-    else if( strcmp( b->directory, "female" ) == 0 )
+    else if (strcmp(b->directory, "female") == 0)
         return 1;
 
-    return strcmp( a->directory, b->directory );
+    return strcmp(a->directory, b->directory);
 }
 
-void PlayerModel_Load( void ) {
+void PlayerModel_Load(void)
+{
     char scratch[MAX_QPATH];
     int ndirs = 0;
     char *dirnames[MAX_PLAYERMODELS];
@@ -94,35 +97,35 @@ void PlayerModel_Load( void ) {
     /*
     ** get a list of directories
     */
-    if( !( list = ( char ** )FS_ListFiles( NULL, "players/*/*", FS_SEARCH_BYFILTER|FS_SEARCH_SAVEPATH, &numFiles ) ) ) {
+    if (!(list = (char **)FS_ListFiles(NULL, "players/*/*", FS_SEARCH_BYFILTER | FS_SEARCH_SAVEPATH, &numFiles))) {
         return;
     }
 
-    for( i = 0; i < numFiles; i++ ) {
-        Q_strlcpy( scratch, list[i] + 8, sizeof( scratch ) );
-        if( ( p = strchr( scratch, '/' ) ) ) {
+    for (i = 0; i < numFiles; i++) {
+        Q_strlcpy(scratch, list[i] + 8, sizeof(scratch));
+        if ((p = strchr(scratch, '/'))) {
             *p = 0;
         }
 
-        for( j = 0; j < ndirs; j++ ) {
-            if( !strcmp( dirnames[j], scratch ) ) {
+        for (j = 0; j < ndirs; j++) {
+            if (!strcmp(dirnames[j], scratch)) {
                 break;
             }
         }
 
-        if( j != ndirs ) {
+        if (j != ndirs) {
             continue;
         }
-        
-        dirnames[ndirs++] = UI_CopyString( scratch );
-        if( ndirs == MAX_PLAYERMODELS ) {
+
+        dirnames[ndirs++] = UI_CopyString(scratch);
+        if (ndirs == MAX_PLAYERMODELS) {
             break;
         }
     }
 
-    FS_FreeList( ( void ** )list );
+    FS_FreeList((void **)list);
 
-    if( !ndirs ) {
+    if (!ndirs) {
         return;
     }
 
@@ -130,7 +133,7 @@ void PlayerModel_Load( void ) {
     ** go through the subdirectories
     */
 
-    for( i = 0; i < ndirs; i++ ) {
+    for (i = 0; i < ndirs; i++) {
         int k, s;
         char **pcxnames;
         char **skinnames;
@@ -140,67 +143,67 @@ void PlayerModel_Load( void ) {
         char **weaponNames;
 
         // verify the existence of tris.md2
-        Q_concat( scratch, sizeof( scratch ), "players/", dirnames[i], "/tris.md2", NULL );
-        if( !FS_FileExists( scratch ) ) {
+        Q_concat(scratch, sizeof(scratch), "players/", dirnames[i], "/tris.md2", NULL);
+        if (!FS_FileExists(scratch)) {
             continue;
         }
 
         // verify the existence of at least one pcx skin
-        Q_concat( scratch, sizeof( scratch ), "players/", dirnames[i], NULL );
-        pcxnames = ( char ** )FS_ListFiles( scratch, ".pcx", 0, &npcxfiles );
-        if( !pcxnames ) {
+        Q_concat(scratch, sizeof(scratch), "players/", dirnames[i], NULL);
+        pcxnames = (char **)FS_ListFiles(scratch, ".pcx", 0, &npcxfiles);
+        if (!pcxnames) {
             continue;
         }
 
         // count valid skins, which consist of a skin with a matching "_i" icon
-        for( k = 0; k < npcxfiles; k++ ) {
-            if( !strstr( pcxnames[k], "_i.pcx" ) ) {
-                if( IconOfSkinExists( pcxnames[k], pcxnames, npcxfiles ) ) {
+        for (k = 0; k < npcxfiles; k++) {
+            if (!strstr(pcxnames[k], "_i.pcx")) {
+                if (IconOfSkinExists(pcxnames[k], pcxnames, npcxfiles)) {
                     nskins++;
                 }
             }
         }
 
-        if( !nskins ) {
-            FS_FreeList( ( void ** )pcxnames );
+        if (!nskins) {
+            FS_FreeList((void **)pcxnames);
             continue;
         }
 
-        skinnames = UI_Malloc( sizeof( char * ) * ( nskins + 1 ) );
+        skinnames = UI_Malloc(sizeof(char *) * (nskins + 1));
         skinnames[nskins] = NULL;
 
         // copy the valid skins
-        for( s = 0, k = 0; k < npcxfiles; k++ ) {
-            if( !strstr( pcxnames[k], "_i.pcx" ) ) {
-                if( IconOfSkinExists( pcxnames[k], pcxnames, npcxfiles ) ) {
-                    COM_StripExtension( pcxnames[k], scratch, sizeof( scratch ) );
-                    skinnames[s++] = UI_CopyString( scratch );
+        for (s = 0, k = 0; k < npcxfiles; k++) {
+            if (!strstr(pcxnames[k], "_i.pcx")) {
+                if (IconOfSkinExists(pcxnames[k], pcxnames, npcxfiles)) {
+                    COM_StripExtension(pcxnames[k], scratch, sizeof(scratch));
+                    skinnames[s++] = UI_CopyString(scratch);
                 }
             }
         }
 
-        FS_FreeList( ( void ** )pcxnames );
+        FS_FreeList((void **)pcxnames);
 
         // load vweap models
-        Q_concat( scratch, sizeof( scratch ), "players/", dirnames[i], "/w_*.md2", NULL );
-        weaponNames = ( char ** )FS_ListFiles( NULL, scratch, FS_SEARCH_BYFILTER, &numWeapons );
+        Q_concat(scratch, sizeof(scratch), "players/", dirnames[i], "/w_*.md2", NULL);
+        weaponNames = (char **)FS_ListFiles(NULL, scratch, FS_SEARCH_BYFILTER, &numWeapons);
 
         pmi = &uis.pmi[uis.numPlayerModels++];
         pmi->numWeapons = 0;
 
-        if( weaponNames ) {
-            pmi->weaponNames = UI_Malloc( sizeof( char * ) * numWeapons );
+        if (weaponNames) {
+            pmi->weaponNames = UI_Malloc(sizeof(char *) * numWeapons);
 
-            for( j = 0; j < numWeapons ; j++ ) {
-                for( k = 0; k < numBaseWeaponNames; k++ ) {
-                    if( !strcmp( weaponNames[j], baseWeaponNames[k] ) ) {
-                        pmi->weaponNames[pmi->numWeapons++] = UI_CopyString( weaponNames[j] );
+            for (j = 0; j < numWeapons; j++) {
+                for (k = 0; k < numBaseWeaponNames; k++) {
+                    if (!strcmp(weaponNames[j], baseWeaponNames[k])) {
+                        pmi->weaponNames[pmi->numWeapons++] = UI_CopyString(weaponNames[j]);
                         break;
                     }
                 }
             }
 
-            FS_FreeList( ( void ** )weaponNames );
+            FS_FreeList((void **)weaponNames);
         }
 
         // at this point we have a valid player model
@@ -208,38 +211,39 @@ void PlayerModel_Load( void ) {
         pmi->skindisplaynames = skinnames;
 
         // make short name for the model
-        strcpy( pmi->directory, dirnames[i] );
+        strcpy(pmi->directory, dirnames[i]);
     }
 
-    for( i = 0; i < ndirs; i++ ) {
-        Z_Free( dirnames[i] );
+    for (i = 0; i < ndirs; i++) {
+        Z_Free(dirnames[i]);
     }
 
-    qsort( uis.pmi, uis.numPlayerModels, sizeof( uis.pmi[0] ), pmicmpfnc );
+    qsort(uis.pmi, uis.numPlayerModels, sizeof(uis.pmi[0]), pmicmpfnc);
 }
 
 
 
-void PlayerModel_Free( void ) {
+void PlayerModel_Free(void)
+{
     playerModelInfo_t *pmi;
     int i, j;
 
-    for( i = 0, pmi = uis.pmi; i < uis.numPlayerModels; i++, pmi++ ) {
-        if( pmi->skindisplaynames ) {
-            for( j = 0; j < pmi->nskins; j++ ) {        
-                Z_Free( pmi->skindisplaynames[j] );
+    for (i = 0, pmi = uis.pmi; i < uis.numPlayerModels; i++, pmi++) {
+        if (pmi->skindisplaynames) {
+            for (j = 0; j < pmi->nskins; j++) {
+                Z_Free(pmi->skindisplaynames[j]);
             }
-            Z_Free( pmi->skindisplaynames );
+            Z_Free(pmi->skindisplaynames);
         }
-        if( pmi->weaponNames ) {
-            for( j = 0; j < pmi->numWeapons; j++ ) {        
-                Z_Free( pmi->weaponNames[j] );
+        if (pmi->weaponNames) {
+            for (j = 0; j < pmi->numWeapons; j++) {
+                Z_Free(pmi->weaponNames[j]);
             }
-            Z_Free( pmi->weaponNames );
+            Z_Free(pmi->weaponNames);
         }
-        memset( pmi, 0, sizeof( *pmi ) );
+        memset(pmi, 0, sizeof(*pmi));
     }
 
     uis.numPlayerModels = 0;
 }
-    
+

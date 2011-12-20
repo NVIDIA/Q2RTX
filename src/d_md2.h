@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -60,8 +60,7 @@ typedef struct {
 } dmd2frame_t;
 
 #define MD2_MAX_FRAMESIZE \
-    ( sizeof( dmd2frame_t ) + sizeof( dmd2trivertx_t ) * ( MD2_MAX_VERTS - 1 ) )
-
+    (sizeof(dmd2frame_t) + sizeof(dmd2trivertx_t) * (MD2_MAX_VERTS - 1))
 
 // the glcmd format:
 // a positive integer starts a tristrip command, followed by that many
@@ -91,7 +90,7 @@ typedef struct dmd2header_s {
     uint32_t        ofs_st;         // byte offset from start for stverts
     uint32_t        ofs_tris;       // offset for dtriangles
     uint32_t        ofs_frames;     // offset for first frame
-    uint32_t        ofs_glcmds;    
+    uint32_t        ofs_glcmds;
     uint32_t        ofs_end;        // end of file
 } dmd2header_t;
 

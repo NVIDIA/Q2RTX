@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -21,24 +21,24 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "sv_local.h"
 #include "q_fifo.h"
 
-#define MVD_Malloc( size )      Z_TagMalloc( size, TAG_MVD )
-#define MVD_Mallocz( size )     Z_TagMallocz( size, TAG_MVD )
-#define MVD_CopyString( s )     Z_TagCopyString( s, TAG_MVD )
+#define MVD_Malloc(size)    Z_TagMalloc(size, TAG_MVD)
+#define MVD_Mallocz(size)   Z_TagMallocz(size, TAG_MVD)
+#define MVD_CopyString(s)   Z_TagCopyString(s, TAG_MVD)
 
-#define FOR_EACH_MVD( mvd ) \
-    LIST_FOR_EACH( mvd_t, mvd, &mvd_channel_list, entry )
+#define FOR_EACH_MVD(mvd) \
+    LIST_FOR_EACH(mvd_t, mvd, &mvd_channel_list, entry)
 
-#define FOR_EACH_MVDCL( cl, mvd ) \
-    LIST_FOR_EACH( mvd_client_t, cl, &(mvd)->clients, entry )
+#define FOR_EACH_MVDCL(cl, mvd) \
+    LIST_FOR_EACH(mvd_client_t, cl, &(mvd)->clients, entry)
 
-#define EDICT_MVDCL( ent )  (( mvd_client_t * )( (ent)->client ))
-#define CS_NUM( c, n )      ( ( char * )(c) + (n) * MAX_QPATH )
+#define EDICT_MVDCL(ent)  ((mvd_client_t *)((ent)->client))
+#define CS_NUM(c, n)      ((char *)(c) + (n) * MAX_QPATH)
 
-#define MVD_InfoSet( var, val ) \
-    Cvar_FullSet( var, val, CVAR_SERVERINFO|CVAR_GAME, FROM_CODE )
+#define MVD_InfoSet(var, val) \
+    Cvar_FullSet(var, val, CVAR_SERVERINFO | CVAR_GAME, FROM_CODE)
 
 // game features MVD client supports
-#define MVD_FEATURES (GMF_CLIENTNUM|GMF_PROPERINUSE|GMF_WANT_ALL_DISCONNECTS)
+#define MVD_FEATURES (GMF_CLIENTNUM | GMF_PROPERINUSE | GMF_WANT_ALL_DISCONNECTS)
 
 #define LAYOUT_MSEC        3000
 
@@ -52,8 +52,8 @@ typedef enum {
     LAYOUT_CHANNELS     // MVD channel list
 } mvd_layout_t;
 
-#define FLOOD_SAMPLES    16
-#define FLOOD_MASK      ( FLOOD_SAMPLES - 1 )
+#define FLOOD_SAMPLES   16
+#define FLOOD_MASK      (FLOOD_SAMPLES - 1)
 
 typedef struct mvd_cs_s {
     struct mvd_cs_s *next;
@@ -69,11 +69,11 @@ typedef struct {
 } mvd_player_t;
 
 typedef struct {
-/* =================== */
+    /* =================== */
     player_state_t ps;
     int ping;
     int clientNum;
-/* =================== */
+    /* =================== */
 
     list_t          entry;
     struct mvd_s    *mvd;
@@ -127,8 +127,8 @@ typedef struct mvd_s {
     int             id;
     char            name[MAX_MVD_NAME];
     struct gtv_s    *gtv;
-    qboolean        (*read_frame)( struct mvd_s * );
-    qboolean        (*forward_cmd)( mvd_client_t * );
+    qboolean        (*read_frame)(struct mvd_s *);
+    qboolean        (*forward_cmd)(mvd_client_t *);
 
     // demo related variables
     qhandle_t   demorecording;
@@ -185,31 +185,30 @@ extern qboolean         mvd_dirty;
 extern cvar_t    *mvd_shownet;
 #endif
 
-void MVD_Destroyf( mvd_t *mvd, const char *fmt, ... )
-    q_noreturn q_printf( 2, 3 );
-void MVD_Shutdown( void );
+void MVD_Destroyf(mvd_t *mvd, const char *fmt, ...) q_noreturn q_printf(2, 3);
+void MVD_Shutdown(void);
 
-mvd_t *MVD_SetChannel( int arg );
+mvd_t *MVD_SetChannel(int arg);
 
-void MVD_File_g( genctx_t *ctx );
+void MVD_File_g(genctx_t *ctx);
 
-void MVD_Spawn( void );
+void MVD_Spawn(void);
 
-void MVD_StopRecord( mvd_t *mvd );
+void MVD_StopRecord(mvd_t *mvd);
 
-void MVD_StreamedStop_f( void );
-void MVD_StreamedRecord_f( void );
+void MVD_StreamedStop_f(void);
+void MVD_StreamedRecord_f(void);
 
-void MVD_Register( void );
-int MVD_Frame( void ); 
+void MVD_Register(void);
+int MVD_Frame(void);
 
 //
 // mvd_parse.c
 //
 
-qboolean MVD_ParseMessage( mvd_t *mvd );
-void MVD_ParseEntityString( mvd_t *mvd, const char *data );
-void MVD_ClearState( mvd_t *mvd, qboolean full );
+qboolean MVD_ParseMessage(mvd_t *mvd);
+void MVD_ParseEntityString(mvd_t *mvd, const char *data);
+void MVD_ClearState(mvd_t *mvd, qboolean full);
 
 //
 // mvd_game.c
@@ -217,16 +216,16 @@ void MVD_ClearState( mvd_t *mvd, qboolean full );
 
 extern mvd_client_t     *mvd_clients;   // [maxclients]
 
-void MVD_SwitchChannel( mvd_client_t *client, mvd_t *mvd );
-void MVD_RemoveClient( client_t *client );
-void MVD_BroadcastPrintf( mvd_t *mvd, int level,
-    int mask, const char *fmt, ... ) q_printf( 4, 5 );
-void MVD_PrepWorldFrame( void );
-void MVD_GameClientNameChanged( edict_t *ent, const char *name );
-void MVD_GameClientDrop( edict_t *ent, const char *prefix, const char *reason );
-void MVD_UpdateClients( mvd_t *mvd );
-void MVD_FreePlayer( mvd_player_t *player );
-void MVD_UpdateConfigstring( mvd_t *mvd, int index );
-void MVD_SetPlayerNames( mvd_t *mvd );
-void MVD_LinkEdict( mvd_t *mvd, edict_t *ent );
+void MVD_SwitchChannel(mvd_client_t *client, mvd_t *mvd);
+void MVD_RemoveClient(client_t *client);
+void MVD_BroadcastPrintf(mvd_t *mvd, int level,
+                         int mask, const char *fmt, ...) q_printf(4, 5);
+void MVD_PrepWorldFrame(void);
+void MVD_GameClientNameChanged(edict_t *ent, const char *name);
+void MVD_GameClientDrop(edict_t *ent, const char *prefix, const char *reason);
+void MVD_UpdateClients(mvd_t *mvd);
+void MVD_FreePlayer(mvd_player_t *player);
+void MVD_UpdateConfigstring(mvd_t *mvd, int index);
+void MVD_SetPlayerNames(mvd_t *mvd);
+void MVD_LinkEdict(mvd_t *mvd, edict_t *ent);
 

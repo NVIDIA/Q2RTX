@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -27,8 +27,9 @@ byte d_16to8table[65536];
 IMG_Unload
 ================
 */
-void IMG_Unload( image_t *image ) {
-    Z_Free( image->pixels[0] );
+void IMG_Unload(image_t *image)
+{
+    Z_Free(image->pixels[0]);
     image->pixels[0] = NULL;
 }
 
@@ -37,54 +38,57 @@ void IMG_Unload( image_t *image ) {
 IMG_Load
 ================
 */
-void IMG_Load( image_t *image, byte *pic, int width, int height ) {
+void IMG_Load(image_t *image, byte *pic, int width, int height)
+{
     int         i, c, b;
 
     image->upload_width = width;
     image->upload_height = height;
 
     c = width * height;
-    if( image->type == it_wall ) {
-        size_t size = MIPSIZE( c );
+    if (image->type == it_wall) {
+        size_t size = MIPSIZE(c);
 
-        image->pixels[0] = R_Malloc( size );
+        image->pixels[0] = R_Malloc(size);
         image->pixels[1] = image->pixels[0] + c;
         image->pixels[2] = image->pixels[1] + c / 4;
         image->pixels[3] = image->pixels[2] + c / 16;
 
-        memcpy( image->pixels[0], pic, size );
+        memcpy(image->pixels[0], pic, size);
     } else {
         image->pixels[0] = pic;
 
-        for( i = 0; i < c; i++ ) {
+        for (i = 0; i < c; i++) {
             b = pic[i];
-            if( b == 255 ) {
+            if (b == 255) {
                 image->flags |= if_transparent;
             }
         }
     }
 }
 
-void R_BuildGammaTable( void ) {
+void R_BuildGammaTable(void)
+{
     int     i, inf;
     float   g = vid_gamma->value;
 
-    if( g == 1.0 ) {
-        for ( i = 0; i < 256; i++)
+    if (g == 1.0) {
+        for (i = 0; i < 256; i++)
             sw_state.gammatable[i] = i;
         return;
     }
 
-    for( i = 0; i < 256; i++ ) {
-        inf = 255 * pow ( ( i + 0.5 ) / 255.5 , g ) + 0.5;
-        sw_state.gammatable[i] = clamp( inf, 0, 255 );
+    for (i = 0; i < 256; i++) {
+        inf = 255 * pow((i + 0.5) / 255.5 , g) + 0.5;
+        sw_state.gammatable[i] = clamp(inf, 0, 255);
     }
 }
 
 #define NTX     16
 
-static void R_CreateNotexture( void ) {
-    static byte buffer[MIPSIZE( NTX * NTX )];
+static void R_CreateNotexture(void)
+{
+    static byte buffer[MIPSIZE(NTX * NTX)];
     int     x, y, m;
     byte    *p;
     image_t *ntx;
@@ -100,58 +104,60 @@ static void R_CreateNotexture( void ) {
     ntx->pixels[2] = ntx->pixels[1] + NTX * NTX / 4;
     ntx->pixels[3] = ntx->pixels[2] + NTX * NTX / 16;
 
-    for( m = 0; m < 4; m++ ) {
+    for (m = 0; m < 4; m++) {
         p = ntx->pixels[m];
-        for ( y = 0; y < ( 16 >> m ); y++ ) {
-            for( x = 0; x < ( 16 >> m ); x++ ) {
-                if( ( y < ( 8 >> m ) ) ^ ( x < ( 8 >> m ) ) )
+        for (y = 0; y < (16 >> m); y++) {
+            for (x = 0; x < (16 >> m); x++) {
+                if ((y < (8 >> m)) ^(x < (8 >> m)))
                     *p++ = 0;
                 else
                     *p++ = 1;
             }
         }
-    }   
+    }
 }
 
-int R_IndexForColor( uint32_t color ) {
+int R_IndexForColor(uint32_t color)
+{
     unsigned int r, g, b, c;
     color_t tmp = { color };
 
-    r = ( tmp.u8[0] >> 3 ) & 31;
-    g = ( tmp.u8[1] >> 2 ) & 63;
-    b = ( tmp.u8[2] >> 3 ) & 31;
+    r = (tmp.u8[0] >> 3) & 31;
+    g = (tmp.u8[1] >> 2) & 63;
+    b = (tmp.u8[2] >> 3) & 31;
 
-    c = r | ( g << 5 ) | ( b << 11 );
+    c = r | (g << 5) | (b << 11);
 
     return d_16to8table[c];
 }
 
-static void R_Get16to8( void ) {
+static void R_Get16to8(void)
+{
     static const char colormap[] = "pics/16to8.dat";
     qhandle_t f;
     ssize_t ret;
 
-    ret = FS_FOpenFile( colormap, &f, FS_MODE_READ );
-    if( !f ) {
+    ret = FS_FOpenFile(colormap, &f, FS_MODE_READ);
+    if (!f) {
         goto fail;
     }
 
-    ret = FS_Read( d_16to8table, sizeof( d_16to8table ), f );
+    ret = FS_Read(d_16to8table, sizeof(d_16to8table), f);
 
-    FS_FCloseFile( f );
+    FS_FCloseFile(f);
 
-    if( ret < 0 ) {
+    if (ret < 0) {
         goto fail;
     }
 
-    if( ret == sizeof( d_16to8table ) ) {
+    if (ret == sizeof(d_16to8table)) {
         return; // success
     }
 
     ret = Q_ERR_FILE_TOO_SMALL;
 fail:
-    Com_Error( ERR_FATAL, "Couldn't load %s: %s",
-        colormap, Q_ErrorString( ret ) );
+    Com_Error(ERR_FATAL, "Couldn't load %s: %s",
+              colormap, Q_ErrorString(ret));
 }
 
 /*
@@ -159,7 +165,8 @@ fail:
 R_InitImages
 ===============
 */
-void R_InitImages( void ) {
+void R_InitImages(void)
+{
     registration_sequence = 1;
 
     vid.colormap = IMG_GetPalette();
@@ -185,9 +192,10 @@ void R_InitImages( void ) {
 R_ShutdownImages
 ===============
 */
-void R_ShutdownImages( void ) {
-    if( vid.colormap ) {
-        Z_Free( vid.colormap );
+void R_ShutdownImages(void)
+{
+    if (vid.colormap) {
+        Z_Free(vid.colormap);
         vid.colormap = NULL;
     }
 

@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -64,7 +64,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define Q_ERR_EXIST             Q_ERR(EEXIST)
 #define Q_ERR_BADF              Q_ERR(EBADF)
 
-#define Q_PrintError( what, code ) \
-    Com_Printf( "Couldn't %s: %s\n", what, Q_ErrorString( code ) )
+#define Q_PrintError(what, code) \
+    Com_Printf("Couldn't %s: %s\n", what, Q_ErrorString(code))
 
-const char *Q_ErrorString( qerror_t error );
+const char *Q_ErrorString(qerror_t error);

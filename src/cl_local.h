@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -222,7 +222,7 @@ typedef struct client_state_s {
     // predicted values, used for smooth player entity movement in thirdperson view
     vec3_t      playerEntityOrigin;
     vec3_t      playerEntityAngles;
-    
+
     //
     // transient data from server
     //
@@ -301,9 +301,9 @@ typedef enum {
 } connstate_t;
 
 #define FOR_EACH_DLQ(q) \
-    LIST_FOR_EACH (dlqueue_t, q, &cls.download.queue, entry)
+    LIST_FOR_EACH(dlqueue_t, q, &cls.download.queue, entry)
 #define FOR_EACH_DLQ_SAFE(q, n) \
-    LIST_FOR_EACH_SAFE (dlqueue_t, q, n, &cls.download.queue, entry)
+    LIST_FOR_EACH_SAFE(dlqueue_t, q, n, &cls.download.queue, entry)
 
 typedef enum {
     // generic types
@@ -345,8 +345,8 @@ typedef struct client_static_s {
 // so that the client knows to send it to the server
 
     int         framecount;
-    unsigned    realtime;            // always increasing, no clamping, etc
-    float       frametime;            // seconds since last frame
+    unsigned    realtime;           // always increasing, no clamping, etc
+    float       frametime;          // seconds since last frame
 
 // preformance measurement
 #define C_FPS   cls.measure.fps[0]
@@ -388,7 +388,7 @@ typedef struct client_static_s {
 #endif
 
 #define RECENT_ADDR 4
-#define RECENT_MASK (RECENT_ADDR-1)
+#define RECENT_MASK (RECENT_ADDR - 1)
 
     netadr_t    recent_addr[RECENT_ADDR];
     int         recent_head;
@@ -399,7 +399,7 @@ typedef struct client_static_s {
         dlqueue_t   *current;           // path being downloaded
         int         percent;            // how much downloaded
         qhandle_t   file;               // UDP file transfer from server
-        char        temp[MAX_QPATH+4];  // account 4 bytes for .tmp suffix
+        char        temp[MAX_QPATH + 4]; // account 4 bytes for .tmp suffix
     } download;
 
 // demo recording info must be here, so it isn't cleared on level change
@@ -455,15 +455,15 @@ extern cvar_t    *cl_noglow;
 extern cvar_t    *cl_nolerp;
 
 #ifdef _DEBUG
-#define SHOWNET(level,...) \
-    if( cl_shownet->integer > level ) \
-        Com_LPrintf( PRINT_DEVELOPER, __VA_ARGS__ )
-#define SHOWCLAMP(level,...) \
-    if( cl_showclamp->integer > level ) \
-        Com_LPrintf( PRINT_DEVELOPER, __VA_ARGS__ )
+#define SHOWNET(level, ...) \
+    if (cl_shownet->integer > level) \
+        Com_LPrintf(PRINT_DEVELOPER, __VA_ARGS__)
+#define SHOWCLAMP(level, ...) \
+    if (cl_showclamp->integer > level) \
+        Com_LPrintf(PRINT_DEVELOPER, __VA_ARGS__)
 #define SHOWMISS(...) \
-    if( cl_showmiss->integer ) \
-        Com_LPrintf( PRINT_DEVELOPER, __VA_ARGS__ )
+    if (cl_showmiss->integer) \
+        Com_LPrintf(PRINT_DEVELOPER, __VA_ARGS__)
 extern cvar_t    *cl_shownet;
 extern cvar_t    *cl_showmiss;
 extern cvar_t    *cl_showclamp;
@@ -514,20 +514,20 @@ extern cvar_t    *info_uf;
 // cl_main
 //
 
-void CL_Init (void);
-void CL_Quit_f (void);
-void CL_Disconnect( error_type_t type );
-void CL_Begin( void );
-void CL_CheckForResend( void );
-void CL_ClearState (void);
-void CL_RestartFilesystem( qboolean total );
-void CL_RestartRefresh( qboolean total );
-void CL_ClientCommand( const char *string );
-void CL_SendRcon( const netadr_t *adr, const char *pass, const char *cmd );
-const char *CL_Server_g( const char *partial, int argnum, int state );
-void CL_CheckForPause( void );
-void CL_UpdateFrameTimes( void );
-qboolean CL_CheckForIgnore( const char *s );
+void CL_Init(void);
+void CL_Quit_f(void);
+void CL_Disconnect(error_type_t type);
+void CL_Begin(void);
+void CL_CheckForResend(void);
+void CL_ClearState(void);
+void CL_RestartFilesystem(qboolean total);
+void CL_RestartRefresh(qboolean total);
+void CL_ClientCommand(const char *string);
+void CL_SendRcon(const netadr_t *adr, const char *pass, const char *cmd);
+const char *CL_Server_g(const char *partial, int argnum, int state);
+void CL_CheckForPause(void);
+void CL_UpdateFrameTimes(void);
+qboolean CL_CheckForIgnore(const char *s);
 
 //
 // cl_precache
@@ -542,40 +542,40 @@ typedef enum {
     LOAD_FINISH
 } load_state_t;
 
-void CL_ParsePlayerSkin( char *name, char *model, char *skin, const char *s );
-void CL_LoadClientinfo( clientinfo_t *ci, const char *s );
-void CL_LoadState( load_state_t state );
-void CL_RegisterSounds( void );
-void CL_RegisterBspModels( void );
-void CL_RegisterVWepModels( void );
-void CL_PrepRefresh( void );
-void CL_UpdateConfigstring( int index );
+void CL_ParsePlayerSkin(char *name, char *model, char *skin, const char *s);
+void CL_LoadClientinfo(clientinfo_t *ci, const char *s);
+void CL_LoadState(load_state_t state);
+void CL_RegisterSounds(void);
+void CL_RegisterBspModels(void);
+void CL_RegisterVWepModels(void);
+void CL_PrepRefresh(void);
+void CL_UpdateConfigstring(int index);
 
 //
 // cl_download
 //
-qerror_t CL_QueueDownload( const char *path, dltype_t type );
-void CL_FinishDownload( dlqueue_t *q );
-void CL_CleanupDownloads( void );
-void CL_HandleDownload( const byte *data, int size, int percent );
-qboolean CL_CheckDownloadExtension( const char *ext );
-void CL_StartNextDownload( void );
-void CL_RequestNextDownload( void );
-void CL_ResetPrecacheCheck( void );
-void CL_InitDownloads( void );
+qerror_t CL_QueueDownload(const char *path, dltype_t type);
+void CL_FinishDownload(dlqueue_t *q);
+void CL_CleanupDownloads(void);
+void CL_HandleDownload(const byte *data, int size, int percent);
+qboolean CL_CheckDownloadExtension(const char *ext);
+void CL_StartNextDownload(void);
+void CL_RequestNextDownload(void);
+void CL_ResetPrecacheCheck(void);
+void CL_InitDownloads(void);
 
 //
 // cl_input
 //
-void IN_Init( void );
-void IN_Shutdown( void );
-void IN_Frame( void );
-void IN_Activate( void );
+void IN_Init(void);
+void IN_Shutdown(void);
+void IN_Frame(void);
+void IN_Activate(void);
 
-void CL_RegisterInput( void );
-void CL_UpdateCmd( int msec );
-void CL_FinalizeCmd( void );
-void CL_SendCmd( void );
+void CL_RegisterInput(void);
+void CL_UpdateCmd(int msec);
+void CL_FinalizeCmd(void);
+void CL_SendCmd(void);
 
 //
 // cl_parse.c
@@ -615,23 +615,23 @@ extern tent_params_t    te;
 extern mz_params_t      mz;
 extern snd_params_t     snd;
 
-void CL_ParseServerMessage (void);
-void CL_SeekDemoMessage( void );
+void CL_ParseServerMessage(void);
+void CL_SeekDemoMessage(void);
 
 //
 // cl_ents.c
 //
-void CL_DeltaFrame( void );
-void CL_AddEntities (void);
-void CL_CalcViewValues( void );
+void CL_DeltaFrame(void);
+void CL_AddEntities(void);
+void CL_CalcViewValues(void);
 
 #ifdef _DEBUG
-void CL_CheckEntityPresent( int entnum, const char *what );
+void CL_CheckEntityPresent(int entnum, const char *what);
 #endif
 
 // the sound code makes callbacks to the client for entitiy position
 // information, so entities can be dynamically re-spatialized
-void CL_GetEntitySoundOrigin( int ent, vec3_t org );
+void CL_GetEntitySoundOrigin(int ent, vec3_t org);
 
 //
 // cl_view.c
@@ -639,20 +639,20 @@ void CL_GetEntitySoundOrigin( int ent, vec3_t org );
 extern    int       gun_frame;
 extern    qhandle_t gun_model;
 
-void V_Init( void );
-void V_Shutdown( void );
-void V_RenderView( void );
-void V_AddEntity (entity_t *ent);
-void V_AddParticle( particle_t *p );
+void V_Init(void);
+void V_Shutdown(void);
+void V_RenderView(void);
+void V_AddEntity(entity_t *ent);
+void V_AddParticle(particle_t *p);
 #if USE_DLIGHTS
-void V_AddLight (vec3_t org, float intensity, float r, float g, float b);
+void V_AddLight(vec3_t org, float intensity, float r, float g, float b);
 #else
-#define V_AddLight(org,intensity,r,g,b)
+#define V_AddLight(org, intensity, r, g, b)
 #endif
 #if USE_LIGHTSTYLES
-void V_AddLightStyle (int style, vec4_t value);
+void V_AddLightStyle(int style, vec4_t value);
 #endif
-void CL_UpdateBlendSetting( void );
+void CL_UpdateBlendSetting(void);
 
 //
 // cl_tent.c
@@ -675,20 +675,20 @@ typedef struct cl_sustain_s {
 
 void CL_SmokeAndFlash(vec3_t origin);
 
-void CL_RegisterTEntSounds (void);
-void CL_RegisterTEntModels (void);
-void CL_ParseTEnt (void);
-void CL_AddTEnts (void);
-void CL_ClearTEnts (void);
-void CL_InitTEnts( void );
+void CL_RegisterTEntSounds(void);
+void CL_RegisterTEntModels(void);
+void CL_ParseTEnt(void);
+void CL_AddTEnts(void);
+void CL_ClearTEnts(void);
+void CL_InitTEnts(void);
 
 
 //
 // cl_pred.c
 //
-void CL_PredictAngles( void );
-void CL_PredictMovement (void);
-void CL_CheckPredictionError (void);
+void CL_PredictAngles(void);
+void CL_PredictMovement(void);
+void CL_CheckPredictionError(void);
 
 //
 // cl_fx.c
@@ -727,43 +727,43 @@ typedef struct cdlight_s {
 } cdlight_t;
 #endif
 
-void CL_BigTeleportParticles (vec3_t org);
-void CL_RocketTrail (vec3_t start, vec3_t end, centity_t *old);
-void CL_DiminishingTrail (vec3_t start, vec3_t end, centity_t *old, int flags);
-void CL_FlyEffect (centity_t *ent, vec3_t origin);
-void CL_BfgParticles (entity_t *ent);
-void CL_ItemRespawnParticles (vec3_t org);
-void CL_InitEffects (void);
-void CL_ClearEffects (void);
-void CL_BlasterParticles (vec3_t org, vec3_t dir);
-void CL_ExplosionParticles (vec3_t org);
-void CL_BFGExplosionParticles (vec3_t org);
-void CL_BlasterTrail (vec3_t start, vec3_t end);
-void CL_QuadTrail (vec3_t start, vec3_t end);
-void CL_OldRailTrail (void);
-void CL_BubbleTrail (vec3_t start, vec3_t end);
-void CL_FlagTrail (vec3_t start, vec3_t end, int color);
-void CL_MuzzleFlash (void);
-void CL_MuzzleFlash2 (void);
-void CL_TeleporterParticles (vec3_t org);
-void CL_TeleportParticles (vec3_t org);
-void CL_ParticleEffect (vec3_t org, vec3_t dir, int color, int count);
-void CL_ParticleEffect2 (vec3_t org, vec3_t dir, int color, int count);
-cparticle_t *CL_AllocParticle( void );
-void CL_RunParticles (void);
-void CL_AddParticles (void);
+void CL_BigTeleportParticles(vec3_t org);
+void CL_RocketTrail(vec3_t start, vec3_t end, centity_t *old);
+void CL_DiminishingTrail(vec3_t start, vec3_t end, centity_t *old, int flags);
+void CL_FlyEffect(centity_t *ent, vec3_t origin);
+void CL_BfgParticles(entity_t *ent);
+void CL_ItemRespawnParticles(vec3_t org);
+void CL_InitEffects(void);
+void CL_ClearEffects(void);
+void CL_BlasterParticles(vec3_t org, vec3_t dir);
+void CL_ExplosionParticles(vec3_t org);
+void CL_BFGExplosionParticles(vec3_t org);
+void CL_BlasterTrail(vec3_t start, vec3_t end);
+void CL_QuadTrail(vec3_t start, vec3_t end);
+void CL_OldRailTrail(void);
+void CL_BubbleTrail(vec3_t start, vec3_t end);
+void CL_FlagTrail(vec3_t start, vec3_t end, int color);
+void CL_MuzzleFlash(void);
+void CL_MuzzleFlash2(void);
+void CL_TeleporterParticles(vec3_t org);
+void CL_TeleportParticles(vec3_t org);
+void CL_ParticleEffect(vec3_t org, vec3_t dir, int color, int count);
+void CL_ParticleEffect2(vec3_t org, vec3_t dir, int color, int count);
+cparticle_t *CL_AllocParticle(void);
+void CL_RunParticles(void);
+void CL_AddParticles(void);
 #if USE_DLIGHTS
-cdlight_t *CL_AllocDlight (int key);
-void CL_RunDLights (void);
-void CL_AddDLights (void);
+cdlight_t *CL_AllocDlight(int key);
+void CL_RunDLights(void);
+void CL_AddDLights(void);
 #endif
 #if USE_LIGHTSTYLES
-void CL_ClearLightStyles( void );
-void CL_SetLightStyle( int index, const char *s );
-void CL_RunLightStyles (void);
-void CL_AddLightStyles (void);
+void CL_ClearLightStyles(void);
+void CL_SetLightStyle(int index, const char *s);
+void CL_RunLightStyles(void);
+void CL_AddLightStyles(void);
 #endif
-void MakeNormalVectors (vec3_t forward, vec3_t right, vec3_t up);
+void MakeNormalVectors(vec3_t forward, vec3_t right, vec3_t up);
 
 //
 // cl_newfx.c
@@ -771,38 +771,38 @@ void MakeNormalVectors (vec3_t forward, vec3_t right, vec3_t up);
 
 // ========
 // PGM
-void CL_BlasterParticles2 (vec3_t org, vec3_t dir, unsigned int color);
-void CL_BlasterTrail2 (vec3_t start, vec3_t end);
-void CL_DebugTrail (vec3_t start, vec3_t end);
-void CL_SmokeTrail (vec3_t start, vec3_t end, int colorStart, int colorRun, int spacing);
+void CL_BlasterParticles2(vec3_t org, vec3_t dir, unsigned int color);
+void CL_BlasterTrail2(vec3_t start, vec3_t end);
+void CL_DebugTrail(vec3_t start, vec3_t end);
+void CL_SmokeTrail(vec3_t start, vec3_t end, int colorStart, int colorRun, int spacing);
 #if USE_DLIGHTS
-void CL_Flashlight (int ent, vec3_t pos);
+void CL_Flashlight(int ent, vec3_t pos);
 #endif
-void CL_ForceWall (vec3_t start, vec3_t end, int color);
-void CL_GenericParticleEffect (vec3_t org, vec3_t dir, int color, int count, int numcolors, int dirspread, float alphavel);
-void CL_BubbleTrail2 (vec3_t start, vec3_t end, int dist);
-void CL_Heatbeam (vec3_t start, vec3_t end);
-void CL_ParticleSteamEffect (vec3_t org, vec3_t dir, int color, int count, int magnitude);
-void CL_TrackerTrail (vec3_t start, vec3_t end, int particleColor);
+void CL_ForceWall(vec3_t start, vec3_t end, int color);
+void CL_GenericParticleEffect(vec3_t org, vec3_t dir, int color, int count, int numcolors, int dirspread, float alphavel);
+void CL_BubbleTrail2(vec3_t start, vec3_t end, int dist);
+void CL_Heatbeam(vec3_t start, vec3_t end);
+void CL_ParticleSteamEffect(vec3_t org, vec3_t dir, int color, int count, int magnitude);
+void CL_TrackerTrail(vec3_t start, vec3_t end, int particleColor);
 void CL_Tracker_Explode(vec3_t origin);
-void CL_TagTrail (vec3_t start, vec3_t end, int color);
+void CL_TagTrail(vec3_t start, vec3_t end, int color);
 #if USE_DLIGHTS
-void CL_ColorFlash (vec3_t pos, int ent, int intensity, float r, float g, float b);
+void CL_ColorFlash(vec3_t pos, int ent, int intensity, float r, float g, float b);
 #endif
 void CL_Tracker_Shell(vec3_t origin);
 void CL_MonsterPlasma_Shell(vec3_t origin);
-void CL_ColorExplosionParticles (vec3_t org, int color, int run);
-void CL_ParticleSmokeEffect (vec3_t org, vec3_t dir, int color, int count, int magnitude);
-void CL_Widowbeamout (cl_sustain_t *self);
-void CL_Nukeblast (cl_sustain_t *self);
-void CL_WidowSplash (void);
+void CL_ColorExplosionParticles(vec3_t org, int color, int run);
+void CL_ParticleSmokeEffect(vec3_t org, vec3_t dir, int color, int count, int magnitude);
+void CL_Widowbeamout(cl_sustain_t *self);
+void CL_Nukeblast(cl_sustain_t *self);
+void CL_WidowSplash(void);
 // PGM
 // ========
 
 // RAFAEL
-void CL_IonripperTrail (vec3_t start, vec3_t end);
-void CL_TrapParticles (entity_t *ent);
-void CL_ParticleEffect3 (vec3_t org, vec3_t dir, int color, int count);
+void CL_IonripperTrail(vec3_t start, vec3_t end);
+void CL_TrapParticles(entity_t *ent);
+void CL_ParticleEffect3(vec3_t org, vec3_t dir, int color, int count);
 // RAFAEL
 
 void CL_ParticleSteamEffect2(cl_sustain_t *self);
@@ -811,114 +811,114 @@ void CL_ParticleSteamEffect2(cl_sustain_t *self);
 //
 // cl_demo.c
 //
-void CL_InitDemos( void );
-void CL_CleanupDemos( void );
-void CL_DemoFrame( int msec );
-qboolean CL_WriteDemoMessage( sizebuf_t *buf );
-void CL_EmitDemoFrame( void ); 
-void CL_EmitDemoSnapshot( void );
-void CL_FirstDemoFrame( void );
-void CL_Stop_f( void );
-demoInfo_t *CL_GetDemoInfo( const char *path, demoInfo_t *info );
+void CL_InitDemos(void);
+void CL_CleanupDemos(void);
+void CL_DemoFrame(int msec);
+qboolean CL_WriteDemoMessage(sizebuf_t *buf);
+void CL_EmitDemoFrame(void);
+void CL_EmitDemoSnapshot(void);
+void CL_FirstDemoFrame(void);
+void CL_Stop_f(void);
+demoInfo_t *CL_GetDemoInfo(const char *path, demoInfo_t *info);
 
 
 //
 // cl_locs.c
 //
-void LOC_Init( void );
-void LOC_LoadLocations( void );
-void LOC_FreeLocations( void );
-void LOC_UpdateCvars( void );
-void LOC_AddLocationsToScene( void );
+void LOC_Init(void);
+void LOC_LoadLocations(void);
+void LOC_FreeLocations(void);
+void LOC_UpdateCvars(void);
+void LOC_AddLocationsToScene(void);
 
 
 //
 // cl_console.c
 //
-void Con_Init( void );
-void Con_PostInit( void );
-void Con_Shutdown( void );
-void Con_DrawConsole( void );
-void Con_RunConsole( void );
-void Con_Print( const char *txt );
-void Con_ClearNotify_f( void );
-void Con_ToggleConsole_f (void);
-void Con_ClearTyping( void );
-void Con_Close( qboolean force );
-void Con_Popup( void );
-void Con_SkipNotify( qboolean skip );
-void Con_RegisterMedia( void );
+void Con_Init(void);
+void Con_PostInit(void);
+void Con_Shutdown(void);
+void Con_DrawConsole(void);
+void Con_RunConsole(void);
+void Con_Print(const char *txt);
+void Con_ClearNotify_f(void);
+void Con_ToggleConsole_f(void);
+void Con_ClearTyping(void);
+void Con_Close(qboolean force);
+void Con_Popup(void);
+void Con_SkipNotify(qboolean skip);
+void Con_RegisterMedia(void);
 
-void Key_Console( int key );
-void Key_Message( int key );
-void Char_Console( int key );
-void Char_Message( int key );
+void Key_Console(int key);
+void Key_Message(int key);
+void Char_Console(int key);
+void Char_Message(int key);
 
 //
 // cl_ref.c
 //
-void    CL_InitRefresh( void );
-void    CL_ShutdownRefresh( void );
-void    CL_RunRefresh( void );
+void    CL_InitRefresh(void);
+void    CL_ShutdownRefresh(void);
+void    CL_RunRefresh(void);
 
 //
 // cl_ui.c
 //
-void        CL_InitUI( void );
-void        CL_ShutdownUI( void );
+void        CL_InitUI(void);
+void        CL_ShutdownUI(void);
 
 //
 // cl_scrn.c
 //
 extern vrect_t      scr_vrect;        // position of render window
 
-void    SCR_Init (void);
-void    SCR_Shutdown( void );
-void    SCR_UpdateScreen (void);
-void    SCR_SizeUp( void );
-void    SCR_SizeDown( void );
-void    SCR_CenterPrint( const char *str );
-void    SCR_BeginLoadingPlaque( void );
-void    SCR_EndLoadingPlaque( void );
-void    SCR_DebugGraph ( float value, int color );
-void    SCR_TouchPics ( void );
-void    SCR_RegisterMedia( void );
-void    SCR_ModeChanged( void );
-void    SCR_LagSample( void );
-void    SCR_LagClear( void );
-void    SCR_SetCrosshairColor( void );
+void    SCR_Init(void);
+void    SCR_Shutdown(void);
+void    SCR_UpdateScreen(void);
+void    SCR_SizeUp(void);
+void    SCR_SizeDown(void);
+void    SCR_CenterPrint(const char *str);
+void    SCR_BeginLoadingPlaque(void);
+void    SCR_EndLoadingPlaque(void);
+void    SCR_DebugGraph(float value, int color);
+void    SCR_TouchPics(void);
+void    SCR_RegisterMedia(void);
+void    SCR_ModeChanged(void);
+void    SCR_LagSample(void);
+void    SCR_LagClear(void);
+void    SCR_SetCrosshairColor(void);
 
-float   SCR_FadeAlpha( unsigned startTime, unsigned visTime, unsigned fadeTime );
-int     SCR_DrawStringEx( int x, int y, int flags, size_t maxlen, const char *s, qhandle_t font );
-void    SCR_DrawStringMulti( int x, int y, int flags, size_t maxlen, const char *s, qhandle_t font );
+float   SCR_FadeAlpha(unsigned startTime, unsigned visTime, unsigned fadeTime);
+int     SCR_DrawStringEx(int x, int y, int flags, size_t maxlen, const char *s, qhandle_t font);
+void    SCR_DrawStringMulti(int x, int y, int flags, size_t maxlen, const char *s, qhandle_t font);
 
 #ifdef _DEBUG
-void CL_AddNetgraph (void);
+void CL_AddNetgraph(void);
 #endif
 
 //
 // cl_keys.c
 //
-void    Key_Init( void );
-void    Key_Event( unsigned key, qboolean down, unsigned time );
-void    Key_CharEvent( int key );
-void    Key_WriteBindings( qhandle_t f );
+void    Key_Init(void);
+void    Key_Event(unsigned key, qboolean down, unsigned time);
+void    Key_CharEvent(int key);
+void    Key_WriteBindings(qhandle_t f);
 
 
 //
 // cl_aastat.c
 //
-void CL_InitAscii( void ); 
+void CL_InitAscii(void);
 
 #if USE_CURL
 //
 // cl_http.c
 //
-void HTTP_CleanupDownloads (void);
-void HTTP_Init (void);
-void HTTP_Shutdown (void);
-qerror_t HTTP_QueueDownload (const char *path, dltype_t type);
-void HTTP_RunDownloads (void);
-void HTTP_SetServer (const char *url);
+void HTTP_CleanupDownloads(void);
+void HTTP_Init(void);
+void HTTP_Shutdown(void);
+qerror_t HTTP_QueueDownload(const char *path, dltype_t type);
+void HTTP_RunDownloads(void);
+void HTTP_SetServer(const char *url);
 #endif
 

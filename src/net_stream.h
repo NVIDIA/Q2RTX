@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -34,10 +34,10 @@ typedef struct netstream_s {
     fifo_t      send;
 } netstream_t;
 
-void NET_Close( netstream_t *s );
-neterr_t NET_Listen( qboolean listen );
-neterr_t NET_Accept( netstream_t *s );
-neterr_t NET_Connect( const netadr_t *peer, netstream_t *s );
-neterr_t NET_RunConnect( netstream_t *s );
-neterr_t NET_RunStream( netstream_t *s );
-void NET_UpdateStream( netstream_t *s );
+void NET_Close(netstream_t *s);
+neterr_t NET_Listen(qboolean listen);
+neterr_t NET_Accept(netstream_t *s);
+neterr_t NET_Connect(const netadr_t *peer, netstream_t *s);
+neterr_t NET_RunConnect(netstream_t *s);
+neterr_t NET_RunStream(netstream_t *s);
+void NET_UpdateStream(netstream_t *s);

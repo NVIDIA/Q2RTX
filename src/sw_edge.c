@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -22,15 +22,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "sw_local.h"
 
 #if !USE_ASM
-void R_SurfacePatch (void)
+void R_SurfacePatch(void)
 {
 }
 
-void R_EdgeCodeStart (void)
+void R_EdgeCodeStart(void)
 {
 }
 
-void R_EdgeCodeEnd (void)
+void R_EdgeCodeEnd(void)
 {
 }
 #endif
@@ -80,17 +80,17 @@ float       scale_for_mip;
 int         ubasestep, errorterm, erroradjustup, erroradjustdown;
 
 // FIXME: should go away
-extern void         R_RotateBmodel (void);
-extern void         R_TransformFrustum (void);
+extern void         R_RotateBmodel(void);
+extern void         R_TransformFrustum(void);
 
 
 
-void R_GenerateSpans (void);
-void R_GenerateSpansBackward (void);
+void R_GenerateSpans(void);
+void R_GenerateSpansBackward(void);
 
-void R_LeadingEdge (edge_t *edge);
-void R_LeadingEdgeBackwards (edge_t *edge);
-void R_TrailingEdge (surf_t *surf, edge_t *edge);
+void R_LeadingEdge(edge_t *edge);
+void R_LeadingEdgeBackwards(edge_t *edge);
+void R_TrailingEdge(surf_t *surf, edge_t *edge);
 
 
 /*
@@ -106,7 +106,7 @@ EDGE SCANNING
 R_BeginEdgeFrame
 ==============
 */
-void R_BeginEdgeFrame (void)
+void R_BeginEdgeFrame(void)
 {
     int     v;
 
@@ -114,27 +114,23 @@ void R_BeginEdgeFrame (void)
     edge_max = &r_edges[r_numallocatededges];
 
     surface_p = &surfaces[2];   // background is surface 1,
-                                //  surface 0 is a dummy
+    //  surface 0 is a dummy
     surfaces[1].spans = NULL;   // no background spans yet
     surfaces[1].flags = DSURF_BACKGROUND;
 
 // put the background behind everything in the world
-    if (sw_draworder->value)
-    {
+    if (sw_draworder->value) {
         pdrawfunc = R_GenerateSpansBackward;
         surfaces[1].key = 0;
         r_currentkey = 1;
-    }
-    else
-    {
+    } else {
         pdrawfunc = R_GenerateSpans;
         surfaces[1].key = 0x7FFFFFFF;
         r_currentkey = 0;
     }
 
 // FIXME: set with memset
-    for (v=r_refdef.vrect.y ; v<r_refdef.vrectbottom ; v++)
-    {
+    for (v = r_refdef.vrect.y; v < r_refdef.vrectbottom; v++) {
         newedges[v] = removeedges[v] = NULL;
     }
 }
@@ -152,29 +148,28 @@ sentinel at the end (actually, this is the active edge table starting at
 edge_head.next).
 ==============
 */
-void R_InsertNewEdges (edge_t *edgestoadd, edge_t *edgelist)
+void R_InsertNewEdges(edge_t *edgestoadd, edge_t *edgelist)
 {
     edge_t  *next_edge;
 
-    do
-    {
+    do {
         next_edge = edgestoadd->next;
 edgesearch:
         if (edgelist->u >= edgestoadd->u)
             goto addedge;
-        edgelist=edgelist->next;
+        edgelist = edgelist->next;
         if (edgelist->u >= edgestoadd->u)
             goto addedge;
-        edgelist=edgelist->next;
+        edgelist = edgelist->next;
         if (edgelist->u >= edgestoadd->u)
             goto addedge;
-        edgelist=edgelist->next;
+        edgelist = edgelist->next;
         if (edgelist->u >= edgestoadd->u)
             goto addedge;
-        edgelist=edgelist->next;
+        edgelist = edgelist->next;
         goto edgesearch;
 
-    // insert edgestoadd before edgelist
+        // insert edgestoadd before edgelist
 addedge:
         edgestoadd->next = edgelist;
         edgestoadd->prev = edgelist->prev;
@@ -188,11 +183,10 @@ addedge:
 R_RemoveEdges
 ==============
 */
-void R_RemoveEdges (edge_t *pedge)
+void R_RemoveEdges(edge_t *pedge)
 {
 
-    do
-    {
+    do {
         pedge->next->prev = pedge->prev;
         pedge->prev->next = pedge->next;
     } while ((pedge = pedge->nextremove) != NULL);
@@ -203,55 +197,53 @@ void R_RemoveEdges (edge_t *pedge)
 R_StepActiveU
 ==============
 */
-void R_StepActiveU (edge_t *pedge)
+void R_StepActiveU(edge_t *pedge)
 {
     edge_t      *pnext_edge, *pwedge;
 
-    while (1)
-    {
+    while (1) {
 nextedge:
         pedge->u += pedge->u_step;
         if (pedge->u < pedge->prev->u)
             goto pushback;
         pedge = pedge->next;
-            
+
         pedge->u += pedge->u_step;
         if (pedge->u < pedge->prev->u)
             goto pushback;
         pedge = pedge->next;
-            
+
         pedge->u += pedge->u_step;
         if (pedge->u < pedge->prev->u)
             goto pushback;
         pedge = pedge->next;
-            
+
         pedge->u += pedge->u_step;
         if (pedge->u < pedge->prev->u)
             goto pushback;
         pedge = pedge->next;
-            
-        goto nextedge;      
-        
+
+        goto nextedge;
+
 pushback:
         if (pedge == &edge_aftertail)
             return;
-            
-    // push it back to keep it sorted       
+
+        // push it back to keep it sorted
         pnext_edge = pedge->next;
 
-    // pull the edge out of the edge list
+        // pull the edge out of the edge list
         pedge->next->prev = pedge->prev;
         pedge->prev->next = pedge->next;
 
-    // find out where the edge goes in the edge list
+        // find out where the edge goes in the edge list
         pwedge = pedge->prev->prev;
 
-        while (pwedge->u > pedge->u)
-        {
+        while (pwedge->u > pedge->u) {
             pwedge = pwedge->prev;
         }
 
-    // put the edge back into the edge list
+        // put the edge back into the edge list
         pedge->next = pwedge->next;
         pedge->prev = pwedge;
         pedge->next->prev = pedge;
@@ -271,7 +263,7 @@ pushback:
 R_CleanupSpan
 ==============
 */
-void R_CleanupSpan (void)
+void R_CleanupSpan(void)
 {
     surf_t  *surf;
     int     iu;
@@ -281,8 +273,7 @@ void R_CleanupSpan (void)
 // unfinished surfaces, so emit a span for whatever's on top
     surf = surfaces[1].next;
     iu = edge_tail_u_shift20;
-    if (iu > surf->last_u)
-    {
+    if (iu > surf->last_u) {
         span = span_p++;
         span->u = surf->last_u;
         span->count = iu - span->u;
@@ -292,8 +283,7 @@ void R_CleanupSpan (void)
     }
 
 // reset spanstate for all surfaces in the surface stack
-    do
-    {
+    do {
         surf->spanstate = 0;
         surf = surf->next;
     } while (surf != &surfaces[1]);
@@ -305,7 +295,7 @@ void R_CleanupSpan (void)
 R_LeadingEdgeBackwards
 ==============
 */
-void R_LeadingEdgeBackwards (edge_t *edge)
+void R_LeadingEdgeBackwards(edge_t *edge)
 {
     espan_t         *span;
     surf_t          *surf, *surf2;
@@ -317,48 +307,43 @@ void R_LeadingEdgeBackwards (edge_t *edge)
 // don't start a span if this is an inverted span, with the end
 // edge preceding the start edge (that is, we've already seen the
 // end edge)
-    if (++surf->spanstate == 1)
-    {
+    if (++surf->spanstate == 1) {
         surf2 = surfaces[1].next;
 
         if (surf->key > surf2->key)
             goto newtop;
 
-    // if it's two surfaces on the same plane, the one that's already
-    // active is in front, so keep going unless it's a bmodel
-        if (surf->insubmodel && (surf->key == surf2->key))
-        {
-        // must be two bmodels in the same leaf; don't care, because they'll
-        // never be farthest anyway
+        // if it's two surfaces on the same plane, the one that's already
+        // active is in front, so keep going unless it's a bmodel
+        if (surf->insubmodel && (surf->key == surf2->key)) {
+            // must be two bmodels in the same leaf; don't care, because they'll
+            // never be farthest anyway
             goto newtop;
         }
 
 continue_search:
 
-        do
-        {
+        do {
             surf2 = surf2->next;
         } while (surf->key < surf2->key);
 
-        if (surf->key == surf2->key)
-        {
-        // if it's two surfaces on the same plane, the one that's already
-        // active is in front, so keep going unless it's a bmodel
+        if (surf->key == surf2->key) {
+            // if it's two surfaces on the same plane, the one that's already
+            // active is in front, so keep going unless it's a bmodel
             if (!surf->insubmodel)
                 goto continue_search;
 
-        // must be two bmodels in the same leaf; don't care which is really
-        // in front, because they'll never be farthest anyway
+            // must be two bmodels in the same leaf; don't care which is really
+            // in front, because they'll never be farthest anyway
         }
 
         goto gotposition;
 
 newtop:
-    // emit a span (obscures current top)
+        // emit a span (obscures current top)
         iu = edge->u >> 20;
 
-        if (iu > surf2->last_u)
-        {
+        if (iu > surf2->last_u) {
             span = span_p++;
             span->u = surf2->last_u;
             span->count = iu - span->u;
@@ -369,9 +354,9 @@ newtop:
 
         // set last_u on the new span
         surf->last_u = iu;
-                
+
 gotposition:
-    // insert before surf2
+        // insert before surf2
         surf->next = surf2;
         surf->prev = surf2->prev;
         surf2->prev->next = surf;
@@ -385,7 +370,7 @@ gotposition:
 R_TrailingEdge
 ==============
 */
-void R_TrailingEdge (surf_t *surf, edge_t *edge)
+void R_TrailingEdge(surf_t *surf, edge_t *edge)
 {
     espan_t         *span;
     int             iu;
@@ -393,14 +378,11 @@ void R_TrailingEdge (surf_t *surf, edge_t *edge)
 // don't generate a span if this is an inverted span, with the end
 // edge preceding the start edge (that is, we haven't seen the
 // start edge yet)
-    if (--surf->spanstate == 0)
-    {
-        if (surf == surfaces[1].next)
-        {
-        // emit a span (current top going away)
+    if (--surf->spanstate == 0) {
+        if (surf == surfaces[1].next) {
+            // emit a span (current top going away)
             iu = edge->u >> 20;
-            if (iu > surf->last_u)
-            {
+            if (iu > surf->last_u) {
                 span = span_p++;
                 span->u = surf->last_u;
                 span->count = iu - span->u;
@@ -409,7 +391,7 @@ void R_TrailingEdge (surf_t *surf, edge_t *edge)
                 surf->spans = span;
             }
 
-        // set last_u on the surface below
+            // set last_u on the surface below
             surf->next->last_u = iu;
         }
 
@@ -426,51 +408,45 @@ void R_TrailingEdge (surf_t *surf, edge_t *edge)
 R_LeadingEdge
 ==============
 */
-void R_LeadingEdge (edge_t *edge)
+void R_LeadingEdge(edge_t *edge)
 {
     espan_t         *span;
     surf_t          *surf, *surf2;
     int             iu;
     float           fu, newzi, testzi, newzitop, newzibottom;
 
-    if (edge->surfs[1])
-    {
-    // it's adding a new surface in, so find the correct place
+    if (edge->surfs[1]) {
+        // it's adding a new surface in, so find the correct place
         surf = &surfaces[edge->surfs[1]];
 
-    // don't start a span if this is an inverted span, with the end
-    // edge preceding the start edge (that is, we've already seen the
-    // end edge)
-        if (++surf->spanstate == 1)
-        {
+        // don't start a span if this is an inverted span, with the end
+        // edge preceding the start edge (that is, we've already seen the
+        // end edge)
+        if (++surf->spanstate == 1) {
             surf2 = surfaces[1].next;
 
             if (surf->key < surf2->key)
                 goto newtop;
 
-        // if it's two surfaces on the same plane, the one that's already
-        // active is in front, so keep going unless it's a bmodel
-            if (surf->insubmodel && (surf->key == surf2->key))
-            {
-            // must be two bmodels in the same leaf; sort on 1/z
+            // if it's two surfaces on the same plane, the one that's already
+            // active is in front, so keep going unless it's a bmodel
+            if (surf->insubmodel && (surf->key == surf2->key)) {
+                // must be two bmodels in the same leaf; sort on 1/z
                 fu = (float)(edge->u - 0xFFFFF) * (1.0 / 0x100000);
-                newzi = surf->d_ziorigin + fv*surf->d_zistepv +
-                        fu*surf->d_zistepu;
+                newzi = surf->d_ziorigin + fv * surf->d_zistepv +
+                        fu * surf->d_zistepu;
                 newzibottom = newzi * 0.99;
 
-                testzi = surf2->d_ziorigin + fv*surf2->d_zistepv +
-                        fu*surf2->d_zistepu;
+                testzi = surf2->d_ziorigin + fv * surf2->d_zistepv +
+                         fu * surf2->d_zistepu;
 
-                if (newzibottom >= testzi)
-                {
+                if (newzibottom >= testzi) {
                     goto newtop;
                 }
 
                 newzitop = newzi * 1.01;
-                if (newzitop >= testzi)
-                {
-                    if (surf->d_zistepu >= surf2->d_zistepu)
-                    {
+                if (newzitop >= testzi) {
+                    if (surf->d_zistepu >= surf2->d_zistepu) {
                         goto newtop;
                     }
                 }
@@ -478,37 +454,32 @@ void R_LeadingEdge (edge_t *edge)
 
 continue_search:
 
-            do
-            {
+            do {
                 surf2 = surf2->next;
             } while (surf->key > surf2->key);
 
-            if (surf->key == surf2->key)
-            {
-            // if it's two surfaces on the same plane, the one that's already
-            // active is in front, so keep going unless it's a bmodel
+            if (surf->key == surf2->key) {
+                // if it's two surfaces on the same plane, the one that's already
+                // active is in front, so keep going unless it's a bmodel
                 if (!surf->insubmodel)
                     goto continue_search;
 
-            // must be two bmodels in the same leaf; sort on 1/z
+                // must be two bmodels in the same leaf; sort on 1/z
                 fu = (float)(edge->u - 0xFFFFF) * (1.0 / 0x100000);
-                newzi = surf->d_ziorigin + fv*surf->d_zistepv +
-                        fu*surf->d_zistepu;
+                newzi = surf->d_ziorigin + fv * surf->d_zistepv +
+                        fu * surf->d_zistepu;
                 newzibottom = newzi * 0.99;
 
-                testzi = surf2->d_ziorigin + fv*surf2->d_zistepv +
-                        fu*surf2->d_zistepu;
+                testzi = surf2->d_ziorigin + fv * surf2->d_zistepv +
+                         fu * surf2->d_zistepu;
 
-                if (newzibottom >= testzi)
-                {
+                if (newzibottom >= testzi) {
                     goto gotposition;
                 }
 
                 newzitop = newzi * 1.01;
-                if (newzitop >= testzi)
-                {
-                    if (surf->d_zistepu >= surf2->d_zistepu)
-                    {
+                if (newzitop >= testzi) {
+                    if (surf->d_zistepu >= surf2->d_zistepu) {
                         goto gotposition;
                     }
                 }
@@ -519,11 +490,10 @@ continue_search:
             goto gotposition;
 
 newtop:
-        // emit a span (obscures current top)
+            // emit a span (obscures current top)
             iu = edge->u >> 20;
 
-            if (iu > surf2->last_u)
-            {
+            if (iu > surf2->last_u) {
                 span = span_p++;
                 span->u = surf2->last_u;
                 span->count = iu - span->u;
@@ -534,9 +504,9 @@ newtop:
 
             // set last_u on the new span
             surf->last_u = iu;
-                
+
 gotposition:
-        // insert before surf2
+            // insert before surf2
             surf->next = surf2;
             surf->prev = surf2->prev;
             surf2->prev->next = surf;
@@ -551,7 +521,7 @@ gotposition:
 R_GenerateSpans
 ==============
 */
-void R_GenerateSpans (void)
+void R_GenerateSpans(void)
 {
     edge_t          *edge;
     surf_t          *surf;
@@ -561,23 +531,21 @@ void R_GenerateSpans (void)
     surfaces[1].last_u = edge_head_u_shift20;
 
 // generate spans
-    for (edge=edge_head.next ; edge != &edge_tail; edge=edge->next)
-    {           
-        if (edge->surfs[0])
-        {
-        // it has a left surface, so a surface is going away for this span
+    for (edge = edge_head.next; edge != &edge_tail; edge = edge->next) {
+        if (edge->surfs[0]) {
+            // it has a left surface, so a surface is going away for this span
             surf = &surfaces[edge->surfs[0]];
 
-            R_TrailingEdge (surf, edge);
+            R_TrailingEdge(surf, edge);
 
             if (!edge->surfs[1])
                 continue;
         }
 
-        R_LeadingEdge (edge);
+        R_LeadingEdge(edge);
     }
 
-    R_CleanupSpan ();
+    R_CleanupSpan();
 }
 
 #endif  // !USE_ASM
@@ -588,7 +556,7 @@ void R_GenerateSpans (void)
 R_GenerateSpansBackward
 ==============
 */
-void R_GenerateSpansBackward (void)
+void R_GenerateSpansBackward(void)
 {
     edge_t          *edge;
 
@@ -597,16 +565,15 @@ void R_GenerateSpansBackward (void)
     surfaces[1].last_u = edge_head_u_shift20;
 
 // generate spans
-    for (edge=edge_head.next ; edge != &edge_tail; edge=edge->next)
-    {           
+    for (edge = edge_head.next; edge != &edge_tail; edge = edge->next) {
         if (edge->surfs[0])
-            R_TrailingEdge (&surfaces[edge->surfs[0]], edge);
+            R_TrailingEdge(&surfaces[edge->surfs[0]], edge);
 
         if (edge->surfs[1])
-            R_LeadingEdgeBackwards (edge);
+            R_LeadingEdgeBackwards(edge);
     }
 
-    R_CleanupSpan ();
+    R_CleanupSpan();
 }
 
 
@@ -614,7 +581,7 @@ void R_GenerateSpansBackward (void)
 ==============
 R_ScanEdges
 
-Input: 
+Input:
 newedges[] array
     this has links to edges, which have links to surfaces
 
@@ -622,15 +589,15 @@ Output:
 Each surface has a linked list of its visible spans
 ==============
 */
-void R_ScanEdges (void)
+void R_ScanEdges(void)
 {
     int     iv, bottom;
-    byte    basespans[MAXSPANS*sizeof(espan_t)+CACHE_SIZE];
+    byte    basespans[MAXSPANS * sizeof(espan_t) + CACHE_SIZE];
     espan_t *basespan_p;
     surf_t  *s;
 
     basespan_p = (espan_t *)
-            ((long)(basespans + CACHE_SIZE - 1) & ~(CACHE_SIZE - 1));
+                 ((long)(basespans + CACHE_SIZE - 1) & ~(CACHE_SIZE - 1));
     max_span_p = &basespan_p[MAXSPANS - r_refdef.vrect.width];
 
     span_p = basespan_p;
@@ -644,7 +611,7 @@ void R_ScanEdges (void)
     edge_head.next = &edge_tail;
     edge_head.surfs[0] = 0;
     edge_head.surfs[1] = 1;
-    
+
     edge_tail.u = (r_refdef.vrectright << 20) + 0xFFFFF;
     edge_tail_u_shift20 = edge_tail.u >> 20;
     edge_tail.u_step = 0;
@@ -652,7 +619,7 @@ void R_ScanEdges (void)
     edge_tail.next = &edge_aftertail;
     edge_tail.surfs[0] = 1;
     edge_tail.surfs[1] = 0;
-    
+
     edge_aftertail.u = -1;      // force a move
     edge_aftertail.u_step = 0;
     edge_aftertail.next = &edge_sentinel;
@@ -662,44 +629,41 @@ void R_ScanEdges (void)
     edge_sentinel.u = 2000 << 24;       // make sure nothing sorts past this
     edge_sentinel.prev = &edge_aftertail;
 
-//  
+//
 // process all scan lines
 //
     bottom = r_refdef.vrectbottom - 1;
 
-    for (iv=r_refdef.vrect.y ; iv<bottom ; iv++)
-    {
+    for (iv = r_refdef.vrect.y; iv < bottom; iv++) {
         current_iv = iv;
         fv = (float)iv;
 
-    // mark that the head (background start) span is pre-included
+        // mark that the head (background start) span is pre-included
         surfaces[1].spanstate = 1;
 
-        if (newedges[iv])
-        {
-            R_InsertNewEdges (newedges[iv], edge_head.next);
+        if (newedges[iv]) {
+            R_InsertNewEdges(newedges[iv], edge_head.next);
         }
 
-        (*pdrawfunc) ();
+        (*pdrawfunc)();
 
-    // flush the span list if we can't be sure we have enough spans left for
-    // the next scan
-        if (span_p > max_span_p)
-        {
-            D_DrawSurfaces ();
+        // flush the span list if we can't be sure we have enough spans left for
+        // the next scan
+        if (span_p > max_span_p) {
+            D_DrawSurfaces();
 
-        // clear the surface span pointers
-            for (s = &surfaces[1] ; s<surface_p ; s++)
+            // clear the surface span pointers
+            for (s = &surfaces[1]; s < surface_p; s++)
                 s->spans = NULL;
 
             span_p = basespan_p;
         }
 
         if (removeedges[iv])
-            R_RemoveEdges (removeedges[iv]);
+            R_RemoveEdges(removeedges[iv]);
 
         if (edge_head.next != &edge_tail)
-            R_StepActiveU (edge_head.next);
+            R_StepActiveU(edge_head.next);
     }
 
 // do the last scan (no need to step or sort or remove on the last scan)
@@ -711,12 +675,12 @@ void R_ScanEdges (void)
     surfaces[1].spanstate = 1;
 
     if (newedges[iv])
-        R_InsertNewEdges (newedges[iv], edge_head.next);
+        R_InsertNewEdges(newedges[iv], edge_head.next);
 
-    (*pdrawfunc) ();
+    (*pdrawfunc)();
 
 // draw whatever's left in the span list
-    D_DrawSurfaces ();
+    D_DrawSurfaces();
 }
 
 
@@ -739,15 +703,15 @@ vec3_t          local_modelorg;
 D_MipLevelForScale
 =============
 */
-int D_MipLevelForScale (float scale)
+int D_MipLevelForScale(float scale)
 {
     int     lmiplevel;
 
-    if (scale >= d_scalemip[0] )
+    if (scale >= d_scalemip[0])
         lmiplevel = 0;
-    else if (scale >= d_scalemip[1] )
+    else if (scale >= d_scalemip[1])
         lmiplevel = 1;
-    else if (scale >= d_scalemip[2] )
+    else if (scale >= d_scalemip[2])
         lmiplevel = 2;
     else
         lmiplevel = 3;
@@ -766,18 +730,19 @@ D_FlatFillSurface
 Simple single color fill with no texture mapping
 ==============
 */
-void D_FlatFillSurface( surf_t *surf, uint32_t color ) {
+void D_FlatFillSurface(surf_t *surf, uint32_t color)
+{
     espan_t *span;
     byte    *pdest;
     int     count;
-    
-    for( span = surf->spans; span; span = span->pnext ) {
-        pdest = ( byte * )d_viewbuffer +
-            r_screenwidth * span->v + span->u;
+
+    for (span = surf->spans; span; span = span->pnext) {
+        pdest = (byte *)d_viewbuffer +
+                r_screenwidth * span->v + span->u;
         count = span->count;
         do {
             *pdest++ = color & 0xff;
-        } while( --count );
+        } while (--count);
     }
 }
 
@@ -787,7 +752,7 @@ void D_FlatFillSurface( surf_t *surf, uint32_t color ) {
 D_CalcGradients
 ==============
 */
-void D_CalcGradients (mface_t *pface)
+void D_CalcGradients(mface_t *pface)
 {
     cplane_t    *pplane;
     float       mipscale;
@@ -799,8 +764,8 @@ void D_CalcGradients (mface_t *pface)
 
     mipscale = 1.0 / (float)(1 << miplevel);
 
-    TransformVector (pface->texinfo->axis[0], p_saxis);
-    TransformVector (pface->texinfo->axis[1], p_taxis);
+    TransformVector(pface->texinfo->axis[0], p_saxis);
+    TransformVector(pface->texinfo->axis[1], p_taxis);
 
     t = xscaleinv * mipscale;
     d_sdivzstepu = p_saxis[0] * t;
@@ -811,27 +776,26 @@ void D_CalcGradients (mface_t *pface)
     d_tdivzstepv = -p_taxis[1] * t;
 
     d_sdivzorigin = p_saxis[2] * mipscale - xcenter * d_sdivzstepu -
-            ycenter * d_sdivzstepv;
+                    ycenter * d_sdivzstepv;
     d_tdivzorigin = p_taxis[2] * mipscale - xcenter * d_tdivzstepu -
-            ycenter * d_tdivzstepv;
+                    ycenter * d_tdivzstepv;
 
-    VectorScale (transformed_modelorg, mipscale, p_temp1);
+    VectorScale(transformed_modelorg, mipscale, p_temp1);
 
-    t = 0x10000*mipscale;
-    sadjust = ((fixed16_t)(DotProduct (p_temp1, p_saxis) * 0x10000 + 0.5)) -
-            ((pface->texturemins[0] << 16) >> miplevel)
-            + pface->texinfo->offset[0]*t;
-    tadjust = ((fixed16_t)(DotProduct (p_temp1, p_taxis) * 0x10000 + 0.5)) -
-            ((pface->texturemins[1] << 16) >> miplevel)
-            + pface->texinfo->offset[1]*t;
+    t = 0x10000 * mipscale;
+    sadjust = ((fixed16_t)(DotProduct(p_temp1, p_saxis) * 0x10000 + 0.5)) -
+              ((pface->texturemins[0] << 16) >> miplevel)
+              + pface->texinfo->offset[0] * t;
+    tadjust = ((fixed16_t)(DotProduct(p_temp1, p_taxis) * 0x10000 + 0.5)) -
+              ((pface->texturemins[1] << 16) >> miplevel)
+              + pface->texinfo->offset[1] * t;
 
     // PGM - changing flow speed for non-warping textures.
-    if (pface->texinfo->c.flags & SURF_FLOWING)
-    {
-        if(pface->texinfo->c.flags & SURF_WARP)
-            sadjust += 0x10000 * (-128 * ( (r_newrefdef.time * 0.25) - (int)(r_newrefdef.time * 0.25) ));
+    if (pface->texinfo->c.flags & SURF_FLOWING) {
+        if (pface->texinfo->c.flags & SURF_WARP)
+            sadjust += 0x10000 * (-128 * ((r_newrefdef.time * 0.25) - (int)(r_newrefdef.time * 0.25)));
         else
-            sadjust += 0x10000 * (-128 * ( (r_newrefdef.time * 0.77) - (int)(r_newrefdef.time * 0.77) ));
+            sadjust += 0x10000 * (-128 * ((r_newrefdef.time * 0.77) - (int)(r_newrefdef.time * 0.77)));
     }
     // PGM
 
@@ -850,7 +814,7 @@ D_BackgroundSurf
 The grey background filler seen when there is a hole in the map
 ==============
 */
-void D_BackgroundSurf (surf_t *s)
+void D_BackgroundSurf(surf_t *s)
 {
 // set up a gradient for the background surface that places it
 // effectively at infinity distance from the viewpoint
@@ -858,8 +822,8 @@ void D_BackgroundSurf (surf_t *s)
     d_zistepv = 0;
     d_ziorigin = -0.9;
 
-    D_FlatFillSurface (s, sw_clearcolor->integer & 0xFF);
-    D_DrawZSpans (s->spans);
+    D_FlatFillSurface(s, sw_clearcolor->integer & 0xFF);
+    D_DrawZSpans(s->spans);
 }
 
 /*
@@ -867,7 +831,7 @@ void D_BackgroundSurf (surf_t *s)
 D_TurbulentSurf
 =================
 */
-void D_TurbulentSurf (surf_t *s)
+void D_TurbulentSurf(surf_t *s)
 {
     d_zistepu = s->d_zistepu;
     d_zistepv = s->d_zistepv;
@@ -878,48 +842,46 @@ void D_TurbulentSurf (surf_t *s)
     cacheblock = pface->texinfo->image->pixels[0];
     cachewidth = 64;
 
-    if (s->insubmodel)
-    {
-    // FIXME: we don't want to do all this for every polygon!
-    // TODO: store once at start of frame
+    if (s->insubmodel) {
+        // FIXME: we don't want to do all this for every polygon!
+        // TODO: store once at start of frame
         currententity = s->entity;  //FIXME: make this passed in to
-                                    // R_RotateBmodel ()
-        VectorSubtract (r_origin, currententity->origin,
-                local_modelorg);
-        TransformVector (local_modelorg, transformed_modelorg);
+        // R_RotateBmodel ()
+        VectorSubtract(r_origin, currententity->origin,
+                       local_modelorg);
+        TransformVector(local_modelorg, transformed_modelorg);
 
-        R_RotateBmodel ();  // FIXME: don't mess with the frustum,
-                            // make entity passed in
+        R_RotateBmodel();   // FIXME: don't mess with the frustum,
+        // make entity passed in
     }
 
-    D_CalcGradients (pface);
+    D_CalcGradients(pface);
 
 //============
 //PGM
     // textures that aren't warping are just flowing. Use NonTurbulent8 instead
-    if(!(pface->texinfo->c.flags & SURF_WARP))
-        NonTurbulent8 (s->spans);
+    if (!(pface->texinfo->c.flags & SURF_WARP))
+        NonTurbulent8(s->spans);
     else
-        Turbulent8 (s->spans);
+        Turbulent8(s->spans);
 //PGM
 //============
 
-    D_DrawZSpans (s->spans);
+    D_DrawZSpans(s->spans);
 
-    if (s->insubmodel)
-    {
-    //
-    // restore the old drawing state
-    // FIXME: we don't want to do this every time!
-    // TODO: speed up
-    //
+    if (s->insubmodel) {
+        //
+        // restore the old drawing state
+        // FIXME: we don't want to do this every time!
+        // TODO: speed up
+        //
         currententity = NULL;   // &r_worldentity;
-        VectorCopy (world_transformed_modelorg,
-                    transformed_modelorg);
-        VectorCopy (base_vpn, vpn);
-        VectorCopy (base_vup, vup);
-        VectorCopy (base_vright, vright);
-        R_TransformFrustum ();
+        VectorCopy(world_transformed_modelorg,
+                   transformed_modelorg);
+        VectorCopy(base_vpn, vpn);
+        VectorCopy(base_vup, vup);
+        VectorCopy(base_vright, vright);
+        R_TransformFrustum();
     }
 }
 
@@ -928,7 +890,7 @@ void D_TurbulentSurf (surf_t *s)
 D_SkySurf
 ==============
 */
-void D_SkySurf (surf_t *s)
+void D_SkySurf(surf_t *s)
 {
     pface = s->msurf;
     miplevel = 0;
@@ -938,14 +900,14 @@ void D_SkySurf (surf_t *s)
     d_ziorigin = s->d_ziorigin;
 
     if (!pface->texinfo->image) {
-        D_FlatFillSurface (s, 0);
+        D_FlatFillSurface(s, 0);
     } else {
         cacheblock = pface->texinfo->image->pixels[0];
         cachewidth = 256;
 
-        D_CalcGradients (pface);
+        D_CalcGradients(pface);
 
-        D_DrawSpans16 (s->spans);
+        D_DrawSpans16(s->spans);
     }
 
 // set up a gradient for the background surface that places it
@@ -954,7 +916,7 @@ void D_SkySurf (surf_t *s)
     d_zistepv = 0;
     d_ziorigin = -0.9;
 
-    D_DrawZSpans (s->spans);
+    D_DrawZSpans(s->spans);
 }
 
 /*
@@ -964,25 +926,23 @@ D_SolidSurf
 Normal surface cached, texture mapped surface
 ==============
 */
-void D_SolidSurf (surf_t *s)
+void D_SolidSurf(surf_t *s)
 {
     d_zistepu = s->d_zistepu;
     d_zistepv = s->d_zistepv;
     d_ziorigin = s->d_ziorigin;
 
-    if (s->insubmodel)
-    {
-    // FIXME: we don't want to do all this for every polygon!
-    // TODO: store once at start of frame
+    if (s->insubmodel) {
+        // FIXME: we don't want to do all this for every polygon!
+        // TODO: store once at start of frame
         currententity = s->entity;  //FIXME: make this passed in to
-                                    // R_RotateBmodel ()
-        VectorSubtract (r_origin, currententity->origin, local_modelorg);
-        TransformVector (local_modelorg, transformed_modelorg);
+        // R_RotateBmodel ()
+        VectorSubtract(r_origin, currententity->origin, local_modelorg);
+        TransformVector(local_modelorg, transformed_modelorg);
 
-        R_RotateBmodel ();  // FIXME: don't mess with the frustum,
-                            // make entity passed in
-    }
-    else
+        R_RotateBmodel();   // FIXME: don't mess with the frustum,
+        // make entity passed in
+    } else
         currententity = &r_worldentity;
 
     pface = s->msurf;
@@ -991,30 +951,29 @@ void D_SolidSurf (surf_t *s)
 
 
 // FIXME: make this passed in to D_CacheSurface
-    pcurrentcache = D_CacheSurface (pface, miplevel);
+    pcurrentcache = D_CacheSurface(pface, miplevel);
 
     cacheblock = (pixel_t *)pcurrentcache->data;
     cachewidth = pcurrentcache->width;
 
-    D_CalcGradients (pface);
+    D_CalcGradients(pface);
 
-    D_DrawSpans16 (s->spans);
+    D_DrawSpans16(s->spans);
 
-    D_DrawZSpans (s->spans);
+    D_DrawZSpans(s->spans);
 
-    if (s->insubmodel)
-    {
-    //
-    // restore the old drawing state
-    // FIXME: we don't want to do this every time!
-    // TODO: speed up
-    //
-        VectorCopy (world_transformed_modelorg,
-                    transformed_modelorg);
-        VectorCopy (base_vpn, vpn);
-        VectorCopy (base_vup, vup);
-        VectorCopy (base_vright, vright);
-        R_TransformFrustum ();
+    if (s->insubmodel) {
+        //
+        // restore the old drawing state
+        // FIXME: we don't want to do this every time!
+        // TODO: speed up
+        //
+        VectorCopy(world_transformed_modelorg,
+                   transformed_modelorg);
+        VectorCopy(base_vpn, vpn);
+        VectorCopy(base_vup, vup);
+        VectorCopy(base_vright, vright);
+        R_TransformFrustum();
         currententity = NULL;   //&r_worldentity;
     }
 }
@@ -1026,12 +985,11 @@ D_DrawflatSurfaces
 To allow developers to see the polygon carving of the world
 =============
 */
-void D_DrawflatSurfaces (void)
+void D_DrawflatSurfaces(void)
 {
     surf_t          *s;
 
-    for (s = &surfaces[1] ; s<surface_p ; s++)
-    {
+    for (s = &surfaces[1]; s < surface_p; s++) {
         if (!s->spans)
             continue;
 
@@ -1041,8 +999,8 @@ void D_DrawflatSurfaces (void)
 
         // make a stable color for each surface by taking the low
         // bits of the msurface pointer
-        D_FlatFillSurface (s, (uint32_t)((intptr_t)s->msurf));
-        D_DrawZSpans (s->spans);
+        D_FlatFillSurface(s, (uint32_t)((intptr_t)s->msurf));
+        D_DrawZSpans(s->spans);
     }
 }
 
@@ -1052,12 +1010,11 @@ D_DrawZSurfaces
 
 =============
 */
-void D_DrawZSurfaces (void)
+void D_DrawZSurfaces(void)
 {
     surf_t          *s;
 
-    for (s = &surfaces[1] ; s<surface_p ; s++)
-    {
+    for (s = &surfaces[1]; s < surface_p; s++) {
         if (!s->spans)
             continue;
 
@@ -1065,7 +1022,7 @@ void D_DrawZSurfaces (void)
         d_zistepv = s->d_zistepv;
         d_ziorigin = s->d_ziorigin;
 
-        D_DrawZSpans (s->spans);
+        D_DrawZSpans(s->spans);
     }
 }
 
@@ -1077,40 +1034,39 @@ Rasterize all the span lists.  Guaranteed zero overdraw.
 May be called more than once a frame if the surf list overflows (higher res)
 ==============
 */
-void D_DrawSurfaces (void)
+void D_DrawSurfaces(void)
 {
     surf_t          *s;
 
 //  currententity = NULL;   //&r_worldentity;
-    VectorSubtract (r_origin, vec3_origin, modelorg);
-    TransformVector (modelorg, transformed_modelorg);
-    VectorCopy (transformed_modelorg, world_transformed_modelorg);
+    VectorSubtract(r_origin, vec3_origin, modelorg);
+    TransformVector(modelorg, transformed_modelorg);
+    VectorCopy(transformed_modelorg, world_transformed_modelorg);
 
-    if( sw_drawsird->integer ) {
+    if (sw_drawsird->integer) {
         D_DrawZSurfaces();
-    } else if( sw_drawflat->integer ) {
-        D_DrawflatSurfaces ();
+    } else if (sw_drawflat->integer) {
+        D_DrawflatSurfaces();
     } else {
-        for (s = &surfaces[1] ; s<surface_p ; s++)
-        {
+        for (s = &surfaces[1]; s < surface_p; s++) {
             if (!s->spans)
                 continue;
 
             r_drawnpolycount++;
 
             if (s->flags & DSURF_SKY)
-                D_SkySurf (s);
+                D_SkySurf(s);
             else if (s->flags & DSURF_BACKGROUND)
-                D_BackgroundSurf (s);
+                D_BackgroundSurf(s);
             else if (s->flags & DSURF_TURB)
-                D_TurbulentSurf (s);
+                D_TurbulentSurf(s);
             else
-                D_SolidSurf (s);
+                D_SolidSurf(s);
         }
     }
 
     currententity = NULL;   //&r_worldentity;
-    VectorSubtract (r_origin, vec3_origin, modelorg);
-    R_TransformFrustum ();
+    VectorSubtract(r_origin, vec3_origin, modelorg);
+    R_TransformFrustum();
 }
 

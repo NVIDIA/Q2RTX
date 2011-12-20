@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -43,7 +43,7 @@ Command text buffering and command execution
 ==============================================================
 */
 
-#define CMD_BUFFER_SIZE     ( 1 << 16 ) // bumped max config size up to 64K
+#define CMD_BUFFER_SIZE     (1 << 16) // bumped max config size up to 64K
 
 #define ALIAS_LOOP_COUNT    16
 
@@ -64,7 +64,7 @@ typedef struct cmdbuf_s {
     size_t      maxsize;
     int         waitCount;
     int         aliasCount; // for detecting runaway loops
-    void        (*exec)( struct cmdbuf_s *, const char * );
+    void        (*exec)(struct cmdbuf_s *, const char *);
 } cmdbuf_t;
 
 // generic console buffer
@@ -85,25 +85,25 @@ The game starts with a Cbuf_AddText ("exec quake.rc\n"); Cbuf_Execute ();
 
 */
 
-void Cbuf_Init( void );
+void Cbuf_Init(void);
 // allocates an initial text buffer that will grow as needed
 
-void Cbuf_AddText( cmdbuf_t *buf, const char *text );
+void Cbuf_AddText(cmdbuf_t *buf, const char *text);
 // as new commands are generated from the console or keybindings,
 // the text is added to the end of the command buffer.
 
-void Cbuf_InsertText( cmdbuf_t *buf, const char *text );
+void Cbuf_InsertText(cmdbuf_t *buf, const char *text);
 // when a command wants to issue other commands immediately, the text is
 // inserted at the beginning of the buffer, before any remaining unexecuted
 // commands.
 
-void Cbuf_Execute( cmdbuf_t *buf );
+void Cbuf_Execute(cmdbuf_t *buf);
 // Pulls off \n terminated lines of text from the command buffer and sends
 // them through Cmd_ExecuteString.  Stops when the buffer is empty.
 // Normally called once per frame, but may be explicitly invoked.
 // Do not call inside a command function!
 
-char *Cbuf_Alloc( cmdbuf_t *buf, size_t len );
+char *Cbuf_Alloc(cmdbuf_t *buf, size_t len);
 
 //===========================================================================
 
@@ -125,10 +125,10 @@ typedef struct genctx_s {
     qboolean ignoredups;
 } genctx_t;
 
-typedef void ( *xcommand_t )( void );
-typedef void ( *xcommandex_t )( cmdbuf_t * );
-typedef size_t ( *xmacro_t )( char *, size_t );
-typedef void ( *xcompleter_t )( struct genctx_s *, int );
+typedef void (*xcommand_t)(void);
+typedef void (*xcommandex_t)(cmdbuf_t *);
+typedef size_t (*xmacro_t)(char *, size_t);
+typedef void (*xcompleter_t)(struct genctx_s *, int);
 
 typedef struct cmd_macro_s {
     struct cmd_macro_s  *next, *hashNext;
@@ -146,96 +146,96 @@ typedef struct cmdreg_s {
     xcompleter_t    completer;
 } cmdreg_t;
 
-void Cmd_Init( void );
+void Cmd_Init(void);
 
-qboolean Cmd_Exists( const char *cmd_name );
+qboolean Cmd_Exists(const char *cmd_name);
 // used by the cvar code to check for cvar / command name overlap
 
-void Cmd_ExecTrigger( const char *string );
+void Cmd_ExecTrigger(const char *string);
 
-xcommand_t Cmd_FindFunction( const char *name );
-cmd_macro_t *Cmd_FindMacro( const char *name );
-xcompleter_t Cmd_FindCompleter( const char *name );
+xcommand_t Cmd_FindFunction(const char *name);
+cmd_macro_t *Cmd_FindMacro(const char *name);
+xcompleter_t Cmd_FindCompleter(const char *name);
 
-char *Cmd_AliasCommand( const char *name );
-void Cmd_AliasSet( const char *name, const char *cmd );
+char *Cmd_AliasCommand(const char *name);
+void Cmd_AliasSet(const char *name, const char *cmd);
 
-void Cmd_Command_g( genctx_t *ctx );
-void Cmd_Alias_g( genctx_t *ctx );
-void Cmd_Macro_g( genctx_t *ctx );
-void Cmd_Config_g( genctx_t *ctx );
-void Cmd_Option_c( const cmd_option_t *opt, xgenerator_t g, genctx_t *ctx, int argnum );
+void Cmd_Command_g(genctx_t *ctx);
+void Cmd_Alias_g(genctx_t *ctx);
+void Cmd_Macro_g(genctx_t *ctx);
+void Cmd_Config_g(genctx_t *ctx);
+void Cmd_Option_c(const cmd_option_t *opt, xgenerator_t g, genctx_t *ctx, int argnum);
 // attempts to match a partial command for automatic command line completion
 // returns NULL if nothing fits
 
-void Cmd_TokenizeString( const char *text, qboolean macroExpand );
+void Cmd_TokenizeString(const char *text, qboolean macroExpand);
 // Takes a null terminated string.  Does not need to be /n terminated.
 // breaks the string up into arg tokens.
 
-void Cmd_ExecuteCommand( cmdbuf_t *buf );
+void Cmd_ExecuteCommand(cmdbuf_t *buf);
 // execute already tokenized string
 
-void Cmd_ExecuteString( cmdbuf_t *buf, const char *text );
+void Cmd_ExecuteString(cmdbuf_t *buf, const char *text);
 // Parses a single line of text into arguments and tries to execute it
 // as if it was typed at the console
 
-qerror_t Cmd_ExecuteFile( const char *path, unsigned flags );
+qerror_t Cmd_ExecuteFile(const char *path, unsigned flags);
 // execute a config file
 
-char *Cmd_MacroExpandString( const char *text, qboolean aliasHack );
+char *Cmd_MacroExpandString(const char *text, qboolean aliasHack);
 
-void Cmd_Register( const cmdreg_t *reg );
-void Cmd_AddCommand( const char *cmd_name, xcommand_t function );
+void Cmd_Register(const cmdreg_t *reg);
+void Cmd_AddCommand(const char *cmd_name, xcommand_t function);
 // called by the init functions of other parts of the program to
 // register commands and functions to call for them.
 // The cmd_name is referenced later, so it should not be in temp memory
 // if function is NULL, the command will be forwarded to the server
 // as a clc_stringcmd instead of executed locally
-void Cmd_Deregister( const cmdreg_t *reg );
-void Cmd_RemoveCommand( const char *cmd_name );
+void Cmd_Deregister(const cmdreg_t *reg);
+void Cmd_RemoveCommand(const char *cmd_name);
 
-void Cmd_AddMacro( const char *name, xmacro_t function );
+void Cmd_AddMacro(const char *name, xmacro_t function);
 
-from_t  Cmd_From( void );
-int     Cmd_Argc( void );
-char    *Cmd_Argv( int arg );
-char    *Cmd_Args( void );
-char    *Cmd_RawArgs( void );
-char    *Cmd_ArgsFrom( int from );
-char    *Cmd_RawArgsFrom( int from );
-size_t  Cmd_ArgsBuffer( char *buffer, size_t size );
-size_t  Cmd_ArgvBuffer( int arg, char *buffer, size_t size );
-size_t  Cmd_ArgOffset( int arg );
-int     Cmd_FindArgForOffset( size_t offset );
-size_t  Cmd_WhiteSpaceTail( void );
-char    *Cmd_RawString( void );
-void    Cmd_Shift( void );
+from_t  Cmd_From(void);
+int     Cmd_Argc(void);
+char    *Cmd_Argv(int arg);
+char    *Cmd_Args(void);
+char    *Cmd_RawArgs(void);
+char    *Cmd_ArgsFrom(int from);
+char    *Cmd_RawArgsFrom(int from);
+size_t  Cmd_ArgsBuffer(char *buffer, size_t size);
+size_t  Cmd_ArgvBuffer(int arg, char *buffer, size_t size);
+size_t  Cmd_ArgOffset(int arg);
+int     Cmd_FindArgForOffset(size_t offset);
+size_t  Cmd_WhiteSpaceTail(void);
+char    *Cmd_RawString(void);
+void    Cmd_Shift(void);
 // The functions that execute commands get their parameters with these
 // functions. Cmd_Argv () will return an empty string, not a NULL
 // if arg > argc, so string operations are always safe.
 
-void Cmd_Alias_f( void );
+void Cmd_Alias_f(void);
 
-void Cmd_WriteAliases( qhandle_t f );
+void Cmd_WriteAliases(qhandle_t f);
 
-#define EXEC_TRIGGER( var ) \
+#define EXEC_TRIGGER(var) \
     do { \
-        if( (var)->string[0] ) { \
-            Cbuf_AddText( &cmd_buffer, (var)->string ); \
+        if ((var)->string[0]) { \
+            Cbuf_AddText(&cmd_buffer, (var)->string); \
         } \
-    } while( 0 )
+    } while(0)
 
 extern int cmd_optind;
 extern char *cmd_optarg;
 extern char *cmd_optopt;
 
-int Cmd_ParseOptions( const cmd_option_t *opt );
-void Cmd_PrintHelp( const cmd_option_t *opt );
-void Cmd_PrintUsage( const cmd_option_t *opt, const char *suffix );
-void Cmd_PrintHint( void );
+int Cmd_ParseOptions(const cmd_option_t *opt);
+void Cmd_PrintHelp(const cmd_option_t *opt);
+void Cmd_PrintUsage(const cmd_option_t *opt, const char *suffix);
+void Cmd_PrintHint(void);
 
-const char *Cmd_Completer( const cmd_option_t *opt, const char *partial,
-    int argnum, int state, xgenerator_t generator );
+const char *Cmd_Completer(const cmd_option_t *opt, const char *partial,
+                          int argnum, int state, xgenerator_t generator);
 
 /*
 ==============================================================
@@ -258,95 +258,95 @@ Cvars are restricted from having the same names as commands to keep this
 interface from being ambiguous.
 */
 
-#define CVAR_CHEAT          ( 1 << 5 )  // can't be changed when connected
-#define CVAR_PRIVATE        ( 1 << 6 )  // never macro expanded or saved to config
-#define CVAR_ROM            ( 1 << 7 )  // can't be changed even from cmdline
-#define CVAR_MODIFIED       ( 1 << 8 )  // modified by user
-#define CVAR_CUSTOM         ( 1 << 9 )  // created by user
-#define CVAR_WEAK           ( 1 << 10 ) // doesn't have value
-#define CVAR_GAME           ( 1 << 11 ) // created by game library
-#define CVAR_FILES          ( 1 << 13 ) // r_reload when changed
-#define CVAR_REFRESH        ( 1 << 14 ) // vid_restart when changed
-#define CVAR_SOUND          ( 1 << 15 ) // snd_restart when changed
+#define CVAR_CHEAT          (1 << 5)  // can't be changed when connected
+#define CVAR_PRIVATE        (1 << 6)  // never macro expanded or saved to config
+#define CVAR_ROM            (1 << 7)  // can't be changed even from cmdline
+#define CVAR_MODIFIED       (1 << 8)  // modified by user
+#define CVAR_CUSTOM         (1 << 9)  // created by user
+#define CVAR_WEAK           (1 << 10) // doesn't have value
+#define CVAR_GAME           (1 << 11) // created by game library
+#define CVAR_FILES          (1 << 13) // r_reload when changed
+#define CVAR_REFRESH        (1 << 14) // vid_restart when changed
+#define CVAR_SOUND          (1 << 15) // snd_restart when changed
 
-#define CVAR_INFOMASK       (CVAR_USERINFO|CVAR_SERVERINFO)
-#define CVAR_MODIFYMASK     (CVAR_INFOMASK|CVAR_FILES|CVAR_REFRESH|CVAR_SOUND)
-#define CVAR_NOARCHIVEMASK  (CVAR_NOSET|CVAR_CHEAT|CVAR_PRIVATE|CVAR_ROM)
+#define CVAR_INFOMASK       (CVAR_USERINFO | CVAR_SERVERINFO)
+#define CVAR_MODIFYMASK     (CVAR_INFOMASK | CVAR_FILES | CVAR_REFRESH | CVAR_SOUND)
+#define CVAR_NOARCHIVEMASK  (CVAR_NOSET | CVAR_CHEAT | CVAR_PRIVATE | CVAR_ROM)
 #define CVAR_EXTENDED_MASK  (~31)
 
 extern cvar_t   *cvar_vars;
 extern int      cvar_modified;
 
-void Cvar_Init (void);
+void Cvar_Init(void);
 
-void Cvar_Variable_g( genctx_t *ctx );
-void Cvar_Default_g( genctx_t *ctx );
+void Cvar_Variable_g(genctx_t *ctx);
+void Cvar_Default_g(genctx_t *ctx);
 // attempts to match a partial variable name for command line completion
 // returns NULL if nothing fits
 
-int Cvar_CountLatchedVars( void );
-void Cvar_GetLatchedVars (void);
+int Cvar_CountLatchedVars(void);
+void Cvar_GetLatchedVars(void);
 // any CVAR_LATCHED variables that have been set will now take effect
 
-void Cvar_FixCheats( void );
+void Cvar_FixCheats(void);
 // resets all cheating cvars to default
 
-void Cvar_Command( cvar_t *v );
+void Cvar_Command(cvar_t *v);
 // called by Cmd_ExecuteString when Cmd_Argv(0) doesn't match a known
 // command.  Returns qtrue if the command was a variable reference that
 // was handled. (print or change)
 
-void Cvar_WriteVariables( qhandle_t f, int mask, qboolean modified );
+void Cvar_WriteVariables(qhandle_t f, int mask, qboolean modified);
 // appends lines containing "set variable value" for all variables
 // with matching flags
 
-size_t Cvar_BitInfo( char *info, int bit );
+size_t Cvar_BitInfo(char *info, int bit);
 
-cvar_t *Cvar_FindVar( const char *var_name );
-xgenerator_t Cvar_FindGenerator( const char *var_name );
-qboolean Cvar_Exists( const char *name, qboolean weak );
+cvar_t *Cvar_FindVar(const char *var_name);
+xgenerator_t Cvar_FindGenerator(const char *var_name);
+qboolean Cvar_Exists(const char *name, qboolean weak);
 
-cvar_t *Cvar_Get( const char *var_name, const char *value, int flags );
+cvar_t *Cvar_Get(const char *var_name, const char *value, int flags);
 // creates the variable if it doesn't exist, or returns the existing one
 // if it exists, the value will not be changed, but flags will be ORed in
 // that allows variables to be unarchived without needing bitflags
 
-cvar_t *Cvar_WeakGet( const char *var_name );
+cvar_t *Cvar_WeakGet(const char *var_name);
 // creates weak variable without value
 
-void Cvar_SetByVar( cvar_t *var, const char *value, from_t from );
+void Cvar_SetByVar(cvar_t *var, const char *value, from_t from);
 // set by cvar pointer
 
-cvar_t *Cvar_SetEx( const char *var_name, const char *value, from_t from );
+cvar_t *Cvar_SetEx(const char *var_name, const char *value, from_t from);
 // will create the variable if it doesn't exist
-cvar_t *Cvar_Set( const char *var_name, const char *value );
+cvar_t *Cvar_Set(const char *var_name, const char *value);
 // will set the variable even if NOSET or LATCH
-cvar_t *Cvar_UserSet( const char *var_name, const char *value );
-cvar_t *Cvar_FullSet( const char *var_name, const char *value,
-                      int flags, from_t from );
+cvar_t *Cvar_UserSet(const char *var_name, const char *value);
+cvar_t *Cvar_FullSet(const char *var_name, const char *value,
+                     int flags, from_t from);
 
-#define Cvar_Reset( x ) \
-    Cvar_SetByVar( x, (x)->default_string, FROM_CODE )
+#define Cvar_Reset(x) \
+    Cvar_SetByVar(x, (x)->default_string, FROM_CODE)
 
-void Cvar_SetValue( cvar_t *var, float value, from_t from );
-void Cvar_SetInteger( cvar_t *var, int value, from_t from );
-//void Cvar_SetHex( cvar_t *var, int value, from_t from );
+void Cvar_SetValue(cvar_t *var, float value, from_t from);
+void Cvar_SetInteger(cvar_t *var, int value, from_t from);
+//void Cvar_SetHex(cvar_t *var, int value, from_t from);
 // expands value to a string and calls Cvar_Set
 
-int Cvar_ClampInteger( cvar_t *var, int min, int max );
-float Cvar_ClampValue( cvar_t *var, float min, float max );
+int Cvar_ClampInteger(cvar_t *var, int min, int max);
+float Cvar_ClampValue(cvar_t *var, float min, float max);
 
-float Cvar_VariableValue( const char *var_name );
-int Cvar_VariableInteger( const char *var_name );
+float Cvar_VariableValue(const char *var_name);
+int Cvar_VariableInteger(const char *var_name);
 // returns 0 if not defined or non numeric
 
-char *Cvar_VariableString( const char *var_name );
+char *Cvar_VariableString(const char *var_name);
 // returns an empty string if not defined
 
-#define Cvar_VariableStringBuffer( name, buffer, size ) \
-    Q_strlcpy( buffer, Cvar_VariableString( name ), size )
+#define Cvar_VariableStringBuffer(name, buffer, size) \
+    Q_strlcpy(buffer, Cvar_VariableString(name), size)
 
-void Cvar_Set_f( void );
+void Cvar_Set_f(void);
 
 /*
 ==============================================================
@@ -356,10 +356,10 @@ ZONE
 ==============================================================
 */
 
-#define Z_Malloc( size )        Z_TagMalloc( size, TAG_GENERAL )
-#define Z_Mallocz( size )       Z_TagMallocz( size, TAG_GENERAL )
-#define Z_Reserve( size )       Z_TagReserve( size, TAG_GENERAL )
-#define Z_CopyString( string )  Z_TagCopyString( string, TAG_GENERAL )
+#define Z_Malloc(size)          Z_TagMalloc(size, TAG_GENERAL)
+#define Z_Mallocz(size)         Z_TagMallocz(size, TAG_GENERAL)
+#define Z_Reserve(size)         Z_TagReserve(size, TAG_GENERAL)
+#define Z_CopyString(string)    Z_TagCopyString(string, TAG_GENERAL)
 
 // memory tags to allow dynamic memory to be cleaned up
 // game DLL has separate tag namespace starting at TAG_MAX
@@ -382,20 +382,20 @@ typedef enum memtag_e {
 } memtag_t;
 
 // may return pointer to static memory
-char    *Cvar_CopyString( const char *in );
+char    *Cvar_CopyString(const char *in);
 
-void    Z_Free( void *ptr );
-void    *Z_TagMalloc( size_t size, memtag_t tag ) q_malloc;
-void    *Z_TagMallocz( size_t size, memtag_t tag ) q_malloc;
-char    *Z_TagCopyString( const char *in, memtag_t tag ) q_malloc;
-void    Z_FreeTags( memtag_t tag );
-void    Z_LeakTest( memtag_t tag );
-void    Z_Check( void );
+void    Z_Free(void *ptr);
+void    *Z_TagMalloc(size_t size, memtag_t tag) q_malloc;
+void    *Z_TagMallocz(size_t size, memtag_t tag) q_malloc;
+char    *Z_TagCopyString(const char *in, memtag_t tag) q_malloc;
+void    Z_FreeTags(memtag_t tag);
+void    Z_LeakTest(memtag_t tag);
+void    Z_Check(void);
 
-void    Z_TagReserve( size_t size, memtag_t tag );
-void    *Z_ReservedAlloc( size_t size ) q_malloc;
-void    *Z_ReservedAllocz( size_t size ) q_malloc;
-char    *Z_ReservedCopyString( const char *in ) q_malloc;
+void    Z_TagReserve(size_t size, memtag_t tag);
+void    *Z_ReservedAlloc(size_t size) q_malloc;
+void    *Z_ReservedAllocz(size_t size) q_malloc;
+char    *Z_ReservedCopyString(const char *in) q_malloc;
 
 /*
 ==============================================================
@@ -406,44 +406,46 @@ MATH
 */
 
 #define NUMVERTEXNORMALS    162
+
 extern const vec3_t bytedirs[NUMVERTEXNORMALS];
 
-int DirToByte( const vec3_t dir );
-//void ByteToDir( int index, vec3_t dir );
+int DirToByte(const vec3_t dir);
+//void ByteToDir(int index, vec3_t dir);
 
-void SetPlaneType( cplane_t *plane );
-void SetPlaneSignbits( cplane_t *plane );
+void SetPlaneType(cplane_t *plane);
+void SetPlaneSignbits(cplane_t *plane);
 
 #define BOX_INFRONT     1
 #define BOX_BEHIND      2
 #define BOX_INTERSECTS  3
 
-int BoxOnPlaneSide( vec3_t emins, vec3_t emaxs, cplane_t *p );
+int BoxOnPlaneSide(vec3_t emins, vec3_t emaxs, cplane_t *p);
 
-static inline int BoxOnPlaneSideFast( vec3_t emins, vec3_t emaxs, cplane_t *p ) {
+static inline int BoxOnPlaneSideFast(vec3_t emins, vec3_t emaxs, cplane_t *p)
+{
     // fast axial cases
-    if( p->type < 3 ) {
-        if( p->dist <= emins[p->type] )
+    if (p->type < 3) {
+        if (p->dist <= emins[p->type])
             return BOX_INFRONT;
-        if( p->dist >= emaxs[p->type] )
+        if (p->dist >= emaxs[p->type])
             return BOX_BEHIND;
         return BOX_INTERSECTS;
     }
 
     // slow generic case
-    return BoxOnPlaneSide( emins, emaxs, p );
+    return BoxOnPlaneSide(emins, emaxs, p);
 }
 
-static inline vec_t PlaneDiffFast( vec3_t v, cplane_t *p ) {
+static inline vec_t PlaneDiffFast(vec3_t v, cplane_t *p)
+{
     // fast axial cases
-    if( p->type < 3 ) {
+    if (p->type < 3) {
         return v[p->type] - p->dist;
     }
 
     // slow generic case
-    return PlaneDiff( v, p );
+    return PlaneDiff(v, p);
 }
-
 
 /*
 ==============================================================
@@ -456,7 +458,7 @@ MISC
 #define MAXPRINTMSG     4096
 #define MAXERRORMSG     1024
 
-#define CONST_STR_LEN( x ) x, x ? sizeof( x ) - 1 : 0
+#define CONST_STR_LEN(x) x, x ? sizeof(x) - 1 : 0
 
 typedef enum {
     COLOR_BLACK,
@@ -474,12 +476,13 @@ typedef enum {
 
 typedef struct {
     const char *name;
-    void (* const func)( void );
+    void (* const func)(void);
 } ucmd_t;
 
-static inline const ucmd_t *Com_Find( const ucmd_t *u, const char *c ) {
-    for( ; u->name; u++ ) {
-        if( !strcmp( c, u->name ) ) {
+static inline const ucmd_t *Com_Find(const ucmd_t *u, const char *c)
+{
+    for (; u->name; u++) {
+        if (!strcmp(c, u->name)) {
             return u;
         }
     }
@@ -491,90 +494,90 @@ typedef struct string_entry_s {
     char string[1];
 } string_entry_t;
 
-typedef void (*rdflush_t)( int target, char *buffer, size_t len );
+typedef void (*rdflush_t)(int target, char *buffer, size_t len);
 
-void        Com_BeginRedirect (int target, char *buffer, size_t buffersize, rdflush_t flush);
-void        Com_EndRedirect (void);
+void        Com_BeginRedirect(int target, char *buffer, size_t buffersize, rdflush_t flush);
+void        Com_EndRedirect(void);
 
 #ifdef _WIN32
-void        Com_AbortFrame( void );
+void        Com_AbortFrame(void);
 #endif
 
-char        *Com_GetLastError( void );
-void        Com_SetLastError( const char *msg );
+char        *Com_GetLastError(void);
+void        Com_SetLastError(const char *msg);
 
-void        Com_Quit( const char *reason, error_type_t type ) q_noreturn;
+void        Com_Quit(const char *reason, error_type_t type) q_noreturn;
 
-void        Com_SetColor( color_index_t color );
+void        Com_SetColor(color_index_t color);
 
-byte        COM_BlockSequenceCRCByte (byte *base, size_t length, int sequence);
+byte        COM_BlockSequenceCRCByte(byte *base, size_t length, int sequence);
 
-void        Com_Address_g( genctx_t *ctx );
-void        Com_Generic_c( genctx_t *ctx, int argnum );
+void        Com_Address_g(genctx_t *ctx);
+void        Com_Generic_c(genctx_t *ctx, int argnum);
 #if USE_CLIENT
-void        Com_Color_g( genctx_t *ctx );
+void        Com_Color_g(genctx_t *ctx);
 #endif
-void        Com_PlayerToEntityState( const player_state_t *ps, entity_state_t *es );
+void        Com_PlayerToEntityState(const player_state_t *ps, entity_state_t *es);
 
 #if USE_CLIENT || USE_MVD_CLIENT
-qboolean    Com_ParseTimespec( const char *s, int *frames );
+qboolean    Com_ParseTimespec(const char *s, int *frames);
 #endif
 
-qboolean    Com_WildCmpEx( const char *filter, const char *string, int term, qboolean ignorecase );
-#define Com_WildCmp( filter, string )  Com_WildCmpEx( filter, string, 0, qfalse )
+qboolean    Com_WildCmpEx(const char *filter, const char *string, int term, qboolean ignorecase);
+#define Com_WildCmp(filter, string)  Com_WildCmpEx(filter, string, 0, qfalse)
 
-unsigned    Com_HashString( const char *s, unsigned size );
-unsigned    Com_HashStringLen( const char *s, size_t len, unsigned size );
+unsigned    Com_HashString(const char *s, unsigned size);
+unsigned    Com_HashStringLen(const char *s, size_t len, unsigned size);
 
-qboolean    Prompt_AddMatch( genctx_t *ctx, const char *s );
+qboolean    Prompt_AddMatch(genctx_t *ctx, const char *s);
 
-size_t      Com_FormatTime( char *buffer, size_t size, time_t t );
-size_t      Com_FormatTimeLong( char *buffer, size_t size, time_t t );
-size_t      Com_TimeDiff( char *buffer, size_t size,
-                time_t *p, time_t now );
-size_t      Com_TimeDiffLong( char *buffer, size_t size,
-                time_t *p, time_t now );
+size_t      Com_FormatTime(char *buffer, size_t size, time_t t);
+size_t      Com_FormatTimeLong(char *buffer, size_t size, time_t t);
+size_t      Com_TimeDiff(char *buffer, size_t size,
+                         time_t *p, time_t now);
+size_t      Com_TimeDiffLong(char *buffer, size_t size,
+                             time_t *p, time_t now);
 
-size_t      Com_Time_m( char *buffer, size_t size );
-size_t      Com_Uptime_m( char *buffer, size_t size );
-size_t      Com_UptimeLong_m( char *buffer, size_t size );
+size_t      Com_Time_m(char *buffer, size_t size);
+size_t      Com_Uptime_m(char *buffer, size_t size);
+size_t      Com_UptimeLong_m(char *buffer, size_t size);
 
-size_t      Com_FormatSize( char *dest, size_t destsize, off_t bytes );
-size_t      Com_FormatSizeLong( char *dest, size_t destsize, off_t bytes );
+size_t      Com_FormatSize(char *dest, size_t destsize, off_t bytes);
+size_t      Com_FormatSizeLong(char *dest, size_t destsize, off_t bytes);
 
-uint32_t    Com_BlockChecksum( void *buffer, size_t len );
+uint32_t    Com_BlockChecksum(void *buffer, size_t len);
 
-void        Com_PageInMemory( void *buffer, size_t size );
+void        Com_PageInMemory(void *buffer, size_t size);
 
-color_index_t Com_ParseColor( const char *s, color_index_t last );
+color_index_t Com_ParseColor(const char *s, color_index_t last);
 
 #if USE_REF == REF_GL
-unsigned    Com_ParseExtensionString( const char *s, const char *const extnames[] );
+unsigned    Com_ParseExtensionString(const char *s, const char *const extnames[]);
 #endif
 
 #ifndef _WIN32
-void        Com_FlushLogs( void );
+void        Com_FlushLogs(void);
 #endif
 
 #if USE_CLIENT
-#define Com_IsDedicated() ( dedicated->integer != 0 )
+#define Com_IsDedicated() (dedicated->integer != 0)
 #else
 #define Com_IsDedicated() 1
 #endif
 
 #ifdef _DEBUG
 #define Com_DPrintf(...) \
-    if( developer && developer->integer > 0 ) \
-        Com_LPrintf( PRINT_DEVELOPER, __VA_ARGS__ )
+    if (developer && developer->integer > 0) \
+        Com_LPrintf(PRINT_DEVELOPER, __VA_ARGS__)
 #define Com_DDPrintf(...) \
-    if( developer && developer->integer > 1 ) \
-        Com_LPrintf( PRINT_DEVELOPER, __VA_ARGS__ )
+    if (developer && developer->integer > 1) \
+        Com_LPrintf(PRINT_DEVELOPER, __VA_ARGS__)
 #define Com_DDDPrintf(...) \
-    if( developer && developer->integer > 2 ) \
-        Com_LPrintf( PRINT_DEVELOPER, __VA_ARGS__ )
+    if (developer && developer->integer > 2) \
+        Com_LPrintf(PRINT_DEVELOPER, __VA_ARGS__)
 #define Com_DDDDPrintf(...) \
-    if( developer && developer->integer > 3 ) \
-        Com_LPrintf( PRINT_DEVELOPER, __VA_ARGS__ )
+    if (developer && developer->integer > 3) \
+        Com_LPrintf(PRINT_DEVELOPER, __VA_ARGS__)
 #else
 #define Com_DPrintf(...)
 #define Com_DDPrintf(...)
@@ -583,7 +586,7 @@ void        Com_FlushLogs( void );
 #endif
 
 #if USE_TESTS
-void    Com_InitTests( void );
+void    Com_InitTests(void);
 #endif
 
 #ifdef _DEBUG
@@ -635,8 +638,8 @@ extern qhandle_t    com_logFile;
 
 extern const char *const colorNames[10];
 
-void Qcommon_Init( int argc, char **argv );
-void Qcommon_Frame( void );
-void Qcommon_Shutdown( void );
+void Qcommon_Init(int argc, char **argv);
+void Qcommon_Frame(void);
+void Qcommon_Shutdown(void);
 
 

@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -26,55 +26,58 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "snd_local.h"
 #include <SDL.h>
 
-static void Filler( void *userdata, Uint8 *stream, int len ) {
+static void Filler(void *userdata, Uint8 *stream, int len)
+{
     int size = dma.samples << 1;
     int pos = dma.samplepos << 1;
     int wrapped = pos + len - size;
 
-    if( wrapped < 0 ) {
-        memcpy( stream, dma.buffer + pos, len );
+    if (wrapped < 0) {
+        memcpy(stream, dma.buffer + pos, len);
         dma.samplepos += len >> 1;
     } else {
         int remaining = size - pos;
-        memcpy( stream, dma.buffer + pos, remaining );
-        memcpy( stream + remaining, dma.buffer, wrapped );
+        memcpy(stream, dma.buffer + pos, remaining);
+        memcpy(stream + remaining, dma.buffer, wrapped);
         dma.samplepos = wrapped >> 1;
     }
 }
 
-static void Shutdown( void ) {
-    Com_Printf( "Shutting down SDL audio.\n" );
+static void Shutdown(void)
+{
+    Com_Printf("Shutting down SDL audio.\n");
 
     SDL_CloseAudio();
-    if( SDL_WasInit( SDL_INIT_EVERYTHING ) == SDL_INIT_AUDIO ) {
+    if (SDL_WasInit(SDL_INIT_EVERYTHING) == SDL_INIT_AUDIO) {
         SDL_Quit();
     } else {
-        SDL_QuitSubSystem( SDL_INIT_AUDIO );
+        SDL_QuitSubSystem(SDL_INIT_AUDIO);
     }
 
-    if( dma.buffer ) {
-        Z_Free( dma.buffer );
+    if (dma.buffer) {
+        Z_Free(dma.buffer);
         dma.buffer = NULL;
     }
 }
 
-static sndinitstat_t Init( void ) {
+static sndinitstat_t Init(void)
+{
     SDL_AudioSpec desired, obtained;
     char buffer[MAX_QPATH];
     int ret;
 
-    if( SDL_WasInit( SDL_INIT_EVERYTHING ) == 0 ) {
-        ret = SDL_Init( SDL_INIT_AUDIO|SDL_INIT_NOPARACHUTE );
+    if (SDL_WasInit(SDL_INIT_EVERYTHING) == 0) {
+        ret = SDL_Init(SDL_INIT_AUDIO | SDL_INIT_NOPARACHUTE);
     } else {
-        ret = SDL_InitSubSystem( SDL_INIT_AUDIO );
+        ret = SDL_InitSubSystem(SDL_INIT_AUDIO);
     }
-    if( ret == -1 ) {
-        Com_EPrintf( "Couldn't initialize SDL audio: %s\n", SDL_GetError() );
+    if (ret == -1) {
+        Com_EPrintf("Couldn't initialize SDL audio: %s\n", SDL_GetError());
         return SIS_FAILURE;
     }
 
-    memset( &desired, 0, sizeof( desired ) );
-    switch( s_khz->integer ) {
+    memset(&desired, 0, sizeof(desired));
+    switch (s_khz->integer) {
     case 48:
         desired.freq = 48000;
         break;
@@ -93,14 +96,14 @@ static sndinitstat_t Init( void ) {
     desired.samples = 512;
     desired.channels = 2;
     desired.callback = Filler;
-    ret = SDL_OpenAudio( &desired, &obtained );
-    if( ret == -1 ) {
-        Com_EPrintf( "Couldn't open SDL audio: %s\n", SDL_GetError() );
+    ret = SDL_OpenAudio(&desired, &obtained);
+    if (ret == -1) {
+        Com_EPrintf("Couldn't open SDL audio: %s\n", SDL_GetError());
         return SIS_FAILURE;
     }
 
-    if( obtained.format != AUDIO_S16LSB ) {
-        Com_EPrintf( "SDL audio format %d unsupported.\n", obtained.format );
+    if (obtained.format != AUDIO_S16LSB) {
+        Com_EPrintf("SDL audio format %d unsupported.\n", obtained.format);
         Shutdown();
         return SIS_FAILURE;
     }
@@ -110,34 +113,38 @@ static sndinitstat_t Init( void ) {
     dma.samples = 2048 * obtained.channels;
     dma.submission_chunk = 1;
     dma.samplebits = 16;
-    dma.buffer = Z_Mallocz( dma.samples * 2 );
+    dma.buffer = Z_Mallocz(dma.samples * 2);
     dma.samplepos = 0;
 
-    Com_Printf( "Using SDL audio driver: %s\n",
-        SDL_AudioDriverName( buffer, sizeof( buffer ) ) );
+    Com_Printf("Using SDL audio driver: %s\n",
+               SDL_AudioDriverName(buffer, sizeof(buffer)));
 
-    SDL_PauseAudio( 0 );
+    SDL_PauseAudio(0);
 
     return SIS_SUCCESS;
 }
 
-static void BeginPainting( void ) {
+static void BeginPainting(void)
+{
     SDL_LockAudio();
 }
 
-static void Submit( void ) {
+static void Submit(void)
+{
     SDL_UnlockAudio();
 }
 
-static void Activate( qboolean active ) {
-    if( active ) {
-        SDL_PauseAudio( 0 );
+static void Activate(qboolean active)
+{
+    if (active) {
+        SDL_PauseAudio(0);
     } else {
-        SDL_PauseAudio( 1 );
+        SDL_PauseAudio(1);
     }
 }
 
-void WAVE_FillAPI( snddmaAPI_t *api ) {
+void WAVE_FillAPI(snddmaAPI_t *api)
+{
     api->Init = Init;
     api->Shutdown = Shutdown;
     api->BeginPainting = BeginPainting;

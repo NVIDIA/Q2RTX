@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -24,26 +24,26 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <AL/alc.h>
 
 #define QALC_IMP \
-    QAL( LPALCCREATECONTEXT, alcCreateContext ); \
-    QAL( LPALCMAKECONTEXTCURRENT, alcMakeContextCurrent ); \
-    QAL( LPALCPROCESSCONTEXT, alcProcessContext ); \
-    QAL( LPALCSUSPENDCONTEXT, alcSuspendContext ); \
-    QAL( LPALCDESTROYCONTEXT, alcDestroyContext ); \
-    QAL( LPALCGETCURRENTCONTEXT, alcGetCurrentContext ); \
-    QAL( LPALCGETCONTEXTSDEVICE, alcGetContextsDevice ); \
-    QAL( LPALCOPENDEVICE, alcOpenDevice ); \
-    QAL( LPALCCLOSEDEVICE, alcCloseDevice ); \
-    QAL( LPALCGETERROR, alcGetError ); \
-    QAL( LPALCISEXTENSIONPRESENT, alcIsExtensionPresent ); \
-    QAL( LPALCGETPROCADDRESS, alcGetProcAddress ); \
-    QAL( LPALCGETENUMVALUE, alcGetEnumValue ); \
-    QAL( LPALCGETSTRING, alcGetString ); \
-    QAL( LPALCGETINTEGERV, alcGetIntegerv ); \
-    QAL( LPALCCAPTUREOPENDEVICE, alcCaptureOpenDevice ); \
-    QAL( LPALCCAPTURECLOSEDEVICE, alcCaptureCloseDevice ); \
-    QAL( LPALCCAPTURESTART, alcCaptureStart ); \
-    QAL( LPALCCAPTURESTOP, alcCaptureStop ); \
-    QAL( LPALCCAPTURESAMPLES, alcCaptureSamples );
+    QAL(LPALCCREATECONTEXT, alcCreateContext); \
+    QAL(LPALCMAKECONTEXTCURRENT, alcMakeContextCurrent); \
+    QAL(LPALCPROCESSCONTEXT, alcProcessContext); \
+    QAL(LPALCSUSPENDCONTEXT, alcSuspendContext); \
+    QAL(LPALCDESTROYCONTEXT, alcDestroyContext); \
+    QAL(LPALCGETCURRENTCONTEXT, alcGetCurrentContext); \
+    QAL(LPALCGETCONTEXTSDEVICE, alcGetContextsDevice); \
+    QAL(LPALCOPENDEVICE, alcOpenDevice); \
+    QAL(LPALCCLOSEDEVICE, alcCloseDevice); \
+    QAL(LPALCGETERROR, alcGetError); \
+    QAL(LPALCISEXTENSIONPRESENT, alcIsExtensionPresent); \
+    QAL(LPALCGETPROCADDRESS, alcGetProcAddress); \
+    QAL(LPALCGETENUMVALUE, alcGetEnumValue); \
+    QAL(LPALCGETSTRING, alcGetString); \
+    QAL(LPALCGETINTEGERV, alcGetIntegerv); \
+    QAL(LPALCCAPTUREOPENDEVICE, alcCaptureOpenDevice); \
+    QAL(LPALCCAPTURECLOSEDEVICE, alcCaptureCloseDevice); \
+    QAL(LPALCCAPTURESTART, alcCaptureStart); \
+    QAL(LPALCCAPTURESTOP, alcCaptureStop); \
+    QAL(LPALCCAPTURESAMPLES, alcCaptureSamples);
 
 static cvar_t   *al_driver;
 static cvar_t   *al_device;
@@ -60,62 +60,64 @@ QALC_IMP
 QAL_IMP
 #undef QAL
 
-void QAL_Shutdown( void ) {
-    if( context ) {
-        qalcMakeContextCurrent( NULL );
-        qalcDestroyContext( context );
+void QAL_Shutdown(void)
+{
+    if (context) {
+        qalcMakeContextCurrent(NULL);
+        qalcDestroyContext(context);
         context = NULL;
     }
-    if( device ) {
-        qalcCloseDevice( device );
+    if (device) {
+        qalcCloseDevice(device);
         device = NULL;
     }
 
 #define QAL(type,func)  q##func = NULL;
-QALC_IMP
-QAL_IMP
+    QALC_IMP
+    QAL_IMP
 #undef QAL
 
-    Sys_FreeLibrary( handle );
+    Sys_FreeLibrary(handle);
     handle = NULL;
 
     al_driver->flags &= ~CVAR_SOUND;
     al_device->flags &= ~CVAR_SOUND;
 }
 
-qboolean QAL_Init( void ) {
-    al_driver = Cvar_Get( "al_driver", DEFAULT_OPENAL_DRIVER, CVAR_SOUND );
-    al_device = Cvar_Get( "al_device", "", CVAR_SOUND );
+qboolean QAL_Init(void)
+{
+    al_driver = Cvar_Get("al_driver", DEFAULT_OPENAL_DRIVER, CVAR_SOUND);
+    al_device = Cvar_Get("al_device", "", CVAR_SOUND);
 
-    Sys_LoadLibrary( al_driver->string, NULL, &handle );
-    if( !handle ) {
+    Sys_LoadLibrary(al_driver->string, NULL, &handle);
+    if (!handle) {
         return qfalse;
     }
 
-#define QAL(type,func)  q##func = Sys_GetProcAddress( handle, #func );
-QALC_IMP
-QAL_IMP
+#define QAL(type, func)  q##func = Sys_GetProcAddress(handle, #func);
+    QALC_IMP
+    QAL_IMP
 #undef QAL
 
-    Com_DPrintf( "...opening OpenAL device: " );
-    device = qalcOpenDevice( al_device->string[0] ? al_device->string : NULL );
-    if( !device ) {
+    Com_DPrintf("...opening OpenAL device: ");
+    device = qalcOpenDevice(al_device->string[0] ? al_device->string : NULL);
+    if (!device) {
         goto fail;
     }
-    Com_DPrintf( "ok\n" );
+    Com_DPrintf("ok\n");
 
-    Com_DPrintf( "...creating OpenAL context: " );
-    context = qalcCreateContext( device, NULL );
-    if( !context ) {
+    Com_DPrintf("...creating OpenAL context: ");
+    context = qalcCreateContext(device, NULL);
+    if (!context) {
         goto fail;
     }
-    Com_DPrintf( "ok\n" );
+    Com_DPrintf("ok\n");
 
-    Com_DPrintf( "...making context current: " );
-    if( !qalcMakeContextCurrent( context ) ) {
+    Com_DPrintf("...making context current: ");
+    if (!qalcMakeContextCurrent(context)) {
         goto fail;
     }
-    Com_DPrintf( "ok\n" );
+    Com_DPrintf("ok\n");
 
     al_driver->flags |= CVAR_SOUND;
     al_device->flags |= CVAR_SOUND;
@@ -123,7 +125,7 @@ QAL_IMP
     return qtrue;
 
 fail:
-    Com_DPrintf( "failed\n" );
+    Com_DPrintf("failed\n");
     QAL_Shutdown();
     return qfalse;
 }

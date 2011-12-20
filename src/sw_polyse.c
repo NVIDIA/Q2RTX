@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -32,8 +32,8 @@ int     rand1k_index = 0;
 
 // TODO: put in span spilling to shrink list size
 // !!! if this is changed, it must be changed in d_polysa.s too !!!
-#define DPS_MAXSPANS            MAXHEIGHT+1 
-                                    // 1 extra for spanpackage that marks end
+#define DPS_MAXSPANS            MAXHEIGHT+1
+// 1 extra for spanpackage that marks end
 
 // !!! if this is changed, it must be changed in asm_draw.h too !!!
 typedef struct {
@@ -104,7 +104,7 @@ typedef struct {
     int     remainder;
 } adivtab_t;
 
-static adivtab_t    adivtab[32*32] = {
+static adivtab_t    adivtab[32 * 32] = {
 #include "adivtab.h"
 };
 
@@ -112,17 +112,17 @@ byte    *skintable[MAX_LBM_HEIGHT];
 int     skinwidth;
 byte    *skinstart;
 
-void    (*d_pdrawspans)(spanpackage_t *pspanpackage);
+void (*d_pdrawspans)(spanpackage_t *pspanpackage);
 
-void R_PolysetDrawSpans8_33 (spanpackage_t *pspanpackage);
-void R_PolysetDrawSpans8_66 (spanpackage_t *pspanpackage);
-void R_PolysetDrawSpans8_Opaque (spanpackage_t *pspanpackage);
+void R_PolysetDrawSpans8_33(spanpackage_t *pspanpackage);
+void R_PolysetDrawSpans8_66(spanpackage_t *pspanpackage);
+void R_PolysetDrawSpans8_Opaque(spanpackage_t *pspanpackage);
 
-void R_PolysetDrawThreshSpans8 (spanpackage_t *pspanpackage);
-void R_PolysetCalcGradients (int skinwidth);
-void R_DrawNonSubdiv (void);
-void R_PolysetSetEdgeTable (void);
-void R_RasterizeAliasPolySmooth (void);
+void R_PolysetDrawThreshSpans8(spanpackage_t *pspanpackage);
+void R_PolysetCalcGradients(int skinwidth);
+void R_DrawNonSubdiv(void);
+void R_PolysetSetEdgeTable(void);
+void R_RasterizeAliasPolySmooth(void);
 void R_PolysetScanLeftEdge(int height);
 void R_PolysetScanLeftEdge_C(int height);
 
@@ -139,7 +139,7 @@ byte irtable[256] = { 79, 78, 77, 76, 75, 74, 73, 72,       // black/white
                       72, 73, 74, 75, 76, 77, 78, 79,
                       208, 208, 208, 208, 208, 208, 208, 208,   // unused?'
                       64, 66, 68, 70, 72, 74, 76, 78,       // dark yellow
-                      
+
                       64, 65, 66, 67, 68, 69, 70, 71,       // dark red
                       72, 73, 74, 75, 76, 77, 78, 79,
                       64, 65, 66, 67, 68, 69, 70, 71,       // grey/tan
@@ -148,7 +148,7 @@ byte irtable[256] = { 79, 78, 77, 76, 75, 74, 73, 72,       // black/white
                       64, 66, 68, 70, 72, 74, 76, 78,       // chocolate
                       68, 67, 66, 65, 64, 65, 66, 67,       // mauve / teal
                       68, 69, 70, 71, 72, 73, 74, 75,
-                      76, 76, 77, 77, 78, 78, 79, 79,       
+                      76, 76, 77, 77, 78, 78, 79, 79,
 
                       64, 65, 66, 67, 68, 69, 70, 71,       // more mauve
                       72, 73, 74, 75, 76, 77, 78, 79,
@@ -159,7 +159,7 @@ byte irtable[256] = { 79, 78, 77, 76, 75, 74, 73, 72,       // black/white
                       72, 73, 74, 75, 76, 77, 78, 79,
                       64, 65, 66, 67, 68, 69, 70, 71,       // sky blue
                       72, 73, 74, 75, 76, 77, 78, 79,
-                      
+
                       64, 65, 66, 67, 68, 69, 70, 71,       // olive again
                       72, 73, 74, 75, 76, 77, 78, 79,
                       64, 65, 66, 67, 68, 69, 70, 71,       // nuclear green
@@ -168,7 +168,8 @@ byte irtable[256] = { 79, 78, 77, 76, 75, 74, 73, 72,       // black/white
                       64, 65, 66, 67, 68, 69, 70, 71,       // fire colors
                       72, 73, 74, 75, 76, 77, 78, 79,
                       208, 208, 64, 64, 70, 71, 72, 64,     // mishmash1
-                      66, 68, 70, 64, 65, 66, 67, 68};      // mishmash2
+                      66, 68, 70, 64, 65, 66, 67, 68
+                    };      // mishmash2
 // PGM
 // ======================
 
@@ -177,18 +178,17 @@ byte irtable[256] = { 79, 78, 77, 76, 75, 74, 73, 72,       // black/white
 R_PolysetUpdateTables
 ================
 */
-void R_PolysetUpdateTables (void)
+void R_PolysetUpdateTables(void)
 {
     int     i;
     byte    *s;
-    
+
     if (r_affinetridesc.skinwidth != skinwidth ||
-        r_affinetridesc.pskin != skinstart)
-    {
+        r_affinetridesc.pskin != skinstart) {
         skinwidth = r_affinetridesc.skinwidth;
         skinstart = r_affinetridesc.pskin;
         s = skinstart;
-        for (i=0 ; i<MAX_LBM_HEIGHT ; i++, s+=skinwidth)
+        for (i = 0; i < MAX_LBM_HEIGHT; i++, s += skinwidth)
             skintable[i] = s;
     }
 }
@@ -199,7 +199,7 @@ void R_PolysetUpdateTables (void)
 R_DrawTriangle
 ================
 */
-void R_DrawTriangle( void )
+void R_DrawTriangle(void)
 {
     spanpackage_t spans[DPS_MAXSPANS];
 
@@ -207,26 +207,25 @@ void R_DrawTriangle( void )
     int dv0_ab, dv1_ac;
 
     /*
-    d_xdenom = ( aliastriangleparms.a->v[1] - aliastriangleparms.b->v[1] ) * ( aliastriangleparms.a->v[0] - aliastriangleparms.c->v[0] ) -
-               ( aliastriangleparms.a->v[0] - aliastriangleparms.b->v[0] ) * ( aliastriangleparms.a->v[1] - aliastriangleparms.c->v[1] );
+    d_xdenom = (aliastriangleparms.a->v[1] - aliastriangleparms.b->v[1]) * (aliastriangleparms.a->v[0] - aliastriangleparms.c->v[0]) -
+               (aliastriangleparms.a->v[0] - aliastriangleparms.b->v[0]) * (aliastriangleparms.a->v[1] - aliastriangleparms.c->v[1]);
     */
 
     dv0_ab = aliastriangleparms.a->u - aliastriangleparms.b->u;
     dv1_ab = aliastriangleparms.a->v - aliastriangleparms.b->v;
 
-    if ( !( dv0_ab | dv1_ab ) )
+    if (!(dv0_ab | dv1_ab))
         return;
 
     dv0_ac = aliastriangleparms.a->u - aliastriangleparms.c->u;
     dv1_ac = aliastriangleparms.a->v - aliastriangleparms.c->v;
 
-    if ( !( dv0_ac | dv1_ac ) )
+    if (!(dv0_ac | dv1_ac))
         return;
 
-    d_xdenom = ( dv0_ac * dv1_ab ) - ( dv0_ab * dv1_ac );
+    d_xdenom = (dv0_ac * dv1_ab) - (dv0_ab * dv1_ac);
 
-    if ( d_xdenom < 0 )
-    {
+    if (d_xdenom < 0) {
         a_spans = spans;
 
         r_p0[0] = aliastriangleparms.a->u;      // u
@@ -250,8 +249,8 @@ void R_DrawTriangle( void )
         r_p2[4] = aliastriangleparms.c->l;
         r_p2[5] = aliastriangleparms.c->zi;
 
-        R_PolysetSetEdgeTable ();
-        R_RasterizeAliasPolySmooth ();
+        R_PolysetSetEdgeTable();
+        R_RasterizeAliasPolySmooth();
     }
 }
 
@@ -263,8 +262,7 @@ R_PolysetScanLeftEdge_C
 */
 void R_PolysetScanLeftEdge_C(int height)
 {
-    do
-    {
+    do {
         d_pedgespanpackage->pdest = d_pdest;
         d_pedgespanpackage->pz = d_pz;
         d_pedgespanpackage->count = d_aspancount;
@@ -273,15 +271,14 @@ void R_PolysetScanLeftEdge_C(int height)
         d_pedgespanpackage->sfrac = d_sfrac;
         d_pedgespanpackage->tfrac = d_tfrac;
 
-    // FIXME: need to clamp l, s, t, at both ends?
+        // FIXME: need to clamp l, s, t, at both ends?
         d_pedgespanpackage->light = d_light;
         d_pedgespanpackage->zi = d_zi;
 
         d_pedgespanpackage++;
 
         errorterm += erroradjustup;
-        if (errorterm >= 0)
-        {
+        if (errorterm >= 0) {
             d_pdest += d_pdestextrastep;
             d_pz += d_pzextrastep;
             d_aspancount += d_countextrastep;
@@ -291,17 +288,14 @@ void R_PolysetScanLeftEdge_C(int height)
 
             d_sfrac &= 0xFFFF;
             d_tfrac += d_tfracextrastep;
-            if (d_tfrac & 0x10000)
-            {
+            if (d_tfrac & 0x10000) {
                 d_ptex += r_affinetridesc.skinwidth;
                 d_tfrac &= 0xFFFF;
             }
             d_light += d_lightextrastep;
             d_zi += d_ziextrastep;
             errorterm -= erroradjustdown;
-        }
-        else
-        {
+        } else {
             d_pdest += d_pdestbasestep;
             d_pz += d_pzbasestep;
             d_aspancount += ubasestep;
@@ -310,8 +304,7 @@ void R_PolysetScanLeftEdge_C(int height)
             d_ptex += d_sfrac >> 16;
             d_sfrac &= 0xFFFF;
             d_tfrac += d_tfracbasestep;
-            if (d_tfrac & 0x10000)
-            {
+            if (d_tfrac & 0x10000) {
                 d_ptex += r_affinetridesc.skinwidth;
                 d_tfrac &= 0xFFFF;
             }
@@ -331,29 +324,25 @@ quotient must fit in 32 bits.
 FIXME: GET RID OF THIS! (FloorDivMod)
 ====================
 */
-void FloorDivMod (float numer, float denom, int *quotient,
-        int *rem)
+void FloorDivMod(float numer, float denom, int *quotient,
+                 int *rem)
 {
     int     q, r;
     float   x;
 
-    if (numer >= 0.0)
-    {
+    if (numer >= 0.0) {
 
         x = floor(numer / denom);
         q = (int)x;
         r = (int)floor(numer - (x * denom));
-    }
-    else
-    {
-    //
-    // perform operations with positive values, and fix mod to make floor-based
-    //
+    } else {
+        //
+        // perform operations with positive values, and fix mod to make floor-based
+        //
         x = floor(-numer / denom);
         q = -(int)x;
         r = (int)floor(-numer - (x * denom));
-        if (r != 0)
-        {
+        if (r != 0) {
             q--;
             r = (int)denom - r;
         }
@@ -370,7 +359,7 @@ R_PolysetSetUpForLineScan
 ====================
 */
 void R_PolysetSetUpForLineScan(fixed8_t startvertu, fixed8_t startvertv,
-        fixed8_t endvertu, fixed8_t endvertv)
+                               fixed8_t endvertu, fixed8_t endvertv)
 {
     float       dm, dn;
     int         tm, tn;
@@ -384,19 +373,16 @@ void R_PolysetSetUpForLineScan(fixed8_t startvertu, fixed8_t startvertv,
     tn = endvertv - startvertv;
 
     if (((tm <= 16) && (tm >= -15)) &&
-        ((tn <= 16) && (tn >= -15)))
-    {
-        ptemp = &adivtab[((tm+15) << 5) + (tn+15)];
+        ((tn <= 16) && (tn >= -15))) {
+        ptemp = &adivtab[((tm + 15) << 5) + (tn + 15)];
         ubasestep = ptemp->quotient;
         erroradjustup = ptemp->remainder;
         erroradjustdown = tn;
-    }
-    else
-    {
+    } else {
         dm = tm;
         dn = tn;
 
-        FloorDivMod (dm, dn, &ubasestep, &erroradjustup);
+        FloorDivMod(dm, dn, &ubasestep, &erroradjustup);
 
         erroradjustdown = dn;
     }
@@ -408,7 +394,7 @@ R_PolysetCalcGradients
 ================
 */
 
-void R_PolysetCalcGradients (int skinwidth)
+void R_PolysetCalcGradients(int skinwidth)
 {
     float   xstepdenominv, ystepdenominv, t0, t1;
     float   p01_minus_p21, p11_minus_p21, p00_minus_p20, p10_minus_p20;
@@ -428,38 +414,36 @@ void R_PolysetCalcGradients (int skinwidth)
     t0 = r_p0[4] - r_p2[4];
     t1 = r_p1[4] - r_p2[4];
     r_lstepx = (int)
-            ceil((t1 * p01_minus_p21 - t0 * p11_minus_p21) * xstepdenominv);
+               ceil((t1 * p01_minus_p21 - t0 * p11_minus_p21) * xstepdenominv);
     r_lstepy = (int)
-            ceil((t1 * p00_minus_p20 - t0 * p10_minus_p20) * ystepdenominv);
+               ceil((t1 * p00_minus_p20 - t0 * p10_minus_p20) * ystepdenominv);
 
     t0 = r_p0[2] - r_p2[2];
     t1 = r_p1[2] - r_p2[2];
     r_sstepx = (int)((t1 * p01_minus_p21 - t0 * p11_minus_p21) *
-            xstepdenominv);
-    r_sstepy = (int)((t1 * p00_minus_p20 - t0* p10_minus_p20) *
-            ystepdenominv);
+                     xstepdenominv);
+    r_sstepy = (int)((t1 * p00_minus_p20 - t0 * p10_minus_p20) *
+                     ystepdenominv);
 
     t0 = r_p0[3] - r_p2[3];
     t1 = r_p1[3] - r_p2[3];
     r_tstepx = (int)((t1 * p01_minus_p21 - t0 * p11_minus_p21) *
-            xstepdenominv);
+                     xstepdenominv);
     r_tstepy = (int)((t1 * p00_minus_p20 - t0 * p10_minus_p20) *
-            ystepdenominv);
+                     ystepdenominv);
 
     t0 = r_p0[5] - r_p2[5];
     t1 = r_p1[5] - r_p2[5];
     r_zistepx = (int)((t1 * p01_minus_p21 - t0 * p11_minus_p21) *
-            xstepdenominv);
+                      xstepdenominv);
     r_zistepy = (int)((t1 * p00_minus_p20 - t0 * p10_minus_p20) *
-            ystepdenominv);
+                      ystepdenominv);
 
 #if USE_ASM
-    if ( d_pdrawspans == R_PolysetDrawSpans8_Opaque )
-    {
+    if (d_pdrawspans == R_PolysetDrawSpans8_Opaque) {
         a_sstepxfrac = r_sstepx << 16;
         a_tstepxfrac = r_tstepx << 16;
-    }
-    else
+    } else
 #endif
     {
         a_sstepxfrac = r_sstepx & 0xFFFF;
@@ -476,7 +460,7 @@ R_PolysetDrawThreshSpans8
 Random fizzle fade rasterizer
 ================
 */
-void R_PolysetDrawThreshSpans8 (spanpackage_t *pspanpackage)
+void R_PolysetDrawThreshSpans8(spanpackage_t *pspanpackage)
 {
     int     lcount;
     byte    *lpdest;
@@ -486,23 +470,18 @@ void R_PolysetDrawThreshSpans8 (spanpackage_t *pspanpackage)
     int     lzi;
     short   *lpz;
 
-    do
-    {
+    do {
         lcount = d_aspancount - pspanpackage->count;
 
         errorterm += erroradjustup;
-        if (errorterm >= 0)
-        {
+        if (errorterm >= 0) {
             d_aspancount += d_countextrastep;
             errorterm -= erroradjustdown;
-        }
-        else
-        {
+        } else {
             d_aspancount += ubasestep;
         }
 
-        if (lcount)
-        {
+        if (lcount) {
             lpdest = pspanpackage->pdest;
             lptex = pspanpackage->ptex;
             lpz = pspanpackage->pz;
@@ -511,14 +490,11 @@ void R_PolysetDrawThreshSpans8 (spanpackage_t *pspanpackage)
             llight = pspanpackage->light;
             lzi = pspanpackage->zi;
 
-            do
-            {
-                if ((lzi >> 16) >= *lpz)
-                {
+            do {
+                if ((lzi >> 16) >= *lpz) {
                     rand1k_index = (rand1k_index + 1) & MASK_1K;
 
-                    if (rand1k[rand1k_index] <= r_affinetridesc.vis_thresh)
-                    {
+                    if (rand1k[rand1k_index] <= r_affinetridesc.vis_thresh) {
                         *lpdest = ((byte *)vid.colormap)[*lptex + (llight & 0xFF00)];
                         *lpz = lzi >> 16;
                     }
@@ -533,8 +509,7 @@ void R_PolysetDrawThreshSpans8 (spanpackage_t *pspanpackage)
                 lptex += lsfrac >> 16;
                 lsfrac &= 0xFFFF;
                 ltfrac += a_tstepxfrac;
-                if (ltfrac & 0x10000)
-                {
+                if (ltfrac & 0x10000) {
                     lptex += r_affinetridesc.skinwidth;
                     ltfrac &= 0xFFFF;
                 }
@@ -551,7 +526,7 @@ void R_PolysetDrawThreshSpans8 (spanpackage_t *pspanpackage)
 R_PolysetDrawSpans8
 ================
 */
-void R_PolysetDrawSpans8_33( spanpackage_t *pspanpackage)
+void R_PolysetDrawSpans8_33(spanpackage_t *pspanpackage)
 {
     int     lcount;
     byte    *lpdest;
@@ -561,23 +536,18 @@ void R_PolysetDrawSpans8_33( spanpackage_t *pspanpackage)
     int     lzi;
     short   *lpz;
 
-    do
-    {
+    do {
         lcount = d_aspancount - pspanpackage->count;
 
         errorterm += erroradjustup;
-        if (errorterm >= 0)
-        {
+        if (errorterm >= 0) {
             d_aspancount += d_countextrastep;
             errorterm -= erroradjustdown;
-        }
-        else
-        {
+        } else {
             d_aspancount += ubasestep;
         }
 
-        if (lcount)
-        {
+        if (lcount) {
             lpdest = pspanpackage->pdest;
             lptex = pspanpackage->ptex;
             lpz = pspanpackage->pz;
@@ -586,13 +556,11 @@ void R_PolysetDrawSpans8_33( spanpackage_t *pspanpackage)
             llight = pspanpackage->light;
             lzi = pspanpackage->zi;
 
-            do
-            {
-                if ((lzi >> 16) >= *lpz)
-                {
-                    int temp = vid.colormap[*lptex + ( llight & 0xFF00 )];
+            do {
+                if ((lzi >> 16) >= *lpz) {
+                    int temp = vid.colormap[*lptex + (llight & 0xFF00)];
 
-                    *lpdest = vid.alphamap[temp+ *lpdest*256];
+                    *lpdest = vid.alphamap[temp + *lpdest * 256];
                 }
                 lpdest++;
                 lzi += r_zistepx;
@@ -603,8 +571,7 @@ void R_PolysetDrawSpans8_33( spanpackage_t *pspanpackage)
                 lptex += lsfrac >> 16;
                 lsfrac &= 0xFFFF;
                 ltfrac += a_tstepxfrac;
-                if (ltfrac & 0x10000)
-                {
+                if (ltfrac & 0x10000) {
                     lptex += r_affinetridesc.skinwidth;
                     ltfrac &= 0xFFFF;
                 }
@@ -615,39 +582,32 @@ void R_PolysetDrawSpans8_33( spanpackage_t *pspanpackage)
     } while (pspanpackage->count != -999999);
 }
 
-void R_PolysetDrawSpansConstant8_33( spanpackage_t *pspanpackage)
+void R_PolysetDrawSpansConstant8_33(spanpackage_t *pspanpackage)
 {
     int     lcount;
     byte    *lpdest;
     int     lzi;
     short   *lpz;
 
-    do
-    {
+    do {
         lcount = d_aspancount - pspanpackage->count;
 
         errorterm += erroradjustup;
-        if (errorterm >= 0)
-        {
+        if (errorterm >= 0) {
             d_aspancount += d_countextrastep;
             errorterm -= erroradjustdown;
-        }
-        else
-        {
+        } else {
             d_aspancount += ubasestep;
         }
 
-        if (lcount)
-        {
+        if (lcount) {
             lpdest = pspanpackage->pdest;
             lpz = pspanpackage->pz;
             lzi = pspanpackage->zi;
 
-            do
-            {
-                if ((lzi >> 16) >= *lpz)
-                {
-                    *lpdest = vid.alphamap[r_aliasblendcolor + *lpdest*256];
+            do {
+                if ((lzi >> 16) >= *lpz) {
+                    *lpdest = vid.alphamap[r_aliasblendcolor + *lpdest * 256];
                 }
                 lpdest++;
                 lzi += r_zistepx;
@@ -669,23 +629,18 @@ void R_PolysetDrawSpans8_66(spanpackage_t *pspanpackage)
     int     lzi;
     short   *lpz;
 
-    do
-    {
+    do {
         lcount = d_aspancount - pspanpackage->count;
 
         errorterm += erroradjustup;
-        if (errorterm >= 0)
-        {
+        if (errorterm >= 0) {
             d_aspancount += d_countextrastep;
             errorterm -= erroradjustdown;
-        }
-        else
-        {
+        } else {
             d_aspancount += ubasestep;
         }
 
-        if (lcount)
-        {
+        if (lcount) {
             lpdest = pspanpackage->pdest;
             lptex = pspanpackage->ptex;
             lpz = pspanpackage->pz;
@@ -694,13 +649,11 @@ void R_PolysetDrawSpans8_66(spanpackage_t *pspanpackage)
             llight = pspanpackage->light;
             lzi = pspanpackage->zi;
 
-            do
-            {
-                if ((lzi >> 16) >= *lpz)
-                {
-                    int temp = vid.colormap[*lptex + ( llight & 0xFF00 )];
+            do {
+                if ((lzi >> 16) >= *lpz) {
+                    int temp = vid.colormap[*lptex + (llight & 0xFF00)];
 
-                    *lpdest = vid.alphamap[temp*256 + *lpdest];
+                    *lpdest = vid.alphamap[temp * 256 + *lpdest];
                     *lpz = lzi >> 16;
                 }
                 lpdest++;
@@ -712,8 +665,7 @@ void R_PolysetDrawSpans8_66(spanpackage_t *pspanpackage)
                 lptex += lsfrac >> 16;
                 lsfrac &= 0xFFFF;
                 ltfrac += a_tstepxfrac;
-                if (ltfrac & 0x10000)
-                {
+                if (ltfrac & 0x10000) {
                     lptex += r_affinetridesc.skinwidth;
                     ltfrac &= 0xFFFF;
                 }
@@ -724,39 +676,32 @@ void R_PolysetDrawSpans8_66(spanpackage_t *pspanpackage)
     } while (pspanpackage->count != -999999);
 }
 
-void R_PolysetDrawSpansConstant8_66( spanpackage_t *pspanpackage)
+void R_PolysetDrawSpansConstant8_66(spanpackage_t *pspanpackage)
 {
     int     lcount;
     byte    *lpdest;
     int     lzi;
     short   *lpz;
 
-    do
-    {
+    do {
         lcount = d_aspancount - pspanpackage->count;
 
         errorterm += erroradjustup;
-        if (errorterm >= 0)
-        {
+        if (errorterm >= 0) {
             d_aspancount += d_countextrastep;
             errorterm -= erroradjustdown;
-        }
-        else
-        {
+        } else {
             d_aspancount += ubasestep;
         }
 
-        if (lcount)
-        {
+        if (lcount) {
             lpdest = pspanpackage->pdest;
             lpz = pspanpackage->pz;
             lzi = pspanpackage->zi;
 
-            do
-            {
-                if ((lzi >> 16) >= *lpz)
-                {
-                    *lpdest = vid.alphamap[r_aliasblendcolor*256 + *lpdest];
+            do {
+                if ((lzi >> 16) >= *lpz) {
+                    *lpdest = vid.alphamap[r_aliasblendcolor * 256 + *lpdest];
                 }
                 lpdest++;
                 lzi += r_zistepx;
@@ -769,27 +714,22 @@ void R_PolysetDrawSpansConstant8_66( spanpackage_t *pspanpackage)
 }
 
 #if !USE_ASM
-void R_PolysetDrawSpans8_Opaque (spanpackage_t *pspanpackage)
+void R_PolysetDrawSpans8_Opaque(spanpackage_t *pspanpackage)
 {
     int     lcount;
 
-    do
-    {
+    do {
         lcount = d_aspancount - pspanpackage->count;
 
         errorterm += erroradjustup;
-        if (errorterm >= 0)
-        {
+        if (errorterm >= 0) {
             d_aspancount += d_countextrastep;
             errorterm -= erroradjustdown;
-        }
-        else
-        {
+        } else {
             d_aspancount += ubasestep;
         }
 
-        if (lcount)
-        {
+        if (lcount) {
             int     lsfrac, ltfrac;
             byte    *lpdest;
             byte    *lptex;
@@ -805,12 +745,10 @@ void R_PolysetDrawSpans8_Opaque (spanpackage_t *pspanpackage)
             llight = pspanpackage->light;
             lzi = pspanpackage->zi;
 
-            do
-            {
-                if ((lzi >> 16) >= *lpz)
-                {
+            do {
+                if ((lzi >> 16) >= *lpz) {
 //PGM
-                    if(iractive)
+                    if (iractive)
                         *lpdest = ((byte *)vid.colormap)[irtable[*lptex]];
                     else
                         *lpdest = ((byte *)vid.colormap)[*lptex + (llight & 0xFF00)];
@@ -826,8 +764,7 @@ void R_PolysetDrawSpans8_Opaque (spanpackage_t *pspanpackage)
                 lptex += lsfrac >> 16;
                 lsfrac &= 0xFFFF;
                 ltfrac += a_tstepxfrac;
-                if (ltfrac & 0x10000)
-                {
+                if (ltfrac & 0x10000) {
                     lptex += r_affinetridesc.skinwidth;
                     ltfrac &= 0xFFFF;
                 }
@@ -845,7 +782,7 @@ void R_PolysetDrawSpans8_Opaque (spanpackage_t *pspanpackage)
 R_PolysetFillSpans8
 ================
 */
-void R_PolysetFillSpans8 (spanpackage_t *pspanpackage)
+void R_PolysetFillSpans8(spanpackage_t *pspanpackage)
 {
     int             color;
 
@@ -853,8 +790,7 @@ void R_PolysetFillSpans8 (spanpackage_t *pspanpackage)
 
     color = d_aflatcolor++;
 
-    while (1)
-    {
+    while (1) {
         int     lcount;
         byte    *lpdest;
 
@@ -863,12 +799,10 @@ void R_PolysetFillSpans8 (spanpackage_t *pspanpackage)
         if (lcount == -1)
             return;
 
-        if (lcount)
-        {
+        if (lcount) {
             lpdest = pspanpackage->pdest;
 
-            do
-            {
+            do {
                 *lpdest++ = color;
             } while (--lcount);
         }
@@ -882,7 +816,7 @@ void R_PolysetFillSpans8 (spanpackage_t *pspanpackage)
 R_RasterizeAliasPolySmooth
 ================
 */
-void R_RasterizeAliasPolySmooth (void)
+void R_RasterizeAliasPolySmooth(void)
 {
     int             initialleftheight, initialrightheight;
     int             *plefttop, *prighttop, *pleftbottom, *prightbottom;
@@ -901,7 +835,7 @@ void R_RasterizeAliasPolySmooth (void)
 // set the s, t, and light gradients, which are consistent across the triangle
 // because being a triangle, things are affine
 //
-    R_PolysetCalcGradients (r_affinetridesc.skinwidth);
+    R_PolysetCalcGradients(r_affinetridesc.skinwidth);
 //
 // rasterize the polygon
 //
@@ -915,14 +849,12 @@ void R_RasterizeAliasPolySmooth (void)
     d_aspancount = plefttop[0] - prighttop[0];
 
     d_ptex = (byte *)r_affinetridesc.pskin + (plefttop[2] >> 16) +
-            (plefttop[3] >> 16) * r_affinetridesc.skinwidth;
+             (plefttop[3] >> 16) * r_affinetridesc.skinwidth;
 #if USE_ASM
-    if ( d_pdrawspans == R_PolysetDrawSpans8_Opaque )
-    {
+    if (d_pdrawspans == R_PolysetDrawSpans8_Opaque) {
         d_sfrac = (plefttop[2] & 0xFFFF) << 16;
         d_tfrac = (plefttop[3] & 0xFFFF) << 16;
-    }
-    else
+    } else
 #endif
     {
         d_sfrac = plefttop[2] & 0xFFFF;
@@ -932,11 +864,10 @@ void R_RasterizeAliasPolySmooth (void)
     d_zi = plefttop[5];
 
     d_pdest = (byte *)d_viewbuffer +
-            ystart * r_screenwidth + plefttop[0];
+              ystart * r_screenwidth + plefttop[0];
     d_pz = d_pzbuffer + ystart * d_zwidth + plefttop[0];
 
-    if (initialleftheight == 1)
-    {
+    if (initialleftheight == 1) {
         d_pedgespanpackage->pdest = d_pdest;
         d_pedgespanpackage->pz = d_pz;
         d_pedgespanpackage->count = d_aspancount;
@@ -945,24 +876,20 @@ void R_RasterizeAliasPolySmooth (void)
         d_pedgespanpackage->sfrac = d_sfrac;
         d_pedgespanpackage->tfrac = d_tfrac;
 
-    // FIXME: need to clamp l, s, t, at both ends?
+        // FIXME: need to clamp l, s, t, at both ends?
         d_pedgespanpackage->light = d_light;
         d_pedgespanpackage->zi = d_zi;
 
         d_pedgespanpackage++;
-    }
-    else
-    {
+    } else {
         R_PolysetSetUpForLineScan(plefttop[0], plefttop[1],
-                              pleftbottom[0], pleftbottom[1]);
+                                  pleftbottom[0], pleftbottom[1]);
 
 #if USE_ASM
-        if ( d_pdrawspans == R_PolysetDrawSpans8_Opaque )
-        {
+        if (d_pdrawspans == R_PolysetDrawSpans8_Opaque) {
             d_pzbasestep = (d_zwidth + ubasestep) << 1;
             d_pzextrastep = d_pzbasestep + 2;
-        }
-        else
+        } else
 #endif
         {
             d_pzbasestep = d_zwidth + ubasestep;
@@ -972,11 +899,11 @@ void R_RasterizeAliasPolySmooth (void)
         d_pdestbasestep = r_screenwidth + ubasestep;
         d_pdestextrastep = d_pdestbasestep + 1;
 
-    // TODO: can reuse partial expressions here
+        // TODO: can reuse partial expressions here
 
-    // for negative steps in x along left edge, bias toward overflow rather than
-    // underflow (sort of turning the floor () we did in the gradient calcs into
-    // ceil (), but plus a little bit)
+        // for negative steps in x along left edge, bias toward overflow rather than
+        // underflow (sort of turning the floor () we did in the gradient calcs into
+        // ceil (), but plus a little bit)
         if (ubasestep < 0)
             working_lstepx = r_lstepx - 1;
         else
@@ -984,15 +911,13 @@ void R_RasterizeAliasPolySmooth (void)
 
         d_countextrastep = ubasestep + 1;
         d_ptexbasestep = ((r_sstepy + r_sstepx * ubasestep) >> 16) +
-                ((r_tstepy + r_tstepx * ubasestep) >> 16) *
-                r_affinetridesc.skinwidth;
+                         ((r_tstepy + r_tstepx * ubasestep) >> 16) *
+                         r_affinetridesc.skinwidth;
 #if USE_ASM
-        if ( d_pdrawspans == R_PolysetDrawSpans8_Opaque )
-        {
+        if (d_pdrawspans == R_PolysetDrawSpans8_Opaque) {
             d_sfracbasestep = (r_sstepy + r_sstepx * ubasestep) << 16;
             d_tfracbasestep = (r_tstepy + r_tstepx * ubasestep) << 16;
-        }
-        else
+        } else
 #endif
         {
             d_sfracbasestep = (r_sstepy + r_sstepx * ubasestep) & 0xFFFF;
@@ -1002,29 +927,25 @@ void R_RasterizeAliasPolySmooth (void)
         d_zibasestep = r_zistepy + r_zistepx * ubasestep;
 
         d_ptexextrastep = ((r_sstepy + r_sstepx * d_countextrastep) >> 16) +
-                ((r_tstepy + r_tstepx * d_countextrastep) >> 16) *
-                r_affinetridesc.skinwidth;
+                          ((r_tstepy + r_tstepx * d_countextrastep) >> 16) *
+                          r_affinetridesc.skinwidth;
 #if USE_ASM
-        if ( d_pdrawspans == R_PolysetDrawSpans8_Opaque )
-        {
-            d_sfracextrastep = (r_sstepy + r_sstepx*d_countextrastep) << 16;
-            d_tfracextrastep = (r_tstepy + r_tstepx*d_countextrastep) << 16;
-        }
-        else
+        if (d_pdrawspans == R_PolysetDrawSpans8_Opaque) {
+            d_sfracextrastep = (r_sstepy + r_sstepx * d_countextrastep) << 16;
+            d_tfracextrastep = (r_tstepy + r_tstepx * d_countextrastep) << 16;
+        } else
 #endif
         {
-            d_sfracextrastep = (r_sstepy + r_sstepx*d_countextrastep) & 0xFFFF;
-            d_tfracextrastep = (r_tstepy + r_tstepx*d_countextrastep) & 0xFFFF;
+            d_sfracextrastep = (r_sstepy + r_sstepx * d_countextrastep) & 0xFFFF;
+            d_tfracextrastep = (r_tstepy + r_tstepx * d_countextrastep) & 0xFFFF;
         }
         d_lightextrastep = d_lightbasestep + working_lstepx;
         d_ziextrastep = d_zibasestep + r_zistepx;
 
 #if USE_ASM
-        if ( d_pdrawspans == R_PolysetDrawSpans8_Opaque )
-        {
-            R_PolysetScanLeftEdge (initialleftheight);
-        }
-        else
+        if (d_pdrawspans == R_PolysetDrawSpans8_Opaque) {
+            R_PolysetScanLeftEdge(initialleftheight);
+        } else
 #endif
         {
             R_PolysetScanLeftEdge_C(initialleftheight);
@@ -1034,8 +955,7 @@ void R_RasterizeAliasPolySmooth (void)
 //
 // scan out the bottom part of the left edge, if it exists
 //
-    if (pedgetable->numleftedges == 2)
-    {
+    if (pedgetable->numleftedges == 2) {
         int     height;
 
         plefttop = pleftbottom;
@@ -1048,7 +968,7 @@ void R_RasterizeAliasPolySmooth (void)
         ystart = plefttop[1];
         d_aspancount = plefttop[0] - prighttop[0];
         d_ptex = (byte *)r_affinetridesc.pskin + (plefttop[2] >> 16) +
-                (plefttop[3] >> 16) * r_affinetridesc.skinwidth;
+                 (plefttop[3] >> 16) * r_affinetridesc.skinwidth;
         d_sfrac = 0;
         d_tfrac = 0;
         d_light = plefttop[4];
@@ -1057,8 +977,7 @@ void R_RasterizeAliasPolySmooth (void)
         d_pdest = (byte *)d_viewbuffer + ystart * r_screenwidth + plefttop[0];
         d_pz = d_pzbuffer + ystart * d_zwidth + plefttop[0];
 
-        if (height == 1)
-        {
+        if (height == 1) {
             d_pedgespanpackage->pdest = d_pdest;
             d_pedgespanpackage->pz = d_pz;
             d_pedgespanpackage->count = d_aspancount;
@@ -1067,27 +986,23 @@ void R_RasterizeAliasPolySmooth (void)
             d_pedgespanpackage->sfrac = d_sfrac;
             d_pedgespanpackage->tfrac = d_tfrac;
 
-        // FIXME: need to clamp l, s, t, at both ends?
+            // FIXME: need to clamp l, s, t, at both ends?
             d_pedgespanpackage->light = d_light;
             d_pedgespanpackage->zi = d_zi;
 
             d_pedgespanpackage++;
-        }
-        else
-        {
+        } else {
             R_PolysetSetUpForLineScan(plefttop[0], plefttop[1],
-                                  pleftbottom[0], pleftbottom[1]);
+                                      pleftbottom[0], pleftbottom[1]);
 
             d_pdestbasestep = r_screenwidth + ubasestep;
             d_pdestextrastep = d_pdestbasestep + 1;
 
 #if USE_ASM
-            if ( d_pdrawspans == R_PolysetDrawSpans8_Opaque )
-            {
+            if (d_pdrawspans == R_PolysetDrawSpans8_Opaque) {
                 d_pzbasestep = (d_zwidth + ubasestep) << 1;
                 d_pzextrastep = d_pzbasestep + 2;
-            }
-            else
+            } else
 #endif
             {
                 d_pzbasestep = d_zwidth + ubasestep;
@@ -1101,15 +1016,13 @@ void R_RasterizeAliasPolySmooth (void)
 
             d_countextrastep = ubasestep + 1;
             d_ptexbasestep = ((r_sstepy + r_sstepx * ubasestep) >> 16) +
-                    ((r_tstepy + r_tstepx * ubasestep) >> 16) *
-                    r_affinetridesc.skinwidth;
+                             ((r_tstepy + r_tstepx * ubasestep) >> 16) *
+                             r_affinetridesc.skinwidth;
 #if USE_ASM
-            if ( d_pdrawspans == R_PolysetDrawSpans8_Opaque )
-            {
+            if (d_pdrawspans == R_PolysetDrawSpans8_Opaque) {
                 d_sfracbasestep = (r_sstepy + r_sstepx * ubasestep) << 16;
                 d_tfracbasestep = (r_tstepy + r_tstepx * ubasestep) << 16;
-            }
-            else
+            } else
 #endif
             {
                 d_sfracbasestep = (r_sstepy + r_sstepx * ubasestep) & 0xFFFF;
@@ -1119,29 +1032,25 @@ void R_RasterizeAliasPolySmooth (void)
             d_zibasestep = r_zistepy + r_zistepx * ubasestep;
 
             d_ptexextrastep = ((r_sstepy + r_sstepx * d_countextrastep) >> 16) +
-                    ((r_tstepy + r_tstepx * d_countextrastep) >> 16) *
-                    r_affinetridesc.skinwidth;
+                              ((r_tstepy + r_tstepx * d_countextrastep) >> 16) *
+                              r_affinetridesc.skinwidth;
 #if USE_ASM
-            if ( d_pdrawspans == R_PolysetDrawSpans8_Opaque )
-            {
-                d_sfracextrastep = ((r_sstepy+r_sstepx*d_countextrastep) & 0xFFFF)<<16;
-                d_tfracextrastep = ((r_tstepy+r_tstepx*d_countextrastep) & 0xFFFF)<<16;
-            }
-            else
+            if (d_pdrawspans == R_PolysetDrawSpans8_Opaque) {
+                d_sfracextrastep = ((r_sstepy + r_sstepx * d_countextrastep) & 0xFFFF) << 16;
+                d_tfracextrastep = ((r_tstepy + r_tstepx * d_countextrastep) & 0xFFFF) << 16;
+            } else
 #endif
             {
-                d_sfracextrastep = (r_sstepy+r_sstepx*d_countextrastep) & 0xFFFF;
-                d_tfracextrastep = (r_tstepy+r_tstepx*d_countextrastep) & 0xFFFF;
+                d_sfracextrastep = (r_sstepy + r_sstepx * d_countextrastep) & 0xFFFF;
+                d_tfracextrastep = (r_tstepy + r_tstepx * d_countextrastep) & 0xFFFF;
             }
             d_lightextrastep = d_lightbasestep + working_lstepx;
             d_ziextrastep = d_zibasestep + r_zistepx;
 
 #if USE_ASM
-            if ( d_pdrawspans == R_PolysetDrawSpans8_Opaque )
-            {
-                R_PolysetScanLeftEdge (height);
-            }
-            else
+            if (d_pdrawspans == R_PolysetDrawSpans8_Opaque) {
+                R_PolysetScanLeftEdge(height);
+            } else
 #endif
             {
                 R_PolysetScanLeftEdge_C(height);
@@ -1154,16 +1063,15 @@ void R_RasterizeAliasPolySmooth (void)
     d_pedgespanpackage = a_spans;
 
     R_PolysetSetUpForLineScan(prighttop[0], prighttop[1],
-                          prightbottom[0], prightbottom[1]);
+                              prightbottom[0], prightbottom[1]);
     d_aspancount = 0;
     d_countextrastep = ubasestep + 1;
     originalcount = a_spans[initialrightheight].count;
     a_spans[initialrightheight].count = -999999; // mark end of the spanpackages
-    (*d_pdrawspans) (a_spans);
+    (*d_pdrawspans)(a_spans);
 
 // scan out the bottom part of the right edge, if it exists
-    if (pedgetable->numrightedges == 2)
-    {
+    if (pedgetable->numrightedges == 2) {
         int             height;
         spanpackage_t   *pstart;
 
@@ -1178,12 +1086,12 @@ void R_RasterizeAliasPolySmooth (void)
         height = prightbottom[1] - prighttop[1];
 
         R_PolysetSetUpForLineScan(prighttop[0], prighttop[1],
-                              prightbottom[0], prightbottom[1]);
+                                  prightbottom[0], prightbottom[1]);
 
         d_countextrastep = ubasestep + 1;
         a_spans[initialrightheight + height].count = -999999;
-                                            // mark end of the spanpackages
-        (*d_pdrawspans) (pstart);
+        // mark end of the spanpackages
+        (*d_pdrawspans)(pstart);
     }
 }
 
@@ -1193,45 +1101,38 @@ void R_RasterizeAliasPolySmooth (void)
 R_PolysetSetEdgeTable
 ================
 */
-void R_PolysetSetEdgeTable (void)
+void R_PolysetSetEdgeTable(void)
 {
     int         edgetableindex;
 
     edgetableindex = 0; // assume the vertices are already in
-                        //  top to bottom order
+    //  top to bottom order
 
 //
 // determine which edges are right & left, and the order in which
 // to rasterize them
 //
-    if (r_p0[1] >= r_p1[1])
-    {
-        if (r_p0[1] == r_p1[1])
-        {
+    if (r_p0[1] >= r_p1[1]) {
+        if (r_p0[1] == r_p1[1]) {
             if (r_p0[1] < r_p2[1])
                 pedgetable = &edgetables[2];
             else
                 pedgetable = &edgetables[5];
 
             return;
-        }
-        else
-        {
+        } else {
             edgetableindex = 1;
         }
     }
 
-    if (r_p0[1] == r_p2[1])
-    {
+    if (r_p0[1] == r_p2[1]) {
         if (edgetableindex)
             pedgetable = &edgetables[8];
         else
             pedgetable = &edgetables[9];
 
         return;
-    }
-    else if (r_p1[1] == r_p2[1])
-    {
+    } else if (r_p1[1] == r_p2[1]) {
         if (edgetableindex)
             pedgetable = &edgetables[10];
         else

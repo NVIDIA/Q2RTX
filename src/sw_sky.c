@@ -9,7 +9,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -38,37 +38,37 @@ static const int        r_skysideimage[6] = { 5, 2, 4, 1, 0, 3 };
 
 // I just copied this data from a box map...
 static const int box_planes[12] = {
-    2,-128, 0,-128, 2,128, 1,128, 0,128, 1,-128
+    2, -128, 0, -128, 2, 128, 1, 128, 0, 128, 1, -128
 };
 static const int box_surfedges[24] = {
-    1,2,3,4,  1,5,6,7,  8,9,6,10,  2,7,9,11, 12,3,11,8,  12,10,5,4
+    1, 2, 3, 4,  1, 5, 6, 7,  8, 9, 6, 10,  2, 7, 9, 11, 12, 3, 11, 8,  12, 10, 5, 4
 };
 static const int box_surfverts[24] = {
-    0,0,0,0,  1,0,0,0,  0,0,1,0,  1,1,1,0,  0,1,1,1,  1,1,1,1
+    0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0,  1, 1, 1, 0,  0, 1, 1, 1,  1, 1, 1, 1
 };
 static const int box_edges[24] = {
-    1,2, 2,3, 3,4, 4,1, 1,5, 5,6, 6,2, 7,8, 8,6, 5,7, 8,3, 7,4
+    1, 2, 2, 3, 3, 4, 4, 1, 1, 5, 5, 6, 6, 2, 7, 8, 8, 6, 5, 7, 8, 3, 7, 4
 };
 static const int box_flags[6] = {
     0, 0, 1, 1, 1, 0
 };
 static const vec3_t box_axis[6][2] = {
-    { {0,-1,0}, {-1,0,0} },
-    { {0,1,0}, {0,0,-1} },
-    { {0,-1,0}, {1,0,0} },
-    { {1,0,0}, {0,0,-1} },
-    { {0,-1,0}, {0,0,-1} },
-    { {-1,0,0}, {0,0,-1} }
+    { {0, -1, 0}, { -1, 0, 0} },
+    { {0, 1, 0}, {0, 0, -1} },
+    { {0, -1, 0}, {1, 0, 0} },
+    { {1, 0, 0}, {0, 0, -1} },
+    { {0, -1, 0}, {0, 0, -1} },
+    { { -1, 0, 0}, {0, 0, -1} }
 };
 static const vec3_t box_verts[8] = {
-    {-1,-1,-1},
-    {-1,1,-1},
-    {1,1,-1},
-    {1,-1,-1},
-    {-1,-1,1},
-    {-1,1,1},
-    {1,-1,1},
-    {1,1,1}
+    { -1, -1, -1},
+    { -1, 1, -1},
+    {1, 1, -1},
+    {1, -1, -1},
+    { -1, -1, 1},
+    { -1, 1, 1},
+    {1, -1, 1},
+    {1, 1, 1}
 };
 
 /*
@@ -76,20 +76,21 @@ static const vec3_t box_verts[8] = {
 R_InitSkyBox
 ================
 */
-void R_InitSkyBox( void ) {
+void R_InitSkyBox(void)
+{
     int i;
 
-    for( i = 0; i < 6; i++ ) {
-        r_skyplanes[i].normal[box_planes[i*2]] = 1;
-        r_skyplanes[i].dist = box_planes[i*2+1];
+    for (i = 0; i < 6; i++) {
+        r_skyplanes[i].normal[box_planes[i * 2]] = 1;
+        r_skyplanes[i].dist = box_planes[i * 2 + 1];
 
-        VectorCopy( box_axis[i][0], r_skytexinfo[i].axis[0] );
-        VectorCopy( box_axis[i][1], r_skytexinfo[i].axis[1] );
+        VectorCopy(box_axis[i][0], r_skytexinfo[i].axis[0]);
+        VectorCopy(box_axis[i][1], r_skytexinfo[i].axis[1]);
 
         r_skyfaces[i].plane = &r_skyplanes[i];
         r_skyfaces[i].drawflags = box_flags[i] | DSURF_SKY;
         r_skyfaces[i].numsurfedges = 4;
-        r_skyfaces[i].firstsurfedge = &r_skysurfedges[i*4];
+        r_skyfaces[i].firstsurfedge = &r_skysurfedges[i * 4];
         r_skyfaces[i].texinfo = &r_skytexinfo[i];
         r_skyfaces[i].texturemins[0] = -128;
         r_skyfaces[i].texturemins[1] = -128;
@@ -97,14 +98,14 @@ void R_InitSkyBox( void ) {
         r_skyfaces[i].extents[1] = 256;
     }
 
-    for( i = 0; i < 24; i++ ) {
-        r_skysurfedges[i].edge = &r_skyedges[box_surfedges[i]-1];
+    for (i = 0; i < 24; i++) {
+        r_skysurfedges[i].edge = &r_skyedges[box_surfedges[i] - 1];
         r_skysurfedges[i].vert = box_surfverts[i];
     }
 
-    for( i = 0; i < 12; i++ ) {
-        r_skyedges[i].v[0] = &r_skyverts[box_edges[i*2+0]-1];
-        r_skyedges[i].v[1] = &r_skyverts[box_edges[i*2+1]-1];
+    for (i = 0; i < 12; i++) {
+        r_skyedges[i].v[0] = &r_skyverts[box_edges[i * 2 + 0] - 1];
+        r_skyedges[i].v[1] = &r_skyverts[box_edges[i * 2 + 1] - 1];
         r_skyedges[i].cachededgeoffset = 0;
     }
 }
@@ -114,7 +115,8 @@ void R_InitSkyBox( void ) {
 R_EmitSkyBox
 ================
 */
-void R_EmitSkyBox( void ) {
+void R_EmitSkyBox(void)
+{
     int i, j;
     int oldkey;
 
@@ -126,28 +128,28 @@ void R_EmitSkyBox( void ) {
     r_skyframe = r_framecount;
 
     // set the eight fake vertexes
-    for( i = 0; i < 8; i++ )
-        for( j = 0; j < 3; j++ )
-            r_skyverts[i].point[j] = r_origin[j] + box_verts[i][j]*128;
+    for (i = 0; i < 8; i++)
+        for (j = 0; j < 3; j++)
+            r_skyverts[i].point[j] = r_origin[j] + box_verts[i][j] * 128;
 
     // set the six fake planes
-    for( i = 0; i < 6; i++ )
-        if (box_planes[i*2+1] > 0)
-            r_skyplanes[i].dist = r_origin[box_planes[i*2]]+128;
+    for (i = 0; i < 6; i++)
+        if (box_planes[i * 2 + 1] > 0)
+            r_skyplanes[i].dist = r_origin[box_planes[i * 2]] + 128;
         else
-            r_skyplanes[i].dist = r_origin[box_planes[i*2]]-128;
+            r_skyplanes[i].dist = r_origin[box_planes[i * 2]] - 128;
 
     // fix texture offsets
-    for( i = 0; i < 6; i++ ) {
-        r_skytexinfo[i].offset[0] = -DotProduct( r_origin, r_skytexinfo[i].axis[0] );
-        r_skytexinfo[i].offset[1] = -DotProduct( r_origin, r_skytexinfo[i].axis[1] );
+    for (i = 0; i < 6; i++) {
+        r_skytexinfo[i].offset[0] = -DotProduct(r_origin, r_skytexinfo[i].axis[0]);
+        r_skytexinfo[i].offset[1] = -DotProduct(r_origin, r_skytexinfo[i].axis[1]);
     }
 
     // emit the six faces
     oldkey = r_currentkey;
     r_currentkey = 0x7ffffff0;
-    for( i = 0; i < 6; i++ ) {
-        R_RenderFace( &r_skyfaces[i], 15 );
+    for (i = 0; i < 6; i++) {
+        R_RenderFace(&r_skyfaces[i], 15);
     }
     r_currentkey = oldkey;  // bsp sorting order
 }
@@ -157,18 +159,19 @@ void R_EmitSkyBox( void ) {
 R_SetSky
 ============
 */
-void R_SetSky( const char *name, float rotate, vec3_t axis ) {
+void R_SetSky(const char *name, float rotate, vec3_t axis)
+{
     int     i;
     char    path[MAX_QPATH];
 
 //    sky_rotate = rotate;
-//    VectorCopy( axis, sky_axis );
+//    VectorCopy(axis, sky_axis);
 
-    for( i = 0; i < 6; i++ ) {
-        Q_concat( path, sizeof( path ), "env/", name,
-            r_skysidenames[r_skysideimage[i]], ".pcx", NULL );
-        FS_NormalizePath( path, path );
-        r_skytexinfo[i].image = IMG_Find( path, it_sky );
+    for (i = 0; i < 6; i++) {
+        Q_concat(path, sizeof(path), "env/", name,
+                 r_skysidenames[r_skysideimage[i]], ".pcx", NULL);
+        FS_NormalizePath(path, path);
+        r_skytexinfo[i].image = IMG_Find(path, it_sky);
     }
 }
 
