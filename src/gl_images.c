@@ -65,7 +65,7 @@ static const glmode_t filterModes[] = {
     { "GL_LINEAR_MIPMAP_LINEAR", GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR }
 };
 
-static const int numFilterModes = sizeof(filterModes) / sizeof(filterModes[0]);
+static const int numFilterModes = q_countof(filterModes);
 
 typedef struct {
     const char *name;
@@ -81,7 +81,7 @@ static const gltmode_t alphaModes[] = {
     { "GL_RGBA2", GL_RGBA2 }
 };
 
-static const int numAlphaModes = sizeof(alphaModes) / sizeof(alphaModes[0]);
+static const int numAlphaModes = q_countof(alphaModes);
 
 static const gltmode_t solidModes[] = {
     { "default", 4 },
@@ -96,7 +96,7 @@ static const gltmode_t solidModes[] = {
 #endif
 };
 
-static const int numSolidModes = sizeof(solidModes) / sizeof(solidModes[0]);
+static const int numSolidModes = q_countof(solidModes);
 
 static void gl_texturemode_changed(cvar_t *self)
 {

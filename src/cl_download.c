@@ -304,10 +304,9 @@ qboolean CL_CheckDownloadExtension(const char *ext)
         "pcx", "wal", "wav", "md2", "sp2", "tga", "png",
         "jpg", "bsp", "ent", "txt", "dm2", "loc", "md3"
     };
-    static const int total = sizeof(allowed) / sizeof(allowed[0]);
     int i;
 
-    for (i = 0; i < total; i++)
+    for (i = 0; i < q_countof(allowed); i++)
         if (!Q_stricmp(ext, allowed[i]))
             return qtrue;
 

@@ -81,6 +81,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #endif /* !__GNUC__ */
 
+#define q_countof(a)        (sizeof(a) / sizeof(a[0]))
+
 typedef unsigned char byte;
 typedef enum { qfalse, qtrue } qboolean;
 typedef int qhandle_t;

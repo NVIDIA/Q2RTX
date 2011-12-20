@@ -179,7 +179,7 @@ static const wildtest_t wildtests[] = {
     { "\\a\\b\\c",      "abc",              1 },
 };
 
-static const int numwildtests = sizeof(wildtests) / sizeof(wildtests[0]);
+static const int numwildtests = q_countof(wildtests);
 
 static void Com_TestWild_f(void)
 {
@@ -254,7 +254,7 @@ static const normtest_t normtests[] = {
     { "foo/bar/../../../../baz/abc/../../zzz/../def/ghi",   "def/ghi"           },
 };
 
-static const int numnormtests = sizeof(normtests) / sizeof(normtests[0]);
+static const int numnormtests = q_countof(normtests);
 
 static void Com_TestNorm_f(void)
 {

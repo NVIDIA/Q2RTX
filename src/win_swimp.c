@@ -71,7 +71,7 @@ static const int s_syspalindices[] =  {
     COLOR_WINDOWTEXT
 };
 
-#define NUM_SYS_COLORS (sizeof(s_syspalindices) / sizeof(s_syspalindices[0]))
+#define NUM_SYS_COLORS q_countof(s_syspalindices)
 
 typedef struct {
     HDC         dibdc;      // DC compatible with DIB section

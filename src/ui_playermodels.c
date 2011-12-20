@@ -42,7 +42,7 @@ static const char *const baseWeaponNames[] = {
     "w_sshotgun.md2"
 };
 
-static const int numBaseWeaponNames = sizeof(baseWeaponNames) / sizeof(baseWeaponNames[0]);
+static const int numBaseWeaponNames = q_countof(baseWeaponNames);
 
 static qboolean IconOfSkinExists(char *skin, char **pcxfiles, int npcxfiles)
 {

@@ -159,7 +159,7 @@ static const char ac_clients[][8] = {
     "Q2PRO"
 };
 
-static const int ac_num_clients = sizeof(ac_clients) / sizeof(ac_clients[0]);
+static const int ac_num_clients = q_countof(ac_clients);
 
 
 /*
