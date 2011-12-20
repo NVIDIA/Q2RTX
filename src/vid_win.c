@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "win_local.h"
 #include "cl_public.h"
 
-#define    WINDOW_CLASS_NAME "Quake2"
+#define WINDOW_CLASS_NAME   "Quake 2 Pro"
 
 // mode_changed flags
 #define MODE_SIZE       (1 << 0)
@@ -46,7 +46,7 @@ static cvar_t   *win_xpfix;
 static cvar_t   *win_rawmouse;
 
 static qboolean Win_InitMouse(void);
-static void Win_ClipCursor(void);
+static void     Win_ClipCursor(void);
 
 /*
 ===============================================================================
@@ -909,30 +909,24 @@ STATIC LONG WINAPI Win_MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
 {
     switch (uMsg) {
     case WM_MOUSEWHEEL:
-        if (win.mouse.initialized == WIN_MOUSE_LEGACY) {
+        if (win.mouse.initialized == WIN_MOUSE_LEGACY)
             mouse_wheel_event((short)HIWORD(wParam));
-        }
         break;
+
     case WM_MOUSEHWHEEL:
-        if (win.mouse.initialized == WIN_MOUSE_LEGACY) {
+        if (win.mouse.initialized == WIN_MOUSE_LEGACY)
             mouse_hwheel_event((short)HIWORD(wParam));
-        }
         break;
 
     case WM_NCMOUSEMOVE:
-        if (win.mouse.initialized) {
-            // don't hide cursor
+        // don't hide cursor
+        if (win.mouse.initialized)
             IN_MouseEvent(-1, -1);
-        }
         break;
 
     case WM_MOUSEMOVE:
-        if (win.mouse.initialized) {
-            int x = (short)LOWORD(lParam);
-            int y = (short)HIWORD(lParam);
-
-            IN_MouseEvent(x, y);
-        }
+        if (win.mouse.initialized)
+            IN_MouseEvent((short)LOWORD(lParam), (short)HIWORD(lParam));
         // fall through
 
     case WM_LBUTTONDOWN:
@@ -943,18 +937,16 @@ STATIC LONG WINAPI Win_MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
     case WM_MBUTTONUP:
     case WM_XBUTTONDOWN:
     case WM_XBUTTONUP:
-        if (win.mouse.initialized == WIN_MOUSE_LEGACY) {
+        if (win.mouse.initialized == WIN_MOUSE_LEGACY)
             legacy_mouse_event(wParam);
-        }
         break;
 
     case WM_HOTKEY:
         return FALSE;
 
     case WM_INPUT:
-        if (wParam == RIM_INPUT && win.mouse.initialized == WIN_MOUSE_RAW) {
+        if (wParam == RIM_INPUT && win.mouse.initialized == WIN_MOUSE_RAW)
             raw_input_event((HANDLE)lParam);
-        }
         break;
 
     case WM_CLOSE:
@@ -983,9 +975,8 @@ STATIC LONG WINAPI Win_MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
         case SC_SCREENSAVE:
             return FALSE;
         case SC_MAXIMIZE:
-            if (!vid_fullscreen->integer) {
+            if (!vid_fullscreen->integer)
                 VID_ToggleFullscreen();
-            }
             return FALSE;
         }
         break;
@@ -1396,22 +1387,22 @@ VID_GetClipboardData
 char *VID_GetClipboardData(void)
 {
     HANDLE clipdata;
-    char *data = NULL;
-    char *cliptext;
+    char *cliptext, *data;
 
-    if (OpenClipboard(NULL) == FALSE) {
+    if (!OpenClipboard(NULL)) {
         Com_DPrintf("Couldn't open clipboard.\n");
-        return data;
+        return NULL;
     }
 
+    data = NULL;
     if ((clipdata = GetClipboardData(CF_TEXT)) != NULL) {
         if ((cliptext = GlobalLock(clipdata)) != NULL) {
             data = Z_CopyString(cliptext);
             GlobalUnlock(clipdata);
         }
     }
-    CloseClipboard();
 
+    CloseClipboard();
     return data;
 }
 
@@ -1426,11 +1417,11 @@ void VID_SetClipboardData(const char *data)
     char *cliptext;
     size_t length;
 
-    if (!data[0]) {
+    if (!data || !*data) {
         return;
     }
 
-    if (OpenClipboard(NULL) == FALSE) {
+    if (!OpenClipboard(NULL)) {
         Com_DPrintf("Couldn't open clipboard.\n");
         return;
     }
