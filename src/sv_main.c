@@ -549,10 +549,259 @@ static void SVC_GetChallenge(void)
                       "challenge %u p=34,35,36", challenge);
 }
 
-static void send_redirect_hack(const char *addr)
+/*
+==================
+SVC_DirectConnect
+
+A connection request that did not come from the master
+==================
+*/
+
+typedef struct {
+    int         protocol;   // major version
+    int         version;    // minor version
+    int         qport;
+    int         challenge;
+
+    int         maxlength;
+    int         nctype;
+    qboolean    has_zlib;
+
+    int         reserved;   // hidden client slots
+    char        reconnect_var[16];
+    char        reconnect_val[16];
+} conn_params_t;
+
+#define reject(...) \
+    (Netchan_OutOfBand(NS_SERVER, &net_from, "print\n" __VA_ARGS__), qfalse)
+
+static qboolean parse_basic_params(conn_params_t *p)
+{
+    p->protocol = atoi(Cmd_Argv(1));
+    p->qport = atoi(Cmd_Argv(2)) ;
+    p->challenge = atoi(Cmd_Argv(3));
+
+    // check for invalid protocol version
+    if (p->protocol < PROTOCOL_VERSION_OLD ||
+        p->protocol > PROTOCOL_VERSION_Q2PRO)
+        return reject("Unsupported protocol version %d.\n", p->protocol);
+
+    // check for valid, but outdated protocol version
+    if (p->protocol < PROTOCOL_VERSION_DEFAULT)
+        return reject("You need Quake 2 version 3.19 or higher.\n");
+
+    return qtrue;
+}
+
+static qboolean permit_connection(conn_params_t *p)
+{
+    addrmatch_t *match;
+    int i, count;
+    client_t *cl;
+    char *s;
+
+    // loopback clients are permitted without any checks
+    if (NET_IsLocalAddress(&net_from))
+        return qtrue;
+
+    // see if the challenge is valid
+    for (i = 0; i < MAX_CHALLENGES; i++) {
+        if (!svs.challenges[i].challenge)
+            continue;
+
+        if (NET_IsEqualBaseAdr(&net_from, &svs.challenges[i].adr)) {
+            if (svs.challenges[i].challenge == p->challenge)
+                break;        // good
+
+            return reject("Bad challenge.\n");
+        }
+    }
+
+    if (i == MAX_CHALLENGES)
+        return reject("No challenge for address.\n");
+
+    svs.challenges[i].challenge = 0;
+
+    // check for banned address
+    if ((match = SV_MatchAddress(&sv_banlist, &net_from)) != NULL) {
+        s = match->comment;
+        if (!*s) {
+            s = "Your IP address is banned from this server.";
+        }
+        return reject("%s\nConnection refused.\n", s);
+    }
+
+    // check for locked server
+    if (sv_locked->integer)
+        return reject("Server is locked.\n");
+
+    // limit number of connections from single IP
+    if (sv_iplimit->integer > 0) {
+        count = 0;
+        FOR_EACH_CLIENT(cl) {
+            if (NET_IsEqualBaseAdr(&net_from, &cl->netchan->remote_address)) {
+                if (cl->state == cs_zombie) {
+                    count++;
+                } else {
+                    count += 2;
+                }
+            }
+        }
+        count >>= 1;
+        if (count >= sv_iplimit->integer)
+            return reject("Too many connections from your IP address.\n");
+    }
+
+    return qtrue;
+}
+
+static qboolean parse_packet_length(conn_params_t *p)
+{
+    char *s;
+
+    // set maximum packet length
+    p->maxlength = MAX_PACKETLEN_WRITABLE_DEFAULT;
+    if (p->protocol >= PROTOCOL_VERSION_R1Q2) {
+        s = Cmd_Argv(5);
+        if (*s) {
+            p->maxlength = atoi(s);
+            if (p->maxlength < 0 || p->maxlength > MAX_PACKETLEN_WRITABLE)
+                return reject("Invalid maximum message length.\n");
+
+            // 0 means highest available
+            if (!p->maxlength)
+                p->maxlength = MAX_PACKETLEN_WRITABLE;
+        }
+    }
+
+    if (!NET_IsLocalAddress(&net_from) && net_maxmsglen->integer > 0) {
+        // cap to server defined maximum value
+        if (p->maxlength > net_maxmsglen->integer)
+            p->maxlength = net_maxmsglen->integer;
+    }
+
+    // don't allow too small packets
+    if (p->maxlength < MIN_PACKETLEN)
+        p->maxlength = MIN_PACKETLEN;
+
+    return qtrue;
+}
+
+static qboolean parse_enhanced_params(conn_params_t *p)
+{
+    char *s;
+
+    if (p->protocol == PROTOCOL_VERSION_R1Q2) {
+        // set minor protocol version
+        s = Cmd_Argv(6);
+        if (*s) {
+            p->version = atoi(s);
+            clamp(p->version,
+                  PROTOCOL_VERSION_R1Q2_MINIMUM,
+                  PROTOCOL_VERSION_R1Q2_CURRENT);
+        } else {
+            p->version = PROTOCOL_VERSION_R1Q2_MINIMUM;
+        }
+        p->nctype = NETCHAN_OLD;
+        p->has_zlib = qtrue;
+    } else if (p->protocol == PROTOCOL_VERSION_Q2PRO) {
+        // set netchan type
+        s = Cmd_Argv(6);
+        if (*s) {
+            p->nctype = atoi(s);
+            if (p->nctype < NETCHAN_OLD || p->nctype > NETCHAN_NEW)
+                return reject("Invalid netchan type.\n");
+        } else {
+            p->nctype = NETCHAN_NEW;
+        }
+
+        // set zlib
+        s = Cmd_Argv(7);
+        if (*s) {
+            p->has_zlib = !!atoi(s);
+        } else {
+            p->has_zlib = qtrue;
+        }
+
+        // set minor protocol version
+        s = Cmd_Argv(8);
+        if (*s) {
+            p->version = atoi(s);
+            clamp(p->version,
+                  PROTOCOL_VERSION_Q2PRO_MINIMUM,
+                  PROTOCOL_VERSION_Q2PRO_CURRENT);
+            if (p->version == PROTOCOL_VERSION_Q2PRO_RESERVED) {
+                p->version--; // never use this version
+            }
+        } else {
+            p->version = PROTOCOL_VERSION_Q2PRO_MINIMUM;
+        }
+    }
+
+    return qtrue;
+}
+
+static qboolean parse_userinfo(conn_params_t *params, char *userinfo)
+{
+    char *info, *s;
+
+    // validate userinfo
+    info = Cmd_Argv(4);
+    if (!info[0])
+        return reject("Empty userinfo string.\n");
+
+    if (!Info_Validate(info))
+        return reject("Malformed userinfo string.\n");
+
+    s = Info_ValueForKey(info, "name");
+    if (COM_IsWhite(s))
+        return reject("Please set your name before connecting.\n");
+
+    // check password
+    s = Info_ValueForKey(info, "password");
+    if (sv_password->string[0]) {
+        if (!s[0])
+            return reject("Please set your password before connecting.\n");
+
+        if (SV_RateLimited(&svs.ratelimit_auth))
+            return reject("Invalid password.\n");
+
+        if (strcmp(sv_password->string, s)) {
+            svs.ratelimit_auth.count++;
+            return reject("Invalid password.\n");
+        }
+        // allow them to use reserved slots
+    } else if (!sv_reserved_password->string[0] ||
+               strcmp(sv_reserved_password->string, s)) {
+        // if no reserved password is set on the server, do not allow
+        // anyone to access reserved slots at all
+        params->reserved = sv_reserved_slots->integer;
+    }
+
+    // copy userinfo off
+    Q_strlcpy(userinfo, info, MAX_INFO_STRING);
+
+    // make sure mvdspec key is not set
+    Info_RemoveKey(userinfo, "mvdspec");
+
+    if (sv_password->string[0] || sv_reserved_password->string[0]) {
+        // unset password key to make game mod happy
+        Info_RemoveKey(userinfo, "password");
+    }
+
+    // force the IP key/value pair so the game can filter based on ip
+    s = NET_AdrToString(&net_from);
+    if (!Info_SetValueForKey(userinfo, "ip", s))
+        return reject("Oversize userinfo string.\n");
+
+    return qtrue;
+}
+
+static void redirect(const char *addr)
 {
     Netchan_OutOfBand(NS_SERVER, &net_from, "client_connect");
 
+    // set up a fake server netchan
     MSG_WriteLong(1);
     MSG_WriteLong(0);
     MSG_WriteByte(svc_print);
@@ -565,324 +814,164 @@ static void send_redirect_hack(const char *addr)
     SZ_Clear(&msg_write);
 }
 
-#define SV_OobPrintf(...) \
-    Netchan_OutOfBand( NS_SERVER, &net_from, "print\n" __VA_ARGS__ )
-
-/*
-==================
-SVC_DirectConnect
-
-A connection request that did not come from the master
-==================
-*/
-static void SVC_DirectConnect(void)
+static client_t *find_client_slot(conn_params_t *params)
 {
-    char        userinfo[MAX_INFO_STRING];
-    char        reconnect_var[16];
-    char        reconnect_val[16];
-    int         i, number, count;
-    client_t    *cl, *newcl, *lastcl;
-    int         protocol, version;
-    int         qport;
-    int         challenge;
-    qboolean    allow;
-    char        *info, *s;
-    int         maxlength;
-    netchan_type_t nctype;
-    char        *ncstring, *acstring;
-    char        dlstring[MAX_INFO_STRING];
-    int         reserved;
-    qboolean    has_zlib;
-
-    protocol = atoi(Cmd_Argv(1));
-    qport = atoi(Cmd_Argv(2)) ;
-    challenge = atoi(Cmd_Argv(3));
-
-    Com_DPrintf("%s: protocol=%i, qport=%i, challenge=%i\n",
-                __func__, protocol, qport, challenge);
-
-    if (protocol < PROTOCOL_VERSION_DEFAULT ||
-        protocol > PROTOCOL_VERSION_Q2PRO) {
-        SV_OobPrintf("Unsupported protocol version %d.\n", protocol);
-        Com_DPrintf("    rejected connect with protocol %i\n", protocol);
-        return;
-    }
-
-    if (!NET_IsLocalAddress(&net_from)) {
-        addrmatch_t *match;
-
-        // see if the challenge is valid
-        for (i = 0; i < MAX_CHALLENGES; i++) {
-            if (!svs.challenges[i].challenge) {
-                continue;
-            }
-            if (NET_IsEqualBaseAdr(&net_from, &svs.challenges[i].adr)) {
-                if (svs.challenges[i].challenge == challenge)
-                    break;        // good
-                SV_OobPrintf("Bad challenge.\n");
-                Com_DPrintf("    rejected -  bad challenge.\n");
-                return;
-            }
-        }
-        if (i == MAX_CHALLENGES) {
-            SV_OobPrintf("No challenge for address.\n");
-            Com_DPrintf("    rejected - no challenge.\n");
-            return;
-        }
-        svs.challenges[i].challenge = 0;
-
-        // check for banned address
-        if ((match = SV_MatchAddress(&sv_banlist, &net_from)) != NULL) {
-            s = match->comment;
-            if (!*s) {
-                s = "Your IP address is banned from this server.";
-            }
-            SV_OobPrintf("%s\nConnection refused.\n", s);
-            Com_DPrintf("   rejected connect from banned IP\n");
-            return;
-        }
-
-        if (sv_locked->integer) {
-            SV_OobPrintf("Server is locked.\n");
-            Com_DPrintf("    rejected - server is locked.\n");
-            return;
-        }
-
-        // limit number of connections from single IP
-        if (sv_iplimit->integer > 0) {
-            count = 0;
-            FOR_EACH_CLIENT(cl) {
-                if (NET_IsEqualBaseAdr(&net_from,
-                                       &cl->netchan->remote_address)) {
-                    if (cl->state == cs_zombie) {
-                        count++;
-                    } else {
-                        count += 2;
-                    }
-                }
-            }
-            count >>= 1;
-            if (count >= sv_iplimit->integer) {
-                SV_OobPrintf("Too many connections from your IP address.\n");
-                Com_DPrintf("    rejected - %d connections from this IP.\n", count);
-                return;
-            }
-        }
-    }
-
-    // set maximum message length
-    maxlength = MAX_PACKETLEN_WRITABLE_DEFAULT;
-    has_zlib = qfalse;
-    if (protocol >= PROTOCOL_VERSION_R1Q2) {
-        has_zlib = qtrue;
-        s = Cmd_Argv(5);
-        if (*s) {
-            maxlength = atoi(s);
-            if (maxlength < 0 || maxlength > MAX_PACKETLEN_WRITABLE) {
-                SV_OobPrintf("Invalid maximum message length.\n");
-                Com_DPrintf("    rejected - bad maxmsglen.\n");
-                return;
-            }
-            if (!maxlength) {
-                maxlength = MAX_PACKETLEN_WRITABLE;
-            } else if (maxlength < MIN_PACKETLEN) {
-                maxlength = MIN_PACKETLEN;
-            }
-        }
-    }
-
-    if (!NET_IsLocalAddress(&net_from)) {
-        // cap maximum message length for real connections
-        if (net_maxmsglen->integer > 0 && maxlength > net_maxmsglen->integer) {
-            maxlength = net_maxmsglen->integer;
-        }
-    }
-
-    if (protocol == PROTOCOL_VERSION_R1Q2) {
-        // set minor protocol version
-        s = Cmd_Argv(6);
-        if (*s) {
-            version = atoi(s);
-            clamp(version, PROTOCOL_VERSION_R1Q2_MINIMUM,
-                  PROTOCOL_VERSION_R1Q2_CURRENT);
-        } else {
-            version = PROTOCOL_VERSION_R1Q2_MINIMUM;
-        }
-        nctype = NETCHAN_OLD;
-        ncstring = "";
-    } else if (protocol == PROTOCOL_VERSION_Q2PRO) {
-        // set netchan type
-        s = Cmd_Argv(6);
-        if (*s) {
-            nctype = atoi(s);
-            if (nctype == NETCHAN_OLD) {
-                ncstring = " nc=0";
-            } else if (nctype == NETCHAN_NEW) {
-                ncstring = " nc=1";
-            } else {
-                SV_OobPrintf("Invalid netchan type.\n");
-                Com_DPrintf("    rejected - bad nctype.\n");
-                return;
-            }
-        } else {
-            nctype = NETCHAN_NEW;
-            ncstring = " nc=1";
-        }
-
-        // set zlib
-        s = Cmd_Argv(7);
-        if (*s && !atoi(s)) {
-            has_zlib = qfalse;
-        }
-
-        // set minor protocol version
-        s = Cmd_Argv(8);
-        if (*s) {
-            version = atoi(s);
-            clamp(version, PROTOCOL_VERSION_Q2PRO_MINIMUM,
-                  PROTOCOL_VERSION_Q2PRO_CURRENT);
-            if (version == PROTOCOL_VERSION_Q2PRO_RESERVED) {
-                version--; // never use this version
-            }
-        } else {
-            version = PROTOCOL_VERSION_Q2PRO_MINIMUM;
-        }
-    } else {
-        nctype = NETCHAN_OLD;
-        ncstring = "";
-        version = 0;
-    }
-
-    // validate userinfo
-    info = Cmd_Argv(4);
-    if (!info[0]) {
-        SV_OobPrintf("Empty userinfo string.\n");
-        Com_DPrintf("    rejected - empty userinfo.\n");
-        return;
-    }
-
-    if (!Info_Validate(info)) {
-        SV_OobPrintf("Malformed userinfo string.\n");
-        Com_DPrintf("    rejected - malformed userinfo.\n");
-        return;
-    }
-
-    s = Info_ValueForKey(info, "name");
-    if (COM_IsWhite(s)) {
-        SV_OobPrintf("Please set your name before connecting.\n");
-        Com_DPrintf("    rejected - empty name.\n");
-        return;
-    }
-
-    // check password
-    s = Info_ValueForKey(info, "password");
-    reserved = 0;
-    if (sv_password->string[0]) {
-        if (!s[0]) {
-            SV_OobPrintf("Please set your password before connecting.\n");
-            Com_DPrintf("    rejected - empty password.\n");
-            return;
-        }
-        if (SV_RateLimited(&svs.ratelimit_auth)) {
-            SV_OobPrintf("Invalid password.\n");
-            Com_DPrintf("    rejected - auth attempt limit exceeded.\n");
-            return;
-        }
-        if (strcmp(sv_password->string, s)) {
-            svs.ratelimit_auth.count++;
-            SV_OobPrintf("Invalid password.\n");
-            Com_DPrintf("    rejected - invalid password.\n");
-            return;
-        }
-        // allow them to use reserved slots
-    } else if (!sv_reserved_password->string[0] ||
-               strcmp(sv_reserved_password->string, s)) {
-        // in no reserved password is set on the server, do not allow
-        // anyone to access reserved slots at all
-        reserved = sv_reserved_slots->integer;
-    }
-
-    Q_strlcpy(userinfo, info, sizeof(userinfo));
-
-    // make sure mvdspec key is not set
-    Info_RemoveKey(userinfo, "mvdspec");
-
-    if (sv_password->string[0] || sv_reserved_password->string[0]) {
-        // unset password key to make game mod happy
-        Info_RemoveKey(userinfo, "password");
-    }
-
-    // force the IP key/value pair so the game can filter based on ip
-    s = NET_AdrToString(&net_from);
-    if (!Info_SetValueForKey(userinfo, "ip", s)) {
-        SV_OobPrintf("Oversize userinfo string.\n");
-        Com_DPrintf("    rejected - oversize userinfo.\n");
-        return;
-    }
-
-    newcl = NULL;
-    reconnect_var[0] = 0;
-    reconnect_val[0] = 0;
+    client_t *cl;
+    char *s;
+    int i;
 
     // if there is already a slot for this ip, reuse it
     FOR_EACH_CLIENT(cl) {
         if (NET_IsEqualAdr(&net_from, &cl->netchan->remote_address)) {
             if (cl->state == cs_zombie) {
-                strcpy(reconnect_var, cl->reconnect_var);
-                strcpy(reconnect_val, cl->reconnect_val);
+                strcpy(params->reconnect_var, cl->reconnect_var);
+                strcpy(params->reconnect_val, cl->reconnect_val);
             } else {
                 SV_DropClient(cl, "reconnected");
             }
 
             Com_DPrintf("%s: reconnect\n", NET_AdrToString(&net_from));
             SV_RemoveClient(cl);
-            newcl = cl;
-            break;
+            return cl;
         }
     }
 
-    // find a client slot
-    if (!newcl) {
-        // check for forced redirect to a different address
-        if (sv_redirect_address->string[0] == '!' &&
-            (!sv_reserved_slots->integer || reserved)) {
-            send_redirect_hack(sv_redirect_address->string + 1);
-            Com_DPrintf("    rejected - forced redirect.\n");
-            return;
-        }
-        lastcl = svs.client_pool + sv_maxclients->integer - reserved;
-        for (newcl = svs.client_pool; newcl < lastcl; newcl++) {
-            if (!newcl->state) {
-                break;
-            }
-        }
-        if (newcl == lastcl) {
-            if (sv_reserved_slots->integer && !reserved) {
-                SV_OobPrintf("Server and reserved slots are full.\n");
-                Com_DPrintf("    rejected - reserved slots are full.\n");
-            } else {
-                // optionally redirect them to a different address
-                if (sv_redirect_address->string[0]) {
-                    send_redirect_hack(sv_redirect_address->string);
-                } else {
-                    SV_OobPrintf("Server is full.\n");
-                }
-                Com_DPrintf("    rejected - server is full.\n");
-            }
-            return;
+    // check for forced redirect to a different address
+    s = sv_redirect_address->string;
+    if (*s == '!' && sv_reserved_slots->integer == params->reserved)
+        return redirect(s + 1), NULL;
+
+    // find a free client slot
+    for (i = 0; i < sv_maxclients->integer - params->reserved; i++) {
+        cl = &svs.client_pool[i];
+        if (cl->state == cs_free)
+            return cl;
+    }
+
+    // clients that know the password are never redirected
+    if (sv_reserved_slots->integer != params->reserved)
+        return reject("Server and reserved slots are full.\n"), NULL;
+
+    // optionally redirect them to a different address
+    if (*s)
+        return redirect(s), NULL;
+
+    return reject("Server is full.\n"), NULL;
+}
+
+static void init_pmove_and_es_flags(client_t *newcl)
+{
+    int force;
+
+    // copy default pmove parameters
+    newcl->pmp = sv_pmp;
+    newcl->pmp.airaccelerate = sv_airaccelerate->integer ? qtrue : qfalse;
+
+    // common extensions
+    force = 2;
+    if (newcl->protocol >= PROTOCOL_VERSION_R1Q2) {
+        newcl->pmp.speedmult = 2;
+        force = 1;
+    }
+    newcl->pmp.strafehack = sv_strafejump_hack->integer >= force ? qtrue : qfalse;
+
+    // r1q2 extensions
+    if (newcl->protocol == PROTOCOL_VERSION_R1Q2) {
+        newcl->esFlags |= MSG_ES_BEAMORIGIN;
+        if (newcl->version >= PROTOCOL_VERSION_R1Q2_LONG_SOLID) {
+            newcl->esFlags |= MSG_ES_LONGSOLID;
         }
     }
+
+    // q2pro extensions
+    force = 2;
+    if (newcl->protocol == PROTOCOL_VERSION_Q2PRO) {
+        if (sv_qwmod->integer) {
+            PmoveEnableQW(&newcl->pmp);
+        }
+        newcl->pmp.flyhack = qtrue;
+        newcl->pmp.flyfriction = 4;
+        newcl->esFlags |= MSG_ES_UMASK;
+        if (newcl->version >= PROTOCOL_VERSION_Q2PRO_LONG_SOLID) {
+            newcl->esFlags |= MSG_ES_LONGSOLID;
+        }
+        if (newcl->version >= PROTOCOL_VERSION_Q2PRO_BEAM_ORIGIN) {
+            newcl->esFlags |= MSG_ES_BEAMORIGIN;
+        }
+        if (newcl->version >= PROTOCOL_VERSION_Q2PRO_WATERJUMP_HACK) {
+            force = 1;
+        }
+    }
+    newcl->pmp.waterhack = sv_waterjump_hack->integer >= force ? qtrue : qfalse;
+}
+
+static void send_connect_packet(client_t *newcl, int nctype)
+{
+    const char *ncstring    = "";
+    const char *acstring    = "";
+    const char *dlstring1   = "";
+    const char *dlstring2   = "";
+
+    if (newcl->protocol == PROTOCOL_VERSION_Q2PRO) {
+        if (nctype == NETCHAN_NEW)
+            ncstring = " nc=1";
+        else
+            ncstring = " nc=0";
+    }
+
+#if USE_AC_SERVER
+    if (!sv_force_reconnect->string[0] || newcl->reconnect_var[0])
+        acstring = AC_ClientConnect(newcl);
+#endif
+
+    if (sv_downloadserver->string[0]) {
+        dlstring1 = " dlserver=";
+        dlstring2 = sv_downloadserver->string;
+    }
+
+    Netchan_OutOfBand(NS_SERVER, &net_from, "client_connect%s%s%s%s map=%s",
+                      ncstring, acstring, dlstring1, dlstring2, newcl->mapname);
+}
+
+static void SVC_DirectConnect(void)
+{
+    char            userinfo[MAX_INFO_STRING];
+    conn_params_t   params;
+    client_t        *newcl;
+    int             number;
+    qboolean        allow;
+    char            *reason;
+
+    memset(&params, 0, sizeof(params));
+
+    // parse and validate parameters
+    if (!parse_basic_params(&params))
+        return;
+    if (!permit_connection(&params))
+        return;
+    if (!parse_packet_length(&params))
+        return;
+    if (!parse_enhanced_params(&params))
+        return;
+    if (!parse_userinfo(&params, userinfo))
+        return;
+
+    // find a free client slot
+    newcl = find_client_slot(&params);
+    if (!newcl)
+        return;
+
+    number = newcl - svs.client_pool;
 
     // build a new connection
     // accept the new client
     // this is the only place a client_t is ever initialized
     memset(newcl, 0, sizeof(*newcl));
-    number = newcl - svs.client_pool;
     newcl->number = newcl->slot = number;
-    newcl->challenge = challenge; // save challenge for checksumming
-    newcl->protocol = protocol;
-    newcl->version = version;
-    newcl->has_zlib = has_zlib;
+    newcl->challenge = params.challenge; // save challenge for checksumming
+    newcl->protocol = params.protocol;
+    newcl->version = params.version;
+    newcl->has_zlib = params.has_zlib;
     newcl->edict = EDICT_NUM(number + 1);
     newcl->gamedir = fs_game->string;
     newcl->mapname = sv.name;
@@ -891,53 +980,14 @@ static void SVC_DirectConnect(void)
     newcl->cm = &sv.cm;
     newcl->spawncount = sv.spawncount;
     newcl->maxclients = sv_maxclients->integer;
-    strcpy(newcl->reconnect_var, reconnect_var);
-    strcpy(newcl->reconnect_val, reconnect_val);
+    strcpy(newcl->reconnect_var, params.reconnect_var);
+    strcpy(newcl->reconnect_val, params.reconnect_val);
 #if USE_FPS
     newcl->framediv = sv.framediv;
     newcl->settings[CLS_FPS] = BASE_FRAMERATE;
 #endif
 
-    // copy default pmove parameters
-    newcl->pmp = sv_pmp;
-    newcl->pmp.airaccelerate = sv_airaccelerate->integer ? qtrue : qfalse;
-
-    // r1q2 extensions
-    i = 2;
-    if (protocol == PROTOCOL_VERSION_R1Q2 ||
-        protocol == PROTOCOL_VERSION_Q2PRO) {
-        newcl->pmp.speedmult = 2;
-        i = 1;
-    }
-    newcl->pmp.strafehack = sv_strafejump_hack->integer >= i ? qtrue : qfalse;
-
-    if (protocol == PROTOCOL_VERSION_R1Q2) {
-        newcl->esFlags |= MSG_ES_BEAMORIGIN;
-        if (version >= PROTOCOL_VERSION_R1Q2_LONG_SOLID) {
-            newcl->esFlags |= MSG_ES_LONGSOLID;
-        }
-    }
-
-    // q2pro extensions
-    i = 2;
-    if (protocol == PROTOCOL_VERSION_Q2PRO) {
-        if (sv_qwmod->integer) {
-            PmoveEnableQW(&newcl->pmp);
-        }
-        newcl->pmp.flyhack = qtrue;
-        newcl->pmp.flyfriction = 4;
-        newcl->esFlags |= MSG_ES_UMASK;
-        if (version >= PROTOCOL_VERSION_Q2PRO_LONG_SOLID) {
-            newcl->esFlags |= MSG_ES_LONGSOLID;
-        }
-        if (version >= PROTOCOL_VERSION_Q2PRO_BEAM_ORIGIN) {
-            newcl->esFlags |= MSG_ES_BEAMORIGIN;
-        }
-        if (version >= PROTOCOL_VERSION_Q2PRO_WATERJUMP_HACK) {
-            i = 1;
-        }
-    }
-    newcl->pmp.waterhack = sv_waterjump_hack->integer >= i ? qtrue : qfalse;
+    init_pmove_and_es_flags(newcl);
 
     // get the game a chance to reject this connection or modify the userinfo
     sv_client = newcl;
@@ -946,50 +996,32 @@ static void SVC_DirectConnect(void)
     sv_client = NULL;
     sv_player = NULL;
     if (!allow) {
-        char *reason;
-
         reason = Info_ValueForKey(userinfo, "rejmsg");
         if (*reason) {
-            SV_OobPrintf("%s\nConnection refused.\n", reason);
+            reject("%s\nConnection refused.\n", reason);
         } else {
-            SV_OobPrintf("Connection refused.\n");
+            reject("Connection refused.\n");
         }
-        Com_DPrintf("    game rejected a connection.\n");
         return;
     }
 
     // setup netchan
-    newcl->netchan = Netchan_Setup(NS_SERVER, nctype, &net_from,
-                                   qport, maxlength, protocol);
+    newcl->netchan = Netchan_Setup(NS_SERVER, params.nctype,
+                                   &net_from, params.qport,
+                                   params.maxlength,
+                                   params.protocol);
     newcl->numpackets = 1;
 
     // parse some info from the info strings
     Q_strlcpy(newcl->userinfo, userinfo, sizeof(newcl->userinfo));
     SV_UserinfoChanged(newcl);
 
-#if USE_AC_SERVER
-    if (!sv_force_reconnect->string[0] || reconnect_var[0]) {
-        acstring = AC_ClientConnect(newcl);
-    } else
-#endif
-    {
-        acstring = "";
-    }
-
-    if (sv_downloadserver->string[0]) {
-        Q_snprintf(dlstring, sizeof(dlstring), " dlserver=%s",
-                   sv_downloadserver->string);
-    } else {
-        dlstring[0] = 0;
-    }
-
     // send the connect packet to the client
-    Netchan_OutOfBand(NS_SERVER, &net_from, "client_connect%s%s%s map=%s",
-                      ncstring, acstring, dlstring, newcl->mapname);
+    send_connect_packet(newcl, params.nctype);
 
     SV_InitClientSend(newcl);
 
-    if (protocol == PROTOCOL_VERSION_DEFAULT) {
+    if (newcl->protocol == PROTOCOL_VERSION_DEFAULT) {
         newcl->WriteFrame = SV_WriteFrameToClient_Default;
     } else {
         newcl->WriteFrame = SV_WriteFrameToClient_Enhanced;
@@ -1046,7 +1078,8 @@ static void SVC_RemoteCommand(void)
     if (i == 0) {
         Com_Printf("Invalid rcon from %s:\n%s\n",
                    NET_AdrToString(&net_from), string);
-        SV_OobPrintf("Bad rcon_password.\n");
+        Netchan_OutOfBand(NS_SERVER, &net_from,
+                          "print\nBad rcon_password.\n");
         svs.ratelimit_rcon.count++;
         return;
     }
