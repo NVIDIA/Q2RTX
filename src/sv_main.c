@@ -158,6 +158,44 @@ void SV_CleanClient(client_t *client)
     }
 }
 
+static void print_drop_reason(client_t *client, const char *reason, clstate_t oldstate)
+{
+    int announce = oldstate == cs_spawned ? 2 : 1;
+    const char *prefix = " was dropped: ";
+
+    // parse flags
+    if (*reason == '!') {
+        reason++;
+        announce = 0;
+    }
+    if (*reason == '?') {
+        reason++;
+        prefix = " ";
+    }
+
+    if (announce == 2) {
+        // announce to others
+#if USE_MVD_CLIENT
+        if (sv.state == ss_broadcast)
+            MVD_GameClientDrop(client->edict, prefix, reason);
+        else
+#endif
+            SV_BroadcastPrintf(PRINT_HIGH, "%s%s%s\n",
+                               client->name, prefix, reason);
+    }
+
+    if (announce)
+        // print this to client as they will not receive broadcast
+        SV_ClientPrintf(client, PRINT_HIGH, "%s%s%s\n",
+                        client->name, prefix, reason);
+
+    // print to server console
+    if (Com_IsDedicated() && client->netchan)
+        Com_Printf("%s[%s]%s%s\n", client->name,
+                   NET_AdrToString(&client->netchan->remote_address),
+                   prefix, reason);
+}
+
 /*
 =====================
 SV_DropClient
@@ -169,50 +207,18 @@ or crashing.
 */
 void SV_DropClient(client_t *client, const char *reason)
 {
-    int oldstate = client->state;
+    clstate_t oldstate;
 
-    if (client->state <= cs_zombie) {
+    if (client->state <= cs_zombie)
         return; // called recursively?
-    }
 
+    oldstate = client->state;
     client->state = cs_zombie;        // become free in a few seconds
     client->lastmessage = svs.realtime;
 
-    if (reason) {
-        qboolean announce = oldstate == cs_spawned ? 2 : 1;
-        const char *prefix = " was dropped: ";
-
-        // parse flags
-        if (*reason == '!') {
-            reason++;
-            announce = 0;
-        }
-        if (*reason == '?') {
-            reason++;
-            prefix = " ";
-        }
-
-        if (announce == 2) {
-            // announce to others
-#if USE_MVD_CLIENT
-            if (sv.state == ss_broadcast)
-                MVD_GameClientDrop(client->edict, prefix, reason);
-            else
-#endif
-                SV_BroadcastPrintf(PRINT_HIGH, "%s%s%s\n",
-                                   client->name, prefix, reason);
-        }
-
-        if (announce)
-            // print this to client as they will not receive broadcast
-            SV_ClientPrintf(client, PRINT_HIGH, "%s%s%s\n",
-                            client->name, prefix, reason);
-
-        // print to server console
-        if (Com_IsDedicated() && client->netchan)
-            Com_Printf("%s[%s]%s%s\n", client->name,
-                       NET_AdrToString(&client->netchan->remote_address), prefix, reason);
-    }
+    // print the reason
+    if (reason)
+        print_drop_reason(client, reason, oldstate);
 
     // add the disconnect
     MSG_WriteByte(svc_disconnect);
