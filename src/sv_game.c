@@ -568,7 +568,7 @@ static void PF_StartSound(edict_t *edict, int channel,
                 }
             }
             BSP_ClusterVis(sv.cm.cache, mask, leaf->cluster, DVIS_PHS);
-            if (!SV_EdictPV(&sv.cm, edict, mask)) {
+            if (!SV_EdictIsVisible(&sv.cm, edict, mask)) {
                 continue; // not in PHS
             }
         }

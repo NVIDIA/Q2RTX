@@ -327,28 +327,6 @@ Build a client frame structure
 =============================================================================
 */
 
-qboolean SV_EdictPV(cm_t *cm, edict_t *ent, byte *mask)
-{
-    mnode_t *node;
-    int i, l;
-
-    if (ent->num_clusters == -1) {
-        // too many leafs for individual check, go by headnode
-        node = CM_NodeNum(cm, ent->headnode);
-        return CM_HeadnodeVisible(node, mask);
-    }
-
-    // check individual leafs
-    for (i = 0; i < ent->num_clusters; i++) {
-        l = ent->clusternums[i];
-        if (Q_IsBitSet(mask, l)) {
-            return qtrue;
-        }
-    }
-
-    return qfalse;        // not visible
-}
-
 #if USE_FPS
 static void
 fix_old_origin(client_t *client, entity_state_t *state, edict_t *ent, int e)
@@ -504,7 +482,7 @@ void SV_BuildClientFrame(client_t *client)
                 if (!Q_IsBitSet(clientphs, l))
                     continue;
             } else {
-                if (!SV_EdictPV(client->cm, ent, clientpvs)) {
+                if (!SV_EdictIsVisible(client->cm, ent, clientpvs)) {
                     continue;
                 }
 

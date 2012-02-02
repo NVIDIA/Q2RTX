@@ -655,7 +655,6 @@ void SV_BuildProxyClientFrame(client_t *client);
 void SV_BuildClientFrame(client_t *client);
 void SV_WriteFrameToClient_Default(client_t *client);
 void SV_WriteFrameToClient_Enhanced(client_t *client);
-qboolean SV_EdictPV(cm_t *cm, edict_t *ent, byte *mask);
 
 //
 // sv_game.c
@@ -704,6 +703,8 @@ int SV_AreaEdicts(vec3_t mins, vec3_t maxs, edict_t **list, int maxcount, int ar
 // test.
 // returns the number of pointers filled in
 // ??? does this always return the world?
+
+qboolean SV_EdictIsVisible(cm_t *cm, edict_t *ent, byte *mask);
 
 //===================================================================
 

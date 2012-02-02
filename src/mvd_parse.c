@@ -551,7 +551,7 @@ static void MVD_ParseSound(mvd_t *mvd, int extrabits)
                 }
             }
             BSP_ClusterVis(mvd->cm.cache, mask, leaf->cluster, DVIS_PHS);
-            if (!SV_EdictPV(&mvd->cm, entity, mask)) {
+            if (!SV_EdictIsVisible(&mvd->cm, entity, mask)) {
                 continue; // not in PHS
             }
         }
