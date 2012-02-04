@@ -34,30 +34,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "sys_public.h"
 #include "sv_public.h"
 #include "cl_public.h"
-#include "io_sleep.h"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <winsock2.h>
-#define socklen_t int
-#define IOCTLSOCKET_PARAM u_long
-#define SETSOCKOPT_PARAM BOOL
-#ifdef _WIN32_WCE
-#define NET_GET_ERROR()     (net_error = GetLastError())
-#else
-#define NET_GET_ERROR()     (net_error = WSAGetLastError())
-#define NET_WOULD_BLOCK()   (NET_GET_ERROR() == WSAEWOULDBLOCK)
-#endif
 #else // _WIN32
 #include <unistd.h>
+#include <sys/types.h>
 #include <sys/socket.h>
-#include <sys/time.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <sys/param.h>
 #include <sys/ioctl.h>
-#include <sys/uio.h>
 #include <arpa/inet.h>
 #ifdef __linux__
 #include <linux/types.h>
@@ -65,19 +54,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <linux/errqueue.h>
 #endif
 #endif // __linux__
-#define SOCKET int
-#define INVALID_SOCKET -1
-#define closesocket close
-#define ioctlsocket ioctl
-#define IOCTLSOCKET_PARAM int
-#define SETSOCKOPT_PARAM int
-#define NET_GET_ERROR()     (net_error = errno)
-#define NET_WOULD_BLOCK()   (NET_GET_ERROR() == EWOULDBLOCK)
 #endif // !_WIN32
+
+// prevents infinite retry loops caused by broken TCP/IP stacks
+#define MAX_ERROR_RETRIES   64
 
 #if USE_CLIENT
 
-#define    MAX_LOOPBACK    4
+#define MAX_LOOPBACK    4
 
 typedef struct {
     byte    data[MAX_PACKETLEN];
@@ -85,14 +69,14 @@ typedef struct {
 } loopmsg_t;
 
 typedef struct {
-    loopmsg_t   msgs[MAX_LOOPBACK];
-    unsigned    get;
-    unsigned    send;
+    loopmsg_t       msgs[MAX_LOOPBACK];
+    unsigned long   get;
+    unsigned long   send;
 } loopback_t;
 
 static loopback_t   loopbacks[NS_COUNT];
 
-#endif
+#endif // USE_CLIENT
 
 cvar_t          *net_ip;
 cvar_t          *net_port;
@@ -121,12 +105,15 @@ static cvar_t   *net_ignore_icmp;
 static netflag_t    net_active;
 static int          net_error;
 
-static const char   socketNames[NS_COUNT][8] = { "Client", "Server" };
-static SOCKET       udp_sockets[NS_COUNT] = { INVALID_SOCKET, INVALID_SOCKET };
-static SOCKET       tcp_socket = INVALID_SOCKET;
+static qsocket_t    udp_sockets[NS_COUNT] = { -1, -1 };
+static qsocket_t    tcp_socket = -1;
+
 #ifdef _DEBUG
 static qhandle_t    net_logFile;
 #endif
+
+static ioentry_t    io_entries[FD_SETSIZE];
+static int          io_numfds;
 
 // current rate measurement
 static unsigned     net_rate_time;
@@ -148,11 +135,6 @@ static uint64_t     net_packets_sent;
 
 //=============================================================================
 
-/*
-===================
-NET_NetadrToSockadr
-===================
-*/
 static void NET_NetadrToSockadr(const netadr_t *a, struct sockaddr_in *s)
 {
     memset(s, 0, sizeof(*s));
@@ -174,11 +156,6 @@ static void NET_NetadrToSockadr(const netadr_t *a, struct sockaddr_in *s)
     }
 }
 
-/*
-===================
-NET_SockadrToNetadr
-===================
-*/
 static void NET_SockadrToNetadr(const struct sockaddr_in *s, netadr_t *a)
 {
     memset(a, 0, sizeof(*a));
@@ -188,36 +165,17 @@ static void NET_SockadrToNetadr(const struct sockaddr_in *s, netadr_t *a)
     a->port = s->sin_port;
 }
 
-/*
-=============
-NET_StringToSockaddr
-
-localhost
-idnewt
-idnewt:28000
-192.246.40.70
-192.246.40.70:28000
-=============
-*/
 static qboolean NET_StringToSockaddr(const char *s, struct sockaddr_in *sadr)
 {
+    uint32_t addr;
     struct hostent *h;
-    char copy[MAX_QPATH], *p;
+    const char *p;
     int dots;
 
     memset(sadr, 0, sizeof(*sadr));
-
     sadr->sin_family = AF_INET;
-    sadr->sin_port = 0;
 
-    Q_strlcpy(copy, s, sizeof(copy));
-    // strip off a trailing :port if present
-    p = strchr(copy, ':');
-    if (p) {
-        *p = 0;
-        sadr->sin_port = htons((u_short)atoi(p + 1));
-    }
-    for (p = copy, dots = 0; *p; p++) {
+    for (p = s, dots = 0; *p; p++) {
         if (*p == '.') {
             dots++;
         } else if (!Q_isdigit(*p)) {
@@ -225,14 +183,11 @@ static qboolean NET_StringToSockaddr(const char *s, struct sockaddr_in *sadr)
         }
     }
     if (*p == 0 && dots <= 3) {
-        uint32_t addr = inet_addr(copy);
-
-        if (addr == INADDR_NONE) {
+        if ((addr = inet_addr(s)) == INADDR_NONE)
             return qfalse;
-        }
         sadr->sin_addr.s_addr = addr;
     } else {
-        if (!(h = gethostbyname(copy)))
+        if (!(h = gethostbyname(s)))
             return qfalse;
         sadr->sin_addr.s_addr = *(uint32_t *)h->h_addr_list[0];
     }
@@ -240,6 +195,23 @@ static qboolean NET_StringToSockaddr(const char *s, struct sockaddr_in *sadr)
     return qtrue;
 }
 
+static qboolean NET_StringToSockaddr2(const char *s, int port, struct sockaddr_in *sadr)
+{
+    if (*s) {
+        if (!NET_StringToSockaddr(s, sadr))
+            return qfalse;
+    } else {
+        // empty string binds to all interfaces
+        memset(sadr, 0, sizeof(*sadr));
+        sadr->sin_family = AF_INET;
+        sadr->sin_addr.s_addr = INADDR_ANY;
+    }
+
+    if (port != PORT_ANY)
+        sadr->sin_port = htons((u_short)port);
+
+    return qtrue;
+}
 
 /*
 ===================
@@ -249,7 +221,6 @@ NET_AdrToString
 char *NET_AdrToString(const netadr_t *a)
 {
     static char s[MAX_QPATH];
-    const uint8_t *ip;
 
     switch (a->type) {
     case NA_LOOPBACK:
@@ -257,9 +228,10 @@ char *NET_AdrToString(const netadr_t *a)
         return s;
     case NA_IP:
     case NA_BROADCAST:
-        ip = a->ip.u8;
         Q_snprintf(s, sizeof(s), "%u.%u.%u.%u:%u",
-                   ip[0], ip[1], ip[2], ip[3], ntohs(a->port));
+                   a->ip.u8[0], a->ip.u8[1],
+                   a->ip.u8[2], a->ip.u8[3],
+                   BigShort(a->port));
         return s;
     default:
         Com_Error(ERR_FATAL, "%s: bad address type", __func__);
@@ -283,16 +255,27 @@ idnewt:28000
 qboolean NET_StringToAdr(const char *s, netadr_t *a, int port)
 {
     struct sockaddr_in sadr;
+    char copy[MAX_STRING_CHARS], *p;
+    size_t len;
 
-    if (!NET_StringToSockaddr(s, &sadr)) {
+    len = Q_strlcpy(copy, s, sizeof(copy));
+    if (len >= sizeof(copy))
         return qfalse;
-    }
+
+    // strip off a trailing :port if present
+    p = strchr(copy, ':');
+    if (p)
+        *p = 0;
+
+    if (!NET_StringToSockaddr(copy, &sadr))
+        return qfalse;
 
     NET_SockadrToNetadr(&sadr, a);
 
-    if (!a->port) {
+    if (p)
+        a->port = BigShort(atoi(p + 1));
+    if (!a->port)
         a->port = BigShort(port);
-    }
 
     return qtrue;
 }
@@ -370,7 +353,8 @@ static void NET_LogPacket(const netadr_t *address, const char *prefix,
         return;
     }
 
-    FS_FPrintf(net_logFile, "%s : %s\n", prefix, NET_AdrToString(address));
+    FS_FPrintf(net_logFile, "%u : %s : %s : %"PRIz" bytes\n",
+               com_localTime, prefix, NET_AdrToString(address), length);
 
     numRows = (length + 15) / 16;
     for (i = 0; i < numRows; i++) {
@@ -386,7 +370,7 @@ static void NET_LogPacket(const netadr_t *address, const char *prefix,
         for (j = 0; j < 16; j++) {
             if (i * 16 + j < length) {
                 c = data[i * 16 + j];
-                FS_FPrintf(net_logFile, "%c", (c < 32 || c > 127) ? '.' : c);
+                FS_FPrintf(net_logFile, "%c", Q_isprint(c) ? c : '.');
             } else {
                 FS_FPrintf(net_logFile, " ");
             }
@@ -399,9 +383,11 @@ static void NET_LogPacket(const netadr_t *address, const char *prefix,
 
 #endif
 
+//=============================================================================
+
 #define RATE_SECS    3
 
-static void NET_UpdateStats(void)
+void NET_UpdateStats(void)
 {
     unsigned diff;
 
@@ -419,1044 +405,6 @@ static void NET_UpdateStats(void)
     net_rate_sent = 0;
     net_rate_rcvd = 0;
 }
-
-
-#if USE_CLIENT
-
-/*
-=============
-NET_GetLoopPacket
-=============
-*/
-qboolean NET_GetLoopPacket(netsrc_t sock)
-{
-    loopback_t *loop;
-    loopmsg_t *loopmsg;
-
-    NET_UpdateStats();
-
-    loop = &loopbacks[sock];
-
-    if (loop->send - loop->get > MAX_LOOPBACK - 1) {
-        loop->get = loop->send - MAX_LOOPBACK + 1;
-    }
-
-    if (loop->get >= loop->send) {
-        return qfalse;
-    }
-
-    loopmsg = &loop->msgs[loop->get & (MAX_LOOPBACK - 1)];
-    loop->get++;
-
-    memcpy(msg_read_buffer, loopmsg->data, loopmsg->datalen);
-
-#ifdef _DEBUG
-    if (net_log_enable->integer) {
-        NET_LogPacket(&net_from, "LP recv", loopmsg->data, loopmsg->datalen);
-    }
-#endif
-    if (sock == NS_CLIENT) {
-        net_rate_rcvd += loopmsg->datalen;
-    }
-
-    SZ_Init(&msg_read, msg_read_buffer, sizeof(msg_read_buffer));
-    msg_read.cursize = loopmsg->datalen;
-
-    return qtrue;
-}
-
-#endif
-
-#if USE_ICMP
-
-// prevents infinite retry loops caused by broken TCP/IP stacks
-#define MAX_ERROR_RETRIES   64
-
-static void icmp_error_event(netsrc_t sock, int info)
-{
-    if (net_ignore_icmp->integer > 0) {
-        return;
-    }
-
-    Com_DPrintf("%s: %s from %s\n", __func__,
-                NET_ErrorString(), NET_AdrToString(&net_from));
-    net_icmp_errors++;
-
-    switch (sock) {
-    case NS_SERVER:
-        SV_ErrorEvent(info);
-        break;
-#if USE_CLIENT
-    case NS_CLIENT:
-        CL_ErrorEvent();
-        break;
-#endif
-    default:
-        break;
-    }
-}
-
-#ifdef __linux__
-
-// Linux at least supports receiving ICMP errors on unconnected UDP sockets
-// via IP_RECVERR cruft below... What about BSD?
-//
-// Returns true if failed socket operation should be retried, extremely hacky :/
-static qboolean process_error_queue(netsrc_t sock, struct sockaddr_in *to)
-{
-    byte buffer[1024];
-    struct sockaddr_in from;
-    struct msghdr msg;
-    struct cmsghdr *cmsg;
-    struct sock_extended_err *ee;
-    int info;
-    int tries;
-    qboolean found;
-
-    tries = 0;
-    found = qfalse;
-
-retry:
-    memset(&from, 0, sizeof(from));
-
-    memset(&msg, 0, sizeof(msg));
-    msg.msg_name = &from;
-    msg.msg_namelen = sizeof(from);
-    msg.msg_control = buffer;
-    msg.msg_controllen = sizeof(buffer);
-
-    if (recvmsg(udp_sockets[sock], &msg, MSG_ERRQUEUE) == -1) {
-        if (NET_WOULD_BLOCK()) {
-            // wouldblock is silent
-            goto finish;
-        }
-        Com_EPrintf("%s: %s\n", __func__, NET_ErrorString());
-        goto finish;
-    }
-
-    if (!(msg.msg_flags & MSG_ERRQUEUE)) {
-        Com_DPrintf("%s: no extended error received\n", __func__);
-        goto finish;
-    }
-
-    // find an ICMP error message
-    for (cmsg = CMSG_FIRSTHDR(&msg);
-         cmsg != NULL;
-         cmsg = CMSG_NXTHDR(&msg, cmsg)) {
-        if (cmsg->cmsg_level != IPPROTO_IP) {
-            continue;
-        }
-        if (cmsg->cmsg_type != IP_RECVERR) {
-            continue;
-        }
-        ee = (struct sock_extended_err *)CMSG_DATA(cmsg);
-        if (ee->ee_origin == SO_EE_ORIGIN_ICMP) {
-            break;
-        }
-    }
-
-    if (!cmsg) {
-        Com_DPrintf("%s: no ICMP error found\n", __func__);
-        goto finish;
-    }
-
-    NET_SockadrToNetadr(&from, &net_from);
-
-    // check if this error was caused by a packet sent to the given address
-    // if so, do not retry send operation to prevent infinite loop
-    if (to != NULL && from.sin_addr.s_addr == to->sin_addr.s_addr &&
-        (!from.sin_port || from.sin_port == to->sin_port)) {
-        Com_DPrintf("%s: found offending address %s:%d\n",
-                    __func__, inet_ntoa(from.sin_addr), BigShort(from.sin_port));
-        found = qtrue;
-    }
-
-    // handle ICMP errors
-    net_error = ee->ee_errno;
-    info = 0;
-#if USE_PMTUDISC
-    // for EMSGSIZE ee_info should hold discovered MTU
-    if (net_error == EMSGSIZE && ee->ee_info >= 576 && ee->ee_info < 4096) {
-        info = ee->ee_info;
-    }
-#endif
-    icmp_error_event(sock, info);
-
-    if (++tries < MAX_ERROR_RETRIES) {
-        goto retry;
-    }
-
-finish:
-    return !!tries && !found;
-}
-
-#endif // __linux__
-
-#endif // USE_ICMP
-
-/*
-=============
-NET_GetPacket
-
-Fills msg_read_buffer with packet contents,
-net_from variable receives source address.
-=============
-*/
-qboolean NET_GetPacket(netsrc_t sock)
-{
-    struct sockaddr_in from;
-    socklen_t fromlen;
-    int ret;
-#if USE_ICMP
-    int tries;
-#ifndef _WIN32
-    int saved_error;
-#endif
-#endif
-    ioentry_t *e;
-
-    if (udp_sockets[sock] == INVALID_SOCKET) {
-        return qfalse;
-    }
-
-    NET_UpdateStats();
-
-    e = IO_Get(udp_sockets[sock]);
-    if (!e->canread) {
-        return qfalse;
-    }
-
-#if USE_ICMP
-    tries = 0;
-
-retry:
-#endif
-    memset(&from, 0, sizeof(from));
-
-    fromlen = sizeof(from);
-    ret = recvfrom(udp_sockets[sock], (void *)msg_read_buffer,
-                   MAX_PACKETLEN, 0, (struct sockaddr *)&from, &fromlen);
-
-    if (!ret) {
-        return qfalse;
-    }
-
-    NET_SockadrToNetadr(&from, &net_from);
-
-    if (ret == -1) {
-        NET_GET_ERROR();
-
-#ifdef _WIN32
-        switch (net_error) {
-        case WSAEWOULDBLOCK:
-            // wouldblock is silent
-            e->canread = qfalse;
-            break;
-#if USE_ICMP
-        case WSAECONNRESET:
-        case WSAENETRESET:
-            // winsock has already provided us with
-            // a valid address from ICMP error packet
-            icmp_error_event(sock, 0);
-            if (++tries < MAX_ERROR_RETRIES) {
-                goto retry;
-            }
-            // intentional fallthrough
-#endif // USE_ICMP
-        default:
-            Com_DPrintf("%s: %s from %s\n", __func__,
-                        NET_ErrorString(), NET_AdrToString(&net_from));
-            net_recv_errors++;
-            break;
-        }
-#else // _WIN32
-        switch (net_error) {
-        case EWOULDBLOCK:
-            // wouldblock is silent
-            e->canread = qfalse;
-            break;
-        default:
-#if USE_ICMP
-            saved_error = net_error;
-            // recvfrom() fails on Linux if there's an ICMP originated
-            // pending error on socket. suck up error queue and retry...
-            if (process_error_queue(sock, NULL)) {
-                if (++tries < MAX_ERROR_RETRIES) {
-                    goto retry;
-                }
-            }
-            net_error = saved_error;
-#endif
-            Com_DPrintf("%s: %s from %s\n", __func__,
-                        NET_ErrorString(), NET_AdrToString(&net_from));
-            net_recv_errors++;
-            break;
-        }
-#endif // !_WIN32
-        return qfalse;
-    }
-
-    if (ret > MAX_PACKETLEN) {
-        Com_EPrintf("%s: oversize packet from %s\n", __func__,
-                    NET_AdrToString(&net_from));
-        return qfalse;
-    }
-
-#ifdef _DEBUG
-    if (net_log_enable->integer) {
-        NET_LogPacket(&net_from, "UDP recv", msg_read_buffer, ret);
-    }
-#endif
-
-    SZ_Init(&msg_read, msg_read_buffer, sizeof(msg_read_buffer));
-    msg_read.cursize = ret;
-    net_rate_rcvd += ret;
-    net_bytes_rcvd += ret;
-    net_packets_rcvd++;
-
-    return qtrue;
-}
-
-//=============================================================================
-
-/*
-=============
-NET_SendPacket
-
-=============
-*/
-qboolean NET_SendPacket(netsrc_t sock, const netadr_t *to, size_t length, const void *data)
-{
-    struct sockaddr_in addr;
-    int ret;
-#if USE_ICMP && (defined __linux__)
-    int tries;
-    int saved_error;
-#endif
-
-    if (!length) {
-        return qfalse;
-    }
-
-    if (length > MAX_PACKETLEN) {
-        Com_EPrintf("%s: oversize packet to %s\n", __func__,
-                    NET_AdrToString(to));
-        return qfalse;
-    }
-
-    switch (to->type) {
-#if USE_CLIENT
-    case NA_LOOPBACK: {
-        loopback_t *loop;
-        loopmsg_t *msg;
-
-        if (net_dropsim->integer > 0 &&
-            (rand() % 100) < net_dropsim->integer) {
-            return NET_AGAIN;
-        }
-
-        loop = &loopbacks[sock ^ 1];
-
-        msg = &loop->msgs[loop->send & (MAX_LOOPBACK - 1)];
-        loop->send++;
-
-        memcpy(msg->data, data, length);
-        msg->datalen = length;
-
-#ifdef _DEBUG
-        if (net_log_enable->integer) {
-            NET_LogPacket(to, "LB send", data, length);
-        }
-#endif
-        if (sock == NS_CLIENT) {
-            net_rate_sent += length;
-        }
-    }
-    return qtrue;
-#endif
-    case NA_IP:
-    case NA_BROADCAST:
-        break;
-    default:
-        Com_Error(ERR_FATAL, "%s: bad address type", __func__);
-        break;
-    }
-
-    if (udp_sockets[sock] == INVALID_SOCKET) {
-        return qfalse;
-    }
-
-    NET_NetadrToSockadr(to, &addr);
-
-#if USE_ICMP && (defined __linux__)
-    tries = 0;
-
-retry:
-#endif
-    ret = sendto(udp_sockets[sock], data, length, 0,
-                 (struct sockaddr *)&addr, sizeof(addr));
-    if (ret == -1) {
-        NET_GET_ERROR();
-
-#ifdef _WIN32
-        switch (net_error) {
-        case WSAEWOULDBLOCK:
-        case WSAEINTR:
-            // wouldblock is silent
-            break;
-        case WSAEADDRNOTAVAIL:
-            // some PPP links do not allow broadcasts
-            if (to->type == NA_BROADCAST) {
-                break;
-            }
-            // intentional fallthrough
-        default:
-            Com_DPrintf("%s: %s to %s\n", __func__,
-                        NET_ErrorString(), NET_AdrToString(to));
-            net_send_errors++;
-            break;
-        }
-#else // _WIN32
-        switch (net_error) {
-        case EWOULDBLOCK:
-            // wouldblock is silent
-            break;
-        default:
-#if USE_ICMP
-            saved_error = net_error;
-            // sendto() fails on Linux if there's an ICMP originated
-            // pending error on socket. suck up error queue and retry...
-            //
-            // this one is especially lame - how do I distingiush between
-            // a failure caused by completely unrelated ICMP error sitting
-            // in the queue and an error explicit to this sendto() call?
-            //
-            // on one hand, I don't want to drop packets to legitimate
-            // clients because of this, and have to retry sendto() after
-            // processing error queue, on another hand, infinite loop should be
-            // avoided if this sendto() regenerates a message in error queue
-            //
-            // this mess is worked around by passing destination address
-            // to process_error_queue() and checking if this address/port
-            // pair is found in the queue. if it is found, or the queue
-            // is empty, do not retry
-            if (process_error_queue(sock, &addr)) {
-                if (++tries < MAX_ERROR_RETRIES) {
-                    goto retry;
-                }
-            }
-            net_error = saved_error;
-#endif
-            Com_DPrintf("%s: %s to %s\n", __func__,
-                        NET_ErrorString(), NET_AdrToString(to));
-            net_send_errors++;
-            break;
-        }
-#endif // !_WIN32
-        return qfalse;
-    }
-
-    if (ret != length) {
-        Com_WPrintf("%s: short send to %s\n", __func__,
-                    NET_AdrToString(to));
-    }
-
-#ifdef _DEBUG
-    if (net_log_enable->integer) {
-        NET_LogPacket(to, "UDP send", data, ret);
-    }
-#endif
-    net_rate_sent += ret;
-    net_bytes_sent += ret;
-    net_packets_sent++;
-
-    return qtrue;
-}
-
-
-//=============================================================================
-
-const char *NET_ErrorString(void)
-{
-#ifdef _WIN32
-    switch (net_error) {
-    case S_OK:
-        return "NO ERROR";
-    default:
-        return "UNKNOWN ERROR";
-#include "wsaerr.h"
-    }
-#else
-    return strerror(net_error);
-#endif
-}
-
-static qboolean get_bind_addr(const char *iface, int port, struct sockaddr_in *sadr)
-{
-    if (*iface) {
-        if (!NET_StringToSockaddr(iface, sadr)) {
-            return qfalse;
-        }
-    } else {
-        // empty string binds to all interfaces
-        memset(sadr, 0, sizeof(*sadr));
-        sadr->sin_family = AF_INET;
-        sadr->sin_addr.s_addr = INADDR_ANY;
-    }
-    if (port != PORT_ANY) {
-        sadr->sin_port = htons((u_short)port);
-    }
-
-    return qtrue;
-}
-
-static SOCKET create_socket(int type, int proto)
-{
-    SOCKET ret = socket(PF_INET, type, proto);
-
-    NET_GET_ERROR();
-    return ret;
-}
-
-static int set_option(SOCKET s, int level, int optname, int value)
-{
-    SETSOCKOPT_PARAM _value = value;
-    int ret = setsockopt(s, level, optname, (char *)&_value, sizeof(_value));
-
-    NET_GET_ERROR();
-    return ret;
-}
-
-#define enable_option(s,level,optname)  set_option(s,level,optname,1)
-
-static int make_nonblock(SOCKET s)
-{
-    IOCTLSOCKET_PARAM _true = 1;
-    int ret = ioctlsocket(s, FIONBIO, &_true);
-
-    NET_GET_ERROR();
-    return ret;
-}
-
-static int bind_socket(SOCKET s, struct sockaddr_in *sadr)
-{
-    int ret = bind(s, (struct sockaddr *)sadr, sizeof(*sadr));
-
-    NET_GET_ERROR();
-    return ret;
-}
-
-static SOCKET UDP_OpenSocket(const char *iface, int port)
-{
-    SOCKET              s;
-    struct sockaddr_in  sadr;
-#ifdef __linux__
-    int                 pmtudisc;
-#endif
-
-    Com_DPrintf("Opening UDP socket: %s:%i\n", iface, port);
-
-    s = create_socket(SOCK_DGRAM, IPPROTO_UDP);
-    if (s == INVALID_SOCKET) {
-        Com_EPrintf("%s: %s:%d: can't create socket: %s\n",
-                    __func__, iface, port, NET_ErrorString());
-        return INVALID_SOCKET;
-    }
-
-    // make it non-blocking
-    if (make_nonblock(s) == -1) {
-        Com_EPrintf("%s: %s:%d: can't make socket non-blocking: %s\n",
-                    __func__, iface, port, NET_ErrorString());
-        goto fail;
-    }
-
-    // make it broadcast capable
-    if (enable_option(s, SOL_SOCKET, SO_BROADCAST) == -1) {
-        Com_WPrintf("%s: %s:%d: can't make socket broadcast capable: %s\n",
-                    __func__, iface, port, NET_ErrorString());
-    }
-
-#ifdef __linux__
-    pmtudisc = IP_PMTUDISC_DONT;
-
-#if USE_ICMP
-    // enable ICMP error queue
-    if (net_ignore_icmp->integer <= 0) {
-        if (enable_option(s, IPPROTO_IP, IP_RECVERR) == -1) {
-            Com_WPrintf("%s: %s:%d: can't enable ICMP error queue: %s\n",
-                        __func__, iface, port, NET_ErrorString());
-            Cvar_Set("net_ignore_icmp", "1");
-        }
-
-#if USE_PMTUDISC
-        // overload negative values to enable path MTU discovery
-        switch (net_ignore_icmp->integer) {
-        case -1: pmtudisc = IP_PMTUDISC_WANT; break;
-        case -2: pmtudisc = IP_PMTUDISC_DO; break;
-#ifdef IP_PMTUDISC_PROBE
-        case -3: pmtudisc = IP_PMTUDISC_PROBE; break;
-#endif
-        }
-#endif // USE_PMTUDISC
-    }
-#endif // USE_ICMP
-
-    // disable or enable path MTU discovery
-    if (set_option(s, IPPROTO_IP, IP_MTU_DISCOVER, pmtudisc) == -1) {
-        Com_WPrintf("%s: %s:%d: can't %sable path MTU discovery: %s\n",
-                    __func__, iface, port, pmtudisc == IP_PMTUDISC_DONT ? "dis" : "en",
-                    NET_ErrorString());
-    }
-
-#endif // __linux__
-
-    // resolve iface sadr
-    if (!get_bind_addr(iface, port, &sadr)) {
-        Com_EPrintf("%s: %s:%d: bad interface address\n",
-                    __func__, iface, port);
-        goto fail;
-    }
-
-    if (bind_socket(s, &sadr) == -1) {
-        Com_EPrintf("%s: %s:%d: can't bind socket: %s\n",
-                    __func__, iface, port, NET_ErrorString());
-        goto fail;
-    }
-
-    return s;
-
-fail:
-    closesocket(s);
-    return INVALID_SOCKET;
-}
-
-static SOCKET TCP_OpenSocket(const char *iface, int port, netsrc_t who)
-{
-    SOCKET              s;
-    struct sockaddr_in  sadr;
-
-    Com_DPrintf("Opening TCP socket: %s:%i\n", iface, port);
-
-    s = create_socket(SOCK_STREAM, IPPROTO_TCP);
-    if (s == INVALID_SOCKET) {
-        Com_EPrintf("%s: %s:%d: can't create socket: %s\n",
-                    __func__, iface, port, NET_ErrorString());
-        return INVALID_SOCKET;
-    }
-
-    // make it non-blocking
-    if (make_nonblock(s) == -1) {
-        Com_EPrintf("%s: %s:%d: can't make socket non-blocking: %s\n",
-                    __func__, iface, port, NET_ErrorString());
-        goto fail;
-    }
-
-    // give it a chance to reuse previous port
-    if (who == NS_SERVER) {
-        if (enable_option(s, SOL_SOCKET, SO_REUSEADDR) == -1) {
-            Com_WPrintf("%s: %s:%d: can't force socket to reuse address: %s\n",
-                        __func__, iface, port, NET_ErrorString());
-        }
-    }
-
-    if (!get_bind_addr(iface, port, &sadr)) {
-        Com_EPrintf("%s: %s:%d: bad interface address\n",
-                    __func__, iface, port);
-        goto fail;
-    }
-
-    if (bind_socket(s, &sadr) == -1) {
-        Com_EPrintf("%s: %s:%d: can't bind socket: %s\n",
-                    __func__, iface, port, NET_ErrorString());
-        goto fail;
-    }
-
-    return s;
-
-fail:
-    closesocket(s);
-    return INVALID_SOCKET;
-}
-
-static void NET_OpenServer(void)
-{
-    static int saved_port;
-    ioentry_t *e;
-    SOCKET s;
-
-    s = UDP_OpenSocket(net_ip->string, net_port->integer);
-    if (s != INVALID_SOCKET) {
-        saved_port = net_port->integer;
-        udp_sockets[NS_SERVER] = s;
-        e = IO_Add(s);
-        e->wantread = qtrue;
-        return;
-    }
-
-    if (saved_port && saved_port != net_port->integer) {
-        // revert to the last valid port
-        Com_Printf("Reverting to the last valid port %d...\n", saved_port);
-        Cbuf_AddText(&cmd_buffer, va("set net_port %d\n", saved_port));
-        return;
-    }
-
-#if USE_CLIENT
-    if (!dedicated->integer) {
-        Com_WPrintf("Couldn't open server UDP port.\n");
-        return;
-    }
-#endif
-
-    Com_Error(ERR_FATAL, "Couldn't open dedicated server UDP port");
-}
-
-#if USE_CLIENT
-static void NET_OpenClient(void)
-{
-    ioentry_t *e;
-    SOCKET s;
-    struct sockaddr_in sadr;
-    socklen_t len;
-
-    s = UDP_OpenSocket(net_ip->string, net_clientport->integer);
-    if (s == INVALID_SOCKET) {
-        // now try with random port
-        if (net_clientport->integer != PORT_ANY) {
-            s = UDP_OpenSocket(net_ip->string, PORT_ANY);
-        }
-        if (s == INVALID_SOCKET) {
-            Com_WPrintf("Couldn't open client UDP port.\n");
-            return;
-        }
-        len = sizeof(sadr);
-        getsockname(s, (struct sockaddr *)&sadr, &len);
-        Com_WPrintf("Client bound to UDP port %d.\n", ntohs(sadr.sin_port));
-        Cvar_SetByVar(net_clientport, va("%d", PORT_ANY), FROM_CODE);
-    }
-
-    udp_sockets[NS_CLIENT] = s;
-    e = IO_Add(s);
-    e->wantread = qtrue;
-}
-#endif
-
-//=============================================================================
-
-void NET_Close(netstream_t *s)
-{
-    if (!s->state) {
-        return;
-    }
-
-    IO_Remove(s->socket);
-    closesocket(s->socket);
-    s->socket = INVALID_SOCKET;
-    s->state = NS_DISCONNECTED;
-}
-
-neterr_t NET_Listen(qboolean arg)
-{
-    SOCKET s;
-    ioentry_t *e;
-
-    if (!arg) {
-        if (tcp_socket != INVALID_SOCKET) {
-            IO_Remove(tcp_socket);
-            closesocket(tcp_socket);
-            tcp_socket = INVALID_SOCKET;
-        }
-        return NET_OK;
-    }
-
-    if (tcp_socket != INVALID_SOCKET) {
-        return NET_OK;
-    }
-
-    s = TCP_OpenSocket(net_tcp_ip->string,
-                       net_tcp_port->integer, NS_SERVER);
-    if (s == INVALID_SOCKET) {
-        return NET_ERROR;
-    }
-    if (listen(s, net_tcp_backlog->integer) == -1) {
-        NET_GET_ERROR();
-        closesocket(s);
-        return NET_ERROR;
-    }
-
-    tcp_socket = s;
-    e = IO_Add(s);
-    e->wantread = qtrue;
-
-    return NET_OK;
-}
-
-// net_from variable receives source address
-neterr_t NET_Accept(netstream_t *s)
-{
-    struct sockaddr_in from;
-    socklen_t fromlen;
-    SOCKET newsocket;
-    ioentry_t *e;
-
-    if (tcp_socket == INVALID_SOCKET) {
-        return NET_AGAIN;
-    }
-
-    e = IO_Get(tcp_socket);
-    if (!e->canread) {
-        return NET_AGAIN;
-    }
-
-    memset(&from, 0, sizeof(from));
-    fromlen = sizeof(from);
-    newsocket = accept(tcp_socket, (struct sockaddr *)&from, &fromlen);
-
-    NET_SockadrToNetadr(&from, &net_from);
-
-    if (newsocket == -1) {
-        if (NET_WOULD_BLOCK()) {
-            // wouldblock is silent
-            e->canread = qfalse;
-            return NET_AGAIN;
-        }
-        return NET_ERROR;
-    }
-
-    // make it non-blocking
-    if (make_nonblock(newsocket) == -1) {
-        closesocket(newsocket);
-        return NET_ERROR;
-    }
-
-    // initialize stream
-    memset(s, 0, sizeof(*s));
-    s->socket = newsocket;
-    s->address = net_from;
-    s->state = NS_CONNECTED;
-
-    // initialize io entry
-    e = IO_Add(newsocket);
-    //e->wantwrite = qtrue;
-    e->wantread = qtrue;
-
-    return NET_OK;
-}
-
-neterr_t NET_Connect(const netadr_t *peer, netstream_t *s)
-{
-    SOCKET socket;
-    ioentry_t *e;
-    struct sockaddr_in sadr;
-    int ret;
-
-    // always bind to `net_ip' for outgoing TCP connections
-    // to avoid problems with AC or MVD/GTV auth on a multi IP system
-    socket = TCP_OpenSocket(net_ip->string, PORT_ANY, NS_CLIENT);
-    if (socket == INVALID_SOCKET) {
-        return NET_ERROR;
-    }
-
-    NET_NetadrToSockadr(peer, &sadr);
-
-    ret = connect(socket, (struct sockaddr *)&sadr, sizeof(sadr));
-    if (ret == -1) {
-#ifdef _WIN32
-        if (NET_GET_ERROR() != WSAEWOULDBLOCK) {
-#else
-        if (NET_GET_ERROR() != EINPROGRESS) {
-#endif
-            // wouldblock is silent
-            closesocket(socket);
-            return NET_ERROR;
-        }
-    }
-
-    // initialize stream
-    memset(s, 0, sizeof(*s));
-    s->state = NS_CONNECTING;
-    s->address = *peer;
-    s->socket = socket;
-
-    // initialize io entry
-    e = IO_Add(socket);
-    e->wantwrite = qtrue;
-#ifdef _WIN32
-    e->wantexcept = qtrue;
-#endif
-
-    return NET_OK;
-}
-
-neterr_t NET_RunConnect(netstream_t *s)
-{
-    socklen_t len;
-    int ret, err;
-    ioentry_t *e;
-
-    if (s->state != NS_CONNECTING) {
-        return NET_AGAIN;
-    }
-
-    e = IO_Get(s->socket);
-    if (!e->canwrite
-#ifdef _WIN32
-        && !e->canexcept
-#endif
-       ) {
-        return NET_AGAIN;
-    }
-
-    len = sizeof(err);
-    ret = getsockopt(s->socket, SOL_SOCKET, SO_ERROR, (char *)&err, &len);
-    if (ret == -1) {
-        goto error1;
-    }
-    if (err) {
-        net_error = err;
-        goto error2;
-    }
-
-    e->wantwrite = qfalse;
-    e->wantread = qtrue;
-#ifdef _WIN32
-    e->wantexcept = qfalse;
-#endif
-    s->state = NS_CONNECTED;
-    return NET_OK;
-
-error1:
-    NET_GET_ERROR();
-error2:
-    s->state = NS_BROKEN;
-    e->wantwrite = qfalse;
-    e->wantread = qfalse;
-#ifdef _WIN32
-    e->wantexcept = qfalse;
-#endif
-    return NET_ERROR;
-}
-
-// updates wantread/wantwrite
-void NET_UpdateStream(netstream_t *s)
-{
-    size_t len;
-    ioentry_t *e;
-
-    if (s->state != NS_CONNECTED) {
-        return;
-    }
-
-    e = IO_Get(s->socket);
-
-    FIFO_Reserve(&s->recv, &len);
-    e->wantread = len ? qtrue : qfalse;
-
-    FIFO_Peek(&s->send, &len);
-    e->wantwrite = len ? qtrue : qfalse;
-}
-
-// returns NET_OK only when there was some data read
-neterr_t NET_RunStream(netstream_t *s)
-{
-    int ret;
-    size_t len;
-    void *data;
-    neterr_t result = NET_AGAIN;
-    ioentry_t *e;
-
-    if (s->state != NS_CONNECTED) {
-        return result;
-    }
-
-    e = IO_Get(s->socket);
-    if (e->wantread && e->canread) {
-        // read as much as we can
-        data = FIFO_Reserve(&s->recv, &len);
-        if (len) {
-            ret = recv(s->socket, data, len, 0);
-            if (!ret) {
-                goto closed;
-            }
-            if (ret == -1) {
-                if (NET_WOULD_BLOCK()) {
-                    // wouldblock is silent
-                    e->canread = qfalse;
-                } else {
-                    goto error;
-                }
-            } else {
-                FIFO_Commit(&s->recv, ret);
-#if _DEBUG
-                if (net_log_enable->integer) {
-                    NET_LogPacket(&s->address, "TCP recv", data, ret);
-                }
-#endif
-                net_rate_rcvd += ret;
-                net_bytes_rcvd += ret;
-
-                result = NET_OK;
-
-                // now see if there's more space to read
-                FIFO_Reserve(&s->recv, &len);
-                if (!len) {
-                    e->wantread = qfalse;
-                }
-            }
-        }
-    }
-
-    if (e->wantwrite && e->canwrite) {
-        // write as much as we can
-        data = FIFO_Peek(&s->send, &len);
-        if (len) {
-            ret = send(s->socket, data, len, 0);
-            if (!ret) {
-                goto closed;
-            }
-            if (ret == -1) {
-                if (NET_WOULD_BLOCK()) {
-                    // wouldblock is silent
-                    e->canwrite = qfalse;
-                } else {
-                    goto error;
-                }
-            } else {
-                FIFO_Decommit(&s->send, ret);
-#if _DEBUG
-                if (net_log_enable->integer) {
-                    NET_LogPacket(&s->address, "TCP send", data, ret);
-                }
-#endif
-                net_rate_sent += ret;
-                net_bytes_sent += ret;
-
-                //result = NET_OK;
-
-                // now see if there's more data to write
-                FIFO_Peek(&s->send, &len);
-                if (!len) {
-                    e->wantwrite = qfalse;
-                }
-
-            }
-        }
-    }
-
-    return result;
-
-closed:
-    s->state = NS_CLOSED;
-    e->wantread = qfalse;
-    return NET_CLOSED;
-
-error:
-    s->state = NS_BROKEN;
-    e->wantread = qfalse;
-    e->wantwrite = qfalse;
-    return NET_ERROR;
-}
-
-//===================================================================
 
 /*
 ====================
@@ -1497,12 +445,986 @@ static void NET_Stats_f(void)
     Com_Printf("Current download rate: %"PRIz" bytes/sec\n", net_rate_dn);
 }
 
+static size_t NET_UpRate_m(char *buffer, size_t size)
+{
+    return Q_scnprintf(buffer, size, "%"PRIz, net_rate_up);
+}
+
+static size_t NET_DnRate_m(char *buffer, size_t size)
+{
+    return Q_scnprintf(buffer, size, "%"PRIz, net_rate_dn);
+}
+
+//=============================================================================
+
+#if USE_CLIENT
+
+/*
+=============
+NET_GetLoopPacket
+=============
+*/
+qboolean NET_GetLoopPacket(netsrc_t sock)
+{
+    loopback_t *loop;
+    loopmsg_t *loopmsg;
+
+    loop = &loopbacks[sock];
+
+    if (loop->send - loop->get > MAX_LOOPBACK - 1) {
+        loop->get = loop->send - MAX_LOOPBACK + 1;
+    }
+
+    if (loop->get >= loop->send) {
+        return qfalse;
+    }
+
+    loopmsg = &loop->msgs[loop->get & (MAX_LOOPBACK - 1)];
+    loop->get++;
+
+    memcpy(msg_read_buffer, loopmsg->data, loopmsg->datalen);
+
+#ifdef _DEBUG
+    if (net_log_enable->integer > 1) {
+        NET_LogPacket(&net_from, "LP recv", loopmsg->data, loopmsg->datalen);
+    }
+#endif
+    if (sock == NS_CLIENT) {
+        net_rate_rcvd += loopmsg->datalen;
+    }
+
+    SZ_Init(&msg_read, msg_read_buffer, sizeof(msg_read_buffer));
+    msg_read.cursize = loopmsg->datalen;
+
+    return qtrue;
+}
+
+static qboolean NET_SendLoopPacket(netsrc_t sock, const void *data,
+                                   size_t len, const netadr_t *to)
+{
+    loopback_t *loop;
+    loopmsg_t *msg;
+
+    if (net_dropsim->integer > 0 && (rand() % 100) < net_dropsim->integer) {
+        return qfalse;
+    }
+
+    loop = &loopbacks[sock ^ 1];
+
+    msg = &loop->msgs[loop->send & (MAX_LOOPBACK - 1)];
+    loop->send++;
+
+    memcpy(msg->data, data, len);
+    msg->datalen = len;
+
+#ifdef _DEBUG
+    if (net_log_enable->integer > 1) {
+        NET_LogPacket(to, "LP send", data, len);
+    }
+#endif
+    if (sock == NS_CLIENT) {
+        net_rate_sent += len;
+    }
+
+    return qtrue;
+}
+
+#endif // USE_CLIENT
+
+//=============================================================================
+
+#if USE_ICMP
+
+static const char *os_error_string(int err);
+
+static void NET_ErrorEvent(netsrc_t sock, netadr_t *from,
+                           int ee_errno, int ee_info)
+{
+    if (net_ignore_icmp->integer > 0) {
+        return;
+    }
+
+    Com_DPrintf("%s: %s from %s\n", __func__,
+                os_error_string(ee_errno), NET_AdrToString(from));
+    net_icmp_errors++;
+
+    switch (sock) {
+    case NS_SERVER:
+        SV_ErrorEvent(from, ee_errno, ee_info);
+        break;
+#if USE_CLIENT
+    case NS_CLIENT:
+        CL_ErrorEvent(from);
+        break;
+#endif
+    default:
+        break;
+    }
+}
+
+#endif // USE_ICMP
+
+//=============================================================================
+
+// include our wrappers to hide platfrom-specific details
+#ifdef _WIN32
+#include "net_win.h"
+#else
+#include "net_unix.h"
+#endif
+
+/*
+=============
+NET_ErrorString
+=============
+*/
+const char *NET_ErrorString(void)
+{
+    return os_error_string(net_error);
+}
+
+/*
+=============
+NET_AddFd
+
+Adds file descriptor to the list of monitored descriptors
+=============
+*/
+ioentry_t *NET_AddFd(qsocket_t fd)
+{
+    ioentry_t *e = os_add_io(fd);
+
+    e->inuse = qtrue;
+    return e;
+}
+
+/*
+=============
+NET_RemoveFd
+
+Removes file descriptor from the list of monitored descriptors
+=============
+*/
+void NET_RemoveFd(qsocket_t fd)
+{
+    ioentry_t *e = os_get_io(fd);
+    int i;
+
+    memset(e, 0, sizeof(*e));
+
+    for (i = io_numfds - 1; i >= 0; i--) {
+        e = &io_entries[i];
+        if (e->inuse) {
+            break;
+        }
+    }
+
+    io_numfds = i + 1;
+}
+
+/*
+=============
+NET_Sleep
+
+Sleeps msec or until some file descriptor is ready. Implementation is not
+terribly efficient, but that's fine for a small number of descriptors we
+typically have.
+=============
+*/
+int NET_Sleep(int msec)
+{
+    struct timeval tv;
+    fd_set rfds, wfds, efds;
+    ioentry_t *e;
+    qsocket_t fd;
+    int i, ret;
+
+    if (!io_numfds) {
+        // don't bother with select()
+        Sys_Sleep(msec);
+        return 0;
+    }
+
+    FD_ZERO(&rfds);
+    FD_ZERO(&wfds);
+    FD_ZERO(&efds);
+
+    for (i = 0, e = io_entries; i < io_numfds; i++, e++) {
+        if (!e->inuse) {
+            continue;
+        }
+        fd = os_get_fd(e);
+        e->canread = qfalse;
+        e->canwrite = qfalse;
+        e->canexcept = qfalse;
+        if (e->wantread) FD_SET(fd, &rfds);
+        if (e->wantwrite) FD_SET(fd, &wfds);
+        if (e->wantexcept) FD_SET(fd, &efds);
+    }
+
+    tv.tv_sec = msec / 1000;
+    tv.tv_usec = (msec % 1000) * 1000;
+
+    ret = os_select(io_numfds, &rfds, &wfds, &efds, &tv);
+    if (ret == -1) {
+        Com_EPrintf("%s: %s\n", __func__, NET_ErrorString());
+        return ret;
+    }
+
+    if (ret == 0)
+        return ret;
+
+    for (i = 0; i < io_numfds; i++) {
+        e = &io_entries[i];
+        if (!e->inuse) {
+            continue;
+        }
+        fd = os_get_fd(e);
+        if (FD_ISSET(fd, &rfds)) e->canread = qtrue;
+        if (FD_ISSET(fd, &wfds)) e->canwrite = qtrue;
+        if (FD_ISSET(fd, &efds)) e->canexcept = qtrue;
+    }
+
+    return ret;
+}
+
+#if USE_AC_SERVER
+
+/*
+=============
+NET_Sleepv
+
+Sleeps msec or until some file descriptor from a given subset is ready
+=============
+*/
+int NET_Sleepv(int msec, ...)
+{
+    va_list argptr;
+    struct timeval tv;
+    fd_set rfds, wfds, efds;
+    ioentry_t *e;
+    qsocket_t fd;
+    int ret;
+
+    FD_ZERO(&rfds);
+    FD_ZERO(&wfds);
+    FD_ZERO(&efds);
+
+    va_start(argptr, msec);
+    while (1) {
+        fd = va_arg(argptr, qsocket_t);
+        if (fd == -1) {
+            break;
+        }
+        e = os_get_io(fd);
+        if (!e->inuse) {
+            continue;
+        }
+        e->canread = qfalse;
+        e->canwrite = qfalse;
+        e->canexcept = qfalse;
+        if (e->wantread) FD_SET(fd, &rfds);
+        if (e->wantwrite) FD_SET(fd, &wfds);
+        if (e->wantexcept) FD_SET(fd, &efds);
+    }
+    va_end(argptr);
+
+    tv.tv_sec = msec / 1000;
+    tv.tv_usec = (msec % 1000) * 1000;
+
+    ret = os_select(io_numfds, &rfds, &wfds, &efds, &tv);
+    if (ret == -1) {
+        Com_EPrintf("%s: %s\n", __func__, NET_ErrorString());
+        return ret;
+    }
+
+    if (ret == 0)
+        return ret;
+
+    va_start(argptr, msec);
+    while (1) {
+        fd = va_arg(argptr, qsocket_t);
+        if (fd == -1) {
+            break;
+        }
+        e = os_get_io(fd);
+        if (!e->inuse) {
+            continue;
+        }
+        if (FD_ISSET(fd, &rfds)) e->canread = qtrue;
+        if (FD_ISSET(fd, &wfds)) e->canwrite = qtrue;
+        if (FD_ISSET(fd, &efds)) e->canexcept = qtrue;
+    }
+    va_end(argptr);
+
+    return ret;
+}
+
+#endif // USE_AC_SERVER
+
+//=============================================================================
+
+/*
+=============
+NET_GetPacket
+
+Fills msg_read_buffer with packet contents,
+net_from variable receives source address.
+=============
+*/
+qboolean NET_GetPacket(netsrc_t sock)
+{
+    ioentry_t *e;
+    ssize_t ret;
+
+    if (udp_sockets[sock] == -1)
+        return qfalse;
+
+    e = os_get_io(udp_sockets[sock]);
+    if (!e->canread)
+        return qfalse;
+
+    ret = os_udp_recv(sock, msg_read_buffer, MAX_PACKETLEN, &net_from);
+    if (ret == NET_AGAIN) {
+        e->canread = qfalse;
+        return qfalse;
+    }
+
+    if (ret == NET_ERROR) {
+        Com_DPrintf("%s: %s from %s\n", __func__,
+                    NET_ErrorString(), NET_AdrToString(&net_from));
+        net_recv_errors++;
+        return qfalse;
+    }
+
+#ifdef _DEBUG
+    if (net_log_enable->integer)
+        NET_LogPacket(&net_from, "UDP recv", msg_read_buffer, ret);
+#endif
+
+    SZ_Init(&msg_read, msg_read_buffer, sizeof(msg_read_buffer));
+    msg_read.cursize = ret;
+
+    net_rate_rcvd += ret;
+    net_bytes_rcvd += ret;
+    net_packets_rcvd++;
+
+    return qtrue;
+}
+
+/*
+=============
+NET_SendPacket
+
+=============
+*/
+qboolean NET_SendPacket(netsrc_t sock, const void *data,
+                        size_t len, const netadr_t *to)
+{
+    ssize_t ret;
+
+    if (len == 0)
+        return qfalse;
+
+    if (len > MAX_PACKETLEN) {
+        Com_EPrintf("%s: oversize packet to %s\n", __func__,
+                    NET_AdrToString(to));
+        return qfalse;
+    }
+
+#if USE_CLIENT
+    if (to->type == NA_LOOPBACK)
+        return NET_SendLoopPacket(sock, data, len, to);
+#endif
+
+    if (udp_sockets[sock] == -1)
+        return qfalse;
+
+    ret = os_udp_send(sock, data, len, to);
+    if (ret == NET_AGAIN)
+        return qfalse;
+
+    if (ret == NET_ERROR) {
+        Com_DPrintf("%s: %s to %s\n", __func__,
+                    NET_ErrorString(), NET_AdrToString(to));
+        net_send_errors++;
+        return qfalse;
+    }
+
+    if (ret < len)
+        Com_WPrintf("%s: short send to %s\n", __func__,
+                    NET_AdrToString(to));
+
+#ifdef _DEBUG
+    if (net_log_enable->integer)
+        NET_LogPacket(to, "UDP send", data, ret);
+#endif
+
+    net_rate_sent += ret;
+    net_bytes_sent += ret;
+    net_packets_sent++;
+
+    return qtrue;
+}
+
+//=============================================================================
+
+static qsocket_t UDP_OpenSocket(const char *iface, int port)
+{
+    struct sockaddr_in  sadr;
+    int     s;
+
+    Com_DPrintf("Opening UDP socket: %s:%d\n", iface, port);
+
+    // resolve iface addr
+    if (!NET_StringToSockaddr2(iface, port, &sadr)) {
+        Com_EPrintf("%s: %s:%d: bad interface address\n",
+                    __func__, iface, port);
+        return -1;
+    }
+
+    s = os_socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (s == -1) {
+        Com_EPrintf("%s: %s:%d: can't create socket: %s\n",
+                    __func__, iface, port, NET_ErrorString());
+        return -1;
+    }
+
+    // make it non-blocking
+    if (os_make_nonblock(s, 1)) {
+        Com_EPrintf("%s: %s:%d: can't make socket non-blocking: %s\n",
+                    __func__, iface, port, NET_ErrorString());
+        goto fail;
+    }
+
+    // make it broadcast capable
+    if (os_setsockopt(s, SOL_SOCKET, SO_BROADCAST, 1)) {
+        Com_WPrintf("%s: %s:%d: can't make socket broadcast capable: %s\n",
+                    __func__, iface, port, NET_ErrorString());
+    }
+
+#ifdef __linux__
+    // udp(7) says: "By default, Linux UDP does path MTU discovery". This means
+    // kernel will set "don't fragment" bit on outgoing packets. This is not
+    // what most Quake 2 server operators expect. Firewalled ICMP traffic may
+    // result in clients getting stuck on connect. Thus we enable IP
+    // fragmentation by default.
+
+    int disc = IP_PMTUDISC_DONT;
+
+#if USE_ICMP
+    // enable ICMP error queue
+    if (net_ignore_icmp->integer <= 0) {
+        if (os_setsockopt(s, IPPROTO_IP, IP_RECVERR, 1)) {
+            Com_WPrintf("%s: %s:%d: can't enable ICMP error queue: %s\n",
+                        __func__, iface, port, NET_ErrorString());
+            Cvar_Set("net_ignore_icmp", "1");
+        }
+
+#if USE_PMTUDISC
+        // overload negative values to enable path MTU discovery
+        switch (net_ignore_icmp->integer) {
+            case -1: disc = IP_PMTUDISC_WANT;   break;
+            case -2: disc = IP_PMTUDISC_DO;     break;
+#ifdef IP_PMTUDISC_PROBE
+            case -3: disc = IP_PMTUDISC_PROBE;  break;
+#endif
+        }
+#endif // USE_PMTUDISC
+    }
+#endif // USE_ICMP
+
+    // set path MTU discovery option
+    if (os_setsockopt(s, IPPROTO_IP, IP_MTU_DISCOVER, disc)) {
+        Com_WPrintf("%s: %s:%d: can't %sable path MTU discovery: %s\n",
+                    __func__, iface, port,
+                    disc == IP_PMTUDISC_DONT ? "dis" : "en",
+                    NET_ErrorString());
+    }
+#endif // __linux__
+
+    if (os_bind(s, (struct sockaddr *)&sadr, sizeof(sadr))) {
+        Com_EPrintf("%s: %s:%d: can't bind socket: %s\n",
+                    __func__, iface, port, NET_ErrorString());
+        goto fail;
+    }
+
+    return s;
+
+fail:
+    os_closesocket(s);
+    return -1;
+}
+
+static qsocket_t TCP_OpenSocket(const char *iface, int port, netsrc_t who)
+{
+    struct sockaddr_in  sadr;
+    int     s;
+
+    Com_DPrintf("Opening TCP socket: %s:%d\n", iface, port);
+
+    // resolve iface addr
+    if (!NET_StringToSockaddr2(iface, port, &sadr)) {
+        Com_EPrintf("%s: %s:%d: bad interface address\n",
+                    __func__, iface, port);
+        return -1;
+    }
+
+    s = os_socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (s == -1) {
+        Com_EPrintf("%s: %s:%d: can't create socket: %s\n",
+                    __func__, iface, port, NET_ErrorString());
+        return -1;
+    }
+
+    // make it non-blocking
+    if (os_make_nonblock(s, 1)) {
+        Com_EPrintf("%s: %s:%d: can't make socket non-blocking: %s\n",
+                    __func__, iface, port, NET_ErrorString());
+        goto fail;
+    }
+
+    if (who == NS_SERVER) {
+        // give it a chance to reuse previous port
+        if (os_setsockopt(s, SOL_SOCKET, SO_REUSEADDR, 1)) {
+            Com_WPrintf("%s: %s:%d: can't force socket to reuse address: %s\n",
+                        __func__, iface, port, NET_ErrorString());
+        }
+    }
+
+    if (os_bind(s, (struct sockaddr *)&sadr, sizeof(sadr))) {
+        Com_EPrintf("%s: %s:%d: can't bind socket: %s\n",
+                    __func__, iface, port, NET_ErrorString());
+        goto fail;
+    }
+
+    return s;
+
+fail:
+    os_closesocket(s);
+    return -1;
+}
+
+static void NET_OpenServer(void)
+{
+    static int saved_port;
+    ioentry_t *e;
+    qsocket_t s;
+
+    s = UDP_OpenSocket(net_ip->string, net_port->integer);
+    if (s != -1) {
+        saved_port = net_port->integer;
+        udp_sockets[NS_SERVER] = s;
+        e = NET_AddFd(s);
+        e->wantread = qtrue;
+        return;
+    }
+
+    if (saved_port && saved_port != net_port->integer) {
+        // revert to the last valid port
+        Com_Printf("Reverting to the last valid port %d...\n", saved_port);
+        Cbuf_AddText(&cmd_buffer, va("set net_port %d\n", saved_port));
+        return;
+    }
+
+#if USE_CLIENT
+    if (!dedicated->integer) {
+        Com_WPrintf("Couldn't open server UDP port.\n");
+        return;
+    }
+#endif
+
+    Com_Error(ERR_FATAL, "Couldn't open dedicated server UDP port");
+}
+
+#if USE_CLIENT
+static void NET_OpenClient(void)
+{
+    ioentry_t *e;
+    qsocket_t s;
+    netadr_t adr;
+
+    s = UDP_OpenSocket(net_ip->string, net_clientport->integer);
+    if (s == -1) {
+        // now try with random port
+        if (net_clientport->integer != PORT_ANY)
+            s = UDP_OpenSocket(net_ip->string, PORT_ANY);
+
+        if (s == -1) {
+            Com_WPrintf("Couldn't open client UDP port.\n");
+            return;
+        }
+
+        if (os_getsockname(s, &adr)) {
+            Com_EPrintf("Couldn't get client UDP socket name: %s\n", NET_ErrorString());
+            os_closesocket(s);
+            return;
+        }
+
+        Com_WPrintf("Client UDP socket bound to %s.\n", NET_AdrToString(&adr));
+        Cvar_SetByVar(net_clientport, va("%d", PORT_ANY), FROM_CODE);
+    }
+
+    udp_sockets[NS_CLIENT] = s;
+    e = NET_AddFd(s);
+    e->wantread = qtrue;
+}
+#endif
+
 /*
 ====================
-NET_DumpHostInfo
+NET_Config
 ====================
 */
-static void NET_DumpHostInfo(struct hostent *h)
+void NET_Config(netflag_t flag)
+{
+    netsrc_t sock;
+
+    if (flag == net_active) {
+        return;
+    }
+
+    if (flag == NET_NONE) {
+        // shut down any existing sockets
+        for (sock = 0; sock < NS_COUNT; sock++) {
+            if (udp_sockets[sock] != -1) {
+                NET_RemoveFd(udp_sockets[sock]);
+                os_closesocket(udp_sockets[sock]);
+                udp_sockets[sock] = -1;
+            }
+        }
+        net_active = NET_NONE;
+        return;
+    }
+
+#if USE_CLIENT
+    if ((flag & NET_CLIENT) && udp_sockets[NS_CLIENT] == -1) {
+        NET_OpenClient();
+    }
+#endif
+
+    if ((flag & NET_SERVER) && udp_sockets[NS_SERVER] == -1) {
+        NET_OpenServer();
+    }
+
+    net_active |= flag;
+}
+
+/*
+====================
+NET_GetAddress
+====================
+*/
+qboolean NET_GetAddress(netsrc_t sock, netadr_t *adr)
+{
+    if (udp_sockets[sock] == -1)
+        return qfalse;
+
+    if (os_getsockname(udp_sockets[sock], adr))
+        return qfalse;
+
+    return qtrue;
+}
+
+//=============================================================================
+
+void NET_CloseStream(netstream_t *s)
+{
+    if (!s->state) {
+        return;
+    }
+
+    NET_RemoveFd(s->socket);
+    os_closesocket(s->socket);
+    s->socket = -1;
+    s->state = NS_DISCONNECTED;
+}
+
+neterr_t NET_Listen(qboolean arg)
+{
+    qsocket_t s;
+    ioentry_t *e;
+    neterr_t ret;
+
+    if (!arg) {
+        if (tcp_socket != -1) {
+            NET_RemoveFd(tcp_socket);
+            os_closesocket(tcp_socket);
+            tcp_socket = -1;
+        }
+        return NET_OK;
+    }
+
+    if (tcp_socket != -1) {
+        return NET_OK;
+    }
+
+    s = TCP_OpenSocket(net_tcp_ip->string,
+                       net_tcp_port->integer, NS_SERVER);
+    if (s == -1) {
+        return NET_ERROR;
+    }
+
+    ret = os_listen(s, net_tcp_backlog->integer);
+    if (ret) {
+        os_closesocket(s);
+        return ret;
+    }
+
+    tcp_socket = s;
+
+    // initialize io entry
+    e = NET_AddFd(s);
+    e->wantread = qtrue;
+
+    return NET_OK;
+}
+
+// net_from variable receives source address
+neterr_t NET_Accept(netstream_t *s)
+{
+    ioentry_t *e;
+    qsocket_t newsocket;
+    neterr_t ret;
+
+    if (tcp_socket == -1) {
+        return NET_AGAIN;
+    }
+
+    e = os_get_io(tcp_socket);
+    if (!e->canread) {
+        return NET_AGAIN;
+    }
+
+    ret = os_accept(tcp_socket, &newsocket, &net_from);
+    if (ret) {
+        e->canread = qfalse;
+        return ret;
+    }
+
+    // make it non-blocking
+    ret = os_make_nonblock(newsocket, 1);
+    if (ret) {
+        os_closesocket(newsocket);
+        return ret;
+    }
+
+    // initialize stream
+    memset(s, 0, sizeof(*s));
+    s->socket = newsocket;
+    s->address = net_from;
+    s->state = NS_CONNECTED;
+
+    // initialize io entry
+    e = NET_AddFd(newsocket);
+    //e->wantwrite = qtrue;
+    e->wantread = qtrue;
+
+    return NET_OK;
+}
+
+neterr_t NET_Connect(const netadr_t *peer, netstream_t *s)
+{
+    qsocket_t socket;
+    ioentry_t *e;
+    neterr_t ret;
+
+    // always bind to `net_ip' for outgoing TCP connections
+    // to avoid problems with AC or MVD/GTV auth on a multi IP system
+    socket = TCP_OpenSocket(net_ip->string, PORT_ANY, NS_CLIENT);
+    if (socket == -1) {
+        return NET_ERROR;
+    }
+
+    ret = os_connect(socket, peer);
+    if (ret) {
+        os_closesocket(socket);
+        return NET_ERROR;
+    }
+
+    // initialize stream
+    memset(s, 0, sizeof(*s));
+    s->state = NS_CONNECTING;
+    s->address = *peer;
+    s->socket = socket;
+
+    // initialize io entry
+    e = NET_AddFd(socket);
+    e->wantwrite = qtrue;
+#ifdef _WIN32
+    e->wantexcept = qtrue;
+#endif
+
+    return NET_OK;
+}
+
+neterr_t NET_RunConnect(netstream_t *s)
+{
+    ioentry_t *e;
+    neterr_t ret;
+    int err;
+
+    if (s->state != NS_CONNECTING) {
+        return NET_AGAIN;
+    }
+
+    e = os_get_io(s->socket);
+    if (!e->canwrite
+#ifdef _WIN32
+        && !e->canexcept
+#endif
+       ) {
+        return NET_AGAIN;
+    }
+
+    ret = os_getsockopt(s->socket, SOL_SOCKET, SO_ERROR, &err);
+    if (ret) {
+        goto fail;
+    }
+    if (err) {
+        net_error = err;
+        goto fail;
+    }
+
+    s->state = NS_CONNECTED;
+    e->wantwrite = qfalse;
+    e->wantread = qtrue;
+#ifdef _WIN32
+    e->wantexcept = qfalse;
+#endif
+    return NET_OK;
+
+fail:
+    s->state = NS_BROKEN;
+    e->wantwrite = qfalse;
+    e->wantread = qfalse;
+#ifdef _WIN32
+    e->wantexcept = qfalse;
+#endif
+    return NET_ERROR;
+}
+
+// updates wantread/wantwrite
+void NET_UpdateStream(netstream_t *s)
+{
+    size_t len;
+    ioentry_t *e;
+
+    if (s->state != NS_CONNECTED) {
+        return;
+    }
+
+    e = os_get_io(s->socket);
+
+    FIFO_Reserve(&s->recv, &len);
+    e->wantread = len ? qtrue : qfalse;
+
+    FIFO_Peek(&s->send, &len);
+    e->wantwrite = len ? qtrue : qfalse;
+}
+
+// returns NET_OK only when there was some data read
+neterr_t NET_RunStream(netstream_t *s)
+{
+    ssize_t ret;
+    size_t len;
+    void *data;
+    neterr_t result = NET_AGAIN;
+    ioentry_t *e;
+
+    if (s->state != NS_CONNECTED) {
+        return result;
+    }
+
+    e = os_get_io(s->socket);
+    if (e->wantread && e->canread) {
+        // read as much as we can
+        data = FIFO_Reserve(&s->recv, &len);
+        if (len) {
+            ret = os_recv(s->socket, data, len, 0);
+            if (!ret) {
+                goto closed;
+            }
+            if (ret == NET_ERROR) {
+                goto error;
+            }
+            if (ret == NET_AGAIN) {
+                // wouldblock is silent
+                e->canread = qfalse;
+            } else {
+                FIFO_Commit(&s->recv, ret);
+#if _DEBUG
+                if (net_log_enable->integer) {
+                    NET_LogPacket(&s->address, "TCP recv", data, ret);
+                }
+#endif
+                net_rate_rcvd += ret;
+                net_bytes_rcvd += ret;
+
+                result = NET_OK;
+
+                // now see if there's more space to read
+                FIFO_Reserve(&s->recv, &len);
+                if (!len) {
+                    e->wantread = qfalse;
+                }
+            }
+        }
+    }
+
+    if (e->wantwrite && e->canwrite) {
+        // write as much as we can
+        data = FIFO_Peek(&s->send, &len);
+        if (len) {
+            ret = os_send(s->socket, data, len, 0);
+            if (!ret) {
+                goto closed;
+            }
+            if (ret == NET_ERROR) {
+                goto error;
+            }
+            if (ret == NET_AGAIN) {
+                // wouldblock is silent
+                e->canwrite = qfalse;
+            } else {
+                FIFO_Decommit(&s->send, ret);
+#if _DEBUG
+                if (net_log_enable->integer) {
+                    NET_LogPacket(&s->address, "TCP send", data, ret);
+                }
+#endif
+                net_rate_sent += ret;
+                net_bytes_sent += ret;
+
+                //result = NET_OK;
+
+                // now see if there's more data to write
+                FIFO_Peek(&s->send, &len);
+                if (!len) {
+                    e->wantwrite = qfalse;
+                }
+
+            }
+        }
+    }
+
+    return result;
+
+closed:
+    s->state = NS_CLOSED;
+    e->wantread = qfalse;
+    return NET_CLOSED;
+
+error:
+    s->state = NS_BROKEN;
+    e->wantread = qfalse;
+    e->wantwrite = qfalse;
+    return NET_ERROR;
+}
+
+//===================================================================
+
+static void dump_hostent(struct hostent *h)
 {
     byte **list;
     int i;
@@ -1521,20 +1443,21 @@ static void NET_DumpHostInfo(struct hostent *h)
     }
 }
 
-static void dump_socket(SOCKET s, const char *s1, const char *s2)
+static void dump_socket(qsocket_t s, const char *s1, const char *s2)
 {
-    struct sockaddr_in sadr;
-    socklen_t len;
     netadr_t adr;
 
-    len = sizeof(sadr);
-    if (getsockname(s, (struct sockaddr *)&sadr, &len) == -1) {
-        NET_GET_ERROR();
-        Com_EPrintf("%s: getsockname: %s\n", __func__, NET_ErrorString());
+    if (s == -1)
+        return;
+
+    if (os_getsockname(s, &adr)) {
+        Com_EPrintf("Couldn't get %s %s socket name: %s\n",
+                    s1, s2, NET_ErrorString());
         return;
     }
-    NET_SockadrToNetadr(&sadr, &adr);
-    Com_Printf("%s %s socket bound to %s\n", s1, s2, NET_AdrToString(&adr));
+
+    Com_Printf("%s %s socket bound to %s\n",
+               s1, s2, NET_AdrToString(&adr));
 }
 
 /*
@@ -1546,30 +1469,23 @@ static void NET_ShowIP_f(void)
 {
     char buffer[256];
     struct hostent *h;
-    netsrc_t sock;
 
     if (gethostname(buffer, sizeof(buffer)) == -1) {
-        NET_GET_ERROR();
-        Com_EPrintf("%s: gethostname: %s\n", __func__, NET_ErrorString());
+        Com_EPrintf("Couldn't get system host name\n");
         return;
     }
 
     if (!(h = gethostbyname(buffer))) {
-        NET_GET_ERROR();
-        Com_EPrintf("%s: gethostbyname: %s\n", __func__, NET_ErrorString());
+        Com_EPrintf("Couldn't resolve %s\n", buffer);
         return;
     }
 
-    NET_DumpHostInfo(h);
+    dump_hostent(h);
 
-    for (sock = 0; sock < NS_COUNT; sock++) {
-        if (udp_sockets[sock] != INVALID_SOCKET) {
-            dump_socket(udp_sockets[sock], socketNames[sock], "UDP");
-        }
-    }
-    if (tcp_socket != INVALID_SOCKET) {
-        dump_socket(tcp_socket, socketNames[NS_SERVER], "TCP");
-    }
+    // dump listening sockets
+    dump_socket(udp_sockets[NS_CLIENT], "Client", "UDP");
+    dump_socket(udp_sockets[NS_SERVER], "Server", "UDP");
+    dump_socket(tcp_socket, "Server", "TCP");
 }
 
 /*
@@ -1606,8 +1522,7 @@ static void NET_Dns_f(void)
         return;
     }
 
-    NET_DumpHostInfo(h);
-
+    dump_hostent(h);
 }
 
 /*
@@ -1618,7 +1533,7 @@ NET_Restart_f
 static void NET_Restart_f(void)
 {
     netflag_t flag = net_active;
-    qboolean listen = tcp_socket != INVALID_SOCKET;
+    qboolean listen = tcp_socket != -1;
 
     Com_DPrintf("%s\n", __func__);
 
@@ -1636,75 +1551,6 @@ static void NET_Restart_f(void)
 #endif
 }
 
-/*
-====================
-NET_Config
-====================
-*/
-void NET_Config(netflag_t flag)
-{
-    netsrc_t sock;
-
-    if (flag == net_active) {
-        return;
-    }
-
-    if (flag == NET_NONE) {
-        // shut down any existing sockets
-        for (sock = 0; sock < NS_COUNT; sock++) {
-            if (udp_sockets[sock] != INVALID_SOCKET) {
-                IO_Remove(udp_sockets[sock]);
-                closesocket(udp_sockets[sock]);
-                udp_sockets[sock] = INVALID_SOCKET;
-            }
-        }
-        net_active = NET_NONE;
-        return;
-    }
-
-#if USE_CLIENT
-    if ((flag & NET_CLIENT) && udp_sockets[NS_CLIENT] == INVALID_SOCKET) {
-        NET_OpenClient();
-    }
-#endif
-
-    if ((flag & NET_SERVER) && udp_sockets[NS_SERVER] == INVALID_SOCKET) {
-        NET_OpenServer();
-    }
-
-    net_active |= flag;
-}
-
-qboolean NET_GetAddress(netsrc_t sock, netadr_t *adr)
-{
-    struct sockaddr_in sadr;
-    socklen_t len;
-    SOCKET s = udp_sockets[sock];
-
-    if (s == INVALID_SOCKET) {
-        return qfalse;
-    }
-
-    len = sizeof(sadr);
-    if (getsockname(s, (struct sockaddr *)&sadr, &len) == -1) {
-        return qfalse;
-    }
-
-    NET_SockadrToNetadr(&sadr, adr);
-
-    return qtrue;
-}
-
-static size_t NET_UpRate_m(char *buffer, size_t size)
-{
-    return Q_scnprintf(buffer, size, "%"PRIz, net_rate_up);
-}
-
-static size_t NET_DnRate_m(char *buffer, size_t size)
-{
-    return Q_scnprintf(buffer, size, "%"PRIz, net_rate_dn);
-}
-
 static void net_udp_param_changed(cvar_t *self)
 {
     // keep TCP socket vars in sync unless modified by user
@@ -1720,7 +1566,7 @@ static void net_udp_param_changed(cvar_t *self)
 
 static void net_tcp_param_changed(cvar_t *self)
 {
-    if (tcp_socket != INVALID_SOCKET) {
+    if (tcp_socket != -1) {
         NET_Listen(qfalse);
         NET_Listen(qtrue);
     }
@@ -1733,17 +1579,7 @@ NET_Init
 */
 void NET_Init(void)
 {
-#ifdef _WIN32
-    WSADATA ws;
-    int ret;
-
-    ret = WSAStartup(MAKEWORD(1, 1), &ws);
-    if (ret) {
-        Com_Error(ERR_FATAL, "Winsock initialization failed, returned %d", ret);
-    }
-
-    Com_DPrintf("Winsock Initialized\n");
-#endif
+    os_net_init();
 
     net_ip = Cvar_Get("net_ip", "", 0);
     net_ip->changed = net_udp_param_changed;
@@ -1794,18 +1630,12 @@ NET_Shutdown
 void NET_Shutdown(void)
 {
 #if _DEBUG
-    if (net_logFile) {
-        FS_FCloseFile(net_logFile);
-        net_logFile = 0;
-    }
+    logfile_close();
 #endif
 
     NET_Listen(qfalse);
     NET_Config(NET_NONE);
-
-#ifdef _WIN32
-    WSACleanup();
-#endif
+    os_net_shutdown();
 
     Cmd_RemoveCommand("net_restart");
     Cmd_RemoveCommand("net_stats");

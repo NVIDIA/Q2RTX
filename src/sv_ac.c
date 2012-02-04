@@ -531,7 +531,7 @@ static void AC_Drop(void)
 {
     client_t *cl;
 
-    NET_Close(&ac.stream);
+    NET_CloseStream(&ac.stream);
 
     if (!ac.connected) {
         Com_Printf("ANTICHEAT: Server connection failed.\n");
@@ -1189,11 +1189,11 @@ STARTUP STUFF
 static void AC_Spin(void)
 {
     // sleep on stdin and AC server socket
-    IO_Sleepv(100,
+    NET_Sleepv(100,
 #ifndef _WIN32
-              0,
+               STDIN_FILENO,
 #endif
-              ac.stream.socket, -1);
+               ac.stream.socket, -1);
 #if USE_SYSCON
     Sys_RunConsole();
 #endif
@@ -1487,7 +1487,7 @@ void AC_Connect(unsigned mvd_spawn)
 
 void AC_Disconnect(void)
 {
-    NET_Close(&ac.stream);
+    NET_CloseStream(&ac.stream);
 
     AC_FreeChecks();
 

@@ -33,6 +33,33 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MAX_PACKETLEN_WRITABLE          (MAX_PACKETLEN - PACKET_HEADER)
 #define MAX_PACKETLEN_WRITABLE_DEFAULT  (MAX_PACKETLEN_DEFAULT - PACKET_HEADER)
 
+// portable network error codes
+#define NET_OK       0  // success
+#define NET_ERROR   -1  // failure (NET_ErrorString returns error message)
+#define NET_AGAIN   -2  // operation would block, try again
+#define NET_CLOSED  -3  // peer has closed connection
+
+typedef int neterr_t;
+
+#ifdef _WIN32
+typedef intptr_t qsocket_t;
+#else
+typedef int qsocket_t;
+#endif
+
+typedef struct {
+#ifdef _WIN32
+    qsocket_t fd;
+#endif
+    qboolean inuse: 1;
+    qboolean canread: 1;
+    qboolean canwrite: 1;
+    qboolean canexcept: 1;
+    qboolean wantread: 1;
+    qboolean wantwrite: 1;
+    qboolean wantexcept: 1;
+} ioentry_t;
+
 typedef enum {
     NA_BAD,
     NA_LOOPBACK,
@@ -52,20 +79,13 @@ typedef enum {
     NET_SERVER  = (1 << 1)
 } netflag_t;
 
-typedef enum {
-    NET_OK,
-    NET_AGAIN,
-    NET_CLOSED,
-    NET_ERROR,
-} neterr_t;
-
 typedef union {
     uint8_t u8[4];
     uint16_t u16[2];
     uint32_t u32;
 } netadrip_t;
 
-typedef struct {
+typedef struct netadr_s {
     netadrtype_t type;
     netadrip_t ip;
     uint16_t port;
@@ -137,26 +157,38 @@ static inline qboolean NET_IsLanAddress(const netadr_t *adr)
     return qfalse;
 }
 
+static inline qboolean NET_IsLocalAddress(const netadr_t *adr)
+{
+#if USE_CLIENT && USE_SERVER
+    if (adr->type == NA_LOOPBACK)
+        return qtrue;
+#endif
+    return qfalse;
+}
+
 void        NET_Init(void);
 void        NET_Shutdown(void);
 
 void        NET_Config(netflag_t flag);
 qboolean    NET_GetAddress(netsrc_t sock, netadr_t *adr);
 
+void        NET_UpdateStats(void);
+
 qboolean    NET_GetPacket(netsrc_t sock);
-qboolean    NET_SendPacket(netsrc_t sock, const netadr_t *to, size_t length, const void *data);
+qboolean    NET_SendPacket(netsrc_t sock, const void *data, size_t len, const netadr_t *to);
 qboolean    NET_GetLoopPacket(netsrc_t sock);
 
 char        *NET_AdrToString(const netadr_t *a);
 qboolean    NET_StringToAdr(const char *s, netadr_t *a, int port);
 
-#if USE_CLIENT && USE_SERVER
-#define     NET_IsLocalAddress(adr) ((adr)->type == NA_LOOPBACK)
-#else
-#define     NET_IsLocalAddress(adr) 0
-#endif
-
 const char  *NET_ErrorString(void);
+
+ioentry_t   *NET_AddFd(qsocket_t fd);
+void        NET_RemoveFd(qsocket_t fd);
+int         NET_Sleep(int msec);
+#if USE_AC_SERVER
+int         NET_Sleepv(int msec, ...);
+#endif
 
 extern cvar_t       *net_ip;
 extern cvar_t       *net_port;

@@ -37,7 +37,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cmodel.h"
 #include "q_field.h"
 #include "prompt.h"
-#include "io_sleep.h"
 #include "fpu.h"
 #include <setjmp.h>
 
@@ -2203,7 +2202,7 @@ void Qcommon_Frame(void)
 
     // sleep on network sockets when running a dedicated server
     // still do a select(), but don't sleep when running a client!
-    IO_Sleep(remaining);
+    NET_Sleep(remaining);
 
     // calculate time spent running last frame and sleeping
     oldtime = com_eventTime;
@@ -2254,6 +2253,8 @@ void Qcommon_Frame(void)
     // run system console
     Sys_RunConsole();
 #endif
+
+    NET_UpdateStats();
 
     remaining = SV_Frame(msec);
 

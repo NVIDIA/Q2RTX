@@ -1216,7 +1216,7 @@ TCP CLIENTS HANDLING
 
 static void remove_client(gtv_client_t *client)
 {
-    NET_Close(&client->stream);
+    NET_CloseStream(&client->stream);
     List_Remove(&client->entry);
     if (client->data) {
         Z_Free(client->data);
@@ -1655,7 +1655,7 @@ static void accept_client(netstream_t *stream)
         if (count >= sv_iplimit->integer) {
             Com_Printf("TCP client [%s] rejected: too many connections\n",
                        NET_AdrToString(&stream->address));
-            NET_Close(stream);
+            NET_CloseStream(stream);
             return;
         }
     }
@@ -1665,7 +1665,7 @@ static void accept_client(netstream_t *stream)
     if (!client) {
         Com_Printf("TCP client [%s] rejected: no free slots\n",
                    NET_AdrToString(&stream->address));
-        NET_Close(stream);
+        NET_CloseStream(stream);
         return;
     }
 

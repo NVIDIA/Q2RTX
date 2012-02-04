@@ -72,8 +72,8 @@ netchan_t *Netchan_Setup(netsrc_t sock, netchan_type_t type,
                          const netadr_t *adr, int qport, size_t maxpacketlen, int protocol);
 void Netchan_Close(netchan_t *netchan);
 
-#define OOB_PRINT(sock, addr, string) \
-    NET_SendPacket(sock, addr, sizeof("\xff\xff\xff\xff" string) - 1, "\xff\xff\xff\xff" string)
+#define OOB_PRINT(sock, addr, data) \
+    NET_SendPacket(sock, CONST_STR_LEN("\xff\xff\xff\xff" data), addr)
 
 //============================================================================
 

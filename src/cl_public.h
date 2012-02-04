@@ -49,7 +49,8 @@ typedef enum {
 
 qboolean CL_ProcessEvents(void);
 #if USE_ICMP
-void CL_ErrorEvent(void);
+struct netadr_s;
+void CL_ErrorEvent(struct netadr_s *from);
 #endif
 void CL_Init(void);
 void CL_Disconnect(error_type_t type);

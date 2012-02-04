@@ -52,7 +52,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "vid_public.h"
 #endif
 #include "sys_public.h"
-#include "io_sleep.h"
+#include "net_sock.h"
 
 cvar_t  *sys_basedir;
 cvar_t  *sys_libdir;
@@ -205,7 +205,7 @@ static void tty_init_input(void)
 static void tty_shutdown_input(void)
 {
     if (tty_io) {
-        IO_Remove(STDIN_FILENO);
+        NET_RemoveFd(STDIN_FILENO);
         tty_io = NULL;
     }
     if (tty_enabled) {
@@ -771,7 +771,7 @@ void Sys_Init(void)
             fcntl(STDOUT_FILENO, F_SETFL, ret | O_NONBLOCK);
 
         // add stdin to the list of descriptors to wait on
-        tty_io = IO_Add(STDIN_FILENO);
+        tty_io = NET_AddFd(STDIN_FILENO);
         tty_io->wantread = qtrue;
 
         // init optional TTY support

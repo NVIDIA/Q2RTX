@@ -38,7 +38,7 @@ void SV_FlushRedirect(int redirected, char *outputbuf, size_t len)
     if (redirected == RD_PACKET) {
         memcpy(buffer, "\xff\xff\xff\xffprint\n", 10);
         memcpy(buffer + 10, outputbuf, len);
-        NET_SendPacket(NS_SERVER, &net_from, len + 10, buffer);
+        NET_SendPacket(NS_SERVER, buffer, len + 10, &net_from);
     } else if (redirected == RD_CLIENT) {
         MSG_WriteByte(svc_print);
         MSG_WriteByte(PRINT_HIGH);
@@ -335,8 +335,6 @@ void SV_Multicast(vec3_t origin, multicast_t to)
     // clear the buffer
     SZ_Clear(&msg_write);
 }
-
-
 
 /*
 =======================
@@ -700,11 +698,14 @@ static void write_datagram_old(client_t *client)
 
     // send the datagram
     cursize = client->netchan->Transmit(client->netchan,
-                                        msg_write.cursize, msg_write.data, client->numpackets);
+                                        msg_write.cursize,
+                                        msg_write.data,
+                                        client->numpackets);
 
     // record the size for rate estimation
     SV_CalcSendTime(client, cursize);
 
+    // clear the write buffer
     SZ_Clear(&msg_write);
 }
 
@@ -767,7 +768,9 @@ static void write_datagram_new(client_t *client)
 
     // send the datagram
     cursize = client->netchan->Transmit(client->netchan,
-                                        msg_write.cursize, msg_write.data, client->numpackets);
+                                        msg_write.cursize,
+                                        msg_write.data,
+                                        client->numpackets);
 
     // record the size for rate estimation
     SV_CalcSendTime(client, cursize);

@@ -39,7 +39,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #if USE_MVD_CLIENT
 #include "mvd_public.h"
 #endif
-#include "io_sleep.h"
 #include "fpu.h"
 #if USE_ZLIB
 #include <zlib.h>

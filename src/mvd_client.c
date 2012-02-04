@@ -1579,7 +1579,7 @@ static void gtv_destroy(gtv_t *gtv)
     }
 
     // make sure network connection is closed
-    NET_Close(&gtv->stream);
+    NET_CloseStream(&gtv->stream);
 
     // unlink from the list of connections
     List_Remove(&gtv->entry);
@@ -1624,7 +1624,7 @@ static void gtv_drop(gtv_t *gtv)
     Com_FormatTimeLong(buffer, sizeof(buffer), sec);
     Com_Printf("[%s] -=- Reconnecting in %s.\n", gtv->name, buffer);
 
-    NET_Close(&gtv->stream);
+    NET_CloseStream(&gtv->stream);
 #if USE_ZLIB
     inflateReset(&gtv->z_str);
     FIFO_Clear(&gtv->z_buf);

@@ -425,7 +425,7 @@ static void SVC_Status(void)
     len += SV_StatusString(buffer + len);
 
     // send the datagram
-    NET_SendPacket(NS_SERVER, &net_from, len, buffer);
+    NET_SendPacket(NS_SERVER, buffer, len, &net_from);
 }
 
 /*
@@ -461,31 +461,24 @@ The second parameter should be the current protocol version number.
 */
 static void SVC_Info(void)
 {
-    char    string[MAX_QPATH];
+    char    buffer[MAX_QPATH];
     size_t  len;
-    int     count;
-    int     version;
 
     if (sv_maxclients->integer == 1)
         return;        // ignore in single player
 
-    version = atoi(Cmd_Argv(1));
-
-    if (version != PROTOCOL_VERSION_DEFAULT) {
+    if (atoi(Cmd_Argv(1)) != PROTOCOL_VERSION_DEFAULT)
         return;
-    }
 
-    count = SV_CountClients();
-
-    len = Q_snprintf(string, sizeof(string),
+    len = Q_snprintf(buffer, sizeof(buffer),
                      "\xff\xff\xff\xffinfo\n%16s %8s %2i/%2i\n",
-                     sv_hostname->string, sv.name, count, sv_maxclients->integer -
+                     sv_hostname->string, sv.name, SV_CountClients(),
+                     sv_maxclients->integer -
                      sv_reserved_slots->integer);
-    if (len >= sizeof(string)) {
+    if (len >= sizeof(buffer))
         return;
-    }
 
-    NET_SendPacket(NS_SERVER, &net_from, len, string);
+    NET_SendPacket(NS_SERVER, buffer, len, &net_from);
 }
 
 /*
@@ -810,7 +803,7 @@ static void redirect(const char *addr)
     MSG_WriteByte(svc_stufftext);
     MSG_WriteString(va("connect %s\n", addr));
 
-    NET_SendPacket(NS_SERVER, &net_from, msg_write.cursize, msg_write.data);
+    NET_SendPacket(NS_SERVER, msg_write.data, msg_write.cursize, &net_from);
     SZ_Clear(&msg_write);
 }
 
@@ -1365,13 +1358,46 @@ static void SV_PacketEvent(void)
     }
 }
 
+#if USE_PMTUDISC
+// We are doing path MTU discovery and got ICMP fragmentation-needed.
+// Update MTU for connecting clients only to minimize spoofed ICMP interference.
+// Total 64 bytes of headers is assumed.
+static void update_client_mtu(client_t *client, int ee_info)
+{
+    netchan_t *netchan = client->netchan;
+    size_t newpacketlen;
+
+    // sanity check discovered MTU
+    if (ee_info < 576 || ee_info > 4096)
+        return;
+
+    if (client->state != cs_primed)
+        return;
+
+    // TODO: old clients require entire queue flush :(
+    if (netchan->type == NETCHAN_OLD)
+        return;
+
+    if (!netchan->reliable_length)
+        return;
+
+    newpacketlen = ee_info - 64;
+    if (newpacketlen >= netchan->maxpacketlen)
+        return;
+
+    Com_Printf("Fixing up maxmsglen for %s: %"PRIz" --> %"PRIz"\n",
+               client->name, netchan->maxpacketlen, newpacketlen);
+    netchan->maxpacketlen = newpacketlen;
+}
+#endif
+
 #if USE_ICMP
 /*
 =================
 SV_ErrorEvent
 =================
 */
-void SV_ErrorEvent(int info)
+void SV_ErrorEvent(netadr_t *from, int ee_errno, int ee_info)
 {
     client_t    *client;
     netchan_t   *netchan;
@@ -1386,29 +1412,16 @@ void SV_ErrorEvent(int info)
             continue; // already a zombie
         }
         netchan = client->netchan;
-        if (!NET_IsEqualBaseAdr(&net_from, &netchan->remote_address)) {
+        if (!NET_IsEqualBaseAdr(from, &netchan->remote_address)) {
             continue;
         }
-        if (net_from.port && netchan->remote_address.port != net_from.port) {
+        if (from->port && netchan->remote_address.port != from->port) {
             continue;
         }
 #if USE_PMTUDISC
-        if (info) {
-            // we are doing path MTU discovery and got ICMP fragmentation-needed
-            // update MTU only for connecting clients to minimize spoofed ICMP interference
-            // MTU info has already been sanity checked for us by network code
-            // assume total 64 bytes of headers
-            if (client->state == cs_primed &&
-                netchan->reliable_length &&
-                info < netchan->maxpacketlen + 64) {
-                if (netchan->type == NETCHAN_OLD) {
-                    // TODO: old clients require entire queue flush :(
-                    continue;
-                }
-                Com_Printf("Fixing up maxmsglen for %s: %d --> %d\n",
-                           client->name, (int)netchan->maxpacketlen, info - 64);
-                netchan->maxpacketlen = info - 64;
-            }
+        // for EMSGSIZE ee_info should hold discovered MTU
+        if (ee_errno == EMSGSIZE) {
+            update_client_mtu(client, ee_info);
             continue;
         }
 #endif
@@ -1646,7 +1659,7 @@ static void SV_MasterHeartbeat(void)
         if (m->adr.port) {
             Com_DPrintf("Sending heartbeat to %s\n",
                         NET_AdrToString(&m->adr));
-            NET_SendPacket(NS_SERVER, &m->adr, len, buffer);
+            NET_SendPacket(NS_SERVER, buffer, len, &m->adr);
         }
     }
 }

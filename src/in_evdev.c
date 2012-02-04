@@ -22,7 +22,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "key_public.h"
 #include "in_public.h"
 #include "cl_public.h"
-#include "io_sleep.h"
 #include "q_list.h"
 
 #include <sys/types.h>
@@ -48,7 +47,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 typedef struct {
     list_t      entry;
     int         fd;
-    ioentry_t   *io;
 } evdev_t;
 
 static struct {
@@ -63,7 +61,6 @@ static struct {
 
 static void evdev_remove(evdev_t *dev)
 {
-    IO_Remove(dev->fd);
     close(dev->fd);
     List_Remove(&dev->entry);
     Z_Free(dev);
@@ -75,12 +72,6 @@ static void evdev_read(evdev_t *dev)
     ssize_t bytes;
     size_t i, count;
     unsigned button, time;
-
-#if 0
-    if (!dev->io->canread) {
-        return;
-    }
-#endif
 
     bytes = read(dev->fd, ev, EVENT_SIZE * MAX_EVENTS);
     if (bytes == -1) {
@@ -206,7 +197,6 @@ static evdev_t *evdev_add(const char *path)
 
     dev = Z_Malloc(sizeof(*dev));
     dev->fd = fd;
-    dev->io = IO_Add(fd);
     List_Append(&evdev.devices, &dev->entry);
 
     return dev;
@@ -328,12 +318,10 @@ static void GrabMouse(grab_t grab)
 
     FOR_EACH_EVDEV(dev) {
         if (!grab) {
-            dev->io->wantread = qfalse;
             continue;
         }
 
         // pump pending events
-        dev->io->wantread = qtrue;
         while (read(dev->fd, &ev, EVENT_SIZE) == EVENT_SIZE)
             ;
     }

@@ -158,7 +158,7 @@ void Netchan_OutOfBand(netsrc_t sock, const netadr_t *address,
     }
 
     // send the datagram
-    NET_SendPacket(sock, address, len + 4, &packet);
+    NET_SendPacket(sock, &packet, len + 4, address);
 }
 
 // ============================================================================
@@ -261,8 +261,8 @@ static size_t NetchanOld_Transmit(netchan_t *netchan, size_t length, const void 
 
     // send the datagram
     for (i = 0; i < numpackets; i++) {
-        NET_SendPacket(netchan->sock, &netchan->remote_address,
-                       send.cursize, send.data);
+        NET_SendPacket(netchan->sock, send.data, send.cursize,
+                       &netchan->remote_address);
     }
 
     netchan->outgoing_sequence++;
@@ -506,8 +506,8 @@ static size_t NetchanNew_TransmitNextFragment(netchan_t *netchan)
     }
 
     // send the datagram
-    NET_SendPacket(netchan->sock, &netchan->remote_address,
-                   send.cursize, send.data);
+    NET_SendPacket(netchan->sock, send.data, send.cursize,
+                   &netchan->remote_address);
 
     return send.cursize;
 }
@@ -610,8 +610,8 @@ static size_t NetchanNew_Transmit(netchan_t *netchan, size_t length, const void 
 
     // send the datagram
     for (i = 0; i < numpackets; i++) {
-        NET_SendPacket(netchan->sock, &netchan->remote_address,
-                       send.cursize, send.data);
+        NET_SendPacket(netchan->sock, send.data, send.cursize,
+                       &netchan->remote_address);
     }
 
     netchan->outgoing_sequence++;

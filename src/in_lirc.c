@@ -23,7 +23,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "in_public.h"
 #include "cl_public.h"
 #include "sys_public.h"
-#include "io_sleep.h"
 #include "in_lirc.h"
 
 #include <sys/types.h>
@@ -88,7 +87,7 @@ void Lirc_Shutdown(void)
         return;
     }
     lirc_freeconfig(lirc.config);
-    IO_Remove(lirc.fd);
+    NET_RemoveFd(lirc.fd);
     lirc_deinit();
     memset(&lirc, 0, sizeof(lirc));
 }
@@ -101,6 +100,8 @@ static void lirc_param_changed(cvar_t *self)
 
 qboolean Lirc_Init(void)
 {
+    int ret;
+
     lirc_enable = Cvar_Get("lirc_enable", "0", 0);
     lirc_enable->changed = lirc_param_changed;
     lirc_config = Cvar_Get("lirc_config", "", CVAR_NOSET);
@@ -125,8 +126,12 @@ qboolean Lirc_Init(void)
         return qfalse;
     }
 
-    fcntl(lirc.fd, F_SETFL, fcntl(lirc.fd, F_GETFL, 0) | FNDELAY);
-    lirc.io = IO_Add(lirc.fd);
+    // change it to non-blocking
+    ret = fcntl(lirc.fd, F_GETFL, 0);
+    if (!(ret & O_NONBLOCK))
+        fcntl(lirc.fd, F_SETFL, ret | O_NONBLOCK);
+
+    lirc.io = NET_AddFd(lirc.fd);
     lirc.io->wantread = qtrue;
 
     Com_Printf("LIRC interface initialized.\n");

@@ -29,7 +29,6 @@ SRCFILES+=cmd.c \
 	q_msg.c \
 	q_shared.c \
 	q_field.c \
-	io_sleep.c \
 	error.c \
 	fpu.c
 

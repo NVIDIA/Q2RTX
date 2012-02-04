@@ -27,14 +27,14 @@ typedef enum netstate_e {
 } netstate_t;
 
 typedef struct netstream_s {
-    int         socket;
+    qsocket_t   socket;
     netadr_t    address;
     netstate_t  state;
     fifo_t      recv;
     fifo_t      send;
 } netstream_t;
 
-void NET_Close(netstream_t *s);
+void NET_CloseStream(netstream_t *s);
 neterr_t NET_Listen(qboolean listen);
 neterr_t NET_Accept(netstream_t *s);
 neterr_t NET_Connect(const netadr_t *peer, netstream_t *s);

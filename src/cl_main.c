@@ -1583,7 +1583,7 @@ static void CL_PacketEvent(void)
 }
 
 #if USE_ICMP
-void CL_ErrorEvent(void)
+void CL_ErrorEvent(netadr_t *from)
 {
     //
     // error packet from server
@@ -1594,10 +1594,10 @@ void CL_ErrorEvent(void)
     if (!cls.netchan) {
         return;     // dump it if not connected
     }
-    if (!NET_IsEqualBaseAdr(&net_from, &cls.netchan->remote_address)) {
+    if (!NET_IsEqualBaseAdr(from, &cls.netchan->remote_address)) {
         return;
     }
-    if (net_from.port && net_from.port != cls.netchan->remote_address.port) {
+    if (from->port && from->port != cls.netchan->remote_address.port) {
         return;
     }
 
