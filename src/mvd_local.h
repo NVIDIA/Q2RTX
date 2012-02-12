@@ -19,7 +19,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "sv_local.h"
-#include "q_fifo.h"
 
 #define MVD_Malloc(size)    Z_TagMalloc(size, TAG_MVD)
 #define MVD_Mallocz(size)   Z_TagMallocz(size, TAG_MVD)

@@ -46,13 +46,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "common.h"
 #include "q_list.h"
 #include "q_field.h"
+#include "q_fifo.h"
 #include "prompt.h"
 #include "files.h"
 #if USE_REF
 #include "vid_public.h"
 #endif
 #include "sys_public.h"
-#include "net_sock.h"
+#include "net_common.h"
 
 cvar_t  *sys_basedir;
 cvar_t  *sys_libdir;

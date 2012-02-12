@@ -24,7 +24,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "mvd_local.h"
 #include "mvd_gtv.h"
-#include "net_stream.h"
 #include <setjmp.h>
 
 #define FOR_EACH_GTV(gtv) \

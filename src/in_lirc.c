@@ -23,6 +23,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "in_public.h"
 #include "cl_public.h"
 #include "sys_public.h"
+#include "q_fifo.h"
+#include "net_common.h"
 #include "in_lirc.h"
 
 #include <sys/types.h>

@@ -26,8 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "protocol.h"
 #include "q_msg.h"
 #include "q_fifo.h"
-#include "net_sock.h"
-#include "net_stream.h"
+#include "net_common.h"
 #ifdef _DEBUG
 #include "files.h"
 #endif

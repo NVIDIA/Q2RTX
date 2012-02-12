@@ -91,6 +91,22 @@ typedef struct netadr_s {
     uint16_t port;
 } netadr_t;
 
+typedef enum netstate_e {
+    NS_DISCONNECTED,// no socket opened
+    NS_CONNECTING,  // connect() not yet completed
+    NS_CONNECTED,   // may transmit data
+    NS_CLOSED,      // peer has preformed orderly shutdown
+    NS_BROKEN       // fatal error has been signaled
+} netstate_t;
+
+typedef struct netstream_s {
+    qsocket_t   socket;
+    netadr_t    address;
+    netstate_t  state;
+    fifo_t      recv;
+    fifo_t      send;
+} netstream_t;
+
 static inline qboolean NET_IsEqualAdr(const netadr_t *a, const netadr_t *b)
 {
     if (a->type != b->type) {
@@ -182,6 +198,14 @@ char        *NET_AdrToString(const netadr_t *a);
 qboolean    NET_StringToAdr(const char *s, netadr_t *a, int port);
 
 const char  *NET_ErrorString(void);
+
+void        NET_CloseStream(netstream_t *s);
+neterr_t    NET_Listen(qboolean listen);
+neterr_t    NET_Accept(netstream_t *s);
+neterr_t    NET_Connect(const netadr_t *peer, netstream_t *s);
+neterr_t    NET_RunConnect(netstream_t *s);
+neterr_t    NET_RunStream(netstream_t *s);
+void        NET_UpdateStream(netstream_t *s);
 
 ioentry_t   *NET_AddFd(qsocket_t fd);
 void        NET_RemoveFd(qsocket_t fd);
