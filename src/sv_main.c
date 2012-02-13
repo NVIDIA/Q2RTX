@@ -1431,25 +1431,6 @@ void SV_ErrorEvent(netadr_t *from, int ee_errno, int ee_info)
 }
 #endif
 
-static void SV_ReadPackets(void)
-{
-#if USE_CLIENT
-    memset(&net_from, 0, sizeof(net_from));
-    net_from.type = NA_LOOPBACK;
-
-    // process loopback packets
-    while (NET_GetLoopPacket(NS_SERVER)) {
-        SV_PacketEvent();
-    }
-#endif
-
-    // process network packets
-    while (NET_GetPacket(NS_SERVER)) {
-        SV_PacketEvent();
-    }
-}
-
-
 /*
 ==================
 SV_CheckTimeouts
@@ -1726,7 +1707,7 @@ unsigned SV_Frame(unsigned msec)
 #endif
 
     // read packets from UDP clients
-    SV_ReadPackets();
+    NET_GetPackets(NS_SERVER, SV_PacketEvent);
 
     if (svs.initialized) {
 #if USE_AC_SERVER

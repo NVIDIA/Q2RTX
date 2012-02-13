@@ -3257,18 +3257,7 @@ qboolean CL_ProcessEvents(void)
 
     IN_Frame();
 
-    memset(&net_from, 0, sizeof(net_from));
-    net_from.type = NA_LOOPBACK;
-
-    // process loopback packets
-    while (NET_GetLoopPacket(NS_CLIENT)) {
-        CL_PacketEvent();
-    }
-
-    // process network packets
-    while (NET_GetPacket(NS_CLIENT)) {
-        CL_PacketEvent();
-    }
+    NET_GetPackets(NS_CLIENT, CL_PacketEvent);
 
     // process console and stuffed commands
     Cbuf_Execute(&cmd_buffer);

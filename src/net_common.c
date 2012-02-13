@@ -251,7 +251,7 @@ idnewt:28000
 192.246.40.70:28000
 =============
 */
-qboolean NET_StringToAdr(const char *s, netadr_t *a, int port)
+qboolean NET_StringToAdr(const char *s, netadr_t *a, int default_port)
 {
     struct sockaddr_in sadr;
     char copy[MAX_STRING_CHARS], *p;
@@ -274,7 +274,7 @@ qboolean NET_StringToAdr(const char *s, netadr_t *a, int port)
     if (p)
         a->port = BigShort(atoi(p + 1));
     if (!a->port)
-        a->port = BigShort(port);
+        a->port = BigShort(default_port);
 
     return qtrue;
 }
@@ -458,12 +458,7 @@ static size_t NET_DnRate_m(char *buffer, size_t size)
 
 #if USE_CLIENT
 
-/*
-=============
-NET_GetLoopPacket
-=============
-*/
-qboolean NET_GetLoopPacket(netsrc_t sock)
+static void NET_GetLoopPackets(netsrc_t sock, void (*packet_cb)(void))
 {
     loopback_t *loop;
     loopmsg_t *loopmsg;
@@ -474,28 +469,26 @@ qboolean NET_GetLoopPacket(netsrc_t sock)
         loop->get = loop->send - MAX_LOOPBACK + 1;
     }
 
-    if (loop->get >= loop->send) {
-        return qfalse;
-    }
+    while (loop->get < loop->send) {
+        loopmsg = &loop->msgs[loop->get & (MAX_LOOPBACK - 1)];
+        loop->get++;
 
-    loopmsg = &loop->msgs[loop->get & (MAX_LOOPBACK - 1)];
-    loop->get++;
-
-    memcpy(msg_read_buffer, loopmsg->data, loopmsg->datalen);
+        memcpy(msg_read_buffer, loopmsg->data, loopmsg->datalen);
 
 #ifdef _DEBUG
-    if (net_log_enable->integer > 1) {
-        NET_LogPacket(&net_from, "LP recv", loopmsg->data, loopmsg->datalen);
-    }
+        if (net_log_enable->integer > 1) {
+            NET_LogPacket(&net_from, "LP recv", loopmsg->data, loopmsg->datalen);
+        }
 #endif
-    if (sock == NS_CLIENT) {
-        net_rate_rcvd += loopmsg->datalen;
+        if (sock == NS_CLIENT) {
+            net_rate_rcvd += loopmsg->datalen;
+        }
+
+        SZ_Init(&msg_read, msg_read_buffer, sizeof(msg_read_buffer));
+        msg_read.cursize = loopmsg->datalen;
+
+        (*packet_cb)();
     }
-
-    SZ_Init(&msg_read, msg_read_buffer, sizeof(msg_read_buffer));
-    msg_read.cursize = loopmsg->datalen;
-
-    return qtrue;
 }
 
 static qboolean NET_SendLoopPacket(netsrc_t sock, const void *data,
@@ -763,52 +756,68 @@ int NET_Sleepv(int msec, ...)
 
 //=============================================================================
 
-/*
-=============
-NET_GetPacket
-
-Fills msg_read_buffer with packet contents,
-net_from variable receives source address.
-=============
-*/
-qboolean NET_GetPacket(netsrc_t sock)
+static void NET_GetUdpPackets(netsrc_t sock, void (*packet_cb)(void))
 {
     ioentry_t *e;
     ssize_t ret;
 
     if (udp_sockets[sock] == -1)
-        return qfalse;
+        return;
 
     e = os_get_io(udp_sockets[sock]);
     if (!e->canread)
-        return qfalse;
+        return;
 
-    ret = os_udp_recv(sock, msg_read_buffer, MAX_PACKETLEN, &net_from);
-    if (ret == NET_AGAIN) {
-        e->canread = qfalse;
-        return qfalse;
-    }
+    while (1) {
+        ret = os_udp_recv(sock, msg_read_buffer, MAX_PACKETLEN, &net_from);
+        if (ret == NET_AGAIN) {
+            e->canread = qfalse;
+            break;
+        }
 
-    if (ret == NET_ERROR) {
-        Com_DPrintf("%s: %s from %s\n", __func__,
-                    NET_ErrorString(), NET_AdrToString(&net_from));
-        net_recv_errors++;
-        return qfalse;
-    }
+        if (ret == NET_ERROR) {
+            Com_DPrintf("%s: %s from %s\n", __func__,
+                        NET_ErrorString(), NET_AdrToString(&net_from));
+            net_recv_errors++;
+            break;
+        }
 
 #ifdef _DEBUG
-    if (net_log_enable->integer)
-        NET_LogPacket(&net_from, "UDP recv", msg_read_buffer, ret);
+        if (net_log_enable->integer)
+            NET_LogPacket(&net_from, "UDP recv", msg_read_buffer, ret);
 #endif
 
-    SZ_Init(&msg_read, msg_read_buffer, sizeof(msg_read_buffer));
-    msg_read.cursize = ret;
+        net_rate_rcvd += ret;
+        net_bytes_rcvd += ret;
+        net_packets_rcvd++;
 
-    net_rate_rcvd += ret;
-    net_bytes_rcvd += ret;
-    net_packets_rcvd++;
+        SZ_Init(&msg_read, msg_read_buffer, sizeof(msg_read_buffer));
+        msg_read.cursize = ret;
 
-    return qtrue;
+        (*packet_cb)();
+    }
+}
+
+/*
+=============
+NET_GetPackets
+
+Fills msg_read_buffer with packet contents,
+net_from variable receives source address.
+=============
+*/
+void NET_GetPackets(netsrc_t sock, void (*packet_cb)(void))
+{
+#if USE_CLIENT
+    memset(&net_from, 0, sizeof(net_from));
+    net_from.type = NA_LOOPBACK;
+
+    // process loopback packets
+    NET_GetLoopPackets(sock, packet_cb);
+#endif
+
+    // process UDP packets
+    NET_GetUdpPackets(sock, packet_cb);
 }
 
 /*

@@ -184,18 +184,16 @@ static inline qboolean NET_IsLocalAddress(const netadr_t *adr)
 
 void        NET_Init(void);
 void        NET_Shutdown(void);
-
 void        NET_Config(netflag_t flag);
-qboolean    NET_GetAddress(netsrc_t sock, netadr_t *adr);
-
 void        NET_UpdateStats(void);
 
-qboolean    NET_GetPacket(netsrc_t sock);
-qboolean    NET_SendPacket(netsrc_t sock, const void *data, size_t len, const netadr_t *to);
-qboolean    NET_GetLoopPacket(netsrc_t sock);
+qboolean    NET_GetAddress(netsrc_t sock, netadr_t *adr);
+void        NET_GetPackets(netsrc_t sock, void (*packet_cb)(void));
+qboolean    NET_SendPacket(netsrc_t sock, const void *data,
+                           size_t len, const netadr_t *to);
 
 char        *NET_AdrToString(const netadr_t *a);
-qboolean    NET_StringToAdr(const char *s, netadr_t *a, int port);
+qboolean    NET_StringToAdr(const char *s, netadr_t *a, int default_port);
 
 const char  *NET_ErrorString(void);
 
