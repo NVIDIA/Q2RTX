@@ -744,7 +744,7 @@ static void MenuList_ValidatePrestep(menuList_t *l)
 
 static void MenuList_AdjustPrestep(menuList_t *l)
 {
-    if (l->numItems > l->maxItems) {
+    if (l->numItems > l->maxItems && l->curvalue > 0) {
         if (l->prestep > l->curvalue) {
             l->prestep = l->curvalue;
         } else if (l->prestep < l->curvalue - l->maxItems + 1) {
@@ -766,13 +766,13 @@ void MenuList_Init(menuList_t *l)
     int        i;
 
     height = l->generic.height;
-    if (!(l->mlFlags & MLF_HIDE_HEADER)) {
+    if (l->mlFlags & MLF_HEADER) {
         height -= MLIST_SPACING;
     }
 
     l->maxItems = height / MLIST_SPACING;
 
-    clamp(l->curvalue, 0, l->numItems - 1);
+    //clamp(l->curvalue, 0, l->numItems - 1);
 
     MenuList_ValidatePrestep(l);
 
@@ -784,14 +784,14 @@ void MenuList_Init(menuList_t *l)
         l->generic.rect.width += l->columns[i].width;
     }
 
-//    if( !( l->mlFlags & MLF_HIDE_SCROLLBAR ) ) {
-//        rc->width += MLIST_SCROLLBAR_WIDTH;
-//    }
+    if (l->mlFlags & MLF_SCROLLBAR) {
+        l->generic.rect.width += MLIST_SCROLLBAR_WIDTH;
+    }
 
     l->generic.rect.height = l->generic.height;
 
     if (l->sortdir && l->sort) {
-        l->sort(l, l->sortcol);
+        l->sort(l);
     }
 }
 
@@ -814,7 +814,7 @@ void MenuList_SetValue(menuList_t *l, int value)
     MenuList_AdjustPrestep(l);
 }
 
-static int MenuList_SetColumn(menuList_t *l, int value)
+static menuSound_t MenuList_SetColumn(menuList_t *l, int value)
 {
     if (l->sortcol == value) {
         l->sortdir = -l->sortdir;
@@ -823,18 +823,88 @@ static int MenuList_SetColumn(menuList_t *l, int value)
         l->sortdir = 1;
     }
     if (l->sort) {
-        l->sort(l, l->sortcol);
+        l->sort(l);
     }
     return QMS_SILENT;
 }
 
+// finds a visible column by number, with numeration starting at 1
+static menuSound_t MenuList_FindColumn(menuList_t *l, int rel)
+{
+    int i, j;
+
+    if (!l->sortdir)
+        return QMS_NOTHANDLED;
+
+    for (i = 0, j = 0; i < l->numcolumns; i++) {
+        if (!l->columns[i].width)
+            continue;
+
+        if (++j == rel)
+            return MenuList_SetColumn(l, i);
+    }
+
+    return QMS_NOTHANDLED;
+}
+
+static menuSound_t MenuList_PrevColumn(menuList_t *l)
+{
+    int col;
+
+    if (!l->sortdir || !l->numcolumns) {
+        return QMS_NOTHANDLED;
+    }
+
+    col = l->sortcol;
+    if (col < 0)
+        return MenuList_FindColumn(l, 1);
+
+    do {
+        if (col < 0) {
+            col = l->numcolumns - 1;
+        } else {
+            col--;
+        }
+        if (col == l->sortcol) {
+            return QMS_SILENT;
+        }
+    } while (!l->columns[col].width);
+
+    return MenuList_SetColumn(l, col);
+}
+
+static menuSound_t MenuList_NextColumn(menuList_t *l)
+{
+    int col;
+
+    if (!l->sortdir || !l->numcolumns) {
+        return QMS_NOTHANDLED;
+    }
+
+    col = l->sortcol;
+    if (col < 0)
+        return MenuList_FindColumn(l, 1);
+
+    do {
+        if (col == l->numcolumns - 1) {
+            col = 0;
+        } else {
+            col++;
+        }
+        if (col == l->sortcol) {
+            return QMS_SILENT;
+        }
+    } while (!l->columns[col].width);
+
+    return MenuList_SetColumn(l, col);
+}
 
 /*
 =================
 MenuList_Click
 =================
 */
-static int MenuList_Click(menuList_t *l)
+static menuSound_t MenuList_Click(menuList_t *l)
 {
     int i, j;
     vrect_t rect;
@@ -843,15 +913,62 @@ static int MenuList_Click(menuList_t *l)
         return QMS_SILENT;
     }
 
+    // click on scroll bar
+    if ((l->mlFlags & MLF_SCROLLBAR) && l->numItems > l->maxItems) {
+        int x = l->generic.rect.x + l->generic.rect.width - MLIST_SCROLLBAR_WIDTH;
+        int y = l->generic.rect.y + MLIST_SPACING;
+        int h = l->generic.height;
+        int barHeight;
+        float pageFrac, prestepFrac;
+
+        if (l->mlFlags & MLF_HEADER) {
+            y += MLIST_SPACING;
+            h -= MLIST_SPACING;
+        }
+
+        barHeight = h - MLIST_SPACING * 2;
+        pageFrac = (float)l->maxItems / l->numItems;
+        prestepFrac = (float)l->prestep / l->numItems;
+
+        // click above thumb
+        rect.x = x;
+        rect.y = y;
+        rect.width = MLIST_SCROLLBAR_WIDTH;
+        rect.height = Q_rint(barHeight * prestepFrac);
+        if (UI_CursorInRect(&rect)) {
+            l->prestep -= l->maxItems;
+            MenuList_ValidatePrestep(l);
+            return QMS_MOVE;
+        }
+
+        h = rect.height + Q_rint(barHeight * pageFrac);
+
+        // click below thumb
+        rect.y = y + h;
+        rect.height = barHeight - h;
+        if (UI_CursorInRect(&rect)) {
+            l->prestep += l->maxItems;
+            MenuList_ValidatePrestep(l);
+            return QMS_MOVE;
+        }
+    }
+
     rect.x = l->generic.rect.x;
     rect.y = l->generic.rect.y;
     rect.width = l->generic.rect.width;
     rect.height = MLIST_SPACING;
 
+    if (l->mlFlags & MLF_SCROLLBAR) {
+        rect.width -= MLIST_SCROLLBAR_WIDTH;
+    }
+
     // click on header
-    if (!(l->mlFlags & MLF_HIDE_HEADER)) {
+    if (l->mlFlags & MLF_HEADER) {
         if (l->sortdir && UI_CursorInRect(&rect)) {
             for (j = 0; j < l->numcolumns; j++) {
+                if (!l->columns[j].width) {
+                    continue;
+                }
                 rect.width = l->columns[j].width;
                 if (UI_CursorInRect(&rect)) {
                     return MenuList_SetColumn(l, j);
@@ -892,7 +1009,7 @@ static int MenuList_Click(menuList_t *l)
 MenuList_Key
 =================
 */
-static int MenuList_Key(menuList_t *l, int key)
+static menuSound_t MenuList_Key(menuList_t *l, int key)
 {
     //int i;
 
@@ -901,11 +1018,7 @@ static int MenuList_Key(menuList_t *l, int key)
     }
 
     if (Key_IsDown(K_ALT) && Q_isdigit(key)) {
-        int col = key == '0' ? 9 : key - '0' - 1;
-        if (l->sortdir && col < l->numcolumns) {
-            return MenuList_SetColumn(l, col);
-        }
-        return QMS_NOTHANDLED;
+        return MenuList_FindColumn(l, key - '0');
     }
 
 #if 0
@@ -946,25 +1059,18 @@ static int MenuList_Key(menuList_t *l, int key)
     switch (key) {
     case K_LEFTARROW:
     case 'h':
-        if (l->sortdir) {
-            if (l->sortcol > 0) {
-                return MenuList_SetColumn(l, l->sortcol - 1);
-            }
-            return MenuList_SetColumn(l, l->numcolumns - 1);
-        }
-        break;
+        return MenuList_PrevColumn(l);
+
     case K_RIGHTARROW:
     case 'l':
-        if (l->sortdir) {
-            if (l->sortcol < l->numcolumns - 1) {
-                return MenuList_SetColumn(l, l->sortcol + 1);
-            }
-            return MenuList_SetColumn(l, 0);
-        }
-        break;
+        return MenuList_NextColumn(l);
+
     case K_UPARROW:
     case K_KP_UPARROW:
     case 'k':
+        if (l->curvalue < 0) {
+            goto home;
+        }
         if (l->curvalue > 0) {
             l->curvalue--;
             if (l->generic.change) {
@@ -978,6 +1084,9 @@ static int MenuList_Key(menuList_t *l, int key)
     case K_DOWNARROW:
     case K_KP_DOWNARROW:
     case 'j':
+        if (l->curvalue < 0) {
+            goto home;
+        }
         if (l->curvalue < l->numItems - 1) {
             l->curvalue++;
             if (l->generic.change) {
@@ -990,6 +1099,7 @@ static int MenuList_Key(menuList_t *l, int key)
 
     case K_HOME:
     case K_KP_HOME:
+    home:
         l->prestep = 0;
         l->curvalue = 0;
         if (l->generic.change) {
@@ -1028,15 +1138,39 @@ static int MenuList_Key(menuList_t *l, int key)
 
     case K_PGUP:
     case K_KP_PGUP:
-        l->prestep -= l->maxItems;
-        MenuList_ValidatePrestep(l);
-        return QMS_SILENT;
+        if (l->curvalue < 0) {
+            goto home;
+        }
+        if (l->curvalue > 0) {
+            l->curvalue -= l->maxItems - 1;
+            if (l->curvalue < 0) {
+                l->curvalue = 0;
+            }
+            if (l->generic.change) {
+                l->generic.change(&l->generic);
+            }
+            MenuList_AdjustPrestep(l);
+            return QMS_MOVE;
+        }
+        return QMS_BEEP;
 
     case K_PGDN:
     case K_KP_PGDN:
-        l->prestep += l->maxItems;
-        MenuList_ValidatePrestep(l);
-        return QMS_SILENT;
+        if (l->curvalue < 0) {
+            goto home;
+        }
+        if (l->curvalue < l->numItems - 1) {
+            l->curvalue += l->maxItems - 1;
+            if (l->curvalue > l->numItems - 1) {
+                l->curvalue = l->numItems - 1;
+            }
+            if (l->generic.change) {
+                l->generic.change(&l->generic);
+            }
+            MenuList_AdjustPrestep(l);
+            return QMS_MOVE;
+        }
+        return QMS_BEEP;
 
     case K_MOUSE1:
     case K_MOUSE2:
@@ -1064,7 +1198,7 @@ static void MenuList_DrawString(int x, int y, int flags,
     rc.bottom = 0;
 
     if ((column->uiFlags & UI_CENTER) == UI_CENTER) {
-        x += column->width / 2;
+        x += column->width / 2 - 1;
     } else if (column->uiFlags & UI_RIGHT) {
         x += column->width - MLIST_PRESTEP;
     } else {
@@ -1100,11 +1234,15 @@ static void MenuList_Draw(menuList_t *l)
     height = l->generic.rect.height;
 
     // draw header
-    if (!(l->mlFlags & MLF_HIDE_HEADER)) {
+    if (l->mlFlags & MLF_HEADER) {
         xx = x;
         for (j = 0; j < l->numcolumns; j++) {
             int flags = UI_ALTCOLOR;
             uint32_t color = uis.color.normal.u32;
+
+            if (!l->columns[j].width) {
+                continue;
+            }
 
             if (l->sortcol == j && l->sortdir) {
                 flags = 0;
@@ -1125,16 +1263,14 @@ static void MenuList_Draw(menuList_t *l)
         height -= MLIST_SPACING;
     }
 
-    if (!(l->mlFlags & MLF_HIDE_SCROLLBAR) &&
-        (!(l->mlFlags & MLF_HIDE_SCROLLBAR_EMPTY) || l->numItems > l->maxItems)) {
+    if (l->mlFlags & MLF_SCROLLBAR) {
         barHeight = height - MLIST_SPACING * 2;
         yy = y + MLIST_SPACING;
 
         // draw scrollbar background
-        if (!(l->mlFlags & MLF_HIDE_BACKGROUND)) {
-            R_DrawFill32(x + width, yy, MLIST_SCROLLBAR_WIDTH - 1,
-                         barHeight, uis.color.normal.u32);
-        }
+        R_DrawFill32(x + width - MLIST_SCROLLBAR_WIDTH, yy,
+                     MLIST_SCROLLBAR_WIDTH - 1, barHeight,
+                     uis.color.normal.u32);
 
         if (l->numItems > l->maxItems) {
             pageFrac = (float)l->maxItems / l->numItems;
@@ -1145,16 +1281,21 @@ static void MenuList_Draw(menuList_t *l)
         }
 
         // draw scrollbar thumb
-        R_DrawFill32(x + width,
+        R_DrawFill32(x + width - MLIST_SCROLLBAR_WIDTH,
                      yy + Q_rint(barHeight * prestepFrac),
                      MLIST_SCROLLBAR_WIDTH - 1,
                      Q_rint(barHeight * pageFrac),
                      uis.color.selection.u32);
     }
 
+    // draw background
     xx = x;
     for (j = 0; j < l->numcolumns; j++) {
         uint32_t color = uis.color.normal.u32;
+
+        if (!l->columns[j].width) {
+            continue;
+        }
 
         if (l->sortcol == j && l->sortdir) {
             if (l->generic.flags & QMF_HASFOCUS) {
@@ -1174,6 +1315,9 @@ static void MenuList_Draw(menuList_t *l)
         if (!(l->generic.flags & QMF_DISABLED) && i == l->curvalue) {
             xx = x;
             for (j = 0; j < l->numcolumns; j++) {
+                if (!l->columns[j].width) {
+                    continue;
+                }
                 R_DrawFill32(xx, yy, l->columns[j].width - 1,
                              MLIST_SPACING, uis.color.selection.u32);
                 xx += l->columns[j].width;
@@ -1188,9 +1332,10 @@ static void MenuList_Draw(menuList_t *l)
                 break;
             }
 
-            MenuList_DrawString(xx, yy, 0, &l->columns[j], s);
-
-            xx += l->columns[j].width;
+            if (l->columns[j].width) {
+                MenuList_DrawString(xx, yy, 0, &l->columns[j], s);
+                xx += l->columns[j].width;
+            }
             s += strlen(s) + 1;
         }
 
@@ -1203,11 +1348,19 @@ void MenuList_Sort(menuList_t *l, int offset, int (*cmpfunc)(const void *, const
     void *n;
     int i;
 
-    if (!l->items) {
+    if (!l->items)
         return;
-    }
 
-    n = l->items[l->curvalue];
+    if (offset >= l->numItems)
+        return;
+
+    if (l->sortcol < 0 || l->sortcol >= l->numcolumns)
+        return;
+
+    if (l->curvalue < 0 || l->curvalue >= l->numItems)
+        n = NULL;
+    else
+        n = l->items[l->curvalue];
 
     qsort(l->items + offset, l->numItems - offset, sizeof(char *), cmpfunc);
 
@@ -1218,7 +1371,8 @@ void MenuList_Sort(menuList_t *l, int offset, int (*cmpfunc)(const void *, const
         }
     }
 
-    MenuList_AdjustPrestep(l);
+    if (n)
+        MenuList_AdjustPrestep(l);
 }
 
 /*

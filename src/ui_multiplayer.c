@@ -414,6 +414,7 @@ void M_Menu_Servers(void)
     m_join.list.generic.change      = Change;
     m_join.list.items               = (void **)m_join.names;
     m_join.list.numcolumns          = 3;
+    m_join.list.mlFlags             = MLF_HEADER | MLF_SCROLLBAR;
 
     m_join.list.columns[0].uiFlags  = UI_LEFT;
     m_join.list.columns[0].name     = "Hostname";
@@ -428,6 +429,7 @@ void M_Menu_Servers(void)
     m_join.info.generic.type    = MTYPE_LIST;
     m_join.info.generic.flags   = QMF_LEFT_JUSTIFY | QMF_HIDDEN;
     m_join.info.numcolumns      = 2;
+    m_join.info.mlFlags         = MLF_HEADER | MLF_SCROLLBAR;
 
     m_join.info.columns[0].uiFlags  = UI_LEFT;
     m_join.info.columns[0].name     = "Key";
@@ -439,8 +441,8 @@ void M_Menu_Servers(void)
 //
     m_join.players.generic.type     = MTYPE_LIST;
     m_join.players.generic.flags    = QMF_LEFT_JUSTIFY | QMF_HIDDEN | QMF_DISABLED;
-    m_join.players.mlFlags          = MLF_HIDE_SCROLLBAR;
     m_join.players.numcolumns       = 3;
+    m_join.players.mlFlags          = MLF_HEADER;
 
     m_join.players.columns[0].uiFlags   = UI_CENTER;
     m_join.players.columns[0].name      = "Frg";

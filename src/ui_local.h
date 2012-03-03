@@ -166,11 +166,10 @@ typedef struct menuSlider_s {
 #define MLIST_BORDER_WIDTH      1
 #define MLIST_SCROLLBAR_WIDTH   GENERIC_SPACING(CHAR_WIDTH)
 #define MLIST_PRESTEP           3
+#define MLIST_PADDING           (MLIST_PRESTEP*2)
 
-#define MLF_HIDE_SCROLLBAR          (1<<0)
-#define MLF_HIDE_SCROLLBAR_EMPTY    (1<<1)
-#define MLF_HIDE_BACKGROUND         (1<<2)
-#define MLF_HIDE_HEADER             (1<<3)
+#define MLF_HEADER      0x00000001
+#define MLF_SCROLLBAR   0x00000002
 
 typedef struct menuListColumn_s {
     char *name;
@@ -199,7 +198,7 @@ typedef struct menuList_s {
     int                 numcolumns;
     int                 sortdir, sortcol;
 
-    menuSound_t (*sort)(struct menuList_s *, int column);
+    menuSound_t (*sort)(struct menuList_s *);
 } menuList_t;
 
 typedef struct menuSpinControl_s {

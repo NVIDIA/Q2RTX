@@ -339,7 +339,7 @@ static void BuildList(void)
     if (m_demos.list.numItems) {
         Change(&m_demos.list.generic);
         if (m_demos.list.sortdir) {
-            m_demos.list.sort(&m_demos.list, m_demos.list.sortcol);
+            m_demos.list.sort(&m_demos.list);
         }
     }
 
@@ -475,9 +475,9 @@ static int namecmp(const void *p1, const void *p2)
     return Q_stricmp(s1, s2) * m_demos.list.sortdir;
 }
 
-static menuSound_t Sort(menuList_t *self, int column)
+static menuSound_t Sort(menuList_t *self)
 {
-    switch (column) {
+    switch (m_demos.list.sortcol) {
     case COL_NAME:
     case COL_MAP:
     case COL_POV:
@@ -504,21 +504,21 @@ static void Size(menuFrameWork_t *self)
     m_demos.list.generic.height = uis.height - CHAR_HEIGHT * 2 - 1;
 
     w1 = 17 + m_demos.widest_map + m_demos.widest_pov;
-    w2 = uis.width - (w1 + 2) * CHAR_WIDTH - MLIST_SCROLLBAR_WIDTH;
+    w2 = uis.width - w1 * CHAR_WIDTH - MLIST_PADDING * 4 - MLIST_SCROLLBAR_WIDTH;
     if (w2 > 8 * CHAR_WIDTH) {
         // everything fits
         m_demos.list.columns[0].width = w2;
-        m_demos.list.columns[1].width = 12 * CHAR_WIDTH + CHAR_WIDTH / 2;
-        m_demos.list.columns[2].width = 5 * CHAR_WIDTH + CHAR_WIDTH / 2;
-        m_demos.list.columns[3].width = m_demos.widest_map * CHAR_WIDTH + CHAR_WIDTH / 2;
-        m_demos.list.columns[4].width = m_demos.widest_pov * CHAR_WIDTH + CHAR_WIDTH / 2;
+        m_demos.list.columns[1].width = 12 * CHAR_WIDTH + MLIST_PADDING;
+        m_demos.list.columns[2].width = 5 * CHAR_WIDTH + MLIST_PADDING;
+        m_demos.list.columns[3].width = m_demos.widest_map * CHAR_WIDTH + MLIST_PADDING;
+        m_demos.list.columns[4].width = m_demos.widest_pov * CHAR_WIDTH + MLIST_PADDING;
         m_demos.list.numcolumns = COL_MAX;
     } else {
         // map and pov don't fit
-        w2 = uis.width - (17 + 1) * CHAR_WIDTH - MLIST_SCROLLBAR_WIDTH;
+        w2 = uis.width - 17 * CHAR_WIDTH - MLIST_PADDING * 2 - MLIST_SCROLLBAR_WIDTH;
         m_demos.list.columns[0].width = w2;
-        m_demos.list.columns[1].width = 12 * CHAR_WIDTH + CHAR_WIDTH / 2;
-        m_demos.list.columns[2].width = 5 * CHAR_WIDTH + CHAR_WIDTH / 2;
+        m_demos.list.columns[1].width = 12 * CHAR_WIDTH + MLIST_PADDING;
+        m_demos.list.columns[2].width = 5 * CHAR_WIDTH + MLIST_PADDING;
         m_demos.list.columns[3].width = 0;
         m_demos.list.columns[4].width = 0;
         m_demos.list.numcolumns = COL_MAX - 2;
@@ -588,7 +588,7 @@ static void ui_sortdemos_changed(cvar_t *self)
     }
 
     if (m_demos.list.items && m_demos.list.sortdir) {
-        m_demos.list.sort(&m_demos.list, m_demos.list.sortcol);
+        m_demos.list.sort(&m_demos.list);
     }
 }
 
@@ -622,6 +622,7 @@ void M_Menu_Demos(void)
     m_demos.list.sortcol        = COL_NAME;
     m_demos.list.extrasize      = DEMO_EXTRASIZE;
     m_demos.list.sort           = Sort;
+    m_demos.list.mlFlags        = MLF_HEADER | MLF_SCROLLBAR;
 
     m_demos.list.columns[0].name    = m_demos.browse;
     m_demos.list.columns[0].uiFlags = UI_LEFT;
