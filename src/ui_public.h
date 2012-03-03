@@ -25,6 +25,8 @@ typedef enum {
     UIMENU_GAME
 } uiMenu_t;
 
+struct netadr_s;
+
 qboolean    UI_Init(void);
 void        UI_Shutdown(void);
 void        UI_ModeChanged(void);
@@ -32,7 +34,9 @@ void        UI_Keydown(int key);
 void        UI_CharEvent(int key);
 void        UI_Draw(int realtime);
 void        UI_OpenMenu(uiMenu_t menu);
-void        UI_AddToServerList(const serverStatus_t *status);
+void        UI_Frame(int msec);
+void        UI_StatusEvent(const serverStatus_t *status);
+void        UI_ErrorEvent(struct netadr_s *from);
 void        UI_MouseEvent(int x, int y);
 qboolean    UI_IsTransparent(void);
 

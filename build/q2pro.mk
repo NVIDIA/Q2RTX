@@ -65,10 +65,10 @@ ifdef USE_UI
 SRCFILES+=ui_atoms.c \
 	ui_demos.c \
 	ui_menu.c \
-	ui_multiplayer.c \
 	ui_playerconfig.c \
 	ui_playermodels.c \
-	ui_script.c
+	ui_script.c \
+	ui_servers.c
 endif
 
 ifdef USE_REF

@@ -18,7 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#define MAX_LOCAL_SERVERS 16
+#define MAX_LOCAL_SERVERS   16
 #define MAX_STATUS_PLAYERS  64
 
 typedef struct {
@@ -28,11 +28,9 @@ typedef struct {
 } playerStatus_t;
 
 typedef struct {
-    char    address[MAX_QPATH];
-    char    infostring[MAX_STRING_CHARS]; // BIG infostring
-    playerStatus_t  players[MAX_STATUS_PLAYERS];
+    char infostring[MAX_INFO_STRING];
+    playerStatus_t players[MAX_STATUS_PLAYERS];
     int numPlayers;
-    int ping;
 } serverStatus_t;
 
 typedef struct {
@@ -47,9 +45,10 @@ typedef enum {
     ACT_ACTIVATED
 } active_t;
 
+struct netadr_s;
+
 qboolean CL_ProcessEvents(void);
 #if USE_ICMP
-struct netadr_s;
 void CL_ErrorEvent(struct netadr_s *from);
 #endif
 void CL_Init(void);
@@ -59,7 +58,7 @@ unsigned CL_Frame(unsigned msec);
 void CL_RestartFilesystem(qboolean total);
 void CL_Activate(active_t active);
 void CL_UpdateUserinfo(cvar_t *var, from_t from);
-qboolean CL_SendStatusRequest(char *buffer, size_t size);
+void CL_SendStatusRequest(const struct netadr_s *address);
 demoInfo_t *CL_GetDemoInfo(const char *path, demoInfo_t *info);
 qboolean CL_CheatsOK(void);
 

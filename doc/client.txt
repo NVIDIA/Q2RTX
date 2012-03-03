@@ -879,6 +879,21 @@ ui_listalldemos::
     Default value is 0 (limit the search to physical files within the current
     game directory).
 
+ui_sortservers::
+    Specifies default sorting order of entries in server browser. Default value
+    is 0.  Negate the values for descending sorting order instead of ascending.
+        - 0 — don't sort
+        - 1 — sort by hostname
+        - 2 — sort by mod
+        - 3 — sort by map
+        - 4 — sort by players
+        - 5 — sort by RTT
+
+ui_pingrate::
+    Specifies the server pinging rate used by server browser, in packets per
+    second. Default value is 0, which estimates the default pinging rate based
+    on ‘rate’ client variable.
+
 com_time_format::
     Time format used by ‘com_time’ macro. Default value is "%H.%M" on Win32 and
     "%H:%M" on UNIX. See strftime(3) for syntax description.

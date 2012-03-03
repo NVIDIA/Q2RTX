@@ -141,8 +141,9 @@ end
 
 begin multiplayer
     banner m_banner_multiplayer
-    action "server browser" pushmenu servers
-    action "demo browser" pushmenu demos
+    action "browse q2servers.com" pushmenu servers "+http://q2servers.com/?raw=2"
+    action "browse address book" pushmenu servers "favorites://" "file:///servers.lst" "broadcast://"
+    action "browse demos" pushmenu demos
     action "start server" pushmenu startserver
 end
 
@@ -158,8 +159,9 @@ end
 
 begin game
     background #0000ff20
-    action "servers" pushmenu servers
-    action "demos" pushmenu demos
+    action "browse q2servers.com" pushmenu servers "+http://q2servers.com/?raw=2"
+    action "browse address book" pushmenu servers "favorites://" "file:///servers.lst" "broadcast://"
+    action "browse demos" pushmenu demos
     action "options" pushmenu options
     action "disconnect" disconnect
     action "quit" quit

@@ -102,9 +102,9 @@ char        cl_cmdbuf_text[MAX_STRING_CHARS];
 
 typedef enum {
     REQ_FREE,
-    REQ_STATUS,
-    //REQ_INFO,
-    REQ_PING,
+    REQ_STATUS_CL,
+    REQ_STATUS_UI,
+    REQ_INFO,
     REQ_RCON
 } requestType_t;
 
@@ -118,21 +118,58 @@ typedef struct {
 #define REQUEST_MASK    (MAX_REQUESTS - 1)
 
 static request_t    clientRequests[MAX_REQUESTS];
-static int          currentRequest;
+static unsigned     nextRequest;
 
 static request_t *CL_AddRequest(const netadr_t *adr, requestType_t type)
 {
     request_t *r;
 
-    r = &clientRequests[currentRequest & REQUEST_MASK];
-    currentRequest++;
-
+    r = &clientRequests[nextRequest++ & REQUEST_MASK];
     r->adr = *adr;
     r->type = type;
     r->time = cls.realtime;
 
     return r;
 }
+
+static request_t *CL_FindRequest(void)
+{
+    request_t *r;
+    int i, count;
+
+    count = MAX_REQUESTS;
+    if (count > nextRequest)
+        count = nextRequest;
+
+    // find the most recent request sent to this address
+    for (i = 0; i < count; i++) {
+        r = &clientRequests[(nextRequest - i - 1) & REQUEST_MASK];
+        if (!r->type) {
+            continue;
+        }
+        if (r->adr.type == NA_BROADCAST) {
+            if (cls.realtime - r->time > 3000) {
+                continue;
+            }
+            if (!NET_IsLanAddress(&net_from)) {
+                continue;
+            }
+        } else {
+            if (cls.realtime - r->time > 6000) {
+                break;
+            }
+            if (!NET_IsEqualBaseAdr(&net_from, &r->adr)) {
+                continue;
+            }
+        }
+
+        return r;
+    }
+
+    return NULL;
+}
+
+//======================================================================
 
 static void CL_UpdateGunSetting(void)
 {
@@ -771,7 +808,7 @@ static void CL_ServerStatus_f(void)
         }
     }
 
-    CL_AddRequest(&adr, REQ_STATUS);
+    CL_AddRequest(&adr, REQ_STATUS_CL);
 
     NET_Config(NET_CLIENT);
 
@@ -796,88 +833,63 @@ static int QDECL SortPlayers(const void *v1, const void *v2)
 
 /*
 ====================
-CL_ServerStatusResponse
+CL_ParseStatusResponse
 ====================
 */
-static qboolean CL_ServerStatusResponse(const char *status, size_t len, serverStatus_t *dest)
+static void CL_ParseStatusResponse(serverStatus_t *status, const char *string)
 {
-    const char *s;
     playerStatus_t *player;
+    const char *s;
     size_t infolen;
 
-    memset(dest, 0, sizeof(*dest));
+    // parse '\n' terminated infostring
+    s = Q_strchrnul(string, '\n');
 
-    s = memchr(status, '\n', len);
-    if (!s) {
-        return qfalse;
-    }
-    infolen = s - status;
-    if (!infolen || infolen >= MAX_STRING_CHARS) {
-        return qfalse;
-    }
-    s++;
+    // due to off-by-one error in the original version of Info_SetValueForKey,
+    // some servers produce infostrings up to 512 characters long. work this
+    // bug around by cutting off the last character(s).
+    infolen = s - string;
+    if (infolen >= MAX_INFO_STRING)
+        infolen = MAX_INFO_STRING - 1;
 
-    strcpy(dest->address, NET_AdrToString(&net_from));
-    memcpy(dest->infostring, status, infolen);
+    // copy infostring off
+    memcpy(status->infostring, string, infolen);
+    status->infostring[infolen] = 0;
 
-    // HACK: check if this is a status response
-    if (!strstr(dest->infostring, "\\maxclients\\")) {
-        return qfalse;
-    }
+    if (!Info_Validate(status->infostring))
+        strcpy(status->infostring, "\\hostname\\badinfo");
 
-    // parse player list
-    if (*s < 32) {
-        return qtrue;
-    }
-    do {
-        player = &dest->players[dest->numPlayers];
+    // parse optional player list
+    status->numPlayers = 0;
+    while (status->numPlayers < MAX_STATUS_PLAYERS) {
+        player = &status->players[status->numPlayers];
         player->score = atoi(COM_Parse(&s));
         player->ping = atoi(COM_Parse(&s));
-        if (!s) {
-            break;
-        }
         Q_strlcpy(player->name, COM_Parse(&s), sizeof(player->name));
-
-        if (++dest->numPlayers == MAX_STATUS_PLAYERS) {
+        if (!s)
             break;
-        }
-    } while (s);
+        status->numPlayers++;
+    }
 
-    qsort(dest->players, dest->numPlayers, sizeof(dest->players[0]), SortPlayers);
-
-    return qtrue;
+    // sort players by frags
+    qsort(status->players, status->numPlayers,
+          sizeof(status->players[0]), SortPlayers);
 }
 
-static void CL_DumpServerInfo(const serverStatus_t *status)
+static void CL_DumpStatusResponse(const serverStatus_t *status)
 {
-    char    key[MAX_STRING_CHARS];
-    char    value[MAX_STRING_CHARS];
-    const   playerStatus_t *player;
-    const char    *infostring;
     int i;
 
-    Com_Printf("Info response from %s:\n",
-               NET_AdrToString(&net_from));
+    Com_Printf("Status response from %s\n\n", NET_AdrToString(&net_from));
 
-    infostring = status->infostring;
-    do {
-        Info_NextPair(&infostring, key, value);
-
-        if (!key[0]) {
-            break;
-        }
-
-        if (value[0]) {
-            Com_Printf("%-20s %s\n", key, value);
-        } else {
-            Com_Printf("%-20s <MISSING VALUE>\n", key);
-        }
-    } while (infostring);
+    Info_Print(status->infostring);
 
     Com_Printf("\nNum Score Ping Name\n");
-    for (i = 0, player = status->players; i < status->numPlayers; i++, player++) {
-        Com_Printf("%3i %5i %4i %s\n", i + 1, player->score, player->ping,
-                   player->name);
+    for (i = 0; i < status->numPlayers; i++) {
+        Com_Printf("%3i %5i %4i %s\n", i + 1,
+                   status->players[i].score,
+                   status->players[i].ping,
+                   status->players[i].name);
     }
 }
 
@@ -888,62 +900,35 @@ CL_ParsePrintMessage
 */
 static void CL_ParsePrintMessage(void)
 {
-    request_t *r;
-    serverStatus_t serverStatus;
     char string[MAX_NET_STRING];
-    int i, oldest;
-    unsigned delta;
-    size_t len;
+    serverStatus_t status;
+    request_t *r;
 
-    len = MSG_ReadString(string, sizeof(string));
+    MSG_ReadString(string, sizeof(string));
 
-    oldest = currentRequest - MAX_REQUESTS;
-    if (oldest < 0) {
-        oldest = 0;
-    }
-    for (i = currentRequest - 1; i >= oldest; i--) {
-        r = &clientRequests[i & REQUEST_MASK];
-        if (!r->type) {
-            continue;
-        }
-        delta = cls.realtime - r->time;
-        if (r->adr.type == NA_BROADCAST) {
-            if (delta > 3000) {
-                continue;
-            }
-        } else {
-            if (delta > 6000) {
-                break;
-            }
-            if (!NET_IsEqualBaseAdr(&net_from, &r->adr)) {
-                continue;
-            }
-        }
+    r = CL_FindRequest();
+    if (r) {
         switch (r->type) {
-        case REQ_STATUS:
-            if (!CL_ServerStatusResponse(string, len, &serverStatus)) {
-                continue;
-            }
-            CL_DumpServerInfo(&serverStatus);
+        case REQ_STATUS_CL:
+            CL_ParseStatusResponse(&status, string);
+            CL_DumpStatusResponse(&status);
             break;
-            //case REQ_INFO:
-            //    break;
 #if USE_UI
-        case REQ_PING:
-            if (!CL_ServerStatusResponse(string, len, &serverStatus)) {
-                continue;
-            }
-            UI_AddToServerList(&serverStatus);
+        case REQ_STATUS_UI:
+            CL_ParseStatusResponse(&status, string);
+            UI_StatusEvent(&status);
             break;
 #endif
         case REQ_RCON:
             Com_Printf("%s", string);
             return; // rcon may come in multiple packets
+
         default:
-            break;
+            return;
         }
 
-        r->type = REQ_FREE;
+        if (r->adr.type != NA_BROADCAST)
+            r->type = REQ_FREE;
         return;
     }
 
@@ -960,6 +945,28 @@ static void CL_ParsePrintMessage(void)
     Com_DPrintf("%s: dropped unrequested packet\n", __func__);
 }
 
+/*
+=================
+CL_ParseInfoMessage
+
+Handle a reply from a ping
+=================
+*/
+void CL_ParseInfoMessage(void) {
+    char string[MAX_QPATH];
+    request_t *r;
+
+    r = CL_FindRequest();
+    if (!r)
+        return;
+    if (r->type != REQ_INFO)
+        return;
+
+    MSG_ReadString(string, sizeof(string));
+    Com_Printf("%s", string);
+    if (r->adr.type != NA_BROADCAST)
+        r->type = REQ_FREE;
+}
 
 /*
 ====================
@@ -1113,54 +1120,21 @@ static void CL_Reconnect_f(void)
     SCR_UpdateScreen();
 }
 
-#if 0
-/*
-=================
-CL_ParseStatusMessage
-
-Handle a reply from a ping
-=================
-*/
-void CL_ParseStatusMessage(void) {}
-#endif
-
+#ifdef USE_UI
 /*
 =================
 CL_SendStatusRequest
 =================
 */
-qboolean CL_SendStatusRequest(char *buffer, size_t size)
+void CL_SendStatusRequest(const netadr_t *address)
 {
-    netadr_t    address;
-
-    memset(&address, 0, sizeof(address));
-
     NET_Config(NET_CLIENT);
 
-    if (!buffer) {
-        // send a broadcast packet
-        address.type = NA_BROADCAST;
-        address.port = BigShort(PORT_SERVER);
-    } else {
-        if (!NET_StringToAdr(buffer, &address, PORT_SERVER)) {
-            return qfalse;
-        }
+    CL_AddRequest(address, REQ_STATUS_UI);
 
-        // return resolved address
-        if (size > 0) {
-            Q_strlcpy(buffer, NET_AdrToString(&address), size);
-        }
-    }
-
-    CL_AddRequest(&address, REQ_PING);
-
-    OOB_PRINT(NS_CLIENT, &address, "status");
-
-    // Com_ProcessEvents();
-
-    return qtrue;
+    OOB_PRINT(NS_CLIENT, address, "status");
 }
-
+#endif
 
 /*
 =================
@@ -1169,48 +1143,40 @@ CL_PingServers_f
 */
 static void CL_PingServers_f(void)
 {
+    netadr_t address;
+    cvar_t *var;
     int i;
-    char    buffer[32];
-    cvar_t  *var;
-    netadr_t    address;
-
-    memset(&address, 0, sizeof(address));
 
     NET_Config(NET_CLIENT);
 
     // send a broadcast packet
-    Com_Printf("pinging broadcast...\n");
+    memset(&address, 0, sizeof(address));
     address.type = NA_BROADCAST;
     address.port = BigShort(PORT_SERVER);
 
-    CL_AddRequest(&address, REQ_STATUS);
+    Com_DPrintf("Pinging broadcast...\n");
+    CL_AddRequest(&address, REQ_INFO);
 
-    OOB_PRINT(NS_CLIENT, &address, "status");
-
-    SCR_UpdateScreen();
+    OOB_PRINT(NS_CLIENT, &address, "info 34");
 
     // send a packet to each address book entry
     for (i = 0; i < 64; i++) {
-        Q_snprintf(buffer, sizeof(buffer), "adr%i", i);
-        var = Cvar_FindVar(buffer);
-        if (!var) {
+        var = Cvar_FindVar(va("adr%i", i));
+        if (!var)
             break;
-        }
+
         if (!var->string[0])
             continue;
 
         if (!NET_StringToAdr(var->string, &address, PORT_SERVER)) {
-            Com_Printf("bad address: %s\n", var->string);
+            Com_Printf("Bad address: %s\n", var->string);
             continue;
         }
 
-        Com_Printf("pinging %s...\n", var->string);
-        CL_AddRequest(&address, REQ_STATUS);
+        Com_DPrintf("Pinging %s...\n", var->string);
+        CL_AddRequest(&address, REQ_INFO);
 
-        OOB_PRINT(NS_CLIENT, &address, "status");
-
-        // Com_ProcessEvents();
-        SCR_UpdateScreen();
+        OOB_PRINT(NS_CLIENT, &address, "info 34");
     }
 }
 
@@ -1487,14 +1453,6 @@ static void CL_ConnectionlessPacket(void)
         return;
     }
 
-#if 0
-    // server responding to a status broadcast
-    if (!strcmp(c, "info")) {
-        CL_ParseStatusMessage();
-        return;
-    }
-#endif
-
     if (!strcmp(c, "passive_connect")) {
         if (!cls.passive) {
             Com_DPrintf("Passive connect received while not connecting.  Ignored.\n");
@@ -1522,9 +1480,14 @@ static void CL_ConnectionlessPacket(void)
         return;
     }
 
+    // server responding to a status broadcast
+    if (!strcmp(c, "info")) {
+        CL_ParseInfoMessage();
+        return;
+    }
+
     Com_DPrintf("Unknown connectionless packet command.\n");
 }
-
 
 /*
 =================
@@ -1585,6 +1548,8 @@ static void CL_PacketEvent(void)
 #if USE_ICMP
 void CL_ErrorEvent(netadr_t *from)
 {
+    UI_ErrorEvent(from);
+
     //
     // error packet from server
     //
@@ -3196,6 +3161,10 @@ unsigned CL_Frame(unsigned msec)
     CL_PredictMovement();
 
     Con_RunConsole();
+
+#if USE_UI
+    UI_Frame(main_extra);
+#endif
 
     if (ref_frame) {
         // update the screen

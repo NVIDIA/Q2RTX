@@ -309,7 +309,6 @@ qboolean    UI_DoHitTest(void);
 qboolean    UI_CursorInRect(vrect_t *rect);
 void        *UI_FormatColumns(int extrasize, ...) q_sentinel;
 char        *UI_GetColumn(char *s, int n);
-void        UI_AddToServerList(const serverStatus_t *status);
 void        UI_DrawString(int x, int y, int flags, const char *string);
 void        UI_DrawChar(int x, int y, int flags, int ch);
 void        UI_DrawRect8(const vrect_t *rect, int border, int c);
