@@ -221,6 +221,15 @@ qboolean Key_IsDown(int key)
     return keydown[key];
 }
 
+int Key_Repeats(int key)
+{
+    if (key < 0 || key > 255) {
+        return 0;
+    }
+
+    return key_repeats[key];
+}
+
 /*
 ===================
 Key_AnyKeyDown

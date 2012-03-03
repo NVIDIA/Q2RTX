@@ -124,6 +124,7 @@ keydest_t   Key_GetDest(void);
 void        Key_SetDest(keydest_t dest);
 
 qboolean    Key_IsDown(int key);
+int         Key_Repeats(int key);
 qboolean    Key_AnyKeyDown(void);
 void        Key_ClearStates(void);
 
