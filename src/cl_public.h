@@ -63,6 +63,10 @@ qboolean CL_SendStatusRequest(char *buffer, size_t size);
 demoInfo_t *CL_GetDemoInfo(const char *path, demoInfo_t *info);
 qboolean CL_CheatsOK(void);
 
+#if USE_CURL
+ssize_t HTTP_FetchFile(const char *url, void **data);
+#endif
+
 qboolean CL_ForwardToServer(void);
 // adds the current command line as a clc_stringcmd to the client message.
 // things like godmode, noclip, etc, are commands directed to the server,

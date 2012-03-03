@@ -198,6 +198,48 @@ static void escape_path(const char *path, char *escaped)
     *p = 0;
 }
 
+// curl doesn't provide a way to convert HTTP response code to string...
+static const char *http_strerror(int response)
+{
+    static char buffer[32];
+
+    //common codes
+    switch (response) {
+    case 200:
+        return "200 OK";
+    case 401:
+        return "401 Unauthorized";
+    case 403:
+        return "403 Forbidden";
+    case 404:
+        return "404 Not Found";
+    case 500:
+        return "500 Internal Server Error";
+    case 503:
+        return "503 Service Unavailable";
+    }
+
+    if (response < 100 || response >= 600) {
+        Q_snprintf(buffer, sizeof(buffer), "%d <bad code>", response);
+        return buffer;
+    }
+
+    //generic classes
+    if (response < 200) {
+        Q_snprintf(buffer, sizeof(buffer), "%d Informational", response);
+    } else if (response < 300) {
+        Q_snprintf(buffer, sizeof(buffer), "%d Success", response);
+    } else if (response < 400) {
+        Q_snprintf(buffer, sizeof(buffer), "%d Redirection", response);
+    } else if (response < 500) {
+        Q_snprintf(buffer, sizeof(buffer), "%d Client Error", response);
+    } else {
+        Q_snprintf(buffer, sizeof(buffer), "%d Server Error", response);
+    }
+
+    return buffer;
+}
+
 // Actually starts a download by adding it to the curl multi handle.
 static void start_download(dlqueue_t *entry, dlhandle_t *dl)
 {
@@ -300,6 +342,63 @@ fail:
     entry->state = DL_RUNNING;
     curl_handles++;
 }
+
+#if USE_UI
+
+/*
+===============
+HTTP_FetchFile
+
+Fetches data from an arbitrary URL in a blocking fashion. Doesn't touch any
+global variables and thus doesn't interfere with existing client downloads.
+===============
+*/
+ssize_t HTTP_FetchFile(const char *url, void **data) {
+    dlhandle_t tmp;
+    CURL *curl;
+    CURLcode ret;
+    long response;
+
+    *data = NULL;
+
+    curl = curl_easy_init();
+    if (!curl)
+        return -1;
+
+    memset(&tmp, 0, sizeof(tmp));
+
+    curl_easy_setopt(curl, CURLOPT_ENCODING, "");
+    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &tmp);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, recv_func);
+    curl_easy_setopt(curl, CURLOPT_WRITEHEADER, &tmp);
+    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, header_func);
+    curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1);
+    curl_easy_setopt(curl, CURLOPT_PROXY, cl_http_proxy->string);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, com_version->string);
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+
+    ret = curl_easy_perform(curl);
+
+    if (ret == CURLE_HTTP_RETURNED_ERROR)
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response);
+
+    curl_easy_cleanup(curl);
+
+    if (ret == CURLE_OK) {
+        *data = tmp.buffer;
+        return tmp.position;
+    }
+
+    Com_EPrintf("[HTTP] Failed to fetch '%s': %s\n",
+                url, ret == CURLE_HTTP_RETURNED_ERROR ?
+                http_strerror(response) : curl_easy_strerror(ret));
+    if (tmp.buffer)
+        Z_Free(tmp.buffer);
+    return -1;
+}
+
+#endif
 
 /*
 ===============
@@ -617,47 +716,6 @@ static dlhandle_t *find_handle(CURL *curl)
     }
 
     Com_Error(ERR_FATAL, "CURL handle not found for CURLMSG_DONE");
-}
-
-static const char *http_strerror(int response)
-{
-    static char buffer[32];
-
-    //common codes
-    switch (response) {
-    case 200:
-        return "200 OK";
-    case 401:
-        return "401 Unauthorized";
-    case 403:
-        return "403 Forbidden";
-    case 404:
-        return "404 Not Found";
-    case 500:
-        return "500 Internal Server Error";
-    case 503:
-        return "503 Service Unavailable";
-    }
-
-    if (response < 100 || response >= 600) {
-        Q_snprintf(buffer, sizeof(buffer), "%d <bad code>", response);
-        return buffer;
-    }
-
-    //generic classes
-    if (response < 200) {
-        Q_snprintf(buffer, sizeof(buffer), "%d Informational", response);
-    } else if (response < 300) {
-        Q_snprintf(buffer, sizeof(buffer), "%d Success", response);
-    } else if (response < 400) {
-        Q_snprintf(buffer, sizeof(buffer), "%d Redirection", response);
-    } else if (response < 500) {
-        Q_snprintf(buffer, sizeof(buffer), "%d Client Error", response);
-    } else {
-        Q_snprintf(buffer, sizeof(buffer), "%d Server Error", response);
-    }
-
-    return buffer;
 }
 
 // A download finished, find out what it was, whether there were any errors and
