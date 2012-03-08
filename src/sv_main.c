@@ -461,22 +461,21 @@ The second parameter should be the current protocol version number.
 */
 static void SVC_Info(void)
 {
-    char    buffer[MAX_QPATH];
+    char    buffer[MAX_QPATH+10];
     size_t  len;
+    int     version;
 
     if (sv_maxclients->integer == 1)
-        return;        // ignore in single player
+        return; // ignore in single player
 
-    if (atoi(Cmd_Argv(1)) != PROTOCOL_VERSION_DEFAULT)
-        return;
+    version = atoi(Cmd_Argv(1));
+    if (version < PROTOCOL_VERSION_DEFAULT || version > PROTOCOL_VERSION_Q2PRO)
+        return; // ignore invalid versions
 
-    len = Q_snprintf(buffer, sizeof(buffer),
-                     "\xff\xff\xff\xffinfo\n%16s %8s %2i/%2i\n",
-                     sv_hostname->string, sv.name, SV_CountClients(),
-                     sv_maxclients->integer -
-                     sv_reserved_slots->integer);
-    if (len >= sizeof(buffer))
-        return;
+    len = Q_scnprintf(buffer, sizeof(buffer),
+                      "\xff\xff\xff\xffinfo\n%16s %8s %2i/%2i\n",
+                      sv_hostname->string, sv.name, SV_CountClients(),
+                      sv_maxclients->integer - sv_reserved_slots->integer);
 
     NET_SendPacket(NS_SERVER, buffer, len, &net_from);
 }
