@@ -1601,22 +1601,20 @@ static void MVD_GameClientBegin(edict_t *ent)
     client->layout_type = LAYOUT_NONE;
     client->layout_time = 0;
     client->layout_cursor = 0;
+    client->notified = qfalse;
+
+    // skip notifications for local clients
+    if (NET_IsLocalAddress(&client->cl->netchan->remote_address))
+        client->notified = qtrue;
+
+    // skip notifications for Waiting Room channel
+    if (mvd == &mvd_waitingRoom)
+        client->notified = qtrue;
 
     if (!client->begin_time) {
         if (MVD_PartFilter(client)) {
             MVD_BroadcastPrintf(mvd, PRINT_MEDIUM, UF_MUTE_MISC,
                                 "[MVD] %s entered the channel\n", client->cl->name);
-        }
-        if (Com_IsDedicated() && mvd != &mvd_waitingRoom) {
-            // notify them if channel is in waiting state
-            if (mvd->state == MVD_WAITING) {
-                SV_ClientPrintf(client->cl, PRINT_HIGH,
-                                "[MVD] Buffering data, please wait...\n");
-            }
-            if (!mvd->cm.cache) {
-                SV_ClientPrintf(client->cl, PRINT_HIGH,
-                                "[MVD] Visibility data is missing for this map!\n");
-            }
         }
         target = MVD_MostFollowed(mvd);
     } else {
@@ -1829,6 +1827,31 @@ static void MVD_IntermissionStop(mvd_t *mvd)
     }
 }
 
+static void MVD_NotifyClient(mvd_client_t *client)
+{
+    mvd_t *mvd = client->mvd;
+
+    if (client->notified)
+        return;
+
+    if (svs.realtime - client->begin_time < 2000)
+        return;
+
+    // notify them if visibility data is missing
+    if (!mvd->cm.cache) {
+        SV_ClientPrintf(client->cl, PRINT_HIGH,
+                        "[MVD] GTV server doesn't have this map!\n");
+    }
+
+    // notify them if channel is in waiting state
+    if (mvd->state == MVD_WAITING) {
+        SV_ClientPrintf(client->cl, PRINT_HIGH,
+                        "[MVD] Buffering data, please wait...\n");
+    }
+
+    client->notified = qtrue;
+}
+
 // called just after new frame is parsed
 void MVD_UpdateClients(mvd_t *mvd)
 {
@@ -1851,6 +1874,7 @@ void MVD_UpdateClients(mvd_t *mvd)
     FOR_EACH_MVDCL(client, mvd) {
         if (client->cl->state == cs_spawned) {
             MVD_UpdateClient(client);
+            MVD_NotifyClient(client);
         }
     }
 }

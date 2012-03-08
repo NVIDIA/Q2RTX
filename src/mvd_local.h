@@ -78,6 +78,7 @@ typedef struct {
     struct mvd_s    *mvd;
     client_t        *cl;
     qboolean    admin;
+    qboolean    notified;
     unsigned    begin_time;
     mvd_player_t *target, *oldtarget;
     int         chase_mask;
