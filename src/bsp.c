@@ -972,9 +972,13 @@ qerror_t BSP_Load(const char *name, bsp_t **bsp_p)
     size_t          lumpcount[HEADER_LUMPS];
     size_t          memsize;
 
-    if (!name || !name[0]) {
+    if (!name || !bsp_p)
         Com_Error(ERR_FATAL, "%s: NULL", __func__);
-    }
+
+    *bsp_p = NULL;
+
+    if (!*name)
+        return Q_ERR_NOENT;
 
     if ((bsp = BSP_Find(name)) != NULL) {
         Com_PageInMemory(bsp->pool.base, bsp->pool.cursize);
@@ -982,8 +986,6 @@ qerror_t BSP_Load(const char *name, bsp_t **bsp_p)
         *bsp_p = bsp;
         return Q_ERR_SUCCESS;
     }
-
-    *bsp_p = NULL;
 
     //
     // load the file
