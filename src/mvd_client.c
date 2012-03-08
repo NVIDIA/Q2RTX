@@ -1665,6 +1665,9 @@ void MVD_Spawn(void)
     sv.framediv = 1;
 #endif
 
+    // set externally visible server name
+    Q_strlcpy(sv.name, mvd_waitingRoom.mapname, sizeof(sv.name));
+
     sv.state = ss_broadcast;
 }
 
