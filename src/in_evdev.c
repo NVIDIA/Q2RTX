@@ -78,7 +78,7 @@ static void evdev_read(evdev_t *dev)
         if (errno == EAGAIN || errno == EINTR) {
             return;
         }
-        Com_EPrintf("Couldn't read event: %s\n", strerror(errno));
+        Com_EPrintf("Couldn't read mouse: %s\n", strerror(errno));
         evdev_remove(dev);
         return;
     }
@@ -185,15 +185,13 @@ static evdev_t *evdev_add(const char *path)
     evdev_t *dev;
     int fd;
 
-    fd = open(path, O_RDONLY);
+    fd = open(path, O_RDONLY | O_NONBLOCK);
     if (fd == -1) {
         Com_EPrintf("Couldn't open %s: %s\n", path, strerror(errno));
         return NULL;
     }
 
     Com_DPrintf("Adding device %s\n", path);
-
-    fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | FNDELAY);
 
     dev = Z_Malloc(sizeof(*dev));
     dev->fd = fd;
