@@ -32,9 +32,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "qgl_local.h"
 #include "qgl_api.h"
 
-#define USE_DOTSHADING  1
-#define USE_CELSHADING  1
-
 /*
  * gl_main.c
  *
@@ -64,6 +61,7 @@ typedef struct {
 typedef struct {
     refdef_t fd;
     vec3_t viewaxis[3];
+    GLfloat viewmatrix[16];
     int visframe;
     int drawframe;
 #if USE_DLIGHTS
@@ -73,8 +71,9 @@ typedef struct {
     int viewcluster2;
     cplane_t frustumPlanes[4];
     entity_t    *ent;
-    vec3_t      entaxis[3];
     qboolean    entrotated;
+    vec3_t      entaxis[3];
+    GLfloat     entmatrix[16];
     int     num_beams;
 } glRefdef_t;
 
@@ -127,13 +126,10 @@ typedef struct {
 extern statCounters_t c;
 
 // regular variables
-#if USE_CELSHADING
-extern cvar_t *gl_celshading;
-#endif
-#if USE_DOTSHADING
-extern cvar_t *gl_dotshading;
-#endif
 extern cvar_t *gl_partscale;
+extern cvar_t *gl_celshading;
+extern cvar_t *gl_dotshading;
+extern cvar_t *gl_shadows;
 extern cvar_t *gl_modulate;
 extern cvar_t *gl_modulate_world;
 extern cvar_t *gl_coloredlightmaps;
@@ -176,6 +172,9 @@ glCullResult_t GL_CullLocalBox(const vec3_t origin, vec3_t bounds[2]);
 
 qboolean GL_AllocBlock(int width, int height, int *inuse,
                        int w, int h, int *s, int *t);
+
+void GL_MultMatrix(GLfloat *out, const GLfloat *a, const GLfloat *b);
+void GL_RotateForEntity(vec3_t origin);
 
 void GL_ClearErrors(void);
 qboolean GL_ShowErrors(const char *func);
@@ -299,7 +298,6 @@ void GL_DisableWarp(void);
 void GL_EnableOutlines(void);
 void GL_DisableOutlines(void);
 
-
 /*
  * gl_draw.c
  *
@@ -391,7 +389,7 @@ void GL_DrawSolidFaces(void);
  */
 void GL_DrawBspModel(mmodel_t *model);
 void GL_DrawWorld(void);
-void _R_LightPoint(vec3_t origin, vec3_t color);
+mface_t *GL_LightPoint(vec3_t origin, vec3_t color);
 
 /*
  * gl_sky.c

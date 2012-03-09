@@ -199,21 +199,33 @@ void GL_Setup3D(void)
     qglFrustum(xmin, xmax, ymin, ymax, gl_znear->value, gl_zfar->value);
 
     qglMatrixMode(GL_MODELVIEW);
-    qglLoadIdentity();
 
-    qglRotatef(-90, 1, 0, 0);   /* put z axis up */
-    qglRotatef(90, 0, 0, 1);    /* put y axis west, x axis north */
-    qglRotatef(-glr.fd.viewangles[ROLL],  1, 0, 0);
-    qglRotatef(-glr.fd.viewangles[PITCH], 0, 1, 0);
-    qglRotatef(-glr.fd.viewangles[YAW],   0, 0, 1);
-    qglTranslatef(-glr.fd.vieworg[0], -glr.fd.vieworg[1], -glr.fd.vieworg[2]);
+    AnglesToAxis(glr.fd.viewangles, glr.viewaxis);
 
-    AngleVectors(glr.fd.viewangles,
-                 glr.viewaxis[0], glr.viewaxis[1], glr.viewaxis[2]);
-    VectorInverse(glr.viewaxis[1]);
+    glr.viewmatrix[0] = -glr.viewaxis[1][0];
+    glr.viewmatrix[4] = -glr.viewaxis[1][1];
+    glr.viewmatrix[8] = -glr.viewaxis[1][2];
+    glr.viewmatrix[12] = DotProduct(glr.viewaxis[1], glr.fd.vieworg);
+
+    glr.viewmatrix[1] = glr.viewaxis[2][0];
+    glr.viewmatrix[5] = glr.viewaxis[2][1];
+    glr.viewmatrix[9] = glr.viewaxis[2][2];
+    glr.viewmatrix[13] = -DotProduct(glr.viewaxis[2], glr.fd.vieworg);
+
+    glr.viewmatrix[2] = -glr.viewaxis[0][0];
+    glr.viewmatrix[6] = -glr.viewaxis[0][1];
+    glr.viewmatrix[10] = -glr.viewaxis[0][2];
+    glr.viewmatrix[14] = DotProduct(glr.viewaxis[0], glr.fd.vieworg);
+
+    glr.viewmatrix[3] = 0;
+    glr.viewmatrix[7] = 0;
+    glr.viewmatrix[11] = 0;
+    glr.viewmatrix[15] = 1;
+
+    qglLoadMatrixf(glr.viewmatrix);
 
     GL_Bits(GLS_DEFAULT);
-    GL_CullFace(GLS_CULL_FRONT);
+    GL_CullFace(GLS_CULL_BACK);
 
     qglClear(GL_DEPTH_BUFFER_BIT);
 }
@@ -230,7 +242,7 @@ void GL_SetDefaultState(void)
     qglDisable(GL_BLEND);
     qglDisable(GL_ALPHA_TEST);
     qglAlphaFunc(GL_GREATER, 0.666f);
-    qglHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+    qglFrontFace(GL_CW);
     qglPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     qglEnableClientState(GL_VERTEX_ARRAY);

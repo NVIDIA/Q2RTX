@@ -20,7 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "gl_local.h"
 
-static qboolean GL_LightPoint(vec3_t origin, vec3_t color)
+static mface_t *GL_BspLightPoint(vec3_t origin, vec3_t color)
 {
     bsp_t *bsp = gl_static.world.cache;
     mface_t *surf;
@@ -35,7 +35,7 @@ static qboolean GL_LightPoint(vec3_t origin, vec3_t color)
     vec3_t point;
 
     if (!bsp || !bsp->lightmap) {
-        return qfalse;
+        return NULL;
     }
 
     point[0] = origin[0];
@@ -44,7 +44,7 @@ static qboolean GL_LightPoint(vec3_t origin, vec3_t color)
 
     surf = BSP_LightPoint(bsp->nodes, origin, point, &s, &t);
     if (!surf) {
-        return qfalse;
+        return NULL;
     }
 
     fracu = s & 15;
@@ -86,7 +86,7 @@ static qboolean GL_LightPoint(vec3_t origin, vec3_t color)
 
     GL_AdjustColor(color);
 
-    return qtrue;
+    return surf;
 }
 
 #if USE_DLIGHTS
@@ -176,15 +176,18 @@ static void GL_AddLights(vec3_t origin, vec3_t color)
 }
 #endif
 
-void _R_LightPoint(vec3_t origin, vec3_t color)
+mface_t *GL_LightPoint(vec3_t origin, vec3_t color)
 {
+    mface_t *surf;
+
     if (gl_fullbright->integer) {
         VectorSet(color, 1, 1, 1);
-        return;
+        return NULL;
     }
 
     // get lighting from world
-    if (!GL_LightPoint(origin, color)) {
+    surf = GL_BspLightPoint(origin, color);
+    if (!surf) {
         VectorSet(color, 1, 1, 1);
     }
 
@@ -199,13 +202,15 @@ void _R_LightPoint(vec3_t origin, vec3_t color)
         // apply modulate twice to mimic original ref_gl behavior
         VectorScale(color, gl_static.entity_modulate, color);
     }
+
+    return surf;
 }
 
 void R_LightPoint(vec3_t origin, vec3_t color)
 {
     int i;
 
-    _R_LightPoint(origin, color);
+    GL_LightPoint(origin, color);
 
     for (i = 0; i < 3; i++) {
         clamp(color[i], 0, 1);
@@ -364,12 +369,7 @@ void GL_DrawBspModel(mmodel_t *model)
     }
 
     qglPushMatrix();
-    qglTranslatef(ent->origin[0], ent->origin[1], ent->origin[2]);
-    if (glr.entrotated) {
-        qglRotatef(ent->angles[YAW],   0, 0, 1);
-        qglRotatef(ent->angles[PITCH], 0, 1, 0);
-        qglRotatef(ent->angles[ROLL],  1, 0, 0);
-    }
+    GL_RotateForEntity(ent->origin);
 
     // draw visible faces
     // FIXME: go by headnode instead?

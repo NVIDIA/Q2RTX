@@ -36,12 +36,9 @@ int registration_sequence;
 
 // regular variables
 cvar_t *gl_partscale;
-#if USE_CELSHADING
 cvar_t *gl_celshading;
-#endif
-#if USE_DOTSHADING
 cvar_t *gl_dotshading;
-#endif
+cvar_t *gl_shadows;
 cvar_t *gl_modulate;
 cvar_t *gl_modulate_world;
 cvar_t *gl_coloredlightmaps;
@@ -286,6 +283,50 @@ qboolean GL_AllocBlock(int width, int height, int *inuse,
     return qtrue;
 }
 
+// P = A * B
+void GL_MultMatrix(GLfloat *p, const GLfloat *a, const GLfloat *b)
+{
+    int i, j;
+
+    for (i = 0; i < 4; i++) {
+        for (j = 0; j < 4; j++) {
+            p[i * 4 + j] =
+                a[0 * 4 + j] * b[i * 4 + 0] +
+                a[1 * 4 + j] * b[i * 4 + 1] +
+                a[2 * 4 + j] * b[i * 4 + 2] +
+                a[3 * 4 + j] * b[i * 4 + 3];
+        }
+    }
+}
+
+void GL_RotateForEntity(vec3_t origin)
+{
+    GLfloat matrix[16];
+
+    matrix[0] = glr.entaxis[0][0];
+    matrix[4] = glr.entaxis[1][0];
+    matrix[8] = glr.entaxis[2][0];
+    matrix[12] = origin[0];
+
+    matrix[1] = glr.entaxis[0][1];
+    matrix[5] = glr.entaxis[1][1];
+    matrix[9] = glr.entaxis[2][1];
+    matrix[13] = origin[1];
+
+    matrix[2] = glr.entaxis[0][2];
+    matrix[6] = glr.entaxis[1][2];
+    matrix[10] = glr.entaxis[2][2];
+    matrix[14] = origin[2];
+
+    matrix[3] = 0;
+    matrix[7] = 0;
+    matrix[11] = 0;
+    matrix[15] = 1;
+
+    GL_MultMatrix(glr.entmatrix, glr.viewmatrix, matrix);
+    qglLoadMatrixf(glr.entmatrix);
+}
+
 static void GL_DrawSpriteModel(model_t *model)
 {
     static const vec_t tcoords[8] = { 0, 1, 0, 0, 1, 1, 1, 0 };
@@ -374,7 +415,7 @@ static void GL_DrawEntities(int mask)
     last = glr.fd.entities + glr.fd.num_entities;
     for (ent = glr.fd.entities; ent != last; ent++) {
         if (ent->flags & RF_BEAM) {
-            /* beams are drawn elsewhere in single batch */
+            // beams are drawn elsewhere in single batch
             glr.num_beams++;
             continue;
         }
@@ -383,15 +424,16 @@ static void GL_DrawEntities(int mask)
         }
 
         glr.ent = ent;
-        if (!VectorEmpty(ent->angles)) {
-            glr.entrotated = qtrue;
-            AngleVectors(ent->angles, glr.entaxis[0], glr.entaxis[1], glr.entaxis[2]);
-            VectorInverse(glr.entaxis[1]);
-        } else {
+
+        // convert angles to axis
+        if (VectorEmpty(ent->angles)) {
             glr.entrotated = qfalse;
             VectorSet(glr.entaxis[0], 1, 0, 0);
             VectorSet(glr.entaxis[1], 0, 1, 0);
             VectorSet(glr.entaxis[2], 0, 0, 1);
+        } else {
+            glr.entrotated = qtrue;
+            AnglesToAxis(ent->angles, glr.entaxis);
         }
 
         // inline BSP model
@@ -675,12 +717,9 @@ static void GL_Register(void)
 {
     // regular variables
     gl_partscale = Cvar_Get("gl_partscale", "2", 0);
-#if USE_CELSHADING
     gl_celshading = Cvar_Get("gl_celshading", "0", 0);
-#endif
-#if USE_DOTSHADING
     gl_dotshading = Cvar_Get("gl_dotshading", "1", 0);
-#endif
+    gl_shadows = Cvar_Get("gl_shadows", "0", CVAR_ARCHIVE);
     gl_modulate = Cvar_Get("gl_modulate", "1", CVAR_ARCHIVE);
     gl_modulate->changed = gl_modulate_changed;
     gl_modulate_world = Cvar_Get("gl_modulate_world", "1", 0);

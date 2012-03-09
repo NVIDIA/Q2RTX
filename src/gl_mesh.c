@@ -20,27 +20,59 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "gl_local.h"
 
-#define RF_SHELL_MASK \
-    ( RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE | \
-      RF_SHELL_DOUBLE | RF_SHELL_HALF_DAM )
+typedef void (*tessfunc_t)(const maliasmesh_t *);
 
-static vec3_t oldscale;
-static vec3_t newscale;
-static vec3_t translate;
-static float frontlerp;
-static float backlerp;
+static int      oldframenum;
+static int      newframenum;
+static float    frontlerp;
+static float    backlerp;
+static vec3_t   origin;
+static vec3_t   oldscale;
+static vec3_t   newscale;
+static vec3_t   translate;
+static vec_t    shellscale;
+static tessfunc_t tessfunc;
+static vec4_t   color;
+static mface_t  *surf;
 
-typedef void (*tessfunc_t)(const maliasmesh_t *, int, int);
+static const vec_t  *shadelight;
+static vec3_t       shadedir;
 
-#if USE_DOTSHADING
-static const vec_t *shadelight;
-static vec3_t shadedir;
+static float    celscale;
 
-// matches the anormtab.h precalculations
+static GLfloat  shadowmatrix[16];
+
+static void setup_dotshading(void)
+{
+    float cp, cy, sp, sy;
+    vec_t yaw;
+
+    shadelight = NULL;
+
+    if (!gl_dotshading->integer)
+        return;
+
+    if (glr.ent->flags & RF_SHELL_MASK)
+        return;
+
+    shadelight = color;
+
+    // matches the anormtab.h precalculations
+    yaw = -DEG2RAD(glr.ent->angles[YAW]);
+    cy = cos(yaw);
+    sy = sin(yaw);
+    cp = cos(-M_PI / 4);
+    sp = sin(-M_PI / 4);
+    shadedir[0] = cp * cy;
+    shadedir[1] = cp * sy;
+    shadedir[2] = -sp;
+}
+
 static inline vec_t shadedot(const vec_t *normal)
 {
     vec_t d = DotProduct(normal, shadedir);
 
+    // matches the anormtab.h precalculations
     if (d < 0) {
         d *= 0.3f;
     }
@@ -48,78 +80,83 @@ static inline vec_t shadedot(const vec_t *normal)
     return d + 1;
 }
 
-#endif // USE_DOTSHADING
-
-static inline void get_static_normal(vec_t *normal, const maliasvert_t *vert)
+static inline vec_t *get_static_normal(vec_t *normal, const maliasvert_t *vert)
 {
-    unsigned lat = vert->norm[0];
-    unsigned lng = vert->norm[1];
+    unsigned int lat = vert->norm[0];
+    unsigned int lng = vert->norm[1];
 
     normal[0] = TAB_SIN(lat) * TAB_COS(lng);
     normal[1] = TAB_SIN(lat) * TAB_SIN(lng);
     normal[2] = TAB_COS(lat);
+
+    return normal;
 }
 
-static void tess_static_mesh(const maliasmesh_t *mesh, int oldframe, int newframe)
+static void tess_static_shell(const maliasmesh_t *mesh)
 {
-    maliasvert_t *src_vert = &mesh->verts[newframe * mesh->numverts];
+    maliasvert_t *src_vert = &mesh->verts[newframenum * mesh->numverts];
     vec_t *dst_vert = tess.vertices;
-    int i, count = mesh->numverts;
+    int count = mesh->numverts;
     vec3_t normal;
 
-    if (glr.ent->flags & RF_SHELL_MASK) {
-        vec_t scale = (glr.ent->flags & RF_WEAPONMODEL) ? WEAPONSHELL_SCALE : POWERSUIT_SCALE;
+    while (count--) {
+        get_static_normal(normal, src_vert);
 
-        for (i = 0; i < count; i++) {
-            get_static_normal(normal, src_vert);
+        dst_vert[0] = normal[0] * shellscale +
+                      src_vert->pos[0] * newscale[0] + translate[0];
+        dst_vert[1] = normal[1] * shellscale +
+                      src_vert->pos[1] * newscale[1] + translate[1];
+        dst_vert[2] = normal[2] * shellscale +
+                      src_vert->pos[2] * newscale[2] + translate[2];
+        dst_vert += 4;
 
-            dst_vert[0] = normal[0] * scale +
-                          src_vert->pos[0] * newscale[0] + translate[0];
-            dst_vert[1] = normal[1] * scale +
-                          src_vert->pos[1] * newscale[1] + translate[1];
-            dst_vert[2] = normal[2] * scale +
-                          src_vert->pos[2] * newscale[2] + translate[2];
-            dst_vert += 4;
-
-            src_vert++;
-        }
-#if USE_DOTSHADING
-    } else if (shadelight) {
-        vec_t d;
-
-        for (i = 0; i < count; i++) {
-            dst_vert[0] = src_vert->pos[0] * newscale[0] + translate[0];
-            dst_vert[1] = src_vert->pos[1] * newscale[1] + translate[1];
-            dst_vert[2] = src_vert->pos[2] * newscale[2] + translate[2];
-
-            get_static_normal(normal, src_vert);
-
-            d = shadedot(normal);
-            dst_vert[3] = shadelight[0] * d;
-            dst_vert[4] = shadelight[1] * d;
-            dst_vert[5] = shadelight[2] * d;
-            dst_vert[6] = shadelight[3];
-            dst_vert += VERTEX_SIZE;
-
-            src_vert++;
-        }
-#endif
-    } else {
-        for (i = 0; i < count; i++) {
-            dst_vert[0] = src_vert->pos[0] * newscale[0] + translate[0];
-            dst_vert[1] = src_vert->pos[1] * newscale[1] + translate[1];
-            dst_vert[2] = src_vert->pos[2] * newscale[2] + translate[2];
-            dst_vert += 4;
-
-            src_vert++;
-        }
+        src_vert++;
     }
-
-    c.trisDrawn += count;
 }
 
-static inline void get_lerped_normal(vec_t *normal,
-                                     const maliasvert_t *oldvert, const maliasvert_t *newvert)
+static void tess_static_shade(const maliasmesh_t *mesh)
+{
+    maliasvert_t *src_vert = &mesh->verts[newframenum * mesh->numverts];
+    vec_t *dst_vert = tess.vertices;
+    int count = mesh->numverts;
+    vec3_t normal;
+    vec_t d;
+
+    while (count--) {
+        d = shadedot(get_static_normal(normal, src_vert));
+
+        dst_vert[0] = src_vert->pos[0] * newscale[0] + translate[0];
+        dst_vert[1] = src_vert->pos[1] * newscale[1] + translate[1];
+        dst_vert[2] = src_vert->pos[2] * newscale[2] + translate[2];
+        dst_vert[3] = shadelight[0] * d;
+        dst_vert[4] = shadelight[1] * d;
+        dst_vert[5] = shadelight[2] * d;
+        dst_vert[6] = shadelight[3];
+        dst_vert += VERTEX_SIZE;
+
+        src_vert++;
+    }
+}
+
+static void tess_static_plain(const maliasmesh_t *mesh)
+{
+    maliasvert_t *src_vert = &mesh->verts[newframenum * mesh->numverts];
+    vec_t *dst_vert = tess.vertices;
+    int count = mesh->numverts;
+
+    while (count--) {
+        dst_vert[0] = src_vert->pos[0] * newscale[0] + translate[0];
+        dst_vert[1] = src_vert->pos[1] * newscale[1] + translate[1];
+        dst_vert[2] = src_vert->pos[2] * newscale[2] + translate[2];
+        dst_vert += 4;
+
+        src_vert++;
+    }
+}
+
+static inline vec_t *get_lerped_normal(vec_t *normal,
+                                       const maliasvert_t *oldvert,
+                                       const maliasvert_t *newvert)
 {
     vec3_t oldnorm, newnorm, tmp;
     vec_t len;
@@ -132,90 +169,179 @@ static inline void get_lerped_normal(vec_t *normal,
     // normalize result
     len = 1 / VectorLength(tmp);
     VectorScale(tmp, len, normal);
+
+    return normal;
 }
 
-static void tess_lerped_mesh(const maliasmesh_t *mesh, int oldframe, int newframe)
+static void tess_lerped_shell(const maliasmesh_t *mesh)
 {
-    maliasvert_t *src_oldvert = &mesh->verts[oldframe * mesh->numverts];
-    maliasvert_t *src_newvert = &mesh->verts[newframe * mesh->numverts];
+    maliasvert_t *src_oldvert = &mesh->verts[oldframenum * mesh->numverts];
+    maliasvert_t *src_newvert = &mesh->verts[newframenum * mesh->numverts];
     vec_t *dst_vert = tess.vertices;
-    int i, count = mesh->numverts;
+    int count = mesh->numverts;
     vec3_t normal;
 
-    if (glr.ent->flags & RF_SHELL_MASK) {
-        vec_t scale = (glr.ent->flags & RF_WEAPONMODEL) ? WEAPONSHELL_SCALE : POWERSUIT_SCALE;
+    while (count--) {
+        get_lerped_normal(normal, src_oldvert, src_newvert);
 
-        for (i = 0; i < count; i++) {
-            get_lerped_normal(normal, src_oldvert, src_newvert);
+        dst_vert[0] = normal[0] * shellscale +
+                      src_oldvert->pos[0] * oldscale[0] +
+                      src_newvert->pos[0] * newscale[0] + translate[0];
+        dst_vert[1] = normal[1] * shellscale +
+                      src_oldvert->pos[1] * oldscale[1] +
+                      src_newvert->pos[1] * newscale[1] + translate[1];
+        dst_vert[2] = normal[2] * shellscale +
+                      src_oldvert->pos[2] * oldscale[2] +
+                      src_newvert->pos[2] * newscale[2] + translate[2];
+        dst_vert += 4;
 
-            dst_vert[0] = normal[0] * scale +
-                          src_oldvert->pos[0] * oldscale[0] +
-                          src_newvert->pos[0] * newscale[0] + translate[0];
-            dst_vert[1] = normal[1] * scale +
-                          src_oldvert->pos[1] * oldscale[1] +
-                          src_newvert->pos[1] * newscale[1] + translate[1];
-            dst_vert[2] = normal[2] * scale +
-                          src_oldvert->pos[2] * oldscale[2] +
-                          src_newvert->pos[2] * newscale[2] + translate[2];
-            dst_vert += 4;
+        src_oldvert++;
+        src_newvert++;
+    }
+}
 
-            src_oldvert++;
-            src_newvert++;
+static void tess_lerped_shade(const maliasmesh_t *mesh)
+{
+    maliasvert_t *src_oldvert = &mesh->verts[oldframenum * mesh->numverts];
+    maliasvert_t *src_newvert = &mesh->verts[newframenum * mesh->numverts];
+    vec_t *dst_vert = tess.vertices;
+    int count = mesh->numverts;
+    vec3_t normal;
+    vec_t d;
+
+    while (count--) {
+        d = shadedot(get_lerped_normal(normal, src_oldvert, src_newvert));
+
+        dst_vert[0] =
+            src_oldvert->pos[0] * oldscale[0] +
+            src_newvert->pos[0] * newscale[0] + translate[0];
+        dst_vert[1] =
+            src_oldvert->pos[1] * oldscale[1] +
+            src_newvert->pos[1] * newscale[1] + translate[1];
+        dst_vert[2] =
+            src_oldvert->pos[2] * oldscale[2] +
+            src_newvert->pos[2] * newscale[2] + translate[2];
+        dst_vert[3] = shadelight[0] * d;
+        dst_vert[4] = shadelight[1] * d;
+        dst_vert[5] = shadelight[2] * d;
+        dst_vert[6] = shadelight[3];
+        dst_vert += VERTEX_SIZE;
+
+        src_oldvert++;
+        src_newvert++;
+    }
+}
+
+static void tess_lerped_plain(const maliasmesh_t *mesh)
+{
+    maliasvert_t *src_oldvert = &mesh->verts[oldframenum * mesh->numverts];
+    maliasvert_t *src_newvert = &mesh->verts[newframenum * mesh->numverts];
+    vec_t *dst_vert = tess.vertices;
+    int count = mesh->numverts;
+
+    while (count--) {
+        dst_vert[0] =
+            src_oldvert->pos[0] * oldscale[0] +
+            src_newvert->pos[0] * newscale[0] + translate[0];
+        dst_vert[1] =
+            src_oldvert->pos[1] * oldscale[1] +
+            src_newvert->pos[1] * newscale[1] + translate[1];
+        dst_vert[2] =
+            src_oldvert->pos[2] * oldscale[2] +
+            src_newvert->pos[2] * newscale[2] + translate[2];
+        dst_vert += 4;
+
+        src_oldvert++;
+        src_newvert++;
+    }
+}
+
+static glCullResult_t cull_static_model(model_t *model)
+{
+    maliasframe_t *newframe = &model->frames[newframenum];
+    vec3_t bounds[2];
+    glCullResult_t cull;
+
+    if (glr.entrotated) {
+        cull = GL_CullSphere(origin, newframe->radius);
+        if (cull == CULL_OUT) {
+            c.spheresCulled++;
+            return cull;
         }
-#if USE_DOTSHADING
-    } else if (shadelight) {
-        vec_t d;
-
-        for (i = 0; i < count; i++) {
-            dst_vert[0] =
-                src_oldvert->pos[0] * oldscale[0] +
-                src_newvert->pos[0] * newscale[0] + translate[0];
-            dst_vert[1] =
-                src_oldvert->pos[1] * oldscale[1] +
-                src_newvert->pos[1] * newscale[1] + translate[1];
-            dst_vert[2] =
-                src_oldvert->pos[2] * oldscale[2] +
-                src_newvert->pos[2] * newscale[2] + translate[2];
-
-            get_lerped_normal(normal, src_oldvert, src_newvert);
-
-            d = shadedot(normal);
-            dst_vert[3] = shadelight[0] * d;
-            dst_vert[4] = shadelight[1] * d;
-            dst_vert[5] = shadelight[2] * d;
-            dst_vert[6] = shadelight[3];
-            dst_vert += VERTEX_SIZE;
-
-            src_oldvert++;
-            src_newvert++;
+        if (cull == CULL_CLIP) {
+            cull = GL_CullLocalBox(origin, newframe->bounds);
+            if (cull == CULL_OUT) {
+                c.rotatedBoxesCulled++;
+                return cull;
+            }
         }
-#endif
     } else {
-        for (i = 0; i < count; i++) {
-            dst_vert[0] =
-                src_oldvert->pos[0] * oldscale[0] +
-                src_newvert->pos[0] * newscale[0] + translate[0];
-            dst_vert[1] =
-                src_oldvert->pos[1] * oldscale[1] +
-                src_newvert->pos[1] * newscale[1] + translate[1];
-            dst_vert[2] =
-                src_oldvert->pos[2] * oldscale[2] +
-                src_newvert->pos[2] * newscale[2] + translate[2];
-            dst_vert += 4;
-
-            src_oldvert++;
-            src_newvert++;
+        VectorAdd(newframe->bounds[0], origin, bounds[0]);
+        VectorAdd(newframe->bounds[1], origin, bounds[1]);
+        cull = GL_CullBox(bounds);
+        if (cull == CULL_OUT) {
+            c.boxesCulled++;
+            return cull;
         }
     }
 
-    c.trisDrawn += count;
+    VectorCopy(newframe->scale, newscale);
+    VectorCopy(newframe->translate, translate);
+
+    return cull;
 }
 
-static void GL_SetAliasColor(vec3_t origin, vec_t *color)
+static glCullResult_t cull_lerped_model(model_t *model)
+{
+    maliasframe_t *newframe = &model->frames[newframenum];
+    maliasframe_t *oldframe = &model->frames[oldframenum];
+    vec3_t bounds[2];
+    vec_t radius;
+    glCullResult_t cull;
+
+    if (glr.entrotated) {
+        radius = newframe->radius > oldframe->radius ?
+                 newframe->radius : oldframe->radius;
+        cull = GL_CullSphere(origin, radius);
+        if (cull == CULL_OUT) {
+            c.spheresCulled++;
+            return cull;
+        }
+        UnionBounds(newframe->bounds, oldframe->bounds, bounds);
+        if (cull == CULL_CLIP) {
+            cull = GL_CullLocalBox(origin, bounds);
+            if (cull == CULL_OUT) {
+                c.rotatedBoxesCulled++;
+                return cull;
+            }
+        }
+    } else {
+        UnionBounds(newframe->bounds, oldframe->bounds, bounds);
+        VectorAdd(bounds[0], origin, bounds[0]);
+        VectorAdd(bounds[1], origin, bounds[1]);
+        cull = GL_CullBox(bounds);
+        if (cull == CULL_OUT) {
+            c.boxesCulled++;
+            return cull;
+        }
+    }
+
+    VectorScale(oldframe->scale, backlerp, oldscale);
+    VectorScale(newframe->scale, frontlerp, newscale);
+
+    LerpVector2(oldframe->translate, newframe->translate,
+                backlerp, frontlerp, translate);
+
+    return cull;
+}
+
+static void setup_color(void)
 {
     int flags = glr.ent->flags;
     float f, m;
     int i;
+
+    surf = NULL;
 
     if (flags & RF_SHELL_MASK) {
         VectorClear(color);
@@ -242,7 +368,7 @@ static void GL_SetAliasColor(vec3_t origin, vec_t *color)
     } else if ((flags & RF_IR_VISIBLE) && (glr.fd.rdflags & RDF_IRGOGGLES)) {
         VectorSet(color, 1, 0, 0);
     } else {
-        _R_LightPoint(origin, color);
+        surf = GL_LightPoint(origin, color);
 
         if (flags & RF_MINLIGHT) {
             for (i = 0; i < 3; i++) {
@@ -269,295 +395,326 @@ static void GL_SetAliasColor(vec3_t origin, vec_t *color)
             clamp(color[i], 0, 1);
         }
     }
+
+    if (flags & RF_TRANSLUCENT) {
+        color[3] = glr.ent->alpha;
+    } else {
+        color[3] = 1;
+    }
+}
+
+static void setup_celshading(void)
+{
+    float value = Cvar_ClampValue(gl_celshading, 0, 10);
+    vec3_t dir;
+
+    celscale = 0;
+
+    if (value == 0)
+        return;
+
+    if (glr.ent->flags & RF_SHELL_MASK)
+        return;
+
+    VectorSubtract(origin, glr.fd.vieworg, dir);
+    celscale = 1.0f - VectorLength(dir) / 700.0f;
+}
+
+static void draw_celshading(maliasmesh_t *mesh)
+{
+    if (celscale < 0.01f || celscale > 1)
+        return;
+
+    GL_Bits(GLS_BLEND_BLEND);
+    qglDisable(GL_TEXTURE_2D);
+    qglLineWidth(gl_celshading->value * celscale);
+    qglPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    qglCullFace(GL_FRONT);
+
+    qglDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    if (shadelight)
+        qglDisableClientState(GL_COLOR_ARRAY);
+
+    qglColor4f(0, 0, 0, color[3] * celscale);
+    qglDrawElements(GL_TRIANGLES, mesh->numindices, GL_UNSIGNED_INT,
+                    mesh->indices);
+    qglColor4fv(color);
+
+    if (shadelight)
+        qglEnableClientState(GL_COLOR_ARRAY);
+    qglEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+    qglCullFace(GL_BACK);
+    qglPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    qglLineWidth(1);
+    qglEnable(GL_TEXTURE_2D);
+}
+
+static void setup_shadow(void)
+{
+    GLfloat matrix[16], tmp[16];
+    cplane_t *plane;
+    vec3_t dir;
+
+    shadowmatrix[15] = 0;
+
+    if (!gl_shadows->integer)
+        return;
+
+    if (glr.ent->flags & RF_WEAPONMODEL)
+        return;
+
+    if (!surf)
+        return;
+
+    plane = surf->plane;
+
+    // position fake light source straight over the model
+    if (surf->drawflags & DSURF_PLANEBACK)
+        VectorSet(dir, 0, 0, -1);
+    else
+        VectorSet(dir, 0, 0, 1);
+
+    // project shadow on ground plane
+    matrix[0] = plane->normal[1] * dir[1] + plane->normal[2] * dir[2];
+    matrix[4] = -plane->normal[1] * dir[0];
+    matrix[8] = -plane->normal[2] * dir[0];
+    matrix[12] = plane->dist * dir[0];
+
+    matrix[1] = -plane->normal[0] * dir[1];
+    matrix[5] = plane->normal[0] * dir[0] + plane->normal[2] * dir[2];
+    matrix[9] = -plane->normal[2] * dir[1];
+    matrix[13] = plane->dist * dir[1];
+
+    matrix[2] = -plane->normal[0] * dir[2];
+    matrix[6] = -plane->normal[1] * dir[2];
+    matrix[10] = plane->normal[0] * dir[0] + plane->normal[1] * dir[1];
+    matrix[14] = plane->dist * dir[2];
+
+    matrix[3] = 0;
+    matrix[7] = 0;
+    matrix[11] = 0;
+    matrix[15] = DotProduct(plane->normal, dir);
+
+    GL_MultMatrix(tmp, glr.viewmatrix, matrix);
+
+    // rotate for entity
+    matrix[0] = glr.entaxis[0][0];
+    matrix[4] = glr.entaxis[1][0];
+    matrix[8] = glr.entaxis[2][0];
+    matrix[12] = origin[0];
+
+    matrix[1] = glr.entaxis[0][1];
+    matrix[5] = glr.entaxis[1][1];
+    matrix[9] = glr.entaxis[2][1];
+    matrix[13] = origin[1];
+
+    matrix[2] = glr.entaxis[0][2];
+    matrix[6] = glr.entaxis[1][2];
+    matrix[10] = glr.entaxis[2][2];
+    matrix[14] = origin[2];
+
+    matrix[3] = 0;
+    matrix[7] = 0;
+    matrix[11] = 0;
+    matrix[15] = 1;
+
+    GL_MultMatrix(shadowmatrix, tmp, matrix);
+}
+
+static void draw_shadow(maliasmesh_t *mesh)
+{
+    if (shadowmatrix[15] < 0.1f)
+        return;
+
+    // load shadow projection matrix
+    qglLoadMatrixf(shadowmatrix);
+
+    GL_Bits(GLS_BLEND_BLEND);
+    GL_TexEnv(GL_MODULATE);
+    GL_BindTexture(TEXNUM_WHITE);
+
+    qglDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    if (shadelight)
+        qglDisableClientState(GL_COLOR_ARRAY);
+
+    qglEnable(GL_POLYGON_OFFSET_FILL);
+    qglPolygonOffset(-1.0f, -2.0f);
+    qglColor4f(0, 0, 0, color[3] * 0.5f);
+    qglDrawElements(GL_TRIANGLES, mesh->numindices, GL_UNSIGNED_INT,
+                    mesh->indices);
+    qglColor4fv(color);
+    qglDisable(GL_POLYGON_OFFSET_FILL);
+
+    if (shadelight)
+        qglEnableClientState(GL_COLOR_ARRAY);
+    qglEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+    // fall back to entity matrix
+    qglLoadMatrixf(glr.entmatrix);
+}
+
+static int texnum_for_mesh(maliasmesh_t *mesh)
+{
+    entity_t *ent = glr.ent;
+
+    if (ent->flags & RF_SHELL_MASK)
+        return TEXNUM_WHITE;
+
+    if (ent->skin)
+        return IMG_ForHandle(ent->skin)->texnum;
+
+    if (!mesh->numskins)
+        return TEXNUM_DEFAULT;
+
+    if (ent->skinnum < 0 || ent->skinnum >= mesh->numskins) {
+        Com_DPrintf("%s: no such skin: %d\n", "GL_DrawAliasModel", ent->skinnum);
+        return mesh->skins[0]->texnum;
+    }
+
+    if (mesh->skins[ent->skinnum]->texnum == TEXNUM_DEFAULT)
+        return mesh->skins[0]->texnum;
+
+    return mesh->skins[ent->skinnum]->texnum;
+}
+
+static void draw_alias_mesh(maliasmesh_t *mesh)
+{
+    if (glr.ent->flags & RF_TRANSLUCENT)
+        GL_Bits(GLS_BLEND_BLEND | GLS_DEPTHMASK_FALSE);
+    else
+        GL_Bits(GLS_DEFAULT);
+
+    GL_TexEnv(GL_MODULATE);
+    GL_BindTexture(texnum_for_mesh(mesh));
+
+    (*tessfunc)(mesh);
+    c.trisDrawn += mesh->numverts;
+
+    qglTexCoordPointer(2, GL_FLOAT, 0, mesh->tcoords);
+
+    if (qglLockArraysEXT)
+        qglLockArraysEXT(0, mesh->numverts);
+
+    qglDrawElements(GL_TRIANGLES, mesh->numindices, GL_UNSIGNED_INT,
+                    mesh->indices);
+
+    draw_celshading(mesh);
+
+    if (gl_showtris->integer) {
+        GL_EnableOutlines();
+        qglDrawElements(GL_TRIANGLES, mesh->numindices, GL_UNSIGNED_INT,
+                        mesh->indices);
+        GL_DisableOutlines();
+    }
+
+    // FIXME: unlock arrays before changing matrix?
+    draw_shadow(mesh);
+
+    if (qglUnlockArraysEXT)
+        qglUnlockArraysEXT();
 }
 
 void GL_DrawAliasModel(model_t *model)
 {
     entity_t *ent = glr.ent;
-    image_t *image;
-    int oldframeIdx, newframeIdx;
-    maliasframe_t *newframe, *oldframe;
-    maliasmesh_t *mesh, *last;
-    tessfunc_t tessfunc;
-    vec3_t origin;
-    vec3_t bounds[2];
-    vec_t radius;
-    glStateBits_t bits;
     glCullResult_t cull;
-    vec4_t color;
-#if USE_CELSHADING
-    vec3_t dir;
-    float scale;
-#endif
-    int back, front;
+    maliasmesh_t *mesh, *last;
 
-    newframeIdx = ent->frame;
-    if (newframeIdx < 0 || newframeIdx >= model->numframes) {
-        Com_DPrintf("%s: no such frame %d\n", __func__, newframeIdx);
-        newframeIdx = 0;
+    newframenum = ent->frame;
+    if (newframenum < 0 || newframenum >= model->numframes) {
+        Com_DPrintf("%s: no such frame %d\n", __func__, newframenum);
+        newframenum = 0;
     }
 
-    oldframeIdx = ent->oldframe;
-    if (oldframeIdx < 0 || oldframeIdx >= model->numframes) {
-        Com_DPrintf("%s: no such oldframe %d\n", __func__, oldframeIdx);
-        oldframeIdx = 0;
+    oldframenum = ent->oldframe;
+    if (oldframenum < 0 || oldframenum >= model->numframes) {
+        Com_DPrintf("%s: no such oldframe %d\n", __func__, oldframenum);
+        oldframenum = 0;
     }
-
-    newframe = model->frames + newframeIdx;
 
     backlerp = ent->backlerp;
     frontlerp = 1.0f - backlerp;
 
+    // optimized case
+    if (backlerp == 0)
+        oldframenum = newframenum;
+
     // interpolate origin, if necessarry
-    if (ent->flags & RF_FRAMELERP) {
+    if (ent->flags & RF_FRAMELERP)
         LerpVector2(ent->oldorigin, ent->origin,
                     backlerp, frontlerp, origin);
-    } else {
+    else
         VectorCopy(ent->origin, origin);
-    }
 
-    if (newframeIdx == oldframeIdx || backlerp == 0) {
-        oldframe = NULL;
+    // cull the model, setup scale and translate vectors
+    if (newframenum == oldframenum)
+        cull = cull_static_model(model);
+    else
+        cull = cull_lerped_model(model);
+    if (cull == CULL_OUT)
+        return;
 
-        if (glr.entrotated) {
-            cull = GL_CullSphere(origin, newframe->radius);
-            if (cull == CULL_OUT) {
-                c.spheresCulled++;
-                return;
-            }
-            if (cull == CULL_CLIP) {
-                cull = GL_CullLocalBox(origin, newframe->bounds);
-                if (cull == CULL_OUT) {
-                    c.rotatedBoxesCulled++;
-                    return;
-                }
-            }
-        } else {
-            VectorAdd(newframe->bounds[0], origin, bounds[0]);
-            VectorAdd(newframe->bounds[1], origin, bounds[1]);
-            if (GL_CullBox(bounds) == CULL_OUT) {
-                c.boxesCulled++;
-                return;
-            }
-        }
+    // setup parameters common for all meshes
+    setup_color();
+    setup_celshading();
+    setup_dotshading();
+    setup_shadow();
 
-        VectorCopy(newframe->scale, newscale);
-        VectorCopy(newframe->translate, translate);
-        tessfunc = tess_static_mesh;
+    // select proper tessfunc
+    if (ent->flags & RF_SHELL_MASK) {
+        shellscale = (ent->flags & RF_WEAPONMODEL) ?
+            WEAPONSHELL_SCALE : POWERSUIT_SCALE;
+        tessfunc = newframenum == oldframenum ?
+            tess_static_shell : tess_lerped_shell;
+    } else if (shadelight) {
+        tessfunc = newframenum == oldframenum ?
+            tess_static_shade : tess_lerped_shade;
     } else {
-        oldframe = model->frames + oldframeIdx;
-
-        if (glr.entrotated) {
-            radius = newframe->radius > oldframe->radius ?
-                     newframe->radius : oldframe->radius;
-            cull = GL_CullSphere(origin, radius);
-            if (cull == CULL_OUT) {
-                c.spheresCulled++;
-                return;
-            }
-            UnionBounds(newframe->bounds, oldframe->bounds, bounds);
-            if (cull == CULL_CLIP) {
-                cull = GL_CullLocalBox(origin, bounds);
-                if (cull == CULL_OUT) {
-                    c.rotatedBoxesCulled++;
-                    return;
-                }
-            }
-        } else {
-            UnionBounds(newframe->bounds, oldframe->bounds, bounds);
-            VectorAdd(bounds[0], origin, bounds[0]);
-            VectorAdd(bounds[1], origin, bounds[1]);
-            if (GL_CullBox(bounds) == CULL_OUT) {
-                c.boxesCulled++;
-                return;
-            }
-        }
-
-        VectorScale(oldframe->scale, backlerp, oldscale);
-        VectorScale(newframe->scale, frontlerp, newscale);
-
-        LerpVector2(oldframe->translate, newframe->translate,
-                    backlerp, frontlerp, translate);
-
-        tessfunc = tess_lerped_mesh;
+        tessfunc = newframenum == oldframenum ?
+            tess_static_plain : tess_lerped_plain;
     }
-
-#if USE_CELSHADING
-    scale = 0;
-    if (gl_celshading->value > 0 && (ent->flags & RF_SHELL_MASK) == 0) {
-        if (gl_celshading->value > 10) {
-            Cvar_Set("gl_celshading", "10");
-        }
-        VectorSubtract(origin, glr.fd.vieworg, dir);
-        scale = VectorLength(dir);
-        scale = 1.0f - scale / 700.0f;
-    }
-#endif
-
-    // setup color
-    GL_SetAliasColor(origin, color);
-
-    // setup transparency
-    bits = GLS_DEFAULT;
-    color[3] = 1;
-    if (ent->flags & RF_TRANSLUCENT) {
-        color[3] = ent->alpha;
-        bits |= GLS_BLEND_BLEND | GLS_DEPTHMASK_FALSE;
-    }
-
-    GL_TexEnv(GL_MODULATE);
 
     qglPushMatrix();
-    qglTranslatef(origin[0], origin[1], origin[2]);
-    if (glr.entrotated) {
-        qglRotatef(ent->angles[YAW],   0, 0, 1);
-        qglRotatef(ent->angles[PITCH], 0, 1, 0);
-        qglRotatef(ent->angles[ROLL],  1, 0, 0);
-    }
+    GL_RotateForEntity(origin);
 
-    if (ent->flags & RF_DEPTHHACK) {
-        qglDepthRange(0, 0.25f);
-    }
     if ((ent->flags & (RF_WEAPONMODEL | RF_LEFTHAND)) ==
         (RF_WEAPONMODEL | RF_LEFTHAND)) {
         qglMatrixMode(GL_PROJECTION);
         qglScalef(-1, 1, 1);
         qglMatrixMode(GL_MODELVIEW);
-        qglCullFace(GL_BACK);
-        back = GL_BACK;
-        front = GL_FRONT;
-    } else {
-        back = GL_FRONT;
-        front = GL_BACK;
+        qglFrontFace(GL_CCW);
     }
 
-#if USE_DOTSHADING
-    shadelight = NULL;
-    if (gl_dotshading->integer && (ent->flags & RF_SHELL_MASK) == 0) {
-        float cp, cy, sp, sy;
-        vec_t yaw;
+    if (ent->flags & RF_DEPTHHACK)
+        qglDepthRange(0, 0.25f);
 
-        shadelight = color;
-
-        // matches the anormtab.h precalculations
-        yaw = -DEG2RAD(ent->angles[YAW]);
-        cy = cos(yaw);
-        sy = sin(yaw);
-        cp = cos(-M_PI / 4);
-        sp = sin(-M_PI / 4);
-        shadedir[0] = cp * cy;
-        shadedir[1] = cp * sy;
-        shadedir[2] = -sp;
-
+    if (shadelight) {
         qglVertexPointer(3, GL_FLOAT, 4 * VERTEX_SIZE, tess.vertices);
         qglColorPointer(4, GL_FLOAT, 4 * VERTEX_SIZE, tess.vertices + 3);
         qglEnableClientState(GL_COLOR_ARRAY);
-    } else
-#endif
-    {
+    } else {
         qglVertexPointer(3, GL_FLOAT, 4 * 4, tess.vertices);
         qglColor4fv(color);
     }
 
+    // draw all the meshes
     last = model->meshes + model->nummeshes;
-    for (mesh = model->meshes; mesh < last; mesh++) {
-        if (ent->flags & RF_SHELL_MASK) {
-            GL_Bits(bits);
-            GL_BindTexture(TEXNUM_WHITE);
-        } else {
-            if (ent->skin) {
-                image = IMG_ForHandle(ent->skin);
-            } else if (mesh->numskins) {
-                if (ent->skinnum < 0 || ent->skinnum >= mesh->numskins) {
-                    Com_DPrintf("%s: no such skin: %d\n",
-                                __func__, ent->skinnum);
-                    image = mesh->skins[0];
-                } else {
-                    image = mesh->skins[ent->skinnum];
-                    if (image->texnum == TEXNUM_DEFAULT) {
-                        image = mesh->skins[0];
-                    }
-                }
-            } else {
-                image = R_NOTEXTURE;
-            }
+    for (mesh = model->meshes; mesh != last; mesh++)
+        draw_alias_mesh(mesh);
 
-            if ((image->flags & (if_transparent | if_paletted)) == if_transparent) {
-                GL_Bits(bits | GLS_BLEND_BLEND);
-            } else {
-                GL_Bits(bits);
-            }
-
-            GL_BindTexture(image->texnum);
-        }
-
-        (*tessfunc)(mesh, oldframeIdx, newframeIdx);
-
-        qglTexCoordPointer(2, GL_FLOAT, 0, mesh->tcoords);
-
-        if (qglLockArraysEXT) {
-            qglLockArraysEXT(0, mesh->numverts);
-        }
-
-        qglDrawElements(GL_TRIANGLES, mesh->numindices, GL_UNSIGNED_INT,
-                        mesh->indices);
-
-#if USE_CELSHADING
-        if (scale > 0 && scale <= 1) {
-            qglCullFace(front);
-            qglPolygonMode(back, GL_LINE);
-            qglDisable(GL_TEXTURE_2D);
-            qglLineWidth(gl_celshading->value * scale);
-            GL_Bits(bits | GLS_BLEND_BLEND);
-#if USE_DOTSHADING
-            if (shadelight) {
-                qglDisableClientState(GL_COLOR_ARRAY);
-            }
-#endif
-            qglColor4f(0, 0, 0, scale);
-            qglDrawElements(GL_TRIANGLES, mesh->numindices, GL_UNSIGNED_INT,
-                            mesh->indices);
-            qglCullFace(back);
-            qglPolygonMode(back, GL_FILL);
-#if USE_DOTSHADING
-            if (shadelight) {
-                qglEnableClientState(GL_COLOR_ARRAY);
-            } else
-#endif
-                qglColor4fv(color);
-            qglLineWidth(1);
-            qglEnable(GL_TEXTURE_2D);
-        }
-#endif
-
-        if (gl_showtris->integer) {
-            GL_EnableOutlines();
-            qglDrawElements(GL_TRIANGLES, mesh->numindices, GL_UNSIGNED_INT,
-                            mesh->indices);
-            GL_DisableOutlines();
-        }
-
-        if (qglUnlockArraysEXT) {
-            qglUnlockArraysEXT();
-        }
-    }
-
-#if USE_DOTSHADING
-    if (shadelight) {
+    if (shadelight)
         qglDisableClientState(GL_COLOR_ARRAY);
-    }
-#endif
 
-    if (ent->flags & RF_DEPTHHACK) {
+    if (ent->flags & RF_DEPTHHACK)
         qglDepthRange(0, 1);
-    }
 
     if ((ent->flags & (RF_WEAPONMODEL | RF_LEFTHAND)) ==
         (RF_WEAPONMODEL | RF_LEFTHAND)) {
         qglMatrixMode(GL_PROJECTION);
         qglScalef(-1, 1, 1);
         qglMatrixMode(GL_MODELVIEW);
-        qglCullFace(GL_FRONT);
+        qglFrontFace(GL_CW);
     }
 
     qglPopMatrix();

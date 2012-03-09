@@ -298,6 +298,12 @@ void AddPointToBounds(const vec3_t v, vec3_t mins, vec3_t maxs);
 vec_t RadiusFromBounds(const vec3_t mins, const vec3_t maxs);
 void UnionBounds(vec3_t a[2], vec3_t b[2], vec3_t c[2]);
 
+static inline void AnglesToAxis(vec3_t angles, vec3_t axis[3])
+{
+    AngleVectors(angles, axis[0], axis[1], axis[2]);
+    VectorInverse(axis[1]);
+}
+
 static inline unsigned npot32(unsigned k)
 {
     if (k == 0)
