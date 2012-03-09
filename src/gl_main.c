@@ -85,51 +85,38 @@ cvar_t *gl_showerrors;
 
 static void GL_SetupFrustum(void)
 {
-    cplane_t *f;
+    vec_t angle, sf, cf;
     vec3_t forward, left, up;
-    vec_t fovSin, fovCos, angle;
+    cplane_t *p;
+    int i;
 
+    // right/left
     angle = DEG2RAD(glr.fd.fov_x / 2);
-    fovSin = sin(angle);
-    fovCos = cos(angle);
+    sf = sin(angle);
+    cf = cos(angle);
 
-    VectorScale(glr.viewaxis[0], fovSin, forward);
-    VectorScale(glr.viewaxis[1], fovCos, left);
+    VectorScale(glr.viewaxis[0], sf, forward);
+    VectorScale(glr.viewaxis[1], cf, left);
 
-    /* right side */
-    f = &glr.frustumPlanes[0];
-    VectorAdd(forward, left, f->normal);
-    f->dist = DotProduct(glr.fd.vieworg, f->normal);
-    f->type = PLANE_NON_AXIAL;
-    SetPlaneSignbits(f);
+    VectorAdd(forward, left, glr.frustumPlanes[0].normal);
+    VectorSubtract(forward, left, glr.frustumPlanes[1].normal);
 
-    /* left side */
-    f = &glr.frustumPlanes[1];
-    VectorSubtract(forward, left, f->normal);
-    f->dist = DotProduct(glr.fd.vieworg, f->normal);
-    f->type = PLANE_NON_AXIAL;
-    SetPlaneSignbits(f);
-
+    // top/bottom
     angle = DEG2RAD(glr.fd.fov_y / 2);
-    fovSin = sin(angle);
-    fovCos = cos(angle);
+    sf = sin(angle);
+    cf = cos(angle);
 
-    VectorScale(glr.viewaxis[0], fovSin, forward);
-    VectorScale(glr.viewaxis[2], fovCos, up);
+    VectorScale(glr.viewaxis[0], sf, forward);
+    VectorScale(glr.viewaxis[2], cf, up);
 
-    /* up side */
-    f = &glr.frustumPlanes[2];
-    VectorAdd(forward, up, f->normal);
-    f->dist = DotProduct(glr.fd.vieworg, f->normal);
-    f->type = PLANE_NON_AXIAL;
-    SetPlaneSignbits(f);
+    VectorAdd(forward, up, glr.frustumPlanes[2].normal);
+    VectorSubtract(forward, up, glr.frustumPlanes[3].normal);
 
-    /* down side */
-    f = &glr.frustumPlanes[3];
-    VectorSubtract(forward, up, f->normal);
-    f->dist = DotProduct(glr.fd.vieworg, f->normal);
-    f->type = PLANE_NON_AXIAL;
-    SetPlaneSignbits(f);
+    for (i = 0, p = glr.frustumPlanes; i < 4; i++, p++) {
+        p->dist = DotProduct(glr.fd.vieworg, p->normal);
+        p->type = PLANE_NON_AXIAL;
+        SetPlaneSignbits(p);
+    }
 }
 
 glCullResult_t GL_CullBox(vec3_t bounds[2])
