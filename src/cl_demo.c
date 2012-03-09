@@ -239,10 +239,14 @@ static void emit_zero_frame(void)
     cls.demo.frames_written++;
 }
 
+static size_t format_demo_size(char *buffer, size_t size)
+{
+    return Com_FormatSizeLong(buffer, size, FS_Tell(cls.demo.recording));
+}
+
 static size_t format_demo_status(char *buffer, size_t size)
 {
-    off_t pos = FS_Tell(cls.demo.recording);
-    size_t len = Com_FormatSizeLong(buffer, size, pos);
+    size_t len = format_demo_size(buffer, size);
     int min, sec, frames = cls.demo.frames_written;
 
     sec = frames / 10; frames %= 10;
@@ -251,9 +255,16 @@ static size_t format_demo_status(char *buffer, size_t size)
     len += Q_scnprintf(buffer + len, size - len, ", %d:%02d.%d",
                        min, sec, frames);
 
-    if (cls.demo.frames_dropped || cls.demo.messages_dropped) {
-        len += Q_scnprintf(buffer + len, size - len, ", %d/%d dropped",
-                           cls.demo.frames_dropped, cls.demo.messages_dropped);
+    if (cls.demo.frames_dropped) {
+        len += Q_scnprintf(buffer + len, size - len, ", %d frame%s dropped",
+                           cls.demo.frames_dropped,
+                           cls.demo.frames_dropped == 1 ? "" : "s");
+    }
+
+    if (cls.demo.others_dropped) {
+        len += Q_scnprintf(buffer + len, size - len, ", %d message%s dropped",
+                           cls.demo.others_dropped,
+                           cls.demo.others_dropped == 1 ? "" : "s");
     }
 
     return len;
@@ -288,7 +299,7 @@ void CL_Stop_f(void)
     msglen = (uint32_t)-1;
     FS_Write(&msglen, 4, cls.demo.recording);
 
-    format_demo_status(buffer, sizeof(buffer));
+    format_demo_size(buffer, sizeof(buffer));
 
 // close demofile
     FS_FCloseFile(cls.demo.recording);
@@ -296,7 +307,7 @@ void CL_Stop_f(void)
     cls.demo.paused = qfalse;
     cls.demo.frames_written = 0;
     cls.demo.frames_dropped = 0;
-    cls.demo.messages_dropped = 0;
+    cls.demo.others_dropped = 0;
 
 // print some statistics
     Com_Printf("Stopped demo (%s).\n", buffer);

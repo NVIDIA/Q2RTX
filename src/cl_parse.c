@@ -1293,7 +1293,7 @@ badbyte:
             if (cls.demo.buffer.cursize + len < cls.demo.buffer.maxsize) {
                 SZ_Write(&cls.demo.buffer, msg_read.data + readcount, len);
             } else {
-                cls.demo.messages_dropped++;
+                cls.demo.others_dropped++;
             }
         }
     }

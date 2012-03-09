@@ -410,9 +410,9 @@ typedef struct client_static_s {
         unsigned    time_frames;
         int         frames_written;     // number of frames written to demo file
         int         frames_dropped;     // number of svc_frames that didn't fit
-        int         messages_dropped;   // number of misc svc_* messages that didn't fit
         int         last_frame;         // number of server frame the last svc_frame was written
                                         // (for delta compression)
+        int         others_dropped;     // number of misc svc_* messages that didn't fit
         int         frames_read;        // number of frames read from demo file
         int         last_snapshot;      // number of demo frame the last snapshot was saved
         int         file_size;
