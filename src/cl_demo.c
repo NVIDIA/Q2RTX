@@ -217,17 +217,9 @@ void CL_EmitDemoFrame(void)
 
 static void emit_zero_frame(void)
 {
-    int             lastframe;
-
-    // the first frame is delta uncompressed
-    if (FRAME_PRE == 0)
-        lastframe = -1;
-    else
-        lastframe = FRAME_PRE;
-
     MSG_WriteByte(svc_frame);
     MSG_WriteLong(FRAME_CUR);
-    MSG_WriteLong(lastframe);   // what we are delta'ing from
+    MSG_WriteLong(FRAME_PRE);   // what we are delta'ing from
     MSG_WriteByte(0);   // rate dropped packets
 
     // send over the areabits
