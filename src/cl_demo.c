@@ -160,21 +160,6 @@ static void emit_delta_frame(server_frame_t *from, server_frame_t *to,
     emit_packet_entities(from, to);
 }
 
-// the only place where last_frame is updated
-static void flush_demo_frame(void)
-{
-    if (cls.demo.buffer.cursize + msg_write.cursize > cls.demo.buffer.maxsize) {
-        Com_DPrintf("Demo frame overflowed\n");
-        cls.demo.frames_dropped++;
-    } else {
-        SZ_Write(&cls.demo.buffer, msg_write.data, msg_write.cursize);
-        cls.demo.last_frame = cl.frame.number;
-        cls.demo.frames_written++;
-    }
-
-    SZ_Clear(&msg_write);
-}
-
 // frames_written counter starts at 0, but we add 1 to every frame number
 // because frame 0 can't be used due to protocol limitation (hack).
 #define FRAME_PRE   (cls.demo.frames_written)
@@ -190,29 +175,45 @@ Writes delta from the last frame we got to the current frame.
 void CL_EmitDemoFrame(void)
 {
     server_frame_t  *oldframe;
-    player_state_t  *oldstate;
     int             lastframe;
 
+    if (!cl.frame.valid)
+        return;
+
     // the first frame is delta uncompressed
-    if (FRAME_PRE == 0) {
+    if (cls.demo.last_server_frame == -1) {
         oldframe = NULL;
-        oldstate = NULL;
         lastframe = -1;
     } else {
-        oldframe = &cl.frames[cls.demo.last_frame & UPDATE_MASK];
-        oldstate = &oldframe->ps;
+        oldframe = &cl.frames[cls.demo.last_server_frame & UPDATE_MASK];
         lastframe = FRAME_PRE;
-        if (oldframe->number != cls.demo.last_frame || !oldframe->valid ||
+        if (oldframe->number != cls.demo.last_server_frame || !oldframe->valid ||
             cl.numEntityStates - oldframe->firstEntity > MAX_PARSE_ENTITIES) {
             oldframe = NULL;
-            oldstate = NULL;
             lastframe = -1;
         }
     }
 
     // emit and flush frame
     emit_delta_frame(oldframe, &cl.frame, lastframe, FRAME_CUR);
-    flush_demo_frame();
+
+    if (cls.demo.buffer.cursize + msg_write.cursize > cls.demo.buffer.maxsize) {
+        Com_DPrintf("Demo frame overflowed (%"PRIz" + %"PRIz" > %"PRIz")\n",
+                    cls.demo.buffer.cursize, msg_write.cursize, cls.demo.buffer.maxsize);
+        cls.demo.frames_dropped++;
+
+        // warn the user if drop rate is too high
+        if (cls.demo.frames_written < 10 && cls.demo.frames_dropped == 50)
+            Com_WPrintf("Too many demo frames don't fit into %"PRIz" bytes.\n"
+                        "Try to increase 'cl_demomsglen' value and restart recording.\n",
+                        cls.demo.buffer.maxsize);
+    } else {
+        SZ_Write(&cls.demo.buffer, msg_write.data, msg_write.cursize);
+        cls.demo.last_server_frame = cl.frame.number;
+        cls.demo.frames_written++;
+    }
+
+    SZ_Clear(&msg_write);
 }
 
 static void emit_zero_frame(void)
@@ -395,6 +396,9 @@ static void CL_Record_f(void)
     cls.demo.recording = f;
     cls.demo.paused = qfalse;
 
+    // the first frame will be delta uncompressed
+    cls.demo.last_server_frame = -1;
+
     SZ_Init(&cls.demo.buffer, demo_buffer, size);
 
     demo_extra = 0;
@@ -505,11 +509,9 @@ static void resume_record(void)
         }
     }
 
-    // emit and flush delta uncompressed frame
-    if (cl.frame.valid) {
-        emit_delta_frame(NULL, &cl.frame, -1, FRAME_CUR);
-        flush_demo_frame();
-    }
+    // write delta uncompressed frame
+    //cls.demo.last_server_frame = -1;
+    CL_EmitDemoFrame();
 
     // FIXME: write layout if it fits? most likely it won't
 
