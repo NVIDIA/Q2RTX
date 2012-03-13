@@ -1208,7 +1208,6 @@ void Info_NextPair(const char **string, char *key, char *value)
     while (*s && *s != '\\') {
         *o++ = *s++;
     }
-
     *o = 0;
 
     if (!*s) {
@@ -1223,12 +1222,7 @@ void Info_NextPair(const char **string, char *key, char *value)
     }
     *o = 0;
 
-    if (*s) {
-        s++;
-    }
-
     *string = s;
-
 }
 
 /*
@@ -1241,18 +1235,18 @@ void Info_Print(const char *infostring)
     char    key[MAX_INFO_STRING];
     char    value[MAX_INFO_STRING];
 
-    while (infostring) {
+    while (1) {
         Info_NextPair(&infostring, key, value);
-
-        if (!key[0]) {
+        if (!infostring)
             break;
-        }
 
-        if (value[0]) {
-            Com_Printf("%-20s %s\n", key, value);
-        } else {
-            Com_Printf("%-20s <MISSING VALUE>\n", key);
-        }
+        if (!key[0])
+            strcpy(key, "<MISSING KEY>");
+
+        if (!value[0])
+            strcpy(value, "<MISSING VALUE>");
+
+        Com_Printf("%-20s %s\n", key, value);
     }
 }
 

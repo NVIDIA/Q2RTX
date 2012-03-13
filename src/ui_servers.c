@@ -259,14 +259,20 @@ void UI_StatusEvent(const serverStatus_t *status)
     m_servers.list.items[i] = slot;
 
     slot->numRules = 0;
-    do {
+    while (slot->numRules < MAX_STATUS_RULES) {
         Info_NextPair(&info, key, value);
-        if (!key[0]) {
+        if (!info)
             break;
-        }
+
+        if (!key[0])
+            strcpy(key, "<MISSING KEY>");
+
+        if (!value[0])
+            strcpy(value, "<MISSING VALUE>");
+
         slot->rules[slot->numRules++] =
             UI_FormatColumns(0, key, value, NULL);
-    } while (info && slot->numRules < MAX_STATUS_RULES);
+    }
 
     slot->numPlayers = status->numPlayers;
     for (i = 0; i < status->numPlayers; i++) {
