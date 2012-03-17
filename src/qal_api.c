@@ -52,11 +52,11 @@ static void *handle;
 static ALCdevice *device;
 static ALCcontext *context;
 
-#define QAL(type,func)  static type q##func;
+#define QAL(type, func)  static type q##func
 QALC_IMP
 #undef QAL
 
-#define QAL(type,func)  type q##func;
+#define QAL(type, func)  type q##func
 QAL_IMP
 #undef QAL
 
@@ -72,29 +72,33 @@ void QAL_Shutdown(void)
         device = NULL;
     }
 
-#define QAL(type,func)  q##func = NULL;
+#define QAL(type, func)  q##func = NULL
     QALC_IMP
     QAL_IMP
 #undef QAL
 
-    Sys_FreeLibrary(handle);
-    handle = NULL;
+    if (handle) {
+        Sys_FreeLibrary(handle);
+        handle = NULL;
+    }
 
-    al_driver->flags &= ~CVAR_SOUND;
-    al_device->flags &= ~CVAR_SOUND;
+    if (al_driver)
+        al_driver->flags &= ~CVAR_SOUND;
+    if (al_device)
+        al_device->flags &= ~CVAR_SOUND;
 }
 
 qboolean QAL_Init(void)
 {
-    al_driver = Cvar_Get("al_driver", DEFAULT_OPENAL_DRIVER, CVAR_SOUND);
-    al_device = Cvar_Get("al_device", "", CVAR_SOUND);
+    al_driver = Cvar_Get("al_driver", DEFAULT_OPENAL_DRIVER, 0);
+    al_device = Cvar_Get("al_device", "", 0);
 
     Sys_LoadLibrary(al_driver->string, NULL, &handle);
     if (!handle) {
         return qfalse;
     }
 
-#define QAL(type, func)  q##func = Sys_GetProcAddress(handle, #func);
+#define QAL(type, func)  q##func = Sys_GetProcAddress(handle, #func)
     QALC_IMP
     QAL_IMP
 #undef QAL
