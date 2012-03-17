@@ -321,8 +321,19 @@ void VID_EndFrame(void)
     }
 }
 
-void *VID_GetProcAddr(const char *symbol)
+void *VID_GetCoreAddr(const char *sym)
 {
-    return (void *)GetProcAddress(glw.hinstOpenGL, symbol);
+    if (glw.hinstOpenGL)
+        return (void *)GetProcAddress(glw.hinstOpenGL, sym);
+
+    return NULL;
+}
+
+void *VID_GetProcAddr(const char *sym)
+{
+    if (qwglGetProcAddress)
+        return (void *)qwglGetProcAddress(sym);
+
+    return NULL;
 }
 

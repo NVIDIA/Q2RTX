@@ -763,6 +763,11 @@ void VID_EndFrame(void)
 #endif
 }
 
+void *VID_GetCoreAddr(const char *sym)
+{
+    return SDL_GL_GetProcAddress(sym);
+}
+
 void *VID_GetProcAddr(const char *sym)
 {
     return SDL_GL_GetProcAddress(sym);

@@ -55,7 +55,6 @@ cvar_t *gl_vertex_buffer_object;
 // development variables
 cvar_t *gl_znear;
 cvar_t *gl_zfar;
-cvar_t *gl_log;
 cvar_t *gl_drawworld;
 cvar_t *gl_drawentities;
 cvar_t *gl_drawsky;
@@ -63,6 +62,7 @@ cvar_t *gl_showtris;
 cvar_t *gl_showorigins;
 cvar_t *gl_showtearing;
 #ifdef _DEBUG
+cvar_t *gl_log;
 cvar_t *gl_showstats;
 cvar_t *gl_showscrap;
 cvar_t *gl_nobind;
@@ -625,9 +625,11 @@ void R_RenderFrame(refdef_t *fd)
 
 void R_BeginFrame(void)
 {
+#ifdef _DEBUG
     if (gl_log->integer) {
-        QGL_LogNewFrame();
+        QGL_LogComment("\n*** R_BeginFrame ***\n");
     }
+#endif
 
     memset(&c, 0, sizeof(c));
 
@@ -657,11 +659,6 @@ void R_EndFrame(void)
         GL_DrawTearing();
     }
 
-    if (gl_log->modified) {
-        QGL_EnableLogging(gl_log->integer);
-        gl_log->modified = qfalse;
-    }
-
     // enable/disable fragment programs on the fly
     if (gl_fragment_program->modified) {
         GL_ShutdownPrograms();
@@ -671,9 +668,17 @@ void R_EndFrame(void)
 
     GL_ShowErrors(__func__);
 
-    VID_EndFrame();
+#ifdef _DEBUG
+    if (gl_log->modified) {
+        if (gl_log->integer)
+            QGL_EnableLogging(gl_config.ext_enabled);
+        else
+            QGL_DisableLogging(gl_config.ext_enabled);
+        gl_log->modified = qfalse;
+    }
+#endif
 
-//    qglFinish();
+    VID_EndFrame();
 }
 
 // ==============================================================================
@@ -743,7 +748,6 @@ static void GL_Register(void)
     // development variables
     gl_znear = Cvar_Get("gl_znear", "2", CVAR_CHEAT);
     gl_zfar = Cvar_Get("gl_zfar", "16384", 0);
-    gl_log = Cvar_Get("gl_log", "0", 0);
     gl_drawworld = Cvar_Get("gl_drawworld", "1", CVAR_CHEAT);
     gl_drawentities = Cvar_Get("gl_drawentities", "1", CVAR_CHEAT);
     gl_drawsky = Cvar_Get("gl_drawsky", "1", 0);
@@ -751,6 +755,7 @@ static void GL_Register(void)
     gl_showorigins = Cvar_Get("gl_showorigins", "0", CVAR_CHEAT);
     gl_showtearing = Cvar_Get("gl_showtearing", "0", 0);
 #ifdef _DEBUG
+    gl_log = Cvar_Get("gl_log", "0", CVAR_CHEAT);
     gl_showstats = Cvar_Get("gl_showstats", "0", 0);
     gl_showscrap = Cvar_Get("gl_showscrap", "0", 0);
     gl_nobind = Cvar_Get("gl_nobind", "0", CVAR_CHEAT);
@@ -972,8 +977,12 @@ qboolean R_Init(qboolean total)
     // register our variables
     GL_Register();
 
-    QGL_EnableLogging(gl_log->integer);
+#ifdef _DEBUG
+    if (gl_log->integer) {
+        QGL_EnableLogging(gl_config.ext_enabled);
+    }
     gl_log->modified = qfalse;
+#endif
 
     GL_PostInit();
 

@@ -68,7 +68,7 @@ void GL_TexEnv(GLenum texenv)
     case GL_MODULATE:
     case GL_BLEND:
     case GL_ADD:
-        qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, texenv);
+        qglTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, texenv);
         break;
     default:
         Com_Error(ERR_FATAL, "GL_TexEnv: bad texenv");
