@@ -49,6 +49,7 @@ typedef struct {
         float add, modulate, scale;
     } world;
     GLuint prognum_warp;
+    GLbitfield stencil_buffer_bit;
     float entity_modulate;
     float inverse_intensity;
     float sintab[256];

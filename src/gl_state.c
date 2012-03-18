@@ -227,14 +227,15 @@ void GL_Setup3D(void)
     GL_Bits(GLS_DEFAULT);
     GL_CullFace(GLS_CULL_BACK);
 
-    qglClear(GL_DEPTH_BUFFER_BIT);
+    qglClear(GL_DEPTH_BUFFER_BIT | gl_static.stencil_buffer_bit);
 }
 
 void GL_SetDefaultState(void)
 {
     qglClearColor(0, 0, 0, 1);
     qglClearDepth(1);
-    qglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    qglClearStencil(0);
+
     qglEnable(GL_DEPTH_TEST);
     qglDepthFunc(GL_LEQUAL);
     qglDepthRange(0, 1);
@@ -244,6 +245,8 @@ void GL_SetDefaultState(void)
     qglAlphaFunc(GL_GREATER, 0.666f);
     qglFrontFace(GL_CW);
     qglPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    qglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | gl_static.stencil_buffer_bit);
 
     qglEnableClientState(GL_VERTEX_ARRAY);
     qglEnableClientState(GL_TEXTURE_COORD_ARRAY);

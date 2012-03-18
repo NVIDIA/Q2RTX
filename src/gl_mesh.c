@@ -530,6 +530,13 @@ static void draw_shadow(maliasmesh_t *mesh)
     // load shadow projection matrix
     qglLoadMatrixf(shadowmatrix);
 
+    // eliminate z-fighting by utilizing stencil buffer, if available
+    if (gl_config.stencilbits) {
+        qglEnable(GL_STENCIL_TEST);
+        qglStencilFunc(GL_EQUAL, 0, 0xff);
+        qglStencilOp(GL_KEEP, GL_KEEP, GL_INCR);
+    }
+
     GL_Bits(GLS_BLEND_BLEND);
     GL_TexEnv(GL_MODULATE);
     GL_BindTexture(TEXNUM_WHITE);
@@ -549,6 +556,14 @@ static void draw_shadow(maliasmesh_t *mesh)
     if (shadelight)
         qglEnableClientState(GL_COLOR_ARRAY);
     qglEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+    // once we have drawn something to stencil buffer, continue to clear it for
+    // the lifetime of OpenGL context. leaving stencil buffer "dirty" and
+    // clearing just depth is slower (verified for Nvidia and ATI drivers).
+    if (gl_config.stencilbits) {
+        qglDisable(GL_STENCIL_TEST);
+        gl_static.stencil_buffer_bit |= GL_STENCIL_BUFFER_BIT;
+    }
 
     // fall back to entity matrix
     qglLoadMatrixf(glr.entmatrix);

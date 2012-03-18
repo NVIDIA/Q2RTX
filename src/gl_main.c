@@ -504,7 +504,7 @@ static void GL_DrawTearing(void)
     points[3][0] = r_config.width;
     points[3][1] = 0;
 
-    qglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    qglClear(GL_COLOR_BUFFER_BIT);
 
     qglDisable(GL_TEXTURE_2D);
     qglDisableClientState(GL_TEXTURE_COORD_ARRAY);
