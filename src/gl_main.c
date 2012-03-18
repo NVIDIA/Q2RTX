@@ -685,13 +685,15 @@ void R_EndFrame(void)
 
 static void GL_Strings_f(void)
 {
-    Com_Printf("GL_VENDOR: %s\n", gl_config.vendorString);
-    Com_Printf("GL_RENDERER: %s\n", gl_config.rendererString);
-    Com_Printf("GL_VERSION: %s\n", gl_config.versionString);
-    Com_Printf("GL_EXTENSIONS: %s\n", gl_config.extensionsString);
+    Com_Printf("GL_VENDOR: %s\n", qglGetString(GL_VENDOR));
+    Com_Printf("GL_RENDERER: %s\n", qglGetString(GL_RENDERER));
+    Com_Printf("GL_VERSION: %s\n", qglGetString(GL_VERSION));
+    Com_Printf("GL_EXTENSIONS: %s\n", qglGetString(GL_EXTENSIONS));
     Com_Printf("GL_MAX_TEXTURE_SIZE: %d\n", gl_config.maxTextureSize);
     Com_Printf("GL_MAX_TEXTURE_UNITS: %d\n", gl_config.numTextureUnits);
-    Com_Printf("GL_MAX_TEXTURE_MAX_ANISOTROPY: %d\n", (int)gl_config.maxAnisotropy);
+    Com_Printf("GL_MAX_TEXTURE_MAX_ANISOTROPY: %.f\n", gl_config.maxAnisotropy);
+    Com_Printf("GL_PFD: color(%d-bit) Z(%d-bit) stencil(%d-bit)\n",
+               gl_config.colorbits, gl_config.depthbits, gl_config.stencilbits);
 }
 
 static size_t GL_ViewCluster_m(char *buffer, size_t size)
@@ -783,18 +785,43 @@ static void GL_Unregister(void)
     Cmd_RemoveCommand("strings");
 }
 
-static qboolean GL_SetupExtensions(void)
+static qboolean GL_SetupConfig(void)
 {
-    int integer;
-    float value;
+    const char *version, *extensions;
+    GLint integer;
+    GLfloat value;
+    char *p;
 
-    if (!gl_config.extensionsString || !gl_config.extensionsString[0]) {
+    // get version string
+    version = (const char *)qglGetString(GL_VERSION);
+    if (!version || !*version) {
+        Com_EPrintf("OpenGL returned NULL version string\n");
+        return qfalse;
+    }
+
+    // parse version
+    gl_config.version_major = strtoul(version, &p, 10);
+    if (*p == '.') {
+        gl_config.version_minor = strtoul(p + 1, NULL, 10);
+    } else {
+        gl_config.version_minor = 0;
+    }
+
+    // OpenGL 1.0 doesn't have vertex arrays
+    if (gl_config.version_major == 1 && gl_config.version_minor == 0) {
+        Com_EPrintf("OpenGL version 1.1 or greater required\n");
+        return qfalse;
+    }
+
+    // get extensions string
+    extensions = (const char *)qglGetString(GL_EXTENSIONS);
+    if (!extensions  || !*extensions) {
         Com_EPrintf("No OpenGL extensions found, check your drivers\n");
         return qfalse;
     }
 
     // parse extension string
-    gl_config.ext_supported = QGL_ParseExtensionString(gl_config.extensionsString);
+    gl_config.ext_supported = QGL_ParseExtensionString(extensions);
     gl_config.ext_enabled = 0;
 
     // initialize our 'always on' extensions
@@ -827,12 +854,12 @@ static qboolean GL_SetupExtensions(void)
     if (gl_config.ext_supported & QGL_EXT_texture_filter_anisotropic) {
         qglGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &value);
         if (value >= 2) {
-            Com_Printf("...enabling GL_EXT_texture_filter_anisotropic (%d max)\n", (int)value);
+            Com_Printf("...enabling GL_EXT_texture_filter_anisotropic (%.f max)\n", value);
             gl_config.ext_enabled |= QGL_EXT_texture_filter_anisotropic;
             gl_config.maxAnisotropy = value;
         } else {
             Com_Printf("...ignoring GL_EXT_texture_filter_anisotropic,\n"
-                       "%d anisotropy is not enough\n", (int)value);
+                       "%.f anisotropy is not enough\n", value);
         }
     } else {
         Com_Printf("GL_EXT_texture_filter_anisotropic not found\n");
@@ -842,7 +869,7 @@ static qboolean GL_SetupExtensions(void)
 
     // lack of multitexture support is a show stopper
     if (!qglActiveTextureARB) {
-        Com_EPrintf("Required OpenGL extensions are missing\n");
+        Com_EPrintf("Required GL_ARB_multitexture extension is missing\n");
         return qfalse;
     }
 
@@ -862,25 +889,21 @@ static qboolean GL_SetupExtensions(void)
 
     gl_config.maxTextureSize = integer;
 
+    gl_config.colorbits = 0;
+    qglGetIntegerv(GL_RED_BITS, &integer);
+    gl_config.colorbits += integer;
+    qglGetIntegerv(GL_GREEN_BITS, &integer);
+    gl_config.colorbits += integer;
+    qglGetIntegerv(GL_BLUE_BITS, &integer);
+    gl_config.colorbits += integer;
+
+    qglGetIntegerv(GL_DEPTH_BITS, &integer);
+    gl_config.depthbits = integer;
+
+    qglGetIntegerv(GL_STENCIL_BITS, &integer);
+    gl_config.stencilbits = integer;
+
     return qtrue;
-}
-
-static void GL_IdentifyRenderer(void)
-{
-    char *p;
-
-    // parse renderer
-    if (Q_stristr(gl_config.rendererString, "mesa dri")) {
-        gl_config.renderer = GL_RENDERER_MESADRI;
-    } else {
-        gl_config.renderer = GL_RENDERER_OTHER;
-    }
-
-    // parse version
-    gl_config.version_major = strtoul(gl_config.versionString, &p, 10);
-    if (*p == '.') {
-        gl_config.version_minor = strtoul(p + 1, NULL, 10);
-    }
 }
 
 static void GL_InitTables(void)
@@ -958,19 +981,8 @@ qboolean R_Init(qboolean total)
     // initialize our QGL dynamic bindings
     QGL_Init();
 
-    // get various static strings from OpenGL
-#define GET_STRING(x)  (const char *)qglGetString(x)
-
-    gl_config.vendorString = GET_STRING(GL_VENDOR);
-    gl_config.rendererString = GET_STRING(GL_RENDERER);
-    gl_config.versionString = GET_STRING(GL_VERSION);
-    gl_config.extensionsString = GET_STRING(GL_EXTENSIONS);
-
-    // parse renderer/version strings
-    GL_IdentifyRenderer();
-
-    // parse extension string
-    if (!GL_SetupExtensions()) {
+    // initialize extensions and get various limits from OpenGL
+    if (!GL_SetupConfig()) {
         goto fail;
     }
 
