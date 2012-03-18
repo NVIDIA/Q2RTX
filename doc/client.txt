@@ -639,6 +639,22 @@ gl_video_sync::
     synchronizing rendering framerate to monitor vertical retrace frequency.
     Default value is 1 (enabled). See also ‘cl_async’ variable.
 
+gl_colorbits::
+    Specifies desired size of color buffer, in bits, requested from OpenGL
+    implementation (should be typically 0, 24 or 32). Default value is 0
+    (determine the best value automatically).
+
+gl_depthbits::
+    Specifies desired size of depth buffer, in bits, requested from OpenGL
+    implementation (should be typically 0 or 24). Default value is 0
+    (determine the best value automatically).
+
+gl_stencilbits::
+    Specifies desired size of stencil buffer, in bits, requested from OpenGL
+    implementation (should be typically 0 or 8). Currently stencil buffer is
+    used only for drawing projection shadows. Default value is 8. 0 means no
+    stencil buffer requested.
+
 gl_screenshot_format::
     Specifies image format ‘screenshot’ command uses. Possible values are
     "png", "jpg" and "tga". Default value is "jpg".

@@ -41,9 +41,12 @@ static cvar_t   *gl_driver;
 static cvar_t   *gl_drawbuffer;
 static cvar_t   *gl_swapinterval;
 static cvar_t   *gl_allow_software;
+static cvar_t   *gl_colorbits;
+static cvar_t   *gl_depthbits;
+static cvar_t   *gl_stencilbits;
 
 /*
-GLimp_Shutdown
+VID_Shutdown
 
 This routine does all OS specific shutdown procedures for the OpenGL
 subsystem.  Under OpenGL this means NULLing out the current DC and
@@ -74,84 +77,83 @@ void VID_Shutdown(void)
     memset(&glw, 0, sizeof(glw));
 }
 
-static qboolean InitGL(void)
+static void ReportLastError(const char *what)
 {
-    PIXELFORMATDESCRIPTOR pfd = {
-        sizeof(PIXELFORMATDESCRIPTOR),      // size of this pfd
-        1,                              // version number
-        PFD_DRAW_TO_WINDOW |            // support window
-        PFD_SUPPORT_OPENGL |            // support OpenGL
-        PFD_DOUBLEBUFFER,               // double buffered
-        PFD_TYPE_RGBA,                  // RGBA type
-        24,                             // 24-bit color depth
-        0, 0, 0, 0, 0, 0,               // color bits ignored
-        0,                              // no alpha buffer
-        0,                              // shift bit ignored
-        0,                              // no accumulation buffer
-        0, 0, 0, 0,                     // accum bits ignored
-        32,                             // 32-bit z-buffer
-        0,                              // no stencil buffer
-        0,                              // no auxiliary buffer
-        PFD_MAIN_PLANE,                 // main layer
-        0,                              // reserved
-        0, 0, 0                         // layer masks ignored
-    };
+    Com_EPrintf("%s failed with error %lu\n", what, GetLastError());
+}
+
+static void ReportPixelFormat(int pixelformat, PIXELFORMATDESCRIPTOR *pfd)
+{
+    Com_DPrintf("GL_FPD(%d): flags(%#lx) color(%d) Z(%d) stencil(%d)\n",
+                pixelformat, pfd->dwFlags, pfd->cColorBits, pfd->cDepthBits,
+                pfd->cStencilBits);
+}
+
+#define FAIL_OK     0
+#define FAIL_SOFT   -1
+#define FAIL_HARD   -2
+
+static int SetupGL(int colorbits, int depthbits, int stencilbits)
+{
+    PIXELFORMATDESCRIPTOR pfd;
     int pixelformat;
-    const char *what;
 
-    // figure out if we're running on a minidriver or not
-    if (!Q_stristr(gl_driver->string, "opengl32")) {
-        Com_Printf("...running a minidriver: %s\n", gl_driver->string);
-        glw.minidriver = qtrue;
-    } else {
-        glw.minidriver = qfalse;
-    }
+    // create the main window
+    Win_Init();
 
-    // load OpenGL library
-    if (!WGL_Init(gl_driver->string)) {
-        what = "WGL_Init";
-        goto fail1;
-    }
+    if (colorbits == 0)
+        colorbits = 24;
+
+    if (depthbits == 0)
+        depthbits = colorbits > 16 ? 24 : 16;
+
+    if (depthbits < 24)
+        stencilbits = 0;
+
+    memset(&pfd, 0, sizeof(pfd));
+    pfd.nSize = sizeof(pfd);
+    pfd.nVersion = 1;
+    pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.cColorBits = colorbits;
+    pfd.cDepthBits = depthbits;
+    pfd.cStencilBits = stencilbits;
+    pfd.iLayerType = PFD_MAIN_PLANE;
 
     // set pixel format
     if (glw.minidriver) {
-        // check if certain entry points are present if using a minidriver
-        if (!qwglChoosePixelFormat || !qwglSetPixelFormat ||
-            !qwglDescribePixelFormat || !qwglSwapBuffers) {
-            Com_EPrintf("Required MCD entry points are missing\n");
-            goto fail2;
-        }
-
         if ((pixelformat = qwglChoosePixelFormat(win.dc, &pfd)) == 0) {
-            what = "wglChoosePixelFormat";
-            goto fail1;
-        }
-
-        if (qwglSetPixelFormat(win.dc, pixelformat, &pfd) == FALSE) {
-            what = "wglSetPixelFormat";
-            goto fail1;
+            ReportLastError("wglChoosePixelFormat");
+            goto soft;
         }
 
         qwglDescribePixelFormat(win.dc, pixelformat, sizeof(pfd), &pfd);
+        ReportPixelFormat(pixelformat, &pfd);
+
+        if (qwglSetPixelFormat(win.dc, pixelformat, &pfd) == FALSE) {
+            ReportLastError("wglSetPixelFormat");
+            goto soft;
+        }
     } else {
         if ((pixelformat = ChoosePixelFormat(win.dc, &pfd)) == 0) {
-            what = "ChoosePixelFormat";
-            goto fail1;
-        }
-
-        if (SetPixelFormat(win.dc, pixelformat, &pfd) == FALSE) {
-            what = "SetPixelFormat";
-            goto fail1;
+            ReportLastError("ChoosePixelFormat");
+            goto soft;
         }
 
         DescribePixelFormat(win.dc, pixelformat, sizeof(pfd), &pfd);
+        ReportPixelFormat(pixelformat, &pfd);
+
+        if (SetPixelFormat(win.dc, pixelformat, &pfd) == FALSE) {
+            ReportLastError("SetPixelFormat");
+            goto soft;
+        }
     }
 
     // check for software emulation
     if (pfd.dwFlags & PFD_GENERIC_FORMAT) {
         if (!gl_allow_software->integer) {
             Com_EPrintf("No hardware OpenGL acceleration detected\n");
-            goto fail2;
+            goto soft;
         }
         Com_WPrintf("...using software emulation\n");
     } else if (pfd.dwFlags & PFD_GENERIC_ACCELERATED) {
@@ -164,34 +166,82 @@ static qboolean InitGL(void)
 
     // startup the OpenGL subsystem by creating a context and making it current
     if ((glw.hGLRC = qwglCreateContext(win.dc)) == NULL) {
-        what = "wglCreateContext";
-        goto fail1;
+        ReportLastError("wglCreateContext");
+        goto hard;
     }
 
-    if (!qwglMakeCurrent(win.dc, glw.hGLRC)) {
-        what = "wglMakeCurrent";
-        goto fail1;
-    }
-
-    // print out PFD specifics
-    Com_DPrintf("GL_VENDOR: %s\n", qwglGetString(GL_VENDOR));
-    Com_DPrintf("GL_RENDERER: %s\n", qwglGetString(GL_RENDERER));
-    Com_DPrintf("GL_PFD: color(%d-bits: %d,%d,%d,%d) Z(%d-bit) stencil(%d-bit)\n",
-                pfd.cColorBits, pfd.cRedBits, pfd.cGreenBits, pfd.cBlueBits,
-                pfd.cAlphaBits, pfd.cDepthBits, pfd.cStencilBits);
-
-    return qtrue;
-
-fail1:
-    Com_EPrintf("%s failed with error %#lx\n", what, GetLastError());
-    if (glw.hGLRC && qwglDeleteContext) {
+    if (qwglMakeCurrent(win.dc, glw.hGLRC) == FALSE) {
+        ReportLastError("wglMakeCurrent");
         qwglDeleteContext(glw.hGLRC);
         glw.hGLRC = NULL;
+        goto hard;
     }
 
-fail2:
+    return FAIL_OK;
+
+soft:
+    // it failed, clean up
+    Win_Shutdown();
+    return FAIL_SOFT;
+
+hard:
+    Win_Shutdown();
+    return FAIL_HARD;
+}
+
+static int LoadGL(const char *driver)
+{
+    int colorbits = Cvar_ClampInteger(gl_colorbits, 0, 32);
+    int depthbits = Cvar_ClampInteger(gl_depthbits, 0, 32);
+    int stencilbits = Cvar_ClampInteger(gl_stencilbits, 0, 8);
+    int ret;
+
+    // figure out if we're running on a minidriver or not
+    if (!Q_stricmp(driver, "opengl32") ||
+        !Q_stricmp(driver, "opengl32.dll")) {
+        glw.minidriver = qfalse;
+    } else {
+        Com_Printf("...running a minidriver: %s\n", driver);
+        glw.minidriver = qtrue;
+    }
+
+    // load the OpenGL library and bind to it
+    if (!WGL_Init(driver)) {
+        ReportLastError("WGL_Init");
+        return FAIL_SOFT;
+    }
+
+    // check if basic WGL entry points are present
+    if (!qwglCreateContext || !qwglMakeCurrent || !qwglDeleteContext) {
+        Com_EPrintf("Required WGL entry points are missing\n");
+        goto fail;
+    }
+
+    if (glw.minidriver) {
+        // check if MCD entry points are present if using a minidriver
+        if (!qwglChoosePixelFormat || !qwglSetPixelFormat ||
+            !qwglDescribePixelFormat || !qwglSwapBuffers) {
+            Com_EPrintf("Required MCD entry points are missing\n");
+            goto fail;
+        }
+    }
+
+    // create window, choose PFD, setup OpenGL context
+    ret = SetupGL(colorbits, depthbits, stencilbits);
+
+    // attempt to recover
+    if (ret == FAIL_SOFT && (colorbits || depthbits || stencilbits))
+        ret = SetupGL(0, 0, 0);
+
+    if (ret)
+        goto fail;
+
+    return FAIL_OK;
+
+fail:
+    // it failed, clean up
     WGL_Shutdown();
-    return qfalse;
+    return FAIL_SOFT;
 }
 
 static void gl_swapinterval_changed(cvar_t *self)
@@ -216,7 +266,7 @@ static void gl_drawbuffer_changed(cvar_t *self)
 }
 
 /*
-GLimp_Init
+VID_Init
 
 This routine is responsible for initializing the OS specific portions
 of OpenGL.  Under Win32 this means dealing with the pixelformats and
@@ -226,33 +276,29 @@ qboolean VID_Init(void)
 {
     const char *extensions;
     unsigned mask;
+    int ret;
 
     gl_driver = Cvar_Get("gl_driver", DEFAULT_OPENGL_DRIVER, CVAR_ARCHIVE | CVAR_REFRESH);
     gl_drawbuffer = Cvar_Get("gl_drawbuffer", "GL_BACK", 0);
     gl_swapinterval = Cvar_Get("gl_swapinterval", "1", CVAR_ARCHIVE);
     gl_allow_software = Cvar_Get("gl_allow_software", "0", 0);
+    gl_colorbits = Cvar_Get("gl_colorbits", "0", CVAR_REFRESH);
+    gl_depthbits = Cvar_Get("gl_depthbits", "0", CVAR_REFRESH);
+    gl_stencilbits = Cvar_Get("gl_stencilbits", "8", CVAR_REFRESH);
 
-    while (1) {
-        // create the window
-        Win_Init();
+    // load and initialize the OpenGL driver
+    ret = LoadGL(gl_driver->string);
 
-        // initialize OpenGL context
-        if (InitGL()) {
-            break;
-        }
-
-        // it failed, clean up
-        Win_Shutdown();
-
-        // see if this was a minidriver
-        if (!glw.minidriver) {
-            return qfalse;
-        }
-
-        // attempt to recover
-        Com_Printf("...attempting to load opengl32\n");
+    // attempt to recover if this was a minidriver
+    if (ret == FAIL_SOFT && glw.minidriver) {
+        Com_Printf("...falling back to opengl32\n");
         Cvar_Set("gl_driver", "opengl32");
+        ret = LoadGL(gl_driver->string);
     }
+
+    // it failed, abort
+    if (ret)
+        return qfalse;
 
     // initialize WGL extensions
     extensions = (const char *)qwglGetString(GL_EXTENSIONS);
@@ -289,11 +335,11 @@ void VID_BeginFrame(void)
 }
 
 /*
-GLimp_EndFrame
+VID_EndFrame
 
 Responsible for doing a swapbuffers and possibly for other stuff
-as yet to be determined.  Probably better not to make this a GLimp
-function and instead do a call to GLimp_SwapBuffers.
+as yet to be determined.  Probably better not to make this a VID_
+function and instead do a call to VID_SwapBuffers.
 */
 void VID_EndFrame(void)
 {
@@ -315,7 +361,7 @@ void VID_EndFrame(void)
 
         // this happens sometimes when the window is iconified
         if (!IsIconic(win.wnd)) {
-            Com_Error(ERR_FATAL, "%s failed with error %#lx",
+            Com_Error(ERR_FATAL, "%s failed with error %lu",
                       glw.minidriver ? "wglSwapBuffers" : "SwapBuffers", error);
         }
     }

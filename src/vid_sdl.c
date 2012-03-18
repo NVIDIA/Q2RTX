@@ -660,13 +660,22 @@ static void init_opengl(void)
 qboolean VID_Init(void)
 {
     cvar_t *gl_driver;
+    cvar_t *gl_colorbits;
+    cvar_t *gl_depthbits;
+    cvar_t *gl_stencilbits;
     char *s;
+    int colorbits;
+    int depthbits;
+    int stencilbits;
 
     if (!init_video()) {
         return qfalse;
     }
 
     gl_driver = Cvar_Get("gl_driver", DEFAULT_OPENGL_DRIVER, CVAR_REFRESH);
+    gl_colorbits = Cvar_Get("gl_colorbits", "0", CVAR_REFRESH);
+    gl_depthbits = Cvar_Get("gl_depthbits", "0", CVAR_REFRESH);
+    gl_stencilbits = Cvar_Get("gl_stencilbits", "8", CVAR_REFRESH);
 
     while (1) {
         // ugly hack to work around brain-dead servers that actively
@@ -692,10 +701,30 @@ qboolean VID_Init(void)
         Cvar_SetByVar(gl_driver, DEFAULT_OPENGL_DRIVER, FROM_CODE);
     }
 
-    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
-    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 5);
-    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
+    colorbits = Cvar_ClampInteger(gl_colorbits, 0, 32);
+    depthbits = Cvar_ClampInteger(gl_depthbits, 0, 32);
+    stencilbits = Cvar_ClampInteger(gl_stencilbits, 0, 8);
+
+    if (colorbits == 0)
+        colorbits = 24;
+
+    if (depthbits == 0)
+        depthbits = colorbits > 16 ? 24 : 16;
+
+    if (depthbits < 24)
+        stencilbits = 0;
+
+    if (colorbits > 16) {
+        SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+        SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+        SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+    } else {
+        SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
+        SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 5);
+        SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
+    }
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, depthbits);
+    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, stencilbits);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
     if (!set_video_mode(SDL_OPENGL | SDL_RESIZABLE, 0)) {
