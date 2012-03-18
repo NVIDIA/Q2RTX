@@ -381,6 +381,8 @@ void Win_SetMode(void)
         // fall back to windowed mode
     }
 
+    ChangeDisplaySettings(NULL, 0);
+
     // parse vid_geometry specification
     VID_GetGeometry(&win.rc);
 
@@ -394,8 +396,6 @@ void Win_SetMode(void)
 
     Com_DPrintf("...setting windowed mode: %dx%d%+d%+d\n",
                 win.rc.width, win.rc.height, win.rc.x, win.rc.y);
-
-    ChangeDisplaySettings(NULL, 0);
 
     memset(&win.dm, 0, sizeof(win.dm));
     win.flags &= ~QVF_FULLSCREEN;
