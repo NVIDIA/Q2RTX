@@ -643,6 +643,7 @@ typedef struct zhead_s {
     size_t      size;
 #ifdef _DEBUG
     void        *addr;
+    time_t      time;
 #endif
     struct zhead_s  *prev, *next;
 } zhead_t;
@@ -914,6 +915,7 @@ void *Z_TagMalloc(size_t size, memtag_t tag)
 #else
     z->addr = NULL;
 #endif
+    z->time = time(NULL);
 #endif
 
     z->next = z_chain.next;
@@ -922,8 +924,7 @@ void *Z_TagMalloc(size_t size, memtag_t tag)
     z_chain.next = z;
 
     if (z_perturb && z_perturb->integer) {
-        memset(z + 1, z_perturb->integer, size -
-               sizeof(zhead_t) - sizeof(uint16_t));
+        memset(z + 1, z_perturb->integer, size - Z_EXTRA);
     }
 
     Z_TAIL_F(z) = Z_TAIL;
