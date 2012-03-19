@@ -81,6 +81,8 @@ typedef struct {
     hide_t      hide_cursor;
     unsigned    last_motion;
     unsigned    hide_delay;
+    int         old_dx;
+    int         old_dy;
 } in_state_t;
 
 static in_state_t   input;
@@ -566,7 +568,6 @@ CL_MouseMove
 */
 static void CL_MouseMove(void)
 {
-    static int old_dx, old_dy;
     int dx, dy;
     float mx, my;
     float speed;
@@ -582,15 +583,15 @@ static void CL_MouseMove(void)
     }
 
     if (m_filter->integer) {
-        mx = (dx + old_dx) * 0.5f;
-        my = (dy + old_dy) * 0.5f;
+        mx = (dx + input.old_dx) * 0.5f;
+        my = (dy + input.old_dy) * 0.5f;
     } else {
         mx = dx;
         my = dy;
     }
 
-    old_dx = dx;
-    old_dy = dy;
+    input.old_dx = dx;
+    input.old_dy = dy;
 
     if (!mx && !my) {
         return;
