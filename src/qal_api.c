@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "common.h"
 #include "sys_public.h"
+#include "files.h"
 #include "qal_api.h"
 #include <AL/alc.h>
 
@@ -92,6 +93,9 @@ qboolean QAL_Init(void)
 {
     al_driver = Cvar_Get("al_driver", DEFAULT_OPENAL_DRIVER, 0);
     al_device = Cvar_Get("al_device", "", 0);
+
+    // don't allow absolute or relative paths
+    FS_SanitizeFilenameVariable(al_driver);
 
     Sys_LoadLibrary(al_driver->string, NULL, &handle);
     if (!handle) {

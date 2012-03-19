@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 
 #include "common.h"
+#include "files.h"
 #include "in_public.h"
 #include "vid_public.h"
 #include "vid_local.h"
@@ -676,6 +677,9 @@ qboolean VID_Init(void)
     gl_colorbits = Cvar_Get("gl_colorbits", "0", CVAR_REFRESH);
     gl_depthbits = Cvar_Get("gl_depthbits", "0", CVAR_REFRESH);
     gl_stencilbits = Cvar_Get("gl_stencilbits", "8", CVAR_REFRESH);
+
+    // don't allow absolute or relative paths
+    FS_SanitizeFilenameVariable(gl_driver);
 
     while (1) {
         // ugly hack to work around brain-dead servers that actively

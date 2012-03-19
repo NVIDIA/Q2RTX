@@ -286,6 +286,9 @@ qboolean VID_Init(void)
     gl_depthbits = Cvar_Get("gl_depthbits", "0", CVAR_REFRESH);
     gl_stencilbits = Cvar_Get("gl_stencilbits", "8", CVAR_REFRESH);
 
+    // don't allow absolute or relative paths
+    FS_SanitizeFilenameVariable(gl_driver);
+
     // load and initialize the OpenGL driver
     ret = LoadGL(gl_driver->string);
 
