@@ -288,6 +288,151 @@ static void Com_TestNorm_f(void)
                errors, numnormtests, pass);
 }
 
+typedef struct {
+    const char *string;
+    int result;
+} info_validate_test_t;
+
+static const info_validate_test_t info_validate_tests[] = {
+    { "",                       0 },
+    { "\\",                     0 },
+    { "\\\\",                   0 },
+    { "\\\\\\",                 0 },
+    { "\\\\\\key\\value",       1 },
+    { "\\\\value",              1 },
+    { "\\key\\\\key\\value",    1 },
+    { "\\key\\value",           1 },
+    { "\\key\\value\\",         0 },
+    { "key\\value",             1 },
+    { "key\\value\\",           0 },
+    { "\\key",                  0 },
+    { "\\key\\",                0 },
+    { "key",                    0 },
+    { "key\\",                  0 },
+    { "\\ke;y\\value",          0 },
+    { "\\ke\"y\\value",         0 },
+    { "\\key\\va;lue",          0 },
+    { "\\key\\va\"lue",         0 },
+    { "\\ke\x81y\\value",       0 },
+    { "\\key\\val\x82ue",       0 },
+    { "\\ke\ny\\value",         0 },
+    { "\\key\\val\nue",         0 },
+    { "\\abcdabcdabcdabcd"
+        "abcdabcdabcdabcd"
+        "abcdabcdabcdabcd"
+        "abcdabcdabcdabcd"
+        "\\value",              0 },
+    { "\\key\\"
+        "abcdabcdabcdabcd"
+        "abcdabcdabcdabcd"
+        "abcdabcdabcdabcd"
+        "abcdabcdabcdabcd",     0 },
+};
+
+static const int num_info_validate_tests = q_countof(info_validate_tests);
+
+typedef struct {
+    const char *string;
+    const char *key;
+    const char *result;
+} info_remove_test_t;
+
+static const info_remove_test_t info_remove_tests[] = {
+    { "",                                           "",     ""               },
+    { "\\key\\value",                               "key",  ""               },
+    { "key\\value",                                 "key",  ""               },
+    { "\\key1\\value1\\key2\\value2",               "key1", "\\key2\\value2" },
+    { "\\key1\\value1\\key2\\value2",               "key2", "\\key1\\value1" },
+    { "\\key1\\value1\\key2\\value2\\key1\\value3", "key1", "\\key2\\value2" },
+    { "\\key\\value",                               "",     "\\key\\value"   },
+    { "\\\\value",                                  "",     ""               },
+};
+
+static const int num_info_remove_tests = q_countof(info_remove_tests);
+
+typedef struct {
+    const char *string;
+    const char *key;
+    const char *value;
+    int result_b;
+    const char *result_s;
+} info_set_test_t;
+
+static const info_set_test_t info_set_tests[] = {
+    { "",                                           "",         "",             1,  ""                              },
+    { "\\key\\value1",                              "key",      "value2",       1,  "\\key\\value2"                 },
+    { "\\key\\value1",                              "key",      "",             1,  ""                              },
+    { "\\key\\value1",                              "",         "value2",       1,  "\\key\\value1\\\\value2"       },
+    { "\\key\\value1",                              "ke\"y",    "value2",       0,  "\\key\\value1"                 },
+    { "\\key\\value1",                              "ke\\y",    "value2",       0,  "\\key\\value1"                 },
+    { "\\key\\value1",                              "ke;y",     "value2",       0,  "\\key\\value1"                 },
+    { "\\key\\value1",                              "ke\xa2y",  "value2",       0,  "\\key\\value1"                 },
+    { "\\key\\value1",                              "ke\xdcy",  "value2",       0,  "\\key\\value1"                 },
+    { "\\key\\value1",                              "ke\xbby",  "value2",       0,  "\\key\\value1"                 },
+    { "\\key\\value1",                              "key",      "val\"ue2",     0,  "\\key\\value1"                 },
+    { "\\key\\value1",                              "key",      "val\\ue2",     0,  "\\key\\value1"                 },
+    { "\\key\\value1",                              "key",      "val;ue2",      0,  "\\key\\value1"                 },
+    { "\\key\\value1",                              "key",      "val\xa2ue2",   0,  "\\key\\value1"                 },
+    { "\\key\\value1",                              "key",      "val\xdcue2",   0,  "\\key\\value1"                 },
+    { "\\key\\value1",                              "key",      "val\xbbue2",   0,  "\\key\\value1"                 },
+    { "\\key1\\value1\\key2\\value2",               "key1",     "value3",       1,  "\\key2\\value2\\key1\\value3"  },
+    { "\\key1\\value1\\key2\\value2",               "key1",     "",             1,  "\\key2\\value2"                },
+    { "\\key1\\value1\\key2\\value2\\key1\\value3", "key1",     "value4",       1,  "\\key2\\value2\\key1\\value4"  },
+    { "\\key1\\value1\\key2\\value2",               "key1",     "v\xe1lue3",    1,  "\\key2\\value2\\key1\\value3"  },
+    { "\\key\\value",                               "key",      "\r\n",         1,  "\\key\\"                       },
+    { "\\key1\\value1\\key2\\value2",               "key1",     "\r\n",         1,  "\\key2\\value2\\key1\\"        },
+};
+
+static const int num_info_set_tests = q_countof(info_set_tests);
+
+static void Com_TestInfo_f(void)
+{
+    const info_validate_test_t *v;
+    const info_remove_test_t *r;
+    const info_set_test_t *s;
+    char buffer[MAX_INFO_STRING];
+    int i, errors;
+    qboolean result;
+
+    errors = 0;
+    for (i = 0; i < num_info_validate_tests; i++) {
+        v = &info_validate_tests[i];
+        result = Info_Validate(v->string);
+        if (result != v->result) {
+            Com_EPrintf("Info_Validate( \"%s\" ) == %d, expected %d\n",
+                        v->string, result, v->result);
+            errors++;
+        }
+    }
+
+    for (i = 0; i < num_info_remove_tests; i++) {
+        r = &info_remove_tests[i];
+        Q_strlcpy(buffer, r->string, sizeof(buffer));
+        Info_RemoveKey(buffer, r->key);
+        if (strcmp(buffer, r->result)) {
+            Com_EPrintf("Info_RemoveKey( \"%s\", \"%s\" ) == \"%s\", expected \"%s\"\n",
+                        r->string, r->key, buffer, r->result);
+            errors++;
+        }
+    }
+
+    for (i = 0; i < num_info_set_tests; i++) {
+        s = &info_set_tests[i];
+        Q_strlcpy(buffer, s->string, sizeof(buffer));
+        result = Info_SetValueForKey(buffer, s->key, s->value);
+        if (result != s->result_b || strcmp(buffer, s->result_s)) {
+            Com_EPrintf("Info_SetValueForKey( \"%s\", \"%s\", \"%s\" ) == \"%s\" (%d), expected \"%s\" (%d)\n",
+                        s->string, s->key, s->value, buffer, result, s->result_s, s->result_b);
+            errors++;
+        }
+    }
+
+    Com_Printf("%d failures, %d strings tested\n", errors,
+               num_info_validate_tests +
+               num_info_remove_tests +
+               num_info_set_tests);
+}
+
 void Com_InitTests(void)
 {
     Cmd_AddCommand("error", Com_Error_f);
@@ -298,5 +443,6 @@ void Com_InitTests(void)
     Cmd_AddCommand("bsptest", BSP_Test_f);
     Cmd_AddCommand("wildtest", Com_TestWild_f);
     Cmd_AddCommand("normtest", Com_TestNorm_f);
+    Cmd_AddCommand("infotest", Com_TestInfo_f);
 }
 
