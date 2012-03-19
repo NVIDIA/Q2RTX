@@ -239,11 +239,15 @@ void R_TileClear(int x, int y, int w, int h, qhandle_t pic)
 
 void R_DrawFill8(int x, int y, int w, int h, int c)
 {
+    if (!w || !h)
+        return;
     _GL_StretchPic(x, y, w, h, 0, 0, 1, 1, d_8to24table[c & 0xff], TEXNUM_WHITE, 0);
 }
 
 void R_DrawFill32(int x, int y, int w, int h, uint32_t color)
 {
+    if (!w || !h)
+        return;
     _GL_StretchPic(x, y, w, h, 0, 0, 1, 1, color, TEXNUM_WHITE, 0);
 }
 
