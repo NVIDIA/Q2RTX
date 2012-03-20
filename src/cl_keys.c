@@ -658,6 +658,7 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
         if (!(cls.key_dest & (KEY_CONSOLE | KEY_MESSAGE | KEY_MENU))
             && key != K_BACKSPACE
             && key != K_PAUSE
+            && key != K_ESCAPE
             && key != K_PGUP
             && key != K_KP_PGUP
             && key != K_PGDN
@@ -697,18 +698,24 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
         if (!down) {
             return;
         }
-        if (key_repeats[key] > 1) {
+
+        if (cls.key_dest == KEY_GAME &&
+            cl.frame.ps.stats[STAT_LAYOUTS] &&
+            cls.demo.playback == qfalse) {
+#if USE_UI
+            // force main menu if escape is held
+            if (key_repeats[key] == 2) {
+                UI_OpenMenu(UIMENU_GAME);
+            } else
+#endif
+            // put away help computer / inventory
+            if (key_repeats[key] == 1) {
+                CL_ClientCommand("putaway");
+            }
             return;
         }
 
-        if (cls.key_dest == KEY_GAME &&
-            !cls.demo.playback &&
-            cl.clientNum != -1 &&
-            cl.frame.ps.stats[STAT_LAYOUTS] &&
-            !cl.putaway) {
-            // put away help computer / inventory
-            CL_ClientCommand("putaway");
-            cl.putaway = qtrue;
+        if (key_repeats[key] > 1) {
             return;
         }
 

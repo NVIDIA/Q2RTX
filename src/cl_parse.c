@@ -1007,7 +1007,6 @@ static void CL_ParseLayout(void)
 {
     MSG_ReadString(cl.layout, sizeof(cl.layout));
     SHOWNET(2, "    \"%s\"\n", cl.layout);
-    cl.putaway = qfalse;
 }
 
 static void CL_ParseInventory(void)
@@ -1017,7 +1016,6 @@ static void CL_ParseInventory(void)
     for (i = 0; i < MAX_ITEMS; i++) {
         cl.inventory[i] = MSG_ReadShort();
     }
-    cl.putaway = qfalse;
 }
 
 static void CL_ParseDownload(void)

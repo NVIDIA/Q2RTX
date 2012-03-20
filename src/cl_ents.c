@@ -219,7 +219,6 @@ static void set_active_state(void)
     cls.state = ca_active;
     cl.oldframe.valid = qfalse;
     cl.frameflags = 0;
-    cl.putaway = qfalse;
     if (cls.netchan) {
         cl.initialSeq = cls.netchan->outgoing_sequence;
     }
@@ -366,10 +365,6 @@ void CL_DeltaFrame(void)
         // this delta has nothing to do with local viewangles,
         // clear it to avoid interfering with demo freelook hack
         VectorClear(cl.frame.ps.pmove.delta_angles);
-    }
-
-    if (!cl.oldframe.ps.stats[STAT_LAYOUTS] && cl.frame.ps.stats[STAT_LAYOUTS]) {
-        cl.putaway = qfalse;
     }
 
     if (cl.oldframe.ps.pmove.pm_type != cl.frame.ps.pmove.pm_type) {
