@@ -122,7 +122,7 @@ static void CL_ParsePacketEntities(server_frame_t *oldframe,
                 Com_DPrintf("U_REMOVE: oldnum != newnum\n");
             }
             if (!oldframe) {
-                Com_Error(ERR_DROP, "U_REMOVE: NULL oldframe");
+                Com_Error(ERR_DROP, "%s: U_REMOVE with NULL oldframe", __func__);
             }
 
             oldindex++;
