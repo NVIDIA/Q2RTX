@@ -351,14 +351,14 @@ sfxcache_t *S_LoadSound(sfx_t *s)
     }
 
 #if USE_OPENAL
-    if (s_started == SS_OAL) {
+    if (s_started == SS_OAL)
         sc = AL_UploadSfx(s);
-    } else
 #endif
+
 #if USE_SNDDMA
-        sc = ResampleSfx(s)
+    if (s_started == SS_DMA)
+        sc = ResampleSfx(s);
 #endif
-             ;
 
 fail:
     FS_FreeFile(data);
