@@ -597,6 +597,23 @@ static inline qboolean is_downsample(void)
     return !!gl_downsample_skins->integer;
 }
 
+static inline qboolean is_clamp(void)
+{
+    if (gls.texnum[gls.tmu] == TEXNUM_SCRAP) {
+        return qtrue; // hack for scrap texture
+    }
+    if (!upload_image) {
+        return qfalse;
+    }
+    if (upload_image->type == it_charset) {
+        return qtrue;
+    }
+    if (upload_image->type == it_pic) {
+        return !Q_stristr(upload_image->name, "backtile"); // hack for backtile
+    }
+    return qfalse;
+}
+
 static inline qboolean is_alpha(byte *data, int width, int height)
 {
     int         i, c;
@@ -736,17 +753,25 @@ static qboolean GL_Upload32(byte *data, int width, int height, qboolean mipmap)
     if (mipmap) {
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
-
-        if (gl_config.maxAnisotropy >= 2) {
-            qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT,
-                             gl_filter_anisotropy);
-        }
     } else if (is_nearest()) {
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     } else {
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    }
+
+    if (!mipmap && is_clamp()) {
+        qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+    } else {
+        qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    }
+
+    if (mipmap && gl_config.maxAnisotropy >= 2) {
+        qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT,
+                         gl_filter_anisotropy);
     }
 
     if (scaled != data) {
