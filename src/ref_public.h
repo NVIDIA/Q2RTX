@@ -204,8 +204,6 @@ int     R_DrawString(int x, int y, int flags, size_t maxChars,
 qboolean R_GetPicSize(int *w, int *h, qhandle_t pic);   // returns transparency bit
 void    R_DrawPic(int x, int y, qhandle_t pic);
 void    R_DrawStretchPic(int x, int y, int w, int h, qhandle_t pic);
-void    R_DrawStretchPicST(int x, int y, int w, int h,
-                           float s1, float t1, float s2, float t2, qhandle_t pic);
 void    R_TileClear(int x, int y, int w, int h, qhandle_t pic);
 void    R_DrawFill8(int x, int y, int w, int h, int c);
 void    R_DrawFill32(int x, int y, int w, int h, uint32_t color);

@@ -205,14 +205,6 @@ qboolean R_GetPicSize(int *w, int *h, qhandle_t pic)
     return image->flags & if_transparent;
 }
 
-void R_DrawStretchPicST(int x, int y, int w, int h, float s1, float t1,
-                        float s2, float t2, qhandle_t pic)
-{
-    /* TODO: scrap support */
-    GL_StretchPic(x, y, w, h, s1, t1, s2, t2,
-                  draw.colors[0].u32, IMG_ForHandle(pic));
-}
-
 void R_DrawStretchPic(int x, int y, int w, int h, qhandle_t pic)
 {
     image_t *image = IMG_ForHandle(pic);
