@@ -31,7 +31,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "d_wal.h"
 #if USE_PNG
 #include <png.h>
+#if USE_ZLIB
+#include <zlib.h>
 #endif
+#endif // USE_PNG
 #if USE_JPG
 #include <jpeglib.h>
 #endif
@@ -1018,7 +1021,7 @@ IMG_LOAD(PNG)
         break;
     case PNG_COLOR_TYPE_GRAY:
         if (bitdepth < 8) {
-            png_set_gray_1_2_4_to_8(png_ptr);
+            png_set_expand_gray_1_2_4_to_8(png_ptr);
         }
         // fall through
     case PNG_COLOR_TYPE_GRAY_ALPHA:
@@ -1037,6 +1040,8 @@ IMG_LOAD(PNG)
     }
 
     png_set_filler(png_ptr, 0xff, PNG_FILLER_AFTER);
+
+    png_set_interlace_handling(png_ptr);
 
     png_read_update_info(png_ptr, info_ptr);
 
@@ -1116,8 +1121,10 @@ IMG_SAVE(PNG)
     png_set_IHDR(png_ptr, info_ptr, width, height, 8, PNG_COLOR_TYPE_RGB,
                  PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 
+#if USE_ZLIB
     png_set_compression_level(png_ptr,
                               clamp(param, Z_NO_COMPRESSION, Z_BEST_COMPRESSION));
+#endif
 
     row_pointers = FS_AllocTempMem(sizeof(png_bytep) * height);
     row_stride = width * 3;
