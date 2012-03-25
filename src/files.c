@@ -23,13 +23,38 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "sys_public.h"
 #include "cl_public.h"
 #include "d_pak.h"
-#if USE_ZLIB
-#include <zlib.h>
-#endif
-#ifndef _GNU_SOURCE
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#ifdef _WIN32
+#include <io.h>
+#else
+#include <unistd.h>
+#endif
+
+#if USE_ZLIB
+#include <zlib.h>
+#endif
+
+#ifdef _WIN32
+#define os_mkdir(p) _mkdir(p)
+#define os_unlink(p) _unlink(p)
+#define os_stat(p, s) _stat(p, s)
+#define os_fstat(f, s) _fstat(f, s)
+#define os_fileno(f) _fileno(f)
+#define Q_ISREG(m) _S_ISREG(m)
+#define Q_ISDIR(m) _S_ISDIR(m)
+typedef struct _stat os_stat_t;
+#else
+#define os_mkdir(p) mkdir(p, 0775)
+#define os_unlink(p) unlink(p)
+#define os_stat(p, s) stat(p, s)
+#define os_fstat(f, s) fstat(f, s)
+#define os_fileno(f) fileno(f)
+#define Q_ISREG(m) S_ISREG(m)
+#define Q_ISDIR(m) S_ISDIR(m)
+typedef struct stat os_stat_t;
 #endif
 
 /*
@@ -594,7 +619,7 @@ qerror_t FS_CreatePath(char *path)
         if (*ofs == '/') {
             // create the directory
             *ofs = 0;
-            ret = Q_mkdir(path);
+            ret = os_mkdir(path);
             *ofs = '/';
             if (ret == -1 && errno != EEXIST) {
                 return Q_ERR(errno);
@@ -627,6 +652,7 @@ qerror_t FS_FilterFile(qhandle_t f)
     void *zfp;
     uint32_t magic;
     size_t length;
+    int fd;
 
     if (!file)
         return Q_ERR_BADF;
@@ -691,7 +717,11 @@ qerror_t FS_FilterFile(qhandle_t f)
         return Q_ERR(errno);
     }
 
-    zfp = gzdopen(fileno(file->fp), modeStr);
+    fd = os_fileno(file->fp);
+    if (fd == -1)
+        return Q_ERR(errno);
+
+    zfp = gzdopen(fd, modeStr);
     if (!zfp) {
         return Q_ERR_FAILURE;
     }
@@ -745,6 +775,49 @@ void FS_FCloseFile(qhandle_t f)
     }
 
     memset(file, 0, sizeof(*file));
+}
+
+static qerror_t get_path_info(const char *path, file_info_t *info)
+{
+    os_stat_t st;
+
+    if (os_stat(path, &st) == -1)
+        return Q_ERR(errno);
+
+    if (!Q_ISREG(st.st_mode))
+        return Q_ERR_ISDIR;
+
+    if (info) {
+        info->size = st.st_size;
+        info->ctime = st.st_ctime;
+        info->mtime = st.st_mtime;
+    }
+
+    return Q_ERR_SUCCESS;
+}
+
+static qerror_t get_fp_info(FILE *fp, file_info_t *info)
+{
+    os_stat_t st;
+    int fd;
+
+    fd = os_fileno(fp);
+    if (fd == -1)
+        return Q_ERR(errno);
+
+    if (os_fstat(fd, &st) == -1)
+        return Q_ERR(errno);
+
+    if (!Q_ISREG(st.st_mode))
+        return Q_ERR_ISDIR;
+
+    if (info) {
+        info->size = st.st_size;
+        info->ctime = st.st_ctime;
+        info->mtime = st.st_mtime;
+    }
+
+    return Q_ERR_SUCCESS;
 }
 
 static inline FILE *fopen_hack(const char *path, const char *mode)
@@ -873,7 +946,7 @@ static ssize_t open_file_write(file_t *file, const char *name)
 
 #ifndef _WIN32
     // check if this is a regular file
-    ret = Sys_GetFileInfo(fp, NULL);
+    ret = get_fp_info(fp, NULL);
     if (ret) {
         goto fail2;
     }
@@ -1279,7 +1352,7 @@ static ssize_t open_file_read(file_t *file, const char *name, qboolean unique)
                 goto fail;
             }
 
-            ret = Sys_GetFileInfo(fp, &info);
+            ret = get_fp_info(fp, &info);
             if (ret) {
                 fclose(fp);
                 goto fail;
@@ -2934,7 +3007,7 @@ static void FS_WhereIs_f(void)
                 continue;
             }
 
-            ret = Sys_GetPathInfo(fullpath, &info);
+            ret = get_path_info(fullpath, &info);
             if (!ret) {
                 Com_Printf("%s (%"PRIz" bytes)\n", fullpath, info.size);
                 if (!report_all) {

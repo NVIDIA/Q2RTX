@@ -573,53 +573,6 @@ unsigned Sys_Milliseconds(void)
 }
 
 /*
-================
-Sys_GetPathInfo
-================
-*/
-qerror_t Sys_GetPathInfo(const char *path, file_info_t *info)
-{
-    struct stat st;
-
-    if (stat(path, &st) == -1) {
-        return Q_ERR(errno);
-    }
-
-    if (!S_ISREG(st.st_mode)) {
-        return Q_ERR_ISDIR;
-    }
-
-    if (info) {
-        info->size = st.st_size;
-        info->ctime = st.st_ctime;
-        info->mtime = st.st_mtime;
-    }
-
-    return Q_ERR_SUCCESS;
-}
-
-qerror_t Sys_GetFileInfo(FILE *fp, file_info_t *info)
-{
-    struct stat st;
-
-    if (fstat(fileno(fp), &st) == -1) {
-        return Q_ERR(errno);
-    }
-
-    if (!S_ISREG(st.st_mode)) {
-        return Q_ERR_ISDIR;
-    }
-
-    if (info) {
-        info->size = st.st_size;
-        info->ctime = st.st_ctime;
-        info->mtime = st.st_mtime;
-    }
-
-    return Q_ERR_SUCCESS;
-}
-
-/*
 =================
 Sys_Quit
 

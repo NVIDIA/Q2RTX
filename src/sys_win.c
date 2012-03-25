@@ -864,45 +864,6 @@ static inline time_t file_time_to_unix(FILETIME *f)
     return (time_t)((u.QuadPart - 116444736000000000ULL) / 10000000);
 }
 
-/*
-================
-Sys_GetPathInfo
-================
-*/
-qerror_t Sys_GetPathInfo(const char *path, file_info_t *info)
-{
-    WIN32_FILE_ATTRIBUTE_DATA data;
-
-    if (!GetFileAttributesExA(path, GetFileExInfoStandard, &data)) {
-        return Q_ERR_NOENT; // TODO: return proper error code
-    }
-
-    if (info) {
-        info->size = data.nFileSizeLow;
-        info->ctime = file_time_to_unix(&data.ftCreationTime);
-        info->mtime = file_time_to_unix(&data.ftLastWriteTime);
-    }
-
-    return Q_ERR_SUCCESS;
-}
-
-qerror_t Sys_GetFileInfo(FILE *fp, file_info_t *info)
-{
-    int pos, end;
-
-    // TODO: check for errors
-    pos = ftell(fp);
-    fseek(fp, 0, SEEK_END);
-    end = ftell(fp);
-    fseek(fp, pos, SEEK_SET);
-
-    info->size = end;
-    info->ctime = 0;
-    info->mtime = 0;
-
-    return Q_ERR_SUCCESS;
-}
-
 static void *copy_info(const char *name, const LPWIN32_FIND_DATAA data)
 {
     time_t ctime = file_time_to_unix(&data->ftCreationTime);

@@ -55,10 +55,6 @@ void    Sys_Quit(void) q_noreturn;
 void    Sys_ListFiles_r(const char *path, const char *filter,
                         unsigned flags, size_t baselen, int *count_p, void **files, int depth);
 
-struct  file_info_s;
-qerror_t Sys_GetPathInfo(const char *path, struct file_info_s *info);
-qerror_t Sys_GetFileInfo(FILE *fp, struct file_info_s *info);
-
 void    Sys_DebugBreak(void);
 
 #if USE_AC_CLIENT
