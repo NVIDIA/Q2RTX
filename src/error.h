@@ -18,15 +18,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#define ERRNO_MAX     20000
+#define ERRNO_MAX       0x5000
+
 #if EINVAL > 0
-#define Q_ERRNO(e)      ((e == Q_ERR_SUCCESS || e < -ERRNO_MAX) ? 0 : -e)
-#define Q_ERR(e)        (e == 0 ? Q_ERR_SUCCESS : e > ERRNO_MAX ? -ERRNO_MAX : -e)
+#define Q_ERR(e)        (e < 1 || e > ERRNO_MAX ? -ERRNO_MAX : -e)
 #else
-#define Q_ERRNO(e)      ((e == Q_ERR_SUCCESS || e < -ERRNO_MAX) ? 0 : e)
-#define Q_ERR(e)        (e == 0 ? Q_ERR_SUCCESS : e < -ERRNO_MAX ? -ERRNO_MAX : e)
+#define Q_ERR(e)        (e > -1 || e < -ERRNO_MAX ? -ERRNO_MAX : e)
 #endif
-#define _Q_ERR(e)       (-ERRNO_MAX-e)
+
+#define _Q_ERR(e)       (-ERRNO_MAX - e)
 
 #define Q_ERR_SUCCESS           0           // Success
 #define Q_ERR_FAILURE           _Q_ERR(0)   // Unspecified error
