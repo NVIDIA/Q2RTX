@@ -339,6 +339,27 @@ void CL_RegisterVWepModels(void)
 
 /*
 =================
+CL_SetSky
+
+=================
+*/
+void CL_SetSky(void)
+{
+    float       rotate;
+    vec3_t      axis;
+
+    rotate = atof(cl.configstrings[CS_SKYROTATE]);
+    if (sscanf(cl.configstrings[CS_SKYAXIS], "%f %f %f",
+               &axis[0], &axis[1], &axis[2]) != 3) {
+        Com_DPrintf("Couldn't parse CS_SKYAXIS\n");
+        VectorClear(axis);
+    }
+
+    R_SetSky(cl.configstrings[CS_SKY], rotate, axis);
+}
+
+/*
+=================
 CL_PrepRefresh
 
 Call before entering a new level, or after changing dlls
@@ -348,8 +369,6 @@ void CL_PrepRefresh(void)
 {
     int         i;
     char        *name;
-    float       rotate;
-    vec3_t      axis;
 
     if (!cls.ref_initialized)
         return;
@@ -395,13 +414,7 @@ void CL_PrepRefresh(void)
     CL_LoadClientinfo(&cl.baseclientinfo, "unnamed\\male/grunt");
 
     // set sky textures and speed
-    rotate = atof(cl.configstrings[CS_SKYROTATE]);
-    if (sscanf(cl.configstrings[CS_SKYAXIS], "%f %f %f",
-               &axis[0], &axis[1], &axis[2]) != 3) {
-        Com_DPrintf("Couldn't parse CS_SKYAXIS\n");
-        VectorClear(axis);
-    }
-    R_SetSky(cl.configstrings[CS_SKY], rotate, axis);
+    CL_SetSky();
 
     // the renderer can now free unneeded stuff
     R_EndRegistration();

@@ -61,6 +61,7 @@ void CL_UpdateUserinfo(cvar_t *var, from_t from);
 void CL_SendStatusRequest(const struct netadr_s *address);
 demoInfo_t *CL_GetDemoInfo(const char *path, demoInfo_t *info);
 qboolean CL_CheatsOK(void);
+void CL_SetSky(void);
 
 #if USE_CURL
 ssize_t HTTP_FetchFile(const char *url, void **data);

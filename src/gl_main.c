@@ -714,6 +714,13 @@ static void gl_modulate_changed(cvar_t *self)
     gl_modulate_entities_changed(self);
 }
 
+// ugly hack to reset sky
+static void gl_drawsky_changed(cvar_t *self)
+{
+    if (gl_static.world.cache)
+        CL_SetSky();
+}
+
 static void gl_novis_changed(cvar_t *self)
 {
     glr.viewcluster1 = glr.viewcluster2 = -2;
@@ -751,6 +758,7 @@ static void GL_Register(void)
     gl_drawworld = Cvar_Get("gl_drawworld", "1", CVAR_CHEAT);
     gl_drawentities = Cvar_Get("gl_drawentities", "1", CVAR_CHEAT);
     gl_drawsky = Cvar_Get("gl_drawsky", "1", 0);
+    gl_drawsky->changed = gl_drawsky_changed;
     gl_showtris = Cvar_Get("gl_showtris", "0", CVAR_CHEAT);
     gl_showorigins = Cvar_Get("gl_showorigins", "0", CVAR_CHEAT);
     gl_showtearing = Cvar_Get("gl_showtearing", "0", 0);
