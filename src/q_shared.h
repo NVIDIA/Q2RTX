@@ -494,7 +494,7 @@ qboolean COM_IsWhite(const char *s);
 
 char *COM_Parse(const char **data_p);
 // data is an in/out parm, returns a parsed out token
-int COM_Compress(char *data);
+size_t COM_Compress(char *data);
 
 int QDECL SortStrcmp(const void *p1, const void *p2);
 int QDECL SortStricmp(const void *p1, const void *p2);

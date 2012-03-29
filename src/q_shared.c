@@ -542,7 +542,7 @@ Non-contiguous line feeds are preserved.
 Returns resulting data length.
 ==============
 */
-int COM_Compress(char *data)
+size_t COM_Compress(char *data)
 {
     int     c, n = 0;
     char    *s = data, *d = data;
@@ -550,7 +550,9 @@ int COM_Compress(char *data)
     while (*s) {
         // skip whitespace
         if (*s <= ' ') {
-            n = ' ';
+            if (n == 0) {
+                n = ' ';
+            }
             do {
                 c = *s++;
                 if (c == '\n') {
@@ -581,6 +583,9 @@ int COM_Compress(char *data)
                     s += 2;
                     break;
                 }
+                if (*s == '\n') {
+                    n = '\n';
+                }
                 s++;
             }
             continue;
@@ -609,6 +614,10 @@ int COM_Compress(char *data)
         // handle line feed escape
         if (*s == '\\' && s[1] == '\n') {
             s += 2;
+            continue;
+        }
+        if (*s == '\\' && s[1] == '\r' && s[2] == '\n') {
+            s += 3;
             continue;
         }
 
