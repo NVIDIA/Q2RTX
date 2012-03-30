@@ -726,6 +726,7 @@ void GL_LoadWorld(const char *name)
     char buffer[MAX_QPATH];
     mface_t *surf;
     int i, size, count;
+    vec_t s, t;
     vec_t *vbo;
     bsp_t *bsp;
     mtexinfo_t *info;
@@ -759,6 +760,22 @@ void GL_LoadWorld(const char *name)
     gl_lightmap_changed(NULL);
 
     gl_static.world.cache = bsp;
+
+    // calculate world size for far clip plane and sky box
+    for (i = 0, s = 0; i < 3; i++) {
+        t = bsp->nodes[0].maxs[i] - bsp->nodes[0].mins[i];
+        if (t > s)
+            s = t;
+    }
+
+    if (s > 4096)
+        gl_static.world.size = 8192;
+    else if (s > 2048)
+        gl_static.world.size = 4096;
+    else
+        gl_static.world.size = 2048;
+
+    Com_DPrintf("%s: world size %.f (%.f)\n", __func__, gl_static.world.size, s);
 
     // register all texinfo
     for (i = 0, info = bsp->texinfo; i < bsp->numtexinfo; i++, info++) {

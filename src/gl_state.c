@@ -181,7 +181,7 @@ void GL_Setup2D(void)
 
 void GL_Setup3D(void)
 {
-    GLdouble xmin, xmax, ymin, ymax;
+    GLdouble xmin, xmax, ymin, ymax, zfar;
     int yb = glr.fd.y + glr.fd.height;
 
     qglViewport(glr.fd.x, r_config.height - yb,
@@ -196,7 +196,12 @@ void GL_Setup3D(void)
     xmax = gl_znear->value * tan(glr.fd.fov_x * M_PI / 360.0);
     xmin = -xmax;
 
-    qglFrustum(xmin, xmax, ymin, ymax, gl_znear->value, gl_zfar->value);
+    if (glr.fd.rdflags & RDF_NOWORLDMODEL)
+        zfar = 2048;
+    else
+        zfar = gl_static.world.size * 2;
+
+    qglFrustum(xmin, xmax, ymin, ymax, gl_znear->value, zfar);
 
     qglMatrixMode(GL_MODELVIEW);
 

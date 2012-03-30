@@ -54,7 +54,6 @@ cvar_t *gl_vertex_buffer_object;
 
 // development variables
 cvar_t *gl_znear;
-cvar_t *gl_zfar;
 cvar_t *gl_drawworld;
 cvar_t *gl_drawentities;
 cvar_t *gl_drawsky;
@@ -749,7 +748,6 @@ static void GL_Register(void)
 
     // development variables
     gl_znear = Cvar_Get("gl_znear", "2", CVAR_CHEAT);
-    gl_zfar = Cvar_Get("gl_zfar", "16384", 0);
     gl_drawworld = Cvar_Get("gl_drawworld", "1", CVAR_CHEAT);
     gl_drawentities = Cvar_Get("gl_drawentities", "1", CVAR_CHEAT);
     gl_drawsky = Cvar_Get("gl_drawsky", "1", 0);

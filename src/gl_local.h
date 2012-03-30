@@ -47,6 +47,7 @@ typedef struct {
         vec_t *vertices;
         GLuint bufnum;
         float add, modulate, scale;
+        vec_t size;
     } world;
     GLuint prognum_warp;
     GLbitfield stencil_buffer_bit;
@@ -137,7 +138,6 @@ extern cvar_t *gl_fragment_program;
 
 // development variables
 extern cvar_t *gl_znear;
-extern cvar_t *gl_zfar;
 extern cvar_t *gl_drawsky;
 extern cvar_t *gl_showtris;
 #ifdef _DEBUG
