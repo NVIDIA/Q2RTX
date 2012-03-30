@@ -1,5 +1,4 @@
 /*
-Copyright (C) 2003-2006 Andrey Nazarov
 Copyright (C) 1997-2001 Id Software, Inc.
 
 This program is free software; you can redistribute it and/or
@@ -59,6 +58,7 @@ static const int vec_to_st[6][3] = {
 };
 
 static float        skymins[2][6], skymaxs[2][6];
+static int          skyfaces;
 static const float  sky_min = 1.0f / 512.0f;
 static const float  sky_max = 511.0f / 512.0f;
 
@@ -71,7 +71,7 @@ static void DrawSkyPolygon(int nump, vec3_t vecs)
     float   *vp;
 
     // decide which face it maps to
-    VectorCopy(vec3_origin, v);
+    VectorClear(v);
     for (i = 0, vp = vecs; i < nump; i++, vp += 3) {
         VectorAdd(vp, v, v);
     }
@@ -227,7 +227,6 @@ void R_AddSkySurface(mface_t *fa)
     vec3_t      verts[MAX_CLIP_VERTS];
     msurfedge_t *surfedge;
     mvertex_t   *vert;
-    medge_t     *edge;
 
     if (fa->numsurfedges > MAX_CLIP_VERTS) {
         Com_Error(ERR_DROP, "%s: too many verts", __func__);
@@ -236,13 +235,13 @@ void R_AddSkySurface(mface_t *fa)
     // calculate vertex values for sky box
     surfedge = fa->firstsurfedge;
     for (i = 0; i < fa->numsurfedges; i++, surfedge++) {
-        edge = surfedge->edge;
-        vert = edge->v[surfedge->vert];
+        vert = surfedge->edge->v[surfedge->vert];
         VectorSubtract(vert->point, glr.fd.vieworg, verts[i]);
     }
-    ClipSkyPolygon(fa->numsurfedges, verts[0], 0);
-}
 
+    ClipSkyPolygon(fa->numsurfedges, verts[0], 0);
+    skyfaces++;
+}
 
 /*
 ==============
@@ -257,17 +256,18 @@ void R_ClearSkyBox(void)
         skymins[0][i] = skymins[1][i] = 9999;
         skymaxs[0][i] = skymaxs[1][i] = -9999;
     }
-}
 
+    skyfaces = 0;
+}
 
 static void MakeSkyVec(float s, float t, int axis, vec_t *v)
 {
     vec3_t  b;
     int     j, k;
 
-    b[0] = s * 4800; //2300;
-    b[1] = t * 4800; //2300;
-    b[2] = 4800; //2300;
+    b[0] = s * gl_static.world.size;
+    b[1] = t * gl_static.world.size;
+    b[2] = gl_static.world.size;
 
     for (j = 0; j < 3; j++) {
         k = st_to_vec[axis][j];
@@ -309,6 +309,10 @@ void R_DrawSkyBox(void)
     vec5_t verts[4];
     int i;
 
+    // check for no sky at all
+    if (!skyfaces)
+        return; // nothing visible
+
     if (skyrotate) {
         // hack, forces full sky to draw when rotating
         for (i = 0; i < 6; i++) {
@@ -316,16 +320,6 @@ void R_DrawSkyBox(void)
             skymins[1][i] = -1;
             skymaxs[0][i] = 1;
             skymaxs[1][i] = 1;
-        }
-    } else {
-        // check for no sky at all
-        for (i = 0; i < 6; i++) {
-            if (SKY_VISIBLE(i)) {
-                break;
-            }
-        }
-        if (i == 6) {
-            return;     // nothing visible
         }
     }
 
