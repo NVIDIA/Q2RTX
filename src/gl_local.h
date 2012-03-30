@@ -340,12 +340,6 @@ void Scrap_Upload(void);
 void GL_InitImages(void);
 void GL_ShutdownImages(void);
 
-void GL_UpdateGammaTable(qboolean realTime);
-
-image_t *R_ImageForHandle(qhandle_t hPic);
-qhandle_t R_RegisterSkin(const char *name);
-qhandle_t R_RegisterPic(const char *name);
-
 
 /*
  * gl_tess.c
