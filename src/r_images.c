@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "common.h"
 #include "q_list.h"
 #include "files.h"
-#include "r_shared.h"
+#include "r_images.h"
 #include "d_pcx.h"
 #include "d_wal.h"
 #if USE_PNG

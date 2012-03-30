@@ -28,7 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "d_md3.h"
 #endif
 #include "d_sp2.h"
-#include "r_shared.h"
+#include "r_images.h"
 #include "r_models.h"
 
 static model_t      r_models[MAX_MODELS];

@@ -27,7 +27,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "sys_public.h"
 #include "q_list.h"
 #include "bsp.h"
-#include "r_shared.h"
+#include "r_images.h"
 #include "d_md2.h"
 #include "r_models.h"
 
