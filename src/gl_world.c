@@ -447,22 +447,7 @@ static inline void GL_DrawLeaf(mleaf_t *leaf)
     c.leavesDrawn++;
 }
 
-static inline void GL_AddGenericFace(mface_t *face)
-{
-    if (face->drawflags & SURF_SKY) {
-        R_AddSkySurface(face);
-        return;
-    }
-
-    if (face->drawflags & (SURF_TRANS33 | SURF_TRANS66)) {
-        GL_AddAlphaFace(face);
-        return;
-    }
-
-    GL_AddSolidFace(face);
-}
-
-static inline void GL_DrawNode(mnode_t *node, vec_t dot)
+static inline void GL_DrawNode(mnode_t *node)
 {
     mface_t *face, *last = node->firstface + node->numfaces;
 
@@ -470,11 +455,18 @@ static inline void GL_DrawNode(mnode_t *node, vec_t dot)
         if (face->drawframe != glr.drawframe) {
             continue;
         }
-        if (BSP_CullFace(face, dot)) {
-            c.facesCulled++;
-        } else {
-            GL_AddGenericFace(face);
+
+        if (face->drawflags & SURF_SKY) {
+            R_AddSkySurface(face);
+            continue;
         }
+
+        if (face->drawflags & (SURF_TRANS33 | SURF_TRANS66)) {
+            GL_AddAlphaFace(face);
+            continue;
+        }
+
+        GL_AddSolidFace(face);
     }
 
     c.nodesDrawn++;
@@ -501,7 +493,7 @@ static void GL_WorldNode_r(mnode_t *node, int clipflags)
 
         GL_WorldNode_r(node->children[side], clipflags);
 
-        GL_DrawNode(node, dot);
+        GL_DrawNode(node);
 
         node = node->children[side ^ 1];
     }
