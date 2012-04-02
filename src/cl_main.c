@@ -2957,7 +2957,11 @@ static sync_mode_t sync_mode;
 
 static inline int fps_to_msec(int fps)
 {
+#if 0
     return (1000 + fps / 2) / fps;
+#else
+    return 1000 / fps;
+#endif
 }
 
 /*
