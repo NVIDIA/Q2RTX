@@ -29,6 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <fcntl.h>
 #ifdef _WIN32
 #include <io.h>
+#include <direct.h>
 #else
 #include <unistd.h>
 #endif
@@ -43,8 +44,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define os_stat(p, s) _stat(p, s)
 #define os_fstat(f, s) _fstat(f, s)
 #define os_fileno(f) _fileno(f)
-#define Q_ISREG(m) _S_ISREG(m)
-#define Q_ISDIR(m) _S_ISDIR(m)
+#define Q_ISREG(m) (((m) & _S_IFMT) == _S_IFREG)
+#define Q_ISDIR(m) (((m) & _S_IFMT) == _S_IFDIR)
 typedef struct _stat os_stat_t;
 #else
 #define os_mkdir(p) mkdir(p, 0775)

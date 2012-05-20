@@ -66,6 +66,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 typedef const GUID *LPCGUID;
 #endif
 
+// MinGW-w64 doesn't define these...
+#ifndef DM_GRAYSCALE
+#define DM_GRAYSCALE    1
+#endif
+#ifndef DM_INTERLACED
+#define DM_INTERLACED   2
+#endif
+
 typedef struct {
     HWND    wnd;
     HDC     dc;
