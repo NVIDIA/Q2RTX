@@ -524,7 +524,7 @@ if [ "$mingw" = "no" ]; then
         echo "PIXDIR=$pixdir" >> $config_mk
     fi
 else
-    echo "#define PRIz \"u\"" >> $config_h # FIXME: change this for x86_64
+    echo "#define PRIz \"Iu\"" >> $config_h
 fi
 
 echo "#define EXPORTED $exported" >> $config_h
