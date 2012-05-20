@@ -22,7 +22,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // win_wgl.h
 //
 
-#define QWGL_EXT_swap_control    (1<<0)
+#define QWGL_ARB_extensions_string  (1<<0)
+#define QWGL_EXT_swap_control       (1<<1)
 
 qboolean    WGL_Init(const char *dllname);
 void        WGL_Shutdown(void);
@@ -42,6 +43,8 @@ extern HGLRC (WINAPI * qwglCreateContext)(HDC);
 extern BOOL (WINAPI * qwglDeleteContext)(HGLRC);
 extern PROC (WINAPI * qwglGetProcAddress)(LPCSTR);
 extern BOOL (WINAPI * qwglMakeCurrent)(HDC, HGLRC);
+
+extern const char * (WINAPI * qwglGetExtensionsStringARB)(HDC hdc);
 
 extern BOOL (WINAPI * qwglSwapIntervalEXT)(int interval);
 

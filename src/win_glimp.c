@@ -304,7 +304,17 @@ qboolean VID_Init(void)
         return qfalse;
 
     // initialize WGL extensions
-    extensions = (const char *)qwglGetString(GL_EXTENSIONS);
+    WGL_InitExtensions(QWGL_ARB_extensions_string);
+
+    if (qwglGetExtensionsStringARB)
+        extensions = qwglGetExtensionsStringARB(win.dc);
+    else
+        extensions = NULL;
+
+    // fall back to GL_EXTENSIONS for legacy drivers
+    if (!extensions || !*extensions)
+        extensions = (const char *)qwglGetString(GL_EXTENSIONS);
+
     mask = WGL_ParseExtensionString(extensions);
 
     if (mask & QWGL_EXT_swap_control) {

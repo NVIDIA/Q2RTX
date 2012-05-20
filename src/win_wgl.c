@@ -34,6 +34,8 @@ BOOL (WINAPI * qwglDeleteContext)(HGLRC);
 PROC (WINAPI * qwglGetProcAddress)(LPCSTR);
 BOOL (WINAPI * qwglMakeCurrent)(HDC, HGLRC);
 
+const char * (WINAPI * qwglGetExtensionsStringARB)(HDC hdc);
+
 BOOL (WINAPI * qwglSwapIntervalEXT)(int interval);
 
 void WGL_Shutdown(void)
@@ -87,8 +89,11 @@ qboolean WGL_Init(const char *dllname)
 
 void WGL_ShutdownExtensions(unsigned mask)
 {
+    if (mask & QWGL_ARB_extensions_string) {
+        qwglGetExtensionsStringARB  = NULL;
+    }
     if (mask & QWGL_EXT_swap_control) {
-        qwglSwapIntervalEXT     = NULL;
+        qwglSwapIntervalEXT         = NULL;
     }
 }
 
@@ -96,8 +101,11 @@ void WGL_ShutdownExtensions(unsigned mask)
 
 void WGL_InitExtensions(unsigned mask)
 {
+    if (mask & QWGL_ARB_extensions_string) {
+        qwglGetExtensionsStringARB  = GPA("wglGetExtensionsStringARB");
+    }
     if (mask & QWGL_EXT_swap_control) {
-        qwglSwapIntervalEXT     = GPA("wglSwapIntervalEXT");
+        qwglSwapIntervalEXT         = GPA("wglSwapIntervalEXT");
     }
 }
 
@@ -107,6 +115,7 @@ unsigned WGL_ParseExtensionString(const char *s)
 {
     // must match defines in win_wgl.h!
     static const char *const extnames[] = {
+        "WGL_ARB_extensions_string",
         "WGL_EXT_swap_control",
         NULL
     };
