@@ -1,41 +1,53 @@
 #include <config.h>
 #include <windows.h>
 
+#pragma code_page(65001)
+
+#ifdef _DEBUG
+#define VER_FILEFLAGS   VS_FF_DEBUG
+#else
+#define VER_FILEFLAGS   0x0L
+#endif
+
+#ifdef _WIN64
+#define VER_ORIGINALFILENAME_STR    "q2pro64.exe"
+#else
+#define VER_ORIGINALFILENAME_STR    "q2pro.exe"
+#endif
+
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION REVISION,0,0,0
- PRODUCTVERSION REVISION,0,0,0
- FILEFLAGSMASK 0x17L
-#ifdef _DEBUG
- FILEFLAGS 0x1L
-#else
- FILEFLAGS 0x0L
-#endif
- FILEOS 0x4L
- FILETYPE 0x0L
- FILESUBTYPE 0x0L
+    FILEVERSION     REVISION,0,0,0
+    PRODUCTVERSION  REVISION,0,0,0
+    FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+    FILEFLAGS       VER_FILEFLAGS
+    FILEOS          VOS_NT_WINDOWS32
+    FILETYPE        VFT_APP
+    FILESUBTYPE     VFT2_UNKNOWN
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
-        BLOCK "040004b0"
+        BLOCK "040904B0"
         BEGIN
             VALUE "Comments", "http://skuller.net/q2pro/"
             VALUE "CompanyName", "skuller.net"
-            VALUE "FileDescription", "Q2PRO graphical client"
-            VALUE "OriginalFilename", "q2pro.exe"
+            VALUE "FileDescription", "Q2PRO OpenGL client"
+            VALUE "OriginalFilename", VER_ORIGINALFILENAME_STR
             VALUE "FileVersion", VERSION
             VALUE "InternalName", "q2pro"
-            VALUE "LegalCopyright", "Copyright (C) 2010 skuller.net"
+            VALUE "LegalCopyright", "Copyright © 2012 skuller.net"
             VALUE "ProductName", "Q2PRO"
             VALUE "ProductVersion", VERSION
         END
     END
     BLOCK "VarFileInfo"
     BEGIN
-        VALUE "Translation", 0x400, 1200
+        VALUE "Translation", 0x409, 0x4B0
     END
 END
 
-100 ICON    "q2pro.ico"
+LANGUAGE LANG_NEUTRAL, SUBLANG_DEFAULT
+
+100 ICON "q2pro.ico"
 
