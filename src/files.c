@@ -787,8 +787,11 @@ static qerror_t get_path_info(const char *path, file_info_t *info)
     if (os_stat(path, &st) == -1)
         return Q_Errno();
 
-    if (!Q_ISREG(st.st_mode))
+    if (Q_ISDIR(st.st_mode))
         return Q_ERR_ISDIR;
+
+    if (!Q_ISREG(st.st_mode))
+        return Q_ERR_FILE_NOT_REGULAR;
 
     if (info) {
         info->size = st.st_size;
@@ -811,8 +814,11 @@ static qerror_t get_fp_info(FILE *fp, file_info_t *info)
     if (os_fstat(fd, &st) == -1)
         return Q_Errno();
 
-    if (!Q_ISREG(st.st_mode))
+    if (Q_ISDIR(st.st_mode))
         return Q_ERR_ISDIR;
+
+    if (!Q_ISREG(st.st_mode))
+        return Q_ERR_FILE_NOT_REGULAR;
 
     if (info) {
         info->size = st.st_size;

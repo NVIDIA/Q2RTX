@@ -36,6 +36,7 @@ static const char *const error_table[] = {
     "File name too short",
     "Unexpected end of file",
     "File too small",
+    "Not a regular file",
     "Bad run length packet",
     "String truncation avoided",
     "Runaway loop avoided",
