@@ -502,7 +502,7 @@ ssize_t FS_Tell(qhandle_t f)
     case FS_REAL:
         ret = ftell(file->fp);
         if (ret == -1) {
-            return Q_ERR(errno);
+            return Q_Errno();
         }
         return ret;
     case FS_PAK:
@@ -535,7 +535,7 @@ static qerror_t seek_pak_file(file_t *file, off_t offset)
 
     filepos = entry->filepos + offset;
     if (fseek(file->fp, filepos, SEEK_SET) == -1)
-        return Q_ERR(errno);
+        return Q_Errno();
 
     file->rest_out = entry->filelen - offset;
 
@@ -565,7 +565,7 @@ qerror_t FS_Seek(qhandle_t f, off_t offset)
     switch (file->type) {
     case FS_REAL:
         if (fseek(file->fp, (long)offset, SEEK_SET) == -1) {
-            return Q_ERR(errno);
+            return Q_Errno();
         }
         return Q_ERR_SUCCESS;
     case FS_PAK:
@@ -573,7 +573,7 @@ qerror_t FS_Seek(qhandle_t f, off_t offset)
 #if USE_ZLIB
     case FS_GZ:
         if (gzseek(file->zfp, (z_off_t)offset, SEEK_SET) == -1) {
-            return Q_ERR(errno);
+            return Q_Errno();
         }
         return Q_ERR_SUCCESS;
 #endif
@@ -622,8 +622,10 @@ qerror_t FS_CreatePath(char *path)
             *ofs = 0;
             ret = os_mkdir(path);
             *ofs = '/';
-            if (ret == -1 && errno != EEXIST) {
-                return Q_ERR(errno);
+            if (ret == -1) {
+                qerror_t err = Q_Errno();
+                if (err != Q_ERR_EXIST)
+                    return err;
             }
         }
     }
@@ -632,9 +634,9 @@ qerror_t FS_CreatePath(char *path)
 }
 
 #define FS_ERR_READ(fp) \
-    (ferror(fp) ? Q_ERR(errno) : Q_ERR_UNEXPECTED_EOF)
+    (ferror(fp) ? Q_Errno() : Q_ERR_UNEXPECTED_EOF)
 #define FS_ERR_WRITE(fp) \
-    (ferror(fp) ? Q_ERR(errno) : Q_ERR_FAILURE)
+    (ferror(fp) ? Q_Errno() : Q_ERR_FAILURE)
 
 /*
 ============
@@ -677,7 +679,7 @@ qerror_t FS_FilterFile(qhandle_t f)
 
         // seek to the header
         if (fseek(file->fp, 0, SEEK_SET) == -1) {
-            return Q_ERR(errno);
+            return Q_Errno();
         }
 
         // read magic
@@ -692,7 +694,7 @@ qerror_t FS_FilterFile(qhandle_t f)
 
         // seek to the trailer
         if (fseek(file->fp, file->length - 4, SEEK_SET) == -1) {
-            return Q_ERR(errno);
+            return Q_Errno();
         }
 
         // read uncompressed length
@@ -715,12 +717,12 @@ qerror_t FS_FilterFile(qhandle_t f)
 
     // rewind back to beginning
     if (fseek(file->fp, 0, SEEK_SET) == -1) {
-        return Q_ERR(errno);
+        return Q_Errno();
     }
 
     fd = os_fileno(file->fp);
     if (fd == -1)
-        return Q_ERR(errno);
+        return Q_Errno();
 
     zfp = gzdopen(fd, modeStr);
     if (!zfp) {
@@ -783,7 +785,7 @@ static qerror_t get_path_info(const char *path, file_info_t *info)
     os_stat_t st;
 
     if (os_stat(path, &st) == -1)
-        return Q_ERR(errno);
+        return Q_Errno();
 
     if (!Q_ISREG(st.st_mode))
         return Q_ERR_ISDIR;
@@ -804,10 +806,10 @@ static qerror_t get_fp_info(FILE *fp, file_info_t *info)
 
     fd = os_fileno(fp);
     if (fd == -1)
-        return Q_ERR(errno);
+        return Q_Errno();
 
     if (os_fstat(fd, &st) == -1)
-        return Q_ERR(errno);
+        return Q_Errno();
 
     if (!Q_ISREG(st.st_mode))
         return Q_ERR_ISDIR;
@@ -941,7 +943,7 @@ static ssize_t open_file_write(file_t *file, const char *name)
 
     fp = fopen_hack(fullpath, mode_str);
     if (!fp) {
-        ret = Q_ERR(errno);
+        ret = Q_Errno();
         goto fail1;
     }
 
@@ -974,7 +976,7 @@ static ssize_t open_file_write(file_t *file, const char *name)
     if (mode == FS_MODE_RDWR) {
         // seek to the end of file for appending
         if (fseek(fp, 0, SEEK_END) == -1) {
-            ret = Q_ERR(errno);
+            ret = Q_Errno();
             goto fail2;
         }
     }
@@ -982,7 +984,7 @@ static ssize_t open_file_write(file_t *file, const char *name)
     // return current position (non-zero for appending modes)
     pos = ftell(fp);
     if (pos == -1) {
-        ret = Q_ERR(errno);
+        ret = Q_Errno();
         goto fail2;
     }
 
@@ -1014,7 +1016,7 @@ static qerror_t check_header_coherency(FILE *fp, packfile_t *entry)
     size_t ofs;
 
     if (fseek(fp, (long)entry->filepos, SEEK_SET) == -1)
-        return Q_ERR(errno);
+        return Q_Errno();
     if (fread(header, 1, sizeof(header), fp) != sizeof(header))
         return FS_ERR_READ(fp);
 
@@ -1187,7 +1189,7 @@ static ssize_t open_from_pak(file_t *file, pack_t *pack, packfile_t *entry, qboo
     if (unique) {
         fp = fopen(pack->filename, "rb");
         if (!fp) {
-            ret = Q_ERR(errno);
+            ret = Q_Errno();
             goto fail1;
         }
     } else {
@@ -1205,7 +1207,7 @@ static ssize_t open_from_pak(file_t *file, pack_t *pack, packfile_t *entry, qboo
 #endif
 
     if (fseek(fp, (long)entry->filepos, SEEK_SET) == -1) {
-        ret = Q_ERR(errno);
+        ret = Q_Errno();
         goto fail2;
     }
 
@@ -1346,10 +1348,10 @@ static ssize_t open_file_read(file_t *file, const char *name, qboolean unique)
 #endif
             fp = fopen(fullpath, "rb");
             if (!fp) {
-                if (errno == ENOENT) {
+                ret = Q_Errno();
+                if (ret == Q_ERR_NOENT) {
                     continue;
                 }
-                ret = Q_ERR(errno);
                 goto fail;
             }
 
@@ -1407,7 +1409,7 @@ static ssize_t read_phys_file(file_t *file, void *buf, size_t len)
 
     result = fread(buf, 1, len, file->fp);
     if (result != len && ferror(file->fp)) {
-        file->error = Q_ERR(errno);
+        file->error = Q_Errno();
         if (!result) {
             return file->error;
         }
@@ -1482,7 +1484,7 @@ ssize_t FS_ReadLine(qhandle_t f, char *buffer, size_t size)
     do {
         s = fgets(buffer, size, file->fp);
         if (!s) {
-            return ferror(file->fp) ? Q_ERR(errno) : 0;
+            return ferror(file->fp) ? Q_Errno() : 0;
         }
         len = strlen(s);
     } while (len < 2);
@@ -1901,7 +1903,7 @@ qerror_t FS_RenameFile(const char *from, const char *to)
 
     // rename it
     if (rename(frompath, topath))
-        return Q_ERR(errno);
+        return Q_Errno();
 
     return Q_ERR_SUCCESS;
 }

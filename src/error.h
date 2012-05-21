@@ -28,6 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define _Q_ERR(e)       (-ERRNO_MAX - e)
 
+// These values are extensions to system errno.
 #define Q_ERR_SUCCESS           0           // Success
 #define Q_ERR_FAILURE           _Q_ERR(0)   // Unspecified error
 #define Q_ERR_UNKNOWN_FORMAT    _Q_ERR(1)   // Unknown file format
@@ -52,6 +53,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define Q_ERR_NOT_COHERENT      _Q_ERR(19)   // Coherency check failed
 #endif
 
+// These values directly map to system errno.
 #define Q_ERR_NOENT             Q_ERR(ENOENT)
 #define Q_ERR_NAMETOOLONG       Q_ERR(ENAMETOOLONG)
 #define Q_ERR_INVAL             Q_ERR(EINVAL)
@@ -66,5 +68,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define Q_PrintError(what, code) \
     Com_Printf("Couldn't %s: %s\n", what, Q_ErrorString(code))
+
+// Maps system error to qerror_t, evaluating errno exactly once.
+// Useful for platforms where errno is defined as a function (e.g. Win32).
+// This function always returns error value (i.e., less than zero).
+static inline qerror_t Q_Errno(void)
+{
+    int e = errno;
+
+    return Q_ERR(e);
+}
 
 const char *Q_ErrorString(qerror_t error);
