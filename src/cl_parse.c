@@ -482,7 +482,7 @@ static void CL_ParseGamestate(void)
 static void CL_ParseServerData(void)
 {
     char    levelname[MAX_QPATH];
-    int     i, protocol, attractloop;
+    int     i, protocol, attractloop q_unused;
     size_t  len;
 
     Cbuf_Execute(&cl_cmdbuf);          // make sure any stuffed commands are done
@@ -1120,7 +1120,8 @@ static void set_server_fps(int value)
 
 static void CL_ParseSetting(void)
 {
-    uint32_t    index, value;
+    int index q_unused;
+    int value q_unused;
 
     index = MSG_ReadLong();
     value = MSG_ReadLong();

@@ -27,7 +27,6 @@ extern cvar_t   *maxclients;
 qboolean ai_checkattack(edict_t *self, float dist);
 
 qboolean    enemy_vis;
-qboolean    enemy_infront;
 int         enemy_range;
 float       enemy_yaw;
 
@@ -790,7 +789,6 @@ qboolean ai_checkattack(edict_t *self, float dist)
 //          return qtrue;
 //  }
 
-    enemy_infront = infront(self, self->enemy);
     enemy_range = range(self, self->enemy);
     VectorSubtract(self->enemy->s.origin, self->s.origin, temp);
     enemy_yaw = vectoyaw(temp);

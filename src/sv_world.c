@@ -434,19 +434,14 @@ object of mins/maxs size.
 */
 static mnode_t *SV_HullForEntity(edict_t *ent)
 {
-    mmodel_t    *model;
-
     if (ent->solid == SOLID_BSP) {
-        int index = ent->s.modelindex - 1;
+        int i = ent->s.modelindex - 1;
 
         // explicit hulls in the BSP model
-        if (index <= 0 || index >= sv.cm.cache->nummodels) {
-            Com_Error(ERR_DROP, "%s: inline model %d out of range",
-                      __func__, index);
-        }
+        if (i <= 0 || i >= sv.cm.cache->nummodels)
+            Com_Error(ERR_DROP, "%s: inline model %d out of range", __func__, i);
 
-        model = &sv.cm.cache->models[index];
-        return model->headnode;
+        return sv.cm.cache->models[i].headnode;
     }
 
     // create a temp hull from bounding box sizes
@@ -462,8 +457,7 @@ int SV_PointContents(vec3_t p)
 {
     edict_t     *touch[MAX_EDICTS], *hit;
     int         i, num;
-    int         contents, c2;
-    mnode_t     *headnode;
+    int         contents;
 
     if (!sv.cm.cache) {
         Com_Error(ERR_DROP, "%s: no map loaded", __func__);
@@ -479,12 +473,8 @@ int SV_PointContents(vec3_t p)
         hit = touch[i];
 
         // might intersect, so do an exact clip
-        headnode = SV_HullForEntity(hit);
-
-        c2 = CM_TransformedPointContents(p, headnode,
-                                         hit->s.origin, hit->s.angles);
-
-        contents |= c2;
+        contents |= CM_TransformedPointContents(p, SV_HullForEntity(hit),
+                                                hit->s.origin, hit->s.angles);
     }
 
     return contents;

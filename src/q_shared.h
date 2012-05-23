@@ -63,6 +63,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define q_gameabi
 #endif
 
+#define q_unused            __attribute__((unused))
+
 #else /* __GNUC__ */
 
 #define q_printf(f, a)
@@ -76,6 +78,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define q_offsetof(t, m)    ((size_t)&((t *)0)->m)
 
 #define q_gameabi
+
+#define q_unused
 
 #endif /* !__GNUC__ */
 

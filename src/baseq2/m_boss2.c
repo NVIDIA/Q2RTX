@@ -523,7 +523,6 @@ qboolean Boss2_CheckAttack(edict_t *self)
     vec3_t  temp;
     float   chance;
     trace_t tr;
-    qboolean    enemy_infront;
     int         enemy_range;
     float       enemy_yaw;
 
@@ -541,7 +540,6 @@ qboolean Boss2_CheckAttack(edict_t *self)
             return qfalse;
     }
 
-    enemy_infront = infront(self, self->enemy);
     enemy_range = range(self, self->enemy);
     VectorSubtract(self->enemy->s.origin, self->s.origin, temp);
     enemy_yaw = vectoyaw(temp);

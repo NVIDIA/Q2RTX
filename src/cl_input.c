@@ -977,7 +977,7 @@ CL_SendDefaultCmd
 */
 static void CL_SendDefaultCmd(void)
 {
-    size_t cursize, checksumIndex;
+    size_t cursize q_unused, checksumIndex;
     usercmd_t *cmd, *oldcmd;
     client_history_t *history;
 
@@ -1062,10 +1062,10 @@ CL_SendBatchedCmd
 */
 static void CL_SendBatchedCmd(void)
 {
-    int i, j, seq, bits;
+    int i, j, seq, bits q_unused;
     int numCmds, numDups;
     int totalCmds, totalMsec;
-    size_t cursize;
+    size_t cursize q_unused;
     usercmd_t *cmd, *oldcmd;
     client_history_t *history, *oldest;
     byte *patch;
@@ -1158,7 +1158,7 @@ static void CL_SendBatchedCmd(void)
 static void CL_SendKeepAlive(void)
 {
     client_history_t *history;
-    size_t cursize;
+    size_t cursize q_unused;
 
     // archive this packet
     history = &cl.history[cls.netchan->outgoing_sequence & CMD_MASK];
