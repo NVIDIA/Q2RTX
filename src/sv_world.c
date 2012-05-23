@@ -490,30 +490,32 @@ int SV_PointContents(vec3_t p)
     return contents;
 }
 
-typedef struct {
-    vec3_t      boxmins, boxmaxs;// enclose the test object along entire move
-    vec_t       *mins, *maxs;    // size of the moving object
-    vec_t       *start, *end;
-    trace_t     *trace;
-    edict_t     *passedict;
-    int         contentmask;
-} moveclip_t;
-
 /*
 ====================
 SV_ClipMoveToEntities
 
 ====================
 */
-static void SV_ClipMoveToEntities(moveclip_t *clip)
+static void SV_ClipMoveToEntities(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end,
+                                  edict_t *passedict, int contentmask, trace_t *tr)
 {
+    vec3_t      boxmins, boxmaxs;
     int         i, num;
     edict_t     *touchlist[MAX_EDICTS], *touch;
     trace_t     trace;
-    mnode_t     *headnode;
 
-    num = SV_AreaEdicts(clip->boxmins, clip->boxmaxs, touchlist
-                        , MAX_EDICTS, AREA_SOLID);
+    // create the bounding box of the entire move
+    for (i = 0; i < 3; i++) {
+        if (end[i] > start[i]) {
+            boxmins[i] = start[i] + mins[i] - 1;
+            boxmaxs[i] = end[i] + maxs[i] + 1;
+        } else {
+            boxmins[i] = end[i] + mins[i] - 1;
+            boxmaxs[i] = start[i] + maxs[i] + 1;
+        }
+    }
+
+    num = SV_AreaEdicts(boxmins, boxmaxs, touchlist, MAX_EDICTS, AREA_SOLID);
 
     // be careful, it is possible to have an entity in this
     // list removed before we get to it (killtriggered)
@@ -521,50 +523,27 @@ static void SV_ClipMoveToEntities(moveclip_t *clip)
         touch = touchlist[i];
         if (touch->solid == SOLID_NOT)
             continue;
-        if (touch == clip->passedict)
+        if (touch == passedict)
             continue;
-        if (clip->trace->allsolid)
+        if (tr->allsolid)
             return;
-        if (clip->passedict) {
-            if (touch->owner == clip->passedict)
+        if (passedict) {
+            if (touch->owner == passedict)
                 continue;    // don't clip against own missiles
-            if (clip->passedict->owner == touch)
+            if (passedict->owner == touch)
                 continue;    // don't clip against owner
         }
 
-        if (!(clip->contentmask & CONTENTS_DEADMONSTER)
+        if (!(contentmask & CONTENTS_DEADMONSTER)
             && (touch->svflags & SVF_DEADMONSTER))
             continue;
 
         // might intersect, so do an exact clip
-        headnode = SV_HullForEntity(touch);
-
-        CM_TransformedBoxTrace(&trace, clip->start, clip->end,
-                               clip->mins, clip->maxs, headnode,  clip->contentmask,
+        CM_TransformedBoxTrace(&trace, start, end, mins, maxs,
+                               SV_HullForEntity(touch), contentmask,
                                touch->s.origin, touch->s.angles);
 
-        CM_ClipEntity(clip->trace, &trace, touch);
-    }
-}
-
-
-/*
-==================
-SV_TraceBounds
-==================
-*/
-static void SV_TraceBounds(moveclip_t *clip)
-{
-    int        i;
-
-    for (i = 0; i < 3; i++) {
-        if (clip->end[i] > clip->start[i]) {
-            clip->boxmins[i] = clip->start[i] + clip->mins[i] - 1;
-            clip->boxmaxs[i] = clip->end[i] + clip->maxs[i] + 1;
-        } else {
-            clip->boxmins[i] = clip->end[i] + clip->mins[i] - 1;
-            clip->boxmaxs[i] = clip->start[i] + clip->maxs[i] + 1;
-        }
+        CM_ClipEntity(tr, &trace, touch);
     }
 }
 
@@ -573,30 +552,25 @@ static void SV_TraceBounds(moveclip_t *clip)
 SV_Trace
 
 Moves the given mins/maxs volume through the world from start to end.
-
 Passedict and edicts owned by passedict are explicitly not checked.
 ==================
 */
-trace_t *SV_Trace(trace_t     *trace,
-                  vec3_t      start,
-                  vec3_t      mins,
-                  vec3_t      maxs,
-                  vec3_t      end,
-                  edict_t     *passedict,
-                  int         contentmask)
+trace_t q_gameabi SV_Trace(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end,
+                           edict_t *passedict, int contentmask)
 {
-    moveclip_t    clip;
+    trace_t     trace;
 
     if (!sv.cm.cache) {
         Com_Error(ERR_DROP, "%s: no map loaded", __func__);
     }
 
+    // work around game bugs
     if (++sv.tracecount > 10000) {
-        Com_EPrintf("%s: game DLL caught in infinite loop!\n", __func__);
-        memset(trace, 0, sizeof(*trace));
-        trace->fraction = 1;
-        trace->ent = ge->edicts;
-        VectorCopy(end, trace->endpos);
+        Com_EPrintf("%s: runaway loop avoided\n", __func__);
+        memset(&trace, 0, sizeof(trace));
+        trace.fraction = 1;
+        trace.ent = ge->edicts;
+        VectorCopy(end, trace.endpos);
         sv.tracecount = 0;
         return trace;
     }
@@ -607,44 +581,14 @@ trace_t *SV_Trace(trace_t     *trace,
         maxs = vec3_origin;
 
     // clip to world
-    CM_BoxTrace(trace, start, end, mins, maxs,
-                sv.cm.cache->nodes, contentmask);
-    trace->ent = ge->edicts;
-    if (trace->fraction == 0) {
-        return trace;        // blocked by the world
+    CM_BoxTrace(&trace, start, end, mins, maxs, sv.cm.cache->nodes, contentmask);
+    trace.ent = ge->edicts;
+    if (trace.fraction == 0) {
+        return trace;   // blocked by the world
     }
 
-    memset(&clip, 0, sizeof(clip));
-    clip.trace = trace;
-    clip.contentmask = contentmask;
-    clip.start = start;
-    clip.end = end;
-    clip.mins = mins;
-    clip.maxs = maxs;
-    clip.passedict = passedict;
-
-    // create the bounding box of the entire move
-    SV_TraceBounds(&clip);
-
     // clip to other solid entities
-    SV_ClipMoveToEntities(&clip);
-
-    return trace;
-}
-
-/*
-==================
-SV_Trace_Native
-
-Variant of SV_Trace for native game ABI
-==================
-*/
-trace_t SV_Trace_Native(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, edict_t *passedict, int contentmask)
-{
-    trace_t trace;
-
-    SV_Trace(&trace, start, mins, maxs, end, passedict, contentmask);
-
+    SV_ClipMoveToEntities(start, mins, maxs, end, passedict, contentmask, &trace);
     return trace;
 }
 

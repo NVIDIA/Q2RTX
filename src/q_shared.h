@@ -57,6 +57,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define q_offsetof(t, m)    ((size_t)&((t *)0)->m)
 #endif
 
+#if USE_GAME_ABI_HACK
+#define q_gameabi           __attribute__((callee_pop_aggregate_return(0)))
+#else
+#define q_gameabi
+#endif
+
 #else /* __GNUC__ */
 
 #define q_printf(f, a)
@@ -68,6 +74,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define q_likely(x)         !!(x)
 #define q_unlikely(x)       !!(x)
 #define q_offsetof(t, m)    ((size_t)&((t *)0)->m)
+
+#define q_gameabi
 
 #endif /* !__GNUC__ */
 
@@ -849,7 +857,7 @@ typedef struct {
     int         waterlevel;
 
     // callbacks to test the world
-    trace_t     (*trace)(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end);
+    trace_t     (* q_gameabi trace)(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end);
     int         (*pointcontents)(vec3_t point);
 } pmove_t;
 

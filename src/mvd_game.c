@@ -1709,7 +1709,7 @@ static void MVD_GameClientDisconnect(edict_t *ent)
 }
 
 
-static trace_t MVD_Trace(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end)
+static trace_t q_gameabi MVD_Trace(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end)
 {
     trace_t trace;
 

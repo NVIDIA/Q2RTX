@@ -73,9 +73,6 @@ cvar_t  *sv_changemapcmd;
 
 cvar_t  *sv_strafejump_hack;
 cvar_t  *sv_waterjump_hack;
-#ifndef _WIN32
-cvar_t  *sv_oldgame_hack;
-#endif
 #if USE_PACKETDUP
 cvar_t  *sv_packetdup_hack;
 #endif
@@ -1977,9 +1974,6 @@ void SV_Init(void)
     sv_strafejump_hack = Cvar_Get("sv_strafejump_hack", "1", CVAR_LATCH);
     sv_waterjump_hack = Cvar_Get("sv_waterjump_hack", "0", CVAR_LATCH);
 
-#ifndef _WIN32
-    sv_oldgame_hack = Cvar_Get("sv_oldgame_hack", "0", CVAR_LATCH);
-#endif
 #if USE_PACKETDUP
     sv_packetdup_hack = Cvar_Get("sv_packetdup_hack", "0", 0);
 #endif

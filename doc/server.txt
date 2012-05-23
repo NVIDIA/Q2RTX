@@ -381,13 +381,6 @@ mvd_snaps::
 Hacks
 ~~~~~
 
-sv_oldgame_hack::
-    On UNIX-like systems, enables ABI compatibility mode which allows loading
-    of game libraries built using ancient GCC versions. If you happen to run a
-    binary-only game mod you cannot recompile and your server crashes while
-    loading a map, try enabling this variable. Default value is 0 (ABI hack
-    disabled).
-
 sv_strafejump_hack::
     Enables FPS-independent strafe jumping mode for clients using R1Q2 and
     Q2PRO protocols. Values higher than 1 will force this mode for all clients,

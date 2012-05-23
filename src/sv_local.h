@@ -484,9 +484,6 @@ extern cvar_t       *sv_calcpings_method;
 extern cvar_t       *sv_changemapcmd;
 
 extern cvar_t       *sv_strafejump_hack;
-#ifndef _WIN32
-extern cvar_t       *sv_oldgame_hack;
-#endif
 #if USE_PACKETDUP
 extern cvar_t       *sv_packetdup_hack;
 #endif
@@ -715,12 +712,8 @@ int SV_PointContents(vec3_t p);
 // returns the CONTENTS_* value from the world at the given point.
 // Quake 2 extends this to also check entities, to allow moving liquids
 
-typedef trace_t (*sv_trace_t)(vec3_t, vec3_t, vec3_t, vec3_t, edict_t *, int);
-
-trace_t SV_Trace_Native(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end,
-                        edict_t *passedict, int contentmask);
-trace_t *SV_Trace(trace_t *trace, vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end,
-                  edict_t *passedict, int contentmask);
+trace_t q_gameabi SV_Trace(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end,
+                           edict_t *passedict, int contentmask);
 // mins and maxs are relative
 
 // if the entire move stays in a solid volume, trace.allsolid will be set,
