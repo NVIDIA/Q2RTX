@@ -44,7 +44,6 @@ void SV_FlushRedirect(int redirected, char *outputbuf, size_t len)
         MSG_WriteByte(PRINT_HIGH);
         MSG_WriteData(outputbuf, len);
         MSG_WriteByte(0);
-        //Sys_Printf("redirect: %d bytes: %s", outputbuf);
         SV_ClientAddMessage(sv_client, MSG_RELIABLE | MSG_CLEAR);
     }
 }

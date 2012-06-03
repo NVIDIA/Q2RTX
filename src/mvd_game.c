@@ -1101,7 +1101,7 @@ static void MVD_Join_f(mvd_client_t *client)
 {
     mvd_t *mvd;
 
-    SV_BeginRedirect(RD_CLIENT);
+    SV_ClientRedirect();
     mvd = MVD_SetChannel(1);
     Com_EndRedirect();
 

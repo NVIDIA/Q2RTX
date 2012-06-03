@@ -789,7 +789,7 @@ static void SV_ShowServerInfo_f(void)
 
     Cvar_BitInfo(serverinfo, CVAR_SERVERINFO);
 
-    SV_BeginRedirect(RD_CLIENT);
+    SV_ClientRedirect();
     Info_Print(serverinfo);
     Com_EndRedirect();
 }
@@ -797,7 +797,7 @@ static void SV_ShowServerInfo_f(void)
 // dumps misc protocol info
 static void SV_ShowMiscInfo_f(void)
 {
-    SV_BeginRedirect(RD_CLIENT);
+    SV_ClientRedirect();
     SV_PrintMiscInfo();
     Com_EndRedirect();
 }
@@ -816,7 +816,7 @@ static void SV_Lag_f(void)
     client_t *cl;
 
     if (Cmd_Argc() > 1) {
-        SV_BeginRedirect(RD_CLIENT);
+        SV_ClientRedirect();
         cl = SV_GetPlayer(Cmd_Argv(1), qtrue);
         Com_EndRedirect();
         if (!cl) {
@@ -890,14 +890,14 @@ static void SV_CvarResult_f(void)
 
 static void SV_AC_List_f(void)
 {
-    SV_BeginRedirect(RD_CLIENT);
+    SV_ClientRedirect();
     AC_List_f();
     Com_EndRedirect();
 }
 
 static void SV_AC_Info_f(void)
 {
-    SV_BeginRedirect(RD_CLIENT);
+    SV_ClientRedirect();
     AC_Info_f();
     Com_EndRedirect();
 }

@@ -552,8 +552,11 @@ void SV_InitGame(unsigned mvd_spawn);
 typedef enum {RD_NONE, RD_CLIENT, RD_PACKET} redirect_t;
 #define SV_OUTPUTBUF_LENGTH     (MAX_PACKETLEN_DEFAULT - 16)
 
-#define SV_BeginRedirect(target) \
-    Com_BeginRedirect(target, sv_outputbuf, SV_OUTPUTBUF_LENGTH, SV_FlushRedirect)
+#define SV_ClientRedirect() \
+    Com_BeginRedirect(RD_CLIENT, sv_outputbuf, MAX_STRING_CHARS - 1, SV_FlushRedirect)
+
+#define SV_PacketRedirect() \
+    Com_BeginRedirect(RD_PACKET, sv_outputbuf, SV_OUTPUTBUF_LENGTH, SV_FlushRedirect)
 
 extern char sv_outputbuf[SV_OUTPUTBUF_LENGTH];
 

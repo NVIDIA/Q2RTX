@@ -1076,10 +1076,8 @@ static void SVC_RemoteCommand(void)
     Com_Printf("Rcon from %s:\n%s\n",
                NET_AdrToString(&net_from), string);
 
-    SV_BeginRedirect(RD_PACKET);
-
+    SV_PacketRedirect();
     Cmd_ExecuteString(&cmd_buffer, string);
-
     Com_EndRedirect();
 }
 
