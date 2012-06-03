@@ -125,7 +125,7 @@ static rdflush_t    rd_flush;
 
 void Com_BeginRedirect(int target, char *buffer, size_t buffersize, rdflush_t flush)
 {
-    if (rd_target || !target || !buffer || buffersize < 1 || !flush) {
+    if (rd_target || !target || !buffer || !buffersize || !flush) {
         return;
     }
     rd_target = target;
@@ -166,7 +166,7 @@ static void Com_Redirect(const char *msg, size_t total)
         if (length > rd_buffersize) {
             length = rd_buffersize;
         }
-        if (rd_length + length > rd_buffersize) {
+        if (rd_length > rd_buffersize - length) {
             rd_flush(rd_target, rd_buffer, rd_length);
             rd_length = 0;
         }
