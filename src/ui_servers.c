@@ -413,14 +413,13 @@ static menuSound_t PingSelected(void)
 
 static void AddServer(const netadr_t *address, const char *hostname)
 {
+    netadr_t tmp;
     serverslot_t *slot;
 
     if (m_servers.list.numItems >= MAX_STATUS_SERVERS)
         return;
 
     if (!address) {
-        netadr_t tmp;
-
         // either address or hostname can be NULL, but not both
         if (!hostname)
             return;
