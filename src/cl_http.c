@@ -564,7 +564,7 @@ qerror_t HTTP_QueueDownload(const char *path, dltype_t type)
     len = strlen(path);
     if (len > 4 && !Q_stricmp(path + len - 4, ".bsp")) {
         len = Q_snprintf(temp, sizeof(temp), "%s/%s", fs_game->string, path);
-        if (len + 5 < sizeof(temp)) {
+        if (len < sizeof(temp) - 5) {
             memcpy(temp + len - 4, ".filelist", 10);
             CL_QueueDownload(temp, DL_LIST);
         }

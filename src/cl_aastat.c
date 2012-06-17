@@ -83,7 +83,7 @@ static void TH_DrawNumber(char *dst, int x, int y, int width, int value)
     if (width > 5)
         width = 5;
 
-    l = Q_snprintf(num, sizeof(num), "%d", value);
+    l = Q_scnprintf(num, sizeof(num), "%d", value);
     if (l > width)
         l = width;
     x += width - l;

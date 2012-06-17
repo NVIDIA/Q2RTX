@@ -794,31 +794,22 @@ size_t Q_vsnprintf(char *dest, size_t size, const char *fmt, va_list argptr)
 {
     int ret;
 
-    if (size > INT_MAX) {
+    if (size > INT_MAX)
         Com_Error(ERR_FATAL, "%s: bad buffer size", __func__);
-    }
 
 #ifdef _WIN32
-    // work around broken M$ C runtime semantics.
-    if (!size) {
-        return 0;
-    }
-    ret = _vsnprintf(dest, size - 1, fmt, argptr);
-    if (ret >= size - 1) {
-        dest[size - 1] = 0;
+    if (size) {
+        ret = _vsnprintf(dest, size - 1, fmt, argptr);
+        if (ret < 0 || ret >= size - 1)
+            dest[size - 1] = 0;
+    } else {
+        ret = _vscprintf(fmt, argptr);
     }
 #else
     ret = vsnprintf(dest, size, fmt, argptr);
 #endif
 
-    // this shouldn't happen
-    if (ret < 0) {
-        if (size) {
-            *dest = 0;
-        }
-        ret = 0;
-    }
-
+    // exploit the fact -1 becomes SIZE_MAX > size
     return (size_t)ret;
 }
 
@@ -835,14 +826,15 @@ size_t Q_vscnprintf(char *dest, size_t size, const char *fmt, va_list argptr)
 {
     size_t ret;
 
-    if (!size) {
+    if (!size)
         return 0;
-    }
 
     ret = Q_vsnprintf(dest, size, fmt, argptr);
-    return ret >= size ? size - 1 : ret;
-}
+    if (ret < size)
+        return ret;
 
+    return size - 1;
+}
 
 /*
 ===============
