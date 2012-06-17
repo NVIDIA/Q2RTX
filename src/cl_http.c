@@ -240,6 +240,15 @@ static const char *http_strerror(int response)
     return buffer;
 }
 
+// Use "baseq2" instead of empty gamedir consistently for all kinds of downloads.
+static const char *http_gamedir(void)
+{
+    if (*fs_game->string)
+        return fs_game->string;
+
+    return BASEGAME;
+}
+
 // Actually starts a download by adding it to the curl multi handle.
 static void start_download(dlqueue_t *entry, dlhandle_t *dl)
 {
@@ -254,6 +263,7 @@ static void start_download(dlqueue_t *entry, dlhandle_t *dl)
     if (entry->type == DL_LIST) {
         dl->file = NULL;
         dl->path[0] = 0;
+        //filelist paths are absolute
         escape_path(entry->path, escaped);
     } else {
         len = Q_snprintf(dl->path, sizeof(dl->path), "%s/%s.tmp", fs_gamedir, entry->path);
@@ -262,8 +272,8 @@ static void start_download(dlqueue_t *entry, dlhandle_t *dl)
             goto fail;
         }
 
-        // FIXME: should use baseq2 instead of empty gamedir?
-        len = Q_snprintf(temp, sizeof(temp), "%s/%s", fs_game->string, entry->path);
+        //prepend quake path with gamedir
+        len = Q_snprintf(temp, sizeof(temp), "%s/%s", http_gamedir(), entry->path);
         if (len >= sizeof(temp)) {
             Com_EPrintf("[HTTP] Refusing oversize server file path.\n");
             goto fail;
@@ -549,7 +559,7 @@ qerror_t HTTP_QueueDownload(const char *path, dltype_t type)
 
     if (need_list) {
         //grab the filelist
-        len = Q_snprintf(temp, sizeof(temp), "%s.filelist", fs_game->string);
+        len = Q_snprintf(temp, sizeof(temp), "%s.filelist", http_gamedir());
         if (len < sizeof(temp))
             CL_QueueDownload(temp, DL_LIST);
 
@@ -563,7 +573,7 @@ qerror_t HTTP_QueueDownload(const char *path, dltype_t type)
     //special case for map file lists, i really wanted a server-push mechanism for this, but oh well
     len = strlen(path);
     if (len > 4 && !Q_stricmp(path + len - 4, ".bsp")) {
-        len = Q_snprintf(temp, sizeof(temp), "%s/%s", fs_game->string, path);
+        len = Q_snprintf(temp, sizeof(temp), "%s/%s", http_gamedir(), path);
         if (len < sizeof(temp) - 5) {
             memcpy(temp + len - 4, ".filelist", 10);
             CL_QueueDownload(temp, DL_LIST);
