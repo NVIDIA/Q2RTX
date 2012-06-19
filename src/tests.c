@@ -433,6 +433,64 @@ static void Com_TestInfo_f(void)
                num_info_set_tests);
 }
 
+typedef struct {
+    size_t size;
+    size_t len1, len2;
+    qboolean overflow1, overflow2;
+    const char *res;
+} snprintf_test_t;
+
+#ifdef _WIN32
+#define OV  SIZE_MAX
+#else
+#define OV  11
+#endif
+
+static const snprintf_test_t snprintf_tests[] = {
+    { 12, 11, 11, 0, 0, "hello world"     },
+    { 11, OV, 10, 1, 0, "hello worl"      },
+    { 10, OV,  9, 1, 0, "hello wor"       },
+    { 0,  11,  0, 1, 1, "xxxxxxxxxxxxxxx" },
+};
+
+static const int num_snprintf_tests = q_countof(snprintf_tests);
+
+static void Com_TestSnprintf_f(void)
+{
+    const snprintf_test_t *t;
+    char buf[16], *ptr;
+    size_t len;
+    int i, errors;
+    qboolean overflow;
+
+    errors = 0;
+    for (i = 0; i < num_snprintf_tests; i++) {
+        t = &snprintf_tests[i];
+
+        ptr = t->size ? buf : NULL;
+
+        memset(buf, 'x', 15); buf[15] = 0;
+        len = Q_snprintf(ptr, t->size, "hello world");
+        overflow = len >= t->size;
+        if (t->len1 != len || strcmp(buf, t->res) || overflow != t->overflow1) {
+            Com_EPrintf("%s( %p, %"PRIz" ) == \"%s\" (%"PRIz") [%d], expected \"%s\" (%"PRIz") [%d]\n",
+                        "Q_snprintf", ptr, t->size, buf, len, overflow, t->res, t->len1, t->overflow1);
+            errors++;
+        }
+
+        memset(buf, 'x', 15); buf[15] = 0;
+        len = Q_scnprintf(ptr, t->size, "hello world");
+        overflow = len >= t->size;
+        if (t->len2 != len || strcmp(buf, t->res) || overflow != t->overflow2) {
+            Com_EPrintf("%s( %p, %"PRIz" ) == \"%s\" (%"PRIz") [%d], expected \"%s\" (%"PRIz") [%d]\n",
+                        "Q_scnprintf", ptr, t->size, buf, len, overflow, t->res, t->len2, t->overflow2);
+            errors++;
+        }
+    }
+
+    Com_Printf("%d failures, %d strings tested\n", errors, num_snprintf_tests * 2);
+}
+
 void Com_InitTests(void)
 {
     Cmd_AddCommand("error", Com_Error_f);
@@ -444,5 +502,6 @@ void Com_InitTests(void)
     Cmd_AddCommand("wildtest", Com_TestWild_f);
     Cmd_AddCommand("normtest", Com_TestNorm_f);
     Cmd_AddCommand("infotest", Com_TestInfo_f);
+    Cmd_AddCommand("snprintftest", Com_TestSnprintf_f);
 }
 
