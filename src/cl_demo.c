@@ -25,7 +25,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cl_local.h"
 
 static byte     demo_buffer[MAX_PACKETLEN];
-static int      demo_extra;
 
 static cvar_t   *cl_demosnaps;
 static cvar_t   *cl_demomsglen;
@@ -216,30 +215,6 @@ void CL_EmitDemoFrame(void)
     SZ_Clear(&msg_write);
 }
 
-static void emit_zero_frame(void)
-{
-    MSG_WriteByte(svc_frame);
-    MSG_WriteLong(FRAME_CUR);
-    MSG_WriteLong(FRAME_PRE);   // what we are delta'ing from
-    MSG_WriteByte(0);   // rate dropped packets
-
-    // send over the areabits
-    MSG_WriteByte(cl.frame.areabytes);
-    MSG_WriteData(cl.frame.areabits, cl.frame.areabytes);
-
-    MSG_WriteByte(svc_playerinfo);
-    MSG_WriteShort(0);
-    MSG_WriteLong(0);
-
-    MSG_WriteByte(svc_packetentities);
-    MSG_WriteShort(0);
-
-    if (!CL_WriteDemoMessage(&msg_write))
-        return;
-
-    cls.demo.frames_written++;
-}
-
 static size_t format_demo_size(char *buffer, size_t size)
 {
     return Com_FormatSizeLong(buffer, size, FS_Tell(cls.demo.recording));
@@ -400,8 +375,6 @@ static void CL_Record_f(void)
     cls.demo.last_server_frame = -1;
 
     SZ_Init(&cls.demo.buffer, demo_buffer, size);
-
-    demo_extra = 0;
 
     // clear dirty configstrings
     memset(cl.dcs, 0, sizeof(cl.dcs));
@@ -1216,17 +1189,6 @@ void CL_DemoFrame(int msec)
     if (cls.state != ca_active) {
         parse_next_message();
         return;
-    }
-
-    if (cls.demo.recording && cl_paused->integer == 2 &&
-        !cls.demo.paused && cls.demo.frames_written) {
-        // XXX: record zero frames when manually paused
-        // for syncing with audio comments, etc
-        demo_extra += msec;
-        if (demo_extra > 100) {
-            emit_zero_frame();
-            demo_extra = 0;
-        }
     }
 
     if (com_timedemo->integer) {
