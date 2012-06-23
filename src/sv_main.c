@@ -141,9 +141,9 @@ void SV_CleanClient(client_t *client)
     // close any existing donwload
     SV_CloseDownload(client);
 
-    if (client->versionString) {
-        Z_Free(client->versionString);
-        client->versionString = NULL;
+    if (client->version_string) {
+        Z_Free(client->version_string);
+        client->version_string = NULL;
     }
 
     // free baselines allocated for this client
@@ -1244,13 +1244,13 @@ static void SV_CalcPings(void)
                 }
             }
             if (!res) {
-                cl->fps = cl->numMoves / 10;
-                cl->numMoves = 0;
+                cl->moves_per_sec = cl->num_moves / 10;
+                cl->num_moves = 0;
             }
         } else {
             cl->ping = 0;
-            cl->fps = 0;
-            cl->numMoves = 0;
+            cl->moves_per_sec = 0;
+            cl->num_moves = 0;
         }
 
         // let the game dll know about the ping
@@ -1275,7 +1275,7 @@ static void SV_GiveMsec(void)
         return;
 
     FOR_EACH_CLIENT(cl) {
-        cl->commandMsec = 1800; // 1600 + some slop
+        cl->command_msec = 1800; // 1600 + some slop
     }
 }
 

@@ -35,7 +35,7 @@ void SV_ClientReset(client_t *client)
     client->lastframe = -1;
     client->frames_nodelta = 0;
     client->send_delta = 0;
-    client->surpressCount = 0;
+    client->suppress_count = 0;
     memset(&client->lastcmd, 0, sizeof(client->lastcmd));
 }
 

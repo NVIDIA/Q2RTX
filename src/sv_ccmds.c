@@ -535,7 +535,7 @@ static void dump_clients(void)
                        &client->netchan->remote_address));
         Com_Printf("%5"PRIz" ", client->rate);
         Com_Printf("%2i ", client->protocol);
-        Com_Printf("%3i ", client->fps);
+        Com_Printf("%3i ", client->moves_per_sec);
         Com_Printf("\n");
     }
 }
@@ -551,7 +551,7 @@ static void dump_versions(void)
     FOR_EACH_CLIENT(client) {
         Com_Printf("%3i %-15.15s %-40.40s\n",
                    client->number, client->name,
-                   client->versionString ? client->versionString : "-");
+                   client->version_string ? client->version_string : "-");
     }
 }
 
@@ -777,14 +777,14 @@ void SV_PrintMiscInfo(void)
     char buffer[MAX_QPATH];
 
     Com_Printf("version              %s\n",
-               sv_client->versionString ? sv_client->versionString : "-");
+               sv_client->version_string ? sv_client->version_string : "-");
     Com_Printf("protocol (maj/min)   %d/%d\n",
                sv_client->protocol, sv_client->version);
     Com_Printf("maxmsglen            %"PRIz"\n", sv_client->netchan->maxpacketlen);
     Com_Printf("zlib support         %s\n", sv_client->has_zlib ? "yes" : "no");
     Com_Printf("netchan type         %s\n", sv_client->netchan->type ? "new" : "old");
     Com_Printf("ping                 %d\n", sv_client->ping);
-    Com_Printf("movement fps         %d\n", sv_client->fps);
+    Com_Printf("movement fps         %d\n", sv_client->moves_per_sec);
 #if USE_FPS
     Com_Printf("update rate          %d\n", sv_client->settings[CLS_FPS]);
 #endif

@@ -79,7 +79,7 @@ static qboolean SV_RateDrop(client_t *client)
         SV_DPrintf(0, "Frame %d surpressed for %s (total = %"PRIz")\n",
                    client->framenum, client->name, total);
         client->frameflags |= FF_SURPRESSED;
-        client->surpressCount++;
+        client->suppress_count++;
         client->message_size[client->framenum % RATE_MESSAGES] = 0;
         return qtrue;
     }

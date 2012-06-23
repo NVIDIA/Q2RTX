@@ -193,9 +193,9 @@ void SV_WriteFrameToClient_Default(client_t *client)
 
     MSG_WriteByte(svc_frame);
     MSG_WriteLong(client->framenum);
-    MSG_WriteLong(lastframe);      // what we are delta'ing from
-    MSG_WriteByte(client->surpressCount);      // rate dropped packets
-    client->surpressCount = 0;
+    MSG_WriteLong(lastframe);   // what we are delta'ing from
+    MSG_WriteByte(client->suppress_count);  // rate dropped packets
+    client->suppress_count = 0;
     client->frameflags = 0;
 
     // send over the areabits
@@ -283,7 +283,7 @@ void SV_WriteFrameToClient_Enhanced(client_t *client)
         }
         surpressed = client->frameflags;
     } else {
-        surpressed = client->surpressCount;
+        surpressed = client->suppress_count;
     }
 
     // delta encode the playerstate
@@ -312,7 +312,7 @@ void SV_WriteFrameToClient_Enhanced(client_t *client)
     *b2 = (surpressed & SURPRESSCOUNT_MASK) |
           ((extraflags & 0x0F) << SURPRESSCOUNT_BITS);
 
-    client->surpressCount = 0;
+    client->suppress_count = 0;
     client->frameflags = 0;
 
     // delta encode the entities

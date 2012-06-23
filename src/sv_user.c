@@ -494,7 +494,7 @@ void SV_Begin_f(void)
         return;
     }
 
-    if (!sv_client->versionString) {
+    if (!sv_client->version_string) {
         SV_DropClient(sv_client, "!failed version probe");
         return;
     }
@@ -514,8 +514,8 @@ void SV_Begin_f(void)
                 sv_client->name);
     sv_client->state = cs_spawned;
     sv_client->send_delta = 0;
-    sv_client->commandMsec = 1800;
-    sv_client->surpressCount = 0;
+    sv_client->command_msec = 1800;
+    sv_client->suppress_count = 0;
     sv_client->http_download = qfalse;
 #if USE_FPS
     align_key_frames();
@@ -863,13 +863,13 @@ static void SV_CvarResult_f(void)
 
     c = Cmd_Argv(1);
     if (!strcmp(c, "version")) {
-        if (!sv_client->versionString) {
+        if (!sv_client->version_string) {
             v = Cmd_RawArgsFrom(2);
             if (Com_IsDedicated()) {
                 Com_Printf("%s[%s]: %s\n", sv_client->name,
                            NET_AdrToString(&sv_client->netchan->remote_address), v);
             }
-            sv_client->versionString = SV_CopyString(v);
+            sv_client->version_string = SV_CopyString(v);
         }
     } else if (!strcmp(c, "connect")) {
         if (sv_client->reconnect_var[0]) {
@@ -1030,12 +1030,12 @@ SV_ClientThink
 */
 static inline void SV_ClientThink(usercmd_t *cmd)
 {
-    sv_client->commandMsec -= cmd->msec;
-    sv_client->numMoves++;
+    sv_client->command_msec -= cmd->msec;
+    sv_client->num_moves++;
 
-    if (sv_client->commandMsec < 0 && sv_enforcetime->integer) {
+    if (sv_client->command_msec < 0 && sv_enforcetime->integer) {
         Com_DPrintf("commandMsec underflow from %s: %d\n",
-                    sv_client->name, sv_client->commandMsec);
+                    sv_client->name, sv_client->command_msec);
         return;
     }
 

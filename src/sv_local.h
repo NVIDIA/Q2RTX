@@ -242,7 +242,10 @@ typedef struct {
 typedef struct client_s {
     list_t          entry;
 
+    // core info
     clstate_t       state;
+    edict_t         *edict;     // EDICT_NUM(clientnum+1)
+    int             number;     // client slot number
 
     // client flags
     qboolean        reconnected: 1;
@@ -254,71 +257,67 @@ typedef struct client_s {
 #endif
     qboolean        http_download: 1;
 
-    char            userinfo[MAX_INFO_STRING];        // name, etc
-    char            *versionString;
+    // userinfo
+    char            userinfo[MAX_INFO_STRING];  // name, etc
+    char            name[MAX_CLIENT_NAME];      // extracted from userinfo, high bits masked
+    int             messagelevel;               // for filtering printed messages
+    size_t          rate;
 
+    // console var probes
+    char            *version_string;
     char            reconnect_var[16];
     char            reconnect_val[16];
 
+    // usercmd stuff
+    unsigned        lastmessage;    // svs.realtime when packet was last received
     int             lastframe;      // for delta compression
     usercmd_t       lastcmd;        // for filling in big drops
-
-    int             commandMsec;    // every seconds this is reset, if user
+    int             command_msec;   // every seconds this is reset, if user
                                     // commands exhaust it, assume time cheating
-    int             numMoves;
-    int             fps;
+    int             num_moves;      // reset every 10 seconds
+    int             moves_per_sec;  // average movement FPS
 
     int             ping, min_ping, max_ping;
     int             avg_ping_time, avg_ping_count;
 
-    size_t          message_size[RATE_MESSAGES];    // used to rate drop packets
-    size_t          rate;
-    int             surpressCount;        // number of messages rate supressed
-    unsigned        send_time, send_delta;    // used to rate drop async packets
-    unsigned        frameflags;
-
-    edict_t         *edict;                 // EDICT_NUM(clientnum+1)
-    char            name[MAX_CLIENT_NAME];  // extracted from userinfo,
-    // high bits masked
-    int             messagelevel;       // for filtering printed messages
-    int             number;             // client slot number
-
-    int             settings[CLS_MAX];
-
-    msgEsFlags_t    esFlags;
-
+    // frame encoding
     client_frame_t  frames[UPDATE_BACKUP];    // updates can be delta'd from here
     unsigned        frames_sent, frames_acked, frames_nodelta;
     int             framenum;
 #if USE_FPS
     int             framediv;
 #endif
+    unsigned        frameflags;
 
-    byte            *download; // file being downloaded
-    int             downloadsize; // total bytes (can't use EOF because of paks)
-    int             downloadcount; // bytes sent
-    char            *downloadname; // name of the file
+    // rate dropping
+    size_t          message_size[RATE_MESSAGES];    // used to rate drop normal packets
+    int             suppress_count;                 // number of messages rate suppressed
+    unsigned        send_time, send_delta;          // used to rate drop async packets
 
-    unsigned        lastmessage; // svs.realtime when packet was last received
+    // current download
+    byte            *download;      // file being downloaded
+    int             downloadsize;   // total bytes (can't use EOF because of paks)
+    int             downloadcount;  // bytes sent
+    char            *downloadname;  // name of the file
 
-    int             challenge; // challenge of this user, randomly generated
-    int             protocol; // major version
-    int             version; // minor version
+    // protocol stuff
+    int             challenge;  // challenge of this user, randomly generated
+    int             protocol;   // major version
+    int             version;    // minor version
+    int             settings[CLS_MAX];
 
-    time_t          connect_time;
-
-    // spectator speed, etc
-    pmoveParams_t    pmp;
+    pmoveParams_t   pmp;        // spectator speed, etc
+    msgEsFlags_t    esFlags;    // entity protocol flags
 
     // packetized messages
     list_t              msg_free_list;
     list_t              msg_unreliable_list;
     list_t              msg_reliable_list;
     message_packet_t    *msg_pool;
-    size_t              msg_unreliable_bytes; // total size of unreliable datagram
-    size_t              msg_dynamic_bytes; // total size of dynamic memory allocated
+    size_t              msg_unreliable_bytes;   // total size of unreliable datagram
+    size_t              msg_dynamic_bytes;      // total size of dynamic memory allocated
 
-    // baselines are allocated per client
+    // per-client baseline chunks
     entity_state_t  *baselines[SV_BASELINES_CHUNKS];
 
     // server state pointers (hack for MVD channels implementation)
@@ -335,8 +334,12 @@ typedef struct client_s {
     void            (*WriteFrame)(struct client_s *);
     void            (*WriteDatagram)(struct client_s *);
 
+    // netchan
     netchan_t       *netchan;
     int             numpackets; // for that nasty packetdup hack
+
+    // misc
+    time_t          connect_time; // time of initial connect
 
 #if USE_AC_SERVER
     qboolean        ac_valid;
