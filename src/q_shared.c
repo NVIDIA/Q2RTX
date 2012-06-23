@@ -946,8 +946,8 @@ key and returns the associated value, or an empty string.
 */
 char *Info_ValueForKey(const char *s, const char *key)
 {
-    static char value[4][MAX_INFO_STRING];  // use 4 buffers so compares
-    // work without stomping on each other
+    // use 4 buffers so compares work without stomping on each other
+    static char value[4][MAX_INFO_STRING];
     static int  valueindex;
     char        pkey[MAX_INFO_STRING];
     char        *o;
@@ -959,7 +959,7 @@ char *Info_ValueForKey(const char *s, const char *key)
         o = pkey;
         while (*s != '\\') {
             if (!*s)
-                return "";
+                goto fail;
             *o++ = *s++;
         }
         *o = 0;
@@ -975,11 +975,14 @@ char *Info_ValueForKey(const char *s, const char *key)
             return value[valueindex & 3];
 
         if (!*s)
-            return "";
+            goto fail;
         s++;
     }
 
-    return "";
+fail:
+    o = value[valueindex & 3];
+    *o = 0;
+    return o;
 }
 
 /*
