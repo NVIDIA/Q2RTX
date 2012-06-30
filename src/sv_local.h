@@ -541,9 +541,6 @@ voidpf SV_Zalloc OF((voidpf opaque, uInt items, uInt size));
 void SV_Zfree OF((voidpf opaque, voidpf address));
 #endif
 
-void Master_Heartbeat(void);
-void Master_Packet(void);
-
 //
 // sv_init.c
 //
