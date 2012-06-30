@@ -32,6 +32,7 @@ cvar_t  *cl_gunalpha;
 cvar_t  *cl_maxfps;
 cvar_t  *cl_async;
 cvar_t  *r_maxfps;
+cvar_t  *cl_autopause;
 
 cvar_t  *cl_kickangles;
 cvar_t  *cl_rollhack;
@@ -2611,6 +2612,7 @@ static void CL_InitLocal(void)
     cl_async->changed = cl_sync_changed;
     r_maxfps = Cvar_Get("r_maxfps", "0", 0);
     r_maxfps->changed = cl_sync_changed;
+    cl_autopause = Cvar_Get("cl_autopause", "1", 0);
     cl_rollhack = Cvar_Get("cl_rollhack", "1", 0);
     cl_noglow = Cvar_Get("cl_noglow", "0", 0);
     cl_nolerp = Cvar_Get("cl_nolerp", "0", 0);
@@ -2902,7 +2904,7 @@ void CL_CheckForPause(void)
 
     if (cls.key_dest & (KEY_CONSOLE | KEY_MENU)) {
         // only pause in single player
-        if (cl_paused->integer == 0) {
+        if (cl_paused->integer == 0 && cl_autopause->integer) {
             Cvar_Set("cl_paused", "1");
         }
     } else if (cl_paused->integer == 1) {
