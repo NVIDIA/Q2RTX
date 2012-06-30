@@ -214,7 +214,7 @@ static neterr_t os_accept(qsocket_t sock, qsocket_t *newsock, netadr_t *from)
 {
     struct sockaddr_in addr;
     int addrlen;
-    int s;
+    SOCKET s;
 
     memset(&addr, 0, sizeof(addr));
     addrlen = sizeof(addr);
