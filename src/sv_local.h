@@ -269,6 +269,7 @@ typedef struct client_s {
     char            name[MAX_CLIENT_NAME];      // extracted from userinfo, high bits masked
     int             messagelevel;               // for filtering printed messages
     size_t          rate;
+    ratelimit_t     ratelimit_namechange;       // for suppressing "foo changed name" flood
 
     // console var probes
     char            *version_string;

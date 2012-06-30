@@ -100,6 +100,10 @@ sv_rcon_limit::
     Limits the rate at which server responds to invalid rcon commands. Default
     value is 1 invalid command per second.
 
+sv_namechange_limit::
+    Limits the rate at which clients are permitted to change their name.
+    Default value is 5 name changes per minute.
+
 sv_password::
     If not empty, allows only authenticated clients to connect.  Authenticated
     clients are allowed to occupy reserved slots, see below.  Clients set their

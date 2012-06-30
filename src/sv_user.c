@@ -1264,7 +1264,9 @@ static void SV_UpdateUserinfo(void)
 
     // validate name
     s = Info_ValueForKey(sv_client->userinfo, "name");
-    if (COM_IsWhite(s)) {
+    s[MAX_CLIENT_NAME - 1] = 0;
+    if (COM_IsWhite(s) || (sv_client->name[0] && strcmp(sv_client->name, s) &&
+                           SV_RateLimited(&sv_client->ratelimit_namechange))) {
         if (!sv_client->name[0]) {
             SV_DropClient(sv_client, "malformed name");
             return;
@@ -1273,6 +1275,10 @@ static void SV_UpdateUserinfo(void)
             SV_DropClient(sv_client, "oversize userinfo");
             return;
         }
+        if (COM_IsWhite(s))
+            SV_ClientPrintf(sv_client, PRINT_HIGH, "You can't have an empty name.\n");
+        else
+            SV_ClientPrintf(sv_client, PRINT_HIGH, "You can't change your name too often.\n");
         SV_ClientCommand(sv_client, "set name \"%s\"\n", sv_client->name);
     }
 

@@ -88,6 +88,7 @@ cvar_t  *sv_status_show;
 cvar_t  *sv_uptime;
 cvar_t  *sv_auth_limit;
 cvar_t  *sv_rcon_limit;
+cvar_t  *sv_namechange_limit;
 
 cvar_t  *g_features;
 
@@ -1073,6 +1074,8 @@ static void SVC_DirectConnect(void)
     // send the connect packet to the client
     send_connect_packet(newcl, params.nctype);
 
+    SV_RateInit(&newcl->ratelimit_namechange, sv_namechange_limit->string);
+
     SV_InitClientSend(newcl);
 
     if (newcl->protocol == PROTOCOL_VERSION_DEFAULT) {
@@ -1949,6 +1952,15 @@ static void init_rate_limits(void)
     SV_RateInit(&svs.ratelimit_rcon, sv_rcon_limit->string);
 }
 
+static void sv_namechange_limit_changed(cvar_t *self)
+{
+    client_t *client;
+
+    FOR_EACH_CLIENT(client) {
+        SV_RateInit(&client->ratelimit_namechange, self->string);
+    }
+}
+
 #if USE_SYSCON
 static void sv_hostname_changed(cvar_t *self)
 {
@@ -2066,6 +2078,9 @@ void SV_Init(void)
 
     sv_rcon_limit = Cvar_Get("sv_rcon_limit", "1", 0);
     sv_rcon_limit->changed = sv_rcon_limit_changed;
+
+    sv_namechange_limit = Cvar_Get("sv_namechange_limit", "5/min", 0);
+    sv_namechange_limit->changed = sv_namechange_limit_changed;
 
     Cvar_Get("sv_features", va("%d", SV_FEATURES), CVAR_ROM);
     g_features = Cvar_Get("g_features", "0", CVAR_ROM);
