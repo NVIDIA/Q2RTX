@@ -289,7 +289,7 @@ void CL_AddNetgraph(void)
     for (i = 0; i < cls.netchan->dropped; i++)
         SCR_DebugGraph(30, 0x40);
 
-    //for (i=0; i<cl.surpressCount; i++)
+    //for (i=0; i<cl.suppressCount; i++)
     //  SCR_DebugGraph (30, 0xdf);
 
     // see what the latency was on this packet
@@ -541,7 +541,7 @@ void SCR_LagSample(void)
         lag.head++;
     }
 
-    if (cl.frameflags & FF_SURPRESSED) {
+    if (cl.frameflags & FF_SUPPRESSED) {
         ping |= LAG_WARN_BIT;
     }
     lag.samples[lag.head % LAG_WIDTH] = ping;
@@ -848,7 +848,7 @@ static void draw_turtle(void)
     }
 
     if (scr_showturtle->integer > 1) {
-        DF(SURPRESSED)
+        DF(SUPPRESSED)
     }
     DF(CLIENTPRED)
     if (scr_showturtle->integer > 1) {

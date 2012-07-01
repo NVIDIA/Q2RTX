@@ -191,7 +191,7 @@ static void CL_ParseFrame(int extrabits)
 {
     uint32_t bits, extraflags;
     int     currentframe, deltaframe,
-            delta, surpressed;
+            delta, suppressed;
     server_frame_t  frame, *oldframe;
     player_state_t  *from;
     int     length;
@@ -200,7 +200,7 @@ static void CL_ParseFrame(int extrabits)
 
     cl.frameflags = 0;
 
-    surpressed = 0;
+    suppressed = 0;
     extraflags = 0;
     if (cls.serverProtocol > PROTOCOL_VERSION_DEFAULT) {
         bits = MSG_ReadLong();
@@ -216,26 +216,26 @@ static void CL_ParseFrame(int extrabits)
 
         bits = MSG_ReadByte();
 
-        surpressed = bits & SURPRESSCOUNT_MASK;
+        suppressed = bits & SUPPRESSCOUNT_MASK;
         if (cls.serverProtocol == PROTOCOL_VERSION_Q2PRO) {
-            if (surpressed & FF_CLIENTPRED) {
+            if (suppressed & FF_CLIENTPRED) {
                 // CLIENTDROP is implied, don't draw both
-                surpressed &= ~FF_CLIENTDROP;
+                suppressed &= ~FF_CLIENTDROP;
             }
-            cl.frameflags |= surpressed;
-        } else if (surpressed) {
-            cl.frameflags |= FF_SURPRESSED;
+            cl.frameflags |= suppressed;
+        } else if (suppressed) {
+            cl.frameflags |= FF_SUPPRESSED;
         }
-        extraflags = (extrabits << 4) | (bits >> SURPRESSCOUNT_BITS);
+        extraflags = (extrabits << 4) | (bits >> SUPPRESSCOUNT_BITS);
     } else {
         currentframe = MSG_ReadLong();
         deltaframe = MSG_ReadLong();
 
         // BIG HACK to let old demos continue to work
         if (cls.serverProtocol != PROTOCOL_VERSION_OLD) {
-            surpressed = MSG_ReadByte();
-            if (surpressed) {
-                cl.frameflags |= FF_SURPRESSED;
+            suppressed = MSG_ReadByte();
+            if (suppressed) {
+                cl.frameflags |= FF_SUPPRESSED;
             }
         }
     }

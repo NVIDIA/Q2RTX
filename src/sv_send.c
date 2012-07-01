@@ -76,9 +76,9 @@ static qboolean SV_RateDrop(client_t *client)
 #endif
 
     if (total > client->rate) {
-        SV_DPrintf(0, "Frame %d surpressed for %s (total = %"PRIz")\n",
+        SV_DPrintf(0, "Frame %d suppressed for %s (total = %"PRIz")\n",
                    client->framenum, client->name, total);
-        client->frameflags |= FF_SURPRESSED;
+        client->frameflags |= FF_SUPPRESSED;
         client->suppress_count++;
         client->message_size[client->framenum % RATE_MESSAGES] = 0;
         return qtrue;
@@ -852,7 +852,7 @@ void SV_SendClientMessages(void)
 
         // don't write any frame data until all fragments are sent
         if (client->netchan->fragment_pending) {
-            client->frameflags |= FF_SURPRESSED;
+            client->frameflags |= FF_SUPPRESSED;
             cursize = client->netchan->TransmitNextFragment(client->netchan);
             SV_CalcSendTime(client, cursize);
             goto advance;

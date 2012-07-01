@@ -325,7 +325,7 @@ scr_draw2d::
 scr_showturtle::
     Toggles drawing of various network error conditions at the lower left
     corner of the screen. Default value is 1 (draw all errors except of
-    SURPRESSED, CLIENTDROP and SERVERDROP). Values higher than 1 draw all
+    SUPPRESSED, CLIENTDROP and SERVERDROP). Values higher than 1 draw all
     errors.
 
 .Types of network errors
@@ -338,7 +338,7 @@ CLIENTPRED:: Many packets from client to server were dropped by the network.
              Server ran out of backup commands and had to predict player's movement.
 NODELTA::    Server sent an uncompressed frame. Typically occurs during
              a heavy lag, when a lot of packets are dropped by the network.
-SURPRESSED:: Server surpressed packets to client because rate limit was exceeded.
+SUPPRESSED:: Server suppressed packets to client because rate limit was exceeded.
 BADFRAME::   Server sent an invalid delta compressed frame.
 OLDFRAME::   Server sent a delta compressed frame that is too old and
              can't be recovered.

@@ -221,7 +221,7 @@ void SV_WriteFrameToClient_Enhanced(client_t *client)
     client_frame_t  *frame, *oldframe;
     player_state_t  *oldstate;
     uint32_t        extraflags;
-    int             delta, surpressed;
+    int             delta, suppressed;
     byte            *b1, *b2;
     msgPsFlags_t    psFlags;
     int             clientEntityNum;
@@ -281,9 +281,9 @@ void SV_WriteFrameToClient_Enhanced(client_t *client)
         if (client->settings[CLS_NOPREDICT]) {
             psFlags |= MSG_PS_IGNORE_PREDICTION;
         }
-        surpressed = client->frameflags;
+        suppressed = client->frameflags;
     } else {
-        surpressed = client->suppress_count;
+        suppressed = client->suppress_count;
     }
 
     // delta encode the playerstate
@@ -309,8 +309,8 @@ void SV_WriteFrameToClient_Enhanced(client_t *client)
     *b1 = svc_frame | (((extraflags & 0x70) << 1));
 
     // save 4 low bits of extraflags
-    *b2 = (surpressed & SURPRESSCOUNT_MASK) |
-          ((extraflags & 0x0F) << SURPRESSCOUNT_BITS);
+    *b2 = (suppressed & SUPPRESSCOUNT_MASK) |
+          ((extraflags & 0x0F) << SUPPRESSCOUNT_BITS);
 
     client->suppress_count = 0;
     client->frameflags = 0;

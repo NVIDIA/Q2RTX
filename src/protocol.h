@@ -77,8 +77,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FRAMENUM_BITS           27
 #define FRAMENUM_MASK           ((1 << FRAMENUM_BITS) - 1)
 
-#define SURPRESSCOUNT_BITS      4
-#define SURPRESSCOUNT_MASK      ((1 << SURPRESSCOUNT_BITS) - 1)
+#define SUPPRESSCOUNT_BITS      4
+#define SUPPRESSCOUNT_MASK      ((1 << SUPPRESSCOUNT_BITS) - 1)
 
 #define MAX_PACKET_ENTITIES     128
 #define MAX_PARSE_ENTITIES      2048    // should be MAX_PACKET_ENTITIES * UPDATE_BACKUP
@@ -363,8 +363,8 @@ typedef enum {
 } serverSetting_t;
 
 // q2pro frame flags sent by the server
-// only SURPRESSCOUNT_BITS can be used
-#define FF_SURPRESSED   (1<<0)
+// only SUPPRESSCOUNT_BITS can be used
+#define FF_SUPPRESSED   (1<<0)
 #define FF_CLIENTDROP   (1<<1)
 #define FF_CLIENTPRED   (1<<2)
 #define FF_RESERVED     (1<<3)
