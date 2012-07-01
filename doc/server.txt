@@ -75,24 +75,30 @@ sv_status_show::
        - 2 — respond with server info and player list
 
 sv_status_limit::
-    Maximum number of status queries server should respond to per sampling
-    period. Default value is 15.
+    Limits the rate at which server responds to status queries. Default value
+    is 15 queries per second.
 
 .Rate limits specification
 **************************
-Full syntax for specifying rate limits is: '<limit>[/<period>[sec|min|hour]]'.
-Only _limit_ value is mandatory. Default sampling period is one second. Custom
-_period_ can be specified after a slash, with optional _sec_, _min_, or _hour_
-suffix (default units are seconds).
+Rate limiting is implemented as a simple token bucket filter. Full syntax for
+specifying rate limits is: '<limit>[/<period>[sec|min|hour]][*<burst>]'. Only
+the _limit_ argument is mandatory. Zero _limit_ means rate is not limited.
+
+Default period is one second. Custom _period_ can be specified after a slash,
+with optional _sec_, _min_, or _hour_ suffix (default units are seconds).
+
+Default burst value is 5. Custom _burst_ can be specified after an asterisk.
+Burst specifies initial number of extra packets that are permitted even if
+they arrive at rate higher than allowed.
 **************************
 
 sv_auth_limit::
-    Maximum number of invalid authentication attempts allowed per sampling
-    period. Default value is 1.
+    Limits the rate of client connection attempts with invalid password.
+    Default value is 1 invalid authentication attempt per second.
 
 sv_rcon_limit::
-    Maximum number of invalid rcon commands allowed per sampling period.
-    Default value is 1.
+    Limits the rate at which server responds to invalid rcon commands. Default
+    value is 1 invalid command per second.
 
 sv_password::
     If not empty, allows only authenticated clients to connect.  Authenticated

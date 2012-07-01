@@ -239,6 +239,13 @@ typedef struct {
 #define AVG_PING(cl) (cl->avg_ping_count ? \
     cl->avg_ping_time / cl->avg_ping_count : cl->ping)
 
+typedef struct {
+    unsigned    time;
+    unsigned    credit;
+    unsigned    credit_cap;
+    unsigned    cost;
+} ratelimit_t;
+
 typedef struct client_s {
     list_t          entry;
 
@@ -371,13 +378,6 @@ typedef struct {
     unsigned    challenge;
     unsigned    time;
 } challenge_t;
-
-typedef struct {
-    unsigned    limit;
-    unsigned    period;
-    unsigned    time;
-    unsigned    count;
-} ratelimit_t;
 
 typedef struct {
     list_t      entry;
@@ -527,8 +527,9 @@ void SV_InitOperatorCommands(void);
 
 void SV_UserinfoChanged(client_t *cl);
 
-//qboolean SV_RateLimited(ratelimit_t *r);
-//void SV_RateInit(ratelimit_t *r, const char *s);
+qboolean SV_RateLimited(ratelimit_t *r);
+void SV_RateRecharge(ratelimit_t *r);
+void SV_RateInit(ratelimit_t *r, const char *s);
 
 addrmatch_t *SV_MatchAddress(list_t *list, netadr_t *address);
 

@@ -242,69 +242,126 @@ void SV_DropClient(client_t *client, const char *reason)
 }
 
 
+//============================================================================
+
+// highest power of two that avoids credit overflow for 1 day
+#define CREDITS_PER_MSEC    32
+#define CREDITS_PER_SEC     (CREDITS_PER_MSEC * 1000)
+
+// allows rates up to 10,000 hits per second
+#define RATE_LIMIT_SCALE    10000
+
 /*
-==============================================================================
+===============
+SV_RateLimited
 
-CONNECTIONLESS COMMANDS
-
-==============================================================================
+Implements simple token bucket filter. Inspired by xt_limit.c from the Linux
+kernel. Returns true if limit is exceeded.
+===============
 */
-
-static qboolean SV_RateLimited(ratelimit_t *r)
+qboolean SV_RateLimited(ratelimit_t *r)
 {
-    if (!r->limit) {
-        return qfalse;
-    }
-    if (svs.realtime - r->time > r->period) {
-        r->count = 0;
-        r->time = svs.realtime;
-        return qfalse;
-    }
+    r->credit += (svs.realtime - r->time) * CREDITS_PER_MSEC;
+    r->time = svs.realtime;
+    if (r->credit > r->credit_cap)
+        r->credit = r->credit_cap;
 
-    if (r->count < r->limit) {
+    if (r->credit >= r->cost) {
+        r->credit -= r->cost;
         return qfalse;
     }
 
     return qtrue;
 }
 
-// <limit>[/<period>[sec|min|hour]]
-static void SV_RateInit(ratelimit_t *r, const char *s)
+/*
+===============
+SV_RateRecharge
+
+Reverts the effect of SV_RateLimited.
+===============
+*/
+void SV_RateRecharge(ratelimit_t *r)
 {
-    unsigned limit;
-    unsigned period, scale;
+    r->credit += r->cost;
+    if (r->credit > r->credit_cap)
+        r->credit = r->credit_cap;
+}
+
+static unsigned rate2credits(unsigned rate)
+{
+    if (rate > UINT_MAX / CREDITS_PER_SEC)
+        return (rate / RATE_LIMIT_SCALE) * CREDITS_PER_SEC;
+
+    return (rate * CREDITS_PER_SEC) / RATE_LIMIT_SCALE;
+}
+
+/*
+===============
+SV_RateInit
+
+Full syntax is: <limit>[/<period>[sec|min|hour]][*<burst>]
+===============
+*/
+void SV_RateInit(ratelimit_t *r, const char *s)
+{
+    unsigned limit, period, mult, burst, rate;
     char *p;
 
     limit = strtoul(s, &p, 10);
     if (*p == '/') {
         period = strtoul(p + 1, &p, 10);
-        if (*p == 0 || *p == 's' || *p == 'S') {
-            scale = 1000;
+        if (*p == 's' || *p == 'S') {
+            mult = 1;
+            p++;
         } else if (*p == 'm' || *p == 'M') {
-            scale = 60 * 1000;
+            mult = 60;
+            p++;
         } else if (*p == 'h' || *p == 'H') {
-            scale = 60 * 60 * 1000;
+            mult = 60 * 60;
+            p++;
         } else {
-            // everything else is milliseconds
-            scale = 1;
+            // everything else are seconds
+            mult = 1;
         }
-        if (period > UINT_MAX / scale) {
-            period = UINT_MAX;
-        } else {
-            if (!period) {
-                period = 1;
-            }
-            period *= scale;
-        }
+        if (!period)
+            period = 1;
     } else {
-        // default is one second
-        period = 1000;
+        // default period is one second
+        period = 1;
+        mult = 1;
     }
 
-    r->count = 0;
+    if (!limit) {
+        // unlimited
+        memset(r, 0, sizeof(*r));
+        return;
+    }
+
+    if (period > UINT_MAX / (RATE_LIMIT_SCALE * mult)) {
+        Com_Printf("Period too large: %u\n", period);
+        return;
+    }
+
+    rate = (RATE_LIMIT_SCALE * period * mult) / limit;
+
+    p = strchr(p, '*');
+    if (p) {
+        burst = strtoul(p + 1, NULL, 10);
+    } else {
+        // default burst is 5 hits
+        burst = 5;
+    }
+
+    if (burst > UINT_MAX / rate) {
+        Com_Printf("Burst too large: %u\n", burst);
+        return;
+    }
+
     r->time = svs.realtime;
-    r->limit = limit;
-    r->period = period;
+    r->credit = rate2credits(rate * burst);
+    r->credit_cap = rate2credits(rate * burst);
+    r->cost = rate2credits(rate);
 }
 
 addrmatch_t *SV_MatchAddress(list_t *list, netadr_t *addr)
@@ -321,6 +378,14 @@ addrmatch_t *SV_MatchAddress(list_t *list, netadr_t *addr)
 
     return NULL;
 }
+
+/*
+==============================================================================
+
+CONNECTIONLESS COMMANDS
+
+==============================================================================
+*/
 
 /*
 ===============
@@ -412,8 +477,6 @@ static void SVC_Status(void)
                     NET_AdrToString(&net_from));
         return;
     }
-
-    svs.ratelimit_status.count++;
 
     // write the packet header
     memcpy(buffer, "\xff\xff\xff\xffprint\n", 10);
@@ -755,10 +818,12 @@ static qboolean parse_userinfo(conn_params_t *params, char *userinfo)
         if (SV_RateLimited(&svs.ratelimit_auth))
             return reject("Invalid password.\n");
 
-        if (strcmp(sv_password->string, s)) {
-            svs.ratelimit_auth.count++;
+        if (strcmp(sv_password->string, s))
             return reject("Invalid password.\n");
-        }
+
+        // valid connect packets are not rate limited
+        SV_RateRecharge(&svs.ratelimit_auth);
+
         // allow them to use reserved slots
     } else if (!sv_reserved_password->string[0] ||
                strcmp(sv_reserved_password->string, s)) {
@@ -1032,15 +1097,15 @@ static void SVC_DirectConnect(void)
     newcl->min_ping = 9999;
 }
 
-static int Rcon_Validate(void)
+static qboolean rcon_valid(void)
 {
     if (!rcon_password->string[0])
-        return 0;
+        return qfalse;
 
     if (strcmp(Cmd_Argv(1), rcon_password->string))
-        return 0;
+        return qfalse;
 
-    return 1;
+    return qtrue;
 }
 
 /*
@@ -1053,8 +1118,7 @@ Redirect all printfs.
 */
 static void SVC_RemoteCommand(void)
 {
-    int i;
-    char *string;
+    char *s;
 
     if (SV_RateLimited(&svs.ratelimit_rcon)) {
         Com_DPrintf("Dropping rcon from %s\n",
@@ -1062,22 +1126,23 @@ static void SVC_RemoteCommand(void)
         return;
     }
 
-    i = Rcon_Validate();
-    string = Cmd_RawArgsFrom(2);
-    if (i == 0) {
+    s = Cmd_RawArgsFrom(2);
+    if (!rcon_valid()) {
         Com_Printf("Invalid rcon from %s:\n%s\n",
-                   NET_AdrToString(&net_from), string);
+                   NET_AdrToString(&net_from), s);
         Netchan_OutOfBand(NS_SERVER, &net_from,
                           "print\nBad rcon_password.\n");
-        svs.ratelimit_rcon.count++;
         return;
     }
 
+    // valid rcon packets are not rate limited
+    SV_RateRecharge(&svs.ratelimit_rcon);
+
     Com_Printf("Rcon from %s:\n%s\n",
-               NET_AdrToString(&net_from), string);
+               NET_AdrToString(&net_from), s);
 
     SV_PacketRedirect();
-    Cmd_ExecuteString(&cmd_buffer, string);
+    Cmd_ExecuteString(&cmd_buffer, s);
     Com_EndRedirect();
 }
 
@@ -1866,14 +1931,17 @@ static void sv_status_limit_changed(cvar_t *self)
 {
     SV_RateInit(&svs.ratelimit_status, self->string);
 }
+
 static void sv_auth_limit_changed(cvar_t *self)
 {
     SV_RateInit(&svs.ratelimit_auth, self->string);
 }
+
 static void sv_rcon_limit_changed(cvar_t *self)
 {
     SV_RateInit(&svs.ratelimit_rcon, self->string);
 }
+
 static void init_rate_limits(void)
 {
     SV_RateInit(&svs.ratelimit_status, sv_status_limit->string);
