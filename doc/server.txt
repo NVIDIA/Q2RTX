@@ -149,7 +149,7 @@ sv_calcpings_method::
     vastly inaccurate results, depending on client settings. Using improved
     algorithm is in fact recommended, it should always give stable results
     similar to ones obtained by the ‘ping’ command line utility. Default value
-    is 1 for compatibility reasons.
+    is 2.
        - 0 — disable ping calculation entirely
        - 1 — use default ping calculation algorithm based on averaging
        - 2 — use improved algorithm based on minimum round trip times

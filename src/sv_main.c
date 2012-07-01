@@ -2046,7 +2046,7 @@ void SV_Init(void)
     sv_pad_packets = Cvar_Get("sv_pad_packets", "0", 0);
 #endif
     sv_lan_force_rate = Cvar_Get("sv_lan_force_rate", "0", CVAR_LATCH);
-    sv_calcpings_method = Cvar_Get("sv_calcpings_method", "1", 0);
+    sv_calcpings_method = Cvar_Get("sv_calcpings_method", "2", 0);
     sv_changemapcmd = Cvar_Get("sv_changemapcmd", "", 0);
 
     sv_strafejump_hack = Cvar_Get("sv_strafejump_hack", "1", CVAR_LATCH);
