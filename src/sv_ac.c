@@ -774,7 +774,7 @@ static void AC_ParseFileViolation(void)
     for (f = acs.files; f; f = f->next) {
         if (!strcmp(f->path, path)) {
             if (f->flags & ACH_REQUIRED) {
-                action = 1;
+                action = 0;
                 break;
             }
         }
