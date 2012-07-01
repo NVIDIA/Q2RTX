@@ -66,7 +66,7 @@ static void MVD_LayoutClients(mvd_client_t *client)
         "xv 16 yv 0 string2 \"    Name            RTT Status\"";
     char layout[MAX_STRING_CHARS];
     char buffer[MAX_QPATH];
-    char status[MAX_QPATH];
+    char *status1, *status2;
     size_t len, total;
     mvd_client_t *cl;
     mvd_t *mvd = client->mvd;
@@ -96,15 +96,16 @@ static void MVD_LayoutClients(mvd_client_t *client)
         if (cl->cl->state < cs_spawned) {
             continue;
         }
-        if (cl->target) {
-            strcpy(status, "-> ");
-            strcpy(status + 3, cl->target->name);
+        if (cl->target && cl->target != mvd->dummy) {
+            status1 = "-> ";
+            status2 = cl->target->name;
         } else {
-            strcpy(status, "observing");
+            status1 = "observing";
+            status2 = "";
         }
         len = Q_snprintf(buffer, sizeof(buffer),
-                         "yv %d string \"%3d %-15.15s %3d %s\"",
-                         y, i, cl->cl->name, cl->ping, status);
+                         "yv %d string \"%3d %-15.15s %3d %s%s\"",
+                         y, i, cl->cl->name, cl->ping, status1, status2);
         if (len >= sizeof(buffer)) {
             continue;
         }
