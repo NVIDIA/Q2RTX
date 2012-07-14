@@ -807,6 +807,7 @@ static qboolean parse_userinfo(conn_params_t *params, char *userinfo)
         return reject("Malformed userinfo string.\n");
 
     s = Info_ValueForKey(info, "name");
+    s[MAX_CLIENT_NAME - 1] = 0;
     if (COM_IsWhite(s))
         return reject("Please set your name before connecting.\n");
 
