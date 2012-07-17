@@ -67,8 +67,8 @@ typedef struct {
     sizebuf_t       datagram;
 
     // delta compressor buffers
-    player_state_t  *players;  // [maxclients]
-    entity_state_t  *entities; // [MAX_EDICTS]
+    player_packed_t  *players;  // [maxclients]
+    entity_packed_t  *entities; // [MAX_EDICTS]
 
     // local recorder
     qhandle_t       recording;
@@ -522,13 +522,11 @@ Initialize MVD delta compressor for the first time on the given map.
 */
 static void build_gamestate(void)
 {
-    player_state_t *ps;
-    entity_state_t *es;
     edict_t *ent;
     int i;
 
-    memset(mvd.players, 0, sizeof(player_state_t) * sv_maxclients->integer);
-    memset(mvd.entities, 0, sizeof(entity_state_t) * MAX_EDICTS);
+    memset(mvd.players, 0, sizeof(player_packed_t) * sv_maxclients->integer);
+    memset(mvd.entities, 0, sizeof(entity_packed_t) * MAX_EDICTS);
 
     // set base player states
     for (i = 0; i < sv_maxclients->integer; i++) {
@@ -538,9 +536,8 @@ static void build_gamestate(void)
             continue;
         }
 
-        ps = &mvd.players[i];
-        *ps = ent->client->ps;
-        PPS_INUSE(ps) = qtrue;
+        MSG_PackPlayer(&mvd.players[i], &ent->client->ps);
+        PPS_INUSE(&mvd.players[i]) = qtrue;
     }
 
     // set base entity states
@@ -551,9 +548,8 @@ static void build_gamestate(void)
             continue;
         }
 
-        es = &mvd.entities[i];
-        *es = ent->s;
-        es->number = i;
+        MSG_PackEntity(&mvd.entities[i], &ent->s, qfalse);
+        mvd.entities[i].number = i;
     }
 }
 
@@ -570,8 +566,8 @@ static void emit_gamestate(void)
 {
     char        *string;
     int         i, j;
-    player_state_t  *ps;
-    entity_state_t  *es;
+    player_packed_t *ps;
+    entity_packed_t *es;
     size_t      length;
     int         flags, extra, portalbytes;
     byte        portalbits[MAX_MAP_PORTAL_BYTES];
@@ -649,8 +645,7 @@ static void emit_gamestate(void)
     MSG_WriteShort(0);
 }
 
-
-static void copy_entity_state(entity_state_t *dst, const entity_state_t *src, int flags)
+static void copy_entity_state(entity_packed_t *dst, const entity_packed_t *src, int flags)
 {
     if (!(flags & MSG_ES_FIRSTPERSON)) {
         VectorCopy(src->origin, dst->origin);
@@ -681,8 +676,8 @@ clients, as well as local recorder.
 */
 static void emit_frame(void)
 {
-    player_state_t *oldps, *newps;
-    entity_state_t *oldes, *newes;
+    player_packed_t *oldps, newps;
+    entity_packed_t *oldes, newes;
     edict_t *ent;
     int flags, portalbytes;
     byte portalbits[MAX_MAP_PORTAL_BYTES];
@@ -705,10 +700,8 @@ static void emit_frame(void)
 
     // send player states
     for (i = 0; i < sv_maxclients->integer; i++) {
-        ent = EDICT_NUM(i + 1);
-
         oldps = &mvd.players[i];
-        newps = &ent->client->ps;
+        ent = EDICT_NUM(i + 1);
 
         if (!player_is_active(ent)) {
             if (PPS_INUSE(oldps)) {
@@ -719,19 +712,22 @@ static void emit_frame(void)
             continue;
         }
 
+        // quantize
+        MSG_PackPlayer(&newps, &ent->client->ps);
+
         if (PPS_INUSE(oldps)) {
             // delta update from old position
             // because the force parm is false, this will not result
             // in any bytes being emited if the player has not changed at all
-            MSG_WriteDeltaPlayerstate_Packet(oldps, newps, i, flags);
+            MSG_WriteDeltaPlayerstate_Packet(oldps, &newps, i, flags);
         } else {
             // this is a new player, send it from the last state
-            MSG_WriteDeltaPlayerstate_Packet(oldps, newps, i,
+            MSG_WriteDeltaPlayerstate_Packet(oldps, &newps, i,
                                              flags | MSG_PS_FORCE);
         }
 
         // shuffle current state to previous
-        *oldps = *newps;
+        *oldps = newps;
         PPS_INUSE(oldps) = qtrue;
     }
 
@@ -739,12 +735,10 @@ static void emit_frame(void)
 
     // send entity states
     for (i = 1; i < ge->num_edicts; i++) {
+        oldes = &mvd.entities[i];
         ent = EDICT_NUM(i);
 
-        oldes = &mvd.entities[i];
-        newes = &ent->s;
-
-        if ((ent->svflags & SVF_NOCLIENT) || !ES_INUSE(newes)) {
+        if ((ent->svflags & SVF_NOCLIENT) || !ES_INUSE(&ent->s)) {
             if (oldes->number) {
                 // the old entity isn't present in the new message
                 MSG_WriteDeltaEntity(oldes, NULL, MSG_ES_FORCE);
@@ -753,10 +747,10 @@ static void emit_frame(void)
             continue;
         }
 
-        if (newes->number != i) {
+        if (ent->s.number != i) {
             Com_WPrintf("%s: fixing ent->s.number: %d to %d\n",
-                        __func__, newes->number, i);
-            newes->number = i;
+                        __func__, ent->s.number, i);
+            ent->s.number = i;
         }
 
         // calculate flags
@@ -775,10 +769,13 @@ static void emit_frame(void)
             flags |= MSG_ES_FORCE | MSG_ES_NEWENTITY;
         }
 
-        MSG_WriteDeltaEntity(oldes, newes, flags);
+        // quantize
+        MSG_PackEntity(&newes, &ent->s, qfalse);
+
+        MSG_WriteDeltaEntity(oldes, &newes, flags);
 
         // shuffle current state to previous
-        copy_entity_state(oldes, newes, flags);
+        copy_entity_state(oldes, &newes, flags);
         oldes->number = i;
     }
 
@@ -1988,12 +1985,12 @@ void SV_MvdInit(void)
     }
 
     // allocate buffers
-    Z_TagReserve(sizeof(player_state_t) * sv_maxclients->integer +
-                 sizeof(entity_state_t) * MAX_EDICTS + MAX_MSGLEN * 2, TAG_SERVER);
+    Z_TagReserve(sizeof(player_packed_t) * sv_maxclients->integer +
+                 sizeof(entity_packed_t) * MAX_EDICTS + MAX_MSGLEN * 2, TAG_SERVER);
     SZ_Init(&mvd.message, Z_ReservedAlloc(MAX_MSGLEN), MAX_MSGLEN);
     SZ_Init(&mvd.datagram, Z_ReservedAlloc(MAX_MSGLEN), MAX_MSGLEN);
-    mvd.players = Z_ReservedAlloc(sizeof(player_state_t) * sv_maxclients->integer);
-    mvd.entities = Z_ReservedAlloc(sizeof(entity_state_t) * MAX_EDICTS);
+    mvd.players = Z_ReservedAlloc(sizeof(player_packed_t) * sv_maxclients->integer);
+    mvd.entities = Z_ReservedAlloc(sizeof(entity_packed_t) * MAX_EDICTS);
 
     // reserve the slot for dummy MVD client
     if (!sv_reserved_slots->integer) {

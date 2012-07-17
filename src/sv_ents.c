@@ -36,7 +36,7 @@ Encode a client frame onto the network channel
 =============
 SV_EmitPacketEntities
 
-Writes a delta update of an entity_state_t list to the message.
+Writes a delta update of an entity_packed_t list to the message.
 =============
 */
 static void SV_EmitPacketEntities(client_t         *client,
@@ -44,8 +44,8 @@ static void SV_EmitPacketEntities(client_t         *client,
                                   client_frame_t   *to,
                                   int              clientEntityNum)
 {
-    entity_state_t *newent;
-    const entity_state_t *oldent;
+    entity_packed_t *newent;
+    const entity_packed_t *oldent;
     unsigned i, oldindex, newindex, from_num_entities;
     int oldnum, newnum;
     msgEsFlags_t flags;
@@ -174,9 +174,9 @@ SV_WriteFrameToClient_Default
 */
 void SV_WriteFrameToClient_Default(client_t *client)
 {
-    client_frame_t      *frame, *oldframe;
-    player_state_t      *oldstate;
-    int                 lastframe;
+    client_frame_t  *frame, *oldframe;
+    player_packed_t *oldstate;
+    int             lastframe;
 
     // this is the frame we are creating
     frame = &client->frames[client->framenum & UPDATE_MASK];
@@ -219,7 +219,7 @@ SV_WriteFrameToClient_Enhanced
 void SV_WriteFrameToClient_Enhanced(client_t *client)
 {
     client_frame_t  *frame, *oldframe;
-    player_state_t  *oldstate;
+    player_packed_t *oldstate;
     uint32_t        extraflags;
     int             delta, suppressed;
     byte            *b1, *b2;
@@ -329,7 +329,7 @@ Build a client frame structure
 
 #if USE_FPS
 static void
-fix_old_origin(client_t *client, entity_state_t *state, edict_t *ent, int e)
+fix_old_origin(client_t *client, entity_packed_t *state, edict_t *ent, int e)
 {
     server_entity_t *sent = &sv.entities[e];
     int i, j, k;
@@ -354,7 +354,7 @@ fix_old_origin(client_t *client, entity_state_t *state, edict_t *ent, int e)
 
     if (sent->create_framenum > sv.framenum - client->framediv) {
         // created between client frames
-        VectorCopy(sent->create_origin, state->old_origin);
+        VectorScale(sent->create_origin, 8.0f, state->old_origin);
         return;
     }
 
@@ -363,7 +363,7 @@ fix_old_origin(client_t *client, entity_state_t *state, edict_t *ent, int e)
         j = sv.framenum - (client->framediv - i);
         k = j & ENT_HISTORY_MASK;
         if (sent->history[k].framenum == j) {
-            VectorCopy(sent->history[k].origin, state->old_origin);
+            VectorScale(sent->history[k].origin, 8.0f, state->old_origin);
             return;
         }
     }
@@ -387,7 +387,7 @@ void SV_BuildClientFrame(client_t *client)
     edict_t     *ent;
     edict_t     *clent;
     client_frame_t  *frame;
-    entity_state_t  *state;
+    entity_packed_t *state;
     player_state_t  *ps;
     int         l;
     int         clientarea, clientcluster;
@@ -423,7 +423,7 @@ void SV_BuildClientFrame(client_t *client)
     }
 
     // grab the current player_state_t
-    frame->ps = *ps;
+    MSG_PackPlayer(&frame->ps, ps);
 
     // grab the current clientNum
     if (g_features->integer & GMF_CLIENTNUM) {
@@ -507,7 +507,7 @@ void SV_BuildClientFrame(client_t *client)
 
         // add it to the circular client_entities array
         state = &svs.entities[svs.next_entity % svs.num_entities];
-        *state = ent->s;
+        MSG_PackEntity(state, &ent->s, Q2PRO_SHORTANGLES(client, e));
 
 #if USE_FPS
         // fix old entity origins for clients not running at

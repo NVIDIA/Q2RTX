@@ -37,10 +37,9 @@ Handles byte ordering and avoids alignment errors
 ==============================================================================
 */
 
-const entity_state_t    nullEntityState;
-const player_state_t    nullPlayerState;
+const entity_packed_t   nullEntityState;
+const player_packed_t   nullPlayerState;
 const usercmd_t         nullUserCmd;
-
 
 /*
 =============
@@ -205,16 +204,6 @@ MSG_WriteAngle
 void MSG_WriteAngle(float f)
 {
     MSG_WriteByte(ANGLE2BYTE(f));
-}
-
-/*
-=============
-MSG_WriteAngle16
-=============
-*/
-static inline void MSG_WriteAngle16(float f)
-{
-    MSG_WriteShort(ANGLE2SHORT(f));
 }
 
 #if USE_CLIENT
@@ -466,57 +455,56 @@ void MSG_WriteDir(const vec3_t dir)
     MSG_WriteByte(best);
 }
 
-// values transmitted over network are discrete, so
-// we use special macros to check for delta conditions
-#define delta_angle(a,b) (ANGLE2BYTE(b)!=ANGLE2BYTE(a))
-#define delta_angle16(a,b) (ANGLE2SHORT(b)!=ANGLE2SHORT(a))
-#define delta_angle16_v(a,b) \
-   (delta_angle16(a[0],b[0])|| \
-    delta_angle16(a[1],b[1])|| \
-    delta_angle16(a[2],b[2]))
-#define delta_coord(a,b) (COORD2SHORT(b)!=COORD2SHORT(a))
-#define delta_pos_v(a,b) \
-   (delta_coord(a[0],b[0])|| \
-    delta_coord(a[1],b[1])|| \
-    delta_coord(a[2],b[2]))
-#define delta_ofs(a,b) ((int)((b)*4)!=(int)((a)*4))
-#define delta_ofs_v(a,b) \
-   (delta_ofs(a[0],b[0])|| \
-    delta_ofs(a[1],b[1])|| \
-    delta_ofs(a[2],b[2]))
-#define delta_blend(a,b) ((int)((b)*255)!=(int)((a)*255))
-#define delta_blend_v(a,b) \
-   (delta_blend(a[0],b[0])|| \
-    delta_blend(a[1],b[1])|| \
-    delta_blend(a[2],b[2])|| \
-    delta_blend(a[3],b[3]))
-#define delta_fov(a,b) ((int)(b)!=(int)(a))
-
-/*
-==================
-MSG_WriteDeltaEntity
-
-Writes part of a packetentities message.
-Can delta from either a baseline or a previous packet_entity
-==================
-*/
-void MSG_WriteDeltaEntity(const entity_state_t *from,
-                          const entity_state_t *to,
-                          msgEsFlags_t         flags)
+void MSG_PackEntity(entity_packed_t *out, const entity_state_t *in, qboolean short_angles)
 {
-    unsigned    bits, mask;
+    if (in->number < 1 || in->number >= MAX_EDICTS)
+        Com_Error(ERR_DROP, "%s: bad number: %d", __func__, in->number);
+
+    out->number = in->number;
+    out->origin[0] = COORD2SHORT(in->origin[0]);
+    out->origin[1] = COORD2SHORT(in->origin[1]);
+    out->origin[2] = COORD2SHORT(in->origin[2]);
+    if (short_angles) {
+        out->angles[0] = ANGLE2SHORT(in->angles[0]);
+        out->angles[1] = ANGLE2SHORT(in->angles[1]);
+        out->angles[2] = ANGLE2SHORT(in->angles[2]);
+    } else {
+        out->angles[0] = ANGLE2BYTE(in->angles[0]) << 8;
+        out->angles[1] = ANGLE2BYTE(in->angles[1]) << 8;
+        out->angles[2] = ANGLE2BYTE(in->angles[2]) << 8;
+    }
+    out->old_origin[0] = COORD2SHORT(in->old_origin[0]);
+    out->old_origin[1] = COORD2SHORT(in->old_origin[1]);
+    out->old_origin[2] = COORD2SHORT(in->old_origin[2]);
+    out->modelindex = in->modelindex;
+    out->modelindex2 = in->modelindex2;
+    out->modelindex3 = in->modelindex3;
+    out->modelindex4 = in->modelindex4;
+    out->skinnum = in->skinnum;
+    out->effects = in->effects;
+    out->renderfx = in->renderfx;
+    out->solid = in->solid;
+    out->frame = in->frame;
+    out->sound = in->sound;
+    out->event = in->event;
+}
+
+void MSG_WriteDeltaEntity(const entity_packed_t *from,
+                          const entity_packed_t *to,
+                          msgEsFlags_t          flags)
+{
+    uint32_t    bits, mask;
 
     if (!to) {
-        if (!from) {
+        if (!from)
             Com_Error(ERR_DROP, "%s: NULL", __func__);
-        }
-        if (from->number < 1 || from->number >= MAX_EDICTS) {
+
+        if (from->number < 1 || from->number >= MAX_EDICTS)
             Com_Error(ERR_DROP, "%s: bad number: %d", __func__, from->number);
-        }
+
         bits = U_REMOVE;
-        if (from->number >= 256) {
+        if (from->number & 0xff00)
             bits |= U_NUMBER16 | U_MOREBITS1;
-        }
 
         MSG_WriteByte(bits & 255);
         if (bits & 0x0000ff00)
@@ -530,89 +518,84 @@ void MSG_WriteDeltaEntity(const entity_state_t *from,
         return; // remove entity
     }
 
-    if (to->number < 1 || to->number >= MAX_EDICTS) {
+    if (to->number < 1 || to->number >= MAX_EDICTS)
         Com_Error(ERR_DROP, "%s: bad number: %d", __func__, to->number);
-    }
 
-    if (!from) {
+    if (!from)
         from = &nullEntityState;
-    }
 
 // send an update
     bits = 0;
 
     if (!(flags & MSG_ES_FIRSTPERSON)) {
-        if (delta_coord(to->origin[0], from->origin[0]))
+        if (to->origin[0] != from->origin[0])
             bits |= U_ORIGIN1;
-        if (delta_coord(to->origin[1], from->origin[1]))
+        if (to->origin[1] != from->origin[1])
             bits |= U_ORIGIN2;
-        if (delta_coord(to->origin[2], from->origin[2]))
+        if (to->origin[2] != from->origin[2])
             bits |= U_ORIGIN3;
 
         if (flags & MSG_ES_SHORTANGLES) {
-            if (delta_angle16(to->angles[0], from->angles[0]))
+            if (to->angles[0] != from->angles[0])
                 bits |= U_ANGLE1 | U_ANGLE16;
-            if (delta_angle16(to->angles[1], from->angles[1]))
+            if (to->angles[1] != from->angles[1])
                 bits |= U_ANGLE2 | U_ANGLE16;
-            if (delta_angle16(to->angles[2], from->angles[2]))
+            if (to->angles[2] != from->angles[2])
                 bits |= U_ANGLE3 | U_ANGLE16;
         } else {
-            if (delta_angle(to->angles[0], from->angles[0]))
+            if (to->angles[0] != from->angles[0])
                 bits |= U_ANGLE1;
-            if (delta_angle(to->angles[1], from->angles[1]))
+            if (to->angles[1] != from->angles[1])
                 bits |= U_ANGLE2;
-            if (delta_angle(to->angles[2], from->angles[2]))
+            if (to->angles[2] != from->angles[2])
                 bits |= U_ANGLE3;
         }
 
         if (flags & MSG_ES_NEWENTITY) {
-            if (delta_pos_v(to->old_origin, from->origin)) {
+            if (to->old_origin[0] != from->origin[0] ||
+                to->old_origin[1] != from->origin[1] ||
+                to->old_origin[2] != from->origin[2])
                 bits |= U_OLDORIGIN;
-            }
         }
     }
 
-    if (flags & MSG_ES_UMASK) {
+    if (flags & MSG_ES_UMASK)
         mask = 0xffff0000;
-    } else {
+    else
         mask = 0xffff8000;  // don't confuse old clients
-    }
 
     if (to->skinnum != from->skinnum) {
-        if (to->skinnum & mask) {
+        if (to->skinnum & mask)
             bits |= U_SKIN8 | U_SKIN16;
-        } else if (to->skinnum & 0x0000ff00) {
+        else if (to->skinnum & 0x0000ff00)
             bits |= U_SKIN16;
-        } else {
+        else
             bits |= U_SKIN8;
-        }
     }
 
     if (to->frame != from->frame) {
-        if (to->frame < 256)
-            bits |= U_FRAME8;
-        else
+        if (to->frame & 0xff00)
             bits |= U_FRAME16;
+        else
+            bits |= U_FRAME8;
     }
 
     if (to->effects != from->effects) {
-        if (to->effects & mask) {
+        if (to->effects & mask)
             bits |= U_EFFECTS8 | U_EFFECTS16;
-        } else if (to->effects & 0x0000ff00) {
+        else if (to->effects & 0x0000ff00)
             bits |= U_EFFECTS16;
-        } else {
+        else
             bits |= U_EFFECTS8;
-        }
     }
 
     if (to->renderfx != from->renderfx) {
-        if (to->renderfx & mask) {
+        if (to->renderfx & mask)
             bits |= U_RENDERFX8 | U_RENDERFX16;
-        } else if (to->renderfx & 0x0000ff00) {
+        else if (to->renderfx & 0x0000ff00)
             bits |= U_RENDERFX16;
-        } else {
+        else
             bits |= U_RENDERFX8;
-        }
     }
 
     if (to->solid != from->solid)
@@ -638,7 +621,9 @@ void MSG_WriteDeltaEntity(const entity_state_t *from,
         bits |= U_OLDORIGIN;
     } else if (to->renderfx & RF_BEAM) {
         if (flags & MSG_ES_BEAMORIGIN) {
-            if (delta_pos_v(to->old_origin, from->old_origin))
+            if (to->old_origin[0] != from->old_origin[0] ||
+                to->old_origin[1] != from->old_origin[1] ||
+                to->old_origin[2] != from->old_origin[2])
                 bits |= U_OLDORIGIN;
         } else {
             bits |= U_OLDORIGIN;
@@ -651,13 +636,12 @@ void MSG_WriteDeltaEntity(const entity_state_t *from,
     if (!bits && !(flags & MSG_ES_FORCE))
         return;     // nothing to send!
 
-    if (flags & MSG_ES_REMOVE) {
+    if (flags & MSG_ES_REMOVE)
         bits |= U_REMOVE; // used for MVD stream only
-    }
 
     //----------
 
-    if (to->number >= 256)
+    if (to->number & 0xff00)
         bits |= U_NUMBER16;     // number8 is implicit otherwise
 
     if (bits & 0xff000000)
@@ -723,62 +707,89 @@ void MSG_WriteDeltaEntity(const entity_state_t *from,
         MSG_WriteShort(to->renderfx);
 
     if (bits & U_ORIGIN1)
-        MSG_WriteCoord(to->origin[0]);
+        MSG_WriteShort(to->origin[0]);
     if (bits & U_ORIGIN2)
-        MSG_WriteCoord(to->origin[1]);
+        MSG_WriteShort(to->origin[1]);
     if (bits & U_ORIGIN3)
-        MSG_WriteCoord(to->origin[2]);
+        MSG_WriteShort(to->origin[2]);
 
     if ((flags & MSG_ES_SHORTANGLES) && (bits & U_ANGLE16)) {
         if (bits & U_ANGLE1)
-            MSG_WriteAngle16(to->angles[0]);
+            MSG_WriteShort(to->angles[0]);
         if (bits & U_ANGLE2)
-            MSG_WriteAngle16(to->angles[1]);
+            MSG_WriteShort(to->angles[1]);
         if (bits & U_ANGLE3)
-            MSG_WriteAngle16(to->angles[2]);
+            MSG_WriteShort(to->angles[2]);
     } else {
         if (bits & U_ANGLE1)
-            MSG_WriteAngle(to->angles[0]);
+            MSG_WriteByte(to->angles[0] >> 8);
         if (bits & U_ANGLE2)
-            MSG_WriteAngle(to->angles[1]);
+            MSG_WriteByte(to->angles[1] >> 8);
         if (bits & U_ANGLE3)
-            MSG_WriteAngle(to->angles[2]);
+            MSG_WriteByte(to->angles[2] >> 8);
     }
 
-    if (bits & U_OLDORIGIN)
-        MSG_WritePos(to->old_origin);
+    if (bits & U_OLDORIGIN) {
+        MSG_WriteShort(to->old_origin[0]);
+        MSG_WriteShort(to->old_origin[1]);
+        MSG_WriteShort(to->old_origin[2]);
+    }
 
     if (bits & U_SOUND)
         MSG_WriteByte(to->sound);
     if (bits & U_EVENT)
         MSG_WriteByte(to->event);
     if (bits & U_SOLID) {
-        if (flags & MSG_ES_LONGSOLID) {
+        if (flags & MSG_ES_LONGSOLID)
             MSG_WriteLong(to->solid);
-        } else {
+        else
             MSG_WriteShort(to->solid);
-        }
     }
 }
 
-/*
-==================
-MSG_WriteDeltaPlayerstate_Default
-==================
-*/
-void MSG_WriteDeltaPlayerstate_Default(const player_state_t *from, const player_state_t *to)
+void MSG_PackPlayer(player_packed_t *out, const player_state_t *in)
 {
-    int             i;
-    int             pflags;
-    int             statbits;
+    int i;
 
-    if (!to) {
+    out->pmove = in->pmove;
+    out->viewangles[0] = ANGLE2SHORT(in->viewangles[0]);
+    out->viewangles[1] = ANGLE2SHORT(in->viewangles[1]);
+    out->viewangles[2] = ANGLE2SHORT(in->viewangles[2]);
+    out->viewoffset[0] = in->viewoffset[0] * 4;
+    out->viewoffset[1] = in->viewoffset[1] * 4;
+    out->viewoffset[2] = in->viewoffset[2] * 4;
+    out->kick_angles[0] = in->kick_angles[0] * 4;
+    out->kick_angles[1] = in->kick_angles[1] * 4;
+    out->kick_angles[2] = in->kick_angles[2] * 4;
+    out->gunoffset[0] = in->gunoffset[0] * 4;
+    out->gunoffset[1] = in->gunoffset[1] * 4;
+    out->gunoffset[2] = in->gunoffset[2] * 4;
+    out->gunangles[0] = in->gunangles[0] * 4;
+    out->gunangles[1] = in->gunangles[1] * 4;
+    out->gunangles[2] = in->gunangles[2] * 4;
+    out->gunindex = in->gunindex;
+    out->gunframe = in->gunframe;
+    out->blend[0] = in->blend[0] * 255;
+    out->blend[1] = in->blend[1] * 255;
+    out->blend[2] = in->blend[2] * 255;
+    out->blend[3] = in->blend[3] * 255;
+    out->fov = in->fov;
+    out->rdflags = in->rdflags;
+    for (i = 0; i < MAX_STATS; i++)
+        out->stats[i] = in->stats[i];
+}
+
+void MSG_WriteDeltaPlayerstate_Default(const player_packed_t *from, const player_packed_t *to)
+{
+    int     i;
+    int     pflags;
+    int     statbits;
+
+    if (!to)
         Com_Error(ERR_DROP, "%s: NULL", __func__);
-    }
 
-    if (!from) {
+    if (!from)
         from = &nullPlayerState;
-    }
 
     //
     // determine what needs to be sent
@@ -790,15 +801,13 @@ void MSG_WriteDeltaPlayerstate_Default(const player_state_t *from, const player_
 
     if (to->pmove.origin[0] != from->pmove.origin[0] ||
         to->pmove.origin[1] != from->pmove.origin[1] ||
-        to->pmove.origin[2] != from->pmove.origin[2]) {
+        to->pmove.origin[2] != from->pmove.origin[2])
         pflags |= PS_M_ORIGIN;
-    }
 
     if (to->pmove.velocity[0] != from->pmove.velocity[0] ||
         to->pmove.velocity[1] != from->pmove.velocity[1] ||
-        to->pmove.velocity[2] != from->pmove.velocity[2]) {
+        to->pmove.velocity[2] != from->pmove.velocity[2])
         pflags |= PS_M_VELOCITY;
-    }
 
     if (to->pmove.pm_time != from->pmove.pm_time)
         pflags |= PS_M_TIME;
@@ -811,41 +820,47 @@ void MSG_WriteDeltaPlayerstate_Default(const player_state_t *from, const player_
 
     if (to->pmove.delta_angles[0] != from->pmove.delta_angles[0] ||
         to->pmove.delta_angles[1] != from->pmove.delta_angles[1] ||
-        to->pmove.delta_angles[2] != from->pmove.delta_angles[2]) {
+        to->pmove.delta_angles[2] != from->pmove.delta_angles[2])
         pflags |= PS_M_DELTA_ANGLES;
-    }
 
-    if (delta_ofs_v(to->viewoffset, from->viewoffset)) {
+    if (to->viewoffset[0] != from->viewoffset[0] ||
+        to->viewoffset[1] != from->viewoffset[1] ||
+        to->viewoffset[2] != from->viewoffset[2])
         pflags |= PS_VIEWOFFSET;
-    }
 
-    if (delta_angle16_v(to->viewangles, from->viewangles)) {
+    if (to->viewangles[0] != from->viewangles[0] ||
+        to->viewangles[1] != from->viewangles[1] ||
+        to->viewangles[2] != from->viewangles[2])
         pflags |= PS_VIEWANGLES;
-    }
 
-    if (delta_ofs_v(to->kick_angles, from->kick_angles)) {
+    if (to->kick_angles[0] != from->kick_angles[0] ||
+        to->kick_angles[1] != from->kick_angles[1] ||
+        to->kick_angles[2] != from->kick_angles[2])
         pflags |= PS_KICKANGLES;
-    }
 
-    if (delta_blend_v(to->blend, from->blend)) {
+    if (to->blend[0] != from->blend[0] ||
+        to->blend[1] != from->blend[1] ||
+        to->blend[2] != from->blend[2] ||
+        to->blend[3] != from->blend[3])
         pflags |= PS_BLEND;
-    }
 
-    if (delta_fov(to->fov, from->fov))
+    if (to->fov != from->fov)
         pflags |= PS_FOV;
 
     if (to->rdflags != from->rdflags)
         pflags |= PS_RDFLAGS;
 
     if (to->gunframe != from->gunframe ||
-        delta_ofs_v(to->gunoffset, from->gunoffset) ||
-        delta_ofs_v(to->gunangles, from->gunangles)) {
+        to->gunoffset[0] != from->gunoffset[0] ||
+        to->gunoffset[1] != from->gunoffset[1] ||
+        to->gunoffset[2] != from->gunoffset[2] ||
+        to->gunangles[0] != from->gunangles[0] ||
+        to->gunangles[1] != from->gunangles[1] ||
+        to->gunangles[2] != from->gunangles[2])
         pflags |= PS_WEAPONFRAME;
-    }
 
     if (to->gunindex != from->gunindex)
         pflags |= PS_WEAPONINDEX;
-
 
     //
     // write it
@@ -889,42 +904,41 @@ void MSG_WriteDeltaPlayerstate_Default(const player_state_t *from, const player_
     // write the rest of the player_state_t
     //
     if (pflags & PS_VIEWOFFSET) {
-        MSG_WriteChar(to->viewoffset[0] * 4);
-        MSG_WriteChar(to->viewoffset[1] * 4);
-        MSG_WriteChar(to->viewoffset[2] * 4);
+        MSG_WriteChar(to->viewoffset[0]);
+        MSG_WriteChar(to->viewoffset[1]);
+        MSG_WriteChar(to->viewoffset[2]);
     }
 
     if (pflags & PS_VIEWANGLES) {
-        MSG_WriteAngle16(to->viewangles[0]);
-        MSG_WriteAngle16(to->viewangles[1]);
-        MSG_WriteAngle16(to->viewangles[2]);
+        MSG_WriteShort(to->viewangles[0]);
+        MSG_WriteShort(to->viewangles[1]);
+        MSG_WriteShort(to->viewangles[2]);
     }
 
     if (pflags & PS_KICKANGLES) {
-        MSG_WriteChar(to->kick_angles[0] * 4);
-        MSG_WriteChar(to->kick_angles[1] * 4);
-        MSG_WriteChar(to->kick_angles[2] * 4);
+        MSG_WriteChar(to->kick_angles[0]);
+        MSG_WriteChar(to->kick_angles[1]);
+        MSG_WriteChar(to->kick_angles[2]);
     }
 
-    if (pflags & PS_WEAPONINDEX) {
+    if (pflags & PS_WEAPONINDEX)
         MSG_WriteByte(to->gunindex);
-    }
 
     if (pflags & PS_WEAPONFRAME) {
         MSG_WriteByte(to->gunframe);
-        MSG_WriteChar(to->gunoffset[0] * 4);
-        MSG_WriteChar(to->gunoffset[1] * 4);
-        MSG_WriteChar(to->gunoffset[2] * 4);
-        MSG_WriteChar(to->gunangles[0] * 4);
-        MSG_WriteChar(to->gunangles[1] * 4);
-        MSG_WriteChar(to->gunangles[2] * 4);
+        MSG_WriteChar(to->gunoffset[0]);
+        MSG_WriteChar(to->gunoffset[1]);
+        MSG_WriteChar(to->gunoffset[2]);
+        MSG_WriteChar(to->gunangles[0]);
+        MSG_WriteChar(to->gunangles[1]);
+        MSG_WriteChar(to->gunangles[2]);
     }
 
     if (pflags & PS_BLEND) {
-        MSG_WriteByte(to->blend[0] * 255);
-        MSG_WriteByte(to->blend[1] * 255);
-        MSG_WriteByte(to->blend[2] * 255);
-        MSG_WriteByte(to->blend[3] * 255);
+        MSG_WriteByte(to->blend[0]);
+        MSG_WriteByte(to->blend[1]);
+        MSG_WriteByte(to->blend[2]);
+        MSG_WriteByte(to->blend[3]);
     }
 
     if (pflags & PS_FOV)
@@ -945,54 +959,43 @@ void MSG_WriteDeltaPlayerstate_Default(const player_state_t *from, const player_
             MSG_WriteShort(to->stats[i]);
 }
 
-/*
-==================
-MSG_WriteDeltaPlayerstate_Enhanced
-==================
-*/
-int MSG_WriteDeltaPlayerstate_Enhanced(const player_state_t    *from,
-                                       player_state_t    *to,
-                                       msgPsFlags_t      flags)
+int MSG_WriteDeltaPlayerstate_Enhanced(const player_packed_t    *from,
+                                             player_packed_t    *to,
+                                             msgPsFlags_t       flags)
 {
-    int             i;
-    int             pflags, extraflags;
-    int             statbits;
+    int     i;
+    int     pflags, eflags;
+    int     statbits;
 
-    if (!to) {
+    if (!to)
         Com_Error(ERR_DROP, "%s: NULL", __func__);
-    }
 
-    if (!from) {
+    if (!from)
         from = &nullPlayerState;
-    }
 
     //
     // determine what needs to be sent
     //
     pflags = 0;
-    extraflags = 0;
+    eflags = 0;
 
     if (to->pmove.pm_type != from->pmove.pm_type)
         pflags |= PS_M_TYPE;
 
     if (to->pmove.origin[0] != from->pmove.origin[0] ||
-        to->pmove.origin[1] != from->pmove.origin[1]) {
+        to->pmove.origin[1] != from->pmove.origin[1])
         pflags |= PS_M_ORIGIN;
-    }
 
-    if (to->pmove.origin[2] != from->pmove.origin[2]) {
-        extraflags |= EPS_M_ORIGIN2;
-    }
+    if (to->pmove.origin[2] != from->pmove.origin[2])
+        eflags |= EPS_M_ORIGIN2;
 
     if (!(flags & MSG_PS_IGNORE_PREDICTION)) {
         if (to->pmove.velocity[0] != from->pmove.velocity[0] ||
-            to->pmove.velocity[1] != from->pmove.velocity[1]) {
+            to->pmove.velocity[1] != from->pmove.velocity[1])
             pflags |= PS_M_VELOCITY;
-        }
 
-        if (to->pmove.velocity[2] != from->pmove.velocity[2]) {
-            extraflags |= EPS_M_VELOCITY2;
-        }
+        if (to->pmove.velocity[2] != from->pmove.velocity[2])
+            eflags |= EPS_M_VELOCITY2;
 
         if (to->pmove.pm_time != from->pmove.pm_time)
             pflags |= PS_M_TIME;
@@ -1013,27 +1016,25 @@ int MSG_WriteDeltaPlayerstate_Enhanced(const player_state_t    *from,
     if (!(flags & MSG_PS_IGNORE_DELTAANGLES)) {
         if (to->pmove.delta_angles[0] != from->pmove.delta_angles[0] ||
             to->pmove.delta_angles[1] != from->pmove.delta_angles[1] ||
-            to->pmove.delta_angles[2] != from->pmove.delta_angles[2]) {
+            to->pmove.delta_angles[2] != from->pmove.delta_angles[2])
             pflags |= PS_M_DELTA_ANGLES;
-        }
     } else {
         // save previous state
         VectorCopy(from->pmove.delta_angles, to->pmove.delta_angles);
     }
 
-    if (delta_ofs_v(from->viewoffset, to->viewoffset)) {
+    if (from->viewoffset[0] != to->viewoffset[0] ||
+        from->viewoffset[1] != to->viewoffset[1] ||
+        from->viewoffset[2] != to->viewoffset[2])
         pflags |= PS_VIEWOFFSET;
-    }
 
     if (!(flags & MSG_PS_IGNORE_VIEWANGLES)) {
-        if (delta_angle16(from->viewangles[0], to->viewangles[0]) ||
-            delta_angle16(from->viewangles[1], to->viewangles[1])) {
+        if (from->viewangles[0] != to->viewangles[0] ||
+            from->viewangles[1] != to->viewangles[1])
             pflags |= PS_VIEWANGLES;
-        }
 
-        if (delta_angle16(from->viewangles[2], to->viewangles[2])) {
-            extraflags |= EPS_VIEWANGLE2;
-        }
+        if (from->viewangles[2] != to->viewangles[2])
+            eflags |= EPS_VIEWANGLE2;
     } else {
         // save previous state
         to->viewangles[0] = from->viewangles[0];
@@ -1041,14 +1042,17 @@ int MSG_WriteDeltaPlayerstate_Enhanced(const player_state_t    *from,
         to->viewangles[2] = from->viewangles[2];
     }
 
-    if (delta_ofs_v(from->kick_angles, to->kick_angles)) {
+    if (from->kick_angles[0] != to->kick_angles[0] ||
+        from->kick_angles[1] != to->kick_angles[1] ||
+        from->kick_angles[2] != to->kick_angles[2])
         pflags |= PS_KICKANGLES;
-    }
 
     if (!(flags & MSG_PS_IGNORE_BLEND)) {
-        if (delta_blend_v(from->blend, to->blend)) {
+        if (from->blend[0] != to->blend[0] ||
+            from->blend[1] != to->blend[1] ||
+            from->blend[2] != to->blend[2] ||
+            from->blend[3] != to->blend[3])
             pflags |= PS_BLEND;
-        }
     } else {
         // save previous state
         to->blend[0] = from->blend[0];
@@ -1057,7 +1061,7 @@ int MSG_WriteDeltaPlayerstate_Enhanced(const player_state_t    *from,
         to->blend[3] = from->blend[3];
     }
 
-    if (delta_fov(from->fov, to->fov))
+    if (from->fov != to->fov)
         pflags |= PS_FOV;
 
     if (to->rdflags != from->rdflags)
@@ -1075,13 +1079,15 @@ int MSG_WriteDeltaPlayerstate_Enhanced(const player_state_t    *from,
         if (to->gunframe != from->gunframe)
             pflags |= PS_WEAPONFRAME;
 
-        if (delta_ofs_v(from->gunoffset, to->gunoffset)) {
-            extraflags |= EPS_GUNOFFSET;
-        }
+        if (from->gunoffset[0] != to->gunoffset[0] ||
+            from->gunoffset[1] != to->gunoffset[1] ||
+            from->gunoffset[2] != to->gunoffset[2])
+            eflags |= EPS_GUNOFFSET;
 
-        if (delta_ofs_v(from->gunangles, to->gunangles)) {
-            extraflags |= EPS_GUNANGLES;
-        }
+        if (from->gunangles[0] != to->gunangles[0] ||
+            from->gunangles[1] != to->gunangles[1] ||
+            from->gunangles[2] != to->gunangles[2])
+            eflags |= EPS_GUNANGLES;
     } else {
         // save previous state
         to->gunframe = from->gunframe;
@@ -1096,15 +1102,12 @@ int MSG_WriteDeltaPlayerstate_Enhanced(const player_state_t    *from,
     }
 
     statbits = 0;
-    for (i = 0; i < MAX_STATS; i++) {
-        if (to->stats[i] != from->stats[i]) {
+    for (i = 0; i < MAX_STATS; i++)
+        if (to->stats[i] != from->stats[i])
             statbits |= 1 << i;
-        }
-    }
 
-    if (statbits) {
-        extraflags |= EPS_STATS;
-    }
+    if (statbits)
+        eflags |= EPS_STATS;
 
     //
     // write it
@@ -1122,30 +1125,25 @@ int MSG_WriteDeltaPlayerstate_Enhanced(const player_state_t    *from,
         MSG_WriteShort(to->pmove.origin[1]);
     }
 
-    if (extraflags & EPS_M_ORIGIN2) {
+    if (eflags & EPS_M_ORIGIN2)
         MSG_WriteShort(to->pmove.origin[2]);
-    }
 
     if (pflags & PS_M_VELOCITY) {
         MSG_WriteShort(to->pmove.velocity[0]);
         MSG_WriteShort(to->pmove.velocity[1]);
     }
 
-    if (extraflags & EPS_M_VELOCITY2) {
+    if (eflags & EPS_M_VELOCITY2)
         MSG_WriteShort(to->pmove.velocity[2]);
-    }
 
-    if (pflags & PS_M_TIME) {
+    if (pflags & PS_M_TIME)
         MSG_WriteByte(to->pmove.pm_time);
-    }
 
-    if (pflags & PS_M_FLAGS) {
+    if (pflags & PS_M_FLAGS)
         MSG_WriteByte(to->pmove.pm_flags);
-    }
 
-    if (pflags & PS_M_GRAVITY) {
+    if (pflags & PS_M_GRAVITY)
         MSG_WriteShort(to->pmove.gravity);
-    }
 
     if (pflags & PS_M_DELTA_ANGLES) {
         MSG_WriteShort(to->pmove.delta_angles[0]);
@@ -1157,52 +1155,48 @@ int MSG_WriteDeltaPlayerstate_Enhanced(const player_state_t    *from,
     // write the rest of the player_state_t
     //
     if (pflags & PS_VIEWOFFSET) {
-        MSG_WriteChar(to->viewoffset[0] * 4);
-        MSG_WriteChar(to->viewoffset[1] * 4);
-        MSG_WriteChar(to->viewoffset[2] * 4);
+        MSG_WriteChar(to->viewoffset[0]);
+        MSG_WriteChar(to->viewoffset[1]);
+        MSG_WriteChar(to->viewoffset[2]);
     }
 
     if (pflags & PS_VIEWANGLES) {
-        MSG_WriteAngle16(to->viewangles[0]);
-        MSG_WriteAngle16(to->viewangles[1]);
-
+        MSG_WriteShort(to->viewangles[0]);
+        MSG_WriteShort(to->viewangles[1]);
     }
 
-    if (extraflags & EPS_VIEWANGLE2) {
-        MSG_WriteAngle16(to->viewangles[2]);
-    }
+    if (eflags & EPS_VIEWANGLE2)
+        MSG_WriteShort(to->viewangles[2]);
 
     if (pflags & PS_KICKANGLES) {
-        MSG_WriteChar(to->kick_angles[0] * 4);
-        MSG_WriteChar(to->kick_angles[1] * 4);
-        MSG_WriteChar(to->kick_angles[2] * 4);
+        MSG_WriteChar(to->kick_angles[0]);
+        MSG_WriteChar(to->kick_angles[1]);
+        MSG_WriteChar(to->kick_angles[2]);
     }
 
-    if (pflags & PS_WEAPONINDEX) {
+    if (pflags & PS_WEAPONINDEX)
         MSG_WriteByte(to->gunindex);
-    }
 
-    if (pflags & PS_WEAPONFRAME) {
+    if (pflags & PS_WEAPONFRAME)
         MSG_WriteByte(to->gunframe);
+
+    if (eflags & EPS_GUNOFFSET) {
+        MSG_WriteChar(to->gunoffset[0]);
+        MSG_WriteChar(to->gunoffset[1]);
+        MSG_WriteChar(to->gunoffset[2]);
     }
 
-    if (extraflags & EPS_GUNOFFSET) {
-        MSG_WriteChar(to->gunoffset[0] * 4);
-        MSG_WriteChar(to->gunoffset[1] * 4);
-        MSG_WriteChar(to->gunoffset[2] * 4);
-    }
-
-    if (extraflags & EPS_GUNANGLES) {
-        MSG_WriteChar(to->gunangles[0] * 4);
-        MSG_WriteChar(to->gunangles[1] * 4);
-        MSG_WriteChar(to->gunangles[2] * 4);
+    if (eflags & EPS_GUNANGLES) {
+        MSG_WriteChar(to->gunangles[0]);
+        MSG_WriteChar(to->gunangles[1]);
+        MSG_WriteChar(to->gunangles[2]);
     }
 
     if (pflags & PS_BLEND) {
-        MSG_WriteByte(to->blend[0] * 255);
-        MSG_WriteByte(to->blend[1] * 255);
-        MSG_WriteByte(to->blend[2] * 255);
-        MSG_WriteByte(to->blend[3] * 255);
+        MSG_WriteByte(to->blend[0]);
+        MSG_WriteByte(to->blend[1]);
+        MSG_WriteByte(to->blend[2]);
+        MSG_WriteByte(to->blend[3]);
     }
 
     if (pflags & PS_FOV)
@@ -1212,16 +1206,14 @@ int MSG_WriteDeltaPlayerstate_Enhanced(const player_state_t    *from,
         MSG_WriteByte(to->rdflags);
 
     // send stats
-    if (extraflags & EPS_STATS) {
+    if (eflags & EPS_STATS) {
         MSG_WriteLong(statbits);
-        for (i = 0; i < MAX_STATS; i++) {
-            if (statbits & (1 << i)) {
+        for (i = 0; i < MAX_STATS; i++)
+            if (statbits & (1 << i))
                 MSG_WriteShort(to->stats[i]);
-            }
-        }
     }
 
-    return extraflags;
+    return eflags;
 }
 
 #if USE_MVD_SERVER || USE_MVD_CLIENT
@@ -1230,22 +1222,21 @@ int MSG_WriteDeltaPlayerstate_Enhanced(const player_state_t    *from,
 ==================
 MSG_WriteDeltaPlayerstate_Packet
 
-Throw away most of the pmove_state_t fields as they are used only
-for client prediction, and not needed in MVDs.
+Throws away most of the pmove_state_t fields as they are used only
+for client prediction, and are not needed in MVDs.
 ==================
 */
-void MSG_WriteDeltaPlayerstate_Packet(const player_state_t   *from,
-                                      const player_state_t   *to,
-                                      int              number,
-                                      msgPsFlags_t     flags)
+void MSG_WriteDeltaPlayerstate_Packet(const player_packed_t *from,
+                                      const player_packed_t *to,
+                                      int                   number,
+                                      msgPsFlags_t          flags)
 {
-    int             i;
-    int             pflags;
-    int             statbits;
+    int     i;
+    int     pflags;
+    int     statbits;
 
-    if (number < 0 || number >= MAX_CLIENTS) {
+    if (number < 0 || number >= MAX_CLIENTS)
         Com_Error(ERR_DROP, "%s: bad number: %d", __func__, number);
-    }
 
     if (!to) {
         MSG_WriteByte(number);
@@ -1253,9 +1244,8 @@ void MSG_WriteDeltaPlayerstate_Packet(const player_state_t   *from,
         return;
     }
 
-    if (!from) {
+    if (!from)
         from = &nullPlayerState;
-    }
 
     //
     // determine what needs to be sent
@@ -1266,38 +1256,38 @@ void MSG_WriteDeltaPlayerstate_Packet(const player_state_t   *from,
         pflags |= PPS_M_TYPE;
 
     if (to->pmove.origin[0] != from->pmove.origin[0] ||
-        to->pmove.origin[1] != from->pmove.origin[1]) {
+        to->pmove.origin[1] != from->pmove.origin[1])
         pflags |= PPS_M_ORIGIN;
-    }
 
-    if (to->pmove.origin[2] != from->pmove.origin[2]) {
+    if (to->pmove.origin[2] != from->pmove.origin[2])
         pflags |= PPS_M_ORIGIN2;
-    }
 
-    if (delta_ofs_v(from->viewoffset, to->viewoffset)) {
+    if (from->viewoffset[0] != to->viewoffset[0] ||
+        from->viewoffset[1] != to->viewoffset[1] ||
+        from->viewoffset[2] != to->viewoffset[2])
         pflags |= PPS_VIEWOFFSET;
-    }
 
-    if (delta_angle16(from->viewangles[0], to->viewangles[0]) ||
-        delta_angle16(from->viewangles[1], to->viewangles[1])) {
+    if (from->viewangles[0] != to->viewangles[0] ||
+        from->viewangles[1] != to->viewangles[1])
         pflags |= PPS_VIEWANGLES;
-    }
 
-    if (delta_angle16(from->viewangles[2], to->viewangles[2])) {
+    if (from->viewangles[2] != to->viewangles[2])
         pflags |= PPS_VIEWANGLE2;
-    }
 
-    if (delta_ofs_v(from->kick_angles, to->kick_angles)) {
+    if (from->kick_angles[0] != to->kick_angles[0] ||
+        from->kick_angles[1] != to->kick_angles[1] ||
+        from->kick_angles[2] != to->kick_angles[2])
         pflags |= PPS_KICKANGLES;
-    }
 
     if (!(flags & MSG_PS_IGNORE_BLEND)) {
-        if (delta_blend_v(from->blend, to->blend)) {
+        if (from->blend[0] != to->blend[0] ||
+            from->blend[1] != to->blend[1] ||
+            from->blend[2] != to->blend[2] ||
+            from->blend[3] != to->blend[3])
             pflags |= PPS_BLEND;
-        }
     }
 
-    if (delta_fov(from->fov, to->fov))
+    if (from->fov != to->fov)
         pflags |= PPS_FOV;
 
     if (to->rdflags != from->rdflags)
@@ -1312,30 +1302,30 @@ void MSG_WriteDeltaPlayerstate_Packet(const player_state_t   *from,
         if (to->gunframe != from->gunframe)
             pflags |= PPS_WEAPONFRAME;
 
-        if (delta_ofs_v(from->gunoffset, to->gunoffset)) {
+        if (from->gunoffset[0] != to->gunoffset[0] ||
+            from->gunoffset[1] != to->gunoffset[1] ||
+            from->gunoffset[2] != to->gunoffset[2])
             pflags |= PPS_GUNOFFSET;
-        }
 
-        if (delta_ofs_v(from->gunangles, to->gunangles)) {
+        if (from->gunangles[0] != to->gunangles[0] ||
+            from->gunangles[1] != to->gunangles[1] ||
+            from->gunangles[2] != to->gunangles[2])
             pflags |= PPS_GUNANGLES;
-        }
     }
 
     statbits = 0;
-    for (i = 0; i < MAX_STATS; i++) {
-        if (to->stats[i] != from->stats[i]) {
+    for (i = 0; i < MAX_STATS; i++)
+        if (to->stats[i] != from->stats[i])
             statbits |= 1 << i;
-            pflags |= PPS_STATS;
-        }
-    }
 
-    if (!pflags && !(flags & MSG_PS_FORCE)) {
+    if (statbits)
+        pflags |= PPS_STATS;
+
+    if (!pflags && !(flags & MSG_PS_FORCE))
         return;
-    }
 
-    if (flags & MSG_PS_REMOVE) {
+    if (flags & MSG_PS_REMOVE)
         pflags |= PPS_REMOVE; // used for MVD stream only
-    }
 
     //
     // write it
@@ -1354,59 +1344,55 @@ void MSG_WriteDeltaPlayerstate_Packet(const player_state_t   *from,
         MSG_WriteShort(to->pmove.origin[1]);
     }
 
-    if (pflags & PPS_M_ORIGIN2) {
+    if (pflags & PPS_M_ORIGIN2)
         MSG_WriteShort(to->pmove.origin[2]);
-    }
 
     //
     // write the rest of the player_state_t
     //
     if (pflags & PPS_VIEWOFFSET) {
-        MSG_WriteChar(to->viewoffset[0] * 4);
-        MSG_WriteChar(to->viewoffset[1] * 4);
-        MSG_WriteChar(to->viewoffset[2] * 4);
+        MSG_WriteChar(to->viewoffset[0]);
+        MSG_WriteChar(to->viewoffset[1]);
+        MSG_WriteChar(to->viewoffset[2]);
     }
 
     if (pflags & PPS_VIEWANGLES) {
-        MSG_WriteAngle16(to->viewangles[0]);
-        MSG_WriteAngle16(to->viewangles[1]);
+        MSG_WriteShort(to->viewangles[0]);
+        MSG_WriteShort(to->viewangles[1]);
     }
 
-    if (pflags & PPS_VIEWANGLE2) {
-        MSG_WriteAngle16(to->viewangles[2]);
-    }
+    if (pflags & PPS_VIEWANGLE2)
+        MSG_WriteShort(to->viewangles[2]);
 
     if (pflags & PPS_KICKANGLES) {
-        MSG_WriteChar(to->kick_angles[0] * 4);
-        MSG_WriteChar(to->kick_angles[1] * 4);
-        MSG_WriteChar(to->kick_angles[2] * 4);
+        MSG_WriteChar(to->kick_angles[0]);
+        MSG_WriteChar(to->kick_angles[1]);
+        MSG_WriteChar(to->kick_angles[2]);
     }
 
-    if (pflags & PPS_WEAPONINDEX) {
+    if (pflags & PPS_WEAPONINDEX)
         MSG_WriteByte(to->gunindex);
-    }
 
-    if (pflags & PPS_WEAPONFRAME) {
+    if (pflags & PPS_WEAPONFRAME)
         MSG_WriteByte(to->gunframe);
-    }
 
     if (pflags & PPS_GUNOFFSET) {
-        MSG_WriteChar(to->gunoffset[0] * 4);
-        MSG_WriteChar(to->gunoffset[1] * 4);
-        MSG_WriteChar(to->gunoffset[2] * 4);
+        MSG_WriteChar(to->gunoffset[0]);
+        MSG_WriteChar(to->gunoffset[1]);
+        MSG_WriteChar(to->gunoffset[2]);
     }
 
     if (pflags & PPS_GUNANGLES) {
-        MSG_WriteChar(to->gunangles[0] * 4);
-        MSG_WriteChar(to->gunangles[1] * 4);
-        MSG_WriteChar(to->gunangles[2] * 4);
+        MSG_WriteChar(to->gunangles[0]);
+        MSG_WriteChar(to->gunangles[1]);
+        MSG_WriteChar(to->gunangles[2]);
     }
 
     if (pflags & PPS_BLEND) {
-        MSG_WriteByte(to->blend[0] * 255);
-        MSG_WriteByte(to->blend[1] * 255);
-        MSG_WriteByte(to->blend[2] * 255);
-        MSG_WriteByte(to->blend[3] * 255);
+        MSG_WriteByte(to->blend[0]);
+        MSG_WriteByte(to->blend[1]);
+        MSG_WriteByte(to->blend[2]);
+        MSG_WriteByte(to->blend[3]);
     }
 
     if (pflags & PPS_FOV)
@@ -1418,11 +1404,9 @@ void MSG_WriteDeltaPlayerstate_Packet(const player_state_t   *from,
     // send stats
     if (pflags & PPS_STATS) {
         MSG_WriteLong(statbits);
-        for (i = 0; i < MAX_STATS; i++) {
-            if (statbits & (1 << i)) {
+        for (i = 0; i < MAX_STATS; i++)
+            if (statbits & (1 << i))
                 MSG_WriteShort(to->stats[i]);
-            }
-        }
     }
 }
 

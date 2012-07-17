@@ -1815,6 +1815,8 @@ static void emit_base_frame(mvd_t *mvd)
     mvd_player_t    *player;
     int             i, portalbytes;
     byte            portalbits[MAX_MAP_PORTAL_BYTES];
+    entity_packed_t es;
+    player_packed_t ps;
 
     portalbytes = CM_WritePortalBits(&mvd->cm, portalbits);
     MSG_WriteByte(portalbytes);
@@ -1823,19 +1825,18 @@ static void emit_base_frame(mvd_t *mvd)
     // send base player states
     for (i = 0; i < mvd->maxclients; i++) {
         player = &mvd->players[i];
-        MSG_WriteDeltaPlayerstate_Packet(NULL, &player->ps, i,
-                                         player_flags(mvd, player));
+        MSG_PackPlayer(&ps, &player->ps);
+        MSG_WriteDeltaPlayerstate_Packet(NULL, &ps, i, player_flags(mvd, player));
     }
-
     MSG_WriteByte(CLIENTNUM_NONE);
 
     // send base entity states
     for (i = 1; i < mvd->pool.num_edicts; i++) {
         ent = &mvd->edicts[i];
         ent->s.number = i;
-        MSG_WriteDeltaEntity(NULL, &ent->s, entity_flags(mvd, ent));
+        MSG_PackEntity(&es, &ent->s, qfalse);
+        MSG_WriteDeltaEntity(NULL, &es, entity_flags(mvd, ent));
     }
-
     MSG_WriteShort(0);
 }
 

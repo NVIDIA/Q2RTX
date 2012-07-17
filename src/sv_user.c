@@ -47,7 +47,7 @@ static void create_baselines(void)
 {
     int        i;
     edict_t    *ent;
-    entity_state_t *base, **chunk;
+    entity_packed_t *base, **chunk;
 
     // clear baselines from previous level
     for (i = 0; i < SV_BASELINES_CHUNKS; i++) {
@@ -77,8 +77,7 @@ static void create_baselines(void)
         }
 
         base = *chunk + (i & SV_BASELINES_MASK);
-
-        *base = ent->s;
+        MSG_PackEntity(base, &ent->s, Q2PRO_SHORTANGLES(sv_client, i));
 
         if (sv_client->esFlags & MSG_ES_LONGSOLID) {
             base->solid = sv.entities[i].solid32;
@@ -116,7 +115,7 @@ static void write_plain_configstrings(void)
     SV_ClientAddMessage(sv_client, MSG_RELIABLE | MSG_CLEAR);
 }
 
-static void write_baseline(entity_state_t *base)
+static void write_baseline(entity_packed_t *base)
 {
     msgEsFlags_t flags = sv_client->esFlags | MSG_ES_FORCE;
 
@@ -130,7 +129,7 @@ static void write_baseline(entity_state_t *base)
 static void write_plain_baselines(void)
 {
     int i, j;
-    entity_state_t *base;
+    entity_packed_t *base;
 
     // write a packet full of data
     for (i = 0; i < SV_BASELINES_CHUNKS; i++) {
@@ -160,7 +159,7 @@ static void write_plain_baselines(void)
 static void write_compressed_gamestate(void)
 {
     sizebuf_t   *buf = &sv_client->netchan->message;
-    entity_state_t  *base;
+    entity_packed_t  *base;
     int         i, j;
     size_t      length;
     uint8_t     *patch;

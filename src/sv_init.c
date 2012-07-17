@@ -344,7 +344,7 @@ void SV_InitGame(unsigned mvd_spawn)
     svs.client_pool = SV_Mallocz(sizeof(client_t) * sv_maxclients->integer);
 
     svs.num_entities = sv_maxclients->integer * UPDATE_BACKUP * MAX_PACKET_ENTITIES;
-    svs.entities = SV_Mallocz(sizeof(entity_state_t) * svs.num_entities);
+    svs.entities = SV_Mallocz(sizeof(entity_packed_t) * svs.num_entities);
 
 #if USE_MVD_SERVER
     // initialize MVD server
