@@ -145,6 +145,7 @@ extern cvar_t *gl_nobind;
 extern cvar_t *gl_test;
 #endif
 extern cvar_t *gl_cull_nodes;
+extern cvar_t *gl_hash_faces;
 extern cvar_t *gl_clear;
 extern cvar_t *gl_novis;
 extern cvar_t *gl_lockpvs;

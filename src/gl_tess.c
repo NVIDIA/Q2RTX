@@ -480,8 +480,13 @@ void GL_DrawSolidFaces(void)
         GL_DisableWarp();
     }
 
-    for (i = 0; i < FACE_HASH_SIZE; i++) {
-        GL_DrawChain(&faces_hash[i]);
+    if (gl_hash_faces->integer) {
+        for (i = 0; i < FACE_HASH_SIZE; i++) {
+            GL_DrawChain(&faces_hash[i]);
+        }
+    } else {
+        GL_DrawChain(&faces_hash[0]);
+        faces_hash[1] = NULL;
     }
 
     GL_Flush3D();
@@ -513,9 +518,19 @@ void GL_AddSolidFace(mface_t *face)
         face->next = faces_warp;
         faces_warp = face;
     } else {
-        unsigned i = FACE_HASH(face->texnum[0], face->texnum[1]);
-        face->next = faces_hash[i];
-        faces_hash[i] = face;
+        if (gl_hash_faces->integer) {
+            unsigned i = FACE_HASH(face->texnum[0], face->texnum[1]);
+            face->next = faces_hash[i];
+            faces_hash[i] = face;
+        } else {
+            // preserve front-to-back ordering
+            face->next = NULL;
+            if (faces_hash[1])
+                faces_hash[1]->next = face;
+            else
+                faces_hash[0] = face;
+            faces_hash[1] = face;
+        }
 
         if (face->lightmap && !(face->drawflags & SURF_NOLM_MASK) && gl_dynamic->integer) {
             GL_PushLights(face);

@@ -70,6 +70,7 @@ cvar_t *gl_test;
 cvar_t *gl_cull_nodes;
 cvar_t *gl_cull_models;
 cvar_t *gl_clear;
+cvar_t *gl_hash_faces;
 cvar_t *gl_novis;
 cvar_t *gl_lockpvs;
 cvar_t *gl_lightmap;
@@ -771,6 +772,7 @@ static void GL_Register(void)
 #endif
     gl_cull_nodes = Cvar_Get("gl_cull_nodes", "1", 0);
     gl_cull_models = Cvar_Get("gl_cull_models", "1", 0);
+    gl_hash_faces = Cvar_Get("gl_hash_faces", "1", 0);
     gl_clear = Cvar_Get("gl_clear", "0", 0);
     gl_novis = Cvar_Get("gl_novis", "0", 0);
     gl_novis->changed = gl_novis_changed;
