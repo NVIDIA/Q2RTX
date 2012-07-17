@@ -2169,8 +2169,6 @@ static size_t CL_Server_m(char *buffer, size_t size)
 static size_t CL_Ups_m(char *buffer, size_t size)
 {
     vec3_t vel;
-    int ups;
-    player_state_t *ps;
 
     if (cl.frame.clientNum == CLIENTNUM_NONE) {
         if (size) {
@@ -2183,15 +2181,10 @@ static size_t CL_Ups_m(char *buffer, size_t size)
         cl_predict->integer) {
         VectorCopy(cl.predicted_velocity, vel);
     } else {
-        ps = &cl.frame.ps;
-
-        vel[0] = ps->pmove.velocity[0] * 0.125f;
-        vel[1] = ps->pmove.velocity[1] * 0.125f;
-        vel[2] = ps->pmove.velocity[2] * 0.125f;
+        VectorScale(cl.frame.ps.pmove.velocity, 0.125f, vel);
     }
 
-    ups = VectorLength(vel);
-    return Q_scnprintf(buffer, size, "%d", ups);
+    return Q_scnprintf(buffer, size, "%d", (int)VectorLength(vel));
 }
 
 static size_t CL_Timer_m(char *buffer, size_t size)
