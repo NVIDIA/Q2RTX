@@ -508,8 +508,8 @@ char *COM_Parse(const char **data_p);
 // data is an in/out parm, returns a parsed out token
 size_t COM_Compress(char *data);
 
-int QDECL SortStrcmp(const void *p1, const void *p2);
-int QDECL SortStricmp(const void *p1, const void *p2);
+int SortStrcmp(const void *p1, const void *p2);
+int SortStricmp(const void *p1, const void *p2);
 
 size_t COM_strclr(char *s);
 

@@ -2367,7 +2367,7 @@ fail2:
 // this is complicated as we need pakXX.pak loaded first,
 // sorted in numerical order, then the rest of the paks in
 // alphabetical order, e.g. pak0.pak, pak2.pak, pak17.pak, abc.pak...
-static int QDECL pakcmp(const void *p1, const void *p2)
+static int pakcmp(const void *p1, const void *p2)
 {
     char *s1 = *(char **)p1;
     char *s2 = *(char **)p2;

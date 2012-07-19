@@ -321,16 +321,16 @@ static void V_Gun_Model_f(void)
 
 //============================================================================
 
-static int QDECL entitycmpfnc(const entity_t *a, const entity_t *b)
+static int entitycmpfnc(const void *_a, const void *_b)
 {
-    /*
-    ** all other models are sorted by model then skin
-    */
-    if (a->model == b->model) {
-        return ((int) a->skin - (int) b->skin);
-    } else {
-        return ((int) a->model - (int) b->model);
-    }
+    const entity_t *a = (const entity_t *)_a;
+    const entity_t *b = (const entity_t *)_b;
+
+    // all other models are sorted by model then skin
+    if (a->model == b->model)
+        return a->skin - b->skin;
+    else
+        return a->model - b->model;
 }
 
 static void V_SetLightLevel(void)
@@ -469,7 +469,7 @@ void V_RenderView(void)
         cl.refdef.rdflags = cl.frame.ps.rdflags;
 
         // sort entities for better cache locality
-        qsort(cl.refdef.entities, cl.refdef.num_entities, sizeof(cl.refdef.entities[0]), (int (QDECL *)(const void *, const void *))entitycmpfnc);
+        qsort(cl.refdef.entities, cl.refdef.num_entities, sizeof(cl.refdef.entities[0]), entitycmpfnc);
     }
 
     R_RenderFrame(&cl.refdef);

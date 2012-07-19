@@ -60,7 +60,7 @@ static qboolean IconOfSkinExists(char *skin, char **pcxfiles, int npcxfiles)
     return qfalse;
 }
 
-static int QDECL pmicmpfnc(const void *_a, const void *_b)
+static int pmicmpfnc(const void *_a, const void *_b)
 {
     const playerModelInfo_t *a = (const playerModelInfo_t *)_a;
     const playerModelInfo_t *b = (const playerModelInfo_t *)_b;

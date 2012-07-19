@@ -379,12 +379,12 @@ qboolean COM_IsWhite(const char *s)
     return qtrue;
 }
 
-int QDECL SortStrcmp(const void *p1, const void *p2)
+int SortStrcmp(const void *p1, const void *p2)
 {
     return strcmp(*(const char **)p1, *(const char **)p2);
 }
 
-int QDECL SortStricmp(const void *p1, const void *p2)
+int SortStricmp(const void *p1, const void *p2)
 {
     return Q_stricmp(*(const char **)p1, *(const char **)p2);
 }

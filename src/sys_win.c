@@ -1188,7 +1188,7 @@ main
 
 ==================
 */
-int QDECL main(int argc, char **argv)
+int main(int argc, char **argv)
 {
 #if USE_WINSVC
     int i;
