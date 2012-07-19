@@ -2089,7 +2089,9 @@ static pack_t *load_pak_file(const char *packfile)
 
         file->filepos = dfile->filepos;
         file->filelen = dfile->filelen;
+#if USE_ZLIB
         file->coherent = qtrue;
+#endif
 
         pack_hash_file(pack, file);
         file++;
