@@ -691,7 +691,9 @@ void     R_BeginFrame(void);
 
 //void    R_CinematicSetPalette(const unsigned char *palette);
 
-void    Sys_MakeCodeWriteable(unsigned long startaddr, unsigned long length);
+#if USE_ASM
+void    Sys_MakeCodeWriteable(uintptr_t start, size_t length);
+#endif
 
 void    R_InitImages(void);
 void    R_ShutdownImages(void);

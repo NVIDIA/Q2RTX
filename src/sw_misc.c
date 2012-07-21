@@ -55,10 +55,10 @@ void D_Patch(void)
     extern void D_PolysetAff8Start(void);
 
     if (!protectset8) {
-        Sys_MakeCodeWriteable((int)D_PolysetAff8Start,
-                              (int)D_Aff8Patch - (int)D_PolysetAff8Start);
-        Sys_MakeCodeWriteable((long)R_Surf8Start,
-                              (long)R_Surf8End - (long)R_Surf8Start);
+        Sys_MakeCodeWriteable((uintptr_t)D_PolysetAff8Start,
+                              (uintptr_t)D_Aff8Patch - (uintptr_t)D_PolysetAff8Start);
+        Sys_MakeCodeWriteable((uintptr_t)R_Surf8Start,
+                              (uintptr_t)R_Surf8End - (uintptr_t)R_Surf8Start);
         protectset8 = qtrue;
     }
 

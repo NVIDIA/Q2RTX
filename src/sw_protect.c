@@ -14,23 +14,19 @@
 Sys_MakeCodeWriteable
 ================
 */
-void Sys_MakeCodeWriteable(unsigned long startaddr, unsigned long length)
+void Sys_MakeCodeWriteable(uintptr_t start, size_t length)
 {
 #ifdef _WIN32
-    DWORD  flOldProtect;
+    DWORD unused;
 
-    if (!VirtualProtect((LPVOID)startaddr, length, PAGE_READWRITE, &flOldProtect))
-        Com_Error(ERR_FATAL, "Protection change failed\n");
+    if (!VirtualProtect((LPVOID)start, length, PAGE_EXECUTE_READWRITE, &unused))
+        Com_Error(ERR_FATAL, "Protection change failed");
 #else
-    int r;
-    unsigned long addr;
     int psize = getpagesize();
+    uintptr_t addr = (start & ~(psize - 1)) - psize;
 
-    addr = (startaddr & ~(psize - 1)) - psize;
-
-    r = mprotect((char*)addr, length + startaddr - addr + psize, 7);
-    if (r < 0)
-        Com_Error(ERR_FATAL, "Protection change failed\n");
+    if (mprotect((void *)addr, length + start - addr + psize, PROT_READ | PROT_WRITE | PROT_EXEC))
+        Com_Error(ERR_FATAL, "Protection change failed");
 #endif
 }
 

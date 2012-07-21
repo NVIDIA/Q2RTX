@@ -279,10 +279,10 @@ qboolean R_Init(qboolean total)
 
     Com_Printf("ref_soft " VERSION ", " __DATE__ "\n");
 
-// TODO: collect 386-specific code in one place
 #if USE_ASM
-    Sys_MakeCodeWriteable((long)R_EdgeCodeStart, (long)R_EdgeCodeEnd - (long)R_EdgeCodeStart);
-#endif  // USE_ASM
+    Sys_MakeCodeWriteable((uintptr_t)R_EdgeCodeStart,
+                          (uintptr_t)R_EdgeCodeEnd - (uintptr_t)R_EdgeCodeStart);
+#endif
 
     r_aliasuvscale = 1.0;
 
