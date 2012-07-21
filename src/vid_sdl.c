@@ -673,7 +673,7 @@ qboolean VID_Init(void)
         return qfalse;
     }
 
-    gl_driver = Cvar_Get("gl_driver", DEFAULT_OPENGL_DRIVER, CVAR_REFRESH);
+    gl_driver = Cvar_Get("gl_driver", "libGL.so.1", CVAR_REFRESH);
     gl_colorbits = Cvar_Get("gl_colorbits", "0", CVAR_REFRESH);
     gl_depthbits = Cvar_Get("gl_depthbits", "0", CVAR_REFRESH);
     gl_stencilbits = Cvar_Get("gl_stencilbits", "8", CVAR_REFRESH);
@@ -687,8 +687,9 @@ qboolean VID_Init(void)
         // of other systems than Windows
         s = gl_driver->string;
         if (!Q_stricmp(s, "opengl32") || !Q_stricmp(s, "opengl32.dll")) {
-            Com_Printf("...attempting to load %s instead of %s\n", DEFAULT_OPENGL_DRIVER, s);
-            s = DEFAULT_OPENGL_DRIVER;
+            Com_Printf("...attempting to load %s instead of %s\n",
+                       gl_driver->default_string, s);
+            s = gl_driver->default_string;
         }
 
         if (SDL_GL_LoadLibrary(s) == 0) {
@@ -696,13 +697,13 @@ qboolean VID_Init(void)
         }
 
         Com_EPrintf("Couldn't load OpenGL library: %s\n", SDL_GetError());
-        if (!strcmp(s, DEFAULT_OPENGL_DRIVER)) {
+        if (!strcmp(s, gl_driver->default_string)) {
             goto fail;
         }
 
         // attempt to recover
-        Com_Printf("...falling back to %s\n", DEFAULT_OPENGL_DRIVER);
-        Cvar_SetByVar(gl_driver, DEFAULT_OPENGL_DRIVER, FROM_CODE);
+        Com_Printf("...falling back to %s\n", gl_driver->default_string);
+        Cvar_Reset(gl_driver);
     }
 
     colorbits = Cvar_ClampInteger(gl_colorbits, 0, 32);

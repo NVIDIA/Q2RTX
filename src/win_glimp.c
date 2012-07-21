@@ -278,7 +278,7 @@ qboolean VID_Init(void)
     unsigned mask;
     int ret;
 
-    gl_driver = Cvar_Get("gl_driver", DEFAULT_OPENGL_DRIVER, CVAR_ARCHIVE | CVAR_REFRESH);
+    gl_driver = Cvar_Get("gl_driver", "opengl32", CVAR_ARCHIVE | CVAR_REFRESH);
     gl_drawbuffer = Cvar_Get("gl_drawbuffer", "GL_BACK", 0);
     gl_swapinterval = Cvar_Get("gl_swapinterval", "1", CVAR_ARCHIVE);
     gl_allow_software = Cvar_Get("gl_allow_software", "0", 0);
@@ -295,7 +295,7 @@ qboolean VID_Init(void)
     // attempt to recover if this was a minidriver
     if (ret == FAIL_SOFT && glw.minidriver) {
         Com_Printf("...falling back to opengl32\n");
-        Cvar_Set("gl_driver", "opengl32");
+        Cvar_Reset(gl_driver);
         ret = LoadGL(gl_driver->string);
     }
 
