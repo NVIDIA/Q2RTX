@@ -126,6 +126,7 @@ Win_ModeChanged
 void Win_ModeChanged(void)
 {
 #if USE_REF == REF_SOFT
+    void SWimp_ModeChanged(void);
     SWimp_ModeChanged();
 #endif
     R_ModeChanged(win.rc.width, win.rc.height, win.flags,
