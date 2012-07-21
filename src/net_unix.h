@@ -31,7 +31,7 @@ static const char *os_error_string(int err)
 // Linux 2.2 and higher supports this via IP_RECVERR option, see ip(7).
 // What about BSD?
 
-#ifdef __linux__
+#if USE_ICMP && (defined __linux__)
 
 static qboolean check_offender(const struct sockaddr_in *from,
                                const struct sockaddr_in *to)
@@ -125,7 +125,7 @@ static ssize_t os_udp_recv(netsrc_t sock, void *data,
     socklen_t addrlen;
     ssize_t ret;
 
-#ifdef __linux__
+#if USE_ICMP && (defined __linux__)
     int tries;
     for (tries = 0; tries < MAX_ERROR_RETRIES; tries++) {
 #endif
@@ -145,7 +145,7 @@ static ssize_t os_udp_recv(netsrc_t sock, void *data,
         if (net_error == EWOULDBLOCK)
             return NET_AGAIN;
 
-#ifdef __linux__
+#if USE_ICMP && (defined __linux__)
         // recvfrom() fails on Linux if there is an ICMP originated pending
         // error on socket. Suck up error queue and retry...
 
@@ -165,7 +165,7 @@ static ssize_t os_udp_send(netsrc_t sock, const void *data,
 
     NET_NetadrToSockadr(to, &addr);
 
-#ifdef __linux__
+#if USE_ICMP && (defined __linux__)
     int tries;
     for (tries = 0; tries < MAX_ERROR_RETRIES; tries++) {
 #endif
@@ -180,7 +180,7 @@ static ssize_t os_udp_send(netsrc_t sock, const void *data,
         if (net_error == EWOULDBLOCK)
             return NET_AGAIN;
 
-#ifdef __linux__
+#if USE_ICMP && (defined __linux__)
         // sendto() fails on Linux if there is an ICMP originated pending error
         // on socket. Suck up error queue and retry...
         //
