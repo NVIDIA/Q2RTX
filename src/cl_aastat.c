@@ -308,14 +308,14 @@ static void SCR_ScoreShot_f(void)
 
     if (Cmd_Argc() > 1) {
         f = FS_EasyOpenFile(path, sizeof(path), FS_MODE_WRITE | FS_FLAG_TEXT,
-                            SCORESHOTS_DIRECTORY "/", Cmd_Argv(1), ".txt");
+                            "scoreshots/", Cmd_Argv(1), ".txt");
         if (!f) {
             return;
         }
     } else {
         // find a file name to save it to
         for (i = 0; i < 1000; i++) {
-            Q_snprintf(path, sizeof(path), SCORESHOTS_DIRECTORY "/quake%03d.txt", i);
+            Q_snprintf(path, sizeof(path), "scoreshots/quake%03d.txt", i);
             ret = FS_FOpenFile(path, &f, FS_MODE_WRITE | FS_FLAG_TEXT | FS_FLAG_EXCL);
             if (f) {
                 break;
