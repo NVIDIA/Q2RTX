@@ -1,47 +1,653 @@
-include config.mk
+### Q2PRO Makefile ###
 
-.PHONY: default all binary strip tags clean distclean
+-include .config
+
+ifdef CONFIG_WINDOWS
+    CPU ?= x86
+    SYS ?= Win32
+else
+    ifndef CPU
+        CPU := $(shell uname -m | sed -e s/i.86/i386/ -e s/amd64/x86_64/ -e s/sun4u/sparc64/ -e s/arm.*/arm/ -e s/sa110/arm/ -e s/alpha/axp/)
+    endif
+    ifndef SYS
+        SYS := $(shell uname -s)
+    endif
+endif
+
+ifndef REV
+    REV := $(shell ./version.sh --revision)
+endif
+ifndef VER
+    VER := $(shell ./version.sh --version)
+endif
+
+CC ?= gcc
+WINDRES ?= windres
+STRIP ?= strip
+RM ?= rm -f
+RMDIR ?= rm -rf
+MKDIR ?= mkdir -p
+
+CFLAGS ?= -O2 -Wall -g -MMD $(INCLUDES)
+ASFLAGS ?=
+RCFLAGS ?=
+LDFLAGS ?=
+LIBS ?=
+
+CFLAGS_s :=
+CFLAGS_c :=
+CFLAGS_g := -I./src
+
+ASFLAGS_s :=
+ASFLAGS_c :=
+
+RCFLAGS_s :=
+RCFLAGS_c :=
+RCFLAGS_g :=
+
+LDFLAGS_s :=
+LDFLAGS_c :=
+LDFLAGS_g := -shared
+
+ifdef CONFIG_WINDOWS
+    # Force i?86-netware calling convention on x86 Windows
+    ifeq ($(CPU),x86)
+        CONFIG_X86_GAME_ABI_HACK := y
+    else
+        CONFIG_X86_GAME_ABI_HACK :=
+        CONFIG_X86_ASSEMBLY :=
+    endif
+
+    LDFLAGS_s += -mconsole
+    LDFLAGS_c += -mwindows
+    LDFLAGS_g += -mconsole
+
+    # Mark images as DEP and ASLR compatible on x86 Windows
+    ifeq ($(CPU),x86)
+        LDFLAGS_s += -Wl,--nxcompat,--dynamicbase
+        LDFLAGS_c += -Wl,--nxcompat,--dynamicbase
+        LDFLAGS_g += -Wl,--nxcompat,--dynamicbase
+    endif
+else
+    # Disable x86 features on other arches
+    ifneq ($(CPU),i386)
+        CONFIG_X86_GAME_ABI_HACK :=
+        CONFIG_X86_ASSEMBLY :=
+    endif
+
+    # Disable Linux features on other systems
+    ifneq ($(SYS),Linux)
+        CONFIG_DIRECT_INPUT :=
+        CONFIG_NO_ICMP := y
+    endif
+
+    # Hide ELF symbols by default
+    CFLAGS_s += -fvisibility=hidden
+    CFLAGS_c += -fvisibility=hidden
+    CFLAGS_g += -fvisibility=hidden
+
+    # Resolve all symbols at link time
+    LDFLAGS_s += -Wl,--no-undefined
+    LDFLAGS_c += -Wl,--no-undefined
+    LDFLAGS_g += -Wl,--no-undefined
+
+    CFLAGS_g += -fPIC
+endif
+
+BUILD_DEFS := -DCPUSTRING='"$(CPU)"'
+BUILD_DEFS += -DBUILDSTRING='"$(SYS)"'
+
+VER_DEFS := -DREVISION=$(REV)
+VER_DEFS += -DVERSION='"$(VER)"'
+
+CONFIG_GAME_BASE ?= baseq2
+CONFIG_GAME_DEFAULT ?=
+PATH_DEFS := -DBASEGAME='"$(CONFIG_GAME_BASE)"'
+PATH_DEFS += -DDEFGAME='"$(CONFIG_GAME_DEFAULT)"'
+
+# System paths
+ifndef CONFIG_WINDOWS
+    CONFIG_PATH_DATA ?= .
+    CONFIG_PATH_LIB ?= .
+    CONFIG_PATH_HOME ?= .
+    PATH_DEFS += -DDATADIR='"$(CONFIG_PATH_DATA)"'
+    PATH_DEFS += -DLIBDIR='"$(CONFIG_PATH_LIB)"'
+    PATH_DEFS += -DHOMEDIR='"$(CONFIG_PATH_HOME)"'
+endif
+
+CFLAGS_s += $(BUILD_DEFS) $(VER_DEFS) $(PATH_DEFS) -DUSE_SERVER=1
+CFLAGS_c += $(BUILD_DEFS) $(VER_DEFS) $(PATH_DEFS) -DUSE_SERVER=1 -DUSE_CLIENT=1
+
+# windres needs special quoting...
+RCFLAGS_s += -DREVISION=$(REV) -DVERSION='\"$(VER)\"'
+RCFLAGS_c += -DREVISION=$(REV) -DVERSION='\"$(VER)\"'
+RCFLAGS_g += -DREVISION=$(REV) -DVERSION='\"$(VER)\"'
+
+
+### Object Files ###
+
+COMMON_OBJS := \
+    src/bsp.o           \
+    src/cmd.o           \
+    src/cmodel.o        \
+    src/common.o        \
+    src/cvar.o          \
+    src/error.o         \
+    src/files.o         \
+    src/fpu.o           \
+    src/mdfour.o        \
+    src/net_chan.o      \
+    src/net_common.o    \
+    src/pmove.o         \
+    src/prompt.o        \
+    src/q_field.o       \
+    src/q_msg.o         \
+    src/q_shared.o
+
+OBJS_c := \
+    $(COMMON_OBJS)      \
+    src/crc.o           \
+    src/m_flash.o       \
+    src/cl_aastat.o     \
+    src/cl_console.o    \
+    src/cl_demo.o       \
+    src/cl_download.o   \
+    src/cl_ents.o       \
+    src/cl_fx.o         \
+    src/cl_input.o      \
+    src/cl_keys.o       \
+    src/cl_locs.o       \
+    src/cl_main.o       \
+    src/cl_newfx.o      \
+    src/cl_parse.o      \
+    src/cl_precache.o   \
+    src/cl_pred.o       \
+    src/cl_ref.o        \
+    src/cl_scrn.o       \
+    src/cl_tent.o       \
+    src/cl_view.o       \
+    src/sv_ccmds.o      \
+    src/sv_ents.o       \
+    src/sv_game.o       \
+    src/sv_init.o       \
+    src/sv_main.o       \
+    src/sv_save.o       \
+    src/sv_send.o       \
+    src/sv_user.o       \
+    src/sv_world.o      \
+    src/snd_main.o      \
+    src/snd_mem.o       \
+    src/r_images.o      \
+    src/r_models.o
+
+OBJS_s := \
+    $(COMMON_OBJS)  \
+    src/cl_null.o   \
+    src/sv_ccmds.o  \
+    src/sv_ents.o   \
+    src/sv_game.o   \
+    src/sv_init.o   \
+    src/sv_main.o   \
+    src/sv_send.o   \
+    src/sv_user.o   \
+    src/sv_world.o
+
+OBJS_g := \
+    src/q_shared.o              \
+    src/m_flash.o               \
+    src/baseq2/g_ai.o           \
+    src/baseq2/g_chase.o        \
+    src/baseq2/g_cmds.o         \
+    src/baseq2/g_combat.o       \
+    src/baseq2/g_func.o         \
+    src/baseq2/g_items.o        \
+    src/baseq2/g_main.o         \
+    src/baseq2/g_misc.o         \
+    src/baseq2/g_monster.o      \
+    src/baseq2/g_phys.o         \
+    src/baseq2/g_ptrs.o         \
+    src/baseq2/g_save.o         \
+    src/baseq2/g_spawn.o        \
+    src/baseq2/g_svcmds.o       \
+    src/baseq2/g_target.o       \
+    src/baseq2/g_trigger.o      \
+    src/baseq2/g_turret.o       \
+    src/baseq2/g_utils.o        \
+    src/baseq2/g_weapon.o       \
+    src/baseq2/m_actor.o        \
+    src/baseq2/m_berserk.o      \
+    src/baseq2/m_boss2.o        \
+    src/baseq2/m_boss31.o       \
+    src/baseq2/m_boss32.o       \
+    src/baseq2/m_boss3.o        \
+    src/baseq2/m_brain.o        \
+    src/baseq2/m_chick.o        \
+    src/baseq2/m_flipper.o      \
+    src/baseq2/m_float.o        \
+    src/baseq2/m_flyer.o        \
+    src/baseq2/m_gladiator.o    \
+    src/baseq2/m_gunner.o       \
+    src/baseq2/m_hover.o        \
+    src/baseq2/m_infantry.o     \
+    src/baseq2/m_insane.o       \
+    src/baseq2/m_medic.o        \
+    src/baseq2/m_move.o         \
+    src/baseq2/m_mutant.o       \
+    src/baseq2/m_parasite.o     \
+    src/baseq2/m_soldier.o      \
+    src/baseq2/m_supertank.o    \
+    src/baseq2/m_tank.o         \
+    src/baseq2/p_client.o       \
+    src/baseq2/p_hud.o          \
+    src/baseq2/p_trail.o        \
+    src/baseq2/p_view.o         \
+    src/baseq2/p_weapon.o
+
+
+### Configuration Options ###
+
+ifdef CONFIG_HTTP
+    CURL_CFLAGS ?= $(shell pkg-config libcurl --cflags)
+    CURL_LIBS ?= $(shell pkg-config libcurl --libs)
+    CFLAGS_c += -DUSE_CURL=1 $(CURL_CFLAGS)
+    LIBS_c += $(CURL_LIBS)
+    OBJS_c += src/cl_http.o
+endif
+
+ifndef CONFIG_NO_SOFTWARE_SOUND
+    CFLAGS_c += -DUSE_SNDDMA=1
+    OBJS_c += src/snd_mix.o
+    OBJS_c += src/snd_dma.o
+endif
+
+ifdef CONFIG_OPENAL
+    CFLAGS_c += -DUSE_OPENAL=1
+    OBJS_c += src/snd_al.o
+    OBJS_c += src/qal_api.o
+endif
+
+ifndef CONFIG_NO_MENUS
+    CFLAGS_c += -DUSE_UI=1
+    OBJS_c += src/ui_atoms.o
+    OBJS_c += src/ui_demos.o
+    OBJS_c += src/ui_menu.o
+    OBJS_c += src/ui_playerconfig.o
+    OBJS_c += src/ui_playermodels.o
+    OBJS_c += src/ui_script.o
+    OBJS_c += src/ui_servers.o
+endif
+
+# Light styles are always enabled
+CFLAGS_c += -DUSE_LIGHTSTYLES=1
+
+ifndef CONFIG_NO_DYNAMIC_LIGHTS
+    CFLAGS_c += -DUSE_DLIGHTS=1
+endif
+
+ifndef CONFIG_NO_AUTOREPLY
+    CFLAGS_c += -DUSE_AUTOREPLY=1
+endif
+
+ifndef CONFIG_NO_MAPCHECKSUM
+    CFLAGS_c += -DUSE_MAPCHECKSUM=1
+endif
+
+ifdef CONFIG_SOFTWARE_RENDERER
+    CFLAGS_c += -DREF_SOFT=1 -DUSE_REF=1 -DVID_REF='"soft"'
+    OBJS_c += src/sw_aclip.o
+    OBJS_c += src/sw_alias.o
+    OBJS_c += src/sw_bsp.o
+    OBJS_c += src/sw_draw.o
+    OBJS_c += src/sw_edge.o
+    OBJS_c += src/sw_image.o
+    OBJS_c += src/sw_light.o
+    OBJS_c += src/sw_main.o
+    OBJS_c += src/sw_misc.o
+    OBJS_c += src/sw_model.o
+    OBJS_c += src/sw_part.o
+    OBJS_c += src/sw_poly.o
+    OBJS_c += src/sw_polyse.o
+    OBJS_c += src/sw_rast.o
+    OBJS_c += src/sw_scan.o
+    OBJS_c += src/sw_surf.o
+    OBJS_c += src/sw_sird.o
+    OBJS_c += src/sw_sky.o
+
+    ifdef CONFIG_X86_ASSEMBLY
+        OBJS_c += src/sw_protect.o
+        OBJS_c += src/i386/r_aclipa.o
+        OBJS_c += src/i386/r_draw16.o
+        OBJS_c += src/i386/r_drawa.o
+        OBJS_c += src/i386/r_edgea.o
+        OBJS_c += src/i386/r_scana.o
+        OBJS_c += src/i386/r_surf8.o
+        OBJS_c += src/i386/r_varsa.o
+        OBJS_c += src/i386/d_polysa.o
+    endif
+else
+    CFLAGS_c += -DREF_GL=1 -DUSE_REF=1 -DVID_REF='"gl"'
+    OBJS_c += src/gl_draw.o
+    OBJS_c += src/gl_images.o
+    OBJS_c += src/gl_main.o
+    OBJS_c += src/gl_mesh.o
+    OBJS_c += src/gl_models.o
+    OBJS_c += src/gl_sky.o
+    OBJS_c += src/gl_state.o
+    OBJS_c += src/gl_surf.o
+    OBJS_c += src/gl_tess.o
+    OBJS_c += src/gl_world.o
+    OBJS_c += src/qgl_api.o
+endif
+
+CONFIG_DEFAULT_MODELIST ?= 640x480 800x600 1024x768
+CONFIG_DEFAULT_GEOMETRY ?= 640x480
+CFLAGS_c += -DVID_MODELIST='"$(CONFIG_DEFAULT_MODELIST)"'
+CFLAGS_c += -DVID_GEOMETRY='"$(CONFIG_DEFAULT_GEOMETRY)"'
+
+ifndef CONFIG_SOFTWARE_RENDERER
+    ifndef CONFIG_NO_MD3
+        CFLAGS_c += -DUSE_MD3=1
+    endif
+
+    ifndef CONFIG_NO_TGA
+        CFLAGS_c += -DUSE_TGA=1
+    endif
+
+    ifdef CONFIG_PNG
+        PNG_CFLAGS ?= $(shell libpng-config --cflags)
+        PNG_LIBS ?= $(shell libpng-config --libs)
+        CFLAGS_c += -DUSE_PNG=1 $(PNG_CFLAGS)
+        LIBS_c += $(PNG_LIBS)
+    endif
+
+    ifdef CONFIG_JPEG
+        JPG_CFLAGS ?=
+        JPG_LIBS ?= -ljpeg
+        CFLAGS_c += -DUSE_JPG=1 $(JPG_CFLAGS)
+        LIBS_c += $(JPG_LIBS)
+    endif
+endif
+
+ifdef CONFIG_ANTICHEAT_SERVER
+    CFLAGS_s += -DUSE_AC_SERVER=1
+    OBJS_s += src/sv_ac.o
+endif
+
+ifdef CONFIG_MVD_SERVER
+    CFLAGS_s += -DUSE_MVD_SERVER=1
+    CFLAGS_c += -DUSE_MVD_SERVER=1
+    OBJS_s += src/sv_mvd.o
+    OBJS_c += src/sv_mvd.o
+endif
+
+ifdef CONFIG_MVD_CLIENT
+    CFLAGS_s += -DUSE_MVD_CLIENT=1
+    CFLAGS_c += -DUSE_MVD_CLIENT=1
+    OBJS_s += src/mvd_client.o src/mvd_parse.o src/mvd_game.o
+    OBJS_c += src/mvd_client.o src/mvd_parse.o src/mvd_game.o
+endif
+
+ifndef CONFIG_NO_ZLIB
+    ZLIB_CFLAGS ?=
+    ZLIB_LIBS ?= -lz
+    CFLAGS_c += -DUSE_ZLIB=1 $(ZLIB_CFLAGS)
+    CFLAGS_s += -DUSE_ZLIB=1 $(ZLIB_CFLAGS)
+    LIBS_c += $(ZLIB_LIBS)
+    LIBS_s += $(ZLIB_LIBS)
+endif
+
+ifndef CONFIG_NO_ICMP
+    CFLAGS_c += -DUSE_ICMP=1
+    CFLAGS_s += -DUSE_ICMP=1
+endif
+
+ifndef CONFIG_NO_SYSTEM_CONSOLE
+    CFLAGS_c += -DUSE_SYSCON=1
+    CFLAGS_s += -DUSE_SYSCON=1
+endif
+
+ifdef CONFIG_X86_GAME_ABI_HACK
+    CFLAGS_c += -DUSE_GAME_ABI_HACK=1
+    CFLAGS_s += -DUSE_GAME_ABI_HACK=1
+    CFLAGS_g += -DUSE_GAME_ABI_HACK=1
+endif
+
+ifdef CONFIG_VARIABLE_SERVER_FPS
+    CFLAGS_c += -DUSE_FPS=1
+    CFLAGS_s += -DUSE_FPS=1
+endif
+
+ifdef CONFIG_WINDOWS
+    OBJS_c += src/vid_win.o
+
+    ifdef CONFIG_DIRECT_INPUT
+        CFLAGS_c += -DUSE_DINPUT=1
+        OBJS_c += src/in_dx.o
+    endif
+
+    ifndef CONFIG_NO_SOFTWARE_SOUND
+        OBJS_c += src/snd_wave.o
+        ifdef CONFIG_DIRECT_SOUND
+            OBJS_c += src/snd_dx.o
+        endif
+    endif
+
+    ifdef CONFIG_SOFTWARE_RENDERER
+        OBJS_c += src/win_swimp.o
+    else
+        OBJS_c += src/win_glimp.o
+        OBJS_c += src/win_wgl.o
+    endif
+
+    ifdef CONFIG_WINDOWS_CRASH_DUMPS
+        CFLAGS_c += -DUSE_DBGHELP=1
+        CFLAGS_s += -DUSE_DBGHELP=1
+        OBJS_c += src/win_dbg.o
+        OBJS_s += src/win_dbg.o
+    endif
+
+    ifdef CONFIG_WINDOWS_SERVICE
+        CFLAGS_s += -DUSE_WINSVC=1
+    endif
+
+    OBJS_c += src/sys_win.o
+    OBJS_s += src/sys_win.o
+
+    # Resources
+    OBJS_c += src/q2pro.o
+    OBJS_s += src/q2proded.o
+    OBJS_g += src/baseq2/baseq2.o
+
+    # System libs
+    LIBS_s += -lws2_32 -lwinmm -ladvapi32
+    LIBS_c += -lws2_32 -lwinmm
+else
+    SDL_CFLAGS ?= $(shell sdl-config --cflags)
+    SDL_LIBS ?= $(shell sdl-config --libs)
+    CFLAGS_c += -DUSE_SDL=1 $(SDL_CFLAGS)
+    LIBS_c += $(SDL_LIBS)
+    OBJS_c += src/vid_sdl.o
+
+    ifdef CONFIG_X11
+        X11_CFLAGS ?=
+        X11_LIBS ?= -lX11
+        CFLAGS_c += -DUSE_X11=1 $(X11_CFLAGS)
+        LIBS_c += $(X11_LIBS)
+    endif
+
+    ifdef CONFIG_DIRECT_INPUT
+        CFLAGS_c += -DUSE_DINPUT=1
+        OBJS_c += src/in_evdev.o
+        ifndef CONFIG_NO_UDEV
+            UDEV_CFLAGS ?=
+            UDEV_LIBS ?= -ludev
+            CFLAGS_c += -DUSE_UDEV=1 $(UDEV_CFLAGS)
+            LIBS_c += $(UDEV_LIBS)
+        endif
+    endif
+
+    ifdef CONFIG_LIRC
+        LIRC_CFLAGS ?=
+        LIRC_LIBS ?= -llirc_client
+        CFLAGS_c += -DUSE_LIRC=1 $(LIRC_CFLAGS)
+        OBJS_c += src/in_lirc.o
+        LIBS_c += $(LIRC_LIBS)
+    endif
+
+    ifndef CONFIG_NO_SOFTWARE_SOUND
+        OBJS_c += src/snd_sdl.o
+        ifdef CONFIG_DIRECT_SOUND
+            OBJS_c += src/snd_oss.o
+        endif
+    endif
+
+    OBJS_c += src/sys_unix.o
+    OBJS_s += src/sys_unix.o
+
+    # System libs
+    LIBS_s += -lm -ldl
+    LIBS_c += -lm -ldl
+    LIBS_g += -lm
+endif
+
+ifdef CONFIG_TESTS
+    CFLAGS_c += -DUSE_TESTS=1
+    CFLAGS_s += -DUSE_TESTS=1
+    OBJS_c += src/tests.o
+    OBJS_s += src/tests.o
+endif
+
+ifdef CONFIG_DEBUG
+    CFLAGS_c += -D_DEBUG
+    CFLAGS_s += -D_DEBUG
+endif
+
+ifdef CONFIG_X86_ASSEMBLY
+    ASFLAGS_c += -DUSE_ASM=1
+    ASFLAGS_s += -DUSE_ASM=1
+    ifdef CONFIG_WINDOWS
+        ASFLAGS_c += -DUNDERSCORES
+        ASFLAGS_s += -DUNDERSCORES
+    endif
+    CFLAGS_c += -DUSE_ASM=1
+    CFLAGS_s += -DUSE_ASM=1
+    OBJS_c += src/i386/math.o
+    OBJS_s += src/i386/math.o
+endif
+
+
+### Targets ###
+
+ifdef CONFIG_WINDOWS
+    TARG_s := q2proded.exe
+    TARG_c := q2pro.exe
+    TARG_g := game$(CPU).dll
+else
+    TARG_s := q2proded
+    TARG_c := q2pro
+    TARG_g := game$(CPU).so
+endif
+
+all: $(TARG_s) $(TARG_c) $(TARG_g)
 
 default: all
-all: binary
 
-%-binary:
-	$(MAKE) -C .$* -f $(SRCDIR)/build/$*.mk binary
+.PHONY: clean
 
-%-strip:
-	$(MAKE) -C .$* -f $(SRCDIR)/build/$*.mk strip
-
-%-clean:
-	$(MAKE) -C .$* -f $(SRCDIR)/build/$*.mk clean
-
-binary: $(patsubst %,%-binary,$(TARGETS))
-
-strip: $(patsubst %,%-strip,$(TARGETS))
-
-tags:
-	ctags $(SRCDIR)/src/*.[ch] $(SRCDIR)/src/baseq2/*.[ch]
-
-clean: $(patsubst %,%-clean,$(TARGETS))
-
-distclean: clean
-	rm -rf .q2pro .q2proded .baseq2
-	rm -f config.mk config.h
-	rm -f tags
-
-ifndef SINGLEUSER
-.PHONY: install uninstall
-
-%-install:
-	$(MAKE) -C .$* -f $(SRCDIR)/build/$*.mk install
-
-%-uninstall:
-	$(MAKE) -C .$* -f $(SRCDIR)/build/$*.mk uninstall
-
-install: $(patsubst %,%-install,$(TARGETS))
-	install -m 644 -D $(SRCDIR)/src/q2pro.default \
-		$(DESTDIR)$(SITECFG)
-
-uninstall: $(patsubst %,%-uninstall,$(TARGETS))
-	-rm $(DESTDIR)$(SITECFG)
+# Define V=1 to show command line.
+ifdef V
+    Q :=
+    E := @true
+else
+    Q := @
+    E := @echo
 endif
+
+# Temporary build directories
+BUILD_s := .q2proded
+BUILD_c := .q2pro
+BUILD_g := .baseq2
+
+# Rewrite paths to build directories
+OBJS_s := $(patsubst %,$(BUILD_s)/%,$(OBJS_s))
+OBJS_c := $(patsubst %,$(BUILD_c)/%,$(OBJS_c))
+OBJS_g := $(patsubst %,$(BUILD_g)/%,$(OBJS_g))
+
+DEPS_s := $(OBJS_s:.o=.d)
+DEPS_c := $(OBJS_c:.o=.d)
+DEPS_g := $(OBJS_g:.o=.d)
+
+-include $(DEPS_s)
+-include $(DEPS_c)
+-include $(DEPS_g)
+
+clean:
+	$(E) [CLEAN]
+	$(Q)$(RM) $(TARG_s) $(TARG_c) $(TARG_g)
+	$(Q)$(RMDIR) $(BUILD_s) $(BUILD_c) $(BUILD_g)
+
+strip: $(TARG_s) $(TARG_c) $(TARG_g)
+	$(E) [STRIP]
+	$(Q)$(STRIP) $(TARG_s) $(TARG_c) $(TARG_g)
+
+# ------
+
+$(BUILD_s)/%.o: %.c
+	$(E) [CC] $@
+	$(Q)$(MKDIR) $(@D)
+	$(Q)$(CC) -c $(CFLAGS) $(CFLAGS_s) -o $@ $<
+
+$(BUILD_s)/%.o: %.s
+	$(E) [AS] $@
+	$(Q)$(MKDIR) $(@D)
+	$(Q)$(CC) -c -x assembler-with-cpp $(ASFLAGS) $(ASFLAGS_s) -o $@ $<
+
+$(BUILD_s)/%.o: %.rc
+	$(E) [RC] $@
+	$(Q)$(MKDIR) $(@D)
+	$(Q)$(WINDRES) $(RCFLAGS) $(RCFLAGS_s) -o $@ $<
+
+$(TARG_s): $(OBJS_s)
+	$(E) [LD] $@
+	$(Q)$(MKDIR) $(@D)
+	$(Q)$(CC) $(LDFLAGS) $(LDFLAGS_s) -o $@ $(OBJS_s) $(LIBS) $(LIBS_s)
+
+# ------
+
+$(BUILD_c)/%.o: %.c
+	$(E) [CC] $@
+	$(Q)$(MKDIR) $(@D)
+	$(Q)$(CC) -c $(CFLAGS) $(CFLAGS_c) -o $@ $<
+
+$(BUILD_c)/%.o: %.s
+	$(E) [AS] $@
+	$(Q)$(MKDIR) $(@D)
+	$(Q)$(CC) -c -x assembler-with-cpp $(ASFLAGS) $(ASFLAGS_c) -o $@ $<
+
+$(BUILD_c)/%.o: %.rc
+	$(E) [RC] $@
+	$(Q)$(MKDIR) $(@D)
+	$(Q)$(WINDRES) $(RCFLAGS) $(RCFLAGS_c) -o $@ $<
+
+$(TARG_c): $(OBJS_c)
+	$(E) [LD] $@
+	$(Q)$(MKDIR) $(@D)
+	$(Q)$(CC) $(LDFLAGS) $(LDFLAGS_c) -o $@ $(OBJS_c) $(LIBS) $(LIBS_c)
+
+# ------
+
+$(BUILD_g)/%.o: %.c
+	$(E) [CC] $@
+	$(Q)$(MKDIR) $(@D)
+	$(Q)$(CC) -c $(CFLAGS) $(CFLAGS_g) -o $@ $<
+
+$(BUILD_g)/%.o: %.rc
+	$(E) [RC] $@
+	$(Q)$(MKDIR) $(@D)
+	$(Q)$(WINDRES) $(RCFLAGS) $(RCFLAGS_g) -o $@ $<
+
+$(TARG_g): $(OBJS_g)
+	$(E) [LD] $@
+	$(Q)$(MKDIR) $(@D)
+	$(Q)$(CC) $(LDFLAGS) $(LDFLAGS_g) -o $@ $(OBJS_g) $(LIBS) $(LIBS_g)
 

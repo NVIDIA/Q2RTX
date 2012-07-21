@@ -89,6 +89,12 @@ void QAL_Shutdown(void)
         al_device->flags &= ~CVAR_SOUND;
 }
 
+#ifdef _WIN32
+#define DEFAULT_OPENAL_DRIVER   "openal32"
+#else
+#define DEFAULT_OPENAL_DRIVER   "libopenal.so.1"
+#endif
+
 qboolean QAL_Init(void)
 {
     al_driver = Cvar_Get("al_driver", DEFAULT_OPENAL_DRIVER, 0);

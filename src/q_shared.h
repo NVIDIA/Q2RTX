@@ -26,62 +26,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <stdarg.h>
 #include <string.h>
 #include <stdlib.h>
-#if HAVE_STDINT_H
 #include <stdint.h>
-#endif
-#if HAVE_INTTYPES_H
 #include <inttypes.h>
-#endif
 #include <limits.h>
 #include <time.h>
 #if HAVE_ENDIAN_H
 #include <endian.h>
 #endif
-
-#ifdef __GNUC__
-
-#define q_printf(f, a)      __attribute__((format(printf, f, a)))
-#define q_noreturn          __attribute__((noreturn))
-#define q_malloc            __attribute__((malloc))
-#if __GNUC__ >= 4
-#define q_sentinel          __attribute__((sentinel))
-#else
-#define q_sentinel
-#endif
-
-#define q_likely(x)         __builtin_expect(!!(x), 1)
-#define q_unlikely(x)       __builtin_expect(!!(x), 0)
-#if __GNUC__ >= 4
-#define q_offsetof(t, m)    __builtin_offsetof(t, m)
-#else
-#define q_offsetof(t, m)    ((size_t)&((t *)0)->m)
-#endif
-
-#if USE_GAME_ABI_HACK
-#define q_gameabi           __attribute__((callee_pop_aggregate_return(0)))
-#else
-#define q_gameabi
-#endif
-
-#define q_unused            __attribute__((unused))
-
-#else /* __GNUC__ */
-
-#define q_printf(f, a)
-#define q_noreturn
-#define q_malloc
-#define q_sentinel
-#define q_packed
-
-#define q_likely(x)         !!(x)
-#define q_unlikely(x)       !!(x)
-#define q_offsetof(t, m)    ((size_t)&((t *)0)->m)
-
-#define q_gameabi
-
-#define q_unused
-
-#endif /* !__GNUC__ */
+#include "platform.h"
 
 #define q_countof(a)        (sizeof(a) / sizeof(a[0]))
 

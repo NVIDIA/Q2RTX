@@ -20,7 +20,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // qcommon.h -- definitions common between client and server, but not game.dll
 
-#include <config.h>
 #include "q_shared.h"
 #include <errno.h>
 #include "error.h"
@@ -41,6 +40,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #else
 #define COM_CONFIG_CFG      "config.cfg"
 #endif
+
+// FIXME: rename these
+#define COM_HISTORYFILE_NAME    ".conhistory"
+#define COM_DEMOCACHE_NAME      ".democache"
 
 /*
 ==============================================================

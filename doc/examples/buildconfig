@@ -1,0 +1,205 @@
+# Example Q2PRO build time configuration file. Copy this file to `.config' and
+# edit it to suit your needs.
+#
+# Any variable that is commented out is DISABLED. Setting a variable to some
+# non-empty value ENABLES it. It doesn't really matter what value the variable
+# is set to, except in cases where the variable is NOT a boolean.
+#
+# After you change something in `.config', make sure to do a full rebuild by
+# typing `make clean; make'.
+
+
+### Client configuration ###
+
+# Enable PNG textures by linking against libpng.
+#CONFIG_PNG=y
+
+# Enable JPEG textures by linking against libjpeg.
+#CONFIG_JPEG=y
+
+# Enable HTTP downloads by linking against libcurl.
+#CONFIG_HTTP=y
+
+# Enable OpenAL sound engine.
+#CONFIG_OPENAL=y
+
+# Enable direct sound driver (DirectSound on Windows, OSS on Linux). This
+# option has no effect if CONFIG_NO_SOFTWARE_SOUND is set.
+#CONFIG_DIRECT_SOUND=y
+
+# Enable direct mouse driver (DirectInput on Windows, evdev kernel interface on
+# Linux). Note: DirectInput is deprecated on Windows (raw input is preferred).
+#CONFIG_DIRECT_INPUT=y
+
+# Enable reading input events from LIRC by linking against liblirc_client.
+# This option has no effect on Windows.
+#CONFIG_LIRC=y
+
+# Enable X11 support in SDL video driver by linking against libX11. Currently,
+# this enables GLX_SGI_video_sync extension and allows pasting text into client
+# console from the X selection buffer. This option has no effect on Windows.
+#CONFIG_X11=y
+
+# Build software renderer instead of OpenGL renderer.
+#CONFIG_SOFTWARE_RENDERER=y
+
+# Specify default list of fullscreen modes. Note: modes are automatically
+# detected on Windows. Default list is only used when autodetection fails.
+#CONFIG_DEFAULT_MODELIST=640x480 800x600 1024x768
+
+# Specify default window geometry.
+#CONFIG_DEFAULT_GEOMETRY=640x480
+
+# Disable default Quake 2 software sound engine. Only makes sense when
+# CONFIG_OPENAL is set.
+#CONFIG_NO_SOFTWARE_SOUND=y
+
+# Disable automatic discovery of evdev device nodes by not linking
+# against libudev. This option has no effect on platforms other than Linux.
+# This option has no effect unless CONFIG_DIRECT_INPUT is set.
+#CONFIG_NO_UDEV=y
+
+# Disable menu-based user interface. This disables scriptable menus, as well as
+# demo and server browsers.
+#CONFIG_NO_MENUS=y
+
+# Disable dynamic lighting.
+#CONFIG_NO_DYNAMIC_LIGHTS=y
+
+# Disable automatic replies to "!version" chat probes.
+#CONFIG_NO_AUTOREPLY=y
+
+# Disable MD3 models.
+#CONFIG_NO_MD3=y
+
+# Disable TGA textures.
+#CONFIG_NO_TGA=y
+
+
+### Server configuration ###
+
+# Enable r1ch.net anticheat server interface.
+#CONFIG_ANTICHEAT_SERVER=y
+
+# Enable local MVD recording and MVD/GTV server functionality. Use this for
+# hosting a GTV-capable game server.
+#CONFIG_MVD_SERVER=y
+
+# Enable MVD/GTV client functionality. Use this for hosting a GTV relay server.
+#CONFIG_MVD_CLIENT=y
+
+
+### X86 options ###
+
+# Options below have no effect on architectures other than x86.
+
+# Build x86 assembly versions of certain C routines. Mostly useful for software
+# renderer.
+#CONFIG_X86_ASSEMBLY=y
+
+# Enable this option on Linux to build a server capable of loading game mods
+# built using ancient GCC versions.
+#CONFIG_X86_GAME_ABI_HACK=y
+
+
+### Common configuration ###
+
+# Enable this when targeting native Windows.
+#CONFIG_WINDOWS=y
+
+# Enable crash dump generation on Windows.
+#CONFIG_WINDOWS_CRASH_DUMPS=y
+
+# Allow dedicated server to be run as Windows service.
+#CONFIG_WINDOWS_SERVICE=y
+
+# Enable experimental variable server FPS support in server and client.
+#CONFIG_VARIABLE_SERVER_FPS=y
+
+# Enable built-in tests. DON'T USE IN RELEASE BUILDS.
+#CONFIG_TESTS=y
+
+# Enable debugging and developer code.
+#CONFIG_DEBUG=y
+
+# Don't link against zlib. Not recommended for client builds, since lack of
+# zlib support breaks compatibility with servers running protocol 35.
+#CONFIG_NO_ZLIB=y
+
+# Don't handle ICMP errors on UDP sockets.
+#CONFIG_NO_ICMP=y
+
+# Don't print console text on standard output and don't read commands from
+# standard input.
+#CONFIG_NO_SYSTEM_CONSOLE=y
+
+
+### Game directories ###
+
+# Name of the game directory used as base game directory. Default value is
+# "baseq2". Change this when creating a standalone game using Q2PRO engine.
+#CONFIG_GAME_BASE=baseq2
+
+# Name of the game directory used as default game directory. Default value is
+# empty. This option sets the default value of "game" console variable. Change
+# this for building a version of Q2PRO customized for particular game mod, e.g.
+# "action".
+#CONFIG_GAME_DEFAULT=
+
+
+### System paths ###
+
+# Set the options below if you wish to install Q2PRO system-wide. All these
+# options default to "." (current directory). These options have no effect on
+# Windows.
+
+# Path to the game data tree. This is where all static, non-executable data
+# lives (e.g., paks). This option sets the default value of "basedir" console
+# variable.
+#CONFIG_PATH_DATA=/usr/local/share/games/q2pro
+
+# Path to the game libraries tree. This is where executable parts if all game
+# mods live (e.g., game$(CPU).so files). This option sets the default value of
+# "libdir" console variable.
+#CONFIG_PATH_LIB=/usr/local/lib/games/q2pro
+
+# Name of the directory where Q2PRO stores per-user data. Tilde at the
+# beginning of the name is automatically expanded to user home directory at run
+# time. Users running Q2PRO must have write permissions to this directory.
+# This option sets the default value of "homedir" console variable.
+#CONFIG_PATH_HOME=~/.q2pro
+
+
+### Options for cross-compiling. ###
+
+# Force cpu type to CPU, instead of autodetecting it.
+#CPU=x86
+
+# Force system type to CPU, instead of autodetecting it.
+#SYS=Win32
+
+# Force different utility names.
+#CC=i686-w64-mingw32-gcc
+#WINDRES=i686-w64-mingw32-windres
+#STRIP=i686-w64-mingw32-strip
+#RM=rm -f
+#RMDIR=rm -rf
+#MKDIR=mkdir -p
+
+# Specify additional global include and library options.
+#INCLUDES=
+#LIBS=
+
+# Disable autodetection and force include and library options for various
+# libraries.
+#CURL_CFLAGS=
+#CURL_LIBS=
+
+#PNG_CFLAGS=
+#PNG_LIBS=
+
+#JPG_CFLAGS=
+#JPG_LIBS=
+
+#ZLIB_CFLAGS=
+#ZLIB_LIBS=
