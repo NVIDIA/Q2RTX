@@ -1182,12 +1182,12 @@ static qhandle_t create_screenshot(char *buffer, size_t size,
     if (name && *name) {
         // save to user supplied name
         return FS_EasyOpenFile(buffer, size, FS_MODE_WRITE,
-                               SCREENSHOTS_DIRECTORY "/", name, ext);
+                               "screenshots/", name, ext);
     }
 
     // find a file name to save it to
     for (i = 0; i < 1000; i++) {
-        Q_snprintf(buffer, size, SCREENSHOTS_DIRECTORY "/quake%03d%s", i, ext);
+        Q_snprintf(buffer, size, "screenshots/quake%03d%s", i, ext);
         ret = FS_FOpenFile(buffer, &f, FS_MODE_WRITE | FS_FLAG_EXCL);
         if (f) {
             return f;
