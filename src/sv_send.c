@@ -259,7 +259,7 @@ void SV_Multicast(vec3_t origin, multicast_t to)
     client_t    *client;
     byte        mask[VIS_MAX_BYTES];
     mleaf_t     *leaf1, *leaf2;
-    int         leafnum;
+    int         leafnum q_unused;
     int         flags;
     vec3_t      org;
 
