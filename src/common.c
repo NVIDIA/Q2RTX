@@ -2109,9 +2109,9 @@ void Qcommon_Init(int argc, char **argv)
 
     // execute configs: default.cfg may come from the packfile, but config.cfg
     // and autoexec.cfg must be real files within the game directory
-    Com_AddConfigFile(COM_DEFAULTCFG_NAME, 0);
-    Com_AddConfigFile(COM_CONFIG_NAME, FS_TYPE_REAL | FS_PATH_GAME);
-    Com_AddConfigFile(COM_AUTOEXECCFG_NAME, FS_TYPE_REAL | FS_PATH_GAME);
+    Com_AddConfigFile(COM_DEFAULT_CFG, 0);
+    Com_AddConfigFile(COM_CONFIG_CFG, FS_TYPE_REAL | FS_PATH_GAME);
+    Com_AddConfigFile(COM_AUTOEXEC_CFG, FS_TYPE_REAL | FS_PATH_GAME);
 
     Com_AddEarlyCommands(qtrue);
 

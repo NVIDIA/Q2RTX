@@ -3490,9 +3490,9 @@ static void fs_game_changed(cvar_t *self)
 #endif
 
     // exec autoexec.cfg (must be a real file within the game directory)
-    ret = Cmd_ExecuteFile(COM_AUTOEXECCFG_NAME, FS_TYPE_REAL | FS_PATH_GAME);
+    ret = Cmd_ExecuteFile(COM_AUTOEXEC_CFG, FS_TYPE_REAL | FS_PATH_GAME);
     if (ret && ret != Q_ERR_NOENT) {
-        Com_WPrintf("Couldn't exec %s: %s\n", COM_AUTOEXECCFG_NAME, Q_ErrorString(ret));
+        Com_WPrintf("Couldn't exec %s: %s\n", COM_AUTOEXEC_CFG, Q_ErrorString(ret));
     }
 }
 

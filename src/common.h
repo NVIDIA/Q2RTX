@@ -33,6 +33,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define APPLICATION     "q2proded"
 #endif
 
+#define COM_DEFAULT_CFG     "default.cfg"
+#define COM_AUTOEXEC_CFG    "autoexec.cfg"
+
+#ifdef _WIN32
+#define COM_CONFIG_CFG      "q2config.cfg"
+#else
+#define COM_CONFIG_CFG      "config.cfg"
+#endif
+
 /*
 ==============================================================
 

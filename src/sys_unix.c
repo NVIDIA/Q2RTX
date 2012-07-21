@@ -587,13 +587,15 @@ void Sys_Quit(void)
     exit(EXIT_SUCCESS);
 }
 
+#define SYS_SITE_CFG    "/etc/default/q2pro"
+
 void Sys_AddDefaultConfig(void)
 {
     FILE *fp;
     struct stat st;
     size_t len, r;
 
-    fp = fopen(SYS_SITECFG_NAME, "r");
+    fp = fopen(SYS_SITE_CFG, "r");
     if (!fp) {
         return;
     }
@@ -613,7 +615,7 @@ void Sys_AddDefaultConfig(void)
     fclose(fp);
 
     if (cmd_buffer.cursize) {
-        Com_Printf("Execing %s\n", SYS_SITECFG_NAME);
+        Com_Printf("Execing %s\n", SYS_SITE_CFG);
         Cbuf_Execute(&cmd_buffer);
     }
 }

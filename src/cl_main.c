@@ -3308,10 +3308,10 @@ static void CL_WriteConfig(void)
     qhandle_t f;
     qerror_t ret;
 
-    ret = FS_FOpenFile(COM_CONFIG_NAME, &f, FS_MODE_WRITE | FS_FLAG_TEXT);
+    ret = FS_FOpenFile(COM_CONFIG_CFG, &f, FS_MODE_WRITE | FS_FLAG_TEXT);
     if (!f) {
         Com_EPrintf("Couldn't open %s for writing: %s\n",
-                    COM_CONFIG_NAME, Q_ErrorString(ret));
+                    COM_CONFIG_CFG, Q_ErrorString(ret));
         return;
     }
 
