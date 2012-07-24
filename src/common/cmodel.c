@@ -1,0 +1,1143 @@
+/*
+Copyright (C) 1997-2001 Id Software, Inc.
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+
+*/
+// cmodel.c -- model loading
+
+#include "shared/shared.h"
+#include "common/bsp.h"
+#include "common/cmd.h"
+#include "common/cmodel.h"
+#include "common/common.h"
+#include "common/cvar.h"
+#include "common/math.h"
+#include "common/zone.h"
+#include "system/hunk.h"
+
+mtexinfo_t nulltexinfo;
+
+static mleaf_t      nullleaf;
+
+static int          floodvalid;
+static int          checkcount;
+
+static cvar_t       *map_noareas;
+static cvar_t       *map_allsolid_bug;
+
+static void    FloodAreaConnections(cm_t *cm);
+
+/*
+==================
+CM_FreeMap
+==================
+*/
+void CM_FreeMap(cm_t *cm)
+{
+    if (cm->floodnums) {
+        Z_Free(cm->floodnums);
+    }
+    BSP_Free(cm->cache);
+
+    memset(cm, 0, sizeof(*cm));
+}
+
+/*
+==================
+CM_LoadMap
+
+Loads in the map and all submodels
+==================
+*/
+qerror_t CM_LoadMap(cm_t *cm, const char *name)
+{
+    bsp_t *cache;
+    qerror_t ret;
+
+    ret = BSP_Load(name, &cache);
+    if (!cache) {
+        return ret;
+    }
+
+    cm->cache = cache;
+    cm->floodnums = Z_TagMallocz(sizeof(int) * cm->cache->numareas +
+                                 sizeof(qboolean) * (cm->cache->lastareaportal + 1), TAG_CMODEL);
+    cm->portalopen = (qboolean *)(cm->floodnums + cm->cache->numareas);
+    FloodAreaConnections(cm);
+
+    return Q_ERR_SUCCESS;
+}
+
+mnode_t *CM_NodeNum(cm_t *cm, int number)
+{
+    if (!cm->cache) {
+        return (mnode_t *)&nullleaf;
+    }
+    if (number == -1) {
+        return (mnode_t *)cm->cache->leafs;   // special case for solid leaf
+    }
+    if (number < 0 || number >= cm->cache->numnodes) {
+        Com_EPrintf("%s: bad number: %d\n", __func__, number);
+        return (mnode_t *)&nullleaf;
+    }
+    return cm->cache->nodes + number;
+}
+
+mleaf_t *CM_LeafNum(cm_t *cm, int number)
+{
+    if (!cm->cache) {
+        return &nullleaf;
+    }
+    if (number < 0 || number >= cm->cache->numleafs) {
+        Com_EPrintf("%s: bad number: %d\n", __func__, number);
+        return &nullleaf;
+    }
+    return cm->cache->leafs + number;
+}
+
+//=======================================================================
+
+static cplane_t box_planes[12];
+static mnode_t  box_nodes[6];
+static mnode_t  *box_headnode;
+static mbrush_t box_brush;
+static mbrush_t *box_leafbrush;
+static mbrushside_t box_brushsides[6];
+static mleaf_t  box_leaf;
+static mleaf_t  box_emptyleaf;
+
+/*
+===================
+CM_InitBoxHull
+
+Set up the planes and nodes so that the six floats of a bounding box
+can just be stored out and get a proper clipping hull structure.
+===================
+*/
+static void CM_InitBoxHull(void)
+{
+    int         i;
+    int         side;
+    mnode_t     *c;
+    cplane_t    *p;
+    mbrushside_t    *s;
+
+    box_headnode = &box_nodes[0];
+
+    box_brush.numsides = 6;
+    box_brush.firstbrushside = &box_brushsides[0];
+    box_brush.contents = CONTENTS_MONSTER;
+
+    box_leaf.contents = CONTENTS_MONSTER;
+    box_leaf.firstleafbrush = &box_leafbrush;
+    box_leaf.numleafbrushes = 1;
+
+    box_leafbrush = &box_brush;
+
+    for (i = 0; i < 6; i++) {
+        side = i & 1;
+
+        // brush sides
+        s = &box_brushsides[i];
+        s->plane = &box_planes[i * 2 + side];
+        s->texinfo = &nulltexinfo;
+
+        // nodes
+        c = &box_nodes[i];
+        c->plane = &box_planes[i * 2];
+        c->children[side] = (mnode_t *)&box_emptyleaf;
+        if (i != 5)
+            c->children[side ^ 1] = &box_nodes[i + 1];
+        else
+            c->children[side ^ 1] = (mnode_t *)&box_leaf;
+
+        // planes
+        p = &box_planes[i * 2];
+        p->type = i >> 1;
+        p->signbits = 0;
+        VectorClear(p->normal);
+        p->normal[i >> 1] = 1;
+
+        p = &box_planes[i * 2 + 1];
+        p->type = 3 + (i >> 1);
+        p->signbits = 0;
+        VectorClear(p->normal);
+        p->normal[i >> 1] = -1;
+    }
+}
+
+
+/*
+===================
+CM_HeadnodeForBox
+
+To keep everything totally uniform, bounding boxes are turned into small
+BSP trees instead of being compared directly.
+===================
+*/
+mnode_t *CM_HeadnodeForBox(vec3_t mins, vec3_t maxs)
+{
+    box_planes[0].dist = maxs[0];
+    box_planes[1].dist = -maxs[0];
+    box_planes[2].dist = mins[0];
+    box_planes[3].dist = -mins[0];
+    box_planes[4].dist = maxs[1];
+    box_planes[5].dist = -maxs[1];
+    box_planes[6].dist = mins[1];
+    box_planes[7].dist = -mins[1];
+    box_planes[8].dist = maxs[2];
+    box_planes[9].dist = -maxs[2];
+    box_planes[10].dist = mins[2];
+    box_planes[11].dist = -mins[2];
+
+    return box_headnode;
+}
+
+
+mleaf_t *CM_PointLeaf(cm_t *cm, vec3_t p)
+{
+    if (!cm->cache) {
+        return &nullleaf;       // server may call this without map loaded
+    }
+    return BSP_PointLeaf(cm->cache->nodes, p);
+}
+
+/*
+=============
+CM_BoxLeafnums
+
+Fills in a list of all the leafs touched
+=============
+*/
+static int      leaf_count, leaf_maxcount;
+static mleaf_t  **leaf_list;
+static float    *leaf_mins, *leaf_maxs;
+static mnode_t  *leaf_topnode;
+
+static void CM_BoxLeafs_r(mnode_t *node)
+{
+    int     s;
+
+    while (node->plane) {
+        s = BoxOnPlaneSideFast(leaf_mins, leaf_maxs, node->plane);
+        if (s == 1) {
+            node = node->children[0];
+        } else if (s == 2) {
+            node = node->children[1];
+        } else {
+            // go down both
+            if (!leaf_topnode) {
+                leaf_topnode = node;
+            }
+            CM_BoxLeafs_r(node->children[0]);
+            node = node->children[1];
+        }
+    }
+
+    if (leaf_count < leaf_maxcount) {
+        leaf_list[leaf_count++] = (mleaf_t *)node;
+    }
+}
+
+static int CM_BoxLeafs_headnode(vec3_t mins, vec3_t maxs, mleaf_t **list, int listsize,
+                                mnode_t *headnode, mnode_t **topnode)
+{
+    leaf_list = list;
+    leaf_count = 0;
+    leaf_maxcount = listsize;
+    leaf_mins = mins;
+    leaf_maxs = maxs;
+
+    leaf_topnode = NULL;
+
+    CM_BoxLeafs_r(headnode);
+
+    if (topnode)
+        *topnode = leaf_topnode;
+
+    return leaf_count;
+}
+
+int CM_BoxLeafs(cm_t *cm, vec3_t mins, vec3_t maxs, mleaf_t **list, int listsize, mnode_t **topnode)
+{
+    if (!cm->cache)     // map not loaded
+        return 0;
+    return CM_BoxLeafs_headnode(mins, maxs, list,
+                                listsize, cm->cache->nodes, topnode);
+}
+
+
+
+/*
+==================
+CM_PointContents
+
+==================
+*/
+int CM_PointContents(vec3_t p, mnode_t *headnode)
+{
+    mleaf_t     *leaf;
+
+    if (!headnode) {
+        return 0;
+    }
+
+    leaf = BSP_PointLeaf(headnode, p);
+
+    return leaf->contents;
+}
+
+/*
+==================
+CM_TransformedPointContents
+
+Handles offseting and rotation of the end points for moving and
+rotating entities
+==================
+*/
+int CM_TransformedPointContents(vec3_t p, mnode_t *headnode, vec3_t origin, vec3_t angles)
+{
+    vec3_t      p_l;
+    vec3_t      temp;
+    vec3_t      forward, right, up;
+    mleaf_t     *leaf;
+
+    if (!headnode) {
+        return 0;
+    }
+
+    // subtract origin offset
+    VectorSubtract(p, origin, p_l);
+
+    // rotate start and end into the models frame of reference
+    if (headnode != box_headnode &&
+        (angles[0] || angles[1] || angles[2])) {
+        AngleVectors(angles, forward, right, up);
+
+        VectorCopy(p_l, temp);
+        p_l[0] = DotProduct(temp, forward);
+        p_l[1] = -DotProduct(temp, right);
+        p_l[2] = DotProduct(temp, up);
+    }
+
+    leaf = BSP_PointLeaf(headnode, p_l);
+
+    return leaf->contents;
+}
+
+
+/*
+===============================================================================
+
+BOX TRACING
+
+===============================================================================
+*/
+
+// 1/32 epsilon to keep floating point happy
+#define DIST_EPSILON    (0.03125)
+
+static vec3_t   trace_start, trace_end;
+static vec3_t   trace_mins, trace_maxs;
+static vec3_t   trace_extents;
+
+static trace_t  *trace_trace;
+static int      trace_contents;
+static qboolean trace_ispoint;      // optimized case
+
+/*
+================
+CM_ClipBoxToBrush
+================
+*/
+static void CM_ClipBoxToBrush(vec3_t mins, vec3_t maxs, vec3_t p1, vec3_t p2,
+                              trace_t *trace, mbrush_t *brush)
+{
+    int         i, j;
+    cplane_t    *plane, *clipplane;
+    float       dist;
+    float       enterfrac, leavefrac;
+    vec3_t      ofs;
+    float       d1, d2;
+    qboolean    getout, startout;
+    float       f;
+    mbrushside_t    *side, *leadside;
+
+    enterfrac = -1;
+    leavefrac = 1;
+    clipplane = NULL;
+
+    if (!brush->numsides)
+        return;
+
+    getout = qfalse;
+    startout = qfalse;
+    leadside = NULL;
+
+    side = brush->firstbrushside;
+    for (i = 0; i < brush->numsides; i++, side++) {
+        plane = side->plane;
+
+        // FIXME: special case for axial
+
+        if (!trace_ispoint) {
+            // general box case
+
+            // push the plane out apropriately for mins/maxs
+
+            // FIXME: use signbits into 8 way lookup for each mins/maxs
+            for (j = 0; j < 3; j++) {
+                if (plane->normal[j] < 0)
+                    ofs[j] = maxs[j];
+                else
+                    ofs[j] = mins[j];
+            }
+            dist = DotProduct(ofs, plane->normal);
+            dist = plane->dist - dist;
+        } else {
+            // special point case
+            dist = plane->dist;
+        }
+
+        d1 = DotProduct(p1, plane->normal) - dist;
+        d2 = DotProduct(p2, plane->normal) - dist;
+
+        if (d2 > 0)
+            getout = qtrue; // endpoint is not in solid
+        if (d1 > 0)
+            startout = qtrue;
+
+        // if completely in front of face, no intersection
+        if (d1 > 0 && d2 >= d1)
+            return;
+
+        if (d1 <= 0 && d2 <= 0)
+            continue;
+
+        // crosses face
+        if (d1 > d2) {
+            // enter
+            f = (d1 - DIST_EPSILON) / (d1 - d2);
+            if (f > enterfrac) {
+                enterfrac = f;
+                clipplane = plane;
+                leadside = side;
+            }
+        } else {
+            // leave
+            f = (d1 + DIST_EPSILON) / (d1 - d2);
+            if (f < leavefrac)
+                leavefrac = f;
+        }
+    }
+
+    if (!startout) {
+        // original point was inside brush
+        trace->startsolid = qtrue;
+        if (!getout) {
+            trace->allsolid = qtrue;
+            if (!map_allsolid_bug->integer) {
+                // original Q2 didn't set these
+                trace->fraction = 0;
+                trace->contents = brush->contents;
+            }
+        }
+        return;
+    }
+    if (enterfrac < leavefrac) {
+        if (enterfrac > -1 && enterfrac < trace->fraction) {
+            if (enterfrac < 0)
+                enterfrac = 0;
+            trace->fraction = enterfrac;
+            trace->plane = *clipplane;
+            trace->surface = &(leadside->texinfo->c);
+            trace->contents = brush->contents;
+        }
+    }
+}
+
+/*
+================
+CM_TestBoxInBrush
+================
+*/
+static void CM_TestBoxInBrush(vec3_t mins, vec3_t maxs, vec3_t p1,
+                              trace_t *trace, mbrush_t *brush)
+{
+    int         i, j;
+    cplane_t    *plane;
+    float       dist;
+    vec3_t      ofs;
+    float       d1;
+    mbrushside_t    *side;
+
+    if (!brush->numsides)
+        return;
+
+    side = brush->firstbrushside;
+    for (i = 0; i < brush->numsides; i++, side++) {
+        plane = side->plane;
+
+        // FIXME: special case for axial
+
+        // general box case
+
+        // push the plane out apropriately for mins/maxs
+
+        // FIXME: use signbits into 8 way lookup for each mins/maxs
+        for (j = 0; j < 3; j++) {
+            if (plane->normal[j] < 0)
+                ofs[j] = maxs[j];
+            else
+                ofs[j] = mins[j];
+        }
+        dist = DotProduct(ofs, plane->normal);
+        dist = plane->dist - dist;
+
+        d1 = DotProduct(p1, plane->normal) - dist;
+
+        // if completely in front of face, no intersection
+        if (d1 > 0)
+            return;
+
+    }
+
+    // inside this brush
+    trace->startsolid = trace->allsolid = qtrue;
+    trace->fraction = 0;
+    trace->contents = brush->contents;
+}
+
+
+/*
+================
+CM_TraceToLeaf
+================
+*/
+static void CM_TraceToLeaf(mleaf_t *leaf)
+{
+    int         k;
+    mbrush_t    *b, **leafbrush;
+
+    if (!(leaf->contents & trace_contents))
+        return;
+    // trace line against all brushes in the leaf
+    leafbrush = leaf->firstleafbrush;
+    for (k = 0; k < leaf->numleafbrushes; k++, leafbrush++) {
+        b = *leafbrush;
+        if (b->checkcount == checkcount)
+            continue;   // already checked this brush in another leaf
+        b->checkcount = checkcount;
+
+        if (!(b->contents & trace_contents))
+            continue;
+        CM_ClipBoxToBrush(trace_mins, trace_maxs, trace_start, trace_end, trace_trace, b);
+        if (!trace_trace->fraction)
+            return;
+    }
+
+}
+
+
+/*
+================
+CM_TestInLeaf
+================
+*/
+static void CM_TestInLeaf(mleaf_t *leaf)
+{
+    int         k;
+    mbrush_t    *b, **leafbrush;
+
+    if (!(leaf->contents & trace_contents))
+        return;
+    // trace line against all brushes in the leaf
+    leafbrush = leaf->firstleafbrush;
+    for (k = 0; k < leaf->numleafbrushes; k++, leafbrush++) {
+        b = *leafbrush;
+        if (b->checkcount == checkcount)
+            continue;   // already checked this brush in another leaf
+        b->checkcount = checkcount;
+
+        if (!(b->contents & trace_contents))
+            continue;
+        CM_TestBoxInBrush(trace_mins, trace_maxs, trace_start, trace_trace, b);
+        if (!trace_trace->fraction)
+            return;
+    }
+
+}
+
+
+/*
+==================
+CM_RecursiveHullCheck
+
+==================
+*/
+static void CM_RecursiveHullCheck(mnode_t *node, float p1f, float p2f, vec3_t p1, vec3_t p2)
+{
+    cplane_t    *plane;
+    float       t1, t2, offset;
+    float       frac, frac2;
+    float       idist;
+    int         i;
+    vec3_t      mid;
+    int         side;
+    float       midf;
+
+    if (trace_trace->fraction <= p1f)
+        return;     // already hit something nearer
+
+recheck:
+    // if plane is NULL, we are in a leaf node
+    plane = node->plane;
+    if (!plane) {
+        CM_TraceToLeaf((mleaf_t *)node);
+        return;
+    }
+
+    //
+    // find the point distances to the seperating plane
+    // and the offset for the size of the box
+    //
+    if (plane->type < 3) {
+        t1 = p1[plane->type] - plane->dist;
+        t2 = p2[plane->type] - plane->dist;
+        offset = trace_extents[plane->type];
+    } else {
+        t1 = PlaneDiff(p1, plane);
+        t2 = PlaneDiff(p2, plane);
+        if (trace_ispoint)
+            offset = 0;
+        else
+            offset = fabs(trace_extents[0] * plane->normal[0]) +
+                     fabs(trace_extents[1] * plane->normal[1]) +
+                     fabs(trace_extents[2] * plane->normal[2]);
+    }
+
+    // see which sides we need to consider
+    if (t1 >= offset && t2 >= offset) {
+        node = node->children[0];
+        goto recheck;
+    }
+    if (t1 < -offset && t2 < -offset) {
+        node = node->children[1];
+        goto recheck;
+    }
+
+    // put the crosspoint DIST_EPSILON pixels on the near side
+    if (t1 < t2) {
+        idist = 1.0 / (t1 - t2);
+        side = 1;
+        frac2 = (t1 + offset + DIST_EPSILON) * idist;
+        frac = (t1 - offset + DIST_EPSILON) * idist;
+    } else if (t1 > t2) {
+        idist = 1.0 / (t1 - t2);
+        side = 0;
+        frac2 = (t1 - offset - DIST_EPSILON) * idist;
+        frac = (t1 + offset + DIST_EPSILON) * idist;
+    } else {
+        side = 0;
+        frac = 1;
+        frac2 = 0;
+    }
+
+    // move up to the node
+    if (frac < 0)
+        frac = 0;
+    if (frac > 1)
+        frac = 1;
+
+    midf = p1f + (p2f - p1f) * frac;
+    for (i = 0; i < 3; i++)
+        mid[i] = p1[i] + frac * (p2[i] - p1[i]);
+
+    CM_RecursiveHullCheck(node->children[side], p1f, midf, p1, mid);
+
+
+    // go past the node
+    if (frac2 < 0)
+        frac2 = 0;
+    if (frac2 > 1)
+        frac2 = 1;
+
+    midf = p1f + (p2f - p1f) * frac2;
+    for (i = 0; i < 3; i++)
+        mid[i] = p1[i] + frac2 * (p2[i] - p1[i]);
+
+    CM_RecursiveHullCheck(node->children[side ^ 1], midf, p2f, mid, p2);
+}
+
+
+
+//======================================================================
+
+/*
+==================
+CM_BoxTrace
+==================
+*/
+void CM_BoxTrace(trace_t *trace, vec3_t start, vec3_t end,
+                 vec3_t mins, vec3_t maxs,
+                 mnode_t *headnode, int brushmask)
+{
+    int     i;
+
+    checkcount++;       // for multi-check avoidance
+
+    // fill in a default trace
+    trace_trace = trace;
+    memset(trace_trace, 0, sizeof(*trace_trace));
+    trace_trace->fraction = 1;
+    trace_trace->surface = &(nulltexinfo.c);
+
+    if (!headnode) {
+        return;
+    }
+
+    trace_contents = brushmask;
+    VectorCopy(start, trace_start);
+    VectorCopy(end, trace_end);
+    VectorCopy(mins, trace_mins);
+    VectorCopy(maxs, trace_maxs);
+
+    //
+    // check for position test special case
+    //
+    if (start[0] == end[0] && start[1] == end[1] && start[2] == end[2]) {
+        mleaf_t     *leafs[1024];
+        int     i, numleafs;
+        vec3_t  c1, c2;
+
+        VectorAdd(start, mins, c1);
+        VectorAdd(start, maxs, c2);
+        for (i = 0; i < 3; i++) {
+            c1[i] -= 1;
+            c2[i] += 1;
+        }
+
+        numleafs = CM_BoxLeafs_headnode(c1, c2, leafs, 1024, headnode, NULL);
+        for (i = 0; i < numleafs; i++) {
+            CM_TestInLeaf(leafs[i]);
+            if (trace_trace->allsolid)
+                break;
+        }
+        VectorCopy(start, trace_trace->endpos);
+        return;
+    }
+
+    //
+    // check for point special case
+    //
+    if (mins[0] == 0 && mins[1] == 0 && mins[2] == 0
+        && maxs[0] == 0 && maxs[1] == 0 && maxs[2] == 0) {
+        trace_ispoint = qtrue;
+        VectorClear(trace_extents);
+    } else {
+        trace_ispoint = qfalse;
+        trace_extents[0] = -mins[0] > maxs[0] ? -mins[0] : maxs[0];
+        trace_extents[1] = -mins[1] > maxs[1] ? -mins[1] : maxs[1];
+        trace_extents[2] = -mins[2] > maxs[2] ? -mins[2] : maxs[2];
+    }
+
+    //
+    // general sweeping through world
+    //
+    CM_RecursiveHullCheck(headnode, 0, 1, start, end);
+
+    if (trace_trace->fraction == 1) {
+        VectorCopy(end, trace_trace->endpos);
+    } else {
+        for (i = 0; i < 3; i++)
+            trace_trace->endpos[i] = start[i] + trace_trace->fraction * (end[i] - start[i]);
+    }
+
+}
+
+
+/*
+==================
+CM_TransformedBoxTrace
+
+Handles offseting and rotation of the end points for moving and
+rotating entities
+==================
+*/
+void CM_TransformedBoxTrace(trace_t *trace, vec3_t start, vec3_t end,
+                            vec3_t mins, vec3_t maxs,
+                            mnode_t *headnode, int brushmask,
+                            vec3_t origin, vec3_t angles)
+{
+    vec3_t      start_l, end_l;
+    vec3_t      a;
+    vec3_t      forward, right, up;
+    vec3_t      temp;
+    qboolean    rotated;
+
+    // subtract origin offset
+    VectorSubtract(start, origin, start_l);
+    VectorSubtract(end, origin, end_l);
+
+    // rotate start and end into the models frame of reference
+    if (headnode != box_headnode &&
+        (angles[0] || angles[1] || angles[2]))
+        rotated = qtrue;
+    else
+        rotated = qfalse;
+
+    if (rotated) {
+        AngleVectors(angles, forward, right, up);
+
+        VectorCopy(start_l, temp);
+        start_l[0] = DotProduct(temp, forward);
+        start_l[1] = -DotProduct(temp, right);
+        start_l[2] = DotProduct(temp, up);
+
+        VectorCopy(end_l, temp);
+        end_l[0] = DotProduct(temp, forward);
+        end_l[1] = -DotProduct(temp, right);
+        end_l[2] = DotProduct(temp, up);
+    }
+
+    // sweep the box through the model
+    CM_BoxTrace(trace, start_l, end_l, mins, maxs, headnode, brushmask);
+
+    if (rotated && trace->fraction != 1.0) {
+        // FIXME: figure out how to do this with existing angles
+        VectorNegate(angles, a);
+        AngleVectors(a, forward, right, up);
+
+        VectorCopy(trace->plane.normal, temp);
+        trace->plane.normal[0] = DotProduct(temp, forward);
+        trace->plane.normal[1] = -DotProduct(temp, right);
+        trace->plane.normal[2] = DotProduct(temp, up);
+    }
+
+    trace->endpos[0] = start[0] + trace->fraction * (end[0] - start[0]);
+    trace->endpos[1] = start[1] + trace->fraction * (end[1] - start[1]);
+    trace->endpos[2] = start[2] + trace->fraction * (end[2] - start[2]);
+}
+
+void CM_ClipEntity(trace_t *dst, const trace_t *src, struct edict_s *ent)
+{
+    dst->allsolid |= src->allsolid;
+    dst->startsolid |= src->startsolid;
+    if (src->fraction < dst->fraction) {
+        dst->fraction = src->fraction;
+        VectorCopy(src->endpos, dst->endpos);
+        dst->plane = src->plane;
+        dst->surface = src->surface;
+        dst->contents |= src->contents;
+        dst->ent = ent;
+    }
+}
+
+
+/*
+===============================================================================
+
+AREAPORTALS
+
+===============================================================================
+*/
+
+static void FloodArea_r(cm_t *cm, int number, int floodnum)
+{
+    int i;
+    mareaportal_t *p;
+    marea_t *area;
+
+    area = &cm->cache->areas[number];
+    if (area->floodvalid == floodvalid) {
+        if (cm->floodnums[number] == floodnum)
+            return;
+        Com_Error(ERR_DROP, "FloodArea_r: reflooded");
+    }
+
+    cm->floodnums[number] = floodnum;
+    area->floodvalid = floodvalid;
+    p = area->firstareaportal;
+    for (i = 0; i < area->numareaportals; i++, p++) {
+        if (cm->portalopen[p->portalnum])
+            FloodArea_r(cm, p->otherarea, floodnum);
+    }
+}
+
+static void FloodAreaConnections(cm_t *cm)
+{
+    int     i;
+    marea_t *area;
+    int     floodnum;
+
+    // all current floods are now invalid
+    floodvalid++;
+    floodnum = 0;
+
+    // area 0 is not used
+    for (i = 1; i < cm->cache->numareas; i++) {
+        area = &cm->cache->areas[i];
+        if (area->floodvalid == floodvalid)
+            continue;       // already flooded into
+        floodnum++;
+        FloodArea_r(cm, i, floodnum);
+    }
+}
+
+void CM_SetAreaPortalState(cm_t *cm, int portalnum, qboolean open)
+{
+    if (!cm->cache) {
+        return;
+    }
+
+    if (portalnum < 0 || portalnum >= MAX_MAP_AREAPORTALS) {
+        Com_EPrintf("%s: portalnum %d is out of range\n", __func__, portalnum);
+        return;
+    }
+
+    // ignore areaportals not referenced by areas
+    if (portalnum > cm->cache->lastareaportal) {
+        Com_DPrintf("%s: portalnum %d is not in use\n", __func__, portalnum);
+        return;
+    }
+
+    cm->portalopen[portalnum] = open;
+    FloodAreaConnections(cm);
+}
+
+qboolean CM_AreasConnected(cm_t *cm, int area1, int area2)
+{
+    bsp_t *cache = cm->cache;
+
+    if (!cache) {
+        return qfalse;
+    }
+    if (map_noareas->integer) {
+        return qtrue;
+    }
+    if (area1 < 1 || area2 < 1) {
+        return qfalse;
+    }
+    if (area1 >= cache->numareas || area2 >= cache->numareas) {
+        Com_EPrintf("%s: area > numareas\n", __func__);
+        return qfalse;
+    }
+    if (cm->floodnums[area1] == cm->floodnums[area2]) {
+        return qtrue;
+    }
+
+    return qfalse;
+}
+
+
+/*
+=================
+CM_WriteAreaBits
+
+Writes a length byte followed by a bit vector of all the areas
+that area in the same flood as the area parameter
+
+This is used by the client refreshes to cull visibility
+=================
+*/
+int CM_WriteAreaBits(cm_t *cm, byte *buffer, int area)
+{
+    bsp_t   *cache = cm->cache;
+    int     i;
+    int     floodnum;
+    int     bytes;
+
+    if (!cache) {
+        return 0;
+    }
+
+    bytes = (cache->numareas + 7) >> 3;
+
+    if (map_noareas->integer || !area) {
+        // for debugging, send everything
+        memset(buffer, 255, bytes);
+    } else {
+        memset(buffer, 0, bytes);
+
+        floodnum = cm->floodnums[area];
+        for (i = 0; i < cache->numareas; i++) {
+            if (cm->floodnums[i] == floodnum) {
+                Q_SetBit(buffer, i);
+            }
+        }
+    }
+
+    return bytes;
+}
+
+int CM_WritePortalBits(cm_t *cm, byte *buffer)
+{
+    int     i, bytes, numportals;
+
+    if (!cm->cache) {
+        return 0;
+    }
+
+    numportals = cm->cache->lastareaportal + 1;
+    if (numportals > MAX_MAP_AREAS) {
+        /* HACK: use the same array size as areabytes!
+         * It is nonsense for a map to have > 256 areaportals anyway. */
+        Com_WPrintf("%s: too many areaportals\n", __func__);
+        numportals = MAX_MAP_AREAS;
+    }
+
+    bytes = (numportals + 7) >> 3;
+    memset(buffer, 0, bytes);
+    for (i = 0; i < numportals; i++) {
+        if (cm->portalopen[i]) {
+            Q_SetBit(buffer, i);
+        }
+    }
+
+    return bytes;
+}
+
+void CM_SetPortalStates(cm_t *cm, byte *buffer, int bytes)
+{
+    int     i, numportals;
+
+    if (!cm->cache) {
+        return;
+    }
+
+    if (!bytes) {
+        for (i = 0; i <= cm->cache->lastareaportal; i++) {
+            cm->portalopen[i] = qtrue;
+        }
+    } else {
+        numportals = bytes << 3;
+        if (numportals > cm->cache->lastareaportal + 1) {
+            numportals = cm->cache->lastareaportal + 1;
+        }
+        for (i = 0; i < numportals; i++) {
+            cm->portalopen[i] = Q_IsBitSet(buffer, i);
+        }
+    }
+
+    FloodAreaConnections(cm);
+}
+
+
+/*
+=============
+CM_HeadnodeVisible
+
+Returns qtrue if any leaf under headnode has a cluster that
+is potentially visible
+=============
+*/
+qboolean CM_HeadnodeVisible(mnode_t *node, byte *visbits)
+{
+    mleaf_t *leaf;
+    int     cluster;
+
+    while (node->plane) {
+        if (CM_HeadnodeVisible(node->children[0], visbits))
+            return qtrue;
+        node = node->children[1];
+    }
+
+    leaf = (mleaf_t *)node;
+    cluster = leaf->cluster;
+    if (cluster == -1)
+        return qfalse;
+    if (Q_IsBitSet(visbits, cluster))
+        return qtrue;
+    return qfalse;
+}
+
+
+/*
+============
+CM_FatPVS
+
+The client will interpolate the view position,
+so we can't use a single PVS point
+===========
+*/
+byte *CM_FatPVS(cm_t *cm, byte *mask, const vec3_t org)
+{
+    byte    temp[VIS_MAX_BYTES];
+    mleaf_t *leafs[64];
+    int     clusters[64];
+    int     i, j, count, longs;
+    uint_fast32_t *src, *dst;
+    vec3_t  mins, maxs;
+
+    if (!cm->cache) {   // map not loaded
+        return memset(mask, 0, VIS_MAX_BYTES);
+    }
+    if (!cm->cache->vis) {
+        return memset(mask, 0xff, VIS_MAX_BYTES);
+    }
+
+    for (i = 0; i < 3; i++) {
+        mins[i] = org[i] - 8;
+        maxs[i] = org[i] + 8;
+    }
+
+    count = CM_BoxLeafs(cm, mins, maxs, leafs, 64, NULL);
+    if (count < 1)
+        Com_Error(ERR_DROP, "CM_FatPVS: leaf count < 1");
+    longs = VIS_FAST_LONGS(cm->cache);
+
+    // convert leafs to clusters
+    for (i = 0; i < count; i++) {
+        clusters[i] = leafs[i]->cluster;
+    }
+
+    BSP_ClusterVis(cm->cache, mask, clusters[0], DVIS_PVS);
+
+    // or in all the other leaf bits
+    for (i = 1; i < count; i++) {
+        for (j = 0; j < i; j++) {
+            if (clusters[i] == clusters[j]) {
+                goto nextleaf; // already have the cluster we want
+            }
+        }
+        src = (uint_fast32_t *)BSP_ClusterVis(cm->cache, temp, clusters[i], DVIS_PVS);
+        dst = (uint_fast32_t *)mask;
+        for (j = 0; j < longs; j++) {
+            *dst++ |= *src++;
+        }
+
+nextleaf:;
+    }
+
+    return mask;
+}
+
+/*
+=============
+CM_Init
+=============
+*/
+void CM_Init(void)
+{
+    CM_InitBoxHull();
+
+    nullleaf.cluster = -1;
+
+    map_noareas = Cvar_Get("map_noareas", "0", 0);
+    map_allsolid_bug = Cvar_Get("map_allsolid_bug", "1", 0);
+}
+

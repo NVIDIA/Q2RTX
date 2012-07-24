@@ -1,4 +1,4 @@
-config.*
+.config*
 .q2pro/
 .q2proded/
 .baseq2/

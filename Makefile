@@ -34,12 +34,12 @@ RCFLAGS ?=
 LDFLAGS ?=
 LIBS ?=
 
-CFLAGS_s :=
-CFLAGS_c :=
-CFLAGS_g := -I./src
+CFLAGS_s := -iquote./inc
+CFLAGS_c := -iquote./inc
+CFLAGS_g := -iquote./inc
 
-ASFLAGS_s :=
-ASFLAGS_c :=
+ASFLAGS_s := -iquote./inc
+ASFLAGS_c := -iquote./inc
 
 RCFLAGS_s :=
 RCFLAGS_c :=
@@ -127,74 +127,77 @@ RCFLAGS_g += -DREVISION=$(REV) -DVERSION='\"$(VER)\"'
 ### Object Files ###
 
 COMMON_OBJS := \
-    src/bsp.o           \
-    src/cmd.o           \
-    src/cmodel.o        \
-    src/common.o        \
-    src/cvar.o          \
-    src/error.o         \
-    src/files.o         \
-    src/fpu.o           \
-    src/mdfour.o        \
-    src/net_chan.o      \
-    src/net_common.o    \
-    src/pmove.o         \
-    src/prompt.o        \
-    src/q_field.o       \
-    src/q_msg.o         \
-    src/q_shared.o
+    src/common/bsp.o        \
+    src/common/cmd.o        \
+    src/common/cmodel.o     \
+    src/common/common.o     \
+    src/common/cvar.o       \
+    src/common/error.o      \
+    src/common/field.o      \
+    src/common/fifo.o       \
+    src/common/files.o      \
+    src/common/math.o       \
+    src/common/mdfour.o     \
+    src/common/msg.o        \
+    src/common/net/chan.o   \
+    src/common/net/net.o    \
+    src/common/pmove.o      \
+    src/common/prompt.o     \
+    src/common/utils.o      \
+    src/common/zone.o       \
+    src/shared/shared.o
 
 OBJS_c := \
-    $(COMMON_OBJS)      \
-    src/crc.o           \
-    src/m_flash.o       \
-    src/cl_aastat.o     \
-    src/cl_console.o    \
-    src/cl_demo.o       \
-    src/cl_download.o   \
-    src/cl_ents.o       \
-    src/cl_fx.o         \
-    src/cl_input.o      \
-    src/cl_keys.o       \
-    src/cl_locs.o       \
-    src/cl_main.o       \
-    src/cl_newfx.o      \
-    src/cl_parse.o      \
-    src/cl_precache.o   \
-    src/cl_pred.o       \
-    src/cl_ref.o        \
-    src/cl_scrn.o       \
-    src/cl_tent.o       \
-    src/cl_view.o       \
-    src/sv_ccmds.o      \
-    src/sv_ents.o       \
-    src/sv_game.o       \
-    src/sv_init.o       \
-    src/sv_main.o       \
-    src/sv_save.o       \
-    src/sv_send.o       \
-    src/sv_user.o       \
-    src/sv_world.o      \
-    src/snd_main.o      \
-    src/snd_mem.o       \
-    src/r_images.o      \
-    src/r_models.o
+    $(COMMON_OBJS)          \
+    src/shared/m_flash.o    \
+    src/client/ascii.o      \
+    src/client/console.o    \
+    src/client/crc.o        \
+    src/client/demo.o       \
+    src/client/download.o   \
+    src/client/effects.o    \
+    src/client/entities.o   \
+    src/client/input.o      \
+    src/client/keys.o       \
+    src/client/locs.o       \
+    src/client/main.o       \
+    src/client/newfx.o      \
+    src/client/parse.o      \
+    src/client/precache.o   \
+    src/client/predict.o    \
+    src/client/refresh.o    \
+    src/client/screen.o     \
+    src/client/tent.o       \
+    src/client/view.o       \
+    src/client/sound/main.o \
+    src/client/sound/mem.o  \
+    src/refresh/images.o    \
+    src/refresh/models.o    \
+    src/server/commands.o   \
+    src/server/entities.o   \
+    src/server/game.o       \
+    src/server/init.o       \
+    src/server/save.o       \
+    src/server/send.o       \
+    src/server/main.o       \
+    src/server/user.o       \
+    src/server/world.o      \
 
 OBJS_s := \
     $(COMMON_OBJS)  \
-    src/cl_null.o   \
-    src/sv_ccmds.o  \
-    src/sv_ents.o   \
-    src/sv_game.o   \
-    src/sv_init.o   \
-    src/sv_main.o   \
-    src/sv_send.o   \
-    src/sv_user.o   \
-    src/sv_world.o
+    src/client/null.o       \
+    src/server/commands.o   \
+    src/server/entities.o   \
+    src/server/game.o       \
+    src/server/init.o       \
+    src/server/send.o       \
+    src/server/main.o       \
+    src/server/user.o       \
+    src/server/world.o
 
 OBJS_g := \
-    src/q_shared.o              \
-    src/m_flash.o               \
+    src/shared/shared.o         \
+    src/shared/m_flash.o        \
     src/baseq2/g_ai.o           \
     src/baseq2/g_chase.o        \
     src/baseq2/g_cmds.o         \
@@ -251,30 +254,30 @@ ifdef CONFIG_HTTP
     CURL_LIBS ?= $(shell pkg-config libcurl --libs)
     CFLAGS_c += -DUSE_CURL=1 $(CURL_CFLAGS)
     LIBS_c += $(CURL_LIBS)
-    OBJS_c += src/cl_http.o
+    OBJS_c += src/client/http.o
 endif
 
 ifndef CONFIG_NO_SOFTWARE_SOUND
     CFLAGS_c += -DUSE_SNDDMA=1
-    OBJS_c += src/snd_mix.o
-    OBJS_c += src/snd_dma.o
+    OBJS_c += src/client/sound/mix.o
+    OBJS_c += src/client/sound/dma.o
 endif
 
 ifdef CONFIG_OPENAL
     CFLAGS_c += -DUSE_OPENAL=1
-    OBJS_c += src/snd_al.o
-    OBJS_c += src/qal_api.o
+    OBJS_c += src/client/sound/al.o
+    OBJS_c += src/client/sound/qal.o
 endif
 
 ifndef CONFIG_NO_MENUS
     CFLAGS_c += -DUSE_UI=1
-    OBJS_c += src/ui_atoms.o
-    OBJS_c += src/ui_demos.o
-    OBJS_c += src/ui_menu.o
-    OBJS_c += src/ui_playerconfig.o
-    OBJS_c += src/ui_playermodels.o
-    OBJS_c += src/ui_script.o
-    OBJS_c += src/ui_servers.o
+    OBJS_c += src/client/ui/demos.o
+    OBJS_c += src/client/ui/menu.o
+    OBJS_c += src/client/ui/playerconfig.o
+    OBJS_c += src/client/ui/playermodels.o
+    OBJS_c += src/client/ui/script.o
+    OBJS_c += src/client/ui/servers.o
+    OBJS_c += src/client/ui/ui.o
 endif
 
 # Light styles are always enabled
@@ -294,49 +297,49 @@ endif
 
 ifdef CONFIG_SOFTWARE_RENDERER
     CFLAGS_c += -DREF_SOFT=1 -DUSE_REF=1 -DVID_REF='"soft"'
-    OBJS_c += src/sw_aclip.o
-    OBJS_c += src/sw_alias.o
-    OBJS_c += src/sw_bsp.o
-    OBJS_c += src/sw_draw.o
-    OBJS_c += src/sw_edge.o
-    OBJS_c += src/sw_image.o
-    OBJS_c += src/sw_light.o
-    OBJS_c += src/sw_main.o
-    OBJS_c += src/sw_misc.o
-    OBJS_c += src/sw_model.o
-    OBJS_c += src/sw_part.o
-    OBJS_c += src/sw_poly.o
-    OBJS_c += src/sw_polyse.o
-    OBJS_c += src/sw_rast.o
-    OBJS_c += src/sw_scan.o
-    OBJS_c += src/sw_surf.o
-    OBJS_c += src/sw_sird.o
-    OBJS_c += src/sw_sky.o
+    OBJS_c += src/refresh/sw/aclip.o
+    OBJS_c += src/refresh/sw/alias.o
+    OBJS_c += src/refresh/sw/bsp.o
+    OBJS_c += src/refresh/sw/draw.o
+    OBJS_c += src/refresh/sw/edge.o
+    OBJS_c += src/refresh/sw/image.o
+    OBJS_c += src/refresh/sw/light.o
+    OBJS_c += src/refresh/sw/main.o
+    OBJS_c += src/refresh/sw/misc.o
+    OBJS_c += src/refresh/sw/model.o
+    OBJS_c += src/refresh/sw/part.o
+    OBJS_c += src/refresh/sw/poly.o
+    OBJS_c += src/refresh/sw/polyset.o
+    OBJS_c += src/refresh/sw/raster.o
+    OBJS_c += src/refresh/sw/scan.o
+    OBJS_c += src/refresh/sw/surf.o
+    OBJS_c += src/refresh/sw/sird.o
+    OBJS_c += src/refresh/sw/sky.o
 
     ifdef CONFIG_X86_ASSEMBLY
-        OBJS_c += src/sw_protect.o
-        OBJS_c += src/i386/r_aclipa.o
-        OBJS_c += src/i386/r_draw16.o
-        OBJS_c += src/i386/r_drawa.o
-        OBJS_c += src/i386/r_edgea.o
-        OBJS_c += src/i386/r_scana.o
-        OBJS_c += src/i386/r_surf8.o
-        OBJS_c += src/i386/r_varsa.o
-        OBJS_c += src/i386/d_polysa.o
+        OBJS_c += src/refresh/sw/x86/protect.o
+        OBJS_c += src/refresh/sw/x86/aclip.o
+        OBJS_c += src/refresh/sw/x86/draw.o
+        OBJS_c += src/refresh/sw/x86/edge.o
+        OBJS_c += src/refresh/sw/x86/polyset.o
+        OBJS_c += src/refresh/sw/x86/span16.o
+        OBJS_c += src/refresh/sw/x86/surf8.o
+        OBJS_c += src/refresh/sw/x86/turb8.o
+        OBJS_c += src/refresh/sw/x86/vars.o
     endif
 else
     CFLAGS_c += -DREF_GL=1 -DUSE_REF=1 -DVID_REF='"gl"'
-    OBJS_c += src/gl_draw.o
-    OBJS_c += src/gl_images.o
-    OBJS_c += src/gl_main.o
-    OBJS_c += src/gl_mesh.o
-    OBJS_c += src/gl_models.o
-    OBJS_c += src/gl_sky.o
-    OBJS_c += src/gl_state.o
-    OBJS_c += src/gl_surf.o
-    OBJS_c += src/gl_tess.o
-    OBJS_c += src/gl_world.o
-    OBJS_c += src/qgl_api.o
+    OBJS_c += src/refresh/gl/draw.o
+    OBJS_c += src/refresh/gl/images.o
+    OBJS_c += src/refresh/gl/main.o
+    OBJS_c += src/refresh/gl/mesh.o
+    OBJS_c += src/refresh/gl/models.o
+    OBJS_c += src/refresh/gl/sky.o
+    OBJS_c += src/refresh/gl/state.o
+    OBJS_c += src/refresh/gl/surf.o
+    OBJS_c += src/refresh/gl/tess.o
+    OBJS_c += src/refresh/gl/world.o
+    OBJS_c += src/refresh/gl/qgl.o
 endif
 
 CONFIG_DEFAULT_MODELIST ?= 640x480 800x600 1024x768
@@ -370,21 +373,21 @@ endif
 
 ifdef CONFIG_ANTICHEAT_SERVER
     CFLAGS_s += -DUSE_AC_SERVER=1
-    OBJS_s += src/sv_ac.o
+    OBJS_s += src/server/ac.o
 endif
 
 ifdef CONFIG_MVD_SERVER
     CFLAGS_s += -DUSE_MVD_SERVER=1
     CFLAGS_c += -DUSE_MVD_SERVER=1
-    OBJS_s += src/sv_mvd.o
-    OBJS_c += src/sv_mvd.o
+    OBJS_s += src/server/mvd.o
+    OBJS_c += src/server/mvd.o
 endif
 
 ifdef CONFIG_MVD_CLIENT
     CFLAGS_s += -DUSE_MVD_CLIENT=1
     CFLAGS_c += -DUSE_MVD_CLIENT=1
-    OBJS_s += src/mvd_client.o src/mvd_parse.o src/mvd_game.o
-    OBJS_c += src/mvd_client.o src/mvd_parse.o src/mvd_game.o
+    OBJS_s += src/server/mvd/client.o src/server/mvd/game.o src/server/mvd/parse.o
+    OBJS_c += src/server/mvd/client.o src/server/mvd/game.o src/server/mvd/parse.o
 endif
 
 ifndef CONFIG_NO_ZLIB
@@ -418,45 +421,45 @@ ifdef CONFIG_VARIABLE_SERVER_FPS
 endif
 
 ifdef CONFIG_WINDOWS
-    OBJS_c += src/vid_win.o
+    OBJS_c += src/windows/client.o
 
     ifdef CONFIG_DIRECT_INPUT
         CFLAGS_c += -DUSE_DINPUT=1
-        OBJS_c += src/in_dx.o
+        OBJS_c += src/windows/dinput.o
     endif
 
     ifndef CONFIG_NO_SOFTWARE_SOUND
-        OBJS_c += src/snd_wave.o
+        OBJS_c += src/windows/wave.o
         ifdef CONFIG_DIRECT_SOUND
-            OBJS_c += src/snd_dx.o
+            OBJS_c += src/windows/dsound.o
         endif
     endif
 
     ifdef CONFIG_SOFTWARE_RENDERER
-        OBJS_c += src/win_swimp.o
+        OBJS_c += src/windows/swimp.o
     else
-        OBJS_c += src/win_glimp.o
-        OBJS_c += src/win_wgl.o
+        OBJS_c += src/windows/glimp.o
+        OBJS_c += src/windows/wgl.o
     endif
 
     ifdef CONFIG_WINDOWS_CRASH_DUMPS
         CFLAGS_c += -DUSE_DBGHELP=1
         CFLAGS_s += -DUSE_DBGHELP=1
-        OBJS_c += src/win_dbg.o
-        OBJS_s += src/win_dbg.o
+        OBJS_c += src/windows/debug.o
+        OBJS_s += src/windows/debug.o
     endif
 
     ifdef CONFIG_WINDOWS_SERVICE
         CFLAGS_s += -DUSE_WINSVC=1
     endif
 
-    OBJS_c += src/sys_win.o
-    OBJS_s += src/sys_win.o
+    OBJS_c += src/windows/hunk.o src/windows/system.o
+    OBJS_s += src/windows/hunk.o src/windows/system.o
 
     # Resources
-    OBJS_c += src/q2pro.o
-    OBJS_s += src/q2proded.o
-    OBJS_g += src/baseq2/baseq2.o
+    OBJS_c += src/windows/res/q2pro.o
+    OBJS_s += src/windows/res/q2proded.o
+    OBJS_g += src/windows/res/baseq2.o
 
     # System libs
     LIBS_s += -lws2_32 -lwinmm -ladvapi32
@@ -466,7 +469,7 @@ else
     SDL_LIBS ?= $(shell sdl-config --libs)
     CFLAGS_c += -DUSE_SDL=1 $(SDL_CFLAGS)
     LIBS_c += $(SDL_LIBS)
-    OBJS_c += src/vid_sdl.o
+    OBJS_c += src/unix/sdl/video.o
 
     ifdef CONFIG_X11
         X11_CFLAGS ?=
@@ -477,7 +480,7 @@ else
 
     ifdef CONFIG_DIRECT_INPUT
         CFLAGS_c += -DUSE_DINPUT=1
-        OBJS_c += src/in_evdev.o
+        OBJS_c += src/unix/evdev.o
         ifndef CONFIG_NO_UDEV
             UDEV_CFLAGS ?=
             UDEV_LIBS ?= -ludev
@@ -490,19 +493,19 @@ else
         LIRC_CFLAGS ?=
         LIRC_LIBS ?= -llirc_client
         CFLAGS_c += -DUSE_LIRC=1 $(LIRC_CFLAGS)
-        OBJS_c += src/in_lirc.o
+        OBJS_c += src/unix/lirc.o
         LIBS_c += $(LIRC_LIBS)
     endif
 
     ifndef CONFIG_NO_SOFTWARE_SOUND
-        OBJS_c += src/snd_sdl.o
+        OBJS_c += src/unix/sdl/sound.o
         ifdef CONFIG_DIRECT_SOUND
-            OBJS_c += src/snd_oss.o
+            OBJS_c += src/unix/oss.o
         endif
     endif
 
-    OBJS_c += src/sys_unix.o
-    OBJS_s += src/sys_unix.o
+    OBJS_s += src/unix/hunk.o src/unix/system.o
+    OBJS_c += src/unix/hunk.o src/unix/system.o
 
     # System libs
     LIBS_s += -lm -ldl
@@ -513,8 +516,8 @@ endif
 ifdef CONFIG_TESTS
     CFLAGS_c += -DUSE_TESTS=1
     CFLAGS_s += -DUSE_TESTS=1
-    OBJS_c += src/tests.o
-    OBJS_s += src/tests.o
+    OBJS_c += src/common/tests.o
+    OBJS_s += src/common/tests.o
 endif
 
 ifdef CONFIG_DEBUG
@@ -531,10 +534,19 @@ ifdef CONFIG_X86_ASSEMBLY
     endif
     CFLAGS_c += -DUSE_ASM=1
     CFLAGS_s += -DUSE_ASM=1
-    OBJS_c += src/i386/math.o
-    OBJS_s += src/i386/math.o
+    OBJS_c += src/common/x86/math.o
+    OBJS_s += src/common/x86/math.o
 endif
 
+ifeq ($(CPU),x86)
+    OBJS_c += src/common/x86/fpu.o
+    OBJS_s += src/common/x86/fpu.o
+endif
+
+ifeq ($(CPU),i386)
+    OBJS_c += src/common/x86/fpu.o
+    OBJS_s += src/common/x86/fpu.o
+endif
 
 ### Targets ###
 
@@ -597,10 +609,10 @@ $(BUILD_s)/%.o: %.c
 	$(Q)$(MKDIR) $(@D)
 	$(Q)$(CC) -c $(CFLAGS) $(CFLAGS_s) -o $@ $<
 
-$(BUILD_s)/%.o: %.s
+$(BUILD_s)/%.o: %.S
 	$(E) [AS] $@
 	$(Q)$(MKDIR) $(@D)
-	$(Q)$(CC) -c -x assembler-with-cpp $(ASFLAGS) $(ASFLAGS_s) -o $@ $<
+	$(Q)$(CC) -c $(ASFLAGS) $(ASFLAGS_s) -o $@ $<
 
 $(BUILD_s)/%.o: %.rc
 	$(E) [RC] $@
@@ -619,10 +631,10 @@ $(BUILD_c)/%.o: %.c
 	$(Q)$(MKDIR) $(@D)
 	$(Q)$(CC) -c $(CFLAGS) $(CFLAGS_c) -o $@ $<
 
-$(BUILD_c)/%.o: %.s
+$(BUILD_c)/%.o: %.S
 	$(E) [AS] $@
 	$(Q)$(MKDIR) $(@D)
-	$(Q)$(CC) -c -x assembler-with-cpp $(ASFLAGS) $(ASFLAGS_c) -o $@ $<
+	$(Q)$(CC) -c $(ASFLAGS) $(ASFLAGS_c) -o $@ $<
 
 $(BUILD_c)/%.o: %.rc
 	$(E) [RC] $@
