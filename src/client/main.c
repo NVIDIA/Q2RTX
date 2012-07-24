@@ -382,9 +382,7 @@ void CL_CheckForResend(void)
         cls.passive = qfalse;
 
         Con_Popup();
-#if USE_UI
         UI_OpenMenu(UIMENU_NONE);
-#endif
     }
 
     // resend if we haven't gotten a reply yet
@@ -751,13 +749,11 @@ void CL_Disconnect(error_type_t type)
     cls.state = ca_disconnected;
     cls.userinfo_modified = 0;
 
-#if USE_UI
     if (type == ERR_DISCONNECT) {
         UI_OpenMenu(UIMENU_DEFAULT);
     } else {
         UI_OpenMenu(UIMENU_NONE);
     }
-#endif
 
     CL_CheckForPause();
 
@@ -2291,9 +2287,7 @@ void CL_RestartFilesystem(qboolean total)
         cls.state = ca_loading;
     }
 
-#if USE_UI
     UI_Shutdown();
-#endif
 
     S_StopAllSounds();
     S_FreeAllSounds();
@@ -2307,25 +2301,20 @@ void CL_RestartFilesystem(qboolean total)
 
         SCR_RegisterMedia();
         Con_RegisterMedia();
-#if USE_UI
         UI_Init();
-#endif
     } else {
         FS_Restart(total);
     }
 
-#if USE_UI
     if (cls_state == ca_disconnected) {
         UI_OpenMenu(UIMENU_DEFAULT);
-    } else
-#endif
-        if (cls_state >= ca_loading) {
-            CL_LoadState(LOAD_MAP);
-            CL_PrepRefresh();
-            CL_LoadState(LOAD_SOUNDS);
-            CL_RegisterSounds();
-            CL_LoadState(LOAD_FINISH);
-        }
+    } else if (cls_state >= ca_loading) {
+        CL_LoadState(LOAD_MAP);
+        CL_PrepRefresh();
+        CL_LoadState(LOAD_SOUNDS);
+        CL_RegisterSounds();
+        CL_LoadState(LOAD_FINISH);
+    }
 
     // switch back to original state
     cls.state = cls_state;
@@ -2357,28 +2346,21 @@ void CL_RestartRefresh(qboolean total)
         CL_InitRefresh();
         IN_Init();
     } else {
-#if USE_UI
         UI_Shutdown();
-#endif
         R_Shutdown(qfalse);
         R_Init(qfalse);
         SCR_RegisterMedia();
         Con_RegisterMedia();
-#if USE_UI
         UI_Init();
-#endif
     }
 
-#if USE_UI
     if (cls_state == ca_disconnected) {
         UI_OpenMenu(UIMENU_DEFAULT);
-    } else
-#endif
-        if (cls_state >= ca_loading) {
-            CL_LoadState(LOAD_MAP);
-            CL_PrepRefresh();
-            CL_LoadState(LOAD_FINISH);
-        }
+    } else if (cls_state >= ca_loading) {
+        CL_LoadState(LOAD_MAP);
+        CL_PrepRefresh();
+        CL_LoadState(LOAD_FINISH);
+    }
 
     // switch back to original state
     cls.state = cls_state;
@@ -3161,9 +3143,7 @@ unsigned CL_Frame(unsigned msec)
 
     Con_RunConsole();
 
-#if USE_UI
     UI_Frame(main_extra);
-#endif
 
     if (ref_frame) {
         // update the screen
@@ -3281,9 +3261,7 @@ void CL_Init(void)
     HTTP_Init();
 #endif
 
-#if USE_UI
     UI_OpenMenu(UIMENU_DEFAULT);
-#endif
 
     Con_PostInit();
     Con_RunConsole();

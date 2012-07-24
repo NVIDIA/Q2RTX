@@ -700,14 +700,11 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
         if (cls.key_dest == KEY_GAME &&
             cl.frame.ps.stats[STAT_LAYOUTS] &&
             cls.demo.playback == qfalse) {
-#if USE_UI
-            // force main menu if escape is held
             if (key_repeats[key] == 2) {
+                // force main menu if escape is held
                 UI_OpenMenu(UIMENU_GAME);
-            } else
-#endif
-            // put away help computer / inventory
-            if (key_repeats[key] == 1) {
+            } else if (key_repeats[key] == 1) {
+                // put away help computer / inventory
                 CL_ClientCommand("putaway");
             }
             return;
@@ -719,28 +716,19 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
 
         if (cls.key_dest & KEY_CONSOLE) {
             if (cls.state < ca_active && !(cls.key_dest & KEY_MENU)) {
-#if USE_UI
                 UI_OpenMenu(UIMENU_MAIN);
-#endif
             } else {
                 Con_Close(qtrue);
             }
-        }
-#if USE_UI
-        else if (cls.key_dest & KEY_MENU) {
+        } else if (cls.key_dest & KEY_MENU) {
             UI_Keydown(key);
-        }
-#endif
-        else if (cls.key_dest & KEY_MESSAGE) {
+        } else if (cls.key_dest & KEY_MESSAGE) {
             Key_Message(key);
-        }
-#if USE_UI
-        else if (cls.state == ca_active) {
+        } else if (cls.state == ca_active) {
             UI_OpenMenu(UIMENU_GAME);
         } else {
             UI_OpenMenu(UIMENU_MAIN);
         }
-#endif
         return;
     }
 
@@ -821,13 +809,9 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
 
     if (cls.key_dest & KEY_CONSOLE) {
         Key_Console(key);
-    }
-#if USE_UI
-    else if (cls.key_dest & KEY_MENU) {
+    } else if (cls.key_dest & KEY_MENU) {
         UI_Keydown(key);
-    }
-#endif
-    else if (cls.key_dest & KEY_MESSAGE) {
+    } else if (cls.key_dest & KEY_MESSAGE) {
         Key_Message(key);
     }
 
@@ -896,13 +880,9 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
 
     if (cls.key_dest & KEY_CONSOLE) {
         Char_Console(key);
-    }
-#if USE_UI
-    else if (cls.key_dest & KEY_MENU) {
+    } else if (cls.key_dest & KEY_MENU) {
         UI_CharEvent(key);
-    }
-#endif
-    else if (cls.key_dest & KEY_MESSAGE) {
+    } else if (cls.key_dest & KEY_MESSAGE) {
         Char_Message(key);
     }
 
@@ -925,13 +905,9 @@ void Key_CharEvent(int key)
 
     if (cls.key_dest & KEY_CONSOLE) {
         Char_Console(key);
-    }
-#if USE_UI
-    else if (cls.key_dest & KEY_MENU) {
+    } else if (cls.key_dest & KEY_MENU) {
         UI_CharEvent(key);
-    }
-#endif
-    else if (cls.key_dest & KEY_MESSAGE) {
+    } else if (cls.key_dest & KEY_MESSAGE) {
         Char_Message(key);
     }
 }

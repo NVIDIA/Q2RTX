@@ -1127,9 +1127,7 @@ void SCR_SetCrosshairColor(void)
 void SCR_ModeChanged(void)
 {
     IN_Activate();
-#if USE_UI
     UI_ModeChanged();
-#endif
     // video sync flag may have changed
     CL_UpdateFrameTimes();
     cls.disable_screen = 0;
@@ -1916,7 +1914,6 @@ void SCR_UpdateScreen(void)
 
     R_BeginFrame();
 
-#if USE_UI
     if (UI_IsTransparent()) {
         // do 3D refresh drawing
         draw_active_frame();
@@ -1924,10 +1921,6 @@ void SCR_UpdateScreen(void)
 
     // draw main menu
     UI_Draw(cls.realtime);
-#else
-    // do 3D refresh drawing
-    draw_active_frame();
-#endif
 
     // draw console
     Con_DrawConsole();

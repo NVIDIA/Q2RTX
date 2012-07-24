@@ -313,9 +313,7 @@ void CL_InitRefresh(void)
     // Initialize the rest of graphics subsystems
     V_Init();
     SCR_Init();
-#if USE_UI
     UI_Init();
-#endif
 
     SCR_RegisterMedia();
     Con_RegisterMedia();
@@ -337,9 +335,7 @@ void CL_ShutdownRefresh(void)
     // Shutdown the rest of graphics subsystems
     V_Shutdown();
     SCR_Shutdown();
-#if USE_UI
     UI_Shutdown();
-#endif
 
     vid_geometry->changed = NULL;
     vid_fullscreen->changed = NULL;

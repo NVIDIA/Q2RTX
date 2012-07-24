@@ -221,9 +221,7 @@ void IN_MouseEvent(int x, int y)
     if (input.hide_cursor == HIDE_SHOW_NC)
         input.hide_cursor = HIDE_SHOW;
 
-#if USE_UI
     UI_MouseEvent(x, y);
-#endif
 }
 
 /*

@@ -634,7 +634,7 @@ static void UI_FreeMenus(void)
 UI_Init
 =================
 */
-qboolean UI_Init(void)
+void UI_Init(void)
 {
     char buffer[MAX_QPATH];
     int i;
@@ -674,8 +674,6 @@ qboolean UI_Init(void)
     Com_DPrintf("Registered %d menus.\n", List_Count(&ui_menus));
 
     uis.initialized = qtrue;
-
-    return qtrue;
 }
 
 /*

@@ -31,7 +31,8 @@ typedef enum {
     UIMENU_GAME
 } uiMenu_t;
 
-qboolean    UI_Init(void);
+#if USE_UI
+void        UI_Init(void);
 void        UI_Shutdown(void);
 void        UI_ModeChanged(void);
 void        UI_Keydown(int key);
@@ -43,5 +44,19 @@ void        UI_StatusEvent(const serverStatus_t *status);
 void        UI_ErrorEvent(netadr_t *from);
 void        UI_MouseEvent(int x, int y);
 qboolean    UI_IsTransparent(void);
+#else
+#define     UI_Init()               (void)0
+#define     UI_Shutdown()           (void)0
+#define     UI_ModeChanged()        (void)0
+#define     UI_Keydown(key)         (void)0
+#define     UI_CharEvent(key)       (void)0
+#define     UI_Draw(realtime)       (void)0
+#define     UI_OpenMenu(menu)       (void)0
+#define     UI_Frame(msec)          (void)0
+#define     UI_StatusEvent(status)  (void)0
+#define     UI_ErrorEvent(from)     (void)0
+#define     UI_MouseEvent(x, y)     (void)0
+#define     UI_IsTransparent()      qtrue
+#endif
 
 #endif // UI_H
