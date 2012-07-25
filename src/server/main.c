@@ -624,8 +624,12 @@ typedef struct {
     char        reconnect_val[16];
 } conn_params_t;
 
-#define reject(...) \
-    (Netchan_OutOfBand(NS_SERVER, &net_from, "print\n" __VA_ARGS__), qfalse)
+#define __reject(...) \
+    Netchan_OutOfBand(NS_SERVER, &net_from, "print\n" __VA_ARGS__)
+
+// small hack to permit one-line return statement :)
+#define reject(...) __reject(__VA_ARGS__), qfalse
+#define reject2(...) __reject(__VA_ARGS__), NULL
 
 static qboolean parse_basic_params(conn_params_t *p)
 {
@@ -852,7 +856,7 @@ static qboolean parse_userinfo(conn_params_t *params, char *userinfo)
     return qtrue;
 }
 
-static void redirect(const char *addr)
+static client_t *redirect(const char *addr)
 {
     Netchan_OutOfBand(NS_SERVER, &net_from, "client_connect");
 
@@ -867,6 +871,7 @@ static void redirect(const char *addr)
 
     NET_SendPacket(NS_SERVER, msg_write.data, msg_write.cursize, &net_from);
     SZ_Clear(&msg_write);
+    return NULL;
 }
 
 static client_t *find_client_slot(conn_params_t *params)
@@ -894,7 +899,7 @@ static client_t *find_client_slot(conn_params_t *params)
     // check for forced redirect to a different address
     s = sv_redirect_address->string;
     if (*s == '!' && sv_reserved_slots->integer == params->reserved)
-        return redirect(s + 1), NULL;
+        return redirect(s + 1);
 
     // find a free client slot
     for (i = 0; i < sv_maxclients->integer - params->reserved; i++) {
@@ -905,13 +910,13 @@ static client_t *find_client_slot(conn_params_t *params)
 
     // clients that know the password are never redirected
     if (sv_reserved_slots->integer != params->reserved)
-        return reject("Server and reserved slots are full.\n"), NULL;
+        return reject2("Server and reserved slots are full.\n");
 
     // optionally redirect them to a different address
     if (*s)
-        return redirect(s), NULL;
+        return redirect(s);
 
-    return reject("Server is full.\n"), NULL;
+    return reject2("Server is full.\n");
 }
 
 static void init_pmove_and_es_flags(client_t *newcl)
@@ -1053,9 +1058,9 @@ static void SVC_DirectConnect(void)
     if (!allow) {
         reason = Info_ValueForKey(userinfo, "rejmsg");
         if (*reason) {
-            reject("%s\nConnection refused.\n", reason);
+            __reject("%s\nConnection refused.\n", reason);
         } else {
-            reject("Connection refused.\n");
+            __reject("Connection refused.\n");
         }
         return;
     }
