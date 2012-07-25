@@ -66,7 +66,7 @@ void Hunk_End(memhunk_t *hunk)
 #else
         void *unmap_base = (byte *)hunk->base + newsize;
         size_t unmap_len = hunk->maxsize - newsize;
-        void *buf = munmap(unmap_base, unmap_len) + hunk->base;
+        void *buf = munmap(unmap_base, unmap_len) + (byte *)hunk->base;
 #endif
         if (buf != hunk->base)
             Com_Error(ERR_FATAL, "%s: could not remap virtual block: %s",

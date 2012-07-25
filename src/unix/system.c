@@ -83,7 +83,7 @@ static int stdout_sleep(void)
 
 // handles partial writes correctly, but never spins too much
 // blocks for 100 ms before giving up and losing data
-static void stdout_write(const void *buf, size_t len)
+static void stdout_write(const char *buf, size_t len)
 {
     const char *what;
     int ret, spins;

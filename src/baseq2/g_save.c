@@ -489,7 +489,7 @@ static void write_index(FILE *f, void *p, size_t size, void *start, int max_inde
         gi.error("%s: pointer out of range: %p", __func__, p);
     }
 
-    diff = p - start;
+    diff = (byte *)p - (byte *)start;
     if (diff % size) {
         gi.error("%s: misaligned pointer: %p", __func__, p);
     }
