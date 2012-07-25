@@ -399,7 +399,8 @@ static netchan_t *NetchanOld_Setup(netsrc_t sock, const netadr_t *adr,
     netchan_old_t *chan;
     netchan_t *netchan;
 
-    Z_Reserve(sizeof(*chan) + maxpacketlen * 2);
+    Z_TagReserve(sizeof(*chan) + maxpacketlen * 2,
+                 sock == NS_SERVER ? TAG_SERVER : TAG_GENERAL);
 
     chan = Z_ReservedAlloc(sizeof(*chan));
     memset(chan, 0, sizeof(*chan));
@@ -800,7 +801,8 @@ static netchan_t *NetchanNew_Setup(netsrc_t sock, const netadr_t *adr,
     netchan_new_t *chan;
     netchan_t *netchan;
 
-    chan = Z_Mallocz(sizeof(*chan));
+    chan = Z_TagMallocz(sizeof(*chan),
+                        sock == NS_SERVER ? TAG_SERVER : TAG_GENERAL);
     netchan = (netchan_t *)chan;
     netchan->sock = sock;
     netchan->remote_address = *adr;
