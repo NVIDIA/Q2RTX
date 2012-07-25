@@ -37,6 +37,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "common/net/net.h"
 #include "common/prompt.h"
 #include "common/protocol.h"
+#include "common/sizebuf.h"
 #include "common/zone.h"
 
 #include "system/system.h"

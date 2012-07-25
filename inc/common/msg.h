@@ -22,47 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MSG_H
 
 #include "common/protocol.h"
-
-//
-// msg.h
-//
-
-#define SZ_MSG_WRITE        MakeRawLong('w', 'r', 'i', 't')
-#define SZ_MSG_READ         MakeRawLong('r', 'e', 'a', 'd')
-#define SZ_NC_SEND_OLD      MakeRawLong('n', 'c', '1', 's')
-#define SZ_NC_SEND_NEW      MakeRawLong('n', 'c', '2', 's')
-#define SZ_NC_SEND_FRG      MakeRawLong('n', 'c', '2', 'f')
-#define SZ_NC_FRG_IN        MakeRawLong('n', 'c', '2', 'i')
-#define SZ_NC_FRG_OUT       MakeRawLong('n', 'c', '2', 'o')
-
-typedef struct sizebuf_s {
-    uint32_t    tag;
-    qboolean    allowoverflow;
-    qboolean    allowunderflow;
-    qboolean    overflowed;        // set to qtrue if the buffer size failed
-    byte        *data;
-    size_t      maxsize;
-    size_t      cursize;
-    size_t      readcount;
-    size_t      bitpos;
-} sizebuf_t;
-
-void SZ_Init(sizebuf_t *buf, void *data, size_t length);
-void SZ_TagInit(sizebuf_t *buf, void *data, size_t length, uint32_t tag);
-void SZ_Clear(sizebuf_t *buf);
-void *SZ_GetSpace(sizebuf_t *buf, size_t length);
-void SZ_WriteByte(sizebuf_t *sb, int c);
-void SZ_WriteShort(sizebuf_t *sb, int c);
-void SZ_WriteLong(sizebuf_t *sb, int c);
-void SZ_WriteString(sizebuf_t *sb, const char *string);
-
-static inline void *SZ_Write(sizebuf_t *buf, const void *data, size_t length)
-{
-    return memcpy(SZ_GetSpace(buf, length), data, length);
-}
-
-
-//============================================================================
+#include "common/sizebuf.h"
 
 typedef struct {
     uint16_t    number;
@@ -151,12 +111,16 @@ void    MSG_PackPlayer(player_packed_t *out, const player_state_t *in);
 void    MSG_WriteDeltaPlayerstate_Default(const player_packed_t *from, const player_packed_t *to);
 int     MSG_WriteDeltaPlayerstate_Enhanced(const player_packed_t *from, player_packed_t *to, msgPsFlags_t flags);
 void    MSG_WriteDeltaPlayerstate_Packet(const player_packed_t *from, const player_packed_t *to, int number, msgPsFlags_t flags);
-void    MSG_FlushTo(sizebuf_t *dest);
-void    MSG_Printf(const char *fmt, ...) q_printf(1, 2);
 
-static inline void *MSG_WriteData(const void *data, size_t length)
+static inline void *MSG_WriteData(const void *data, size_t len)
 {
-    return memcpy(SZ_GetSpace(&msg_write, length), data, length);
+    return memcpy(SZ_GetSpace(&msg_write, len), data, len);
+}
+
+static inline void MSG_FlushTo(sizebuf_t *buf)
+{
+    SZ_Write(buf, msg_write.data, msg_write.cursize);
+    SZ_Clear(&msg_write);
 }
 
 void    MSG_BeginReading(void);

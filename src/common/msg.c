@@ -21,13 +21,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "shared/shared.h"
 #include "common/msg.h"
 #include "common/protocol.h"
+#include "common/sizebuf.h"
 #include "common/math.h"
-
-sizebuf_t   msg_write;
-byte        msg_write_buffer[MAX_MSGLEN];
-
-sizebuf_t   msg_read;
-byte        msg_read_buffer[MAX_MSGLEN];
 
 /*
 ==============================================================================
@@ -38,6 +33,12 @@ Handles byte ordering and avoids alignment errors
 ==============================================================================
 */
 
+sizebuf_t   msg_write;
+byte        msg_write_buffer[MAX_MSGLEN];
+
+sizebuf_t   msg_read;
+byte        msg_read_buffer[MAX_MSGLEN];
+
 const entity_packed_t   nullEntityState;
 const player_packed_t   nullPlayerState;
 const usercmd_t         nullUserCmd;
@@ -45,20 +46,30 @@ const usercmd_t         nullUserCmd;
 /*
 =============
 MSG_Init
+
+Initialize default buffers, clearing allow overflow/underflow flags.
+
+This is the only place where writing buffer is initialized. Writing buffer is
+never allowed to overflow.
+
+Reading buffer is reinitialized in many other places. Reinitializing will set
+the allow underflow flag as appropriate.
 =============
 */
 void MSG_Init(void)
 {
-    // initialize default buffers
-    // don't allow them to overflow
     SZ_TagInit(&msg_read, msg_read_buffer, MAX_MSGLEN, SZ_MSG_READ);
     SZ_TagInit(&msg_write, msg_write_buffer, MAX_MSGLEN, SZ_MSG_WRITE);
 }
 
 
-//
-// writing functions
-//
+/*
+==============================================================================
+
+            WRITING
+
+==============================================================================
+*/
 
 /*
 =============
@@ -1413,43 +1424,14 @@ void MSG_WriteDeltaPlayerstate_Packet(const player_packed_t *from,
 
 #endif // USE_MVD_SERVER || USE_MVD_CLIENT
 
+
 /*
-=============
-MSG_FlushTo
-=============
+==============================================================================
+
+            READING
+
+==============================================================================
 */
-void MSG_FlushTo(sizebuf_t *dest)
-{
-    memcpy(SZ_GetSpace(dest, msg_write.cursize), msg_write.data, msg_write.cursize);
-    SZ_Clear(&msg_write);
-}
-
-#if 0
-// NOTE: does not NUL-terminate the string
-void MSG_Printf(const char *fmt, ...)
-{
-    char        buffer[MAX_STRING_CHARS];
-    va_list     argptr;
-    size_t      len;
-
-    va_start(argptr, fmt);
-    len = Q_vsnprintf(buffer, sizeof(buffer), fmt, argptr);
-    va_end(argptr);
-
-    if (len >= sizeof(buffer)) {
-        Com_WPrintf("%s: overflow\n", __func__);
-        return;
-    }
-
-    MSG_WriteData(buffer, len);
-}
-#endif
-
-//============================================================
-
-//
-// reading functions
-//
 
 void MSG_BeginReading(void)
 {
@@ -2377,6 +2359,15 @@ void MSG_ParseDeltaPlayerstate_Packet(const player_state_t *from,
 
 #endif // USE_MVD_CLIENT
 
+
+/*
+==============================================================================
+
+            DEBUGGING STUFF
+
+==============================================================================
+*/
+
 #ifdef _DEBUG
 
 #define SHOWBITS(x) Com_LPrintf(PRINT_DEVELOPER, x " ")
@@ -2437,7 +2428,6 @@ void MSG_ShowDeltaPlayerstateBits_Enhanced(int flags)
 #undef SP
 #undef SE
 }
-
 
 void MSG_ShowDeltaUsercmdBits_Enhanced(int bits)
 {
@@ -2567,111 +2557,4 @@ const char *MSG_ServerCommandString(int cmd)
 #endif // USE_CLIENT || USE_MVD_CLIENT
 
 #endif // _DEBUG
-
-//===========================================================================
-
-void SZ_TagInit(sizebuf_t *buf, void *data, size_t length, uint32_t tag)
-{
-    memset(buf, 0, sizeof(*buf));
-    buf->data = data;
-    buf->maxsize = length;
-    buf->tag = tag;
-}
-
-void SZ_Init(sizebuf_t *buf, void *data, size_t length)
-{
-    memset(buf, 0, sizeof(*buf));
-    buf->data = data;
-    buf->maxsize = length;
-    buf->allowoverflow = qtrue;
-    buf->allowunderflow = qtrue;
-}
-
-void SZ_Clear(sizebuf_t *buf)
-{
-    buf->cursize = 0;
-    buf->readcount = 0;
-    buf->bitpos = 0;
-    buf->overflowed = qfalse;
-}
-
-void *SZ_GetSpace(sizebuf_t *buf, size_t length)
-{
-    void    *data;
-
-    if (buf->cursize + length > buf->maxsize) {
-        if (!buf->allowoverflow) {
-            Com_Error(ERR_FATAL,
-                      "%s: %#x: overflow without allowoverflow set",
-                      __func__, buf->tag);
-        }
-        if (length > buf->maxsize) {
-            Com_Error(ERR_FATAL,
-                      "%s: %#x: %"PRIz" is > full buffer size %"PRIz"",
-                      __func__, buf->tag, length, buf->maxsize);
-        }
-
-        //Com_DPrintf("%s: %#x: overflow\n", __func__, buf->tag);
-        SZ_Clear(buf);
-        buf->overflowed = qtrue;
-    }
-
-    data = buf->data + buf->cursize;
-    buf->cursize += length;
-    buf->bitpos = buf->cursize << 3;
-
-    return data;
-}
-
-void SZ_WriteByte(sizebuf_t *sb, int c)
-{
-    byte    *buf;
-
-    buf = SZ_GetSpace(sb, 1);
-    buf[0] = c;
-}
-
-void SZ_WriteShort(sizebuf_t *sb, int c)
-{
-    byte    *buf;
-
-    buf = SZ_GetSpace(sb, 2);
-    buf[0] = c & 0xff;
-    buf[1] = c >> 8;
-}
-
-void SZ_WriteLong(sizebuf_t *sb, int c)
-{
-    byte    *buf;
-
-    buf = SZ_GetSpace(sb, 4);
-    buf[0] = c & 0xff;
-    buf[1] = (c >> 8) & 0xff;
-    buf[2] = (c >> 16) & 0xff;
-    buf[3] = c >> 24;
-}
-
-#if USE_MVD_SERVER
-
-void SZ_WriteString(sizebuf_t *sb, const char *string)
-{
-    size_t length;
-
-    if (!string) {
-        SZ_WriteByte(sb, 0);
-        return;
-    }
-
-    length = strlen(string);
-    if (length >= MAX_NET_STRING) {
-        Com_WPrintf("%s: overflow: %"PRIz" chars", __func__, length);
-        SZ_WriteByte(sb, 0);
-        return;
-    }
-
-    SZ_Write(sb, string, length + 1);
-}
-
-#endif
-
 

@@ -143,6 +143,7 @@ COMMON_OBJS := \
     src/common/net/net.o    \
     src/common/pmove.o      \
     src/common/prompt.o     \
+    src/common/sizebuf.o    \
     src/common/utils.o      \
     src/common/zone.o       \
     src/shared/shared.o
