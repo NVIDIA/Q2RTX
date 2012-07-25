@@ -183,6 +183,8 @@ static int CheckPowerArmor(edict_t *ent, vec3_t point, vec3_t normal, int damage
     if (dflags & DAMAGE_NO_ARMOR)
         return 0;
 
+    index = 0;  // shut up gcc
+
     if (client) {
         power_armor_type = PowerArmorType(ent);
         if (power_armor_type != POWER_ARMOR_NONE) {
