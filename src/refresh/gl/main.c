@@ -1009,10 +1009,6 @@ qboolean R_Init(qboolean total)
 
     GL_InitTables();
 
-    if (((size_t)tess.vertices) & 15) {
-        Com_WPrintf("tess.vertices not 16 byte aligned\n");
-    }
-
     Com_Printf("----------------------\n");
 
     return qtrue;
