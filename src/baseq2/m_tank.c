@@ -304,7 +304,7 @@ void tank_pain(edict_t *self, edict_t *other, float kick, int damage)
         self->monsterinfo.currentmove = &tank_move_pain2;
     else
         self->monsterinfo.currentmove = &tank_move_pain3;
-};
+}
 
 
 //

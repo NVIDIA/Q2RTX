@@ -241,7 +241,7 @@ void plat_CalcAcceleratedMove(moveinfo_t *moveinfo)
     }
 
     moveinfo->decel_distance = decel_dist;
-};
+}
 
 void plat_Accelerate(moveinfo_t *moveinfo)
 {
@@ -307,7 +307,7 @@ void plat_Accelerate(moveinfo_t *moveinfo)
 
     // we are at constant velocity (move_speed)
     return;
-};
+}
 
 void Think_AccelMove(edict_t *ent)
 {
@@ -924,7 +924,7 @@ void door_use(edict_t *self, edict_t *other, edict_t *activator)
         ent->touch = NULL;
         door_go_up(ent, activator);
     }
-};
+}
 
 void Touch_DoorTrigger(edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 {

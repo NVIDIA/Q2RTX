@@ -453,7 +453,7 @@ void SP_point_combat(edict_t *self)
     VectorSet(self->maxs, 8, 8, 16);
     self->svflags = SVF_NOCLIENT;
     gi.linkentity(self);
-};
+}
 
 
 /*QUAKED viewthing (0 .5 .8) (-8 -8 -8) (8 8 8)
@@ -488,7 +488,7 @@ Used as a positional target for spotlights, etc.
 void SP_info_null(edict_t *self)
 {
     G_FreeEdict(self);
-};
+}
 
 
 /*QUAKED info_notnull (0 0.5 0) (-4 -4 -4) (4 4 4)
@@ -498,7 +498,7 @@ void SP_info_notnull(edict_t *self)
 {
     VectorCopy(self->s.origin, self->absmin);
     VectorCopy(self->s.origin, self->absmax);
-};
+}
 
 
 /*QUAKED light (0 1 0) (-8 -8 -8) (8 8 8) START_OFF

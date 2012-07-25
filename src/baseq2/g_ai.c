@@ -661,7 +661,7 @@ void ai_run_missile(edict_t *self)
         self->monsterinfo.attack(self);
         self->monsterinfo.attack_state = AS_STRAIGHT;
     }
-};
+}
 
 
 /*

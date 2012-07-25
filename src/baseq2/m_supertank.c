@@ -466,7 +466,7 @@ void supertank_pain(edict_t *self, edict_t *other, float kick, int damage)
         gi.sound(self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
         self->monsterinfo.currentmove = &supertank_move_pain3;
     }
-};
+}
 
 
 void supertankRocket(edict_t *self)
