@@ -603,28 +603,15 @@ static void dump_lag(void)
 {
     client_t    *cl;
 
-#ifdef USE_PACKETDUP
-#define PD1 " dup"
-#define PD2 " ---"
-#define PD3 " %3d"
-#else
-#define PD1
-#define PD2
-#define PD3
-#endif
-
     Com_Printf(
-        "num name            PLs2c PLc2s Rmin Ravg Rmax"PD1"\n"
-        "--- --------------- ----- ----- ---- ---- ----"PD2"\n");
+        "num name            PLs2c PLc2s Rmin Ravg Rmax dup\n"
+        "--- --------------- ----- ----- ---- ---- ---- ---\n");
 
     FOR_EACH_CLIENT(cl) {
-        Com_Printf("%3i %-15.15s %5.2f %5.2f %4d %4d %4d"PD3"\n",
+        Com_Printf("%3i %-15.15s %5.2f %5.2f %4d %4d %4d %3d\n",
                    cl->number, cl->name, PL_S2C(cl), PL_C2S(cl),
-                   cl->min_ping, AVG_PING(cl), cl->max_ping
-#ifdef USE_PACKETDUP
-                   , cl->numpackets - 1
-#endif
-                  );
+                   cl->min_ping, AVG_PING(cl), cl->max_ping,
+                   cl->numpackets - 1);
     }
 }
 
