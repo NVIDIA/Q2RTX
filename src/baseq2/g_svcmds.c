@@ -228,6 +228,7 @@ void SVCmd_WriteIP_f(void)
 {
     FILE    *f;
     char    name[MAX_OSPATH];
+    size_t  len;
     byte    b[4];
     int     i;
     cvar_t  *game;
@@ -235,9 +236,14 @@ void SVCmd_WriteIP_f(void)
     game = gi.cvar("game", "", 0);
 
     if (!*game->string)
-        sprintf(name, "%s/listip.cfg", GAMEVERSION);
+        len = Q_snprintf(name, sizeof(name), "%s/listip.cfg", GAMEVERSION);
     else
-        sprintf(name, "%s/listip.cfg", game->string);
+        len = Q_snprintf(name, sizeof(name), "%s/listip.cfg", game->string);
+
+    if (len >= sizeof(name)) {
+        gi.cprintf(NULL, PRINT_HIGH, "File name too long\n");
+        return;
+    }
 
     gi.cprintf(NULL, PRINT_HIGH, "Writing %s.\n", name);
 
