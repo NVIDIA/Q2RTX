@@ -161,7 +161,8 @@ static void tty_init_input(void)
 
     tcgetattr(STDIN_FILENO, &tty_orig);
     tty = tty_orig;
-    tty.c_lflag &= ~(ECHO | ICANON | INPCK | ISTRIP);
+    tty.c_iflag &= ~(INPCK | ISTRIP);
+    tty.c_lflag &= ~(ICANON | ECHO);
     tty.c_cc[VMIN] = 1;
     tty.c_cc[VTIME] = 0;
     tcsetattr(STDIN_FILENO, TCSADRAIN, &tty);
@@ -399,13 +400,13 @@ static void tty_parse_input(const char *text)
 #if 0
                     case 'C':
                         if (f->text[f->cursorPos]) {
-                            Sys_ConsoleWrite("\033[C", 3);
+                            stdout_write("\033[C", 3);
                             f->cursorPos++;
                         }
                         break;
                     case 'D':
                         if (f->cursorPos) {
-                            Sys_ConsoleWrite("\033[D", 3);
+                            stdout_write("\033[D", 3);
                             f->cursorPos--;
                         }
                         break;
