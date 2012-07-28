@@ -790,20 +790,19 @@ void SV_ShutdownGameProgs(void)
     Cvar_Set("g_features", "0");
 }
 
-static void *SV_LoadLibrary(const char *game)
+static void *SV_LoadGameLibrary(const char *game, const char *prefix)
 {
     char path[MAX_OSPATH];
     size_t len;
 
     len = Q_concat(path, sizeof(path), sys_libdir->string,
-                   PATH_SEP_STRING, game, PATH_SEP_STRING
-                   "game" CPUSTRING LIBSUFFIX, NULL);
-    if (len >= sizeof(path)) {
-        Com_WPrintf("Game library path length exceeded\n");
-        return NULL;
-    }
+                   PATH_SEP_STRING, game, PATH_SEP_STRING,
+                   prefix, "game" CPUSTRING LIBSUFFIX, NULL);
+    if (len < sizeof(path))
+        return Sys_LoadLibrary(path, "GetGameAPI", &game_library);
 
-    return Sys_LoadLibrary(path, "GetGameAPI", &game_library);
+    Com_WPrintf("Game library path length exceeded\n");
+    return NULL;
 }
 
 /*
@@ -826,19 +825,24 @@ void SV_InitGameProgs(void)
         entry = Sys_LoadLibrary(sys_forcegamelib->string,
                                 "GetGameAPI", &game_library);
     }
-    if (!entry) {
-        // try game first
-        if (fs_game->string[0]) {
-            entry = SV_LoadLibrary(fs_game->string);
-        }
-        if (!entry) {
-            // then try baseq2
-            entry = SV_LoadLibrary(BASEGAME);
-            if (!entry) {
-                Com_Error(ERR_DROP, "Failed to load game library");
-            }
-        }
+
+    // try game first
+    if (!entry && fs_game->string[0]) {
+        entry = SV_LoadGameLibrary(fs_game->string, "q2pro_");
+        if (!entry)
+            entry = SV_LoadGameLibrary(fs_game->string, "");
     }
+
+    // then try baseq2
+    if (!entry) {
+        entry = SV_LoadGameLibrary(BASEGAME, "q2pro_");
+        if (!entry)
+            entry = SV_LoadGameLibrary(BASEGAME, "");
+    }
+
+    // all paths failed
+    if (!entry)
+        Com_Error(ERR_DROP, "Failed to load game library");
 
     // load a new game dll
     import.multicast = SV_Multicast;
