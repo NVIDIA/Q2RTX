@@ -691,9 +691,7 @@ static void SV_Status_f(void)
     }
     Com_Printf("\n");
 
-#if USE_MVD_SERVER
     SV_MvdStatus_f();
-#endif
 }
 
 /*
@@ -1443,9 +1441,8 @@ static void SV_Record_f(void)
         return;
     }
 #endif
-#if USE_MVD_SERVER
+
     SV_MvdRecord_f();
-#endif
 }
 
 static void SV_Stop_f(void)
@@ -1456,9 +1453,8 @@ static void SV_Stop_f(void)
         return;
     }
 #endif
-#if USE_MVD_SERVER
+
     SV_MvdStop_f();
-#endif
 }
 
 #endif

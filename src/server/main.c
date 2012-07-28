@@ -227,18 +227,14 @@ void SV_DropClient(client_t *client, const char *reason)
         ge->ClientDisconnect(client->edict);
     }
 
-#if USE_AC_SERVER
     AC_ClientDisconnect(client);
-#endif
 
     SV_CleanClient(client);
 
     Com_DPrintf("Going to cs_zombie for %s\n", client->name);
 
-#if USE_MVD_SERVER
-    // give MVD server a chance to detect if it's dummy client was dropped
+    // give MVD server a chance to detect if its dummy client was dropped
     SV_MvdClientDropped(client);
-#endif
 }
 
 
@@ -979,10 +975,8 @@ static void send_connect_packet(client_t *newcl, int nctype)
             ncstring = " nc=0";
     }
 
-#if USE_AC_SERVER
     if (!sv_force_reconnect->string[0] || newcl->reconnect_var[0])
         acstring = AC_ClientConnect(newcl);
-#endif
 
     if (sv_downloadserver->string[0]) {
         dlstring1 = " dlserver=";
@@ -1635,10 +1629,8 @@ SV_RunGameFrame
 */
 static void SV_RunGameFrame(void)
 {
-#if USE_MVD_SERVER
     // save the entire world state if recording a serverdemo
     SV_MvdBeginFrame();
-#endif
 
 #if USE_CLIENT
     if (host_speeds->integer)
@@ -1664,10 +1656,8 @@ static void SV_RunGameFrame(void)
         SZ_Clear(&msg_write);
     }
 
-#if USE_MVD_SERVER
     // save the entire world state if recording a serverdemo
     SV_MvdEndFrame();
-#endif
 }
 
 /*
@@ -1777,15 +1767,11 @@ unsigned SV_Frame(unsigned msec)
     NET_GetPackets(NS_SERVER, SV_PacketEvent);
 
     if (svs.initialized) {
-#if USE_AC_SERVER
         // run connection to the anticheat server
         AC_Run();
-#endif
 
-#if USE_MVD_SERVER
         // run connections from MVD/GTV clients
         SV_MvdRunClients();
-#endif
 
         // deliver fragments and reliable messages for connecting clients
         SV_SendAsyncPackets();
@@ -1996,17 +1982,13 @@ void SV_Init(void)
 {
     SV_InitOperatorCommands();
 
-#if USE_MVD_SERVER
     SV_MvdRegister();
-#endif
 
 #if USE_MVD_CLIENT
     MVD_Register();
 #endif
 
-#if USE_AC_SERVER
     AC_Register();
-#endif
 
     Cvar_Get("protocol", va("%i", PROTOCOL_VERSION_DEFAULT), CVAR_SERVERINFO | CVAR_ROM);
 
@@ -2191,13 +2173,9 @@ void SV_Shutdown(const char *finalmsg, error_type_t type)
     type &= ~MVD_SPAWN_MASK;
 #endif
 
-#if USE_AC_SERVER
     AC_Disconnect();
-#endif
 
-#if USE_MVD_SERVER
     SV_MvdShutdown(type);
-#endif
 
     SV_FinalMessage(finalmsg, type);
     SV_MasterShutdown();

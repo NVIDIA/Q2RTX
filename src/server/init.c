@@ -237,10 +237,8 @@ void SV_SpawnServer(cm_t *cm, const char *server, const char *spawnpoint)
     // all precaches are complete
     sv.state = ss_game;
 
-#if USE_MVD_SERVER
     // respawn dummy MVD client, set base states, etc
     SV_MvdMapChanged();
-#endif
 
     // set serverinfo variable
     SV_InfoSet("mapname", sv.name);
@@ -344,12 +342,10 @@ void SV_InitGame(unsigned mvd_spawn)
     svs.num_entities = sv_maxclients->integer * UPDATE_BACKUP * MAX_PACKET_ENTITIES;
     svs.entities = SV_Mallocz(sizeof(entity_packed_t) * svs.num_entities);
 
-#if USE_MVD_SERVER
     // initialize MVD server
     if (!mvd_spawn) {
         SV_MvdInit();
     }
-#endif
 
     Cvar_ClampInteger(sv_reserved_slots, 0, sv_maxclients->integer - 1);
 
@@ -386,9 +382,7 @@ void SV_InitGame(unsigned mvd_spawn)
         client->number = i;
     }
 
-#if USE_AC_SERVER
     AC_Connect(mvd_spawn);
-#endif
 
     svs.initialized = qtrue;
 }

@@ -501,11 +501,9 @@ void SV_Begin_f(void)
         return;
     }
 
-#if USE_AC_SERVER
     if (!AC_ClientBegin(sv_client)) {
         return;
     }
-#endif
 
     Com_DPrintf("Going from cs_primed to cs_spawned for %s\n",
                 sv_client->name);
@@ -523,9 +521,7 @@ void SV_Begin_f(void)
     // call the game begin function
     ge->ClientBegin(sv_player);
 
-#if USE_AC_SERVER
     AC_ClientAnnounce(sv_client);
-#endif
 }
 
 //=============================================================================
@@ -875,15 +871,10 @@ static void SV_CvarResult_f(void)
                 sv_client->reconnected = qtrue;
             }
         }
-    }
-#if USE_AC_SERVER
-    else if (!strcmp(c, "actoken")) {
+    } else if (!strcmp(c, "actoken")) {
         AC_ClientToken(sv_client, Cmd_Argv(2));
     }
-#endif
 }
-
-#if USE_AC_SERVER
 
 static void SV_AC_List_f(void)
 {
@@ -898,16 +889,6 @@ static void SV_AC_Info_f(void)
     AC_Info_f();
     Com_EndRedirect();
 }
-
-#else
-
-static void SV_AC_Null_f(void)
-{
-    SV_ClientPrintf(sv_client, PRINT_HIGH,
-                    "This server does not support anticheat.\n");
-}
-
-#endif
 
 static const ucmd_t ucmds[] = {
     // auto issued
@@ -932,13 +913,8 @@ static const ucmd_t ucmds[] = {
 #if USE_PACKETDUP
     { "packetdup", SV_PacketdupHack_f },
 #endif
-#if USE_AC_SERVER
     { "aclist", SV_AC_List_f },
     { "acinfo", SV_AC_Info_f },
-#else
-    { "aclist", SV_AC_Null_f },
-    { "acinfo", SV_AC_Null_f },
-#endif
 
     { NULL, NULL }
 };

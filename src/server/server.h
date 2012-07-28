@@ -580,11 +580,10 @@ void SV_ClientAddMessage(client_t *client, int flags);
 void SV_ShutdownClientSend(client_t *client);
 void SV_InitClientSend(client_t *newcl);
 
-#if USE_MVD_SERVER
-
 //
 // sv_mvd.c
 //
+#if USE_MVD_SERVER
 void SV_MvdRegister(void);
 void SV_MvdInit(void);
 void SV_MvdShutdown(error_type_t type);
@@ -605,13 +604,33 @@ void SV_MvdStartSound(int entnum, int channel, int flags,
 
 void SV_MvdRecord_f(void);
 void SV_MvdStop_f(void);
-#endif // USE_MVD_SERVER
+#else
+#define SV_MvdRegister()            (void)0
+#define SV_MvdInit()                (void)0
+#define SV_MvdShutdown(type)        (void)0
+#define SV_MvdBeginFrame()          (void)0
+#define SV_MvdEndFrame()            (void)0
+#define SV_MvdRunClients()          (void)0
+#define SV_MvdStatus_f()            (void)0
+#define SV_MvdMapChanged()          (void)0
+#define SV_MvdClientDropped(client) (void)0
 
-#if USE_AC_SERVER
+#define SV_MvdUnicast(ent, clientNum, reliable)     (void)0
+#define SV_MvdMulticast(leafnum, to)                (void)0
+#define SV_MvdConfigstring(index, string, len)      (void)0
+#define SV_MvdBroadcastPrint(level, string)         (void)0
+#define SV_MvdStartSound(entnum, channel, flags, \
+                         soundindex, volume, \
+                         attenuation, timeofs)      (void)0
+
+#define SV_MvdRecord_f()    (void)0
+#define SV_MvdStop_f()      (void)0
+#endif
 
 //
 // sv_ac.c
 //
+#if USE_AC_SERVER
 char *AC_ClientConnect(client_t *cl);
 void AC_ClientDisconnect(client_t *cl);
 qboolean AC_ClientBegin(client_t *cl);
@@ -625,8 +644,23 @@ void AC_Run(void);
 
 void AC_List_f(void);
 void AC_Info_f(void);
+#else
+#define AC_ClientConnect(cl)        ""
+#define AC_ClientDisconnect(cl)     (void)0
+#define AC_ClientBegin(cl)          qtrue
+#define AC_ClientAnnounce(cl)       (void)0
+#define AC_ClientToken(cl, token)   (void)0
 
-#endif // USE_AC_SERVER
+#define AC_Register()               (void)0
+#define AC_Disconnect()             (void)0
+#define AC_Connect(mvd_spawn)       (void)0
+#define AC_Run()                    (void)0
+
+#define AC_List_f() \
+    Com_Printf("This server does not support anticheat.\n")
+#define AC_Info_f() \
+    Com_Printf("This server does not support anticheat.\n")
+#endif
 
 //
 // sv_user.c

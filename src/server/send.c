@@ -324,10 +324,8 @@ void SV_Multicast(vec3_t origin, multicast_t to)
         SV_ClientAddMessage(client, flags);
     }
 
-#if USE_MVD_SERVER
     // add to MVD datagram
     SV_MvdMulticast(leafnum, to);
-#endif
 
     // clear the buffer
     SZ_Clear(&msg_write);
