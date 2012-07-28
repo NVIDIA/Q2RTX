@@ -19,6 +19,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef X86_ASM_H
 #define X86_ASM_H
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #ifndef UNDERSCORES
 #define C(label) label
 #else

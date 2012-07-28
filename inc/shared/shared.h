@@ -23,6 +23,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // shared.h -- included first by ALL program modules
 //
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <math.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -33,9 +37,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <inttypes.h>
 #include <limits.h>
 #include <time.h>
+
 #if HAVE_ENDIAN_H
 #include <endian.h>
 #endif
+
 #include "shared/platform.h"
 
 #define q_countof(a)        (sizeof(a) / sizeof(a[0]))
