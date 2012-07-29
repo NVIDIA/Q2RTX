@@ -467,7 +467,8 @@ void MSG_WriteDir(const vec3_t dir)
 
 void MSG_PackEntity(entity_packed_t *out, const entity_state_t *in, qboolean short_angles)
 {
-    if (in->number < 1 || in->number >= MAX_EDICTS)
+    // allow 0 to accomodate empty baselines
+    if (in->number < 0 || in->number >= MAX_EDICTS)
         Com_Error(ERR_DROP, "%s: bad number: %d", __func__, in->number);
 
     out->number = in->number;
@@ -479,6 +480,8 @@ void MSG_PackEntity(entity_packed_t *out, const entity_state_t *in, qboolean sho
         out->angles[1] = ANGLE2SHORT(in->angles[1]);
         out->angles[2] = ANGLE2SHORT(in->angles[2]);
     } else {
+        // pack angles8 akin to angles16 to make delta compression happy when
+        // precision suddenly changes between entity updates
         out->angles[0] = ANGLE2BYTE(in->angles[0]) << 8;
         out->angles[1] = ANGLE2BYTE(in->angles[1]) << 8;
         out->angles[2] = ANGLE2BYTE(in->angles[2]) << 8;
