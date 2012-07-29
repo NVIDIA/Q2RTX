@@ -1164,13 +1164,16 @@ void CL_CleanupDemos(void)
     if (cls.demo.playback) {
         FS_FCloseFile(cls.demo.playback);
 
-        if (com_timedemo->integer) {
+        if (com_timedemo->integer && cls.demo.time_frames) {
             unsigned msec = Sys_Milliseconds();
-            float sec = (msec - cls.demo.time_start) * 0.001f;
-            float fps = cls.demo.time_frames / sec;
 
-            Com_Printf("%u frames, %3.1f seconds: %3.1f fps\n",
-                       cls.demo.time_frames, sec, fps);
+            if (msec > cls.demo.time_start) {
+                float sec = (msec - cls.demo.time_start) * 0.001f;
+                float fps = cls.demo.time_frames / sec;
+
+                Com_Printf("%u frames, %3.1f seconds: %3.1f fps\n",
+                           cls.demo.time_frames, sec, fps);
+            }
         }
     }
 
