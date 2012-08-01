@@ -162,7 +162,7 @@ static qboolean start_download(dlqueue_t *q)
         cls.download.file = f;
         // give the server an offset to start the download
         Com_DPrintf("[UDP] Resuming %s\n", q->path);
-        CL_ClientCommand(va("download \"%s\" %d", q->path, (int)ret));
+        CL_ClientCommand(va("download \"%s\" %"PRIz, q->path, ret));
     } else if (ret == Q_ERR_NOENT) {  // it doesn't exist
         Com_DPrintf("[UDP] Downloading %s\n", q->path);
         CL_ClientCommand(va("download \"%s\"", q->path));
