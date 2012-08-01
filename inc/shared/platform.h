@@ -57,7 +57,6 @@
 #define q_noreturn
 #define q_malloc
 #define q_sentinel
-#define q_packed
 
 #define q_likely(x)         !!(x)
 #define q_unlikely(x)       !!(x)
