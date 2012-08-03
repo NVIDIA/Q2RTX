@@ -780,11 +780,6 @@ MISC
 ===============================================================================
 */
 
-static void *copy_info(const char *name, const struct stat *st)
-{
-    return FS_CopyInfo(name, st->st_size, st->st_ctime, st->st_mtime);
-}
-
 /*
 =================
 Sys_ListFiles_r
@@ -826,7 +821,16 @@ void Sys_ListFiles_r(const char  *path,
             continue;
         }
 
-        if (stat(fullpath, &st) == -1) {
+        st.st_mode = 0;
+
+#ifdef _DIRENT_HAVE_D_TYPE
+        // try to avoid stat() if possible
+        if (!(flags & FS_SEARCH_EXTRAINFO)) {
+            st.st_mode = DTTOIF(ent->d_type);
+        }
+#endif
+
+        if (st.st_mode == 0 && stat(fullpath, &st) == -1) {
             continue;
         }
 
@@ -884,7 +888,10 @@ void Sys_ListFiles_r(const char  *path,
 
         // copy info off
         if (flags & FS_SEARCH_EXTRAINFO) {
-            info = copy_info(name, &st);
+            info = FS_CopyInfo(name,
+                               st.st_size,
+                               st.st_ctime,
+                               st.st_mtime);
         } else {
             info = FS_CopyString(name);
         }
