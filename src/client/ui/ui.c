@@ -64,10 +64,9 @@ void UI_PushMenu(menuFrameWork_t *menu)
         uis.menuDepth = i + 1;
     }
 
-    if (menu->push) {
-        if (!menu->push(menu)) {
-            return;
-        }
+    if (menu->push && !menu->push(menu)) {
+        uis.menuDepth--;
+        return;
     }
 
     Menu_Init(menu);
