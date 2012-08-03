@@ -27,21 +27,6 @@ PLAYER MODELS
 =============================================================================
 */
 
-static const char *const baseWeaponNames[] = {
-    "w_bfg.md2",
-    "w_blaster.md2",
-    "w_chaingun.md2",
-    "w_glauncher.md2",
-    "w_hyperblaster.md2",
-    "w_machinegun.md2",
-    "w_railgun.md2",
-    "w_rlauncher.md2",
-    "w_shotgun.md2",
-    "w_sshotgun.md2"
-};
-
-static const int numBaseWeaponNames = q_countof(baseWeaponNames);
-
 static qboolean IconOfSkinExists(char *skin, char **pcxfiles, int npcxfiles)
 {
     int i;
@@ -82,31 +67,38 @@ static int pmicmpfnc(const void *_a, const void *_b)
 void PlayerModel_Load(void)
 {
     char scratch[MAX_QPATH];
+    size_t len;
     int ndirs = 0;
     char *dirnames[MAX_PLAYERMODELS];
     int i, j;
     char **list;
-    char *p;
+    char *s, *p;
     int numFiles;
     playerModelInfo_t *pmi;
 
     uis.numPlayerModels = 0;
 
-    /*
-    ** get a list of directories
-    */
-    if (!(list = (char **)FS_ListFiles(NULL, "players/*/*", FS_SEARCH_BYFILTER | FS_SEARCH_SAVEPATH, &numFiles))) {
+    // get a list of directories
+    if (!(list = (char **)FS_ListFiles(NULL, "players/*/tris.md2", FS_SEARCH_BYFILTER | FS_SEARCH_SAVEPATH, &numFiles))) {
         return;
     }
 
     for (i = 0; i < numFiles; i++) {
-        Q_strlcpy(scratch, list[i] + 8, sizeof(scratch));
-        if ((p = strchr(scratch, '/'))) {
-            *p = 0;
-        }
+        len = Q_strlcpy(scratch, list[i], sizeof(scratch));
+        if (len >= sizeof(scratch))
+            continue;
+
+        // make short name for the model
+        if (!(s = strchr(scratch, '/')))
+            continue;
+        s++;
+
+        if (!(p = strchr(s, '/')))
+            continue;
+        *p = 0;
 
         for (j = 0; j < ndirs; j++) {
-            if (!strcmp(dirnames[j], scratch)) {
+            if (!strcmp(dirnames[j], s)) {
                 break;
             }
         }
@@ -115,7 +107,7 @@ void PlayerModel_Load(void)
             continue;
         }
 
-        dirnames[ndirs++] = UI_CopyString(scratch);
+        dirnames[ndirs++] = UI_CopyString(s);
         if (ndirs == MAX_PLAYERMODELS) {
             break;
         }
@@ -127,30 +119,25 @@ void PlayerModel_Load(void)
         return;
     }
 
-    /*
-    ** go through the subdirectories
-    */
-
+    // go through the subdirectories
     for (i = 0; i < ndirs; i++) {
         int k, s;
         char **pcxnames;
         char **skinnames;
         int npcxfiles;
         int nskins = 0;
-        int numWeapons;
-        char **weaponNames;
 
         // verify the existence of tris.md2
         Q_concat(scratch, sizeof(scratch), "players/", dirnames[i], "/tris.md2", NULL);
         if (!FS_FileExists(scratch)) {
-            continue;
+            goto skip;
         }
 
         // verify the existence of at least one pcx skin
         Q_concat(scratch, sizeof(scratch), "players/", dirnames[i], NULL);
         pcxnames = (char **)FS_ListFiles(scratch, ".pcx", 0, &npcxfiles);
         if (!pcxnames) {
-            continue;
+            goto skip;
         }
 
         // count valid skins, which consist of a skin with a matching "_i" icon
@@ -164,7 +151,7 @@ void PlayerModel_Load(void)
 
         if (!nskins) {
             FS_FreeList((void **)pcxnames);
-            continue;
+            goto skip;
         }
 
         skinnames = UI_Malloc(sizeof(char *) * (nskins + 1));
@@ -182,44 +169,19 @@ void PlayerModel_Load(void)
 
         FS_FreeList((void **)pcxnames);
 
-        // load vweap models
-        Q_concat(scratch, sizeof(scratch), "players/", dirnames[i], "/w_*.md2", NULL);
-        weaponNames = (char **)FS_ListFiles(NULL, scratch, FS_SEARCH_BYFILTER, &numWeapons);
-
-        pmi = &uis.pmi[uis.numPlayerModels++];
-        pmi->numWeapons = 0;
-
-        if (weaponNames) {
-            pmi->weaponNames = UI_Malloc(sizeof(char *) * numWeapons);
-
-            for (j = 0; j < numWeapons; j++) {
-                for (k = 0; k < numBaseWeaponNames; k++) {
-                    if (!strcmp(weaponNames[j], baseWeaponNames[k])) {
-                        pmi->weaponNames[pmi->numWeapons++] = UI_CopyString(weaponNames[j]);
-                        break;
-                    }
-                }
-            }
-
-            FS_FreeList((void **)weaponNames);
-        }
-
         // at this point we have a valid player model
+        pmi = &uis.pmi[uis.numPlayerModels++];
         pmi->nskins = nskins;
         pmi->skindisplaynames = skinnames;
+        pmi->directory = dirnames[i];
+        continue;
 
-        // make short name for the model
-        strcpy(pmi->directory, dirnames[i]);
-    }
-
-    for (i = 0; i < ndirs; i++) {
+skip:
         Z_Free(dirnames[i]);
     }
 
     qsort(uis.pmi, uis.numPlayerModels, sizeof(uis.pmi[0]), pmicmpfnc);
 }
-
-
 
 void PlayerModel_Free(void)
 {
@@ -233,12 +195,7 @@ void PlayerModel_Free(void)
             }
             Z_Free(pmi->skindisplaynames);
         }
-        if (pmi->weaponNames) {
-            for (j = 0; j < pmi->numWeapons; j++) {
-                Z_Free(pmi->weaponNames[j]);
-            }
-            Z_Free(pmi->weaponNames);
-        }
+        Z_Free(pmi->directory);
         memset(pmi, 0, sizeof(*pmi));
     }
 

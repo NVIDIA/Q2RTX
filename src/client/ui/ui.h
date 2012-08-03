@@ -243,14 +243,12 @@ typedef struct menuKeybind_s {
     char            *cmd;
 } menuKeybind_t;
 
-#define MAX_PLAYERMODELS 32
+#define MAX_PLAYERMODELS 1024
 
 typedef struct playerModelInfo_s {
     int nskins;
     char **skindisplaynames;
-    char **weaponNames;
-    int numWeapons;
-    char directory[MAX_QPATH];
+    char *directory;
 } playerModelInfo_t;
 
 void PlayerModel_Load(void);
