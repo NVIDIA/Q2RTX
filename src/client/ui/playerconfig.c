@@ -61,16 +61,27 @@ static void ReloadMedia(void)
     char *model = uis.pmi[m_player.model.curvalue].directory;
     char *skin = uis.pmi[m_player.model.curvalue].skindisplaynames[m_player.skin.curvalue];
 
+    m_player.refdef.num_entities = 0;
+
     Q_concat(scratch, sizeof(scratch), "players/", model, "/tris.md2", NULL);
     m_player.entities[0].model = R_RegisterModel(scratch);
+    if (!m_player.entities[0].model)
+        return;
+
+    m_player.refdef.num_entities++;
 
     Q_concat(scratch, sizeof(scratch), "players/", model, "/", skin, ".pcx", NULL);
     m_player.entities[0].skin = R_RegisterSkin(scratch);
 
-    if (uis.weaponModel[0]) {
-        Q_concat(scratch, sizeof(scratch), "players/", model, "/", uis.weaponModel, NULL);
-        m_player.entities[1].model = R_RegisterModel(scratch);
-    }
+    if (!uis.weaponModel[0])
+        return;
+
+    Q_concat(scratch, sizeof(scratch), "players/", model, "/", uis.weaponModel, NULL);
+    m_player.entities[1].model = R_RegisterModel(scratch);
+    if (!m_player.entities[1].model)
+        return;
+
+    m_player.refdef.num_entities++;
 }
 
 static void RunFrame(void)
@@ -196,6 +207,7 @@ static qboolean Push(menuFrameWork_t *self)
     if (!uis.numPlayerModels) {
         PlayerModel_Load();
         if (!uis.numPlayerModels) {
+            Com_Printf("No player models found.\n");
             return qfalse;
         }
     }
@@ -276,11 +288,7 @@ void M_Menu_PlayerConfig(void)
     VectorCopy(origin, m_player.entities[1].origin);
     VectorCopy(origin, m_player.entities[1].oldorigin);
 
-    m_player.refdef.num_entities = 1;
-    if (uis.weaponModel[0]) {
-        m_player.refdef.num_entities++;
-    }
-
+    m_player.refdef.num_entities = 0;
     m_player.refdef.entities = m_player.entities;
     m_player.refdef.rdflags = RDF_NOWORLDMODEL;
 
