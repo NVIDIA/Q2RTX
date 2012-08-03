@@ -30,7 +30,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "refresh/images.h"
 #include "refresh/models.h"
 
-static model_t      r_models[MAX_MODELS];
+// during registration it is possible to have more models than could actually
+// be referenced during gameplay, because we don't want to free anything until
+// we are sure we won't need it.
+#define MAX_RMODELS     (MAX_MODELS * 2)
+
+static model_t      r_models[MAX_RMODELS];
 static int          r_numModels;
 
 static model_t *MOD_Alloc(void)
@@ -45,8 +50,8 @@ static model_t *MOD_Alloc(void)
     }
 
     if (i == r_numModels) {
-        if (r_numModels == MAX_MODELS) {
-            Com_Error(ERR_DROP, "Model_Alloc: MAX_MODELS");
+        if (r_numModels == MAX_RMODELS) {
+            return NULL;
         }
         r_numModels++;
     }
@@ -353,6 +358,11 @@ qhandle_t R_RegisterModel(const char *name)
     }
 
     model = MOD_Alloc();
+    if (!model) {
+        ret = Q_ERR_OUT_OF_SLOTS;
+        goto fail2;
+    }
+
     memcpy(model->name, normalized, namelen + 1);
     model->registration_sequence = registration_sequence;
 

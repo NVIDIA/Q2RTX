@@ -38,6 +38,7 @@ static const char *const error_table[] = {
     "Runaway loop avoided",
     "Infinite loop avoided",
     "Library error",
+    "Out of slots",
 #if USE_ZLIB
     "Inflate failed",
     "Deflate failed",

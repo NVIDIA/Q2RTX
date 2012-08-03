@@ -325,7 +325,7 @@ static sfx_t *S_AllocSfx(void)
 
     if (i == num_sfx) {
         if (num_sfx == MAX_SFX)
-            Com_Error(ERR_DROP, "S_AllocSfx: out of sfx_t");
+            return NULL;
         num_sfx++;
     }
 
@@ -353,9 +353,10 @@ static sfx_t *S_FindName(const char *name, size_t namelen)
 
     // allocate new one
     sfx = S_AllocSfx();
-    memcpy(sfx->name, name, namelen + 1);
-    sfx->registration_sequence = s_registration_sequence;
-
+    if (sfx) {
+        memcpy(sfx->name, name, namelen + 1);
+        sfx->registration_sequence = s_registration_sequence;
+    }
     return sfx;
 }
 
@@ -413,6 +414,10 @@ qhandle_t S_RegisterSound(const char *name)
     }
 
     sfx = S_FindName(buffer, len);
+    if (!sfx) {
+        Com_DPrintf("%s: out of slots\n", __func__);
+        return 0;
+    }
 
     if (!s_registering) {
         S_LoadSound(sfx);
@@ -457,7 +462,7 @@ static sfx_t *S_RegisterSexedSound(int entnum, const char *base)
     sfx = S_FindName(buffer, len);
 
     // see if it exists
-    if (!sfx->truename && !S_LoadSound(sfx)) {
+    if (sfx && !sfx->truename && !S_LoadSound(sfx)) {
         // no, revert to the male sound in the pak0.pak
         len = Q_concat(buffer, MAX_QPATH,
                        "sound/player/male/", base + 1, NULL);

@@ -1461,7 +1461,7 @@ static image_t *alloc_image(void)
 
     if (i == r_numImages) {
         if (r_numImages == MAX_RIMAGES)
-            Com_Error(ERR_FATAL, "%s: MAX_IMAGES exceeded", __func__);
+            return NULL;
         r_numImages++;
     }
 
@@ -1724,25 +1724,23 @@ static qerror_t find_or_load_image(const char *name,
         return ret;
     }
 
-#if USE_REF == REF_GL
-    // don't need pics in memory after GL upload
-    if (!tmp) {
-        tmp = pic;
-    }
-#endif
-
     // allocate image slot
     image = alloc_image();
-    memcpy(image->name, buffer, len + 1);
-    image->baselen = len - 4;
-    List_Append(&r_imageHash[hash], &image->entry);
+    if (!image) {
+        FS_FreeFile(tmp ? tmp : pic);
+        return Q_ERR_OUT_OF_SLOTS;
+    }
 
     // fill in some basic info
-    image->registration_sequence = registration_sequence;
+    memcpy(image->name, buffer, len + 1);
+    image->baselen = len - 4;
     image->type = type;
     image->flags = 0;
     image->width = width;
     image->height = height;
+    image->registration_sequence = registration_sequence;
+
+    List_Append(&r_imageHash[hash], &image->entry);
 
     if (ret <= im_wal) {
         image->flags |= if_paletted;
@@ -1759,6 +1757,13 @@ static qerror_t find_or_load_image(const char *name,
 
     // upload the image to card
     IMG_Load(image, pic, width, height);
+
+#if USE_REF == REF_GL
+    // don't need pics in memory after GL upload
+    if (!tmp) {
+        tmp = pic;
+    }
+#endif
 
     // free any temp memory still remaining
     FS_FreeFile(tmp);
