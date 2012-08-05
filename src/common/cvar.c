@@ -178,11 +178,9 @@ static void change_string_value(cvar_t *var, const char *value, from_t from)
     var->string = Z_CvarCopyString(value);
     parse_string_value(var);
 
-#if USE_CLIENT
     if (var->flags & CVAR_USERINFO) {
         CL_UpdateUserinfo(var, from);
     }
-#endif
 
     var->modified = qtrue;
     if (from != FROM_CODE) {
@@ -448,13 +446,11 @@ cvar_t *Cvar_FullSet(const char *var_name, const char *value, int flags, from_t 
 
     Cvar_SetByVar(var, value, from);
 
-#if USE_CLIENT
     // force retransmit of userinfo variables
     // needed for compatibility with q2admin
     if ((var->flags | flags) & CVAR_USERINFO) {
         CL_UpdateUserinfo(var, from);
     }
-#endif
 
     var->flags &= ~CVAR_INFOMASK;
     var->flags |= flags;

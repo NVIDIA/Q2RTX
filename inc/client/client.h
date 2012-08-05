@@ -23,6 +23,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/net/net.h"
 #include "common/utils.h"
 
+#define CHAR_WIDTH  8
+#define CHAR_HEIGHT 8
+
+#if USE_CLIENT
+
 #define MAX_LOCAL_SERVERS   16
 #define MAX_STATUS_PLAYERS  64
 
@@ -97,9 +102,6 @@ void SCR_UpdateScreen(void);
 #define U32_MAGENTA MakeColor(255,   0, 255, 255)
 #define U32_WHITE   MakeColor(255, 255, 255, 255)
 
-#define CHAR_WIDTH  8
-#define CHAR_HEIGHT 8
-
 #define UI_LEFT             0x00000001
 #define UI_RIGHT            0x00000002
 #define UI_CENTER           (UI_LEFT | UI_RIGHT)
@@ -119,5 +121,26 @@ extern const uint32_t   colorTable[8];
 qboolean SCR_ParseColor(const char *s, color_t *color);
 
 float V_CalcFov(float fov_x, float width, float height);
+
+#else // USE_CLIENT
+
+#define CL_Init()                       (void)0
+#define CL_Disconnect(type)             (void)0
+#define CL_Shutdown()                   (void)0
+#define CL_UpdateUserinfo(var, from)    (void)0
+#define CL_ErrorEvent(from)             (void)0
+#define CL_RestartFilesystem(total)     FS_Restart(total)
+#define CL_ForwardToServer()            qfalse
+#define CL_CheatsOK()                   (!!Cvar_VariableInteger("cheats"))
+
+#define Con_Init()                      (void)0
+#define Con_SetColor(color)             (void)0
+#define Con_Print(text)                 (void)0
+
+#define SCR_DebugGraph(value, color)    (void)0
+#define SCR_BeginLoadingPlaque()        (void)0
+#define SCR_EndLoadingPlaque()          (void)0
+
+#endif // !USE_CLIENT
 
 #endif // CLIENT_H

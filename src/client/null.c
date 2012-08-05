@@ -23,15 +23,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/cvar.h"
 #include "client/client.h"
 
-qboolean CL_CheatsOK(void)
-{
-    // developer option
-    if (Cvar_VariableInteger("cheats")) {
-        return qtrue;
-    }
-    return qfalse;
-}
-
 static void Key_Bind_Null_f(void)
 {
 }

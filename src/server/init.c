@@ -141,9 +141,7 @@ void SV_SpawnServer(cm_t *cm, const char *server, const char *spawnpoint)
     int         i;
     client_t    *client;
 
-#if USE_CLIENT
     SCR_BeginLoadingPlaque();           // for local system
-#endif
 
     Com_Printf("------- Server Initialization -------\n");
     Com_Printf("SpawnServer: %s\n", server);
@@ -277,11 +275,9 @@ void SV_InitGame(unsigned mvd_spawn)
         // cause any connected clients to reconnect
         SV_Shutdown("Server restarted\n", ERR_RECONNECT | mvd_spawn);
     } else {
-#if USE_CLIENT
         // make sure the client is down
         CL_Disconnect(ERR_RECONNECT);
         SCR_BeginLoadingPlaque();
-#endif
 
         CM_FreeMap(&sv.cm);
         SV_FreeFile(sv.entitystring);

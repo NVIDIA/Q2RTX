@@ -363,10 +363,8 @@ void Com_SetColor(color_index_t color)
     if (rd_target) {
         return;
     }
-#if USE_CLIENT
     // graphical console
     Con_SetColor(color);
-#endif
 #if USE_SYSCON
     // debugging console
     Sys_SetConsoleColor(color);
@@ -452,10 +450,8 @@ void Com_LPrintf(print_type_t type, const char *fmt, ...)
             break;
         }
 
-#if USE_CLIENT
         // graphical console
         Con_Print(msg);
-#endif
 
 #if USE_SYSCON
         // debugging console
@@ -528,9 +524,7 @@ void Com_Error(error_type_t code, const char *fmt, ...)
     if (code == ERR_DISCONNECT || code == ERR_RECONNECT) {
         Com_WPrintf("%s\n", com_errorMsg);
         SV_Shutdown(va("Server was killed: %s\n", com_errorMsg), code);
-#if USE_CLIENT
         CL_Disconnect(code);
-#endif
         goto abort;
     }
 
@@ -550,9 +544,7 @@ void Com_Error(error_type_t code, const char *fmt, ...)
                     "ERROR: %s\n"
                     "********************\n", com_errorMsg);
         SV_Shutdown(va("Server crashed: %s\n", com_errorMsg), ERR_DROP);
-#if USE_CLIENT
         CL_Disconnect(ERR_DROP);
-#endif
         goto abort;
     }
 
@@ -561,9 +553,7 @@ void Com_Error(error_type_t code, const char *fmt, ...)
     }
 
     SV_Shutdown(va("Server fatal crashed: %s\n", com_errorMsg), ERR_FATAL);
-#if USE_CLIENT
     CL_Shutdown();
-#endif
     Qcommon_Shutdown();
 
     Sys_Error("%s", com_errorMsg);
@@ -606,12 +596,8 @@ void Com_Quit(const char *reason, error_type_t type)
     }
 
     SV_Shutdown(buffer, type);
-
-#if USE_CLIENT
     CL_Shutdown();
-#endif
     Qcommon_Shutdown();
-
     Sys_Quit();
 }
 
@@ -897,9 +883,7 @@ void Qcommon_Init(int argc, char **argv)
     Cvar_Init();
     Key_Init();
     Prompt_Init();
-#if USE_CLIENT
     Con_Init();
-#endif
 
     //
     // init commands and vars
@@ -1013,9 +997,7 @@ void Qcommon_Init(int argc, char **argv)
     BSP_Init();
     CM_Init();
     SV_Init();
-#if USE_CLIENT
     CL_Init();
-#endif
     TST_Init();
 
 #if USE_SYSCON
@@ -1030,14 +1012,11 @@ void Qcommon_Init(int argc, char **argv)
             Cbuf_AddText(&cmd_buffer, cmd);
             Cbuf_Execute(&cmd_buffer);
         }
-    }
-#if USE_CLIENT
-    else {
+    } else {
         // the user asked for something explicit
         // so drop the loading plaque
         SCR_EndLoadingPlaque();
     }
-#endif
 
     // even not given a starting map, dedicated server starts
     // listening for rcon commands (create socket after all configs

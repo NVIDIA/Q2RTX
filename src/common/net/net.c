@@ -546,11 +546,9 @@ static void NET_ErrorEvent(netsrc_t sock, netadr_t *from,
     case NS_SERVER:
         SV_ErrorEvent(from, ee_errno, ee_info);
         break;
-#if USE_CLIENT
     case NS_CLIENT:
         CL_ErrorEvent(from);
         break;
-#endif
     default:
         break;
     }

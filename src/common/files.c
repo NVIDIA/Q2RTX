@@ -3395,11 +3395,7 @@ Console command to fully re-start the file system.
 */
 static void FS_Restart_f(void)
 {
-#if USE_CLIENT
     CL_RestartFilesystem(qtrue);
-#else
-    FS_Restart(qtrue);
-#endif
 }
 
 static const cmdreg_t c_fs[] = {
@@ -3485,11 +3481,7 @@ static void fs_game_changed(cvar_t *self)
     }
 
     // otherwise, restart the filesystem
-#if USE_CLIENT
     CL_RestartFilesystem(qfalse);
-#else
-    FS_Restart(qfalse);
-#endif
 
     // exec autoexec.cfg (must be a real file within the game directory)
     ret = Cmd_ExecuteFile(COM_AUTOEXEC_CFG, FS_TYPE_REAL | FS_PATH_GAME);

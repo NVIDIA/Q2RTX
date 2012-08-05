@@ -26,9 +26,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/files.h"
 #include "common/prompt.h"
 #include "common/utils.h"
-#if USE_CLIENT
 #include "client/client.h"
-#endif
 
 #define Cmd_Malloc(size)        Z_TagMalloc(size, TAG_CMD)
 #define Cmd_CopyString(string)  Z_TagCopyString(string, TAG_CMD)
@@ -1612,13 +1610,9 @@ void Cmd_ExecuteCommand(cmdbuf_t *buf)
     if (cmd) {
         if (cmd->function) {
             cmd->function();
-        } else
-#if USE_CLIENT
-            if (!CL_ForwardToServer())
-#endif
-            {
-                Com_Printf("Can't \"%s\", not connected\n", cmd_argv[0]);
-            }
+        } else if (!CL_ForwardToServer()) {
+            Com_Printf("Can't \"%s\", not connected\n", cmd_argv[0]);
+        }
         return;
     }
 
@@ -1644,11 +1638,8 @@ void Cmd_ExecuteCommand(cmdbuf_t *buf)
         return;
     }
 
-#if USE_CLIENT
     // send it as a server command if we are connected
-    if (!CL_ForwardToServer())
-#endif
-    {
+    if (!CL_ForwardToServer()) {
         Com_Printf("Unknown command \"%s\"\n", cmd_argv[0]);
     }
 }
