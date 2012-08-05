@@ -187,7 +187,7 @@ static void print_drop_reason(client_t *client, const char *reason, clstate_t ol
                         client->name, prefix, reason);
 
     // print to server console
-    if (Com_IsDedicated() && client->netchan)
+    if (COM_DEDICATED && client->netchan)
         Com_Printf("%s[%s]%s%s\n", client->name,
                    NET_AdrToString(&client->netchan->remote_address),
                    prefix, reason);
@@ -1674,7 +1674,7 @@ static void SV_MasterHeartbeat(void)
     size_t  len;
     master_t *m;
 
-    if (!Com_IsDedicated())
+    if (!COM_DEDICATED)
         return;        // only dedicated servers send heartbeats
 
     if (!sv_public->integer)
@@ -1718,7 +1718,7 @@ static void SV_MasterShutdown(void)
         m->last_ack = 0;
     }
 
-    if (!Com_IsDedicated())
+    if (!COM_DEDICATED)
         return;        // only dedicated servers send heartbeats
 
     if (!sv_public || !sv_public->integer)
@@ -1753,7 +1753,7 @@ unsigned SV_Frame(unsigned msec)
     // advance local server time
     svs.realtime += msec;
 
-    if (Com_IsDedicated()) {
+    if (COM_DEDICATED) {
         // process console commands if not running a client
         Cbuf_Execute(&cmd_buffer);
     }
@@ -1809,7 +1809,7 @@ unsigned SV_Frame(unsigned msec)
         sv.framenum++;
     }
 
-    if (Com_IsDedicated()) {
+    if (COM_DEDICATED) {
         // run cmd buffer in dedicated mode
         if (cmd_buffer.waitCount > 0) {
             cmd_buffer.waitCount--;
@@ -1861,7 +1861,7 @@ void SV_UserinfoChanged(client_t *cl)
     for (i = 0; i < len; i++)
         name[i] &= 127;
     if (cl->name[0] && strcmp(cl->name, name)) {
-        if (Com_IsDedicated()) {
+        if (COM_DEDICATED) {
             Com_Printf("%s[%s] changed name to %s\n", cl->name,
                        NET_AdrToString(&cl->netchan->remote_address), name);
         }

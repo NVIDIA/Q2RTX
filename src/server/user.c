@@ -858,7 +858,7 @@ static void SV_CvarResult_f(void)
     if (!strcmp(c, "version")) {
         if (!sv_client->version_string) {
             v = Cmd_RawArgsFrom(2);
-            if (Com_IsDedicated()) {
+            if (COM_DEDICATED) {
                 Com_Printf("%s[%s]: %s\n", sv_client->name,
                            NET_AdrToString(&sv_client->netchan->remote_address), v);
             }

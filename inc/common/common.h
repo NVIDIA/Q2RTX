@@ -103,9 +103,9 @@ void        Com_FlushLogs(void);
 #endif
 
 #if USE_CLIENT
-#define Com_IsDedicated() (dedicated->integer != 0)
+#define COM_DEDICATED   (dedicated->integer != 0)
 #else
-#define Com_IsDedicated() 1
+#define COM_DEDICATED   1
 #endif
 
 #ifdef _DEBUG

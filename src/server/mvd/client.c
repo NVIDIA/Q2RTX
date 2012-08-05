@@ -200,7 +200,7 @@ void MVD_Destroyf(mvd_t *mvd, const char *fmt, ...)
     Com_Printf("[%s] =X= %s\n", mvd->name, text);
 
     // notify spectators
-    if (Com_IsDedicated()) {
+    if (COM_DEDICATED) {
         MVD_BroadcastPrintf(mvd, PRINT_HIGH, 0,
                             "[MVD] %s\n", text);
     }
@@ -871,7 +871,7 @@ static qboolean gtv_wait_stop(mvd_t *mvd)
 
 stop:
     // notify spectators
-    if (Com_IsDedicated()) {
+    if (COM_DEDICATED) {
         MVD_BroadcastPrintf(mvd, PRINT_HIGH, 0,
                             "[MVD] Streaming resumed.\n");
     }
@@ -910,7 +910,7 @@ static void gtv_wait_start(mvd_t *mvd)
     mvd->dirty = qtrue;
 
     // notify spectators
-    if (Com_IsDedicated()) {
+    if (COM_DEDICATED) {
         MVD_BroadcastPrintf(mvd, PRINT_HIGH, 0,
                             "[MVD] Buffering data, please wait...\n");
     }
@@ -1110,7 +1110,7 @@ static void parse_hello(gtv_t *gtv)
         MVD_Spawn();
     } else {
         // notify spectators
-        if (Com_IsDedicated() && gtv->mvd) {
+        if (COM_DEDICATED && gtv->mvd) {
             MVD_BroadcastPrintf(gtv->mvd, PRINT_HIGH, 0,
                                 "[MVD] Restored connection to the game server!\n");
         }
@@ -1207,7 +1207,7 @@ static void parse_stream_data(gtv_t *gtv)
             // oops, overflowed
             Com_Printf("[%s] =!= Delay buffer overflowed!\n", gtv->name);
 
-            if (Com_IsDedicated()) {
+            if (COM_DEDICATED) {
                 // notify spectators
                 MVD_BroadcastPrintf(mvd, PRINT_HIGH, 0,
                                     "[MVD] Delay buffer overflowed!\n");
@@ -1568,7 +1568,7 @@ static void gtv_destroy(gtv_t *gtv)
             // free it here, since it is not yet
             // added to global channel list
             MVD_Free(mvd);
-        } else if (Com_IsDedicated()) {
+        } else if (COM_DEDICATED) {
             // notify spectators
             MVD_BroadcastPrintf(mvd, PRINT_HIGH, 0,
                                 "[MVD] Disconnected from the game server!\n");
@@ -1601,7 +1601,7 @@ static void gtv_drop(gtv_t *gtv)
         gtv->retry_backoff += 15 * 1000;
     } else {
         // notify spectators
-        if (Com_IsDedicated() && gtv->mvd) {
+        if (COM_DEDICATED && gtv->mvd) {
             MVD_BroadcastPrintf(gtv->mvd, PRINT_HIGH, 0,
                                 "[MVD] Lost connection to the game server!\n");
         }

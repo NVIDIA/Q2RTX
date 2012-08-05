@@ -923,7 +923,7 @@ void Qcommon_Init(int argc, char **argv)
     com_fatal_error = Cvar_Get("com_fatal_error", "0", 0);
     com_version = Cvar_Get("version", com_version_string, CVAR_SERVERINFO | CVAR_ROM);
 
-    allow_download = Cvar_Get("allow_download", Com_IsDedicated() ? "0" : "1", CVAR_ARCHIVE);
+    allow_download = Cvar_Get("allow_download", COM_DEDICATED ? "0" : "1", CVAR_ARCHIVE);
     allow_download_players = Cvar_Get("allow_download_players", "1", CVAR_ARCHIVE);
     allow_download_models = Cvar_Get("allow_download_models", "1", CVAR_ARCHIVE);
     allow_download_sounds = Cvar_Get("allow_download_sounds", "1", CVAR_ARCHIVE);
@@ -1007,7 +1007,8 @@ void Qcommon_Init(int argc, char **argv)
     // add + commands from command line
     if (!Com_AddLateCommands()) {
         // if the user didn't give any commands, run default action
-        char *cmd = Com_IsDedicated() ? "dedicated_start" : "client_start";
+        char *cmd = COM_DEDICATED ? "dedicated_start" : "client_start";
+
         if ((cmd = Cmd_AliasCommand(cmd)) != NULL) {
             Cbuf_AddText(&cmd_buffer, cmd);
             Cbuf_Execute(&cmd_buffer);
@@ -1021,7 +1022,7 @@ void Qcommon_Init(int argc, char **argv)
     // even not given a starting map, dedicated server starts
     // listening for rcon commands (create socket after all configs
     // are executed to make sure port number is properly set)
-    if (Com_IsDedicated()) {
+    if (COM_DEDICATED) {
         NET_Config(NET_SERVER);
     }
 

@@ -721,7 +721,7 @@ static void SV_ConSay_f(void)
         SV_ClientPrintf(client, PRINT_CHAT, "console: %s\n", s);
     }
 
-    if (Com_IsDedicated()) {
+    if (COM_DEDICATED) {
         Com_LPrintf(PRINT_TALK, "console: %s\n", s);
     }
 }
@@ -1549,7 +1549,7 @@ void SV_InitOperatorCommands(void)
 {
     Cmd_Register(c_server);
 
-    if (Com_IsDedicated())
+    if (COM_DEDICATED)
         Cmd_AddCommand("say", SV_ConSay_f);
 }
 

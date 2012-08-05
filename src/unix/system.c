@@ -650,7 +650,7 @@ void Sys_Init(void)
         signal(SIGHUP, term_handler);
     } else
 #endif
-        if (Com_IsDedicated()) {
+        if (COM_DEDICATED) {
             signal(SIGHUP, hup_handler);
         }
 
