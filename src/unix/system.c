@@ -20,26 +20,22 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/cmd.h"
 #include "common/common.h"
 #include "common/cvar.h"
-#include "common/field.h"
 #include "common/files.h"
-#include "common/net/net.h"
-#include "common/prompt.h"
 #if USE_REF
 #include "client/video.h"
 #endif
 #include "system/system.h"
+#include "tty.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/mman.h>
-#include <sys/ioctl.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <dirent.h>
 #include <dlfcn.h>
-#include <termios.h>
 #include <errno.h>
 
 cvar_t  *sys_basedir;
@@ -48,419 +44,6 @@ cvar_t  *sys_homedir;
 cvar_t  *sys_forcegamelib;
 
 cvar_t  *sys_parachute;
-
-/*
-===============================================================================
-
-TERMINAL SUPPORT
-
-===============================================================================
-*/
-
-#if USE_SYSCON
-
-cvar_t  *sys_console;
-
-static qboolean         tty_enabled;
-static struct termios   tty_orig;
-static commandPrompt_t  tty_prompt;
-static int              tty_hidden;
-static ioentry_t        *tty_io;
-
-static int stdout_sleep(void)
-{
-    struct timeval tv;
-    fd_set fd;
-
-    tv.tv_sec = 0;
-    tv.tv_usec = 10000;
-
-    FD_ZERO(&fd);
-    FD_SET(STDOUT_FILENO, &fd);
-
-    return select(STDOUT_FILENO + 1, NULL, &fd, NULL, &tv);
-}
-
-// handles partial writes correctly, but never spins too much
-// blocks for 100 ms before giving up and losing data
-static void stdout_write(const char *buf, size_t len)
-{
-    const char *what;
-    int ret, spins;
-
-    for (spins = 0; spins < 10; spins++) {
-        if (len == 0)
-            break;
-
-        ret = write(STDOUT_FILENO, buf, len);
-        if (q_unlikely(ret < 0)) {
-            if (errno == EINTR)
-                continue;
-
-            if (errno == EAGAIN) {
-                ret = stdout_sleep();
-                if (ret >= 0)
-                    continue;
-                what = "select";
-            } else {
-                what = "write";
-            }
-
-            // avoid recursive calls
-            sys_console = NULL;
-            tty_enabled = qfalse;
-
-            Com_Error(ERR_FATAL, "%s: %s() failed: %s",
-                      __func__, what, strerror(errno));
-        }
-
-        buf += ret;
-        len -= ret;
-    }
-}
-
-static void tty_hide_input(void)
-{
-    int i;
-
-    if (!tty_hidden) {
-        for (i = 0; i <= tty_prompt.inputLine.cursorPos; i++) {
-            stdout_write("\b \b", 3);
-        }
-    }
-    tty_hidden++;
-}
-
-static void tty_show_input(void)
-{
-    if (!tty_hidden) {
-        return;
-    }
-
-    tty_hidden--;
-    if (!tty_hidden) {
-        stdout_write("]", 1);
-        stdout_write(tty_prompt.inputLine.text,
-                     tty_prompt.inputLine.cursorPos);
-    }
-}
-
-static void tty_init_input(void)
-{
-    struct termios tty;
-#ifdef TIOCGWINSZ
-    struct winsize ws;
-#endif
-    int width;
-
-    if (!isatty(STDIN_FILENO) || !isatty(STDOUT_FILENO)) {
-        Com_Printf("stdin/stdout don't both refer to a TTY\n");
-        Cvar_Set("sys_console", "1");
-        return;
-    }
-
-    tcgetattr(STDIN_FILENO, &tty_orig);
-    tty = tty_orig;
-    tty.c_iflag &= ~(INPCK | ISTRIP);
-    tty.c_lflag &= ~(ICANON | ECHO);
-    tty.c_cc[VMIN] = 1;
-    tty.c_cc[VTIME] = 0;
-    tcsetattr(STDIN_FILENO, TCSADRAIN, &tty);
-
-    // determine terminal width
-    width = 80;
-#ifdef TIOCGWINSZ
-    if (ioctl(STDIN_FILENO, TIOCGWINSZ, &ws) == 0) {
-        if (ws.ws_col) {
-            width = ws.ws_col;
-        }
-    }
-#endif
-    tty_prompt.widthInChars = width;
-    tty_prompt.printf = Sys_Printf;
-    tty_enabled = qtrue;
-
-    // figure out input line width
-    width--;
-    if (width > MAX_FIELD_TEXT - 1) {
-        width = MAX_FIELD_TEXT - 1;
-    }
-    IF_Init(&tty_prompt.inputLine, width, width);
-
-    // display command prompt
-    stdout_write("]", 1);
-}
-
-static void tty_shutdown_input(void)
-{
-    if (tty_io) {
-        NET_RemoveFd(STDIN_FILENO);
-        tty_io = NULL;
-    }
-    if (tty_enabled) {
-        tty_hide_input();
-        tcsetattr(STDIN_FILENO, TCSADRAIN, &tty_orig);
-        tty_enabled = qfalse;
-    }
-}
-
-void Sys_SetConsoleColor(color_index_t color)
-{
-    static const char color_to_ansi[8] =
-    { '0', '1', '2', '3', '4', '6', '5', '7' };
-    char buf[5];
-    size_t len;
-
-    if (!sys_console || !sys_console->integer) {
-        return;
-    }
-
-    if (!tty_enabled) {
-        return;
-    }
-
-    buf[0] = '\033';
-    buf[1] = '[';
-    switch (color) {
-    case COLOR_NONE:
-        buf[2] = '0';
-        buf[3] = 'm';
-        len = 4;
-        break;
-    case COLOR_ALT:
-        buf[2] = '3';
-        buf[3] = '2';
-        buf[4] = 'm';
-        len = 5;
-        break;
-    default:
-        buf[2] = '3';
-        buf[3] = color_to_ansi[color];
-        buf[4] = 'm';
-        len = 5;
-        break;
-    }
-
-    if (color != COLOR_NONE) {
-        tty_hide_input();
-    }
-    stdout_write(buf, len);
-    if (color == COLOR_NONE) {
-        tty_show_input();
-    }
-}
-
-static void tty_write_output(const char *text)
-{
-    char    buf[MAXPRINTMSG];
-    size_t  len;
-
-    for (len = 0; len < MAXPRINTMSG; len++) {
-        int c = *text++;
-        if (!c) {
-            break;
-        }
-        buf[len] = Q_charascii(c);
-    }
-
-    stdout_write(buf, len);
-}
-
-/*
-=================
-Sys_ConsoleOutput
-=================
-*/
-void Sys_ConsoleOutput(const char *text)
-{
-    if (!sys_console || !sys_console->integer) {
-        return;
-    }
-
-    if (!tty_enabled) {
-        tty_write_output(text);
-    } else {
-        tty_hide_input();
-        tty_write_output(text);
-        tty_show_input();
-    }
-}
-
-void Sys_SetConsoleTitle(const char *title)
-{
-    char buf[MAX_STRING_CHARS];
-    size_t len;
-
-    if (!sys_console || !sys_console->integer) {
-        return;
-    }
-
-    if (!tty_enabled) {
-        return;
-    }
-
-    buf[0] = '\033';
-    buf[1] = ']';
-    buf[2] = '0';
-    buf[3] = ';';
-
-    for (len = 4; len < MAX_STRING_CHARS - 1; len++) {
-        int c = *title++;
-        if (!c) {
-            break;
-        }
-        buf[len] = Q_charascii(c);
-    }
-
-    buf[len++] = '\007';
-
-    stdout_write(buf, len);
-}
-
-static void tty_parse_input(const char *text)
-{
-    inputField_t *f;
-    char *s;
-    int i, key;
-
-    f = &tty_prompt.inputLine;
-    while (*text) {
-        key = *text++;
-
-        if (key == tty_orig.c_cc[VERASE] || key == 127 || key == 8) {
-            if (f->cursorPos) {
-                f->text[--f->cursorPos] = 0;
-                stdout_write("\b \b", 3);
-            }
-            continue;
-        }
-
-        if (key == tty_orig.c_cc[VKILL]) {
-            for (i = 0; i < f->cursorPos; i++) {
-                stdout_write("\b \b", 3);
-            }
-            f->cursorPos = 0;
-            continue;
-        }
-
-        if (key >= 32) {
-            if (f->cursorPos == f->maxChars - 1) {
-                stdout_write(va("\b \b%c", key), 4);
-                f->text[f->cursorPos + 0] = key;
-                f->text[f->cursorPos + 1] = 0;
-            } else {
-                stdout_write(va("%c", key), 1);
-                f->text[f->cursorPos + 0] = key;
-                f->text[f->cursorPos + 1] = 0;
-                f->cursorPos++;
-            }
-            continue;
-        }
-
-        if (key == '\n') {
-            tty_hide_input();
-            s = Prompt_Action(&tty_prompt);
-            if (s) {
-                if (*s == '\\' || *s == '/') {
-                    s++;
-                }
-                Sys_Printf("]%s\n", s);
-                Cbuf_AddText(&cmd_buffer, s);
-            } else {
-                stdout_write("]\n", 2);
-            }
-            tty_show_input();
-            continue;
-        }
-
-        if (key == '\t') {
-            tty_hide_input();
-            Prompt_CompleteCommand(&tty_prompt, qfalse);
-            f->cursorPos = strlen(f->text);   // FIXME
-            tty_show_input();
-            continue;
-        }
-
-        if (*text) {
-            key = *text++;
-            if (key == '[' || key == 'O') {
-                if (*text) {
-                    key = *text++;
-                    switch (key) {
-                    case 'A':
-                        tty_hide_input();
-                        Prompt_HistoryUp(&tty_prompt);
-                        tty_show_input();
-                        break;
-                    case 'B':
-                        tty_hide_input();
-                        Prompt_HistoryDown(&tty_prompt);
-                        tty_show_input();
-                        break;
-#if 0
-                    case 'C':
-                        if (f->text[f->cursorPos]) {
-                            stdout_write("\033[C", 3);
-                            f->cursorPos++;
-                        }
-                        break;
-                    case 'D':
-                        if (f->cursorPos) {
-                            stdout_write("\033[D", 3);
-                            f->cursorPos--;
-                        }
-                        break;
-#endif
-                    }
-                }
-            }
-        }
-    }
-}
-
-void Sys_RunConsole(void)
-{
-    char text[MAX_STRING_CHARS];
-    ssize_t ret;
-
-    if (!sys_console || !sys_console->integer) {
-        return;
-    }
-
-    if (!tty_io || !tty_io->canread) {
-        return;
-    }
-
-    ret = read(STDIN_FILENO, text, sizeof(text) - 1);
-    if (!ret) {
-        Com_DPrintf("Read EOF from stdin.\n");
-        tty_shutdown_input();
-        Cvar_Set("sys_console", "0");
-        return;
-    }
-
-    // make sure the next call will not block
-    tty_io->canread = qfalse;
-
-    if (ret < 0) {
-        if (errno == EAGAIN || errno == EINTR) {
-            return;
-        }
-        Com_Error(ERR_FATAL, "%s: read() failed: %s",
-                  __func__, strerror(errno));
-    }
-
-    text[ret] = 0;
-
-    if (!tty_enabled) {
-        Cbuf_AddText(&cmd_buffer, text);
-        return;
-    }
-
-    tty_parse_input(text);
-}
-
-#endif // USE_SYSCON
 
 /*
 ===============================================================================
@@ -494,9 +77,7 @@ This function never returns.
 */
 void Sys_Quit(void)
 {
-#if USE_SYSCON
     tty_shutdown_input();
-#endif
     exit(EXIT_SUCCESS);
 }
 
@@ -567,9 +148,7 @@ static void term_handler(int signum)
 
 static void kill_handler(int signum)
 {
-#if USE_SYSCON
     tty_shutdown_input();
-#endif
 
 #if USE_CLIENT && USE_REF
     VID_FatalShutdown();
@@ -619,40 +198,11 @@ void Sys_Init(void)
     sys_libdir = Cvar_Get("libdir", LIBDIR, CVAR_NOSET);
     sys_forcegamelib = Cvar_Get("sys_forcegamelib", "", CVAR_NOSET);
 
-#if USE_SYSCON
-    // we want TTY support enabled if started from terminal,
-    // but don't want any output by default if launched without one
-    // (from X session for example)
-    sys_console = Cvar_Get("sys_console", isatty(STDIN_FILENO) &&
-                           isatty(STDOUT_FILENO) ? "2" : "0", CVAR_NOSET);
-
-    if (sys_console->integer > 0) {
-        int ret;
-
-        // change stdin to non-blocking
-        ret = fcntl(STDIN_FILENO, F_GETFL, 0);
-        if (!(ret & O_NONBLOCK))
-            fcntl(STDIN_FILENO, F_SETFL, ret | O_NONBLOCK);
-
-        // change stdout to non-blocking
-        ret = fcntl(STDOUT_FILENO, F_GETFL, 0);
-        if (!(ret & O_NONBLOCK))
-            fcntl(STDOUT_FILENO, F_SETFL, ret | O_NONBLOCK);
-
-        // add stdin to the list of descriptors to wait on
-        tty_io = NET_AddFd(STDIN_FILENO);
-        tty_io->wantread = qtrue;
-
-        // init optional TTY support
-        if (sys_console->integer > 1)
-            tty_init_input();
-
+    if (tty_init_input()) {
         signal(SIGHUP, term_handler);
-    } else
-#endif
-        if (COM_DEDICATED) {
-            signal(SIGHUP, hup_handler);
-        }
+    } else if (COM_DEDICATED) {
+        signal(SIGHUP, hup_handler);
+    }
 
     sys_parachute = Cvar_Get("sys_parachute", "1", CVAR_NOSET);
 
@@ -665,25 +215,6 @@ void Sys_Init(void)
     }
 }
 
-#if USE_SYSCON
-/*
-================
-Sys_Printf
-================
-*/
-void Sys_Printf(const char *fmt, ...)
-{
-    va_list     argptr;
-    char        msg[MAXPRINTMSG];
-
-    va_start(argptr, fmt);
-    Q_vsnprintf(msg, sizeof(msg), fmt, argptr);
-    va_end(argptr);
-
-    Sys_ConsoleOutput(msg);
-}
-#endif
-
 /*
 =================
 Sys_Error
@@ -694,9 +225,7 @@ void Sys_Error(const char *error, ...)
     va_list     argptr;
     char        text[MAXERRORMSG];
 
-#if USE_SYSCON
     tty_shutdown_input();
-#endif
 
 #if USE_CLIENT && USE_REF
     VID_FatalShutdown();
@@ -706,7 +235,8 @@ void Sys_Error(const char *error, ...)
     Q_vsnprintf(text, sizeof(text), error, argptr);
     va_end(argptr);
 
-    fprintf(stderr, "********************\n"
+    fprintf(stderr,
+            "********************\n"
             "FATAL: %s\n"
             "********************\n", text);
     exit(EXIT_FAILURE);
@@ -916,18 +446,18 @@ int main(int argc, char **argv)
     if (argc > 1) {
         if (!strcmp(argv[1], "-v") || !strcmp(argv[1], "--version")) {
             fprintf(stderr, "%s\n", com_version_string);
-            return 0;
+            return EXIT_SUCCESS;
         }
         if (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help")) {
             fprintf(stderr, "Usage: %s [+command arguments] [...]\n", argv[0]);
-            return 0;
+            return EXIT_SUCCESS;
         }
     }
 
     if (!getuid() || !geteuid()) {
-        fprintf(stderr,    "You can not run " PRODUCT " as superuser "
+        fprintf(stderr, "You can not run " PRODUCT " as superuser "
                 "for security reasons!\n");
-        return 1;
+        return EXIT_FAILURE;
     }
 
     Qcommon_Init(argc, argv);

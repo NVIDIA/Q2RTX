@@ -508,6 +508,11 @@ else
     OBJS_s += src/unix/hunk.o src/unix/system.o
     OBJS_c += src/unix/hunk.o src/unix/system.o
 
+    ifndef CONFIG_NO_SYSTEM_CONSOLE
+        OBJS_s += src/unix/tty.o
+        OBJS_c += src/unix/tty.o
+    endif
+
     # System libs
     LIBS_s += -lm -ldl
     LIBS_c += -lm -ldl
