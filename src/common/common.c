@@ -554,7 +554,9 @@ void Com_Error(error_type_t code, const char *fmt, ...)
 
     SV_Shutdown(va("Server fatal crashed: %s\n", com_errorMsg), ERR_FATAL);
     CL_Shutdown();
-    Qcommon_Shutdown();
+    NET_Shutdown();
+    logfile_close();
+    FS_Shutdown();
 
     Sys_Error("%s", com_errorMsg);
     // doesn't get there
@@ -597,8 +599,12 @@ void Com_Quit(const char *reason, error_type_t type)
 
     SV_Shutdown(buffer, type);
     CL_Shutdown();
-    Qcommon_Shutdown();
+    NET_Shutdown();
+    logfile_close();
+    FS_Shutdown();
+
     Sys_Quit();
+    // doesn't get there
 }
 
 static void Com_Quit_f(void)
@@ -1149,17 +1155,5 @@ void Qcommon_Frame(void)
                    all, ev, sv, gm, cl, rf);
     }
 #endif
-}
-
-/*
-=================
-Qcommon_Shutdown
-=================
-*/
-void Qcommon_Shutdown(void)
-{
-    NET_Shutdown();
-    logfile_close();
-    FS_Shutdown();
 }
 

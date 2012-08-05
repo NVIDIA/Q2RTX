@@ -181,6 +181,5 @@ extern const char *const colorNames[10];
 
 void Qcommon_Init(int argc, char **argv);
 void Qcommon_Frame(void);
-void Qcommon_Shutdown(void);
 
 #endif // COMMON_H
