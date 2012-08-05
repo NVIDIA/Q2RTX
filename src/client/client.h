@@ -918,12 +918,19 @@ void CL_InitAscii(void);
 // http.c
 //
 #if USE_CURL
-void HTTP_CleanupDownloads(void);
 void HTTP_Init(void);
 void HTTP_Shutdown(void);
+void HTTP_SetServer(const char *url);
 qerror_t HTTP_QueueDownload(const char *path, dltype_t type);
 void HTTP_RunDownloads(void);
-void HTTP_SetServer(const char *url);
+void HTTP_CleanupDownloads(void);
+#else
+#define HTTP_Init()                     (void)0
+#define HTTP_Shutdown()                 (void)0
+#define HTTP_SetServer(url)             (void)0
+#define HTTP_QueueDownload(path, type)  Q_ERR_NOSYS
+#define HTTP_RunDownloads()             (void)0
+#define HTTP_CleanupDownloads()         (void)0
 #endif
 
 

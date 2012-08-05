@@ -114,9 +114,7 @@ void CL_CleanupDownloads(void)
 {
     dlqueue_t *q, *n;
 
-#if USE_CURL
     HTTP_CleanupDownloads();
-#endif
 
     FOR_EACH_DLQ_SAFE(q, n) {
         Z_Free(q);
@@ -350,11 +348,9 @@ static qerror_t check_file_len(const char *path, size_t len, dltype_t type)
         // it exists, no need to download
         return Q_ERR_EXIST;
 
-#if USE_CURL
     ret = HTTP_QueueDownload(buffer, type);
     if (ret != Q_ERR_NOSYS)
         return ret;
-#endif
 
     // queue and start legacy UDP download
     ret = CL_QueueDownload(buffer, type);

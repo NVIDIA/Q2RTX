@@ -1402,12 +1402,9 @@ static void CL_ConnectionlessPacket(void)
                 }
             } else if (!strncmp(s, "map=", 4)) {
                 Q_strlcpy(mapname, s + 4, sizeof(mapname));
-            }
-#if USE_CURL
-            else if (!strncmp(s, "dlserver=", 9)) {
+            } else if (!strncmp(s, "dlserver=", 9)) {
                 HTTP_SetServer(s + 9);
             }
-#endif
         }
 
         Com_Printf("Connected to %s (protocol %d).\n",
@@ -3209,9 +3206,7 @@ qboolean CL_ProcessEvents(void)
     Cbuf_Execute(&cmd_buffer);
     Cbuf_Execute(&cl_cmdbuf);
 
-#if USE_CURL
     HTTP_RunDownloads();
-#endif
 
     return cl.sendPacketNow;
 }
@@ -3255,9 +3250,7 @@ void CL_Init(void)
     }
 #endif
 
-#if USE_CURL
     HTTP_Init();
-#endif
 
     UI_OpenMenu(UIMENU_DEFAULT);
 
@@ -3327,10 +3320,7 @@ void CL_Shutdown(void)
     inflateEnd(&cls.z);
 #endif
 
-#if USE_CURL
     HTTP_Shutdown();
-#endif
-
     S_Shutdown();
     IN_Shutdown();
     Con_Shutdown();
