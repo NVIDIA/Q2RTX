@@ -866,13 +866,19 @@ static void SV_CvarResult_f(void)
         }
     } else if (!strcmp(c, "connect")) {
         if (sv_client->reconnect_var[0]) {
-            v = Cmd_Argv(2);
-            if (!strcmp(v, sv_client->reconnect_val)) {
+            if (!strcmp(Cmd_Argv(2), sv_client->reconnect_val)) {
                 sv_client->reconnected = qtrue;
             }
         }
     } else if (!strcmp(c, "actoken")) {
         AC_ClientToken(sv_client, Cmd_Argv(2));
+    } else if (!strcmp(c, "console")) {
+        if (sv_client->console_queries > 0) {
+            Com_Printf("%s[%s]: \"%s\" is \"%s\"\n", sv_client->name,
+                       NET_AdrToString(&sv_client->netchan->remote_address),
+                       Cmd_Argv(2), Cmd_RawArgsFrom(3));
+            sv_client->console_queries--;
+        }
     }
 }
 

@@ -279,6 +279,7 @@ typedef struct client_s {
     char            *version_string;
     char            reconnect_var[16];
     char            reconnect_val[16];
+    int             console_queries;
 
     // usercmd stuff
     unsigned        lastmessage;    // svs.realtime when packet was last received

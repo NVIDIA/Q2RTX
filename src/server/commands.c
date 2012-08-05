@@ -849,12 +849,12 @@ static void SV_Stuff_f(void)
 
 /*
 ==================
-SV_Stuff_f
+SV_StuffAll_f
 
 Stuff raw command string to all clients.
 ==================
 */
-static void SV_Stuffall_f(void)
+static void SV_StuffAll_f(void)
 {
     client_t *client;
 
@@ -877,6 +877,41 @@ static void SV_Stuffall_f(void)
 
     SZ_Clear(&msg_write);
 
+}
+
+/*
+==================
+SV_StuffCvar_f
+
+Stuff one or more cvar queries to the client.
+==================
+*/
+static void SV_StuffCvar_f(void)
+{
+    int i, argc = Cmd_Argc();
+    char *c;
+
+    if (!svs.initialized) {
+        Com_Printf("No server running.\n");
+        return;
+    }
+
+    if (argc < 3) {
+        Com_Printf("Usage: %s <userid> <variable> [...]\n", Cmd_Argv(0));
+        return;
+    }
+
+    if (!SV_SetPlayer())
+        return;
+
+    for (i = 2; i < argc; i++) {
+        c = Cmd_Argv(i);
+        SV_ClientCommand(sv_client, "cmd \177c console %s $%s\n", c, c);
+        sv_client->console_queries++;
+    }
+
+    sv_client = NULL;
+    sv_player = NULL;
 }
 
 static void SV_PickClient_f(void)
@@ -1469,7 +1504,8 @@ static const cmdreg_t c_server[] = {
     { "serverinfo", SV_Serverinfo_f },
     { "dumpuser", SV_DumpUser_f, SV_SetPlayer_c },
     { "stuff", SV_Stuff_f, SV_SetPlayer_c },
-    { "stuffall", SV_Stuffall_f },
+    { "stuffall", SV_StuffAll_f },
+    { "stuffcvar", SV_StuffCvar_f, SV_SetPlayer_c },
     { "map", SV_Map_f, SV_Map_c },
     { "demomap", SV_DemoMap_f },
     { "gamemap", SV_GameMap_f, SV_Map_c },

@@ -528,6 +528,12 @@ stuff <userid> <text ...>::
 stuffall <text ...>::
     Stuff the given raw _text_ into command buffers of all connected clients.
 
+stuffcvar <userid> <variable> [...]::
+    Stuff a command to query value of console _variable_ into command buffer of
+    the client identified by _userid_. Result of the query is printed in server
+    console once a reply is received. More than one variable can be specified on
+    command line.
+
 dumpents [filename]::
     Dumps the entity string of current map into ‘maps/_filename_.ent’ file. See
     also ‘map_override_path’ variable description.
