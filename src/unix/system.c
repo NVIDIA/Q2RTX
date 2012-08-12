@@ -45,6 +45,8 @@ cvar_t  *sys_forcegamelib;
 
 cvar_t  *sys_parachute;
 
+static qboolean terminate;
+
 /*
 ===============================================================================
 
@@ -143,14 +145,15 @@ static void term_handler(int signum)
 #else
     Com_Printf("Received signal %d, exiting\n", signum);
 #endif
-    Com_Quit(NULL, ERR_DISCONNECT);
+
+    terminate = qtrue;
 }
 
 static void kill_handler(int signum)
 {
     tty_shutdown_input();
 
-#if USE_CLIENT && USE_REF
+#if USE_CLIENT && USE_REF && !USE_X11
     VID_FatalShutdown();
 #endif
 
@@ -461,10 +464,11 @@ int main(int argc, char **argv)
     }
 
     Qcommon_Init(argc, argv);
-    while (1) {
+    while (!terminate) {
         Qcommon_Frame();
     }
 
+    Com_Quit(NULL, ERR_DISCONNECT);
     return EXIT_FAILURE; // never gets here
 }
 
