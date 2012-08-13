@@ -175,8 +175,6 @@ extern unsigned     com_localTime; // milliseconds since Q2 startup
 extern qboolean     com_initialized;
 extern time_t       com_startTime;
 
-extern const char *const colorNames[10];
-
 void Qcommon_Init(int argc, char **argv);
 void Qcommon_Frame(void);
 

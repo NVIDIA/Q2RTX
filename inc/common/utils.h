@@ -33,6 +33,8 @@ typedef enum {
     COLOR_NONE
 } color_index_t;
 
+extern const char *const colorNames[10];
+
 qboolean Com_WildCmpEx(const char *filter, const char *string, int term, qboolean ignorecase);
 #define Com_WildCmp(filter, string)  Com_WildCmpEx(filter, string, 0, qfalse)
 
