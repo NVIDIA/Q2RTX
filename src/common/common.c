@@ -58,6 +58,9 @@ static char     com_errorMsg[MAXERRORMSG]; // from Com_Printf/Com_Error
 
 static int      com_printEntered;
 
+static qhandle_t    com_logFile;
+static qboolean     com_logNewline;
+
 static char     **com_argv;
 static int      com_argc;
 
@@ -104,8 +107,6 @@ cvar_t  *rcon_password;
 const char  com_version_string[] =
     APPLICATION " " VERSION " " __DATE__ " " BUILDSTRING " " CPUSTRING;
 
-qhandle_t   com_logFile;
-qboolean    com_logNewline;
 unsigned    com_framenum;
 unsigned    com_eventTime;
 unsigned    com_localTime;

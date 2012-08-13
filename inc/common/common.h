@@ -169,13 +169,11 @@ extern unsigned     time_after_ref;
 
 extern const char   com_version_string[];
 
+extern unsigned     com_framenum;
 extern unsigned     com_eventTime; // system time of the last event
 extern unsigned     com_localTime; // milliseconds since Q2 startup
-extern unsigned     com_framenum;
 extern qboolean     com_initialized;
 extern time_t       com_startTime;
-
-extern qhandle_t    com_logFile;
 
 extern const char *const colorNames[10];
 
