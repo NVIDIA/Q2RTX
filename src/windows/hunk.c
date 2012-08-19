@@ -22,6 +22,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 void Hunk_Begin(memhunk_t *hunk, size_t maxsize)
 {
+    if (maxsize > SIZE_MAX - 4095)
+        Com_Error(ERR_FATAL, "%s: size > SIZE_MAX", __func__);
+
     // reserve a huge chunk of memory, but don't commit any yet
     hunk->cursize = 0;
     hunk->maxsize = (maxsize + 4095) & ~4095;
@@ -36,12 +39,19 @@ void *Hunk_Alloc(memhunk_t *hunk, size_t size)
 {
     void *buf;
 
+    if (size > SIZE_MAX - 63)
+        Com_Error(ERR_FATAL, "%s: size > SIZE_MAX", __func__);
+
     // round to cacheline
     size = (size + 63) & ~63;
 
-    hunk->cursize += size;
     if (hunk->cursize > hunk->maxsize)
+        Com_Error(ERR_FATAL, "%s: cursize > maxsize", __func__);
+
+    if (size > hunk->maxsize - hunk->cursize)
         Com_Error(ERR_FATAL, "%s: couldn't allocate %"PRIz" bytes", __func__, size);
+
+    hunk->cursize += size;
 
     // commit pages as needed
     buf = VirtualAlloc(hunk->base, hunk->cursize, MEM_COMMIT, PAGE_READWRITE);
@@ -55,6 +65,9 @@ void *Hunk_Alloc(memhunk_t *hunk, size_t size)
 
 void Hunk_End(memhunk_t *hunk)
 {
+    if (hunk->cursize > hunk->maxsize)
+        Com_Error(ERR_FATAL, "%s: cursize > maxsize", __func__);
+
     // for statistics
     hunk->mapped = (hunk->cursize + 4095) & ~4095;
 }

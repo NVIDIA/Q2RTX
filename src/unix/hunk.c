@@ -25,6 +25,9 @@ void Hunk_Begin(memhunk_t *hunk, size_t maxsize)
 {
     void *buf;
 
+    if (maxsize > SIZE_MAX - 4095)
+        Com_Error(ERR_FATAL, "%s: size > SIZE_MAX", __func__);
+
     // reserve a huge chunk of memory, but don't commit any yet
     hunk->cursize = 0;
     hunk->maxsize = (maxsize + 4095) & ~4095;
@@ -41,12 +44,17 @@ void *Hunk_Alloc(memhunk_t *hunk, size_t size)
 {
     void *buf;
 
+    if (size > SIZE_MAX - 63)
+        Com_Error(ERR_FATAL, "%s: size > SIZE_MAX", __func__);
+
     // round to cacheline
     size = (size + 63) & ~63;
 
-    if (hunk->cursize + size > hunk->maxsize)
-        Com_Error(ERR_FATAL, "%s: unable to allocate %"PRIz" bytes out of %"PRIz,
-                  __func__, size, hunk->maxsize);
+    if (hunk->cursize > hunk->maxsize)
+        Com_Error(ERR_FATAL, "%s: cursize > maxsize", __func__);
+
+    if (size > hunk->maxsize - hunk->cursize)
+        Com_Error(ERR_FATAL, "%s: couldn't allocate %"PRIz" bytes", __func__, size);
 
     buf = (byte *)hunk->base + hunk->cursize;
     hunk->cursize += size;
@@ -55,10 +63,12 @@ void *Hunk_Alloc(memhunk_t *hunk, size_t size)
 
 void Hunk_End(memhunk_t *hunk)
 {
-    size_t newsize = (hunk->cursize + 4095) & ~4095;
+    size_t newsize;
 
-    if (newsize > hunk->maxsize)
-        Com_Error(ERR_FATAL, "%s: newsize > maxsize", __func__);
+    if (hunk->cursize > hunk->maxsize)
+        Com_Error(ERR_FATAL, "%s: cursize > maxsize", __func__);
+
+    newsize = (hunk->cursize + 4095) & ~4095;
 
     if (newsize < hunk->maxsize) {
 #ifdef _GNU_SOURCE
@@ -72,6 +82,7 @@ void Hunk_End(memhunk_t *hunk)
             Com_Error(ERR_FATAL, "%s: could not remap virtual block: %s",
                       __func__, strerror(errno));
     }
+
     hunk->mapped = newsize;
 }
 
