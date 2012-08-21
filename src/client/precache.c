@@ -480,12 +480,12 @@ void CL_UpdateConfigstring(int index)
         return;
     }
 
-    if (index >= CS_SOUNDS && index < CS_SOUNDS + MAX_MODELS) {
+    if (index >= CS_SOUNDS && index < CS_SOUNDS + MAX_SOUNDS) {
         cl.sound_precache[index - CS_SOUNDS] = S_RegisterSound(s);
         return;
     }
 
-    if (index >= CS_IMAGES && index < CS_IMAGES + MAX_MODELS) {
+    if (index >= CS_IMAGES && index < CS_IMAGES + MAX_IMAGES) {
         cl.image_precache[index - CS_IMAGES] = R_RegisterPic(s);
         return;
     }
