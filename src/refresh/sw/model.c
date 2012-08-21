@@ -53,7 +53,7 @@ static void ProcessTexinfo(bsp_t *bsp)
 
         Q_concat(name, sizeof(name), "textures/", tex->name, ".wal", NULL);
         FS_NormalizePath(name, name);
-        tex->image = IMG_Find(name, it_wall);
+        tex->image = IMG_Find(name, IT_WALL);
     }
 }
 
@@ -249,7 +249,7 @@ qerror_t MOD_LoadMD2(model_t *model, const void *rawdata, size_t length)
             goto fail;
         }
         FS_NormalizePath(skinname, skinname);
-        model->skins[i] = IMG_Find(skinname, it_skin);
+        model->skins[i] = IMG_Find(skinname, IT_SKIN);
         src_skin += MD2_MAX_SKINNAME;
     }
     model->numskins = header.num_skins;

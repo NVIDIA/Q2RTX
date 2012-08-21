@@ -780,7 +780,7 @@ void GL_LoadWorld(const char *name)
         Q_concat(buffer, sizeof(buffer), "textures/", info->name, ".wal", NULL);
         FS_NormalizePath(buffer, buffer);
         upload_texinfo = info;
-        info->image = IMG_Find(buffer, it_wall);
+        info->image = IMG_Find(buffer, IT_WALL);
         upload_texinfo = NULL;
     }
 

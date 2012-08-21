@@ -44,7 +44,7 @@ void IMG_Load(image_t *image, byte *pic, int width, int height)
     image->upload_height = height;
 
     c = width * height;
-    if (image->type == it_wall) {
+    if (image->type == IT_WALL) {
         size_t size = MIPSIZE(c);
 
         image->pixels[0] = R_Malloc(size);
@@ -59,7 +59,7 @@ void IMG_Load(image_t *image, byte *pic, int width, int height)
         for (i = 0; i < c; i++) {
             b = pic[i];
             if (b == 255) {
-                image->flags |= if_transparent;
+                image->flags |= IF_TRANSPARENT;
             }
         }
     }
@@ -93,7 +93,7 @@ static void R_CreateNotexture(void)
 
 // create a simple checkerboard texture for the default
     ntx = R_NOTEXTURE;
-    ntx->type = it_wall;
+    ntx->type = IT_WALL;
     ntx->flags = 0;
     ntx->width = ntx->height = NTX;
     ntx->upload_width = ntx->upload_height = NTX;

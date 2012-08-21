@@ -169,7 +169,7 @@ void R_SetSky(const char *name, float rotate, vec3_t axis)
         Q_concat(path, sizeof(path), "env/", name,
                  r_skysidenames[r_skysideimage[i]], ".pcx", NULL);
         FS_NormalizePath(path, path);
-        r_skytexinfo[i].image = IMG_Find(path, it_sky);
+        r_skytexinfo[i].image = IMG_Find(path, IT_SKY);
     }
 }
 

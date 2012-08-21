@@ -28,6 +28,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/files.h"
 #include "common/zone.h"
 #include "common/error.h"
+#include "refresh/refresh.h"
 
 #define R_Malloc(size)      Z_TagMalloc(size, TAG_RENDERER)
 #define R_Mallocz(size)     Z_TagMallocz(size, TAG_RENDERER)
@@ -57,33 +58,18 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define MAX_PALETTED_PIXELS         (512 * 256)
 
 typedef enum {
-    if_transparent  = (1 << 0),
-    if_paletted     = (1 << 1),
-    if_scrap        = (1 << 2)
-} imageflags_t;
-
-typedef enum {
-    it_skin,
-    it_sprite,
-    it_wall,
-    it_pic,
-    it_sky,
-    it_charset
-} imagetype_t;
-
-typedef enum {
-    im_pcx,
-    im_wal,
+    IM_PCX,
+    IM_WAL,
 #if USE_TGA
-    im_tga,
+    IM_TGA,
 #endif
 #if USE_JPG
-    im_jpg,
+    IM_JPG,
 #endif
 #if USE_PNG
-    im_png,
+    IM_PNG,
 #endif
-    im_unknown
+    IM_MAX
 } imageformat_t;
 
 typedef struct image_s {
@@ -123,11 +109,6 @@ void IMG_Shutdown(void);
 byte *IMG_GetPalette(void);
 
 image_t *IMG_ForHandle(qhandle_t h);
-qhandle_t R_RegisterSkin(const char *name);
-qhandle_t R_RegisterPic(const char *name);
-qhandle_t R_RegisterFont(const char *name);
-qerror_t _R_RegisterPic(const char *name, qhandle_t *handle);
-qerror_t _R_RegisterFont(const char *name, qhandle_t *handle);
 
 // these are implemented in [gl,sw]_images.c
 void IMG_Unload(image_t *image);

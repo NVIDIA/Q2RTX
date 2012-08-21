@@ -136,7 +136,7 @@ qerror_t MOD_LoadMD2(model_t *model, const void *rawdata, size_t length)
             goto fail;
         }
         FS_NormalizePath(skinname, skinname);
-        dst_mesh->skins[i] = IMG_Find(skinname, it_skin);
+        dst_mesh->skins[i] = IMG_Find(skinname, IT_SKIN);
         src_skin += MD2_MAX_SKINNAME;
     }
     dst_mesh->numskins = header.num_skins;
@@ -341,7 +341,7 @@ qerror_t MOD_LoadMD3(model_t *model, const void *rawdata, size_t length)
                 goto fail;
             }
             FS_NormalizePath(skinname, skinname);
-            dst_mesh->skins[j] = IMG_Find(skinname, it_skin);
+            dst_mesh->skins[j] = IMG_Find(skinname, IT_SKIN);
         }
         dst_mesh->numskins = numskins;
 

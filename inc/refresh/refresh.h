@@ -19,6 +19,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef REFRESH_H
 #define REFRESH_H
 
+#include "common/error.h"
+
 #define MAX_DLIGHTS     32
 #define MAX_ENTITIES    256     // == MAX_PACKET_ENTITIES * 2
 #define MAX_PARTICLES   4096
@@ -155,6 +157,25 @@ typedef struct {
     int left, right, top, bottom;
 } clipRect_t;
 
+typedef enum {
+    IF_NONE         = 0,
+    IF_PERMANENT    = (1 << 0),
+    IF_TRANSPARENT  = (1 << 1),
+    IF_PALETTED     = (1 << 2),
+    IF_SCRAP        = (1 << 3),
+} imageflags_t;
+
+typedef enum {
+    IT_PIC,
+    IT_FONT,
+    IT_SKIN,
+    IT_SPRITE,
+    IT_WALL,
+    IT_SKY,
+
+    IT_MAX
+} imagetype_t;
+
 // called when the library is loaded
 qboolean    R_Init(qboolean total);
 
@@ -176,13 +197,15 @@ void        R_Shutdown(qboolean total);
 // slash will not use the "pics/" prefix or the ".pcx" postfix)
 void    R_BeginRegistration(const char *map);
 qhandle_t R_RegisterModel(const char *name);
-qhandle_t R_RegisterSkin(const char *name);
-qhandle_t R_RegisterPic(const char *name);
-qhandle_t R_RegisterFont(const char *name);
-qerror_t _R_RegisterPic(const char *name, qhandle_t *handle);
-qerror_t _R_RegisterFont(const char *name, qhandle_t *handle);
+qhandle_t R_RegisterImage(const char *name, imagetype_t type,
+                          imageflags_t flags, qerror_t *err_p);
 void    R_SetSky(const char *name, float rotate, vec3_t axis);
 void    R_EndRegistration(void);
+
+#define R_RegisterPic(name)     R_RegisterImage(name, IT_PIC, IF_PERMANENT, NULL)
+#define R_RegisterPic2(name)    R_RegisterImage(name, IT_PIC, IF_NONE, NULL)
+#define R_RegisterFont(name)    R_RegisterImage(name, IT_FONT, IF_PERMANENT, NULL)
+#define R_RegisterSkin(name)    R_RegisterImage(name, IT_SKIN, IF_NONE, NULL)
 
 void    R_RenderFrame(refdef_t *fd);
 void    R_LightPoint(vec3_t origin, vec3_t light);

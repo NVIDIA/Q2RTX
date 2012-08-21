@@ -337,8 +337,8 @@ static void GL_DrawSpriteModel(model_t *model)
     vec3_t points[4];
 
     if (alpha == 1) {
-        if (image->flags & if_transparent) {
-            if (image->flags & if_paletted) {
+        if (image->flags & IF_TRANSPARENT) {
+            if (image->flags & IF_PALETTED) {
                 bits |= GLS_ALPHATEST_ENABLE;
             } else {
                 bits |= GLS_BLEND_BLEND;

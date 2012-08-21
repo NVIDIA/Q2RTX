@@ -1391,7 +1391,7 @@ int         r_numImages;
 
 uint32_t    d_8to24table[256];
 
-static const imageloader_t img_loaders[im_unknown] = {
+static const imageloader_t img_loaders[IM_MAX] = {
     { "pcx", IMG_LoadPCX },
     { "wal", IMG_LoadWAL },
 #if USE_TGA
@@ -1406,7 +1406,7 @@ static const imageloader_t img_loaders[im_unknown] = {
 };
 
 #if USE_PNG || USE_JPG || USE_TGA
-static imageformat_t    img_search[im_unknown];
+static imageformat_t    img_search[IM_MAX];
 static int              img_total;
 
 static cvar_t   *r_override_textures;
@@ -1420,7 +1420,7 @@ IMG_List_f
 */
 static void IMG_List_f(void)
 {
-    static const char types[8] = "MSWPYC?";
+    static const char types[8] = "PFMSWY??";
     int        i;
     image_t    *image;
     int        texels, count;
@@ -1432,13 +1432,14 @@ static void IMG_List_f(void)
         if (!image->registration_sequence)
             continue;
 
-        Com_Printf("%c%c%c %4i %4i %s: %s\n",
-                   types[image->type],
-                   (image->flags & if_transparent) ? 'T' : ' ',
-                   (image->flags & if_scrap) ? 'S' : ' ',
+        Com_Printf("%c%c%c%c %4i %4i %s: %s\n",
+                   types[image->type > IT_MAX ? IT_MAX : image->type],
+                   (image->flags & IF_TRANSPARENT) ? 'T' : ' ',
+                   (image->flags & IF_SCRAP) ? 'S' : ' ',
+                   (image->flags & IF_PERMANENT) ? '*' : ' ',
                    image->upload_width,
                    image->upload_height,
-                   (image->flags & if_paletted) ? "PAL" : "RGB",
+                   (image->flags & IF_PALETTED) ? "PAL" : "RGB",
                    image->name);
 
         texels += image->upload_width * image->upload_height;
@@ -1517,7 +1518,7 @@ static imageformat_t try_image_format(const imageloader_t *ldr,
 
     // unless this is a WAL texture, raw image data is
     // no longer needed, free it now
-    if (ret != im_wal) {
+    if (ret != IM_WAL) {
         FS_FreeFile(data);
         *tmp = NULL;
     } else {
@@ -1559,7 +1560,7 @@ static qerror_t try_other_formats(imageformat_t orig, imagetype_t type,
     }
 
     // fall back to 8-bit formats
-    fmt = type == it_wall ? im_wal : im_pcx;
+    fmt = type == IT_WALL ? IM_WAL : IM_PCX;
     if (fmt == orig) {
         // don't retry twice
         return Q_ERR_NOENT;
@@ -1581,7 +1582,7 @@ static void get_image_dimensions(image_t *image,
     unsigned w, h;
 
     w = h = 0;
-    if (fmt == im_wal) {
+    if (fmt == IM_WAL) {
         memcpy(ext, "wal", 4);
         FS_FOpenFile(buffer, &f, FS_MODE_READ);
         if (f) {
@@ -1625,19 +1626,19 @@ static void r_texture_formats_changed(cvar_t *self)
     for (s = self->string; *s; s++) {
         switch (*s) {
 #if USE_TGA
-        case 't': case 'T': i = im_tga; break;
+            case 't': case 'T': i = IM_TGA; break;
 #endif
 #if USE_JPG
-        case 'j': case 'J': i = im_jpg; break;
+            case 'j': case 'J': i = IM_JPG; break;
 #endif
 #if USE_PNG
-        case 'p': case 'P': i = im_png; break;
+            case 'p': case 'P': i = IM_PNG; break;
 #endif
-        default: continue;
+            default: continue;
         }
 
         img_search[img_total++] = i;
-        if (img_total == im_unknown) {
+        if (img_total == IM_MAX) {
             break;
         }
     }
@@ -1646,8 +1647,9 @@ static void r_texture_formats_changed(cvar_t *self)
 #endif // USE_PNG || USE_JPG || USE_TGA
 
 // finds or loads the given image, adding it to the hash table.
-static qerror_t find_or_load_image(const char *name,
-                                   size_t len, imagetype_t type, image_t **image_p)
+static qerror_t find_or_load_image(const char *name, size_t len,
+                                   imagetype_t type, imageflags_t flags,
+                                   image_t **image_p)
 {
     image_t *image;
     byte *pic, *tmp;
@@ -1672,6 +1674,7 @@ static qerror_t find_or_load_image(const char *name,
 
     // look for it
     if ((image = lookup_image(name, type, hash, len - 4)) != NULL) {
+        image->flags |= flags & IF_PERMANENT;
         image->registration_sequence = registration_sequence;
         *image_p = image;
         return Q_ERR_SUCCESS;
@@ -1682,7 +1685,7 @@ static qerror_t find_or_load_image(const char *name,
     ext = buffer + len - 3;
 
     // find out original extension
-    for (fmt = 0; fmt < im_unknown; fmt++) {
+    for (fmt = 0; fmt < IM_MAX; fmt++) {
         ldr = &img_loaders[fmt];
         if (!Q_stricmp(ext, ldr->ext)) {
             break;
@@ -1692,9 +1695,9 @@ static qerror_t find_or_load_image(const char *name,
     // load the pic from disk
     pic = tmp = NULL;
 #if USE_PNG || USE_JPG || USE_TGA
-    if (fmt == im_unknown) {
+    if (fmt == IM_MAX) {
         // unknown extension, but give it a chance to load anyway
-        ret = try_other_formats(im_unknown, type,
+        ret = try_other_formats(IM_MAX, type,
                                 buffer, ext, &pic, &tmp, &width, &height);
         if (ret == Q_ERR_NOENT) {
             // not found, change error to invalid path
@@ -1702,7 +1705,7 @@ static qerror_t find_or_load_image(const char *name,
         }
     } else if (r_override_textures->integer) {
         // forcibly replace the extension
-        ret = try_other_formats(im_unknown, type,
+        ret = try_other_formats(IM_MAX, type,
                                 buffer, ext, &pic, &tmp, &width, &height);
     } else {
         // first try with original extension
@@ -1714,7 +1717,7 @@ static qerror_t find_or_load_image(const char *name,
         }
     }
 #else
-    if (fmt == im_unknown) {
+    if (fmt == IM_MAX) {
         return Q_ERR_INVALID_PATH;
     }
     ret = try_image_format(ldr, buffer, &pic, &tmp, &width, &height);
@@ -1735,22 +1738,22 @@ static qerror_t find_or_load_image(const char *name,
     memcpy(image->name, buffer, len + 1);
     image->baselen = len - 4;
     image->type = type;
-    image->flags = 0;
+    image->flags = flags;
     image->width = width;
     image->height = height;
     image->registration_sequence = registration_sequence;
 
     List_Append(&r_imageHash[hash], &image->entry);
 
-    if (ret <= im_wal) {
-        image->flags |= if_paletted;
+    if (ret <= IM_WAL) {
+        image->flags |= IF_PALETTED;
     }
 
 #if USE_PNG || USE_JPG || USE_TGA
     // if we are replacing 8-bit texture with a higher resolution 32-bit
     // texture, we need to recover original image dimensions for proper
     // texture alignment
-    if (fmt <= im_wal && ret > im_wal) {
+    if (fmt <= IM_WAL && ret > IM_WAL) {
         get_image_dimensions(image, fmt, buffer, ext);
     }
 #endif
@@ -1789,7 +1792,7 @@ image_t *IMG_Find(const char *name, imagetype_t type)
         Com_Error(ERR_FATAL, "%s: oversize name", __func__);
     }
 
-    ret = find_or_load_image(name, len, type, &image);
+    ret = find_or_load_image(name, len, type, IF_NONE, &image);
     if (image) {
         return image;
     }
@@ -1816,106 +1819,84 @@ image_t *IMG_ForHandle(qhandle_t h)
     return &r_images[h];
 }
 
-static qerror_t _register_image(const char *name, imagetype_t type, qhandle_t *handle)
+/*
+===============
+R_RegisterImage
+===============
+*/
+qhandle_t R_RegisterImage(const char *name, imagetype_t type,
+                          imageflags_t flags, qerror_t *err_p)
 {
     image_t *image;
     char    fullname[MAX_QPATH];
     size_t  len;
-    qerror_t ret;
+    qerror_t err;
 
-    *handle = 0;
-
-    if (!r_numImages) {
-        return Q_ERR_AGAIN;
+    // empty names are legal, silently ignore them
+    if (!*name) {
+        if (err_p)
+            *err_p = Q_ERR_NAMETOOSHORT;
+        return 0;
     }
 
-    if (type == it_skin) {
+    // no images = not initialized
+    if (!r_numImages) {
+        err = Q_ERR_AGAIN;
+        goto fail;
+    }
+
+    if (type == IT_SKIN) {
         len = FS_NormalizePathBuffer(fullname, name, sizeof(fullname));
-    } else if (name[0] == '/' || name[0] == '\\') {
+    } else if (*name == '/' || *name == '\\') {
         len = FS_NormalizePathBuffer(fullname, name + 1, sizeof(fullname));
     } else {
         len = Q_concat(fullname, sizeof(fullname), "pics/", name, NULL);
         if (len >= sizeof(fullname)) {
-            return Q_ERR_NAMETOOLONG;
+            err = Q_ERR_NAMETOOLONG;
+            goto fail;
         }
         FS_NormalizePath(fullname, fullname);
         len = COM_DefaultExtension(fullname, ".pcx", sizeof(fullname));
     }
 
     if (len >= sizeof(fullname)) {
-        return Q_ERR_NAMETOOLONG;
+        err = Q_ERR_NAMETOOLONG;
+        goto fail;
     }
 
-    ret = find_or_load_image(fullname, len, type, &image);
-
-    if (!image) {
-        return ret;
+    err = find_or_load_image(fullname, len, type, flags, &image);
+    if (image) {
+        if (err_p)
+            *err_p = Q_ERR_SUCCESS;
+        return image - r_images;
     }
 
-    *handle = (image - r_images);
-    return Q_ERR_SUCCESS;
-}
-
-static qhandle_t register_image(const char *name, imagetype_t type)
-{
-    qhandle_t handle;
-    qerror_t ret;
-
-    // empty names are legal, silently ignore them
-    if (!*name)
-        return 0;
-
-    ret = _register_image(name, type, &handle);
-    if (handle) {
-        return handle;
-    }
-
+fail:
     // don't spam about missing images
-    if (ret != Q_ERR_NOENT) {
-        Com_EPrintf("Couldn't load %s: %s\n", name, Q_ErrorString(ret));
-    }
+    if (err_p)
+        *err_p = err;
+    else if (err != Q_ERR_NOENT)
+        Com_EPrintf("Couldn't load %s: %s\n", name, Q_ErrorString(err));
 
     return 0;
 }
 
 /*
-===============
-R_RegisterSkin
-===============
+=============
+R_GetPicSize
+=============
 */
-qhandle_t R_RegisterSkin(const char *name)
+qboolean R_GetPicSize(int *w, int *h, qhandle_t pic)
 {
-    return register_image(name, it_skin);
-}
+    image_t *image = IMG_ForHandle(pic);
 
-/*
-================
-R_RegisterPic
-================
-*/
-qhandle_t R_RegisterPic(const char *name)
-{
-    return register_image(name, it_pic);
-}
-
-qerror_t _R_RegisterPic(const char *name, qhandle_t *handle)
-{
-    return _register_image(name, it_pic, handle);
-}
-
-/*
-================
-R_RegisterFont
-================
-*/
-qhandle_t R_RegisterFont(const char *name)
-{
-    return register_image(name, it_charset);
-}
-
-qerror_t _R_RegisterFont(const char *name, qhandle_t *handle)
-{
-    return _register_image(name, it_charset, handle);
+    if (w) {
+        *w = image->width;
+    }
+    if (h) {
+        *h = image->height;
+    }
+    return !!(image->flags & IF_TRANSPARENT);
 }
 
 /*
@@ -1940,7 +1921,7 @@ void IMG_FreeUnused(void)
         }
         if (!image->registration_sequence)
             continue;        // free image_t slot
-        if (image->type == it_pic || image->type == it_charset)
+        if (image->flags & (IF_PERMANENT | IF_SCRAP))
             continue;        // don't free pics
 
         // delete it from hash table

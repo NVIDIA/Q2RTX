@@ -57,8 +57,8 @@ static inline void _GL_StretchPic(
     dst_indices[4] = tess.numverts + 1;
     dst_indices[5] = tess.numverts + 2;
 
-    if (flags & if_transparent) {
-        if ((flags & if_paletted) && draw.scale == 1) {
+    if (flags & IF_TRANSPARENT) {
+        if ((flags & IF_PALETTED) && draw.scale == 1) {
             tess.flags |= 1;
         } else {
             tess.flags |= 2;
@@ -188,19 +188,6 @@ void R_SetScale(float *scale)
              Q_rint(r_config.height * f), 0, -1, 1);
 
     draw.scale = f;
-}
-
-qboolean R_GetPicSize(int *w, int *h, qhandle_t pic)
-{
-    image_t *image = IMG_ForHandle(pic);
-
-    if (w) {
-        *w = image->width;
-    }
-    if (h) {
-        *h = image->height;
-    }
-    return image->flags & if_transparent;
 }
 
 void R_DrawStretchPic(int x, int y, int w, int h, qhandle_t pic)
@@ -363,7 +350,7 @@ void Draw_Lightmaps(void)
 void Draw_Scrap(void)
 {
     _GL_StretchPic(0, 0, 256, 256,
-                   0, 0, 1, 1, U32_WHITE, TEXNUM_SCRAP, if_paletted | if_transparent);
+                   0, 0, 1, 1, U32_WHITE, TEXNUM_SCRAP, IF_PALETTED | IF_TRANSPARENT);
 }
 
 #endif

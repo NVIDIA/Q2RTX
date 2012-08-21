@@ -170,7 +170,7 @@ void CL_LoadClientinfo(clientinfo_t *ci, const char *s)
     // icon file
     Q_concat(icon_filename, sizeof(icon_filename),
              "/players/", model_name, "/", skin_name, "_i.pcx", NULL);
-    ci->icon = R_RegisterPic(icon_filename);
+    ci->icon = R_RegisterPic2(icon_filename);
 
     strcpy(ci->model_name, model_name);
     strcpy(ci->skin_name, skin_name);
@@ -397,7 +397,7 @@ void CL_PrepRefresh(void)
         if (!name[0]) {
             break;
         }
-        cl.image_precache[i] = R_RegisterPic(name);
+        cl.image_precache[i] = R_RegisterPic2(name);
     }
 
     CL_LoadState(LOAD_CLIENTS);
@@ -486,7 +486,7 @@ void CL_UpdateConfigstring(int index)
     }
 
     if (index >= CS_IMAGES && index < CS_IMAGES + MAX_IMAGES) {
-        cl.image_precache[index - CS_IMAGES] = R_RegisterPic(s);
+        cl.image_precache[index - CS_IMAGES] = R_RegisterPic2(s);
         return;
     }
 

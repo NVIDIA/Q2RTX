@@ -168,24 +168,6 @@ void R_SetClipRect(int flags, const clipRect_t *clip)
 
 /*
 =============
-R_GetPicSize
-=============
-*/
-qboolean R_GetPicSize(int *w, int *h, qhandle_t pic)
-{
-    image_t *image = IMG_ForHandle(pic);
-
-    if (w) {
-        *w = image->width;
-    }
-    if (h) {
-        *h = image->height;
-    }
-    return image->flags & if_transparent;
-}
-
-/*
-=============
 R_DrawStretchData
 =============
 */

@@ -119,7 +119,7 @@ static void gl_texturemode_changed(cvar_t *self)
 
     // change all the existing mipmap texture objects
     for (i = 0, image = r_images; i < r_numImages; i++, image++) {
-        if (image->type == it_wall || image->type == it_skin) {
+        if (image->type == IT_WALL || image->type == IT_SKIN) {
             GL_BindTexture(image->texnum);
             qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
                              gl_filter_min);
@@ -154,7 +154,7 @@ static void gl_anisotropy_changed(cvar_t *self)
 
     // change all the existing mipmap texture objects
     for (i = 0, image = r_images; i < r_numImages; i++, image++) {
-        if (image->type == it_wall || image->type == it_skin) {
+        if (image->type == IT_WALL || image->type == IT_SKIN) {
             GL_BindTexture(image->texnum);
             qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT,
                              gl_filter_anisotropy);
@@ -170,7 +170,7 @@ static void gl_bilerp_chars_changed(cvar_t *self)
 
     // change all the existing charset texture objects
     for (i = 0, image = r_images; i < r_numImages; i++, image++) {
-        if (image->type == it_charset) {
+        if (image->type == IT_FONT) {
             GL_BindTexture(image->texnum);
             qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, param);
             qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, param);
@@ -186,7 +186,7 @@ static void gl_bilerp_pics_changed(cvar_t *self)
 
     // change all the existing pic texture objects
     for (i = 0, image = r_images; i < r_numImages; i++, image++) {
-        if (image->type == it_pic) {
+        if (image->type == IT_PIC) {
             GL_BindTexture(image->texnum);
             qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, param);
             qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, param);
@@ -559,10 +559,10 @@ static inline qboolean is_nearest(void)
     if (!upload_image) {
         return qfalse;
     }
-    if (upload_image->type == it_charset) {
+    if (upload_image->type == IT_FONT) {
         return !gl_bilerp_chars->integer;
     }
-    if (upload_image->type == it_pic) {
+    if (upload_image->type == IT_PIC) {
         return !gl_bilerp_pics->integer;
     }
     return qfalse;
@@ -573,7 +573,7 @@ static inline qboolean is_wall(void)
     if (!upload_image) {
         return qfalse;
     }
-    if (upload_image->type != it_wall) {
+    if (upload_image->type != IT_WALL) {
         return qfalse; // not a wall texture
     }
     if (!upload_texinfo) {
@@ -590,7 +590,7 @@ static inline qboolean is_downsample(void)
     if (!upload_image) {
         return qtrue;
     }
-    if (upload_image->type != it_skin) {
+    if (upload_image->type != IT_SKIN) {
         return qtrue; // not a skin
     }
     return !!gl_downsample_skins->integer;
@@ -604,10 +604,10 @@ static inline qboolean is_clamp(void)
     if (!upload_image) {
         return qfalse;
     }
-    if (upload_image->type == it_charset) {
+    if (upload_image->type == IT_FONT) {
         return qtrue;
     }
-    if (upload_image->type == it_pic) {
+    if (upload_image->type == IT_PIC) {
         return !Q_stristr(upload_image->name, "backtile"); // hack for backtile
     }
     return qfalse;
@@ -850,51 +850,50 @@ void IMG_Load(image_t *image, byte *pic, int width, int height)
     upload_image = image;
 
     // load small 8-bit pics onto the scrap
-    if (image->type == it_pic && (image->flags & if_paletted) &&
-        width < 64 && height < 64 && !gl_noscrap->integer) {
-        if (Scrap_AllocBlock(width, height, &s, &t)) {
-            src = pic;
-            dst = &scrap_data[t * SCRAP_BLOCK_WIDTH + s];
-            for (i = 0; i < height; i++) {
-                ptr = dst;
-                for (j = 0; j < width; j++) {
-                    *ptr++ = *src++;
-                }
-                dst += SCRAP_BLOCK_WIDTH;
+    if (image->type == IT_PIC && (image->flags & IF_PALETTED) &&
+        width < 64 && height < 64 && !gl_noscrap->integer &&
+        Scrap_AllocBlock(width, height, &s, &t)) {
+        src = pic;
+        dst = &scrap_data[t * SCRAP_BLOCK_WIDTH + s];
+        for (i = 0; i < height; i++) {
+            ptr = dst;
+            for (j = 0; j < width; j++) {
+                *ptr++ = *src++;
             }
-
-            image->texnum = TEXNUM_SCRAP;
-            image->upload_width = width;
-            image->upload_height = height;
-            image->flags |= if_scrap | if_transparent;
-            image->sl = (s + 0.01f) / (float)SCRAP_BLOCK_WIDTH;
-            image->sh = (s + width - 0.01f) / (float)SCRAP_BLOCK_WIDTH;
-            image->tl = (t + 0.01f) / (float)SCRAP_BLOCK_HEIGHT;
-            image->th = (t + height - 0.01f) / (float)SCRAP_BLOCK_HEIGHT;
-
-            scrap_dirty = qtrue;
-            if (!gl_static.registering) {
-                Scrap_Upload();
-            }
-
-            upload_image = NULL;
-            return;
+            dst += SCRAP_BLOCK_WIDTH;
         }
+
+        image->texnum = TEXNUM_SCRAP;
+        image->upload_width = width;
+        image->upload_height = height;
+        image->flags |= IF_SCRAP | IF_TRANSPARENT;
+        image->sl = (s + 0.01f) / (float)SCRAP_BLOCK_WIDTH;
+        image->sh = (s + width - 0.01f) / (float)SCRAP_BLOCK_WIDTH;
+        image->tl = (t + 0.01f) / (float)SCRAP_BLOCK_HEIGHT;
+        image->th = (t + height - 0.01f) / (float)SCRAP_BLOCK_HEIGHT;
+
+        scrap_dirty = qtrue;
+        if (!gl_static.registering) {
+            Scrap_Upload();
+        }
+
+        upload_image = NULL;
+        return;
     }
 
-    if (image->type == it_skin && (image->flags & if_paletted))
+    if (image->type == IT_SKIN && (image->flags & IF_PALETTED))
         R_FloodFillSkin(pic, width, height);
 
-    mipmap = (image->type == it_wall || image->type == it_skin);
+    mipmap = (image->type == IT_WALL || image->type == IT_SKIN);
     image->texnum = (image - r_images);
     GL_BindTexture(image->texnum);
-    if (image->flags & if_paletted) {
+    if (image->flags & IF_PALETTED) {
         transparent = GL_Upload8(pic, width, height, mipmap);
     } else {
         transparent = GL_Upload32(pic, width, height, mipmap);
     }
     if (transparent) {
-        image->flags |= if_transparent;
+        image->flags |= IF_TRANSPARENT;
     }
     image->upload_width = upload_width;     // after power of 2 and scales
     image->upload_height = upload_height;
@@ -909,6 +908,8 @@ void IMG_Load(image_t *image, byte *pic, int width, int height)
 void IMG_Unload(image_t *image)
 {
     if (image->texnum > 0 && image->texnum < MAX_RIMAGES) {
+        if (gls.texnum[gls.tmu] == image->texnum)
+            gls.texnum[gls.tmu] = 0;
         qglDeleteTextures(1, &image->texnum);
         image->texnum = 0;
     }
@@ -994,7 +995,7 @@ static void GL_InitDefaultTexture(void)
     ntx = R_NOTEXTURE;
     ntx->width = ntx->upload_width = 8;
     ntx->height = ntx->upload_height = 8;
-    ntx->type = it_wall;
+    ntx->type = IT_WALL;
     ntx->flags = 0;
     ntx->texnum = TEXNUM_DEFAULT;
     ntx->sl = 0;
