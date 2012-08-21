@@ -249,15 +249,24 @@ void GL_SetDefaultState(void)
     qglFrontFace(GL_CW);
     qglPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-    qglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | gl_static.stencil_buffer_bit);
+    qglActiveTextureARB(GL_TEXTURE1_ARB);
+    qglClientActiveTextureARB(GL_TEXTURE1_ARB);
+    qglBindTexture(GL_TEXTURE_2D, 0);
+    qglDisable(GL_TEXTURE_2D);
+    qglDisableClientState(GL_TEXTURE_COORD_ARRAY);
 
-    qglEnableClientState(GL_VERTEX_ARRAY);
+    qglActiveTextureARB(GL_TEXTURE0_ARB);
+    qglClientActiveTextureARB(GL_TEXTURE0_ARB);
+    qglBindTexture(GL_TEXTURE_2D, 0);
+    qglEnable(GL_TEXTURE_2D);
     qglEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
-    GL_SelectTMU(0);
-    GL_BindTexture(0);
-    qglEnable(GL_TEXTURE_2D);
-    GL_Bits(GLS_DEFAULT);
+    qglEnableClientState(GL_VERTEX_ARRAY);
+    qglDisableClientState(GL_COLOR_ARRAY);
+
+    qglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | gl_static.stencil_buffer_bit);
+
+    memset(&gls, 0, sizeof(gls));
 }
 
 // for screenshots

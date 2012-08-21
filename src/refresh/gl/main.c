@@ -954,9 +954,9 @@ static void GL_PostInit(void)
         gl_vertex_buffer_object->modified = qfalse;
     }
 
+    GL_SetDefaultState();
     GL_InitImages();
     MOD_Init();
-    GL_SetDefaultState();
 }
 
 // ==============================================================================
