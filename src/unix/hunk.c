@@ -71,7 +71,7 @@ void Hunk_End(memhunk_t *hunk)
     newsize = (hunk->cursize + 4095) & ~4095;
 
     if (newsize < hunk->maxsize) {
-#ifdef _GNU_SOURCE
+#if (defined __linux__) && (defined _GNU_SOURCE)
         void *buf = mremap(hunk->base, hunk->maxsize, newsize, 0);
 #else
         void *unmap_base = (byte *)hunk->base + newsize;

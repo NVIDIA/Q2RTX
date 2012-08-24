@@ -89,15 +89,17 @@ void QAL_Shutdown(void)
         al_device->flags &= ~CVAR_SOUND;
 }
 
-#ifdef _WIN32
-#define DEFAULT_OPENAL_DRIVER   "openal32"
+#if (defined _WIN32)
+#define LIBAL   "openal32"
+#elif (defined __OpenBSD__)
+#define LIBAL   "libopenal.so"
 #else
-#define DEFAULT_OPENAL_DRIVER   "libopenal.so.1"
+#define LIBAL   "libopenal.so.1"
 #endif
 
 qboolean QAL_Init(void)
 {
-    al_driver = Cvar_Get("al_driver", DEFAULT_OPENAL_DRIVER, 0);
+    al_driver = Cvar_Get("al_driver", LIBAL, 0);
     al_device = Cvar_Get("al_device", "", 0);
 
     // don't allow absolute or relative paths

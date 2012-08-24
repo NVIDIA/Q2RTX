@@ -87,9 +87,11 @@ else
     CFLAGS_g += -fvisibility=hidden
 
     # Resolve all symbols at link time
-    LDFLAGS_s += -Wl,--no-undefined
-    LDFLAGS_c += -Wl,--no-undefined
-    LDFLAGS_g += -Wl,--no-undefined
+    ifneq ($(SYS),OpenBSD)
+        LDFLAGS_s += -Wl,--no-undefined
+        LDFLAGS_c += -Wl,--no-undefined
+        LDFLAGS_g += -Wl,--no-undefined
+    endif
 
     CFLAGS_g += -fPIC
 endif
@@ -514,9 +516,14 @@ else
     endif
 
     # System libs
-    LIBS_s += -lm -ldl
-    LIBS_c += -lm -ldl
+    LIBS_s += -lm
+    LIBS_c += -lm
     LIBS_g += -lm
+
+    ifeq ($(SYS),Linux)
+        LIBS_s += -ldl
+        LIBS_c += -ldl
+    endif
 endif
 
 ifdef CONFIG_TESTS

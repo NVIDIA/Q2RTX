@@ -659,6 +659,12 @@ static void init_opengl(void)
 #endif
 }
 
+#ifdef __OpenBSD__
+#define LIBGL   "libGL.so"
+#else
+#define LIBGL   "libGL.so.1"
+#endif
+
 qboolean VID_Init(void)
 {
     cvar_t *gl_driver;
@@ -674,7 +680,7 @@ qboolean VID_Init(void)
         return qfalse;
     }
 
-    gl_driver = Cvar_Get("gl_driver", "libGL.so.1", CVAR_REFRESH);
+    gl_driver = Cvar_Get("gl_driver", LIBGL, CVAR_REFRESH);
     gl_colorbits = Cvar_Get("gl_colorbits", "0", CVAR_REFRESH);
     gl_depthbits = Cvar_Get("gl_depthbits", "0", CVAR_REFRESH);
     gl_stencilbits = Cvar_Get("gl_stencilbits", "8", CVAR_REFRESH);
