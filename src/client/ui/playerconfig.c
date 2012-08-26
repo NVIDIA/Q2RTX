@@ -236,7 +236,7 @@ static qboolean Push(menuFrameWork_t *self)
         }
     }
 
-    IF_Init(&m_player.name.field, 15, 15);
+    IF_Init(&m_player.name.field, m_player.name.width, m_player.name.width);
     IF_Replace(&m_player.name.field, Cvar_VariableString("name"));
 
     m_player.model.curvalue = currentdirectoryindex;
@@ -295,6 +295,7 @@ void M_Menu_PlayerConfig(void)
     m_player.name.generic.type = MTYPE_FIELD;
     m_player.name.generic.flags = QMF_HASFOCUS;
     m_player.name.generic.name = "name";
+    m_player.name.width = MAX_CLIENT_NAME - 1;
 
     m_player.model.generic.type = MTYPE_SPINCONTROL;
     m_player.model.generic.id = ID_MODEL;
