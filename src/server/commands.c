@@ -374,6 +374,45 @@ static void SV_GameMap_f(void)
     SV_Map(1, qfalse);
 }
 
+static int should_really_restart(void)
+{
+    static qboolean warned;
+
+    if (sv.state != ss_game)
+        return 1;   // the game is just starting
+
+#if !USE_CLIENT
+    if (sv_recycle->integer)
+        return 1;   // there is recycle pending
+#endif
+
+    if (Cvar_CountLatchedVars())
+        return 1;   // there are latched cvars
+
+    if (!strcmp(Cmd_Argv(2), "force"))
+        return 1;   // forced restart
+
+    if (sv_allow_map->integer == 1)
+        return 1;   // `map' warning disabled
+
+    if (sv_allow_map->integer != 0)
+        return 0;   // turn `map' into `gamemap'
+
+    Com_Printf(
+        "Using 'map' will cause full server restart. "
+        "Use 'gamemap' for changing maps.\n");
+
+    if (!warned) {
+        Com_Printf(
+            "(You can set 'sv_allow_map' to 1 if you wish to permanently "
+            "disable this warning. To force restart for a single invocation "
+            "of this command, use 'map <mapname> force')\n");
+        warned = qtrue;
+    }
+
+    return -1;  // ignore this command
+}
+
 /*
 ==================
 SV_Map_f
@@ -384,39 +423,18 @@ For development work
 */
 static void SV_Map_f(void)
 {
+    int res;
+
     if (Cmd_Argc() < 2) {
         Com_Printf("Usage: %s <mapname>\n", Cmd_Argv(0));
         return;
     }
 
-    if (sv.state == ss_game &&
-        sv_allow_map->integer != 1 &&
-#if !USE_CLIENT
-        sv_recycle->integer == 0 &&
-#endif
-        Cvar_CountLatchedVars() == 0 &&
-        strcmp(Cmd_Argv(2), "force") != 0) {
-        if (sv_allow_map->integer == 0) {
-            static qboolean warned;
-
-            Com_Printf(
-                "Using '%s' command will cause full server restart, "
-                "which is likely not what you want. Use 'gamemap' "
-                "command for changing maps.\n", Cmd_Argv(0));
-            if (!warned) {
-                Com_Printf(
-                    "(You can set 'sv_allow_map' to 1 "
-                    "if you wish to disable this check.)\n");
-                warned = qtrue;
-            }
-            return;
-        }
-
-        SV_Map(1, qfalse);
+    res = should_really_restart();
+    if (res < 0)
         return;
-    }
 
-    SV_Map(1, qtrue);
+    SV_Map(1, !!res);
 }
 
 static void SV_Map_c(genctx_t *ctx, int argnum)

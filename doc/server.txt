@@ -205,6 +205,15 @@ sv_recycle::
 
 WARNING: Be sure to read ‘recycle’ command description below before enabling ‘sv_recycle’.
 
+sv_allow_map::
+    Controls the ‘map’ command behavior. ‘map’ is often mistakingly used by
+    server operators to change maps instead of the more lightweight ‘gamemap’.
+    Thus, this variable exists to prevent misuse of ‘map’. Default value is 0.
+       - 0 — disallow ‘map’ and print a warning unless there are pending
+       latched cvars
+       - 1 — handle ‘map’ command normally
+       - 2 — turn ‘map’ into ‘gamemap’ unless there are pending latched cvars
+
 sv_changemapcmd::
     Specifies command to be executed each time server finishes loading a new map.
     Default value is empty.
@@ -216,7 +225,6 @@ sv_fps::
     that support Q2PRO protocol will be able to take advantage of higher FPS.
     Other clients will receive updates at default rate of 10 packets per
     second.
-
 
 Downloads
 ~~~~~~~~~
