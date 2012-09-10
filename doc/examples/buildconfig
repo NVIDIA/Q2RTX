@@ -149,24 +149,30 @@
 
 ### System paths ###
 
-# Set the options below if you wish to install Q2PRO system-wide. All these
-# options default to "." (current directory). These options have no effect on
-# Windows.
+# By default Q2PRO assumes per-user installation: all game content, configs and
+# executable files are kept in the same directory tree. This configuration is
+# easy for most users to set up, but not ideal from security standpoint.
+#
+# Uncomment the options below if you wish to install Q2PRO system-wide,
+# separating static, executable and writable content into different trees with
+# different permissions.  These options have no effect on Windows.
 
 # Path to the game data tree. This is where all static, non-executable data
 # lives (e.g., paks). This option sets the default value of "basedir" console
-# variable.
+# variable. Default value of this option is "." (current directory).
 #CONFIG_PATH_DATA=/usr/local/share/games/q2pro
 
-# Path to the game libraries tree. This is where executable parts if all game
+# Path to the game libraries tree. This is where executable parts of all game
 # mods live (e.g., game$(CPU).so files). This option sets the default value of
-# "libdir" console variable.
+# "libdir" console variable. Default value of this option is "." (current
+# directory).
 #CONFIG_PATH_LIB=/usr/local/lib/games/q2pro
 
 # Name of the directory where Q2PRO stores per-user data. Tilde at the
 # beginning of the name is automatically expanded to user home directory at run
 # time. Users running Q2PRO must have write permissions to this directory.
-# This option sets the default value of "homedir" console variable.
+# This option sets the default value of "homedir" console variable. Default
+# value of this option is "" (use basedir as homedir).
 #CONFIG_PATH_HOME=~/.q2pro
 
 
