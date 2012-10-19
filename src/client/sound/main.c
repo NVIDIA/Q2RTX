@@ -242,12 +242,12 @@ void S_Shutdown(void)
 #if USE_OPENAL
     if (s_started == SS_OAL)
         AL_Shutdown();
-    else
 #endif
+
 #if USE_SNDDMA
-        DMA_Shutdown()
+    if (s_started == SS_DMA)
+        DMA_Shutdown();
 #endif
-        ;
 
     s_started = SS_NOT;
     s_active = qfalse;
