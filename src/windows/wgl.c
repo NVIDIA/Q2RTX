@@ -115,6 +115,7 @@ unsigned WGL_ParseExtensionString(const char *s)
     static const char *const extnames[] = {
         "WGL_ARB_extensions_string",
         "WGL_EXT_swap_control",
+        "WGL_EXT_swap_control_tear",
         NULL
     };
 

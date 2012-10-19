@@ -28,6 +28,7 @@ typedef struct {
     HINSTANCE   hinstOpenGL;    // handle to GL library
     qboolean    minidriver;
     GLenum      drawbuffer;
+    unsigned    extensions;
 } glwstate_t;
 
 extern glwstate_t glw;

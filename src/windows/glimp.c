@@ -244,9 +244,13 @@ fail:
 
 static void gl_swapinterval_changed(cvar_t *self)
 {
-    if (qwglSwapIntervalEXT) {
-        qwglSwapIntervalEXT(self->integer);
+    if (self->integer < 0 && !(glw.extensions & QWGL_EXT_swap_control_tear)) {
+        Com_Printf("Negative swap interval is not supported on this system.\n");
+        Cvar_Reset(self);
     }
+
+    if (qwglSwapIntervalEXT && !qwglSwapIntervalEXT(self->integer))
+        ReportLastError("wglSwapIntervalEXT");
 }
 
 static void gl_drawbuffer_changed(cvar_t *self)
@@ -273,7 +277,6 @@ doing the wgl interface stuff.
 qboolean VID_Init(void)
 {
     const char *extensions;
-    unsigned mask;
     int ret;
 
     gl_driver = Cvar_Get("gl_driver", "opengl32", CVAR_ARCHIVE | CVAR_REFRESH);
@@ -313,15 +316,19 @@ qboolean VID_Init(void)
     if (!extensions || !*extensions)
         extensions = (const char *)qwglGetString(GL_EXTENSIONS);
 
-    mask = WGL_ParseExtensionString(extensions);
+    glw.extensions = WGL_ParseExtensionString(extensions);
 
-    if (mask & QWGL_EXT_swap_control) {
-        Com_Printf("...enabling WGL_EXT_swap_control\n");
+    if (glw.extensions & QWGL_EXT_swap_control) {
+        if (glw.extensions & QWGL_EXT_swap_control_tear)
+            Com_Printf("...enabling WGL_EXT_swap_control(_tear)\n");
+        else
+            Com_Printf("...enabling WGL_EXT_swap_control\n");
         WGL_InitExtensions(QWGL_EXT_swap_control);
         gl_swapinterval->changed = gl_swapinterval_changed;
         gl_swapinterval_changed(gl_swapinterval);
     } else {
         Com_Printf("WGL_EXT_swap_control not found\n");
+        Cvar_Set("gl_swapinterval", "0");
     }
 
     gl_drawbuffer->changed = gl_drawbuffer_changed;

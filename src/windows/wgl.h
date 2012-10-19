@@ -22,6 +22,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define QWGL_ARB_extensions_string  (1<<0)
 #define QWGL_EXT_swap_control       (1<<1)
+#define QWGL_EXT_swap_control_tear  (1<<2)
 
 qboolean    WGL_Init(const char *dllname);
 void        WGL_Shutdown(void);
