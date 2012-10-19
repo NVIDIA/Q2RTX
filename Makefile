@@ -473,12 +473,22 @@ else
     CFLAGS_c += -DUSE_SDL=1 $(SDL_CFLAGS)
     LIBS_c += $(SDL_LIBS)
     OBJS_c += src/unix/sdl/video.o
+    OBJS_c += src/unix/sdl/clipboard.o
+
+    ifdef CONFIG_SOFTWARE_RENDERER
+        OBJS_c += src/unix/sdl/swimp.o
+    else
+        OBJS_c += src/unix/sdl/glimp.o
+    endif
 
     ifdef CONFIG_X11
         X11_CFLAGS ?=
         X11_LIBS ?= -lX11
         CFLAGS_c += -DUSE_X11=1 $(X11_CFLAGS)
         LIBS_c += $(X11_LIBS)
+        ifndef CONFIG_SOFTWARE_RENDERER
+            OBJS_c += src/unix/sdl/glx.o
+        endif
     endif
 
     ifdef CONFIG_DIRECT_INPUT

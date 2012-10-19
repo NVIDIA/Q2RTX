@@ -17,54 +17,13 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 //
-// vid_sdl.c
+// video.c
 //
 
-#include "shared/shared.h"
-#include "common/cvar.h"
-#include "common/common.h"
-#include "common/files.h"
-#include "common/zone.h"
-#include "client/client.h"
-#include "client/input.h"
-#include "client/keys.h"
-#include "client/video.h"
-#include "refresh/refresh.h"
+#include "video.h"
 #include "../res/q2pro.xbm"
 
-#include <SDL.h>
-#if USE_X11
-#include <SDL_syswm.h>
-#include <X11/Xutil.h>
-#if USE_REF == REF_GL
-#include <GL/glx.h>
-#include <GL/glxext.h>
-typedef const char *(*PFNGLXQUERYEXTENSIONSSTRING)(Display *, int);
-#endif
-#endif
-
-typedef struct {
-    SDL_Surface     *surface;
-    SDL_Surface     *icon;
-    Uint16          gamma[3][256];
-    vidFlags_t      flags;
-    struct {
-        qboolean    initialized;
-        grab_t      grabbed;
-    } mouse;
-#if USE_X11
-    Display         *dpy;
-    Window          win;
-#if USE_REF == REF_GL
-    PFNGLXQUERYEXTENSIONSSTRING glXQueryExtensionsString;
-    PFNGLXGETVIDEOSYNCSGIPROC   glXGetVideoSyncSGI;
-    PFNGLXWAITVIDEOSYNCSGIPROC  glXWaitVideoSyncSGI;
-    GLuint          sync_count;
-#endif
-#endif
-} sdl_state_t;
-
-static sdl_state_t    sdl;
+sdl_state_t    sdl;
 
 /*
 ===============================================================================
@@ -74,111 +33,7 @@ COMMON SDL VIDEO RELATED ROUTINES
 ===============================================================================
 */
 
-#if USE_REF == REF_GL
-static void init_opengl(void);
-#endif
-
-#if USE_X11
-static void init_x11(void)
-{
-    SDL_SysWMinfo   info;
-
-    SDL_VERSION(&info.version);
-    if (!SDL_GetWMInfo(&info)) {
-        return;
-    }
-
-    if (info.subsystem != SDL_SYSWM_X11) {
-        return;
-    }
-
-    sdl.dpy = info.info.x11.display;
-    sdl.win = info.info.x11.window;
-}
-
-static void set_wm_hints(void)
-{
-    XSizeHints hints;
-
-    if (!sdl.dpy) {
-        return;
-    }
-
-    memset(&hints, 0, sizeof(hints));
-    hints.flags = PMinSize | PResizeInc;
-    hints.min_width = 64;
-    hints.min_height = 64;
-    hints.width_inc = 8;
-    hints.height_inc = 2;
-
-    XSetWMSizeHints(sdl.dpy, sdl.win, &hints, XA_WM_SIZE_HINTS);
-}
-#endif
-
-/*
-=================
-VID_GetClipboardData
-=================
-*/
-char *VID_GetClipboardData(void)
-{
-#if USE_X11
-    Window sowner;
-    Atom type, property;
-    unsigned long len, bytes_left;
-    unsigned char *data;
-    int format, result;
-    char *ret;
-
-    if (!sdl.dpy) {
-        return NULL;
-    }
-
-    sowner = XGetSelectionOwner(sdl.dpy, XA_PRIMARY);
-    if (sowner == None) {
-        return NULL;
-    }
-
-    property = XInternAtom(sdl.dpy, "GETCLIPBOARDDATA_PROP", False);
-
-    XConvertSelection(sdl.dpy, XA_PRIMARY, XA_STRING, property, sdl.win, CurrentTime);
-
-    XSync(sdl.dpy, False);
-
-    result = XGetWindowProperty(sdl.dpy, sdl.win, property, 0, 0, False,
-                                AnyPropertyType, &type, &format, &len, &bytes_left, &data);
-
-    if (result != Success) {
-        return NULL;
-    }
-
-    ret = NULL;
-    if (bytes_left) {
-        result = XGetWindowProperty(sdl.dpy, sdl.win, property, 0, bytes_left, True,
-                                    AnyPropertyType, &type, &format, &len, &bytes_left, &data);
-        if (result == Success) {
-            ret = Z_CopyString((char *)data);
-        }
-    }
-
-    XFree(data);
-
-    return ret;
-#else
-    return NULL;
-#endif
-}
-
-/*
-=================
-VID_SetClipboardData
-=================
-*/
-void VID_SetClipboardData(const char *data)
-{
-}
-
-static qboolean set_video_mode(int flags, int forcedepth)
+qboolean VID_SDL_SetMode(int flags, int forcedepth)
 {
     SDL_Surface *surf;
     vrect_t rc;
@@ -216,13 +71,8 @@ success:
     // init some stuff for the first time
     if (sdl.surface != surf) {
         sdl.surface = surf;
-#if USE_X11
-        init_x11();
-        set_wm_hints();
-#endif
-#if USE_REF == REF_GL
-        init_opengl();
-#endif
+        VID_SDL_SurfaceChanged();
+        CL_Activate(ACT_ACTIVATED);
     }
     R_ModeChanged(rc.width, rc.height, sdl.flags, surf->pitch, surf->pixels);
     SCR_ModeChanged();
@@ -241,7 +91,11 @@ VID_SetMode
 */
 void VID_SetMode(void)
 {
-    if (!set_video_mode(sdl.surface->flags, sdl.surface->format->BitsPerPixel)) {
+    if (!sdl.surface) {
+        Com_Error(ERR_FATAL, "%s: NULL surface", __func__);
+    }
+
+    if (!VID_SDL_SetMode(sdl.surface->flags, sdl.surface->format->BitsPerPixel)) {
         Com_Error(ERR_FATAL, "Couldn't change video mode: %s", SDL_GetError());
     }
 }
@@ -253,7 +107,7 @@ void VID_FatalShutdown(void)
     SDL_Quit();
 }
 
-static qboolean init_video(void)
+qboolean VID_SDL_Init(void)
 {
     SDL_Color    color;
     byte *dst;
@@ -318,7 +172,7 @@ static qboolean init_video(void)
     return qtrue;
 }
 
-void VID_Shutdown(void)
+void VID_SDL_Shutdown(void)
 {
     if (sdl.flags & QVF_GAMMARAMP) {
         SDL_SetGammaRamp(sdl.gamma[0], sdl.gamma[1], sdl.gamma[2]);
@@ -529,293 +383,6 @@ void VID_PumpEvents(void)
         }
     }
 }
-
-/*
-===============================================================================
-
-RENDERER SPECIFIC
-
-===============================================================================
-*/
-
-#if USE_REF == REF_SOFT
-
-qboolean VID_Init(void)
-{
-    if (!init_video()) {
-        return qfalse;
-    }
-
-    if (!set_video_mode(SDL_SWSURFACE | SDL_HWPALETTE | SDL_RESIZABLE, 8)) {
-        Com_EPrintf("Couldn't set video mode: %s\n", SDL_GetError());
-        VID_Shutdown();
-        return qfalse;
-    }
-
-    activate_event();
-    return qtrue;
-}
-
-void VID_UpdatePalette(const byte *palette)
-{
-    SDL_Color    colors[256];
-    SDL_Color    *c;
-
-    for (c = colors; c < colors + 256; c++) {
-        c->r = palette[0];
-        c->g = palette[1];
-        c->b = palette[2];
-        palette += 4;
-    }
-
-    SDL_SetPalette(sdl.surface, SDL_LOGPAL, colors, 0, 256);
-}
-
-void VID_VideoWait(void)
-{
-}
-
-qboolean VID_VideoSync(void)
-{
-    return qtrue;
-}
-
-void VID_BeginFrame(void)
-{
-    SDL_LockSurface(sdl.surface);
-}
-
-void VID_EndFrame(void)
-{
-    SDL_UnlockSurface(sdl.surface);
-    SDL_Flip(sdl.surface);
-}
-
-#else // USE_REF == REF_SOFT
-
-#if USE_X11
-
-// for debugging
-#define SHOW_SYNC() \
-    Com_DDDDPrintf("%s: %u\n", __func__, sdl.sync_count)
-
-static unsigned glx_parse_extension_string(const char *s)
-{
-    static const char *const extnames[] = {
-        "GLX_SGI_video_sync",
-        NULL
-    };
-
-    return Com_ParseExtensionString(s, extnames);
-}
-
-static void init_glx(void)
-{
-    const char *extensions;
-    cvar_t *gl_video_sync;
-    unsigned mask;
-
-    if (!sdl.dpy) {
-        return;
-    }
-
-    sdl.glXQueryExtensionsString = SDL_GL_GetProcAddress("glXQueryExtensionsString");
-    if (!sdl.glXQueryExtensionsString) {
-        return;
-    }
-
-    gl_video_sync = Cvar_Get("gl_video_sync", "1", 0);
-
-    extensions = sdl.glXQueryExtensionsString(sdl.dpy, DefaultScreen(sdl.dpy));
-    mask = glx_parse_extension_string(extensions);
-    if (mask & 1) {
-        if (gl_video_sync->integer) {
-            Com_Printf("...enabling GLX_SGI_video_sync\n");
-            sdl.glXGetVideoSyncSGI = SDL_GL_GetProcAddress("glXGetVideoSyncSGI");
-            sdl.glXWaitVideoSyncSGI = SDL_GL_GetProcAddress("glXWaitVideoSyncSGI");
-            sdl.glXGetVideoSyncSGI(&sdl.sync_count);
-            sdl.flags |= QVF_VIDEOSYNC;
-        } else {
-            Com_Printf("...ignoring GLX_SGI_video_sync\n");
-        }
-    } else if (gl_video_sync->integer) {
-        Com_Printf("GLX_SGI_video_sync not found\n");
-        Cvar_Set("gl_video_sync", "0");
-    }
-}
-#endif
-
-static void init_opengl(void)
-{
-    int accel;
-
-    SDL_GL_GetAttribute(SDL_GL_ACCELERATED_VISUAL, &accel);
-    if (accel) {
-        sdl.flags |= QVF_ACCELERATED;
-    }
-
-#if USE_X11
-    init_glx();
-#endif
-}
-
-#ifdef __OpenBSD__
-#define LIBGL   "libGL.so"
-#else
-#define LIBGL   "libGL.so.1"
-#endif
-
-qboolean VID_Init(void)
-{
-    cvar_t *gl_driver;
-    cvar_t *gl_colorbits;
-    cvar_t *gl_depthbits;
-    cvar_t *gl_stencilbits;
-    char *s;
-    int colorbits;
-    int depthbits;
-    int stencilbits;
-
-    if (!init_video()) {
-        return qfalse;
-    }
-
-    gl_driver = Cvar_Get("gl_driver", LIBGL, CVAR_REFRESH);
-    gl_colorbits = Cvar_Get("gl_colorbits", "0", CVAR_REFRESH);
-    gl_depthbits = Cvar_Get("gl_depthbits", "0", CVAR_REFRESH);
-    gl_stencilbits = Cvar_Get("gl_stencilbits", "8", CVAR_REFRESH);
-
-    // don't allow absolute or relative paths
-    FS_SanitizeFilenameVariable(gl_driver);
-
-    while (1) {
-        // ugly hack to work around brain-dead servers that actively
-        // check and enforce `gl_driver' cvar to `opengl32', unaware
-        // of other systems than Windows
-        s = gl_driver->string;
-        if (!Q_stricmp(s, "opengl32") || !Q_stricmp(s, "opengl32.dll")) {
-            Com_Printf("...attempting to load %s instead of %s\n",
-                       gl_driver->default_string, s);
-            s = gl_driver->default_string;
-        }
-
-        if (SDL_GL_LoadLibrary(s) == 0) {
-            break;
-        }
-
-        Com_EPrintf("Couldn't load OpenGL library: %s\n", SDL_GetError());
-        if (!strcmp(s, gl_driver->default_string)) {
-            goto fail;
-        }
-
-        // attempt to recover
-        Com_Printf("...falling back to %s\n", gl_driver->default_string);
-        Cvar_Reset(gl_driver);
-    }
-
-    colorbits = Cvar_ClampInteger(gl_colorbits, 0, 32);
-    depthbits = Cvar_ClampInteger(gl_depthbits, 0, 32);
-    stencilbits = Cvar_ClampInteger(gl_stencilbits, 0, 8);
-
-    if (colorbits == 0)
-        colorbits = 24;
-
-    if (depthbits == 0)
-        depthbits = colorbits > 16 ? 24 : 16;
-
-    if (depthbits < 24)
-        stencilbits = 0;
-
-    if (colorbits > 16) {
-        SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
-        SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
-        SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
-    } else {
-        SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
-        SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 5);
-        SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
-    }
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, depthbits);
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, stencilbits);
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-
-    if (!set_video_mode(SDL_OPENGL | SDL_RESIZABLE, 0)) {
-        Com_EPrintf("Couldn't set video mode: %s\n", SDL_GetError());
-        goto fail;
-    }
-
-    activate_event();
-    return qtrue;
-
-fail:
-    VID_Shutdown();
-    return qfalse;
-}
-
-void VID_VideoWait(void)
-{
-#if USE_X11
-    if (!sdl.glXWaitVideoSyncSGI) {
-        return;
-    }
-
-    sdl.glXWaitVideoSyncSGI(2, 1, &sdl.sync_count);
-    SHOW_SYNC();
-#endif
-}
-
-qboolean VID_VideoSync(void)
-{
-#if USE_X11
-    GLuint count;
-
-    if (!sdl.glXGetVideoSyncSGI) {
-        return qtrue;
-    }
-
-    if (sdl.glXGetVideoSyncSGI(&count)) {
-        return qtrue;
-    }
-
-    if (count != sdl.sync_count) {
-        sdl.sync_count = count;
-        SHOW_SYNC();
-        return qtrue;
-    }
-
-    return qfalse;
-#else
-    return qtrue;
-#endif
-}
-
-void VID_BeginFrame(void)
-{
-}
-
-void VID_EndFrame(void)
-{
-    SDL_GL_SwapBuffers();
-#if USE_X11
-    if (sdl.glXGetVideoSyncSGI) {
-        sdl.glXGetVideoSyncSGI(&sdl.sync_count);
-        SHOW_SYNC();
-    }
-#endif
-}
-
-void *VID_GetCoreAddr(const char *sym)
-{
-    return SDL_GL_GetProcAddress(sym);
-}
-
-void *VID_GetProcAddr(const char *sym)
-{
-    return SDL_GL_GetProcAddress(sym);
-}
-
-#endif // USE_REF == REF_GL
-
 
 /*
 ===============================================================================
