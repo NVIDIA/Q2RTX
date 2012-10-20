@@ -1189,9 +1189,7 @@ static void AC_Spin(void)
                STDIN_FILENO,
 #endif
                ac.stream.socket, -1);
-#if USE_SYSCON
     Sys_RunConsole();
-#endif
     AC_Run();
 }
 
@@ -1460,9 +1458,7 @@ void AC_Connect(unsigned mvd_spawn)
     AC_LoadChecks();
 
     Com_Printf("ANTICHEAT: Attempting to connect to %s...\n", ac_server_address->string);
-#if USE_SYSCON
     Sys_RunConsole();
-#endif
 
     acs.retry_backoff = AC_DEFAULT_BACKOFF;
     if (!AC_Reconnect()) {

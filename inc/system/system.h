@@ -38,6 +38,12 @@ void    Sys_ConsoleOutput(const char *string);
 void    Sys_SetConsoleTitle(const char *title);
 void    Sys_SetConsoleColor(color_index_t color);
 void    Sys_Printf(const char *fmt, ...) q_printf(1, 2);
+#else
+#define Sys_RunConsole()            (void)0
+#define Sys_ConsoleOutput(string)   (void)0
+#define Sys_SetConsoleTitle(title)  (void)0
+#define Sys_SetConsoleColor(color)  (void)0
+#define Sys_Printf(...)             (void)0
 #endif
 
 void    Sys_Error(const char *error, ...) q_noreturn q_printf(1, 2);

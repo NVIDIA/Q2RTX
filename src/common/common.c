@@ -364,12 +364,8 @@ void Com_SetColor(color_index_t color)
     if (rd_target) {
         return;
     }
-    // graphical console
     Con_SetColor(color);
-#if USE_SYSCON
-    // debugging console
     Sys_SetConsoleColor(color);
-#endif
 }
 
 void Com_SetLastError(const char *msg)
@@ -454,10 +450,8 @@ void Com_LPrintf(print_type_t type, const char *fmt, ...)
         // graphical console
         Con_Print(msg);
 
-#if USE_SYSCON
         // debugging console
         Sys_ConsoleOutput(msg);
-#endif
 
         // remote console
         //SV_ConsoleOutput(msg);
@@ -963,15 +957,11 @@ void Qcommon_Init(int argc, char **argv)
 
     Sys_Init();
 
-#if USE_SYSCON
     Sys_RunConsole();
-#endif
 
     FS_Init();
 
-#if USE_SYSCON
     Sys_RunConsole();
-#endif
 
     // no longer allow CVAR_NOSET modifications
     com_initialized = qtrue;
@@ -1007,9 +997,7 @@ void Qcommon_Init(int argc, char **argv)
     CL_Init();
     TST_Init();
 
-#if USE_SYSCON
     Sys_RunConsole();
-#endif
 
     // add + commands from command line
     if (!Com_AddLateCommands()) {
@@ -1119,10 +1107,8 @@ void Qcommon_Frame(void)
         time_event = Sys_Milliseconds();
 #endif
 
-#if USE_SYSCON
     // run system console
     Sys_RunConsole();
-#endif
 
     NET_UpdateStats();
 
