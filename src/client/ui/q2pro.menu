@@ -3,8 +3,7 @@ This is example menu definition file for Q2PRO.
 
 File format is line based, whitespace is ignored.  C and C++ style comments are
 supported.  Long lines can be broken into multiple ones by escaping linefeed
-characters with backslashes.  It possible to escape only UNIX-style line
-endings.
+characters with backslashes.
 
 Lines are macro expanded at script load time just as usual console commands.
 Any cvars and macros can be referenced.
@@ -47,7 +46,7 @@ begin <menuname>
 end
 */
 
-background conback
+background black
 font conchars
 cursor ch1
 weapon w_railgun.md2
@@ -60,21 +59,21 @@ color disabled #7f7f7f
 begin video
     //title "Video Setup"
     banner m_banner_video
-    range "screen size" viewsize 40 100 10
-    range "gamma" vid_gamma 1.3 0.3
-    toggle "hardware gamma" vid_hwgamma
     values "video mode" vid_fullscreen windowed $vid_modelist
+    toggle "vertical sync" gl_swapinterval
+    range "texture gamma" vid_gamma 1.3 0.3
+    toggle "hardware gamma" vid_hwgamma
     range "texture quality" gl_picmip 3 0 -1
     pairs "texture filter" gl_texturemode \
         nearest GL_NEAREST \
         linear GL_LINEAR \
         bilinear GL_LINEAR_MIPMAP_NEAREST \
         trilinear GL_LINEAR_MIPMAP_LINEAR
-    toggle "vertical sync" gl_swapinterval
-    values "dynamic lighting" gl_dynamic "no" "yes" "only switchable"
-    toggle "smooth lights falloff" gl_dlight_falloff
+    pairs "anisotropic filter" gl_anisotropy no 0 2x 2 4x 4 8x 8 16x 16
     range "texture saturation" gl_saturation 0 1
+    pairs "texture intensity" intensity 1x 1 2x 2 3x 3
     range "lightmap saturation" gl_coloredlightmaps 0 1
+    range "lightmap brightness" gl_brightness 0 0.3
 end
 
 begin options
@@ -86,6 +85,8 @@ begin options
     action "weapon bindings" pushmenu weapons
     action "video setup" pushmenu video
     action "sound setup" pushmenu sound
+    action "effects setup" pushmenu effects
+    action "screen setup" pushmenu screen
     action "download options" pushmenu downloads
     action "address book" pushmenu addressbook
 end
@@ -99,6 +100,59 @@ begin sound
     values "chat beep" cl_chat_sound "disabled" "default" "alternative"
 end
 
+begin railtrail
+    title "Railgun Trail Setup"
+    values "rail trail type" cl_railtrail_type \
+        "default" "core only" "core and spiral"
+    range "rail trail duration" cl_railtrail_time 0.1 3.0 0.1
+    range "core width" cl_railcore_width 1 6 1
+    range "spiral radius" cl_railspiral_radius 1 6 1
+    pairs "core color" cl_railcore_color \
+        black black red red green green yellow yellow \
+        blue blue cyan cyan magenta magenta white white
+    pairs "spiral color" cl_railspiral_color \
+        black black red red green green yellow yellow \
+        blue blue cyan cyan magenta magenta white white
+end
+
+begin effects
+    title "Effects Setup"
+    values "dynamic lighting" gl_dynamic "no" "yes" "only switchable"
+    values "entity cel-shading" gl_celshading no 1x 2x 3x
+    toggle "entity glowing" cl_noglow ~0
+    toggle "ground shadows" gl_shadows
+    toggle "screen blending" gl_polyblend
+    toggle "grenade explosions" cl_disable_explosions ~0
+    toggle "rocket explosions" cl_disable_explosions ~1
+    blank
+    action --align "railgun trail setup..." pushmenu railtrail
+end
+
+begin crosshair
+    title "Crosshair Setup"
+    values "crosshair type" crosshair none cross dot angle
+    pairs "crosshair scale" ch_scale 1x 1 2x 2 4x 4
+    toggle "color by health" ch_health
+    range "red channel" ch_red 0 1
+    range "green channel" ch_green 0 1
+    range "blue channel" ch_blue 0 1
+    range "alpha channel" ch_alpha 0 1
+end
+
+begin screen
+    title "Screen Setup"
+    range "screen size" viewsize 40 100 10
+    toggle "ping graph" scr_lag_draw
+    values "demo bar" scr_demobar no yes verbose
+    range "HUD opacity" scr_alpha 0 1
+    range "console opacity" con_alpha 0 1
+    pairs "HUD scale" scr_scale 1x 1 2x 2 4x 4
+    pairs "console scale" con_scale 1x 1 2x 2 4x 4
+    pairs "menu scale" ui_scale 1x 1 2x 2 4x 4
+    blank
+    action --align "crosshair setup..." pushmenu crosshair
+end
+
 begin downloads
     title "Download Options"
     toggle "allow downloading" allow_download
@@ -108,6 +162,8 @@ begin downloads
     toggle "sounds" allow_download_sounds
     toggle "textures" allow_download_textures
     toggle "pics" allow_download_pics
+    blank
+    toggle "HTTP downloads" cl_http_downloads
 end
 
 begin gameflags
@@ -129,14 +185,14 @@ end
 begin startserver
     //title "Start Server"
     banner m_banner_start_server
-    strings "initial map" nextserver $com_maplist
+    strings "initial map" _ui_nextserver $com_maplist
     field --integer --status "0 - no time limit" --width 3 "time limit" timelimit
     field --integer --status "0 - no frag limit" --width 3 "frag limit" fraglimit
     field --integer --width 3 "max players" maxclients
     field --width 16 "host name" hostname
     blank
-    action --align "deathmatch flags" pushmenu gameflags
-    action --align "begin game" "forcemenuoff; map $nextserver force"
+    action --align "deathmatch flags..." pushmenu gameflags
+    action --align "begin game!" "forcemenuoff; map $_ui_nextserver force"
 end
 
 begin multiplayer
@@ -147,10 +203,21 @@ begin multiplayer
     action "start server" pushmenu startserver
 end
 
+begin singleplayer
+    banner m_banner_game
+    action easy "skill 0; deathmatch 0; coop 0; maxclients 1; newgame"
+    action medium "skill 1; deathmatch 0; coop 0; maxclients 1; newgame"
+    action hard "skill 2; deathmatch 0; coop 0; maxclients 1; newgame"
+    action nightmare "skill 3; deathmatch 0; coop 0; maxclients 1; newgame"
+    //blank
+    //action "load game" pushmenu loadgame
+    //action "save game" pushmenu savegame
+end
+
 begin main
     //title "Main Menu"
     plaque m_main_plaque m_main_logo
-    bitmap m_main_game pushmenu startserver
+    bitmap m_main_game pushmenu singleplayer
     bitmap m_main_multiplayer pushmenu multiplayer
     bitmap m_main_options pushmenu options
     bitmap m_main_video pushmenu video
@@ -190,7 +257,7 @@ end
 
 begin input
     title "Input Setup"
-    field --integer --width 2 "mouse sens" sensitivity
+    field --integer --width 8 "mouse sens" sensitivity
     toggle "auto sens" m_autosens
     toggle "mouse filter" m_filter
     toggle "free look" freelook
@@ -238,4 +305,3 @@ begin weapons
     bind "railgun" "use Railgun"
     bind "bfg10k" "use BFG10K"
 end
-
