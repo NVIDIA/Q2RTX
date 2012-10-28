@@ -440,7 +440,7 @@ static void GL_DrawEntities(int mask)
             bsp_t *bsp = gl_static.world.cache;
             int index = ~ent->model;
 
-            if (!bsp) {
+            if (glr.fd.rdflags & RDF_NOWORLDMODEL) {
                 Com_Error(ERR_DROP, "%s: inline model without world",
                           __func__);
             }
@@ -604,7 +604,9 @@ void R_RenderFrame(refdef_t *fd)
 
     GL_DrawEntities(RF_TRANSLUCENT);
 
-    GL_DrawAlphaFaces();
+    if (!(glr.fd.rdflags & RDF_NOWORLDMODEL)) {
+        GL_DrawAlphaFaces();
+    }
 
     // go back into 2D mode
     GL_Setup2D();
