@@ -290,7 +290,41 @@ static int get_desktop_frequency(const DEVMODE *desktop)
     return desktop->dmDisplayFrequency;
 }
 
-static qboolean set_fullscreen_mode(void)
+// avoid doing CDS to the same fullscreen mode to reduce flickering
+static qboolean mode_is_current(const DEVMODE *dm)
+{
+    DEVMODE current;
+    DWORD fields;
+
+    memset(&current, 0, sizeof(current));
+    current.dmSize = sizeof(current);
+
+    if (!EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &current))
+        return qfalse;
+
+    if (current.dmFields & DM_DISPLAYFLAGS) {
+        if (current.dmDisplayFlags & (DM_GRAYSCALE | DM_INTERLACED))
+            return qfalse;
+    }
+
+    fields = current.dmFields & dm->dmFields;
+
+    if ((fields & DM_PELSWIDTH) && current.dmPelsWidth != dm->dmPelsWidth)
+        return qfalse;
+
+    if ((fields & DM_PELSHEIGHT) && current.dmPelsHeight != dm->dmPelsHeight)
+        return qfalse;
+
+    if ((fields & DM_BITSPERPEL) && current.dmBitsPerPel != dm->dmBitsPerPel)
+        return qfalse;
+
+    if ((fields & DM_DISPLAYFREQUENCY) && current.dmDisplayFrequency != dm->dmDisplayFrequency)
+        return qfalse;
+
+    return qtrue;
+}
+
+static LONG set_fullscreen_mode(void)
 {
     DEVMODE desktop, dm;
     LONG ret;
@@ -344,20 +378,25 @@ static qboolean set_fullscreen_mode(void)
         Com_DPrintf("...using desktop bitdepth of %lu\n", desktop.dmBitsPerPel);
     }
 
-    Com_DPrintf("...calling CDS: ");
-    ret = ChangeDisplaySettings(&dm, CDS_FULLSCREEN);
-    if (ret != DISP_CHANGE_SUCCESSFUL) {
-        Com_DPrintf("failed with error %ld\n", ret);
-        return qfalse;
+    if (mode_is_current(&dm)) {
+        Com_DPrintf("...skipping CDS\n");
+        ret = DISP_CHANGE_SUCCESSFUL;
+    } else {
+        Com_DPrintf("...calling CDS: ");
+        ret = ChangeDisplaySettings(&dm, CDS_FULLSCREEN);
+        if (ret != DISP_CHANGE_SUCCESSFUL) {
+            Com_DPrintf("failed with error %ld\n", ret);
+            return ret;
+        }
+        Com_DPrintf("ok\n");
     }
-    Com_DPrintf("ok\n");
 
     win.dm = dm;
     win.flags |= QVF_FULLSCREEN;
     Win_SetPosition();
     win.mode_changed = 0;
 
-    return qtrue;
+    return ret;
 }
 
 /*
@@ -369,14 +408,25 @@ void Win_SetMode(void)
 {
     // set full screen mode if requested
     if (vid_fullscreen->integer > 0) {
-        if (set_fullscreen_mode()) {
+        LONG ret;
+
+        ret = set_fullscreen_mode();
+        switch (ret) {
+        case DISP_CHANGE_SUCCESSFUL:
             return;
+        case DISP_CHANGE_FAILED:
+            Com_EPrintf("Display driver failed the %dx%d video mode.\n", win.rc.width, win.rc.height);
+            break;
+        case DISP_CHANGE_BADMODE:
+            Com_EPrintf("Video mode %dx%d is not supported.\n", win.rc.width, win.rc.height);
+            break;
+        default:
+            Com_EPrintf("Video mode %dx%d failed with error %ld.\n",  win.rc.width, win.rc.height, ret);
+            break;
         }
 
-        Cvar_Reset(vid_fullscreen);
-        Com_Printf("Full screen mode %dx%d failed.\n",
-                   win.rc.width, win.rc.height);
         // fall back to windowed mode
+        Cvar_Reset(vid_fullscreen);
     }
 
     ChangeDisplaySettings(NULL, 0);
@@ -495,7 +545,9 @@ static void Win_Activate(WPARAM wParam)
 
         if (vid_flip_on_switch->integer) {
             if (active == ACT_ACTIVATED) {
-                ChangeDisplaySettings(&win.dm, CDS_FULLSCREEN);
+                if (!mode_is_current(&win.dm)) {
+                    ChangeDisplaySettings(&win.dm, CDS_FULLSCREEN);
+                }
             } else {
                 ChangeDisplaySettings(NULL, 0);
             }
