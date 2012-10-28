@@ -577,6 +577,10 @@ void Sys_Error(const char *error, ...)
 
     errorEntered = qtrue;
 
+#if USE_CLIENT
+    Win_Shutdown();
+#endif
+
 #if USE_SYSCON
     Sys_SetConsoleColor(COLOR_RED);
     Sys_Printf("********************\n"
