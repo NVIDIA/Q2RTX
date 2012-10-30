@@ -105,8 +105,8 @@ static void Win_SetPosition(void)
 
     // set new window style and position
     SetWindowLong(win.wnd, GWL_STYLE, style);
-    SetWindowPos(win.wnd, after, x, y, w, h, SWP_FRAMECHANGED);
-    ShowWindow(win.wnd, SW_SHOW);
+    SetWindowPos(win.wnd, after, x, y, w, h, SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+    UpdateWindow(win.wnd);
     SetForegroundWindow(win.wnd);
     SetFocus(win.wnd);
 
@@ -1047,6 +1047,11 @@ STATIC LONG WINAPI Win_MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
         Key_CharEvent(wParam);
 #endif
         return FALSE;
+
+    case WM_ERASEBKGND:
+        if (win.flags & QVF_FULLSCREEN)
+            return FALSE;
+        break;
 
     default:
         break;
