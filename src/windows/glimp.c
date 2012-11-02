@@ -42,6 +42,7 @@ static cvar_t   *gl_allow_software;
 static cvar_t   *gl_colorbits;
 static cvar_t   *gl_depthbits;
 static cvar_t   *gl_stencilbits;
+static cvar_t   *gl_multisamples;
 
 /*
 VID_Shutdown
@@ -91,7 +92,7 @@ static void ReportPixelFormat(int pixelformat, PIXELFORMATDESCRIPTOR *pfd)
 #define FAIL_SOFT   -1
 #define FAIL_HARD   -2
 
-static int SetupGL(int colorbits, int depthbits, int stencilbits)
+static int SetupGL(int colorbits, int depthbits, int stencilbits, int multisamples)
 {
     PIXELFORMATDESCRIPTOR pfd;
     int pixelformat;
@@ -108,23 +109,66 @@ static int SetupGL(int colorbits, int depthbits, int stencilbits)
     if (depthbits < 24)
         stencilbits = 0;
 
-    memset(&pfd, 0, sizeof(pfd));
-    pfd.nSize = sizeof(pfd);
-    pfd.nVersion = 1;
-    pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
-    pfd.iPixelType = PFD_TYPE_RGBA;
-    pfd.cColorBits = colorbits;
-    pfd.cDepthBits = depthbits;
-    pfd.cStencilBits = stencilbits;
-    pfd.iLayerType = PFD_MAIN_PLANE;
+    // choose pixel format
+    if (qwglChoosePixelFormatARB && multisamples > 1) {
+        int iAttributes[20];
+        UINT numFormats;
+
+        iAttributes[0] = WGL_DRAW_TO_WINDOW_ARB;
+        iAttributes[1] = TRUE;
+        iAttributes[2] = WGL_SUPPORT_OPENGL_ARB;
+        iAttributes[3] = TRUE;
+        iAttributes[4] = WGL_DOUBLE_BUFFER_ARB;
+        iAttributes[5] = TRUE;
+        iAttributes[6] = WGL_PIXEL_TYPE_ARB;
+        iAttributes[7] = WGL_TYPE_RGBA_ARB;
+        iAttributes[8] = WGL_COLOR_BITS_ARB;
+        iAttributes[9] = colorbits;
+        iAttributes[10] = WGL_DEPTH_BITS_ARB;
+        iAttributes[11] = depthbits;
+        iAttributes[12] = WGL_STENCIL_BITS_ARB;
+        iAttributes[13] = stencilbits;
+        iAttributes[14] = WGL_SAMPLE_BUFFERS_ARB;
+        iAttributes[15] = 1;
+        iAttributes[16] = WGL_SAMPLES_ARB;
+        iAttributes[17] = multisamples;
+        iAttributes[18] = 0;
+        iAttributes[19] = 0;
+
+        if (qwglChoosePixelFormatARB(win.dc, iAttributes, NULL, 1, &pixelformat, &numFormats) == FALSE) {
+            ReportLastError("wglChoosePixelFormatARB");
+            goto soft;
+        }
+        if (numFormats == 0) {
+            Com_EPrintf("No suitable OpenGL pixelformat found\n");
+            goto soft;
+        }
+    } else {
+        memset(&pfd, 0, sizeof(pfd));
+        pfd.nSize = sizeof(pfd);
+        pfd.nVersion = 1;
+        pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+        pfd.iPixelType = PFD_TYPE_RGBA;
+        pfd.cColorBits = colorbits;
+        pfd.cDepthBits = depthbits;
+        pfd.cStencilBits = stencilbits;
+        pfd.iLayerType = PFD_MAIN_PLANE;
+
+        if (glw.minidriver) {
+            if ((pixelformat = qwglChoosePixelFormat(win.dc, &pfd)) == 0) {
+                ReportLastError("wglChoosePixelFormat");
+                goto soft;
+            }
+        } else {
+            if ((pixelformat = ChoosePixelFormat(win.dc, &pfd)) == 0) {
+                ReportLastError("ChoosePixelFormat");
+                goto soft;
+            }
+        }
+    }
 
     // set pixel format
     if (glw.minidriver) {
-        if ((pixelformat = qwglChoosePixelFormat(win.dc, &pfd)) == 0) {
-            ReportLastError("wglChoosePixelFormat");
-            goto soft;
-        }
-
         qwglDescribePixelFormat(win.dc, pixelformat, sizeof(pfd), &pfd);
         ReportPixelFormat(pixelformat, &pfd);
 
@@ -133,11 +177,6 @@ static int SetupGL(int colorbits, int depthbits, int stencilbits)
             goto soft;
         }
     } else {
-        if ((pixelformat = ChoosePixelFormat(win.dc, &pfd)) == 0) {
-            ReportLastError("ChoosePixelFormat");
-            goto soft;
-        }
-
         DescribePixelFormat(win.dc, pixelformat, sizeof(pfd), &pfd);
         ReportPixelFormat(pixelformat, &pfd);
 
@@ -187,11 +226,100 @@ hard:
     return FAIL_HARD;
 }
 
+#define FAKE_WINDOW_CLASS   "Q2PRO FAKE WINDOW CLASS"
+#define FAKE_WINDOW_NAME    "Q2PRO FAKE WINDOW NAME"
+
+static unsigned GetFakeWindowExtensions(void)
+{
+    WNDCLASSEX wc;
+    PIXELFORMATDESCRIPTOR pfd;
+    int pixelformat;
+    HWND wnd;
+    HDC dc;
+    HGLRC rc;
+    unsigned extensions = 0;
+
+    memset(&wc, 0, sizeof(wc));
+    wc.cbSize = sizeof(wc);
+    wc.lpfnWndProc = DefWindowProc;
+    wc.hInstance = hGlobalInstance;
+    wc.lpszClassName = FAKE_WINDOW_CLASS;
+
+    if (!RegisterClassEx(&wc))
+        goto fail0;
+
+    wnd = CreateWindow(
+        FAKE_WINDOW_CLASS,
+        FAKE_WINDOW_NAME,
+        0,
+        0, 0, 0, 0,
+        NULL,
+        NULL,
+        hGlobalInstance,
+        NULL);
+    if (!wnd)
+        goto fail1;
+
+    if ((dc = GetDC(wnd)) == NULL)
+        goto fail2;
+
+    memset(&pfd, 0, sizeof(pfd));
+    pfd.nSize = sizeof(pfd);
+    pfd.nVersion = 1;
+    pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.cColorBits = 24;
+    pfd.cDepthBits = 24;
+    pfd.cStencilBits = 8;
+    pfd.iLayerType = PFD_MAIN_PLANE;
+
+    if (glw.minidriver) {
+        if ((pixelformat = qwglChoosePixelFormat(dc, &pfd)) == 0)
+            goto fail3;
+
+        if (qwglSetPixelFormat(dc, pixelformat, &pfd) == FALSE)
+            goto fail3;
+    } else {
+        if ((pixelformat = ChoosePixelFormat(dc, &pfd)) == 0)
+            goto fail3;
+
+        if (SetPixelFormat(dc, pixelformat, &pfd) == FALSE)
+            goto fail3;
+    }
+
+    if ((rc = qwglCreateContext(dc)) == NULL)
+        goto fail3;
+
+    if (qwglMakeCurrent(dc, rc) == FALSE)
+        goto fail4;
+
+    WGL_InitExtensions(QWGL_ARB_extensions_string);
+
+    if (!qwglGetExtensionsStringARB)
+        goto fail5;
+
+    extensions = WGL_ParseExtensionString(qwglGetExtensionsStringARB(dc));
+
+fail5:
+    qwglMakeCurrent(NULL, NULL);
+fail4:
+    qwglDeleteContext(rc);
+fail3:
+    ReleaseDC(wnd, dc);
+fail2:
+    DestroyWindow(wnd);
+fail1:
+    UnregisterClass(FAKE_WINDOW_CLASS, hGlobalInstance);
+fail0:
+    return extensions;
+}
+
 static int LoadGL(const char *driver)
 {
     int colorbits = Cvar_ClampInteger(gl_colorbits, 0, 32);
     int depthbits = Cvar_ClampInteger(gl_depthbits, 0, 32);
     int stencilbits = Cvar_ClampInteger(gl_stencilbits, 0, 8);
+    int multisamples = Cvar_ClampInteger(gl_multisamples, 0, 32);
     int ret;
 
     // figure out if we're running on a minidriver or not
@@ -224,12 +352,33 @@ static int LoadGL(const char *driver)
         }
     }
 
+    // check for WGL_ARB_multisample by creating a fake window
+    if (multisamples > 1) {
+        unsigned extensions = GetFakeWindowExtensions();
+
+        if (extensions & QWGL_ARB_multisample) {
+            if (extensions & QWGL_ARB_pixel_format) {
+                Com_Printf("...enabling WGL_ARB_pixel_format\n");
+                Com_Printf("...enabling WGL_ARB_multisample\n");
+                WGL_InitExtensions(QWGL_ARB_pixel_format);
+            } else {
+                Com_Printf("...ignoring WGL_ARB_multisample, WGL_ARB_pixel_format not found\n");
+                Cvar_Set("gl_multisamples", "0");
+                multisamples = 0;
+            }
+        } else {
+            Com_Printf("WGL_ARB_multisample not found\n");
+            Cvar_Set("gl_multisamples", "0");
+            multisamples = 0;
+        }
+    }
+
     // create window, choose PFD, setup OpenGL context
-    ret = SetupGL(colorbits, depthbits, stencilbits);
+    ret = SetupGL(colorbits, depthbits, stencilbits, multisamples);
 
     // attempt to recover
-    if (ret == FAIL_SOFT && (colorbits || depthbits || stencilbits))
-        ret = SetupGL(0, 0, 0);
+    if (ret == FAIL_SOFT && (colorbits || depthbits || stencilbits || multisamples > 1))
+        ret = SetupGL(0, 0, 0, 0);
 
     if (ret)
         goto fail;
@@ -286,6 +435,7 @@ qboolean VID_Init(void)
     gl_colorbits = Cvar_Get("gl_colorbits", "0", CVAR_REFRESH);
     gl_depthbits = Cvar_Get("gl_depthbits", "0", CVAR_REFRESH);
     gl_stencilbits = Cvar_Get("gl_stencilbits", "8", CVAR_REFRESH);
+    gl_multisamples = Cvar_Get("gl_multisamples", "0", CVAR_REFRESH);
 
     // don't allow absolute or relative paths
     FS_SanitizeFilenameVariable(gl_driver);

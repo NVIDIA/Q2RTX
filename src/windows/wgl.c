@@ -34,6 +34,8 @@ BOOL (WINAPI * qwglMakeCurrent)(HDC, HGLRC);
 
 const char * (WINAPI * qwglGetExtensionsStringARB)(HDC hdc);
 
+BOOL (WINAPI * qwglChoosePixelFormatARB)(HDC, const int *, const FLOAT *, UINT, int *, UINT *);
+
 BOOL (WINAPI * qwglSwapIntervalEXT)(int interval);
 
 void WGL_Shutdown(void)
@@ -90,6 +92,9 @@ void WGL_ShutdownExtensions(unsigned mask)
     if (mask & QWGL_ARB_extensions_string) {
         qwglGetExtensionsStringARB  = NULL;
     }
+    if (mask & QWGL_ARB_pixel_format) {
+        qwglChoosePixelFormatARB    = NULL;
+    }
     if (mask & QWGL_EXT_swap_control) {
         qwglSwapIntervalEXT         = NULL;
     }
@@ -101,6 +106,9 @@ void WGL_InitExtensions(unsigned mask)
 {
     if (mask & QWGL_ARB_extensions_string) {
         qwglGetExtensionsStringARB  = GPA("wglGetExtensionsStringARB");
+    }
+    if (mask & QWGL_ARB_pixel_format) {
+        qwglChoosePixelFormatARB    = GPA("wglChoosePixelFormatARB");
     }
     if (mask & QWGL_EXT_swap_control) {
         qwglSwapIntervalEXT         = GPA("wglSwapIntervalEXT");
@@ -114,6 +122,8 @@ unsigned WGL_ParseExtensionString(const char *s)
     // must match defines in win_wgl.h!
     static const char *const extnames[] = {
         "WGL_ARB_extensions_string",
+        "WGL_ARB_multisample",
+        "WGL_ARB_pixel_format",
         "WGL_EXT_swap_control",
         "WGL_EXT_swap_control_tear",
         NULL

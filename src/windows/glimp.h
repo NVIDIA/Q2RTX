@@ -21,7 +21,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 //
 
 #include <GL/gl.h>
-#include <GL/glu.h>
+#include <GL/wglext.h>
 
 typedef struct {
     HGLRC       hGLRC;          // handle to GL rendering context
