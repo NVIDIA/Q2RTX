@@ -48,10 +48,12 @@ qboolean VID_Init(void)
     cvar_t *gl_colorbits;
     cvar_t *gl_depthbits;
     cvar_t *gl_stencilbits;
+    cvar_t *gl_multisamples;
     char *s;
     int colorbits;
     int depthbits;
     int stencilbits;
+    int multisamples;
 
     if (!VID_SDL_Init()) {
         return qfalse;
@@ -61,6 +63,7 @@ qboolean VID_Init(void)
     gl_colorbits = Cvar_Get("gl_colorbits", "0", CVAR_REFRESH);
     gl_depthbits = Cvar_Get("gl_depthbits", "0", CVAR_REFRESH);
     gl_stencilbits = Cvar_Get("gl_stencilbits", "8", CVAR_REFRESH);
+    gl_multisamples = Cvar_Get("gl_multisamples", "0", CVAR_REFRESH);
 
     // don't allow absolute or relative paths
     FS_SanitizeFilenameVariable(gl_driver);
@@ -93,6 +96,7 @@ qboolean VID_Init(void)
     colorbits = Cvar_ClampInteger(gl_colorbits, 0, 32);
     depthbits = Cvar_ClampInteger(gl_depthbits, 0, 32);
     stencilbits = Cvar_ClampInteger(gl_stencilbits, 0, 8);
+    multisamples = Cvar_ClampInteger(gl_multisamples, 0, 32);
 
     if (colorbits == 0)
         colorbits = 24;
@@ -112,9 +116,15 @@ qboolean VID_Init(void)
         SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 5);
         SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
     }
+
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, depthbits);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, stencilbits);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+
+    if (multisamples > 1) {
+        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, multisamples);
+    }
 
     if (!VID_SDL_SetMode(SDL_OPENGL | SDL_RESIZABLE, 0)) {
         Com_EPrintf("Couldn't set video mode: %s\n", SDL_GetError());
