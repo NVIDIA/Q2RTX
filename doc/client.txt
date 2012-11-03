@@ -655,6 +655,12 @@ gl_stencilbits::
     used only for drawing projection shadows. Default value is 8. 0 means no
     stencil buffer requested.
 
+gl_multisamples::
+    Specifies number of samples per pixel used to implement multisample
+    anti-aliasing, if supported by OpenGL implementation. Values 0 and 1 are
+    equivalent and disable MSAA. Values from 2 to 32 enable MSAA. Default
+    value is 0.
+
 gl_screenshot_format::
     Specifies image format ‘screenshot’ command uses. Possible values are
     "png", "jpg" and "tga". Default value is "jpg".
