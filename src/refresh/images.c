@@ -2023,6 +2023,7 @@ byte *IMG_GetPalette(void)
 
 fail:
     Com_Error(ERR_FATAL, "Couldn't load %s: %s", colormap, Q_ErrorString(ret));
+    return NULL;
 }
 
 static const cmdreg_t img_cmd[] = {

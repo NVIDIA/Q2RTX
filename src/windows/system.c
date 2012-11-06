@@ -718,7 +718,8 @@ void Sys_Init(void)
 #ifndef _WIN64
     module = GetModuleHandle("kernel32.dll");
     if (module) {
-        pSetProcessDEPPolicy = GetProcAddress(module, "SetProcessDEPPolicy");
+        pSetProcessDEPPolicy = (PVOID)GetProcAddress(module,
+                                                     "SetProcessDEPPolicy");
         if (pSetProcessDEPPolicy) {
             var = Cvar_Get("sys_disabledep", "0", CVAR_NOSET);
 

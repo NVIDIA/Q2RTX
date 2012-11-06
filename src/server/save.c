@@ -341,6 +341,7 @@ static qerror_t read_server_file(const char *dir)
 
 fail:
     Com_Error(ERR_DROP, "Couldn't load %s: %s", dir, Q_ErrorString(ret));
+    return Q_ERR_FAILURE;
 }
 
 static void read_level_file(const char *dir)

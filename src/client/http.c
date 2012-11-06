@@ -724,6 +724,7 @@ static dlhandle_t *find_handle(CURL *curl)
     }
 
     Com_Error(ERR_FATAL, "CURL handle not found for CURLMSG_DONE");
+    return NULL;
 }
 
 // A download finished, find out what it was, whether there were any errors and
