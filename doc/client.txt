@@ -950,6 +950,7 @@ Each of the following examples are valid and produce the same output:
 cl_armor:: armor statistic seen in the HUD
 cl_ammo:: ammo statistic seen in the HUD
 cl_health:: health statistic seen in the HUD
+cl_weaponmodel:: current weapon model
 cl_timer:: time since level load
 cl_demopos:: current position in demo, in _timespec_ syntax
 cl_server:: address of the server client is connected to

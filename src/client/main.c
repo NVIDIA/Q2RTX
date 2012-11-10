@@ -2258,6 +2258,12 @@ static size_t CL_Armor_m(char *buffer, size_t size)
     return Q_scnprintf(buffer, size, "%i", cl.frame.ps.stats[STAT_ARMOR]);
 }
 
+static size_t CL_WeaponModel_m(char *buffer, size_t size)
+{
+    return Q_scnprintf(buffer, size, "%s",
+                       cl.configstrings[cl.frame.ps.gunindex + CS_MODELS]);
+}
+
 /*
 ===============
 CL_WriteConfig
@@ -2701,6 +2707,7 @@ static void CL_InitLocal(void)
     Cmd_AddMacro("cl_health", CL_Health_m);
     Cmd_AddMacro("cl_ammo", CL_Ammo_m);
     Cmd_AddMacro("cl_armor", CL_Armor_m);
+    Cmd_AddMacro("cl_weaponmodel", CL_WeaponModel_m);
 }
 
 /*
