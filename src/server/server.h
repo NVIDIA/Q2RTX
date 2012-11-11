@@ -542,8 +542,8 @@ addrmatch_t *SV_MatchAddress(list_t *list, netadr_t *address);
 int SV_CountClients(void);
 
 #if USE_ZLIB
-voidpf SV_Zalloc OF((voidpf opaque, uInt items, uInt size));
-void SV_Zfree OF((voidpf opaque, voidpf address));
+voidpf SV_zalloc(voidpf opaque, uInt items, uInt size);
+void SV_zfree(voidpf opaque, voidpf address);
 #endif
 
 //

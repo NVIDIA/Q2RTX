@@ -1424,8 +1424,8 @@ static void parse_hello(gtv_client_t *client)
 #if USE_ZLIB
     // the rest of the stream will be deflated
     if (flags & GTF_DEFLATE) {
-        client->z.zalloc = SV_Zalloc;
-        client->z.zfree = SV_Zfree;
+        client->z.zalloc = SV_zalloc;
+        client->z.zfree = SV_zfree;
         if (deflateInit(&client->z, Z_DEFAULT_COMPRESSION) != Z_OK) {
             drop_client(client, "deflateInit failed");
             return;

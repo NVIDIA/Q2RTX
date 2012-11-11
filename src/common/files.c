@@ -1061,12 +1061,12 @@ static qerror_t check_header_coherency(FILE *fp, packfile_t *entry)
     return Q_ERR_SUCCESS;
 }
 
-static voidpf FS_zalloc OF((voidpf opaque, uInt items, uInt size))
+static voidpf FS_zalloc(voidpf opaque, uInt items, uInt size)
 {
     return FS_Malloc(items * size);
 }
 
-static void FS_zfree OF((voidpf opaque, voidpf address))
+static void FS_zfree(voidpf opaque, voidpf address)
 {
     Z_Free(address);
 }

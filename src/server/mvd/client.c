@@ -1061,12 +1061,12 @@ static void send_stream_stop(gtv_t *gtv)
 
 
 #if USE_ZLIB
-static voidpf gtv_zalloc OF((voidpf opaque, uInt items, uInt size))
+static voidpf gtv_zalloc(voidpf opaque, uInt items, uInt size)
 {
     return MVD_Malloc(items * size);
 }
 
-static void gtv_zfree OF((voidpf opaque, voidpf address))
+static void gtv_zfree(voidpf opaque, voidpf address)
 {
     Z_Free(address);
 }

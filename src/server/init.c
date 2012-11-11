@@ -346,8 +346,8 @@ void SV_InitGame(unsigned mvd_spawn)
     Cvar_ClampInteger(sv_reserved_slots, 0, sv_maxclients->integer - 1);
 
 #if USE_ZLIB
-    svs.z.zalloc = SV_Zalloc;
-    svs.z.zfree = SV_Zfree;
+    svs.z.zalloc = SV_zalloc;
+    svs.z.zfree = SV_zfree;
     if (deflateInit2(&svs.z, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
                      -MAX_WBITS, 9, Z_DEFAULT_STRATEGY) != Z_OK) {
         Com_Error(ERR_FATAL, "%s: deflateInit2() failed", __func__);

@@ -1960,12 +1960,12 @@ static void sv_hostname_changed(cvar_t *self)
 #endif
 
 #if USE_ZLIB
-voidpf SV_Zalloc OF((voidpf opaque, uInt items, uInt size))
+voidpf SV_zalloc(voidpf opaque, uInt items, uInt size)
 {
     return SV_Malloc(items * size);
 }
 
-void SV_Zfree OF((voidpf opaque, voidpf address))
+void SV_zfree(voidpf opaque, voidpf address)
 {
     Z_Free(address);
 }
