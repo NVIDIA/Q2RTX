@@ -393,7 +393,10 @@ ifdef CONFIG_MVD_CLIENT
     OBJS_c += src/server/mvd/client.o src/server/mvd/game.o src/server/mvd/parse.o
 endif
 
-ifndef CONFIG_NO_ZLIB
+ifdef CONFIG_NO_ZLIB
+    CFLAGS_c += -DUSE_ZLIB=0
+    CFLAGS_s += -DUSE_ZLIB=0
+else
     ZLIB_CFLAGS ?=
     ZLIB_LIBS ?= -lz
     CFLAGS_c += -DUSE_ZLIB=1 $(ZLIB_CFLAGS)
