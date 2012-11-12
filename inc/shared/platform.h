@@ -1,3 +1,35 @@
+/*
+Copyright (C) 2012 Andrey Nazarov
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+//
+// platform.h -- platform-specific definitions
+//
+
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#ifdef _WIN32
+#include <io.h>
+#include <direct.h>
+#else
+#include <unistd.h>
+#endif
+
 #ifdef _WIN32
 #define PRIz    "Iu"
 #else
@@ -16,6 +48,35 @@
 #else
 #define PATH_SEP_CHAR       '/'
 #define PATH_SEP_STRING     "/"
+#endif
+
+#ifdef _WIN32
+#define os_mkdir(p)         _mkdir(p)
+#define os_unlink(p)        _unlink(p)
+#define os_stat(p, s)       _stat(p, s)
+#define os_fstat(f, s)      _fstat(f, s)
+#define os_fileno(f)        _fileno(f)
+#define os_access(p, m)     _access(p, m)
+#define Q_ISREG(m)          (((m) & _S_IFMT) == _S_IFREG)
+#define Q_ISDIR(m)          (((m) & _S_IFMT) == _S_IFDIR)
+#define Q_STATBUF           struct _stat
+#else
+#define os_mkdir(p)         mkdir(p, 0775)
+#define os_unlink(p)        unlink(p)
+#define os_stat(p, s)       stat(p, s)
+#define os_fstat(f, s)      fstat(f, s)
+#define os_fileno(f)        fileno(f)
+#define os_access(p, m)     access(p, m)
+#define Q_ISREG(m)          S_ISREG(m)
+#define Q_ISDIR(m)          S_ISDIR(m)
+#define Q_STATBUF           struct stat
+#endif
+
+#ifndef F_OK
+#define F_OK    0
+#define X_OK    1
+#define W_OK    2
+#define R_OK    4
 #endif
 
 #ifdef __GNUC__

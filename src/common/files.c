@@ -26,38 +26,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "client/client.h"
 #include "format/pak.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
-#ifdef _WIN32
-#include <io.h>
-#include <direct.h>
-#else
-#include <unistd.h>
-#endif
 
 #if USE_ZLIB
 #include <zlib.h>
-#endif
-
-#ifdef _WIN32
-#define os_mkdir(p) _mkdir(p)
-#define os_unlink(p) _unlink(p)
-#define os_stat(p, s) _stat(p, s)
-#define os_fstat(f, s) _fstat(f, s)
-#define os_fileno(f) _fileno(f)
-#define Q_ISREG(m) (((m) & _S_IFMT) == _S_IFREG)
-#define Q_ISDIR(m) (((m) & _S_IFMT) == _S_IFDIR)
-typedef struct _stat os_stat_t;
-#else
-#define os_mkdir(p) mkdir(p, 0775)
-#define os_unlink(p) unlink(p)
-#define os_stat(p, s) stat(p, s)
-#define os_fstat(f, s) fstat(f, s)
-#define os_fileno(f) fileno(f)
-#define Q_ISREG(m) S_ISREG(m)
-#define Q_ISDIR(m) S_ISDIR(m)
-typedef struct stat os_stat_t;
 #endif
 
 /*
@@ -784,7 +756,7 @@ void FS_FCloseFile(qhandle_t f)
 
 static qerror_t get_path_info(const char *path, file_info_t *info)
 {
-    os_stat_t st;
+    Q_STATBUF st;
 
     if (os_stat(path, &st) == -1)
         return Q_Errno();
@@ -806,7 +778,7 @@ static qerror_t get_path_info(const char *path, file_info_t *info)
 
 static qerror_t get_fp_info(FILE *fp, file_info_t *info)
 {
-    os_stat_t st;
+    Q_STATBUF st;
     int fd;
 
     fd = os_fileno(fp);
