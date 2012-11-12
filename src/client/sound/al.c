@@ -45,13 +45,13 @@ qboolean AL_Init(void)
     Com_DPrintf("Initializing OpenAL\n");
 
     if (!QAL_Init()) {
-        return qfalse;
+        goto fail0;
     }
 
     // check for linear distance extension
     if (!qalIsExtensionPresent("AL_EXT_LINEAR_DISTANCE")) {
-        Com_DPrintf("AL_EXT_LINEAR_DISTANCE extension is missing\n");
-        goto fail;
+        Com_SetLastError("AL_EXT_LINEAR_DISTANCE extension is missing");
+        goto fail1;
     }
 
     // generate source names
@@ -66,8 +66,8 @@ qboolean AL_Init(void)
     Com_DPrintf("Got %d AL sources\n", i);
 
     if (i < MIN_CHANNELS) {
-        Com_DPrintf("Insufficient number of sources\n");
-        goto fail;
+        Com_SetLastError("Insufficient number of AL sources");
+        goto fail1;
     }
 
     s_numchannels = i;
@@ -75,8 +75,10 @@ qboolean AL_Init(void)
     Com_Printf("OpenAL initialized.\n");
     return qtrue;
 
-fail:
+fail1:
     QAL_Shutdown();
+fail0:
+    Com_EPrintf("Failed to initialize OpenAL: %s\n", Com_GetLastError());
     return qfalse;
 }
 

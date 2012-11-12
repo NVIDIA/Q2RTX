@@ -115,25 +115,22 @@ qboolean QAL_Init(void)
     QAL_IMP
 #undef QAL
 
-    Com_DPrintf("...opening OpenAL device: ");
     device = qalcOpenDevice(al_device->string[0] ? al_device->string : NULL);
     if (!device) {
+        Com_SetLastError(va("alcOpenDevice(%s) failed", al_device->string));
         goto fail;
     }
-    Com_DPrintf("ok\n");
 
-    Com_DPrintf("...creating OpenAL context: ");
     context = qalcCreateContext(device, NULL);
     if (!context) {
+        Com_SetLastError("alcCreateContext failed");
         goto fail;
     }
-    Com_DPrintf("ok\n");
 
-    Com_DPrintf("...making context current: ");
     if (!qalcMakeContextCurrent(context)) {
+        Com_SetLastError("alcMakeContextCurrent failed");
         goto fail;
     }
-    Com_DPrintf("ok\n");
 
     al_driver->flags |= CVAR_SOUND;
     al_device->flags |= CVAR_SOUND;
@@ -141,7 +138,6 @@ qboolean QAL_Init(void)
     return qtrue;
 
 fail:
-    Com_DPrintf("failed\n");
     QAL_Shutdown();
     return qfalse;
 }
