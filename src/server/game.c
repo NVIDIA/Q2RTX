@@ -780,6 +780,19 @@ void SV_ShutdownGameProgs(void)
     Cvar_Set("g_features", "0");
 }
 
+static void *_SV_LoadGameLibrary(const char *path)
+{
+    void *entry;
+
+    entry = Sys_LoadLibrary(path, "GetGameAPI", &game_library);
+    if (!entry)
+        Com_EPrintf("Failed to load game library: %s\n", Com_GetLastError());
+    else
+        Com_Printf("Loaded game library from %s\n", path);
+
+    return entry;
+}
+
 static void *SV_LoadGameLibrary(const char *game, const char *prefix)
 {
     char path[MAX_OSPATH];
@@ -788,11 +801,18 @@ static void *SV_LoadGameLibrary(const char *game, const char *prefix)
     len = Q_concat(path, sizeof(path), sys_libdir->string,
                    PATH_SEP_STRING, game, PATH_SEP_STRING,
                    prefix, "game" CPUSTRING LIBSUFFIX, NULL);
-    if (len < sizeof(path))
-        return Sys_LoadLibrary(path, "GetGameAPI", &game_library);
+    if (len >= sizeof(path)) {
+        Com_EPrintf("Game library path length exceeded\n");
+        return NULL;
+    }
 
-    Com_WPrintf("Game library path length exceeded\n");
-    return NULL;
+    if (os_access(path, F_OK)) {
+        if (!*prefix)
+            Com_Printf("Can't access %s: %s\n", path, strerror(errno));
+        return NULL;
+    }
+
+    return _SV_LoadGameLibrary(path);
 }
 
 /*
@@ -811,10 +831,8 @@ void SV_InitGameProgs(void)
     SV_ShutdownGameProgs();
 
     // for debugging or `proxy' mods
-    if (sys_forcegamelib->string[0]) {
-        entry = Sys_LoadLibrary(sys_forcegamelib->string,
-                                "GetGameAPI", &game_library);
-    }
+    if (sys_forcegamelib->string[0])
+        entry = _SV_LoadGameLibrary(sys_forcegamelib->string);
 
     // try game first
     if (!entry && fs_game->string[0]) {

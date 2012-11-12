@@ -746,10 +746,7 @@ DLL LOADING
 
 void Sys_FreeLibrary(void *handle)
 {
-    if (!handle) {
-        return;
-    }
-    if (!FreeLibrary(handle)) {
+    if (handle && !FreeLibrary(handle)) {
         Com_Error(ERR_FATAL, "FreeLibrary failed on %p", handle);
     }
 }
@@ -763,16 +760,16 @@ void *Sys_LoadLibrary(const char *path, const char *sym, void **handle)
 
     module = LoadLibraryA(path);
     if (!module) {
-        Com_DPrintf("%s failed: LoadLibrary returned %lu on %s\n",
-                    __func__, GetLastError(), path);
+        Com_SetLastError(va("%s: LoadLibrary failed with error %lu\n",
+                            path, GetLastError()));
         return NULL;
     }
 
     if (sym) {
         entry = GetProcAddress(module, sym);
         if (!entry) {
-            Com_DPrintf("%s failed: GetProcAddress returned %lu on %s\n",
-                        __func__, GetLastError(), path);
+            Com_SetLastError(va("%s: GetProcAddress failed with error %lu\n",
+                                path, GetLastError()));
             FreeLibrary(module);
             return NULL;
         }
@@ -781,9 +778,6 @@ void *Sys_LoadLibrary(const char *path, const char *sym, void **handle)
     }
 
     *handle = module;
-
-    Com_DPrintf("%s succeeded: %s\n", __func__, path);
-
     return entry;
 }
 

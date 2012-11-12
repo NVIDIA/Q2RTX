@@ -278,14 +278,15 @@ void *Sys_LoadLibrary(const char *path, const char *sym, void **handle)
 
     module = dlopen(path, RTLD_LAZY);
     if (!module) {
-        Com_DPrintf("%s failed: %s\n", __func__, dlerror());
+        Com_SetLastError(dlerror());
         return NULL;
     }
 
     if (sym) {
+        dlerror();
         entry = dlsym(module, sym);
         if (!entry) {
-            Com_DPrintf("%s failed: %s\n", __func__, dlerror());
+            Com_SetLastError(dlerror());
             dlclose(module);
             return NULL;
         }
@@ -293,10 +294,7 @@ void *Sys_LoadLibrary(const char *path, const char *sym, void **handle)
         entry = NULL;
     }
 
-    Com_DPrintf("%s succeeded: %s\n", __func__, path);
-
     *handle = module;
-
     return entry;
 }
 
