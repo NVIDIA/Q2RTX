@@ -596,7 +596,7 @@ static void CL_MouseMove(void)
     mx *= speed;
     my *= speed;
 
-    if (m_autosens->integer) {
+    if (m_autosens->integer && cl.fov_x >= 1) {
         mx *= cl.fov_x / 90.0f;
         my *= V_CalcFov(cl.fov_x, 4, 3) / 73.739795291688f;
     }
