@@ -165,7 +165,11 @@ void    FS_FreeList(void **list);
 size_t FS_NormalizePath(char *out, const char *in);
 size_t FS_NormalizePathBuffer(char *out, const char *in, size_t size);
 
-qboolean FS_ValidatePath(const char *s);
+#define PATH_INVALID        0
+#define PATH_VALID          1
+#define PATH_MIXED_CASE     2
+
+int FS_ValidatePath(const char *s);
 
 void FS_SanitizeFilenameVariable(cvar_t *var);
 

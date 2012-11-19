@@ -70,6 +70,8 @@ QUAKE FILESYSTEM
 #define FS_DPrintf(...)
 #endif
 
+#define PATH_NOT_CHECKED    -1
+
 //
 // in memory
 //
@@ -161,7 +163,19 @@ static symlink_t    *fs_links;
 static file_t       fs_files[MAX_FILE_HANDLES];
 
 #ifdef _DEBUG
-static int          fs_count_read, fs_count_strcmp, fs_count_open;
+static int          fs_count_read;
+static int          fs_count_open;
+static int          fs_count_strcmp;
+static int          fs_count_strlwr;
+#define FS_COUNT_READ       fs_count_read++
+#define FS_COUNT_OPEN       fs_count_open++
+#define FS_COUNT_STRCMP     fs_count_strcmp++
+#define FS_COUNT_STRLWR     fs_count_strlwr++
+#else
+#define FS_COUNT_READ       (void)0
+#define FS_COUNT_OPEN       (void)0
+#define FS_COUNT_STRCMP     (void)0
+#define FS_COUNT_STRLWR     (void)0
 #endif
 
 #ifdef _DEBUG
@@ -232,17 +246,22 @@ static inline qboolean validate_char(int c)
 ================
 FS_ValidatePath
 
-Checks for bad characters in path (OS specific).
+Checks for bad (OS specific) and mixed case characters in path.
 ================
 */
-qboolean FS_ValidatePath(const char *s)
+int FS_ValidatePath(const char *s)
 {
+    int res = PATH_VALID;
+
     for (; *s; s++) {
         if (!validate_char(*s))
-            return qfalse;
+            return PATH_INVALID;
+
+        if (Q_isupper(*s))
+            res = PATH_MIXED_CASE;
     }
 
-    return qtrue;
+    return res;
 }
 
 /*
@@ -1226,7 +1245,41 @@ fail2:
         fclose(fp);
     }
 fail1:
-    FS_DPrintf("%s: %s: %s\n", __func__, entry->name, Q_ErrorString(ret));
+    FS_DPrintf("%s: %s/%s: %s\n", __func__, pack->filename, entry->name, Q_ErrorString(ret));
+    return ret;
+}
+
+static ssize_t open_from_disk(file_t *file, const char *fullpath)
+{
+    FILE *fp;
+    file_info_t info;
+    qerror_t ret;
+
+    FS_COUNT_OPEN;
+
+    fp = fopen(fullpath, "rb");
+    if (!fp) {
+        ret = Q_Errno();
+        goto fail;
+    }
+
+    ret = get_fp_info(fp, &info);
+    if (ret) {
+        fclose(fp);
+        goto fail;
+    }
+
+    file->type = FS_REAL;
+    file->fp = fp;
+    file->unique = qtrue;
+    file->error = Q_ERR_SUCCESS;
+    file->length = info.size;
+
+    FS_DPrintf("%s: %s: %"PRIz" bytes\n", __func__, fullpath, info.size);
+    return info.size;
+
+fail:
+    FS_DPrintf("%s: %s: %s\n", __func__, fullpath, Q_ErrorString(ret));
     return ret;
 }
 
@@ -1240,15 +1293,11 @@ static ssize_t open_file_read(file_t *file, const char *name, qboolean unique)
     pack_t          *pak;
     unsigned        hash;
     packfile_t      *entry;
-    FILE            *fp;
-    file_info_t     info;
-    qerror_t        ret;
+    ssize_t         ret;
     int             valid;
     size_t          len, namelen;
 
-#ifdef _DEBUG
-    fs_count_read++;
-#endif
+    FS_COUNT_READ;
 
 // normalize path
     namelen = FS_NormalizePathBuffer(normalized, name, MAX_OSPATH);
@@ -1268,7 +1317,7 @@ static ssize_t open_file_read(file_t *file, const char *name, qboolean unique)
 
     hash = FS_HashPath(normalized, 0);
 
-    valid = -1; // not yet checked
+    valid = PATH_NOT_CHECKED;
 
 // search through the path, one element at a time
     for (search = fs_searchpaths; search; search = search->next) {
@@ -1294,9 +1343,7 @@ static ssize_t open_file_read(file_t *file, const char *name, qboolean unique)
                 if (entry->namelen != namelen) {
                     continue;
                 }
-#ifdef _DEBUG
-                fs_count_strcmp++;
-#endif
+                FS_COUNT_STRCMP;
                 if (!FS_pathcmp(entry->name, normalized)) {
                     // found it!
                     return open_from_pak(file, pak, entry, unique);
@@ -1309,10 +1356,10 @@ static ssize_t open_file_read(file_t *file, const char *name, qboolean unique)
             // don't error out immediately if the path is found to be invalid,
             // just stop looking for it in directory tree but continue to search
             // for it in packs, to give broken maps or mods a chance to work
-            if (valid == -1) {
+            if (valid == PATH_NOT_CHECKED) {
                 valid = FS_ValidatePath(normalized);
             }
-            if (valid == 0) {
+            if (valid == PATH_INVALID) {
                 continue;
             }
             // check a file in the directory tree
@@ -1323,32 +1370,20 @@ static ssize_t open_file_read(file_t *file, const char *name, qboolean unique)
                 goto fail;
             }
 
-#ifdef _DEBUG
-            fs_count_open++;
+            ret = open_from_disk(file, fullpath);
+            if (ret != Q_ERR_NOENT)
+                return ret;
+
+#ifndef _WIN32
+            if (valid == PATH_MIXED_CASE) {
+                // convert to lower case and retry
+                FS_COUNT_STRLWR;
+                Q_strlwr(fullpath + strlen(search->filename) + 1);
+                ret = open_from_disk(file, fullpath);
+                if (ret != Q_ERR_NOENT)
+                    return ret;
+            }
 #endif
-            fp = fopen(fullpath, "rb");
-            if (!fp) {
-                ret = Q_Errno();
-                if (ret == Q_ERR_NOENT) {
-                    continue;
-                }
-                goto fail;
-            }
-
-            ret = get_fp_info(fp, &info);
-            if (ret) {
-                fclose(fp);
-                goto fail;
-            }
-
-            file->type = FS_REAL;
-            file->fp = fp;
-            file->unique = qtrue;
-            file->error = Q_ERR_SUCCESS;
-            file->length = info.size;
-
-            FS_DPrintf("%s: %s: %"PRIz" bytes\n", __func__, fullpath, info.size);
-            return info.size;
         }
     }
 
@@ -2584,7 +2619,7 @@ void **FS_ListFiles(const char *path,
     int valid;
 
     count = 0;
-    valid = -1;
+    valid = PATH_NOT_CHECKED;
 
     if (!path) {
         path = "";
@@ -2691,10 +2726,10 @@ void **FS_ListFiles(const char *path,
                 if (len + pathlen + 1 >= MAX_OSPATH) {
                     continue;
                 }
-                if (valid == -1) {
+                if (valid == PATH_NOT_CHECKED) {
                     valid = FS_ValidatePath(path);
                 }
-                if (valid == 0) {
+                if (valid == PATH_INVALID) {
                     continue;
                 }
                 s = memcpy(buffer, search->filename, len);
@@ -2939,7 +2974,7 @@ static void FS_WhereIs_f(void)
 
     hash = FS_HashPath(normalized, 0);
 
-    valid = -1; // not yet checked
+    valid = PATH_NOT_CHECKED;
 
 // search through the path, one element at a time
     for (search = fs_searchpaths; search; search = search->next) {
@@ -2967,16 +3002,16 @@ static void FS_WhereIs_f(void)
                 }
             }
         } else {
-            if (valid == -1) {
+            if (valid == PATH_NOT_CHECKED) {
                 valid = FS_ValidatePath(normalized);
-                if (!valid) {
+                if (valid == PATH_INVALID) {
                     // warn about invalid path
                     Com_Printf("Not searching for '%s' in physical file "
                                "system since path contains invalid characters.\n",
                                normalized);
                 }
             }
-            if (valid == 0) {
+            if (valid == PATH_INVALID) {
                 continue;
             }
 
@@ -2993,7 +3028,17 @@ static void FS_WhereIs_f(void)
             }
 
             ret = get_path_info(fullpath, &info);
-            if (!ret) {
+
+#ifndef _WIN32
+            if (ret == Q_ERR_NOENT && valid == PATH_MIXED_CASE) {
+                Q_strlwr(fullpath + strlen(search->filename) + 1);
+                ret = get_path_info(fullpath, &info);
+                if (ret == Q_ERR_SUCCESS)
+                    Com_Printf("Physical path found after converting to lower case.\n");
+            }
+#endif
+
+            if (ret == Q_ERR_SUCCESS) {
                 Com_Printf("%s (%"PRIz" bytes)\n", fullpath, info.size);
                 if (!report_all) {
                     return;
@@ -3093,9 +3138,10 @@ static void FS_Stats_f(void)
         //totalHashSize += pack->hash_size;
     }
 
-    Com_Printf("Total calls to OpenFileRead: %d\n", fs_count_read);
+    Com_Printf("Total calls to open_file_read: %d\n", fs_count_read);
     Com_Printf("Total path comparsions: %d\n", fs_count_strcmp);
-    Com_Printf("Total calls to fopen: %d\n", fs_count_open);
+    Com_Printf("Total calls to open_from_disk: %d\n", fs_count_open);
+    Com_Printf("Total mixed-case reopens: %d\n", fs_count_strlwr);
 
     if (!totalHashSize) {
         Com_Printf("No stats to display\n");
