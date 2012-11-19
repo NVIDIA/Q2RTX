@@ -314,6 +314,7 @@ static qerror_t check_file_len(const char *path, size_t len, dltype_t type)
 {
     char buffer[MAX_QPATH], *ext;
     qerror_t ret;
+    int valid;
 
     // check for oversize path
     if (len >= MAX_QPATH)
@@ -326,10 +327,12 @@ static qerror_t check_file_len(const char *path, size_t len, dltype_t type)
     if (len == 0)
         return Q_ERR_NAMETOOSHORT;
 
+    valid = FS_ValidatePath(buffer);
+
     // check path
-    if (!Q_ispath(buffer[0])
+    if (valid == PATH_INVALID
+        || !Q_ispath(buffer[0])
         || !Q_ispath(buffer[len - 1])
-        || !FS_ValidatePath(buffer)
         || strstr(buffer, "..")
         || !strchr(buffer, '/')) {
         // some of these checks are too conservative or even redundant
@@ -347,6 +350,10 @@ static qerror_t check_file_len(const char *path, size_t len, dltype_t type)
     if (FS_FileExists(buffer))
         // it exists, no need to download
         return Q_ERR_EXIST;
+
+    if (valid == PATH_MIXED_CASE)
+        // convert to lower case to make download server happy
+        Q_strlwr(buffer);
 
     ret = HTTP_QueueDownload(buffer, type);
     if (ret != Q_ERR_NOSYS)

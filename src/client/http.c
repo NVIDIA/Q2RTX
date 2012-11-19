@@ -588,6 +588,7 @@ static void check_and_queue_download(char *path)
     char        *ext;
     dltype_t    type;
     unsigned    flags;
+    int         valid;
 
     len = strlen(path);
     if (len >= MAX_QPATH)
@@ -630,11 +631,14 @@ static void check_and_queue_download(char *path)
     }
 
     len = FS_NormalizePath(path, path);
+    if (len == 0)
+        return;
 
-    if (len == 0 ||
+    valid = FS_ValidatePath(path);
+
+    if (valid == PATH_INVALID ||
         !Q_ispath(path[0]) ||
         !Q_ispath(path[len - 1]) ||
-        !FS_ValidatePath(path) ||
         strstr(path, "..") ||
         (type == DL_OTHER && !strchr(path, '/')) ||
         (type == DL_PAK && strchr(path, '/'))) {
@@ -642,9 +646,13 @@ static void check_and_queue_download(char *path)
         return;
     }
 
-    if (!FS_FileExistsEx(path, flags)) {
-        CL_QueueDownload(path, type);
-    }
+    if (FS_FileExistsEx(path, flags))
+        return;
+
+    if (valid == PATH_MIXED_CASE)
+        Q_strlwr(path);
+
+    CL_QueueDownload(path, type);
 }
 
 // A filelist is in memory, scan and validate it and queue up the files.
