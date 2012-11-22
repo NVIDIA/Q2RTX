@@ -437,6 +437,7 @@ ifdef CONFIG_WINDOWS
     ifndef CONFIG_NO_SOFTWARE_SOUND
         OBJS_c += src/windows/wave.o
         ifdef CONFIG_DIRECT_SOUND
+            CFLAGS_c += -DUSE_DSOUND=1
             OBJS_c += src/windows/dsound.o
         endif
     endif
@@ -516,6 +517,7 @@ else
     ifndef CONFIG_NO_SOFTWARE_SOUND
         OBJS_c += src/unix/sdl/sound.o
         ifdef CONFIG_DIRECT_SOUND
+            CFLAGS_c += -DUSE_DSOUND=1
             OBJS_c += src/unix/oss.o
         endif
     endif
