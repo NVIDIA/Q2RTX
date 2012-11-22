@@ -129,9 +129,8 @@ void        Key_SetOverstrikeMode(qboolean overstrike);
 keydest_t   Key_GetDest(void);
 void        Key_SetDest(keydest_t dest);
 
-qboolean    Key_IsDown(int key);
-int         Key_Repeats(int key);
-qboolean    Key_AnyKeyDown(void);
+int         Key_IsDown(int key);
+int         Key_AnyKeyDown(void);
 void        Key_ClearStates(void);
 
 char    *Key_KeynumToString(int keynum);

@@ -15,32 +15,28 @@ You should have received a copy of the GNU General Public License along
 with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
+
 #include "client.h"
-
-/*
-key up events are sent even if in console mode
-*/
-
-static int  anykeydown;
 
 static keywaitcb_t  key_wait_cb;
 static void         *key_wait_arg;
 
 static char     *keybindings[256];
 
-// if false, passed to interpreter while in console
-static qboolean consolekeys[256];
+// bitmap of keys not passed to interpreter while in console
+static byte     consolekeys[256 / 8];
 
-// if true, passed to interpreter while in menu
-static qboolean menubound[256];
-
-#if !USE_CHAR_EVENTS
 // key to map to if shift held down in console
-static int      keyshift[256];
-#endif
+static byte     keyshift[256];
 
-static int      key_repeats[256];   // if > 1, it is autorepeating
-static qboolean keydown[256];
+// key down status: if > 1, it is auto-repeating
+static byte     keydown[256];
+
+// number of keys down for BUTTON_ANY
+static int      anykeydown;
+
+// bitmap for generating button up commands
+static byte     buttondown[256 / 8];
 
 static qboolean key_overstrike;
 
@@ -186,14 +182,6 @@ void Key_SetDest(keydest_t dest)
     }
 
     diff = cls.key_dest ^ dest;
-    if (diff & KEY_CONSOLE) {
-        if (dest & KEY_CONSOLE) {
-// release all keys, to keep the character from continuing an
-// action started before a console switch
-            Key_ClearStates();
-        }
-    }
-
     cls.key_dest = dest;
 
 // activate or deactivate mouse
@@ -206,32 +194,27 @@ void Key_SetDest(keydest_t dest)
 /*
 ===================
 Key_IsDown
+
+Returns key down status: if > 1, it is auto-repeating
 ===================
 */
-qboolean Key_IsDown(int key)
-{
-    if (key < 0 || key > 255) {
-        return qfalse;
-    }
-
-    return keydown[key];
-}
-
-int Key_Repeats(int key)
+int Key_IsDown(int key)
 {
     if (key < 0 || key > 255) {
         return 0;
     }
 
-    return key_repeats[key];
+    return keydown[key];
 }
 
 /*
 ===================
 Key_AnyKeyDown
+
+Returns total number of keys down.
 ===================
 */
-qboolean Key_AnyKeyDown(void)
+int Key_AnyKeyDown(void)
 {
     return anykeydown;
 }
@@ -526,10 +509,10 @@ void Key_Init(void)
 // init ascii characters in console mode
 //
     for (i = K_ASCIIFIRST; i <= K_ASCIILAST; i++)
-        consolekeys[i] = qtrue;
+        Q_SetBit(consolekeys, i);
 
 #define K(x) \
-    consolekeys[K_##x] = qtrue
+    Q_SetBit(consolekeys, K_##x)
 
     K(BACKSPACE);
     K(TAB);
@@ -581,7 +564,6 @@ void Key_Init(void)
 
 #undef K
 
-#if !USE_CHAR_EVENTS
 //
 // init ascii keyshift characters
 //
@@ -611,11 +593,6 @@ void Key_Init(void)
     keyshift[']'] = '}';
     keyshift['`'] = '~';
     keyshift['\\'] = '|';
-#endif
-
-    menubound[K_ESCAPE] = qtrue;
-    for (i = 0; i < 12; i++)
-        menubound[K_F1 + i] = qtrue;
 
 //
 // register our functions
@@ -648,32 +625,17 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
         return;
     }
 
-    // update auto-repeat status
+    // update key down and auto-repeat status
     if (down) {
-        key_repeats[key]++;
-        if (!(cls.key_dest & (KEY_CONSOLE | KEY_MESSAGE | KEY_MENU))
-            && key != K_BACKSPACE
-            && key != K_PAUSE
-            && key != K_ESCAPE
-            && key != K_PGUP
-            && key != K_KP_PGUP
-            && key != K_PGDN
-            && key != K_KP_PGDN
-            && key_repeats[key] > 1) {
-            return; // ignore most autorepeats
-        }
-
-        if (key >= K_MOUSEFIRST && !keybindings[key] && !consolekeys[key]) {
-            Com_Printf("%s is unbound, hit F4 to set.\n",
-                       Key_KeynumToString(key));
-        }
+        if (keydown[key] < 255)
+            keydown[key]++;
     } else {
-        key_repeats[key] = 0;
+        keydown[key] = 0;
     }
 
     // console key is hardcoded, so the user can never unbind it
     if (!Key_IsDown(K_SHIFT) && (key == '`' || key == '~')) {
-        if (down) {
+        if (keydown[key] == 1) {
             Con_ToggleConsole_f();
         }
         return;
@@ -681,9 +643,7 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
 
     // Alt+Enter is hardcoded for all systems
     if (Key_IsDown(K_ALT) && key == K_ENTER) {
-        if (down) {
-            extern void VID_ToggleFullscreen(void);
-
+        if (keydown[key] == 1) {
             VID_ToggleFullscreen();
         }
         return;
@@ -698,17 +658,18 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
         if (cls.key_dest == KEY_GAME &&
             cl.frame.ps.stats[STAT_LAYOUTS] &&
             cls.demo.playback == qfalse) {
-            if (key_repeats[key] == 2) {
+            if (keydown[key] == 2) {
                 // force main menu if escape is held
                 UI_OpenMenu(UIMENU_GAME);
-            } else if (key_repeats[key] == 1) {
+            } else if (keydown[key] == 1) {
                 // put away help computer / inventory
                 CL_ClientCommand("putaway");
             }
             return;
         }
 
-        if (key_repeats[key] > 1) {
+        // ignore autorepeats
+        if (keydown[key] > 1) {
             return;
         }
 
@@ -731,9 +692,8 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
     }
 
     // track if any key is down for BUTTON_ANY
-    keydown[key] = down;
     if (down) {
-        if (key_repeats[key] == 1)
+        if (keydown[key] == 1)
             anykeydown++;
     } else {
         anykeydown--;
@@ -742,7 +702,7 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
     }
 
     // hack for demo freelook in windowed mode
-    if (cls.key_dest == KEY_GAME && cls.demo.playback && key == K_SHIFT) {
+    if (cls.key_dest == KEY_GAME && cls.demo.playback && key == K_SHIFT && keydown[key] <= 1) {
         IN_Activate();
     }
 
@@ -750,13 +710,15 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
 // if not a consolekey, send to the interpreter no matter what mode is
 //
     if ((cls.key_dest == KEY_GAME) ||
-        ((cls.key_dest & KEY_CONSOLE) && !consolekeys[key]) ||
-        ((cls.key_dest & KEY_MENU) && menubound[key])) {
+        ((cls.key_dest & KEY_CONSOLE) && !Q_IsBitSet(consolekeys, key)) ||
+        ((cls.key_dest & KEY_MENU) && (key >= K_F1 && key <= K_F12)) ||
+        (!down && Q_IsBitSet(buttondown, key))) {
 //
-// Key up events only generate commands if the game key binding is
-// a button command (leading + sign).
-// Button commands include the kenum as a parameter, so multiple
-// downs can be matched with ups.
+// Key up events only generate commands if the game key binding is a button
+// command (leading + sign). These will occur even in console mode, to keep the
+// character from continuing an action started before a console switch. Button
+// commands include the kenum as a parameter, so multiple downs can be matched
+// with ups.
 //
         if (!down) {
             kb = keybindings[key];
@@ -765,7 +727,6 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
                            kb + 1, key, time);
                 Cbuf_AddText(&cmd_buffer, cmd);
             }
-#if !USE_CHAR_EVENTS
             if (keyshift[key] != key) {
                 kb = keybindings[keyshift[key]];
                 if (kb && kb[0] == '+') {
@@ -774,19 +735,21 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
                     Cbuf_AddText(&cmd_buffer, cmd);
                 }
             }
-#endif
+            Q_ClearBit(buttondown, key);
             return;
         }
 
-        if (key_repeats[key] > 1) {
+        // ignore autorepeats
+        if (keydown[key] > 1) {
             return;
         }
 
-#if !USE_CHAR_EVENTS
+        // generate button up command when released
+        Q_SetBit(buttondown, key);
+
         if (Key_IsDown(K_SHIFT) && keyshift[key] != key && keybindings[keyshift[key]]) {
             key = keyshift[key];
         }
-#endif
 
         kb = keybindings[key];
         if (kb) {
@@ -802,6 +765,9 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
         return;
     }
 
+    if (cls.key_dest == KEY_GAME)
+        return;
+
     if (!down)
         return;     // other subsystems only care about key down events
 
@@ -812,8 +778,6 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
     } else if (cls.key_dest & KEY_MESSAGE) {
         Key_Message(key);
     }
-
-#if !USE_CHAR_EVENTS
 
     if (Key_IsDown(K_CTRL) || Key_IsDown(K_ALT)) {
         return;
@@ -883,34 +847,7 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
     } else if (cls.key_dest & KEY_MESSAGE) {
         Char_Message(key);
     }
-
-#endif // !USE_CHAR_EVENTS
-
 }
-
-#if USE_CHAR_EVENTS
-
-/*
-===================
-Key_CharEvent
-===================
-*/
-void Key_CharEvent(int key)
-{
-    if (key == '`' || key == '~') {
-        return;
-    }
-
-    if (cls.key_dest & KEY_CONSOLE) {
-        Char_Console(key);
-    } else if (cls.key_dest & KEY_MENU) {
-        UI_CharEvent(key);
-    } else if (cls.key_dest & KEY_MESSAGE) {
-        Char_Message(key);
-    }
-}
-
-#endif
 
 /*
 ===================
@@ -921,13 +858,18 @@ void Key_ClearStates(void)
 {
     int     i;
 
-    for (i = 0; i < 256; i++) {
-        if (keydown[i] || key_repeats[i])
-            Key_Event(i, qfalse, 0);
-        keydown[i] = 0;
-        key_repeats[i] = 0;
+    // hack for menu key binding
+    if (key_wait_cb) {
+        key_wait_cb(key_wait_arg, K_ESCAPE);
+        key_wait_cb = NULL;
     }
 
+    for (i = 0; i < 256; i++) {
+        if (keydown[i])
+            Key_Event(i, qfalse, com_eventTime);
+    }
+
+    memset(buttondown, 0, sizeof(buttondown));
     anykeydown = 0;
 }
 

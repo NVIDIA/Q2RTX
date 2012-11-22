@@ -935,7 +935,8 @@ static void Size(menuFrameWork_t *self)
 
 static menuSound_t Keydown(menuFrameWork_t *self, int key)
 {
-    if (Key_Repeats(key) > 1)
+    // ignore autorepeats
+    if (Key_IsDown(key) > 1)
         return QMS_NOTHANDLED;
 
     switch (key) {

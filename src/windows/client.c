@@ -1043,9 +1043,6 @@ STATIC LONG WINAPI Win_MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
 
     case WM_SYSCHAR:
     case WM_CHAR:
-#if USE_CHAR_EVENTS
-        Key_CharEvent(wParam);
-#endif
         return FALSE;
 
     case WM_ERASEBKGND:
