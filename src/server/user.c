@@ -77,6 +77,13 @@ static void create_baselines(void)
         base = *chunk + (i & SV_BASELINES_MASK);
         MSG_PackEntity(base, &ent->s, Q2PRO_SHORTANGLES(sv_client, i));
 
+#if USE_MVD_CLIENT
+        if (sv.state == ss_broadcast) {
+            // spectators only need to know about inline BSP models
+            if (base->solid != PACKED_BSP)
+                base->solid = 0;
+        } else
+#endif
         if (sv_client->esFlags & MSG_ES_LONGSOLID) {
             base->solid = sv.entities[i].solid32;
         }
