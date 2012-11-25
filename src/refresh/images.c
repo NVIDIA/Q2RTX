@@ -65,10 +65,9 @@ static qerror_t _IMG_LoadPCX(byte *rawdata, size_t rawlen,
 {
     byte    *raw, *end;
     dpcx_t  *pcx;
-    size_t  x, y, w, h;
+    int     x, y, w, h, scan;
     int     dataByte, runLength;
     byte    *out, *pix;
-    qerror_t ret;
 
     if (pic) {
         *pic = NULL;
@@ -83,18 +82,25 @@ static qerror_t _IMG_LoadPCX(byte *rawdata, size_t rawlen,
 
     pcx = (dpcx_t *)rawdata;
 
-    if (pcx->manufacturer != 0x0a || pcx->version != 5) {
+    if (pcx->manufacturer != 10 || pcx->version != 5) {
         return Q_ERR_UNKNOWN_FORMAT;
     }
 
-    w = LittleShort(pcx->xmax) + 1;
-    h = LittleShort(pcx->ymax) + 1;
     if (pcx->encoding != 1 || pcx->bits_per_pixel != 8) {
         return Q_ERR_INVALID_FORMAT;
     }
+
+    w = (LittleShort(pcx->xmax) - LittleShort(pcx->xmin)) + 1;
+    h = (LittleShort(pcx->ymax) - LittleShort(pcx->ymin)) + 1;
     if (w > 640 || h > 480 || w * h > MAX_PALETTED_PIXELS) {
         return Q_ERR_INVALID_FORMAT;
     }
+
+    if (pcx->color_planes != 1) {
+        return Q_ERR_INVALID_FORMAT;
+    }
+
+    scan = LittleShort(pcx->bytes_per_line);
 
     //
     // get palette
@@ -116,29 +122,26 @@ static qerror_t _IMG_LoadPCX(byte *rawdata, size_t rawlen,
         end = (byte *)pcx + rawlen;
 
         for (y = 0; y < h; y++, pix += w) {
-            for (x = 0; x < w;) {
-                if (raw >= end) {
-                    ret = Q_ERR_BAD_EXTENT;
+            for (x = 0; x < scan;) {
+                if (raw >= end)
                     goto fail;
-                }
                 dataByte = *raw++;
 
                 if ((dataByte & 0xC0) == 0xC0) {
                     runLength = dataByte & 0x3F;
-                    if (x + runLength > w) {
-                        ret = Q_ERR_BAD_RLE_PACKET;
+                    if (x + runLength > scan)
                         goto fail;
-                    }
-                    if (raw >= end) {
-                        ret = Q_ERR_BAD_RLE_PACKET;
+                    if (raw >= end)
                         goto fail;
-                    }
                     dataByte = *raw++;
-                    while (runLength--) {
-                        pix[x++] = dataByte;
-                    }
                 } else {
-                    pix[x++] = dataByte;
+                    runLength = 1;
+                }
+
+                while (runLength--) {
+                    if (x < w)
+                        pix[x] = dataByte;
+                    x++;
                 }
             }
         }
@@ -155,7 +158,7 @@ static qerror_t _IMG_LoadPCX(byte *rawdata, size_t rawlen,
 
 fail:
     IMG_FreePixels(out);
-    return ret;
+    return Q_ERR_BAD_RLE_PACKET;
 }
 
 IMG_LOAD(PCX)
