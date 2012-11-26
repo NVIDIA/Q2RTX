@@ -103,13 +103,17 @@ static sndinitstat_t Init(void)
 
     if (obtained.format != AUDIO_S16LSB) {
         Com_EPrintf("SDL audio format %d unsupported.\n", obtained.format);
-        Shutdown();
-        return SIS_FAILURE;
+        goto fail;
+    }
+
+    if (obtained.channels != 1 && obtained.channels != 2) {
+        Com_EPrintf("SDL audio channels %d unsupported.\n", obtained.channels);
+        goto fail;
     }
 
     dma.speed = obtained.freq;
     dma.channels = obtained.channels;
-    dma.samples = 2048 * obtained.channels;
+    dma.samples = 0x8000 * obtained.channels;
     dma.submission_chunk = 1;
     dma.samplebits = 16;
     dma.buffer = Z_Mallocz(dma.samples * 2);
@@ -121,6 +125,10 @@ static sndinitstat_t Init(void)
     SDL_PauseAudio(0);
 
     return SIS_SUCCESS;
+
+fail:
+    Shutdown();
+    return SIS_FAILURE;
 }
 
 static void BeginPainting(void)
