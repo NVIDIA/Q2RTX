@@ -23,7 +23,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "video.h"
 #include "../res/q2pro.xbm"
 
-sdl_state_t    sdl;
+sdl_state_t     sdl;
+
+static cvar_t   *sdl_keymap;
 
 /*
 ===============================================================================
@@ -152,6 +154,7 @@ qboolean VID_SDL_Init(void)
         SDL_WM_SetIcon(sdl.icon, NULL);
     }
 
+    sdl_keymap = Cvar_Get("sdl_keymap", "0", 0);
     vid_hwgamma = Cvar_Get("vid_hwgamma", "0", CVAR_REFRESH);
 
     if (vid_hwgamma->integer) {
@@ -220,9 +223,55 @@ static void activate_event(void)
     CL_Activate(active);
 }
 
+static const byte scantokey[128] = {
+//  0               1           2               3               4           5               6           7
+//  8               9           A               B               C           D               E           F
+    0,              K_ESCAPE,   '1',            '2',            '3',        '4',            '5',        '6',
+    '7',            '8',        '9',            '0',            '-',        '=',            K_BACKSPACE,K_TAB,      // 0
+    'q',            'w',        'e',            'r',            't',        'y',            'u',        'i',
+    'o',            'p',        '[',            ']',            K_ENTER,    K_LCTRL,        'a',        's',        // 1
+    'd',            'f',        'g',            'h',            'j',        'k',            'l',        ';',
+    '\'',           '`',        K_LSHIFT,       '\\',           'z',        'x',            'c',        'v',        // 2
+    'b',            'n',        'm',            ',',            '.',        '/',            K_RSHIFT,   K_KP_MULTIPLY,
+    K_LALT,         K_SPACE,    K_CAPSLOCK,     K_F1,           K_F2,       K_F3,           K_F4,       K_F5,       // 3
+    K_F6,           K_F7,       K_F8,           K_F9,           K_F10,      K_NUMLOCK,      K_SCROLLOCK,K_KP_HOME,
+    K_KP_UPARROW,   K_KP_PGUP,  K_KP_MINUS,     K_KP_LEFTARROW, K_KP_5,     K_KP_RIGHTARROW,K_KP_PLUS,  K_KP_END,   // 4
+    K_KP_DOWNARROW, K_KP_PGDN,  K_KP_INS,       K_KP_DEL,       0,          0,              0,          K_F11,
+    K_F12,          0,          0,              0,              0,          0,              0,          0,          // 5
+    K_KP_ENTER,     K_RCTRL,    K_KP_SLASH,     0,              K_RALT,     0,              K_HOME,     K_UPARROW,
+    K_PGUP,         K_LEFTARROW,K_RIGHTARROW,   K_END,          K_DOWNARROW,K_PGDN,         K_INS,      K_DEL,      // 6
+    0,              0,          0,              0,              0,          0,              0,          K_PAUSE,
+    0,              0,          0,              0,              0,          K_LWINKEY,      K_RWINKEY,  K_MENU      // 7
+};
+
+static void key_event_keymap(SDL_keysym *keysym, qboolean down)
+{
+    if (keysym->scancode < 8 || keysym->scancode > 127 + 8)
+        return;
+
+    byte result = scantokey[keysym->scancode - 8];
+
+    if (result == 0) {
+        Com_DPrintf("%s: unknown scancode %d\n", __func__, keysym->scancode);
+        return;
+    }
+
+    if (result == K_LALT || result == K_RALT)
+        Key_Event(K_ALT, down, com_eventTime);
+    else if (result == K_LCTRL || result == K_RCTRL)
+        Key_Event(K_CTRL, down, com_eventTime);
+    else if (result == K_LSHIFT || result == K_RSHIFT)
+        Key_Event(K_SHIFT, down, com_eventTime);
+
+    Key_Event(result, down, com_eventTime);
+}
+
 static void key_event(SDL_keysym *keysym, qboolean down)
 {
     unsigned key1, key2 = 0;
+
+    if (sdl_keymap->integer)
+        return key_event_keymap(keysym, down);
 
     if (keysym->sym <= 127) {
         // ASCII chars are mapped directly
