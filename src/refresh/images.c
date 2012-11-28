@@ -101,6 +101,9 @@ static qerror_t _IMG_LoadPCX(byte *rawdata, size_t rawlen,
     }
 
     scan = LittleShort(pcx->bytes_per_line);
+    if (scan < w) {
+        return Q_ERR_INVALID_FORMAT;
+    }
 
     //
     // get palette
