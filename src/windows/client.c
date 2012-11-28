@@ -610,114 +610,63 @@ static void win_disablewinkey_changed(cvar_t *self)
     }
 }
 
-static const byte scantokey[128] = {
-//  0           1           2           3               4           5               6           7
-//  8           9           A           B               C           D               E           F
-    0,          K_ESCAPE,   '1',        '2',            '3',        '4',            '5',         '6',
-    '7',        '8',        '9',        '0',            '-',        '=',            K_BACKSPACE,  K_TAB,    // 0
-    'q',        'w',        'e',        'r',            't',        'y',            'u',         'i',
-    'o',        'p',        '[',        ']',            K_ENTER,    K_CTRL,         'a',         's',       // 1
-    'd',        'f',        'g',        'h',            'j',        'k',            'l',         ';',
-    '\'' ,      '`',        K_LSHIFT,   '\\',           'z',        'x',            'c',         'v',       // 2
-    'b',        'n',        'm',        ',',            '.',        '/',            K_RSHIFT,    K_KP_MULTIPLY,
-    K_ALT,      K_SPACE,    K_CAPSLOCK, K_F1,           K_F2,       K_F3,           K_F4,        K_F5,      // 3
-    K_F6,       K_F7,       K_F8,       K_F9,           K_F10,      K_PAUSE,        K_SCROLLOCK, K_HOME,
-    K_UPARROW,  K_PGUP,     K_KP_MINUS, K_LEFTARROW,    K_KP_5,     K_RIGHTARROW,   K_KP_PLUS,   K_END,     // 4
-    K_DOWNARROW,K_PGDN,     K_INS,      K_DEL,          0,          0,              0,           K_F11,
-    K_F12,      0,          0,          K_LWINKEY,      K_RWINKEY,  K_MENU,         0,           0,         // 5
-    0,          0,          0,          0,              0,          0,              0,           0,
-    0,          0,          0,          0,              0,          0,              0,           0,         // 6
-    0,          0,          0,          0,              0,          0,              0,           0,
-    0,          0,          0,          0,              0,          0,              0,           0          // 7
+static const byte scantokey[2][96] = {
+    {
+//      0               1           2           3               4           5               6           7
+//      8               9           A           B               C           D               E           F
+        0,              K_ESCAPE,   '1',        '2',            '3',        '4',            '5',        '6',
+        '7',            '8',        '9',        '0',            '-',        '=',            K_BACKSPACE,K_TAB,      // 0
+        'q',            'w',        'e',        'r',            't',        'y',            'u',        'i',
+        'o',            'p',        '[',        ']',            K_ENTER,    K_LCTRL,        'a',        's',        // 1
+        'd',            'f',        'g',        'h',            'j',        'k',            'l',        ';',
+        '\'',           '`',        K_LSHIFT,   '\\',           'z',        'x',            'c',        'v',        // 2
+        'b',            'n',        'm',        ',',            '.',        '/',            K_RSHIFT,   K_KP_MULTIPLY,
+        K_LALT,         K_SPACE,    K_CAPSLOCK, K_F1,           K_F2,       K_F3,           K_F4,       K_F5,       // 3
+        K_F6,           K_F7,       K_F8,       K_F9,           K_F10,      K_PAUSE,        K_SCROLLOCK,K_KP_HOME,
+        K_KP_UPARROW,   K_KP_PGUP,  K_KP_MINUS, K_KP_LEFTARROW, K_KP_5,     K_KP_RIGHTARROW,K_KP_PLUS,  K_KP_END,   // 4
+        K_KP_DOWNARROW, K_KP_PGDN,  K_KP_INS,   K_KP_DEL,       0,          0,              0,          K_F11,
+        K_F12,          0,          0,          0,              0,          0,              0,          0,          // 5
+    },
+    {
+        0,              0,          0,          0,              0,          0,              0,          0,
+        0,              0,          0,          0,              0,          0,              0,          0,          // 0
+        0,              0,          0,          0,              0,          0,              0,          0,
+        0,              0,          0,          0,              K_KP_ENTER, K_RCTRL,        0,          0,          // 1
+        0,              0,          0,          0,              0,          0,              0,          0,
+        0,              0,          0,          0,              0,          0,              0,          0,          // 2
+        0,              0,          0,          0,              0,          K_KP_SLASH,     0,          0,
+        K_RALT,         0,          0,          0,              0,          0,              0,          0,          // 3
+        0,              0,          0,          0,              0,          K_NUMLOCK,      0,          K_HOME,
+        K_UPARROW,      K_PGUP,     0,          K_LEFTARROW,    0,          K_RIGHTARROW,   0,          K_END,      // 4
+        K_DOWNARROW,    K_PGDN,     K_INS,      K_DEL,          0,          0,              0,          0,
+        0,              0,          0,          K_LWINKEY,      K_RWINKEY,  K_MENU,         0,          0,          // 5
+    }
 };
 
 // Map from windows to quake keynums
 static void legacy_key_event(WPARAM wParam, LPARAM lParam, qboolean down)
 {
-    unsigned scancode = (lParam >> 16) & 255;
-    unsigned extended = (lParam >> 24) & 1;
-    unsigned result;
+    int scancode = (lParam >> 16) & 255;
+    int extended = (lParam >> 24) & 1;
+    byte result;
 
-    if (scancode > 127) {
-        return;
-    }
+    if (scancode < 96)
+        result = scantokey[extended][scancode];
+    else
+        result = 0;
 
-    result = scantokey[scancode];
     if (!result) {
-        Com_DPrintf("%s: unknown scancode: %u\n", __func__, scancode);
+        Com_DPrintf("%s: unknown %sscancode %d\n",
+                    __func__, extended ? "extended " : "", scancode);
         return;
     }
 
-    if (!extended) {
-        switch (result) {
-        case K_HOME:
-            result = K_KP_HOME;
-            break;
-        case K_UPARROW:
-            result = K_KP_UPARROW;
-            break;
-        case K_PGUP:
-            result = K_KP_PGUP;
-            break;
-        case K_LEFTARROW:
-            result = K_KP_LEFTARROW;
-            break;
-        case K_RIGHTARROW:
-            result = K_KP_RIGHTARROW;
-            break;
-        case K_END:
-            result = K_KP_END;
-            break;
-        case K_DOWNARROW:
-            result = K_KP_DOWNARROW;
-            break;
-        case K_PGDN:
-            result = K_KP_PGDN;
-            break;
-        case K_INS:
-            result = K_KP_INS;
-            break;
-        case K_DEL:
-            result = K_KP_DEL;
-            break;
-        case K_LSHIFT:
-            Key_Event(K_SHIFT, down, win.lastMsgTime);
-            Key_Event(K_LSHIFT, down, win.lastMsgTime);
-            return;
-        case K_RSHIFT:
-            Key_Event(K_SHIFT, down, win.lastMsgTime);
-            Key_Event(K_RSHIFT, down, win.lastMsgTime);
-            return;
-        case K_ALT:
-            Key_Event(K_ALT, down, win.lastMsgTime);
-            Key_Event(K_LALT, down, win.lastMsgTime);
-            return;
-        case K_CTRL:
-            Key_Event(K_CTRL, down, win.lastMsgTime);
-            Key_Event(K_LCTRL, down, win.lastMsgTime);
-            return;
-        }
-    } else {
-        switch (result) {
-        case K_ENTER:
-            result = K_KP_ENTER;
-            break;
-        case '/':
-            result = K_KP_SLASH;
-            break;
-        case K_PAUSE:
-            result = K_NUMLOCK;
-            break;
-        case K_ALT:
-            Key_Event(K_ALT, down, win.lastMsgTime);
-            Key_Event(K_RALT, down, win.lastMsgTime);
-            return;
-        case K_CTRL:
-            Key_Event(K_CTRL, down, win.lastMsgTime);
-            Key_Event(K_RCTRL, down, win.lastMsgTime);
-            return;
-        }
-    }
+    if (result == K_LALT || result == K_RALT)
+        Key_Event(K_ALT, down, win.lastMsgTime);
+    else if (result == K_LCTRL || result == K_RCTRL)
+        Key_Event(K_CTRL, down, win.lastMsgTime);
+    else if (result == K_LSHIFT || result == K_RSHIFT)
+        Key_Event(K_SHIFT, down, win.lastMsgTime);
 
     Key_Event(result, down, win.lastMsgTime);
 }
