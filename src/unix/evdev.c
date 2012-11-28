@@ -49,6 +49,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 typedef struct {
     list_t      entry;
+    char        *path;
+    char        *name;
     int         fd;
 } evdev_t;
 
@@ -64,7 +66,11 @@ static struct {
 
 static void evdev_remove(evdev_t *dev)
 {
+    Com_DPrintf("Removing %s [%s]\n", dev->path, dev->name);
+
     close(dev->fd);
+    Z_Free(dev->path);
+    Z_Free(dev->name);
     List_Remove(&dev->entry);
     Z_Free(dev);
 }
@@ -81,7 +87,7 @@ static void evdev_read(evdev_t *dev)
         if (errno == EAGAIN || errno == EINTR) {
             return;
         }
-        Com_EPrintf("Couldn't read mouse: %s\n", strerror(errno));
+        Com_EPrintf("Couldn't read %s: %s\n", dev->path, strerror(errno));
         evdev_remove(dev);
         return;
     }
@@ -180,13 +186,16 @@ static void ShutdownMouse(void)
     SDL_WM_SetCaption(PRODUCT, APPLICATION);
 #endif
 
+    Cmd_RemoveCommand("evdevlist");
+
     memset(&evdev, 0, sizeof(evdev));
 }
 
 static evdev_t *evdev_add(const char *path)
 {
+    char buffer[MAX_QPATH];
     evdev_t *dev;
-    int fd;
+    int fd, ret;
 
     fd = open(path, O_RDONLY | O_NONBLOCK);
     if (fd == -1) {
@@ -194,9 +203,20 @@ static evdev_t *evdev_add(const char *path)
         return NULL;
     }
 
-    Com_DPrintf("Adding device %s\n", path);
+    ret = ioctl(fd, EVIOCGNAME(MAX_QPATH), buffer);
+    if (ret > 0) {
+        if (ret > MAX_QPATH)
+            ret = MAX_QPATH;
+        buffer[ret - 1] = 0;
+    } else {
+        strcpy(buffer, "Unknown");
+    }
+
+    Com_DPrintf("Adding %s [%s]\n", path, buffer);
 
     dev = Z_Malloc(sizeof(*dev));
+    dev->path = Z_CopyString(path);
+    dev->name = Z_CopyString(buffer);
     dev->fd = fd;
     List_Append(&evdev.devices, &dev->entry);
 
@@ -241,6 +261,20 @@ static void auto_add_devices(void)
 }
 #endif
 
+static void ListDevices_f(void)
+{
+    evdev_t *dev;
+
+    if (LIST_EMPTY(&evdev.devices)) {
+        Com_Printf("No input devices.\n");
+        return;
+    }
+
+    FOR_EACH_EVDEV(dev) {
+        Com_Printf("%s [%s]\n", dev->path, dev->name);
+    }
+}
+
 static qboolean InitMouse(void)
 {
     cvar_t *var;
@@ -276,6 +310,8 @@ static qboolean InitMouse(void)
 #endif
     }
 
+    Cmd_AddCommand("evdevlist", ListDevices_f);
+
     Com_Printf("Evdev mouse initialized.\n");
     evdev.initialized = qtrue;
 
@@ -297,14 +333,12 @@ static void GrabMouse(grab_t grab)
         return;
     }
 
-    if (grab == IN_GRAB) {
 #if USE_SDL
+    if (grab == IN_GRAB) {
         SDL_WM_GrabInput(SDL_GRAB_ON);
         SDL_WM_SetCaption("[" PRODUCT "]", APPLICATION);
         SDL_ShowCursor(SDL_DISABLE);
-#endif
     } else {
-#if USE_SDL
         if (evdev.grabbed == IN_GRAB) {
             SDL_WM_GrabInput(SDL_GRAB_OFF);
             SDL_WM_SetCaption(PRODUCT, APPLICATION);
@@ -314,17 +348,15 @@ static void GrabMouse(grab_t grab)
         } else {
             SDL_ShowCursor(SDL_ENABLE);
         }
-#endif
     }
+#endif
 
-    FOR_EACH_EVDEV(dev) {
-        if (!grab) {
-            continue;
-        }
-
+    if (grab) {
         // pump pending events
-        while (read(dev->fd, &ev, EVENT_SIZE) == EVENT_SIZE)
-            ;
+        FOR_EACH_EVDEV(dev) {
+            while (read(dev->fd, &ev, EVENT_SIZE) == EVENT_SIZE)
+                ;
+        }
     }
 
     evdev.dx = 0;
@@ -353,5 +385,4 @@ void DI_FillAPI(inputAPI_t *api)
     api->GetEvents = GetMouseEvents;
     api->GetMotion = GetMouseMotion;
 }
-
 
