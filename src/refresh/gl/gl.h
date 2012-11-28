@@ -135,6 +135,7 @@ extern cvar_t *gl_dlight_falloff;
 extern cvar_t *gl_modulate_entities;
 extern cvar_t *gl_doublelight_entities;
 extern cvar_t *gl_fragment_program;
+extern cvar_t *gl_fontshadow;
 
 // development variables
 extern cvar_t *gl_znear;

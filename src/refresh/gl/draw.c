@@ -239,6 +239,18 @@ static inline void draw_char(int x, int y, int c, qboolean alt, image_t *image)
     c |= alt << 7;
     s = (c & 15) * 0.0625f;
     t = (c >> 4) * 0.0625f;
+
+    if (gl_fontshadow->integer > 0) {
+        uint32_t black = MakeColor(0, 0, 0, draw.colors[0].u8[3]);
+
+        GL_StretchPic(x + 1, y + 1, CHAR_WIDTH, CHAR_HEIGHT, s, t,
+                      s + 0.0625f, t + 0.0625f, black, image);
+
+        if (gl_fontshadow->integer > 1)
+            GL_StretchPic(x + 2, y + 2, CHAR_WIDTH, CHAR_HEIGHT, s, t,
+                          s + 0.0625f, t + 0.0625f, black, image);
+    }
+
     GL_StretchPic(x, y, CHAR_WIDTH, CHAR_HEIGHT, s, t,
                   s + 0.0625f, t + 0.0625f, draw.colors[alt].u32, image);
 }
