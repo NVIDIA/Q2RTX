@@ -238,7 +238,7 @@ static const byte scantokey[128] = {
     K_KP_UPARROW,   K_KP_PGUP,  K_KP_MINUS,     K_KP_LEFTARROW, K_KP_5,     K_KP_RIGHTARROW,K_KP_PLUS,  K_KP_END,   // 4
     K_KP_DOWNARROW, K_KP_PGDN,  K_KP_INS,       K_KP_DEL,       0,          0,              0,          K_F11,
     K_F12,          0,          0,              0,              0,          0,              0,          0,          // 5
-    K_KP_ENTER,     K_RCTRL,    K_KP_SLASH,     0,              K_RALT,     0,              K_HOME,     K_UPARROW,
+    K_KP_ENTER,     K_RCTRL,    K_KP_SLASH,     K_PRINTSCREEN,  K_RALT,     0,              K_HOME,     K_UPARROW,
     K_PGUP,         K_LEFTARROW,K_RIGHTARROW,   K_END,          K_DOWNARROW,K_PGDN,         K_INS,      K_DEL,      // 6
     0,              0,          0,              0,              0,          0,              0,          K_PAUSE,
     0,              0,          0,              0,              0,          K_LWINKEY,      K_RWINKEY,  K_MENU      // 7
@@ -329,6 +329,7 @@ static void key_event(SDL_keysym *keysym, qboolean down)
         K(LSUPER,    LWINKEY)
         K(RSUPER,    RWINKEY)
         K(MENU,      MENU)
+        K(PRINT,     PRINTSCREEN)
 
         KK(RSHIFT, SHIFT, RSHIFT)
         KK(LSHIFT, SHIFT, LSHIFT)

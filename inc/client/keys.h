@@ -66,6 +66,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define K_LWINKEY       156
 #define K_RWINKEY       157
 #define K_MENU          158
+#define K_PRINTSCREEN   159
 
 #define K_KP_HOME       160
 #define K_KP_UPARROW    161

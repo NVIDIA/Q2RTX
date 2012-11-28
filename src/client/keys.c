@@ -96,6 +96,7 @@ static const keyname_t keynames[] = {
     K(LWINKEY),
     K(RWINKEY),
     K(MENU),
+    K(PRINTSCREEN),
 
     K(KP_HOME),
     K(KP_UPARROW),
