@@ -92,14 +92,20 @@ void GL_DrawParticles(void)
     int numverts;
     vec_t *dst_vert;
     uint32_t *dst_color;
+    int blend;
 
     if (!glr.fd.num_particles) {
         return;
     }
 
+    if (gl_partstyle->integer)
+        blend = GLS_BLEND_ADD;
+    else
+        blend = GLS_BLEND_BLEND;
+
     GL_BindTexture(TEXNUM_PARTICLE);
     GL_TexEnv(GL_MODULATE);
-    GL_Bits(GLS_BLEND_BLEND | GLS_DEPTHMASK_FALSE);
+    GL_Bits(blend | GLS_DEPTHMASK_FALSE);
 
     qglEnableClientState(GL_COLOR_ARRAY);
     qglColorPointer(4, GL_UNSIGNED_BYTE, 0, tess.colors);

@@ -533,6 +533,11 @@ gl_drawsky::
 gl_partscale::
     Specifies minimum size of particles. Default value is 2.
 
+gl_partstyle::
+    Specifies drawing style of particles. Default value is 0.
+      - 0 — blend colors
+      - 1 — saturate colors
+
 gl_celshading::
     Enables drawing black contour lines around 3D models (aka ‘celshading’).
     Value of this variable specifies thickness of the lines drawn. Default

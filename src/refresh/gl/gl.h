@@ -120,6 +120,7 @@ extern statCounters_t c;
 
 // regular variables
 extern cvar_t *gl_partscale;
+extern cvar_t *gl_partstyle;
 extern cvar_t *gl_celshading;
 extern cvar_t *gl_dotshading;
 extern cvar_t *gl_shadows;
