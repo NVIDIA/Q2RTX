@@ -60,6 +60,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define K_HOME          150
 #define K_END           151
 
+#define K_102ND         152
+
 #define K_NUMLOCK       153
 #define K_CAPSLOCK      154
 #define K_SCROLLOCK     155

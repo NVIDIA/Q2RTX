@@ -90,6 +90,8 @@ static const keyname_t keynames[] = {
     K(HOME),
     K(END),
 
+    K(102ND),
+
     K(NUMLOCK),
     K(CAPSLOCK),
     K(SCROLLOCK),
