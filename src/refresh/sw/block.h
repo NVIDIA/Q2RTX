@@ -2,8 +2,8 @@
 
 void BLOCK_FUNC(void)
 {
-    int             v, i, b, lightstep, lighttemp, light;
-    byte    pix, *psource, *prowdest;
+    int     v, i, b, lightstep, lighttemp, light;
+    byte    *psource, *prowdest;
 
     psource = pbasesource;
     prowdest = prowdestbase;
@@ -24,9 +24,9 @@ void BLOCK_FUNC(void)
             light = lightright;
 
             for (b = BLOCK_SIZE - 1; b >= 0; b--) {
-                pix = psource[b];
-                prowdest[b] = ((unsigned char *)vid.colormap)
-                              [(light & 0xFF00) + pix];
+                prowdest[b * TEX_BYTES + 0] = (psource[b * TEX_BYTES + 0] * light) >> 16;
+                prowdest[b * TEX_BYTES + 1] = (psource[b * TEX_BYTES + 1] * light) >> 16;
+                prowdest[b * TEX_BYTES + 2] = (psource[b * TEX_BYTES + 2] * light) >> 16;
                 light += lightstep;
             }
 

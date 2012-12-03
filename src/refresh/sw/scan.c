@@ -94,11 +94,16 @@ D_DrawTurbulent8Span
 void D_DrawTurbulent8Span(void)
 {
     int     sturb, tturb;
+    byte    *ptex;
 
     do {
         sturb = ((r_turb_s + r_turb_turb[(r_turb_t >> 16) & (CYCLE - 1)]) >> 16) & 63;
         tturb = ((r_turb_t + r_turb_turb[(r_turb_s >> 16) & (CYCLE - 1)]) >> 16) & 63;
-        *r_turb_pdest++ = *(r_turb_pbase + (tturb << 6) + sturb);
+        ptex = r_turb_pbase + (tturb * 64 * TEX_BYTES) + sturb * TEX_BYTES;
+        r_turb_pdest[0] = ptex[2];
+        r_turb_pdest[1] = ptex[1];
+        r_turb_pdest[2] = ptex[0];
+        r_turb_pdest += VID_BYTES;
         r_turb_s += r_turb_sstep;
         r_turb_t += r_turb_tstep;
     } while (--r_turb_spancount > 0);
@@ -480,7 +485,11 @@ void D_DrawSpans16(espan_t *pspan)
             }
 
             do {
-                *pdest++ = *(pbase + (s >> 16) + (t >> 16) * cachewidth);
+                pbase = (byte *)cacheblock + (s >> 16) * TEX_BYTES + (t >> 16) * cachewidth;
+                pdest[0] = pbase[2];
+                pdest[1] = pbase[1];
+                pdest[2] = pbase[0];
+                pdest += VID_BYTES;
                 s += sstep;
                 t += tstep;
             } while (--spancount > 0);

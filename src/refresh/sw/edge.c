@@ -738,7 +738,10 @@ void D_FlatFillSurface(surf_t *surf, uint32_t color)
         pdest = (byte *)d_viewbuffer + d_scantable[span->v] + span->u * VID_BYTES;
         count = span->count;
         do {
-            *pdest++ = color & 0xff;
+            pdest[0] = color & 0xff;
+            pdest[1] = (color >> 8) & 0xff;
+            pdest[2] = (color >> 16) & 0xff;
+            pdest += VID_BYTES;
         } while (--count);
     }
 }

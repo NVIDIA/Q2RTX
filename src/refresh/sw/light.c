@@ -322,12 +322,16 @@ void R_BuildLightMap(void)
 // bound, invert, and shift
     for (i = 0; i < size; i++) {
         t = blocklights[i];
+#if 0
         if (t < 0)
             t = 0;
         t = (255 * 256 - t) >> (8 - VID_CBITS);
 
         if (t < (1 << 6))
             t = (1 << 6);
+#else
+        clamp(t, 255, 65535);
+#endif
 
         blocklights[i] = t;
     }
