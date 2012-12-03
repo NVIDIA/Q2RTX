@@ -15,18 +15,14 @@ You should have received a copy of the GNU General Public License along
 with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
+
 #include "sw.h"
 
-vec3_t r_pright, r_pup, r_ppn;
-
-#define PARTICLE_33     0
-#define PARTICLE_66     1
-#define PARTICLE_OPAQUE 2
-
 typedef struct {
-    particle_t *particle;
-    int         level;
-    int         color;
+    particle_t  *particle;
+    fixed8_t    color[3];
+    int         one_minus_alpha;
+    vec3_t      right, up, pn;
 } partparms_t;
 
 static partparms_t partparms;
@@ -46,23 +42,20 @@ static partparms_t partparms;
 */
 static void R_DrawParticle(void)
 {
-    particle_t *pparticle = partparms.particle;
-    int         level     = partparms.level;
     vec3_t  local, transformed;
     float   zi;
     byte    *pdest;
     short   *pz;
-    int      color = pparticle->color;
     int     i, izi, pix, count, u, v;
 
     /*
     ** transform the particle
     */
-    VectorSubtract(pparticle->origin, r_origin, local);
+    VectorSubtract(partparms.particle->origin, r_origin, local);
 
-    transformed[0] = DotProduct(local, r_pright);
-    transformed[1] = DotProduct(local, r_pup);
-    transformed[2] = DotProduct(local, r_ppn);
+    transformed[0] = DotProduct(local, partparms.right);
+    transformed[1] = DotProduct(local, partparms.up);
+    transformed[2] = DotProduct(local, partparms.pn);
 
     if (transformed[2] < PARTICLE_Z_CLIP)
         return;
@@ -103,42 +96,15 @@ static void R_DrawParticle(void)
     /*
     ** render the appropriate pixels
     */
-    count = pix;
-
-    switch (level) {
-    case PARTICLE_33 :
-        for (; count; count--, pz += d_zwidth, pdest += r_screenwidth) {
-//FIXME--do it in blocks of 8?
-            for (i = 0; i < pix; i++) {
-                if (pz[i] <= izi) {
-                    pz[i]    = izi;
-                    pdest[i] = vid.alphamap[color + ((int)pdest[i] << 8)];
-                }
+    for (count = pix; count; count--, pz += d_zwidth, pdest += r_screenrowbytes) {
+        for (i = 0; i < pix; i++) {
+            if (pz[i] <= izi) {
+                pz[i] = izi;
+                pdest[i * VID_BYTES + 0] = (pdest[i * VID_BYTES + 0] * partparms.one_minus_alpha + partparms.color[2]) >> 8;
+                pdest[i * VID_BYTES + 1] = (pdest[i * VID_BYTES + 1] * partparms.one_minus_alpha + partparms.color[1]) >> 8;
+                pdest[i * VID_BYTES + 2] = (pdest[i * VID_BYTES + 2] * partparms.one_minus_alpha + partparms.color[0]) >> 8;
             }
         }
-        break;
-
-    case PARTICLE_66 :
-        for (; count; count--, pz += d_zwidth, pdest += r_screenwidth) {
-            for (i = 0; i < pix; i++) {
-                if (pz[i] <= izi) {
-                    pz[i]    = izi;
-                    pdest[i] = vid.alphamap[(color << 8) + (int)pdest[i]];
-                }
-            }
-        }
-        break;
-
-    default:  //100
-        for (; count; count--, pz += d_zwidth, pdest += r_screenwidth) {
-            for (i = 0; i < pix; i++) {
-                if (pz[i] <= izi) {
-                    pz[i]    = izi;
-                    pdest[i] = color;
-                }
-            }
-        }
-        break;
     }
 }
 
@@ -154,22 +120,30 @@ void R_DrawParticles(void)
 {
     particle_t *p;
     int         i;
+    int         alpha;
 
-    VectorScale(vright, xscaleshrink, r_pright);
-    VectorScale(vup, yscaleshrink, r_pup);
-    VectorCopy(vpn, r_ppn);
+    VectorScale(vright, xscaleshrink, partparms.right);
+    VectorScale(vup, yscaleshrink, partparms.up);
+    VectorCopy(vpn, partparms.pn);
 
     for (p = r_newrefdef.particles, i = 0; i < r_newrefdef.num_particles; i++, p++) {
-
-        if (p->alpha > 0.66)
-            partparms.level = PARTICLE_OPAQUE;
-        else if (p->alpha > 0.33)
-            partparms.level = PARTICLE_66;
-        else
-            partparms.level = PARTICLE_33;
-
         partparms.particle = p;
-        partparms.color    = p->color;
+
+        alpha = 255 * p->alpha;
+        partparms.one_minus_alpha = 255 - alpha;
+
+        if (p->color == -1) {
+            partparms.color[0] = p->rgba.u8[0] * alpha;
+            partparms.color[1] = p->rgba.u8[1] * alpha;
+            partparms.color[2] = p->rgba.u8[2] * alpha;
+        } else {
+            color_t color;
+
+            color.u32 = d_8to24table[p->color & 0xff];
+            partparms.color[0] = color.u8[0] * alpha;
+            partparms.color[1] = color.u8[1] * alpha;
+            partparms.color[2] = color.u8[2] * alpha;
+        }
 
         R_DrawParticle();
     }

@@ -382,8 +382,6 @@ extern qboolean r_dowarp;
 
 extern affinetridesc_t  r_affinetridesc;
 
-extern vec3_t   r_pright, r_pup, r_ppn;
-
 void D_DrawSurfaces(void);
 void D_ViewChanged(void);
 void D_WarpScreen(void);
