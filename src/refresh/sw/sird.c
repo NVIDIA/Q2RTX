@@ -64,7 +64,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define R_SIRDnumRand 103
 
 //this hold the background pattern
-byte r_SIRDBackground[R_SIRDw * R_SIRDh];
+byte r_SIRDBackground[R_SIRDw * R_SIRDh * VID_BYTES];
 
 //these are the actual random numbers
 byte r_SIRDrandValues[] = {
@@ -170,7 +170,7 @@ void R_ApplySIRDAlgorithum(void)
     //basically done by shifting the values around
     //each time and xoring them with a randomly
     //selected pixel
-    for (i = 0; i < R_SIRDw * R_SIRDh; i++) {
+    for (i = 0; i < R_SIRDw * R_SIRDh * VID_BYTES; i++) {
         if ((i % R_SIRDnumRand) == 0) {
             ji++;
             ji %= R_SIRDnumRand;
@@ -214,15 +214,18 @@ void R_ApplySIRDAlgorithum(void)
             // copy the background into the left most column
             curbp = &(r_SIRDBackground[ R_SIRDw * (y % R_SIRDh) ]);
             for (x = 0; x < R_SIRDw; x++) {
-                *curp = *curbp;
-                curp++;
-                curbp++;
+                curp[0] = curbp[0];
+                curp[1] = curbp[1];
+                curp[2] = curbp[2];
+
+                curp += VID_BYTES;
+                curbp += VID_BYTES;
             }
 
             lastz = 0;
             cz = 0;
             curz += R_SIRDw;
-            curbp = curp - R_SIRDw;
+            curbp = curp - R_SIRDw * VID_BYTES;
 
             // now calculate the SIRD
             for (x = R_SIRDw; x < vid.width; x++) {
@@ -241,13 +244,15 @@ void R_ApplySIRDAlgorithum(void)
                     //so here we are copying from bp to p, and so
                     //it simply increases or decreases the distance
                     //between the two.
-                    curbp = (curp - R_SIRDw + cz);
+                    curbp = (curp - R_SIRDw * VID_BYTES + cz * VID_BYTES);
                 }
 
-                *curp = *curbp;
+                curp[0] = curbp[0];
+                curp[1] = curbp[1];
+                curp[2] = curbp[2];
 
-                curp++;
-                curbp++;
+                curp += VID_BYTES;
+                curbp += VID_BYTES;
                 curz++;
             }
         } else {
@@ -266,9 +271,11 @@ void R_ApplySIRDAlgorithum(void)
                     cz = R_SIRDZFunc(*curz);
                 }
 
-                *curp = cz;
+                curp[0] = cz;
+                curp[1] = cz;
+                curp[2] = cz;
 
-                curp++;
+                curp += VID_BYTES;
                 curz++;
             }
         }
