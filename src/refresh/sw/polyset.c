@@ -112,8 +112,8 @@ byte    *skinstart;
 
 void (*d_pdrawspans)(spanpackage_t *pspanpackage);
 
-void R_PolysetDrawSpans8_33(spanpackage_t *pspanpackage);
-void R_PolysetDrawSpans8_66(spanpackage_t *pspanpackage);
+void R_PolysetDrawSpansConstant8_Blended(spanpackage_t *pspanpackage);
+void R_PolysetDrawSpans8_Blended(spanpackage_t *pspanpackage);
 void R_PolysetDrawSpans8_Opaque(spanpackage_t *pspanpackage);
 
 void R_PolysetCalcGradients(int skinwidth);
@@ -449,12 +449,7 @@ void R_PolysetCalcGradients(int skinwidth)
     a_ststepxwhole = skinwidth * (r_tstepx >> 16) + (r_sstepx >> 16) * TEX_BYTES;
 }
 
-/*
-================
-R_PolysetDrawSpans8
-================
-*/
-void R_PolysetDrawSpans8_33(spanpackage_t *pspanpackage)
+void R_PolysetDrawSpans8_Blended(spanpackage_t *pspanpackage)
 {
     int     lcount;
     byte    *lpdest;
@@ -486,111 +481,19 @@ void R_PolysetDrawSpans8_33(spanpackage_t *pspanpackage)
 
             do {
                 if ((lzi >> 16) >= *lpz) {
-                    int temp = vid.colormap[*lptex + (llight & 0xFF00)];
-
-                    *lpdest = vid.alphamap[temp + *lpdest * 256];
-                }
-                lpdest++;
-                lzi += r_zistepx;
-                lpz++;
-                llight += r_lstepx;
-                lptex += a_ststepxwhole;
-                lsfrac += a_sstepxfrac;
-                lptex += lsfrac >> 16;
-                lsfrac &= 0xFFFF;
-                ltfrac += a_tstepxfrac;
-                if (ltfrac & 0x10000) {
-                    lptex += r_affinetridesc.skinwidth;
-                    ltfrac &= 0xFFFF;
-                }
-            } while (--lcount);
-        }
-
-        pspanpackage++;
-    } while (pspanpackage->count != -999999);
-}
-
-void R_PolysetDrawSpansConstant8_33(spanpackage_t *pspanpackage)
-{
-    int     lcount;
-    byte    *lpdest;
-    int     lzi;
-    short   *lpz;
-
-    do {
-        lcount = d_aspancount - pspanpackage->count;
-
-        errorterm += erroradjustup;
-        if (errorterm >= 0) {
-            d_aspancount += d_countextrastep;
-            errorterm -= erroradjustdown;
-        } else {
-            d_aspancount += ubasestep;
-        }
-
-        if (lcount) {
-            lpdest = pspanpackage->pdest;
-            lpz = pspanpackage->pz;
-            lzi = pspanpackage->zi;
-
-            do {
-                if ((lzi >> 16) >= *lpz) {
-                    *lpdest = vid.alphamap[r_aliasblendcolor + *lpdest * 256];
-                }
-                lpdest++;
-                lzi += r_zistepx;
-                lpz++;
-            } while (--lcount);
-        }
-
-        pspanpackage++;
-    } while (pspanpackage->count != -999999);
-}
-
-void R_PolysetDrawSpans8_66(spanpackage_t *pspanpackage)
-{
-    int     lcount;
-    byte    *lpdest;
-    byte    *lptex;
-    int     lsfrac, ltfrac;
-    int     llight;
-    int     lzi;
-    short   *lpz;
-
-    do {
-        lcount = d_aspancount - pspanpackage->count;
-
-        errorterm += erroradjustup;
-        if (errorterm >= 0) {
-            d_aspancount += d_countextrastep;
-            errorterm -= erroradjustdown;
-        } else {
-            d_aspancount += ubasestep;
-        }
-
-        if (lcount) {
-            lpdest = pspanpackage->pdest;
-            lptex = pspanpackage->ptex;
-            lpz = pspanpackage->pz;
-            lsfrac = pspanpackage->sfrac;
-            ltfrac = pspanpackage->tfrac;
-            llight = pspanpackage->light;
-            lzi = pspanpackage->zi;
-
-            do {
-                if ((lzi >> 16) >= *lpz) {
-                    int temp = vid.colormap[*lptex + (llight & 0xFF00)];
-
-                    *lpdest = vid.alphamap[temp * 256 + *lpdest];
+                    // TODO: llight
+                    lpdest[0] = (lpdest[0] * r_alias_one_minus_alpha + lptex[2] * r_alias_alpha) >> 8;
+                    lpdest[1] = (lpdest[1] * r_alias_one_minus_alpha + lptex[1] * r_alias_alpha) >> 8;
+                    lpdest[2] = (lpdest[2] * r_alias_one_minus_alpha + lptex[0] * r_alias_alpha) >> 8;
                     *lpz = lzi >> 16;
                 }
-                lpdest++;
+                lpdest += VID_BYTES;
                 lzi += r_zistepx;
                 lpz++;
                 llight += r_lstepx;
                 lptex += a_ststepxwhole;
                 lsfrac += a_sstepxfrac;
-                lptex += lsfrac >> 16;
+                lptex += (lsfrac >> 16) * TEX_BYTES;
                 lsfrac &= 0xFFFF;
                 ltfrac += a_tstepxfrac;
                 if (ltfrac & 0x10000) {
@@ -604,7 +507,7 @@ void R_PolysetDrawSpans8_66(spanpackage_t *pspanpackage)
     } while (pspanpackage->count != -999999);
 }
 
-void R_PolysetDrawSpansConstant8_66(spanpackage_t *pspanpackage)
+void R_PolysetDrawSpansConstant8_Blended(spanpackage_t *pspanpackage)
 {
     int     lcount;
     byte    *lpdest;
@@ -629,9 +532,11 @@ void R_PolysetDrawSpansConstant8_66(spanpackage_t *pspanpackage)
 
             do {
                 if ((lzi >> 16) >= *lpz) {
-                    *lpdest = vid.alphamap[r_aliasblendcolor * 256 + *lpdest];
+                    lpdest[0] = (lpdest[0] * r_alias_one_minus_alpha + r_aliasblendcolor[2]) >> 8;
+                    lpdest[1] = (lpdest[1] * r_alias_one_minus_alpha + r_aliasblendcolor[1]) >> 8;
+                    lpdest[2] = (lpdest[2] * r_alias_one_minus_alpha + r_aliasblendcolor[0]) >> 8;
                 }
-                lpdest++;
+                lpdest += VID_BYTES;
                 lzi += r_zistepx;
                 lpz++;
             } while (--lcount);
@@ -675,21 +580,19 @@ void R_PolysetDrawSpans8_Opaque(spanpackage_t *pspanpackage)
 
             do {
                 if ((lzi >> 16) >= *lpz) {
-//PGM
-                    if (iractive)
-                        *lpdest = ((byte *)vid.colormap)[irtable[*lptex]];
-                    else
-                        *lpdest = ((byte *)vid.colormap)[*lptex + (llight & 0xFF00)];
-//PGM
+                    // TODO: llight, iractive
+                    lpdest[0] = lptex[2];
+                    lpdest[1] = lptex[1];
+                    lpdest[2] = lptex[0];
                     *lpz = lzi >> 16;
                 }
-                lpdest++;
+                lpdest += VID_BYTES;
                 lzi += r_zistepx;
                 lpz++;
                 llight += r_lstepx;
                 lptex += a_ststepxwhole;
                 lsfrac += a_sstepxfrac;
-                lptex += lsfrac >> 16;
+                lptex += (lsfrac >> 16) * TEX_BYTES;
                 lsfrac &= 0xFFFF;
                 ltfrac += a_tstepxfrac;
                 if (ltfrac & 0x10000) {

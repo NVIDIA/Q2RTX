@@ -38,9 +38,11 @@ vec3_t          r_lerped[1024];
 vec3_t          r_lerp_frontv, r_lerp_backv, r_lerp_move;
 
 int             r_ambientlight;
-int             r_aliasblendcolor;
+fixed8_t        r_aliasblendcolor[3];
 float           r_shadelight;
 
+int             r_alias_alpha;
+int             r_alias_one_minus_alpha;
 
 maliasframe_t   *r_thisframe, *r_lastframe;
 
@@ -635,57 +637,50 @@ static void R_AliasSetUpLerpData(float backlerp)
 static void R_AliasSetupBlend(void)
 {
     extern void (*d_pdrawspans)(void *);
+    extern void R_PolysetDrawSpansConstant8_Blended(void *);
+    extern void R_PolysetDrawSpans8_Blended(void *);
     extern void R_PolysetDrawSpans8_Opaque(void *);
-    extern void R_PolysetDrawSpans8_33(void *);
-    extern void R_PolysetDrawSpans8_66(void *);
-    extern void R_PolysetDrawSpansConstant8_33(void *);
-    extern void R_PolysetDrawSpansConstant8_66(void *);
 
-    int     color;
+    int         mask;
+    color_t     color;
+
+    r_alias_alpha = 255 * currententity->alpha;
+    r_alias_one_minus_alpha = 255 - r_alias_alpha;
 
     /*
     ** select the proper span routine based on translucency
     */
-    // PMM - added double damage shell
-    // PMM - reordered to handle blending
-    color = currententity->flags & (RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE | RF_SHELL_DOUBLE | RF_SHELL_HALF_DAM);
-    if (color) {
-        // PMM - added double
-        // PMM - reordered, new shells after old shells (so they get overriden)
-        if (color == RF_SHELL_RED)
-            r_aliasblendcolor = SHELL_RED_COLOR;
-        else if (color == RF_SHELL_GREEN)
-            r_aliasblendcolor = SHELL_GREEN_COLOR;
-        else if (color == RF_SHELL_BLUE)
-            r_aliasblendcolor = SHELL_BLUE_COLOR;
-        else if (color == (RF_SHELL_RED | RF_SHELL_GREEN))
-            r_aliasblendcolor = SHELL_RG_COLOR;
-        else if (color == (RF_SHELL_RED | RF_SHELL_BLUE))
-            r_aliasblendcolor = SHELL_RB_COLOR;
-        else if (color == (RF_SHELL_BLUE | RF_SHELL_GREEN))
-            r_aliasblendcolor = SHELL_BG_COLOR;
-
-        // PMM - added this .. it's yellowish
-        else if (color == (RF_SHELL_DOUBLE))
-            r_aliasblendcolor = SHELL_DOUBLE_COLOR;
-        else if (color == (RF_SHELL_HALF_DAM))
-            r_aliasblendcolor = SHELL_HALF_DAM_COLOR;
-        // pmm
+    mask = currententity->flags & (RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE | RF_SHELL_DOUBLE | RF_SHELL_HALF_DAM);
+    if (mask) {
+        if (mask == RF_SHELL_RED)
+            color.u32 = d_8to24table[SHELL_RED_COLOR];
+        else if (mask == RF_SHELL_GREEN)
+            color.u32 = d_8to24table[SHELL_GREEN_COLOR];
+        else if (mask == RF_SHELL_BLUE)
+            color.u32 = d_8to24table[SHELL_BLUE_COLOR];
+        else if (mask == (RF_SHELL_RED | RF_SHELL_GREEN))
+            color.u32 = d_8to24table[SHELL_RG_COLOR];
+        else if (mask == (RF_SHELL_RED | RF_SHELL_BLUE))
+            color.u32 = d_8to24table[SHELL_RB_COLOR];
+        else if (mask == (RF_SHELL_BLUE | RF_SHELL_GREEN))
+            color.u32 = d_8to24table[SHELL_BG_COLOR];
+        else if (mask == (RF_SHELL_DOUBLE))
+            color.u32 = d_8to24table[SHELL_DOUBLE_COLOR];
+        else if (mask == (RF_SHELL_HALF_DAM))
+            color.u32 = d_8to24table[SHELL_HALF_DAM_COLOR];
         else
-            r_aliasblendcolor = SHELL_WHITE_COLOR;
+            color.u32 = d_8to24table[SHELL_WHITE_COLOR];
 
-        if (currententity->alpha > 0.33)
-            d_pdrawspans = R_PolysetDrawSpansConstant8_66;
-        else
-            d_pdrawspans = R_PolysetDrawSpansConstant8_33;
+        r_aliasblendcolor[0] = color.u8[0] * r_alias_alpha;
+        r_aliasblendcolor[1] = color.u8[1] * r_alias_alpha;
+        r_aliasblendcolor[2] = color.u8[2] * r_alias_alpha;
 
+        d_pdrawspans = R_PolysetDrawSpansConstant8_Blended;
     } else if (currententity->flags & RF_TRANSLUCENT) {
-        if (currententity->alpha > 0.66)
+        if (currententity->alpha == 1)
             d_pdrawspans = R_PolysetDrawSpans8_Opaque;
-        else if (currententity->alpha > 0.33)
-            d_pdrawspans = R_PolysetDrawSpans8_66;
         else
-            d_pdrawspans = R_PolysetDrawSpans8_33;
+            d_pdrawspans = R_PolysetDrawSpans8_Blended;
     } else {
         d_pdrawspans = R_PolysetDrawSpans8_Opaque;
     }

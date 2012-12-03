@@ -612,7 +612,10 @@ extern edge_t   edge_head;
 extern edge_t   edge_tail;
 extern edge_t   edge_aftertail;
 
-extern int      r_aliasblendcolor;
+extern fixed8_t r_aliasblendcolor[3];
+
+extern int      r_alias_alpha;
+extern int      r_alias_one_minus_alpha;
 
 extern float    aliasxscale, aliasyscale, aliasxcenter, aliasycenter;
 
