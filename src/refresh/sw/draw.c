@@ -20,107 +20,80 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "sw.h"
 
+#define STEP                                                    \
+    dst[0] = (dst[0] * (255 - src[3]) + src[2] * src[3]) >> 8;  \
+    dst[1] = (dst[1] * (255 - src[3]) + src[1] * src[3]) >> 8;  \
+    dst[2] = (dst[2] * (255 - src[3]) + src[0] * src[3]) >> 8;  \
+    dst += VID_BYTES;                                           \
+    src += TEX_BYTES;
 
-//=============================================================================
+#define STEP_M                                                  \
+    tmp[0] = (src[0] * color.u8[0]) >> 8;                       \
+    tmp[1] = (src[1] * color.u8[1]) >> 8;                       \
+    tmp[2] = (src[2] * color.u8[2]) >> 8;                       \
+    tmp[3] = (src[3] * color.u8[3]) >> 8;                       \
+    dst[0] = (dst[0] * (255 - tmp[3]) + tmp[2] * tmp[3]) >> 8;  \
+    dst[1] = (dst[1] * (255 - tmp[3]) + tmp[1] * tmp[3]) >> 8;  \
+    dst[2] = (dst[2] * (255 - tmp[3]) + tmp[0] * tmp[3]) >> 8;  \
+    dst += VID_BYTES;                                           \
+    src += TEX_BYTES;
 
+#define STRETCH                                                     \
+    _src = src + (u >> 16) * TEX_BYTES;                             \
+    dst[0] = (dst[0] * (255 - _src[3]) + _src[2] * _src[3]) >> 8;   \
+    dst[1] = (dst[1] * (255 - _src[3]) + _src[1] * _src[3]) >> 8;   \
+    dst[2] = (dst[2] * (255 - _src[3]) + _src[0] * _src[3]) >> 8;   \
+    dst += VID_BYTES;                                               \
+    u += ustep;
 
+#define STRETCH_M                                               \
+    _src = src + (u >> 16) * TEX_BYTES;                         \
+    tmp[0] = (_src[0] * color.u8[0]) >> 8;                      \
+    tmp[1] = (_src[1] * color.u8[1]) >> 8;                      \
+    tmp[2] = (_src[2] * color.u8[2]) >> 8;                      \
+    tmp[3] = (_src[3] * color.u8[3]) >> 8;                      \
+    dst[0] = (dst[0] * (255 - tmp[3]) + tmp[2] * tmp[3]) >> 8;  \
+    dst[1] = (dst[1] * (255 - tmp[3]) + tmp[1] * tmp[3]) >> 8;  \
+    dst[2] = (dst[2] * (255 - tmp[3]) + tmp[0] * tmp[3]) >> 8;  \
+    dst += VID_BYTES;                                           \
+    u += ustep;
 
-#define DOSTEP do {             \
-            tbyte = *src++;     \
-            if (tbyte != 255)   \
-                *dst = tbyte;   \
-            dst++;              \
-        } while (0)
+#define ROW1(DO)    \
+    do {            \
+        DO;         \
+    } while (--count)
 
-#define DOMSTEP do {            \
-            if (*src++ != 255)  \
-                *dst = tbyte;   \
-            dst++;              \
-        } while (0)
-
-#define DOSTRETCH do {              \
-            tbyte = src[u >> 16];   \
-            if (tbyte != 255)       \
-                *dst = tbyte;       \
-            dst++;                  \
-            u += ustep;             \
-        } while (0)
-
-#define ROW1 do {   \
-        DOSTEP;     \
-    } while (--count);
-
-#define ROW4 do {   \
-        DOSTEP;     \
-        DOSTEP;     \
-        DOSTEP;     \
-        DOSTEP;     \
+#define ROW4(DO)    \
+    do {            \
+        DO;         \
+        DO;         \
+        DO;         \
+        DO;         \
                     \
         count -= 4; \
-    } while (count);
+    } while (count)
 
-#define ROW8 do {   \
-        DOSTEP;     \
-        DOSTEP;     \
-        DOSTEP;     \
-        DOSTEP;     \
-        DOSTEP;     \
-        DOSTEP;     \
-        DOSTEP;     \
-        DOSTEP;     \
+#define ROW8(DO)    \
+    do {            \
+        DO;         \
+        DO;         \
+        DO;         \
+        DO;         \
+        DO;         \
+        DO;         \
+        DO;         \
+        DO;         \
                     \
         count -= 8; \
-    } while (count);
-
-#define MROW8 do {  \
-        DOMSTEP;        \
-        DOMSTEP;        \
-        DOMSTEP;        \
-        DOMSTEP;        \
-        DOMSTEP;        \
-        DOMSTEP;        \
-        DOMSTEP;        \
-        DOMSTEP;        \
-                    \
-        count -= 8; \
-    } while (count);
-
-#define STRETCH1 do {   \
-        DOSTRETCH;      \
-    } while (--count);
-
-#define STRETCH4 do {   \
-        DOSTRETCH;      \
-        DOSTRETCH;      \
-        DOSTRETCH;      \
-        DOSTRETCH;      \
-                        \
-        count -= 4;     \
-    } while (count);
-
-#define STRETCH8 do {   \
-        DOSTRETCH;      \
-        DOSTRETCH;      \
-        DOSTRETCH;      \
-        DOSTRETCH;      \
-        DOSTRETCH;      \
-        DOSTRETCH;      \
-        DOSTRETCH;      \
-        DOSTRETCH;      \
-                        \
-        count -= 8;     \
-    } while (count);
+    } while (count)
 
 typedef struct {
-    int colorIndex;
-    int colorFlags;
+    color_t colors[2];
     clipRect_t clipRect;
     int flags;
 } drawStatic_t;
 
 static drawStatic_t draw;
-
-static int  colorIndices[8];
 
 void R_SetScale(float *scale)
 {
@@ -131,28 +104,27 @@ void R_SetScale(float *scale)
 
 void R_InitDraw(void)
 {
-    int i;
-
     memset(&draw, 0, sizeof(draw));
-    draw.colorIndex = -1;
-
-    for (i = 0; i < 8; i++) {
-        colorIndices[i] = R_IndexForColor(colorTable[i]);
-    }
+    draw.colors[0].u32 = U32_WHITE;
+    draw.colors[1].u32 = U32_WHITE;
 }
 
 void R_ClearColor(void)
 {
-    draw.colorIndex = -1;
+    draw.colors[0].u32 = U32_WHITE;
+    draw.colors[1].u32 = U32_WHITE;
 }
 
 void R_SetAlpha(float alpha)
 {
+    draw.colors[0].u8[3] = alpha * 255;
+    draw.colors[1].u8[3] = alpha * 255;
 }
 
 void R_SetColor(uint32_t color)
 {
-    draw.colorIndex = R_IndexForColor(color);
+    draw.colors[0].u32 = color;
+    draw.colors[1].u8[3] = draw.colors[0].u8[3];
 }
 
 void R_SetClipRect(int flags, const clipRect_t *clip)
@@ -172,15 +144,16 @@ R_DrawStretchData
 =============
 */
 static void R_DrawStretchData(int x, int y, int w, int h, int xx, int yy,
-                              int ww, int hh, int pitch, byte *data)
+                              int ww, int hh, int pitch, byte *data, color_t color)
 {
-    byte            *srcpixels, *dstpixels, *dst, *src;
-    int             v, u;
-    int             ustep, vstep;
-    int             skipv, skipu;
-    int             width, height;
-    byte            tbyte;
-    int         count;
+    byte    *srcpixels, *dstpixels, *dst, *src;
+    int     v, u;
+    int     ustep, vstep;
+    int     skipv, skipu;
+    int     width, height;
+    int     count;
+    byte    *_src;
+    int     tmp[4];
 
     skipv = skipu = 0;
     width = w;
@@ -230,52 +203,93 @@ static void R_DrawStretchData(int x, int y, int w, int h, int xx, int yy,
         }
     }
 
-    srcpixels = data + yy * pitch + xx;
-    dstpixels = vid.buffer + y * vid.rowbytes + x;
+    srcpixels = data + yy * pitch + xx * TEX_BYTES;
+    dstpixels = vid.buffer + y * vid.rowbytes + x * VID_BYTES;
 
     vstep = hh * 0x10000 / height;
 
     v = skipv * vstep;
-    if (width == ww) {
-        dstpixels += skipu;
-        do {
-            src = &srcpixels[(v >> 16) * pitch];
-            dst = dstpixels;
-            count = w;
+    if (color.u32 == U32_WHITE) {
+        if (width == ww) {
+            dstpixels += skipu * VID_BYTES;
+            do {
+                src = &srcpixels[(v >> 16) * pitch];
+                dst = dstpixels;
+                count = w;
 
-            if (!(w & 7)) {
-                ROW8;
-            } else if (!(w & 3)) {
-                ROW4;
-            } else {
-                ROW1;
-            }
+                if (!(w & 7)) {
+                    ROW8(STEP);
+                } else if (!(w & 3)) {
+                    ROW4(STEP);
+                } else {
+                    ROW1(STEP);
+                }
 
-            v += vstep;
-            dstpixels += vid.rowbytes;
-        } while (--h);
+                v += vstep;
+                dstpixels += vid.rowbytes;
+            } while (--h);
+        } else {
+            ustep = ww * 0x10000 / width;
+            skipu = skipu * ustep;
+            do {
+                src = &srcpixels[(v >> 16) * pitch];
+                dst = dstpixels;
+                count = w;
+
+                u = skipu;
+                if (!(w & 7)) {
+                    ROW8(STRETCH);
+                } else if (!(w & 3)) {
+                    ROW4(STRETCH);
+                } else {
+                    ROW1(STRETCH);
+                }
+
+                v += vstep;
+                dstpixels += vid.rowbytes;
+            } while (--h);
+        }
     } else {
-        ustep = ww * 0x10000 / width;
-        skipu = skipu * ustep;
-        do {
-            src = &srcpixels[(v >> 16) * pitch];
-            dst = dstpixels;
-            count = w;
+        if (width == ww) {
+            dstpixels += skipu * VID_BYTES;
+            do {
+                src = &srcpixels[(v >> 16) * pitch];
+                dst = dstpixels;
+                count = w;
 
-            u = skipu;
-            if (!(w & 7)) {
-                STRETCH8;
-            } else if (!(w & 3)) {
-                STRETCH4;
-            } else {
-                STRETCH1;
-            }
+                if (!(w & 7)) {
+                    ROW8(STEP_M);
+                } else if (!(w & 3)) {
+                    ROW4(STEP_M);
+                } else {
+                    ROW1(STEP_M);
+                }
 
-            v += vstep;
-            dstpixels += vid.rowbytes;
-        } while (--h);
+                v += vstep;
+                dstpixels += vid.rowbytes;
+            } while (--h);
+        } else {
+            ustep = ww * 0x10000 / width;
+            skipu = skipu * ustep;
+            do {
+                src = &srcpixels[(v >> 16) * pitch];
+                dst = dstpixels;
+                count = w;
+
+                u = skipu;
+                if (!(w & 7)) {
+                    ROW8(STRETCH_M);
+                } else if (!(w & 3)) {
+                    ROW4(STRETCH_M);
+                } else {
+                    ROW1(STRETCH_M);
+                }
+
+                v += vstep;
+                dstpixels += vid.rowbytes;
+            } while (--h);
+        }
     }
-
 }
 
 /*
@@ -284,13 +298,13 @@ R_DrawFixedData
 =============
 */
 static void R_DrawFixedData(int x, int y, int w, int h,
-                            int pitch, byte *data)
+                            int pitch, byte *data, color_t color)
 {
-    byte *srcpixels, *dstpixels;
-    byte            *dst, *src;
-    int             skipv, skipu;
-    byte            tbyte;
-    int         count;
+    byte    *srcpixels, *dstpixels;
+    byte    *dst, *src;
+    int     skipv, skipu;
+    int     count;
+    int     tmp[4];
 
     skipv = skipu = 0;
 
@@ -338,140 +352,62 @@ static void R_DrawFixedData(int x, int y, int w, int h,
         }
     }
 
-    srcpixels = data + skipv * pitch + skipu;
-    dstpixels = vid.buffer + y * vid.rowbytes + x;
+    srcpixels = data + skipv * pitch + skipu * TEX_BYTES;
+    dstpixels = vid.buffer + y * vid.rowbytes + x * VID_BYTES;
 
-    if (!(w & 7)) {
-        do {
-            src = srcpixels;
-            dst = dstpixels;
-            count = w; ROW8;
-            srcpixels += pitch;
-            dstpixels += vid.rowbytes;
-        } while (--h);
-    } else if (!(w & 3)) {
-        do {
-            src = srcpixels;
-            dst = dstpixels;
-            count = w; ROW4;
-            srcpixels += pitch;
-            dstpixels += vid.rowbytes;
-        } while (--h);
+    if (color.u32 == U32_WHITE) {
+        if (!(w & 7)) {
+            do {
+                src = srcpixels;
+                dst = dstpixels;
+                count = w; ROW8(STEP);
+                srcpixels += pitch;
+                dstpixels += vid.rowbytes;
+            } while (--h);
+        } else if (!(w & 3)) {
+            do {
+                src = srcpixels;
+                dst = dstpixels;
+                count = w; ROW4(STEP);
+                srcpixels += pitch;
+                dstpixels += vid.rowbytes;
+            } while (--h);
+        } else {
+            do {
+                src = srcpixels;
+                dst = dstpixels;
+                count = w; ROW1(STEP);
+                srcpixels += pitch;
+                dstpixels += vid.rowbytes;
+            } while (--h);
+        }
     } else {
-        do {
-            src = srcpixels;
-            dst = dstpixels;
-            count = w; ROW1;
-            srcpixels += pitch;
-            dstpixels += vid.rowbytes;
-        } while (--h);
-    }
-
-}
-
-static void R_DrawFixedDataAsMask(int x, int y, int w, int h,
-                                  int pitch, byte *data, byte tbyte)
-{
-    byte *srcpixels, *dstpixels;
-    byte            *dst, *src;
-    int             skipv, skipu;
-    int         count;
-
-    skipv = skipu = 0;
-
-    if (draw.flags & DRAW_CLIP_MASK) {
-        clipRect_t *clip = &draw.clipRect;
-
-        if (draw.flags & DRAW_CLIP_LEFT) {
-            if (x < clip->left) {
-                skipu = clip->left - x;
-                if (w <= skipu) {
-                    return;
-                }
-                w -= skipu;
-                x = clip->left;
-            }
-        }
-
-        if (draw.flags & DRAW_CLIP_RIGHT) {
-            if (x >= clip->right) {
-                return;
-            }
-            if (x + w > clip->right) {
-                w = clip->right - x;
-            }
-        }
-
-        if (draw.flags & DRAW_CLIP_TOP) {
-            if (y < clip->top) {
-                skipv = clip->top - y;
-                if (h <= skipv) {
-                    return;
-                }
-                h -= skipv;
-                y = clip->top;
-            }
-        }
-
-        if (draw.flags & DRAW_CLIP_BOTTOM) {
-            if (y <= clip->bottom) {
-                return;
-            }
-            if (y + h > clip->bottom) {
-                h = clip->bottom - y;
-            }
+        if (!(w & 7)) {
+            do {
+                src = srcpixels;
+                dst = dstpixels;
+                count = w; ROW8(STEP_M);
+                srcpixels += pitch;
+                dstpixels += vid.rowbytes;
+            } while (--h);
+        } else if (!(w & 3)) {
+            do {
+                src = srcpixels;
+                dst = dstpixels;
+                count = w; ROW4(STEP_M);
+                srcpixels += pitch;
+                dstpixels += vid.rowbytes;
+            } while (--h);
+        } else {
+            do {
+                src = srcpixels;
+                dst = dstpixels;
+                count = w; ROW1(STEP_M);
+                srcpixels += pitch;
+                dstpixels += vid.rowbytes;
+            } while (--h);
         }
     }
-
-    srcpixels = data + skipv * pitch + skipu;
-    dstpixels = vid.buffer + y * vid.rowbytes + x;
-
-    if (!(w & 7)) {
-        do {
-            src = srcpixels;
-            dst = dstpixels;
-            count = w; MROW8;
-            srcpixels += pitch;
-            dstpixels += vid.rowbytes;
-        } while (--h);
-    } else if (!(w & 3)) {
-        do {
-            src = srcpixels;
-            dst = dstpixels;
-            count = w; ROW4;
-            srcpixels += pitch;
-            dstpixels += vid.rowbytes;
-        } while (--h);
-    } else {
-        do {
-            src = srcpixels;
-            dst = dstpixels;
-            count = w; ROW1;
-            srcpixels += pitch;
-            dstpixels += vid.rowbytes;
-        } while (--h);
-    }
-
-}
-
-/*
-=============
-R_DrawStretcpic
-=============
-*/
-void R_DrawStretcPicST(int x, int y, int w, int h, float s1, float t1,
-                       float s2, float t2, qhandle_t pic)
-{
-    image_t *image = IMG_ForHandle(pic);
-    int xx, yy, ww, hh;
-
-    xx = image->width * s1;
-    yy = image->height * t1;
-    ww = image->width * (s2 - s1);
-    hh = image->height * (t2 - t1);
-
-    R_DrawStretchData(x, y, w, h, xx, yy, ww, hh,
-                      image->width, image->pixels[0]);
 }
 
 /*
@@ -483,14 +419,12 @@ void R_DrawStretchPic(int x, int y, int w, int h, qhandle_t pic)
 {
     image_t *image = IMG_ForHandle(pic);
 
-    if (w == image->width && h == image->height) {
+    if (w == image->upload_width && h == image->upload_height)
         R_DrawFixedData(x, y, image->width, image->height,
-                        image->width, image->pixels[0]);
-        return;
-    }
-
-    R_DrawStretchData(x, y, w, h, 0, 0, image->width, image->height,
-                      image->width, image->pixels[0]);
+                        image->width * TEX_BYTES, image->pixels[0], draw.colors[0]);
+    else
+        R_DrawStretchData(x, y, w, h, 0, 0, image->width, image->height,
+                          image->width * TEX_BYTES, image->pixels[0], draw.colors[0]);
 }
 
 /*
@@ -502,32 +436,42 @@ void R_DrawPic(int x, int y, qhandle_t pic)
 {
     image_t *image = IMG_ForHandle(pic);
 
-    R_DrawFixedData(x, y, image->width, image->height,
-                    image->width, image->pixels[0]);
+    if (image->width == image->upload_width && image->height == image->upload_height)
+        R_DrawFixedData(x, y, image->upload_width, image->upload_height,
+                        image->upload_width * TEX_BYTES, image->pixels[0], draw.colors[0]);
+    else
+        R_DrawStretchData(x, y, image->width, image->height, 0, 0, image->upload_width, image->upload_height,
+                          image->upload_width * TEX_BYTES, image->pixels[0], draw.colors[0]);
+}
+
+static inline void draw_char(int x, int y, int ch, qboolean alt, image_t *image)
+{
+    int x2, y2;
+    byte *data;
+
+    if ((ch & 127) == 32)
+        return;
+
+    ch |= alt << 7;
+    x2 = (ch & 15) * CHAR_WIDTH;
+    y2 = ((ch >> 4) & 15) * CHAR_HEIGHT;
+    data = image->pixels[0] + y2 * image->upload_width * TEX_BYTES + x2 * TEX_BYTES;
+
+    R_DrawFixedData(x, y, CHAR_WIDTH, CHAR_HEIGHT, image->upload_width * TEX_BYTES, data, draw.colors[alt]);
 }
 
 void R_DrawChar(int x, int y, int flags, int ch, qhandle_t font)
 {
     image_t *image;
-    int xx, yy;
-    byte *data;
 
-    if (!font) {
+    if (!font)
         return;
-    }
+
     image = IMG_ForHandle(font);
-    if (image->width != 128 || image->height != 128) {
+    if (image->upload_width != 128 || image->upload_height != 128)
         return;
-    }
 
-    xx = (ch & 15) << 3;
-    yy = ((ch >> 4) & 15) << 3;
-    data = image->pixels[0] + yy * image->width + xx;
-    if (draw.colorIndex != -1 && !(ch & 128)) {
-        R_DrawFixedDataAsMask(x, y, 8, 8, image->width, data, draw.colorIndex);
-    } else {
-        R_DrawFixedData(x, y, 8, 8, image->width, data);
-    }
+    draw_char(x, y, ch, !!(flags & UI_ALTCOLOR), image);
 }
 
 /*
@@ -539,42 +483,23 @@ int R_DrawString(int x, int y, int flags, size_t maxChars,
                  const char *string, qhandle_t font)
 {
     image_t *image;
-    byte c, *data;
-    int xx, yy;
-    int color;
     qboolean alt;
 
-    if (!font) {
+    if (!font)
         return x;
-    }
+
     image = IMG_ForHandle(font);
-    if (image->width != 128 || image->height != 128) {
+    if (image->upload_width != 128 || image->upload_height != 128)
         return x;
-    }
 
     alt = (flags & UI_ALTCOLOR) ? qtrue : qfalse;
-    color = draw.colorIndex;
 
     while (maxChars-- && *string) {
-        c = *string++;
-        if ((c & 127) == 32) {
-            x += 8;
-            continue;
-        }
-
-        c |= alt << 7;
-        xx = (c & 15) << 3;
-        yy = (c >> 4) << 3;
-
-        data = image->pixels[0] + yy * image->width + xx;
-        if (color != -1 && !(c & 128)) {
-            R_DrawFixedDataAsMask(x, y, 8, 8, image->width, data, color);
-        } else {
-            R_DrawFixedData(x, y, 8, 8, image->width, data);
-        }
-
-        x += 8;
+        byte c = *string++;
+        draw_char(x, y, c, alt, image);
+        x += CHAR_WIDTH;
     }
+
     return x;
 }
 
@@ -594,9 +519,8 @@ void R_TileClear(int x, int y, int w, int h, qhandle_t pic)
     image_t     *image;
     int         x2;
 
-    if (!pic) {
+    if (!pic)
         return;
-    }
 
     if (x < 0) {
         w += x;
@@ -614,15 +538,18 @@ void R_TileClear(int x, int y, int w, int h, qhandle_t pic)
         return;
 
     image = IMG_ForHandle(pic);
-    if (image->width != 64 || image->height != 64) {
+    if (image->upload_width != 64 || image->upload_height != 64)
         return;
-    }
+
     x2 = x + w;
     pdest = vid.buffer + y * vid.rowbytes;
     for (i = 0; i < h; i++, pdest += vid.rowbytes) {
-        psrc = image->pixels[0] + image->width * ((i + y) & 63);
-        for (j = x; j < x2; j++)
-            pdest[j] = psrc[j & 63];
+        psrc = image->pixels[0] + 64 * TEX_BYTES * ((i + y) & 63);
+        for (j = x; j < x2; j++) {
+            pdest[j * VID_BYTES + 0] = psrc[(j & 63) * TEX_BYTES + 2];
+            pdest[j * VID_BYTES + 1] = psrc[(j & 63) * TEX_BYTES + 1];
+            pdest[j * VID_BYTES + 2] = psrc[(j & 63) * TEX_BYTES + 0];
+        }
     }
 }
 
@@ -636,8 +563,9 @@ Fills a box of pixels with a single color
 */
 void R_DrawFill8(int x, int y, int w, int h, int c)
 {
-    byte            *dest;
-    int             u, v;
+    byte        *dest;
+    int         u, v;
+    color_t     color;
 
     if (x + w > vid.width)
         w = vid.width - x;
@@ -654,18 +582,25 @@ void R_DrawFill8(int x, int y, int w, int h, int c)
     if (w < 0 || h < 0)
         return;
 
-    dest = vid.buffer + y * vid.rowbytes + x;
-    for (v = 0; v < h; v++, dest += vid.rowbytes)
-        for (u = 0; u < w; u++)
-            dest[u] = c;
+    color.u32 = d_8to24table[c & 0xff];
+
+    dest = vid.buffer + y * vid.rowbytes + x * VID_BYTES;
+    for (v = 0; v < h; v++, dest += vid.rowbytes) {
+        for (u = 0; u < w; u++) {
+            dest[u * VID_BYTES + 0] = color.u8[2];
+            dest[u * VID_BYTES + 1] = color.u8[1];
+            dest[u * VID_BYTES + 2] = color.u8[0];
+        }
+    }
 }
 
-void R_DrawFill32(int x, int y, int w, int h, uint32_t color)
+void R_DrawFill32(int x, int y, int w, int h, uint32_t c)
 {
-    int             c;
-    byte            *dest;
-    int             u, v;
-    int             alpha;
+    byte        *dest;
+    int         u, v;
+    color_t     color;
+    int         alpha, one_minus_alpha;
+    fixed8_t    pre[3];
 
     if (x + w > vid.width)
         w = vid.width - x;
@@ -682,55 +617,21 @@ void R_DrawFill32(int x, int y, int w, int h, uint32_t color)
     if (w < 0 || h < 0)
         return;
 
-    c = R_IndexForColor(color);
-    alpha = (LittleLong(color) >> 24) & 0xff;
+    color.u32 = c;
 
-    dest = vid.buffer + y * vid.rowbytes + x;
-    if (alpha < 172) {
-        if (alpha > 84) {
-            for (v = 0; v < h; v++, dest += vid.rowbytes) {
-                for (u = 0; u < w; u++) {
-                    dest[u] = vid.alphamap[c * 256 + dest[u]];
-                }
-            }
-        } else {
-            for (v = 0; v < h; v++, dest += vid.rowbytes) {
-                for (u = 0; u < w; u++) {
-                    dest[u] = vid.alphamap[c + dest[u] * 256];
-                }
-            }
-        }
-    } else {
-        for (v = 0; v < h; v++, dest += vid.rowbytes) {
-            for (u = 0; u < w; u++) {
-                dest[u] = c;
-            }
-        }
-    }
-}
+    alpha = color.u8[3];
+    one_minus_alpha = 255 - alpha;
 
+    pre[0] = color.u8[0] * alpha;
+    pre[1] = color.u8[1] * alpha;
+    pre[2] = color.u8[2] * alpha;
 
-//=============================================================================
-
-/*
-================
-R_DrawFadeScreen
-
-================
-*/
-void R_DrawFadeScreen(void)
-{
-    int         x, y;
-    byte        *pbuf;
-    int t;
-
-    for (y = 0; y < vid.height; y++) {
-        pbuf = (byte *)(vid.buffer + vid.rowbytes * y);
-        t = (y & 1) << 1;
-
-        for (x = 0; x < vid.width; x++) {
-            if ((x & 3) != t)
-                pbuf[x] = 0;
+    dest = vid.buffer + y * vid.rowbytes + x * VID_BYTES;
+    for (v = 0; v < h; v++, dest += vid.rowbytes) {
+        for (u = 0; u < w; u++) {
+            dest[u * VID_BYTES + 0] = (dest[u * VID_BYTES + 0] * one_minus_alpha + pre[2]) >> 8;
+            dest[u * VID_BYTES + 1] = (dest[u * VID_BYTES + 1] * one_minus_alpha + pre[1]) >> 8;
+            dest[u * VID_BYTES + 2] = (dest[u * VID_BYTES + 2] * one_minus_alpha + pre[0]) >> 8;
         }
     }
 }
