@@ -306,7 +306,8 @@ typedef struct {
     float       s_offset, t_offset;
     float       viewer_position[3];
     void        (*drawspanlet)(void);
-    int         stipple_parity;
+    int         alpha;
+    int         one_minus_alpha;
 } polydesc_t;
 
 // FIXME: compress, make a union if that will help
@@ -715,9 +716,7 @@ typedef struct swstate_s {
     byte        currentpalette[1024];
 } swstate_t;
 
-void R_IMFlatShadedQuad(vec3_t a, vec3_t b, vec3_t c, vec3_t d, int color, float alpha);
-
-int R_IndexForColor(uint32_t color);
+void R_IMFlatShadedQuad(vec3_t a, vec3_t b, vec3_t c, vec3_t d, color_t color, float alpha);
 
 void R_InitDraw(void);
 

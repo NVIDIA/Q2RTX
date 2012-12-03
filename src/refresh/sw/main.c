@@ -1076,6 +1076,7 @@ void R_DrawBeam(entity_t *e)
 {
 #define NUM_BEAM_SEGS 6
 
+    color_t color;
     int i;
 
     vec3_t perpvec;
@@ -1108,12 +1109,17 @@ void R_DrawBeam(entity_t *e)
         VectorAdd(start_points[i], direction, end_points[i]);
     }
 
+    if (e->skinnum == -1)
+        color.u32 = e->rgba.u32;
+    else
+        color.u32 = d_8to24table[e->skinnum & 0xFF];
+
     for (i = 0; i < NUM_BEAM_SEGS; i++) {
         R_IMFlatShadedQuad(start_points[i],
                            end_points[i],
                            end_points[(i + 1) % NUM_BEAM_SEGS],
                            start_points[(i + 1) % NUM_BEAM_SEGS],
-                           e->skinnum & 0xFF,
+                           color,
                            e->alpha);
     }
 }
