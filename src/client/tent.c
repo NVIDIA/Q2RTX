@@ -351,9 +351,7 @@ typedef struct {
     vec3_t      start;
     vec3_t      end;
     int         color;
-#if USE_REF == REF_GL
     color_t     rgba;
-#endif
     int         width;
     int         lifetime, starttime;
 } laser_t;
@@ -398,17 +396,16 @@ static void CL_AddLasers(void)
             continue;
         }
 
-#if USE_REF == REF_GL
         if (l->color == -1) {
             float f = (float)time / (float)l->lifetime;
             ent.rgba.u8[0] = l->rgba.u8[0];
             ent.rgba.u8[1] = l->rgba.u8[1];
             ent.rgba.u8[2] = l->rgba.u8[2];
             ent.rgba.u8[3] = l->rgba.u8[3] * f;
+            ent.alpha = f;
+        } else {
+            ent.alpha = 0.30f;
         }
-#endif
-
-        ent.alpha = 0.30f;
         ent.skinnum = l->color;
         ent.flags = RF_TRANSLUCENT | RF_BEAM;
         VectorCopy(l->start, ent.origin);
@@ -959,8 +956,6 @@ static void CL_ParseNuke(void)
 
 //==============================================================
 
-#if USE_REF == REF_GL
-
 static color_t  railcore_color;
 static color_t  railspiral_color;
 
@@ -1063,10 +1058,6 @@ static void CL_RailTrail(void)
         }
     }
 }
-
-#else
-#define CL_RailTrail CL_OldRailTrail
-#endif
 
 static void dirtoangles(vec3_t angles)
 {
@@ -1483,7 +1474,6 @@ void CL_ClearTEnts(void)
 
 void CL_InitTEnts(void)
 {
-#if USE_REF == REF_GL
     cl_railtrail_type = Cvar_Get("cl_railtrail_type", "0", 0);
     cl_railtrail_time = Cvar_Get("cl_railtrail_time", "1.0", 0);
     cl_railcore_color = Cvar_Get("cl_railcore_color", "red", 0);
@@ -1496,6 +1486,5 @@ void CL_InitTEnts(void)
     cl_railspiral_color->generator = Com_Color_g;
     cl_railspiral_color_changed(cl_railspiral_color);
     cl_railspiral_radius = Cvar_Get("cl_railspiral_radius", "3", 0);
-#endif
 }
 

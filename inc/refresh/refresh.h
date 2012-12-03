@@ -77,9 +77,7 @@ typedef struct entity_s {
     int     lightstyle;             // for flashing entities
     float   alpha;                  // ignore if RF_TRANSLUCENT isn't set
 
-#if USE_REF == REF_GL
     color_t rgba;
-#endif
 
     qhandle_t   skin;           // NULL for inline skin
     int         flags;
@@ -98,9 +96,7 @@ typedef struct particle_s {
     vec3_t  origin;
     int     color;              // -1 => use rgba
     float   alpha;
-#if USE_REF == REF_GL
     color_t rgba;
-#endif
 } particle_t;
 
 typedef struct lightstyle_s {
