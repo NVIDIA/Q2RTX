@@ -355,12 +355,6 @@ void R_Shutdown(qboolean total)
         sc_base = NULL;
     }
 
-    // free colormap
-    if (vid.colormap) {
-        Z_Free(vid.colormap);
-        vid.colormap = NULL;
-    }
-
     R_UnRegister();
 
     IMG_Shutdown();
@@ -881,13 +875,41 @@ void R_CalcPalette(void)
     R_GammaCorrectAndSetPalette(palette);
 }
 
-byte *IMG_ReadPixels(byte **palette, int *width, int *height, int *rowbytes)
+byte *IMG_ReadPixels(qboolean reverse, int *width, int *height)
 {
-    *palette = sw_state.currentpalette;
+    byte *pixels;
+    byte *src, *dst;
+    int x, y;
+
+    pixels = FS_AllocTempMem(vid.width * vid.height * 3);
+
+    src = vid.buffer + vid.rowbytes * (vid.height - 1);
+    dst = pixels;
+
+    if (reverse) {
+        for (y = 0; y < vid.height; y++, src -= vid.rowbytes) {
+            for (x = 0; x < vid.width; x++) {
+                dst[0] = src[x * VID_BYTES + 0];
+                dst[1] = src[x * VID_BYTES + 1];
+                dst[2] = src[x * VID_BYTES + 2];
+                dst += 3;
+            }
+        }
+    } else {
+        for (y = 0; y < vid.height; y++, src -= vid.rowbytes) {
+            for (x = 0; x < vid.width; x++) {
+                dst[0] = src[x * VID_BYTES + 2];
+                dst[1] = src[x * VID_BYTES + 1];
+                dst[2] = src[x * VID_BYTES + 0];
+                dst += 3;
+            }
+        }
+    }
+
     *width = vid.width;
     *height = vid.height;
-    *rowbytes = vid.rowbytes;
-    return vid.buffer;
+
+    return pixels;
 }
 
 //=======================================================================

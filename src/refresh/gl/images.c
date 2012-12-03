@@ -474,81 +474,6 @@ static void GL_ColorInvertTexture(byte *in, int inwidth, int inheight)
     }
 }
 
-/*
-================
-GL_ResampleTexture
-================
-*/
-static void GL_ResampleTexture(const byte *in, int inwidth, int inheight, byte *out, int outwidth, int outheight)
-{
-    int i, j;
-    const byte  *inrow1, *inrow2;
-    unsigned    frac, fracstep;
-    unsigned    p1[MAX_TEXTURE_SIZE], p2[MAX_TEXTURE_SIZE];
-    const byte  *pix1, *pix2, *pix3, *pix4;
-    float       heightScale;
-
-    if (outwidth > MAX_TEXTURE_SIZE) {
-        Com_Error(ERR_FATAL, "%s: outwidth > %d", __func__, MAX_TEXTURE_SIZE);
-    }
-
-    fracstep = inwidth * 0x10000 / outwidth;
-
-    frac = fracstep >> 2;
-    for (i = 0; i < outwidth; i++) {
-        p1[i] = 4 * (frac >> 16);
-        frac += fracstep;
-    }
-    frac = 3 * (fracstep >> 2);
-    for (i = 0; i < outwidth; i++) {
-        p2[i] = 4 * (frac >> 16);
-        frac += fracstep;
-    }
-
-    heightScale = (float)inheight / outheight;
-    inwidth <<= 2;
-    for (i = 0; i < outheight; i++) {
-        inrow1 = in + inwidth * (int)((i + 0.25f) * heightScale);
-        inrow2 = in + inwidth * (int)((i + 0.75f) * heightScale);
-        for (j = 0; j < outwidth; j++) {
-            pix1 = inrow1 + p1[j];
-            pix2 = inrow1 + p2[j];
-            pix3 = inrow2 + p1[j];
-            pix4 = inrow2 + p2[j];
-            out[0] = (pix1[0] + pix2[0] + pix3[0] + pix4[0]) >> 2;
-            out[1] = (pix1[1] + pix2[1] + pix3[1] + pix4[1]) >> 2;
-            out[2] = (pix1[2] + pix2[2] + pix3[2] + pix4[2]) >> 2;
-            out[3] = (pix1[3] + pix2[3] + pix3[3] + pix4[3]) >> 2;
-            out += 4;
-        }
-    }
-}
-
-/*
-================
-GL_MipMap
-
-Operates in place, quartering the size of the texture
-================
-*/
-static void GL_MipMap(byte *in, int width, int height)
-{
-    int     i, j;
-    byte    *out;
-
-    width <<= 2;
-    height >>= 1;
-    out = in;
-    for (i = 0; i < height; i++, in += width) {
-        for (j = 0; j < width; j += 8, out += 4, in += 8) {
-            out[0] = (in[0] + in[4] + in[width + 0] + in[width + 4]) >> 2;
-            out[1] = (in[1] + in[5] + in[width + 1] + in[width + 5]) >> 2;
-            out[2] = (in[2] + in[6] + in[width + 2] + in[width + 6]) >> 2;
-            out[3] = (in[3] + in[7] + in[width + 3] + in[width + 7]) >> 2;
-        }
-    }
-}
-
 // returns true if image should not be bilinear filtered
 // (useful for small images in scarp, charsets, etc)
 static inline qboolean is_nearest(void)
@@ -711,14 +636,14 @@ static qboolean GL_Upload32(byte *data, int width, int height, qboolean mipmap)
         // optimized case, use faster mipmap operation
         scaled = data;
         while (width > scaled_width || height > scaled_height) {
-            GL_MipMap(scaled, width, height);
+            IMG_MipMap(scaled, scaled, width, height);
             width >>= 1;
             height >>= 1;
         }
     } else {
         scaled = FS_AllocTempMem(scaled_width * scaled_height * 4);
-        GL_ResampleTexture(data, width, height, scaled,
-                           scaled_width, scaled_height);
+        IMG_ResampleTexture(data, width, height, scaled,
+                            scaled_width, scaled_height);
     }
 
     // scan the texture for any non-255 alpha
@@ -736,7 +661,7 @@ static qboolean GL_Upload32(byte *data, int width, int height, qboolean mipmap)
         int miplevel = 0;
 
         while (scaled_width > 1 || scaled_height > 1) {
-            GL_MipMap(scaled, scaled_width, scaled_height);
+            IMG_MipMap(scaled, scaled, scaled_width, scaled_height);
             scaled_width >>= 1;
             scaled_height >>= 1;
             if (scaled_width < 1)

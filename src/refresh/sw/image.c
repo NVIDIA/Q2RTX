@@ -18,8 +18,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "sw.h"
 
-byte d_16to8table[65536];
-
 /*
 ================
 IMG_Unload
@@ -29,6 +27,21 @@ void IMG_Unload(image_t *image)
 {
     Z_Free(image->pixels[0]);
     image->pixels[0] = NULL;
+}
+
+static void R_LightScaleTexture(byte *in, int inwidth, int inheight)
+{
+    int     i, c;
+    byte    *p;
+
+    p = in;
+    c = inwidth * inheight;
+
+    for (i = 0; i < c; i++, p += TEX_BYTES) {
+        p[0] = sw_state.gammatable[p[0]];
+        p[1] = sw_state.gammatable[p[1]];
+        p[2] = sw_state.gammatable[p[2]];
+    }
 }
 
 /*
@@ -43,22 +56,54 @@ void IMG_Load(image_t *image, byte *pic, int width, int height)
     image->upload_width = width;
     image->upload_height = height;
 
+    b = image->width * image->height;
     c = width * height;
-    if (image->type == IT_WALL) {
-        size_t size = MIPSIZE(c);
 
-        image->pixels[0] = R_Malloc(size);
-        image->pixels[1] = image->pixels[0] + c;
-        image->pixels[2] = image->pixels[1] + c / 4;
-        image->pixels[3] = image->pixels[2] + c / 16;
+    if (image->flags & IF_PALETTED) {
+        if (image->type == IT_WALL) {
+            image->pixels[0] = R_Malloc(MIPSIZE(c) * TEX_BYTES);
+            image->pixels[1] = image->pixels[0] + c * TEX_BYTES;
+            image->pixels[2] = image->pixels[1] + c * TEX_BYTES / 4;
+            image->pixels[3] = image->pixels[2] + c * TEX_BYTES / 16;
 
-        memcpy(image->pixels[0], pic, size);
+            for (i = 0; i < MIPSIZE(c); i++) {
+                ((uint32_t *)image->pixels[0])[i] = d_8to24table[pic[i]];
+            }
+
+            R_LightScaleTexture(image->pixels[0], MIPSIZE(c), 1);
+        } else {
+            image->pixels[0] = R_Malloc(c * TEX_BYTES);
+            for (i = 0; i < c; i++) {
+                ((uint32_t *)image->pixels[0])[i] = d_8to24table[pic[i]];
+                if (pic[i] == 255) {
+                    image->flags |= IF_TRANSPARENT;
+                }
+            }
+            Z_Free(pic);
+        }
+    } else if (image->type == IT_WALL) {
+        image->upload_width = image->width;
+        image->upload_height = image->height;
+
+        image->pixels[0] = R_Malloc(MIPSIZE(b) * TEX_BYTES);
+        image->pixels[1] = image->pixels[0] + b * TEX_BYTES;
+        image->pixels[2] = image->pixels[1] + b * TEX_BYTES / 4;
+        image->pixels[3] = image->pixels[2] + b * TEX_BYTES / 16;
+
+        R_LightScaleTexture(pic, width, height);
+
+        IMG_ResampleTexture(pic, width, height, image->pixels[0], image->width, image->height);
+        IMG_MipMap(image->pixels[1], image->pixels[0], image->width >> 0, image->height >> 0);
+        IMG_MipMap(image->pixels[2], image->pixels[1], image->width >> 1, image->height >> 1);
+        IMG_MipMap(image->pixels[3], image->pixels[2], image->width >> 2, image->height >> 2);
+
+        Z_Free(pic);
     } else {
         image->pixels[0] = pic;
 
         for (i = 0; i < c; i++) {
-            b = pic[i];
-            if (b == 255) {
+            b = pic[i * TEX_BYTES + 3];
+            if (b != 255) {
                 image->flags |= IF_TRANSPARENT;
             }
         }
@@ -86,10 +131,10 @@ void R_BuildGammaTable(void)
 
 static void R_CreateNotexture(void)
 {
-    static byte buffer[MIPSIZE(NTX * NTX)];
-    int     x, y, m;
-    byte    *p;
-    image_t *ntx;
+    static byte buffer[MIPSIZE(NTX * NTX) * TEX_BYTES];
+    int         x, y, m;
+    uint32_t    *p;
+    image_t     *ntx;
 
 // create a simple checkerboard texture for the default
     ntx = R_NOTEXTURE;
@@ -98,64 +143,21 @@ static void R_CreateNotexture(void)
     ntx->width = ntx->height = NTX;
     ntx->upload_width = ntx->upload_height = NTX;
     ntx->pixels[0] = buffer;
-    ntx->pixels[1] = ntx->pixels[0] + NTX * NTX;
-    ntx->pixels[2] = ntx->pixels[1] + NTX * NTX / 4;
-    ntx->pixels[3] = ntx->pixels[2] + NTX * NTX / 16;
+    ntx->pixels[1] = ntx->pixels[0] + NTX * NTX * TEX_BYTES;
+    ntx->pixels[2] = ntx->pixels[1] + NTX * NTX * TEX_BYTES / 4;
+    ntx->pixels[3] = ntx->pixels[2] + NTX * NTX * TEX_BYTES / 16;
 
     for (m = 0; m < 4; m++) {
-        p = ntx->pixels[m];
+        p = (uint32_t *)ntx->pixels[m];
         for (y = 0; y < (16 >> m); y++) {
             for (x = 0; x < (16 >> m); x++) {
-                if ((y < (8 >> m)) ^(x < (8 >> m)))
-                    *p++ = 0;
+                if ((y < (8 >> m)) ^ (x < (8 >> m)))
+                    *p++ = U32_BLACK;
                 else
-                    *p++ = 1;
+                    *p++ = U32_WHITE;
             }
         }
     }
-}
-
-int R_IndexForColor(uint32_t color)
-{
-    unsigned int r, g, b, c;
-    color_t tmp = { color };
-
-    r = (tmp.u8[0] >> 3) & 31;
-    g = (tmp.u8[1] >> 2) & 63;
-    b = (tmp.u8[2] >> 3) & 31;
-
-    c = r | (g << 5) | (b << 11);
-
-    return d_16to8table[c];
-}
-
-static void R_Get16to8(void)
-{
-    static const char colormap[] = "pics/16to8.dat";
-    qhandle_t f;
-    ssize_t ret;
-
-    ret = FS_FOpenFile(colormap, &f, FS_MODE_READ);
-    if (!f) {
-        goto fail;
-    }
-
-    ret = FS_Read(d_16to8table, sizeof(d_16to8table), f);
-
-    FS_FCloseFile(f);
-
-    if (ret < 0) {
-        goto fail;
-    }
-
-    if (ret == sizeof(d_16to8table)) {
-        return; // success
-    }
-
-    ret = Q_ERR_FILE_TOO_SMALL;
-fail:
-    Com_Error(ERR_FATAL, "Couldn't load %s: %s",
-              colormap, Q_ErrorString(ret));
 }
 
 /*
@@ -167,18 +169,7 @@ void R_InitImages(void)
 {
     registration_sequence = 1;
 
-    vid.colormap = IMG_GetPalette();
-    vid.alphamap = vid.colormap + 64 * 256;
-
-#if USE_ASM
-    {
-        /* variable needed by assembly code */
-        extern void            *d_pcolormap;
-        d_pcolormap = vid.colormap;
-    }
-#endif
-
-    R_Get16to8();
+    IMG_GetPalette();
 
     R_CreateNotexture();
 
@@ -192,11 +183,6 @@ R_ShutdownImages
 */
 void R_ShutdownImages(void)
 {
-    if (vid.colormap) {
-        Z_Free(vid.colormap);
-        vid.colormap = NULL;
-    }
-
     IMG_FreeAll();
 }
 

@@ -169,67 +169,6 @@ IMG_LOAD(PCX)
     return _IMG_LoadPCX(rawdata, rawlen, pic, NULL, width, height);
 }
 
-#if USE_REF == REF_SOFT
-static qerror_t _IMG_SavePCX(qhandle_t f, const byte *data, \
-                             const byte *palette, int width, int height, int rowbytes)
-{
-    int         i, j;
-    size_t      len;
-    dpcx_t      *pcx;
-    byte        *pack;
-    ssize_t     ret;
-
-    pcx = FS_AllocTempMem(width * height * 2 + 1000);
-    pcx->manufacturer = 0x0a;   // PCX id
-    pcx->version = 5;           // 256 color
-    pcx->encoding = 1;          // uncompressed
-    pcx->bits_per_pixel = 8;    // 256 color
-    pcx->xmin = 0;
-    pcx->ymin = 0;
-    pcx->xmax = LittleShort(width - 1);
-    pcx->ymax = LittleShort(height - 1);
-    pcx->hres = LittleShort(width);
-    pcx->vres = LittleShort(height);
-    memset(pcx->palette, 0, sizeof(pcx->palette));
-    pcx->color_planes = 1;      // chunky image
-    pcx->bytes_per_line = LittleShort(width);
-    pcx->palette_type = LittleShort(2);         // not a grey scale
-    memset(pcx->filler, 0, sizeof(pcx->filler));
-
-// pack the image
-    pack = pcx->data;
-    for (i = 0; i < height; i++) {
-        for (j = 0; j < width; j++) {
-            if ((*data & 0xc0) == 0xc0) {
-                *pack++ = 0xc1;
-            }
-            *pack++ = *data++;
-        }
-        data += rowbytes - width;
-    }
-
-// write the palette
-    *pack++ = 0x0c;     // palette ID byte
-    for (i = 0; i < 256; i++) {
-        pack[0] = palette[0];
-        pack[1] = palette[1];
-        pack[2] = palette[2];
-        pack += 3;
-        palette += 4;
-    }
-
-// write output file
-    len = pack - (byte *)pcx;
-    ret = FS_Write(pcx, len, f);
-    FS_FreeTempMem(pcx);
-
-    if (ret < 0) {
-        return ret;
-    }
-
-    return Q_ERR_SUCCESS;
-}
-#endif
 
 /*
 =================================================================
@@ -1211,36 +1150,24 @@ static qhandle_t create_screenshot(char *buffer, size_t size,
     return 0;
 }
 
-static void make_screenshot(const char *name, const char *ext
-#if USE_REF == REF_GL
-                            , qerror_t (*save)(qhandle_t, const char *, const byte *, int, int, int),
-                            qboolean reverse, int param
-#endif
-                           )
+static void make_screenshot(const char *name, const char *ext,
+                            qerror_t (*save)(qhandle_t, const char *, const byte *, int, int, int),
+                            qboolean reverse, int param)
 {
     char        buffer[MAX_OSPATH];
     byte        *pixels;
     qerror_t    ret;
     qhandle_t   f;
     int         w, h;
-#if USE_REF == REF_SOFT
-    int         rowbytes;
-    byte        *palette;
-#endif
 
     f = create_screenshot(buffer, sizeof(buffer), name, ext);
     if (!f) {
         return;
     }
 
-#if USE_REF == REF_GL
     pixels = IMG_ReadPixels(reverse, &w, &h);
     ret = save(f, buffer, pixels, w, h, param);
     FS_FreeTempMem(pixels);
-#else
-    pixels = IMG_ReadPixels(&palette, &w, &h, &rowbytes);
-    ret = _IMG_SavePCX(f, pixels, palette, w, h, rowbytes);
-#endif
 
     FS_FCloseFile(f);
 
@@ -1295,9 +1222,7 @@ static void IMG_ScreenShot_f(void)
 #endif
 #endif // USE_JPG || USE_PNG
 
-#if USE_REF == REF_SOFT
-    make_screenshot(NULL, ".pcx");
-#elif USE_TGA
+#if USE_TGA
     make_screenshot(NULL, ".tga", IMG_SaveTGA, qtrue, 0);
 #else
     Com_Printf("Can't take screenshot, TGA format not available.\n");
@@ -1312,17 +1237,6 @@ Specialized function to take a screenshot in specified format. Screenshot name
 can be also specified, as well as quality and compression options.
 ==================
 */
-#if USE_REF == REF_SOFT
-static void IMG_ScreenShotPCX_f(void)
-{
-    if (Cmd_Argc() > 2) {
-        Com_Printf("Usage: %s [name]\n", Cmd_Argv(0));
-        return;
-    }
-
-    make_screenshot(Cmd_Argv(1), ".pcx");
-}
-#endif
 
 #if USE_TGA
 static void IMG_ScreenShotTGA_f(void)
@@ -1375,6 +1289,76 @@ static void IMG_ScreenShotPNG_f(void)
     make_screenshot(Cmd_Argv(1), ".png", IMG_SavePNG, qfalse, compression);
 }
 #endif
+
+/*
+=========================================================
+
+IMAGE PROCESSING
+
+=========================================================
+*/
+
+void IMG_ResampleTexture(const byte *in, int inwidth, int inheight,
+                         byte *out, int outwidth, int outheight)
+{
+    int i, j;
+    const byte  *inrow1, *inrow2;
+    unsigned    frac, fracstep;
+    unsigned    p1[MAX_TEXTURE_SIZE], p2[MAX_TEXTURE_SIZE];
+    const byte  *pix1, *pix2, *pix3, *pix4;
+    float       heightScale;
+
+    if (outwidth > MAX_TEXTURE_SIZE) {
+        Com_Error(ERR_FATAL, "%s: outwidth > %d", __func__, MAX_TEXTURE_SIZE);
+    }
+
+    fracstep = inwidth * 0x10000 / outwidth;
+
+    frac = fracstep >> 2;
+    for (i = 0; i < outwidth; i++) {
+        p1[i] = 4 * (frac >> 16);
+        frac += fracstep;
+    }
+    frac = 3 * (fracstep >> 2);
+    for (i = 0; i < outwidth; i++) {
+        p2[i] = 4 * (frac >> 16);
+        frac += fracstep;
+    }
+
+    heightScale = (float)inheight / outheight;
+    inwidth <<= 2;
+    for (i = 0; i < outheight; i++) {
+        inrow1 = in + inwidth * (int)((i + 0.25f) * heightScale);
+        inrow2 = in + inwidth * (int)((i + 0.75f) * heightScale);
+        for (j = 0; j < outwidth; j++) {
+            pix1 = inrow1 + p1[j];
+            pix2 = inrow1 + p2[j];
+            pix3 = inrow2 + p1[j];
+            pix4 = inrow2 + p2[j];
+            out[0] = (pix1[0] + pix2[0] + pix3[0] + pix4[0]) >> 2;
+            out[1] = (pix1[1] + pix2[1] + pix3[1] + pix4[1]) >> 2;
+            out[2] = (pix1[2] + pix2[2] + pix3[2] + pix4[2]) >> 2;
+            out[3] = (pix1[3] + pix2[3] + pix3[3] + pix4[3]) >> 2;
+            out += 4;
+        }
+    }
+}
+
+void IMG_MipMap(byte *out, byte *in, int width, int height)
+{
+    int     i, j;
+
+    width <<= 2;
+    height >>= 1;
+    for (i = 0; i < height; i++, in += width) {
+        for (j = 0; j < width; j += 8, out += 4, in += 8) {
+            out[0] = (in[0] + in[4] + in[width + 0] + in[width + 4]) >> 2;
+            out[1] = (in[1] + in[5] + in[width + 1] + in[width + 5]) >> 2;
+            out[2] = (in[2] + in[6] + in[width + 2] + in[width + 6]) >> 2;
+            out[3] = (in[3] + in[7] + in[width + 3] + in[width + 7]) >> 2;
+        }
+    }
+}
 
 /*
 =========================================================
@@ -1921,7 +1905,8 @@ void IMG_FreeUnused(void)
     for (i = 1, image = r_images + 1; i < r_numImages; i++, image++) {
         if (image->registration_sequence == registration_sequence) {
 #if USE_REF == REF_SOFT
-            Com_PageInMemory(image->pixels[0], image->width * image->height);
+            // TODO: account for MIPSIZE, TEX_BYTES
+            Com_PageInMemory(image->pixels[0], image->upload_width * image->upload_height * 4);
 #endif
             continue;        // used this sequence
         }
@@ -1976,20 +1961,15 @@ void IMG_FreeAll(void)
 ===============
 R_GetPalette
 
-Reads the palette and (optionally) loads
-the colormap for software renderer.
 ===============
 */
-byte *IMG_GetPalette(void)
+void IMG_GetPalette(void)
 {
     static const char colormap[] = "pics/colormap.pcx";
-    byte pal[768], *src, *data, *pic;
+    byte pal[768], *src, *data;
     qerror_t ret;
     ssize_t len;
     int i;
-#if USE_REF == REF_SOFT
-    int w, h;
-#endif
 
     // get the palette
     len = FS_LoadFile(colormap, (void **)&data);
@@ -1998,12 +1978,7 @@ byte *IMG_GetPalette(void)
         goto fail;
     }
 
-#if USE_REF == REF_SOFT
-    ret = _IMG_LoadPCX(data, len, &pic, pal, &w, &h);
-#else
     ret = _IMG_LoadPCX(data, len, NULL, pal, NULL, NULL);
-    pic = NULL;
-#endif
 
     FS_FreeFile(data);
 
@@ -2011,33 +1986,21 @@ byte *IMG_GetPalette(void)
         goto fail;
     }
 
-#if USE_REF == REF_SOFT
-    // check colormap size
-    if (w != 256 || h != 320) {
-        ret = Q_ERR_INVALID_FORMAT;
-        goto fail;
-    }
-#endif
-
     for (i = 0, src = pal; i < 255; i++, src += 3) {
         d_8to24table[i] = MakeColor(src[0], src[1], src[2], 255);
     }
 
     // 255 is transparent
     d_8to24table[i] = MakeColor(src[0], src[1], src[2], 0);
-    return pic;
+    return;
 
 fail:
     Com_Error(ERR_FATAL, "Couldn't load %s: %s", colormap, Q_ErrorString(ret));
-    return NULL;
 }
 
 static const cmdreg_t img_cmd[] = {
     { "imagelist", IMG_List_f },
     { "screenshot", IMG_ScreenShot_f },
-#if USE_REF == REF_SOFT
-    { "screenshotpcx", IMG_ScreenShotPCX_f },
-#endif
 #if USE_TGA
     { "screenshottga", IMG_ScreenShotTGA_f },
 #endif

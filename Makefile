@@ -354,24 +354,24 @@ ifndef CONFIG_SOFTWARE_RENDERER
     ifndef CONFIG_NO_MD3
         CFLAGS_c += -DUSE_MD3=1
     endif
+endif
 
-    ifndef CONFIG_NO_TGA
-        CFLAGS_c += -DUSE_TGA=1
-    endif
+ifndef CONFIG_NO_TGA
+	CFLAGS_c += -DUSE_TGA=1
+endif
 
-    ifdef CONFIG_PNG
-        PNG_CFLAGS ?= $(shell libpng-config --cflags)
-        PNG_LIBS ?= $(shell libpng-config --libs)
-        CFLAGS_c += -DUSE_PNG=1 $(PNG_CFLAGS)
-        LIBS_c += $(PNG_LIBS)
-    endif
+ifdef CONFIG_PNG
+	PNG_CFLAGS ?= $(shell libpng-config --cflags)
+	PNG_LIBS ?= $(shell libpng-config --libs)
+	CFLAGS_c += -DUSE_PNG=1 $(PNG_CFLAGS)
+	LIBS_c += $(PNG_LIBS)
+endif
 
-    ifdef CONFIG_JPEG
-        JPG_CFLAGS ?=
-        JPG_LIBS ?= -ljpeg
-        CFLAGS_c += -DUSE_JPG=1 $(JPG_CFLAGS)
-        LIBS_c += $(JPG_LIBS)
-    endif
+ifdef CONFIG_JPEG
+	JPG_CFLAGS ?=
+	JPG_LIBS ?= -ljpeg
+	CFLAGS_c += -DUSE_JPG=1 $(JPG_CFLAGS)
+	LIBS_c += $(JPG_LIBS)
 endif
 
 ifdef CONFIG_ANTICHEAT_SERVER

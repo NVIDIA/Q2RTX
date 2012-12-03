@@ -43,8 +43,6 @@ typedef struct vrectSoft_s {
 
 typedef struct {
     pixel_t                 *buffer;                // invisible buffer
-    pixel_t                 *colormap;              // 256 * VID_GRADES size
-    pixel_t                 *alphamap;              // 256 * 256 translucency map
     int                     rowbytes;               // may be > width if displayed in a window
                                                     // can be negative for stupid dibs
     int                     width;
@@ -95,8 +93,8 @@ extern oldrefdef_t      r_refdef;
 #define VID_CBITS       6
 #define VID_GRADES      (1 << VID_CBITS)
 
-#define VID_BYTES       1
-#define TEX_BYTES       1
+#define VID_BYTES       4   // can be 4 or 3
+#define TEX_BYTES       4   // must be 4
 
 
 // r_shared.h: general refresh-related stuff shared between the refresh and the

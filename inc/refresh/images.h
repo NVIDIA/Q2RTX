@@ -48,11 +48,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #endif
 
 // absolute limit for OpenGL renderer
-#if USE_REF == REF_GL
 #define MAX_TEXTURE_SIZE            2048
-#else
-#define MAX_TEXTURE_SIZE            512
-#endif
 
 // size of GL_Upload8 internal buffer
 #define MAX_PALETTED_PIXELS         (512 * 256)
@@ -106,17 +102,17 @@ void IMG_FreeUnused(void);
 void IMG_FreeAll(void);
 void IMG_Init(void);
 void IMG_Shutdown(void);
-byte *IMG_GetPalette(void);
+void IMG_GetPalette(void);
 
 image_t *IMG_ForHandle(qhandle_t h);
+
+void IMG_ResampleTexture(const byte *in, int inwidth, int inheight,
+                         byte *out, int outwidth, int outheight);
+void IMG_MipMap(byte *out, byte *in, int width, int height);
 
 // these are implemented in src/refresh/[gl,sw]/images.c
 void IMG_Unload(image_t *image);
 void IMG_Load(image_t *image, byte *pic, int width, int height);
-#if USE_REF == REF_SOFT
-byte *IMG_ReadPixels(byte **palette, int *width, int *height, int *rowbytes);
-#else
 byte *IMG_ReadPixels(qboolean reverse, int *width, int *height);
-#endif
 
 #endif // IMAGES_H
