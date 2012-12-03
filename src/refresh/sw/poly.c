@@ -567,7 +567,7 @@ static void R_PolygonDrawSpans(espan_t *pspan, int iswater)
     s_spanletvars.pz = 0;
 
     do {
-        s_spanletvars.pdest   = (byte *)d_viewbuffer + (d_scantable[pspan->v] /*r_screenwidth * pspan->v*/) + pspan->u;
+        s_spanletvars.pdest   = (byte *)d_viewbuffer + d_scantable[pspan->v] + pspan->u * VID_BYTES;
         s_spanletvars.pz      = d_pzbuffer + (d_zwidth * pspan->v) + pspan->u;
         s_spanletvars.u       = pspan->u;
         s_spanletvars.v       = pspan->v;
@@ -933,9 +933,7 @@ static void R_ClipAndDrawPoly(float alpha, int isturbulent, qboolean textured)
 static void R_BuildPolygonFromSurface(mface_t *fa)
 {
     int         i, lnumverts;
-    medge_t     *pedges;
     msurfedge_t *surfedge;
-    int         vertpage;
     float       *vec;
     vec5_t     *pverts;
     float       tmins[2] = { 0, 0 };
@@ -943,9 +941,7 @@ static void R_BuildPolygonFromSurface(mface_t *fa)
     r_polydesc.nump = 0;
 
     // reconstruct the polygon
-    pedges = r_worldmodel->edges;
     lnumverts = fa->numsurfedges;
-    vertpage = 0;
 
     pverts = r_clip_verts[0];
 
@@ -1075,7 +1071,7 @@ static void R_DrawPoly(int iswater)
     if (ymin >= ymax)
         return;     // doesn't cross any scans at all
 
-    cachewidth = r_polydesc.pixel_width;
+    cachewidth = r_polydesc.pixel_width * TEX_BYTES;
     cacheblock = r_polydesc.pixels;
 
 // copy the first vertex to the last vertex, so we don't have to deal with

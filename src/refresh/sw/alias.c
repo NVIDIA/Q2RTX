@@ -473,7 +473,7 @@ static qboolean R_AliasSetupSkin(void)
         return qfalse;
 
     r_affinetridesc.pskin = pskindesc->pixels[0];
-    r_affinetridesc.skinwidth = pskindesc->width;
+    r_affinetridesc.skinwidth = pskindesc->width * TEX_BYTES;
     r_affinetridesc.skinheight = pskindesc->height;
 
     R_PolysetUpdateTables();        // FIXME: precalc edge lookups

@@ -95,6 +95,9 @@ extern oldrefdef_t      r_refdef;
 #define VID_CBITS       6
 #define VID_GRADES      (1 << VID_CBITS)
 
+#define VID_BYTES       1
+#define TEX_BYTES       1
+
 
 // r_shared.h: general refresh-related stuff shared between the refresh and the
 // driver
@@ -397,7 +400,7 @@ void R_DrawSurface(void);
 
 extern int              c_surf;
 
-extern byte             r_warpbuffer[WARP_WIDTH * WARP_HEIGHT];
+extern byte             r_warpbuffer[WARP_WIDTH * WARP_HEIGHT * VID_BYTES];
 
 extern float    scale_for_mip;
 
@@ -437,7 +440,7 @@ extern float    d_scalemip[3];
 
 extern int      cachewidth;
 extern pixel_t  *cacheblock;
-extern int      r_screenwidth;
+extern int      r_screenrowbytes;
 
 extern int      r_drawnpolycount;
 
@@ -681,8 +684,6 @@ void R_InitCaches(void);
 void D_FlushCaches(void);
 
 qhandle_t R_RegisterModel(const char *name);
-
-void    R_ScreenShot_f(void);
 
 void    R_RenderFrame(refdef_t *fd);
 

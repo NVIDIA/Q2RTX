@@ -100,7 +100,7 @@ extern int registration_sequence;
 
 extern uint32_t d_8to24table[256];
 
-// these are implemented in r_images.c
+// these are implemented in src/refresh/images.c
 image_t *IMG_Find(const char *name, imagetype_t type);
 void IMG_FreeUnused(void);
 void IMG_FreeAll(void);
@@ -110,7 +110,7 @@ byte *IMG_GetPalette(void);
 
 image_t *IMG_ForHandle(qhandle_t h);
 
-// these are implemented in [gl,sw]_images.c
+// these are implemented in src/refresh/[gl,sw]/images.c
 void IMG_Unload(image_t *image);
 void IMG_Load(image_t *image, byte *pic, int width, int height);
 #if USE_REF == REF_SOFT

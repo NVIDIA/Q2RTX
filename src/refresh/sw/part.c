@@ -87,7 +87,7 @@ static void R_DrawParticle(void)
     ** compute the Z-buffer reference value.
     */
     pz = d_pzbuffer + (d_zwidth * v) + u;
-    pdest = d_viewbuffer + d_scantable[v] + u;
+    pdest = d_viewbuffer + d_scantable[v] + u * VID_BYTES;
     izi = (int)(zi * 0x8000);
 
     /*

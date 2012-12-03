@@ -96,7 +96,7 @@ void D_ViewChanged(void)
         r_refdef.vrectbottom - d_pix_max;
 
     for (i = 0; i < vid.height; i++) {
-        d_scantable[i] = i * r_screenwidth;
+        d_scantable[i] = i * r_screenrowbytes;
         zspantable[i] = d_pzbuffer + i * d_zwidth;
     }
 
@@ -392,7 +392,7 @@ void R_SetupFrame(void)
         vrect.height = r_newrefdef.height < WARP_HEIGHT ? r_newrefdef.height : WARP_HEIGHT;
 
         d_viewbuffer = r_warpbuffer;
-        r_screenwidth = WARP_WIDTH;
+        r_screenrowbytes = WARP_WIDTH * VID_BYTES;
     } else {
         vrect.x = r_newrefdef.x;
         vrect.y = r_newrefdef.y;
@@ -400,7 +400,7 @@ void R_SetupFrame(void)
         vrect.height = r_newrefdef.height;
 
         d_viewbuffer = (void *)vid.buffer;
-        r_screenwidth = vid.rowbytes;
+        r_screenrowbytes = vid.rowbytes;
     }
 
     R_ViewChanged(&vrect);

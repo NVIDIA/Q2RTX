@@ -624,7 +624,7 @@ void R_ScanEdges(void)
     edge_aftertail.prev = &edge_tail;
 
 // FIXME: do we need this now that we clamp x in r_draw.c?
-    edge_sentinel.u = 2000 << 24;       // make sure nothing sorts past this
+    edge_sentinel.u = 2000 << 20;       // make sure nothing sorts past this
     edge_sentinel.prev = &edge_aftertail;
 
 //
@@ -735,8 +735,7 @@ void D_FlatFillSurface(surf_t *surf, uint32_t color)
     int     count;
 
     for (span = surf->spans; span; span = span->pnext) {
-        pdest = (byte *)d_viewbuffer +
-                r_screenwidth * span->v + span->u;
+        pdest = (byte *)d_viewbuffer + d_scantable[span->v] + span->u * VID_BYTES;
         count = span->count;
         do {
             *pdest++ = color & 0xff;
@@ -752,13 +751,10 @@ D_CalcGradients
 */
 void D_CalcGradients(mface_t *pface)
 {
-    cplane_t    *pplane;
     float       mipscale;
     vec3_t      p_temp1;
     vec3_t      p_saxis, p_taxis;
     float       t;
-
-    pplane = pface->plane;
 
     mipscale = 1.0 / (float)(1 << miplevel);
 
@@ -838,7 +834,7 @@ void D_TurbulentSurf(surf_t *s)
     pface = s->msurf;
     miplevel = 0;
     cacheblock = pface->texinfo->image->pixels[0];
-    cachewidth = 64;
+    cachewidth = 64 * TEX_BYTES;
 
     if (s->insubmodel) {
         // FIXME: we don't want to do all this for every polygon!
@@ -901,7 +897,7 @@ void D_SkySurf(surf_t *s)
         D_FlatFillSurface(s, 0);
     } else {
         cacheblock = pface->texinfo->image->pixels[0];
-        cachewidth = 256;
+        cachewidth = 256 * TEX_BYTES;
 
         D_CalcGradients(pface);
 
@@ -952,7 +948,7 @@ void D_SolidSurf(surf_t *s)
     pcurrentcache = D_CacheSurface(pface, miplevel);
 
     cacheblock = (pixel_t *)pcurrentcache->data;
-    cachewidth = pcurrentcache->width;
+    cachewidth = pcurrentcache->width * TEX_BYTES;
 
     D_CalcGradients(pface);
 

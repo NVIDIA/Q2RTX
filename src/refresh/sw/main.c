@@ -30,7 +30,7 @@ model_t     *currentmodel;
 
 bsp_t       *r_worldmodel;
 
-byte        r_warpbuffer[WARP_WIDTH * WARP_HEIGHT];
+byte        r_warpbuffer[WARP_WIDTH * WARP_HEIGHT * VID_BYTES];
 
 swstate_t sw_state;
 
@@ -67,7 +67,7 @@ float       xscaleinv, yscaleinv;
 float       xscaleshrink, yscaleshrink;
 float       aliasxscale, aliasyscale, aliasxcenter, aliasycenter;
 
-int     r_screenwidth;
+int     r_screenrowbytes;
 
 float   verticalFieldOfView;
 float   xOrigin, yOrigin;
@@ -222,7 +222,6 @@ void R_Register(void)
 
 void R_UnRegister(void)
 {
-    Cmd_RemoveCommand("screenshot");
     Cmd_RemoveCommand("scdump");
 }
 
@@ -916,7 +915,8 @@ void R_RenderFrame(refdef_t *fd)
 
     R_MarkLeaves();     // done here so we know if we're in water
 
-    R_PushDlights(r_worldmodel->nodes);
+    if (r_worldmodel)
+        R_PushDlights(r_worldmodel->nodes);
 
     R_EdgeDrawing();
 

@@ -26,13 +26,13 @@ int             lightdelta, lightdeltastep;
 int             lightright, lightleftstep, lightrightstep, blockdivshift;
 unsigned        blockdivmask;
 void            *prowdestbase;
-unsigned char   *pbasesource;
+byte            *pbasesource;
 int             surfrowbytes;   // used by ASM files
 unsigned        *r_lightptr;
 int             r_stepback;
 int             r_lightwidth;
 int             r_numhblocks, r_numvblocks;
-unsigned char   *r_source, *r_sourcemax;
+byte            *r_source, *r_sourcemax;
 
 void R_DrawSurfaceBlock8_mip0(void);
 void R_DrawSurfaceBlock8_mip1(void);
@@ -104,7 +104,7 @@ void R_DrawSurface(void)
 // from a source range of 0 - 255
 
     /* width in bytes */
-    twidth = mt->upload_width >> r_drawsurf.surfmip;
+    twidth = (mt->upload_width >> r_drawsurf.surfmip) * TEX_BYTES;
 
     blocksize = 16 >> r_drawsurf.surfmip;
     blockdivshift = 4 - r_drawsurf.surfmip;
@@ -119,14 +119,14 @@ void R_DrawSurface(void)
 
     pblockdrawer = surfmiptable[r_drawsurf.surfmip];
 // TODO: only needs to be set when there is a display settings change
-    horzblockstep = blocksize;
+    horzblockstep = blocksize * TEX_BYTES;
 
     smax = mt->upload_width >> r_drawsurf.surfmip;
     tmax = mt->upload_height >> r_drawsurf.surfmip;
     sourcetstep = twidth;
     r_stepback = tmax * twidth;
 
-    r_sourcemax = r_source + tmax * smax;
+    r_sourcemax = r_source + tmax * smax * TEX_BYTES;
 
     soffset = r_drawsurf.surf->texturemins[0];
     toffset = r_drawsurf.surf->texturemins[1];
@@ -144,7 +144,7 @@ void R_DrawSurface(void)
 
         prowdestbase = pcolumndest;
 
-        pbasesource = basetptr + soffset;
+        pbasesource = basetptr + soffset * TEX_BYTES;
 
         (*pblockdrawer)();
 
@@ -206,7 +206,7 @@ void R_InitCaches(void)
     // round up to page size
     size = (size + 8191) & ~8191;
 
-    Com_Printf("%ik surface cache\n", size / 1024);
+    Com_DPrintf("%ik surface cache\n", size / 1024);
 
     sc_size = size;
     sc_base = (surfcache_t *)R_Malloc(size);
@@ -255,7 +255,7 @@ surfcache_t     *D_SCAlloc(int width, int size)
     if ((width < 0) || (width > 256))
         Com_Error(ERR_FATAL, "D_SCAlloc: bad cache width %d\n", width);
 
-    if ((size <= 0) || (size > 0x10000))
+    if ((size <= 0) || (size > 0x10000 * TEX_BYTES))
         Com_Error(ERR_FATAL, "D_SCAlloc: bad cache size %d\n", size);
 
     size += sizeof(surfcache_t) - 4;
@@ -376,7 +376,7 @@ surfcache_t *D_CacheSurface(mface_t *surface, int miplevel)
     surfscale = 1.0 / (1 << miplevel);
     r_drawsurf.surfmip = miplevel;
     r_drawsurf.surfwidth = surface->extents[0] >> miplevel;
-    r_drawsurf.rowbytes = r_drawsurf.surfwidth;
+    r_drawsurf.rowbytes = r_drawsurf.surfwidth * TEX_BYTES;
     r_drawsurf.surfheight = surface->extents[1] >> miplevel;
 
 //
@@ -384,7 +384,7 @@ surfcache_t *D_CacheSurface(mface_t *surface, int miplevel)
 //
     if (!cache) {   // if a texture just animated, don't reallocate it
         cache = D_SCAlloc(r_drawsurf.surfwidth,
-                          r_drawsurf.surfwidth * r_drawsurf.surfheight);
+                          r_drawsurf.surfwidth * r_drawsurf.surfheight * TEX_BYTES);
         surface->cachespots[miplevel] = cache;
         cache->owner = &surface->cachespots[miplevel];
         cache->mipscale = surfscale;
