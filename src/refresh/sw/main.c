@@ -254,8 +254,6 @@ void R_ModeChanged(int width, int height, int flags, int rowbytes, void *pixels)
     d_pzbuffer = R_Mallocz(vid.width * vid.height * 2);
 
     R_InitCaches();
-
-    R_GammaCorrectAndSetPalette((const byte *) d_8to24table);
 }
 
 /*
@@ -311,9 +309,6 @@ qboolean R_Init(qboolean total)
     r_refdef.yOrigin = YCENTERING;
 
     R_InitTurb();
-
-    R_GammaCorrectAndSetPalette((const byte *) d_8to24table);
-    vid_gamma->modified = qfalse;
 
     return qtrue;
 }
@@ -821,60 +816,6 @@ void R_EdgeDrawing(void)
 
 //=======================================================================
 
-
-/*
-=============
-R_CalcPalette
-
-=============
-*/
-void R_CalcPalette(void)
-{
-    static qboolean modified;
-    byte    palette[256 * 4], *in, *out;
-    int     i;
-    float   alpha, one_minus_alpha;
-    vec3_t  premult;
-    int     r, g, b;
-
-    alpha = r_newrefdef.blend[3];
-    if (alpha <= 0) {
-        if (modified) {
-            // set back to default
-            modified = qfalse;
-            R_GammaCorrectAndSetPalette((const byte *) d_8to24table);
-        }
-        return;
-    }
-
-    modified = qtrue;
-    if (alpha > 1)
-        alpha = 1;
-
-    premult[0] = r_newrefdef.blend[0] * alpha * 255;
-    premult[1] = r_newrefdef.blend[1] * alpha * 255;
-    premult[2] = r_newrefdef.blend[2] * alpha * 255;
-
-    one_minus_alpha = (1.0 - alpha);
-
-    in = (byte *)d_8to24table;
-    out = palette;
-    for (i = 0; i < 256; i++, in += 4, out += 4) {
-        r = premult[0] + one_minus_alpha * in[0];
-        g = premult[1] + one_minus_alpha * in[1];
-        b = premult[2] + one_minus_alpha * in[2];
-        if (r > 255) r = 255;
-        if (g > 255) g = 255;
-        if (b > 255) b = 255;
-        out[0] = r;
-        out[1] = g;
-        out[2] = b;
-        out[3] = 255;
-    }
-
-    R_GammaCorrectAndSetPalette(palette);
-}
-
 byte *IMG_ReadPixels(qboolean reverse, int *width, int *height)
 {
     byte *pixels;
@@ -978,8 +919,6 @@ void R_RenderFrame(refdef_t *fd)
     if (r_dspeeds->integer)
         da_time2 = Sys_Milliseconds();
 
-    R_CalcPalette();
-
     if (sw_aliasstats->integer)
         R_PrintAliasStats();
 
@@ -1006,68 +945,8 @@ void R_BeginFrame(void)
 
 void R_EndFrame(void)
 {
-    if (vid_gamma->modified) {
-        R_BuildGammaTable();
-        R_GammaCorrectAndSetPalette((const byte *) d_8to24table);
-        vid_gamma->modified = qfalse;
-    }
-
     VID_EndFrame();
 }
-
-/*
-** R_GammaCorrectAndSetPalette
-*/
-void R_GammaCorrectAndSetPalette(const byte *palette)
-{
-    int i;
-    byte *dest;
-
-    dest = sw_state.currentpalette;
-    for (i = 0; i < 256; i++) {
-        dest[0] = sw_state.gammatable[palette[0]];
-        dest[1] = sw_state.gammatable[palette[1]];
-        dest[2] = sw_state.gammatable[palette[2]];
-        palette += 4; dest += 4;
-    }
-
-    VID_UpdatePalette(sw_state.currentpalette);
-}
-
-#if 0
-/*
-** R_CinematicSetPalette
-*/
-void R_CinematicSetPalette(const byte *palette)
-{
-    byte palette32[1024];
-    int     i, j, w;
-    int     *d;
-
-    // clear screen to black to avoid any palette flash
-    w = abs(vid.rowbytes) >> 2; // stupid negative pitch win32 stuff...
-    for (i = 0; i < vid.height; i++, d += w) {
-        d = (int *)(vid.buffer + i * vid.rowbytes);
-        for (j = 0; j < w; j++)
-            d[j] = 0;
-    }
-    // flush it to the screen
-    R_EndFrame();
-
-    if (palette) {
-        for (i = 0; i < 256; i++) {
-            palette32[i * 4 + 0] = palette[i * 3 + 0];
-            palette32[i * 4 + 1] = palette[i * 3 + 1];
-            palette32[i * 4 + 2] = palette[i * 3 + 2];
-            palette32[i * 4 + 3] = 0xFF;
-        }
-
-        R_GammaCorrectAndSetPalette(palette32);
-    } else {
-        R_GammaCorrectAndSetPalette((const byte *) d_8to24table);
-    }
-}
-#endif
 
 /*
 ** R_DrawBeam

@@ -689,8 +689,6 @@ void    R_RenderFrame(refdef_t *fd);
 
 void     R_BeginFrame(void);
 
-//void    R_CinematicSetPalette(const unsigned char *palette);
-
 #if USE_ASM
 void    Sys_MakeCodeWriteable(uintptr_t start, size_t length);
 #endif
@@ -699,7 +697,6 @@ void    R_InitImages(void);
 void    R_ShutdownImages(void);
 
 void    R_BuildGammaTable(void);
-void    R_GammaCorrectAndSetPalette(const byte *pal);
 
 void    R_InitSkyBox(void);
 void    R_EmitSkyBox(void);

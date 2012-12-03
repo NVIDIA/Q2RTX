@@ -225,8 +225,5 @@ void    R_DrawFill32(int x, int y, int w, int h, uint32_t color);
 void    R_BeginFrame(void);
 void    R_EndFrame(void);
 void    R_ModeChanged(int width, int height, int flags, int rowbytes, void *pixels);
-#if 0
-void    R_CinematicSetPalette(const byte *palette);
-#endif
 
 #endif // REFRESH_H
