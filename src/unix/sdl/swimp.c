@@ -28,7 +28,7 @@ qboolean VID_Init(void)
         return qfalse;
     }
 
-    if (!VID_SDL_SetMode(SDL_SWSURFACE | SDL_HWPALETTE | SDL_RESIZABLE, 8)) {
+    if (!VID_SDL_SetMode(SDL_HWSURFACE | SDL_RESIZABLE, 32)) {
         Com_EPrintf("Couldn't set video mode: %s\n", SDL_GetError());
         VID_SDL_Shutdown();
         return qfalse;
@@ -40,21 +40,6 @@ qboolean VID_Init(void)
 void VID_Shutdown(void)
 {
     VID_SDL_Shutdown();
-}
-
-void VID_UpdatePalette(const byte *palette)
-{
-    SDL_Color    colors[256];
-    SDL_Color    *c;
-
-    for (c = colors; c < colors + 256; c++) {
-        c->r = palette[0];
-        c->g = palette[1];
-        c->b = palette[2];
-        palette += 4;
-    }
-
-    SDL_SetPalette(sdl.surface, SDL_LOGPAL, colors, 0, 256);
 }
 
 void VID_VideoWait(void)
