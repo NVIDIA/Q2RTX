@@ -2,7 +2,7 @@
 
 void BLOCK_FUNC(void)
 {
-    int     v, i, b, lightstep, lighttemp, light;
+    int     v, i, b, lightstep[3], light[3];
     byte    *psource, *prowdest;
 
     psource = pbasesource;
@@ -11,28 +11,45 @@ void BLOCK_FUNC(void)
     for (v = 0 ; v < r_numvblocks ; v++) {
         // FIXME: make these locals?
         // FIXME: use delta rather than both right and left, like ASM?
-        lightleft = r_lightptr[0];
-        lightright = r_lightptr[1];
+        lightleft[0] = r_lightptr[0 * LIGHTMAP_BYTES + 0];
+        lightleft[1] = r_lightptr[0 * LIGHTMAP_BYTES + 1];
+        lightleft[2] = r_lightptr[0 * LIGHTMAP_BYTES + 2];
+        lightright[0] = r_lightptr[1 * LIGHTMAP_BYTES + 0];
+        lightright[1] = r_lightptr[1 * LIGHTMAP_BYTES + 1];
+        lightright[2] = r_lightptr[1 * LIGHTMAP_BYTES + 2];
         r_lightptr += r_lightwidth;
-        lightleftstep = (r_lightptr[0] - lightleft) >> BLOCK_SHIFT;
-        lightrightstep = (r_lightptr[1] - lightright) >> BLOCK_SHIFT;
+        lightleftstep[0] = (r_lightptr[0 * LIGHTMAP_BYTES + 0] - lightleft[0]) >> BLOCK_SHIFT;
+        lightleftstep[1] = (r_lightptr[0 * LIGHTMAP_BYTES + 1] - lightleft[1]) >> BLOCK_SHIFT;
+        lightleftstep[2] = (r_lightptr[0 * LIGHTMAP_BYTES + 2] - lightleft[2]) >> BLOCK_SHIFT;
+        lightrightstep[0] = (r_lightptr[1 * LIGHTMAP_BYTES + 0] - lightright[0]) >> BLOCK_SHIFT;
+        lightrightstep[1] = (r_lightptr[1 * LIGHTMAP_BYTES + 1] - lightright[1]) >> BLOCK_SHIFT;
+        lightrightstep[2] = (r_lightptr[1 * LIGHTMAP_BYTES + 2] - lightright[2]) >> BLOCK_SHIFT;
 
         for (i = 0 ; i < BLOCK_SIZE ; i++) {
-            lighttemp = lightleft - lightright;
-            lightstep = lighttemp >> BLOCK_SHIFT;
+            lightstep[0] = (lightleft[0] - lightright[0]) >> BLOCK_SHIFT;
+            lightstep[1] = (lightleft[1] - lightright[1]) >> BLOCK_SHIFT;
+            lightstep[2] = (lightleft[2] - lightright[2]) >> BLOCK_SHIFT;
 
-            light = lightright;
+            light[0] = lightright[0];
+            light[1] = lightright[1];
+            light[2] = lightright[2];
 
             for (b = BLOCK_SIZE - 1; b >= 0; b--) {
-                prowdest[b * TEX_BYTES + 0] = (psource[b * TEX_BYTES + 0] * light) >> 16;
-                prowdest[b * TEX_BYTES + 1] = (psource[b * TEX_BYTES + 1] * light) >> 16;
-                prowdest[b * TEX_BYTES + 2] = (psource[b * TEX_BYTES + 2] * light) >> 16;
-                light += lightstep;
+                prowdest[b * TEX_BYTES + 0] = (psource[b * TEX_BYTES + 0] * light[0]) >> 16;
+                prowdest[b * TEX_BYTES + 1] = (psource[b * TEX_BYTES + 1] * light[1]) >> 16;
+                prowdest[b * TEX_BYTES + 2] = (psource[b * TEX_BYTES + 2] * light[2]) >> 16;
+                light[0] += lightstep[0];
+                light[1] += lightstep[1];
+                light[2] += lightstep[2];
             }
 
             psource += sourcetstep;
-            lightright += lightrightstep;
-            lightleft += lightleftstep;
+            lightright[0] += lightrightstep[0];
+            lightright[1] += lightrightstep[1];
+            lightright[2] += lightrightstep[2];
+            lightleft[0] += lightleftstep[0];
+            lightleft[1] += lightleftstep[1];
+            lightleft[2] += lightleftstep[2];
             prowdest += surfrowbytes;
         }
 

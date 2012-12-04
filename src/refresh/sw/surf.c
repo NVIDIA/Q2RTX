@@ -21,9 +21,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 drawsurf_t  r_drawsurf;
 
-int             lightleft, sourcesstep, blocksize, sourcetstep;
+int             lightleft[3], sourcesstep, blocksize, sourcetstep;
 int             lightdelta, lightdeltastep;
-int             lightright, lightleftstep, lightrightstep, blockdivshift;
+int             lightright[3], lightleftstep[3], lightrightstep[3], blockdivshift;
 unsigned        blockdivmask;
 void            *prowdestbase;
 byte            *pbasesource;
@@ -47,7 +47,7 @@ static void (*surfmiptable[4])(void) = {
 };
 
 void R_BuildLightMap(void);
-extern  blocklight_t        blocklights[MAX_BLOCKLIGHTS];   // allow some very large lightmaps
+extern  blocklight_t        blocklights[MAX_BLOCKLIGHTS * LIGHTMAP_BYTES];   // allow some very large lightmaps
 
 float           surfscale;
 qboolean        r_cache_thrash;         // set if surface cache is thrashing

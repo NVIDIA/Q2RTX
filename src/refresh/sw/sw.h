@@ -271,7 +271,7 @@ typedef struct clipplane_s {
 } clipplane_t;
 
 #define MAX_BLOCKLIGHTS 1024
-#define LIGHTMAP_BYTES  1
+#define LIGHTMAP_BYTES  3
 
 typedef int blocklight_t;
 

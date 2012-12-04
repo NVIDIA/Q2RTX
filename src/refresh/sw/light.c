@@ -178,7 +178,7 @@ void R_LightPoint(vec3_t p, vec3_t color)
 
 //===================================================================
 
-blocklight_t        blocklights[MAX_BLOCKLIGHTS];
+blocklight_t        blocklights[MAX_BLOCKLIGHTS * LIGHTMAP_BYTES];
 
 /*
 ===============
@@ -198,6 +198,7 @@ static void R_AddDynamicLights(void)
     mtexinfo_t  *tex;
     dlight_t    *dl;
     int         negativeLight;  //PGM
+    blocklight_t *block;
 
     surf = r_drawsurf.surf;
     smax = S_MAX(surf);
@@ -247,14 +248,28 @@ static void R_AddDynamicLights(void)
                 else
                     dist = td + (sd>>1);*/
                 dist = sqrt(sd * sd + td * td);
+                block = blocklights + t * smax * LIGHTMAP_BYTES + s * LIGHTMAP_BYTES;
                 if (!negativeLight) {
-                    if (dist < minlight)
-                        blocklights[t * smax + s] += (rad - dist) * 256;
+                    if (dist < minlight) {
+                        block[0] += (rad - dist) * dl->color[0] * 256;
+                        block[1] += (rad - dist) * dl->color[1] * 256;
+                        block[2] += (rad - dist) * dl->color[2] * 256;
+                    }
                 } else {
-                    if (dist < minlight)
-                        blocklights[t * smax + s] -= (rad - dist) * 256;
-                    if (blocklights[t * smax + s] < minlight)
-                        blocklights[t * smax + s] = minlight;
+                    if (dist < minlight) {
+                        block[0] -= (rad - dist) * dl->color[0] * 256;
+                        block[1] -= (rad - dist) * dl->color[1] * 256;
+                        block[2] -= (rad - dist) * dl->color[2] * 256;
+                    }
+                    if (block[0] < minlight) {
+                        block[0] = minlight;
+                    }
+                    if (block[1] < minlight) {
+                        block[1] = minlight;
+                    }
+                    if (block[2] < minlight) {
+                        block[2] = minlight;
+                    }
                 }
             }
         }
@@ -290,10 +305,7 @@ void R_BuildLightMap(void)
     }
 
 // clear to no light
-    dst = blocklights;
-    for (i = 0; i < size; i++) {
-        *dst++ = 0;
-    }
+    memset(blocklights, 0, sizeof(blocklights));
 
     if (r_fullbright->integer || !r_worldmodel->lightmap) {
         return;
@@ -308,9 +320,12 @@ void R_BuildLightMap(void)
             dst = blocklights;
             scale = r_drawsurf.lightadj[maps];  // 8.8 fraction
             for (i = 0; i < size; i++) {
-                blocklights[i] += lightmap[0] * scale;
+                blocklights[i * LIGHTMAP_BYTES + 0] += lightmap[0] * scale;
+                blocklights[i * LIGHTMAP_BYTES + 1] += lightmap[1] * scale;
+                blocklights[i * LIGHTMAP_BYTES + 2] += lightmap[2] * scale;
 
-                lightmap++; dst++;
+                lightmap += LIGHTMAP_BYTES;
+                dst += LIGHTMAP_BYTES;
             }
         }
     }
@@ -320,7 +335,7 @@ void R_BuildLightMap(void)
         R_AddDynamicLights();
 
 // bound, invert, and shift
-    for (i = 0; i < size; i++) {
+    for (i = 0; i < size * LIGHTMAP_BYTES; i++) {
         t = blocklights[i];
 #if 0
         if (t < 0)

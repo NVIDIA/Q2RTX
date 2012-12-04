@@ -275,14 +275,6 @@ LOAD(LeafBrushes)
 #if USE_REF
 LOAD(Lightmap)
 {
-#if USE_REF == REF_SOFT
-    byte *in;
-    byte *out;
-    int i;
-
-    count /= 3;
-#endif
-
     if (!count) {
         return Q_ERR_SUCCESS;
     }
@@ -290,22 +282,7 @@ LOAD(Lightmap)
     bsp->numlightmapbytes = count;
     bsp->lightmap = ALLOC(count);
 
-#if USE_REF == REF_SOFT
-    // convert the 24 bit lighting down to 8 bit
-    // by taking the brightest component
-    in = base;
-    out = bsp->lightmap;
-    for (i = 0; i < count; i++, in += 3, out++) {
-        if (in[0] > in[1] && in[0] > in[2])
-            *out = in[0];
-        else if (in[1] > in[0] && in[1] > in[2])
-            *out = in[1];
-        else
-            *out = in[2];
-    }
-#else
     memcpy(bsp->lightmap, base, count);
-#endif
 
     return Q_ERR_SUCCESS;
 }
@@ -444,10 +421,6 @@ LOAD(Faces)
         if (lightofs == (uint32_t)-1 || bsp->numlightmapbytes == 0) {
             out->lightmap = NULL;
         } else {
-#if USE_REF == REF_SOFT
-            // lighting info is converted from 24 bit on disk to 8 bit
-            lightofs /= 3;
-#endif
             if (lightofs >= bsp->numlightmapbytes) {
                 DEBUG("bad lightofs");
                 return Q_ERR_BAD_INDEX;
