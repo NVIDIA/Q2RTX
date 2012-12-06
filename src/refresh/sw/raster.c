@@ -20,10 +20,17 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "sw.h"
 
 // !!! if these are changed, they must be changed in asm_draw.h too !!!
-#define FULLY_CLIPPED_CACHED    0x80000000
-#define FRAMECOUNT_MASK         0x7FFFFFFF
+#if (defined __amd64__) || (defined _M_AMD64)
+#define FULLY_CLIPPED_CACHED    0x8000000000000000ULL
+#define CLIPPED_NOT_CACHED      0x7FFFFFFFFFFFFFFFULL
+#define FRAMECOUNT_MASK         0x7FFFFFFFFFFFFFFFULL
+#else
+#define FULLY_CLIPPED_CACHED    0x80000000UL
+#define CLIPPED_NOT_CACHED      0x7FFFFFFFUL
+#define FRAMECOUNT_MASK         0x7FFFFFFFUL
+#endif
 
-unsigned int    cacheoffset;
+uintptr_t   cacheoffset;
 
 int         c_faceclip;                 // number of faces clipped
 
@@ -144,7 +151,7 @@ void R_EmitEdge(mvertex_t *pv0, mvertex_t *pv1)
 // create the edge
     if (ceilv0 == r_ceilv1) {
         // we cache unclipped horizontal edges as fully clipped
-        if (cacheoffset != 0x7FFFFFFF) {
+        if (cacheoffset != CLIPPED_NOT_CACHED) {
             cacheoffset = FULLY_CLIPPED_CACHED |
                           (r_framecount & FRAMECOUNT_MASK);
         }
@@ -242,7 +249,7 @@ void R_ClipEdge(mvertex_t *pv0, mvertex_t *pv1, clipplane_t *clip)
             // only point 1 is clipped
 
             // we don't cache clipped edges
-            cacheoffset = 0x7FFFFFFF;
+            cacheoffset = CLIPPED_NOT_CACHED;
 
             f = d0 / (d0 - d1);
             clipvert.point[0] = pv0->point[0] +
@@ -277,7 +284,7 @@ void R_ClipEdge(mvertex_t *pv0, mvertex_t *pv1, clipplane_t *clip)
             r_lastvertvalid = qfalse;
 
             // we don't cache partially clipped edges
-            cacheoffset = 0x7FFFFFFF;
+            cacheoffset = CLIPPED_NOT_CACHED;
 
             f = d0 / (d0 - d1);
             clipvert.point[0] = pv0->point[0] +
@@ -316,7 +323,7 @@ void R_EmitCachedEdge(void)
 {
     edge_t      *pedge_t;
 
-    pedge_t = (edge_t *)((unsigned long)r_edges + r_pedge->cachededgeoffset);
+    pedge_t = (edge_t *)((byte *)r_edges + r_pedge->cachededgeoffset);
 
     if (!pedge_t->surfs[0])
         pedge_t->surfs[0] = surface_p - surfaces;
@@ -405,9 +412,9 @@ void R_RenderFace(mface_t *fa, int clipflags)
                     continue;
                 }
             } else {
-                if ((((unsigned long)edge_p - (unsigned long)r_edges) >
+                if ((((byte *)edge_p - (byte *)r_edges) >
                      r_pedge->cachededgeoffset) &&
-                    (((edge_t *)((unsigned long)r_edges +
+                    (((edge_t *)((byte *)r_edges +
                                  r_pedge->cachededgeoffset))->owner == r_pedge)) {
                     R_EmitCachedEdge();
                     r_lastvertvalid = qfalse;

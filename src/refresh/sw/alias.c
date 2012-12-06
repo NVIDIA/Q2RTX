@@ -306,7 +306,7 @@ static void R_AliasPreparePoints(void)
 
     // put work vertexes on stack, cache aligned
     pfinalverts = (finalvert_t *)
-                  (((long)&finalverts[0] + CACHE_SIZE - 1) & ~(CACHE_SIZE - 1));
+                  (((uintptr_t)&finalverts[0] + CACHE_SIZE - 1) & ~(CACHE_SIZE - 1));
 
     R_AliasTransformFinalVerts(currentmodel->numverts, pfinalverts,
                                r_lastframe->verts, r_thisframe->verts);

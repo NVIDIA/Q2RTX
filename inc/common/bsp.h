@@ -60,7 +60,7 @@ typedef struct {
 typedef struct {
     mvertex_t   *v[2];
 #if USE_REF == REF_SOFT
-    unsigned    cachededgeoffset;
+    uintptr_t   cachededgeoffset;
 #endif
 } medge_t;
 
