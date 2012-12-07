@@ -138,7 +138,7 @@ void R_BuildGammaTable(void)
     }
 }
 
-#define NTX     16
+#define NTX     256
 
 static void R_CreateNotexture(void)
 {
@@ -160,9 +160,9 @@ static void R_CreateNotexture(void)
 
     for (m = 0; m < 4; m++) {
         p = (uint32_t *)ntx->pixels[m];
-        for (y = 0; y < (16 >> m); y++) {
-            for (x = 0; x < (16 >> m); x++) {
-                if ((y < (8 >> m)) ^ (x < (8 >> m)))
+        for (y = 0; y < (NTX >> m); y++) {
+            for (x = 0; x < (NTX >> m); x++) {
+                if ((x ^ y) & (1 << (3 - m)))
                     *p++ = U32_BLACK;
                 else
                     *p++ = U32_WHITE;
