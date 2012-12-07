@@ -32,8 +32,6 @@ bsp_t       *r_worldmodel;
 
 byte        r_warpbuffer[WARP_WIDTH * WARP_HEIGHT * VID_BYTES];
 
-swstate_t sw_state;
-
 float       r_time1;
 int         r_numallocatededges;
 float       r_aliasuvscale = 1.0;
@@ -208,7 +206,7 @@ void R_Register(void)
     r_lerpmodels = Cvar_Get("r_lerpmodels", "1", 0);
     r_novis = Cvar_Get("r_novis", "0", 0);
 
-    vid_gamma = Cvar_Get("vid_gamma", "1.0", CVAR_ARCHIVE);
+    vid_gamma = Cvar_Get("vid_gamma", "1.0", CVAR_ARCHIVE | CVAR_FILES);
 
     Cmd_AddCommand("scdump", D_SCDump_f);
 

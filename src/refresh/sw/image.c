@@ -18,6 +18,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "sw.h"
 
+static byte gammatable[256];
+
 /*
 ================
 IMG_Unload
@@ -38,9 +40,9 @@ static void R_LightScaleTexture(byte *in, int inwidth, int inheight)
     c = inwidth * inheight;
 
     for (i = 0; i < c; i++, p += TEX_BYTES) {
-        p[0] = sw_state.gammatable[p[0]];
-        p[1] = sw_state.gammatable[p[1]];
-        p[2] = sw_state.gammatable[p[2]];
+        p[0] = gammatable[p[0]];
+        p[1] = gammatable[p[1]];
+        p[2] = gammatable[p[2]];
     }
 }
 
@@ -70,7 +72,8 @@ void IMG_Load(image_t *image, byte *pic, int width, int height)
                 ((uint32_t *)image->pixels[0])[i] = d_8to24table[pic[i]];
             }
 
-            R_LightScaleTexture(image->pixels[0], MIPSIZE(c), 1);
+            if (!(r_config.flags & QVF_GAMMARAMP))
+                R_LightScaleTexture(image->pixels[0], MIPSIZE(c), 1);
         } else {
             image->pixels[0] = R_Malloc(c * TEX_BYTES);
             for (i = 0; i < c; i++) {
@@ -90,9 +93,14 @@ void IMG_Load(image_t *image, byte *pic, int width, int height)
         image->pixels[2] = image->pixels[1] + b * TEX_BYTES / 4;
         image->pixels[3] = image->pixels[2] + b * TEX_BYTES / 16;
 
-        R_LightScaleTexture(pic, width, height);
+        if (!(r_config.flags & QVF_GAMMARAMP))
+            R_LightScaleTexture(pic, width, height);
 
-        IMG_ResampleTexture(pic, width, height, image->pixels[0], image->width, image->height);
+        if (width == image->width && height == image->height)
+            memcpy(image->pixels[0], pic, width * height * TEX_BYTES);
+        else
+            IMG_ResampleTexture(pic, width, height, image->pixels[0], image->width, image->height);
+
         IMG_MipMap(image->pixels[1], image->pixels[0], image->width >> 0, image->height >> 0);
         IMG_MipMap(image->pixels[2], image->pixels[1], image->width >> 1, image->height >> 1);
         IMG_MipMap(image->pixels[3], image->pixels[2], image->width >> 2, image->height >> 2);
@@ -108,6 +116,9 @@ void IMG_Load(image_t *image, byte *pic, int width, int height)
             }
         }
     }
+
+    if (image->type == IT_SKIN && !(r_config.flags & QVF_GAMMARAMP))
+        R_LightScaleTexture(image->pixels[0], width, height);
 }
 
 void R_BuildGammaTable(void)
@@ -117,13 +128,13 @@ void R_BuildGammaTable(void)
 
     if (g == 1.0) {
         for (i = 0; i < 256; i++)
-            sw_state.gammatable[i] = i;
+            gammatable[i] = i;
         return;
     }
 
     for (i = 0; i < 256; i++) {
-        inf = 255 * pow((i + 0.5) / 255.5 , g) + 0.5;
-        sw_state.gammatable[i] = clamp(inf, 0, 255);
+        inf = 255 * pow((i + 0.5) / 255.5, g) + 0.5;
+        gammatable[i] = clamp(inf, 0, 255);
     }
 }
 

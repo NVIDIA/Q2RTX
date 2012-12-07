@@ -697,17 +697,7 @@ void    R_EmitSkyBox(void);
 
 void R_ApplySIRDAlgorithum(void);
 
-typedef struct swstate_s {
-    qboolean    fullscreen;
-    int         prev_mode;  // last valid SW mode
-
-    byte        gammatable[256];
-    byte        currentpalette[1024];
-} swstate_t;
-
 void R_IMFlatShadedQuad(vec3_t a, vec3_t b, vec3_t c, vec3_t d, color_t color, float alpha);
 
 void R_InitDraw(void);
-
-extern swstate_t sw_state;
 
