@@ -22,13 +22,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 #include "sw.h"
 
-#define LIGHT_MIN   5       // lowest light value we'll allow, to avoid the
-//  need for inner-loop light clamping
-
-//PGM
-extern byte iractive;
-//PGM
-
 int             r_amodels_drawn;
 
 affinetridesc_t r_affinetridesc;
@@ -258,16 +251,16 @@ static void R_AliasTransformFinalVerts(int numpoints, finalvert_t *fv, maliasver
 
         // lighting
         lightcos = DotProduct(plightnormal, r_plightvec);
+        if (lightcos < 0)
+            lightcos *= 0.3f;
+
         temp = r_ambientlight;
+        temp += (int)(r_shadelight * (lightcos + 1));
 
-        if (lightcos < 0) {
-            temp += (int)(r_shadelight * lightcos);
-
-            // clamp; because we limited the minimum ambient and shading light, we
-            // don't have to clamp low light, just bright
-            if (temp < 0)
-                temp = 0;
-        }
+        // clamp; because we limited the minimum ambient and shading light, we
+        // don't have to clamp low light, just bright
+        if (temp > 0xffff)
+            temp = 0xffff;
 
         fv->l = temp;
 
@@ -296,13 +289,6 @@ static void R_AliasPreparePoints(void)
     finalvert_t finalverts[MAXALIASVERTS +
                            ((CACHE_SIZE - 1) / sizeof(finalvert_t)) + 3];
     finalvert_t *pfinalverts;
-
-//PGM
-    iractive = (r_newrefdef.rdflags & RDF_IRGOGGLES && currententity->flags & RF_IR_VISIBLE);
-//  iractive = 0;
-//  if(r_newrefdef.rdflags & RDF_IRGOGGLES && currententity->flags & RF_IR_VISIBLE)
-//      iractive = 1;
-//PGM
 
     // put work vertexes on stack, cache aligned
     pfinalverts = (finalvert_t *)
@@ -493,7 +479,6 @@ R_AliasSetupLighting
 */
 static void R_AliasSetupLighting(void)
 {
-    alight_t        lighting;
     float           lightvec[3] = { -1, 0, 0};
     vec3_t          light;
     int             i, j;
@@ -527,42 +512,15 @@ static void R_AliasSetupLighting(void)
         }
     }
 
-    j = (light[0] + light[1] + light[2]) * 0.3333 * 255;
+    j = LUMINANCE(light[0], light[1], light[2]) * 256;
 
-    lighting.ambientlight = j;
-    lighting.shadelight = j;
-
-    lighting.plightvec = lightvec;
-
-// clamp lighting so it doesn't overbright as much
-    if (lighting.ambientlight > 128)
-        lighting.ambientlight = 128;
-    if (lighting.ambientlight + lighting.shadelight > 192)
-        lighting.shadelight = 192 - lighting.ambientlight;
-
-// guarantee that no vertex will ever be lit below LIGHT_MIN, so we don't have
-// to clamp off the bottom
-    r_ambientlight = lighting.ambientlight;
-
-    if (r_ambientlight < LIGHT_MIN)
-        r_ambientlight = LIGHT_MIN;
-
-    r_ambientlight = (255 - r_ambientlight) << VID_CBITS;
-
-    if (r_ambientlight < LIGHT_MIN)
-        r_ambientlight = LIGHT_MIN;
-
-    r_shadelight = lighting.shadelight;
-
-    if (r_shadelight < 0)
-        r_shadelight = 0;
-
-    r_shadelight *= VID_GRADES;
+    r_ambientlight = 0;
+    r_shadelight = j << 8;
 
 // rotate the lighting vector into the model's frame of reference
-    r_plightvec[0] =  DotProduct(lighting.plightvec, s_alias_forward);
-    r_plightvec[1] = -DotProduct(lighting.plightvec, s_alias_right);
-    r_plightvec[2] =  DotProduct(lighting.plightvec, s_alias_up);
+    r_plightvec[0] =  DotProduct(lightvec, s_alias_forward);
+    r_plightvec[1] = -DotProduct(lightvec, s_alias_right);
+    r_plightvec[2] =  DotProduct(lightvec, s_alias_up);
 }
 
 

@@ -320,8 +320,6 @@ void GL_Blend(void);
  *
  */
 
-#define LUMINANCE(r, g, b) ((r) * 0.2126f + (g) * 0.7152f + (b) * 0.0722f)
-
 // auto textures
 enum {
     TEXNUM_DEFAULT = MAX_RIMAGES,

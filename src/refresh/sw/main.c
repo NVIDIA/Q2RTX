@@ -34,8 +34,6 @@ byte        r_warpbuffer[WARP_WIDTH * WARP_HEIGHT * VID_BYTES];
 
 swstate_t sw_state;
 
-vec3_t      viewlightvec;
-alight_t    r_viewlighting = {128, 192, viewlightvec};
 float       r_time1;
 int         r_numallocatededges;
 float       r_aliasuvscale = 1.0;

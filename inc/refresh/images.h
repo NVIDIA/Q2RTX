@@ -47,6 +47,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define MIPSIZE(c) (c)
 #endif
 
+#define LUMINANCE(r, g, b) ((r) * 0.2126f + (g) * 0.7152f + (b) * 0.0722f)
+
 // absolute limit for OpenGL renderer
 #define MAX_TEXTURE_SIZE            2048
 

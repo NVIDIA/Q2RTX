@@ -122,53 +122,6 @@ void R_RasterizeAliasPolySmooth(void);
 void R_PolysetScanLeftEdge(int height);
 void R_PolysetScanLeftEdge_C(int height);
 
-// ======================
-// PGM
-// 64 65 66 67 68 69 70 71   72 73 74 75 76 77 78 79
-byte iractive = 0;
-byte irtable[256] = { 79, 78, 77, 76, 75, 74, 73, 72,       // black/white
-                      71, 70, 69, 68, 67, 66, 65, 64,
-                      64, 65, 66, 67, 68, 69, 70, 71,       // dark taupe
-                      72, 73, 74, 75, 76, 77, 78, 79,
-
-                      64, 65, 66, 67, 68, 69, 70, 71,       // slate grey
-                      72, 73, 74, 75, 76, 77, 78, 79,
-                      208, 208, 208, 208, 208, 208, 208, 208,   // unused?'
-                      64, 66, 68, 70, 72, 74, 76, 78,       // dark yellow
-
-                      64, 65, 66, 67, 68, 69, 70, 71,       // dark red
-                      72, 73, 74, 75, 76, 77, 78, 79,
-                      64, 65, 66, 67, 68, 69, 70, 71,       // grey/tan
-                      72, 73, 74, 75, 76, 77, 78, 79,
-
-                      64, 66, 68, 70, 72, 74, 76, 78,       // chocolate
-                      68, 67, 66, 65, 64, 65, 66, 67,       // mauve / teal
-                      68, 69, 70, 71, 72, 73, 74, 75,
-                      76, 76, 77, 77, 78, 78, 79, 79,
-
-                      64, 65, 66, 67, 68, 69, 70, 71,       // more mauve
-                      72, 73, 74, 75, 76, 77, 78, 79,
-                      64, 65, 66, 67, 68, 69, 70, 71,       // olive
-                      72, 73, 74, 75, 76, 77, 78, 79,
-
-                      64, 65, 66, 67, 68, 69, 70, 71,       // maroon
-                      72, 73, 74, 75, 76, 77, 78, 79,
-                      64, 65, 66, 67, 68, 69, 70, 71,       // sky blue
-                      72, 73, 74, 75, 76, 77, 78, 79,
-
-                      64, 65, 66, 67, 68, 69, 70, 71,       // olive again
-                      72, 73, 74, 75, 76, 77, 78, 79,
-                      64, 65, 66, 67, 68, 69, 70, 71,       // nuclear green
-                      64, 65, 66, 67, 68, 69, 70, 71,       // bright yellow
-
-                      64, 65, 66, 67, 68, 69, 70, 71,       // fire colors
-                      72, 73, 74, 75, 76, 77, 78, 79,
-                      208, 208, 64, 64, 70, 71, 72, 64,     // mishmash1
-                      66, 68, 70, 64, 65, 66, 67, 68
-                    };      // mishmash2
-// PGM
-// ======================
-
 /*
 ================
 R_PolysetUpdateTables
@@ -458,6 +411,7 @@ void R_PolysetDrawSpans8_Blended(spanpackage_t *pspanpackage)
     int     llight;
     int     lzi;
     short   *lpz;
+    int     tmp[3];
 
     do {
         lcount = d_aspancount - pspanpackage->count;
@@ -481,10 +435,12 @@ void R_PolysetDrawSpans8_Blended(spanpackage_t *pspanpackage)
 
             do {
                 if ((lzi >> 16) >= *lpz) {
-                    // TODO: llight
-                    lpdest[0] = (lpdest[0] * r_alias_one_minus_alpha + lptex[2] * r_alias_alpha) >> 8;
-                    lpdest[1] = (lpdest[1] * r_alias_one_minus_alpha + lptex[1] * r_alias_alpha) >> 8;
-                    lpdest[2] = (lpdest[2] * r_alias_one_minus_alpha + lptex[0] * r_alias_alpha) >> 8;
+                    tmp[0] = (lptex[0] * llight) >> 16;
+                    tmp[1] = (lptex[1] * llight) >> 16;
+                    tmp[2] = (lptex[2] * llight) >> 16;
+                    lpdest[0] = (lpdest[0] * r_alias_one_minus_alpha + tmp[2] * r_alias_alpha) >> 8;
+                    lpdest[1] = (lpdest[1] * r_alias_one_minus_alpha + tmp[1] * r_alias_alpha) >> 8;
+                    lpdest[2] = (lpdest[2] * r_alias_one_minus_alpha + tmp[0] * r_alias_alpha) >> 8;
                     *lpz = lzi >> 16;
                 }
                 lpdest += VID_BYTES;
@@ -580,10 +536,9 @@ void R_PolysetDrawSpans8_Opaque(spanpackage_t *pspanpackage)
 
             do {
                 if ((lzi >> 16) >= *lpz) {
-                    // TODO: llight, iractive
-                    lpdest[0] = lptex[2];
-                    lpdest[1] = lptex[1];
-                    lpdest[2] = lptex[0];
+                    lpdest[0] = (lptex[2] * llight) >> 16;
+                    lpdest[1] = (lptex[1] * llight) >> 16;
+                    lpdest[2] = (lptex[0] * llight) >> 16;
                     *lpz = lzi >> 16;
                 }
                 lpdest += VID_BYTES;

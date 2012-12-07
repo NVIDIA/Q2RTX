@@ -108,11 +108,11 @@ LIGHT SAMPLING
 static qboolean RecursiveLightPoint(vec3_t p, vec3_t color)
 {
     mface_t     *surf;
+    int         smax, tmax, size;
     int         ds, dt;
     byte        *lightmap;
     float       *scales;
     int         maps;
-    float       samp;
     vec3_t      end;
 
     end[0] = p[0];
@@ -127,15 +127,21 @@ static qboolean RecursiveLightPoint(vec3_t p, vec3_t color)
     ds >>= 4;
     dt >>= 4;
 
+    smax = S_MAX(surf);
+    tmax = T_MAX(surf);
+    size = smax * tmax * LIGHTMAP_BYTES;
+
     lightmap = surf->lightmap;
-    lightmap += dt * S_MAX(surf) + ds;
+    lightmap += dt * smax * LIGHTMAP_BYTES + ds * LIGHTMAP_BYTES;
 
     for (maps = 0; maps < surf->numstyles; maps++) {
-        samp = *lightmap * (1.0 / 255); // adjust for gl scale
         scales = r_newrefdef.lightstyles[surf->styles[maps]].rgb;
-        VectorMA(color, samp, scales, color);
-        lightmap += S_MAX(surf) * T_MAX(surf);
+        color[0] += lightmap[0] * scales[0] * (1.0f / 255);
+        color[1] += lightmap[1] * scales[1] * (1.0f / 255);
+        color[2] += lightmap[2] * scales[2] * (1.0f / 255);
+        lightmap += size;
     }
+
     return qtrue;
 }
 
