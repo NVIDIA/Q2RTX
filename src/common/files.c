@@ -17,6 +17,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 #include "shared/shared.h"
+#include "shared/list.h"
 #include "common/common.h"
 #include "common/cvar.h"
 #include "common/error.h"
@@ -71,6 +72,12 @@ QUAKE FILESYSTEM
 #endif
 
 #define PATH_NOT_CHECKED    -1
+
+#define FOR_EACH_SYMLINK(link, list) \
+    LIST_FOR_EACH(symlink_t, link, list, entry)
+
+#define FOR_EACH_SYMLINK_SAFE(link, next, list) \
+    LIST_FOR_EACH_SAFE(symlink_t, link, next, list, entry)
 
 //
 // in memory
@@ -143,8 +150,8 @@ typedef struct {
     size_t      length;     // total cached file length
 } file_t;
 
-typedef struct symlink_s {
-    struct symlink_s *next;
+typedef struct {
+    list_t  entry;
     size_t  targlen;
     size_t  namelen;
     char    *target;
@@ -158,7 +165,8 @@ char                fs_gamedir[MAX_OSPATH];
 static searchpath_t *fs_searchpaths;
 static searchpath_t *fs_base_searchpaths;
 
-static symlink_t    *fs_links;
+static list_t       fs_hard_links;
+static list_t       fs_soft_links;
 
 static file_t       fs_files[MAX_FILE_HANDLES];
 
@@ -434,12 +442,12 @@ static void cleanup_path(char *s)
 }
 
 // expects a buffer of at least MAX_OSPATH bytes!
-static symlink_t *expand_links(char *buffer, size_t *len_p)
+static symlink_t *expand_links(list_t *list, char *buffer, size_t *len_p)
 {
     symlink_t   *link;
     size_t      namelen = *len_p;
 
-    for (link = fs_links; link; link = link->next) {
+    FOR_EACH_SYMLINK(link, list) {
         if (link->namelen > namelen) {
             continue;
         }
@@ -1286,34 +1294,18 @@ fail:
 // Finds the file in the search path.
 // Fills file_t and returns file length.
 // Used for streaming data out of either a pak file or a seperate file.
-static ssize_t open_file_read(file_t *file, const char *name, qboolean unique)
+static ssize_t open_file_read(file_t *file, const char *normalized, size_t namelen, qboolean unique)
 {
-    char            normalized[MAX_OSPATH], fullpath[MAX_OSPATH];
+    char            fullpath[MAX_OSPATH];
     searchpath_t    *search;
     pack_t          *pak;
     unsigned        hash;
     packfile_t      *entry;
     ssize_t         ret;
     int             valid;
-    size_t          len, namelen;
+    size_t          len;
 
     FS_COUNT_READ;
-
-// normalize path
-    namelen = FS_NormalizePathBuffer(normalized, name, MAX_OSPATH);
-    if (namelen >= MAX_OSPATH) {
-        return Q_ERR_NAMETOOLONG;
-    }
-
-// expand symlinks
-    if (expand_links(normalized, &namelen) && namelen >= MAX_OSPATH) {
-        return Q_ERR_NAMETOOLONG;
-    }
-
-// reject empty paths
-    if (namelen == 0) {
-        return Q_ERR_NAMETOOSHORT;
-    }
 
     hash = FS_HashPath(normalized, 0);
 
@@ -1392,6 +1384,43 @@ static ssize_t open_file_read(file_t *file, const char *name, qboolean unique)
 
 fail:
     FS_DPrintf("%s: %s: %s\n", __func__, normalized, Q_ErrorString(ret));
+    return ret;
+}
+
+// Normalizes quake path, expands symlinks
+static ssize_t expand_open_file_read(file_t *file, const char *name, qboolean unique)
+{
+    char        normalized[MAX_OSPATH];
+    ssize_t     ret;
+    size_t      namelen;
+
+// normalize path
+    namelen = FS_NormalizePathBuffer(normalized, name, MAX_OSPATH);
+    if (namelen >= MAX_OSPATH) {
+        return Q_ERR_NAMETOOLONG;
+    }
+
+// expand hard symlinks
+    if (expand_links(&fs_hard_links, normalized, &namelen) && namelen >= MAX_OSPATH) {
+        return Q_ERR_NAMETOOLONG;
+    }
+
+// reject empty paths
+    if (namelen == 0) {
+        return Q_ERR_NAMETOOSHORT;
+    }
+
+    ret = open_file_read(file, normalized, namelen, unique);
+    if (ret == Q_ERR_NOENT) {
+// expand soft symlinks
+        if (expand_links(&fs_soft_links, normalized, &namelen)) {
+            if (namelen >= MAX_OSPATH) {
+                return Q_ERR_NAMETOOLONG;
+            }
+            ret = open_file_read(file, normalized, namelen, unique);
+        }
+    }
+
     return ret;
 }
 
@@ -1608,7 +1637,7 @@ ssize_t FS_FOpenFile(const char *name, qhandle_t *f, unsigned mode)
     file->mode = mode;
 
     if ((mode & FS_MODE_MASK) == FS_MODE_READ) {
-        ret = open_file_read(file, name, qtrue);
+        ret = expand_open_file_read(file, name, qtrue);
     } else {
         ret = open_file_write(file, name);
     }
@@ -1783,7 +1812,7 @@ ssize_t FS_LoadFileEx(const char *path, void **buffer, unsigned flags, memtag_t 
     file->mode = (flags & ~FS_MODE_MASK) | FS_MODE_READ;
 
     // look for it in the filesystem or pack files
-    len = open_file_read(file, path, qfalse);
+    len = expand_open_file_read(file, path, qfalse);
     if (len < 0) {
         return len;
     }
@@ -2914,7 +2943,7 @@ static void FS_Dir_f(void)
 ============
 FS_WhereIs_f
 
-Verbosely looks up a filename with exactly the same logic as open_file_read.
+Verbosely looks up a filename with exactly the same logic as expand_open_file_read.
 ============
 */
 static void FS_WhereIs_f(void)
@@ -2943,8 +2972,8 @@ static void FS_WhereIs_f(void)
         return;
     }
 
-// expand symlinks
-    link = expand_links(normalized, &namelen);
+// expand hard symlinks
+    link = expand_links(&fs_hard_links, normalized, &namelen);
     if (link) {
         if (namelen >= MAX_OSPATH) {
             Com_Printf("Oversize symbolic link ('%s --> '%s').\n",
@@ -2956,11 +2985,17 @@ static void FS_WhereIs_f(void)
                    link->name, link->target);
     }
 
+    report_all = Cmd_Argc() >= 3;
+    total = 0;
+    link = NULL;
+
 // reject empty paths
     if (namelen == 0) {
         Com_Printf("Refusing to lookup empty path.\n");
         return;
     }
+
+recheck:
 
 // warn about non-standard path length
     if (namelen >= MAX_QPATH) {
@@ -2968,9 +3003,6 @@ static void FS_WhereIs_f(void)
                    "since path length exceedes %d characters.\n",
                    normalized, MAX_QPATH - 1);
     }
-
-    report_all = Cmd_Argc() >= 3;
-    total = 0;
 
     hash = FS_HashPath(normalized, 0);
 
@@ -3051,6 +3083,22 @@ static void FS_WhereIs_f(void)
                     return;
                 }
             }
+        }
+    }
+
+    if ((total == 0 || report_all) && link == NULL) {
+        // expand soft symlinks
+        link = expand_links(&fs_soft_links, normalized, &namelen);
+        if (link) {
+            if (namelen >= MAX_OSPATH) {
+                Com_Printf("Oversize symbolic link ('%s --> '%s').\n",
+                           link->name, link->target);
+                return;
+            }
+
+            Com_Printf("Symbolic link ('%s' --> '%s') in effect.\n",
+                       link->name, link->target);
+            goto recheck;
         }
     }
 
@@ -3160,9 +3208,15 @@ static void FS_Stats_f(void)
 
 static void FS_Link_g(genctx_t *ctx)
 {
+    list_t *list;
     symlink_t *link;
 
-    for (link = fs_links; link; link = link->next) {
+    if (!strncmp(Cmd_Argv(ctx->argnum - 1), "soft", 4))
+        list = &fs_soft_links;
+    else
+        list = &fs_hard_links;
+
+    FOR_EACH_SYMLINK(link, list) {
         if (!Prompt_AddMatch(ctx, link->name)) {
             break;
         }
@@ -3176,16 +3230,16 @@ static void FS_Link_c(genctx_t *ctx, int argnum)
     }
 }
 
-static void free_all_links(void)
+static void free_all_links(list_t *list)
 {
     symlink_t *link, *next;
 
-    for (link = fs_links; link; link = next) {
-        next = link->next;
+    FOR_EACH_SYMLINK_SAFE(link, next, list) {
         Z_Free(link->target);
         Z_Free(link);
     }
-    fs_links = NULL;
+
+    List_Init(list);
 }
 
 static void FS_UnLink_f(void)
@@ -3195,9 +3249,15 @@ static void FS_UnLink_f(void)
         { "h", "help", "display this message" },
         { NULL }
     };
-    symlink_t *link, **next_p;
+    list_t *list;
+    symlink_t *link;
     char *name;
     int c;
+
+    if (!strncmp(Cmd_Argv(0), "soft", 4))
+        list = &fs_soft_links;
+    else
+        list = &fs_hard_links;
 
     while ((c = Cmd_ParseOptions(options)) != -1) {
         switch (c) {
@@ -3207,7 +3267,7 @@ static void FS_UnLink_f(void)
             Cmd_PrintHelp(options);
             return;
         case 'a':
-            free_all_links();
+            free_all_links(list);
             Com_Printf("Deleted all symbolic links.\n");
             return;
         default:
@@ -3222,37 +3282,41 @@ static void FS_UnLink_f(void)
         return;
     }
 
-    for (link = fs_links, next_p = &fs_links; link; link = link->next) {
+    FOR_EACH_SYMLINK(link, list) {
         if (!FS_pathcmp(link->name, name)) {
-            break;
+            List_Remove(&link->entry);
+            Z_Free(link->target);
+            Z_Free(link);
+            return;
         }
-        next_p = &link->next;
-    }
-    if (!link) {
-        Com_Printf("Symbolic link '%s' does not exist.\n", name);
-        return;
     }
 
-    *next_p = link->next;
-    Z_Free(link->target);
-    Z_Free(link);
+    Com_Printf("Symbolic link '%s' does not exist.\n", name);
 }
 
 static void FS_Link_f(void)
 {
     int argc, count;
+    list_t *list;
     symlink_t *link;
     size_t namelen, targlen;
     char name[MAX_OSPATH];
     char target[MAX_OSPATH];
 
+    if (!strncmp(Cmd_Argv(0), "soft", 4))
+        list = &fs_soft_links;
+    else
+        list = &fs_hard_links;
+
     argc = Cmd_Argc();
     if (argc == 1) {
-        for (link = fs_links, count = 0; link; link = link->next, count++) {
+        count = 0;
+        FOR_EACH_SYMLINK(link, list) {
             Com_Printf("%s --> %s\n", link->name, link->target);
+            count++;
         }
         Com_Printf("------------------\n"
-                   "%d symbolic links listed.\n", count);
+                   "%d symbolic link%s listed.\n", count, count == 1 ? "" : "s");
         return;
     }
 
@@ -3278,7 +3342,7 @@ static void FS_Link_f(void)
     }
 
     // search for existing link with this name
-    for (link = fs_links; link; link = link->next) {
+    FOR_EACH_SYMLINK(link, list) {
         if (!FS_pathcmp(link->name, name)) {
             Z_Free(link->target);
             goto update;
@@ -3289,8 +3353,7 @@ static void FS_Link_f(void)
     link = FS_Malloc(sizeof(*link) + namelen);
     memcpy(link->name, name, namelen + 1);
     link->namelen = namelen;
-    link->next = fs_links;
-    fs_links = link;
+    List_Append(list, &link->entry);
 
 update:
     link->target = FS_CopyString(target);
@@ -3426,6 +3489,8 @@ static const cmdreg_t c_fs[] = {
     { "whereis", FS_WhereIs_f },
     { "link", FS_Link_f, FS_Link_c },
     { "unlink", FS_UnLink_f, FS_Link_c },
+    { "softlink", FS_Link_f, FS_Link_c },
+    { "softunlink", FS_UnLink_f, FS_Link_c },
     { "fs_restart", FS_Restart_f },
 
     { NULL }
@@ -3454,7 +3519,8 @@ void FS_Shutdown(void)
     }
 
     // free symbolic links
-    free_all_links();
+    free_all_links(&fs_hard_links);
+    free_all_links(&fs_soft_links);
 
     // free search paths
     free_all_paths();
@@ -3520,6 +3586,9 @@ FS_Init
 void FS_Init(void)
 {
     Com_Printf("------- FS_Init -------\n");
+
+    List_Init(&fs_hard_links);
+    List_Init(&fs_soft_links);
 
     Cmd_Register(c_fs);
 
