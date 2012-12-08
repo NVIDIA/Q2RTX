@@ -846,7 +846,7 @@ static qboolean Com_AddLateCommands(void)
     return ret;
 }
 
-static void Com_AddConfigFile(const char *name, unsigned flags)
+void Com_AddConfigFile(const char *name, unsigned flags)
 {
     qerror_t ret;
 

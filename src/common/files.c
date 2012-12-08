@@ -3474,7 +3474,6 @@ void FS_Shutdown(void)
 static void fs_game_changed(cvar_t *self)
 {
     char *s = self->string;
-    qerror_t ret;
 
     // validate it
     if (*s) {
@@ -3501,11 +3500,16 @@ static void fs_game_changed(cvar_t *self)
     // otherwise, restart the filesystem
     CL_RestartFilesystem(qfalse);
 
-    // exec autoexec.cfg (must be a real file within the game directory)
-    ret = Cmd_ExecuteFile(COM_AUTOEXEC_CFG, FS_TYPE_REAL | FS_PATH_GAME);
-    if (ret && ret != Q_ERR_NOENT) {
-        Com_WPrintf("Couldn't exec %s: %s\n", COM_AUTOEXEC_CFG, Q_ErrorString(ret));
+    // FIXME: if baseq2/autoexec.cfg exists DO NOT exec default.cfg and config.cfg.
+    // this assumes user prefers to do configuration via autoexec.cfg and doesn't
+    // want settings and binds messed up whenever gamedir changes after startup.
+    if (!FS_FileExistsEx(COM_AUTOEXEC_CFG, FS_TYPE_REAL | FS_PATH_BASE)) {
+        Com_AddConfigFile(COM_DEFAULT_CFG, FS_PATH_GAME);
+        Com_AddConfigFile(COM_CONFIG_CFG, FS_TYPE_REAL | FS_PATH_GAME);
     }
+
+    // exec autoexec.cfg (must be a real file within the game directory)
+    Com_AddConfigFile(COM_AUTOEXEC_CFG, FS_TYPE_REAL | FS_PATH_GAME);
 }
 
 /*

@@ -102,6 +102,8 @@ size_t      Com_UptimeLong_m(char *buffer, size_t size);
 void        Com_FlushLogs(void);
 #endif
 
+void        Com_AddConfigFile(const char *name, unsigned flags);
+
 #if USE_CLIENT
 #define COM_DEDICATED   (dedicated->integer != 0)
 #else
