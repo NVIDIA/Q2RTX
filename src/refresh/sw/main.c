@@ -103,6 +103,8 @@ cvar_t  *sw_reportsurfout;
 cvar_t  *sw_stipplealpha;
 cvar_t  *sw_surfcacheoverride;
 cvar_t  *sw_waterwarp;
+cvar_t  *sw_dynamic;
+cvar_t  *sw_modulate;
 
 //Start Added by Lewey
 // These flags allow you to turn SIRDS on and
@@ -193,6 +195,8 @@ void R_Register(void)
     sw_reportsurfout = Cvar_Get("sw_reportsurfout", "0", 0);
     sw_stipplealpha = Cvar_Get("sw_stipplealpha", "0", CVAR_ARCHIVE);
     sw_waterwarp = Cvar_Get("sw_waterwarp", "1", 0);
+    sw_dynamic = Cvar_Get("sw_dynamic", "1", 0);
+    sw_modulate = Cvar_Get("sw_modulate", "1", 0);
 
     //Start Added by Lewey
     sw_drawsird = Cvar_Get("sw_drawsird", "0", 0);
@@ -866,6 +870,9 @@ void R_RenderFrame(refdef_t *fd)
 
     VectorCopy(fd->vieworg, r_refdef.vieworg);
     VectorCopy(fd->viewangles, r_refdef.viewangles);
+
+    if (!sw_dynamic->integer)
+        r_newrefdef.num_dlights = 0;
 
     if (r_speeds->integer || r_dspeeds->integer)
         r_time1 = Sys_Milliseconds();

@@ -482,6 +482,8 @@ extern cvar_t   *sw_stipplealpha;
 extern cvar_t   *sw_surfcacheoverride;
 extern cvar_t   *sw_waterwarp;
 extern cvar_t   *sw_drawsird;
+extern cvar_t   *sw_dynamic;
+extern cvar_t   *sw_modulate;
 
 extern cvar_t   *r_fullbright;
 extern cvar_t   *r_drawentities;

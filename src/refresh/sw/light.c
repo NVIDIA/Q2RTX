@@ -158,13 +158,14 @@ void R_LightPoint(vec3_t p, vec3_t color)
     float       add;
 
     if (!r_worldmodel || !r_worldmodel->lightmap || !r_newrefdef.lightstyles) {
-        color[0] = color[1] = color[2] = 1.0;
+        VectorSet(color, 1, 1, 1);
         return;
     }
 
     VectorClear(color);
 
-    RecursiveLightPoint(p, color);
+    if (!RecursiveLightPoint(p, color))
+        VectorSet(color, 1, 1, 1);
 
     //
     // add dynamic lights
@@ -180,6 +181,8 @@ void R_LightPoint(vec3_t p, vec3_t color)
             VectorMA(color, add, dl->color, color);
         }
     }
+
+    VectorScale(color, sw_modulate->value, color);
 }
 
 //===================================================================
