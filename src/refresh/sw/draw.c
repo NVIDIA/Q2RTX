@@ -420,11 +420,11 @@ void R_DrawStretchPic(int x, int y, int w, int h, qhandle_t pic)
     image_t *image = IMG_ForHandle(pic);
 
     if (w == image->upload_width && h == image->upload_height)
-        R_DrawFixedData(x, y, image->width, image->height,
-                        image->width * TEX_BYTES, image->pixels[0], draw.colors[0]);
+        R_DrawFixedData(x, y, image->upload_width, image->upload_height,
+                        image->upload_width * TEX_BYTES, image->pixels[0], draw.colors[0]);
     else
-        R_DrawStretchData(x, y, w, h, 0, 0, image->width, image->height,
-                          image->width * TEX_BYTES, image->pixels[0], draw.colors[0]);
+        R_DrawStretchData(x, y, w, h, 0, 0, image->upload_width, image->upload_height,
+                          image->upload_width * TEX_BYTES, image->pixels[0], draw.colors[0]);
 }
 
 /*
