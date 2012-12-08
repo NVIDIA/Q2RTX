@@ -24,6 +24,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "format/md2.h"
 #include "format/sp2.h"
 
+#define CL_DOWNLOAD_IGNORES     "download-ignores.txt"
+
 typedef enum {
     PRECACHE_MODELS,
     PRECACHE_OTHER,
@@ -84,6 +86,27 @@ qerror_t CL_QueueDownload(const char *path, dltype_t type)
 
 /*
 ===============
+CL_IgnoreDownload
+
+Returns true if specified path matches against an entry in download ignore
+list.
+===============
+*/
+qboolean CL_IgnoreDownload(const char *path)
+{
+    string_entry_t *entry;
+
+    for (entry = cls.download.ignores; entry; entry = entry->next) {
+        if (Com_WildCmp(entry->string, path)) {
+            return qtrue;
+        }
+    }
+
+    return qfalse;
+}
+
+/*
+===============
 CL_FinishDownload
 
 Mark the queue entry as done, decrementing pending count.
@@ -132,6 +155,77 @@ void CL_CleanupDownloads(void)
     }
 
     cls.download.temp[0] = 0;
+}
+
+/*
+===============
+CL_LoadDownloadIgnores
+
+Allow mods to provide a list of paths that are known to be non-existent and
+should never be downloaded (e.g. model specific sounds).
+===============
+*/
+void CL_LoadDownloadIgnores(void)
+{
+    string_entry_t *entry, *next;
+    char *raw, *data, *p;
+    int count, line;
+    ssize_t len;
+
+    // free previous entries
+    for (entry = cls.download.ignores; entry; entry = next) {
+        next = entry->next;
+        Z_Free(entry);
+    }
+
+    cls.download.ignores = NULL;
+
+    // load new list
+    len = FS_LoadFile(CL_DOWNLOAD_IGNORES, (void **)&raw);
+    if (!raw) {
+        if (len != Q_ERR_NOENT)
+            Com_EPrintf("Couldn't load %s: %s\n",
+                        CL_DOWNLOAD_IGNORES, Q_ErrorString(len));
+        return;
+    }
+
+    count = 0;
+    line = 1;
+    data = raw;
+
+    while (*data) {
+        p = strchr(data, '\n');
+        if (p) {
+            if (p > data && *(p - 1) == '\r')
+                *(p - 1) = 0;
+            *p = 0;
+        }
+
+        // ignore empty lines and comments
+        if (*data && *data != '#' && *data != '/') {
+            len = strlen(data);
+            if (len < MAX_QPATH) {
+                entry = Z_Malloc(sizeof(*entry) + len);
+                memcpy(entry->string, data, len + 1);
+                entry->next = cls.download.ignores;
+                cls.download.ignores = entry;
+                count++;
+            } else {
+                Com_WPrintf("Oversize filter on line %d in %s\n",
+                            line, CL_DOWNLOAD_IGNORES);
+            }
+        }
+
+        if (!p)
+            break;
+
+        data = p + 1;
+        line++;
+    }
+
+    Com_DPrintf("Loaded %d filters from %s\n", count, CL_DOWNLOAD_IGNORES);
+
+    FS_FreeFile(raw);
 }
 
 // start legacy UDP download
@@ -354,6 +448,9 @@ static qerror_t check_file_len(const char *path, size_t len, dltype_t type)
     if (valid == PATH_MIXED_CASE)
         // convert to lower case to make download server happy
         Q_strlwr(buffer);
+
+    if (CL_IgnoreDownload(buffer))
+        return Q_ERR_PERM;
 
     ret = HTTP_QueueDownload(buffer, type);
     if (ret != Q_ERR_NOSYS)

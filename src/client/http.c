@@ -652,6 +652,9 @@ static void check_and_queue_download(char *path)
     if (valid == PATH_MIXED_CASE)
         Q_strlwr(path);
 
+    if (CL_IgnoreDownload(path))
+        return;
+
     CL_QueueDownload(path, type);
 }
 

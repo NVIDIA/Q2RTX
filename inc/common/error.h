@@ -70,6 +70,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define Q_ERR_MFILE             Q_ERR(EMFILE)
 #define Q_ERR_EXIST             Q_ERR(EEXIST)
 #define Q_ERR_BADF              Q_ERR(EBADF)
+#define Q_ERR_PERM              Q_ERR(EPERM)
 
 #define Q_PrintError(what, code) \
     Com_Printf("Couldn't %s: %s\n", what, Q_ErrorString(code))

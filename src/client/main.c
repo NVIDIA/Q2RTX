@@ -2347,6 +2347,8 @@ void CL_RestartFilesystem(qboolean total)
         CL_LoadState(LOAD_FINISH);
     }
 
+    CL_LoadDownloadIgnores();
+
     // switch back to original state
     cls.state = cls_state;
 
@@ -3286,6 +3288,8 @@ void CL_Init(void)
         Com_Error(ERR_FATAL, "%s: inflateInit2() failed", __func__);
     }
 #endif
+
+    CL_LoadDownloadIgnores();
 
     HTTP_Init();
 
