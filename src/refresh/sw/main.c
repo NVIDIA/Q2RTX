@@ -246,10 +246,7 @@ void R_ModeChanged(int width, int height, int flags, int rowbytes, void *pixels)
     }
 
     // free surface cache
-    if (sc_base) {
-        Z_Free(sc_base);
-        sc_base = NULL;
-    }
+    R_FreeCaches();
 
     d_pzbuffer = R_Mallocz(vid.width * vid.height * 2);
 
@@ -345,10 +342,7 @@ void R_Shutdown(qboolean total)
     }
 
     // free surface cache
-    if (sc_base) {
-        Z_Free(sc_base);
-        sc_base = NULL;
-    }
+    R_FreeCaches();
 
     R_UnRegister();
 

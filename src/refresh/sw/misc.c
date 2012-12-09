@@ -24,8 +24,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 cvar_t  *sw_mipcap;
 cvar_t  *sw_mipscale;
 
-surfcache_t     *d_initial_rover;
-qboolean        d_roverwrapped;
 int             d_minmip;
 float           d_scalemip[NUM_MIPS - 1];
 
@@ -425,9 +423,6 @@ void R_SetupFrame(void)
     r_outofedges = 0;
 
 // d_setup
-    d_roverwrapped = qfalse;
-    d_initial_rover = sc_rover;
-
     d_minmip = sw_mipcap->value;
     if (d_minmip > 3)
         d_minmip = 3;

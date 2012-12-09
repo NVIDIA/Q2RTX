@@ -395,10 +395,6 @@ extern byte             r_warpbuffer[WARP_WIDTH * WARP_HEIGHT * VID_BYTES];
 
 extern float    scale_for_mip;
 
-extern qboolean         d_roverwrapped;
-extern surfcache_t      *sc_rover;
-extern surfcache_t      *d_initial_rover;
-
 extern float    d_sdivzstepu, d_tdivzstepu, d_zistepu;
 extern float    d_sdivzstepv, d_tdivzstepv, d_zistepv;
 extern float    d_sdivzorigin, d_tdivzorigin, d_ziorigin;
@@ -643,6 +639,8 @@ extern int      r_dlightframecount;
 
 extern bsp_t    *r_worldmodel;
 
+extern blocklight_t     blocklights[MAX_BLOCKLIGHTS * LIGHTMAP_BYTES];   // allow some very large lightmaps
+
 void R_PrintAliasStats(void);
 void R_PrintTimes(void);
 void R_PrintDSpeeds(void);
@@ -651,10 +649,9 @@ void R_LightPoint(vec3_t p, vec3_t color);
 void R_SetupFrame(void);
 void R_EmitEdge(mvertex_t *pv0, mvertex_t *pv1);
 void R_ClipEdge(mvertex_t *pv0, mvertex_t *pv1, clipplane_t *clip);
+void R_BuildLightMap(void);
 
 extern refdef_t     r_newrefdef;
-
-extern surfcache_t  *sc_rover, *sc_base;
 
 //====================================================================
 
@@ -675,6 +672,7 @@ void Draw_Init(void);
 qboolean R_Init(qboolean total);
 void R_Shutdown(qboolean total);
 void R_InitCaches(void);
+void R_FreeCaches(void);
 void D_FlushCaches(void);
 
 qhandle_t R_RegisterModel(const char *name);

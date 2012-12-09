@@ -1,7 +1,9 @@
 #define BLOCK_SIZE  (1 << BLOCK_SHIFT)
 
-void BLOCK_FUNC(void)
+static void BLOCK_FUNC(void)
 {
+    int     lightleft[3], lightright[3];
+    int     lightleftstep[3], lightrightstep[3];
     int     v, i, b, lightstep[3], light[3];
     byte    *psource, *prowdest;
 
@@ -9,7 +11,6 @@ void BLOCK_FUNC(void)
     prowdest = prowdestbase;
 
     for (v = 0 ; v < r_numvblocks ; v++) {
-        // FIXME: make these locals?
         // FIXME: use delta rather than both right and left, like ASM?
         lightleft[0] = r_lightptr[0 * LIGHTMAP_BYTES + 0];
         lightleft[1] = r_lightptr[0 * LIGHTMAP_BYTES + 1];

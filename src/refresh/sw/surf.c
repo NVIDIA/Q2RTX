@@ -21,23 +21,20 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 drawsurf_t  r_drawsurf;
 
-int             lightleft[3], sourcesstep, blocksize, sourcetstep;
-int             lightdelta, lightdeltastep;
-int             lightright[3], lightleftstep[3], lightrightstep[3], blockdivshift;
-unsigned        blockdivmask;
-void            *prowdestbase;
-byte            *pbasesource;
-int             surfrowbytes;   // used by ASM files
-unsigned        *r_lightptr;
-int             r_stepback;
-int             r_lightwidth;
-int             r_numhblocks, r_numvblocks;
-byte            *r_source, *r_sourcemax;
+static int          sourcetstep;
+static void         *prowdestbase;
+static byte         *pbasesource;
+static int          surfrowbytes;
+static unsigned     *r_lightptr;
+static int          r_stepback;
+static int          r_lightwidth;
+static int          r_numhblocks, r_numvblocks;
+static byte         *r_source, *r_sourcemax;
 
-void R_DrawSurfaceBlock8_mip0(void);
-void R_DrawSurfaceBlock8_mip1(void);
-void R_DrawSurfaceBlock8_mip2(void);
-void R_DrawSurfaceBlock8_mip3(void);
+static void R_DrawSurfaceBlock8_mip0(void);
+static void R_DrawSurfaceBlock8_mip1(void);
+static void R_DrawSurfaceBlock8_mip2(void);
+static void R_DrawSurfaceBlock8_mip3(void);
 
 static void (*surfmiptable[4])(void) = {
     R_DrawSurfaceBlock8_mip0,
@@ -46,14 +43,8 @@ static void (*surfmiptable[4])(void) = {
     R_DrawSurfaceBlock8_mip3
 };
 
-void R_BuildLightMap(void);
-extern  blocklight_t        blocklights[MAX_BLOCKLIGHTS * LIGHTMAP_BYTES];   // allow some very large lightmaps
-
-float           surfscale;
-qboolean        r_cache_thrash;         // set if surface cache is thrashing
-
-int         sc_size;
-surfcache_t *sc_rover, *sc_base;
+static int          sc_size;
+static surfcache_t  *sc_rover, *sc_base;
 
 /*
 ===============
@@ -86,13 +77,15 @@ R_DrawSurface
 void R_DrawSurface(void)
 {
     byte        *basetptr;
-    int             smax, tmax, twidth;
-    int             u;
-    int             soffset, toffset;
-    int             horzblockstep;
+    int         smax, tmax, twidth;
+    int         u;
+    int         soffset, toffset;
+    int         horzblockstep;
     byte        *pcolumndest;
-    void (*pblockdrawer)(void);
-    image_t         *mt;
+    void        (*pblockdrawer)(void);
+    image_t     *mt;
+    int         blocksize;
+    int         blockdivshift;
 
     surfrowbytes = r_drawsurf.rowbytes;
 
@@ -100,22 +93,15 @@ void R_DrawSurface(void)
 
     r_source = mt->pixels[r_drawsurf.surfmip];
 
-// the fractional light values should range from 0 to (VID_GRADES - 1) << 16
-// from a source range of 0 - 255
-
-    /* width in bytes */
     twidth = (mt->upload_width >> r_drawsurf.surfmip) * TEX_BYTES;
 
     blocksize = 16 >> r_drawsurf.surfmip;
     blockdivshift = 4 - r_drawsurf.surfmip;
-    blockdivmask = (1 << blockdivshift) - 1;
 
     r_lightwidth = S_MAX(r_drawsurf.surf) * LIGHTMAP_BYTES;
 
     r_numhblocks = r_drawsurf.surfwidth >> blockdivshift;
     r_numvblocks = r_drawsurf.surfheight >> blockdivshift;
-
-//==============================
 
     pblockdrawer = surfmiptable[r_drawsurf.surfmip];
 // TODO: only needs to be set when there is a display settings change
@@ -217,6 +203,16 @@ void R_InitCaches(void)
     sc_base->size = sc_size;
 }
 
+void R_FreeCaches(void)
+{
+    if (sc_base) {
+        Z_Free(sc_base);
+        sc_base = NULL;
+    }
+
+    sc_size = 0;
+    sc_rover = NULL;
+}
 
 /*
 ==================
@@ -250,7 +246,6 @@ D_SCAlloc
 surfcache_t     *D_SCAlloc(int width, int size)
 {
     surfcache_t             *new;
-    qboolean                wrapped_this_time;
 
     if ((width < 0) || (width > 256))
         Com_Error(ERR_FATAL, "D_SCAlloc: bad cache width %d\n", width);
@@ -264,12 +259,7 @@ surfcache_t     *D_SCAlloc(int width, int size)
         Com_Error(ERR_FATAL, "D_SCAlloc: %i > cache size of %i", size, sc_size);
 
 // if there is not size bytes after the rover, reset to the start
-    wrapped_this_time = qfalse;
-
     if (!sc_rover || (byte *)sc_rover - (byte *)sc_base > sc_size - size) {
-        if (sc_rover) {
-            wrapped_this_time = qtrue;
-        }
         sc_rover = sc_base;
     }
 
@@ -309,13 +299,6 @@ surfcache_t     *D_SCAlloc(int width, int size)
 
     new->owner = NULL;              // should be set properly after return
 
-    if (d_roverwrapped) {
-        if (wrapped_this_time || (sc_rover >= d_initial_rover))
-            r_cache_thrash = qtrue;
-    } else if (wrapped_this_time) {
-        d_roverwrapped = qtrue;
-    }
-
     return new;
 }
 
@@ -347,6 +330,7 @@ D_CacheSurface
 surfcache_t *D_CacheSurface(mface_t *surface, int miplevel)
 {
     surfcache_t     *cache;
+    float           surfscale;
 
 //
 // if the surface is animating or flashing, flush the cache
