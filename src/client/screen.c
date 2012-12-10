@@ -1553,9 +1553,10 @@ static void draw_layout_string(const char *s)
             token = COM_Parse(&s);
             time = atoi(token);
 
-            HUD_DrawString(x + 32, y, ci->name);
-            Q_snprintf(buffer, sizeof(buffer), "Score: %i", score);
-            HUD_DrawString(x + 32, y + CHAR_HEIGHT, buffer);
+            HUD_DrawAltString(x + 32, y, ci->name);
+            HUD_DrawString(x + 32, y + CHAR_HEIGHT, "Score: ");
+            Q_snprintf(buffer, sizeof(buffer), "%i", score);
+            HUD_DrawAltString(x + 32 + 7 * CHAR_WIDTH, y + CHAR_HEIGHT, buffer);
             Q_snprintf(buffer, sizeof(buffer), "Ping:  %i", ping);
             HUD_DrawString(x + 32, y + 2 * CHAR_HEIGHT, buffer);
             Q_snprintf(buffer, sizeof(buffer), "Time:  %i", time);
