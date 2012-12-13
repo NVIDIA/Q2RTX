@@ -81,9 +81,58 @@ success:
     return qtrue;
 }
 
+static int VID_SDL_InitSubSystem(void)
+{
+    int ret;
+
+    ret = SDL_WasInit(SDL_INIT_EVERYTHING);
+    if (ret == 0)
+        ret = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE);
+    else if (!(ret & SDL_INIT_VIDEO))
+        ret = SDL_InitSubSystem(SDL_INIT_VIDEO);
+    else
+        ret = 0;
+
+    if (ret == -1)
+        Com_EPrintf("Couldn't initialize SDL video: %s\n", SDL_GetError());
+
+    return ret;
+}
+
 char *VID_GetDefaultModeList(void)
 {
-    return Z_CopyString(VID_MODELIST);
+    SDL_Rect **modes;
+    size_t size, len;
+    char *buf;
+    int i;
+
+    if (VID_SDL_InitSubSystem())
+        return NULL;
+
+#if USE_REF == REF_SOFT
+    modes = SDL_ListModes(NULL, SDL_FULLSCREEN | SDL_HWSURFACE);
+#else
+    modes = SDL_ListModes(NULL, SDL_FULLSCREEN | SDL_OPENGL);
+#endif
+
+    if (modes == (SDL_Rect **)0 || modes == (SDL_Rect **)-1)
+        return Z_CopyString(VID_MODELIST);
+
+    for (i = 0; modes[i]; i++);
+
+    if (i == 0)
+        return Z_CopyString(VID_MODELIST);
+
+    size = i * 10 + 1;
+    buf = Z_Malloc(size);
+
+    for (i = 0, len = 0; modes[i]; i++)
+        len += Q_scnprintf(buf + len, size - len, "%dx%d ", modes[i]->w, modes[i]->h);
+
+    if (buf[len - 1] == ' ')
+        buf[len - 1] = 0;
+
+    return buf;
 }
 
 /*
@@ -114,17 +163,10 @@ qboolean VID_SDL_Init(void)
     SDL_Color    color;
     byte *dst;
     char buffer[MAX_QPATH];
-    int i, ret;
+    int i;
     cvar_t *vid_hwgamma;
 
-    if (SDL_WasInit(SDL_INIT_EVERYTHING) == 0) {
-        ret = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE);
-    } else {
-        ret = SDL_InitSubSystem(SDL_INIT_VIDEO);
-    }
-
-    if (ret == -1) {
-        Com_EPrintf("Couldn't initialize SDL video: %s\n", SDL_GetError());
+    if (VID_SDL_InitSubSystem()) {
         return qfalse;
     }
 

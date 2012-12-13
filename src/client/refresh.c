@@ -277,7 +277,12 @@ void CL_InitRefresh(void)
         return;
     }
 
+    Com_SetLastError(NULL);
+
     modelist = VID_GetDefaultModeList();
+    if (!modelist) {
+        Com_Error(ERR_FATAL, "Couldn't initialize refresh: %s", Com_GetLastError());
+    }
 
     // Create the video variables so we know how to start the graphics drivers
     vid_ref = Cvar_Get("vid_ref", VID_REF, CVAR_ROM);
