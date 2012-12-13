@@ -105,27 +105,29 @@ LIGHT SAMPLING
 =============================================================================
 */
 
-static qboolean RecursiveLightPoint(vec3_t p, vec3_t color)
+static qboolean RecursiveLightPoint(vec3_t start, vec3_t color)
 {
-    mface_t     *surf;
-    int         smax, tmax, size;
-    int         ds, dt;
-    byte        *lightmap;
-    float       *scales;
-    int         maps;
-    vec3_t      end;
+    mface_t         *surf;
+    int             smax, tmax, size;
+    int             ds, dt;
+    byte            *lightmap;
+    float           *scales;
+    int             maps;
+    vec3_t          end;
+    lightpoint_t    lightpoint;
 
-    end[0] = p[0];
-    end[1] = p[1];
-    end[2] = p[2] - 2048;
+    end[0] = start[0];
+    end[1] = start[1];
+    end[2] = start[2] - 2048;
 
-    surf = BSP_LightPoint(r_worldmodel->nodes, p, end, &ds, &dt);
-    if (!surf) {
+    BSP_LightPoint(&lightpoint, start, end, r_worldmodel->nodes);
+
+    surf = lightpoint.surf;
+    if (!surf)
         return qfalse;
-    }
 
-    ds >>= 4;
-    dt >>= 4;
+    ds = lightpoint.s >> 4;
+    dt = lightpoint.t >> 4;
 
     smax = S_MAX(surf);
     tmax = T_MAX(surf);

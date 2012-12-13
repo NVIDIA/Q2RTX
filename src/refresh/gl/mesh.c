@@ -31,7 +31,6 @@ static vec3_t   translate;
 static vec_t    shellscale;
 static tessfunc_t tessfunc;
 static vec4_t   color;
-static mface_t  *surf;
 
 static const vec_t  *shadelight;
 static vec3_t       shadedir;
@@ -339,7 +338,7 @@ static void setup_color(void)
     float f, m;
     int i;
 
-    surf = NULL;
+    memset(&glr.lightpoint, 0, sizeof(glr.lightpoint));
 
     if (flags & RF_SHELL_MASK) {
         VectorClear(color);
@@ -366,7 +365,7 @@ static void setup_color(void)
     } else if ((flags & RF_IR_VISIBLE) && (glr.fd.rdflags & RDF_IRGOGGLES)) {
         VectorSet(color, 1, 0, 0);
     } else {
-        surf = GL_LightPoint(origin, color);
+        GL_LightPoint(origin, color);
 
         if (flags & RF_MINLIGHT) {
             for (i = 0; i < 3; i++) {
@@ -462,13 +461,13 @@ static void setup_shadow(void)
     if (glr.ent->flags & RF_WEAPONMODEL)
         return;
 
-    if (!surf)
+    if (!glr.lightpoint.surf)
         return;
 
-    plane = surf->plane;
+    plane = &glr.lightpoint.plane;
 
     // position fake light source straight over the model
-    if (surf->drawflags & DSURF_PLANEBACK)
+    if (glr.lightpoint.surf->drawflags & DSURF_PLANEBACK)
         VectorSet(dir, 0, 0, -1);
     else
         VectorSet(dir, 0, 0, 1);

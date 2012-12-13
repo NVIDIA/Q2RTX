@@ -1066,71 +1066,112 @@ HELPER FUNCTIONS
 
 #if USE_REF
 
-mface_t *BSP_LightPoint(mnode_t *node, vec3_t start, vec3_t end, int *ps, int *pt)
+static lightpoint_t *light_point;
+
+static qboolean BSP_RecursiveLightPoint(mnode_t *node, float p1f, float p2f, vec3_t p1, vec3_t p2)
 {
-    vec_t startFrac, endFrac, midFrac;
-    vec3_t _start, mid;
-    int side;
+    vec_t d1, d2, frac, midf;
+    vec3_t mid;
+    int i, side, s, t;
     mface_t *surf;
     mtexinfo_t *texinfo;
-    int i;
-    int s, t;
 
-    VectorCopy(start, _start);
     while (node->plane) {
         // calculate distancies
-        startFrac = PlaneDiffFast(_start, node->plane);
-        endFrac = PlaneDiffFast(end, node->plane);
-        side = (startFrac < 0);
+        d1 = PlaneDiffFast(p1, node->plane);
+        d2 = PlaneDiffFast(p2, node->plane);
+        side = (d1 < 0);
 
-        if ((endFrac < 0) == side) {
+        if ((d2 < 0) == side) {
             // both points are one the same side
             node = node->children[side];
             continue;
         }
 
         // find crossing point
-        midFrac = startFrac / (startFrac - endFrac);
-        LerpVector(_start, end, midFrac, mid);
+        frac = d1 / (d1 - d2);
+        midf = p1f + (p2f - p1f) * frac;
+        LerpVector(p1, p2, frac, mid);
 
         // check near side
-        surf = BSP_LightPoint(node->children[side], _start, mid, ps, pt);
-        if (surf) {
-            return surf;
-        }
+        if (BSP_RecursiveLightPoint(node->children[side], p1f, midf, p1, mid))
+            return qtrue;
 
         for (i = 0, surf = node->firstface; i < node->numfaces; i++, surf++) {
-            if (!surf->lightmap) {
+            if (!surf->lightmap)
                 continue;
-            }
+
             texinfo = surf->texinfo;
-            if (texinfo->c.flags & SURF_NOLM_MASK) {
+            if (texinfo->c.flags & SURF_NOLM_MASK)
                 continue;
-            }
+
             s = DotProduct(texinfo->axis[0], mid) + texinfo->offset[0];
             t = DotProduct(texinfo->axis[1], mid) + texinfo->offset[1];
 
             s -= surf->texturemins[0];
             t -= surf->texturemins[1];
-            if (s < 0 || t < 0) {
+            if (s < 0 || s > surf->extents[0])
                 continue;
-            }
-            if (s > surf->extents[0] || t > surf->extents[1]) {
+            if (t < 0 || t > surf->extents[1])
                 continue;
-            }
 
-            *ps = s;
-            *pt = t;
-
-            return surf;
+            light_point->surf = surf;
+            light_point->plane = *surf->plane;
+            light_point->s = s;
+            light_point->t = t;
+            light_point->fraction = midf;
+            return qtrue;
         }
 
         // check far side
-        VectorCopy(mid, _start);
-        node = node->children[side ^ 1];
+        return BSP_RecursiveLightPoint(node->children[side ^ 1], midf, p2f, mid, p2);
     }
 
-    return NULL;
+    return qfalse;
+}
+
+void BSP_LightPoint(lightpoint_t *point, vec3_t start, vec3_t end, mnode_t *headnode)
+{
+    light_point = point;
+    light_point->surf = NULL;
+    light_point->fraction = 1;
+
+    BSP_RecursiveLightPoint(headnode, 0, 1, start, end);
+}
+
+void BSP_TransformedLightPoint(lightpoint_t *point, vec3_t start, vec3_t end,
+                               mnode_t *headnode, vec3_t origin, vec3_t angles)
+{
+    vec3_t start_l, end_l;
+    vec3_t axis[3];
+
+    light_point = point;
+    light_point->surf = NULL;
+    light_point->fraction = 1;
+
+    // subtract origin offset
+    VectorSubtract(start, origin, start_l);
+    VectorSubtract(end, origin, end_l);
+
+    // rotate start and end into the models frame of reference
+    if (angles) {
+        AnglesToAxis(angles, axis);
+        RotatePoint(start_l, axis);
+        RotatePoint(end_l, axis);
+    }
+
+    // sweep the line through the model
+    if (!BSP_RecursiveLightPoint(headnode, 0, 1, start_l, end_l))
+        return;
+
+    // rotate plane normal into the worlds frame of reference
+    if (angles) {
+        TransposeAxis(axis);
+        RotatePoint(point->plane.normal, axis);
+    }
+
+    // offset plane distance
+    point->plane.dist += DotProduct(point->plane.normal, origin);
 }
 
 #endif

@@ -282,8 +282,18 @@ void BSP_Free(bsp_t *bsp);
 const char *BSP_GetError(void);
 
 #if USE_REF
-mface_t *BSP_LightPoint(mnode_t *node, vec3_t start, vec3_t end, int *ps, int *pt);
+typedef struct {
+    mface_t     *surf;
+    cplane_t    plane;
+    int         s, t;
+    float       fraction;
+} lightpoint_t;
+
+void BSP_LightPoint(lightpoint_t *point, vec3_t start, vec3_t end, mnode_t *headnode);
+void BSP_TransformedLightPoint(lightpoint_t *point, vec3_t start, vec3_t end,
+                               mnode_t *headnode, vec3_t origin, vec3_t angles);
 #endif
+
 byte *BSP_ClusterVis(bsp_t *bsp, byte *mask, int cluster, int vis);
 mleaf_t *BSP_PointLeaf(mnode_t *node, vec3_t p);
 mmodel_t *BSP_InlineModel(bsp_t *bsp, const char *name);

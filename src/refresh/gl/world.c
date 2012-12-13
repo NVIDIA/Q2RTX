@@ -18,43 +18,87 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "gl.h"
 
-static mface_t *GL_BspLightPoint(vec3_t origin, vec3_t color)
+static qboolean GL_SmoothLightPoint(vec3_t start, vec3_t color)
 {
-    bsp_t *bsp = gl_static.world.cache;
-    mface_t *surf;
-    int s, t, i;
-    byte *lightmap;
-    byte *b1, *b2, *b3, *b4;
-    int fracu, fracv;
-    int w1, w2, w3, w4;
-    byte temp[3];
-    int smax, tmax, size;
-    lightstyle_t *style;
-    vec3_t point;
+    bsp_t           *bsp;
+    mface_t         *surf;
+    int             s, t, i, index;
+    byte            *lightmap;
+    byte            *b1, *b2, *b3, *b4;
+    int             fracu, fracv;
+    int             w1, w2, w3, w4;
+    byte            temp[3];
+    int             smax, tmax, size;
+    lightstyle_t    *style;
+    lightpoint_t    pt;
+    vec3_t          end, mins, maxs;
+    entity_t        *ent;
+    mmodel_t        *model;
+    vec_t           *angles;
 
-    if (!bsp || !bsp->lightmap) {
-        return NULL;
+    bsp = gl_static.world.cache;
+    if (!bsp || !bsp->lightmap)
+        return qfalse;
+
+    end[0] = start[0];
+    end[1] = start[1];
+    end[2] = start[2] - 8192;
+
+    // get base lightpoint from world
+    BSP_LightPoint(&glr.lightpoint, start, end, bsp->nodes);
+
+    // trace to other BSP models
+    for (i = 0; i < glr.fd.num_entities; i++) {
+        ent = &glr.fd.entities[i];
+        index = ent->model;
+        if (!(index & 0x80000000))
+            continue;
+
+        index = ~index;
+        if (index < 1 || index >= bsp->nummodels)
+            continue;
+
+        model = &bsp->models[index];
+
+        // cull in X/Y plane
+        if (ent->angles[0] || ent->angles[1] || ent->angles[2]) {
+            if (fabs(start[0] - ent->origin[0]) > model->radius)
+                continue;
+            if (fabs(start[1] - ent->origin[1]) > model->radius)
+                continue;
+            angles = ent->angles;
+        } else {
+            VectorAdd(model->mins, ent->origin, mins);
+            VectorAdd(model->maxs, ent->origin, maxs);
+            if (start[0] < mins[0] || start[0] > maxs[0])
+                continue;
+            if (start[1] < mins[1] || start[1] > maxs[1])
+                continue;
+            angles = NULL;
+        }
+
+        BSP_TransformedLightPoint(&pt, start, end, model->headnode,
+                                  ent->origin, angles);
+
+        if (pt.fraction < glr.lightpoint.fraction)
+            glr.lightpoint = pt;
     }
 
-    point[0] = origin[0];
-    point[1] = origin[1];
-    point[2] = origin[2] - 8192;
+    surf = glr.lightpoint.surf;
+    if (!surf)
+        return qfalse;
 
-    surf = BSP_LightPoint(bsp->nodes, origin, point, &s, &t);
-    if (!surf) {
-        return NULL;
-    }
+    fracu = glr.lightpoint.s & 15;
+    fracv = glr.lightpoint.t & 15;
 
-    fracu = s & 15;
-    fracv = t & 15;
-
+    // compute weights of lightmap blocks
     w1 = (16 - fracu) * (16 - fracv);
     w2 = fracu * (16 - fracv);
     w3 = fracu * fracv;
     w4 = (16 - fracu) * fracv;
 
-    s >>= 4;
-    t >>= 4;
+    s = glr.lightpoint.s >> 4;
+    t = glr.lightpoint.t >> 4;
 
     smax = S_MAX(surf);
     tmax = T_MAX(surf);
@@ -62,6 +106,7 @@ static mface_t *GL_BspLightPoint(vec3_t origin, vec3_t color)
 
     VectorClear(color);
 
+    // add all the lightmaps with bilinear filtering
     lightmap = surf->lightmap;
     for (i = 0; i < surf->numstyles; i++) {
         b1 = &lightmap[3 * ((t + 0) * smax + (s + 0))];
@@ -84,7 +129,7 @@ static mface_t *GL_BspLightPoint(vec3_t origin, vec3_t color)
 
     GL_AdjustColor(color);
 
-    return surf;
+    return qtrue;
 }
 
 #if USE_DLIGHTS
@@ -174,18 +219,15 @@ static void GL_AddLights(vec3_t origin, vec3_t color)
 }
 #endif
 
-mface_t *GL_LightPoint(vec3_t origin, vec3_t color)
+void GL_LightPoint(vec3_t origin, vec3_t color)
 {
-    mface_t *surf;
-
     if (gl_fullbright->integer) {
         VectorSet(color, 1, 1, 1);
-        return NULL;
+        return;
     }
 
     // get lighting from world
-    surf = GL_BspLightPoint(origin, color);
-    if (!surf) {
+    if (!GL_SmoothLightPoint(origin, color)) {
         VectorSet(color, 1, 1, 1);
     }
 
@@ -200,8 +242,6 @@ mface_t *GL_LightPoint(vec3_t origin, vec3_t color)
         // apply modulate twice to mimic original ref_gl behavior
         VectorScale(color, gl_static.entity_modulate, color);
     }
-
-    return surf;
 }
 
 void R_LightPoint(vec3_t origin, vec3_t color)

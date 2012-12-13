@@ -75,6 +75,7 @@ typedef struct {
     qboolean    entrotated;
     vec3_t      entaxis[3];
     GLfloat     entmatrix[16];
+    lightpoint_t lightpoint;
     int     num_beams;
 } glRefdef_t;
 
@@ -376,7 +377,7 @@ void GL_DrawSolidFaces(void);
  */
 void GL_DrawBspModel(mmodel_t *model);
 void GL_DrawWorld(void);
-mface_t *GL_LightPoint(vec3_t origin, vec3_t color);
+void GL_LightPoint(vec3_t origin, vec3_t color);
 
 /*
  * gl_sky.c
