@@ -42,7 +42,6 @@ qboolean    r_dowarp;
 
 int         c_surf;
 int         r_maxsurfsseen, r_maxedgesseen, r_cnumsurfs;
-qboolean    r_surfsonstack;
 int         r_clipflags;
 
 //
@@ -325,6 +324,16 @@ void R_Shutdown(qboolean total)
 
     R_ShutdownImages();
 
+    if (auxsurfaces) {
+        Z_Free(auxsurfaces);
+        auxsurfaces = NULL;
+    }
+
+    if (auxedges) {
+        Z_Free(auxedges);
+        auxedges = NULL;
+    }
+
     // free world model
     if (r_worldmodel) {
         BSP_Free(r_worldmodel);
@@ -360,35 +369,34 @@ void R_NewMap(void)
 {
     r_viewcluster = -1;
 
-    r_cnumsurfs = sw_maxsurfs->integer;
+    if (auxsurfaces) {
+        Z_Free(auxsurfaces);
+        auxsurfaces = NULL;
+    }
 
-    if (r_cnumsurfs <= MINSURFACES)
-        r_cnumsurfs = MINSURFACES;
+    if (auxedges) {
+        Z_Free(auxedges);
+        auxedges = NULL;
+    }
+
+    r_cnumsurfs = Cvar_ClampInteger(sw_maxsurfs, MINSURFACES, MAXSURFACES);
 
     if (r_cnumsurfs > NUMSTACKSURFACES) {
-        surfaces = R_Mallocz(r_cnumsurfs * sizeof(surf_t));
+        surfaces = auxsurfaces = R_Mallocz(r_cnumsurfs * sizeof(surf_t));
         surface_p = surfaces;
         surf_max = &surfaces[r_cnumsurfs];
-        r_surfsonstack = qfalse;
         // surface 0 doesn't really exist; it's just a dummy because index 0
         // is used to indicate no edge attached to surface
         surfaces--;
         R_SurfacePatch();
-    } else {
-        r_surfsonstack = qtrue;
     }
 
     r_maxedgesseen = 0;
     r_maxsurfsseen = 0;
 
-    r_numallocatededges = sw_maxedges->integer;
+    r_numallocatededges = Cvar_ClampInteger(sw_maxedges, MINEDGES, MAXEDGES);
 
-    if (r_numallocatededges < MINEDGES)
-        r_numallocatededges = MINEDGES;
-
-    if (r_numallocatededges <= NUMSTACKEDGES) {
-        auxedges = NULL;
-    } else {
+    if (r_numallocatededges > NUMSTACKEDGES) {
         auxedges = R_Mallocz(r_numallocatededges * sizeof(edge_t));
     }
 }
@@ -775,7 +783,7 @@ void R_EdgeDrawing(void)
                   (((uintptr_t)&ledges[0] + CACHE_SIZE - 1) & ~(CACHE_SIZE - 1));
     }
 
-    if (r_surfsonstack) {
+    if (!auxsurfaces) {
         surfaces = (surf_t *)
                    (((uintptr_t)&lsurfs[0] + CACHE_SIZE - 1) & ~(CACHE_SIZE - 1));
         surf_max = &surfaces[r_cnumsurfs];

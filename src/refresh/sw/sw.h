@@ -140,8 +140,10 @@ extern oldrefdef_t      r_refdef;
 
 #define NUMSTACKEDGES           3000
 #define MINEDGES                NUMSTACKEDGES
+#define MAXEDGES                30000
 #define NUMSTACKSURFACES        1000
 #define MINSURFACES             NUMSTACKSURFACES
+#define MAXSURFACES             10000
 #define MAXSPANS                3000
 
 // flags in finalvert_t.flags
@@ -437,6 +439,7 @@ extern vec3_t   vup, base_vup;
 extern vec3_t   vpn, base_vpn;
 extern vec3_t   vright, base_vright;
 
+extern surf_t   *auxsurfaces;
 extern surf_t   *surfaces, *surface_p, *surf_max;
 
 // surfaces are generated in back to front order by the bsp, so if a surf
