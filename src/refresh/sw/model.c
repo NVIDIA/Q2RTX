@@ -296,25 +296,31 @@ Specifies the model that will be used as the world
 */
 void R_BeginRegistration(const char *model)
 {
-    char    fullname[MAX_QPATH];
-    bsp_t   *bsp;
+    char        fullname[MAX_QPATH];
+    bsp_t       *bsp;
+    qerror_t    ret;
+    int         i;
 
     registration_sequence++;
     r_oldviewcluster = -1;      // force markleafs
-    Q_concat(fullname, sizeof(fullname), "maps/", model, ".bsp", NULL);
 
     D_FlushCaches();
-    BSP_Load(fullname, &bsp);
-    if (bsp == r_worldmodel) {
-        mtexinfo_t *tex = bsp->texinfo;
-        int i;
 
-        for (i = 0; i < bsp->numtexinfo; i++, tex++) {
-            tex->image->registration_sequence = registration_sequence;
+    Q_concat(fullname, sizeof(fullname), "maps/", model, ".bsp", NULL);
+    ret = BSP_Load(fullname, &bsp);
+    if (!bsp) {
+        Com_Error(ERR_DROP, "%s: couldn't load %s: %s",
+                  __func__, fullname, Q_ErrorString(ret));
+    }
+
+    if (bsp == r_worldmodel) {
+        for (i = 0; i < bsp->numtexinfo; i++) {
+            bsp->texinfo[i].image->registration_sequence = registration_sequence;
         }
         bsp->refcount--;
         return;
     }
+
     BSP_Free(r_worldmodel);
     r_worldmodel = bsp;
 
