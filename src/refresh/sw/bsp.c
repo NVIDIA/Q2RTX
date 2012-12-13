@@ -201,15 +201,7 @@ void R_RecursiveClipBPoly(bedge_t *pedges, mnode_t *pnode, mface_t *psurf)
             // generate the clipped vertex
             frac = lastdist / (lastdist - dist);
             ptvert = &pbverts[numbverts++];
-            ptvert->point[0] = plastvert->point[0] +
-                               frac * (pvert->point[0] -
-                                       plastvert->point[0]);
-            ptvert->point[1] = plastvert->point[1] +
-                               frac * (pvert->point[1] -
-                                       plastvert->point[1]);
-            ptvert->point[2] = plastvert->point[2] +
-                               frac * (pvert->point[2] -
-                                       plastvert->point[2]);
+            LerpVector(plastvert->point, pvert->point, frac, ptvert->point);
 
             // split into two edges, one on each side, and remember entering
             // and exiting points

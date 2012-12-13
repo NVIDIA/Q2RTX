@@ -593,7 +593,6 @@ static void CM_RecursiveHullCheck(mnode_t *node, float p1f, float p2f, vec3_t p1
     float       t1, t2, offset;
     float       frac, frac2;
     float       idist;
-    int         i;
     vec3_t      mid;
     int         side;
     float       midf;
@@ -656,27 +655,18 @@ recheck:
     }
 
     // move up to the node
-    if (frac < 0)
-        frac = 0;
-    if (frac > 1)
-        frac = 1;
+    clamp(frac, 0, 1);
 
     midf = p1f + (p2f - p1f) * frac;
-    for (i = 0; i < 3; i++)
-        mid[i] = p1[i] + frac * (p2[i] - p1[i]);
+    LerpVector(p1, p2, frac, mid);
 
     CM_RecursiveHullCheck(node->children[side], p1f, midf, p1, mid);
 
-
     // go past the node
-    if (frac2 < 0)
-        frac2 = 0;
-    if (frac2 > 1)
-        frac2 = 1;
+    clamp(frac2, 0, 1);
 
     midf = p1f + (p2f - p1f) * frac2;
-    for (i = 0; i < 3; i++)
-        mid[i] = p1[i] + frac2 * (p2[i] - p1[i]);
+    LerpVector(p1, p2, frac2, mid);
 
     CM_RecursiveHullCheck(node->children[side ^ 1], midf, p2f, mid, p2);
 }
@@ -694,8 +684,6 @@ void CM_BoxTrace(trace_t *trace, vec3_t start, vec3_t end,
                  vec3_t mins, vec3_t maxs,
                  mnode_t *headnode, int brushmask)
 {
-    int     i;
-
     checkcount++;       // for multi-check avoidance
 
     // fill in a default trace
@@ -758,13 +746,10 @@ void CM_BoxTrace(trace_t *trace, vec3_t start, vec3_t end,
     //
     CM_RecursiveHullCheck(headnode, 0, 1, start, end);
 
-    if (trace_trace->fraction == 1) {
+    if (trace_trace->fraction == 1)
         VectorCopy(end, trace_trace->endpos);
-    } else {
-        for (i = 0; i < 3; i++)
-            trace_trace->endpos[i] = start[i] + trace_trace->fraction * (end[i] - start[i]);
-    }
-
+    else
+        LerpVector(start, end, trace_trace->fraction, trace_trace->endpos);
 }
 
 

@@ -252,12 +252,7 @@ void R_ClipEdge(mvertex_t *pv0, mvertex_t *pv1, clipplane_t *clip)
             cacheoffset = CLIPPED_NOT_CACHED;
 
             f = d0 / (d0 - d1);
-            clipvert.point[0] = pv0->point[0] +
-                                f * (pv1->point[0] - pv0->point[0]);
-            clipvert.point[1] = pv0->point[1] +
-                                f * (pv1->point[1] - pv0->point[1]);
-            clipvert.point[2] = pv0->point[2] +
-                                f * (pv1->point[2] - pv0->point[2]);
+            LerpVector(pv0->point, pv1->point, f, clipvert.point);
 
             if (clip->leftedge) {
                 r_leftclipped = qtrue;
@@ -287,12 +282,7 @@ void R_ClipEdge(mvertex_t *pv0, mvertex_t *pv1, clipplane_t *clip)
             cacheoffset = CLIPPED_NOT_CACHED;
 
             f = d0 / (d0 - d1);
-            clipvert.point[0] = pv0->point[0] +
-                                f * (pv1->point[0] - pv0->point[0]);
-            clipvert.point[1] = pv0->point[1] +
-                                f * (pv1->point[1] - pv0->point[1]);
-            clipvert.point[2] = pv0->point[2] +
-                                f * (pv1->point[2] - pv0->point[2]);
+            LerpVector(pv0->point, pv1->point, f, clipvert.point);
 
             if (clip->leftedge) {
                 r_leftclipped = qtrue;
