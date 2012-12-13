@@ -761,8 +761,8 @@ void D_CalcGradients(mface_t *pface)
 
     mipscale = 1.0 / (float)(1 << miplevel);
 
-    TransformVector(pface->texinfo->axis[0], p_saxis);
-    TransformVector(pface->texinfo->axis[1], p_taxis);
+    R_TransformVector(pface->texinfo->axis[0], p_saxis);
+    R_TransformVector(pface->texinfo->axis[1], p_taxis);
 
     t = xscaleinv * mipscale;
     d_sdivzstepu = p_saxis[0] * t;
@@ -846,7 +846,7 @@ void D_TurbulentSurf(surf_t *s)
         // R_RotateBmodel ()
         VectorSubtract(r_origin, currententity->origin,
                        local_modelorg);
-        TransformVector(local_modelorg, transformed_modelorg);
+        R_TransformVector(local_modelorg, transformed_modelorg);
 
         R_RotateBmodel();   // FIXME: don't mess with the frustum,
         // make entity passed in
@@ -931,7 +931,7 @@ void D_SolidSurf(surf_t *s)
         currententity = s->entity;  //FIXME: make this passed in to
         // R_RotateBmodel ()
         VectorSubtract(r_origin, currententity->origin, local_modelorg);
-        TransformVector(local_modelorg, transformed_modelorg);
+        R_TransformVector(local_modelorg, transformed_modelorg);
 
         R_RotateBmodel();   // FIXME: don't mess with the frustum,
         // make entity passed in
@@ -1033,7 +1033,7 @@ void D_DrawSurfaces(void)
 
 //  currententity = NULL;   //&r_worldentity;
     VectorSubtract(r_origin, vec3_origin, modelorg);
-    TransformVector(modelorg, transformed_modelorg);
+    R_TransformVector(modelorg, transformed_modelorg);
     VectorCopy(transformed_modelorg, world_transformed_modelorg);
 
     if (sw_drawsird->integer) {

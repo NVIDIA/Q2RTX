@@ -577,7 +577,7 @@ static void R_ClipAndDrawPoly(float alpha, int isturbulent, int textured)
 
     for (i = 0; i < nump; i++) {
         VectorSubtract(pv, r_origin, local);
-        TransformVector(local, transformed);
+        R_TransformVector(local, transformed);
 
         if (transformed[2] < NEAR_CLIP)
             transformed[2] = NEAR_CLIP;
@@ -678,9 +678,9 @@ static void R_PolygonCalculateGradients(void)
     vec3_t      p_normal, p_saxis, p_taxis;
     float       distinv;
 
-    TransformVector(r_polydesc.vpn, p_normal);
-    TransformVector(r_polydesc.vright, p_saxis);
-    TransformVector(r_polydesc.vup, p_taxis);
+    R_TransformVector(r_polydesc.vpn, p_normal);
+    R_TransformVector(r_polydesc.vright, p_saxis);
+    R_TransformVector(r_polydesc.vup, p_taxis);
 
     distinv = 1.0 / (-(DotProduct(r_polydesc.viewer_position, r_polydesc.vpn)) + r_polydesc.dist);
 

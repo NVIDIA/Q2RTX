@@ -83,7 +83,7 @@ void R_EmitEdge(mvertex_t *pv0, mvertex_t *pv1)
 
         // transform and project
         VectorSubtract(world, modelorg, local);
-        TransformVector(local, transformed);
+        R_TransformVector(local, transformed);
 
         if (transformed[2] < NEAR_CLIP)
             transformed[2] = NEAR_CLIP;
@@ -112,7 +112,7 @@ void R_EmitEdge(mvertex_t *pv0, mvertex_t *pv1)
 
 // transform and project
     VectorSubtract(world, modelorg, local);
-    TransformVector(local, transformed);
+    R_TransformVector(local, transformed);
 
     if (transformed[2] < NEAR_CLIP)
         transformed[2] = NEAR_CLIP;
@@ -462,7 +462,7 @@ void R_RenderFace(mface_t *fa, int clipflags)
 
     pplane = fa->plane;
 // FIXME: cache this?
-    TransformVector(pplane->normal, p_normal);
+    R_TransformVector(pplane->normal, p_normal);
 // FIXME: cache this?
     distinv = 1.0 / (pplane->dist - DotProduct(modelorg, pplane->normal));
 
@@ -576,7 +576,7 @@ void R_RenderBmodelFace(bedge_t *pedges, mface_t *psurf)
 
     pplane = psurf->plane;
 // FIXME: cache this?
-    TransformVector(pplane->normal, p_normal);
+    R_TransformVector(pplane->normal, p_normal);
 // FIXME: cache this?
     distinv = 1.0 / (pplane->dist - DotProduct(modelorg, pplane->normal));
 
