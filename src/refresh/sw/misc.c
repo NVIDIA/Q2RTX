@@ -27,9 +27,7 @@ cvar_t  *sw_mipscale;
 int             d_minmip;
 float           d_scalemip[NUM_MIPS - 1];
 
-static float    basemip[NUM_MIPS - 1] = {1.0, 0.5 * 0.8, 0.25 * 0.8};
-
-extern int          d_aflatcolor;
+static const float  basemip[NUM_MIPS - 1] = {1.0, 0.5 * 0.8, 0.25 * 0.8};
 
 int d_vrectx, d_vrecty, d_vrectright_particle, d_vrectbottom_particle;
 
@@ -427,8 +425,6 @@ void R_SetupFrame(void)
 
     for (i = 0; i < (NUM_MIPS - 1); i++)
         d_scalemip[i] = basemip[i] * sw_mipscale->value;
-
-    d_aflatcolor = 0;
 }
 
 /*

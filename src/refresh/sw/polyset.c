@@ -20,14 +20,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "sw.h"
 
-int rand1k[] = {
-#include "rand1k.h"
-};
-
-#define MASK_1K 0x3FF
-
-int     rand1k_index = 0;
-
 // TODO: put in span spilling to shrink list size
 // !!! if this is changed, it must be changed in d_polysa.s too !!!
 #define DPS_MAXSPANS            MAXHEIGHT+1
@@ -52,26 +44,25 @@ typedef struct {
     int     *prightedgevert0;
     int     *prightedgevert1;
     int     *prightedgevert2;
-} edgetable;
+} edgetable_t;
 
 aliastriangleparms_t aliastriangleparms;
 
 int r_p0[6], r_p1[6], r_p2[6];
 
-int         d_aflatcolor;
 int         d_xdenom;
 
-edgetable   *pedgetable;
+static const edgetable_t    *pedgetable;
 
-edgetable   edgetables[12] = {
-    {0, 1, r_p0, r_p2, NULL, 2, r_p0, r_p1, r_p2 },
-    {0, 2, r_p1, r_p0, r_p2,   1, r_p1, r_p2, NULL},
+static const edgetable_t    edgetables[12] = {
+    {0, 1, r_p0, r_p2, NULL, 2, r_p0, r_p1, r_p2},
+    {0, 2, r_p1, r_p0, r_p2, 1, r_p1, r_p2, NULL},
     {1, 1, r_p0, r_p2, NULL, 1, r_p1, r_p2, NULL},
-    {0, 1, r_p1, r_p0, NULL, 2, r_p1, r_p2, r_p0 },
-    {0, 2, r_p0, r_p2, r_p1,   1, r_p0, r_p1, NULL},
+    {0, 1, r_p1, r_p0, NULL, 2, r_p1, r_p2, r_p0},
+    {0, 2, r_p0, r_p2, r_p1, 1, r_p0, r_p1, NULL},
     {0, 1, r_p2, r_p1, NULL, 1, r_p2, r_p0, NULL},
-    {0, 1, r_p2, r_p1, NULL, 2, r_p2, r_p0, r_p1 },
-    {0, 2, r_p2, r_p1, r_p0,   1, r_p2, r_p0, NULL},
+    {0, 1, r_p2, r_p1, NULL, 2, r_p2, r_p0, r_p1},
+    {0, 2, r_p2, r_p1, r_p0, 1, r_p2, r_p0, NULL},
     {0, 1, r_p1, r_p0, NULL, 1, r_p1, r_p2, NULL},
     {1, 1, r_p2, r_p1, NULL, 1, r_p0, r_p1, NULL},
     {1, 1, r_p1, r_p0, NULL, 1, r_p2, r_p0, NULL},
@@ -86,7 +77,6 @@ int             d_aspancount, d_countextrastep;
 
 spanpackage_t           *a_spans;
 spanpackage_t           *d_pedgespanpackage;
-static int              ystart;
 byte                    *d_pdest, *d_ptex;
 short                   *d_pz;
 int                     d_sfrac, d_tfrac, d_light, d_zi;
@@ -102,7 +92,7 @@ typedef struct {
     int     remainder;
 } adivtab_t;
 
-static adivtab_t    adivtab[32 * 32] = {
+static const adivtab_t  adivtab[32 * 32] = {
 #include "adivtab.h"
 };
 
@@ -312,7 +302,7 @@ void R_PolysetSetUpForLineScan(fixed8_t startvertu, fixed8_t startvertv,
 {
     float       dm, dn;
     int         tm, tn;
-    adivtab_t   *ptemp;
+    const adivtab_t *ptemp;
 
 // TODO: implement x86 version
 
@@ -573,6 +563,7 @@ void R_RasterizeAliasPolySmooth(void)
     int             initialleftheight, initialrightheight;
     int             *plefttop, *prighttop, *pleftbottom, *prightbottom;
     int             working_lstepx, originalcount;
+    int             ystart;
 
     plefttop = pedgetable->pleftedgevert0;
     prighttop = pedgetable->prightedgevert0;

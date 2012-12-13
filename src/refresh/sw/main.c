@@ -268,7 +268,7 @@ qboolean R_Init(qboolean total)
         return qtrue;
     }
 
-    Com_Printf("ref_soft " VERSION ", " __DATE__ "\n");
+    Com_DPrintf("ref_soft " VERSION ", " __DATE__ "\n");
 
 #if USE_ASM
     Sys_MakeCodeWriteable((uintptr_t)R_EdgeCodeStart,
