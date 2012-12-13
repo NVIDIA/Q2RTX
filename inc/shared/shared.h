@@ -267,6 +267,33 @@ static inline void AnglesToAxis(vec3_t angles, vec3_t axis[3])
     VectorInverse(axis[1]);
 }
 
+static inline void TransposeAxis(vec3_t axis[3])
+{
+    vec_t temp;
+
+    temp = axis[0][1];
+    axis[0][1] = axis[1][0];
+    axis[1][0] = temp;
+
+    temp = axis[0][2];
+    axis[0][2] = axis[2][0];
+    axis[2][0] = temp;
+
+    temp = axis[1][2];
+    axis[1][2] = axis[2][1];
+    axis[2][1] = temp;
+}
+
+static inline void RotatePoint(vec3_t point, vec3_t axis[3])
+{
+    vec3_t temp;
+
+    VectorCopy(point, temp);
+    point[0] = DotProduct(temp, axis[0]);
+    point[1] = DotProduct(temp, axis[1]);
+    point[2] = DotProduct(temp, axis[2]);
+}
+
 static inline unsigned npot32(unsigned k)
 {
     if (k == 0)

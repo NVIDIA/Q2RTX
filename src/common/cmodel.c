@@ -782,9 +782,7 @@ void CM_TransformedBoxTrace(trace_t *trace, vec3_t start, vec3_t end,
                             vec3_t origin, vec3_t angles)
 {
     vec3_t      start_l, end_l;
-    vec3_t      a;
-    vec3_t      forward, right, up;
-    vec3_t      temp;
+    vec3_t      axis[3];
     qboolean    rotated;
 
     // subtract origin offset
@@ -799,36 +797,23 @@ void CM_TransformedBoxTrace(trace_t *trace, vec3_t start, vec3_t end,
         rotated = qfalse;
 
     if (rotated) {
-        AngleVectors(angles, forward, right, up);
-
-        VectorCopy(start_l, temp);
-        start_l[0] = DotProduct(temp, forward);
-        start_l[1] = -DotProduct(temp, right);
-        start_l[2] = DotProduct(temp, up);
-
-        VectorCopy(end_l, temp);
-        end_l[0] = DotProduct(temp, forward);
-        end_l[1] = -DotProduct(temp, right);
-        end_l[2] = DotProduct(temp, up);
+        AnglesToAxis(angles, axis);
+        RotatePoint(start_l, axis);
+        RotatePoint(end_l, axis);
     }
 
     // sweep the box through the model
     CM_BoxTrace(trace, start_l, end_l, mins, maxs, headnode, brushmask);
 
+    // rotate plane normal into the worlds frame of reference
     if (rotated && trace->fraction != 1.0) {
-        // FIXME: figure out how to do this with existing angles
-        VectorNegate(angles, a);
-        AngleVectors(a, forward, right, up);
-
-        VectorCopy(trace->plane.normal, temp);
-        trace->plane.normal[0] = DotProduct(temp, forward);
-        trace->plane.normal[1] = -DotProduct(temp, right);
-        trace->plane.normal[2] = DotProduct(temp, up);
+        TransposeAxis(axis);
+        RotatePoint(trace->plane.normal, axis);
     }
 
-    trace->endpos[0] = start[0] + trace->fraction * (end[0] - start[0]);
-    trace->endpos[1] = start[1] + trace->fraction * (end[1] - start[1]);
-    trace->endpos[2] = start[2] + trace->fraction * (end[2] - start[2]);
+    // FIXME: offset plane distance?
+
+    LerpVector(start, end, trace->fraction, trace->endpos);
 }
 
 void CM_ClipEntity(trace_t *dst, const trace_t *src, struct edict_s *ent)
