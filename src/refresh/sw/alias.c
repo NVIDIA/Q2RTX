@@ -375,7 +375,7 @@ R_AliasSetUpTransform
 static void R_AliasSetUpTransform(void)
 {
     int             i;
-    static float    viewmatrix[3][4];
+    float           viewmatrix[3][4];
     vec3_t          angles;
 
 // TODO: should really be stored with the entity instead of being reconstructed
@@ -390,12 +390,12 @@ static void R_AliasSetUpTransform(void)
 // TODO: can do this with simple matrix rearrangement
 
     memset(aliasworldtransform, 0, sizeof(aliasworldtransform));
-    memset(aliasoldworldtransform, 0, sizeof(aliasworldtransform));
+    memset(aliasoldworldtransform, 0, sizeof(aliasoldworldtransform));
 
     for (i = 0; i < 3; i++) {
         aliasoldworldtransform[i][0] = aliasworldtransform[i][0] =  s_alias_forward[i];
-        aliasoldworldtransform[i][0] = aliasworldtransform[i][1] = -s_alias_right[i];
-        aliasoldworldtransform[i][0] = aliasworldtransform[i][2] =  s_alias_up[i];
+        aliasoldworldtransform[i][1] = aliasworldtransform[i][1] = -s_alias_right[i];
+        aliasoldworldtransform[i][2] = aliasworldtransform[i][2] =  s_alias_up[i];
     }
 
     aliasworldtransform[0][3] = currententity->origin[0] - r_origin[0];
