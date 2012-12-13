@@ -651,7 +651,7 @@ R_AliasDrawModel
 */
 void R_AliasDrawModel(void)
 {
-    if (r_lerpmodels->value == 0)
+    if (r_lerpmodels->integer == 0)
         currententity->backlerp = 0;
 
     if ((currententity->flags & (RF_WEAPONMODEL | RF_LEFTHAND)) == (RF_WEAPONMODEL | RF_LEFTHAND)) {

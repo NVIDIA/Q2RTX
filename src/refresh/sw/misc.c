@@ -423,11 +423,7 @@ void R_SetupFrame(void)
     r_outofedges = 0;
 
 // d_setup
-    d_minmip = sw_mipcap->value;
-    if (d_minmip > 3)
-        d_minmip = 3;
-    else if (d_minmip < 0)
-        d_minmip = 0;
+    d_minmip = Cvar_ClampInteger(sw_mipcap, 0, NUM_MIPS - 1);
 
     for (i = 0; i < (NUM_MIPS - 1); i++)
         d_scalemip[i] = basemip[i] * sw_mipscale->value;

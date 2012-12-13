@@ -118,7 +118,7 @@ void R_BeginEdgeFrame(void)
     surfaces[1].flags = DSURF_BACKGROUND;
 
 // put the background behind everything in the world
-    if (sw_draworder->value) {
+    if (sw_draworder->integer) {
         pdrawfunc = R_GenerateSpansBackward;
         surfaces[1].key = 0;
         r_currentkey = 1;

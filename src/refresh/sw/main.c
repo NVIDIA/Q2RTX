@@ -690,7 +690,7 @@ void R_DrawBEntitiesOnList(void)
     mnode_t     *topnode;
     mmodel_t    *model;
 
-    if (!r_drawentities->value)
+    if (!r_drawentities->integer)
         return;
 
     VectorCopy(modelorg, oldorigin);
