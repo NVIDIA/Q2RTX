@@ -83,7 +83,8 @@ static mvd_server_t     mvd;
 static LIST_DECL(gtv_client_list);
 static LIST_DECL(gtv_active_list);
 
-static LIST_DECL(gtv_host_list);
+static LIST_DECL(gtv_white_list);
+static LIST_DECL(gtv_black_list);
 
 static cvar_t   *sv_mvd_enable;
 static cvar_t   *sv_mvd_maxclients;
@@ -1347,16 +1348,17 @@ static void write_message(gtv_client_t *client, gtv_serverop_t op)
 
 static qboolean auth_client(gtv_client_t *client, const char *password)
 {
-    if (SV_MatchAddress(&gtv_host_list, &client->stream.address)) {
-        return qtrue; // dedicated GTV hosts don't need password
-    }
-    if (!sv_mvd_password->string[0]) {
-        return qfalse; // no password set on the server
-    }
-    if (strcmp(sv_mvd_password->string, password)) {
-        return qfalse; // password doesn't match
-    }
-    return qtrue;
+    if (SV_MatchAddress(&gtv_white_list, &client->stream.address))
+        return qtrue; // ALLOW whitelisted hosts without password
+
+    if (SV_MatchAddress(&gtv_black_list, &client->stream.address))
+        return qfalse; // DENY blacklisted hosts
+
+    if (*sv_mvd_password->string == 0)
+        return qtrue; // ALLOW neutral hosts if password IS NOT set
+
+    // ALLOW neutral hosts if password matches, DENY otherwise
+    return !strcmp(sv_mvd_password->string, password);
 }
 
 static void parse_hello(gtv_client_t *client)
@@ -2217,15 +2219,28 @@ static void SV_MvdStuff_f(void)
 
 static void SV_AddGtvHost_f(void)
 {
-    SV_AddMatch_f(&gtv_host_list);
+    SV_AddMatch_f(&gtv_white_list);
 }
 static void SV_DelGtvHost_f(void)
 {
-    SV_DelMatch_f(&gtv_host_list);
+    SV_DelMatch_f(&gtv_white_list);
 }
 static void SV_ListGtvHosts_f(void)
 {
-    SV_ListMatches_f(&gtv_host_list);
+    SV_ListMatches_f(&gtv_white_list);
+}
+
+static void SV_AddGtvBan_f(void)
+{
+    SV_AddMatch_f(&gtv_black_list);
+}
+static void SV_DelGtvBan_f(void)
+{
+    SV_DelMatch_f(&gtv_black_list);
+}
+static void SV_ListGtvBans_f(void)
+{
+    SV_ListMatches_f(&gtv_black_list);
 }
 
 static const cmdreg_t c_svmvd[] = {
@@ -2233,6 +2248,9 @@ static const cmdreg_t c_svmvd[] = {
     { "addgtvhost", SV_AddGtvHost_f },
     { "delgtvhost", SV_DelGtvHost_f },
     { "listgtvhosts", SV_ListGtvHosts_f },
+    { "addgtvban", SV_AddGtvBan_f },
+    { "delgtvban", SV_DelGtvBan_f },
+    { "listgtvbans", SV_ListGtvBans_f },
 
     { NULL }
 };

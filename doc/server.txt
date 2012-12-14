@@ -296,9 +296,12 @@ sv_mvd_maxclients::
     Total number of MVD/GTV client slots on the server. Default value is 8.
 
 sv_mvd_password::
-    Password used to authenticate MVD/GTV clients. Default value is empty,
-    which means only those clients can connect, whose IP address is added to
-    the list of trusted MVD/GTV hosts using ‘addgtvhost’ command.
+    If not empty, allows only authenticated MVD/GTV clients to connect.
+    Default value is empty (any neutral host can connect).
+
+NOTE: Password check only applies to MVD/GTV clients that are neither
+whitelisted nor blacklisted (see ‘addgtvhost’ and ‘addgtvban’ commands
+description for more information).
 
 sv_mvd_nogun::
     Reduce bandwidth usage by filtering on-screen gun updates out of MVD
@@ -626,6 +629,7 @@ recycle [reason ...]::
     process will be automatically restarted by an external shell script right
     after it exits.
 
+
 MVD/GTV server
 ~~~~~~~~~~~~~~
 
@@ -641,18 +645,37 @@ mvdstuff <text>::
     Execute the given _text_ on behalf of dummy MVD observer.
 
 addgtvhost <address[/mask]>::
-    Adds specified _address_ to the list of trusted MVD/GTV hosts allowed to
-    connect to this server without password. Specify _mask_ to allow entire
+    Adds specified _address_ to the white list of trusted MVD/GTV hosts allowed
+    to connect to this server without password. Specify _mask_ to allow entire
     subnetwork.
 
 delgtvhost <address[/mask]|id|all>::
-    Deletes exactly matching _address_/_mask_ pair from the list of trusted
-    MVD/GTV hosts.  You can also specify numeric _id_ of the address/mask pair
-    to delete, or use special keyword _all_ to clear the entire list.
+    Deletes exactly matching _address_/_mask_ pair from the white list of
+    trusted MVD/GTV hosts. You can also specify numeric _id_ of the
+    address/mask pair to delete, or use special keyword _all_ to clear the
+    entire list.
 
 listgtvhosts::
-    Displays all address/mask pairs added to the list of trusted MVD/GTV hosts
-    along with their IDs.
+    Displays all address/mask pairs added to the white list of trusted MVD/GTV
+    hosts along with their IDs.
+
+NOTE: White list of MVD/GTV hosts takes precedence over black list. Whitelisted
+hosts are not required to know ‘sv_mvd_password’ even if it is set.
+
+addgtvban <address[/mask]>::
+    Adds specified _address_ to the black list of banned MVD/GTV hosts
+    disallowed to connect to this server. Specify _mask_ to ban entire
+    subnetwork.
+
+delgtvban <address[/mask]|id|all>::
+    Deletes exactly matching _address_/_mask_ pair from the black list of
+    banned MVD/GTV hosts. You can also specify numeric _id_ of the address/mask
+    pair to delete, or use special keyword _all_ to clear the entire list.
+
+listgtvbans::
+    Displays all address/mask pairs added to the black list of banned MVD/GTV
+    hosts along with their IDs.
+
 
 MVD/GTV client
 ~~~~~~~~~~~~~~
