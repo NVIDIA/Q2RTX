@@ -52,7 +52,7 @@ static qboolean GL_SmoothLightPoint(vec3_t start, vec3_t color)
         ent = &glr.fd.entities[i];
         index = ent->model;
         if (!(index & 0x80000000))
-            continue;
+            break;  // BSP models are at the start of entity array
 
         index = ~index;
         if (index < 1 || index >= bsp->nummodels)
