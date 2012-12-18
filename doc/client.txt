@@ -387,6 +387,10 @@ scr_lag_y::
     counted in pixels from the screen edge. Negative values align graph to the bottom
     edge of the screen intead of the top edge. Default value is -1.
 
+scr_lag_min::
+    Specifies ping graph offset by defining the minimum value that can be
+    displayed. Default value is 0.
+
 scr_lag_max::
     Specifies ping graph scale by defining the maximum value that can be
     displayed. Default value is 200.

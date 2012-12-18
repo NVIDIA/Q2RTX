@@ -61,6 +61,7 @@ static cvar_t   *scr_draw2d;
 static cvar_t   *scr_lag_x;
 static cvar_t   *scr_lag_y;
 static cvar_t   *scr_lag_draw;
+static cvar_t   *scr_lag_min;
 static cvar_t   *scr_lag_max;
 static cvar_t   *scr_alpha;
 
@@ -548,7 +549,14 @@ void SCR_LagSample(void)
 
 static void draw_ping_graph(int x, int y)
 {
-    int i, j, v, c, max = Cvar_ClampInteger(scr_lag_max, 16, 480);
+    int i, j, v, c, v_min, v_max, v_range;
+
+    v_min = Cvar_ClampInteger(scr_lag_min, 0, LAG_HEIGHT * 10);
+    v_max = Cvar_ClampInteger(scr_lag_max, 0, LAG_HEIGHT * 10);
+
+    v_range = v_max - v_min;
+    if (v_range < 1)
+        return;
 
     for (i = 0; i < LAG_WIDTH; i++) {
         j = lag.head - i - 1;
@@ -567,10 +575,8 @@ static void draw_ping_graph(int x, int y)
         }
 
         v &= ~(LAG_WARN_BIT | LAG_CRIT_BIT);
-        v = v * LAG_HEIGHT / max;
-        if (v > LAG_HEIGHT) {
-            v = LAG_HEIGHT;
-        }
+        v = (v - v_min) * LAG_HEIGHT / v_range;
+        clamp(v, 0, LAG_HEIGHT);
 
         R_DrawFill8(x + LAG_WIDTH - i - 1, y + LAG_HEIGHT - v, 1, v, c);
     }
@@ -1222,6 +1228,7 @@ void SCR_Init(void)
     scr_lag_x = Cvar_Get("scr_lag_x", "-1", 0);
     scr_lag_y = Cvar_Get("scr_lag_y", "-1", 0);
     scr_lag_draw = Cvar_Get("scr_lag_draw", "0", 0);
+    scr_lag_min = Cvar_Get("scr_lag_min", "0", 0);
     scr_lag_max = Cvar_Get("scr_lag_max", "200", 0);
     scr_alpha = Cvar_Get("scr_alpha", "1", 0);
 #ifdef _DEBUG
