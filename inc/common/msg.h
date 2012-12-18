@@ -149,7 +149,7 @@ void    MSG_ParseDeltaPlayerstate_Packet(const player_state_t *from, player_stat
 #ifdef _DEBUG
 #if USE_CLIENT
 void    MSG_ShowDeltaPlayerstateBits_Default(int flags);
-void    MSG_ShowDeltaPlayerstateBits_Enhanced(int flags);
+void    MSG_ShowDeltaPlayerstateBits_Enhanced(int flags, int extraflags);
 void    MSG_ShowDeltaUsercmdBits_Enhanced(int bits);
 #endif
 #if USE_CLIENT || USE_MVD_CLIENT

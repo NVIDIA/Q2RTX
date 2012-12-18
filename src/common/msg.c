@@ -2396,13 +2396,8 @@ void MSG_ShowDeltaPlayerstateBits_Default(int flags)
 #undef S
 }
 
-void MSG_ShowDeltaPlayerstateBits_Enhanced(int flags)
+void MSG_ShowDeltaPlayerstateBits_Enhanced(int flags, int extraflags)
 {
-    int extraflags;
-
-    extraflags = flags >> PS_BITS;
-    flags &= PS_MASK;
-
 #define SP(b,s) if(flags&PS_##b) SHOWBITS(s)
 #define SE(b,s) if(extraflags&EPS_##b) SHOWBITS(s)
     SP(M_TYPE,          "pmove.pm_type");

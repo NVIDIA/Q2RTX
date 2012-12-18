@@ -313,8 +313,8 @@ static void CL_ParseFrame(int extrabits)
     if (cls.serverProtocol > PROTOCOL_VERSION_DEFAULT) {
         MSG_ParseDeltaPlayerstate_Enhanced(from, &frame.ps, bits, extraflags);
 #ifdef _DEBUG
-        if (cl_shownet->integer > 2) {
-            MSG_ShowDeltaPlayerstateBits_Enhanced(bits);
+        if (cl_shownet->integer > 2 && (bits || extraflags)) {
+            MSG_ShowDeltaPlayerstateBits_Enhanced(bits, extraflags);
             Com_LPrintf(PRINT_DEVELOPER, "\n");
         }
 #endif
@@ -331,7 +331,7 @@ static void CL_ParseFrame(int extrabits)
     } else {
         MSG_ParseDeltaPlayerstate_Default(from, &frame.ps, bits);
 #ifdef _DEBUG
-        if (cl_shownet->integer > 2) {
+        if (cl_shownet->integer > 2 && bits) {
             MSG_ShowDeltaPlayerstateBits_Default(bits);
             Com_LPrintf(PRINT_DEVELOPER, "\n");
         }
