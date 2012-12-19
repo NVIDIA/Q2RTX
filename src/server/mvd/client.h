@@ -179,6 +179,9 @@ extern list_t           mvd_channel_list;
 extern mvd_t            mvd_waitingRoom;
 extern qboolean         mvd_dirty;
 
+extern qboolean     mvd_active;
+extern unsigned     mvd_last_activity;
+
 #ifdef _DEBUG
 extern cvar_t    *mvd_shownet;
 #endif

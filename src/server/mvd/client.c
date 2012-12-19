@@ -103,13 +103,14 @@ mvd_t       mvd_waitingRoom;
 qboolean    mvd_dirty;
 int         mvd_chanid;
 
+qboolean    mvd_active;
+unsigned    mvd_last_activity;
+
 jmp_buf     mvd_jmpbuf;
 
 #ifdef _DEBUG
 cvar_t      *mvd_shownet;
 #endif
-
-static qboolean mvd_active;
 
 static cvar_t  *mvd_timeout;
 static cvar_t  *mvd_suspend_time;
@@ -373,6 +374,29 @@ static gtv_t *gtv_set_conn(int arg)
     return NULL;
 }
 
+static void set_mvd_active(void)
+{
+    unsigned delta = mvd_suspend_time->value * 60 * 1000;
+
+    // zero timeout = always active
+    if (delta == 0)
+        mvd_last_activity = svs.realtime;
+
+    if (svs.realtime - mvd_last_activity > delta) {
+        if (mvd_active) {
+            Com_DPrintf("Suspending MVD streams.\n");
+            mvd_active = qfalse;
+            mvd_dirty = qtrue;
+        }
+    } else {
+        if (!mvd_active) {
+            Com_DPrintf("Resuming MVD streams.\n");
+            mvd_active = qtrue;
+            mvd_dirty = qtrue;
+        }
+    }
+}
+
 /*
 ==============
 MVD_Frame
@@ -382,25 +406,11 @@ Called from main server loop.
 */
 int MVD_Frame(void)
 {
-    static unsigned prevtime;
     gtv_t *gtv, *next;
     int connections = 0;
 
     if (sv.state == ss_broadcast) {
-        unsigned delta = mvd_suspend_time->value * 60 * 1000;
-
-        if (!delta || !LIST_EMPTY(&sv_clientlist)) {
-            prevtime = svs.realtime;
-            if (!mvd_active) {
-                Com_DPrintf("Resuming MVD streams.\n");
-                mvd_active = qtrue;
-            }
-        } else if (mvd_active) {
-            if (svs.realtime - prevtime > delta) {
-                Com_DPrintf("Suspending MVD streams.\n");
-                mvd_active = qfalse;
-            }
-        }
+        set_mvd_active();
     }
 
     // run all GTV connections (but not demos)
@@ -1667,6 +1677,10 @@ void MVD_Spawn(void)
     Q_strlcpy(sv.name, mvd_waitingRoom.mapname, sizeof(sv.name));
 
     sv.state = ss_broadcast;
+
+    // start as inactive
+    mvd_last_activity = INT_MIN;
+    set_mvd_active();
 }
 
 static void MVD_Spawn_f(void)

@@ -365,7 +365,7 @@ mvd_timeout::
 
 mvd_suspend_time::
     GTV connections are suspended after this period of time, in minutes,
-    counted from the moment last MVD spectator disconnects.  Setting this to
+    counted from the last moment of MVD spectator(s) activity. Setting this to
     zero disables client side suspending entirely. Default value is 5.
 
 mvd_wait_delay::

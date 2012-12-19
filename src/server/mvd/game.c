@@ -161,6 +161,11 @@ static void MVD_LayoutChannels(mvd_client_t *client)
         "yv 80 string \" Please wait until players\""
         "yv 88 string \" connect.\""
         ;
+    static const char inactive[] =
+        "yv 72 string \" Traffic saving mode.\""
+        "yv 80 string \" Press any key to wake\""
+        "yv 88 string \" this server up.\""
+        ;
     char layout[MAX_STRING_CHARS];
     char buffer[MAX_QPATH];
     mvd_t *mvd;
@@ -205,8 +210,13 @@ static void MVD_LayoutChannels(mvd_client_t *client)
         }
     } else {
         client->layout_cursor = 0;
-        memcpy(layout + total, nochans, sizeof(nochans) - 1);
-        total += sizeof(nochans) - 1;
+        if (mvd_active) {
+            memcpy(layout + total, nochans, sizeof(nochans) - 1);
+            total += sizeof(nochans) - 1;
+        } else {
+            memcpy(layout + total, inactive, sizeof(inactive) - 1);
+            total += sizeof(inactive) - 1;
+        }
     }
 
     layout[total] = 0;
@@ -639,14 +649,19 @@ copy:
         client->ps.pmove.pm_type = PM_FREEZE;
         client->clientNum = target - mvd->players;
 
-        if (mvd_stats_hack->integer && target != mvd->dummy) {
-            // copy stats of the dummy MVD observer
-            target = mvd->dummy;
-            for (i = 0; i < MAX_STATS; i++) {
-                if (mvd_stats_hack->integer & (1 << i)) {
-                    client->ps.stats[i] = target->ps.stats[i];
+        if (target != mvd->dummy) {
+            if (mvd_stats_hack->integer) {
+                // copy stats of the dummy MVD observer
+                target = mvd->dummy;
+                for (i = 0; i < MAX_STATS; i++) {
+                    if (mvd_stats_hack->integer & (1 << i)) {
+                        client->ps.stats[i] = target->ps.stats[i];
+                    }
                 }
             }
+
+            // chasing someone counts as activity
+            mvd_last_activity = svs.realtime;
         }
     }
 
@@ -1195,6 +1210,12 @@ static void MVD_GameClientCommand(edict_t *ent)
     }
 
     cmd = Cmd_Argv(0);
+    if (!*cmd) {
+        return;
+    }
+
+    // don't timeout
+    mvd_last_activity = svs.realtime;
 
     if (!strcmp(cmd, "!mvdadmin")) {
         MVD_Admin_f(client);
@@ -1583,6 +1604,9 @@ static qboolean MVD_GameClientConnect(edict_t *ent, char *userinfo)
     // override server state
     MVD_SetServerState(client->cl, mvd);
 
+    // don't timeout
+    mvd_last_activity = svs.realtime;
+
     return qtrue;
 }
 
@@ -1729,6 +1753,14 @@ static void MVD_GameClientThink(edict_t *ent, usercmd_t *cmd)
     mvd_client_t *client = EDICT_MVDCL(ent);
     usercmd_t *old = &client->lastcmd;
     pmove_t pm;
+
+    if (cmd->buttons != old->buttons
+        || cmd->forwardmove != old->forwardmove
+        || cmd->sidemove != old->sidemove
+        || cmd->upmove != old->upmove) {
+        // don't timeout
+        mvd_last_activity = svs.realtime;
+    }
 
     if ((cmd->buttons & ~old->buttons) & BUTTON_ATTACK) {
         MVD_Observe_f(client);
