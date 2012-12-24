@@ -1105,6 +1105,30 @@ static inline float LerpShort(int a2, int a1, float frac)
 }
 #endif
 
+static inline float lerp_client_fov(float ofov, float nfov, float lerp)
+{
+    if (cls.demo.playback) {
+        float fov = info_fov->value;
+
+        if (fov < 1)
+            fov = 90;
+        else if (fov > 160)
+            fov = 160;
+
+        if (info_uf->integer & UF_LOCALFOV)
+            return fov;
+
+        if (!(info_uf->integer & UF_PLAYERFOV)) {
+            if (ofov >= 90)
+                ofov = fov;
+            if (nfov >= 90)
+                nfov = fov;
+        }
+    }
+
+    return ofov + lerp * (nfov - ofov);
+}
+
 /*
 ===============
 CL_CalcViewValues
@@ -1118,7 +1142,7 @@ void CL_CalcViewValues(void)
 {
     player_state_t *ps, *ops;
     vec3_t viewoffset;
-    float fov, lerp;
+    float lerp;
 
     // find states to interpolate between
     ps = &cl.frame.ps;
@@ -1177,18 +1201,8 @@ void CL_CalcViewValues(void)
     cl.delta_angles[2] = LerpShort(ops->pmove.delta_angles[2], ps->pmove.delta_angles[2], lerp);
 #endif
 
-    if (cls.demo.playback && (info_uf->integer & UF_LOCALFOV)) {
-        fov = info_fov->value;
-        if (fov < 1) {
-            fov = 90;
-        } else if (fov > 160) {
-            fov = 160;
-        }
-        cl.fov_x = fov;
-    } else {
-        // interpolate field of view
-        cl.fov_x = ops->fov + lerp * (ps->fov - ops->fov);
-    }
+    // interpolate field of view
+    cl.fov_x = lerp_client_fov(ops->fov, ps->fov, lerp);
 
     // don't interpolate blend color
     Vector4Copy(ps->blend, cl.refdef.blend);

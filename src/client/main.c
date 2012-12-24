@@ -2689,7 +2689,7 @@ static void CL_InitLocal(void)
     info_fov = Cvar_Get("fov", "90", CVAR_USERINFO | CVAR_ARCHIVE);
     info_gender = Cvar_Get("gender", "male", CVAR_USERINFO | CVAR_ARCHIVE);
     info_gender->modified = qfalse; // clear this so we know when user sets it manually
-    info_uf = Cvar_Get("uf", va("%d", UF_LOCALFOV), CVAR_USERINFO);
+    info_uf = Cvar_Get("uf", "", CVAR_USERINFO);
 
 
     //

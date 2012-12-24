@@ -1389,6 +1389,7 @@ ROGUE - VERSIONS
 #define UF_MUTE_PLAYERS     8
 #define UF_MUTE_OBSERVERS   16
 #define UF_MUTE_MISC        32
+#define UF_PLAYERFOV        64
 
 /*
 ==========================================================

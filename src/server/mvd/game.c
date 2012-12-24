@@ -232,6 +232,7 @@ static void MVD_LayoutChannels(mvd_client_t *client)
 #define MENU_ITEMS  10
 #define YES "\xD9\xE5\xF3"
 #define NO "\xCE\xEF"
+#define DEFAULT "\xC4\xE5\xE6\xE1\xF5\xEC\xF4"
 
 static int clamp_menu_cursor(mvd_client_t *client)
 {
@@ -256,7 +257,7 @@ static void MVD_LayoutMenu(mvd_client_t *client)
         "yv 96 string \"%cIgnore spectator chat: %s\""
         "yv 104 string \"%cIgnore connect msgs:   %s\""
         "yv 112 string \"%cIgnore player chat:    %s\""
-        "yv 120 string \"%cIgnore player FOV:     %s\""
+        "yv 120 string \"%cIgnore player FOV: %7s\""
         "yv 128 string \" (use 'set uf %d u' in cfg)\""
         "yv 144 string2 \"%cExit menu\""
         "%s xv %d yv 172 string2 " VERSION;
@@ -274,7 +275,8 @@ static void MVD_LayoutMenu(mvd_client_t *client)
                         cur[5], (client->uf & UF_MUTE_OBSERVERS) ? YES : NO,
                         cur[6], (client->uf & UF_MUTE_MISC) ? YES : NO,
                         cur[7], (client->uf & UF_MUTE_PLAYERS) ? YES : NO,
-                        cur[8], (client->uf & UF_LOCALFOV) ? YES : NO,
+                        cur[8], (client->uf & UF_LOCALFOV) ? YES :
+                        (client->uf & UF_PLAYERFOV) ? NO " " : DEFAULT,
                         client->uf,
                         cur[9], client->mvd->state == MVD_WAITING ?
                         "xv 0 yv 160 cstring [BUFFERING]" : "",
@@ -642,7 +644,8 @@ static void MVD_UpdateClient(mvd_client_t *client)
 copy:
         // copy entire player state
         client->ps = target->ps;
-        if (client->uf & UF_LOCALFOV) {
+        if ((client->uf & UF_LOCALFOV) || (!(client->uf & UF_PLAYERFOV)
+                                           && client->ps.fov >= 90)) {
             client->ps.fov = client->fov;
         }
         client->ps.pmove.pm_flags |= PMF_NO_PREDICTION;
@@ -1089,7 +1092,11 @@ static void MVD_Invuse_f(mvd_client_t *client)
             client->uf ^= UF_MUTE_PLAYERS;
             break;
         case 8:
-            client->uf ^= UF_LOCALFOV;
+            client->uf &= ~(UF_LOCALFOV | UF_PLAYERFOV);
+            if (uf & UF_LOCALFOV)
+                client->uf |= UF_PLAYERFOV;
+            else if (!(uf & UF_PLAYERFOV))
+                client->uf |= UF_LOCALFOV;
             break;
         case 9:
             MVD_SetDefaultLayout(client);
@@ -1670,27 +1677,19 @@ static void MVD_GameClientBegin(edict_t *ent)
 static void MVD_GameClientUserinfoChanged(edict_t *ent, char *userinfo)
 {
     mvd_client_t *client = EDICT_MVDCL(ent);
-    char *s;
     float fov;
 
-    s = Info_ValueForKey(userinfo, "uf");
-    if (*s) {
-        client->uf = atoi(s);
-    } else {
-        client->uf = UF_LOCALFOV;
-    }
+    client->uf = atoi(Info_ValueForKey(userinfo, "uf"));
 
-    s = Info_ValueForKey(userinfo, "fov");
-    fov = atof(s);
+    fov = atof(Info_ValueForKey(userinfo, "fov"));
     if (fov < 1) {
         fov = 90;
     } else if (fov > 160) {
         fov = 160;
     }
     client->fov = fov;
-    if (client->uf & UF_LOCALFOV) {
+    if (!client->target)
         client->ps.fov = fov;
-    }
 }
 
 void MVD_GameClientNameChanged(edict_t *ent, const char *name)
