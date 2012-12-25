@@ -2,12 +2,12 @@
 
 if [ -f VERSION ]
 then
-    ver=`cat VERSION`
-    rev=`tr -d -c [:digit:] < VERSION`
-elif [ -x `which git` -a -d ".git" ]
+    ver="`cat VERSION`"
+    rev="`sed -e 's/^r\([0-9]\+\).*$/\1/' VERSION`"
+elif [ -x "`which git`" -a -d ".git" ]
 then
-    ver=`git describe --match "r[0-9]*" --abbrev=4 HEAD`
-    rev=`git describe --match "r[0-9]*" --abbrev=0 HEAD | tr -d -c [:digit:]`
+    rev="`git rev-list HEAD | wc -l`"
+    ver="r$rev~`git rev-parse --short HEAD`"
 else
     echo "WARNING: Couldn't detect Q2PRO version." >&2
     ver="r666"
