@@ -862,7 +862,9 @@ static void MVD_Say_f(mvd_client_t *client, int argnum)
     mvd_t *mvd = client->mvd;
     unsigned delta, delay = mvd_flood_waitdelay->value * 1000;
     unsigned treshold = mvd_flood_persecond->value * 1000;
-    char text[150], *p;
+    char text[150], hightext[150];
+    mvd_client_t *other;
+    client_t *cl;
     unsigned i, j;
 
     if (mvd_flood_mute->integer && !client->admin) {
@@ -903,12 +905,28 @@ static void MVD_Say_f(mvd_client_t *client, int argnum)
 
     Q_snprintf(text, sizeof(text), "[MVD] %s: %s",
                client->cl->name, Cmd_ArgsFrom(argnum));
-    for (p = text; *p; p++) {
-        *p |= 128;
-    }
 
-    MVD_BroadcastPrintf(mvd, PRINT_HIGH, client->admin ?
-                        0 : UF_MUTE_OBSERVERS, "%s\n", text);
+    // color text for legacy clients
+    for (i = 0; text[i]; i++)
+        hightext[i] = text[i] | 128;
+    hightext[i] = 0;
+
+    FOR_EACH_MVDCL(other, mvd) {
+        cl = other->cl;
+        if (cl->state < cs_spawned) {
+            continue;
+        }
+        if (!client->admin && (other->uf & UF_MUTE_OBSERVERS)) {
+            continue;
+        }
+
+        if (cl->protocol == PROTOCOL_VERSION_Q2PRO &&
+            cl->version >= PROTOCOL_VERSION_Q2PRO_SERVER_STATE) {
+            SV_ClientPrintf(cl, PRINT_CHAT, "%s\n", text);
+        } else {
+            SV_ClientPrintf(cl, PRINT_HIGH, "%s\n", hightext);
+        }
+    }
 }
 
 static void MVD_Observe_f(mvd_client_t *client)

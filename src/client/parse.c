@@ -545,6 +545,9 @@ static void CL_ParseServerData(void)
     cl.framediv = 1;
 #endif
 
+    // setup default server state
+    cl.serverstate = ss_game;
+
     if (cls.serverProtocol == PROTOCOL_VERSION_R1Q2) {
         i = MSG_ReadByte();
         if (i) {
@@ -583,7 +586,11 @@ static void CL_ParseServerData(void)
         }
         Com_DPrintf("Using minor Q2PRO protocol version %d\n", i);
         cls.protocolVersion = i;
-        MSG_ReadByte(); // used to be gametype
+        i = MSG_ReadByte();
+        if (cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_SERVER_STATE) {
+            Com_DPrintf("Q2PRO server state %d\n", i);
+            cl.serverstate = i;
+        }
         i = MSG_ReadByte();
         if (i) {
             Com_DPrintf("Q2PRO strafejump hack enabled\n");
@@ -931,7 +938,7 @@ static void CL_ParsePrint(void)
 
     if (level != PRINT_CHAT) {
         Com_Printf("%s", s);
-        if (!cls.demo.playback) {
+        if (!cls.demo.playback && cl.serverstate != ss_broadcast) {
             COM_strclr(s);
             Cmd_ExecTrigger(s);
         }
@@ -943,7 +950,7 @@ static void CL_ParsePrint(void)
     }
 
 #if USE_AUTOREPLY
-    if (!cls.demo.playback) {
+    if (!cls.demo.playback && cl.serverstate != ss_broadcast) {
         CL_CheckForVersion(s);
     }
 #endif
@@ -971,6 +978,10 @@ static void CL_ParsePrint(void)
     SCR_AddToChatHUD(s);
 #endif
 
+    // silence MVD spectator chat
+    if (cl.serverstate == ss_broadcast && !strncmp(s, "[MVD] ", 6))
+        return;
+
     // play sound
     if (cl_chat_sound->integer > 1)
         S_StartLocalSound_("misc/talk1.wav");
@@ -986,7 +997,7 @@ static void CL_ParseCenterPrint(void)
     SHOWNET(2, "    \"%s\"\n", s);
     SCR_CenterPrint(s);
 
-    if (!cls.demo.playback) {
+    if (!cls.demo.playback && cl.serverstate != ss_broadcast) {
         COM_strclr(s);
         Cmd_ExecTrigger(s);
     }

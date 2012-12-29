@@ -25,9 +25,7 @@ typedef enum {
     ss_dead,            // no map loaded
     ss_loading,         // spawning level edicts
     ss_game,            // actively running
-#if USE_MVD_CLIENT
     ss_broadcast        // running MVD client
-#endif
 } server_state_t;
 
 #if USE_ICMP

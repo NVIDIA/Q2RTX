@@ -242,6 +242,7 @@ typedef struct client_state_s {
     //
     // server state information
     //
+    int         serverstate;    // ss_* constants
     int         servercount;    // server identification for prespawns
     char        gamedir[MAX_QPATH];
     int         clientNum;            // never changed during gameplay, set by serverdata packet
