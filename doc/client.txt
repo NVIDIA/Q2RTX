@@ -888,9 +888,13 @@ cl_demomsglen::
     value is 1390.  See ‘record’ command description for more information on
     demo packet sizes.
 
+cl_demowait::
+    Specifies if demo playback is automatically paused at the last frame in
+    demo file. Default value is 0 (finish playback).
+
 cl_autopause::
-    Specifies if single player game or demo playback is automaticlly paused once
-    client console or menu is opened. Default value is 1 (pause game).
+    Specifies if single player game or demo playback is automatically paused
+    once client console or menu is opened. Default value is 1 (pause game).
 
 ui_open::
     Specifies if menu is automatically opened on startup, instead of full

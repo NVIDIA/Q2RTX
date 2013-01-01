@@ -432,6 +432,7 @@ typedef struct client_static_s {
         list_t      snapshots;
         qboolean    paused;
         qboolean    seeking;
+        qboolean    eof;
     } demo;
 } client_static_t;
 

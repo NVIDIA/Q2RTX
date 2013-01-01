@@ -26,6 +26,7 @@ static byte     demo_buffer[MAX_PACKETLEN];
 
 static cvar_t   *cl_demosnaps;
 static cvar_t   *cl_demomsglen;
+static cvar_t   *cl_demowait;
 
 // =========================================================================
 
@@ -660,19 +661,25 @@ static void update_status(void)
     }
 }
 
-static void parse_next_message(void)
+static int parse_next_message(int wait)
 {
     int ret;
 
     ret = read_next_message(cls.demo.playback);
-    if (ret <= 0) {
+    if (ret < 0 || (ret == 0 && wait == 0)) {
         finish_demo(ret);
-        return;
+        return -1;
+    }
+
+    update_status();
+
+    if (ret == 0) {
+        cls.demo.eof = qtrue;
+        return -1;
     }
 
     CL_ParseServerMessage();
-
-    update_status();
+    return 0;
 }
 
 /*
@@ -727,10 +734,13 @@ static void CL_PlayDemo_f(void)
     Con_Popup();
     SCR_UpdateScreen();
 
+    // parse the first message just read
     CL_ParseServerMessage();
+
+    // read and parse messages util `precache' command
     while (cls.state == ca_connected) {
         Cbuf_Execute(&cl_cmdbuf);
-        parse_next_message();
+        parse_next_message(0);
     }
 }
 
@@ -934,6 +944,10 @@ static void CL_Seek_f(void)
         // already there
         return;
 
+    if (frames > 0 && cls.demo.eof && cl_demowait->integer)
+        // already at end
+        return;
+
     // disable effects processing
     cls.demo.seeking = qtrue;
 
@@ -959,6 +973,9 @@ static void CL_Seek_f(void)
                 Com_EPrintf("Couldn't seek demo: %s\n", Q_ErrorString(ret));
                 goto done;
             }
+
+            // clear end-of-file flag
+            cls.demo.eof = qfalse;
 
             // reset configstrings
             for (i = 0; i < MAX_CONFIGSTRINGS; i++) {
@@ -987,6 +1004,10 @@ static void CL_Seek_f(void)
     // skip forward to destination frame
     while (cls.demo.frames_read < dest) {
         ret = read_next_message(cls.demo.playback);
+        if (ret == 0 && cl_demowait->integer) {
+            cls.demo.eof = qtrue;
+            break;
+        }
         if (ret <= 0) {
             finish_demo(ret);
             return;
@@ -1203,24 +1224,31 @@ void CL_DemoFrame(int msec)
     }
 
     if (cls.state != ca_active) {
-        parse_next_message();
+        parse_next_message(0);
         return;
     }
 
     if (com_timedemo->integer) {
-        parse_next_message();
+        parse_next_message(0);
         cl.time = cl.servertime;
         cls.demo.time_frames++;
+        return;
+    }
+
+    // wait at the end of demo
+    if (cls.demo.eof) {
+        if (!cl_demowait->integer)
+            finish_demo(0);
         return;
     }
 
     // cl.time has already been advanced for this client frame
     // read the next frame to start lerp cycle again
     while (cl.servertime < cl.time) {
-        parse_next_message();
-        if (cls.state != ca_active) {
+        if (parse_next_message(cl_demowait->integer))
             break;
-        }
+        if (cls.state != ca_active)
+            break;
     }
 }
 
@@ -1243,6 +1271,7 @@ void CL_InitDemos(void)
 {
     cl_demosnaps = Cvar_Get("cl_demosnaps", "10", 0);
     cl_demomsglen = Cvar_Get("cl_demomsglen", va("%d", MAX_PACKETLEN_WRITABLE_DEFAULT), 0);
+    cl_demowait = Cvar_Get("cl_demowait", "0", 0);
 
     Cmd_Register(c_demo);
     List_Init(&cls.demo.snapshots);
