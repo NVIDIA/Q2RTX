@@ -170,7 +170,6 @@ void Z_Free(void *ptr)
     }
 }
 
-#if 0
 /*
 ========================
 Z_Realloc
@@ -221,7 +220,6 @@ void *Z_Realloc(void *ptr, size_t size)
 
     return z + 1;
 }
-#endif
 
 /*
 ========================

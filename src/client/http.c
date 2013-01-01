@@ -27,9 +27,9 @@ static cvar_t  *cl_http_proxy;
 static cvar_t  *cl_http_debug;
 #endif
 
-// size limits for filelists
+// size limits for filelists, must be power of two
 #define MAX_DLSIZE  0x100000    // 1 MiB
-#define MIN_DLSIZE  0x020000    // 128 KiB
+#define MIN_DLSIZE  0x8000      // 32 KiB
 
 typedef struct {
     CURL        *curl;
@@ -66,19 +66,16 @@ on the HTTP server should ideally be gzipped to conserve
 bandwidth.
 */
 
-// libcurl callback to update progress info. Mainly just used as
-// a way to cancel the transfer if required.
+// libcurl callback to update progress info.
 static int progress_func(void *clientp, double dltotal, double dlnow, double ultotal, double ulnow)
 {
     dlhandle_t *dl = (dlhandle_t *)clientp;
-
-    //dl->position = (unsigned)dlnow;
 
     //don't care which download shows as long as something does :)
     cls.download.current = dl->queue;
 
     if (dltotal)
-        cls.download.percent = (int)((dlnow / dltotal) * 100.0f);
+        cls.download.percent = (int)((dlnow / dltotal) * 100.0);
     else
         cls.download.percent = 0;
 
@@ -88,29 +85,27 @@ static int progress_func(void *clientp, double dltotal, double dlnow, double ult
 // libcurl callback for filelists.
 static size_t recv_func(void *ptr, size_t size, size_t nmemb, void *stream)
 {
-    size_t new_size, bytes = size * nmemb;
     dlhandle_t *dl = (dlhandle_t *)stream;
+    size_t new_size, bytes;
 
-    if (!dl->size) {
-        new_size = bytes + 1;
-        if (new_size > MAX_DLSIZE)
-            goto oversize;
-        if (new_size < MIN_DLSIZE)
-            new_size = MIN_DLSIZE;
-        dl->size = new_size;
-        dl->buffer = Z_Malloc(dl->size);
-    } else if (dl->position + bytes >= dl->size) {
-        char *tmp = dl->buffer;
+    if (!nmemb)
+        return 0;
 
-        new_size = dl->size * 2;
-        if (new_size > MAX_DLSIZE)
-            new_size = MAX_DLSIZE;
-        if (dl->position + bytes >= new_size)
-            goto oversize;
-        dl->buffer = Z_Malloc(new_size);
-        memcpy(dl->buffer, tmp, dl->size);
-        Z_Free(tmp);
+    if (size > SIZE_MAX / nmemb)
+        goto oversize;
+
+    if (dl->position > MAX_DLSIZE)
+        goto oversize;
+
+    bytes = size * nmemb;
+    if (bytes >= MAX_DLSIZE - dl->position)
+        goto oversize;
+
+    // grow buffer in MIN_DLSIZE chunks. +1 for NUL.
+    new_size = (dl->position + bytes + MIN_DLSIZE) & ~(MIN_DLSIZE - 1);
+    if (new_size > dl->size) {
         dl->size = new_size;
+        dl->buffer = Z_Realloc(dl->buffer, new_size);
     }
 
     memcpy(dl->buffer + dl->position, ptr, bytes);
@@ -124,41 +119,8 @@ oversize:
     return 0;
 }
 
-// libcurl callback to update header info.
-static size_t header_func(void *ptr, size_t size, size_t nmemb, void *stream)
-{
-    size_t len, bytes = size * nmemb;
-    dlhandle_t *dl = (dlhandle_t *)stream;
-    char buffer[64];
-
-    if (dl->size)
-        return bytes;
-
-    if (bytes <= 16)
-        return bytes;
-
-    if (bytes > sizeof(buffer) - 1)
-        bytes = sizeof(buffer) - 1;
-
-    memcpy(buffer, ptr, bytes);
-    buffer[bytes] = 0;
-
-    if (!Q_strncasecmp(buffer, "Content-Length: ", 16)) {
-        //allocate buffer based on what the server claims content-length is. +1 for nul
-        len = strtoul(buffer + 16, NULL, 10);
-        if (len >= MAX_DLSIZE) {
-            Com_DPrintf("[HTTP] Oversize file while trying to download '%s'\n", dl->url);
-            return 0;
-        }
-        dl->size = len + 1;
-        dl->buffer = Z_Malloc(dl->size);
-    }
-
-    return bytes;
-}
-
 #ifdef _DEBUG
-static int debug_func(CURL *c, curl_infotype type, char *data, size_t size, void * ptr)
+static int debug_func(CURL *c, curl_infotype type, char *data, size_t size, void *ptr)
 {
     char buffer[MAXPRINTMSG];
 
@@ -316,13 +278,9 @@ static void start_download(dlqueue_t *entry, dlhandle_t *dl)
     if (dl->file) {
         curl_easy_setopt(dl->curl, CURLOPT_WRITEDATA, dl->file);
         curl_easy_setopt(dl->curl, CURLOPT_WRITEFUNCTION, NULL);
-        curl_easy_setopt(dl->curl, CURLOPT_WRITEHEADER, NULL);
-        curl_easy_setopt(dl->curl, CURLOPT_HEADERFUNCTION, NULL);
     } else {
         curl_easy_setopt(dl->curl, CURLOPT_WRITEDATA, dl);
         curl_easy_setopt(dl->curl, CURLOPT_WRITEFUNCTION, recv_func);
-        curl_easy_setopt(dl->curl, CURLOPT_WRITEHEADER, dl);
-        curl_easy_setopt(dl->curl, CURLOPT_HEADERFUNCTION, header_func);
     }
     curl_easy_setopt(dl->curl, CURLOPT_FAILONERROR, 1);
     curl_easy_setopt(dl->curl, CURLOPT_PROXY, cl_http_proxy->string);
@@ -379,8 +337,6 @@ ssize_t HTTP_FetchFile(const char *url, void **data) {
     curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &tmp);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, recv_func);
-    curl_easy_setopt(curl, CURLOPT_WRITEHEADER, &tmp);
-    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, header_func);
     curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1);
     curl_easy_setopt(curl, CURLOPT_PROXY, cl_http_proxy->string);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, com_version->string);
