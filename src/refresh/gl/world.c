@@ -59,6 +59,8 @@ static qboolean GL_SmoothLightPoint(vec3_t start, vec3_t color)
             continue;
 
         model = &bsp->models[index];
+        if (!model->numfaces)
+            continue;
 
         // cull in X/Y plane
         if (ent->angles[0] || ent->angles[1] || ent->angles[2]) {
@@ -357,6 +359,9 @@ void GL_DrawBspModel(mmodel_t *model)
     vec3_t transformed, temp;
     entity_t *ent = glr.ent;
     glCullResult_t cull;
+
+    if (!model->numfaces)
+        return;
 
     if (glr.entrotated) {
         cull = GL_CullSphere(ent->origin, model->radius);
