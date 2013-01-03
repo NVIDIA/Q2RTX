@@ -642,11 +642,19 @@ LOAD(Submodels)
             out->origin[j] = LittleFloat(in->origin[j]);
         }
         headnode = LittleLong(in->headnode);
-        if (headnode >= bsp->numnodes) {
-            // FIXME: headnode may be garbage for some models (a leaf perhaps)
-            Com_DPrintf("%s: bad headnode\n", __func__);
-            out->headnode = NULL;
+        if (headnode & 0x80000000) {
+            // be careful, some models have no nodes, just a leaf
+            headnode = ~headnode;
+            if (headnode >= bsp->numleafs) {
+                DEBUG("bad headleaf");
+                return Q_ERR_BAD_INDEX;
+            }
+            out->headnode = (mnode_t *)(bsp->leafs + headnode);
         } else {
+            if (headnode >= bsp->numnodes) {
+                DEBUG("bad headnode");
+                return Q_ERR_BAD_INDEX;
+            }
             out->headnode = bsp->nodes + headnode;
         }
 #if USE_REF
