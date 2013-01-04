@@ -36,6 +36,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define COM_DEFAULT_CFG     "default.cfg"
 #define COM_AUTOEXEC_CFG    "autoexec.cfg"
+#define COM_POSTEXEC_CFG    "postexec.cfg"
+#define COM_POSTINIT_CFG    "postinit.cfg"
 
 #ifdef _WIN32
 #define COM_CONFIG_CFG      "q2config.cfg"

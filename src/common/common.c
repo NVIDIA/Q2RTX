@@ -977,6 +977,7 @@ void Qcommon_Init(int argc, char **argv)
     Com_AddConfigFile(COM_DEFAULT_CFG, 0);
     Com_AddConfigFile(COM_CONFIG_CFG, FS_TYPE_REAL | FS_PATH_GAME);
     Com_AddConfigFile(COM_AUTOEXEC_CFG, FS_TYPE_REAL | FS_PATH_GAME);
+    Com_AddConfigFile(COM_POSTEXEC_CFG, FS_TYPE_REAL);
 
     Com_AddEarlyCommands(qtrue);
 
@@ -1021,7 +1022,7 @@ void Qcommon_Init(int argc, char **argv)
         NET_Config(NET_SERVER);
     }
 
-    Com_AddConfigFile("postinit.cfg", FS_TYPE_REAL | FS_PATH_GAME);
+    Com_AddConfigFile(COM_POSTINIT_CFG, FS_TYPE_REAL);
 
     Com_Printf("====== " PRODUCT " initialized ======\n\n");
     Com_LPrintf(PRINT_NOTICE, APPLICATION " " VERSION ", " __DATE__ "\n");

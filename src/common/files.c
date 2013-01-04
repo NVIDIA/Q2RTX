@@ -3576,6 +3576,9 @@ static void fs_game_changed(cvar_t *self)
 
     // exec autoexec.cfg (must be a real file within the game directory)
     Com_AddConfigFile(COM_AUTOEXEC_CFG, FS_TYPE_REAL | FS_PATH_GAME);
+
+    // exec postexec.cfg (must be a real file)
+    Com_AddConfigFile(COM_POSTEXEC_CFG, FS_TYPE_REAL);
 }
 
 /*
