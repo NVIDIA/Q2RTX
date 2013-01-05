@@ -47,7 +47,18 @@ static int          cl_lastofs;
 
 void CL_ClearLightStyles(void)
 {
-    memset(cl_lightstyles, 0, sizeof(cl_lightstyles));
+    int     i;
+    clightstyle_t   *ls;
+
+    for (i = 0, ls = cl_lightstyles; i < MAX_LIGHTSTYLES; i++, ls++) {
+        List_Init(&ls->entry);
+        ls->length = 0;
+        ls->value[0] =
+        ls->value[1] =
+        ls->value[2] =
+        ls->value[3] = 1;
+    }
+
     List_Init(&cl_lightlist);
     cl_lastofs = -1;
 }
@@ -99,11 +110,18 @@ void CL_SetLightStyle(int index, const char *s)
         return;
     }
 
+    if (ls->length == 1) {
+        ls->value[0] =
+        ls->value[1] =
+        ls->value[2] =
+        ls->value[3] = ls->map[0];
+        return;
+    }
+
     ls->value[0] =
     ls->value[1] =
     ls->value[2] =
-    ls->value[3] =
-    ls->map[0] = 1;
+    ls->value[3] = 1;
 }
 
 /*
