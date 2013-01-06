@@ -420,32 +420,36 @@ static void GL_DrawFace(mface_t *surf)
     int numtris = surf->numsurfedges - 2;
     int numindices = numtris * 3;
     int diff = surf->drawflags ^ tess.flags;
-    int texnum = GL_TextureAnimation(surf->texinfo);
+    int texnum[2];
     int *dst_indices;
     int i, j;
 
-    if (tess.texnum[0] != texnum ||
-        tess.texnum[1] != surf->texnum[1] ||
+    if (gl_lightmap->integer) {
+        texnum[0] = surf->texnum[1];
+        if (!texnum[0])
+            texnum[0] = GL_TextureAnimation(surf->texinfo);
+        texnum[1] = 0;
+    } else {
+        texnum[0] = GL_TextureAnimation(surf->texinfo);
+        texnum[1] = surf->texnum[1];
+    }
+
+    if (tess.texnum[0] != texnum[0] ||
+        tess.texnum[1] != texnum[1] ||
         (diff & SURF_FLUSH_MASK) ||
         tess.numindices + numindices > TESS_MAX_INDICES) {
         GL_Flush3D();
     }
+
+    tess.texnum[0] = texnum[0];
+    tess.texnum[1] = texnum[1];
+    tess.flags = surf->drawflags;
 
     if (gl_static.world.vertices) {
         j = GL_CopyVerts(surf);
     } else {
         j = surf->firstvert;
     }
-
-    if (gl_lightmap->integer) {
-        tess.texnum[0] = surf->texnum[1] ? surf->texnum[1] : texnum;
-        tess.texnum[1] = 0;
-    } else {
-        tess.texnum[0] = texnum;
-        tess.texnum[1] = surf->texnum[1];
-    }
-
-    tess.flags = surf->drawflags;
 
     dst_indices = tess.indices + tess.numindices;
     for (i = 0; i < numtris; i++) {
@@ -522,7 +526,7 @@ void GL_AddSolidFace(mface_t *face)
         face->next = faces_warp;
         faces_warp = face;
     } else {
-        if (gl_hash_faces->integer) {
+        if (gl_hash_faces->integer && !gl_lightmap->integer) {
             unsigned i = FACE_HASH(face->texnum[0], face->texnum[1]);
             face->next = faces_hash[i];
             faces_hash[i] = face;
