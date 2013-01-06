@@ -1046,40 +1046,42 @@ int Cmd_ParseOptions(const cmd_option_t *opt)
             }
             return -1; // special terminator
         }
+
+        // check for long option argument
         if ((p = strchr(s, '=')) != NULL) {
             *p = 0;
         }
+
+        // parse long option
         for (o = opt; o->sh; o++) {
             if (!strcmp(o->lo, s)) {
                 break;
             }
         }
-        if (p) {
-            if (o->sh[1] == ':') {
-                cmd_optarg = p + 1;
-            } else {
-                Com_Printf("%s does not take an argument.\n", o->lo);
-                Cmd_PrintHint();
-            }
-            *p = 0;
-        }
-    } else {
-        p = NULL;
-        if (s[1]) {
+        if (!o->sh) {
             goto unknown;
         }
+
+        // parse long option argument
+        if (p) {
+            if (o->sh[1] != ':') {
+                Com_Printf("%s does not take an argument.\n", cmd_argv[cmd_optind]);
+                Cmd_PrintHint();
+                return '!';
+            }
+            cmd_optarg = p + 1;
+        }
+    } else {
+        // parse short option
         for (o = opt; o->sh; o++) {
             if (o->sh[0] == *s) {
                 break;
             }
         }
-    }
-
-    if (!o->sh) {
-unknown:
-        Com_Printf("Unknown option: %s.\n", cmd_argv[cmd_optind]);
-        Cmd_PrintHint();
-        return '?';
+        if (!o->sh || s[1]) {
+            goto unknown;
+        }
+        p = NULL;
     }
 
     // parse option argument
@@ -1093,8 +1095,12 @@ unknown:
     }
 
     cmd_optind++;
-
     return o->sh[0];
+
+unknown:
+    Com_Printf("Unknown option: %s.\n", cmd_argv[cmd_optind]);
+    Cmd_PrintHint();
+    return '?';
 }
 
 void Cmd_PrintUsage(const cmd_option_t *opt, const char *suffix)

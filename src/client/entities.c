@@ -385,7 +385,7 @@ void CL_DeltaFrame(void)
 // for debugging problems when out-of-date entity origin is referenced
 void CL_CheckEntityPresent(int entnum, const char *what)
 {
-    centity_t *e = &cl_entities[entnum];
+    centity_t *e;
 
     if (entnum == cl.frame.clientNum + 1) {
         return; // player entity = current

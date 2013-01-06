@@ -1471,7 +1471,6 @@ static void draw_layout_string(const char *s)
 
     x = 0;
     y = 0;
-    width = 3;
 
     while (s) {
         token = COM_Parse(&s);

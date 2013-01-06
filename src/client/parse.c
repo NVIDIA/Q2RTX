@@ -198,7 +198,6 @@ static void CL_ParseFrame(int extrabits)
 
     cl.frameflags = 0;
 
-    suppressed = 0;
     extraflags = 0;
     if (cls.serverProtocol > PROTOCOL_VERSION_DEFAULT) {
         bits = MSG_ReadLong();
@@ -424,7 +423,6 @@ static void CL_ParseConfigstring(int index)
         Com_WPrintf(
             "%s: index %d overflowed: %"PRIz" > %"PRIz"\n",
             __func__, index, len, maxlen - 1);
-        len = maxlen - 1;
     }
 
     if (cls.demo.seeking) {

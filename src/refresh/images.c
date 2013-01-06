@@ -197,8 +197,7 @@ IMG_LOAD(WAL)
         return Q_ERR_INVALID_FORMAT;
     }
 
-    size = w * h;
-    size = MIPSIZE(size);
+    size = MIPSIZE(w * h);
     endpos = offset + size;
     if (endpos < offset || endpos > rawlen) {
         return Q_ERR_BAD_EXTENT;

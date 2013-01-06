@@ -104,7 +104,6 @@ static void TH_DrawLayoutString(char *dst, const char *s)
 
     x = 0;
     y = 0;
-    width = 3;
 
     while (s) {
         token = COM_Parse(&s);
