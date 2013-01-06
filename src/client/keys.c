@@ -263,7 +263,8 @@ char *Key_KeynumToString(int keynum)
 
     if (keynum == -1)
         return "<KEY NOT FOUND>";
-    if (keynum > 32 && keynum < 127) {
+
+    if (keynum > 32 && keynum < 127 && keynum != ';' && keynum != '"') {
         // printable ascii
         tinystr[0] = keynum;
         tinystr[1] = 0;
