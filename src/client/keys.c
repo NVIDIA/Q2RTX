@@ -238,7 +238,7 @@ int Key_StringToKeynum(const char *str)
     if (!str || !str[0])
         return -1;
     if (!str[1])
-        return str[0];
+        return Q_tolower(str[0]);
 
     for (kn = keynames; kn->name; kn++) {
         if (!Q_stricmp(str, kn->name))
@@ -731,14 +731,6 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
                            kb + 1, key, time);
                 Cbuf_AddText(&cmd_buffer, cmd);
             }
-            if (keyshift[key] != key) {
-                kb = keybindings[keyshift[key]];
-                if (kb && kb[0] == '+') {
-                    Q_snprintf(cmd, sizeof(cmd), "-%s %i %i\n",
-                               kb + 1, key, time);
-                    Cbuf_AddText(&cmd_buffer, cmd);
-                }
-            }
             Q_ClearBit(buttondown, key);
             return;
         }
@@ -750,10 +742,6 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
 
         // generate button up command when released
         Q_SetBit(buttondown, key);
-
-        if (Key_IsDown(K_SHIFT) && keyshift[key] != key && keybindings[keyshift[key]]) {
-            key = keyshift[key];
-        }
 
         kb = keybindings[key];
         if (kb) {
