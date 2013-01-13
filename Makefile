@@ -592,7 +592,7 @@ all: $(TARG_s) $(TARG_c) $(TARG_g)
 
 default: all
 
-.PHONY: clean
+.PHONY: all default clean strip
 
 # Define V=1 to show command line.
 ifdef V
