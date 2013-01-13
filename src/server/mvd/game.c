@@ -466,7 +466,8 @@ static void MVD_FollowStop(mvd_client_t *client)
     client->ps.fov = client->fov;
 
     // send delta configstrings
-    write_cs_list(client, mvd->dummy->configstrings);
+    if (mvd->dummy)
+        write_cs_list(client, mvd->dummy->configstrings);
 
     client->clientNum = mvd->clientNum;
     client->oldtarget = client->target;
@@ -631,9 +632,10 @@ static void MVD_UpdateClient(mvd_client_t *client)
     target = client->target;
     if (!target) {
         // copy stats of the dummy MVD observer
-        target = mvd->dummy;
-        for (i = 0; i < MAX_STATS; i++) {
-            client->ps.stats[i] = target->ps.stats[i];
+        if (mvd->dummy) {
+            for (i = 0; i < MAX_STATS; i++) {
+                client->ps.stats[i] = mvd->dummy->ps.stats[i];
+            }
         }
     } else {
         if (!target->inuse) {
@@ -653,12 +655,11 @@ copy:
         client->clientNum = target - mvd->players;
 
         if (target != mvd->dummy) {
-            if (mvd_stats_hack->integer) {
+            if (mvd_stats_hack->integer && mvd->dummy) {
                 // copy stats of the dummy MVD observer
-                target = mvd->dummy;
                 for (i = 0; i < MAX_STATS; i++) {
                     if (mvd_stats_hack->integer & (1 << i)) {
-                        client->ps.stats[i] = target->ps.stats[i];
+                        client->ps.stats[i] = mvd->dummy->ps.stats[i];
                     }
                 }
             }
@@ -1906,7 +1907,7 @@ void MVD_UpdateClients(mvd_t *mvd)
     mvd_client_t *client;
 
     // check for intermission
-    if (mvd_freeze_hack->integer) {
+    if (mvd_freeze_hack->integer && mvd->dummy) {
         if (!mvd->intermission) {
             if (mvd->dummy->ps.pmove.pm_type == PM_FREEZE) {
                 MVD_IntermissionStart(mvd);

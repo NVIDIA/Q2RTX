@@ -267,7 +267,7 @@ static void MVD_UnicastLayout(mvd_t *mvd, mvd_player_t *player)
 {
     mvd_client_t *client;
 
-    if (player != mvd->dummy) {
+    if (mvd->dummy && player != mvd->dummy) {
         MSG_ReadString(NULL, 0);
         return; // we don't care about others
     }
@@ -1010,11 +1010,15 @@ static void MVD_ParseServerData(mvd_t *mvd, int extrabits)
         }
     }
 
-    // validate clientNum
-    if (mvd->clientNum < 0 || mvd->clientNum >= mvd->maxclients) {
-        MVD_Destroyf(mvd, "Invalid client num: %d", mvd->clientNum);
+    if (mvd->clientNum == -1) {
+        mvd->dummy = NULL;
+    } else {
+        // validate clientNum
+        if (mvd->clientNum < 0 || mvd->clientNum >= mvd->maxclients) {
+            MVD_Destroyf(mvd, "Invalid client num: %d", mvd->clientNum);
+        }
+        mvd->dummy = mvd->players + mvd->clientNum;
     }
-    mvd->dummy = mvd->players + mvd->clientNum;
 
     // parse world model
     string = mvd->configstrings[CS_MODELS + 1];
