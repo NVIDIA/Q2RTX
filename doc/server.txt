@@ -315,7 +315,8 @@ sv_mvd_nomsgs::
     When enabled, MVD/GTV spectators in chasecam mode will not receive any text
     messages routed to their chase targets (which are normally on a team), but
     will receive messages routed to the dummy MVD observer. Default value is 1
-    (enabled).
+    (enabled). This variable is only effective when dummy client is spawned,
+    see ‘sv_mvd_spawn_dummy’ variable description for more information.
 
 sv_mvd_maxtime::
     Maximum duration, in minutes, of the locally recorded MVD.  Default value
@@ -340,7 +341,7 @@ sv_mvd_scorecmd::
     This command is issued on behalf of dummy MVD observer each time no layout
     updates are detected for more than 9 seconds. Useful for reopening the
     scoreboard if the game mod closes it for some reason.  MVD observer has
-    it's own command buffer and each ‘wait’ cycle lasts 100 ms there. Default
+    its own command buffer and each ‘wait’ cycle lasts 100 ms there. Default
     value is "putaway; wait 10; help;".
 
 sv_mvd_suspend_time::
@@ -348,6 +349,18 @@ sv_mvd_suspend_time::
     counted from the moment last active player disconnects or becomes inactive.
     Setting this to zero disables server side suspending entirely. Default
     value is 5.
+
+sv_mvd_disconnect_time::
+    Dummy MVD observer is disconnected after this period of time, in minutes,
+    counted from the moment last GTV client disconnects or becomes inactive.
+    Setting this to zero makes dummy client persistent. Default value is 15.
+
+sv_mvd_spawn_dummy::
+    Specifies if dummy MVD observer needs to be spawned. Default value is 1.
+       - 0 — never spawn dummy client
+       - 1 — only spawn if game mod advertises support for MVD
+       - 2 — always spawn dummy client
+
 
 MVD/GTV client
 ~~~~~~~~~~~~~~

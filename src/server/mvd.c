@@ -52,6 +52,7 @@ typedef struct {
 } gtv_client_t;
 
 typedef struct {
+    qboolean        enabled;
     qboolean        active;
     client_t        *dummy;
     unsigned        layout_time;
@@ -103,10 +104,11 @@ static cvar_t   *sv_mvd_capture_flags;
 static cvar_t   *sv_mvd_disconnect_time;
 static cvar_t   *sv_mvd_suspend_time;
 static cvar_t   *sv_mvd_allow_stufftext;
+static cvar_t   *sv_mvd_spawn_dummy;
 
 static qboolean mvd_enable(void);
 static void     mvd_disable(void);
-static void     mvd_drop(gtv_serverop_t op);
+static void     mvd_error(const char *reason);
 
 static void     write_stream(gtv_client_t *client, void *data, size_t len);
 static void     write_message(gtv_client_t *client, gtv_serverop_t op);
@@ -288,6 +290,9 @@ static void dummy_add_message(client_t *client, byte *data,
 
 static void dummy_spawn(void)
 {
+    if (!mvd.dummy)
+        return;
+
     sv_client = mvd.dummy;
     sv_player = sv_client->edict;
     ge->ClientBegin(sv_player);
@@ -328,7 +333,7 @@ static client_t *dummy_find_slot(void)
     return NULL;
 }
 
-static qboolean dummy_create(void)
+static int dummy_create(void)
 {
     client_t *newcl;
     char userinfo[MAX_INFO_STRING];
@@ -336,11 +341,25 @@ static qboolean dummy_create(void)
     qboolean allow;
     int number;
 
+    // do nothing if already created
+    if (mvd.dummy)
+        return 0;
+
+    if (sv_mvd_spawn_dummy->integer <= 0) {
+        Com_DPrintf("Dummy MVD client disabled\n");
+        return 0;
+    }
+
+    if (sv_mvd_spawn_dummy->integer == 1 && !(g_features->integer & GMF_MVDSPEC)) {
+        Com_DPrintf("Dummy MVD client not supported by game\n");
+        return 0;
+    }
+
     // find a free client slot
     newcl = dummy_find_slot();
     if (!newcl) {
         Com_EPrintf("No slot for dummy MVD client\n");
-        return qfalse;
+        return -1;
     }
 
     memset(newcl, 0, sizeof(*newcl));
@@ -369,23 +388,28 @@ static qboolean dummy_create(void)
     sv_player = NULL;
     if (!allow) {
         s = Info_ValueForKey(userinfo, "rejmsg");
-        if (*s) {
-            Com_EPrintf("Dummy MVD client rejected by game DLL: %s\n", s);
+        if (!*s) {
+            s = "Connection refused";
         }
+        Com_EPrintf("Dummy MVD client rejected by game: %s\n", s);
+        Z_Free(newcl->netchan);
         mvd.dummy = NULL;
-        return qfalse;
+        return -1;
     }
 
     // parse some info from the info strings
     strcpy(newcl->userinfo, userinfo);
     SV_UserinfoChanged(newcl);
 
-    return qtrue;
+    return 1;
 }
 
 static void dummy_run(void)
 {
     usercmd_t cmd;
+
+    if (!mvd.dummy)
+        return;
 
     Cbuf_Execute(&dummy_buffer);
     if (dummy_buffer.waitCount > 0) {
@@ -435,15 +459,11 @@ entity states, but not player states.
 */
 
 /*
-==================
-player_is_active
-
 Attempts to determine if the given player entity is active,
 and the given player state should be captured into MVD stream.
 
 Entire function is a nasty hack. Ideally a compatible game DLL
 should do it for us by providing some SVF_* flag or something.
-==================
 */
 static qboolean player_is_active(const edict_t *ent)
 {
@@ -477,7 +497,7 @@ static qboolean player_is_active(const edict_t *ent)
     }
 
     // always capture dummy MVD client
-    if (ent == mvd.dummy->edict) {
+    if (mvd.dummy && ent == mvd.dummy->edict) {
         return qtrue;
     }
 
@@ -512,13 +532,7 @@ static qboolean player_is_active(const edict_t *ent)
     return qtrue;
 }
 
-/*
-==================
-build_gamestate
-
-Initialize MVD delta compressor for the first time on the given map.
-==================
-*/
+// Initializes MVD delta compressor for the first time on this map.
 static void build_gamestate(void)
 {
     edict_t *ent;
@@ -552,15 +566,8 @@ static void build_gamestate(void)
     }
 }
 
-
-/*
-==================
-emit_gamestate
-
-Writes a single giant message with all the startup info,
-followed by an uncompressed (baseline) frame.
-==================
-*/
+// Writes a single giant message with all the startup info,
+// followed by an uncompressed (baseline) frame.
 static void emit_gamestate(void)
 {
     char        *string;
@@ -571,9 +578,14 @@ static void emit_gamestate(void)
     int         flags, extra, portalbytes;
     byte        portalbits[MAX_MAP_PORTAL_BYTES];
 
+    // don't bother writing if there are no active MVD clients
+    if (!mvd.recording && LIST_EMPTY(&gtv_active_list)) {
+        return;
+    }
+
     // pack MVD stream flags into extra bits
     extra = 0;
-    if (sv_mvd_nomsgs->integer) {
+    if (sv_mvd_nomsgs->integer && mvd.dummy) {
         extra |= MVF_NOMSGS << SVCMD_BITS;
     }
 
@@ -583,7 +595,10 @@ static void emit_gamestate(void)
     MSG_WriteShort(PROTOCOL_VERSION_MVD_CURRENT);
     MSG_WriteLong(sv.spawncount);
     MSG_WriteString(fs_game->string);
-    MSG_WriteShort(mvd.dummy->number);
+    if (mvd.dummy)
+        MSG_WriteShort(mvd.dummy->number);
+    else
+        MSG_WriteShort(-1);
 
     // send configstrings
     for (i = 0; i < MAX_CONFIGSTRINGS; i++) {
@@ -665,13 +680,9 @@ static void copy_entity_state(entity_packed_t *dst, const entity_packed_t *src, 
 }
 
 /*
-==================
-emit_frame
-
-Builds new MVD frame by capturing all entity and player states
-and calculating portalbits. The same frame is used for all MVD
-clients, as well as local recorder.
-==================
+Builds a new delta compressed MVD frame by capturing all entity and player
+states and calculating portalbits. The same frame is used for all MVD clients,
+as well as local recorder.
 */
 static void emit_frame(void)
 {
@@ -793,6 +804,7 @@ static void suspend_streams(void)
 #endif
         NET_UpdateStream(&client->stream);
     }
+
     Com_DPrintf("Suspending MVD streams.\n");
     mvd.active = qfalse;
 }
@@ -836,42 +848,32 @@ static qboolean players_active(void)
 
     for (i = 0; i < sv_maxclients->integer; i++) {
         ent = EDICT_NUM(i + 1);
-        if (ent != mvd.dummy->edict && player_is_active(ent)) {
+        if (mvd.dummy && ent == mvd.dummy->edict)
+            continue;
+        if (player_is_active(ent))
             return qtrue;
-        }
     }
+
     return qfalse;
 }
 
-/*
-==================
-SV_MvdBeginFrame
-==================
-*/
-void SV_MvdBeginFrame(void)
+// disconnects MVD dummy if no MVD clients are active for some time
+static void check_clients_activity(void)
 {
-    unsigned delta;
+    unsigned delta = sv_mvd_disconnect_time->value * 60 * 1000;
 
-    // do nothing if not enabled
-    if (!mvd.dummy) {
-        return;
-    }
-
-    delta = sv_mvd_disconnect_time->value * 60 * 1000;
-
-    // disconnect MVD dummy if no MVD clients are active for some time
-    // FIXME: should not really count unauthenticated/zombie clients
-    if (!delta || mvd.recording || !LIST_EMPTY(&gtv_client_list)) {
+    if (!delta || mvd.recording || !LIST_EMPTY(&gtv_active_list)) {
         mvd.clients_active = svs.realtime;
     } else if (svs.realtime - mvd.clients_active > delta) {
-        Com_DPrintf("Disconnecting dummy MVD client.\n");
-        SV_DropClient(mvd.dummy, NULL);
-        return;
+        mvd_disable();
     }
+}
 
-    delta = sv_mvd_suspend_time->value * 60 * 1000;
+// suspends or resumes MVD streams depending on players activity
+static void check_players_activity(void)
+{
+    unsigned delta = sv_mvd_suspend_time->value * 60 * 1000;
 
-    // suspend/resume MVD streams depending on players activity
     if (!delta || players_active()) {
         mvd.players_active = svs.realtime;
         if (!mvd.active) {
@@ -882,6 +884,54 @@ void SV_MvdBeginFrame(void)
             suspend_streams();
         }
     }
+}
+
+static qboolean mvd_enable(void)
+{
+    int ret;
+
+    if (!mvd.enabled)
+        Com_DPrintf("Enabling server MVD recorder.\n");
+
+    // create and spawn MVD dummy
+    ret = dummy_create();
+    if (ret < 0)
+        return qfalse;
+
+    if (ret > 0)
+        dummy_spawn();
+
+    // we are enabled now
+    mvd.enabled = qtrue;
+
+    // don't timeout
+    mvd.clients_active = svs.realtime;
+
+    // check for activation
+    check_players_activity();
+
+    return qtrue;
+}
+
+static void mvd_disable(void)
+{
+    if (mvd.enabled)
+        Com_DPrintf("Disabling server MVD recorder.\n");
+
+    // drop (no-op if already dropped) and remove MVD dummy. NULL out pointer
+    // before calling SV_DropClient to prevent spurious error message.
+    if (mvd.dummy) {
+        client_t *tmp = mvd.dummy;
+        mvd.dummy = NULL;
+        SV_DropClient(tmp, NULL);
+        SV_RemoveClient(tmp);
+    }
+
+    SZ_Clear(&mvd.datagram);
+    SZ_Clear(&mvd.message);
+
+    mvd.enabled = qfalse;
+    mvd.active = qfalse;
 }
 
 static void rec_frame(size_t total)
@@ -929,6 +979,20 @@ fail:
 
 /*
 ==================
+SV_MvdBeginFrame
+==================
+*/
+void SV_MvdBeginFrame(void)
+{
+    if (mvd.enabled)
+        check_clients_activity();
+
+    if (mvd.enabled)
+        check_players_activity();
+}
+
+/*
+==================
 SV_MvdEndFrame
 ==================
 */
@@ -942,7 +1006,7 @@ void SV_MvdEndFrame(void)
         return;
 
     // do nothing if not enabled
-    if (!mvd.dummy) {
+    if (!mvd.enabled) {
         return;
     }
 
@@ -955,9 +1019,7 @@ void SV_MvdEndFrame(void)
 
     // if reliable message overflowed, kick all clients
     if (mvd.message.overflowed) {
-        Com_EPrintf("Reliable MVD message overflowed!\n");
-        SV_DropClient(mvd.dummy, NULL);
-        return;
+        return mvd_error("reliable message overflowed");
     }
 
     if (mvd.datagram.overflowed) {
@@ -970,10 +1032,8 @@ void SV_MvdEndFrame(void)
 
     // if reliable message and frame update don't fit, kick all clients
     if (mvd.message.cursize + msg_write.cursize >= MAX_MSGLEN) {
-        Com_EPrintf("MVD frame overflowed!\n");
         SZ_Clear(&msg_write);
-        SV_DropClient(mvd.dummy, NULL);
-        return;
+        return mvd_error("frame overflowed");
     }
 
     // check if unreliable datagram fits
@@ -1031,10 +1091,6 @@ out-of-band data into the MVD stream.
 /*
 ==============
 SV_MvdMulticast
-
-TODO: would be better to combine identical unicast/multicast messages
-into one larger message to save space (useful for shotgun patterns
-as they often occur in the same BSP leaf)
 ==============
 */
 void SV_MvdMulticast(int leafnum, multicast_t to)
@@ -1062,12 +1118,41 @@ void SV_MvdMulticast(int leafnum, multicast_t to)
     SZ_Write(buf, msg_write.data, msg_write.cursize);
 }
 
+// Performs some basic filtering of the unicast data that would be
+// otherwise discarded by the MVD client.
+static qboolean filter_unicast_data(edict_t *ent)
+{
+    int cmd = msg_write.data[0];
+
+    // discard any stufftexts, except of play sound hacks
+    if (cmd == svc_stufftext) {
+        return !memcmp(msg_write.data + 1, "play ", 5);
+    }
+
+    // if there is no dummy client, don't discard anything
+    if (!mvd.dummy) {
+        return qtrue;
+    }
+
+    if (cmd == svc_layout) {
+        if (ent != mvd.dummy->edict) {
+            // discard any layout updates to players
+            return qfalse;
+        }
+        mvd.layout_time = svs.realtime;
+    } else if (cmd == svc_print) {
+        if (ent != mvd.dummy->edict && sv_mvd_nomsgs->integer) {
+            // optionally discard text messages to players
+            return qfalse;
+        }
+    }
+
+    return qtrue;
+}
+
 /*
 ==============
 SV_MvdUnicast
-
-Performs some basic filtering of the unicast data that would be
-otherwise discarded by the MVD client.
 ==============
 */
 void SV_MvdUnicast(edict_t *ent, int clientNum, qboolean reliable)
@@ -1086,28 +1171,8 @@ void SV_MvdUnicast(edict_t *ent, int clientNum, qboolean reliable)
         return;
     }
 
-    switch (msg_write.data[0]) {
-    case svc_layout:
-        if (ent == mvd.dummy->edict) {
-            // special case, send to all observers
-            mvd.layout_time = svs.realtime;
-        } else {
-            // discard any layout updates to players
-            return;
-        }
-        break;
-    case svc_stufftext:
-        if (memcmp(msg_write.data + 1, "play ", 5)) {
-            // discard any stufftexts, except of play sound hacks
-            return;
-        }
-        break;
-    case svc_print:
-        if (ent != mvd.dummy->edict && sv_mvd_nomsgs->integer) {
-            // optionally discard text messages to players
-            return;
-        }
-        break;
+    if (!filter_unicast_data(ent)) {
+        return;
     }
 
     // decide where should it go
@@ -1630,6 +1695,7 @@ static gtv_client_t *find_slot(void)
             return client;
         }
     }
+
     return NULL;
 }
 
@@ -1823,27 +1889,9 @@ void SV_MvdStatus_f(void)
     Com_Printf("\n");
 }
 
-static void mvd_disable(void)
-{
-    // remove MVD dummy
-    if (mvd.dummy) {
-        SV_RemoveClient(mvd.dummy);
-        mvd.dummy = NULL;
-    }
-
-    SZ_Clear(&mvd.datagram);
-    SZ_Clear(&mvd.message);
-
-    mvd.active = qfalse;
-}
-
-// something bad happened, remove all clients
 static void mvd_drop(gtv_serverop_t op)
 {
     gtv_client_t *client;
-
-    // stop recording
-    rec_stop();
 
     // drop GTV clients
     FOR_EACH_GTV(client) {
@@ -1852,9 +1900,7 @@ static void mvd_drop(gtv_serverop_t op)
         case cs_primed:
             write_message(client, op);
             drop_client(client, NULL);
-            NET_RunStream(&client->stream);
-            NET_RunStream(&client->stream);
-            remove_client(client);
+            NET_UpdateStream(&client->stream);
             break;
         default:
             drop_client(client, NULL);
@@ -1863,28 +1909,32 @@ static void mvd_drop(gtv_serverop_t op)
         }
     }
 
+    // update I/O status
+    NET_Sleep(0);
+
+    // push error message
+    FOR_EACH_GTV(client) {
+        NET_RunStream(&client->stream);
+        NET_RunStream(&client->stream);
+        remove_client(client);
+    }
+
+    List_Init(&gtv_client_list);
+    List_Init(&gtv_active_list);
+}
+
+// something bad happened, remove all clients
+static void mvd_error(const char *reason)
+{
+    Com_EPrintf("Fatal MVD error: %s\n", reason);
+
+    // stop recording
+    rec_stop();
+
+    mvd_drop(GTS_ERROR);
+
     mvd_disable();
 }
-
-// if dummy is not yet connected, create and spawn it
-static qboolean mvd_enable(void)
-{
-    if (!mvd.dummy) {
-        if (!dummy_create()) {
-            return qfalse;
-        }
-
-        dummy_spawn();
-
-        // don't drop it
-        mvd.clients_active = svs.realtime;
-
-        // check for activation
-        SV_MvdBeginFrame();
-    }
-    return qtrue;
-}
-
 
 /*
 ==============================================================================
@@ -1906,20 +1956,22 @@ Server has just changed the map, spawn the MVD dummy and go!
 void SV_MvdMapChanged(void)
 {
     gtv_client_t *client;
+    int ret;
 
-    if (!sv_mvd_enable->integer) {
-        return; // do noting if disabled
+    if (!mvd.entities) {
+        return; // do nothing if disabled
     }
 
-    if (!mvd.dummy) {
-        if (!sv_mvd_autorecord->integer) {
-            return; // not listening for autorecord command
-        }
-        if (!dummy_create()) {
+    // spawn MVD dummy now if listening for autorecord command
+    if (sv_mvd_autorecord->integer) {
+        ret = dummy_create();
+        if (ret < 0) {
             return;
         }
-        Com_Printf("Spawning MVD dummy for auto-recording\n");
-        Cvar_Set("sv_mvd_suspend_time", "0");
+        if (ret > 0) {
+            Com_DPrintf("Spawning MVD dummy for auto-recording\n");
+            Cvar_Set("sv_mvd_suspend_time", "0");
+        }
     }
 
     dummy_spawn();
@@ -1961,13 +2013,14 @@ void SV_MvdMapChanged(void)
 ==================
 SV_MvdClientDropped
 
-Server has just dropped a client, check if that was our MVD dummy client.
+Server has just dropped a client. Drop all TCP clients if that was our MVD
+dummy client.
 ==================
 */
 void SV_MvdClientDropped(client_t *client)
 {
     if (client == mvd.dummy) {
-        mvd_drop(GTS_ERROR);
+        mvd_error("dummy client was dropped");
     }
 }
 
@@ -2024,6 +2077,17 @@ Server is shutting down, clean everything up.
 */
 void SV_MvdShutdown(error_type_t type)
 {
+    // stop recording
+    rec_stop();
+
+    // remove MVD dummy
+    if (mvd.dummy) {
+        SV_RemoveClient(mvd.dummy);
+        mvd.dummy = NULL;
+    }
+
+    memset(&dummy_buffer, 0, sizeof(dummy_buffer));
+
     // drop all clients
     mvd_drop(type == ERR_RECONNECT ? GTS_RECONNECT : GTS_DISCONNECT);
 
@@ -2035,8 +2099,6 @@ void SV_MvdShutdown(error_type_t type)
     NET_Listen(qfalse);
 
     memset(&mvd, 0, sizeof(mvd));
-
-    memset(&dummy_buffer, 0, sizeof(dummy_buffer));
 }
 
 
@@ -2069,13 +2131,7 @@ fail:
     rec_stop();
 }
 
-/*
-==============
-rec_stop
-
-Stops server local MVD recording.
-==============
-*/
+// Stops server local MVD recording.
 static void rec_stop(void)
 {
     uint16_t msglen;
@@ -2098,10 +2154,12 @@ static qboolean rec_allowed(void)
         Com_Printf("MVD recording is disabled on this server.\n");
         return qfalse;
     }
+
     if (mvd.recording) {
         Com_Printf("Already recording a local MVD.\n");
         return qfalse;
     }
+
     return qtrue;
 }
 
@@ -2207,6 +2265,14 @@ void SV_MvdStop_f(void)
     rec_stop();
 }
 
+/*
+==============================================================================
+
+CVARS AND COMMANDS
+
+==============================================================================
+*/
+
 static void SV_MvdStuff_f(void)
 {
     if (mvd.dummy) {
@@ -2276,6 +2342,7 @@ void SV_MvdRegister(void)
     sv_mvd_disconnect_time = Cvar_Get("sv_mvd_disconnect_time", "15", 0);
     sv_mvd_suspend_time = Cvar_Get("sv_mvd_suspend_time", "5", 0);
     sv_mvd_allow_stufftext = Cvar_Get("sv_mvd_allow_stufftext", "0", CVAR_LATCH);
+    sv_mvd_spawn_dummy = Cvar_Get("sv_mvd_spawn_dummy", "1", 0);
 
     Cmd_Register(c_svmvd);
 }
