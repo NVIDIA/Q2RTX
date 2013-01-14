@@ -275,14 +275,6 @@ void CL_Stop_f(void)
         return;
     }
 
-    if (cls.netchan && cls.serverProtocol >= PROTOCOL_VERSION_R1Q2) {
-        // tell the server we finished recording
-        MSG_WriteByte(clc_setting);
-        MSG_WriteShort(CLS_RECORDING);
-        MSG_WriteShort(0);
-        MSG_FlushTo(&cls.netchan->message);
-    }
-
 // finish up
     msglen = (uint32_t)-1;
     FS_Write(&msglen, 4, cls.demo.recording);
@@ -299,6 +291,9 @@ void CL_Stop_f(void)
 
 // print some statistics
     Com_Printf("Stopped demo (%s).\n", buffer);
+
+// tell the server we finished recording
+    CL_UpdateRecordingSetting();
 }
 
 static const cmd_option_t o_record[] = {
@@ -392,13 +387,8 @@ static void CL_Record_f(void)
     // clear dirty configstrings
     memset(cl.dcs, 0, sizeof(cl.dcs));
 
-    if (cls.netchan && cls.serverProtocol >= PROTOCOL_VERSION_R1Q2) {
-        // tell the server we are recording
-        MSG_WriteByte(clc_setting);
-        MSG_WriteShort(CLS_RECORDING);
-        MSG_WriteShort(1);
-        MSG_FlushTo(&cls.netchan->message);
-    }
+    // tell the server we are recording
+    CL_UpdateRecordingSetting();
 
     //
     // write out messages to hold the startup information

@@ -323,6 +323,7 @@ void CL_DeltaFrame(void)
     entity_state_t      *state;
     int                 i, j;
     int                 framenum;
+    int                 prevstate = cls.state;
 
     // getting a valid frame message ends the connection process
     if (cls.state == ca_precached)
@@ -358,6 +359,11 @@ void CL_DeltaFrame(void)
     if (cls.demo.recording && !cls.demo.paused && !cls.demo.seeking && CL_FRAMESYNC) {
         CL_EmitDemoFrame();
     }
+
+    if (prevstate == ca_precached)
+        CL_GTV_Resume();
+    else
+        CL_GTV_EmitFrame();
 
     if (cls.demo.playback) {
         // this delta has nothing to do with local viewangles,

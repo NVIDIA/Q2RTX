@@ -174,7 +174,7 @@ static void CL_UpdateGunSetting(void)
 {
     int nogun;
 
-    if (cls.state < ca_connected) {
+    if (!cls.netchan) {
         return;
     }
     if (cls.serverProtocol < PROTOCOL_VERSION_R1Q2) {
@@ -197,10 +197,9 @@ static void CL_UpdateGunSetting(void)
 
 static void CL_UpdateGibSetting(void)
 {
-    if (cls.state < ca_connected) {
+    if (!cls.netchan) {
         return;
     }
-
     if (cls.serverProtocol != PROTOCOL_VERSION_Q2PRO) {
         return;
     }
@@ -213,7 +212,7 @@ static void CL_UpdateGibSetting(void)
 
 static void CL_UpdateFootstepsSetting(void)
 {
-    if (cls.state < ca_connected) {
+    if (!cls.netchan) {
         return;
     }
     if (cls.serverProtocol != PROTOCOL_VERSION_Q2PRO) {
@@ -228,7 +227,7 @@ static void CL_UpdateFootstepsSetting(void)
 
 static void CL_UpdatePredictSetting(void)
 {
-    if (cls.state < ca_connected) {
+    if (!cls.netchan) {
         return;
     }
     if (cls.serverProtocol != PROTOCOL_VERSION_Q2PRO) {
@@ -244,7 +243,7 @@ static void CL_UpdatePredictSetting(void)
 #if USE_FPS
 static void CL_UpdateRateSetting(void)
 {
-    if (cls.state < ca_connected) {
+    if (!cls.netchan) {
         return;
     }
     if (cls.serverProtocol != PROTOCOL_VERSION_Q2PRO) {
@@ -257,6 +256,35 @@ static void CL_UpdateRateSetting(void)
     MSG_FlushTo(&cls.netchan->message);
 }
 #endif
+
+void CL_UpdateRecordingSetting(void)
+{
+    int rec;
+
+    if (!cls.netchan) {
+        return;
+    }
+    if (cls.serverProtocol < PROTOCOL_VERSION_R1Q2) {
+        return;
+    }
+
+    if (cls.demo.recording) {
+        rec = 1;
+    } else {
+        rec = 0;
+    }
+
+#if USE_CLIENT_GTV
+    if (cls.gtv.state == ca_active) {
+        rec |= 1;
+    }
+#endif
+
+    MSG_WriteByte(clc_setting);
+    MSG_WriteShort(CLS_RECORDING);
+    MSG_WriteShort(rec);
+    MSG_FlushTo(&cls.netchan->message);
+}
 
 /*
 ===================
@@ -743,6 +771,8 @@ void CL_Disconnect(error_type_t type)
     CL_CleanupDownloads();
 
     CL_ClearState();
+
+    CL_GTV_Suspend();
 
     cls.state = ca_disconnected;
     cls.userinfo_modified = 0;
@@ -1725,6 +1755,7 @@ void CL_Begin(void)
     CL_UpdateGibSetting();
     CL_UpdateFootstepsSetting();
     CL_UpdatePredictSetting();
+    CL_UpdateRecordingSetting();
 }
 
 /*
@@ -2591,6 +2622,7 @@ static void CL_InitLocal(void)
     CL_InitEffects();
     CL_InitTEnts();
     CL_InitDownloads();
+    CL_GTV_Init();
 
     List_Init(&cl_ignores);
 
@@ -3247,6 +3279,8 @@ qboolean CL_ProcessEvents(void)
 
     HTTP_RunDownloads();
 
+    CL_GTV_Run();
+
     return cl.sendPacketNow;
 }
 
@@ -3327,6 +3361,8 @@ void CL_Shutdown(void)
     if (!cl_running || !cl_running->integer) {
         return;
     }
+
+    CL_GTV_Shutdown();
 
     CL_Disconnect(ERR_FATAL);
 

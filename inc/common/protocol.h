@@ -168,7 +168,7 @@ typedef enum {
 // MVD stream flags (only 3 bits can be used)
 typedef enum {
     MVF_NOMSGS      = 1,
-    MVF_RESERVED1   = 2,
+    MVF_SINGLEPOV   = 2,
     MVF_RESERVED2   = 4
 } mvd_flags_t;
 

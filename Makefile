@@ -260,6 +260,11 @@ ifdef CONFIG_HTTP
     OBJS_c += src/client/http.o
 endif
 
+ifdef CONFIG_CLIENT_GTV
+    CFLAGS_c += -DUSE_CLIENT_GTV=1
+    OBJS_c += src/client/gtv.o
+endif
+
 ifndef CONFIG_NO_SOFTWARE_SOUND
     CFLAGS_c += -DUSE_SNDDMA=1
     OBJS_c += src/client/sound/mix.o

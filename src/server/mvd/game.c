@@ -354,7 +354,7 @@ static void MVD_SetDefaultLayout(mvd_client_t *client)
         type = LAYOUT_CHANNELS;
     } else if (mvd->intermission) {
         type = LAYOUT_SCORES;
-    } else if (client->target) {
+    } else if (client->target && !(mvd->flags & MVF_SINGLEPOV)) {
         type = LAYOUT_FOLLOW;
     } else {
         type = LAYOUT_NONE;
@@ -1665,6 +1665,8 @@ static void MVD_GameClientBegin(edict_t *ent)
             MVD_BroadcastPrintf(mvd, PRINT_MEDIUM, UF_MUTE_MISC,
                                 "[MVD] %s entered the channel\n", client->cl->name);
         }
+        target = MVD_MostFollowed(mvd);
+    } else if (mvd->flags & MVF_SINGLEPOV) {
         target = MVD_MostFollowed(mvd);
     } else {
         target = client->oldtarget;
