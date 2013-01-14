@@ -1760,6 +1760,10 @@ void SV_MvdRunClients(void)
     unsigned    ghost_time  = 1000 * sv_ghostime->value;
     unsigned    delta;
 
+    if (!mvd.clients) {
+        return; // do nothing if disabled
+    }
+
     // accept new connections
     ret = NET_Accept(&stream);
     if (ret == NET_ERROR) {
@@ -2054,10 +2058,16 @@ void SV_MvdInit(void)
 
     // open server TCP socket
     if (sv_mvd_enable->integer > 1) {
-        if (NET_Listen(qtrue) == NET_OK) {
+        neterr_t ret;
+
+        ret = NET_Listen(qtrue);
+        if (ret == NET_OK) {
             mvd.clients = SV_Mallocz(sizeof(gtv_client_t) * sv_mvd_maxclients->integer);
         } else {
-            Com_EPrintf("%s while opening server TCP port.\n", NET_ErrorString());
+            if (ret == NET_ERROR)
+                Com_EPrintf("%s while opening server TCP port.\n", NET_ErrorString());
+            else
+                Com_EPrintf("Server TCP port already in use.\n");
             Cvar_Set("sv_mvd_enable", "1");
         }
     }

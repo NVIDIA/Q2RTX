@@ -1164,7 +1164,7 @@ neterr_t NET_Listen(qboolean arg)
     }
 
     if (tcp_socket != -1) {
-        return NET_OK;
+        return NET_AGAIN;
     }
 
     s = TCP_OpenSocket(net_tcp_ip->string,
