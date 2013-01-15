@@ -387,7 +387,7 @@ static void draw_percent_bar(int percent, qboolean paused, int framenum)
     }
 }
 
-static void draw_demo_bar(void)
+static void SCR_DrawDemo(void)
 {
 #if USE_MVD_CLIENT
     int percent;
@@ -473,7 +473,7 @@ void SCR_CenterPrint(const char *str)
     Con_ClearNotify_f();
 }
 
-static void draw_center_string(void)
+static void SCR_DrawCenterString(void)
 {
     int y;
     float alpha;
@@ -547,7 +547,7 @@ void SCR_LagSample(void)
     lag.head++;
 }
 
-static void draw_ping_graph(int x, int y)
+static void SCR_LagDraw(int x, int y)
 {
     int i, j, v, c, v_min, v_max, v_range;
 
@@ -582,7 +582,7 @@ static void draw_ping_graph(int x, int y)
     }
 }
 
-static void draw_lagometer(void)
+static void SCR_DrawNet(void)
 {
     int x = scr_lag_x->integer;
     int y = scr_lag_y->integer;
@@ -599,7 +599,7 @@ static void draw_lagometer(void)
         if (scr_lag_draw->integer > 1) {
             R_DrawFill8(x, y, LAG_WIDTH, LAG_HEIGHT, 4);
         }
-        draw_ping_graph(x, y);
+        SCR_LagDraw(x, y);
     }
 
     // draw phone jack
@@ -620,12 +620,12 @@ DRAW OBJECTS
 */
 
 typedef struct {
-    list_t  entry;
-    int     x, y;
-    cvar_t *cvar;
-    cmd_macro_t *macro;
-    int flags;
-    color_t color;
+    list_t          entry;
+    int             x, y;
+    cvar_t          *cvar;
+    cmd_macro_t     *macro;
+    int             flags;
+    color_t         color;
 } drawobj_t;
 
 #define FOR_EACH_DRAWOBJ(obj) \
@@ -801,7 +801,7 @@ static void SCR_UnDraw_f(void)
     }
 }
 
-static void draw_objects(void)
+static void SCR_DrawObjects(void)
 {
     char buffer[MAX_QPATH];
     int x, y;
@@ -840,10 +840,18 @@ DEBUG STUFF
 ===============================================================================
 */
 
-static void draw_turtle(void)
+static void SCR_DrawTurtle(void)
 {
-    int x = CHAR_WIDTH;
-    int y = scr.hud_height - 11 * CHAR_HEIGHT;
+    int x, y;
+
+    if (scr_showturtle->integer <= 0)
+        return;
+
+    if (!cl.frameflags)
+        return;
+
+    x = CHAR_WIDTH;
+    y = scr.hud_height - 11 * CHAR_HEIGHT;
 
 #define DF(f) \
     if (cl.frameflags & FF_##f) { \
@@ -869,16 +877,19 @@ static void draw_turtle(void)
 
 #ifdef _DEBUG
 
-static void draw_stats(void)
+static void SCR_DrawDebugStats(void)
 {
     char buffer[MAX_QPATH];
     int i, j;
     int x, y;
 
     j = scr_showstats->integer;
-    if (j > MAX_STATS) {
+    if (j <= 0)
+        return;
+
+    if (j > MAX_STATS)
         j = MAX_STATS;
-    }
+
     x = CHAR_WIDTH;
     y = (scr.hud_height - j * CHAR_HEIGHT) / 2;
     for (i = 0; i < j; i++) {
@@ -892,7 +903,7 @@ static void draw_stats(void)
     }
 }
 
-static void draw_pmove(void)
+static void SCR_DrawDebugPmove(void)
 {
     static const char * const types[] = {
         "NORMAL", "SPECTATOR", "DEAD", "GIB", "FREEZE"
@@ -902,14 +913,19 @@ static void draw_pmove(void)
         "TIME_WATERJUMP", "TIME_LAND", "TIME_TELEPORT",
         "NO_PREDICTION", "TELEPORT_BIT"
     };
-    int x = CHAR_WIDTH;
-    int y = (scr.hud_height - 2 * CHAR_HEIGHT) / 2;
     unsigned i, j;
+    int x, y;
+
+    if (!scr_showpmove->integer)
+        return;
+
+    x = CHAR_WIDTH;
+    y = (scr.hud_height - 2 * CHAR_HEIGHT) / 2;
 
     i = cl.frame.ps.pmove.pm_type;
-    if (i > PM_FREEZE) {
+    if (i > PM_FREEZE)
         i = PM_FREEZE;
-    }
+
     R_DrawString(x, y, 0, MAX_STRING_CHARS, types[i], scr.font_pic);
     y += CHAR_HEIGHT;
 
@@ -927,7 +943,7 @@ static void draw_pmove(void)
 //============================================================================
 
 // Sets scr_vrect, the coordinates of the rendered window
-static void calc_vrect(void)
+static void SCR_CalcVrect(void)
 {
     int     size;
 
@@ -1296,7 +1312,7 @@ void SCR_EndLoadingPlaque(void)
 }
 
 // Clear any parts of the tiled background that were drawn on last frame
-static void tile_clear(void)
+static void SCR_TileClear(void)
 {
     int top, bottom, left, right;
 
@@ -1387,7 +1403,7 @@ static void HUD_DrawNumber(int x, int y, int color, int width, int value)
 
 #define DISPLAY_ITEMS   17
 
-static void draw_inventory(void)
+static void SCR_DrawInventory(void)
 {
     int     i;
     int     num, selected_num, item;
@@ -1397,6 +1413,9 @@ static void draw_inventory(void)
     char    *bind;
     int     selected;
     int     top;
+
+    if (!(cl.frame.ps.stats[STAT_LAYOUTS] & 2))
+        return;
 
     selected = cl.frame.ps.stats[STAT_SELECTED_ITEM];
 
@@ -1456,7 +1475,7 @@ static void draw_inventory(void)
     }
 }
 
-static void draw_layout_string(const char *s)
+static void SCR_ExecuteLayoutString(const char *s)
 {
     char    buffer[MAX_QPATH];
     int     x, y;
@@ -1746,40 +1765,98 @@ static void draw_layout_string(const char *s)
     }
 }
 
-static void draw_pause(void)
+//=============================================================================
+
+static void SCR_DrawPause(void)
 {
-    int x = (scr.hud_width - scr.pause_width) / 2;
-    int y = (scr.hud_height - scr.pause_height) / 2;
+    int x, y;
+
+    if (!sv_paused->integer)
+        return;
+    if (!cl_paused->integer)
+        return;
+    if (scr_showpause->integer != 1)
+        return;
+
+    x = (scr.hud_width - scr.pause_width) / 2;
+    y = (scr.hud_height - scr.pause_height) / 2;
 
     R_DrawPic(x, y, scr.pause_pic);
 }
 
-static void draw_loading(void)
+static void SCR_DrawLoading(void)
 {
-    int x = (r_config.width - scr.loading_width) / 2;
-    int y = (r_config.height - scr.loading_height) / 2;
+    int x, y;
+
+    if (!scr.draw_loading)
+        return;
+
+    scr.draw_loading = qfalse;
+
+    x = (r_config.width - scr.loading_width) / 2;
+    y = (r_config.height - scr.loading_height) / 2;
 
     R_DrawPic(x, y, scr.loading_pic);
 }
 
-static void draw_crosshair(void)
+static void SCR_DrawCrosshair(void)
 {
-    int x = (scr.hud_width - scr.crosshair_width) / 2;
-    int y = (scr.hud_height - scr.crosshair_height) / 2;
+    int x, y;
 
-    x += ch_x->integer;
-    y += ch_y->integer;
+    if (!scr_crosshair->integer)
+        return;
+
+    x = (scr.hud_width - scr.crosshair_width) / 2;
+    y = (scr.hud_height - scr.crosshair_height) / 2;
 
     R_SetColor(scr.crosshair_color.u32);
-    R_DrawStretchPic(x, y, scr.crosshair_width, scr.crosshair_height,
+
+    R_DrawStretchPic(x + ch_x->integer,
+                     y + ch_y->integer,
+                     scr.crosshair_width,
+                     scr.crosshair_height,
                      scr.crosshair_pic);
 }
 
-static void draw_2d(void)
+// The status bar is a small layout program that is based on the stats array
+static void SCR_DrawStats(void)
+{
+    if (scr_draw2d->integer <= 1)
+        return;
+
+    SCR_ExecuteLayoutString(cl.configstrings[CS_STATUSBAR]);
+}
+
+static void SCR_DrawLayout(void)
+{
+    if (scr_draw2d->integer == 3 && !Key_IsDown(K_F1))
+        return;     // turn off for GTV
+
+    if (cls.demo.playback && Key_IsDown(K_F1))
+        goto draw;
+
+    if (!(cl.frame.ps.stats[STAT_LAYOUTS] & 1))
+        return;
+
+draw:
+    SCR_ExecuteLayoutString(cl.layout);
+}
+
+static void SCR_Draw2D(void)
 {
 #if USE_REF == REF_SOFT
     clipRect_t rc;
+#else
+    float scale;
+#endif
 
+    if (scr_draw2d->integer <= 0)
+        return;     // turn off for screenshots
+
+    if (cls.key_dest & KEY_MENU)
+        return;
+
+#if USE_REF == REF_SOFT
     // avoid DoS by making sure nothing is drawn out of bounds
     rc.left = 0;
     rc.top = 0;
@@ -1788,63 +1865,42 @@ static void draw_2d(void)
 
     R_SetClipRect(DRAW_CLIP_MASK, &rc);
 #else
-    float scale;
+    scale = 1.0f / Cvar_ClampValue(scr_scale, 1, 9);
+    R_SetScale(&scale);
 
-    if (scr_scale->value != 1) {
-        scale = 1.0f / Cvar_ClampValue(scr_scale, 1, 9);
-        R_SetScale(&scale);
-
-        scr.hud_height *= scale;
-        scr.hud_width *= scale;
-    }
+    scr.hud_height *= scale;
+    scr.hud_width *= scale;
 #endif
 
-    // crosshair has it's own color and alpha
-    if (scr_crosshair->integer) {
-        draw_crosshair();
-    }
+    // crosshair has its own color and alpha
+    SCR_DrawCrosshair();
 
     // the rest of 2D elements share common alpha
     R_ClearColor();
     R_SetAlpha(Cvar_ClampValue(scr_alpha, 0, 1));
 
-    if (scr_draw2d->integer > 1) {
-        draw_layout_string(cl.configstrings[CS_STATUSBAR]);
-    }
+    SCR_DrawStats();
 
-    if ((cl.frame.ps.stats[STAT_LAYOUTS] & 1) ||
-        (cls.demo.playback && Key_IsDown(K_F1))) {
-        draw_layout_string(cl.layout);
-    }
+    SCR_DrawLayout();
 
-    if (cl.frame.ps.stats[STAT_LAYOUTS] & 2) {
-        draw_inventory();
-    }
+    SCR_DrawInventory();
 
-    draw_center_string();
+    SCR_DrawCenterString();
 
-    draw_lagometer();
+    SCR_DrawNet();
 
-    draw_objects();
+    SCR_DrawObjects();
 
-    if (cl.frameflags && scr_showturtle->integer > 0) {
-        draw_turtle();
-    }
+    SCR_DrawTurtle();
 
-    if (sv_paused->integer && cl_paused->integer && scr_showpause->integer == 1) {
-        draw_pause();
-    }
+    SCR_DrawPause();
 
     // debug stats have no alpha
     R_ClearColor();
 
 #ifdef _DEBUG
-    if (scr_showstats->integer) {
-        draw_stats();
-    }
-    if (scr_showpmove->integer) {
-        draw_pmove();
-    }
+    SCR_DrawDebugStats();
+    SCR_DrawDebugPmove();
 #endif
 
 #if USE_REF == REF_SOFT
@@ -1854,31 +1910,34 @@ static void draw_2d(void)
 #endif
 }
 
-static void draw_active_frame(void)
+static void SCR_DrawActive(void)
 {
+    // if full screen menu is up, do nothing at all
+    if (!UI_IsTransparent())
+        return;
+
+    // draw black background if not active
     if (cls.state < ca_active) {
-        // draw black background if not active
         R_DrawFill8(0, 0, r_config.width, r_config.height, 0);
         return;
     }
 
+    // start with full screen HUD
     scr.hud_height = r_config.height;
     scr.hud_width = r_config.width;
 
-    draw_demo_bar();
+    SCR_DrawDemo();
 
-    calc_vrect();
+    SCR_CalcVrect();
 
     // clear any dirty part of the background
-    tile_clear();
+    SCR_TileClear();
 
     // draw 3D game view
     V_RenderView();
 
     // draw all 2D elements
-    if (scr_draw2d->integer && !(cls.key_dest & KEY_MENU)) {
-        draw_2d();
-    }
+    SCR_Draw2D();
 }
 
 //=======================================================
@@ -1919,10 +1978,8 @@ void SCR_UpdateScreen(void)
 
     R_BeginFrame();
 
-    if (UI_IsTransparent()) {
-        // do 3D refresh drawing
-        draw_active_frame();
-    }
+    // do 3D refresh drawing
+    SCR_DrawActive();
 
     // draw main menu
     UI_Draw(cls.realtime);
@@ -1931,24 +1988,18 @@ void SCR_UpdateScreen(void)
     Con_DrawConsole();
 
     // draw loading plaque
-    if (scr.draw_loading) {
-        draw_loading();
-        scr.draw_loading = qfalse;
-    }
+    SCR_DrawLoading();
 
 #ifdef _DEBUG
     // draw debug graphs
     if (scr_timegraph->integer)
         SCR_DebugGraph(cls.frametime * 300, 0);
 
-    if (scr_debuggraph->integer || scr_timegraph->integer || scr_netgraph->integer) {
+    if (scr_debuggraph->integer || scr_timegraph->integer || scr_netgraph->integer)
         SCR_DrawDebugGraph();
-    }
 #endif
 
     R_EndFrame();
 
     recursive--;
 }
-
-
