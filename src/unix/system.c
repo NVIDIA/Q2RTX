@@ -43,8 +43,6 @@ cvar_t  *sys_libdir;
 cvar_t  *sys_homedir;
 cvar_t  *sys_forcegamelib;
 
-cvar_t  *sys_parachute;
-
 static qboolean terminate;
 
 /*
@@ -174,6 +172,7 @@ Sys_Init
 void Sys_Init(void)
 {
     char    *homedir;
+    cvar_t  *sys_parachute;
 
     signal(SIGTERM, term_handler);
     signal(SIGINT, term_handler);

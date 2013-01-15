@@ -1374,8 +1374,9 @@ typedef struct {
     qerror_t (*load)(byte *, size_t, const char *, byte **, int *, int *);
 } imageloader_t;
 
+static list_t   r_imageHash[RIMAGES_HASH];
+
 image_t     r_images[MAX_RIMAGES];
-list_t      r_imageHash[RIMAGES_HASH];
 int         r_numImages;
 
 uint32_t    d_8to24table[256];
