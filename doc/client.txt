@@ -395,6 +395,30 @@ scr_lag_max::
     Specifies ping graph scale by defining the maximum value that can be
     displayed. Default value is 200.
 
+scr_chathud::
+    Toggles drawing of the last chat lines on the screen. Default value is 0.
+      - 0 — do not draw chat lines
+      - 1 — draw chat lines in normal color
+      - 2 — draw chat lines in alternative color
+
+scr_chathud_lines::
+    Specifies number of the last chat lines drawn on the screen. Default value
+    is 4. Maximum value is 32.
+
+scr_chathud_time::
+    Specifies visibility time of each chat line, counted in seconds. Default
+    value is 0 (lines never fade out).
+
+scr_chathud_x::
+    Absolute value of this cvar specifies horizontal placement of the chat HUD,
+    counted in pixels from the screen edge. Negative values align graph to the right
+    edge of the screen instead of the left edge. Default value is 8.
+
+scr_chathud_y::
+    Absolute value of this cvar specifies vertical placement of the chat HUD,
+    counted in pixels from the screen edge. Negative values align graph to the bottom
+    edge of the screen intead of the top edge. Default value is -64.
+
 ch_health::
     Enables dynamic crosshair coloring based on the health statistic seen in
     the player's HUD.  Default value is 0 (use static color).

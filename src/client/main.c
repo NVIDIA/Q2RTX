@@ -732,7 +732,9 @@ void CL_Disconnect(error_type_t type)
         return;
     }
 
-    SCR_EndLoadingPlaque();    // get rid of loading plaque
+    SCR_EndLoadingPlaque(); // get rid of loading plaque
+
+    SCR_ClearChatHUD_f();   // clear chat HUD on server change
 
     if (cls.state > ca_disconnected && !cls.demo.playback) {
         EXEC_TRIGGER(cl_disconnectcmd);

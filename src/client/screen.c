@@ -71,6 +71,12 @@ static cvar_t   *scr_scale;
 
 static cvar_t   *scr_crosshair;
 
+static cvar_t   *scr_chathud;
+static cvar_t   *scr_chathud_lines;
+static cvar_t   *scr_chathud_time;
+static cvar_t   *scr_chathud_x;
+static cvar_t   *scr_chathud_y;
+
 static cvar_t   *ch_health;
 static cvar_t   *ch_red;
 static cvar_t   *ch_green;
@@ -835,6 +841,103 @@ static void SCR_DrawObjects(void)
 /*
 ===============================================================================
 
+CHAT HUD
+
+===============================================================================
+*/
+
+#define MAX_CHAT_TEXT       150
+#define MAX_CHAT_LINES      32
+#define CHAT_LINE_MASK      (MAX_CHAT_LINES - 1)
+
+typedef struct {
+    char        text[MAX_CHAT_TEXT];
+    unsigned    time;
+} chatline_t;
+
+static chatline_t   scr_chatlines[MAX_CHAT_LINES];
+static unsigned     scr_chathead;
+
+void SCR_ClearChatHUD_f(void)
+{
+    memset(scr_chatlines, 0, sizeof(scr_chatlines));
+    scr_chathead = 0;
+}
+
+void SCR_AddToChatHUD(const char *text)
+{
+    chatline_t *line;
+    char *p;
+
+    line = &scr_chatlines[scr_chathead++ & CHAT_LINE_MASK];
+    Q_strlcpy(line->text, text, sizeof(line->text));
+    line->time = cls.realtime;
+
+    p = strrchr(line->text, '\n');
+    if (p)
+        *p = 0;
+}
+
+static void SCR_DrawChatHUD(void)
+{
+    int x, y, flags, step;
+    unsigned i, lines, time;
+    float alpha;
+    chatline_t *line;
+
+    if (scr_chathud->integer == 0)
+        return;
+
+    x = scr_chathud_x->integer;
+    y = scr_chathud_y->integer;
+
+    if (scr_chathud->integer == 2)
+        flags = UI_ALTCOLOR;
+    else
+        flags = 0;
+
+    if (x < 0) {
+        x += scr.hud_width + 1;
+        flags |= UI_RIGHT;
+    } else {
+        flags |= UI_LEFT;
+    }
+
+    if (y < 0) {
+        y += scr.hud_height - CHAR_HEIGHT + 1;
+        step = -CHAR_HEIGHT;
+    } else {
+        step = CHAR_HEIGHT;
+    }
+
+    lines = scr_chathud_lines->integer;
+    if (lines > scr_chathead)
+        lines = scr_chathead;
+
+    time = scr_chathud_time->value * 1000;
+
+    for (i = 0; i < lines; i++) {
+        line = &scr_chatlines[(scr_chathead - i - 1) & CHAT_LINE_MASK];
+
+        if (time) {
+            alpha = SCR_FadeAlpha(line->time, time, 1000);
+            if (!alpha)
+                break;
+
+            R_SetAlpha(alpha * scr_alpha->value);
+            SCR_DrawString(x, y, flags, line->text);
+            R_SetAlpha(scr_alpha->value);
+        } else {
+            SCR_DrawString(x, y, flags, line->text);
+        }
+
+        y += step;
+    }
+}
+
+/*
+===============================================================================
+
 DEBUG STUFF
 
 ===============================================================================
@@ -1195,6 +1298,7 @@ static const cmdreg_t scr_cmds[] = {
     { "sky", SCR_Sky_f },
     { "draw", SCR_Draw_f, SCR_Draw_c },
     { "undraw", SCR_UnDraw_f, SCR_UnDraw_c },
+    { "clearchathud", SCR_ClearChatHUD_f },
     { NULL }
 };
 
@@ -1222,6 +1326,12 @@ void SCR_Init(void)
     scr_scale = Cvar_Get("scr_scale", "1", 0);
     scr_crosshair = Cvar_Get("crosshair", "0", CVAR_ARCHIVE);
     scr_crosshair->changed = scr_crosshair_changed;
+
+    scr_chathud = Cvar_Get("scr_chathud", "0", 0);
+    scr_chathud_lines = Cvar_Get("scr_chathud_lines", "4", 0);
+    scr_chathud_time = Cvar_Get("scr_chathud_time", "0", 0);
+    scr_chathud_x = Cvar_Get("scr_chathud_x", "8", 0);
+    scr_chathud_y = Cvar_Get("scr_chathud_y", "-64", 0);
 
     ch_health = Cvar_Get("ch_health", "0", 0);
     ch_health->changed = scr_crosshair_changed;
@@ -1306,9 +1416,6 @@ void SCR_EndLoadingPlaque(void)
     }
     cls.disable_screen = 0;
     Con_ClearNotify_f();
-#if USE_CHATHUD
-    SCR_ClearChatHUD_f();
-#endif
 }
 
 // Clear any parts of the tiled background that were drawn on last frame
@@ -1890,6 +1997,8 @@ static void SCR_Draw2D(void)
     SCR_DrawNet();
 
     SCR_DrawObjects();
+
+    SCR_DrawChatHUD();
 
     SCR_DrawTurtle();
 

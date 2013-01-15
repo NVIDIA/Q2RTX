@@ -972,9 +972,7 @@ static void CL_ParsePrint(void)
 
     Con_SkipNotify(qfalse);
 
-#if USE_CHATHUD
     SCR_AddToChatHUD(s);
-#endif
 
     // silence MVD spectator chat
     if (cl.serverstate == ss_broadcast && !strncmp(s, "[MVD] ", 6))
