@@ -318,13 +318,15 @@ static void parse_hello(void)
     int protocol;
 
     if (cls.gtv.state >= ca_precached) {
-        return drop_client("duplicated hello message");
+        drop_client("duplicated hello message");
+        return;
     }
 
     protocol = MSG_ReadWord();
     if (protocol != GTV_PROTOCOL_VERSION) {
         write_message(GTS_BADREQUEST);
-        return drop_client("bad protocol version");
+        drop_client("bad protocol version");
+        return;
     }
 
     MSG_ReadLong();
@@ -336,7 +338,8 @@ static void parse_hello(void)
     // authorize access
     if (!NET_IsLanAddress(&cls.gtv.stream.address)) {
         write_message(GTS_NOACCESS);
-        return drop_client("not authorized");
+        drop_client("not authorized");
+        return;
     }
 
     cls.gtv.state = ca_precached;
@@ -363,7 +366,8 @@ static void parse_ping(void)
 static void parse_stream_start(void)
 {
     if (cls.gtv.state != ca_precached) {
-        return drop_client("unexpected stream start message");
+        drop_client("unexpected stream start message");
+        return;
     }
 
     // skip maxbuf
@@ -389,7 +393,8 @@ static void parse_stream_start(void)
 static void parse_stream_stop(void)
 {
     if (cls.gtv.state != ca_active) {
-        return drop_client("unexpected stream stop message");
+        drop_client("unexpected stream stop message");
+        return;
     }
 
     cls.gtv.state = ca_precached;

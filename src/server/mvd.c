@@ -1019,7 +1019,8 @@ void SV_MvdEndFrame(void)
 
     // if reliable message overflowed, kick all clients
     if (mvd.message.overflowed) {
-        return mvd_error("reliable message overflowed");
+        mvd_error("reliable message overflowed");
+        return;
     }
 
     if (mvd.datagram.overflowed) {
@@ -1033,7 +1034,8 @@ void SV_MvdEndFrame(void)
     // if reliable message and frame update don't fit, kick all clients
     if (mvd.message.cursize + msg_write.cursize >= MAX_MSGLEN) {
         SZ_Clear(&msg_write);
-        return mvd_error("frame overflowed");
+        mvd_error("frame overflowed");
+        return;
     }
 
     // check if unreliable datagram fits
