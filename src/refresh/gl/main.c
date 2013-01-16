@@ -825,6 +825,11 @@ static qboolean GL_SetupConfig(void)
         gl_config.version_minor = 0;
     }
 
+    if (gl_config.version_major < 1) {
+        Com_EPrintf("OpenGL returned invalid version string\n");
+        return qfalse;
+    }
+
     // OpenGL 1.0 doesn't have vertex arrays
     if (gl_config.version_major == 1 && gl_config.version_minor == 0) {
         Com_EPrintf("OpenGL version 1.1 or greater required\n");
