@@ -1453,10 +1453,12 @@ void ClientDisconnect(edict_t *ent)
     gi.bprintf(PRINT_HIGH, "%s disconnected\n", ent->client->pers.netname);
 
     // send effect
-    gi.WriteByte(svc_muzzleflash);
-    gi.WriteShort(ent - g_edicts);
-    gi.WriteByte(MZ_LOGOUT);
-    gi.multicast(ent->s.origin, MULTICAST_PVS);
+    if (ent->inuse) {
+        gi.WriteByte(svc_muzzleflash);
+        gi.WriteShort(ent - g_edicts);
+        gi.WriteByte(MZ_LOGOUT);
+        gi.multicast(ent->s.origin, MULTICAST_PVS);
+    }
 
     gi.unlinkentity(ent);
     ent->s.modelindex = 0;

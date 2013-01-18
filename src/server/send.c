@@ -261,6 +261,10 @@ void SV_Multicast(vec3_t origin, multicast_t to)
     int         flags;
     vec3_t      org;
 
+    if (!sv.cm.cache) {
+        Com_Error(ERR_DROP, "%s: no map loaded", __func__);
+    }
+
     flags = 0;
 
     switch (to) {
