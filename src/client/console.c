@@ -763,7 +763,7 @@ static void Con_DrawSolidConsole(void)
         vislines = con.vidHeight;
 
 // setup transparency
-    if (cls.state == ca_active &&
+    if (cls.state >= ca_active &&
         con_alpha->value &&
         (cls.key_dest & KEY_MENU) == 0) {
         alpha = 0.5f + 0.5f * (con.currentHeight / con_height->value);
@@ -777,7 +777,7 @@ static void Con_DrawSolidConsole(void)
     R_SetClipRect(DRAW_CLIP_TOP, &clip);
 
 // draw the background
-    if (cls.state != ca_active || (cls.key_dest & KEY_MENU) || con_alpha->value) {
+    if (cls.state < ca_active || (cls.key_dest & KEY_MENU) || con_alpha->value) {
         R_DrawStretchPic(0, vislines - con.vidHeight,
                          con.vidWidth, con.vidHeight, con.backImage);
     }

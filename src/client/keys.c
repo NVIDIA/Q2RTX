@@ -687,7 +687,7 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
             UI_Keydown(key);
         } else if (cls.key_dest & KEY_MESSAGE) {
             Key_Message(key);
-        } else if (cls.state == ca_active) {
+        } else if (cls.state >= ca_active) {
             UI_OpenMenu(UIMENU_GAME);
         } else {
             UI_OpenMenu(UIMENU_MAIN);
@@ -708,6 +708,11 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
     // hack for demo freelook in windowed mode
     if (cls.key_dest == KEY_GAME && cls.demo.playback && key == K_SHIFT && keydown[key] <= 1) {
         IN_Activate();
+    }
+
+    // skip the rest of the cinematic
+    if (cls.key_dest == KEY_GAME && cls.state == ca_cinematic && down) {
+        SCR_FinishCinematic();
     }
 
 //

@@ -36,6 +36,8 @@ static struct {
     int         loading_width, loading_height;
     qboolean    draw_loading;
 
+    qhandle_t   cinematic_pic;
+
     qhandle_t   sb_pics[2][STAT_PICS];
     qhandle_t   inven_pic;
     qhandle_t   field_pic;
@@ -1283,6 +1285,10 @@ void SCR_RegisterMedia(void)
     scr.net_pic = R_RegisterPic("net");
     scr.font_pic = R_RegisterFont(scr_font->string);
 
+    // reload cinematic picture
+    if (scr.cinematic_pic)
+        scr.cinematic_pic = R_RegisterPic2(cl.mapname);
+
     scr_crosshair_changed(scr_crosshair);
 }
 
@@ -1375,6 +1381,35 @@ void SCR_Shutdown(void)
 
 //=============================================================================
 
+void SCR_FinishCinematic(void)
+{
+    // tell the server to advance to the next map / cinematic
+    CL_ClientCommand(va("nextserver %i\n", cl.servercount));
+}
+
+void SCR_PlayCinematic(const char *name)
+{
+    // only static pictures are supported
+    if (COM_CompareExtension(name, ".pcx")) {
+        SCR_FinishCinematic();
+        return;
+    }
+
+    scr.cinematic_pic = R_RegisterPic2(name);
+    if (!scr.cinematic_pic) {
+        SCR_FinishCinematic();
+        return;
+    }
+
+    // save picture name for reloading
+    Q_strlcpy(cl.mapname, name, sizeof(cl.mapname));
+
+    cls.state = ca_cinematic;
+
+    SCR_EndLoadingPlaque();     // get rid of loading plaque
+    Con_Close(qfalse);          // get rid of connection screen
+}
+
 /*
 ================
 SCR_BeginLoadingPlaque
@@ -1385,14 +1420,17 @@ void SCR_BeginLoadingPlaque(void)
     if (!cls.state) {
         return;
     }
+
     if (cls.disable_screen) {
         return;
     }
+
 #ifdef _DEBUG
     if (developer->integer) {
         return;
     }
 #endif
+
     // if at console or menu, don't bring up the plaque
     if (cls.key_dest & (KEY_CONSOLE | KEY_MENU)) {
         return;
@@ -2028,6 +2066,11 @@ static void SCR_DrawActive(void)
     // draw black background if not active
     if (cls.state < ca_active) {
         R_DrawFill8(0, 0, r_config.width, r_config.height, 0);
+        return;
+    }
+
+    if (cls.state == ca_cinematic) {
+        R_DrawStretchPic(0, 0, r_config.width, r_config.height, scr.cinematic_pic);
         return;
     }
 

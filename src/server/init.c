@@ -140,6 +140,7 @@ void SV_SpawnServer(cm_t *cm, const char *server, const char *spawnpoint)
 {
     int         i;
     client_t    *client;
+    char        *entitystring;
 
     SCR_BeginLoadingPlaque();           // for local system
 
@@ -192,15 +193,23 @@ void SV_SpawnServer(cm_t *cm, const char *server, const char *spawnpoint)
     resolve_masters();
 #endif
 
-    override_entity_string(server);
+    if (cm->cache) {
+        override_entity_string(server);
 
-    sv.cm = *cm;
-    sprintf(sv.configstrings[CS_MAPCHECKSUM], "%d", (int)cm->cache->checksum);
+        sv.cm = *cm;
+        sprintf(sv.configstrings[CS_MAPCHECKSUM], "%d", (int)cm->cache->checksum);
 
-    // set inline model names
-    Q_concat(sv.configstrings[CS_MODELS + 1], MAX_QPATH, "maps/", server, ".bsp", NULL);
-    for (i = 1; i < cm->cache->nummodels; i++) {
-        sprintf(sv.configstrings[CS_MODELS + 1 + i], "*%d", i);
+        // set inline model names
+        Q_concat(sv.configstrings[CS_MODELS + 1], MAX_QPATH, "maps/", server, ".bsp", NULL);
+        for (i = 1; i < cm->cache->nummodels; i++) {
+            sprintf(sv.configstrings[CS_MODELS + 1 + i], "*%d", i);
+        }
+
+        entitystring = sv.entitystring ? sv.entitystring : cm->cache->entitystring;
+    } else {
+        // no real map
+        strcpy(sv.configstrings[CS_MAPCHECKSUM], "0");
+        entitystring = "";
     }
 
     //
@@ -220,8 +229,7 @@ void SV_SpawnServer(cm_t *cm, const char *server, const char *spawnpoint)
     X86_SINGLE_FPCW;
 
     // load and spawn all other entities
-    ge->SpawnEntities(sv.name, sv.entitystring ?
-                      sv.entitystring : cm->cache->entitystring, spawnpoint);
+    ge->SpawnEntities(sv.name, entitystring, spawnpoint);
 
     // run two frames to allow everything to settle
     ge->RunFrame(); sv.framenum++;
@@ -233,7 +241,7 @@ void SV_SpawnServer(cm_t *cm, const char *server, const char *spawnpoint)
     sprintf(sv.configstrings[CS_MAXCLIENTS], "%d", sv_maxclients->integer);
 
     // all precaches are complete
-    sv.state = ss_game;
+    sv.state = cm->cache ? ss_game : ss_pic;
 
     // respawn dummy MVD client, set base states, etc
     SV_MvdMapChanged();
@@ -242,7 +250,7 @@ void SV_SpawnServer(cm_t *cm, const char *server, const char *spawnpoint)
     SV_InfoSet("mapname", sv.name);
     SV_InfoSet("port", net_port->string);
 
-    Cvar_SetInteger(sv_running, ss_game, FROM_CODE);
+    Cvar_SetInteger(sv_running, sv.state, FROM_CODE);
     Cvar_Set("sv_paused", "0");
     Cvar_Set("timedemo", "0");
 

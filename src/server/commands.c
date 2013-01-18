@@ -296,21 +296,32 @@ static void SV_Map(int argnum, qboolean restart)
         spawnpoint = mapcmd + len;
     }
 
+    memset(&cm, 0, sizeof(cm));
+
     // now expand and try to load the map
-    len = Q_concat(expanded, sizeof(expanded), "maps/", s, ".bsp", NULL);
-    if (len >= sizeof(expanded)) {
-        ret = Q_ERR_NAMETOOLONG;
+    if (!COM_CompareExtension(s, ".pcx")) {
+        len = Q_concat(expanded, sizeof(expanded), "pics/", s, NULL);
+        if (len >= sizeof(expanded)) {
+            ret = Q_ERR_NAMETOOLONG;
+        } else {
+            ret = FS_LoadFile(expanded, NULL);
+        }
     } else {
-        ret = CM_LoadMap(&cm, expanded);
+        len = Q_concat(expanded, sizeof(expanded), "maps/", s, ".bsp", NULL);
+        if (len >= sizeof(expanded)) {
+            ret = Q_ERR_NAMETOOLONG;
+        } else {
+            ret = CM_LoadMap(&cm, expanded);
+        }
     }
 
-    if (ret) {
+    if (ret < 0) {
         Com_Printf("Couldn't load %s: %s\n", expanded, Q_ErrorString(ret));
         return;
     }
 
     // any error will drop from this point
-    if (sv.state != ss_game || restart) {
+    if ((sv.state != ss_game && sv.state != ss_pic) || restart) {
         SV_InitGame(MVD_SPAWN_DISABLED);    // the game is just starting
     }
 
@@ -378,7 +389,7 @@ static int should_really_restart(void)
 {
     static qboolean warned;
 
-    if (sv.state != ss_game)
+    if (sv.state != ss_game && sv.state != ss_pic)
         return 1;   // the game is just starting
 
 #if !USE_CLIENT

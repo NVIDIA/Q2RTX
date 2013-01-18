@@ -318,7 +318,7 @@ qboolean CL_ForwardToServer(void)
     char    *cmd;
 
     cmd = Cmd_Argv(0);
-    if (cls.state < ca_active || *cmd == '-' || *cmd == '+') {
+    if (cls.state != ca_active || *cmd == '-' || *cmd == '+') {
         return qfalse;
     }
 
@@ -2372,7 +2372,7 @@ void CL_RestartFilesystem(qboolean total)
 
     if (cls_state == ca_disconnected) {
         UI_OpenMenu(UIMENU_DEFAULT);
-    } else if (cls_state >= ca_loading) {
+    } else if (cls_state >= ca_loading && cls_state <= ca_active) {
         CL_LoadState(LOAD_MAP);
         CL_PrepRefresh();
         CL_LoadState(LOAD_SOUNDS);
@@ -2422,7 +2422,7 @@ void CL_RestartRefresh(qboolean total)
 
     if (cls_state == ca_disconnected) {
         UI_OpenMenu(UIMENU_DEFAULT);
-    } else if (cls_state >= ca_loading) {
+    } else if (cls_state >= ca_loading && cls_state <= ca_active) {
         CL_LoadState(LOAD_MAP);
         CL_PrepRefresh();
         CL_LoadState(LOAD_FINISH);
@@ -3036,7 +3036,7 @@ void CL_UpdateFrameTimes(void)
         ref_msec = phys_msec = 0;
         main_msec = fps_to_msec(10);
         sync_mode = SYNC_SLEEP_10;
-    } else if (cls.active == ACT_RESTORED || cls.state < ca_active) {
+    } else if (cls.active == ACT_RESTORED || cls.state != ca_active) {
         // run at 60 fps if not active
         ref_msec = phys_msec = 0;
         if (cl_async->integer > 1) {

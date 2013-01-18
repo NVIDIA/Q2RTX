@@ -307,7 +307,8 @@ typedef enum {
     ca_connected,       // netchan_t established, waiting for svc_serverdata
     ca_loading,         // loading level data
     ca_precached,       // loaded level data, waiting for svc_frame
-    ca_active           // game views should be displayed
+    ca_active,          // game views should be displayed
+    ca_cinematic        // running a cinematic
 } connstate_t;
 
 #define FOR_EACH_DLQ(q) \
@@ -909,6 +910,8 @@ void    SCR_UpdateScreen(void);
 void    SCR_SizeUp(void);
 void    SCR_SizeDown(void);
 void    SCR_CenterPrint(const char *str);
+void    SCR_FinishCinematic(void);
+void    SCR_PlayCinematic(const char *name);
 void    SCR_BeginLoadingPlaque(void);
 void    SCR_EndLoadingPlaque(void);
 void    SCR_DebugGraph(float value, int color);

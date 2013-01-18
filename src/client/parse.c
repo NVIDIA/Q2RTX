@@ -622,8 +622,7 @@ static void CL_ParseServerData(void)
     }
 
     if (cl.clientNum == -1) {
-        // tell the server to advance to the next map / cinematic
-        CL_ClientCommand(va("nextserver %i\n", cl.servercount));
+        SCR_PlayCinematic(levelname);
     } else {
         // seperate the printfs so the server message can have a color
         Con_Printf(

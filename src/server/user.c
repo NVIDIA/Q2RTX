@@ -408,7 +408,10 @@ void SV_New_f(void)
     MSG_WriteLong(sv_client->spawncount);
     MSG_WriteByte(0);   // no attract loop
     MSG_WriteString(sv_client->gamedir);
-    MSG_WriteShort(sv_client->slot);
+    if (sv.state == ss_pic)
+        MSG_WriteShort(-1);
+    else
+        MSG_WriteShort(sv_client->slot);
     MSG_WriteString(&sv_client->configstrings[CS_NAME * MAX_QPATH]);
 
     // send protocol specific stuff
@@ -457,6 +460,9 @@ void SV_New_f(void)
     sv_client->state = cs_primed;
 
     memset(&sv_client->lastcmd, 0, sizeof(sv_client->lastcmd));
+
+    if (sv.state == ss_pic)
+        return;
 
 #if USE_ZLIB
     if (sv_client->has_zlib) {
@@ -775,6 +781,26 @@ static void SV_StopDownload_f(void)
 
 //============================================================================
 
+// special hack for end game screen in coop mode
+static void SV_NextServer_f(void)
+{
+    if (sv.state != ss_pic)
+        return;     // can't nextserver while playing a normal game
+
+    if (Q_stricmp(sv.name, "victory.pcx"))
+        return;
+
+    if (Cvar_VariableInteger("deathmatch"))
+        return;
+
+    sv.name[0] = 0; // make sure another doesn't sneak in
+
+    if (Cvar_VariableInteger("coop"))
+        Cbuf_AddText(&cmd_buffer, "gamemap \"*base1\"\n");
+    else
+        Cbuf_AddText(&cmd_buffer, "killserver\n");
+}
+
 // the client is going to disconnect, so remove the connection immediately
 static void SV_Disconnect_f(void)
 {
@@ -909,7 +935,7 @@ static const ucmd_t ucmds[] = {
     { "begin", SV_Begin_f },
     { "baselines", NULL },
     { "configstrings", NULL },
-    { "nextserver", NULL },
+    { "nextserver", SV_NextServer_f },
     { "disconnect", SV_Disconnect_f },
 
     // issued by hand at client consoles
@@ -985,15 +1011,18 @@ static void SV_ExecuteUserCommand(const char *s)
         }
         return;
     }
-    if (sv.state < ss_game) {
+
+    if (sv.state == ss_pic) {
         return;
     }
+
     LIST_FOR_EACH(filtercmd_t, filter, &sv_filterlist, entry) {
         if (!Q_stricmp(filter->string, c)) {
             handle_filtercmd(filter);
             return;
         }
     }
+
     ge->ClientCommand(sv_player);
 }
 

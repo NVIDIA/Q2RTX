@@ -106,7 +106,7 @@ static inline grab_t get_grab_mode(void)
         return IN_HIDE;
     if (sv_paused->integer)
         return IN_HIDE;
-    if (cls.state < ca_active)
+    if (cls.state != ca_active)
         return IN_HIDE;
 
     // don't grab if mouse input is not needed
@@ -844,7 +844,7 @@ void CL_FinalizeCmd(void)
         cl_cmdbuf.waitCount--;
     }
 
-    if (cls.state < ca_active) {
+    if (cls.state != ca_active) {
         return; // not talking to a server
     }
 
@@ -1220,7 +1220,7 @@ void CL_SendCmd(void)
         return;
     }
 
-    if (cls.state < ca_active || sv_paused->integer) {
+    if (cls.state != ca_active || sv_paused->integer) {
         // send a userinfo update if needed
         CL_SendUserinfo();
 
