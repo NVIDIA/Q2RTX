@@ -355,7 +355,9 @@ void Sys_ListFiles_r(const char  *path,
 
 #ifdef _DIRENT_HAVE_D_TYPE
         // try to avoid stat() if possible
-        if (!(flags & FS_SEARCH_EXTRAINFO)) {
+        if (!(flags & FS_SEARCH_EXTRAINFO)
+            && ent->d_type != DT_UNKNOWN
+            && ent->d_type != DT_LNK) {
             st.st_mode = DTTOIF(ent->d_type);
         }
 #endif
