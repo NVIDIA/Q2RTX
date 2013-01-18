@@ -36,12 +36,6 @@ void VID_SDL_SurfaceChanged(void)
 #endif
 }
 
-#ifdef __OpenBSD__
-#define LIBGL   "libGL.so"
-#else
-#define LIBGL   "libGL.so.1"
-#endif
-
 qboolean VID_Init(void)
 {
     cvar_t *gl_driver;

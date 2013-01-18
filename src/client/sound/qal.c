@@ -89,14 +89,6 @@ void QAL_Shutdown(void)
         al_device->flags &= ~CVAR_SOUND;
 }
 
-#if (defined _WIN32)
-#define LIBAL   "openal32"
-#elif (defined __OpenBSD__)
-#define LIBAL   "libopenal.so"
-#else
-#define LIBAL   "libopenal.so.1"
-#endif
-
 qboolean QAL_Init(void)
 {
     al_driver = Cvar_Get("al_driver", LIBAL, 0);
