@@ -1256,6 +1256,27 @@ screenshottga [filename]::
     the screenshot into ‘screenshots/_filename_.tga’. Otherwise, file name is
     picked up automatically.
 
+
+Locations
+~~~~~~~~~
+
+loc_add <name ...>::
+    Adds new location with the specified name at current player position.
+
+loc_delete::
+    Deletes location closest to player position.
+
+loc_update <name ...>::
+    Changes name of location closest to player position.
+
+loc_write::
+    Saves current location list into ‘locs/<mapname>.loc’ file.
+
+NOTE: Edit locations on a local server and don't forget to execute ‘loc_write’
+command once you are finished. Otherwise all changes to location list will be
+lost on map change or disconnect.
+
+
 Miscellaneous
 ~~~~~~~~~~~~~
 

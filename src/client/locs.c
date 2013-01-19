@@ -42,15 +42,11 @@ LOC_Alloc
 static location_t *LOC_Alloc(const char *name)
 {
     location_t *loc;
-    char buffer[MAX_QPATH];
     size_t len;
 
-    Q_strlcpy(buffer, name, sizeof(buffer));
-    len = COM_strclr(buffer);
-
+    len = strlen(name);
     loc = Z_Malloc(sizeof(*loc) + len);
-    memcpy(loc->name, buffer, len + 1);
-    List_Append(&cl_locations, &loc->entry);
+    memcpy(loc->name, name, len + 1);
 
     return loc;
 }
@@ -92,14 +88,17 @@ void LOC_LoadLocations(void)
         line++;
 
         argc = Cmd_Argc();
-        if (argc != 0 && argc < 4) {
-            Com_WPrintf("Line %i is incomplete in %s\n", line, path);
-        } else {
-            loc = LOC_Alloc(Cmd_RawArgsFrom(3));
-            loc->origin[0] = atof(Cmd_Argv(0)) * 0.125f;
-            loc->origin[1] = atof(Cmd_Argv(1)) * 0.125f;
-            loc->origin[2] = atof(Cmd_Argv(2)) * 0.125f;
-            count++;
+        if (argc) {
+            if (argc < 4) {
+                Com_WPrintf("Line %d is incomplete in %s\n", line, path);
+            } else {
+                loc = LOC_Alloc(Cmd_RawArgsFrom(3));
+                loc->origin[0] = atof(Cmd_Argv(0)) * 0.125f;
+                loc->origin[1] = atof(Cmd_Argv(1)) * 0.125f;
+                loc->origin[2] = atof(Cmd_Argv(2)) * 0.125f;
+                List_Append(&cl_locations, &loc->entry);
+                count++;
+            }
         }
 
         if (!p) {
@@ -109,7 +108,8 @@ void LOC_LoadLocations(void)
         s = p + 1;
     }
 
-    Com_DPrintf("Loaded %i locations from %s\n", count, path);
+    Com_DPrintf("Loaded %d location%s from %s\n",
+                count, count == 1 ? "" : "s", path);
 
     FS_FreeFile(buffer);
 }
@@ -126,6 +126,7 @@ void LOC_FreeLocations(void)
     LIST_FOR_EACH_SAFE(location_t, loc, next, &cl_locations, entry) {
         Z_Free(loc);
     }
+
     List_Init(&cl_locations);
 }
 
@@ -209,9 +210,7 @@ void LOC_AddLocationsToScene(void)
         }
 
         V_AddEntity(&ent);
-
     }
-
 }
 
 /*
@@ -233,6 +232,7 @@ static size_t LOC_Here_m(char *buffer, size_t size)
     if (loc) {
         ret = Q_strlcpy(buffer, loc->name, size);
     }
+
     return ret;
 }
 
@@ -261,7 +261,111 @@ static size_t LOC_There_m(char *buffer, size_t size)
     if (loc) {
         ret = Q_strlcpy(buffer, loc->name, size);
     }
+
     return ret;
+}
+
+static void LOC_Add_f(void)
+{
+    location_t *loc;
+
+    if (Cmd_Argc() < 2) {
+        Com_Printf("Usage: %s <name>\n", Cmd_Argv(0));
+        return;
+    }
+
+    if (cls.state != ca_active) {
+        Com_Printf("Must be in a level.\n");
+        return;
+    }
+
+    loc = LOC_Alloc(Cmd_Args());
+    VectorCopy(cl.playerEntityOrigin, loc->origin);
+    List_Append(&cl_locations, &loc->entry);
+}
+
+static void LOC_Delete_f(void)
+{
+    location_t *loc;
+
+    if (cls.state != ca_active) {
+        Com_Printf("Must be in a level.\n");
+        return;
+    }
+
+    loc = LOC_FindClosest(cl.playerEntityOrigin);
+    if (!loc) {
+        Com_Printf("No closest location.\n");
+        return;
+    }
+
+    List_Remove(&loc->entry);
+    Z_Free(loc);
+}
+
+static void LOC_Update_f(void)
+{
+    location_t *oldloc, *newloc;
+
+    if (Cmd_Argc() < 2) {
+        Com_Printf("Usage: %s <name>\n", Cmd_Argv(0));
+        return;
+    }
+
+    if (cls.state != ca_active) {
+        Com_Printf("Must be in a level.\n");
+        return;
+    }
+
+    oldloc = LOC_FindClosest(cl.playerEntityOrigin);
+    if (!oldloc) {
+        Com_Printf("No closest location.\n");
+        return;
+    }
+
+    newloc = LOC_Alloc(Cmd_Args());
+    VectorCopy(oldloc->origin, newloc->origin);
+    List_Link(oldloc->entry.prev, oldloc->entry.next, &newloc->entry);
+    Z_Free(oldloc);
+}
+
+static void LOC_Write_f(void)
+{
+    char buffer[MAX_OSPATH];
+    location_t *loc;
+    qhandle_t f;
+    int count;
+
+    if (cls.state != ca_active) {
+        Com_Printf("Must be in a level.\n");
+        return;
+    }
+
+    if (LIST_EMPTY(&cl_locations)) {
+        Com_Printf("No locations to write.\n");
+        return;
+    }
+
+    f = FS_EasyOpenFile(buffer, sizeof(buffer), FS_MODE_WRITE | FS_FLAG_TEXT,
+                        "locs/", cl.mapname, ".loc");
+    if (!f) {
+        return;
+    }
+
+    count = 0;
+    LIST_FOR_EACH(location_t, loc, &cl_locations, entry) {
+        FS_FPrintf(f, "%d %d %d %s\n",
+                   (int)(loc->origin[0] * 8),
+                   (int)(loc->origin[1] * 8),
+                   (int)(loc->origin[2] * 8),
+                   loc->name);
+        count++;
+    }
+
+    Com_Printf("Wrote %d location%s to %s\n",
+               count, count == 1 ? "" : "s", buffer);
+
+    FS_FCloseFile(f);
 }
 
 /*
@@ -271,12 +375,16 @@ LOC_Init
 */
 void LOC_Init(void)
 {
-//  loc_enable = Cvar_Get("loc_enable", "0", 0);
     loc_trace = Cvar_Get("loc_trace", "0", 0);
     loc_draw = Cvar_Get("loc_draw", "0", 0);
     loc_dist = Cvar_Get("loc_dist", "500", 0);
 
     Cmd_AddMacro("loc_here", LOC_Here_m);
     Cmd_AddMacro("loc_there", LOC_There_m);
+
+    Cmd_AddCommand("loc_add", LOC_Add_f);
+    Cmd_AddCommand("loc_delete", LOC_Delete_f);
+    Cmd_AddCommand("loc_update", LOC_Update_f);
+    Cmd_AddCommand("loc_write", LOC_Write_f);
 }
 
