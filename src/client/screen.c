@@ -36,8 +36,6 @@ static struct {
     int         loading_width, loading_height;
     qboolean    draw_loading;
 
-    qhandle_t   cinematic_pic;
-
     qhandle_t   sb_pics[2][STAT_PICS];
     qhandle_t   inven_pic;
     qhandle_t   field_pic;
@@ -1285,10 +1283,6 @@ void SCR_RegisterMedia(void)
     scr.net_pic = R_RegisterPic("net");
     scr.font_pic = R_RegisterFont(scr_font->string);
 
-    // reload cinematic picture
-    if (scr.cinematic_pic)
-        scr.cinematic_pic = R_RegisterPic2(cl.mapname);
-
     scr_crosshair_changed(scr_crosshair);
 }
 
@@ -1395,8 +1389,8 @@ void SCR_PlayCinematic(const char *name)
         return;
     }
 
-    scr.cinematic_pic = R_RegisterPic2(name);
-    if (!scr.cinematic_pic) {
+    cl.image_precache[0] = R_RegisterPic2(name);
+    if (!cl.image_precache[0]) {
         SCR_FinishCinematic();
         return;
     }
@@ -2070,7 +2064,7 @@ static void SCR_DrawActive(void)
     }
 
     if (cls.state == ca_cinematic) {
-        R_DrawStretchPic(0, 0, r_config.width, r_config.height, scr.cinematic_pic);
+        R_DrawStretchPic(0, 0, r_config.width, r_config.height, cl.image_precache[0]);
         return;
     }
 

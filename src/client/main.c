@@ -2378,6 +2378,8 @@ void CL_RestartFilesystem(qboolean total)
         CL_LoadState(LOAD_SOUNDS);
         CL_RegisterSounds();
         CL_LoadState(LOAD_FINISH);
+    } else if (cls_state == ca_cinematic) {
+        cl.image_precache[0] = R_RegisterPic2(cl.mapname);
     }
 
     CL_LoadDownloadIgnores();
@@ -2426,6 +2428,8 @@ void CL_RestartRefresh(qboolean total)
         CL_LoadState(LOAD_MAP);
         CL_PrepRefresh();
         CL_LoadState(LOAD_FINISH);
+    } else if (cls_state == ca_cinematic) {
+        cl.image_precache[0] = R_RegisterPic2(cl.mapname);
     }
 
     // switch back to original state
