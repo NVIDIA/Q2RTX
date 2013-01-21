@@ -155,6 +155,8 @@ typedef struct {
     int         framenum;
     unsigned    frameresidual;
 
+    char        mapcmd[MAX_QPATH];          // ie: *intro.cin+base
+
     char        name[MAX_QPATH];            // map name, or cinematic name
     cm_t        cm;
     char        *entitystring;
@@ -427,6 +429,16 @@ typedef struct {
     char name[1];
 } master_t;
 
+typedef struct {
+    char            buffer[MAX_QPATH];
+    char            *server;
+    char            *spawnpoint;
+    server_state_t  state;
+    int             loadgame;
+    qboolean        endofunit;
+    cm_t            cm;
+} mapcmd_t;
+
 #define FOR_EACH_MASTER(m) \
     LIST_FOR_EACH(master_t, m, &sv_masterlist, entry)
 #define FOR_EACH_MASTER_SAFE(m, n) \
@@ -550,7 +562,8 @@ void SV_zfree(voidpf opaque, voidpf address);
 // sv_init.c
 //
 void SV_ClientReset(client_t *client);
-void SV_SpawnServer(cm_t *cm, const char *server, const char *spawnpoint);
+void SV_SpawnServer(mapcmd_t *cmd);
+qboolean SV_ParseMapCmd(mapcmd_t *cmd);
 void SV_InitGame(unsigned mvd_spawn);
 
 //
@@ -708,12 +721,19 @@ void SV_InitEdict(edict_t *e);
 
 void PF_Pmove(pmove_t *pm);
 
-#if USE_CLIENT
 //
 // sv_save.c
 //
-void SV_Savegame_f(void);
-void SV_Loadgame_f(void);
+#if USE_CLIENT
+void SV_AutoSaveBegin(mapcmd_t *cmd);
+void SV_AutoSaveEnd(void);
+void SV_CheckForSavegame(mapcmd_t *cmd);
+void SV_RegisterSavegames(void);
+#else
+#define SV_AutoSaveBegin(cmd)       (void)0
+#define SV_AutoSaveEnd()            (void)0
+#define SV_CheckForSavegame(cmd)    (void)0
+#define SV_RegisterSavegames()      (void)0
 #endif
 
 //============================================================

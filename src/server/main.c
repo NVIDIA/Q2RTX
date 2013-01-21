@@ -1990,6 +1990,8 @@ void SV_Init(void)
 
     AC_Register();
 
+    SV_RegisterSavegames();
+
     Cvar_Get("protocol", va("%i", PROTOCOL_VERSION_DEFAULT), CVAR_SERVERINFO | CVAR_ROM);
 
     Cvar_Get("skill", "1", CVAR_LATCH);

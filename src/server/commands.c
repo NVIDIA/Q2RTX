@@ -257,75 +257,35 @@ another level:
     map tram.cin+jail_e3
 ======================
 */
-static void SV_Map(int argnum, qboolean restart)
+static void SV_Map(qboolean restart)
 {
-    char    mapcmd[MAX_QPATH];
-    char    expanded[MAX_QPATH];
-    char    *s, *ch, *spawnpoint;
-    cm_t    cm;
-    qerror_t ret;
-    size_t  len;
+    mapcmd_t    cmd;
+    size_t      len;
+
+    memset(&cmd, 0, sizeof(cmd));
 
     // save the mapcmd
-    len = Cmd_ArgvBuffer(argnum, mapcmd, sizeof(mapcmd));
-    if (len >= sizeof(mapcmd)) {
+    len = Cmd_ArgvBuffer(1, cmd.buffer, sizeof(cmd.buffer));
+    if (len >= sizeof(cmd.buffer)) {
         Com_Printf("Refusing to process oversize level string.\n");
         return;
     }
 
-    s = mapcmd;
-
-    // if there is a + in the map, set nextserver to the remainder
-    // we go directly to nextserver as we don't support cinematics
-    ch = strchr(s, '+');
-    if (ch) {
-        s = ch + 1;
-    }
-
-    // skip the end-of-unit flag if necessary
-    if (*s == '*') {
-        s++;
-    }
-
-    // if there is a $, use the remainder as a spawnpoint
-    ch = strchr(s, '$');
-    if (ch) {
-        *ch = 0;
-        spawnpoint = ch + 1;
-    } else {
-        spawnpoint = mapcmd + len;
-    }
-
-    memset(&cm, 0, sizeof(cm));
-
-    // now expand and try to load the map
-    if (!COM_CompareExtension(s, ".pcx")) {
-        len = Q_concat(expanded, sizeof(expanded), "pics/", s, NULL);
-        if (len >= sizeof(expanded)) {
-            ret = Q_ERR_NAMETOOLONG;
-        } else {
-            ret = FS_LoadFile(expanded, NULL);
-        }
-    } else {
-        len = Q_concat(expanded, sizeof(expanded), "maps/", s, ".bsp", NULL);
-        if (len >= sizeof(expanded)) {
-            ret = Q_ERR_NAMETOOLONG;
-        } else {
-            ret = CM_LoadMap(&cm, expanded);
-        }
-    }
-
-    if (ret < 0) {
-        Com_Printf("Couldn't load %s: %s\n", expanded, Q_ErrorString(ret));
+    if (!SV_ParseMapCmd(&cmd))
         return;
-    }
+
+    // wipe savegames
+    cmd.endofunit |= restart;
+
+    SV_AutoSaveBegin(&cmd);
 
     // any error will drop from this point
-    if ((sv.state != ss_game && sv.state != ss_pic) || restart) {
+    if ((sv.state != ss_game && sv.state != ss_pic) || restart)
         SV_InitGame(MVD_SPAWN_DISABLED);    // the game is just starting
-    }
 
-    SV_SpawnServer(&cm, s, spawnpoint);
+    SV_SpawnServer(&cmd);
+
+    SV_AutoSaveEnd();
 }
 
 /*
@@ -377,12 +337,12 @@ static void SV_GameMap_f(void)
         if (sv_recycle->integer > 1) {
             Com_Quit(NULL, ERR_RECONNECT);
         }
-        SV_Map(1, qtrue);
+        SV_Map(qtrue);
         return;
     }
 #endif
 
-    SV_Map(1, qfalse);
+    SV_Map(qfalse);
 }
 
 static int should_really_restart(void)
@@ -445,7 +405,7 @@ static void SV_Map_f(void)
     if (res < 0)
         return;
 
-    SV_Map(1, !!res);
+    SV_Map(!!res);
 }
 
 static void SV_Map_c(genctx_t *ctx, int argnum)
@@ -1556,10 +1516,6 @@ static const cmdreg_t c_server[] = {
     { "addfiltercmd", SV_AddFilterCmd_f, SV_AddFilterCmd_c },
     { "delfiltercmd", SV_DelFilterCmd_f, SV_DelFilterCmd_c },
     { "listfiltercmds", SV_ListFilterCmds_f },
-#if USE_CLIENT
-    { "savegame", SV_Savegame_f },
-    { "loadgame", SV_Loadgame_f },
-#endif
 #if USE_MVD_CLIENT || USE_MVD_SERVER
     { "mvdrecord", SV_Record_f, SV_Record_c },
     { "mvdstop", SV_Stop_f },
