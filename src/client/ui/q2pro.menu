@@ -40,6 +40,8 @@ begin <menuname>
    bind <name> <command>
    action <name> <command>
    bitmap <image> <command>
+   savegame <slot>
+   loadgame <slot>
    blank
 
    field [options] <name> <cvar>
@@ -209,9 +211,48 @@ begin singleplayer
     action medium "skill 1; deathmatch 0; coop 0; maxclients 1; newgame"
     action hard "skill 2; deathmatch 0; coop 0; maxclients 1; newgame"
     action nightmare "skill 3; deathmatch 0; coop 0; maxclients 1; newgame"
-    //blank
-    //action "load game" pushmenu loadgame
-    //action "save game" pushmenu savegame
+    blank
+    action "load game..." pushmenu loadgame
+    action "save game..." pushmenu savegame
+end
+
+begin loadgame
+    banner m_banner_load_game
+    loadgame save0
+    blank
+    loadgame save1
+    loadgame save2
+    loadgame save3
+    loadgame save4
+    loadgame save5
+    loadgame save6
+    loadgame save7
+    loadgame save8
+    loadgame save9
+    loadgame save10
+    loadgame save11
+    loadgame save12
+    loadgame save13
+    loadgame save14
+    loadgame save15
+end
+
+begin savegame
+    banner m_banner_save_game
+    savegame save1
+    savegame save2
+    savegame save3
+    savegame save4
+    savegame save5
+    savegame save6
+    savegame save7
+    savegame save8
+    savegame save10
+    savegame save11
+    savegame save12
+    savegame save13
+    savegame save14
+    savegame save15
 end
 
 begin main
@@ -229,6 +270,7 @@ begin game
     action "browse q2servers.com" pushmenu servers "+http://q2servers.com/?raw=2"
     action "browse address book" pushmenu servers "favorites://" "file:///servers.lst" "broadcast://"
     action "browse demos" pushmenu demos
+    action "single player" pushmenu singleplayer
     action "options" pushmenu options
     action "disconnect" disconnect
     action "quit" quit

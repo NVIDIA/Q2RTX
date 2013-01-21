@@ -17,6 +17,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 #include "ui.h"
+#include "server/server.h"
 
 /*
 ===================================================================
@@ -77,7 +78,13 @@ static void Action_Draw(menuAction_t *a)
         }
     }
 
+    if (a->generic.flags & QMF_GRAYED) {
+        R_SetColor(uis.color.disabled.u32);
+    }
     UI_DrawString(a->generic.x, a->generic.y, flags, a->generic.name);
+    if (a->generic.flags & QMF_GRAYED) {
+        R_ClearColor();
+    }
 }
 
 /*
@@ -1513,6 +1520,33 @@ static void Separator_Draw(menuSeparator_t *s)
 /*
 ===================================================================
 
+SAVEGAME CONTROL
+
+===================================================================
+*/
+
+static void Savegame_Push(menuAction_t *a)
+{
+    char *info;
+
+    Z_Free(a->generic.name);
+
+    info = SV_GetSaveInfo(a->cmd);
+    if (info) {
+        a->generic.name = info;
+        a->generic.flags &= ~QMF_GRAYED;
+    } else {
+        a->generic.name = Z_CopyString("<EMPTY>");
+        if (a->generic.type == MTYPE_LOADGAME)
+            a->generic.flags |= QMF_GRAYED;
+    }
+
+    UI_StringDimensions(&a->generic.rect, a->generic.uiFlags, a->generic.name);
+}
+
+/*
+===================================================================
+
 MISC
 
 ===================================================================
@@ -1610,6 +1644,8 @@ void Menu_Init(menuFrameWork_t *menu)
             SpinControl_Init(item);
             break;
         case MTYPE_ACTION:
+        case MTYPE_SAVEGAME:
+        case MTYPE_LOADGAME:
             Action_Init(item);
             break;
         case MTYPE_SEPARATOR:
@@ -1933,6 +1969,8 @@ void Menu_Draw(menuFrameWork_t *menu)
             SpinControl_Draw(item);
             break;
         case MTYPE_ACTION:
+        case MTYPE_SAVEGAME:
+        case MTYPE_LOADGAME:
             Action_Draw(item);
             break;
         case MTYPE_SEPARATOR:
@@ -1991,6 +2029,8 @@ menuSound_t Menu_SelectItem(menuFrameWork_t *s)
     case MTYPE_ACTION:
     case MTYPE_LIST:
     case MTYPE_BITMAP:
+    case MTYPE_SAVEGAME:
+    case MTYPE_LOADGAME:
         return Common_DoEnter(item);
     default:
         return QMS_NOTHANDLED;
@@ -2195,6 +2235,10 @@ qboolean Menu_Push(menuFrameWork_t *menu)
         case MTYPE_FIELD:
             Field_Push(item);
             break;
+        case MTYPE_SAVEGAME:
+        case MTYPE_LOADGAME:
+            Savegame_Push(item);
+            break;
         default:
             break;
         }
@@ -2249,6 +2293,8 @@ void Menu_Free(menuFrameWork_t *menu)
 
         switch (((menuCommon_t *)item)->type) {
         case MTYPE_ACTION:
+        case MTYPE_SAVEGAME:
+        case MTYPE_LOADGAME:
             Action_Free(item);
             break;
         case MTYPE_SLIDER:

@@ -50,7 +50,9 @@ typedef enum {
     MTYPE_TOGGLE,
     MTYPE_STATIC,
     MTYPE_KEYBIND,
-    MTYPE_BITMAP
+    MTYPE_BITMAP,
+    MTYPE_SAVEGAME,
+    MTYPE_LOADGAME
 } menuType_t;
 
 #define QMF_LEFT_JUSTIFY    0x00000001

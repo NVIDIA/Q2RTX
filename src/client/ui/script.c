@@ -21,10 +21,21 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 static menuSound_t Activate(menuCommon_t *self)
 {
-    if (self->type == MTYPE_ACTION) {
+    switch (self->type) {
+    case MTYPE_ACTION:
         Cbuf_AddText(&cmd_buffer, ((menuAction_t *)self)->cmd);
-    } else if (self->type == MTYPE_BITMAP) {
+        break;
+    case MTYPE_BITMAP:
         Cbuf_AddText(&cmd_buffer, ((menuBitmap_t *)self)->cmd);
+        break;
+    case MTYPE_SAVEGAME:
+        Cbuf_AddText(&cmd_buffer, va("savegame \"%s\"; forcemenuoff\n", ((menuAction_t *)self)->cmd));
+        break;
+    case MTYPE_LOADGAME:
+        Cbuf_AddText(&cmd_buffer, va("loadgame \"%s\"\n", ((menuAction_t *)self)->cmd));
+        break;
+    default:
+        break;
     }
 
     return QMS_NOTHANDLED;
@@ -209,6 +220,30 @@ static void Parse_Bind(menuFrameWork_t *menu)
     k->cmd = UI_CopyString(Cmd_ArgsFrom(2));
 
     Menu_AddItem(menu, k);
+}
+
+static void Parse_Savegame(menuFrameWork_t *menu, menuType_t type)
+{
+    menuAction_t *a;
+
+    if (Cmd_Argc() < 2) {
+        Com_Printf("Usage: %s <dir>\n", Cmd_Argv(0));
+        return;
+    }
+
+    CHECK_NITEMS
+
+    a = UI_Mallocz(sizeof(*a));
+    a->generic.type = type;
+    a->generic.name = Z_CopyString("<EMPTY>");
+    a->generic.uiFlags = UI_CENTER;
+    a->generic.activate = Activate;
+    a->cmd = UI_CopyString(Cmd_Argv(1));
+
+    if (type == MTYPE_LOADGAME)
+        a->generic.flags |= QMF_GRAYED;
+
+    Menu_AddItem(menu, a);
 }
 
 static void Parse_Toggle(menuFrameWork_t *menu)
@@ -457,6 +492,10 @@ static qboolean Parse_File(const char *path, int depth)
                     Parse_Bitmap(menu);
                 } else if (!strcmp(cmd, "bind")) {
                     Parse_Bind(menu);
+                } else if (!strcmp(cmd, "savegame")) {
+                    Parse_Savegame(menu, MTYPE_SAVEGAME);
+                } else if (!strcmp(cmd, "loadgame")) {
+                    Parse_Savegame(menu, MTYPE_LOADGAME);
                 } else if (!strcmp(cmd, "toggle")) {
                     Parse_Toggle(menu);
                 } else if (!strcmp(cmd, "field")) {
