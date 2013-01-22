@@ -327,9 +327,9 @@ static int read_server_file(void)
     MSG_ReadLong();
     MSG_ReadLong();
     if (MSG_ReadByte())
-        cmd.loadgame = 2;
+        cmd.loadgame = 2;   // autosave
     else
-        cmd.loadgame = 1;
+        cmd.loadgame = 1;   // regular savegame
     MSG_ReadString(NULL, 0);
 
     // read the mapcmd
@@ -526,12 +526,10 @@ void SV_CheckForSavegame(mapcmd_t *cmd)
     if (no_save_games())
         return;
 
-    // autosave starts the map from the beginning
-    if (cmd->loadgame == 2)
-        return;
-
     if (read_level_file()) {
-        if (cmd->loadgame)
+        // only warn when loading a regular savegame. autosave without level
+        // file is ok and simply starts the map from the beginning.
+        if (cmd->loadgame == 1)
             Com_EPrintf("Couldn't read level file.\n");
         return;
     }
