@@ -105,8 +105,9 @@ DYNAMIC BLOCKLIGHTS
 =============================================================================
 */
 
-// max 512 extents plus borders
-#define MAX_BLOCKLIGHTS (34*34)
+#define MAX_SURFACE_EXTENTS     2048
+#define MAX_LIGHTMAP_EXTENTS    ((MAX_SURFACE_EXTENTS >> 4) + 1)
+#define MAX_BLOCKLIGHTS         (MAX_LIGHTMAP_EXTENTS * MAX_LIGHTMAP_EXTENTS)
 
 static float blocklights[MAX_BLOCKLIGHTS * 3];
 
@@ -444,8 +445,8 @@ static qboolean LM_BuildSurface(mface_t *surf, vec_t *vbo)
     bsp_t *bsp;
 
     // validate extents
-    if (surf->extents[0] < 0 || surf->extents[0] > 512 ||
-        surf->extents[1] < 0 || surf->extents[1] > 512) {
+    if (surf->extents[0] < 0 || surf->extents[0] > MAX_SURFACE_EXTENTS ||
+        surf->extents[1] < 0 || surf->extents[1] > MAX_SURFACE_EXTENTS) {
         Com_EPrintf("%s: bad surface extents\n", __func__);
         return qfalse;
     }

@@ -38,7 +38,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define     MAX_MAP_BRUSHES     8192
 #define     MAX_MAP_ENTITIES    2048
 #define     MAX_MAP_ENTSTRING   0x40000
-#define     MAX_MAP_TEXINFO      8192
+#define     MAX_MAP_TEXINFO     8192
 
 #define     MAX_MAP_AREAS       256
 #define     MAX_MAP_AREAPORTALS 1024
@@ -54,7 +54,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define     MAX_MAP_PORTALS     65536
 #define     MAX_MAP_EDGES       128000
 #define     MAX_MAP_SURFEDGES   256000
-#define     MAX_MAP_LIGHTING    0x200000
+#define     MAX_MAP_LIGHTING    0x800000
 #define     MAX_MAP_VISIBILITY  0x100000
 
 // key / value pair sizes
