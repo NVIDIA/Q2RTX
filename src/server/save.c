@@ -551,7 +551,7 @@ void SV_CheckForSavegame(mapcmd_t *cmd)
 static void SV_Savegame_c(genctx_t *ctx, int argnum)
 {
     if (argnum == 1) {
-        FS_File_g("save", NULL, FS_SEARCH_DIRSONLY, ctx);
+        FS_File_g("save", NULL, FS_SEARCH_DIRSONLY | FS_TYPE_REAL | FS_PATH_GAME, ctx);
     }
 }
 
