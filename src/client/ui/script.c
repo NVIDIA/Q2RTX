@@ -29,10 +29,10 @@ static menuSound_t Activate(menuCommon_t *self)
         Cbuf_AddText(&cmd_buffer, ((menuBitmap_t *)self)->cmd);
         break;
     case MTYPE_SAVEGAME:
-        Cbuf_AddText(&cmd_buffer, va("savegame \"%s\"; forcemenuoff\n", ((menuAction_t *)self)->cmd));
+        Cbuf_AddText(&cmd_buffer, va("save \"%s\"; forcemenuoff\n", ((menuAction_t *)self)->cmd));
         break;
     case MTYPE_LOADGAME:
-        Cbuf_AddText(&cmd_buffer, va("loadgame \"%s\"\n", ((menuAction_t *)self)->cmd));
+        Cbuf_AddText(&cmd_buffer, va("load \"%s\"\n", ((menuAction_t *)self)->cmd));
         break;
     default:
         break;

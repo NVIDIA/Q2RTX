@@ -548,6 +548,13 @@ void SV_CheckForSavegame(mapcmd_t *cmd)
     }
 }
 
+static void SV_Savegame_c(genctx_t *ctx, int argnum)
+{
+    if (argnum == 1) {
+        FS_File_g("save", NULL, FS_SEARCH_DIRSONLY, ctx);
+    }
+}
+
 static void SV_Loadgame_f(void)
 {
     char *dir;
@@ -651,8 +658,13 @@ static void SV_Savegame_f(void)
     Com_Printf("Game saved.\n");
 }
 
+static const cmdreg_t c_savegames[] = {
+    { "save", SV_Savegame_f, SV_Savegame_c },
+    { "load", SV_Loadgame_f, SV_Savegame_c },
+    { NULL }
+};
+
 void SV_RegisterSavegames(void)
 {
-    Cmd_AddCommand("savegame", SV_Savegame_f);
-    Cmd_AddCommand("loadgame", SV_Loadgame_f);
+    Cmd_Register(c_savegames);
 }
