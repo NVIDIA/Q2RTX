@@ -367,7 +367,7 @@ mframe_t parasite_frames_drain [] = {
 };
 mmove_t parasite_move_drain = {FRAME_drain01, FRAME_drain18, parasite_frames_drain, parasite_start_run};
 
-
+#if 0
 mframe_t parasite_frames_break [] = {
     { ai_charge, 0,   NULL },
     { ai_charge, -3,  NULL },
@@ -403,7 +403,7 @@ mframe_t parasite_frames_break [] = {
     { ai_charge, 1,   NULL }
 };
 mmove_t parasite_move_break = {FRAME_break01, FRAME_break32, parasite_frames_break, parasite_start_run};
-
+#endif
 /*
 ===
 Break Stuff Ends

@@ -205,7 +205,6 @@ extern int mutant_move_run;
 extern int mutant_move_stand;
 extern int mutant_move_start_walk;
 extern int mutant_move_walk;
-extern int parasite_move_break;
 extern int parasite_move_death;
 extern int parasite_move_drain;
 extern int parasite_move_end_fidget;
@@ -462,6 +461,7 @@ extern void player_pain(void);
 extern void soldier_pain(void);
 extern void supertank_pain(void);
 extern void tank_pain(void);
+extern void misc_viper_bomb_prethink(void);
 extern void AngleMove_Begin(void);
 extern void AngleMove_Done(void);
 extern void AngleMove_Final(void);
@@ -881,7 +881,6 @@ const save_ptr_t save_ptrs[] = {
 { P_monsterinfo_currentmove, &mutant_move_stand },
 { P_monsterinfo_currentmove, &mutant_move_start_walk },
 { P_monsterinfo_currentmove, &mutant_move_walk },
-{ P_monsterinfo_currentmove, &parasite_move_break },
 { P_monsterinfo_currentmove, &parasite_move_death },
 { P_monsterinfo_currentmove, &parasite_move_drain },
 { P_monsterinfo_currentmove, &parasite_move_end_fidget },
@@ -1077,6 +1076,7 @@ const save_ptr_t save_ptrs[] = {
 { P_pain, soldier_pain },
 { P_pain, supertank_pain },
 { P_pain, tank_pain },
+{ P_prethink, misc_viper_bomb_prethink },
 { P_think, AngleMove_Begin },
 { P_think, AngleMove_Done },
 { P_think, AngleMove_Final },
