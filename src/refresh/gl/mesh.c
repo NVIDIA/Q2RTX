@@ -410,7 +410,7 @@ static void setup_celshading(void)
     if (value == 0)
         return;
 
-    if (glr.ent->flags & RF_SHELL_MASK)
+    if (glr.ent->flags & (RF_TRANSLUCENT | RF_SHELL_MASK))
         return;
 
     VectorSubtract(origin, glr.fd.vieworg, dir);
