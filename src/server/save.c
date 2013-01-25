@@ -309,6 +309,7 @@ static int read_server_file(void)
     char        name[MAX_OSPATH], string[MAX_STRING_CHARS];
     mapcmd_t    cmd;
     size_t      len;
+    jmp_buf     tmp;
 
     // errors like missing file, bad version, etc are
     // non-fatal and just return to the command handler
@@ -340,6 +341,16 @@ static int read_server_file(void)
     // now try to load the map
     if (!SV_ParseMapCmd(&cmd))
         return -1;
+
+    // save error frame
+    memcpy(tmp, com_abortframe, sizeof(jmp_buf));
+
+    // catch ERR_DROP and free the map
+    if (setjmp(com_abortframe)) {
+        memcpy(com_abortframe, tmp, sizeof(jmp_buf));
+        CM_FreeMap(&cmd.cm);
+        return -1;
+    }
 
     // any error will drop from this point
     SV_Shutdown("Server restarted\n", ERR_RECONNECT);
@@ -378,6 +389,9 @@ static int read_server_file(void)
 
     ge->ReadGame(name);
 
+    // restore error frame
+    memcpy(com_abortframe, tmp, sizeof(jmp_buf));
+
     // go to the map
     SV_SpawnServer(&cmd);
     return 0;
@@ -402,6 +416,8 @@ static int read_level_file(void)
     if (MSG_ReadLong() != SAVE_VERSION)
         return -1;
 
+    // any error will drop from this point
+
     // the rest can't underflow
     msg_read.allowunderflow = qfalse;
 
@@ -412,17 +428,17 @@ static int read_level_file(void)
             break;
 
         if (index < 0 || index > MAX_CONFIGSTRINGS)
-            return -1;
+            Com_Error(ERR_DROP, "Bad savegame configstring index");
 
         maxlen = CS_SIZE(index);
         len = MSG_ReadString(sv.configstrings[index], maxlen);
         if (len >= maxlen)
-            return -1;
+            Com_Error(ERR_DROP, "Savegame configstring too long");
     }
 
     len = MSG_ReadByte();
     if (len > MAX_MAP_PORTAL_BYTES)
-        return -1;
+        Com_Error(ERR_DROP, "Savegame portalbits too long");
 
     SV_ClearWorld();
 
@@ -432,7 +448,7 @@ static int read_level_file(void)
     len = Q_snprintf(name, MAX_OSPATH, "%s/save/" SAVE_CURRENT "/%s.sav",
                      fs_gamedir, sv.name);
     if (len >= MAX_OSPATH)
-        return -1;
+        Com_Error(ERR_DROP, "Savegame path too long");
 
     ge->ReadLevel(name);
     return 0;

@@ -30,6 +30,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "format/wal.h"
 
 #if USE_PNG
+#define PNG_SKIP_SETJMP_CHECK
 #include <png.h>
 #if USE_ZLIB
 #include <zlib.h>
@@ -38,10 +39,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #if USE_JPG
 #include <jpeglib.h>
-#endif
-
-#if USE_PNG || USE_JPG
-#include <setjmp.h>
 #endif
 
 #define IMG_LOAD(x) \

@@ -49,9 +49,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "server/server.h"
 #include "system/system.h"
 
-#include <setjmp.h>
-
-static jmp_buf  abortframe;     // an ERR_DROP occured, exit the entire frame
+jmp_buf  com_abortframe;    // an ERR_DROP occured, exit the entire frame
 
 static qboolean com_errorEntered;
 static char     com_errorMsg[MAXERRORMSG]; // from Com_Printf/Com_Error
@@ -561,13 +559,13 @@ abort:
         FS_Flush(com_logFile);
     }
     com_errorEntered = qfalse;
-    longjmp(abortframe, -1);
+    longjmp(com_abortframe, -1);
 }
 
 #ifdef _WIN32
 void Com_AbortFrame(void)
 {
-    longjmp(abortframe, -1);
+    longjmp(com_abortframe, -1);
 }
 #endif
 
@@ -865,7 +863,7 @@ Qcommon_Init
 */
 void Qcommon_Init(int argc, char **argv)
 {
-    if (setjmp(abortframe))
+    if (setjmp(com_abortframe))
         Sys_Error("Error during initialization: %s", com_errorMsg);
 
     com_argc = argc;
@@ -1048,7 +1046,7 @@ void Qcommon_Frame(void)
     static unsigned remaining;
     static float frac;
 
-    if (setjmp(abortframe)) {
+    if (setjmp(com_abortframe)) {
         return;            // an ERR_DROP was thrown
     }
 

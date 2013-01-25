@@ -21,7 +21,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 //
 
 #include "client.h"
-#include <setjmp.h>
 
 static cvar_t   *mvd_admin_password;
 static cvar_t   *mvd_part_filter;

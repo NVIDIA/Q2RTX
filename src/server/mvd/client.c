@@ -22,7 +22,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "client.h"
 #include "server/mvd/protocol.h"
-#include <setjmp.h>
 
 #define FOR_EACH_GTV(gtv) \
     LIST_FOR_EACH(gtv_t, gtv, &mvd_gtv_list, entry)

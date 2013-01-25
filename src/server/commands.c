@@ -261,6 +261,7 @@ static void SV_Map(qboolean restart)
 {
     mapcmd_t    cmd;
     size_t      len;
+    jmp_buf     tmp;
 
     memset(&cmd, 0, sizeof(cmd));
 
@@ -274,6 +275,16 @@ static void SV_Map(qboolean restart)
     if (!SV_ParseMapCmd(&cmd))
         return;
 
+    // save error frame
+    memcpy(tmp, com_abortframe, sizeof(jmp_buf));
+
+    // catch ERR_DROP and free the map
+    if (setjmp(com_abortframe)) {
+        memcpy(com_abortframe, tmp, sizeof(jmp_buf));
+        CM_FreeMap(&cmd.cm);
+        return;
+    }
+
     // wipe savegames
     cmd.endofunit |= restart;
 
@@ -282,6 +293,9 @@ static void SV_Map(qboolean restart)
     // any error will drop from this point
     if ((sv.state != ss_game && sv.state != ss_pic) || restart)
         SV_InitGame(MVD_SPAWN_DISABLED);    // the game is just starting
+
+    // restore error frame
+    memcpy(com_abortframe, tmp, sizeof(jmp_buf));
 
     SV_SpawnServer(&cmd);
 
