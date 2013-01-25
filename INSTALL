@@ -1,16 +1,23 @@
 Prerequisities
 --------------
 
-On all platforms except Windows, Q2PRO client depends on libSDL for video
-output. Both client and dedicated server require zlib support for full network
-protocol compatibility.
+For building Q2PRO on Linux, BSD and similar platfroms you need to have a C
+compiler installed. Recent versions of both GCC (4.x.x) and Clang (3.x) are
+supported.
 
-To install the full set of dependencies for building Q2PRO on Debian-based
+Q2PRO client requires libSDL 1.2.x for video and sound output. Both client and
+dedicated server require zlib support for full compatibility at network
+protocol level. The rest of dependencies are purely optional.
+
+To install the *full* set of dependencies for building Q2PRO on Debian-based
 Linux distributions, use the following command:
 
     apt-get install libc6-dev libx11-dev libsdl1.2-dev libopenal-dev \
-                    libpng12-dev libjpeg62-dev zlib1g-dev mesa-common-dev \
-                    liblircclient-dev libcurl-dev
+                    libpng12-dev libjpeg8-dev zlib1g-dev mesa-common-dev \
+                    liblircclient-dev libcurl4-gnutls-dev
+
+You can exchange libjpeg8-dev with libjpeg62-dev and libcurl4-gnutls-dev with
+libcurl4-openssl-dev if you wish.
 
 Users of other distributions should look for equivalent development packages
 and install them.
@@ -20,8 +27,13 @@ Building
 --------
 
 Q2PRO uses a simple build system consisting of a single top-level Makefile and
-an optional build-time configuration file. Copy an example configuration file
-from `doc/examples/buildconfig' to `.config' and modify it to suit your needs.
+a build-time configuration file. Configuration file is optional; if there is no
+one, Q2PRO will be built with minimal subset of dependencies, but some features
+will be unavailable.
+
+Copy an example configuration file from `doc/examples/buildconfig' to `.config'
+and modify it to suit your needs. Enable needed features by uncommenting them.
+By default *nothing* optional is enabled.
 
 Type `make' to build a client, dedicated server and baseq2 game library. Type
 `make strip' to strip off debugging symbols from resulting executables. Type
@@ -30,3 +42,38 @@ dependencies.
 
 To enable verbose output during the build, set the V variable, e.g. `make V=1'.
 
+
+Installation
+------------
+
+Before you begin, you need to have either full version of Quake 2 unpacked
+somewhere, or a demo. Both should be patched to 3.20 point release.
+
+Run the following commands to do a per-user installation of Q2PRO into your
+home directory.
+
+    mkdir -p ~/.q2pro/baseq2
+    cp -a /path/to/quake2/baseq2/pak*.pak ~/.q2pro/baseq2/
+    cp -a /path/to/quake2/baseq2/players ~/.q2pro/baseq2/
+    cp -a src/client/ui/q2pro.menu ~/.q2pro/baseq2/
+    cp -a game*.so ~/.q2pro/baseq2/
+    cp -a q2pro ~/.q2pro/
+
+Then change directory to ~/.q2pro and run ./q2pro from there.
+
+
+Mouse input on Linux
+--------------------
+
+SDL 1.2.x way of handling mouse input in X11 environment is hardly suitable for
+any serious gaming. For optimal control and performance using Linux evdev
+kernel interface for reading mouse input is recommended. Enable it by defining
+CONFIG_DIRECT_INPUT option in `.config'.
+
+By default, evdev device nodes have permissions that disallow normal uses to
+read them. If you are the only physical user of computer, it is safe to change
+default permissions of the mouse device node.
+
+To do so, copy `doc/examples/92-direct-input.rules' into `etc/udev/rules.d/',
+then run `udevadm trigger' as root. Change `plugdev' group name if needed
+(depends on Linux distribution).
