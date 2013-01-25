@@ -878,11 +878,9 @@ static qerror_t BSP_ValidateTree(bsp_t *bsp)
             return Q_ERR_INVALID_FORMAT;
         }
 
-        if (mod->headnode) {
-            ret = BSP_SetParent(mod->headnode, ~i);
-            if (ret) {
-                return ret;
-            }
+        ret = BSP_SetParent(mod->headnode, ~i);
+        if (ret) {
+            return ret;
         }
 
 #if USE_REF
