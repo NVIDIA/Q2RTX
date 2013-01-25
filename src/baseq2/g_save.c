@@ -827,7 +827,7 @@ void ReadGame(const char *filename)
     i = read_int(f);
     if (i != SAVE_VERSION) {
         fclose(f);
-        gi.error("Savegame from an older version.\n");
+        gi.error("Savegame from an older version");
     }
 
     read_fields(f, gamefields, &game);
@@ -835,11 +835,11 @@ void ReadGame(const char *filename)
     // should agree with server's version
     if (game.maxclients != (int)maxclients->value) {
         fclose(f);
-        gi.error("Savegame has bad maxclients.\n");
+        gi.error("Savegame has bad maxclients");
     }
     if (game.maxentities <= game.maxclients || game.maxentities > MAX_EDICTS) {
         fclose(f);
-        gi.error("Savegame has bad maxentities.\n");
+        gi.error("Savegame has bad maxentities");
     }
 
     g_edicts = gi.TagMalloc(game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
@@ -937,7 +937,7 @@ void ReadLevel(const char *filename)
     i = read_int(f);
     if (i != SAVE_VERSION) {
         fclose(f);
-        gi.error("Savegame from an older version.\n");
+        gi.error("Savegame from an older version");
     }
 
     // load the level locals
