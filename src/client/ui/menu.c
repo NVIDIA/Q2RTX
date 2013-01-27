@@ -923,7 +923,7 @@ static menuSound_t MenuList_Click(menuList_t *l)
         int x = l->generic.rect.x + l->generic.rect.width - MLIST_SCROLLBAR_WIDTH;
         int y = l->generic.rect.y + MLIST_SPACING;
         int h = l->generic.height;
-        int barHeight;
+        int barHeight, pageHeight, prestepHeight;
         float pageFrac, prestepFrac;
 
         if (l->mlFlags & MLF_HEADER) {
@@ -935,24 +935,52 @@ static menuSound_t MenuList_Click(menuList_t *l)
         pageFrac = (float)l->maxItems / l->numItems;
         prestepFrac = (float)l->prestep / l->numItems;
 
+        pageHeight = Q_rint(barHeight * pageFrac);
+        prestepHeight = Q_rint(barHeight * prestepFrac);
+
         // click above thumb
         rect.x = x;
         rect.y = y;
         rect.width = MLIST_SCROLLBAR_WIDTH;
-        rect.height = Q_rint(barHeight * prestepFrac);
+        rect.height = prestepHeight;
         if (UI_CursorInRect(&rect)) {
             l->prestep -= l->maxItems;
             MenuList_ValidatePrestep(l);
             return QMS_MOVE;
         }
 
-        h = rect.height + Q_rint(barHeight * pageFrac);
+        // click on thumb
+        rect.y = y + prestepHeight;
+        rect.height = pageHeight;
+        if (UI_CursorInRect(&rect)) {
+            l->drag_y = uis.mouseCoords[1] - rect.y;
+            uis.mouseTracker = &l->generic;
+            return QMS_SILENT;
+        }
 
         // click below thumb
-        rect.y = y + h;
-        rect.height = barHeight - h;
+        rect.y = y + prestepHeight + pageHeight;
+        rect.height = barHeight - prestepHeight - pageHeight;
         if (UI_CursorInRect(&rect)) {
             l->prestep += l->maxItems;
+            MenuList_ValidatePrestep(l);
+            return QMS_MOVE;
+        }
+
+        // click above scrollbar
+        rect.y = y - MLIST_SPACING;
+        rect.height = MLIST_SPACING;
+        if (UI_CursorInRect(&rect)) {
+            l->prestep--;
+            MenuList_ValidatePrestep(l);
+            return QMS_MOVE;
+        }
+
+        // click below scrollbar
+        rect.y = l->generic.rect.y + l->generic.height - MLIST_SPACING;
+        rect.height = MLIST_SPACING;
+        if (UI_CursorInRect(&rect)) {
+            l->prestep++;
             MenuList_ValidatePrestep(l);
             return QMS_MOVE;
         }
@@ -1184,6 +1212,30 @@ static menuSound_t MenuList_Key(menuList_t *l, int key)
     }
 
     return QMS_NOTHANDLED;
+}
+
+static menuSound_t MenuList_MouseMove(menuList_t *l)
+{
+    int y, h, barHeight;
+
+    if (uis.mouseTracker != &l->generic)
+        return QMS_NOTHANDLED;
+
+    y = l->generic.y + MLIST_SPACING;
+    h = l->generic.height;
+
+    if (l->mlFlags & MLF_HEADER) {
+        y += MLIST_SPACING;
+        h -= MLIST_SPACING;
+    }
+
+    barHeight = h - MLIST_SPACING * 2;
+    if (barHeight > 0) {
+        l->prestep = (uis.mouseCoords[1] - y - l->drag_y) * l->numItems / barHeight;
+        MenuList_ValidatePrestep(l);
+    }
+
+    return QMS_SILENT;
 }
 
 /*
@@ -2095,7 +2147,12 @@ menuSound_t Menu_CharEvent(menuCommon_t *item, int key)
 
 menuSound_t Menu_MouseMove(menuCommon_t *item)
 {
-    return QMS_NOTHANDLED;
+    switch (item->type) {
+    case MTYPE_LIST:
+        return MenuList_MouseMove((menuList_t *)item);
+    default:
+        return QMS_NOTHANDLED;
+    }
 }
 
 static menuSound_t Menu_DefaultKey(menuFrameWork_t *m, int key)

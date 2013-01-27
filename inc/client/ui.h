@@ -33,7 +33,7 @@ typedef enum {
 void        UI_Init(void);
 void        UI_Shutdown(void);
 void        UI_ModeChanged(void);
-void        UI_Keydown(int key);
+void        UI_KeyEvent(int key, qboolean down);
 void        UI_CharEvent(int key);
 void        UI_Draw(int realtime);
 void        UI_OpenMenu(uiMenu_t menu);
@@ -46,7 +46,7 @@ qboolean    UI_IsTransparent(void);
 #define     UI_Init()               (void)0
 #define     UI_Shutdown()           (void)0
 #define     UI_ModeChanged()        (void)0
-#define     UI_Keydown(key)         (void)0
+#define     UI_KeyEvent(key, down)  (void)0
 #define     UI_CharEvent(key)       (void)0
 #define     UI_Draw(realtime)       (void)0
 #define     UI_OpenMenu(menu)       (void)0

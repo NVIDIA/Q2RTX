@@ -198,6 +198,8 @@ typedef struct menuList_s {
     int     scratchCount;
     int     scratchTime;
 
+    int     drag_y;
+
     menuListColumn_t    columns[MAX_COLUMNS];
     int                 numcolumns;
     int                 sortdir, sortcol;
@@ -273,6 +275,7 @@ typedef struct uiStatic_s {
     int menuDepth;
     menuFrameWork_t *layers[MAX_MENU_DEPTH];
     menuFrameWork_t *activeMenu;
+    menuCommon_t *mouseTracker;
     int mouseCoords[2];
     qboolean entersound;        // play after drawing a frame, so caching
     // won't disrupt the sound

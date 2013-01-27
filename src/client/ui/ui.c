@@ -142,6 +142,7 @@ void UI_ForceMenuOff(void)
     Key_SetDest(Key_GetDest() & ~KEY_MENU);
     uis.menuDepth = 0;
     uis.activeMenu = NULL;
+    uis.mouseTracker = NULL;
     uis.transparent = qfalse;
 }
 
@@ -169,6 +170,7 @@ void UI_PopMenu(void)
     }
 
     uis.activeMenu = uis.layers[uis.menuDepth - 1];
+    uis.mouseTracker = NULL;
 
     uis.transparent = qfalse;
     for (i = uis.menuDepth - 1; i >= 0; i--) {
@@ -384,9 +386,14 @@ qboolean UI_DoHitTest(void)
         return qfalse;
     }
 
-    if (!(item = Menu_HitTest(uis.activeMenu))) {
-        return qfalse;
+    if (uis.mouseTracker) {
+        item = uis.mouseTracker;
+    } else {
+        if (!(item = Menu_HitTest(uis.activeMenu))) {
+            return qfalse;
+        }
     }
+
     if (!UI_IsItemSelectable(item)) {
         return qfalse;
     }
@@ -511,14 +518,21 @@ void UI_StartSound(menuSound_t sound)
 
 /*
 =================
-UI_Keydown
+UI_KeyEvent
 =================
 */
-void UI_Keydown(int key)
+void UI_KeyEvent(int key, qboolean down)
 {
     menuSound_t sound;
 
     if (!uis.activeMenu) {
+        return;
+    }
+
+    if (!down) {
+        if (key == K_MOUSE1) {
+            uis.mouseTracker = NULL;
+        }
         return;
     }
 

@@ -684,7 +684,7 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
                 Con_Close(qtrue);
             }
         } else if (cls.key_dest & KEY_MENU) {
-            UI_Keydown(key);
+            UI_KeyEvent(key, down);
         } else if (cls.key_dest & KEY_MESSAGE) {
             Key_Message(key);
         } else if (cls.state >= ca_active) {
@@ -765,13 +765,16 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
     if (cls.key_dest == KEY_GAME)
         return;
 
-    if (!down)
+    if (!down) {
+        if (cls.key_dest & KEY_MENU)
+            UI_KeyEvent(key, down);
         return;     // other subsystems only care about key down events
+    }
 
     if (cls.key_dest & KEY_CONSOLE) {
         Key_Console(key);
     } else if (cls.key_dest & KEY_MENU) {
-        UI_Keydown(key);
+        UI_KeyEvent(key, down);
     } else if (cls.key_dest & KEY_MESSAGE) {
         Key_Message(key);
     }
