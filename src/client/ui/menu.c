@@ -1178,7 +1178,7 @@ static menuSound_t MenuList_Key(menuList_t *l, int key)
         return QMS_BEEP;
 
     case K_MOUSE1:
-    case K_MOUSE2:
+    //case K_MOUSE2:
     //case K_MOUSE3:
         return MenuList_Click(l);
     }
@@ -2104,6 +2104,7 @@ static menuSound_t Menu_DefaultKey(menuFrameWork_t *m, int key)
 
     switch (key) {
     case K_ESCAPE:
+    case K_MOUSE2:
         UI_PopMenu();
         return QMS_OUT;
 
@@ -2131,7 +2132,7 @@ static menuSound_t Menu_DefaultKey(menuFrameWork_t *m, int key)
         return Menu_SlideItem(m, 1);
 
     case K_MOUSE1:
-    case K_MOUSE2:
+    //case K_MOUSE2:
     case K_MOUSE3:
         item = Menu_HitTest(m);
         if (!item) {
