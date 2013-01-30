@@ -161,8 +161,8 @@ typedef struct mvd_s {
     int             numplayers; // number of active players in frame
     int             clientNum;
     mvd_flags_t     flags;
-    char        layout[MAX_STRING_CHARS];
-    char        oldscores[MAX_STRING_CHARS]; // layout is copied here
+    char        layout[MAX_NET_STRING];
+    char        oldscores[MAX_NET_STRING]; // layout is copied here
     qboolean    intermission;
     qboolean    dirty;
 

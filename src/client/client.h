@@ -236,7 +236,7 @@ typedef struct client_state_s {
     //
     // transient data from server
     //
-    char        layout[MAX_STRING_CHARS];        // general 2D overlay
+    char        layout[MAX_NET_STRING];     // general 2D overlay
     int         inventory[MAX_ITEMS];
 
     //
