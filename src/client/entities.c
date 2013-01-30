@@ -94,7 +94,7 @@ entity_old(centity_t *ent, const entity_state_t *state, const vec_t *origin)
         || abs(origin[0] - ent->current.origin[0]) > 512
         || abs(origin[1] - ent->current.origin[1]) > 512
         || abs(origin[2] - ent->current.origin[2]) > 512
-        || cl_nolerp->integer) {
+        || cl_nolerp->integer == 1) {
         // some data changes will force no lerping
         ent->trailcount = 1024;     // for diminishing rocket / grenade trails
 
@@ -151,7 +151,7 @@ static void entity_update(const entity_state_t *state)
         origin = state->origin;
     }
 
-    if (ent->serverframe != cl.oldframe.number) {
+    if (ent->serverframe != cl.oldframe.number || cl_nolerp->integer == 2) {
         // wasn't in last update, so initialize some things
         entity_new(ent, state, origin);
     } else {
@@ -300,7 +300,7 @@ player_update(server_frame_t *oldframe, server_frame_t *frame, int framediv)
         goto dup;
 
     // developer option
-    if (cl_nolerp->integer)
+    if (cl_nolerp->integer == 1)
         goto dup;
 
     return;
