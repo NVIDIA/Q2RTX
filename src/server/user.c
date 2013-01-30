@@ -1260,7 +1260,7 @@ static void SV_NewClientExecuteMove(int c)
 =================
 SV_UpdateUserinfo
 
-Ensures that name and ip are properly set.
+Ensures that userinfo is valid and name is properly set.
 =================
 */
 static void SV_UpdateUserinfo(void)
@@ -1295,13 +1295,6 @@ static void SV_UpdateUserinfo(void)
         else
             SV_ClientPrintf(sv_client, PRINT_HIGH, "You can't change your name too often.\n");
         SV_ClientCommand(sv_client, "set name \"%s\"\n", sv_client->name);
-    }
-
-    // force the IP key/value pair so the game can filter based on ip
-    s = NET_AdrToString(&sv_client->netchan->remote_address);
-    if (!Info_SetValueForKey(sv_client->userinfo, "ip", s)) {
-        SV_DropClient(sv_client, "oversize userinfo");
-        return;
     }
 
     SV_UserinfoChanged(sv_client);
