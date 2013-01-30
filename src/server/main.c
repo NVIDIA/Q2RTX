@@ -836,18 +836,21 @@ static qboolean parse_userinfo(conn_params_t *params, char *userinfo)
     // copy userinfo off
     Q_strlcpy(userinfo, info, MAX_INFO_STRING);
 
-    // make sure mvdspec key is not set
-    Info_RemoveKey(userinfo, "mvdspec");
+    // mvdspec, ip, etc are passed in extra userinfo if supported
+    if (!(g_features->integer & GMF_EXTRA_USERINFO)) {
+        // make sure mvdspec key is not set
+        Info_RemoveKey(userinfo, "mvdspec");
 
-    if (sv_password->string[0] || sv_reserved_password->string[0]) {
-        // unset password key to make game mod happy
-        Info_RemoveKey(userinfo, "password");
+        if (sv_password->string[0] || sv_reserved_password->string[0]) {
+            // unset password key to make game mod happy
+            Info_RemoveKey(userinfo, "password");
+        }
+
+        // force the IP key/value pair so the game can filter based on ip
+        s = NET_AdrToString(&net_from);
+        if (!Info_SetValueForKey(userinfo, "ip", s))
+            return reject("Oversize userinfo string.\n");
     }
-
-    // force the IP key/value pair so the game can filter based on ip
-    s = NET_AdrToString(&net_from);
-    if (!Info_SetValueForKey(userinfo, "ip", s))
-        return reject("Oversize userinfo string.\n");
 
     return qtrue;
 }
@@ -987,9 +990,28 @@ static void send_connect_packet(client_t *newcl, int nctype)
                       ncstring, acstring, dlstring1, dlstring2, newcl->mapname);
 }
 
+// converts all the extra positional parameters to `connect' command into an
+// infostring appended to normal userinfo after terminating NUL. game mod can
+// then access these parameters in ClientConnect callback.
+static void append_extra_userinfo(conn_params_t *params, char *userinfo)
+{
+    if (!(g_features->integer & GMF_EXTRA_USERINFO)) {
+        userinfo[strlen(userinfo) + 1] = 0;
+        return;
+    }
+
+    Q_snprintf(userinfo + strlen(userinfo) + 1, MAX_INFO_STRING,
+               "\\challenge\\%d\\ip\\%s"
+               "\\major\\%d\\minor\\%d\\netchan\\%d"
+               "\\packetlen\\%d\\qport\\%d\\zlib\\%d",
+               params->challenge, NET_AdrToString(&net_from),
+               params->protocol, params->version, params->nctype,
+               params->maxlength, params->qport, params->has_zlib);
+}
+
 static void SVC_DirectConnect(void)
 {
-    char            userinfo[MAX_INFO_STRING];
+    char            userinfo[MAX_INFO_STRING * 2];
     conn_params_t   params;
     client_t        *newcl;
     int             number;
@@ -1042,6 +1064,8 @@ static void SVC_DirectConnect(void)
 #endif
 
     init_pmove_and_es_flags(newcl);
+
+    append_extra_userinfo(&params, userinfo);
 
     // get the game a chance to reject this connection or modify the userinfo
     sv_client = newcl;

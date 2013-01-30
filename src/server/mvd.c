@@ -333,10 +333,16 @@ static client_t *dummy_find_slot(void)
     return NULL;
 }
 
+#define MVD_USERINFO1 \
+    "\\name\\[MVDSPEC]\\skin\\male/grunt"
+
+#define MVD_USERINFO2 \
+    "\\mvdspec\\" STRINGIFY(PROTOCOL_VERSION_MVD_CURRENT) "\\ip\\loopback"
+
 static int dummy_create(void)
 {
     client_t *newcl;
-    char userinfo[MAX_INFO_STRING];
+    char userinfo[MAX_INFO_STRING * 2];
     char *s;
     qboolean allow;
     int number;
@@ -374,9 +380,14 @@ static int dummy_create(void)
 
     List_Init(&newcl->entry);
 
-    Q_snprintf(userinfo, sizeof(userinfo),
-               "\\name\\[MVDSPEC]\\skin\\male/grunt\\mvdspec\\%d\\ip\\loopback",
-               PROTOCOL_VERSION_MVD_CURRENT);
+    if (g_features->integer & GMF_EXTRA_USERINFO) {
+        strcpy(userinfo, MVD_USERINFO1);
+        strcpy(userinfo + strlen(userinfo) + 1, MVD_USERINFO2);
+    } else {
+        strcpy(userinfo, MVD_USERINFO1);
+        strcat(userinfo, MVD_USERINFO2);
+        userinfo[strlen(userinfo) + 1] = 0;
+    }
 
     mvd.dummy = newcl;
 
@@ -398,7 +409,7 @@ static int dummy_create(void)
     }
 
     // parse some info from the info strings
-    strcpy(newcl->userinfo, userinfo);
+    Q_strlcpy(newcl->userinfo, userinfo, sizeof(newcl->userinfo));
     SV_UserinfoChanged(newcl);
 
     return 1;
