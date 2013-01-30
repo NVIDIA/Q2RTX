@@ -1992,7 +1992,7 @@ void SV_Init(void)
 
     SV_RegisterSavegames();
 
-    Cvar_Get("protocol", va("%i", PROTOCOL_VERSION_DEFAULT), CVAR_SERVERINFO | CVAR_ROM);
+    Cvar_Get("protocol", STRINGIFY(PROTOCOL_VERSION_DEFAULT), CVAR_SERVERINFO | CVAR_ROM);
 
     Cvar_Get("skill", "1", CVAR_LATCH);
     Cvar_Get("deathmatch", "1", CVAR_SERVERINFO | CVAR_LATCH);

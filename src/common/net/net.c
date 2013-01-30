@@ -1591,10 +1591,10 @@ void NET_Init(void)
 
     net_ip = Cvar_Get("net_ip", "", 0);
     net_ip->changed = net_udp_param_changed;
-    net_port = Cvar_Get("net_port", PORT_SERVER_STRING, 0);
+    net_port = Cvar_Get("net_port", STRINGIFY(PORT_SERVER), 0);
     net_port->changed = net_udp_param_changed;
 #if USE_CLIENT
-    net_clientport = Cvar_Get("net_clientport", PORT_ANY_STRING, 0);
+    net_clientport = Cvar_Get("net_clientport", STRINGIFY(PORT_ANY), 0);
     net_clientport->changed = net_udp_param_changed;
     net_dropsim = Cvar_Get("net_dropsim", "0", 0);
 #endif

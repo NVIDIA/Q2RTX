@@ -186,8 +186,8 @@ void R_Register(void)
     sw_clearcolor = Cvar_Get("sw_clearcolor", "2", 0);
     sw_drawflat = Cvar_Get("sw_drawflat", "0", CVAR_CHEAT);
     sw_draworder = Cvar_Get("sw_draworder", "0", CVAR_CHEAT);
-    sw_maxedges = Cvar_Get("sw_maxedges", va("%i", NUMSTACKEDGES), 0);
-    sw_maxsurfs = Cvar_Get("sw_maxsurfs", va("%i", NUMSTACKSURFACES), 0);
+    sw_maxedges = Cvar_Get("sw_maxedges", STRINGIFY(NUMSTACKEDGES), 0);
+    sw_maxsurfs = Cvar_Get("sw_maxsurfs", STRINGIFY(NUMSTACKSURFACES), 0);
     sw_mipcap = Cvar_Get("sw_mipcap", "0", 0);
     sw_mipscale = Cvar_Get("sw_mipscale", "1", 0);
     sw_reportedgeout = Cvar_Get("sw_reportedgeout", "0", 0);

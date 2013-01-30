@@ -24,10 +24,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // net.h -- quake's interface to the networking layer
 
 #define PORT_ANY            -1
-#define PORT_ANY_STRING     "-1"
 #define PORT_MASTER         27900
 #define PORT_SERVER         27910
-#define PORT_SERVER_STRING  "27910"
 
 #define MIN_PACKETLEN                   512     // don't allow smaller packets
 #define MAX_PACKETLEN                   4096    // max length of a single packet
