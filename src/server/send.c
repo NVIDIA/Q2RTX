@@ -335,6 +335,50 @@ void SV_Multicast(vec3_t origin, multicast_t to)
     SZ_Clear(&msg_write);
 }
 
+static qboolean compress_message(client_t *client, int flags)
+{
+#if USE_ZLIB
+    byte    buffer[MAX_MSGLEN];
+
+    if (!(flags & MSG_COMPRESS))
+        return qfalse;
+
+    if (!client->has_zlib)
+        return qfalse;
+
+    // FIXME: make this configurable?
+    if (msg_write.cursize < MAX_PACKETLEN_DEFAULT / 2)
+        return qfalse;
+
+    deflateReset(&svs.z);
+    svs.z.next_in = msg_write.data;
+    svs.z.avail_in = (uInt)msg_write.cursize;
+    svs.z.next_out = buffer + 5;
+    svs.z.avail_out = (uInt)(MAX_MSGLEN - 5);
+
+    if (deflate(&svs.z, Z_FINISH) != Z_STREAM_END)
+        return qfalse;
+
+    buffer[0] = svc_zpacket;
+    buffer[1] = svs.z.total_out & 255;
+    buffer[2] = (svs.z.total_out >> 8) & 255;
+    buffer[3] = msg_write.cursize & 255;
+    buffer[4] = (msg_write.cursize >> 8) & 255;
+
+    SV_DPrintf(0, "%s: comp: %lu into %lu\n",
+               client->name, svs.z.total_in, svs.z.total_out + 5);
+
+    if (svs.z.total_out + 5 > msg_write.cursize)
+        return qfalse;
+
+    client->AddMessage(client, buffer, svs.z.total_out + 5,
+                       (flags & MSG_RELIABLE) ? qtrue : qfalse);
+    return qtrue;
+#else
+    return qfalse;
+#endif
+}
+
 /*
 =======================
 SV_ClientAddMessage
@@ -353,9 +397,14 @@ void SV_ClientAddMessage(client_t *client, int flags)
         return;
     }
 
+    if (compress_message(client, flags)) {
+        goto clear;
+    }
+
     client->AddMessage(client, msg_write.data, msg_write.cursize,
                        (flags & MSG_RELIABLE) ? qtrue : qfalse);
 
+clear:
     if (flags & MSG_CLEAR) {
         SZ_Clear(&msg_write);
     }

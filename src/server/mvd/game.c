@@ -121,7 +121,7 @@ static void MVD_LayoutClients(mvd_client_t *client)
     layout[total] = 0;
 
     // the very first layout update is reliably delivered
-    flags = MSG_CLEAR;
+    flags = MSG_CLEAR | MSG_COMPRESS;
     if (!client->layout_time) {
         flags |= MSG_RELIABLE;
     }
@@ -223,7 +223,7 @@ static void MVD_LayoutChannels(mvd_client_t *client)
     // send the layout
     MSG_WriteByte(svc_layout);
     MSG_WriteData(layout, total + 1);
-    SV_ClientAddMessage(client->cl, MSG_RELIABLE | MSG_CLEAR);
+    SV_ClientAddMessage(client->cl, MSG_RELIABLE | MSG_CLEAR | MSG_COMPRESS);
 
     client->layout_time = svs.realtime;
 }
@@ -284,7 +284,7 @@ static void MVD_LayoutMenu(mvd_client_t *client)
     // send the layout
     MSG_WriteByte(svc_layout);
     MSG_WriteData(layout, total + 1);
-    SV_ClientAddMessage(client->cl, MSG_RELIABLE | MSG_CLEAR);
+    SV_ClientAddMessage(client->cl, MSG_RELIABLE | MSG_CLEAR | MSG_COMPRESS);
 
     client->layout_time = svs.realtime;
 }
@@ -292,7 +292,7 @@ static void MVD_LayoutMenu(mvd_client_t *client)
 static void MVD_LayoutScores(mvd_client_t *client)
 {
     mvd_t *mvd = client->mvd;
-    int flags = MSG_CLEAR;
+    int flags = MSG_CLEAR | MSG_COMPRESS;
     char *layout;
 
     if (client->layout_type == LAYOUT_OLDSCORES) {

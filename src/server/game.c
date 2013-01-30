@@ -81,7 +81,7 @@ Archived in MVD stream.
 static void PF_Unicast(edict_t *ent, qboolean reliable)
 {
     client_t    *client;
-    int         clientNum;
+    int         cmd, flags, clientNum;
 
     if (!ent) {
         goto clear;
@@ -99,10 +99,26 @@ static void PF_Unicast(edict_t *ent, qboolean reliable)
         goto clear;
     }
 
-    SV_ClientAddMessage(client, reliable ? MSG_RELIABLE : 0);
+    if (!msg_write.cursize) {
+        Com_DPrintf("%s with empty data\n", __func__);
+        goto clear;
+    }
 
-    if (msg_write.data[0] == svc_disconnect) {
-        // fix anti-kicking exploit for broken mods
+    cmd = msg_write.data[0];
+
+    flags = 0;
+    if (reliable) {
+        flags |= MSG_RELIABLE;
+    }
+
+    if (cmd == svc_layout) {
+        flags |= MSG_COMPRESS;
+    }
+
+    SV_ClientAddMessage(client, flags);
+
+    // fix anti-kicking exploit for broken mods
+    if (cmd == svc_disconnect) {
         client->drop_hack = qtrue;
         goto clear;
     }

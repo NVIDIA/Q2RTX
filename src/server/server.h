@@ -213,6 +213,7 @@ typedef enum {
 
 #define MSG_RELIABLE    1
 #define MSG_CLEAR       2
+#define MSG_COMPRESS    4
 
 #define MAX_SOUND_PACKET   14
 
