@@ -543,6 +543,19 @@ static qboolean player_is_active(const edict_t *ent)
     return qtrue;
 }
 
+static qboolean entity_is_active(const edict_t *ent)
+{
+    if ((g_features->integer & GMF_PROPERINUSE) && !ent->inuse) {
+        return qfalse;
+    }
+
+    if (ent->svflags & SVF_NOCLIENT) {
+        return qfalse;
+    }
+
+    return ES_INUSE(&ent->s);
+}
+
 // Initializes MVD delta compressor for the first time on this map.
 static void build_gamestate(void)
 {
@@ -568,7 +581,7 @@ static void build_gamestate(void)
     for (i = 1; i < ge->num_edicts; i++) {
         ent = EDICT_NUM(i);
 
-        if ((ent->svflags & SVF_NOCLIENT) || !ES_INUSE(&ent->s)) {
+        if (!entity_is_active(ent)) {
             continue;
         }
 
@@ -759,7 +772,7 @@ static void emit_frame(void)
         oldes = &mvd.entities[i];
         ent = EDICT_NUM(i);
 
-        if ((ent->svflags & SVF_NOCLIENT) || !ES_INUSE(&ent->s)) {
+        if (!entity_is_active(ent)) {
             if (oldes->number) {
                 // the old entity isn't present in the new message
                 MSG_WriteDeltaEntity(oldes, NULL, MSG_ES_FORCE);
