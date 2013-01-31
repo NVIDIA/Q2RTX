@@ -1901,7 +1901,21 @@ static void SCR_ExecuteLayoutString(const char *s)
             }
             continue;
         }
+
+        if (!strcmp(token, "color")) {
+            color_t     color;
+
+            token = COM_Parse(&s);
+            if (SCR_ParseColor(token, &color)) {
+                color.u8[3] *= scr_alpha->value;
+                R_SetColor(color.u32);
+            }
+            continue;
+        }
     }
+
+    R_ClearColor();
+    R_SetAlpha(scr_alpha->value);
 }
 
 //=============================================================================
