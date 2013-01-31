@@ -1559,6 +1559,14 @@ static void CL_PacketEvent(void)
 
     CL_ParseServerMessage();
 
+    // if recording demo, write the message out
+    if (cls.demo.recording && !cls.demo.paused && CL_FRAMESYNC) {
+        CL_WriteDemoMessage(&cls.demo.buffer);
+    }
+
+    // if running GTV server, transmit to client
+    CL_GTV_Transmit();
+
     if (!cls.netchan)
         return;     // might have disconnected
 

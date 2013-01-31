@@ -1304,18 +1304,6 @@ badbyte:
         CL_GTV_WriteMessage(msg_read.data + readcount,
                             msg_read.readcount - readcount);
     }
-
-// if recording demos, write the message out
-    if (cls.demo.recording && !cls.demo.paused && CL_FRAMESYNC) {
-        CL_WriteDemoMessage(&cls.demo.buffer);
-    }
-
-// if running GTV server, transmit to client
-    CL_GTV_Transmit();
-
-// if playing demos, save a snapshot once the full packet is parsed
-    if (cls.demo.playback)
-        CL_EmitDemoSnapshot();
 }
 
 /*
