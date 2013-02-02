@@ -694,7 +694,6 @@ void CL_UpdateBlendSetting(void);
 // tent.c
 //
 
-//ROGUE
 typedef struct cl_sustain_s {
     int     id;
     int     type;
@@ -732,10 +731,7 @@ void CL_CheckPredictionError(void);
 //
 #define PARTICLE_GRAVITY        40
 #define BLASTER_PARTICLE_COLOR  0xe0
-// PMM
 #define INSTANT_PARTICLE    -10000.0
-// PGM
-// ========
 
 typedef struct cparticle_s {
     struct cparticle_s    *next;
@@ -805,8 +801,6 @@ void MakeNormalVectors(vec3_t forward, vec3_t right, vec3_t up);
 // newfx.c
 //
 
-// ========
-// PGM
 void CL_BlasterParticles2(vec3_t org, vec3_t dir, unsigned int color);
 void CL_BlasterTrail2(vec3_t start, vec3_t end);
 void CL_DebugTrail(vec3_t start, vec3_t end);
@@ -832,15 +826,9 @@ void CL_ParticleSmokeEffect(vec3_t org, vec3_t dir, int color, int count, int ma
 void CL_Widowbeamout(cl_sustain_t *self);
 void CL_Nukeblast(cl_sustain_t *self);
 void CL_WidowSplash(void);
-// PGM
-// ========
-
-// RAFAEL
 void CL_IonripperTrail(vec3_t start, vec3_t end);
 void CL_TrapParticles(entity_t *ent);
 void CL_ParticleEffect3(vec3_t org, vec3_t dir, int color, int count);
-// RAFAEL
-
 void CL_ParticleSteamEffect2(cl_sustain_t *self);
 
 
