@@ -20,6 +20,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 typedef void (*tessfunc_t)(const maliasmesh_t *);
 
+extern qhandle_t    cl_mod_laser;
+
 static int      oldframenum;
 static int      newframenum;
 static float    frontlerp;
@@ -461,10 +463,11 @@ static void setup_shadow(void)
     if (glr.ent->flags & RF_WEAPONMODEL)
         return;
 
-    if (!glr.lightpoint.surf)
+    if (glr.ent->model == cl_mod_laser)
         return;
 
-    plane = &glr.lightpoint.plane;
+    if (!glr.lightpoint.surf)
+        return;
 
     // position fake light source straight over the model
     if (glr.lightpoint.surf->drawflags & DSURF_PLANEBACK)
@@ -473,6 +476,8 @@ static void setup_shadow(void)
         VectorSet(dir, 0, 0, 1);
 
     // project shadow on ground plane
+    plane = &glr.lightpoint.plane;
+
     matrix[0] = plane->normal[1] * dir[1] + plane->normal[2] * dir[2];
     matrix[4] = -plane->normal[1] * dir[0];
     matrix[8] = -plane->normal[2] * dir[0];
@@ -521,7 +526,7 @@ static void setup_shadow(void)
 
 static void draw_shadow(maliasmesh_t *mesh)
 {
-    if (shadowmatrix[15] < 0.1f)
+    if (shadowmatrix[15] < 0.5f)
         return;
 
     // load shadow projection matrix
