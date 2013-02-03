@@ -1229,7 +1229,12 @@ static ssize_t open_from_pak(file_t *file, pack_t *pack, packfile_t *entry, qboo
 
 #if USE_ZLIB
     if (pack->type == FS_ZIP) {
-        if (entry->compmtd) {
+        if (file->mode & FS_FLAG_DEFLATE) {
+            // server wants raw deflated data for downloads
+            file->type = FS_PAK;
+            file->rest_out = entry->complen;
+            file->length = entry->complen;
+        } else if (entry->compmtd) {
             open_zip_file(file);
         } else {
             // stored, just pretend it's a packfile
@@ -1244,9 +1249,9 @@ static ssize_t open_from_pak(file_t *file, pack_t *pack, packfile_t *entry, qboo
     }
 
     FS_DPrintf("%s: %s/%s: %"PRIz" bytes\n",
-               __func__, pack->filename, entry->name, entry->filelen);
+               __func__, pack->filename, entry->name, file->length);
 
-    return entry->filelen;
+    return file->length;
 
 fail2:
     if (unique) {
@@ -1328,13 +1333,23 @@ static ssize_t open_file_read(file_t *file, const char *normalized, size_t namel
             if (namelen >= MAX_QPATH) {
                 continue;
             }
-            // look through all the pak file elements
             pak = search->pack;
+#if USE_ZLIB
+            if ((file->mode & FS_FLAG_DEFLATE) && pak->type != FS_ZIP) {
+                continue;
+            }
+#endif
+            // look through all the pak file elements
             entry = pak->file_hash[hash & (pak->hash_size - 1)];
             for (; entry; entry = entry->hash_next) {
                 if (entry->namelen != namelen) {
                     continue;
                 }
+#if USE_ZLIB
+                if ((file->mode & FS_FLAG_DEFLATE) && entry->compmtd != Z_DEFLATED) {
+                    continue;
+                }
+#endif
                 FS_COUNT_STRCMP;
                 if (!FS_pathcmp(entry->name, normalized)) {
                     // found it!
@@ -1345,6 +1360,11 @@ static ssize_t open_file_read(file_t *file, const char *normalized, size_t namel
             if ((file->mode & FS_TYPE_MASK) == FS_TYPE_PAK) {
                 continue;
             }
+#if USE_ZLIB
+            if (file->mode & FS_FLAG_DEFLATE) {
+                continue;
+            }
+#endif
             // don't error out immediately if the path is found to be invalid,
             // just stop looking for it in directory tree but continue to search
             // for it in packs, to give broken maps or mods a chance to work
