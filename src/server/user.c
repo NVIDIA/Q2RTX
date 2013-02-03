@@ -19,10 +19,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "server.h"
 
-#if USE_FPS
-static void align_key_frames(void);
-#endif
-
 /*
 ============================================================
 
@@ -525,9 +521,8 @@ void SV_Begin_f(void)
     sv_client->command_msec = 1800;
     sv_client->suppress_count = 0;
     sv_client->http_download = qfalse;
-#if USE_FPS
-    align_key_frames();
-#endif
+
+    SV_AlignKeyFrames(sv_client);
 
     stuff_cmds(&sv_cmdlist_begin);
 
@@ -538,8 +533,6 @@ void SV_Begin_f(void)
 }
 
 //=============================================================================
-
-#define MAX_DOWNLOAD_CHUNK    1024
 
 void SV_CloseDownload(client_t *client)
 {
@@ -554,6 +547,7 @@ void SV_CloseDownload(client_t *client)
     client->downloadsize = 0;
     client->downloadcount = 0;
     client->downloadcmd = 0;
+    client->downloadpending = qfalse;
 }
 
 /*
@@ -563,37 +557,10 @@ SV_NextDownload_f
 */
 static void SV_NextDownload_f(void)
 {
-    int     r;
-    int     percent;
-    int     size;
-
     if (!sv_client->download)
         return;
 
-    r = sv_client->downloadsize - sv_client->downloadcount;
-    if (r > MAX_DOWNLOAD_CHUNK)
-        r = MAX_DOWNLOAD_CHUNK;
-
-    MSG_WriteByte(sv_client->downloadcmd);
-    MSG_WriteShort(r);
-
-    sv_client->downloadcount += r;
-    size = sv_client->downloadsize;
-    if (!size)
-        size = 1;
-    percent = sv_client->downloadcount * 100 / size;
-    MSG_WriteByte(percent);
-    MSG_WriteData(sv_client->download + sv_client->downloadcount - r, r);
-
-    if (sv_client->downloadcount == sv_client->downloadsize) {
-        SV_CloseDownload(sv_client);
-#if USE_FPS
-        if (sv_client->state == cs_spawned)
-            align_key_frames();
-#endif
-    }
-
-    SV_ClientAddMessage(sv_client, MSG_RELIABLE | MSG_CLEAR);
+    sv_client->downloadpending = qtrue;
 }
 
 /*
@@ -706,6 +673,11 @@ static void SV_BeginDownload_f(void)
     }
 #endif
 
+    if (downloadsize == 0) {
+        Com_DPrintf("Refusing empty download of %s to %s\n", name, sv_client->name);
+        goto fail2;
+    }
+
     if (downloadsize > maxdownloadsize) {
         Com_DPrintf("Refusing oversize download of %s to %s\n", name, sv_client->name);
         goto fail2;
@@ -744,10 +716,9 @@ static void SV_BeginDownload_f(void)
     sv_client->downloadcount = offset;
     sv_client->downloadname = SV_CopyString(name);
     sv_client->downloadcmd = downloadcmd;
+    sv_client->downloadpending = qtrue;
 
     Com_DPrintf("Downloading %s to %s\n", name, sv_client->name);
-
-    SV_NextDownload_f();
     return;
 
 fail3:
@@ -763,18 +734,12 @@ fail1:
 
 static void SV_StopDownload_f(void)
 {
-    int size, percent;
+    int percent;
 
-    if (!sv_client->download) {
+    if (!sv_client->download)
         return;
-    }
 
-    size = sv_client->downloadsize;
-    if (!size) {
-        percent = 0;
-    } else {
-        percent = sv_client->downloadcount * 100 / size;
-    }
+    percent = sv_client->downloadcount * 100 / sv_client->downloadsize;
 
     MSG_WriteByte(svc_download);
     MSG_WriteShort(-1);
@@ -784,11 +749,7 @@ static void SV_StopDownload_f(void)
     Com_DPrintf("Download of %s to %s stopped by user request\n",
                 sv_client->downloadname, sv_client->name);
     SV_CloseDownload(sv_client);
-
-#if USE_FPS
-    if (sv_client->state == cs_spawned)
-        align_key_frames();
-#endif
+    SV_AlignKeyFrames(sv_client);
 }
 
 //============================================================================
@@ -843,10 +804,7 @@ static void SV_ShowMiscInfo_f(void)
 static void SV_NoGameData_f(void)
 {
     sv_client->nodata ^= 1;
-#if USE_FPS
-    if (sv_client->state == cs_spawned)
-        align_key_frames();
-#endif
+    SV_AlignKeyFrames(sv_client);
 }
 
 static void SV_Lag_f(void)
@@ -1390,16 +1348,16 @@ static void SV_ParseDeltaUserinfo(void)
 }
 
 #if USE_FPS
-static void align_key_frames(void)
+void SV_AlignKeyFrames(client_t *client)
 {
-    int framediv = sv.framediv / sv_client->framediv;
-    int framenum = sv.framenum / sv_client->framediv;
+    int framediv = sv.framediv / client->framediv;
+    int framenum = sv.framenum / client->framediv;
     int frameofs = framenum % framediv;
-    int newnum = frameofs + Q_align(sv_client->framenum, framediv);
+    int newnum = frameofs + Q_align(client->framenum, framediv);
 
     Com_DPrintf("[%d] align %d --> %d (num = %d, div = %d, ofs = %d)\n",
-                sv.framenum, sv_client->framenum, newnum, framenum, framediv, frameofs);
-    sv_client->framenum = newnum;
+                sv.framenum, client->framenum, newnum, framenum, framediv, frameofs);
+    client->framenum = newnum;
 }
 
 static void set_client_fps(int value)
@@ -1422,8 +1380,7 @@ static void set_client_fps(int value)
 
     sv_client->framediv = framediv;
 
-    if (sv_client->state == cs_spawned)
-        align_key_frames();
+    SV_AlignKeyFrames(sv_client);
 
     // save for status inspection
     sv_client->settings[CLS_FPS] = framerate;

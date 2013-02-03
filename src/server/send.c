@@ -921,6 +921,49 @@ finish:
     }
 }
 
+static void write_pending_download(client_t *client)
+{
+    sizebuf_t   *buf;
+    size_t      remaining;
+    int         chunk, percent;
+
+    if (!client->download)
+        return;
+
+    if (!client->downloadpending)
+        return;
+
+    if (client->netchan->reliable_length)
+        return;
+
+    buf = &client->netchan->message;
+    if (buf->cursize > client->netchan->maxpacketlen)
+        return;
+
+    remaining = client->netchan->maxpacketlen - buf->cursize;
+    if (remaining <= 4)
+        return;
+
+    chunk = client->downloadsize - client->downloadcount;
+    if (chunk > remaining - 4)
+        chunk = remaining - 4;
+
+    client->downloadpending = qfalse;
+    client->downloadcount += chunk;
+
+    percent = client->downloadcount * 100 / client->downloadsize;
+
+    SZ_WriteByte(buf, client->downloadcmd);
+    SZ_WriteShort(buf, chunk);
+    SZ_WriteByte(buf, percent);
+    SZ_Write(buf, client->download + client->downloadcount - chunk, chunk);
+
+    if (client->downloadcount == client->downloadsize) {
+        SV_CloseDownload(client);
+        SV_AlignKeyFrames(client);
+    }
+}
+
 /*
 ==================
 SV_SendAsyncPackets
@@ -972,6 +1015,10 @@ void SV_SendAsyncPackets(void)
         if (netchan->type == NETCHAN_OLD) {
             write_reliables_old(client, netchan->maxpacketlen);
         }
+
+        // now fill up remaining buffer space with download
+        write_pending_download(client);
+
         if (netchan->message.cursize || netchan->reliable_ack_pending ||
             netchan->reliable_length || retransmit) {
             cursize = netchan->Transmit(netchan, 0, NULL, 1);

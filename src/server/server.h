@@ -316,6 +316,7 @@ typedef struct client_s {
     int             downloadcount;  // bytes sent
     char            *downloadname;  // name of the file
     int             downloadcmd;    // svc_(z)download
+    qboolean        downloadpending;
 
     // protocol stuff
     int             challenge;  // challenge of this user, randomly generated
@@ -683,9 +684,13 @@ void AC_Info_f(void);
 //
 void SV_New_f(void);
 void SV_Begin_f(void);
-void SV_Nextserver(void);
 void SV_ExecuteClientMessage(client_t *cl);
 void SV_CloseDownload(client_t *client);
+#if USE_FPS
+void SV_AlignKeyFrames(client_t *client);
+#else
+#define SV_AlignKeyFrames(client) (void)0
+#endif
 
 //
 // sv_ccmds.c
