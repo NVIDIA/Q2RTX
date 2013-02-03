@@ -1022,9 +1022,9 @@ static void CL_ParseInventory(void)
     }
 }
 
-static void CL_ParseDownload(void)
+static void CL_ParseDownload(int cmd)
 {
-    int size, percent;
+    int size, percent, compressed;
     byte *data;
 
     if (!cls.download.temp[0]) {
@@ -1035,8 +1035,19 @@ static void CL_ParseDownload(void)
     size = MSG_ReadShort();
     percent = MSG_ReadByte();
     if (size == -1) {
-        CL_HandleDownload(NULL, size, percent);
+        CL_HandleDownload(NULL, size, percent, qfalse);
         return;
+    }
+
+    // read optional uncompressed packet size
+    if (cmd == svc_zdownload) {
+        if (cls.serverProtocol == PROTOCOL_VERSION_R1Q2) {
+            compressed = MSG_ReadShort();
+        } else {
+            compressed = -1;
+        }
+    } else {
+        compressed = 0;
     }
 
     if (size < 0) {
@@ -1050,7 +1061,7 @@ static void CL_ParseDownload(void)
     data = msg_read.data + msg_read.readcount;
     msg_read.readcount += size;
 
-    CL_HandleDownload(data, size, percent);
+    CL_HandleDownload(data, size, percent, compressed);
 }
 
 static void CL_ParseZPacket(void)
@@ -1249,7 +1260,7 @@ badbyte:
             break;
 
         case svc_download:
-            CL_ParseDownload();
+            CL_ParseDownload(cmd);
             continue;
 
         case svc_frame:
@@ -1269,6 +1280,13 @@ badbyte:
                 goto badbyte;
             }
             CL_ParseZPacket();
+            continue;
+
+        case svc_zdownload:
+            if (cls.serverProtocol < PROTOCOL_VERSION_R1Q2) {
+                goto badbyte;
+            }
+            CL_ParseDownload(cmd);
             continue;
 
         case svc_gamestate:

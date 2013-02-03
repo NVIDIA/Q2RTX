@@ -155,6 +155,10 @@ void CL_CleanupDownloads(void)
     }
 
     cls.download.temp[0] = 0;
+
+#if USE_ZLIB
+    inflateEnd(&cls.download.z);
+#endif
 }
 
 /*
@@ -228,8 +232,7 @@ void CL_LoadDownloadIgnores(void)
     FS_FreeFile(raw);
 }
 
-// start legacy UDP download
-static qboolean start_download(dlqueue_t *q)
+static qboolean start_udp_download(dlqueue_t *q)
 {
     size_t len;
     qhandle_t f;
@@ -246,7 +249,6 @@ static qboolean start_download(dlqueue_t *q)
     memcpy(cls.download.temp, q->path, len);
     memcpy(cls.download.temp + len, ".tmp", 5);
 
-//ZOID
     // check to see if we already have a tmp for this file, if so, try to resume
     // open the file if not opened yet
     ret = FS_FOpenFile(cls.download.temp, &f, FS_MODE_RDWR);
@@ -254,10 +256,20 @@ static qboolean start_download(dlqueue_t *q)
         cls.download.file = f;
         // give the server an offset to start the download
         Com_DPrintf("[UDP] Resuming %s\n", q->path);
-        CL_ClientCommand(va("download \"%s\" %"PRIz, q->path, ret));
+#if USE_ZLIB
+        if (cls.serverProtocol == PROTOCOL_VERSION_R1Q2)
+            CL_ClientCommand(va("download \"%s\" %"PRIz" udp-zlib", q->path, ret));
+        else
+#endif
+            CL_ClientCommand(va("download \"%s\" %"PRIz, q->path, ret));
     } else if (ret == Q_ERR_NOENT) {  // it doesn't exist
         Com_DPrintf("[UDP] Downloading %s\n", q->path);
-        CL_ClientCommand(va("download \"%s\"", q->path));
+#if USE_ZLIB
+        if (cls.serverProtocol == PROTOCOL_VERSION_R1Q2)
+            CL_ClientCommand(va("download \"%s\" %"PRIz" udp-zlib", q->path, (size_t)0));
+        else
+#endif
+            CL_ClientCommand(va("download \"%s\"", q->path));
     } else { // error happened
         Com_EPrintf("[UDP] Couldn't open %s for appending: %s\n",
                     cls.download.temp, Q_ErrorString(ret));
@@ -287,24 +299,127 @@ void CL_StartNextDownload(void)
 
     FOR_EACH_DLQ(q) {
         if (q->state == DL_PENDING) {
-            if (start_download(q)) {
+            if (start_udp_download(q)) {
                 break;
             }
         }
     }
 }
 
+static void finish_udp_download(const char *msg)
+{
+    dlqueue_t *q = cls.download.current;
+
+    // finished with current path
+    CL_FinishDownload(q);
+
+    cls.download.current = NULL;
+    cls.download.percent = 0;
+
+    if (cls.download.file) {
+        FS_FCloseFile(cls.download.file);
+        cls.download.file = 0;
+    }
+
+    cls.download.temp[0] = 0;
+
+#if USE_ZLIB
+    inflateReset(&cls.download.z);
+#endif
+
+    if (msg) {
+        Com_Printf("[UDP] %s [%s] [%d remaining file%s]\n",
+                   q->path, msg, cls.download.pending,
+                   cls.download.pending == 1 ? "" : "s");
+    }
+
+    // get another file if needed
+    CL_RequestNextDownload();
+    CL_StartNextDownload();
+}
+
+static int write_udp_download(byte *data, int size)
+{
+    ssize_t ret;
+
+    ret = FS_Write(data, size, cls.download.file);
+    if (ret != size) {
+        Com_EPrintf("[UDP] Couldn't write %s: %s\n",
+                    cls.download.temp, Q_ErrorString(ret));
+        finish_udp_download(NULL);
+        return -1;
+    }
+
+    return 0;
+}
+
+// handles both continuous deflate stream for entire download and chunked
+// per-packet streams for compatibility.
+static int inflate_udp_download(byte *data, int inlen, int outlen)
+{
+#if USE_ZLIB
+
+#define CHUNK   0x10000
+
+    z_streamp   z = &cls.download.z;
+    byte        buffer[CHUNK];
+    int         ret;
+
+    z->next_in = data;
+    z->avail_in = inlen;
+
+    // initialize stream if not done yet
+    if (z->state == NULL && inflateInit2(z, -MAX_WBITS) != Z_OK)
+        Com_Error(ERR_FATAL, "%s: inflateInit2() failed", __func__);
+
+    // run inflate() until output buffer not full
+    do {
+        z->next_out = buffer;
+        z->avail_out = CHUNK;
+
+        ret = inflate(z, Z_SYNC_FLUSH);
+        if (ret != Z_OK && ret != Z_STREAM_END) {
+            Com_EPrintf("[UDP] inflate() failed: %s\n", z->msg);
+            finish_udp_download(NULL);
+            return -1;
+        }
+
+        Com_DDPrintf("%s: %u --> %u [%d]\n",
+                     __func__,
+                     inlen - z->avail_in,
+                     CHUNK - z->avail_out,
+                     ret);
+
+        if (write_udp_download(buffer, CHUNK - z->avail_out))
+            return -1;
+    } while (z->avail_out == 0);
+
+    // check uncompressed length if known
+    if (outlen > 0 && outlen != z->total_out)
+        Com_WPrintf("[UDP] Decompressed length mismatch: %d != %lu\n", outlen, z->total_out);
+
+    // prepare for the next stream if done
+    if (ret == Z_STREAM_END)
+        inflateReset(z);
+
+    return 0;
+#else
+    // should never happen
+    Com_Error(ERR_DROP, "Compressed server packet received, "
+              "but no zlib support linked in.");
+#endif
+}
+
 /*
 =====================
 CL_HandleDownload
 
-A download data has been received from the server
+An UDP download data has been received from the server.
 =====================
 */
-void CL_HandleDownload(const byte *data, int size, int percent)
+void CL_HandleDownload(byte *data, int size, int percent, int compressed)
 {
     dlqueue_t *q = cls.download.current;
-    const char *msg = NULL;
     qerror_t ret;
 
     if (!q) {
@@ -313,15 +428,11 @@ void CL_HandleDownload(const byte *data, int size, int percent)
 
     if (size == -1) {
         if (!percent) {
-            msg = "FAIL";
+            finish_udp_download("FAIL");
         } else {
-            msg = "STOP";
+            finish_udp_download("STOP");
         }
-        if (cls.download.file) {
-            // if here, we tried to resume a file but the server said no
-            FS_FCloseFile(cls.download.file);
-        }
-        goto another;
+        return;
     }
 
     // open the file if not opened yet
@@ -330,16 +441,17 @@ void CL_HandleDownload(const byte *data, int size, int percent)
         if (!cls.download.file) {
             Com_EPrintf("[UDP] Couldn't open %s for writing: %s\n",
                         cls.download.temp, Q_ErrorString(ret));
-            goto another;
+            finish_udp_download(NULL);
+            return;
         }
     }
 
-    ret = FS_Write(data, size, cls.download.file);
-    if (ret != size) {
-        Com_EPrintf("[UDP] Couldn't write %s: %s\n",
-                    cls.download.temp, Q_ErrorString(ret));
-        FS_FCloseFile(cls.download.file);
-        goto another;
+    if (compressed) {
+        if (inflate_udp_download(data, size, compressed))
+            return;
+    } else {
+        if (write_udp_download(data, size))
+            return;
     }
 
     if (percent != 100) {
@@ -349,33 +461,19 @@ void CL_HandleDownload(const byte *data, int size, int percent)
 
         CL_ClientCommand("nextdl");
     } else {
+        // close the file before renaming
         FS_FCloseFile(cls.download.file);
+        cls.download.file = 0;
 
-        // rename the temp file to it's final name
+        // rename the temp file to its final name
         ret = FS_RenameFile(cls.download.temp, q->path);
         if (ret) {
             Com_EPrintf("[UDP] Couldn't rename %s to %s: %s\n",
                         cls.download.temp, q->path, Q_ErrorString(ret));
+            finish_udp_download(NULL);
         } else {
-            msg = "DONE";
+            finish_udp_download("DONE");
         }
-
-another:
-        // finished with current path
-        CL_FinishDownload(q);
-        cls.download.current = NULL;
-        cls.download.percent = 0;
-        cls.download.file = 0;
-        cls.download.temp[0] = 0;
-
-        if (msg) {
-            Com_Printf("[UDP] %s [%s] [%d remaining file%s]\n",
-                       q->path, msg, cls.download.pending, cls.download.pending == 1 ? "" : "s");
-        }
-
-        // get another file if needed
-        CL_RequestNextDownload();
-        CL_StartNextDownload();
     }
 }
 

@@ -411,6 +411,9 @@ typedef struct client_static_s {
         int         percent;            // how much downloaded
         qhandle_t   file;               // UDP file transfer from server
         char        temp[MAX_QPATH + 4];// account 4 bytes for .tmp suffix
+#if USE_ZLIB
+        z_stream    z;                  // UDP download zlib stream
+#endif
         string_entry_t  *ignores;       // list of ignored paths
     } download;
 
@@ -588,7 +591,7 @@ qboolean CL_IgnoreDownload(const char *path);
 void CL_FinishDownload(dlqueue_t *q);
 void CL_CleanupDownloads(void);
 void CL_LoadDownloadIgnores(void);
-void CL_HandleDownload(const byte *data, int size, int percent);
+void CL_HandleDownload(byte *data, int size, int percent, int compressed);
 qboolean CL_CheckDownloadExtension(const char *ext);
 void CL_StartNextDownload(void);
 void CL_RequestNextDownload(void);

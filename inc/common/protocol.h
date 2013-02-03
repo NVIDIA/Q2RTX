@@ -46,7 +46,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define PROTOCOL_VERSION_Q2PRO_SHORT_ANGLES     1018    // r1037-44
 #define PROTOCOL_VERSION_Q2PRO_SERVER_STATE     1019    // r1302
 #define PROTOCOL_VERSION_Q2PRO_EXTENDED_LAYOUT  1020    // r1354
-#define PROTOCOL_VERSION_Q2PRO_CURRENT          1020    // r1354
+#define PROTOCOL_VERSION_Q2PRO_ZLIB_DOWNLOADS   1021    // r1358
+#define PROTOCOL_VERSION_Q2PRO_CURRENT          1021    // r1358
 
 #define PROTOCOL_VERSION_MVD_MINIMUM            2009    // r168
 #define PROTOCOL_VERSION_MVD_CURRENT            2010    // r177
