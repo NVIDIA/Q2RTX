@@ -467,6 +467,10 @@ void HTTP_SetServer(const char *url)
     if (allow_download->integer == -1)
         return;
 
+    // ignore if HTTP downloads are disabled
+    if (cl_http_downloads->integer == 0)
+        return;
+
     if (strncmp(url, "http://", 7)) {
         Com_Printf("[HTTP] Ignoring download server URL with non-HTTP schema.\n");
         return;
@@ -497,7 +501,7 @@ qerror_t HTTP_QueueDownload(const char *path, dltype_t type)
     qerror_t    ret;
 
     // no http server (or we got booted)
-    if (!curl_multi || !cl_http_downloads->integer)
+    if (!curl_multi)
         return Q_ERR_NOSYS;
 
     // first download queued, so we want the mod filelist
