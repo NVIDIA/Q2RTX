@@ -315,6 +315,7 @@ typedef struct client_s {
     int             downloadsize;   // total bytes (can't use EOF because of paks)
     int             downloadcount;  // bytes sent
     char            *downloadname;  // name of the file
+    int             downloadcmd;    // svc_(z)download
 
     // protocol stuff
     int             challenge;  // challenge of this user, randomly generated

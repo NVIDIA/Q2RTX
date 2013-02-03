@@ -553,6 +553,7 @@ void SV_CloseDownload(client_t *client)
     }
     client->downloadsize = 0;
     client->downloadcount = 0;
+    client->downloadcmd = 0;
 }
 
 /*
@@ -573,7 +574,7 @@ static void SV_NextDownload_f(void)
     if (r > MAX_DOWNLOAD_CHUNK)
         r = MAX_DOWNLOAD_CHUNK;
 
-    MSG_WriteByte(svc_download);
+    MSG_WriteByte(sv_client->downloadcmd);
     MSG_WriteShort(r);
 
     sv_client->downloadcount += r;
@@ -604,11 +605,11 @@ static void SV_BeginDownload_f(void)
 {
     char    name[MAX_QPATH];
     byte    *download;
+    int     downloadcmd;
     ssize_t downloadsize, maxdownloadsize, result;
     int     offset = 0;
     cvar_t  *allow;
     size_t  len;
-    unsigned flags;
     qhandle_t f;
 
     len = Cmd_ArgvBuffer(1, name, sizeof(name));
@@ -674,18 +675,28 @@ static void SV_BeginDownload_f(void)
         SV_CloseDownload(sv_client);
     }
 
-    flags = FS_MODE_READ;
+    f = 0;
+    downloadcmd = svc_download;
 
-    // special check for maps, if it came from a pak file, don't allow
-    // download  ZOID
-    if (allow == allow_download_maps && allow->integer < 2) {
-        flags |= FS_TYPE_REAL;
+#if USE_ZLIB
+    // prefer raw deflate stream from .pkz if supported
+    if (sv_client->protocol == PROTOCOL_VERSION_Q2PRO &&
+        sv_client->version >= PROTOCOL_VERSION_Q2PRO_ZLIB_DOWNLOADS &&
+        sv_client->has_zlib && offset == 0) {
+        downloadsize = FS_FOpenFile(name, &f, FS_MODE_READ | FS_FLAG_DEFLATE);
+        if (f) {
+            Com_DPrintf("Serving compressed download to %s\n", sv_client->name);
+            downloadcmd = svc_zdownload;
+        }
     }
+#endif
 
-    downloadsize = FS_FOpenFile(name, &f, flags);
     if (!f) {
-        Com_DPrintf("Couldn't download %s to %s\n", name, sv_client->name);
-        goto fail1;
+        downloadsize = FS_FOpenFile(name, &f, FS_MODE_READ);
+        if (!f) {
+            Com_DPrintf("Couldn't download %s to %s\n", name, sv_client->name);
+            goto fail1;
+        }
     }
 
     maxdownloadsize = MAX_LOADFILE;
@@ -732,6 +743,7 @@ static void SV_BeginDownload_f(void)
     sv_client->downloadsize = downloadsize;
     sv_client->downloadcount = offset;
     sv_client->downloadname = SV_CopyString(name);
+    sv_client->downloadcmd = downloadcmd;
 
     Com_DPrintf("Downloading %s to %s\n", name, sv_client->name);
 
