@@ -79,6 +79,8 @@ static int progress_func(void *clientp, double dltotal, double dlnow, double ult
     else
         cls.download.percent = 0;
 
+    cls.download.position = (int)dlnow;
+
     return 0;
 }
 
@@ -669,6 +671,7 @@ static void abort_downloads(void)
 
     cls.download.current = NULL;
     cls.download.percent = 0;
+    cls.download.position = 0;
 
     FOR_EACH_DLQ(q) {
         if (q->state != DL_DONE && q->type >= DL_LIST)
@@ -728,6 +731,7 @@ static qboolean finish_download(void)
 
         cls.download.current = NULL;
         cls.download.percent = 0;
+        cls.download.position = 0;
 
         //filelist processing is done on read
         if (dl->file) {

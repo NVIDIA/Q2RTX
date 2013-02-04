@@ -834,11 +834,11 @@ static void Con_DrawSolidConsole(void)
         else
             text = cls.download.current->path;
 
-        x = con.linewidth - ((con.linewidth * 7) / 40);
-        y = x - strlen(text) - 8;
-        i = con.linewidth / 3;
+        x = con.linewidth;
+        y = x - strlen(text) - 18;
+        i = x / 3;
         if (strlen(text) > i) {
-            y = x - i - 11;
+            y = x - i - 21;
             strncpy(buffer, text, i);
             buffer[i] = 0;
             strcat(buffer, "...");
@@ -860,7 +860,8 @@ static void Con_DrawSolidConsole(void)
         buffer[i++] = '\x82';
         buffer[i] = 0;
 
-        sprintf(buffer + i, " %02d%%", cls.download.percent);
+        Q_snprintf(buffer + i, sizeof(buffer) - i, " %02d%% (%d kB)",
+                   cls.download.percent, cls.download.position / 1000);
 
         // draw it
         y = vislines - 10;

@@ -148,6 +148,7 @@ void CL_CleanupDownloads(void)
 
     cls.download.current = NULL;
     cls.download.percent = 0;
+    cls.download.position = 0;
 
     if (cls.download.file) {
         FS_FCloseFile(cls.download.file);
@@ -315,6 +316,7 @@ static void finish_udp_download(const char *msg)
 
     cls.download.current = NULL;
     cls.download.percent = 0;
+    cls.download.position = 0;
 
     if (cls.download.file) {
         FS_FCloseFile(cls.download.file);
@@ -458,6 +460,7 @@ void CL_HandleDownload(byte *data, int size, int percent, int compressed)
         // request next block
         // change display routines by zoid
         cls.download.percent = percent;
+        cls.download.position += size;
 
         CL_ClientCommand("nextdl");
     } else {
