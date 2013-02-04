@@ -3478,6 +3478,10 @@ void FS_Restart(qboolean total)
     } else {
         // just change gamedir
         free_game_paths();
+        Q_snprintf(fs_gamedir, sizeof(fs_gamedir), "%s/"BASEGAME, sys_basedir->string);
+#ifdef _WIN32
+        FS_ReplaceSeparators(fs_gamedir, '/');
+#endif
     }
 
     setup_game_paths();
