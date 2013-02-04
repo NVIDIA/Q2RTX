@@ -125,7 +125,7 @@ void Netchan_Init(void)
     // pick a port value that should be nice and random
     port = Sys_Milliseconds() & 0xffff;
     net_qport = Cvar_Get("qport", va("%d", port), 0);
-    net_maxmsglen = Cvar_Get("net_maxmsglen", "1390", 0);
+    net_maxmsglen = Cvar_Get("net_maxmsglen", va("%d", MAX_PACKETLEN_WRITABLE_DEFAULT), 0);
     net_maxmsglen->changed = net_maxmsglen_changed;
     net_chantype = Cvar_Get("net_chantype", "1", 0);
 }
@@ -837,7 +837,7 @@ netchan_t *Netchan_Setup(netsrc_t sock, netchan_type_t type,
 {
     netchan_t *netchan;
 
-    clamp(maxpacketlen, 256, MAX_PACKETLEN_WRITABLE);
+    clamp(maxpacketlen, MIN_PACKETLEN, MAX_PACKETLEN_WRITABLE);
 
     switch (type) {
     case NETCHAN_OLD:
