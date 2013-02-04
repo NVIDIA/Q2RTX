@@ -348,6 +348,9 @@ void CL_ShutdownRefresh(void)
 
     cls.ref_initialized = qfalse;
 
+    // no longer active
+    cls.active = ACT_MINIMIZED;
+
     Z_LeakTest(TAG_RENDERER);
 }
 
