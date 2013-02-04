@@ -255,6 +255,7 @@ static qboolean start_udp_download(dlqueue_t *q)
     ret = FS_FOpenFile(cls.download.temp, &f, FS_MODE_RDWR);
     if (ret >= 0) {  // it exists
         cls.download.file = f;
+        cls.download.position = ret;
         // give the server an offset to start the download
         Com_DPrintf("[UDP] Resuming %s\n", q->path);
 #if USE_ZLIB
