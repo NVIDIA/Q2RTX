@@ -964,6 +964,11 @@ void Con_RunConsole(void)
         con.destHeight = 0;             // none visible
     }
 
+    if (con_speed->value <= 0) {
+        con.currentHeight = con.destHeight;
+        return;
+    }
+
     if (con.currentHeight > con.destHeight) {
         con.currentHeight -= con_speed->value * cls.frametime;
         if (con.currentHeight < con.destHeight) {
