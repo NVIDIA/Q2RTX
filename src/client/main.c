@@ -407,7 +407,7 @@ void CL_CheckForResend(void)
 
         cls.passive = qfalse;
 
-        Con_Popup();
+        Con_Popup(qtrue);
         UI_OpenMenu(UIMENU_NONE);
     }
 
@@ -563,7 +563,7 @@ usage:
     cls.connect_time -= CONNECT_FAST;
     cls.connect_count = 0;
 
-    Con_Popup();
+    Con_Popup(qtrue);
 
     CL_CheckForResend();
 
@@ -2356,6 +2356,8 @@ void CL_RestartFilesystem(qboolean total)
         cls.state = ca_loading;
     }
 
+    Con_Popup(qfalse);
+
     UI_Shutdown();
 
     S_StopAllSounds();
@@ -2395,6 +2397,8 @@ void CL_RestartFilesystem(qboolean total)
     // switch back to original state
     cls.state = cls_state;
 
+    Con_Close(qfalse);
+
     CL_UpdateFrameTimes();
 
     cvar_modified &= ~CVAR_FILES;
@@ -2413,6 +2417,8 @@ void CL_RestartRefresh(qboolean total)
     if (cls.state >= ca_precached) {
         cls.state = ca_loading;
     }
+
+    Con_Popup(qfalse);
 
     S_StopAllSounds();
 
@@ -2442,6 +2448,8 @@ void CL_RestartRefresh(qboolean total)
 
     // switch back to original state
     cls.state = cls_state;
+
+    Con_Close(qfalse);
 
     CL_UpdateFrameTimes();
 

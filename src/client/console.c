@@ -121,7 +121,7 @@ if user has typed something into it since the last call to Con_Popup.
 */
 void Con_Close(qboolean force)
 {
-    if (con.mode && !force) {
+    if (con.mode > CON_POPUP && !force) {
         return;
     }
 
@@ -131,7 +131,7 @@ void Con_Close(qboolean force)
     Key_SetDest(cls.key_dest & ~KEY_CONSOLE);
 
     con.destHeight = con.currentHeight = 0;
-    con.mode = CON_DEFAULT;
+    con.mode = CON_POPUP;
     con.chat = CHAT_NONE;
 }
 
@@ -139,12 +139,12 @@ void Con_Close(qboolean force)
 ================
 Con_Popup
 
-Drop to connection screen.
+Drop to connection screen. Unless `force' is true, does not change console mode to popup.
 ================
 */
-void Con_Popup(void)
+void Con_Popup(qboolean force)
 {
-    if (con.mode == CON_DEFAULT) {
+    if (force) {
         con.mode = CON_POPUP;
     }
 
@@ -168,7 +168,7 @@ static void toggle_console(consoleMode_t mode, chatMode_t chat)
 
     if (cls.key_dest & KEY_CONSOLE) {
         Key_SetDest(cls.key_dest & ~KEY_CONSOLE);
-        con.mode = CON_DEFAULT;
+        con.mode = CON_POPUP;
         con.chat = CHAT_NONE;
         return;
     }
@@ -1018,7 +1018,7 @@ static void Con_Say(char *msg)
 // don't close console after connecting
 static void Con_InteractiveMode(void)
 {
-    if (!con.mode) {
+    if (con.mode == CON_POPUP) {
         con.mode = CON_DEFAULT;
     }
 }

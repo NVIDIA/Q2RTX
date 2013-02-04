@@ -873,7 +873,7 @@ void Con_ClearNotify_f(void);
 void Con_ToggleConsole_f(void);
 void Con_ClearTyping(void);
 void Con_Close(qboolean force);
-void Con_Popup(void);
+void Con_Popup(qboolean force);
 void Con_SkipNotify(qboolean skip);
 void Con_RegisterMedia(void);
 

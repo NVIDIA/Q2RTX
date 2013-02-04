@@ -733,7 +733,7 @@ static void CL_PlayDemo_f(void)
     Q_strlcpy(cls.servername, COM_SkipPath(name), sizeof(cls.servername));
     cls.serverAddress.type = NA_LOOPBACK;
 
-    Con_Popup();
+    Con_Popup(qtrue);
     SCR_UpdateScreen();
 
     // parse the first message just read
