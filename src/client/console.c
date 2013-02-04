@@ -125,6 +125,11 @@ void Con_Close(qboolean force)
         return;
     }
 
+    // if not connected, console or menu should be up
+    if (cls.state < ca_active && !(cls.key_dest & KEY_MENU)) {
+        return;
+    }
+
     Con_ClearTyping();
     Con_ClearNotify_f();
 
