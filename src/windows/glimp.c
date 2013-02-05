@@ -140,7 +140,7 @@ static int SetupGL(int colorbits, int depthbits, int stencilbits, int multisampl
             goto soft;
         }
         if (numFormats == 0) {
-            Com_EPrintf("No suitable OpenGL pixelformat found\n");
+            Com_EPrintf("No suitable OpenGL pixelformat found for %d multisamples\n", multisamples);
             goto soft;
         }
     } else {
@@ -300,6 +300,11 @@ static unsigned GetFakeWindowExtensions(void)
 
     extensions = WGL_ParseExtensionString(qwglGetExtensionsStringARB(dc));
 
+    if (extensions & QWGL_ARB_pixel_format) {
+        Com_Printf("...enabling WGL_ARB_pixel_format\n");
+        WGL_InitExtensions(QWGL_ARB_pixel_format);
+    }
+
 fail5:
     qwglMakeCurrent(NULL, NULL);
 fail4:
@@ -357,10 +362,8 @@ static int LoadGL(const char *driver)
         unsigned extensions = GetFakeWindowExtensions();
 
         if (extensions & QWGL_ARB_multisample) {
-            if (extensions & QWGL_ARB_pixel_format) {
-                Com_Printf("...enabling WGL_ARB_pixel_format\n");
+            if (qwglChoosePixelFormatARB) {
                 Com_Printf("...enabling WGL_ARB_multisample\n");
-                WGL_InitExtensions(QWGL_ARB_pixel_format);
             } else {
                 Com_Printf("...ignoring WGL_ARB_multisample, WGL_ARB_pixel_format not found\n");
                 Cvar_Set("gl_multisamples", "0");
@@ -377,8 +380,10 @@ static int LoadGL(const char *driver)
     ret = SetupGL(colorbits, depthbits, stencilbits, multisamples);
 
     // attempt to recover
-    if (ret == FAIL_SOFT && (colorbits || depthbits || stencilbits || multisamples > 1))
+    if (ret == FAIL_SOFT && (colorbits || depthbits || stencilbits || multisamples > 1)) {
+        Cvar_Set("gl_multisamples", "0");
         ret = SetupGL(0, 0, 0, 0);
+    }
 
     if (ret)
         goto fail;
