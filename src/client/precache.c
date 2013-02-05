@@ -192,49 +192,6 @@ void CL_LoadClientinfo(clientinfo_t *ci, const char *s)
 
 /*
 =================
-CL_LoadState
-=================
-*/
-void CL_LoadState(load_state_t state)
-{
-    extern void VID_PumpEvents(void);
-    const char *s;
-
-    switch (state) {
-    case LOAD_MAP:
-        s = cl.configstrings[CS_MODELS + 1];
-        break;
-    case LOAD_MODELS:
-        s = "models";
-        break;
-    case LOAD_IMAGES:
-        s = "images";
-        break;
-    case LOAD_CLIENTS:
-        s = "clients";
-        break;
-    case LOAD_SOUNDS:
-        s = "sounds";
-        break;
-    case LOAD_FINISH:
-        s = NULL;
-        break;
-    default:
-        return;
-    }
-
-    if (s) {
-        Con_Printf("Loading %s...\r", s);
-    } else {
-        Con_Print("\r");
-    }
-
-    SCR_UpdateScreen();
-    VID_PumpEvents();
-}
-
-/*
-=================
 CL_RegisterSounds
 =================
 */

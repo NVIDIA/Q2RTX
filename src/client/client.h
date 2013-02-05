@@ -566,12 +566,12 @@ qboolean CL_CheckForIgnore(const char *s);
 //
 
 typedef enum {
+    LOAD_NONE,
     LOAD_MAP,
     LOAD_MODELS,
     LOAD_IMAGES,
     LOAD_CLIENTS,
-    LOAD_SOUNDS,
-    LOAD_FINISH
+    LOAD_SOUNDS
 } load_state_t;
 
 void CL_ParsePlayerSkin(char *name, char *model, char *skin, const char *s);

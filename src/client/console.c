@@ -71,6 +71,8 @@ typedef struct console_s {
     consoleMode_t mode;
     netadr_t remoteAddress;
     char *remotePassword;
+
+    load_state_t loadstate;
 } console_t;
 
 static console_t    con;
@@ -522,6 +524,18 @@ void Con_SetColor(color_index_t color)
 }
 
 /*
+=================
+CL_LoadState
+=================
+*/
+void CL_LoadState(load_state_t state)
+{
+    con.loadstate = state;
+    SCR_UpdateScreen();
+    VID_PumpEvents();
+}
+
+/*
 ================
 Con_Print
 
@@ -768,9 +782,7 @@ static void Con_DrawSolidConsole(void)
         vislines = con.vidHeight;
 
 // setup transparency
-    if (cls.state >= ca_active &&
-        con_alpha->value &&
-        (cls.key_dest & KEY_MENU) == 0) {
+    if (cls.state >= ca_active && !(cls.key_dest & KEY_MENU) && con_alpha->value) {
         alpha = 0.5f + 0.5f * (con.currentHeight / con_height->value);
         R_SetAlpha(alpha * Cvar_ClampValue(con_alpha, 0, 1));
     }
@@ -786,11 +798,6 @@ static void Con_DrawSolidConsole(void)
         R_DrawStretchPic(0, vislines - con.vidHeight,
                          con.vidWidth, con.vidHeight, con.backImage);
     }
-#if 0
-    if (cls.state > ca_disconnected && cls.state < ca_active) {
-        R_DrawFill(0, vislines, con.vidWidth, con.vidHeight - vislines, 0);
-    }
-#endif
 
 // draw the text
     y = vislines - CON_PRESTEP;
@@ -828,9 +835,7 @@ static void Con_DrawSolidConsole(void)
 
     R_ClearColor();
 
-//ZOID
     // draw the download bar
-    // figure out width
     if (cls.download.current) {
         int n, j;
 
@@ -839,6 +844,7 @@ static void Con_DrawSolidConsole(void)
         else
             text = cls.download.current->path;
 
+        // figure out width
         x = con.linewidth;
         y = x - strlen(text) - 18;
         i = x / 3;
@@ -871,8 +877,37 @@ static void Con_DrawSolidConsole(void)
         // draw it
         y = vislines - 10;
         R_DrawString(CHAR_WIDTH, y, 0, CON_LINEWIDTH, buffer, con.charsetImage);
+    } else if (cls.state == ca_loading) {
+        // draw loading state
+        switch (con.loadstate) {
+        case LOAD_MAP:
+            text = cl.configstrings[CS_MODELS + 1];
+            break;
+        case LOAD_MODELS:
+            text = "models";
+            break;
+        case LOAD_IMAGES:
+            text = "images";
+            break;
+        case LOAD_CLIENTS:
+            text = "clients";
+            break;
+        case LOAD_SOUNDS:
+            text = "sounds";
+            break;
+        default:
+            text = NULL;
+            break;
+        }
+
+        if (text) {
+            Q_snprintf(buffer, sizeof(buffer), "Loading %s...", text);
+
+            // draw it
+            y = vislines - 10;
+            R_DrawString(CHAR_WIDTH, y, 0, CON_LINEWIDTH, buffer, con.charsetImage);
+        }
     }
-//ZOID
 
 // draw the input prompt, user text, and cursor if desired
     x = 0;
