@@ -368,12 +368,12 @@ static int inflate_udp_download(byte *data, int inlen, int outlen)
     byte        buffer[CHUNK];
     int         ret;
 
-    z->next_in = data;
-    z->avail_in = inlen;
-
     // initialize stream if not done yet
     if (z->state == NULL && inflateInit2(z, -MAX_WBITS) != Z_OK)
         Com_Error(ERR_FATAL, "%s: inflateInit2() failed", __func__);
+
+    z->next_in = data;
+    z->avail_in = inlen;
 
     // run inflate() until output buffer not full
     do {
