@@ -83,7 +83,7 @@ qboolean CL_ForwardToServer(void);
 void Con_Init(void);
 void Con_SetColor(color_index_t color);
 void Con_Print(const char *text);
-void Con_Printf(const char *fmt, ...);
+void Con_Printf(const char *fmt, ...) q_printf(1, 2);
 void Con_Close(qboolean force);
 
 // this is in the client code, but can be used for debugging from server
