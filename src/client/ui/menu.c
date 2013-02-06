@@ -434,6 +434,15 @@ static void Field_Draw(menuField_t *f)
     }
 }
 
+static qboolean Field_TestKey(menuField_t *f, int key)
+{
+    if (f->generic.flags & QMF_NUMBERSONLY) {
+        return Q_isdigit(key) || key == '+' || key == '-' || key == '.';
+    }
+
+    return Q_isprint(key);
+}
+
 /*
 =================
 Field_Key
@@ -441,21 +450,14 @@ Field_Key
 */
 static int Field_Key(menuField_t *f, int key)
 {
-    qboolean ret;
-
-    ret = IF_KeyEvent(&f->field, key);
-    if (ret) {
+    if (IF_KeyEvent(&f->field, key)) {
         return QMS_SILENT;
     }
-    if (f->generic.flags & QMF_NUMBERSONLY) {
-        if (Q_isdigit(key)) {
-            return QMS_SILENT;
-        }
-    } else {
-        if (key >= 32 && key < 127) {
-            return QMS_SILENT;
-        }
+
+    if (Field_TestKey(f, key)) {
+        return QMS_SILENT;
     }
+
     return QMS_NOTHANDLED;
 }
 
@@ -466,12 +468,10 @@ Field_Char
 */
 static int Field_Char(menuField_t *f, int key)
 {
-    int ret;
+    qboolean ret;
 
-    if (f->generic.flags & QMF_NUMBERSONLY) {
-        if (key < '0' || key > '9') {
-            return QMS_BEEP;
-        }
+    if (!Field_TestKey(f, key)) {
+        return QMS_BEEP;
     }
 
     ret = IF_CharEvent(&f->field, key);
