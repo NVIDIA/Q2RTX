@@ -1939,6 +1939,7 @@ static void SCR_DrawPause(void)
 
 static void SCR_DrawLoading(void)
 {
+    float scale;
     int x, y;
 
     if (!scr.draw_loading)
@@ -1946,8 +1947,11 @@ static void SCR_DrawLoading(void)
 
     scr.draw_loading = qfalse;
 
-    x = (r_config.width - scr.loading_width) / 2;
-    y = (r_config.height - scr.loading_height) / 2;
+    scale = 1.0f / Cvar_ClampValue(scr_scale, 1, 9);
+    R_SetScale(&scale);
+
+    x = (r_config.width * scale - scr.loading_width) / 2;
+    y = (r_config.height * scale - scr.loading_height) / 2;
 
     R_DrawPic(x, y, scr.loading_pic);
 }
