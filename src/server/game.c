@@ -927,6 +927,7 @@ void SV_InitGameProgs(void)
     if (!ge) {
         Com_Error(ERR_DROP, "Game DLL returned NULL exports");
     }
+
     if (ge->apiversion != GAME_API_VERSION) {
         Com_Error(ERR_DROP, "Game DLL is version %d, expected %d",
                   ge->apiversion, GAME_API_VERSION);
@@ -934,6 +935,11 @@ void SV_InitGameProgs(void)
 
     // initialize
     ge->Init();
+
+    // sanitize edict_size
+    if (ge->edict_size < sizeof(edict_t) || ge->edict_size > SIZE_MAX / MAX_EDICTS) {
+        Com_Error(ERR_DROP, "Game DLL returned bad size of edict_t");
+    }
 
     // sanitize max_edicts
     if (ge->max_edicts <= sv_maxclients->integer || ge->max_edicts > MAX_EDICTS) {
