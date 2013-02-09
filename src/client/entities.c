@@ -45,7 +45,7 @@ static inline qboolean entity_optimized(const entity_state_t *state)
 }
 
 static inline void
-entity_new(centity_t *ent, const entity_state_t *state, const vec_t *origin)
+entity_update_new(centity_t *ent, const entity_state_t *state, const vec_t *origin)
 {
     ent->trailcount = 1024;     // for diminishing rocket / grenade trails
 
@@ -71,7 +71,7 @@ entity_new(centity_t *ent, const entity_state_t *state, const vec_t *origin)
 }
 
 static inline void
-entity_old(centity_t *ent, const entity_state_t *state, const vec_t *origin)
+entity_update_old(centity_t *ent, const entity_state_t *state, const vec_t *origin)
 {
     int event = state->event;
 
@@ -124,6 +124,26 @@ entity_old(centity_t *ent, const entity_state_t *state, const vec_t *origin)
     ent->prev = ent->current;
 }
 
+static inline qboolean entity_new(const centity_t *ent)
+{
+    if (!cl.oldframe.valid)
+        return qtrue;   // last received frame was invalid
+
+    if (ent->serverframe != cl.oldframe.number)
+        return qtrue;   // wasn't in last received frame
+
+    if (cl_nolerp->integer == 2)
+        return qtrue;   // developer option, always new
+
+    if (cl_nolerp->integer == 3)
+        return qfalse;  // developer option, lerp from last received frame
+
+    if (cl.oldframe.number != cl.frame.number - 1)
+        return qtrue;   // previous server frame was dropped
+
+    return qfalse;
+}
+
 static void entity_update(const entity_state_t *state)
 {
     centity_t *ent = &cl_entities[state->number];
@@ -151,11 +171,11 @@ static void entity_update(const entity_state_t *state)
         origin = state->origin;
     }
 
-    if (ent->serverframe != cl.oldframe.number || cl_nolerp->integer == 2) {
+    if (entity_new(ent)) {
         // wasn't in last update, so initialize some things
-        entity_new(ent, state, origin);
+        entity_update_new(ent, state, origin);
     } else {
-        entity_old(ent, state, origin);
+        entity_update_old(ent, state, origin);
     }
 
     ent->serverframe = cl.frame.number;
