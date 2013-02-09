@@ -107,11 +107,11 @@ static void emit_packet_entities(server_frame_t *from, server_frame_t *to)
         }
 
         if (newnum == oldnum) {
-            // delta update from old position
-            // because the force parm is false, this will not result
-            // in any bytes being emited if the entity has not changed at all
-            // note that players are always 'newentities' in compatibility mode,
-            // this updates their oldorigin always and prevents warping
+            // Delta update from old position. Because the force parm is false,
+            // this will not result in any bytes being emitted if the entity has
+            // not changed at all. Note that players are always 'newentities',
+            // this updates their old_origin always and prevents warping in case
+            // of packet loss.
             MSG_PackEntity(&oldpack, oldent, qfalse);
             MSG_PackEntity(&newpack, newent, qfalse);
             MSG_WriteDeltaEntity(&oldpack, &newpack,
