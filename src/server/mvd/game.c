@@ -1998,7 +1998,8 @@ void MVD_PrepWorldFrame(void)
 
     // reset events and old origins
     FOR_EACH_MVD(mvd) {
-        for (i = 1, ent = &mvd->edicts[1]; i < mvd->pool.num_edicts; i++, ent++) {
+        for (i = 1; i < mvd->pool.num_edicts; i++) {
+            ent = &mvd->edicts[i];
             if (!ent->inuse) {
                 continue;
             }

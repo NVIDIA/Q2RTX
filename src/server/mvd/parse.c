@@ -739,6 +739,9 @@ static void MVD_ParsePacketEntities(mvd_t *mvd)
             MVD_LinkEdict(mvd, ent);
         }
 
+        // mark this entity as seen even if removed
+        ent->svflags |= SVF_MONSTER;
+
         if (bits & U_REMOVE) {
             SHOWNET(2, "   remove: %d\n", number);
             ent->inuse = qfalse;
@@ -853,7 +856,7 @@ void MVD_ClearState(mvd_t *mvd, qboolean full)
     int i;
 
     // clear all entities, don't trust num_edicts as it is possible
-    // to miscount removed entities
+    // to miscount removed but seen entities
     memset(mvd->edicts, 0, sizeof(mvd->edicts));
     mvd->pool.num_edicts = 0;
 
