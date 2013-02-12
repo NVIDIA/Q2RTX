@@ -35,9 +35,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
     Cvar_FullSet(var, val, CVAR_SERVERINFO | CVAR_GAME, FROM_CODE)
 
 // game features MVD client supports
-#define MVD_FEATURES (GMF_CLIENTNUM | GMF_PROPERINUSE | GMF_WANT_ALL_DISCONNECTS)
+#define MVD_FEATURES    (GMF_CLIENTNUM | GMF_PROPERINUSE | GMF_WANT_ALL_DISCONNECTS)
 
-#define LAYOUT_MSEC        3000
+#define LAYOUT_MSEC     3000
 
 typedef enum {
     LAYOUT_NONE,        // no layout at all
@@ -75,13 +75,18 @@ typedef struct {
     list_t          entry;
     struct mvd_s    *mvd;
     client_t        *cl;
-    qboolean    admin;
-    qboolean    notified;
-    unsigned    begin_time;
-    mvd_player_t *target, *oldtarget;
-    int         chase_mask;
-    float       fov;
-    int         uf;
+    qboolean        admin;
+    qboolean        notified;
+    unsigned        begin_time;
+    float           fov;
+    int             uf;
+
+    mvd_player_t    *target;
+    mvd_player_t    *oldtarget;
+    int             chase_mask;
+    qboolean        chase_auto;
+    qboolean        chase_wait;
+    byte            chase_bitmap[MAX_CLIENTS / CHAR_BIT];
 
     mvd_layout_t    layout_type;
     unsigned        layout_time;

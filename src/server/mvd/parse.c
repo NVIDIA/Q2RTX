@@ -842,7 +842,7 @@ static void MVD_ParseFrame(mvd_t *mvd)
 
     // update clients now so that effects datagram that
     // follows can reference current view positions
-    if (mvd->state && !mvd->demoseeking) {
+    if (mvd->state && mvd->framenum && !mvd->demoseeking) {
         MVD_UpdateClients(mvd);
     }
 
@@ -1009,7 +1009,12 @@ static void MVD_ParseServerData(mvd_t *mvd, int extrabits)
 
         // clear chase targets
         FOR_EACH_MVDCL(client, mvd) {
-            client->target = client->oldtarget = NULL;
+            client->target = NULL;
+            client->oldtarget = NULL;
+            client->chase_mask = 0;
+            client->chase_auto = qfalse;
+            client->chase_wait = qfalse;
+            memset(client->chase_bitmap, 0, sizeof(client->chase_bitmap));
         }
     }
 
