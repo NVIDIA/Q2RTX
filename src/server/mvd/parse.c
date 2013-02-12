@@ -742,8 +742,12 @@ static void MVD_ParsePacketEntities(mvd_t *mvd)
         // mark this entity as seen even if removed
         ent->svflags |= SVF_MONSTER;
 
+        // shuffle current origin to old if removed
         if (bits & U_REMOVE) {
             SHOWNET(2, "   remove: %d\n", number);
+            if (!(ent->s.renderfx & RF_BEAM)) {
+                VectorCopy(ent->s.origin, ent->s.old_origin);
+            }
             ent->inuse = qfalse;
             continue;
         }
