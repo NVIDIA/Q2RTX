@@ -1959,6 +1959,59 @@ static void MVD_GameClientDisconnect(edict_t *ent)
     client->begin_time = 0;
 }
 
+static mvd_player_t *MVD_HitPlayer(mvd_client_t *client)
+{
+    mvd_t *mvd = client->mvd;
+    trace_t trace;
+    vec3_t start, end, forward;
+    mvd_player_t *player, *target;
+    edict_t *ent;
+    float fraction;
+    int i;
+
+    if (!mvd->players)
+        return NULL;
+
+    if (mvd->intermission)
+        return NULL;
+
+    VectorMA(client->ps.viewoffset, 0.125f, client->ps.pmove.origin, start);
+    AngleVectors(client->ps.viewangles, forward, NULL, NULL);
+    VectorMA(start, 8192, forward, end);
+
+    if (mvd->cm.cache) {
+        CM_BoxTrace(&trace, start, end, vec3_origin, vec3_origin,
+                    mvd->cm.cache->nodes, CONTENTS_SOLID);
+        fraction = trace.fraction;
+    } else {
+        fraction = 1;
+    }
+
+    target = NULL;
+    for (i = 0; i < mvd->maxclients; i++) {
+        player = &mvd->players[i];
+        if (!player->inuse || player == mvd->dummy)
+            continue;
+
+        ent = &mvd->edicts[i + 1];
+        if (!ent->inuse)
+            continue;
+
+        if (ent->solid != SOLID_BBOX)
+            continue;
+
+        CM_TransformedBoxTrace(&trace, start, end, vec3_origin, vec3_origin,
+                               CM_HeadnodeForBox(ent->mins, ent->maxs),
+                               CONTENTS_MONSTER, ent->s.origin, vec3_origin);
+
+        if (trace.fraction < fraction) {
+            fraction = trace.fraction;
+            target = player;
+        }
+    }
+
+    return target;
+}
 
 static trace_t q_gameabi MVD_Trace(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end)
 {
@@ -1991,6 +2044,13 @@ static void MVD_GameClientThink(edict_t *ent, usercmd_t *cmd)
     }
 
     if ((cmd->buttons & ~old->buttons) & BUTTON_ATTACK) {
+        mvd_player_t *hit;
+
+        // small hack to allow picking up targets by aim
+        if (client->target == NULL && (hit = MVD_HitPlayer(client)) != NULL) {
+            client->oldtarget = hit;
+        }
+
         MVD_Observe_f(client);
     }
 
