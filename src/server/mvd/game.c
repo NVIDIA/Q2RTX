@@ -1117,6 +1117,20 @@ match:
     }
 }
 
+static qboolean count_chase_bits(mvd_client_t *client)
+{
+    mvd_t *mvd = client->mvd;
+    int i, j, count = 0;
+
+    for (i = 0; i < (mvd->maxclients + CHAR_BIT - 1) / CHAR_BIT; i++)
+        if (client->chase_bitmap[i])
+            for (j = 0; j < 8; j++)
+                if (client->chase_bitmap[i] & (1 << j))
+                    count++;
+
+    return count;
+}
+
 static void MVD_AutoFollow_f(mvd_client_t *client)
 {
     mvd_t *mvd = client->mvd;
@@ -1135,9 +1149,10 @@ static void MVD_AutoFollow_f(mvd_client_t *client)
 
     argc = Cmd_Argc();
     if (argc < 2) {
+        i = count_chase_bits(client);
         SV_ClientPrintf(client->cl, PRINT_HIGH,
-                        "[MVD] Auto chasing is %s.\n",
-                        client->chase_auto ? "ON" : "OFF");
+                        "[MVD] Auto chasing is %s (%d target%s).\n",
+                        client->chase_auto ? "ON" : "OFF", i, i == 1 ? "" : "s");
         return;
     }
 
@@ -1172,11 +1187,22 @@ static void MVD_AutoFollow_f(mvd_client_t *client)
             return;
         }
 
-        for (i = 0; i < mvd->maxclients / CHAR_BIT; i++)
-            if (client->chase_bitmap[i])
-                return;
+        if (!count_chase_bits(client))
+            client->chase_auto = qfalse;
+        return;
+    }
 
-        client->chase_auto = qfalse;
+    if (!strcmp(s, "set")) {
+        memset(client->chase_bitmap, 0, sizeof(client->chase_bitmap));
+
+        for (i = 2; i < argc; i++) {
+            j = atoi(Cmd_Argv(i));
+            if (j >= 0 && j < mvd->maxclients)
+                Q_SetBit(client->chase_bitmap, j);
+        }
+
+        if (!count_chase_bits(client))
+            client->chase_auto = qfalse;
         return;
     }
 
@@ -1221,11 +1247,7 @@ static void MVD_AutoFollow_f(mvd_client_t *client)
     }
 
     if (!strcmp(s, "on")) {
-        for (i = 0; i < mvd->maxclients / CHAR_BIT; i++)
-            if (client->chase_bitmap[i])
-                break;
-
-        if (i == mvd->maxclients / CHAR_BIT) {
+        if (!count_chase_bits(client)) {
             SV_ClientPrintf(client->cl, PRINT_HIGH,
                             "[MVD] Please add auto chase targets first.\n");
             return;
@@ -1245,7 +1267,7 @@ static void MVD_AutoFollow_f(mvd_client_t *client)
     }
 
     SV_ClientPrintf(client->cl, PRINT_HIGH,
-                    "[MVD] Usage: %s <add|rm|list|on|off> [...]\n",
+                    "[MVD] Usage: %s <add|rm|set|list|on|off> [...]\n",
                     Cmd_Argv(0));
 }
 
