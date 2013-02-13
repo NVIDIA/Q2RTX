@@ -346,8 +346,16 @@ static qboolean compress_message(client_t *client, int flags)
     if (!client->has_zlib)
         return qfalse;
 
-    // FIXME: make this configurable?
-    if (msg_write.cursize < MAX_PACKETLEN_DEFAULT / 2)
+    // older clients have problems seamlessly writing svc_zpackets
+    if (client->settings[CLS_RECORDING]) {
+        if (client->protocol != PROTOCOL_VERSION_Q2PRO)
+            return qfalse;
+        if (client->version < PROTOCOL_VERSION_Q2PRO_EXTENDED_LAYOUT)
+            return qfalse;
+    }
+
+    // compress only sufficiently large layouts
+    if (msg_write.cursize < client->netchan->maxpacketlen / 2)
         return qfalse;
 
     deflateReset(&svs.z);
