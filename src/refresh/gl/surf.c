@@ -672,35 +672,42 @@ void GL_FreeWorld(void)
     memset(&gl_static.world, 0, sizeof(gl_static.world));
 }
 
-static vec_t *create_vbo(int size)
+static qboolean create_surface_vbo(size_t size)
 {
     GLuint buf;
-    vec_t *vbo;
+
+    if (!qglGenBuffersARB || !qglBindBufferARB ||
+        !qglBufferDataARB || !qglBufferSubDataARB ||
+        !qglDeleteBuffersARB) {
+        return qfalse;
+    }
 
     GL_ClearErrors();
+
     qglGenBuffersARB(1, &buf);
     qglBindBufferARB(GL_ARRAY_BUFFER_ARB, buf);
     qglBufferDataARB(GL_ARRAY_BUFFER_ARB, size, NULL, GL_STATIC_DRAW_ARB);
+
     if (GL_ShowErrors("Failed to create world model VBO")) {
-        goto fail;
+        qglBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
+        qglDeleteBuffersARB(1, &buf);
+        return qfalse;
     }
-
-    vbo = qglMapBufferARB(GL_ARRAY_BUFFER_ARB, GL_READ_WRITE_ARB);
-    GL_ShowErrors("Failed to map world model VBO data");
-    if (!vbo) {
-        goto fail;
-    }
-
-    qglBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
 
     gl_static.world.vertices = NULL;
     gl_static.world.bufnum = buf;
-    return vbo;
+    return qtrue;
+}
 
-fail:
-    qglBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
-    qglDeleteBuffersARB(1, &buf);
-    return NULL;
+static void upload_surface_vbo(int lastvert)
+{
+    GLintptrARB offset = lastvert * VERTEX_SIZE * sizeof(vec_t);
+    GLsizeiptrARB size = tess.numverts * VERTEX_SIZE * sizeof(vec_t);
+
+    Com_DDPrintf("%s: %"PRIz" bytes\n", __func__, size);
+
+    qglBufferSubDataARB(GL_ARRAY_BUFFER_ARB, offset, size, tess.vertices);
+    tess.numverts = 0;
 }
 
 // silence GCC warning
@@ -724,7 +731,8 @@ void GL_LoadWorld(const char *name)
 {
     char buffer[MAX_QPATH];
     mface_t *surf;
-    int i, size, count;
+    int i, count, lastvert;
+    size_t size;
     vec_t s, t;
     vec_t *vbo;
     bsp_t *bsp;
@@ -788,26 +796,21 @@ void GL_LoadWorld(const char *name)
     // calculate vertex buffer size in bytes
     count = 0;
     for (i = 0, surf = bsp->faces; i < bsp->numfaces; i++, surf++) {
-        count += surf->numsurfedges;
-    }
-    size = count * VERTEX_SIZE * 4;
-
-    // try to map our VBO
-    vbo = NULL;
-    if (qglBindBufferARB) {
-        vbo = create_vbo(size);
-        if (vbo) {
-            Com_DPrintf("%s: %d bytes of vertex data as VBO\n", __func__, size);
+        if (!(surf->texinfo->c.flags & SURF_SKY)) {
+            count += surf->numsurfedges;
         }
     }
+    size = count * VERTEX_SIZE * sizeof(vec_t);
 
-    // no VBO, allocate on hunk
-    if (!vbo) {
+    // try VBO first, then allocate on hunk
+    if (create_surface_vbo(size)) {
+        Com_DPrintf("%s: %"PRIz" bytes of vertex data as VBO\n", __func__, size);
+    } else {
         Hunk_Begin(&gl_static.world.hunk, size);
         vbo = Hunk_Alloc(&gl_static.world.hunk, size);
         Hunk_End(&gl_static.world.hunk);
 
-        Com_DPrintf("%s: %d bytes of vertex data on hunk\n", __func__, size);
+        Com_DPrintf("%s: %"PRIz" bytes of vertex data on hunk\n", __func__, size);
         gl_static.world.vertices = vbo;
     }
 
@@ -816,12 +819,31 @@ void GL_LoadWorld(const char *name)
 
     // post process all surfaces
     count = 0;
+    lastvert = 0;
     for (i = 0, surf = bsp->faces; i < bsp->numfaces; i++, surf++) {
         // hack surface flags into drawflags for faster access
         surf->drawflags |= surf->texinfo->c.flags & ~DSURF_PLANEBACK;
 
         if (surf->drawflags & SURF_SKY) {
             continue;
+        }
+
+        if (gl_static.world.vertices) {
+            vbo = gl_static.world.vertices + count * VERTEX_SIZE;
+        } else {
+            if (surf->numsurfedges > TESS_MAX_VERTICES) {
+                Com_EPrintf("%s: too many verts\n", __func__);
+                continue;
+            }
+
+            // upload VBO chunk if needed
+            if (tess.numverts + surf->numsurfedges > TESS_MAX_VERTICES) {
+                upload_surface_vbo(lastvert);
+                lastvert = count;
+            }
+
+            vbo = tess.vertices + tess.numverts * VERTEX_SIZE;
+            tess.numverts += surf->numsurfedges;
         }
 
         surf->firstvert = count;
@@ -838,21 +860,16 @@ void GL_LoadWorld(const char *name)
         }
 
         count += surf->numsurfedges;
-        vbo += surf->numsurfedges * VERTEX_SIZE;
+    }
+
+    // upload the last VBO chunk
+    if (!gl_static.world.vertices) {
+        upload_surface_vbo(lastvert);
+        qglBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
     }
 
     // end building lightmaps
     LM_EndBuilding();
     Com_DPrintf("%s: %d lightmaps built\n", __func__, lm.nummaps);
-
-    // unmap our VBO
-    if (qglBindBufferARB && !gl_static.world.vertices) {
-        qglBindBufferARB(GL_ARRAY_BUFFER_ARB, gl_static.world.bufnum);
-        if (!qglUnmapBufferARB(GL_ARRAY_BUFFER_ARB)) {
-            Com_Error(ERR_DROP, "Failed to unmap VBO data");
-        }
-        qglBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
-    }
-
 }
 
