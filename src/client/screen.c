@@ -669,6 +669,7 @@ static void SCR_Draw_f(void)
     const char *s, *c;
     drawobj_t *obj;
     cmd_macro_t *macro;
+    cvar_t *cvar;
     color_t color;
     int flags;
     int argc = Cmd_Argc();
@@ -697,16 +698,17 @@ static void SCR_Draw_f(void)
 
     s = Cmd_Argv(1);
     x = atoi(Cmd_Argv(2));
+    y = atoi(Cmd_Argv(3));
+
     if (x < 0) {
         flags |= UI_RIGHT;
     }
-    y = atoi(Cmd_Argv(3));
 
     if (argc > 4) {
         c = Cmd_Argv(4);
         if (!strcmp(c, "alt")) {
             flags |= UI_ALTCOLOR;
-        } else {
+        } else if (strcmp(c, "none")) {
             if (!SCR_ParseColor(c, &color)) {
                 Com_Printf("Unknown color '%s'\n", c);
                 return;
@@ -715,20 +717,29 @@ static void SCR_Draw_f(void)
         }
     }
 
+    cvar = NULL;
+    macro = Cmd_FindMacro(s);
+    if (!macro) {
+        cvar = Cvar_WeakGet(s);
+    }
+
+    FOR_EACH_DRAWOBJ(obj) {
+        if (obj->macro == macro && obj->cvar == cvar) {
+            obj->x = x;
+            obj->y = y;
+            obj->flags = flags;
+            obj->color.u32 = color.u32;
+            return;
+        }
+    }
+
     obj = Z_Malloc(sizeof(*obj));
     obj->x = x;
     obj->y = y;
+    obj->cvar = cvar;
+    obj->macro = macro;
     obj->flags = flags;
     obj->color.u32 = color.u32;
-
-    macro = Cmd_FindMacro(s);
-    if (macro) {
-        obj->cvar = NULL;
-        obj->macro = macro;
-    } else {
-        obj->cvar = Cvar_WeakGet(s);
-        obj->macro = NULL;
-    }
 
     List_Append(&scr_objects, &obj->entry);
 }
@@ -765,7 +776,6 @@ static void SCR_UnDraw_f(void)
     drawobj_t *obj, *next;
     cmd_macro_t *macro;
     cvar_t *cvar;
-    qboolean deleted;
 
     if (Cmd_Argc() != 2) {
         Com_Printf("Usage: %s <name>\n", Cmd_Argv(0));
@@ -793,18 +803,15 @@ static void SCR_UnDraw_f(void)
         cvar = Cvar_WeakGet(s);
     }
 
-    deleted = qfalse;
     FOR_EACH_DRAWOBJ_SAFE(obj, next) {
         if (obj->macro == macro && obj->cvar == cvar) {
             List_Remove(&obj->entry);
             Z_Free(obj);
-            deleted = qtrue;
+            return;
         }
     }
 
-    if (!deleted) {
-        Com_Printf("Draw string '%s' not found.\n", s);
-    }
+    Com_Printf("Draw string '%s' not found.\n", s);
 }
 
 static void SCR_DrawObjects(void)
