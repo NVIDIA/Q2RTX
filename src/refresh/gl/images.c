@@ -40,8 +40,7 @@ static cvar_t *gl_gamma_scale_pics;
 static cvar_t *gl_bilerp_chars;
 static cvar_t *gl_bilerp_pics;
 static cvar_t *gl_texturemode;
-static cvar_t *gl_texturesolidmode;
-static cvar_t *gl_texturealphamode;
+static cvar_t *gl_texturebits;
 static cvar_t *gl_anisotropy;
 static cvar_t *gl_saturation;
 static cvar_t *gl_intensity;
@@ -65,37 +64,6 @@ static const glmode_t filterModes[] = {
 };
 
 static const int numFilterModes = q_countof(filterModes);
-
-typedef struct {
-    const char *name;
-    int mode;
-} gltmode_t;
-
-static const gltmode_t alphaModes[] = {
-    { "default", 4 },
-    { "GL_RGBA", GL_RGBA },
-    { "GL_RGBA8", GL_RGBA8 },
-    { "GL_RGB5_A1", GL_RGB5_A1 },
-    { "GL_RGBA4", GL_RGBA4 },
-    { "GL_RGBA2", GL_RGBA2 }
-};
-
-static const int numAlphaModes = q_countof(alphaModes);
-
-static const gltmode_t solidModes[] = {
-    { "default", 4 },
-    { "GL_RGB", GL_RGB },
-    { "GL_RGB8", GL_RGB8 },
-    { "GL_RGB5", GL_RGB5 },
-    { "GL_RGB4", GL_RGB4 },
-    { "GL_R3_G3_B2", GL_R3_G3_B2 },
-    { "GL_LUMINANCE", GL_LUMINANCE },
-#ifdef GL_RGB2_EXT
-    { "GL_RGB2", GL_RGB2_EXT }
-#endif
-};
-
-static const int numSolidModes = q_countof(solidModes);
 
 static void gl_texturemode_changed(cvar_t *self)
 {
@@ -202,68 +170,20 @@ static void gl_bilerp_pics_changed(cvar_t *self)
     }
 }
 
-
-/*
-===============
-GL_TextureAlphaMode
-===============
-*/
-static void GL_TextureAlphaMode(void)
+static void gl_texturebits_changed(cvar_t *self)
 {
-    int     i;
-
-    for (i = 0; i < numAlphaModes; i++) {
-        if (!Q_stricmp(alphaModes[i].name, gl_texturealphamode->string)) {
-            gl_tex_alpha_format = alphaModes[i].mode;
-            return;
-        }
-    }
-
-    Com_WPrintf("Bad texture alpha mode: %s\n", gl_texturealphamode->string);
-    Cvar_Reset(gl_texturealphamode);
-    gl_tex_alpha_format = alphaModes[0].mode;
-}
-
-static void gl_texturealphamode_g(genctx_t *ctx)
-{
-    int i;
-
-    for (i = 0; i < numAlphaModes; i++) {
-        if (!Prompt_AddMatch(ctx, alphaModes[i].name)) {
-            break;
-        }
-    }
-}
-
-/*
-===============
-GL_TextureSolidMode
-===============
-*/
-static void GL_TextureSolidMode(void)
-{
-    int     i;
-
-    for (i = 0; i < numSolidModes; i++) {
-        if (!Q_stricmp(solidModes[i].name, gl_texturesolidmode->string)) {
-            gl_tex_solid_format = solidModes[i].mode;
-            return;
-        }
-    }
-
-    Com_WPrintf("Bad texture solid mode: %s\n", gl_texturesolidmode->string);
-    Cvar_Reset(gl_texturesolidmode);
-    gl_tex_solid_format = solidModes[0].mode;
-}
-
-static void gl_texturesolidmode_g(genctx_t *ctx)
-{
-    int i;
-
-    for (i = 0; i < numSolidModes; i++) {
-        if (!Prompt_AddMatch(ctx, solidModes[i].name)) {
-            break;
-        }
+    if (self->integer > 16) {
+        gl_tex_alpha_format = GL_RGBA8;
+        gl_tex_solid_format = GL_RGB8;
+    } else if (self->integer > 8)  {
+        gl_tex_alpha_format = GL_RGBA4;
+        gl_tex_solid_format = GL_RGB5;
+    } else if (self->integer > 0)  {
+        gl_tex_alpha_format = GL_RGBA2;
+        gl_tex_solid_format = GL_R3_G3_B2;
+    } else {
+        gl_tex_alpha_format = GL_RGBA;
+        gl_tex_solid_format = GL_RGB;
     }
 }
 
@@ -1025,6 +945,7 @@ void GL_InitImages(void)
                               "GL_LINEAR_MIPMAP_LINEAR", CVAR_ARCHIVE);
     gl_texturemode->changed = gl_texturemode_changed;
     gl_texturemode->generator = gl_texturemode_g;
+    gl_texturebits = Cvar_Get("gl_texturebits", "0", CVAR_FILES);
     gl_anisotropy = Cvar_Get("gl_anisotropy", "1", 0);
     gl_anisotropy->changed = gl_anisotropy_changed;
     gl_noscrap = Cvar_Get("gl_noscrap", "0", CVAR_FILES);
@@ -1033,12 +954,6 @@ void GL_InitImages(void)
     gl_maxmip = Cvar_Get("gl_maxmip", "0", CVAR_FILES);
     gl_downsample_skins = Cvar_Get("gl_downsample_skins", "1", CVAR_FILES);
     gl_gamma_scale_pics = Cvar_Get("gl_gamma_scale_pics", "0", CVAR_FILES);
-    gl_texturealphamode = Cvar_Get("gl_texturealphamode",
-                                   "default", CVAR_ARCHIVE | CVAR_FILES);
-    gl_texturealphamode->generator = gl_texturealphamode_g;
-    gl_texturesolidmode = Cvar_Get("gl_texturesolidmode",
-                                   "default", CVAR_ARCHIVE | CVAR_FILES);
-    gl_texturesolidmode->generator = gl_texturesolidmode_g;
     gl_saturation = Cvar_Get("gl_saturation", "1", CVAR_FILES);
     gl_intensity = Cvar_Get("intensity", "1", CVAR_FILES);
     gl_invert = Cvar_Get("gl_invert", "0", CVAR_FILES);
@@ -1065,10 +980,8 @@ void GL_InitImages(void)
     // FIXME: the name 'saturation' is misleading in this context
     colorscale = Cvar_ClampValue(gl_saturation, 0, 1);
 
-    GL_TextureAlphaMode();
-    GL_TextureSolidMode();
-
     gl_texturemode_changed(gl_texturemode);
+    gl_texturebits_changed(gl_texturebits);
     gl_anisotropy_changed(gl_anisotropy);
     gl_bilerp_chars_changed(gl_bilerp_chars);
     gl_bilerp_pics_changed(gl_bilerp_pics);
@@ -1102,8 +1015,6 @@ void GL_ShutdownImages(void)
     gl_bilerp_pics->changed = NULL;
     gl_texturemode->changed = NULL;
     gl_texturemode->generator = NULL;
-    gl_texturealphamode->generator = NULL;
-    gl_texturesolidmode->generator = NULL;
     gl_anisotropy->changed = NULL;
     gl_gamma->changed = NULL;
 

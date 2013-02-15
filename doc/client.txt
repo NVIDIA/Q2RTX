@@ -698,6 +698,11 @@ gl_multisamples::
     equivalent and disable MSAA. Values from 2 to 32 enable MSAA. Default
     value is 0.
 
+gl_texturebits::
+    Specifies number of bits per texel used for internal texture storage
+    (should be typically 0, 8, 16 or 32). Default value is 0 (choose the best
+    internal format automatically).
+
 gl_screenshot_format::
     Specifies image format ‘screenshot’ command uses. Possible values are
     "png", "jpg" and "tga". Default value is "jpg".
