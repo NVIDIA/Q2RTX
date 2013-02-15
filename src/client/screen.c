@@ -1961,6 +1961,8 @@ static void SCR_DrawLoading(void)
     y = (r_config.height * scale - scr.loading_height) / 2;
 
     R_DrawPic(x, y, scr.loading_pic);
+
+    R_SetScale(NULL);
 }
 
 static void SCR_DrawCrosshair(void)
