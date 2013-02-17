@@ -591,6 +591,19 @@ static void SV_Loadgame_f(void)
         return;
     }
 
+    // make sure the server files exist
+    if (!FS_FileExistsEx(va("save/%s/server.ssv", dir), FS_TYPE_REAL | FS_PATH_GAME) ||
+        !FS_FileExistsEx(va("save/%s/game.ssv", dir), FS_TYPE_REAL | FS_PATH_GAME)) {
+        Com_Printf ("No such savegame: %s\n", dir);
+        return;
+    }
+
+    // clear whatever savegames are there
+    if (wipe_save_dir(SAVE_CURRENT)) {
+        Com_Printf("Couldn't wipe '%s' directory.\n", SAVE_CURRENT);
+        return;
+    }
+
     // copy it off
     if (copy_save_dir(dir, SAVE_CURRENT)) {
         Com_Printf("Couldn't read '%s' directory.\n", dir);
