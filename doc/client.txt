@@ -178,10 +178,7 @@ cl_railtrail_type::
       - 1 — use alternative effect, draw rail core only
       - 2 — use alternative effect, draw rail core and spiral
 
-.Alternative rail trail
-NOTE: Alternative beam based rail trail effect is available in OpenGL mode
-only. In software mode original particle based effect is always used.
-Variables listed below apply to the alternative effect only.
+NOTE: Rail trail variables listed below apply to the alternative effect only.
 
 cl_railtrail_time::
     Time, in seconds, for the rail trail to be visible. Default value is 1.0.
@@ -285,7 +282,7 @@ con_height::
 
 con_alpha::
     Opacity of in-game console background. 0 is fully transparent, 1 is opaque.
-    Takes effect in OpenGL mode only. Default value is 1.
+    Default value is 1.
 
 con_scale::
     Scaling factor of the console text. Takes effect in OpenGL mode only.
@@ -304,7 +301,7 @@ con_notifylines::
 con_history::
     Specifies how many lines to save into console history file before exiting
     Q2PRO, to be reloaded on next startup. Maximum number of history lines is
-    \128. Default value is 0.
+    128. Default value is 0.
 
 con_scroll::
     Controls automatic scrolling of console text when some event occurs. This
@@ -364,8 +361,8 @@ scr_scale::
     Default value is 1.
 
 scr_alpha::
-    Opacity of the HUD elements. 0 is fully transparent, 1 is opaque. Takes
-    effect in OpenGL mode only. Default value is 1.
+    Opacity of the HUD elements. 0 is fully transparent, 1 is opaque. Default
+    value is 1.
 
 scr_font::
     Font used for drawing HUD text. Default value is "conchars".
@@ -882,7 +879,7 @@ cl_chat_filter::
     messages, to prevent common exploits like hiding player names. Default
     value is 0 (don't filter).
 
-cl_noskins 0::
+cl_noskins::
     Restricts which models and skins players can use. Default value is 0.
       - 0 — no restrictions, if skins exists, it will be loaded
       - 1 — do not allow any skins except of ‘male/grunt’
@@ -1378,10 +1375,10 @@ it used to be you know where to look. The following list may be incomplete.
 
 - Joysticks are not supported.
 
-- Single player savegames are partially supported: only ‘savegame’ and
-  ‘loadgame’ console commands are available yet (no menu and autosave support),
-  and only the ‘baseq2’ game library included in Q2PRO distribution has been
-  converted to use the new improved savegame format.
+- Single player savegame format has been rewritten from scratch for better
+  robustness and portability. Only the ‘baseq2’ game library included in Q2PRO
+  distribution has been converted to use the new improved savegame format. Q2PRO
+  will refuse to load and save games in old format for security reasons.
 
 - CD music is not supported.
 
