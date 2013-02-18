@@ -644,22 +644,25 @@ static void parse_file_list(dlhandle_t *dl)
     char    *list;
     char    *p;
 
+    if (!dl->buffer)
+        return;
+
     if (cl_http_filelists->integer) {
         list = dl->buffer;
-        while (1) {
+        while (*list) {
             p = strchr(list, '\n');
             if (p) {
                 if (p > list && *(p - 1) == '\r')
                     *(p - 1) = 0;
                 *p = 0;
-                if (*list)
-                    check_and_queue_download(list);
-                list = p + 1;
-            } else {
-                if (*list)
-                    check_and_queue_download(list);
-                break;
             }
+
+            if (*list)
+                check_and_queue_download(list);
+
+            if (!p)
+                break;
+            list = p + 1;
         }
     }
 

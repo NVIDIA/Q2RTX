@@ -459,8 +459,11 @@ static void ParsePlain(void *data, size_t len, size_t chunk)
 {
     char *list, *p;
 
+    if (!data)
+        return;
+
     list = data;
-    while (1) {
+    while (*list) {
         p = strchr(list, '\n');
         if (p) {
             if (p > list && *(p - 1) == '\r')
@@ -481,6 +484,9 @@ static void ParseBinary(void *data, size_t len, size_t chunk)
 {
     netadr_t address;
     byte *ptr;
+
+    if (!data)
+        return;
 
     address.type = NA_IP;
 
