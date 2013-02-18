@@ -1392,6 +1392,7 @@ static void CL_ConnectionlessPacket(void)
         netchan_type_t type;
         int anticheat = 0;
         char mapname[MAX_QPATH];
+        qboolean got_server = qfalse;
 
         if (cls.state < ca_connecting) {
             Com_DPrintf("Connect received while not connecting.  Ignored.\n");
@@ -1435,8 +1436,15 @@ static void CL_ConnectionlessPacket(void)
             } else if (!strncmp(s, "map=", 4)) {
                 Q_strlcpy(mapname, s + 4, sizeof(mapname));
             } else if (!strncmp(s, "dlserver=", 9)) {
-                HTTP_SetServer(s + 9);
+                if (!got_server) {
+                    HTTP_SetServer(s + 9);
+                    got_server = qtrue;
+                }
             }
+        }
+
+        if (!got_server) {
+            HTTP_SetServer(NULL);
         }
 
         Com_Printf("Connected to %s (protocol %d).\n",

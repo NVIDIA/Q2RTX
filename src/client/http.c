@@ -23,6 +23,7 @@ static cvar_t  *cl_http_downloads;
 static cvar_t  *cl_http_filelists;
 static cvar_t  *cl_http_max_connections;
 static cvar_t  *cl_http_proxy;
+static cvar_t  *cl_http_default_url;
 #ifdef _DEBUG
 static cvar_t  *cl_http_debug;
 #endif
@@ -45,6 +46,7 @@ typedef struct {
 static dlhandle_t   download_handles[4]; //actual download handles, don't raise this!
 static char     download_server[512];    //base url prefix to download from
 static char     download_referer[32];    //libcurl requires a static string :(
+static qboolean download_default_repo;
 
 static qboolean curl_initialized;
 static CURLM    *curl_multi;
@@ -380,6 +382,8 @@ void HTTP_CleanupDownloads(void)
 
     download_server[0] = 0;
     download_referer[0] = 0;
+    download_default_repo = qfalse;
+
     curl_handles = 0;
 
     for (i = 0; i < 4; i++) {
@@ -427,6 +431,7 @@ void HTTP_Init(void)
     cl_http_max_connections = Cvar_Get("cl_http_max_connections", "2", 0);
     //cl_http_max_connections->changed = _cl_http_max_connections_changed;
     cl_http_proxy = Cvar_Get("cl_http_proxy", "", 0);
+    cl_http_default_url = Cvar_Get("cl_http_default_url", "", 0);
 #ifdef _DEBUG
     cl_http_debug = Cvar_Get("cl_http_debug", "0", 0);
 #endif
@@ -462,7 +467,8 @@ void HTTP_SetServer(const char *url)
         return;
     }
 
-    if (!*url)
+    // ignore on the local server
+    if (NET_IsLocalAddress(&cls.serverAddress))
         return;
 
     // ignore if downloads are permanently disabled
@@ -471,6 +477,18 @@ void HTTP_SetServer(const char *url)
 
     // ignore if HTTP downloads are disabled
     if (cl_http_downloads->integer == 0)
+        return;
+
+    // use default URL for servers that don't specify one. treat 404 from
+    // default repository as fatal error and revert to UDP downloading.
+    if (!url) {
+        url = cl_http_default_url->string;
+        download_default_repo = qtrue;
+    } else {
+        download_default_repo = qfalse;
+    }
+
+    if (!*url)
         return;
 
     if (strncmp(url, "http://", 7)) {
@@ -510,9 +528,8 @@ qerror_t HTTP_QueueDownload(const char *path, dltype_t type)
     need_list = LIST_EMPTY(&cls.download.queue);
 
     ret = CL_QueueDownload(path, type);
-    if (ret) {
+    if (ret)
         return ret;
-    }
 
     if (!cl_http_filelists->integer)
         return Q_ERR_SUCCESS;
@@ -527,7 +544,8 @@ qerror_t HTTP_QueueDownload(const char *path, dltype_t type)
         //get confused by a ton of people stuck in CNCT state. it's assumed the server
         //is running r1q2 if we're even able to do http downloading so hopefully this
         //won't spew an error msg.
-        CL_ClientCommand("download http\n");
+        if (!download_default_repo)
+            CL_ClientCommand("download http\n");
     }
 
     //special case for map file lists, i really wanted a server-push mechanism for this, but oh well
@@ -755,8 +773,8 @@ static qboolean finish_download(void)
 
             err = http_strerror(response);
 
-            //404 is non-fatal
-            if (response == 404) {
+            //404 is non-fatal unless accessing default repository
+            if (response == 404 && (!download_default_repo || !dl->path[0])) {
                 level = PRINT_ALL;
                 goto fail1;
             }
