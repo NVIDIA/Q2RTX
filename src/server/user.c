@@ -993,6 +993,11 @@ static void SV_ExecuteUserCommand(const char *s)
         }
     }
 
+    if (!strcmp(c, "say") || !strcmp(c, "say_team")) {
+        // don't timeout. only chat commands count as activity.
+        sv_client->lastactivity = svs.realtime;
+    }
+
     ge->ClientCommand(sv_player);
 }
 
@@ -1015,6 +1020,8 @@ SV_ClientThink
 */
 static inline void SV_ClientThink(usercmd_t *cmd)
 {
+    usercmd_t *old = &sv_client->lastcmd;
+
     sv_client->command_msec -= cmd->msec;
     sv_client->num_moves++;
 
@@ -1022,6 +1029,14 @@ static inline void SV_ClientThink(usercmd_t *cmd)
         Com_DPrintf("commandMsec underflow from %s: %d\n",
                     sv_client->name, sv_client->command_msec);
         return;
+    }
+
+    if (cmd->buttons != old->buttons
+        || cmd->forwardmove != old->forwardmove
+        || cmd->sidemove != old->sidemove
+        || cmd->upmove != old->upmove) {
+        // don't timeout
+        sv_client->lastactivity = svs.realtime;
     }
 
     ge->ClientThink(sv_player, cmd);

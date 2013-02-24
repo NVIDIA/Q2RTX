@@ -41,6 +41,7 @@ cvar_t  *sv_fps;
 cvar_t  *sv_timeout;            // seconds without any message
 cvar_t  *sv_zombietime;         // seconds to sink messages after disconnect
 cvar_t  *sv_ghostime;
+cvar_t  *sv_idlekick;
 
 cvar_t  *sv_password;
 cvar_t  *sv_reserved_password;
@@ -1120,6 +1121,7 @@ static void SVC_DirectConnect(void)
     newcl->framenum = 1; // frame 0 can't be used
     newcl->lastframe = -1;
     newcl->lastmessage = svs.realtime;    // don't timeout
+    newcl->lastactivity = svs.realtime;
     newcl->min_ping = 9999;
 }
 
@@ -1534,6 +1536,7 @@ static void SV_CheckTimeouts(void)
     unsigned    zombie_time = 1000 * sv_zombietime->value;
     unsigned    drop_time   = 1000 * sv_timeout->value;
     unsigned    ghost_time  = 1000 * sv_ghostime->value;
+    unsigned    idle_time   = 1000 * sv_idlekick->value;
     unsigned    delta;
 
     FOR_EACH_CLIENT(client) {
@@ -1570,6 +1573,12 @@ static void SV_CheckTimeouts(void)
 
         if (client->frames_nodelta > 64 && !sv_allow_nodelta->integer) {
             SV_DropClient(client, "too many nodelta frames");
+            continue;
+        }
+
+        delta = svs.realtime - client->lastactivity;
+        if (idle_time && delta > idle_time) {
+            SV_DropClient(client, "idling");
             continue;
         }
     }
@@ -2035,6 +2044,7 @@ void SV_Init(void)
     sv_timeout = Cvar_Get("timeout", "90", 0);
     sv_zombietime = Cvar_Get("zombietime", "2", 0);
     sv_ghostime = Cvar_Get("sv_ghostime", "6", 0);
+    sv_idlekick = Cvar_Get("sv_idlekick", "0", 0);
     sv_showclamp = Cvar_Get("showclamp", "0", 0);
     sv_enforcetime = Cvar_Get("sv_enforcetime", "1", 0);
     sv_allow_nodelta = Cvar_Get("sv_allow_nodelta", "1", 0);

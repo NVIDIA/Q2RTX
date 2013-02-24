@@ -589,16 +589,20 @@ static void dump_time(void)
     client_t    *client;
     char        buffer[MAX_QPATH];
     time_t      clock = time(NULL);
+    unsigned    idle;
 
     Com_Printf(
-        "num name            time\n"
-        "--- --------------- --------\n");
+        "num name            idle time\n"
+        "--- --------------- ---- --------\n");
 
     FOR_EACH_CLIENT(client) {
+        idle = (svs.realtime - client->lastactivity) / 1000;
+        if (idle > 9999)
+            idle = 9999;
         Com_TimeDiff(buffer, sizeof(buffer),
                      &client->connect_time, clock);
-        Com_Printf("%3i %-15.15s %s\n",
-                   client->number, client->name, buffer);
+        Com_Printf("%3i %-15.15s %4u %s\n",
+                   client->number, client->name, idle, buffer);
     }
 }
 

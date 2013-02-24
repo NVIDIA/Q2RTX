@@ -161,6 +161,14 @@ sv_ghostime::
     request processing stage.  Helps to avoid attacks flooding server with
     zombie clients, combined with ‘sv_iplimit’ variable. Default value is 6.
 
+sv_idlekick::
+    Time, in seconds, before dropping inactive clients. Default value is 0
+    (don't kick idling clients). Moving, pressing buttons while in game and
+    issuing chat commands counts as activity.
+
+NOTE: Don't set ‘sv_idlekick’ too low to avoid kicking clients that are
+downloading or otherwise taking long time to enter the game.
+
 sv_force_reconnect::
     When set to an address string, forces new clients to quickly reconnect to
     this address as an additional proxy protection measure. Default value is
