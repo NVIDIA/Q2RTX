@@ -151,6 +151,11 @@ static void Size(menuFrameWork_t *self)
     m_player.refdef.fov_y = V_CalcFov(m_player.refdef.fov_x,
                                       m_player.refdef.width, m_player.refdef.height);
 
+    if (m_player.menu.banner) {
+        m_player.menu.banner_rc.x = x - m_player.menu.banner_rc.width / 2;
+        m_player.menu.banner_rc.y = y - GENERIC_SPACING(m_player.menu.banner_rc.height);
+    }
+
     m_player.name.generic.x        = x;
     m_player.name.generic.y        = y;
     y += 32;
@@ -254,6 +259,15 @@ static qboolean Push(menuFrameWork_t *self)
     m_player.hand.curvalue = Cvar_VariableInteger("hand");
     clamp(m_player.hand.curvalue, 0, 2);
 
+    m_player.menu.banner = R_RegisterPic("m_banner_plauer_setup");
+    if (m_player.menu.banner) {
+        R_GetPicSize(&m_player.menu.banner_rc.width,
+                     &m_player.menu.banner_rc.height, m_player.menu.banner);
+        m_player.menu.title = NULL;
+    } else {
+        m_player.menu.title = "Player Setup";
+    }
+
     ReloadMedia();
 
     // set up oldframe correctly
@@ -275,7 +289,6 @@ void M_Menu_PlayerConfig(void)
     static const vec3_t angles = { 0.0f, 260.0f, 0.0f };
 
     m_player.menu.name = "players";
-    m_player.menu.title = "Player Setup";
     m_player.menu.push = Push;
     m_player.menu.pop = Pop;
     m_player.menu.size = Size;
