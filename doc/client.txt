@@ -248,6 +248,10 @@ s_auto_focus::
       - 2 — sound is activated when main window has input focus, and deactivated
       when it loses it
 
+s_swapstereo:
+    Swap left and right audio channels. Only effective when using DMA sound
+    engine. Default value is 0 (don't swap).
+
 al_driver::
     Specifies the name of OpenAL driver to use. Default value is ‘openal32’
     on Windows, and ‘libopenal.so.1’ on Linux.
