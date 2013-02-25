@@ -397,13 +397,12 @@ static int GL_CopyVerts(mface_t *surf)
 
 static int GL_TextureAnimation(mtexinfo_t *tex)
 {
-    int     frame, c;
+    int c;
 
     if (!tex->next)
         return tex->image->texnum;
 
-    frame = (int)(glr.fd.time * 2);
-    c = frame % tex->numframes;
+    c = glr.ent->frame % tex->numframes;
     while (c) {
         tex = tex->next;
         c--;
@@ -503,6 +502,8 @@ void GL_DrawSolidFaces(void)
 
 void GL_DrawAlphaFaces(void)
 {
+    glr.ent = &gl_world;
+
     GL_BindArrays();
 
     GL_Bits(GLS_BLEND_BLEND | GLS_DEPTHMASK_FALSE);

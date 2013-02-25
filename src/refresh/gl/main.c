@@ -28,6 +28,8 @@ glStatic_t gl_static;
 glConfig_t gl_config;
 statCounters_t  c;
 
+entity_t gl_world;
+
 refcfg_t r_config;
 
 int registration_sequence;

@@ -99,6 +99,8 @@ extern glStatic_t gl_static;
 extern glConfig_t gl_config;
 extern glRefdef_t glr;
 
+extern entity_t gl_world;
+
 typedef struct {
     int nodesVisible;
     int nodesDrawn;

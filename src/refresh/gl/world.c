@@ -544,6 +544,11 @@ static void GL_WorldNode_r(mnode_t *node, int clipflags)
 
 void GL_DrawWorld(void)
 {
+    // auto cycle the world frame for texture animation
+    gl_world.frame = (int)(glr.fd.time * 2);
+
+    glr.ent = &gl_world;
+
     GL_MarkLeaves();
 
 #if USE_DLIGHTS
