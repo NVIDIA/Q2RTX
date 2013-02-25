@@ -222,17 +222,17 @@ TARGA IMAGES
 #define TARGA_HEADER_SIZE  18
 
 #define TGA_DECODE(x) \
-    static qerror_t tga_decode_##x(byte *in, byte *out, int cols, int rows, byte *max_in)
+    static qerror_t tga_decode_##x(byte *in, byte **row_pointers, int cols, int rows, byte *max_in)
 
-typedef qerror_t (*tga_decode_t)(byte *, byte *, int, int, byte *);
+typedef qerror_t (*tga_decode_t)(byte *, byte **, int, int, byte *);
 
 TGA_DECODE(bgr)
 {
     int col, row;
     byte *out_row;
 
-    for (row = rows - 1; row >= 0; row--) {
-        out_row = out + row * cols * 4;
+    for (row = 0; row < rows; row++) {
+        out_row = row_pointers[row];
         for (col = 0; col < cols; col++, out_row += 4, in += 3) {
             out_row[0] = in[2];
             out_row[1] = in[1];
@@ -249,8 +249,8 @@ TGA_DECODE(bgra)
     int col, row;
     byte *out_row;
 
-    for (row = rows - 1; row >= 0; row--) {
-        out_row = out + row * cols * 4;
+    for (row = 0; row < rows; row++) {
+        out_row = row_pointers[row];
         for (col = 0; col < cols; col++, out_row += 4, in += 4) {
             out_row[0] = in[2];
             out_row[1] = in[1];
@@ -262,44 +262,15 @@ TGA_DECODE(bgra)
     return Q_ERR_SUCCESS;
 }
 
-TGA_DECODE(bgr_flip)
-{
-    int i, count = rows * cols;
-
-    for (i = 0; i < count; i++, out += 4, in += 3) {
-        out[0] = in[2];
-        out[1] = in[1];
-        out[2] = in[0];
-        out[3] = 255;
-    }
-
-    return Q_ERR_SUCCESS;
-}
-
-TGA_DECODE(bgra_flip)
-{
-    int i, count = rows * cols;
-
-    for (i = 0; i < count; i++, out += 4, in += 3) {
-        out[0] = in[2];
-        out[1] = in[1];
-        out[2] = in[0];
-        out[3] = in[3];
-    }
-
-    return Q_ERR_SUCCESS;
-}
-
 TGA_DECODE(bgr_rle)
 {
     int col, row;
     byte *out_row;
     uint32_t color;
-    unsigned packet_header, packet_size;
-    int j;
+    int j, packet_header, packet_size;
 
-    for (row = rows - 1; row >= 0; row--) {
-        out_row = out + row * cols * 4;
+    for (row = 0; row < rows; row++) {
+        out_row = row_pointers[row];
 
         for (col = 0; col < cols;) {
             packet_header = *in++;
@@ -319,11 +290,9 @@ TGA_DECODE(bgr_rle)
                     if (++col == cols) {
                         // run spans across rows
                         col = 0;
-                        if (row > 0)
-                            row--;
-                        else
+                        if (++row == rows)
                             goto break_out;
-                        out_row = out + row * cols * 4;
+                        out_row = row_pointers[row];
                     }
                 }
             } else {
@@ -342,11 +311,9 @@ TGA_DECODE(bgr_rle)
                     if (++col == cols) {
                         // run spans across rows
                         col = 0;
-                        if (row > 0)
-                            row--;
-                        else
+                        if (++row == rows)
                             goto break_out;
-                        out_row = out + row * cols * 4;
+                        out_row = row_pointers[row];
                     }
                 }
             }
@@ -362,11 +329,10 @@ TGA_DECODE(bgra_rle)
     int col, row;
     byte *out_row;
     uint32_t color;
-    unsigned packet_header, packet_size;
-    int j;
+    int j, packet_header, packet_size;
 
-    for (row = rows - 1; row >= 0; row--) {
-        out_row = out + row * cols * 4;
+    for (row = 0; row < rows; row++) {
+        out_row = row_pointers[row];
 
         for (col = 0; col < cols;) {
             packet_header = *in++;
@@ -386,11 +352,9 @@ TGA_DECODE(bgra_rle)
                     if (++col == cols) {
                         // run spans across rows
                         col = 0;
-                        if (row > 0)
-                            row--;
-                        else
+                        if (++row == rows)
                             goto break_out;
-                        out_row = out + row * cols * 4;
+                        out_row = row_pointers[row];
                     }
                 }
             } else {
@@ -409,11 +373,9 @@ TGA_DECODE(bgra_rle)
                     if (++col == cols) {
                         // run spans across rows
                         col = 0;
-                        if (row > 0)
-                            row--;
-                        else
+                        if (++row == rows)
                             goto break_out;
-                        out_row = out + row * cols * 4;
+                        out_row = row_pointers[row];
                     }
                 }
             }
@@ -428,7 +390,8 @@ IMG_LOAD(TGA)
 {
     size_t offset;
     byte *pixels;
-    unsigned w, h, id_length, image_type, pixel_size, attributes, bpp;
+    byte *row_pointers[MAX_TEXTURE_SIZE];
+    unsigned i, bpp, id_length, colormap_type, image_type, w, h, pixel_size, attributes;
     tga_decode_t decode;
     qerror_t ret;
 
@@ -439,6 +402,7 @@ IMG_LOAD(TGA)
     }
 
     id_length = rawdata[0];
+    colormap_type = rawdata[1];
     image_type = rawdata[2];
     w = LittleShortMem(&rawdata[12]);
     h = LittleShortMem(&rawdata[14]);
@@ -449,6 +413,11 @@ IMG_LOAD(TGA)
     offset = TARGA_HEADER_SIZE + id_length;
     if (offset + 4 > rawlen) {
         return Q_ERR_BAD_EXTENT;
+    }
+
+    if (colormap_type) {
+        Com_DPrintf("%s: %s: color mapped images are not supported\n", __func__, filename);
+        return Q_ERR_INVALID_FORMAT;
     }
 
     if (pixel_size == 32) {
@@ -469,24 +438,12 @@ IMG_LOAD(TGA)
         if (offset + w * h * bpp > rawlen) {
             return Q_ERR_BAD_EXTENT;
         }
-        if (attributes & 32) {
-            if (pixel_size == 32) {
-                decode = tga_decode_bgra_flip;
-            } else {
-                decode = tga_decode_bgr_flip;
-            }
+        if (pixel_size == 32) {
+            decode = tga_decode_bgra;
         } else {
-            if (pixel_size == 32) {
-                decode = tga_decode_bgra;
-            } else {
-                decode = tga_decode_bgr;
-            }
+            decode = tga_decode_bgr;
         }
     } else if (image_type == 10) {
-        if (attributes & 32) {
-            Com_DPrintf("%s: %s: vertically flipped, RLE encoded images are not supported\n", __func__, filename);
-            return Q_ERR_INVALID_FORMAT;
-        }
         if (pixel_size == 32) {
             decode = tga_decode_bgra_rle;
         } else {
@@ -498,7 +455,17 @@ IMG_LOAD(TGA)
     }
 
     pixels = IMG_AllocPixels(w * h * 4);
-    ret = decode(rawdata + offset, pixels, w, h, rawdata + rawlen);
+    if (attributes & 32) {
+        for (i = 0; i < h; i++) {
+            row_pointers[i] = pixels + i * w * 4;
+        }
+    } else {
+        for (i = 0; i < h; i++) {
+            row_pointers[i] = pixels + (h - i - 1) * w * 4;
+        }
+    }
+
+    ret = decode(rawdata + offset, row_pointers, w, h, rawdata + rawlen);
     if (ret < 0) {
         IMG_FreePixels(pixels);
         return ret;
