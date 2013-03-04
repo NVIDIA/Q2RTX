@@ -426,7 +426,7 @@ void V_RenderView(void)
 
         // adjust for non-4/3 screens
         if (cl_adjustfov->integer) {
-            cl.refdef.fov_y = V_CalcFov(cl.fov_x, 4, 3);
+            cl.refdef.fov_y = cl.fov_y;
             cl.refdef.fov_x = V_CalcFov(cl.refdef.fov_y, cl.refdef.height, cl.refdef.width);
         } else {
             cl.refdef.fov_x = cl.fov_x;

@@ -552,6 +552,9 @@ static float CL_KeyState(kbutton_t *key)
 
 //==========================================================================
 
+static float autosens_x;
+static float autosens_y;
+
 /*
 ================
 CL_MouseMove
@@ -596,9 +599,9 @@ static void CL_MouseMove(void)
     mx *= speed;
     my *= speed;
 
-    if (m_autosens->integer && cl.fov_x >= 1) {
-        mx *= cl.fov_x / 90.0f;
-        my *= V_CalcFov(cl.fov_x, 4, 3) / 73.739795291688f;
+    if (m_autosens->integer) {
+        mx *= cl.fov_x * autosens_x;
+        my *= cl.fov_y * autosens_y;
     }
 
 // add mouse X/Y movement
@@ -746,6 +749,18 @@ void CL_UpdateCmd(int msec)
     cl.cmd.angles[2] = ANGLE2SHORT(cl.viewangles[2]);
 }
 
+static void m_autosens_changed(cvar_t *self)
+{
+    float fov;
+
+    if (self->value > 90.0f && self->value <= 179.0f)
+        fov = self->value;
+    else
+        fov = 90.0f;
+
+    autosens_x = 1.0f / fov;
+    autosens_y = 1.0f / V_CalcFov(fov, 4, 3);
+}
 
 /*
 ============
@@ -822,6 +837,8 @@ void CL_RegisterInput(void)
     m_filter = Cvar_Get("m_filter", "0", 0);
     m_accel = Cvar_Get("m_accel", "0", 0);
     m_autosens = Cvar_Get("m_autosens", "0", 0);
+    m_autosens->changed = m_autosens_changed;
+    m_autosens_changed(m_autosens);
 }
 
 /*

@@ -840,10 +840,10 @@ in_smart_grab::
     is up).
 
 m_autosens::
-    When enabled, mouse sensitivity is scaled proportional to current player field
-    of view. When FOV is exactly 90, no scaling is applied. Higher FOV values will
-    scale sensitivity higher, lower FOV values will scale sensitivity lower.
-    Default value is 0 (scaling disabled).
+    Enables automatic scaling of mouse sensitivity proportional to the current
+    player field of view. Values between 90 and 179 specify the default FOV
+    value to scale sensitivity from. Zero disables automatic scaling. Any other
+    value assumes default FOV of 90 degrees. Default value is 0.
 
 m_accel::
     Specifies mouse acceleration factor. Default value is 0 (acceleration

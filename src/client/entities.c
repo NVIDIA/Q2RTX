@@ -1193,6 +1193,7 @@ void CL_CalcViewValues(void)
 
     // interpolate field of view
     cl.fov_x = lerp_client_fov(ops->fov, ps->fov, lerp);
+    cl.fov_y = V_CalcFov(cl.fov_x, 4, 3);
 
     // don't interpolate blend color
     Vector4Copy(ps->blend, cl.refdef.blend);

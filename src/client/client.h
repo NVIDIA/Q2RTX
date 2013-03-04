@@ -223,6 +223,7 @@ typedef struct client_state_s {
 
     refdef_t    refdef;
     float       fov_x;      // interpolated
+    float       fov_y;      // derived from fov_x assuming 4/3 aspect ratio
     int         lightlevel;
 
     vec3_t      v_forward, v_right, v_up;    // set when refdef.angles is set
