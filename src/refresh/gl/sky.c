@@ -55,6 +55,7 @@ static const int vec_to_st[6][3] = {
     { -2, 1, -3 }
 };
 
+static vec3_t       skymatrix[3];
 static float        skymins[2][6], skymaxs[2][6];
 static int          skyfaces;
 static const float  sky_min = 1.0f / 512.0f;
@@ -263,9 +264,41 @@ void R_ClearSkyBox(void)
     skyfaces = 0;
 }
 
-static void MakeSkyVec(float s, float t, int axis, vec_t *v)
+static void SkyRotate(void)
 {
-    vec3_t  b;
+    vec_t angle, s, c, one_c, xx, yy, zz, xy, yz, zx, xs, ys, zs;
+
+    angle = DEG2RAD(glr.fd.time * skyrotate);
+    s = sin(angle);
+    c = cos(angle);
+    one_c = 1 - c;
+
+    xx = skyaxis[0] * skyaxis[0];
+    yy = skyaxis[1] * skyaxis[1];
+    zz = skyaxis[2] * skyaxis[2];
+    xy = skyaxis[0] * skyaxis[1];
+    yz = skyaxis[1] * skyaxis[2];
+    zx = skyaxis[2] * skyaxis[0];
+    xs = skyaxis[0] * s;
+    ys = skyaxis[1] * s;
+    zs = skyaxis[2] * s;
+
+    skymatrix[0][0] = (one_c * xx) + c;
+    skymatrix[0][1] = (one_c * xy) - zs;
+    skymatrix[0][2] = (one_c * zx) + ys;
+
+    skymatrix[1][0] = (one_c * xy) + zs;
+    skymatrix[1][1] = (one_c * yy) + c;
+    skymatrix[1][2] = (one_c * yz) - xs;
+
+    skymatrix[2][0] = (one_c * zx) - ys;
+    skymatrix[2][1] = (one_c * yz) + xs;
+    skymatrix[2][2] = (one_c * zz) + c;
+}
+
+static void MakeSkyVec(float s, float t, int axis, vec_t *out)
+{
+    vec3_t  b, v;
     int     j, k;
 
     b[0] = s * gl_static.world.size;
@@ -278,6 +311,14 @@ static void MakeSkyVec(float s, float t, int axis, vec_t *v)
             v[j] = -b[-k - 1];
         else
             v[j] = b[k - 1];
+    }
+
+    if (skyrotate) {
+        out[0] = DotProduct(skymatrix[0], v) + glr.fd.vieworg[0];
+        out[1] = DotProduct(skymatrix[1], v) + glr.fd.vieworg[1];
+        out[2] = DotProduct(skymatrix[2], v) + glr.fd.vieworg[2];
+    } else {
+        VectorAdd(v, glr.fd.vieworg, out);
     }
 
     // avoid bilerp seam
@@ -293,8 +334,8 @@ static void MakeSkyVec(float s, float t, int axis, vec_t *v)
     else if (t > sky_max)
         t = sky_max;
 
-    v[3] = s;
-    v[4] = 1.0 - t;
+    out[3] = s;
+    out[4] = 1.0 - t;
 }
 
 #define SKY_VISIBLE(side) \
@@ -324,12 +365,8 @@ void R_DrawSkyBox(void)
             skymaxs[0][i] = 1;
             skymaxs[1][i] = 1;
         }
-    }
 
-    qglPushMatrix();
-    qglTranslatef(glr.fd.vieworg[0], glr.fd.vieworg[1], glr.fd.vieworg[2]);
-    if (skyrotate) {
-        qglRotatef(glr.fd.time * skyrotate, skyaxis[0], skyaxis[1], skyaxis[2]);
+        SkyRotate();
     }
 
     GL_TexEnv(GL_REPLACE);
@@ -351,8 +388,6 @@ void R_DrawSkyBox(void)
         MakeSkyVec(skymins[0][i], skymaxs[1][i], i, verts[3]);
         qglDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     }
-
-    qglPopMatrix();
 }
 
 static void R_UnsetSky(void)
@@ -385,7 +420,7 @@ void R_SetSky(const char *name, float rotate, vec3_t axis)
     }
 
     skyrotate = rotate;
-    VectorCopy(axis, skyaxis);
+    VectorNormalize2(axis, skyaxis);
 
     for (i = 0; i < 6; i++) {
         len = Q_concat(pathname, sizeof(pathname),
