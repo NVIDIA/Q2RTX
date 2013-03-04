@@ -369,18 +369,17 @@ void R_DrawSkyBox(void)
         SkyRotate();
     }
 
-    GL_TexEnv(GL_REPLACE);
-    GL_Bits(GLS_DEFAULT);
-
-    qglVertexPointer(3, GL_FLOAT, 5 * 4, &verts[0][0]);
-    qglTexCoordPointer(2, GL_FLOAT, 5 * 4, &verts[0][3]);
+    GL_StateBits(GLS_TEXTURE_REPLACE);
+    GL_ArrayBits(GLA_VERTEX | GLA_TC);
+    GL_VertexPointer(3, 5, &verts[0][0]);
+    GL_TexCoordPointer(2, 5, &verts[0][3]);
 
     for (i = 0; i < 6; i++) {
         if (!SKY_VISIBLE(i)) {
             continue;
         }
 
-        GL_BindTexture(sky_images[skytexorder[i]]);
+        GL_BindTexture(0, sky_images[skytexorder[i]]);
 
         MakeSkyVec(skymaxs[0][i], skymins[1][i], i, verts[0]);
         MakeSkyVec(skymins[0][i], skymins[1][i], i, verts[1]);

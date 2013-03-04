@@ -127,10 +127,10 @@ static void tess_static_shade(const maliasmesh_t *mesh)
         dst_vert[0] = src_vert->pos[0] * newscale[0] + translate[0];
         dst_vert[1] = src_vert->pos[1] * newscale[1] + translate[1];
         dst_vert[2] = src_vert->pos[2] * newscale[2] + translate[2];
-        dst_vert[3] = shadelight[0] * d;
-        dst_vert[4] = shadelight[1] * d;
-        dst_vert[5] = shadelight[2] * d;
-        dst_vert[6] = shadelight[3];
+        dst_vert[4] = shadelight[0] * d;
+        dst_vert[5] = shadelight[1] * d;
+        dst_vert[6] = shadelight[2] * d;
+        dst_vert[7] = shadelight[3];
         dst_vert += VERTEX_SIZE;
 
         src_vert++;
@@ -220,10 +220,10 @@ static void tess_lerped_shade(const maliasmesh_t *mesh)
         dst_vert[2] =
             src_oldvert->pos[2] * oldscale[2] +
             src_newvert->pos[2] * newscale[2] + translate[2];
-        dst_vert[3] = shadelight[0] * d;
-        dst_vert[4] = shadelight[1] * d;
-        dst_vert[5] = shadelight[2] * d;
-        dst_vert[6] = shadelight[3];
+        dst_vert[4] = shadelight[0] * d;
+        dst_vert[5] = shadelight[1] * d;
+        dst_vert[6] = shadelight[2] * d;
+        dst_vert[7] = shadelight[3];
         dst_vert += VERTEX_SIZE;
 
         src_oldvert++;
@@ -424,29 +424,19 @@ static void draw_celshading(maliasmesh_t *mesh)
     if (celscale < 0.01f || celscale > 1)
         return;
 
-    GL_Bits(GLS_BLEND_BLEND);
-    qglDisable(GL_TEXTURE_2D);
+    GL_BindTexture(0, TEXNUM_BLACK);
+    GL_StateBits(GLS_BLEND_BLEND);
+    GL_ArrayBits(GLA_VERTEX);
+
     qglLineWidth(gl_celshading->value * celscale);
     qglPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     qglCullFace(GL_FRONT);
-
-    qglDisableClientState(GL_TEXTURE_COORD_ARRAY);
-    if (shadelight)
-        qglDisableClientState(GL_COLOR_ARRAY);
-
     qglColor4f(0, 0, 0, color[3] * celscale);
-    qglDrawElements(GL_TRIANGLES, mesh->numindices, GL_UNSIGNED_INT,
+    qglDrawElements(GL_TRIANGLES, mesh->numindices, QGL_INDEX_ENUM,
                     mesh->indices);
-    qglColor4fv(color);
-
-    if (shadelight)
-        qglEnableClientState(GL_COLOR_ARRAY);
-    qglEnableClientState(GL_TEXTURE_COORD_ARRAY);
-
     qglCullFace(GL_BACK);
     qglPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     qglLineWidth(1);
-    qglEnable(GL_TEXTURE_2D);
 }
 
 static void setup_shadow(void)
@@ -530,7 +520,7 @@ static void draw_shadow(maliasmesh_t *mesh)
         return;
 
     // load shadow projection matrix
-    qglLoadMatrixf(shadowmatrix);
+    GL_LoadMatrix(shadowmatrix);
 
     // eliminate z-fighting by utilizing stencil buffer, if available
     if (gl_config.stencilbits) {
@@ -539,25 +529,16 @@ static void draw_shadow(maliasmesh_t *mesh)
         qglStencilOp(GL_KEEP, GL_KEEP, GL_INCR);
     }
 
-    GL_Bits(GLS_BLEND_BLEND);
-    GL_TexEnv(GL_MODULATE);
-    GL_BindTexture(TEXNUM_WHITE);
-
-    qglDisableClientState(GL_TEXTURE_COORD_ARRAY);
-    if (shadelight)
-        qglDisableClientState(GL_COLOR_ARRAY);
+    GL_StateBits(GLS_BLEND_BLEND);
+    GL_BindTexture(0, TEXNUM_WHITE);
+    GL_ArrayBits(GLA_VERTEX);
 
     qglEnable(GL_POLYGON_OFFSET_FILL);
     qglPolygonOffset(-1.0f, -2.0f);
     qglColor4f(0, 0, 0, color[3] * 0.5f);
-    qglDrawElements(GL_TRIANGLES, mesh->numindices, GL_UNSIGNED_INT,
+    qglDrawElements(GL_TRIANGLES, mesh->numindices, QGL_INDEX_ENUM,
                     mesh->indices);
-    qglColor4fv(color);
     qglDisable(GL_POLYGON_OFFSET_FILL);
-
-    if (shadelight)
-        qglEnableClientState(GL_COLOR_ARRAY);
-    qglEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
     // once we have drawn something to stencil buffer, continue to clear it for
     // the lifetime of OpenGL context. leaving stencil buffer "dirty" and
@@ -566,9 +547,6 @@ static void draw_shadow(maliasmesh_t *mesh)
         qglDisable(GL_STENCIL_TEST);
         gl_static.stencil_buffer_bit |= GL_STENCIL_BUFFER_BIT;
     }
-
-    // fall back to entity matrix
-    qglLoadMatrixf(glr.entmatrix);
 }
 
 static int texnum_for_mesh(maliasmesh_t *mesh)
@@ -597,30 +575,46 @@ static int texnum_for_mesh(maliasmesh_t *mesh)
 
 static void draw_alias_mesh(maliasmesh_t *mesh)
 {
-    if (glr.ent->flags & RF_TRANSLUCENT)
-        GL_Bits(GLS_BLEND_BLEND | GLS_DEPTHMASK_FALSE);
-    else
-        GL_Bits(GLS_DEFAULT);
+    glStateBits_t state = GLS_DEFAULT;
 
-    GL_TexEnv(GL_MODULATE);
-    GL_BindTexture(texnum_for_mesh(mesh));
+    // fall back to entity matrix
+    GL_LoadMatrix(glr.entmatrix);
+
+    if (shadelight)
+        state |= GLS_SHADE_SMOOTH;
+
+    if (glr.ent->flags & RF_TRANSLUCENT)
+        state |= GLS_BLEND_BLEND | GLS_DEPTHMASK_FALSE;
+
+    GL_StateBits(state);
+
+    GL_BindTexture(0, texnum_for_mesh(mesh));
 
     (*tessfunc)(mesh);
     c.trisDrawn += mesh->numverts;
 
-    qglTexCoordPointer(2, GL_FLOAT, 0, mesh->tcoords);
+    if (shadelight) {
+        GL_ArrayBits(GLA_VERTEX | GLA_TC | GLA_COLOR);
+        GL_VertexPointer(3, VERTEX_SIZE, tess.vertices);
+        GL_ColorFloatPointer(4, VERTEX_SIZE, tess.vertices + 4);
+    } else {
+        GL_ArrayBits(GLA_VERTEX | GLA_TC);
+        GL_VertexPointer(3, 4, tess.vertices);
+        qglColor4fv(color);
+    }
 
-    if (qglLockArraysEXT)
-        qglLockArraysEXT(0, mesh->numverts);
+    GL_TexCoordPointer(2, 0, (GLfloat *)mesh->tcoords);
 
-    qglDrawElements(GL_TRIANGLES, mesh->numindices, GL_UNSIGNED_INT,
+    GL_LockArrays(mesh->numverts);
+
+    qglDrawElements(GL_TRIANGLES, mesh->numindices, QGL_INDEX_ENUM,
                     mesh->indices);
 
     draw_celshading(mesh);
 
     if (gl_showtris->integer) {
         GL_EnableOutlines();
-        qglDrawElements(GL_TRIANGLES, mesh->numindices, GL_UNSIGNED_INT,
+        qglDrawElements(GL_TRIANGLES, mesh->numindices, QGL_INDEX_ENUM,
                         mesh->indices);
         GL_DisableOutlines();
     }
@@ -628,15 +622,14 @@ static void draw_alias_mesh(maliasmesh_t *mesh)
     // FIXME: unlock arrays before changing matrix?
     draw_shadow(mesh);
 
-    if (qglUnlockArraysEXT)
-        qglUnlockArraysEXT();
+    GL_UnlockArrays();
 }
 
 void GL_DrawAliasModel(model_t *model)
 {
     entity_t *ent = glr.ent;
     glCullResult_t cull;
-    maliasmesh_t *mesh, *last;
+    int i;
 
     newframenum = ent->frame;
     if (newframenum < 0 || newframenum >= model->numframes) {
@@ -692,7 +685,6 @@ void GL_DrawAliasModel(model_t *model)
             tess_static_plain : tess_lerped_plain;
     }
 
-    qglPushMatrix();
     GL_RotateForEntity(origin);
 
     if ((ent->flags & (RF_WEAPONMODEL | RF_LEFTHAND)) ==
@@ -706,22 +698,9 @@ void GL_DrawAliasModel(model_t *model)
     if (ent->flags & RF_DEPTHHACK)
         qglDepthRange(0, 0.25f);
 
-    if (shadelight) {
-        qglVertexPointer(3, GL_FLOAT, 4 * VERTEX_SIZE, tess.vertices);
-        qglColorPointer(4, GL_FLOAT, 4 * VERTEX_SIZE, tess.vertices + 3);
-        qglEnableClientState(GL_COLOR_ARRAY);
-    } else {
-        qglVertexPointer(3, GL_FLOAT, 4 * 4, tess.vertices);
-        qglColor4fv(color);
-    }
-
     // draw all the meshes
-    last = model->meshes + model->nummeshes;
-    for (mesh = model->meshes; mesh != last; mesh++)
-        draw_alias_mesh(mesh);
-
-    if (shadelight)
-        qglDisableClientState(GL_COLOR_ARRAY);
+    for (i = 0; i < model->nummeshes; i++)
+        draw_alias_mesh(&model->meshes[i]);
 
     if (ent->flags & RF_DEPTHHACK)
         qglDepthRange(0, 1);
@@ -733,7 +712,5 @@ void GL_DrawAliasModel(model_t *model)
         qglMatrixMode(GL_MODELVIEW);
         qglFrontFace(GL_CW);
     }
-
-    qglPopMatrix();
 }
 

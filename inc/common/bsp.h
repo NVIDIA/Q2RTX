@@ -69,8 +69,9 @@ typedef struct {
     int         vert;
 } msurfedge_t;
 
-#define SURF_NOLM_MASK \
-    (SURF_SKY | SURF_WARP | SURF_FLOWING | SURF_TRANS33 | SURF_TRANS66)
+#define SURF_TRANS_MASK (SURF_TRANS33 | SURF_TRANS66)
+#define SURF_COLOR_MASK (SURF_TRANS_MASK | SURF_WARP)
+#define SURF_NOLM_MASK  (SURF_COLOR_MASK | SURF_FLOWING | SURF_SKY)
 
 #define DSURF_PLANEBACK     1
 
@@ -95,6 +96,7 @@ typedef struct mface_s {
 
 #if USE_REF == REF_GL
     int             texnum[2];
+    int             statebits;
     int             firstvert;
     int             light_s, light_t;
     float           stylecache[MAX_LIGHTMAPS];

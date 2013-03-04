@@ -88,7 +88,7 @@ static void gl_texturemode_changed(cvar_t *self)
     // change all the existing mipmap texture objects
     for (i = 0, image = r_images; i < r_numImages; i++, image++) {
         if (image->type == IT_WALL || image->type == IT_SKIN) {
-            GL_BindTexture(image->texnum);
+            GL_ForceTexture(0, image->texnum);
             qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
                              gl_filter_min);
             qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
@@ -123,7 +123,7 @@ static void gl_anisotropy_changed(cvar_t *self)
     // change all the existing mipmap texture objects
     for (i = 0, image = r_images; i < r_numImages; i++, image++) {
         if (image->type == IT_WALL || image->type == IT_SKIN) {
-            GL_BindTexture(image->texnum);
+            GL_ForceTexture(0, image->texnum);
             qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT,
                              gl_filter_anisotropy);
         }
@@ -139,7 +139,7 @@ static void gl_bilerp_chars_changed(cvar_t *self)
     // change all the existing charset texture objects
     for (i = 0, image = r_images; i < r_numImages; i++, image++) {
         if (image->type == IT_FONT) {
-            GL_BindTexture(image->texnum);
+            GL_ForceTexture(0, image->texnum);
             qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, param);
             qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, param);
         }
@@ -155,7 +155,7 @@ static void gl_bilerp_pics_changed(cvar_t *self)
     // change all the existing pic texture objects
     for (i = 0, image = r_images; i < r_numImages; i++, image++) {
         if (image->type == IT_PIC) {
-            GL_BindTexture(image->texnum);
+            GL_ForceTexture(0, image->texnum);
             qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, param);
             qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, param);
         }
@@ -164,7 +164,7 @@ static void gl_bilerp_pics_changed(cvar_t *self)
     // change scrap texture object
     if (!gl_noscrap->integer) {
         param = self->integer > 1 ? GL_LINEAR : GL_NEAREST;
-        GL_BindTexture(TEXNUM_SCRAP);
+        GL_ForceTexture(0, TEXNUM_SCRAP);
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, param);
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, param);
     }
@@ -229,7 +229,8 @@ void Scrap_Upload(void)
     if (!scrap_dirty) {
         return;
     }
-    GL_BindTexture(TEXNUM_SCRAP);
+
+    GL_ForceTexture(0, TEXNUM_SCRAP);
     GL_Upload8(scrap_data, SCRAP_BLOCK_WIDTH, SCRAP_BLOCK_HEIGHT, qfalse);
     scrap_dirty = qfalse;
 }
@@ -398,7 +399,7 @@ static void GL_ColorInvertTexture(byte *in, int inwidth, int inheight)
 // (useful for small images in scarp, charsets, etc)
 static inline qboolean is_nearest(void)
 {
-    if (gls.texnum[gls.tmu] == TEXNUM_SCRAP && gl_bilerp_pics->integer <= 1) {
+    if (gls.texnums[0] == TEXNUM_SCRAP && gl_bilerp_pics->integer <= 1) {
         return qtrue; // hack for scrap texture
     }
     if (!upload_image) {
@@ -443,7 +444,7 @@ static inline qboolean is_downsample(void)
 
 static inline qboolean is_clamp(void)
 {
-    if (gls.texnum[gls.tmu] == TEXNUM_SCRAP) {
+    if (gls.texnums[0] == TEXNUM_SCRAP) {
         return qtrue; // hack for scrap texture
     }
     if (!upload_image) {
@@ -735,8 +736,8 @@ void IMG_Load(image_t *image, byte *pic, int width, int height)
         R_FloodFillSkin(pic, width, height);
 
     mipmap = (image->type == IT_WALL || image->type == IT_SKIN);
-    image->texnum = (image - r_images);
-    GL_BindTexture(image->texnum);
+    qglGenTextures(1, &image->texnum);
+    GL_ForceTexture(0, image->texnum);
     if (image->flags & IF_PALETTED) {
         transparent = GL_Upload8(pic, width, height, mipmap);
     } else {
@@ -757,9 +758,9 @@ void IMG_Load(image_t *image, byte *pic, int width, int height)
 
 void IMG_Unload(image_t *image)
 {
-    if (image->texnum > 0 && image->texnum < MAX_RIMAGES) {
-        if (gls.texnum[gls.tmu] == image->texnum)
-            gls.texnum[gls.tmu] = 0;
+    if (image->texnum && !(image->flags & IF_SCRAP)) {
+        if (gls.texnums[0] == image->texnum)
+            gls.texnums[0] = 0;
         qglDeleteTextures(1, &image->texnum);
         image->texnum = 0;
     }
@@ -771,7 +772,6 @@ static void GL_BuildIntensityTable(void)
     float f;
 
     f = Cvar_ClampValue(gl_intensity, 1, 5);
-    gl_static.inverse_intensity = 1 / f;
     for (i = 0; i < 256; i++) {
         j = i * f;
         if (j > 255) {
@@ -779,6 +779,11 @@ static void GL_BuildIntensityTable(void)
         }
         intensitytable[i] = j;
     }
+
+    j = 255.0f / f;
+    gl_static.inverse_intensity_33 = MakeColor(j, j, j, 85);
+    gl_static.inverse_intensity_66 = MakeColor(j, j, j, 170);
+    gl_static.inverse_intensity_100 = MakeColor(j, j, j, 255);
 }
 
 static void GL_BuildGammaTables(void)
@@ -838,7 +843,7 @@ static void GL_InitDefaultTexture(void)
         }
     }
 
-    GL_BindTexture(TEXNUM_DEFAULT);
+    GL_ForceTexture(0, TEXNUM_DEFAULT);
     GL_Upload32(pixels, 8, 8, qtrue);
 
     // fill in notexture image
@@ -876,7 +881,7 @@ static void GL_InitParticleTexture(void)
         }
     }
 
-    GL_BindTexture(TEXNUM_PARTICLE);
+    GL_ForceTexture(0, TEXNUM_PARTICLE);
     GL_Upload32(pixels, 16, 16, qfalse);
     if (gl_config.version_major == 1 && gl_config.version_minor == 1) {
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
@@ -892,13 +897,13 @@ static void GL_InitWhiteImage(void)
     uint32_t pixel;
 
     pixel = U32_WHITE;
-    GL_BindTexture(TEXNUM_WHITE);
+    GL_ForceTexture(0, TEXNUM_WHITE);
     GL_Upload32((byte *)&pixel, 1, 1, qfalse);
     qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     pixel = U32_BLACK;
-    GL_BindTexture(TEXNUM_BLACK);
+    GL_ForceTexture(0, TEXNUM_BLACK);
     GL_Upload32((byte *)&pixel, 1, 1, qfalse);
     qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -924,7 +929,7 @@ static void GL_InitBeamTexture(void)
         }
     }
 
-    GL_BindTexture(TEXNUM_BEAM);
+    GL_ForceTexture(0, TEXNUM_BEAM);
     GL_Upload32(pixels, 16, 16, qfalse);
     qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -989,12 +994,17 @@ void GL_InitImages(void)
     upload_image = NULL;
     upload_texinfo = NULL;
 
+    qglGenTextures(NUM_TEXNUMS, gl_static.texnums);
+    qglGenTextures(LM_MAX_LIGHTMAPS, lm.texnums);
+
     Scrap_Init();
 
     GL_InitDefaultTexture();
     GL_InitParticleTexture();
     GL_InitWhiteImage();
     GL_InitBeamTexture();
+
+    GL_ShowErrors(__func__);
 }
 
 #ifdef _DEBUG
@@ -1008,9 +1018,6 @@ GL_ShutdownImages
 */
 void GL_ShutdownImages(void)
 {
-    GLuint texnums[NUM_TEXNUMS];
-    int i, j;
-
     gl_bilerp_chars->changed = NULL;
     gl_bilerp_pics->changed = NULL;
     gl_texturemode->changed = NULL;
@@ -1019,13 +1026,8 @@ void GL_ShutdownImages(void)
     gl_gamma->changed = NULL;
 
     // delete auto textures
-    j = TEXNUM_LIGHTMAP + lm.highwater - TEXNUM_DEFAULT;
-    for (i = 0; i < j; i++) {
-        texnums[i] = TEXNUM_DEFAULT + i;
-    }
-    qglDeleteTextures(j, texnums);
-
-    lm.highwater = 0;
+    qglDeleteTextures(NUM_TEXNUMS, gl_static.texnums);
+    qglDeleteTextures(LM_MAX_LIGHTMAPS, lm.texnums);
 
 #ifdef _DEBUG
     r_charset = NULL;

@@ -27,7 +27,7 @@ static inline void _GL_StretchPic(
 {
     vec_t *dst_vert;
     uint32_t *dst_color;
-    int *dst_indices;
+    QGL_INDEX_TYPE *dst_indices;
 
     if (tess.numverts + 4 > TESS_MAX_VERTICES ||
         tess.numindices + 6 > TESS_MAX_INDICES ||
@@ -181,10 +181,7 @@ void R_SetScale(float *scale)
 
     GL_Flush2D();
 
-    qglMatrixMode(GL_PROJECTION);
-    qglLoadIdentity();
-
-    qglOrtho(0, Q_rint(r_config.width * f),
+    GL_Ortho(0, Q_rint(r_config.width * f),
              Q_rint(r_config.height * f), 0, -1, 1);
 
     draw.scale = f;
@@ -339,9 +336,9 @@ void Draw_Stats(void)
     }
     if (c.batchesDrawn) {
         Draw_Stringf(x, y, "Batches drawn: %i", c.batchesDrawn); y += 10;
-        Draw_Stringf(x, y, "Faces / batch: %i", c.facesDrawn / c.batchesDrawn);
+        Draw_Stringf(x, y, "Faces / batch: %.1f", (float)c.facesDrawn / c.batchesDrawn);
         y += 10;
-        Draw_Stringf(x, y, "Tris / batch : %i", c.trisDrawn / c.batchesDrawn);
+        Draw_Stringf(x, y, "Tris / batch : %.1f", (float)c.facesTris / c.batchesDrawn);
         y += 10;
     }
     Draw_Stringf(x, y, "2D batches   : %i", c.batchesDrawn2D); y += 10;
@@ -355,7 +352,7 @@ void Draw_Lightmaps(void)
         x = i & 1;
         y = i >> 1;
         _GL_StretchPic(256 * x, 256 * y, 256, 256,
-                       0, 0, 1, 1, U32_WHITE, TEXNUM_LIGHTMAP + i, 0);
+                       0, 0, 1, 1, U32_WHITE, lm.texnums[i], 0);
     }
 }
 

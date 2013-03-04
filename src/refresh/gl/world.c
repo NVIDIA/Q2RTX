@@ -18,11 +18,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "gl.h"
 
-static qboolean GL_SmoothLightPoint(vec3_t start, vec3_t color)
+void GL_SampleLightPoint(vec3_t color)
 {
-    bsp_t           *bsp;
     mface_t         *surf;
-    int             s, t, i, index;
+    int             s, t, i;
     byte            *lightmap;
     byte            *b1, *b2, *b3, *b4;
     int             fracu, fracv;
@@ -30,6 +29,53 @@ static qboolean GL_SmoothLightPoint(vec3_t start, vec3_t color)
     byte            temp[3];
     int             smax, tmax, size;
     lightstyle_t    *style;
+
+    fracu = glr.lightpoint.s & 15;
+    fracv = glr.lightpoint.t & 15;
+
+    // compute weights of lightmap blocks
+    w1 = (16 - fracu) * (16 - fracv);
+    w2 = fracu * (16 - fracv);
+    w3 = fracu * fracv;
+    w4 = (16 - fracu) * fracv;
+
+    s = glr.lightpoint.s >> 4;
+    t = glr.lightpoint.t >> 4;
+
+    surf = glr.lightpoint.surf;
+
+    smax = S_MAX(surf);
+    tmax = T_MAX(surf);
+    size = smax * tmax * 3;
+
+    VectorClear(color);
+
+    // add all the lightmaps with bilinear filtering
+    lightmap = surf->lightmap;
+    for (i = 0; i < surf->numstyles; i++) {
+        b1 = &lightmap[3 * ((t + 0) * smax + (s + 0))];
+        b2 = &lightmap[3 * ((t + 0) * smax + (s + 1))];
+        b3 = &lightmap[3 * ((t + 1) * smax + (s + 1))];
+        b4 = &lightmap[3 * ((t + 1) * smax + (s + 0))];
+
+        temp[0] = (w1 * b1[0] + w2 * b2[0] + w3 * b3[0] + w4 * b4[0]) >> 8;
+        temp[1] = (w1 * b1[1] + w2 * b2[1] + w3 * b3[1] + w4 * b4[1]) >> 8;
+        temp[2] = (w1 * b1[2] + w2 * b2[2] + w3 * b3[2] + w4 * b4[2]) >> 8;
+
+        style = LIGHT_STYLE(surf, i);
+
+        color[0] += temp[0] * style->rgb[0];
+        color[1] += temp[1] * style->rgb[1];
+        color[2] += temp[2] * style->rgb[2];
+
+        lightmap += size;
+    }
+}
+
+static qboolean _GL_LightPoint(vec3_t start, vec3_t color)
+{
+    bsp_t           *bsp;
+    int             i, index;
     lightpoint_t    pt;
     vec3_t          end, mins, maxs;
     entity_t        *ent;
@@ -86,48 +132,10 @@ static qboolean GL_SmoothLightPoint(vec3_t start, vec3_t color)
             glr.lightpoint = pt;
     }
 
-    surf = glr.lightpoint.surf;
-    if (!surf)
+    if (!glr.lightpoint.surf)
         return qfalse;
 
-    fracu = glr.lightpoint.s & 15;
-    fracv = glr.lightpoint.t & 15;
-
-    // compute weights of lightmap blocks
-    w1 = (16 - fracu) * (16 - fracv);
-    w2 = fracu * (16 - fracv);
-    w3 = fracu * fracv;
-    w4 = (16 - fracu) * fracv;
-
-    s = glr.lightpoint.s >> 4;
-    t = glr.lightpoint.t >> 4;
-
-    smax = S_MAX(surf);
-    tmax = T_MAX(surf);
-    size = smax * tmax * 3;
-
-    VectorClear(color);
-
-    // add all the lightmaps with bilinear filtering
-    lightmap = surf->lightmap;
-    for (i = 0; i < surf->numstyles; i++) {
-        b1 = &lightmap[3 * ((t + 0) * smax + (s + 0))];
-        b2 = &lightmap[3 * ((t + 0) * smax + (s + 1))];
-        b3 = &lightmap[3 * ((t + 1) * smax + (s + 1))];
-        b4 = &lightmap[3 * ((t + 1) * smax + (s + 0))];
-
-        temp[0] = (w1 * b1[0] + w2 * b2[0] + w3 * b3[0] + w4 * b4[0]) >> 8;
-        temp[1] = (w1 * b1[1] + w2 * b2[1] + w3 * b3[1] + w4 * b4[1]) >> 8;
-        temp[2] = (w1 * b1[2] + w2 * b2[2] + w3 * b3[2] + w4 * b4[2]) >> 8;
-
-        style = LIGHT_STYLE(surf, i);
-
-        color[0] += temp[0] * style->rgb[0];
-        color[1] += temp[1] * style->rgb[1];
-        color[2] += temp[2] * style->rgb[2];
-
-        lightmap += size;
-    }
+    GL_SampleLightPoint(color);
 
     GL_AdjustColor(color);
 
@@ -168,7 +176,6 @@ static void GL_MarkLights_r(mnode_t *node, dlight_t *light, int lightbit)
         }
 
         GL_MarkLights_r(node->children[0], light, lightbit);
-
         node = node->children[1];
     }
 }
@@ -177,6 +184,8 @@ static void GL_MarkLights(void)
 {
     int i;
     dlight_t *light;
+
+    glr.dlightframe++;
 
     for (i = 0, light = glr.fd.dlights; i < glr.fd.num_dlights; i++, light++) {
         VectorCopy(light->origin, light->transformed);
@@ -190,9 +199,7 @@ static void GL_TransformLights(mmodel_t *model)
     dlight_t *light;
     vec3_t temp;
 
-    if (!model->headnode) {
-        return;
-    }
+    glr.dlightframe++;
 
     for (i = 0, light = glr.fd.dlights; i < glr.fd.num_dlights; i++, light++) {
         VectorSubtract(light->origin, glr.ent->origin, temp);
@@ -219,6 +226,10 @@ static void GL_AddLights(vec3_t origin, vec3_t color)
         }
     }
 }
+#else
+#define GL_MarkLights()             (void)0
+#define GL_TransformLights()        (void)0
+#define GL_AddLights(origin, color) (void)0
 #endif
 
 void GL_LightPoint(vec3_t origin, vec3_t color)
@@ -229,16 +240,12 @@ void GL_LightPoint(vec3_t origin, vec3_t color)
     }
 
     // get lighting from world
-    if (!GL_SmoothLightPoint(origin, color)) {
+    if (!_GL_LightPoint(origin, color)) {
         VectorSet(color, 1, 1, 1);
     }
 
-#if USE_DLIGHTS
-    if (gl_dynamic->integer == 1) {
-        // add dynamic lights
-        GL_AddLights(origin, color);
-    }
-#endif
+    // add dynamic lights
+    GL_AddLights(origin, color);
 
     if (gl_doublelight_entities->integer) {
         // apply modulate twice to mimic original ref_gl behavior
@@ -344,7 +351,7 @@ finish:
 
 }
 
-#define BACKFACE_EPSILON    0.001f
+#define BACKFACE_EPSILON    0.01f
 
 #define BSP_CullFace(face, dot) \
     (((dot) < -BACKFACE_EPSILON && !((face)->drawflags & DSURF_PLANEBACK)) || \
@@ -392,7 +399,7 @@ void GL_DrawBspModel(mmodel_t *model)
         }
         VectorSubtract(glr.fd.vieworg, ent->origin, transformed);
         if (VectorEmpty(ent->origin) && model->drawframe != glr.drawframe) {
-            mask = SURF_TRANS33 | SURF_TRANS66;
+            mask = SURF_TRANS_MASK;
         }
     }
 
@@ -400,19 +407,11 @@ void GL_DrawBspModel(mmodel_t *model)
     // with alpha faces is referenced by multiple entities
     model->drawframe = glr.drawframe;
 
-#if USE_DLIGHTS
-    glr.dlightframe++;
-    if (gl_dynamic->integer == 1) {
-        GL_TransformLights(model);
-    }
-#endif
+    GL_TransformLights(model);
 
-    if (gl_dynamic->integer) {
-        GL_BeginLights();
-    }
-
-    qglPushMatrix();
     GL_RotateForEntity(ent->origin);
+
+    GL_BindArrays();
 
     // draw visible faces
     // FIXME: go by headnode instead?
@@ -427,18 +426,15 @@ void GL_DrawBspModel(mmodel_t *model)
             // on rotated or translated inline models
             GL_AddAlphaFace(face);
         } else {
-            GL_AddSolidFace(face);
+            if (gl_dynamic->integer) {
+                GL_PushLights(face);
+            }
+            GL_DrawFace(face);
         }
         face++;
     }
 
-    if (gl_dynamic->integer) {
-        GL_EndLights();
-    }
-
-    GL_DrawSolidFaces();
-
-    qglPopMatrix();
+    GL_Flush3D();
 }
 
 #define NODE_CLIPPED    0
@@ -504,12 +500,20 @@ static inline void GL_DrawNode(mnode_t *node)
             continue;
         }
 
-        if (face->drawflags & (SURF_TRANS33 | SURF_TRANS66)) {
+        if (face->drawflags & SURF_TRANS_MASK) {
             GL_AddAlphaFace(face);
             continue;
         }
 
-        GL_AddSolidFace(face);
+        if (gl_dynamic->integer) {
+            GL_PushLights(face);
+        }
+
+        if (gl_hash_faces->integer) {
+            GL_AddSolidFace(face);
+        } else {
+            GL_DrawFace(face);
+        }
     }
 
     c.nodesDrawn++;
@@ -551,27 +555,22 @@ void GL_DrawWorld(void)
 
     GL_MarkLeaves();
 
-#if USE_DLIGHTS
-    glr.dlightframe++;
-    if (gl_dynamic->integer == 1) {
-        GL_MarkLights();
-    }
-#endif
+    GL_MarkLights();
 
     R_ClearSkyBox();
 
-    if (gl_dynamic->integer) {
-        GL_BeginLights();
-    }
+    GL_LoadMatrix(glr.viewmatrix);
+
+    GL_BindArrays();
+
+    GL_ClearSolidFaces();
 
     GL_WorldNode_r(gl_static.world.cache->nodes,
                    gl_cull_nodes->integer ? NODE_CLIPPED : NODE_UNCLIPPED);
 
-    if (gl_dynamic->integer) {
-        GL_EndLights();
-    }
-
     GL_DrawSolidFaces();
+
+    GL_Flush3D();
 
     R_DrawSkyBox();
 }

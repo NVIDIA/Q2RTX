@@ -388,6 +388,10 @@ LOAD(Faces)
             DEBUG("bad surfedges");
             return Q_ERR_TOO_FEW;
         }
+        if (numedges > 4096) {
+            DEBUG("bad surfedges");
+            return Q_ERR_TOO_MANY;
+        }
         if (lastedge < firstedge || lastedge > bsp->numsurfedges) {
             DEBUG("bad surfedges");
             return Q_ERR_BAD_INDEX;

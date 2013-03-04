@@ -78,6 +78,7 @@ cvar_t *gl_novis;
 cvar_t *gl_lockpvs;
 cvar_t *gl_lightmap;
 cvar_t *gl_fullbright;
+cvar_t *gl_vertexlight;
 cvar_t *gl_polyblend;
 cvar_t *gl_showerrors;
 
@@ -328,6 +329,9 @@ void GL_RotateForEntity(vec3_t origin)
 
     GL_MultMatrix(glr.entmatrix, glr.viewmatrix, matrix);
     qglLoadMatrixf(glr.entmatrix);
+
+    // forced matrix upload
+    gls.currentmatrix = glr.entmatrix;
 }
 
 static void GL_DrawSpriteModel(model_t *model)
@@ -353,9 +357,10 @@ static void GL_DrawSpriteModel(model_t *model)
         bits |= GLS_BLEND_BLEND;
     }
 
-    GL_TexEnv(GL_MODULATE);
-    GL_Bits(bits);
-    GL_BindTexture(image->texnum);
+    GL_LoadMatrix(glr.viewmatrix);
+    GL_BindTexture(0, image->texnum);
+    GL_StateBits(bits);
+    GL_ArrayBits(GLA_VERTEX | GLA_TC);
     qglColor4f(1, 1, 1, alpha);
 
     VectorScale(glr.viewaxis[1], frame->origin_x, left);
@@ -368,8 +373,8 @@ static void GL_DrawSpriteModel(model_t *model)
     VectorAdd3(e->origin, down, right, points[2]);
     VectorAdd3(e->origin, up, right, points[3]);
 
-    qglTexCoordPointer(2, GL_FLOAT, 0, tcoords);
-    qglVertexPointer(3, GL_FLOAT, 0, points);
+    GL_TexCoordPointer(2, 0, tcoords);
+    GL_VertexPointer(3, 0, &points[0][0]);
     qglDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 
@@ -391,19 +396,13 @@ static void GL_DrawNullModel(void)
     VectorMA(e->origin, 16, glr.entaxis[1], points[3]);
     VectorMA(e->origin, 16, glr.entaxis[2], points[5]);
 
-    qglDisable(GL_TEXTURE_2D);
-    //qglDisable(GL_DEPTH_TEST);
-    qglDisableClientState(GL_TEXTURE_COORD_ARRAY);
-    qglEnableClientState(GL_COLOR_ARRAY);
-
-    qglColorPointer(4, GL_UNSIGNED_BYTE, 0, colors);
-    qglVertexPointer(3, GL_FLOAT, 0, points);
+    GL_LoadMatrix(glr.viewmatrix);
+    GL_BindTexture(0, TEXNUM_WHITE);
+    GL_StateBits(GLS_DEFAULT);
+    GL_ArrayBits(GLA_VERTEX | GLA_COLOR);
+    GL_ColorBytePointer(4, 0, (GLubyte *)colors);
+    GL_VertexPointer(3, 0, &points[0][0]);
     qglDrawArrays(GL_LINES, 0, 6);
-
-    qglDisableClientState(GL_COLOR_ARRAY);
-    qglEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    //qglEnable(GL_DEPTH_TEST);
-    qglEnable(GL_TEXTURE_2D);
 }
 
 static void GL_DrawEntities(int mask)
@@ -485,39 +484,17 @@ static void GL_DrawEntities(int mask)
 
 static void GL_DrawTearing(void)
 {
-    vec2_t points[4];
     static int i;
 
     // alternate colors to make tearing obvious
     i++;
     if (i & 1) {
         qglClearColor(1, 1, 1, 1);
-        qglColor4f(1, 1, 1, 1);
     } else {
         qglClearColor(1, 0, 0, 0);
-        qglColor4f(1, 0, 0, 1);
     }
 
-    points[0][0] = 0;
-    points[0][1] = r_config.height;
-    points[1][0] = 0;
-    points[1][1] = 0;
-    points[2][0] = r_config.width;
-    points[2][1] = r_config.height;
-    points[3][0] = r_config.width;
-    points[3][1] = 0;
-
     qglClear(GL_COLOR_BUFFER_BIT);
-
-    qglDisable(GL_TEXTURE_2D);
-    qglDisableClientState(GL_TEXTURE_COORD_ARRAY);
-
-    qglVertexPointer(2, GL_FLOAT, 0, points);
-    qglDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-    qglEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    qglEnable(GL_TEXTURE_2D);
-
     qglClearColor(0, 0, 0, 1);
 }
 
@@ -580,13 +557,13 @@ void R_RenderFrame(refdef_t *fd)
     glr.num_beams = 0;
 
 #if USE_DLIGHTS
-    if (gl_dynamic->integer != 1) {
+    if (gl_dynamic->integer != 1 || gl_vertexlight->integer) {
         glr.fd.num_dlights = 0;
     }
 #endif
 
     if (lm.dirty) {
-        LM_RebuildSurfaces();
+        GL_RebuildLighting();
         lm.dirty = qfalse;
     }
 
@@ -710,13 +687,19 @@ static size_t GL_ViewCluster_m(char *buffer, size_t size)
     return Q_scnprintf(buffer, size, "%d", glr.viewcluster1);
 }
 
+static void gl_lightmap_changed(cvar_t *self)
+{
+    lm.scale = Cvar_ClampValue(gl_coloredlightmaps, 0, 1);
+    lm.comp = lm.scale ? GL_RGB : GL_LUMINANCE;
+    lm.add = 255 * Cvar_ClampValue(gl_brightness, -1, 1);
+    lm.modulate = gl_modulate->value * gl_modulate_world->value;
+    lm.dirty = qtrue; // rebuild all lightmaps next frame
+}
+
 static void gl_modulate_entities_changed(cvar_t *self)
 {
     gl_static.entity_modulate = gl_modulate->value * gl_modulate_entities->value;
 }
-
-// this one is defined in gl_surf.c
-extern void gl_lightmap_changed(cvar_t *self);
 
 static void gl_modulate_changed(cvar_t *self)
 {
@@ -791,10 +774,14 @@ static void GL_Register(void)
     gl_lockpvs = Cvar_Get("gl_lockpvs", "0", CVAR_CHEAT);
     gl_lightmap = Cvar_Get("gl_lightmap", "0", CVAR_CHEAT);
     gl_fullbright = Cvar_Get("r_fullbright", "0", CVAR_CHEAT);
+    gl_fullbright->changed = gl_lightmap_changed;
+    gl_vertexlight = Cvar_Get("gl_vertexlight", "0", 0);
+    gl_vertexlight->changed = gl_lightmap_changed;
     gl_polyblend = Cvar_Get("gl_polyblend", "1", 0);
     gl_showerrors = Cvar_Get("gl_showerrors", "1", 0);
 
-    gl_modulate_entities_changed(gl_modulate_entities);
+    gl_lightmap_changed(NULL);
+    gl_modulate_entities_changed(NULL);
 
     Cmd_AddCommand("strings", GL_Strings_f);
     Cmd_AddMacro("gl_viewcluster", GL_ViewCluster_m);
@@ -838,14 +825,8 @@ static qboolean GL_SetupConfig(void)
         return qfalse;
     }
 
-    // get extensions string
+    // get and parse extension string
     extensions = (const char *)qglGetString(GL_EXTENSIONS);
-    if (!extensions  || !*extensions) {
-        Com_EPrintf("No OpenGL extensions found, check your drivers\n");
-        return qfalse;
-    }
-
-    // parse extension string
     gl_config.ext_supported = QGL_ParseExtensionString(extensions);
     gl_config.ext_enabled = 0;
 
@@ -892,12 +873,6 @@ static qboolean GL_SetupConfig(void)
 
     QGL_InitExtensions(gl_config.ext_enabled);
 
-    // lack of multitexture support is a show stopper
-    if (!qglActiveTextureARB) {
-        Com_EPrintf("Required GL_ARB_multitexture extension is missing\n");
-        return qfalse;
-    }
-
     qglGetIntegerv(GL_MAX_TEXTURE_SIZE, &integer);
     if (integer < 256) {
         Com_EPrintf("OpenGL reports invalid maximum texture size\n");
@@ -928,6 +903,7 @@ static qboolean GL_SetupConfig(void)
     qglGetIntegerv(GL_STENCIL_BITS, &integer);
     gl_config.stencilbits = integer;
 
+    GL_ShowErrors(__func__);
     return qtrue;
 }
 

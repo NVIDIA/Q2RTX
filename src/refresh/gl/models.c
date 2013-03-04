@@ -31,7 +31,7 @@ qerror_t MOD_LoadMD2(model_t *model, const void *rawdata, size_t length)
     maliasframe_t *dst_frame;
     maliasvert_t *dst_vert;
     maliasmesh_t *dst_mesh;
-    uint32_t *finalIndices;
+    QGL_INDEX_TYPE *finalIndices;
     maliastc_t *dst_tc;
     int i, j, k;
     uint16_t remap[MD2_MAX_TRIANGLES * 3];
@@ -229,7 +229,8 @@ qerror_t MOD_LoadMD3(model_t *model, const void *rawdata, size_t length)
     maliasmesh_t *dst_mesh;
     maliasvert_t *dst_vert;
     maliastc_t *dst_tc;
-    uint32_t *dst_idx;
+    QGL_INDEX_TYPE *dst_idx;
+    uint32_t index;
     uint32_t numverts, numtris, numskins;
     uint32_t totalVerts;
     char skinname[MAX_QPATH];
@@ -387,15 +388,13 @@ qerror_t MOD_LoadMD3(model_t *model, const void *rawdata, size_t length)
             goto fail;
         }
         dst_idx = dst_mesh->indices;
-        for (j = 0; j < numtris; j++) {
-            dst_idx[0] = LittleLong(src_idx[0]);
-            dst_idx[1] = LittleLong(src_idx[1]);
-            dst_idx[2] = LittleLong(src_idx[2]);
-            if (dst_idx[0] >= numverts || dst_idx[1] >= numverts || dst_idx[2] >= numverts) {
+        for (j = 0; j < numtris * 3; j++) {
+            index = LittleLong(*src_idx++);
+            if (index >= numverts) {
                 ret = Q_ERR_BAD_INDEX;
                 goto fail;
             }
-            src_idx += 3; dst_idx += 3;
+            *dst_idx++ = index;
         }
 
         offset = LittleLong(src_mesh->meshsize);
