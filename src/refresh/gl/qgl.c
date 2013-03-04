@@ -48,21 +48,103 @@ QGL_EXT_compiled_vertex_array_IMP
 #define SIG(x) fprintf(log_fp, "%s\n", x)
 #define SIGf(...) fprintf(log_fp, __VA_ARGS__)
 
+static const char *enumToString(GLenum num)
+{
+#define E(x) case x: return #x;
+    switch (num) {
+/* Data types */
+        E(GL_UNSIGNED_BYTE)
+        E(GL_UNSIGNED_SHORT)
+        E(GL_UNSIGNED_INT)
+        E(GL_FLOAT)
+
+/* Primitives */
+        E(GL_LINES)
+        E(GL_LINE_STRIP)
+        E(GL_TRIANGLES)
+        E(GL_TRIANGLE_STRIP)
+
+/* Vertex Arrays */
+        E(GL_VERTEX_ARRAY)
+        E(GL_COLOR_ARRAY)
+        E(GL_TEXTURE_COORD_ARRAY)
+
+/* Matrix Mode */
+        E(GL_MODELVIEW)
+        E(GL_PROJECTION)
+        E(GL_TEXTURE)
+
+/* Polygons */
+        E(GL_LINE)
+        E(GL_FILL)
+        E(GL_CW)
+        E(GL_CCW)
+        E(GL_FRONT)
+        E(GL_BACK)
+        E(GL_CULL_FACE)
+        E(GL_POLYGON_OFFSET_FILL)
+
+/* Depth buffer */
+        E(GL_LEQUAL)
+        E(GL_GREATER)
+        E(GL_DEPTH_TEST)
+
+/* Lighting */
+        E(GL_FRONT_AND_BACK)
+        E(GL_FLAT)
+        E(GL_SMOOTH)
+
+/* Alpha testing */
+        E(GL_ALPHA_TEST)
+
+/* Blending */
+        E(GL_BLEND)
+        E(GL_SRC_ALPHA)
+        E(GL_ONE_MINUS_SRC_ALPHA)
+        E(GL_DST_COLOR)
+
+/* Stencil */
+        E(GL_STENCIL_TEST)
+        E(GL_REPLACE)
+
+/* Scissor box */
+        E(GL_SCISSOR_TEST)
+
+/* Texture mapping */
+        E(GL_TEXTURE_ENV)
+        E(GL_TEXTURE_ENV_MODE)
+        E(GL_TEXTURE_2D)
+        E(GL_TEXTURE_WRAP_S)
+        E(GL_TEXTURE_WRAP_T)
+        E(GL_TEXTURE_MAG_FILTER)
+        E(GL_TEXTURE_MIN_FILTER)
+        E(GL_MODULATE)
+
+/* GL_ARB_fragment_program */
+        E(GL_FRAGMENT_PROGRAM_ARB)
+
+/* GL_EXT_texture_filter_anisotropic */
+        E(GL_TEXTURE_MAX_ANISOTROPY_EXT)
+    }
+#undef E
+    return va("%#x", num);
+}
+
 static void APIENTRY logAlphaFunc(GLenum func, GLclampf ref)
 {
-    SIGf("%s( %#x, %f )\n", "glAlphaFunc", func, ref);
+    SIGf("%s( %s, %f )\n", "glAlphaFunc", enumToString(func), ref);
     dllAlphaFunc(func, ref);
 }
 
 static void APIENTRY logBindTexture(GLenum target, GLuint texture)
 {
-    SIGf("%s( %#x, %u )\n", "glBindTexture", target, texture);
+    SIGf("%s( %s, %u )\n", "glBindTexture", enumToString(target), texture);
     dllBindTexture(target, texture);
 }
 
 static void APIENTRY logBlendFunc(GLenum sfactor, GLenum dfactor)
 {
-    SIGf("%s( %#x, %#x )\n", "glBlendFunc", sfactor, dfactor);
+    SIGf("%s( %s, %s )\n", "glBlendFunc", enumToString(sfactor), enumToString(dfactor));
     dllBlendFunc(sfactor, dfactor);
 }
 
@@ -110,7 +192,7 @@ static void APIENTRY logColorMask(GLboolean red, GLboolean green, GLboolean blue
 
 static void APIENTRY logColorPointer(GLint size, GLenum type, GLsizei stride, const void *pointer)
 {
-    SIG("glColorPointer");
+    SIGf("%s( %d, %s, %d, %p )\n", "glColorPointer", size, enumToString(type), stride, pointer);
     dllColorPointer(size, type, stride, pointer);
 }
 
@@ -128,67 +210,67 @@ static void APIENTRY logCopyTexSubImage2D(GLenum target, GLint level, GLint xoff
 
 static void APIENTRY logCullFace(GLenum mode)
 {
-    SIG("glCullFace");
+    SIGf("%s( %s )\n", "glCullFace", enumToString(mode));
     dllCullFace(mode);
 }
 
 static void APIENTRY logDeleteTextures(GLsizei n, const GLuint *textures)
 {
-    SIG("glDeleteTextures");
+    SIGf("%s( %d, %p )\n", "glDeleteTextures", n, textures);
     dllDeleteTextures(n, textures);
 }
 
 static void APIENTRY logDepthFunc(GLenum func)
 {
-    SIG("glDepthFunc");
+    SIGf("%s( %s )\n", "glDepthFunc", enumToString(func));
     dllDepthFunc(func);
 }
 
 static void APIENTRY logDepthMask(GLboolean flag)
 {
-    SIG("glDepthMask");
+    SIGf("%s( %s )\n", "glDepthMask", flag ? "GL_TRUE" : "GL_FALSE");
     dllDepthMask(flag);
 }
 
 static void APIENTRY logDepthRange(GLclampd zNear, GLclampd zFar)
 {
-    SIG("glDepthRange");
+    SIGf("%s( %f, %f )\n", "glDepthRange", zNear, zFar);
     dllDepthRange(zNear, zFar);
 }
 
 static void APIENTRY logDisable(GLenum cap)
 {
-    SIGf("%s( %#x )\n", "glDisable", cap);
+    SIGf("%s( %s )\n", "glDisable", enumToString(cap));
     dllDisable(cap);
 }
 
 static void APIENTRY logDisableClientState(GLenum array)
 {
-    SIGf("%s( %#x )\n", "glDisableClientState", array);
+    SIGf("%s( %s )\n", "glDisableClientState", enumToString(array));
     dllDisableClientState(array);
 }
 
 static void APIENTRY logDrawArrays(GLenum mode, GLint first, GLsizei count)
 {
-    SIGf("%s( %#x, %u, %u )\n", "glDrawArrays", mode, first, count);
+    SIGf("%s( %s, %u, %u )\n", "glDrawArrays", enumToString(mode), first, count);
     dllDrawArrays(mode, first, count);
 }
 
 static void APIENTRY logDrawElements(GLenum mode, GLsizei count, GLenum type, const void *indices)
 {
-    SIGf("%s( %#x, %u, %#x, %p )\n", "glDrawElements", mode, count, type, indices);
+    SIGf("%s( %s, %u, %s, %p )\n", "glDrawElements", enumToString(mode), count, enumToString(type), indices);
     dllDrawElements(mode, count, type, indices);
 }
 
 static void APIENTRY logEnable(GLenum cap)
 {
-    SIGf("%s( %#x )\n", "glEnable", cap);
+    SIGf("%s( %s )\n", "glEnable", enumToString(cap));
     dllEnable(cap);
 }
 
 static void APIENTRY logEnableClientState(GLenum array)
 {
-    SIGf("%s( %#x )\n", "glEnableClientState", array);
+    SIGf("%s( %s )\n", "glEnableClientState", enumToString(array));
     dllEnableClientState(array);
 }
 
@@ -218,7 +300,7 @@ static void APIENTRY logFogfv(GLenum pname, const GLfloat *params)
 
 static void APIENTRY logFrontFace(GLenum mode)
 {
-    SIG("glFrontFace");
+    SIGf("%s( %s )\n", "glFrontFace", enumToString(mode));
     dllFrontFace(mode);
 }
 
@@ -230,7 +312,7 @@ static void APIENTRY logFrustum(GLdouble left, GLdouble right, GLdouble bottom, 
 
 static void APIENTRY logGenTextures(GLsizei n, GLuint *textures)
 {
-    SIG("glGenTextures");
+    SIGf("%s( %d, %p )\n", "glGenTextures", n, textures);
     dllGenTextures(n, textures);
 }
 
@@ -314,7 +396,7 @@ static void APIENTRY logLoadIdentity(void)
 
 static void APIENTRY logLoadMatrixf(const GLfloat *m)
 {
-    SIG("glLoadMatrixf");
+    SIGf("glLoadMatrixf( %p )\n", m);
     dllLoadMatrixf(m);
 }
 
@@ -338,7 +420,7 @@ static void APIENTRY logMaterialfv(GLenum face, GLenum pname, const GLfloat *par
 
 static void APIENTRY logMatrixMode(GLenum mode)
 {
-    SIG("glMatrixMode");
+    SIGf("%s( %s )\n", "glMatrixMode", enumToString(mode));
     dllMatrixMode(mode);
 }
 
@@ -386,13 +468,13 @@ static void APIENTRY logPointSize(GLfloat size)
 
 static void APIENTRY logPolygonMode(GLenum face, GLenum mode)
 {
-    SIGf("%s( %#x, %#x )\n", "glPolygonMode", face, mode);
+    SIGf("%s( %s, %s )\n", "glPolygonMode", enumToString(face), enumToString(mode));
     dllPolygonMode(face, mode);
 }
 
 static void APIENTRY logPolygonOffset(GLfloat factor, GLfloat units)
 {
-    SIG("glPolygonOffset");
+    SIGf("%s( %f, %f )\n", "glPolygonOffset", factor, units);
     dllPolygonOffset(factor, units);
 }
 
@@ -428,13 +510,13 @@ static void APIENTRY logScalef(GLfloat x, GLfloat y, GLfloat z)
 
 static void APIENTRY logScissor(GLint x, GLint y, GLsizei width, GLsizei height)
 {
-    SIG("glScissor");
+    SIGf("%s( %d, %d, %d, %d )\n", "glScissor", x, y, width, height);
     dllScissor(x, y, width, height);
 }
 
 static void APIENTRY logShadeModel(GLenum mode)
 {
-    SIG("glShadeModel");
+    SIGf("%s( %s )\n", "glShadeModel", enumToString(mode));
     dllShadeModel(mode);
 }
 
@@ -458,13 +540,13 @@ static void APIENTRY logStencilOp(GLenum fail, GLenum zfail, GLenum zpass)
 
 static void APIENTRY logTexCoordPointer(GLint size, GLenum type, GLsizei stride, const void *pointer)
 {
-    SIG("glTexCoordPointer");
+    SIGf("%s( %d, %s, %d, %p )\n", "glTexCoordPointer", size, enumToString(type), stride, pointer);
     dllTexCoordPointer(size, type, stride, pointer);
 }
 
 static void APIENTRY logTexEnvf(GLenum target, GLenum pname, GLfloat param)
 {
-    SIGf("%s( %#x, %#x, %f )\n", "glTexEnvf", target, pname, param);
+    SIGf("%s( %s, %s, %s )\n", "glTexEnvf", enumToString(target), enumToString(pname), enumToString(param));
     dllTexEnvf(target, pname, param);
 }
 
@@ -482,7 +564,7 @@ static void APIENTRY logTexImage2D(GLenum target, GLint level, GLint internalfor
 
 static void APIENTRY logTexParameterf(GLenum target, GLenum pname, GLfloat param)
 {
-    SIGf("%s( %#x, %#x, %f )\n", "glTexParameterf", target, pname, param);
+    SIGf("%s( %s, %s, %f )\n", "glTexParameterf", enumToString(target), enumToString(pname), param);
     dllTexParameterf(target, pname, param);
 }
 
@@ -506,13 +588,13 @@ static void APIENTRY logTranslatef(GLfloat x, GLfloat y, GLfloat z)
 
 static void APIENTRY logVertexPointer(GLint size, GLenum type, GLsizei stride, const void *pointer)
 {
-    SIG("glVertexPointer");
+    SIGf("%s( %d, %s, %d, %p )\n", "glVertexPointer", size, enumToString(type), stride, pointer);
     dllVertexPointer(size, type, stride, pointer);
 }
 
 static void APIENTRY logViewport(GLint x, GLint y, GLsizei width, GLsizei height)
 {
-    SIG("glViewport");
+    SIGf("%s( %d, %d, %d, %d )\n", "glViewport", x, y, width, height);
     dllViewport(x, y, width, height);
 }
 
