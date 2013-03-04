@@ -143,8 +143,11 @@ static void ClipSkyPolygon(int nump, vec3_t vecs, int stage)
     int     newc[2];
     int     i, j;
 
-    if (nump > MAX_CLIP_VERTS - 2)
-        Com_Error(ERR_DROP,  "ClipSkyPolygon: MAX_CLIP_VERTS");
+    if (nump > MAX_CLIP_VERTS - 2) {
+        Com_DPrintf("%s: too many verts\n", __func__);
+        return;
+    }
+
     if (stage == 6) {
         // fully clipped, so draw it
         DrawSkyPolygon(nump, vecs);
@@ -161,8 +164,9 @@ static void ClipSkyPolygon(int nump, vec3_t vecs, int stage)
         } else if (d < -ON_EPSILON) {
             back = qtrue;
             sides[i] = SIDE_BACK;
-        } else
+        } else {
             sides[i] = SIDE_ON;
+        }
         dists[i] = d;
     }
 
@@ -227,7 +231,8 @@ void R_AddSkySurface(mface_t *fa)
     mvertex_t   *vert;
 
     if (fa->numsurfedges > MAX_CLIP_VERTS) {
-        Com_Error(ERR_DROP, "%s: too many verts", __func__);
+        Com_DPrintf("%s: too many verts\n", __func__);
+        return;
     }
 
     // calculate vertex values for sky box
