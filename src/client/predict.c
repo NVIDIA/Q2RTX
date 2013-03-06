@@ -249,13 +249,17 @@ void CL_PredictMovement(void)
 
     X86_POP_FPCW;
 
-    oldz = cl.predicted_origins[cl.predicted_step_frame & CMD_MASK][2];
-    step = pm.s.origin[2] - oldz;
-    if (step > 63 && step < 160 && (pm.s.pm_flags & PMF_ON_GROUND)) {
-        cl.predicted_step = step * 0.125f;
-        cl.predicted_step_time = cls.realtime;
-        cl.predicted_step_frame = frame + 1;    // don't double step
-    } else if (cl.predicted_step_frame < frame) {
+    if (pm.s.pm_type != PM_SPECTATOR && (pm.s.pm_flags & PMF_ON_GROUND)) {
+        oldz = cl.predicted_origins[cl.predicted_step_frame & CMD_MASK][2];
+        step = pm.s.origin[2] - oldz;
+        if (step > 63 && step < 160) {
+            cl.predicted_step = step * 0.125f;
+            cl.predicted_step_time = cls.realtime;
+            cl.predicted_step_frame = frame + 1;    // don't double step
+        }
+    }
+
+    if (cl.predicted_step_frame < frame) {
         cl.predicted_step_frame = frame;
     }
 
