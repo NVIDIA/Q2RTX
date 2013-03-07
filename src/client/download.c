@@ -848,13 +848,8 @@ void CL_RequestNextDownload(void)
                 "rt", "bk", "lf", "ft", "up", "dn"
             };
 
-            for (i = 0; i < 12; i++) {
-                if (i & 1)
-                    len = Q_concat(fn, sizeof(fn),
-                                   "env/", cl.configstrings[CS_SKY], env_suf[i >> 1], ".pcx", NULL);
-                else
-                    len = Q_concat(fn, sizeof(fn),
-                                   "env/", cl.configstrings[CS_SKY], env_suf[i >> 1], ".tga", NULL);
+            for (i = 0; i < 6; i++) {
+                len = Q_concat(fn, sizeof(fn), "env/", cl.configstrings[CS_SKY], env_suf[i], ".tga", NULL);
                 check_file_len(fn, len, DL_OTHER);
             }
         }
