@@ -1134,6 +1134,10 @@ void CL_CalcViewValues(void)
     vec3_t viewoffset;
     float lerp;
 
+    if (!cl.frame.valid) {
+        return;
+    }
+
     // find states to interpolate between
     ps = &cl.frame.ps;
     ops = &cl.oldframe.ps;
