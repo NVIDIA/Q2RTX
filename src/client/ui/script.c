@@ -464,9 +464,7 @@ static void Parse_Background(menuFrameWork_t *menu)
 
     if (SCR_ParseColor(s, &menu->color)) {
         menu->image = 0;
-        if (menu->color.u8[3] != 255) {
-            menu->transparent = qtrue;
-        }
+        menu->transparent = menu->color.u8[3] != 255;
     } else {
         menu->image = R_RegisterPic(s);
         menu->transparent = R_GetPicSize(NULL, NULL, menu->image);
@@ -632,6 +630,7 @@ static qboolean Parse_File(const char *path, int depth)
                     menu->free = Menu_Free;
                     menu->image = uis.backgroundHandle;
                     menu->color.u32 = uis.color.background.u32;
+                    menu->transparent = uis.transparent;
                 } else if (!strcmp(cmd, "include")) {
                     char *s = Cmd_Argv(1);
                     if (!*s) {
@@ -650,8 +649,10 @@ static qboolean Parse_File(const char *path, int depth)
 
                     if (SCR_ParseColor(s, &uis.color.background)) {
                         uis.backgroundHandle = 0;
+                        uis.transparent = uis.color.background.u8[3] != 255;
                     } else {
                         uis.backgroundHandle = R_RegisterPic(s);
+                        uis.transparent = R_GetPicSize(NULL, NULL, uis.backgroundHandle);
                     }
                 } else if (!strcmp(cmd, "font")) {
                     uis.fontHandle = R_RegisterFont(Cmd_Argv(1));

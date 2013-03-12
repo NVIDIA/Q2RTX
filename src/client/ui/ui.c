@@ -85,7 +85,6 @@ void UI_PushMenu(menuFrameWork_t *menu)
         uis.entersound = qtrue;
     }
 
-    uis.transparent |= menu->transparent;
     uis.activeMenu = menu;
 
     UI_DoHitTest();
@@ -154,7 +153,6 @@ UI_PopMenu
 void UI_PopMenu(void)
 {
     menuFrameWork_t *menu;
-    int i;
 
     if (uis.menuDepth < 1)
         Com_Error(ERR_FATAL, "UI_PopMenu: depth < 1");
@@ -171,14 +169,6 @@ void UI_PopMenu(void)
 
     uis.activeMenu = uis.layers[uis.menuDepth - 1];
     uis.mouseTracker = NULL;
-
-    uis.transparent = qfalse;
-    for (i = uis.menuDepth - 1; i >= 0; i--) {
-        if (uis.layers[i]->transparent) {
-            uis.transparent = qtrue;
-            break;
-        }
-    }
 
     UI_DoHitTest();
 }
@@ -198,7 +188,7 @@ qboolean UI_IsTransparent(void)
         return qtrue;
     }
 
-    return uis.transparent;
+    return uis.activeMenu->transparent;
 }
 
 menuFrameWork_t *UI_FindMenu(const char *name)
@@ -210,6 +200,7 @@ menuFrameWork_t *UI_FindMenu(const char *name)
             return menu;
         }
     }
+
     return NULL;
 }
 
@@ -451,7 +442,7 @@ void UI_Draw(int realtime)
     R_SetScale(&uis.scale);
 #endif
 
-    if (!uis.transparent) {
+    if (1) {
         // draw top menu
         if (uis.activeMenu->draw) {
             uis.activeMenu->draw(uis.activeMenu);

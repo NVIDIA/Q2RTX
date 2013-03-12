@@ -610,6 +610,7 @@ void M_Menu_Demos(void)
     m_demos.menu.free       = Free;
     m_demos.menu.image      = uis.backgroundHandle;
     m_demos.menu.color.u32  = uis.color.background.u32;
+    m_demos.menu.transparent    = uis.transparent;
 
     m_demos.list.generic.type   = MTYPE_LIST;
     m_demos.list.generic.flags  = QMF_HASFOCUS;
