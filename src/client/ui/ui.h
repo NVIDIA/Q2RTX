@@ -245,6 +245,7 @@ typedef struct menuKeybind_s {
     char            binding[32];
     char            altbinding[32];
     char            *cmd;
+    char            *altstatus;
 } menuKeybind_t;
 
 #define MAX_PLAYERMODELS 1024
@@ -278,7 +279,7 @@ typedef struct uiStatic_s {
     menuCommon_t *mouseTracker;
     int mouseCoords[2];
     qboolean entersound;        // play after drawing a frame, so caching
-    // won't disrupt the sound
+                                // won't disrupt the sound
     qboolean transparent;
     int numPlayerModels;
     playerModelInfo_t pmi[MAX_PLAYERMODELS];

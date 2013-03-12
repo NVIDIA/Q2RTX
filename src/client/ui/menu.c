@@ -30,6 +30,7 @@ ACTION CONTROL
 static void Action_Free(menuAction_t *a)
 {
     Z_Free(a->generic.name);
+    Z_Free(a->generic.status);
     Z_Free(a->cmd);
     Z_Free(a);
 }
@@ -143,6 +144,7 @@ BITMAP CONTROL
 
 static void Bitmap_Free(menuBitmap_t *b)
 {
+    Z_Free(b->generic.status);
     Z_Free(b->cmd);
     Z_Free(b);
 }
@@ -177,7 +179,9 @@ KEYBIND CONTROL
 static void Keybind_Free(menuKeybind_t *k)
 {
     Z_Free(k->generic.name);
+    Z_Free(k->generic.status);
     Z_Free(k->cmd);
+    Z_Free(k->altstatus);
     Z_Free(k);
 }
 
@@ -314,7 +318,7 @@ static qboolean keybind_cb(void *arg, int key)
     Keybind_Update(menu);
 
     menu->keywait = qfalse;
-    menu->status = "Press Enter to change, Backspace to clear";
+    menu->status = k->generic.status;
     Key_WaitKey(NULL, NULL);
 
     UI_StartSound(QMS_OUT);
@@ -326,7 +330,7 @@ static menuSound_t Keybind_DoEnter(menuKeybind_t *k)
     menuFrameWork_t *menu = k->generic.parent;
 
     menu->keywait = qtrue;
-    menu->status = "Press the desired key, Escape to cancel";
+    menu->status = k->altstatus;
     Key_WaitKey(keybind_cb, k);
     return QMS_IN;
 }
@@ -507,6 +511,7 @@ static void SpinControl_Free(menuSpinControl_t *s)
     int i;
 
     Z_Free(s->generic.name);
+    Z_Free(s->generic.status);
     for (i = 0; i < s->numItems; i++) {
         Z_Free(s->itemnames[i]);
     }
@@ -644,6 +649,7 @@ static void BitField_Pop(menuSpinControl_t *s)
 static void BitField_Free(menuSpinControl_t *s)
 {
     Z_Free(s->generic.name);
+    Z_Free(s->generic.status);
     Z_Free(s);
 }
 
@@ -677,6 +683,7 @@ static void Pairs_Free(menuSpinControl_t *s)
     int i;
 
     Z_Free(s->generic.name);
+    Z_Free(s->generic.status);
     for (i = 0; i < s->numItems; i++) {
         Z_Free(s->itemnames[i]);
         Z_Free(s->itemvalues[i]);
@@ -1454,6 +1461,7 @@ static void Slider_Pop(menuSlider_t *s)
 static void Slider_Free(menuSlider_t *s)
 {
     Z_Free(s->generic.name);
+    Z_Free(s->generic.status);
     Z_Free(s);
 }
 
@@ -1588,7 +1596,7 @@ static void Savegame_Push(menuAction_t *a)
         a->generic.name = info;
         a->generic.flags &= ~QMF_GRAYED;
     } else {
-        a->generic.name = Z_CopyString("<EMPTY>");
+        a->generic.name = UI_CopyString("<EMPTY>");
         if (a->generic.type == MTYPE_LOADGAME)
             a->generic.flags |= QMF_GRAYED;
     }
@@ -1722,6 +1730,9 @@ void Menu_Init(menuFrameWork_t *menu)
     if (!focus && menu->nitems) {
         item = menu->items[0];
         ((menuCommon_t *)item)->flags |= QMF_HASFOCUS;
+        if (((menuCommon_t *)item)->status) {
+            menu->status = ((menuCommon_t *)item)->status;
+        }
     }
 
     // calc menu bounding box
@@ -1887,7 +1898,8 @@ void Menu_SetFocus(menuCommon_t *focus)
             item->flags &= ~QMF_HASFOCUS;
             if (item->focus) {
                 item->focus(item, qfalse);
-            } else if (menu->status == item->status) {
+            } else if (menu->status == item->status
+                       && menu->status != focus->status) {
                 menu->status = NULL;
             }
         }
@@ -1949,6 +1961,51 @@ menuSound_t Menu_AdjustCursor(menuFrameWork_t *m, int dir)
     Menu_SetFocus(item);
 
     return QMS_MOVE;
+}
+
+static void Menu_DrawStatus(menuFrameWork_t *menu)
+{
+    int     linewidth = uis.width / CHAR_WIDTH;
+    int     x, y, l, count;
+    char    *txt, *p;
+    int     lens[8];
+    char    *ptrs[8];
+
+    txt = menu->status;
+    x = 0;
+
+    count = 0;
+    ptrs[0] = txt;
+
+    while (*txt) {
+        // count word length
+        for (p = txt; *p > 32; p++)
+            ;
+        l = p - txt;
+
+        // word wrap
+        if ((l < linewidth && x + l > linewidth) || (x == linewidth)) {
+            if (count == 7)
+                break;
+            lens[count++] = x;
+            ptrs[count] = txt;
+            x = 0;
+        }
+
+        // display character and advance
+        txt++;
+        x++;
+    }
+
+    lens[count++] = x;
+
+    R_DrawFill8(0, menu->y2 - count * CHAR_HEIGHT, uis.width, count * CHAR_HEIGHT, 4);
+
+    for (l = 0; l < count; l++) {
+        x = (uis.width - lens[l] * CHAR_WIDTH) / 2;
+        y = menu->y2 - (count - l) * CHAR_HEIGHT;
+        R_DrawString(x, y, 0, lens[l], ptrs[l], uis.fontHandle);
+    }
 }
 
 /*
@@ -2051,9 +2108,7 @@ void Menu_Draw(menuFrameWork_t *menu)
 // draw status bar
 //
     if (menu->status) {
-        R_DrawFill8(0, menu->y2 - CHAR_HEIGHT, uis.width, CHAR_HEIGHT, 4);
-        UI_DrawString(uis.width / 2, menu->y2 - CHAR_HEIGHT,
-                      UI_CENTER, menu->status);
+        Menu_DrawStatus(menu);
     }
 }
 

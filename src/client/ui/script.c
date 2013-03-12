@@ -47,12 +47,28 @@ static menuSound_t Activate(menuCommon_t *self)
         return; \
     }
 
+static const cmd_option_t o_common[] = {
+    { "s:", "status" },
+    { NULL }
+};
+
 static void Parse_Spin(menuFrameWork_t *menu, menuType_t type)
 {
     menuSpinControl_t *s;
-    int numItems = Cmd_Argc() - 3;
-    int i;
+    int c, i, numItems;
+    char *status = NULL;
 
+    while ((c = Cmd_ParseOptions(o_common)) != -1) {
+        switch (c) {
+        case 's':
+            status = cmd_optarg;
+            break;
+        default:
+            return;
+        }
+    }
+
+    numItems = Cmd_Argc() - (cmd_optind + 2);
     if (numItems < 1) {
         Com_Printf("Usage: %s <name> <cvar> <desc1> [...]\n", Cmd_Argv(0));
         return;
@@ -62,11 +78,12 @@ static void Parse_Spin(menuFrameWork_t *menu, menuType_t type)
 
     s = UI_Mallocz(sizeof(*s));
     s->generic.type = type;
-    s->generic.name = UI_CopyString(Cmd_Argv(1));
-    s->cvar = Cvar_WeakGet(Cmd_Argv(2));
+    s->generic.name = UI_CopyString(Cmd_Argv(cmd_optind));
+    s->generic.status = UI_CopyString(status);
+    s->cvar = Cvar_WeakGet(Cmd_Argv(cmd_optind + 1));
     s->itemnames = UI_Mallocz(sizeof(char *) * (numItems + 1));
     for (i = 0; i < numItems; i++) {
-        s->itemnames[i] = UI_CopyString(Cmd_Argv(3 + i));
+        s->itemnames[i] = UI_CopyString(Cmd_Argv(cmd_optind + 2 + i));
     }
     s->numItems = numItems;
 
@@ -76,9 +93,20 @@ static void Parse_Spin(menuFrameWork_t *menu, menuType_t type)
 static void Parse_Pairs(menuFrameWork_t *menu)
 {
     menuSpinControl_t *s;
-    int numItems = Cmd_Argc() - 3;
-    int i;
+    int c, i, numItems;
+    char *status = NULL;
 
+    while ((c = Cmd_ParseOptions(o_common)) != -1) {
+        switch (c) {
+        case 's':
+            status = cmd_optarg;
+            break;
+        default:
+            return;
+        }
+    }
+
+    numItems = Cmd_Argc() - (cmd_optind + 2);
     if (numItems < 2 || (numItems & 1)) {
         Com_Printf("Usage: %s <name> <cvar> <desc1> <value1> [...]\n", Cmd_Argv(0));
         return;
@@ -88,16 +116,15 @@ static void Parse_Pairs(menuFrameWork_t *menu)
 
     s = UI_Mallocz(sizeof(*s));
     s->generic.type = MTYPE_PAIRS;
-    s->generic.name = UI_CopyString(Cmd_Argv(1));
-    s->cvar = Cvar_WeakGet(Cmd_Argv(2));
-    numItems >>= 1;
+    s->generic.name = UI_CopyString(Cmd_Argv(cmd_optind));
+    s->generic.status = UI_CopyString(status);
+    s->cvar = Cvar_WeakGet(Cmd_Argv(cmd_optind + 1));
+    numItems /= 2;
     s->itemnames = UI_Mallocz(sizeof(char *) * (numItems + 1));
-    for (i = 0; i < numItems; i++) {
-        s->itemnames[i] = UI_CopyString(Cmd_Argv(3 + i * 2));
-    }
     s->itemvalues = UI_Mallocz(sizeof(char *) * (numItems + 1));
     for (i = 0; i < numItems; i++) {
-        s->itemvalues[i] = UI_CopyString(Cmd_Argv(4 + i * 2));
+        s->itemnames[i] = UI_CopyString(Cmd_Argv(cmd_optind + 2 + i * 2));
+        s->itemvalues[i] = UI_CopyString(Cmd_Argv(cmd_optind + 3 + i * 2));
     }
     s->numItems = numItems;
 
@@ -107,8 +134,20 @@ static void Parse_Pairs(menuFrameWork_t *menu)
 static void Parse_Range(menuFrameWork_t *menu)
 {
     menuSlider_t *s;
+    char *status = NULL;
+    int c;
 
-    if (Cmd_Argc() < 5) {
+    while ((c = Cmd_ParseOptions(o_common)) != -1) {
+        switch (c) {
+        case 's':
+            status = cmd_optarg;
+            break;
+        default:
+            return;
+        }
+    }
+
+    if (Cmd_Argc() - cmd_optind < 4) {
         Com_Printf("Usage: %s <name> <cvar> <min> <max> [step]\n", Cmd_Argv(0));
         return;
     }
@@ -117,12 +156,13 @@ static void Parse_Range(menuFrameWork_t *menu)
 
     s = UI_Mallocz(sizeof(*s));
     s->generic.type = MTYPE_SLIDER;
-    s->generic.name = UI_CopyString(Cmd_Argv(1));
-    s->cvar = Cvar_WeakGet(Cmd_Argv(2));
-    s->minvalue = atof(Cmd_Argv(3));
-    s->maxvalue = atof(Cmd_Argv(4));
-    if (Cmd_Argc() > 5) {
-        s->step = atof(Cmd_Argv(5));
+    s->generic.name = UI_CopyString(Cmd_Argv(cmd_optind));
+    s->generic.status = UI_CopyString(status);
+    s->cvar = Cvar_WeakGet(Cmd_Argv(cmd_optind + 1));
+    s->minvalue = atof(Cmd_Argv(cmd_optind + 2));
+    s->maxvalue = atof(Cmd_Argv(cmd_optind + 3));
+    if (Cmd_Argc() - cmd_optind > 4) {
+        s->step = atof(Cmd_Argv(cmd_optind + 4));
     } else {
         s->step = (s->maxvalue - s->minvalue) / SLIDER_RANGE;
     }
@@ -132,7 +172,7 @@ static void Parse_Range(menuFrameWork_t *menu)
 
 static void Parse_Action(menuFrameWork_t *menu)
 {
-    static const cmd_option_t options[] = {
+    static const cmd_option_t o_action[] = {
         { "a", "align" },
         { "s:", "status" },
         { NULL }
@@ -142,7 +182,7 @@ static void Parse_Action(menuFrameWork_t *menu)
     char *status = NULL;
     int c;
 
-    while ((c = Cmd_ParseOptions(options)) != -1) {
+    while ((c = Cmd_ParseOptions(o_action)) != -1) {
         switch (c) {
         case 'a':
             uiFlags = UI_LEFT | UI_ALTCOLOR;
@@ -175,28 +215,45 @@ static void Parse_Action(menuFrameWork_t *menu)
 
 static void Parse_Bitmap(menuFrameWork_t *menu)
 {
-    char buffer[MAX_QPATH];
+    static const cmd_option_t o_bitmap[] = {
+        { "s:", "status" },
+        { "N:", "altname" },
+        { NULL }
+    };
     menuBitmap_t *b;
-    char *name;
+    char *status = NULL, *altname = NULL;
+    int c;
 
-    if (Cmd_Argc() < 3) {
+    while ((c = Cmd_ParseOptions(o_bitmap)) != -1) {
+        switch (c) {
+        case 's':
+            status = cmd_optarg;
+            break;
+        case 'N':
+            altname = cmd_optarg;
+            break;
+        default:
+            return;
+        }
+    }
+
+    if (Cmd_Argc() - cmd_optind < 2) {
         Com_Printf("Usage: %s <name> <command>\n", Cmd_Argv(0));
         return;
     }
 
     CHECK_NITEMS
 
+    if (!altname)
+        altname = va("%s_sel", Cmd_Argv(cmd_optind));
+
     b = UI_Mallocz(sizeof(*b));
     b->generic.type = MTYPE_BITMAP;
     b->generic.activate = Activate;
-    b->cmd = UI_CopyString(Cmd_ArgsFrom(2));
-
-    name = Cmd_Argv(1);
-    b->pics[0] = R_RegisterPic(name);
-
-    Q_snprintf(buffer, sizeof(buffer), "%s_sel", name);
-    b->pics[1] = R_RegisterPic(buffer);
-
+    b->generic.status = UI_CopyString(status);
+    b->cmd = UI_CopyString(Cmd_ArgsFrom(cmd_optind + 1));
+    b->pics[0] = R_RegisterPic(Cmd_Argv(cmd_optind));
+    b->pics[1] = R_RegisterPic(altname);
     R_GetPicSize(&b->generic.width, &b->generic.height, b->pics[0]);
 
     Menu_AddItem(menu, b);
@@ -204,9 +261,30 @@ static void Parse_Bitmap(menuFrameWork_t *menu)
 
 static void Parse_Bind(menuFrameWork_t *menu)
 {
+    static const cmd_option_t o_bind[] = {
+        { "s:", "status" },
+        { "S:", "altstatus" },
+        { NULL }
+    };
     menuKeybind_t *k;
+    char *status = "Press Enter to change, Backspace to clear";
+    char *altstatus = "Press the desired key, Escape to cancel";
+    int c;
 
-    if (Cmd_Argc() < 3) {
+    while ((c = Cmd_ParseOptions(o_bind)) != -1) {
+        switch (c) {
+        case 's':
+            status = cmd_optarg;
+            break;
+        case 'S':
+            altstatus = cmd_optarg;
+            break;
+        default:
+            return;
+        }
+    }
+
+    if (Cmd_Argc() - cmd_optind < 2) {
         Com_Printf("Usage: %s <name> <command>\n", Cmd_Argv(0));
         return;
     }
@@ -215,9 +293,11 @@ static void Parse_Bind(menuFrameWork_t *menu)
 
     k = UI_Mallocz(sizeof(*k));
     k->generic.type = MTYPE_KEYBIND;
-    k->generic.name = UI_CopyString(Cmd_Argv(1));
+    k->generic.name = UI_CopyString(Cmd_Argv(cmd_optind));
     k->generic.uiFlags = UI_CENTER;
-    k->cmd = UI_CopyString(Cmd_ArgsFrom(2));
+    k->generic.status = UI_CopyString(status);
+    k->cmd = UI_CopyString(Cmd_ArgsFrom(cmd_optind + 1));
+    k->altstatus = UI_CopyString(altstatus);
 
     Menu_AddItem(menu, k);
 }
@@ -225,8 +305,20 @@ static void Parse_Bind(menuFrameWork_t *menu)
 static void Parse_Savegame(menuFrameWork_t *menu, menuType_t type)
 {
     menuAction_t *a;
+    char *status = NULL;
+    int c;
 
-    if (Cmd_Argc() < 2) {
+    while ((c = Cmd_ParseOptions(o_common)) != -1) {
+        switch (c) {
+        case 's':
+            status = cmd_optarg;
+            break;
+        default:
+            return;
+        }
+    }
+
+    if (Cmd_Argc() - cmd_optind < 1) {
         Com_Printf("Usage: %s <dir>\n", Cmd_Argv(0));
         return;
     }
@@ -235,10 +327,11 @@ static void Parse_Savegame(menuFrameWork_t *menu, menuType_t type)
 
     a = UI_Mallocz(sizeof(*a));
     a->generic.type = type;
-    a->generic.name = Z_CopyString("<EMPTY>");
-    a->generic.uiFlags = UI_CENTER;
+    a->generic.name = UI_CopyString("<EMPTY>");
     a->generic.activate = Activate;
-    a->cmd = UI_CopyString(Cmd_Argv(1));
+    a->generic.uiFlags = UI_CENTER;
+    a->generic.status = UI_CopyString(status);
+    a->cmd = UI_CopyString(Cmd_Argv(cmd_optind));
 
     if (type == MTYPE_LOADGAME)
         a->generic.flags |= QMF_GRAYED;
@@ -252,15 +345,25 @@ static void Parse_Toggle(menuFrameWork_t *menu)
     menuSpinControl_t *s;
     qboolean negate = qfalse;
     menuType_t type = MTYPE_TOGGLE;
-    int bit = 0;
-    char *b;
+    int c, bit = 0;
+    char *b, *status = NULL;
 
-    if (Cmd_Argc() < 3) {
+    while ((c = Cmd_ParseOptions(o_common)) != -1) {
+        switch (c) {
+        case 's':
+            status = cmd_optarg;
+            break;
+        default:
+            return;
+        }
+    }
+
+    if (Cmd_Argc() - cmd_optind < 2) {
         Com_Printf("Usage: %s <name> <cvar> [~][bit]\n", Cmd_Argv(0));
         return;
     }
 
-    b = Cmd_Argv(3);
+    b = Cmd_Argv(cmd_optind + 2);
     if (*b == '~') {
         negate = qtrue;
         b++;
@@ -278,8 +381,9 @@ static void Parse_Toggle(menuFrameWork_t *menu)
 
     s = UI_Mallocz(sizeof(*s));
     s->generic.type = type;
-    s->generic.name = UI_CopyString(Cmd_Argv(1));
-    s->cvar = Cvar_WeakGet(Cmd_Argv(2));
+    s->generic.name = UI_CopyString(Cmd_Argv(cmd_optind));
+    s->generic.status = UI_CopyString(status);
+    s->cvar = Cvar_WeakGet(Cmd_Argv(cmd_optind + 1));
     s->itemnames = (char **)yes_no_names;
     s->numItems = 2;
     s->negate = negate;
