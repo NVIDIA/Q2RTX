@@ -139,37 +139,52 @@ static void Draw(menuFrameWork_t *self)
 
 static void Size(menuFrameWork_t *self)
 {
-    int x = uis.width / 2 - 130;
-    int y = uis.height / 2 - 97;
+    int w = uis.width / uis.scale;
+    int h = uis.height / uis.scale;
+    int x = uis.width / 2;
+    int y = uis.height / 2 - MENU_SPACING * 5 / 2;
 
-    m_player.refdef.x = uis.width / uis.scale / 2;
-    m_player.refdef.y = 60;
-    m_player.refdef.width = uis.width / uis.scale / 2;
-    m_player.refdef.height = uis.height / uis.scale - 122;
+    m_player.refdef.x = w / 2;
+    m_player.refdef.y = h / 10;
+    m_player.refdef.width = w / 2;
+    m_player.refdef.height = h - h / 5;
 
-    m_player.refdef.fov_x = 40;
+    m_player.refdef.fov_x = 90;
     m_player.refdef.fov_y = V_CalcFov(m_player.refdef.fov_x,
                                       m_player.refdef.width, m_player.refdef.height);
 
-    if (m_player.menu.banner) {
-        m_player.menu.banner_rc.x = x - m_player.menu.banner_rc.width / 2;
-        m_player.menu.banner_rc.y = y - GENERIC_SPACING(m_player.menu.banner_rc.height);
+    if (uis.width < 800 && uis.width >= 640) {
+        x -= CHAR_WIDTH * 10;
     }
 
-    m_player.name.generic.x        = x;
-    m_player.name.generic.y        = y;
-    y += 32;
+    if (m_player.menu.banner) {
+        h = GENERIC_SPACING(m_player.menu.banner_rc.height);
+        m_player.menu.banner_rc.x = x - m_player.menu.banner_rc.width / 2;
+        m_player.menu.banner_rc.y = y - h / 2;
+        y += h / 2;
+    }
+
+    if (uis.width < 640) {
+        x -= CHAR_WIDTH * 10;
+        m_player.hand.generic.name = "hand";
+    } else {
+        m_player.hand.generic.name = "handedness";
+    }
+
+    m_player.name.generic.x     = x;
+    m_player.name.generic.y     = y;
+    y += MENU_SPACING * 2;
 
     m_player.model.generic.x    = x;
     m_player.model.generic.y    = y;
-    y += 16;
+    y += MENU_SPACING;
 
-    m_player.skin.generic.x    = x;
-    m_player.skin.generic.y    = y;
-    y += 16;
+    m_player.skin.generic.x     = x;
+    m_player.skin.generic.y     = y;
+    y += MENU_SPACING;
 
-    m_player.hand.generic.x    = x;
-    m_player.hand.generic.y    = y;
+    m_player.hand.generic.x     = x;
+    m_player.hand.generic.y     = y;
 }
 
 static menuSound_t Change(menuCommon_t *self)
@@ -285,7 +300,7 @@ static void Free(menuFrameWork_t *self)
 
 void M_Menu_PlayerConfig(void)
 {
-    static const vec3_t origin = { 80.0f, 5.0f, 0.0f };
+    static const vec3_t origin = { 40.0f, 0.0f, 0.0f };
     static const vec3_t angles = { 0.0f, 260.0f, 0.0f };
 
     m_player.menu.name = "players";
