@@ -299,7 +299,7 @@ end
 
 begin input
     title "Input Setup"
-    field --integer --width 8 "mouse sens" sensitivity
+    field --numeric --width 8 "mouse sens" sensitivity
     toggle "auto sens" m_autosens
     toggle "mouse filter" m_filter
     toggle "free look" freelook

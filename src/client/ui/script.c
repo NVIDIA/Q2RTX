@@ -397,6 +397,7 @@ static void Parse_Field(menuFrameWork_t *menu)
     static const cmd_option_t o_field[] = {
         { "c", "center" },
         { "i", "integer" },
+        { "n", "numeric" },
         { "s:", "status" },
         { "w:", "width" },
         { NULL }
@@ -414,6 +415,7 @@ static void Parse_Field(menuFrameWork_t *menu)
             center = qtrue;
             break;
         case 'i':
+        case 'n':
             flags |= QMF_NUMBERSONLY;
             break;
         case 's':
