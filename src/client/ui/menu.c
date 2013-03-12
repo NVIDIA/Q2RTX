@@ -1786,7 +1786,7 @@ void Menu_Size(menuFrameWork_t *menu)
     }
 
     // set menu top/bottom
-    if (menu->transparent) {
+    if (menu->compact) {
         menu->y1 = (uis.height - h) / 2 - MENU_SPACING;
         menu->y2 = (uis.height + h) / 2 + MENU_SPACING;
     } else {

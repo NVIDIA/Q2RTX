@@ -471,6 +471,37 @@ static void Parse_Background(menuFrameWork_t *menu)
     }
 }
 
+static void Parse_Style(menuFrameWork_t *menu)
+{
+    static const cmd_option_t o_style[] = {
+        { "c", "compact" },
+        { "C", "no-compact" },
+        { "t", "transparent" },
+        { "T", "no-transparent" },
+        { NULL }
+    };
+    int c;
+
+    while ((c = Cmd_ParseOptions(o_style)) != -1) {
+        switch (c) {
+        case 'c':
+            menu->compact = qtrue;
+            break;
+        case 'C':
+            menu->compact = qfalse;
+            break;
+        case 't':
+            menu->transparent = qtrue;
+            break;
+        case 'T':
+            menu->transparent = qfalse;
+            break;
+        default:
+            return;
+        }
+    }
+}
+
 static void Parse_Color(void)
 {
     char *s, *c;
@@ -582,6 +613,8 @@ static qboolean Parse_File(const char *path, int depth)
                     Parse_Banner(menu);
                 } else if (!strcmp(cmd, "background")) {
                     Parse_Background(menu);
+                } else if (!strcmp(cmd, "style")) {
+                    Parse_Style(menu);
                 } else if (!strcmp(cmd, "values")) {
                     Parse_Spin(menu, MTYPE_SPINCONTROL);
                 } else if (!strcmp(cmd, "strings")) {

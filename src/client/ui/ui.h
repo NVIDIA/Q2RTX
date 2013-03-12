@@ -96,6 +96,7 @@ typedef struct menuFrameWork_s {
     int     nitems;
     void    *items[MAXMENUITEMS];
 
+    qboolean compact;
     qboolean transparent;
     qboolean keywait;
 
