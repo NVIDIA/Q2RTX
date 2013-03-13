@@ -235,6 +235,8 @@ void R_ModeChanged(int width, int height, int flags, int rowbytes, void *pixels)
     r_config.height = vid.height;
     r_config.flags = flags;
 
+    R_SetClipRect(NULL);
+
     sw_surfcacheoverride = Cvar_Get("sw_surfcacheoverride", "0", 0);
 
     D_FlushCaches();

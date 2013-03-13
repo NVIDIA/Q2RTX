@@ -130,11 +130,7 @@ static void Draw(menuFrameWork_t *self)
 
     R_RenderFrame(&m_player.refdef);
 
-#if USE_REF == REF_SOFT
-    R_SetClipRect(DRAW_CLIP_MASK, &uis.clipRect);
-#else
     R_SetScale(&uis.scale);
-#endif
 }
 
 static void Size(menuFrameWork_t *self)

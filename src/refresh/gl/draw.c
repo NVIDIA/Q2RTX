@@ -109,66 +109,46 @@ void R_SetColor(uint32_t color)
     draw.colors[1].u8[3] = draw.colors[0].u8[3];
 }
 
-void R_SetClipRect(int flags, const clipRect_t *clip)
+void R_SetClipRect(const clipRect_t *clip)
 {
     clipRect_t rc;
     float scale;
 
-    if ((draw.flags & DRAW_CLIP_MASK) == flags) {
-        return;
-    }
-
     GL_Flush2D();
 
-    if (flags == DRAW_CLIP_DISABLED) {
-        qglDisable(GL_SCISSOR_TEST);
-        draw.flags &= ~DRAW_CLIP_MASK;
+    if (!clip) {
+clear:
+        if (draw.scissor) {
+            qglDisable(GL_SCISSOR_TEST);
+            draw.scissor = qfalse;
+        }
         return;
     }
 
     scale = 1 / draw.scale;
 
-    rc.left = 0;
-    rc.top = 0;
-    if (flags & DRAW_CLIP_LEFT) {
-        rc.left = clip->left * scale;
-        if (rc.left < 0) {
-            rc.left = 0;
-        }
-    }
-    if (flags & DRAW_CLIP_TOP) {
-        rc.top = clip->top * scale;
-        if (rc.top < 0) {
-            rc.top = 0;
-        }
-    }
+    rc.left = clip->left * scale;
+    rc.top = clip->top * scale;
+    rc.right = clip->right * scale;
+    rc.bottom = clip->bottom * scale;
 
-    rc.right = r_config.width;
-    rc.bottom = r_config.height;
-    if (flags & DRAW_CLIP_RIGHT) {
-        rc.right = clip->right * scale;
-        if (rc.right > r_config.width) {
-            rc.right = r_config.width;
-        }
-    }
-    if (flags & DRAW_CLIP_BOTTOM) {
-        rc.bottom = clip->bottom * scale;
-        if (rc.bottom > r_config.height) {
-            rc.bottom = r_config.height;
-        }
-    }
-
-    if (rc.right < rc.left) {
-        rc.right = rc.left;
-    }
-    if (rc.bottom < rc.top) {
-        rc.bottom = rc.top;
-    }
+    if (rc.left < 0)
+        rc.left = 0;
+    if (rc.top < 0)
+        rc.top = 0;
+    if (rc.right > r_config.width)
+        rc.right = r_config.width;
+    if (rc.bottom > r_config.height)
+        rc.bottom = r_config.height;
+    if (rc.right < rc.left)
+        goto clear;
+    if (rc.bottom < rc.top)
+        goto clear;
 
     qglEnable(GL_SCISSOR_TEST);
     qglScissor(rc.left, r_config.height - rc.bottom,
                rc.right - rc.left, rc.bottom - rc.top);
-    draw.flags = (draw.flags & ~DRAW_CLIP_MASK) | flags;
+    draw.scissor = qtrue;
 }
 
 void R_SetScale(float *scale)

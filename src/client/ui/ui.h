@@ -271,7 +271,6 @@ void PlayerModel_Free(void);
 typedef struct uiStatic_s {
     qboolean initialized;
     int realtime;
-    clipRect_t clipRect;
     int width, height; // scaled
     float scale;
     int menuDepth;

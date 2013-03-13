@@ -268,11 +268,10 @@ void GL_Setup2D(void)
     draw.colors[0].u32 = U32_WHITE;
     draw.colors[1].u32 = U32_WHITE;
 
-    if (draw.flags & DRAW_CLIP_MASK) {
+    if (draw.scissor) {
         qglDisable(GL_SCISSOR_TEST);
+        draw.scissor = qfalse;
     }
-
-    draw.flags = 0;
 
     qglMatrixMode(GL_MODELVIEW);
     qglLoadIdentity();

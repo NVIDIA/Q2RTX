@@ -682,7 +682,7 @@ static int Con_DrawLine(int v, int line, float alpha)
                         con.charsetImage);
 }
 
-#define CON_PRESTEP     (10 + CHAR_HEIGHT * 2)
+#define CON_PRESTEP     (CHAR_HEIGHT * 3 + CHAR_HEIGHT / 4)
 
 /*
 ================
@@ -771,7 +771,6 @@ static void Con_DrawSolidConsole(void)
     char            buffer[CON_LINEWIDTH];
     int             vislines;
     float           alpha;
-    clipRect_t      clip;
     int             widths[2];
 
     vislines = con.vidHeight * con.currentHeight;
@@ -786,12 +785,6 @@ static void Con_DrawSolidConsole(void)
         alpha = 0.5f + 0.5f * (con.currentHeight / con_height->value);
         R_SetAlpha(alpha * Cvar_ClampValue(con_alpha, 0, 1));
     }
-
-    clip.left = 0;
-    clip.top = 0;
-    clip.right = 0;
-    clip.bottom = 0;
-    R_SetClipRect(DRAW_CLIP_TOP, &clip);
 
 // draw the background
     if (cls.state < ca_active || (cls.key_dest & KEY_MENU) || con_alpha->value) {
@@ -875,7 +868,7 @@ static void Con_DrawSolidConsole(void)
                    cls.download.percent, cls.download.position / 1000);
 
         // draw it
-        y = vislines - 10;
+        y = vislines - CON_PRESTEP + CHAR_HEIGHT * 2;
         R_DrawString(CHAR_WIDTH, y, 0, CON_LINEWIDTH, buffer, con.charsetImage);
     } else if (cls.state == ca_loading) {
         // draw loading state
@@ -904,7 +897,7 @@ static void Con_DrawSolidConsole(void)
             Q_snprintf(buffer, sizeof(buffer), "Loading %s...", text);
 
             // draw it
-            y = vislines - 10;
+            y = vislines - CON_PRESTEP + CHAR_HEIGHT * 2;
             R_DrawString(CHAR_WIDTH, y, 0, CON_LINEWIDTH, buffer, con.charsetImage);
         }
     }
@@ -965,7 +958,6 @@ static void Con_DrawSolidConsole(void)
 
     // restore rendering parameters
     R_ClearColor();
-    R_SetClipRect(DRAW_CLIP_DISABLED, NULL);
 }
 
 //=============================================================================

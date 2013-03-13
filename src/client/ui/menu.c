@@ -1258,8 +1258,8 @@ static void MenuList_DrawString(int x, int y, int flags,
 
     rc.left = x;
     rc.right = x + column->width - 1;
-    rc.top = 0;
-    rc.bottom = 0;
+    rc.top = y + 1;
+    rc.bottom = y + CHAR_HEIGHT + 1;
 
     if ((column->uiFlags & UI_CENTER) == UI_CENTER) {
         x += column->width / 2 - 1;
@@ -1269,13 +1269,9 @@ static void MenuList_DrawString(int x, int y, int flags,
         x += MLIST_PRESTEP;
     }
 
-    R_SetClipRect(DRAW_CLIP_RIGHT | DRAW_CLIP_LEFT, &rc);
+    R_SetClipRect(&rc);
     UI_DrawString(x, y + 1, column->uiFlags | flags, string);
-#if USE_REF == REF_SOFT
-    R_SetClipRect(DRAW_CLIP_MASK, &uis.clipRect);
-#else
-    R_SetClipRect(DRAW_CLIP_DISABLED, NULL);
-#endif
+    R_SetClipRect(NULL);
 }
 
 /*

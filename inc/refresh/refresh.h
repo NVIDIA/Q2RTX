@@ -142,13 +142,6 @@ typedef struct {
 
 extern refcfg_t r_config;
 
-#define DRAW_CLIP_DISABLED  0
-#define DRAW_CLIP_LEFT      0x00000004
-#define DRAW_CLIP_RIGHT     0x00000008
-#define DRAW_CLIP_TOP       0x00000010
-#define DRAW_CLIP_BOTTOM    0x00000020
-#define DRAW_CLIP_MASK      0x0000003C
-
 typedef struct {
     int left, right, top, bottom;
 } clipRect_t;
@@ -209,7 +202,7 @@ void    R_LightPoint(vec3_t origin, vec3_t light);
 void    R_ClearColor(void);
 void    R_SetAlpha(float clpha);
 void    R_SetColor(uint32_t color);
-void    R_SetClipRect(int flags, const clipRect_t *clip);
+void    R_SetClipRect(const clipRect_t *clip);
 void    R_SetScale(float *scale);
 void    R_DrawChar(int x, int y, int flags, int ch, qhandle_t font);
 int     R_DrawString(int x, int y, int flags, size_t maxChars,

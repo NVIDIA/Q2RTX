@@ -2010,11 +2010,7 @@ draw:
 
 static void SCR_Draw2D(void)
 {
-#if USE_REF == REF_SOFT
-    clipRect_t rc;
-#else
     float scale;
-#endif
 
     if (scr_draw2d->integer <= 0)
         return;     // turn off for screenshots
@@ -2022,21 +2018,11 @@ static void SCR_Draw2D(void)
     if (cls.key_dest & KEY_MENU)
         return;
 
-#if USE_REF == REF_SOFT
-    // avoid DoS by making sure nothing is drawn out of bounds
-    rc.left = 0;
-    rc.top = 0;
-    rc.right = scr.hud_width;
-    rc.bottom = scr.hud_height;
-
-    R_SetClipRect(DRAW_CLIP_MASK, &rc);
-#else
     scale = 1.0f / Cvar_ClampValue(scr_scale, 1, 9);
     R_SetScale(&scale);
 
     scr.hud_height *= scale;
     scr.hud_width *= scale;
-#endif
 
     // crosshair has its own color and alpha
     SCR_DrawCrosshair();
@@ -2071,11 +2057,7 @@ static void SCR_Draw2D(void)
     SCR_DrawDebugPmove();
 #endif
 
-#if USE_REF == REF_SOFT
-    R_SetClipRect(DRAW_CLIP_DISABLED, NULL);
-#else
     R_SetScale(NULL);
-#endif
 }
 
 static void SCR_DrawActive(void)

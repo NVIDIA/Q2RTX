@@ -99,16 +99,11 @@ static void UI_Resize(void)
     int i;
 
 #if USE_REF == REF_SOFT
-    uis.clipRect.left = 0;
-    uis.clipRect.top = 0;
-    uis.clipRect.right = r_config.width;
-    uis.clipRect.bottom = r_config.height;
     uis.scale = 1;
     uis.width = r_config.width;
     uis.height = r_config.height;
 #else
-    Cvar_ClampValue(ui_scale, 1, 9);
-    uis.scale = 1 / ui_scale->value;
+    uis.scale = 1 / Cvar_ClampValue(ui_scale, 1, 9);
     uis.width = r_config.width * uis.scale;
     uis.height = r_config.height * uis.scale;
 #endif
@@ -436,11 +431,7 @@ void UI_Draw(int realtime)
     }
 
     R_ClearColor();
-#if USE_REF == REF_SOFT
-    R_SetClipRect(DRAW_CLIP_MASK, &uis.clipRect);
-#else
     R_SetScale(&uis.scale);
-#endif
 
     if (1) {
         // draw top menu
@@ -479,12 +470,8 @@ void UI_Draw(int realtime)
         S_StartLocalSound("misc/menu1.wav");
     }
 
-#if USE_REF == REF_SOFT
-    R_SetClipRect(DRAW_CLIP_DISABLED, NULL);
-#else
-    R_SetScale(NULL);
-#endif
     R_ClearColor();
+    R_SetScale(NULL);
 }
 
 void UI_StartSound(menuSound_t sound)
