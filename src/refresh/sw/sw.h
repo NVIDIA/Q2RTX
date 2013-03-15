@@ -462,7 +462,6 @@ extern cvar_t   *sw_modulate;
 extern cvar_t   *r_fullbright;
 extern cvar_t   *r_drawentities;
 extern cvar_t   *r_drawworld;
-extern cvar_t   *r_dspeeds;
 extern cvar_t   *r_lerpmodels;
 
 extern cvar_t   *r_speeds;
@@ -601,9 +600,6 @@ void R_AliasClipTriangle(finalvert_t *index0, finalvert_t *index1, finalvert_t *
 
 
 extern float    r_time1;
-extern float    da_time1, da_time2;
-extern float    dp_time1, dp_time2, db_time1, db_time2, rw_time1, rw_time2;
-extern float    se_time1, se_time2, de_time1, de_time2, dv_time1, dv_time2;
 extern int      r_frustum_indexes[4 * 6];
 extern int      r_maxsurfsseen, r_maxedgesseen, r_cnumsurfs;
 extern qboolean r_surfsonstack;

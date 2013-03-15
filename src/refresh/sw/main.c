@@ -85,9 +85,6 @@ int         r_frustum_indexes[4 * 6];
 mleaf_t     *r_viewleaf;
 int         r_viewcluster, r_oldviewcluster;
 
-float   da_time1, da_time2, dp_time1, dp_time2, db_time1, db_time2, rw_time1, rw_time2;
-float   se_time1, se_time2, de_time1, de_time2;
-
 void R_MarkLeaves(void);
 
 cvar_t  *sw_aliasstats;
@@ -113,7 +110,6 @@ cvar_t  *sw_drawsird;
 
 cvar_t  *r_drawworld;
 cvar_t  *r_drawentities;
-cvar_t  *r_dspeeds;
 cvar_t  *r_fullbright;
 cvar_t  *r_lerpmodels;
 cvar_t  *r_novis;
@@ -197,7 +193,6 @@ void R_Register(void)
     r_fullbright = Cvar_Get("r_fullbright", "0", CVAR_CHEAT);
     r_drawentities = Cvar_Get("r_drawentities", "1", 0);
     r_drawworld = Cvar_Get("r_drawworld", "1", CVAR_CHEAT);
-    r_dspeeds = Cvar_Get("r_dspeeds", "0", 0);
     r_lerpmodels = Cvar_Get("r_lerpmodels", "1", 0);
     r_novis = Cvar_Get("r_novis", "0", 0);
 
@@ -782,23 +777,10 @@ void R_EdgeDrawing(void)
 
     R_BeginEdgeFrame();
 
-    if (r_dspeeds->integer) {
-        rw_time1 = Sys_Milliseconds();
-    }
 
     R_RenderWorld();
 
-    if (r_dspeeds->integer) {
-        rw_time2 = Sys_Milliseconds();
-        db_time1 = rw_time2;
-    }
-
     R_DrawBEntitiesOnList();
-
-    if (r_dspeeds->integer) {
-        db_time2 = Sys_Milliseconds();
-        se_time1 = db_time2;
-    }
 
     R_ScanEdges();
 }
@@ -863,7 +845,7 @@ void R_RenderFrame(refdef_t *fd)
     if (!sw_dynamic->integer)
         r_newrefdef.num_dlights = 0;
 
-    if (r_speeds->integer || r_dspeeds->integer)
+    if (r_speeds->integer)
         r_time1 = Sys_Milliseconds();
 
     R_SetupFrame();
@@ -875,22 +857,9 @@ void R_RenderFrame(refdef_t *fd)
 
     R_EdgeDrawing();
 
-    if (r_dspeeds->integer) {
-        se_time2 = Sys_Milliseconds();
-        de_time1 = se_time2;
-    }
-
     R_DrawEntitiesOnList();
 
-    if (r_dspeeds->integer) {
-        de_time2 = Sys_Milliseconds();
-        dp_time1 = Sys_Milliseconds();
-    }
-
     R_DrawParticles();
-
-    if (r_dspeeds->integer)
-        dp_time2 = Sys_Milliseconds();
 
     R_DrawAlphaSurfaces();
 
@@ -905,20 +874,11 @@ void R_RenderFrame(refdef_t *fd)
     }
     //End Replaced by Lewey
 
-    if (r_dspeeds->integer)
-        da_time1 = Sys_Milliseconds();
-
-    if (r_dspeeds->integer)
-        da_time2 = Sys_Milliseconds();
-
     if (sw_aliasstats->integer)
         R_PrintAliasStats();
 
     if (r_speeds->integer)
         R_PrintTimes();
-
-    if (r_dspeeds->integer)
-        R_PrintDSpeeds();
 
     if (sw_reportsurfout->integer && r_outofsurfaces)
         Com_Printf("Short %d surfaces\n", r_outofsurfaces);
