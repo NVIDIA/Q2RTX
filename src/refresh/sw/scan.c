@@ -214,8 +214,6 @@ void D_DrawTurbulent16(espan_t *pspan, int *warptable)
     } while ((pspan = pspan->pnext) != NULL);
 }
 
-#if !USE_ASM
-
 /*
 =============
 D_DrawSpans16
@@ -399,6 +397,4 @@ void D_DrawZSpans(espan_t *pspan)
 
     } while ((pspan = pspan->pnext) != NULL);
 }
-
-#endif
 

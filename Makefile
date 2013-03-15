@@ -29,7 +29,6 @@ RMDIR ?= rm -rf
 MKDIR ?= mkdir -p
 
 CFLAGS ?= -O2 -Wall -g -MMD $(INCLUDES)
-ASFLAGS ?=
 RCFLAGS ?=
 LDFLAGS ?=
 LIBS ?=
@@ -37,9 +36,6 @@ LIBS ?=
 CFLAGS_s := -iquote./inc
 CFLAGS_c := -iquote./inc
 CFLAGS_g := -iquote./inc -fno-strict-aliasing
-
-ASFLAGS_s := -iquote./inc
-ASFLAGS_c := -iquote./inc
 
 RCFLAGS_s :=
 RCFLAGS_c :=
@@ -323,18 +319,6 @@ ifdef CONFIG_SOFTWARE_RENDERER
     OBJS_c += src/refresh/sw/surf.o
     OBJS_c += src/refresh/sw/sird.o
     OBJS_c += src/refresh/sw/sky.o
-
-    ifdef CONFIG_X86_ASSEMBLY
-        OBJS_c += src/refresh/sw/x86/protect.o
-        OBJS_c += src/refresh/sw/x86/aclip.o
-        OBJS_c += src/refresh/sw/x86/draw.o
-        OBJS_c += src/refresh/sw/x86/edge.o
-        OBJS_c += src/refresh/sw/x86/polyset.o
-        OBJS_c += src/refresh/sw/x86/span16.o
-        OBJS_c += src/refresh/sw/x86/surf8.o
-        OBJS_c += src/refresh/sw/x86/turb8.o
-        OBJS_c += src/refresh/sw/x86/vars.o
-    endif
 else
     CFLAGS_c += -DREF_GL=1 -DUSE_REF=1 -DVID_REF='"gl"'
     OBJS_c += src/refresh/gl/draw.o
@@ -558,19 +542,6 @@ ifdef CONFIG_DEBUG
     CFLAGS_s += -D_DEBUG
 endif
 
-ifdef CONFIG_X86_ASSEMBLY
-    ASFLAGS_c += -DUSE_ASM=1
-    ASFLAGS_s += -DUSE_ASM=1
-    ifdef CONFIG_WINDOWS
-        ASFLAGS_c += -DUNDERSCORES
-        ASFLAGS_s += -DUNDERSCORES
-    endif
-    CFLAGS_c += -DUSE_ASM=1
-    CFLAGS_s += -DUSE_ASM=1
-    OBJS_c += src/common/x86/math.o
-    OBJS_s += src/common/x86/math.o
-endif
-
 ifeq ($(CPU),x86)
     OBJS_c += src/common/x86/fpu.o
     OBJS_s += src/common/x86/fpu.o
@@ -642,11 +613,6 @@ $(BUILD_s)/%.o: %.c
 	$(Q)$(MKDIR) $(@D)
 	$(Q)$(CC) -c $(CFLAGS) $(CFLAGS_s) -o $@ $<
 
-$(BUILD_s)/%.o: %.S
-	$(E) [AS] $@
-	$(Q)$(MKDIR) $(@D)
-	$(Q)$(CC) -c $(ASFLAGS) $(ASFLAGS_s) -o $@ $<
-
 $(BUILD_s)/%.o: %.rc
 	$(E) [RC] $@
 	$(Q)$(MKDIR) $(@D)
@@ -663,11 +629,6 @@ $(BUILD_c)/%.o: %.c
 	$(E) [CC] $@
 	$(Q)$(MKDIR) $(@D)
 	$(Q)$(CC) -c $(CFLAGS) $(CFLAGS_c) -o $@ $<
-
-$(BUILD_c)/%.o: %.S
-	$(E) [AS] $@
-	$(Q)$(MKDIR) $(@D)
-	$(Q)$(CC) -c $(ASFLAGS) $(ASFLAGS_c) -o $@ $<
 
 $(BUILD_c)/%.o: %.rc
 	$(E) [RC] $@

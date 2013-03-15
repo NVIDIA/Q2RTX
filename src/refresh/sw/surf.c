@@ -143,7 +143,6 @@ void R_DrawSurface(void)
 }
 
 //=============================================================================
-#if !USE_ASM
 
 #define BLOCK_FUNC R_DrawSurfaceBlock8_mip0
 #define BLOCK_SHIFT 4
@@ -160,9 +159,6 @@ void R_DrawSurface(void)
 #define BLOCK_FUNC R_DrawSurfaceBlock8_mip3
 #define BLOCK_SHIFT 1
 #include "block.h"
-
-#endif
-
 
 //============================================================================
 

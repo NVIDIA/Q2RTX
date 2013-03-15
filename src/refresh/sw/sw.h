@@ -51,7 +51,6 @@ typedef struct {
 
 extern viddef_t vid;
 
-// !!! if this is changed, it must be changed in asm_draw.h too !!!
 typedef struct {
     vrectSoft_t     vrect;                          // subwindow in video for refresh
                                                     // FIXME: not need vrect next field here?
@@ -105,7 +104,6 @@ extern oldrefdef_t      r_refdef;
 #define MAXWORKINGVERTS (MAXVERTS + 4)  // max points in an intermediate
                                         // polygon (while processing)
 
-// !!! if this is changed, it must be changed in d_ifacea.h too !!!
 #define MAXHEIGHT       1200
 #define MAXWIDTH        1600
 
@@ -124,14 +122,11 @@ extern oldrefdef_t      r_refdef;
 
 #define PARTICLE_Z_CLIP 8.0
 
-// !!! must be kept the same as in quakeasm.h !!!
 #define TRANSPARENT_COLOR       0xFF
 
 
-// !!! if this is changed, it must be changed in d_ifacea.h too !!!
 #define TURB_TEX_SIZE           64  // base turbulent texture size
 
-// !!! if this is changed, it must be changed in d_ifacea.h too !!!
 #define CYCLE                   128 // turbulent cycle size
 
 #define SCANBUFFERPAD           0x1000
@@ -166,7 +161,6 @@ extern oldrefdef_t      r_refdef;
 
 #define BACKFACE_EPSILON        0.01
 
-// !!! if this is changed, it must be changed in asm_draw.h too !!!
 #define NEAR_CLIP       0.01
 
 
@@ -198,10 +192,6 @@ typedef struct {
     float   zi;
 } emitpoint_t;
 
-/*
-** if you change this structure be sure to change the #defines
-** listed after it!
-*/
 typedef struct finalvert_s {
     int     u, v, s, t;
     int     l;
@@ -209,18 +199,6 @@ typedef struct finalvert_s {
     int     flags;
     float   xyz[3];         // eye space
 } finalvert_t;
-
-#define FINALVERT_V0     0
-#define FINALVERT_V1     4
-#define FINALVERT_V2     8
-#define FINALVERT_V3    12
-#define FINALVERT_V4    16
-#define FINALVERT_V5    20
-#define FINALVERT_FLAGS 24
-#define FINALVERT_X     28
-#define FINALVERT_Y     32
-#define FINALVERT_Z     36
-#define FINALVERT_SIZE  40
 
 typedef struct {
     void                *pskin;
@@ -256,7 +234,6 @@ typedef struct bedge_s {
 } bedge_t;
 
 
-// !!! if this is changed, it must be changed in asm_draw.h too !!!
 typedef struct clipplane_s {
     vec3_t              normal;
     float               dist;
@@ -284,7 +261,6 @@ typedef struct surfcache_s {
     byte                    data[4];        // width*height elements
 } surfcache_t;
 
-// !!! if this is changed, it must be changed in asm_draw.h too !!!
 typedef struct espan_s {
     int                             u, v, count;
     struct espan_s  *pnext;
@@ -327,7 +303,6 @@ typedef struct surf_s {
     int             pad[2];         // to 64 bytes
 } surf_t;
 
-// !!! if this is changed, it must be changed in asm_draw.h too !!!
 typedef struct edge_s {
     fixed16_t       u;
     fixed16_t       u_step;
@@ -589,7 +564,6 @@ extern int          r_currentbkey;
 void R_InitTurb(void);
 
 void R_DrawParticles(void);
-void R_SurfacePatch(void);
 
 extern int          r_amodels_drawn;
 extern edge_t       *auxedges;
@@ -683,10 +657,6 @@ qhandle_t R_RegisterModel(const char *name);
 void    R_RenderFrame(refdef_t *fd);
 
 void     R_BeginFrame(void);
-
-#if USE_ASM
-void    Sys_MakeCodeWriteable(uintptr_t start, size_t length);
-#endif
 
 void    R_InitImages(void);
 void    R_ShutdownImages(void);

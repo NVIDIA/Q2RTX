@@ -49,20 +49,6 @@ static void R_Alias_clip_z(finalvert_t *pfv0, finalvert_t *pfv1, finalvert_t *ou
     R_AliasProjectAndClipTestFinalVert(out);
 }
 
-
-#if USE_ASM
-
-void R_Alias_clip_top(finalvert_t *pfv0, finalvert_t *pfv1,
-                      finalvert_t *out);
-void R_Alias_clip_bottom(finalvert_t *pfv0, finalvert_t *pfv1,
-                         finalvert_t *out);
-void R_Alias_clip_left(finalvert_t *pfv0, finalvert_t *pfv1,
-                       finalvert_t *out);
-void R_Alias_clip_right(finalvert_t *pfv0, finalvert_t *pfv1,
-                        finalvert_t *out);
-
-#else
-
 static void R_Alias_clip_left(finalvert_t *pfv0, finalvert_t *pfv1, finalvert_t *out)
 {
     float       scale;
@@ -87,7 +73,6 @@ static void R_Alias_clip_left(finalvert_t *pfv0, finalvert_t *pfv1, finalvert_t 
         out->zi = pfv1->zi + (pfv0->zi - pfv1->zi) * scale + 0.5;
     }
 }
-
 
 static void R_Alias_clip_right(finalvert_t *pfv0, finalvert_t *pfv1, finalvert_t *out)
 {
@@ -114,7 +99,6 @@ static void R_Alias_clip_right(finalvert_t *pfv0, finalvert_t *pfv1, finalvert_t
     }
 }
 
-
 static void R_Alias_clip_top(finalvert_t *pfv0, finalvert_t *pfv1, finalvert_t *out)
 {
     float       scale;
@@ -139,7 +123,6 @@ static void R_Alias_clip_top(finalvert_t *pfv0, finalvert_t *pfv1, finalvert_t *
         out->zi = pfv1->zi + (pfv0->zi - pfv1->zi) * scale + 0.5;
     }
 }
-
 
 static void R_Alias_clip_bottom(finalvert_t *pfv0, finalvert_t *pfv1,
                                 finalvert_t *out)
@@ -168,9 +151,6 @@ static void R_Alias_clip_bottom(finalvert_t *pfv0, finalvert_t *pfv1,
         out->zi = pfv1->zi + (pfv0->zi - pfv1->zi) * scale + 0.5;
     }
 }
-
-#endif
-
 
 static int R_AliasClip(finalvert_t *in, finalvert_t *out, int flag, int count,
                        void(*clip)(finalvert_t *pfv0, finalvert_t *pfv1, finalvert_t *out))

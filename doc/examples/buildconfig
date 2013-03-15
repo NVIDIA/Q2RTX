@@ -93,10 +93,6 @@
 
 # Options below have no effect on architectures other than x86.
 
-# Build x86 assembly versions of certain C routines. Mostly useful for software
-# renderer.
-#CONFIG_X86_ASSEMBLY=y
-
 # Enable this option on Linux to build a server capable of loading game mods
 # built using ancient GCC versions.
 #CONFIG_X86_GAME_ABI_HACK=y

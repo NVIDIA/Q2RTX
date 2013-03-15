@@ -38,30 +38,6 @@ short   *zspantable[MAXHEIGHT];
 
 /*
 ================
-D_Patch
-================
-*/
-void D_Patch(void)
-{
-#if USE_ASM
-    extern void D_Aff8Patch(void);
-    static qboolean protectset8 = qfalse;
-    extern void D_PolysetAff8Start(void);
-
-    if (!protectset8) {
-        Sys_MakeCodeWriteable((uintptr_t)D_PolysetAff8Start,
-                              (uintptr_t)D_Aff8Patch - (uintptr_t)D_PolysetAff8Start);
-        Sys_MakeCodeWriteable((uintptr_t)R_Surf8Start,
-                              (uintptr_t)R_Surf8End - (uintptr_t)R_Surf8Start);
-        protectset8 = qtrue;
-    }
-
-    R_Surf8Patch();
-    D_Aff8Patch();
-#endif
-}
-/*
-================
 D_ViewChanged
 ================
 */
@@ -103,8 +79,6 @@ void D_ViewChanged(void)
         memset(d_pzbuffer, 0xff, vid.width * vid.height * sizeof(d_pzbuffer[0]));
         R_DrawFill8(r_newrefdef.x, r_newrefdef.y, r_newrefdef.width, r_newrefdef.height, /*(int)sw_clearcolor->value & 0xff*/0);
     }
-
-    D_Patch();
 }
 
 

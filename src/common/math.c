@@ -260,7 +260,6 @@ BoxOnPlaneSide
 Returns 1, 2, or 1 + 2
 ==================
 */
-#if !USE_ASM
 int BoxOnPlaneSide(vec3_t emins, vec3_t emaxs, cplane_t *p)
 {
     vec_t   *bounds[2] = { emins, emaxs };
@@ -286,6 +285,3 @@ int BoxOnPlaneSide(vec3_t emins, vec3_t emaxs, cplane_t *p)
 
     return sides;
 }
-#endif // USE_ASM
-
-

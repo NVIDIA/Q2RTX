@@ -21,11 +21,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "sw.h"
 
 // TODO: put in span spilling to shrink list size
-// !!! if this is changed, it must be changed in d_polysa.s too !!!
 #define DPS_MAXSPANS            MAXHEIGHT+1
 // 1 extra for spanpackage that marks end
 
-// !!! if this is changed, it must be changed in asm_draw.h too !!!
 typedef struct {
     void            *pdest;
     short           *pz;
@@ -378,16 +376,8 @@ void R_PolysetCalcGradients(int skinwidth)
     r_zistepy = (int)((t1 * p00_minus_p20 - t0 * p10_minus_p20) *
                       ystepdenominv);
 
-#if USE_ASM
-    if (d_pdrawspans == R_PolysetDrawSpans8_Opaque) {
-        a_sstepxfrac = r_sstepx << 16;
-        a_tstepxfrac = r_tstepx << 16;
-    } else
-#endif
-    {
-        a_sstepxfrac = r_sstepx & 0xFFFF;
-        a_tstepxfrac = r_tstepx & 0xFFFF;
-    }
+    a_sstepxfrac = r_sstepx & 0xFFFF;
+    a_tstepxfrac = r_tstepx & 0xFFFF;
 
     a_ststepxwhole = skinwidth * (r_tstepx >> 16) + (r_sstepx >> 16) * TEX_BYTES;
 }
@@ -492,7 +482,6 @@ void R_PolysetDrawSpansConstant8_Blended(spanpackage_t *pspanpackage)
     } while (pspanpackage->count != -999999);
 }
 
-#if !USE_ASM
 void R_PolysetDrawSpans8_Opaque(spanpackage_t *pspanpackage)
 {
     int     lcount;
@@ -550,7 +539,6 @@ void R_PolysetDrawSpans8_Opaque(spanpackage_t *pspanpackage)
         pspanpackage++;
     } while (pspanpackage->count != -999999);
 }
-#endif
 
 
 /*
@@ -593,16 +581,8 @@ void R_RasterizeAliasPolySmooth(void)
 
     d_ptex = (byte *)r_affinetridesc.pskin + (plefttop[2] >> 16) * TEX_BYTES +
              (plefttop[3] >> 16) * r_affinetridesc.skinwidth;
-#if USE_ASM
-    if (d_pdrawspans == R_PolysetDrawSpans8_Opaque) {
-        d_sfrac = (plefttop[2] & 0xFFFF) << 16;
-        d_tfrac = (plefttop[3] & 0xFFFF) << 16;
-    } else
-#endif
-    {
-        d_sfrac = plefttop[2] & 0xFFFF;
-        d_tfrac = plefttop[3] & 0xFFFF;
-    }
+    d_sfrac = plefttop[2] & 0xFFFF;
+    d_tfrac = plefttop[3] & 0xFFFF;
     d_light = plefttop[4];
     d_zi = plefttop[5];
 
@@ -627,16 +607,8 @@ void R_RasterizeAliasPolySmooth(void)
         R_PolysetSetUpForLineScan(plefttop[0], plefttop[1],
                                   pleftbottom[0], pleftbottom[1]);
 
-#if USE_ASM
-        if (d_pdrawspans == R_PolysetDrawSpans8_Opaque) {
-            d_pzbasestep = (d_zwidth + ubasestep) << 1;
-            d_pzextrastep = d_pzbasestep + 2;
-        } else
-#endif
-        {
-            d_pzbasestep = d_zwidth + ubasestep;
-            d_pzextrastep = d_pzbasestep + 1;
-        }
+        d_pzbasestep = d_zwidth + ubasestep;
+        d_pzextrastep = d_pzbasestep + 1;
 
         d_pdestbasestep = r_screenrowbytes + ubasestep * VID_BYTES;
         d_pdestextrastep = d_pdestbasestep + 1 * VID_BYTES;
@@ -655,43 +627,20 @@ void R_RasterizeAliasPolySmooth(void)
         d_ptexbasestep = ((r_sstepy + r_sstepx * ubasestep) >> 16) * TEX_BYTES +
                          ((r_tstepy + r_tstepx * ubasestep) >> 16) *
                          r_affinetridesc.skinwidth;
-#if USE_ASM
-        if (d_pdrawspans == R_PolysetDrawSpans8_Opaque) {
-            d_sfracbasestep = (r_sstepy + r_sstepx * ubasestep) << 16;
-            d_tfracbasestep = (r_tstepy + r_tstepx * ubasestep) << 16;
-        } else
-#endif
-        {
-            d_sfracbasestep = (r_sstepy + r_sstepx * ubasestep) & 0xFFFF;
-            d_tfracbasestep = (r_tstepy + r_tstepx * ubasestep) & 0xFFFF;
-        }
+        d_sfracbasestep = (r_sstepy + r_sstepx * ubasestep) & 0xFFFF;
+        d_tfracbasestep = (r_tstepy + r_tstepx * ubasestep) & 0xFFFF;
         d_lightbasestep = r_lstepy + working_lstepx * ubasestep;
         d_zibasestep = r_zistepy + r_zistepx * ubasestep;
 
         d_ptexextrastep = ((r_sstepy + r_sstepx * d_countextrastep) >> 16) * TEX_BYTES +
                           ((r_tstepy + r_tstepx * d_countextrastep) >> 16) *
                           r_affinetridesc.skinwidth;
-#if USE_ASM
-        if (d_pdrawspans == R_PolysetDrawSpans8_Opaque) {
-            d_sfracextrastep = (r_sstepy + r_sstepx * d_countextrastep) << 16;
-            d_tfracextrastep = (r_tstepy + r_tstepx * d_countextrastep) << 16;
-        } else
-#endif
-        {
-            d_sfracextrastep = (r_sstepy + r_sstepx * d_countextrastep) & 0xFFFF;
-            d_tfracextrastep = (r_tstepy + r_tstepx * d_countextrastep) & 0xFFFF;
-        }
+        d_sfracextrastep = (r_sstepy + r_sstepx * d_countextrastep) & 0xFFFF;
+        d_tfracextrastep = (r_tstepy + r_tstepx * d_countextrastep) & 0xFFFF;
         d_lightextrastep = d_lightbasestep + working_lstepx;
         d_ziextrastep = d_zibasestep + r_zistepx;
 
-#if USE_ASM
-        if (d_pdrawspans == R_PolysetDrawSpans8_Opaque) {
-            R_PolysetScanLeftEdge(initialleftheight);
-        } else
-#endif
-        {
-            R_PolysetScanLeftEdge_C(initialleftheight);
-        }
+        R_PolysetScanLeftEdge_C(initialleftheight);
     }
 
 //
@@ -740,16 +689,8 @@ void R_RasterizeAliasPolySmooth(void)
             d_pdestbasestep = r_screenrowbytes + ubasestep * VID_BYTES;
             d_pdestextrastep = d_pdestbasestep + 1 * VID_BYTES;
 
-#if USE_ASM
-            if (d_pdrawspans == R_PolysetDrawSpans8_Opaque) {
-                d_pzbasestep = (d_zwidth + ubasestep) << 1;
-                d_pzextrastep = d_pzbasestep + 2;
-            } else
-#endif
-            {
-                d_pzbasestep = d_zwidth + ubasestep;
-                d_pzextrastep = d_pzbasestep + 1;
-            }
+            d_pzbasestep = d_zwidth + ubasestep;
+            d_pzextrastep = d_pzbasestep + 1;
 
             if (ubasestep < 0)
                 working_lstepx = r_lstepx - 1;
@@ -760,43 +701,20 @@ void R_RasterizeAliasPolySmooth(void)
             d_ptexbasestep = ((r_sstepy + r_sstepx * ubasestep) >> 16) * TEX_BYTES +
                              ((r_tstepy + r_tstepx * ubasestep) >> 16) *
                              r_affinetridesc.skinwidth;
-#if USE_ASM
-            if (d_pdrawspans == R_PolysetDrawSpans8_Opaque) {
-                d_sfracbasestep = (r_sstepy + r_sstepx * ubasestep) << 16;
-                d_tfracbasestep = (r_tstepy + r_tstepx * ubasestep) << 16;
-            } else
-#endif
-            {
-                d_sfracbasestep = (r_sstepy + r_sstepx * ubasestep) & 0xFFFF;
-                d_tfracbasestep = (r_tstepy + r_tstepx * ubasestep) & 0xFFFF;
-            }
+            d_sfracbasestep = (r_sstepy + r_sstepx * ubasestep) & 0xFFFF;
+            d_tfracbasestep = (r_tstepy + r_tstepx * ubasestep) & 0xFFFF;
             d_lightbasestep = r_lstepy + working_lstepx * ubasestep;
             d_zibasestep = r_zistepy + r_zistepx * ubasestep;
 
             d_ptexextrastep = ((r_sstepy + r_sstepx * d_countextrastep) >> 16) * TEX_BYTES +
                               ((r_tstepy + r_tstepx * d_countextrastep) >> 16) *
                               r_affinetridesc.skinwidth;
-#if USE_ASM
-            if (d_pdrawspans == R_PolysetDrawSpans8_Opaque) {
-                d_sfracextrastep = ((r_sstepy + r_sstepx * d_countextrastep) & 0xFFFF) << 16;
-                d_tfracextrastep = ((r_tstepy + r_tstepx * d_countextrastep) & 0xFFFF) << 16;
-            } else
-#endif
-            {
-                d_sfracextrastep = (r_sstepy + r_sstepx * d_countextrastep) & 0xFFFF;
-                d_tfracextrastep = (r_tstepy + r_tstepx * d_countextrastep) & 0xFFFF;
-            }
+            d_sfracextrastep = (r_sstepy + r_sstepx * d_countextrastep) & 0xFFFF;
+            d_tfracextrastep = (r_tstepy + r_tstepx * d_countextrastep) & 0xFFFF;
             d_lightextrastep = d_lightbasestep + working_lstepx;
             d_ziextrastep = d_zibasestep + r_zistepx;
 
-#if USE_ASM
-            if (d_pdrawspans == R_PolysetDrawSpans8_Opaque) {
-                R_PolysetScanLeftEdge(height);
-            } else
-#endif
-            {
-                R_PolysetScanLeftEdge_C(height);
-            }
+            R_PolysetScanLeftEdge_C(height);
         }
     }
 

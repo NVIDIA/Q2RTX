@@ -19,21 +19,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "sw.h"
 
-#if !USE_ASM
-void R_SurfacePatch(void)
-{
-}
-
-void R_EdgeCodeStart(void)
-{
-}
-
-void R_EdgeCodeEnd(void)
-{
-}
-#endif
-
-
 /*
 the complex cases add new polys on most lines, so dont optimize for keeping them the same
 have multiple free span lists to try to get better coherence?
@@ -134,8 +119,6 @@ void R_BeginEdgeFrame(void)
     }
 }
 
-
-#if !USE_ASM
 
 /*
 ==============
@@ -253,8 +236,6 @@ pushback:
             return;
     }
 }
-
-#endif  // !USE_ASM
 
 
 /*
@@ -400,8 +381,6 @@ void R_TrailingEdge(surf_t *surf, edge_t *edge)
 }
 
 
-#if !USE_ASM
-
 /*
 ==============
 R_LeadingEdge
@@ -546,8 +525,6 @@ void R_GenerateSpans(void)
 
     R_CleanupSpan();
 }
-
-#endif  // !USE_ASM
 
 
 /*

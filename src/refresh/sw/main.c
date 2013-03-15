@@ -126,12 +126,6 @@ cvar_t  *vid_gamma;
 cvar_t  *sw_lockpvs;
 //PGM
 
-#if USE_ASM
-
-void            *d_pcolormap;
-
-#else // USE_ASM
-
 // all global and static refresh variables are collected in a contiguous block
 // to avoid cache conflicts.
 
@@ -154,8 +148,6 @@ pixel_t         *d_viewbuffer;
 short           *d_pzbuffer;
 unsigned int    d_zrowbytes;
 unsigned int    d_zwidth;
-
-#endif  // !USE_ASM
 
 int     sintable[CYCLE * 2];
 int     intsintable[CYCLE * 2];
@@ -272,11 +264,6 @@ qboolean R_Init(qboolean total)
 
     Com_DPrintf("ref_soft " VERSION ", " __DATE__ "\n");
 
-#if USE_ASM
-    Sys_MakeCodeWriteable((uintptr_t)R_EdgeCodeStart,
-                          (uintptr_t)R_EdgeCodeEnd - (uintptr_t)R_EdgeCodeStart);
-#endif
-
     r_aliasuvscale = 1.0;
 
     // create the window
@@ -390,7 +377,6 @@ void R_NewMap(void)
         // surface 0 doesn't really exist; it's just a dummy because index 0
         // is used to indicate no edge attached to surface
         surfaces--;
-        R_SurfacePatch();
     }
 
     r_maxedgesseen = 0;
@@ -792,7 +778,6 @@ void R_EdgeDrawing(void)
         // surface 0 doesn't really exist; it's just a dummy because index 0
         // is used to indicate no edge attached to surface
         surfaces--;
-        R_SurfacePatch();
     }
 
     R_BeginEdgeFrame();
