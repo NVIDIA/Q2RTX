@@ -884,6 +884,7 @@ void GL_LoadWorld(const char *name)
     mtexinfo_t *info;
     mface_t *surf;
     qerror_t ret;
+    imageflags_t flags;
     int i;
 
     ret = BSP_Load(name, &bsp);
@@ -918,11 +919,14 @@ void GL_LoadWorld(const char *name)
 
     // register all texinfo
     for (i = 0, info = bsp->texinfo; i < bsp->numtexinfo; i++, info++) {
+        if (info->c.flags & SURF_WARP)
+            flags = IF_TURBULENT;
+        else
+            flags = IF_NONE;
+
         Q_concat(buffer, sizeof(buffer), "textures/", info->name, ".wal", NULL);
         FS_NormalizePath(buffer, buffer);
-        upload_texinfo = info;
-        info->image = IMG_Find(buffer, IT_WALL);
-        upload_texinfo = NULL;
+        info->image = IMG_Find(buffer, IT_WALL, flags);
     }
 
     // calculate vertex buffer size in bytes

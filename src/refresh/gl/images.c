@@ -29,7 +29,6 @@ static int gl_tex_solid_format;
 static int  upload_width;
 static int  upload_height;
 static image_t  *upload_image;
-mtexinfo_t    *upload_texinfo;
 
 static cvar_t *gl_noscrap;
 static cvar_t *gl_round_down;
@@ -422,11 +421,8 @@ static inline qboolean is_wall(void)
     if (upload_image->type != IT_WALL) {
         return qfalse; // not a wall texture
     }
-    if (!upload_texinfo) {
-        return qtrue; // don't know what type of surface it is
-    }
-    if (upload_texinfo->c.flags & (SURF_SKY | SURF_WARP)) {
-        return qfalse; // don't grayscale or invert sky and liquid surfaces
+    if (upload_image->flags & IF_TURBULENT) {
+        return qfalse; // don't grayscale or invert turbulent surfaces
     }
     return qtrue;
 }
@@ -992,7 +988,6 @@ void GL_InitImages(void)
     gl_bilerp_pics_changed(gl_bilerp_pics);
 
     upload_image = NULL;
-    upload_texinfo = NULL;
 
     qglGenTextures(NUM_TEXNUMS, gl_static.texnums);
     qglGenTextures(LM_MAX_LIGHTMAPS, lm.texnums);

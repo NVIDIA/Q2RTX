@@ -36,6 +36,7 @@ static void ProcessTexinfo(bsp_t *bsp)
     int i;
     vec_t len1, len2;
     char name[MAX_QPATH];
+    imageflags_t flags;
 
     tex = bsp->texinfo;
     for (i = 0; i < bsp->numtexinfo; i++, tex++) {
@@ -51,9 +52,14 @@ static void ProcessTexinfo(bsp_t *bsp)
         else
             tex->mipadjust = 1;
 
+        if (tex->c.flags & (SURF_WARP | SURF_FLOWING))
+            flags = IF_TURBULENT;
+        else
+            flags = IF_NONE;
+
         Q_concat(name, sizeof(name), "textures/", tex->name, ".wal", NULL);
         FS_NormalizePath(name, name);
-        tex->image = IMG_Find(name, IT_WALL);
+        tex->image = IMG_Find(name, IT_WALL, flags);
     }
 }
 
@@ -249,7 +255,7 @@ qerror_t MOD_LoadMD2(model_t *model, const void *rawdata, size_t length)
             goto fail;
         }
         FS_NormalizePath(skinname, skinname);
-        model->skins[i] = IMG_Find(skinname, IT_SKIN);
+        model->skins[i] = IMG_Find(skinname, IT_SKIN, IF_NONE);
         src_skin += MD2_MAX_SKINNAME;
     }
     model->numskins = header.num_skins;

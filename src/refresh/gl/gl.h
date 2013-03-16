@@ -415,8 +415,6 @@ void GL_Blend(void);
 #define TEXNUM_WHITE    gl_static.texnums[4]
 #define TEXNUM_BLACK    gl_static.texnums[5]
 
-extern mtexinfo_t *upload_texinfo;
-
 void Scrap_Upload(void);
 
 void GL_InitImages(void);

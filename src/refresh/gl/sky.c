@@ -429,7 +429,7 @@ void R_SetSky(const char *name, float rotate, vec3_t axis)
             return;
         }
         FS_NormalizePath(pathname, pathname);
-        image = IMG_Find(pathname, IT_SKY);
+        image = IMG_Find(pathname, IT_SKY, IF_NONE);
         if (image->texnum == TEXNUM_DEFAULT) {
             R_UnsetSky();
             return;

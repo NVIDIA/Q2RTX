@@ -268,7 +268,7 @@ static qerror_t MOD_LoadSP2(model_t *model, const void *rawdata, size_t length)
             dst_frame->image = R_NOTEXTURE;
         } else {
             FS_NormalizePath(buffer, buffer);
-            dst_frame->image = IMG_Find(buffer, IT_SPRITE);
+            dst_frame->image = IMG_Find(buffer, IT_SPRITE, IF_NONE);
         }
 
         src_frame++;

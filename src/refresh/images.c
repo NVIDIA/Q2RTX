@@ -1730,7 +1730,7 @@ static qerror_t find_or_load_image(const char *name, size_t len,
     return Q_ERR_SUCCESS;
 }
 
-image_t *IMG_Find(const char *name, imagetype_t type)
+image_t *IMG_Find(const char *name, imagetype_t type, imageflags_t flags)
 {
     image_t *image;
     size_t len;
@@ -1746,7 +1746,7 @@ image_t *IMG_Find(const char *name, imagetype_t type)
         Com_Error(ERR_FATAL, "%s: oversize name", __func__);
     }
 
-    ret = find_or_load_image(name, len, type, IF_NONE, &image);
+    ret = find_or_load_image(name, len, type, flags, &image);
     if (image) {
         return image;
     }

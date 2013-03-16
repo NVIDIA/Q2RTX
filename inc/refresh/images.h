@@ -99,7 +99,7 @@ extern int registration_sequence;
 extern uint32_t d_8to24table[256];
 
 // these are implemented in src/refresh/images.c
-image_t *IMG_Find(const char *name, imagetype_t type);
+image_t *IMG_Find(const char *name, imagetype_t type, imageflags_t flags);
 void IMG_FreeUnused(void);
 void IMG_FreeAll(void);
 void IMG_Init(void);
