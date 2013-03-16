@@ -63,6 +63,8 @@ typedef struct model_s {
     int numsts;
     struct maliasst_s *sts;
     int numverts;
+    int skinwidth;
+    int skinheight;
 #endif
 
     // sprite models

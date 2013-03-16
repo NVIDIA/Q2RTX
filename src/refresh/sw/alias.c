@@ -437,7 +437,7 @@ static void R_AliasSetUpTransform(void)
 R_AliasSetupSkin
 ===============
 */
-static qboolean R_AliasSetupSkin(void)
+static void R_AliasSetupSkin(void)
 {
     int             skinnum;
     image_t         *pskindesc;
@@ -451,20 +451,21 @@ static qboolean R_AliasSetupSkin(void)
                         currentmodel->name, skinnum);
             skinnum = 0;
         }
-
         pskindesc = currentmodel->skins[skinnum];
     }
 
-    if (!pskindesc)
-        return qfalse;
+    if (pskindesc == NULL ||
+        pskindesc->upload_width != currentmodel->skinwidth ||
+        pskindesc->upload_height != currentmodel->skinheight) {
+        Com_DPrintf("R_AliasSetupSkin %s: bad skin %p\n",
+                    currentmodel->name, pskindesc);
+        memset(&r_affinetridesc, 0, sizeof(r_affinetridesc));
+        return;
+    }
 
-    r_affinetridesc.pskin = pskindesc->pixels[0];
-    r_affinetridesc.skinwidth = pskindesc->width * TEX_BYTES;
-    r_affinetridesc.skinheight = pskindesc->height;
-
-    R_PolysetUpdateTables();        // FIXME: precalc edge lookups
-
-    return qtrue;
+    r_affinetridesc.pskin       = pskindesc->pixels[0];
+    r_affinetridesc.skinwidth   = pskindesc->upload_width * TEX_BYTES;
+    r_affinetridesc.skinheight  = pskindesc->upload_height;
 }
 
 
@@ -600,14 +601,19 @@ static void R_AliasSetupBlend(void)
     int         mask;
     color_t     color;
 
-    r_alias_alpha = 255 * currententity->alpha;
-    r_alias_one_minus_alpha = 255 - r_alias_alpha;
+    if (currententity->flags & RF_TRANSLUCENT) {
+        r_alias_alpha = 255 * currententity->alpha;
+        r_alias_one_minus_alpha = 255 - r_alias_alpha;
+    } else {
+        r_alias_alpha = 255;
+        r_alias_one_minus_alpha = 0;
+    }
 
     /*
     ** select the proper span routine based on translucency
     */
     mask = currententity->flags & RF_SHELL_MASK;
-    if (mask) {
+    if (mask || r_affinetridesc.pskin == NULL) {
         if (mask == RF_SHELL_RED)
             color.u32 = d_8to24table[SHELL_RED_COLOR];
         else if (mask == RF_SHELL_GREEN)
@@ -620,9 +626,9 @@ static void R_AliasSetupBlend(void)
             color.u32 = d_8to24table[SHELL_RB_COLOR];
         else if (mask == (RF_SHELL_BLUE | RF_SHELL_GREEN))
             color.u32 = d_8to24table[SHELL_BG_COLOR];
-        else if (mask == (RF_SHELL_DOUBLE))
+        else if (mask == RF_SHELL_DOUBLE)
             color.u32 = d_8to24table[SHELL_DOUBLE_COLOR];
-        else if (mask == (RF_SHELL_HALF_DAM))
+        else if (mask == RF_SHELL_HALF_DAM)
             color.u32 = d_8to24table[SHELL_HALF_DAM_COLOR];
         else
             color.u32 = d_8to24table[SHELL_WHITE_COLOR];
@@ -633,7 +639,7 @@ static void R_AliasSetupBlend(void)
 
         d_pdrawspans = R_PolysetDrawSpansConstant8_Blended;
     } else if (currententity->flags & RF_TRANSLUCENT) {
-        if (currententity->alpha == 1)
+        if (r_alias_alpha == 255)
             d_pdrawspans = R_PolysetDrawSpans8_Opaque;
         else
             d_pdrawspans = R_PolysetDrawSpans8_Blended;
@@ -652,9 +658,8 @@ void R_AliasDrawModel(void)
     if (r_lerpmodels->integer == 0)
         currententity->backlerp = 0;
 
-    if ((currententity->flags & (RF_WEAPONMODEL | RF_LEFTHAND)) == (RF_WEAPONMODEL | RF_LEFTHAND)) {
+    if ((currententity->flags & (RF_WEAPONMODEL | RF_LEFTHAND)) == (RF_WEAPONMODEL | RF_LEFTHAND))
         aliasxscale = -aliasxscale;
-    }
 
     /*
     ** we have to set our frame pointers and transformations before
@@ -665,21 +670,14 @@ void R_AliasDrawModel(void)
 
     // see if the bounding box lets us trivially reject, also sets
     // trivial accept status
-    if (R_AliasCheckBBox() == BBOX_TRIVIAL_REJECT) {
-        if ((currententity->flags & (RF_WEAPONMODEL | RF_LEFTHAND)) == (RF_WEAPONMODEL | RF_LEFTHAND)) {
-            aliasxscale = -aliasxscale;
-        }
-        return;
-    }
+    if (R_AliasCheckBBox() == BBOX_TRIVIAL_REJECT)
+        goto exit;
 
     // set up the skin and verify it exists
-    if (!R_AliasSetupSkin()) {
-        Com_DPrintf("R_AliasDrawModel %s: NULL skin found\n",
-                    currentmodel->name);
-        return;
-    }
+    R_AliasSetupSkin();
 
     r_amodels_drawn++;
+
     R_AliasSetupLighting();
 
     R_AliasSetupBlend();
@@ -696,10 +694,8 @@ void R_AliasDrawModel(void)
 
     R_AliasPreparePoints();
 
-    if ((currententity->flags & (RF_WEAPONMODEL | RF_LEFTHAND)) == (RF_WEAPONMODEL | RF_LEFTHAND)) {
+exit:
+    if ((currententity->flags & (RF_WEAPONMODEL | RF_LEFTHAND)) == (RF_WEAPONMODEL | RF_LEFTHAND))
         aliasxscale = -aliasxscale;
-    }
 }
-
-
 

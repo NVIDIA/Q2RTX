@@ -95,10 +95,6 @@ static const adivtab_t  adivtab[32 * 32] = {
 #include "adivtab.h"
 };
 
-static byte     *skintable[MAX_LBM_HEIGHT];
-static int      skinwidth;
-static byte     *skinstart;
-
 void (*d_pdrawspans)(spanpackage_t *pspanpackage);
 
 void R_PolysetDrawSpansConstant8_Blended(spanpackage_t *pspanpackage);
@@ -107,26 +103,6 @@ void R_PolysetDrawSpans8_Opaque(spanpackage_t *pspanpackage);
 
 static void R_PolysetSetEdgeTable(void);
 static void R_RasterizeAliasPolySmooth(void);
-
-/*
-================
-R_PolysetUpdateTables
-================
-*/
-void R_PolysetUpdateTables(void)
-{
-    int     i;
-    byte    *s;
-
-    if (r_affinetridesc.skinwidth != skinwidth ||
-        r_affinetridesc.pskin != skinstart) {
-        skinwidth = r_affinetridesc.skinwidth;
-        skinstart = r_affinetridesc.pskin;
-        s = skinstart;
-        for (i = 0; i < MAX_LBM_HEIGHT; i++, s += skinwidth)
-            skintable[i] = s;
-    }
-}
 
 
 /*

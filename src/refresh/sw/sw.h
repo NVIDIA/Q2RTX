@@ -64,8 +64,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define WARP_WIDTH      320
 #define WARP_HEIGHT     240
 
-#define MAX_LBM_HEIGHT  480
-
 #define PARTICLE_Z_CLIP 8.0
 
 #define TRANSPARENT_COLOR       0xFF
@@ -107,7 +105,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define NEAR_CLIP       0.01
 
-#define MAXALIASVERTS           2000    // TODO: tune this
+#define MAXALIASVERTS           2048    // MD2_MAX_VERTS
 #define ALIAS_Z_CLIP_PLANE      4
 
 // turbulence stuff
@@ -176,7 +174,6 @@ typedef struct finalvert_s {
 
 typedef struct {
     void                *pskin;
-    int                 pskindesc;
     int                 skinwidth;
     int                 skinheight;
 } affinetridesc_t;
@@ -321,7 +318,6 @@ extern affinetridesc_t  r_affinetridesc;
 void D_DrawSurfaces(void);
 void D_ViewChanged(void);
 void D_WarpScreen(void);
-void R_PolysetUpdateTables(void);
 
 //=======================================================================//
 
