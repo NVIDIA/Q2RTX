@@ -637,8 +637,8 @@ static void R_BuildPolygonFromSurface(mface_t *fa)
 
     if (fa->texinfo->c.flags & (SURF_WARP | SURF_FLOWING)) {
         r_polydesc.pixels       = fa->texinfo->image->pixels[0];
-        r_polydesc.pixel_width  = fa->texinfo->image->width;
-        r_polydesc.pixel_height = fa->texinfo->image->height;
+        r_polydesc.pixel_width  = fa->texinfo->image->upload_width;
+        r_polydesc.pixel_height = fa->texinfo->image->upload_height;
     } else {
         surfcache_t *scache;
 
@@ -837,14 +837,14 @@ void R_DrawSprite(void)
     vec5_t      *pverts;
     vec3_t      left, up, right, down;
     mspriteframe_t  *frame;
-    int textured;
+    int             textured;
 
     frame = &currentmodel->spriteframes[
                 currententity->frame % currentmodel->numframes];
 
     r_polydesc.pixels       = frame->image->pixels[0];
-    r_polydesc.pixel_width  = frame->width;
-    r_polydesc.pixel_height = frame->height;
+    r_polydesc.pixel_width  = frame->image->upload_width;
+    r_polydesc.pixel_height = frame->image->upload_height;
     r_polydesc.dist         = 0;
 
     // generate the sprite's axes, completely parallel to the viewplane.
