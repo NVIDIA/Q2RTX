@@ -202,6 +202,12 @@ void R_ModeChanged(int width, int height, int flags, int rowbytes, void *pixels)
     vid.buffer = pixels;
     vid.rowbytes = rowbytes;
 
+    if (width > MAXWIDTH)
+        vid.buffer += (width - MAXWIDTH) * VID_BYTES / 2;
+
+    if (height > MAXHEIGHT)
+        vid.buffer += (height - MAXHEIGHT) * rowbytes / 2;
+
     r_config.width = vid.width;
     r_config.height = vid.height;
     r_config.flags = flags;
