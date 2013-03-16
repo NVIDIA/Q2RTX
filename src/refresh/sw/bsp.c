@@ -25,11 +25,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 qboolean        insubmodel;
 entity_t        *currententity;
 vec3_t          modelorg;       // modelorg is the viewpoint reletive to
-// the currently rendering entity
+                                // the currently rendering entity
 vec3_t          r_entorigin;    // the currently rendering entity in world
-// coordinates
+                                // coordinates
 
-float           entity_rotation[3][3];
+static float    entity_rotation[3][3];
 
 int             r_currentbkey;
 
@@ -52,7 +52,7 @@ static qboolean     makeclippededge;
 R_EntityRotate
 ================
 */
-void R_EntityRotate(vec3_t vec)
+static void R_EntityRotate(vec3_t vec)
 {
     vec3_t  tvec;
 
@@ -149,7 +149,7 @@ R_RecursiveClipBPoly
 Clip a bmodel poly down the world bsp tree
 ================
 */
-void R_RecursiveClipBPoly(bedge_t *pedges, mnode_t *pnode, mface_t *psurf)
+static void R_RecursiveClipBPoly(bedge_t *pedges, mnode_t *pnode, mface_t *psurf)
 {
     bedge_t     *psideedges[2], *pnextedge, *ptedge;
     int         i, side, lastside;
@@ -401,7 +401,7 @@ int c_drawnode;
 R_RecursiveWorldNode
 ================
 */
-void R_RecursiveWorldNode(mnode_t *node, int clipflags)
+static void R_RecursiveWorldNode(mnode_t *node, int clipflags)
 {
     int         i, c, side, *pindex;
     vec3_t      acceptpt, rejectpt;

@@ -979,7 +979,8 @@ CL_ParseInfoMessage
 Handle a reply from a ping
 =================
 */
-void CL_ParseInfoMessage(void) {
+static void CL_ParseInfoMessage(void)
+{
     char string[MAX_QPATH];
     request_t *r;
 

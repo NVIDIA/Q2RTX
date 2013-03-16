@@ -85,8 +85,6 @@ int         r_frustum_indexes[4 * 6];
 mleaf_t     *r_viewleaf;
 int         r_viewcluster, r_oldviewcluster;
 
-void R_MarkLeaves(void);
-
 cvar_t  *sw_aliasstats;
 cvar_t  *sw_allow_modex;
 cvar_t  *sw_clearcolor;
@@ -167,7 +165,7 @@ void R_InitTurb(void)
 
 void D_SCDump_f(void);
 
-void R_Register(void)
+static void R_Register(void)
 {
     sw_aliasstats = Cvar_Get("sw_polymodelstats", "0", 0);
     sw_allow_modex = Cvar_Get("sw_allow_modex", "1", CVAR_ARCHIVE);
@@ -206,7 +204,7 @@ void R_Register(void)
 
 }
 
-void R_UnRegister(void)
+static void R_UnRegister(void)
 {
     Cmd_RemoveCommand("scdump");
 }
@@ -393,7 +391,7 @@ Mark the leaves and nodes that are in the PVS for the current
 cluster
 ===============
 */
-void R_MarkLeaves(void)
+static void R_MarkLeaves(void)
 {
     byte    vis[VIS_MAX_BYTES];
     mnode_t *node;
@@ -524,7 +522,7 @@ static void R_DrawEntitiesOnList(void)
 R_BmodelCheckBBox
 =============
 */
-int R_BmodelCheckBBox(float *minmaxs)
+static int R_BmodelCheckBBox(float *minmaxs)
 {
     int         i, *pindex, clipflags;
     vec3_t      acceptpt, rejectpt;
@@ -571,7 +569,7 @@ R_FindTopnode
 Find the first node that splits the given box
 ===================
 */
-mnode_t *R_FindTopnode(vec3_t mins, vec3_t maxs)
+static mnode_t *R_FindTopnode(vec3_t mins, vec3_t maxs)
 {
     int         sides;
     mnode_t *node;
@@ -609,7 +607,7 @@ RotatedBBox
 Returns an axially aligned box that contains the input box at the given rotation
 =============
 */
-void RotatedBBox(vec3_t mins, vec3_t maxs, vec3_t angles,
+static void RotatedBBox(vec3_t mins, vec3_t maxs, vec3_t angles,
                  vec3_t tmins, vec3_t tmaxs)
 {
     vec3_t  tmp, v;
@@ -664,7 +662,7 @@ void RotatedBBox(vec3_t mins, vec3_t maxs, vec3_t angles,
 R_DrawBEntitiesOnList
 =============
 */
-void R_DrawBEntitiesOnList(void)
+static void R_DrawBEntitiesOnList(void)
 {
     int         i, index, clipflags;
     vec3_t      oldorigin;
@@ -749,7 +747,7 @@ void R_DrawBEntitiesOnList(void)
 R_EdgeDrawing
 ================
 */
-void R_EdgeDrawing(void)
+static void R_EdgeDrawing(void)
 {
     edge_t  ledges[NUMSTACKEDGES +
                    ((CACHE_SIZE - 1) / sizeof(edge_t)) + 1];

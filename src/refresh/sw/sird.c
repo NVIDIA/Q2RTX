@@ -64,10 +64,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define R_SIRDnumRand 103
 
 //this hold the background pattern
-byte r_SIRDBackground[R_SIRDw * R_SIRDh * VID_BYTES];
+static byte r_SIRDBackground[R_SIRDw * R_SIRDh * VID_BYTES];
 
 //these are the actual random numbers
-byte r_SIRDrandValues[] = {
+static const byte r_SIRDrandValues[] = {
 #include "rand1k.h"
 };
 
@@ -78,7 +78,7 @@ byte r_SIRDrandValues[] = {
 //You could also expand the loop 4 times to remove
 // the 'while'
 #if !id386 || !(defined _MSC_VER)
-int UShortLog(int val)
+static int UShortLog(int val)
 {
     int mask = 0xff00;
     int p = 0;
@@ -98,7 +98,7 @@ int UShortLog(int val)
 }
 #endif
 
-int R_SIRDZFunc(int sub)
+static int R_SIRDZFunc(int sub)
 {
     int e;
 

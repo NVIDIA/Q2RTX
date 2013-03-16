@@ -53,7 +53,7 @@ R_TextureAnimation
 Returns the proper texture for a given time and base texture
 ===============
 */
-image_t *R_TextureAnimation(mtexinfo_t *tex)
+static image_t *R_TextureAnimation(mtexinfo_t *tex)
 {
     int     c;
 
@@ -74,7 +74,7 @@ image_t *R_TextureAnimation(mtexinfo_t *tex)
 R_DrawSurface
 ===============
 */
-void R_DrawSurface(void)
+static void R_DrawSurface(void)
 {
     byte        *basetptr;
     int         smax, tmax, twidth;
@@ -239,7 +239,7 @@ void D_FlushCaches(void)
 D_SCAlloc
 =================
 */
-surfcache_t     *D_SCAlloc(int width, int size)
+static surfcache_t *D_SCAlloc(int width, int size)
 {
     surfcache_t             *new;
 

@@ -26,22 +26,21 @@ int             r_amodels_drawn;
 
 affinetridesc_t r_affinetridesc;
 
-vec3_t          r_plightvec;
-vec3_t          r_lerped[1024];
-vec3_t          r_lerp_frontv, r_lerp_backv, r_lerp_move;
-
-int             r_ambientlight;
-fixed8_t        r_aliasblendcolor[3];
-float           r_shadelight;
-
 int             r_alias_alpha;
 int             r_alias_one_minus_alpha;
+fixed8_t        r_aliasblendcolor[3];
 
-maliasframe_t   *r_thisframe, *r_lastframe;
+static vec3_t   r_plightvec;
+static vec3_t   r_lerp_frontv, r_lerp_backv, r_lerp_move;
 
-float   aliastransform[3][4];
-float   aliasworldtransform[3][4];
-float   aliasoldworldtransform[3][4];
+static int      r_ambientlight;
+static float    r_shadelight;
+
+static maliasframe_t    *r_thisframe, *r_lastframe;
+
+static float    aliastransform[3][4];
+static float    aliasworldtransform[3][4];
+static float    aliasoldworldtransform[3][4];
 
 static float    s_ziscale;
 static vec3_t   s_alias_forward, s_alias_right, s_alias_up;
@@ -56,7 +55,7 @@ static vec3_t   s_alias_forward, s_alias_right, s_alias_up;
 R_AliasTransformVector
 ================
 */
-void R_AliasTransformVector(vec3_t in, vec3_t out, float xf[3][4])
+static void R_AliasTransformVector(vec3_t in, vec3_t out, float xf[3][4])
 {
     out[0] = DotProduct(in, xf[0]) + xf[0][3];
     out[1] = DotProduct(in, xf[1]) + xf[1][3];
@@ -69,7 +68,7 @@ void R_AliasTransformVector(vec3_t in, vec3_t out, float xf[3][4])
 **
 ** Checks a specific alias frame bounding box
 */
-unsigned long R_AliasCheckFrameBBox(maliasframe_t *frame, float worldxf[3][4])
+static unsigned long R_AliasCheckFrameBBox(maliasframe_t *frame, float worldxf[3][4])
 {
     unsigned long aggregate_and_clipcode = ~0U,
                   aggregate_or_clipcode = 0;
@@ -155,7 +154,7 @@ unsigned long R_AliasCheckFrameBBox(maliasframe_t *frame, float worldxf[3][4])
 R_AliasCheckBBox
 ================
 */
-qboolean R_AliasCheckBBox(void)
+static qboolean R_AliasCheckBBox(void)
 {
     unsigned long ccodes[2] = { 0, 0 };
 

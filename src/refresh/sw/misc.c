@@ -174,7 +174,7 @@ void R_TransformPlane(cplane_t *p, float *normal, float *dist)
 R_SetUpFrustumIndexes
 ===============
 */
-void R_SetUpFrustumIndexes(void)
+static void R_SetUpFrustumIndexes(void)
 {
     int     i, j, *pindex;
 

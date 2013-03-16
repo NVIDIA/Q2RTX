@@ -46,9 +46,9 @@ typedef struct {
 
 aliastriangleparms_t aliastriangleparms;
 
-int r_p0[6], r_p1[6], r_p2[6];
+static int  r_p0[6], r_p1[6], r_p2[6];
 
-int         d_xdenom;
+static int  d_xdenom;
 
 static const edgetable_t    *pedgetable;
 
@@ -67,23 +67,24 @@ static const edgetable_t    edgetables[12] = {
     {0, 1, r_p0, r_p2, NULL, 1, r_p0, r_p1, NULL},
 };
 
-// FIXME: some of these can become statics
-int             a_sstepxfrac, a_tstepxfrac, r_lstepx, a_ststepxwhole;
-int             r_sstepx, r_tstepx, r_lstepy, r_sstepy, r_tstepy;
-int             r_zistepx, r_zistepy;
-int             d_aspancount, d_countextrastep;
+static int  a_sstepxfrac, a_tstepxfrac, r_lstepx, a_ststepxwhole;
+static int  r_sstepx, r_tstepx, r_lstepy, r_sstepy, r_tstepy;
+static int  r_zistepx, r_zistepy;
+static int  d_aspancount, d_countextrastep;
 
-spanpackage_t           *a_spans;
-spanpackage_t           *d_pedgespanpackage;
-byte                    *d_pdest, *d_ptex;
-short                   *d_pz;
-int                     d_sfrac, d_tfrac, d_light, d_zi;
-int                     d_ptexextrastep, d_sfracextrastep;
-int                     d_tfracextrastep, d_lightextrastep, d_pdestextrastep;
-int                     d_lightbasestep, d_pdestbasestep, d_ptexbasestep;
-int                     d_sfracbasestep, d_tfracbasestep;
-int                     d_ziextrastep, d_zibasestep;
-int                     d_pzextrastep, d_pzbasestep;
+static int  ubasestep, errorterm, erroradjustup, erroradjustdown;
+
+static spanpackage_t    *a_spans;
+static spanpackage_t    *d_pedgespanpackage;
+static byte             *d_pdest, *d_ptex;
+static short            *d_pz;
+static int              d_sfrac, d_tfrac, d_light, d_zi;
+static int              d_ptexextrastep, d_sfracextrastep;
+static int              d_tfracextrastep, d_lightextrastep, d_pdestextrastep;
+static int              d_lightbasestep, d_pdestbasestep, d_ptexbasestep;
+static int              d_sfracbasestep, d_tfracbasestep;
+static int              d_ziextrastep, d_zibasestep;
+static int              d_pzextrastep, d_pzbasestep;
 
 typedef struct {
     int     quotient;
@@ -94,9 +95,9 @@ static const adivtab_t  adivtab[32 * 32] = {
 #include "adivtab.h"
 };
 
-byte    *skintable[MAX_LBM_HEIGHT];
-int     skinwidth;
-byte    *skinstart;
+static byte     *skintable[MAX_LBM_HEIGHT];
+static int      skinwidth;
+static byte     *skinstart;
 
 void (*d_pdrawspans)(spanpackage_t *pspanpackage);
 
@@ -104,11 +105,8 @@ void R_PolysetDrawSpansConstant8_Blended(spanpackage_t *pspanpackage);
 void R_PolysetDrawSpans8_Blended(spanpackage_t *pspanpackage);
 void R_PolysetDrawSpans8_Opaque(spanpackage_t *pspanpackage);
 
-void R_PolysetCalcGradients(int skinwidth);
-void R_PolysetSetEdgeTable(void);
-void R_RasterizeAliasPolySmooth(void);
-void R_PolysetScanLeftEdge(int height);
-void R_PolysetScanLeftEdge_C(int height);
+static void R_PolysetSetEdgeTable(void);
+static void R_RasterizeAliasPolySmooth(void);
 
 /*
 ================
@@ -139,14 +137,8 @@ R_DrawTriangle
 void R_DrawTriangle(void)
 {
     spanpackage_t spans[DPS_MAXSPANS];
-
     int dv1_ab, dv0_ac;
     int dv0_ab, dv1_ac;
-
-    /*
-    d_xdenom = (aliastriangleparms.a->v[1] - aliastriangleparms.b->v[1]) * (aliastriangleparms.a->v[0] - aliastriangleparms.c->v[0]) -
-               (aliastriangleparms.a->v[0] - aliastriangleparms.b->v[0]) * (aliastriangleparms.a->v[1] - aliastriangleparms.c->v[1]);
-    */
 
     dv0_ab = aliastriangleparms.a->u - aliastriangleparms.b->u;
     dv1_ab = aliastriangleparms.a->v - aliastriangleparms.b->v;
@@ -261,14 +253,12 @@ quotient must fit in 32 bits.
 FIXME: GET RID OF THIS! (FloorDivMod)
 ====================
 */
-void FloorDivMod(float numer, float denom, int *quotient,
-                 int *rem)
+static void FloorDivMod(float numer, float denom, int *quotient, int *rem)
 {
     int     q, r;
     float   x;
 
     if (numer >= 0.0) {
-
         x = floor(numer / denom);
         q = (int)x;
         r = (int)floor(numer - (x * denom));
@@ -295,14 +285,12 @@ void FloorDivMod(float numer, float denom, int *quotient,
 R_PolysetSetUpForLineScan
 ====================
 */
-void R_PolysetSetUpForLineScan(fixed8_t startvertu, fixed8_t startvertv,
-                               fixed8_t endvertu, fixed8_t endvertv)
+static void R_PolysetSetUpForLineScan(fixed8_t startvertu, fixed8_t startvertv,
+                                      fixed8_t endvertu, fixed8_t endvertv)
 {
     float       dm, dn;
     int         tm, tn;
     const adivtab_t *ptemp;
-
-// TODO: implement x86 version
 
     errorterm = -1;
 
@@ -330,8 +318,7 @@ void R_PolysetSetUpForLineScan(fixed8_t startvertu, fixed8_t startvertv,
 R_PolysetCalcGradients
 ================
 */
-
-void R_PolysetCalcGradients(int skinwidth)
+static void R_PolysetCalcGradients(int skinwidth)
 {
     float   xstepdenominv, ystepdenominv, t0, t1;
     float   p01_minus_p21, p11_minus_p21, p00_minus_p20, p10_minus_p20;
@@ -761,12 +748,12 @@ void R_RasterizeAliasPolySmooth(void)
 R_PolysetSetEdgeTable
 ================
 */
-void R_PolysetSetEdgeTable(void)
+static void R_PolysetSetEdgeTable(void)
 {
     int         edgetableindex;
 
     edgetableindex = 0; // assume the vertices are already in
-    //  top to bottom order
+                        // top to bottom order
 
 //
 // determine which edges are right & left, and the order in which

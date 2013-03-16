@@ -30,30 +30,26 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define FRAMECOUNT_MASK         0x7FFFFFFFUL
 #endif
 
-uintptr_t   cacheoffset;
+static uintptr_t    cacheoffset;
 
 int         c_faceclip;                 // number of faces clipped
 
-
-clipplane_t *entity_clipplanes;
 clipplane_t view_clipplanes[4];
-clipplane_t world_clipplanes[16];
 
-medge_t         *r_pedge;
+static medge_t      *r_pedge;
 
-qboolean        r_leftclipped, r_rightclipped;
-qboolean        r_nearzionly;
+static qboolean     r_leftclipped, r_rightclipped;
+static qboolean     r_nearzionly;
 
-mvertex_t   r_leftenter, r_leftexit;
-mvertex_t   r_rightenter, r_rightexit;
+static mvertex_t    r_leftenter, r_leftexit;
+static mvertex_t    r_rightenter, r_rightexit;
 
-int             r_emitted;
-float           r_nearzi;
-float           r_u1, r_v1, r_lzi1;
-int             r_ceilv1;
+static int          r_emitted;
+static float        r_nearzi;
+static float        r_u1, r_v1, r_lzi1;
+static int          r_ceilv1;
 
-qboolean        r_lastvertvalid;
-
+static qboolean     r_lastvertvalid;
 
 
 /*
@@ -61,7 +57,7 @@ qboolean        r_lastvertvalid;
 R_EmitEdge
 ================
 */
-void R_EmitEdge(mvertex_t *pv0, mvertex_t *pv1)
+static void R_EmitEdge(mvertex_t *pv0, mvertex_t *pv1)
 {
     edge_t  *edge, *pcheck;
     int     u_check;
@@ -229,7 +225,7 @@ void R_EmitEdge(mvertex_t *pv0, mvertex_t *pv1)
 R_ClipEdge
 ================
 */
-void R_ClipEdge(mvertex_t *pv0, mvertex_t *pv1, clipplane_t *clip)
+static void R_ClipEdge(mvertex_t *pv0, mvertex_t *pv1, clipplane_t *clip)
 {
     float       d0, d1, f;
     mvertex_t   clipvert;
@@ -306,7 +302,7 @@ void R_ClipEdge(mvertex_t *pv0, mvertex_t *pv1, clipplane_t *clip)
 R_EmitCachedEdge
 ================
 */
-void R_EmitCachedEdge(void)
+static void R_EmitCachedEdge(void)
 {
     edge_t      *pedge_t;
 

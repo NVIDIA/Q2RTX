@@ -364,8 +364,6 @@ void R_PolysetUpdateTables(void);
 
 extern drawsurf_t       r_drawsurf;
 
-void R_DrawSurface(void);
-
 extern int              c_surf;
 
 extern byte             r_warpbuffer[WARP_WIDTH * WARP_HEIGHT * VID_BYTES];
@@ -434,10 +432,6 @@ extern float    xscaleinv, yscaleinv;
 extern float    xscaleshrink, yscaleshrink;
 
 extern void R_TransformVector(vec3_t in, vec3_t out);
-extern void SetUpForLineScan(fixed8_t startvertu, fixed8_t startvertv,
-                             fixed8_t endvertu, fixed8_t endvertv);
-
-extern int      ubasestep, errorterm, erroradjustup, erroradjustdown;
 
 //===========================================================================
 
@@ -499,9 +493,6 @@ extern mface_t      *r_alpha_surfaces;
 
 //=============================================================================
 
-void R_ClearPolyList(void);
-void R_DrawPolyList(void);
-
 //
 // current entity info
 //
@@ -519,43 +510,24 @@ void R_TransformFrustum(void);
 void R_DrawSurfaceBlock16(void);
 void R_DrawSurfaceBlock8(void);
 
-void R_Surf8Patch(void);
-void R_Surf16Patch(void);
 void R_DrawSubmodelPolygons(mmodel_t *pmodel, int clipflags, mnode_t *topnode);
 void R_DrawSolidClippedSubmodelPolygons(mmodel_t *pmodel, mnode_t *topnode);
 
-void R_AddPolygonEdges(emitpoint_t *pverts, int numverts, int miplevel);
-surf_t *R_GetSurf(void);
 void R_AliasDrawModel(void);
 void R_BeginEdgeFrame(void);
 void R_ScanEdges(void);
-void D_DrawSurfaces(void);
-void R_InsertNewEdges(edge_t *edgestoadd, edge_t *edgelist);
-void R_StepActiveU(edge_t *pedge);
-void R_RemoveEdges(edge_t *pedge);
 void R_PushDlights(mnode_t *headnode);
 
-extern void R_Surf8Start(void);
-extern void R_Surf8End(void);
-extern void R_Surf16Start(void);
-extern void R_Surf16End(void);
-extern void R_EdgeCodeStart(void);
-extern void R_EdgeCodeEnd(void);
-
-extern void R_RotateBmodel(void);
+void R_RotateBmodel(void);
 
 extern int      c_faceclip;
 extern int      r_polycount;
 extern int      r_wholepolycount;
 
-extern int          ubasestep, errorterm, erroradjustup, erroradjustdown;
-
 extern fixed16_t    sadjust, tadjust;
 extern fixed16_t    bbextents, bbextentt;
 
 extern mvertex_t    *r_ptverts, *r_ptvertsmax;
-
-extern float        entity_rotation[3][3];
 
 extern int          r_currentkey;
 extern int          r_currentbkey;
@@ -571,11 +543,6 @@ extern edge_t       *r_edges, *edge_p, *edge_max;
 
 extern edge_t   *newedges[MAXHEIGHT];
 extern edge_t   *removeedges[MAXHEIGHT];
-
-// FIXME: make stack vars when debugging done
-extern edge_t   edge_head;
-extern edge_t   edge_tail;
-extern edge_t   edge_aftertail;
 
 extern fixed8_t r_aliasblendcolor[3];
 
@@ -616,12 +583,8 @@ extern blocklight_t     blocklights[MAX_BLOCKLIGHTS * LIGHTMAP_BYTES];   // allo
 
 void R_PrintAliasStats(void);
 void R_PrintTimes(void);
-void R_PrintDSpeeds(void);
-void R_AnimateLight(void);
 void R_LightPoint(vec3_t p, vec3_t color);
 void R_SetupFrame(void);
-void R_EmitEdge(mvertex_t *pv0, mvertex_t *pv1);
-void R_ClipEdge(mvertex_t *pv0, mvertex_t *pv1, clipplane_t *clip);
 void R_BuildLightMap(void);
 
 extern refdef_t     r_newrefdef;
@@ -636,14 +599,8 @@ void R_ConcatTransforms(float in1[3][4], float in2[3][4], float out[3][4]);
 void ProjectPointOnPlane(vec3_t dst, const vec3_t p, const vec3_t normal);
 void PerpendicularVector(vec3_t dst, const vec3_t src);
 
-float R_DLightPoint(vec3_t p);
-
 void R_NewMap(void);
-void R_Register(void);
-void R_UnRegister(void);
-void Draw_Init(void);
-qboolean R_Init(qboolean total);
-void R_Shutdown(qboolean total);
+
 void R_InitCaches(void);
 void R_FreeCaches(void);
 void D_FlushCaches(void);
