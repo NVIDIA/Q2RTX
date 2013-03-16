@@ -80,11 +80,11 @@ static void R_DrawSpanletTurbulentBlended(void)
     byte    *ptex;
 
     do {
-        sturb = ((s_spanletvars.s + r_turb_turb[(s_spanletvars.t >> 16) & (CYCLE - 1)]) >> 16) & 63;
-        tturb = ((s_spanletvars.t + r_turb_turb[(s_spanletvars.s >> 16) & (CYCLE - 1)]) >> 16) & 63;
+        sturb = ((s_spanletvars.s + r_turb_turb[(s_spanletvars.t >> 16) & (CYCLE - 1)]) >> 16) & TURB_MASK;
+        tturb = ((s_spanletvars.t + r_turb_turb[(s_spanletvars.s >> 16) & (CYCLE - 1)]) >> 16) & TURB_MASK;
 
         if (*s_spanletvars.pz <= (s_spanletvars.izi >> 16)) {
-            ptex = s_spanletvars.pbase + (sturb) * TEX_BYTES + (tturb) * 64 * TEX_BYTES;
+            ptex = s_spanletvars.pbase + (sturb) * TEX_BYTES + (tturb) * TURB_SIZE * TEX_BYTES;
             s_spanletvars.pdest[0] = (s_spanletvars.pdest[0] * r_polydesc.one_minus_alpha + ptex[2] * r_polydesc.alpha) >> 8;
             s_spanletvars.pdest[1] = (s_spanletvars.pdest[1] * r_polydesc.one_minus_alpha + ptex[1] * r_polydesc.alpha) >> 8;
             s_spanletvars.pdest[2] = (s_spanletvars.pdest[2] * r_polydesc.one_minus_alpha + ptex[0] * r_polydesc.alpha) >> 8;

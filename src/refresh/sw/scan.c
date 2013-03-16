@@ -195,9 +195,9 @@ void D_DrawTurbulent16(espan_t *pspan, int *warptable)
             t = t & ((CYCLE << 16) - 1);
 
             do {
-                turb_s = ((s + turb[(t >> 16) & (CYCLE - 1)]) >> 16) & 63;
-                turb_t = ((t + turb[(s >> 16) & (CYCLE - 1)]) >> 16) & 63;
-                ptex = pbase + (turb_t * 64 * TEX_BYTES) + turb_s * TEX_BYTES;
+                turb_s = ((s + turb[(t >> 16) & (CYCLE - 1)]) >> 16) & TURB_MASK;
+                turb_t = ((t + turb[(s >> 16) & (CYCLE - 1)]) >> 16) & TURB_MASK;
+                ptex = pbase + (turb_t * TURB_SIZE * TEX_BYTES) + turb_s * TEX_BYTES;
                 pdest[0] = ptex[2];
                 pdest[1] = ptex[1];
                 pdest[2] = ptex[0];

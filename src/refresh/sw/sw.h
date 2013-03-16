@@ -124,8 +124,8 @@ extern oldrefdef_t      r_refdef;
 
 #define TRANSPARENT_COLOR       0xFF
 
-
-#define TURB_TEX_SIZE           64  // base turbulent texture size
+#define TURB_SIZE               64  // base turbulent texture size
+#define TURB_MASK               (TURB_SIZE - 1)
 
 #define CYCLE                   128 // turbulent cycle size
 

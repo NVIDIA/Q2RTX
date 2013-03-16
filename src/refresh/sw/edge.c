@@ -803,7 +803,7 @@ static void D_TurbulentSurf(surf_t *s)
     pface = s->msurf;
     miplevel = 0;
     cacheblock = pface->texinfo->image->pixels[0];
-    cachewidth = 64 * TEX_BYTES;
+    cachewidth = TURB_SIZE * TEX_BYTES;
 
     if (s->insubmodel) {
         // FIXME: we don't want to do all this for every polygon!

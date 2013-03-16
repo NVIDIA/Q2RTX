@@ -55,6 +55,11 @@ void IMG_Load(image_t *image, byte *pic, int width, int height)
 {
     int         i, c, b;
 
+    if (image->flags & IF_TURBULENT) {
+        image->width = TURB_SIZE;
+        image->height = TURB_SIZE;
+    }
+
     image->upload_width = width;
     image->upload_height = height;
 
