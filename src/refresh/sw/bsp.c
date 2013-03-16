@@ -339,6 +339,11 @@ void R_DrawSolidClippedSubmodelPolygons(mmodel_t *pmodel, mnode_t *topnode)
         pbedge = &bedges[numbedges];
         numbedges += psurf->numsurfedges;
 
+        if (numbedges >= MAX_BMODEL_EDGES) {
+            Com_Printf("Out of edges for bmodel\n");
+            return;
+        }
+
         surfedge = psurf->firstsurfedge;
         for (j = 0; j < psurf->numsurfedges; j++, surfedge++) {
             pbedge[j].v[0] = surfedge->edge->v[surfedge->vert    ];

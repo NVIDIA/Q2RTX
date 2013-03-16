@@ -176,7 +176,9 @@ void R_InitCaches(void)
 
     // calculate size to allocate
     if (sw_surfcacheoverride->integer) {
-        size = sw_surfcacheoverride->integer;
+        size = Cvar_ClampInteger(sw_surfcacheoverride,
+                                 SURFCACHE_SIZE_AT_320X240,
+                                 SURFCACHE_SIZE_AT_320X240 * 25);
     } else {
         size = SURFCACHE_SIZE_AT_320X240;
 
@@ -184,6 +186,8 @@ void R_InitCaches(void)
         if (pix > 64000)
             size += (pix - 64000) * 3;
     }
+
+    size *= TEX_BYTES;
 
     // round up to page size
     size = (size + 8191) & ~8191;

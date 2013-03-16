@@ -620,6 +620,9 @@ static void R_BuildPolygonFromSurface(mface_t *fa)
     // reconstruct the polygon
     lnumverts = fa->numsurfedges;
 
+    if (lnumverts > MAXWORKINGVERTS)
+        Com_Error(ERR_DROP, "R_BuildPolygonFromSurface: too many points: %d", lnumverts);
+
     pverts = r_clip_verts[0];
 
     surfedge = fa->firstsurfedge;
