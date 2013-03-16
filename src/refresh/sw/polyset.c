@@ -186,10 +186,10 @@ void R_DrawTriangle(void)
 
 /*
 ===================
-R_PolysetScanLeftEdge_C
+R_PolysetScanLeftEdge
 ====================
 */
-void R_PolysetScanLeftEdge_C(int height)
+static void R_PolysetScanLeftEdge(int height)
 {
     do {
         d_pedgespanpackage->pdest = d_pdest;
@@ -527,44 +527,13 @@ void R_PolysetDrawSpans8_Opaque(spanpackage_t *pspanpackage)
     } while (pspanpackage->count != -999999);
 }
 
-
-/*
-================
-R_RasterizeAliasPolySmooth
-================
-*/
-void R_RasterizeAliasPolySmooth(void)
+static void R_PolysetSetUpAndScanLeftEdge(int *plefttop, int *pleftbottom)
 {
-    int             initialleftheight, initialrightheight;
-    int             *plefttop, *prighttop, *pleftbottom, *prightbottom;
-    int             working_lstepx, originalcount;
-    int             ystart;
+    int     height, ystart;
+    int     working_lstepx;
 
-    plefttop = pedgetable->pleftedgevert0;
-    prighttop = pedgetable->prightedgevert0;
-
-    pleftbottom = pedgetable->pleftedgevert1;
-    prightbottom = pedgetable->prightedgevert1;
-
-    initialleftheight = pleftbottom[1] - plefttop[1];
-    initialrightheight = prightbottom[1] - prighttop[1];
-
-//
-// set the s, t, and light gradients, which are consistent across the triangle
-// because being a triangle, things are affine
-//
-    R_PolysetCalcGradients(r_affinetridesc.skinwidth);
-//
-// rasterize the polygon
-//
-
-//
-// scan out the top (and possibly only) part of the left edge
-//
-    d_pedgespanpackage = a_spans;
-
+    height = pleftbottom[1] - plefttop[1];
     ystart = plefttop[1];
-    d_aspancount = plefttop[0] - prighttop[0];
 
     d_ptex = (byte *)r_affinetridesc.pskin + (plefttop[2] >> 16) * TEX_BYTES +
              (plefttop[3] >> 16) * r_affinetridesc.skinwidth;
@@ -576,7 +545,7 @@ void R_RasterizeAliasPolySmooth(void)
     d_pdest = (byte *)d_viewbuffer + d_scantable[ystart] + plefttop[0] * VID_BYTES;
     d_pz = d_pzbuffer + ystart * d_zwidth + plefttop[0];
 
-    if (initialleftheight == 1) {
+    if (height == 1) {
         d_pedgespanpackage->pdest = d_pdest;
         d_pedgespanpackage->pz = d_pz;
         d_pedgespanpackage->count = d_aspancount;
@@ -599,8 +568,6 @@ void R_RasterizeAliasPolySmooth(void)
 
         d_pdestbasestep = r_screenrowbytes + ubasestep * VID_BYTES;
         d_pdestextrastep = d_pdestbasestep + 1 * VID_BYTES;
-
-        // TODO: can reuse partial expressions here
 
         // for negative steps in x along left edge, bias toward overflow rather than
         // underflow (sort of turning the floor () we did in the gradient calcs into
@@ -627,82 +594,59 @@ void R_RasterizeAliasPolySmooth(void)
         d_lightextrastep = d_lightbasestep + working_lstepx;
         d_ziextrastep = d_zibasestep + r_zistepx;
 
-        R_PolysetScanLeftEdge_C(initialleftheight);
+        R_PolysetScanLeftEdge(height);
     }
+}
+
+/*
+================
+R_RasterizeAliasPolySmooth
+================
+*/
+static void R_RasterizeAliasPolySmooth(void)
+{
+    int     /*initialleftheight,*/ initialrightheight;
+    int     *plefttop, *prighttop, *pleftbottom, *prightbottom;
+    int     originalcount;
+
+    plefttop = pedgetable->pleftedgevert0;
+    prighttop = pedgetable->prightedgevert0;
+
+    pleftbottom = pedgetable->pleftedgevert1;
+    prightbottom = pedgetable->prightedgevert1;
+
+    /*initialleftheight = pleftbottom[1] - plefttop[1];*/
+    initialrightheight = prightbottom[1] - prighttop[1];
+
+//
+// set the s, t, and light gradients, which are consistent across the triangle
+// because being a triangle, things are affine
+//
+    R_PolysetCalcGradients(r_affinetridesc.skinwidth);
+
+//
+// rasterize the polygon
+//
+
+//
+// scan out the top (and possibly only) part of the left edge
+//
+    d_pedgespanpackage = a_spans;
+
+    d_aspancount = plefttop[0] - prighttop[0];
+
+    R_PolysetSetUpAndScanLeftEdge(plefttop, pleftbottom);
 
 //
 // scan out the bottom part of the left edge, if it exists
 //
     if (pedgetable->numleftedges == 2) {
-        int     height;
-
         plefttop = pleftbottom;
         pleftbottom = pedgetable->pleftedgevert2;
 
-        height = pleftbottom[1] - plefttop[1];
-
-// TODO: make this a function; modularize this function in general
-
-        ystart = plefttop[1];
         d_aspancount = plefttop[0] - prighttop[0];
-        d_ptex = (byte *)r_affinetridesc.pskin + (plefttop[2] >> 16) * TEX_BYTES +
-                 (plefttop[3] >> 16) * r_affinetridesc.skinwidth;
-        d_sfrac = 0;
-        d_tfrac = 0;
-        d_light = plefttop[4];
-        d_zi = plefttop[5];
 
-        d_pdest = (byte *)d_viewbuffer + d_scantable[ystart] + plefttop[0] * VID_BYTES;
-        d_pz = d_pzbuffer + ystart * d_zwidth + plefttop[0];
-
-        if (height == 1) {
-            d_pedgespanpackage->pdest = d_pdest;
-            d_pedgespanpackage->pz = d_pz;
-            d_pedgespanpackage->count = d_aspancount;
-            d_pedgespanpackage->ptex = d_ptex;
-
-            d_pedgespanpackage->sfrac = d_sfrac;
-            d_pedgespanpackage->tfrac = d_tfrac;
-
-            // FIXME: need to clamp l, s, t, at both ends?
-            d_pedgespanpackage->light = d_light;
-            d_pedgespanpackage->zi = d_zi;
-
-            d_pedgespanpackage++;
-        } else {
-            R_PolysetSetUpForLineScan(plefttop[0], plefttop[1],
-                                      pleftbottom[0], pleftbottom[1]);
-
-            d_pdestbasestep = r_screenrowbytes + ubasestep * VID_BYTES;
-            d_pdestextrastep = d_pdestbasestep + 1 * VID_BYTES;
-
-            d_pzbasestep = d_zwidth + ubasestep;
-            d_pzextrastep = d_pzbasestep + 1;
-
-            if (ubasestep < 0)
-                working_lstepx = r_lstepx - 1;
-            else
-                working_lstepx = r_lstepx;
-
-            d_countextrastep = ubasestep + 1;
-            d_ptexbasestep = ((r_sstepy + r_sstepx * ubasestep) >> 16) * TEX_BYTES +
-                             ((r_tstepy + r_tstepx * ubasestep) >> 16) *
-                             r_affinetridesc.skinwidth;
-            d_sfracbasestep = (r_sstepy + r_sstepx * ubasestep) & 0xFFFF;
-            d_tfracbasestep = (r_tstepy + r_tstepx * ubasestep) & 0xFFFF;
-            d_lightbasestep = r_lstepy + working_lstepx * ubasestep;
-            d_zibasestep = r_zistepy + r_zistepx * ubasestep;
-
-            d_ptexextrastep = ((r_sstepy + r_sstepx * d_countextrastep) >> 16) * TEX_BYTES +
-                              ((r_tstepy + r_tstepx * d_countextrastep) >> 16) *
-                              r_affinetridesc.skinwidth;
-            d_sfracextrastep = (r_sstepy + r_sstepx * d_countextrastep) & 0xFFFF;
-            d_tfracextrastep = (r_tstepy + r_tstepx * d_countextrastep) & 0xFFFF;
-            d_lightextrastep = d_lightbasestep + working_lstepx;
-            d_ziextrastep = d_zibasestep + r_zistepx;
-
-            R_PolysetScanLeftEdge_C(height);
-        }
+        R_PolysetSetUpAndScanLeftEdge(plefttop, pleftbottom);
     }
 
 // scan out the top (and possibly only) part of the right edge, updating the
@@ -736,8 +680,7 @@ void R_RasterizeAliasPolySmooth(void)
                                   prightbottom[0], prightbottom[1]);
 
         d_countextrastep = ubasestep + 1;
-        a_spans[initialrightheight + height].count = -999999;
-        // mark end of the spanpackages
+        a_spans[initialrightheight + height].count = -999999; // mark end of the spanpackages
         (*d_pdrawspans)(pstart);
     }
 }
