@@ -87,7 +87,7 @@ void R_BeginEdgeFrame(void)
     edge_max = &r_edges[r_numallocatededges];
 
     surface_p = &surfaces[2];   // background is surface 1,
-    //  surface 0 is a dummy
+                                // surface 0 is a dummy
     surfaces[1].spans = NULL;   // no background spans yet
     surfaces[1].flags = DSURF_BACKGROUND;
 
@@ -660,7 +660,6 @@ SURFACE FILLING
 
 static vec3_t       transformed_modelorg;
 static vec3_t       world_transformed_modelorg;
-static vec3_t       local_modelorg;
 
 /*
 =============
@@ -806,12 +805,13 @@ static void D_TurbulentSurf(surf_t *s)
     cachewidth = TURB_SIZE * TEX_BYTES;
 
     if (s->insubmodel) {
+        vec3_t       local_modelorg;
+
         // FIXME: we don't want to do all this for every polygon!
         // TODO: store once at start of frame
         currententity = s->entity;  // FIXME: make this passed in to
                                     // R_RotateBmodel ()
-        VectorSubtract(r_origin, currententity->origin,
-                       local_modelorg);
+        VectorSubtract(r_origin, currententity->origin, local_modelorg);
         R_TransformVector(local_modelorg, transformed_modelorg);
 
         R_RotateBmodel();   // FIXME: don't mess with the frustum,
@@ -835,8 +835,7 @@ static void D_TurbulentSurf(surf_t *s)
         // TODO: speed up
         //
         currententity = NULL;   // &r_worldentity;
-        VectorCopy(world_transformed_modelorg,
-                   transformed_modelorg);
+        VectorCopy(world_transformed_modelorg, transformed_modelorg);
         VectorCopy(base_vpn, vpn);
         VectorCopy(base_vup, vup);
         VectorCopy(base_vright, vright);
@@ -897,6 +896,8 @@ static void D_SolidSurf(surf_t *s)
     d_ziorigin = s->d_ziorigin;
 
     if (s->insubmodel) {
+        vec3_t       local_modelorg;
+
         // FIXME: we don't want to do all this for every polygon!
         // TODO: store once at start of frame
         currententity = s->entity;  // FIXME: make this passed in to
@@ -932,8 +933,7 @@ static void D_SolidSurf(surf_t *s)
         // FIXME: we don't want to do this every time!
         // TODO: speed up
         //
-        VectorCopy(world_transformed_modelorg,
-                   transformed_modelorg);
+        VectorCopy(world_transformed_modelorg, transformed_modelorg);
         VectorCopy(base_vpn, vpn);
         VectorCopy(base_vup, vup);
         VectorCopy(base_vright, vright);

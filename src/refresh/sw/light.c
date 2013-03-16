@@ -39,7 +39,7 @@ static void R_MarkLights(dlight_t *light, int bit, mnode_t *node)
 {
     cplane_t    *splitplane;
     float       dist;
-    mface_t *surf;
+    mface_t     *surf;
     int         i;
 
     if (!node->plane)
@@ -48,19 +48,15 @@ static void R_MarkLights(dlight_t *light, int bit, mnode_t *node)
     splitplane = node->plane;
     dist = DotProduct(light->origin, splitplane->normal) - splitplane->dist;
 
-//=====
-//PGM
     i = light->intensity;
     if (i < 0)
         i = -i;
-//PGM
-//=====
 
-    if (dist > i) { // PGM (dist > light->intensity)
+    if (dist > i) {
         R_MarkLights(light, bit, node->children[0]);
         return;
     }
-    if (dist < -i) { // PGM (dist < -light->intensity)
+    if (dist < -i) {
         R_MarkLights(light, bit, node->children[1]);
         return;
     }
@@ -208,7 +204,7 @@ static void R_AddDynamicLights(void)
     int         smax, tmax;
     mtexinfo_t  *tex;
     dlight_t    *dl;
-    int         negativeLight;  //PGM
+    int         negativeLight;
     blocklight_t *block;
 
     surf = r_drawsurf.surf;
@@ -295,15 +291,13 @@ R_BuildLightMap
 Combine and scale multiple lightmaps into the 8.8 format in blocklights
 ===============
 */
-
 void R_BuildLightMap(void)
 {
     int         smax, tmax;
-    blocklight_t            t;
     int         i, size;
     byte        *lightmap;
     int         maps;
-    mface_t *surf;
+    mface_t     *surf;
     blocklight_t *dst;
 
     surf = r_drawsurf.surf;
@@ -345,22 +339,8 @@ void R_BuildLightMap(void)
     if (surf->dlightframe == r_framecount)
         R_AddDynamicLights();
 
-// bound, invert, and shift
-    for (i = 0; i < size * LIGHTMAP_BYTES; i++) {
-        t = blocklights[i];
-#if 0
-        if (t < 0)
-            t = 0;
-        t = (255 * 256 - t) >> (8 - VID_CBITS);
-
-        if (t < (1 << 6))
-            t = (1 << 6);
-#else
-        clamp(t, 255, 65535);
-#endif
-
-        blocklights[i] = t;
-    }
-
+// bound
+    for (i = 0; i < size * LIGHTMAP_BYTES; i++)
+        clamp(blocklights[i], 255, 65535);
 }
 

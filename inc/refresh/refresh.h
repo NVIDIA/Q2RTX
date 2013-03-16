@@ -74,9 +74,7 @@ typedef struct entity_s {
     int     skinnum;                // also used as RF_BEAM's palette index,
                                     // -1 => use rgba
 
-    int     lightstyle;             // for flashing entities
     float   alpha;                  // ignore if RF_TRANSLUCENT isn't set
-
     color_t rgba;
 
     qhandle_t   skin;           // NULL for inline skin

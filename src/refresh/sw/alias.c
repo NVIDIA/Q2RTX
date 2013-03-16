@@ -235,8 +235,7 @@ static void R_AliasTransformFinalVerts(int numpoints, finalvert_t *fv, maliasver
 
         plightnormal = bytedirs[newv->lightnormalindex];
 
-        // PMM - added double damage shell
-        if (currententity->flags & (RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE | RF_SHELL_DOUBLE | RF_SHELL_HALF_DAM)) {
+        if (currententity->flags & RF_SHELL_MASK) {
             lerped_vert[0] += plightnormal[0] * POWERSUIT_SCALE;
             lerped_vert[1] += plightnormal[1] * POWERSUIT_SCALE;
             lerped_vert[2] += plightnormal[2] * POWERSUIT_SCALE;
@@ -443,9 +442,9 @@ static qboolean R_AliasSetupSkin(void)
     int             skinnum;
     image_t         *pskindesc;
 
-    if (currententity->skin)
+    if (currententity->skin) {
         pskindesc = IMG_ForHandle(currententity->skin);
-    else {
+    } else {
         skinnum = currententity->skinnum;
         if ((skinnum >= currentmodel->numskins) || (skinnum < 0)) {
             Com_DPrintf("R_AliasSetupSkin %s: no such skin # %d\n",
@@ -607,7 +606,7 @@ static void R_AliasSetupBlend(void)
     /*
     ** select the proper span routine based on translucency
     */
-    mask = currententity->flags & (RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE | RF_SHELL_DOUBLE | RF_SHELL_HALF_DAM);
+    mask = currententity->flags & RF_SHELL_MASK;
     if (mask) {
         if (mask == RF_SHELL_RED)
             color.u32 = d_8to24table[SHELL_RED_COLOR];

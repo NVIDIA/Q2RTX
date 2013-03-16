@@ -32,53 +32,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define REF_VERSION     "SOFT 0.01"
 
-//===================================================================
-
-typedef unsigned char pixel_t;
-
-typedef struct vrectSoft_s {
-    int             x, y, width, height;
-    int dummy;
-} vrectSoft_t;
-
-typedef struct {
-    pixel_t                 *buffer;                // invisible buffer
-    int                     rowbytes;               // may be > width if displayed in a window
-                                                    // can be negative for stupid dibs
-    int                     width;
-    int                     height;
-} viddef_t;
-
-extern viddef_t vid;
-
-typedef struct {
-    vrectSoft_t     vrect;                          // subwindow in video for refresh
-                                                    // FIXME: not need vrect next field here?
-    vrectSoft_t     aliasvrect;                     // scaled Alias version
-    int             vrectright, vrectbottom;        // right & bottom screen coords
-    int             aliasvrectright, aliasvrectbottom;  // scaled Alias versions
-    float           vrectrightedge;                 // rightmost right edge we care about,
-                                                    //  for use in edge list
-    float           fvrectx, fvrecty;               // for floating-point compares
-    float           fvrectx_adj, fvrecty_adj;       // left and top edges, for clamping
-    int             vrect_x_adj_shift20;            // (vrect.x + 0.5 - epsilon) << 20
-    int             vrectright_adj_shift20;         // (vrectright + 0.5 - epsilon) << 20
-    float           fvrectright_adj, fvrectbottom_adj;  // right and bottom edges, for clamping
-    float           fvrectright;                    // rightmost edge, for Alias clamping
-    float           fvrectbottom;                   // bottommost edge, for Alias clamping
-    float           horizontalFieldOfView;          // at Z = 1.0, this many X is visible
-                                                    // 2.0 = 90 degrees
-    float           xOrigin;                        // should probably always be 0.5
-    float           yOrigin;                        // between be around 0.3 to 0.5
-
-    vec3_t          vieworg;
-    vec3_t          viewangles;
-
-    int             ambientlight;
-} oldrefdef_t;
-
-extern oldrefdef_t      r_refdef;
-
 /*
 ====================================================
 
@@ -87,17 +40,14 @@ extern oldrefdef_t      r_refdef;
 ====================================================
 */
 
-#define CACHE_SIZE      32
+#define DSURF_SKY           2
+#define DSURF_TURB          4
+#define DSURF_BACKGROUND    8
 
-#define VID_CBITS       6
-#define VID_GRADES      (1 << VID_CBITS)
+#define CACHE_SIZE      32
 
 #define VID_BYTES       4   // can be 4 or 3
 #define TEX_BYTES       4   // must be 4
-
-
-// r_shared.h: general refresh-related stuff shared between the refresh and the
-// driver
 
 
 #define MAXVERTS        64              // max points in a surface polygon
@@ -111,14 +61,10 @@ extern oldrefdef_t      r_refdef;
                                             // be farther away than anything in
                                             // the scene
 
-
-// d_iface.h: interface header file for rasterization driver modules
-
 #define WARP_WIDTH      320
 #define WARP_HEIGHT     240
 
 #define MAX_LBM_HEIGHT  480
-
 
 #define PARTICLE_Z_CLIP 8.0
 
@@ -128,8 +74,6 @@ extern oldrefdef_t      r_refdef;
 #define TURB_MASK               (TURB_SIZE - 1)
 
 #define CYCLE                   128 // turbulent cycle size
-
-#define SCANBUFFERPAD           0x1000
 
 #define DS_SPAN_LIST_END        -128
 
@@ -163,12 +107,10 @@ extern oldrefdef_t      r_refdef;
 
 #define NEAR_CLIP       0.01
 
-
 #define MAXALIASVERTS           2000    // TODO: tune this
 #define ALIAS_Z_CLIP_PLANE      4
 
 // turbulence stuff
-
 #define AMP     8*0x10000
 #define AMP2    3
 #define SPEED   20
@@ -182,9 +124,41 @@ TYPES
 ====================================================
 */
 
-#define DSURF_SKY           2
-#define DSURF_TURB          4
-#define DSURF_BACKGROUND    8
+typedef unsigned char pixel_t;
+
+typedef struct {
+    pixel_t                 *buffer;                // invisible buffer
+    int                     rowbytes;               // may be > width if displayed in a window
+                                                    // can be negative for stupid dibs
+    int                     width;
+    int                     height;
+} viddef_t;
+
+typedef struct {
+    vrect_t         vrect;                          // subwindow in video for refresh
+                                                    // FIXME: not need vrect next field here?
+    vrect_t         aliasvrect;                     // scaled Alias version
+    int             vrectright, vrectbottom;        // right & bottom screen coords
+    int             aliasvrectright, aliasvrectbottom;  // scaled Alias versions
+    float           vrectrightedge;                 // rightmost right edge we care about,
+                                                    //  for use in edge list
+    float           fvrectx, fvrecty;               // for floating-point compares
+    float           fvrectx_adj, fvrecty_adj;       // left and top edges, for clamping
+    int             vrect_x_adj_shift20;            // (vrect.x + 0.5 - epsilon) << 20
+    int             vrectright_adj_shift20;         // (vrectright + 0.5 - epsilon) << 20
+    float           fvrectright_adj, fvrectbottom_adj;  // right and bottom edges, for clamping
+    float           fvrectright;                    // rightmost edge, for Alias clamping
+    float           fvrectbottom;                   // bottommost edge, for Alias clamping
+    float           horizontalFieldOfView;          // at Z = 1.0, this many X is visible
+                                                    // 2.0 = 90 degrees
+    float           xOrigin;                        // should probably always be 0.5
+    float           yOrigin;                        // between be around 0.3 to 0.5
+
+    vec3_t          vieworg;
+    vec3_t          viewangles;
+
+    int             ambientlight;
+} oldrefdef_t;
 
 typedef struct {
     float   u, v;
@@ -205,14 +179,6 @@ typedef struct {
     int                 pskindesc;
     int                 skinwidth;
     int                 skinheight;
-//  dtriangle_t         *ptriangles;
-    void                *unused;
-    finalvert_t         *pfinalverts;
-    int                 numtriangles;
-    int                 drawtype;
-    int                 seamfixupX16;
-    qboolean            do_vis_thresh;
-    int                 vis_thresh;
 } affinetridesc_t;
 
 typedef struct drawsurf_s {
@@ -227,12 +193,10 @@ typedef struct drawsurf_s {
 } drawsurf_t;
 
 // clipped bmodel edges
-
 typedef struct bedge_s {
     mvertex_t       *v[2];
     struct bedge_s  *pnext;
 } bedge_t;
-
 
 typedef struct clipplane_s {
     vec3_t              normal;
@@ -262,7 +226,7 @@ typedef struct surfcache_s {
 } surfcache_t;
 
 typedef struct espan_s {
-    int                             u, v, count;
+    int             u, v, count;
     struct espan_s  *pnext;
 } espan_t;
 
@@ -299,8 +263,6 @@ typedef struct surf_s {
     float           nearzi;         // nearest 1/z on surface, for mipmapping
     qboolean        insubmodel;
     float           d_ziorigin, d_zistepu, d_zistepv;
-
-    int             pad[2];         // to 64 bytes
 } surf_t;
 
 typedef struct edge_s {
@@ -329,12 +291,16 @@ typedef struct maliasvert_s {
 } maliasvert_t;
 
 typedef struct maliasframe_s {
-    vec3_t scale;
-    vec3_t translate;
-    vec3_t bounds[2];
-    vec_t radius;
-    maliasvert_t *verts;
+    vec3_t          scale;
+    vec3_t          translate;
+    vec3_t          bounds[2];
+    vec_t           radius;
+    maliasvert_t    *verts;
 } maliasframe_t;
+
+typedef struct {
+    finalvert_t *a, *b, *c;
+} aliastriangleparms_t;
 
 
 /*
@@ -345,7 +311,6 @@ VARS
 ====================================================
 */
 
-extern int      d_spanpixcount;
 extern int      r_framecount;       // sequence # of current frame since Quake started
 extern float    r_aliasuvscale;     // scale-up factor for screen u and v
                                     // on Alias vertices passed to driver
@@ -359,8 +324,6 @@ void D_WarpScreen(void);
 void R_PolysetUpdateTables(void);
 
 //=======================================================================//
-
-// callbacks to Quake
 
 extern drawsurf_t       r_drawsurf;
 
@@ -396,6 +359,9 @@ extern int      d_scantable[MAXHEIGHT];
 extern int      d_minmip;
 extern float    d_scalemip[3];
 
+extern viddef_t         vid;
+extern oldrefdef_t      r_refdef;
+
 //===================================================================
 
 extern int      cachewidth;
@@ -406,7 +372,7 @@ extern int      r_drawnpolycount;
 
 extern int      sintable[CYCLE * 2];
 extern int      intsintable[CYCLE * 2];
-extern int      blanktable[CYCLE * 2];      // PGM
+extern int      blanktable[CYCLE * 2];
 
 extern vec3_t   vup, base_vup;
 extern vec3_t   vpn, base_vpn;
@@ -446,7 +412,6 @@ extern cvar_t   *sw_mipscale;
 extern cvar_t   *sw_mode;
 extern cvar_t   *sw_reportsurfout;
 extern cvar_t   *sw_reportedgeout;
-extern cvar_t   *sw_stipplealpha;
 extern cvar_t   *sw_surfcacheoverride;
 extern cvar_t   *sw_waterwarp;
 extern cvar_t   *sw_drawsird;
@@ -507,8 +472,6 @@ void R_RenderFace(mface_t *fa, int clipflags);
 void R_RenderBmodelFace(bedge_t *pedges, mface_t *psurf);
 void R_TransformPlane(cplane_t *p, float *normal, float *dist);
 void R_TransformFrustum(void);
-void R_DrawSurfaceBlock16(void);
-void R_DrawSurfaceBlock8(void);
 
 void R_DrawSubmodelPolygons(mmodel_t *pmodel, int clipflags, mnode_t *topnode);
 void R_DrawSolidClippedSubmodelPolygons(mmodel_t *pmodel, mnode_t *topnode);
@@ -532,8 +495,6 @@ extern mvertex_t    *r_ptverts, *r_ptvertsmax;
 extern int          r_currentkey;
 extern int          r_currentbkey;
 
-void R_InitTurb(void);
-
 void R_DrawParticles(void);
 
 extern int          r_amodels_drawn;
@@ -556,15 +517,11 @@ extern int      r_outofedges;
 
 extern int      r_maxvalidedgeoffset;
 
-typedef struct {
-    finalvert_t *a, *b, *c;
-} aliastriangleparms_t;
-
 extern aliastriangleparms_t aliastriangleparms;
 
 void R_DrawTriangle(void);
 void R_AliasClipTriangle(finalvert_t *index0, finalvert_t *index1, finalvert_t *index2);
-
+void R_AliasProjectAndClipTestFinalVert(finalvert_t *fv);
 
 extern float    r_time1;
 extern int      r_frustum_indexes[4 * 6];
@@ -604,20 +561,17 @@ void R_NewMap(void);
 void R_InitCaches(void);
 void R_FreeCaches(void);
 void D_FlushCaches(void);
+void D_SCDump_f(void);
 
-qhandle_t R_RegisterModel(const char *name);
+void R_InitTurb(void);
 
-void    R_RenderFrame(refdef_t *fd);
+void R_InitImages(void);
+void R_ShutdownImages(void);
 
-void     R_BeginFrame(void);
+void R_BuildGammaTable(void);
 
-void    R_InitImages(void);
-void    R_ShutdownImages(void);
-
-void    R_BuildGammaTable(void);
-
-void    R_InitSkyBox(void);
-void    R_EmitSkyBox(void);
+void R_InitSkyBox(void);
+void R_EmitSkyBox(void);
 
 void R_ApplySIRDAlgorithum(void);
 

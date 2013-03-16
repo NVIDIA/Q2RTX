@@ -353,7 +353,7 @@ void R_DrawSolidClippedSubmodelPolygons(mmodel_t *pmodel, mnode_t *topnode)
 
         pbedge[j - 1].pnext = NULL; // mark end of edges
 
-        if (!(psurf->texinfo->c.flags & (SURF_TRANS66 | SURF_TRANS33)))
+        if (!(psurf->texinfo->c.flags & SURF_TRANS_MASK))
             R_RecursiveClipBPoly(pbedge, topnode, psurf);
         else
             R_RenderBmodelFace(pbedge, psurf);

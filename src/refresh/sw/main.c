@@ -74,7 +74,6 @@ cplane_t    screenedge[4];
 //
 int     r_framecount = 1;   // so frame counts initialized to 0 don't match
 int     r_visframecount;
-int     d_spanpixcount;
 int     r_polycount;
 int     r_drawnpolycount;
 int     r_wholepolycount;
@@ -86,7 +85,6 @@ mleaf_t     *r_viewleaf;
 int         r_viewcluster, r_oldviewcluster;
 
 cvar_t  *sw_aliasstats;
-cvar_t  *sw_allow_modex;
 cvar_t  *sw_clearcolor;
 cvar_t  *sw_drawflat;
 cvar_t  *sw_draworder;
@@ -94,11 +92,11 @@ cvar_t  *sw_maxedges;
 cvar_t  *sw_maxsurfs;
 cvar_t  *sw_reportedgeout;
 cvar_t  *sw_reportsurfout;
-cvar_t  *sw_stipplealpha;
 cvar_t  *sw_surfcacheoverride;
 cvar_t  *sw_waterwarp;
 cvar_t  *sw_dynamic;
 cvar_t  *sw_modulate;
+cvar_t  *sw_lockpvs;
 
 //Start Added by Lewey
 // These flags allow you to turn SIRDS on and
@@ -115,10 +113,6 @@ cvar_t  *r_novis;
 cvar_t  *r_speeds;
 
 cvar_t  *vid_gamma;
-
-//PGM
-cvar_t  *sw_lockpvs;
-//PGM
 
 // all global and static refresh variables are collected in a contiguous block
 // to avoid cache conflicts.
@@ -145,7 +139,7 @@ unsigned int    d_zwidth;
 
 int     sintable[CYCLE * 2];
 int     intsintable[CYCLE * 2];
-int     blanktable[CYCLE * 2];      // PGM
+int     blanktable[CYCLE * 2];
 
 /*
 ================
@@ -159,16 +153,13 @@ void R_InitTurb(void)
     for (i = 0; i < CYCLE * 2; i++) {
         sintable[i] = AMP + sin(i * M_PI * 2 / CYCLE) * AMP;
         intsintable[i] = AMP2 + sin(i * M_PI * 2 / CYCLE) * AMP2; // AMP2, not 20
-        blanktable[i] = 0;          //PGM
+        blanktable[i] = 0;
     }
 }
-
-void D_SCDump_f(void);
 
 static void R_Register(void)
 {
     sw_aliasstats = Cvar_Get("sw_polymodelstats", "0", 0);
-    sw_allow_modex = Cvar_Get("sw_allow_modex", "1", CVAR_ARCHIVE);
     sw_clearcolor = Cvar_Get("sw_clearcolor", "2", 0);
     sw_drawflat = Cvar_Get("sw_drawflat", "0", CVAR_CHEAT);
     sw_draworder = Cvar_Get("sw_draworder", "0", CVAR_CHEAT);
@@ -178,10 +169,10 @@ static void R_Register(void)
     sw_mipscale = Cvar_Get("sw_mipscale", "1", 0);
     sw_reportedgeout = Cvar_Get("sw_reportedgeout", "0", 0);
     sw_reportsurfout = Cvar_Get("sw_reportsurfout", "0", 0);
-    sw_stipplealpha = Cvar_Get("sw_stipplealpha", "0", CVAR_ARCHIVE);
     sw_waterwarp = Cvar_Get("sw_waterwarp", "1", 0);
     sw_dynamic = Cvar_Get("sw_dynamic", "1", 0);
     sw_modulate = Cvar_Get("sw_modulate", "1", 0);
+    sw_lockpvs = Cvar_Get("sw_lockpvs", "0", 0);
 
     //Start Added by Lewey
     sw_drawsird = Cvar_Get("sw_drawsird", "0", 0);
@@ -197,11 +188,6 @@ static void R_Register(void)
     vid_gamma = Cvar_Get("vid_gamma", "1.0", CVAR_ARCHIVE | CVAR_FILES);
 
     Cmd_AddCommand("scdump", D_SCDump_f);
-
-//PGM
-    sw_lockpvs = Cvar_Get("sw_lockpvs", "0", 0);
-//PGM
-
 }
 
 static void R_UnRegister(void)
@@ -257,19 +243,16 @@ qboolean R_Init(qboolean total)
 
     Com_DPrintf("ref_soft " VERSION ", " __DATE__ "\n");
 
-    r_aliasuvscale = 1.0;
-
     // create the window
-    if (!VID_Init()) {
+    if (!VID_Init())
         return qfalse;
-    }
 
     R_Register();
 
     IMG_Init();
+
     MOD_Init();
 
-    /* get the palette before we create the window */
     R_InitImages();
 
     R_InitSkyBox();
@@ -277,11 +260,11 @@ qboolean R_Init(qboolean total)
     view_clipplanes[0].leftedge = qtrue;
     view_clipplanes[1].rightedge = qtrue;
     view_clipplanes[1].leftedge =
-        view_clipplanes[2].leftedge =
-            view_clipplanes[3].leftedge = qfalse;
+    view_clipplanes[2].leftedge =
+    view_clipplanes[3].leftedge = qfalse;
     view_clipplanes[0].rightedge =
-        view_clipplanes[2].rightedge =
-            view_clipplanes[3].rightedge = qfalse;
+    view_clipplanes[2].rightedge =
+    view_clipplanes[3].rightedge = qfalse;
 
     r_refdef.xOrigin = XCENTERING;
     r_refdef.yOrigin = YCENTERING;
@@ -572,25 +555,25 @@ Find the first node that splits the given box
 static mnode_t *R_FindTopnode(vec3_t mins, vec3_t maxs)
 {
     int         sides;
-    mnode_t *node;
+    mnode_t     *node;
 
     node = r_worldmodel->nodes;
 
     while (node->visframe == r_visframecount) {
         if (!node->plane) {
             if (((mleaf_t *)node)->contents != CONTENTS_SOLID)
-                return node; // we've reached a non-solid leaf, so it's
-            //  visible and not BSP clipped
+                return node;    // we've reached a non-solid leaf, so it's
+                                // visible and not BSP clipped
             return NULL;    // in solid, so not visible
         }
 
         sides = BoxOnPlaneSideFast(mins, maxs, node->plane);
 
-        if (sides == 3)
+        if (sides == BOX_INTERSECTS)
             return node;    // this is the splitter
 
         // not split yet; recurse down the contacted side
-        if (sides & 1)
+        if (sides & BOX_INFRONT)
             node = node->children[0];
         else
             node = node->children[1];
@@ -608,7 +591,7 @@ Returns an axially aligned box that contains the input box at the given rotation
 =============
 */
 static void RotatedBBox(vec3_t mins, vec3_t maxs, vec3_t angles,
-                 vec3_t tmins, vec3_t tmaxs)
+                        vec3_t tmins, vec3_t tmaxs)
 {
     vec3_t  tmp, v;
     int     i, j;
@@ -774,7 +757,6 @@ static void R_EdgeDrawing(void)
     }
 
     R_BeginEdgeFrame();
-
 
     R_RenderWorld();
 

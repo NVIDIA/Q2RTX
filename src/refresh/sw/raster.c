@@ -338,7 +338,7 @@ void R_RenderFace(mface_t *fa, int clipflags)
     qboolean    makeleftedge, makerightedge;
 
     // translucent surfaces are not drawn by the edge renderer
-    if (fa->texinfo->c.flags & (SURF_TRANS33 | SURF_TRANS66)) {
+    if (fa->texinfo->c.flags & SURF_TRANS_MASK) {
         fa->next = r_alpha_surfaces;
         r_alpha_surfaces = fa;
         return;
@@ -485,7 +485,7 @@ void R_RenderBmodelFace(bedge_t *pedges, mface_t *psurf)
     clipplane_t *pclip;
     qboolean    makeleftedge, makerightedge;
 
-    if (psurf->texinfo->c.flags & (SURF_TRANS33 | SURF_TRANS66)) {
+    if (psurf->texinfo->c.flags & SURF_TRANS_MASK) {
         psurf->next = r_alpha_surfaces;
         r_alpha_surfaces = psurf;
         return;

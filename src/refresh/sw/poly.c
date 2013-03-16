@@ -21,13 +21,13 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define AFFINE_SPANLET_SIZE_BITS 4
 
 typedef struct {
-    byte     *pbase, *pdest;
-    short    *pz;
-    fixed16_t s, t;
-    fixed16_t sstep, tstep;
-    int       izi, izistep, izistep_times_2;
-    int       spancount;
-    unsigned  u, v;
+    byte        *pbase, *pdest;
+    short       *pz;
+    fixed16_t   s, t;
+    fixed16_t   sstep, tstep;
+    int         izi, izistep;
+    int         spancount;
+    unsigned    u, v;
 } spanletvars_t;
 
 static spanletvars_t s_spanletvars;
@@ -239,7 +239,6 @@ static int R_ClipPolyFace(int nump, clipplane_t *pclipplane)
 /*
 ** R_PolygonDrawSpans
 */
-// PGM - iswater was qboolean. changed to allow passing more flags
 static void R_PolygonDrawSpans(espan_t *pspan, int iswater)
 {
     int         count;
@@ -249,12 +248,10 @@ static void R_PolygonDrawSpans(espan_t *pspan, int iswater)
 
     s_spanletvars.pbase = cacheblock;
 
-//PGM
     if (iswater & SURF_WARP)
         r_turb_turb = sintable + ((int)(r_newrefdef.time * SPEED) & (CYCLE - 1));
     else if (iswater & SURF_FLOWING)
         r_turb_turb = blanktable;
-//PGM
 
     sdivzspanletstepu = d_sdivzstepu * AFFINE_SPANLET_SIZE;
     tdivzspanletstepu = d_tdivzstepu * AFFINE_SPANLET_SIZE;
@@ -262,7 +259,6 @@ static void R_PolygonDrawSpans(espan_t *pspan, int iswater)
 
 // we count on FP exceptions being turned off to avoid range problems
     s_spanletvars.izistep = (int)(d_zistepu * 0x8000 * 0x10000);
-    s_spanletvars.izistep_times_2 = s_spanletvars.izistep * 2;
 
     s_spanletvars.pz = 0;
 
@@ -329,8 +325,8 @@ static void R_PolygonDrawSpans(espan_t *pspan, int iswater)
                         snext = bbextents;
                     else if (snext < AFFINE_SPANLET_SIZE)
                         snext = AFFINE_SPANLET_SIZE;    // prevent round-off error on <0 steps from
-                    //  from causing overstepping & running off the
-                    //  edge of the texture
+                                                        // from causing overstepping & running off the
+                                                        // edge of the texture
 
                     if (tnext > bbextentt)
                         tnext = bbextentt;
@@ -358,8 +354,8 @@ static void R_PolygonDrawSpans(espan_t *pspan, int iswater)
                         snext = bbextents;
                     else if (snext < AFFINE_SPANLET_SIZE)
                         snext = AFFINE_SPANLET_SIZE;    // prevent round-off error on <0 steps from
-                    //  from causing overstepping & running off the
-                    //  edge of the texture
+                                                        // from causing overstepping & running off the
+                                                        // edge of the texture
 
                     if (tnext > bbextentt)
                         tnext = bbextentt;
@@ -534,7 +530,6 @@ static void R_PolygonScanRightEdge(void)
 /*
 ** R_ClipAndDrawPoly
 */
-// PGM - isturbulent was qboolean. changed to int to allow passing more flags
 static void R_ClipAndDrawPoly(float alpha, int isturbulent, int textured)
 {
     emitpoint_t outverts[MAXWORKINGVERTS + 3], *pout;
@@ -612,7 +607,7 @@ static void R_BuildPolygonFromSurface(mface_t *fa)
     int         i, lnumverts;
     msurfedge_t *surfedge;
     float       *vec;
-    vec5_t     *pverts;
+    vec5_t      *pverts;
     float       tmins[2] = { 0, 0 };
 
     r_polydesc.nump = 0;
@@ -640,14 +635,11 @@ static void R_BuildPolygonFromSurface(mface_t *fa)
         VectorInverse(r_polydesc.vpn);
     }
 
-// PGM 09/16/98
     if (fa->texinfo->c.flags & (SURF_WARP | SURF_FLOWING)) {
         r_polydesc.pixels       = fa->texinfo->image->pixels[0];
         r_polydesc.pixel_width  = fa->texinfo->image->width;
         r_polydesc.pixel_height = fa->texinfo->image->height;
-    }
-// PGM 09/16/98
-    else {
+    } else {
         surfcache_t *scache;
 
         scache = D_CacheSurface(fa, 0);
@@ -715,7 +707,6 @@ static void R_PolygonCalculateGradients(void)
 **
 ** This should NOT be called externally since it doesn't do clipping!
 */
-// PGM - iswater was qboolean. changed to support passing more flags
 static void R_DrawPoly(int iswater)
 {
     int         i, nump;
@@ -783,20 +774,10 @@ void R_DrawAlphaSurfaces(void)
     while (s) {
         R_BuildPolygonFromSurface(s);
 
-//=======
-//PGM
-//      if (s->texinfo->flags & SURF_TRANS66)
-//          R_ClipAndDrawPoly(0.60f, (s->texinfo->flags & SURF_WARP) != 0, qtrue);
-//      else
-//          R_ClipAndDrawPoly(0.30f, (s->texinfo->flags & SURF_WARP) != 0, qtrue);
-
-        // PGM - pass down all the texinfo flags, not just SURF_WARP.
         if (s->texinfo->c.flags & SURF_TRANS66)
-            R_ClipAndDrawPoly(0.60f, (s->texinfo->c.flags & (SURF_WARP | SURF_FLOWING)), qtrue);
+            R_ClipAndDrawPoly(0.66f, (s->texinfo->c.flags & (SURF_WARP | SURF_FLOWING)), qtrue);
         else
-            R_ClipAndDrawPoly(0.30f, (s->texinfo->c.flags & (SURF_WARP | SURF_FLOWING)), qtrue);
-//PGM
-//=======
+            R_ClipAndDrawPoly(0.33f, (s->texinfo->c.flags & (SURF_WARP | SURF_FLOWING)), qtrue);
 
         s = s->next;
     }

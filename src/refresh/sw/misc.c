@@ -155,6 +155,7 @@ void R_TransformVector(vec3_t in, vec3_t out)
     out[2] = DotProduct(in, vpn);
 }
 
+#if 0
 /*
 ================
 R_TransformPlane
@@ -169,7 +170,7 @@ void R_TransformPlane(cplane_t *p, float *normal, float *dist)
 // TODO: when we have rotating entities, this will need to use the view matrix
     R_TransformVector(p->normal, normal);
 }
-
+#endif
 
 /*
 ===============
@@ -207,7 +208,7 @@ Called every time the vid structure or r_refdef changes.
 Guaranteed to be called before the first refresh
 ===============
 */
-void R_ViewChanged(vrectSoft_t *vr)
+static void R_ViewChanged(vrect_t *vr)
 {
     int     i;
 
@@ -305,7 +306,7 @@ R_SetupFrame
 void R_SetupFrame(void)
 {
     int         i;
-    vrectSoft_t     vrect;
+    vrect_t     vrect;
 
     if (r_fullbright->modified) {
         r_fullbright->modified = qfalse;
@@ -364,7 +365,6 @@ void R_SetupFrame(void)
 
 // clear frame counts
     c_faceclip = 0;
-    d_spanpixcount = 0;
     r_polycount = 0;
     r_drawnpolycount = 0;
     r_wholepolycount = 0;

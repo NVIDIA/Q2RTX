@@ -19,11 +19,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "sw.h"
 
-static finalvert_t      fv[2][8];
-
-void R_AliasProjectAndClipTestFinalVert(finalvert_t *fv);
-
-
 /*
 ================
 R_Alias_clip_z
@@ -153,7 +148,7 @@ static void R_Alias_clip_bottom(finalvert_t *pfv0, finalvert_t *pfv1,
 }
 
 static int R_AliasClip(finalvert_t *in, finalvert_t *out, int flag, int count,
-                       void(*clip)(finalvert_t *pfv0, finalvert_t *pfv1, finalvert_t *out))
+                       void (*clip)(finalvert_t *pfv0, finalvert_t *pfv1, finalvert_t *out))
 {
     int         i, j, k;
     int         flags, oldflags;
@@ -196,6 +191,7 @@ R_AliasClipTriangle
 */
 void R_AliasClipTriangle(finalvert_t *index0, finalvert_t *index1, finalvert_t *index2)
 {
+    finalvert_t     fv[2][8];
     int             i, k, pingpong;
     unsigned        clipflags;
 
