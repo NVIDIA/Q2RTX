@@ -232,8 +232,6 @@ typedef struct maliasmesh_s {
  * gl_surf.c
  *
  */
-#define DLIGHT_CUTOFF       64
-
 #define LIGHT_STYLE(surf, i) \
     &glr.fd.lightstyles[gl_static.lightstylemap[(surf)->styles[i]]]
 

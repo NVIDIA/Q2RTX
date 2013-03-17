@@ -472,8 +472,6 @@ static void R_AliasSetupSkin(void)
 /*
 ================
 R_AliasSetupLighting
-
-  FIXME: put lighting into tables
 ================
 */
 static void R_AliasSetupLighting(void)
@@ -484,12 +482,10 @@ static void R_AliasSetupLighting(void)
 
     // all components of light should be identical in software
     if (currententity->flags & RF_FULLBRIGHT) {
-        for (i = 0; i < 3; i++)
-            light[i] = 1.0;
+        VectorSet(light, 1, 1, 1);
     } else {
         R_LightPoint(currententity->origin, light);
     }
-
 
     if (currententity->flags & RF_MINLIGHT) {
         for (i = 0; i < 3; i++)
@@ -510,6 +506,9 @@ static void R_AliasSetupLighting(void)
                 light[i] = min;
         }
     }
+
+    for (i = 0; i < 3; i++)
+        clamp(light[i], 0, 1);
 
     j = LUMINANCE(light[0], light[1], light[2]) * 256;
 

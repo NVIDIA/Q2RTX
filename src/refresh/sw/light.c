@@ -32,66 +32,68 @@ DYNAMIC LIGHTS
 
 /*
 =============
-R_MarkLights
+R_MarkLights_r
 =============
 */
-static void R_MarkLights(dlight_t *light, int bit, mnode_t *node)
+static void R_MarkLights_r(mnode_t *node, dlight_t *light,
+                           vec3_t transformed, int bit)
 {
-    cplane_t    *splitplane;
     float       dist;
     mface_t     *surf;
     int         i;
 
-    if (!node->plane)
-        return;
-
-    splitplane = node->plane;
-    dist = DotProduct(light->origin, splitplane->normal) - splitplane->dist;
-
-    i = light->intensity;
-    if (i < 0)
-        i = -i;
-
-    if (dist > i) {
-        R_MarkLights(light, bit, node->children[0]);
-        return;
-    }
-    if (dist < -i) {
-        R_MarkLights(light, bit, node->children[1]);
-        return;
-    }
-
-// mark the polygons
-    surf = node->firstface;
-    for (i = 0; i < node->numfaces; i++, surf++) {
-        if (surf->dlightframe != r_dlightframecount) {
-            surf->dlightbits = 0;
-            surf->dlightframe = r_dlightframecount;
+    while (node->plane) {
+        dist = PlaneDiffFast(transformed, node->plane);
+        if (dist > light->intensity - DLIGHT_CUTOFF) {
+            node = node->children[0];
+            continue;
         }
-        surf->dlightbits |= bit;
+        if (dist < -light->intensity + DLIGHT_CUTOFF) {
+            node = node->children[1];
+            continue;
+        }
+
+        // mark the polygons
+        surf = node->firstface;
+        for (i = 0; i < node->numfaces; i++, surf++) {
+            if (surf->dlightframe != r_dlightframecount) {
+                surf->dlightbits = 0;
+                surf->dlightframe = r_dlightframecount;
+            }
+            surf->dlightbits |= bit;
+        }
+
+        R_MarkLights_r(node->children[0], light, transformed, bit);
+        node = node->children[1];
     }
-
-    R_MarkLights(light, bit, node->children[0]);
-    R_MarkLights(light, bit, node->children[1]);
 }
-
 
 /*
 =============
-R_PushDlights
+R_MarkLights
 =============
 */
-void R_PushDlights(mnode_t *headnode)
+void R_MarkLights(mnode_t *headnode)
 {
-    int     i;
-    dlight_t    *l;
+    dlight_t    *light;
+    vec3_t      transformed;
+    int         i;
 
     r_dlightframecount = r_framecount;
-    for (i = 0, l = r_newrefdef.dlights; i < r_newrefdef.num_dlights; i++, l++) {
-        R_MarkLights(l, 1 << i, headnode);
+    for (i = 0, light = r_newrefdef.dlights; i < r_newrefdef.num_dlights; i++, light++) {
+        if (insubmodel) {
+            vec3_t      temp;
+
+            VectorSubtract(light->origin, currententity->origin, temp);
+            transformed[0] = DotProduct(temp, entity_rotation[0]);
+            transformed[1] = DotProduct(temp, entity_rotation[1]);
+            transformed[2] = DotProduct(temp, entity_rotation[2]);
+        } else {
+            VectorCopy(light->origin, transformed);
+        }
+        R_MarkLights_r(headnode, light, transformed, 1 << i);
     }
 }
-
 
 /*
 =============================================================================
@@ -101,14 +103,17 @@ LIGHT SAMPLING
 =============================================================================
 */
 
-static qboolean RecursiveLightPoint(vec3_t start, vec3_t color)
+static qboolean _R_LightPoint(vec3_t start, vec3_t color)
 {
     mface_t         *surf;
-    int             smax, tmax, size;
-    int             ds, dt;
+    int             s, t, maps;
     byte            *lightmap;
-    float           *scales;
-    int             maps;
+    byte            *b1, *b2, *b3, *b4;
+    int             fracu, fracv;
+    int             w1, w2, w3, w4;
+    byte            temp[3];
+    int             smax, tmax, size;
+    float           scale;
     vec3_t          end;
     lightpoint_t    lightpoint;
 
@@ -122,21 +127,39 @@ static qboolean RecursiveLightPoint(vec3_t start, vec3_t color)
     if (!surf)
         return qfalse;
 
-    ds = lightpoint.s >> 4;
-    dt = lightpoint.t >> 4;
+    fracu = lightpoint.s & 15;
+    fracv = lightpoint.t & 15;
+
+    // compute weights of lightmap blocks
+    w1 = (16 - fracu) * (16 - fracv);
+    w2 = fracu * (16 - fracv);
+    w3 = fracu * fracv;
+    w4 = (16 - fracu) * fracv;
+
+    s = lightpoint.s >> 4;
+    t = lightpoint.t >> 4;
 
     smax = S_MAX(surf);
     tmax = T_MAX(surf);
     size = smax * tmax * LIGHTMAP_BYTES;
 
+    // add all the lightmaps with bilinear filtering
     lightmap = surf->lightmap;
-    lightmap += dt * smax * LIGHTMAP_BYTES + ds * LIGHTMAP_BYTES;
-
     for (maps = 0; maps < surf->numstyles; maps++) {
-        scales = r_newrefdef.lightstyles[surf->styles[maps]].rgb;
-        color[0] += lightmap[0] * scales[0] * (1.0f / 255);
-        color[1] += lightmap[1] * scales[1] * (1.0f / 255);
-        color[2] += lightmap[2] * scales[2] * (1.0f / 255);
+        b1 = &lightmap[LIGHTMAP_BYTES * ((t + 0) * smax + (s + 0))];
+        b2 = &lightmap[LIGHTMAP_BYTES * ((t + 0) * smax + (s + 1))];
+        b3 = &lightmap[LIGHTMAP_BYTES * ((t + 1) * smax + (s + 1))];
+        b4 = &lightmap[LIGHTMAP_BYTES * ((t + 1) * smax + (s + 0))];
+
+        temp[0] = (w1 * b1[0] + w2 * b2[0] + w3 * b3[0] + w4 * b4[0]) >> 8;
+        temp[1] = (w1 * b1[1] + w2 * b2[1] + w3 * b3[1] + w4 * b4[1]) >> 8;
+        temp[2] = (w1 * b1[2] + w2 * b2[2] + w3 * b3[2] + w4 * b4[2]) >> 8;
+
+        scale = r_newrefdef.lightstyles[surf->styles[maps]].white * (1.0f / 255);
+        color[0] += temp[0] * scale;
+        color[1] += temp[1] * scale;
+        color[2] += temp[2] * scale;
+
         lightmap += size;
     }
 
@@ -148,21 +171,20 @@ static qboolean RecursiveLightPoint(vec3_t start, vec3_t color)
 R_LightPoint
 ===============
 */
-void R_LightPoint(vec3_t p, vec3_t color)
+void R_LightPoint(vec3_t point, vec3_t color)
 {
     int         lnum;
     dlight_t    *dl;
-    vec3_t      dist;
     float       add;
 
-    if (!r_worldmodel || !r_worldmodel->lightmap || !r_newrefdef.lightstyles) {
+    if (!r_worldmodel || !r_worldmodel->lightmap || r_fullbright->integer) {
         VectorSet(color, 1, 1, 1);
         return;
     }
 
     VectorClear(color);
 
-    if (!RecursiveLightPoint(p, color))
+    if (!_R_LightPoint(point, color))
         VectorSet(color, 1, 1, 1);
 
     //
@@ -170,12 +192,9 @@ void R_LightPoint(vec3_t p, vec3_t color)
     //
     for (lnum = 0; lnum < r_newrefdef.num_dlights; lnum++) {
         dl = &r_newrefdef.dlights[lnum];
-        VectorSubtract(p,
-                       dl->origin,
-                       dist);
-        add = dl->intensity - VectorLength(dist);
-        add *= (1.0 / 256);
+        add = dl->intensity - DLIGHT_CUTOFF - Distance(point, dl->origin);
         if (add > 0) {
+            add *= (1.0f / 255);
             VectorMA(color, add, dl->color, color);
         }
     }
@@ -194,47 +213,45 @@ R_AddDynamicLights
 */
 static void R_AddDynamicLights(void)
 {
-    mface_t *surf;
-    int         lnum;
-    int         sd, td;
-    float       dist, rad, minlight;
-    vec3_t      impact, local;
-    int         s, t;
-    int         i;
-    int         smax, tmax;
-    mtexinfo_t  *tex;
-    dlight_t    *dl;
-    int         negativeLight;
-    blocklight_t *block;
+    mface_t         *surf;
+    dlight_t        *light;
+    mtexinfo_t      *tex;
+    vec3_t          transformed, impact;
+    int             local[2];
+    vec_t           dist, rad, minlight, scale, frac;
+    blocklight_t    *block;
+    int             i, smax, tmax, s, t, sd, td;
 
     surf = r_drawsurf.surf;
     smax = S_MAX(surf);
     tmax = T_MAX(surf);
     tex = surf->texinfo;
 
-    for (lnum = 0; lnum < r_newrefdef.num_dlights; lnum++) {
-        if (!(surf->dlightbits & (1 << lnum)))
-            continue;       // not lit by this light
-
-        dl = &r_newrefdef.dlights[lnum];
-        rad = dl->intensity;
-
-        negativeLight = 0;
-        if (rad < 0) {
-            negativeLight = 1;
-            rad = -rad;
-        }
-
-        dist = PlaneDiffFast(dl->origin, surf->plane);
-        rad -= fabs(dist);
-        minlight = 32;      // dl->minlight;
-        if (rad < minlight)
+    for (i = 0; i < r_newrefdef.num_dlights; i++) {
+        if (!(surf->dlightbits & (1 << i)))
             continue;
-        minlight = rad - minlight;
 
-        for (i = 0; i < 3; i++) {
-            impact[i] = dl->origin[i] - surf->plane->normal[i] * dist;
+        light = &r_newrefdef.dlights[i];
+
+        if (currententity && currententity != &r_worldentity) {
+            vec3_t      temp;
+
+            VectorSubtract(light->origin, currententity->origin, temp);
+            transformed[0] = DotProduct(temp, entity_rotation[0]);
+            transformed[1] = DotProduct(temp, entity_rotation[1]);
+            transformed[2] = DotProduct(temp, entity_rotation[2]);
+        } else {
+            VectorCopy(light->origin, transformed);
         }
+
+        dist = PlaneDiffFast(transformed, surf->plane);
+        rad = light->intensity - fabs(dist);
+        if (rad < DLIGHT_CUTOFF)
+            continue;
+        minlight = rad - DLIGHT_CUTOFF * 0.8f;
+        scale = rad / minlight;
+
+        VectorMA(transformed, -dist, surf->plane->normal, impact);
 
         local[0] = DotProduct(impact, tex->axis[0]) + tex->offset[0];
         local[1] = DotProduct(impact, tex->axis[1]) + tex->offset[1];
@@ -242,47 +259,26 @@ static void R_AddDynamicLights(void)
         local[0] -= surf->texturemins[0];
         local[1] -= surf->texturemins[1];
 
+        block = blocklights;
         for (t = 0; t < tmax; t++) {
-            td = local[1] - t * 16;
-            if (td < 0)
-                td = -td;
+            td = abs(local[1] - (t << 4));
             for (s = 0; s < smax; s++) {
-                sd = local[0] - s * 16;
-                if (sd < 0)
-                    sd = -sd;
-                /*if (sd > td)
-                    dist = sd + (td>>1);
+                sd = abs(local[0] - (s << 4));
+                if (sd > td)
+                    dist = sd + (td >> 1);
                 else
-                    dist = td + (sd>>1);*/
-                dist = sqrt(sd * sd + td * td);
-                block = blocklights + t * smax * LIGHTMAP_BYTES + s * LIGHTMAP_BYTES;
-                if (!negativeLight) {
-                    if (dist < minlight) {
-                        block[0] += (rad - dist) * dl->color[0] * 256;
-                        block[1] += (rad - dist) * dl->color[1] * 256;
-                        block[2] += (rad - dist) * dl->color[2] * 256;
-                    }
-                } else {
-                    if (dist < minlight) {
-                        block[0] -= (rad - dist) * dl->color[0] * 256;
-                        block[1] -= (rad - dist) * dl->color[1] * 256;
-                        block[2] -= (rad - dist) * dl->color[2] * 256;
-                    }
-                    if (block[0] < minlight) {
-                        block[0] = minlight;
-                    }
-                    if (block[1] < minlight) {
-                        block[1] = minlight;
-                    }
-                    if (block[2] < minlight) {
-                        block[2] = minlight;
-                    }
+                    dist = td + (sd >> 1);
+                if (dist < minlight) {
+                    frac = (rad - dist * scale) * sw_modulate->value * 256;
+                    block[0] += light->color[0] * frac;
+                    block[1] += light->color[1] * frac;
+                    block[2] += light->color[2] * frac;
                 }
+                block += LIGHTMAP_BYTES;
             }
         }
     }
 }
-
 
 /*
 ===============
@@ -293,45 +289,45 @@ Combine and scale multiple lightmaps into the 8.8 format in blocklights
 */
 void R_BuildLightMap(void)
 {
-    int         smax, tmax;
-    int         i, size;
-    byte        *lightmap;
-    int         maps;
-    mface_t     *surf;
-    blocklight_t *dst;
+    int             i, maps, smax, tmax, size;
+    byte            *lightmap;
+    mface_t         *surf;
+    blocklight_t    *block;
 
     surf = r_drawsurf.surf;
-
     smax = S_MAX(surf);
     tmax = T_MAX(surf);
     size = smax * tmax;
-    if (size > MAX_BLOCKLIGHTS) {
+
+    if (size > MAX_BLOCKLIGHTS)
         Com_Error(ERR_DROP, "R_BuildLightMap: surface blocklights size %i > %i", size, MAX_BLOCKLIGHTS);
-    }
 
-// clear to no light
-    memset(blocklights, 0, sizeof(blocklights));
-
-    if (r_fullbright->integer || !r_worldmodel->lightmap) {
+    if (r_fullbright->integer || !surf->lightmap) {
+        block = blocklights;
+        for (i = 0; i < size; i++) {
+            block[0] = block[1] = block[2] = 0xffff;
+            block += LIGHTMAP_BYTES;
+        }
         return;
     }
 
+// clear to no light
+    memset(blocklights, 0, sizeof(blocklights[0]) * size * LIGHTMAP_BYTES);
+
 // add all the lightmaps
     lightmap = surf->lightmap;
-    if (lightmap) {
-        for (maps = 0; maps < surf->numstyles; maps++) {
-            fixed8_t        scale;
+    for (maps = 0; maps < surf->numstyles; maps++) {
+        fixed8_t        scale;
 
-            dst = blocklights;
-            scale = r_drawsurf.lightadj[maps];  // 8.8 fraction
-            for (i = 0; i < size; i++) {
-                blocklights[i * LIGHTMAP_BYTES + 0] += lightmap[0] * scale;
-                blocklights[i * LIGHTMAP_BYTES + 1] += lightmap[1] * scale;
-                blocklights[i * LIGHTMAP_BYTES + 2] += lightmap[2] * scale;
+        block = blocklights;
+        scale = r_drawsurf.lightadj[maps];  // 8.8 fraction
+        for (i = 0; i < size; i++) {
+            block[0] += lightmap[0] * scale;
+            block[1] += lightmap[1] * scale;
+            block[2] += lightmap[2] * scale;
 
-                lightmap += LIGHTMAP_BYTES;
-                dst += LIGHTMAP_BYTES;
-            }
+            lightmap += LIGHTMAP_BYTES;
+            block += LIGHTMAP_BYTES;
         }
     }
 
@@ -340,7 +336,45 @@ void R_BuildLightMap(void)
         R_AddDynamicLights();
 
 // bound
-    for (i = 0; i < size * LIGHTMAP_BYTES; i++)
-        clamp(blocklights[i], 255, 65535);
+    block = blocklights;
+    for (i = 0; i < size; i++) {
+        blocklight_t    r, g, b, max;
+
+        r = block[0];
+        g = block[1];
+        b = block[2];
+
+        // catch negative lights
+        if (r < 255)
+            r = 255;
+        if (g < 255)
+            g = 255;
+        if (b < 255)
+            b = 255;
+
+        // determine the brightest of the three color components
+        max = g;
+        if (r > max)
+            max = r;
+        if (b > max)
+            max = b;
+
+        // rescale all the color components if the intensity of the greatest
+        // channel exceeds 1.0
+        if (max > 65535) {
+            float   y;
+
+            y = 65535.0f / max;
+            r *= y;
+            g *= y;
+            b *= y;
+        }
+
+        block[0] = r;
+        block[1] = g;
+        block[2] = b;
+
+        block += LIGHTMAP_BYTES;
+    }
 }
 

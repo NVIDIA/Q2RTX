@@ -29,7 +29,7 @@ vec3_t          modelorg;       // modelorg is the viewpoint reletive to
 vec3_t          r_entorigin;    // the currently rendering entity in world
                                 // coordinates
 
-static float    entity_rotation[3][3];
+vec3_t          entity_rotation[3];
 
 int             r_currentbkey;
 

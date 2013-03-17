@@ -705,7 +705,7 @@ static void R_DrawBEntitiesOnList(void)
         R_RotateBmodel();
 
         // calculate dynamic lighting for bmodel
-        R_PushDlights(model->headnode);
+        R_MarkLights(model->headnode);
 
         if (topnode->plane) {
             // not a leaf; has to be clipped to the world BSP
@@ -839,7 +839,7 @@ void R_RenderFrame(refdef_t *fd)
     R_MarkLeaves();     // done here so we know if we're in water
 
     if (r_worldmodel)
-        R_PushDlights(r_worldmodel->nodes);
+        R_MarkLights(r_worldmodel->nodes);
 
     R_EdgeDrawing();
 

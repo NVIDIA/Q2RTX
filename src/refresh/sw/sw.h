@@ -444,6 +444,7 @@ extern model_t      *currentmodel;
 extern entity_t     *currententity;
 extern vec3_t       modelorg;
 extern vec3_t       r_entorigin;
+extern vec3_t       entity_rotation[3];
 
 extern float        verticalFieldOfView;
 extern float        xOrigin, yOrigin;
@@ -475,7 +476,7 @@ void R_DrawSolidClippedSubmodelPolygons(mmodel_t *pmodel, mnode_t *topnode);
 void R_AliasDrawModel(void);
 void R_BeginEdgeFrame(void);
 void R_ScanEdges(void);
-void R_PushDlights(mnode_t *headnode);
+void R_MarkLights(mnode_t *headnode);
 
 void R_RotateBmodel(void);
 
