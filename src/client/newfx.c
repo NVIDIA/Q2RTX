@@ -19,44 +19,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "client.h"
 
-/*
-======
-vectoangles2 - this is duplicated in the game DLL, but I need it heref.
-======
-*/
-void vectoangles2(vec3_t value1, vec3_t angles)
-{
-    float   forward;
-    float   yaw, pitch;
-
-    if (value1[1] == 0 && value1[0] == 0) {
-        yaw = 0;
-        if (value1[2] > 0)
-            pitch = 90;
-        else
-            pitch = 270;
-    } else {
-        if (value1[0])
-            yaw = atan2(value1[1], value1[0]) * 180 / M_PI;
-        else if (value1[1] > 0)
-            yaw = 90;
-        else
-            yaw = 270;
-
-        if (yaw < 0)
-            yaw += 360;
-
-        forward = sqrt(value1[0] * value1[0] + value1[1] * value1[1]);
-        pitch = atan2(value1[2], forward) * 180 / M_PI;
-        if (pitch < 0)
-            pitch += 360;
-    }
-
-    angles[PITCH] = -pitch;
-    angles[YAW] = yaw;
-    angles[ROLL] = 0;
-}
-
 #if USE_DLIGHTS
 void CL_Flashlight(int ent, vec3_t pos)
 {

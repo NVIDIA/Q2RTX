@@ -21,6 +21,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define NUMVERTEXNORMALS    162
 
+void vectoangles2(const vec3_t value1, vec3_t angles);
+
+void MakeNormalVectors(const vec3_t forward, vec3_t right, vec3_t up);
+
 extern const vec3_t bytedirs[NUMVERTEXNORMALS];
 
 int DirToByte(const vec3_t dir);
@@ -60,5 +64,10 @@ static inline vec_t PlaneDiffFast(vec3_t v, cplane_t *p)
     // slow generic case
     return PlaneDiff(v, p);
 }
+
+void SetupRotationMatrix(vec3_t matrix[3], const vec3_t dir, float degrees);
+void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t point, float degrees);
+void ProjectPointOnPlane(vec3_t dst, const vec3_t p, const vec3_t normal);
+void PerpendicularVector(vec3_t dst, const vec3_t src);
 
 #endif // MATH_H

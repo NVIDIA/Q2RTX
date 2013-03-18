@@ -264,38 +264,6 @@ void R_ClearSkyBox(void)
     skyfaces = 0;
 }
 
-static void SkyRotate(void)
-{
-    vec_t angle, s, c, one_c, xx, yy, zz, xy, yz, zx, xs, ys, zs;
-
-    angle = DEG2RAD(glr.fd.time * skyrotate);
-    s = sin(angle);
-    c = cos(angle);
-    one_c = 1 - c;
-
-    xx = skyaxis[0] * skyaxis[0];
-    yy = skyaxis[1] * skyaxis[1];
-    zz = skyaxis[2] * skyaxis[2];
-    xy = skyaxis[0] * skyaxis[1];
-    yz = skyaxis[1] * skyaxis[2];
-    zx = skyaxis[2] * skyaxis[0];
-    xs = skyaxis[0] * s;
-    ys = skyaxis[1] * s;
-    zs = skyaxis[2] * s;
-
-    skymatrix[0][0] = (one_c * xx) + c;
-    skymatrix[0][1] = (one_c * xy) - zs;
-    skymatrix[0][2] = (one_c * zx) + ys;
-
-    skymatrix[1][0] = (one_c * xy) + zs;
-    skymatrix[1][1] = (one_c * yy) + c;
-    skymatrix[1][2] = (one_c * yz) - xs;
-
-    skymatrix[2][0] = (one_c * zx) - ys;
-    skymatrix[2][1] = (one_c * yz) + xs;
-    skymatrix[2][2] = (one_c * zz) + c;
-}
-
 static void MakeSkyVec(float s, float t, int axis, vec_t *out)
 {
     vec3_t  b, v;
@@ -366,7 +334,7 @@ void R_DrawSkyBox(void)
             skymaxs[1][i] = 1;
         }
 
-        SkyRotate();
+        SetupRotationMatrix(skymatrix, skyaxis, glr.fd.time * skyrotate);
     }
 
     GL_StateBits(GLS_TEXTURE_REPLACE);

@@ -19,9 +19,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "client.h"
 
-void MakeNormalVectors(vec3_t forward, vec3_t right, vec3_t up);
-void vectoangles2(vec3_t value1, vec3_t angles);
-
 qhandle_t   cl_sfx_ric1;
 qhandle_t   cl_sfx_ric2;
 qhandle_t   cl_sfx_ric3;

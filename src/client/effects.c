@@ -1354,22 +1354,6 @@ void CL_DiminishingTrail(vec3_t start, vec3_t end, centity_t *old, int flags)
     }
 }
 
-void MakeNormalVectors(vec3_t forward, vec3_t right, vec3_t up)
-{
-    float       d;
-
-    // this rotate and negat guarantees a vector
-    // not colinear with the original
-    right[1] = -forward[0];
-    right[2] = forward[1];
-    right[0] = forward[2];
-
-    d = DotProduct(right, forward);
-    VectorMA(right, -d, forward, right);
-    VectorNormalize(right);
-    CrossProduct(right, forward, up);
-}
-
 /*
 ===============
 CL_RocketTrail

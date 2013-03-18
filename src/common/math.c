@@ -19,6 +19,64 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "shared/shared.h"
 #include "common/math.h"
 
+#if USE_CLIENT
+
+/*
+======
+vectoangles2 - this is duplicated in the game DLL, but I need it here.
+======
+*/
+void vectoangles2(const vec3_t value1, vec3_t angles)
+{
+    float   forward;
+    float   yaw, pitch;
+
+    if (value1[1] == 0 && value1[0] == 0) {
+        yaw = 0;
+        if (value1[2] > 0)
+            pitch = 90;
+        else
+            pitch = 270;
+    } else {
+        if (value1[0])
+            yaw = atan2(value1[1], value1[0]) * 180 / M_PI;
+        else if (value1[1] > 0)
+            yaw = 90;
+        else
+            yaw = 270;
+
+        if (yaw < 0)
+            yaw += 360;
+
+        forward = sqrt(value1[0] * value1[0] + value1[1] * value1[1]);
+        pitch = atan2(value1[2], forward) * 180 / M_PI;
+        if (pitch < 0)
+            pitch += 360;
+    }
+
+    angles[PITCH] = -pitch;
+    angles[YAW] = yaw;
+    angles[ROLL] = 0;
+}
+
+void MakeNormalVectors(const vec3_t forward, vec3_t right, vec3_t up)
+{
+    float       d;
+
+    // this rotate and negate guarantees a vector
+    // not colinear with the original
+    right[1] = -forward[0];
+    right[2] = forward[1];
+    right[0] = forward[2];
+
+    d = DotProduct(right, forward);
+    VectorMA(right, -d, forward, right);
+    VectorNormalize(right);
+    CrossProduct(right, forward, up);
+}
+
+#endif  // USE_CLIENT
+
 const vec3_t bytedirs[NUMVERTEXNORMALS] = {
     {-0.525731, 0.000000, 0.850651}, 
     {-0.442863, 0.238856, 0.864188}, 
@@ -250,6 +308,7 @@ void SetPlaneSignbits(cplane_t *plane)
     if (plane->normal[2] < 0) {
         bits |= 4;
     }
+
     plane->signbits = bits;
 }
 
@@ -285,3 +344,114 @@ int BoxOnPlaneSide(vec3_t emins, vec3_t emaxs, cplane_t *p)
 
     return sides;
 }
+
+#if USE_REF
+
+/*
+==================
+SetupRotationMatrix
+
+Setup rotation matrix given the normalized direction vector and angle to rotate
+around this vector. Adapted from Mesa 3D implementation of _math_matrix_rotate.
+==================
+*/
+void SetupRotationMatrix(vec3_t matrix[3], const vec3_t dir, float degrees)
+{
+    vec_t   angle, s, c, one_c, xx, yy, zz, xy, yz, zx, xs, ys, zs;
+
+    angle = DEG2RAD(degrees);
+    s = sin(angle);
+    c = cos(angle);
+    one_c = 1.0F - c;
+
+    xx = dir[0] * dir[0];
+    yy = dir[1] * dir[1];
+    zz = dir[2] * dir[2];
+    xy = dir[0] * dir[1];
+    yz = dir[1] * dir[2];
+    zx = dir[2] * dir[0];
+    xs = dir[0] * s;
+    ys = dir[1] * s;
+    zs = dir[2] * s;
+
+    matrix[0][0] = (one_c * xx) + c;
+    matrix[0][1] = (one_c * xy) - zs;
+    matrix[0][2] = (one_c * zx) + ys;
+
+    matrix[1][0] = (one_c * xy) + zs;
+    matrix[1][1] = (one_c * yy) + c;
+    matrix[1][2] = (one_c * yz) - xs;
+
+    matrix[2][0] = (one_c * zx) - ys;
+    matrix[2][1] = (one_c * yz) + xs;
+    matrix[2][2] = (one_c * zz) + c;
+}
+
+#if USE_REF == REF_SOFT
+
+void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t point, float degrees)
+{
+    vec3_t  matrix[3];
+
+    SetupRotationMatrix(matrix, dir, degrees);
+
+    dst[0] = DotProduct(matrix[0], point);
+    dst[1] = DotProduct(matrix[1], point);
+    dst[2] = DotProduct(matrix[2], point);
+}
+
+void ProjectPointOnPlane(vec3_t dst, const vec3_t p, const vec3_t normal)
+{
+    float d;
+    vec3_t n;
+    float inv_denom;
+
+    inv_denom = 1.0F / DotProduct(normal, normal);
+
+    d = DotProduct(normal, p) * inv_denom;
+
+    n[0] = normal[0] * inv_denom;
+    n[1] = normal[1] * inv_denom;
+    n[2] = normal[2] * inv_denom;
+
+    dst[0] = p[0] - d * n[0];
+    dst[1] = p[1] - d * n[1];
+    dst[2] = p[2] - d * n[2];
+}
+
+/*
+** assumes "src" is normalized
+*/
+void PerpendicularVector(vec3_t dst, const vec3_t src)
+{
+    int pos;
+    int i;
+    float minelem = 1.0F;
+    vec3_t tempvec;
+
+    /*
+    ** find the smallest magnitude axially aligned vector
+    */
+    for (pos = 0, i = 0; i < 3; i++) {
+        if (fabs(src[i]) < minelem) {
+            pos = i;
+            minelem = fabs(src[i]);
+        }
+    }
+    tempvec[0] = tempvec[1] = tempvec[2] = 0.0F;
+    tempvec[pos] = 1.0F;
+
+    /*
+    ** project the point onto the plane defined by src
+    */
+    ProjectPointOnPlane(dst, tempvec, src);
+
+    /*
+    ** normalize the result
+    */
+    VectorNormalize(dst);
+}
+
+#endif  // USE_REF == REF_SOFT
+
+#endif  // USE_REF
