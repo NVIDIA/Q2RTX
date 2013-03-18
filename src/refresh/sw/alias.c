@@ -232,9 +232,14 @@ static void R_AliasTransformFinalVerts(int numpoints, finalvert_t *fv, maliasver
         plightnormal = bytedirs[newv->lightnormalindex];
 
         if (currententity->flags & RF_SHELL_MASK) {
-            lerped_vert[0] += plightnormal[0] * POWERSUIT_SCALE;
-            lerped_vert[1] += plightnormal[1] * POWERSUIT_SCALE;
-            lerped_vert[2] += plightnormal[2] * POWERSUIT_SCALE;
+            float   scale;
+
+            scale = (currententity->flags & RF_WEAPONMODEL) ?
+                WEAPONSHELL_SCALE : POWERSUIT_SCALE;
+
+            lerped_vert[0] += plightnormal[0] * scale;
+            lerped_vert[1] += plightnormal[1] * scale;
+            lerped_vert[2] += plightnormal[2] * scale;
         }
 
         fv->xyz[0] = DotProduct(lerped_vert, aliastransform[0]) + aliastransform[0][3];
