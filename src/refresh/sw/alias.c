@@ -33,9 +33,6 @@ fixed8_t        r_aliasblendcolor[3];
 static vec3_t   r_plightvec;
 static vec3_t   r_lerp_frontv, r_lerp_backv, r_lerp_move;
 
-static int      r_ambientlight;
-static float    r_shadelight;
-
 static maliasframe_t    *r_thisframe, *r_lastframe;
 
 static float    aliastransform[3][4];
@@ -224,7 +221,6 @@ static void R_AliasTransformFinalVerts(int numpoints, finalvert_t *fv, maliasver
     int i;
 
     for (i = 0; i < numpoints; i++, fv++, oldv++, newv++) {
-        int         temp;
         float       lightcos;
         const vec_t *plightnormal;
         vec3_t      lerped_vert;
@@ -252,15 +248,7 @@ static void R_AliasTransformFinalVerts(int numpoints, finalvert_t *fv, maliasver
         if (lightcos < 0)
             lightcos *= 0.3f;
 
-        temp = r_ambientlight;
-        temp += (int)(r_shadelight * (lightcos + 1));
-
-        // clamp; because we limited the minimum ambient and shading light, we
-        // don't have to clamp low light, just bright
-        if (temp > 0xffff)
-            temp = 0xffff;
-
-        fv->l = temp;
+        fv->l = 0x8000 + (int)(0x7fff * lightcos);
 
         if (fv->xyz[2] < ALIAS_Z_CLIP_PLANE) {
             fv->flags |= ALIAS_Z_CLIP;
@@ -497,9 +485,10 @@ R_AliasSetupLighting
 */
 static void R_AliasSetupLighting(void)
 {
-    float           lightvec[3] = { -1, 0, 0};
+    float           cp, cy, sp, sy;
+    vec_t           yaw;
     vec3_t          light;
-    int             i, j;
+    int             i;
 
     // all components of light should be identical in software
     if (currententity->flags & RF_FULLBRIGHT) {
@@ -531,15 +520,19 @@ static void R_AliasSetupLighting(void)
     for (i = 0; i < 3; i++)
         clamp(light[i], 0, 1);
 
-    j = LUMINANCE(light[0], light[1], light[2]) * 256;
-
-    r_ambientlight = 0;
-    r_shadelight = j << 8;
+    r_aliasblendcolor[0] = light[0] * 255;
+    r_aliasblendcolor[1] = light[1] * 255;
+    r_aliasblendcolor[2] = light[2] * 255;
 
 // rotate the lighting vector into the model's frame of reference
-    r_plightvec[0] =  DotProduct(lightvec, s_alias_forward);
-    r_plightvec[1] = -DotProduct(lightvec, s_alias_right);
-    r_plightvec[2] =  DotProduct(lightvec, s_alias_up);
+    yaw = -DEG2RAD(currententity->angles[YAW]);
+    cy = cos(yaw);
+    sy = sin(yaw);
+    cp = cos(-M_PI / 4);
+    sp = sin(-M_PI / 4);
+    r_plightvec[0] = cp * cy;
+    r_plightvec[1] = cp * sy;
+    r_plightvec[2] = -sp;
 }
 
 

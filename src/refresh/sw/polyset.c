@@ -378,9 +378,15 @@ void R_PolysetDrawSpans8_Blended(spanpackage_t *pspanpackage)
 
             do {
                 if ((lzi >> 16) >= *lpz) {
-                    tmp[0] = (lptex[0] * llight) >> 16;
-                    tmp[1] = (lptex[1] * llight) >> 16;
-                    tmp[2] = (lptex[2] * llight) >> 16;
+                    tmp[0] = (r_aliasblendcolor[0] * llight) >> 15;
+                    tmp[1] = (r_aliasblendcolor[1] * llight) >> 15;
+                    tmp[2] = (r_aliasblendcolor[2] * llight) >> 15;
+                    if (tmp[0] > 255) tmp[0] = 255;
+                    if (tmp[1] > 255) tmp[1] = 255;
+                    if (tmp[2] > 255) tmp[2] = 255;
+                    tmp[0] = (lptex[0] * tmp[0]) >> 8;
+                    tmp[1] = (lptex[1] * tmp[1]) >> 8;
+                    tmp[2] = (lptex[2] * tmp[2]) >> 8;
                     lpdest[0] = (lpdest[0] * r_alias_one_minus_alpha + tmp[2] * r_alias_alpha) >> 8;
                     lpdest[1] = (lpdest[1] * r_alias_one_minus_alpha + tmp[1] * r_alias_alpha) >> 8;
                     lpdest[2] = (lpdest[2] * r_alias_one_minus_alpha + tmp[0] * r_alias_alpha) >> 8;
@@ -467,6 +473,7 @@ void R_PolysetDrawSpans8_Opaque(spanpackage_t *pspanpackage)
             int     llight;
             int     lzi;
             short   *lpz;
+            int     tmp[3];
 
             lpdest = pspanpackage->pdest;
             lptex = pspanpackage->ptex;
@@ -478,9 +485,15 @@ void R_PolysetDrawSpans8_Opaque(spanpackage_t *pspanpackage)
 
             do {
                 if ((lzi >> 16) >= *lpz) {
-                    lpdest[0] = (lptex[2] * llight) >> 16;
-                    lpdest[1] = (lptex[1] * llight) >> 16;
-                    lpdest[2] = (lptex[0] * llight) >> 16;
+                    tmp[0] = (r_aliasblendcolor[0] * llight) >> 15;
+                    tmp[1] = (r_aliasblendcolor[1] * llight) >> 15;
+                    tmp[2] = (r_aliasblendcolor[2] * llight) >> 15;
+                    if (tmp[0] > 255) tmp[0] = 255;
+                    if (tmp[1] > 255) tmp[1] = 255;
+                    if (tmp[2] > 255) tmp[2] = 255;
+                    lpdest[0] = (lptex[2] * tmp[2]) >> 8;
+                    lpdest[1] = (lptex[1] * tmp[1]) >> 8;
+                    lpdest[2] = (lptex[0] * tmp[0]) >> 8;
                     *lpz = lzi >> 16;
                 }
                 lpdest += VID_BYTES;
