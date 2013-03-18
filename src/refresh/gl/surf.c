@@ -114,40 +114,40 @@ static float blocklights[MAX_BLOCKLIGHTS * 3];
 #if USE_DLIGHTS
 static void add_dynamic_lights(mface_t *surf)
 {
-    dlight_t *light;
-    mtexinfo_t *texinfo;
-    cplane_t *plane;
-    vec3_t point;
-    int local[2];
-    vec_t dist, radius, scale, f;
-    float *bl;
-    int smax, tmax, s, t, sd, td;
-    int i, j, k;
+    dlight_t    *light;
+    mtexinfo_t  *tex;
+    vec3_t      point;
+    int         local[2];
+    vec_t       dist, rad, minlight, scale, frac;
+    float       *bl;
+    int         i, smax, tmax, s, t, sd, td;
 
     smax = S_MAX(surf);
     tmax = T_MAX(surf);
-
-    k = !!gl_dlight_falloff->integer;
-    scale = 1 + 0.1f * k;
+    tex = surf->texinfo;
 
     for (i = 0; i < glr.fd.num_dlights; i++) {
-        if (!(surf->dlightbits & (1 << i))) {
+        if (!(surf->dlightbits & (1 << i)))
             continue;
-        }
 
         light = &glr.fd.dlights[i];
-        plane = surf->plane;
-        dist = PlaneDiffFast(light->transformed, plane);
-        radius = light->intensity * scale - fabs(dist);
-        if (radius < DLIGHT_CUTOFF) {
+        dist = PlaneDiffFast(light->transformed, surf->plane);
+        rad = light->intensity - fabs(dist);
+        if (rad < DLIGHT_CUTOFF)
             continue;
+
+        if (gl_dlight_falloff->integer) {
+            minlight = rad - DLIGHT_CUTOFF * 0.8f;
+            scale = rad / minlight; // fall off from rad to 0
+        } else {
+            minlight = rad - DLIGHT_CUTOFF;
+            scale = 1;              // fall off from rad to minlight
         }
 
-        VectorMA(light->transformed, -dist, plane->normal, point);
+        VectorMA(light->transformed, -dist, surf->plane->normal, point);
 
-        texinfo = surf->texinfo;
-        local[0] = DotProduct(point, texinfo->axis[0]) + texinfo->offset[0];
-        local[1] = DotProduct(point, texinfo->axis[1]) + texinfo->offset[1];
+        local[0] = DotProduct(point, tex->axis[0]) + tex->offset[0];
+        local[1] = DotProduct(point, tex->axis[1]) + tex->offset[1];
 
         local[0] -= surf->texturemins[0];
         local[1] -= surf->texturemins[1];
@@ -157,19 +157,16 @@ static void add_dynamic_lights(mface_t *surf)
             td = abs(local[1] - (t << 4));
             for (s = 0; s < smax; s++) {
                 sd = abs(local[0] - (s << 4));
-                if (sd > td) {
-                    j = sd + (td >> 1);
-                } else {
-                    j = td + (sd >> 1);
+                if (sd > td)
+                    dist = sd + (td >> 1);
+                else
+                    dist = td + (sd >> 1);
+                if (dist < minlight) {
+                    frac = rad - dist * scale;
+                    bl[0] += light->color[0] * frac;
+                    bl[1] += light->color[1] * frac;
+                    bl[2] += light->color[2] * frac;
                 }
-
-                if (j + DLIGHT_CUTOFF < radius) {
-                    f = radius - (j + DLIGHT_CUTOFF * k);
-                    bl[0] += light->color[0] * f;
-                    bl[1] += light->color[1] * f;
-                    bl[2] += light->color[2] * f;
-                }
-
                 bl += 3;
             }
         }

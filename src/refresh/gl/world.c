@@ -213,13 +213,11 @@ static void GL_TransformLights(mmodel_t *model)
 static void GL_AddLights(vec3_t origin, vec3_t color)
 {
     dlight_t *light;
-    vec3_t dir;
     vec_t f;
     int i;
 
     for (i = 0, light = glr.fd.dlights; i < glr.fd.num_dlights; i++, light++) {
-        VectorSubtract(light->origin, origin, dir);
-        f = light->intensity - VectorLength(dir);
+        f = light->intensity - DLIGHT_CUTOFF - Distance(light->origin, origin);
         if (f > 0) {
             f *= (1.0f / 255);
             VectorMA(color, f, light->color, color);
