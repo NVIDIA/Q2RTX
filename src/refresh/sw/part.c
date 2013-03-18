@@ -79,8 +79,8 @@ static void R_DrawParticle(void)
     ** compute addresses of zbuffer, framebuffer, and
     ** compute the Z-buffer reference value.
     */
-    pz = d_pzbuffer + (d_zwidth * v) + u;
-    pdest = d_viewbuffer + d_scantable[v] + u * VID_BYTES;
+    pz = d_zspantable[v] + u;
+    pdest = d_spantable[v] + u * VID_BYTES;
     izi = (int)(zi * 0x8000);
 
     /*
@@ -96,7 +96,7 @@ static void R_DrawParticle(void)
     /*
     ** render the appropriate pixels
     */
-    for (count = pix; count; count--, pz += d_zwidth, pdest += r_screenrowbytes) {
+    for (count = pix; count; count--, pz += d_zwidth, pdest += d_screenrowbytes) {
         for (i = 0; i < pix; i++) {
             if (pz[i] <= izi) {
                 pz[i] = izi;

@@ -334,10 +334,12 @@ void D_DrawZSpans(espan_t *pspans);
 surfcache_t     *D_CacheSurface(mface_t *surface, int miplevel);
 
 extern pixel_t  *d_viewbuffer;
-extern short *d_pzbuffer;
-extern unsigned int d_zrowbytes, d_zwidth;
-extern short    *zspantable[MAXHEIGHT];
-extern int      d_scantable[MAXHEIGHT];
+extern int      d_screenrowbytes;
+extern short    *d_pzbuffer;
+extern int      d_zrowbytes;
+extern int      d_zwidth;
+extern byte     *d_spantable[MAXHEIGHT];
+extern short    *d_zspantable[MAXHEIGHT];
 
 extern int      d_minmip;
 extern float    d_scalemip[3];
@@ -349,7 +351,6 @@ extern oldrefdef_t      r_refdef;
 
 extern int      cachewidth;
 extern pixel_t  *cacheblock;
-extern int      r_screenrowbytes;
 
 extern int      r_drawnpolycount;
 

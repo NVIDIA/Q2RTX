@@ -102,7 +102,7 @@ void D_DrawTurbulent16(espan_t *pspan, int *warptable)
     zi16stepu = d_zistepu * 16;
 
     do {
-        pdest = (byte *)d_viewbuffer + d_scantable[pspan->v] + pspan->u * VID_BYTES;
+        pdest = d_spantable[pspan->v] + pspan->u * VID_BYTES;
 
         count = pspan->count;
 
@@ -237,7 +237,7 @@ void D_DrawSpans16(espan_t *pspan)
     zi16stepu = d_zistepu * 16;
 
     do {
-        pdest = (byte *)d_viewbuffer + d_scantable[pspan->v] + pspan->u * VID_BYTES;
+        pdest = d_spantable[pspan->v] + pspan->u * VID_BYTES;
 
         count = pspan->count;
 
@@ -363,7 +363,7 @@ void D_DrawZSpans(espan_t *pspan)
     izistep = (int)(d_zistepu * 0x8000 * 0x10000);
 
     do {
-        pdest = d_pzbuffer + (d_zwidth * pspan->v) + pspan->u;
+        pdest = d_zspantable[pspan->v] + pspan->u;
 
         count = pspan->count;
 

@@ -531,8 +531,8 @@ static void R_PolysetSetUpAndScanLeftEdge(int *plefttop, int *pleftbottom)
     d_light = plefttop[4];
     d_zi = plefttop[5];
 
-    d_pdest = (byte *)d_viewbuffer + d_scantable[ystart] + plefttop[0] * VID_BYTES;
-    d_pz = d_pzbuffer + ystart * d_zwidth + plefttop[0];
+    d_pdest = d_spantable[ystart] + plefttop[0] * VID_BYTES;
+    d_pz = d_zspantable[ystart] + plefttop[0];
 
     if (height == 1) {
         d_pedgespanpackage->pdest = d_pdest;
@@ -555,7 +555,7 @@ static void R_PolysetSetUpAndScanLeftEdge(int *plefttop, int *pleftbottom)
         d_pzbasestep = d_zwidth + ubasestep;
         d_pzextrastep = d_pzbasestep + 1;
 
-        d_pdestbasestep = r_screenrowbytes + ubasestep * VID_BYTES;
+        d_pdestbasestep = d_screenrowbytes + ubasestep * VID_BYTES;
         d_pdestextrastep = d_pdestbasestep + 1 * VID_BYTES;
 
         // for negative steps in x along left edge, bias toward overflow rather than

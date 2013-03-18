@@ -56,8 +56,6 @@ vec3_t  r_origin;
 //
 oldrefdef_t r_refdef;
 
-int     r_screenrowbytes;
-
 cplane_t    screenedge[4];
 
 //
@@ -123,10 +121,14 @@ fixed16_t   sadjust, tadjust, bbextents, bbextentt;
 
 pixel_t         *cacheblock;
 int             cachewidth;
-pixel_t         *d_viewbuffer;
-short           *d_pzbuffer;
-unsigned int    d_zrowbytes;
-unsigned int    d_zwidth;
+
+pixel_t     *d_viewbuffer;
+int         d_screenrowbytes;
+short       *d_pzbuffer;
+int         d_zrowbytes;
+int         d_zwidth;
+byte        *d_spantable[MAXHEIGHT];
+short       *d_zspantable[MAXHEIGHT];
 
 int     sintable[CYCLE * 2];
 int     intsintable[CYCLE * 2];
@@ -218,6 +220,8 @@ void R_ModeChanged(int width, int height, int flags, int rowbytes, void *pixels)
     R_FreeCaches();
 
     d_pzbuffer = R_Mallocz(vid.width * vid.height * 2);
+    d_zrowbytes = vid.width * 2;
+    d_zwidth = vid.width;
 
     R_InitCaches();
 }

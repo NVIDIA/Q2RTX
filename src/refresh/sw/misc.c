@@ -29,9 +29,6 @@ float           d_scalemip[NUM_MIPS - 1];
 
 static const float  basemip[NUM_MIPS - 1] = {1.0, 0.5 * 0.8, 0.25 * 0.8};
 
-int     d_scantable[MAXHEIGHT];
-short   *zspantable[MAXHEIGHT];
-
 
 /*
 =============
@@ -281,7 +278,7 @@ void R_SetupFrame(void)
         vrect.height = r_newrefdef.height < WARP_HEIGHT ? r_newrefdef.height : WARP_HEIGHT;
 
         d_viewbuffer = r_warpbuffer;
-        r_screenrowbytes = WARP_WIDTH * VID_BYTES;
+        d_screenrowbytes = WARP_WIDTH * VID_BYTES;
     } else {
         vrect.x = r_newrefdef.x;
         vrect.y = r_newrefdef.y;
@@ -289,7 +286,7 @@ void R_SetupFrame(void)
         vrect.height = r_newrefdef.height;
 
         d_viewbuffer = (void *)vid.buffer;
-        r_screenrowbytes = vid.rowbytes;
+        d_screenrowbytes = vid.rowbytes;
     }
 
     R_ViewChanged(&vrect);
@@ -313,12 +310,9 @@ void R_SetupFrame(void)
     r_outofedges = 0;
 
 // d_setup
-    d_zrowbytes = vid.width * 2;
-    d_zwidth = vid.width;
-
     for (i = 0; i < vid.height; i++) {
-        d_scantable[i] = i * r_screenrowbytes;
-        zspantable[i] = d_pzbuffer + i * d_zwidth;
+        d_spantable[i] = d_viewbuffer + i * d_screenrowbytes;
+        d_zspantable[i] = d_pzbuffer + i * d_zwidth;
     }
 
 // clear Z-buffer and color-buffers if we're doing the gallery

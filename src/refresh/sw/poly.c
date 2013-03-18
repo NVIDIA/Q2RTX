@@ -263,8 +263,8 @@ static void R_PolygonDrawSpans(espan_t *pspan, int iswater)
     s_spanletvars.pz = 0;
 
     do {
-        s_spanletvars.pdest   = (byte *)d_viewbuffer + d_scantable[pspan->v] + pspan->u * VID_BYTES;
-        s_spanletvars.pz      = d_pzbuffer + (d_zwidth * pspan->v) + pspan->u;
+        s_spanletvars.pdest   = d_spantable[pspan->v] + pspan->u * VID_BYTES;
+        s_spanletvars.pz      = d_zspantable[pspan->v] + pspan->u;
         s_spanletvars.u       = pspan->u;
         s_spanletvars.v       = pspan->v;
 
