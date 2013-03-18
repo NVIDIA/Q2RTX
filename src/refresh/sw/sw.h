@@ -96,9 +96,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define BMODEL_FULLY_CLIPPED    0x10    // value returned by R_BmodelCheckBBox ()
                                         // if bbox is trivially rejected
 
-#define XCENTERING      (1.0 / 2.0)
-#define YCENTERING      (1.0 / 2.0)
-
 #define CLIP_EPSILON            0.001
 
 #define BACKFACE_EPSILON        0.01
@@ -134,12 +131,9 @@ typedef struct {
 
 typedef struct {
     vrect_t         vrect;                          // subwindow in video for refresh
-                                                    // FIXME: not need vrect next field here?
-    vrect_t         aliasvrect;                     // scaled Alias version
     int             vrectright, vrectbottom;        // right & bottom screen coords
-    int             aliasvrectright, aliasvrectbottom;  // scaled Alias versions
     float           vrectrightedge;                 // rightmost right edge we care about,
-                                                    //  for use in edge list
+                                                    // for use in edge list
     float           fvrectx, fvrecty;               // for floating-point compares
     float           fvrectx_adj, fvrecty_adj;       // left and top edges, for clamping
     int             vrect_x_adj_shift20;            // (vrect.x + 0.5 - epsilon) << 20
@@ -147,15 +141,17 @@ typedef struct {
     float           fvrectright_adj, fvrectbottom_adj;  // right and bottom edges, for clamping
     float           fvrectright;                    // rightmost edge, for Alias clamping
     float           fvrectbottom;                   // bottommost edge, for Alias clamping
-    float           horizontalFieldOfView;          // at Z = 1.0, this many X is visible
-                                                    // 2.0 = 90 degrees
-    float           xOrigin;                        // should probably always be 0.5
-    float           yOrigin;                        // between be around 0.3 to 0.5
 
-    vec3_t          vieworg;
-    vec3_t          viewangles;
+    // values for perspective projection
+    float           xcenter, ycenter;
+    float           xscale, yscale;
+    float           xscaleinv, yscaleinv;
+    float           xscaleshrink, yscaleshrink;
+    float           scale_for_mip;
 
-    int             ambientlight;
+    // particle values
+    int             vrectright_particle, vrectbottom_particle;
+    int             pix_min, pix_max, pix_shift;
 } oldrefdef_t;
 
 typedef struct {
@@ -309,14 +305,11 @@ VARS
 */
 
 extern int      r_framecount;       // sequence # of current frame since Quake started
-extern float    r_aliasuvscale;     // scale-up factor for screen u and v
-                                    // on Alias vertices passed to driver
 extern qboolean r_dowarp;
 
 extern affinetridesc_t  r_affinetridesc;
 
 void D_DrawSurfaces(void);
-void D_ViewChanged(void);
 void D_WarpScreen(void);
 
 //=======================================================================//
@@ -326,8 +319,6 @@ extern drawsurf_t       r_drawsurf;
 extern int              c_surf;
 
 extern byte             r_warpbuffer[WARP_WIDTH * WARP_HEIGHT * VID_BYTES];
-
-extern float    scale_for_mip;
 
 extern float    d_sdivzstepu, d_tdivzstepu, d_zistepu;
 extern float    d_sdivzstepv, d_tdivzstepv, d_zistepv;
@@ -341,10 +332,6 @@ void D_DrawSpans16(espan_t *pspans);
 void D_DrawZSpans(espan_t *pspans);
 
 surfcache_t     *D_CacheSurface(mface_t *surface, int miplevel);
-
-extern int      d_vrectx, d_vrecty, d_vrectright_particle, d_vrectbottom_particle;
-
-extern int      d_pix_min, d_pix_max, d_pix_shift;
 
 extern pixel_t  *d_viewbuffer;
 extern short *d_pzbuffer;
@@ -387,11 +374,6 @@ extern surf_t   *surfaces, *surface_p, *surf_max;
 
 extern vec3_t   sxformaxis[4];  // s axis transformed into viewspace
 extern vec3_t   txformaxis[4];  // t axis transformed into viewspac
-
-extern float    xcenter, ycenter;
-extern float    xscale, yscale;
-extern float    xscaleinv, yscaleinv;
-extern float    xscaleshrink, yscaleshrink;
 
 extern void R_TransformVector(vec3_t in, vec3_t out);
 
@@ -445,9 +427,6 @@ extern entity_t     *currententity;
 extern vec3_t       modelorg;
 extern vec3_t       r_entorigin;
 extern vec3_t       entity_rotation[3];
-
-extern float        verticalFieldOfView;
-extern float        xOrigin, yOrigin;
 
 extern int          r_visframecount;
 
@@ -506,8 +485,6 @@ extern fixed8_t r_aliasblendcolor[3];
 
 extern int      r_alias_alpha;
 extern int      r_alias_one_minus_alpha;
-
-extern float    aliasxscale, aliasyscale, aliasxcenter, aliasycenter;
 
 extern int      r_outofsurfaces;
 extern int      r_outofedges;

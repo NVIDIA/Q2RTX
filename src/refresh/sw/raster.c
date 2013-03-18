@@ -86,15 +86,15 @@ static void R_EmitEdge(mvertex_t *pv0, mvertex_t *pv1)
         lzi0 = 1.0 / transformed[2];
 
         // FIXME: build x/yscale into transform?
-        scale = xscale * lzi0;
-        u0 = (xcenter + scale * transformed[0]);
+        scale = r_refdef.xscale * lzi0;
+        u0 = (r_refdef.xcenter + scale * transformed[0]);
         if (u0 < r_refdef.fvrectx_adj)
             u0 = r_refdef.fvrectx_adj;
         if (u0 > r_refdef.fvrectright_adj)
             u0 = r_refdef.fvrectright_adj;
 
-        scale = yscale * lzi0;
-        v0 = (ycenter - scale * transformed[1]);
+        scale = r_refdef.yscale * lzi0;
+        v0 = (r_refdef.ycenter - scale * transformed[1]);
         if (v0 < r_refdef.fvrecty_adj)
             v0 = r_refdef.fvrecty_adj;
         if (v0 > r_refdef.fvrectbottom_adj)
@@ -114,15 +114,15 @@ static void R_EmitEdge(mvertex_t *pv0, mvertex_t *pv1)
 
     r_lzi1 = 1.0 / transformed[2];
 
-    scale = xscale * r_lzi1;
-    r_u1 = (xcenter + scale * transformed[0]);
+    scale = r_refdef.xscale * r_lzi1;
+    r_u1 = (r_refdef.xcenter + scale * transformed[0]);
     if (r_u1 < r_refdef.fvrectx_adj)
         r_u1 = r_refdef.fvrectx_adj;
     if (r_u1 > r_refdef.fvrectright_adj)
         r_u1 = r_refdef.fvrectright_adj;
 
-    scale = yscale * r_lzi1;
-    r_v1 = (ycenter - scale * transformed[1]);
+    scale = r_refdef.yscale * r_lzi1;
+    r_v1 = (r_refdef.ycenter - scale * transformed[1]);
     if (r_v1 < r_refdef.fvrecty_adj)
         r_v1 = r_refdef.fvrecty_adj;
     if (r_v1 > r_refdef.fvrectbottom_adj)
@@ -459,11 +459,11 @@ void R_RenderFace(mface_t *fa, int clipflags)
 // FIXME: cache this?
     distinv = 1.0 / (pplane->dist - DotProduct(modelorg, pplane->normal));
 
-    surface_p->d_zistepu = p_normal[0] * xscaleinv * distinv;
-    surface_p->d_zistepv = -p_normal[1] * yscaleinv * distinv;
+    surface_p->d_zistepu = p_normal[0] * r_refdef.xscaleinv * distinv;
+    surface_p->d_zistepv = -p_normal[1] * r_refdef.yscaleinv * distinv;
     surface_p->d_ziorigin = p_normal[2] * distinv -
-                            xcenter * surface_p->d_zistepu -
-                            ycenter * surface_p->d_zistepv;
+                            r_refdef.xcenter * surface_p->d_zistepu -
+                            r_refdef.ycenter * surface_p->d_zistepv;
 
     surface_p++;
 }
@@ -573,11 +573,11 @@ void R_RenderBmodelFace(bedge_t *pedges, mface_t *psurf)
 // FIXME: cache this?
     distinv = 1.0 / (pplane->dist - DotProduct(modelorg, pplane->normal));
 
-    surface_p->d_zistepu = p_normal[0] * xscaleinv * distinv;
-    surface_p->d_zistepv = -p_normal[1] * yscaleinv * distinv;
+    surface_p->d_zistepu = p_normal[0] * r_refdef.xscaleinv * distinv;
+    surface_p->d_zistepv = -p_normal[1] * r_refdef.yscaleinv * distinv;
     surface_p->d_ziorigin = p_normal[2] * distinv -
-                            xcenter * surface_p->d_zistepu -
-                            ycenter * surface_p->d_zistepv;
+                            r_refdef.xcenter * surface_p->d_zistepu -
+                            r_refdef.ycenter * surface_p->d_zistepv;
 
     surface_p++;
 }

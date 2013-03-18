@@ -65,13 +65,13 @@ static void R_DrawParticle(void)
     */
     // FIXME: preadjust xcenter and ycenter
     zi = 1.0 / transformed[2];
-    u = (int)(xcenter + zi * transformed[0] + 0.5);
-    v = (int)(ycenter - zi * transformed[1] + 0.5);
+    u = (int)(r_refdef.xcenter + zi * transformed[0] + 0.5);
+    v = (int)(r_refdef.ycenter - zi * transformed[1] + 0.5);
 
-    if ((v > d_vrectbottom_particle) ||
-        (u > d_vrectright_particle) ||
-        (v < d_vrecty) ||
-        (u < d_vrectx)) {
+    if (v > r_refdef.vrectbottom_particle ||
+        u > r_refdef.vrectright_particle ||
+        v < r_refdef.vrect.y ||
+        u < r_refdef.vrect.x) {
         return;
     }
 
@@ -87,11 +87,11 @@ static void R_DrawParticle(void)
     ** determine the screen area covered by the particle,
     ** which also means clamping to a min and max
     */
-    pix = izi >> d_pix_shift;
-    if (pix < d_pix_min)
-        pix = d_pix_min;
-    else if (pix > d_pix_max)
-        pix = d_pix_max;
+    pix = izi >> r_refdef.pix_shift;
+    if (pix < r_refdef.pix_min)
+        pix = r_refdef.pix_min;
+    else if (pix > r_refdef.pix_max)
+        pix = r_refdef.pix_max;
 
     /*
     ** render the appropriate pixels
@@ -122,8 +122,8 @@ void R_DrawParticles(void)
     int         i;
     int         alpha;
 
-    VectorScale(vright, xscaleshrink, partparms.right);
-    VectorScale(vup, yscaleshrink, partparms.up);
+    VectorScale(vright, r_refdef.xscaleshrink, partparms.right);
+    VectorScale(vup, r_refdef.yscaleshrink, partparms.up);
     VectorCopy(vpn, partparms.pn);
 
     for (p = r_newrefdef.particles, i = 0; i < r_newrefdef.num_particles; i++, p++) {

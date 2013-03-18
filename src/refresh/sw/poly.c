@@ -583,11 +583,11 @@ static void R_ClipAndDrawPoly(float alpha, int isturbulent, int textured)
         pout->s = pv[3];
         pout->t = pv[4];
 
-        scale = xscale * pout->zi;
-        pout->u = (xcenter + scale * transformed[0]);
+        scale = r_refdef.xscale * pout->zi;
+        pout->u = (r_refdef.xcenter + scale * transformed[0]);
 
-        scale = yscale * pout->zi;
-        pout->v = (ycenter - scale * transformed[1]);
+        scale = r_refdef.yscale * pout->zi;
+        pout->v = (r_refdef.ycenter - scale * transformed[1]);
 
         pv += sizeof(vec5_t) / sizeof(vec_t);
     }
@@ -679,17 +679,17 @@ static void R_PolygonCalculateGradients(void)
 
     distinv = 1.0 / (-(DotProduct(r_polydesc.viewer_position, r_polydesc.vpn)) + r_polydesc.dist);
 
-    d_sdivzstepu  =  p_saxis[0] * xscaleinv;
-    d_sdivzstepv  = -p_saxis[1] * yscaleinv;
-    d_sdivzorigin =  p_saxis[2] - xcenter * d_sdivzstepu - ycenter * d_sdivzstepv;
+    d_sdivzstepu  =  p_saxis[0] * r_refdef.xscaleinv;
+    d_sdivzstepv  = -p_saxis[1] * r_refdef.yscaleinv;
+    d_sdivzorigin =  p_saxis[2] - r_refdef.xcenter * d_sdivzstepu - r_refdef.ycenter * d_sdivzstepv;
 
-    d_tdivzstepu  =  p_taxis[0] * xscaleinv;
-    d_tdivzstepv  = -p_taxis[1] * yscaleinv;
-    d_tdivzorigin =  p_taxis[2] - xcenter * d_tdivzstepu - ycenter * d_tdivzstepv;
+    d_tdivzstepu  =  p_taxis[0] * r_refdef.xscaleinv;
+    d_tdivzstepv  = -p_taxis[1] * r_refdef.yscaleinv;
+    d_tdivzorigin =  p_taxis[2] - r_refdef.xcenter * d_tdivzstepu - r_refdef.ycenter * d_tdivzstepv;
 
-    d_zistepu =   p_normal[0] * xscaleinv * distinv;
-    d_zistepv =  -p_normal[1] * yscaleinv * distinv;
-    d_ziorigin =  p_normal[2] * distinv - xcenter * d_zistepu - ycenter * d_zistepv;
+    d_zistepu =   p_normal[0] * r_refdef.xscaleinv * distinv;
+    d_zistepv =  -p_normal[1] * r_refdef.yscaleinv * distinv;
+    d_ziorigin =  p_normal[2] * distinv - r_refdef.xcenter * d_zistepu - r_refdef.ycenter * d_zistepv;
 
     sadjust = (fixed16_t)((DotProduct(r_polydesc.viewer_position, r_polydesc.vright) + r_polydesc.s_offset) * 0x10000);
     tadjust = (fixed16_t)((DotProduct(r_polydesc.viewer_position, r_polydesc.vup) + r_polydesc.t_offset) * 0x10000);

@@ -60,8 +60,6 @@ static float    fv;
 
 static int  miplevel;
 
-float       scale_for_mip;
-
 static void R_GenerateSpans(void);
 static void R_GenerateSpansBackward(void);
 
@@ -729,18 +727,20 @@ static void D_CalcGradients(mface_t *pface)
     R_TransformVector(pface->texinfo->axis[0], p_saxis);
     R_TransformVector(pface->texinfo->axis[1], p_taxis);
 
-    t = xscaleinv * mipscale;
+    t = r_refdef.xscaleinv * mipscale;
     d_sdivzstepu = p_saxis[0] * t;
     d_tdivzstepu = p_taxis[0] * t;
 
-    t = yscaleinv * mipscale;
+    t = r_refdef.yscaleinv * mipscale;
     d_sdivzstepv = -p_saxis[1] * t;
     d_tdivzstepv = -p_taxis[1] * t;
 
-    d_sdivzorigin = p_saxis[2] * mipscale - xcenter * d_sdivzstepu -
-                    ycenter * d_sdivzstepv;
-    d_tdivzorigin = p_taxis[2] * mipscale - xcenter * d_tdivzstepu -
-                    ycenter * d_tdivzstepv;
+    d_sdivzorigin = p_saxis[2] * mipscale -
+                    r_refdef.xcenter * d_sdivzstepu -
+                    r_refdef.ycenter * d_sdivzstepv;
+    d_tdivzorigin = p_taxis[2] * mipscale -
+                    r_refdef.xcenter * d_tdivzstepu -
+                    r_refdef.ycenter * d_tdivzstepv;
 
     VectorScale(transformed_modelorg, mipscale, p_temp1);
 
@@ -913,7 +913,7 @@ static void D_SolidSurf(surf_t *s)
 
     pface = s->msurf;
 
-    miplevel = D_MipLevelForScale(s->nearzi * scale_for_mip * pface->texinfo->mipadjust);
+    miplevel = D_MipLevelForScale(s->nearzi * r_refdef.scale_for_mip * pface->texinfo->mipadjust);
 
 // FIXME: make this passed in to D_CacheSurface
     pcurrentcache = D_CacheSurface(pface, miplevel);

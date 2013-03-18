@@ -34,7 +34,6 @@ byte        r_warpbuffer[WARP_WIDTH * WARP_HEIGHT * VID_BYTES];
 
 float       r_time1;
 int         r_numallocatededges;
-float       r_aliasuvscale = 1.0;
 int         r_outofsurfaces;
 int         r_outofedges;
 
@@ -56,16 +55,8 @@ vec3_t  r_origin;
 // screen size info
 //
 oldrefdef_t r_refdef;
-float       xcenter, ycenter;
-float       xscale, yscale;
-float       xscaleinv, yscaleinv;
-float       xscaleshrink, yscaleshrink;
-float       aliasxscale, aliasyscale, aliasxcenter, aliasycenter;
 
 int     r_screenrowbytes;
-
-float   verticalFieldOfView;
-float   xOrigin, yOrigin;
 
 cplane_t    screenedge[4];
 
@@ -271,9 +262,6 @@ qboolean R_Init(qboolean total)
     view_clipplanes[0].rightedge =
     view_clipplanes[2].rightedge =
     view_clipplanes[3].rightedge = qfalse;
-
-    r_refdef.xOrigin = XCENTERING;
-    r_refdef.yOrigin = YCENTERING;
 
     R_InitTurb();
 
@@ -824,9 +812,6 @@ void R_RenderFrame(refdef_t *fd)
 
     if (!r_worldmodel && !(r_newrefdef.rdflags & RDF_NOWORLDMODEL))
         Com_Error(ERR_FATAL, "R_RenderView: NULL worldmodel");
-
-    VectorCopy(fd->vieworg, r_refdef.vieworg);
-    VectorCopy(fd->viewangles, r_refdef.viewangles);
 
     if (!sw_dynamic->integer)
         r_newrefdef.num_dlights = 0;

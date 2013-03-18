@@ -29,60 +29,8 @@ float           d_scalemip[NUM_MIPS - 1];
 
 static const float  basemip[NUM_MIPS - 1] = {1.0, 0.5 * 0.8, 0.25 * 0.8};
 
-int d_vrectx, d_vrecty, d_vrectright_particle, d_vrectbottom_particle;
-
-int d_pix_min, d_pix_max, d_pix_shift;
-
 int     d_scantable[MAXHEIGHT];
 short   *zspantable[MAXHEIGHT];
-
-/*
-================
-D_ViewChanged
-================
-*/
-void D_ViewChanged(void)
-{
-    int     i;
-
-    scale_for_mip = xscale;
-    if (yscale > xscale)
-        scale_for_mip = yscale;
-
-    d_zrowbytes = vid.width * 2;
-    d_zwidth = vid.width;
-
-    d_pix_min = r_refdef.vrect.width / 640;
-    if (d_pix_min < 1)
-        d_pix_min = 1;
-
-    d_pix_max = (int)((float)r_refdef.vrect.width / (640.0 / 4.0) + 0.5);
-    d_pix_shift = 8 - (int)((float)r_refdef.vrect.width / 640.0 + 0.5);
-    if (d_pix_max < 1)
-        d_pix_max = 1;
-
-    d_vrectx = r_refdef.vrect.x;
-    d_vrecty = r_refdef.vrect.y;
-    d_vrectright_particle = r_refdef.vrectright - d_pix_max;
-    d_vrectbottom_particle =
-        r_refdef.vrectbottom - d_pix_max;
-
-    for (i = 0; i < vid.height; i++) {
-        d_scantable[i] = i * r_screenrowbytes;
-        zspantable[i] = d_pzbuffer + i * d_zwidth;
-    }
-
-    /*
-    ** clear Z-buffer and color-buffers if we're doing the gallery
-    */
-    if (r_newrefdef.rdflags & RDF_NOWORLDMODEL) {
-        memset(d_pzbuffer, 0xff, vid.width * vid.height * sizeof(d_pzbuffer[0]));
-#if 0
-        R_DrawFill8(r_newrefdef.x, r_newrefdef.y, r_newrefdef.width, r_newrefdef.height, /*(int)sw_clearcolor->value & 0xff*/0);
-#endif
-    }
-}
-
 
 
 /*
@@ -210,12 +158,13 @@ Guaranteed to be called before the first refresh
 */
 static void R_ViewChanged(vrect_t *vr)
 {
+    float   fov_h, fov_v;
     int     i;
 
     r_refdef.vrect = *vr;
 
-    r_refdef.horizontalFieldOfView = 2 * tan((float)r_newrefdef.fov_x / 360 * M_PI);
-    verticalFieldOfView = 2 * tan((float)r_newrefdef.fov_y / 360 * M_PI);
+    fov_h = 2 * tan((float)r_newrefdef.fov_x / 360 * M_PI);
+    fov_v = 2 * tan((float)r_newrefdef.fov_y / 360 * M_PI);
 
     r_refdef.fvrectx = (float)r_refdef.vrect.x;
     r_refdef.fvrectx_adj = (float)r_refdef.vrect.x - 0.5;
@@ -231,70 +180,61 @@ static void R_ViewChanged(vrect_t *vr)
     r_refdef.fvrectbottom = (float)r_refdef.vrectbottom;
     r_refdef.fvrectbottom_adj = (float)r_refdef.vrectbottom - 0.5;
 
-    r_refdef.aliasvrect.x = (int)(r_refdef.vrect.x * r_aliasuvscale);
-    r_refdef.aliasvrect.y = (int)(r_refdef.vrect.y * r_aliasuvscale);
-    r_refdef.aliasvrect.width = (int)(r_refdef.vrect.width * r_aliasuvscale);
-    r_refdef.aliasvrect.height = (int)(r_refdef.vrect.height * r_aliasuvscale);
-    r_refdef.aliasvrectright = r_refdef.aliasvrect.x +
-                               r_refdef.aliasvrect.width;
-    r_refdef.aliasvrectbottom = r_refdef.aliasvrect.y +
-                                r_refdef.aliasvrect.height;
-
-    xOrigin = r_refdef.xOrigin;
-    yOrigin = r_refdef.yOrigin;
-
 // values for perspective projection
 // if math were exact, the values would range from 0.5 to to range+0.5
 // hopefully they wll be in the 0.000001 to range+.999999 and truncate
 // the polygon rasterization will never render in the first row or column
 // but will definately render in the [range] row and column, so adjust the
 // buffer origin to get an exact edge to edge fill
-    xcenter = ((float)r_refdef.vrect.width * XCENTERING) +
-              r_refdef.vrect.x - 0.5;
-    aliasxcenter = xcenter * r_aliasuvscale;
-    ycenter = ((float)r_refdef.vrect.height * YCENTERING) +
-              r_refdef.vrect.y - 0.5;
-    aliasycenter = ycenter * r_aliasuvscale;
+    r_refdef.xcenter = ((float)r_refdef.vrect.width * 0.5) + r_refdef.vrect.x - 0.5;
+    r_refdef.ycenter = ((float)r_refdef.vrect.height * 0.5) + r_refdef.vrect.y - 0.5;
+    r_refdef.xscale = r_refdef.vrect.width / fov_h;
+    r_refdef.xscaleinv = 1.0 / r_refdef.xscale;
+    r_refdef.yscale = r_refdef.vrect.height / fov_v;
+    r_refdef.yscaleinv = 1.0 / r_refdef.yscale;
+    r_refdef.xscaleshrink = (r_refdef.vrect.width - 6) / fov_h;
+    r_refdef.yscaleshrink = (r_refdef.vrect.height - 6) / fov_v;
 
-    xscale = r_refdef.vrect.width / r_refdef.horizontalFieldOfView;
-    aliasxscale = xscale * r_aliasuvscale;
-    xscaleinv = 1.0 / xscale;
+    r_refdef.scale_for_mip = max(r_refdef.xscale, r_refdef.yscale);
 
-    yscale = xscale;
-    aliasyscale = yscale * r_aliasuvscale;
-    yscaleinv = 1.0 / yscale;
-    xscaleshrink = (r_refdef.vrect.width - 6) / r_refdef.horizontalFieldOfView;
-    yscaleshrink = xscaleshrink;
+    r_refdef.pix_min = r_refdef.vrect.width / 640;
+    if (r_refdef.pix_min < 1)
+        r_refdef.pix_min = 1;
+
+    r_refdef.pix_max = (int)((float)r_refdef.vrect.width / (640.0 / 4.0) + 0.5);
+    r_refdef.pix_shift = 8 - (int)((float)r_refdef.vrect.width / 640.0 + 0.5);
+    if (r_refdef.pix_max < 1)
+        r_refdef.pix_max = 1;
+
+    r_refdef.vrectright_particle = r_refdef.vrectright - r_refdef.pix_max;
+    r_refdef.vrectbottom_particle = r_refdef.vrectbottom - r_refdef.pix_max;
 
 // left side clip
-    screenedge[0].normal[0] = -1.0 / (xOrigin * r_refdef.horizontalFieldOfView);
+    screenedge[0].normal[0] = -1.0 / (0.5 * fov_h);
     screenedge[0].normal[1] = 0;
     screenedge[0].normal[2] = 1;
     screenedge[0].type = PLANE_ANYZ;
 
 // right side clip
-    screenedge[1].normal[0] =
-        1.0 / ((1.0 - xOrigin) * r_refdef.horizontalFieldOfView);
+    screenedge[1].normal[0] = 1.0 / (0.5 * fov_h);
     screenedge[1].normal[1] = 0;
     screenedge[1].normal[2] = 1;
     screenedge[1].type = PLANE_ANYZ;
 
 // top side clip
     screenedge[2].normal[0] = 0;
-    screenedge[2].normal[1] = -1.0 / (yOrigin * verticalFieldOfView);
+    screenedge[2].normal[1] = -1.0 / (0.5 * fov_v);
     screenedge[2].normal[2] = 1;
     screenedge[2].type = PLANE_ANYZ;
 
 // bottom side clip
     screenedge[3].normal[0] = 0;
-    screenedge[3].normal[1] = 1.0 / ((1.0 - yOrigin) * verticalFieldOfView);
+    screenedge[3].normal[1] = 1.0 / (0.5 * fov_v);
     screenedge[3].normal[2] = 1;
     screenedge[3].type = PLANE_ANYZ;
 
     for (i = 0; i < 4; i++)
         VectorNormalize(screenedge[i].normal);
-
-    D_ViewChanged();
 }
 
 
@@ -317,10 +257,10 @@ void R_SetupFrame(void)
 
 
 // build the transformation matrix for the given view angles
-    VectorCopy(r_refdef.vieworg, modelorg);
-    VectorCopy(r_refdef.vieworg, r_origin);
+    VectorCopy(r_newrefdef.vieworg, modelorg);
+    VectorCopy(r_newrefdef.vieworg, r_origin);
 
-    AngleVectors(r_refdef.viewangles, vpn, vright, vup);
+    AngleVectors(r_newrefdef.viewangles, vpn, vright, vup);
 
 // current viewleaf
     if (!(r_newrefdef.rdflags & RDF_NOWORLDMODEL)) {
@@ -373,6 +313,22 @@ void R_SetupFrame(void)
     r_outofedges = 0;
 
 // d_setup
+    d_zrowbytes = vid.width * 2;
+    d_zwidth = vid.width;
+
+    for (i = 0; i < vid.height; i++) {
+        d_scantable[i] = i * r_screenrowbytes;
+        zspantable[i] = d_pzbuffer + i * d_zwidth;
+    }
+
+// clear Z-buffer and color-buffers if we're doing the gallery
+    if (r_newrefdef.rdflags & RDF_NOWORLDMODEL) {
+        memset(d_pzbuffer, 0xff, vid.width * vid.height * sizeof(d_pzbuffer[0]));
+#if 0
+        R_DrawFill8(r_newrefdef.x, r_newrefdef.y, r_newrefdef.width, r_newrefdef.height, /*(int)sw_clearcolor->value & 0xff*/0);
+#endif
+    }
+
     d_minmip = Cvar_ClampInteger(sw_mipcap, 0, NUM_MIPS - 1);
 
     for (i = 0; i < (NUM_MIPS - 1); i++)

@@ -198,16 +198,16 @@ void R_AliasProjectAndClipTestFinalVert(finalvert_t *fv)
 
     fv->zi = zi * s_ziscale;
 
-    fv->u = (x * aliasxscale * zi) + aliasxcenter;
-    fv->v = (y * aliasyscale * zi) + aliasycenter;
+    fv->u = (x * r_refdef.xscale * zi) + r_refdef.xcenter;
+    fv->v = (y * r_refdef.yscale * zi) + r_refdef.ycenter;
 
-    if (fv->u < r_refdef.aliasvrect.x)
+    if (fv->u < r_refdef.vrect.x)
         fv->flags |= ALIAS_LEFT_CLIP;
-    if (fv->v < r_refdef.aliasvrect.y)
+    if (fv->v < r_refdef.vrect.y)
         fv->flags |= ALIAS_TOP_CLIP;
-    if (fv->u > r_refdef.aliasvrectright)
+    if (fv->u > r_refdef.vrectright)
         fv->flags |= ALIAS_RIGHT_CLIP;
-    if (fv->v > r_refdef.aliasvrectbottom)
+    if (fv->v > r_refdef.vrectbottom)
         fv->flags |= ALIAS_BOTTOM_CLIP;
 }
 
@@ -672,7 +672,7 @@ void R_AliasDrawModel(void)
         currententity->backlerp = 0;
 
     if ((currententity->flags & (RF_WEAPONMODEL | RF_LEFTHAND)) == (RF_WEAPONMODEL | RF_LEFTHAND))
-        aliasxscale = -aliasxscale;
+        r_refdef.xscale = -r_refdef.xscale;
 
     /*
     ** we have to set our frame pointers and transformations before
@@ -709,6 +709,6 @@ void R_AliasDrawModel(void)
 
 exit:
     if ((currententity->flags & (RF_WEAPONMODEL | RF_LEFTHAND)) == (RF_WEAPONMODEL | RF_LEFTHAND))
-        aliasxscale = -aliasxscale;
+        r_refdef.xscale = -r_refdef.xscale;
 }
 
