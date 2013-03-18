@@ -34,8 +34,9 @@ static inline void CL_ParseDeltaEntity(server_frame_t  *frame,
 {
     entity_state_t    *state;
 
-    if (frame->numEntities >= MAX_PACKET_ENTITIES) {
-        Com_Error(ERR_DROP, "%s: MAX_PACKET_ENTITIES exceeded", __func__);
+    // suck up to MAX_EDICTS for servers that don't cap at MAX_PACKET_ENTITIES
+    if (frame->numEntities >= MAX_EDICTS) {
+        Com_Error(ERR_DROP, "%s: MAX_EDICTS exceeded", __func__);
     }
 
     state = &cl.entityStates[cl.numEntityStates & PARSE_ENTITIES_MASK];

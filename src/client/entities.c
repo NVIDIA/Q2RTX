@@ -151,7 +151,8 @@ static void entity_update(const entity_state_t *state)
     vec3_t origin_v;
 
     // if entity is solid, decode mins/maxs and add to the list
-    if (state->solid && state->number != cl.frame.clientNum + 1) {
+    if (state->solid && state->number != cl.frame.clientNum + 1
+        && cl.numSolidEntities < MAX_PACKET_ENTITIES) {
         cl.solidEntities[cl.numSolidEntities++] = ent;
         if (state->solid != PACKED_BSP) {
             // encoded bbox
