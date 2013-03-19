@@ -219,6 +219,13 @@ static void ClipSkyPolygon(int nump, vec3_t vecs, int stage)
     ClipSkyPolygon(newc[1], newv[1][0], stage + 1);
 }
 
+static inline void SkyInverseRotate(vec3_t out, const vec3_t in)
+{
+    out[0] = skymatrix[0][0] * in[0] + skymatrix[1][0] * in[1] + skymatrix[2][0] * in[2];
+    out[1] = skymatrix[0][1] * in[0] + skymatrix[1][1] * in[1] + skymatrix[2][1] * in[2];
+    out[2] = skymatrix[0][2] * in[0] + skymatrix[1][2] * in[1] + skymatrix[2][2] * in[2];
+}
+
 /*
 =================
 R_AddSkySurface
@@ -228,6 +235,7 @@ void R_AddSkySurface(mface_t *fa)
 {
     int         i;
     vec3_t      verts[MAX_CLIP_VERTS];
+    vec3_t      temp;
     msurfedge_t *surfedge;
     mvertex_t   *vert;
 
@@ -238,9 +246,20 @@ void R_AddSkySurface(mface_t *fa)
 
     // calculate vertex values for sky box
     surfedge = fa->firstsurfedge;
-    for (i = 0; i < fa->numsurfedges; i++, surfedge++) {
-        vert = surfedge->edge->v[surfedge->vert];
-        VectorSubtract(vert->point, glr.fd.vieworg, verts[i]);
+    if (skyrotate) {
+        if (!skyfaces)
+            SetupRotationMatrix(skymatrix, skyaxis, glr.fd.time * skyrotate);
+
+        for (i = 0; i < fa->numsurfedges; i++, surfedge++) {
+            vert = surfedge->edge->v[surfedge->vert];
+            VectorSubtract(vert->point, glr.fd.vieworg, temp);
+            SkyInverseRotate(verts[i], temp);
+        }
+    } else {
+        for (i = 0; i < fa->numsurfedges; i++, surfedge++) {
+            vert = surfedge->edge->v[surfedge->vert];
+            VectorSubtract(vert->point, glr.fd.vieworg, verts[i]);
+        }
     }
 
     ClipSkyPolygon(fa->numsurfedges, verts[0], 0);
@@ -324,18 +343,6 @@ void R_DrawSkyBox(void)
     // check for no sky at all
     if (!skyfaces)
         return; // nothing visible
-
-    if (skyrotate) {
-        // hack, forces full sky to draw when rotating
-        for (i = 0; i < 6; i++) {
-            skymins[0][i] = -1;
-            skymins[1][i] = -1;
-            skymaxs[0][i] = 1;
-            skymaxs[1][i] = 1;
-        }
-
-        SetupRotationMatrix(skymatrix, skyaxis, glr.fd.time * skyrotate);
-    }
 
     GL_StateBits(GLS_TEXTURE_REPLACE);
     GL_ArrayBits(GLA_VERTEX | GLA_TC);
