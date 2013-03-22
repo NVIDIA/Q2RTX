@@ -22,6 +22,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/common.h"
 #include "common/files.h"
 #include "common/tests.h"
+#include "refresh/refresh.h"
 #include "system/system.h"
 
 // test error shutdown procedures
@@ -491,6 +492,38 @@ static void Com_TestSnprintf_f(void)
     Com_Printf("%d failures, %d strings tested\n", errors, num_snprintf_tests * 2);
 }
 
+#if USE_REF
+static void Com_TestModels_f(void)
+{
+    void **list;
+    int i, count, errors;
+    unsigned start, end;
+
+    list = FS_ListFiles("models", ".md2", FS_SEARCH_SAVEPATH, &count);
+    if (!list) {
+        Com_Printf("No models found\n");
+        return;
+    }
+
+    start = Sys_Milliseconds();
+
+    errors = 0;
+    for (i = 0; i < count; i++) {
+        if (!R_RegisterModel(list[i])) {
+            errors++;
+            continue;
+        }
+    }
+
+    end = Sys_Milliseconds();
+
+    Com_Printf("%d msec, %d failures, %d models tested\n",
+               end - start, errors, count);
+
+    FS_FreeList(list);
+}
+#endif
+
 void TST_Init(void)
 {
     Cmd_AddCommand("error", Com_Error_f);
@@ -503,5 +536,8 @@ void TST_Init(void)
     Cmd_AddCommand("normtest", Com_TestNorm_f);
     Cmd_AddCommand("infotest", Com_TestInfo_f);
     Cmd_AddCommand("snprintftest", Com_TestSnprintf_f);
+#if USE_REF
+    Cmd_AddCommand("modeltest", Com_TestModels_f);
+#endif
 }
 
