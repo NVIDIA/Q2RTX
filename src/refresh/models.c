@@ -159,7 +159,7 @@ qerror_t MOD_ValidateMD2(dmd2header_t *header, size_t length)
     // check st
     if (header->num_st < 3)
         return Q_ERR_TOO_FEW;
-    if (header->num_st > MD2_MAX_VERTS)
+    if (header->num_st > MAX_ALIAS_VERTS)
         return Q_ERR_TOO_MANY;
 
     end = header->ofs_st + sizeof(dmd2stvert_t) * header->num_st;
@@ -169,7 +169,7 @@ qerror_t MOD_ValidateMD2(dmd2header_t *header, size_t length)
     // check xyz and frames
     if (header->num_xyz < 3)
         return Q_ERR_TOO_FEW;
-    if (header->num_xyz > MD2_MAX_VERTS)
+    if (header->num_xyz > MAX_ALIAS_VERTS)
         return Q_ERR_TOO_MANY;
     if (header->num_frames < 1)
         return Q_ERR_TOO_FEW;

@@ -591,7 +591,7 @@ static void draw_alias_mesh(maliasmesh_t *mesh)
     GL_BindTexture(0, texnum_for_mesh(mesh));
 
     (*tessfunc)(mesh);
-    c.trisDrawn += mesh->numverts;
+    c.trisDrawn += mesh->numtris;
 
     if (shadelight) {
         GL_ArrayBits(GLA_VERTEX | GLA_TC | GLA_COLOR);

@@ -423,8 +423,7 @@ void GL_ShutdownImages(void);
  * gl_tess.c
  *
  */
-#define TESS_MAX_FACES      256
-#define TESS_MAX_VERTICES   (16 * TESS_MAX_FACES)
+#define TESS_MAX_VERTICES   4096
 #define TESS_MAX_INDICES    (3 * TESS_MAX_VERTICES)
 
 typedef struct {

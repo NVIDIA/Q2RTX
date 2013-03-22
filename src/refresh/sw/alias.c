@@ -277,7 +277,7 @@ static void R_AliasPreparePoints(void)
     maliasst_t  *pstverts;
     maliastri_t *ptri;
     finalvert_t *pfv[3];
-    finalvert_t finalverts[MAXALIASVERTS +
+    finalvert_t finalverts[MAX_ALIAS_VERTS +
                            ((CACHE_SIZE - 1) / sizeof(finalvert_t)) + 3];
     finalvert_t *pfinalverts;
 

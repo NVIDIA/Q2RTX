@@ -102,7 +102,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define NEAR_CLIP       0.01
 
-#define MAXALIASVERTS           2048    // MD2_MAX_VERTS
 #define ALIAS_Z_CLIP_PLANE      4
 
 // turbulence stuff

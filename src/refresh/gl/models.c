@@ -21,29 +21,36 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "format/md3.h"
 #include "format/sp2.h"
 
+#if MAX_ALIAS_VERTS > TESS_MAX_VERTICES
+#error TESS_MAX_VERTICES
+#endif
+
+#if MD2_MAX_TRIANGLES > TESS_MAX_INDICES / 3
+#error TESS_MAX_INDICES
+#endif
+
 qerror_t MOD_LoadMD2(model_t *model, const void *rawdata, size_t length)
 {
-    dmd2header_t header;
-    dmd2frame_t *src_frame;
-    dmd2trivertx_t *src_vert;
-    dmd2triangle_t *src_tri;
-    dmd2stvert_t *src_tc;
-    maliasframe_t *dst_frame;
-    maliasvert_t *dst_vert;
-    maliasmesh_t *dst_mesh;
-    QGL_INDEX_TYPE *finalIndices;
-    maliastc_t *dst_tc;
-    int i, j, k;
-    uint16_t remap[MD2_MAX_TRIANGLES * 3];
-    uint16_t vertIndices[MD2_MAX_TRIANGLES * 3];
-    uint16_t tcIndices[MD2_MAX_TRIANGLES * 3];
-    int numverts, numindices;
-    char skinname[MAX_QPATH];
-    char *src_skin;
-    vec_t scaleS, scaleT;
-    int val;
-    vec3_t mins, maxs;
-    qerror_t ret;
+    dmd2header_t    header;
+    dmd2frame_t     *src_frame;
+    dmd2trivertx_t  *src_vert;
+    dmd2triangle_t  *src_tri;
+    dmd2stvert_t    *src_tc;
+    char            *src_skin;
+    maliasframe_t   *dst_frame;
+    maliasvert_t    *dst_vert;
+    maliasmesh_t    *dst_mesh;
+    maliastc_t      *dst_tc;
+    int             i, j, k, val;
+    uint16_t        remap[TESS_MAX_INDICES];
+    uint16_t        vertIndices[TESS_MAX_INDICES];
+    uint16_t        tcIndices[TESS_MAX_INDICES];
+    uint16_t        finalIndices[TESS_MAX_INDICES];
+    int             numverts, numindices;
+    char            skinname[MAX_QPATH];
+    vec_t           scale_s, scale_t;
+    vec3_t          mins, maxs;
+    qerror_t        ret;
 
     if (length < sizeof(header)) {
         return Q_ERR_FILE_TOO_SMALL;
@@ -66,44 +73,40 @@ qerror_t MOD_LoadMD2(model_t *model, const void *rawdata, size_t length)
         return ret;
     }
 
-    Hunk_Begin(&model->hunk, 0x400000);
-    model->type = MOD_ALIAS;
-
     // load all triangle indices
+    numindices = 0;
     src_tri = (dmd2triangle_t *)((byte *)rawdata + header.ofs_tris);
     for (i = 0; i < header.num_tris; i++) {
         for (j = 0; j < 3; j++) {
             uint16_t idx_xyz = LittleShort(src_tri->index_xyz[j]);
             uint16_t idx_st = LittleShort(src_tri->index_st[j]);
 
+            // some broken models have 0xFFFF indices
             if (idx_xyz >= header.num_xyz || idx_st >= header.num_st) {
-                ret = Q_ERR_BAD_INDEX;
-                goto fail;
+                break;
             }
 
-            vertIndices[i * 3 + j] = idx_xyz;
-            tcIndices[i * 3 + j] = idx_st;
+            vertIndices[numindices + j] = idx_xyz;
+            tcIndices[numindices + j] = idx_st;
+        }
+        if (j == 3) {
+            // only count good triangles
+            numindices += 3;
         }
         src_tri++;
     }
 
-    numindices = header.num_tris * 3;
-
-    model->meshes = MOD_Malloc(sizeof(maliasmesh_t));
-    model->nummeshes = 1;
-
-    dst_mesh = model->meshes;
-    dst_mesh->indices = MOD_Malloc(numindices * sizeof(QGL_INDEX_TYPE));
-    dst_mesh->numtris = header.num_tris;
-    dst_mesh->numindices = numindices;
+    if (numindices < 3) {
+        return Q_ERR_TOO_FEW;
+    }
 
     for (i = 0; i < numindices; i++) {
         remap[i] = 0xFFFF;
     }
 
+    // remap all triangle indices
     numverts = 0;
     src_tc = (dmd2stvert_t *)((byte *)rawdata + header.ofs_st);
-    finalIndices = dst_mesh->indices;
     for (i = 0; i < numindices; i++) {
         if (remap[i] != 0xFFFF) {
             continue; // already remapped
@@ -124,9 +127,34 @@ qerror_t MOD_LoadMD2(model_t *model, const void *rawdata, size_t length)
         finalIndices[i] = numverts++;
     }
 
+    if (numverts > TESS_MAX_VERTICES) {
+        return Q_ERR_TOO_MANY;
+    }
+
+    Hunk_Begin(&model->hunk, 0x400000);
+    model->type = MOD_ALIAS;
+    model->nummeshes = 1;
+    model->numframes = header.num_frames;
+    model->meshes = MOD_Malloc(sizeof(maliasmesh_t));
+    model->frames = MOD_Malloc(header.num_frames * sizeof(maliasframe_t));
+
+    dst_mesh = model->meshes;
+    dst_mesh->numtris = numindices / 3;
+    dst_mesh->numindices = numindices;
+    dst_mesh->numverts = numverts;
+    dst_mesh->numskins = header.num_skins;
     dst_mesh->verts = MOD_Malloc(numverts * header.num_frames * sizeof(maliasvert_t));
     dst_mesh->tcoords = MOD_Malloc(numverts * sizeof(maliastc_t));
-    dst_mesh->numverts = numverts;
+    dst_mesh->indices = MOD_Malloc(numindices * sizeof(QGL_INDEX_TYPE));
+
+    if (dst_mesh->numtris != header.num_tris) {
+        Com_DPrintf("%s has %d bad triangles\n", model->name, header.num_tris - dst_mesh->numtris);
+    }
+
+    // store final triangle indices
+    for (i = 0; i < numindices; i++) {
+        dst_mesh->indices[i] = finalIndices[i];
+    }
 
     // load all skins
     src_skin = (char *)rawdata + header.ofs_skins;
@@ -139,27 +167,23 @@ qerror_t MOD_LoadMD2(model_t *model, const void *rawdata, size_t length)
         dst_mesh->skins[i] = IMG_Find(skinname, IT_SKIN, IF_NONE);
         src_skin += MD2_MAX_SKINNAME;
     }
-    dst_mesh->numskins = header.num_skins;
 
     // load all tcoords
     src_tc = (dmd2stvert_t *)((byte *)rawdata + header.ofs_st);
     dst_tc = dst_mesh->tcoords;
-    scaleS = 1.0f / header.skinwidth;
-    scaleT = 1.0f / header.skinheight;
+    scale_s = 1.0f / header.skinwidth;
+    scale_t = 1.0f / header.skinheight;
     for (i = 0; i < numindices; i++) {
-        if (remap[i] == i) {
-            float s = (int16_t)LittleShort(src_tc[tcIndices[i]].s);
-            float t = (int16_t)LittleShort(src_tc[tcIndices[i]].t);
-
-            dst_tc[finalIndices[i]].st[0] = s * scaleS;
-            dst_tc[finalIndices[i]].st[1] = t * scaleT;
+        if (remap[i] != i) {
+            continue;
         }
+        dst_tc[finalIndices[i]].st[0] =
+            (int16_t)LittleShort(src_tc[tcIndices[i]].s) * scale_s;
+        dst_tc[finalIndices[i]].st[1] =
+            (int16_t)LittleShort(src_tc[tcIndices[i]].t) * scale_t;
     }
 
     // load all frames
-    model->frames = MOD_Malloc(header.num_frames * sizeof(maliasframe_t));
-    model->numframes = header.num_frames;
-
     src_frame = (dmd2frame_t *)((byte *)rawdata + header.ofs_frames);
     dst_frame = model->frames;
     for (j = 0; j < header.num_frames; j++) {
@@ -169,28 +193,31 @@ qerror_t MOD_LoadMD2(model_t *model, const void *rawdata, size_t length)
         // load frame vertices
         ClearBounds(mins, maxs);
         for (i = 0; i < numindices; i++) {
-            if (remap[i] == i) {
-                src_vert = &src_frame->verts[vertIndices[i]];
-                dst_vert = &dst_mesh->verts[j * numverts + finalIndices[i]];
+            if (remap[i] != i) {
+                continue;
+            }
+            src_vert = &src_frame->verts[vertIndices[i]];
+            dst_vert = &dst_mesh->verts[j * numverts + finalIndices[i]];
 
-                dst_vert->pos[0] = src_vert->v[0];
-                dst_vert->pos[1] = src_vert->v[1];
-                dst_vert->pos[2] = src_vert->v[2];
-                k = src_vert->lightnormalindex;
-                if (k >= NUMVERTEXNORMALS) {
-                    ret = Q_ERR_BAD_INDEX;
-                    goto fail;
-                }
-                dst_vert->norm[0] = gl_static.latlngtab[k][0];
-                dst_vert->norm[1] = gl_static.latlngtab[k][1];
+            dst_vert->pos[0] = src_vert->v[0];
+            dst_vert->pos[1] = src_vert->v[1];
+            dst_vert->pos[2] = src_vert->v[2];
 
-                for (k = 0; k < 3; k++) {
-                    val = dst_vert->pos[k];
-                    if (val < mins[k])
-                        mins[k] = val;
-                    if (val > maxs[k])
-                        maxs[k] = val;
-                }
+            val = src_vert->lightnormalindex;
+            if (val >= NUMVERTEXNORMALS) {
+                dst_vert->norm[0] = 0;
+                dst_vert->norm[1] = 0;
+            } else {
+                dst_vert->norm[0] = gl_static.latlngtab[val][0];
+                dst_vert->norm[1] = gl_static.latlngtab[val][1];
+            }
+
+            for (k = 0; k < 3; k++) {
+                val = dst_vert->pos[k];
+                if (val < mins[k])
+                    mins[k] = val;
+                if (val > maxs[k])
+                    maxs[k] = val;
             }
         }
 

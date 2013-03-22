@@ -29,8 +29,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define MOD_Malloc(size)    Hunk_Alloc(&model->hunk, size)
 
-// FIXME: MD3 has 256 limit
 #define MAX_ALIAS_SKINS     32
+#define MAX_ALIAS_VERTS     4096
 
 typedef struct mspriteframe_s {
     int             width, height;
