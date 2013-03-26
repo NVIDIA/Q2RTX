@@ -545,6 +545,10 @@ gl_bilerp_pics::
       - 1 — enabled for large pictures that don't fit into the scrap
       - 2 — enabled for all pictures, including the scrap texture itself
 
+gl_upscale_pcx::
+    Enables upscaling of PCX images using HQ2x filter. This improves rendering
+    quality when screen scaling is used. Default value is 0.
+
 gl_maxmip::
     When set to a positive integer N, limits maximum texture size to 2^N^.
     Larger textures will be downsampled to that size. Default value is 0

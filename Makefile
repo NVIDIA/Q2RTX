@@ -332,6 +332,7 @@ else
     OBJS_c += src/refresh/gl/tess.o
     OBJS_c += src/refresh/gl/world.o
     OBJS_c += src/refresh/gl/qgl.o
+    OBJS_c += src/refresh/gl/hq2x.o
 endif
 
 CONFIG_DEFAULT_MODELIST ?= 640x480 800x600 1024x768

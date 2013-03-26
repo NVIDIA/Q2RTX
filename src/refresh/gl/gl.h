@@ -476,3 +476,9 @@ void R_SetSky(const char *name, float rotate, vec3_t axis);
  */
 void GL_DrawAliasModel(model_t *model);
 
+/*
+ * hq2x.c
+ *
+ */
+void HQ2x_Render(uint32_t *output, const uint8_t *input, int width, int height);
+void HQ2x_Init(void);

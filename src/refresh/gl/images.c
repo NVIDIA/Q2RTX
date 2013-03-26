@@ -41,6 +41,7 @@ static cvar_t *gl_downsample_skins;
 static cvar_t *gl_gamma_scale_pics;
 static cvar_t *gl_bilerp_chars;
 static cvar_t *gl_bilerp_pics;
+static cvar_t *gl_upscale_pcx;
 static cvar_t *gl_texturemode;
 static cvar_t *gl_texturebits;
 static cvar_t *gl_anisotropy;
@@ -641,6 +642,25 @@ static void GL_Upload8(byte *data, int width, int height, qboolean mipmap)
 
     s = width * height;
 
+    if (!mipmap && gl_upscale_pcx->integer) {
+        if (s > MAX_STACK_PIXELS / 4)
+            buffer = FS_AllocTempMem(s * 16);
+        else
+            buffer = stackbuf;
+
+        HQ2x_Render((uint32_t *)buffer, data, width, height);
+        GL_Upload32(buffer, width * 2, height * 2, mipmap);
+
+        if (s > MAX_STACK_PIXELS / 4)
+            FS_FreeTempMem(buffer);
+
+        // enable blending, not alpha testing
+        // FIXME: do this for scrap allocated images too?
+        if (upload_image)
+            upload_image->flags &= ~IF_PALETTED;
+        return;
+    }
+
     if (s > MAX_STACK_PIXELS)
         buffer = FS_AllocTempMem(s * 4);
     else
@@ -954,6 +974,7 @@ void GL_InitImages(void)
     gl_maxmip = Cvar_Get("gl_maxmip", "0", CVAR_FILES);
     gl_downsample_skins = Cvar_Get("gl_downsample_skins", "1", CVAR_FILES);
     gl_gamma_scale_pics = Cvar_Get("gl_gamma_scale_pics", "0", CVAR_FILES);
+    gl_upscale_pcx = Cvar_Get("gl_upscale_pcx", "0", CVAR_FILES);
     gl_saturation = Cvar_Get("gl_saturation", "1", CVAR_FILES);
     gl_intensity = Cvar_Get("intensity", "1", CVAR_FILES);
     gl_invert = Cvar_Get("gl_invert", "0", CVAR_FILES);
@@ -968,6 +989,8 @@ void GL_InitImages(void)
     IMG_Init();
 
     IMG_GetPalette();
+
+    HQ2x_Init();
 
     GL_BuildIntensityTable();
 
