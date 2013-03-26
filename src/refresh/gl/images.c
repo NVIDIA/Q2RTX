@@ -20,6 +20,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "gl.h"
 #include "common/prompt.h"
 
+#define MAX_STACK_PIXELS    (256 * 256)
+
 static int gl_filter_min;
 static int gl_filter_max;
 static float gl_filter_anisotropy;
@@ -29,6 +31,7 @@ static int gl_tex_solid_format;
 static int  upload_width;
 static int  upload_height;
 static image_t  *upload_image;
+static qboolean upload_alpha;
 
 static cvar_t *gl_noscrap;
 static cvar_t *gl_round_down;
@@ -46,7 +49,7 @@ static cvar_t *gl_intensity;
 static cvar_t *gl_gamma;
 static cvar_t *gl_invert;
 
-static qboolean GL_Upload8(byte *data, int width, int height, qboolean mipmap);
+static void GL_Upload8(byte *data, int width, int height, qboolean mipmap);
 
 typedef struct {
     const char *name;
@@ -476,12 +479,12 @@ static inline qboolean is_alpha(byte *data, int width, int height)
 GL_Upload32
 ===============
 */
-static qboolean GL_Upload32(byte *data, int width, int height, qboolean mipmap)
+static void GL_Upload32(byte *data, int width, int height, qboolean mipmap)
 {
     byte        *scaled;
     int         scaled_width, scaled_height;
     int         comp;
-    qboolean    isalpha, picmip;
+    qboolean    picmip;
     int         maxsize;
 
     // find the next-highest power of two
@@ -564,8 +567,8 @@ static qboolean GL_Upload32(byte *data, int width, int height, qboolean mipmap)
     }
 
     // scan the texture for any non-255 alpha
-    isalpha = is_alpha(scaled, scaled_width, scaled_height);
-    if (isalpha) {
+    upload_alpha = is_alpha(scaled, scaled_width, scaled_height);
+    if (upload_alpha) {
         comp = gl_tex_alpha_format;
     }
 
@@ -623,29 +626,25 @@ static qboolean GL_Upload32(byte *data, int width, int height, qboolean mipmap)
     if (scaled != data) {
         FS_FreeTempMem(scaled);
     }
-
-    return isalpha;
 }
 
 /*
 ===============
 GL_Upload8
-
-Returns has_alpha
 ===============
 */
-static qboolean GL_Upload8(byte *data, int width, int height, qboolean mipmap)
+static void GL_Upload8(byte *data, int width, int height, qboolean mipmap)
 {
-    byte    buffer[MAX_PALETTED_PIXELS * 4];
-    byte    *dest;
-    int     i, s;
-    int     p;
+    byte        stackbuf[MAX_STACK_PIXELS * 4];
+    byte        *buffer, *dest;
+    int         i, s, p;
 
     s = width * height;
-    if (s > MAX_PALETTED_PIXELS) {
-        // should never happen
-        Com_Error(ERR_FATAL, "GL_Upload8: too large");
-    }
+
+    if (s > MAX_STACK_PIXELS)
+        buffer = FS_AllocTempMem(s * 4);
+    else
+        buffer = stackbuf;
 
     dest = buffer;
     for (i = 0; i < s; i++) {
@@ -675,8 +674,10 @@ static qboolean GL_Upload8(byte *data, int width, int height, qboolean mipmap)
         dest += 4;
     }
 
-    return GL_Upload32(buffer, width, height, mipmap);
+    GL_Upload32(buffer, width, height, mipmap);
 
+    if (s > MAX_STACK_PIXELS)
+        FS_FreeTempMem(buffer);
 }
 
 /*
@@ -686,9 +687,9 @@ IMG_Load
 */
 void IMG_Load(image_t *image, byte *pic, int width, int height)
 {
-    qboolean mipmap, transparent;
-    byte *src, *dst, *ptr;
-    int i, j, s, t;
+    qboolean mipmap;
+    byte *src, *dst;
+    int i, s, t;
 
     if (!pic) {
         Com_Error(ERR_FATAL, "%s: NULL", __func__);
@@ -703,10 +704,8 @@ void IMG_Load(image_t *image, byte *pic, int width, int height)
         src = pic;
         dst = &scrap_data[t * SCRAP_BLOCK_WIDTH + s];
         for (i = 0; i < height; i++) {
-            ptr = dst;
-            for (j = 0; j < width; j++) {
-                *ptr++ = *src++;
-            }
+            memcpy(dst, src, width);
+            src += width;
             dst += SCRAP_BLOCK_WIDTH;
         }
 
@@ -735,11 +734,11 @@ void IMG_Load(image_t *image, byte *pic, int width, int height)
     qglGenTextures(1, &image->texnum);
     GL_ForceTexture(0, image->texnum);
     if (image->flags & IF_PALETTED) {
-        transparent = GL_Upload8(pic, width, height, mipmap);
+        GL_Upload8(pic, width, height, mipmap);
     } else {
-        transparent = GL_Upload32(pic, width, height, mipmap);
+        GL_Upload32(pic, width, height, mipmap);
     }
-    if (transparent) {
+    if (upload_alpha) {
         image->flags |= IF_TRANSPARENT;
     }
     image->upload_width = upload_width;     // after power of 2 and scales

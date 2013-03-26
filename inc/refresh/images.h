@@ -52,9 +52,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // absolute limit for OpenGL renderer
 #define MAX_TEXTURE_SIZE            2048
 
-// size of GL_Upload8 internal buffer
-#define MAX_PALETTED_PIXELS         (512 * 256)
-
 typedef enum {
     IM_PCX,
     IM_WAL,

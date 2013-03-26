@@ -89,7 +89,7 @@ static qerror_t _IMG_LoadPCX(byte *rawdata, size_t rawlen,
 
     w = (LittleShort(pcx->xmax) - LittleShort(pcx->xmin)) + 1;
     h = (LittleShort(pcx->ymax) - LittleShort(pcx->ymin)) + 1;
-    if (w > 640 || h > 480 || w * h > MAX_PALETTED_PIXELS) {
+    if (w > 640 || h > 480) {
         return Q_ERR_INVALID_FORMAT;
     }
 
@@ -190,7 +190,7 @@ IMG_LOAD(WAL)
     h = LittleLong(mt->height);
     offset = LittleLong(mt->offsets[0]);
 
-    if (w < 1 || h < 1 || w > 512 || h > 512 || w * h > MAX_PALETTED_PIXELS) {
+    if (w < 1 || h < 1 || w > 512 || h > 512) {
         return Q_ERR_INVALID_FORMAT;
     }
 
@@ -1560,7 +1560,7 @@ static void get_image_dimensions(image_t *image,
         }
     }
 
-    if (w < 1 || h < 1 || w > 512 || h > 512 || w * h > MAX_PALETTED_PIXELS) {
+    if (w < 1 || h < 1 || w > 512 || h > 512) {
         return;
     }
 
