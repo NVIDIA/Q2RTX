@@ -151,8 +151,11 @@ typedef enum {
     IF_PERMANENT    = (1 << 0),
     IF_TRANSPARENT  = (1 << 1),
     IF_PALETTED     = (1 << 2),
-    IF_SCRAP        = (1 << 3),
-    IF_TURBULENT    = (1 << 4)
+    IF_UPSCALED     = (1 << 3),
+    IF_SCRAP        = (1 << 4),
+    IF_TURBULENT    = (1 << 5),
+    IF_REPEAT       = (1 << 6),
+    IF_NEAREST      = (1 << 7),
 } imageflags_t;
 
 typedef enum {
