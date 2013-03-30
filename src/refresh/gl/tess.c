@@ -43,6 +43,8 @@ void GL_Flush2D(void)
         bits |= GLS_ALPHATEST_ENABLE;
     }
 
+    Scrap_Upload();
+
     GL_BindTexture(0, tess.texnum[0]);
     GL_StateBits(bits);
     GL_ArrayBits(GLA_VERTEX | GLA_TC | GLA_COLOR);

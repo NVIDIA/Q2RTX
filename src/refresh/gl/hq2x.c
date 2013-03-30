@@ -26,6 +26,7 @@ written by Maxim Stepin (MaxSt). it is not 100% identical, but very similar.
 */
 
 #include "shared/shared.h"
+#include "common/cvar.h"
 #include "refresh/images.h"
 
 #define MASK_G      0x0000ff00
@@ -34,46 +35,43 @@ written by Maxim Stepin (MaxSt). it is not 100% identical, but very similar.
 #define MASK_ALPHA  0xff000000
 
 static const uint8_t hqTable[256] = {
-    4, 4, 6,  2, 4, 4, 6,  2, 5,  3, 15, 12, 5,  3, 17, 13,
-    4, 4, 6, 18, 4, 4, 6, 18, 5,  3, 12, 12, 5,  3,  1, 12,
-    4, 4, 6,  2, 4, 4, 6,  2, 5,  3, 17, 13, 5,  3, 16, 14,
-    4, 4, 6, 18, 4, 4, 6, 18, 5,  3, 16, 12, 5,  3,  1, 14,
-    4, 4, 6,  2, 4, 4, 6,  2, 5, 19, 12, 12, 5, 19, 16, 12,
-    4, 4, 6,  2, 4, 4, 6,  2, 5,  3, 16, 12, 5,  3, 16, 12,
-    4, 4, 6,  2, 4, 4, 6,  2, 5, 19,  1, 12, 5, 19,  1, 14,
-    4, 4, 6,  2, 4, 4, 6, 18, 5,  3, 16, 12, 5, 19,  1, 14,
-    4, 4, 6,  2, 4, 4, 6,  2, 5,  3, 15, 12, 5,  3, 17, 13,
-    4, 4, 6,  2, 4, 4, 6,  2, 5,  3, 16, 12, 5,  3, 16, 12,
-    4, 4, 6,  2, 4, 4, 6,  2, 5,  3, 17, 13, 5,  3, 16, 14,
-    4, 4, 6,  2, 4, 4, 6,  2, 5,  3, 16, 13, 5,  3,  1, 14,
-    4, 4, 6,  2, 4, 4, 6,  2, 5,  3, 16, 12, 5,  3, 16, 13,
-    4, 4, 6,  2, 4, 4, 6,  2, 5,  3, 16, 12, 5,  3,  1, 12,
-    4, 4, 6,  2, 4, 4, 6,  2, 5,  3, 16, 12, 5,  3,  1, 14,
-    4, 4, 6,  2, 4, 4, 6,  2, 5,  3,  1, 12, 5,  3,  1, 14,
+    1, 1, 2,  4, 1, 1, 2,  4, 3,  5,  7,  8, 3,  5, 13, 15,
+    1, 1, 2, 10, 1, 1, 2, 10, 3,  5,  8,  8, 3,  5,  6,  8,
+    1, 1, 2,  4, 1, 1, 2,  4, 3,  5, 12, 14, 3,  5,  9, 16,
+    1, 1, 2, 10, 1, 1, 2, 10, 3,  5,  9,  8, 3,  5,  6, 16,
+    1, 1, 2,  4, 1, 1, 2,  4, 3, 11,  8,  8, 3, 11,  9,  8,
+    1, 1, 2,  4, 1, 1, 2,  4, 3,  5,  9,  8, 3,  5,  9,  8,
+    1, 1, 2,  4, 1, 1, 2,  4, 3, 11,  6,  8, 3, 11,  6, 16,
+    1, 1, 2,  4, 1, 1, 2, 10, 3,  5,  9,  8, 3, 11,  6, 16,
+    1, 1, 2,  4, 1, 1, 2,  4, 3,  5,  7,  8, 3,  5, 13, 15,
+    1, 1, 2,  4, 1, 1, 2,  4, 3,  5,  9,  8, 3,  5,  9,  8,
+    1, 1, 2,  4, 1, 1, 2,  4, 3,  5, 12, 14, 3,  5,  9, 16,
+    1, 1, 2,  4, 1, 1, 2,  4, 3,  5,  9, 14, 3,  5,  6, 16,
+    1, 1, 2,  4, 1, 1, 2,  4, 3,  5,  9,  8, 3,  5,  9, 15,
+    1, 1, 2,  4, 1, 1, 2,  4, 3,  5,  9,  8, 3,  5,  6,  8,
+    1, 1, 2,  4, 1, 1, 2,  4, 3,  5,  9,  8, 3,  5,  6, 16,
+    1, 1, 2,  4, 1, 1, 2,  4, 3,  5,  6,  8, 3,  5,  6, 16,
 };
 
 static uint8_t  rotTable[256];
 static uint8_t  equBitmap[65536 / CHAR_BIT];
 
-static int same(int A, int B)
+static inline int same(int A, int B)
 {
     return Q_IsBitSet(equBitmap, (A << 8) + B);
 }
 
-static int diff(int A, int B)
+static inline int diff(int A, int B)
 {
     return !same(A, B);
 }
 
-static uint32_t generic(int A, int B, int C, int w1, int w2, int w3, int s)
+static inline uint32_t generic(int A, int B, int C, int w1, int w2, int w3, int s)
 {
     uint32_t a = d_8to24table[A];
     uint32_t b = d_8to24table[B];
     uint32_t c = d_8to24table[C];
     uint32_t g, rb, alpha;
-
-    if ((A & B & C) == 255)
-        return 0;
 
     // if transparent, scan around for another color to avoid alpha fringes
     if (A == 255) {
@@ -94,68 +92,258 @@ static uint32_t generic(int A, int B, int C, int w1, int w2, int w3, int s)
     return (g & MASK_G) | (rb & MASK_RB) | (alpha & MASK_ALPHA);
 }
 
-static uint32_t blend0(int A)
+static uint32_t blend_1(int A)
 {
-    if (A == 255)
-        return 0;
-
     return d_8to24table[A];
 }
 
-static uint32_t blend1(int A, int B)
+static uint32_t blend_1_1(int A, int B)
+{
+    return generic(A, B, 0, 1, 1, 0, 1);
+}
+
+static uint32_t blend_3_1(int A, int B)
 {
     return generic(A, B, 0, 3, 1, 0, 2);
 }
 
-static uint32_t blend2(int A, int B, int C)
+static uint32_t blend_7_1(int A, int B)
+{
+    return generic(A, B, 0, 7, 1, 0, 3);
+}
+
+static uint32_t blend_5_3(int A, int B)
+{
+    return generic(A, B, 0, 5, 3, 0, 3);
+}
+
+static uint32_t blend_2_1_1(int A, int B, int C)
 {
     return generic(A, B, C, 2, 1, 1, 2);
 }
 
-static uint32_t blend3(int A, int B, int C)
+static uint32_t blend_5_2_1(int A, int B, int C)
 {
     return generic(A, B, C, 5, 2, 1, 3);
 }
 
-static uint32_t blend4(int A, int B, int C)
+static uint32_t blend_6_1_1(int A, int B, int C)
 {
     return generic(A, B, C, 6, 1, 1, 3);
 }
 
-static uint32_t blend5(int A, int B, int C)
+static uint32_t blend_2_3_3(int A, int B, int C)
 {
     return generic(A, B, C, 2, 3, 3, 3);
 }
 
-static uint32_t blend6(int A, int B, int C)
+static uint32_t blend_14_1_1(int A, int B, int C)
 {
     return generic(A, B, C, 14, 1, 1, 4);
 }
 
-static uint32_t blend(int rule, int E, int A, int B, int D, int F, int H)
+static uint32_t hq2x_blend(int rule, int E, int A, int B, int D, int F, int H)
 {
     switch (rule) {
-        default:
-        case  0: return blend0(E);
-        case  1: return blend1(E, A);
-        case  2: return blend1(E, D);
-        case  3: return blend1(E, B);
-        case  4: return blend2(E, D, B);
-        case  5: return blend2(E, A, B);
-        case  6: return blend2(E, A, D);
-        case  7: return blend3(E, B, D);
-        case  8: return blend3(E, D, B);
-        case  9: return blend4(E, D, B);
-        case 10: return blend5(E, D, B);
-        case 11: return blend6(E, D, B);
-        case 12: return same(B, D) ? blend2(E, D, B) : blend0(E);
-        case 13: return same(B, D) ? blend5(E, D, B) : blend0(E);
-        case 14: return same(B, D) ? blend6(E, D, B) : blend0(E);
-        case 15: return same(B, D) ? blend2(E, D, B) : blend1(E, A);
-        case 16: return same(B, D) ? blend4(E, D, B) : blend1(E, A);
-        case 17: return same(B, D) ? blend5(E, D, B) : blend1(E, A);
-        case 18: return same(B, F) ? blend3(E, B, D) : blend1(E, D);
-        case 19: return same(D, H) ? blend3(E, D, B) : blend1(E, B);
+    case 1:
+        return blend_2_1_1(E, D, B);
+    case 2:
+        return blend_2_1_1(E, A, D);
+    case 3:
+        return blend_2_1_1(E, A, B);
+    case 4:
+        return blend_3_1(E, D);
+    case 5:
+        return blend_3_1(E, B);
+    case 6:
+        return blend_3_1(E, A);
+    case 7:
+        return same(B, D) ? blend_2_1_1(E, D, B) : blend_3_1(E, A);
+    case 8:
+        return same(B, D) ? blend_2_1_1(E, D, B) : blend_1(E);
+    case 9:
+        return same(B, D) ? blend_6_1_1(E, D, B) : blend_3_1(E, A);
+    case 10:
+        return same(B, F) ? blend_5_2_1(E, B, D) : blend_3_1(E, D);
+    case 11:
+        return same(D, H) ? blend_5_2_1(E, D, B) : blend_3_1(E, B);
+    case 12:
+    case 13:
+        return same(B, D) ? blend_2_3_3(E, D, B) : blend_3_1(E, A);
+    case 14:
+    case 15:
+        return same(B, D) ? blend_2_3_3(E, D, B) : blend_1(E);
+    case 16:
+        return same(B, D) ? blend_14_1_1(E, D, B) : blend_1(E);
+    default:
+        Com_Error(ERR_FATAL, "%s: bad rule %d", __func__, rule);
+        return 0;
+    }
+}
+
+static void hq4x_blend(int rule, uint32_t *p00, uint32_t *p01, uint32_t *p10, uint32_t *p11, int E, int A, int B, int D, int F, int H)
+{
+    switch (rule) {
+    case 1:
+        *p00 = blend_2_1_1(E, B, D);
+        *p01 = blend_5_2_1(E, B, D);
+        *p10 = blend_5_2_1(E, D, B);
+        *p11 = blend_6_1_1(E, D, B);
+        break;
+    case 2:
+        *p00 = blend_5_3(E, A);
+        *p01 = blend_3_1(E, A);
+        *p10 = blend_5_2_1(E, D, A);
+        *p11 = blend_7_1(E, A);
+        break;
+    case 3:
+        *p00 = blend_5_3(E, A);
+        *p01 = blend_5_2_1(E, B, A);
+        *p10 = blend_3_1(E, A);
+        *p11 = blend_7_1(E, A);
+        break;
+    case 4:
+        *p00 = blend_5_3(E, D);
+        *p01 = blend_7_1(E, D);
+        *p10 = blend_5_3(E, D);
+        *p11 = blend_7_1(E, D);
+        break;
+    case 5:
+        *p00 = blend_5_3(E, B);
+        *p01 = blend_5_3(E, B);
+        *p10 = blend_7_1(E, B);
+        *p11 = blend_7_1(E, B);
+        break;
+    case 6:
+        *p00 = blend_5_3(E, A);
+        *p01 = blend_3_1(E, A);
+        *p10 = blend_3_1(E, A);
+        *p11 = blend_7_1(E, A);
+        break;
+    case 7:
+        if (same(B, D)) {
+            *p00 = blend_1_1(B, D);
+            *p01 = blend_1_1(B, E);
+            *p10 = blend_1_1(D, E);
+            *p11 = blend_1(E);
+        } else {
+            *p00 = blend_5_3(E, A);
+            *p01 = blend_3_1(E, A);
+            *p10 = blend_3_1(E, A);
+            *p11 = blend_7_1(E, A);
+        }
+        break;
+    case 8:
+        if (same(B, D)) {
+            *p00 = blend_1_1(B, D);
+            *p01 = blend_1_1(B, E);
+            *p10 = blend_1_1(D, E);
+        } else {
+            *p00 = blend_1(E);
+            *p01 = blend_1(E);
+            *p10 = blend_1(E);
+        }
+        *p11 = blend_1(E);
+        break;
+    case 9:
+        if (same(B, D)) {
+            *p00 = blend_2_1_1(E, B, D);
+            *p01 = blend_3_1(E, B);
+            *p10 = blend_3_1(E, D);
+            *p11 = blend_1(E);
+        } else {
+            *p00 = blend_5_3(E, A);
+            *p01 = blend_3_1(E, A);
+            *p10 = blend_3_1(E, A);
+            *p11 = blend_7_1(E, A);
+        }
+        break;
+    case 10:
+        if (same(B, F)) {
+            *p00 = blend_3_1(E, B);
+            *p01 = blend_3_1(B, E);
+        } else {
+            *p00 = blend_5_3(E, D);
+            *p01 = blend_7_1(E, D);
+        }
+        *p10 = blend_5_3(E, D);
+        *p11 = blend_7_1(E, D);
+        break;
+    case 11:
+        if (same(D, H)) {
+            *p00 = blend_3_1(E, D);
+            *p10 = blend_3_1(D, E);
+        } else {
+            *p00 = blend_5_3(E, B);
+            *p10 = blend_7_1(E, B);
+        }
+        *p01 = blend_5_3(E, B);
+        *p11 = blend_7_1(E, B);
+        break;
+    case 12:
+        if (same(B, D)) {
+            *p00 = blend_1_1(B, D);
+            *p01 = blend_2_1_1(B, E, D);
+            *p10 = blend_5_3(D, B);
+            *p11 = blend_6_1_1(E, D, B);
+        } else {
+            *p00 = blend_5_3(E, A);
+            *p01 = blend_3_1(E, A);
+            *p10 = blend_3_1(E, A);
+            *p11 = blend_7_1(E, A);
+        }
+        break;
+    case 13:
+        if (same(B, D)) {
+            *p00 = blend_1_1(B, D);
+            *p01 = blend_5_3(B, D);
+            *p10 = blend_2_1_1(D, E, B);
+            *p11 = blend_6_1_1(E, D, B);
+        } else {
+            *p00 = blend_5_3(E, A);
+            *p01 = blend_3_1(E, A);
+            *p10 = blend_3_1(E, A);
+            *p11 = blend_7_1(E, A);
+        }
+        break;
+    case 14:
+        if (same(B, D)) {
+            *p00 = blend_1_1(B, D);
+            *p01 = blend_2_1_1(B, E, D);
+            *p10 = blend_5_3(D, B);
+            *p11 = blend_6_1_1(E, D, B);
+        } else {
+            *p00 = blend_1(E);
+            *p01 = blend_1(E);
+            *p10 = blend_1(E);
+            *p11 = blend_1(E);
+        }
+        break;
+    case 15:
+        if (same(B, D)) {
+            *p00 = blend_1_1(B, D);
+            *p01 = blend_5_3(B, D);
+            *p10 = blend_2_1_1(D, E, B);
+            *p11 = blend_6_1_1(E, D, B);
+        } else {
+            *p00 = blend_1(E);
+            *p01 = blend_1(E);
+            *p10 = blend_1(E);
+            *p11 = blend_1(E);
+        }
+        break;
+    case 16:
+        if (same(B, D))
+            *p00 = blend_2_1_1(E, B, D);
+        else
+            *p00 = blend_1(E);
+        *p01 = blend_1(E);
+        *p10 = blend_1(E);
+        *p11 = blend_1(E);
+        break;
+    default:
+        Com_Error(ERR_FATAL, "%s: bad rule %d", __func__, rule);
+        break;
     }
 }
 
@@ -165,8 +353,8 @@ void HQ2x_Render(uint32_t *output, const uint8_t *input, int width, int height)
 
     for (y = 0; y < height; y++) {
         const uint8_t *in = input + y * width;
-        uint32_t *out0 = output + y * width * 4;
-        uint32_t *out1 = output + y * width * 4 + width * 2;
+        uint32_t *out0 = output + (y * 2 + 0) * width * 2;
+        uint32_t *out1 = output + (y * 2 + 1) * width * 2;
 
         int prevline = (y == 0 ? 0 : width);
         int nextline = (y == height - 1 ? 0 : width);
@@ -195,14 +383,66 @@ void HQ2x_Render(uint32_t *output, const uint8_t *input, int width, int height)
             pattern |= diff(E, H) << 6;
             pattern |= diff(E, I) << 7;
 
-            *(out0 + 0) = blend(hqTable[pattern], E, A, B, D, F, H); pattern = rotTable[pattern];
-            *(out0 + 1) = blend(hqTable[pattern], E, C, F, B, H, D); pattern = rotTable[pattern];
-            *(out1 + 1) = blend(hqTable[pattern], E, I, H, F, D, B); pattern = rotTable[pattern];
-            *(out1 + 0) = blend(hqTable[pattern], E, G, D, H, B, F);
+            *(out0 + 0) = hq2x_blend(hqTable[pattern], E, A, B, D, F, H); pattern = rotTable[pattern];
+            *(out0 + 1) = hq2x_blend(hqTable[pattern], E, C, F, B, H, D); pattern = rotTable[pattern];
+            *(out1 + 1) = hq2x_blend(hqTable[pattern], E, I, H, F, D, B); pattern = rotTable[pattern];
+            *(out1 + 0) = hq2x_blend(hqTable[pattern], E, G, D, H, B, F);
 
             in++;
             out0 += 2;
             out1 += 2;
+        }
+    }
+}
+
+void HQ4x_Render(uint32_t *output, const uint8_t *input, int width, int height)
+{
+    int x, y;
+
+    for (y = 0; y < height; y++) {
+        const uint8_t *in = input + y * width;
+        uint32_t *out0 = output + (y * 4 + 0) * width * 4;
+        uint32_t *out1 = output + (y * 4 + 1) * width * 4;
+        uint32_t *out2 = output + (y * 4 + 2) * width * 4;
+        uint32_t *out3 = output + (y * 4 + 3) * width * 4;
+
+        int prevline = (y == 0 ? 0 : width);
+        int nextline = (y == height - 1 ? 0 : width);
+
+        for (x = 0; x < width; x++) {
+            int prev = (x == 0 ? 0 : 1);
+            int next = (x == width - 1 ? 0 : 1);
+
+            int A = *(in - prevline - prev);
+            int B = *(in - prevline);
+            int C = *(in - prevline + next);
+            int D = *(in - prev);
+            int E = *(in);
+            int F = *(in + next);
+            int G = *(in + nextline - prev);
+            int H = *(in + nextline);
+            int I = *(in + nextline + next);
+
+            int pattern;
+            pattern  = diff(E, A) << 0;
+            pattern |= diff(E, B) << 1;
+            pattern |= diff(E, C) << 2;
+            pattern |= diff(E, D) << 3;
+            pattern |= diff(E, F) << 4;
+            pattern |= diff(E, G) << 5;
+            pattern |= diff(E, H) << 6;
+            pattern |= diff(E, I) << 7;
+
+            hq4x_blend(hqTable[pattern], out0 + 0, out0 + 1, out1 + 0, out1 + 1, E, A, B, D, F, H); pattern = rotTable[pattern];
+            hq4x_blend(hqTable[pattern], out0 + 3, out1 + 3, out0 + 2, out1 + 2, E, C, F, B, H, D); pattern = rotTable[pattern];
+            hq4x_blend(hqTable[pattern], out3 + 3, out3 + 2, out2 + 3, out2 + 2, E, I, H, F, D, B); pattern = rotTable[pattern];
+            hq4x_blend(hqTable[pattern], out3 + 0, out2 + 0, out3 + 1, out2 + 1, E, G, D, H, B, F);
+
+            in++;
+            out0 += 4;
+            out1 += 4;
+            out2 += 4;
+            out3 += 4;
         }
     }
 }
@@ -220,7 +460,11 @@ static void pix2ycc(float c[3], int C)
 
 void HQ2x_Init(void)
 {
-    int n;
+    int n, A, B;
+
+    cvar_t *hqx_y   = Cvar_Get("hqx_y", "48", CVAR_FILES);
+    cvar_t *hqx_cb  = Cvar_Get("hqx_cb", "7", CVAR_FILES);
+    cvar_t *hqx_cr  = Cvar_Get("hqx_cr", "6", CVAR_FILES);
 
     for (n = 0; n < 256; n++) {
         rotTable[n] = ((n >> 2) & 0x11) | ((n << 2) & 0x88)
@@ -230,30 +474,25 @@ void HQ2x_Init(void)
 
     memset(equBitmap, 0, sizeof(equBitmap));
 
-    for (n = 0; n < 65536; n++) {
-        int A = n >> 8;
-        int B = n & 255;
-        float a[3];
-        float b[3];
+    for (A = 0; A < 255; A++) {
+        for (B = 0; B <= A; B++) {
+            float a[3];
+            float b[3];
 
-        if (A == 255 && B == 255) {
-            Q_SetBit(equBitmap, n);
-            continue;
+            pix2ycc(a, A);
+            pix2ycc(b, B);
+
+            if (fabs(a[0] - b[0]) > hqx_y->value)
+                continue;
+            if (fabs(a[1] - b[1]) > hqx_cb->value)
+                continue;
+            if (fabs(a[2] - b[2]) > hqx_cr->value)
+                continue;
+
+            Q_SetBit(equBitmap, (A << 8) + B);
+            Q_SetBit(equBitmap, (B << 8) + A);
         }
-
-        if (A == 255 || B == 255)
-            continue;
-
-        pix2ycc(a, A);
-        pix2ycc(b, B);
-
-        if (fabs(a[0] - b[0]) > 0x30)
-            continue;
-        if (fabs(a[1] - b[1]) > 0x07)
-            continue;
-        if (fabs(a[2] - b[2]) > 0x06)
-            continue;
-
-        Q_SetBit(equBitmap, n);
     }
+
+    Q_SetBit(equBitmap, 65535);
 }

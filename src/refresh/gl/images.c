@@ -592,14 +592,33 @@ static void GL_Upload8(byte *data, int width, int height, int baselevel, imagety
 
 static void GL_Upscale8(byte *data, int width, int height, imagetype_t type, imageflags_t flags)
 {
-    byte    *buffer;
+    int         maxlevel;
+    byte        *buffer;
+    uint32_t    saved;
 
-    buffer = FS_AllocTempMem(width * height * 16);
-    HQ2x_Render((uint32_t *)buffer, data, width, height);
-    GL_Upload32(buffer, width * 2, height * 2, 0, type, flags);
+    maxlevel = Cvar_ClampInteger(gl_upscale_pcx, 1, 2);
+    buffer = FS_AllocTempMem((width * height) << ((maxlevel + 1) * 2));
+
+    // small hack for optimization
+    saved = d_8to24table[255];
+    d_8to24table[255] = 0;
+
+    if (maxlevel >= 2) {
+        HQ4x_Render((uint32_t *)buffer, data, width, height);
+        GL_Upload32(buffer, width * 4, height * 4, maxlevel - 2, type, flags);
+    }
+
+    if (maxlevel >= 1) {
+        HQ2x_Render((uint32_t *)buffer, data, width, height);
+        GL_Upload32(buffer, width * 2, height * 2, maxlevel - 1, type, flags);
+    }
+
+    d_8to24table[255] = saved;
+
     FS_FreeTempMem(buffer);
-    GL_Upload8(data, width, height, 1, type, flags);
-    qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 1);
+
+    GL_Upload8(data, width, height, maxlevel, type, flags);
+    qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, maxlevel);
 }
 
 static void GL_SetFilterAndRepeat(imagetype_t type, imageflags_t flags)
@@ -697,9 +716,6 @@ void IMG_Load(image_t *image, byte *pic, int width, int height)
             image->flags |= IF_UPSCALED;
 
         scrap_dirty = qtrue;
-        if (!gl_static.registering) {
-            Scrap_Upload();
-        }
         return;
     }
 
@@ -941,7 +957,9 @@ void GL_InitImages(void)
 
     IMG_GetPalette();
 
-    HQ2x_Init();
+    if (gl_upscale_pcx->integer) {
+        HQ2x_Init();
+    }
 
     GL_BuildIntensityTable();
 
