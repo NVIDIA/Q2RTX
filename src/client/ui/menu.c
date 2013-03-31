@@ -1443,6 +1443,8 @@ SLIDER CONTROL
 ===================================================================
 */
 
+static menuSound_t Slider_DoSlide(menuSlider_t *s, int dir);
+
 static void Slider_Push(menuSlider_t *s)
 {
     s->curvalue = s->cvar->value;
@@ -1451,6 +1453,7 @@ static void Slider_Push(menuSlider_t *s)
 
 static void Slider_Pop(menuSlider_t *s)
 {
+    cclamp(s->curvalue, s->minvalue, s->maxvalue);
     Cvar_SetValue(s->cvar, s->curvalue, FROM_MENU);
 }
 
@@ -1473,7 +1476,65 @@ static void Slider_Init(menuSlider_t *s)
     s->generic.rect.height = CHAR_HEIGHT;
 }
 
-static int Slider_Key(menuSlider_t *s, int key)
+static menuSound_t Slider_Click(menuSlider_t *s)
+{
+    vrect_t rect;
+    float   pos;
+    int     x;
+
+    pos = (s->curvalue - s->minvalue) / (s->maxvalue - s->minvalue);
+    clamp(pos, 0, 1);
+
+    x = CHAR_WIDTH + (SLIDER_RANGE - 1) * CHAR_WIDTH * pos;
+
+    // click left of thumb
+    rect.x = s->generic.x + RCOLUMN_OFFSET;
+    rect.y = s->generic.y;
+    rect.width = x;
+    rect.height = CHAR_HEIGHT;
+    if (UI_CursorInRect(&rect))
+        return Slider_DoSlide(s, -1);
+
+    // click on thumb
+    rect.x = s->generic.x + RCOLUMN_OFFSET + x;
+    rect.y = s->generic.y;
+    rect.width = CHAR_WIDTH;
+    rect.height = CHAR_HEIGHT;
+    if (UI_CursorInRect(&rect)) {
+        uis.mouseTracker = &s->generic;
+        return QMS_SILENT;
+    }
+
+    // click right of thumb
+    rect.x = s->generic.x + RCOLUMN_OFFSET + x + CHAR_WIDTH;
+    rect.y = s->generic.y;
+    rect.width = (SLIDER_RANGE + 1) * CHAR_WIDTH - x;
+    rect.height = CHAR_HEIGHT;
+    if (UI_CursorInRect(&rect))
+        return Slider_DoSlide(s, 1);
+
+    return QMS_SILENT;
+}
+
+static menuSound_t Slider_MouseMove(menuSlider_t *s)
+{
+    float   pos, value;
+    int     steps;
+
+    if (uis.mouseTracker != &s->generic)
+        return QMS_NOTHANDLED;
+
+    pos = (uis.mouseCoords[0] - (s->generic.x + RCOLUMN_OFFSET + CHAR_WIDTH)) * (1.0f / (SLIDER_RANGE * CHAR_WIDTH));
+    clamp(pos, 0, 1);
+
+    value = pos * (s->maxvalue - s->minvalue);
+    steps = Q_rint(value / s->step);
+
+    s->curvalue = s->minvalue + steps * s->step;
+    return QMS_SILENT;
+}
+
+static menuSound_t Slider_Key(menuSlider_t *s, int key)
 {
     switch (key) {
     case K_END:
@@ -1482,6 +1543,8 @@ static int Slider_Key(menuSlider_t *s, int key)
     case K_HOME:
         s->curvalue = s->minvalue;
         return QMS_MOVE;
+    case K_MOUSE1:
+        return Slider_Click(s);
     }
 
     return QMS_NOTHANDLED;
@@ -1493,7 +1556,7 @@ static int Slider_Key(menuSlider_t *s, int key)
 Slider_DoSlide
 =================
 */
-static int Slider_DoSlide(menuSlider_t *s, int dir)
+static menuSound_t Slider_DoSlide(menuSlider_t *s, int dir)
 {
     s->curvalue += dir * s->step;
 
@@ -1516,8 +1579,8 @@ Slider_Draw
 */
 static void Slider_Draw(menuSlider_t *s)
 {
-    int    i, flags;
-    float pos;
+    int     i, flags;
+    float   pos;
 
     flags = s->generic.uiFlags & ~(UI_LEFT | UI_RIGHT);
 
@@ -2201,6 +2264,8 @@ menuSound_t Menu_MouseMove(menuCommon_t *item)
     switch (item->type) {
     case MTYPE_LIST:
         return MenuList_MouseMove((menuList_t *)item);
+    case MTYPE_SLIDER:
+        return Slider_MouseMove((menuSlider_t *)item);
     default:
         return QMS_NOTHANDLED;
     }
