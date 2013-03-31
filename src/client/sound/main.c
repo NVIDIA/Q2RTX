@@ -464,7 +464,7 @@ static sfx_t *S_RegisterSexedSound(int entnum, const char *base)
     sfx = S_FindName(buffer, len);
 
     // see if it exists
-    if (sfx && !sfx->truename && !S_LoadSound(sfx)) {
+    if (sfx && !sfx->truename && !s_registering && !S_LoadSound(sfx)) {
         // no, revert to the male sound in the pak0.pak
         len = Q_concat(buffer, MAX_QPATH,
                        "sound/player/male/", base + 1, NULL);
@@ -476,6 +476,33 @@ static sfx_t *S_RegisterSexedSound(int entnum, const char *base)
     }
 
     return sfx;
+}
+
+static void S_RegisterSexedSounds(void)
+{
+    int     sounds[MAX_SFX];
+    int     i, j, total;
+    sfx_t   *sfx;
+
+    // find sexed sounds
+    total = 0;
+    for (i = 0, sfx = known_sfx; i < num_sfx; i++, sfx++) {
+        if (sfx->name[0] != '*')
+            continue;
+        if (sfx->registration_sequence != s_registration_sequence)
+            continue;
+        sounds[total++] = i;
+    }
+
+    // register sounds for baseclientinfo and other valid clientinfos
+    for (i = 0; i <= MAX_CLIENTS; i++) {
+        if (i > 0 && !cl.clientinfo[i - 1].model_name[0])
+            continue;
+        for (j = 0; j < total; j++) {
+            sfx = &known_sfx[sounds[j]];
+            S_RegisterSexedSound(i, sfx->name);
+        }
+    }
 }
 
 /*
@@ -492,6 +519,8 @@ void S_EndRegistration(void)
     sfxcache_t *sc;
     int     size;
 #endif
+
+    S_RegisterSexedSounds();
 
     // clear playsound list, so we don't free sfx still present there
     S_StopAllSounds();
