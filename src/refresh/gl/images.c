@@ -618,7 +618,19 @@ static void GL_Upscale8(byte *data, int width, int height, imagetype_t type, ima
     FS_FreeTempMem(buffer);
 
     GL_Upload8(data, width, height, maxlevel, type, flags);
-    qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, maxlevel);
+
+    if (AT_LEAST_OPENGL(1, 2))
+        qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, maxlevel);
+
+    // adjust LOD for non power-of-two textures
+    if ((width & (width - 1)) || (height & (height - 1))) {
+        float du    = npot32(width) / (float)width;
+        float dv    = npot32(height) / (float)height;
+        float bias  = -log2(max(du, dv));
+
+        if (AT_LEAST_OPENGL(1, 4))
+            qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_LOD_BIAS, bias);
+    }
 }
 
 static void GL_SetFilterAndRepeat(imagetype_t type, imageflags_t flags)
@@ -642,7 +654,7 @@ static void GL_SetFilterAndRepeat(imagetype_t type, imageflags_t flags)
             nearest = qfalse;
         }
 
-        if (flags & IF_UPSCALED) {
+        if ((flags & IF_UPSCALED) && AT_LEAST_OPENGL(1, 2)) {
             if (nearest) {
                 qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
                 qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -671,9 +683,12 @@ static void GL_SetFilterAndRepeat(imagetype_t type, imageflags_t flags)
     if (type == IT_WALL || type == IT_SKIN || (flags & IF_REPEAT)) {
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    } else {
+    } else if (AT_LEAST_OPENGL(1, 2)) {
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    } else {
+        qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
     }
 }
 

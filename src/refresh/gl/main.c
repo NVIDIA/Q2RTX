@@ -820,9 +820,8 @@ static qboolean GL_SetupConfig(void)
     }
 
     // OpenGL 1.0 doesn't have vertex arrays
-    // OpenGL 1.1 doesn't have GL_CLAMP_TO_EDGE, GL_TEXTURE_MAX_LEVEL
-    if (gl_config.version_major == 1 && gl_config.version_minor < 2) {
-        Com_EPrintf("OpenGL version 1.2 or higher required\n");
+    if (!AT_LEAST_OPENGL(1, 1)) {
+        Com_EPrintf("OpenGL version 1.1 or higher required\n");
         return qfalse;
     }
 

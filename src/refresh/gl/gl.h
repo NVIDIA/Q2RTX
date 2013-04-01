@@ -108,6 +108,9 @@ typedef struct {
     int         stencilbits;
 } glConfig_t;
 
+#define AT_LEAST_OPENGL(major, minor) \
+    (gl_config.version_major > major || (gl_config.version_major == major && gl_config.version_minor >= minor))
+
 extern glStatic_t gl_static;
 extern glConfig_t gl_config;
 extern glRefdef_t glr;
