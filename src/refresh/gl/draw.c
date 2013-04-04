@@ -65,8 +65,6 @@ static inline void _GL_StretchPic(
         }
     }
 
-#define U32_ALPHA   MakeColor(0, 0, 0, 255)
-
     if ((color & U32_ALPHA) != U32_ALPHA) {
         tess.flags |= 2;
     }

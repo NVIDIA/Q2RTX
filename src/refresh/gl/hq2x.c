@@ -29,11 +29,6 @@ written by Maxim Stepin (MaxSt). it is not 100% identical, but very similar.
 #include "common/cvar.h"
 #include "refresh/images.h"
 
-#define MASK_G      0x0000ff00
-#define MASK_RB     0x00ff00ff
-#define MASK_RGB    0x00ffffff
-#define MASK_ALPHA  0xff000000
-
 static const uint8_t hqTable[256] = {
     1, 1, 2,  4, 1, 1, 2,  4, 3,  5,  7,  8, 3,  5, 13, 15,
     1, 1, 2, 10, 1, 1, 2, 10, 3,  5,  8,  8, 3,  5,  6,  8,
@@ -66,30 +61,39 @@ static inline int diff(int A, int B)
     return !same(A, B);
 }
 
+static inline uint64_t grow(uint64_t n)
+{
+    n |= n << 24;
+    n &= UINT64_C(0xff00ff00ff00ff);
+    return n;
+}
+
+static inline uint32_t pack(uint64_t n)
+{
+    n &= UINT64_C(0xff00ff00ff00ff);
+    n |= n >> 24;
+    return n;
+}
+
 static inline uint32_t generic(int A, int B, int C, int w1, int w2, int w3, int s)
 {
     uint32_t a = d_8to24table[A];
     uint32_t b = d_8to24table[B];
     uint32_t c = d_8to24table[C];
-    uint32_t g, rb, alpha;
 
     // if transparent, scan around for another color to avoid alpha fringes
     if (A == 255) {
         if (B == 255)
-            a = c & MASK_RGB;
+            a = c & U32_RGB;
         else
-            a = b & MASK_RGB;
+            a = b & U32_RGB;
     }
     if (B == 255)
-        b = a & MASK_RGB;
+        b = a & U32_RGB;
     if (C == 255)
-        c = a & MASK_RGB;
+        c = a & U32_RGB;
 
-    g      = ((a & MASK_G)  * w1 + (b & MASK_G)  * w2 + (c & MASK_G)  * w3) >> s;
-    rb     = ((a & MASK_RB) * w1 + (b & MASK_RB) * w2 + (c & MASK_RB) * w3) >> s;
-    alpha  = ((a >> 24)     * w1 + (b >> 24)     * w2 + (c >> 24)     * w3) << (24 - s);
-
-    return (g & MASK_G) | (rb & MASK_RB) | (alpha & MASK_ALPHA);
+    return pack((grow(a) * w1 + grow(b) * w2 + grow(c) * w3) >> s);
 }
 
 static uint32_t blend_1(int A)
@@ -449,13 +453,12 @@ void HQ4x_Render(uint32_t *output, const uint8_t *input, int width, int height)
 
 static void pix2ycc(float c[3], int C)
 {
-    int r = d_8to24table[C] & 255;
-    int g = (d_8to24table[C] >> 8) & 255;
-    int b = (d_8to24table[C] >> 16) & 255;
+    color_t tmp;
 
-    c[0] = r *  0.299f + g *  0.587f + b *  0.114f;
-    c[1] = r * -0.169f + g * -0.331f + b *  0.499f + 128.0f;
-    c[2] = r *  0.499f + g * -0.418f + b * -0.081f + 128.0f;
+    tmp.u32 = d_8to24table[C];
+    c[0] = tmp.u8[0] *  0.299f + tmp.u8[1] *  0.587f + tmp.u8[2] *  0.114f;
+    c[1] = tmp.u8[0] * -0.169f + tmp.u8[1] * -0.331f + tmp.u8[2] *  0.499f + 128.0f;
+    c[2] = tmp.u8[0] *  0.499f + tmp.u8[1] * -0.418f + tmp.u8[2] * -0.081f + 128.0f;
 }
 
 void HQ2x_Init(void)
