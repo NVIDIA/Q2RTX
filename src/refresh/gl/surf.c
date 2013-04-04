@@ -721,7 +721,7 @@ static void duplicate_surface_lmtc(mface_t *surf, vec_t *vbo)
 
 static qboolean create_surface_vbo(size_t size)
 {
-    GLuint buf;
+    GLuint buf = 0;
 
     if (!qglGenBuffersARB || !qglBindBufferARB ||
         !qglBufferDataARB || !qglBufferSubDataARB ||

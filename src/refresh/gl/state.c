@@ -456,7 +456,7 @@ void GL_DisableOutlines(void)
 
 void GL_InitPrograms(void)
 {
-    GLuint prog;
+    GLuint prog = 0;
 
     if (gl_config.ext_supported & QGL_ARB_fragment_program) {
         if (gl_fragment_program->integer) {
@@ -477,6 +477,7 @@ void GL_InitPrograms(void)
     }
 
     GL_ClearErrors();
+
     qglGenProgramsARB(1, &prog);
     qglBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, prog);
     qglProgramStringARB(GL_FRAGMENT_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB,
