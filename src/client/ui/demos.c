@@ -47,10 +47,10 @@ DEMOS MENU
 #define COL_MAX     5
 
 typedef struct {
-    unsigned type;
-    size_t size;
-    time_t mtime;
-    char name[1];
+    unsigned    type;
+    size_t      size;
+    time_t      mtime;
+    char        name[1];
 } demoEntry_t;
 
 typedef struct m_demos_s {
@@ -250,8 +250,14 @@ static void CalcHash(void **list)
 
 static menuSound_t Change(menuCommon_t *self)
 {
-    demoEntry_t *e = m_demos.list.items[m_demos.list.curvalue];
+    demoEntry_t *e;
 
+    if (!m_demos.list.numItems) {
+        m_demos.menu.status = "No demos found";
+        return QMS_BEEP;
+    }
+
+    e = m_demos.list.items[m_demos.list.curvalue];
     switch (e->type) {
     case ENTRY_DEMO:
         m_demos.menu.status = "Press Enter to play demo";
@@ -260,6 +266,7 @@ static menuSound_t Change(menuCommon_t *self)
         m_demos.menu.status = "Press Enter to change directory";
         break;
     }
+
     return QMS_SILENT;
 }
 
@@ -274,6 +281,7 @@ static void BuildList(void)
 
     // this can be a lengthy process
     S_StopAllSounds();
+
     m_demos.menu.status = "Building list...";
     SCR_UpdateScreen();
 
@@ -297,7 +305,7 @@ static void BuildList(void)
     // start with minimum size
     m_demos.menu.size(&m_demos.menu);
 
-    if (m_demos.browse[0]) {
+    if (strcmp(m_demos.browse, "/")) {
         BuildDir("..", ENTRY_UP);
     }
 
@@ -334,11 +342,9 @@ static void BuildList(void)
     }
 
     // update status line and sort
-    if (m_demos.list.numItems) {
-        Change(&m_demos.list.generic);
-        if (m_demos.list.sortdir) {
-            m_demos.list.sort(&m_demos.list);
-        }
+    Change(&m_demos.list.generic);
+    if (m_demos.list.sortdir) {
+        m_demos.list.sort(&m_demos.list);
     }
 
     // resize columns
@@ -368,16 +374,21 @@ static void FreeList(void)
     }
 }
 
-static void LeaveDirectory(void)
+static menuSound_t LeaveDirectory(void)
 {
-    char *s;
-    int i;
+    char    *s;
+    int     i;
 
     s = strrchr(m_demos.browse, '/');
     if (!s) {
-        return;
+        return QMS_BEEP;
     }
-    *s = 0;
+
+    if (s == m_demos.browse) {
+        strcpy(m_demos.browse, "/");
+    } else {
+        *s = 0;
+    }
 
     // rebuild list
     FreeList();
@@ -393,43 +404,64 @@ static void LeaveDirectory(void)
         }
     }
 
-    if (s == m_demos.browse) {
-        m_demos.browse[0] = '/';
-        m_demos.browse[1] = 0;
+    return QMS_OUT;
+}
+
+static menuSound_t EnterDirectory(demoEntry_t *e)
+{
+    size_t  baselen, len;
+
+    baselen = strlen(m_demos.browse);
+    len = strlen(e->name);
+    if (baselen + 1 + len >= sizeof(m_demos.browse)) {
+        return QMS_BEEP;
     }
+
+    if (baselen == 0 || m_demos.browse[baselen - 1] != '/') {
+        m_demos.browse[baselen++] = '/';
+    }
+
+    memcpy(m_demos.browse + baselen, e->name, len + 1);
+
+    // rebuild list
+    FreeList();
+    BuildList();
+    MenuList_Init(&m_demos.list);
+    return QMS_IN;
+}
+
+static menuSound_t PlayDemo(demoEntry_t *e)
+{
+    char    buffer[MAX_STRING_CHARS];
+    size_t  len;
+
+    len = Q_snprintf(buffer, sizeof(buffer), "demo \"%s/%s\"\n",
+                     strcmp(m_demos.browse, "/") ? m_demos.browse : "",
+                     e->name);
+    if (len >= sizeof(buffer)) {
+        return QMS_BEEP;
+    }
+
+    Cbuf_AddText(&cmd_buffer, buffer);
+    return QMS_SILENT;
 }
 
 static menuSound_t Activate(menuCommon_t *self)
 {
-    size_t len, baselen;
-    demoEntry_t *e = m_demos.list.items[m_demos.list.curvalue];
+    demoEntry_t *e;
 
+    if (!m_demos.list.numItems) {
+        return QMS_BEEP;
+    }
+
+    e = m_demos.list.items[m_demos.list.curvalue];
     switch (e->type) {
     case ENTRY_UP:
-        LeaveDirectory();
-        return QMS_OUT;
-
+        return LeaveDirectory();
     case ENTRY_DN:
-        baselen = strlen(m_demos.browse);
-        len = strlen(e->name);
-        if (baselen + 1 + len >= sizeof(m_demos.browse)) {
-            return QMS_BEEP;
-        }
-        if (!baselen || m_demos.browse[baselen - 1] != '/') {
-            m_demos.browse[baselen++] = '/';
-        }
-        memcpy(m_demos.browse + baselen, e->name, len + 1);
-
-        // rebuild list
-        FreeList();
-        BuildList();
-        MenuList_Init(&m_demos.list);
-        return QMS_IN;
-
+        return EnterDirectory(e);
     case ENTRY_DEMO:
-        Cbuf_AddText(&cmd_buffer, va("demo \"%s/%s\"\n", m_demos.browse[1] ?
-                                     m_demos.browse : "", e->name));
-        return QMS_SILENT;
+        return PlayDemo(e);
     }
 
     return QMS_NOTHANDLED;
@@ -529,6 +561,7 @@ static menuSound_t Keydown(menuFrameWork_t *self, int key)
         LeaveDirectory();
         return QMS_OUT;
     }
+
     return QMS_NOTHANDLED;
 }
 
@@ -557,7 +590,15 @@ static void Expose(menuFrameWork_t *self)
         m_demos.year = tm->tm_year;
     }
 
+    // check that target directory exists
+    if (strcmp(m_demos.browse, "/")
+        && ui_listalldemos->integer == 0
+        && os_access(va("%s%s", fs_gamedir, m_demos.browse), F_OK)) {
+        strcpy(m_demos.browse, "/");
+    }
+
     BuildList();
+
     // move cursor to previous position
     MenuList_SetValue(&m_demos.list, m_demos.selection);
 }
@@ -640,5 +681,3 @@ void M_Menu_Demos(void)
 
     List_Append(&ui_menus, &m_demos.menu.entry);
 }
-
-
