@@ -1766,7 +1766,7 @@ static void Cmd_Exec_f(void)
 
 void Cmd_Config_g(genctx_t *ctx)
 {
-    FS_File_g("", "*.cfg", FS_SEARCH_SAVEPATH | FS_SEARCH_BYFILTER | FS_SEARCH_STRIPEXT, ctx);
+    FS_File_g(NULL, "*.cfg", FS_SEARCH_SAVEPATH | FS_SEARCH_BYFILTER | FS_SEARCH_STRIPEXT, ctx);
 }
 
 static void Cmd_Exec_c(genctx_t *ctx, int argnum)

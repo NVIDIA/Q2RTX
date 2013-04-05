@@ -2657,15 +2657,15 @@ void **FS_ListFiles(const char *path,
                     unsigned   flags,
                     int        *count_p)
 {
-    searchpath_t *search;
-    packfile_t *file;
-    void *files[MAX_LISTED_FILES], *info;
-    int i, count, total;
-    char normalized[MAX_OSPATH], buffer[MAX_OSPATH];
-    void **list;
-    size_t len, pathlen;
-    char *s, *p;
-    int valid;
+    searchpath_t    *search;
+    packfile_t      *file;
+    void            *files[MAX_LISTED_FILES], *info;
+    int             i, j, count, total;
+    char            normalized[MAX_OSPATH], buffer[MAX_OSPATH];
+    void            **list;
+    size_t          len, pathlen;
+    char            *s, *p;
+    int             valid;
 
     count = 0;
     valid = PATH_NOT_CHECKED;
@@ -2683,6 +2683,11 @@ void **FS_ListFiles(const char *path,
         path = normalized;
     }
 
+    // can't mix directory search with other flags
+    if ((flags & FS_SEARCH_DIRSONLY) && (flags & FS_SEARCH_MASK & ~FS_SEARCH_DIRSONLY)) {
+        goto fail;
+    }
+
     for (search = fs_searchpaths; search; search = search->next) {
         if (flags & FS_PATH_MASK) {
             if ((flags & search->mode & FS_PATH_MASK) == 0) {
@@ -2692,11 +2697,6 @@ void **FS_ListFiles(const char *path,
         if (search->pack) {
             if ((flags & FS_TYPE_MASK) == FS_TYPE_REAL) {
                 continue; // don't search in paks
-            }
-
-            // TODO: add directory search support for pak files
-            if (flags & FS_SEARCH_DIRSONLY) {
-                continue;
             }
 
             for (i = 0; i < search->pack->num_files; i++) {
@@ -2712,10 +2712,14 @@ void **FS_ListFiles(const char *path,
                         continue;
                     }
                     if (s[pathlen] != '/') {
-                        continue; // matched prefix must be a directory
+                        continue;   // matched prefix must be a directory
                     }
                     if (flags & FS_SEARCH_BYFILTER) {
                         s += pathlen + 1;
+                    }
+                } else if (path == normalized) {
+                    if (!(flags & FS_SEARCH_DIRSONLY) && strchr(s, '/')) {
+                        continue;   // must be a file in the root directory
                     }
                 }
 
@@ -2732,6 +2736,32 @@ void **FS_ListFiles(const char *path,
                     }
                 }
 
+                // copy name off
+                if (flags & (FS_SEARCH_DIRSONLY | FS_SEARCH_STRIPEXT)) {
+                    s = strcpy(buffer, s);
+                }
+
+                // hacky directory search support for pak files
+                if (flags & FS_SEARCH_DIRSONLY) {
+                    p = s;
+                    if (pathlen) {
+                        p += pathlen + 1;
+                    }
+                    p = strchr(p, '/');
+                    if (!p) {
+                        continue;   // does not have directory component
+                    }
+                    *p = 0;
+                    for (j = 0; j < count; j++) {
+                        if (!FS_pathcmp(files[j], s)) {
+                            break;
+                        }
+                    }
+                    if (j != count) {
+                        continue;   // already listed this directory
+                    }
+                }
+
                 // strip path
                 if (!(flags & FS_SEARCH_SAVEPATH)) {
                     s = COM_SkipPath(s);
@@ -2739,12 +2769,7 @@ void **FS_ListFiles(const char *path,
 
                 // strip extension
                 if (flags & FS_SEARCH_STRIPEXT) {
-                    p = COM_FileExtension(s);
-                    if (*p) {
-                        len = p - s;
-                        s = memcpy(buffer, s, len);
-                        s[len] = 0;
-                    }
+                    *COM_FileExtension(s) = 0;
                 }
 
                 if (!*s) {

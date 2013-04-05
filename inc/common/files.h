@@ -66,6 +66,7 @@ typedef struct file_info_s {
 #define FS_SEARCH_EXTRAINFO     0x00000400
 #define FS_SEARCH_STRIPEXT      0x00000800
 #define FS_SEARCH_DIRSONLY      0x00001000
+#define FS_SEARCH_MASK          0x00001f00
 
 // bits 8 - 11, flag
 #define FS_FLAG_GZIP            0x00000100
