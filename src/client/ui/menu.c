@@ -497,7 +497,12 @@ SPIN CONTROL
 static void SpinControl_Push(menuSpinControl_t *s)
 {
     int val = s->cvar->integer;
-    clamp(val, 0, s->numItems - 1);
+
+    if (val > s->numItems - 1)
+        val = s->numItems - 1;
+    if (val < 0)
+        val = 0;
+
     s->curvalue = val;
 }
 
@@ -814,7 +819,10 @@ MenuList_SetValue
 */
 void MenuList_SetValue(menuList_t *l, int value)
 {
-    clamp(value, 0, l->numItems - 1);
+    if (value > l->numItems - 1)
+        value = l->numItems - 1;
+    if (value < 0)
+        value = 0;
 
     if (value != l->curvalue) {
         l->curvalue = value;
@@ -1149,6 +1157,9 @@ static menuSound_t MenuList_Key(menuList_t *l, int key)
 
     case K_END:
     case K_KP_END:
+        if (!l->numItems) {
+            goto home;
+        }
         if (l->numItems > l->maxItems) {
             l->prestep = l->numItems - l->maxItems;
         }
