@@ -626,7 +626,7 @@ static void GL_Upscale8(byte *data, int width, int height, imagetype_t type, ima
     if ((width & (width - 1)) || (height & (height - 1))) {
         float du    = npot32(width) / (float)width;
         float dv    = npot32(height) / (float)height;
-        float bias  = -log2(max(du, dv));
+        float bias  = -log(max(du, dv)) / M_LN2;
 
         if (AT_LEAST_OPENGL(1, 4))
             qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_LOD_BIAS, bias);
