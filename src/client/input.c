@@ -476,7 +476,8 @@ static void IN_StrafeUp(void) { KeyUp(&in_strafe); }
 static void IN_AttackDown(void)
 {
     KeyDown(&in_attack);
-    if (cl_instantpacket->integer) {
+
+    if (cl_instantpacket->integer && cls.state == ca_active && cls.netchan) {
         cl.sendPacketNow = qtrue;
     }
 }
@@ -489,7 +490,8 @@ static void IN_AttackUp(void)
 static void IN_UseDown(void)
 {
     KeyDown(&in_use);
-    if (cl_instantpacket->integer) {
+
+    if (cl_instantpacket->integer && cls.state == ca_active && cls.netchan) {
         cl.sendPacketNow = qtrue;
     }
 }
@@ -1245,6 +1247,8 @@ void CL_SendCmd(void)
         if (cls.netchan->ShouldUpdate(cls.netchan)) {
             CL_SendKeepAlive();
         }
+
+        cl.sendPacketNow = qfalse;
         return;
     }
 
