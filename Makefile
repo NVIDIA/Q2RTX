@@ -51,7 +51,6 @@ ifdef CONFIG_WINDOWS
         CONFIG_X86_GAME_ABI_HACK := y
     else
         CONFIG_X86_GAME_ABI_HACK :=
-        CONFIG_X86_ASSEMBLY :=
     endif
 
     LDFLAGS_s += -mconsole
@@ -68,7 +67,6 @@ else
     # Disable x86 features on other arches
     ifneq ($(CPU),i386)
         CONFIG_X86_GAME_ABI_HACK :=
-        CONFIG_X86_ASSEMBLY :=
     endif
 
     # Disable Linux features on other systems
@@ -347,21 +345,21 @@ ifndef CONFIG_SOFTWARE_RENDERER
 endif
 
 ifndef CONFIG_NO_TGA
-	CFLAGS_c += -DUSE_TGA=1
+    CFLAGS_c += -DUSE_TGA=1
 endif
 
 ifdef CONFIG_PNG
-	PNG_CFLAGS ?= $(shell libpng-config --cflags)
-	PNG_LIBS ?= $(shell libpng-config --libs)
-	CFLAGS_c += -DUSE_PNG=1 $(PNG_CFLAGS)
-	LIBS_c += $(PNG_LIBS)
+    PNG_CFLAGS ?= $(shell libpng-config --cflags)
+    PNG_LIBS ?= $(shell libpng-config --libs)
+    CFLAGS_c += -DUSE_PNG=1 $(PNG_CFLAGS)
+    LIBS_c += $(PNG_LIBS)
 endif
 
 ifdef CONFIG_JPEG
-	JPG_CFLAGS ?=
-	JPG_LIBS ?= -ljpeg
-	CFLAGS_c += -DUSE_JPG=1 $(JPG_CFLAGS)
-	LIBS_c += $(JPG_LIBS)
+    JPG_CFLAGS ?=
+    JPG_LIBS ?= -ljpeg
+    CFLAGS_c += -DUSE_JPG=1 $(JPG_CFLAGS)
+    LIBS_c += $(JPG_LIBS)
 endif
 
 ifdef CONFIG_ANTICHEAT_SERVER
