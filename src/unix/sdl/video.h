@@ -46,3 +46,7 @@ qboolean VID_SDL_Init(void);
 void VID_SDL_Shutdown(void);
 qboolean VID_SDL_SetMode(int flags, int forcedepth);
 void VID_SDL_SurfaceChanged(void);
+
+#if USE_X11
+void VID_GLX_SurfaceChanged(void);
+#endif

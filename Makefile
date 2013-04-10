@@ -268,7 +268,15 @@ endif
 ifdef CONFIG_OPENAL
     CFLAGS_c += -DUSE_OPENAL=1
     OBJS_c += src/client/sound/al.o
-    OBJS_c += src/client/sound/qal.o
+    ifdef CONFIG_FIXED_LIBAL
+        AL_CFLAGS ?= $(shell pkg-config openal --cflags)
+        AL_LIBS ?= $(shell pkg-config openal --libs)
+        CFLAGS_c += -DUSE_FIXED_LIBAL=1 $(AL_CFLAGS)
+        LIBS_c += $(AL_LIBS)
+        OBJS_c += src/client/sound/qal/fixed.o
+    else
+        OBJS_c += src/client/sound/qal/dynamic.o
+    endif
 endif
 
 ifndef CONFIG_NO_MENUS
@@ -320,6 +328,7 @@ ifdef CONFIG_SOFTWARE_RENDERER
 else
     CFLAGS_c += -DREF_GL=1 -DUSE_REF=1 -DVID_REF='"gl"'
     OBJS_c += src/refresh/gl/draw.o
+    OBJS_c += src/refresh/gl/hq2x.o
     OBJS_c += src/refresh/gl/images.o
     OBJS_c += src/refresh/gl/main.o
     OBJS_c += src/refresh/gl/mesh.o
@@ -329,8 +338,15 @@ else
     OBJS_c += src/refresh/gl/surf.o
     OBJS_c += src/refresh/gl/tess.o
     OBJS_c += src/refresh/gl/world.o
-    OBJS_c += src/refresh/gl/qgl.o
-    OBJS_c += src/refresh/gl/hq2x.o
+    ifdef CONFIG_FIXED_LIBGL
+        GL_CFLAGS ?=
+        GL_LIBS ?= -lGL
+        CFLAGS_c += -DUSE_FIXED_LIBGL=1 $(GL_CFLAGS)
+        LIBS_c += $(GL_LIBS)
+        OBJS_c += src/refresh/gl/qgl/fixed.o
+    else
+        OBJS_c += src/refresh/gl/qgl/dynamic.o
+    endif
 endif
 
 CONFIG_DEFAULT_MODELIST ?= 640x480 800x600 1024x768

@@ -19,7 +19,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "shared/shared.h"
 #include "common/common.h"
 #include "client/video.h"
-#include "qgl.h"
+#include "dynamic.h"
 
 // ==========================================================
 
@@ -663,15 +663,16 @@ void QGL_ShutdownExtensions(unsigned mask)
 #define GCA(x)  VID_GetCoreAddr("gl"#x)
 #define GPA(x)  VID_GetProcAddr("gl"#x)
 
-void QGL_Init(void)
+qboolean QGL_Init(void)
 {
 #ifdef _DEBUG
-#define QGL(x)  qgl##x = dll##x = GCA(x)
+#define QGL(x)  if ((qgl##x = dll##x = GCA(x)) == NULL) return qfalse;
 #else
-#define QGL(x)  qgl##x = GCA(x)
+#define QGL(x)  if ((qgl##x = GCA(x)) == NULL)          return qfalse;
 #endif
     QGL_core_IMP
 #undef QGL
+    return qtrue;
 }
 
 void QGL_InitExtensions(unsigned mask)
@@ -701,7 +702,7 @@ void QGL_InitExtensions(unsigned mask)
 
 unsigned QGL_ParseExtensionString(const char *s)
 {
-    // must match defines in qgl_api.h!
+    // must match defines in dynamic.h!
     static const char *const extnames[] = {
         "GL_ARB_fragment_program",
         "GL_ARB_multitexture",

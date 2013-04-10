@@ -275,6 +275,7 @@ void *Sys_LoadLibrary(const char *path, const char *sym, void **handle)
 
     *handle = NULL;
 
+    dlerror();
     module = dlopen(path, RTLD_LAZY);
     if (!module) {
         Com_SetLastError(dlerror());
@@ -299,7 +300,14 @@ void *Sys_LoadLibrary(const char *path, const char *sym, void **handle)
 
 void *Sys_GetProcAddress(void *handle, const char *sym)
 {
-    return dlsym(handle, sym);
+    void    *entry;
+
+    dlerror();
+    entry = dlsym(handle, sym);
+    if (!entry)
+        Com_SetLastError(dlerror());
+
+    return entry;
 }
 
 /*

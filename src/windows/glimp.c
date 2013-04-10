@@ -542,17 +542,31 @@ void VID_EndFrame(void)
 
 void *VID_GetCoreAddr(const char *sym)
 {
-    if (glw.hinstOpenGL)
-        return (void *)GetProcAddress(glw.hinstOpenGL, sym);
+    void    *entry;
 
-    return NULL;
+    if (glw.hinstOpenGL)
+        entry = (void *)GetProcAddress(glw.hinstOpenGL, sym);
+    else
+        entry = NULL;
+
+    if (!entry)
+        Com_EPrintf("Couldn't get OpenGL entry point: %s\n", sym);
+
+    return entry;
 }
 
 void *VID_GetProcAddr(const char *sym)
 {
-    if (qwglGetProcAddress)
-        return (void *)qwglGetProcAddress(sym);
+    void    *entry;
 
-    return NULL;
+    if (qwglGetProcAddress)
+        entry = (void *)qwglGetProcAddress(sym);
+    else
+        entry = NULL;
+
+    if (!entry)
+        Com_EPrintf("Couldn't get OpenGL entry point: %s\n", sym);
+
+    return entry;
 }
 

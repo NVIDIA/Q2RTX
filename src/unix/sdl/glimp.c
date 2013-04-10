@@ -18,10 +18,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "video.h"
 
-#if USE_X11
-void VID_GLX_SurfaceChanged(void);
-#endif
-
 void VID_SDL_SurfaceChanged(void)
 {
     int accel;
@@ -43,7 +39,6 @@ qboolean VID_Init(void)
     cvar_t *gl_depthbits;
     cvar_t *gl_stencilbits;
     cvar_t *gl_multisamples;
-    char *s;
     int colorbits;
     int depthbits;
     int stencilbits;
@@ -53,16 +48,18 @@ qboolean VID_Init(void)
         return qfalse;
     }
 
+#if USE_FIXED_LIBGL
+    gl_driver = Cvar_Get("gl_driver", LIBGL, CVAR_ROM);
+    (void)gl_driver;
+#else
     gl_driver = Cvar_Get("gl_driver", LIBGL, CVAR_REFRESH);
-    gl_colorbits = Cvar_Get("gl_colorbits", "0", CVAR_REFRESH);
-    gl_depthbits = Cvar_Get("gl_depthbits", "0", CVAR_REFRESH);
-    gl_stencilbits = Cvar_Get("gl_stencilbits", "8", CVAR_REFRESH);
-    gl_multisamples = Cvar_Get("gl_multisamples", "0", CVAR_REFRESH);
 
     // don't allow absolute or relative paths
     FS_SanitizeFilenameVariable(gl_driver);
 
     while (1) {
+        char *s;
+
         // ugly hack to work around brain-dead servers that actively
         // check and enforce `gl_driver' cvar to `opengl32', unaware
         // of other systems than Windows
@@ -86,6 +83,12 @@ qboolean VID_Init(void)
         Com_Printf("...falling back to %s\n", gl_driver->default_string);
         Cvar_Reset(gl_driver);
     }
+#endif
+
+    gl_colorbits = Cvar_Get("gl_colorbits", "0", CVAR_REFRESH);
+    gl_depthbits = Cvar_Get("gl_depthbits", "0", CVAR_REFRESH);
+    gl_stencilbits = Cvar_Get("gl_stencilbits", "8", CVAR_REFRESH);
+    gl_multisamples = Cvar_Get("gl_multisamples", "0", CVAR_REFRESH);
 
     colorbits = Cvar_ClampInteger(gl_colorbits, 0, 32);
     depthbits = Cvar_ClampInteger(gl_depthbits, 0, 32);
@@ -156,15 +159,27 @@ void VID_EndFrame(void)
 {
     SDL_GL_SwapBuffers();
 }
-#endif
 
+#endif  // !USE_X11
+
+#if !USE_FIXED_LIBGL
 void *VID_GetCoreAddr(const char *sym)
 {
-    return SDL_GL_GetProcAddress(sym);
+    void    *entry = SDL_GL_GetProcAddress(sym);
+
+    if (!entry)
+        Com_EPrintf("Couldn't get OpenGL entry point: %s\n", sym);
+
+    return entry;
 }
+#endif
 
 void *VID_GetProcAddr(const char *sym)
 {
-    return SDL_GL_GetProcAddress(sym);
-}
+    void    *entry = SDL_GL_GetProcAddress(sym);
 
+    if (!entry)
+        Com_EPrintf("Couldn't get OpenGL entry point: %s\n", sym);
+
+    return entry;
+}

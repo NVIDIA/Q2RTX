@@ -980,7 +980,9 @@ qboolean R_Init(qboolean total)
     }
 
     // initialize our QGL dynamic bindings
-    QGL_Init();
+    if (!QGL_Init()) {
+        goto fail;
+    }
 
     // initialize extensions and get various limits from OpenGL
     if (!GL_SetupConfig()) {

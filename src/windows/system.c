@@ -760,7 +760,7 @@ void *Sys_LoadLibrary(const char *path, const char *sym, void **handle)
 
     module = LoadLibraryA(path);
     if (!module) {
-        Com_SetLastError(va("%s: LoadLibrary failed with error %lu\n",
+        Com_SetLastError(va("%s: LoadLibrary failed with error %lu",
                             path, GetLastError()));
         return NULL;
     }
@@ -768,8 +768,8 @@ void *Sys_LoadLibrary(const char *path, const char *sym, void **handle)
     if (sym) {
         entry = GetProcAddress(module, sym);
         if (!entry) {
-            Com_SetLastError(va("%s: GetProcAddress failed with error %lu\n",
-                                path, GetLastError()));
+            Com_SetLastError(va("%s: GetProcAddress(%s) failed with error %lu",
+                                path, sym, GetLastError()));
             FreeLibrary(module);
             return NULL;
         }
@@ -783,7 +783,14 @@ void *Sys_LoadLibrary(const char *path, const char *sym, void **handle)
 
 void *Sys_GetProcAddress(void *handle, const char *sym)
 {
-    return GetProcAddress(handle, sym);
+    void    *entry;
+
+    entry = GetProcAddress(handle, sym);
+    if (!entry)
+        Com_SetLastError(va("GetProcAddress(%s) failed with error %lu",
+                            sym, GetLastError()));
+
+    return entry;
 }
 
 /*

@@ -21,7 +21,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/cvar.h"
 #include "common/common.h"
 #include "common/files.h"
-#include "qal.h"
+#include "dynamic.h"
 #include <AL/alc.h>
 
 #define QALC_IMP \
@@ -102,7 +102,7 @@ qboolean QAL_Init(void)
         return qfalse;
     }
 
-#define QAL(type, func)  q##func = Sys_GetProcAddress(handle, #func)
+#define QAL(type, func)  if ((q##func = Sys_GetProcAddress(handle, #func)) == NULL) goto fail;
     QALC_IMP
     QAL_IMP
 #undef QAL

@@ -17,7 +17,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 #include "sound.h"
-#include "qal.h"
+
+#if USE_FIXED_LIBAL
+#include "qal/fixed.h"
+#else
+#include "qal/dynamic.h"
+#endif
 
 // translates from AL coordinate system to quake
 #define AL_UnpackVector(v)  -v[1],v[2],-v[0]

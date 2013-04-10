@@ -15,21 +15,12 @@ You should have received a copy of the GNU General Public License along
 with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
-/*
-** QGL.H
-*/
 
-#ifndef __QGL_H__
-#define __QGL_H__
+#ifndef QGL_H
+#define QGL_H
 
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
 #include <GL/gl.h>
 #include <GL/glext.h>
-#else
-#include <GL/gl.h>
-#endif
 
 #ifndef APIENTRY
 #define APIENTRY
@@ -278,7 +269,7 @@ typedef void (APIENTRY * qglUnlockArraysEXT_t)(void);
 
 // ==========================================================
 
-void QGL_Init(void);
+qboolean QGL_Init(void);
 void QGL_Shutdown(void);
 void QGL_InitExtensions(unsigned mask);
 void QGL_ShutdownExtensions(unsigned mask);
@@ -299,5 +290,5 @@ QGL_ARB_vertex_buffer_object_IMP
 QGL_EXT_compiled_vertex_array_IMP
 #undef QGL
 
-#endif
+#endif  // QGL_H
 
