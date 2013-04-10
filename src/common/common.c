@@ -873,6 +873,8 @@ void Qcommon_Init(int argc, char **argv)
 
     X86_SetFPCW();
 
+    srand(time(NULL));
+
     // prepare enough of the subsystems to handle
     // cvar and command buffer management
     Z_Init();
@@ -985,8 +987,6 @@ void Qcommon_Init(int argc, char **argv)
 #if !USE_CLIENT
     Cmd_AddCommand("recycle", Com_Recycle_f);
 #endif
-
-    srand(Sys_Milliseconds());
 
     Netchan_Init();
     NET_Init();
