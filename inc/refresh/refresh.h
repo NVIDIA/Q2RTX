@@ -46,7 +46,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define SHELL_WHITE_COLOR   0xD7
 
+// NOTE: these flags are intentionally the same value
 #define RF_LEFTHAND         0x80000000
+#define RF_NOSHADOW         0x80000000
 
 #define RF_SHELL_MASK       (RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE | \
                              RF_SHELL_DOUBLE | RF_SHELL_HALF_DAM)

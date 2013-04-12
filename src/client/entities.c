@@ -20,6 +20,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "client.h"
 
 extern qhandle_t cl_mod_powerscreen;
+extern qhandle_t cl_mod_laser;
 extern qhandle_t cl_sfx_footsteps[4];
 
 /*
@@ -609,6 +610,8 @@ static void CL_AddPacketEntities(void)
                 ent.skinnum = s1->skinnum;
                 ent.skin = 0;
                 ent.model = cl.model_draw[s1->modelindex];
+                if (ent.model == cl_mod_laser)
+                    renderfx |= RF_NOSHADOW;
             }
         }
 

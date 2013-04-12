@@ -20,8 +20,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 typedef void (*tessfunc_t)(const maliasmesh_t *);
 
-extern qhandle_t    cl_mod_laser;
-
 static int      oldframenum;
 static int      newframenum;
 static float    frontlerp;
@@ -450,10 +448,7 @@ static void setup_shadow(void)
     if (!gl_shadows->integer)
         return;
 
-    if (glr.ent->flags & RF_WEAPONMODEL)
-        return;
-
-    if (glr.ent->model == cl_mod_laser)
+    if (glr.ent->flags & (RF_WEAPONMODEL | RF_NOSHADOW))
         return;
 
     if (!glr.lightpoint.surf)

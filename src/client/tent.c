@@ -202,7 +202,7 @@ void CL_SmokeAndFlash(vec3_t origin)
     VectorCopy(origin, ex->ent.origin);
     ex->type = ex_misc;
     ex->frames = 4;
-    ex->ent.flags = RF_TRANSLUCENT;
+    ex->ent.flags = RF_TRANSLUCENT | RF_NOSHADOW;
     ex->start = cl.servertime - CL_FRAMETIME;
     ex->ent.model = cl_mod_smoke;
 
