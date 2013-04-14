@@ -159,7 +159,7 @@ void CL_LoadClientinfo(clientinfo_t *ci, const char *s)
         Q_concat(weapon_filename, sizeof(weapon_filename),
                  "players/", model_name, "/", cl.weaponModels[i], NULL);
         ci->weaponmodel[i] = R_RegisterModel(weapon_filename);
-        if (!ci->weaponmodel[i] && Q_stricmp(model_name, "male")) {
+        if (!ci->weaponmodel[i] && !Q_stricmp(model_name, "cyborg")) {
             // try male
             Q_concat(weapon_filename, sizeof(weapon_filename),
                      "players/male/", cl.weaponModels[i], NULL);
