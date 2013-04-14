@@ -20,8 +20,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "gl.h"
 #include "common/prompt.h"
 
-#define MAX_STACK_PIXELS    (256 * 256)
-
 static int gl_filter_min;
 static int gl_filter_max;
 static float gl_filter_anisotropy;
@@ -49,9 +47,10 @@ static cvar_t *gl_intensity;
 static cvar_t *gl_gamma;
 static cvar_t *gl_invert;
 
+static int GL_UpscaleLevel(int width, int height, imagetype_t type, imageflags_t flags);
+static void GL_Upload32(byte *data, int width, int height, int baselevel, imagetype_t type, imageflags_t flags);
+static void GL_Upscale32(byte *data, int width, int height, int maxlevel, imagetype_t type, imageflags_t flags);
 static void GL_SetFilterAndRepeat(imagetype_t type, imageflags_t flags);
-static void GL_Upload8(byte *data, int width, int height, int baselevel, imagetype_t type, imageflags_t flags);
-static void GL_Upscale8(byte *data, int width, int height, imagetype_t type, imageflags_t flags);
 
 typedef struct {
     const char *name;
@@ -189,7 +188,7 @@ static void gl_texturebits_changed(cvar_t *self)
 #define SCRAP_BLOCK_HEIGHT      256
 
 static int scrap_inuse[SCRAP_BLOCK_WIDTH];
-static byte scrap_data[SCRAP_BLOCK_WIDTH * SCRAP_BLOCK_HEIGHT];
+static byte scrap_data[SCRAP_BLOCK_WIDTH * SCRAP_BLOCK_HEIGHT * 4];
 static qboolean scrap_dirty;
 
 #define Scrap_AllocBlock(w, h, s, t) \
@@ -198,7 +197,7 @@ static qboolean scrap_dirty;
 static void Scrap_Init(void)
 {
     // make scrap texture initially transparent
-    memset(scrap_data, 255, sizeof(scrap_data));
+    memset(scrap_data, 0, sizeof(scrap_data));
 }
 
 static void Scrap_Shutdown(void)
@@ -214,16 +213,20 @@ static void Scrap_Shutdown(void)
 
 void Scrap_Upload(void)
 {
+    int maxlevel;
+
     if (!scrap_dirty) {
         return;
     }
 
     GL_ForceTexture(0, TEXNUM_SCRAP);
-    if (gl_upscale_pcx->integer) {
-        GL_Upscale8(scrap_data, SCRAP_BLOCK_WIDTH, SCRAP_BLOCK_HEIGHT, IT_PIC, IF_SCRAP);
+
+    maxlevel = GL_UpscaleLevel(SCRAP_BLOCK_WIDTH, SCRAP_BLOCK_HEIGHT, IT_PIC, IF_SCRAP);
+    if (maxlevel) {
+        GL_Upscale32(scrap_data, SCRAP_BLOCK_WIDTH, SCRAP_BLOCK_HEIGHT, maxlevel, IT_PIC, IF_SCRAP);
         GL_SetFilterAndRepeat(IT_PIC, IF_SCRAP | IF_UPSCALED);
     } else {
-        GL_Upload8(scrap_data, SCRAP_BLOCK_WIDTH, SCRAP_BLOCK_HEIGHT, 0, IT_PIC, IF_SCRAP);
+        GL_Upload32(scrap_data, SCRAP_BLOCK_WIDTH, SCRAP_BLOCK_HEIGHT, maxlevel, IT_PIC, IF_SCRAP);
         GL_SetFilterAndRepeat(IT_PIC, IF_SCRAP);
     }
 
@@ -541,83 +544,99 @@ static void GL_Upload32(byte *data, int width, int height, int baselevel, imaget
 
 /*
 ===============
-GL_Upload8
+GL_Unpack8
 ===============
 */
-static void GL_Upload8(byte *data, int width, int height, int baselevel, imagetype_t type, imageflags_t flags)
+static void GL_Unpack8(byte *output, int outpitch, const byte *input, int width, int height)
 {
-    byte    stackbuf[MAX_STACK_PIXELS * 4];
-    byte    *buffer, *dest;
-    int     i, s, p;
+    uint32_t    *out;
+    int         x, y, p;
 
-    s = width * height;
-    if (s > MAX_STACK_PIXELS)
-        buffer = FS_AllocTempMem(s * 4);
-    else
-        buffer = stackbuf;
-
-    dest = buffer;
-    for (i = 0; i < s; i++) {
-        p = data[i];
-        *(uint32_t *)dest = d_8to24table[p];
-
-        if (p == 255) {
-            // transparent, so scan around for another color
-            // to avoid alpha fringes
-            // FIXME: do a full flood fill so mips work...
-            if (i > width && data[i - width] != 255)
-                p = data[i - width];
-            else if (i < s - width && data[i + width] != 255)
-                p = data[i + width];
-            else if (i > 0 && data[i - 1] != 255)
-                p = data[i - 1];
-            else if (i < s - 1 && data[i + 1] != 255)
-                p = data[i + 1];
-            else
-                p = 0;
-            // copy rgb components
-            dest[0] = ((byte *)&d_8to24table[p])[0];
-            dest[1] = ((byte *)&d_8to24table[p])[1];
-            dest[2] = ((byte *)&d_8to24table[p])[2];
+    for (y = 0; y < height; y++) {
+        out = (uint32_t *)output + y * outpitch;
+        for (x = 0; x < width; x++) {
+            p = *input;
+            if (p == 255) {
+                // transparent, so scan around for another color
+                // to avoid alpha fringes
+                // FIXME: do a full flood fill so mips work...
+                if (y > 0 && *(input - width) != 255)
+                    p = *(input - width);
+                else if (y < height - 1 && *(input + width) != 255)
+                    p = *(input + width);
+                else if (x > 0 && *(input - 1) != 255)
+                    p = *(input - 1);
+                else if (x < width - 1 && *(input + 1) != 255)
+                    p = *(input + 1);
+                else if (y > 0 && x > 0 && *(input - width - 1) != 255)
+                    p = *(input - width - 1);
+                else if (y > 0 && x < width - 1 && *(input - width + 1) != 255)
+                    p = *(input - width + 1);
+                else if (y < height - 1 && x > 0 && *(input + width - 1) != 255)
+                    p = *(input + width - 1);
+                else if (y < height - 1 && x < width - 1 && *(input + width + 1) != 255)
+                    p = *(input + width + 1);
+                else
+                    p = 0;
+                // copy rgb components
+                *out = d_8to24table[p] & U32_RGB;
+            } else {
+                *out = d_8to24table[p];
+            }
+            input++;
+            out++;
         }
-
-        dest += 4;
     }
-
-    GL_Upload32(buffer, width, height, baselevel, type, flags);
-
-    if (s > MAX_STACK_PIXELS)
-        FS_FreeTempMem(buffer);
 }
 
-static void GL_Upscale8(byte *data, int width, int height, imagetype_t type, imageflags_t flags)
+static int GL_UpscaleLevel(int width, int height, imagetype_t type, imageflags_t flags)
 {
-    int         maxlevel;
-    byte        *buffer;
-    uint32_t    saved;
+    int maxlevel;
 
-    maxlevel = Cvar_ClampInteger(gl_upscale_pcx, 1, 2);
+    // only upscale pics, fonts and sprites
+    if (type != IT_PIC && type != IT_FONT && type != IT_SPRITE)
+        return 0;
+
+    // only upscale 8-bit and small 32-bit pics
+    if (!(flags & (IF_PALETTED | IF_SCRAP)))
+        return 0;
+
+    width = npot32(width);
+    height = npot32(height);
+
+    maxlevel = Cvar_ClampInteger(gl_upscale_pcx, 0, 2);
+    while (maxlevel) {
+        int maxsize = gl_config.maxTextureSize >> maxlevel;
+
+        // don't bother upscaling larger than max texture size
+        if (width <= maxsize && height <= maxsize)
+            break;
+
+        maxlevel--;
+    }
+
+    return maxlevel;
+}
+
+static void GL_Upscale32(byte *data, int width, int height, int maxlevel, imagetype_t type, imageflags_t flags)
+{
+    byte    *buffer;
+
     buffer = FS_AllocTempMem((width * height) << ((maxlevel + 1) * 2));
 
-    // small hack for optimization
-    saved = d_8to24table[255];
-    d_8to24table[255] = 0;
-
     if (maxlevel >= 2) {
-        HQ4x_Render((uint32_t *)buffer, data, width, height);
+        HQ4x_Render((uint32_t *)buffer, (uint32_t *)data, width, height);
         GL_Upload32(buffer, width * 4, height * 4, maxlevel - 2, type, flags);
     }
 
     if (maxlevel >= 1) {
-        HQ2x_Render((uint32_t *)buffer, data, width, height);
+        HQ2x_Render((uint32_t *)buffer, (uint32_t *)data, width, height);
         GL_Upload32(buffer, width * 2, height * 2, maxlevel - 1, type, flags);
     }
 
-    d_8to24table[255] = saved;
-
     FS_FreeTempMem(buffer);
 
-    GL_Upload8(data, width, height, maxlevel, type, flags);
+    GL_Upload32(data, width, height, maxlevel, type, flags);
 
     if (AT_LEAST_OPENGL(1, 2))
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, maxlevel);
@@ -692,6 +711,8 @@ static void GL_SetFilterAndRepeat(imagetype_t type, imageflags_t flags)
     }
 }
 
+#define MAX_STACK_PIXELS    (256 * 256)
+
 /*
 ================
 IMG_Load
@@ -699,23 +720,28 @@ IMG_Load
 */
 void IMG_Load(image_t *image, byte *pic, int width, int height)
 {
-    byte *src, *dst;
-    int i, s, t;
+    byte    stackbuf[MAX_STACK_PIXELS * 4];
+    byte    *buffer;
+    byte    *src, *dst;
+    int     i, s, t, maxlevel;
 
     if (!pic) {
         Com_Error(ERR_FATAL, "%s: NULL", __func__);
     }
 
-    // load small 8-bit pics onto the scrap
-    if (image->type == IT_PIC && (image->flags & IF_PALETTED) &&
-        width < 64 && height < 64 && !gl_noscrap->integer &&
-        Scrap_AllocBlock(width, height, &s, &t)) {
-        src = pic;
-        dst = &scrap_data[t * SCRAP_BLOCK_WIDTH + s];
-        for (i = 0; i < height; i++) {
-            memcpy(dst, src, width);
-            src += width;
-            dst += SCRAP_BLOCK_WIDTH;
+    // load small pics onto the scrap
+    if (image->type == IT_PIC && width < 64 && height < 64 &&
+        gl_noscrap->integer == 0 && Scrap_AllocBlock(width, height, &s, &t)) {
+        dst = &scrap_data[(t * SCRAP_BLOCK_WIDTH + s) * 4];
+        if (image->flags & IF_PALETTED) {
+            GL_Unpack8(dst, SCRAP_BLOCK_WIDTH, pic, width, height);
+        } else {
+            src = pic;
+            for (i = 0; i < height; i++) {
+                memcpy(dst, src, width * 4);
+                src += width * 4;
+                dst += SCRAP_BLOCK_WIDTH * 4;
+            }
         }
 
         image->texnum = TEXNUM_SCRAP;
@@ -727,7 +753,8 @@ void IMG_Load(image_t *image, byte *pic, int width, int height)
         image->tl = (t + 0.01f) / (float)SCRAP_BLOCK_HEIGHT;
         image->th = (t + height - 0.01f) / (float)SCRAP_BLOCK_HEIGHT;
 
-        if (gl_upscale_pcx->integer)
+        maxlevel = GL_UpscaleLevel(SCRAP_BLOCK_WIDTH, SCRAP_BLOCK_HEIGHT, IT_PIC, IF_SCRAP);
+        if (maxlevel)
             image->flags |= IF_UPSCALED;
 
         scrap_dirty = qtrue;
@@ -737,19 +764,31 @@ void IMG_Load(image_t *image, byte *pic, int width, int height)
     if (image->type == IT_SKIN && (image->flags & IF_PALETTED))
         R_FloodFillSkin(pic, width, height);
 
+    if (image->flags & IF_PALETTED) {
+        s = width * height;
+        if (s > MAX_STACK_PIXELS)
+            buffer = FS_AllocTempMem(s * 4);
+        else
+            buffer = stackbuf;
+        GL_Unpack8(buffer, width, pic, width, height);
+    } else {
+        s = 0;
+        buffer = pic;
+    }
+
     qglGenTextures(1, &image->texnum);
     GL_ForceTexture(0, image->texnum);
-    if (image->flags & IF_PALETTED) {
-        if (image->type != IT_WALL && image->type != IT_SKIN && gl_upscale_pcx->integer) {
-            GL_Upscale8(pic, width, height, image->type, image->flags);
-            image->flags |= IF_UPSCALED;
-        } else {
-            GL_Upload8(pic, width, height, 0, image->type, image->flags);
-        }
+
+    maxlevel = GL_UpscaleLevel(width, height, image->type, image->flags);
+    if (maxlevel) {
+        GL_Upscale32(buffer, width, height, maxlevel, image->type, image->flags);
+        image->flags |= IF_UPSCALED;
     } else {
-        GL_Upload32(pic, width, height, 0, image->type, image->flags);
+        GL_Upload32(buffer, width, height, maxlevel, image->type, image->flags);
     }
+
     GL_SetFilterAndRepeat(image->type, image->flags);
+
     if (upload_alpha) {
         image->flags |= IF_TRANSPARENT;
     }
@@ -759,6 +798,9 @@ void IMG_Load(image_t *image, byte *pic, int width, int height)
     image->sh = 1;
     image->tl = 0;
     image->th = 1;
+
+    if (s > MAX_STACK_PIXELS)
+        FS_FreeTempMem(buffer);
 }
 
 void IMG_Unload(image_t *image)

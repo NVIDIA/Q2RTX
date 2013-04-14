@@ -94,6 +94,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define q_printf(f, a)      __attribute__((format(printf, f, a)))
 #define q_noreturn          __attribute__((noreturn))
+#define q_noinline          __attribute__((noinline))
 #define q_malloc            __attribute__((malloc))
 #if __GNUC__ >= 4
 #define q_sentinel          __attribute__((sentinel))
@@ -127,6 +128,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define q_printf(f, a)
 #define q_noreturn
+#define q_noinline
 #define q_malloc
 #define q_sentinel
 

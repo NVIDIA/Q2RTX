@@ -49,16 +49,44 @@ static const uint8_t hqTable[256] = {
 };
 
 static uint8_t  rotTable[256];
-static uint8_t  equBitmap[65536 / CHAR_BIT];
+static int32_t  yccTable[8][256];
+static int32_t  maxY, maxCb, maxCr;
 
-static inline int same(int A, int B)
+static q_noinline int diff(uint32_t A_u32, uint32_t B_u32)
 {
-    return Q_IsBitSet(equBitmap, (A << 8) + B);
+    color_t A, B;
+    int32_t a, b;
+
+    A.u32 = A_u32;
+    B.u32 = B_u32;
+
+    if (A.u8[3] == 0 && B.u8[3] == 0)
+        return 0;
+
+    if (A.u8[3] == 0 || B.u8[3] == 0)
+        return 1;
+
+    a = yccTable[0][A.u8[0]] + yccTable[1][A.u8[1]] + yccTable[2][A.u8[2]];
+    b = yccTable[0][B.u8[0]] + yccTable[1][B.u8[1]] + yccTable[2][B.u8[2]];
+    if (abs(a - b) > maxY)
+        return 1;
+
+    a = yccTable[3][A.u8[0]] + yccTable[4][A.u8[1]] + yccTable[5][A.u8[2]];
+    b = yccTable[3][B.u8[0]] + yccTable[4][B.u8[1]] + yccTable[5][B.u8[2]];
+    if (abs(a - b) > maxCb)
+        return 1;
+
+    a = yccTable[5][A.u8[0]] + yccTable[6][A.u8[1]] + yccTable[7][A.u8[2]];
+    b = yccTable[5][B.u8[0]] + yccTable[6][B.u8[1]] + yccTable[7][B.u8[2]];
+    if (abs(a - b) > maxCr)
+        return 1;
+
+    return 0;
 }
 
-static inline int diff(int A, int B)
+static inline int same(uint32_t A, uint32_t B)
 {
-    return !same(A, B);
+    return !diff(A, B);
 }
 
 static inline uint64_t grow(uint64_t n)
@@ -75,78 +103,52 @@ static inline uint32_t pack(uint64_t n)
     return n;
 }
 
-static inline uint32_t generic(int A, int B, int C, int w1, int w2, int w3, int s)
+static q_noinline uint32_t blend_1_1(uint32_t A, uint32_t B)
 {
-    uint32_t a = d_8to24table[A];
-    uint32_t b = d_8to24table[B];
-    uint32_t c = d_8to24table[C];
-
-    // if transparent, scan around for another color to avoid alpha fringes
-    if (A == 255) {
-        if (B == 255)
-            a = c & U32_RGB;
-        else
-            a = b & U32_RGB;
-    }
-    if (B == 255)
-        b = a & U32_RGB;
-    if (C == 255)
-        c = a & U32_RGB;
-
-    return pack((grow(a) * w1 + grow(b) * w2 + grow(c) * w3) >> s);
+    return pack((grow(A) + grow(B)) >> 1);
 }
 
-static uint32_t blend_1(int A)
+static q_noinline uint32_t blend_3_1(uint32_t A, uint32_t B)
 {
-    return d_8to24table[A];
+    return pack((grow(A) * 3 + grow(B)) >> 2);
 }
 
-static uint32_t blend_1_1(int A, int B)
+static q_noinline uint32_t blend_7_1(uint32_t A, uint32_t B)
 {
-    return generic(A, B, 0, 1, 1, 0, 1);
+    return pack((grow(A) * 7 + grow(B)) >> 3);
 }
 
-static uint32_t blend_3_1(int A, int B)
+static q_noinline uint32_t blend_5_3(uint32_t A, uint32_t B)
 {
-    return generic(A, B, 0, 3, 1, 0, 2);
+    return pack((grow(A) * 5 + grow(B) * 3) >> 3);
 }
 
-static uint32_t blend_7_1(int A, int B)
+static q_noinline uint32_t blend_2_1_1(uint32_t A, uint32_t B, uint32_t C)
 {
-    return generic(A, B, 0, 7, 1, 0, 3);
+    return pack((grow(A) * 2 + grow(B) + grow(C)) >> 2);
 }
 
-static uint32_t blend_5_3(int A, int B)
+static q_noinline uint32_t blend_5_2_1(uint32_t A, uint32_t B, uint32_t C)
 {
-    return generic(A, B, 0, 5, 3, 0, 3);
+    return pack((grow(A) * 5 + grow(B) * 2 + grow(C)) >> 3);
 }
 
-static uint32_t blend_2_1_1(int A, int B, int C)
+static q_noinline uint32_t blend_6_1_1(uint32_t A, uint32_t B, uint32_t C)
 {
-    return generic(A, B, C, 2, 1, 1, 2);
+    return pack((grow(A) * 6 + grow(B) + grow(C)) >> 3);
 }
 
-static uint32_t blend_5_2_1(int A, int B, int C)
+static q_noinline uint32_t blend_2_3_3(uint32_t A, uint32_t B, uint32_t C)
 {
-    return generic(A, B, C, 5, 2, 1, 3);
+    return pack((grow(A) * 2 + (grow(B) + grow(C)) * 3) >> 3);
 }
 
-static uint32_t blend_6_1_1(int A, int B, int C)
+static q_noinline uint32_t blend_14_1_1(uint32_t A, uint32_t B, uint32_t C)
 {
-    return generic(A, B, C, 6, 1, 1, 3);
+    return pack((grow(A) * 14 + grow(B) + grow(C)) >> 4);
 }
 
-static uint32_t blend_2_3_3(int A, int B, int C)
-{
-    return generic(A, B, C, 2, 3, 3, 3);
-}
-
-static uint32_t blend_14_1_1(int A, int B, int C)
-{
-    return generic(A, B, C, 14, 1, 1, 4);
-}
-
-static uint32_t hq2x_blend(int rule, int E, int A, int B, int D, int F, int H)
+static q_noinline uint32_t hq2x_blend(int rule, uint32_t E, uint32_t A, uint32_t B, uint32_t D, uint32_t F, uint32_t H)
 {
     switch (rule) {
     case 1:
@@ -164,7 +166,7 @@ static uint32_t hq2x_blend(int rule, int E, int A, int B, int D, int F, int H)
     case 7:
         return same(B, D) ? blend_2_1_1(E, D, B) : blend_3_1(E, A);
     case 8:
-        return same(B, D) ? blend_2_1_1(E, D, B) : blend_1(E);
+        return same(B, D) ? blend_2_1_1(E, D, B) : E;
     case 9:
         return same(B, D) ? blend_6_1_1(E, D, B) : blend_3_1(E, A);
     case 10:
@@ -176,16 +178,17 @@ static uint32_t hq2x_blend(int rule, int E, int A, int B, int D, int F, int H)
         return same(B, D) ? blend_2_3_3(E, D, B) : blend_3_1(E, A);
     case 14:
     case 15:
-        return same(B, D) ? blend_2_3_3(E, D, B) : blend_1(E);
+        return same(B, D) ? blend_2_3_3(E, D, B) : E;
     case 16:
-        return same(B, D) ? blend_14_1_1(E, D, B) : blend_1(E);
+        return same(B, D) ? blend_14_1_1(E, D, B) : E;
     default:
         Com_Error(ERR_FATAL, "%s: bad rule %d", __func__, rule);
         return 0;
     }
 }
 
-static void hq4x_blend(int rule, uint32_t *p00, uint32_t *p01, uint32_t *p10, uint32_t *p11, int E, int A, int B, int D, int F, int H)
+static q_noinline void hq4x_blend(int rule, uint32_t *p00, uint32_t *p01, uint32_t *p10, uint32_t *p11,
+                                  uint32_t E, uint32_t A, uint32_t B, uint32_t D, uint32_t F, uint32_t H)
 {
     switch (rule) {
     case 1:
@@ -229,7 +232,7 @@ static void hq4x_blend(int rule, uint32_t *p00, uint32_t *p01, uint32_t *p10, ui
             *p00 = blend_1_1(B, D);
             *p01 = blend_1_1(B, E);
             *p10 = blend_1_1(D, E);
-            *p11 = blend_1(E);
+            *p11 = E;
         } else {
             *p00 = blend_5_3(E, A);
             *p01 = blend_3_1(E, A);
@@ -243,18 +246,18 @@ static void hq4x_blend(int rule, uint32_t *p00, uint32_t *p01, uint32_t *p10, ui
             *p01 = blend_1_1(B, E);
             *p10 = blend_1_1(D, E);
         } else {
-            *p00 = blend_1(E);
-            *p01 = blend_1(E);
-            *p10 = blend_1(E);
+            *p00 = E;
+            *p01 = E;
+            *p10 = E;
         }
-        *p11 = blend_1(E);
+        *p11 = E;
         break;
     case 9:
         if (same(B, D)) {
             *p00 = blend_2_1_1(E, B, D);
             *p01 = blend_3_1(E, B);
             *p10 = blend_3_1(E, D);
-            *p11 = blend_1(E);
+            *p11 = E;
         } else {
             *p00 = blend_5_3(E, A);
             *p01 = blend_3_1(E, A);
@@ -317,10 +320,10 @@ static void hq4x_blend(int rule, uint32_t *p00, uint32_t *p01, uint32_t *p10, ui
             *p10 = blend_5_3(D, B);
             *p11 = blend_6_1_1(E, D, B);
         } else {
-            *p00 = blend_1(E);
-            *p01 = blend_1(E);
-            *p10 = blend_1(E);
-            *p11 = blend_1(E);
+            *p00 = E;
+            *p01 = E;
+            *p10 = E;
+            *p11 = E;
         }
         break;
     case 15:
@@ -330,20 +333,20 @@ static void hq4x_blend(int rule, uint32_t *p00, uint32_t *p01, uint32_t *p10, ui
             *p10 = blend_2_1_1(D, E, B);
             *p11 = blend_6_1_1(E, D, B);
         } else {
-            *p00 = blend_1(E);
-            *p01 = blend_1(E);
-            *p10 = blend_1(E);
-            *p11 = blend_1(E);
+            *p00 = E;
+            *p01 = E;
+            *p10 = E;
+            *p11 = E;
         }
         break;
     case 16:
         if (same(B, D))
             *p00 = blend_2_1_1(E, B, D);
         else
-            *p00 = blend_1(E);
-        *p01 = blend_1(E);
-        *p10 = blend_1(E);
-        *p11 = blend_1(E);
+            *p00 = E;
+        *p01 = E;
+        *p10 = E;
+        *p11 = E;
         break;
     default:
         Com_Error(ERR_FATAL, "%s: bad rule %d", __func__, rule);
@@ -351,12 +354,12 @@ static void hq4x_blend(int rule, uint32_t *p00, uint32_t *p01, uint32_t *p10, ui
     }
 }
 
-void HQ2x_Render(uint32_t *output, const uint8_t *input, int width, int height)
+void HQ2x_Render(uint32_t *output, const uint32_t *input, int width, int height)
 {
     int x, y;
 
     for (y = 0; y < height; y++) {
-        const uint8_t *in = input + y * width;
+        const uint32_t *in = input + y * width;
         uint32_t *out0 = output + (y * 2 + 0) * width * 2;
         uint32_t *out1 = output + (y * 2 + 1) * width * 2;
 
@@ -367,15 +370,15 @@ void HQ2x_Render(uint32_t *output, const uint8_t *input, int width, int height)
             int prev = (x == 0 ? 0 : 1);
             int next = (x == width - 1 ? 0 : 1);
 
-            int A = *(in - prevline - prev);
-            int B = *(in - prevline);
-            int C = *(in - prevline + next);
-            int D = *(in - prev);
-            int E = *(in);
-            int F = *(in + next);
-            int G = *(in + nextline - prev);
-            int H = *(in + nextline);
-            int I = *(in + nextline + next);
+            uint32_t A = *(in - prevline - prev);
+            uint32_t B = *(in - prevline);
+            uint32_t C = *(in - prevline + next);
+            uint32_t D = *(in - prev);
+            uint32_t E = *(in);
+            uint32_t F = *(in + next);
+            uint32_t G = *(in + nextline - prev);
+            uint32_t H = *(in + nextline);
+            uint32_t I = *(in + nextline + next);
 
             int pattern;
             pattern  = diff(E, A) << 0;
@@ -399,12 +402,12 @@ void HQ2x_Render(uint32_t *output, const uint8_t *input, int width, int height)
     }
 }
 
-void HQ4x_Render(uint32_t *output, const uint8_t *input, int width, int height)
+void HQ4x_Render(uint32_t *output, const uint32_t *input, int width, int height)
 {
     int x, y;
 
     for (y = 0; y < height; y++) {
-        const uint8_t *in = input + y * width;
+        const uint32_t *in = input + y * width;
         uint32_t *out0 = output + (y * 4 + 0) * width * 4;
         uint32_t *out1 = output + (y * 4 + 1) * width * 4;
         uint32_t *out2 = output + (y * 4 + 2) * width * 4;
@@ -417,15 +420,15 @@ void HQ4x_Render(uint32_t *output, const uint8_t *input, int width, int height)
             int prev = (x == 0 ? 0 : 1);
             int next = (x == width - 1 ? 0 : 1);
 
-            int A = *(in - prevline - prev);
-            int B = *(in - prevline);
-            int C = *(in - prevline + next);
-            int D = *(in - prev);
-            int E = *(in);
-            int F = *(in + next);
-            int G = *(in + nextline - prev);
-            int H = *(in + nextline);
-            int I = *(in + nextline + next);
+            uint32_t A = *(in - prevline - prev);
+            uint32_t B = *(in - prevline);
+            uint32_t C = *(in - prevline + next);
+            uint32_t D = *(in - prev);
+            uint32_t E = *(in);
+            uint32_t F = *(in + next);
+            uint32_t G = *(in + nextline - prev);
+            uint32_t H = *(in + nextline);
+            uint32_t I = *(in + nextline + next);
 
             int pattern;
             pattern  = diff(E, A) << 0;
@@ -451,23 +454,19 @@ void HQ4x_Render(uint32_t *output, const uint8_t *input, int width, int height)
     }
 }
 
-static void pix2ycc(float c[3], int C)
-{
-    color_t tmp;
-
-    tmp.u32 = d_8to24table[C];
-    c[0] = tmp.u8[0] *  0.299f + tmp.u8[1] *  0.587f + tmp.u8[2] *  0.114f;
-    c[1] = tmp.u8[0] * -0.169f + tmp.u8[1] * -0.331f + tmp.u8[2] *  0.499f + 128.0f;
-    c[2] = tmp.u8[0] *  0.499f + tmp.u8[1] * -0.418f + tmp.u8[2] * -0.081f + 128.0f;
-}
+#define FIX(x)      (int)((x) * (1 << 16))
 
 void HQ2x_Init(void)
 {
-    int n, A, B;
+    int n;
 
-    cvar_t *hqx_y   = Cvar_Get("hqx_y", "48", CVAR_FILES);
-    cvar_t *hqx_cb  = Cvar_Get("hqx_cb", "7", CVAR_FILES);
-    cvar_t *hqx_cr  = Cvar_Get("hqx_cr", "6", CVAR_FILES);
+    cvar_t *hqx_y  = Cvar_Get("hqx_y", "48", CVAR_FILES);
+    cvar_t *hqx_cb = Cvar_Get("hqx_cb", "7", CVAR_FILES);
+    cvar_t *hqx_cr = Cvar_Get("hqx_cr", "6", CVAR_FILES);
+
+    maxY  = FIX(Cvar_ClampValue(hqx_y,  0, 256));
+    maxCb = FIX(Cvar_ClampValue(hqx_cb, 0, 256));
+    maxCr = FIX(Cvar_ClampValue(hqx_cr, 0, 256));
 
     for (n = 0; n < 256; n++) {
         rotTable[n] = ((n >> 2) & 0x11) | ((n << 2) & 0x88)
@@ -475,27 +474,15 @@ void HQ2x_Init(void)
                     | ((n & 0x10) >> 3) | ((n & 0x80) >> 5);
     }
 
-    memset(equBitmap, 0, sizeof(equBitmap));
-
-    for (A = 0; A < 255; A++) {
-        for (B = 0; B <= A; B++) {
-            float a[3];
-            float b[3];
-
-            pix2ycc(a, A);
-            pix2ycc(b, B);
-
-            if (fabs(a[0] - b[0]) > hqx_y->value)
-                continue;
-            if (fabs(a[1] - b[1]) > hqx_cb->value)
-                continue;
-            if (fabs(a[2] - b[2]) > hqx_cr->value)
-                continue;
-
-            Q_SetBit(equBitmap, (A << 8) + B);
-            Q_SetBit(equBitmap, (B << 8) + A);
-        }
+    // libjpeg YCbCr coefficients
+    for (n = 0; n < 256; n++) {
+        yccTable[0][n] =  FIX(0.29900f) * n;
+        yccTable[1][n] =  FIX(0.58700f) * n;
+        yccTable[2][n] =  FIX(0.11400f) * n;
+        yccTable[3][n] = -FIX(0.16874f) * n;
+        yccTable[4][n] = -FIX(0.33126f) * n;
+        yccTable[5][n] =  FIX(0.50000f) * n;
+        yccTable[6][n] = -FIX(0.41869f) * n;
+        yccTable[7][n] = -FIX(0.08131f) * n;
     }
-
-    Q_SetBit(equBitmap, 65535);
 }
