@@ -26,8 +26,8 @@ static float gl_filter_anisotropy;
 static int gl_tex_alpha_format;
 static int gl_tex_solid_format;
 
-static int  upload_width;
-static int  upload_height;
+static int upload_width;
+static int upload_height;
 static qboolean upload_alpha;
 
 static cvar_t *gl_noscrap;
@@ -440,14 +440,20 @@ static void GL_Upload32(byte *data, int width, int height, int baselevel, imaget
 {
     byte        *scaled;
     int         scaled_width, scaled_height, maxsize, comp;
-    qboolean    power_of_two;
+    qboolean    quarter;
 
-    // find the next-highest power of two
-    scaled_width = npot32(width);
-    scaled_height = npot32(height);
+    if (AT_LEAST_OPENGL(3, 0)) {
+        // assume full NPOT texture support
+        scaled_width = width;
+        scaled_height = height;
+    } else {
+        // find the next-highest power of two
+        scaled_width = npot32(width);
+        scaled_height = npot32(height);
+    }
 
     // save the flag indicating if costly resampling can be avoided
-    power_of_two = (scaled_width == width && scaled_height == height);
+    quarter = (scaled_width == width && scaled_height == height);
 
     maxsize = gl_config.maxTextureSize;
     if (type == IT_WALL || (type == IT_SKIN && gl_downsample_skins->integer)) {
@@ -482,10 +488,8 @@ static void GL_Upload32(byte *data, int width, int height, int baselevel, imaget
     if (scaled_height < 1)
         scaled_height = 1;
 
-    if (baselevel == 0) {
-        upload_width = scaled_width;
-        upload_height = scaled_height;
-    }
+    upload_width = scaled_width;
+    upload_height = scaled_height;
 
     // set colorscale and lightscale before mipmap
     comp = GL_GrayScaleTexture(data, width, height, type, flags);
@@ -495,7 +499,7 @@ static void GL_Upload32(byte *data, int width, int height, int baselevel, imaget
     if (scaled_width == width && scaled_height == height) {
         // optimized case, do nothing
         scaled = data;
-    } else if (power_of_two) {
+    } else if (quarter) {
         // optimized case, use faster mipmap operation
         scaled = data;
         while (width > scaled_width || height > scaled_height) {
@@ -601,8 +605,10 @@ static int GL_UpscaleLevel(int width, int height, imagetype_t type, imageflags_t
     if (!(flags & (IF_PALETTED | IF_SCRAP)))
         return 0;
 
-    width = npot32(width);
-    height = npot32(height);
+    if (!AT_LEAST_OPENGL(3, 0)) {
+        width = npot32(width);
+        height = npot32(height);
+    }
 
     maxlevel = Cvar_ClampInteger(gl_upscale_pcx, 0, 2);
     while (maxlevel) {
@@ -641,10 +647,10 @@ static void GL_Upscale32(byte *data, int width, int height, int maxlevel, imaget
     if (AT_LEAST_OPENGL(1, 2))
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, maxlevel);
 
-    // adjust LOD for non power-of-two textures
-    if ((width & (width - 1)) || (height & (height - 1))) {
-        float du    = npot32(width) / (float)width;
-        float dv    = npot32(height) / (float)height;
+    // adjust LOD for resampled textures
+    if (upload_width != width || upload_height != height) {
+        float du    = upload_width / (float)width;
+        float dv    = upload_height / (float)height;
         float bias  = -log(max(du, dv)) / M_LN2;
 
         if (AT_LEAST_OPENGL(1, 4))
@@ -792,8 +798,8 @@ void IMG_Load(image_t *image, byte *pic, int width, int height)
     if (upload_alpha) {
         image->flags |= IF_TRANSPARENT;
     }
-    image->upload_width = upload_width;     // after power of 2 and scales
-    image->upload_height = upload_height;
+    image->upload_width = upload_width << maxlevel;     // after power of 2 and scales
+    image->upload_height = upload_height << maxlevel;
     image->sl = 0;
     image->sh = 1;
     image->tl = 0;
