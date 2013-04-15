@@ -825,6 +825,16 @@ static qboolean GL_SetupConfig(void)
         return qfalse;
     }
 
+    // allow version override for debugging purposes
+    p = Cvar_Get("gl_versionoverride", "", CVAR_REFRESH)->string;
+    if (*p) {
+        gl_config.version_major = strtoul(p, &p, 10);
+        if (*p == '.')
+            gl_config.version_minor = strtoul(p + 1, NULL, 10);
+        else
+            gl_config.version_minor = 0;
+    }
+
     // get and parse extension string
     extensions = (const char *)qglGetString(GL_EXTENSIONS);
     gl_config.ext_supported = QGL_ParseExtensionString(extensions);
