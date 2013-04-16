@@ -1128,6 +1128,9 @@ dec <cvar> [value]::
 reset <cvar>::
     Reset the specified _cvar_ to it's default value.
 
+resetall::
+    Resets all cvars to their default values.
+
 set <cvar> <value> [u|s|...]::
     If 2 arguments are given, sets the specified _cvar_ to _value_.  If 3
     arguments are given, and the last argument is ‘u’ or ‘s’, sets _cvar_ to

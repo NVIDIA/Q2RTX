@@ -1091,6 +1091,19 @@ static void Cvar_Reset_c(genctx_t *ctx, int argnum)
     }
 }
 
+static void Cvar_ResetAll_f(void)
+{
+    cvar_t *var;
+
+    for (var = cvar_vars; var; var = var->next) {
+        if (var->flags & CVAR_ROM)
+            continue;
+        if ((var->flags & CVAR_NOSET) && com_initialized)
+            continue;
+        Cvar_SetByVar(var, var->default_string, Cmd_From());
+    }
+}
+
 size_t Cvar_BitInfo(char *info, int bit)
 {
     char    newi[MAX_INFO_STRING], *v;
@@ -1141,6 +1154,7 @@ static const cmdreg_t c_cvar[] = {
     { "inc", Cvar_Inc_f, Cvar_Reset_c },
     { "dec", Cvar_Inc_f, Cvar_Reset_c },
     { "reset", Cvar_Reset_f, Cvar_Reset_c },
+    { "resetall", Cvar_ResetAll_f },
 
     { NULL }
 };
