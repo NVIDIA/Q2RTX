@@ -233,85 +233,6 @@ void Scrap_Upload(void)
     scrap_dirty = qfalse;
 }
 
-/*
-====================================================================
-
-IMAGE FLOOD FILLING
-
-====================================================================
-*/
-
-typedef struct {
-    short       x, y;
-} floodfill_t;
-
-// must be a power of 2
-#define FLOODFILL_FIFO_SIZE 0x1000
-#define FLOODFILL_FIFO_MASK (FLOODFILL_FIFO_SIZE - 1)
-
-#define FLOODFILL_STEP(off, dx, dy) \
-    do { \
-        if (pos[off] == fillcolor) { \
-            pos[off] = 255; \
-            fifo[inpt].x = x + (dx); \
-            fifo[inpt].y = y + (dy); \
-            inpt = (inpt + 1) & FLOODFILL_FIFO_MASK; \
-        } else if (pos[off] != 255) { \
-            fdc = pos[off]; \
-        } \
-    } while(0)
-
-/*
-=================
-Mod_FloodFillSkin
-
-Fill background pixels so mipmapping doesn't have haloes
-=================
-*/
-static void R_FloodFillSkin(byte *skin, int skinwidth, int skinheight)
-{
-    byte                fillcolor = *skin; // assume this is the pixel to fill
-    floodfill_t         fifo[FLOODFILL_FIFO_SIZE];
-    int                 inpt = 0, outpt = 0;
-    int                 filledcolor = -1;
-    int                 i;
-
-    if (filledcolor == -1) {
-        filledcolor = 0;
-        // attempt to find opaque black
-        for (i = 0; i < 256; ++i)
-            if (d_8to24table[i] == 255) {
-                // alpha 1.0
-                filledcolor = i;
-                break;
-            }
-    }
-
-    // can't fill to filled color or to transparent color
-    // (used as visited marker)
-    if ((fillcolor == filledcolor) || (fillcolor == 255)) {
-        return;
-    }
-
-    fifo[inpt].x = 0, fifo[inpt].y = 0;
-    inpt = (inpt + 1) & FLOODFILL_FIFO_MASK;
-
-    while (outpt != inpt) {
-        int         x = fifo[outpt].x, y = fifo[outpt].y;
-        int         fdc = filledcolor;
-        byte        *pos = &skin[x + skinwidth * y];
-
-        outpt = (outpt + 1) & FLOODFILL_FIFO_MASK;
-
-        if (x > 0) FLOODFILL_STEP(-1, -1, 0);
-        if (x < skinwidth - 1) FLOODFILL_STEP(1, 1, 0);
-        if (y > 0) FLOODFILL_STEP(-skinwidth, 0, -1);
-        if (y < skinheight - 1) FLOODFILL_STEP(skinwidth, 0, 1);
-
-        skin[x + skinwidth * y] = fdc;
-    }
-}
-
 //=======================================================
 
 static byte gammatable[256];
@@ -513,8 +434,15 @@ static void GL_Upload32(byte *data, int width, int height, int baselevel, imaget
                             scaled_width, scaled_height);
     }
 
-    // scan the texture for any non-255 alpha
-    upload_alpha = GL_TextureHasAlpha(scaled, scaled_width, scaled_height);
+    if (flags & IF_TRANSPARENT) {
+        upload_alpha = qtrue;
+    } else if (flags & IF_OPAQUE) {
+        upload_alpha = qfalse;
+    } else {
+        // scan the texture for any non-255 alpha
+        upload_alpha = GL_TextureHasAlpha(scaled, scaled_width, scaled_height);
+    }
+
     if (upload_alpha) {
         comp = gl_tex_alpha_format;
     }
@@ -543,53 +471,6 @@ static void GL_Upload32(byte *data, int width, int height, int baselevel, imaget
 
     if (scaled != data) {
         FS_FreeTempMem(scaled);
-    }
-}
-
-/*
-===============
-GL_Unpack8
-===============
-*/
-static void GL_Unpack8(byte *output, int outpitch, const byte *input, int width, int height)
-{
-    uint32_t    *out;
-    int         x, y, p;
-
-    for (y = 0; y < height; y++) {
-        out = (uint32_t *)output + y * outpitch;
-        for (x = 0; x < width; x++) {
-            p = *input;
-            if (p == 255) {
-                // transparent, so scan around for another color
-                // to avoid alpha fringes
-                // FIXME: do a full flood fill so mips work...
-                if (y > 0 && *(input - width) != 255)
-                    p = *(input - width);
-                else if (y < height - 1 && *(input + width) != 255)
-                    p = *(input + width);
-                else if (x > 0 && *(input - 1) != 255)
-                    p = *(input - 1);
-                else if (x < width - 1 && *(input + 1) != 255)
-                    p = *(input + 1);
-                else if (y > 0 && x > 0 && *(input - width - 1) != 255)
-                    p = *(input - width - 1);
-                else if (y > 0 && x < width - 1 && *(input - width + 1) != 255)
-                    p = *(input - width + 1);
-                else if (y < height - 1 && x > 0 && *(input + width - 1) != 255)
-                    p = *(input + width - 1);
-                else if (y < height - 1 && x < width - 1 && *(input + width + 1) != 255)
-                    p = *(input + width + 1);
-                else
-                    p = 0;
-                // copy rgb components
-                *out = d_8to24table[p] & U32_RGB;
-            } else {
-                *out = d_8to24table[p];
-            }
-            input++;
-            out++;
-        }
     }
 }
 
@@ -717,42 +598,32 @@ static void GL_SetFilterAndRepeat(imagetype_t type, imageflags_t flags)
     }
 }
 
-#define MAX_STACK_PIXELS    (256 * 256)
-
 /*
 ================
 IMG_Load
 ================
 */
-void IMG_Load(image_t *image, byte *pic, int width, int height)
+void IMG_Load(image_t *image, byte *pic)
 {
-    byte    stackbuf[MAX_STACK_PIXELS * 4];
-    byte    *buffer;
     byte    *src, *dst;
     int     i, s, t, maxlevel;
+    int     width, height;
 
-    if (!pic) {
-        Com_Error(ERR_FATAL, "%s: NULL", __func__);
-    }
+    width = image->upload_width;
+    height = image->upload_height;
 
     // load small pics onto the scrap
     if (image->type == IT_PIC && width < 64 && height < 64 &&
         gl_noscrap->integer == 0 && Scrap_AllocBlock(width, height, &s, &t)) {
+        src = pic;
         dst = &scrap_data[(t * SCRAP_BLOCK_WIDTH + s) * 4];
-        if (image->flags & IF_PALETTED) {
-            GL_Unpack8(dst, SCRAP_BLOCK_WIDTH, pic, width, height);
-        } else {
-            src = pic;
-            for (i = 0; i < height; i++) {
-                memcpy(dst, src, width * 4);
-                src += width * 4;
-                dst += SCRAP_BLOCK_WIDTH * 4;
-            }
+        for (i = 0; i < height; i++) {
+            memcpy(dst, src, width * 4);
+            src += width * 4;
+            dst += SCRAP_BLOCK_WIDTH * 4;
         }
 
         image->texnum = TEXNUM_SCRAP;
-        image->upload_width = width;
-        image->upload_height = height;
         image->flags |= IF_SCRAP | IF_TRANSPARENT;
         image->sl = (s + 0.01f) / (float)SCRAP_BLOCK_WIDTH;
         image->sh = (s + width - 0.01f) / (float)SCRAP_BLOCK_WIDTH;
@@ -764,49 +635,33 @@ void IMG_Load(image_t *image, byte *pic, int width, int height)
             image->flags |= IF_UPSCALED;
 
         scrap_dirty = qtrue;
-        return;
-    }
-
-    if (image->type == IT_SKIN && (image->flags & IF_PALETTED))
-        R_FloodFillSkin(pic, width, height);
-
-    if (image->flags & IF_PALETTED) {
-        s = width * height;
-        if (s > MAX_STACK_PIXELS)
-            buffer = FS_AllocTempMem(s * 4);
-        else
-            buffer = stackbuf;
-        GL_Unpack8(buffer, width, pic, width, height);
     } else {
-        s = 0;
-        buffer = pic;
+        qglGenTextures(1, &image->texnum);
+        GL_ForceTexture(0, image->texnum);
+
+        maxlevel = GL_UpscaleLevel(width, height, image->type, image->flags);
+        if (maxlevel) {
+            GL_Upscale32(pic, width, height, maxlevel, image->type, image->flags);
+            image->flags |= IF_UPSCALED;
+        } else {
+            GL_Upload32(pic, width, height, maxlevel, image->type, image->flags);
+        }
+
+        GL_SetFilterAndRepeat(image->type, image->flags);
+
+        if (upload_alpha) {
+            image->flags |= IF_TRANSPARENT;
+        }
+        image->upload_width = upload_width << maxlevel;     // after power of 2 and scales
+        image->upload_height = upload_height << maxlevel;
+        image->sl = 0;
+        image->sh = 1;
+        image->tl = 0;
+        image->th = 1;
     }
 
-    qglGenTextures(1, &image->texnum);
-    GL_ForceTexture(0, image->texnum);
-
-    maxlevel = GL_UpscaleLevel(width, height, image->type, image->flags);
-    if (maxlevel) {
-        GL_Upscale32(buffer, width, height, maxlevel, image->type, image->flags);
-        image->flags |= IF_UPSCALED;
-    } else {
-        GL_Upload32(buffer, width, height, maxlevel, image->type, image->flags);
-    }
-
-    GL_SetFilterAndRepeat(image->type, image->flags);
-
-    if (upload_alpha) {
-        image->flags |= IF_TRANSPARENT;
-    }
-    image->upload_width = upload_width << maxlevel;     // after power of 2 and scales
-    image->upload_height = upload_height << maxlevel;
-    image->sl = 0;
-    image->sh = 1;
-    image->tl = 0;
-    image->th = 1;
-
-    if (s > MAX_STACK_PIXELS)
-        FS_FreeTempMem(buffer);
+    // don't need pics in memory after GL upload
+    Z_Free(pic);
 }
 
 void IMG_Unload(image_t *image)

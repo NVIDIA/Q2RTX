@@ -114,7 +114,7 @@ void IMG_MipMap(byte *out, byte *in, int width, int height);
 
 // these are implemented in src/refresh/[gl,sw]/images.c
 void IMG_Unload(image_t *image);
-void IMG_Load(image_t *image, byte *pic, int width, int height);
+void IMG_Load(image_t *image, byte *pic);
 byte *IMG_ReadPixels(qboolean reverse, int *width, int *height);
 
 #endif // IMAGES_H

@@ -51,48 +51,23 @@ static void R_LightScaleTexture(byte *in, int inwidth, int inheight)
 IMG_Load
 ================
 */
-void IMG_Load(image_t *image, byte *pic, int width, int height)
+void IMG_Load(image_t *image, byte *pic)
 {
-    int         i, c, b;
+    int     i, c, b;
+    int     width, height;
+
+    width = image->upload_width;
+    height = image->upload_height;
 
     if (image->flags & IF_TURBULENT) {
         image->width = TURB_SIZE;
         image->height = TURB_SIZE;
     }
 
-    image->upload_width = width;
-    image->upload_height = height;
-
     b = image->width * image->height;
     c = width * height;
 
-    if (image->flags & IF_PALETTED) {
-        if (image->type == IT_WALL) {
-            image->pixels[0] = R_Malloc(MIPSIZE(c) * TEX_BYTES);
-            image->pixels[1] = image->pixels[0] + c * TEX_BYTES;
-            image->pixels[2] = image->pixels[1] + c * TEX_BYTES / 4;
-            image->pixels[3] = image->pixels[2] + c * TEX_BYTES / 16;
-
-            for (i = 0; i < MIPSIZE(c); i++) {
-                ((uint32_t *)image->pixels[0])[i] = d_8to24table[pic[i]];
-            }
-
-            if (!(r_config.flags & QVF_GAMMARAMP))
-                R_LightScaleTexture(image->pixels[0], MIPSIZE(c), 1);
-        } else {
-            image->pixels[0] = R_Malloc(c * TEX_BYTES);
-            for (i = 0; i < c; i++) {
-                ((uint32_t *)image->pixels[0])[i] = d_8to24table[pic[i]];
-                if (pic[i] == 255) {
-                    image->flags |= IF_TRANSPARENT;
-                }
-            }
-            Z_Free(pic);
-        }
-    } else if (image->type == IT_WALL) {
-        image->upload_width = image->width;
-        image->upload_height = image->height;
-
+    if (image->type == IT_WALL) {
         image->pixels[0] = R_Malloc(MIPSIZE(b) * TEX_BYTES);
         image->pixels[1] = image->pixels[0] + b * TEX_BYTES;
         image->pixels[2] = image->pixels[1] + b * TEX_BYTES / 4;
@@ -101,10 +76,13 @@ void IMG_Load(image_t *image, byte *pic, int width, int height)
         if (!(r_config.flags & QVF_GAMMARAMP))
             R_LightScaleTexture(pic, width, height);
 
-        if (width == image->width && height == image->height)
+        if (width == image->width && height == image->height) {
             memcpy(image->pixels[0], pic, width * height * TEX_BYTES);
-        else
+        } else {
             IMG_ResampleTexture(pic, width, height, image->pixels[0], image->width, image->height);
+            image->upload_width = image->width;
+            image->upload_height = image->height;
+        }
 
         IMG_MipMap(image->pixels[1], image->pixels[0], image->width >> 0, image->height >> 0);
         IMG_MipMap(image->pixels[2], image->pixels[1], image->width >> 1, image->height >> 1);
@@ -114,10 +92,12 @@ void IMG_Load(image_t *image, byte *pic, int width, int height)
     } else {
         image->pixels[0] = pic;
 
-        for (i = 0; i < c; i++) {
-            b = pic[i * TEX_BYTES + 3];
-            if (b != 255) {
-                image->flags |= IF_TRANSPARENT;
+        if (!(image->flags & IF_OPAQUE)) {
+            for (i = 0; i < c; i++) {
+                b = pic[i * TEX_BYTES + 3];
+                if (b != 255) {
+                    image->flags |= IF_TRANSPARENT;
+                }
             }
         }
     }

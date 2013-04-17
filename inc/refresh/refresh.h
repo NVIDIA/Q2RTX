@@ -158,6 +158,7 @@ typedef enum {
     IF_TURBULENT    = (1 << 5),
     IF_REPEAT       = (1 << 6),
     IF_NEAREST      = (1 << 7),
+    IF_OPAQUE       = (1 << 8),
 } imageflags_t;
 
 typedef enum {
