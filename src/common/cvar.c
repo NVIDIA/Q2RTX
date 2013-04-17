@@ -1100,6 +1100,8 @@ static void Cvar_ResetAll_f(void)
             continue;
         if ((var->flags & CVAR_NOSET) && com_initialized)
             continue;
+        if (var == fs_game)
+            continue;
         Cvar_SetByVar(var, var->default_string, Cmd_From());
     }
 }
