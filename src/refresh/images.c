@@ -1100,7 +1100,7 @@ IMG_LOAD(PNG)
     if (colortype == PNG_COLOR_TYPE_PALETTE)
         image->flags |= IF_PALETTED;
 
-    if (has_tRNS == 0)
+    if (has_tRNS == 0 && (colortype & PNG_COLOR_MASK_ALPHA) == 0)
         image->flags |= IF_OPAQUE;
 
     ret = Q_ERR_SUCCESS;
