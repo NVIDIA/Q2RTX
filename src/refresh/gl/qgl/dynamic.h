@@ -151,6 +151,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define QGL_EXT_compiled_vertex_array       (1 << 3)
 #define QGL_EXT_texture_filter_anisotropic  (1 << 4)
 
+#define QGL_3_0_core_functions              (1 << 31)
+
 // ==========================================================
 
 // subset of OpenGL 1.1 core functions
@@ -233,6 +235,9 @@ typedef void (APIENTRY * qglTranslatef_t)(GLfloat x, GLfloat y, GLfloat z);
 typedef void (APIENTRY * qglVertexPointer_t)(GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
 typedef void (APIENTRY * qglViewport_t)(GLint x, GLint y, GLsizei width, GLsizei height);
 
+// OpenGL 3.0 core function
+typedef void (APIENTRY * qglGenerateMipmap_t)(GLenum target);
+
 // GL_ARB_fragment_program
 typedef void (APIENTRY * qglProgramStringARB_t)(GLenum target, GLenum format, GLsizei len, const GLvoid *string);
 typedef void (APIENTRY * qglBindProgramARB_t)(GLenum target, GLuint program);
@@ -289,6 +294,8 @@ QGL_ARB_multitexture_IMP
 QGL_ARB_vertex_buffer_object_IMP
 QGL_EXT_compiled_vertex_array_IMP
 #undef QGL
+
+extern qglGenerateMipmap_t qglGenerateMipmap;
 
 #endif  // QGL_H
 

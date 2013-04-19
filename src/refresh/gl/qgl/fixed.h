@@ -104,6 +104,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define qglVertexPointer glVertexPointer
 #define qglViewport glViewport
 
+// OpenGL 3.0 core function
+extern PFNGLGENERATEMIPMAPPROC      qglGenerateMipmap;
+
 // GL_ARB_fragment_program
 extern PFNGLPROGRAMSTRINGARBPROC            qglProgramStringARB;
 extern PFNGLBINDPROGRAMARBPROC              qglBindProgramARB;
@@ -135,8 +138,10 @@ extern PFNGLUNLOCKARRAYSEXTPROC     qglUnlockArraysEXT;
 #define QGL_EXT_compiled_vertex_array       (1 << 3)
 #define QGL_EXT_texture_filter_anisotropic  (1 << 4)
 
+#define QGL_3_0_core_functions              (1 << 31)
+
 #define QGL_Init()                      qtrue
-#define QGL_Shutdown()                  QGL_ShutdownExtensions(~0) 
+#define QGL_Shutdown()                  QGL_ShutdownExtensions(~0)
 
 void QGL_InitExtensions(unsigned mask);
 void QGL_ShutdownExtensions(unsigned mask);

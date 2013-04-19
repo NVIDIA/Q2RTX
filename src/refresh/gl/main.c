@@ -881,6 +881,10 @@ static qboolean GL_SetupConfig(void)
         Com_Printf("GL_EXT_texture_filter_anisotropic not found\n");
     }
 
+    if (AT_LEAST_OPENGL(3, 0)) {
+        gl_config.ext_enabled |= QGL_3_0_core_functions;
+    }
+
     QGL_InitExtensions(gl_config.ext_enabled);
 
     qglGetIntegerv(GL_MAX_TEXTURE_SIZE, &integer);

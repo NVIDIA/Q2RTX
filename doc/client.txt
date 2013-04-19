@@ -552,15 +552,14 @@ gl_upscale_pcx::
       - 1 — upscale 2x (takes 5x more memory)
       - 2 — upscale 4x (takes 21x more memory)
 
-gl_maxmip::
-    When set to a positive integer N, limits maximum texture size to 2^N^.
-    Larger textures will be downsampled to that size. Default value is 0
-    (unlimited).
+gl_texture_non_power_of_two::
+    Enables use of non power-of-two sized textures without resampling on OpenGL
+    3.0 and higher compliant hardware. Default value is 1.
 
 gl_downsample_skins::
     Specifies if skins are downsampled just like world textures are. When
-    disabled, ‘gl_round_down’, ‘gl_picmip’ and ‘gl_maxmip’ cvars will have no
-    effect on skins.  Default value is 1 (downsampling enabled).
+    disabled, ‘gl_round_down’, ‘gl_picmip’ cvars have no effect on skins.
+    Default value is 1 (downsampling enabled).
 
 gl_drawsky::
     Enable skybox texturing. 0 means to draw sky box in solid black color.

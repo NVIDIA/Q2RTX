@@ -23,6 +23,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 // ==========================================================
 
+// OpenGL 3.0 core function
+PFNGLGENERATEMIPMAPPROC     qglGenerateMipmap;
+
 // GL_ARB_fragment_program
 PFNGLPROGRAMSTRINGARBPROC               qglProgramStringARB;
 PFNGLBINDPROGRAMARBPROC                 qglBindProgramARB;
@@ -76,6 +79,10 @@ void QGL_ShutdownExtensions(unsigned mask)
         qglLockArraysEXT    = NULL;
         qglUnlockArraysEXT  = NULL;
     }
+
+    if (mask & QGL_3_0_core_functions) {
+        qglGenerateMipmap   = NULL;
+    }
 }
 
 #define GPA(x)  VID_GetProcAddr(x)
@@ -107,6 +114,10 @@ void QGL_InitExtensions(unsigned mask)
     if (mask & QGL_EXT_compiled_vertex_array) {
         qglLockArraysEXT    = GPA("glLockArraysEXT");
         qglUnlockArraysEXT  = GPA("glUnlockArraysEXT");
+    }
+
+    if (mask & QGL_3_0_core_functions) {
+        qglGenerateMipmap   = GPA("glGenerateMipmap");
     }
 }
 

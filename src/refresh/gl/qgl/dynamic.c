@@ -31,6 +31,8 @@ QGL_ARB_vertex_buffer_object_IMP
 QGL_EXT_compiled_vertex_array_IMP
 #undef QGL
 
+qglGenerateMipmap_t qglGenerateMipmap;
+
 // ==========================================================
 
 #ifdef _DEBUG
@@ -634,10 +636,8 @@ void QGL_Shutdown(void)
 #define QGL(x)  qgl##x = NULL
 #endif
     QGL_core_IMP
-    QGL_ARB_fragment_program_IMP
-    QGL_ARB_multitexture_IMP
-    QGL_ARB_vertex_buffer_object_IMP
-    QGL_EXT_compiled_vertex_array_IMP
+
+    QGL_ShutdownExtensions(~0);
 }
 
 void QGL_ShutdownExtensions(unsigned mask)
@@ -657,6 +657,10 @@ void QGL_ShutdownExtensions(unsigned mask)
     if (mask & QGL_EXT_compiled_vertex_array) {
         QGL_EXT_compiled_vertex_array_IMP
     }
+
+    if (mask & QGL_3_0_core_functions) {
+        qglGenerateMipmap = NULL;
+    }
 #undef QGL
 }
 
@@ -672,6 +676,7 @@ qboolean QGL_Init(void)
 #endif
     QGL_core_IMP
 #undef QGL
+
     return qtrue;
 }
 
@@ -696,6 +701,10 @@ void QGL_InitExtensions(unsigned mask)
 
     if (mask & QGL_EXT_compiled_vertex_array) {
         QGL_EXT_compiled_vertex_array_IMP
+    }
+
+    if (mask & QGL_3_0_core_functions) {
+        qglGenerateMipmap = GPA(GenerateMipmap);
     }
 #undef QGL
 }

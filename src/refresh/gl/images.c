@@ -33,7 +33,6 @@ static qboolean upload_alpha;
 static cvar_t *gl_noscrap;
 static cvar_t *gl_round_down;
 static cvar_t *gl_picmip;
-static cvar_t *gl_maxmip;
 static cvar_t *gl_downsample_skins;
 static cvar_t *gl_gamma_scale_pics;
 static cvar_t *gl_bilerp_chars;
@@ -41,6 +40,7 @@ static cvar_t *gl_bilerp_pics;
 static cvar_t *gl_upscale_pcx;
 static cvar_t *gl_texturemode;
 static cvar_t *gl_texturebits;
+static cvar_t *gl_texture_non_power_of_two;
 static cvar_t *gl_anisotropy;
 static cvar_t *gl_saturation;
 static cvar_t *gl_intensity;
@@ -352,6 +352,19 @@ static qboolean GL_TextureHasAlpha(byte *data, int width, int height)
     return qfalse;
 }
 
+static qboolean GL_MakePowerOfTwo(int *width, int *height)
+{
+    if (!(*width & (*width - 1)) && !(*height & (*height - 1)))
+        return qtrue;   // already power of two
+
+    if (AT_LEAST_OPENGL(3, 0) && gl_texture_non_power_of_two->integer)
+        return qfalse;  // assume full NPOT texture support
+
+    *width = npot32(*width);
+    *height = npot32(*height);
+    return qfalse;
+}
+
 /*
 ===============
 GL_Upload32
@@ -360,23 +373,13 @@ GL_Upload32
 static void GL_Upload32(byte *data, int width, int height, int baselevel, imagetype_t type, imageflags_t flags)
 {
     byte        *scaled;
-    int         scaled_width, scaled_height, maxsize, comp;
-    qboolean    quarter;
+    int         scaled_width, scaled_height, comp;
+    qboolean    power_of_two;
 
-    if (AT_LEAST_OPENGL(3, 0)) {
-        // assume full NPOT texture support
-        scaled_width = width;
-        scaled_height = height;
-    } else {
-        // find the next-highest power of two
-        scaled_width = npot32(width);
-        scaled_height = npot32(height);
-    }
+    scaled_width = width;
+    scaled_height = height;
+    power_of_two = GL_MakePowerOfTwo(&scaled_width, &scaled_height);
 
-    // save the flag indicating if costly resampling can be avoided
-    quarter = (scaled_width == width && scaled_height == height);
-
-    maxsize = gl_config.maxTextureSize;
     if (type == IT_WALL || (type == IT_SKIN && gl_downsample_skins->integer)) {
         // round world textures down, if requested
         if (gl_round_down->integer) {
@@ -389,17 +392,10 @@ static void GL_Upload32(byte *data, int width, int height, int baselevel, imaget
         // let people sample down the world textures for speed
         scaled_width >>= gl_picmip->integer;
         scaled_height >>= gl_picmip->integer;
-
-        if (gl_maxmip->integer > 0) {
-            maxsize = 1 << Cvar_ClampInteger(gl_maxmip, 1, 12);
-            if (maxsize > gl_config.maxTextureSize) {
-                maxsize = gl_config.maxTextureSize;
-            }
-        }
     }
 
     // don't ever bother with >256 textures
-    while (scaled_width > maxsize || scaled_height > maxsize) {
+    while (scaled_width > gl_config.maxTextureSize || scaled_height > gl_config.maxTextureSize) {
         scaled_width >>= 1;
         scaled_height >>= 1;
     }
@@ -420,7 +416,7 @@ static void GL_Upload32(byte *data, int width, int height, int baselevel, imaget
     if (scaled_width == width && scaled_height == height) {
         // optimized case, do nothing
         scaled = data;
-    } else if (quarter) {
+    } else if (power_of_two) {
         // optimized case, use faster mipmap operation
         scaled = data;
         while (width > scaled_width || height > scaled_height) {
@@ -453,19 +449,23 @@ static void GL_Upload32(byte *data, int width, int height, int baselevel, imaget
     c.texUploads++;
 
     if (type == IT_WALL || type == IT_SKIN) {
-        int miplevel = 0;
+        if (qglGenerateMipmap) {
+            qglGenerateMipmap(GL_TEXTURE_2D);
+        } else {
+            int miplevel = 0;
 
-        while (scaled_width > 1 || scaled_height > 1) {
-            IMG_MipMap(scaled, scaled, scaled_width, scaled_height);
-            scaled_width >>= 1;
-            scaled_height >>= 1;
-            if (scaled_width < 1)
-                scaled_width = 1;
-            if (scaled_height < 1)
-                scaled_height = 1;
-            miplevel++;
-            qglTexImage2D(GL_TEXTURE_2D, miplevel, comp, scaled_width,
-                          scaled_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, scaled);
+            while (scaled_width > 1 || scaled_height > 1) {
+                IMG_MipMap(scaled, scaled, scaled_width, scaled_height);
+                scaled_width >>= 1;
+                scaled_height >>= 1;
+                if (scaled_width < 1)
+                    scaled_width = 1;
+                if (scaled_height < 1)
+                    scaled_height = 1;
+                miplevel++;
+                qglTexImage2D(GL_TEXTURE_2D, miplevel, comp, scaled_width,
+                              scaled_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, scaled);
+            }
         }
     }
 
@@ -486,10 +486,7 @@ static int GL_UpscaleLevel(int width, int height, imagetype_t type, imageflags_t
     if (!(flags & (IF_PALETTED | IF_SCRAP)))
         return 0;
 
-    if (!AT_LEAST_OPENGL(3, 0)) {
-        width = npot32(width);
-        height = npot32(height);
-    }
+    GL_MakePowerOfTwo(&width, &height);
 
     maxlevel = Cvar_ClampInteger(gl_upscale_pcx, 0, 2);
     while (maxlevel) {
@@ -851,24 +848,31 @@ void GL_InitImages(void)
     gl_texturemode->changed = gl_texturemode_changed;
     gl_texturemode->generator = gl_texturemode_g;
     gl_texturebits = Cvar_Get("gl_texturebits", "0", CVAR_FILES);
+    gl_texture_non_power_of_two = Cvar_Get("gl_texture_non_power_of_two", "1", 0);
     gl_anisotropy = Cvar_Get("gl_anisotropy", "1", 0);
     gl_anisotropy->changed = gl_anisotropy_changed;
     gl_noscrap = Cvar_Get("gl_noscrap", "0", CVAR_FILES);
     gl_round_down = Cvar_Get("gl_round_down", "0", CVAR_FILES);
     gl_picmip = Cvar_Get("gl_picmip", "0", CVAR_FILES);
-    gl_maxmip = Cvar_Get("gl_maxmip", "0", CVAR_FILES);
     gl_downsample_skins = Cvar_Get("gl_downsample_skins", "1", CVAR_FILES);
     gl_gamma_scale_pics = Cvar_Get("gl_gamma_scale_pics", "0", CVAR_FILES);
     gl_upscale_pcx = Cvar_Get("gl_upscale_pcx", "0", CVAR_FILES);
     gl_saturation = Cvar_Get("gl_saturation", "1", CVAR_FILES);
     gl_intensity = Cvar_Get("intensity", "1", CVAR_FILES);
     gl_invert = Cvar_Get("gl_invert", "0", CVAR_FILES);
+    gl_gamma = Cvar_Get("vid_gamma", "1", CVAR_ARCHIVE);
+
     if (r_config.flags & QVF_GAMMARAMP) {
-        gl_gamma = Cvar_Get("vid_gamma", "1", CVAR_ARCHIVE);
         gl_gamma->changed = gl_gamma_changed;
         gl_gamma->flags &= ~CVAR_FILES;
     } else {
-        gl_gamma = Cvar_Get("vid_gamma", "1", CVAR_ARCHIVE | CVAR_FILES);
+        gl_gamma->flags |= CVAR_FILES;
+    }
+
+    if (AT_LEAST_OPENGL(3, 0)) {
+        gl_texture_non_power_of_two->flags |= CVAR_FILES;
+    } else {
+        gl_texture_non_power_of_two->flags &= ~CVAR_FILES;
     }
 
     IMG_Init();
