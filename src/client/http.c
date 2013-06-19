@@ -24,8 +24,13 @@ static cvar_t  *cl_http_filelists;
 static cvar_t  *cl_http_max_connections;
 static cvar_t  *cl_http_proxy;
 static cvar_t  *cl_http_default_url;
+
 #ifdef _DEBUG
 static cvar_t  *cl_http_debug;
+#endif
+
+#if USE_UI
+static cvar_t  *cl_http_blocking_timeout;
 #endif
 
 // size limits for filelists, must be power of two
@@ -345,6 +350,7 @@ ssize_t HTTP_FetchFile(const char *url, void **data) {
     curl_easy_setopt(curl, CURLOPT_PROXY, cl_http_proxy->string);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, com_version->string);
     curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, cl_http_blocking_timeout->integer);
 
     ret = curl_easy_perform(curl);
 
@@ -432,8 +438,13 @@ void HTTP_Init(void)
     //cl_http_max_connections->changed = _cl_http_max_connections_changed;
     cl_http_proxy = Cvar_Get("cl_http_proxy", "", 0);
     cl_http_default_url = Cvar_Get("cl_http_default_url", "", 0);
+
 #ifdef _DEBUG
     cl_http_debug = Cvar_Get("cl_http_debug", "0", 0);
+#endif
+
+#if USE_UI
+    cl_http_blocking_timeout = Cvar_Get("cl_http_blocking_timeout", "15", 0);
 #endif
 
     curl_global_init(CURL_GLOBAL_NOTHING);
