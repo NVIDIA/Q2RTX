@@ -175,6 +175,7 @@ typedef struct menuSlider_s {
 
 #define MLF_HEADER      0x00000001
 #define MLF_SCROLLBAR   0x00000002
+#define MLF_COLOR       0x00000004
 
 typedef struct menuListColumn_s {
     char *name;

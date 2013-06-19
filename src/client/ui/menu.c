@@ -1397,6 +1397,10 @@ static void MenuList_Draw(menuList_t *l)
 
         // draw contents
         s = (char *)l->items[i] + l->extrasize;
+        if (l->mlFlags & MLF_COLOR) {
+            R_SetColor(*((uint32_t *)(s - 4)));
+        }
+
         xx = x;
         for (j = 0; j < l->numcolumns; j++) {
             if (!*s) {
@@ -1411,6 +1415,10 @@ static void MenuList_Draw(menuList_t *l)
         }
 
         yy += MLIST_SPACING;
+    }
+
+    if (l->mlFlags & MLF_COLOR) {
+        R_SetColor(U32_WHITE);
     }
 }
 

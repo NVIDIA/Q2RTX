@@ -59,6 +59,7 @@ typedef struct {
     int         numPlayers;
     char        *players[MAX_STATUS_PLAYERS];
     unsigned    timestamp;
+    uint32_t    color;
     char        name[1];
 } serverslot_t;
 
@@ -81,6 +82,7 @@ typedef struct {
 static m_servers_t  m_servers;
 
 static cvar_t   *ui_sortservers;
+static cvar_t   *ui_colorservers;
 static cvar_t   *ui_pingrate;
 
 static void UpdateSelection(void)
@@ -180,6 +182,20 @@ static serverslot_t *FindSlot(const netadr_t *search, int *index_p)
     return found;
 }
 
+static uint32_t ColorForStatus(const serverStatus_t *status)
+{
+    if (atoi(Info_ValueForKey(status->infostring, "needpass")) >= 1)
+        return uis.color.disabled.u32;
+
+    if (atoi(Info_ValueForKey(status->infostring, "anticheat")) >= 2)
+        return uis.color.disabled.u32;
+
+    if (Q_stricmp(Info_ValueForKey(status->infostring, "NoFake"), "ENABLED") == 0)
+        return uis.color.disabled.u32;
+
+    return U32_WHITE;
+}
+
 /*
 =================
 UI_StatusEvent
@@ -253,6 +269,7 @@ void UI_StatusEvent(const serverStatus_t *status)
     slot->status = SLOT_VALID;
     slot->address = net_from;
     slot->hostname = hostname;
+    slot->color = ColorForStatus(status);
 
     m_servers.list.items[i] = slot;
 
@@ -336,6 +353,7 @@ void UI_ErrorEvent(netadr_t *from)
     slot->status = SLOT_ERROR;
     slot->address = address;
     slot->hostname = hostname;
+    slot->color = U32_WHITE;
     slot->numRules = 0;
     slot->numPlayers = 0;
     slot->timestamp = timestamp;
@@ -396,6 +414,7 @@ static menuSound_t PingSelected(void)
     slot->status = SLOT_PENDING;
     slot->address = address;
     slot->hostname = hostname;
+    slot->color = U32_WHITE;
     slot->numRules = 0;
     slot->numPlayers = 0;
     slot->timestamp = com_eventTime;
@@ -448,6 +467,7 @@ static void AddServer(const netadr_t *address, const char *hostname)
     slot->status = SLOT_IDLE;
     slot->address = *address;
     slot->hostname = UI_CopyString(hostname);
+    slot->color = U32_WHITE;
     slot->numRules = 0;
     slot->numPlayers = 0;
     slot->timestamp = com_eventTime;
@@ -1037,10 +1057,20 @@ static void Free(menuFrameWork_t *self)
     memset(&m_servers, 0, sizeof(m_servers));
 }
 
+static void ui_colorservers_changed(cvar_t *self)
+{
+    if (self->integer)
+        m_servers.list.mlFlags |= MLF_COLOR;
+    else
+        m_servers.list.mlFlags &= ~MLF_COLOR;
+}
+
 void M_Menu_Servers(void)
 {
     ui_sortservers = Cvar_Get("ui_sortservers", "0", 0);
     ui_sortservers->changed = ui_sortservers_changed;
+    ui_colorservers = Cvar_Get("ui_colorservers", "0", 0);
+    ui_colorservers->changed = ui_colorservers_changed;
     ui_pingrate = Cvar_Get("ui_pingrate", "0", 0);
 
     m_servers.menu.name     = "servers";
@@ -1082,6 +1112,8 @@ void M_Menu_Servers(void)
     m_servers.list.columns[3].name      = "Players";
     m_servers.list.columns[4].uiFlags   = UI_RIGHT;
     m_servers.list.columns[4].name      = "RTT";
+
+    ui_colorservers_changed(ui_colorservers);
 
 //
 // server info

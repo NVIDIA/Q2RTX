@@ -968,6 +968,11 @@ ui_sortservers::
         - 4 — sort by players
         - 5 — sort by RTT
 
+ui_colorservers::
+    Enables highlighting of entries in server browser with different colors.
+    Currently, this option grays out password protected and anticheat enforced
+    servers. Default value is 0 (disabled).
+
 ui_pingrate::
     Specifies the server pinging rate used by server browser, in packets per
     second. Default value is 0, which estimates the default pinging rate based
