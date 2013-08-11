@@ -128,47 +128,26 @@ static int GetLittleLong(void)
     return val;
 }
 
-static int GetRawLong(void)
-{
-    int val;
-
-    if (data_p + 4 > iff_end) {
-        return -1;
-    }
-
-    val = RawLongMem(data_p);
-    data_p += 4;
-    return val;
-}
-
 static void FindNextChunk(uint32_t search)
 {
-    uint32_t chunk, length;
-    int i;
+    uint32_t chunk, len;
+    size_t remaining;
 
-    for (i = 0; i < 1000; i++) {
-        if (data_p + 8 >= iff_end) {
-            data_p = NULL;
-            return; // didn't find the chunk
-        }
-
-        chunk = GetRawLong();
-        iff_chunk_len = GetLittleLong();
-        if (iff_chunk_len > iff_end - data_p) {
-            Com_DPrintf("%s: oversize chunk %#x in %s\n",
-                        __func__, LittleLong(chunk), s_info.name);
-            data_p = NULL;
-            return;
+    while (data_p + 8 < iff_end) {
+        chunk = RawLongMem(data_p); data_p += 4;
+        len = LittleLongMem(data_p); data_p += 4;
+        remaining = (size_t)(iff_end - data_p);
+        if (len > remaining) {
+            len = remaining;
         }
         if (chunk == search) {
+            iff_chunk_len = len;
             return;
         }
-        length = (iff_chunk_len + 1) & ~1;
-        data_p += length;
+        data_p += (len + 1) & ~1;
     }
 
-    Com_DPrintf("%s: too many iterations for chunk %#x in %s\n",
-                __func__, search, s_info.name);
+    // didn't find the chunk
     data_p = NULL;
 }
 
