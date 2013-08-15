@@ -110,7 +110,7 @@ static void Win_SetPosition(void)
     SetForegroundWindow(win.wnd);
     SetFocus(win.wnd);
 
-    if (win.mouse.grabbed == IN_GRAB) {
+    if (win.mouse.grabbed) {
         Win_ClipCursor();
     }
 }
@@ -756,7 +756,7 @@ static BOOL check_cursor_pos(void)
 {
     POINT pt;
 
-    if (win.mouse.grabbed == IN_GRAB)
+    if (win.mouse.grabbed)
         return TRUE;
 
     if (!GetCursorPos(&pt))
@@ -917,15 +917,9 @@ STATIC LONG WINAPI Win_MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
             mouse_hwheel_event((short)HIWORD(wParam));
         break;
 
-    case WM_NCMOUSEMOVE:
-        // don't hide cursor
-        if (win.mouse.initialized)
-            IN_MouseEvent(-1, -1);
-        break;
-
     case WM_MOUSEMOVE:
         if (win.mouse.initialized)
-            IN_MouseEvent((short)LOWORD(lParam), (short)HIWORD(lParam));
+            UI_MouseEvent((short)LOWORD(lParam), (short)HIWORD(lParam));
         // fall through
 
     case WM_LBUTTONDOWN:
@@ -1043,7 +1037,7 @@ void VID_PumpEvents(void)
         }
         if (win.mode_changed & (MODE_SIZE | MODE_POS | MODE_STYLE)) {
             VID_SetGeometry(&win.rc);
-            if (win.mouse.grabbed == IN_GRAB) {
+            if (win.mouse.grabbed) {
                 Win_ClipCursor();
             }
         }
@@ -1237,7 +1231,7 @@ static qboolean Win_GetMouseMotion(int *dx, int *dy)
         return qfalse;
     }
 
-    if (win.mouse.grabbed != IN_GRAB) {
+    if (!win.mouse.grabbed) {
         return qfalse;
     }
 
@@ -1296,7 +1290,7 @@ static void Win_ShutdownMouse(void)
 
 static void win_xpfix_changed(cvar_t *self)
 {
-    if (win.mouse.grabbed == IN_GRAB) {
+    if (win.mouse.grabbed) {
         Win_AcquireMouse();
     }
 }
@@ -1340,7 +1334,7 @@ static qboolean Win_InitMouse(void)
 }
 
 // Called when the main window gains or loses focus.
-static void Win_GrabMouse(grab_t grab)
+static void Win_GrabMouse(qboolean grab)
 {
     if (!win.mouse.initialized) {
         return;
@@ -1355,18 +1349,12 @@ static void Win_GrabMouse(grab_t grab)
         return;
     }
 
-    if (grab == IN_GRAB) {
+    if (grab) {
         Win_AcquireMouse();
         Win_HideCursor();
     } else {
-        if (win.mouse.grabbed == IN_GRAB) {
-            Win_DeAcquireMouse();
-        }
-        if (grab == IN_HIDE) {
-            Win_HideCursor();
-        } else {
-            Win_ShowCursor();
-        }
+        Win_DeAcquireMouse();
+        Win_ShowCursor();
     }
 
     win.mouse.grabbed = grab;

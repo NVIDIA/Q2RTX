@@ -839,11 +839,14 @@ in_device::
     should be one of ‘/dev/input/eventX’ files (reading permissions are
     required).  Default value is empty and needs to be filled by user.
 
-in_smart_grab::
-    Enables ‘smart’ mouse grabbing policy in windowed mode: mouse will be
-    automatically released when mouse input is not needed (playing a demo, or
-    spectating a player). Default value is 0 (grab mouse unless console or menu
-    is up).
+in_grab::
+    Specifies mouse grabbing policy in windowed mode. Normally, mouse is always
+    grabbed in-game and released when console or menu is up. In addition to
+    that, smart policy mode automatically releases the mouse when its input is
+    not needed (playing a demo, or spectating a player). Default value is 1.
+      - 0 — don't grab mouse
+      - 1 — normal grabbing policy
+      - 2 — smart grabbing policy
 
 m_autosens::
     Enables automatic scaling of mouse sensitivity proportional to the current

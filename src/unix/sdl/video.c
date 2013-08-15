@@ -470,7 +470,7 @@ void VID_PumpEvents(void)
             button_event(event.button.button, qfalse);
             break;
         case SDL_MOUSEMOTION:
-            IN_MouseEvent(event.motion.x, event.motion.y);
+            UI_MouseEvent(event.motion.x, event.motion.y);
             break;
         }
     }
@@ -496,6 +496,7 @@ static void AcquireMouse(void)
 
     // grab the mouse, so SDL enters relative mouse mode
     SDL_WM_GrabInput(SDL_GRAB_ON);
+    SDL_WM_SetCaption("[" PRODUCT "]", APPLICATION);
     SDL_ShowCursor(SDL_DISABLE);
 
     // pump mouse motion events still pending
@@ -503,6 +504,13 @@ static void AcquireMouse(void)
 
     // clear any deltas generated
     SDL_GetRelativeMouseState(NULL, NULL);
+}
+
+static void DeAcquireMouse(void)
+{
+    SDL_WM_GrabInput(SDL_GRAB_OFF);
+    SDL_WM_SetCaption(PRODUCT, APPLICATION);
+    SDL_ShowCursor(SDL_ENABLE);
 }
 
 static qboolean GetMouseMotion(int *dx, int *dy)
@@ -524,9 +532,9 @@ static void WarpMouse(int x, int y)
 static void ShutdownMouse(void)
 {
     // release the mouse
-    SDL_ShowCursor(SDL_ENABLE);
-    SDL_WM_GrabInput(SDL_GRAB_OFF);
-    SDL_WM_SetCaption(PRODUCT, APPLICATION);
+    if (sdl.mouse.grabbed) {
+        DeAcquireMouse();
+    }
     memset(&sdl.mouse, 0, sizeof(sdl.mouse));
 }
 
@@ -542,7 +550,7 @@ static qboolean InitMouse(void)
     return qtrue;
 }
 
-static void GrabMouse(grab_t grab)
+static void GrabMouse(qboolean grab)
 {
     if (!sdl.mouse.initialized) {
         return;
@@ -553,19 +561,10 @@ static void GrabMouse(grab_t grab)
         return;
     }
 
-    if (grab == IN_GRAB) {
+    if (grab) {
         AcquireMouse();
-        SDL_WM_SetCaption("[" PRODUCT "]", APPLICATION);
     } else {
-        if (sdl.mouse.grabbed == IN_GRAB) {
-            SDL_WM_GrabInput(SDL_GRAB_OFF);
-            SDL_WM_SetCaption(PRODUCT, APPLICATION);
-        }
-        if (grab == IN_HIDE) {
-            SDL_ShowCursor(SDL_DISABLE);
-        } else {
-            SDL_ShowCursor(SDL_ENABLE);
-        }
+        DeAcquireMouse();
     }
 
     sdl.mouse.grabbed = grab;

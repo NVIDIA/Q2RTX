@@ -56,7 +56,7 @@ typedef struct {
 
 static struct {
     qboolean    initialized;
-    grab_t      grabbed;
+    qboolean    grabbed;
     list_t      devices;
     int         dx, dy;
 } evdev;
@@ -318,7 +318,7 @@ static qboolean InitMouse(void)
     return qtrue;
 }
 
-static void GrabMouse(grab_t grab)
+static void GrabMouse(qboolean grab)
 {
     struct input_event ev;
     evdev_t *dev;
@@ -334,20 +334,14 @@ static void GrabMouse(grab_t grab)
     }
 
 #if USE_SDL
-    if (grab == IN_GRAB) {
+    if (grab) {
         SDL_WM_GrabInput(SDL_GRAB_ON);
         SDL_WM_SetCaption("[" PRODUCT "]", APPLICATION);
         SDL_ShowCursor(SDL_DISABLE);
     } else {
-        if (evdev.grabbed == IN_GRAB) {
-            SDL_WM_GrabInput(SDL_GRAB_OFF);
-            SDL_WM_SetCaption(PRODUCT, APPLICATION);
-        }
-        if (grab == IN_HIDE) {
-            SDL_ShowCursor(SDL_DISABLE);
-        } else {
-            SDL_ShowCursor(SDL_ENABLE);
-        }
+        SDL_WM_GrabInput(SDL_GRAB_OFF);
+        SDL_WM_SetCaption(PRODUCT, APPLICATION);
+        SDL_ShowCursor(SDL_ENABLE);
     }
 #endif
 
