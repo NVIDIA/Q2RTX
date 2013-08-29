@@ -38,6 +38,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <dlfcn.h>
 #include <errno.h>
 
+#if USE_SDL
+#include <SDL_main.h>
+#endif
+
 cvar_t  *sys_basedir;
 cvar_t  *sys_libdir;
 cvar_t  *sys_homedir;

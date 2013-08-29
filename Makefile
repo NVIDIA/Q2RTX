@@ -476,37 +476,45 @@ ifdef CONFIG_WINDOWS
     LIBS_s += -lws2_32 -lwinmm -ladvapi32
     LIBS_c += -lws2_32 -lwinmm
 else
-    SDL_CFLAGS ?= $(shell sdl-config --cflags)
-    SDL_LIBS ?= $(shell sdl-config --libs)
-    CFLAGS_c += -DUSE_SDL=1 $(SDL_CFLAGS)
-    LIBS_c += $(SDL_LIBS)
-    OBJS_c += src/unix/sdl/video.o
-    OBJS_c += src/unix/sdl/clipboard.o
-
-    ifdef CONFIG_SOFTWARE_RENDERER
-        OBJS_c += src/unix/sdl/swimp.o
+    ifdef CONFIG_SDL2
+        SDL_CFLAGS ?= $(shell sdl2-config --cflags)
+        SDL_LIBS ?= $(shell sdl2-config --libs)
+        CFLAGS_c += -DUSE_SDL=2 $(SDL_CFLAGS)
+        LIBS_c += $(SDL_LIBS)
+        OBJS_c += src/unix/sdl2/video.o
     else
-        OBJS_c += src/unix/sdl/glimp.o
-    endif
+        SDL_CFLAGS ?= $(shell sdl-config --cflags)
+        SDL_LIBS ?= $(shell sdl-config --libs)
+        CFLAGS_c += -DUSE_SDL=1 $(SDL_CFLAGS)
+        LIBS_c += $(SDL_LIBS)
+        OBJS_c += src/unix/sdl/video.o
+        OBJS_c += src/unix/sdl/clipboard.o
 
-    ifdef CONFIG_X11
-        X11_CFLAGS ?=
-        X11_LIBS ?= -lX11
-        CFLAGS_c += -DUSE_X11=1 $(X11_CFLAGS)
-        LIBS_c += $(X11_LIBS)
-        ifndef CONFIG_SOFTWARE_RENDERER
-            OBJS_c += src/unix/sdl/glx.o
+        ifdef CONFIG_SOFTWARE_RENDERER
+            OBJS_c += src/unix/sdl/swimp.o
+        else
+            OBJS_c += src/unix/sdl/glimp.o
         endif
-    endif
 
-    ifdef CONFIG_DIRECT_INPUT
-        CFLAGS_c += -DUSE_DINPUT=1
-        OBJS_c += src/unix/evdev.o
-        ifndef CONFIG_NO_UDEV
-            UDEV_CFLAGS ?=
-            UDEV_LIBS ?= -ludev
-            CFLAGS_c += -DUSE_UDEV=1 $(UDEV_CFLAGS)
-            LIBS_c += $(UDEV_LIBS)
+        ifdef CONFIG_X11
+            X11_CFLAGS ?=
+            X11_LIBS ?= -lX11
+            CFLAGS_c += -DUSE_X11=1 $(X11_CFLAGS)
+            LIBS_c += $(X11_LIBS)
+            ifndef CONFIG_SOFTWARE_RENDERER
+                OBJS_c += src/unix/sdl/glx.o
+            endif
+        endif
+
+        ifdef CONFIG_DIRECT_INPUT
+            CFLAGS_c += -DUSE_DINPUT=1
+            OBJS_c += src/unix/evdev.o
+            ifndef CONFIG_NO_UDEV
+                UDEV_CFLAGS ?=
+                UDEV_LIBS ?= -ludev
+                CFLAGS_c += -DUSE_UDEV=1 $(UDEV_CFLAGS)
+                LIBS_c += $(UDEV_LIBS)
+            endif
         endif
     endif
 
@@ -519,7 +527,11 @@ else
     endif
 
     ifndef CONFIG_NO_SOFTWARE_SOUND
-        OBJS_c += src/unix/sdl/sound.o
+        ifdef CONFIG_SDL2
+            OBJS_c += src/unix/sdl2/sound.o
+        else
+            OBJS_c += src/unix/sdl/sound.o
+        endif
         ifdef CONFIG_DIRECT_SOUND
             CFLAGS_c += -DUSE_DSOUND=1
             OBJS_c += src/unix/oss.o
