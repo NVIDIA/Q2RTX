@@ -63,20 +63,23 @@ void CL_ParsePlayerSkin(char *name, char *model, char *skin, const char *s)
     if (!t)
         t = strchr(model, '\\');
     if (!t)
-        t = model;
-    if (t == model)
         goto default_model;
-    *t++ = 0;
+    *t = 0;
+
+    // isolate the skin name
+    strcpy(skin, t + 1);
+
+    // fix empty model to male
+    if (t == model)
+        strcpy(model, "male");
 
     // apply restrictions on skins
-    if (cl_noskins->integer == 2 || !COM_IsPath(t))
+    if (cl_noskins->integer == 2 || !COM_IsPath(skin))
         goto default_skin;
 
     if (cl_noskins->integer || !COM_IsPath(model))
         goto default_model;
 
-    // isolate the skin name
-    strcpy(skin, t);
     return;
 
 default_skin:
