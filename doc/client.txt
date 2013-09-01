@@ -457,7 +457,7 @@ vid_modelist::
     Space separated list of fullscreen video modes. Both _freq_ and _bpp_
     parameters are optional. Full syntax is: 'WxH[@freq][:bpp] [...]'. Default
     value is "640x480 800x600 1024x768". On Linux, _freq_ parameter is currently
-    ignored.
+    ignored. Special keyword ‘desktop’ means to use default desktop video mode.
 
 vid_fullscreen::
     If set to non zero _value_, run in the specified fullscreen mode. This way,

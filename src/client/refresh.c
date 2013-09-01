@@ -69,27 +69,38 @@ qboolean VID_GetFullscreen(vrect_t *rc, int *freq_p, int *depth_p)
         return qfalse;
 
     s = vid_modelist->string;
+    while (Q_isspace(*s))
+        s++;
     if (!*s)
         return qfalse;
 
     mode = 1;
     while (1) {
-        w = strtoul(s, &s, 10);
-        if (*s != 'x' && *s != 'X') {
-            Com_DPrintf("Mode %d is malformed\n", mode);
-            return qfalse;
-        }
-        h = strtoul(s + 1, &s, 10);
-        freq = depth = 0;
-        if (*s == '@') {
-            freq = strtoul(s + 1, &s, 10);
-            if (*s == ':') {
-                depth = strtoul(s + 1, &s, 10);
+        if (!strncmp(s, "desktop", 7)) {
+            s += 7;
+            if (*s && !Q_isspace(*s)) {
+                Com_DPrintf("Mode %d is malformed\n", mode);
+                return qfalse;
             }
-        } else if (*s == ':') {
-            depth = strtoul(s + 1, &s, 10);
+            w = h = freq = depth = 0;
+        } else {
+            w = strtoul(s, &s, 10);
+            if (*s != 'x' && *s != 'X') {
+                Com_DPrintf("Mode %d is malformed\n", mode);
+                return qfalse;
+            }
+            h = strtoul(s + 1, &s, 10);
+            freq = depth = 0;
             if (*s == '@') {
                 freq = strtoul(s + 1, &s, 10);
+                if (*s == ':') {
+                    depth = strtoul(s + 1, &s, 10);
+                }
+            } else if (*s == ':') {
+                depth = strtoul(s + 1, &s, 10);
+                if (*s == '@') {
+                    freq = strtoul(s + 1, &s, 10);
+                }
             }
         }
         if (mode == vid_fullscreen->integer) {
@@ -97,7 +108,7 @@ qboolean VID_GetFullscreen(vrect_t *rc, int *freq_p, int *depth_p)
         }
         while (Q_isspace(*s))
             s++;
-        if (*s == 0) {
+        if (!*s) {
             Com_DPrintf("Mode %d not found\n", vid_fullscreen->integer);
             return qfalse;
         }
