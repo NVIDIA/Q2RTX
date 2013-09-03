@@ -81,7 +81,7 @@ else
     CFLAGS_g += -fvisibility=hidden
 
     # Resolve all symbols at link time
-    ifneq ($(SYS),OpenBSD)
+    ifeq ($(SYS),Linux)
         LDFLAGS_s += -Wl,--no-undefined
         LDFLAGS_c += -Wl,--no-undefined
         LDFLAGS_g += -Wl,--no-undefined
