@@ -293,7 +293,10 @@ static void start_message_mode(chatMode_t mode)
         return;
     }
 
-    Con_Close(qtrue);
+    // starting messagemode closes console
+    if (cls.key_dest & KEY_CONSOLE) {
+        Con_Close(qtrue);
+    }
 
     con.chat = mode;
     IF_Replace(&con.chatPrompt.inputLine, Cmd_RawArgs());
