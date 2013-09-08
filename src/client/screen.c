@@ -1505,13 +1505,13 @@ STAT PROGRAMS
     R_DrawString(x, y, 0, MAX_STRING_CHARS, string, scr.font_pic)
 
 #define HUD_DrawAltString(x, y, string) \
-    R_DrawString(x, y, UI_ALTCOLOR, MAX_STRING_CHARS, string, scr.font_pic)
+    R_DrawString(x, y, UI_XORCOLOR, MAX_STRING_CHARS, string, scr.font_pic)
 
 #define HUD_DrawCenterString(x, y, string) \
     SCR_DrawStringMulti(x, y, UI_CENTER, MAX_STRING_CHARS, string, scr.font_pic)
 
 #define HUD_DrawAltCenterString(x, y, string) \
-    SCR_DrawStringMulti(x, y, UI_CENTER|UI_ALTCOLOR, MAX_STRING_CHARS, string, scr.font_pic)
+    SCR_DrawStringMulti(x, y, UI_CENTER | UI_XORCOLOR, MAX_STRING_CHARS, string, scr.font_pic)
 
 static void HUD_DrawNumber(int x, int y, int color, int width, int value)
 {

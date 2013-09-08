@@ -203,7 +203,7 @@ void R_DrawFill32(int x, int y, int w, int h, uint32_t color)
     _GL_StretchPic(x, y, w, h, 0, 0, 1, 1, color, TEXNUM_WHITE, 0);
 }
 
-static inline void draw_char(int x, int y, int c, qboolean alt, image_t *image)
+static inline void draw_char(int x, int y, int flags, int c, image_t *image)
 {
     float s, t;
 
@@ -211,7 +211,13 @@ static inline void draw_char(int x, int y, int c, qboolean alt, image_t *image)
         return;
     }
 
-    c |= alt << 7;
+    if (flags & UI_ALTCOLOR) {
+        c |= 0x80;
+    }
+    if (flags & UI_XORCOLOR) {
+        c ^= 0x80;
+    }
+
     s = (c & 15) * 0.0625f;
     t = (c >> 4) * 0.0625f;
 
@@ -227,23 +233,21 @@ static inline void draw_char(int x, int y, int c, qboolean alt, image_t *image)
     }
 
     GL_StretchPic(x, y, CHAR_WIDTH, CHAR_HEIGHT, s, t,
-                  s + 0.0625f, t + 0.0625f, draw.colors[alt].u32, image);
+                  s + 0.0625f, t + 0.0625f, draw.colors[c >> 7].u32, image);
 }
 
 void R_DrawChar(int x, int y, int flags, int c, qhandle_t font)
 {
-    qboolean alt = (flags & UI_ALTCOLOR) ? qtrue : qfalse;
-    draw_char(x, y, c & 255, alt, IMG_ForHandle(font));
+    draw_char(x, y, flags, c & 255, IMG_ForHandle(font));
 }
 
 int R_DrawString(int x, int y, int flags, size_t maxlen, const char *s, qhandle_t font)
 {
     image_t *image = IMG_ForHandle(font);
-    qboolean alt = (flags & UI_ALTCOLOR) ? qtrue : qfalse;
 
     while (maxlen-- && *s) {
         byte c = *s++;
-        draw_char(x, y, c, alt, image);
+        draw_char(x, y, flags, c, image);
         x += CHAR_WIDTH;
     }
 

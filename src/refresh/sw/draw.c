@@ -405,7 +405,7 @@ void R_DrawPic(int x, int y, qhandle_t pic)
                           image->upload_width * TEX_BYTES, image->pixels[0], draw.colors[0]);
 }
 
-static inline void draw_char(int x, int y, int ch, qboolean alt, image_t *image)
+static inline void draw_char(int x, int y, int flags, int ch, image_t *image)
 {
     int x2, y2;
     byte *data;
@@ -413,12 +413,17 @@ static inline void draw_char(int x, int y, int ch, qboolean alt, image_t *image)
     if ((ch & 127) == 32)
         return;
 
-    ch |= alt << 7;
+    if (flags & UI_ALTCOLOR)
+        ch |= 0x80;
+
+    if (flags & UI_XORCOLOR)
+        ch ^= 0x80;
+
     x2 = (ch & 15) * CHAR_WIDTH;
     y2 = ((ch >> 4) & 15) * CHAR_HEIGHT;
     data = image->pixels[0] + y2 * image->upload_width * TEX_BYTES + x2 * TEX_BYTES;
 
-    R_DrawFixedData(x, y, CHAR_WIDTH, CHAR_HEIGHT, image->upload_width * TEX_BYTES, data, draw.colors[alt]);
+    R_DrawFixedData(x, y, CHAR_WIDTH, CHAR_HEIGHT, image->upload_width * TEX_BYTES, data, draw.colors[ch >> 7]);
 }
 
 void R_DrawChar(int x, int y, int flags, int ch, qhandle_t font)
@@ -432,7 +437,7 @@ void R_DrawChar(int x, int y, int flags, int ch, qhandle_t font)
     if (image->upload_width != 128 || image->upload_height != 128)
         return;
 
-    draw_char(x, y, ch, !!(flags & UI_ALTCOLOR), image);
+    draw_char(x, y, flags, ch & 255, image);
 }
 
 /*
@@ -444,7 +449,6 @@ int R_DrawString(int x, int y, int flags, size_t maxChars,
                  const char *string, qhandle_t font)
 {
     image_t *image;
-    qboolean alt;
 
     if (!font)
         return x;
@@ -453,11 +457,9 @@ int R_DrawString(int x, int y, int flags, size_t maxChars,
     if (image->upload_width != 128 || image->upload_height != 128)
         return x;
 
-    alt = (flags & UI_ALTCOLOR) ? qtrue : qfalse;
-
     while (maxChars-- && *string) {
         byte c = *string++;
-        draw_char(x, y, c, alt, image);
+        draw_char(x, y, flags, c, image);
         x += CHAR_WIDTH;
     }
 

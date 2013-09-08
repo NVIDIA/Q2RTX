@@ -111,7 +111,7 @@ void SCR_UpdateScreen(void);
 #define UI_DROPSHADOW       0x00000010
 #define UI_ALTCOLOR         0x00000020
 #define UI_IGNORECOLOR      0x00000040
-#define UI_ALTESCAPES       0x00000080
+#define UI_XORCOLOR         0x00000080
 #define UI_AUTOWRAP         0x00000100
 #define UI_MULTILINE        0x00000200
 #define UI_DRAWCURSOR       0x00000400
