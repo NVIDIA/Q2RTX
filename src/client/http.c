@@ -46,6 +46,7 @@ typedef struct {
     size_t      position;
     char        url[576];
     char        *buffer;
+    qboolean    multi_added;    //to prevent multiple removes
 } dlhandle_t;
 
 static dlhandle_t   download_handles[4]; //actual download handles, don't raise this!
@@ -315,6 +316,7 @@ fail:
 
     Com_DPrintf("[HTTP] Fetching %s...\n", dl->url);
     entry->state = DL_RUNNING;
+    dl->multi_added = qtrue;
     curl_handles++;
 }
 
@@ -407,13 +409,14 @@ void HTTP_CleanupDownloads(void)
         }
 
         if (dl->curl) {
-            if (curl_multi)
+            if (curl_multi && dl->multi_added)
                 curl_multi_remove_handle(curl_multi, dl->curl);
             curl_easy_cleanup(dl->curl);
             dl->curl = NULL;
         }
 
         dl->queue = NULL;
+        dl->multi_added = qfalse;
     }
 
     if (curl_multi) {
@@ -829,7 +832,11 @@ fail2:
                 Z_Free(dl->buffer);
                 dl->buffer = NULL;
             }
-            curl_multi_remove_handle(curl_multi, curl);
+            if (dl->multi_added) {
+                //remove the handle and mark it as such
+                curl_multi_remove_handle(curl_multi, curl);
+                dl->multi_added = qfalse;
+            }
             continue;
         }
 
@@ -844,12 +851,11 @@ fail2:
         Com_FormatSizeLong(size, sizeof(size), bytes);
         Com_FormatSizeLong(speed, sizeof(speed), bytes / sec);
 
-        //FIXME:
-        //technically i shouldn't need to do this as curl will auto reuse the
-        //existing handle when you change the url. however, the curl_handles goes
-        //all weird when reusing a download slot in this way. if you can figure
-        //out why, please let me know.
-        curl_multi_remove_handle(curl_multi, curl);
+        if (dl->multi_added) {
+            //remove the handle and mark it as such
+            curl_multi_remove_handle(curl_multi, curl);
+            dl->multi_added = qfalse;
+        }
 
         Com_Printf("[HTTP] %s [%s, %s/sec] [%d remaining file%s]\n",
                    dl->queue->path, size, speed, cls.download.pending,
