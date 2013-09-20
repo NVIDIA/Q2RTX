@@ -357,8 +357,7 @@ finish:
 
 void GL_DrawBspModel(mmodel_t *model)
 {
-    mface_t *face;
-    int count, mask = 0;
+    mface_t *face, *last;
     vec3_t bounds[2];
     vec_t dot;
     vec3_t transformed, temp;
@@ -396,14 +395,7 @@ void GL_DrawBspModel(mmodel_t *model)
             return;
         }
         VectorSubtract(glr.fd.vieworg, ent->origin, transformed);
-        if (VectorEmpty(ent->origin) && model->drawframe != glr.drawframe) {
-            mask = SURF_TRANS_MASK;
-        }
     }
-
-    // protect against infinite loop if the same inline model
-    // with alpha faces is referenced by multiple entities
-    model->drawframe = glr.drawframe;
 
     GL_TransformLights(model);
 
@@ -412,27 +404,40 @@ void GL_DrawBspModel(mmodel_t *model)
     GL_BindArrays();
 
     // draw visible faces
-    // FIXME: go by headnode instead?
-    face = model->firstface;
-    count = model->numfaces;
-    while (count--) {
+    last = model->firstface + model->numfaces;
+    for (face = model->firstface; face < last; face++) {
         dot = PlaneDiffFast(transformed, face->plane);
         if (BSP_CullFace(face, dot)) {
             c.facesCulled++;
-        } else if (face->drawflags & mask) {
-            // FIXME: alpha faces are not supported
-            // on rotated or translated inline models
-            GL_AddAlphaFace(face);
-        } else {
-            if (gl_dynamic->integer) {
-                GL_PushLights(face);
-            }
-            GL_DrawFace(face);
+            continue;
         }
-        face++;
+
+        // sky faces don't have their polygon built
+        if (face->drawflags & SURF_SKY) {
+            continue;
+        }
+
+        // alpha faces on transformed inline models are drawn with world GL
+        // matrix. this bug is intentional: some maps exploit this to hide
+        // surfaces that would otherwise be visible.
+        if (face->drawflags & SURF_TRANS_MASK) {
+            if (model->drawframe != glr.drawframe)
+                GL_AddAlphaFace(face);
+            continue;
+        }
+
+        if (gl_dynamic->integer) {
+            GL_PushLights(face);
+        }
+
+        GL_DrawFace(face);
     }
 
     GL_Flush3D();
+
+    // protect against infinite loop if the same inline model
+    // with alpha faces is referenced by multiple entities
+    model->drawframe = glr.drawframe;
 }
 
 #define NODE_CLIPPED    0
