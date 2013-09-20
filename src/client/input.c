@@ -474,8 +474,9 @@ static float CL_KeyState(kbutton_t *key)
         }
     }
 
+    // special case for instant packet
     if (!cl.cmd.msec) {
-        return 0;
+        return (float)(key->state & 1);
     }
 
     val = (float)msec / cl.cmd.msec;
