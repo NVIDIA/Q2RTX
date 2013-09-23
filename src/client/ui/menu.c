@@ -498,17 +498,16 @@ static void SpinControl_Push(menuSpinControl_t *s)
 {
     int val = s->cvar->integer;
 
-    if (val > s->numItems - 1)
-        val = s->numItems - 1;
-    if (val < 0)
-        val = 0;
-
-    s->curvalue = val;
+    if (val < 0 || val >= s->numItems)
+        s->curvalue = -1;
+    else
+        s->curvalue = val;
 }
 
 static void SpinControl_Pop(menuSpinControl_t *s)
 {
-    Cvar_SetInteger(s->cvar, s->curvalue, FROM_MENU);
+    if (s->curvalue >= 0 && s->curvalue < s->numItems)
+        Cvar_SetInteger(s->cvar, s->curvalue, FROM_MENU);
 }
 
 static void SpinControl_Free(menuSpinControl_t *s)
@@ -567,6 +566,9 @@ SpinControl_DoEnter
 */
 static int SpinControl_DoEnter(menuSpinControl_t *s)
 {
+    if (!s->numItems)
+        return QMS_BEEP;
+
     s->curvalue++;
 
     if (s->curvalue >= s->numItems)
@@ -586,6 +588,9 @@ SpinControl_DoSlide
 */
 static int SpinControl_DoSlide(menuSpinControl_t *s, int dir)
 {
+    if (!s->numItems)
+        return QMS_BEEP;
+
     s->curvalue += dir;
 
     if (s->curvalue < 0) {
@@ -608,6 +613,8 @@ SpinControl_Draw
 */
 static void SpinControl_Draw(menuSpinControl_t *s)
 {
+    char *name;
+
     UI_DrawString(s->generic.x + LCOLUMN_OFFSET, s->generic.y,
                   s->generic.uiFlags | UI_RIGHT | UI_ALTCOLOR, s->generic.name);
 
@@ -618,8 +625,13 @@ static void SpinControl_Draw(menuSpinControl_t *s)
         }
     }
 
+    if (s->curvalue < 0 || s->curvalue >= s->numItems)
+        name = "???";
+    else
+        name = s->itemnames[s->curvalue];
+
     UI_DrawString(s->generic.x + RCOLUMN_OFFSET, s->generic.y,
-                  s->generic.uiFlags, s->itemnames[s->curvalue]);
+                  s->generic.uiFlags, name);
 }
 
 /*
@@ -673,14 +685,17 @@ static void Pairs_Push(menuSpinControl_t *s)
     for (i = 0; i < s->numItems; i++) {
         if (!Q_stricmp(s->itemvalues[i], s->cvar->string)) {
             s->curvalue = i;
-            break;
+            return;
         }
     }
+
+    s->curvalue = -1;
 }
 
 static void Pairs_Pop(menuSpinControl_t *s)
 {
-    Cvar_SetByVar(s->cvar, s->itemvalues[s->curvalue], FROM_MENU);
+    if (s->curvalue >= 0 && s->curvalue < s->numItems)
+        Cvar_SetByVar(s->cvar, s->itemvalues[s->curvalue], FROM_MENU);
 }
 
 static void Pairs_Free(menuSpinControl_t *s)
@@ -713,14 +728,17 @@ static void Strings_Push(menuSpinControl_t *s)
     for (i = 0; i < s->numItems; i++) {
         if (!Q_stricmp(s->itemnames[i], s->cvar->string)) {
             s->curvalue = i;
-            break;
+            return;
         }
     }
+
+    s->curvalue = -1;
 }
 
 static void Strings_Pop(menuSpinControl_t *s)
 {
-    Cvar_SetByVar(s->cvar, s->itemnames[s->curvalue], FROM_MENU);
+    if (s->curvalue >= 0 && s->curvalue < s->numItems)
+        Cvar_SetByVar(s->cvar, s->itemnames[s->curvalue], FROM_MENU);
 }
 
 /*
@@ -733,7 +751,18 @@ TOGGLE CONTROL
 
 static void Toggle_Push(menuSpinControl_t *s)
 {
-    s->curvalue = (s->cvar->integer ? 1 : 0) ^ s->negate;
+    int val = s->cvar->integer;
+
+    if (val == 0 || val == 1)
+        s->curvalue = val ^ s->negate;
+    else
+        s->curvalue = -1;
+}
+
+static void Toggle_Pop(menuSpinControl_t *s)
+{
+    if (s->curvalue == 0 || s->curvalue == 1)
+        Cvar_SetInteger(s->cvar, s->curvalue ^ s->negate, FROM_MENU);
 }
 
 /*
@@ -1466,14 +1495,17 @@ static menuSound_t Slider_DoSlide(menuSlider_t *s, int dir);
 
 static void Slider_Push(menuSlider_t *s)
 {
+    s->modified = qfalse;
     s->curvalue = s->cvar->value;
     cclamp(s->curvalue, s->minvalue, s->maxvalue);
 }
 
 static void Slider_Pop(menuSlider_t *s)
 {
-    cclamp(s->curvalue, s->minvalue, s->maxvalue);
-    Cvar_SetValue(s->cvar, s->curvalue, FROM_MENU);
+    if (s->modified) {
+        cclamp(s->curvalue, s->minvalue, s->maxvalue);
+        Cvar_SetValue(s->cvar, s->curvalue, FROM_MENU);
+    }
 }
 
 static void Slider_Free(menuSlider_t *s)
@@ -1549,6 +1581,7 @@ static menuSound_t Slider_MouseMove(menuSlider_t *s)
     value = pos * (s->maxvalue - s->minvalue);
     steps = Q_rint(value / s->step);
 
+    s->modified = qtrue;
     s->curvalue = s->minvalue + steps * s->step;
     return QMS_SILENT;
 }
@@ -1557,9 +1590,11 @@ static menuSound_t Slider_Key(menuSlider_t *s, int key)
 {
     switch (key) {
     case K_END:
+        s->modified = qtrue;
         s->curvalue = s->maxvalue;
         return QMS_MOVE;
     case K_HOME:
+        s->modified = qtrue;
         s->curvalue = s->minvalue;
         return QMS_MOVE;
     case K_MOUSE1:
@@ -1577,6 +1612,7 @@ Slider_DoSlide
 */
 static menuSound_t Slider_DoSlide(menuSlider_t *s, int dir)
 {
+    s->modified = qtrue;
     s->curvalue += dir * s->step;
 
     cclamp(s->curvalue, s->minvalue, s->maxvalue);
@@ -2461,8 +2497,10 @@ void Menu_Pop(menuFrameWork_t *menu)
             Strings_Pop(item);
             break;
         case MTYPE_SPINCONTROL:
-        case MTYPE_TOGGLE:
             SpinControl_Pop(item);
+            break;
+        case MTYPE_TOGGLE:
+            Toggle_Pop(item);
             break;
         case MTYPE_KEYBIND:
             Keybind_Pop(item);

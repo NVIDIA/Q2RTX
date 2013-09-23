@@ -121,7 +121,7 @@ begin effects
     title "Effects Setup"
     values "dynamic lighting" gl_dynamic "no" "yes" "only switchable"
     values "entity cel-shading" gl_celshading no 1x 2x 3x
-    toggle "entity glowing" cl_noglow ~0
+    toggle "entity glowing" cl_noglow ~
     toggle "ground shadows" gl_shadows
     toggle "screen blending" gl_polyblend
     toggle "grenade explosions" cl_disable_explosions ~0

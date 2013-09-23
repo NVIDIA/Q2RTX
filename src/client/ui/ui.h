@@ -158,6 +158,7 @@ typedef struct menuField_s {
 typedef struct menuSlider_s {
     menuCommon_t generic;
     cvar_t *cvar;
+    qboolean modified;
 
     float minvalue;
     float maxvalue;
