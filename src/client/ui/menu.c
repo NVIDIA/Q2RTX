@@ -192,6 +192,8 @@ Keybind_Init
 */
 static void Keybind_Init(menuKeybind_t *k)
 {
+    size_t len;
+
     if (!k->generic.name) {
         Com_Error(ERR_FATAL, "Keybind_Init: NULL k->generic.name");
     }
@@ -204,8 +206,15 @@ static void Keybind_Init(menuKeybind_t *k)
     UI_StringDimensions(&k->generic.rect,
                         k->generic.uiFlags | UI_RIGHT, k->generic.name);
 
-    k->generic.rect.width += (RCOLUMN_OFFSET - LCOLUMN_OFFSET) +
-                             strlen(k->binding) * CHAR_WIDTH;
+    if (k->altbinding[0]) {
+        len = strlen(k->binding) + 4 + strlen(k->altbinding);
+    } else if (k->binding[0]) {
+        len = strlen(k->binding);
+    } else {
+        len = 3;
+    }
+
+    k->generic.rect.width += (RCOLUMN_OFFSET - LCOLUMN_OFFSET) + len * CHAR_WIDTH;
 }
 
 /*
@@ -279,6 +288,7 @@ static void Keybind_Update(menuFrameWork_t *menu)
         k = menu->items[i];
         if (k->generic.type == MTYPE_KEYBIND) {
             Keybind_Push(k);
+            Keybind_Init(k);
         }
     }
 }
