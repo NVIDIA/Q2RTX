@@ -1835,10 +1835,11 @@ void CL_ClearEffects(void)
 
 void CL_InitEffects(void)
 {
-    int i;
+    int i, j;
 
-    for (i = 0; i < NUMVERTEXNORMALS * 3; i++)
-        avelocities[0][i] = (rand() & 255) * 0.01;
+    for (i = 0; i < NUMVERTEXNORMALS; i++)
+        for (j = 0; j < 3; j++)
+            avelocities[i][j] = (rand() & 255) * 0.01f;
 
 }
 
