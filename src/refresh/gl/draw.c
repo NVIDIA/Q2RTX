@@ -149,20 +149,35 @@ clear:
     draw.scissor = qtrue;
 }
 
-void R_SetScale(float *scale)
+float R_ClampScale(cvar_t *var)
 {
-    float f = scale ? *scale : 1;
+    if (!var)
+        return 1.0f;
 
-    if (draw.scale == f) {
+    if (var->value)
+        return 1.0f / Cvar_ClampValue(var, 1.0f, 10.0f);
+
+    if (r_config.width * r_config.height >= 2560 * 1440)
+        return 0.25f;
+
+    if (r_config.width * r_config.height >= 1280 * 720)
+        return 0.5f;
+
+    return 1.0f;
+}
+
+void R_SetScale(float scale)
+{
+    if (draw.scale == scale) {
         return;
     }
 
     GL_Flush2D();
 
-    GL_Ortho(0, Q_rint(r_config.width * f),
-             Q_rint(r_config.height * f), 0, -1, 1);
+    GL_Ortho(0, Q_rint(r_config.width * scale),
+             Q_rint(r_config.height * scale), 0, -1, 1);
 
-    draw.scale = f;
+    draw.scale = scale;
 }
 
 void R_DrawStretchPic(int x, int y, int w, int h, qhandle_t pic)

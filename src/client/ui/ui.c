@@ -98,15 +98,9 @@ static void UI_Resize(void)
 {
     int i;
 
-#if USE_REF == REF_SOFT
-    uis.scale = 1;
-    uis.width = r_config.width;
-    uis.height = r_config.height;
-#else
-    uis.scale = 1 / Cvar_ClampValue(ui_scale, 1, 9);
+    uis.scale = R_ClampScale(ui_scale);
     uis.width = r_config.width * uis.scale;
     uis.height = r_config.height * uis.scale;
-#endif
 
     for (i = 0; i < uis.menuDepth; i++) {
         Menu_Init(uis.layers[i]);
@@ -431,7 +425,7 @@ void UI_Draw(int realtime)
     }
 
     R_ClearColor();
-    R_SetScale(&uis.scale);
+    R_SetScale(uis.scale);
 
     if (1) {
         // draw top menu
@@ -471,7 +465,7 @@ void UI_Draw(int realtime)
     }
 
     R_ClearColor();
-    R_SetScale(NULL);
+    R_SetScale(1.0f);
 }
 
 void UI_StartSound(menuSound_t sound)

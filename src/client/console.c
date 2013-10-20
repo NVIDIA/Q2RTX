@@ -364,17 +364,16 @@ Con_CheckResize
 If the line width has changed, reformat the buffer.
 ================
 */
-static void Con_CheckResize(void)
+void Con_CheckResize(void)
 {
     int     width;
+
+    con.scale = R_ClampScale(con_scale);
 
     con.vidWidth = r_config.width * con.scale;
     con.vidHeight = r_config.height * con.scale;
 
     width = (con.vidWidth / CHAR_WIDTH) - 2;
-
-    if (width == con.linewidth)
-        return;
 
     con.linewidth = width > CON_LINEWIDTH ? CON_LINEWIDTH : width;
     con.prompt.inputLine.visibleChars = con.linewidth;
@@ -405,6 +404,13 @@ static void con_param_changed(cvar_t *self)
 {
     if (con.initialized && cls.ref_initialized) {
         Con_RegisterMedia();
+    }
+}
+
+static void con_scale_changed(cvar_t *self)
+{
+    if (con.initialized && cls.ref_initialized) {
+        Con_CheckResize();
     }
 }
 
@@ -443,6 +449,7 @@ void Con_Init(void)
     con_speed = Cvar_Get("scr_conspeed", "3", 0);
     con_alpha = Cvar_Get("con_alpha", "1", 0);
     con_scale = Cvar_Get("con_scale", "1", 0);
+    con_scale->changed = con_scale_changed;
     con_font = Cvar_Get("con_font", "conchars", 0);
     con_font->changed = con_param_changed;
     con_background = Cvar_Get("con_background", "conback", 0);
@@ -1024,16 +1031,10 @@ SCR_DrawConsole
 */
 void Con_DrawConsole(void)
 {
-    Cvar_ClampValue(con_scale, 1, 9);
-
-    con.scale = 1.0f / con_scale->value;
-    R_SetScale(&con.scale);
-
-    Con_CheckResize();
+    R_SetScale(con.scale);
     Con_DrawSolidConsole();
     Con_DrawNotify();
-
-    R_SetScale(NULL);
+    R_SetScale(1.0f);
 }
 
 

@@ -46,6 +46,7 @@ static struct {
     qhandle_t   font_pic;
 
     int         hud_width, hud_height;
+    float       hud_scale;
 } scr;
 
 static cvar_t   *scr_viewsize;
@@ -1257,10 +1258,13 @@ void SCR_SetCrosshairColor(void)
 void SCR_ModeChanged(void)
 {
     IN_Activate();
+    Con_CheckResize();
     UI_ModeChanged();
     // video sync flag may have changed
     CL_UpdateFrameTimes();
     cls.disable_screen = 0;
+    if (scr.initialized)
+        scr.hud_scale = R_ClampScale(scr_scale);
 }
 
 /*
@@ -1298,6 +1302,11 @@ static void scr_font_changed(cvar_t *self)
     scr.font_pic = R_RegisterFont(self->string);
 }
 
+static void scr_scale_changed(cvar_t *self)
+{
+    scr.hud_scale = R_ClampScale(self);
+}
+
 static const cmdreg_t scr_cmds[] = {
     { "timerefresh", SCR_TimeRefresh_f },
     { "sizeup", SCR_SizeUp_f },
@@ -1331,6 +1340,7 @@ void SCR_Init(void)
     scr_font = Cvar_Get("scr_font", "conchars", 0);
     scr_font->changed = scr_font_changed;
     scr_scale = Cvar_Get("scr_scale", "1", 0);
+    scr_scale->changed = scr_scale_changed;
     scr_crosshair = Cvar_Get("crosshair", "0", CVAR_ARCHIVE);
     scr_crosshair->changed = scr_crosshair_changed;
 
@@ -1370,6 +1380,8 @@ void SCR_Init(void)
 #endif
 
     Cmd_Register(scr_cmds);
+
+    scr_scale_changed(scr_scale);
 
     scr.initialized = qtrue;
 }
@@ -1946,7 +1958,6 @@ static void SCR_DrawPause(void)
 
 static void SCR_DrawLoading(void)
 {
-    float scale;
     int x, y;
 
     if (!scr.draw_loading)
@@ -1954,15 +1965,14 @@ static void SCR_DrawLoading(void)
 
     scr.draw_loading = qfalse;
 
-    scale = 1.0f / Cvar_ClampValue(scr_scale, 1, 9);
-    R_SetScale(&scale);
+    R_SetScale(scr.hud_scale);
 
-    x = (r_config.width * scale - scr.loading_width) / 2;
-    y = (r_config.height * scale - scr.loading_height) / 2;
+    x = (r_config.width * scr.hud_scale - scr.loading_width) / 2;
+    y = (r_config.height * scr.hud_scale - scr.loading_height) / 2;
 
     R_DrawPic(x, y, scr.loading_pic);
 
-    R_SetScale(NULL);
+    R_SetScale(1.0f);
 }
 
 static void SCR_DrawCrosshair(void)
@@ -2010,19 +2020,16 @@ draw:
 
 static void SCR_Draw2D(void)
 {
-    float scale;
-
     if (scr_draw2d->integer <= 0)
         return;     // turn off for screenshots
 
     if (cls.key_dest & KEY_MENU)
         return;
 
-    scale = 1.0f / Cvar_ClampValue(scr_scale, 1, 9);
-    R_SetScale(&scale);
+    R_SetScale(scr.hud_scale);
 
-    scr.hud_height *= scale;
-    scr.hud_width *= scale;
+    scr.hud_height *= scr.hud_scale;
+    scr.hud_width *= scr.hud_scale;
 
     // crosshair has its own color and alpha
     SCR_DrawCrosshair();
@@ -2057,7 +2064,7 @@ static void SCR_Draw2D(void)
     SCR_DrawDebugPmove();
 #endif
 
-    R_SetScale(NULL);
+    R_SetScale(1.0f);
 }
 
 static void SCR_DrawActive(void)

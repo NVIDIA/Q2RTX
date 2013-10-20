@@ -130,7 +130,7 @@ static void Draw(menuFrameWork_t *self)
 
     R_RenderFrame(&m_player.refdef);
 
-    R_SetScale(&uis.scale);
+    R_SetScale(uis.scale);
 }
 
 static void Size(menuFrameWork_t *self)

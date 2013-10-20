@@ -19,6 +19,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef REFRESH_H
 #define REFRESH_H
 
+#include "common/cvar.h"
 #include "common/error.h"
 
 #define MAX_DLIGHTS     32
@@ -210,7 +211,8 @@ void    R_ClearColor(void);
 void    R_SetAlpha(float clpha);
 void    R_SetColor(uint32_t color);
 void    R_SetClipRect(const clipRect_t *clip);
-void    R_SetScale(float *scale);
+float   R_ClampScale(cvar_t *var);
+void    R_SetScale(float scale);
 void    R_DrawChar(int x, int y, int flags, int ch, qhandle_t font);
 int     R_DrawString(int x, int y, int flags, size_t maxChars,
                      const char *string, qhandle_t font);  // returns advanced x coord

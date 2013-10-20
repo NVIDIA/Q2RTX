@@ -876,6 +876,7 @@ void Con_Close(qboolean force);
 void Con_Popup(qboolean force);
 void Con_SkipNotify(qboolean skip);
 void Con_RegisterMedia(void);
+void Con_CheckResize(void);
 
 void Key_Console(int key);
 void Key_Message(int key);

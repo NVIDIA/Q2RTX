@@ -94,11 +94,16 @@ typedef struct {
 
 static drawStatic_t draw;
 
-void R_SetScale(float *scale)
+float R_ClampScale(cvar_t *var)
 {
-    if (scale) {
-        *scale = 1;
+    if (var) {
+        Cvar_SetValue(var, 1.0f);
     }
+    return 1.0f;
+}
+
+void R_SetScale(float scale)
+{
 }
 
 void R_InitDraw(void)

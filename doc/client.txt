@@ -290,7 +290,8 @@ con_alpha::
 
 con_scale::
     Scaling factor of the console text. Takes effect in OpenGL mode only.
-    Default value is 1.
+    Default value is 1. Automatically scales depending on current display
+    resolution when set to 0.
 
 con_font::
     Font used for drawing console text. Default value is "conchars".
@@ -362,7 +363,8 @@ scr_showpause::
 
 scr_scale::
     Scaling factor of the HUD elements. Takes effect in OpenGL mode only.
-    Default value is 1.
+    Default value is 1. Automatically scales depending on current display
+    resolution when set to 0.
 
 scr_alpha::
     Opacity of the HUD elements. 0 is fully transparent, 1 is opaque. Default
@@ -944,7 +946,9 @@ ui_background::
     just fills the screen with solid black color.
 
 ui_scale::
-    Scaling factor of the UI widgets. Takes effect in OpenGL mode only. Default value is 1.
+    Scaling factor of the UI widgets. Takes effect in OpenGL mode only. Default
+    value is 1. Automatically scales depending on current display resolution
+    when set to 0.
 
 ui_sortdemos::
     Specifies default sorting order of entries in demo browser. Default value
