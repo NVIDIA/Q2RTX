@@ -1107,8 +1107,8 @@ R_ModeChanged
 */
 void R_ModeChanged(int width, int height, int flags, int rowbytes, void *pixels)
 {
-    r_config.width = width & ~7;
-    r_config.height = height & ~1;
+    r_config.width = width;
+    r_config.height = height;
     r_config.flags = flags;
 }
 

@@ -46,7 +46,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define IMG_SAVE(x) \
     static qerror_t IMG_Save##x(qhandle_t f, const char *filename, \
-        const byte *pic, int width, int height, int param)
+        const byte *pic, int width, int height, int row_stride, int param)
 
 /*
 ====================================================================
@@ -602,9 +602,9 @@ IMG_LOAD(TGA)
 
 IMG_SAVE(TGA)
 {
-    size_t len;
     byte header[TARGA_HEADER_SIZE];
     ssize_t ret;
+    int i;
 
     memset(&header, 0, sizeof(header));
     header[ 2] = 2;        // uncompressed type
@@ -619,10 +619,18 @@ IMG_SAVE(TGA)
         return ret;
     }
 
-    len = width * height * 3;
-    ret = FS_Write(pic, len, f);
-    if (ret < 0) {
-        return ret;
+    if (row_stride == width * 3) {
+        ret = FS_Write(pic, width * height * 3, f);
+        if (ret < 0) {
+            return ret;
+        }
+    } else {
+        for (i = 0; i < height; i++) {
+            ret = FS_Write(pic + i * row_stride, width * 3, f);
+            if (ret < 0) {
+                return ret;
+            }
+        }
     }
 
     return Q_ERR_SUCCESS;
@@ -887,7 +895,6 @@ IMG_SAVE(JPG)
     struct jpeg_compress_struct cinfo;
     struct my_error_mgr jerr;
     JSAMPARRAY row_pointers;
-    int row_stride;
     qerror_t ret;
     int i;
 
@@ -916,7 +923,6 @@ IMG_SAVE(JPG)
     jpeg_start_compress(&cinfo, TRUE);
 
     row_pointers = FS_AllocTempMem(sizeof(JSAMPROW) * height);
-    row_stride = width * 3;    // JSAMPLEs per row in image_buffer
 
     for (i = 0; i < height; i++) {
         row_pointers[i] = (JSAMPROW)(pic + (height - i - 1) * row_stride);
@@ -1131,7 +1137,7 @@ IMG_SAVE(PNG)
     png_structp png_ptr;
     png_infop info_ptr;
     png_bytepp row_pointers;
-    int i, row_stride;
+    int i;
     my_png_error my_err;
     qerror_t ret;
 
@@ -1164,7 +1170,6 @@ IMG_SAVE(PNG)
     png_set_compression_level(png_ptr, clamp(param, 0, 9));
 
     row_pointers = FS_AllocTempMem(sizeof(png_bytep) * height);
-    row_stride = width * 3;
 
     for (i = 0; i < height; i++) {
         row_pointers[i] = (png_bytep)pic + (height - i - 1) * row_stride;
@@ -1241,22 +1246,22 @@ static qhandle_t create_screenshot(char *buffer, size_t size,
 }
 
 static void make_screenshot(const char *name, const char *ext,
-                            qerror_t (*save)(qhandle_t, const char *, const byte *, int, int, int),
+                            qerror_t (*save)(qhandle_t, const char *, const byte *, int, int, int, int),
                             qboolean reverse, int param)
 {
     char        buffer[MAX_OSPATH];
     byte        *pixels;
     qerror_t    ret;
     qhandle_t   f;
-    int         w, h;
+    int         w, h, rowbytes;
 
     f = create_screenshot(buffer, sizeof(buffer), name, ext);
     if (!f) {
         return;
     }
 
-    pixels = IMG_ReadPixels(reverse, &w, &h);
-    ret = save(f, buffer, pixels, w, h, param);
+    pixels = IMG_ReadPixels(reverse, &w, &h, &rowbytes);
+    ret = save(f, buffer, pixels, w, h, rowbytes, param);
     FS_FreeTempMem(pixels);
 
     FS_FCloseFile(f);

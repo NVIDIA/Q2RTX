@@ -765,7 +765,7 @@ static void R_EdgeDrawing(void)
 
 //=======================================================================
 
-byte *IMG_ReadPixels(qboolean reverse, int *width, int *height)
+byte *IMG_ReadPixels(qboolean reverse, int *width, int *height, int *rowbytes)
 {
     byte *pixels;
     byte *src, *dst;
@@ -798,6 +798,7 @@ byte *IMG_ReadPixels(qboolean reverse, int *width, int *height)
 
     *width = vid.width;
     *height = vid.height;
+    *rowbytes = vid.width * 3;
 
     return pixels;
 }
