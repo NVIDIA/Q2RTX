@@ -97,7 +97,7 @@ static drawStatic_t draw;
 float R_ClampScale(cvar_t *var)
 {
     if (var) {
-        Cvar_SetValue(var, 1.0f);
+        Cvar_SetValue(var, 1.0f, FROM_CODE);
     }
     return 1.0f;
 }
