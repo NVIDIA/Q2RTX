@@ -207,6 +207,9 @@ static void VID_SDL_SetMode(void)
     int freq;
 
     if (vid_fullscreen->integer) {
+        // FIXME: force update by toggling fullscreen mode
+        SDL_SetWindowFullscreen(sdl_window, 0);
+
         if (VID_GetFullscreen(&rc, &freq, NULL)) {
             SDL_DisplayMode mode = {
                 .format         = SDL_PIXELFORMAT_UNKNOWN,
@@ -221,6 +224,10 @@ static void VID_SDL_SetMode(void)
             flags = SDL_WINDOW_FULLSCREEN_DESKTOP;
         }
     } else {
+        if (VID_GetGeometry(&rc)) {
+            SDL_SetWindowSize(sdl_window, rc.width, rc.height);
+            SDL_SetWindowPosition(sdl_window, rc.x, rc.y);
+        }
         flags = 0;
     }
 
