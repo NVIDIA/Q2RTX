@@ -452,6 +452,8 @@ static void SV_DumpEnts_f(void)
 
 //===============================================================
 
+static void make_mask(netadr_t *mask, netadrtype_t type, int bits);
+
 /*
 ==================
 SV_Kick_f
@@ -480,10 +482,10 @@ static void SV_Kick_f(void)
     // optionally ban their IP address
     if (!strcmp(Cmd_Argv(0), "kickban")) {
         netadr_t *addr = &sv_client->netchan->remote_address;
-        if (addr->type == NA_IP) {
+        if (addr->type == NA_IP || addr->type == NA_IP6) {
             addrmatch_t *match = Z_Malloc(sizeof(*match));
-            match->addr.u32 = addr->ip.u32;
-            match->mask = 0xffffffffU;
+            match->addr = *addr;
+            make_mask(&match->mask, addr->type, addr->type == NA_IP6 ? 128 : 32);
             match->hits = 0;
             match->time = 0;
             match->comment[0] = 0;
@@ -988,15 +990,20 @@ static void SV_ServerCommand_f(void)
     ge->ServerCommand();
 }
 
-// (ip & mask) == (addr & mask)
-// bits = 32 --> mask = 255.255.255.255
-// bits = 24 --> mask = 255.255.255.0
-
-static qboolean parse_mask(const char *s, uint32_t *addr, uint32_t *mask)
+static void make_mask(netadr_t *mask, netadrtype_t type, int bits)
 {
-    netadr_t address;
+    memset(mask, 0, sizeof(*mask));
+    mask->type = type;
+    memset(mask->ip.u8, 0xff, bits >> 3);
+    if (bits & 7) {
+        mask->ip.u8[bits >> 3] = ~((1 << (8 - (bits & 7))) - 1);
+    }
+}
+
+static qboolean parse_mask(char *s, netadr_t *addr, netadr_t *mask)
+{
+    int bits, size;
     char *p;
-    int bits;
 
     p = strchr(s, '/');
     if (p) {
@@ -1006,45 +1013,67 @@ static qboolean parse_mask(const char *s, uint32_t *addr, uint32_t *mask)
             return qfalse;
         }
         bits = atoi(p);
-        if (bits < 1 || bits > 32) {
-            Com_Printf("Bad mask: %d bits\n", bits);
-            return qfalse;
-        }
     } else {
-        bits = 32;
+        bits = -1;
     }
 
-    if (!NET_StringToAdr(s, &address, 0)) {
+    if (!NET_StringToBaseAdr(s, addr)) {
         Com_Printf("Bad address: %s\n", s);
         return qfalse;
     }
 
-    *addr = address.ip.u32;
-    *mask = BigLong(~((1 << (32 - bits)) - 1));
+    size = (addr->type == NA_IP6) ? 128 : 32;
+
+    if (bits == -1) {
+        bits = size;
+    }
+
+    if (bits < 1 || bits > size) {
+        Com_Printf("Bad mask: %d bits\n", bits);
+        return qfalse;
+    }
+
+    make_mask(mask, addr->type, bits);
     return qtrue;
 }
 
-static size_t format_mask(addrmatch_t *match, char *buf, size_t size)
+static size_t format_mask(addrmatch_t *match, char *buf, size_t buf_size)
 {
-    uint8_t *ip = match->addr.u8;
-    uint32_t mask = BigLong(match->mask);
-    int i;
+    int i, j, bits, size;
 
-    for (i = 0; i < 32; i++) {
-        if (mask & (1 << i)) {
+    size = (match->mask.type == NA_IP6) ? 128 : 32;
+    bits = 0;
+
+    for (i = 0; i < size >> 3; i++) {
+        int c = match->mask.ip.u8[i];
+
+        if (c == 0xff) {
+            bits += 8;
+            continue;
+        }
+
+        if (c == 0) {
             break;
         }
+
+        for (j = 0; j < 8; j++) {
+            if (!(c & (1 << (7 - j)))) {
+                break;
+            }
+        }
+
+        bits += j;
+        break;
     }
 
-    return Q_snprintf(buf, size, "%d.%d.%d.%d/%d",
-                      ip[0], ip[1], ip[2], ip[3], 32 - i);
+    return Q_snprintf(buf, buf_size, "%s/%d", NET_BaseAdrToString(&match->addr), bits);
 }
 
 void SV_AddMatch_f(list_t *list)
 {
-    char *s, buf[32];
+    char *s, buf[MAX_QPATH];
     addrmatch_t *match;
-    uint32_t addr, mask;
+    netadr_t addr, mask;
     size_t len;
 
     if (Cmd_Argc() < 2) {
@@ -1058,7 +1087,8 @@ void SV_AddMatch_f(list_t *list)
     }
 
     LIST_FOR_EACH(addrmatch_t, match, list, entry) {
-        if (match->addr.u32 == addr && match->mask == mask) {
+        if (NET_IsEqualBaseAdr(&match->addr, &addr) &&
+            NET_IsEqualBaseAdr(&match->mask, &mask)) {
             format_mask(match, buf, sizeof(buf));
             Com_Printf("Entry %s already exists.\n", buf);
             return;
@@ -1068,7 +1098,7 @@ void SV_AddMatch_f(list_t *list)
     s = Cmd_ArgsFrom(2);
     len = strlen(s);
     match = Z_Malloc(sizeof(*match) + len);
-    match->addr.u32 = addr;
+    match->addr = addr;
     match->mask = mask;
     match->hits = 0;
     match->time = 0;
@@ -1080,7 +1110,7 @@ void SV_DelMatch_f(list_t *list)
 {
     char *s;
     addrmatch_t *match, *next;
-    uint32_t addr, mask;
+    netadr_t addr, mask;
     int i;
 
     if (Cmd_Argc() < 2) {
@@ -1122,7 +1152,8 @@ void SV_DelMatch_f(list_t *list)
     }
 
     LIST_FOR_EACH(addrmatch_t, match, list, entry) {
-        if (match->addr.u32 == addr && match->mask == mask) {
+        if (NET_IsEqualBaseAdr(&match->addr, &addr) &&
+            NET_IsEqualBaseAdr(&match->mask, &mask)) {
 remove:
             List_Remove(&match->entry);
             Z_Free(match);
@@ -1135,8 +1166,8 @@ remove:
 void SV_ListMatches_f(list_t *list)
 {
     addrmatch_t *match;
-    char last[32];
-    char addr[32];
+    char last[MAX_QPATH];
+    char addr[MAX_QPATH];
     int count;
 
     if (LIST_EMPTY(list)) {

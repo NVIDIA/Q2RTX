@@ -366,7 +366,7 @@ addrmatch_t *SV_MatchAddress(list_t *list, netadr_t *addr)
     addrmatch_t *match;
 
     LIST_FOR_EACH(addrmatch_t, match, list, entry) {
-        if ((addr->ip.u32 & match->mask) == (match->addr.u32 & match->mask)) {
+        if (NET_IsEqualBaseAdrMask(addr, &match->addr, &match->mask)) {
             match->hits++;
             match->time = time(NULL);
             return match;

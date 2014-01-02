@@ -148,7 +148,7 @@ static void NET_NetadrToSockadr(const netadr_t *a, struct sockaddr_in *s)
         break;
     case NA_IP:
         s->sin_family = AF_INET;
-        s->sin_addr.s_addr = a->ip.u32;
+        s->sin_addr.s_addr = a->ip.u32[0];
         s->sin_port = a->port;
         break;
     default:
@@ -162,7 +162,7 @@ static void NET_SockadrToNetadr(const struct sockaddr_in *s, netadr_t *a)
     memset(a, 0, sizeof(*a));
 
     a->type = NA_IP;
-    a->ip.u32 = s->sin_addr.s_addr;
+    a->ip.u32[0] = s->sin_addr.s_addr;
     a->port = s->sin_port;
 }
 
