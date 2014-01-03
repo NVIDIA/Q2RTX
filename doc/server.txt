@@ -17,7 +17,7 @@ Network
 ~~~~~~~
 
 net_ip::
-    Specifies network interface address server should listen on for UDP
+    Specifies network interface address server should listen on for UDP and TCP
     connections. The same interface is also used for outgoing TCP connections
     (these include MVD/GTV and anticheat connections).  Default value is empty,
     which means listening on all interfaces.
@@ -29,18 +29,8 @@ one of your network interfaces using the ‘net_ip’ cvar, otherwise expect any
 kinds of problems.
 
 net_port::
-    Specifies port number server should listen on for UDP connections. Default
-    value is 27910.
-
-net_tcp_ip::
-    Specifies network interface address server should listen on for TCP
-    connections (these include MVD/GTV connections, enabled only when
-    ‘sv_mvd_enable’ is set, see below).  Empty string means listening on all
-    interfaces.  Value of this cvar mirrors ‘net_ip’ unless modified by user.
-
-net_tcp_port::
-    Specifies port number server should listen on for TCP connections.  Value
-    of this cvar mirrors ‘net_port’ unless modified by user.
+    Specifies port number server should listen on for UDP and TCP connections.
+    Default value is 27910.
 
 net_ignore_icmp::
     On Win32 and Linux, server is able to receive ICMP

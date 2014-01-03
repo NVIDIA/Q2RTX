@@ -95,10 +95,6 @@ static cvar_t   *net_log_name;
 static cvar_t   *net_log_flush;
 #endif
 
-static cvar_t   *net_tcp_ip;
-static cvar_t   *net_tcp_port;
-static cvar_t   *net_tcp_backlog;
-
 #if USE_ICMP
 static cvar_t   *net_ignore_icmp;
 #endif
@@ -1167,13 +1163,12 @@ neterr_t NET_Listen(qboolean arg)
         return NET_AGAIN;
     }
 
-    s = TCP_OpenSocket(net_tcp_ip->string,
-                       net_tcp_port->integer, NS_SERVER);
+    s = TCP_OpenSocket(net_ip->string, net_port->integer, NS_SERVER);
     if (s == -1) {
         return NET_ERROR;
     }
 
-    ret = os_listen(s, net_tcp_backlog->integer);
+    ret = os_listen(s, 128);
     if (ret) {
         os_closesocket(s);
         return ret;
@@ -1561,23 +1556,7 @@ static void NET_Restart_f(void)
 
 static void net_udp_param_changed(cvar_t *self)
 {
-    // keep TCP socket vars in sync unless modified by user
-    if (!(net_tcp_ip->flags & CVAR_MODIFIED)) {
-        Cvar_SetByVar(net_tcp_ip, net_ip->string, FROM_CODE);
-    }
-    if (!(net_tcp_port->flags & CVAR_MODIFIED)) {
-        Cvar_SetByVar(net_tcp_port, net_port->string, FROM_CODE);
-    }
-
     NET_Restart_f();
-}
-
-static void net_tcp_param_changed(cvar_t *self)
-{
-    if (tcp_socket != -1) {
-        NET_Listen(qfalse);
-        NET_Listen(qtrue);
-    }
 }
 
 /*
@@ -1609,11 +1588,6 @@ void NET_Init(void)
 #if USE_ICMP
     net_ignore_icmp = Cvar_Get("net_ignore_icmp", "0", 0);
 #endif
-    net_tcp_ip = Cvar_Get("net_tcp_ip", net_ip->string, 0);
-    net_tcp_ip->changed = net_tcp_param_changed;
-    net_tcp_port = Cvar_Get("net_tcp_port", net_port->string, 0);
-    net_tcp_port->changed = net_tcp_param_changed;
-    net_tcp_backlog = Cvar_Get("net_tcp_backlog", "4", 0);
 
 #if _DEBUG
     net_log_enable_changed(net_log_enable);
