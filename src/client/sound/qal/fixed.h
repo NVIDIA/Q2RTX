@@ -11,12 +11,17 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License qalong
+You should have received a copy of the GNU General Public License along
 with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
 #include <AL/al.h>
+
+#ifndef AL_SOFT_loop_points
+#define AL_SOFT_loop_points 1
+#define AL_LOOP_POINTS_SOFT 0x2015
+#endif
 
 #define qalEnable alEnable
 #define qalDisable alDisable

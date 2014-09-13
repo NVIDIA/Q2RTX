@@ -121,6 +121,14 @@ sfxcache_t *AL_UploadSfx(sfx_t *s)
         return NULL;
     }
 
+#if 0
+    // specify OpenAL-Soft style loop points
+    if (s_info.loopstart > 0 && qalIsExtensionPresent("AL_SOFT_loop_points")) {
+        ALint points[2] = { s_info.loopstart, s_info.samples };
+        qalBufferiv(name, AL_LOOP_POINTS_SOFT, points);
+    }
+#endif
+
     // allocate placeholder sfxcache
     sc = s->cache = S_Malloc(sizeof(*sc));
     sc->length = s_info.samples * 1000 / s_info.rate; // in msec
@@ -188,8 +196,11 @@ void AL_PlayChannel(channel_t *ch)
     ch->srcnum = s_srcnums[ch - channels];
     qalGetError();
     qalSourcei(ch->srcnum, AL_BUFFER, sc->bufnum);
-    //qalSourcei(ch->srcnum, AL_LOOPING, sc->loopstart == -1 ? AL_FALSE : AL_TRUE);
-    qalSourcei(ch->srcnum, AL_LOOPING, ch->autosound ? AL_TRUE : AL_FALSE);
+    if (ch->autosound /*|| sc->loopstart >= 0*/) {
+        qalSourcei(ch->srcnum, AL_LOOPING, AL_TRUE);
+    } else {
+        qalSourcei(ch->srcnum, AL_LOOPING, AL_FALSE);
+    }
     qalSourcef(ch->srcnum, AL_GAIN, ch->master_vol);
     qalSourcef(ch->srcnum, AL_REFERENCE_DISTANCE, SOUND_FULLVOLUME);
     qalSourcef(ch->srcnum, AL_MAX_DISTANCE, 8192);
