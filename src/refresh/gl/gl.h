@@ -41,7 +41,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
  *
  */
 
-#if 0
+#ifdef GL_VERSION_ES_CM_1_0
 #define QGL_INDEX_TYPE  GLushort
 #define QGL_INDEX_ENUM  GL_UNSIGNED_SHORT
 #else
@@ -98,6 +98,8 @@ typedef struct {
 } glRefdef_t;
 
 typedef struct {
+    qboolean    es_profile;
+
     int     version_major;
     int     version_minor;
 
@@ -113,8 +115,14 @@ typedef struct {
     int         stencilbits;
 } glConfig_t;
 
-#define AT_LEAST_OPENGL(major, minor) \
+#define AT_LEAST_OPENGL_ANY(major, minor) \
     (gl_config.version_major > major || (gl_config.version_major == major && gl_config.version_minor >= minor))
+
+#define AT_LEAST_OPENGL(major, minor) \
+    (!gl_config.es_profile && AT_LEAST_OPENGL_ANY(major, minor))
+
+#define AT_LEAST_OPENGL_ES(major, minor) \
+    (gl_config.es_profile && AT_LEAST_OPENGL_ANY(major, minor))
 
 extern glStatic_t gl_static;
 extern glConfig_t gl_config;

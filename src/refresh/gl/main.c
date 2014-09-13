@@ -690,7 +690,10 @@ static size_t GL_ViewCluster_m(char *buffer, size_t size)
 static void gl_lightmap_changed(cvar_t *self)
 {
     lm.scale = Cvar_ClampValue(gl_coloredlightmaps, 0, 1);
-    lm.comp = lm.scale ? GL_RGB : GL_LUMINANCE;
+    if (AT_LEAST_OPENGL_ES(1, 0))
+        lm.comp = GL_RGBA; // ES doesn't support internal format != external
+    else
+        lm.comp = lm.scale ? GL_RGB : GL_LUMINANCE;
     lm.add = 255 * Cvar_ClampValue(gl_brightness, -1, 1);
     lm.modulate = gl_modulate->value * gl_modulate_world->value;
     lm.dirty = qtrue; // rebuild all lightmaps next frame
@@ -806,6 +809,22 @@ static qboolean GL_SetupConfig(void)
         return qfalse;
     }
 
+    // parse ES profile prefix
+    if (!strncmp(version, "OpenGL ES", 9)) {
+        version += 9;
+        if (version[0] == '-' && version[1] && version[2] && version[3] == ' ') {
+            version += 4;
+        } else if (version[0] == ' ') {
+            version += 1;
+        } else {
+            Com_EPrintf("OpenGL returned invalid version string\n");
+            return qfalse;
+        }
+        gl_config.es_profile = qtrue;
+    } else {
+        gl_config.es_profile = qfalse;
+    }
+
     // parse version
     gl_config.version_major = strtoul(version, &p, 10);
     if (*p == '.') {
@@ -820,7 +839,7 @@ static qboolean GL_SetupConfig(void)
     }
 
     // OpenGL 1.0 doesn't have vertex arrays
-    if (!AT_LEAST_OPENGL(1, 1)) {
+    if (!AT_LEAST_OPENGL(1, 1) && !AT_LEAST_OPENGL_ES(1, 0)) {
         Com_EPrintf("OpenGL version 1.1 or higher required\n");
         return qfalse;
     }
