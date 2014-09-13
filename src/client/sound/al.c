@@ -243,7 +243,7 @@ static channel_t *AL_FindLoopingSound(int entnum, sfx_t *sfx)
             continue;
         if (!ch->autosound)
             continue;
-        if (ch->entnum != entnum)
+        if (entnum && ch->entnum != entnum)
             continue;
         if (ch->sfx != sfx)
             continue;
@@ -257,7 +257,7 @@ static void AL_AddLoopSounds(void)
 {
     int         i;
     int         sounds[MAX_EDICTS];
-    channel_t   *ch;
+    channel_t   *ch, *ch2;
     sfx_t       *sfx;
     sfxcache_t  *sc;
     int         num;
@@ -295,6 +295,8 @@ static void AL_AddLoopSounds(void)
         if (!ch)
             continue;
 
+        ch2 = AL_FindLoopingSound(0, sfx);
+
         ch->autosound = qtrue;  // remove next frame
         ch->autoframe = s_framecount;
         ch->sfx = sfx;
@@ -304,6 +306,14 @@ static void AL_AddLoopSounds(void)
         ch->end = paintedtime + sc->length;
 
         AL_PlayChannel(ch);
+
+        // attempt to synchronize with existing sounds of the same type
+        if (ch2) {
+            ALint offset;
+
+            qalGetSourcei(ch2->srcnum, AL_SAMPLE_OFFSET, &offset);
+            qalSourcei(ch->srcnum, AL_SAMPLE_OFFSET, offset);
+        }
     }
 }
 
